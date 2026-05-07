@@ -1,19 +1,20 @@
 /**
  * POST /api/trips/:id/recompute-travel?day=N|all
  *
- * v2.23.0 google-maps-migration: ORS+Haversine → Google Routes API.
- * v2.23.8 self-drive: per-pair mode logic (DRIVE / WALK / TRANSIT).
+ * v2.24.0 trip-segments：
+ *   - 1km gate（Haversine 本地算）：≤1km → walking + WALK API；>1km → driving + DRIVE API
+ *   - 永遠 1 Google Routes call/pair（不打 TRANSIT — Japan 無資料）
+ *   - 寫 trip_segments（first-class）+ dual-write trip_entries.travel_*（legacy until Phase ε）
+ *   - mode_source='user' 既有 segment 不覆寫（保留 user override）
  *
- * Mode resolution per pair (curr entry):
- *   - self_drive_enabled AND curr datetime ∈ [pickup_at, return_at] → DRIVE
- *   - else: WALK 試算（1 call）→ duration ≤10min → WALK
- *   - else: TRANSIT（2nd call，departureTime = curr datetime）
+ * Self-drive 窗內也吃 1km gate（短程仍 walking — 找停車位比走路慢）。
  *
- * Fallback when entry has no time: assume DRIVE (within self-drive window if enabled).
+ * Subrequest budget（CF Pages Free 50/invocation）：
+ *   1 (assertGoogleAvailable) + 1 (trip) + 1 (days) + N day SELECTs
+ *     + 1 (existing segments preload) + 47 (Routes calls per pair) + 1 (db.batch)
+ *   ~52 for HuiYun 47 pairs；約莫擦邊。day filter recompute 永遠安全。
  *
- * NO Haversine fallback per P11/T13 — single pair Google failure → travel_source='error', skip.
- *
- * Auth: trip write permission (owner/member with write).
+ * Auth: trip write permission.
  */
 
 import { hasWritePermission } from '../../_auth';
@@ -21,15 +22,15 @@ import { AppError } from '../../_errors';
 import { json, getAuth } from '../../_utils';
 import { assertGoogleAvailable } from '../../_maps_lock';
 import { computeRoute } from '../../../../src/server/maps/google-client';
+import { haversineMeters } from '../../../../src/server/maps/haversine';
 import type { Env } from '../../_types';
 
-const WALK_THRESHOLD_MIN = 10;
+const WALK_GATE_M = 1000;
 
 interface EntryWithCoords {
   id: number;
   day_id: number;
   sort_order: number;
-  time: string | null;     // entry start time HH:MM, may be NULL
   lat: number | null;
   lng: number | null;
 }
@@ -37,45 +38,13 @@ interface EntryWithCoords {
 interface TripDay {
   id: number;
   day_num: number;
-  date: string;            // YYYY-MM-DD
 }
 
-interface TripMeta {
-  default_travel_mode: string | null;
-  self_drive_enabled: number | null;
-  self_drive_pickup_at: string | null;     // ISO datetime YYYY-MM-DDTHH:MM
-  self_drive_return_at: string | null;
-}
-
-/**
- * Build effective ISO datetime for an entry: combine day.date + entry.time.
- *
- * v2.23.14: entry.time 實際格式可能是：
- *   - "HH:MM" — 單一時間（v2.23.0 新建 entry）
- *   - "HH:MM-HH:MM" — time range（legacy 多數既有 entry）
- * 取起始 HH:MM 組 ISO datetime。Range 末段忽略。
- *
- * Returns null if time is missing or unparseable (caller falls back to default mode).
- */
-function entryDateTime(date: string, time: string | null): string | null {
-  if (!time) return null;
-  const startTime = (time.split('-')[0] ?? '').trim();
-  if (!/^\d{2}:\d{2}$/.test(startTime)) return null;
-  return `${date}T${startTime}:00`;
-}
-
-/**
- * Determine if entry's effective datetime falls within self-drive window.
- * If entry has no datetime: default true (assume in window — DRIVE conservative).
- */
-function isInSelfDriveWindow(
-  entryDt: string | null,
-  pickupAt: string | null,
-  returnAt: string | null,
-): boolean {
-  if (!pickupAt || !returnAt) return false;
-  if (!entryDt) return true; // entry no time → assume during self-drive window
-  return entryDt >= pickupAt && entryDt <= returnAt;
+interface ExistingSegment {
+  id: number;
+  from_entry_id: number;
+  to_entry_id: number;
+  mode_source: string;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -90,62 +59,55 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
-  // Resolve trip meta — default_travel_mode + self-drive window
-  const trip = await db
-    .prepare(
-      `SELECT default_travel_mode, self_drive_enabled,
-              self_drive_pickup_at, self_drive_return_at
-         FROM trips WHERE id = ?`,
-    )
-    .bind(tripId)
-    .first<TripMeta>();
+  const trip = await db.prepare('SELECT id FROM trips WHERE id = ?').bind(tripId).first();
   if (!trip) throw new AppError('DATA_NOT_FOUND', '找不到該行程');
-
-  const tripDefaultMode = trip.default_travel_mode ?? 'driving';
-  const selfDriveEnabled = trip.self_drive_enabled === 1;
-  const pickupAt = trip.self_drive_pickup_at;
-  const returnAt = trip.self_drive_return_at;
 
   const apiKey = context.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) throw new AppError('MAPS_UPSTREAM_FAILED', 'GOOGLE_MAPS_API_KEY not configured');
   await assertGoogleAvailable(db);
 
-  // Resolve day filter
   const url = new URL(context.request.url);
   const dayParam = url.searchParams.get('day');
   let dayNumFilter: number | null = null;
   if (dayParam && dayParam !== 'all') {
     const n = parseInt(dayParam, 10);
     if (!Number.isFinite(n) || n < 1) {
-      throw new AppError('DATA_VALIDATION', 'day 參數必須為正整數或 all');
+      throw new AppError('DATA_VALIDATION', 'day 必須為正整數或 all');
     }
     dayNumFilter = n;
   }
 
-  // Fetch days to process — incl date for entry datetime synthesis
   const daysSql = dayNumFilter !== null
-    ? 'SELECT id, day_num, date FROM trip_days WHERE trip_id = ? AND day_num = ? ORDER BY day_num'
-    : 'SELECT id, day_num, date FROM trip_days WHERE trip_id = ? ORDER BY day_num';
+    ? 'SELECT id, day_num FROM trip_days WHERE trip_id = ? AND day_num = ? ORDER BY day_num'
+    : 'SELECT id, day_num FROM trip_days WHERE trip_id = ? ORDER BY day_num';
   const daysBind = dayNumFilter !== null ? [tripId, dayNumFilter] : [tripId];
   const daysRes = await db.prepare(daysSql).bind(...daysBind).all<TripDay>();
 
+  // Pre-load 既有 segments（單一 SELECT 省 N 次 per-pair query）
+  const existingRes = await db
+    .prepare('SELECT id, from_entry_id, to_entry_id, mode_source FROM trip_segments WHERE trip_id = ?')
+    .bind(tripId)
+    .all<ExistingSegment>();
+  const existingMap = new Map<string, ExistingSegment>();
+  for (const s of existingRes.results) {
+    existingMap.set(`${s.from_entry_id}-${s.to_entry_id}`, s);
+  }
+
   let pairsComputed = 0;
+  let pairsSkippedUser = 0;
   const sourceBreakdown: Record<string, number> = {};
   const modeBreakdown: Record<string, number> = {};
   const errorsDetail: Array<{ entryId: number; message: string }> = [];
-  const updates: Array<{
-    entryId: number;
-    distance_m: number;
-    duration_s: number;
-    source: string;
-    travelType: string;     // 'driving' | 'walking' | 'transit'
-  }> = [];
 
-  // Walk each day's entries in sort_order
+  // 收集 batch statements 最後一次 db.batch 寫入（單一 subrequest）
+  const segmentInserts: Array<{ tripId: string; from: number; to: number; mode: string; min: number; distM: number; now: number }> = [];
+  const segmentUpdates: Array<{ id: number; mode: string; min: number; distM: number; now: number }> = [];
+  const legacyEntryUpdates: Array<{ entryId: number; distM: number; min: number; now: number; mode: string }> = [];
+
   for (const day of daysRes.results) {
-    const entries = await db
+    const entriesRes = await db
       .prepare(
-        `SELECT e.id, e.day_id, e.sort_order, e.time, p.lat, p.lng
+        `SELECT e.id, e.day_id, e.sort_order, p.lat, p.lng
          FROM trip_entries e
          LEFT JOIN pois p ON p.id = e.poi_id
          WHERE e.day_id = ?
@@ -154,137 +116,106 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .bind(day.id)
       .all<EntryWithCoords>();
 
-    const list = entries.results;
+    const list = entriesRes.results;
     for (let i = 1; i < list.length; i++) {
       const prev = list[i - 1];
       const curr = list[i];
       if (!prev || !curr) continue;
       if (prev.lat == null || prev.lng == null || curr.lat == null || curr.lng == null) continue;
 
-      const currDt = entryDateTime(day.date, curr.time);
+      const existing = existingMap.get(`${prev.id}-${curr.id}`);
+      if (existing && existing.mode_source === 'user') {
+        pairsSkippedUser++;
+        continue;
+      }
 
-      // 決定 mode：self-drive window 內 → DRIVE；否則 WALK 試算後決定 WALK / TRANSIT
-      let chosenTravelType = 'driving';
-      let result: { distance_meters: number; duration_seconds: number } | null = null;
-
-      const inWindow = selfDriveEnabled && isInSelfDriveWindow(currDt, pickupAt, returnAt);
+      // 1km gate（pure local Haversine — 0 API call）
+      const distHaversine = haversineMeters(
+        { lat: prev.lat, lng: prev.lng },
+        { lat: curr.lat, lng: curr.lng },
+      );
+      const chosenMode: 'walking' | 'driving' = distHaversine <= WALK_GATE_M ? 'walking' : 'driving';
+      const apiMode: 'WALK' | 'DRIVE' = chosenMode === 'walking' ? 'WALK' : 'DRIVE';
 
       try {
-        if (inWindow) {
-          chosenTravelType = 'driving';
-          result = await computeRoute(
-            apiKey,
-            { lat: prev.lat, lng: prev.lng },
-            { lat: curr.lat, lng: curr.lng },
-            'DRIVE',
-          );
+        const result = await computeRoute(
+          apiKey,
+          { lat: prev.lat, lng: prev.lng },
+          { lat: curr.lat, lng: curr.lng },
+          apiMode,
+        );
+
+        const minutes = Math.round(result.duration_seconds / 60);
+        const distM = result.distance_meters;
+        const now = Date.now();
+
+        if (existing) {
+          segmentUpdates.push({ id: existing.id, mode: chosenMode, min: minutes, distM, now });
         } else {
-          // try WALK first；失敗（跨島 / 距離超 50km / 無步行路徑）→ fallback DRIVE
-          // (v2.23.11：Okinawa 那霸→恩納 50km WALK 也回 empty。non-self-drive trip
-          //  用戶仍需看「開車多久」當參考，DRIVE 兜底比 error 好。)
-          let walkResult: { distance_meters: number; duration_seconds: number } | null = null;
-          try {
-            walkResult = await computeRoute(
-              apiKey,
-              { lat: prev.lat, lng: prev.lng },
-              { lat: curr.lat, lng: curr.lng },
-              'WALK',
-            );
-          } catch {
-            walkResult = null;
-          }
-
-          if (walkResult === null) {
-            // WALK 不能算 → DRIVE last resort
-            result = await computeRoute(
-              apiKey,
-              { lat: prev.lat, lng: prev.lng },
-              { lat: curr.lat, lng: curr.lng },
-              'DRIVE',
-            );
-            chosenTravelType = 'driving';
-          } else {
-            const walkMin = walkResult.duration_seconds / 60;
-            if (walkMin <= WALK_THRESHOLD_MIN) {
-              chosenTravelType = 'walking';
-              result = walkResult;
-            } else {
-              // walk >10min → 試 TRANSIT；失敗 → fallback walk result（誠實 walking time）
-              const departureTime = currDt
-                ? new Date(currDt).toISOString()
-                : new Date().toISOString();
-              try {
-                result = await computeRoute(
-                  apiKey,
-                  { lat: prev.lat, lng: prev.lng },
-                  { lat: curr.lat, lng: curr.lng },
-                  'TRANSIT',
-                  departureTime,
-                );
-                chosenTravelType = 'transit';
-              } catch {
-                result = walkResult;
-                chosenTravelType = 'walking';
-              }
-            }
-          }
+          segmentInserts.push({ tripId, from: prev.id, to: curr.id, mode: chosenMode, min: minutes, distM, now });
         }
+        legacyEntryUpdates.push({ entryId: curr.id, distM, min: minutes, now, mode: chosenMode });
 
-        if (!result) continue;
-        updates.push({
-          entryId: curr.id,
-          distance_m: result.distance_meters,
-          duration_s: result.duration_seconds,
-          source: 'google',
-          travelType: chosenTravelType,
-        });
         sourceBreakdown['google'] = (sourceBreakdown['google'] ?? 0) + 1;
-        modeBreakdown[chosenTravelType] = (modeBreakdown[chosenTravelType] ?? 0) + 1;
+        modeBreakdown[chosenMode] = (modeBreakdown[chosenMode] ?? 0) + 1;
         pairsComputed++;
       } catch (err) {
         sourceBreakdown['error'] = (sourceBreakdown['error'] ?? 0) + 1;
-        // v2.23.15: AppError 的 message 是 catalog default，detail 才有真實 cause（如 "Routes 429"）
         const detail = err instanceof AppError ? (err.detail ?? err.message) : (err instanceof Error ? err.message : String(err));
         errorsDetail.push({ entryId: curr.id, message: detail.slice(0, 200) });
         if (err instanceof AppError && err.code === 'MAPS_LOCKED') throw err;
-        // Other errors → swallow per pair, continue
       }
-      // v2.23.15: 50ms throttle 避免 Routes API per-second QPS 限制（burst >50/sec 會 429）
-      // CF Pages function 30s 內可處理 ~500 pairs sequential。
-      await new Promise((r) => setTimeout(r, 50));
     }
   }
 
-  // Batch UPDATE trip_entries — 每 pair 寫 travel_type per chosen mode
-  // (覆蓋 prior NULL，保留 user 手動 override：若 entry.travel_type 已是非 'driving'/'walking'/'transit'
-  // 字串例「火車」/「徒步 5min」，視為人工註記，COALESCE 保留 — 但這條件無法在 SQL 直接 expr。
-  // 妥協：v2.23.8 起 recompute 強制覆寫 travel_type 為自動模式。人工註記用 travel_desc 欄位。)
-  const now = Date.now();
-  if (updates.length > 0) {
-    const stmts = updates.map((u) =>
-      db
-        .prepare(
-          `UPDATE trip_entries
-           SET travel_distance_m = ?, travel_min = ?, travel_computed_at = ?,
-               travel_source = ?, travel_type = ?
-           WHERE id = ?`,
-        )
-        .bind(u.distance_m, Math.round(u.duration_s / 60), now, u.source, u.travelType, u.entryId),
-    );
+  // 單一 db.batch 寫入所有 upserts + legacy dual-write（1 subrequest 不論 statement 數）
+  if (segmentInserts.length > 0 || segmentUpdates.length > 0 || legacyEntryUpdates.length > 0) {
+    const stmts = [
+      // INSERT 用 ON CONFLICT 防 TOCTOU race：preload 後若另一支 concurrent
+      // recompute 已 INSERT 同 (from,to) pair，本 batch 不會炸 UNIQUE → atomic
+      // rollback；改成 upsert。WHERE mode_source = 'auto' 防 race PATCH 時 user
+      // override 被 auto recompute 蓋（preload→write 之間若 user 改過 mode_source
+      // 為 'user'，DO UPDATE 因 WHERE 不成立 → no-op，保留 user 覆寫）。
+      ...segmentInserts.map((s) => db.prepare(
+        `INSERT INTO trip_segments
+         (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, ?, 'auto', ?, ?, 'google', ?, ?)
+         ON CONFLICT (from_entry_id, to_entry_id) DO UPDATE SET
+           mode = excluded.mode,
+           mode_source = 'auto',
+           min = excluded.min,
+           distance_m = excluded.distance_m,
+           source = 'google',
+           computed_at = excluded.computed_at,
+           updated_at = excluded.updated_at
+         WHERE trip_segments.mode_source = 'auto'`,
+      ).bind(s.tripId, s.from, s.to, s.mode, s.min, s.distM, s.now, s.now)),
+      // UPDATE 加 mode_source='auto' guard：preload→write 之間若 user PATCH 過
+      // mode_source='user'，本 UPDATE 因 WHERE 不成立 → 0 rows affected (correct)。
+      ...segmentUpdates.map((s) => db.prepare(
+        `UPDATE trip_segments
+         SET mode = ?, mode_source = 'auto', min = ?, distance_m = ?,
+             source = 'google', computed_at = ?, updated_at = ?
+         WHERE id = ? AND mode_source = 'auto'`,
+      ).bind(s.mode, s.min, s.distM, s.now, s.now, s.id)),
+      ...legacyEntryUpdates.map((u) => db.prepare(
+        `UPDATE trip_entries
+         SET travel_distance_m = ?, travel_min = ?, travel_computed_at = ?,
+             travel_source = 'google', travel_type = ?
+         WHERE id = ?`,
+      ).bind(u.distM, u.min, u.now, u.mode, u.entryId)),
+    ];
     await db.batch(stmts);
   }
 
   return json({
     ok: true,
-    trip_id: tripId,
-    days_processed: daysRes.results.length,
-    pairs_computed: pairsComputed,
-    source_breakdown: sourceBreakdown,
-    mode_breakdown: modeBreakdown,
-    errors_detail: errorsDetail,    // v2.23.13 debug
-    self_drive: selfDriveEnabled
-      ? { enabled: true, pickup_at: pickupAt, return_at: returnAt }
-      : { enabled: false },
-    default_mode: tripDefaultMode,
+    tripId,
+    daysProcessed: daysRes.results.length,
+    pairsComputed,
+    pairsSkippedUser,
+    sourceBreakdown,
+    modeBreakdown,
+    errorsDetail,
   });
 };
