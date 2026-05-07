@@ -19,6 +19,12 @@ import { TripIdContext } from '../../src/contexts/TripIdContext';
 import { TripDaysContext } from '../../src/contexts/TripDaysContext';
 import type { DayOption } from '../../src/lib/entryAction';
 
+// γ.1：useTripSegments 會打 GET /api/trips/:id/segments，這個 test 套件 stub 全域
+// fetch 驗 PATCH/DELETE/etc — mock hook 回 empty 避免 segments fetch 干擾 fetchSpy。
+vi.mock('../../src/hooks/useTripSegments', () => ({
+  useTripSegments: () => ({ segments: [], segmentMap: new Map(), loading: false }),
+}));
+
 const TIMELINE_RAIL_SRC = fs.readFileSync(
   path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
   'utf8',

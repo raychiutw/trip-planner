@@ -40,6 +40,7 @@ import TravelPill from './TravelPill';
 import type { TimelineEntryData } from './TimelineEvent';
 import { parseTimeRange, formatDuration, deriveTypeMeta } from '../../lib/timelineUtils';
 import { useDragDrop } from '../../hooks/useDragDrop';
+import { useTripSegments } from '../../hooks/useTripSegments';
 
 const SCOPED_STYLES = `
 .tp-rail-detail {
@@ -717,6 +718,9 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
   // backend PATCH 完成 + tp-entry-updated 觸發 refetch 再用 fresh data 覆蓋。
   const [orderOverride, setOrderOverride] = useState<number[] | null>(null);
   const tripId = useTripId();
+  // v2.24.0 γ.1：fetch segments → 為每對 entry 提供 segment row 給 TravelPill 啟用
+  // tap-switch dialog。Hook listen tp-segment-updated + tp-entry-updated 自動 re-fetch。
+  const { segmentMap } = useTripSegments(tripId);
 
   // PR-K dnd-kit sensors。pointer 8px activation distance 避免誤觸 (跟 click
   // expand row 衝突)，keyboard 走 sortable coordinate getter。
@@ -809,14 +813,29 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
           const isLast = i === events.length - 1;
           const expanded = entry.id != null && expandedId === entry.id;
           const travelObj = entry.travel && typeof entry.travel === 'object' ? entry.travel : null;
+          // v2.24.0 γ.1：lookup segment for (prev, curr) pair
+          const prev = i > 0 ? orderedEvents[i - 1] : null;
+          const segment = (prev?.id != null && entry.id != null)
+            ? segmentMap.get(`${prev.id}-${entry.id}`)
+            : undefined;
           return (
             <div key={entry.id ?? i} className="ocean-rail-row-wrap">
-              {i > 0 && travelObj && (
+              {i > 0 && (travelObj || segment) && (
                 <TravelPill
-                  type={travelObj.type ?? null}
-                  desc={travelObj.desc ?? null}
-                  min={travelObj.min ?? null}
-                  distanceM={travelObj.distanceM ?? null}
+                  type={travelObj?.type ?? null}
+                  desc={travelObj?.desc ?? null}
+                  min={travelObj?.min ?? null}
+                  distanceM={travelObj?.distanceM ?? null}
+                  segment={segment ? {
+                    id: segment.id,
+                    mode: segment.mode,
+                    modeSource: segment.modeSource,
+                    min: segment.min,
+                    distanceM: segment.distanceM,
+                  } : undefined}
+                  tripId={tripId}
+                  fromName={prev?.title ?? null}
+                  toName={entry.title ?? null}
                 />
               )}
               <RailRow

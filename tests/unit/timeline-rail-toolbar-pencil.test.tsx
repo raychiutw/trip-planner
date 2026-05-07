@@ -15,6 +15,12 @@ import TimelineRail from '../../src/components/trip/TimelineRail';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
 import { TripIdContext } from '../../src/contexts/TripIdContext';
 
+// γ.1：useTripSegments 會打 GET /api/trips/:id/segments，這個 test 套件 stub 全域
+// fetch 驗 toolbar fetch 行為 — mock hook 回 empty 避免 segments fetch 干擾 fetchSpy。
+vi.mock('../../src/hooks/useTripSegments', () => ({
+  useTripSegments: () => ({ segments: [], segmentMap: new Map(), loading: false }),
+}));
+
 const ENTRY: TimelineEntryData = {
   id: 42,
   time: '11:30-14:00',
