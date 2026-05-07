@@ -58,14 +58,20 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', 'mode 必須為 driving / walking / transit');
   }
 
-  // transit 必須帶 min（≥0 整數）
-  if (mode === 'transit' && (typeof body.min !== 'number' || !Number.isFinite(body.min) || body.min < 0)) {
-    throw new AppError('DATA_VALIDATION', 'transit mode 須提供 min（≥0 整數）');
+  const MAX_MIN = 1440; // 24h 上界（防 abuse + 不合理輸入）
+  // transit 必須帶 min（0 ≤ min ≤ 1440）
+  if (mode === 'transit' && (typeof body.min !== 'number' || !Number.isFinite(body.min) || body.min < 0 || body.min > MAX_MIN)) {
+    throw new AppError('DATA_VALIDATION', 'transit mode 須提供 min（0–1440 分鐘）');
+  }
+  // 其它 mode 若帶 min，也要在合理範圍
+  if (typeof body.min === 'number' && Number.isFinite(body.min) && (body.min < 0 || body.min > MAX_MIN)) {
+    throw new AppError('DATA_VALIDATION', 'min 必須在 0–1440 分鐘範圍內');
   }
 
   const now = Date.now();
   if (typeof body.min === 'number' && Number.isFinite(body.min) && body.min >= 0) {
-    const newSource = mode === 'transit' ? 'manual' : 'manual';
+    // user 提供 min → source='manual'（不論 mode；user 手動填的數字都是 manual 來源）
+    const newSource = 'manual';
     await db
       .prepare(
         `UPDATE trip_segments

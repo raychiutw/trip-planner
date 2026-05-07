@@ -171,16 +171,32 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 單一 db.batch 寫入所有 upserts + legacy dual-write（1 subrequest 不論 statement 數）
   if (segmentInserts.length > 0 || segmentUpdates.length > 0 || legacyEntryUpdates.length > 0) {
     const stmts = [
+      // INSERT 用 ON CONFLICT 防 TOCTOU race：preload 後若另一支 concurrent
+      // recompute 已 INSERT 同 (from,to) pair，本 batch 不會炸 UNIQUE → atomic
+      // rollback；改成 upsert。WHERE mode_source = 'auto' 防 race PATCH 時 user
+      // override 被 auto recompute 蓋（preload→write 之間若 user 改過 mode_source
+      // 為 'user'，DO UPDATE 因 WHERE 不成立 → no-op，保留 user 覆寫）。
       ...segmentInserts.map((s) => db.prepare(
         `INSERT INTO trip_segments
          (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
-         VALUES (?, ?, ?, ?, 'auto', ?, ?, 'google', ?, ?)`,
+         VALUES (?, ?, ?, ?, 'auto', ?, ?, 'google', ?, ?)
+         ON CONFLICT (from_entry_id, to_entry_id) DO UPDATE SET
+           mode = excluded.mode,
+           mode_source = 'auto',
+           min = excluded.min,
+           distance_m = excluded.distance_m,
+           source = 'google',
+           computed_at = excluded.computed_at,
+           updated_at = excluded.updated_at
+         WHERE trip_segments.mode_source = 'auto'`,
       ).bind(s.tripId, s.from, s.to, s.mode, s.min, s.distM, s.now, s.now)),
+      // UPDATE 加 mode_source='auto' guard：preload→write 之間若 user PATCH 過
+      // mode_source='user'，本 UPDATE 因 WHERE 不成立 → 0 rows affected (correct)。
       ...segmentUpdates.map((s) => db.prepare(
         `UPDATE trip_segments
          SET mode = ?, mode_source = 'auto', min = ?, distance_m = ?,
              source = 'google', computed_at = ?, updated_at = ?
-         WHERE id = ?`,
+         WHERE id = ? AND mode_source = 'auto'`,
       ).bind(s.mode, s.min, s.distM, s.now, s.now, s.id)),
       ...legacyEntryUpdates.map((u) => db.prepare(
         `UPDATE trip_entries

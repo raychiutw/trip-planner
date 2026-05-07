@@ -75,6 +75,16 @@ describe('PATCH /api/trips/:id/segments/:sid', () => {
     expect(updated!.mode_source).toBe('user');
   });
 
+  it('mode=transit + min=99999 (> 1440 上界) → 400', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'transit', min: 99999 }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-segp', sid: String(segId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+  });
+
   it('mode invalid (flying) → 400', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'flying' }),
