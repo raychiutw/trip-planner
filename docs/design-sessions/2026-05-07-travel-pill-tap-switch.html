@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>v2.24.0 TravelPill tap-switch dialog · mockup</title>
+<style>
+  :root {
+    --color-accent: #D97848;
+    --color-accent-deep: #B85C2E;
+    --color-accent-subtle: #FBEEE4;
+    --color-accent-bg: #F7DFCB;
+    --color-accent-foreground: #FFFFFF;
+    --color-background: #FFFBF5;
+    --color-secondary: #FAF4EA;
+    --color-tertiary: #F2EAD9;
+    --color-hover: #F9EDE0;
+    --color-foreground: #2A1F18;
+    --color-muted: #6F5A47;
+    --color-border: #EADFCF;
+    --color-line-strong: #C8B89F;
+    --color-overlay: rgba(42, 31, 24, 0.35);
+    --color-success: #06A77D;
+    --color-warning: #F48C06;
+    --font-size-body: 1rem;
+    --font-size-footnote: 0.875rem;
+    --font-size-caption: 0.75rem;
+    --font-size-headline: 1.0625rem;
+    --font-size-title3: 1.25rem;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-full: 9999px;
+    --spacing-tap-min: 44px;
+    --z-overlay: 100;
+    --z-modal: 110;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+    color: var(--color-foreground);
+    background: var(--color-background);
+    margin: 0; padding: 32px;
+  }
+  h1 { font-size: 1.5rem; margin: 0 0 8px; }
+  h2 { font-size: 1.125rem; margin: 32px 0 12px; color: var(--color-accent-deep); }
+  .meta { font-size: var(--font-size-footnote); color: var(--color-muted); margin: 0 0 24px; }
+  .frame {
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .frame-label {
+    font-size: var(--font-size-caption);
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .device-frame {
+    width: 375px;
+    margin: 0 auto;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--color-background);
+    position: relative;
+    min-height: 400px;
+  }
+  .device-frame.desktop { width: 100%; max-width: 760px; min-height: 200px; }
+
+  /* === TravelPill (既有 v2.23 + v2.24 微改) === */
+  .tp-travel-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 14px;
+    border-radius: var(--radius-full);
+    background: var(--color-secondary);
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    font-size: var(--font-size-footnote);
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+  }
+  .tp-travel-pill.is-interactive {
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms;
+  }
+  .tp-travel-pill.is-interactive:hover {
+    background: var(--color-hover);
+    border-color: var(--color-line-strong);
+  }
+  .tp-travel-pill-icon {
+    color: var(--color-accent);
+    display: inline-flex; align-items: center;
+  }
+  .tp-travel-pill-icon svg { width: 14px; height: 14px; }
+  .tp-travel-pill-min { font-weight: 700; color: var(--color-foreground); }
+  .tp-travel-pill-sep { color: var(--color-muted); opacity: 0.5; }
+  .tp-travel-pill-desc { color: var(--color-muted); }
+  .tp-travel-pill-chevron {
+    color: var(--color-muted); opacity: 0.6;
+    margin-left: 2px; font-size: 10px; line-height: 1;
+  }
+  .tp-travel-pill-lock {
+    color: var(--color-accent-deep);
+    margin-left: 2px;
+    display: inline-flex; align-items: center;
+  }
+  .tp-travel-pill-lock svg { width: 10px; height: 10px; }
+
+  /* === Bottom sheet (mobile) === */
+  .tp-overlay {
+    position: absolute; inset: 0;
+    background: var(--color-overlay);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: var(--z-overlay);
+  }
+  .tp-bottom-sheet {
+    background: var(--color-background);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    width: 100%;
+    padding: 8px 16px 24px;
+    box-shadow: 0 -8px 32px rgba(42, 31, 24, 0.18);
+    z-index: var(--z-modal);
+  }
+  .tp-bottom-sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--color-line-strong);
+    border-radius: 2px;
+    margin: 0 auto 12px;
+  }
+  .tp-dialog-title {
+    font-size: var(--font-size-headline);
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .tp-dialog-meta {
+    font-size: var(--font-size-footnote);
+    color: var(--color-muted);
+    margin: 0 0 16px;
+  }
+  .tp-mode-list {
+    display: flex; flex-direction: column;
+    gap: 8px;
+  }
+  .tp-mode-option {
+    display: flex; align-items: center; gap: 12px;
+    min-height: var(--spacing-tap-min);
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-background);
+    font: inherit; font-size: var(--font-size-body);
+    color: var(--color-foreground);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+  }
+  .tp-mode-option:hover { background: var(--color-hover); }
+  .tp-mode-option.is-selected {
+    background: var(--color-accent-subtle);
+    border-color: var(--color-accent);
+    color: var(--color-accent-deep);
+  }
+  .tp-mode-option-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--color-secondary);
+    color: var(--color-accent);
+    flex-shrink: 0;
+  }
+  .tp-mode-option.is-selected .tp-mode-option-icon {
+    background: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
+  .tp-mode-option-icon svg { width: 18px; height: 18px; }
+  .tp-mode-option-body {
+    flex: 1; display: flex; flex-direction: column; gap: 2px;
+  }
+  .tp-mode-option-label { font-weight: 600; }
+  .tp-mode-option-meta {
+    font-size: var(--font-size-footnote);
+    color: var(--color-muted);
+  }
+  .tp-mode-option.is-selected .tp-mode-option-meta { color: var(--color-accent-deep); }
+  .tp-mode-option-check {
+    color: var(--color-accent);
+    flex-shrink: 0;
+  }
+  .tp-mode-option-check svg { width: 18px; height: 18px; }
+
+  /* Transit manual input */
+  .tp-transit-input {
+    margin-top: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    background: var(--color-accent-subtle);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .tp-transit-input-label {
+    font-size: var(--font-size-footnote);
+    color: var(--color-accent-deep);
+    font-weight: 600;
+  }
+  .tp-transit-input input {
+    font: inherit; font-size: var(--font-size-body);
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    width: 100%;
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+  .tp-transit-input input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+  .tp-transit-input-hint {
+    font-size: var(--font-size-caption);
+    color: var(--color-muted);
+  }
+
+  /* Footer actions */
+  .tp-dialog-footer {
+    display: flex; gap: 8px;
+    margin-top: 16px;
+  }
+  .tp-dialog-btn {
+    flex: 1;
+    min-height: var(--spacing-tap-min);
+    padding: 10px 16px;
+    border-radius: var(--radius-full);
+    font: inherit; font-size: var(--font-size-body); font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .tp-dialog-btn-primary {
+    background: var(--color-accent);
+    color: var(--color-accent-foreground);
+    border-color: var(--color-accent);
+  }
+  .tp-dialog-btn-primary:disabled {
+    opacity: 0.55; cursor: not-allowed;
+  }
+  .tp-dialog-btn-secondary {
+    background: transparent;
+    color: var(--color-muted);
+    border-color: var(--color-border);
+  }
+  .tp-dialog-reset {
+    margin-top: 12px;
+    background: none;
+    border: 0;
+    color: var(--color-muted);
+    font: inherit; font-size: var(--font-size-footnote);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+
+  /* === Desktop popover === */
+  .tp-popover-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .tp-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: var(--z-modal);
+    width: 320px;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(42, 31, 24, 0.15);
+    padding: 16px;
+  }
+  .tp-popover::before {
+    content: '';
+    position: absolute; top: -6px; left: 24px;
+    width: 12px; height: 12px;
+    background: var(--color-background);
+    border-top: 1px solid var(--color-border);
+    border-left: 1px solid var(--color-border);
+    transform: rotate(45deg);
+  }
+
+  /* === Annotation === */
+  .annot { font-size: var(--font-size-caption); color: var(--color-muted); margin-top: 12px; }
+  .legend {
+    display: inline-flex; gap: 16px; font-size: var(--font-size-caption); color: var(--color-muted);
+    margin-bottom: 16px;
+  }
+  .legend code {
+    background: var(--color-tertiary); padding: 2px 6px; border-radius: var(--radius-sm);
+    font-family: ui-monospace, monospace;
+  }
+</style>
+</head>
+<body>
+
+<h1>v2.24.0 TravelPill tap-switch dialog</h1>
+<p class="meta">
+  <strong>Created:</strong> 2026-05-07 · <strong>Sprint:</strong> v2.24.0-γ frontend · <strong>Backend dependency:</strong> PATCH /api/trips/:id/segments/:sid（v2.24.0-β shipped）<br>
+  <strong>Trigger:</strong> 點 TravelPill → 開 dialog → 三選一（駕車 / 步行 / 大眾運輸）→ 大眾運輸選中時手動填分鐘 → Save → PATCH segment + 設 mode_source='user' + recompute 後續不覆寫
+</p>
+
+<div class="legend">
+  <span>States: <code>auto</code> = 系統算的，可被 recompute 蓋；<code>user</code> = user 手動覆寫，受保護</span>
+</div>
+
+<h2>1. TravelPill 本體（4 states）</h2>
+<div class="frame">
+  <div class="frame-label">Frame 1 · TravelPill states</div>
+  <div style="display:flex; flex-direction:column; gap:16px; align-items:flex-start;">
+
+    <div>
+      <div class="annot" style="margin:0 0 4px;">A · auto driving（既有預設）</div>
+      <div class="tp-travel-pill is-interactive" tabindex="0">
+        <span class="tp-travel-pill-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 11l1.5-4.5h11L19 11M17 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M7 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M5 16h14v-5l-1.5-4.5h-11L5 11v5z"/></svg></span>
+        <span><span class="tp-travel-pill-min">5.3 km</span> <span class="tp-travel-pill-sep">·</span> <span class="tp-travel-pill-min">11 min</span></span>
+        <span class="tp-travel-pill-chevron">▾</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="annot" style="margin:0 0 4px;">B · auto walking（≤1km）</div>
+      <div class="tp-travel-pill is-interactive" tabindex="0">
+        <span class="tp-travel-pill-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 5.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0M9 22V11l-2 1v-3l3-2 2 3 3 1v3l-3-1v8h-3z"/></svg></span>
+        <span><span class="tp-travel-pill-min">450 m</span> <span class="tp-travel-pill-sep">·</span> <span class="tp-travel-pill-min">6 min</span></span>
+        <span class="tp-travel-pill-chevron">▾</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="annot" style="margin:0 0 4px;">C · user override transit（鎖頭表示「手動覆寫，recompute 不蓋」）</div>
+      <div class="tp-travel-pill is-interactive" tabindex="0">
+        <span class="tp-travel-pill-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 16.5V11l1-1V7a3 3 0 013-3h8a3 3 0 013 3v3l1 1v5.5l-1 .5v2h-2v-2H7v2H5v-2l-1-.5M7 13a1 1 0 100 2 1 1 0 000-2m10 0a1 1 0 100 2 1 1 0 000-2"/></svg></span>
+        <span><span class="tp-travel-pill-min">25 min</span> <span class="tp-travel-pill-sep">·</span> <span class="tp-travel-pill-desc">大眾運輸</span></span>
+        <span class="tp-travel-pill-lock"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a4 4 0 014 4v3h1a1 1 0 011 1v9a1 1 0 01-1 1H7a1 1 0 01-1-1v-9a1 1 0 011-1h1V6a4 4 0 014-4m0 2a2 2 0 00-2 2v3h4V6a2 2 0 00-2-2z"/></svg></span>
+      </div>
+    </div>
+
+    <div>
+      <div class="annot" style="margin:0 0 4px;">D · user override walking（user 強制走路即使 >1km）</div>
+      <div class="tp-travel-pill is-interactive" tabindex="0">
+        <span class="tp-travel-pill-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 5.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0M9 22V11l-2 1v-3l3-2 2 3 3 1v3l-3-1v8h-3z"/></svg></span>
+        <span><span class="tp-travel-pill-min">2.1 km</span> <span class="tp-travel-pill-sep">·</span> <span class="tp-travel-pill-min">26 min</span></span>
+        <span class="tp-travel-pill-lock"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a4 4 0 014 4v3h1a1 1 0 011 1v9a1 1 0 01-1 1H7a1 1 0 01-1-1v-9a1 1 0 011-1h1V6a4 4 0 014-4m0 2a2 2 0 00-2 2v3h4V6a2 2 0 00-2-2z"/></svg></span>
+      </div>
+    </div>
+
+  </div>
+  <p class="annot">
+    <strong>Affordance：</strong>右側 <code>▾</code>（auto）或 🔒（user）暗示可點。Hover 時 background 變 <code>--color-hover</code>，整 pill cursor pointer。<br>
+    <strong>Auto vs user：</strong>auto 的 mode 來自 1km gate（≤1km walking / >1km driving）；user 是手動覆寫，recompute-travel 看到 <code>mode_source='user'</code> 直接 skip 此 segment。
+  </p>
+</div>
+
+<h2>2. Mobile bottom sheet — driving 選中（auto state）</h2>
+<div class="frame">
+  <div class="frame-label">Frame 2 · Mobile · 點 pill 後 · driving 是當前選擇</div>
+  <div class="device-frame">
+    <div style="padding:24px; min-height:200px;">
+      <div style="display:inline-flex; align-items:center; gap:8px; padding:12px 16px; background:var(--color-tertiary); border-radius:var(--radius-md); font-size:var(--font-size-footnote); color:var(--color-muted);">
+        <span>下層 timeline 內容…</span>
+      </div>
+    </div>
+    <div class="tp-overlay">
+      <div class="tp-bottom-sheet">
+        <div class="tp-bottom-sheet-handle"></div>
+        <h3 class="tp-dialog-title">交通方式</h3>
+        <p class="tp-dialog-meta">那霸機場 → 美國村 · 5.3 km</p>
+        <div class="tp-mode-list">
+          <button class="tp-mode-option is-selected">
+            <span class="tp-mode-option-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 11l1.5-4.5h11L19 11M17 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M7 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M5 16h14v-5l-1.5-4.5h-11L5 11v5z"/></svg></span>
+            <span class="tp-mode-option-body">
+              <span class="tp-mode-option-label">駕車</span>
+              <span class="tp-mode-option-meta">11 min · 5.3 km · Google Routes</span>
+            </span>
+            <span class="tp-mode-option-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11"/></svg></span>
+          </button>
+          <button class="tp-mode-option">
+            <span class="tp-mode-option-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 5.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0M9 22V11l-2 1v-3l3-2 2 3 3 1v3l-3-1v8h-3z"/></svg></span>
+            <span class="tp-mode-option-body">
+              <span class="tp-mode-option-label">步行</span>
+              <span class="tp-mode-option-meta">距離 5.3 km · 估 64 min</span>
+            </span>
+          </button>
+          <button class="tp-mode-option">
+            <span class="tp-mode-option-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 16.5V11l1-1V7a3 3 0 013-3h8a3 3 0 013 3v3l1 1v5.5l-1 .5v2h-2v-2H7v2H5v-2l-1-.5M7 13a1 1 0 100 2 1 1 0 000-2m10 0a1 1 0 100 2 1 1 0 000-2"/></svg></span>
+            <span class="tp-mode-option-body">
+              <span class="tp-mode-option-label">大眾運輸</span>
+              <span class="tp-mode-option-meta">手動填寫分鐘（Google API 沒日本資料）</span>
+            </span>
+          </button>
+        </div>
+        <div class="tp-dialog-footer">
+          <button class="tp-dialog-btn tp-dialog-btn-secondary">取消</button>
+          <button class="tp-dialog-btn tp-dialog-btn-primary" disabled>無變更</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="annot">
+    Backdrop = <code>--color-overlay</code>。Drag handle = <code>--color-line-strong</code>。當前選擇顯示 <code>--color-accent-subtle</code> 底 + ✓。每個 option <code>min-height: 44px</code>。Save button disabled 當 mode 沒變。
+  </p>
+</div>
+
+<h2>3. Mobile bottom sheet — transit 選中（手動填分鐘）</h2>
+<div class="frame">
+  <div class="frame-label">Frame 3 · Mobile · 大眾運輸 tap 後 · 手動輸入</div>
+  <div class="device-frame">
+    <div style="padding:24px; min-height:200px;">
+      <div style="display:inline-flex; align-items:center; gap:8px; padding:12px 16px; background:var(--color-tertiary); border-radius:var(--radius-md); font-size:var(--font-size-footnote); color:var(--color-muted);">
+        <span>下層 timeline 內容…</span>
+      </div>
+    </div>
+    <div class="tp-overlay">
+      <div class="tp-bottom-sheet">
+        <div class="tp-bottom-sheet-handle"></div>
+        <h3 class="tp-dialog-title">交通方式</h3>
+        <p class="tp-dialog-meta">那霸機場 → 美國村 · 5.3 km</p>
+        <div class="tp-mode-list">
+          <button class="tp-mode-option">
+            <span class="tp-mode-option-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 11l1.5-4.5h11L19 11M17 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M7 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M5 16h14v-5l-1.5-4.5h-11L5 11v5z"/></svg></span>
+            <span class="tp-mode-option-body">
+              <span class="tp-mode-option-label">駕車</span>
+              <span class="tp-mode-option-meta">11 min · 5.3 km · Google Routes</span>
+            </span>
+          </button>
+          <button class="tp-mode-option">
+            <span class="tp-mode-option-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 5.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0M9 22V11l-2 1v-3l3-2 2 3 3 1v3l-3-1v8h-3z"/></svg></span>
+            <span class="tp-mode-option-body">
+              <span class="tp-mode-option-label">步行</span>
+              <span class="tp-mode-option-meta">距離 5.3 km · 估 64 min</span>
+            </span>
+          </button>
+          <button class="tp-mode-option is-selected">
+            <span class="tp-mode-option-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 16.5V11l1-1V7a3 3 0 013-3h8a3 3 0 013 3v3l1 1v5.5l-1 .5v2h-2v-2H7v2H5v-2l-1-.5M7 13a1 1 0 100 2 1 1 0 000-2m10 0a1 1 0 100 2 1 1 0 000-2"/></svg></span>
+            <span class="tp-mode-option-body">
+              <span class="tp-mode-option-label">大眾運輸</span>
+              <span class="tp-mode-option-meta">手動填寫分鐘（Google API 沒日本資料）</span>
+            </span>
+            <span class="tp-mode-option-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11"/></svg></span>
+          </button>
+        </div>
+        <div class="tp-transit-input">
+          <label class="tp-transit-input-label" for="transit-min">需要多少分鐘？</label>
+          <input id="transit-min" type="number" min="1" max="1440" value="25" inputmode="numeric">
+          <span class="tp-transit-input-hint">範圍 1–1440 分鐘（24 小時內）</span>
+        </div>
+        <div class="tp-dialog-footer">
+          <button class="tp-dialog-btn tp-dialog-btn-secondary">取消</button>
+          <button class="tp-dialog-btn tp-dialog-btn-primary">儲存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="annot">
+    transit 選中 → 同一張 sheet 內展開 input 區（<code>--color-accent-subtle</code> 底色強調這是「待輸入」）。<code>type="number" inputmode="numeric"</code> 觸發 mobile 數字鍵盤。Save 按鈕 disabled 條件：<code>!min || min < 1 || min > 1440</code>。
+  </p>
+</div>
+
+<h2>4. User-mode reset to auto</h2>
+<div class="frame">
+  <div class="frame-label">Frame 4 · Mobile · 已 user override（mode_source='user'），多一個 reset 連結</div>
+  <div class="device-frame">
+    <div style="padding:24px; min-height:200px;">
+      <div style="display:inline-flex; align-items:center; gap:8px; padding:12px 16px; background:var(--color-tertiary); border-radius:var(--radius-md); font-size:var(--font-size-footnote); color:var(--color-muted);">
+        <span>下層 timeline 內容…</span>
+      </div>
+    </div>
+    <div class="tp-overlay">
+      <div class="tp-bottom-sheet">
+        <div class="tp-bottom-sheet-handle"></div>
+        <h3 class="tp-dialog-title">交通方式 <span style="font-size:var(--font-size-footnote); color:var(--color-accent-deep); font-weight:500;">· 已手動覆寫</span></h3>
+        <p class="tp-dialog-meta">那霸機場 → 美國村 · 5.3 km</p>
+        <div class="tp-mode-list">
+          <button class="tp-mode-option">
+            <span class="tp-mode-option-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 11l1.5-4.5h11L19 11M17 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M7 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M5 16h14v-5l-1.5-4.5h-11L5 11v5z"/></svg></span>
+            <span class="tp-mode-option-body">
+              <span class="tp-mode-option-label">駕車</span>
+              <span class="tp-mode-option-meta">11 min · 5.3 km</span>
+            </span>
+          </button>
+          <button class="tp-mode-option">
+            <span class="tp-mode-option-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 5.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0M9 22V11l-2 1v-3l3-2 2 3 3 1v3l-3-1v8h-3z"/></svg></span>
+            <span class="tp-mode-option-body">
+              <span class="tp-mode-option-label">步行</span>
+              <span class="tp-mode-option-meta">距離 5.3 km · 估 64 min</span>
+            </span>
+          </button>
+          <button class="tp-mode-option is-selected">
+            <span class="tp-mode-option-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 16.5V11l1-1V7a3 3 0 013-3h8a3 3 0 013 3v3l1 1v5.5l-1 .5v2h-2v-2H7v2H5v-2l-1-.5M7 13a1 1 0 100 2 1 1 0 000-2m10 0a1 1 0 100 2 1 1 0 000-2"/></svg></span>
+            <span class="tp-mode-option-body">
+              <span class="tp-mode-option-label">大眾運輸</span>
+              <span class="tp-mode-option-meta">25 分鐘 · 已手動填寫</span>
+            </span>
+            <span class="tp-mode-option-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11"/></svg></span>
+          </button>
+        </div>
+        <button class="tp-dialog-reset">↺ 重設為自動（讓系統 1km gate 重算）</button>
+        <div class="tp-dialog-footer">
+          <button class="tp-dialog-btn tp-dialog-btn-secondary">關閉</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="annot">
+    當 <code>mode_source='user'</code> 時，title 加灰字「· 已手動覆寫」+ reset 連結。Reset 行為：PATCH segment 設 mode='driving' (or whatever auto would pick) + mode_source='auto' → 下次 recompute 會重新覆寫。MVP 簡化：reset = PATCH with auto-derived mode（前端依 distance 算）。
+  </p>
+</div>
+
+<h2>5. Desktop popover</h2>
+<div class="frame">
+  <div class="frame-label">Frame 5 · Desktop · TravelPill 旁彈出 320px popover</div>
+  <div class="device-frame desktop">
+    <div style="padding:24px; min-height:200px; position:relative;">
+      <div class="tp-popover-wrap">
+        <div class="tp-travel-pill is-interactive" style="background:var(--color-accent-subtle); border-color:var(--color-accent);">
+          <span class="tp-travel-pill-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 11l1.5-4.5h11L19 11M17 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M7 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M5 16h14v-5l-1.5-4.5h-11L5 11v5z"/></svg></span>
+          <span><span class="tp-travel-pill-min">5.3 km</span> <span class="tp-travel-pill-sep">·</span> <span class="tp-travel-pill-min">11 min</span></span>
+          <span class="tp-travel-pill-chevron">▾</span>
+        </div>
+        <div class="tp-popover">
+          <h3 class="tp-dialog-title" style="font-size:var(--font-size-headline); margin-bottom:4px;">交通方式</h3>
+          <p class="tp-dialog-meta" style="margin-bottom:12px;">那霸機場 → 美國村 · 5.3 km</p>
+          <div class="tp-mode-list">
+            <button class="tp-mode-option is-selected">
+              <span class="tp-mode-option-icon" style="width:32px; height:32px;"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 11l1.5-4.5h11L19 11M17 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M7 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3M5 16h14v-5l-1.5-4.5h-11L5 11v5z"/></svg></span>
+              <span class="tp-mode-option-body"><span class="tp-mode-option-label">駕車</span><span class="tp-mode-option-meta">11 min</span></span>
+              <span class="tp-mode-option-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11"/></svg></span>
+            </button>
+            <button class="tp-mode-option">
+              <span class="tp-mode-option-icon" style="width:32px; height:32px;"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 5.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0M9 22V11l-2 1v-3l3-2 2 3 3 1v3l-3-1v8h-3z"/></svg></span>
+              <span class="tp-mode-option-body"><span class="tp-mode-option-label">步行</span><span class="tp-mode-option-meta">估 64 min</span></span>
+            </button>
+            <button class="tp-mode-option">
+              <span class="tp-mode-option-icon" style="width:32px; height:32px;"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 16.5V11l1-1V7a3 3 0 013-3h8a3 3 0 013 3v3l1 1v5.5l-1 .5v2h-2v-2H7v2H5v-2l-1-.5M7 13a1 1 0 100 2 1 1 0 000-2m10 0a1 1 0 100 2 1 1 0 000-2"/></svg></span>
+              <span class="tp-mode-option-body"><span class="tp-mode-option-label">大眾運輸</span><span class="tp-mode-option-meta">手動填寫</span></span>
+            </button>
+          </div>
+          <div class="tp-dialog-footer">
+            <button class="tp-dialog-btn tp-dialog-btn-secondary">取消</button>
+            <button class="tp-dialog-btn tp-dialog-btn-primary" disabled>無變更</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="annot">
+    Desktop ≥1024px 時改用 popover 而非 bottom sheet。寬度 <code>320px</code>。Click outside / Esc 關閉。Mode option icon 從 40px → 32px（desktop 桌機更密）。
+  </p>
+</div>
+
+<h2>實作對齊 / 邊界</h2>
+<ul style="font-size: var(--font-size-footnote); color: var(--color-muted); line-height: 1.7;">
+  <li><strong>API：</strong>PATCH <code>/api/trips/:id/segments/:sid</code>。Body：<code>{ mode: 'driving'|'walking'|'transit', min?: number }</code>。transit 必填 min（1-1440）。Response：updated segment row。</li>
+  <li><strong>Backend behavior：</strong>PATCH 自動 set <code>mode_source='user'</code>。recompute-travel 看到 user 直接 skip。Reset 動作：PATCH with mode + mode_source='auto'（後端要支援 explicit reset，目前 PATCH 永遠寫 user — Phase γ 實作要決定是否擴 PATCH 或加 DELETE endpoint）。</li>
+  <li><strong>Lock icon：</strong>用 SVG 不用 emoji（DESIGN.md inline-SVG 鐵律）。</li>
+  <li><strong>Tap target：</strong>所有 mode option ≥44px（DESIGN.md HIG）。</li>
+  <li><strong>A11y：</strong>dialog 用 <code>role="dialog" aria-modal="true" aria-labelledby="…"</code>；focus trap；Esc 關閉。Auto-focus 第一個 option（用 mounted ref）。</li>
+  <li><strong>Optimistic update：</strong>Save → 先本地 update + 關 dialog，背景 PATCH。失敗 → toast + revert。Phase γ 實作可 MVP 先 await PATCH 再關 dialog（簡單可靠）。</li>
+  <li><strong>Mockup file path：</strong><code>docs/design-sessions/2026-05-07-travel-pill-tap-switch.html</code>（self-contained，可 <code>open</code> 預覽 / 改 token 對齊）。</li>
+</ul>
+
+</body>
+</html>
