@@ -203,8 +203,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // V2 cutover (migration 0047): trips.owner email column dropped — owner_user_id
   // is canonical; LEFT JOIN users 拿 owner email for legacy display。
+  // 2026-05-07：加 u.display_name AS owner_display_name 給 trip card avatar
+  // initial 顯示「帳號名稱」第一字母（不是 email[0]）。
   const baseCols = `t.id AS tripId, t.name,
-                    u.email AS owner, t.owner_user_id,
+                    u.email AS owner, u.display_name AS owner_display_name, t.owner_user_id,
                     t.title,
                     t.countries, t.published, t.data_source, t.default_travel_mode, t.lang,
                     (SELECT COUNT(*) FROM trip_days d WHERE d.trip_id = t.id) AS day_count,

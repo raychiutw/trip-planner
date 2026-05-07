@@ -455,6 +455,10 @@ interface TripInfo {
   tripId: string;
   name: string;
   owner?: string;
+  /** 2026-05-07：owner.users.display_name（API LEFT JOIN）給 trip card avatar
+   *  initial 顯示「帳號名稱」第一字母，不是 email[0]。null/undefined →
+   *  fallback email local part 或 email[0]。 */
+  ownerDisplayName?: string | null;
   title?: string | null;
   countries?: string | null;
   published?: number | boolean;
@@ -1042,17 +1046,18 @@ export default function TripsListPage() {
                 const isActive = isDesktop && t.tripId === effectiveSelectedId;
                 const ownerEmail = (t.owner ?? '').trim();
                 const isOwnTrip = ownerEmail.toLowerCase() === userEmail;
-                // 2026-05-07：avatar initial 改用「帳號名稱」第一字母（不是 email）。
-                // 自己的 trip 有 displayName 可用 → 取其第一字母；他人的 trip
-                // 後端只給 email，仍回退 email 第一字母（fix that 需 backend 加
-                // owner displayName 欄位）。
+                // 2026-05-07：avatar initial 一律用「帳號名稱」第一字母（不是 email）。
+                // 自己的 trip 用 current user displayName（API 也帶 ownerDisplayName，
+                // 但 client-side 已知 displayName 較即時）；他人 trip 用後端 LEFT JOIN
+                // 帶來的 ownerDisplayName，fallback email[0]（users 表查無對應）。
+                const ownerName = isOwnTrip
+                  ? (user?.displayName ?? t.ownerDisplayName ?? ownerEmail)
+                  : (t.ownerDisplayName ?? ownerEmail);
                 const ownerInitial = ownerEmail
-                  ? (isOwnTrip
-                      ? (user?.displayName?.charAt(0) ?? ownerEmail.charAt(0)).toUpperCase()
-                      : ownerEmail.charAt(0).toUpperCase())
+                  ? (ownerName.charAt(0) || ownerEmail.charAt(0)).toUpperCase()
                   : '·';
                 const ownerLabel = ownerEmail
-                  ? (isOwnTrip ? '由你建立' : ownerEmail.split('@')[0])
+                  ? (isOwnTrip ? '由你建立' : (t.ownerDisplayName ?? ownerEmail.split('@')[0]))
                   : '';
                 return (
                   <div key={t.tripId} className="tp-trip-card-wrap">
