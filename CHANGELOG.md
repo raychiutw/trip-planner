@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.24.6] - 2026-05-07
+
+**fix(test): drag-flows :73 + :100 改用 atomic native `scrollIntoView` via
+`evaluate()`，補足 v2.24.5 over-correction。**
+
+### Fixed
+
+v2.24.5 完全刪 `scrollIntoViewIfNeeded` → off-screen 元素 mobile-chrome :73
+`getBoundingClientRect` 回 0x0 + mobile-safari :100 `focus()` fail（off-screen
+不可 focus）。
+
+修正：用 `firstGrip.evaluate((el) => { el.scrollIntoView(...); ... })` atomic
+scroll + measure。Native `scrollIntoView` 不會經過 Playwright 的 stability 等
+待 → 不踩 React useEffect re-render race（webkit "Element not attached"）；同
+時又能保證元素 in-viewport → `getBoundingClientRect` 正確 + `focus()` 可靠。
+
+### Verified
+
+- 5/5 consecutive mobile-chrome :73 通過
+- 5/5 consecutive mobile-safari :100 通過
+- 完整 mobile-chrome 43/44 + mobile-safari 43/44，0 fail
+
+### Notes
+
+- 純 test 修正，無 src / API / migration 變更
+- v2.24.0 sprint chronic flake hunt 真正最終收尾（v2.24.4 root cause + v2.24.5
+  trade-off + v2.24.6 atomic fix）
+
 ## [2.24.5] - 2026-05-07
 
 **fix(test): drag-flows.spec.js:73 mobile-safari `scrollIntoViewIfNeeded`

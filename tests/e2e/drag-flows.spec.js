@@ -82,12 +82,12 @@ test.describe('Drag flows — Section 8.2 mobile webkit', () => {
     // Apple HIG 44px tap target，詳見 DESIGN.md Decisions Log + Accessibility
     // section。Webkit (mobile-safari) 對 sticky/transform 容器內 element 的
     // boundingBox() 偶爾回 null，改讀 DOM getBoundingClientRect() 拿 rect。
-    // 2026-05-07 v2.24.5：刪 scrollIntoViewIfNeeded — getBoundingClientRect
-    // 對 off-screen 也 work，scrollIntoView 在 webkit + sticky/transform 容器
-    // 偶爾踩到 React useEffect re-render 導致 "Element not attached" intermittent
-    // fail（master CI 23+ runs chronic flake 之後 sole remaining mobile-safari
-    // flake source）。
+    // 2026-05-07 v2.24.6：scroll + measure 用 single evaluate atomic — 避免
+    // Playwright scrollIntoViewIfNeeded auto-stability 等待跟 React useEffect
+    // re-render race（webkit "Element not attached"）；同時不能完全省 scroll，
+    // off-screen 元素 getBoundingClientRect 偶爾回 0（mobile-chrome）。
     const box = await firstGrip.evaluate((el) => {
+      el.scrollIntoView({ block: 'center', inline: 'center' });
       const r = el.getBoundingClientRect();
       return { width: r.width, height: r.height };
     });
@@ -102,6 +102,8 @@ test.describe('Drag flows — Section 8.3 keyboard a11y', () => {
     await expect(page.getByRole('heading', { name: /2026 沖繩自駕五日遊/ })).toBeVisible();
 
     const firstGrip = page.getByRole('button', { name: /拖拉排序/ }).first();
+    // Mobile-safari off-screen focus 不可靠 — 先 scroll into view 再 focus
+    await firstGrip.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     await firstGrip.focus();
     await expect(firstGrip).toBeFocused();
     // 觸發 Space — dnd-kit KeyboardSensor 接管。runtime 完整位移流程 jsdom/
