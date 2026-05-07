@@ -3,6 +3,44 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.24.1] - 2026-05-07
+
+**v2.24.0 sprint γ.0：TravelPill tap-switch UI scaffolding（mockup + React component + TDD）。**
+TimelineRail 接線（讓使用者實際看到可點 pill）留 γ.1 PR；本次純加 component + dialog
++ tests，zero risk to existing UI。
+
+### Added
+
+- `docs/design-sessions/2026-05-07-travel-pill-tap-switch.html` — mockup-first
+  hard gate produced：5 frames covering TravelPill states / mobile bottom sheet /
+  transit input / user-mode reset / desktop popover。Self-contained，可 open 預覽
+- `src/components/trip/TravelPillDialog.tsx` — segment mode picker dialog。
+  Mobile bottom sheet（<760px）+ desktop popover-style modal（≥760px responsive）。
+  3 mode options（駕車 / 步行 / 大眾運輸）每個 ≥44px tap target；transit 選中
+  展開 number input (1–1440 分鐘)；ARIA dialog + aria-modal + Esc / overlay close。
+  Save → apiFetchRaw PATCH `/api/trips/:id/segments/:sid` + 設 `mode_source='user'` +
+  dispatch `tp-segment-updated` event 給 parent re-fetch
+- `tests/unit/travel-pill-tap-switch.test.tsx` — 15 TDD tests 覆蓋 read-only
+  backwards compat / interactive button / 鎖頭 / dialog 開合 / mode 切換 /
+  transit min 邊界 / Save PATCH 含正確 body / Esc 關閉 / overlay click 關閉 /
+  PATCH fail error / dispatch event
+
+### Changed
+
+- `src/components/trip/TravelPill.tsx` — 加 optional props `segment + tripId +
+  fromName + toName`。當提供時 pill 變 button、tap 開 TravelPillDialog；
+  `mode_source='user'` 顯示鎖頭 SVG；`auto` 顯示 ▾ affordance；backwards compat
+  保留 v2.23 唯讀 div render 當 props 未提供。優先用 `segment.mode/min/distanceM`
+  顯示（v2.24.0 SoT），fallback v2.23 `type/min/distanceM` props
+
+### Out of Scope (Phase γ.1)
+
+- TimelineRail 接線：尚未 fetch GET /segments + 傳 segment props 到 TravelPill。
+  目前用戶 production UI 仍 render v2.23 唯讀 pill（從 trip_entries.travel_*
+  dual-write 來）
+- Reset to auto button：mockup frame 4 顯示，需後端 PATCH 擴 modeSource 參數
+  才能實現
+
 ## [2.24.0] - 2026-05-07
 
 **v2.24.0 trip-segments sprint α + β：新 `trip_segments` first-class entity +
