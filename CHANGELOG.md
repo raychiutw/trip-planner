@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.24.4] - 2026-05-07
+
+**fix(shell): 修 22+ master CI runs chronic mobile e2e flake — `.app-shell-main`
+全時 `will-change: transform` 變 stacking context 害 sibling bottom-nav 蓋過
+form bottom-bar pointer events。**
+
+### Fixed
+
+- `.app-shell-main` 從 base CSS 拿掉 `will-change: transform`，改成只在
+  `[data-pulling="true"]` 時 enable
+- Root cause：`will-change: transform` 永久 enable 讓 main 變 stacking context +
+  containing block for `position: fixed` descendants。內部 `.tp-page-bottom-bar`
+  (z=210) 被 scope 到 main 內部，main 整體 z auto < `.app-shell-bottom-nav`
+  (z=200) → mobile 上 form confirm button 永遠被 nav 蓋掉，pointer events 被
+  攔截
+- Bisect 顯示：PR #480（pull-to-refresh feat 2026-05-05）引入此 regression，
+  之後 22+ master CI runs 連續 mobile-chrome / mobile-safari fail
+  - `add-stop-page.spec.js:73` 自訂 tab 缺 title 點完成 → inline error
+  - `drag-flows.spec.js:73,80,96,102` mobile grip handles touch / keyboard a11y
+  - `qa-flows.spec.js:208,226` Flow 5 編輯行程 bottom button → PUT
+  - `qa-flows.spec.js:264,284` Flow 7 移動景點 cross-day → PATCH
+
+### Verified
+
+- Local full e2e：mobile-chrome 43/44 + mobile-safari 43/44 + chromium 44/44，
+  0 fail（之前 mobile 8 fail × 2 browsers）
+- Pulling 期間 `will-change` 仍 enable（GPU layer hint 不損效能）
+
+### Notes
+
+- 純 CSS 1 行變更（move `will-change` 從 base 到 `[data-pulling="true"]`），無
+  React / API / migration 變更
+- 預期之後 master CI 不再連續 mobile e2e flake fail
+
 ## [2.24.3] - 2026-05-07
 
 **v2.24.0 sprint Phase δ：tp-* skill files 切換到 segments path（recompute-travel endpoint）。**

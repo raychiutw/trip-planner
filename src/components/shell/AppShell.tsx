@@ -65,14 +65,21 @@ export const APP_SHELL_STYLES = `
   .app-shell-ptr[data-refreshing="true"] .app-shell-ptr-spinner { animation: none; }
 }
 
-/* main 拉動位移（pull friction）。transform 同時讓 PTR indicator 跟內容一起下拉 */
+/* main 拉動位移（pull friction）。transform 同時讓 PTR indicator 跟內容一起下拉。
+ *
+ * will-change: transform 只在 data-pulling="true" 時 enable。全時 enable 會讓
+ * main 永遠變 stacking context + containing block for position: fixed descendants,
+ * 導致 sibling .app-shell-bottom-nav (z=200) 整個蓋過 main (z auto), 而 main 內
+ * .tp-page-bottom-bar (z=210) 被 scope 到 main 內部 stacking context → mobile
+ * 上 form confirm button 被 bottom-nav 攔截 pointer events (22+ master CI runs
+ * e2e flake root cause)。Pulling 期間才提示瀏覽器把 main 升 GPU layer。 */
 .app-shell-main {
   position: relative;
   transition: transform 200ms ease-out;
-  will-change: transform;
 }
 .app-shell-main[data-pulling="true"] {
   transition: none;
+  will-change: transform;
 }
 
 /* PR-VV 2026-04-27：bottom-nav 改 position: fixed overlay（從 grid row）。
