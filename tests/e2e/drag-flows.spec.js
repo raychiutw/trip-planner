@@ -77,12 +77,16 @@ test.describe('Drag flows — Section 8.2 mobile webkit', () => {
 
     const firstGrip = page.getByRole('button', { name: /拖拉排序/ }).first();
     await expect(firstGrip).toBeVisible();
-    await firstGrip.scrollIntoViewIfNeeded();
-    // 2026-05-02 v2.18.3:grip 從 32x32 改 24x24 對齊 mockup S12 Variant A
+    // 2026-05-02 v2.18.3：grip 從 32x32 改 24x24 對齊 mockup S12 Variant A
     // (terracotta-preview-v2.html .tp-stop-v-grip)。documented exception 對
-    // Apple HIG 44px tap target,詳見 DESIGN.md Decisions Log + Accessibility
+    // Apple HIG 44px tap target，詳見 DESIGN.md Decisions Log + Accessibility
     // section。Webkit (mobile-safari) 對 sticky/transform 容器內 element 的
-    // boundingBox() 偶爾回 null,改讀 DOM getBoundingClientRect() 拿 rect。
+    // boundingBox() 偶爾回 null，改讀 DOM getBoundingClientRect() 拿 rect。
+    // 2026-05-07 v2.24.5：刪 scrollIntoViewIfNeeded — getBoundingClientRect
+    // 對 off-screen 也 work，scrollIntoView 在 webkit + sticky/transform 容器
+    // 偶爾踩到 React useEffect re-render 導致 "Element not attached" intermittent
+    // fail（master CI 23+ runs chronic flake 之後 sole remaining mobile-safari
+    // flake source）。
     const box = await firstGrip.evaluate((el) => {
       const r = el.getBoundingClientRect();
       return { width: r.width, height: r.height };
