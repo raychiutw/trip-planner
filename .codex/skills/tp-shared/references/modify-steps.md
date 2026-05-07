@@ -8,19 +8,22 @@
 
 | entry | travel 意義 |
 |-------|-----------|
-| 板橋出發 | `{type: "car", desc: "國道五號", min: 60}` = 從板橋開車 60 分到下一站 |
+| 板橋出發 | `driving` 60 min = 從板橋開車 60 分到下一站 |
 | 幾米廣場 | `null` = 不需移動（下一站在附近） |
-| 午餐 | `{type: "car", desc: "宜蘭→冬山", min: 25}` = 午餐後開車 25 分到梅花湖 |
+| 午餐 | `driving` 25 min = 午餐後開車 25 分到梅花湖 |
 | 返回板橋 | `null` = 最後一站，無後續移動 |
 
-> ⚠️ **PATCH /entries/:eid** 用 flat fields：`travel_type`, `travel_desc`, `travel_min`。
-> **PUT /days/:num** 用巢狀物件：`travel: {type, desc, min}`。兩者語意相同但格式不同。
+> ⚠️ **v2.24.0 起 trip_segments 是 SoT**：travel 寫入 `trip_segments` table（每對 from→to entry 一筆 row）。
+> Skill 只需做結構修改（POST/PATCH/PUT/DELETE entry），**不再手動計算 travel** — 改呼叫
+> `POST /api/trips/:id/recompute-travel?day=N` 讓 backend 跑 1km gate（≤1km walking、>1km driving）
+> + Google Routes API + 寫 segments + dual-write trip_entries.travel_* legacy（Phase ε 將 DROP）。
 
 **規則：**
 - 第一個 entry 通常有 travel（從出發地到第一個景點）
 - 最後一個 entry 的 travel 為 null（已到終點）
-- 同地點連續 entry（如農場內的早餐→體驗→退房）travel 為 null
-- 插入/移除/移動 entry 時，**必須重算相鄰 entry 的 travel**
+- 同地點連續 entry（如農場內的早餐→體驗→退房）travel 為 null（≤1km gate 自動判定）
+- 插入/移除/移動 entry 時，**必須在最後呼叫 `POST /recompute-travel`** 讓 backend 重算
+- `mode_source='user'` 既有 segment **不會**被 recompute 覆寫（user manual override 永久保留）
 
 ## 行程修改共用步驟
 
@@ -64,23 +67,35 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 
 | 操作 | 端點 | 注意 |
 |------|------|------|
-| 新增 entry | `POST /api/trips/{tripId}/days/{dayNum}/entries` | 必填 `title`；選填 `sort_order`（省略則 append 到最後）、`time`、`description`、`maps` 等。回 201 |
-| 修改單一 entry | `PATCH /api/trips/{tripId}/entries/{eid}` | travel 用 flat fields：`travel_type` / `travel_desc` / `travel_min` |
-| 刪除單一 entry | `DELETE /api/trips/{tripId}/entries/{eid}` | **tp-request 禁止此操作**。刪除後須重算相鄰 travel |
-| 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。travel 用巢狀：`travel: {type, desc, min}`。**tp-request 禁止此操作** |
+| 新增 entry | `POST /api/trips/{tripId}/days/{dayNum}/entries` | 必填 `title`；選填 `sort_order`（省略則 append 到最後）、`time`、`description`、`maps` 等。回 201。**之後須 recompute（見 §4）** |
+| 修改單一 entry | `PATCH /api/trips/{tripId}/entries/{eid}` | 只改非結構欄位（`title` / `time` / `description` / `note` / `location` / `maps` 等）。**禁止寫 `travel_type` / `travel_desc` / `travel_min`** — segments 由 recompute-travel 自動計算 |
+| 刪除單一 entry | `DELETE /api/trips/{tripId}/entries/{eid}` | **tp-request 禁止此操作**。刪除後須 recompute（見 §4） |
+| 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。entry 內可含 `travel: {type, desc, min}` 巢狀（v2.24.0 backwards-compat dual-write，Phase ε 後忽略）。建議省略 → 之後 recompute 一次。**tp-request 禁止此操作** |
 | 新增 POI | `POST /api/trips/{tripId}/entries/{eid}/trip-pois` | 必填 `name` + `type`；選填 `context`（'timeline' / 'shopping'，預設 timeline） |
-| 修改/刪除 POI | `PATCH/DELETE /api/trips/{tripId}/trip-pois/{tpid}` | |
+| 修改/刪除 POI | `PATCH/DELETE /api/trips/{tripId}/trip-pois/{tpid}` | sort_order=0（首選）餐廳變動時須 recompute（見 §4） |
+| 重算 travel | `POST /api/trips/{tripId}/recompute-travel?day=N\|all` | v2.24.0 結構動完後**呼叫此端點**取代手動計算。1km gate + Google Routes + 寫 segments。`mode_source='user'` 既有 segment 不覆寫 |
+| 手動覆寫 segment | `PATCH /api/trips/{tripId}/segments/{sid}` | 罕用（通常 user 從 UI TravelPill dialog 觸發）。body: `{mode: 'driving' \| 'walking' \| 'transit', min?: 0-1440}`（transit 必填 min）。寫後 `mode_source='user'` |
 | 更新 doc | `PUT /api/trips/{tripId}/docs/{type}` | doc 結構見 `references/doc-spec.md` |
 
 ### 4. Doc 連動 + travel 重算
 
 - **Doc 連動（鐵律）**：每次修改後檢視 5 種 doc（checklist/backup/suggestions/flights/emergency），更新不一致內容。規則見 `references/doc-spec.md`。
-- **travel 重算（鐵律）**：以下情況須重新估算 **前一站→本站** 和 **本站→下一站** 兩段 travel，語意見上方「travel 欄位語意」：
-  1. **插入/移除/移動 entry 時** — 前一站的 travel 指向變了，必須重算
-  2. **替換 entry 地點時** — 景點換了位置，前後車程都變
-  3. **餐廳首選變動時** — meal entry（早餐/午餐/晚餐）的 sort_order=0 餐廳新增、替換或刪除時，用新首選餐廳的 lat/lng 重算前後兩段車程
-  
-  **計算方式**：用前後 entry 的 location lat/lng（meal entry 用首選餐廳的 lat/lng），以 Haversine 距離估算。自駕 ~30km/h，步行 ~5km/h，同區域 <500m 用 walk。PATCH `travel_type` / `travel_desc` / `travel_min`。
+- **travel 重算（鐵律）** — v2.24.0 起 backend 跑 1km gate + Google Routes 自動算。以下情況須呼叫 `POST /api/trips/{tripId}/recompute-travel?day=N`（單天）或 `?day=all`（整 trip）：
+  1. **插入 / 移除 / 移動 entry** — 前後 entry 的 from→to 對變了
+  2. **替換 entry 地點 / 改 location 座標** — 景點換了位置，距離變
+  3. **餐廳首選變動** — meal entry sort_order=0 餐廳新增、替換或刪除時（recompute 用 entry.location，meal 在 PUT/PATCH 時應已對齊首選餐廳座標）
+  4. **新建 day**（tp-create）— 整 trip PUT 完成後，呼叫 `?day=all` 一次
+
+  **行為**：
+  - `≤1km` Haversine → `walking` mode + 1 Google Routes WALK call
+  - `>1km` → `driving` mode + 1 Google Routes DRIVE call
+  - 永遠 1 API call/pair（不打 transit — Japan 無資料；user 需手動透過 segments PATCH 設 transit）
+  - `mode_source='user'` 既有 segment **不覆寫**（user override 永久保留）
+  - 寫 trip_segments + dual-write trip_entries.travel_* legacy（Phase ε 後 DROP）
+
+  **subrequest budget**：CF Pages Free 50/invocation。整 trip recompute 上限約 47 pair（HuiYun 沖繩 7 天）。day-scoped recompute 永遠安全。
+
+  **不再手動計算**：v2.23 前 skill 用 Haversine + ~30km/h 在 client 算後 PATCH `travel_type/desc/min` — v2.24.0 後**禁止**。
 
 ### 5. Google Maps 驗證與歇業偵測（鐵律）
 
