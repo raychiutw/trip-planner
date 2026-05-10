@@ -101,21 +101,36 @@ export function parseEndMinutes(time?: string | null): number {
 }
 
 /**
- * 根據行程項目的 title / description / travel.type 推導類型 meta。
- * 回傳 Icon name、中文標籤與 accent 旗標。
+ * 根據行程項目推導類型 meta（icon + 中文 label + accent 旗標）。
+ * 優先級：
+ *   1. entry.poiType（POI master 的 canonical type，最權威）— v2.x normalized schema 後加入
+ *   2. title / description / travel.type 文字 keyword match（fallback for legacy entries
+ *      或 POI 還沒 attach 完成的 entries）
+ *
+ * 不同來源同義對齊：poi.type 'attraction' → label '景點' icon 'location-pin'；
+ * 文字 match 「美術館」也走 fallback location-pin/景點，最終視覺一致。
  */
 export function deriveTypeMeta(entry: TimelineEntryData): { icon: string; label: string; accent: boolean } {
+  // 1. POI master type 優先（v2.x normalized）
+  const poiType = (entry.poiType ?? '').toLowerCase();
+  if (poiType === 'hotel') return { icon: 'hotel', label: '住宿', accent: false };
+  if (poiType === 'restaurant') return { icon: 'utensils', label: '用餐', accent: true };
+  if (poiType === 'shopping') return { icon: 'shopping', label: '購物', accent: true };
+  if (poiType === 'attraction') return { icon: 'location-pin', label: '景點', accent: true };
+  if (poiType === 'transport') return { icon: 'car', label: '移動', accent: false };
+  if (poiType === 'parking') return { icon: 'parking', label: '停車', accent: false };
+  if (poiType === 'activity') return { icon: 'sparkle', label: '活動', accent: true };
+
+  // 2. Fallback：text keyword match
   const title = (entry.title ?? '').toLowerCase();
   const desc = (entry.description ?? '').toLowerCase();
   const travelType = (entry.travel && typeof entry.travel === 'object' ? entry.travel.type ?? '' : '').toLowerCase();
   const blob = `${title} ${desc} ${travelType}`;
-
-  // Order matters — most specific first.
   if (/機場|flight|機票/.test(blob)) return { icon: 'plane', label: '飛行', accent: false };
   if (/飯店|旅館|hotel|check[- ]?in|民宿/.test(blob)) return { icon: 'hotel', label: '住宿', accent: false };
   if (/餐|食|restaurant|lunch|dinner|breakfast|用餐/.test(blob)) return { icon: 'utensils', label: '用餐', accent: true };
   if (/咖啡|café|cafe|coffee/.test(blob)) return { icon: 'coffee', label: '咖啡', accent: true };
-  if (/購物|shopping|mall|market/.test(blob)) return { icon: 'shopping', label: '購物', accent: false };
+  if (/購物|shopping|mall|market|道之驛/.test(blob)) return { icon: 'shopping', label: '購物', accent: true };
   if (/開車|drive|car|自駕|租車/.test(blob)) return { icon: 'car', label: '移動', accent: false };
   if (/步行|walk|散步/.test(blob)) return { icon: 'walking', label: '散步', accent: false };
   if (/休息|rest|spa|泡湯/.test(blob)) return { icon: 'coffee', label: '休息', accent: false };

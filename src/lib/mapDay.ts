@@ -260,6 +260,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     googleRating: effGoogleRating,
     source: raw.source ?? null,
     travel: travelData,
+    poiType: poi?.type ?? null,
     locations: locations.length > 0 ? locations : null,
     infoBoxes: infoBoxes.length > 0 ? infoBoxes : null,
     photos: effPhotos,
