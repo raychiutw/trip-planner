@@ -202,6 +202,26 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
   });
+
+  it('PATCH 只給 start_time（晚於既有 end_time）→ effective merge 後 400', async () => {
+    // 設 oldRow end_time = 13:30
+    await db.prepare('UPDATE trip_entries SET start_time = ?, end_time = ?, time = ? WHERE id = ?')
+      .bind('12:00', '13:30', '12:00-13:30', entryId).run();
+
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
+        start_time: '15:00', // 比 oldRow.end_time(13:30) 晚 → inverted
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-e', eid: String(entryId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+
+    // 沒被寫進去
+    const row = await db.prepare('SELECT start_time FROM trip_entries WHERE id = ?').bind(entryId).first();
+    expect((row as Record<string, unknown>).start_time).toBe('12:00');
+  });
 });
 
 describe('DELETE /api/trips/:id/entries/:eid', () => {

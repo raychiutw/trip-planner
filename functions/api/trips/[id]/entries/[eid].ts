@@ -1,6 +1,7 @@
 import { logAudit, computeDiff } from '../../../_audit';
 import { hasPermission, hasWritePermission, verifyEntryBelongsToTrip } from '../../../_auth';
 import { AppError } from '../../../_errors';
+import { TIME_RE, composeTime, parseTime } from '../../../_time';
 import { validateEntryBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -11,30 +12,9 @@ import type { Env } from '../../../_types';
 // 不可改成不同 trip 的 day_id（防越權）。
 // v2.26.0 (migration 0056)：start_time / end_time 拆分 time。dual-write 觀察期：
 //   - body 若帶 start_time/end_time → 寫入 start/end + 同步 compose 寫 time
-//   - body 若帶 time（legacy）→ 寫 time + parseTimeRange compose start/end
+//   - body 若帶 time（legacy）→ 寫 time + parseTime compose start/end
+// helpers (TIME_RE / composeTime / parseTime) 共用 _time.ts。
 const ALLOWED_FIELDS = ['day_id', 'sort_order', 'time', 'start_time', 'end_time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min'] as const;
-
-// HH:MM 0–23 / 0–59 strict
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-/** Compose legacy time string from start/end pair（用於 dual-write）*/
-function composeTime(start?: string | null, end?: string | null): string | null {
-  if (start && end) return `${start}-${end}`;
-  if (start) return start;
-  return null;
-}
-
-/** Parse legacy time string → { start, end }（用於 dual-write 反向）*/
-function parseTime(time?: string | null): { start: string | null; end: string | null } {
-  if (!time) return { start: null, end: null };
-  const trimmed = time.trim();
-  if (!trimmed) return { start: null, end: null };
-  const dash = trimmed.indexOf('-');
-  if (dash > 0) {
-    return { start: trimmed.slice(0, dash), end: trimmed.slice(dash + 1) };
-  }
-  return { start: trimmed, end: null };
-}
 
 /**
  * GET /api/trips/:id/entries/:eid → { id, day_id, title } 回單一 entry meta。
@@ -129,16 +109,14 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       }
     }
   }
-  if ('start_time' in body && 'end_time' in body
-      && typeof body.start_time === 'string' && typeof body.end_time === 'string'
-      && body.start_time && body.end_time) {
-    if (body.start_time >= body.end_time) {
-      throw new AppError('DATA_VALIDATION', 'start_time 必須早於 end_time');
-    }
-  }
   if ('start_time' in body || 'end_time' in body) {
     const start = ('start_time' in body ? body.start_time : oldRow.start_time) as string | null | undefined;
     const end = ('end_time' in body ? body.end_time : oldRow.end_time) as string | null | undefined;
+    // 驗證 effective merge state（不只看 body）— 防 client 只送 start_time
+    // 但 oldRow 既有 end_time 比新 start_time 早造成 inverted range。
+    if (typeof start === 'string' && typeof end === 'string' && start && end && start >= end) {
+      throw new AppError('DATA_VALIDATION', 'start_time 必須早於 end_time');
+    }
     body.time = composeTime(start, end);
   } else if ('time' in body && typeof body.time === 'string') {
     const parsed = parseTime(body.time);

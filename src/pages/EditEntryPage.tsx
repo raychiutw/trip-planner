@@ -31,6 +31,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import Icon from '../components/shared/Icon';
 import InlineError from '../components/shared/InlineError';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -277,55 +278,7 @@ const SCOPED_STYLES = `
   margin-top: 12px;
 }
 
-/* Confirm modal (discard changes) */
-.tp-edit-entry-modal-overlay {
-  position: fixed; inset: 0; z-index: 1000;
-  background: var(--color-overlay);
-  display: grid; place-items: center;
-  padding: 20px;
-}
-.tp-edit-entry-modal {
-  width: min(420px, 100%);
-  border-radius: var(--radius-xl);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border);
-  padding: 18px;
-}
-.tp-edit-entry-modal h3 {
-  margin: 0;
-  font-size: var(--font-size-title3);
-  font-weight: 800;
-}
-.tp-edit-entry-modal p {
-  margin: 10px 0 18px;
-  font-size: var(--font-size-callout);
-  color: var(--color-muted);
-}
-.tp-edit-entry-modal-actions {
-  display: flex; gap: 8px; justify-content: flex-end;
-}
-.tp-edit-entry-btn-ghost {
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 700;
-  color: var(--color-foreground);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  min-height: 40px; padding: 8px 16px;
-  cursor: pointer;
-}
-.tp-edit-entry-btn-ghost:hover { background: var(--color-hover); }
-.tp-edit-entry-btn-danger {
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 700;
-  color: var(--color-accent-foreground);
-  background: var(--color-destructive);
-  border: 0;
-  border-radius: var(--radius-full);
-  min-height: 40px; padding: 8px 16px;
-  cursor: pointer;
-}
-.tp-edit-entry-btn-danger:hover { filter: brightness(1.05); }
+/* discard-changes 用 shared <ConfirmModal>（沒額外樣式） */
 `;
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -828,44 +781,16 @@ export default function EditEntryPage() {
         </div>
       </main>
 
-      {/* Discard confirm modal */}
-      {showDiscardModal && (
-        <div
-          className="tp-edit-entry-modal-overlay"
-          role="presentation"
-          onClick={() => setShowDiscardModal(false)}
-        >
-          <div
-            className="tp-edit-entry-modal"
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="edit-entry-discard-title"
-            onClick={(e) => e.stopPropagation()}
-            data-testid="edit-entry-discard-modal"
-          >
-            <h3 id="edit-entry-discard-title">丟棄變更？</h3>
-            <p>未儲存的變更會遺失。</p>
-            <div className="tp-edit-entry-modal-actions">
-              <button
-                type="button"
-                className="tp-edit-entry-btn-ghost"
-                onClick={() => setShowDiscardModal(false)}
-                data-testid="edit-entry-discard-cancel"
-              >
-                繼續編輯
-              </button>
-              <button
-                type="button"
-                className="tp-edit-entry-btn-danger"
-                onClick={() => { setShowDiscardModal(false); goBack(); }}
-                data-testid="edit-entry-discard-confirm"
-              >
-                丟棄變更
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Discard confirm modal — shared <ConfirmModal> 取代 inline rolled-own */}
+      <ConfirmModal
+        open={showDiscardModal}
+        title="丟棄變更？"
+        message="未儲存的變更會遺失。"
+        confirmLabel="丟棄變更"
+        cancelLabel="繼續編輯"
+        onConfirm={() => { setShowDiscardModal(false); goBack(); }}
+        onCancel={() => setShowDiscardModal(false)}
+      />
     </div>
   );
 

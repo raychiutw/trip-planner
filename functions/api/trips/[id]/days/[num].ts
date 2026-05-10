@@ -2,6 +2,7 @@ import { logAudit } from '../../../_audit';
 import { hasWritePermission } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
+import { resolveEntryTimes } from '../../../_time';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -124,28 +125,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     for (let i = 0; i < timeline.length; i++) {
       const e = timeline[i]!;
       const travel = e.travel as { type?: unknown; desc?: unknown; min?: unknown } | undefined;
-      // v2.26.0 (migration 0056) dual-write start_time/end_time: 從 e.time 解析或
-      // 從 e.start_time/e.end_time compose。優先使用顯式 startTime/endTime（新
-      // 路徑），其次解析 e.time（legacy）。
-      const explicitStart = (e as { start_time?: unknown }).start_time;
-      const explicitEnd = (e as { end_time?: unknown }).end_time;
-      let startTime: string | null = null;
-      let endTime: string | null = null;
-      let timeStr: string | null = null;
-      if (typeof explicitStart === 'string' || typeof explicitEnd === 'string') {
-        startTime = typeof explicitStart === 'string' ? explicitStart : null;
-        endTime = typeof explicitEnd === 'string' ? explicitEnd : null;
-        timeStr = startTime && endTime ? `${startTime}-${endTime}` : (startTime ?? null);
-      } else if (typeof e.time === 'string' && e.time.trim()) {
-        timeStr = e.time;
-        const dash = e.time.indexOf('-');
-        if (dash > 0) {
-          startTime = e.time.slice(0, dash);
-          endTime = e.time.slice(dash + 1);
-        } else {
-          startTime = e.time;
-        }
-      }
+      // v2.26.0 (migration 0056) dual-write — helper from _time.ts.
+      const { time: timeStr, startTime, endTime } = resolveEntryTimes(e as Record<string, unknown>);
       batch1.push(
         db.prepare('INSERT INTO trip_entries (day_id, sort_order, time, start_time, end_time, title, description, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
           .bind(dayId, i, timeStr, startTime, endTime, e.title ?? null, e.description ?? null,

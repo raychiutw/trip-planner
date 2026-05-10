@@ -47,18 +47,36 @@ ALTER TABLE trip_entries ADD COLUMN end_time TEXT;
 -- Range case: contains '-' (e.g., "12:00-13:30")
 UPDATE trip_entries
 SET
-  start_time = substr(time, 1, instr(time, '-') - 1),
-  end_time   = substr(time, instr(time, '-') + 1)
+  start_time = trim(substr(time, 1, instr(time, '-') - 1)),
+  end_time   = trim(substr(time, instr(time, '-') + 1))
 WHERE time IS NOT NULL
   AND time != ''
   AND instr(time, '-') > 0;
 
 -- Single-time case: no '-' (e.g., "08:00")
 UPDATE trip_entries
-SET start_time = time
+SET start_time = trim(time)
 WHERE time IS NOT NULL
   AND time != ''
   AND instr(time, '-') = 0;
+
+-- =============================================
+-- 2b. Cleanup: NULL out malformed values
+-- =============================================
+-- Pathological legacy rows (e.g. time = "-", "12:00-", "abc-def") could leave
+-- empty / non-conforming start_time / end_time. Clean those to NULL so the
+-- backend's HH:MM regex defenders aren't hit by garbage on next PATCH.
+-- GLOB pattern matches strict HH:MM zero-padded only.
+
+UPDATE trip_entries
+SET start_time = NULL
+WHERE start_time = ''
+   OR (start_time IS NOT NULL AND start_time NOT GLOB '[0-2][0-9]:[0-5][0-9]');
+
+UPDATE trip_entries
+SET end_time = NULL
+WHERE end_time = ''
+   OR (end_time IS NOT NULL AND end_time NOT GLOB '[0-2][0-9]:[0-5][0-9]');
 
 -- =============================================
 -- 3. ANALYZE

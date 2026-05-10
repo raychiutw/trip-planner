@@ -24,6 +24,7 @@
 import { logAudit } from '../../../../_audit';
 import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
+import { parseTime } from '../../../../_time';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
@@ -83,23 +84,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const overrideTime = body.time !== undefined ? body.time : source.time;
   // v2.26.0 (migration 0056): 同步寫 start_time/end_time。若 body.time 覆寫，
-  // 重新解析；否則 copy source 的 start_time/end_time。
+  // 用 _time.ts parseTime 解析；否則 copy source 的 start_time/end_time。
   let copyStartTime: string | null;
   let copyEndTime: string | null;
   if (body.time !== undefined) {
-    if (typeof body.time === 'string' && body.time.trim()) {
-      const dash = body.time.indexOf('-');
-      if (dash > 0) {
-        copyStartTime = body.time.slice(0, dash);
-        copyEndTime = body.time.slice(dash + 1);
-      } else {
-        copyStartTime = body.time;
-        copyEndTime = null;
-      }
-    } else {
-      copyStartTime = null;
-      copyEndTime = null;
-    }
+    const parsed = parseTime(typeof body.time === 'string' ? body.time : null);
+    copyStartTime = parsed.start;
+    copyEndTime = parsed.end;
   } else {
     copyStartTime = (source.start_time as string | null) ?? null;
     copyEndTime = (source.end_time as string | null) ?? null;

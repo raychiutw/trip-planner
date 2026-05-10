@@ -2,6 +2,7 @@ import { logAudit } from '../../../../_audit';
 import { hasWritePermission } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { findOrCreatePoi } from '../../../../_poi';
+import { resolveEntryTimes } from '../../../../_time';
 import { validateEntryBody, detectGarbledText } from '../../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../../_utils';
 import type { Env } from '../../../../_types';
@@ -84,28 +85,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       source: 'ai',
     });
 
-    // v2.26.0 (migration 0056) dual-write start_time/end_time。優先使用顯式
-    // body.start_time/body.end_time，其次解析 body.time（legacy）。
-    const explicitStart = body.start_time as string | null | undefined;
-    const explicitEnd = body.end_time as string | null | undefined;
-    const legacyTime = typeof body.time === 'string' ? body.time : null;
-    let startTime: string | null = null;
-    let endTime: string | null = null;
-    let timeStr: string | null = null;
-    if (typeof explicitStart === 'string' || typeof explicitEnd === 'string') {
-      startTime = typeof explicitStart === 'string' ? explicitStart : null;
-      endTime = typeof explicitEnd === 'string' ? explicitEnd : null;
-      timeStr = startTime && endTime ? `${startTime}-${endTime}` : (startTime ?? null);
-    } else if (legacyTime) {
-      timeStr = legacyTime;
-      const dash = legacyTime.indexOf('-');
-      if (dash > 0) {
-        startTime = legacyTime.slice(0, dash);
-        endTime = legacyTime.slice(dash + 1);
-      } else {
-        startTime = legacyTime;
-      }
-    }
+    // v2.26.0 (migration 0056) dual-write — helper from _time.ts.
+    const { time: timeStr, startTime, endTime } = resolveEntryTimes(body);
 
     row = await db
       .prepare(`INSERT INTO trip_entries (day_id, sort_order, time, start_time, end_time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)

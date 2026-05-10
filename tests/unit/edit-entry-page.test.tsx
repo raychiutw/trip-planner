@@ -136,6 +136,27 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
     });
     expect(screen.getByTestId('edit-entry-duration').textContent).toMatch(/90/);
   });
+
+  it('Day 1 第一個 entry（無 prev）→ mode section 不渲染', async () => {
+    // 重新 mock：entry 42 是 timeline[0]
+    (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
+      if (url.endsWith('/days')) return Promise.resolve(DAYS);
+      if (url.includes('/days/3')) return Promise.resolve({
+        id: 7, day_num: 3,
+        timeline: [
+          { id: 42, title: '花織そば', poiType: 'restaurant' }, // <-- index 0
+          { id: 99, title: '海中道路', poiType: 'attraction' },
+        ],
+      });
+      return Promise.resolve(null);
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-time-section')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('edit-entry-mode-section')).toBeNull();
+  });
 });
 
 describe('EditEntryPage — 驗證', () => {
@@ -207,7 +228,7 @@ describe('EditEntryPage — 取消保護', () => {
     const back = screen.getByLabelText('返回行程');
     fireEvent.click(back);
     expect(navigateSpy).toHaveBeenCalled();
-    expect(screen.queryByTestId('edit-entry-discard-modal')).toBeNull();
+    expect(screen.queryByTestId('confirm-modal')).toBeNull();
   });
 
   it('已改 → 點返回 → 跳 ConfirmModal', async () => {
@@ -218,17 +239,17 @@ describe('EditEntryPage — 取消保護', () => {
     const note = screen.getByTestId('edit-entry-note') as HTMLTextAreaElement;
     fireEvent.change(note, { target: { value: 'dirty' } });
     fireEvent.click(screen.getByLabelText('返回行程'));
-    expect(screen.queryByTestId('edit-entry-discard-modal')).toBeTruthy();
+    expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
   });
 
-  it('ConfirmModal「丟棄變更」 → navigate; 「繼續編輯」 → modal 關閉', async () => {
+  it('ConfirmModal「繼續編輯」 → modal 關閉', async () => {
     renderPage();
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-note')).toBeTruthy();
     });
     fireEvent.change(screen.getByTestId('edit-entry-note'), { target: { value: 'dirty' } });
     fireEvent.click(screen.getByLabelText('返回行程'));
-    fireEvent.click(screen.getByTestId('edit-entry-discard-cancel'));
-    expect(screen.queryByTestId('edit-entry-discard-modal')).toBeNull();
+    fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
+    expect(screen.queryByTestId('confirm-modal')).toBeNull();
   });
 });
