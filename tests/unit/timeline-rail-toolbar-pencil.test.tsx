@@ -3,7 +3,8 @@
  *
  * 驗 expanded toolbar 含：
  *   - 放大檢視 button (lightbox open)
- *   - 編輯備註 pencil button (focus textarea data-testid `timeline-rail-edit-note-N`)
+ *   - v2.26.0：編輯景點 pencil button → navigate to `/trip/:id/stop/:eid/edit`
+ *     （取代既有 inline note edit；備註 inline 編輯仍保留 via tp-rail-note-value click）
  *   - 刪除景點 button → 開 inline ConfirmModal (alertdialog)，不直接 fire DELETE
  *   - 收合 button (x-mark icon)
  *   - icon 全為 SVG sprite (無 emoji)
@@ -20,6 +21,16 @@ import { TripIdContext } from '../../src/contexts/TripIdContext';
 vi.mock('../../src/hooks/useTripSegments', () => ({
   useTripSegments: () => ({ segments: [], segmentMap: new Map(), loading: false }),
 }));
+
+// v2.26.0: 編輯按鈕 navigate，mock useNavigate 驗 navigate 路徑
+const navigateSpy = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateSpy,
+  };
+});
 
 const ENTRY: TimelineEntryData = {
   id: 42,
@@ -54,16 +65,24 @@ describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     expect(screen.getByTestId('timeline-rail-detail-42')).toBeTruthy();
     expect(screen.getByTestId('timeline-rail-lightbox-open-42')).toBeTruthy();
-    expect(screen.getByTestId('timeline-rail-edit-note-42')).toBeTruthy();
+    // v2.26.0: 「編」testid 改為 timeline-rail-edit-N（取代 timeline-rail-edit-note-N）
+    expect(screen.getByTestId('timeline-rail-edit-42')).toBeTruthy();
     expect(screen.getByTestId('timeline-rail-delete-42')).toBeTruthy();
     expect(screen.getByTestId('timeline-rail-collapse-42')).toBeTruthy();
   });
 
-  it('pencil button click → note 進 edit mode + textarea render', () => {
+  it('pencil button click → navigate to EditEntryPage', () => {
+    navigateSpy.mockClear();
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
-    fireEvent.click(screen.getByTestId('timeline-rail-edit-note-42'));
-    // pencil click 把 note 進 edit mode → textarea render
+    fireEvent.click(screen.getByTestId('timeline-rail-edit-42'));
+    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/edit');
+  });
+
+  it('inline note 編輯仍保留 — 點 tp-rail-note-value 觸發 textarea', () => {
+    renderRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    fireEvent.click(screen.getByTestId('timeline-rail-note-value-42'));
     const textarea = screen.queryByTestId('timeline-rail-note-input-42');
     expect(textarea).toBeTruthy();
   });

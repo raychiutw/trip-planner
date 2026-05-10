@@ -3,6 +3,70 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.26.0] - 2026-05-11
+
+**EditEntryPage — 全頁編輯 entry 起訖時間 + 從上一站移動方式 + 備註。**
+
+### Added (Schema)
+
+- **Migration 0056**：`trip_entries` 加 `start_time` / `end_time` TEXT cols。Backfill 既有 `time` 欄：
+  - `"HH:MM-HH:MM"` → split 成兩欄
+  - `"HH:MM"` → start_time = HH:MM, end_time = NULL
+  - NULL/empty → 兩欄 NULL
+  - **不 drop** legacy `time` col（dual-write 觀察期；後續 migration 0057 再 drop）
+
+### Added (Frontend)
+
+- 新增 `src/pages/EditEntryPage.tsx` — fullpage 編輯 entry。Route `/trip/:tripId/stop/:entryId/edit`。
+  - **Layout**：AppShell + sticky TitleBar（左 ← back / 中 title / 右 `<TitleBarPrimaryAction>` 儲存）
+  - **三 sections**：時間（兩 time inputs + 停留分鐘 chip）/ 從上一站移動（segmented control driving/walking/transit + transit min input + lock pill + 重設為自動）/ 備註（textarea + counter + Markdown）
+  - **儲存策略**：dirty.entry → PATCH /entries body { start_time, end_time, note }；dirty.segment → PATCH /segments body { mode, min }；並行送 + 失敗保留 dirty 值 + toast「已儲存」
+  - **取消保護**：dirty 跳 ConfirmModal「丟棄變更」
+  - **Keyboard shortcuts**：⌘+S / ⌘+Enter 儲存 · Esc 取消
+- 新增 route `/trip/:tripId/stop/:entryId/edit` 在 `src/entries/main.tsx`
+- `TimelineRail` toolbar pencil 按鈕改 navigate 到 EditEntryPage（取代既有 inline note edit 入口；testid 從 `timeline-rail-edit-note-N` 改為 `timeline-rail-edit-N`）。**inline note edit 仍保留** — 點 `tp-rail-note-value` 仍可快速編。
+
+### Changed (Backend)
+
+- `functions/api/trips/[id]/entries/[eid].ts`（PATCH）：
+  - `ALLOWED_FIELDS` 加 `start_time`、`end_time`
+  - **dual-write**：body 帶 `start_time`/`end_time` → 寫入 + compose `time`；body 帶 legacy `time` → 解析回填 `start_time`/`end_time`
+  - 加 format validation（HH:MM regex）+ start < end 驗證
+- `functions/api/trips/[id]/days/[num].ts`（PUT）：INSERT trip_entries dual-write
+- `functions/api/trips/[id]/days/[num]/entries.ts`（POST）：dual-write
+- `functions/api/trips/[id]/entries/[eid]/copy.ts`：dual-write（copy source 的 start_time/end_time）
+- `functions/api/poi-favorites/[id]/add-to-trip.ts`：4-field 純時間驅動 → 直接寫 start_time/end_time + 同步 time
+- `functions/api/trips/[id]/audit/[aid]/rollback.ts`：`trip_entries` `TABLE_COLUMNS` 加 `start_time`、`end_time`
+
+### Changed (TypeScript)
+
+- `src/components/trip/TimelineEvent.tsx`：`TimelineEntryData` 加 `start_time` / `end_time` 欄位（v2.26.0 新 path 用）
+
+### Tests
+
+- `tests/api/entries.integration.test.ts`：6 個新 test
+  - PATCH start_time + end_time → 同步 compose time
+  - PATCH 只給 start_time → end_time 從現值繼承
+  - PATCH legacy time `HH:MM-HH:MM` → 同步寫 start/end
+  - PATCH legacy time `HH:MM` → end_time = NULL
+  - 無效 start_time format → 400
+  - start_time >= end_time → 400
+- `tests/unit/edit-entry-page.test.tsx`（新檔）：12 tests 涵蓋初始 render / 驗證 / 儲存 dispatch / 取消保護
+- `tests/unit/timeline-rail-toolbar-pencil.test.tsx`：更新 pencil 行為從 inline edit → navigate
+- `tests/e2e/qa-flows.spec.js`：QA Flow 6 改用 `timeline-rail-note-value-N` 觸發 inline edit（pencil 改 navigate）
+
+### Mockup
+
+- `docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html`（v4 fullpage final）
+
+### Migration ops
+
+- Apply order：CF Pages auto-deploy workflow parallel run migration + CF Pages build。`start_time`/`end_time` 為 nullable，舊 backend 不會 break；可放心 merge。
+
+### 關聯
+
+- TravelPill v2.24.0 tap-switch 保留（不動 `TravelPillDialog`）— EditEntryPage 走「編」按鈕入口；兩個入口並存，pill 用於 timeline 上快速切，page 用於詳細編輯（含時間 + 備註）。
+
 ## [2.25.5] - 2026-05-10
 
 **`trip_pois.hours` DROP COLUMN — hours 純 `pois` master + tp-* skills 改走 Place Details API。**
