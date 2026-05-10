@@ -44,9 +44,9 @@ import { useTripSegments } from '../../hooks/useTripSegments';
 
 const SCOPED_STYLES = `
 .tp-rail-detail {
-  /* mockup .tp-detail-expanded:2086 — margin-left: 110px desktop / 92px mobile.
-   * 對齊 TravelPill 同樣 indent，視覺從 dot 中心起算。 */
-  margin: 0 0 12px 110px;
+  /* mockup .tp-detail-expanded:2086 — margin: 4px 0 8px 110px desktop / 92px mobile。
+   * left=110px 對齊 TravelPill 同樣 indent，視覺從 dot 中心起算。 */
+  margin: 4px 0 8px 110px;
   padding: 14px 16px;
   background: var(--color-secondary);
   border: 1px solid var(--color-border);
@@ -55,7 +55,7 @@ const SCOPED_STYLES = `
   animation: tp-rail-detail-in 160ms var(--transition-timing-function-apple, ease-out);
 }
 @media (max-width: 760px) {
-  .tp-rail-detail { margin-left: 92px; }
+  .tp-rail-detail { margin: 4px 0 8px 92px; padding: 12px; }
 }
 @keyframes tp-rail-detail-in {
   from { opacity: 0; transform: translateY(-4px); }
