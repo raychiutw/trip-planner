@@ -23,11 +23,14 @@ export interface FindOrCreatePoiData {
   email?: string | null;
   website?: string | null;
   country?: string | null;
+  // Migration 0054 (v2.25.4): price 從 trip_pois 移到 pois master
+  price?: string | null;
 }
 
 const COALESCE_FIELDS = [
   'description', 'mapcode', 'lat', 'lng', 'rating',
   'category', 'hours', 'address', 'phone', 'email', 'website', 'country',
+  'price',
 ] as const;
 
 type CoalesceField = typeof COALESCE_FIELDS[number];
@@ -66,15 +69,16 @@ export async function findOrCreatePoi(
 
   // Not found → INSERT (INSERT OR IGNORE for race-safety with UNIQUE index)
   // Migration 0045: dropped maps col (use mapsUrl helper).
+  // Migration 0054: added price col.
   const result = await db.prepare(
-    'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, mapcode, lat, lng, source, address, phone, email, website, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+    'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, mapcode, lat, lng, source, address, phone, email, website, country, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
   ).bind(
     data.type, data.name, data.description ?? null, data.hours ?? null,
     data.rating ?? null, data.category ?? null,
     data.mapcode ?? null,
     data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
     data.address ?? null, data.phone ?? null, data.email ?? null,
-    data.website ?? null, data.country ?? 'JP',
+    data.website ?? null, data.country ?? 'JP', data.price ?? null,
   ).first<{ id: number }>();
 
   // INSERT OR IGNORE returns null if concurrent insert won the race
@@ -145,14 +149,14 @@ export async function batchFindOrCreatePois(
     const insertStmts = toInsert.map((idx) => {
       const data = uniqueItems[idx]!.data;
       return db.prepare(
-        'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, mapcode, lat, lng, source, address, phone, email, website, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+        'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, mapcode, lat, lng, source, address, phone, email, website, country, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
       ).bind(
         data.type, data.name, data.description ?? null, data.hours ?? null,
         data.rating ?? null, data.category ?? null,
         data.mapcode ?? null,
         data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
         data.address ?? null, data.phone ?? null, data.email ?? null,
-        data.website ?? null, data.country ?? 'JP',
+        data.website ?? null, data.country ?? 'JP', data.price ?? null,
       );
     });
     const insertResults = await db.batch(insertStmts);

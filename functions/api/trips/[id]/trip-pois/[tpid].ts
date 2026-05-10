@@ -15,7 +15,7 @@ import type { Env } from '../../../_types';
 const ALLOWED_FIELDS = [
   'description', 'note', 'hours', 'sort_order',
   'checkout', 'breakfast_included', 'breakfast_note',
-  'price', 'reservation', 'reservation_url',
+  'reservation', 'reservation_url',
   'must_buy', 'entry_id',
 ] as const;
 
@@ -23,9 +23,10 @@ const ALLOWED_FIELDS = [
 // 到 PATCH /pois/:id (避免 silent no-op，前端誤把 master 欄位送到 trip_pois)。
 // description/note/hours 是 overlap (trip_pois 也有同名欄位作為覆寫) — 留在
 // trip_pois ALLOWED_FIELDS，視為 user 想做 override。
+// Migration 0054 (v2.25.4): price 從 trip_pois 移到 pois master，加入 dispatch list。
 const POI_MASTER_ONLY_FIELDS = [
   'name', 'address', 'phone', 'email', 'website',
-  'rating', 'category', 'mapcode', 'lat', 'lng',
+  'rating', 'price', 'category', 'mapcode', 'lat', 'lng',
   'country', 'source',
   'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source',
   // Migration 0051 (v2.23.0 google-maps-migration): place_id + lifecycle cols
