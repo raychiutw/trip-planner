@@ -209,6 +209,9 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
         type: travel.type || '',
         desc: travel.desc ?? null,
         min: travel.min ?? null,
+        // v2.23.0 加 travel_distance_m col 時漏接到 mapDay → frontend
+        // entry.travel.distanceM 永遠 undefined，TravelPill 顯示不出 km。
+        distanceM: (travel as { distanceM?: number | null }).distanceM ?? null,
         text: formatTravelText(travel),
       }
     : null;
@@ -217,7 +220,9 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   const poi = raw.poi ?? null;
   const effMaps = poi?.maps ?? null;
   const effMapcode = poi?.mapcode ?? null;
-  const effGoogleRating = poi?.googleRating ?? null;
+  // Migration 0045 (v2.19.x) 把 pois.google_rating 改名為 rating，但這裡的 mapping
+  // 沒 follow up — entry.googleRating 永遠 null。Fallback 同時讀新舊 key 維持向前相容。
+  const effGoogleRating = poi?.googleRating ?? (poi as { rating?: number | null })?.rating ?? null;
   // v2.12 Wave 3：parse pois.photos JSON 字串。malformed → 視為 null（不 throw）。
   const effPhotos: PoiPhoto[] | null = parsePhotos(poi?.photos);
 
@@ -255,6 +260,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     googleRating: effGoogleRating,
     source: raw.source ?? null,
     travel: travelData,
+    poiType: poi?.type ?? null,
     locations: locations.length > 0 ? locations : null,
     infoBoxes: infoBoxes.length > 0 ? infoBoxes : null,
     photos: effPhotos,
