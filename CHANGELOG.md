@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.25.1] - 2026-05-09
+
+**修「由網頁加入的景點」沒有起訖時間 + 缺 icon 兩個 bug。**
+
+### Fixed
+
+- `src/lib/timelineUtils.ts` `deriveTypeMeta` 回傳 icon name 對齊 `Icon.tsx` ICONS registry：
+  - `'fork-knife'` → `'utensils'`（用餐）
+  - `'walk'` → `'walking'`（散步）
+  - 過去這兩個未註冊名讓 `<Icon>` 靜默 return null（line 130），entry 顯示「空白匡線」。任何 `entry.travel.type === 'walking'` 都中標。
+- `src/components/shared/Icon.tsx`：新增 `'coffee'` SVG（Material `local_cafe` 風格），讓 cafe / 休息 entry 有圖示。
+- `src/pages/AddPoiFavoriteToTripPage.tsx` direct mode（從 /explore + 加入行程）：
+  - `time` 欄位前端送錯名 — 之前送 `startTime` / `endTime` 兩欄位，但 `functions/api/trips/[id]/days/[num]/entries.ts` POST 只認 `body.time`（"HH:MM-HH:MM" 單欄位）→ time 永存 null。
+  - 改成 `time: \`${startTime}-${endTime}\`` 或 `undefined`（兩者都空時）。
+- 同步補 VERSION file 到 2.25.1（v2.25.0 commit 漏 bump VERSION 造成的 drift）。
+
+### Tests
+
+- `tests/unit/timelineUtils.test.ts`：新增 ICONS registry 完整性 regression guard — 確保 `deriveTypeMeta` 所有回傳 icon name 都在 registry 裡，防止再次 silent-null。
+- `tests/unit/poi-favorite-add-to-trip-form.test.tsx`：新增 direct mode 2 個 case — `time="HH:MM-HH:MM"` 正確 join + 兩欄位都空時 `time` omitted。
+
 ## [2.25.0] - 2026-05-07
 
 **Sidebar / Trip card / Chat 帳號顯示一致化：avatar initial 改用「帳號名稱」第一字母（不是 email）。**
