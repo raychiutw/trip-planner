@@ -13,7 +13,13 @@
  * Hysteresis (autoplan C4 — kept per user direction):
  *   90% lock / 50% unlock prevents flapping at threshold.
  *
- * Triggered by: launchd com.tripline.daily-check (mac mini cron)
+ * Invocation:
+ *   - Standalone：`npm run quota:google` — 跑全套（含 daily summary Telegram）
+ *   - 由 daily-check-scheduler.sh 整合呼叫：env `QUIET_DAILY_TELEGRAM=1`
+ *     抑制 daily summary Telegram（避免與 daily-check 主訊息重複），但
+ *     lock / unlock urgent alert 仍會發出（事件導向，不該等到下次 daily-check）。
+ *   - 不論呼叫方式，都會寫 `scripts/logs/daily-check/{YYYY-MM-DD}-quota.json`
+ *     供 scheduler Phase 3 合併到主 Telegram。
  *
  * Required env: TRIPLINE_API_URL, TRIPLINE_API_TOKEN, GOOGLE_CLOUD_PROJECT_ID,
  *               GOOGLE_CLOUD_SA_KEY (service account JSON string)
@@ -23,6 +29,8 @@
  * which uses Google Maps Platform Console quota usage API (simpler shim).
  * Full Cloud Monitoring integration deferred to v2.24.0 (TODO).
  */
+import { writeFileSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { loadCronEnv, makeApiClient, alertTelegram } from './_lib/cron-shared';
 
 const PRICE_PER_1K = {
@@ -87,22 +95,58 @@ async function main(): Promise<void> {
   const summary = `${icon} Google Maps MTD: $${mtdCost.toFixed(2)} / $${settings.budget_usd} (${mtdPct.toFixed(1)}%) — 剩 $${remainingUsd.toFixed(2)}`;
 
   // Trigger lock / unlock transitions
+  // QUIET_DAILY_TELEGRAM 控制 daily summary 是否獨立發 Telegram。urgent 事件
+  // （lock / unlock）不受此 flag 影響——這些是事件導向，必須立即通知。
+  const quietDaily = process.env.QUIET_DAILY_TELEGRAM === '1';
+  let lockEvent: 'lock' | 'unlock' | null = null;
   if (mtdPct >= settings.lock_threshold_pct && !settings.is_locked) {
     console.log(`🔒 Locking (MTD ${mtdPct.toFixed(1)}% ≥ ${settings.lock_threshold_pct}%)`);
     await api('POST', '/api/admin/maps-lock', {
       reason: `自動鎖定：MTD $${mtdCost.toFixed(2)} / $${settings.budget_usd} (${mtdPct.toFixed(1)}%)`,
     });
     await alertTelegram(`🚨 ${summary}\n→ Google Maps 自動鎖定（503）月初解除`);
+    lockEvent = 'lock';
   } else if (mtdPct <= settings.unlock_threshold_pct && settings.is_locked) {
     console.log(`🔓 Unlocking (MTD ${mtdPct.toFixed(1)}% ≤ ${settings.unlock_threshold_pct}%)`);
     await api('POST', '/api/admin/maps-unlock', {});
     await alertTelegram(`${summary}\n→ Google Maps 自動解鎖`);
+    lockEvent = 'unlock';
   } else {
-    // Daily summary (low + medium thresholds → Telegram only at 50/70/90 first crossing)
+    // Daily summary (low + medium thresholds → Telegram only at 50/70/90 first crossing
+    // or 1st/15th 半月檢查)。整合進 daily-check 時設 QUIET_DAILY_TELEGRAM=1 由
+    // scheduler Phase 3 合併到主訊息，避免每天兩則 Telegram。
     const sendDaily = mtdPct >= 50 || dayOfMonth === 1 || dayOfMonth === 15;
-    if (sendDaily) await alertTelegram(summary);
+    if (sendDaily && !quietDaily) await alertTelegram(summary);
     console.log(summary);
   }
+
+  // Write JSON output for scheduler integration (always, regardless of quiet flag).
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(dayOfMonth).padStart(2, '0')}`;
+  const outDir = join(process.cwd(), 'scripts', 'logs', 'daily-check');
+  mkdirSync(outDir, { recursive: true });
+  const outPath = join(outDir, `${dateStr}-quota.json`);
+  writeFileSync(
+    outPath,
+    JSON.stringify(
+      {
+        date: dateStr,
+        generatedAt: now.toISOString(),
+        icon,
+        mtdCost: Number(mtdCost.toFixed(2)),
+        budgetUsd: settings.budget_usd,
+        mtdPct: Number(mtdPct.toFixed(1)),
+        remainingUsd: Number(remainingUsd.toFixed(2)),
+        dailyCost: Number(dailyCost.toFixed(2)),
+        isLocked: settings.is_locked,
+        lockEvent,
+        summary,
+        breakdown: estimates,
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
 
   // Cleanup expired pois_search_cache rows so 24h-TTL table doesn't grow unbounded.
   try {

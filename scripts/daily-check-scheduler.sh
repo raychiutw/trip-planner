@@ -102,6 +102,18 @@ else
   exit 1
 fi
 
+# Phase 1b: Google Maps quota monitor（v2.25.0+）— 與 daily-check 同訊息送出。
+# QUIET_DAILY_TELEGRAM=1 抑制 daily summary 自己發 Telegram；lock/unlock 事件仍會獨立發。
+# 寫 {date}-quota.json 給 Phase 3 合併進主訊息。失敗不阻塞 daily-check（informational）。
+log "Phase 1b: 執行 google-quota-monitor"
+QUOTA_JSON="$LOG_DIR/$(date +%Y-%m-%d)-quota.json"
+if QUIET_DAILY_TELEGRAM=1 bun scripts/google-quota-monitor.ts >> "$LOG_FILE" 2>> "$ERR_LOG_FILE"; then
+  log "Phase 1b 完成"
+else
+  log_error "google-quota-monitor 執行失敗（非阻塞，繼續）"
+  QUOTA_JSON=""
+fi
+
 # Phase 2: 呼叫 Claude tp-daily-check（自動修復）
 log "Phase 2: claude /tp-daily-check（自動修復）"
 if "$CLAUDE_BIN" --dangerously-skip-permissions -p "/tp-daily-check" >> "$LOG_FILE" 2>&1; then
@@ -110,9 +122,24 @@ else
   log_error "Claude /tp-daily-check 執行失敗"
 fi
 
-# Phase 3: 發 Telegram（報告 + 修復結果合併一則）
+# Phase 3: 發 Telegram（報告 + Google quota + 修復結果合併一則）
 log "Phase 3: 發送 Telegram"
 TELEGRAM_MSG=$(build_telegram_msg "$REPORT_JSON")
+
+# 附加 Google Maps quota summary（Phase 1b 寫的 JSON，存在才附加）
+if [ -n "$QUOTA_JSON" ] && [ -f "$QUOTA_JSON" ]; then
+  QUOTA_PART=$(node -e "
+    var r = JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));
+    var lines = [r.summary];
+    if (r.lockEvent === 'lock') lines.push('🔒 已自動鎖定（503）');
+    else if (r.lockEvent === 'unlock') lines.push('🔓 已自動解鎖');
+    console.log(lines.join('\n'));
+  " "$QUOTA_JSON" 2>/dev/null)
+  if [ -n "$QUOTA_PART" ]; then
+    TELEGRAM_MSG="${TELEGRAM_MSG}
+${QUOTA_PART}"
+  fi
+fi
 
 # 附加修復結果
 if [ -f "$FIX_RESULT" ]; then
