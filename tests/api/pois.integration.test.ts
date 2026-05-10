@@ -140,3 +140,20 @@ describe('PATCH /api/pois/:id — tripId 權限', () => {
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
   });
 });
+
+describe('PATCH /api/pois/:id — price (migration 0054)', () => {
+  it('admin 更新 pois.price → 200 + DB 寫入', async () => {
+    const restPoiId = await seedPoi(db, { type: 'restaurant', name: 'Price Test 拉麵' });
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/pois/${restPoiId}`, 'PATCH', {
+        price: '¥800~1200',
+      }),
+      env,
+      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      params: { id: String(restPoiId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    const poi = await db.prepare('SELECT price FROM pois WHERE id = ?').bind(restPoiId).first();
+    expect((poi as Record<string, unknown>).price).toBe('¥800~1200');
+  });
+});

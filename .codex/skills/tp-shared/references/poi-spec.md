@@ -18,19 +18,21 @@ pois 表欄位（id, type, name, description, note, address, phone, email, websi
 | type | 必填 | 建議填 |
 |------|------|--------|
 | hotel | name, rating, maps | description, address, phone, mapcode, hours |
-| restaurant | name, category, hours, rating, maps | description, phone, address, business_status |
+| restaurant | name, category, hours, rating, maps | description, phone, address, business_status, **price** |
 | shopping | name, category, hours, rating, maps | description, phone, address, business_status |
 | parking | name, description, maps | mapcode, hours |
 | attraction | name, rating, maps | description, hours, address, phone |
 | transport | name, maps | description, hours |
 | activity | name, rating, maps, hours | description, phone, website |
 
+> ⚠️ **2026-05-10 (migration 0054)**：`price` 欄位從 `trip_pois` 移到 `pois` master。語意：餐廳定價是客觀屬性（不會因 trip 而異），跟 rating/address/phone 同列。寫入路徑：`POST /trip-pois` body 帶 `price` 會寫進 `pois.price`（透過 findOrCreatePoi）；`PATCH /pois/:id` 直接接受 `price`。`PATCH /trip-pois/:tpid` 帶 `price` 會被 `POI_MASTER_ONLY_FIELDS` dispatch 到 pois。讀取路徑：v2.25.4 dual-read（`pois.price ?? trip_pois.price`）；migration 0055 後改純 `pois.price`。
+
 **trip_pois override（PATCH /trip-pois/:tpid 可修改）：**
 
 | type | 可覆寫欄位 |
 |------|-----------|
 | hotel | description, note, hours, checkout, breakfast_included, breakfast_note |
-| restaurant | description, note, hours, price, reservation, reservation_url |
+| restaurant | description, note, hours, reservation, reservation_url |
 | shopping | description, note, hours, must_buy |
 
 pois.type 允許值：`hotel`, `restaurant`, `shopping`, `parking`, `attraction`, `transport`, `activity`, `other`（v2.1.2.0+ 納入 `activity`）

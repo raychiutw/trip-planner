@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.25.4] - 2026-05-10
+
+**`pois.price` schema migration phase 1：把餐廳定價從 `trip_pois` 移到 `pois` master。**
+
+### Changed (Schema)
+
+- **Migration 0054**：`ALTER TABLE pois ADD COLUMN price TEXT` + COPY 既有 `trip_pois.price` → `pois.price`（5 筆，同 poi 多筆衝突取最新 `updated_at`）。**不 drop** `trip_pois.price`（migration 0055 觀察期後才 drop）。
+- 餐廳定價是客觀屬性（不會因 trip 而異），原本放 `trip_pois` override 是 schema misalignment。搬到 `pois` master 讓多個 trip 共用同一筆 price 資料。
+
+### Changed (Backend)
+
+- `functions/api/_poi.ts`：`FindOrCreatePoiData` 加 `price` 欄位；`COALESCE_FIELDS` 加 `'price'`；`INSERT INTO pois` 含 price col。
+- `functions/api/pois/[id].ts`：`ALLOWED_FIELDS` 加 `'price'`。
+- `functions/api/trips/[id]/trip-pois/[tpid].ts`：`ALLOWED_FIELDS` 移除 `'price'`，加入 `POI_MASTER_ONLY_FIELDS` 自動 dispatch 到 `PATCH /pois/:id`。
+- `functions/api/trips/[id]/entries/[eid]/trip-pois.ts` POST：`body.price` 透過 `findOrCreatePoi` 寫進 `pois.price`，`INSERT INTO trip_pois` 不再含 price col。
+- `functions/api/trips/[id]/days/[num].ts` PUT：restaurants[].price 同上路徑寫 pois master。
+- `functions/api/trips/[id]/days/_merge.ts`：dual-read `price: poi.price ?? tp.price`（觀察期保險，舊 trip_pois.price 資料仍可讀；migration 0055 後簡化）。
+
+### Changed (Skills)
+
+- `tp-shared/references/poi-spec.md`：`price` 從 trip_pois override 區搬到 pois master 區，restaurant 建議欄位加 **price**。`.codex/` 鏡像同步。
+- `CLAUDE.md` Naming history 加 v2.25.4 紀錄。
+
+### Tests
+
+- `tests/api/pois.integration.test.ts`：PATCH /pois/:id 接受 `price` + DB 寫入驗證。
+- `tests/api/trip-pois.integration.test.ts`：
+  - POST /trip-pois 帶 price → 寫 `pois.price` 不寫 `trip_pois.price`
+  - PATCH /trip-pois/:tpid 帶 price → dispatch 到 pois master
+
+### Migration ops
+
+- `wrangler d1 migrations apply trip-planner-db --remote` 已先於 PR merge 前執行（CLAUDE.md memory：先 apply migration 再 merge PR）。5 筆 prod trip_pois.price 已 copy 到 pois.price。
+
 ## [2.25.3] - 2026-05-10
 
 **Trip overview timeline 對齊 mockup（terracotta-preview-v2.html）+ tp-* skill 改回 /browse + WebSearch 爬 Google Maps。**
