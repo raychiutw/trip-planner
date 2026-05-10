@@ -12,8 +12,9 @@ import { json, getAuth, parseJsonBody, buildUpdateClause, parseIntParam } from '
 import type { Env } from '../../../_types';
 
 // trip_pois 可更新的欄位（覆寫 + 類型專屬）
+// Migration 0055 (v2.25.5): hours 從 trip_pois override 移除，hours 純 pois master。
 const ALLOWED_FIELDS = [
-  'description', 'note', 'hours', 'sort_order',
+  'description', 'note', 'sort_order',
   'checkout', 'breakfast_included', 'breakfast_note',
   'reservation', 'reservation_url',
   'must_buy', 'entry_id',
@@ -21,12 +22,13 @@ const ALLOWED_FIELDS = [
 
 // 2026-05-02 OSM PR (commit 11): pois master 專屬欄位 — 偵測到後自動 dispatch
 // 到 PATCH /pois/:id (避免 silent no-op，前端誤把 master 欄位送到 trip_pois)。
-// description/note/hours 是 overlap (trip_pois 也有同名欄位作為覆寫) — 留在
+// description/note 是 overlap (trip_pois 也有同名欄位作為覆寫) — 留在
 // trip_pois ALLOWED_FIELDS，視為 user 想做 override。
 // Migration 0054 (v2.25.4): price 從 trip_pois 移到 pois master，加入 dispatch list。
+// Migration 0055 (v2.25.5): hours 同樣加入 dispatch list（trip_pois.hours 已 DROP）。
 const POI_MASTER_ONLY_FIELDS = [
   'name', 'address', 'phone', 'email', 'website',
-  'rating', 'price', 'category', 'mapcode', 'lat', 'lng',
+  'rating', 'price', 'hours', 'category', 'mapcode', 'lat', 'lng',
   'country', 'source',
   'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source',
   // Migration 0051 (v2.23.0 google-maps-migration): place_id + lifecycle cols

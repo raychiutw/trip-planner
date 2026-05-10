@@ -3,6 +3,38 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.25.5] - 2026-05-10
+
+**`trip_pois.hours` DROP COLUMN — hours 純 `pois` master + tp-* skills 改走 Place Details API。**
+
+### Changed (Schema)
+
+- **Migration 0055**：`UPDATE pois SET hours = (latest trip_pois.hours)` backfill（COALESCE，不覆蓋既有 `pois.hours`）→ `ALTER TABLE trip_pois DROP COLUMN hours`。`pois.hours` 自始就在（migration 0014），`trip_pois.hours` 是冗餘的 user override（hours 是 POI 客觀屬性，不會因 trip 而異）。
+- **Deploy 順序（hard rule）**：必須**先 merge PR + deploy backend**，再 apply migration。順序顛倒會讓既有 prod backend `INSERT INTO trip_pois (..., hours, ...)` 觸發 SQL fail。
+
+### Changed (Backend)
+
+- `functions/api/trips/[id]/days/_merge.ts`：`hours: tp.hours ?? poi.hours` → 純 `hours: poi.hours`。
+- `functions/api/trips/[id]/trip-pois/[tpid].ts`：`ALLOWED_FIELDS` 移除 `'hours'`，加入 `POI_MASTER_ONLY_FIELDS` 自動 dispatch 到 `PATCH /pois/:id`。
+- `functions/api/trips/[id]/entries/[eid]/trip-pois.ts` POST：`body.hours` 透過 `findOrCreatePoi` 寫進 `pois.hours`，`INSERT INTO trip_pois` 不再含 hours col。
+- `functions/api/trips/[id]/days/[num].ts` PUT：hotels[].hours 同上路徑寫 pois master。
+- `functions/api/trips/[id]/audit/[aid]/rollback.ts`：`trip_pois` `TABLE_COLUMNS` 移除 `'hours'`。
+
+### Changed (Skills)
+
+- `tp-search-strategies/SKILL.md`：**完全重寫**。第一原則改為「用 backend `POST /api/pois/{id}/enrich`，不爬網頁」。Backend 直接打 Google Place Details API 取 rating/address/phone/hours/business_status。Anti-pattern 表新增禁止 `/browse` Google Maps + WebSearch 拼湊。
+- `tp-shared/references/poi-spec.md`：新增「POI 補資料策略（migration 0051+ 後 v2.23.0）」section，trip_pois override 表移除 hours，hours 註記 Place Details API `weekday_descriptions` 已含**全週時段 + 公休日**（「星期三: 休息」），不需另外處理定休日欄位。
+- `.codex/` 鏡像同步。
+- `CLAUDE.md` Naming history 加 v2.25.5 紀錄。
+
+### Tests
+
+- `tests/api/trip-pois.integration.test.ts`：新增 `PATCH hours → dispatch 到 pois master (migration 0055)` test，鏡像既有 price dispatch test pattern。
+
+### Rationale
+
+POI 補資料先前同時存在三條路徑（Place Details API enrich、`/browse` Google Maps、WebSearch），各自品質不一且容易讓 LLM 自由選擇成本最高的方法。本次把 skill spec 收斂到單一路徑（`POST /api/pois/{id}/enrich`），backend 集中管理 quota / API key，`weekday_descriptions` 結構化資料把公休日語意一併解決，trip_pois.hours override 失去意義 → DROP。
+
 ## [2.25.4] - 2026-05-10
 
 **`pois.price` schema migration phase 1：把餐廳定價從 `trip_pois` 移到 `pois` master。**

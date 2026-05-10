@@ -153,16 +153,18 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     if (body.hotel) {
       const h = body.hotel;
       hotelPoiIdx = poiItems.length;
+      // Migration 0055 (v2.25.5): hours 寫進 pois master，不再寫 trip_pois.hours。
       poiItems.push({
         name: (h.name as string) || '', type: 'hotel',
         description: h.description as string,
+        hours: h.hours as string,
         lat: h.lat as number, lng: h.lng as number, source: 'ai',
       });
       const hCopy = h; // capture for closure
       tripPoiBuilders.push((ids) => [
-        db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, description, note, hours, checkout, breakfast_included, breakfast_note) VALUES (?, ?, 'hotel', ?, ?, ?, ?, ?, ?, ?)`)
+        db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, description, note, checkout, breakfast_included, breakfast_note) VALUES (?, ?, 'hotel', ?, ?, ?, ?, ?, ?)`)
           .bind(ids[hotelPoiIdx], id, dayId,
-            hCopy.description as string ?? null, hCopy.note as string ?? null, hCopy.hours as string ?? null,
+            hCopy.description as string ?? null, hCopy.note as string ?? null,
             hCopy.checkout as string ?? null, hCopy.breakfast_included as number ?? null, hCopy.breakfast_note as string ?? null),
       ]);
 

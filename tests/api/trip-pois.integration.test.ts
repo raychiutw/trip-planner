@@ -123,6 +123,22 @@ describe('PATCH /api/trips/:id/trip-pois/:tpid', () => {
     const poi = await db.prepare('SELECT price FROM pois WHERE id = ?').bind((tp as Record<string, unknown>).poi_id).first();
     expect((poi as Record<string, unknown>).price).toBe('¥1000~1500');
   });
+
+  it('PATCH hours → dispatch 到 pois master (migration 0055)', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-tp/trip-pois/${tripPoiId}`, 'PATCH', {
+        hours: '星期一: 11:00 – 22:00\n星期二: 11:00 – 22:00\n星期三: 休息',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-tp', tpid: String(tripPoiId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+
+    const tp = await db.prepare('SELECT poi_id FROM trip_pois WHERE id = ?').bind(tripPoiId).first();
+    const poi = await db.prepare('SELECT hours FROM pois WHERE id = ?').bind((tp as Record<string, unknown>).poi_id).first();
+    expect((poi as Record<string, unknown>).hours).toContain('星期三: 休息');
+  });
 });
 
 describe('DELETE /api/trips/:id/trip-pois/:tpid', () => {
