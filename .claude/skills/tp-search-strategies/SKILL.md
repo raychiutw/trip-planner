@@ -1,9 +1,6 @@
 ---
-
-> **v2.23.0 Google Maps Platform 更新**：rating / hours / business_status / phone 來源統一改用 Google Place Details API（不再 WebSearch / OSM Overpass）。canonical curl block + field 對映 + 401 alert 路徑見 `tp-shared/references/poi-spec.md`「v2.23.0 Google Maps Platform」section。
-
 name: tp-search-strategies
-description: POI 搜尋策略內部參考 — googleRating、reservation、location、hours 的查詢方式。不直接 invoke，被 tp-create、tp-edit、tp-patch 引用。
+description: POI 搜尋策略內部參考 — rating、hours、phone、business_status、website、reservation、location 的查詢方式。不直接 invoke，被 tp-create、tp-edit、tp-patch 引用。
 user-invocable: false
 ---
 
@@ -34,11 +31,68 @@ Event type schema（各類型物件必填欄位）見 `references/event-schema.m
 
 **為什麼用 Google Maps 而非其他來源：** Google Maps 是最完整的全球 POI 資料庫，涵蓋座標、營業狀態、評分。Tabelog/HotPepper 僅限日本餐飲，地址 geocoding 有誤差，WebSearch 結果無法保證座標準確性。以 Google Maps 為唯一 source of truth 可確保所有 POI 資料一致且可驗證。
 
-### googleRating
+### rating（googleRating）
 
-適用：hotel、restaurant、shop、event、gasStation
+適用：hotel、restaurant、shop、attraction、activity、gasStation
 
-查詢策略見 `tp-shared/references.md`（browse-first，WebSearch fallback）。
+1. `/browse` 開 `https://www.google.com/maps/search/{POI名稱}`
+2. 從頁面文字抽第一個 `X.X` 格式（1.0–5.0）即為 rating
+3. fallback：WebSearch「{名稱} Google rating」/ Wanderlog / TripAdvisor / Tabelog 交叉比對
+4. 找不到不填預設值（NULL）
+5. 寫入 pois.rating（v2.19.x migration 0045 後 col 名為 `rating`，非 `google_rating`）
+
+### hours（營業時間）
+
+適用：restaurant、shopping、attraction、activity、parking、transport
+
+1. `/browse` 開 Google Maps page
+2. 點開「營業時間」/「Hours」展開區塊
+3. 抽星期一-星期日的時段字串（例：「11:00–14:30, 17:00–22:00」）
+4. join '\n' 多行存入 pois.hours
+5. fallback：WebSearch「{名稱} 営業時間」/ 官方網站 / Tabelog
+6. 24h / 全年無休 → 寫「24 hours」或「全年無休」
+
+### phone
+
+適用：hotel、restaurant、shopping、attraction、activity
+
+1. `/browse` 開 Google Maps page
+2. 抽「電話」/「Phone」label 後的字串（或 `tel:` href）
+3. 國際 E.164 格式（如「+81-98-872-2701」）
+4. fallback：WebSearch「{名稱} 電話」/ 官方網站
+5. 寫入 pois.phone
+
+### website
+
+適用：hotel、restaurant、shopping、attraction、activity
+
+1. `/browse` 開 Google Maps page
+2. 抽「網站」/「Website」label 後的 URL
+3. 必須 `http://` 或 `https://` 開頭
+4. fallback：WebSearch「{名稱} 公式サイト」/「{名稱} official website」
+5. 寫入 pois.website
+
+### address
+
+適用：所有 type
+
+1. `/browse` 開 Google Maps page
+2. 抽「地址」/「Address」label 後字串（或 schema.org `streetAddress`）
+3. 含完整縣市區段（例：「沖縄県国頭郡本部町石川424」）
+4. fallback：WebSearch「{名稱} 住所」
+5. 寫入 pois.address
+
+### business_status（營業狀態）
+
+適用：所有 type
+
+1. `/browse` 開 Google Maps page
+2. 觀察狀態標籤：
+   - 「永久歇業」/「Permanently closed」→ `closed_permanently`
+   - 「暫停營業」/「Temporarily closed」→ `closed_temporarily`
+   - 一般狀態 → `active`（OPERATIONAL）
+3. 寫入 pois.business_status（或 status + status_reason，依 schema phase）
+4. closed_permanently 觸發歇業偵測清理流程（見 modify-steps.md §5）
 
 ### reservation
 

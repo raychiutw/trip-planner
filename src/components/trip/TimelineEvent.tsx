@@ -59,4 +59,7 @@ export interface TimelineEntryData {
   /** v2.12 Wave 3：POI photos （from pois.photos JSON column）。null = 還沒抓到，
    *  StopLightbox 顯示「即將推出」 placeholder。 */
   photos?: PoiPhoto[] | null;
+  /** POI master type — surface 給 deriveTypeMeta 優先 over text-based keyword match。
+   *  pois.type ∈ hotel|restaurant|shopping|parking|attraction|transport|activity|other */
+  poiType?: string | null;
 }

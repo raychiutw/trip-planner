@@ -130,11 +130,18 @@ export interface TravelPillProps {
 
 /**
  * Format distance in meters → human label.
- *  ≥1000 m → "X.X km"（小數一位）
- *  <1000 m → "Y00 m"（rounded to 50m）
+ *  ≥10 km → "X km"（整數，整 km 不帶小數）
+ *  ≥1 km → "X.X km"（短距離保留 1 位小數區分 1.5 vs 2.0）
+ *  <1 km → "Y00 m"（rounded to 50m）
+ * 對應 mockup .tp-detail-travel:6258 顯示風格："4.2 km" / "30 km" / "5.4 km"。
  */
 function formatDistance(m: number): string {
-  if (m >= 1000) return `${(m / 1000).toFixed(1)} km`;
+  if (m >= 10000) return `${Math.round(m / 1000)} km`;
+  if (m >= 1000) {
+    const km = m / 1000;
+    const display = Number.isInteger(km) ? String(km) : km.toFixed(1).replace(/\.0$/, '');
+    return `${display} km`;
+  }
   const rounded = Math.round(m / 50) * 50;
   return `${rounded} m`;
 }
@@ -172,9 +179,10 @@ export default function TravelPill({
         <Icon name={iconName} />
       </span>
       <span className="tp-travel-pill-meta">
-        {hasDist && <span className="tp-travel-pill-min">{formatDistance(effectiveDist!)}</span>}
-        {hasDist && hasMin && <span className="tp-travel-pill-sep">·</span>}
+        {/* mockup .tp-detail-travel:6254-6258 順序：min → sep → distance（與 v2.23.0 之前的 dist 先 → min 後相反）。 */}
         {hasMin && <span className="tp-travel-pill-min">{effectiveMin} min</span>}
+        {hasDist && hasMin && <span className="tp-travel-pill-sep">·</span>}
+        {hasDist && <span className="tp-travel-pill-min">{formatDistance(effectiveDist!)}</span>}
         {(hasDist || hasMin) && hasDesc && <span className="tp-travel-pill-sep">·</span>}
         {hasDesc && <span className="tp-travel-pill-desc">{desc}</span>}
       </span>

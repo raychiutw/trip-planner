@@ -3,6 +3,31 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.25.3] - 2026-05-10
+
+**Trip overview timeline 對齊 mockup（terracotta-preview-v2.html）+ tp-* skill 改回 /browse + WebSearch 爬 Google Maps。**
+
+### Changed (UI)
+
+- `src/components/trip/DaySection.tsx` + `TimelineRail.tsx` + `TimelineEvent.tsx` + `TravelPill.tsx`：對齊 mockup hero rail / row tint / connector / pill 樣式。
+- `css/tokens.css`：移除 `.ocean-day` 大片暖色 wrapper bg（legacy `#tripContent section` 規則被 `:not(.ocean-day)` 排除），row 內仍保留底色。
+- expanded panel margin 改 `4px 0 8px 110px`、travel pill 顯示順序改「分鐘 → 距離」、distance 整 km 不帶 `.0`、hotel sub-line 不顯示 rating（mockup design choice）。
+- `src/lib/timelineUtils.ts` `deriveTypeMeta`：`poi.type` 優先 over 文字 keyword 判斷 icon。
+
+### Fixed
+
+- `src/lib/mapDay.ts`：補 v2.19.x col rename（`poi.googleRating` → `poi.rating`）+ v2.23.0 新增 `travelData.distanceM` field 兩處 stale 對映，導致 frontend 拿不到評分 / 距離。
+
+### Changed (skills)
+
+- 8 個 tp-* skill 文件改回爬 Google Maps：`tp-shared/references/poi-spec.md` 重寫「Google Maps 爬取策略 (all fields)」/browse-first + WebSearch fallback step-by-step；`tp-search-strategies` 補回 rating / hours / phone / website / address / business_status 各欄位流程；6 個 tp-* SKILL.md（`tp-create` / `tp-edit` / `tp-patch` / `tp-rebuild` / `tp-quality-rules` / `tp-check`）frontmatter 拿掉 v2.23.0 update note。
+- `.codex/` 鏡像同步（8 檔）。
+- 注意：backend Place Details API 仍在運作，這是 LLM workflow 層級調整，不動 production code。
+
+### Tests
+
+- `tests/unit/timelineUtils.test.ts`：補 `deriveTypeMeta` poi.type 優先 over keyword + distance integer formatting case。
+
 ## [2.25.1] - 2026-05-09
 
 **修「由網頁加入的景點」沒有起訖時間 + 缺 icon 兩個 bug。**
