@@ -49,7 +49,9 @@ function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Re
     phone: poi.phone,
     email: poi.email,
     website: poi.website,
-    hours: tp.hours ?? poi.hours,
+    // Migration 0055 (v2.25.5): trip_pois.hours DROPPED, hours 純 pois master。
+    // Place Details API weekday_descriptions 已含全週時段 + 公休日。
+    hours: poi.hours,
     rating: poi.rating,
     // Migration 0054 (v2.25.4): price 從 trip_pois 移到 pois master。
     // dual-read 保險：pois.price 優先，trip_pois.price 作 fallback（觀察期內舊資料）。
