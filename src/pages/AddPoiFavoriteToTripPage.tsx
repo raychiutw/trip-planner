@@ -343,7 +343,9 @@ export default function AddPoiFavoriteToTripPage() {
     setSubmitError(null);
     try {
       if (isDirectMode && favorite) {
-        // direct mode：POI 從 explore 帶來，沒對應 favorite → 直接 POST entries（同 AddStopPage 'search' tab）
+        // direct mode：POI 從 explore 帶來，沒對應 favorite → 直接 POST entries（同 AddStopPage 'search' tab）。
+        // entries.ts 後端只認 body.time（"HH:MM-HH:MM" 單欄位），需在前端 join。
+        const time = startTime && endTime ? `${startTime}-${endTime}` : undefined;
         await apiFetch(`/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`, {
           method: 'POST',
           body: JSON.stringify({
@@ -352,8 +354,7 @@ export default function AddPoiFavoriteToTripPage() {
             lat: favorite.poiLat,
             lng: favorite.poiLng,
             source: 'google',
-            startTime: startTime || undefined,
-            endTime: endTime || undefined,
+            time,
           }),
         });
         // recompute travel for this day (fire-and-forget；同 v2.23.1 AddStopPage pattern)
