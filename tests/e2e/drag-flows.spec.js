@@ -80,19 +80,33 @@ test.describe('Drag flows — Section 8.2 mobile webkit', () => {
     // 2026-05-02 v2.18.3：grip 從 32x32 改 24x24 對齊 mockup S12 Variant A
     // (terracotta-preview-v2.html .tp-stop-v-grip)。documented exception 對
     // Apple HIG 44px tap target，詳見 DESIGN.md Decisions Log + Accessibility
-    // section。Webkit (mobile-safari) 對 sticky/transform 容器內 element 的
-    // boundingBox() 偶爾回 null，改讀 DOM getBoundingClientRect() 拿 rect。
-    // 2026-05-07 v2.24.6：scroll + measure 用 single evaluate atomic — 避免
-    // Playwright scrollIntoViewIfNeeded auto-stability 等待跟 React useEffect
-    // re-render race（webkit "Element not attached"）；同時不能完全省 scroll，
-    // off-screen 元素 getBoundingClientRect 偶爾回 0（mobile-chrome）。
-    const box = await firstGrip.evaluate((el) => {
+    // section。
+    //
+    // 2026-05-11 v2.26.0：root-cause 修法 — 之前的 atomic scroll+measure
+    // (v2.24.6) 仍 flaky，因為 `scrollIntoView()` 是 sync 但 layout/paint commit
+    // 在 next frame；mobile webkit 在 dnd-kit useSortable transform container
+    // 內，第一次 paint 時 grid layout 還沒 flush，getBoundingClientRect 回 0。
+    //
+    // 修法：(1) scrollIntoView → (2) double RAF 等 scroll commit + layout flush
+    // → (3) measure rect。包在 expect.poll() 自動 retry 直到 width ≥ 24（element
+    // 一定會 settle，只是時序不定）。
+    const measureGrip = async () => firstGrip.evaluate((el) => new Promise((resolve) => {
       el.scrollIntoView({ block: 'center', inline: 'center' });
-      const r = el.getBoundingClientRect();
-      return { width: r.width, height: r.height };
-    });
-    expect(box.width).toBeGreaterThanOrEqual(24); // grip is 24x24 button (mockup S12 Variant A spec)
-    expect(box.height).toBeGreaterThanOrEqual(24);
+      // 雙 RAF：第一幀讓 scroll 提交，第二幀讓 layout 與 transform settle。
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        resolve({ width: r.width, height: r.height });
+      }));
+    }));
+    await expect.poll(async () => (await measureGrip()).width, {
+      timeout: 5000,
+      intervals: [100, 250, 500, 1000],
+      message: 'grip width should be ≥ 24px (mockup S12 Variant A) after layout settles',
+    }).toBeGreaterThanOrEqual(24);
+    await expect.poll(async () => (await measureGrip()).height, {
+      timeout: 5000,
+      intervals: [100, 250, 500, 1000],
+    }).toBeGreaterThanOrEqual(24);
   });
 });
 

@@ -2,6 +2,7 @@ import { logAudit } from '../../../../_audit';
 import { hasWritePermission } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { findOrCreatePoi } from '../../../../_poi';
+import { resolveEntryTimes } from '../../../../_time';
 import { validateEntryBody, detectGarbledText } from '../../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../../_utils';
 import type { Env } from '../../../../_types';
@@ -84,11 +85,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       source: 'ai',
     });
 
+    // v2.26.0 (migration 0056) dual-write — helper from _time.ts.
+    const { time: timeStr, startTime, endTime } = resolveEntryTimes(body);
+
     row = await db
-      .prepare(`INSERT INTO trip_entries (day_id, sort_order, time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+      .prepare(`INSERT INTO trip_entries (day_id, sort_order, time, start_time, end_time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
       .bind(
         dayId, sortOrder,
-        body.time ?? null,
+        timeStr,
+        startTime,
+        endTime,
         title,
         body.description ?? null,
         body.source ?? 'ai',

@@ -12,7 +12,9 @@ type AllowedTable = typeof ALLOWED_TABLES[number];
 const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
   trips:            ['id', 'name', 'owner_user_id', 'title', 'description', 'countries', 'published', 'data_source', 'default_travel_mode', 'lang', 'created_at', 'updated_at'],
   trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'title', 'updated_at'],
-  trip_entries:     ['id', 'day_id', 'sort_order', 'time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min', 'travel_distance_m', 'travel_computed_at', 'travel_source', 'poi_id', 'updated_at'],
+  // Migration 0056 (v2.26.0): start_time / end_time 拆分自 time。time 仍存在
+  // (dual-write 觀察期)，rollback 對舊 audit row 仍能還原舊行為。
+  trip_entries:     ['id', 'day_id', 'sort_order', 'time', 'start_time', 'end_time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min', 'travel_distance_m', 'travel_computed_at', 'travel_source', 'poi_id', 'updated_at'],
   pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'mapcode', 'lat', 'lng', 'country', 'source', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at', 'created_at', 'updated_at'],
   // Migration 0055 (v2.25.5): hours dropped from trip_pois (moved to pois master).
   // Migration 0054 (v2.25.4) note: price still listed here for legacy audit rows;

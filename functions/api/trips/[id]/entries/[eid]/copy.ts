@@ -24,6 +24,7 @@
 import { logAudit } from '../../../../_audit';
 import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
+import { parseTime } from '../../../../_time';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
@@ -82,6 +83,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   const overrideTime = body.time !== undefined ? body.time : source.time;
+  // v2.26.0 (migration 0056): 同步寫 start_time/end_time。若 body.time 覆寫，
+  // 用 _time.ts parseTime 解析；否則 copy source 的 start_time/end_time。
+  let copyStartTime: string | null;
+  let copyEndTime: string | null;
+  if (body.time !== undefined) {
+    const parsed = parseTime(typeof body.time === 'string' ? body.time : null);
+    copyStartTime = parsed.start;
+    copyEndTime = parsed.end;
+  } else {
+    copyStartTime = (source.start_time as string | null) ?? null;
+    copyEndTime = (source.end_time as string | null) ?? null;
+  }
 
   // INSERT new entry — copy 所有 source 欄位除了 id、day_id、sort_order
   let newRow;
@@ -89,14 +102,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     newRow = await db
       .prepare(
         `INSERT INTO trip_entries
-          (day_id, sort_order, time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (day_id, sort_order, time, start_time, end_time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING *`,
       )
       .bind(
         targetDayId,
         sortOrder,
         overrideTime,
+        copyStartTime,
+        copyEndTime,
         source.title,
         source.description,
         source.source,
@@ -107,7 +122,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         source.poi_id,
       )
       .first() as Record<string, unknown> | null;
-  } catch {
+  } catch (err) {
+    console.error('[copy.ts] INSERT trip_entries failed', { eid, targetDayId, err });
     throw new AppError('SYS_DB_ERROR', 'DB 暫時無法處理，請稍後重試');
   }
   if (!newRow) throw new AppError('DATA_SAVE_FAILED', '複製 entry 失敗');

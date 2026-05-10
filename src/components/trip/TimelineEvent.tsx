@@ -47,7 +47,12 @@ export interface PoiPhoto {
 
 export interface TimelineEntryData {
   id?: number | null;
+  /** Legacy combined time string ("HH:MM" or "HH:MM-HH:MM"). v2.26.0 新 path 改用 start_time / end_time。 */
   time?: string | null;
+  /** v2.26.0 (migration 0056): 抵達時間 "HH:MM"，獨立欄位讓 EditEntryPage 可單獨編輯。 */
+  start_time?: string | null;
+  /** v2.26.0 (migration 0056): 離開時間 "HH:MM"。 */
+  end_time?: string | null;
   title?: string | null;
   description?: string | null;
   note?: string | null;

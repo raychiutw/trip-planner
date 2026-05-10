@@ -597,16 +597,24 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 </button>
               </div>
             )}
-            <button
-              type="button"
-              className="tp-rail-action-icon"
-              onClick={(e) => { e.stopPropagation(); beginEditNote(e); }}
-              aria-label="編輯備註"
-              title="編輯備註"
-              data-testid={`timeline-rail-edit-note-${entry.id}`}
-            >
-              <Icon name="pencil" />
-            </button>
+            {/* v2.26.0：「編」按鈕改 navigate 到 EditEntryPage 全頁 form
+              * （含起訖時間 + 從上一站移動方式 + 備註）。tp-rail-detail 內 inline
+              * note edit 仍保留作為快速 path（單獨改備註不用跳頁）。 */}
+            {tripId && entry.id != null && (
+              <button
+                type="button"
+                className="tp-rail-action-icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entry.id}/edit`);
+                }}
+                aria-label="編輯景點"
+                title="編輯景點"
+                data-testid={`timeline-rail-edit-${entry.id}`}
+              >
+                <Icon name="pencil" />
+              </button>
+            )}
             {/* v2.23.8 變更 POI — navigate to ChangePoiPage */}
             {tripId && entry.id != null && (
               <button

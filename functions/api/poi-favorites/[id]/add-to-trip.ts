@@ -22,7 +22,9 @@ import { hasWritePermission } from '../../_auth';
 import { AppError, buildRateLimitResponse } from '../../_errors';
 import { detectGarbledText } from '../../_validate';
 import { json, parseIntParam, parseJsonBody } from '../../_utils';
-import { TIME_RE } from '../../_poi-defaults';
+// v2.26.0: TIME_RE canonical 在 _time.ts（migration 0056 後 entry-time helpers 統一住處）。
+// _poi-defaults.ts:6 仍保留同 const 給 saved-pois fast-path（defense-in-depth）。
+import { TIME_RE } from '../../_time';
 import { assertFavoriteOwnership, pickFavoriteRateLimitBucket, requireFavoriteActor } from '../../_companion';
 import { bumpRateLimit, RATE_LIMITS } from '../../_rate_limit';
 import type { Env, AuthData } from '../../_types';
@@ -139,15 +141,38 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   }
 
   // Conflict detection + sort_order 計算（一次查 day 的所有 entries）
+  // v2.26.0 (migration 0056)：優先讀 start_time/end_time，fall back 到 legacy
+  // time 解析。為什麼這麼做：原本只 parseTimeRange(entry.time) 在 single-form
+  // "HH:MM"（無 end）或 NULL 時 skip 整個 conflict 檢查；新欄位 backfill 會把
+  // single-form 也記下 start_time（end_time = NULL）→ 可以用 start + 估計 stay
+  // 重建 range。簡化策略：start_time 有但 end_time NULL → 視為瞬間點（end = start）。
   const newStartMin = hhmmToMin(startTime);
   const newEndMin = hhmmToMin(endTime);
   const { results: dayEntries } = await db
-    .prepare('SELECT id, time, title, sort_order FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC')
+    .prepare('SELECT id, time, start_time, end_time, title, sort_order FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC')
     .bind(day.id)
-    .all<{ id: number; time: string | null; title: string; sort_order: number }>();
+    .all<{
+      id: number;
+      time: string | null;
+      start_time: string | null;
+      end_time: string | null;
+      title: string;
+      sort_order: number;
+    }>();
+
+  /** 取得 entry 的 [startMin, endMin]：優先 start_time/end_time，fall back time。 */
+  function entryRange(entry: { time: string | null; start_time: string | null; end_time: string | null }): [number, number] | null {
+    if (entry.start_time) {
+      const start = hhmmToMin(entry.start_time);
+      if (!Number.isFinite(start)) return null;
+      const end = entry.end_time ? hhmmToMin(entry.end_time) : start; // single-time = 瞬間點
+      return [start, Number.isFinite(end) ? end : start];
+    }
+    return parseTimeRange(entry.time);
+  }
 
   for (const entry of dayEntries ?? []) {
-    const range = parseTimeRange(entry.time);
+    const range = entryRange(entry);
     if (!range) continue;
     const [eStart, eEnd] = range;
     if (newStartMin < eEnd && newEndMin > eStart) {
@@ -155,7 +180,9 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
         error: 'CONFLICT',
         conflictWith: {
           entryId: entry.id,
-          time: entry.time,
+          time: entry.start_time && entry.end_time
+            ? `${entry.start_time}-${entry.end_time}`
+            : (entry.start_time ?? entry.time),
           title: entry.title,
           dayNum,
         },
@@ -167,7 +194,7 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   // 若沒有更晚 entry → append 到末尾。已有 entry 但時間範圍無法 parse 視為早於。
   let insertSortOrder = (dayEntries?.length ?? 0); // default append
   for (const entry of dayEntries ?? []) {
-    const range = parseTimeRange(entry.time);
+    const range = entryRange(entry);
     if (!range) continue;
     const [eStart] = range;
     if (eStart > newStartMin) {
@@ -186,11 +213,13 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     );
   }
 
+  // v2.26.0 (migration 0056): dual-write start_time/end_time（已是 4-field 純時間驅動，
+   // 直接寫入新欄位 + 同步 compose 寫 legacy time）。
   stmts.push(
     db.prepare(
-      `INSERT INTO trip_entries (day_id, sort_order, time, title, description, source, note, poi_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-    ).bind(day.id, insertSortOrder, `${startTime}-${endTime}`, favorite.poi_name, null, 'fast-path', favorite.note, favorite.poi_id),
+      `INSERT INTO trip_entries (day_id, sort_order, time, start_time, end_time, title, description, source, note, poi_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+    ).bind(day.id, insertSortOrder, `${startTime}-${endTime}`, startTime, endTime, favorite.poi_name, null, 'fast-path', favorite.note, favorite.poi_id),
   );
   stmts.push(
     db.prepare(

@@ -248,8 +248,9 @@ test.describe('QA Flow 6 — 編輯景點 (note inline)', () => {
     await row.click();
     await expect(page.getByTestId('timeline-rail-detail-101')).toBeVisible();
 
-    // 點編輯備註 → 出 textarea → 改 → 儲存
-    await page.getByTestId('timeline-rail-edit-note-101').click();
+    // v2.26.0：「編」按鈕 navigate 到 EditEntryPage；inline note edit 改走點 note-value
+    // 直接觸發 textarea (pattern 不變，testid `timeline-rail-note-value-N`)。
+    await page.getByTestId('timeline-rail-note-value-101').click();
     const noteInput = page.getByTestId('timeline-rail-note-input-101');
     await expect(noteInput).toBeVisible();
     await noteInput.fill('QA spec 改的備註');
