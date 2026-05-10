@@ -412,7 +412,11 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
             <span className="ocean-rail-name">{entry.title ?? ''}</span>
             {(() => {
               const durLabel = formatDurationCompact(parsed.duration);
-              const rating = typeof entry.googleRating === 'number' ? entry.googleRating : null;
+              // mockup hotel row sub-line 是「HOTEL · 退房 + 早餐」— 不顯示 rating
+              // 即使 POI 有 rating（design choice：飯店重點是 check-out / 早餐
+              // 等資訊，rating 對 hotel timeline entry 不那麼相關）。
+              const isHotel = meta.label === '住宿';
+              const rating = typeof entry.googleRating === 'number' && !isHotel ? entry.googleRating : null;
               const desc = entry.description?.trim() ?? '';
               const shortDesc = desc && desc.length <= 24 && !desc.includes('\n') ? desc : '';
               return (
