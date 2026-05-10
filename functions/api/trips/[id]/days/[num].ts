@@ -230,17 +230,19 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       if (Array.isArray(e.restaurants)) {
         for (const [idx, r] of (e.restaurants as Record<string, unknown>[]).entries()) {
           const rIdx = poiItems.length;
+          // Migration 0054: price 寫進 pois master，不再寫 trip_pois.price。
           poiItems.push({
             name: (r.name as string) || '', type: 'restaurant',
             description: r.description as string, rating: r.rating as number,
             category: r.category as string,
             hours: r.hours as string, source: 'ai',
+            price: r.price as string,
           });
           tripPoiBuilders.push((ids) => [
-            db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, description, note, price, reservation, reservation_url) VALUES (?, ?, 'timeline', ?, ?, ?, ?, ?, ?, ?, ?)`)
+            db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, description, note, reservation, reservation_url) VALUES (?, ?, 'timeline', ?, ?, ?, ?, ?, ?, ?)`)
               .bind(ids[rIdx], id, entryId, dayId, idx,
                 r.description as string ?? null, r.note as string ?? null,
-                r.price as string ?? null, r.reservation as string ?? null, r.reservation_url as string ?? null),
+                r.reservation as string ?? null, r.reservation_url as string ?? null),
           ]);
         }
       }

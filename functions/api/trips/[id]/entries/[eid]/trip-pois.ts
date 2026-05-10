@@ -56,12 +56,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!entry) throw new AppError('DATA_NOT_FOUND', '找不到此 entry');
 
   // Find or create POI master (shared helper, race-safe with UNIQUE index)
+  // Migration 0054 (v2.25.4): price 是 pois master 欄位，跟著 findOrCreatePoi 寫入。
   const poiId = await findOrCreatePoi(db, {
     name: body.name, type: body.type,
     description: body.description as string, hours: body.hours as string,
     rating: body.rating as number, category: body.category as string,
     mapcode: body.mapcode as string,
     lat: body.lat as number, lng: body.lng as number, source: 'ai',
+    price: body.price as string,
   });
 
   // Get next sort_order
@@ -69,14 +71,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     'SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM trip_pois WHERE entry_id = ? AND context = ?'
   ).bind(entryId, body.context || 'timeline').first<{ max_sort: number }>();
 
-  // Insert trip_pois
+  // Insert trip_pois (no price — moved to pois master in migration 0054)
   const result = await db.prepare(
-    `INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, description, note, hours, price, reservation, reservation_url, must_buy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+    `INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, description, note, hours, reservation, reservation_url, must_buy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
   ).bind(
     poiId, id, body.context || 'timeline', entryId, entry.day_id,
     (maxSort?.max_sort ?? -1) + 1,
     body.description ?? null, body.note ?? null, body.hours ?? null,
-    body.price ?? null, body.reservation ?? null, body.reservation_url ?? null,
+    body.reservation ?? null, body.reservation_url ?? null,
     body.must_buy ?? null,
   ).first();
 

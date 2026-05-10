@@ -69,6 +69,30 @@ describe('POST /api/trips/:id/entries/:eid/trip-pois', () => {
     });
     expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
   });
+
+  it('帶 price → 寫入 pois.price 不寫 trip_pois.price (migration 0054)', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-tp/entries/${entryId}/trip-pois`, 'POST', {
+        name: '價位測試屋',
+        type: 'restaurant',
+        context: 'timeline',
+        price: '¥600~',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-tp', eid: String(entryId) },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(201);
+    const data = await resp.json() as Record<string, unknown>;
+    const poiIdRow = (data.poi_id ?? data.poiId) as number;
+
+    const poi = await db.prepare('SELECT price FROM pois WHERE id = ?').bind(poiIdRow).first();
+    expect((poi as Record<string, unknown>).price).toBe('¥600~');
+
+    const tp = await db.prepare('SELECT price FROM trip_pois WHERE id = ?').bind(data.id).first();
+    expect((tp as Record<string, unknown>).price).toBeNull();
+  });
 });
 
 describe('PATCH /api/trips/:id/trip-pois/:tpid', () => {
@@ -82,6 +106,22 @@ describe('PATCH /api/trips/:id/trip-pois/:tpid', () => {
       params: { id: 'trip-tp', tpid: String(tripPoiId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+  });
+
+  it('PATCH price → dispatch 到 pois master (migration 0054)', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-tp/trip-pois/${tripPoiId}`, 'PATCH', {
+        price: '¥1000~1500',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-tp', tpid: String(tripPoiId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+
+    const tp = await db.prepare('SELECT poi_id FROM trip_pois WHERE id = ?').bind(tripPoiId).first();
+    const poi = await db.prepare('SELECT price FROM pois WHERE id = ?').bind((tp as Record<string, unknown>).poi_id).first();
+    expect((poi as Record<string, unknown>).price).toBe('¥1000~1500');
   });
 });
 

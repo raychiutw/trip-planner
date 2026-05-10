@@ -51,6 +51,10 @@ function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Re
     website: poi.website,
     hours: tp.hours ?? poi.hours,
     rating: poi.rating,
+    // Migration 0054 (v2.25.4): price 從 trip_pois 移到 pois master。
+    // dual-read 保險：pois.price 優先，trip_pois.price 作 fallback（觀察期內舊資料）。
+    // Migration 0055 觀察期後 DROP trip_pois.price，這行會簡化成 `poi.price`。
+    price: (poi as { price?: unknown }).price ?? tp.price,
     category: poi.category,
     mapcode: poi.mapcode,
     lat: poi.lat,
@@ -66,7 +70,6 @@ function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Re
     checkout: tp.checkout,
     breakfast_included: tp.breakfast_included,
     breakfast_note: tp.breakfast_note,
-    price: tp.price,
     reservation: tp.reservation,
     reservation_url: tp.reservation_url,
     must_buy: tp.must_buy,
