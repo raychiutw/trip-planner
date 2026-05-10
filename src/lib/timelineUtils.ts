@@ -94,11 +94,11 @@ export function deriveTypeMeta(entry: TimelineEntryData): { icon: string; label:
   // Order matters — most specific first.
   if (/機場|flight|機票/.test(blob)) return { icon: 'plane', label: '飛行', accent: false };
   if (/飯店|旅館|hotel|check[- ]?in|民宿/.test(blob)) return { icon: 'hotel', label: '住宿', accent: false };
-  if (/餐|食|restaurant|lunch|dinner|breakfast|用餐/.test(blob)) return { icon: 'fork-knife', label: '用餐', accent: true };
+  if (/餐|食|restaurant|lunch|dinner|breakfast|用餐/.test(blob)) return { icon: 'utensils', label: '用餐', accent: true };
   if (/咖啡|café|cafe|coffee/.test(blob)) return { icon: 'coffee', label: '咖啡', accent: true };
   if (/購物|shopping|mall|market/.test(blob)) return { icon: 'shopping', label: '購物', accent: false };
   if (/開車|drive|car|自駕|租車/.test(blob)) return { icon: 'car', label: '移動', accent: false };
-  if (/步行|walk|散步/.test(blob)) return { icon: 'walk', label: '散步', accent: false };
+  if (/步行|walk|散步/.test(blob)) return { icon: 'walking', label: '散步', accent: false };
   if (/休息|rest|spa|泡湯/.test(blob)) return { icon: 'coffee', label: '休息', accent: false };
   return { icon: 'location-pin', label: '景點', accent: true };
 }

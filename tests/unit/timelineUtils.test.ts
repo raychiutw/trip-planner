@@ -84,19 +84,49 @@ describe('deriveTypeMeta', () => {
     expect(deriveTypeMeta(entry)).toEqual({ icon: 'plane', label: '飛行', accent: false });
   });
 
-  it('午餐 (description: restaurant) → fork-knife / 用餐 / accent:true', () => {
+  it('午餐 (description: restaurant) → utensils / 用餐 / accent:true', () => {
     const entry: TimelineEntryData = { title: '午餐', description: 'restaurant' };
-    expect(deriveTypeMeta(entry)).toEqual({ icon: 'fork-knife', label: '用餐', accent: true });
+    expect(deriveTypeMeta(entry)).toEqual({ icon: 'utensils', label: '用餐', accent: true });
   });
 
-  it('步行市區 → walk / 散步 / accent:false', () => {
+  it('步行市區 → walking / 散步 / accent:false', () => {
     const entry: TimelineEntryData = { title: '步行市區' };
-    expect(deriveTypeMeta(entry)).toEqual({ icon: 'walk', label: '散步', accent: false });
+    expect(deriveTypeMeta(entry)).toEqual({ icon: 'walking', label: '散步', accent: false });
   });
 
   it('無特殊關鍵字 → location-pin / 景點 / accent:true', () => {
     const entry: TimelineEntryData = { title: '首里城' };
     expect(deriveTypeMeta(entry)).toEqual({ icon: 'location-pin', label: '景點', accent: true });
+  });
+
+  // Regression guard：deriveTypeMeta 回傳的 icon name 必須存在於 Icon.tsx ICONS registry，
+  // 否則 <Icon name=…> 會 silently render null（user 看到的「缺少 icon」即此 bug）。
+  it('所有 deriveTypeMeta 回傳的 icon name 都在 ICONS registry', () => {
+    const iconSrc = fs.readFileSync(
+      path.resolve(__dirname, '../../src/components/shared/Icon.tsx'),
+      'utf-8',
+    );
+    const registered = new Set<string>();
+    for (const m of iconSrc.matchAll(/'([\w-]+)':\s*'<path/g)) registered.add(m[1]!);
+
+    const cases: TimelineEntryData[] = [
+      { title: '機場接送' },
+      { title: '飯店' },
+      { title: '午餐 restaurant' },
+      { title: 'cafe 咖啡' },
+      { title: 'shopping 購物' },
+      { title: '開車自駕' },
+      { title: '步行市區' },
+      { title: 'spa 泡湯' },
+      { title: '東京迪士尼樂園', travel: { type: 'walking' } },
+      { title: '首里城' },
+    ];
+    const missing: string[] = [];
+    for (const c of cases) {
+      const { icon } = deriveTypeMeta(c);
+      if (!registered.has(icon)) missing.push(`${c.title}→${icon}`);
+    }
+    expect(missing).toEqual([]);
   });
 });
 
