@@ -15,7 +15,7 @@ import path from 'path';
    F001 — parseTimeRange / formatDuration / deriveTypeMeta
    ============================================================ */
 
-import { parseTimeRange, formatDuration, deriveTypeMeta } from '../../src/lib/timelineUtils';
+import { parseTimeRange, formatDuration, formatDurationCompact, deriveTypeMeta } from '../../src/lib/timelineUtils';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
 
 describe('parseTimeRange', () => {
@@ -76,6 +76,17 @@ describe('formatDuration', () => {
   it('Infinity → ""', () => {
     expect(formatDuration(Infinity)).toBe('');
   });
+});
+
+describe('formatDurationCompact', () => {
+  it('0 → ""', () => { expect(formatDurationCompact(0)).toBe(''); });
+  it('negative → ""', () => { expect(formatDurationCompact(-5)).toBe(''); });
+  it('NaN → ""', () => { expect(formatDurationCompact(NaN)).toBe(''); });
+  it('30 → "30 min"', () => { expect(formatDurationCompact(30)).toBe('30 min'); });
+  it('59 → "59 min"', () => { expect(formatDurationCompact(59)).toBe('59 min'); });
+  it('60 → "1 hr"', () => { expect(formatDurationCompact(60)).toBe('1 hr'); });
+  it('90 → "1.5 hr"', () => { expect(formatDurationCompact(90)).toBe('1.5 hr'); });
+  it('240 → "4 hr"', () => { expect(formatDurationCompact(240)).toBe('4 hr'); });
 });
 
 describe('deriveTypeMeta', () => {

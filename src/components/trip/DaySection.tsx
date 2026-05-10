@@ -72,6 +72,41 @@ function getTimelineBounds(timeline: unknown[]): { start: string | null; end: st
   };
 }
 
+/** Sum entry.travel.distanceM across timeline → kilometers (rounded). null if no data. */
+function getTotalKm(timeline: unknown[]): number | null {
+  let totalM = 0;
+  let hasAny = false;
+  for (const e of timeline) {
+    if (typeof e !== 'object' || e === null) continue;
+    const travel = (e as { travel?: { distanceM?: number | null } }).travel;
+    const d = travel?.distanceM;
+    if (typeof d === 'number' && Number.isFinite(d)) {
+      totalM += d;
+      hasAny = true;
+    }
+  }
+  if (!hasAny) return null;
+  return Math.round(totalM / 1000);
+}
+
+/** Compute hours between bounds.start and bounds.end (e.g. "08:00" → "21:00" = 13). */
+function getTotalHours(start: string | null, end: string | null): number | null {
+  if (!start || !end) return null;
+  const parse = (t: string): number | null => {
+    const [hh, mm] = t.split(':');
+    const h = parseInt(hh ?? '', 10);
+    const m = parseInt(mm ?? '0', 10);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+  };
+  const s = parse(start);
+  const e = parse(end);
+  if (s == null || e == null) return null;
+  const diff = e - s;
+  if (diff <= 0) return null;
+  return Math.round(diff / 60);
+}
+
 const DaySection = React.memo(function DaySection({
   dayNum,
   day,
@@ -96,6 +131,15 @@ const DaySection = React.memo(function DaySection({
 
   const warnings = useMemo(() => validateDay(timeline), [timeline]);
   const bounds = useMemo(() => getTimelineBounds(timeline), [timeline]);
+  const totalKm = useMemo(() => getTotalKm(timeline), [timeline]);
+  const totalHours = useMemo(() => getTotalHours(bounds.start, bounds.end), [bounds.start, bounds.end]);
+  const heroSub = useMemo(() => {
+    const parts: string[] = [];
+    if (timeline.length > 0) parts.push(`${timeline.length} 個 stops`);
+    if (totalKm != null) parts.push(`${totalKm} km`);
+    if (totalHours != null) parts.push(`預估 ${totalHours} 小時`);
+    return parts.length > 1 ? parts.join(' · ') : '';
+  }, [timeline.length, totalKm, totalHours]);
 
   const timelineEntries = useMemo(
     () => timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e) : toTimelineEntry({})),
@@ -127,24 +171,27 @@ const DaySection = React.memo(function DaySection({
           </div>
         </div>
         <h2 className="ocean-hero-title">{dayTitle}</h2>
-        <div className="ocean-hero-stats">
-          <div className="ocean-hero-stat">
-            <div className="ocean-hero-stat-label">Stops</div>
-            <div className="ocean-hero-stat-value">{timeline.length || '—'}</div>
+        {heroSub && <div className="ocean-hero-sub">{heroSub}</div>}
+        {timeline.length > 0 && (
+          <div className="ocean-hero-stats">
+            <div className="ocean-hero-stat">
+              <div className="ocean-hero-stat-label">Stops</div>
+              <div className="ocean-hero-stat-value">{timeline.length}</div>
+            </div>
+            {bounds.start && (
+              <div className="ocean-hero-stat">
+                <div className="ocean-hero-stat-label">Start</div>
+                <div className="ocean-hero-stat-value">{bounds.start}</div>
+              </div>
+            )}
+            {bounds.end && (
+              <div className="ocean-hero-stat">
+                <div className="ocean-hero-stat-label">End</div>
+                <div className="ocean-hero-stat-value">{bounds.end}</div>
+              </div>
+            )}
           </div>
-          {bounds.start && (
-            <div className="ocean-hero-stat">
-              <div className="ocean-hero-stat-label">Start</div>
-              <div className="ocean-hero-stat-value">{bounds.start}</div>
-            </div>
-          )}
-          {bounds.end && (
-            <div className="ocean-hero-stat">
-              <div className="ocean-hero-stat-label">End</div>
-              <div className="ocean-hero-stat-value">{bounds.end}</div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       <div

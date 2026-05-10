@@ -38,22 +38,24 @@ import { useNavigate } from 'react-router-dom';
 import { Restaurant, type RestaurantData } from './Restaurant';
 import TravelPill from './TravelPill';
 import type { TimelineEntryData } from './TimelineEvent';
-import { parseTimeRange, formatDuration, deriveTypeMeta } from '../../lib/timelineUtils';
+import { parseTimeRange, formatDurationCompact, deriveTypeMeta } from '../../lib/timelineUtils';
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { useTripSegments } from '../../hooks/useTripSegments';
 
 const SCOPED_STYLES = `
 .tp-rail-detail {
-  margin: 0 0 12px calc(48px + 16px);
+  /* mockup .tp-detail-expanded:2086 — margin-left: 110px desktop / 92px mobile.
+   * 對齊 TravelPill 同樣 indent，視覺從 dot 中心起算。 */
+  margin: 0 0 12px 110px;
   padding: 14px 16px;
   background: var(--color-secondary);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   display: flex; flex-direction: column; gap: 12px;
   animation: tp-rail-detail-in 160ms var(--transition-timing-function-apple, ease-out);
 }
-@media (max-width: 480px) {
-  .tp-rail-detail { margin-left: 8px; }
+@media (max-width: 760px) {
+  .tp-rail-detail { margin-left: 92px; }
 }
 @keyframes tp-rail-detail-in {
   from { opacity: 0; transform: translateY(-4px); }
@@ -376,11 +378,12 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         data-past={isPast || undefined}
         data-accent={meta.accent || undefined}
         data-last={isLast || undefined}
+        data-expanded={expanded || undefined}
         data-scroll-anchor={entry.id != null ? `entry-${entry.id}` : undefined}
       >
-        {/* mockup S12 Variant A 5 欄 grid: grip(24) | time+dur(60) | icon(44) | content | caret(24)
-         * 2026-05-01: grip 移到 col 1（首子元素）+ time 包進 stack 加 dur 副行 +
-         * 移除 .ocean-rail-dot 編號圓圈（mockup 沒有此元素，與 grip 視覺競爭）。 */}
+        {/* mockup .tp-detail-row:1923 — 6-col grid: grip(24) | time(50) | dot(24) | icon(44) | body(1fr) | caret(20)。
+         * 2026-05-10 (#510)：重新加回 .ocean-rail-dot — 編號圓圈是 wayfinding，
+         * mockup terracotta-preview-v2.html 6241 一直都有，移除它的舊註解（基於更早 S12 Variant A）已過期。 */}
         <button
           type="button"
           className="ocean-rail-grip"
@@ -391,15 +394,8 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         >
           <Icon name="grip" />
         </button>
-        {(() => {
-          const durLabel = formatDuration(parsed.duration);
-          return (
-            <span className="ocean-rail-time-stack">
-              <span className="ocean-rail-time">{parsed.start}</span>
-              {durLabel && <span className="ocean-rail-dur">{durLabel}</span>}
-            </span>
-          );
-        })()}
+        <span className="ocean-rail-time">{parsed.start}</span>
+        <span className="ocean-rail-dot" aria-hidden="true">{index + 1}</span>
         <button
           type="button"
           className="ocean-rail-head"
@@ -413,13 +409,37 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
             <Icon name={meta.icon} />
           </span>
           <span className="ocean-rail-content">
-            <span className="ocean-rail-chip">{meta.label}</span>
             <span className="ocean-rail-name">{entry.title ?? ''}</span>
-            {typeof entry.googleRating === 'number' && (
-              <span className="ocean-rail-sub">
-                <span>★ {entry.googleRating.toFixed(1)}</span>
-              </span>
-            )}
+            {(() => {
+              const durLabel = formatDurationCompact(parsed.duration);
+              const rating = typeof entry.googleRating === 'number' ? entry.googleRating : null;
+              const desc = entry.description?.trim() ?? '';
+              const shortDesc = desc && desc.length <= 24 && !desc.includes('\n') ? desc : '';
+              return (
+                <span className="ocean-rail-sub">
+                  <span className="ocean-rail-sub-type">{meta.label}</span>
+                  {durLabel && (
+                    <>
+                      <span className="ocean-rail-sub-sep">·</span>
+                      <span>{durLabel}</span>
+                    </>
+                  )}
+                  {rating != null && (
+                    <>
+                      <span className="ocean-rail-sub-sep">·</span>
+                      <span className="ocean-rail-sub-star">★</span>
+                      <span>{rating.toFixed(1)}</span>
+                    </>
+                  )}
+                  {shortDesc && (
+                    <>
+                      <span className="ocean-rail-sub-sep">·</span>
+                      <span>{shortDesc}</span>
+                    </>
+                  )}
+                </span>
+              );
+            })()}
           </span>
           <span className="ocean-rail-caret" aria-hidden="true">›</span>
         </button>

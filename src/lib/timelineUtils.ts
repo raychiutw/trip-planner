@@ -55,6 +55,25 @@ export function formatDuration(mins: number): string {
 }
 
 /**
+ * 短格式 duration（英文）— 對應 mockup .tp-detail-body-sub 的 "30 min" / "4 hr" / "1.5 hr"。
+ * 與 formatDuration（中文長）並存：rail body sub-line 一行多資訊用短格式較密；
+ * 其他情境（TravelPill、weather summary、整列描述）維持中文 formatDuration。
+ *   30  → "30 min"
+ *   60  → "1 hr"
+ *   90  → "1.5 hr"
+ *   240 → "4 hr"
+ *   非有限/0/負數 → ""
+ */
+export function formatDurationCompact(mins: number): string {
+  if (!Number.isFinite(mins) || mins <= 0) return '';
+  if (mins < 60) return `${mins} min`;
+  const hrs = mins / 60;
+  // 整數小時不帶小數；非整數保留 1 位小數（去尾 0），例如 1.5 / 1.25→1.3
+  const display = Number.isInteger(hrs) ? String(hrs) : hrs.toFixed(1).replace(/\.0$/, '');
+  return `${display} hr`;
+}
+
+/**
  * 解析時間字串的起始分鐘數（since midnight）。
  * "09:30-11:00" → 570；無 / null / malformed → -1。
  */
