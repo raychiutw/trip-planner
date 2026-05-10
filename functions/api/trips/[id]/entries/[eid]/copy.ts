@@ -122,7 +122,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         source.poi_id,
       )
       .first() as Record<string, unknown> | null;
-  } catch {
+  } catch (err) {
+    console.error('[copy.ts] INSERT trip_entries failed', { eid, targetDayId, err });
     throw new AppError('SYS_DB_ERROR', 'DB 暫時無法處理，請稍後重試');
   }
   if (!newRow) throw new AppError('DATA_SAVE_FAILED', '複製 entry 失敗');
