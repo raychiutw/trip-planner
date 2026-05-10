@@ -1,6 +1,6 @@
 ---
 name: tp-search-strategies
-description: POI 搜尋策略內部參考 — rating、hours、phone、business_status、website、reservation、location 的查詢方式。不直接 invoke，被 tp-create、tp-edit、tp-patch 引用。
+description: POI 搜尋策略內部參考 — rating / hours / phone / business_status / website / reservation / location / address 的查詢方式。不直接 invoke，被 tp-create、tp-edit、tp-patch 引用。
 user-invocable: false
 ---
 
@@ -8,113 +8,150 @@ user-invocable: false
 
 Event type schema（各類型物件必填欄位）見 `references/event-schema.md`。
 
-## Search Strategies
+## 第一原則：用 backend enrich endpoint，不爬網頁
 
-各欄位的搜尋方式、關鍵字模板、驗證規則。Agent 搜尋時依此執行。
+**v2.23.0 (migration 0051) 之後，POI 補資料統一透過 `POST /api/pois/{id}/enrich`。** Backend 直接打 Google Place Details API（API Routes v1）拿 rating / address / phone / hours / business_status，COALESCE 寫進 pois 表。
 
-### 前置步驟：Google Maps 驗證（鐵律）
+不要 `/browse` 爬 Google Maps 詳情頁，不要 WebSearch 摘要拼湊 — 兩者都比 backend Place Details 取得的資料粗糙（Google Maps 對未登入訪客限制 hours，WebSearch 結果聚合多 source 不一致）。
 
-**Google Maps 是 POI 的 source of truth。** 所有 tp-* skills 新增或更新 POI 時，必須先通過 Google Maps 驗證。查不到 = 無效 POI，不得新增或保留。
+完整呼叫流程見 `references/poi-spec.md` §「POI 補資料策略」。
+
+## 前置步驟：POI 存在驗證（鐵律）
+
+新增或更新 POI 前，必須通過存在驗證。查不到 = 無效 POI，不得新增或保留。
 
 **驗證流程：**
 
-1. WebSearch「{POI 名稱} {地區} Google Maps」
-2. 從搜尋結果確認 Google Maps 上有該 POI 的頁面（有明確地址、座標、評分）
-3. 從 Google Maps 結果提取 source of truth 資料：
-   - **lat/lng**（座標）— 必填，精度 4 位小數
-   - **address**（地址）— 有則填
-   - **google_rating**（評分）— 有則填
-4. 找到 → 用 Google Maps 資料更新 POI，繼續後續搜尋
-5. 找不到 → 判定為無效（無論 source 是 ai 或 user）：
+1. **`POST /api/poi-search`** body `{ query: "POI 名稱 城市", region?: "JP|TW|KR" }` → 回傳 results array（含 place_id、name、formatted_address、location）
+2. 確認 results 有匹配項（place_id 必填）
+3. 找到 → 用 `findOrCreatePoi` 建 pois 行 + 寫 place_id；接著 `POST /api/pois/{id}/enrich` 補完整欄位
+4. 找不到 → 判定無效：
    - **新增場景**（tp-create/tp-edit/tp-request）→ **不新增**，替換為 Google Maps 上可查到的真實店家
-   - **既有 POI**（tp-patch/tp-rebuild）→ 執行歇業偵測清理（見 modify-steps.md §5）
+   - **既有 POI**（tp-patch/tp-rebuild）→ 既有 POI 的 enrich 會自動把 status 設成 'missing'；觸發歇業偵測清理（見 `tp-shared/references/modify-steps.md §5`）
 
-**為什麼用 Google Maps 而非其他來源：** Google Maps 是最完整的全球 POI 資料庫，涵蓋座標、營業狀態、評分。Tabelog/HotPepper 僅限日本餐飲，地址 geocoding 有誤差，WebSearch 結果無法保證座標準確性。以 Google Maps 為唯一 source of truth 可確保所有 POI 資料一致且可驗證。
+## Field Sources（透過 enrich endpoint 取得）
 
-### rating（googleRating）
+下表列出每個欄位的 source（Place Details API 哪個 field）。Skill 不直接呼叫 Google API；資訊只供 debug + 補資料判斷用。
 
-適用：hotel、restaurant、shop、attraction、activity、gasStation
+### rating
 
-1. `/browse` 開 `https://www.google.com/maps/search/{POI名稱}`
-2. 從頁面文字抽第一個 `X.X` 格式（1.0–5.0）即為 rating
-3. fallback：WebSearch「{名稱} Google rating」/ Wanderlog / TripAdvisor / Tabelog 交叉比對
-4. 找不到不填預設值（NULL）
-5. 寫入 pois.rating（v2.19.x migration 0045 後 col 名為 `rating`，非 `google_rating`）
+- 適用：hotel / restaurant / shopping / attraction / activity / gasStation
+- Source: Place Details `rating`（1.0-5.0，userRatingCount 補強信心度）
+- 寫入：`pois.rating`（v2.19.x migration 0045 col rename 為 `rating`）
+- 找不到 → 不填 NULL（行政區、街道等 generic POI 沒 rating）
 
-### hours（營業時間）
+### hours（營業時間 + 公休日）
 
-適用：restaurant、shopping、attraction、activity、parking、transport
-
-1. `/browse` 開 Google Maps page
-2. 點開「營業時間」/「Hours」展開區塊
-3. 抽星期一-星期日的時段字串（例：「11:00–14:30, 17:00–22:00」）
-4. join '\n' 多行存入 pois.hours
-5. fallback：WebSearch「{名稱} 営業時間」/ 官方網站 / Tabelog
-6. 24h / 全年無休 → 寫「24 hours」或「全年無休」
+- 適用：restaurant / shopping / attraction / activity / parking / transport
+- Source: Place Details `regularOpeningHours.weekdayDescriptions`（array of "星期一: 11:00 – 14:30, 17:00 – 22:00" 全週）
+- 寫入：`pois.hours`（migration 0055 後 `trip_pois.hours` DROPPED，純 pois master）
+- **公休日**：weekday_descriptions 自動含「星期X: 休息」格式，不需另外處理
+- 24h / 全年無休 → "24 時間営業" / "全年無休"
 
 ### phone
 
-適用：hotel、restaurant、shopping、attraction、activity
-
-1. `/browse` 開 Google Maps page
-2. 抽「電話」/「Phone」label 後的字串（或 `tel:` href）
-3. 國際 E.164 格式（如「+81-98-872-2701」）
-4. fallback：WebSearch「{名稱} 電話」/ 官方網站
-5. 寫入 pois.phone
+- 適用：hotel / restaurant / shopping / attraction / activity
+- Source: Place Details `internationalPhoneNumber`（E.164 `+81-XX-XXXX-XXXX`）
+- 寫入：`pois.phone`
 
 ### website
 
-適用：hotel、restaurant、shopping、attraction、activity
-
-1. `/browse` 開 Google Maps page
-2. 抽「網站」/「Website」label 後的 URL
-3. 必須 `http://` 或 `https://` 開頭
-4. fallback：WebSearch「{名稱} 公式サイト」/「{名稱} official website」
-5. 寫入 pois.website
+- 適用：hotel / restaurant / shopping / attraction / activity
+- Source: Place Details `websiteUri`
+- 寫入：`pois.website`（必須 `http://` / `https://` 開頭）
 
 ### address
 
-適用：所有 type
+- 適用：所有 type
+- Source: Place Details `formattedAddress`
+- 寫入：`pois.address`（含完整縣市區段）
 
-1. `/browse` 開 Google Maps page
-2. 抽「地址」/「Address」label 後字串（或 schema.org `streetAddress`）
-3. 含完整縣市區段（例：「沖縄県国頭郡本部町石川424」）
-4. fallback：WebSearch「{名稱} 住所」
-5. 寫入 pois.address
+### business_status
 
-### business_status（營業狀態）
+- 適用：所有 type
+- Source: Place Details `businessStatus`
+  - `OPERATIONAL` → `pois.status='active'`
+  - `CLOSED_PERMANENTLY` → `pois.status='closed' + status_reason='永久歇業'`
+  - `CLOSED_TEMPORARILY` → 仍 `status='active'`（暫時性不警告）
+  - 404 → `pois.status='missing' + status_reason='Google Maps 查無資料'`
+- 寫入：`pois.status` + `pois.status_reason`
+- `closed` 或 `missing` 觸發歇業清理（見 modify-steps.md §5）
 
-適用：所有 type
+### location（lat/lng）
 
-1. `/browse` 開 Google Maps page
-2. 觀察狀態標籤：
-   - 「永久歇業」/「Permanently closed」→ `closed_permanently`
-   - 「暫停營業」/「Temporarily closed」→ `closed_temporarily`
-   - 一般狀態 → `active`（OPERATIONAL）
-3. 寫入 pois.business_status（或 status + status_reason，依 schema phase）
-4. closed_permanently 觸發歇業偵測清理流程（見 modify-steps.md §5）
+- 適用：所有 type
+- Source: Place Details `location.latitude` / `location.longitude`（4 位小數）
+- 寫入：`pois.lat` / `pois.lng`
+- 同步 entry 用：trip_entries.location 仍是獨立 JSON（含 googleQuery / appleQuery / mapcode），但 lat/lng 應跟 pois 一致
 
-### reservation
+### reservation（餐廳專屬，非 Place Details 欄位）
 
-適用：restaurant
+- 適用：restaurant
+- Source: WebSearch（Place Details 沒提供 reservation status）
+  1. 搜尋 `{name} 予約 tabelog`
+  2. 搜尋 `{name} hotpepper 予約`
+  3. 搜尋 `{name} TableCheck`
+  4. 搜尋 `{name} 予約 公式サイト`
+- 寫入：`trip_pois.reservation`（仍是 user override 欄位）+ `reservation_url`
+  - 有預約頁面 → `available: "yes"` + method/url
+  - 電話預約 → `method: "phone"`
+  - 不可預約 → `available: "no"`
+  - 找不到 → `available: "unknown"`
+- 搜尋 `{name} 人気 予約` 判斷 `recommended: true/false`
 
-1. WebSearch「{餐廳名稱} 予約 tabelog」
-2. WebSearch「{餐廳名稱} hotpepper 予約」
-3. WebSearch「{餐廳名稱} TableCheck」
-4. WebSearch「{餐廳名稱} 予約 公式サイト」
-5. 判斷：有預約頁面 → `available: "yes"` + method/url；電話 → `method: "phone"`；予約不可 → `available: "no"`；找不到 → `available: "unknown"`
-6. 搜尋「{名稱} 人気 予約」判斷 `recommended: true/false`
+驗證：available 三選一 / method 搭配 url 或 phone / recommended boolean
 
-驗證：`available` 三選一、`method` 搭配 url 或 phone、`recommended` boolean
+## 範例：補單一 POI 缺漏欄位
 
-### location
+```bash
+TOKEN=$(cat /tmp/admin-token.txt)  # OAuth client_credentials admin scope
+POI_ID=458
 
-適用：restaurant（location 物件）、event（locations 陣列）
+# 1. 確認 POI 有 place_id（沒 place_id 不能 enrich）
+npx wrangler d1 execute trip-planner-db --remote --command \
+  "SELECT id, name, place_id FROM pois WHERE id = $POI_ID" --json
 
-1. WebSearch「{名稱} {地區} GPS coordinates」或「{名稱} Google Maps 座標」
-2. 從 Google Maps 結果提取 lat/lng（source of truth）
-3. 取得正式地名作為 `name`
-4. `googleQuery`/`appleQuery`：「{名稱}+{地址或地區}」
-5. 同步更新 `pois.lat`/`pois.lng`（PATCH /pois/:id）
+# 2. 若沒 place_id：先 search
+curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"花織そば 沖縄"}' \
+  "https://trip-planner-dby.pages.dev/api/poi-search"
+# → 拿到 place_id，PATCH 寫回 pois.place_id
 
-驗證：name、googleQuery、appleQuery 皆為非空字串。lat/lng 須為有效數字。自駕行程可含 `mapcode`。
+# 3. enrich
+curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+  "https://trip-planner-dby.pages.dev/api/pois/$POI_ID/enrich"
+# → 自動寫 rating/address/phone/hours/business_status
+```
+
+## 範例：批次補多筆
+
+```bash
+TOKEN=$(cat /tmp/admin-token.txt)
+
+# 取得需 enrich 的 POI（有 place_id + active + 缺漏 hours/address/phone）
+PIDS=$(npx wrangler d1 execute trip-planner-db --remote --command "
+  SELECT id FROM pois
+  WHERE place_id IS NOT NULL AND status='active'
+    AND (hours IS NULL OR address IS NULL OR phone IS NULL)
+" --json | grep -oE '"id":\s*[0-9]+' | grep -oE '[0-9]+')
+
+for pid in $PIDS; do
+  curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+    "https://trip-planner-dby.pages.dev/api/pois/$pid/enrich" \
+    | grep -oE '"status":"[^"]*"'
+  sleep 0.6  # rate limit
+done
+```
+
+## Anti-patterns
+
+| ❌ Anti-pattern | ✅ 正確做法 |
+|---|---|
+| `/browse goto google.com/maps/search/...` 抓 raw text | `POST /api/pois/:id/enrich` |
+| WebSearch「POI 名稱 営業時間」拼湊 hours | 同上 |
+| LLM 直接呼叫 Google Place Details API | 同上（透過 backend 統一 quota / key 管理） |
+| `PATCH /pois/:id` 手動寫 rating/hours/phone | enrich 自動處理（除非用戶 explicit override） |
+| `PATCH /trip-pois/:tpid` 寫 hours | hours 已 DROP from trip_pois (migration 0055)；body 帶 hours 會 auto-dispatch 到 pois |
+
+完整 schema + endpoint reference 見 `references/poi-spec.md`。

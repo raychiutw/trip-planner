@@ -14,7 +14,10 @@ const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
   trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'title', 'updated_at'],
   trip_entries:     ['id', 'day_id', 'sort_order', 'time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min', 'travel_distance_m', 'travel_computed_at', 'travel_source', 'poi_id', 'updated_at'],
   pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'mapcode', 'lat', 'lng', 'country', 'source', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at', 'created_at', 'updated_at'],
-  trip_pois:        ['id', 'trip_id', 'poi_id', 'context', 'day_id', 'entry_id', 'sort_order', 'description', 'note', 'hours', 'checkout', 'breakfast_included', 'breakfast_note', 'price', 'reservation', 'reservation_url', 'must_buy', 'source', 'created_at', 'updated_at'],
+  // Migration 0055 (v2.25.5): hours dropped from trip_pois (moved to pois master).
+  // Migration 0054 (v2.25.4) note: price still listed here for legacy audit rows;
+  // trip_pois.price drop pending future migration.
+  trip_pois:        ['id', 'trip_id', 'poi_id', 'context', 'day_id', 'entry_id', 'sort_order', 'description', 'note', 'checkout', 'breakfast_included', 'breakfast_note', 'price', 'reservation', 'reservation_url', 'must_buy', 'source', 'created_at', 'updated_at'],
   poi_relations:    ['id', 'poi_id', 'related_poi_id', 'relation_type', 'note'],
   trip_docs:     ['id', 'trip_id', 'doc_type', 'title', 'updated_at'],
   trip_doc_entries: ['id', 'doc_id', 'sort_order', 'section', 'title', 'content', 'updated_at'],
