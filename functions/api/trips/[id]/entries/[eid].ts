@@ -9,7 +9,32 @@ import type { Env } from '../../../_types';
 // POI 重掛走 PUT /api/trips/:id/entries/:eid/poi-id（獨立端點，驗證 POI 存在）。
 // v2.10 Wave 1 (Item 3 move 跨天)：加 day_id — 須驗證 targetDay 屬於同 trip，
 // 不可改成不同 trip 的 day_id（防越權）。
-const ALLOWED_FIELDS = ['day_id', 'sort_order', 'time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min'] as const;
+// v2.26.0 (migration 0056)：start_time / end_time 拆分 time。dual-write 觀察期：
+//   - body 若帶 start_time/end_time → 寫入 start/end + 同步 compose 寫 time
+//   - body 若帶 time（legacy）→ 寫 time + parseTimeRange compose start/end
+const ALLOWED_FIELDS = ['day_id', 'sort_order', 'time', 'start_time', 'end_time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min'] as const;
+
+// HH:MM 0–23 / 0–59 strict
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Compose legacy time string from start/end pair（用於 dual-write）*/
+function composeTime(start?: string | null, end?: string | null): string | null {
+  if (start && end) return `${start}-${end}`;
+  if (start) return start;
+  return null;
+}
+
+/** Parse legacy time string → { start, end }（用於 dual-write 反向）*/
+function parseTime(time?: string | null): { start: string | null; end: string | null } {
+  if (!time) return { start: null, end: null };
+  const trimmed = time.trim();
+  if (!trimmed) return { start: null, end: null };
+  const dash = trimmed.indexOf('-');
+  if (dash > 0) {
+    return { start: trimmed.slice(0, dash), end: trimmed.slice(dash + 1) };
+  }
+  return { start: trimmed, end: null };
+}
 
 /**
  * GET /api/trips/:id/entries/:eid → { id, day_id, title } 回單一 entry meta。
@@ -91,6 +116,37 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       .first() as { trip_id: string } | null;
     if (!targetDay) throw new AppError('DATA_NOT_FOUND', '指定的 day 不存在');
     if (targetDay.trip_id !== id) throw new AppError('PERM_DENIED', '不可將 entry 移到其他 trip');
+  }
+
+  // v2.26.0 (migration 0056) dual-write：start_time/end_time 與 legacy time 同步。
+  //   - 若 body 帶 start_time / end_time → 寫 start/end + compose 寫 time
+  //   - 若 body 帶 time（legacy 路徑）→ 解析 → 同步寫 start/end
+  //   - 兩者都帶 → 以 start_time/end_time 為準（compose time 覆寫）
+  for (const f of ['start_time', 'end_time'] as const) {
+    if (f in body && body[f] !== null && body[f] !== '' && typeof body[f] === 'string') {
+      if (!TIME_RE.test(body[f] as string)) {
+        throw new AppError('DATA_VALIDATION', `${f} 必須符合 HH:MM 格式`);
+      }
+    }
+  }
+  if ('start_time' in body && 'end_time' in body
+      && typeof body.start_time === 'string' && typeof body.end_time === 'string'
+      && body.start_time && body.end_time) {
+    if (body.start_time >= body.end_time) {
+      throw new AppError('DATA_VALIDATION', 'start_time 必須早於 end_time');
+    }
+  }
+  if ('start_time' in body || 'end_time' in body) {
+    const start = ('start_time' in body ? body.start_time : oldRow.start_time) as string | null | undefined;
+    const end = ('end_time' in body ? body.end_time : oldRow.end_time) as string | null | undefined;
+    body.time = composeTime(start, end);
+  } else if ('time' in body && typeof body.time === 'string') {
+    const parsed = parseTime(body.time);
+    body.start_time = parsed.start;
+    body.end_time = parsed.end;
+  } else if ('time' in body && body.time === null) {
+    body.start_time = null;
+    body.end_time = null;
   }
 
   const update = buildUpdateClause(body, ALLOWED_FIELDS);

@@ -186,11 +186,13 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     );
   }
 
+  // v2.26.0 (migration 0056): dual-write start_time/end_time（已是 4-field 純時間驅動，
+   // 直接寫入新欄位 + 同步 compose 寫 legacy time）。
   stmts.push(
     db.prepare(
-      `INSERT INTO trip_entries (day_id, sort_order, time, title, description, source, note, poi_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-    ).bind(day.id, insertSortOrder, `${startTime}-${endTime}`, favorite.poi_name, null, 'fast-path', favorite.note, favorite.poi_id),
+      `INSERT INTO trip_entries (day_id, sort_order, time, start_time, end_time, title, description, source, note, poi_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+    ).bind(day.id, insertSortOrder, `${startTime}-${endTime}`, startTime, endTime, favorite.poi_name, null, 'fast-path', favorite.note, favorite.poi_id),
   );
   stmts.push(
     db.prepare(

@@ -82,6 +82,28 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   const overrideTime = body.time !== undefined ? body.time : source.time;
+  // v2.26.0 (migration 0056): 同步寫 start_time/end_time。若 body.time 覆寫，
+  // 重新解析；否則 copy source 的 start_time/end_time。
+  let copyStartTime: string | null;
+  let copyEndTime: string | null;
+  if (body.time !== undefined) {
+    if (typeof body.time === 'string' && body.time.trim()) {
+      const dash = body.time.indexOf('-');
+      if (dash > 0) {
+        copyStartTime = body.time.slice(0, dash);
+        copyEndTime = body.time.slice(dash + 1);
+      } else {
+        copyStartTime = body.time;
+        copyEndTime = null;
+      }
+    } else {
+      copyStartTime = null;
+      copyEndTime = null;
+    }
+  } else {
+    copyStartTime = (source.start_time as string | null) ?? null;
+    copyEndTime = (source.end_time as string | null) ?? null;
+  }
 
   // INSERT new entry — copy 所有 source 欄位除了 id、day_id、sort_order
   let newRow;
@@ -89,14 +111,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     newRow = await db
       .prepare(
         `INSERT INTO trip_entries
-          (day_id, sort_order, time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (day_id, sort_order, time, start_time, end_time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING *`,
       )
       .bind(
         targetDayId,
         sortOrder,
         overrideTime,
+        copyStartTime,
+        copyEndTime,
         source.title,
         source.description,
         source.source,

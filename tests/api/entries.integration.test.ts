@@ -108,6 +108,100 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(401);
   });
+
+  // v2.26.0 (migration 0056) — start_time / end_time 拆分 + dual-write 與 legacy time
+  it('PATCH start_time + end_time → 寫入 + 同步 compose time', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
+        start_time: '12:00',
+        end_time: '13:30',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-e', eid: String(entryId) },
+    });
+    const resp = await callHandler(onRequestPatch, ctx);
+    expect(resp.status).toBe(200);
+    const row = await db.prepare('SELECT time, start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
+    expect((row as Record<string, unknown>).start_time).toBe('12:00');
+    expect((row as Record<string, unknown>).end_time).toBe('13:30');
+    expect((row as Record<string, unknown>).time).toBe('12:00-13:30');
+  });
+
+  it('PATCH 只給 start_time → end_time 從現值繼承，time 重組', async () => {
+    // 先設一個基礎 end_time
+    await db.prepare('UPDATE trip_entries SET end_time = ?, time = ? WHERE id = ?').bind('15:00', '13:30-15:00', entryId).run();
+
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
+        start_time: '14:00',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-e', eid: String(entryId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    const row = await db.prepare('SELECT time, start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
+    expect((row as Record<string, unknown>).start_time).toBe('14:00');
+    expect((row as Record<string, unknown>).end_time).toBe('15:00');
+    expect((row as Record<string, unknown>).time).toBe('14:00-15:00');
+  });
+
+  it('PATCH legacy time "HH:MM-HH:MM" → 同步寫 start_time / end_time', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
+        time: '09:30-10:45',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-e', eid: String(entryId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    const row = await db.prepare('SELECT time, start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
+    expect((row as Record<string, unknown>).time).toBe('09:30-10:45');
+    expect((row as Record<string, unknown>).start_time).toBe('09:30');
+    expect((row as Record<string, unknown>).end_time).toBe('10:45');
+  });
+
+  it('PATCH legacy time "HH:MM" → start_time = HH:MM, end_time = NULL', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
+        time: '08:00',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-e', eid: String(entryId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    const row = await db.prepare('SELECT time, start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
+    expect((row as Record<string, unknown>).start_time).toBe('08:00');
+    expect((row as Record<string, unknown>).end_time).toBeNull();
+  });
+
+  it('PATCH 無效 start_time format → 400', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
+        start_time: '25:99',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-e', eid: String(entryId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+  });
+
+  it('PATCH start_time >= end_time → 400', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
+        start_time: '14:00',
+        end_time: '13:00',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-e', eid: String(entryId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+  });
 });
 
 describe('DELETE /api/trips/:id/entries/:eid', () => {
