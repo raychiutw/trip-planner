@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.25.2] - 2026-05-10
+
+**每日 Telegram 開始顯示 Google Maps 用量 + 費用 — 補完 v2.23.0 漏接的 quota monitor，順便解開三個 hidden silent failure 讓整條 daily-check pipeline 第一次真的跑通。**
+
+### Added
+
+- `scripts/daily-check-scheduler.sh` 新增 Phase 1b：daily-check.js 跑完後接著跑 `google-quota-monitor.ts`，把每月累計花費（MTD vs $200 budget）、24h 估算、🟢/🟡/🟠/🔴 狀態合併進 daily-check 主 Telegram 訊息。失敗不阻塞 daily-check（informational）。
+- `scripts/google-quota-monitor.ts`：
+  - 新增 `QUIET_DAILY_TELEGRAM=1` env，由 scheduler 設定抑制 daily summary 自己發 Telegram（避免重複），但 lock@90% / unlock@50% urgent 事件 alert 仍會獨立發出（事件導向）。
+  - 不論獨立呼叫或從 scheduler 跑，都寫 `scripts/logs/daily-check/{YYYY-MM-DD}-quota.json` 給 scheduler Phase 3 解析合併到主 Telegram。
+  - 修正 header docstring：之前寫「Triggered by: launchd com.tripline.daily-check」但實際從未排程 — 改成正確說明 standalone vs scheduler 兩種呼叫方式。
+- 結果：每日 06:13 Telegram 會多一行 `🟢 Google Maps MTD: $X.XX / $200 (Y.Y%) — 剩 $Z.ZZ`；MTD 達 90% 自動鎖 kill switch、≤50% 自動解鎖（hysteresis 防 flapping）。
+
+### Fixed
+
+- `scripts/lib/scheduler-common.sh` `.env.local` parser 改成 POSIX state machine：
+  - **問題：** v2.23.0 加 `GOOGLE_CLOUD_SA_KEY` 進 `.env.local` 是 multiline single-quoted PEM JSON。原 line-by-line `${line%%=*}` parser 第 2 行起把 base64 字串當 key（含 +、/、空白），`set -eo pipefail` 直接 abort 整個 scheduler。**daily-check cron 自 v2.23.0 起天天 06:13 silently fail，Telegram 從沒真的發送過**（user 也沒察覺，因為失敗 = 沒訊息 = 跟「全綠不發」表面上一樣）。
+  - **修法：** 用 `case` pattern 偵測 `KEY='value` 但結尾沒收尾單引號 → 進 multiline buffer 累積後續行直到看到結尾 `'`；單行 single/double-quote 也支援；key 額外驗證只含 `[A-Za-z0-9_]`。zsh 兼容（不依賴 `BASH_REMATCH`）。
+  - 同步把 `.env.local:59` `GMAIL_APP_PASSWORD` 加引號（值含空白，原本沒 quote 在 `set -a; source` 路徑也會炸）。
+- `scripts/daily-check.js` `queryRequestErrors()` (Source 4) 移除 stale `trip_requests.mode` 欄位查詢：
+  - **問題：** v2.21.3 (migration 0049) 已 DROP `trip_requests.mode` column（intent 由 tp-request skill 自動分類），但 daily-check.js 從沒同步更新，每天 cron 在 Source 4 silently 拿到 `D1 query failed: 400`，每天 schedulerErrors 累積 1 筆 daily-check warning。
+  - **修法：** SQL 拿掉 `mode`、return mapping 拿掉 `mode`。Manual trigger 驗證：6/6 OK 全綠，無 Source error。
+
 ## [2.25.1] - 2026-05-09
 
 **修「由網頁加入的景點」沒有起訖時間 + 缺 icon 兩個 bug。**
