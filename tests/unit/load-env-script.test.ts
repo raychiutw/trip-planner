@@ -20,6 +20,17 @@ import os from 'node:os';
 
 const SCRIPT = path.resolve(__dirname, '../../scripts/lib/load-env.mjs');
 
+// 偵測 shell — 優先用 zsh（macOS production scheduler 用的 shell；CI Ubuntu 通常沒裝）
+// fallback bash — 兩者對 `$'…'` ANSI-C quoting + `set -e + command-not-found` 行為一致
+const SHELL: 'zsh' | 'bash' = (() => {
+  try {
+    const probe = spawnSync('zsh', ['-c', 'true']);
+    return probe.status === 0 ? 'zsh' : 'bash';
+  } catch {
+    return 'bash';
+  }
+})();
+
 function runLoader(envContent: string): { code: number; stdout: string; stderr: string } {
   const tmp = path.join(os.tmpdir(), `load-env-test-${Date.now()}-${Math.random().toString(36).slice(2)}.env`);
   fs.writeFileSync(tmp, envContent);
@@ -35,7 +46,7 @@ function runLoader(envContent: string): { code: number; stdout: string; stderr: 
 function evalAndDump(loaderOutput: string, varNames: string[]): Record<string, string> {
   const dumpCmd = varNames.map(n => `echo "${n}=$(printf %s "$${n}" | base64)"`).join('\n');
   const script = `set -e\n${loaderOutput}\n${dumpCmd}\n`;
-  const result = spawnSync('zsh', ['-c', script], { encoding: 'utf8' });
+  const result = spawnSync(SHELL, ['-c', script], { encoding: 'utf8' });
   if (result.status !== 0) {
     throw new Error(`bash eval failed (code=${result.status}): ${result.stderr}\n--- loader output ---\n${loaderOutput}`);
   }
