@@ -1,6 +1,6 @@
 {
   "name": "tripline",
-  "version": "2.26.0",
+  "version": "2.26.1",
   "private": true,
   "scripts": {
     "dev": "concurrently -n vite,api -c cyan,green \"vite\" \"wrangler pages dev dist --local --port 8788\"",
@@ -40,6 +40,7 @@
     "axe-core": "^4.11.3",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
+    "dotenv": "^16.6.1",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^26.0.0",
     "miniflare": "^4.20260317.3",
