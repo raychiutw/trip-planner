@@ -638,9 +638,12 @@ export default function EditEntryPage() {
         const idx = timeline.findIndex((e) => e.id === entryId);
         const me = idx >= 0 ? timeline[idx] : null;
         if (me) {
+          // v2.27.0 multi-POI: 優先用 master.name / master.type 作為 POI card 顯示
+          // 否則 fallback 到 me.title / me.poiType（legacy）。原本只讀 me.title/poiType
+          // 導致 master swap 後 card 不更新（QA visual finding）。
           setPoiInfo({
-            name: me.title ?? entry.title ?? '景點',
-            poiType: me.poiType ?? null,
+            name: me.master?.name ?? me.title ?? entry.title ?? '景點',
+            poiType: me.master?.type ?? me.poiType ?? null,
           });
           // v2.27.0 multi-POI: master + alternates 從 day fetch 帶出
           if (me.master?.poiId != null) {
