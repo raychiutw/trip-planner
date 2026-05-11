@@ -21,6 +21,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
     | driving/walking | 不帶 + coords 缺 | fallback：只改 mode，保留舊 min |
   - 4 個新 regression test（`tests/api/segments-patch.integration.test.ts`）：driving→walking 重算、walking→driving 重算、manual override 不重算、coords 缺 fallback。
 
+## [2.26.1] - 2026-05-11
+
+**daily-check scheduler 韌性升級 — `.env.local` multi-line parser + LaunchDaemon 遷移。**
+
+### Fixed (Scheduler)
+
+- **`.env.local` multi-line value parser**：`scripts/lib/scheduler-common.sh` 原本用 `while IFS= read -r line` 讀 .env.local，遇到 single-quoted JSON 跨多行的值（例：`GOOGLE_CLOUD_SA_KEY` 的 `private_key` 字段）會把每行 base64 切片當獨立 `KEY=VALUE` export → zsh 丟「not an identifier」+ `set -eo pipefail` 中止 → `daily-check-scheduler.sh` 連 LOG_FILE 都還沒建就死，沒 Telegram 也沒 log。
+- 觀察：2026-05-11 06:13 launchd fire 觸發此 bug，`.context/daily-check-stderr.log` 記到 export 失敗。
+- 修法：新增 `scripts/lib/load-env.mjs` — 用 `dotenv@16`（已支援 multi-line single-quote）parse，輸出 bash ANSI-C `$'...'` quoting 的 `export` 指令；scheduler-common.sh 改用 `eval "$(node load-env.mjs)"`。同時 emit 時校驗 key 必須匹配 `^[A-Za-z_][A-Za-z0-9_]*$`，非法 key 直接 skip 不 export。
+- 測試：`tests/unit/load-env-script.test.ts` 8 cases — 簡單 KEY=VALUE / comment+空行 / shell metachar (`< > & |`) / multi-line single-quoted（regression test for `GOOGLE_CLOUD_SA_KEY`）/ 單引號 ANSI-C escape / backslash+newline / 缺 path / path 不存在。
+
+### Added (Scheduler)
+
+- **LaunchDaemon 遷移**：`com.tripline.daily-check` 從 LaunchAgent (`~/Library/LaunchAgents/`) 改 LaunchDaemon (`/Library/LaunchDaemons/`)。
+- 動機：2026-05-07~05-10 連 4 天 LaunchAgent 沒 fire（Mac mini 從未睡過 + uptime 29 天 + sleep=0 + user 一直 logged in，`pmset -g log` 零 Sleep/Wake event），但 `launchctl print` 顯示 `runs=8` 對齊 filesystem 上 4/30-5/6 + 5/11 = 8 次，5/7-5/10 launchd **真的沒 fire**。最可能原因是 user-tier LaunchAgent 被 macOS XPC activity throttling 節流。LaunchDaemon 跑在 system domain，不受 user session / XPC throttle 影響。
+- 新增 `scripts/com.tripline.daily-check.plist`（LaunchDaemon plist，UserName=ray 讓 process 仍以 user 身分跑，env 帶 PATH/HOME/USER/LANG）。
+- 新增 `scripts/install-daily-check-launchdaemon.sh`：(1) bootout 舊 LaunchAgent (2) 備份舊 plist (3) bootout 舊 LaunchDaemon if any (4) copy + chown root:wheel + chmod 644 (5) bootstrap (6) 印狀態驗證。Idempotent 可重複跑。
+- 用法（需 sudo，在 mac mini 上跑）：`bash scripts/install-daily-check-launchdaemon.sh`
+
 ## [2.26.0] - 2026-05-11
 
 **EditEntryPage — 全頁編輯 entry 起訖時間 + 從上一站移動方式 + 備註。**
