@@ -2,6 +2,7 @@ import { logAudit } from '../../../../_audit';
 import { hasWritePermission } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { findOrCreatePoi } from '../../../../_poi';
+import { syncEntryMaster } from '../../../../_entry_pois';
 import { resolveEntryTimes } from '../../../../_time';
 import { validateEntryBody, detectGarbledText } from '../../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../../_utils';
@@ -72,9 +73,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Phase 2：entry 對應的 pois master（find-or-create），再回填 poi_id
   // 包在 try/catch 內統一 error path；POI 建成後若 INSERT 失敗，orphan POI
   // 由後續 `migrate-entries-to-pois.js --clean-orphans` 清理。
+  // poiId 宣告在 try 外因為 try 結束後還要拿去 syncEntryMaster (v2.27.0 multi-POI)。
   let row;
+  let poiId: number | null = null;
   try {
-    const poiId = await findOrCreatePoi(db, {
+    poiId = await findOrCreatePoi(db, {
       name: title,
       type: (body.poi_type as string) || 'attraction',
       description: (body.description as string | undefined) ?? null,
@@ -111,6 +114,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   if (!row) throw new AppError('DATA_SAVE_FAILED', '新增 entry 失敗');
+
+  // v2.27.0：同步 trip_entry_pois.sort_order=1（multi-POI per entry invariant）。
+  // 若不寫此 helper，後續 addAlternate 會 fire MISSING_MASTER 直到第一次 GET 自我修復
+  // (Codex pre-landing CRITICAL #2)。
+  const insertedEntryId = (row as { id?: unknown }).id;
+  if (poiId != null && typeof insertedEntryId === 'number') {
+    await syncEntryMaster(db, insertedEntryId, poiId);
+  }
 
   await logAudit(db, {
     tripId: id,

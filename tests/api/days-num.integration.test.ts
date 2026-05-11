@@ -315,11 +315,14 @@ describe('PUT /api/trips/:id/days/:num', () => {
     expect((await callHandler(onRequestPutPoiId, ctx)).status).toBe(404);
   });
 
-  it('Phase 2: PUT /entries/:eid/poi-id 允許 null 清空', async () => {
+  it('v2.27.0: PUT /entries/:eid/poi-id 阻擋 null 清空（per multi-POI invariant，要用 DELETE entry）', async () => {
+    // v2.27.0 起每 entry 至少要有 1 master POI（trip_entry_pois sort_order=1 invariant）。
+    // 清空 master 的正確路徑是 DELETE /entries/:eid 刪整個 entry，不是 PUT /poi-id null。
+    // pre-v2.27.0 此分支事實上 unreachable（frontend 沒地方傳 null），現在 explicit 阻擋。
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entry = await db.prepare(
-      'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
-    ).bind(dayId).first() as { id: number };
+      'SELECT id, poi_id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
+    ).bind(dayId).first() as { id: number; poi_id: number | null };
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
@@ -329,8 +332,9 @@ describe('PUT /api/trips/:id/days/:num', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-dn', eid: String(entry.id) },
     });
-    expect((await callHandler(onRequestPutPoiId, ctx)).status).toBe(200);
+    expect((await callHandler(onRequestPutPoiId, ctx)).status).toBe(400);
+    // entry.poi_id 不變
     const row = await db.prepare('SELECT poi_id FROM trip_entries WHERE id = ?').bind(entry.id).first() as { poi_id: number | null };
-    expect(row.poi_id).toBeNull();
+    expect(row.poi_id).toBe(entry.poi_id);
   });
 });

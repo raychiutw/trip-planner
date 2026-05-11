@@ -538,6 +538,7 @@ export default function EditEntryPage() {
   const [masterSummary, setMasterSummary] = useState<MasterPoiSummary | null>(null);
   const [entryPoisVersion, setEntryPoisVersion] = useState<string | null>(null);
   const [altSwapConfirm, setAltSwapConfirm] = useState<AlternatePoi | null>(null);
+  const [altRemoveConfirm, setAltRemoveConfirm] = useState<AlternatePoi | null>(null);
   const [showDeleteStopConfirm, setShowDeleteStopConfirm] = useState(false);
   const [altPending, setAltPending] = useState<number | null>(null);
   const [altError, setAltError] = useState<string | null>(null);
@@ -845,23 +846,33 @@ export default function EditEntryPage() {
     }
   }, [tripId, entryId, entryPoisVersion, altPending, refreshEntryPois]);
 
-  const handleRemoveAlternate = useCallback(async (alt: AlternatePoi) => {
+  // 開 ConfirmModal — 真正執行刪除在 handleConfirmRemoveAlternate。
+  // 用 ConfirmModal 取代 window.confirm 對齊全站 modal style + a11y（Codex
+  // pre-landing HIGH #6；window.confirm browser-native 沒法樣式化，跟 swap/delete
+  // stop 的 ConfirmModal 不一致）。
+  const handleRemoveAlternate = useCallback((alt: AlternatePoi) => {
     if (!tripId || altPending) return;
-    if (!window.confirm(`移除備案「${alt.name}」？`)) return;
+    setAltRemoveConfirm(alt);
+  }, [tripId, altPending]);
+
+  const handleConfirmRemoveAlternate = useCallback(async (alt: AlternatePoi) => {
+    if (!tripId) return;
     setAltPending(alt.poiId);
     setAltError(null);
     try {
       await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates/${alt.poiId}`, {
         method: 'DELETE',
       });
+      setAltRemoveConfirm(null);
       await refreshEntryPois();
       showToast(`已移除備案「${alt.name}」`, 'success');
     } catch (err) {
       setAltError(err instanceof Error ? err.message : '移除備案失敗');
+      setAltRemoveConfirm(null);
     } finally {
       setAltPending(null);
     }
-  }, [tripId, entryId, altPending, refreshEntryPois]);
+  }, [tripId, entryId, refreshEntryPois]);
 
   const handleReorderAlternate = useCallback(async (poiId: number, direction: 'up' | 'down') => {
     if (!tripId || altPending || alternates.length < 2) return;
@@ -1258,6 +1269,17 @@ export default function EditEntryPage() {
         cancelLabel="取消"
         onConfirm={() => altSwapConfirm && void handleSetAsMaster(altSwapConfirm)}
         onCancel={() => setAltSwapConfirm(null)}
+      />
+
+      {/* v2.27.0 Remove alternate confirm */}
+      <ConfirmModal
+        open={altRemoveConfirm != null}
+        title="移除備案"
+        message={altRemoveConfirm ? `將從這個 stop 移除備案「${altRemoveConfirm.name}」。POI 本身不會被刪除，仍可從搜尋或收藏再次加入。` : ''}
+        confirmLabel="移除備案"
+        cancelLabel="取消"
+        onConfirm={() => altRemoveConfirm && void handleConfirmRemoveAlternate(altRemoveConfirm)}
+        onCancel={() => setAltRemoveConfirm(null)}
       />
 
       {/* v2.27.0 Delete stop confirm */}

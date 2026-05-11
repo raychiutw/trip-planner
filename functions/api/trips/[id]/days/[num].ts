@@ -275,14 +275,26 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // Batch resolve all POIs (2–3 DB round-trips instead of N)
     const poiIds = await batchFindOrCreatePois(db, poiItems);
 
-    // Build batch2: (a) UPDATE trip_entries.poi_id for entries with POI, (b) trip_pois 插入
+    // Build batch2: (a) UPDATE trip_entries.poi_id + INSERT trip_entry_pois sort_order=1,
+    // (b) trip_pois 插入
+    // v2.27.0：batch1 DELETE FROM trip_entries → ON DELETE CASCADE 清掉舊 trip_entry_pois，
+    // 這裡 INSERT 不會撞 UNIQUE。Codex pre-landing CRITICAL #2：少了這段，後續 addAlternate
+    // 會 fire MISSING_MASTER 直到第一次 GET 自我修復。
     const batch2: D1PreparedStatement[] = [];
+    const now = new Date().toISOString();
     for (let i = 0; i < timeline.length; i++) {
       const pIdx = entryPoiIdx[i]!;
       if (pIdx < 0) continue;
+      const poiId = poiIds[pIdx];
+      const entryId = entryIds[i]!;
       batch2.push(
-        db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?')
-          .bind(poiIds[pIdx], entryIds[i]!),
+        db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(poiId, entryId),
+        db
+          .prepare(
+            `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
+             VALUES (?, ?, 1, ?, ?)`,
+          )
+          .bind(entryId, poiId, now, now),
       );
     }
     for (const builder of tripPoiBuilders) {

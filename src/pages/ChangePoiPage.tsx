@@ -116,7 +116,9 @@ export default function ChangePoiPage() {
   const pageTitle = mode === 'alternate' ? '加入備案景點' : '變更景點';
   const submitLabel = mode === 'alternate' ? '加為備案' : '套用';
 
-  const [tab, setTab] = useState<Tab>('search');
+  // v2.27.0：alternate mode 強制 favorites（search tab 暫不支援 find-or-create
+  // alternate；HIGH #7 — 避免使用者點 search tab 選新 POI 後撞 error guard）
+  const [tab, setTab] = useState<Tab>(mode === 'alternate' ? 'favorites' : 'search');
   const [query, setQuery] = useState('');
   const [region] = useState<string>('全部地區');
   const [selected, setSelected] = useState<SelectedPoi | null>(null);
@@ -206,14 +208,16 @@ export default function ChangePoiPage() {
       <main className="tp-page-content">
         <div className="tp-change-poi">
           <div className="tp-change-poi-tabs">
-            <button
-              type="button"
-              className={`tp-change-poi-tab ${tab === 'search' ? 'is-active' : ''}`}
-              onClick={() => setTab('search')}
-              data-testid="change-poi-tab-search"
-            >
-              搜尋
-            </button>
+            {mode !== 'alternate' && (
+              <button
+                type="button"
+                className={`tp-change-poi-tab ${tab === 'search' ? 'is-active' : ''}`}
+                onClick={() => setTab('search')}
+                data-testid="change-poi-tab-search"
+              >
+                搜尋
+              </button>
+            )}
             <button
               type="button"
               className={`tp-change-poi-tab ${tab === 'favorites' ? 'is-active' : ''}`}
@@ -222,6 +226,11 @@ export default function ChangePoiPage() {
             >
               收藏
             </button>
+            {mode === 'alternate' && (
+              <span style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 'var(--font-size-caption)', color: 'var(--color-muted)' }}>
+                備案目前只支援從收藏加入
+              </span>
+            )}
           </div>
 
           {tab === 'search' && (

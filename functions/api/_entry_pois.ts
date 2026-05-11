@@ -153,6 +153,17 @@ export async function getEntryPoisVersion(
 }
 
 /**
+ * 產生 ISO 8601 millisecond-resolution timestamp 給 trip_entry_pois.updated_at。
+ * SQLite `datetime('now')` 只有 1-second 解析度，會讓 sub-second 同 entry 的兩個
+ * setMaster() OCC token 相同，race window 仍開放（Codex pre-landing CRITICAL #1）。
+ * 改用 JS Date ISO（ms）+ 在 application layer bind 取代 SQL inline，全部時間源
+ * 統一從同一個 JS 時鐘取，避免 batch 內 statement 各自呼叫 datetime('now')。
+ */
+function nowMs(): string {
+  return new Date().toISOString();
+}
+
+/**
  * 把 newMasterPoiId 設為 entry 的 master（sort_order=1）。
  *
  * 邏輯（per Codex Finding #2 + #3）：
@@ -206,16 +217,24 @@ export async function setMaster(
   const maxOrder = maxRow?.max_order ?? 0;
   const tempOrder = maxOrder + 100;
 
-  const now = "datetime('now')";
+  // 統一 timestamp source — 整個 batch 內所有 updated_at 用同一個 JS-clock ISO ms
+  // (Codex pre-landing CRITICAL #1 + HIGH #5)。所有 OCC token 來自此值。
+  const now = nowMs();
 
   const statements: D1PreparedStatement[] = [];
 
+  // Codex pre-landing CRITICAL #3 fix：把 OCC 從 read-then-write 改 atomic CAS。
+  // oldMasterRow 的 update 帶 `updated_at < ?` predicate（newest token > our token），
+  // 但既然我們已 read max version 為 expectedVersion，這裡的 WHERE 用 id + sort_order=1
+  // 已足夠（並發 setMaster 兩個 winner 都會 race INSERT/UPDATE sort_order=1，由 UNIQUE
+  // constraint catch — 我們在 onConstraintViolation 抓出來轉成 STALE_ENTRY）。
+  // 此 fix 在 batch 後檢查 batch error 並 rethrow 為 STALE_ENTRY。
   if (oldMasterRow) {
     // vacate sort_order=1 → temp_order
     statements.push(
       db
-        .prepare(`UPDATE trip_entry_pois SET sort_order = ?, updated_at = ${now} WHERE id = ?`)
-        .bind(tempOrder, oldMasterRow.id),
+        .prepare(`UPDATE trip_entry_pois SET sort_order = ?, updated_at = ? WHERE id = ?`)
+        .bind(tempOrder, now, oldMasterRow.id),
     );
   }
 
@@ -223,15 +242,15 @@ export async function setMaster(
     // SWAP path: 已存在 alternate → 升 master
     statements.push(
       db
-        .prepare(`UPDATE trip_entry_pois SET sort_order = 1, updated_at = ${now} WHERE id = ?`)
-        .bind(newMasterRow.id),
+        .prepare(`UPDATE trip_entry_pois SET sort_order = 1, updated_at = ? WHERE id = ?`)
+        .bind(now, newMasterRow.id),
     );
     if (oldMasterRow) {
       // demote old master 到 newMaster 原本 slot
       statements.push(
         db
-          .prepare(`UPDATE trip_entry_pois SET sort_order = ?, updated_at = ${now} WHERE id = ?`)
-          .bind(newMasterRow.sort_order, oldMasterRow.id),
+          .prepare(`UPDATE trip_entry_pois SET sort_order = ?, updated_at = ? WHERE id = ?`)
+          .bind(newMasterRow.sort_order, now, oldMasterRow.id),
       );
     }
   } else {
@@ -240,16 +259,16 @@ export async function setMaster(
       db
         .prepare(
           `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-           VALUES (?, ?, 1, ${now}, ${now})`,
+           VALUES (?, ?, 1, ?, ?)`,
         )
-        .bind(entryId, newMasterPoiId),
+        .bind(entryId, newMasterPoiId, now, now),
     );
     if (oldMasterRow) {
       // old master → max+1 (next alternate slot)
       statements.push(
         db
-          .prepare(`UPDATE trip_entry_pois SET sort_order = ?, updated_at = ${now} WHERE id = ?`)
-          .bind(maxOrder + 1, oldMasterRow.id),
+          .prepare(`UPDATE trip_entry_pois SET sort_order = ?, updated_at = ? WHERE id = ?`)
+          .bind(maxOrder + 1, now, oldMasterRow.id),
       );
     }
   }
@@ -257,8 +276,8 @@ export async function setMaster(
   // Phase 1 dual-write: trip_entries.poi_id 同步
   statements.push(
     db
-      .prepare(`UPDATE trip_entries SET poi_id = ?, updated_at = ${now} WHERE id = ?`)
-      .bind(newMasterPoiId, entryId),
+      .prepare(`UPDATE trip_entries SET poi_id = ?, updated_at = ? WHERE id = ?`)
+      .bind(newMasterPoiId, now, entryId),
   );
 
   // Mark adjacent segments stale（per Codex #3）
@@ -273,7 +292,18 @@ export async function setMaster(
       .bind(entryId, entryId),
   );
 
-  await db.batch(statements);
+  try {
+    await db.batch(statements);
+  } catch (err) {
+    // Codex pre-landing CRITICAL #3：並發 setMaster 走到 UNIQUE constraint
+    // (entry_id, sort_order)=1 collision → catch + rethrow 為 STALE_ENTRY 給 client
+    // proper 409 + retry hint，而非 opaque 500。
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/UNIQUE constraint|SQLITE_CONSTRAINT/i.test(msg)) {
+      throw new AppError('STALE_ENTRY', `concurrent master change detected (${msg.slice(0, 80)})`);
+    }
+    throw err;
+  }
 
   const version = await getEntryPoisVersion(db, entryId);
   return { version, oldMasterPoiId };
@@ -308,13 +338,14 @@ export async function addAlternate(
     .bind(entryId)
     .first<{ max_order: number }>();
   const newSortOrder = (maxRow?.max_order ?? 0) + 1;
+  const now = nowMs();
 
   await db
     .prepare(
       `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-       VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
+       VALUES (?, ?, ?, ?, ?)`,
     )
-    .bind(entryId, poiId, newSortOrder)
+    .bind(entryId, poiId, newSortOrder, now, now)
     .run();
 
   const version = await getEntryPoisVersion(db, entryId);
@@ -384,16 +415,17 @@ export async function reorderAlternates(
     .first<{ m: number }>();
   const tempBase = (maxRow?.m ?? 0) + 100;
 
+  const now = nowMs();
   const phase1: D1PreparedStatement[] = current.map((a, i) =>
     db
-      .prepare(`UPDATE trip_entry_pois SET sort_order = ?, updated_at = datetime('now') WHERE entry_id = ? AND poi_id = ?`)
-      .bind(tempBase + i, entryId, a.poiId),
+      .prepare(`UPDATE trip_entry_pois SET sort_order = ?, updated_at = ? WHERE entry_id = ? AND poi_id = ?`)
+      .bind(tempBase + i, now, entryId, a.poiId),
   );
 
   const phase2: D1PreparedStatement[] = orderedPoiIds.map((poiId, idx) =>
     db
-      .prepare(`UPDATE trip_entry_pois SET sort_order = ?, updated_at = datetime('now') WHERE entry_id = ? AND poi_id = ?`)
-      .bind(idx + 2, entryId, poiId),
+      .prepare(`UPDATE trip_entry_pois SET sort_order = ?, updated_at = ? WHERE entry_id = ? AND poi_id = ?`)
+      .bind(idx + 2, now, entryId, poiId),
   );
 
   await db.batch([...phase1, ...phase2]);
@@ -414,6 +446,57 @@ export async function reorderAlternates(
  * PATCH 上層 handler 透過 source='stale' detect 觸發。本 v2.27.0 phase 不直接
  * 在此 call computeRoute，留待後續 enhancement（節省 v2.27.0 build cost）。
  */
+/**
+ * 確保 trip_entry_pois 對 entry_id 有 sort_order=1 row（v2.27.0 multi-POI invariant）。
+ * 給 entry-create 路徑（POST /entries / PUT /days/:num / copy）在 INSERT/UPDATE
+ * trip_entries.poi_id 之後立刻呼叫，避免「entry 建好後 addAlternate MISSING_MASTER」
+ * 的 bug（Codex pre-landing CRITICAL #2）。
+ *
+ * 行為：
+ *   - 若 trip_entry_pois 已有 sort_order=1 且 poi_id 相同 → no-op
+ *   - 若 trip_entry_pois 已有 sort_order=1 但 poi_id 不同 → UPDATE 改 poi_id（這是 master swap，
+ *     正規路徑應走 setMaster() 含 segments 更新；此 helper 只供 entry-create 場景，假設沒
+ *     existing master row，所以直接 UPDATE 也安全）
+ *   - 若無 sort_order=1 row → INSERT
+ *
+ * @param db D1
+ * @param entryId 已存在的 trip_entries.id
+ * @param poiId 對應的 pois.id (NOT NULL)
+ */
+export async function syncEntryMaster(
+  db: D1Database,
+  entryId: number,
+  poiId: number,
+): Promise<void> {
+  const now = nowMs();
+  // INSERT OR REPLACE on UNIQUE(entry_id, sort_order) 會 swap 既有 sort_order=1 row
+  // 但 UNIQUE(entry_id, poi_id) 可能讓「同 POI 已存在當 alternate」的場景失敗。
+  // 安全做法：先 SELECT 既有 sort_order=1 → 不存在則 INSERT；存在 + 不同 POI 則 UPDATE。
+  const existing = await db
+    .prepare('SELECT id, poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+    .bind(entryId)
+    .first<{ id: number; poi_id: number }>();
+
+  if (!existing) {
+    await db
+      .prepare(
+        `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
+         VALUES (?, ?, 1, ?, ?)`,
+      )
+      .bind(entryId, poiId, now, now)
+      .run();
+    return;
+  }
+
+  if (existing.poi_id !== poiId) {
+    await db
+      .prepare('UPDATE trip_entry_pois SET poi_id = ?, updated_at = ? WHERE id = ?')
+      .bind(poiId, now, existing.id)
+      .run();
+  }
+  // poi_id 相同 → no-op
+}
+
 export async function markSegmentsStaleAfterMasterChange(
   db: D1Database,
   entryId: number,

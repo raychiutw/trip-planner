@@ -76,17 +76,24 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   if (!oldRow) throw new AppError('DATA_NOT_FOUND', '找不到 entry');
 
   // v2.27.0：透過 setMaster() 同步維護 trip_entry_pois.sort_order=1（含 entries.poi_id
-  // dual-write + segments stale marking）。newPoiId === null 是清空 master 的特殊路徑，
-  // 直接 UPDATE entries.poi_id（trip_entry_pois 暫不刪 sort_order=1 row — 留作 phase 2
-  // 設計議題；目前 frontend 沒地方傳 null poi_id，這條路徑事實上 unreachable）。
-  if (newPoiId !== null) {
-    await setMaster(db, entryId, newPoiId);
-    if (newTitle !== null) {
-      await db.prepare('UPDATE trip_entries SET title = ? WHERE id = ?')
-        .bind(newTitle, entryId).run();
-    }
-  } else {
-    await db.prepare('UPDATE trip_entries SET poi_id = NULL WHERE id = ?').bind(entryId).run();
+  // dual-write + segments stale marking）。
+  //
+  // newPoiId === null 路徑在 v2.27.0 invariant「每 entry 至少 1 master POI」下 illegal：
+  // 清空 master 要走 DELETE /entries/:eid 刪整個 entry。pre v2.27.0 此分支事實上 unreachable
+  // （frontend 沒地方傳 null）；為避免 silently 留下 trip_entry_pois orphan row + entries.poi_id
+  // 跟 trip_entry_pois.sort_order=1 dual-source 不一致，這裡 explicit 阻擋（Codex pre-landing
+  // HIGH #4）。
+  if (newPoiId === null) {
+    throw new AppError(
+      'DATA_VALIDATION',
+      'v2.27.0 不允許清空 master POI；要刪除請走 DELETE /entries/:eid',
+    );
+  }
+
+  await setMaster(db, entryId, newPoiId);
+  if (newTitle !== null) {
+    await db.prepare('UPDATE trip_entries SET title = ? WHERE id = ?')
+      .bind(newTitle, entryId).run();
   }
 
   await logAudit(db, {
