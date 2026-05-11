@@ -89,11 +89,77 @@ function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Re
  * @param tripPois - 該天的 trip_pois
  * @param poiMap - poi_id → pois row 的查找表
  */
+/**
+ * v2.27.0 multi-POI per entry：fetch trip_entry_pois rows for given entry IDs，
+ * group by entry_id 並 JOIN pois 取 spatial fields。
+ *
+ * @param db D1 instance
+ * @param entryIds 要查的 trip_entries.id list
+ * @returns Map<entryId, { master, alternates, version }>。Entry 無 master row → master=null。
+ */
+export async function fetchEntryPoisByEntries(
+  db: D1Database,
+  entryIds: number[],
+): Promise<Map<number, { master: Record<string, unknown> | null; alternates: Record<string, unknown>[]; version: string }>> {
+  const result = new Map<number, { master: Record<string, unknown> | null; alternates: Record<string, unknown>[]; version: string }>();
+  if (entryIds.length === 0) return result;
+
+  const placeholders = entryIds.map(() => '?').join(',');
+  const { results } = await db
+    .prepare(
+      `SELECT tep.entry_id, tep.poi_id, tep.sort_order, tep.updated_at,
+              p.name, p.lat, p.lng, p.type, p.category
+       FROM trip_entry_pois tep
+       JOIN pois p ON p.id = tep.poi_id
+       WHERE tep.entry_id IN (${placeholders})
+       ORDER BY tep.entry_id, tep.sort_order`,
+    )
+    .bind(...entryIds)
+    .all<{
+      entry_id: number;
+      poi_id: number;
+      sort_order: number;
+      updated_at: string;
+      name: string | null;
+      lat: number | null;
+      lng: number | null;
+      type: string | null;
+      category: string | null;
+    }>();
+
+  for (const r of results) {
+    let bucket = result.get(r.entry_id);
+    if (!bucket) {
+      bucket = { master: null, alternates: [], version: '0' };
+      result.set(r.entry_id, bucket);
+    }
+    const poiInfo = {
+      poi_id: r.poi_id,
+      name: r.name,
+      lat: r.lat,
+      lng: r.lng,
+      type: r.type,
+      category: r.category,
+    };
+    if (r.sort_order === 1) {
+      bucket.master = poiInfo;
+    } else {
+      bucket.alternates.push({ ...poiInfo, sort_order: r.sort_order });
+    }
+    if (r.updated_at > bucket.version) {
+      bucket.version = r.updated_at;
+    }
+  }
+
+  return result;
+}
+
 export function assembleDay(
   dayRow: Record<string, unknown>,
   entries: Record<string, unknown>[],
   tripPois: Record<string, unknown>[],
   poiMap: Map<number, Record<string, unknown>>,
+  entryPoisMap?: Map<number, { master: Record<string, unknown> | null; alternates: Record<string, unknown>[]; version: string }>,
 ): Record<string, unknown> {
   let hotel: Record<string, unknown> | null = null;
   const parkingList: Record<string, unknown>[] = [];
@@ -147,10 +213,21 @@ export function assembleDay(
       ? (poiMap.get(poiId) ?? null)
       : null;
 
+    // v2.27.0 multi-POI per entry：populate master + alternates from trip_entry_pois。
+    // Phase 1 dual-response：保留 legacy `poi` + `poi_id` + 新增 master / alternates / entry_pois_version。
+    // entryPoisMap 未提供 (legacy caller) → master/alternates 為 undefined，client selector fallback 走 poi。
+    const entryPoiBucket = entryPoisMap?.get(eid);
+    const master = entryPoiBucket?.master ?? null;
+    const alternates = entryPoiBucket?.alternates ?? [];
+    const entry_pois_version = entryPoiBucket?.version ?? null;
+
     return {
       ...e,
       travel,
       poi,
+      master,
+      alternates,
+      entry_pois_version,
       restaurants: restByEntry.get(eid) ?? [],
       shopping: shopByEntry.get(eid) ?? [],
     };

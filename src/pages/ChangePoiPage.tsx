@@ -106,6 +106,16 @@ export default function ChangePoiPage() {
   const goBack = useNavigateBack(tripId ? `/trips?selected=${tripId}` : '/trips');
   const { user } = useCurrentUser();
 
+  // v2.27.0 multi-POI per entry：?mode=alternate 切換 add-alternate 行為
+  // （title 改「加入備案景點」+ CTA 改「加為備案」+ 提交走 POST /alternates）
+  const mode: 'master' | 'alternate' = (() => {
+    if (typeof window === 'undefined') return 'master';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') === 'alternate' ? 'alternate' : 'master';
+  })();
+  const pageTitle = mode === 'alternate' ? '加入備案景點' : '變更景點';
+  const submitLabel = mode === 'alternate' ? '加為備案' : '套用';
+
   const [tab, setTab] = useState<Tab>('search');
   const [query, setQuery] = useState('');
   const [region] = useState<string>('全部地區');
@@ -139,6 +149,33 @@ export default function ChangePoiPage() {
     setSubmitting(true);
     setError(null);
     try {
+      if (mode === 'alternate') {
+        // 加為備案：先 find-or-create 取得 poi_id，再 POST /alternates
+        let poiIdToAdd: number | null = selected.poiId ?? null;
+        if (poiIdToAdd == null && selected.name && selected.lat != null && selected.lng != null) {
+          // 透過 PUT /poi-id 的 find-or-create 路徑 hacky；改 v2.27.x 後可開
+          // 直接 backend find-or-create endpoint。目前先 require favorites mode 才能加 alternate。
+          throw new Error('搜尋新建 POI 暫時不支援加備案（請先存收藏再加為備案）');
+        }
+        if (poiIdToAdd == null) throw new Error('無法解析 POI ID');
+        const res = await apiFetchRaw(
+          `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ poiId: poiIdToAdd }),
+          },
+        );
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`加備案失敗 (${res.status}): ${text.slice(0, 200)}`);
+        }
+        window.dispatchEvent(new CustomEvent('tp-entry-updated', { detail: { tripId } }));
+        navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`, { replace: true });
+        return;
+      }
+
+      // master 模式（既有 PUT /poi-id 流程）
       const body = selected.source === 'favorite' && selected.poiId
         ? { poi_id: selected.poiId }
         : { name: selected.name, lat: selected.lat, lng: selected.lng, source: 'google' };
@@ -160,12 +197,12 @@ export default function ChangePoiPage() {
       setError(err instanceof Error ? err.message : '變更 POI 失敗');
       setSubmitting(false);
     }
-  }, [selected, tripId, entryId, submitting, navigate]);
+  }, [selected, tripId, entryId, submitting, navigate, mode]);
 
   const main = useMemo(() => (
     <div className="tp-app">
       <style>{SCOPED_STYLES}</style>
-      <TitleBar title="變更 POI" back={goBack} />
+      <TitleBar title={pageTitle} back={goBack} />
       <main className="tp-page-content">
         <div className="tp-change-poi">
           <div className="tp-change-poi-tabs">
@@ -269,13 +306,13 @@ export default function ChangePoiPage() {
               onClick={() => void handleSubmit()}
               data-testid="change-poi-submit"
             >
-              {submitting ? '變更中…' : '確認變更'}
+              {submitting ? '處理中…' : submitLabel}
             </button>
           </div>
         </div>
       </main>
     </div>
-  ), [tab, query, searching, searchResults, favorites, selected, error, submitting, goBack, handleSubmit]);
+  ), [tab, query, searching, searchResults, favorites, selected, error, submitting, goBack, handleSubmit, pageTitle, submitLabel]);
 
   return (
     <AppShell

@@ -6,7 +6,7 @@ import { resolveEntryTimes } from '../../../_time';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
-import { assembleDay, fetchPoiMap } from './_merge';
+import { assembleDay, fetchPoiMap, fetchEntryPoisByEntries } from './_merge';
 
 // ---------------------------------------------------------------------------
 // GET /api/trips/:id/days/:num — POI Schema (pois + trip_pois)
@@ -35,11 +35,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const entryRows = entriesResult.results as Record<string, unknown>[];
   const poiMap = await fetchPoiMap(db, tripPoiRows, entryRows);
 
+  // v2.27.0 multi-POI per entry
+  const entryPoisMap = await fetchEntryPoisByEntries(db, entryRows.map((e) => e.id as number));
+
   const assembled = assembleDay(
     day,
     entryRows,
     tripPoiRows,
     poiMap,
+    entryPoisMap,
   );
 
   return json(assembled);

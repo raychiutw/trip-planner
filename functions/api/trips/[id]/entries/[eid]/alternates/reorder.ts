@@ -1,0 +1,52 @@
+/**
+ * PATCH /api/trips/:id/entries/:eid/alternates/reorder — reorder alternates
+ *
+ * Body:
+ *   - order: number[] — poiId array，新順序（不含 master）。長度必須等於當前
+ *     alternates count，內容必須完全等同當前 alternates set（不增不減）。
+ *
+ * Server 從 sort_order=2 起依序賦值 (2, 3, 4, ...)。Master sort_order=1 不動。
+ *
+ * 違反 (length / set mismatch / duplicates) → 422 INVALID_ORDER。
+ */
+import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../../_auth';
+import { AppError } from '../../../../../_errors';
+import { reorderAlternates } from '../../../../../_entry_pois';
+import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../../_utils';
+import type { Env } from '../../../../../_types';
+
+export const onRequestPatch: PagesFunction<Env> = async (context) => {
+  const auth = getAuth(context);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
+
+  const { id, eid: eidStr } = context.params as { id: string; eid: string };
+  const eid = parseIntParam(eidStr);
+  if (!eid) throw new AppError('DATA_VALIDATION', 'entry ID 格式錯誤');
+  const db = context.env.DB;
+
+  const [canWrite, belongsToTrip] = await Promise.all([
+    hasWritePermission(db, auth, id, auth.isAdmin),
+    verifyEntryBelongsToTrip(db, eid, id),
+  ]);
+  if (!canWrite) throw new AppError('PERM_DENIED');
+  if (!belongsToTrip) throw new AppError('DATA_NOT_FOUND');
+
+  const body = await parseJsonBody<{ order?: unknown }>(context.request);
+  if (!Array.isArray(body.order)) {
+    throw new AppError('INVALID_ORDER', 'order 必須是 array');
+  }
+  const orderedPoiIds = body.order.map((v) => {
+    if (typeof v !== 'number' || !Number.isInteger(v) || v <= 0) {
+      throw new AppError('INVALID_ORDER', 'order 內所有元素必須是 positive integer');
+    }
+    return v;
+  });
+
+  const result = await reorderAlternates(db, eid, orderedPoiIds);
+
+  return json({
+    entryId: eid,
+    order: orderedPoiIds,
+    entryPoisVersion: result.version,
+  });
+};

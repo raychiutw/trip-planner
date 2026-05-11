@@ -15,6 +15,7 @@ import { findOrCreatePoi } from '../../../../_poi';
 import { logAudit } from '../../../../_audit';
 import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
+import { setMaster } from '../../../../_entry_pois';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
@@ -74,12 +75,18 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const oldRow = await db.prepare('SELECT poi_id FROM trip_entries WHERE id = ?').bind(entryId).first() as { poi_id: number | null } | null;
   if (!oldRow) throw new AppError('DATA_NOT_FOUND', '找不到 entry');
 
-  if (newTitle !== null) {
-    // Find-or-create mode：title 同步更新（user 從 search 換 POI 時，entry.title 應跟新 POI 對齊）
-    await db.prepare('UPDATE trip_entries SET poi_id = ?, title = ? WHERE id = ?')
-      .bind(newPoiId, newTitle, entryId).run();
+  // v2.27.0：透過 setMaster() 同步維護 trip_entry_pois.sort_order=1（含 entries.poi_id
+  // dual-write + segments stale marking）。newPoiId === null 是清空 master 的特殊路徑，
+  // 直接 UPDATE entries.poi_id（trip_entry_pois 暫不刪 sort_order=1 row — 留作 phase 2
+  // 設計議題；目前 frontend 沒地方傳 null poi_id，這條路徑事實上 unreachable）。
+  if (newPoiId !== null) {
+    await setMaster(db, entryId, newPoiId);
+    if (newTitle !== null) {
+      await db.prepare('UPDATE trip_entries SET title = ? WHERE id = ?')
+        .bind(newTitle, entryId).run();
+    }
   } else {
-    await db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(newPoiId, entryId).run();
+    await db.prepare('UPDATE trip_entries SET poi_id = NULL WHERE id = ?').bind(entryId).run();
   }
 
   await logAudit(db, {

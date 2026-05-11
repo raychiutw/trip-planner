@@ -118,21 +118,63 @@ export interface Restaurant {
  *   - location → parsed by mapRow JSON_FIELDS
  *   - travel_* cols → assembled into travel object by API handler
  */
+/**
+ * Entry-bound POI (v2.27.0 multi-POI per entry)：
+ * 從 trip_entry_pois JOIN pois 出來的 master / alternate 條目。`sortOrder` 在
+ * Entry.alternates 內為 2, 3, ...；master 不在 alternates，sortOrder 隱含為 1。
+ */
+export interface EntryPoiInfo {
+  poiId: number;
+  name?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  type?: string | null;
+  category?: string | null;
+}
+
+export interface EntryPoiAlternate extends EntryPoiInfo {
+  sortOrder: number;
+}
+
 export interface Entry {
   id: number;
   dayId?: number;
   sortOrder: number;
   time?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
   title: string;
   description?: string | null;
   source?: string | null;
   note?: string | null;
   /** Assembled from travel_type / travel_desc / travel_min columns */
   travel?: Travel | null;
-  /** FK → pois.id (Phase 3 後 NOT NULL，由 find-or-create 保證) */
+  /**
+   * @deprecated v2.27.0：master 改走 trip_entry_pois.sort_order=1。
+   * Phase 1 dual-read，Phase 2 (v2.27.1) DROP COLUMN 後此欄位移除。
+   * 過渡期讀新 code 走 `getEntryMasterPoiId(entry)` selector。
+   */
   poiId?: number | null;
-  /** Joined POI master record — spatial fields (lat/lng/maps/googleRating) 全部在這 */
+  /**
+   * @deprecated v2.27.0：master POI 改走 `entry.master`。
+   * Phase 1 dual-read，Phase 2 移除。過渡期讀新 code 走 `getEntryMaster(entry)`。
+   */
   poi?: Poi | null;
+  /**
+   * v2.27.0 multi-POI per entry：master POI（sort_order=1）。Phase 1 dual-read
+   * fallback：若 backend 未 populate，selector 會自動 fall back 到 legacy `poi`。
+   */
+  master?: EntryPoiInfo | null;
+  /**
+   * v2.27.0 multi-POI per entry：alternates 列表，依 sort_order 升序。空陣列表示
+   * 無 alternates；undefined 表示 backend 尚未 populate（legacy response shape）。
+   */
+  alternates?: EntryPoiAlternate[];
+  /**
+   * v2.27.0 OCC token：MAX(updated_at) across trip_entry_pois rows for this entry。
+   * Client 在 PATCH /master 等 mutating endpoint 帶回，server 比對偵測 stale write。
+   */
+  entryPoisVersion?: string;
   updatedAt?: string;
   restaurants: Restaurant[];
   shopping: Shopping[];

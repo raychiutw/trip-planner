@@ -300,6 +300,127 @@ const SCOPED_STYLES = `
   margin-top: 12px;
 }
 
+/* v2.27.0 multi-POI alternates section (V1 inline button list) */
+.tp-edit-entry-alternates { margin-bottom: 28px; }
+.tp-edit-entry-alternates-h {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.tp-edit-entry-alternates-h .h-left { display: flex; align-items: center; gap: 8px; }
+.tp-edit-entry-alternates-h .label {
+  font-size: var(--font-size-eyebrow);
+  font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--color-muted);
+}
+.tp-edit-entry-alt-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+}
+.tp-edit-entry-alt-chip-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.tp-edit-entry-alt-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--color-background, #fff);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  min-height: 44px;
+}
+.tp-edit-entry-alt-row.is-pending { opacity: 0.5; }
+.tp-edit-entry-alt-order {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  font-weight: 600;
+  min-width: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.tp-edit-entry-alt-meta { flex: 1; min-width: 0; }
+.tp-edit-entry-alt-name {
+  font-weight: 600;
+  font-size: var(--font-size-subheadline);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tp-edit-entry-alt-category {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+}
+.tp-edit-entry-alt-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.tp-edit-entry-alt-actions button {
+  width: 44px; height: 44px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  font-size: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.tp-edit-entry-alt-actions button[disabled] { opacity: 0.4; cursor: not-allowed; }
+.tp-edit-entry-alt-actions button.set-master {
+  width: auto; min-width: 76px;
+  padding: 0 12px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  border-color: transparent;
+  font-weight: 600;
+  font-size: var(--font-size-caption);
+}
+.tp-edit-entry-alt-actions button.set-master:hover { background: var(--color-accent-bg); }
+.tp-edit-entry-alt-actions button.alt-delete:hover { color: var(--color-danger, #B83A3A); }
+
+.tp-edit-entry-alt-add-row {
+  display: flex; gap: 8px; margin-top: 8px;
+}
+.tp-edit-entry-alt-add-btn {
+  flex: 1;
+  min-height: 44px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--font-size-footnote);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer;
+}
+
+.tp-edit-entry-alt-error {
+  background: var(--color-danger-subtle, #F8E3E3);
+  color: var(--color-danger-deep, #8B2828);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-footnote);
+  margin: 8px 0;
+}
+
+/* Danger zone */
+.tp-edit-entry-danger {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.tp-edit-entry-danger-btn {
+  width: 100%;
+  min-height: 44px;
+  background: transparent;
+  color: var(--color-danger, #B83A3A);
+  border: 1px solid var(--color-danger-subtle, #F8E3E3);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--font-size-footnote);
+  cursor: pointer;
+}
+.tp-edit-entry-danger-btn:hover { background: var(--color-danger-subtle, #F8E3E3); }
+
 /* discard-changes 用 shared <ConfirmModal>（沒額外樣式） */
 `;
 
@@ -347,6 +468,20 @@ interface EntryApi {
   poiId?: number | null;
 }
 
+interface AlternatePoi {
+  poiId: number;
+  name: string;
+  sortOrder: number;
+  type?: string | null;
+  category?: string | null;
+}
+
+interface MasterPoiSummary {
+  poiId: number;
+  name: string;
+  type?: string | null;
+}
+
 interface TripMeta {
   title?: string | null;
   name?: string | null;
@@ -359,6 +494,9 @@ interface DayApi {
     id?: number | null;
     title?: string | null;
     poiType?: string | null;
+    master?: { poiId?: number; name?: string | null; type?: string | null } | null;
+    alternates?: Array<{ poiId: number; name?: string | null; sortOrder?: number; type?: string | null; category?: string | null }>;
+    entryPoisVersion?: string | null;
   }>;
 }
 
@@ -394,6 +532,15 @@ export default function EditEntryPage() {
   const [tripName, setTripName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // v2.27.0 multi-POI per entry
+  const [alternates, setAlternates] = useState<AlternatePoi[]>([]);
+  const [masterSummary, setMasterSummary] = useState<MasterPoiSummary | null>(null);
+  const [entryPoisVersion, setEntryPoisVersion] = useState<string | null>(null);
+  const [altSwapConfirm, setAltSwapConfirm] = useState<AlternatePoi | null>(null);
+  const [showDeleteStopConfirm, setShowDeleteStopConfirm] = useState(false);
+  const [altPending, setAltPending] = useState<number | null>(null);
+  const [altError, setAltError] = useState<string | null>(null);
 
   // Form state
   const [startTime, setStartTime] = useState('');
@@ -474,6 +621,26 @@ export default function EditEntryPage() {
             name: me.title ?? entry.title ?? '景點',
             poiType: me.poiType ?? null,
           });
+          // v2.27.0 multi-POI: master + alternates 從 day fetch 帶出
+          if (me.master?.poiId != null) {
+            setMasterSummary({
+              poiId: me.master.poiId,
+              name: me.master.name ?? me.title ?? '景點',
+              type: me.master.type ?? null,
+            });
+          }
+          if (Array.isArray(me.alternates)) {
+            setAlternates(me.alternates.map((a) => ({
+              poiId: a.poiId,
+              name: a.name ?? '景點',
+              sortOrder: a.sortOrder ?? 0,
+              type: a.type ?? null,
+              category: a.category ?? null,
+            })));
+          }
+          if (me.entryPoisVersion) {
+            setEntryPoisVersion(me.entryPoisVersion);
+          }
         }
         const prev = idx > 0 ? timeline[idx - 1] : null;
         if (prev?.id != null && prev.title) {
@@ -619,6 +786,129 @@ export default function EditEntryPage() {
     // mode='auto' 我們無法直接 PATCH; user 留 mode 不變相當於不送 segment PATCH
   }, [segment]);
 
+  // v2.27.0 multi-POI handlers ----------------------------------------------
+
+  const refreshEntryPois = useCallback(async () => {
+    if (!tripId || !Number.isInteger(entryId)) return;
+    try {
+      const data = await apiFetch<EntryApi>(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`);
+      setEntry((prev) => prev ? { ...prev, ...data } : data);
+      // 重抓 day 拿 master/alternates（_merge.ts 已 populate）
+      const days = await apiFetch<Array<{ id: number; dayNum: number }>>(`/trips/${encodeURIComponent(tripId)}/days`);
+      const day = days.find((d) => d.id === data.dayId);
+      if (!day) return;
+      const dayData = await apiFetch<DayApi>(
+        `/trips/${encodeURIComponent(tripId)}/days/${day.dayNum}`,
+      );
+      const me = (dayData.timeline ?? []).find((e) => e.id === entryId);
+      if (!me) return;
+      if (me.master?.poiId != null) {
+        setMasterSummary({
+          poiId: me.master.poiId,
+          name: me.master.name ?? me.title ?? '景點',
+          type: me.master.type ?? null,
+        });
+        setPoiInfo({ name: me.master.name ?? me.title ?? '景點', poiType: me.master.type ?? null });
+      }
+      setAlternates(
+        (me.alternates ?? []).map((a) => ({
+          poiId: a.poiId,
+          name: a.name ?? '景點',
+          sortOrder: a.sortOrder ?? 0,
+          type: a.type ?? null,
+          category: a.category ?? null,
+        })),
+      );
+      if (me.entryPoisVersion) setEntryPoisVersion(me.entryPoisVersion);
+    } catch {
+      // refresh 失敗不阻擋，UI 維持上次狀態
+    }
+  }, [tripId, entryId]);
+
+  const handleSetAsMaster = useCallback(async (alt: AlternatePoi) => {
+    if (!tripId || altPending) return;
+    setAltPending(alt.poiId);
+    setAltError(null);
+    try {
+      await apiFetch(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/master`, {
+        method: 'PATCH',
+        body: JSON.stringify({ poiId: alt.poiId, version: entryPoisVersion ?? undefined }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      setAltSwapConfirm(null);
+      await refreshEntryPois();
+      showToast(`已將「${alt.name}」設為首選`, 'success');
+    } catch (err) {
+      setAltError(err instanceof Error ? err.message : '設為首選失敗');
+    } finally {
+      setAltPending(null);
+    }
+  }, [tripId, entryId, entryPoisVersion, altPending, refreshEntryPois]);
+
+  const handleRemoveAlternate = useCallback(async (alt: AlternatePoi) => {
+    if (!tripId || altPending) return;
+    if (!window.confirm(`移除備案「${alt.name}」？`)) return;
+    setAltPending(alt.poiId);
+    setAltError(null);
+    try {
+      await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates/${alt.poiId}`, {
+        method: 'DELETE',
+      });
+      await refreshEntryPois();
+      showToast(`已移除備案「${alt.name}」`, 'success');
+    } catch (err) {
+      setAltError(err instanceof Error ? err.message : '移除備案失敗');
+    } finally {
+      setAltPending(null);
+    }
+  }, [tripId, entryId, altPending, refreshEntryPois]);
+
+  const handleReorderAlternate = useCallback(async (poiId: number, direction: 'up' | 'down') => {
+    if (!tripId || altPending || alternates.length < 2) return;
+    const idx = alternates.findIndex((a) => a.poiId === poiId);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= alternates.length) return;
+    const newOrder = alternates.map((a) => a.poiId);
+    const a = newOrder[idx];
+    const b = newOrder[swapIdx];
+    if (a == null || b == null) return;
+    newOrder[idx] = b;
+    newOrder[swapIdx] = a;
+    setAltPending(poiId);
+    setAltError(null);
+    try {
+      await apiFetch(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates/reorder`, {
+        method: 'PATCH',
+        body: JSON.stringify({ order: newOrder }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      await refreshEntryPois();
+    } catch (err) {
+      setAltError(err instanceof Error ? err.message : '排序失敗');
+    } finally {
+      setAltPending(null);
+    }
+  }, [tripId, entryId, alternates, altPending, refreshEntryPois]);
+
+  const handleDeleteStop = useCallback(async () => {
+    if (!tripId) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`, {
+        method: 'DELETE',
+      });
+      setShowDeleteStopConfirm(false);
+      navigate(goBackHref);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '刪除 stop 失敗');
+      setShowDeleteStopConfirm(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [tripId, entryId, navigate, goBackHref]);
+
   // ⌘+Enter / ⌘+S 儲存
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -684,6 +974,100 @@ export default function EditEntryPage() {
                   >
                     <Icon name="swap-horizontal" />
                   </button>
+                </div>
+              )}
+
+              {/* v2.27.0 Alternates section — V1 inline button list */}
+              {alternates.length > 0 && (
+                <section className="tp-edit-entry-alternates" data-testid="edit-entry-alternates">
+                  <div className="tp-edit-entry-alternates-h">
+                    <div className="h-left">
+                      <span className="label">備案</span>
+                      <span className="tp-edit-entry-alt-chip">
+                        <span className="tp-edit-entry-alt-chip-dot" />
+                        {alternates.length} 個
+                      </span>
+                    </div>
+                  </div>
+                  {altError && (
+                    <div className="tp-edit-entry-alt-error" role="alert">{altError}</div>
+                  )}
+                  {alternates.map((alt, idx) => (
+                    <div
+                      key={alt.poiId}
+                      className={`tp-edit-entry-alt-row${altPending === alt.poiId ? ' is-pending' : ''}`}
+                      data-testid={`edit-entry-alt-row-${alt.poiId}`}
+                    >
+                      <span className="tp-edit-entry-alt-order">{idx + 2}</span>
+                      <div className="tp-edit-entry-alt-meta">
+                        <div className="tp-edit-entry-alt-name">{alt.name}</div>
+                        {alt.type && (
+                          <div className="tp-edit-entry-alt-category">
+                            {POI_TYPE_LABEL[alt.type] ?? alt.type}
+                          </div>
+                        )}
+                      </div>
+                      <div className="tp-edit-entry-alt-actions">
+                        <button
+                          type="button"
+                          aria-label={`上移 ${alt.name}`}
+                          disabled={idx === 0 || altPending != null}
+                          onClick={() => void handleReorderAlternate(alt.poiId, 'up')}
+                          data-testid={`edit-entry-alt-up-${alt.poiId}`}
+                        >↑</button>
+                        <button
+                          type="button"
+                          aria-label={`下移 ${alt.name}`}
+                          disabled={idx === alternates.length - 1 || altPending != null}
+                          onClick={() => void handleReorderAlternate(alt.poiId, 'down')}
+                          data-testid={`edit-entry-alt-down-${alt.poiId}`}
+                        >↓</button>
+                        <button
+                          type="button"
+                          className="set-master"
+                          disabled={altPending != null}
+                          onClick={() => setAltSwapConfirm(alt)}
+                          data-testid={`edit-entry-alt-setmaster-${alt.poiId}`}
+                        >
+                          設為首選
+                        </button>
+                        <button
+                          type="button"
+                          className="alt-delete"
+                          aria-label={`刪除 ${alt.name}`}
+                          disabled={altPending != null}
+                          onClick={() => void handleRemoveAlternate(alt)}
+                          data-testid={`edit-entry-alt-delete-${alt.poiId}`}
+                        >×</button>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="tp-edit-entry-alt-add-row">
+                    <button
+                      type="button"
+                      className="tp-edit-entry-alt-add-btn"
+                      onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate`)}
+                      data-testid="edit-entry-alt-add-search"
+                    >＋ 從搜尋加備案</button>
+                    <button
+                      type="button"
+                      className="tp-edit-entry-alt-add-btn"
+                      onClick={() => navigate(`/favorites?addToEntry=${entryId}&tripId=${encodeURIComponent(tripId!)}`)}
+                      data-testid="edit-entry-alt-add-fav"
+                    >＋ 從收藏加備案</button>
+                  </div>
+                </section>
+              )}
+
+              {/* 0 alternates 時 hide section，但仍提供 add CTA（在 POI 卡下方） */}
+              {alternates.length === 0 && masterSummary && (
+                <div className="tp-edit-entry-alt-add-row" data-testid="edit-entry-alt-add-zero" style={{ marginBottom: 24 }}>
+                  <button
+                    type="button"
+                    className="tp-edit-entry-alt-add-btn"
+                    onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate`)}
+                    data-testid="edit-entry-alt-add-search-zero"
+                  >＋ 加備案景點</button>
                 </div>
               )}
 
@@ -832,6 +1216,21 @@ export default function EditEntryPage() {
                   <InlineError message={error} />
                 </div>
               )}
+
+              {/* v2.27.0 Danger zone — Delete entire stop */}
+              {masterSummary && (
+                <div className="tp-edit-entry-danger" data-testid="edit-entry-danger-zone">
+                  <button
+                    type="button"
+                    className="tp-edit-entry-danger-btn"
+                    onClick={() => setShowDeleteStopConfirm(true)}
+                    data-testid="edit-entry-delete-stop"
+                    disabled={submitting}
+                  >
+                    <Icon name="trash" /> 刪除整個 stop
+                  </button>
+                </div>
+              )}
             </>
           ) : null}
         </div>
@@ -846,6 +1245,32 @@ export default function EditEntryPage() {
         cancelLabel="繼續編輯"
         onConfirm={() => { setShowDiscardModal(false); goBack(); }}
         onCancel={() => setShowDiscardModal(false)}
+      />
+
+      {/* v2.27.0 Master swap confirm */}
+      <ConfirmModal
+        open={altSwapConfirm != null}
+        title="設為首選"
+        message={altSwapConfirm && masterSummary
+          ? `將「${altSwapConfirm.name}」設為首選，原首選「${masterSummary.name}」會變備案，前後行程時間會重新計算。`
+          : ''}
+        confirmLabel="設為首選"
+        cancelLabel="取消"
+        onConfirm={() => altSwapConfirm && void handleSetAsMaster(altSwapConfirm)}
+        onCancel={() => setAltSwapConfirm(null)}
+      />
+
+      {/* v2.27.0 Delete stop confirm */}
+      <ConfirmModal
+        open={showDeleteStopConfirm}
+        title="刪除整個 stop？"
+        message={masterSummary
+          ? `將同時刪除：主景點「${masterSummary.name}」${alternates.length > 0 ? ` + ${alternates.length} 個備案` : ''}。前後路線時間也會重算。此操作不可復原。`
+          : ''}
+        confirmLabel="刪除 stop"
+        cancelLabel="取消"
+        onConfirm={() => void handleDeleteStop()}
+        onCancel={() => setShowDeleteStopConfirm(false)}
       />
     </div>
   );

@@ -82,6 +82,42 @@ const DAY_DATA = {
   ],
 };
 
+// v2.27.0 multi-POI per entry — DAY_DATA with master + alternates
+const DAY_DATA_WITH_ALTS = {
+  id: 7,
+  dayNum: 3,
+  timeline: [
+    { id: 41, title: '首里城', poiType: 'attraction' },
+    {
+      id: 42,
+      title: '花織そば',
+      poiType: 'restaurant',
+      master: { poiId: 100, name: '花織そば', type: 'restaurant' },
+      alternates: [
+        { poiId: 201, name: '首里そば', sortOrder: 2, type: 'restaurant', category: null },
+        { poiId: 202, name: 'やんばる食堂', sortOrder: 3, type: 'restaurant', category: null },
+      ],
+      entryPoisVersion: '2026-05-11T12:00:00',
+    },
+  ],
+};
+
+const DAY_DATA_NO_ALTS = {
+  id: 7,
+  dayNum: 3,
+  timeline: [
+    { id: 41, title: '首里城', poiType: 'attraction' },
+    {
+      id: 42,
+      title: '花織そば',
+      poiType: 'restaurant',
+      master: { poiId: 100, name: '花織そば', type: 'restaurant' },
+      alternates: [],
+      entryPoisVersion: '2026-05-11T12:00:00',
+    },
+  ],
+};
+
 const TRIP_META = { title: '沖縄自駕五日遊', name: null };
 
 function setupApiMocks() {
@@ -299,5 +335,161 @@ describe('EditEntryPage — 取消保護', () => {
     fireEvent.click(screen.getByLabelText('返回行程'));
     fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
+  });
+});
+
+// =========================================================================
+// v2.27.0 Multi-POI per entry — alternates section + master swap + delete stop
+// =========================================================================
+
+function setupAltsMocks(dayDataOverride?: typeof DAY_DATA_WITH_ALTS) {
+  const dayData = dayDataOverride ?? DAY_DATA_WITH_ALTS;
+  (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+    if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
+    if (url.endsWith('/days')) return Promise.resolve(DAYS);
+    if (url.includes('/days/3')) return Promise.resolve(dayData);
+    if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+    if (url.includes('/master')) return Promise.resolve({ masterPoiId: 201 });
+    if (url.includes('/alternates/reorder')) return Promise.resolve({ order: [] });
+    return Promise.resolve(null);
+  });
+  (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
+    ok: true, status: 200, text: () => Promise.resolve(''),
+  } as unknown as Response);
+}
+
+describe('EditEntryPage — v2.27.0 alternates section', () => {
+  it('alternates 有 2 個 → section 渲染 + count chip "2 個"', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy();
+    });
+    const section = screen.getByTestId('edit-entry-alternates');
+    expect(section.textContent).toMatch(/2 個/);
+    expect(screen.getByTestId('edit-entry-alt-row-201')).toBeTruthy();
+    expect(screen.getByTestId('edit-entry-alt-row-202')).toBeTruthy();
+  });
+
+  it('alternates 為 0 → section hidden + 顯示單一「加備案景點」CTA', async () => {
+    setupAltsMocks(DAY_DATA_NO_ALTS);
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-add-zero')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('edit-entry-alternates')).toBeNull();
+  });
+
+  it('每 row 含 ↑↓ / 設為首選 / × 四個 button', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-row-201')).toBeTruthy();
+    });
+    expect(screen.getByTestId('edit-entry-alt-up-201')).toBeTruthy();
+    expect(screen.getByTestId('edit-entry-alt-down-201')).toBeTruthy();
+    expect(screen.getByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+    expect(screen.getByTestId('edit-entry-alt-delete-201')).toBeTruthy();
+  });
+
+  it('第一個 row 的 ↑ 按鈕 disabled，最後一個 row 的 ↓ 按鈕 disabled', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-up-201')).toBeTruthy();
+    });
+    expect((screen.getByTestId('edit-entry-alt-up-201') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('edit-entry-alt-down-202') as HTMLButtonElement).disabled).toBe(true);
+    // 中間操作可用
+    expect((screen.getByTestId('edit-entry-alt-down-201') as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByTestId('edit-entry-alt-up-202') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('Tap 設為首選 → 開 confirm modal 含原首選與目標 POI 名稱', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-201'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
+    });
+    const modalText = screen.getByTestId('confirm-modal').textContent ?? '';
+    expect(modalText).toMatch(/首里そば/);
+    expect(modalText).toMatch(/花織そば/);
+  });
+
+  it('Confirm 設為首選 → 呼叫 PATCH /master with poiId + version', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-201'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => {
+      const calls = (apiFetch as ReturnType<typeof vi.fn>).mock.calls;
+      const masterCall = calls.find((c) => typeof c[0] === 'string' && (c[0] as string).includes('/master'));
+      expect(masterCall).toBeTruthy();
+      const opts = masterCall![1] as RequestInit;
+      const body = JSON.parse(opts.body as string);
+      expect(body.poiId).toBe(201);
+      expect(body.version).toBe('2026-05-11T12:00:00');
+    });
+  });
+
+  it('刪除整個 stop button 渲染 + tap 開 confirm modal', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-delete-stop')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-delete-stop'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
+    });
+    const modalText = screen.getByTestId('confirm-modal').textContent ?? '';
+    expect(modalText).toMatch(/刪除整個 stop/);
+    expect(modalText).toMatch(/花織そば/);
+    expect(modalText).toMatch(/2 個備案/);
+  });
+
+  it('Confirm 刪除 stop → 呼叫 DELETE /entries/:id + navigate back', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-delete-stop')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-delete-stop'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const deleteCall = calls.find((c) => {
+        const url = String(c[0]);
+        const opts = c[1] as RequestInit | undefined;
+        return url.includes('/entries/42') && opts?.method === 'DELETE';
+      });
+      expect(deleteCall).toBeTruthy();
+      expect(navigateSpy).toHaveBeenCalled();
+    });
+  });
+
+  it('「從搜尋加備案」按鈕 → navigate /trip/:id/stop/:eid/change-poi?mode=alternate', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-add-search')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-alt-add-search'));
+    expect(navigateSpy).toHaveBeenCalledWith(
+      expect.stringContaining('change-poi?mode=alternate'),
+    );
   });
 });
