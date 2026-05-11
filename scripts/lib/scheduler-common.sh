@@ -21,9 +21,13 @@ find "$LOG_DIR" \( -name "*.log" -o -name "*-report.json" \) -mtime +7 -delete 2
 # export → zsh 丟「not an identifier」+ `set -eo pipefail` 中止 source → 整支
 # scheduler 沒建 LOG_FILE 就死（觀察到 2026-05-11 06:13 .context stderr.log 即此）。
 # load-env.mjs 用 dotenv 正確 parse 後輸出 ANSI-C quoted `export` 指令。
+#
+# NOTE：絕對不要用 `2>&1` 合併 stderr 進來 eval。load-env.mjs 對非法 key 寫 warning
+# 到 stderr；合併後 eval 該文字 → zsh `command not found` → `set -eo pipefail` 中止
+# → 重現原本要修的同類沉默死亡。讓 stderr 流到 launchd StandardErrorPath。
 if [ -f "$PROJECT_DIR/.env.local" ]; then
-  _env_exports=$(node "$PROJECT_DIR/scripts/lib/load-env.mjs" "$PROJECT_DIR/.env.local" 2>&1) || {
-    echo "[scheduler-common] load-env.mjs 失敗: $_env_exports" >&2
+  _env_exports=$(node "$PROJECT_DIR/scripts/lib/load-env.mjs" "$PROJECT_DIR/.env.local") || {
+    echo "[scheduler-common] load-env.mjs 失敗（exit non-zero）— 詳見 stderr log" >&2
     exit 1
   }
   eval "$_env_exports"

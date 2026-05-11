@@ -68,3 +68,19 @@ echo "=== 完成 ==="
 echo "・ 手動觸發測試：sudo launchctl kickstart -k system/$LABEL"
 echo "・ 觀察 log:    tail -f $PROJECT_DIR/.context/daily-check-stderr.log"
 echo "・ 觀察當天 log: ls -la $PROJECT_DIR/scripts/logs/daily-check/\$(date +%Y-%m-%d)*"
+echo ""
+echo "=== ⚠ 驗證重點：Claude CLI keychain access ==="
+echo "LaunchDaemon 跑在 system Mach session，不在 user GUI session 內。"
+echo "Claude CLI OAuth token 在 login keychain — daemon 可能讀不到。"
+echo "Phase 2 (claude /tp-daily-check) 若 auth fail："
+echo ""
+echo "  Rollback 回 LaunchAgent："
+LATEST_BACKUP=$(ls -t "$LAUNCH_AGENT.migrated-"* 2>/dev/null | head -1)
+if [ -n "$LATEST_BACKUP" ]; then
+  echo "    sudo launchctl bootout system/$LABEL"
+  echo "    sudo rm $PLIST_DST"
+  echo "    mv $LATEST_BACKUP $LAUNCH_AGENT"
+  echo "    launchctl bootstrap gui/\$(id -u) $LAUNCH_AGENT"
+else
+  echo "    （備份檔不存在 — 從 PR #514 commit 取回原 LaunchAgent plist 重裝）"
+fi

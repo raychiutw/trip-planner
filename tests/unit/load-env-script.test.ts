@@ -35,7 +35,7 @@ function runLoader(envContent: string): { code: number; stdout: string; stderr: 
 function evalAndDump(loaderOutput: string, varNames: string[]): Record<string, string> {
   const dumpCmd = varNames.map(n => `echo "${n}=$(printf %s "$${n}" | base64)"`).join('\n');
   const script = `set -e\n${loaderOutput}\n${dumpCmd}\n`;
-  const result = spawnSync('bash', ['-c', script], { encoding: 'utf8' });
+  const result = spawnSync('zsh', ['-c', script], { encoding: 'utf8' });
   if (result.status !== 0) {
     throw new Error(`bash eval failed (code=${result.status}): ${result.stderr}\n--- loader output ---\n${loaderOutput}`);
   }
@@ -118,5 +118,25 @@ describe('load-env.mjs — scheduler env loader', () => {
     const result = spawnSync('node', [SCRIPT, '/tmp/definitely-does-not-exist.env'], { encoding: 'utf8' });
     expect(result.status).not.toBe(0);
     expect(result.stderr).toMatch(/not found|ENOENT|不存在/i);
+  });
+
+  // Regression：非法 key 的 stderr warning 絕對不能被合進 stdout
+  // 不然 scheduler-common.sh 若用 `2>&1` 捕獲會把 warning eval 成 shell → zsh 死。
+  // 兩道防線都要保留：(1) loader 維持 stderr/stdout 分離 (2) scheduler-common.sh 不用 `2>&1`
+  it('非法 key 走 stderr 不污染 stdout（regression: 2>&1 silent-death 同類）', () => {
+    // dotenv 接受含「.」「-」的 key（dotenv 用 [\w.-]+），但 loader 的 VALID_KEY
+    // regex 拒絕 → 寫 warning 到 stderr。stdout 必須只含合法 export。
+    const result = runLoader(`OK_KEY=alpha\nBAD.KEY=should-skip\nHAS-DASH=also-skip\nAFTER=zulu\n`);
+    expect(result.code, `unexpected exit code (stderr: ${result.stderr})`).toBe(0);
+    expect(result.stdout).not.toMatch(/BAD\.KEY|HAS-DASH/);
+    expect(result.stdout).toMatch(/export OK_KEY=/);
+    expect(result.stdout).toMatch(/export AFTER=/);
+    expect(result.stderr).toMatch(/BAD\.KEY|HAS-DASH/);
+
+    // 確認單獨 eval stdout 在 zsh `set -e` 下不會炸
+    const evalCheck = spawnSync('zsh', ['-c', `set -eo pipefail\n${result.stdout}\necho OK_KEY=$OK_KEY\necho AFTER=$AFTER\n`], { encoding: 'utf8' });
+    expect(evalCheck.status, `zsh eval 失敗 stderr: ${evalCheck.stderr}`).toBe(0);
+    expect(evalCheck.stdout).toContain('OK_KEY=alpha');
+    expect(evalCheck.stdout).toContain('AFTER=zulu');
   });
 });
