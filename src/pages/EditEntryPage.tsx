@@ -311,20 +311,23 @@ const MODE_ICON: Record<TripSegment['mode'], string> = {
   transit: 'bus',
 };
 
+// API 走 json() 自動 deepCamel — 必須用 camelCase 讀，不是 DB snake_case。
+// v2.26.0 ship 時 interface 寫成 snake_case → 全部讀回 undefined（time 空白、
+// POI 卡 + 移動方式 section 全消失）。Regression test fixture 也跟著錯，CI 沒抓到。
 interface EntryApi {
   id: number;
-  day_id: number;
+  dayId: number;
   title?: string | null;
   time?: string | null;
-  start_time?: string | null;
-  end_time?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
   note?: string | null;
-  poi_id?: number | null;
+  poiId?: number | null;
 }
 
 interface DayApi {
   id?: number;
-  day_num?: number;
+  dayNum?: number;
   timeline?: Array<{
     id?: number | null;
     title?: string | null;
@@ -411,13 +414,13 @@ export default function EditEntryPage() {
     let cancelled = false;
     (async () => {
       try {
-        // entry.day_id → day_num — fetch via days endpoint pattern: GET /trips/:id/days
-        const days = await apiFetch<Array<{ id: number; day_num: number }>>(`/trips/${encodeURIComponent(tripId)}/days`);
+        // entry.dayId → dayNum — fetch via days endpoint pattern: GET /trips/:id/days
+        const days = await apiFetch<Array<{ id: number; dayNum: number }>>(`/trips/${encodeURIComponent(tripId)}/days`);
         if (cancelled) return;
-        const day = days.find((d) => d.id === entry.day_id);
+        const day = days.find((d) => d.id === entry.dayId);
         if (!day) return;
         const dayData = await apiFetch<DayApi & { timeline?: Array<{ id?: number | null; title?: string | null; poiType?: string | null }> }>(
-          `/trips/${encodeURIComponent(tripId)}/days/${day.day_num}`,
+          `/trips/${encodeURIComponent(tripId)}/days/${day.dayNum}`,
         );
         if (cancelled) return;
         const timeline = Array.isArray(dayData.timeline) ? dayData.timeline : [];
@@ -445,8 +448,8 @@ export default function EditEntryPage() {
   // Init form once entry + segmentMap available
   useEffect(() => {
     if (!entry) return;
-    const initialStart = entry.start_time ?? '';
-    const initialEnd = entry.end_time ?? '';
+    const initialStart = entry.startTime ?? '';
+    const initialEnd = entry.endTime ?? '';
     setStartTime(initialStart);
     setEndTime(initialEnd);
     setNote(entry.note ?? '');
