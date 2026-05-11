@@ -82,11 +82,15 @@ const DAY_DATA = {
   ],
 };
 
+const TRIP_META = { title: '沖縄自駕五日遊', name: null };
+
 function setupApiMocks() {
   (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
     if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
     if (url.endsWith('/days')) return Promise.resolve(DAYS);
     if (url.includes('/days/3')) return Promise.resolve(DAY_DATA);
+    // v2.26.4: trip meta fetch for TitleBar 行程名稱
+    if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
     return Promise.resolve(null);
   });
   (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -131,6 +135,46 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
     const note = screen.getByTestId('edit-entry-note') as HTMLTextAreaElement;
     expect(note.value).toBe('老店');
     expect(screen.getByTestId('edit-entry-note-counter').textContent).toBe('2 / 1000');
+  });
+
+  // v2.26.4 — V1 mockup sign-off：TitleBar inline trip name + POI 卡 swap button
+  it('TitleBar 顯示「編輯景點 · {trip name}」', async () => {
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByText(/沖縄自駕五日遊/)).toBeTruthy();
+    });
+    // TitleBar 同行包含「編輯景點」+ trip name（中間以 · 分隔）
+    const titleEl = screen.getByText(/編輯景點/);
+    expect(titleEl.textContent).toContain('編輯景點');
+    expect(titleEl.textContent).toContain('沖縄自駕五日遊');
+  });
+
+  it('trip meta 還沒載入 → TitleBar 仍顯示「編輯景點」（fallback）', async () => {
+    // 讓 trip meta endpoint pending 不解析
+    (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
+      if (url.endsWith('/days')) return Promise.resolve(DAYS);
+      if (url.includes('/days/3')) return Promise.resolve(DAY_DATA);
+      if (url.match(/\/trips\/[^/]+$/)) return new Promise(() => {}); // never resolves
+      return Promise.resolve(null);
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
+    });
+    // TitleBar 不該卡 — 只顯示「編輯景點」
+    expect(screen.getByText(/編輯景點/).textContent).toContain('編輯景點');
+  });
+
+  it('POI 卡右側顯示「變更景點」icon button + click navigate 到 change-poi route', async () => {
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-change-poi')).toBeTruthy();
+    });
+    const btn = screen.getByTestId('edit-entry-change-poi') as HTMLButtonElement;
+    expect(btn.getAttribute('aria-label')).toContain('變更景點');
+    fireEvent.click(btn);
+    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi');
   });
 
   it('停留時間 chip 顯示「停留 90 分鐘」', async () => {
