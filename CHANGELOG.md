@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.26.4] - 2026-05-11
+
+**EditEntryPage 加 trip name 顯示 + 變更景點入口（mockup V1 sign-off）。**
+
+### Added
+
+- **TitleBar inline trip name**：TitleBar 標題從固定「編輯景點」改為「編輯景點 · {trip name}」。透過新增 `apiFetch<TripMeta>('/trips/${tripId}')` 取 trip meta，silent 失敗 fallback 為單純「編輯景點」不擋頁面 load。Mobile 走 TitleBar 既有 `text-overflow: ellipsis`，trip name 過長會截斷但「編輯景點」保留。
+- **POI 卡右側「變更景點」icon button**：44×44 swap icon button（`swap-horizontal` 新增到 Icon sprite），click 後 navigate 到既有的 `/trip/:tripId/stop/:entryId/change-poi`（`ChangePoiPage` 已建好只是無入口）。Touch target 達 DESIGN.md ≥44px 標準，aria-label「變更景點」+ hover terracotta accent。
+- Mockup：`/tmp/EditEntryPage-trip-name-change-poi-variants.html` V1 Compact（user sign-off 2026-05-11）
+
+### Tests
+
+- 3 個新 unit case in `tests/unit/edit-entry-page.test.tsx`：
+  - TitleBar 顯示「編輯景點 · {trip name}」
+  - trip meta 還沒載入 → 不擋頁面、fallback 為「編輯景點」
+  - POI 卡 swap button click → navigate 到 change-poi route（含 aria-label 驗證）
+
 ## [2.26.3] - 2026-05-11
 
 **修 v2.26.0 EditEntryPage 一半畫面不顯示的 bug — snake_case vs camelCase API 讀取錯誤。**

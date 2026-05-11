@@ -76,6 +76,28 @@ const SCOPED_STYLES = `
   color: var(--color-muted); font-size: var(--font-size-footnote);
   margin-top: 2px;
 }
+.tp-edit-entry-poi-action {
+  width: 44px; height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  border: 1.5px solid var(--color-border);
+  color: var(--color-foreground);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font: inherit;
+  transition: all 120ms;
+}
+.tp-edit-entry-poi-action:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+.tp-edit-entry-poi-action:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.tp-edit-entry-poi-action .svg-icon { width: 20px; height: 20px; }
 
 .tp-edit-entry-section { margin-bottom: 28px; }
 .tp-edit-entry-section-h {
@@ -325,6 +347,11 @@ interface EntryApi {
   poiId?: number | null;
 }
 
+interface TripMeta {
+  title?: string | null;
+  name?: string | null;
+}
+
 interface DayApi {
   id?: number;
   dayNum?: number;
@@ -364,6 +391,7 @@ export default function EditEntryPage() {
   const [entry, setEntry] = useState<EntryApi | null>(null);
   const [poiInfo, setPoiInfo] = useState<{ name: string; poiType: string | null } | null>(null);
   const [prevEntry, setPrevEntry] = useState<{ id: number; title: string } | null>(null);
+  const [tripName, setTripName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -407,6 +435,21 @@ export default function EditEntryPage() {
     })();
     return () => { cancelled = true; };
   }, [tripId, entryId]);
+
+  // Load trip meta — 給 TitleBar 顯示 「編輯景點 · {tripName}」（v2.26.4 mockup V1）
+  // 失敗 silent：TitleBar fallback 為單純「編輯景點」，不擋 entry load
+  useEffect(() => {
+    if (!tripId) return;
+    let cancelled = false;
+    apiFetch<TripMeta>(`/trips/${encodeURIComponent(tripId)}`)
+      .then((data) => {
+        if (cancelled) return;
+        const name = data?.title || data?.name;
+        if (name) setTripName(name);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [tripId]);
 
   // Once entry is loaded, fetch the day for prev-entry context + POI meta
   useEffect(() => {
@@ -605,7 +648,7 @@ export default function EditEntryPage() {
     <div className="tp-app">
       <style>{SCOPED_STYLES}</style>
       <TitleBar
-        title="編輯景點"
+        title={tripName ? `編輯景點 · ${tripName}` : '編輯景點'}
         back={handleCancel}
         backLabel="返回行程"
         actions={titleBarActions}
@@ -631,6 +674,16 @@ export default function EditEntryPage() {
                       {POI_TYPE_LABEL[poiInfo.poiType ?? 'attraction'] ?? '景點'}
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    className="tp-edit-entry-poi-action"
+                    aria-label="變更景點"
+                    title="變更景點"
+                    onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi`)}
+                    data-testid="edit-entry-change-poi"
+                  >
+                    <Icon name="swap-horizontal" />
+                  </button>
                 </div>
               )}
 
