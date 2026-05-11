@@ -42,9 +42,11 @@ function runLoader(envContent: string): { code: number; stdout: string; stderr: 
   }
 }
 
-/** eval loader output in bash subshell, dump requested vars via base64 (preserves multi-line + ctrl chars) */
+/** eval loader output in subshell, dump requested vars via base64 (preserves multi-line + ctrl chars) */
 function evalAndDump(loaderOutput: string, varNames: string[]): Record<string, string> {
-  const dumpCmd = varNames.map(n => `echo "${n}=$(printf %s "$${n}" | base64)"`).join('\n');
+  // Linux base64 預設 wrap 76 chars，macOS 不 wrap — 加 `tr -d '\n'` 統一單行輸出
+  // 否則 stdout split-by-newline 會把 base64 後半段當沒 `=` 的行 skip 掉
+  const dumpCmd = varNames.map(n => `echo "${n}=$(printf %s "$${n}" | base64 | tr -d '\\n')"`).join('\n');
   const script = `set -e\n${loaderOutput}\n${dumpCmd}\n`;
   const result = spawnSync(SHELL, ['-c', script], { encoding: 'utf8' });
   if (result.status !== 0) {
@@ -144,9 +146,9 @@ describe('load-env.mjs — scheduler env loader', () => {
     expect(result.stdout).toMatch(/export AFTER=/);
     expect(result.stderr).toMatch(/BAD\.KEY|HAS-DASH/);
 
-    // 確認單獨 eval stdout 在 zsh `set -e` 下不會炸
-    const evalCheck = spawnSync('zsh', ['-c', `set -eo pipefail\n${result.stdout}\necho OK_KEY=$OK_KEY\necho AFTER=$AFTER\n`], { encoding: 'utf8' });
-    expect(evalCheck.status, `zsh eval 失敗 stderr: ${evalCheck.stderr}`).toBe(0);
+    // 確認單獨 eval stdout 在 production shell（zsh/bash）`set -e` 下不會炸
+    const evalCheck = spawnSync(SHELL, ['-c', `set -eo pipefail\n${result.stdout}\necho OK_KEY=$OK_KEY\necho AFTER=$AFTER\n`], { encoding: 'utf8' });
+    expect(evalCheck.status, `${SHELL} eval 失敗 stderr: ${evalCheck.stderr}`).toBe(0);
     expect(evalCheck.stdout).toContain('OK_KEY=alpha');
     expect(evalCheck.stdout).toContain('AFTER=zulu');
   });
