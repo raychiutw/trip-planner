@@ -44,7 +44,6 @@ export const ErrorCode = {
   POI_NOT_ALTERNATE: 'POI_NOT_ALTERNATE',
   MISSING_MASTER: 'MISSING_MASTER',
   INVALID_ORDER: 'INVALID_ORDER',
-  ROUTE_RECOMPUTE_FAILED: 'ROUTE_RECOMPUTE_FAILED',
 } as const;
 
 export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
@@ -74,7 +73,6 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   POI_NOT_ALTERNATE: '此景點不是此 stop 的備案',
   MISSING_MASTER: '每個 stop 必須有首選景點',
   INVALID_ORDER: '備案排序格式不正確',
-  ROUTE_RECOMPUTE_FAILED: '路線計算暫時無法完成，請稍後重試',
 };
 
 // ---------------------------------------------------------------------------

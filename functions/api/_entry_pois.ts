@@ -89,13 +89,15 @@ export async function getMasterPoi(
 
   if (!legacy || legacy.poi_id == null) return null;
 
-  // Self-heal: INSERT into trip_entry_pois sort_order=1
+  // Self-heal: INSERT into trip_entry_pois sort_order=1。用 nowMs() 取代 datetime('now')
+  // 跟其餘 file 一致 ms-resolution（Codex 2nd-pass review CRITICAL #1 一致性 fix）。
+  const healNow = nowMs();
   await db
     .prepare(
       `INSERT OR IGNORE INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-       VALUES (?, ?, 1, datetime('now'), datetime('now'))`,
+       VALUES (?, ?, 1, ?, ?)`,
     )
-    .bind(entryId, legacy.poi_id)
+    .bind(entryId, legacy.poi_id, healNow, healNow)
     .run();
 
   return {
@@ -175,8 +177,10 @@ function nowMs(): string {
  *    ELSE  → INSERT 新 row (poi_id=newMasterPoiId, sort_order=1)
  *           old master → max+1
  * 5. UPDATE trip_entries.poi_id = newMasterPoiId（Phase 1 dual-write）
- * 6. UPDATE trip_segments SET source='stale', computed_at=NULL WHERE from_entry_id=entryId OR to_entry_id=entryId
- *    （caller 在 commit 後再呼 recomputeAdjacentSegments 觸發 Google Routes）
+ * 6. UPDATE trip_segments SET computed_at = NULL WHERE from_entry_id=entryId OR to_entry_id=entryId
+ *    （只清 computed_at 不改 source — trip_segments.source CHECK 不允許 'stale'；
+ *      frontend useTripSegments 透過 updated_at bump detect refetch；後續 Google Routes
+ *      recompute 留待 v2.27.x enhancement）
  */
 export async function setMaster(
   db: D1Database,
@@ -223,12 +227,10 @@ export async function setMaster(
 
   const statements: D1PreparedStatement[] = [];
 
-  // Codex pre-landing CRITICAL #3 fix：把 OCC 從 read-then-write 改 atomic CAS。
-  // oldMasterRow 的 update 帶 `updated_at < ?` predicate（newest token > our token），
-  // 但既然我們已 read max version 為 expectedVersion，這裡的 WHERE 用 id + sort_order=1
-  // 已足夠（並發 setMaster 兩個 winner 都會 race INSERT/UPDATE sort_order=1，由 UNIQUE
-  // constraint catch — 我們在 onConstraintViolation 抓出來轉成 STALE_ENTRY）。
-  // 此 fix 在 batch 後檢查 batch error 並 rethrow 為 STALE_ENTRY。
+  // OCC 策略：read-then-CAS via UNIQUE(entry_id, sort_order)。兩個並發 setMaster 都
+  // 想寫 sort_order=1，UNIQUE constraint 讓 loser 失敗 → batch try/catch 抓
+  // SQLITE_CONSTRAINT 轉成 STALE_ENTRY 409（Codex CRITICAL #3）。expectedVersion
+  // 比對只是 happy path 短路 — 不傳 version 也安全，UNIQUE 仍會 catch race。
   if (oldMasterRow) {
     // vacate sort_order=1 → temp_order
     statements.push(
@@ -297,10 +299,12 @@ export async function setMaster(
   } catch (err) {
     // Codex pre-landing CRITICAL #3：並發 setMaster 走到 UNIQUE constraint
     // (entry_id, sort_order)=1 collision → catch + rethrow 為 STALE_ENTRY 給 client
-    // proper 409 + retry hint，而非 opaque 500。
+    // proper 409 + retry hint，而非 opaque 500。SQL error 細節 log 到 console，
+    // user-facing message 走 ERROR_MESSAGES catalog（避免 schema 名外漏 — Codex 2nd-pass）。
     const msg = err instanceof Error ? err.message : String(err);
     if (/UNIQUE constraint|SQLITE_CONSTRAINT/i.test(msg)) {
-      throw new AppError('STALE_ENTRY', `concurrent master change detected (${msg.slice(0, 80)})`);
+      console.warn('[setMaster] UNIQUE collision (concurrent master change)', msg);
+      throw new AppError('STALE_ENTRY');
     }
     throw err;
   }
@@ -315,38 +319,52 @@ export async function addAlternate(
   entryId: number,
   poiId: number,
 ): Promise<{ sortOrder: number; version: string }> {
-  // 確認 entry 有 master（At-least-one invariant — alternate 不能在沒 master 時加）
-  const masterCount = await db
-    .prepare('SELECT COUNT(*) AS c FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
-    .bind(entryId)
-    .first<{ c: number }>();
+  // 三段平行 SELECT 同 setMaster 模式減 round-trip：master 存在 + dup-check + max
+  const [masterCount, dup, maxRow] = await Promise.all([
+    db
+      .prepare('SELECT COUNT(*) AS c FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(entryId)
+      .first<{ c: number }>(),
+    db
+      .prepare('SELECT id FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ?')
+      .bind(entryId, poiId)
+      .first(),
+    db
+      .prepare('SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM trip_entry_pois WHERE entry_id = ?')
+      .bind(entryId)
+      .first<{ max_order: number }>(),
+  ]);
+
+  // At-least-one invariant: alternate 不能在沒 master 時加
   if (!masterCount || masterCount.c === 0) {
     throw new AppError('MISSING_MASTER', 'Entry must have a master POI before adding alternates');
   }
-
-  // Check duplicate
-  const dup = await db
-    .prepare('SELECT id FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ?')
-    .bind(entryId, poiId)
-    .first();
   if (dup) {
     throw new AppError('DUPLICATE_POI', `POI ${poiId} already exists in entry ${entryId}`);
   }
 
-  const maxRow = await db
-    .prepare('SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM trip_entry_pois WHERE entry_id = ?')
-    .bind(entryId)
-    .first<{ max_order: number }>();
   const newSortOrder = (maxRow?.max_order ?? 0) + 1;
   const now = nowMs();
 
-  await db
-    .prepare(
-      `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-       VALUES (?, ?, ?, ?, ?)`,
-    )
-    .bind(entryId, poiId, newSortOrder, now, now)
-    .run();
+  // 同 setMaster CRITICAL #3：兩個並發 addAlternate 讀到同 max → 同 sort_order INSERT
+  // → UNIQUE(entry_id, sort_order) collision；catch 後轉成 retryable STALE_ENTRY，
+  // client 重抓 version 後再試。UNIQUE(entry_id, poi_id) 衝突也走同一 catch，但語意
+  // 上是 DUPLICATE_POI（並發 add 同一 POI）— 我們已 dup-check 過，剩 race window 很窄。
+  try {
+    await db
+      .prepare(
+        `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .bind(entryId, poiId, newSortOrder, now, now)
+      .run();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/UNIQUE constraint|SQLITE_CONSTRAINT/i.test(msg)) {
+      throw new AppError('STALE_ENTRY', 'concurrent alternate add detected — retry after refreshing version');
+    }
+    throw err;
+  }
 
   const version = await getEntryPoisVersion(db, entryId);
   return { sortOrder: newSortOrder, version };
@@ -435,18 +453,6 @@ export async function reorderAlternates(
 }
 
 /**
- * Recompute adjacent trip_segments 透過 Google Routes API。
- *
- * Called by setMaster() AFTER batch commit（per Codex Finding #3 — Google call
- * 不在 TX 內，commit 後 idempotent retry）。Failure → throw ROUTE_RECOMPUTE_FAILED；
- * caller 應吞下 error 並轉成 warning（master swap 本身已成功）。
- *
- * Note: 實際 Google Routes 整合在 functions/api/trips/[id]/segments/[sid].ts 已有；
- * 此 helper 僅 mark segment stale 並 trigger refresh — refresh 邏輯在 segments
- * PATCH 上層 handler 透過 source='stale' detect 觸發。本 v2.27.0 phase 不直接
- * 在此 call computeRoute，留待後續 enhancement（節省 v2.27.0 build cost）。
- */
-/**
  * 確保 trip_entry_pois 對 entry_id 有 sort_order=1 row（v2.27.0 multi-POI invariant）。
  * 給 entry-create 路徑（POST /entries / PUT /days/:num / copy）在 INSERT/UPDATE
  * trip_entries.poi_id 之後立刻呼叫，避免「entry 建好後 addAlternate MISSING_MASTER」
@@ -495,18 +501,4 @@ export async function syncEntryMaster(
       .run();
   }
   // poi_id 相同 → no-op
-}
-
-export async function markSegmentsStaleAfterMasterChange(
-  db: D1Database,
-  entryId: number,
-): Promise<{ affected: number }> {
-  const result = await db
-    .prepare(
-      `UPDATE trip_segments SET computed_at = NULL, updated_at = strftime('%s', 'now')
-       WHERE from_entry_id = ? OR to_entry_id = ?`,
-    )
-    .bind(entryId, entryId)
-    .run();
-  return { affected: result.meta?.changes ?? 0 };
 }

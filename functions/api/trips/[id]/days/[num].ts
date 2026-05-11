@@ -1,5 +1,6 @@
 import { logAudit } from '../../../_audit';
 import { hasWritePermission } from '../../../_auth';
+import { syncEntryMaster } from '../../../_entry_pois';
 import { AppError } from '../../../_errors';
 import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
 import { resolveEntryTimes } from '../../../_time';
@@ -275,32 +276,34 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // Batch resolve all POIs (2–3 DB round-trips instead of N)
     const poiIds = await batchFindOrCreatePois(db, poiItems);
 
-    // Build batch2: (a) UPDATE trip_entries.poi_id + INSERT trip_entry_pois sort_order=1,
-    // (b) trip_pois 插入
-    // v2.27.0：batch1 DELETE FROM trip_entries → ON DELETE CASCADE 清掉舊 trip_entry_pois，
-    // 這裡 INSERT 不會撞 UNIQUE。Codex pre-landing CRITICAL #2：少了這段，後續 addAlternate
-    // 會 fire MISSING_MASTER 直到第一次 GET 自我修復。
+    // Build batch2: (a) UPDATE trip_entries.poi_id, (b) trip_pois 插入
+    // batch1 DELETE FROM trip_entries → ON DELETE CASCADE 清掉舊 trip_entry_pois。
+    // trip_entry_pois sort_order=1 invariant 由 syncEntryMaster() helper 在 batch2 後維護
+    // （Codex pre-landing CRITICAL #2 — 不靠 inline INSERT 漂流 SQL；DRY 對齊
+    // POST /entries + copy.ts pattern）。
     const batch2: D1PreparedStatement[] = [];
-    const now = new Date().toISOString();
+    const entriesNeedingMaster: Array<{ entryId: number; poiId: number }> = [];
     for (let i = 0; i < timeline.length; i++) {
       const pIdx = entryPoiIdx[i]!;
       if (pIdx < 0) continue;
       const poiId = poiIds[pIdx];
       const entryId = entryIds[i]!;
+      if (typeof poiId !== 'number') continue;
       batch2.push(
         db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(poiId, entryId),
-        db
-          .prepare(
-            `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-             VALUES (?, ?, 1, ?, ?)`,
-          )
-          .bind(entryId, poiId, now, now),
       );
+      entriesNeedingMaster.push({ entryId, poiId });
     }
     for (const builder of tripPoiBuilders) {
       batch2.push(...builder(poiIds));
     }
     if (batch2.length > 0) await db.batch(batch2);
+
+    // 維護 trip_entry_pois sort_order=1 invariant — 用 helper 而非 inline INSERT
+    // 對齊 POST /entries + copy.ts。Parallel for throughput (independent rows)。
+    await Promise.all(
+      entriesNeedingMaster.map((p) => syncEntryMaster(db, p.entryId, p.poiId)),
+    );
 
     // Audit log AFTER both batches succeed (prevents phantom audit entries on failure)
     await logAudit(db, {

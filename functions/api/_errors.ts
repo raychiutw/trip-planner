@@ -45,7 +45,6 @@ const STATUS_MAP: Partial<Record<ErrorCodeType, number>> = {
   POI_NOT_ALTERNATE: 404,
   MISSING_MASTER: 400,
   INVALID_ORDER: 422,
-  ROUTE_RECOMPUTE_FAILED: 502,
 };
 
 export class AppError extends Error {

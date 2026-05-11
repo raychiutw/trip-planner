@@ -329,13 +329,17 @@ const SCOPED_STYLES = `
 .tp-edit-entry-alt-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px;
-  background: var(--color-background, #fff);
+  background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   margin-bottom: 8px;
   min-height: 44px;
 }
-.tp-edit-entry-alt-row.is-pending { opacity: 0.5; }
+.tp-edit-entry-alt-row.is-pending {
+  opacity: 0.65;
+  pointer-events: none;
+  cursor: wait;
+}
 .tp-edit-entry-alt-order {
   font-size: var(--font-size-caption);
   color: var(--color-muted);
@@ -360,9 +364,14 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--font-size-support);
   display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer;
+}
+.tp-edit-entry-alt-actions button .svg-icon { width: 18px; height: 18px; }
+.tp-edit-entry-alt-actions button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 .tp-edit-entry-alt-actions button[disabled] { opacity: 0.4; cursor: not-allowed; }
 .tp-edit-entry-alt-actions button.set-master {
@@ -375,7 +384,10 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-caption);
 }
 .tp-edit-entry-alt-actions button.set-master:hover { background: var(--color-accent-bg); }
-.tp-edit-entry-alt-actions button.alt-delete:hover { color: var(--color-danger, #B83A3A); }
+.tp-edit-entry-alt-actions button.alt-delete:hover {
+  color: var(--color-destructive);
+  border-color: var(--color-destructive);
+}
 
 .tp-edit-entry-alt-add-row {
   display: flex; gap: 8px; margin-top: 8px;
@@ -392,10 +404,14 @@ const SCOPED_STYLES = `
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   cursor: pointer;
 }
+.tp-edit-entry-alt-add-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
 
 .tp-edit-entry-alt-error {
-  background: var(--color-danger-subtle, #F8E3E3);
-  color: var(--color-danger-deep, #8B2828);
+  background: var(--color-destructive-bg);
+  color: var(--color-destructive);
   padding: 8px 12px;
   border-radius: var(--radius-md);
   font-size: var(--font-size-footnote);
@@ -412,14 +428,18 @@ const SCOPED_STYLES = `
   width: 100%;
   min-height: 44px;
   background: transparent;
-  color: var(--color-danger, #B83A3A);
-  border: 1px solid var(--color-danger-subtle, #F8E3E3);
+  color: var(--color-destructive);
+  border: 1px solid var(--color-destructive-bg);
   border-radius: var(--radius-md);
   font-weight: 600;
   font-size: var(--font-size-footnote);
   cursor: pointer;
 }
-.tp-edit-entry-danger-btn:hover { background: var(--color-danger-subtle, #F8E3E3); }
+.tp-edit-entry-danger-btn:hover { background: var(--color-destructive-bg); }
+.tp-edit-entry-danger-btn:focus-visible {
+  outline: 2px solid var(--color-destructive);
+  outline-offset: 2px;
+}
 
 /* discard-changes 用 shared <ConfirmModal>（沒額外樣式） */
 `;
@@ -840,6 +860,9 @@ export default function EditEntryPage() {
       await refreshEntryPois();
       showToast(`已將「${alt.name}」設為首選`, 'success');
     } catch (err) {
+      // Close modal first so altError 在 alternates 區塊正常顯示，不會被 modal 蓋住
+      // (Codex 2nd-pass review UX finding)。
+      setAltSwapConfirm(null);
       setAltError(err instanceof Error ? err.message : '設為首選失敗');
     } finally {
       setAltPending(null);
@@ -860,9 +883,15 @@ export default function EditEntryPage() {
     setAltPending(alt.poiId);
     setAltError(null);
     try {
-      await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates/${alt.poiId}`, {
+      // apiFetchRaw 不會 throw on 4xx/5xx — 必須自己檢查 res.ok，否則 backend reject 也會
+      // 顯示成功 toast（Codex 2nd-pass review CRITICAL）。
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates/${alt.poiId}`, {
         method: 'DELETE',
       });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`移除備案失敗 (${res.status})${text ? `: ${text.slice(0, 120)}` : ''}`);
+      }
       setAltRemoveConfirm(null);
       await refreshEntryPois();
       showToast(`已移除備案「${alt.name}」`, 'success');
@@ -907,9 +936,15 @@ export default function EditEntryPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`, {
+      // apiFetchRaw 不 throw on 4xx/5xx — 必須自己檢查 res.ok 防止 backend reject
+      // 仍 navigate-away（Codex 2nd-pass review CRITICAL）。
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`, {
         method: 'DELETE',
       });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`刪除 stop 失敗 (${res.status})${text ? `: ${text.slice(0, 120)}` : ''}`);
+      }
       setShowDeleteStopConfirm(false);
       navigate(goBackHref);
     } catch (err) {
@@ -1025,14 +1060,14 @@ export default function EditEntryPage() {
                           disabled={idx === 0 || altPending != null}
                           onClick={() => void handleReorderAlternate(alt.poiId, 'up')}
                           data-testid={`edit-entry-alt-up-${alt.poiId}`}
-                        >↑</button>
+                        ><Icon name="chevron-up" /></button>
                         <button
                           type="button"
                           aria-label={`下移 ${alt.name}`}
                           disabled={idx === alternates.length - 1 || altPending != null}
                           onClick={() => void handleReorderAlternate(alt.poiId, 'down')}
                           data-testid={`edit-entry-alt-down-${alt.poiId}`}
-                        >↓</button>
+                        ><Icon name="chevron-down" /></button>
                         <button
                           type="button"
                           className="set-master"
@@ -1047,9 +1082,9 @@ export default function EditEntryPage() {
                           className="alt-delete"
                           aria-label={`刪除 ${alt.name}`}
                           disabled={altPending != null}
-                          onClick={() => void handleRemoveAlternate(alt)}
+                          onClick={() => handleRemoveAlternate(alt)}
                           data-testid={`edit-entry-alt-delete-${alt.poiId}`}
-                        >×</button>
+                        ><Icon name="x-mark" /></button>
                       </div>
                     </div>
                   ))}
@@ -1267,6 +1302,7 @@ export default function EditEntryPage() {
           : ''}
         confirmLabel="設為首選"
         cancelLabel="取消"
+        busy={altPending != null}
         onConfirm={() => altSwapConfirm && void handleSetAsMaster(altSwapConfirm)}
         onCancel={() => setAltSwapConfirm(null)}
       />
@@ -1278,6 +1314,7 @@ export default function EditEntryPage() {
         message={altRemoveConfirm ? `將從這個 stop 移除備案「${altRemoveConfirm.name}」。POI 本身不會被刪除，仍可從搜尋或收藏再次加入。` : ''}
         confirmLabel="移除備案"
         cancelLabel="取消"
+        busy={altPending != null}
         onConfirm={() => altRemoveConfirm && void handleConfirmRemoveAlternate(altRemoveConfirm)}
         onCancel={() => setAltRemoveConfirm(null)}
       />
@@ -1291,6 +1328,7 @@ export default function EditEntryPage() {
           : ''}
         confirmLabel="刪除 stop"
         cancelLabel="取消"
+        busy={submitting}
         onConfirm={() => void handleDeleteStop()}
         onCancel={() => setShowDeleteStopConfirm(false)}
       />

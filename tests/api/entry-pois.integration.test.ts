@@ -706,9 +706,7 @@ describe('setMaster() edge cases', () => {
 
 describe('GET /api/trips/:id/days/:num — multi-POI surface', () => {
   it('回傳 timeline 含 master + alternates + entryPoisVersion', async () => {
-    // 用本 file 已 import 的 GET handler? days-num.test 已測 GET shape；
-    // 此處重點是 multi-POI fields surface。
-    const { default: daysNumGet } = await import('../../functions/api/trips/[id]/days/[num]');
+    // days-num.test 已測 GET shape；此處重點是 multi-POI fields surface。
     const { entryId } = await seedEntryWithMaster({
       poiName: 'DaySurface-Master',
       altPoiNames: ['DaySurface-Alt-1', 'DaySurface-Alt-2'],
