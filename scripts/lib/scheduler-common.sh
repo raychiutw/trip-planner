@@ -15,12 +15,17 @@ log_error() {
 # Log rotation: delete files older than 7 days
 find "$LOG_DIR" \( -name "*.log" -o -name "*-report.json" \) -mtime +7 -delete 2>/dev/null || true
 
-# Load .env.local
+# Load .env.local — 透過 Node dotenv parser
+# 舊版用 `while IFS= read -r line` 土法 parse，遇 multi-line single-quoted JSON
+# （例：GOOGLE_CLOUD_SA_KEY 的 private_key）會把每行 base64 切片當獨立 KEY=VALUE
+# export → zsh 丟「not an identifier」+ `set -eo pipefail` 中止 source → 整支
+# scheduler 沒建 LOG_FILE 就死（觀察到 2026-05-11 06:13 .context stderr.log 即此）。
+# load-env.mjs 用 dotenv 正確 parse 後輸出 ANSI-C quoted `export` 指令。
 if [ -f "$PROJECT_DIR/.env.local" ]; then
-  while IFS= read -r line; do
-    [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-    key="${line%%=*}"
-    value="${line#*=}"
-    [ -n "$key" ] && export "$key=$value"
-  done < "$PROJECT_DIR/.env.local"
+  _env_exports=$(node "$PROJECT_DIR/scripts/lib/load-env.mjs" "$PROJECT_DIR/.env.local" 2>&1) || {
+    echo "[scheduler-common] load-env.mjs 失敗: $_env_exports" >&2
+    exit 1
+  }
+  eval "$_env_exports"
+  unset _env_exports
 fi
