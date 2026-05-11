@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.26.3] - 2026-05-11
+
+**修 v2.26.0 EditEntryPage 一半畫面不顯示的 bug — snake_case vs camelCase API 讀取錯誤。**
+
+### Fixed
+
+- **`src/pages/EditEntryPage.tsx` 讀錯 API 欄位 case**：`functions/api/_utils.ts:json()` 自動 deepCamel response，real API 回 `{ id, dayId, startTime, endTime, poiId, ... }`，但前端 interface + 所有讀取點都用 snake_case (`entry.day_id` / `entry.start_time` / `entry.end_time`)。連鎖效應：
+  - 起訖時間 input 永遠空白（even if entry has time in DB）
+  - `dayId` undefined → days lookup 找不到 day → `poiInfo` + `prevEntry` 都 null → POI 摘要卡 + 從上一站移動 section 完全不 render
+  - 只有備註 textarea 能用 → user 反映「編輯景點功能不完全」
+- **Why CI 沒抓到**：`tests/unit/edit-entry-page.test.tsx` 的 ENTRY / DAYS / DAY_DATA fixture 也用 snake_case 跟前端 code 一致 → mock 自己騙自己，test pass production fail。
+- **修法**：(1) interface + 所有讀取點改 camelCase (2) test fixture 改 camelCase 對齊 real API 防 regression。PATCH 寫入 body 仍用 snake_case（對齊 backend `ALLOWED_FIELDS`），未改。
+
 ## [2.26.2] - 2026-05-11
 
 **修 v2.26.0 EditEntryPage 切 mode 後 min 沒重算的 bug。**

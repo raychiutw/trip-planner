@@ -57,21 +57,25 @@ vi.mock('../../src/hooks/useTripSegments', () => ({
 
 import { apiFetch, apiFetchRaw } from '../../src/lib/apiClient';
 
+// API 走 json() 自動 deepCamel → fixture 必須用 camelCase 對齊 real API。
+// v2.26.0 ship 時 fixture 用 snake_case，跟 frontend code 同款，CI mask 掉
+// 真實 API 用 camelCase 的事實 → production 一上線就壞（time 空白 + POI 卡
+// 全消失），但測試從沒驗到。v2.26.3 補修 + 同步 fixture。
 const ENTRY = {
   id: 42,
-  day_id: 7,
+  dayId: 7,
   title: '花織そば',
   time: '12:00-13:30',
-  start_time: '12:00',
-  end_time: '13:30',
+  startTime: '12:00',
+  endTime: '13:30',
   note: '老店',
-  poi_id: 100,
+  poiId: 100,
 };
 
-const DAYS = [{ id: 7, day_num: 3 }];
+const DAYS = [{ id: 7, dayNum: 3 }];
 const DAY_DATA = {
   id: 7,
-  day_num: 3,
+  dayNum: 3,
   timeline: [
     { id: 41, title: '首里城', poiType: 'attraction' },
     { id: 42, title: '花織そば', poiType: 'restaurant' },
@@ -143,7 +147,7 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
       if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
       if (url.endsWith('/days')) return Promise.resolve(DAYS);
       if (url.includes('/days/3')) return Promise.resolve({
-        id: 7, day_num: 3,
+        id: 7, dayNum: 3,
         timeline: [
           { id: 42, title: '花織そば', poiType: 'restaurant' }, // <-- index 0
           { id: 99, title: '海中道路', poiType: 'attraction' },
