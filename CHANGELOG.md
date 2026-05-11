@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.26.2] - 2026-05-11
+
+**修 v2.26.0 EditEntryPage 切 mode 後 min 沒重算的 bug。**
+
+### Fixed
+
+- **`PATCH /api/trips/:id/segments/:sid`：mode=driving/walking 不帶 min → backend 自動 call Google Routes 重算 min + distance_m，source='google'**。
+  - User observation：v2.26.0 EditEntryPage 切 mode 後 timeline 顯示「步行 17 min / 9.3 km」，17 min 是 driving 時間（walking 9.3 km 應 ≈ 110 min）。
+  - Root cause：原邏輯註解「user override mode 不重算 min，以手動覆寫優先為準」實際上反了 — segmented control 只送 `{ mode }`（無 min），backend 保留舊 mode 的 min。
+  - 行為矩陣：
+    | mode | user 帶 min？ | 結果 |
+    |------|--------------|------|
+    | transit | 必填 | source='manual', 用 user 值 |
+    | driving/walking | 帶 | source='manual', 用 user 值 |
+    | driving/walking | 不帶 | **call Google Routes 重算**, source='google' |
+    | driving/walking | 不帶 + coords 缺 | fallback：只改 mode，保留舊 min |
+  - 4 個新 regression test（`tests/api/segments-patch.integration.test.ts`）：driving→walking 重算、walking→driving 重算、manual override 不重算、coords 缺 fallback。
+
 ## [2.26.1] - 2026-05-11
 
 **daily-check scheduler 韌性升級 — `.env.local` multi-line parser + LaunchDaemon 遷移。**
