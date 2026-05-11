@@ -459,6 +459,381 @@ describe('Cascade behavior', () => {
   });
 });
 
+// =========================================================================
+// v2.27.0 ship coverage gaps — auth + perm + cross-trip + edge cases
+// =========================================================================
+
+describe('Auth & permission gates — PATCH /master', () => {
+  it('未認證 → 401 AUTH_REQUIRED', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'AuthMaster-A',
+      altPoiNames: ['AuthMaster-Alt-1'],
+    });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/master`,
+        'PATCH',
+        { poiId: altPoiIds[0] },
+      ),
+      env,
+      // no auth
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    expect((await callHandler(masterPatch, ctx)).status).toBe(401);
+  });
+
+  it('非 owner 無 write perm → 403 PERM_DENIED', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'AuthMaster-B',
+      altPoiNames: ['AuthMaster-Alt-2'],
+    });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/master`,
+        'PATCH',
+        { poiId: altPoiIds[0] },
+      ),
+      env,
+      auth: mockAuth({ email: 'stranger@test.com' }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    expect((await callHandler(masterPatch, ctx)).status).toBe(403);
+  });
+
+  it('cross-trip URL（entry 不屬於 URL 的 trip）→ 404 DATA_NOT_FOUND', async () => {
+    // 另開一個 trip 並嘗試用該 trip URL 改原 trip 的 entry master
+    await seedTrip(db, { id: 'trip-ep-other' });
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'CrossTrip-A',
+      altPoiNames: ['CrossTrip-Alt-1'],
+    });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/trip-ep-other/entries/${entryId}/master`,
+        'PATCH',
+        { poiId: altPoiIds[0] },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: 'trip-ep-other', eid: String(entryId) },
+    });
+    expect((await callHandler(masterPatch, ctx)).status).toBe(404);
+  });
+});
+
+describe('Auth & permission gates — POST /alternates', () => {
+  it('未認證 → 401', async () => {
+    const { entryId } = await seedEntryWithMaster({ poiName: 'AuthAlt-A' });
+    const altPoiId = await seedPoi(db, { name: 'AuthAlt-A-Alt', type: 'attraction' });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+        'POST',
+        { poiId: altPoiId },
+      ),
+      env,
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    expect((await callHandler(alternatesPost, ctx)).status).toBe(401);
+  });
+
+  it('無 write perm → 403', async () => {
+    const { entryId } = await seedEntryWithMaster({ poiName: 'AuthAlt-B' });
+    const altPoiId = await seedPoi(db, { name: 'AuthAlt-B-Alt', type: 'attraction' });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+        'POST',
+        { poiId: altPoiId },
+      ),
+      env,
+      auth: mockAuth({ email: 'stranger@test.com' }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    expect((await callHandler(alternatesPost, ctx)).status).toBe(403);
+  });
+
+  it('poiId 缺漏 / 非正整數 → 400 DATA_VALIDATION', async () => {
+    const { entryId } = await seedEntryWithMaster({ poiName: 'AuthAlt-C' });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+        'POST',
+        { poiId: -1 },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    expect((await callHandler(alternatesPost, ctx)).status).toBe(400);
+  });
+
+  it('poiId 不存在 → 404 DATA_NOT_FOUND', async () => {
+    const { entryId } = await seedEntryWithMaster({ poiName: 'AuthAlt-D' });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+        'POST',
+        { poiId: 9999999 },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    expect((await callHandler(alternatesPost, ctx)).status).toBe(404);
+  });
+});
+
+describe('Auth & permission gates — DELETE /alternates/:poiId', () => {
+  it('未認證 → 401', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'AuthDel-A',
+      altPoiNames: ['AuthDel-A-Alt'],
+    });
+    const ctx = mockContext({
+      request: new Request(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/${altPoiIds[0]}`,
+        { method: 'DELETE' },
+      ),
+      env,
+      params: { id: TRIP_ID, eid: String(entryId), poiId: String(altPoiIds[0]) },
+    });
+    expect((await callHandler(alternateDelete, ctx)).status).toBe(401);
+  });
+
+  it('無 write perm → 403', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'AuthDel-B',
+      altPoiNames: ['AuthDel-B-Alt'],
+    });
+    const ctx = mockContext({
+      request: new Request(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/${altPoiIds[0]}`,
+        { method: 'DELETE' },
+      ),
+      env,
+      auth: mockAuth({ email: 'stranger@test.com' }),
+      params: { id: TRIP_ID, eid: String(entryId), poiId: String(altPoiIds[0]) },
+    });
+    expect((await callHandler(alternateDelete, ctx)).status).toBe(403);
+  });
+});
+
+describe('Auth & permission gates — PATCH /alternates/reorder', () => {
+  it('未認證 → 401', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'AuthReorder-A',
+      altPoiNames: ['R-1', 'R-2'],
+    });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/reorder`,
+        'PATCH',
+        { order: [altPoiIds[1], altPoiIds[0]] },
+      ),
+      env,
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    expect((await callHandler(reorderPatch, ctx)).status).toBe(401);
+  });
+
+  it('order 非 array → 422 INVALID_ORDER', async () => {
+    const { entryId } = await seedEntryWithMaster({
+      poiName: 'AuthReorder-B',
+      altPoiNames: ['R-3'],
+    });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/reorder`,
+        'PATCH',
+        { order: 'not-array' },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    expect((await callHandler(reorderPatch, ctx)).status).toBe(422);
+  });
+
+  it('order 含非 integer → 422 INVALID_ORDER', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'AuthReorder-C',
+      altPoiNames: ['R-4'],
+    });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/reorder`,
+        'PATCH',
+        { order: [altPoiIds[0], 'string'] },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    expect((await callHandler(reorderPatch, ctx)).status).toBe(422);
+  });
+});
+
+describe('setMaster() edge cases', () => {
+  it('no-op: poiId === 現有 master → 200 不變更 sort_order', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({
+      poiName: 'NoOp-Master',
+      altPoiNames: ['NoOp-Alt'],
+    });
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/master`,
+        'PATCH',
+        { poiId: masterPoiId },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    const resp = await callHandler(masterPatch, ctx);
+    expect(resp.status).toBe(200);
+    const body = (await resp.json()) as { masterPoiId: number; oldMasterPoiId: number };
+    expect(body.masterPoiId).toBe(masterPoiId);
+    expect(body.oldMasterPoiId).toBe(masterPoiId);
+    // master 仍是同 POI
+    const newMaster = await db
+      .prepare('SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(entryId)
+      .first<{ poi_id: number }>();
+    expect(newMaster!.poi_id).toBe(masterPoiId);
+  });
+});
+
+describe('GET /api/trips/:id/days/:num — multi-POI surface', () => {
+  it('回傳 timeline 含 master + alternates + entryPoisVersion', async () => {
+    // 用本 file 已 import 的 GET handler? days-num.test 已測 GET shape；
+    // 此處重點是 multi-POI fields surface。
+    const { default: daysNumGet } = await import('../../functions/api/trips/[id]/days/[num]');
+    const { entryId } = await seedEntryWithMaster({
+      poiName: 'DaySurface-Master',
+      altPoiNames: ['DaySurface-Alt-1', 'DaySurface-Alt-2'],
+    });
+    // 取得 entry 所在 dayNum
+    const dayRow = await db
+      .prepare(
+        `SELECT d.day_num FROM trip_days d
+         JOIN trip_entries e ON e.day_id = d.id
+         WHERE e.id = ?`,
+      )
+      .bind(entryId)
+      .first<{ day_num: number }>();
+    expect(dayRow).not.toBeNull();
+    const ctx = mockContext({
+      request: new Request(
+        `https://test.com/api/trips/${TRIP_ID}/days/${dayRow!.day_num}`,
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, num: String(dayRow!.day_num) },
+    });
+    // direct handler ref
+    const handler = (await import('../../functions/api/trips/[id]/days/[num]')).onRequestGet;
+    const resp = await callHandler(handler, ctx);
+    expect(resp.status).toBe(200);
+    const data = (await resp.json()) as {
+      timeline: Array<{
+        id: number;
+        master: { poiId: number; name?: string | null } | null;
+        alternates: Array<{ poiId: number; sortOrder: number }>;
+        entryPoisVersion: string | null;
+      }>;
+    };
+    const me = data.timeline.find((e) => e.id === entryId);
+    expect(me).toBeDefined();
+    expect(me!.master).not.toBeNull();
+    expect(me!.master!.name).toBe('DaySurface-Master');
+    expect(me!.alternates).toHaveLength(2);
+    expect(me!.alternates[0].sortOrder).toBe(2);
+    expect(me!.alternates[1].sortOrder).toBe(3);
+    expect(me!.entryPoisVersion).toBeTruthy();
+  });
+});
+
+describe('POST /api/trips/:id/days/:num/entries — syncEntryMaster', () => {
+  it('POST 新 entry → 自動 INSERT trip_entry_pois sort_order=1（multi-POI invariant）', async () => {
+    const { onRequestPost: entriesPost } = await import(
+      '../../functions/api/trips/[id]/days/[num]/entries'
+    );
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/days/1/entries`,
+        'POST',
+        {
+          title: 'SyncMasterEntry-1',
+          time: '14:00',
+          poi_type: 'attraction',
+          rating: 4.0,
+        },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, num: '1' },
+    });
+    const resp = await callHandler(entriesPost, ctx);
+    expect(resp.status).toBe(201);
+    const newEntry = (await resp.json()) as { id: number; poiId?: number; poi_id?: number };
+    const newId = newEntry.id;
+    expect(newId).toBeGreaterThan(0);
+
+    // 驗證 trip_entry_pois 有 sort_order=1 row
+    const row = await db
+      .prepare(
+        'SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+      )
+      .bind(newId)
+      .first<{ poi_id: number; sort_order: number }>();
+    expect(row).not.toBeNull();
+    expect(row!.sort_order).toBe(1);
+    // poi_id 對齊 trip_entries.poi_id（dual-write 起點）
+    const entryRow = await db
+      .prepare('SELECT poi_id FROM trip_entries WHERE id = ?')
+      .bind(newId)
+      .first<{ poi_id: number }>();
+    expect(row!.poi_id).toBe(entryRow!.poi_id);
+  });
+});
+
+describe('POST /api/trips/:id/entries/:eid/copy — syncEntryMaster', () => {
+  it('copy entry 到別天 → 新 entry 自動有 trip_entry_pois sort_order=1', async () => {
+    const { onRequestPost: copyPost } = await import(
+      '../../functions/api/trips/[id]/entries/[eid]/copy'
+    );
+    // seed source entry with master
+    const { entryId: srcEntryId, masterPoiId } = await seedEntryWithMaster({
+      poiName: 'Copy-Master',
+    });
+    const targetDayId = await getDayId(db, TRIP_ID, 2);
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${srcEntryId}/copy`,
+        'POST',
+        { targetDayId },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(srcEntryId) },
+    });
+    const resp = await callHandler(copyPost, ctx);
+    expect(resp.status).toBe(200);
+    const newRow = (await resp.json()) as { id: number };
+    expect(newRow.id).not.toBe(srcEntryId);
+
+    const masterRow = await db
+      .prepare(
+        'SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+      )
+      .bind(newRow.id)
+      .first<{ poi_id: number; sort_order: number }>();
+    expect(masterRow).not.toBeNull();
+    expect(masterRow!.poi_id).toBe(masterPoiId);
+  });
+});
+
 describe('Segment recompute trigger', () => {
   it('master swap → from/to segments marked stale', async () => {
     // 設 2 個 entries 在同 day + segment 連接
