@@ -171,8 +171,12 @@ export interface Entry {
    */
   alternates?: EntryPoiAlternate[];
   /**
-   * v2.27.0 OCC token：MAX(updated_at) across trip_entry_pois rows for this entry。
-   * Client 在 PATCH /master 等 mutating endpoint 帶回，server 比對偵測 stale write。
+   * v2.27.0 OCC token = trip_entries.entry_pois_version (monotonic integer counter,
+   * migration 0058). Only the 4 multi-POI mutating helpers bump it; unrelated
+   * PATCH /entries note/time edits do NOT touch it. Client passes the token back
+   * in PATCH /master / POST /alternates / DELETE /alternates / PATCH /alternates/reorder;
+   * server compares and returns 409 STALE_ENTRY on mismatch. Serialized as string so
+   * the JSON contract is type-stable (large counters would overflow JS Number eventually).
    */
   entryPoisVersion?: string;
   updatedAt?: string;

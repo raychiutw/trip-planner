@@ -114,33 +114,51 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
   }
 
-  // round 4 fix adv-C5 / Codex F4: PRE-batch1, snapshot alternates per old-entry-master-POI.
-  // The batch1 DELETE FROM trip_entries cascades trip_entry_pois (FK ON DELETE CASCADE).
-  // Without this snapshot, every PUT /days/:num silently destroys all alternates because
-  // syncEntryMaster only restores sort_order=1. Strategy: index old alternates by their
-  // entry's master POI id. After syncEntryMaster lands a new master, look up alternates
-  // by master POI id — if the same POI is master again (common case: user reorders day
-  // but POIs stay), restore its alternates. Edge cases:
-  //  - User replaces an entry's POI entirely → no match → alternates lost (acceptable;
-  //    they were specific to the replaced POI)
-  //  - Two new entries with same master POI → both inherit same alternates;
-  //    UNIQUE(entry_id, poi_id) is per-entry so this is fine
-  //  - INSERT OR IGNORE on alternate restore handles any UNIQUE corner
-  const oldAltsByMasterPoi = new Map<number, Array<{ poiId: number; sortOrder: number }>>();
+  // round 5 fix (was round 4 adv-C5): snapshot alternates per OLD entry, each entry's alts
+  // kept as a separate list so restore can match 1:1 without conflation. Round 4 keyed by
+  // master_poi_id and merged lists from multiple old entries — if two old entries shared
+  // a master POI, INSERT OR IGNORE silently dropped collisions (round 5 HIGH finding).
+  //
+  // Strategy: snapshot each old entry's master POI + alt list. On restore, for each new
+  // entry, find the FIRST old snapshot with matching master POI that hasn't been claimed
+  // yet, transfer its alts. Edge cases:
+  //  - User replaces an entry's POI entirely → no match → alts gracefully lost (acceptable;
+  //    they belonged to the replaced POI)
+  //  - Two new entries with same master POI → first claims the first old snapshot's alts,
+  //    second claims the second old snapshot's alts (1:1 by order)
+  //  - Read trip_entry_pois.sort_order=1 (not legacy trip_entries.poi_id) per round 5 F2 fix
+  type OldEntrySnapshot = { masterPoiId: number; alts: Array<{ poiId: number; sortOrder: number }> };
+  const oldEntrySnapshots: OldEntrySnapshot[] = [];
   {
-    const { results } = await db
+    const entriesRow = await db
       .prepare(
-        `SELECT e.poi_id AS master_poi_id, alt.poi_id AS alt_poi_id, alt.sort_order
+        `SELECT e.id AS entry_id, tep.poi_id AS master_poi_id
          FROM trip_entries e
-         JOIN trip_entry_pois alt ON alt.entry_id = e.id AND alt.sort_order > 1
-         WHERE e.day_id = ? AND e.poi_id IS NOT NULL`,
+         JOIN trip_entry_pois tep ON tep.entry_id = e.id AND tep.sort_order = 1
+         WHERE e.day_id = ?
+         ORDER BY e.sort_order ASC`,
       )
       .bind(dayId)
-      .all<{ master_poi_id: number; alt_poi_id: number; sort_order: number }>();
-    for (const row of results) {
-      const list = oldAltsByMasterPoi.get(row.master_poi_id) ?? [];
-      list.push({ poiId: row.alt_poi_id, sortOrder: row.sort_order });
-      oldAltsByMasterPoi.set(row.master_poi_id, list);
+      .all<{ entry_id: number; master_poi_id: number }>();
+    const entryIdToSnapshot = new Map<number, OldEntrySnapshot>();
+    for (const e of entriesRow.results) {
+      const snap = { masterPoiId: e.master_poi_id, alts: [] as Array<{ poiId: number; sortOrder: number }> };
+      oldEntrySnapshots.push(snap);
+      entryIdToSnapshot.set(e.entry_id, snap);
+    }
+    if (entriesRow.results.length > 0) {
+      const altPlaceholders = entriesRow.results.map(() => '?').join(',');
+      const altsRow = await db
+        .prepare(
+          `SELECT entry_id, poi_id, sort_order
+           FROM trip_entry_pois
+           WHERE entry_id IN (${altPlaceholders}) AND sort_order > 1`,
+        )
+        .bind(...entriesRow.results.map((e) => e.entry_id))
+        .all<{ entry_id: number; poi_id: number; sort_order: number }>();
+      for (const a of altsRow.results) {
+        entryIdToSnapshot.get(a.entry_id)?.alts.push({ poiId: a.poi_id, sortOrder: a.sort_order });
+      }
     }
   }
 
@@ -335,14 +353,23 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       entriesNeedingMaster.map((p) => syncEntryMaster(db, p.entryId, p.poiId)),
     );
 
-    // round 4 fix adv-C5: restore alternates for entries whose new master poi_id matches
-    // a previously-known master. Skip alternates that collide with the new master itself.
+    // round 5 fix: claim-once snapshot restore — for each new entry, find first unclaimed
+    // old snapshot with matching master POI, transfer its alts. Prevents conflation of
+    // two old entries sharing the same master POI (round 5 HIGH finding). Each new entry
+    // gets at most ONE old snapshot's alts. Also bumps entry_pois_version for any entry
+    // that received restored alts so clients can detect the day-level reshape.
     const altRestoreStatements: D1PreparedStatement[] = [];
     const nowAlt = new Date().toISOString();
+    const claimed = new Set<OldEntrySnapshot>();
+    const entriesGainingAlts: number[] = [];
     for (const { entryId, poiId: newMasterPoiId } of entriesNeedingMaster) {
-      const oldAlts = oldAltsByMasterPoi.get(newMasterPoiId);
-      if (!oldAlts) continue;
-      for (const alt of oldAlts) {
+      const match = oldEntrySnapshots.find(
+        (s) => s.masterPoiId === newMasterPoiId && !claimed.has(s) && s.alts.length > 0,
+      );
+      if (!match) continue;
+      claimed.add(match);
+      entriesGainingAlts.push(entryId);
+      for (const alt of match.alts) {
         if (alt.poiId === newMasterPoiId) continue; // would violate UNIQUE(entry_id, poi_id)
         altRestoreStatements.push(
           db
@@ -353,6 +380,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
             .bind(entryId, alt.poiId, alt.sortOrder, nowAlt, nowAlt),
         );
       }
+    }
+    // Bump entry_pois_version on entries that gained restored alts (round 5 monotonic invariant).
+    for (const entryId of entriesGainingAlts) {
+      altRestoreStatements.push(
+        db.prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?').bind(entryId),
+      );
     }
     if (altRestoreStatements.length > 0) {
       await db.batch(altRestoreStatements);

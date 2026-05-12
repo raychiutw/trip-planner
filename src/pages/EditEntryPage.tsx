@@ -877,6 +877,9 @@ export default function EditEntryPage() {
         headers: { 'Content-Type': 'application/json' },
       });
       setAltSwapConfirm(null);
+      // round 5 fix: dispatch tp-segment-updated so useTripSegments refetches the now-stale
+      // adjacent segments (backend marked computed_at=NULL in the setMaster batch).
+      window.dispatchEvent(new CustomEvent('tp-segment-updated', { detail: { tripId } }));
       await refreshEntryPois();
       showToast(`已將「${alt.name}」設為首選`, 'success');
     } catch (err) {

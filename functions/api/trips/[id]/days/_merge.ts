@@ -94,29 +94,45 @@ export async function fetchEntryPoisByEntries(
   if (entryIds.length === 0) return result;
 
   const placeholders = entryIds.map(() => '?').join(',');
-  const { results } = await db
-    .prepare(
-      `SELECT tep.entry_id, tep.poi_id, tep.sort_order, tep.updated_at,
-              p.name, p.lat, p.lng, p.type, p.category
-       FROM trip_entry_pois tep
-       JOIN pois p ON p.id = tep.poi_id
-       WHERE tep.entry_id IN (${placeholders})
-       ORDER BY tep.entry_id, tep.sort_order`,
-    )
-    .bind(...entryIds)
-    .all<{
-      entry_id: number;
-      poi_id: number;
-      sort_order: number;
-      updated_at: string;
-      name: string | null;
-      lat: number | null;
-      lng: number | null;
-      type: string | null;
-      category: string | null;
-    }>();
 
-  for (const r of results) {
+  // round 5 fix: read OCC version from trip_entries.entry_pois_version (dedicated counter,
+  // migration 0058). Pre-fix, this function derived version from MAX(trip_entry_pois.updated_at)
+  // while the write path validated trip_entries.updated_at — a fresh GET sent back a token
+  // that the mutation path rejected as stale. Both paths now read the same integer counter.
+  const [poisQuery, versionsQuery] = await Promise.all([
+    db
+      .prepare(
+        `SELECT tep.entry_id, tep.poi_id, tep.sort_order, tep.updated_at,
+                p.name, p.lat, p.lng, p.type, p.category
+         FROM trip_entry_pois tep
+         JOIN pois p ON p.id = tep.poi_id
+         WHERE tep.entry_id IN (${placeholders})
+         ORDER BY tep.entry_id, tep.sort_order`,
+      )
+      .bind(...entryIds)
+      .all<{
+        entry_id: number;
+        poi_id: number;
+        sort_order: number;
+        updated_at: string;
+        name: string | null;
+        lat: number | null;
+        lng: number | null;
+        type: string | null;
+        category: string | null;
+      }>(),
+    db
+      .prepare(`SELECT id, entry_pois_version FROM trip_entries WHERE id IN (${placeholders})`)
+      .bind(...entryIds)
+      .all<{ id: number; entry_pois_version: number }>(),
+  ]);
+
+  // Seed buckets with versions (so entries with no trip_entry_pois rows still get a version)
+  for (const v of versionsQuery.results) {
+    result.set(v.id, { master: null, alternates: [], version: String(v.entry_pois_version) });
+  }
+
+  for (const r of poisQuery.results) {
     let bucket = result.get(r.entry_id);
     if (!bucket) {
       bucket = { master: null, alternates: [], version: '0' };
@@ -134,9 +150,6 @@ export async function fetchEntryPoisByEntries(
       bucket.master = poiInfo;
     } else {
       bucket.alternates.push({ ...poiInfo, sort_order: r.sort_order });
-    }
-    if (r.updated_at > bucket.version) {
-      bucket.version = r.updated_at;
     }
   }
 

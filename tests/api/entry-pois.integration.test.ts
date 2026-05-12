@@ -182,16 +182,18 @@ describe('PATCH /master — OCC version', () => {
       altPoiNames: ['Alt-OCC-B1'],
     });
 
+    // round 5 fix: OCC version is trip_entries.entry_pois_version (integer counter,
+    // migration 0058). Read as string to match wire format.
     const versionRow = await db
-      .prepare("SELECT COALESCE(MAX(updated_at), '0') AS v FROM trip_entry_pois WHERE entry_id = ?")
+      .prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
       .bind(entryId)
-      .first<{ v: string }>();
+      .first<{ v: number }>();
 
     const ctx = mockContext({
       request: jsonRequest(
         `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/master`,
         'PATCH',
-        { poiId: altPoiIds[0], version: versionRow!.v },
+        { poiId: altPoiIds[0], version: String(versionRow!.v) },
       ),
       env,
       auth: mockAuth({ email: USER_EMAIL }),
@@ -887,11 +889,13 @@ describe('Round 4 — OCC monotonic across removeAlternate (Codex F2 fix)', () =
       altPoiNames: ['F2-Alt-1', 'F2-Alt-2'],
     });
 
-    // Bump trip_entries.updated_at so the first version is non-zero / non-default.
-    const v0 = '2026-05-12T00:00:00.000Z';
-    await db.prepare('UPDATE trip_entries SET updated_at = ? WHERE id = ?').bind(v0, entryId).run();
+    // round 5 fix: OCC source is now trip_entries.entry_pois_version (integer counter).
+    // Read before-version, removeAlternate, assert after-version > before-version.
+    const before = await db
+      .prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+      .bind(entryId)
+      .first<{ v: number }>();
 
-    // Remove the last alternate
     await callHandler(alternateDelete, mockContext({
       request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/${altPoiIds[1]}`, 'DELETE'),
       env,
@@ -900,11 +904,12 @@ describe('Round 4 — OCC monotonic across removeAlternate (Codex F2 fix)', () =
     }));
 
     const after = await db
-      .prepare('SELECT updated_at AS v FROM trip_entries WHERE id = ?')
+      .prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
       .bind(entryId)
-      .first<{ v: string }>();
-    // Must be strictly greater than v0 — monotonic invariant per F2 fix.
-    expect(after!.v > v0).toBe(true);
+      .first<{ v: number }>();
+    // Monotonic counter: after > before, by exactly 1 (single mutation).
+    expect(after!.v).toBeGreaterThan(before!.v);
+    expect(after!.v).toBe(before!.v + 1);
   });
 });
 
@@ -913,10 +918,12 @@ describe('Round 4 — Alternates CRUD OCC enforcement (Codex F3 fix)', () => {
     const { entryId } = await seedEntryWithMaster({ poiName: 'F3-Master' });
     const newAltPoi = await seedPoi(db, { name: 'F3-NewAlt', type: 'attraction' });
 
+    // round 5 fix: OCC is integer counter. Stale = a high number that's clearly past the current value.
+    // Fresh entries start at 0 (DEFAULT) or 1 (after a setMaster/seed); '99999' is unambiguously stale.
     const resp = await callHandler(alternatesPost, mockContext({
       request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`, 'POST', {
         poiId: newAltPoi,
-        entryPoisVersion: '1970-01-01T00:00:00.000Z', // ancient = stale
+        entryPoisVersion: '99999', // unambiguously stale (current is 0 or 1)
       }),
       env,
       auth: mockAuth({ email: USER_EMAIL }),
@@ -933,7 +940,7 @@ describe('Round 4 — Alternates CRUD OCC enforcement (Codex F3 fix)', () => {
       altPoiNames: ['F3-DelAlt'],
     });
     const resp = await callHandler(alternateDelete, mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/${altPoiIds[0]}?entryPoisVersion=1970-01-01T00:00:00.000Z`, 'DELETE'),
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/${altPoiIds[0]}?entryPoisVersion=99999`, 'DELETE'),
       env,
       auth: mockAuth({ email: USER_EMAIL }),
       params: { id: TRIP_ID, eid: String(entryId), poiId: String(altPoiIds[0]) },
@@ -951,7 +958,7 @@ describe('Round 4 — Alternates CRUD OCC enforcement (Codex F3 fix)', () => {
     const resp = await callHandler(reorderPatch, mockContext({
       request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/reorder`, 'PATCH', {
         order: [altPoiIds[1], altPoiIds[0]],
-        entryPoisVersion: '1970-01-01T00:00:00.000Z',
+        entryPoisVersion: '99999',
       }),
       env,
       auth: mockAuth({ email: USER_EMAIL }),
@@ -969,13 +976,14 @@ describe('Round 4 — PATCH /master accepts both body field names (A1 fix)', () 
       poiName: 'A1-canonical',
       altPoiNames: ['A1-canonical-alt'],
     });
-    const v = await db.prepare('SELECT updated_at AS v FROM trip_entries WHERE id = ?')
+    // round 5 fix: OCC source is trip_entries.entry_pois_version (integer counter)
+    const v = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
       .bind(entryId)
-      .first<{ v: string }>();
+      .first<{ v: number }>();
     const resp = await callHandler(masterPatch, mockContext({
       request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/master`, 'PATCH', {
         poiId: altPoiIds[0],
-        entryPoisVersion: v!.v,
+        entryPoisVersion: String(v!.v),
       }),
       env,
       auth: mockAuth({ email: USER_EMAIL }),
@@ -989,13 +997,46 @@ describe('Round 4 — PATCH /master accepts both body field names (A1 fix)', () 
       poiName: 'A1-legacy',
       altPoiNames: ['A1-legacy-alt'],
     });
-    const v = await db.prepare('SELECT updated_at AS v FROM trip_entries WHERE id = ?')
+    const v = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
       .bind(entryId)
-      .first<{ v: string }>();
+      .first<{ v: number }>();
     const resp = await callHandler(masterPatch, mockContext({
       request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/master`, 'PATCH', {
         poiId: altPoiIds[0],
-        version: v!.v,
+        version: String(v!.v),
+      }),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    }));
+    expect(resp.status).toBe(200);
+  });
+});
+
+// Round 5 regression: cross-mutation OCC false-positive fix
+// Round 4 made OCC source = trip_entries.updated_at; PATCH /entries note edit bumped that
+// column and silently invalidated entryPoisVersion. Round 5 moved OCC to dedicated counter
+// trip_entries.entry_pois_version which ONLY multi-POI helpers touch.
+describe('Round 5 — entry_pois_version isolated from unrelated entry edits (cross-mutation fix)', () => {
+  it('PATCH /entries note edit does not invalidate entry_pois_version', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'R5-CrossMutation',
+      altPoiNames: ['R5-Alt'],
+    });
+    const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+      .bind(entryId).first<{ v: number }>();
+
+    // Simulate PATCH /entries note edit: bumps updated_at but NOT entry_pois_version
+    await db
+      .prepare("UPDATE trip_entries SET note = 'edited', updated_at = '2099-01-01T00:00:00.000Z' WHERE id = ?")
+      .bind(entryId)
+      .run();
+
+    // setMaster with the original version should still succeed
+    const resp = await callHandler(masterPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/master`, 'PATCH', {
+        poiId: altPoiIds[0],
+        entryPoisVersion: String(v0!.v),
       }),
       env,
       auth: mockAuth({ email: USER_EMAIL }),

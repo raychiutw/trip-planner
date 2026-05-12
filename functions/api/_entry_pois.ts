@@ -78,24 +78,28 @@ async function getAlternates(
 }
 
 /**
- * OCC version token = trip_entries.updated_at (monotonic by design — round 4 fix Codex F2).
+ * OCC version token = trip_entries.entry_pois_version (integer counter, migration 0058).
  *
- * Previous impl used MAX(updated_at) FROM trip_entry_pois — backward-movable: when
- * removeAlternate deletes the row with the highest updated_at, MAX falls back to an
- * older timestamp, so stale tokens held by a racing client become valid again.
+ * Round 4 attempted to fix Codex F2 (version backward) by switching to
+ * trip_entries.updated_at. Round 5 found that this:
+ *   1. mismatched the GET path (MAX(trip_entry_pois.updated_at)) → fresh clients 409
+ *   2. cross-mutation false-positive — PATCH /entries note edit bumps updated_at,
+ *      invalidating outstanding tokens
  *
- * trip_entries.updated_at avoids that: the row is never deleted during alt mutations,
- * and every mutating helper here bumps it = nowMs() (monotonically increasing JS clock).
+ * Round 5 fix: dedicated integer counter on trip_entries, bumped ONLY by the 4 multi-POI
+ * mutating helpers (setMaster / addAlternate / removeAlternate / reorderAlternates).
+ * GET + write paths read the same column. PATCH /entries note edits do NOT touch it.
+ * Returned as string so the API contract surface stays string-typed.
  */
 export async function getEntryPoisVersion(
   db: D1Database,
   entryId: number,
 ): Promise<string> {
   const row = await db
-    .prepare(`SELECT updated_at AS version FROM trip_entries WHERE id = ?`)
+    .prepare(`SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?`)
     .bind(entryId)
-    .first<{ version: string | null }>();
-  return row?.version ?? '0';
+    .first<{ v: number | null }>();
+  return String(row?.v ?? 0);
 }
 
 /**
@@ -160,17 +164,19 @@ export async function setMaster(
   const maxOrder = maxRow?.max_order ?? 0;
   const tempOrder = maxOrder + 100;
 
-  // No-op: already master. Phase 1 drift safety (round 4 fix adv-C2) — still UPDATE
-  // trip_entries.poi_id + bump updated_at so trip_entry_pois & trip_entries don't drift
-  // when an earlier migration / race left them out of sync. We do NOT mark segments
-  // stale (no plan change) and do NOT touch trip_entry_pois rows.
+  // No-op: already master. Phase 1 drift repair (round 4 adv-C2) — UPDATE trip_entries.poi_id
+  // + bump updated_at to clear any drift between trip_entries and trip_entry_pois.
+  // round 5 fix: also invalidate segments cache so a drift repair doesn't leave a stale
+  // travel time in TimelineRail. NO entry_pois_version bump — semantically nothing changed
+  // for multi-POI clients, so their tokens stay valid.
   if (oldMasterPoiId === newMasterPoiId) {
     const now = nowMs();
-    await db
-      .prepare('UPDATE trip_entries SET poi_id = ?, updated_at = ? WHERE id = ?')
-      .bind(newMasterPoiId, now, entryId)
-      .run();
-    return { version: now, oldMasterPoiId };
+    await db.batch([
+      db.prepare('UPDATE trip_entries SET poi_id = ?, updated_at = ? WHERE id = ?').bind(newMasterPoiId, now, entryId),
+      db.prepare(`UPDATE trip_segments SET computed_at = NULL, updated_at = ? WHERE from_entry_id = ? OR to_entry_id = ?`).bind(Date.now(), entryId, entryId),
+    ]);
+    const version = await getEntryPoisVersion(db, entryId);
+    return { version, oldMasterPoiId };
   }
 
   // 統一 timestamp source — 整個 batch 內所有 updated_at 用同一個 JS-clock ISO ms
@@ -227,10 +233,12 @@ export async function setMaster(
     }
   }
 
-  // Phase 1 dual-write: trip_entries.poi_id 同步
+  // Phase 1 dual-write: trip_entries.poi_id 同步 + bump entry_pois_version (round 5 fix —
+  // dedicated counter, only multi-POI helpers bump it, so PATCH /entries note edit doesn't
+  // invalidate the OCC token).
   statements.push(
     db
-      .prepare(`UPDATE trip_entries SET poi_id = ?, updated_at = ? WHERE id = ?`)
+      .prepare(`UPDATE trip_entries SET poi_id = ?, updated_at = ?, entry_pois_version = entry_pois_version + 1 WHERE id = ?`)
       .bind(newMasterPoiId, now, entryId),
   );
 
@@ -266,10 +274,10 @@ export async function setMaster(
     throw err;
   }
 
-  // OCC version source is trip_entries.updated_at (round 4 fix Codex F2 — monotonic
-  // by design). We just bumped it in the batch above, so use `now` directly to save
-  // a SELECT round-trip (round 4 perf P4).
-  return { version: now, oldMasterPoiId };
+  // round 5 fix: OCC version is trip_entries.entry_pois_version (integer counter).
+  // We just bumped it in the batch — SELECT it back to return.
+  const newVersion = await getEntryPoisVersion(db, entryId);
+  return { version: newVersion, oldMasterPoiId };
 }
 
 /** Add alternate POI（sort_order = max + 1）。 */
@@ -317,9 +325,10 @@ export async function addAlternate(
 
   // 同 setMaster CRITICAL #3：兩個並發 addAlternate 讀到同 max → 同 sort_order INSERT
   // → UNIQUE(entry_id, sort_order) collision；catch 後轉成 retryable STALE_ENTRY，
-  // client 重抓 version 後再試。UNIQUE(entry_id, poi_id) 衝突也走同一 catch，但語意
-  // 上是 DUPLICATE_POI（並發 add 同一 POI）— 我們已 dup-check 過，剩 race window 很窄。
-  // round 4 fix F2: also bump trip_entries.updated_at to make OCC token monotonic.
+  // client 重抓 version 後再試。UNIQUE(entry_id, poi_id) 衝突也走同一 catch — 雖然語意
+  // 上 DUPLICATE_POI 較精準，但 SQLite 的 SQLITE_CONSTRAINT 訊息不一定能分辨，統一收
+  // 在 STALE_ENTRY 是 best-effort 處理（dup-check 已在 batch 前阻擋大部分情況）。
+  // round 5 fix: bump entry_pois_version (dedicated OCC counter) instead of updated_at.
   try {
     await db.batch([
       db
@@ -329,8 +338,8 @@ export async function addAlternate(
         )
         .bind(entryId, poiId, newSortOrder, now, now),
       db
-        .prepare('UPDATE trip_entries SET updated_at = ? WHERE id = ?')
-        .bind(now, entryId),
+        .prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?')
+        .bind(entryId),
     ]);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -340,7 +349,8 @@ export async function addAlternate(
     throw err;
   }
 
-  return { sortOrder: newSortOrder, version: now };
+  const newVersion = await getEntryPoisVersion(db, entryId);
+  return { sortOrder: newSortOrder, version: newVersion };
 }
 
 /** Remove alternate POI（不能 remove master — caller 應走 DELETE /entries/:id）。 */
@@ -374,14 +384,15 @@ export async function removeAlternate(
     );
   }
 
-  // Batch DELETE + trip_entries.updated_at bump so OCC token is monotonic (round 4 F2).
-  const now = nowMs();
+  // Batch DELETE + entry_pois_version bump (round 5 fix — dedicated counter monotonic
+  // by definition; removing the max-updated_at row no longer affects version).
   await db.batch([
     db.prepare('DELETE FROM trip_entry_pois WHERE id = ?').bind(row.id),
-    db.prepare('UPDATE trip_entries SET updated_at = ? WHERE id = ?').bind(now, entryId),
+    db.prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?').bind(entryId),
   ]);
 
-  return { version: now };
+  const newVersion = await getEntryPoisVersion(db, entryId);
+  return { version: newVersion };
 }
 
 /**
@@ -445,12 +456,13 @@ export async function reorderAlternates(
       .bind(idx + 2, now, entryId, poiId),
   );
 
-  // round 4 fix F2: bump trip_entries.updated_at for monotonic OCC token
-  const bump = db.prepare('UPDATE trip_entries SET updated_at = ? WHERE id = ?').bind(now, entryId);
+  // round 5 fix: bump entry_pois_version (dedicated counter)
+  const bump = db.prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?').bind(entryId);
 
   await db.batch([...phase1, ...phase2, bump]);
 
-  return { version: now };
+  const newVersion = await getEntryPoisVersion(db, entryId);
+  return { version: newVersion };
 }
 
 /**
