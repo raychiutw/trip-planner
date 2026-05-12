@@ -3,9 +3,19 @@
 -- DROP COLUMN entry_pois_version. SQLite 3.35.0+ supports ALTER TABLE DROP COLUMN.
 -- Cloudflare D1 uses libsql which supports this.
 --
--- After rollback: backend regression of v2.27.0 (already deployed) will revert to
--- reading MAX(trip_entry_pois.updated_at) for entryPoisVersion — the dual-source
--- mismatch returns, but solo-user impact is bounded since round-4 alternates
--- preservation snapshot etc. don't depend on the column.
+-- ⚠️ HARD ORDERING — do NOT run this in isolation while v2.27.0 round-5+ backend
+-- is deployed. The current backend reads entry_pois_version exclusively (see
+-- functions/api/_entry_pois.ts `getEntryPoisVersion` + `functions/api/trips/[id]/
+-- days/_merge.ts` `fetchEntryPoisByEntries`); dropping the column makes every GET
+-- /api/trips/:id/days/:num hard-fail with `no such column: entry_pois_version`.
+--
+-- Correct rollback sequence:
+--   1. Revert CF Pages to a pre-v2.27.0 deploy (or revert PR + redeploy)
+--   2. Wait for propagation (~30s)
+--   3. Run this migration to drop the column
+--
+-- If you skipped step 1 and ran this anyway, re-apply migration 0058 to restore
+-- service (column comes back with DEFAULT 0; OCC tokens reset to '0' across all
+-- entries — clients hit one stale-token cycle then recover).
 
 ALTER TABLE trip_entries DROP COLUMN entry_pois_version;

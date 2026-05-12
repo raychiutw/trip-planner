@@ -25,6 +25,11 @@ import { onRequestPatch as masterPatch } from '../../functions/api/trips/[id]/en
 import { onRequestPost as alternatesPost } from '../../functions/api/trips/[id]/entries/[eid]/alternates';
 import { onRequestDelete as alternateDelete } from '../../functions/api/trips/[id]/entries/[eid]/alternates/[poiId]';
 import { onRequestPatch as reorderPatch } from '../../functions/api/trips/[id]/entries/[eid]/alternates/reorder';
+// round 7 fix: route cross-mutation regression through real PATCH /entries handler
+// instead of raw SQL — if a future change adds entry_pois_version to ALLOWED_FIELDS
+// or to buildUpdateClause(), the raw-SQL test would silently pass while the real
+// handler invalidates OCC tokens.
+import { onRequestPatch as entryPatch } from '../../functions/api/trips/[id]/entries/[eid]';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
@@ -1018,7 +1023,10 @@ describe('Round 4 — PATCH /master accepts both body field names (A1 fix)', () 
 // column and silently invalidated entryPoisVersion. Round 5 moved OCC to dedicated counter
 // trip_entries.entry_pois_version which ONLY multi-POI helpers touch.
 describe('Round 5 — entry_pois_version isolated from unrelated entry edits (cross-mutation fix)', () => {
-  it('PATCH /entries note edit does not invalidate entry_pois_version', async () => {
+  it('PATCH /entries note edit (real handler) does not invalidate entry_pois_version', async () => {
+    // round 7 fix: 透過真實 PATCH /entries handler 而非 raw SQL — 若未來有人把
+    // entry_pois_version 加入 ALLOWED_FIELDS（誤以為 client 需要 patch），raw SQL
+    // test 不會 catch 但這 test 會。
     const { entryId, altPoiIds } = await seedEntryWithMaster({
       poiName: 'R5-CrossMutation',
       altPoiNames: ['R5-Alt'],
@@ -1026,11 +1034,22 @@ describe('Round 5 — entry_pois_version isolated from unrelated entry edits (cr
     const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
       .bind(entryId).first<{ v: number }>();
 
-    // Simulate PATCH /entries note edit: bumps updated_at but NOT entry_pois_version
-    await db
-      .prepare("UPDATE trip_entries SET note = 'edited', updated_at = '2099-01-01T00:00:00.000Z' WHERE id = ?")
-      .bind(entryId)
-      .run();
+    // PATCH /entries via real handler — note + time edit 都該 NOT bump entry_pois_version
+    const patchResp = await callHandler(entryPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}`, 'PATCH', {
+        note: '更新備註',
+        start_time: '09:30',
+        end_time: '11:00',
+      }),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    }));
+    expect(patchResp.status).toBe(200);
+
+    const vAfter = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+      .bind(entryId).first<{ v: number }>();
+    expect(vAfter!.v).toBe(v0!.v); // unchanged — round 5 invariant
 
     // setMaster with the original version should still succeed
     const resp = await callHandler(masterPatch, mockContext({
@@ -1043,6 +1062,33 @@ describe('Round 5 — entry_pois_version isolated from unrelated entry edits (cr
       params: { id: TRIP_ID, eid: String(entryId) },
     }));
     expect(resp.status).toBe(200);
+  });
+
+  it('PATCH /entries body 不接受 entry_pois_version (mass assignment 防護)', async () => {
+    // round 7 fix: 確認 ALLOWED_FIELDS whitelist 排除 entry_pois_version，
+    // attacker / buggy client 送 body 帶 entry_pois_version: 99999 不該影響 column。
+    const { entryId } = await seedEntryWithMaster({
+      poiName: 'R7-MassAssign',
+      altPoiNames: [],
+    });
+    const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+      .bind(entryId).first<{ v: number }>();
+
+    await callHandler(entryPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}`, 'PATCH', {
+        note: 'ok',
+        // injection attempt — should be silently dropped by ALLOWED_FIELDS filter
+        entry_pois_version: 99999,
+        entryPoisVersion: 99999,
+      }),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    }));
+
+    const vAfter = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+      .bind(entryId).first<{ v: number }>();
+    expect(vAfter!.v).toBe(v0!.v);
   });
 });
 

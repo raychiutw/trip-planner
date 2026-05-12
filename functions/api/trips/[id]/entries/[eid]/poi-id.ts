@@ -9,6 +9,12 @@
  *   1. { poi_id: number | null } — 直接重掛到既有 POI 或清空
  *   2. { name: string, lat: number, lng: number, source?: string } — 從 search 結果
  *      新建 POI（find-or-create by lat/lng）並重掛。entry.title 也同步更新為 name。
+ *
+ * round 7 fix: 接受可選 OCC token（snake_case `entry_pois_version` 對齊其他 body
+ * field 慣例 + camelCase `entryPoisVersion` 跨端點一致）；若 client 帶上，setMaster
+ * 走 expectedVersion check；mismatch → 409 STALE_ENTRY。沒帶仍向後相容 — UNIQUE
+ * constraint 仍能 catch true race，但 cross-tab lost-update 場景需 client 帶 token
+ * 才能 detect（adversarial round 6 #2）。
  */
 
 import { findOrCreatePoi } from '../../../../_poi';
@@ -26,6 +32,9 @@ interface ChangePoiBody {
   lat?: number;
   lng?: number;
   source?: string;
+  // round 7: OCC token (optional, both casings accepted)
+  entry_pois_version?: string;
+  entryPoisVersion?: string;
 }
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
@@ -90,7 +99,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     );
   }
 
-  await setMaster(db, entryId, newPoiId);
+  // round 7 fix: pass OCC token through to setMaster (adversarial #2 — was bypassed).
+  const expectedVersion = body.entry_pois_version ?? body.entryPoisVersion;
+  await setMaster(db, entryId, newPoiId, expectedVersion);
   if (newTitle !== null) {
     await db.prepare('UPDATE trip_entries SET title = ? WHERE id = ?')
       .bind(newTitle, entryId).run();

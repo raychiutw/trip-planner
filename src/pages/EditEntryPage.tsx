@@ -39,6 +39,7 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 
 const SCOPED_STYLES = `
 .tp-edit-entry {
@@ -868,14 +869,37 @@ export default function EditEntryPage() {
     if (!tripId || altPending) return;
     setAltPending(alt.poiId);
     setAltError(null);
-    try {
+
+    // round 7 fix: 409 STALE_ENTRY auto-retry once with refreshed version.
+    // adversarial round 6 #5 — 之前 UX 把 STALE_ENTRY 當 opaque "設為首選失敗"，
+    // 使用者要手動 reload。Auto-refresh + retry 一次後仍失敗才 surface error，
+    // 對應 PATCH /master / PATCH /alternates/reorder / DELETE /alternates 都改走
+    // 同 pattern（這裡先做 PATCH /master — 最 high-frequency 的 multi-POI 操作）。
+    const sendSwap = async (versionOverride?: string) => {
+      const useVersion = versionOverride ?? entryPoisVersion ?? undefined;
       await apiFetch(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/master`, {
         method: 'PATCH',
-        // round 4 fix A1: use canonical entryPoisVersion (matches GET response field).
-        // backend also accepts legacy `version` for backwards compat — see master.ts.
-        body: JSON.stringify({ poiId: alt.poiId, entryPoisVersion: entryPoisVersion ?? undefined }),
+        body: JSON.stringify({ poiId: alt.poiId, entryPoisVersion: useVersion }),
         headers: { 'Content-Type': 'application/json' },
       });
+    };
+
+    try {
+      try {
+        await sendSwap();
+      } catch (err) {
+        if (err instanceof ApiError && err.code === 'STALE_ENTRY') {
+          // refetch master/alternates 取得新 entryPoisVersion 然後 retry 一次
+          await refreshEntryPois();
+          const fresh = await apiFetch<{ entryPoisVersion?: string }>(
+            `/trips/${encodeURIComponent(tripId)}/entries/${entryId}`,
+          ).catch(() => null);
+          await sendSwap(fresh?.entryPoisVersion);
+        } else {
+          throw err;
+        }
+      }
+
       setAltSwapConfirm(null);
       // round 5 fix: dispatch tp-segment-updated so useTripSegments refetches the now-stale
       // adjacent segments (backend marked computed_at=NULL in the setMaster batch).

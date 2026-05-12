@@ -1,7 +1,9 @@
 /**
  * _entry_pois.ts — trip_entry_pois 操作 helper（v2.27.0 multi-POI per entry）
  *
- * 對映 design doc `feat-multi-poi-per-entry-design-2026-05-11.md` Eng section。
+ * Design 紀要 + Phase 1 → Phase 2 cutover 細節：見 PR / commit body + migration
+ * 0057 / 0058 header 註解。完整 design doc 由 gbrain 維護（feat-multi-poi-per-
+ * entry-design-2026-05-11），不在 repo 內。
  *
  * ## 核心 invariants
  *
@@ -137,10 +139,13 @@ export async function setMaster(
   expectedVersion?: string,
 ): Promise<{ version: string; oldMasterPoiId: number | null }> {
   // 1. OCC version check
+  // round 7 fix: 移除 detail string（中英混用 + 洩漏 token format）。STALE_ENTRY
+  // 的 user-facing 中文 message 從 ERROR_MESSAGES catalog 取，client 需要 recover
+  // 走 refetch 而非從 error message regex 解 version。
   if (expectedVersion !== undefined) {
     const current = await getEntryPoisVersion(db, entryId);
     if (current !== expectedVersion) {
-      throw new AppError('STALE_ENTRY', `expected version ${expectedVersion} but got ${current}`);
+      throw new AppError('STALE_ENTRY');
     }
   }
 
@@ -292,7 +297,7 @@ export async function addAlternate(
   if (expectedVersion !== undefined) {
     const current = await getEntryPoisVersion(db, entryId);
     if (current !== expectedVersion) {
-      throw new AppError('STALE_ENTRY', `expected version ${expectedVersion} but got ${current}`);
+      throw new AppError('STALE_ENTRY');
     }
   }
 
@@ -344,7 +349,7 @@ export async function addAlternate(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (/UNIQUE constraint|SQLITE_CONSTRAINT/i.test(msg)) {
-      throw new AppError('STALE_ENTRY', 'concurrent alternate add detected — retry after refreshing version');
+      throw new AppError('STALE_ENTRY');
     }
     throw err;
   }
@@ -364,7 +369,7 @@ export async function removeAlternate(
   if (expectedVersion !== undefined) {
     const current = await getEntryPoisVersion(db, entryId);
     if (current !== expectedVersion) {
-      throw new AppError('STALE_ENTRY', `expected version ${expectedVersion} but got ${current}`);
+      throw new AppError('STALE_ENTRY');
     }
   }
 
@@ -414,7 +419,7 @@ export async function reorderAlternates(
   if (expectedVersion !== undefined) {
     const current = await getEntryPoisVersion(db, entryId);
     if (current !== expectedVersion) {
-      throw new AppError('STALE_ENTRY', `expected version ${expectedVersion} but got ${current}`);
+      throw new AppError('STALE_ENTRY');
     }
   }
 
@@ -478,6 +483,11 @@ export async function reorderAlternates(
  *     existing master row，所以直接 UPDATE 也安全）
  *   - 若無 sort_order=1 row → INSERT
  *
+ * round 7 fix: INSERT / naked UPDATE path 也 bump entry_pois_version 保持 monotonic
+ * invariant — 即使 syncEntryMaster 主要在 entry-create 用，PUT /days/:num 帶 reorder
+ * 場景下既有 entry 也會走 naked UPDATE path 而不 bump，讓 outstanding setMaster token
+ * 誤判為 fresh（adversarial round 6 #1）。
+ *
  * @param db D1
  * @param entryId 已存在的 trip_entries.id
  * @param poiId 對應的 pois.id (NOT NULL)
@@ -505,13 +515,19 @@ export async function syncEntryMaster(
   ]);
 
   if (!existing) {
-    await db
-      .prepare(
-        `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-         VALUES (?, ?, 1, ?, ?)`,
-      )
-      .bind(entryId, poiId, now, now)
-      .run();
+    // round 7 fix: bump entry_pois_version atomically with the INSERT so outstanding
+    // OCC tokens become stale on master creation.
+    await db.batch([
+      db
+        .prepare(
+          `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
+           VALUES (?, ?, 1, ?, ?)`,
+        )
+        .bind(entryId, poiId, now, now),
+      db
+        .prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?')
+        .bind(entryId),
+    ]);
     return;
   }
 
@@ -523,13 +539,19 @@ export async function syncEntryMaster(
   if (asAlternate) {
     // poiId 已是這個 entry 的 alternate → naked UPDATE 會撞 UNIQUE(entry_id, poi_id)。
     // 走 setMaster 做 master↔alternate swap，連帶 dual-write + segments stale 一起處理。
+    // setMaster 內部已 bump entry_pois_version。
     await setMaster(db, entryId, poiId);
     return;
   }
 
   // existing master poi_id != poiId, and poiId is not yet an alternate → safe UPDATE
-  await db
-    .prepare('UPDATE trip_entry_pois SET poi_id = ?, updated_at = ? WHERE id = ?')
-    .bind(poiId, now, existing.id)
-    .run();
+  // round 7 fix: bump entry_pois_version atomically with the UPDATE.
+  await db.batch([
+    db
+      .prepare('UPDATE trip_entry_pois SET poi_id = ?, updated_at = ? WHERE id = ?')
+      .bind(poiId, now, existing.id),
+    db
+      .prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?')
+      .bind(entryId),
+  ]);
 }
