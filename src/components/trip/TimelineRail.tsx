@@ -42,6 +42,7 @@ import { parseTimeRange, formatDurationCompact, deriveTypeMeta } from '../../lib
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { useTripSegments } from '../../hooks/useTripSegments';
 import { haversineMeters } from '../../lib/geo';
+import { getTimelineEntryDisplayTitle } from '../../lib/stopDisplay';
 
 const SCOPED_STYLES = `
 .tp-rail-detail {
@@ -253,6 +254,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const allDays = useTripDays();
   const parsed = parseTimeRange(entry.time);
   const meta = deriveTypeMeta(entry);
+  const entryDisplayTitle = getTimelineEntryDisplayTitle(entry);
 
   // QA 2026-04-26 PR-K：dnd-kit sortable wiring。entry.id null 時 disabled
   // (避免拖到還沒儲存的 row)。drag handle 用 grip icon button (only-source)
@@ -390,7 +392,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
           className="ocean-rail-grip"
           {...sortable.listeners}
           {...sortable.attributes}
-          aria-label={`拖拉排序：${entry.title ?? '（無標題）'}`}
+          aria-label={`拖拉排序：${entryDisplayTitle}`}
           data-testid={entry.id != null ? `timeline-rail-grip-${entry.id}` : undefined}
         >
           <Icon name="grip" />
@@ -403,14 +405,14 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
           onClick={onToggle}
           disabled={!canExpand}
           aria-expanded={canExpand ? expanded : undefined}
-          aria-label={`${expanded ? '收合' : '展開'}景點：${entry.title ?? '（無標題）'}`}
+          aria-label={`${expanded ? '收合' : '展開'}景點：${entryDisplayTitle}`}
           data-testid={entry.id != null ? `timeline-rail-row-${entry.id}` : undefined}
         >
           <span className="ocean-rail-icon" aria-hidden="true">
             <Icon name={meta.icon} />
           </span>
           <span className="ocean-rail-content">
-            <span className="ocean-rail-name">{entry.title ?? ''}</span>
+            <span className="ocean-rail-name">{entryDisplayTitle}</span>
             {(() => {
               const durLabel = formatDurationCompact(parsed.duration);
               // mockup hotel row sub-line 是「HOTEL · 退房 + 早餐」— 不顯示 rating
@@ -695,7 +697,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               確認刪除？
             </h3>
             <p style={{ margin: '10px 0 16px', fontSize: 'var(--font-size-callout)', color: 'var(--color-muted)' }}>
-              「{entry.title || '此景點'}」將從行程中移除。此操作無法復原。
+              「{entryDisplayTitle}」將從行程中移除。此操作無法復原。
             </p>
             {saveError && (
               <p style={{ fontSize: 'var(--font-size-footnote)', color: 'var(--color-destructive)', margin: '0 0 8px' }}>
@@ -907,8 +909,8 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
                     distanceM: segment.distanceM,
                   } : undefined}
                   tripId={tripId}
-                  fromName={prev?.title ?? null}
-                  toName={entry.title ?? null}
+                  fromName={prev ? getTimelineEntryDisplayTitle(prev) : null}
+                  toName={getTimelineEntryDisplayTitle(entry)}
                   staleHaversineM={staleHaversineM}
                   onRecompute={handleRecomputeTravel}
                 />

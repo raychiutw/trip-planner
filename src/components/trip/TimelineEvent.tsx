@@ -53,6 +53,8 @@ export interface TimelineEntryData {
   start_time?: string | null;
   /** v2.26.0 (migration 0056): 離開時間 "HH:MM"。 */
   end_time?: string | null;
+  /** Display title used by list/map UI. Keeps raw `title` intact for edit/export semantics. */
+  displayTitle?: string | null;
   title?: string | null;
   description?: string | null;
   note?: string | null;

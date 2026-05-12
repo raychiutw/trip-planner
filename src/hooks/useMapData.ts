@@ -7,6 +7,7 @@
 
 import { useMemo } from 'react';
 import type { Day, Entry, Hotel } from '../types/trip';
+import { getStopDisplayTitle } from '../lib/stopDisplay';
 
 /* ===== Types ===== */
 
@@ -91,15 +92,28 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   /* --- Entry pins --- */
   const timeline: Entry[] = day.timeline ?? [];
   for (const entry of timeline) {
-    // Phase 3：spatial 來源只有 POI master；餐廳 entry 無 POI 座標時走首選餐廳
+    const primaryStopPoi = entry.stopPois?.find((p) => p.sortOrder === 1)
+      ?? entry.stopPois?.[0]
+      ?? entry.master
+      ?? null;
+    const primaryRestaurant = entry.restaurants.find(r => r.sortOrder === 0) || entry.restaurants[0] || null;
+    const displayTitle = getStopDisplayTitle({
+      title: entry.title,
+      poiName: primaryStopPoi?.name ?? entry.poi?.name ?? primaryRestaurant?.name ?? null,
+      poiType: primaryStopPoi?.type ?? entry.poi?.type ?? (primaryRestaurant ? 'restaurant' : null),
+    }) ?? entry.title;
+    // stop 自己的 POI 是 stopPois[0] / sortOrder=1；fallback master →
+    // legacy poi/restaurants 是 transition 期保險。
     let coords: { lat: number; lng: number } | null = null;
-    if (entry.poi && isValidCoords(entry.poi)) {
+    if (primaryStopPoi && isValidCoords(primaryStopPoi)) {
+      coords = { lat: primaryStopPoi.lat as number, lng: primaryStopPoi.lng as number };
+    }
+    if (!coords && entry.poi && isValidCoords(entry.poi)) {
       coords = { lat: entry.poi.lat as number, lng: entry.poi.lng as number };
     }
-    if (!coords && entry.restaurants.length > 0) {
-      const primary = entry.restaurants.find(r => r.sortOrder === 0) || entry.restaurants[0];
-      if (primary && isValidCoords(primary)) {
-        coords = { lat: primary.lat, lng: primary.lng };
+    if (!coords && primaryRestaurant) {
+      if (isValidCoords(primaryRestaurant)) {
+        coords = { lat: primaryRestaurant.lat, lng: primaryRestaurant.lng };
       }
     }
     if (coords) {
@@ -108,11 +122,14 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
         id: entry.id,
         type: 'entry',
         index: entryIndex,
-        title: entry.title,
+        title: displayTitle,
         lat: coords.lat,
         lng: coords.lng,
         time: entry.time,
-        googleRating: entry.poi?.googleRating ?? null,
+        googleRating: primaryStopPoi?.rating
+          ?? entry.poi?.googleRating
+          ?? (entry.poi as { rating?: number | null } | null | undefined)?.rating
+          ?? null,
         travelMin: entry.travel?.min,
         travelType: entry.travel?.type,
         sortOrder: entry.sortOrder,

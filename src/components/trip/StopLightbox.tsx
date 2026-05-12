@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
 import { parseTimeRange, deriveTypeMeta } from '../../lib/timelineUtils';
+import { getTimelineEntryDisplayTitle } from '../../lib/stopDisplay';
 import type { TimelineEntryData } from './TimelineEvent';
 
 const SCOPED_STYLES = `
@@ -212,6 +213,7 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
   const hasNote = !!entry.note?.trim();
   const hasDescription = !!entry.description?.trim();
   const currentPhoto = hasPhotos && photos ? photos[photoIndex] ?? photos[0]! : null;
+  const displayTitle = getTimelineEntryDisplayTitle(entry);
 
   const handleBackdrop = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose();
@@ -235,7 +237,7 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
       >
         <div className="tp-lightbox-head">
           <div className="title">
-            <h2 id="stop-lightbox-title">{entry.title || '景點詳情'}</h2>
+            <h2 id="stop-lightbox-title">{displayTitle || '景點詳情'}</h2>
             <div className="sub">
               {meta.label}
               {parsed.start && ` · ${parsed.start}${parsed.end ? `–${parsed.end}` : ''}`}
@@ -258,7 +260,7 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
               <div className="tp-lightbox-carousel" data-testid="stop-lightbox-carousel">
                 <img
                   src={currentPhoto.thumbUrl || currentPhoto.url}
-                  alt={currentPhoto.caption || entry.title || '景點照片'}
+                  alt={currentPhoto.caption || displayTitle || '景點照片'}
                   loading="lazy"
                 />
                 {photos.length > 1 && (

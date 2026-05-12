@@ -117,6 +117,25 @@ describe('TimelineRail — inline expand', () => {
     expect(row.getAttribute('aria-expanded')).toBe('true');
   });
 
+  it('generic meal rows show the selected restaurant display title', () => {
+    renderRail([
+      {
+        id: 783,
+        time: '11:42-12:42',
+        title: '午餐',
+        displayTitle: '敘敘苑 沖繩浦添PARCO CITY店',
+        poiType: 'restaurant',
+        description: null,
+        note: null,
+        googleRating: 4.2,
+      },
+    ]);
+    const row = screen.getByTestId('timeline-rail-row-783');
+    expect(row.textContent).toContain('敘敘苑 沖繩浦添PARCO CITY店');
+    expect(row.textContent).not.toContain('午餐');
+    expect(row.getAttribute('aria-label')).toContain('敘敘苑 沖繩浦添PARCO CITY店');
+  });
+
   it('renders dedicated drag grips so reorder does not conflict with row expand', () => {
     renderRail();
     const grip = screen.getByTestId('timeline-rail-grip-42');

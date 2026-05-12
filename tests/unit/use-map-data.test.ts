@@ -156,6 +156,37 @@ describe('useMapData — entry pins', () => {
     expect(pin.googleRating).toBe(4.5);
     expect(pin.travelMin).toBe(20);
   });
+
+  it('9. 用餐 stop pin 使用 stopPois sortOrder=1 的座標與 rating，而不是 legacy entry.poi', () => {
+    const day = makeDay({
+      timeline: [
+        makeEntry({
+          id: 1,
+          sortOrder: 1,
+          title: '午餐',
+          poi: { id: 1, type: 'attraction', name: 'Legacy wrapper', lat: 26.1, lng: 127.1, googleRating: 2.1 },
+          stopPois: [
+            {
+              poiId: 20,
+              sortOrder: 1,
+              type: 'restaurant',
+              name: '第一順位拉麵',
+              lat: 26.222,
+              lng: 127.222,
+              rating: 4.6,
+            },
+          ],
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() => useMapData(day));
+    const pin = result.current.pins[0];
+    expect(pin.title).toBe('第一順位拉麵');
+    expect(pin.lat).toBeCloseTo(26.222);
+    expect(pin.lng).toBeCloseTo(127.222);
+    expect(pin.googleRating).toBe(4.6);
+  });
 });
 
 describe('useMapData — hotel pins', () => {
