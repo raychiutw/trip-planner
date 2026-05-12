@@ -15,12 +15,12 @@
 
 **Found by**: v2.28.0 ship — Phase 1 backfill 進 alternates 完成，但 `restaurants` TABLE 仍在 + TripPage expanded restaurant 子項目仍讀 `entry.restaurants[]` (來自 `trip_pois context='timeline'`)。
 **Partial fix shipped**: v2.28.2 先修使用者可見 bug：用餐 stop 的第一順位餐廳會透過 `stopPois[0]` / `master` / `poi` 顯示在 timeline、地圖與 lightbox；Migration 0059 也改成可把第一順位餐廳持久化為 `trip_entry_pois.sort_order=1`。
+**Partial fix shipped**: v2.28.3 讓 TripPage expanded choices 改讀 `entry.stopPois`，用通用「正選 / 備選」卡片取代餐廳專屬 UI。
 **Phase 2 cutover (after 2 weeks observation + 0059 apply)**:
 1. Remote dry-run/apply `scripts/migrate-0059-restaurants-to-alternates.ts`，確認 meal stop primary POI backfill 無 drift。
 2. Monitoring SQL：確認 `trip_pois context='timeline'` 跟 `trip_entry_pois sort_order>1` / `sort_order=1` restaurant primary 狀態 100% match（dual-state drift = 0）。
-3. TripPage expanded restaurant 子項目改讀 `entry.alternates[].filter(a => a.type === 'restaurant')` 或 `entry.stopPois`，取代 `entry.infoBoxes[].restaurants[]`。
-4. `mapDay.ts:toEntryData` 移除 `raw.restaurants → infoBoxes` 路徑（讀 alternates / stopPois）。
-5. Migration 0060: `DROP TABLE restaurants`（table 自 v2.14 後 dead，無資料損失風險）
+3. `mapDay.ts:toEntryData` 移除 `raw.restaurants → infoBoxes` 路徑（讀 alternates / stopPois）。
+4. Migration 0060: `DROP TABLE restaurants`（table 自 v2.14 後 dead，無資料損失風險）
 **Priority**: P1（schema cleanup + UI 統一）
 **Est**: 1-2 hr CC
 
@@ -50,11 +50,6 @@
 - Fix: trip_days 加 `version` column + PUT 接受 expectedVersion
 - Est: 1 hr CC + 1 migration + frontend wire
 - Priority: P3（rare scenario — 一般只有單 user 編輯）
-
-**ChangePoiPage unit tests for mode=alternate**：
-- v2.27.0 ChangePoiPage 加 `?mode=alternate` 切換 (title / CTA / search-tab hidden)，但無 unit test 覆蓋
-- Est: 30 min CC，3-4 個 test cases
-- Priority: P2
 
 **refreshEntryPois 3-way cascade UX**：
 - master swap 後 useTripSegments + refreshEntryPois + day refetch 三方需要協調，目前 EditEntryPage sequential 跑 — 可能短暫顯示 stale 狀態
@@ -339,6 +334,13 @@ A 是標準做法但需 cron handler；B 簡單但 latency tail 可能受 1% 隨
 ---
 
 ## Completed
+
+### ChangePoiPage alternate mode unit coverage
+
+**Priority:** P2
+**Completed:** v2.28.3 (2026-05-13)
+
+`tests/unit/change-poi-page.test.tsx` covers `?mode=alternate` with both 搜尋 and 收藏 tabs. Search results post find-or-create payloads to `/alternates`; favorites post `{ poiId }` from the same screen.
 
 ### Middleware service-token auth bypass — non-admin service token 繼承 ADMIN_EMAIL
 
