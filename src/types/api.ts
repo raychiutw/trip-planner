@@ -70,9 +70,9 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   MAPS_UPSTREAM_FAILED: 'Google Maps 服務暫時無法回應，請稍後再試',
   STALE_ENTRY: '資料已被其他操作更新，請重新整理',
   DUPLICATE_POI: '此景點已存在於 stop 中',
-  POI_NOT_ALTERNATE: '此景點不是此 stop 的備案',
-  MISSING_MASTER: '每個 stop 必須有首選景點',
-  INVALID_ORDER: '備案排序格式不正確',
+  POI_NOT_ALTERNATE: '此景點不是此 stop 的備選',
+  MISSING_MASTER: '每個 stop 必須有正選景點',
+  INVALID_ORDER: '備選排序格式不正確',
 };
 
 // ---------------------------------------------------------------------------
@@ -269,4 +269,3 @@ export interface AuditLog {
   /** DB column `created_at` */
   createdAt: string;
 }
-

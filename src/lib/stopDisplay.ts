@@ -25,13 +25,7 @@ export function isGenericMealStopTitle(title?: string | null): boolean {
 export function getStopDisplayTitle(input: StopDisplayInput): string | null {
   const title = clean(input.title);
   const poiName = clean(input.poiName);
-  const poiType = clean(input.poiType)?.toLowerCase() ?? null;
-
-  if (poiName && poiType === 'restaurant' && isGenericMealStopTitle(title)) {
-    return poiName;
-  }
-
-  return title ?? poiName;
+  return poiName ?? title;
 }
 
 export function getTimelineEntryDisplayTitle(entry: TimelineDisplayInput): string {

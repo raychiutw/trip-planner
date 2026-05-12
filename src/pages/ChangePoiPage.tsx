@@ -21,6 +21,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { regionToApiParam } from '../lib/maps/region';
+import { mapNominatimCategory } from '../lib/poiCategory';
 import type { PoiFavorite } from '../types/api';
 
 const SCOPED_STYLES = `
@@ -97,6 +98,10 @@ interface SelectedPoi {
   lat: number;
   lng: number;
   address?: string | null;
+  type?: string | null;
+  category?: string | null;
+  rating?: number | null;
+  country?: string | null;
 }
 
 export default function ChangePoiPage() {
@@ -107,17 +112,15 @@ export default function ChangePoiPage() {
   const { user } = useCurrentUser();
 
   // v2.27.0 multi-POI per entry：?mode=alternate 切換 add-alternate 行為
-  // （title 改「加入備案景點」+ CTA 改「加為備案」+ 提交走 POST /alternates）
+  // （title 改「加入備選景點」+ CTA 改「加為備選」+ 提交走 POST /alternates）
   // round 4 fix M5: use react-router's useSearchParams (reactive + SSR-safe) instead
   // of raw window.location.search which doesn't re-render on client-side route changes.
   const [searchParams] = useSearchParams();
   const mode: 'master' | 'alternate' = searchParams.get('mode') === 'alternate' ? 'alternate' : 'master';
-  const pageTitle = mode === 'alternate' ? '加入備案景點' : '變更景點';
-  const submitLabel = mode === 'alternate' ? '加為備案' : '套用';
+  const pageTitle = mode === 'alternate' ? '加入備選景點' : '置換景點';
+  const submitLabel = mode === 'alternate' ? '加為備選' : '置換景點';
 
-  // v2.27.0：alternate mode 強制 favorites（search tab 暫不支援 find-or-create
-  // alternate；HIGH #7 — 避免使用者點 search tab 選新 POI 後撞 error guard）
-  const [tab, setTab] = useState<Tab>(mode === 'alternate' ? 'favorites' : 'search');
+  const [tab, setTab] = useState<Tab>('search');
   const [query, setQuery] = useState('');
   const [region] = useState<string>('全部地區');
   const [selected, setSelected] = useState<SelectedPoi | null>(null);
@@ -132,6 +135,18 @@ export default function ChangePoiPage() {
     region: regionToApiParam(region),
     limit: 20,
   });
+
+  const buildSearchPoiBody = useCallback((poi: SelectedPoi) => ({
+    name: poi.name,
+    lat: poi.lat,
+    lng: poi.lng,
+    type: poi.type ?? mapNominatimCategory(poi.category ?? ''),
+    category: poi.category ?? undefined,
+    address: poi.address ?? undefined,
+    rating: poi.rating ?? undefined,
+    country: poi.country ?? undefined,
+    source: 'google',
+  }), []);
 
   useEffect(() => {
     if (tab !== 'favorites' || favorites !== null) return;
@@ -151,27 +166,20 @@ export default function ChangePoiPage() {
     setError(null);
     try {
       if (mode === 'alternate') {
-        // 加為備案：直接取 selected.poiId（alternate mode 只在 favorites tab 操作，
-        // 收藏 POI 必有 poi_id）。round 4 fix M6: search tab 在 alternate mode 完全
-        // 隱藏 (見 render 區塊)，所以下方兩個 throw 是 defense-in-depth — UI 不該
-        // 走到這裡。保留 throw 而非 assert 是因為若未來新增「直接收藏 search 結果」
-        // 的 flow，這 guard 還能擋一下 race window。
-        const poiIdToAdd: number | null = selected.poiId ?? null;
-        if (poiIdToAdd == null && selected.name && selected.lat != null && selected.lng != null) {
-          throw new Error('搜尋新建 POI 暫時不支援加備案（請先存收藏再加為備案）');
-        }
-        if (poiIdToAdd == null) throw new Error('無法解析 POI ID');
+        const body = selected.source === 'favorite' && selected.poiId
+          ? { poiId: selected.poiId }
+          : buildSearchPoiBody(selected);
         const res = await apiFetchRaw(
           `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ poiId: poiIdToAdd }),
+            body: JSON.stringify(body),
           },
         );
         if (!res.ok) {
           const text = await res.text();
-          throw new Error(`加備案失敗 (${res.status}): ${text.slice(0, 200)}`);
+          throw new Error(`加備選失敗 (${res.status}): ${text.slice(0, 200)}`);
         }
         window.dispatchEvent(new CustomEvent('tp-entry-updated', { detail: { tripId } }));
         navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`, { replace: true });
@@ -181,7 +189,7 @@ export default function ChangePoiPage() {
       // master 模式（既有 PUT /poi-id 流程）
       const body = selected.source === 'favorite' && selected.poiId
         ? { poi_id: selected.poiId }
-        : { name: selected.name, lat: selected.lat, lng: selected.lng, source: 'google' };
+        : buildSearchPoiBody(selected);
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/poi-id`, {
         method: 'PUT',
         body: JSON.stringify(body),
@@ -197,10 +205,10 @@ export default function ChangePoiPage() {
       window.dispatchEvent(new CustomEvent('tp-entry-updated', { detail: { tripId } }));
       navigate(`/trips?selected=${encodeURIComponent(tripId)}`, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : '變更 POI 失敗');
+      setError(err instanceof Error ? err.message : '置換景點失敗');
       setSubmitting(false);
     }
-  }, [selected, tripId, entryId, submitting, navigate, mode]);
+  }, [selected, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody]);
 
   const main = useMemo(() => (
     <div className="tp-app">
@@ -209,16 +217,14 @@ export default function ChangePoiPage() {
       <main className="tp-page-content">
         <div className="tp-change-poi">
           <div className="tp-change-poi-tabs">
-            {mode !== 'alternate' && (
-              <button
-                type="button"
-                className={`tp-change-poi-tab ${tab === 'search' ? 'is-active' : ''}`}
-                onClick={() => setTab('search')}
-                data-testid="change-poi-tab-search"
-              >
-                搜尋
-              </button>
-            )}
+            <button
+              type="button"
+              className={`tp-change-poi-tab ${tab === 'search' ? 'is-active' : ''}`}
+              onClick={() => setTab('search')}
+              data-testid="change-poi-tab-search"
+            >
+              搜尋
+            </button>
             <button
               type="button"
               className={`tp-change-poi-tab ${tab === 'favorites' ? 'is-active' : ''}`}
@@ -227,11 +233,6 @@ export default function ChangePoiPage() {
             >
               收藏
             </button>
-            {mode === 'alternate' && (
-              <span style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 'var(--font-size-caption)', color: 'var(--color-muted)' }}>
-                備案目前只支援從收藏加入
-              </span>
-            )}
           </div>
 
           {tab === 'search' && (
@@ -265,6 +266,10 @@ export default function ChangePoiPage() {
                         lat: r.lat,
                         lng: r.lng,
                         address: r.address,
+                        type: mapNominatimCategory(r.category ?? ''),
+                        category: r.category,
+                        rating: r.rating ?? null,
+                        country: r.country ?? null,
                       })}
                       data-testid={`change-poi-search-item-${r.place_id}`}
                     >
@@ -295,6 +300,7 @@ export default function ChangePoiPage() {
                       lat: f.poiLat ?? 0,
                       lng: f.poiLng ?? 0,
                       address: f.poiAddress,
+                      type: f.poiType ?? null,
                     })}
                     data-testid={`change-poi-favorite-item-${f.id}`}
                   >

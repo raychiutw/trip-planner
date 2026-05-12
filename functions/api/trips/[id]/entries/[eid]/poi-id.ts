@@ -20,7 +20,7 @@
  * 統一 camelCase。CHANGELOG 列為 round 9 cleanup — 沒 production client 用過 snake form。
  */
 
-import { findOrCreatePoi } from '../../../../_poi';
+import { findOrCreatePoi, normalizeFindOrCreatePoiPayload, type FindOrCreatePoiPayload } from '../../../../_poi';
 import { logAudit } from '../../../../_audit';
 import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
@@ -28,15 +28,10 @@ import { setMaster } from '../../../../_entry_pois';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
-interface ChangePoiBody {
-  poi_id?: number | null;
-  // direct-from-search mode
-  name?: string;
-  lat?: number;
-  lng?: number;
-  source?: string;
+interface ChangePoiBody extends FindOrCreatePoiPayload {
+  poi_id?: unknown;
   // round 7 + round 9: OCC token (optional, camelCase only — matches other multi-POI endpoints)
-  entryPoisVersion?: string;
+  entryPoisVersion?: unknown;
 }
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
@@ -55,13 +50,23 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   if (!hasPerm) throw new AppError('PERM_DENIED');
   if (!belongsToTrip) throw new AppError('PERM_DENIED', '此 entry 不屬於該行程');
 
-  const body = await parseJsonBody<ChangePoiBody>(context.request);
+  const rawBody = await parseJsonBody<unknown>(context.request);
+  if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) {
+    throw new AppError('DATA_VALIDATION', 'JSON body 必須是 object');
+  }
+  const body = rawBody as ChangePoiBody;
+  if (body.entryPoisVersion != null && typeof body.entryPoisVersion !== 'string') {
+    throw new AppError('DATA_VALIDATION', 'entryPoisVersion 必須是字串');
+  }
+  const entryPoisVersion = typeof body.entryPoisVersion === 'string'
+    ? body.entryPoisVersion
+    : undefined;
 
   // Resolve mode：poi_id mode (existing) vs find-or-create mode (new from search)
   let newPoiId: number | null;
   let newTitle: string | null = null;
   if ('poi_id' in body) {
-    newPoiId = body.poi_id ?? null;
+    newPoiId = body.poi_id == null ? null : body.poi_id as number;
     if (newPoiId !== null && (typeof newPoiId !== 'number' || !Number.isInteger(newPoiId) || newPoiId <= 0)) {
       throw new AppError('DATA_VALIDATION', 'poi_id 須為正整數或 null');
     }
@@ -69,16 +74,11 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       const poi = await db.prepare('SELECT id FROM pois WHERE id = ?').bind(newPoiId).first();
       if (!poi) throw new AppError('DATA_NOT_FOUND', `pois.id=${newPoiId} 不存在`);
     }
-  } else if (body.name && typeof body.lat === 'number' && typeof body.lng === 'number') {
+  } else if ('name' in body || 'lat' in body || 'lng' in body) {
     // find-or-create from search payload
-    newPoiId = await findOrCreatePoi(db, {
-      name: body.name,
-      type: 'attraction',
-      lat: body.lat,
-      lng: body.lng,
-      source: body.source ?? 'google',
-    });
-    newTitle = body.name;
+    const poiData = normalizeFindOrCreatePoiPayload(body);
+    newPoiId = await findOrCreatePoi(db, poiData);
+    newTitle = poiData.name;
   } else {
     throw new AppError('DATA_VALIDATION', '須提供 poi_id 或 { name, lat, lng }');
   }
@@ -102,7 +102,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   }
 
   // round 7 fix: pass OCC token through to setMaster (adversarial #2 — was bypassed).
-  await setMaster(db, entryId, newPoiId, body.entryPoisVersion);
+  await setMaster(db, entryId, newPoiId, entryPoisVersion);
   if (newTitle !== null) {
     await db.prepare('UPDATE trip_entries SET title = ? WHERE id = ?')
       .bind(newTitle, entryId).run();
