@@ -67,8 +67,16 @@ const REPORT_PATH = path.join(REPORT_DIR, `0059-restaurants-to-alternates-${TS}.
 
 fs.mkdirSync(REPORT_DIR, { recursive: true });
 
+/** Flatten multi-line SQL to single line — wrangler --command 不認 \n escape，CF API
+ *  收到 literal `\\n` 會以 unrecognized token reject。
+ */
+function flattenSql(sql: string): string {
+  return sql.replace(/\s+/g, ' ').trim();
+}
+
 function d1Query(sql: string): unknown[] {
-  const cmd = `wrangler d1 execute ${DB_NAME} ${REMOTE ? '--remote' : '--local'} --json --command ${JSON.stringify(sql)}`;
+  const flat = flattenSql(sql);
+  const cmd = `wrangler d1 execute ${DB_NAME} ${REMOTE ? '--remote' : '--local'} --json --command ${JSON.stringify(flat)}`;
   try {
     const out = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
     const parsed = JSON.parse(out) as Array<{ results: unknown[] }>;
@@ -81,7 +89,8 @@ function d1Query(sql: string): unknown[] {
 }
 
 function d1Exec(sql: string): { rowsAffected: number } {
-  const cmd = `wrangler d1 execute ${DB_NAME} ${REMOTE ? '--remote' : '--local'} --json --command ${JSON.stringify(sql)}`;
+  const flat = flattenSql(sql);
+  const cmd = `wrangler d1 execute ${DB_NAME} ${REMOTE ? '--remote' : '--local'} --json --command ${JSON.stringify(flat)}`;
   try {
     const out = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
     const parsed = JSON.parse(out) as Array<{ meta?: { rows_written?: number; changes?: number } }>;

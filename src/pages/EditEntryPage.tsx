@@ -40,6 +40,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
+import { haversineMeters, avgLatLng, CROSS_REGION_THRESHOLD_M, type LatLng } from '../lib/geo';
 
 const SCOPED_STYLES = `
 .tp-edit-entry {
@@ -546,12 +547,18 @@ interface AlternatePoi {
   price?: string | null;
   reservation?: string | null;
   reservationUrl?: string | null;
+  /** POI coords — feed cross-region warning when this row is set as master. */
+  lat?: number | null;
+  lng?: number | null;
 }
 
 interface MasterPoiSummary {
   poiId: number;
   name: string;
   type?: string | null;
+  /** Master coords — baseline for sibling-distance comparison（cross-region warning）。 */
+  lat?: number | null;
+  lng?: number | null;
 }
 
 interface TripMeta {
@@ -566,7 +573,7 @@ interface DayApi {
     id?: number | null;
     title?: string | null;
     poiType?: string | null;
-    master?: { poiId?: number; name?: string | null; type?: string | null } | null;
+    master?: { poiId?: number; name?: string | null; type?: string | null; lat?: number | null; lng?: number | null } | null;
     alternates?: Array<{
       poiId: number;
       name?: string | null;
@@ -579,6 +586,8 @@ interface DayApi {
       price?: string | null;
       reservation?: string | null;
       reservationUrl?: string | null;
+      lat?: number | null;
+      lng?: number | null;
     }>;
     entryPoisVersion?: string | null;
   }>;
@@ -602,6 +611,46 @@ function formatKm(m: number | null): string | null {
   return `${Math.round(m / 50) * 50} m`;
 }
 
+// Restaurant / coord fields shared between init useEffect and refreshEntryPois —
+// 抽 helper 避免 drift（v2.28.0 ship 時 refresh path 漏抄 restaurant fields → swap 後 chips 消失）。
+type TimelineAlternateRow = NonNullable<DayApi['timeline']>[number] extends infer T
+  ? T extends { alternates?: Array<infer A> } ? A : never
+  : never;
+
+function mapAlternate(a: TimelineAlternateRow): AlternatePoi {
+  return {
+    poiId: a.poiId,
+    name: a.name ?? '景點',
+    sortOrder: a.sortOrder ?? 0,
+    type: a.type ?? null,
+    category: a.category ?? null,
+    hours: a.hours ?? null,
+    rating: a.rating ?? null,
+    price: a.price ?? null,
+    reservation: a.reservation ?? null,
+    reservationUrl: a.reservationUrl ?? null,
+    lat: a.lat ?? null,
+    lng: a.lng ?? null,
+  };
+}
+
+/** Pluck master coords from timeline siblings (exclude self). 用於 cross-region warning。 */
+function extractSiblingCoords(
+  timeline: NonNullable<DayApi['timeline']>,
+  excludeEntryId: number,
+): LatLng[] {
+  const out: LatLng[] = [];
+  for (const t of timeline) {
+    if (t.id === excludeEntryId) continue;
+    const lat = t.master?.lat;
+    const lng = t.master?.lng;
+    if (typeof lat === 'number' && typeof lng === 'number') {
+      out.push({ lat, lng });
+    }
+  }
+  return out;
+}
+
 export default function EditEntryPage() {
   const { tripId, entryId: entryIdParam } = useParams<{ tripId: string; entryId: string }>();
   const entryId = Number(entryIdParam);
@@ -621,6 +670,8 @@ export default function EditEntryPage() {
   const [alternates, setAlternates] = useState<AlternatePoi[]>([]);
   const [masterSummary, setMasterSummary] = useState<MasterPoiSummary | null>(null);
   const [entryPoisVersion, setEntryPoisVersion] = useState<string | null>(null);
+  /** 當日其他 entries 的 master 座標（cross-region warning 基準）。 */
+  const [siblingMasterCoords, setSiblingMasterCoords] = useState<LatLng[]>([]);
   const [altSwapConfirm, setAltSwapConfirm] = useState<AlternatePoi | null>(null);
   const [altRemoveConfirm, setAltRemoveConfirm] = useState<AlternatePoi | null>(null);
   const [showDeleteStopConfirm, setShowDeleteStopConfirm] = useState(false);
@@ -714,27 +765,18 @@ export default function EditEntryPage() {
               poiId: me.master.poiId,
               name: me.master.name ?? me.title ?? '景點',
               type: me.master.type ?? null,
+              lat: me.master.lat ?? null,
+              lng: me.master.lng ?? null,
             });
           }
           if (Array.isArray(me.alternates)) {
-            setAlternates(me.alternates.map((a) => ({
-              poiId: a.poiId,
-              name: a.name ?? '景點',
-              sortOrder: a.sortOrder ?? 0,
-              type: a.type ?? null,
-              category: a.category ?? null,
-              // v2.28.0 — restaurant fields (null for non-restaurant POIs)
-              hours: a.hours ?? null,
-              rating: a.rating ?? null,
-              price: a.price ?? null,
-              reservation: a.reservation ?? null,
-              reservationUrl: a.reservationUrl ?? null,
-            })));
+            setAlternates(me.alternates.map(mapAlternate));
           }
           if (me.entryPoisVersion) {
             setEntryPoisVersion(me.entryPoisVersion);
           }
         }
+        setSiblingMasterCoords(extractSiblingCoords(timeline, entryId));
         const prev = idx > 0 ? timeline[idx - 1] : null;
         if (prev?.id != null && prev.title) {
           setPrevEntry({ id: prev.id, title: prev.title });
@@ -802,6 +844,21 @@ export default function EditEntryPage() {
     if (!startTime || !endTime) return null;
     return durationMinutes(startTime, endTime);
   }, [startTime, endTime]);
+
+  // Cross-region warning for master swap confirm modal.
+  // 新 master vs 當日其他 entries 平均座標 > CROSS_REGION_THRESHOLD_M → 紅字提示。
+  // 任一座標缺漏 → 不警告（無法判斷）。
+  const crossRegionWarning = useMemo<string | null>(() => {
+    if (!altSwapConfirm) return null;
+    const { lat, lng } = altSwapConfirm;
+    if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+    const center = avgLatLng(siblingMasterCoords);
+    if (!center) return null;
+    const d = haversineMeters({ lat, lng }, center);
+    if (d <= CROSS_REGION_THRESHOLD_M) return null;
+    const km = d >= 100_000 ? Math.round(d / 1000) : Number((d / 1000).toFixed(1));
+    return `新首選距離本日其他點約 ${km} km，可能跨區，前後車程會誤算。確定要設為首選？`;
+  }, [altSwapConfirm, siblingMasterCoords]);
 
   const handleSave = useCallback(async () => {
     if (!tripId || !entry || submitting) return;
@@ -914,18 +971,13 @@ export default function EditEntryPage() {
           poiId: freshMasterPoiId,
           name: freshMasterName,
           type: me.master?.type ?? null,
+          lat: me.master?.lat ?? null,
+          lng: me.master?.lng ?? null,
         });
       }
-      setAlternates(
-        (me.alternates ?? []).map((a) => ({
-          poiId: a.poiId,
-          name: a.name ?? '景點',
-          sortOrder: a.sortOrder ?? 0,
-          type: a.type ?? null,
-          category: a.category ?? null,
-        })),
-      );
+      setAlternates((me.alternates ?? []).map(mapAlternate));
       if (me.entryPoisVersion) setEntryPoisVersion(me.entryPoisVersion);
+      setSiblingMasterCoords(extractSiblingCoords(dayData.timeline ?? [], entryId));
       return {
         masterPoiId: freshMasterPoiId,
         masterName: freshMasterName,
@@ -1452,13 +1504,14 @@ export default function EditEntryPage() {
         onCancel={() => setShowDiscardModal(false)}
       />
 
-      {/* v2.27.0 Master swap confirm */}
+      {/* Master swap confirm (v2.27.0) with optional cross-region warning */}
       <ConfirmModal
         open={altSwapConfirm != null}
         title="設為首選"
         message={altSwapConfirm && masterSummary
           ? `將「${altSwapConfirm.name}」設為首選，原首選「${masterSummary.name}」會變備案，前後行程時間會重新計算。`
           : ''}
+        warning={crossRegionWarning ?? undefined}
         confirmLabel="設為首選"
         cancelLabel="取消"
         busy={altPending != null}

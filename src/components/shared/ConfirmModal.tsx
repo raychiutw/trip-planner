@@ -52,6 +52,19 @@ const SCOPED_STYLES = `
   line-height: 1.55;
   color: var(--color-muted);
 }
+.tp-confirm-warning {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.08));
+  border: 1px solid var(--color-priority-high-dot, #c0392b);
+  color: var(--color-priority-high-dot, #c0392b);
+  font-size: var(--font-size-footnote);
+  line-height: 1.45;
+}
+.tp-confirm-warning-icon { flex-shrink: 0; font-weight: 700; }
+.tp-confirm-warning-text { flex: 1; }
 .tp-confirm-actions {
   display: flex; gap: 8px; flex-wrap: wrap;
 }
@@ -91,6 +104,8 @@ export interface ConfirmModalProps {
   title: string;
   /** 主要描述,可多行(plain text only) */
   message: string;
+  /** 可選紅色警告（cross-region / destructive 補充說明），undefined 時不渲染 */
+  warning?: string;
   /** 確認按鈕 label,預設「確認」 */
   confirmLabel?: string;
   /** 取消按鈕 label,預設「取消」 */
@@ -107,6 +122,7 @@ export default function ConfirmModal({
   open,
   title,
   message,
+  warning,
   confirmLabel = '確認',
   cancelLabel = '取消',
   busy = false,
@@ -152,6 +168,12 @@ export default function ConfirmModal({
         >
           <h2 className="tp-confirm-title" id="tp-confirm-title">{title}</h2>
           <p className="tp-confirm-message" id="tp-confirm-message">{message}</p>
+          {warning && (
+            <div className="tp-confirm-warning" data-testid="confirm-modal-warning">
+              <span className="tp-confirm-warning-icon" aria-hidden="true">⚠</span>
+              <span className="tp-confirm-warning-text">{warning}</span>
+            </div>
+          )}
           <div className="tp-confirm-actions">
             <button
               type="button"
