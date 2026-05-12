@@ -3,6 +3,8 @@
  *
  * Body:
  *   - poiId: number — alternate POI id（不可是現有 master 或已存在 alternate）
+ *   - 或 { name, lat, lng, type?, category?, address?, rating?, country?, source? }
+ *     — 直接從搜尋結果 find-or-create 後加入 alternate
  *   - entryPoisVersion?: string — OCC token from prior GET; mismatch → 409 STALE_ENTRY
  *
  * Server 自動 assign sort_order = max + 1。
@@ -13,8 +15,14 @@ import { logAudit } from '../../../../_audit';
 import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { addAlternate } from '../../../../_entry_pois';
+import { findOrCreatePoi, normalizeFindOrCreatePoiPayload, type FindOrCreatePoiPayload } from '../../../../_poi';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
+
+interface AddAlternateBody extends FindOrCreatePoiPayload {
+  poiId?: unknown;
+  entryPoisVersion?: unknown;
+}
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
@@ -32,18 +40,37 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!canWrite) throw new AppError('PERM_DENIED');
   if (!belongsToTrip) throw new AppError('DATA_NOT_FOUND');
 
-  const body = await parseJsonBody<{ poiId?: number; entryPoisVersion?: string }>(context.request);
-  if (typeof body.poiId !== 'number' || !Number.isInteger(body.poiId) || body.poiId <= 0) {
-    throw new AppError('DATA_VALIDATION', 'poiId 必須是 positive integer');
+  const rawBody = await parseJsonBody<unknown>(context.request);
+  if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) {
+    throw new AppError('DATA_VALIDATION', 'JSON body 必須是 object');
+  }
+  const body = rawBody as AddAlternateBody;
+  if (body.entryPoisVersion != null && typeof body.entryPoisVersion !== 'string') {
+    throw new AppError('DATA_VALIDATION', 'entryPoisVersion 必須是字串');
+  }
+  const entryPoisVersion = typeof body.entryPoisVersion === 'string'
+    ? body.entryPoisVersion
+    : undefined;
+  let poiIdToAdd: number;
+
+  if ('poiId' in body) {
+    if (typeof body.poiId !== 'number' || !Number.isInteger(body.poiId) || body.poiId <= 0) {
+      throw new AppError('DATA_VALIDATION', 'poiId 必須是 positive integer');
+    }
+
+    const poiExists = await db
+      .prepare('SELECT id FROM pois WHERE id = ?')
+      .bind(body.poiId)
+      .first();
+    if (!poiExists) throw new AppError('DATA_NOT_FOUND', `POI ${body.poiId} 不存在`);
+    poiIdToAdd = body.poiId;
+  } else if ('name' in body || 'lat' in body || 'lng' in body) {
+    poiIdToAdd = await findOrCreatePoi(db, normalizeFindOrCreatePoiPayload(body));
+  } else {
+    throw new AppError('DATA_VALIDATION', '須提供 poiId 或 { name, lat, lng }');
   }
 
-  const poiExists = await db
-    .prepare('SELECT id FROM pois WHERE id = ?')
-    .bind(body.poiId)
-    .first();
-  if (!poiExists) throw new AppError('DATA_NOT_FOUND', `POI ${body.poiId} 不存在`);
-
-  const result = await addAlternate(db, eid, body.poiId, body.entryPoisVersion);
+  const result = await addAlternate(db, eid, poiIdToAdd, entryPoisVersion);
 
   // Audit log (round 4 fix S1 — was missing on all alternates endpoints)
   await logAudit(db, {
@@ -52,12 +79,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     recordId: eid,
     action: 'insert',
     changedBy: auth.email,
-    diffJson: JSON.stringify({ alt_added: body.poiId, sort_order: result.sortOrder }),
+    diffJson: JSON.stringify({ alt_added: poiIdToAdd, sort_order: result.sortOrder }),
   });
 
   return json({
     entryId: eid,
-    poiId: body.poiId,
+    poiId: poiIdToAdd,
     sortOrder: result.sortOrder,
     entryPoisVersion: result.version,
   }, 201);

@@ -264,7 +264,7 @@ export default function TravelPill({
   const staleChip = isStale ? (
     <span
       className="tp-travel-pill-stale"
-      aria-label="車程未更新 — 新首選與舊資料 distance 差距 > 20%"
+      aria-label="車程未更新 — 新正選與舊資料 distance 差距 > 20%"
       data-testid="travel-pill-stale"
     >
       <span aria-hidden="true">⚠</span>

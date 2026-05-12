@@ -35,9 +35,9 @@ import StopLightbox from './StopLightbox';
 // 2026-05-03 modal-to-fullpage migration: EntryActionPopover 由 /trip/:id/stop/:eid/(copy|move) page 取代。
 // DayOption type 抽到 src/lib/entryAction.ts 給 caller (TripPage dayOptions) 共用。
 import { useNavigate } from 'react-router-dom';
-import { Restaurant, type RestaurantData } from './Restaurant';
+import MapLinks from './MapLinks';
 import TravelPill from './TravelPill';
-import type { TimelineEntryData } from './TimelineEvent';
+import type { StopPoiOptionData, TimelineEntryData } from './TimelineEvent';
 import { parseTimeRange, formatDurationCompact, deriveTypeMeta } from '../../lib/timelineUtils';
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { useTripSegments } from '../../hooks/useTripSegments';
@@ -145,12 +145,10 @@ const SCOPED_STYLES = `
 .ocean-rail-head[aria-expanded="true"] .ocean-rail-caret { transform: rotate(90deg); color: var(--color-accent-deep); }
 .ocean-rail-caret { transition: transform 120ms; display: inline-block; }
 
-/* 2026-05-01 餐廳推薦 section — 顯示 entry.infoBoxes 中 type='restaurants' 的卡片。
- * 排序按 sortOrder 升冪：第一筆 hero（accent 邊框 + 漸層底），其餘 standard。
- * ≥2 家時前一張和後續間插「備選」divider。1 家走 standard 不分 hero/alt。
- * 全展開無收合（user 拍板）。 */
-.tp-rail-rest-list { display: flex; flex-direction: column; gap: 8px; }
-.tp-rail-rest-alt-heading {
+/* Entry POI choices — one primary (sortOrder=1) followed by alternates.
+ * Same layout for restaurants and non-restaurant stops. */
+.tp-rail-poi-list { display: flex; flex-direction: column; gap: 8px; }
+.tp-rail-poi-alt-heading {
   display: flex; align-items: center; gap: 10px;
   font-size: var(--font-size-eyebrow);
   font-weight: 700;
@@ -160,12 +158,65 @@ const SCOPED_STYLES = `
   margin: 6px 0 -2px;
   padding-left: 2px;
 }
-.tp-rail-rest-alt-heading::after {
+.tp-rail-poi-alt-heading::after {
   content: ''; flex: 1; height: 1px; background: var(--color-border);
 }
-/* Restaurant.tsx 內的 .rest-card 預設 margin: 8px 0；放進 list 用 gap:8 控
- * 間距，這裡覆蓋 margin 為 0 避免 double spacing。 */
-.tp-rail-rest-list .rest-card { margin: 0; }
+.tp-rail-poi-card {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  transition: border-color 160ms var(--transition-timing-function-apple);
+}
+.tp-rail-poi-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border)); }
+.tp-rail-poi-card[data-variant="primary"] {
+  border-color: var(--color-accent);
+  background: linear-gradient(180deg, var(--color-accent-subtle) 0%, var(--color-background) 44%);
+}
+.tp-rail-poi-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; row-gap: 4px; }
+.tp-rail-poi-name {
+  font-size: var(--font-size-callout);
+  font-weight: 700;
+  color: var(--color-foreground);
+  line-height: 1.35;
+}
+.tp-rail-poi-role {
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  color: var(--color-accent-deep);
+  background: var(--color-accent-subtle);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+}
+.tp-rail-poi-type {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  background: var(--color-tertiary);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+}
+.tp-rail-poi-meta {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.tp-rail-poi-desc {
+  font-size: var(--font-size-footnote);
+  color: var(--color-foreground);
+  margin-top: 6px;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tp-rail-poi-note {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  margin-top: 4px;
+  line-height: 1.55;
+}
 
 /* 2026-04-29 mockup parity:expanded toolbar 從 body 上方移到底部(mockup S12
  * Variant A 規範)。margin-top + padding-top + border-top 視覺分隔 body 內容。
@@ -247,6 +298,52 @@ interface RailRowProps {
   isNow: boolean;
   isLast: boolean;
   dayId?: number | null;
+}
+
+const POI_TYPE_LABEL: Record<string, string> = {
+  restaurant: '餐廳',
+  attraction: '景點',
+  shopping: '購物',
+  hotel: '住宿',
+  parking: '停車',
+  transport: '交通',
+  activity: '活動',
+  other: '其他',
+};
+
+function StopPoiChoiceCard({
+  poi,
+  variant,
+}: {
+  poi: StopPoiOptionData;
+  variant: 'primary' | 'alternate';
+}) {
+  const metaParts: string[] = [];
+  if (typeof poi.rating === 'number') metaParts.push(`★ ${poi.rating.toFixed(1)}`);
+  if (poi.price) metaParts.push(poi.price);
+  if (poi.hours) metaParts.push(poi.hours);
+  if (poi.reservation) metaParts.push(poi.reservation);
+  const typeLabel = poi.category || (poi.type ? POI_TYPE_LABEL[poi.type] ?? poi.type : null);
+
+  return (
+    <article className="tp-rail-poi-card" data-variant={variant}>
+      <div className="tp-rail-poi-head">
+        {variant === 'primary' && <span className="tp-rail-poi-role">正選</span>}
+        <span className="tp-rail-poi-name">{poi.name}</span>
+        {typeLabel && <span className="tp-rail-poi-type">{typeLabel}</span>}
+        {poi.location && <MapLinks location={poi.location} inline />}
+      </div>
+      {metaParts.length > 0 && (
+        <div className="tp-rail-poi-meta">{metaParts.join(' · ')}</div>
+      )}
+      {poi.description && (
+        <MarkdownText text={poi.description} as="div" className="tp-rail-poi-desc" inline />
+      )}
+      {poi.note && (
+        <MarkdownText text={poi.note} as="div" className="tp-rail-poi-note" inline />
+      )}
+    </article>
+  );
 }
 
 const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId }: RailRowProps) {
@@ -362,14 +459,13 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const hasLocations = !!entry.locations && entry.locations.length > 0;
   const hasNote = !!entry.note?.trim();
 
-  // 2026-05-01 餐廳推薦 — 從 infoBoxes 取出 type='restaurants' 並按 sortOrder 升冪。
-  // 1 家：standard variant；≥2 家：第一筆 hero + 後續 standard（中間插「備選」divider）
-  const sortedRestaurants: RestaurantData[] = useMemo(() => {
-    const box = entry.infoBoxes?.find((b) => b.type === 'restaurants');
-    const items = box?.restaurants ?? [];
-    return [...items].sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
-  }, [entry.infoBoxes]);
-  const hasRestaurants = sortedRestaurants.length > 0;
+  const stopPois: StopPoiOptionData[] = useMemo(() => {
+    const items = entry.stopPois ?? [];
+    return [...items]
+      .filter((p) => !!p.name?.trim())
+      .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
+  }, [entry.stopPois]);
+  const hasStopChoices = stopPois.length > 1;
 
   return (
     <>
@@ -487,17 +583,17 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
             </div>
           )}
 
-          {hasRestaurants && (
+          {hasStopChoices && (
             <div className="tp-rail-detail-section">
-              <h4>餐廳推薦</h4>
-              <div className="tp-rail-rest-list" data-testid={`timeline-rail-rest-${entry.id}`}>
-                {sortedRestaurants.map((r, i) => {
-                  const isHero = sortedRestaurants.length > 1 && i === 0;
-                  const showAltDivider = sortedRestaurants.length > 1 && i === 1;
+              <h4>景點選擇</h4>
+              <div className="tp-rail-poi-list" data-testid={`timeline-rail-pois-${entry.id}`}>
+                {stopPois.map((poi, i) => {
+                  const isPrimary = i === 0;
+                  const showAltDivider = i === 1;
                   return (
-                    <div key={`${r.name}-${i}`} onClick={(e) => e.stopPropagation()}>
-                      {showAltDivider && <h5 className="tp-rail-rest-alt-heading">備選</h5>}
-                      <Restaurant restaurant={r} variant={isHero ? 'hero' : 'standard'} />
+                    <div key={`${poi.poiId ?? poi.name}-${i}`} onClick={(e) => e.stopPropagation()}>
+                      {showAltDivider && <h5 className="tp-rail-poi-alt-heading">備選</h5>}
+                      <StopPoiChoiceCard poi={poi} variant={isPrimary ? 'primary' : 'alternate'} />
                     </div>
                   );
                 })}
@@ -618,7 +714,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 <Icon name="pencil" />
               </button>
             )}
-            {/* v2.23.8 變更 POI — navigate to ChangePoiPage */}
+            {/* v2.23.8 置換景點 — navigate to ChangePoiPage */}
             {tripId && entry.id != null && (
               <button
                 type="button"
@@ -627,8 +723,8 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                   e.stopPropagation();
                   navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entry.id}/change-poi`);
                 }}
-                aria-label="變更 POI"
-                title="變更 POI"
+                aria-label="置換景點"
+                title="置換景點"
                 data-testid={`timeline-rail-change-poi-${entry.id}`}
               >
                 <Icon name="pin" />

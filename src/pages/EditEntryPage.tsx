@@ -302,7 +302,7 @@ const SCOPED_STYLES = `
   margin-top: 12px;
 }
 
-/* v2.27.0 multi-POI alternates section (V1 inline button list) */
+/* v2.27.0 multi-POI alternates section */
 .tp-edit-entry-alternates { margin-bottom: 28px; }
 .tp-edit-entry-alternates-h {
   display: flex; align-items: center; justify-content: space-between;
@@ -419,9 +419,18 @@ const SCOPED_STYLES = `
   color: var(--color-destructive);
   border-color: var(--color-destructive);
 }
+.tp-edit-entry-alt-empty {
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote);
+  line-height: 1.5;
+  padding: 10px 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-secondary);
+}
 
 .tp-edit-entry-alt-add-row {
-  display: flex; gap: 8px; margin-top: 8px;
+  display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
 }
 .tp-edit-entry-alt-add-btn {
   flex: 1;
@@ -857,7 +866,7 @@ export default function EditEntryPage() {
     const d = haversineMeters({ lat, lng }, center);
     if (d <= CROSS_REGION_THRESHOLD_M) return null;
     const km = d >= 100_000 ? Math.round(d / 1000) : Number((d / 1000).toFixed(1));
-    return `新首選距離本日其他點約 ${km} km，可能跨區，前後車程會誤算。確定要設為首選？`;
+    return `新正選距離本日其他點約 ${km} km，可能跨區，前後車程會誤算。確定要設為正選？`;
   }, [altSwapConfirm, siblingMasterCoords]);
 
   const handleSave = useCallback(async () => {
@@ -1039,12 +1048,12 @@ export default function EditEntryPage() {
       // adjacent segments (backend marked computed_at=NULL in the setMaster batch).
       window.dispatchEvent(new CustomEvent('tp-segment-updated', { detail: { tripId } }));
       await refreshEntryPois();
-      showToast(`已將「${alt.name}」設為首選`, 'success');
+      showToast(`已將「${alt.name}」設為正選`, 'success');
     } catch (err) {
       // Close modal first so altError 在 alternates 區塊正常顯示，不會被 modal 蓋住
       // (Codex 2nd-pass review UX finding)。
       setAltSwapConfirm(null);
-      setAltError(err instanceof Error ? err.message : '設為首選失敗');
+      setAltError(err instanceof Error ? err.message : '設為正選失敗');
     } finally {
       setAltPending(null);
     }
@@ -1073,13 +1082,13 @@ export default function EditEntryPage() {
       });
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`移除備案失敗 (${res.status})${text ? `: ${text.slice(0, 120)}` : ''}`);
+        throw new Error(`移除備選失敗 (${res.status})${text ? `: ${text.slice(0, 120)}` : ''}`);
       }
       setAltRemoveConfirm(null);
       await refreshEntryPois();
-      showToast(`已移除備案「${alt.name}」`, 'success');
+      showToast(`已移除備選「${alt.name}」`, 'success');
     } catch (err) {
-      setAltError(err instanceof Error ? err.message : '移除備案失敗');
+      setAltError(err instanceof Error ? err.message : '移除備選失敗');
       setAltRemoveConfirm(null);
     } finally {
       setAltPending(null);
@@ -1198,8 +1207,8 @@ export default function EditEntryPage() {
                   <button
                     type="button"
                     className="tp-edit-entry-poi-action"
-                    aria-label="變更景點"
-                    title="變更景點"
+                    aria-label="置換景點"
+                    title="置換景點"
                     onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi`)}
                     data-testid="edit-entry-change-poi"
                   >
@@ -1208,12 +1217,12 @@ export default function EditEntryPage() {
                 </div>
               )}
 
-              {/* v2.27.0 Alternates section — V1 inline button list */}
-              {alternates.length > 0 && (
+              {/* v2.27.0 Alternates section — consistent for 0-N alternates. */}
+              {masterSummary && (
                 <section className="tp-edit-entry-alternates" data-testid="edit-entry-alternates">
                   <div className="tp-edit-entry-alternates-h">
                     <div className="h-left">
-                      <span className="label">備案</span>
+                      <span className="label">備選</span>
                       <span className="tp-edit-entry-alt-chip">
                         <span className="tp-edit-entry-alt-chip-dot" />
                         {alternates.length} 個
@@ -1223,109 +1232,97 @@ export default function EditEntryPage() {
                   {altError && (
                     <div className="tp-edit-entry-alt-error" role="alert">{altError}</div>
                   )}
-                  {alternates.map((alt, idx) => (
-                    <div
-                      key={alt.poiId}
-                      className={`tp-edit-entry-alt-row${altPending === alt.poiId ? ' is-pending' : ''}`}
-                      data-testid={`edit-entry-alt-row-${alt.poiId}`}
-                    >
-                      <span className="tp-edit-entry-alt-order">{idx + 2}</span>
-                      <div className="tp-edit-entry-alt-meta">
-                        <div className="tp-edit-entry-alt-name">{alt.name}</div>
-                        {alt.type && (
-                          <div className="tp-edit-entry-alt-category">
-                            {POI_TYPE_LABEL[alt.type] ?? alt.type}
-                            {alt.rating != null && (
-                              <span className="tp-edit-entry-alt-rating">
-                                <Icon name="star" /> {alt.rating.toFixed(1)}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {/* v2.28.0 — restaurant inline info: price · hours · reservation */}
-                        {(alt.price || alt.hours || alt.reservation) && (
-                          <div className="tp-edit-entry-alt-extra" data-testid={`edit-entry-alt-extra-${alt.poiId}`}>
-                            {alt.price && <span className="alt-extra-chip price">{alt.price}</span>}
-                            {alt.hours && <span className="alt-extra-chip hours">{alt.hours}</span>}
-                            {alt.reservation && (
-                              alt.reservationUrl ? (
-                                <a
-                                  href={alt.reservationUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="alt-extra-chip reservation is-link"
-                                >
-                                  {alt.reservation}
-                                </a>
-                              ) : (
-                                <span className="alt-extra-chip reservation">{alt.reservation}</span>
-                              )
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className="tp-edit-entry-alt-actions">
-                        <button
-                          type="button"
-                          aria-label={`上移 ${alt.name}`}
-                          disabled={idx === 0 || altPending != null}
-                          onClick={() => void handleReorderAlternate(alt.poiId, 'up')}
-                          data-testid={`edit-entry-alt-up-${alt.poiId}`}
-                        ><Icon name="chevron-up" /></button>
-                        <button
-                          type="button"
-                          aria-label={`下移 ${alt.name}`}
-                          disabled={idx === alternates.length - 1 || altPending != null}
-                          onClick={() => void handleReorderAlternate(alt.poiId, 'down')}
-                          data-testid={`edit-entry-alt-down-${alt.poiId}`}
-                        ><Icon name="chevron-down" /></button>
-                        <button
-                          type="button"
-                          className="set-master"
-                          disabled={altPending != null}
-                          onClick={() => setAltSwapConfirm(alt)}
-                          data-testid={`edit-entry-alt-setmaster-${alt.poiId}`}
-                        >
-                          設為首選
-                        </button>
-                        <button
-                          type="button"
-                          className="alt-delete"
-                          aria-label={`刪除 ${alt.name}`}
-                          disabled={altPending != null}
-                          onClick={() => handleRemoveAlternate(alt)}
-                          data-testid={`edit-entry-alt-delete-${alt.poiId}`}
-                        ><Icon name="x-mark" /></button>
-                      </div>
+                  {alternates.length === 0 ? (
+                    <div className="tp-edit-entry-alt-empty" data-testid="edit-entry-alt-empty">
+                      還沒有備選景點。可從搜尋或收藏加入，之後再設為正選。
                     </div>
-                  ))}
+                  ) : (
+                    alternates.map((alt, idx) => (
+                      <div
+                        key={alt.poiId}
+                        className={`tp-edit-entry-alt-row${altPending === alt.poiId ? ' is-pending' : ''}`}
+                        data-testid={`edit-entry-alt-row-${alt.poiId}`}
+                      >
+                        <span className="tp-edit-entry-alt-order">{idx + 2}</span>
+                        <div className="tp-edit-entry-alt-meta">
+                          <div className="tp-edit-entry-alt-name">{alt.name}</div>
+                          {alt.type && (
+                            <div className="tp-edit-entry-alt-category">
+                              {POI_TYPE_LABEL[alt.type] ?? alt.type}
+                              {alt.rating != null && (
+                                <span className="tp-edit-entry-alt-rating">
+                                  <Icon name="star" /> {alt.rating.toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {/* v2.28.0 — restaurant inline info: price · hours · reservation */}
+                          {(alt.price || alt.hours || alt.reservation) && (
+                            <div className="tp-edit-entry-alt-extra" data-testid={`edit-entry-alt-extra-${alt.poiId}`}>
+                              {alt.price && <span className="alt-extra-chip price">{alt.price}</span>}
+                              {alt.hours && <span className="alt-extra-chip hours">{alt.hours}</span>}
+                              {alt.reservation && (
+                                alt.reservationUrl ? (
+                                  <a
+                                    href={alt.reservationUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="alt-extra-chip reservation is-link"
+                                  >
+                                    {alt.reservation}
+                                  </a>
+                                ) : (
+                                  <span className="alt-extra-chip reservation">{alt.reservation}</span>
+                                )
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="tp-edit-entry-alt-actions">
+                          <button
+                            type="button"
+                            aria-label={`上移 ${alt.name}`}
+                            disabled={idx === 0 || altPending != null}
+                            onClick={() => void handleReorderAlternate(alt.poiId, 'up')}
+                            data-testid={`edit-entry-alt-up-${alt.poiId}`}
+                          ><Icon name="chevron-up" /></button>
+                          <button
+                            type="button"
+                            aria-label={`下移 ${alt.name}`}
+                            disabled={idx === alternates.length - 1 || altPending != null}
+                            onClick={() => void handleReorderAlternate(alt.poiId, 'down')}
+                            data-testid={`edit-entry-alt-down-${alt.poiId}`}
+                          ><Icon name="chevron-down" /></button>
+                          <button
+                            type="button"
+                            className="set-master"
+                            disabled={altPending != null}
+                            onClick={() => setAltSwapConfirm(alt)}
+                            data-testid={`edit-entry-alt-setmaster-${alt.poiId}`}
+                          >
+                            設為正選
+                          </button>
+                          <button
+                            type="button"
+                            className="alt-delete"
+                            aria-label={`刪除 ${alt.name}`}
+                            disabled={altPending != null}
+                            onClick={() => handleRemoveAlternate(alt)}
+                            data-testid={`edit-entry-alt-delete-${alt.poiId}`}
+                          ><Icon name="x-mark" /></button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                   <div className="tp-edit-entry-alt-add-row">
                     <button
                       type="button"
                       className="tp-edit-entry-alt-add-btn"
                       onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate`)}
                       data-testid="edit-entry-alt-add-search"
-                    >＋ 從搜尋加備案</button>
-                    <button
-                      type="button"
-                      className="tp-edit-entry-alt-add-btn"
-                      onClick={() => navigate(`/favorites?addToEntry=${entryId}&tripId=${encodeURIComponent(tripId!)}`)}
-                      data-testid="edit-entry-alt-add-fav"
-                    >＋ 從收藏加備案</button>
+                    >＋ 加入備選景點</button>
                   </div>
                 </section>
-              )}
-
-              {/* 0 alternates 時 hide section，但仍提供 add CTA（在 POI 卡下方） */}
-              {alternates.length === 0 && masterSummary && (
-                <div className="tp-edit-entry-alt-add-row" data-testid="edit-entry-alt-add-zero" style={{ marginBottom: 24 }}>
-                  <button
-                    type="button"
-                    className="tp-edit-entry-alt-add-btn"
-                    onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate`)}
-                    data-testid="edit-entry-alt-add-search-zero"
-                  >＋ 加備案景點</button>
-                </div>
               )}
 
               {/* Time section */}
@@ -1507,12 +1504,12 @@ export default function EditEntryPage() {
       {/* Master swap confirm (v2.27.0) with optional cross-region warning */}
       <ConfirmModal
         open={altSwapConfirm != null}
-        title="設為首選"
+        title="設為正選"
         message={altSwapConfirm && masterSummary
-          ? `將「${altSwapConfirm.name}」設為首選，原首選「${masterSummary.name}」會變備案，前後行程時間會重新計算。`
+          ? `將「${altSwapConfirm.name}」設為正選，原正選「${masterSummary.name}」會變備選，前後行程時間會重新計算。`
           : ''}
         warning={crossRegionWarning ?? undefined}
-        confirmLabel="設為首選"
+        confirmLabel="設為正選"
         cancelLabel="取消"
         busy={altPending != null}
         onConfirm={() => altSwapConfirm && void handleSetAsMaster(altSwapConfirm)}
@@ -1522,9 +1519,9 @@ export default function EditEntryPage() {
       {/* v2.27.0 Remove alternate confirm */}
       <ConfirmModal
         open={altRemoveConfirm != null}
-        title="移除備案"
-        message={altRemoveConfirm ? `將從這個 stop 移除備案「${altRemoveConfirm.name}」。POI 本身不會被刪除，仍可從搜尋或收藏再次加入。` : ''}
-        confirmLabel="移除備案"
+        title="移除備選"
+        message={altRemoveConfirm ? `將從這個 stop 移除備選「${altRemoveConfirm.name}」。POI 本身不會被刪除，仍可從搜尋或收藏再次加入。` : ''}
+        confirmLabel="移除備選"
         cancelLabel="取消"
         busy={altPending != null}
         onConfirm={() => altRemoveConfirm && void handleConfirmRemoveAlternate(altRemoveConfirm)}
@@ -1536,7 +1533,7 @@ export default function EditEntryPage() {
         open={showDeleteStopConfirm}
         title="刪除整個 stop？"
         message={masterSummary
-          ? `將同時刪除：主景點「${masterSummary.name}」${alternates.length > 0 ? ` + ${alternates.length} 個備案` : ''}。前後路線時間也會重算。此操作不可復原。`
+          ? `將同時刪除：正選景點「${masterSummary.name}」${alternates.length > 0 ? ` + ${alternates.length} 個備選` : ''}。前後路線時間也會重算。此操作不可復原。`
           : ''}
         confirmLabel="刪除 stop"
         cancelLabel="取消"

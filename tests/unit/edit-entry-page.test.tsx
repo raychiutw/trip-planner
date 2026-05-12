@@ -268,13 +268,13 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
     expect(screen.getByText(/編輯景點/).textContent).toContain('編輯景點');
   });
 
-  it('POI 卡右側顯示「變更景點」icon button + click navigate 到 change-poi route', async () => {
+  it('POI 卡右側顯示「置換景點」icon button + click navigate 到 change-poi route', async () => {
     renderPage();
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-change-poi')).toBeTruthy();
     });
     const btn = screen.getByTestId('edit-entry-change-poi') as HTMLButtonElement;
-    expect(btn.getAttribute('aria-label')).toContain('變更景點');
+    expect(btn.getAttribute('aria-label')).toContain('置換景點');
     fireEvent.click(btn);
     expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi');
   });
@@ -473,16 +473,17 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     expect(screen.getByTestId('edit-entry-alt-row-202')).toBeTruthy();
   });
 
-  it('alternates 為 0 → section hidden + 顯示單一「加備案景點」CTA', async () => {
+  it('alternates 為 0 → section 仍渲染 + 可進同一個加入備選畫面', async () => {
     setupAltsMocks(DAY_DATA_NO_ALTS);
     renderPage();
     await waitFor(() => {
-      expect(screen.queryByTestId('edit-entry-alt-add-zero')).toBeTruthy();
+      expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy();
     });
-    expect(screen.queryByTestId('edit-entry-alternates')).toBeNull();
+    expect(screen.queryByTestId('edit-entry-alt-empty')).toBeTruthy();
+    expect(screen.getByTestId('edit-entry-alt-add-search').textContent).toContain('加入備選景點');
   });
 
-  it('每 row 含 ↑↓ / 設為首選 / × 四個 button', async () => {
+  it('每 row 含 ↑↓ / 設為正選 / × 四個 button', async () => {
     setupAltsMocks();
     renderPage();
     await waitFor(() => {
@@ -507,7 +508,7 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     expect((screen.getByTestId('edit-entry-alt-up-202') as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('Tap 設為首選 → 開 confirm modal 含原首選與目標 POI 名稱', async () => {
+  it('Tap 設為正選 → 開 confirm modal 含原正選與目標 POI 名稱', async () => {
     setupAltsMocks();
     renderPage();
     await waitFor(() => {
@@ -522,7 +523,7 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     expect(modalText).toMatch(/花織そば/);
   });
 
-  it('Confirm 設為首選 → 呼叫 PATCH /master with poiId + entryPoisVersion', async () => {
+  it('Confirm 設為正選 → 呼叫 PATCH /master with poiId + entryPoisVersion', async () => {
     setupAltsMocks();
     renderPage();
     await waitFor(() => {
@@ -558,7 +559,7 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     const modalText = screen.getByTestId('confirm-modal').textContent ?? '';
     expect(modalText).toMatch(/刪除整個 stop/);
     expect(modalText).toMatch(/花織そば/);
-    expect(modalText).toMatch(/2 個備案/);
+    expect(modalText).toMatch(/2 個備選/);
   });
 
   it('Confirm 刪除 stop → 呼叫 DELETE /entries/:id + navigate back', async () => {
@@ -622,7 +623,7 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     });
   });
 
-  it('「從搜尋加備案」按鈕 → navigate /trip/:id/stop/:eid/change-poi?mode=alternate', async () => {
+  it('「加入備選景點」按鈕 → navigate /trip/:id/stop/:eid/change-poi?mode=alternate', async () => {
     setupAltsMocks();
     renderPage();
     await waitFor(() => {
@@ -754,7 +755,7 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
 // v2.28.1 — 跨區警告 (master swap confirm modal)
 //
 // 當 swap 目標 POI 距當日其他 entries 平均位置 > 50km，confirm modal 顯紅字
-// 「⚠ 新首選距離本日其他點 X km，可能跨區，確定？」。
+// 「⚠ 新正選距離本日其他點 X km，可能跨區，確定？」。
 // 反向：< 50km 不顯。
 // =========================================================================
 describe('EditEntryPage — v2.28.1 跨區警告', () => {
@@ -771,7 +772,7 @@ describe('EditEntryPage — v2.28.1 跨區警告', () => {
     } as unknown as Response);
   }
 
-  it('Tap 設為首選（跨區 alternate, > 50km）→ confirm modal 顯跨區警告', async () => {
+  it('Tap 設為正選（跨區 alternate, > 50km）→ confirm modal 顯跨區警告', async () => {
     setupGeoMocks();
     renderPage();
     await waitFor(() => {
@@ -789,7 +790,7 @@ describe('EditEntryPage — v2.28.1 跨區警告', () => {
     expect(warning.textContent).toMatch(/\d+\s*km/);
   });
 
-  it('Tap 設為首選（同區 alternate, < 50km）→ confirm modal 不顯跨區警告', async () => {
+  it('Tap 設為正選（同區 alternate, < 50km）→ confirm modal 不顯跨區警告', async () => {
     setupGeoMocks();
     renderPage();
     await waitFor(() => {

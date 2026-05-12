@@ -5,6 +5,63 @@
  */
 import { AppError } from './_errors';
 
+const POI_TYPE_WHITELIST = [
+  'hotel',
+  'restaurant',
+  'shopping',
+  'parking',
+  'attraction',
+  'transport',
+  'activity',
+  'other',
+] as const;
+
+export type PoiType = (typeof POI_TYPE_WHITELIST)[number];
+
+const POI_TYPE_SET = new Set<string>(POI_TYPE_WHITELIST);
+
+export function normalizePoiType(raw: unknown, fallback: PoiType = 'attraction'): PoiType {
+  if (raw == null || raw === '') return fallback;
+  if (typeof raw !== 'string') {
+    throw new AppError('DATA_VALIDATION', 'type 必須是字串');
+  }
+  const type = raw.trim().toLowerCase();
+  if (type === '') return fallback;
+  if (!POI_TYPE_SET.has(type)) {
+    throw new AppError('DATA_VALIDATION', `不支援的 POI type: ${raw}`);
+  }
+  return type as PoiType;
+}
+
+function normalizeOptionalString(raw: unknown, field: string): string | null {
+  if (raw == null || raw === '') return null;
+  if (typeof raw !== 'string') {
+    throw new AppError('DATA_VALIDATION', `${field} 必須是字串`);
+  }
+  const value = raw.trim();
+  return value.length > 0 ? value : null;
+}
+
+function normalizeCoordinate(raw: unknown, field: 'lat' | 'lng'): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+    throw new AppError('DATA_VALIDATION', `${field} 必須是數字`);
+  }
+  const min = field === 'lat' ? -90 : -180;
+  const max = field === 'lat' ? 90 : 180;
+  if (raw < min || raw > max) {
+    throw new AppError('DATA_VALIDATION', `${field} 超出有效範圍`);
+  }
+  return raw;
+}
+
+function normalizeOptionalRating(raw: unknown): number | null {
+  if (raw == null) return null;
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+    throw new AppError('DATA_VALIDATION', 'rating 必須是數字');
+  }
+  return raw;
+}
+
 export interface FindOrCreatePoiData {
   name: string;
   type: string;
@@ -25,6 +82,35 @@ export interface FindOrCreatePoiData {
   country?: string | null;
   // Migration 0054 (v2.25.4): price 從 trip_pois 移到 pois master
   price?: string | null;
+}
+
+export interface FindOrCreatePoiPayload {
+  name?: unknown;
+  type?: unknown;
+  lat?: unknown;
+  lng?: unknown;
+  rating?: unknown;
+  category?: unknown;
+  address?: unknown;
+  country?: unknown;
+  source?: unknown;
+}
+
+export function normalizeFindOrCreatePoiPayload(raw: FindOrCreatePoiPayload): FindOrCreatePoiData {
+  const name = normalizeOptionalString(raw.name, 'name');
+  if (!name) throw new AppError('DATA_VALIDATION', 'name 必須是非空字串');
+
+  return {
+    name,
+    type: normalizePoiType(raw.type),
+    lat: normalizeCoordinate(raw.lat, 'lat'),
+    lng: normalizeCoordinate(raw.lng, 'lng'),
+    rating: normalizeOptionalRating(raw.rating),
+    category: normalizeOptionalString(raw.category, 'category'),
+    address: normalizeOptionalString(raw.address, 'address'),
+    country: normalizeOptionalString(raw.country, 'country'),
+    source: normalizeOptionalString(raw.source, 'source') ?? 'google',
+  };
 }
 
 const COALESCE_FIELDS = [

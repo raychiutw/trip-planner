@@ -149,6 +149,10 @@ describe('toTimelineEntry — entry.poi 優先於 entry 欄位', () => {
     expect(entry.googleRating).toBe(4.6);
     expect(entry.locations[0].name).toBe('第一順位拉麵');
     expect(entry.locations[0].mapcode).toBe('22 222 222*22');
+    expect(entry.stopPois.map((p) => [p.name, p.sortOrder])).toEqual([
+      ['第一順位拉麵', 1],
+      ['備選沖繩麵', 2],
+    ]);
     expect(entry.masterLat).toBe(26.222);
     expect(entry.masterLng).toBe(127.222);
   });
