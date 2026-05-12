@@ -108,6 +108,50 @@ describe('toTimelineEntry — entry.poi 優先於 entry 欄位', () => {
     });
     expect(entry.locations).toBeNull();
   });
+
+  it('用餐 stop 以 stopPois sortOrder=1 作為 canonical POI，覆蓋 legacy entry.poi', () => {
+    const entry = toTimelineEntry({
+      title: '午餐',
+      poi: {
+        id: 1,
+        type: 'attraction',
+        name: 'Legacy 景點',
+        mapcode: '11 111 111*11',
+        googleRating: 2.1,
+        lat: 26.1,
+        lng: 127.1,
+      },
+      stopPois: [
+        {
+          poiId: 20,
+          sortOrder: 1,
+          type: 'restaurant',
+          name: '第一順位拉麵',
+          mapcode: '22 222 222*22',
+          rating: 4.6,
+          lat: 26.222,
+          lng: 127.222,
+        },
+        {
+          poiId: 21,
+          sortOrder: 2,
+          type: 'restaurant',
+          name: '備選沖繩麵',
+          rating: 4.1,
+          lat: 26.333,
+          lng: 127.333,
+        },
+      ],
+    });
+    expect(entry.title).toBe('午餐');
+    expect(entry.displayTitle).toBe('第一順位拉麵');
+    expect(entry.poiType).toBe('restaurant');
+    expect(entry.googleRating).toBe(4.6);
+    expect(entry.locations[0].name).toBe('第一順位拉麵');
+    expect(entry.locations[0].mapcode).toBe('22 222 222*22');
+    expect(entry.masterLat).toBe(26.222);
+    expect(entry.masterLng).toBe(127.222);
+  });
 });
 
 /* ===== URL trip 參數優先權（使用 jsdom window.location）===== */

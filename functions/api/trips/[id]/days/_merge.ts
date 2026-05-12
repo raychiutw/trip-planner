@@ -2,6 +2,13 @@
  * 共用的 POI merge 與 Day 組裝邏輯（單天 GET 與 batch GET 共用）
  */
 
+type EntryPoiBucket = {
+  master: Record<string, unknown> | null;
+  alternates: Record<string, unknown>[];
+  stopPois: Record<string, unknown>[];
+  version: string;
+};
+
 /**
  * 從任一帶 `poi_id` 欄位的 row set 取得所有關聯的 pois，建 poi_id → pois row 查找表。
  * 同時支援 trip_pois（context 關聯）與 trip_entries（Phase 2 entry.poi_id）。
@@ -89,8 +96,8 @@ function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Re
 export async function fetchEntryPoisByEntries(
   db: D1Database,
   entryIds: number[],
-): Promise<Map<number, { master: Record<string, unknown> | null; alternates: Record<string, unknown>[]; version: string }>> {
-  const result = new Map<number, { master: Record<string, unknown> | null; alternates: Record<string, unknown>[]; version: string }>();
+): Promise<Map<number, EntryPoiBucket>> {
+  const result = new Map<number, EntryPoiBucket>();
   if (entryIds.length === 0) return result;
 
   const placeholders = entryIds.map(() => '?').join(',');
@@ -109,7 +116,7 @@ export async function fetchEntryPoisByEntries(
       .prepare(
         `SELECT tep.entry_id, tep.poi_id, tep.sort_order, tep.updated_at,
                 p.name, p.lat, p.lng, p.type, p.category,
-                p.hours, p.rating, p.price,
+                p.hours, p.rating, p.price, p.mapcode, p.photos, p.source,
                 tp.reservation, tp.reservation_url, tp.description, tp.note
          FROM trip_entry_pois tep
          JOIN pois p ON p.id = tep.poi_id
@@ -133,6 +140,9 @@ export async function fetchEntryPoisByEntries(
         hours: string | null;
         rating: number | null;
         price: string | null;
+        mapcode: string | null;
+        photos: string | null;
+        source: string | null;
         reservation: string | null;
         reservation_url: string | null;
         description: string | null;
@@ -146,22 +156,26 @@ export async function fetchEntryPoisByEntries(
 
   // Seed buckets with versions (so entries with no trip_entry_pois rows still get a version)
   for (const v of versionsQuery.results) {
-    result.set(v.id, { master: null, alternates: [], version: String(v.entry_pois_version) });
+    result.set(v.id, { master: null, alternates: [], stopPois: [], version: String(v.entry_pois_version) });
   }
 
   for (const r of poisQuery.results) {
     let bucket = result.get(r.entry_id);
     if (!bucket) {
-      bucket = { master: null, alternates: [], version: '0' };
+      bucket = { master: null, alternates: [], stopPois: [], version: '0' };
       result.set(r.entry_id, bucket);
     }
     const poiInfo: Record<string, unknown> = {
       poi_id: r.poi_id,
+      sort_order: r.sort_order,
       name: r.name,
       lat: r.lat,
       lng: r.lng,
       type: r.type,
       category: r.category,
+      mapcode: r.mapcode,
+      photos: r.photos,
+      source: r.source,
       // v2.28.0 — restaurant 共享屬性（master 也 surface 同欄位以對齊 schema）
       hours: r.hours,
       rating: r.rating,
@@ -171,6 +185,7 @@ export async function fetchEntryPoisByEntries(
       description: r.description,
       note: r.note,
     };
+    bucket.stopPois.push(poiInfo);
     if (r.sort_order === 1) {
       bucket.master = poiInfo;
     } else {
@@ -178,6 +193,66 @@ export async function fetchEntryPoisByEntries(
     }
   }
 
+  return result;
+}
+
+function entryPoiToLegacyPoi(row: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!row || typeof row.poi_id !== 'number') return null;
+  return {
+    id: row.poi_id,
+    type: row.type,
+    name: row.name,
+    description: row.description,
+    note: row.note,
+    category: row.category,
+    mapcode: row.mapcode,
+    lat: row.lat,
+    lng: row.lng,
+    rating: row.rating,
+    hours: row.hours,
+    price: row.price,
+    source: row.source,
+    photos: row.photos,
+  };
+}
+
+const MEAL_STOP_RE = /早餐|早午餐|午餐|晚餐|宵夜|用餐|餐廳|餐厅|食堂|美食|lunch|dinner|breakfast|brunch|supper|meal|restaurant/i;
+
+function bySortOrder(a: unknown, b: unknown): number {
+  const ao = typeof (a as { sort_order?: unknown }).sort_order === 'number'
+    ? (a as { sort_order: number }).sort_order
+    : 0;
+  const bo = typeof (b as { sort_order?: unknown }).sort_order === 'number'
+    ? (b as { sort_order: number }).sort_order
+    : 0;
+  return ao - bo;
+}
+
+function isMealStop(
+  entry: Record<string, unknown>,
+  restaurants: Record<string, unknown>[],
+): boolean {
+  if (!restaurants.some((r) => r.type === 'restaurant')) return false;
+  const blob = `${entry.title ?? ''} ${entry.description ?? ''} ${entry.note ?? ''}`;
+  return MEAL_STOP_RE.test(blob);
+}
+
+function promotedMealStopPois(
+  restaurants: Record<string, unknown>[],
+  storedStopPois: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  const result: Record<string, unknown>[] = [];
+  const seenPoiIds = new Set<number>();
+
+  const push = (row: Record<string, unknown>) => {
+    const poiId = row.poi_id;
+    if (typeof poiId !== 'number' || seenPoiIds.has(poiId)) return;
+    seenPoiIds.add(poiId);
+    result.push({ ...row, sort_order: result.length + 1 });
+  };
+
+  restaurants.filter((r) => r.type === 'restaurant').sort(bySortOrder).forEach(push);
+  storedStopPois.sort(bySortOrder).forEach(push);
   return result;
 }
 
@@ -200,11 +275,11 @@ export function assembleDay(
   entries: Record<string, unknown>[],
   tripPois: Record<string, unknown>[],
   poiMap: Map<number, Record<string, unknown>>,
-  entryPoisMap?: Map<number, { master: Record<string, unknown> | null; alternates: Record<string, unknown>[]; version: string }>,
+  entryPoisMap?: Map<number, EntryPoiBucket>,
 ): Record<string, unknown> {
   let hotel: Record<string, unknown> | null = null;
   const parkingList: Record<string, unknown>[] = [];
-  const restByEntry = new Map<number, unknown[]>();
+  const restByEntry = new Map<number, Record<string, unknown>[]>();
   const shopByEntry = new Map<number, unknown[]>();
 
   for (const tp of tripPois) {
@@ -249,27 +324,43 @@ export function assembleDay(
     } : null;
 
     // Phase 3: entry.poi_id JOIN pois master（spatial 欄位唯一來源）
-    const poiId = e.poi_id as number | null | undefined;
-    const poi = (typeof poiId === 'number' && poiId > 0)
-      ? (poiMap.get(poiId) ?? null)
+    const legacyPoiId = e.poi_id as number | null | undefined;
+    const legacyPoi = (typeof legacyPoiId === 'number' && legacyPoiId > 0)
+      ? (poiMap.get(legacyPoiId) ?? null)
       : null;
 
     // v2.27.0 multi-POI per entry：populate master + alternates from trip_entry_pois。
     // Phase 1 dual-response：保留 legacy `poi` + `poi_id` + 新增 master / alternates / entry_pois_version。
     // entryPoisMap 未提供 (legacy caller) → master/alternates 為 undefined，client selector fallback 走 poi。
     const entryPoiBucket = entryPoisMap?.get(eid);
-    const master = entryPoiBucket?.master ?? null;
-    const alternates = entryPoiBucket?.alternates ?? [];
+    const restaurants = restByEntry.get(eid) ?? [];
+    const storedMaster = entryPoiBucket?.master ?? null;
+    const storedAlternates = entryPoiBucket?.alternates ?? [];
+    const storedStopPois = entryPoiBucket?.stopPois ?? [];
+    const shouldPromoteRestaurant =
+      storedMaster?.type !== 'restaurant' && isMealStop(e, restaurants);
+    const promotedStopPois = shouldPromoteRestaurant
+      ? promotedMealStopPois(restaurants, storedStopPois)
+      : null;
+    const stop_pois = promotedStopPois ?? storedStopPois;
+    const master = promotedStopPois?.[0] ?? storedMaster;
+    const alternates = promotedStopPois
+      ? promotedStopPois.slice(1).map((row) => ({ ...row, sort_order: row.sort_order }))
+      : storedAlternates;
     const entry_pois_version = entryPoiBucket?.version ?? null;
+    const poi = entryPoiToLegacyPoi(master) ?? legacyPoi;
+    const poi_id = typeof poi?.id === 'number' ? poi.id : (legacyPoiId ?? null);
 
     return {
       ...e,
+      poi_id,
       travel,
       poi,
       master,
       alternates,
+      stop_pois,
       entry_pois_version,
-      restaurants: restByEntry.get(eid) ?? [],
+      restaurants,
       shopping: shopByEntry.get(eid) ?? [],
     };
   });

@@ -9,6 +9,7 @@ import type { InfoBoxData } from '../components/trip/InfoBox';
 import type { RestaurantData } from '../components/trip/Restaurant';
 import type { ShopData } from '../components/trip/Shop';
 import type { Day, Entry } from '../types/trip';
+import { getStopDisplayTitle } from './stopDisplay';
 
 /* ===== Entry lookup helpers (shared across pages/components) ===== */
 
@@ -104,6 +105,8 @@ interface RawTravel {
 /** Raw POI (Phase 2) joined onto entries via trip_entries.poi_id. */
 interface RawEntryPoi {
   id?: number | null;
+  poiId?: number | null;
+  sortOrder?: number | null;
   type?: string | null;
   name?: string | null;
   maps?: string | null;
@@ -111,9 +114,12 @@ interface RawEntryPoi {
   lat?: number | null;
   lng?: number | null;
   googleRating?: number | null;
+  rating?: number | null;
   /** v2.12 Wave 3：JSON-encoded TEXT — array of { url, thumbUrl?, caption?, source?, attribution? } */
   photos?: string | null;
 }
+
+type RawStopPoi = RawEntryPoi;
 
 /** Raw timeline entry as returned by the API (Phase 3：spatial 欄位只存在 poi). */
 interface RawEntry {
@@ -127,7 +133,9 @@ interface RawEntry {
   /** JOIN pois via poi_id — spatial source of truth (Phase 2 / legacy) */
   poi?: RawEntryPoi | null;
   /** v2.27.0 multi-POI per entry — master (sort_order=1) JOIN pois。lat/lng 為新 SoT */
-  master?: { lat?: number | null; lng?: number | null } | null;
+  master?: RawStopPoi | null;
+  /** Canonical stop POI list; stop POI === first row (sortOrder=1). */
+  stopPois?: RawStopPoi[];
   restaurants?: RawRestaurant[];
   shopping?: RawShop[];
 }
@@ -159,6 +167,11 @@ function formatTravelText(travel: RawTravel): string {
   if (desc) return desc;
   if (min) return `${min} 分`;
   return '';
+}
+
+function getPrimaryStopPoi(stopPois: RawStopPoi[] | undefined): RawStopPoi | null {
+  if (!stopPois || stopPois.length === 0) return null;
+  return stopPois.find((p) => p.sortOrder === 1) ?? stopPois[0] ?? null;
 }
 
 /* ===== Restaurant (from merged POI) ===== */
@@ -218,8 +231,9 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
       }
     : null;
 
-  // Phase 3：spatial 欄位只從 POI master 取（entry 已不存這些）
-  const poi = raw.poi ?? null;
+  // stop 的 canonical POI 是 stopPois[0] / sortOrder=1。
+  // fallback master → legacy poi 是 transition 期保險。
+  const poi = getPrimaryStopPoi(raw.stopPois) ?? raw.master ?? raw.poi ?? null;
   const effMaps = poi?.maps ?? null;
   const effMapcode = poi?.mapcode ?? null;
   // Migration 0045 (v2.19.x) 把 pois.google_rating 改名為 rating，但這裡的 mapping
@@ -227,11 +241,16 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   const effGoogleRating = poi?.googleRating ?? (poi as { rating?: number | null })?.rating ?? null;
   // v2.12 Wave 3：parse pois.photos JSON 字串。malformed → 視為 null（不 throw）。
   const effPhotos: PoiPhoto[] | null = parsePhotos(poi?.photos);
+  const displayTitle = getStopDisplayTitle({
+    title: raw.title ?? null,
+    poiName: poi?.name ?? null,
+    poiType: poi?.type ?? null,
+  });
 
   const locations: NavLocation[] = [];
   if (effMaps || effMapcode) {
     locations.push({
-      name: raw.title || undefined,
+      name: displayTitle || raw.title || undefined,
       googleQuery: effMaps || undefined,
       mapcode: effMapcode || undefined,
     });
@@ -253,14 +272,14 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     });
   }
 
-  // master coord：優先 v2.27.0 master.lat/lng（multi-POI SoT），否則 fallback
-  // 到 Phase 2 poi.lat/lng。任一可用就能 surface 給 TimelineRail 算 stale-travel。
-  const masterLat = raw.master?.lat ?? poi?.lat ?? null;
-  const masterLng = raw.master?.lng ?? poi?.lng ?? null;
+  // master coord：使用 canonical stop POI；fallback 已在 poi 解析完成。
+  const masterLat = poi?.lat ?? null;
+  const masterLng = poi?.lng ?? null;
 
   return {
     id: raw.id ?? null,
     time: raw.time ?? null,
+    displayTitle,
     title: raw.title ?? null,
     description: raw.description ?? null,
     note: raw.note ?? null,
