@@ -125,6 +125,49 @@ const DAY_DATA_WITH_ALTS = {
   ],
 };
 
+// v2.28.1 cross-region warning — master + alternates with lat/lng + sibling day entry coords
+// 沖繩三點 (那覇~美國村) → 全部 < 30km from day average。Tokyo alternate (poiId=303) > 50km
+// trigger warning. 同區 alternate (poiId=302) < 30km no warning。
+const DAY_DATA_WITH_GEO = {
+  id: 7,
+  dayNum: 3,
+  timeline: [
+    {
+      id: 41,
+      title: '首里城',
+      poiType: 'attraction',
+      master: { poiId: 99, name: '首里城', type: 'attraction', lat: 26.2173, lng: 127.7195 },
+      alternates: [],
+      entryPoisVersion: '2026-05-11T12:00:00',
+    },
+    {
+      id: 42,
+      title: '花織そば',
+      poiType: 'restaurant',
+      master: { poiId: 100, name: '花織そば', type: 'restaurant', lat: 26.2124, lng: 127.6792 },
+      alternates: [
+        {
+          poiId: 302,
+          name: '北谷美食街',
+          sortOrder: 2,
+          type: 'restaurant',
+          category: null,
+          lat: 26.3158, lng: 127.7591, // 美國村 — 同區
+        },
+        {
+          poiId: 303,
+          name: 'Tokyo Tower 餐廳',
+          sortOrder: 3,
+          type: 'restaurant',
+          category: null,
+          lat: 35.6586, lng: 139.7454, // 東京 — 跨區
+        },
+      ],
+      entryPoisVersion: '2026-05-11T12:00:00',
+    },
+  ],
+};
+
 const DAY_DATA_NO_ALTS = {
   id: 7,
   dayNum: 3,
@@ -704,5 +747,58 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
         expect(patchCallCount).toBe(1);
       });
     });
+  });
+});
+
+// =========================================================================
+// v2.28.1 — 跨區警告 (master swap confirm modal)
+//
+// 當 swap 目標 POI 距當日其他 entries 平均位置 > 50km，confirm modal 顯紅字
+// 「⚠ 新首選距離本日其他點 X km，可能跨區，確定？」。
+// 反向：< 50km 不顯。
+// =========================================================================
+describe('EditEntryPage — v2.28.1 跨區警告', () => {
+  function setupGeoMocks() {
+    (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
+      if (url.endsWith('/days')) return Promise.resolve(DAYS);
+      if (url.includes('/days/3')) return Promise.resolve(DAY_DATA_WITH_GEO);
+      if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+      return Promise.resolve(null);
+    });
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true, status: 200, text: () => Promise.resolve(''),
+    } as unknown as Response);
+  }
+
+  it('Tap 設為首選（跨區 alternate, > 50km）→ confirm modal 顯跨區警告', async () => {
+    setupGeoMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-setmaster-303')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-303'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
+    });
+    // Warning element should be visible with cross-region copy + distance number
+    const warning = screen.getByTestId('confirm-modal-warning');
+    expect(warning).toBeTruthy();
+    expect(warning.textContent).toMatch(/跨區|距離本日其他點/);
+    // ~1556 km from day center → 顯數字 (km 級)
+    expect(warning.textContent).toMatch(/\d+\s*km/);
+  });
+
+  it('Tap 設為首選（同區 alternate, < 50km）→ confirm modal 不顯跨區警告', async () => {
+    setupGeoMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-setmaster-302')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-302'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('confirm-modal-warning')).toBeNull();
   });
 });

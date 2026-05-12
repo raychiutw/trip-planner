@@ -124,8 +124,10 @@ interface RawEntry {
   note?: string | null;
   source?: string | null;
   travel?: RawTravel | null;
-  /** JOIN pois via poi_id — spatial source of truth */
+  /** JOIN pois via poi_id — spatial source of truth (Phase 2 / legacy) */
   poi?: RawEntryPoi | null;
+  /** v2.27.0 multi-POI per entry — master (sort_order=1) JOIN pois。lat/lng 為新 SoT */
+  master?: { lat?: number | null; lng?: number | null } | null;
   restaurants?: RawRestaurant[];
   shopping?: RawShop[];
 }
@@ -251,6 +253,11 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     });
   }
 
+  // master coord：優先 v2.27.0 master.lat/lng（multi-POI SoT），否則 fallback
+  // 到 Phase 2 poi.lat/lng。任一可用就能 surface 給 TimelineRail 算 stale-travel。
+  const masterLat = raw.master?.lat ?? poi?.lat ?? null;
+  const masterLng = raw.master?.lng ?? poi?.lng ?? null;
+
   return {
     id: raw.id ?? null,
     time: raw.time ?? null,
@@ -264,6 +271,8 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     locations: locations.length > 0 ? locations : null,
     infoBoxes: infoBoxes.length > 0 ? infoBoxes : null,
     photos: effPhotos,
+    masterLat,
+    masterLng,
   };
 }
 
