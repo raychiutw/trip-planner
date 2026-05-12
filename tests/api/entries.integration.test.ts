@@ -22,7 +22,10 @@ beforeAll(async () => {
 afterAll(disposeMiniflare);
 
 describe('GET /api/trips/:id/entries/:eid', () => {
-  it('回 { id, dayId, title } → 200', async () => {
+  it('回完整 entry shape（含 time/note/poi_id/entry_pois_version）→ 200', async () => {
+    // v2.27.1 regression：v2.26.0 SELECT 只有 id/day_id/title，導致 EditEntryPage
+    // 初始 load 後 entry.startTime/endTime/note/poiId 全 undefined → input 空白。
+    // Backend SELECT 改 SELECT * 一勞永逸；此 test 鎖住完整 shape 防 regression。
     const ctx = mockContext({
       request: new Request(`https://test.com/api/trips/trip-e/entries/${entryId}`, { method: 'GET' }),
       env,
@@ -32,11 +35,31 @@ describe('GET /api/trips/:id/entries/:eid', () => {
     const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
     // json() helper does deepCamel — server SELECT day_id 出去變 dayId。
-    // 此 endpoint 跟既有 PATCH/DELETE 一樣走 json() camelCase 慣例。
-    const body = await resp.json() as { id: number | bigint; dayId: number | bigint; title: string };
+    const body = await resp.json() as {
+      id: number | bigint;
+      dayId: number | bigint;
+      title: string;
+      time?: string | null;
+      startTime?: string | null;
+      endTime?: string | null;
+      note?: string | null;
+      poiId?: number | null;
+      entryPoisVersion?: number | string | null;
+      sortOrder?: number;
+    };
     expect(Number(body.id)).toBe(Number(entryId));
     expect(Number(body.dayId)).toBeGreaterThan(0);
     expect(body.title).toBeTruthy();
+    // v2.27.1 critical fields — frontend depends on these being present (即使是 null)
+    expect('time' in body).toBe(true);
+    expect('startTime' in body).toBe(true);
+    expect('endTime' in body).toBe(true);
+    expect('note' in body).toBe(true);
+    expect('poiId' in body).toBe(true);
+    expect('entryPoisVersion' in body).toBe(true);
+    // seedEntry 寫 time='10:00'（new INSERT 沒觸發 migration 0056 backfill — start_time
+    // 仍 NULL；real entry 從 POST /entries 進來會走 dual-write 補 start/end）
+    expect(body.time).toBe('10:00');
   });
 
   it('未認證 → 401', async () => {

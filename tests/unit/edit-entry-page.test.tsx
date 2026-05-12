@@ -94,8 +94,31 @@ const DAY_DATA_WITH_ALTS = {
       poiType: 'restaurant',
       master: { poiId: 100, name: '花織そば', type: 'restaurant' },
       alternates: [
-        { poiId: 201, name: '首里そば', sortOrder: 2, type: 'restaurant', category: null },
-        { poiId: 202, name: 'やんばる食堂', sortOrder: 3, type: 'restaurant', category: null },
+        // v2.28.0 — alternates surface restaurant fields (price/hours/reservation)
+        {
+          poiId: 201,
+          name: '首里そば',
+          sortOrder: 2,
+          type: 'restaurant',
+          category: null,
+          hours: '11:00-18:00',
+          rating: 4.5,
+          price: '$',
+          reservation: '無需預約',
+          reservationUrl: null,
+        },
+        {
+          poiId: 202,
+          name: 'やんばる食堂',
+          sortOrder: 3,
+          type: 'restaurant',
+          category: null,
+          hours: null,
+          rating: null,
+          price: null,
+          reservation: '需電話預約',
+          reservationUrl: 'https://example.com/r',
+        },
       ],
       entryPoisVersion: '2026-05-11T12:00:00',
     },
@@ -515,6 +538,44 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       });
       expect(deleteCall).toBeTruthy();
       expect(navigateSpy).toHaveBeenCalled();
+    });
+  });
+
+  // v2.28.0 — restaurant inline info (price/hours/reservation) under type label
+  describe('alternates row surface restaurant fields (v2.28.0)', () => {
+    it('alternate type=restaurant 含 price/hours → 渲染 chips', async () => {
+      setupAltsMocks();
+      renderPage();
+      await waitFor(() => {
+        expect(screen.queryByTestId('edit-entry-alt-extra-201')).toBeTruthy();
+      });
+      const extra = screen.getByTestId('edit-entry-alt-extra-201');
+      expect(extra.textContent).toMatch(/\$/);          // price chip
+      expect(extra.textContent).toMatch(/11:00-18:00/);  // hours chip
+      expect(extra.textContent).toMatch(/無需預約/);     // reservation chip
+    });
+
+    it('reservationUrl 存在 → reservation chip 變 link', async () => {
+      setupAltsMocks();
+      renderPage();
+      await waitFor(() => {
+        expect(screen.queryByTestId('edit-entry-alt-extra-202')).toBeTruthy();
+      });
+      const extra = screen.getByTestId('edit-entry-alt-extra-202');
+      const link = extra.querySelector('a.alt-extra-chip.reservation') as HTMLAnchorElement | null;
+      expect(link).toBeTruthy();
+      expect(link!.href).toBe('https://example.com/r');
+      expect(link!.textContent).toBe('需電話預約');
+    });
+
+    it('rating 存在 → 渲染 star + 數字', async () => {
+      setupAltsMocks();
+      renderPage();
+      await waitFor(() => {
+        expect(screen.queryByTestId('edit-entry-alt-row-201')).toBeTruthy();
+      });
+      const row = screen.getByTestId('edit-entry-alt-row-201');
+      expect(row.textContent).toMatch(/4\.5/);
     });
   });
 

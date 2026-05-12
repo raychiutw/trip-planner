@@ -3,6 +3,39 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.28.0] - 2026-05-12
+
+**Restaurants → alternates schema migration (Phase 1) + GET /entries SELECT * fix。**
+
+### Fixed
+
+- **`GET /api/trips/:id/entries/:eid` SELECT 只回 `id, day_id, title, entry_pois_version`** — 缺 `start_time/end_time/time/note/poi_id`。EditEntryPage 初始 load 後 `entry.startTime/endTime/note` 全 undefined → 起訖時間 input 空白 + 備註空白。User 報 entry 424 (`/trip/okinawa-trip-2026-Ray/stop/424/edit`)。
+  - 自 v2.26.0 開始就漏 — `test fixture mock 全欄位讓 CI mask 掉 bug`。v2.26.3 修了 frontend camelCase 但 backend SELECT 沒同步修。round 9 加 entry_pois_version 也漏。
+  - 修法：SELECT * 一勞永逸 + integration test 鎖住 response shape (time/startTime/endTime/note/poiId/entryPoisVersion 必須 surface)。
+
+### Added (Phase 1)
+
+- **Migration 0059 — Restaurants (trip_pois timeline) → trip_entry_pois alternates**（背景：legacy `restaurants` TABLE 自 v2.14 後就 dead，所有寫入路徑都進 `trip_pois context='timeline'`）。
+  - `scripts/migrate-0059-restaurants-to-alternates.ts` standalone bun script，標準 wrangler d1 execute。
+  - For each `trip_pois` row WHERE `context='timeline'` AND `entry_id IS NOT NULL`：INSERT trip_entry_pois (sort_order=max+1)，bump `entry_pois_version` 讓既有 client refetch。
+  - **Idempotent** via UNIQUE (entry_id, poi_id) → INSERT OR IGNORE，重跑安全。
+  - 支援 `--dry-run` / `--apply`、`--local` / `--remote`，report 寫到 `.gstack/migration-reports/`。
+  - **Deploy 順序**：merge PR → backend 上線 → user 手動跑 `bun run scripts/migrate-0059-restaurants-to-alternates.ts --dry-run --remote` → 看影響範圍 → `--apply --remote`。
+- **alternates response 加 restaurant 欄位**：`functions/api/trips/[id]/days/_merge.ts:fetchEntryPoisByEntries` SELECT 多 LEFT JOIN `trip_pois` (context='timeline')，surface `hours/rating/price`（pois master）+ `reservation/reservation_url/description/note`（trip_pois override）。
+- **EditEntryPage alternates row 加 restaurant inline info**：type label 旁邊顯示 rating (⭐ 4.5)，meta 下方 chip 顯示 `price · hours · reservation`。`reservationUrl` 存在時 reservation chip 改 link。`src/types/trip.ts` `EntryPoiInfo` extend 含這些欄位。
+
+### Phase 2 (待 v2.28.x — 2 週 observation 後)
+
+- DROP `restaurants` legacy TABLE（已 dead 但 schema 還在）
+- TripPage TimelineRail 改讀 `alternates with type='restaurant'` 取代 `entry.restaurants[]`（per user — 「之後被選的景點都用相同格式渲染」）
+
+### Tests
+
+- 2 個新 integration tests（alternates 含 restaurant fields surface + non-restaurant alt 不誤 surface）
+- 3 個新 EditEntryPage unit tests（price/hours chip rendering、reservationUrl → link、rating star + 數字）
+- 修正 GET /entries integration test 鎖住完整 response shape (含 time/startTime/endTime/note/poiId/entryPoisVersion)
+- 既有 103 API + 56 unit tests pass，無 regression
+
 ## [2.27.0] - 2026-05-12
 
 **Multi-POI per entry — 同一 stop 可掛多個備案景點（master + alternates），EditEntryPage 加 alternates section + master swap UI。**

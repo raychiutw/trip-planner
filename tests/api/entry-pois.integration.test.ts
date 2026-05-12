@@ -759,6 +759,112 @@ describe('GET /api/trips/:id/days/:num — multi-POI surface', () => {
   });
 });
 
+describe('v2.28.0 — alternates 含 restaurant 欄位 (price/hours/reservation)', () => {
+  it('alternates 從 fetchEntryPoisByEntries 帶出 trip_pois override 欄位', async () => {
+    // Seed: entry with master attraction + alt restaurant (poi.type='restaurant')
+    // 加 trip_pois (context='timeline') override 含 reservation/reservation_url
+    // alternates response 應該 surface 這些 fields。
+    const masterPoi = await db.prepare(
+      "INSERT INTO pois (name, type) VALUES ('R-Master-Attraction', 'attraction') RETURNING id"
+    ).first<{ id: number }>();
+    const altRestaurant = await db.prepare(
+      "INSERT INTO pois (name, type, hours, rating, price) VALUES ('R-Alt-Restaurant', 'restaurant', '11:00-22:00', 4.3, '$$') RETURNING id"
+    ).first<{ id: number }>();
+    const dayId = await getDayId(db, TRIP_ID, 1);
+    const entry = await db.prepare(
+      "INSERT INTO trip_entries (day_id, sort_order, time, title, poi_id) VALUES (?, 99, '18:00', 'R-Entry', ?) RETURNING id"
+    ).bind(dayId, masterPoi!.id).first<{ id: number }>();
+
+    await db.batch([
+      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, masterPoi!.id),
+      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(entry!.id, altRestaurant!.id),
+      // trip_pois override：reservation status + reservation URL
+      db.prepare(
+        `INSERT INTO trip_pois (trip_id, poi_id, context, day_id, entry_id, sort_order, reservation, reservation_url, description)
+         VALUES (?, ?, 'timeline', ?, ?, 1, ?, ?, ?)`
+      ).bind(TRIP_ID, altRestaurant!.id, dayId, entry!.id, '已訂位', 'https://example.com/reservation', '想試試特色料理'),
+    ]);
+
+    // Fetch via day GET handler
+    const dayRow = await db.prepare(
+      'SELECT day_num FROM trip_days WHERE id = ?'
+    ).bind(dayId).first<{ day_num: number }>();
+    const handler = (await import('../../functions/api/trips/[id]/days/[num]')).onRequestGet;
+    const ctx = mockContext({
+      request: new Request(`https://test.com/api/trips/${TRIP_ID}/days/${dayRow!.day_num}`),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, num: String(dayRow!.day_num) },
+    });
+    const resp = await callHandler(handler, ctx);
+    expect(resp.status).toBe(200);
+    const data = (await resp.json()) as {
+      timeline: Array<{
+        id: number;
+        alternates: Array<{
+          poiId: number;
+          type?: string;
+          hours?: string | null;
+          rating?: number | null;
+          price?: string | null;
+          reservation?: string | null;
+          reservationUrl?: string | null;
+          description?: string | null;
+        }>;
+      }>;
+    };
+    const me = data.timeline.find((e) => e.id === entry!.id);
+    expect(me).toBeDefined();
+    expect(me!.alternates).toHaveLength(1);
+    const alt = me!.alternates[0]!;
+    expect(alt.poiId).toBe(altRestaurant!.id);
+    expect(alt.type).toBe('restaurant');
+    // pois master fields
+    expect(alt.hours).toBe('11:00-22:00');
+    expect(alt.rating).toBe(4.3);
+    expect(alt.price).toBe('$$');
+    // trip_pois override fields
+    expect(alt.reservation).toBe('已訂位');
+    expect(alt.reservationUrl).toBe('https://example.com/reservation');
+    expect(alt.description).toBe('想試試特色料理');
+  });
+
+  it('non-restaurant alternates 不應 surface restaurant-specific fields 為 truthy', async () => {
+    // Master + 一個 attraction alt（無 trip_pois override）→ price/reservation 應 NULL
+    const masterPoi = await db.prepare(
+      "INSERT INTO pois (name, type) VALUES ('R-Master2', 'attraction') RETURNING id"
+    ).first<{ id: number }>();
+    const altAttraction = await db.prepare(
+      "INSERT INTO pois (name, type) VALUES ('R-Alt-Attraction', 'attraction') RETURNING id"
+    ).first<{ id: number }>();
+    const dayId = await getDayId(db, TRIP_ID, 1);
+    const entry = await db.prepare(
+      "INSERT INTO trip_entries (day_id, sort_order, time, title, poi_id) VALUES (?, 100, '09:00', 'R-Attr-Entry', ?) RETURNING id"
+    ).bind(dayId, masterPoi!.id).first<{ id: number }>();
+    await db.batch([
+      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, masterPoi!.id),
+      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(entry!.id, altAttraction!.id),
+    ]);
+
+    const dayRow = await db.prepare(
+      'SELECT day_num FROM trip_days WHERE id = ?'
+    ).bind(dayId).first<{ day_num: number }>();
+    const handler = (await import('../../functions/api/trips/[id]/days/[num]')).onRequestGet;
+    const ctx = mockContext({
+      request: new Request(`https://test.com/api/trips/${TRIP_ID}/days/${dayRow!.day_num}`),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, num: String(dayRow!.day_num) },
+    });
+    const resp = await callHandler(handler, ctx);
+    const data = (await resp.json()) as { timeline: Array<{ id: number; alternates: Array<{ price?: string | null; reservation?: string | null }> }> };
+    const me = data.timeline.find((e) => e.id === entry!.id);
+    const alt = me!.alternates.find((a) => a.price !== undefined || a.reservation !== undefined) ?? me!.alternates[0];
+    expect(alt!.price).toBeNull();
+    expect(alt!.reservation).toBeNull();
+  });
+});
+
 describe('POST /api/trips/:id/days/:num/entries — syncEntryMaster', () => {
   it('POST 新 entry → 自動 INSERT trip_entry_pois sort_order=1（multi-POI invariant）', async () => {
     const { onRequestPost: entriesPost } = await import(
