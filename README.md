@@ -18,6 +18,7 @@
 ### 行程編輯（v2.19.0+）
 
 - ✏️ **新增 / 編輯行程** — 可改名稱、描述、語言、預設交通方式、發布狀態、目的地清單（拖排 / 加 POI / 分配天數）
+- 🔁 **正選 / 備選景點** — 同一個行程 entry 可掛 1 個正選 POI + 多個備選 POI，搜尋與收藏都能加入備選
 - 🌐 **OSM POI 自動補資料** — Nominatim + Overpass + OpenTripMap + Wikidata 拉景點 lat/lng / address / phone / 評分 / cuisine / opening_hours / wikidata_id，90 天 cache，每月 1 號 09:00 自動跑批次補新 POI
 - 🚗 **景點重排自動更新車程** — 拖拉景點順序時自動重算 ORS 路徑（自駕 / 步行）+ Haversine fallback（大眾運輸）
 - 📅 **多目的地子表** — 跨城市行程可分配每地天數（沖繩 3 天 / 京都 2 天）
