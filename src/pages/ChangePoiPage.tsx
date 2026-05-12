@@ -10,7 +10,7 @@
  * 完成後 fire-and-forget recompute travel + navigate 回 trip view。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -106,7 +106,18 @@ export default function ChangePoiPage() {
   const goBack = useNavigateBack(tripId ? `/trips?selected=${tripId}` : '/trips');
   const { user } = useCurrentUser();
 
-  const [tab, setTab] = useState<Tab>('search');
+  // v2.27.0 multi-POI per entry：?mode=alternate 切換 add-alternate 行為
+  // （title 改「加入備案景點」+ CTA 改「加為備案」+ 提交走 POST /alternates）
+  // round 4 fix M5: use react-router's useSearchParams (reactive + SSR-safe) instead
+  // of raw window.location.search which doesn't re-render on client-side route changes.
+  const [searchParams] = useSearchParams();
+  const mode: 'master' | 'alternate' = searchParams.get('mode') === 'alternate' ? 'alternate' : 'master';
+  const pageTitle = mode === 'alternate' ? '加入備案景點' : '變更景點';
+  const submitLabel = mode === 'alternate' ? '加為備案' : '套用';
+
+  // v2.27.0：alternate mode 強制 favorites（search tab 暫不支援 find-or-create
+  // alternate；HIGH #7 — 避免使用者點 search tab 選新 POI 後撞 error guard）
+  const [tab, setTab] = useState<Tab>(mode === 'alternate' ? 'favorites' : 'search');
   const [query, setQuery] = useState('');
   const [region] = useState<string>('全部地區');
   const [selected, setSelected] = useState<SelectedPoi | null>(null);
@@ -139,6 +150,35 @@ export default function ChangePoiPage() {
     setSubmitting(true);
     setError(null);
     try {
+      if (mode === 'alternate') {
+        // 加為備案：直接取 selected.poiId（alternate mode 只在 favorites tab 操作，
+        // 收藏 POI 必有 poi_id）。round 4 fix M6: search tab 在 alternate mode 完全
+        // 隱藏 (見 render 區塊)，所以下方兩個 throw 是 defense-in-depth — UI 不該
+        // 走到這裡。保留 throw 而非 assert 是因為若未來新增「直接收藏 search 結果」
+        // 的 flow，這 guard 還能擋一下 race window。
+        const poiIdToAdd: number | null = selected.poiId ?? null;
+        if (poiIdToAdd == null && selected.name && selected.lat != null && selected.lng != null) {
+          throw new Error('搜尋新建 POI 暫時不支援加備案（請先存收藏再加為備案）');
+        }
+        if (poiIdToAdd == null) throw new Error('無法解析 POI ID');
+        const res = await apiFetchRaw(
+          `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ poiId: poiIdToAdd }),
+          },
+        );
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`加備案失敗 (${res.status}): ${text.slice(0, 200)}`);
+        }
+        window.dispatchEvent(new CustomEvent('tp-entry-updated', { detail: { tripId } }));
+        navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`, { replace: true });
+        return;
+      }
+
+      // master 模式（既有 PUT /poi-id 流程）
       const body = selected.source === 'favorite' && selected.poiId
         ? { poi_id: selected.poiId }
         : { name: selected.name, lat: selected.lat, lng: selected.lng, source: 'google' };
@@ -160,23 +200,25 @@ export default function ChangePoiPage() {
       setError(err instanceof Error ? err.message : '變更 POI 失敗');
       setSubmitting(false);
     }
-  }, [selected, tripId, entryId, submitting, navigate]);
+  }, [selected, tripId, entryId, submitting, navigate, mode]);
 
   const main = useMemo(() => (
     <div className="tp-app">
       <style>{SCOPED_STYLES}</style>
-      <TitleBar title="變更 POI" back={goBack} />
+      <TitleBar title={pageTitle} back={goBack} />
       <main className="tp-page-content">
         <div className="tp-change-poi">
           <div className="tp-change-poi-tabs">
-            <button
-              type="button"
-              className={`tp-change-poi-tab ${tab === 'search' ? 'is-active' : ''}`}
-              onClick={() => setTab('search')}
-              data-testid="change-poi-tab-search"
-            >
-              搜尋
-            </button>
+            {mode !== 'alternate' && (
+              <button
+                type="button"
+                className={`tp-change-poi-tab ${tab === 'search' ? 'is-active' : ''}`}
+                onClick={() => setTab('search')}
+                data-testid="change-poi-tab-search"
+              >
+                搜尋
+              </button>
+            )}
             <button
               type="button"
               className={`tp-change-poi-tab ${tab === 'favorites' ? 'is-active' : ''}`}
@@ -185,6 +227,11 @@ export default function ChangePoiPage() {
             >
               收藏
             </button>
+            {mode === 'alternate' && (
+              <span style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 'var(--font-size-caption)', color: 'var(--color-muted)' }}>
+                備案目前只支援從收藏加入
+              </span>
+            )}
           </div>
 
           {tab === 'search' && (
@@ -269,13 +316,13 @@ export default function ChangePoiPage() {
               onClick={() => void handleSubmit()}
               data-testid="change-poi-submit"
             >
-              {submitting ? '變更中…' : '確認變更'}
+              {submitting ? '處理中…' : submitLabel}
             </button>
           </div>
         </div>
       </main>
     </div>
-  ), [tab, query, searching, searchResults, favorites, selected, error, submitting, goBack, handleSubmit]);
+  ), [tab, query, searching, searchResults, favorites, selected, error, submitting, goBack, handleSubmit, pageTitle, submitLabel]);
 
   return (
     <AppShell

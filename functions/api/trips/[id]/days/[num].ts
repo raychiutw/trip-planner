@@ -1,12 +1,13 @@
 import { logAudit } from '../../../_audit';
 import { hasWritePermission } from '../../../_auth';
+import { syncEntryMaster } from '../../../_entry_pois';
 import { AppError } from '../../../_errors';
 import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
 import { resolveEntryTimes } from '../../../_time';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
-import { assembleDay, fetchPoiMap } from './_merge';
+import { assembleDay, fetchPoiMap, fetchEntryPoisByEntries } from './_merge';
 
 // ---------------------------------------------------------------------------
 // GET /api/trips/:id/days/:num — POI Schema (pois + trip_pois)
@@ -35,11 +36,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const entryRows = entriesResult.results as Record<string, unknown>[];
   const poiMap = await fetchPoiMap(db, tripPoiRows, entryRows);
 
+  // v2.27.0 multi-POI per entry
+  const entryPoisMap = await fetchEntryPoisByEntries(db, entryRows.map((e) => e.id as number));
+
   const assembled = assembleDay(
     day,
     entryRows,
     tripPoiRows,
     poiMap,
+    entryPoisMap,
   );
 
   return json(assembled);
@@ -106,6 +111,54 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const pt = (timelineEntries[i] as Record<string, unknown>).poi_type;
     if (pt !== undefined && (typeof pt !== 'string' || !ALLOWED_POI_TYPES.has(pt))) {
       throw new AppError('DATA_VALIDATION', `timeline[${i}].poi_type 無效（允許：${[...ALLOWED_POI_TYPES].join(', ')}）`);
+    }
+  }
+
+  // round 5 fix (was round 4 adv-C5): snapshot alternates per OLD entry, each entry's alts
+  // kept as a separate list so restore can match 1:1 without conflation. Round 4 keyed by
+  // master_poi_id and merged lists from multiple old entries — if two old entries shared
+  // a master POI, INSERT OR IGNORE silently dropped collisions (round 5 HIGH finding).
+  //
+  // Strategy: snapshot each old entry's master POI + alt list. On restore, for each new
+  // entry, find the FIRST old snapshot with matching master POI that hasn't been claimed
+  // yet, transfer its alts. Edge cases:
+  //  - User replaces an entry's POI entirely → no match → alts gracefully lost (acceptable;
+  //    they belonged to the replaced POI)
+  //  - Two new entries with same master POI → first claims the first old snapshot's alts,
+  //    second claims the second old snapshot's alts (1:1 by order)
+  //  - Read trip_entry_pois.sort_order=1 (not legacy trip_entries.poi_id) per round 5 F2 fix
+  type OldEntrySnapshot = { masterPoiId: number; alts: Array<{ poiId: number; sortOrder: number }> };
+  const oldEntrySnapshots: OldEntrySnapshot[] = [];
+  {
+    const entriesRow = await db
+      .prepare(
+        `SELECT e.id AS entry_id, tep.poi_id AS master_poi_id
+         FROM trip_entries e
+         JOIN trip_entry_pois tep ON tep.entry_id = e.id AND tep.sort_order = 1
+         WHERE e.day_id = ?
+         ORDER BY e.sort_order ASC`,
+      )
+      .bind(dayId)
+      .all<{ entry_id: number; master_poi_id: number }>();
+    const entryIdToSnapshot = new Map<number, OldEntrySnapshot>();
+    for (const e of entriesRow.results) {
+      const snap = { masterPoiId: e.master_poi_id, alts: [] as Array<{ poiId: number; sortOrder: number }> };
+      oldEntrySnapshots.push(snap);
+      entryIdToSnapshot.set(e.entry_id, snap);
+    }
+    if (entriesRow.results.length > 0) {
+      const altPlaceholders = entriesRow.results.map(() => '?').join(',');
+      const altsRow = await db
+        .prepare(
+          `SELECT entry_id, poi_id, sort_order
+           FROM trip_entry_pois
+           WHERE entry_id IN (${altPlaceholders}) AND sort_order > 1`,
+        )
+        .bind(...entriesRow.results.map((e) => e.entry_id))
+        .all<{ entry_id: number; poi_id: number; sort_order: number }>();
+      for (const a of altsRow.results) {
+        entryIdToSnapshot.get(a.entry_id)?.alts.push({ poiId: a.poi_id, sortOrder: a.sort_order });
+      }
     }
   }
 
@@ -271,20 +324,72 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // Batch resolve all POIs (2–3 DB round-trips instead of N)
     const poiIds = await batchFindOrCreatePois(db, poiItems);
 
-    // Build batch2: (a) UPDATE trip_entries.poi_id for entries with POI, (b) trip_pois 插入
+    // Build batch2: (a) UPDATE trip_entries.poi_id, (b) trip_pois 插入
+    // batch1 DELETE FROM trip_entries → ON DELETE CASCADE 清掉舊 trip_entry_pois。
+    // trip_entry_pois sort_order=1 invariant 由 syncEntryMaster() helper 在 batch2 後維護
+    // （Codex pre-landing CRITICAL #2 — 不靠 inline INSERT 漂流 SQL；DRY 對齊
+    // POST /entries + copy.ts pattern）。
     const batch2: D1PreparedStatement[] = [];
+    const entriesNeedingMaster: Array<{ entryId: number; poiId: number }> = [];
     for (let i = 0; i < timeline.length; i++) {
       const pIdx = entryPoiIdx[i]!;
       if (pIdx < 0) continue;
+      const poiId = poiIds[pIdx];
+      const entryId = entryIds[i]!;
+      if (typeof poiId !== 'number') continue;
       batch2.push(
-        db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?')
-          .bind(poiIds[pIdx], entryIds[i]!),
+        db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(poiId, entryId),
       );
+      entriesNeedingMaster.push({ entryId, poiId });
     }
     for (const builder of tripPoiBuilders) {
       batch2.push(...builder(poiIds));
     }
     if (batch2.length > 0) await db.batch(batch2);
+
+    // 維護 trip_entry_pois sort_order=1 invariant — 用 helper 而非 inline INSERT
+    // 對齊 POST /entries + copy.ts。Parallel for throughput (independent rows)。
+    await Promise.all(
+      entriesNeedingMaster.map((p) => syncEntryMaster(db, p.entryId, p.poiId)),
+    );
+
+    // round 5 fix: claim-once snapshot restore — for each new entry, find first unclaimed
+    // old snapshot with matching master POI, transfer its alts. Prevents conflation of
+    // two old entries sharing the same master POI (round 5 HIGH finding). Each new entry
+    // gets at most ONE old snapshot's alts. Also bumps entry_pois_version for any entry
+    // that received restored alts so clients can detect the day-level reshape.
+    const altRestoreStatements: D1PreparedStatement[] = [];
+    const nowAlt = new Date().toISOString();
+    const claimed = new Set<OldEntrySnapshot>();
+    const entriesGainingAlts: number[] = [];
+    for (const { entryId, poiId: newMasterPoiId } of entriesNeedingMaster) {
+      const match = oldEntrySnapshots.find(
+        (s) => s.masterPoiId === newMasterPoiId && !claimed.has(s) && s.alts.length > 0,
+      );
+      if (!match) continue;
+      claimed.add(match);
+      entriesGainingAlts.push(entryId);
+      for (const alt of match.alts) {
+        if (alt.poiId === newMasterPoiId) continue; // would violate UNIQUE(entry_id, poi_id)
+        altRestoreStatements.push(
+          db
+            .prepare(
+              `INSERT OR IGNORE INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
+               VALUES (?, ?, ?, ?, ?)`,
+            )
+            .bind(entryId, alt.poiId, alt.sortOrder, nowAlt, nowAlt),
+        );
+      }
+    }
+    // Bump entry_pois_version on entries that gained restored alts (round 5 monotonic invariant).
+    for (const entryId of entriesGainingAlts) {
+      altRestoreStatements.push(
+        db.prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?').bind(entryId),
+      );
+    }
+    if (altRestoreStatements.length > 0) {
+      await db.batch(altRestoreStatements);
+    }
 
     // Audit log AFTER both batches succeed (prevents phantom audit entries on failure)
     await logAudit(db, {

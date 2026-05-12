@@ -11,6 +11,52 @@
 
 ---
 
+## v2.27.x Multi-POI Phase 2 + 後續優化
+
+**Found by**: v2.27.0 round 5/6/7 ship review deferred items
+**Phase 2 cutover (v2.27.1)**:
+1. DROP `trip_entries.poi_id` 後 setMaster 移除 dual-write
+2. `_entry_pois.ts` 移除 Phase 1 `UPDATE trip_entries SET poi_id = ?` line + retire entry.poi_id selector fallback
+3. `_merge.ts` 拔掉 `entryPoiIdx` + dual-batch
+4. `src/types/trip.ts` Entry.poi / Entry.poiId @deprecated 標記移除
+**Priority**: P1（dual-write 維護成本高，~2 week observation 後即可 cutover）
+
+**ChangePoiPage 加 entry_pois_version 帶上**：
+- 目前 PUT /poi-id backend 接受 OCC token 但 ChangePoiPage 沒 fetch / 帶上 → cross-tab swap 仍可能 lost update（雖機率低，user 主動「變更景點」非 high-contention）
+- Fix: ChangePoiPage useEffect 抓 GET /entries/:eid 取 entryPoisVersion → submit body 帶上
+- Est: 15 min CC
+- Priority: P2
+
+**Atomic CAS via UPDATE RETURNING**：
+- 目前 OCC 是「先 SELECT version → 比對 → bind 寫」兩段式，concurrent setMaster 仍 fall back 到 UNIQUE constraint catch + retry。SQLite ≥3.35 支援 `UPDATE ... WHERE version = ? RETURNING new_version` atomic CAS，可省一個 RTT + 簡化 race handling
+- Est: 30 min CC + 跑既有 OCC test suite 確認
+- Priority: P3（既有 UNIQUE catch 已足夠避免 silent data loss）
+
+**Day-level OCC token on PUT /days/:num**：
+- 目前 PUT /days/:num 對整個 day 沒有 OCC 保護，兩 client 同時 PUT 全 timeline 可能 lost update
+- Fix: trip_days 加 `version` column + PUT 接受 expectedVersion
+- Est: 1 hr CC + 1 migration + frontend wire
+- Priority: P3（rare scenario — 一般只有單 user 編輯）
+
+**ChangePoiPage unit tests for mode=alternate**：
+- v2.27.0 ChangePoiPage 加 `?mode=alternate` 切換 (title / CTA / search-tab hidden)，但無 unit test 覆蓋
+- Est: 30 min CC，3-4 個 test cases
+- Priority: P2
+
+**refreshEntryPois 3-way cascade UX**：
+- master swap 後 useTripSegments + refreshEntryPois + day refetch 三方需要協調，目前 EditEntryPage sequential 跑 — 可能短暫顯示 stale 狀態
+- Fix: 把三方 cascade 收到單一 hook 處理優先序
+- Est: 1 hr CC
+- Priority: P3
+
+**Tech debt — event name const-ize**：
+- `tp-segment-updated` / `tp-entry-updated` / `tp-trip-updated` 散在 16+ dispatch / listen sites 用字串 literal
+- Fix: `src/lib/events.ts` 集中 const
+- Est: 15 min CC
+- Priority: P3
+
+---
+
 ## Travel compute — 統一到 Mapbox（拔 ORS）
 
 **Found by**: 2026-05-06 user 問「車程計算用哪個 service」 → 發現 split：`/api/route` (Mapbox) + `src/server/travel/compute.ts` (ORS primary)

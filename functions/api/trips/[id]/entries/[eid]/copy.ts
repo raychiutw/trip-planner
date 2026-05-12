@@ -24,6 +24,7 @@
 import { logAudit } from '../../../../_audit';
 import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
+import { syncEntryMaster } from '../../../../_entry_pois';
 import { parseTime } from '../../../../_time';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
@@ -129,6 +130,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!newRow) throw new AppError('DATA_SAVE_FAILED', '複製 entry 失敗');
 
   const newEid = newRow.id as number;
+  const copiedPoiId = source.poi_id;
+
+  // v2.27.0：copy 完同步 trip_entry_pois sort_order=1（multi-POI per entry invariant）。
+  // 沒此 helper 則 copy 出來的 entry addAlternate 會 fire MISSING_MASTER 直到第一次 GET
+  // 自我修復（Codex pre-landing CRITICAL #2）。
+  // 註：v2.27.0 不複製 alternates（sort_order > 1），維持 v2.10 Wave 1 「只複製 master」
+  // 的最小語意，future enhancement 再決定。
+  if (copiedPoiId != null && typeof copiedPoiId === 'number') {
+    await syncEntryMaster(db, newEid, copiedPoiId);
+  }
 
   // 註：v2.10 Wave 1 不複製 trip_pois 關聯。entries 多半透過 entries.poi_id
   // 連 master POI（已在 INSERT 上面 source.poi_id 帶過去），trip_pois 主要是

@@ -1,6 +1,6 @@
 import { json } from '../../_utils';
 import type { Env } from '../../_types';
-import { assembleDay } from './days/_merge';
+import { assembleDay, fetchEntryPoisByEntries } from './days/_merge';
 
 /**
  * GET /api/trips/:id/days
@@ -69,6 +69,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     tripPoisByDay.get(dayId)!.push(tp);
   }
 
+  // v2.27.0 multi-POI per entry：1 query fetch all entry_pois，分 map per entry
+  const allEntryIds = entryRows.map((e) => e.id as number);
+  const entryPoisMap = await fetchEntryPoisByEntries(db, allEntryIds);
+
   const days = dayRows.map(day => {
     const dayId = day.id as number;
     return assembleDay(
@@ -76,6 +80,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       entriesByDay.get(dayId) ?? [],
       tripPoisByDay.get(dayId) ?? [],
       poiMap,
+      entryPoisMap,
     );
   });
 
