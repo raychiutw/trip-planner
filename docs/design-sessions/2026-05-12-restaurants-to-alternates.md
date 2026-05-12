@@ -2,7 +2,7 @@
 
 **Date**: 2026-05-12
 **Triggered by**: v2.27.0 deploy 後 user 反映 entry 424 「備案餐廳沒進備選名單」
-**Status**: Draft — 待 signoff
+**Status**: Partially shipped — v2.28.0 alternates fields + v2.28.2 meal primary POI response/backfill
 
 ## Problem
 
@@ -16,6 +16,8 @@ Entry 424「美國村晚餐＋散步」:
 ```
 
 User 心智模型：「備案餐廳就是備選」。技術現實：兩個分離 data model。
+
+**2026-05-13 update (v2.28.2)**：實際 prod bug 是 entry 783 這類用餐 stop 已把第一順位餐廳設成 `order=1`，但 overview 還顯示泛用 `午餐` / legacy wrapper POI。v2.28.2 先補 `stop_pois` response 與 frontend display title：泛用用餐 label 顯示第一順位餐廳；legacy wrapper master 會在 response 中 virtual promote 第一順位餐廳為 `poi/master/stopPois[0]`。Migration 0059 也從「append restaurants as alternates」升級成「第一順位餐廳持久化為 stop primary POI」。
 
 ## Goal
 
@@ -46,6 +48,8 @@ User 心智模型：「備案餐廳就是備選」。技術現實：兩個分離
 POI type 強制 `'restaurant'`。
 
 ## Phase 1 — Migration 0059 + dual-read/write (v2.28.0)
+
+> v2.28.2 修正：0059 不再只是 append alternates。新 script 會依 `trip_pois.sort_order` 排序餐廳 choices，把第一順位餐廳寫成 `trip_entry_pois.sort_order=1`，其餘餐廳與既有 stop POIs 依序保留，並同步 `trip_entries.poi_id` + bump `entry_pois_version`。
 
 ### Migration 0059 SQL
 
