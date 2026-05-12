@@ -183,6 +183,11 @@ export interface Entry {
    */
   alternates?: EntryPoiAlternate[];
   /**
+   * Canonical stop POI list. The stop's own POI is always the first item
+   * (`sortOrder=1`); remaining rows are alternates.
+   */
+  stopPois?: EntryPoiAlternate[];
+  /**
    * v2.27.0 OCC token = trip_entries.entry_pois_version (monotonic integer counter,
    * migration 0058). Only the 4 multi-POI mutating helpers bump it; unrelated
    * PATCH /entries note/time edits do NOT touch it. Client passes the token back

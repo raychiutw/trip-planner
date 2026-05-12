@@ -1,26 +1,24 @@
 #!/usr/bin/env bun
 /**
- * migrate-0059-restaurants-to-alternates.ts — v2.28.0 Phase 1 backfill
+ * migrate-0059-restaurants-to-alternates.ts — meal stop primary POI backfill
  *
- * 把 `trip_pois` context='timeline' 的 rows 同步進 `trip_entry_pois` 當 alternates，
- * 讓 v2.27.0 EditEntryPage alternates section 看得到 user 既有的「備案餐廳/景點」。
+ * 舊資料有一批用餐 entry 的 master POI 仍是商圈/景點 wrapper，而真正的餐廳選擇
+ * 存在 `trip_pois.context='timeline'`。這會讓「設定餐廳為首選」後，行程一覽仍看
+ * 到舊 wrapper，因為 overview 讀的是 stop 的 canonical POI。
  *
- * ## 背景
- *
- * `restaurants` legacy TABLE 自 v2.14 後完全 dead — restaurant 資料早就存在
- * `trip_pois` context='timeline' + `pois` type='restaurant'。v2.27.0 引入
- * `trip_entry_pois` master/alternates 但**沒**動 trip_pois — 結果 entry.alternates=[]
- * 但 entry.restaurants[] 有 2 個 (entry 424 user report)。
- *
- * 修法：trip_pois 既有 context='timeline' rows → INSERT 對應 trip_entry_pois
- * (sort_order = master_count + trip_pois.sort_order)。POI 已存在不需 find-or-create，
- * trip_pois 也不動 — 僅 trip_entry_pois 補 row 讓 alternates 系統看得到。
+ * 本 backfill 對「用餐 entry + restaurant choices」執行：
+ *   1. 依 `trip_pois.sort_order` 排序餐廳選擇。
+ *   2. 將第一順位餐廳寫成 `trip_entry_pois.sort_order=1`。
+ *   3. 其餘餐廳接在後面，既有非餐廳 stop_pois 保留並往後移。
+ *   4. 同步 `trip_entries.poi_id` 到第一順位餐廳，讓 legacy list/overview 立即一致。
+ *   5. bump `trip_entries.entry_pois_version`，讓舊編輯頁 state refetch。
  *
  * ## Idempotency
  *
- * UNIQUE (entry_id, poi_id) on trip_entry_pois → INSERT OR IGNORE 重跑安全。
- * 已被當作 master 的 POI（trip_entry_pois sort_order=1）會被 UNIQUE 擋掉（同 poi_id），
- * 不會重複建 alternate row。
+ * 每個 entry 先用 pure planner 算 desired order。若 `trip_entries.poi_id` 與
+ * `trip_entry_pois` 順序已一致，直接 skip。套用時用 temporary sort offset +
+ * upsert，避免 UNIQUE(entry_id, sort_order) / UNIQUE(entry_id, poi_id) swap collision，
+ * 同時維持 D1 remote-compatible SQL（不包 explicit transaction）。
  *
  * ## Usage
  *
@@ -33,18 +31,20 @@
  * bun run scripts/migrate-0059-restaurants-to-alternates.ts --dry-run --remote
  * bun run scripts/migrate-0059-restaurants-to-alternates.ts --apply --remote
  * ```
- *
- * ## Bump entry_pois_version
- *
- * 為每個受影響 entry bump trip_entries.entry_pois_version (v2.27.0 OCC counter)。
- * 確保 backfill 後 user 的舊 page state 收到 STALE_ENTRY 而 refetch — 否則他們的
- * EditEntryPage 仍以為自己看的是 0 個 alternates，後續 setMaster 帶舊 version=0
- * 會跟新狀態（有 alternates）的 version=1 衝突。
  */
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  buildMealStopPrimaryPoiApplySql,
+  planMealStopPrimaryPoiBackfill,
+  sqlPositiveInteger,
+  type ExistingStopPoiRow,
+  type MealStopBackfillInput,
+  type MealStopPrimaryPoiPlan,
+  type RestaurantChoiceRow,
+} from './lib/meal-stop-primary-poi-backfill';
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
@@ -63,24 +63,67 @@ if (DRY_RUN && APPLY) {
 const DB_NAME = 'trip-planner-db';
 const REPORT_DIR = path.join(__dirname, '..', '.gstack', 'migration-reports');
 const TS = new Date().toISOString().replace(/[:.]/g, '-');
-const REPORT_PATH = path.join(REPORT_DIR, `0059-restaurants-to-alternates-${TS}.json`);
+const REPORT_PATH = path.join(REPORT_DIR, `0059-meal-stop-primary-poi-${TS}.json`);
 
 fs.mkdirSync(REPORT_DIR, { recursive: true });
 
-/** Flatten multi-line SQL to single line — wrangler --command 不認 \n escape，CF API
- *  收到 literal `\\n` 會以 unrecognized token reject。
- */
+type D1JsonRow = {
+  results?: unknown[];
+  meta?: {
+    rows_written?: number;
+    changes?: number;
+  };
+};
+
+type RestaurantCandidateRow = {
+  entry_id: number;
+  title: string | null;
+  description: string | null;
+  note: string | null;
+  current_poi_id: number | null;
+  tp_id: number;
+  poi_id: number;
+  tp_sort: number | null;
+  poi_name: string | null;
+  poi_type: string | null;
+};
+
+type ExistingStopPoiQueryRow = {
+  entry_id: number;
+  poi_id: number;
+  sort_order: number;
+  poi_name: string | null;
+};
+
+type PlannedDetail = {
+  entryId: number;
+  title: string | null;
+  firstRestaurantPoiId: number;
+  firstRestaurantName: string | null;
+  desiredPoiIds: number[];
+  changed: boolean;
+};
+
 function flattenSql(sql: string): string {
   return sql.replace(/\s+/g, ' ').trim();
 }
 
+function d1Args(extra: string[]): string[] {
+  return ['d1', 'execute', DB_NAME, REMOTE ? '--remote' : '--local', '--json', ...extra];
+}
+
+function parseD1Json(out: string): D1JsonRow[] {
+  return JSON.parse(out) as D1JsonRow[];
+}
+
 function d1Query(sql: string): unknown[] {
   const flat = flattenSql(sql);
-  const cmd = `wrangler d1 execute ${DB_NAME} ${REMOTE ? '--remote' : '--local'} --json --command ${JSON.stringify(flat)}`;
   try {
-    const out = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-    const parsed = JSON.parse(out) as Array<{ results: unknown[] }>;
-    return parsed[0]?.results ?? [];
+    const out = execFileSync('wrangler', d1Args(['--command', flat]), {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return parseD1Json(out)[0]?.results ?? [];
   } catch (err: unknown) {
     const e = err as { stderr?: Buffer | string; stdout?: Buffer | string };
     console.error('D1 query failed:', e.stderr?.toString() ?? e.stdout?.toString() ?? err);
@@ -90,122 +133,202 @@ function d1Query(sql: string): unknown[] {
 
 function d1Exec(sql: string): { rowsAffected: number } {
   const flat = flattenSql(sql);
-  const cmd = `wrangler d1 execute ${DB_NAME} ${REMOTE ? '--remote' : '--local'} --json --command ${JSON.stringify(flat)}`;
   try {
-    const out = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-    const parsed = JSON.parse(out) as Array<{ meta?: { rows_written?: number; changes?: number } }>;
-    return { rowsAffected: parsed[0]?.meta?.rows_written ?? parsed[0]?.meta?.changes ?? 0 };
+    const out = execFileSync('wrangler', d1Args(['--command', flat]), {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const parsed = parseD1Json(out);
+    return {
+      rowsAffected: parsed.reduce(
+        (sum, row) => sum + (row.meta?.rows_written ?? row.meta?.changes ?? 0),
+        0,
+      ),
+    };
   } catch (err: unknown) {
-    const e = err as { stderr?: Buffer | string };
-    console.error('D1 exec failed:', e.stderr?.toString() ?? err);
+    const e = err as { stderr?: Buffer | string; stdout?: Buffer | string };
+    console.error('D1 exec failed:', e.stderr?.toString() ?? e.stdout?.toString() ?? err);
     throw err;
   }
 }
 
-console.log(`\nMigration 0059 — restaurants (trip_pois timeline) → trip_entry_pois alternates`);
+function pushUnique<T>(list: T[], value: T): void {
+  if (!list.includes(value)) list.push(value);
+}
+
+function firstRestaurantName(input: MealStopBackfillInput, plan: MealStopPrimaryPoiPlan): string | null {
+  return input.restaurants.find((row) => row.poiId === plan.firstRestaurantPoiId)?.poiName ?? null;
+}
+
+console.log('\nMigration 0059 — meal stop primary POI backfill');
 console.log(`Mode: ${DRY_RUN ? 'DRY-RUN' : 'APPLY'}`);
 console.log(`Target: ${REMOTE ? 'REMOTE (production)' : 'LOCAL (.wrangler dev)'}\n`);
 
-// Step 1: find candidate trip_pois rows that need an alternate row in trip_entry_pois
-// 條件：
-//   - trip_pois.context = 'timeline'
-//   - trip_pois.entry_id IS NOT NULL
-//   - 對應 (entry_id, poi_id) 還不在 trip_entry_pois (否則 INSERT OR IGNORE 也 skip 但統計會錯)
-const candidates = d1Query(`
-  SELECT tp.id AS tp_id, tp.entry_id, tp.poi_id, tp.sort_order AS tp_sort,
-         p.name AS poi_name, p.type AS poi_type
-  FROM trip_pois tp
+const candidateRows = d1Query(`
+  SELECT e.id AS entry_id,
+         e.title,
+         e.description,
+         e.note,
+         e.poi_id AS current_poi_id,
+         tp.id AS tp_id,
+         tp.poi_id,
+         tp.sort_order AS tp_sort,
+         p.name AS poi_name,
+         p.type AS poi_type
+  FROM trip_entries e
+  JOIN trip_pois tp ON tp.entry_id = e.id AND tp.context = 'timeline'
   JOIN pois p ON p.id = tp.poi_id
-  LEFT JOIN trip_entry_pois tep ON tep.entry_id = tp.entry_id AND tep.poi_id = tp.poi_id
-  WHERE tp.context = 'timeline'
-    AND tp.entry_id IS NOT NULL
-    AND tep.id IS NULL
-  ORDER BY tp.entry_id, tp.sort_order
-`) as Array<{ tp_id: number; entry_id: number; poi_id: number; tp_sort: number; poi_name: string; poi_type: string }>;
+  WHERE p.type = 'restaurant'
+  ORDER BY e.id, COALESCE(tp.sort_order, 0), tp.id
+`) as RestaurantCandidateRow[];
 
-console.log(`找到 ${candidates.length} 個 trip_pois rows 需要 backfill 成 alternates。\n`);
+const entryIds: number[] = [];
+for (const row of candidateRows) {
+  pushUnique(entryIds, row.entry_id);
+}
 
-if (candidates.length === 0) {
-  console.log('Nothing to migrate.');
-  fs.writeFileSync(REPORT_PATH, JSON.stringify({ ts: TS, candidates: 0, applied: 0 }, null, 2));
+if (entryIds.length === 0) {
+  console.log('找不到任何有餐廳 choice 的 timeline entry。Nothing to migrate.');
+  fs.writeFileSync(
+    REPORT_PATH,
+    JSON.stringify({ ts: TS, mode: DRY_RUN ? 'dry-run' : 'apply', remote: REMOTE, affectedEntries: 0 }, null, 2),
+  );
   console.log(`Report: ${REPORT_PATH}`);
   process.exit(0);
 }
 
-// Group by entry_id
-const byEntry = new Map<number, Array<{ poiId: number; tpSort: number; poiName: string; poiType: string }>>();
-for (const c of candidates) {
-  if (!byEntry.has(c.entry_id)) byEntry.set(c.entry_id, []);
-  byEntry.get(c.entry_id)!.push({ poiId: c.poi_id, tpSort: c.tp_sort, poiName: c.poi_name, poiType: c.poi_type });
+const existingRows = d1Query(`
+  SELECT tep.entry_id,
+         tep.poi_id,
+         tep.sort_order,
+         p.name AS poi_name
+  FROM trip_entry_pois tep
+  LEFT JOIN pois p ON p.id = tep.poi_id
+  WHERE tep.entry_id IN (${entryIds.map((id) => sqlPositiveInteger(id, 'entry_id')).join(',')})
+  ORDER BY tep.entry_id, tep.sort_order
+`) as ExistingStopPoiQueryRow[];
+
+const inputsByEntry = new Map<number, MealStopBackfillInput>();
+
+for (const row of candidateRows) {
+  let input = inputsByEntry.get(row.entry_id);
+  if (!input) {
+    input = {
+      entryId: row.entry_id,
+      title: row.title,
+      description: row.description,
+      note: row.note,
+      currentEntryPoiId: row.current_poi_id,
+      existingStopPois: [],
+      restaurants: [],
+    };
+    inputsByEntry.set(row.entry_id, input);
+  }
+  input.restaurants.push({
+    poiId: row.poi_id,
+    tripPoiId: row.tp_id,
+    tripPoiSortOrder: row.tp_sort,
+    poiName: row.poi_name,
+    poiType: row.poi_type,
+  } satisfies RestaurantChoiceRow);
 }
 
-console.log(`受影響 entry 數: ${byEntry.size}\n`);
+for (const row of existingRows) {
+  const input = inputsByEntry.get(row.entry_id);
+  if (!input) continue;
+  input.existingStopPois.push({
+    poiId: row.poi_id,
+    sortOrder: row.sort_order,
+    poiName: row.poi_name,
+  } satisfies ExistingStopPoiRow);
+}
 
-// Step 2: for each entry, find current max sort_order in trip_entry_pois
-let totalInsertedAlternates = 0;
-let totalBumpedEntries = 0;
-const errors: Array<{ entryId: number; error: string }> = [];
+const plans: Array<{ input: MealStopBackfillInput; plan: MealStopPrimaryPoiPlan }> = [];
+const unchanged: PlannedDetail[] = [];
+const skippedNotMeal: Array<{ entryId: number; title: string | null }> = [];
 
-for (const [entryId, items] of byEntry) {
-  try {
-    const maxRow = d1Query(`
-      SELECT COALESCE(MAX(sort_order), 0) AS max_so FROM trip_entry_pois WHERE entry_id = ${entryId}
-    `) as Array<{ max_so: number }>;
-    const maxSo = maxRow[0]?.max_so ?? 0;
-
-    let insertedForEntry = 0;
-    let nextSo = maxSo;
-    for (const item of items) {
-      nextSo += 1;
-      const sql = `
-        INSERT OR IGNORE INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-        VALUES (${entryId}, ${item.poiId}, ${nextSo}, datetime('now'), datetime('now'))
-      `;
-      console.log(`  ${DRY_RUN ? '[DRY]' : '[APPLY]'} entry=${entryId} poi=${item.poiId} (${item.poiName} · ${item.poiType}) → trip_entry_pois.sort_order=${nextSo}`);
-      if (APPLY) {
-        const result = d1Exec(sql);
-        if (result.rowsAffected > 0) insertedForEntry += 1;
-      } else {
-        insertedForEntry += 1; // dry-run estimate
-      }
-    }
-
-    // Bump entry_pois_version so EditEntryPage clients re-fetch (避免 stale view)
-    if (insertedForEntry > 0 && APPLY) {
-      d1Exec(`UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ${entryId}`);
-      totalBumpedEntries += 1;
-    } else if (insertedForEntry > 0) {
-      totalBumpedEntries += 1; // dry-run estimate
-    }
-    totalInsertedAlternates += insertedForEntry;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`  ❌ entry ${entryId} failed: ${msg}`);
-    errors.push({ entryId, error: msg });
+for (const input of inputsByEntry.values()) {
+  const plan = planMealStopPrimaryPoiBackfill(input);
+  if (!plan) {
+    skippedNotMeal.push({ entryId: input.entryId, title: input.title ?? null });
+    continue;
+  }
+  const detail: PlannedDetail = {
+    entryId: input.entryId,
+    title: input.title ?? null,
+    firstRestaurantPoiId: plan.firstRestaurantPoiId,
+    firstRestaurantName: firstRestaurantName(input, plan),
+    desiredPoiIds: plan.desiredPoiIds,
+    changed: plan.changed,
+  };
+  if (plan.changed) {
+    plans.push({ input, plan });
+  } else {
+    unchanged.push(detail);
   }
 }
 
-console.log(`\n=== Summary ===`);
-console.log(`Candidates:             ${candidates.length}`);
-console.log(`Inserted alternates:    ${totalInsertedAlternates}${DRY_RUN ? ' (would insert)' : ''}`);
-console.log(`Bumped entries:         ${totalBumpedEntries}${DRY_RUN ? ' (would bump)' : ''}`);
-console.log(`Errors:                 ${errors.length}`);
+console.log(`有餐廳 choice 的 entry: ${inputsByEntry.size}`);
+console.log(`需升級的用餐 entry:   ${plans.length}`);
+console.log(`已符合新結構:         ${unchanged.length}`);
+console.log(`非用餐 entry 略過:     ${skippedNotMeal.length}\n`);
+
+let applied = 0;
+const errors: Array<{ entryId: number; error: string }> = [];
+const plannedDetails: PlannedDetail[] = [];
+
+for (const { input, plan } of plans) {
+  const detail: PlannedDetail = {
+    entryId: input.entryId,
+    title: input.title ?? null,
+    firstRestaurantPoiId: plan.firstRestaurantPoiId,
+    firstRestaurantName: firstRestaurantName(input, plan),
+    desiredPoiIds: plan.desiredPoiIds,
+    changed: plan.changed,
+  };
+  plannedDetails.push(detail);
+  console.log(
+    `  ${DRY_RUN ? '[DRY]' : '[APPLY]'} entry=${input.entryId} ${input.title ?? '(untitled)'} ` +
+      `→ master poi=${plan.firstRestaurantPoiId}` +
+      `${detail.firstRestaurantName ? ` (${detail.firstRestaurantName})` : ''}; ` +
+      `stop_pois=${plan.desiredPoiIds.join(',')}`,
+  );
+
+  if (!APPLY) continue;
+
+  try {
+    d1Exec(buildMealStopPrimaryPoiApplySql(plan));
+    applied += 1;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    errors.push({ entryId: input.entryId, error: msg });
+  }
+}
+
+console.log('\n=== Summary ===');
+console.log(`Candidates with restaurants: ${inputsByEntry.size}`);
+console.log(`Would change / changed:      ${plans.length}${DRY_RUN ? ' (would change)' : ''}`);
+console.log(`Applied entries:             ${applied}`);
+console.log(`Already current:             ${unchanged.length}`);
+console.log(`Skipped non-meal:            ${skippedNotMeal.length}`);
+console.log(`Errors:                      ${errors.length}`);
 
 const report = {
   ts: TS,
   mode: DRY_RUN ? 'dry-run' : 'apply',
   remote: REMOTE,
-  candidates: candidates.length,
-  affectedEntries: byEntry.size,
-  inserted: totalInsertedAlternates,
-  bumpedVersions: totalBumpedEntries,
+  candidatesWithRestaurants: inputsByEntry.size,
+  plannedChanges: plans.length,
+  applied,
+  alreadyCurrent: unchanged,
+  skippedNotMeal,
   errors,
-  details: APPLY ? null : Array.from(byEntry.entries()).map(([entryId, items]) => ({ entryId, items })),
+  details: plannedDetails,
 };
 fs.writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2));
 console.log(`\nReport: ${REPORT_PATH}`);
 
 if (errors.length > 0) {
-  console.error('\n⚠️  Errors occurred — review report');
+  console.error('\nErrors occurred — review report');
   process.exit(1);
 }

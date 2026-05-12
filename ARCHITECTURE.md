@@ -174,15 +174,17 @@ trips (1)
 ### POI（景點 / 餐廳 / 購物 / 飯店）— 雙層所有權
 
 ```
-pois              AI 維護的 master + OSM 自動補資料（v2.19.0：rating 1-7 OpenTripMap、
-                  osm_id/osm_type、category、tags、wikidata_id、data_fetched_at 90d cache）
-  ↓ 1:N
-trip_pois         user 可覆寫的 per-trip layer
-  ↓ N:N
-poi_relations     多對多關聯（例如「某景點附近有哪些餐廳」）
+pois               AI 維護的 master + OSM 自動補資料（v2.19.0：rating 1-7 OpenTripMap、
+                   osm_id/osm_type、category、tags、wikidata_id、data_fetched_at 90d cache）
+trip_entry_pois    trip_entries × pois junction；sort_order=1 是 stop 本身，
+                   sort_order>1 是備案；entry_pois_version 做 OCC
+trip_pois          user 可覆寫的 per-trip/context layer（hotel / timeline / shopping）
+poi_relations      多對多關聯（例如「某景點附近有哪些餐廳」）
 ```
 
 **COALESCE convention**：讀 POI 資料時 `SELECT COALESCE(trip_pois.name, pois.name) AS name ...`。`trip_pois.name = NULL` 代表繼承 master；非 NULL 代表 user 覆寫。這讓 AI 更新 master 不會覆蓋 user 的 per-trip 客製。
+
+用餐 stop 的餐廳 choice 仍在過渡期同時由 `trip_pois context='timeline'` surface。`GET /api/trips/:id/days/:num` 會回傳 `stopPois`；若 legacy 用餐 stop 的 stored master 仍是 wrapper POI，API response 會把第一順位餐廳 virtual promote 成 `poi/master/stopPois[0]`，讓一覽、地圖與詳細視窗都顯示實際首選餐廳。Migration 0059 可把這個狀態持久化回 `trip_entry_pois.sort_order=1`。
 
 ### OSM 自動補資料 stack（v2.19.0）
 

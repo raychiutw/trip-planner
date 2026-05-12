@@ -13,12 +13,14 @@
 
 ## v2.28.x Restaurants → alternates Phase 2
 
-**Found by**: v2.28.0 ship — Phase 1 backfill 進 alternates 完成，但 `restaurants` TABLE 仍在 + TripPage TimelineRail 仍讀 `entry.restaurants[]` (來自 trip_pois context='timeline')
-**Phase 2 cutover (after 2 weeks observation)**:
-1. Monitoring SQL：確認 `trip_pois context='timeline'` 跟 `trip_entry_pois sort_order>1` 100% match（dual-state drift = 0）
-2. TripPage `TimelineRail.tsx` 改讀 `entry.alternates[].filter(a => a.type === 'restaurant')` 取代 `entry.infoBoxes[].restaurants[]`
-3. `mapDay.ts:toEntryData` 移除 `raw.restaurants → infoBoxes` 路徑（讀 alternates）
-4. Migration 0060: `DROP TABLE restaurants`（table 自 v2.14 後 dead，無資料損失風險）
+**Found by**: v2.28.0 ship — Phase 1 backfill 進 alternates 完成，但 `restaurants` TABLE 仍在 + TripPage expanded restaurant 子項目仍讀 `entry.restaurants[]` (來自 `trip_pois context='timeline'`)。
+**Partial fix shipped**: v2.28.2 先修使用者可見 bug：用餐 stop 的第一順位餐廳會透過 `stopPois[0]` / `master` / `poi` 顯示在 timeline、地圖與 lightbox；Migration 0059 也改成可把第一順位餐廳持久化為 `trip_entry_pois.sort_order=1`。
+**Phase 2 cutover (after 2 weeks observation + 0059 apply)**:
+1. Remote dry-run/apply `scripts/migrate-0059-restaurants-to-alternates.ts`，確認 meal stop primary POI backfill 無 drift。
+2. Monitoring SQL：確認 `trip_pois context='timeline'` 跟 `trip_entry_pois sort_order>1` / `sort_order=1` restaurant primary 狀態 100% match（dual-state drift = 0）。
+3. TripPage expanded restaurant 子項目改讀 `entry.alternates[].filter(a => a.type === 'restaurant')` 或 `entry.stopPois`，取代 `entry.infoBoxes[].restaurants[]`。
+4. `mapDay.ts:toEntryData` 移除 `raw.restaurants → infoBoxes` 路徑（讀 alternates / stopPois）。
+5. Migration 0060: `DROP TABLE restaurants`（table 自 v2.14 後 dead，無資料損失風險）
 **Priority**: P1（schema cleanup + UI 統一）
 **Est**: 1-2 hr CC
 
