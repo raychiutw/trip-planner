@@ -22,7 +22,7 @@ import { AppError } from '../../_errors';
 import { json, getAuth } from '../../_utils';
 import { assertGoogleAvailable } from '../../_maps_lock';
 import { computeRoute } from '../../../../src/server/maps/google-client';
-import { haversineMeters } from '../../../../src/server/maps/haversine';
+import { haversineMeters } from '../../../../src/lib/geo';
 import type { Env } from '../../_types';
 
 const WALK_GATE_M = 1000;
