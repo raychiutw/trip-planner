@@ -99,13 +99,23 @@ export async function fetchEntryPoisByEntries(
   // migration 0058). Pre-fix, this function derived version from MAX(trip_entry_pois.updated_at)
   // while the write path validated trip_entries.updated_at — a fresh GET sent back a token
   // that the mutation path rejected as stale. Both paths now read the same integer counter.
+  //
+  // v2.28.0：alternates SELECT 也 LEFT JOIN trip_pois (context='timeline')，surface
+  // restaurant 專屬欄位 (hours/rating/price 來自 pois master；reservation/reservation_url/
+  // description/note 來自 trip_pois override)。讓 EditEntryPage alternates section 跟
+  // TripPage timeline 子項目都能看到「備案餐廳」原本的細節（hours/price/reservation）。
   const [poisQuery, versionsQuery] = await Promise.all([
     db
       .prepare(
         `SELECT tep.entry_id, tep.poi_id, tep.sort_order, tep.updated_at,
-                p.name, p.lat, p.lng, p.type, p.category
+                p.name, p.lat, p.lng, p.type, p.category,
+                p.hours, p.rating, p.price,
+                tp.reservation, tp.reservation_url, tp.description, tp.note
          FROM trip_entry_pois tep
          JOIN pois p ON p.id = tep.poi_id
+         LEFT JOIN trip_pois tp ON tp.entry_id = tep.entry_id
+                                AND tp.poi_id = tep.poi_id
+                                AND tp.context = 'timeline'
          WHERE tep.entry_id IN (${placeholders})
          ORDER BY tep.entry_id, tep.sort_order`,
       )
@@ -120,6 +130,13 @@ export async function fetchEntryPoisByEntries(
         lng: number | null;
         type: string | null;
         category: string | null;
+        hours: string | null;
+        rating: number | null;
+        price: string | null;
+        reservation: string | null;
+        reservation_url: string | null;
+        description: string | null;
+        note: string | null;
       }>(),
     db
       .prepare(`SELECT id, entry_pois_version FROM trip_entries WHERE id IN (${placeholders})`)
@@ -138,13 +155,21 @@ export async function fetchEntryPoisByEntries(
       bucket = { master: null, alternates: [], version: '0' };
       result.set(r.entry_id, bucket);
     }
-    const poiInfo = {
+    const poiInfo: Record<string, unknown> = {
       poi_id: r.poi_id,
       name: r.name,
       lat: r.lat,
       lng: r.lng,
       type: r.type,
       category: r.category,
+      // v2.28.0 — restaurant 共享屬性（master 也 surface 同欄位以對齊 schema）
+      hours: r.hours,
+      rating: r.rating,
+      price: r.price,
+      reservation: r.reservation,
+      reservation_url: r.reservation_url,
+      description: r.description,
+      note: r.note,
     };
     if (r.sort_order === 1) {
       bucket.master = poiInfo;

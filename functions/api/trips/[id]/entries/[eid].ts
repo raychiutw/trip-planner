@@ -39,11 +39,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!hasPerm) throw new AppError('PERM_DENIED');
   if (!belongsToTrip) throw new AppError('DATA_NOT_FOUND');
 
-  // round 9 fix: include entry_pois_version so frontend recovery paths (e.g.
-  // EditEntryPage handleSetAsMaster 409 retry) can refetch OCC token without
-  // pulling the full /days/:num blob (contract specialist P0).
+  // v2.27.1 fix: SELECT 必須含 EditEntryPage 讀取的所有欄位。round 9 只加了
+  // entry_pois_version 但漏了 start_time/end_time/time/note/poi_id — 導致初始 load 後
+  // entry.startTime/endTime/note/poiId 全 undefined → 起訖 input 空白 + note 空白。
+  // v2.26.3 雖然修了 camelCase reads 但 backend SELECT 從沒回 time 欄位（test mock 全欄
+  // 位讓 CI mask 掉 bug）。此處改 SELECT * 一勞永逸，避免未來再漏欄位。
   const row = await db
-    .prepare('SELECT id, day_id, title, entry_pois_version FROM trip_entries WHERE id = ?')
+    .prepare('SELECT * FROM trip_entries WHERE id = ?')
     .bind(eid)
     .first();
   if (!row) throw new AppError('DATA_NOT_FOUND');
