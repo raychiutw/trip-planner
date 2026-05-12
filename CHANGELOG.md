@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.28.2] - 2026-05-13
+
+**Meal stop primary POI：行程一覽顯示實際首選餐廳，而不是泛用「午餐」。**
+
+User 在 `/trip/okinawa-trip-2026-HuiYun/stop/783/edit` 已把 `order=1` 設為「敘敘苑 沖繩浦添PARCO CITY店」，但 TripPage timeline 仍顯示 `午餐`。Root cause 是 overview 仍以 entry title / legacy wrapper POI 為 canonical display source，沒有把用餐 stop 的首選餐廳提升為 stop 本身的 primary POI。
+
+### Fixed
+
+- **TimelineRail / TravelPill / StopLightbox 顯示 selected restaurant name**：新增 `stopDisplay` helper。只有泛用用餐 label（`午餐` / `晚餐` / `lunch` 等）會被 restaurant POI name 取代；`本部午餐` 這類具體標題保留原文。
+- **Map pins / stale-travel 座標改讀 canonical stop POI**：`mapDay` + `useMapData` 以 `stopPois sortOrder=1` 作為 entry 的 POI source，fallback 到 `master` / legacy `poi`，讓地圖 pin、rating、`masterLat/masterLng` 與實際首選一致。
+- **Day API surface `stop_pois` + legacy meal promotion**：`GET /api/trips/:id/days/:num` 現在回傳完整 stop POI list；legacy 用餐 stop 若 master 仍是 wrapper，但 `trip_pois context='timeline'` 有 restaurant choices，response 會把第一順位餐廳 virtual promote 成 `poi/master/stopPois[0]`。
+- **Migration 0059 backfill script upgraded**：`scripts/migrate-0059-restaurants-to-alternates.ts` 改成 meal stop primary POI backfill：第一順位餐廳 → `trip_entry_pois.sort_order=1`，其餘餐廳與既有 stop POIs 依序保留，並同步 `trip_entries.poi_id` + bump `entry_pois_version`。提供 pure planner helper + unit tests。
+
+### Tests
+
+- 新增 `tests/unit/stop-display.test.ts`、`tests/unit/meal-stop-primary-poi-backfill.test.ts`
+- 擴充 `tests/api/entry-pois.integration.test.ts`，鎖住 `poi/poiId/master/stopPois` 都取用餐 stop 首選餐廳
+- 擴充 `map-day` / `use-map-data` / `timeline-rail-inline-expand` regression tests
+
+### Verify
+
+- `npm run typecheck`
+- `npm run typecheck:functions`
+- `npm test` — 181 files / 1539 tests
+- `npx vitest run --config vitest.config.api.mts --maxWorkers=1 --no-file-parallelism` — 64 files / 677 tests
+- `npm run build`
+
 ## [2.28.1] - 2026-05-12
 
 **Master swap / stale-travel 防呆 UX：跨區警告 + ⚠ 車程未更新提示。**
