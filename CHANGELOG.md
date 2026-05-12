@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.28.1] - 2026-05-12
+
+**Master swap / stale-travel 防呆 UX：跨區警告 + ⚠ 車程未更新提示。**
+
+v2.28.0 ship 後 entry 430 暴露兩個 UX 弱點：(A) 沒有 visual signal 阻止 user 不小心把 Tokyo POI swap 進沖繩 itinerary，(B) swap 後 `entry.travel.distanceM` 還停在舊值但 master 已換，timeline 顯「3 min 0.4 km」指向 Tokyo Tower。本版加兩道防線。
+
+### Added
+
+- **EditEntryPage swap 確認 modal — 跨區警告**：把備案設為首選時，若新 master POI 距當日其他 entries master 平均座標 > 50 km，confirm modal 加一行紅字「新首選距離本日其他點約 X km，可能跨區，前後車程會誤算」。
+  - User 仍可確認 swap（不阻擋）— 純 visual nudge，threshold 50 km 是「同日內常識邊界」（沖繩本島南北 ~120 km、城市內 ~10 km、跨日本 1500+ km）。
+  - 任一 POI 缺座標 → 不警告（無法判斷）。當日無其他 entries → 不警告（無基準）。
+- **TimelineRail TravelPill — stale-travel ⚠ + 「重新計算」button**：每對 (prev, curr) entry 算 Haversine(prev.master, curr.master)，與顯示中的 `travel.distanceM` 比對，divergence > 20% 顯紅色「⚠ 車程未更新」chip + 「重新計算」link。
+  - 點「重新計算」→ `POST /trips/:id/recompute-travel?day=N`（day-scoped，只重算當日不重算全 trip），完成後 dispatch `tp-entry-updated` 觸發 TripPage refetch。
+  - useRef in-flight guard：防快點 N× burn Google Routes quota；失敗時 `.finally` 解鎖讓 user 可重試。
+- **`src/lib/geo.ts` — canonical haversine + LatLng + avgLatLng + CROSS_REGION_THRESHOLD_M**：取代 `src/server/maps/haversine.ts`，client + server 共用（避免 drift）。`functions/api/.../recompute-travel.ts` import path 更新。
+
+### Fixed
+
+- **`refreshEntryPois` 漏抄 restaurant fields (price/hours/reservation)**：v2.28.0 init useEffect 正確 surface 但 refresh path（master swap 後）漏掉，導致 swap 完 alternates 的 price/hours/reservation chips 消失。抽 `mapAlternate(a)` helper 兩條路徑共用，避免 drift。
+- **TravelPill nested `<button>` HTML5 違規**：interactive pill 變 `<button>` 時，內嵌的 ⚠「重新計算」也是 `<button>` → 違反 HTML5 + 破壞 keyboard a11y。restructure：stale chip 改為 pill 旁的 sibling（用 `.tp-travel-pill-wrap` 包起來保持 inline）。
+- **Migration 0059 `wrangler --command` SQL escape**：multi-line SQL JSON.stringify 後傳給 `wrangler d1 execute --command`，CF API 收到 literal `\n` 會以 unrecognized token reject。加 `flattenSql()` helper 把 whitespace 收成單 space。實測通過（80 alternates inserted / 25 entries bumped / 0 errors），此版收尾未提交 fix。
+
+### Changed
+
+- **`mapDay.toTimelineEntry` surface `masterLat` / `masterLng`**：TimelineEntryData 加兩個 optional fields。優先 v2.27.0 `raw.master.lat/lng`（multi-POI SoT），fallback `raw.poi.lat/lng`（Phase 2 legacy）。TimelineRail 用來算 stale-travel detection。
+- **ConfirmModal 加 optional `warning?: string` prop**：紅色警告 box，用 `--color-priority-high-bg` token，可用於其他 destructive flow 補充說明。
+- **EditEntryPage helper 抽出 (DRY fix)**：`mapAlternate(a)` + `extractSiblingCoords(timeline, excludeEntryId)` 兩個 helper，init useEffect + refreshEntryPois 共用，避免 v2.28.0 既有的「refresh 漏抄欄位」bug 再復發。
+
+### Tests
+
+- `tests/unit/geo.test.ts` (新, 9 tests)：haversineMeters 同點 / Naha-Nago / Naha-Tokyo / 同區 / commutative / 1km gate boundary / 500m short range / 美國村 distance
+- `tests/unit/travel-pill-stale.test.tsx` (新, 10 tests)：staleHaversineM undefined / 一致 / >20% divergence / onRecompute click / distanceM null + stale value 不渲染 / staleHaversineM=0 / 負值 / 20% 邊界 / isStale=true 但無 onRecompute
+- `tests/unit/timeline-rail-stale-travel.test.tsx` (新, 6 tests)：cross-region + bad distanceM 顯 ⚠ / same-region 不顯 / missing master coords / click → POST + event / rapid 3-click → 1 POST (in-flight guard) / failed POST → retry POSTs again (.finally unlock)
+- `tests/unit/edit-entry-page.test.tsx` (+2 tests, cross-region 警告 describe)：跨區 alternate setmaster → confirm modal 顯 `confirm-modal-warning` / 同區 alternate setmaster → 不顯
+
+Total: 1526/1526 unit tests pass, 675/675 API integration tests pass, tsc clean (src + functions)。
+
 ## [2.28.0] - 2026-05-12
 
 **Restaurants → alternates schema migration (Phase 1) + GET /entries SELECT * fix。**
