@@ -3,6 +3,56 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.27.0] - 2026-05-12
+
+**Multi-POI per entry — 同一 stop 可掛多個備案景點（master + alternates），EditEntryPage 加 alternates section + master swap UI。**
+
+### Added
+
+- **Migration 0057** `trip_entry_pois` junction table（entry × poi M:N）+ backfill `entries.poi_id → sort_order=1`。`UNIQUE (entry_id, sort_order)` 保證單一 master + `UNIQUE (entry_id, poi_id)` 防同 POI 重複 + `CHECK (sort_order >= 1)`。
+- **Migration 0058** `trip_entries.entry_pois_version INTEGER NOT NULL DEFAULT 0` — OCC（樂觀並發控制）dedicated counter，僅 multi-POI mutating helpers bump（setMaster / addAlternate / removeAlternate / reorderAlternates + syncEntryMaster entry-create paths），PATCH /entries note/time edit **不** 觸碰，避免 cross-mutation false-positive。
+- **6 個新 API endpoints**：
+  - `PATCH /api/trips/:id/entries/:eid/master` — 設為首選 POI（含 alt → master swap 或 INSERT 新 master）
+  - `POST /api/trips/:id/entries/:eid/alternates` — 加入備案 POI
+  - `DELETE /api/trips/:id/entries/:eid/alternates/:poiId?entryPoisVersion=...` — 移除備案
+  - `PATCH /api/trips/:id/entries/:eid/alternates/reorder` — 重排備案順序
+  - 全部含 OCC token (`entryPoisVersion`)，409 STALE_ENTRY 表示需 refetch
+- **`functions/api/_entry_pois.ts`** helper：setMaster / addAlternate / removeAlternate / reorderAlternates / syncEntryMaster / getEntryPoisVersion，封裝 D1 batch + UNIQUE collision routing + temp_order swap idiom + dual-write Phase 1 (trip_entries.poi_id 同步維護)。
+- **GET /api/trips/:id/days/:num** response 加 `master` + `alternates` + `entryPoisVersion` 三欄（`_merge.ts` fetchEntryPoisByEntries Promise.all join + version seed from trip_entries.entry_pois_version）。Phase 1 dual-response：legacy `poi` + `poi_id` 保留，frontend selector fallback chain `getEntryMaster(entry)` / `getEntryMasterPoiId(entry)` 處理過渡期。
+- **EditEntryPage** 新增 alternates section（V1 compact + expandable list）：master swap confirm modal、加備案（從搜尋 / 從收藏）、刪除備案、上下重排、刪除整個 stop。8-state matrix 涵蓋 loading / error / empty / pending 各場景。409 STALE_ENTRY auto-retry once with refreshed version。
+- **`src/types/trip.ts`** Entry 加 `master` / `alternates` / `entryPoisVersion`，舊 `poi` / `poiId` 標 `@deprecated`（Phase 1 dual-read，Phase 2 = v2.27.1 DROP）。
+
+### Changed
+
+- **PUT /api/trips/:id/entries/:eid/poi-id** 接受可選 `entry_pois_version` / `entryPoisVersion` body field 做 OCC check（之前 cross-tab swap 會 silently lost update）。`poi_id: null` 改 explicit 拒絕 — v2.27.0 invariant「每 entry 至少 1 master POI」，要清空走 DELETE /entries。
+- **PUT /api/trips/:id/days/:num** alt-restore 邏輯改 per-OLD-entry snapshot + claim-once mapping（之前 keyed by master_poi_id 在多 entries 共享同 master POI 場景會 collapse snapshot 互換 alternates）。同步 bump `entry_pois_version` 讓 outstanding tokens 失效。
+
+### Performance
+
+- `fetchEntryPoisByEntries` 用 Promise.all 並行 — 多 1 SELECT 但同 RTT。
+- 每 mutation +1 SQL statement (UPDATE entry_pois_version + 1) — D1 batch limit 100 仍餘量。
+- migration 0058 ADD COLUMN DEFAULT 0 為 metadata-only（SQLite ≥3.35 / D1）— 既有 trip_entries rows 不重寫。
+
+### Security
+
+- ALLOWED_FIELDS whitelist 排除 entry_pois_version，PATCH /entries body 帶該 field 不能 mass-assign（test 鎖住）。
+- STALE_ENTRY error response 不洩漏 token format / 中英混用（round 7 fix）。
+
+### Migration / Deploy Order
+
+1. Apply migration 0057 + 0058 (`wrangler d1 migrations apply DB --remote`)
+2. Wait ~30s for propagation
+3. Merge PR → CF Pages auto-deploys backend + frontend
+4. Verify GET /api/trips/:id/days/:num response 含 `master` / `alternates` / `entryPoisVersion`
+5. Rollback：必須先 revert backend deploy 再 run `migrations/rollback/0058_*.sql` + `0057_*.sql`（current backend reads entry_pois_version exclusively；DROP COLUMN without revert → hard 500 on all day GETs）
+
+### Tests
+
+- 42 entry-pois integration tests（master swap / alt CRUD / reorder / OCC / UNIQUE routing / dual-write / Phase 1 fallback / cross-mutation isolation / mass-assignment）
+- 17 days-num integration tests（含 v2.27.0 alt preservation single-entry + shared-master regression）
+- 5 migration 0058 unit tests（schema / DEFAULT / monotonic / isolation / upper bound）
+- 既有 segments-patch + entries + days + unit tests pass，無 regression
+
 ## [2.26.4] - 2026-05-11
 
 **EditEntryPage 加 trip name 顯示 + 變更景點入口（mockup V1 sign-off）。**
