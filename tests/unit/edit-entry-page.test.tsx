@@ -82,6 +82,42 @@ const DAY_DATA = {
   ],
 };
 
+// v2.27.0 multi-POI per entry — DAY_DATA with master + alternates
+const DAY_DATA_WITH_ALTS = {
+  id: 7,
+  dayNum: 3,
+  timeline: [
+    { id: 41, title: '首里城', poiType: 'attraction' },
+    {
+      id: 42,
+      title: '花織そば',
+      poiType: 'restaurant',
+      master: { poiId: 100, name: '花織そば', type: 'restaurant' },
+      alternates: [
+        { poiId: 201, name: '首里そば', sortOrder: 2, type: 'restaurant', category: null },
+        { poiId: 202, name: 'やんばる食堂', sortOrder: 3, type: 'restaurant', category: null },
+      ],
+      entryPoisVersion: '2026-05-11T12:00:00',
+    },
+  ],
+};
+
+const DAY_DATA_NO_ALTS = {
+  id: 7,
+  dayNum: 3,
+  timeline: [
+    { id: 41, title: '首里城', poiType: 'attraction' },
+    {
+      id: 42,
+      title: '花織そば',
+      poiType: 'restaurant',
+      master: { poiId: 100, name: '花織そば', type: 'restaurant' },
+      alternates: [],
+      entryPoisVersion: '2026-05-11T12:00:00',
+    },
+  ],
+};
+
 const TRIP_META = { title: '沖縄自駕五日遊', name: null };
 
 function setupApiMocks() {
@@ -183,6 +219,42 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
       expect(screen.queryByTestId('edit-entry-duration')).toBeTruthy();
     });
     expect(screen.getByTestId('edit-entry-duration').textContent).toMatch(/90/);
+  });
+
+  // v2.27.0 regression test：POI 卡名稱必須 reflect master.name，不能被 entry.title 蓋掉。
+  // QA finding: 在 4f4cad2 修復前，master swap 後 POI card 還是顯示舊 entry.title。
+  // Initial useEffect was overwriting refreshEntryPois 設的 master-aware value。
+  it('POI 卡名稱優先用 master.name 而非 entry.title（master swap 不被覆寫）', async () => {
+    (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/entries/42')) return Promise.resolve({ ...ENTRY, title: 'Old Stale Title' });
+      if (url.endsWith('/days')) return Promise.resolve(DAYS);
+      if (url.includes('/days/3')) return Promise.resolve({
+        id: 7, dayNum: 3,
+        timeline: [
+          {
+            id: 42,
+            title: 'Old Stale Title',
+            poiType: 'attraction',
+            // master.name 跟 me.title 不同 — 模擬 swap 後 entry.title 還沒同步
+            master: { poiId: 999, name: 'New Master POI', type: 'hotel' },
+            alternates: [],
+            entryPoisVersion: '2026-05-12T00:00:00',
+          },
+        ],
+      });
+      if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+      return Promise.resolve(null);
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-summary')).toBeTruthy();
+    });
+    const poiCard = screen.getByTestId('edit-entry-poi-summary');
+    // 應顯示 master.name "New Master POI"，不是 entry.title "Old Stale Title"
+    expect(poiCard.textContent).toContain('New Master POI');
+    expect(poiCard.textContent).not.toContain('Old Stale Title');
+    // type label：master.type='hotel' → '住宿'
+    expect(poiCard.textContent).toContain('住宿');
   });
 
   it('Day 1 第一個 entry（無 prev）→ mode section 不渲染', async () => {
@@ -299,5 +371,277 @@ describe('EditEntryPage — 取消保護', () => {
     fireEvent.click(screen.getByLabelText('返回行程'));
     fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
+  });
+});
+
+// =========================================================================
+// v2.27.0 Multi-POI per entry — alternates section + master swap + delete stop
+// =========================================================================
+
+function setupAltsMocks(dayDataOverride?: typeof DAY_DATA_WITH_ALTS) {
+  const dayData = dayDataOverride ?? DAY_DATA_WITH_ALTS;
+  (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+    if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
+    if (url.endsWith('/days')) return Promise.resolve(DAYS);
+    if (url.includes('/days/3')) return Promise.resolve(dayData);
+    if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+    if (url.includes('/master')) return Promise.resolve({ masterPoiId: 201 });
+    if (url.includes('/alternates/reorder')) return Promise.resolve({ order: [] });
+    return Promise.resolve(null);
+  });
+  (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
+    ok: true, status: 200, text: () => Promise.resolve(''),
+  } as unknown as Response);
+}
+
+describe('EditEntryPage — v2.27.0 alternates section', () => {
+  it('alternates 有 2 個 → section 渲染 + count chip "2 個"', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy();
+    });
+    const section = screen.getByTestId('edit-entry-alternates');
+    expect(section.textContent).toMatch(/2 個/);
+    expect(screen.getByTestId('edit-entry-alt-row-201')).toBeTruthy();
+    expect(screen.getByTestId('edit-entry-alt-row-202')).toBeTruthy();
+  });
+
+  it('alternates 為 0 → section hidden + 顯示單一「加備案景點」CTA', async () => {
+    setupAltsMocks(DAY_DATA_NO_ALTS);
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-add-zero')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('edit-entry-alternates')).toBeNull();
+  });
+
+  it('每 row 含 ↑↓ / 設為首選 / × 四個 button', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-row-201')).toBeTruthy();
+    });
+    expect(screen.getByTestId('edit-entry-alt-up-201')).toBeTruthy();
+    expect(screen.getByTestId('edit-entry-alt-down-201')).toBeTruthy();
+    expect(screen.getByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+    expect(screen.getByTestId('edit-entry-alt-delete-201')).toBeTruthy();
+  });
+
+  it('第一個 row 的 ↑ 按鈕 disabled，最後一個 row 的 ↓ 按鈕 disabled', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-up-201')).toBeTruthy();
+    });
+    expect((screen.getByTestId('edit-entry-alt-up-201') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('edit-entry-alt-down-202') as HTMLButtonElement).disabled).toBe(true);
+    // 中間操作可用
+    expect((screen.getByTestId('edit-entry-alt-down-201') as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByTestId('edit-entry-alt-up-202') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('Tap 設為首選 → 開 confirm modal 含原首選與目標 POI 名稱', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-201'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
+    });
+    const modalText = screen.getByTestId('confirm-modal').textContent ?? '';
+    expect(modalText).toMatch(/首里そば/);
+    expect(modalText).toMatch(/花織そば/);
+  });
+
+  it('Confirm 設為首選 → 呼叫 PATCH /master with poiId + entryPoisVersion', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-201'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => {
+      const calls = (apiFetch as ReturnType<typeof vi.fn>).mock.calls;
+      const masterCall = calls.find((c) => typeof c[0] === 'string' && (c[0] as string).includes('/master'));
+      expect(masterCall).toBeTruthy();
+      const opts = masterCall![1] as RequestInit;
+      const body = JSON.parse(opts.body as string);
+      expect(body.poiId).toBe(201);
+      // round 4 fix A1: canonical field name is entryPoisVersion (matches GET response)
+      expect(body.entryPoisVersion).toBe('2026-05-11T12:00:00');
+    });
+  });
+
+  it('刪除整個 stop button 渲染 + tap 開 confirm modal', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-delete-stop')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-delete-stop'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
+    });
+    const modalText = screen.getByTestId('confirm-modal').textContent ?? '';
+    expect(modalText).toMatch(/刪除整個 stop/);
+    expect(modalText).toMatch(/花織そば/);
+    expect(modalText).toMatch(/2 個備案/);
+  });
+
+  it('Confirm 刪除 stop → 呼叫 DELETE /entries/:id + navigate back', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-delete-stop')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-delete-stop'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const deleteCall = calls.find((c) => {
+        const url = String(c[0]);
+        const opts = c[1] as RequestInit | undefined;
+        return url.includes('/entries/42') && opts?.method === 'DELETE';
+      });
+      expect(deleteCall).toBeTruthy();
+      expect(navigateSpy).toHaveBeenCalled();
+    });
+  });
+
+  it('「從搜尋加備案」按鈕 → navigate /trip/:id/stop/:eid/change-poi?mode=alternate', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-add-search')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-alt-add-search'));
+    expect(navigateSpy).toHaveBeenCalledWith(
+      expect.stringContaining('change-poi?mode=alternate'),
+    );
+  });
+
+  // Round 9 — 409 STALE_ENTRY 處理 (cross-tab safety + auto-retry on benign race)
+  describe('handleSetAsMaster — 409 STALE_ENTRY 處理', () => {
+    it('一次 PATCH /master 409 + refresh 後 master 不變 → 自動 retry 成功', async () => {
+      const { ApiError } = await import('../../src/lib/errors');
+      setupAltsMocks();
+      // 第一次 PATCH 409 STALE_ENTRY，第二次成功；DAY_DATA refresh 仍回原 master
+      let patchCallCount = 0;
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
+          patchCallCount += 1;
+          if (patchCallCount === 1) {
+            return Promise.reject(new ApiError('STALE_ENTRY', 409));
+          }
+          return Promise.resolve({});
+        }
+        if (url.includes('/entries/42')) return Promise.resolve({ ...ENTRY, entryPoisVersion: '999' });
+        if (url.endsWith('/days')) return Promise.resolve(DAYS);
+        if (url.includes('/days/3')) return Promise.resolve(DAY_DATA_WITH_ALTS);
+        if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+        return Promise.resolve(null);
+      });
+      renderPage();
+      await waitFor(() => {
+        expect(screen.queryByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-201'));
+      await waitFor(() => {
+        expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+      await waitFor(() => {
+        expect(patchCallCount).toBe(2); // 第一次 409，第二次成功 retry
+      });
+    });
+
+    it('一次 PATCH /master 409 + refresh 後 master 已被其他 tab 改過 → abort retry + 顯示警示', async () => {
+      const { ApiError } = await import('../../src/lib/errors');
+      // refresh 後 day data 回新 master poiId 999 (不是原 100) — 模擬 cross-tab swap
+      const DAY_DATA_AFTER_OTHER_TAB_SWAP = {
+        ...DAY_DATA_WITH_ALTS,
+        timeline: [
+          DAY_DATA_WITH_ALTS.timeline[0],
+          {
+            ...DAY_DATA_WITH_ALTS.timeline[1],
+            master: { poiId: 999, name: '別人改成的店', type: 'restaurant' },
+            entryPoisVersion: '999',
+          },
+        ],
+      };
+      let patchCallCount = 0;
+      let refreshed = false;
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
+          patchCallCount += 1;
+          return Promise.reject(new ApiError('STALE_ENTRY', 409));
+        }
+        // 一開始回原 DAY_DATA_WITH_ALTS，refresh 後回 AFTER_OTHER_TAB_SWAP
+        if (url.includes('/days/3')) {
+          const data = refreshed ? DAY_DATA_AFTER_OTHER_TAB_SWAP : DAY_DATA_WITH_ALTS;
+          refreshed = true;
+          return Promise.resolve(data);
+        }
+        if (url.includes('/entries/42')) return Promise.resolve({ ...ENTRY, entryPoisVersion: '999' });
+        if (url.endsWith('/days')) return Promise.resolve(DAYS);
+        if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+        return Promise.resolve(null);
+      });
+      renderPage();
+      await waitFor(() => {
+        expect(screen.queryByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-201'));
+      await waitFor(() => {
+        expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+      await waitFor(() => {
+        // Abort — 只有第一次 PATCH，沒 retry
+        expect(patchCallCount).toBe(1);
+        // 顯示 cross-tab 警示 message
+        const errorEl = screen.queryByText(/已被改成/);
+        expect(errorEl).toBeTruthy();
+      });
+    });
+
+    it('PATCH /master 非 STALE_ENTRY 錯誤 → 不 retry，直接 surface error', async () => {
+      const { ApiError } = await import('../../src/lib/errors');
+      let patchCallCount = 0;
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
+          patchCallCount += 1;
+          return Promise.reject(new ApiError('SYS_INTERNAL', 500));
+        }
+        if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
+        if (url.endsWith('/days')) return Promise.resolve(DAYS);
+        if (url.includes('/days/3')) return Promise.resolve(DAY_DATA_WITH_ALTS);
+        if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+        return Promise.resolve(null);
+      });
+      renderPage();
+      await waitFor(() => {
+        expect(screen.queryByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-201'));
+      await waitFor(() => {
+        expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+      await waitFor(() => {
+        // 沒 retry — 只一次 call
+        expect(patchCallCount).toBe(1);
+      });
+    });
   });
 });
