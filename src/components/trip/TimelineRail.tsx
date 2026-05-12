@@ -12,7 +12,7 @@
  * reachable via list click.
  */
 
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   DndContext,
@@ -41,6 +41,7 @@ import type { TimelineEntryData } from './TimelineEvent';
 import { parseTimeRange, formatDurationCompact, deriveTypeMeta } from '../../lib/timelineUtils';
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { useTripSegments } from '../../hooks/useTripSegments';
+import { haversineMeters } from '../../lib/geo';
 
 const SCOPED_STYLES = `
 .tp-rail-detail {
@@ -750,6 +751,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
   // backend PATCH 完成 + tp-entry-updated 觸發 refetch 再用 fresh data 覆蓋。
   const [orderOverride, setOrderOverride] = useState<number[] | null>(null);
   const tripId = useTripId();
+  const allDays = useTripDays();
   // v2.24.0 γ.1：fetch segments → 為每對 entry 提供 segment row 給 TravelPill 啟用
   // tap-switch dialog。Hook listen tp-segment-updated + tp-entry-updated 自動 re-fetch。
   const { segmentMap } = useTripSegments(tripId);
@@ -817,6 +819,35 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
     }
   }, [orderedEvents, tripId]);
 
+  // Recompute travel on demand（TravelPill ⚠「重新計算」trigger）。
+  // fire-and-forget 對齊 drag-reorder 路徑；完成 dispatch tp-entry-updated 觸發 refetch。
+  // In-flight guard：endpoint 不帶 day param 會跑全 trip；用 ref 同步檢查防快點 N× burn quota。
+  // ?day=N scope：dayId → useTripDays() 找對應 dayNum，避免重算其他天 segments。
+  const recomputePendingRef = useRef(false);
+  const handleRecomputeTravel = useCallback(() => {
+    if (!tripId || recomputePendingRef.current) return;
+    const dayNum = dayId != null ? allDays.find((d) => d.dayId === dayId)?.dayNum : null;
+    const query = typeof dayNum === 'number' ? `?day=${dayNum}` : '';
+    recomputePendingRef.current = true;
+    apiFetchRaw(`/trips/${tripId}/recompute-travel${query}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`recompute-travel ${res.status}`);
+        showToast('車程已重新計算', 'info');
+        window.dispatchEvent(new CustomEvent('tp-entry-updated', {
+          detail: { tripId, travelRecomputeRequested: true },
+        }));
+      })
+      .catch(() => {
+        showToast('車程重新計算失敗，請稍後再試', 'info');
+      })
+      .finally(() => {
+        recomputePendingRef.current = false;
+      });
+  }, [tripId, dayId, allDays]);
+
   if (!events || events.length === 0) return null;
 
   const firstTime = parseTimeRange(orderedEvents[0]?.time).start;
@@ -850,6 +881,16 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
           const segment = (prev?.id != null && entry.id != null)
             ? segmentMap.get(`${prev.id}-${entry.id}`)
             : undefined;
+          // Stale-travel baseline: Haversine(prev.master, curr.master) 給 TravelPill 比對
+          // displayed distance。任一缺座標 → null（不比較）。Transit 沒 distance 走不到。
+          const staleHaversineM = (() => {
+            if (!prev) return null;
+            const aLat = prev.masterLat; const aLng = prev.masterLng;
+            const bLat = entry.masterLat; const bLng = entry.masterLng;
+            if (typeof aLat !== 'number' || typeof aLng !== 'number') return null;
+            if (typeof bLat !== 'number' || typeof bLng !== 'number') return null;
+            return haversineMeters({ lat: aLat, lng: aLng }, { lat: bLat, lng: bLng });
+          })();
           return (
             <div key={entry.id ?? i} className="ocean-rail-row-wrap">
               {i > 0 && (travelObj || segment) && (
@@ -868,6 +909,8 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
                   tripId={tripId}
                   fromName={prev?.title ?? null}
                   toName={entry.title ?? null}
+                  staleHaversineM={staleHaversineM}
+                  onRecompute={handleRecomputeTravel}
                 />
               )}
               <RailRow

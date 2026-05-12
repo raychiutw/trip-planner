@@ -67,4 +67,12 @@ export interface TimelineEntryData {
   /** POI master type — surface 給 deriveTypeMeta 優先 over text-based keyword match。
    *  pois.type ∈ hotel|restaurant|shopping|parking|attraction|transport|activity|other */
   poiType?: string | null;
+  /**
+   * POI master coords — TimelineRail 用來算 Haversine(prev, curr) 與
+   * `travel.distanceM` 比對，divergence > 20% 顯 ⚠「車程未更新」。
+   * Master swap (v2.27.0) 後若沒重跑 recompute-travel，舊 distance/min 仍是 swap 前
+   * 的 prev↔curr 路線、coord 已是新 master → 提示 user 重新計算。
+   */
+  masterLat?: number | null;
+  masterLng?: number | null;
 }

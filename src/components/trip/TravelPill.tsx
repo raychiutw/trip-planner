@@ -20,12 +20,18 @@ import Icon from '../shared/Icon';
 import TravelPillDialog, { type TravelMode } from './TravelPillDialog';
 
 const SCOPED_STYLES = `
+.tp-travel-pill-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 6px 110px;
+  flex-wrap: wrap;
+}
 .tp-travel-pill {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   padding: 5px 14px;
-  margin: 6px 0 6px 110px;
   border-radius: var(--radius-full);
   background: var(--color-secondary);
   border: 1px solid var(--color-border);
@@ -73,9 +79,33 @@ const SCOPED_STYLES = `
   margin-left: 2px;
 }
 .tp-travel-pill-lock svg { width: 11px; height: 11px; }
+/* Stale-travel ⚠ indicator + recompute button — sibling of pill (not nested, avoid button-in-button) */
+.tp-travel-pill-stale {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.10));
+  color: var(--color-priority-high-dot, #c0392b);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+}
+.tp-travel-pill-recompute {
+  appearance: none; background: none; border: 0; padding: 2px 6px;
+  margin-left: 2px;
+  color: var(--color-priority-high-dot, #c0392b);
+  font: inherit; font-size: var(--font-size-caption);
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  text-decoration: underline;
+  min-height: var(--spacing-tap-min);
+  display: inline-flex; align-items: center;
+}
+.tp-travel-pill-recompute:hover { background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.16)); filter: brightness(0.95); }
+.tp-travel-pill-recompute:focus-visible { outline: 2px solid var(--color-priority-high-dot, #c0392b); outline-offset: 2px; }
 @media (max-width: 760px) {
+  .tp-travel-pill-wrap { margin-left: 92px; }
   .tp-travel-pill {
-    margin-left: 92px;
     padding: 4px 12px;
     gap: 8px;
     font-size: var(--font-size-caption);
@@ -126,7 +156,19 @@ export interface TravelPillProps {
   /** 顯示在 dialog title 旁的 from→to entry 名稱（optional） */
   fromName?: string | null;
   toName?: string | null;
+  /**
+   * 預期大圓距離（公尺，由 caller 從 current masters lat/lng 算）。
+   * 顯示中的 distanceM 與此值 divergence > STALE_TRAVEL_THRESHOLD_RATIO 時，
+   * pill 旁渲染 ⚠ + 重新計算 button。
+   * 0/null/undefined → 不警告（caller 表示無法比較，例如 master 缺座標）。
+   */
+  staleHaversineM?: number | null;
+  /** ⚠ button 點擊 callback（caller 呼叫 recompute-travel endpoint） */
+  onRecompute?: () => void;
 }
+
+/** 公開 export 給 test 與 caller 同步閾值定義。 */
+export const STALE_TRAVEL_THRESHOLD_RATIO = 0.2;
 
 /**
  * Format distance in meters → human label.
@@ -155,6 +197,8 @@ export default function TravelPill({
   tripId,
   fromName,
   toName,
+  staleHaversineM,
+  onRecompute,
 }: TravelPillProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -169,10 +213,24 @@ export default function TravelPill({
   const hasDesc = typeof desc === 'string' && desc.trim().length > 0;
   if (!hasMin && !hasDist && !hasDesc) return null;
 
+  // Stale-travel detection. 只在 distanceM 有值且 staleHaversineM 有值才比較；
+  // divergence = |haversine - displayed| / displayed > THRESHOLD → 渲染 ⚠。
+  // transit/walk 沒 distanceM 時 caller 不該傳 staleHaversineM（也比不出），跳過。
+  const isStale = (() => {
+    if (!hasDist) return false;
+    if (typeof staleHaversineM !== 'number' || staleHaversineM <= 0) return false;
+    const displayed = effectiveDist!;
+    const divergence = Math.abs(staleHaversineM - displayed) / displayed;
+    return divergence > STALE_TRAVEL_THRESHOLD_RATIO;
+  })();
+
   const iconName = TYPE_ICON_MAP[(effectiveType ?? '').toLowerCase()] ?? 'car';
   const isInteractive = !!segment && !!tripId;
   const showAffordance = isInteractive && !isLocked;
 
+  // Pill 內部內容 — 必須只含 non-interactive elements（pill 本身可能 wrap 成 <button>，
+  // 內部不可再有 <button>/<a>，否則 HTML5 違規 + a11y 破）。Stale ⚠ chip 含 recompute
+  // button，因此渲染成 pill 旁的 sibling，不放進 inner。
   const inner = (
     <>
       <span className="tp-travel-pill-icon" aria-hidden="true">
@@ -203,24 +261,49 @@ export default function TravelPill({
     </>
   );
 
+  const staleChip = isStale ? (
+    <span
+      className="tp-travel-pill-stale"
+      aria-label="車程未更新 — 新首選與舊資料 distance 差距 > 20%"
+      data-testid="travel-pill-stale"
+    >
+      <span aria-hidden="true">⚠</span>
+      <span>車程未更新</span>
+      {onRecompute && (
+        <button
+          type="button"
+          className="tp-travel-pill-recompute"
+          onClick={onRecompute}
+          data-testid="travel-pill-recompute"
+          aria-label="重新計算車程"
+        >
+          重新計算
+        </button>
+      )}
+    </span>
+  ) : null;
+
   return (
     <>
       <style>{SCOPED_STYLES}</style>
-      {isInteractive ? (
-        <button
-          type="button"
-          className="tp-travel-pill is-interactive"
-          onClick={() => setDialogOpen(true)}
-          aria-label={`交通方式 ${effectiveType ?? ''}${hasMin ? ` ${effectiveMin} 分鐘` : ''}${isLocked ? '（已手動覆寫）' : ''}（點擊變更）`}
-          data-testid="travel-pill"
-        >
-          {inner}
-        </button>
-      ) : (
-        <div className="tp-travel-pill" role="presentation" data-testid="travel-pill">
-          {inner}
-        </div>
-      )}
+      <span className="tp-travel-pill-wrap">
+        {isInteractive ? (
+          <button
+            type="button"
+            className="tp-travel-pill is-interactive"
+            onClick={() => setDialogOpen(true)}
+            aria-label={`交通方式 ${effectiveType ?? ''}${hasMin ? ` ${effectiveMin} 分鐘` : ''}${isLocked ? '（已手動覆寫）' : ''}（點擊變更）`}
+            data-testid="travel-pill"
+          >
+            {inner}
+          </button>
+        ) : (
+          <div className="tp-travel-pill" role="presentation" data-testid="travel-pill">
+            {inner}
+          </div>
+        )}
+        {staleChip}
+      </span>
       {dialogOpen && segment && tripId && (
         <TravelPillDialog
           tripId={tripId}
