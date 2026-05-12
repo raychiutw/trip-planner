@@ -1092,6 +1092,61 @@ describe('Round 5 — entry_pois_version isolated from unrelated entry edits (cr
   });
 });
 
+// Round 9 — syncEntryMaster INSERT + naked UPDATE 各自 bump entry_pois_version 的 regression。
+// Round 7 修了這兩條 path 加 bump，但既有 syncEntryMaster test 只走 setMaster collision route。
+describe('Round 9 — syncEntryMaster INSERT/naked UPDATE bump entry_pois_version', () => {
+  it('INSERT path (entry 沒 trip_entry_pois row) → bump version', async () => {
+    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
+    const trip = await seedTrip(db, { id: 'r9-sync-insert' });
+    const dayId = await getDayId(db, trip.id, 1);
+    const poi = await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-INS-POI', 'attraction') RETURNING id").first<{ id: number }>();
+    // 故意建 entry 後不 INSERT trip_entry_pois，模擬 entry-create 中間狀態
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, time, title, poi_id) VALUES (?, 1, '10:00', 'R9-INS', ?) RETURNING id").bind(dayId, poi!.id).first<{ id: number }>();
+    const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry!.id).first<{ v: number }>();
+
+    await syncEntryMaster(db, entry!.id, poi!.id);
+
+    const v1 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry!.id).first<{ v: number }>();
+    expect(v1!.v).toBe(v0!.v + 1);
+    const row = await db.prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ?').bind(entry!.id).first<{ poi_id: number; sort_order: number }>();
+    expect(row!.sort_order).toBe(1);
+    expect(row!.poi_id).toBe(poi!.id);
+  });
+
+  it('naked UPDATE path (master 已存在 + new poiId 不是 alternate) → bump version', async () => {
+    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
+    const trip = await seedTrip(db, { id: 'r9-sync-update' });
+    const dayId = await getDayId(db, trip.id, 1);
+    const poiOld = await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-OldMaster', 'attraction') RETURNING id").first<{ id: number }>();
+    const poiNew = await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-NewMaster', 'attraction') RETURNING id").first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, time, title, poi_id) VALUES (?, 1, '11:00', 'R9-UPD', ?) RETURNING id").bind(dayId, poiOld!.id).first<{ id: number }>();
+    await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, poiOld!.id).run();
+    const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry!.id).first<{ v: number }>();
+
+    await syncEntryMaster(db, entry!.id, poiNew!.id);
+
+    const v1 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry!.id).first<{ v: number }>();
+    expect(v1!.v).toBe(v0!.v + 1);
+    const row = await db.prepare('SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1').bind(entry!.id).first<{ poi_id: number }>();
+    expect(row!.poi_id).toBe(poiNew!.id);
+  });
+
+  it('no-op path (poiId 跟既有 master 相同) → 不 bump version', async () => {
+    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
+    const trip = await seedTrip(db, { id: 'r9-sync-noop' });
+    const dayId = await getDayId(db, trip.id, 1);
+    const poi = await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-NoOp', 'attraction') RETURNING id").first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, time, title, poi_id) VALUES (?, 1, '12:00', 'R9-NoOp', ?) RETURNING id").bind(dayId, poi!.id).first<{ id: number }>();
+    await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, poi!.id).run();
+    const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry!.id).first<{ v: number }>();
+
+    await syncEntryMaster(db, entry!.id, poi!.id);
+
+    const v1 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry!.id).first<{ v: number }>();
+    expect(v1!.v).toBe(v0!.v); // unchanged
+  });
+});
+
 describe('Round 4 — syncEntryMaster routes UNIQUE collision to setMaster (adv-C4 fix)', () => {
   it('syncEntryMaster when poiId is already alternate → master↔alt swap (not UNIQUE 500)', async () => {
     const { entryId, masterPoiId, altPoiIds } = await seedEntryWithMaster({

@@ -826,28 +826,39 @@ export default function EditEntryPage() {
 
   // v2.27.0 multi-POI handlers ----------------------------------------------
 
-  const refreshEntryPois = useCallback(async () => {
-    if (!tripId || !Number.isInteger(entryId)) return;
+  // round 9 fix: refreshEntryPois 回傳新的 master + version 供 caller decision logic
+  // 使用（如 cross-tab safety check in handleSetAsMaster）。useState setter 是 async，
+  // 同 callback 內讀不到 fresh value，所以需要把 fresh value bubble up。
+  const refreshEntryPois = useCallback(async (): Promise<{
+    masterPoiId: number | null;
+    masterName: string | null;
+    entryPoisVersion: string | null;
+  } | null> => {
+    if (!tripId || !Number.isInteger(entryId)) return null;
     try {
       const data = await apiFetch<EntryApi>(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`);
       setEntry((prev) => prev ? { ...prev, ...data } : data);
       // 重抓 day 拿 master/alternates（_merge.ts 已 populate）
       const days = await apiFetch<Array<{ id: number; dayNum: number }>>(`/trips/${encodeURIComponent(tripId)}/days`);
       const day = days.find((d) => d.id === data.dayId);
-      if (!day) return;
+      if (!day) return null;
       const dayData = await apiFetch<DayApi>(
         `/trips/${encodeURIComponent(tripId)}/days/${day.dayNum}`,
       );
       const me = (dayData.timeline ?? []).find((e) => e.id === entryId);
-      if (!me) return;
+      if (!me) return null;
       // POI card always reflect latest master fallback chain — 即使 me.master 為 null
       // 也用 helper fallthrough（degenerate API 不會留 stale name）。
-      setPoiInfo({ name: poiNameFrom(me), poiType: poiTypeFrom(me) });
-      if (me.master?.poiId != null) {
+      const freshMasterName = poiNameFrom(me);
+      setPoiInfo({ name: freshMasterName, poiType: poiTypeFrom(me) });
+      // Phase 1 dual-read fallback：master.poiId 優先，沒有時用 legacy 路徑
+      // （EntryApi.poiId — backend 未 populate master 的舊 response shape）。
+      const freshMasterPoiId = me.master?.poiId ?? data.poiId ?? null;
+      if (freshMasterPoiId != null) {
         setMasterSummary({
-          poiId: me.master.poiId,
-          name: poiNameFrom(me),
-          type: me.master.type ?? null,
+          poiId: freshMasterPoiId,
+          name: freshMasterName,
+          type: me.master?.type ?? null,
         });
       }
       setAlternates(
@@ -860,8 +871,14 @@ export default function EditEntryPage() {
         })),
       );
       if (me.entryPoisVersion) setEntryPoisVersion(me.entryPoisVersion);
+      return {
+        masterPoiId: freshMasterPoiId,
+        masterName: freshMasterName,
+        entryPoisVersion: me.entryPoisVersion ?? null,
+      };
     } catch {
       // refresh 失敗不阻擋，UI 維持上次狀態
+      return null;
     }
   }, [tripId, entryId]);
 
@@ -870,11 +887,14 @@ export default function EditEntryPage() {
     setAltPending(alt.poiId);
     setAltError(null);
 
+    // round 9 fix: capture user-perceived master at confirm time for cross-tab safety check.
+    // 若 retry 前 master 已被其他 tab 換過（B 收到 409 是因為 A 已 swap）→ abort 不 silent
+    // 覆寫 A 的 work，改 surface「此 stop 已被改成 X，請重新確認」讓 user 看到事實再決定。
+    const userExpectedOldMaster = masterSummary?.poiId ?? null;
+
     // round 7 fix: 409 STALE_ENTRY auto-retry once with refreshed version.
     // adversarial round 6 #5 — 之前 UX 把 STALE_ENTRY 當 opaque "設為首選失敗"，
-    // 使用者要手動 reload。Auto-refresh + retry 一次後仍失敗才 surface error，
-    // 對應 PATCH /master / PATCH /alternates/reorder / DELETE /alternates 都改走
-    // 同 pattern（這裡先做 PATCH /master — 最 high-frequency 的 multi-POI 操作）。
+    // 使用者要手動 reload。Auto-refresh + retry 一次後仍失敗才 surface error。
     const sendSwap = async (versionOverride?: string) => {
       const useVersion = versionOverride ?? entryPoisVersion ?? undefined;
       await apiFetch(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/master`, {
@@ -889,12 +909,19 @@ export default function EditEntryPage() {
         await sendSwap();
       } catch (err) {
         if (err instanceof ApiError && err.code === 'STALE_ENTRY') {
-          // refetch master/alternates 取得新 entryPoisVersion 然後 retry 一次
-          await refreshEntryPois();
-          const fresh = await apiFetch<{ entryPoisVersion?: string }>(
-            `/trips/${encodeURIComponent(tripId)}/entries/${entryId}`,
-          ).catch(() => null);
-          await sendSwap(fresh?.entryPoisVersion);
+          // round 9 fix: refresh 然後 cross-tab master-change detection。
+          // round 7 的 retry 是 unconditional → 若 master 已被改成 X，retry 會把它再
+          // 改成 Y，user 沒看到 X 的存在（adversarial round 8 #4 silent overwrite）。
+          // 現在 refresh 後比對 master：
+          //   - 相同 → benign race (例如其他 tab 加 alternate 觸發 version bump) → retry OK
+          //   - 不同 → 真實 cross-tab master change → abort + 報「已被改成 X」
+          const refreshed = await refreshEntryPois();
+          if (refreshed && refreshed.masterPoiId !== userExpectedOldMaster) {
+            const intoName = refreshed.masterName ?? `POI #${refreshed.masterPoiId}`;
+            throw new Error(`此 stop 已被改成「${intoName}」，請重新確認後再操作`);
+          }
+          // master 仍相同 — retry with refreshed version
+          await sendSwap(refreshed?.entryPoisVersion ?? undefined);
         } else {
           throw err;
         }
@@ -914,7 +941,7 @@ export default function EditEntryPage() {
     } finally {
       setAltPending(null);
     }
-  }, [tripId, entryId, entryPoisVersion, altPending, refreshEntryPois]);
+  }, [tripId, entryId, entryPoisVersion, altPending, refreshEntryPois, masterSummary]);
 
   // 開 ConfirmModal — 真正執行刪除在 handleConfirmRemoveAlternate。
   // 用 ConfirmModal 取代 window.confirm 對齊全站 modal style + a11y（Codex

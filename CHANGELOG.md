@@ -11,15 +11,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 - **Migration 0057** `trip_entry_pois` junction table（entry × poi M:N）+ backfill `entries.poi_id → sort_order=1`。`UNIQUE (entry_id, sort_order)` 保證單一 master + `UNIQUE (entry_id, poi_id)` 防同 POI 重複 + `CHECK (sort_order >= 1)`。
 - **Migration 0058** `trip_entries.entry_pois_version INTEGER NOT NULL DEFAULT 0` — OCC（樂觀並發控制）dedicated counter，僅 multi-POI mutating helpers bump（setMaster / addAlternate / removeAlternate / reorderAlternates + syncEntryMaster entry-create paths），PATCH /entries note/time edit **不** 觸碰，避免 cross-mutation false-positive。
-- **6 個新 API endpoints**：
+- **4 個新 API endpoints**：
   - `PATCH /api/trips/:id/entries/:eid/master` — 設為首選 POI（含 alt → master swap 或 INSERT 新 master）
   - `POST /api/trips/:id/entries/:eid/alternates` — 加入備案 POI
   - `DELETE /api/trips/:id/entries/:eid/alternates/:poiId?entryPoisVersion=...` — 移除備案
   - `PATCH /api/trips/:id/entries/:eid/alternates/reorder` — 重排備案順序
-  - 全部含 OCC token (`entryPoisVersion`)，409 STALE_ENTRY 表示需 refetch
+  - 全部含 OCC token (`entryPoisVersion`)，409 STALE_ENTRY 表示 client 應 refetch `/days/:num` 拿 fresh token 後重試
 - **`functions/api/_entry_pois.ts`** helper：setMaster / addAlternate / removeAlternate / reorderAlternates / syncEntryMaster / getEntryPoisVersion，封裝 D1 batch + UNIQUE collision routing + temp_order swap idiom + dual-write Phase 1 (trip_entries.poi_id 同步維護)。
 - **GET /api/trips/:id/days/:num** response 加 `master` + `alternates` + `entryPoisVersion` 三欄（`_merge.ts` fetchEntryPoisByEntries Promise.all join + version seed from trip_entries.entry_pois_version）。Phase 1 dual-response：legacy `poi` + `poi_id` 保留，frontend selector fallback chain `getEntryMaster(entry)` / `getEntryMasterPoiId(entry)` 處理過渡期。
-- **EditEntryPage** 新增 alternates section（V1 compact + expandable list）：master swap confirm modal、加備案（從搜尋 / 從收藏）、刪除備案、上下重排、刪除整個 stop。8-state matrix 涵蓋 loading / error / empty / pending 各場景。409 STALE_ENTRY auto-retry once with refreshed version。
+- **EditEntryPage** 新增 alternates section（V1 compact + expandable list）：master swap confirm modal、加備案（從搜尋 / 從收藏）、刪除備案、上下重排、刪除整個 stop。8-state matrix 涵蓋 loading / error / empty / pending 各場景。409 STALE_ENTRY auto-refresh + retry once，且加 cross-tab safety check — 若 refresh 後 master 已被其他 tab 改變，**abort** retry 並顯示「此 stop 已被改成 X，請重新確認」（避免 silent overwrite）。
+- **GET /api/trips/:id/entries/:eid** response 加 `entryPoisVersion` 欄位（round 9 — 之前只回 `id / dayId / title`），讓 frontend recovery 路徑不必再 refetch 整個 day blob。
 - **`src/types/trip.ts`** Entry 加 `master` / `alternates` / `entryPoisVersion`，舊 `poi` / `poiId` 標 `@deprecated`（Phase 1 dual-read，Phase 2 = v2.27.1 DROP）。
 
 ### Changed

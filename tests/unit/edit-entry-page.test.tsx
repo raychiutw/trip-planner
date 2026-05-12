@@ -529,4 +529,119 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       expect.stringContaining('change-poi?mode=alternate'),
     );
   });
+
+  // Round 9 — 409 STALE_ENTRY 處理 (cross-tab safety + auto-retry on benign race)
+  describe('handleSetAsMaster — 409 STALE_ENTRY 處理', () => {
+    it('一次 PATCH /master 409 + refresh 後 master 不變 → 自動 retry 成功', async () => {
+      const { ApiError } = await import('../../src/lib/errors');
+      setupAltsMocks();
+      // 第一次 PATCH 409 STALE_ENTRY，第二次成功；DAY_DATA refresh 仍回原 master
+      let patchCallCount = 0;
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
+          patchCallCount += 1;
+          if (patchCallCount === 1) {
+            return Promise.reject(new ApiError('STALE_ENTRY', 409));
+          }
+          return Promise.resolve({});
+        }
+        if (url.includes('/entries/42')) return Promise.resolve({ ...ENTRY, entryPoisVersion: '999' });
+        if (url.endsWith('/days')) return Promise.resolve(DAYS);
+        if (url.includes('/days/3')) return Promise.resolve(DAY_DATA_WITH_ALTS);
+        if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+        return Promise.resolve(null);
+      });
+      renderPage();
+      await waitFor(() => {
+        expect(screen.queryByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-201'));
+      await waitFor(() => {
+        expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+      await waitFor(() => {
+        expect(patchCallCount).toBe(2); // 第一次 409，第二次成功 retry
+      });
+    });
+
+    it('一次 PATCH /master 409 + refresh 後 master 已被其他 tab 改過 → abort retry + 顯示警示', async () => {
+      const { ApiError } = await import('../../src/lib/errors');
+      // refresh 後 day data 回新 master poiId 999 (不是原 100) — 模擬 cross-tab swap
+      const DAY_DATA_AFTER_OTHER_TAB_SWAP = {
+        ...DAY_DATA_WITH_ALTS,
+        timeline: [
+          DAY_DATA_WITH_ALTS.timeline[0],
+          {
+            ...DAY_DATA_WITH_ALTS.timeline[1],
+            master: { poiId: 999, name: '別人改成的店', type: 'restaurant' },
+            entryPoisVersion: '999',
+          },
+        ],
+      };
+      let patchCallCount = 0;
+      let refreshed = false;
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
+          patchCallCount += 1;
+          return Promise.reject(new ApiError('STALE_ENTRY', 409));
+        }
+        // 一開始回原 DAY_DATA_WITH_ALTS，refresh 後回 AFTER_OTHER_TAB_SWAP
+        if (url.includes('/days/3')) {
+          const data = refreshed ? DAY_DATA_AFTER_OTHER_TAB_SWAP : DAY_DATA_WITH_ALTS;
+          refreshed = true;
+          return Promise.resolve(data);
+        }
+        if (url.includes('/entries/42')) return Promise.resolve({ ...ENTRY, entryPoisVersion: '999' });
+        if (url.endsWith('/days')) return Promise.resolve(DAYS);
+        if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+        return Promise.resolve(null);
+      });
+      renderPage();
+      await waitFor(() => {
+        expect(screen.queryByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-201'));
+      await waitFor(() => {
+        expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+      await waitFor(() => {
+        // Abort — 只有第一次 PATCH，沒 retry
+        expect(patchCallCount).toBe(1);
+        // 顯示 cross-tab 警示 message
+        const errorEl = screen.queryByText(/已被改成/);
+        expect(errorEl).toBeTruthy();
+      });
+    });
+
+    it('PATCH /master 非 STALE_ENTRY 錯誤 → 不 retry，直接 surface error', async () => {
+      const { ApiError } = await import('../../src/lib/errors');
+      let patchCallCount = 0;
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
+          patchCallCount += 1;
+          return Promise.reject(new ApiError('SYS_INTERNAL', 500));
+        }
+        if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
+        if (url.endsWith('/days')) return Promise.resolve(DAYS);
+        if (url.includes('/days/3')) return Promise.resolve(DAY_DATA_WITH_ALTS);
+        if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+        return Promise.resolve(null);
+      });
+      renderPage();
+      await waitFor(() => {
+        expect(screen.queryByTestId('edit-entry-alt-setmaster-201')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('edit-entry-alt-setmaster-201'));
+      await waitFor(() => {
+        expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+      await waitFor(() => {
+        // 沒 retry — 只一次 call
+        expect(patchCallCount).toBe(1);
+      });
+    });
+  });
 });

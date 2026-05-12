@@ -3,16 +3,22 @@
  * Migration 0058 — trip_entries.entry_pois_version OCC counter
  *
  * 對映 round 5 architectural fix（adversarial round 4 「OCC source dual-write race」
- * + cross-mutation false-positive）。Dedicated INTEGER counter，only 4 multi-POI
+ * + cross-mutation false-positive）。Dedicated INTEGER counter，only multi-POI
  * mutating helpers bump，PATCH /entries note/time edit 不觸碰，GET + write 同源讀寫。
  *
  * Covers:
  * 1. ADD COLUMN schema (PRAGMA table_info)
- * 2. NOT NULL + DEFAULT 0 — 既有 rows 自動拿到 0
+ * 2. NOT NULL + DEFAULT 0 on INSERT — INSERT 不指定欄位 → 自動 0
  * 3. Monotonic 行為 — 每次 UPDATE = current + 1 不會 race backward
- * 4. SQLite ≥3.35 metadata-only ALTER（D1 supported）— 不該重寫整張表
- * 5. Round 5 invariant：cross-mutation isolation — UPDATE trip_entries SET note=...
- *    NOT 動 entry_pois_version
+ * 4. Cross-mutation isolation — UPDATE trip_entries SET note=...  NOT 動 entry_pois_version
+ * 5. Upper bound sanity — 100k 仍正常運作
+ *
+ * **Note on ALTER backfill semantic**：round 8 adversarial 正確指出 createTestDb 在
+ * fresh DB 跑完所有 migrations，所以本檔測的是「INSERT default behavior」而非
+ * 「對 pre-existing rows 的 ALTER backfill」。SQLite ≥3.35 spec 對 `ADD COLUMN
+ * NOT NULL DEFAULT <constant>` 的行為已 well-defined（既有 rows 補入 constant，
+ * metadata-only, no table rewrite），實際 prod migration 在 D1 上 apply 過後
+ * 由 entry-pois integration tests 在 prod-like schema 下驗證行為。
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createTestDb, disposeMiniflare } from '../api/setup';
@@ -43,7 +49,10 @@ describe('migration 0058 — trip_entries.entry_pois_version', () => {
     expect(col!.dflt_value).toBe('0');
   });
 
-  it('既有 rows DEFAULT 0 — 新建 entry 沒 explicitly 設 version 時讀回 0', async () => {
+  it('INSERT default 0 — 新建 entry 沒 explicitly 設 version 時讀回 0', async () => {
+    // 注意：本 test 驗證的是「INSERT 未提供 entry_pois_version 時 DEFAULT 0 生效」，
+    // 不是「ALTER TABLE 對 pre-existing rows backfill 為 0」。後者在 D1 上由
+    // migration apply 過程驗證（SQLite ADD COLUMN NOT NULL DEFAULT 0 spec-defined）。
     const { id: tripId } = await seedTrip(db, { id: 'mig58-default-trip' });
     const dayId = await getDayId(db, tripId, 1);
     const poiId = await seedPoi(db, { name: 'POI-Mig58-Default' });

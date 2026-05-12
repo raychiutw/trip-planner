@@ -10,11 +10,14 @@
  *   2. { name: string, lat: number, lng: number, source?: string } — 從 search 結果
  *      新建 POI（find-or-create by lat/lng）並重掛。entry.title 也同步更新為 name。
  *
- * round 7 fix: 接受可選 OCC token（snake_case `entry_pois_version` 對齊其他 body
- * field 慣例 + camelCase `entryPoisVersion` 跨端點一致）；若 client 帶上，setMaster
- * 走 expectedVersion check；mismatch → 409 STALE_ENTRY。沒帶仍向後相容 — UNIQUE
- * constraint 仍能 catch true race，但 cross-tab lost-update 場景需 client 帶 token
- * 才能 detect（adversarial round 6 #2）。
+ * round 7 fix + round 9 cleanup: 接受可選 OCC token `entryPoisVersion` 對齊其他
+ * multi-POI endpoints（PATCH /master / POST,DELETE /alternates / PATCH /alternates/reorder
+ * 統一 camelCase）。若 client 帶上，setMaster 走 expectedVersion check；mismatch →
+ * 409 STALE_ENTRY。沒帶仍向後相容 — UNIQUE constraint 仍能 catch true race，但 cross-tab
+ * lost-update 場景需 client 帶 token 才能 detect（adversarial round 6 #2）。
+ *
+ * Round 8 contract specialist P2：拿掉 round 7 引入的 snake_case 別名（`entry_pois_version`），
+ * 統一 camelCase。CHANGELOG 列為 round 9 cleanup — 沒 production client 用過 snake form。
  */
 
 import { findOrCreatePoi } from '../../../../_poi';
@@ -32,8 +35,7 @@ interface ChangePoiBody {
   lat?: number;
   lng?: number;
   source?: string;
-  // round 7: OCC token (optional, both casings accepted)
-  entry_pois_version?: string;
+  // round 7 + round 9: OCC token (optional, camelCase only — matches other multi-POI endpoints)
   entryPoisVersion?: string;
 }
 
@@ -100,8 +102,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   }
 
   // round 7 fix: pass OCC token through to setMaster (adversarial #2 — was bypassed).
-  const expectedVersion = body.entry_pois_version ?? body.entryPoisVersion;
-  await setMaster(db, entryId, newPoiId, expectedVersion);
+  await setMaster(db, entryId, newPoiId, body.entryPoisVersion);
   if (newTitle !== null) {
     await db.prepare('UPDATE trip_entries SET title = ? WHERE id = ?')
       .bind(newTitle, entryId).run();

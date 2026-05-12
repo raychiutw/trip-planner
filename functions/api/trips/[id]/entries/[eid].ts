@@ -39,8 +39,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!hasPerm) throw new AppError('PERM_DENIED');
   if (!belongsToTrip) throw new AppError('DATA_NOT_FOUND');
 
+  // round 9 fix: include entry_pois_version so frontend recovery paths (e.g.
+  // EditEntryPage handleSetAsMaster 409 retry) can refetch OCC token without
+  // pulling the full /days/:num blob (contract specialist P0).
   const row = await db
-    .prepare('SELECT id, day_id, title FROM trip_entries WHERE id = ?')
+    .prepare('SELECT id, day_id, title, entry_pois_version FROM trip_entries WHERE id = ?')
     .bind(eid)
     .first();
   if (!row) throw new AppError('DATA_NOT_FOUND');

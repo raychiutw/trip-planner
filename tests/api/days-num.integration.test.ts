@@ -337,6 +337,57 @@ describe('PUT /api/trips/:id/days/:num', () => {
     const row = await db.prepare('SELECT poi_id FROM trip_entries WHERE id = ?').bind(entry.id).first() as { poi_id: number | null };
     expect(row.poi_id).toBe(entry.poi_id);
   });
+
+  // Round 9 — PUT /poi-id OCC token coverage (round 7 backend 加 entryPoisVersion body field)
+  it('v2.27.0: PUT /poi-id 帶 stale entryPoisVersion → 409 STALE_ENTRY', async () => {
+    const dayId = await getDayId(db, 'trip-dn', 3);
+    const entry = await db.prepare(
+      'SELECT id, poi_id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
+    ).bind(dayId).first() as { id: number; poi_id: number };
+    const newPoi = await db.prepare(
+      "INSERT INTO pois (type, name) VALUES ('attraction', 'R9-OCC-Stale-Target') RETURNING id",
+    ).first() as { id: number };
+
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
+        poi_id: newPoi.id,
+        entryPoisVersion: '99999', // 故意 stale
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-dn', eid: String(entry.id) },
+    });
+    const resp = await callHandler(onRequestPutPoiId, ctx);
+    expect(resp.status).toBe(409);
+    // entry.poi_id 不變
+    const row = await db.prepare('SELECT poi_id FROM trip_entries WHERE id = ?').bind(entry.id).first() as { poi_id: number };
+    expect(row.poi_id).toBe(entry.poi_id);
+  });
+
+  it('v2.27.0: PUT /poi-id 帶正確 entryPoisVersion → 200 + bump version', async () => {
+    const dayId = await getDayId(db, 'trip-dn', 3);
+    const entry = await db.prepare(
+      'SELECT id, poi_id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
+    ).bind(dayId).first() as { id: number; poi_id: number };
+    const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry.id).first<{ v: number }>();
+    const newPoi = await db.prepare(
+      "INSERT INTO pois (type, name) VALUES ('attraction', 'R9-OCC-OK-Target') RETURNING id",
+    ).first() as { id: number };
+
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
+        poi_id: newPoi.id,
+        entryPoisVersion: String(v0!.v),
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-dn', eid: String(entry.id) },
+    });
+    const resp = await callHandler(onRequestPutPoiId, ctx);
+    expect(resp.status).toBe(200);
+    const v1 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry.id).first<{ v: number }>();
+    expect(v1!.v).toBe(v0!.v + 1);
+  });
 });
 
 // Round 4 fix adv-C5 / Codex F4 regression: PUT /days/:num batch1 DELETE FROM
