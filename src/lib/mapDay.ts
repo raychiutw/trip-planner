@@ -3,7 +3,7 @@
  * POI Schema: API returns merged pois + trip_pois rows.
  */
 
-import type { TimelineEntryData, TravelData, PoiPhoto } from '../components/trip/TimelineEvent';
+import type { TimelineEntryData, TravelData, PoiPhoto, StopPoiOptionData } from '../components/trip/TimelineEvent';
 import type { NavLocation } from '../components/trip/MapLinks';
 import type { InfoBoxData } from '../components/trip/InfoBox';
 import type { RestaurantData } from '../components/trip/Restaurant';
@@ -109,12 +109,19 @@ interface RawEntryPoi {
   sortOrder?: number | null;
   type?: string | null;
   name?: string | null;
+  category?: string | null;
   maps?: string | null;
   mapcode?: string | null;
   lat?: number | null;
   lng?: number | null;
   googleRating?: number | null;
   rating?: number | null;
+  hours?: string | null;
+  price?: string | null;
+  reservation?: string | null;
+  reservationUrl?: string | null;
+  description?: string | null;
+  note?: string | null;
   /** v2.12 Wave 3：JSON-encoded TEXT — array of { url, thumbUrl?, caption?, source?, attribution? } */
   photos?: string | null;
 }
@@ -172,6 +179,26 @@ function formatTravelText(travel: RawTravel): string {
 function getPrimaryStopPoi(stopPois: RawStopPoi[] | undefined): RawStopPoi | null {
   if (!stopPois || stopPois.length === 0) return null;
   return stopPois.find((p) => p.sortOrder === 1) ?? stopPois[0] ?? null;
+}
+
+function toStopPoiOption(p: RawStopPoi): StopPoiOptionData | null {
+  const name = p.name?.trim();
+  if (!name) return null;
+  return {
+    poiId: p.poiId ?? p.id ?? null,
+    sortOrder: p.sortOrder ?? null,
+    name,
+    type: p.type ?? null,
+    category: p.category ?? null,
+    rating: p.googleRating ?? p.rating ?? null,
+    hours: p.hours ?? null,
+    price: p.price ?? null,
+    reservation: p.reservation ?? null,
+    reservationUrl: p.reservationUrl ?? null,
+    description: p.description ?? null,
+    note: p.note ?? null,
+    location: buildLocation(p.maps ?? null, p.mapcode ?? null, name, p.lat ?? null, p.lng ?? null),
+  };
 }
 
 /* ===== Restaurant (from merged POI) ===== */
@@ -241,6 +268,10 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   const effGoogleRating = poi?.googleRating ?? (poi as { rating?: number | null })?.rating ?? null;
   // v2.12 Wave 3：parse pois.photos JSON 字串。malformed → 視為 null（不 throw）。
   const effPhotos: PoiPhoto[] | null = parsePhotos(poi?.photos);
+  const stopPois = (raw.stopPois ?? [])
+    .map(toStopPoiOption)
+    .filter((p): p is StopPoiOptionData => p !== null)
+    .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
   const displayTitle = getStopDisplayTitle({
     title: raw.title ?? null,
     poiName: poi?.name ?? null,
@@ -289,6 +320,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     poiType: poi?.type ?? null,
     locations: locations.length > 0 ? locations : null,
     infoBoxes: infoBoxes.length > 0 ? infoBoxes : null,
+    stopPois: stopPois.length > 0 ? stopPois : null,
     photos: effPhotos,
     masterLat,
     masterLng,

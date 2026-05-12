@@ -20,12 +20,12 @@ describe('stopDisplay', () => {
     })).toBe('敘敘苑 沖繩浦添PARCO CITY店');
   });
 
-  it('keeps specific non-generic titles unchanged', () => {
+  it('uses the primary POI name even when the entry title is specific', () => {
     expect(getStopDisplayTitle({
       title: '本部午餐',
       poiName: 'きしもと食堂',
       poiType: 'restaurant',
-    })).toBe('本部午餐');
+    })).toBe('きしもと食堂');
   });
 
   it('prefers explicit displayTitle in timeline labels', () => {

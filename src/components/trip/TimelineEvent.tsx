@@ -45,6 +45,22 @@ export interface PoiPhoto {
   attribution?: string;
 }
 
+export interface StopPoiOptionData {
+  poiId?: number | null;
+  sortOrder?: number | null;
+  name?: string | null;
+  type?: string | null;
+  category?: string | null;
+  rating?: number | null;
+  hours?: string | null;
+  price?: string | null;
+  reservation?: string | null;
+  reservationUrl?: string | null;
+  description?: string | null;
+  note?: string | null;
+  location?: NavLocation | null;
+}
+
 export interface TimelineEntryData {
   id?: number | null;
   /** Legacy combined time string ("HH:MM" or "HH:MM-HH:MM"). v2.26.0 新 path 改用 start_time / end_time。 */
@@ -63,6 +79,8 @@ export interface TimelineEntryData {
   travel?: TravelData | string | null;
   locations?: NavLocation[] | null;
   infoBoxes?: InfoBoxData[] | null;
+  /** Canonical entry POIs: first row (`sortOrder=1`) is the primary pick; remaining rows are alternates. */
+  stopPois?: StopPoiOptionData[] | null;
   /** v2.12 Wave 3：POI photos （from pois.photos JSON column）。null = 還沒抓到，
    *  StopLightbox 顯示「即將推出」 placeholder。 */
   photos?: PoiPhoto[] | null;

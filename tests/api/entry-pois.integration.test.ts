@@ -263,6 +263,52 @@ describe('POST /alternates — add', () => {
     expect(body.entryPoisVersion).toBeTruthy();
   });
 
+  it('搜尋結果 payload → find-or-create POI 後加為 alternate', async () => {
+    const { entryId } = await seedEntryWithMaster({ poiName: 'AltAdd-Search-Master' });
+
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+        'POST',
+        {
+          name: 'AltAdd-Search-New',
+          lat: 26.123,
+          lng: 127.456,
+          type: 'restaurant',
+          category: 'restaurant',
+          address: 'Okinawa',
+          rating: 4.6,
+          source: 'google',
+        },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    });
+    const resp = await callHandler(alternatesPost, ctx);
+    expect(resp.status).toBe(201);
+    const body = (await resp.json()) as { poiId: number; sortOrder: number };
+    expect(body.sortOrder).toBe(2);
+
+    const poi = await db
+      .prepare('SELECT name, type, category, address, rating FROM pois WHERE id = ?')
+      .bind(body.poiId)
+      .first<{ name: string; type: string; category: string | null; address: string | null; rating: number | null }>();
+    expect(poi).toMatchObject({
+      name: 'AltAdd-Search-New',
+      type: 'restaurant',
+      category: 'restaurant',
+      address: 'Okinawa',
+      rating: 4.6,
+    });
+
+    const link = await db
+      .prepare('SELECT sort_order FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ?')
+      .bind(entryId, body.poiId)
+      .first<{ sort_order: number }>();
+    expect(link?.sort_order).toBe(2);
+  });
+
   it('已存在的 POI → 409 DUPLICATE_POI', async () => {
     const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'AltAdd-DupMaster' });
     const ctx = mockContext({

@@ -3,6 +3,45 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.28.3] - 2026-05-13
+
+**Entry multi-POI UI parity：正選 / 備選顯示一致，搜尋與收藏都能加入備選。**
+
+Trip 的 entry 設計是「一個 entry 對一到多個 POI」：`trip_entry_pois.sort_order=1` 是正選，`sort_order>1` 是備選。本版把編輯頁、置換頁、行程一覽統一到這個資料模型，不再讓餐廳與一般景點走不同 UI。
+
+### Added
+
+- **ChangePoiPage alternate mode 支援搜尋加入備選**：`POST /alternates` 現在接受搜尋結果 payload，會先 find-or-create POI 再加入 `trip_entry_pois`，不用先收藏才能加入備選。
+- **行程一覽通用「景點選擇」區塊**：TimelineRail 展開後顯示正選卡片，接著顯示備選卡片；餐廳與一般景點共用同一格式。
+- **搜尋 POI payload runtime validation**：後端統一驗證 name/type/lat/lng/rating/category/address/country/source，malformed body 回 `DATA_VALIDATION`，不落到 D1 bind error。
+
+### Changed
+
+- **EditEntryPage 備選區塊 0-N 筆一致**：有正選景點時永遠顯示備選區；0 筆顯示 empty state +「加入備選景點」CTA。
+- **行程標題優先使用正選 POI 名稱**：`getStopDisplayTitle()` 現在一般景點也優先顯示 primary POI name，不只修餐廳 `午餐` wrapper。
+- **使用者文字統一為正選 / 備選 / 置換景點**：取代舊的首選 / 備案 / 變更 POI 混用。
+- **ARCHITECTURE.md 同步資料模型用語**：明確記錄 `sort_order=1` 是正選景點，`sort_order>1` 是備選景點。
+
+### Fixed
+
+- **置換景點從搜尋建立 POI 不再硬寫 attraction**：`PUT /poi-id` 保留搜尋結果的 type/category/address/rating/country。
+- **備選加入頁 UI 不再依是否已有備選而分岔**：搜尋與收藏兩個 tab 都能加入備選，點擊進入的是同一個置換 / 加入備選畫面。
+- **行程一覽不再用餐廳專屬卡片渲染餐廳 choices**：改讀 `entry.stopPois` 並依 `sortOrder` 排序，正選先於備選。
+
+### Tests
+
+- 新增 `tests/unit/change-poi-page.test.tsx`
+- 擴充 `tests/api/entry-pois.integration.test.ts`，鎖住搜尋 payload → find-or-create → alternate link
+- 擴充 `timeline-rail-restaurants` / `edit-entry-page` / `map-day` / `stop-display` tests，覆蓋通用正選 / 備選顯示
+
+### Verify
+
+- `npm run typecheck`
+- `npm run typecheck:functions`
+- `npm test` — 182 files / 1542 tests
+- `npm run test:api` — 64 files / 678 tests
+- `npm run build`
+
 ## [2.28.2] - 2026-05-13
 
 **Meal stop primary POI：行程一覽顯示實際首選餐廳，而不是泛用「午餐」。**
