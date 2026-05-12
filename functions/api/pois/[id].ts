@@ -103,6 +103,24 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   // Phase 2：trip_entries.poi_id FK 沒 ON DELETE SET NULL，手動清空，否則 DELETE pois 會 FK fail
   await db.prepare('UPDATE trip_entries SET poi_id = NULL WHERE poi_id = ?').bind(poiId).run();
 
+  // v2.27.0 round 4 fix adv-C1 / Codex F1: migration 0057 adds
+  // trip_entry_pois.poi_id REFERENCES pois(id) ON DELETE RESTRICT. From the moment
+  // 0057 deploys, every master POI has a junction row blocking DELETE pois.
+  // We must DELETE FROM trip_entry_pois first. Note the cascading effect:
+  // a master POI being deleted leaves its entries master-less; the next
+  // GET/refresh path will self-heal (no master row) but the entry might fall
+  // back to legacy trip_entries.poi_id which is NULL now too. Admin-only
+  // operation, accepted blast radius — trips with this POI should be migrated
+  // before admin POI deletion.
+  const junctionBefore = await db
+    .prepare('SELECT COUNT(*) AS c FROM trip_entry_pois WHERE poi_id = ?')
+    .bind(poiId)
+    .first<{ c: number }>();
+  const deletedJunctionCount = junctionBefore?.c ?? 0;
+  if (deletedJunctionCount > 0) {
+    await db.prepare('DELETE FROM trip_entry_pois WHERE poi_id = ?').bind(poiId).run();
+  }
+
   // 刪除 pois master
   await db.prepare('DELETE FROM pois WHERE id = ?').bind(poiId).run();
 
@@ -118,5 +136,6 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   return json({
     ok: true,
     deleted_trip_pois: relatedTripPois.results.length,
+    deleted_trip_entry_pois: deletedJunctionCount,
   });
 };

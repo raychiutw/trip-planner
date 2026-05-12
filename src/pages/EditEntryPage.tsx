@@ -871,7 +871,9 @@ export default function EditEntryPage() {
     try {
       await apiFetch(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/master`, {
         method: 'PATCH',
-        body: JSON.stringify({ poiId: alt.poiId, version: entryPoisVersion ?? undefined }),
+        // round 4 fix A1: use canonical entryPoisVersion (matches GET response field).
+        // backend also accepts legacy `version` for backwards compat — see master.ts.
+        body: JSON.stringify({ poiId: alt.poiId, entryPoisVersion: entryPoisVersion ?? undefined }),
         headers: { 'Content-Type': 'application/json' },
       });
       setAltSwapConfirm(null);
@@ -903,7 +905,9 @@ export default function EditEntryPage() {
     try {
       // apiFetchRaw 不會 throw on 4xx/5xx — 必須自己檢查 res.ok，否則 backend reject 也會
       // 顯示成功 toast（Codex 2nd-pass review CRITICAL）。
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates/${alt.poiId}`, {
+      // round 4 fix F3: OCC token travels via query string (DELETE has no body).
+      const versionQuery = entryPoisVersion ? `?entryPoisVersion=${encodeURIComponent(entryPoisVersion)}` : '';
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates/${alt.poiId}${versionQuery}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
@@ -919,7 +923,7 @@ export default function EditEntryPage() {
     } finally {
       setAltPending(null);
     }
-  }, [tripId, entryId, refreshEntryPois]);
+  }, [tripId, entryId, entryPoisVersion, refreshEntryPois]);
 
   const handleReorderAlternate = useCallback(async (poiId: number, direction: 'up' | 'down') => {
     if (!tripId || altPending || alternates.length < 2) return;
@@ -938,7 +942,9 @@ export default function EditEntryPage() {
     try {
       await apiFetch(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates/reorder`, {
         method: 'PATCH',
-        body: JSON.stringify({ order: newOrder }),
+        // round 4 fix F3: pass entryPoisVersion for OCC (concurrent reorders previously
+        // silently overwrote each other).
+        body: JSON.stringify({ order: newOrder, entryPoisVersion: entryPoisVersion ?? undefined }),
         headers: { 'Content-Type': 'application/json' },
       });
       await refreshEntryPois();
@@ -947,7 +953,7 @@ export default function EditEntryPage() {
     } finally {
       setAltPending(null);
     }
-  }, [tripId, entryId, alternates, altPending, refreshEntryPois]);
+  }, [tripId, entryId, alternates, altPending, entryPoisVersion, refreshEntryPois]);
 
   const handleDeleteStop = useCallback(async () => {
     if (!tripId) return;

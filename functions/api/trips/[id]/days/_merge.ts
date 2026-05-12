@@ -79,17 +79,6 @@ function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Re
 }
 
 /**
- * 組裝單天完整資料：hotel + timeline + POI 歸類。
- *
- * **前置條件**：`entries` 必須已依 `sort_order ASC` 排序（caller 負責）。
- * 本函式不排序，直接依輸入順序組裝 timeline。
- *
- * @param dayRow - trip_days row
- * @param entries - 該天的 trip_entries（已排序）
- * @param tripPois - 該天的 trip_pois
- * @param poiMap - poi_id → pois row 的查找表
- */
-/**
  * v2.27.0 multi-POI per entry：fetch trip_entry_pois rows for given entry IDs，
  * group by entry_id 並 JOIN pois 取 spatial fields。
  *
@@ -154,6 +143,20 @@ export async function fetchEntryPoisByEntries(
   return result;
 }
 
+/**
+ * 組裝單天完整資料：hotel + timeline + POI 歸類。
+ *
+ * **前置條件**：`entries` 必須已依 `sort_order ASC` 排序（caller 負責）。
+ * 本函式不排序，直接依輸入順序組裝 timeline。
+ *
+ * @param dayRow - trip_days row
+ * @param entries - 該天的 trip_entries（已排序）
+ * @param tripPois - 該天的 trip_pois
+ * @param poiMap - poi_id → pois row 的查找表
+ * @param entryPoisMap - v2.27.0 multi-POI per-entry data (optional; legacy callers
+ *   omit → entry.master/alternates fall back to `null`/`[]` and frontend selectors
+ *   read legacy `entry.poi` via getEntryMaster fallback chain).
+ */
 export function assembleDay(
   dayRow: Record<string, unknown>,
   entries: Record<string, unknown>[],

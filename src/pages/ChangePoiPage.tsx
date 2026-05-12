@@ -10,7 +10,7 @@
  * 完成後 fire-and-forget recompute travel + navigate 回 trip view。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -108,11 +108,10 @@ export default function ChangePoiPage() {
 
   // v2.27.0 multi-POI per entry：?mode=alternate 切換 add-alternate 行為
   // （title 改「加入備案景點」+ CTA 改「加為備案」+ 提交走 POST /alternates）
-  const mode: 'master' | 'alternate' = (() => {
-    if (typeof window === 'undefined') return 'master';
-    const params = new URLSearchParams(window.location.search);
-    return params.get('mode') === 'alternate' ? 'alternate' : 'master';
-  })();
+  // round 4 fix M5: use react-router's useSearchParams (reactive + SSR-safe) instead
+  // of raw window.location.search which doesn't re-render on client-side route changes.
+  const [searchParams] = useSearchParams();
+  const mode: 'master' | 'alternate' = searchParams.get('mode') === 'alternate' ? 'alternate' : 'master';
   const pageTitle = mode === 'alternate' ? '加入備案景點' : '變更景點';
   const submitLabel = mode === 'alternate' ? '加為備案' : '套用';
 
@@ -152,11 +151,13 @@ export default function ChangePoiPage() {
     setError(null);
     try {
       if (mode === 'alternate') {
-        // 加為備案：先 find-or-create 取得 poi_id，再 POST /alternates
-        let poiIdToAdd: number | null = selected.poiId ?? null;
+        // 加為備案：直接取 selected.poiId（alternate mode 只在 favorites tab 操作，
+        // 收藏 POI 必有 poi_id）。round 4 fix M6: search tab 在 alternate mode 完全
+        // 隱藏 (見 render 區塊)，所以下方兩個 throw 是 defense-in-depth — UI 不該
+        // 走到這裡。保留 throw 而非 assert 是因為若未來新增「直接收藏 search 結果」
+        // 的 flow，這 guard 還能擋一下 race window。
+        const poiIdToAdd: number | null = selected.poiId ?? null;
         if (poiIdToAdd == null && selected.name && selected.lat != null && selected.lng != null) {
-          // 透過 PUT /poi-id 的 find-or-create 路徑 hacky；改 v2.27.x 後可開
-          // 直接 backend find-or-create endpoint。目前先 require favorites mode 才能加 alternate。
           throw new Error('搜尋新建 POI 暫時不支援加備案（請先存收藏再加為備案）');
         }
         if (poiIdToAdd == null) throw new Error('無法解析 POI ID');

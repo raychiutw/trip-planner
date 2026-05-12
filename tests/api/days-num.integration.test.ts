@@ -338,3 +338,73 @@ describe('PUT /api/trips/:id/days/:num', () => {
     expect(row.poi_id).toBe(entry.poi_id);
   });
 });
+
+// Round 4 fix adv-C5 / Codex F4 regression: PUT /days/:num batch1 DELETE FROM
+// trip_entries cascades trip_entry_pois rows (FK ON DELETE CASCADE). Without the
+// preservation snapshot+restore, every PUT silently destroyed all alternates.
+describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () => {
+  it('保留 alternates：當新 timeline entry 的 master POI 跟舊 entry 同 → alternates 還在', async () => {
+    const TRIP = 'trip-dn-alt';
+    await seedTrip(db, { id: TRIP, days: 1 });
+    const dayId = await getDayId(db, TRIP, 1);
+
+    // Seed: 1 entry with master "Master-X" + 2 alternates "Alt-A", "Alt-B"
+    const masterPoi = await db
+      .prepare("INSERT INTO pois (name, type) VALUES ('Master-X', 'attraction') RETURNING id")
+      .first<{ id: number }>();
+    const altA = await db
+      .prepare("INSERT INTO pois (name, type) VALUES ('Alt-A', 'attraction') RETURNING id")
+      .first<{ id: number }>();
+    const altB = await db
+      .prepare("INSERT INTO pois (name, type) VALUES ('Alt-B', 'attraction') RETURNING id")
+      .first<{ id: number }>();
+    const entry = await db
+      .prepare("INSERT INTO trip_entries (day_id, sort_order, time, title, poi_id) VALUES (?, 1, '10:00', 'Master-X', ?) RETURNING id")
+      .bind(dayId, masterPoi!.id)
+      .first<{ id: number }>();
+    await db.batch([
+      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, masterPoi!.id),
+      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(entry!.id, altA!.id),
+      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 3)').bind(entry!.id, altB!.id),
+    ]);
+
+    // Sanity: 3 trip_entry_pois rows for this entry
+    const before = await db
+      .prepare('SELECT COUNT(*) AS c FROM trip_entry_pois WHERE entry_id = ?')
+      .bind(entry!.id)
+      .first<{ c: number }>();
+    expect(before!.c).toBe(3);
+
+    // PUT /days/:num with same master POI title (find-or-create resolves to same row)
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+        date: '2026-05-12',
+        dayOfWeek: '二',
+        label: 'Updated',
+        timeline: [
+          { time: '11:00', title: 'Master-X', poi_type: 'attraction' },
+        ],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: TRIP, num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(200);
+
+    // Verify: alternates Alt-A + Alt-B restored
+    const newEntry = await db
+      .prepare('SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1')
+      .bind(dayId)
+      .first<{ id: number }>();
+    const rows = await db
+      .prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ? ORDER BY sort_order')
+      .bind(newEntry!.id)
+      .all<{ poi_id: number; sort_order: number }>();
+    expect(rows.results.length).toBe(3);
+    expect(rows.results[0]!.sort_order).toBe(1);
+    expect(rows.results[0]!.poi_id).toBe(masterPoi!.id);
+    const altPoiIds = rows.results.slice(1).map((r) => r.poi_id).sort();
+    expect(altPoiIds).toEqual([altA!.id, altB!.id].sort());
+  });
+});

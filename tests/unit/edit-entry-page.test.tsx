@@ -456,7 +456,7 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     expect(modalText).toMatch(/花織そば/);
   });
 
-  it('Confirm 設為首選 → 呼叫 PATCH /master with poiId + version', async () => {
+  it('Confirm 設為首選 → 呼叫 PATCH /master with poiId + entryPoisVersion', async () => {
     setupAltsMocks();
     renderPage();
     await waitFor(() => {
@@ -474,7 +474,8 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       const opts = masterCall![1] as RequestInit;
       const body = JSON.parse(opts.body as string);
       expect(body.poiId).toBe(201);
-      expect(body.version).toBe('2026-05-11T12:00:00');
+      // round 4 fix A1: canonical field name is entryPoisVersion (matches GET response)
+      expect(body.entryPoisVersion).toBe('2026-05-11T12:00:00');
     });
   });
 

@@ -114,6 +114,36 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
   }
 
+  // round 4 fix adv-C5 / Codex F4: PRE-batch1, snapshot alternates per old-entry-master-POI.
+  // The batch1 DELETE FROM trip_entries cascades trip_entry_pois (FK ON DELETE CASCADE).
+  // Without this snapshot, every PUT /days/:num silently destroys all alternates because
+  // syncEntryMaster only restores sort_order=1. Strategy: index old alternates by their
+  // entry's master POI id. After syncEntryMaster lands a new master, look up alternates
+  // by master POI id — if the same POI is master again (common case: user reorders day
+  // but POIs stay), restore its alternates. Edge cases:
+  //  - User replaces an entry's POI entirely → no match → alternates lost (acceptable;
+  //    they were specific to the replaced POI)
+  //  - Two new entries with same master POI → both inherit same alternates;
+  //    UNIQUE(entry_id, poi_id) is per-entry so this is fine
+  //  - INSERT OR IGNORE on alternate restore handles any UNIQUE corner
+  const oldAltsByMasterPoi = new Map<number, Array<{ poiId: number; sortOrder: number }>>();
+  {
+    const { results } = await db
+      .prepare(
+        `SELECT e.poi_id AS master_poi_id, alt.poi_id AS alt_poi_id, alt.sort_order
+         FROM trip_entries e
+         JOIN trip_entry_pois alt ON alt.entry_id = e.id AND alt.sort_order > 1
+         WHERE e.day_id = ? AND e.poi_id IS NOT NULL`,
+      )
+      .bind(dayId)
+      .all<{ master_poi_id: number; alt_poi_id: number; sort_order: number }>();
+    for (const row of results) {
+      const list = oldAltsByMasterPoi.get(row.master_poi_id) ?? [];
+      list.push({ poiId: row.alt_poi_id, sortOrder: row.sort_order });
+      oldAltsByMasterPoi.set(row.master_poi_id, list);
+    }
+  }
+
   try {
     // Batch 1: delete old trip_pois + entries, update day, insert entries
     const batch1: D1PreparedStatement[] = [];
@@ -304,6 +334,29 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     await Promise.all(
       entriesNeedingMaster.map((p) => syncEntryMaster(db, p.entryId, p.poiId)),
     );
+
+    // round 4 fix adv-C5: restore alternates for entries whose new master poi_id matches
+    // a previously-known master. Skip alternates that collide with the new master itself.
+    const altRestoreStatements: D1PreparedStatement[] = [];
+    const nowAlt = new Date().toISOString();
+    for (const { entryId, poiId: newMasterPoiId } of entriesNeedingMaster) {
+      const oldAlts = oldAltsByMasterPoi.get(newMasterPoiId);
+      if (!oldAlts) continue;
+      for (const alt of oldAlts) {
+        if (alt.poiId === newMasterPoiId) continue; // would violate UNIQUE(entry_id, poi_id)
+        altRestoreStatements.push(
+          db
+            .prepare(
+              `INSERT OR IGNORE INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
+               VALUES (?, ?, ?, ?, ?)`,
+            )
+            .bind(entryId, alt.poiId, alt.sortOrder, nowAlt, nowAlt),
+        );
+      }
+    }
+    if (altRestoreStatements.length > 0) {
+      await db.batch(altRestoreStatements);
+    }
 
     // Audit log AFTER both batches succeed (prevents phantom audit entries on failure)
     await logAudit(db, {

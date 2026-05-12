@@ -14,8 +14,11 @@
  * ## OCC（樂觀並發控制）
  *
  * 對抗 Codex Finding #1 CRITICAL — dual-write race。`getEntryPoisVersion()` 取
- * MAX(updated_at) 當 version token；setMaster() 帶 expectedVersion，mismatch 即
- * 409 STALE_ENTRY。
+ * **trip_entries.updated_at** 當 version token（round 4 fix Codex F2：原本用
+ * MAX(updated_at) FROM trip_entry_pois 在 removeAlternate 後可能 backward — 移除
+ * max-ts row 後 MAX 變回更舊 ts，舊 token 重新有效）。所有 mutating helper
+ * （setMaster / addAlternate / removeAlternate / reorderAlternates）都會 bump
+ * trip_entries.updated_at = nowMs() 保證 monotonic。
  *
  * ## Master swap TX 邏輯（Codex Finding #2）
  *
@@ -25,12 +28,15 @@
  *
  * ## Segment recompute（Codex Finding #3）
  *
- * `markAdjacentSegmentsStale()` 在 master 變動的 TX 內 mark trip_segments
- * source='stale' + computed_at=NULL。實際 Google Routes call 由 caller 在
- * commit 後 idempotent retry，失敗變 retryable warning 不阻斷 master swap。
+ * setMaster() 在 batch 內 mark trip_segments computed_at=NULL + updated_at=Date.now()
+ * (ms — round 4 Codex F5 fix；原本用 strftime('%s') seconds 跟 recompute-travel
+ * 的 Date.now() ms 不同 scale)。trip_segments.source CHECK 不允許 'stale'，所以
+ * 只能用 computed_at=NULL signal。實際 Google Routes call 由 frontend useTripSegments
+ * 在 computed_at=NULL detect 後觸發 POST /recompute-travel idempotent。
  */
 import { AppError } from './_errors';
 
+/** @internal — exported for syncEntryMaster collision-route to setMaster. */
 export interface MasterPoiRow {
   poiId: number;
   name: string | null;
@@ -40,78 +46,13 @@ export interface MasterPoiRow {
   category: string | null;
 }
 
-export interface AlternatePoiRow extends MasterPoiRow {
+/** @internal — used inside reorderAlternates only. Do not call from endpoints. */
+interface AlternatePoiRow extends MasterPoiRow {
   sortOrder: number;
 }
 
-/**
- * 取 entry 的 master POI（sort_order=1）。若無 master row → return null。
- * Phase 1 dual-read fallback：trip_entry_pois 無 row 時，讀 trip_entries.poi_id
- * 並即時 INSERT 補資料（self-healing）。
- */
-export async function getMasterPoi(
-  db: D1Database,
-  entryId: number,
-): Promise<MasterPoiRow | null> {
-  // Primary path: trip_entry_pois.sort_order=1 JOIN pois
-  const primary = await db
-    .prepare(
-      `SELECT p.id AS poi_id, p.name, p.lat, p.lng, p.type, p.category
-       FROM trip_entry_pois tep
-       JOIN pois p ON p.id = tep.poi_id
-       WHERE tep.entry_id = ? AND tep.sort_order = 1`,
-    )
-    .bind(entryId)
-    .first<{ poi_id: number; name: string | null; lat: number | null; lng: number | null; type: string | null; category: string | null }>();
-
-  if (primary) {
-    return {
-      poiId: primary.poi_id,
-      name: primary.name,
-      lat: primary.lat,
-      lng: primary.lng,
-      type: primary.type,
-      category: primary.category,
-    };
-  }
-
-  // Phase 1 fallback: trip_entries.poi_id 仍存在但 trip_entry_pois 沒寫到（migration
-  // backfill 之前的 entries、或 race condition）→ self-heal INSERT
-  const legacy = await db
-    .prepare(
-      `SELECT te.poi_id, p.name, p.lat, p.lng, p.type, p.category
-       FROM trip_entries te
-       LEFT JOIN pois p ON p.id = te.poi_id
-       WHERE te.id = ? AND te.poi_id IS NOT NULL`,
-    )
-    .bind(entryId)
-    .first<{ poi_id: number; name: string | null; lat: number | null; lng: number | null; type: string | null; category: string | null }>();
-
-  if (!legacy || legacy.poi_id == null) return null;
-
-  // Self-heal: INSERT into trip_entry_pois sort_order=1。用 nowMs() 取代 datetime('now')
-  // 跟其餘 file 一致 ms-resolution（Codex 2nd-pass review CRITICAL #1 一致性 fix）。
-  const healNow = nowMs();
-  await db
-    .prepare(
-      `INSERT OR IGNORE INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-       VALUES (?, ?, 1, ?, ?)`,
-    )
-    .bind(entryId, legacy.poi_id, healNow, healNow)
-    .run();
-
-  return {
-    poiId: legacy.poi_id,
-    name: legacy.name,
-    lat: legacy.lat,
-    lng: legacy.lng,
-    type: legacy.type,
-    category: legacy.category,
-  };
-}
-
-/** 取 entry 所有 alternates（sort_order > 1，依 sort_order 排序）。 */
-export async function getAlternates(
+/** 取 entry 所有 alternates（sort_order > 1，依 sort_order 排序）。 @internal */
+async function getAlternates(
   db: D1Database,
   entryId: number,
 ): Promise<AlternatePoiRow[]> {
@@ -137,20 +78,23 @@ export async function getAlternates(
 }
 
 /**
- * OCC version token = MAX(updated_at) of all trip_entry_pois rows for entry。
- * 任一 row update / insert / delete 都會 bump version。Client 在 PATCH /master
- * 等 mutating endpoint 傳回收的 version，server 對比，mismatch → 409 STALE_ENTRY。
+ * OCC version token = trip_entries.updated_at (monotonic by design — round 4 fix Codex F2).
+ *
+ * Previous impl used MAX(updated_at) FROM trip_entry_pois — backward-movable: when
+ * removeAlternate deletes the row with the highest updated_at, MAX falls back to an
+ * older timestamp, so stale tokens held by a racing client become valid again.
+ *
+ * trip_entries.updated_at avoids that: the row is never deleted during alt mutations,
+ * and every mutating helper here bumps it = nowMs() (monotonically increasing JS clock).
  */
 export async function getEntryPoisVersion(
   db: D1Database,
   entryId: number,
 ): Promise<string> {
   const row = await db
-    .prepare(
-      `SELECT COALESCE(MAX(updated_at), '0') AS version FROM trip_entry_pois WHERE entry_id = ?`,
-    )
+    .prepare(`SELECT updated_at AS version FROM trip_entries WHERE id = ?`)
     .bind(entryId)
-    .first<{ version: string }>();
+    .first<{ version: string | null }>();
   return row?.version ?? '0';
 }
 
@@ -196,30 +140,38 @@ export async function setMaster(
     }
   }
 
-  // 2. Snapshot current state
-  const oldMasterRow = await db
-    .prepare('SELECT id, poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
-    .bind(entryId)
-    .first<{ id: number; poi_id: number }>();
+  // 2. Snapshot current state — 3 SELECTs parallelized (round 4 perf P2 — D1 = network
+  // round trip per query; serial cost was 3 RTs, now 1).
+  const [oldMasterRow, newMasterRow, maxRow] = await Promise.all([
+    db
+      .prepare('SELECT id, poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(entryId)
+      .first<{ id: number; poi_id: number }>(),
+    db
+      .prepare('SELECT id, sort_order FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ?')
+      .bind(entryId, newMasterPoiId)
+      .first<{ id: number; sort_order: number }>(),
+    db
+      .prepare('SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM trip_entry_pois WHERE entry_id = ?')
+      .bind(entryId)
+      .first<{ max_order: number }>(),
+  ]);
   const oldMasterPoiId = oldMasterRow?.poi_id ?? null;
-
-  // No-op: already master
-  if (oldMasterPoiId === newMasterPoiId) {
-    const version = await getEntryPoisVersion(db, entryId);
-    return { version, oldMasterPoiId };
-  }
-
-  const newMasterRow = await db
-    .prepare('SELECT id, sort_order FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ?')
-    .bind(entryId, newMasterPoiId)
-    .first<{ id: number; sort_order: number }>();
-
-  const maxRow = await db
-    .prepare('SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM trip_entry_pois WHERE entry_id = ?')
-    .bind(entryId)
-    .first<{ max_order: number }>();
   const maxOrder = maxRow?.max_order ?? 0;
   const tempOrder = maxOrder + 100;
+
+  // No-op: already master. Phase 1 drift safety (round 4 fix adv-C2) — still UPDATE
+  // trip_entries.poi_id + bump updated_at so trip_entry_pois & trip_entries don't drift
+  // when an earlier migration / race left them out of sync. We do NOT mark segments
+  // stale (no plan change) and do NOT touch trip_entry_pois rows.
+  if (oldMasterPoiId === newMasterPoiId) {
+    const now = nowMs();
+    await db
+      .prepare('UPDATE trip_entries SET poi_id = ?, updated_at = ? WHERE id = ?')
+      .bind(newMasterPoiId, now, entryId)
+      .run();
+    return { version: now, oldMasterPoiId };
+  }
 
   // 統一 timestamp source — 整個 batch 內所有 updated_at 用同一個 JS-clock ISO ms
   // (Codex pre-landing CRITICAL #1 + HIGH #5)。所有 OCC token 來自此值。
@@ -284,14 +236,19 @@ export async function setMaster(
 
   // Mark adjacent segments stale（per Codex #3）
   // trip_segments.source CHECK 不允許 'stale'，改用 computed_at=NULL 標 stale +
-  // bump updated_at 讓 frontend useTripSegments 知道要 refetch
+  // bump updated_at 讓 frontend useTripSegments 知道要 refetch。
+  // round 4 fix Codex F5: bind Date.now() ms (matches recompute-travel.ts:150
+  // convention) instead of strftime('%s') seconds — mixing scales made the
+  // "bumped updated_at" signal move backward when this UPDATE ran right after
+  // a recompute, breaking refetch detection.
+  const segUpdatedAt = Date.now();
   statements.push(
     db
       .prepare(
-        `UPDATE trip_segments SET computed_at = NULL, updated_at = strftime('%s', 'now')
+        `UPDATE trip_segments SET computed_at = NULL, updated_at = ?
          WHERE from_entry_id = ? OR to_entry_id = ?`,
       )
-      .bind(entryId, entryId),
+      .bind(segUpdatedAt, entryId, entryId),
   );
 
   try {
@@ -309,8 +266,10 @@ export async function setMaster(
     throw err;
   }
 
-  const version = await getEntryPoisVersion(db, entryId);
-  return { version, oldMasterPoiId };
+  // OCC version source is trip_entries.updated_at (round 4 fix Codex F2 — monotonic
+  // by design). We just bumped it in the batch above, so use `now` directly to save
+  // a SELECT round-trip (round 4 perf P4).
+  return { version: now, oldMasterPoiId };
 }
 
 /** Add alternate POI（sort_order = max + 1）。 */
@@ -318,7 +277,17 @@ export async function addAlternate(
   db: D1Database,
   entryId: number,
   poiId: number,
+  expectedVersion?: string,
 ): Promise<{ sortOrder: number; version: string }> {
+  // OCC check (round 4 fix Codex F3 — alternates CRUD now uses same OCC as setMaster
+  // so two concurrent reorders/adds can't silently overwrite each other).
+  if (expectedVersion !== undefined) {
+    const current = await getEntryPoisVersion(db, entryId);
+    if (current !== expectedVersion) {
+      throw new AppError('STALE_ENTRY', `expected version ${expectedVersion} but got ${current}`);
+    }
+  }
+
   // 三段平行 SELECT 同 setMaster 模式減 round-trip：master 存在 + dup-check + max
   const [masterCount, dup, maxRow] = await Promise.all([
     db
@@ -350,14 +319,19 @@ export async function addAlternate(
   // → UNIQUE(entry_id, sort_order) collision；catch 後轉成 retryable STALE_ENTRY，
   // client 重抓 version 後再試。UNIQUE(entry_id, poi_id) 衝突也走同一 catch，但語意
   // 上是 DUPLICATE_POI（並發 add 同一 POI）— 我們已 dup-check 過，剩 race window 很窄。
+  // round 4 fix F2: also bump trip_entries.updated_at to make OCC token monotonic.
   try {
-    await db
-      .prepare(
-        `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`,
-      )
-      .bind(entryId, poiId, newSortOrder, now, now)
-      .run();
+    await db.batch([
+      db
+        .prepare(
+          `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
+           VALUES (?, ?, ?, ?, ?)`,
+        )
+        .bind(entryId, poiId, newSortOrder, now, now),
+      db
+        .prepare('UPDATE trip_entries SET updated_at = ? WHERE id = ?')
+        .bind(now, entryId),
+    ]);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (/UNIQUE constraint|SQLITE_CONSTRAINT/i.test(msg)) {
@@ -366,8 +340,7 @@ export async function addAlternate(
     throw err;
   }
 
-  const version = await getEntryPoisVersion(db, entryId);
-  return { sortOrder: newSortOrder, version };
+  return { sortOrder: newSortOrder, version: now };
 }
 
 /** Remove alternate POI（不能 remove master — caller 應走 DELETE /entries/:id）。 */
@@ -375,7 +348,16 @@ export async function removeAlternate(
   db: D1Database,
   entryId: number,
   poiId: number,
+  expectedVersion?: string,
 ): Promise<{ version: string }> {
+  // OCC check (round 4 fix F3)
+  if (expectedVersion !== undefined) {
+    const current = await getEntryPoisVersion(db, entryId);
+    if (current !== expectedVersion) {
+      throw new AppError('STALE_ENTRY', `expected version ${expectedVersion} but got ${current}`);
+    }
+  }
+
   const row = await db
     .prepare(
       'SELECT id, sort_order FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ?',
@@ -391,10 +373,15 @@ export async function removeAlternate(
       'Cannot remove master via alternates endpoint. Use DELETE /entries/:id to delete entire stop.',
     );
   }
-  await db.prepare('DELETE FROM trip_entry_pois WHERE id = ?').bind(row.id).run();
 
-  const version = await getEntryPoisVersion(db, entryId);
-  return { version };
+  // Batch DELETE + trip_entries.updated_at bump so OCC token is monotonic (round 4 F2).
+  const now = nowMs();
+  await db.batch([
+    db.prepare('DELETE FROM trip_entry_pois WHERE id = ?').bind(row.id),
+    db.prepare('UPDATE trip_entries SET updated_at = ? WHERE id = ?').bind(now, entryId),
+  ]);
+
+  return { version: now };
 }
 
 /**
@@ -409,7 +396,17 @@ export async function reorderAlternates(
   db: D1Database,
   entryId: number,
   orderedPoiIds: number[],
+  expectedVersion?: string,
 ): Promise<{ version: string }> {
+  // OCC check (round 4 fix F3 — was missing entirely, two concurrent reorders silently
+  // overwrote each other).
+  if (expectedVersion !== undefined) {
+    const current = await getEntryPoisVersion(db, entryId);
+    if (current !== expectedVersion) {
+      throw new AppError('STALE_ENTRY', `expected version ${expectedVersion} but got ${current}`);
+    }
+  }
+
   const current = await getAlternates(db, entryId);
   const currentIds = new Set(current.map((a) => a.poiId));
   const orderedSet = new Set(orderedPoiIds);
@@ -427,11 +424,13 @@ export async function reorderAlternates(
   // 兩段式 UPDATE 避開 UNIQUE collision：
   // Phase 1: 全部 alternates 推到 temp range（max+100, max+101, ...）
   // Phase 2: 依 orderedPoiIds 重排到 2, 3, ...
-  const maxRow = await db
-    .prepare('SELECT COALESCE(MAX(sort_order), 0) AS m FROM trip_entry_pois WHERE entry_id = ?')
-    .bind(entryId)
-    .first<{ m: number }>();
-  const tempBase = (maxRow?.m ?? 0) + 100;
+  //
+  // round 4 perf P7: max sort_order derived from getAlternates result (ASC ordered,
+  // last element is the max alternate) — saves a redundant SELECT MAX round-trip.
+  // Master holds sort_order=1, alternates start at 2 — so masterOrder+1 < altMaxOrder
+  // always, and max(alternates) is enough since temp range only needs to exceed alts.
+  const altMaxOrder = current.length > 0 ? current[current.length - 1]!.sortOrder : 1;
+  const tempBase = altMaxOrder + 100;
 
   const now = nowMs();
   const phase1: D1PreparedStatement[] = current.map((a, i) =>
@@ -446,10 +445,12 @@ export async function reorderAlternates(
       .bind(idx + 2, now, entryId, poiId),
   );
 
-  await db.batch([...phase1, ...phase2]);
+  // round 4 fix F2: bump trip_entries.updated_at for monotonic OCC token
+  const bump = db.prepare('UPDATE trip_entries SET updated_at = ? WHERE id = ?').bind(now, entryId);
 
-  const version = await getEntryPoisVersion(db, entryId);
-  return { version };
+  await db.batch([...phase1, ...phase2, bump]);
+
+  return { version: now };
 }
 
 /**
@@ -477,11 +478,19 @@ export async function syncEntryMaster(
   const now = nowMs();
   // INSERT OR REPLACE on UNIQUE(entry_id, sort_order) 會 swap 既有 sort_order=1 row
   // 但 UNIQUE(entry_id, poi_id) 可能讓「同 POI 已存在當 alternate」的場景失敗。
-  // 安全做法：先 SELECT 既有 sort_order=1 → 不存在則 INSERT；存在 + 不同 POI 則 UPDATE。
-  const existing = await db
-    .prepare('SELECT id, poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
-    .bind(entryId)
-    .first<{ id: number; poi_id: number }>();
+  // 安全做法：先 SELECT 既有 sort_order=1 → 不存在則 INSERT；存在 + 不同 POI 則需要
+  // master↔alternate swap，路由到 setMaster (round 4 fix adv-C4 — naked UPDATE blew up
+  // on UNIQUE(entry_id, poi_id) when new poiId was already an alternate of this entry).
+  const [existing, asAlternate] = await Promise.all([
+    db
+      .prepare('SELECT id, poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(entryId)
+      .first<{ id: number; poi_id: number }>(),
+    db
+      .prepare('SELECT id FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ? AND sort_order > 1')
+      .bind(entryId, poiId)
+      .first<{ id: number }>(),
+  ]);
 
   if (!existing) {
     await db
@@ -494,11 +503,21 @@ export async function syncEntryMaster(
     return;
   }
 
-  if (existing.poi_id !== poiId) {
-    await db
-      .prepare('UPDATE trip_entry_pois SET poi_id = ?, updated_at = ? WHERE id = ?')
-      .bind(poiId, now, existing.id)
-      .run();
+  if (existing.poi_id === poiId) {
+    // poi_id 相同 → no-op
+    return;
   }
-  // poi_id 相同 → no-op
+
+  if (asAlternate) {
+    // poiId 已是這個 entry 的 alternate → naked UPDATE 會撞 UNIQUE(entry_id, poi_id)。
+    // 走 setMaster 做 master↔alternate swap，連帶 dual-write + segments stale 一起處理。
+    await setMaster(db, entryId, poiId);
+    return;
+  }
+
+  // existing master poi_id != poiId, and poiId is not yet an alternate → safe UPDATE
+  await db
+    .prepare('UPDATE trip_entry_pois SET poi_id = ?, updated_at = ? WHERE id = ?')
+    .bind(poiId, now, existing.id)
+    .run();
 }

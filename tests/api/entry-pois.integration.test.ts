@@ -875,3 +875,154 @@ describe('Segment recompute trigger', () => {
     expect(seg!.updated_at).toBeGreaterThan(0);
   });
 });
+
+// ============================================================================
+// Round 4 pre-landing fixes — regression tests for newly-fixed bugs
+// ============================================================================
+
+describe('Round 4 — OCC monotonic across removeAlternate (Codex F2 fix)', () => {
+  it('removeAlternate 後 version 不會 backward (trip_entries.updated_at monotonic)', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'F2-Master',
+      altPoiNames: ['F2-Alt-1', 'F2-Alt-2'],
+    });
+
+    // Bump trip_entries.updated_at so the first version is non-zero / non-default.
+    const v0 = '2026-05-12T00:00:00.000Z';
+    await db.prepare('UPDATE trip_entries SET updated_at = ? WHERE id = ?').bind(v0, entryId).run();
+
+    // Remove the last alternate
+    await callHandler(alternateDelete, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/${altPoiIds[1]}`, 'DELETE'),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId), poiId: String(altPoiIds[1]) },
+    }));
+
+    const after = await db
+      .prepare('SELECT updated_at AS v FROM trip_entries WHERE id = ?')
+      .bind(entryId)
+      .first<{ v: string }>();
+    // Must be strictly greater than v0 — monotonic invariant per F2 fix.
+    expect(after!.v > v0).toBe(true);
+  });
+});
+
+describe('Round 4 — Alternates CRUD OCC enforcement (Codex F3 fix)', () => {
+  it('POST /alternates with stale entryPoisVersion → 409 STALE_ENTRY', async () => {
+    const { entryId } = await seedEntryWithMaster({ poiName: 'F3-Master' });
+    const newAltPoi = await seedPoi(db, { name: 'F3-NewAlt', type: 'attraction' });
+
+    const resp = await callHandler(alternatesPost, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`, 'POST', {
+        poiId: newAltPoi,
+        entryPoisVersion: '1970-01-01T00:00:00.000Z', // ancient = stale
+      }),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    }));
+    expect(resp.status).toBe(409);
+    const body = await resp.json() as { error: { code: string } };
+    expect(body.error.code).toBe('STALE_ENTRY');
+  });
+
+  it('DELETE /alternates/:poiId?entryPoisVersion=stale → 409 STALE_ENTRY', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'F3-DelMaster',
+      altPoiNames: ['F3-DelAlt'],
+    });
+    const resp = await callHandler(alternateDelete, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/${altPoiIds[0]}?entryPoisVersion=1970-01-01T00:00:00.000Z`, 'DELETE'),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId), poiId: String(altPoiIds[0]) },
+    }));
+    expect(resp.status).toBe(409);
+    const body = await resp.json() as { error: { code: string } };
+    expect(body.error.code).toBe('STALE_ENTRY');
+  });
+
+  it('PATCH /alternates/reorder with stale entryPoisVersion → 409 STALE_ENTRY', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'F3-ReorderMaster',
+      altPoiNames: ['F3-R-1', 'F3-R-2'],
+    });
+    const resp = await callHandler(reorderPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates/reorder`, 'PATCH', {
+        order: [altPoiIds[1], altPoiIds[0]],
+        entryPoisVersion: '1970-01-01T00:00:00.000Z',
+      }),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    }));
+    expect(resp.status).toBe(409);
+    const body = await resp.json() as { error: { code: string } };
+    expect(body.error.code).toBe('STALE_ENTRY');
+  });
+});
+
+describe('Round 4 — PATCH /master accepts both body field names (A1 fix)', () => {
+  it('body `entryPoisVersion` (canonical) works', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'A1-canonical',
+      altPoiNames: ['A1-canonical-alt'],
+    });
+    const v = await db.prepare('SELECT updated_at AS v FROM trip_entries WHERE id = ?')
+      .bind(entryId)
+      .first<{ v: string }>();
+    const resp = await callHandler(masterPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/master`, 'PATCH', {
+        poiId: altPoiIds[0],
+        entryPoisVersion: v!.v,
+      }),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    }));
+    expect(resp.status).toBe(200);
+  });
+
+  it('body legacy `version` still works (backwards compat)', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'A1-legacy',
+      altPoiNames: ['A1-legacy-alt'],
+    });
+    const v = await db.prepare('SELECT updated_at AS v FROM trip_entries WHERE id = ?')
+      .bind(entryId)
+      .first<{ v: string }>();
+    const resp = await callHandler(masterPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/master`, 'PATCH', {
+        poiId: altPoiIds[0],
+        version: v!.v,
+      }),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId) },
+    }));
+    expect(resp.status).toBe(200);
+  });
+});
+
+describe('Round 4 — syncEntryMaster routes UNIQUE collision to setMaster (adv-C4 fix)', () => {
+  it('syncEntryMaster when poiId is already alternate → master↔alt swap (not UNIQUE 500)', async () => {
+    const { entryId, masterPoiId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'C4-Master',
+      altPoiNames: ['C4-Alt'],
+    });
+    // Simulate a PUT /days/:num flow: caller wants to make C4-Alt the master for this entry
+    // (previously this would crash with UNIQUE(entry_id, poi_id) because C4-Alt was already an alternate).
+    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
+    await syncEntryMaster(db, entryId, altPoiIds[0]!);
+
+    // Verify the swap happened: C4-Alt is now master (sort_order=1), C4-Master is alternate
+    const rows = await db
+      .prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ? ORDER BY sort_order')
+      .bind(entryId)
+      .all<{ poi_id: number; sort_order: number }>();
+    expect(rows.results.length).toBe(2);
+    expect(rows.results[0]).toMatchObject({ poi_id: altPoiIds[0], sort_order: 1 });
+    expect(rows.results[1]!.poi_id).toBe(masterPoiId);
+  });
+});

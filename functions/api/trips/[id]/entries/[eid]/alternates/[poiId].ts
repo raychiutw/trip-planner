@@ -4,8 +4,13 @@
  * Master 不能透過此 endpoint 移除（會 throw DATA_VALIDATION）；
  * 刪 master = 刪整個 entry，走 DELETE /api/trips/:id/entries/:eid。
  *
+ * Query string:
+ *   - entryPoisVersion?: string — OCC token from prior GET; mismatch → 409 STALE_ENTRY.
+ *     (DELETE has no body per HTTP semantics, so version travels via query.)
+ *
  * POI 不在此 entry → 404 POI_NOT_ALTERNATE。
  */
+import { logAudit } from '../../../../../_audit';
 import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../../_auth';
 import { AppError } from '../../../../../_errors';
 import { removeAlternate } from '../../../../../_entry_pois';
@@ -34,7 +39,21 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   if (!canWrite) throw new AppError('PERM_DENIED');
   if (!belongsToTrip) throw new AppError('DATA_NOT_FOUND');
 
-  const result = await removeAlternate(db, eid, poiId);
+  // OCC token via query string (round 4 fix F3 — DELETE has no body)
+  const url = new URL(context.request.url);
+  const expectedVersion = url.searchParams.get('entryPoisVersion') ?? undefined;
+
+  const result = await removeAlternate(db, eid, poiId, expectedVersion);
+
+  // Audit log (round 4 fix S1)
+  await logAudit(db, {
+    tripId: id,
+    tableName: 'trip_entry_pois',
+    recordId: eid,
+    action: 'delete',
+    changedBy: auth.email,
+    diffJson: JSON.stringify({ alt_removed: poiId }),
+  });
 
   return json({
     entryId: eid,
