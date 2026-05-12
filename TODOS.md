@@ -11,6 +11,17 @@
 
 ---
 
+## v2.28.x Restaurants → alternates Phase 2
+
+**Found by**: v2.28.0 ship — Phase 1 backfill 進 alternates 完成，但 `restaurants` TABLE 仍在 + TripPage TimelineRail 仍讀 `entry.restaurants[]` (來自 trip_pois context='timeline')
+**Phase 2 cutover (after 2 weeks observation)**:
+1. Monitoring SQL：確認 `trip_pois context='timeline'` 跟 `trip_entry_pois sort_order>1` 100% match（dual-state drift = 0）
+2. TripPage `TimelineRail.tsx` 改讀 `entry.alternates[].filter(a => a.type === 'restaurant')` 取代 `entry.infoBoxes[].restaurants[]`
+3. `mapDay.ts:toEntryData` 移除 `raw.restaurants → infoBoxes` 路徑（讀 alternates）
+4. Migration 0060: `DROP TABLE restaurants`（table 自 v2.14 後 dead，無資料損失風險）
+**Priority**: P1（schema cleanup + UI 統一）
+**Est**: 1-2 hr CC
+
 ## v2.27.x Multi-POI Phase 2 + 後續優化
 
 **Found by**: v2.27.0 round 5/6/7 ship review deferred items

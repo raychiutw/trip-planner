@@ -130,6 +130,18 @@ export interface EntryPoiInfo {
   lng?: number | null;
   type?: string | null;
   category?: string | null;
+  /** v2.28.0 — restaurant-shared attributes (POI master). */
+  hours?: string | null;
+  /** googleRating - from pois.rating column */
+  rating?: number | null;
+  /** v2.25.4 後 price 純 pois master */
+  price?: string | null;
+  /** v2.28.0 — trip_pois override (context='timeline')。NULL = 無 trip-specific 預約資訊。 */
+  reservation?: string | null;
+  reservationUrl?: string | null;
+  /** trip_pois override description / note */
+  description?: string | null;
+  note?: string | null;
 }
 
 export interface EntryPoiAlternate extends EntryPoiInfo {

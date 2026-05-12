@@ -327,6 +327,35 @@ const SCOPED_STYLES = `
   background: var(--color-accent);
 }
 
+/* v2.28.0 — restaurant inline info (price/hours/reservation) under type label */
+.tp-edit-entry-alt-extra {
+  display: flex; flex-wrap: wrap; gap: 4px 8px;
+  margin-top: 4px;
+}
+.tp-edit-entry-alt-extra .alt-extra-chip {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  line-height: 1.4;
+}
+.tp-edit-entry-alt-extra .alt-extra-chip.is-link {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.tp-edit-entry-alt-extra .alt-extra-chip.is-link:hover {
+  text-decoration: underline;
+}
+.tp-edit-entry-alt-rating {
+  display: inline-flex; align-items: center; gap: 2px;
+  margin-left: 6px; font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+}
+.tp-edit-entry-alt-rating svg {
+  width: 12px; height: 12px;
+}
 .tp-edit-entry-alt-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px;
@@ -509,6 +538,14 @@ interface AlternatePoi {
   sortOrder: number;
   type?: string | null;
   category?: string | null;
+  // v2.28.0 — restaurant-shared attributes surfaced from pois master + trip_pois override.
+  // Migration 0059 把 trip_pois context='timeline' rows 同步進 trip_entry_pois，這些欄位
+  // 從 fetchEntryPoisByEntries 的 JOIN 進來。
+  hours?: string | null;
+  rating?: number | null;
+  price?: string | null;
+  reservation?: string | null;
+  reservationUrl?: string | null;
 }
 
 interface MasterPoiSummary {
@@ -530,7 +567,19 @@ interface DayApi {
     title?: string | null;
     poiType?: string | null;
     master?: { poiId?: number; name?: string | null; type?: string | null } | null;
-    alternates?: Array<{ poiId: number; name?: string | null; sortOrder?: number; type?: string | null; category?: string | null }>;
+    alternates?: Array<{
+      poiId: number;
+      name?: string | null;
+      sortOrder?: number;
+      type?: string | null;
+      category?: string | null;
+      // v2.28.0 — restaurant fields surfaced via _merge.ts LEFT JOIN trip_pois
+      hours?: string | null;
+      rating?: number | null;
+      price?: string | null;
+      reservation?: string | null;
+      reservationUrl?: string | null;
+    }>;
     entryPoisVersion?: string | null;
   }>;
 }
@@ -674,6 +723,12 @@ export default function EditEntryPage() {
               sortOrder: a.sortOrder ?? 0,
               type: a.type ?? null,
               category: a.category ?? null,
+              // v2.28.0 — restaurant fields (null for non-restaurant POIs)
+              hours: a.hours ?? null,
+              rating: a.rating ?? null,
+              price: a.price ?? null,
+              reservation: a.reservation ?? null,
+              reservationUrl: a.reservationUrl ?? null,
             })));
           }
           if (me.entryPoisVersion) {
@@ -1128,6 +1183,32 @@ export default function EditEntryPage() {
                         {alt.type && (
                           <div className="tp-edit-entry-alt-category">
                             {POI_TYPE_LABEL[alt.type] ?? alt.type}
+                            {alt.rating != null && (
+                              <span className="tp-edit-entry-alt-rating">
+                                <Icon name="star" /> {alt.rating.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {/* v2.28.0 — restaurant inline info: price · hours · reservation */}
+                        {(alt.price || alt.hours || alt.reservation) && (
+                          <div className="tp-edit-entry-alt-extra" data-testid={`edit-entry-alt-extra-${alt.poiId}`}>
+                            {alt.price && <span className="alt-extra-chip price">{alt.price}</span>}
+                            {alt.hours && <span className="alt-extra-chip hours">{alt.hours}</span>}
+                            {alt.reservation && (
+                              alt.reservationUrl ? (
+                                <a
+                                  href={alt.reservationUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="alt-extra-chip reservation is-link"
+                                >
+                                  {alt.reservation}
+                                </a>
+                              ) : (
+                                <span className="alt-extra-chip reservation">{alt.reservation}</span>
+                              )
+                            )}
                           </div>
                         )}
                       </div>
