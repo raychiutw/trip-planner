@@ -474,6 +474,20 @@ const MODE_ICON: Record<TripSegment['mode'], string> = {
   transit: 'bus',
 };
 
+// v2.27.0: POI card display fallback chain — master.name/master.type 優先，否則 fallback
+// 到 legacy me.title/me.poiType。集中在 helper 避免 init useEffect + refreshEntryPois drift。
+type TimelineEntryLike = {
+  master?: { name?: string | null; type?: string | null } | null;
+  title?: string | null;
+  poiType?: string | null;
+};
+function poiNameFrom(me: TimelineEntryLike | null | undefined, fallbackTitle?: string | null): string {
+  return me?.master?.name ?? me?.title ?? fallbackTitle ?? '景點';
+}
+function poiTypeFrom(me: TimelineEntryLike | null | undefined): string | null {
+  return me?.master?.type ?? me?.poiType ?? null;
+}
+
 // API 走 json() 自動 deepCamel — 必須用 camelCase 讀，不是 DB snake_case。
 // v2.26.0 ship 時 interface 寫成 snake_case → 全部讀回 undefined（time 空白、
 // POI 卡 + 移動方式 section 全消失）。Regression test fixture 也跟著錯，CI 沒抓到。
@@ -638,12 +652,11 @@ export default function EditEntryPage() {
         const idx = timeline.findIndex((e) => e.id === entryId);
         const me = idx >= 0 ? timeline[idx] : null;
         if (me) {
-          // v2.27.0 multi-POI: 優先用 master.name / master.type 作為 POI card 顯示
-          // 否則 fallback 到 me.title / me.poiType（legacy）。原本只讀 me.title/poiType
-          // 導致 master swap 後 card 不更新（QA visual finding）。
+          // v2.27.0 multi-POI: master.name/master.type 優先，legacy fallback 詳見
+          // poiNameFrom/poiTypeFrom helper（同 refreshEntryPois 共用避免 drift）。
           setPoiInfo({
-            name: me.master?.name ?? me.title ?? entry.title ?? '景點',
-            poiType: me.master?.type ?? me.poiType ?? null,
+            name: poiNameFrom(me, entry.title),
+            poiType: poiTypeFrom(me),
           });
           // v2.27.0 multi-POI: master + alternates 從 day fetch 帶出
           if (me.master?.poiId != null) {
@@ -826,13 +839,15 @@ export default function EditEntryPage() {
       );
       const me = (dayData.timeline ?? []).find((e) => e.id === entryId);
       if (!me) return;
+      // POI card always reflect latest master fallback chain — 即使 me.master 為 null
+      // 也用 helper fallthrough（degenerate API 不會留 stale name）。
+      setPoiInfo({ name: poiNameFrom(me), poiType: poiTypeFrom(me) });
       if (me.master?.poiId != null) {
         setMasterSummary({
           poiId: me.master.poiId,
-          name: me.master.name ?? me.title ?? '景點',
+          name: poiNameFrom(me),
           type: me.master.type ?? null,
         });
-        setPoiInfo({ name: me.master.name ?? me.title ?? '景點', poiType: me.master.type ?? null });
       }
       setAlternates(
         (me.alternates ?? []).map((a) => ({

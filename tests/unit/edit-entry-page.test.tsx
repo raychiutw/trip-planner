@@ -221,6 +221,42 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
     expect(screen.getByTestId('edit-entry-duration').textContent).toMatch(/90/);
   });
 
+  // v2.27.0 regression test：POI 卡名稱必須 reflect master.name，不能被 entry.title 蓋掉。
+  // QA finding: 在 4f4cad2 修復前，master swap 後 POI card 還是顯示舊 entry.title。
+  // Initial useEffect was overwriting refreshEntryPois 設的 master-aware value。
+  it('POI 卡名稱優先用 master.name 而非 entry.title（master swap 不被覆寫）', async () => {
+    (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/entries/42')) return Promise.resolve({ ...ENTRY, title: 'Old Stale Title' });
+      if (url.endsWith('/days')) return Promise.resolve(DAYS);
+      if (url.includes('/days/3')) return Promise.resolve({
+        id: 7, dayNum: 3,
+        timeline: [
+          {
+            id: 42,
+            title: 'Old Stale Title',
+            poiType: 'attraction',
+            // master.name 跟 me.title 不同 — 模擬 swap 後 entry.title 還沒同步
+            master: { poiId: 999, name: 'New Master POI', type: 'hotel' },
+            alternates: [],
+            entryPoisVersion: '2026-05-12T00:00:00',
+          },
+        ],
+      });
+      if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
+      return Promise.resolve(null);
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-summary')).toBeTruthy();
+    });
+    const poiCard = screen.getByTestId('edit-entry-poi-summary');
+    // 應顯示 master.name "New Master POI"，不是 entry.title "Old Stale Title"
+    expect(poiCard.textContent).toContain('New Master POI');
+    expect(poiCard.textContent).not.toContain('Old Stale Title');
+    // type label：master.type='hotel' → '住宿'
+    expect(poiCard.textContent).toContain('住宿');
+  });
+
   it('Day 1 第一個 entry（無 prev）→ mode section 不渲染', async () => {
     // 重新 mock：entry 42 是 timeline[0]
     (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
