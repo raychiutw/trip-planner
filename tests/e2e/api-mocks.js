@@ -6,7 +6,7 @@
  * - trips.ts      → GET /api/trips       → array of trip rows
  * - trips/[id].ts → GET /api/trips/:id   → single trip row (footer parsed to object)
  * - days.ts       → GET /api/trips/:id/days → array of { id, dayNum, date, dayOfWeek, label }
- * - days/[num].ts → GET /api/trips/:id/days/:num → full day with hotel, timeline, restaurants, shopping
+ * - days/[num].ts → GET /api/trips/:id/days/:num → full day with hotel, timeline, stopPois, shopping
  * - docs/[type].ts → GET /api/trips/:id/docs/:type → { docType, content (JSON string), updatedAt }
  */
 
@@ -167,18 +167,36 @@ const MOCK_DAY1_OKINAWA = {
       travelType: 'car',
       travelDesc: '從飯店開車 15 分鐘',
       travelMin: 15,
-      // No location — tests fallback to maps+mapcode
       location: null,
       travel: { type: 'car', desc: '從飯店開車 15 分鐘', min: 15 },
-      restaurants: [
+      master: {
+        poiId: 101,
+        sortOrder: 1,
+        name: '首里城',
+        type: 'attraction',
+        maps: '首里城公園',
+        mapcode: '33 161 526*71',
+        rating: 4.5,
+      },
+      stopPois: [
         {
-          id: 201,
-          entryId: 101,
+          poiId: 101,
+          sortOrder: 1,
+          name: '首里城',
+          type: 'attraction',
+          maps: '首里城公園',
+          mapcode: '33 161 526*71',
+          rating: 4.5,
+        },
+        {
+          poiId: 201,
+          sortOrder: 2,
           name: '首里そば',
+          type: 'restaurant',
           category: '午餐',
           address: '沖繩縣那霸市首里赤田町 1-7',
           maps: '首里そば',
-          googleRating: 4.3,
+          rating: 4.3,
           hours: '11:30-14:00',
           price: '¥800-1200',
           description: '沖繩傳統麵食',
@@ -187,13 +205,14 @@ const MOCK_DAY1_OKINAWA = {
           note: null,
         },
         {
-          id: 202,
-          entryId: 101,
+          poiId: 202,
+          sortOrder: 3,
           name: '花笠食堂',
+          type: 'restaurant',
           category: '午餐',
           address: '沖繩縣那霸市牧志 3-2-48',
           maps: '花笠食堂',
-          googleRating: 4.1,
+          rating: 4.1,
           hours: '11:00-21:00',
           price: '¥600-1000',
           description: '家庭料理定食',
@@ -220,7 +239,22 @@ const MOCK_DAY1_OKINAWA = {
       travelMin: 20,
       location: '[{"name":"波上宮","googleQuery":"https://www.google.com/maps/search/波上宮","appleQuery":"https://maps.apple.com/?q=波上宮"}]',
       travel: { type: 'car', desc: '開車 20 分鐘', min: 20 },
-      restaurants: [],
+      master: {
+        poiId: 102,
+        sortOrder: 1,
+        name: '波上宮',
+        type: 'attraction',
+        maps: 'https://www.google.com/maps/search/波上宮',
+        rating: 4.0,
+      },
+      stopPois: [{
+        poiId: 102,
+        sortOrder: 1,
+        name: '波上宮',
+        type: 'attraction',
+        maps: 'https://www.google.com/maps/search/波上宮',
+        rating: 4.0,
+      }],
       shopping: [
         {
           id: 301,
@@ -252,7 +286,20 @@ const MOCK_DAY1_OKINAWA = {
       travelMin: 10,
       location: null,
       travel: { type: 'walking', desc: '步行 10 分鐘', min: 10 },
-      restaurants: [],
+      master: {
+        poiId: 103,
+        sortOrder: 1,
+        name: '國際通',
+        type: 'attraction',
+        maps: '國際通',
+      },
+      stopPois: [{
+        poiId: 103,
+        sortOrder: 1,
+        name: '國際通',
+        type: 'attraction',
+        maps: '國際通',
+      }],
       shopping: [],
     },
     {
@@ -271,15 +318,32 @@ const MOCK_DAY1_OKINAWA = {
       travelMin: 5,
       location: '{"name":"牧志公設市場","googleQuery":"https://www.google.com/maps/search/牧志公設市場","appleQuery":"https://maps.apple.com/?q=牧志公設市場"}',
       travel: { type: 'walking', desc: '步行 5 分鐘', min: 5 },
-      restaurants: [
+      master: {
+        poiId: 104,
+        sortOrder: 1,
+        name: '牧志公設市場',
+        type: 'attraction',
+        maps: '牧志公設市場',
+        rating: 4.2,
+      },
+      stopPois: [
         {
-          id: 203,
-          entryId: 104,
+          poiId: 104,
+          sortOrder: 1,
+          name: '牧志公設市場',
+          type: 'attraction',
+          maps: '牧志公設市場',
+          rating: 4.2,
+        },
+        {
+          poiId: 203,
+          sortOrder: 2,
           name: '市場二樓食堂',
+          type: 'restaurant',
           category: '晚餐',
           address: '沖繩縣那霸市松尾 2-10-1',
           maps: '牧志公設市場二樓',
-          googleRating: 4.4,
+          rating: 4.4,
           hours: '11:00-20:00',
           price: '¥1500-3000',
           description: '一樓買海鮮二樓代煮',
@@ -332,13 +396,27 @@ function buildMinimalDay(dayNum, date, dayOfWeek, label) {
         travelDesc: '開車 30 分鐘',
         travelMin: 30,
         location: null,
-        poi: {
+        master: {
+          poiId: dayNum * 100 + 1,
+          sortOrder: 1,
+          type: 'attraction',
+          name: label + '景點',
+          maps: label,
           lat: 26.2 + dayNum * 0.01,
           lng: 127.7 + dayNum * 0.01,
-          googleRating: 4.2,
+          rating: 4.2,
         },
+        stopPois: [{
+          poiId: dayNum * 100 + 1,
+          sortOrder: 1,
+          type: 'attraction',
+          name: label + '景點',
+          maps: label,
+          lat: 26.2 + dayNum * 0.01,
+          lng: 127.7 + dayNum * 0.01,
+          rating: 4.2,
+        }],
         travel: { type: 'car', desc: '開車 30 分鐘', min: 30 },
-        restaurants: [],
         shopping: [],
       },
     ],
@@ -387,7 +465,22 @@ const MOCK_DAY1_BUSAN = {
       travelMin: 20,
       location: '{"name":"海雲臺海水浴場","googleQuery":"https://www.google.com/maps/search/해운대해수욕장","appleQuery":"https://maps.apple.com/?q=해운대해수욕장","naverQuery":"https://map.naver.com/v5/search/해운대해수욕장"}',
       travel: { type: 'train', desc: '地鐵 20 分鐘', min: 20 },
-      restaurants: [],
+      master: {
+        poiId: 501,
+        sortOrder: 1,
+        name: '海雲臺海水浴場',
+        type: 'attraction',
+        maps: 'https://www.google.com/maps/search/해운대해수욕장',
+        rating: 4.5,
+      },
+      stopPois: [{
+        poiId: 501,
+        sortOrder: 1,
+        name: '海雲臺海水浴場',
+        type: 'attraction',
+        maps: 'https://www.google.com/maps/search/해운대해수욕장',
+        rating: 4.5,
+      }],
       shopping: [],
     },
   ],
@@ -711,13 +804,26 @@ async function setupApiMocks(page) {
     // { id, day_id, title }。
     const entryActionMatch = path.match(/^\/api\/trips\/([^/]+)\/entries\/(\d+)$/);
     if (entryActionMatch) {
-      const [, , eid] = entryActionMatch;
+      const [, tripId, eid] = entryActionMatch;
       const eidNum = Number(eid);
       if (method === 'GET') {
+        const tripDays = TRIP_DAYS[tripId];
+        const day = tripDays
+          ? Object.values(tripDays.byNum).find((d) => (d.timeline ?? []).some((entry) => entry.id === eidNum))
+          : null;
+        const entry = day ? (day.timeline ?? []).find((item) => item.id === eidNum) : null;
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ id: eidNum, dayId: 1, title: `Mock entry ${eid}` }),
+          body: JSON.stringify({
+            id: eidNum,
+            dayId: day?.id ?? 1,
+            title: entry?.title ?? `Mock entry ${eid}`,
+            master: entry?.master ?? null,
+            alternates: (entry?.stopPois ?? []).filter((p) => p.sortOrder > 1),
+            stopPois: entry?.stopPois ?? [],
+            entryPoisVersion: '1',
+          }),
         });
       }
       if (method === 'PATCH' || method === 'DELETE') {

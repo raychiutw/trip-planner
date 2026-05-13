@@ -5,6 +5,7 @@ import { TIME_RE, composeTime, parseTime } from '../../../_time';
 import { validateEntryBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
+import { fetchEntryPoisByEntries } from '../days/_merge';
 
 // Phase 3：移除 location / maps / mapcode / rating — 這些欄位已 DROP，POI master JOIN 取代。
 // POI 重掛走 PUT /api/trips/:id/entries/:eid/poi-id（獨立端點，驗證 POI 存在）。
@@ -17,7 +18,7 @@ import type { Env } from '../../../_types';
 const ALLOWED_FIELDS = ['day_id', 'sort_order', 'time', 'start_time', 'end_time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min'] as const;
 
 /**
- * GET /api/trips/:id/entries/:eid → { id, day_id, title } 回單一 entry meta。
+ * GET /api/trips/:id/entries/:eid → single entry meta + canonical entry POIs.
  *
  * v2.19.13: EntryActionPage (move/copy) 載 entry 當前 day_id 用,本來在 prod
  * 沒這 handler 直接 405,move/copy flow broken。讀權限走 hasPermission (viewer
@@ -39,18 +40,25 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!hasPerm) throw new AppError('PERM_DENIED');
   if (!belongsToTrip) throw new AppError('DATA_NOT_FOUND');
 
-  // v2.27.1 fix: SELECT 必須含 EditEntryPage 讀取的所有欄位。round 9 只加了
-  // entry_pois_version 但漏了 start_time/end_time/time/note/poi_id — 導致初始 load 後
-  // entry.startTime/endTime/note/poiId 全 undefined → 起訖 input 空白 + note 空白。
-  // v2.26.3 雖然修了 camelCase reads 但 backend SELECT 從沒回 time 欄位（test mock 全欄
-  // 位讓 CI mask 掉 bug）。此處改 SELECT * 一勞永逸，避免未來再漏欄位。
   const row = await db
     .prepare('SELECT * FROM trip_entries WHERE id = ?')
     .bind(eid)
-    .first();
+    .first<Record<string, unknown>>();
   if (!row) throw new AppError('DATA_NOT_FOUND');
 
-  return json(row);
+  const entryPois = await fetchEntryPoisByEntries(db, [eid]);
+  const bucket = entryPois.get(eid) ?? { master: null, alternates: [], stopPois: [], version: String(row.entry_pois_version ?? 0) };
+  const master = bucket.master;
+  const { poi_id: _legacyPoiId, ...entryFields } = row;
+  void _legacyPoiId;
+
+  return json({
+    ...entryFields,
+    master,
+    alternates: bucket.alternates,
+    stop_pois: bucket.stopPois,
+    entry_pois_version: bucket.version,
+  });
 };
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {

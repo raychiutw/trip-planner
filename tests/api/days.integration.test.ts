@@ -15,7 +15,7 @@ beforeAll(async () => {
   db = await createTestDb();
   env = mockEnv(db);
 
-  // Trip A: 5 天，Day1 和 Day2 有 entries 和 restaurants（測 cross-day isolation）
+  // Trip A: 5 天，Day1 和 Day2 有 entries 和 canonical stopPois（測 cross-day isolation）
   await seedTrip(db, { id: 'trip-days', days: 5 });
   const d1Id = await getDayId(db, 'trip-days', 1);
   const d2Id = await getDayId(db, 'trip-days', 2);
@@ -34,15 +34,17 @@ beforeAll(async () => {
     travelMin: 30,
     poiId: d1EntryPoiId,
   });
+  await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(d1EntryId, d1EntryPoiId).run();
   const d2EntryId = await seedEntry(db, d2Id, { title: 'Day2 Entry', sortOrder: 0 });
 
   // Day1 restaurant POI
   const d1RestId = await seedPoi(db, { type: 'restaurant', name: 'Day1 Restaurant' });
-  await seedTripPoi(db, { poiId: d1RestId, tripId: 'trip-days', entryId: d1EntryId, dayId: d1Id, sortOrder: 0 });
+  await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(d1EntryId, d1RestId).run();
 
   // Day2 restaurant POI
   const d2RestId = await seedPoi(db, { type: 'restaurant', name: 'Day2 Restaurant' });
-  await seedTripPoi(db, { poiId: d2RestId, tripId: 'trip-days', entryId: d2EntryId, dayId: d2Id, sortOrder: 0 });
+  await db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(d2RestId, d2EntryId).run();
+  await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(d2EntryId, d2RestId).run();
 
   // Day1 shopping POI（shopping context）
   const d1ShopId = await seedPoi(db, { type: 'shopping', name: 'Day1 Shop' });
@@ -127,7 +129,7 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     expect((day1.timeline as unknown[]).length).toBe(1);
   });
 
-  it('POI 不跨天洩漏（Day1/Day2 restaurant 嚴格隔離）', async () => {
+  it('POI 不跨天洩漏（Day1/Day2 stopPois 嚴格隔離）', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
       env,
@@ -137,16 +139,14 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     const data = await resp.json() as Array<Record<string, unknown>>;
 
     const d1Timeline = data[0].timeline as Array<Record<string, unknown>>;
-    const d1Rests = d1Timeline[0].restaurants as Array<Record<string, unknown>>;
-    expect(d1Rests).toHaveLength(1);
-    expect(d1Rests[0].name).toBe('Day1 Restaurant');
-    expect(d1Rests.find(r => r.name === 'Day2 Restaurant')).toBeUndefined();
+    const d1Pois = d1Timeline[0].stopPois as Array<Record<string, unknown>>;
+    expect(d1Pois.find(p => p.name === 'Day1 Restaurant')).toBeDefined();
+    expect(d1Pois.find(p => p.name === 'Day2 Restaurant')).toBeUndefined();
 
     const d2Timeline = data[1].timeline as Array<Record<string, unknown>>;
-    const d2Rests = d2Timeline[0].restaurants as Array<Record<string, unknown>>;
-    expect(d2Rests).toHaveLength(1);
-    expect(d2Rests[0].name).toBe('Day2 Restaurant');
-    expect(d2Rests.find(r => r.name === 'Day1 Restaurant')).toBeUndefined();
+    const d2Pois = d2Timeline[0].stopPois as Array<Record<string, unknown>>;
+    expect(d2Pois.find(p => p.name === 'Day2 Restaurant')).toBeDefined();
+    expect(d2Pois.find(p => p.name === 'Day1 Restaurant')).toBeUndefined();
   });
 
   it('hotel context 正確歸類（含 parking 附加）', async () => {
@@ -211,7 +211,7 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     expect(d2Timeline[0].travel).toBeNull();
   });
 
-  it('Phase 3：entry.poi 取 POI master（取代舊 entry.location JSON）', async () => {
+  it('Phase 3：entry.master 取 canonical POI master（取代舊 entry.location JSON）', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
       env,
@@ -221,11 +221,12 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     const data = await resp.json() as Array<Record<string, unknown>>;
 
     const d1Timeline = data[0].timeline as Array<Record<string, unknown>>;
-    const poi = d1Timeline[0].poi as Record<string, unknown>;
-    expect(poi).toBeTruthy();
-    expect(poi.lat).toBe(26.5);
-    expect(poi.lng).toBe(127.9);
-    expect(poi.name).toBe('測試地點');
+    const master = d1Timeline[0].master as Record<string, unknown>;
+    expect(master).toBeTruthy();
+    expect(master.lat).toBe(26.5);
+    expect(master.lng).toBe(127.9);
+    expect(master.name).toBe('測試地點');
+    expect('poi' in d1Timeline[0]).toBe(false);
   });
 
   it('空行程（有天但無 POI）不 crash，回傳空 hotel/timeline', async () => {

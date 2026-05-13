@@ -11,7 +11,8 @@ type EntryPoiBucket = {
 
 /**
  * 從任一帶 `poi_id` 欄位的 row set 取得所有關聯的 pois，建 poi_id → pois row 查找表。
- * 同時支援 trip_pois（context 關聯）與 trip_entries（Phase 2 entry.poi_id）。
+ * Runtime only passes contextual trip_pois rows here; entry stops are loaded
+ * separately from canonical trip_entry_pois.
  * 使用 `IN (...)` 批次查詢避免 N+1；null poi_id 直接過濾。
  */
 export async function fetchPoiMap(
@@ -107,22 +108,18 @@ export async function fetchEntryPoisByEntries(
   // while the write path validated trip_entries.updated_at — a fresh GET sent back a token
   // that the mutation path rejected as stale. Both paths now read the same integer counter.
   //
-  // v2.28.0：alternates SELECT 也 LEFT JOIN trip_pois (context='timeline')，surface
-  // restaurant 專屬欄位 (hours/rating/price 來自 pois master；reservation/reservation_url/
-  // description/note 來自 trip_pois override)。讓 EditEntryPage alternates section 跟
-  // TripPage timeline 子項目都能看到「備案餐廳」原本的細節（hours/price/reservation）。
+  // v2.29.0：timeline trip_pois rows are migrated into trip_entry_pois by
+  // migration 0059. Runtime reads canonical entry POI rows only; no legacy
+  // promotion or trip_pois fallback.
   const [poisQuery, versionsQuery] = await Promise.all([
     db
       .prepare(
         `SELECT tep.entry_id, tep.poi_id, tep.sort_order, tep.updated_at,
                 p.name, p.lat, p.lng, p.type, p.category,
                 p.hours, p.rating, p.price, p.mapcode, p.photos, p.source,
-                tp.reservation, tp.reservation_url, tp.description, tp.note
+                tep.reservation, tep.reservation_url, tep.description, tep.note
          FROM trip_entry_pois tep
          JOIN pois p ON p.id = tep.poi_id
-         LEFT JOIN trip_pois tp ON tp.entry_id = tep.entry_id
-                                AND tp.poi_id = tep.poi_id
-                                AND tp.context = 'timeline'
          WHERE tep.entry_id IN (${placeholders})
          ORDER BY tep.entry_id, tep.sort_order`,
       )
@@ -196,66 +193,6 @@ export async function fetchEntryPoisByEntries(
   return result;
 }
 
-function entryPoiToLegacyPoi(row: Record<string, unknown> | null): Record<string, unknown> | null {
-  if (!row || typeof row.poi_id !== 'number') return null;
-  return {
-    id: row.poi_id,
-    type: row.type,
-    name: row.name,
-    description: row.description,
-    note: row.note,
-    category: row.category,
-    mapcode: row.mapcode,
-    lat: row.lat,
-    lng: row.lng,
-    rating: row.rating,
-    hours: row.hours,
-    price: row.price,
-    source: row.source,
-    photos: row.photos,
-  };
-}
-
-const MEAL_STOP_RE = /早餐|早午餐|午餐|晚餐|宵夜|用餐|餐廳|餐厅|食堂|美食|lunch|dinner|breakfast|brunch|supper|meal|restaurant/i;
-
-function bySortOrder(a: unknown, b: unknown): number {
-  const ao = typeof (a as { sort_order?: unknown }).sort_order === 'number'
-    ? (a as { sort_order: number }).sort_order
-    : 0;
-  const bo = typeof (b as { sort_order?: unknown }).sort_order === 'number'
-    ? (b as { sort_order: number }).sort_order
-    : 0;
-  return ao - bo;
-}
-
-function isMealStop(
-  entry: Record<string, unknown>,
-  restaurants: Record<string, unknown>[],
-): boolean {
-  if (!restaurants.some((r) => r.type === 'restaurant')) return false;
-  const blob = `${entry.title ?? ''} ${entry.description ?? ''} ${entry.note ?? ''}`;
-  return MEAL_STOP_RE.test(blob);
-}
-
-function promotedMealStopPois(
-  restaurants: Record<string, unknown>[],
-  storedStopPois: Record<string, unknown>[],
-): Record<string, unknown>[] {
-  const result: Record<string, unknown>[] = [];
-  const seenPoiIds = new Set<number>();
-
-  const push = (row: Record<string, unknown>) => {
-    const poiId = row.poi_id;
-    if (typeof poiId !== 'number' || seenPoiIds.has(poiId)) return;
-    seenPoiIds.add(poiId);
-    result.push({ ...row, sort_order: result.length + 1 });
-  };
-
-  restaurants.filter((r) => r.type === 'restaurant').sort(bySortOrder).forEach(push);
-  storedStopPois.sort(bySortOrder).forEach(push);
-  return result;
-}
-
 /**
  * 組裝單天完整資料：hotel + timeline + POI 歸類。
  *
@@ -266,9 +203,8 @@ function promotedMealStopPois(
  * @param entries - 該天的 trip_entries（已排序）
  * @param tripPois - 該天的 trip_pois
  * @param poiMap - poi_id → pois row 的查找表
- * @param entryPoisMap - v2.27.0 multi-POI per-entry data (optional; legacy callers
- *   omit → entry.master/alternates fall back to `null`/`[]` and frontend selectors
- *   read legacy `entry.poi` via getEntryMaster fallback chain).
+ * @param entryPoisMap - canonical v2 entry POIs. Runtime does not promote legacy
+ *   timeline trip_pois rows; migration 0059 must have moved them first.
  */
 export function assembleDay(
   dayRow: Record<string, unknown>,
@@ -279,7 +215,6 @@ export function assembleDay(
 ): Record<string, unknown> {
   let hotel: Record<string, unknown> | null = null;
   const parkingList: Record<string, unknown>[] = [];
-  const restByEntry = new Map<number, Record<string, unknown>[]>();
   const shopByEntry = new Map<number, unknown[]>();
 
   for (const tp of tripPois) {
@@ -293,10 +228,6 @@ export function assembleDay(
       hotel = merged;
     } else if (context === 'hotel' && poiType === 'parking') {
       parkingList.push(merged);
-    } else if (context === 'timeline') {
-      const eid = tp.entry_id as number;
-      if (!restByEntry.has(eid)) restByEntry.set(eid, []);
-      restByEntry.get(eid)!.push(merged);
     } else if (context === 'shopping') {
       const eid = tp.entry_id as number;
       if (eid) {
@@ -323,44 +254,27 @@ export function assembleDay(
       source: e.travel_source,
     } : null;
 
-    // Phase 3: entry.poi_id JOIN pois master（spatial 欄位唯一來源）
-    const legacyPoiId = e.poi_id as number | null | undefined;
-    const legacyPoi = (typeof legacyPoiId === 'number' && legacyPoiId > 0)
-      ? (poiMap.get(legacyPoiId) ?? null)
-      : null;
-
-    // v2.27.0 multi-POI per entry：populate master + alternates from trip_entry_pois。
-    // Phase 1 dual-response：保留 legacy `poi` + `poi_id` + 新增 master / alternates / entry_pois_version。
-    // entryPoisMap 未提供 (legacy caller) → master/alternates 為 undefined，client selector fallback 走 poi。
+    // v2.29.0 canonical model：populate all stop choices from trip_entry_pois.
+    // trip_entries.poi_id may still exist as a denormalized write-through cache, but
+    // read paths no longer use it as fallback.
     const entryPoiBucket = entryPoisMap?.get(eid);
-    const restaurants = restByEntry.get(eid) ?? [];
     const storedMaster = entryPoiBucket?.master ?? null;
     const storedAlternates = entryPoiBucket?.alternates ?? [];
     const storedStopPois = entryPoiBucket?.stopPois ?? [];
-    const shouldPromoteRestaurant =
-      storedMaster?.type !== 'restaurant' && isMealStop(e, restaurants);
-    const promotedStopPois = shouldPromoteRestaurant
-      ? promotedMealStopPois(restaurants, storedStopPois)
-      : null;
-    const stop_pois = promotedStopPois ?? storedStopPois;
-    const master = promotedStopPois?.[0] ?? storedMaster;
-    const alternates = promotedStopPois
-      ? promotedStopPois.slice(1).map((row) => ({ ...row, sort_order: row.sort_order }))
-      : storedAlternates;
+    const stop_pois = storedStopPois;
+    const master = storedMaster;
+    const alternates = storedAlternates;
     const entry_pois_version = entryPoiBucket?.version ?? null;
-    const poi = entryPoiToLegacyPoi(master) ?? legacyPoi;
-    const poi_id = typeof poi?.id === 'number' ? poi.id : (legacyPoiId ?? null);
+    const { poi_id: _legacyPoiId, ...entryFields } = e;
+    void _legacyPoiId;
 
     return {
-      ...e,
-      poi_id,
+      ...entryFields,
       travel,
-      poi,
       master,
       alternates,
       stop_pois,
       entry_pois_version,
-      restaurants,
       shopping: shopByEntry.get(eid) ?? [],
     };
   });

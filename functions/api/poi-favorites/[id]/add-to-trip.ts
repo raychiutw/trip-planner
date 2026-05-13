@@ -217,15 +217,15 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
    // 直接寫入新欄位 + 同步 compose 寫 legacy time）。
   stmts.push(
     db.prepare(
-      `INSERT INTO trip_entries (day_id, sort_order, time, start_time, end_time, title, description, source, note, poi_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO trip_entries (day_id, sort_order, time, start_time, end_time, title, description, source, note, poi_id, entry_pois_version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1) RETURNING id`,
     ).bind(day.id, insertSortOrder, `${startTime}-${endTime}`, startTime, endTime, favorite.poi_name, null, 'fast-path', favorite.note, favorite.poi_id),
   );
   stmts.push(
     db.prepare(
-      `INSERT INTO trip_pois (trip_id, poi_id, context, day_id, entry_id, source)
-       VALUES (?, ?, 'timeline', ?, last_insert_rowid(), 'fast-path')`,
-    ).bind(tripId, favorite.poi_id, day.id),
+      `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
+       VALUES (last_insert_rowid(), ?, 1, ?, ?)`,
+    ).bind(favorite.poi_id, new Date().toISOString(), new Date().toISOString()),
   );
 
   const batchResults = await db.batch<{ id: number }>(stmts);

@@ -13,13 +13,15 @@ describe('toTimelineEntry — photos parsing', () => {
     const entry = toTimelineEntry({
       id: 1,
       title: 'X',
-      poi: {
-        id: 100,
+      stopPois: [{
+        poiId: 100,
+        sortOrder: 1,
+        name: 'X',
         photos: JSON.stringify([
           { url: 'https://x.com/a.jpg', caption: 'a' },
           { url: 'https://x.com/b.jpg' },
         ]),
-      },
+      }],
     });
     expect(entry.photos).toHaveLength(2);
     expect(entry.photos?.[0]?.url).toBe('https://x.com/a.jpg');
@@ -27,47 +29,49 @@ describe('toTimelineEntry — photos parsing', () => {
   });
 
   it('NULL → null', () => {
-    const entry = toTimelineEntry({ id: 1, title: 'X', poi: { id: 100, photos: null } });
+    const entry = toTimelineEntry({ id: 1, title: 'X', stopPois: [{ poiId: 100, sortOrder: 1, name: 'X', photos: null }] });
     expect(entry.photos).toBeNull();
   });
 
-  it('undefined poi → null', () => {
+  it('undefined stopPois → null', () => {
     const entry = toTimelineEntry({ id: 1, title: 'X' });
     expect(entry.photos).toBeNull();
   });
 
   it('empty string → null', () => {
-    const entry = toTimelineEntry({ id: 1, title: 'X', poi: { id: 100, photos: '' } });
+    const entry = toTimelineEntry({ id: 1, title: 'X', stopPois: [{ poiId: 100, sortOrder: 1, name: 'X', photos: '' }] });
     expect(entry.photos).toBeNull();
   });
 
   it('empty array JSON → null（無實際照片視同無）', () => {
-    const entry = toTimelineEntry({ id: 1, title: 'X', poi: { id: 100, photos: '[]' } });
+    const entry = toTimelineEntry({ id: 1, title: 'X', stopPois: [{ poiId: 100, sortOrder: 1, name: 'X', photos: '[]' }] });
     expect(entry.photos).toBeNull();
   });
 
   it('malformed JSON → null（不 throw）', () => {
-    const entry = toTimelineEntry({ id: 1, title: 'X', poi: { id: 100, photos: '{not json' } });
+    const entry = toTimelineEntry({ id: 1, title: 'X', stopPois: [{ poiId: 100, sortOrder: 1, name: 'X', photos: '{not json' }] });
     expect(entry.photos).toBeNull();
   });
 
   it('JSON object（not array） → null', () => {
-    const entry = toTimelineEntry({ id: 1, title: 'X', poi: { id: 100, photos: '{"url":"x"}' } });
+    const entry = toTimelineEntry({ id: 1, title: 'X', stopPois: [{ poiId: 100, sortOrder: 1, name: 'X', photos: '{"url":"x"}' }] });
     expect(entry.photos).toBeNull();
   });
 
   it('array with mixed valid/invalid items → only valid kept', () => {
     const entry = toTimelineEntry({
       id: 1, title: 'X',
-      poi: {
-        id: 100,
+      stopPois: [{
+        poiId: 100,
+        sortOrder: 1,
+        name: 'X',
         photos: JSON.stringify([
           { url: 'https://valid.com/a.jpg' },
           { caption: 'no url' },         // invalid — no url
           { url: 123 },                   // invalid — url not string
           { url: 'https://valid.com/b.jpg', thumbUrl: 'https://valid.com/b-thumb.jpg' },
         ]),
-      },
+      }],
     });
     expect(entry.photos).toHaveLength(2);
     expect(entry.photos?.map((p) => p.url)).toEqual([
@@ -79,7 +83,7 @@ describe('toTimelineEntry — photos parsing', () => {
   it('all-invalid array → null', () => {
     const entry = toTimelineEntry({
       id: 1, title: 'X',
-      poi: { id: 100, photos: JSON.stringify([{ caption: 'no url' }, { url: 123 }]) },
+      stopPois: [{ poiId: 100, sortOrder: 1, name: 'X', photos: JSON.stringify([{ caption: 'no url' }, { url: 123 }]) }],
     });
     expect(entry.photos).toBeNull();
   });

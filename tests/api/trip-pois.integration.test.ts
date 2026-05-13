@@ -24,12 +24,11 @@ beforeAll(async () => {
 afterAll(disposeMiniflare);
 
 describe('POST /api/trips/:id/entries/:eid/trip-pois', () => {
-  it('新增 POI 到 entry → 201', async () => {
+  it('新增餐廳選項到 entry → 寫入 trip_entry_pois，不建立 timeline trip_pois', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-tp/entries/${entryId}/trip-pois`, 'POST', {
         name: 'すし三昧',
         type: 'restaurant',
-        context: 'timeline',
       }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
@@ -38,19 +37,22 @@ describe('POST /api/trips/:id/entries/:eid/trip-pois', () => {
     const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(201);
     const data = await resp.json() as Record<string, unknown>;
-    tripPoiId = data.id as number;
     expect(data.poiId).toBeDefined();
 
     // 驗證 pois master 已建立
     const poi = await db.prepare('SELECT * FROM pois WHERE name = ?').bind('すし三昧').first();
     expect(poi).not.toBeNull();
+    const tep = await db.prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE id = ?').bind(data.id).first<{ poi_id: number; sort_order: number }>();
+    expect(tep).not.toBeNull();
+    expect(tep!.sort_order).toBe(1);
+    const timelineRows = await db.prepare("SELECT COUNT(*) AS c FROM trip_pois WHERE entry_id = ? AND context = 'timeline'").bind(entryId).first<{ c: number }>();
+    expect(timelineRows!.c).toBe(0);
   });
 
   it('缺 name → 400', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-tp/entries/${entryId}/trip-pois`, 'POST', {
         type: 'restaurant',
-        context: 'timeline',
       }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
@@ -62,7 +64,7 @@ describe('POST /api/trips/:id/entries/:eid/trip-pois', () => {
   it('未認證 → 401', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-tp/entries/${entryId}/trip-pois`, 'POST', {
-        name: 'x', type: 'restaurant', context: 'timeline',
+        name: 'x', type: 'restaurant',
       }),
       env,
       params: { id: 'trip-tp', eid: String(entryId) },
@@ -70,13 +72,13 @@ describe('POST /api/trips/:id/entries/:eid/trip-pois', () => {
     expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
   });
 
-  it('帶 price → 寫入 pois.price 不寫 trip_pois.price (migration 0054)', async () => {
+  it('帶 price → 寫入 pois.price，entry choice metadata 寫 trip_entry_pois', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-tp/entries/${entryId}/trip-pois`, 'POST', {
         name: '價位測試屋',
         type: 'restaurant',
-        context: 'timeline',
         price: '¥600~',
+        reservation: '已訂位',
       }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
@@ -90,8 +92,26 @@ describe('POST /api/trips/:id/entries/:eid/trip-pois', () => {
     const poi = await db.prepare('SELECT price FROM pois WHERE id = ?').bind(poiIdRow).first();
     expect((poi as Record<string, unknown>).price).toBe('¥600~');
 
-    const tp = await db.prepare('SELECT price FROM trip_pois WHERE id = ?').bind(data.id).first();
-    expect((tp as Record<string, unknown>).price).toBeNull();
+    const tep = await db.prepare('SELECT reservation FROM trip_entry_pois WHERE id = ?').bind(data.id).first<{ reservation: string | null }>();
+    expect(tep!.reservation).toBe('已訂位');
+  });
+
+  it('新增 shopping POI → 仍寫入 contextual trip_pois', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-tp/entries/${entryId}/trip-pois`, 'POST', {
+        name: '伴手禮店',
+        type: 'shopping',
+        must_buy: '黑糖',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-tp', eid: String(entryId) },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(201);
+    const data = await resp.json() as Record<string, unknown>;
+    tripPoiId = data.id as number;
+    expect(data.context).toBe('shopping');
   });
 });
 

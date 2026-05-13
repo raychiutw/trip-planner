@@ -514,32 +514,16 @@ const MODE_ICON: Record<TripSegment['mode'], string> = {
   transit: 'bus',
 };
 
-// v2.27.0: POI card display fallback chain — master.name/master.type 優先，否則 fallback
-// 到 legacy me.title/me.poiType。集中在 helper 避免 init useEffect + refreshEntryPois drift。
+// v2.29.0: POI card display uses the canonical entry master.
 type TimelineEntryLike = {
   master?: { name?: string | null; type?: string | null } | null;
   title?: string | null;
-  poiType?: string | null;
 };
-function poiNameFrom(me: TimelineEntryLike | null | undefined, fallbackTitle?: string | null): string {
-  return me?.master?.name ?? me?.title ?? fallbackTitle ?? '景點';
+function poiNameFrom(me: TimelineEntryLike | null | undefined, placeholderTitle?: string | null): string {
+  return me?.master?.name ?? me?.title ?? placeholderTitle ?? '景點';
 }
 function poiTypeFrom(me: TimelineEntryLike | null | undefined): string | null {
-  return me?.master?.type ?? me?.poiType ?? null;
-}
-
-// API 走 json() 自動 deepCamel — 必須用 camelCase 讀，不是 DB snake_case。
-// v2.26.0 ship 時 interface 寫成 snake_case → 全部讀回 undefined（time 空白、
-// POI 卡 + 移動方式 section 全消失）。Regression test fixture 也跟著錯，CI 沒抓到。
-interface EntryApi {
-  id: number;
-  dayId: number;
-  title?: string | null;
-  time?: string | null;
-  startTime?: string | null;
-  endTime?: string | null;
-  note?: string | null;
-  poiId?: number | null;
+  return me?.master?.type ?? null;
 }
 
 interface AlternatePoi {
@@ -548,9 +532,7 @@ interface AlternatePoi {
   sortOrder: number;
   type?: string | null;
   category?: string | null;
-  // v2.28.0 — restaurant-shared attributes surfaced from pois master + trip_pois override.
-  // Migration 0059 把 trip_pois context='timeline' rows 同步進 trip_entry_pois，這些欄位
-  // 從 fetchEntryPoisByEntries 的 JOIN 進來。
+  // v2.29.0 — restaurant-shared attributes surface from canonical trip_entry_pois.
   hours?: string | null;
   rating?: number | null;
   price?: string | null;
@@ -561,6 +543,8 @@ interface AlternatePoi {
   lng?: number | null;
 }
 
+type EntryPoiPayload = Omit<AlternatePoi, 'sortOrder'> & { sortOrder?: number | null };
+
 interface MasterPoiSummary {
   poiId: number;
   name: string;
@@ -568,6 +552,26 @@ interface MasterPoiSummary {
   /** Master coords — baseline for sibling-distance comparison（cross-region warning）。 */
   lat?: number | null;
   lng?: number | null;
+}
+
+// API 走 json() 自動 deepCamel — 必須用 camelCase 讀，不是 DB snake_case。
+interface EntryApi {
+  id: number;
+  dayId: number;
+  title?: string | null;
+  time?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  note?: string | null;
+  master?: {
+    poiId?: number;
+    name?: string | null;
+    type?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+  } | null;
+  alternates?: EntryPoiPayload[];
+  entryPoisVersion?: string | number | null;
 }
 
 interface TripMeta {
@@ -581,24 +585,9 @@ interface DayApi {
   timeline?: Array<{
     id?: number | null;
     title?: string | null;
-    poiType?: string | null;
     master?: { poiId?: number; name?: string | null; type?: string | null; lat?: number | null; lng?: number | null } | null;
-    alternates?: Array<{
-      poiId: number;
-      name?: string | null;
-      sortOrder?: number;
-      type?: string | null;
-      category?: string | null;
-      // v2.28.0 — restaurant fields surfaced via _merge.ts LEFT JOIN trip_pois
-      hours?: string | null;
-      rating?: number | null;
-      price?: string | null;
-      reservation?: string | null;
-      reservationUrl?: string | null;
-      lat?: number | null;
-      lng?: number | null;
-    }>;
-    entryPoisVersion?: string | null;
+    alternates?: EntryPoiPayload[];
+    entryPoisVersion?: string | number | null;
   }>;
 }
 
@@ -622,11 +611,7 @@ function formatKm(m: number | null): string | null {
 
 // Restaurant / coord fields shared between init useEffect and refreshEntryPois —
 // 抽 helper 避免 drift（v2.28.0 ship 時 refresh path 漏抄 restaurant fields → swap 後 chips 消失）。
-type TimelineAlternateRow = NonNullable<DayApi['timeline']>[number] extends infer T
-  ? T extends { alternates?: Array<infer A> } ? A : never
-  : never;
-
-function mapAlternate(a: TimelineAlternateRow): AlternatePoi {
+function mapAlternate(a: EntryPoiPayload): AlternatePoi {
   return {
     poiId: a.poiId,
     name: a.name ?? '景點',
@@ -719,6 +704,21 @@ export default function EditEntryPage() {
         const data = await apiFetch<EntryApi>(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`);
         if (cancelled) return;
         setEntry(data);
+        if (data.master?.poiId != null) {
+          setPoiInfo({
+            name: data.master.name ?? data.title ?? '景點',
+            poiType: data.master.type ?? null,
+          });
+          setMasterSummary({
+            poiId: data.master.poiId,
+            name: data.master.name ?? data.title ?? '景點',
+            type: data.master.type ?? null,
+            lat: data.master.lat ?? null,
+            lng: data.master.lng ?? null,
+          });
+        }
+        setAlternates((data.alternates ?? []).map(mapAlternate));
+        if (data.entryPoisVersion != null) setEntryPoisVersion(String(data.entryPoisVersion));
       } catch (err) {
         if (cancelled) return;
         setLoadError(err instanceof Error ? err.message : '載入失敗');
@@ -729,7 +729,7 @@ export default function EditEntryPage() {
   }, [tripId, entryId]);
 
   // Load trip meta — 給 TitleBar 顯示 「編輯景點 · {tripName}」（v2.26.4 mockup V1）
-  // 失敗 silent：TitleBar fallback 為單純「編輯景點」，不擋 entry load
+  // 失敗時只省略 tripName，不擋 entry load。
   useEffect(() => {
     if (!tripId) return;
     let cancelled = false;
@@ -754,7 +754,7 @@ export default function EditEntryPage() {
         if (cancelled) return;
         const day = days.find((d) => d.id === entry.dayId);
         if (!day) return;
-        const dayData = await apiFetch<DayApi & { timeline?: Array<{ id?: number | null; title?: string | null; poiType?: string | null }> }>(
+        const dayData = await apiFetch<DayApi>(
           `/trips/${encodeURIComponent(tripId)}/days/${day.dayNum}`,
         );
         if (cancelled) return;
@@ -762,8 +762,7 @@ export default function EditEntryPage() {
         const idx = timeline.findIndex((e) => e.id === entryId);
         const me = idx >= 0 ? timeline[idx] : null;
         if (me) {
-          // v2.27.0 multi-POI: master.name/master.type 優先，legacy fallback 詳見
-          // poiNameFrom/poiTypeFrom helper（同 refreshEntryPois 共用避免 drift）。
+          // v2.29.0: canonical master comes from trip_entry_pois.
           setPoiInfo({
             name: poiNameFrom(me, entry.title),
             poiType: poiTypeFrom(me),
@@ -781,8 +780,8 @@ export default function EditEntryPage() {
           if (Array.isArray(me.alternates)) {
             setAlternates(me.alternates.map(mapAlternate));
           }
-          if (me.entryPoisVersion) {
-            setEntryPoisVersion(me.entryPoisVersion);
+          if (me.entryPoisVersion != null) {
+            setEntryPoisVersion(String(me.entryPoisVersion));
           }
         }
         setSiblingMasterCoords(extractSiblingCoords(timeline, entryId));
@@ -968,13 +967,10 @@ export default function EditEntryPage() {
       );
       const me = (dayData.timeline ?? []).find((e) => e.id === entryId);
       if (!me) return null;
-      // POI card always reflect latest master fallback chain — 即使 me.master 為 null
-      // 也用 helper fallthrough（degenerate API 不會留 stale name）。
+      // POI card reflects the latest canonical master.
       const freshMasterName = poiNameFrom(me);
       setPoiInfo({ name: freshMasterName, poiType: poiTypeFrom(me) });
-      // Phase 1 dual-read fallback：master.poiId 優先，沒有時用 legacy 路徑
-      // （EntryApi.poiId — backend 未 populate master 的舊 response shape）。
-      const freshMasterPoiId = me.master?.poiId ?? data.poiId ?? null;
+      const freshMasterPoiId = me.master?.poiId ?? null;
       if (freshMasterPoiId != null) {
         setMasterSummary({
           poiId: freshMasterPoiId,
@@ -985,12 +981,12 @@ export default function EditEntryPage() {
         });
       }
       setAlternates((me.alternates ?? []).map(mapAlternate));
-      if (me.entryPoisVersion) setEntryPoisVersion(me.entryPoisVersion);
+      if (me.entryPoisVersion != null) setEntryPoisVersion(String(me.entryPoisVersion));
       setSiblingMasterCoords(extractSiblingCoords(dayData.timeline ?? [], entryId));
       return {
         masterPoiId: freshMasterPoiId,
         masterName: freshMasterName,
-        entryPoisVersion: me.entryPoisVersion ?? null,
+        entryPoisVersion: me.entryPoisVersion != null ? String(me.entryPoisVersion) : null,
       };
     } catch {
       // refresh 失敗不阻擋，UI 維持上次狀態

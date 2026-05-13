@@ -17,6 +17,8 @@ import {
   seedPoi,
   seedUser,
   seedTrip,
+  seedEntry,
+  getDayId,
   callHandler,
 } from './helpers';
 import { onRequestGet } from '../../functions/api/poi-favorites';
@@ -92,6 +94,44 @@ describe('GET /api/poi-favorites — §7.1 V2 user / anonymous', () => {
     expect(Array.isArray(data[0]!.usages)).toBe(true);
   });
 
+  it('usages 包含合法 contextual trip_pois，但忽略舊 timeline rows', async () => {
+    const userEmail = 'v2-get-contextual@test.com';
+    const userId = await seedUser(db, userEmail);
+    const poiX = await seedPoi(db, { name: 'Contextual Favorite', type: 'shopping' });
+    await db.prepare('INSERT INTO poi_favorites (user_id, poi_id) VALUES (?, ?)').bind(userId, poiX).run();
+
+    const tripId = 'contextual-usage-trip';
+    await seedTrip(db, { id: tripId, owner: userEmail });
+    const dayId = await getDayId(db, tripId, 1);
+    const legacyEntryId = await seedEntry(db, dayId, { title: 'Legacy timeline holder' });
+    await db.batch([
+      db
+        .prepare(
+          `INSERT INTO trip_pois (poi_id, trip_id, context, day_id, entry_id, sort_order)
+           VALUES (?, ?, 'shopping', ?, NULL, 0)`,
+        )
+        .bind(poiX, tripId, dayId),
+      db
+        .prepare(
+          `INSERT INTO trip_pois (poi_id, trip_id, context, day_id, entry_id, sort_order)
+           VALUES (?, ?, 'timeline', ?, ?, 0)`,
+        )
+        .bind(poiX, tripId, dayId, legacyEntryId),
+    ]);
+
+    const ctx = mockContext({
+      request: new Request('https://test.com/api/poi-favorites'),
+      env,
+      auth: mockAuth({ email: userEmail }),
+    });
+    const resp = await callHandler(onRequestGet, ctx);
+    expect(resp.status).toBe(200);
+    const data = await resp.json() as Array<{ poiId: number; usages: Array<{ tripId: string; entryId: number | null }> }>;
+    const favorite = data.find((d) => d.poiId === poiX);
+    expect(favorite?.usages.some((usage) => usage.tripId === tripId)).toBe(true);
+    expect(favorite?.usages.some((usage) => usage.entryId === legacyEntryId)).toBe(false);
+  });
+
   it('anonymous（無 auth）→ 200 + 空陣列', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/poi-favorites'),
@@ -131,12 +171,16 @@ describe('GET /api/poi-favorites — §7.1 V2 user / anonymous', () => {
       .prepare('SELECT id FROM trip_days WHERE trip_id = ? LIMIT 1')
       .bind('private-trip-of-b')
       .first<{ id: number }>();
-    await db
+    const entry = await db
       .prepare(
-        `INSERT INTO trip_pois (poi_id, trip_id, entry_id, day_id, sort_order, context)
-         VALUES (?, ?, NULL, ?, 0, 'timeline')`,
+        `INSERT INTO trip_entries (day_id, sort_order, title, poi_id)
+         VALUES (?, 0, 'Private usage', ?) RETURNING id`,
       )
-      .bind(sharedPoi, 'private-trip-of-b', dayRow!.id)
+      .bind(dayRow!.id, sharedPoi)
+      .first<{ id: number }>();
+    await db
+      .prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)')
+      .bind(entry!.id, sharedPoi)
       .run();
 
     // A 查自己收藏 — usages 不該揭露 B 的私 trip

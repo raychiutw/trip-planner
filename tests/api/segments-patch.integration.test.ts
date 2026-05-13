@@ -163,6 +163,10 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(26.5687, 127.8826, poiB).run();
     const e1 = await seedEntry(db, day1, { sortOrder: 1, poiId: poiA });
     const e2 = await seedEntry(db, day1, { sortOrder: 2, poiId: poiB });
+    await db.batch([
+      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(e1, poiA),
+      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(e2, poiB),
+    ]);
     const now = Date.now();
     // 起始為 driving / 18min（mock 速度算出）
     const r = await db.prepare(
@@ -229,8 +233,30 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
 
   it('entries 缺 coords → 保留舊 min（不能 call Google，fallback）', async () => {
     // 把 POI 座標清掉模擬缺資料
-    await db.prepare('UPDATE pois SET lat=NULL, lng=NULL WHERE id IN (SELECT poi_id FROM trip_entries WHERE id IN (SELECT from_entry_id FROM trip_segments WHERE id = ?))').bind(segIdR).run();
-    await db.prepare('UPDATE pois SET lat=NULL, lng=NULL WHERE id IN (SELECT poi_id FROM trip_entries WHERE id IN (SELECT to_entry_id FROM trip_segments WHERE id = ?))').bind(segIdR).run();
+    await db
+      .prepare(
+        `UPDATE pois SET lat=NULL, lng=NULL
+         WHERE id IN (
+           SELECT tep.poi_id
+           FROM trip_entry_pois tep
+           WHERE tep.sort_order = 1
+             AND tep.entry_id IN (SELECT from_entry_id FROM trip_segments WHERE id = ?)
+         )`,
+      )
+      .bind(segIdR)
+      .run();
+    await db
+      .prepare(
+        `UPDATE pois SET lat=NULL, lng=NULL
+         WHERE id IN (
+           SELECT tep.poi_id
+           FROM trip_entry_pois tep
+           WHERE tep.sort_order = 1
+             AND tep.entry_id IN (SELECT to_entry_id FROM trip_segments WHERE id = ?)
+         )`,
+      )
+      .bind(segIdR)
+      .run();
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'walking' }),

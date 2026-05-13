@@ -37,12 +37,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       SELECT * FROM pois
       WHERE id IN (
         SELECT DISTINCT poi_id FROM trip_pois WHERE trip_id = ?
-        UNION
-        SELECT DISTINCT e.poi_id FROM trip_entries e
-          JOIN trip_days d ON e.day_id = d.id
-          WHERE d.trip_id = ? AND e.poi_id IS NOT NULL
       )
-    `).bind(id, id).all(),
+    `).bind(id).all(),
   ]);
 
   const dayRows = daysResult.results as Record<string, unknown>[];
