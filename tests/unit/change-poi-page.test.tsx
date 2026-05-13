@@ -76,6 +76,16 @@ describe('ChangePoiPage — alternate mode', () => {
     expect(screen.queryByText(/只支援從收藏/)).toBeNull();
   });
 
+  it('tab=favorites opens the same alternate page on the favorites tab', async () => {
+    (apiFetch as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    renderPage('/trip/okinawa-2026/stop/42/change-poi?mode=alternate&tab=favorites');
+    expect(screen.getByTestId('change-poi-tab-favorites').className).toContain('is-active');
+    expect(screen.queryByTestId('change-poi-search-input')).toBeNull();
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/poi-favorites');
+    });
+  });
+
   it('can add a searched POI as an alternate', async () => {
     mockPoiSearch.results = [{
       place_id: 'ChIJ-alt-search',
