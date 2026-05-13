@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.28.6] - 2026-05-13
+
+**置換景點搜尋修正：ChangePoiPage 正確讀取 `/api/poi-search` 結果。**
+
+### Fixed
+
+- ChangePoiPage 搜尋 tab 補上 `/api/poi-search` `{ results: [...] }` response normalise，避免 production 搜尋明明 200 卻顯示「無結果」。
+- 置換景點搜尋 input 改為 text input + search enter hint，對齊新增景點 / Explore 的可輸入搜尋體驗。
+
+### Verify
+
+- `npm test -- tests/unit/change-poi-page.test.tsx`
+- `npm run typecheck`
+- `npm run typecheck:functions`
+- `npm test` — 182 files / 1539 tests
+- `npm run build`
+- `node scripts/verify-sw.js`
+- `bash scripts/bundle-size-check.sh`
+- `npm run test:e2e -- --project=chromium` — 44 tests
+
 ## [2.28.5] - 2026-05-13
 
 **備選加入入口修正：搜尋與收藏是兩個明確入口，進同一頁不同 tab。**

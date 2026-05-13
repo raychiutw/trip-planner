@@ -23,6 +23,7 @@ import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { regionToApiParam } from '../lib/maps/region';
 import { mapNominatimCategory } from '../lib/poiCategory';
 import type { PoiFavorite } from '../types/api';
+import type { PoiSearchResult } from '../types/poi';
 
 const SCOPED_STYLES = `
 .tp-change-poi {
@@ -48,8 +49,12 @@ const SCOPED_STYLES = `
   padding: 10px 14px; border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
+.tp-change-poi-search:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-subtle);
+}
 .tp-change-poi-search input {
-  border: 0; flex: 1; outline: 0; font: inherit; font-size: 15px;
+  border: 0; flex: 1; min-width: 0; outline: 0; font: inherit; font-size: 16px;
   background: transparent;
 }
 .tp-change-poi-list {
@@ -104,6 +109,13 @@ interface SelectedPoi {
   country?: string | null;
 }
 
+function normalizeSearchResults(data: unknown): PoiSearchResult[] {
+  const rows = Array.isArray(data)
+    ? data
+    : (data as { results?: unknown[] })?.results;
+  return Array.isArray(rows) ? (rows as PoiSearchResult[]) : [];
+}
+
 export default function ChangePoiPage() {
   const { tripId, entryId: entryIdParam } = useParams<{ tripId: string; entryId: string }>();
   const entryId = Number(entryIdParam);
@@ -134,6 +146,7 @@ export default function ChangePoiPage() {
     query: query.trim(),
     region: regionToApiParam(region),
     limit: 20,
+    normalise: normalizeSearchResults,
   });
 
   const buildSearchPoiBody = useCallback((poi: SelectedPoi) => ({
@@ -249,9 +262,11 @@ export default function ChangePoiPage() {
                 <Icon name="search" />
                 <input
                   ref={inputRef}
-                  type="search"
+                  type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  autoComplete="off"
+                  enterKeyHint="search"
                   placeholder="輸入景點名稱…"
                   data-testid="change-poi-search-input"
                 />
