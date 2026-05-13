@@ -115,12 +115,12 @@ export default function ChangePoiPage() {
   // （title 改「加入備選景點」+ CTA 改「加為備選」+ 提交走 POST /alternates）
   // round 4 fix M5: use react-router's useSearchParams (reactive + SSR-safe) instead
   // of raw window.location.search which doesn't re-render on client-side route changes.
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const mode: 'master' | 'alternate' = searchParams.get('mode') === 'alternate' ? 'alternate' : 'master';
+  const tab: Tab = searchParams.get('tab') === 'favorites' ? 'favorites' : 'search';
   const pageTitle = mode === 'alternate' ? '加入備選景點' : '置換景點';
   const submitLabel = mode === 'alternate' ? '加為備選' : '置換景點';
 
-  const [tab, setTab] = useState<Tab>('search');
   const [query, setQuery] = useState('');
   const [region] = useState<string>('全部地區');
   const [selected, setSelected] = useState<SelectedPoi | null>(null);
@@ -147,6 +147,14 @@ export default function ChangePoiPage() {
     country: poi.country ?? undefined,
     source: 'google',
   }), []);
+
+  const handleTabChange = useCallback((nextTab: Tab) => {
+    if (nextTab === tab) return;
+    setSelected(null);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', nextTab);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, tab]);
 
   useEffect(() => {
     if (tab !== 'favorites' || favorites !== null) return;
@@ -220,7 +228,7 @@ export default function ChangePoiPage() {
             <button
               type="button"
               className={`tp-change-poi-tab ${tab === 'search' ? 'is-active' : ''}`}
-              onClick={() => setTab('search')}
+              onClick={() => handleTabChange('search')}
               data-testid="change-poi-tab-search"
             >
               搜尋
@@ -228,7 +236,7 @@ export default function ChangePoiPage() {
             <button
               type="button"
               className={`tp-change-poi-tab ${tab === 'favorites' ? 'is-active' : ''}`}
-              onClick={() => setTab('favorites')}
+              onClick={() => handleTabChange('favorites')}
               data-testid="change-poi-tab-favorites"
             >
               收藏
@@ -328,7 +336,7 @@ export default function ChangePoiPage() {
         </div>
       </main>
     </div>
-  ), [tab, query, searching, searchResults, favorites, selected, error, submitting, goBack, handleSubmit, pageTitle, submitLabel]);
+  ), [tab, query, searching, searchResults, favorites, selected, error, submitting, goBack, handleSubmit, handleTabChange, pageTitle, submitLabel]);
 
   return (
     <AppShell

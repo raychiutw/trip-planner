@@ -434,6 +434,7 @@ const SCOPED_STYLES = `
 }
 .tp-edit-entry-alt-add-btn {
   flex: 1;
+  min-width: 180px;
   min-height: 44px;
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
@@ -1314,9 +1315,21 @@ export default function EditEntryPage() {
                     <button
                       type="button"
                       className="tp-edit-entry-alt-add-btn"
-                      onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate`)}
+                      onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate&tab=search`)}
                       data-testid="edit-entry-alt-add-search"
-                    >＋ 加入備選景點</button>
+                    >
+                      <Icon name="search" />
+                      搜尋加入備選
+                    </button>
+                    <button
+                      type="button"
+                      className="tp-edit-entry-alt-add-btn"
+                      onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate&tab=favorites`)}
+                      data-testid="edit-entry-alt-add-favorites"
+                    >
+                      <Icon name="heart" />
+                      收藏加入備選
+                    </button>
                   </div>
                 </section>
               )}

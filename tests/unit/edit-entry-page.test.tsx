@@ -480,7 +480,8 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy();
     });
     expect(screen.queryByTestId('edit-entry-alt-empty')).toBeTruthy();
-    expect(screen.getByTestId('edit-entry-alt-add-search').textContent).toContain('加入備選景點');
+    expect(screen.getByTestId('edit-entry-alt-add-search').textContent).toContain('搜尋加入備選');
+    expect(screen.getByTestId('edit-entry-alt-add-favorites').textContent).toContain('收藏加入備選');
   });
 
   it('每 row 含 ↑↓ / 設為正選 / × 四個 button', async () => {
@@ -623,16 +624,24 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     });
   });
 
-  it('「加入備選景點」按鈕 → navigate /trip/:id/stop/:eid/change-poi?mode=alternate', async () => {
+  it('「搜尋加入備選」按鈕 → navigate 到 change-poi alternate search tab', async () => {
     setupAltsMocks();
     renderPage();
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-alt-add-search')).toBeTruthy();
     });
     fireEvent.click(screen.getByTestId('edit-entry-alt-add-search'));
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.stringContaining('change-poi?mode=alternate'),
-    );
+    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi?mode=alternate&tab=search');
+  });
+
+  it('「收藏加入備選」按鈕 → navigate 到 change-poi alternate favorites tab', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-alt-add-favorites')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-alt-add-favorites'));
+    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi?mode=alternate&tab=favorites');
   });
 
   // Round 9 — 409 STALE_ENTRY 處理 (cross-tab safety + auto-retry on benign race)
