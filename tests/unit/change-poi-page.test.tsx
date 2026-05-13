@@ -7,6 +7,10 @@ import type { PoiSearchResult } from '../../src/types/poi';
 const navigateSpy = vi.fn();
 const mockPoiSearch = vi.hoisted(() => ({
   results: [] as PoiSearchResult[],
+  lastOptions: null as null | {
+    query: string;
+    normalise?: (raw: unknown) => PoiSearchResult[];
+  },
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -26,7 +30,10 @@ vi.mock('../../src/hooks/useNavigateBack', () => ({
 }));
 
 vi.mock('../../src/hooks/usePoiSearch', () => ({
-  usePoiSearch: () => ({ results: mockPoiSearch.results, searching: false }),
+  usePoiSearch: (options: { query: string; normalise?: (raw: unknown) => PoiSearchResult[] }) => {
+    mockPoiSearch.lastOptions = options;
+    return { results: mockPoiSearch.results, searching: false };
+  },
 }));
 
 vi.mock('../../src/components/shell/AppShell', () => ({
@@ -60,6 +67,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   navigateSpy.mockClear();
   mockPoiSearch.results = [];
+  mockPoiSearch.lastOptions = null;
   (apiFetch as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
     ok: true,
@@ -155,5 +163,30 @@ describe('ChangePoiPage — alternate mode', () => {
     const call = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls[0]!;
     const body = JSON.parse((call[1] as RequestInit).body as string);
     expect(body).toEqual({ poiId: 321 });
+  });
+});
+
+describe('ChangePoiPage — master search mode', () => {
+  it('normalises wrapped /api/poi-search results and keeps the search input editable', () => {
+    renderPage('/trip/okinawa-2026/stop/42/change-poi');
+
+    const input = screen.getByTestId('change-poi-search-input') as HTMLInputElement;
+    expect(input.type).toBe('text');
+    fireEvent.change(input, { target: { value: '美國村' } });
+    expect(input.value).toBe('美國村');
+
+    const rows = mockPoiSearch.lastOptions?.normalise?.({
+      results: [{
+        place_id: 'ChIJzZoVCAUT5TQRzIueHYt83hs',
+        name: '美國村',
+        address: 'Mihama, Chatan',
+        lat: 26.3158799,
+        lng: 127.7540077,
+        category: 'tourist_attraction',
+        country: 'JP',
+        rating: 4.3,
+      }],
+    });
+    expect(rows).toEqual([expect.objectContaining({ name: '美國村' })]);
   });
 });
