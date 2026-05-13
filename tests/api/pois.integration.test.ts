@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedPoi, callHandler, seedTrip, seedEntry, getDayId, seedTripPoi } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedPoi, callHandler, seedTrip, seedEntry, getDayId } from './helpers';
 import { onRequestPatch, onRequestDelete } from '../../functions/api/pois/[id]';
 import type { Env } from '../../functions/api/_types';
 
@@ -60,7 +60,6 @@ describe('PATCH /api/pois/:id', () => {
 });
 
 describe('PATCH /api/pois/:id — tripId 權限', () => {
-  let tripPoiId: number;
   const tripId = 'pois-perm-trip';
   const tripOwner = 'companion@test.com';
 
@@ -68,7 +67,10 @@ describe('PATCH /api/pois/:id — tripId 權限', () => {
     await seedTrip(db, { id: tripId, owner: tripOwner });
     const dayId = await getDayId(db, tripId, 1);
     const entryId = await seedEntry(db, dayId);
-    tripPoiId = await seedTripPoi(db, { poiId: poiId, tripId, entryId, dayId });
+    await db
+      .prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)')
+      .bind(entryId, poiId)
+      .run();
   });
 
   it('帶 tripId + 有權限 + POI 屬於該 trip → 200', async () => {
@@ -112,6 +114,30 @@ describe('PATCH /api/pois/:id — tripId 權限', () => {
       env,
       auth: mockAuth({ email: tripOwner, isAdmin: false }),
       params: { id: String(otherPoiId) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(403);
+  });
+
+  it('舊 trip_pois timeline row 不再授權 POI 編輯', async () => {
+    const dayId = await getDayId(db, tripId, 1);
+    const entryId = await seedEntry(db, dayId, { title: 'Legacy timeline row' });
+    const legacyPoiId = await seedPoi(db, { type: 'restaurant', name: 'Legacy Timeline Only' });
+    await db
+      .prepare(
+        `INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order)
+         VALUES (?, ?, 'timeline', ?, ?, 0)`,
+      )
+      .bind(legacyPoiId, tripId, entryId, dayId)
+      .run();
+
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/pois/${legacyPoiId}`, 'PATCH', {
+        tripId,
+        lat: 1,
+      }),
+      env,
+      auth: mockAuth({ email: tripOwner, isAdmin: false }),
+      params: { id: String(legacyPoiId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(403);
   });

@@ -81,34 +81,6 @@ export interface Shopping {
 }
 
 /**
- * Restaurant recommendation — belongs to an entry.
- * DB columns: id, entry_id, sort_order, name, category, hours, price,
- *             reservation, reservation_url, description, note, rating,
- *             maps, mapcode, source
- */
-export interface Restaurant {
-  id: number;
-  entryId: number;
-  sortOrder: number;
-  name: string;
-  category?: string | null;
-  hours?: string | null;
-  price?: string | null;
-  reservation?: string | null;
-  reservationUrl?: string | null;
-  /** maps to DB `description` column directly (no rename in FIELD_MAP) */
-  description?: string | null;
-  note?: string | null;
-  /** maps to DB `rating` (googleRating alias not applied here — FIELD_MAP maps `rating` -> `googleRating`) */
-  googleRating?: number | null;
-  maps?: string | null;
-  mapcode?: string | null;
-  lat?: number | null;
-  lng?: number | null;
-  source?: string | null;
-}
-
-/**
  * Timeline entry (activity / spot).
  * DB table: trip_entries
  * DB columns: id, day_id, sort_order, time, title, description, source, maps,
@@ -136,10 +108,10 @@ export interface EntryPoiInfo {
   rating?: number | null;
   /** v2.25.4 後 price 純 pois master */
   price?: string | null;
-  /** v2.28.0 — trip_pois override (context='timeline')。NULL = 無 trip-specific 預約資訊。 */
+  /** v2.29.0 — trip_entry_pois metadata。NULL = 無 trip-specific 預約資訊。 */
   reservation?: string | null;
   reservationUrl?: string | null;
-  /** trip_pois override description / note */
+  /** trip_entry_pois metadata description / note */
   description?: string | null;
   note?: string | null;
 }
@@ -162,24 +134,13 @@ export interface Entry {
   /** Assembled from travel_type / travel_desc / travel_min columns */
   travel?: Travel | null;
   /**
-   * @deprecated v2.27.0：master 改走 trip_entry_pois.sort_order=1。
-   * Phase 1 dual-read，Phase 2 (v2.27.1) DROP COLUMN 後此欄位移除。
-   * 過渡期讀新 code 走 `getEntryMasterPoiId(entry)` selector。
-   */
-  poiId?: number | null;
-  /**
-   * @deprecated v2.27.0：master POI 改走 `entry.master`。
-   * Phase 1 dual-read，Phase 2 移除。過渡期讀新 code 走 `getEntryMaster(entry)`。
-   */
-  poi?: Poi | null;
-  /**
    * v2.27.0 multi-POI per entry：master POI（sort_order=1）。Phase 1 dual-read
-   * fallback：若 backend 未 populate，selector 會自動 fall back 到 legacy `poi`。
+   * 之後由 backend 直接從 trip_entry_pois populate。
    */
   master?: EntryPoiInfo | null;
   /**
    * v2.27.0 multi-POI per entry：alternates 列表，依 sort_order 升序。空陣列表示
-   * 無 alternates；undefined 表示 backend 尚未 populate（legacy response shape）。
+   * 無 alternates；undefined 表示 backend 未 populate。
    */
   alternates?: EntryPoiAlternate[];
   /**
@@ -197,7 +158,6 @@ export interface Entry {
    */
   entryPoisVersion?: string;
   updatedAt?: string;
-  restaurants: Restaurant[];
   shopping: Shopping[];
 }
 
@@ -254,7 +214,7 @@ export interface TripPoi {
   id: number;
   tripId: string;
   poiId: number;
-  context: 'hotel' | 'timeline' | 'shopping';
+  context: 'hotel' | 'shopping';
   dayId?: number | null;
   entryId?: number | null;
   sortOrder: number;
@@ -268,10 +228,6 @@ export interface TripPoi {
   checkout?: string | null;
   breakfastIncluded?: number | null;
   breakfastNote?: string | null;
-  /** Restaurant-specific (flattened) */
-  price?: string | null;
-  reservation?: string | null;
-  reservationUrl?: string | null;
   /** Shopping-specific (flattened) */
   mustBuy?: string | null;
   source?: string | null;
@@ -283,17 +239,13 @@ export interface TripPoi {
 export interface MergedPoi extends Poi {
   sortOrder: number;
   tripPoiId: number;
-  context: 'hotel' | 'timeline' | 'shopping';
+  context: 'hotel' | 'shopping';
   dayId?: number | null;
   entryId?: number | null;
   /** Hotel-specific (from trip_pois flattened columns) */
   checkout?: string | null;
   breakfastIncluded?: number | null;
   breakfastNote?: string | null;
-  /** Restaurant-specific */
-  price?: string | null;
-  reservation?: string | null;
-  reservationUrl?: string | null;
   /** Shopping-specific */
   mustBuy?: string | null;
 }

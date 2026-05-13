@@ -1,12 +1,11 @@
 /**
  * Maps raw API day response data to component-expected shapes.
- * POI Schema: API returns merged pois + trip_pois rows.
+ * POI Schema: API returns canonical trip_entry_pois rows for timeline entries.
  */
 
 import type { TimelineEntryData, TravelData, PoiPhoto, StopPoiOptionData } from '../components/trip/TimelineEvent';
 import type { NavLocation } from '../components/trip/MapLinks';
 import type { InfoBoxData } from '../components/trip/InfoBox';
-import type { RestaurantData } from '../components/trip/Restaurant';
 import type { ShopData } from '../components/trip/Shop';
 import type { Day, Entry } from '../types/trip';
 import { getStopDisplayTitle } from './stopDisplay';
@@ -62,24 +61,6 @@ export function formatDateLabel(date: string | null | undefined): string {
 
 /* ===== Raw input interfaces (camelCase, matching API response from mergePoi) ===== */
 
-/** Raw restaurant POI as returned by the API (merged pois + trip_pois). */
-interface RawRestaurant {
-  name?: string | null;
-  sortOrder?: number | null;
-  category?: string | null;
-  hours?: string | null;
-  price?: string | null;
-  reservation?: string | null;
-  reservationUrl?: string | null;
-  description?: string | null;
-  note?: string | null;
-  googleRating?: number | null;
-  maps?: string | null;
-  mapcode?: string | null;
-  lat?: number | null;
-  lng?: number | null;
-}
-
 /** Raw shopping POI as returned by the API. */
 interface RawShop {
   name?: string | null;
@@ -102,7 +83,7 @@ interface RawTravel {
   min?: number | null;
 }
 
-/** Raw POI (Phase 2) joined onto entries via trip_entries.poi_id. */
+/** Raw POI row joined through trip_entry_pois. */
 interface RawEntryPoi {
   id?: number | null;
   poiId?: number | null;
@@ -128,7 +109,7 @@ interface RawEntryPoi {
 
 type RawStopPoi = RawEntryPoi;
 
-/** Raw timeline entry as returned by the API (Phase 3：spatial 欄位只存在 poi). */
+/** Raw timeline entry as returned by the API. */
 interface RawEntry {
   id?: number | null;
   time?: string | null;
@@ -137,13 +118,10 @@ interface RawEntry {
   note?: string | null;
   source?: string | null;
   travel?: RawTravel | null;
-  /** JOIN pois via poi_id — spatial source of truth (Phase 2 / legacy) */
-  poi?: RawEntryPoi | null;
   /** v2.27.0 multi-POI per entry — master (sort_order=1) JOIN pois。lat/lng 為新 SoT */
   master?: RawStopPoi | null;
   /** Canonical stop POI list; stop POI === first row (sortOrder=1). */
   stopPois?: RawStopPoi[];
-  restaurants?: RawRestaurant[];
   shopping?: RawShop[];
 }
 
@@ -201,24 +179,6 @@ function toStopPoiOption(p: RawStopPoi): StopPoiOptionData | null {
   };
 }
 
-/* ===== Restaurant (from merged POI) ===== */
-
-function toRestaurantData(r: RawRestaurant): RestaurantData {
-  return {
-    name: r.name || '',
-    sortOrder: r.sortOrder ?? null,
-    category: r.category ?? null,
-    hours: r.hours ?? null,
-    price: r.price ?? null,
-    reservation: r.reservation ?? null,
-    reservationUrl: r.reservationUrl ?? null,
-    description: r.description ?? null,
-    note: r.note ?? null,
-    googleRating: r.googleRating ?? null,
-    location: buildLocation(r.maps ?? null, r.mapcode ?? null, r.name ?? null, r.lat ?? null, r.lng ?? null),
-  };
-}
-
 /* ===== Shopping (from merged POI) ===== */
 
 function toShopData(s: RawShop): ShopData {
@@ -258,9 +218,8 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
       }
     : null;
 
-  // stop 的 canonical POI 是 stopPois[0] / sortOrder=1。
-  // fallback master → legacy poi 是 transition 期保險。
-  const poi = getPrimaryStopPoi(raw.stopPois) ?? raw.master ?? raw.poi ?? null;
+  // stop 的 canonical POI 是 stopPois.sortOrder=1；migration 0059 guarantees the data.
+  const poi = getPrimaryStopPoi(raw.stopPois);
   const effMaps = poi?.maps ?? null;
   const effMapcode = poi?.mapcode ?? null;
   // Migration 0045 (v2.19.x) 把 pois.google_rating 改名為 rating，但這裡的 mapping
@@ -288,13 +247,6 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   }
 
   const infoBoxes: InfoBoxData[] = [];
-  const restaurants = raw.restaurants ?? [];
-  if (restaurants.length > 0) {
-    infoBoxes.push({
-      type: 'restaurants',
-      restaurants: restaurants.map(toRestaurantData),
-    });
-  }
   const shopping = raw.shopping ?? [];
   if (shopping.length > 0) {
     infoBoxes.push({
@@ -303,7 +255,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     });
   }
 
-  // master coord：使用 canonical stop POI；fallback 已在 poi 解析完成。
+  // master coord：使用 canonical stop POI。
   const masterLat = poi?.lat ?? null;
   const masterLng = poi?.lng ?? null;
 

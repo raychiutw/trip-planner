@@ -16,7 +16,7 @@
  *   2. SELECT source entry
  *   3. validate targetDayId 屬於同 trip
  *   4. INSERT new entry with day_id = targetDayId, sort_order, 其他欄位 copy
- *   5. SELECT trip_pois WHERE entry_id = source → INSERT 副本 with entry_id = new
+ *   5. SELECT trip_entry_pois WHERE entry_id = source → INSERT canonical POI copies
  *   6. logAudit action='create' with diff source ref
  *   7. Return new entry row
  */
@@ -24,7 +24,6 @@
 import { logAudit } from '../../../../_audit';
 import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
-import { syncEntryMaster } from '../../../../_entry_pois';
 import { parseTime } from '../../../../_time';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
@@ -33,6 +32,15 @@ interface CopyEntryBody {
   targetDayId: number;
   sortOrder?: number;
   time?: string | null;
+}
+
+interface SourceEntryPoi {
+  poi_id: number;
+  sort_order: number;
+  description: string | null;
+  note: string | null;
+  reservation: string | null;
+  reservation_url: string | null;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -73,6 +81,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .first() as Record<string, unknown> | null;
   if (!source) throw new AppError('DATA_NOT_FOUND');
 
+  const sourceStopPois = (await db
+    .prepare(
+      `SELECT poi_id, sort_order, description, note, reservation, reservation_url
+       FROM trip_entry_pois
+       WHERE entry_id = ?
+       ORDER BY sort_order ASC`,
+    )
+    .bind(eid)
+    .all<SourceEntryPoi>()).results ?? [];
+  const copiedMasterPoiId = sourceStopPois.find((row) => row.sort_order === 1)?.poi_id ?? null;
+
   // sortOrder 預設追加到目標 day 末尾
   let sortOrder = body.sortOrder;
   if (typeof sortOrder !== 'number') {
@@ -103,8 +122,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     newRow = await db
       .prepare(
         `INSERT INTO trip_entries
-          (day_id, sort_order, time, start_time, end_time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (day_id, sort_order, time, start_time, end_time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id, entry_pois_version)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING *`,
       )
       .bind(
@@ -120,7 +139,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         source.travel_type,
         source.travel_desc,
         source.travel_min,
-        source.poi_id,
+        copiedMasterPoiId,
+        sourceStopPois.length > 0 ? 1 : 0,
       )
       .first() as Record<string, unknown> | null;
   } catch (err) {
@@ -130,22 +150,32 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!newRow) throw new AppError('DATA_SAVE_FAILED', '複製 entry 失敗');
 
   const newEid = newRow.id as number;
-  const copiedPoiId = source.poi_id;
 
-  // v2.27.0：copy 完同步 trip_entry_pois sort_order=1（multi-POI per entry invariant）。
-  // 沒此 helper 則 copy 出來的 entry addAlternate 會 fire MISSING_MASTER 直到第一次 GET
-  // 自我修復（Codex pre-landing CRITICAL #2）。
-  // 註：v2.27.0 不複製 alternates（sort_order > 1），維持 v2.10 Wave 1 「只複製 master」
-  // 的最小語意，future enhancement 再決定。
-  if (copiedPoiId != null && typeof copiedPoiId === 'number') {
-    await syncEntryMaster(db, newEid, copiedPoiId);
+  if (sourceStopPois.length > 0) {
+    const now = new Date().toISOString();
+    await db.batch(sourceStopPois.map((row) =>
+      db
+        .prepare(
+          `INSERT INTO trip_entry_pois
+             (entry_id, poi_id, sort_order, description, note, reservation, reservation_url, added_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          newEid,
+          row.poi_id,
+          row.sort_order,
+          row.description,
+          row.note,
+          row.reservation,
+          row.reservation_url,
+          now,
+          now,
+        ),
+    ));
   }
 
-  // 註：v2.10 Wave 1 不複製 trip_pois 關聯。entries 多半透過 entries.poi_id
-  // 連 master POI（已在 INSERT 上面 source.poi_id 帶過去），trip_pois 主要是
-  // hotel 場景或 user 覆寫 master POI 的場合，冷門。需要時可在 follow-up PR
-  // 補 cloneTripPois 邏輯（要對齊 trip_pois 完整 schema 含 description/note/
-  // hours/checkout/breakfast_*/price/reservation/must_buy）。
+  // Contextual trip_pois (hotel/shopping) are not copied by this endpoint; entry
+  // stop choices are copied from trip_entry_pois above.
 
   await logAudit(db, {
     tripId: id,

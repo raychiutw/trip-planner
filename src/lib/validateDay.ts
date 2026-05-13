@@ -1,12 +1,12 @@
 /**
- * Validates a day's timeline entries against restaurant/shop opening hours.
+ * Validates a day's timeline entries against stop/shop opening hours.
  * Returns warning messages for entries that may arrive before opening.
  */
 
 interface ValidateEntry {
   time?: string | null;
   title?: string | null;
-  restaurants?: Array<{ name?: string; hours?: string | null }>;
+  stopPois?: Array<{ name?: string | null; hours?: string | null }>;
   shopping?: Array<{ name?: string; hours?: string | null }>;
 }
 
@@ -33,9 +33,9 @@ export function validateDay(timeline: ValidateEntry[]): string[] {
     const entryHour = parseHour(entry.time);
     const title = entry.title || '';
 
-    entry.restaurants?.forEach((r) => {
-      if (r && r.hours) {
-        const w = checkHours(title, entryTime, entryHour, r.name || '', r.hours);
+    entry.stopPois?.forEach((p) => {
+      if (p && p.hours) {
+        const w = checkHours(title, entryTime, entryHour, p.name || '', p.hours);
         if (w) warnings.push(w);
       }
     });

@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, getDayId , callHandler } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, seedPoi, getDayId , callHandler } from './helpers';
 import { onRequestGet, onRequestPatch, onRequestDelete } from '../../functions/api/trips/[id]/entries/[eid]';
 import type { Env } from '../../functions/api/_types';
 
@@ -16,15 +16,17 @@ beforeAll(async () => {
   env = mockEnv(db);
   await seedTrip(db, { id: 'trip-e' });
   const dayId = await getDayId(db, 'trip-e', 1);
-  entryId = await seedEntry(db, dayId, { title: 'Original' });
+  const poiId = await seedPoi(db, { name: 'Original POI', type: 'attraction' });
+  entryId = await seedEntry(db, dayId, { title: 'Original', poiId });
+  await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entryId, poiId).run();
 });
 
 afterAll(disposeMiniflare);
 
 describe('GET /api/trips/:id/entries/:eid', () => {
-  it('回完整 entry shape（含 time/note/poi_id/entry_pois_version）→ 200', async () => {
+  it('回完整 entry shape（含 time/note/master/stopPois/entry_pois_version）→ 200', async () => {
     // v2.27.1 regression：v2.26.0 SELECT 只有 id/day_id/title，導致 EditEntryPage
-    // 初始 load 後 entry.startTime/endTime/note/poiId 全 undefined → input 空白。
+    // 初始 load 後 entry.startTime/endTime/note/master 全 undefined → input 空白。
     // Backend SELECT 改 SELECT * 一勞永逸；此 test 鎖住完整 shape 防 regression。
     const ctx = mockContext({
       request: new Request(`https://test.com/api/trips/trip-e/entries/${entryId}`, { method: 'GET' }),
@@ -43,7 +45,9 @@ describe('GET /api/trips/:id/entries/:eid', () => {
       startTime?: string | null;
       endTime?: string | null;
       note?: string | null;
-      poiId?: number | null;
+      master?: { poiId: number; name: string } | null;
+      stopPois?: Array<{ poiId: number; sortOrder: number }>;
+      alternates?: Array<{ poiId: number; sortOrder: number }>;
       entryPoisVersion?: number | string | null;
       sortOrder?: number;
     };
@@ -55,8 +59,13 @@ describe('GET /api/trips/:id/entries/:eid', () => {
     expect('startTime' in body).toBe(true);
     expect('endTime' in body).toBe(true);
     expect('note' in body).toBe(true);
-    expect('poiId' in body).toBe(true);
+    expect('poiId' in body).toBe(false);
     expect('entryPoisVersion' in body).toBe(true);
+    expect(body.master?.name).toBe('Original POI');
+    expect(body.master?.poiId).toBeGreaterThan(0);
+    expect(body.stopPois).toHaveLength(1);
+    expect(body.stopPois?.[0]?.sortOrder).toBe(1);
+    expect(body.alternates).toEqual([]);
     // seedEntry 寫 time='10:00'（new INSERT 沒觸發 migration 0056 backfill — start_time
     // 仍 NULL；real entry 從 POST /entries 進來會走 dual-write 補 start/end）
     expect(body.time).toBe('10:00');

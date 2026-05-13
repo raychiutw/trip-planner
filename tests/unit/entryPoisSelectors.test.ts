@@ -13,7 +13,6 @@ function baseEntry(overrides: Partial<Entry> = {}): Entry {
     id: 1,
     sortOrder: 1,
     title: 'Test entry',
-    restaurants: [],
     shopping: [],
     ...overrides,
   };
@@ -26,23 +25,20 @@ describe('getEntryMaster', () => {
     expect(getEntryMaster(entry)).toEqual(master);
   });
 
-  it('fallback 到 entry.poi 當 master 未 populate (Phase 1 legacy shape)', () => {
+  it('沒有 canonical master 時不讀 entry.poi', () => {
     const poi: Poi = { id: 200, type: 'attraction', name: '識名園', lat: 26.21, lng: 127.71, category: null };
-    const entry = baseEntry({ poi });
-    const result = getEntryMaster(entry);
-    expect(result?.poiId).toBe(200);
-    expect(result?.name).toBe('識名園');
-    expect(result?.lat).toBe(26.21);
+    const entry = { ...baseEntry(), poi } as unknown as Entry;
+    expect(getEntryMaster(entry)).toBeNull();
   });
 
-  it('優先 entry.master 即使 entry.poi 也有（dual response）', () => {
+  it('回 entry.master 即使 entry.poi 也有', () => {
     const master: EntryPoiInfo = { poiId: 300, name: 'New master', lat: null, lng: null, type: null, category: null };
     const poi: Poi = { id: 999, type: 'attraction', name: 'Legacy poi' };
-    const entry = baseEntry({ master, poi });
+    const entry = { ...baseEntry({ master }), poi } as unknown as Entry;
     expect(getEntryMaster(entry)?.poiId).toBe(300);
   });
 
-  it('master + poi 皆無 → null', () => {
+  it('master 無 → null', () => {
     expect(getEntryMaster(baseEntry())).toBeNull();
   });
 });
@@ -51,12 +47,14 @@ describe('getEntryMasterPoiId', () => {
   it('回 master.poiId 當 master populated', () => {
     expect(getEntryMasterPoiId(baseEntry({ master: { poiId: 5 } }))).toBe(5);
   });
-  it('fallback 到 entry.poi.id', () => {
+  it('不讀 entry.poi.id', () => {
     const poi: Poi = { id: 7, type: 'attraction', name: 'X' };
-    expect(getEntryMasterPoiId(baseEntry({ poi }))).toBe(7);
+    const entry = { ...baseEntry(), poi } as unknown as Entry;
+    expect(getEntryMasterPoiId(entry)).toBeNull();
   });
-  it('最後 fallback 到 entry.poiId', () => {
-    expect(getEntryMasterPoiId(baseEntry({ poiId: 9 }))).toBe(9);
+  it('不讀 entry.poiId', () => {
+    const entry = { ...baseEntry(), poiId: 9 } as unknown as Entry;
+    expect(getEntryMasterPoiId(entry)).toBeNull();
   });
   it('全空 → null', () => {
     expect(getEntryMasterPoiId(baseEntry())).toBeNull();

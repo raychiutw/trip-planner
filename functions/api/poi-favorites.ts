@@ -42,23 +42,41 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             p.lat AS poi_lat, p.lng AS poi_lng, p.type AS poi_type,
             COALESCE(
               (SELECT json_group_array(json_object(
-                  'tripId', tp.trip_id,
-                  'tripName', t.name,
-                  'dayNum', td.day_num,
-                  'dayDate', td.date,
-                  'entryId', tp.entry_id
+                  'tripId', usage.trip_id,
+                  'tripName', usage.trip_name,
+                  'dayNum', usage.day_num,
+                  'dayDate', usage.day_date,
+                  'entryId', usage.entry_id
                 ))
-                FROM trip_pois tp
-                LEFT JOIN trip_days td ON td.id = tp.day_id
-                LEFT JOIN trips t ON t.id = tp.trip_id
-                WHERE tp.poi_id = pf.poi_id
-                  AND (
-                    t.owner_user_id = ?1
-                    OR EXISTS (
-                      SELECT 1 FROM trip_permissions perm
-                      WHERE perm.trip_id = tp.trip_id AND perm.user_id = ?1
+                FROM (
+                  SELECT t.id AS trip_id, t.name AS trip_name, td.day_num, td.date AS day_date, e.id AS entry_id
+                  FROM trip_entry_pois tep
+                  JOIN trip_entries e ON e.id = tep.entry_id
+                  JOIN trip_days td ON td.id = e.day_id
+                  JOIN trips t ON t.id = td.trip_id
+                  WHERE tep.poi_id = pf.poi_id
+                    AND (
+                      t.owner_user_id = ?1
+                      OR EXISTS (
+                        SELECT 1 FROM trip_permissions perm
+                        WHERE perm.trip_id = t.id AND perm.user_id = ?1
+                      )
                     )
-                  )
+                  UNION
+                  SELECT t.id AS trip_id, t.name AS trip_name, td.day_num, td.date AS day_date, tp.entry_id
+                  FROM trip_pois tp
+                  JOIN trips t ON t.id = tp.trip_id
+                  LEFT JOIN trip_days td ON td.id = tp.day_id
+                  WHERE tp.poi_id = pf.poi_id
+                    AND tp.context IN ('hotel', 'shopping')
+                    AND (
+                      t.owner_user_id = ?1
+                      OR EXISTS (
+                        SELECT 1 FROM trip_permissions perm
+                        WHERE perm.trip_id = t.id AND perm.user_id = ?1
+                      )
+                    )
+                ) usage
               ),
               '[]'
             ) AS usages_json

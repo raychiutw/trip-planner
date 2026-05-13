@@ -10,7 +10,7 @@ import type { Env } from '../../../_types';
 import { assembleDay, fetchPoiMap, fetchEntryPoisByEntries } from './_merge';
 
 // ---------------------------------------------------------------------------
-// GET /api/trips/:id/days/:num — POI Schema (pois + trip_pois)
+// GET /api/trips/:id/days/:num — canonical entry POIs + contextual day POIs
 // ---------------------------------------------------------------------------
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -34,7 +34,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const tripPoiRows = allTripPois.results as Record<string, unknown>[];
   const entryRows = entriesResult.results as Record<string, unknown>[];
-  const poiMap = await fetchPoiMap(db, tripPoiRows, entryRows);
+  const poiMap = await fetchPoiMap(db, tripPoiRows);
 
   // v2.27.0 multi-POI per entry
   const entryPoisMap = await fetchEntryPoisByEntries(db, entryRows.map((e) => e.id as number));
@@ -51,8 +51,66 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 // ---------------------------------------------------------------------------
-// PUT /api/trips/:id/days/:num — POI Schema (find-or-create pois + trip_pois)
+// PUT /api/trips/:id/days/:num — canonical entry POIs + contextual day POIs
 // ---------------------------------------------------------------------------
+
+type TimelineEntryBody = Record<string, unknown> & {
+  shopping?: unknown[];
+  stopPois?: unknown[];
+  alternates?: unknown[];
+  master?: unknown;
+  travel?: { type?: unknown; desc?: unknown; min?: unknown };
+};
+
+type EntryPoiChoiceBuilder = {
+  poiItemIdx?: number;
+  poiId?: number;
+  description: string | null;
+  note: string | null;
+  reservation: string | null;
+  reservationUrl: string | null;
+};
+
+type ResolvedEntryPoiChoice = Omit<EntryPoiChoiceBuilder, 'poiItemIdx' | 'poiId'> & {
+  poiId: number;
+};
+
+function recordArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object' && !Array.isArray(item)) : [];
+}
+
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function numberOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function positiveInt(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) return null;
+  return value;
+}
+
+function canonicalChoiceInputs(entry: TimelineEntryBody): Array<{ item: Record<string, unknown>; defaultType: string }> {
+  const stopPois = recordArray(entry.stopPois);
+  if (stopPois.length > 0) return stopPois.map((item) => ({ item, defaultType: 'attraction' }));
+
+  const master = recordValue(entry.master);
+  const alternates = recordArray(entry.alternates);
+  if (master || alternates.length > 0) {
+    return [
+      ...(master ? [{ item: master, defaultType: 'attraction' }] : []),
+      ...alternates.map((item) => ({ item, defaultType: 'attraction' })),
+    ];
+  }
+
+  return [];
+}
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
@@ -86,7 +144,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     dayOfWeek?: string;
     label?: string;
     hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown[]; description?: unknown };
-    timeline?: Array<Record<string, unknown> & { restaurants?: unknown[]; shopping?: unknown[]; travel?: { type?: unknown; desc?: unknown; min?: unknown } }>;
+    timeline?: TimelineEntryBody[];
   };
   const body = await parseJsonBody<DayBody>(context.request);
 
@@ -97,6 +155,15 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const timelineEntries = Array.isArray(body.timeline) ? body.timeline : [];
   for (let i = 0; i < timelineEntries.length; i++) {
     const e = timelineEntries[i]!;
+    if ('restaurants' in e) {
+      throw new AppError('DATA_VALIDATION', `timeline[${i}].restaurants 已移除，請使用 stopPois`);
+    }
+    if ('stop_pois' in e) {
+      throw new AppError('DATA_VALIDATION', `timeline[${i}].stop_pois 已移除，請使用 stopPois`);
+    }
+    if ('poi' in e) {
+      throw new AppError('DATA_VALIDATION', `timeline[${i}].poi 已移除，請使用 master 或 stopPois`);
+    }
     for (const f of ['title', 'description', 'note'] as const) {
       const val = e[f as keyof typeof e];
       if (typeof val === 'string' && detectGarbledText(val)) {
@@ -264,6 +331,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // type 來自 body.timeline[].poi_type，預設 attraction；機場/車站請傳 transport、預訂體驗請傳 activity。
     for (let i = 0; i < timeline.length; i++) {
       const e = timeline[i] as Record<string, unknown>;
+      if (canonicalChoiceInputs(timeline[i]!).length > 0) continue;
       const title = typeof e.title === 'string' ? e.title.trim() : '';
       if (!title) continue;
       const rawType = typeof e.poi_type === 'string' ? e.poi_type : 'attraction';
@@ -280,29 +348,50 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       });
     }
 
-    // Entry restaurants + shopping
+    // Canonical entry POI choices + contextual entry shopping.
+    const entryPoiChoiceBuilders: EntryPoiChoiceBuilder[][] = timeline.map(() => []);
+
     for (let i = 0; i < timeline.length; i++) {
       const e = timeline[i]!;
       const entryId = entryIds[i]!;
 
-      if (Array.isArray(e.restaurants)) {
-        for (const [idx, r] of (e.restaurants as Record<string, unknown>[]).entries()) {
-          const rIdx = poiItems.length;
-          // Migration 0054: price 寫進 pois master，不再寫 trip_pois.price。
-          poiItems.push({
-            name: (r.name as string) || '', type: 'restaurant',
-            description: r.description as string, rating: r.rating as number,
-            category: r.category as string,
-            hours: r.hours as string, source: 'ai',
-            price: r.price as string,
-          });
-          tripPoiBuilders.push((ids) => [
-            db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, description, note, reservation, reservation_url) VALUES (?, ?, 'timeline', ?, ?, ?, ?, ?, ?, ?)`)
-              .bind(ids[rIdx], id, entryId, dayId, idx,
-                r.description as string ?? null, r.note as string ?? null,
-                r.reservation as string ?? null, r.reservation_url as string ?? null),
-          ]);
+      for (const { item, defaultType } of canonicalChoiceInputs(e)) {
+        const directPoiId = positiveInt(item.poiId ?? item.poi_id);
+        const choice: EntryPoiChoiceBuilder = {
+          description: stringOrNull(item.description),
+          note: stringOrNull(item.note),
+          reservation: stringOrNull(item.reservation),
+          reservationUrl: stringOrNull(item.reservation_url ?? item.reservationUrl),
+        };
+
+        if (directPoiId !== null) {
+          entryPoiChoiceBuilders[i]!.push({ ...choice, poiId: directPoiId });
+          continue;
         }
+
+        const name = stringOrNull(item.name);
+        if (!name) continue;
+
+        const choiceType = stringOrNull(item.type) ?? defaultType;
+        if (!ALLOWED_POI_TYPES.has(choiceType)) {
+          throw new AppError('DATA_VALIDATION', `timeline[${i}].stopPois.type 無效（允許：${[...ALLOWED_POI_TYPES].join(', ')}）`);
+        }
+
+        const pIdx = poiItems.length;
+        poiItems.push({
+          name,
+          type: choiceType,
+          description: stringOrNull(item.description),
+          rating: numberOrNull(item.rating),
+          category: stringOrNull(item.category),
+          hours: stringOrNull(item.hours),
+          source: 'ai',
+          price: stringOrNull(item.price),
+          mapcode: stringOrNull(item.mapcode),
+          lat: numberOrNull(item.lat),
+          lng: numberOrNull(item.lng),
+        });
+        entryPoiChoiceBuilders[i]!.push({ ...choice, poiItemIdx: pIdx });
       }
 
       if (Array.isArray((e as Record<string, unknown>).shopping)) {
@@ -324,18 +413,93 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // Batch resolve all POIs (2–3 DB round-trips instead of N)
     const poiIds = await batchFindOrCreatePois(db, poiItems);
 
-    // Build batch2: (a) UPDATE trip_entries.poi_id, (b) trip_pois 插入
+    const directChoicePoiIds = new Set<number>();
+    for (const choices of entryPoiChoiceBuilders) {
+      for (const choice of choices) {
+        if (choice.poiId !== undefined) directChoicePoiIds.add(choice.poiId);
+      }
+    }
+    if (directChoicePoiIds.size > 0) {
+      const directIds = [...directChoicePoiIds];
+      const placeholders = directIds.map(() => '?').join(',');
+      const existing = await db
+        .prepare(`SELECT id FROM pois WHERE id IN (${placeholders})`)
+        .bind(...directIds)
+        .all<{ id: number }>();
+      const existingIds = new Set(existing.results.map((row) => row.id));
+      const missing = directIds.filter((poiId) => !existingIds.has(poiId));
+      if (missing.length > 0) {
+        throw new AppError('DATA_VALIDATION', `stopPois.poiId 不存在: ${missing.join(', ')}`);
+      }
+    }
+
+    function resolveEntryChoices(index: number): ResolvedEntryPoiChoice[] {
+      const seen = new Set<number>();
+      const resolved: ResolvedEntryPoiChoice[] = [];
+      for (const choice of entryPoiChoiceBuilders[index] ?? []) {
+        const poiId = choice.poiId ?? (choice.poiItemIdx !== undefined ? poiIds[choice.poiItemIdx] : undefined);
+        if (typeof poiId !== 'number' || seen.has(poiId)) continue;
+        seen.add(poiId);
+        resolved.push({
+          poiId,
+          description: choice.description,
+          note: choice.note,
+          reservation: choice.reservation,
+          reservationUrl: choice.reservationUrl,
+        });
+      }
+      return resolved;
+    }
+
+    // Build batch2: (a) canonical entry POIs, (b) contextual trip_pois inserts.
     // batch1 DELETE FROM trip_entries → ON DELETE CASCADE 清掉舊 trip_entry_pois。
-    // trip_entry_pois sort_order=1 invariant 由 syncEntryMaster() helper 在 batch2 後維護
-    // （Codex pre-landing CRITICAL #2 — 不靠 inline INSERT 漂流 SQL；DRY 對齊
-    // POST /entries + copy.ts pattern）。
     const batch2: D1PreparedStatement[] = [];
     const entriesNeedingMaster: Array<{ entryId: number; poiId: number }> = [];
+    const nowEntryPois = new Date().toISOString();
     for (let i = 0; i < timeline.length; i++) {
+      const entryId = entryIds[i]!;
+      const explicitChoices = resolveEntryChoices(i);
+      if (explicitChoices.length > 0) {
+        batch2.push(
+          db.prepare('UPDATE trip_entries SET poi_id = ?, entry_pois_version = entry_pois_version + 1 WHERE id = ?')
+            .bind(explicitChoices[0]!.poiId, entryId),
+        );
+        for (const [idx, choice] of explicitChoices.entries()) {
+          batch2.push(
+            db
+              .prepare(
+                `INSERT INTO trip_entry_pois (
+                   entry_id,
+                   poi_id,
+                   sort_order,
+                   added_at,
+                   updated_at,
+                   description,
+                   note,
+                   reservation,
+                   reservation_url
+                 )
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              )
+              .bind(
+                entryId,
+                choice.poiId,
+                idx + 1,
+                nowEntryPois,
+                nowEntryPois,
+                choice.description,
+                choice.note,
+                choice.reservation,
+                choice.reservationUrl,
+              ),
+          );
+        }
+        continue;
+      }
+
       const pIdx = entryPoiIdx[i]!;
       if (pIdx < 0) continue;
       const poiId = poiIds[pIdx];
-      const entryId = entryIds[i]!;
       if (typeof poiId !== 'number') continue;
       batch2.push(
         db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(poiId, entryId),
@@ -347,8 +511,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
     if (batch2.length > 0) await db.batch(batch2);
 
-    // 維護 trip_entry_pois sort_order=1 invariant — 用 helper 而非 inline INSERT
-    // 對齊 POST /entries + copy.ts。Parallel for throughput (independent rows)。
+    // Title-only entries use the shared helper to keep the master invariant aligned
+    // with POST /entries and copy.ts.
     await Promise.all(
       entriesNeedingMaster.map((p) => syncEntryMaster(db, p.entryId, p.poiId)),
     );
@@ -397,6 +561,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       snapshot, diffJson: JSON.stringify({ day_num: Number(num), overwrite: true }),
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     await logAudit(db, {
       tripId: id, tableName: 'trip_days', recordId: dayId, action: 'error', changedBy,
       diffJson: JSON.stringify({ error: 'Partial write failure', message: err instanceof Error ? err.message : String(err) }),

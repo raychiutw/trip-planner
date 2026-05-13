@@ -1,13 +1,13 @@
 /**
  * PATCH /api/pois/:id — 修改 master POI (C2)
- * DELETE /api/pois/:id — 刪除 master POI（admin only，會先刪除所有關聯 trip_pois）
+ * DELETE /api/pois/:id — 刪除 master POI（admin only，會先刪除所有關聯）
  *
  * Admin: 可不帶 tripId（向下相容 tp-patch/tp-rebuild）
  * 非 Admin: 必須帶 tripId，檢查 hasPermission + POI 屬於該 trip
  */
 
 import { logAudit, computeDiff } from '../_audit';
-import { hasWritePermission } from '../_auth';
+import { hasWritePermission, verifyPoiBelongsToTrip } from '../_auth';
 import { AppError } from '../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause, parseIntParam } from '../_utils';
 import type { Env } from '../_types';
@@ -48,9 +48,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     if (!await hasWritePermission(db, auth, tripId, false)) {
       throw new AppError('PERM_DENIED');
     }
-    const link = await db.prepare(
-      'SELECT 1 FROM trip_pois WHERE poi_id = ? AND trip_id = ?'
-    ).bind(poiId, tripId).first();
+    const link = await verifyPoiBelongsToTrip(db, poiId, tripId);
     if (!link) throw new AppError('PERM_DENIED', '此 POI 不屬於該行程');
   }
 
@@ -75,7 +73,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 };
 
 /**
- * DELETE /api/pois/:id — 刪除 master POI + 所有關聯 trip_pois
+ * DELETE /api/pois/:id — 刪除 master POI + 所有 canonical/contextual 關聯
  * Admin only（Service Token 視為 admin）
  */
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
@@ -100,18 +98,12 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     await db.prepare('DELETE FROM trip_pois WHERE poi_id = ?').bind(poiId).run();
   }
 
-  // Phase 2：trip_entries.poi_id FK 沒 ON DELETE SET NULL，手動清空，否則 DELETE pois 會 FK fail
+  // trip_entries.poi_id is a write-through mirror with a FK; clear it before
+  // deleting the master POI.
   await db.prepare('UPDATE trip_entries SET poi_id = NULL WHERE poi_id = ?').bind(poiId).run();
 
-  // v2.27.0 round 4 fix adv-C1 / Codex F1: migration 0057 adds
-  // trip_entry_pois.poi_id REFERENCES pois(id) ON DELETE RESTRICT. From the moment
-  // 0057 deploys, every master POI has a junction row blocking DELETE pois.
-  // We must DELETE FROM trip_entry_pois first. Note the cascading effect:
-  // a master POI being deleted leaves its entries master-less; the next
-  // GET/refresh path will self-heal (no master row) but the entry might fall
-  // back to legacy trip_entries.poi_id which is NULL now too. Admin-only
-  // operation, accepted blast radius — trips with this POI should be migrated
-  // before admin POI deletion.
+  // trip_entry_pois.poi_id REFERENCES pois(id) ON DELETE RESTRICT, so canonical
+  // entry POI rows must be deleted before the POI master.
   const junctionBefore = await db
     .prepare('SELECT COUNT(*) AS c FROM trip_entry_pois WHERE poi_id = ?')
     .bind(poiId)

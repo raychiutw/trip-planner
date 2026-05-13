@@ -107,3 +107,31 @@ export async function verifyTripPoiBelongsToTrip(
     .first();
   return !!row;
 }
+
+/**
+ * Verifies that a POI is attached to a trip, either as a canonical entry POI
+ * (`trip_entry_pois`) or as a contextual day/entry POI (`trip_pois`, e.g.
+ * hotel/shopping).
+ */
+export async function verifyPoiBelongsToTrip(
+  db: D1Database,
+  poiId: number,
+  tripId: string,
+): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT 1
+       FROM trip_entry_pois tep
+       JOIN trip_entries e ON e.id = tep.entry_id
+       JOIN trip_days d ON d.id = e.day_id
+       WHERE tep.poi_id = ? AND d.trip_id = ?
+       UNION ALL
+       SELECT 1
+       FROM trip_pois tp
+       WHERE tp.poi_id = ? AND tp.trip_id = ? AND tp.context IN ('hotel', 'shopping')
+       LIMIT 1`,
+    )
+    .bind(poiId, tripId, poiId, tripId)
+    .first();
+  return !!row;
+}

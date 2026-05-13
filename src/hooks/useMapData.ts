@@ -94,27 +94,15 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   for (const entry of timeline) {
     const primaryStopPoi = entry.stopPois?.find((p) => p.sortOrder === 1)
       ?? entry.stopPois?.[0]
-      ?? entry.master
       ?? null;
-    const primaryRestaurant = entry.restaurants.find(r => r.sortOrder === 0) || entry.restaurants[0] || null;
     const displayTitle = getStopDisplayTitle({
       title: entry.title,
-      poiName: primaryStopPoi?.name ?? entry.poi?.name ?? primaryRestaurant?.name ?? null,
-      poiType: primaryStopPoi?.type ?? entry.poi?.type ?? (primaryRestaurant ? 'restaurant' : null),
+      poiName: primaryStopPoi?.name ?? null,
+      poiType: primaryStopPoi?.type ?? null,
     }) ?? entry.title;
-    // stop 自己的 POI 是 stopPois[0] / sortOrder=1；fallback master →
-    // legacy poi/restaurants 是 transition 期保險。
     let coords: { lat: number; lng: number } | null = null;
     if (primaryStopPoi && isValidCoords(primaryStopPoi)) {
       coords = { lat: primaryStopPoi.lat as number, lng: primaryStopPoi.lng as number };
-    }
-    if (!coords && entry.poi && isValidCoords(entry.poi)) {
-      coords = { lat: entry.poi.lat as number, lng: entry.poi.lng as number };
-    }
-    if (!coords && primaryRestaurant) {
-      if (isValidCoords(primaryRestaurant)) {
-        coords = { lat: primaryRestaurant.lat, lng: primaryRestaurant.lng };
-      }
     }
     if (coords) {
       entryIndex++;
@@ -127,8 +115,6 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
         lng: coords.lng,
         time: entry.time,
         googleRating: primaryStopPoi?.rating
-          ?? entry.poi?.googleRating
-          ?? (entry.poi as { rating?: number | null } | null | undefined)?.rating
           ?? null,
         travelMin: entry.travel?.min,
         travelType: entry.travel?.type,

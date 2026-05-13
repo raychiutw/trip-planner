@@ -9,7 +9,7 @@
  *   §9.3 body 含 legacy position 或 anchorEntryId → 400「欄位已廢除」
  *   §9.4 startTime '12:00' 加進已有 11:00-12:00 entry 的 day → server 計算 sort_order 排到後面
  *   §9.5 startTime '13:00' 加進已有 12:00-14:00 entry 的 day → 409 CONFLICT + conflictWith
- *   §9.6 V2 user 成功 201 + entry + trip_pois 各 1 row
+ *   §9.6 V2 user 成功 201 + entry + trip_entry_pois 各 1 row
  *   §9.7 companion case：valid 三 gate + companionRequestId + ownership match → 201 + audit_log companion sentinel
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
@@ -46,6 +46,7 @@ beforeEach(async () => {
   await db.prepare("DELETE FROM trip_requests WHERE trip_id LIKE 'companion-add-%'").run();
   await db.prepare("DELETE FROM poi_favorites WHERE user_id LIKE 'test-user-%'").run();
   await db.prepare("DELETE FROM trip_entries WHERE day_id IN (SELECT id FROM trip_days WHERE trip_id LIKE 'add-trip-%')").run();
+  await db.prepare("DELETE FROM trip_entry_pois WHERE entry_id NOT IN (SELECT id FROM trip_entries)").run();
   await db.prepare("DELETE FROM trip_pois WHERE trip_id LIKE 'add-trip-%'").run();
 });
 
@@ -281,7 +282,7 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.5 conflict 409', () =>
 // --- §9.6 V2 user 成功 ---
 
 describe('POST /api/poi-favorites/:id/add-to-trip — §9.6 V2 user happy path', () => {
-  it('valid V2 user → 201 + entry + trip_pois 各 1 row', async () => {
+  it('valid V2 user → 201 + entry + trip_entry_pois 各 1 row', async () => {
     const tripId = 'add-trip-9-6';
     await seedAddTripFixture({ tripId, ownerEmail: '9-6@test.com' });
     const { favId, poiId } = await seedFavorite({ email: '9-6@test.com', poiName: 'POI 9-6' });
@@ -307,11 +308,16 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.6 V2 user happy path',
     expect(entries.results[0]!.time).toBe('09:00-10:30');
     expect(entries.results[0]!.poi_id).toBe(poiId);
 
-    const tripPois = await db
-      .prepare('SELECT id FROM trip_pois WHERE trip_id = ? AND poi_id = ?')
-      .bind(tripId, poiId)
-      .all<{ id: number }>();
-    expect(tripPois.results).toHaveLength(1);
+    const entryPois = await db
+      .prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ?')
+      .bind(entries.results[0]!.id)
+      .all<{ poi_id: number; sort_order: number }>();
+    expect(entryPois.results).toEqual([{ poi_id: poiId, sort_order: 1 }]);
+    const timelineTripPois = await db
+      .prepare("SELECT COUNT(*) AS c FROM trip_pois WHERE trip_id = ? AND context = 'timeline'")
+      .bind(tripId)
+      .first<{ c: number }>();
+    expect(timelineTripPois!.c).toBe(0);
   });
 });
 

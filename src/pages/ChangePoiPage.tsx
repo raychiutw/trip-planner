@@ -5,7 +5,7 @@
  *
  * Use case：user 在 timeline row action 點「變更 POI」 → 進此頁，搜尋
  * + 選新 POI（search 或 favorites）→ submit 走 `PUT /api/trips/:id/entries/:eid/poi-id`
- * find-or-create mode（{name, lat, lng, source}）或 favorite mode (existing poi_id)。
+ * find-or-create mode（{name, lat, lng, source}）或 favorite mode ({poiId})。
  *
  * 完成後 fire-and-forget recompute travel + navigate 回 trip view。
  */
@@ -91,7 +91,7 @@ type Tab = 'search' | 'favorites';
 
 interface SelectedPoi {
   source: 'search' | 'favorite';
-  /** for favorite mode: pre-existing poi_id */
+  /** for favorite mode: pre-existing POI id */
   poiId?: number;
   /** for search mode: payload to send find-or-create */
   name: string;
@@ -188,7 +188,7 @@ export default function ChangePoiPage() {
 
       // master 模式（既有 PUT /poi-id 流程）
       const body = selected.source === 'favorite' && selected.poiId
-        ? { poi_id: selected.poiId }
+        ? { poiId: selected.poiId }
         : buildSearchPoiBody(selected);
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/poi-id`, {
         method: 'PUT',

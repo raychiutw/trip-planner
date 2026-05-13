@@ -23,10 +23,9 @@ function makeEntry(id: number, sortOrder: number, lat: number | null, lng: numbe
     sortOrder,
     title: `entry ${id}`,
     time: '10:00',
-    poi: lat !== null && lng !== null
-      ? { id: 1000 + id, type: 'attraction', name: `POI ${id}`, lat, lng }
-      : null,
-    restaurants: [],
+    stopPois: lat !== null && lng !== null
+      ? [{ poiId: 1000 + id, sortOrder: 1, type: 'attraction', name: `POI ${id}`, lat, lng }]
+      : [],
     shopping: [],
     travel: null,
     description: null,
@@ -91,15 +90,13 @@ describe('extractPinsFromAllDays', () => {
     expect(r.missingCount).toBe(1);
   });
 
-  /* Phase 3：spatial 來源只有 POI master（v2.2.0.0+） */
-  it('entry.poi 有 lat/lng → pin 使用 POI 座標', () => {
+  it('entry.stopPois 有 lat/lng → pin 使用 canonical POI 座標', () => {
     const entry = {
       id: 101,
       sortOrder: 0,
       title: 'poi test',
       time: '10:00',
-      poi: { id: 7, type: 'attraction', lat: 26.1, lng: 127.6, name: 'master' },
-      restaurants: [],
+      stopPois: [{ poiId: 7, sortOrder: 1, type: 'attraction', lat: 26.1, lng: 127.6, name: 'master' }],
       shopping: [],
       travel: null,
       description: null,
@@ -112,14 +109,13 @@ describe('extractPinsFromAllDays', () => {
     expect(r.pins[0]!.lng).toBe(127.6);
   });
 
-  it('entry.poi 無效座標 + 無餐廳 fallback → missingCount++', () => {
+  it('entry.stopPois 無效座標 → missingCount++', () => {
     const entry = {
       id: 102,
       sortOrder: 0,
       title: 'no-coords test',
       time: '10:00',
-      poi: { id: 8, type: 'attraction', lat: null, lng: null, name: 'no-coords' },
-      restaurants: [],
+      stopPois: [{ poiId: 8, sortOrder: 1, type: 'attraction', lat: null, lng: null, name: 'no-coords' }],
       shopping: [],
       travel: null,
       description: null,

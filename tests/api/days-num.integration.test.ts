@@ -57,8 +57,8 @@ describe('PUT /api/trips/:id/days/:num', () => {
             time: '09:00',
             title: '首里城',
             description: '世界遺產',
-            restaurants: [
-              { name: 'すし三昧', type: 'restaurant', context: 'timeline' },
+            stopPois: [
+              { name: 'すし三昧', type: 'restaurant' },
             ],
           },
           {
@@ -86,6 +86,21 @@ describe('PUT /api/trips/:id/days/:num', () => {
     ).bind(dayId).all();
     expect(entries.results).toHaveLength(2);
     expect((entries.results[0] as Record<string, unknown>).title).toBe('首里城');
+    const restaurantPoi = await db
+      .prepare("SELECT id FROM pois WHERE name = 'すし三昧' AND type = 'restaurant'")
+      .first<{ id: number }>();
+    expect(restaurantPoi).not.toBeNull();
+    expect((entries.results[0] as Record<string, unknown>).poi_id).toBe(restaurantPoi!.id);
+    const entryPoi = await db
+      .prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ? ORDER BY sort_order')
+      .bind((entries.results[0] as Record<string, unknown>).id)
+      .all<{ poi_id: number; sort_order: number }>();
+    expect(entryPoi.results).toEqual([{ poi_id: restaurantPoi!.id, sort_order: 1 }]);
+    const timelineTp = await db
+      .prepare("SELECT COUNT(*) AS c FROM trip_pois WHERE trip_id = 'trip-dn' AND context = 'timeline' AND day_id = ?")
+      .bind(dayId)
+      .first<{ c: number }>();
+    expect(timelineTp!.c).toBe(0);
 
     // 驗證 hotel POI 已建立
     const hotelPoi = await db.prepare(
@@ -111,6 +126,30 @@ describe('PUT /api/trips/:id/days/:num', () => {
       params: { id: 'trip-dn', num: '1' },
     });
     expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
+  });
+
+  it('只要帶舊 restaurants entry 欄位就拒絕，避免 runtime fallback', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {
+        date: '2026-04-01',
+        dayOfWeek: '三',
+        label: 'Day 1',
+        timeline: [
+          {
+            time: '12:00',
+            title: '午餐',
+            restaurants: [],
+          },
+        ],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-dn', num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(400);
+    const data = await resp.json() as { error?: { detail?: string } };
+    expect(data.error?.detail ?? '').toContain('restaurants 已移除');
   });
 
   it('未認證 → 401', async () => {
@@ -197,7 +236,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
     expect(attractionPoi).not.toBeNull();
   });
 
-  it('Phase 2: GET /days/:num 回傳 entry.poi JOIN 物件', async () => {
+  it('Phase 2: GET /days/:num 回傳 canonical master JOIN 物件', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/trips/trip-dn/days/3'),
       env,
@@ -205,12 +244,13 @@ describe('PUT /api/trips/:id/days/:num', () => {
     });
     const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
-    const data = await resp.json() as { timeline: Array<{ title: string; poi: { type: string } | null }> };
+    const data = await resp.json() as { timeline: Array<{ title: string; master: { type: string } | null; stopPois?: Array<{ type: string; sortOrder: number }> }> };
     const transportEntry = data.timeline.find((e) => e.title === '那覇空港');
     expect(transportEntry).toBeDefined();
-    expect(transportEntry!.poi).not.toBeNull();
-    expect(transportEntry!.poi!.type).toBe('transport');
-    // Migration 0045: poi.maps dropped (use mapsUrl helper to render Google/Apple/Naver URLs).
+    expect(transportEntry!.master).not.toBeNull();
+    expect(transportEntry!.master!.type).toBe('transport');
+    expect(transportEntry!.stopPois?.[0]).toMatchObject({ type: 'transport', sortOrder: 1 });
+    expect('poi' in transportEntry!).toBe(false);
   });
 
   it('Phase 2: POST /entries 建立 POI 並回填 poi_id', async () => {
@@ -285,7 +325,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
-        poi_id: newPoi.id,
+        poiId: newPoi.id,
       }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
@@ -298,7 +338,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
     expect(row.poi_id).toBe(newPoi.id);
   });
 
-  it('Phase 2: PUT /entries/:eid/poi-id 拒絕不存在的 poi_id → 404', async () => {
+  it('Phase 2: PUT /entries/:eid/poi-id 拒絕不存在的 poiId → 404', async () => {
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entry = await db.prepare(
       'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
@@ -306,7 +346,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
-        poi_id: 99999,
+        poiId: 99999,
       }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
@@ -326,7 +366,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
-        poi_id: null,
+        poiId: null,
       }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
@@ -350,7 +390,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
-        poi_id: newPoi.id,
+        poiId: newPoi.id,
         entryPoisVersion: '99999', // 故意 stale
       }),
       env,
@@ -376,7 +416,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
-        poi_id: newPoi.id,
+        poiId: newPoi.id,
         entryPoisVersion: String(v0!.v),
       }),
       env,

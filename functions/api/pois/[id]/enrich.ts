@@ -18,7 +18,7 @@
  * Auth: 同 PATCH /pois/:id — admin OR trip owner（passing tripId for link check）。
  */
 
-import { hasWritePermission } from '../../_auth';
+import { hasWritePermission, verifyPoiBelongsToTrip } from '../../_auth';
 import { AppError } from '../../_errors';
 import { json, getAuth, parseIntParam } from '../../_utils';
 import { assertGoogleAvailable } from '../../_maps_lock';
@@ -47,10 +47,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!(await hasWritePermission(db, auth, tripId, false))) {
       throw new AppError('PERM_DENIED');
     }
-    const link = await db
-      .prepare('SELECT 1 FROM trip_pois WHERE poi_id = ? AND trip_id = ?')
-      .bind(poiId, tripId)
-      .first();
+    const link = await verifyPoiBelongsToTrip(db, poiId, tripId);
     if (!link) throw new AppError('PERM_DENIED', '此 POI 不屬於該行程');
   }
 
