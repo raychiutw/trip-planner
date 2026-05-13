@@ -79,8 +79,16 @@ beforeEach(() => {
 describe('ChangePoiPage — alternate mode', () => {
   it('shows both search and favorites tabs', () => {
     renderPage();
+    expect(screen.getByTestId('change-poi-page')).toBeTruthy();
     expect(screen.getByTestId('change-poi-tab-search')).toBeTruthy();
     expect(screen.getByTestId('change-poi-tab-favorites')).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'POI 類別' })).toBeTruthy();
+    expect(screen.getByTestId('change-poi-subtab-all').getAttribute('aria-pressed')).toBe('true');
+    const regionPill = screen.getByTestId('change-poi-region-pill');
+    const searchInput = screen.getByTestId('change-poi-search-input');
+    expect(Boolean(regionPill.compareDocumentPosition(searchInput) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(searchInput.compareDocumentPosition(screen.getByRole('group', { name: 'POI 類別' })) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(screen.getByTestId('change-poi-filter-btn')).toBeTruthy();
     expect(screen.queryByText(/只支援從收藏/)).toBeNull();
   });
 
@@ -107,7 +115,11 @@ describe('ChangePoiPage — alternate mode', () => {
     }];
     renderPage();
 
-    fireEvent.click(screen.getByTestId('change-poi-search-item-ChIJ-alt-search'));
+    const card = screen.getByTestId('change-poi-search-item-ChIJ-alt-search');
+    expect(card.className).toContain('tp-change-poi-card');
+    expect(screen.getByText('熱門景點 · 全部地區')).toBeTruthy();
+
+    fireEvent.click(card);
     fireEvent.click(screen.getByTestId('change-poi-submit'));
 
     await waitFor(() => {
@@ -172,6 +184,7 @@ describe('ChangePoiPage — master search mode', () => {
 
     const input = screen.getByTestId('change-poi-search-input') as HTMLInputElement;
     expect(input.type).toBe('text');
+    expect(input.closest('.tp-change-poi-search')).toBeTruthy();
     fireEvent.change(input, { target: { value: '美國村' } });
     expect(input.value).toBe('美國村');
 

@@ -6,6 +6,14 @@ initSentry();
 flushPendingReports();
 
 if ('serviceWorker' in navigator) {
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  const reloadKey = 'tp-sw-controller-reload';
+  sessionStorage.removeItem(reloadKey);
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || sessionStorage.getItem(reloadKey)) return;
+    sessionStorage.setItem(reloadKey, '1');
+    window.location.reload();
+  });
   navigator.serviceWorker.getRegistration().then((reg) => {
     if (reg) reg.update();
   });
