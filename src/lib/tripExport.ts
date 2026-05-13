@@ -14,7 +14,7 @@ type RawDayEntry = {
   time?: unknown; title?: unknown; description?: unknown; body?: unknown; note?: unknown;
   googleRating?: unknown; rating?: unknown; maps?: unknown; source?: unknown;
   travel?: unknown; travelType?: unknown; travelDesc?: unknown; travelMin?: unknown;
-  restaurants?: Record<string, unknown>[];
+  stopPois?: Record<string, unknown>[];
   shopping?: Record<string, unknown>[];
   [key: string]: unknown;
 };
@@ -141,14 +141,14 @@ export async function downloadTripFormat(
             md += '\n';
           }
 
-          // Restaurants
-          const restaurants = e.restaurants ?? [];
-          if (restaurants.length > 0) {
-            md += '\n#### 🍽 餐廳推薦\n';
-            md += '| 餐廳 | 類別 | 評分 | 價格 | 營業時間 | 備註 |\n';
-            md += '|------|------|------|------|---------|------|\n';
-            for (const r of restaurants) {
-              md += `| ${s(r.name)} | ${s(r.category)} | ${s(r.googleRating)} | ${s(r.price)} | ${s(r.hours)} | ${s(r.note)} |\n`;
+          // Stop POI choices
+          const stopPois = e.stopPois ?? [];
+          if (stopPois.length > 0) {
+            md += '\n#### 景點選擇\n';
+            md += '| 順序 | 名稱 | 類型 | 類別 | 評分 | 價格 | 營業時間 | 備註 |\n';
+            md += '|------|------|------|------|------|------|---------|------|\n';
+            for (const p of stopPois) {
+              md += `| ${s(p.sortOrder)} | ${s(p.name)} | ${s(p.type)} | ${s(p.category)} | ${s(p.googleRating ?? p.rating)} | ${s(p.price)} | ${s(p.hours)} | ${s(p.note)} |\n`;
             }
           }
 
@@ -187,7 +187,7 @@ export async function downloadTripFormat(
        * 住宿資訊改由 timeline[0] 的 check-out entry 承載，無需獨立欄位。 */
       const headers = [
         'Day', '日期', '星期', '時間', '地點', '評分', '說明', '備註',
-        '交通方式', '交通時間(分)', '餐廳名', '餐廳類別', '餐廳評分', '餐廳價格',
+        '交通方式', '交通時間(分)', 'POI名', 'POI類型', 'POI評分', 'POI價格',
         '購物店名', '購物類別', '購物必買',
       ];
       const rows: string[][] = [headers];
@@ -212,17 +212,17 @@ export async function downloadTripFormat(
             travelType, travelMin,
           ];
 
-          const restaurants = e.restaurants ?? [];
+          const stopPois = e.stopPois ?? [];
           const shopping = e.shopping ?? [];
-          const maxNested = Math.max(restaurants.length, shopping.length, 1);
+          const maxNested = Math.max(stopPois.length, shopping.length, 1);
 
           for (let n = 0; n < maxNested; n++) {
-            const r = restaurants[n];
+            const p = stopPois[n];
             const sh = shopping[n];
             // For subsequent rows, repeat entry base columns
             const row = n === 0 ? [...baseRow] : [dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title), '', '', '', '', ''];
-            // Restaurant columns
-            row.push(r ? csvCell(r.name) : '', r ? csvCell(r.category) : '', r ? csvCell(r.googleRating) : '', r ? csvCell(r.price) : '');
+            // POI columns
+            row.push(p ? csvCell(p.name) : '', p ? csvCell(p.type) : '', p ? csvCell(p.googleRating ?? p.rating) : '', p ? csvCell(p.price) : '');
             // Shopping columns
             row.push(sh ? csvCell(sh.name) : '', sh ? csvCell(sh.category) : '', sh ? csvCell(sh.mustBuy) : '');
             rows.push(row);

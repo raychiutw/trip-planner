@@ -109,7 +109,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .prepare(
         `SELECT e.id, e.day_id, e.sort_order, p.lat, p.lng
          FROM trip_entries e
-         LEFT JOIN pois p ON p.id = e.poi_id
+         LEFT JOIN trip_entry_pois tep ON tep.entry_id = e.id AND tep.sort_order = 1
+         LEFT JOIN pois p ON p.id = tep.poi_id
          WHERE e.day_id = ?
          ORDER BY e.sort_order ASC`,
       )

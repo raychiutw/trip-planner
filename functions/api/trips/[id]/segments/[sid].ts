@@ -95,8 +95,10 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
          FROM trip_segments s
          JOIN trip_entries ef ON ef.id = s.from_entry_id
          JOIN trip_entries et ON et.id = s.to_entry_id
-         LEFT JOIN pois pf ON pf.id = ef.poi_id
-         LEFT JOIN pois pt ON pt.id = et.poi_id
+         LEFT JOIN trip_entry_pois tepf ON tepf.entry_id = ef.id AND tepf.sort_order = 1
+         LEFT JOIN trip_entry_pois tept ON tept.entry_id = et.id AND tept.sort_order = 1
+         LEFT JOIN pois pf ON pf.id = tepf.poi_id
+         LEFT JOIN pois pt ON pt.id = tept.poi_id
          WHERE s.id = ?`,
       )
       .bind(sid)

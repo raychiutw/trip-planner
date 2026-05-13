@@ -804,7 +804,7 @@ describe('GET /api/trips/:id/days/:num — multi-POI surface', () => {
     expect(me!.entryPoisVersion).toBeTruthy();
   });
 
-  it('用餐 stop 的 poi/poiId 取 trip_entry_pois sort_order=1，而不是 legacy trip_entries.poi_id', async () => {
+  it('用餐 stop 的 master/stopPois 取 trip_entry_pois sort_order=1，而不是 legacy trip_entries.poi_id', async () => {
     const dayId = await getDayId(db, TRIP_ID, 1);
     const legacyPoi = await db
       .prepare("INSERT INTO pois (name, type) VALUES ('Legacy wrapper spot', 'attraction') RETURNING id")
@@ -840,8 +840,6 @@ describe('GET /api/trips/:id/days/:num — multi-POI surface', () => {
     const data = (await resp.json()) as {
       timeline: Array<{
         id: number;
-        poiId: number | null;
-        poi: { id: number; type: string; name: string } | null;
         stopPois?: Array<{ poiId: number; sortOrder: number; type: string; name: string }>;
         master: { poiId: number; type: string; name: string } | null;
         alternates: Array<{ poiId: number; sortOrder: number }>;
@@ -853,12 +851,8 @@ describe('GET /api/trips/:id/days/:num — multi-POI surface', () => {
       [primaryRestaurant!.id, 1],
       [alternateRestaurant!.id, 2],
     ]);
-    expect(meal!.poiId).toBe(primaryRestaurant!.id);
-    expect(meal!.poi).toMatchObject({
-      id: primaryRestaurant!.id,
-      type: 'restaurant',
-      name: 'Order One Ramen',
-    });
+    expect('poiId' in meal!).toBe(false);
+    expect('poi' in meal!).toBe(false);
     expect(meal!.master).toMatchObject({
       poiId: primaryRestaurant!.id,
       type: 'restaurant',
@@ -867,7 +861,7 @@ describe('GET /api/trips/:id/days/:num — multi-POI surface', () => {
     expect(meal!.alternates[0]!.poiId).toBe(alternateRestaurant!.id);
   });
 
-  it('legacy 用餐 stop 有 restaurants 但 master 還是 wrapper 時，自動以第一個餐廳作為 stopPois[0]/poi/master', async () => {
+  it('舊 trip_pois timeline rows 不會在 runtime 被 promoted 成 master/stopPois', async () => {
     const dayId = await getDayId(db, TRIP_ID, 1);
     const wrapperPoi = await db
       .prepare("INSERT INTO pois (name, type) VALUES ('午餐 wrapper', 'attraction') RETURNING id")
@@ -906,8 +900,6 @@ describe('GET /api/trips/:id/days/:num — multi-POI surface', () => {
     const data = (await resp.json()) as {
       timeline: Array<{
         id: number;
-        poiId: number | null;
-        poi: { id: number; type: string; name: string; rating?: number | null } | null;
         stopPois?: Array<{ poiId: number; sortOrder: number; type: string; name: string; rating?: number | null }>;
         master: { poiId: number; type: string; name: string; rating?: number | null } | null;
         alternates: Array<{ poiId: number; sortOrder: number }>;
@@ -916,33 +908,23 @@ describe('GET /api/trips/:id/days/:num — multi-POI surface', () => {
     const meal = data.timeline.find((e) => e.id === entryId);
     expect(meal).toBeDefined();
     expect(meal!.stopPois?.map((p) => [p.poiId, p.sortOrder])).toEqual([
-      [firstRestaurant!.id, 1],
-      [secondRestaurant!.id, 2],
-      [wrapperPoi!.id, 3],
+      [wrapperPoi!.id, 1],
     ]);
-    expect(meal!.poiId).toBe(firstRestaurant!.id);
-    expect(meal!.poi).toMatchObject({
-      id: firstRestaurant!.id,
-      type: 'restaurant',
-      name: 'Auto Primary Taco',
-      rating: 4.7,
-    });
+    expect('poiId' in meal!).toBe(false);
+    expect('poi' in meal!).toBe(false);
     expect(meal!.master).toMatchObject({
-      poiId: firstRestaurant!.id,
-      type: 'restaurant',
-      name: 'Auto Primary Taco',
-      rating: 4.7,
+      poiId: wrapperPoi!.id,
+      type: 'attraction',
+      name: '午餐 wrapper',
     });
-    expect(meal!.alternates[0]!.poiId).toBe(secondRestaurant!.id);
-    expect(meal!.alternates[1]!.poiId).toBe(wrapperPoi!.id);
+    expect(meal!.alternates).toHaveLength(0);
+    expect([firstRestaurant!.id, secondRestaurant!.id]).not.toContain(meal!.master?.poiId);
   });
 });
 
 describe('v2.28.0 — alternates 含 restaurant 欄位 (price/hours/reservation)', () => {
-  it('alternates 從 fetchEntryPoisByEntries 帶出 trip_pois override 欄位', async () => {
+  it('alternates 從 fetchEntryPoisByEntries 帶出 trip_entry_pois metadata 欄位', async () => {
     // Seed: entry with master attraction + alt restaurant (poi.type='restaurant')
-    // 加 trip_pois (context='timeline') override 含 reservation/reservation_url
-    // alternates response 應該 surface 這些 fields。
     const masterPoi = await db.prepare(
       "INSERT INTO pois (name, type) VALUES ('R-Master-Attraction', 'attraction') RETURNING id"
     ).first<{ id: number }>();
@@ -956,12 +938,10 @@ describe('v2.28.0 — alternates 含 restaurant 欄位 (price/hours/reservation)
 
     await db.batch([
       db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, masterPoi!.id),
-      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(entry!.id, altRestaurant!.id),
-      // trip_pois override：reservation status + reservation URL
       db.prepare(
-        `INSERT INTO trip_pois (trip_id, poi_id, context, day_id, entry_id, sort_order, reservation, reservation_url, description)
-         VALUES (?, ?, 'timeline', ?, ?, 1, ?, ?, ?)`
-      ).bind(TRIP_ID, altRestaurant!.id, dayId, entry!.id, '已訂位', 'https://example.com/reservation', '想試試特色料理'),
+        `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, reservation, reservation_url, description)
+         VALUES (?, ?, 2, ?, ?, ?)`
+      ).bind(entry!.id, altRestaurant!.id, '已訂位', 'https://example.com/reservation', '想試試特色料理'),
     ]);
 
     // Fetch via day GET handler
@@ -1002,7 +982,7 @@ describe('v2.28.0 — alternates 含 restaurant 欄位 (price/hours/reservation)
     expect(alt.hours).toBe('11:00-22:00');
     expect(alt.rating).toBe(4.3);
     expect(alt.price).toBe('$$');
-    // trip_pois override fields
+    // trip_entry_pois metadata fields
     expect(alt.reservation).toBe('已訂位');
     expect(alt.reservationUrl).toBe('https://example.com/reservation');
     expect(alt.description).toBe('想試試特色料理');
@@ -1089,13 +1069,13 @@ describe('POST /api/trips/:id/days/:num/entries — syncEntryMaster', () => {
 });
 
 describe('POST /api/trips/:id/entries/:eid/copy — syncEntryMaster', () => {
-  it('copy entry 到別天 → 新 entry 自動有 trip_entry_pois sort_order=1', async () => {
+  it('copy entry 到別天 → 新 entry 複製 canonical stopPois 順序', async () => {
     const { onRequestPost: copyPost } = await import(
       '../../functions/api/trips/[id]/entries/[eid]/copy'
     );
-    // seed source entry with master
-    const { entryId: srcEntryId, masterPoiId } = await seedEntryWithMaster({
+    const { entryId: srcEntryId, masterPoiId, altPoiIds } = await seedEntryWithMaster({
       poiName: 'Copy-Master',
+      altPoiNames: ['Copy-Alt'],
     });
     const targetDayId = await getDayId(db, TRIP_ID, 2);
     const ctx = mockContext({
@@ -1113,14 +1093,16 @@ describe('POST /api/trips/:id/entries/:eid/copy — syncEntryMaster', () => {
     const newRow = (await resp.json()) as { id: number };
     expect(newRow.id).not.toBe(srcEntryId);
 
-    const masterRow = await db
+    const copiedRows = await db
       .prepare(
-        'SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+        'SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ? ORDER BY sort_order',
       )
       .bind(newRow.id)
-      .first<{ poi_id: number; sort_order: number }>();
-    expect(masterRow).not.toBeNull();
-    expect(masterRow!.poi_id).toBe(masterPoiId);
+      .all<{ poi_id: number; sort_order: number }>();
+    expect(copiedRows.results.map((row) => [row.poi_id, row.sort_order])).toEqual([
+      [masterPoiId, 1],
+      [altPoiIds[0], 2],
+    ]);
   });
 });
 

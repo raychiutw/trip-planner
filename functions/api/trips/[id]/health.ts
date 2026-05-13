@@ -17,7 +17,7 @@
  *   }
  *
  * SQL avoids N+1 by single JOIN + filter on status != 'active'.
- * trip_entries.poi_id FK → pois — collect distinct POI IDs in this trip's days.
+ * trip_entry_pois → pois — collect distinct canonical entry POIs in this trip.
  *
  * Empty (closed=0 + missing=0) → still returns 200 with items: [].
  * Frontend `<TripHealthBanner>` returns null on empty (does NOT render stub).
@@ -53,9 +53,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          p.name AS poi_name,
          p.status AS status,
          p.status_reason AS reason
-       FROM pois p
-       INNER JOIN trip_entries te ON te.poi_id = p.id
+       FROM trip_entry_pois tep
+       INNER JOIN trip_entries te ON te.id = tep.entry_id
        INNER JOIN trip_days td    ON td.id = te.day_id
+       INNER JOIN pois p          ON p.id = tep.poi_id
        WHERE td.trip_id = ?
          AND p.status != 'active'
        ORDER BY p.id`,

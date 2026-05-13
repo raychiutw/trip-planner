@@ -32,16 +32,20 @@ describe('migration 0057 — trip_entry_pois', () => {
     await db.prepare('DELETE FROM trip_entry_pois').run();
   });
 
-  it('CREATE TABLE — schema 含 7 個 column + 2 UNIQUE + 1 CHECK', async () => {
+  it('CREATE TABLE — schema 含 canonical columns + 2 UNIQUE + 1 CHECK', async () => {
     const { results } = await db
       .prepare("PRAGMA table_info('trip_entry_pois')")
       .all<{ name: string; type: string; notnull: number; dflt_value: string | null; pk: number }>();
     const cols = results.map((r) => r.name).sort();
     expect(cols).toEqual([
       'added_at',
+      'description',
       'entry_id',
       'id',
+      'note',
       'poi_id',
+      'reservation',
+      'reservation_url',
       'sort_order',
       'updated_at',
     ].sort());

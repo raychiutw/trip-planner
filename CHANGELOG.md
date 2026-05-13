@@ -3,6 +3,42 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.28.4] - 2026-05-13
+
+**Canonical entry POI cutover：移除舊 timeline 餐廳格式，不再 runtime fallback。**
+
+### Added
+
+- **Migration 0059**：把 `trip_pois.context='timeline'` 升級到 `trip_entry_pois`，保留正選 / 備選順序與 reservation/note metadata，最後刪除所有舊 timeline rows。
+- **Canonical-only health / travel / POI permission checks**：trip health、travel recompute、segment mode recalculation、POI patch/enrich 都改讀 `trip_entry_pois.sort_order=1` 或合法 contextual `trip_pois`。
+
+### Changed
+
+- **Day / Entry API 改為 canonical response**：`GET /days`、`GET /days/:num`、`GET /entries/:eid` 不再回傳 legacy `poi` / `poiId`，只回 `master`、`alternates`、`stopPois`、`entryPoisVersion`。
+- **Day PUT 拒絕舊格式**：`restaurants`、`stop_pois`、`poi` 欄位只要出現就回 `DATA_VALIDATION`，不做格式 fallback。
+- **Copy entry / add favorite to trip**：新 entry 直接寫 `trip_entry_pois`；copy 會複製完整 canonical stopPois 順序。
+- **Favorites usages**：改用 `trip_entry_pois`，同時保留 hotel/shopping contextual usages，但忽略舊 timeline rows。
+
+### Removed
+
+- 刪除舊 backfill script `scripts/migrate-0059-restaurants-to-alternates.ts` 與 `meal-stop-primary-poi-backfill` helper/tests。
+- Frontend `Entry.restaurants` / `Entry.poi` / `Entry.poiId` runtime fallback 已移除。
+
+### Tests
+
+- 新增 `tests/unit/migration-0059-canonical-entry-pois.test.ts`
+- 新增 `tests/api/trip-health.integration.test.ts`
+- 擴充 days / entries / entry-pois / poi-favorites / pois / travel segment tests，鎖住 canonical-only 行為與舊 timeline rows 忽略/刪除。
+
+### Verify
+
+- `npm run typecheck`
+- `npm run typecheck:functions`
+- `npm test` — 182 files / 1536 tests
+- `npm run test:api -- --maxWorkers=1` — 65 passed / 4 skipped files, 683 passed / 35 skipped tests
+- `npm run build`
+- `npm run test:e2e` — 130 passed / 2 skipped
+
 ## [2.28.3] - 2026-05-13
 
 **Entry multi-POI UI parity：正選 / 備選顯示一致，搜尋與收藏都能加入備選。**

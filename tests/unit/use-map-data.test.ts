@@ -22,7 +22,6 @@ function makeEntry(overrides: Partial<Entry> = {}): Entry {
     id: 1,
     sortOrder: 1,
     title: 'Test Entry',
-    restaurants: [],
     shopping: [],
     ...overrides,
   };
@@ -78,7 +77,7 @@ describe('useMapData — entry pins', () => {
           id: 10,
           sortOrder: 1,
           title: '首里城',
-          poi: { id: 101, type: 'attraction', name: '首里城', lat: 26.217, lng: 127.719 },
+          stopPois: [{ poiId: 101, sortOrder: 1, type: 'attraction', name: '首里城', lat: 26.217, lng: 127.719 }],
         }),
       ],
     });
@@ -98,7 +97,7 @@ describe('useMapData — entry pins', () => {
   it('5. entry lat/lng = null → missingCount=1，pin 不加入', () => {
     const day = makeDay({
       timeline: [
-        makeEntry({ id: 10, poi: null }),
+        makeEntry({ id: 10, stopPois: [] }),
       ],
     });
 
@@ -111,7 +110,7 @@ describe('useMapData — entry pins', () => {
   it('6. entry lat/lng = 0 → 視為無效', () => {
     const day = makeDay({
       timeline: [
-        makeEntry({ id: 10, poi: { id: 1, type: 'attraction', name: 'zero', lat: 0, lng: 0 } }),
+        makeEntry({ id: 10, stopPois: [{ poiId: 1, sortOrder: 1, type: 'attraction', name: 'zero', lat: 0, lng: 0 }] }),
       ],
     });
 
@@ -123,9 +122,9 @@ describe('useMapData — entry pins', () => {
   it('7. 2 個有座標 + 1 個無座標 → pins.length=2, missingCount=1', () => {
     const day = makeDay({
       timeline: [
-        makeEntry({ id: 1, sortOrder: 1, poi: { id: 1, type: 'attraction', name: 'a', lat: 26.2, lng: 127.7 } }),
-        makeEntry({ id: 2, sortOrder: 2, poi: null }),
-        makeEntry({ id: 3, sortOrder: 3, poi: { id: 3, type: 'attraction', name: 'c', lat: 26.3, lng: 127.8 } }),
+        makeEntry({ id: 1, sortOrder: 1, stopPois: [{ poiId: 1, sortOrder: 1, type: 'attraction', name: 'a', lat: 26.2, lng: 127.7 }] }),
+        makeEntry({ id: 2, sortOrder: 2, stopPois: [] }),
+        makeEntry({ id: 3, sortOrder: 3, stopPois: [{ poiId: 3, sortOrder: 1, type: 'attraction', name: 'c', lat: 26.3, lng: 127.8 }] }),
       ],
     });
 
@@ -145,7 +144,7 @@ describe('useMapData — entry pins', () => {
         makeEntry({
           id: 1,
           sortOrder: 1,
-          poi: { id: 1, type: 'attraction', name: 'r', lat: 26.2, lng: 127.7, googleRating: 4.5 },
+          stopPois: [{ poiId: 1, sortOrder: 1, type: 'attraction', name: 'r', lat: 26.2, lng: 127.7, rating: 4.5 }],
           travel: { type: 'car', min: 20 },
         }),
       ],
@@ -157,14 +156,13 @@ describe('useMapData — entry pins', () => {
     expect(pin.travelMin).toBe(20);
   });
 
-  it('9. 用餐 stop pin 使用 stopPois sortOrder=1 的座標與 rating，而不是 legacy entry.poi', () => {
+  it('9. 用餐 stop pin 使用 stopPois sortOrder=1 的座標與 rating', () => {
     const day = makeDay({
       timeline: [
         makeEntry({
           id: 1,
           sortOrder: 1,
           title: '午餐',
-          poi: { id: 1, type: 'attraction', name: 'Legacy wrapper', lat: 26.1, lng: 127.1, googleRating: 2.1 },
           stopPois: [
             {
               poiId: 20,
@@ -226,8 +224,8 @@ describe('useMapData — hotel pins', () => {
         location: { lat: 26.21, lng: 127.68 },
       }),
       timeline: [
-        makeEntry({ id: 1, sortOrder: 1, poi: { id: 1, type: 'attraction', name: 'a', lat: 26.2, lng: 127.7 } }),
-        makeEntry({ id: 2, sortOrder: 2, poi: { id: 2, type: 'attraction', name: 'b', lat: 26.3, lng: 127.8 } }),
+        makeEntry({ id: 1, sortOrder: 1, stopPois: [{ poiId: 1, sortOrder: 1, type: 'attraction', name: 'a', lat: 26.2, lng: 127.7 }] }),
+        makeEntry({ id: 2, sortOrder: 2, stopPois: [{ poiId: 2, sortOrder: 1, type: 'attraction', name: 'b', lat: 26.3, lng: 127.8 }] }),
       ],
     });
 

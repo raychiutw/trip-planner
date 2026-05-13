@@ -1,6 +1,7 @@
 /**
  * POST /api/trips/:id/entries/:eid/trip-pois — 新增 POI 到 entry
- * 取代舊的 entries/[eid]/restaurants.ts 和 entries/[eid]/shopping.ts
+ * Shopping remains contextual trip_pois. Entry choices are canonical
+ * trip_entry_pois rows.
  */
 
 import { logAudit } from '../../../../_audit';
@@ -28,8 +29,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   type AddPoiBody = {
     name: string;
-    type: 'restaurant' | 'shopping';
-    context: 'timeline' | 'shopping';
+    type: 'restaurant' | 'shopping' | 'attraction' | 'activity' | 'transport' | 'other';
+    context?: 'shopping';
     description?: string;
     note?: string;
     hours?: string;
@@ -67,20 +68,69 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     price: body.price as string,
   });
 
-  // Get next sort_order
-  const maxSort = await db.prepare(
-    'SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM trip_pois WHERE entry_id = ? AND context = ?'
-  ).bind(entryId, body.context || 'timeline').first<{ max_sort: number }>();
+  if (body.type !== 'shopping') {
+    const maxSort = await db
+      .prepare('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM trip_entry_pois WHERE entry_id = ?')
+      .bind(entryId)
+      .first<{ max_sort: number }>();
+    const sortOrder = (maxSort?.max_sort ?? 0) + 1;
+    const now = new Date().toISOString();
+    const result = await db
+      .prepare(
+        `INSERT INTO trip_entry_pois (
+           entry_id,
+           poi_id,
+           sort_order,
+           added_at,
+           updated_at,
+           description,
+           note,
+           reservation,
+           reservation_url
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         RETURNING *`,
+      )
+      .bind(
+        entryId,
+        poiId,
+        sortOrder,
+        now,
+        now,
+        body.description ?? null,
+        body.note ?? null,
+        body.reservation ?? null,
+        body.reservation_url ?? null,
+      )
+      .first();
 
-  // Insert trip_pois (no price — moved to pois master in migration 0054)
-  // Migration 0055: no hours either — moved to pois master.
+    const updates = [
+      db.prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?').bind(entryId),
+    ];
+    if (sortOrder === 1) {
+      updates.push(db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(poiId, entryId));
+    }
+    await db.batch(updates);
+
+    await logAudit(db, {
+      tripId: id, tableName: 'trip_entry_pois', recordId: (result as { id: number }).id,
+      action: 'insert', changedBy: auth.email,
+      diffJson: JSON.stringify(body),
+    });
+
+    return json(result, 201);
+  }
+
+  const maxSort = await db.prepare(
+    "SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM trip_pois WHERE entry_id = ? AND context = 'shopping'"
+  ).bind(entryId).first<{ max_sort: number }>();
+
   const result = await db.prepare(
-    `INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, description, note, reservation, reservation_url, must_buy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+    `INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, description, note, must_buy) VALUES (?, ?, 'shopping', ?, ?, ?, ?, ?, ?) RETURNING *`
   ).bind(
-    poiId, id, body.context || 'timeline', entryId, entry.day_id,
+    poiId, id, entryId, entry.day_id,
     (maxSort?.max_sort ?? -1) + 1,
     body.description ?? null, body.note ?? null,
-    body.reservation ?? null, body.reservation_url ?? null,
     body.must_buy ?? null,
   ).first();
 

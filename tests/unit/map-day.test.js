@@ -6,85 +6,75 @@ import {
   formatDateLabel,
 } from '../../src/lib/mapDay.ts';
 
-/* ===== buildLocation — 透過 toTimelineEntry 餐廳情境間接測試 ===== */
+/* ===== buildLocation — 透過 canonical stopPois 間接測試 ===== */
 /* R19 備註：toHotelData 已隨 Hotel card 移除，相關停車場測試改以 toTimelineEntry 測試 */
 
 describe('buildLocation — maps 是 URL 時 googleQuery', () => {
-  it('餐廳 maps 是 URL 時，location.googleQuery 應為該 URL', () => {
+  it('stopPois maps 是 URL 時，location.googleQuery 應為該 URL', () => {
     const entry = toTimelineEntry({
       title: '午餐',
-      restaurants: [
+      stopPois: [
         {
+          poiId: 1,
+          sortOrder: 1,
           name: '沖繩そば',
           maps: 'https://maps.google.com/?q=%E6%B2%96%E7%B8%84',
         },
       ],
     });
-    const restaurant = entry.infoBoxes?.[0]?.restaurants?.[0];
-    expect(restaurant).toBeDefined();
-    expect(restaurant.location).not.toBeNull();
-    expect(restaurant.location.googleQuery).toBe('https://maps.google.com/?q=%E6%B2%96%E7%B8%84');
+    const stopPoi = entry.stopPois?.[0];
+    expect(stopPoi).toBeDefined();
+    expect(stopPoi.location).not.toBeNull();
+    expect(stopPoi.location.googleQuery).toBe('https://maps.google.com/?q=%E6%B2%96%E7%B8%84');
     // URL 模式時，name 不使用 maps 欄位
-    expect(restaurant.location.name).toBe('沖繩そば');
+    expect(stopPoi.location.name).toBe('沖繩そば');
   });
 });
 
-describe('buildLocation — maps 非 URL（地名）時 name fallback（R19 後改以 toTimelineEntry 覆蓋）', () => {
-  it('餐廳 maps 是地名、name 為空時，location.name 應 fallback 為 maps 值', () => {
+describe('buildLocation — maps 非 URL（地名）', () => {
+  it('stopPois maps 是地名時，不產生 googleQuery', () => {
     const entry = toTimelineEntry({
       title: '晚餐',
-      restaurants: [
+      stopPois: [
         {
-          // name 刻意為空 / 未提供
-          maps: '北谷町営駐車場 美浜',
-        },
-      ],
-    });
-    const restaurant = entry.infoBoxes?.[0]?.restaurants?.[0];
-    expect(restaurant).toBeDefined();
-    expect(restaurant.location).not.toBeNull();
-    // maps 是地名（非 URL），name 應 fallback 為地名
-    expect(restaurant.location.name).toBe('北谷町営駐車場 美浜');
-    // 非 URL 不應產生 googleQuery
-    expect(restaurant.location.googleQuery).toBeUndefined();
-  });
-
-  it('餐廳 maps 是地名、name 有值時，location.name 應優先用 name', () => {
-    const entry = toTimelineEntry({
-      title: '晚餐',
-      restaurants: [
-        {
+          poiId: 1,
+          sortOrder: 1,
           name: '美浜停車場',
           maps: '北谷町営駐車場 美浜',
         },
       ],
     });
-    const restaurant = entry.infoBoxes?.[0]?.restaurants?.[0];
-    expect(restaurant.location.name).toBe('美浜停車場');
-    expect(restaurant.location.googleQuery).toBeUndefined();
+    const stopPoi = entry.stopPois?.[0];
+    expect(stopPoi).toBeDefined();
+    expect(stopPoi.location).not.toBeNull();
+    expect(stopPoi.location.name).toBe('美浜停車場');
+    // 非 URL 不應產生 googleQuery
+    expect(stopPoi.location.googleQuery).toBeUndefined();
   });
 });
 
-/* ===== Phase 2 POI JOIN 優先 (v2.1.2.0+) ===== */
+/* ===== canonical stopPois 優先 ===== */
 
-describe('toTimelineEntry — entry.poi 優先於 entry 欄位', () => {
-  it('entry.poi.maps 存在時，locations 使用 POI maps 而非 entry.maps', () => {
+describe('toTimelineEntry — stopPois 作為 canonical POI', () => {
+  it('stopPois.maps 存在時，locations 使用 canonical stop POI', () => {
     const entry = toTimelineEntry({
       title: '首里城',
       maps: 'https://legacy.example.com/old',
-      poi: {
-        id: 42,
+      stopPois: [{
+        poiId: 42,
+        sortOrder: 1,
         type: 'attraction',
+        name: '首里城',
         maps: 'https://www.google.com/maps/search/首里城',
         googleRating: 4.3,
-      },
+      }],
     });
     expect(entry.locations).toHaveLength(1);
     expect(entry.locations[0].googleQuery).toBe('https://www.google.com/maps/search/首里城');
     expect(entry.googleRating).toBe(4.3);
   });
 
-  it('Phase 3：entry.poi 不存在時，無 locations 與 googleRating', () => {
+  it('沒有 canonical stopPois 時，無 locations 與 googleRating', () => {
     const entry = toTimelineEntry({
       title: '無 POI entry',
     });
@@ -92,35 +82,26 @@ describe('toTimelineEntry — entry.poi 優先於 entry 欄位', () => {
     expect(entry.googleRating).toBeNull();
   });
 
-  it('entry.poi.mapcode 存在時使用 POI mapcode', () => {
+  it('stopPois.mapcode 存在時使用 canonical mapcode', () => {
     const entry = toTimelineEntry({
       title: 'mapcode test',
       mapcode: '11 111 111*11',
-      poi: { id: 1, type: 'transport', mapcode: '33 530 406*00' },
+      stopPois: [{ poiId: 1, sortOrder: 1, type: 'transport', name: '車站', mapcode: '33 530 406*00' }],
     });
     expect(entry.locations[0].mapcode).toBe('33 530 406*00');
   });
 
-  it('entry.poi.maps 與 mapcode 都空時，整個 location block 省略', () => {
+  it('stopPois.maps 與 mapcode 都空時，整個 location block 省略', () => {
     const entry = toTimelineEntry({
       title: '純描述',
-      poi: { id: 1, type: 'attraction' },
+      stopPois: [{ poiId: 1, sortOrder: 1, type: 'attraction', name: '純描述' }],
     });
     expect(entry.locations).toBeNull();
   });
 
-  it('用餐 stop 以 stopPois sortOrder=1 作為 canonical POI，覆蓋 legacy entry.poi', () => {
+  it('用餐 stop 以 stopPois sortOrder=1 作為 canonical POI', () => {
     const entry = toTimelineEntry({
       title: '午餐',
-      poi: {
-        id: 1,
-        type: 'attraction',
-        name: 'Legacy 景點',
-        mapcode: '11 111 111*11',
-        googleRating: 2.1,
-        lat: 26.1,
-        lng: 127.1,
-      },
       stopPois: [
         {
           poiId: 20,

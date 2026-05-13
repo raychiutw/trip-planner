@@ -54,6 +54,11 @@ async function setupTripWithEntries(tripId: string) {
   const e1 = await seedEntry(db, day1, { sortOrder: 1, title: 'A', poiId: poiA });
   const e2 = await seedEntry(db, day1, { sortOrder: 2, title: 'B', poiId: poiB });
   const e3 = await seedEntry(db, day1, { sortOrder: 3, title: 'C', poiId: poiC });
+  await db.batch([
+    db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(e1, poiA),
+    db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(e2, poiB),
+    db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(e3, poiC),
+  ]);
   return { e1, e2, e3 };
 }
 
