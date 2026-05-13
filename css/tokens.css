@@ -59,6 +59,14 @@ html { color-scheme: light dark; }
     --color-cover-tw-to: #F7DFCB;          /* matches --color-accent-bg */
     --color-cover-other-from: #6F5A47;     /* matches --color-muted */
     --color-cover-other-to: #C8B89F;       /* matches --color-line-strong */
+    --color-poi-card-tone-cool-from: #DCE7E0;
+    --color-poi-card-tone-cool-to: #C8DCE0;
+    --color-poi-card-tone-ocean-from: #C7DBE5;
+    --color-poi-card-tone-ocean-to: #A6C5D2;
+    --color-poi-card-tone-amber-from: #F2DCB0;
+    --color-poi-card-tone-amber-to: #E0C089;
+    --color-poi-card-tone-icon: rgba(255, 255, 255, 0.78);
+    --color-poi-card-tone-icon-shadow: rgba(0, 0, 0, 0.18);
 
     /* Radius — Airbnb-inspired 8px primary */
     --radius-xs: 4px;
@@ -841,6 +849,14 @@ body.dark {
         --color-cover-tw-to: #4D372A;
         --color-cover-other-from: #4D372A;
         --color-cover-other-to: #6F5A47;
+        --color-poi-card-tone-cool-from: #20302C;
+        --color-poi-card-tone-cool-to: #2E423E;
+        --color-poi-card-tone-ocean-from: #203342;
+        --color-poi-card-tone-ocean-to: #2D4A5F;
+        --color-poi-card-tone-amber-from: #4A351E;
+        --color-poi-card-tone-amber-to: #5A4220;
+        --color-poi-card-tone-icon: rgba(255, 255, 255, 0.74);
+        --color-poi-card-tone-icon-shadow: rgba(0, 0, 0, 0.28);
     }
 
     /* Print mode — flat white + hairline for printing */

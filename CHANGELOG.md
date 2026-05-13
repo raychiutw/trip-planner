@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.28.7] - 2026-05-14
+
+**置換景點頁樣式重整：對齊 DESIGN.md / terracotta mockup 的搜尋與收藏加入模式。**
+
+### Changed
+
+- ChangePoiPage 改成 Add Stop mockup 同款全頁表單：TitleBar action、搜尋/收藏 tabs、類別 chips、地區 pill、搜尋列、篩選按鈕、POI card grid、收藏 empty state、sticky bottom action bar。
+- 搜尋 input 改用 native-uncontrolled typing path，補上 foreground / placeholder / WebKit text-fill / caret color，避免輸入值存在但畫面不可見。
+- Service worker controller 更新後自動刷新現有頁面，避免使用者停留在舊版 JS chunk。
+
+### Verify
+
+- `npm test -- tests/unit/change-poi-page.test.tsx`
+- `npm run typecheck`
+- `npm run typecheck:functions`
+- `npm run build`
+- `npm test`
+- `npx vitest run --config vitest.config.api.mts --no-file-parallelism --maxWorkers=1`
+- `npm run test:e2e -- --project=chromium`
+- Playwright local visual QA：mobile + desktop screenshots for ChangePoiPage search tab, including typed-text pixel detection
+
 ## [2.28.6] - 2026-05-13
 
 **置換景點搜尋修正：ChangePoiPage 正確讀取 `/api/poi-search` 結果。**
