@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.28.5] - 2026-05-13
+
+**備選加入入口修正：搜尋與收藏是兩個明確入口，進同一頁不同 tab。**
+
+### Fixed
+
+- Edit entry 備選區塊改回兩個加入方式：「搜尋加入備選」與「收藏加入備選」。
+- 兩個入口都進同一個 `change-poi?mode=alternate` 畫面，但分別帶 `tab=search` / `tab=favorites`。
+- ChangePoiPage 依 `tab` query 預設到搜尋或收藏頁籤，搜尋加入備選不再被藏在單一 CTA 後面。
+
+### Verify
+
+- `npm test -- tests/unit/edit-entry-page.test.tsx tests/unit/change-poi-page.test.tsx`
+- `npm run typecheck`
+- `npm run typecheck:functions`
+- `npm test` — 182 files / 1538 tests
+- `npm run test:api` — 65 files / 683 tests
+- `npm run build`
+- `node scripts/verify-sw.js`
+- `bash scripts/bundle-size-check.sh`
+- `npm run test:e2e -- --project=chromium` — 44 tests
+
 ## [2.28.4] - 2026-05-13
 
 **Canonical entry POI cutover：移除舊 timeline 餐廳格式，不再 runtime fallback。**
