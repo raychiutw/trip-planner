@@ -3,6 +3,48 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.29.0] - 2026-05-14
+
+**Phase-2 schema cleanup：`trip_pois` 整表 + 10 個過期 column 一次清乾淨。**
+
+「住宿」與「順路採買」改從專屬欄位 / canonical 表查得，行程載入更直觀；hotel hours / 餐廳 alternates 的 POI 主檔欄位 (rating / hours / price) 從 master JOIN 出來，前端不再走 `trip_pois` shim。
+
+### Changed
+
+- Hotel 從 `trip_pois(context='hotel')` 搬到 `trip_days.hotel_poi_id` (FK → pois)。一個 day 一個 hotel，不再用 junction row。
+- Entry-level shopping 從 `trip_pois(context='shopping')` 搬到 `trip_entry_pois`（sort_order > 1），跟主選 + alternates 走同一通道。
+- Travel info（步行 / 車程 / 距離）讀 `trip_segments`，不再讀 `trip_entries.travel_*`。
+- `PATCH /api/trips/:id/entries/batch` ALLOWED_FIELDS 改為 `[sort_order, day_id, start_time, end_time]`，移除 `time` 與 5 個 `travel_*`。
+- `POST /api/trips/:id/entries/:eid/trip-pois` MAX-sort + INSERT 合成單 SQL + UNIQUE catch，concurrent POST 改回 409 / 422，不再 500。
+
+### Removed
+
+- 整表 DROP `trip_pois` (migration 0062)。
+- DROP 8 cols：`trip_entries.{time, poi_id, travel_type, travel_desc, travel_min, travel_distance_m, travel_computed_at, travel_source}`。
+- DROP 2 cols：`trip_destinations.{osm_id, osm_type}` (v2.23.0 Google Maps 切換後 deprecated)。
+- DROP `InfoBoxType` 的 `'restaurants'` + `RestaurantsBox`（restaurant timeline 已 cutover 進 `trip_entry_pois` alternates）。
+- 移除 `src/types/trip.ts` 的 `TripPoi` / `MergedPoi` interfaces（指向已 drop schema）。
+- 移除 `functions/api/trips/[id]/trip-pois/[tpid].ts`（endpoint 整檔）。
+
+### Migrations
+
+- `0060_trip_pois_rip_out_add_col.sql`：ADD COLUMN `trip_days.hotel_poi_id INTEGER REFERENCES pois(id)`。
+- `0061_trip_pois_rip_out_backfill.sql`：hotel backfill 用 INNER JOIN pois 避免 dangling FK；shopping backfill 用 ROW_NUMBER PARTITION BY (entry, poi) CTE dedup `trip_pois` 內部 duplicates；day-level shopping 24 rows DELETE（user 接受 data loss）。
+- `0062_trip_pois_rip_out_drop.sql`：DROP INDEX `idx_trip_entries_poi_id` → DROP 10 cols → DROP TABLE `trip_pois`。
+
+### Deploy 順序
+
+`/ship` → CF Pages auto-deploy + GitHub Actions apply migrations 0060/0061/0062 並行。30–90 秒 cutover 窗口內舊 backend in-flight 請求若觸到已 drop 表會 5xx；user 接受短時 outage，靠 Step 0 `wrangler d1 export` backup + D1 Time Travel 30 天 retention 兜底。
+
+### Verify
+
+- `npm test`（frontend 1532 tests pass）
+- `npx vitest run --config vitest.config.api.mts --no-file-parallelism`（API 670 tests pass）
+- `npx tsc --noEmit && npx tsc --noEmit -p tsconfig.functions.json`
+- `/review` + Codex adversarial（2 critical + 1 high + 1 medium 已修）
+- `/cso --diff`（0 findings）
+- `/qa` UI cutover render：hotel via trip_days.hotel_poi_id ✓、travel via trip_segments ✓、master/alternates via trip_entry_pois ✓
+
 ## [2.28.7] - 2026-05-14
 
 **置換景點頁樣式重整：對齊 DESIGN.md / terracotta mockup 的搜尋與收藏加入模式。**
