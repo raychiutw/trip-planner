@@ -27,6 +27,23 @@
 
 ## Completed
 
+### v2.30.5 — Schedulers → Claude Cowork migration
+
+**Priority:** P1
+**Completed:** v2.30.5 (2026-05-15)
+
+3 支 scheduler.sh + 對應 launchd plist 全部廢除，改由 Claude Desktop Cowork scheduled task 觸發 skill 內部跑流程：
+
+- **daily-check** → Cowork Daily 跑 `/tp-daily-check`（含 in-session code fix pipeline，不再 spawn 新 `claude -p` process）
+- **tp-request** → Cowork Hourly 跑 `/tp-request`（接受 hourly latency，從原 15 min 降級換取 keychain isolation 修復）
+- **poi-enrich-monthly** → Cowork Daily fire + skill 內 `date +%d == 01` 檢查跑 `/tp-poi-enrich-monthly`（Cowork 無 monthly 頻率）
+
+**動機**：2026-05-11 LaunchAgent → LaunchDaemon migration 引入 keychain isolation — LaunchDaemon `UserName=ray` 仍 pre-login session 拿不到 user keychain，導致 `claude -p` OAuth token unreachable，daily-check Phase 2 / tp-request 全部沉默失敗。Cowork 跑在 Claude Desktop 使用者 session 內，自然繼承 keychain + shell env，零 auth 設定。
+
+抽公用 helper：`scripts/lib/send-telegram.sh`（3 支 scheduler 重複 Telegram wrapper 統一）+ `scripts/lib/build-daily-check-msg.js`（daily-check report → Telegram 訊息）。`scripts/lib/scheduler-common.sh` 已無 .sh 呼叫者，刪除。`daily-check.js` `querySchedulerErrors()` 移除 tp-request / daily-check error-log scan（Cowork session 失敗 surface 在 Telegram + fix-result.json，不再寫 `.error.log`），api-server `stderr` scan 保留。
+
+**使用者手動動作**：跑 `bash scripts/migrate-launchd-to-cowork.sh` bootout 舊 LaunchDaemon + LaunchAgent，然後在 Claude Desktop 內手動建 3 個 scheduled task（task name + skill 對應在 SKILL.md 開頭「排程」段）。
+
 ### v2.30.3 — `.tp-action-btn` family extract (poi-favorites-rename §13 收尾)
 
 **Priority:** P3

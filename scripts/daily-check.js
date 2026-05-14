@@ -354,11 +354,9 @@ function querySchedulerErrors() {
   var cutoff = new Date(Date.now() - DAY_MS);
   var baseDir = path.join(__dirname, 'logs');
 
-  // error-log = cron scheduler（scheduler-common.sh log_error() → YYYY-MM-DD.error.log）
-  // stderr    = long-running process（tripline-api-server → stderr.log，無時戳用 mtime 近似）
+  // v2.30.5 Cowork migration 後 tp-request / daily-check 跑在 Claude Desktop session 內，
+  // 失敗 surface 在 Telegram + fix-result.json，不再寫 .error.log。剩 api-server LaunchAgent。
   var schedulers = [
-    { name: 'tp-request',  type: 'error-log' },
-    { name: 'daily-check', type: 'error-log' },
     { name: 'api-server',  type: 'stderr' },
   ];
 
