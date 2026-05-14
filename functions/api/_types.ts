@@ -31,11 +31,6 @@ export interface Env {
   // email send failure or trigger fetch failure (reuses scripts/daily-check creds).
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
-  // 2026-05-02 OSM integration — POI enrich + travel routing.
-  // v2.23.0 google-maps-migration: ORS + OPENTRIPMAP keys 仍保留 schema 但 code path 已 dead；
-  // 實際讀取的是 GOOGLE_MAPS_API_KEY。env vars 在下個 v2.24.0 PR 從 wrangler secrets 移除。
-  ORS_API_KEY?: string;          // DEPRECATED v2.23.0
-  OPENTRIPMAP_API_KEY?: string;  // DEPRECATED v2.23.0
   // v2.23.0 Google Maps Platform — server-side single key (Places + Routes + Geocoding + Place Details).
   // Frontend Maps JS 用獨立 GOOGLE_MAPS_BROWSER_KEY (referrer-restricted) — 不在此 Env，是 import.meta.env
   GOOGLE_MAPS_API_KEY?: string;
