@@ -42,7 +42,6 @@ import type { StopPoiOptionData, TimelineEntryData } from './TimelineEvent';
 import { parseEntryTime, formatDurationCompact, deriveTypeMeta } from '../../lib/timelineUtils';
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { useTripSegments } from '../../hooks/useTripSegments';
-import { haversineMeters } from '../../lib/geo';
 import { getTimelineEntryDisplayTitle } from '../../lib/stopDisplay';
 
 const SCOPED_STYLES = `
@@ -981,16 +980,6 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
           const segment = (prev?.id != null && entry.id != null)
             ? segmentMap.get(`${prev.id}-${entry.id}`)
             : undefined;
-          // Stale-travel baseline: Haversine(prev.master, curr.master) 給 TravelPill 比對
-          // displayed distance。任一缺座標 → null（不比較）。Transit 沒 distance 走不到。
-          const staleHaversineM = (() => {
-            if (!prev) return null;
-            const aLat = prev.masterLat; const aLng = prev.masterLng;
-            const bLat = entry.masterLat; const bLng = entry.masterLng;
-            if (typeof aLat !== 'number' || typeof aLng !== 'number') return null;
-            if (typeof bLat !== 'number' || typeof bLng !== 'number') return null;
-            return haversineMeters({ lat: aLat, lng: aLng }, { lat: bLat, lng: bLng });
-          })();
           return (
             <div key={entry.id ?? i} className="ocean-rail-row-wrap">
               {i > 0 && (travelObj || segment) && (
@@ -1005,11 +994,11 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
                     modeSource: segment.modeSource,
                     min: segment.min,
                     distanceM: segment.distanceM,
+                    computedAt: segment.computedAt,
                   } : undefined}
                   tripId={tripId}
                   fromName={prev ? getTimelineEntryDisplayTitle(prev) : null}
                   toName={getTimelineEntryDisplayTitle(entry)}
-                  staleHaversineM={staleHaversineM}
                   onRecompute={handleRecomputeTravel}
                 />
               )}
