@@ -11,28 +11,10 @@
 
 ---
 
-## v2.28.x Restaurants → alternates Phase 2
-
-**Found by**: v2.28.0 ship — Phase 1 backfill 進 alternates 完成，但 `restaurants` TABLE 仍在 + TripPage expanded restaurant 子項目仍讀 `entry.restaurants[]` (來自 `trip_pois context='timeline'`)。
-**Partial fix shipped**: v2.28.2 先修使用者可見 bug：用餐 stop 的第一順位餐廳會透過 `stopPois[0]` / `master` / `poi` 顯示在 timeline、地圖與 lightbox；Migration 0059 也改成可把第一順位餐廳持久化為 `trip_entry_pois.sort_order=1`。
-**Partial fix shipped**: v2.28.3 讓 TripPage expanded choices 改讀 `entry.stopPois`，用通用「正選 / 備選」卡片取代餐廳專屬 UI。
-**Phase 2 cutover (after 2 weeks observation + 0059 apply)**:
-1. Remote dry-run/apply `scripts/migrate-0059-restaurants-to-alternates.ts`，確認 meal stop primary POI backfill 無 drift。
-2. Monitoring SQL：確認 `trip_pois context='timeline'` 跟 `trip_entry_pois sort_order>1` / `sort_order=1` restaurant primary 狀態 100% match（dual-state drift = 0）。
-3. `mapDay.ts:toEntryData` 移除 `raw.restaurants → infoBoxes` 路徑（讀 alternates / stopPois）。
-4. Migration 0060: `DROP TABLE restaurants`（table 自 v2.14 後 dead，無資料損失風險）
-**Priority**: P1（schema cleanup + UI 統一）
-**Est**: 1-2 hr CC
-
 ## v2.27.x Multi-POI Phase 2 + 後續優化
 
 **Found by**: v2.27.0 round 5/6/7 ship review deferred items
-**Phase 2 cutover (v2.27.1)**:
-1. DROP `trip_entries.poi_id` 後 setMaster 移除 dual-write
-2. `_entry_pois.ts` 移除 Phase 1 `UPDATE trip_entries SET poi_id = ?` line + retire entry.poi_id selector fallback
-3. `_merge.ts` 拔掉 `entryPoiIdx` + dual-batch
-4. `src/types/trip.ts` Entry.poi / Entry.poiId @deprecated 標記移除
-**Priority**: P1（dual-write 維護成本高，~2 week observation 後即可 cutover）
+**Phase 2 cutover (v2.27.1)** — `[Phase 2 cutover items 1-4 已於 v2.29.0 完成 → 見 Completed]`
 
 **ChangePoiPage 加 entry_pois_version 帶上**：
 - 目前 PUT /poi-id backend 接受 OCC token 但 ChangePoiPage 沒 fetch / 帶上 → cross-tab swap 仍可能 lost update（雖機率低，user 主動「變更景點」非 high-contention）
@@ -334,6 +316,29 @@ A 是標準做法但需 cron handler；B 簡單但 latency tail 可能受 1% 隨
 ---
 
 ## Completed
+
+### v2.28.x Restaurants → alternates Phase 2
+
+**Priority:** P1
+**Completed:** v2.29.0 (2026-05-14)
+**PR:** [#527](https://github.com/raychiutw/trip-planner/pull/527)
+
+v2.29.0 trip_pois rip-out 一次 cutover 完成 Phase 2 全部 items：
+- migration 0021 (v2.5) 早已 `DROP TABLE restaurants`；本次 audit 確認 prod 無此 table（item 4 已完成）
+- `scripts/migrate-0059-restaurants-to-alternates.ts` + `meal-stop-primary-poi-backfill` helper/tests 一併刪除（CHANGELOG v2.29.0 Removed section）
+- `Day PUT` 拒絕舊格式 `restaurants` / `stop_pois` / `poi` → `DATA_VALIDATION`（item 3 `raw.restaurants → infoBoxes` 路徑移除）
+- canonical response 只回 `master` / `alternates` / `stopPois` / `entryPoisVersion`，dual-state drift 不再可能（item 2 monitoring SQL 不再需要）
+
+### v2.27.x Multi-POI Phase 2 (items 1-4)
+
+**Priority:** P1
+**Completed:** v2.29.0 (2026-05-14)
+**PR:** [#527](https://github.com/raychiutw/trip-planner/pull/527)
+
+- ✅ Item 1: migration 0062 DROP `trip_entries.poi_id`，setMaster() 不再 dual-write
+- ✅ Item 2: `_entry_pois.ts` 移除 `UPDATE trip_entries SET poi_id = ?` line + entry.poi_id selector fallback retire
+- ✅ Item 3: `_merge.ts` 拔掉 entryPoiIdx + dual-batch（檔案重構後不存在）
+- ✅ Item 4: `src/types/trip.ts` Entry.poi / Entry.poiId 移除（dead fields）
 
 ### ChangePoiPage alternate mode unit coverage
 

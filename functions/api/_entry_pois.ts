@@ -125,8 +125,7 @@ function nowMs(): string {
  *           old master → 改回 newMaster 原本的 sort_order
  *    ELSE  → INSERT 新 row (poi_id=newMasterPoiId, sort_order=1)
  *           old master → max+1
- * 5. UPDATE trip_entries.poi_id = newMasterPoiId（Phase 1 dual-write）
- * 6. UPDATE trip_segments SET computed_at = NULL WHERE from_entry_id=entryId OR to_entry_id=entryId
+ * 5. UPDATE trip_segments SET computed_at = NULL WHERE from_entry_id=entryId OR to_entry_id=entryId
  *    （只清 computed_at 不改 source — trip_segments.source CHECK 不允許 'stale'；
  *      frontend useTripSegments 透過 updated_at bump detect refetch；後續 Google Routes
  *      recompute 留待 v2.27.x enhancement）
@@ -469,9 +468,9 @@ export async function reorderAlternates(
 
 /**
  * 確保 trip_entry_pois 對 entry_id 有 sort_order=1 row（v2.27.0 multi-POI invariant）。
- * 給 entry-create 路徑（POST /entries / PUT /days/:num / copy）在 INSERT/UPDATE
- * trip_entries.poi_id 之後立刻呼叫，避免「entry 建好後 addAlternate MISSING_MASTER」
- * 的 bug（Codex pre-landing CRITICAL #2）。
+ * 給 entry-create 路徑（POST /entries / PUT /days/:num / copy）在 INSERT trip_entries
+ * 之後立刻呼叫，避免「entry 建好後 addAlternate MISSING_MASTER」的 bug
+ * （Codex pre-landing CRITICAL #2）。
  *
  * 行為：
  *   - 若 trip_entry_pois 已有 sort_order=1 且 poi_id 相同 → no-op

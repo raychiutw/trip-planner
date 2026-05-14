@@ -201,7 +201,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   //    they belonged to the replaced POI)
   //  - Two new entries with same master POI → first claims the first old snapshot's alts,
   //    second claims the second old snapshot's alts (1:1 by order)
-  //  - Read trip_entry_pois.sort_order=1 (not legacy trip_entries.poi_id) per round 5 F2 fix
+  //  - Read trip_entry_pois.sort_order=1 (canonical master since v2.29.0 DROP trip_entries.poi_id)
   type OldEntrySnapshot = { masterPoiId: number; alts: Array<{ poiId: number; sortOrder: number }> };
   const oldEntrySnapshots: OldEntrySnapshot[] = [];
   {
