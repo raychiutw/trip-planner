@@ -40,6 +40,7 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { dayColor } from '../lib/dayPalette';
+import { EVENT } from '../lib/events';
 import {
   ENTRY_ACTION_TIME_SLOTS,
   shortenDateLabel,
@@ -312,7 +313,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
         } catch { /* not JSON */ }
         throw new Error(message);
       }
-      window.dispatchEvent(new CustomEvent('tp-entry-updated', {
+      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
         detail: { tripId, entryId: entryIdNum },
       }));
       showToast(action === 'copy' ? '景點已複製' : '景點已移動', 'success');
