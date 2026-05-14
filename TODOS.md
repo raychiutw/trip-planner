@@ -151,37 +151,6 @@
 
 ---
 
-## poi-favorites-rename — Pre-merge gates (admin / SRE actions)
-
-### admin — provision TRIPLINE_API_TOKEN + TP_REQUEST_CLIENT_ID Pages secrets
-
-**Priority:** P0 — blocks merge of PR #474
-**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §1.2, §1.4
-**Symptom:** `TRIPLINE_API_TOKEN` 未 provisioned in Cloudflare Pages env → companion path 全 401。
-
-**步驟：**
-1. admin re-run `node scripts/provision-admin-cli-client.js`（已加 `companion` scope）取得新 client_secret（一次性 print）
-2. 用 `curl -X POST /api/oauth/token` with `client_credentials` + `client_secret` 換 access_token（含 `admin + companion` scopes）
-3. `wrangler pages secret put TRIPLINE_API_TOKEN --project-name trip-planner` 設為 access_token
-4. `wrangler pages secret put TP_REQUEST_CLIENT_ID --project-name trip-planner` 設為 `tripline-internal-cli`
-5. `wrangler pages secret list --project-name trip-planner` verify 兩個都有
-
-完成才能 merge PR #474。
-
-### SRE — mac mini cron sync (URL + OAuth token)
-
-**Priority:** P0 — blocks merge of PR #474
-**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §1.3, §19
-**Symptom:** mac mini cron `scripts/tp-request-scheduler.sh` 還在打 `/api/saved-pois`（middleware 白名單已 cutover 到 `/api/poi-favorites`）→ companion 會 403。
-
-**步驟：**
-1. SSH mac mini 改 `scripts/tp-request-scheduler.sh` base URL 4 條 endpoint：`/api/saved-pois*` → `/api/poi-favorites*`
-2. 換新 OAuth token（admin re-mint 含 `admin + companion` scope）並更新 cron env var
-3. dry-run smoke：trigger 測試 trip_requests row → assert tp-request 處理成功 + companion path 200
-4. PR description 附 commit hash / config diff / dry-run output 證據
-
----
-
 ## poi-favorites-rename — UI mockup-driven redesigns (PoiFavoritesPage + AddPoiFavoriteToTripPage)
 
 **Priority:** P2 — mockup signed-off (`docs/design-sessions/2026-05-04-favorites-redesign.html` v4)，React refactor 留 follow-up
