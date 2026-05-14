@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.5] - 2026-05-15
+
+**Schedulers → Claude Cowork migration — 3 支 launchd-driven scheduler 全部廢除。**
+
+2026-05-11 LaunchAgent → LaunchDaemon migration 引入 keychain isolation regression：LaunchDaemon `UserName=ray` 雖標 user 但跑 pre-login system context，沒附著 user keychain session → `claude -p` CLI OAuth token unreachable → daily-check Phase 2 自動修復 / tp-request 處理全部沉默失敗（user 描述「改排程執行方式抓不到授權了」）。本 PR 不修 keychain 問題本身，改用 Claude Desktop 內建的 **Cowork scheduled task** 直接觸發 skill — Cowork 跑在使用者 session 內，自然繼承 keychain + shell env，零 auth 設定，順便消滅所有 `claude -p` headless invocation。
+
+### Removed
+
+- `scripts/daily-check-scheduler.sh` / `scripts/tp-request-scheduler.sh` / `scripts/poi-enrich-scheduler.sh` — 3 支 .sh wrapper 整支刪掉
+- `scripts/com.tripline.daily-check.plist` / `scripts/com.tripline.request-job.plist` — launchd 設定檔 source 刪除（user 手動 bootout `/Library/LaunchDaemons/` 或 `~/Library/LaunchAgents/` 既有 install 透過 `scripts/migrate-launchd-to-cowork.sh`）
+- `scripts/install-daily-check-launchdaemon.sh` — daemon install helper 過時
+- `scripts/register-daily-check.ps1` / `scripts/register-scheduler.ps1` / `scripts/tp-request-scheduler.ps1` / `scripts/unregister-scheduler.ps1` — Windows PowerShell 排程 wrapper（專案 2026-04 已遷 macOS，PS1 為歷史殘留）
+- `scripts/lib/scheduler-common.sh` — 無 .sh 呼叫者後失去意義（env loading 改 skill 內直呼 `scripts/lib/load-env.mjs`）
+
+### Added
+
+- `.claude/skills/tp-poi-enrich-monthly/SKILL.md` — 新 skill 取代 `poi-enrich-scheduler.sh`，Cowork Daily fire + skill 內 `if [ "$(date +%d)" != "01" ]; then exit 0; fi`（Cowork 不支援 monthly 頻率，30 次 noop fire 換 monthly 一次 batch）
+- `scripts/lib/send-telegram.sh` — 3 支 scheduler 重複 Telegram bot wrapper 抽出共用 helper（`bash scripts/lib/send-telegram.sh "<msg>"`）
+- `scripts/lib/build-daily-check-msg.js` — daily-check report JSON → Telegram 訊息 builder（抽自 `daily-check-scheduler.sh` 的 inline `build_telegram_msg()` Node script）
+- `scripts/migrate-launchd-to-cowork.sh` — 使用者手動跑一次：bootout 舊 LaunchDaemon `/Library/LaunchDaemons/com.tripline.daily-check.plist` + LaunchAgent `~/Library/LaunchAgents/com.tripline.{request-job,poi-enrich-monthly}.plist`，rm `~/.local/bin/tripline-daily-check.sh` + `~/.local/bin/tripline-poi-enrich-monthly.sh`
+
+### Changed
+
+- `.claude/skills/tp-daily-check/SKILL.md` 重寫：Phase 1 改 Bash tool 直呼 `node scripts/daily-check.js` + Phase 2 in-session auto-fix（同 Cowork session 內走 `/tp-code-verify` → `/ship` → `/land-and-deploy`，不再 spawn 新 `claude -p` process）+ Phase 3 `bash scripts/lib/send-telegram.sh`
+- `.claude/skills/tp-request/SKILL.md` 觸發模式段落改 Cowork Hourly（接受 hourly latency，從原 15 min 降級換取 keychain isolation 修復）；env loading 走 `scripts/lib/load-env.mjs`，token 走 `scripts/lib/get-tripline-token.js`
+- `scripts/daily-check.js:querySchedulerErrors()` 移除 `tp-request` / `daily-check` error-log scan（Cowork session 失敗 surface 在 Telegram + fix-result.json，不再寫 `.error.log`）；保留 `api-server` stderr scan（LaunchAgent 仍長駐）
+- `ARCHITECTURE.md` poi-enrich 排程段落改指向 `.claude/skills/tp-poi-enrich-monthly/`
+- `.codex/skills/tp-{daily-check,request,poi-enrich-monthly}/SKILL.md` mirror 同步
+
+### Manual steps after merge
+
+1. `bash scripts/migrate-launchd-to-cowork.sh` — bootout 舊 launchd
+2. Claude Desktop → Cowork → 建 3 個 scheduled task（task name 列在每個 SKILL.md 開頭「排程」段）：
+   - `Tripline Daily Check` / Daily / `/tp-daily-check` / working folder `/Users/ray/Projects/trip-planner`
+   - `Tripline Request Handler` / Hourly / `/tp-request` / 同 folder
+   - `Tripline POI Enrich Monthly` / Daily / `/tp-poi-enrich-monthly` / 同 folder
+
 ## [2.30.4] - 2026-05-15
 
 **Daily-check follow-up fixes — daily-report `trip_pois` stale SELECT + skill docs `POST /api/poi-search` → `GET`。**

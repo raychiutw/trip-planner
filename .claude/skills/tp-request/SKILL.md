@@ -20,7 +20,28 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 
 ## 觸發模式
 
-本機排程（cron / Claude Code schedule）自動執行本 skill，處理所有 open/received 請求。
+**Cowork Scheduled task**（Claude Desktop 內建）：
+- Name: Tripline Request Processor
+- Prompt: `/tp-request`
+- Frequency: Hourly
+- Working folder: `/Users/ray/Projects/trip-planner`
+
+v2.30.x Cowork migration 前的 launchd `tp-request-scheduler.sh` + `claude -p` 已移除。Cowork 跑在 user session 內、auth 自動繼承，無 keychain isolation 問題。**Latency 從 15 min 降到 hourly** — 緊急請求需 user 手動跑 `/tp-request`。
+
+## Cowork 環境準備
+
+skill 跑時需要 env vars（從 `.env.local` 載入）：
+```bash
+cd /Users/ray/Projects/trip-planner
+eval "$(node scripts/lib/load-env.mjs .env.local)"
+```
+
+主要 secret：`TRIPLINE_API_CLIENT_ID` / `TRIPLINE_API_CLIENT_SECRET`（拿 OAuth token）。
+
+token 取得 helper：
+```bash
+TRIPLINE_API_TOKEN=$(node scripts/lib/get-tripline-token.js)
+```
 
 ## 四態 Status 流程
 
