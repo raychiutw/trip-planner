@@ -4,10 +4,10 @@
  */
 
 interface ValidateEntry {
-  time?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
   title?: string | null;
   stopPois?: Array<{ name?: string | null; hours?: string | null }>;
-  shopping?: Array<{ name?: string; hours?: string | null }>;
 }
 
 function parseHour(timeStr: string): number {
@@ -28,21 +28,19 @@ export function validateDay(timeline: ValidateEntry[]): string[] {
   if (!timeline?.length) return warnings;
 
   timeline.forEach((entry) => {
-    if (!entry.time) return;
-    const entryTime = (entry.time.split('-')[0] ?? '').trim();
-    const entryHour = parseHour(entry.time);
+    // v2.29.0: entry.time DROPPED — 用 start_time/end_time 重組 display string
+    const composedTime = entry.start_time && entry.end_time
+      ? `${entry.start_time}-${entry.end_time}`
+      : (entry.start_time ?? null);
+    if (!composedTime) return;
+    const entryTime = entry.start_time ?? '';
+    const entryHour = parseHour(composedTime);
     const title = entry.title || '';
 
+    // v2.29.0: shopping array removed — shopping POI 已合進 stopPois (filter by type)
     entry.stopPois?.forEach((p) => {
       if (p && p.hours) {
         const w = checkHours(title, entryTime, entryHour, p.name || '', p.hours);
-        if (w) warnings.push(w);
-      }
-    });
-
-    entry.shopping?.forEach((s) => {
-      if (s && s.hours) {
-        const w = checkHours(title, entryTime, entryHour, s.name || '', s.hours);
         if (w) warnings.push(w);
       }
     });

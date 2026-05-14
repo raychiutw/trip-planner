@@ -152,14 +152,14 @@ export async function downloadTripFormat(
             }
           }
 
-          // Shopping
-          const shopping = e.shopping ?? [];
-          if (shopping.length > 0) {
+          // v2.29.0: shopping array removed — shopping POI 已合進 stopPois (filter by type)
+          const shoppingAlts = stopPois.filter((p) => p.type === 'shopping' && p.sortOrder !== 1);
+          if (shoppingAlts.length > 0) {
             md += '\n#### 🛍 購物推薦\n';
-            md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
-            md += '|------|------|------|---------|------|\n';
-            for (const sh of shopping) {
-              md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.googleRating)} | ${s(sh.hours)} | ${s(sh.mustBuy)} |\n`;
+            md += '| 店名 | 類別 | 評分 | 營業時間 |\n';
+            md += '|------|------|------|---------|\n';
+            for (const sh of shoppingAlts) {
+              md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.googleRating ?? sh.rating)} | ${s(sh.hours)} |\n`;
             }
           }
 
@@ -212,19 +212,16 @@ export async function downloadTripFormat(
             travelType, travelMin,
           ];
 
+          // v2.29.0: shopping array removed — shopping POI 已合進 stopPois (filter by type)
           const stopPois = e.stopPois ?? [];
-          const shopping = e.shopping ?? [];
-          const maxNested = Math.max(stopPois.length, shopping.length, 1);
+          const maxNested = Math.max(stopPois.length, 1);
 
           for (let n = 0; n < maxNested; n++) {
             const p = stopPois[n];
-            const sh = shopping[n];
             // For subsequent rows, repeat entry base columns
             const row = n === 0 ? [...baseRow] : [dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title), '', '', '', '', ''];
             // POI columns
             row.push(p ? csvCell(p.name) : '', p ? csvCell(p.type) : '', p ? csvCell(p.googleRating ?? p.rating) : '', p ? csvCell(p.price) : '');
-            // Shopping columns
-            row.push(sh ? csvCell(sh.name) : '', sh ? csvCell(sh.category) : '', sh ? csvCell(sh.mustBuy) : '');
             rows.push(row);
           }
         }

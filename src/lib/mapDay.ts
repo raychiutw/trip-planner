@@ -112,7 +112,8 @@ type RawStopPoi = RawEntryPoi;
 /** Raw timeline entry as returned by the API. */
 interface RawEntry {
   id?: number | null;
-  time?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
   title?: string | null;
   description?: string | null;
   note?: string | null;
@@ -122,7 +123,7 @@ interface RawEntry {
   master?: RawStopPoi | null;
   /** Canonical stop POI list; stop POI === first row (sortOrder=1). */
   stopPois?: RawStopPoi[];
-  shopping?: RawShop[];
+  // v2.29.0: shopping field removed — shopping POI is now an alternate in stopPois (filter by type='shopping')
 }
 
 /* ===== Helpers ===== */
@@ -246,12 +247,23 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     });
   }
 
+  // v2.29.0: shopping 不再是獨立 array — 從 stopPois 過濾 type='shopping' 取出。
   const infoBoxes: InfoBoxData[] = [];
-  const shopping = raw.shopping ?? [];
-  if (shopping.length > 0) {
+  const shoppingAlternates = (raw.stopPois ?? []).filter((p) => p.type === 'shopping' && p.sortOrder !== 1);
+  if (shoppingAlternates.length > 0) {
     infoBoxes.push({
       type: 'shopping',
-      shops: shopping.map(toShopData),
+      shops: shoppingAlternates.map((p) => toShopData({
+        name: p.name ?? '',
+        category: p.category ?? null,
+        rating: p.rating ?? null,
+        hours: p.hours ?? null,
+        note: p.note ?? null,
+        maps: null,
+        mapcode: null,
+        lat: p.lat ?? null,
+        lng: p.lng ?? null,
+      } as RawShop)),
     });
   }
 
@@ -259,9 +271,14 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   const masterLat = poi?.lat ?? null;
   const masterLng = poi?.lng ?? null;
 
+  // v2.29.0: time DROPPED — 從 start_time/end_time 重組成顯示字串
+  const composedTime = raw.start_time && raw.end_time
+    ? `${raw.start_time}-${raw.end_time}`
+    : (raw.start_time ?? null);
+
   return {
     id: raw.id ?? null,
-    time: raw.time ?? null,
+    time: composedTime,
     displayTitle,
     title: raw.title ?? null,
     description: raw.description ?? null,

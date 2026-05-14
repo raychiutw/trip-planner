@@ -12,7 +12,7 @@
 import { useEffect, useState } from 'react';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
-import { parseTimeRange, deriveTypeMeta } from '../../lib/timelineUtils';
+import { parseEntryTime, deriveTypeMeta } from '../../lib/timelineUtils';
 import { getTimelineEntryDisplayTitle } from '../../lib/stopDisplay';
 import type { TimelineEntryData } from './TimelineEvent';
 
@@ -207,7 +207,7 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
 
   if (!open) return null;
 
-  const parsed = parseTimeRange(entry.time);
+  const parsed = parseEntryTime(entry);
   const meta = deriveTypeMeta(entry);
   const firstLoc = entry.locations?.[0];
   const hasNote = !!entry.note?.trim();

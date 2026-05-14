@@ -1,7 +1,8 @@
 export interface DragScheduleEntry {
   id?: number | string | null;
   title?: string | null;
-  time?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
   sortOrder?: number | null;
   orderInDay?: number | null;
 }
@@ -47,15 +48,16 @@ export function formatMinutesAsClock(minutes: number): string {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
+/**
+ * v2.29.0: trip_entries.time DROPPED — parse entry.{start_time, end_time} 直接。
+ */
 export function parseEntryTimeRange(
-  time: string | null | undefined,
+  entry: { start_time?: string | null; end_time?: string | null },
   fallbackDurationMinutes = DEFAULT_DURATION_MINUTES,
 ): TimeRangeMinutes | null {
-  if (!time) return null;
-  const [rawStart, rawEnd] = time.split('-');
-  const start = parseClockToMinutes(rawStart ?? '');
+  const start = parseClockToMinutes(entry.start_time ?? '');
   if (start == null) return null;
-  const parsedEnd = rawEnd ? parseClockToMinutes(rawEnd) : null;
+  const parsedEnd = entry.end_time ? parseClockToMinutes(entry.end_time) : null;
   let end = parsedEnd ?? start + fallbackDurationMinutes;
   if (end <= start) end += MINUTES_PER_DAY;
   return { startMinutes: start, endMinutes: end };
@@ -67,7 +69,7 @@ export function hasTimeConflict(candidate: TimeRangeMinutes, entries: DragSchedu
 
 export function findFirstTimeConflict(candidate: TimeRangeMinutes, entries: DragScheduleEntry[]): DragScheduleEntry | null {
   return entries.find((entry) => {
-    const range = parseEntryTimeRange(entry.time);
+    const range = parseEntryTimeRange(entry);
     if (!range) return false;
     return candidate.startMinutes < range.endMinutes && candidate.endMinutes > range.startMinutes;
   }) ?? null;
@@ -89,7 +91,7 @@ export function getSmartPlacement(
   const gapMinutes = options.gapMinutes ?? DEFAULT_GAP_MINUTES;
   const defaultStart = parseClockToMinutes(options.defaultStart ?? DEFAULT_START) ?? parseClockToMinutes(DEFAULT_START)!;
   const ranges = entries
-    .map((entry) => parseEntryTimeRange(entry.time, durationMinutes))
+    .map((entry) => parseEntryTimeRange(entry, durationMinutes))
     .filter((range): range is TimeRangeMinutes => range != null);
 
   const latestEnd = ranges.length > 0

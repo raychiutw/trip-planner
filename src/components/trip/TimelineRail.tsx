@@ -38,7 +38,7 @@ import { useNavigate } from 'react-router-dom';
 import MapLinks from './MapLinks';
 import TravelPill from './TravelPill';
 import type { StopPoiOptionData, TimelineEntryData } from './TimelineEvent';
-import { parseTimeRange, formatDurationCompact, deriveTypeMeta } from '../../lib/timelineUtils';
+import { parseEntryTime, formatDurationCompact, deriveTypeMeta } from '../../lib/timelineUtils';
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { useTripSegments } from '../../hooks/useTripSegments';
 import { haversineMeters } from '../../lib/geo';
@@ -349,7 +349,7 @@ function StopPoiChoiceCard({
 const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId }: RailRowProps) {
   const tripId = useTripId();
   const allDays = useTripDays();
-  const parsed = parseTimeRange(entry.time);
+  const parsed = parseEntryTime(entry);
   const meta = deriveTypeMeta(entry);
   const entryDisplayTitle = getTimelineEntryDisplayTitle(entry);
 
@@ -948,9 +948,10 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
 
   if (!events || events.length === 0) return null;
 
-  const firstTime = parseTimeRange(orderedEvents[0]?.time).start;
-  const lastTime = parseTimeRange(orderedEvents[orderedEvents.length - 1]?.time).end ||
-                   parseTimeRange(orderedEvents[orderedEvents.length - 1]?.time).start;
+  const firstTime = orderedEvents[0] ? parseEntryTime(orderedEvents[0]).start : '';
+  const lastTime = orderedEvents[orderedEvents.length - 1]
+    ? (parseEntryTime(orderedEvents[orderedEvents.length - 1]!).end || parseEntryTime(orderedEvents[orderedEvents.length - 1]!).start)
+    : '';
 
   // PR-K：sortable items list — entry.id 或 fallback `idx-N`（disabled in RailRow）
   const sortableItems = orderedEvents.map((e, i) => e.id ?? `idx-${i}`);
