@@ -1,12 +1,16 @@
 /**
  * PATCH /api/trips/:id/entries/batch — 一次更新多個 entries 的 sort_order /
- * day_id / time，drag-drop reorder 結束後背景 commit 用。
+ * day_id / start_time / end_time，drag-drop reorder 結束後背景 commit 用。
  *
  * Spec: openspec/changes/ideas-drag-to-itinerary/specs/drag-to-reorder/spec.md
  *   "Batch update 優化 D1 寫入" — 用單一 transaction batch update，避免 N+1。
  *
  * Naming: spec 用 `order_in_day`，DB 是 `sort_order`；endpoint 接 DB 名稱以
  * 對齊 PATCH /entries/:eid 既有 contract，前端 mapper 在 IdeasTab/Timeline 處理。
+ *
+ * v2.29.0 (migration 0062): trip_entries.{time, travel_*} 8 cols DROPPED。
+ *   - `time` legacy → start_time/end_time 拆分（v2.26 起 dual-write）
+ *   - travel_* → trip_segments 為唯一 source（PATCH /api/trips/:id/segments）
  *
  * 安全：
  *   - 認證 + trip permission 必驗
@@ -20,14 +24,7 @@ import { AppError } from '../../../_errors';
 import { json, parseJsonBody, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 
-// Migration 0045 added travel_distance_m / travel_computed_at / travel_source on
-// trip_entries. POST /trips/:id/recompute-travel batches updates internally via
-// db.batch(), but external callers (TimelineRail.handleDragEnd or future
-// admin tools) may also want to push computed travel values through this batch.
-const ALLOWED_FIELDS = [
-  'sort_order', 'day_id', 'time',
-  'travel_distance_m', 'travel_min', 'travel_computed_at', 'travel_source',
-] as const;
+const ALLOWED_FIELDS = ['sort_order', 'day_id', 'start_time', 'end_time'] as const;
 
 interface BatchUpdateItem {
   id: number;
@@ -72,8 +69,10 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     if ('day_id' in fields && (typeof fields.day_id !== 'number' || !Number.isInteger(fields.day_id) || (fields.day_id as number) <= 0)) {
       throw new AppError('DATA_VALIDATION', `updates[id=${id}].day_id 必須是正整數`);
     }
-    if ('time' in fields && fields.time != null && typeof fields.time !== 'string') {
-      throw new AppError('DATA_VALIDATION', `updates[id=${id}].time 必須是字串或 null`);
+    for (const tf of ['start_time', 'end_time'] as const) {
+      if (tf in fields && fields[tf] != null && typeof fields[tf] !== 'string') {
+        throw new AppError('DATA_VALIDATION', `updates[id=${id}].${tf} 必須是字串或 null`);
+      }
     }
     validated.push({ id, fields });
   }

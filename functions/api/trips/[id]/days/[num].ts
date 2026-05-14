@@ -7,7 +7,12 @@ import { resolveEntryTimes } from '../../../_time';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
-import { assembleDay, fetchPoiMap, fetchEntryPoisByEntries } from './_merge';
+import {
+  assembleDay,
+  fetchEntryPoisByEntries,
+  fetchHotelAndParking,
+  fetchTripSegmentsMap,
+} from './_merge';
 
 // ---------------------------------------------------------------------------
 // GET /api/trips/:id/days/:num — canonical entry POIs + contextual day POIs
@@ -26,25 +31,27 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const dayId = day.id as number;
 
-  // Query trip_pois and pois SEPARATELY to avoid D1 schema cache + JOIN column conflicts
-  const [entriesResult, allTripPois] = await Promise.all([
+  // v2.29.0: trip_pois DROPPED. Hotel ← trip_days.hotel_poi_id; entry POIs ← trip_entry_pois;
+  // travel ← trip_segments; parking ← poi_relations.
+  const [entriesResult, segmentsMap] = await Promise.all([
     db.prepare('SELECT * FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
-    db.prepare('SELECT * FROM trip_pois WHERE trip_id = ? AND day_id = ?').bind(id, dayId).all(),
+    fetchTripSegmentsMap(db, id),
   ]);
 
-  const tripPoiRows = allTripPois.results as Record<string, unknown>[];
   const entryRows = entriesResult.results as Record<string, unknown>[];
-  const poiMap = await fetchPoiMap(db, tripPoiRows);
 
-  // v2.27.0 multi-POI per entry
+  const hotelPoiId = day.hotel_poi_id as number | null;
+  const { poiMap, parkingMap } = await fetchHotelAndParking(db, hotelPoiId ? [hotelPoiId] : []);
+
   const entryPoisMap = await fetchEntryPoisByEntries(db, entryRows.map((e) => e.id as number));
 
   const assembled = assembleDay(
     day,
     entryRows,
-    tripPoiRows,
     poiMap,
+    parkingMap,
     entryPoisMap,
+    segmentsMap,
   );
 
   return json(assembled);
@@ -133,11 +140,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const dayId = day.id;
 
   // Snapshot old data for audit
-  const [oldTripPois, oldEntries] = await Promise.all([
-    db.prepare('SELECT * FROM trip_pois WHERE trip_id = ? AND day_id = ?').bind(id, dayId).all(),
+  // v2.29.0: trip_pois DROPPED. Snapshot 只含 entries + day.hotel_poi_id。
+  const [oldDay, oldEntries] = await Promise.all([
+    db.prepare('SELECT hotel_poi_id FROM trip_days WHERE id = ?').bind(dayId).first<{ hotel_poi_id: number | null }>(),
     db.prepare('SELECT * FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
   ]);
-  const snapshot = JSON.stringify({ dayId, tripPois: oldTripPois.results, entries: oldEntries.results });
+  const snapshot = JSON.stringify({ dayId, hotelPoiId: oldDay?.hotel_poi_id ?? null, entries: oldEntries.results });
 
   type DayBody = {
     date?: string;
@@ -230,11 +238,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   }
 
   try {
-    // Batch 1: delete old trip_pois + entries, update day, insert entries
+    // Batch 1: delete old entries, update day, insert new entries
+    // v2.29.0: trip_pois DROPPED, no DELETE FROM trip_pois needed. ON DELETE CASCADE
+    // on trip_entries clears trip_entry_pois automatically.
     const batch1: D1PreparedStatement[] = [];
 
     batch1.push(
-      db.prepare('DELETE FROM trip_pois WHERE trip_id = ? AND day_id = ?').bind(id, dayId),
       db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(dayId),
       db.prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ? WHERE id = ?')
         .bind(body.date!, body.dayOfWeek!, body.label!, dayId),
@@ -244,14 +253,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const ENTRIES_START = batch1.length;
     for (let i = 0; i < timeline.length; i++) {
       const e = timeline[i]!;
-      const travel = e.travel as { type?: unknown; desc?: unknown; min?: unknown } | undefined;
-      // v2.26.0 (migration 0056) dual-write — helper from _time.ts.
-      const { time: timeStr, startTime, endTime } = resolveEntryTimes(e as Record<string, unknown>);
+      // v2.29.0: trip_entries.{time, travel_*} DROPPED. body.travel.* 被 ignore；
+      // travel info 改寫 trip_segments by /recompute-travel。
+      const { startTime, endTime } = resolveEntryTimes(e as Record<string, unknown>);
       batch1.push(
-        db.prepare('INSERT INTO trip_entries (day_id, sort_order, time, start_time, end_time, title, description, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
-          .bind(dayId, i, timeStr, startTime, endTime, e.title ?? null, e.description ?? null,
-            e.note ?? null,
-            travel?.type ?? null, travel?.desc ?? null, travel?.min ?? null),
+        db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, note) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id')
+          .bind(dayId, i, startTime, endTime, e.title ?? null, e.description ?? null, e.note ?? null),
       );
     }
 
@@ -283,15 +290,14 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         hours: h.hours as string,
         lat: h.lat as number, lng: h.lng as number, source: 'ai',
       });
-      const hCopy = h; // capture for closure
+      // v2.29.0: hotel 改寫 trip_days.hotel_poi_id (FK to pois)。
+      // hotel-specific cols (checkout/breakfast/reservation) 已 DROPPED, body 帶值會被 ignore。
       tripPoiBuilders.push((ids) => [
-        db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, description, note, checkout, breakfast_included, breakfast_note) VALUES (?, ?, 'hotel', ?, ?, ?, ?, ?, ?)`)
-          .bind(ids[hotelPoiIdx], id, dayId,
-            hCopy.description as string ?? null, hCopy.note as string ?? null,
-            hCopy.checkout as string ?? null, hCopy.breakfast_included as number ?? null, hCopy.breakfast_note as string ?? null),
+        db.prepare(`UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?`)
+          .bind(ids[hotelPoiIdx], dayId),
       ]);
 
-      // Hotel parking
+      // Hotel parking — 仍寫 poi_relations (relation_type='parking')；trip_pois.parking row 不再寫。
       if (Array.isArray(h.parking)) {
         for (const p of h.parking as Record<string, unknown>[]) {
           const parkIdx = poiItems.length;
@@ -302,29 +308,14 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
             lat: p.lat as number, lng: p.lng as number, source: 'ai',
           });
           tripPoiBuilders.push((ids) => [
-            db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, description, note) VALUES (?, ?, 'hotel', ?, ?, ?)`)
-              .bind(ids[parkIdx], id, dayId, p.price ? `費用：${p.price}` : null, p.note as string ?? null),
             db.prepare(`INSERT OR IGNORE INTO poi_relations (poi_id, related_poi_id, relation_type) VALUES (?, ?, 'parking')`)
               .bind(ids[hotelPoiIdx], ids[parkIdx]),
           ]);
         }
       }
 
-      // Hotel shopping
-      if (Array.isArray(h.shopping)) {
-        for (const [idx, s] of (h.shopping as Record<string, unknown>[]).entries()) {
-          const shopIdx = poiItems.length;
-          poiItems.push({
-            name: (s.name as string) || '', type: 'shopping',
-            rating: s.rating as number,
-            category: s.category as string, hours: s.hours as string, source: 'ai',
-          });
-          tripPoiBuilders.push((ids) => [
-            db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, sort_order, note, must_buy) VALUES (?, ?, 'shopping', ?, ?, ?, ?)`)
-              .bind(ids[shopIdx], id, dayId, idx, s.note as string ?? null, s.must_buy as string ?? null),
-          ]);
-        }
-      }
+      // v2.29.0: hotel.shopping (day-level) DELETED — design 決定不遷，user 接受 data loss。
+      // body.hotel.shopping 帶值會被 ignore (frontend 已停送)。
     }
 
     // Entry-level POI (Phase 2)：每個 timeline entry 對應一筆 pois master。
@@ -353,7 +344,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     for (let i = 0; i < timeline.length; i++) {
       const e = timeline[i]!;
-      const entryId = entryIds[i]!;
 
       for (const { item, defaultType } of canonicalChoiceInputs(e)) {
         const directPoiId = positiveInt(item.poiId ?? item.poi_id);
@@ -394,18 +384,24 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         entryPoiChoiceBuilders[i]!.push({ ...choice, poiItemIdx: pIdx });
       }
 
+      // v2.29.0: entry-level shopping 改進 trip_entry_pois (sort_order = next, 同 main alternates).
+      // body.shopping 仍接受（backward-compat），但 INSERT 到 trip_entry_pois 而非 trip_pois。
       if (Array.isArray((e as Record<string, unknown>).shopping)) {
-        for (const [idx, s] of ((e as Record<string, unknown>).shopping as Record<string, unknown>[]).entries()) {
+        for (const s of (e as Record<string, unknown>).shopping as Record<string, unknown>[]) {
           const sIdx = poiItems.length;
           poiItems.push({
             name: (s.name as string) || '', type: 'shopping',
             rating: s.rating as number,
             category: s.category as string, hours: s.hours as string, source: 'ai',
           });
-          tripPoiBuilders.push((ids) => [
-            db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, note, must_buy) VALUES (?, ?, 'shopping', ?, ?, ?, ?, ?)`)
-              .bind(ids[sIdx], id, entryId, dayId, idx, s.note as string ?? null, s.must_buy as string ?? null),
-          ]);
+          // 收進 entryPoiChoiceBuilders[i] 跟 main alternates 一視同仁
+          entryPoiChoiceBuilders[i]!.push({
+            description: null,
+            note: stringOrNull(s.note),
+            reservation: null,
+            reservationUrl: null,
+            poiItemIdx: sIdx,
+          });
         }
       }
     }
@@ -451,7 +447,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       return resolved;
     }
 
-    // Build batch2: (a) canonical entry POIs, (b) contextual trip_pois inserts.
+    // Build batch2: (a) canonical entry POIs (trip_entry_pois), (b) hotel UPDATE + parking poi_relations (via tripPoiBuilders).
     // batch1 DELETE FROM trip_entries → ON DELETE CASCADE 清掉舊 trip_entry_pois。
     const batch2: D1PreparedStatement[] = [];
     const entriesNeedingMaster: Array<{ entryId: number; poiId: number }> = [];
@@ -460,9 +456,10 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       const entryId = entryIds[i]!;
       const explicitChoices = resolveEntryChoices(i);
       if (explicitChoices.length > 0) {
+        // v2.29.0: trip_entries.poi_id DROPPED. Just bump entry_pois_version.
         batch2.push(
-          db.prepare('UPDATE trip_entries SET poi_id = ?, entry_pois_version = entry_pois_version + 1 WHERE id = ?')
-            .bind(explicitChoices[0]!.poiId, entryId),
+          db.prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?')
+            .bind(entryId),
         );
         for (const [idx, choice] of explicitChoices.entries()) {
           batch2.push(
@@ -501,9 +498,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       if (pIdx < 0) continue;
       const poiId = poiIds[pIdx];
       if (typeof poiId !== 'number') continue;
-      batch2.push(
-        db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(poiId, entryId),
-      );
+      // v2.29.0: trip_entries.poi_id DROPPED. syncEntryMaster 寫 trip_entry_pois.sort_order=1
+      // 並 bump entry_pois_version (見 _entry_pois.ts)。
       entriesNeedingMaster.push({ entryId, poiId });
     }
     for (const builder of tripPoiBuilders) {

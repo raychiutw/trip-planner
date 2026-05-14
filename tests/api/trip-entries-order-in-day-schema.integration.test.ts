@@ -42,8 +42,9 @@ describe('migration 0030 — trip_entries.order_in_day', () => {
 
   it('手動設 order_in_day 可成功 INSERT / 讀回', async () => {
     const dayId = await getDayId(db, 'order-trip', 2);
+    // v2.29.0: trip_entries.time DROPPED, 改用 start_time。
     await db.prepare(
-      `INSERT INTO trip_entries (day_id, sort_order, time, title, order_in_day)
+      `INSERT INTO trip_entries (day_id, sort_order, start_time, title, order_in_day)
        VALUES (?, ?, ?, ?, ?)`
     ).bind(dayId, 1, '10:00', 'Ordered Entry', 5).run();
     const row = await db.prepare(

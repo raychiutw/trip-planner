@@ -154,29 +154,34 @@ export async function seedTrip(db: D1Database, opts: {
   return { id, owner: ownerEmail, ownerUserId };
 }
 
-/** 插入測試 entry（Phase 3：不再有 location 欄位；spatial 走 poi_id JOIN pois） */
+/** 插入測試 entry。
+ *  v2.29.0: trip_entries.{time, travel_*, poi_id} DROPPED。
+ *  Spatial / master POI 走 trip_entry_pois (caller 自行 INSERT)。
+ *  poi_id opt 已 deprecated；若 caller 仍傳，會自動 INSERT trip_entry_pois sort_order=1。
+ */
 export async function seedEntry(db: D1Database, dayId: number, opts: {
   sortOrder?: number;
   title?: string;
-  travelType?: string | null;
-  travelDesc?: string | null;
-  travelMin?: number | null;
+  /** @deprecated v2.29.0 — pass through trip_entry_pois INSERT instead */
   poiId?: number | null;
 } = {}) {
   const result = await db.prepare(
-    `INSERT INTO trip_entries (day_id, sort_order, time, title, travel_type, travel_desc, travel_min, poi_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+    `INSERT INTO trip_entries (day_id, sort_order, start_time, title)
+     VALUES (?, ?, ?, ?) RETURNING id`,
   ).bind(
     dayId,
     opts.sortOrder ?? 1,
     '10:00',
     opts.title || 'Test Entry',
-    opts.travelType ?? null,
-    opts.travelDesc ?? null,
-    opts.travelMin ?? null,
-    opts.poiId ?? null,
   ).first<{ id: number }>();
-  return result!.id;
+  const entryId = result!.id;
+  // Backward-compat: poiId opt → INSERT trip_entry_pois.sort_order=1 (master)
+  if (opts.poiId != null) {
+    await db.prepare(
+      `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)`,
+    ).bind(entryId, opts.poiId).run();
+  }
+  return entryId;
 }
 
 /** 插入測試 POI */
@@ -198,29 +203,22 @@ export async function getDayId(db: D1Database, tripId: string, dayNum: number): 
   return row!.id;
 }
 
-/** 插入測試 trip_pois 關聯。
- * hotel context 的 entry_id 可為 null（attached to day, not entry）。
+/** v2.29.0: trip_pois 整表 DROPPED. seedTripPoi removed.
+ *  - hotel: 設 trip_days.hotel_poi_id (UPDATE)
+ *  - shopping / entry-level POI: INSERT trip_entry_pois (sort_order > 1)
  */
-export async function seedTripPoi(db: D1Database, opts: {
+export async function seedHotelForDay(db: D1Database, dayId: number, poiId: number): Promise<void> {
+  await db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(poiId, dayId).run();
+}
+
+export async function seedEntryAlternate(db: D1Database, opts: {
+  entryId: number;
   poiId: number;
-  tripId: string;
-  entryId: number | null;
-  dayId: number;
-  context?: 'timeline' | 'hotel' | 'shopping';
   sortOrder?: number;
-  must_buy?: string | null;
-}) {
+}): Promise<number> {
+  const sortOrder = opts.sortOrder ?? 2;
   const result = await db.prepare(
-    `INSERT INTO trip_pois (poi_id, trip_id, entry_id, day_id, sort_order, context, must_buy)
-     VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-  ).bind(
-    opts.poiId,
-    opts.tripId,
-    opts.entryId,
-    opts.dayId,
-    opts.sortOrder ?? 0,
-    opts.context ?? 'timeline',
-    opts.must_buy ?? null,
-  ).first<{ id: number }>();
+    `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, ?) RETURNING id`,
+  ).bind(opts.entryId, opts.poiId, sortOrder).first<{ id: number }>();
   return result!.id;
 }

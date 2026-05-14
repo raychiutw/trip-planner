@@ -118,29 +118,7 @@ describe('PATCH /api/pois/:id — tripId 權限', () => {
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(403);
   });
 
-  it('舊 trip_pois timeline row 不再授權 POI 編輯', async () => {
-    const dayId = await getDayId(db, tripId, 1);
-    const entryId = await seedEntry(db, dayId, { title: 'Legacy timeline row' });
-    const legacyPoiId = await seedPoi(db, { type: 'restaurant', name: 'Legacy Timeline Only' });
-    await db
-      .prepare(
-        `INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order)
-         VALUES (?, ?, 'timeline', ?, ?, 0)`,
-      )
-      .bind(legacyPoiId, tripId, entryId, dayId)
-      .run();
-
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/pois/${legacyPoiId}`, 'PATCH', {
-        tripId,
-        lat: 1,
-      }),
-      env,
-      auth: mockAuth({ email: tripOwner, isAdmin: false }),
-      params: { id: String(legacyPoiId) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(403);
-  });
+  // v2.29.0: 「舊 trip_pois timeline row 不授權」test removed — trip_pois table DROPPED。
 
   it('不帶 tripId + 非 admin → 400', async () => {
     const ctx = mockContext({
@@ -194,11 +172,8 @@ describe('DELETE /api/pois/:id — v2.27.0 trip_entry_pois cleanup', () => {
     await seedTrip(db, { id: TRIP });
     const dayId = await getDayId(db, TRIP, 1);
     const targetPoi = await seedPoi(db, { name: 'AdmDel-Master', type: 'attraction' });
+    // v2.29.0: seedEntry({poiId}) 已自動 INSERT trip_entry_pois sort_order=1。
     const entryId = await seedEntry(db, dayId, { title: 'AdmDel-Entry', poiId: targetPoi });
-    await db
-      .prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)')
-      .bind(entryId, targetPoi)
-      .run();
 
     // Pre-condition: junction row exists
     const before = await db
@@ -235,11 +210,12 @@ describe('DELETE /api/pois/:id — v2.27.0 trip_entry_pois cleanup', () => {
     const dayId = await getDayId(db, TRIP, 1);
     const masterPoi = await seedPoi(db, { name: 'AdmDel-Alt-M', type: 'attraction' });
     const altPoi = await seedPoi(db, { name: 'AdmDel-Alt-A', type: 'attraction' });
+    // v2.29.0: seedEntry({poiId}) 已自動 INSERT master sort_order=1，只補 alternate。
     const entryId = await seedEntry(db, dayId, { title: 'AdmDel-Alt-Entry', poiId: masterPoi });
-    await db.batch([
-      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entryId, masterPoi),
-      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(entryId, altPoi),
-    ]);
+    await db
+      .prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)')
+      .bind(entryId, altPoi)
+      .run();
 
     const resp = await callHandler(onRequestDelete, mockContext({
       request: jsonRequest(`https://test.com/api/pois/${altPoi}`, 'DELETE'),

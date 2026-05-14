@@ -93,25 +93,11 @@ export async function verifyEntryBelongsToTrip(
 }
 
 /**
- * Verifies that a trip_poi belongs to the given trip.
- * Replaces verifyRestaurantBelongsToTrip, verifyShoppingBelongsToTrip, verifyHotelBelongsToTrip.
- */
-export async function verifyTripPoiBelongsToTrip(
-  db: D1Database,
-  tripPoiId: number,
-  tripId: string,
-): Promise<boolean> {
-  const row = await db
-    .prepare('SELECT 1 FROM trip_pois WHERE id = ? AND trip_id = ?')
-    .bind(tripPoiId, tripId)
-    .first();
-  return !!row;
-}
-
-/**
  * Verifies that a POI is attached to a trip, either as a canonical entry POI
- * (`trip_entry_pois`) or as a contextual day/entry POI (`trip_pois`, e.g.
- * hotel/shopping).
+ * (`trip_entry_pois`) or as the day-level hotel (`trip_days.hotel_poi_id`).
+ *
+ * v2.29.0: trip_pois 整表 DROPPED. verifyTripPoiBelongsToTrip removed (no
+ * trip_pois.id 可查); all callers go through this function instead.
  */
 export async function verifyPoiBelongsToTrip(
   db: D1Database,
@@ -127,8 +113,8 @@ export async function verifyPoiBelongsToTrip(
        WHERE tep.poi_id = ? AND d.trip_id = ?
        UNION ALL
        SELECT 1
-       FROM trip_pois tp
-       WHERE tp.poi_id = ? AND tp.trip_id = ? AND tp.context IN ('hotel', 'shopping')
+       FROM trip_days td
+       WHERE td.hotel_poi_id = ? AND td.trip_id = ?
        LIMIT 1`,
     )
     .bind(poiId, tripId, poiId, tripId)

@@ -63,11 +63,12 @@ export interface StopPoiOptionData {
 
 export interface TimelineEntryData {
   id?: number | null;
-  /** Legacy combined time string ("HH:MM" or "HH:MM-HH:MM"). v2.26.0 新 path 改用 start_time / end_time。 */
+  /** v2.29.0: client-side composed display string (從 start_time/end_time 合成 by mapDay.ts).
+   *  schema 已無 trip_entries.time col。frontend 仍接受此 field 作為 display fallback。 */
   time?: string | null;
-  /** v2.26.0 (migration 0056): 抵達時間 "HH:MM"，獨立欄位讓 EditEntryPage 可單獨編輯。 */
+  /** 抵達時間 "HH:MM"。schema source. */
   start_time?: string | null;
-  /** v2.26.0 (migration 0056): 離開時間 "HH:MM"。 */
+  /** 離開時間 "HH:MM"。schema source. */
   end_time?: string | null;
   /** Display title used by list/map UI. Keeps raw `title` intact for edit/export semantics. */
   displayTitle?: string | null;

@@ -1,11 +1,11 @@
 /* ===== InfoBox Component ===== */
 /* Renders an info box — tips, notes, parking, restaurants, shopping, gas stations, etc. */
 
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
 import MapLinks, { type MapLocation } from './MapLinks';
-import Restaurant, { type RestaurantData } from './Restaurant';
+// v2.29.0: restaurants infoBox 移除（trip_pois timeline 已 cutover 到 trip_entry_pois）
 import Shop, { type ShopData } from './Shop';
 import { escUrl } from '../../lib/sanitize';
 
@@ -54,7 +54,7 @@ interface GasStationDetail {
 // InfoBox data — union of all known box types
 // ---------------------------------------------------------------------------
 
-export type InfoBoxType = 'reservation' | 'parking' | 'souvenir' | 'restaurants' | 'shopping' | 'gasStation';
+export type InfoBoxType = 'reservation' | 'parking' | 'souvenir' | 'shopping' | 'gasStation';
 
 export interface InfoBoxData {
   type: InfoBoxType;
@@ -74,8 +74,7 @@ export interface InfoBoxData {
   // items is reused (string[] for reservation, SouvenirItem[] for souvenir)
   // We handle the polymorphism inside the component.
 
-  /* restaurants */
-  restaurants?: RestaurantData[] | null;
+
 
   /* shopping */
   shops?: ShopData[] | null;
@@ -220,71 +219,6 @@ function SouvenirBox({ box }: { box: InfoBoxData }) {
   );
 }
 
-function RestaurantsBox({ box }: { box: InfoBoxData }) {
-  const rItems = box.restaurants ?? [];
-  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
-
-  if (rItems.length === 0) return null;
-
-  const heading = box.title || '推薦餐廳';
-
-  // Single restaurant OR legacy title override — flat render
-  if (rItems.length === 1 || box.title) {
-    return (
-      <div className="infobox-block">
-        <style>{INFOBOX_STYLES}</style>
-        <div className="infobox-heading">
-          <Icon name="utensils" />{heading}
-        </div>
-        {rItems.map((r, i) => (
-          <Restaurant key={i} restaurant={r} variant={i === 0 && rItems.length > 1 ? 'hero' : 'standard'} />
-        ))}
-      </div>
-    );
-  }
-
-  // Multiple restaurants — hero (first by sortOrder) + backup rows
-  const sorted = [...rItems].sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
-  const hero = sorted[0]!;
-  const backups = sorted.slice(1);
-
-  return (
-    <div className="infobox-block">
-      <style>{INFOBOX_STYLES}</style>
-      <div className="infobox-heading">
-        <Icon name="utensils" />推薦餐廳
-      </div>
-      <Restaurant restaurant={hero} variant="hero" />
-      {backups.length > 0 && (
-        <div className="mt-2">
-          <div className="text-caption text-muted mb-1 pl-1" style={{ letterSpacing: '0.1em' }}>備選</div>
-          {backups.map((r, i) => {
-            const isOpen = expandedIdx === i;
-            return (
-              <div key={r.name}>
-                <button
-                  type="button"
-                  className="infobox-backup-row w-full text-left"
-                  aria-expanded={isOpen}
-                  onClick={() => setExpandedIdx(isOpen ? null : i)}
-                >
-                  <span className="infobox-backup-row__name">{r.name}</span>
-                  <span className="infobox-backup-row__side">
-                    {r.category && <span>{r.category}</span>}
-                    {typeof r.googleRating === 'number' && <span>★ {r.googleRating.toFixed(1)}</span>}
-                    <span className="infobox-backup-row__chev">›</span>
-                  </span>
-                </button>
-                {isOpen && <Restaurant restaurant={r} variant="standard" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function ShoppingBox({ box }: { box: InfoBoxData }) {
   const sItems = box.shops ?? [];
   if (sItems.length === 0) return null;
@@ -350,8 +284,6 @@ export const InfoBox = memo(function InfoBox({ box }: InfoBoxProps) {
       return <ParkingBox box={box} />;
     case 'souvenir':
       return <SouvenirBox box={box} />;
-    case 'restaurants':
-      return <RestaurantsBox box={box} />;
     case 'shopping':
       return <ShoppingBox box={box} />;
     case 'gasStation':

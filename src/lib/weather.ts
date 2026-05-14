@@ -84,7 +84,7 @@ export function getLocIdx(day: WeatherDay, h: number): number {
  */
 export function buildWeatherDay(
   dayLabel: string | null | undefined,
-  timeline: Array<{ time?: string | null; title: string; location?: { lat?: number; lng?: number } | null }>,
+  timeline: Array<{ start_time?: string | null; title: string; location?: { lat?: number; lng?: number } | null }>,
 ): WeatherDay | null {
   if (!timeline || timeline.length === 0) return null;
 
@@ -100,10 +100,10 @@ export function buildWeatherDay(
     // Skip if same location as previous (within ~1km)
     if (locations.length > 0 && Math.abs(lat - lastLat) < 0.01 && Math.abs(lng - lastLon) < 0.01) continue;
 
-    // Parse start hour from time field (e.g., "09:00-11:00" → 9)
+    // v2.29.0: trip_entries.time DROPPED. Parse start hour from entry.start_time (e.g., "09:00" → 9)
     let start = 0;
-    if (entry.time) {
-      const match = entry.time.match(/(\d{1,2}):/);
+    if (entry.start_time) {
+      const match = entry.start_time.match(/(\d{1,2}):/);
       if (match) start = parseInt(match[1] ?? '0', 10);
     }
 

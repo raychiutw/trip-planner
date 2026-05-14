@@ -25,8 +25,6 @@ interface TripDestRow {
   lng: number | null;
   day_quota: number | null;
   sub_areas: string | null;
-  osm_id: number | null;
-  osm_type: string | null;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -40,7 +38,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // sub_areas stored as JSON array string — parse for client convenience.
   const dests = await db
     .prepare(
-      'SELECT dest_order, name, lat, lng, day_quota, sub_areas, osm_id, osm_type FROM trip_destinations WHERE trip_id = ? ORDER BY dest_order ASC',
+      'SELECT dest_order, name, lat, lng, day_quota, sub_areas FROM trip_destinations WHERE trip_id = ? ORDER BY dest_order ASC',
     )
     .bind(id)
     .all<TripDestRow>();
@@ -108,8 +106,6 @@ interface DestinationInput {
   lng?: number | null;
   day_quota?: number | null;
   sub_areas?: string[] | null;
-  osm_id?: number | null;
-  osm_type?: 'node' | 'way' | 'relation' | null;
 }
 
 const MAX_DESTINATIONS = 30;
@@ -194,8 +190,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       stmts.push(
         db.prepare(
           `INSERT INTO trip_destinations
-            (trip_id, dest_order, name, lat, lng, day_quota, sub_areas, osm_id, osm_type)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (trip_id, dest_order, name, lat, lng, day_quota, sub_areas)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
         ).bind(
           id,
           idx,
@@ -204,8 +200,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           d.lng ?? null,
           d.day_quota ?? null,
           safeSubAreas(d.sub_areas),
-          d.osm_id ?? null,
-          d.osm_type ?? null,
         ),
       );
     });

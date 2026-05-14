@@ -161,12 +161,9 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(26.4937, 127.9202, poiA).run();
     const poiB = await seedPoi(db, { name: `segr-B-${suffix}` });
     await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(26.5687, 127.8826, poiB).run();
+    // v2.29.0: seedEntry({poiId}) 已自動 INSERT trip_entry_pois sort_order=1。
     const e1 = await seedEntry(db, day1, { sortOrder: 1, poiId: poiA });
     const e2 = await seedEntry(db, day1, { sortOrder: 2, poiId: poiB });
-    await db.batch([
-      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(e1, poiA),
-      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(e2, poiB),
-    ]);
     const now = Date.now();
     // 起始為 driving / 18min（mock 速度算出）
     const r = await db.prepare(

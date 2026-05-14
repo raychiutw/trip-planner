@@ -23,8 +23,6 @@ interface DestinationInput {
   lng?: number;
   day_quota?: number;
   sub_areas?: string[];
-  osm_id?: number;
-  osm_type?: 'node' | 'way' | 'relation';
 }
 
 function str(val: unknown, fallback = ''): string {
@@ -153,11 +151,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   );
 
   // trip_destinations: write each dest with dest_order (commit 7)
+  // v2.29.0: trip_destinations.{osm_id, osm_type} DROPPED.
   destinations.forEach((d, idx) => {
     stmts.push(
       db.prepare(
-        `INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, sub_areas, osm_id, osm_type)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, sub_areas)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       ).bind(
         id,
         idx + 1,
@@ -166,8 +165,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         nullableInt(d.lng),
         nullableInt(d.day_quota),
         Array.isArray(d.sub_areas) ? JSON.stringify(d.sub_areas) : null,
-        nullableInt(d.osm_id),
-        nullableStr(d.osm_type),
       ),
     );
   });

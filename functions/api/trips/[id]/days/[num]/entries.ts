@@ -42,7 +42,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!validation.ok) throw new AppError('DATA_VALIDATION', validation.error);
 
   // 亂碼偵測
-  for (const f of ['title', 'description', 'note', 'travel_desc']) {
+  for (const f of ['title', 'description', 'note']) {
     if (f in body && typeof body[f] === 'string' && detectGarbledText(body[f] as string)) {
       throw new AppError('DATA_ENCODING', `欄位 ${f} 包含疑似亂碼，請確認 encoding 為 UTF-8`);
     }
@@ -88,24 +88,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       source: 'ai',
     });
 
-    // v2.26.0 (migration 0056) dual-write — helper from _time.ts.
-    const { time: timeStr, startTime, endTime } = resolveEntryTimes(body);
+    // v2.29.0: trip_entries.{time, travel_*, poi_id} DROPPED. resolveEntryTimes 仍接受
+    // legacy body.time → parse 拆 start/end，但 INSERT 只寫 start_time/end_time。
+    // poi_id 改透過 trip_entry_pois 寫 master (sort_order=1，下方 helper)，不直接寫 col。
+    const { startTime, endTime } = resolveEntryTimes(body);
 
     row = await db
-      .prepare(`INSERT INTO trip_entries (day_id, sort_order, time, start_time, end_time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+      .prepare(`INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
       .bind(
         dayId, sortOrder,
-        timeStr,
         startTime,
         endTime,
         title,
         body.description ?? null,
         body.source ?? 'ai',
         body.note ?? null,
-        body.travel_type ?? null,
-        body.travel_desc ?? null,
-        body.travel_min ?? null,
-        poiId,
       )
       .first();
   } catch (err) {

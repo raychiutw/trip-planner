@@ -51,14 +51,10 @@ async function setupTripWithEntries(tripId: string) {
   await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(26.3175, 127.7589, poiB).run(); // ~500m east
   const poiC = await seedPoi(db, { name: 'C' });
   await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(26.196, 127.6458, poiC).run(); // 那霸機場（~17km）
+  // v2.29.0: seedEntry({poiId}) 已自動 INSERT trip_entry_pois sort_order=1。
   const e1 = await seedEntry(db, day1, { sortOrder: 1, title: 'A', poiId: poiA });
   const e2 = await seedEntry(db, day1, { sortOrder: 2, title: 'B', poiId: poiB });
   const e3 = await seedEntry(db, day1, { sortOrder: 3, title: 'C', poiId: poiC });
-  await db.batch([
-    db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(e1, poiA),
-    db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(e2, poiB),
-    db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(e3, poiC),
-  ]);
   return { e1, e2, e3 };
 }
 
@@ -149,30 +145,8 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
     expect(seg!.distance_m).toBeLessThan(1000);
   });
 
-  it('dual-write trip_entries.travel_* (legacy until Phase ε)', async () => {
-    const { e2, e3 } = await setupTripWithEntries('trip-rec-dual');
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-rec-dual/recompute-travel?day=all', 'POST'),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-rec-dual' },
-    });
-    await callHandler(onRequestPost, ctx);
-
-    // entry e2 應有 travel data（A→B walking 500m）
-    const e2row = await db.prepare(
-      'SELECT travel_type, travel_min, travel_distance_m, travel_source FROM trip_entries WHERE id = ?',
-    ).bind(e2).first<{ travel_type: string; travel_min: number; travel_distance_m: number; travel_source: string }>();
-    expect(e2row!.travel_type).toBe('walking');
-    expect(e2row!.travel_source).toBe('google');
-
-    // entry e3 應有 travel data（B→C driving ~17km）
-    const e3row = await db.prepare(
-      'SELECT travel_type, travel_distance_m FROM trip_entries WHERE id = ?',
-    ).bind(e3).first<{ travel_type: string; travel_distance_m: number }>();
-    expect(e3row!.travel_type).toBe('driving');
-    expect(e3row!.travel_distance_m).toBeGreaterThan(15000);
-  });
+  // v2.29.0: 「dual-write trip_entries.travel_*」test removed — trip_entries.travel_* DROPPED。
+  // travel 物件單一 source 改為 trip_segments（測在 days/days-num tests 涵蓋）。
 
   it('未認證 → 401', async () => {
     await setupTripWithEntries('trip-rec-noauth');

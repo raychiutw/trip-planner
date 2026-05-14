@@ -1,19 +1,10 @@
 // @vitest-environment node
 /**
- * Migration 0057 — trip_entry_pois junction table（multi-POI per entry）
+ * trip_entry_pois schema invariants（migration 0057 frozen state）
  *
- * 對映 design doc `feat-multi-poi-per-entry-design-2026-05-11.md`
- * + autoplan Codex Finding #6: 5 個 invariant smoke queries 必須回 0 row
- *
- * Covers:
- * 1. CREATE TABLE schema（PRAGMA table_info）
- * 2. Backfill correctness：entries with poi_id NOT NULL → 對應 sort_order=1 row
- * 3. 5 個 invariant smoke queries（CI gate — 任一 row 即 fail）
- * 4. UNIQUE (entry_id, sort_order) constraint
- * 5. UNIQUE (entry_id, poi_id) constraint
- * 6. CHECK (sort_order >= 1)
- * 7. ON DELETE CASCADE entry → 連 rows 一起刪
- * 8. ON DELETE RESTRICT poi → blocked
+ * v2.29.0: trip_entries.poi_id DROPPED；原 backfill / invariant smoke tests
+ * （依賴 entries.poi_id col）已 obsolete 並移除。本 file 保留 schema regression
+ * protection — CREATE TABLE shape / indexes / UNIQUE / CHECK / CASCADE。
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createTestDb, disposeMiniflare } from '../api/setup';
@@ -71,81 +62,7 @@ describe('migration 0057 — trip_entry_pois', () => {
     expect(names).toContain('idx_trip_entry_pois_poi');
   });
 
-  it('Backfill — entries with poi_id NOT NULL 在 migration 後得到 sort_order=1 row', async () => {
-    const { id: tripId } = await seedTrip(db, { id: 'backfill-trip' });
-    const dayId = await getDayId(db, tripId, 1);
-    const poiId = await seedPoi(db, { name: 'Backfill POI' });
-    // Simulate pre-migration state: entry with poi_id set, but trip_entry_pois empty
-    // (clean from beforeEach already empties trip_entry_pois)
-    const entryId = await seedEntry(db, dayId, { title: 'Pre-existing entry', poiId });
-
-    // Re-run migration 0057 INSERT SELECT 模擬 prod cutover
-    await db
-      .prepare(
-        `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-         SELECT id, poi_id, 1, COALESCE(updated_at, datetime('now')), datetime('now')
-         FROM trip_entries
-         WHERE id = ? AND poi_id IS NOT NULL`,
-      )
-      .bind(entryId)
-      .run();
-
-    const row = await db
-      .prepare('SELECT entry_id, poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ?')
-      .bind(entryId)
-      .first<{ entry_id: number; poi_id: number; sort_order: number }>();
-    expect(row).not.toBeNull();
-    expect(row!.poi_id).toBe(poiId);
-    expect(row!.sort_order).toBe(1);
-  });
-
-  describe('5 invariant smoke queries (CI gate — 任一 row 即 fail)', () => {
-    it('(a) entry with poi_id + 對應 master row → smoke 對此 entry 不應 flag', async () => {
-      // Migration 0057 backfill INSERT SELECT 模擬：trip_entry_pois.sort_order=1 對齊 entry.poi_id
-      const { id: tripId } = await seedTrip(db, { id: 'smoke-a-trip' });
-      const dayId = await getDayId(db, tripId, 1);
-      const poiId = await seedPoi(db, { name: 'POI-Smoke-A' });
-      const entryId = await seedEntry(db, dayId, { title: 'Entry A', poiId });
-      await db
-        .prepare(
-          'INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)',
-        )
-        .bind(entryId, poiId)
-        .run();
-
-      // Scope smoke query to this entry only — global state may have prior test orphans
-      const orphan = await db
-        .prepare(
-          `SELECT id FROM trip_entries
-           WHERE id = ?
-             AND poi_id IS NOT NULL
-             AND id NOT IN (SELECT entry_id FROM trip_entry_pois WHERE sort_order = 1)`,
-        )
-        .bind(entryId)
-        .first();
-      expect(orphan).toBeNull();
-    });
-
-    it('(a-negative) entry with poi_id but no master row → smoke 應 flag', async () => {
-      // 故意製造 invariant violation：entry.poi_id 設了，但 trip_entry_pois 沒寫
-      const { id: tripId } = await seedTrip(db, { id: 'smoke-a-neg-trip' });
-      const dayId = await getDayId(db, tripId, 1);
-      const poiId = await seedPoi(db, { name: 'POI-Smoke-A-Neg' });
-      const entryId = await seedEntry(db, dayId, { title: 'Entry orphan', poiId });
-      // skip INSERT into trip_entry_pois — invariant violation
-
-      const orphan = await db
-        .prepare(
-          `SELECT id FROM trip_entries
-           WHERE id = ?
-             AND poi_id IS NOT NULL
-             AND id NOT IN (SELECT entry_id FROM trip_entry_pois WHERE sort_order = 1)`,
-        )
-        .bind(entryId)
-        .first();
-      expect(orphan).not.toBeNull();
-    });
-
+  describe('FK + invariant smoke queries', () => {
     it('(b) trip_entry_pois.poi_id 不在 pois → FK enforce 阻擋或 smoke detect', async () => {
       const { id: tripId } = await seedTrip(db, { id: 'smoke-b-trip' });
       const dayId = await getDayId(db, tripId, 1);
@@ -220,7 +137,7 @@ describe('migration 0057 — trip_entry_pois', () => {
       const { id: tripId } = await seedTrip(db, { id: 'smoke-d-trip' });
       const dayId = await getDayId(db, tripId, 1);
       const poiId = await seedPoi(db, { name: 'POI-Smoke-D' });
-      const entryId = await seedEntry(db, dayId, { title: 'Entry D', poiId });
+      const entryId = await seedEntry(db, dayId, { title: 'Entry D' });
       await db
         .prepare(
           'INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)',
@@ -300,7 +217,7 @@ describe('migration 0057 — trip_entry_pois', () => {
       const dayId = await getDayId(db, tripId, 1);
       const p1 = await seedPoi(db, { name: 'CASC-M' });
       const p2 = await seedPoi(db, { name: 'CASC-A' });
-      const entryId = await seedEntry(db, dayId, { title: 'Entry CASC', poiId: p1 });
+      const entryId = await seedEntry(db, dayId, { title: 'Entry CASC' });
 
       await db.batch([
         db

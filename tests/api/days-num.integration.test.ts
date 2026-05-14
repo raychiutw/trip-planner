@@ -90,29 +90,25 @@ describe('PUT /api/trips/:id/days/:num', () => {
       .prepare("SELECT id FROM pois WHERE name = 'すし三昧' AND type = 'restaurant'")
       .first<{ id: number }>();
     expect(restaurantPoi).not.toBeNull();
-    expect((entries.results[0] as Record<string, unknown>).poi_id).toBe(restaurantPoi!.id);
+    // v2.29.0: trip_entries.poi_id DROPPED. master POI 改放 trip_entry_pois.sort_order=1。
     const entryPoi = await db
       .prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ? ORDER BY sort_order')
       .bind((entries.results[0] as Record<string, unknown>).id)
       .all<{ poi_id: number; sort_order: number }>();
-    expect(entryPoi.results).toEqual([{ poi_id: restaurantPoi!.id, sort_order: 1 }]);
-    const timelineTp = await db
-      .prepare("SELECT COUNT(*) AS c FROM trip_pois WHERE trip_id = 'trip-dn' AND context = 'timeline' AND day_id = ?")
-      .bind(dayId)
-      .first<{ c: number }>();
-    expect(timelineTp!.c).toBe(0);
+    // master (sort_order=1) is the entry's primary POI; stop POIs surface as alternates.
+    expect(entryPoi.results[0]).toEqual({ poi_id: restaurantPoi!.id, sort_order: 1 });
 
     // 驗證 hotel POI 已建立
     const hotelPoi = await db.prepare(
-      "SELECT * FROM pois WHERE name = 'ホテルオリオン' AND type = 'hotel'"
-    ).first();
+      "SELECT id FROM pois WHERE name = 'ホテルオリオン' AND type = 'hotel'"
+    ).first<{ id: number }>();
     expect(hotelPoi).not.toBeNull();
 
-    // 驗證 trip_pois 有 hotel context
-    const hotelTp = await db.prepare(
-      "SELECT * FROM trip_pois WHERE trip_id = 'trip-dn' AND context = 'hotel' AND day_id = ?"
-    ).bind(dayId).first();
-    expect(hotelTp).not.toBeNull();
+    // v2.29.0: trip_pois DROPPED. Hotel 改用 trip_days.hotel_poi_id。
+    const dayRow = await db.prepare(
+      'SELECT hotel_poi_id FROM trip_days WHERE id = ?',
+    ).bind(dayId).first<{ hotel_poi_id: number | null }>();
+    expect(dayRow!.hotel_poi_id).toBe(hotelPoi!.id);
   });
 
   it('缺 date → 400', async () => {
@@ -189,7 +185,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
   });
 
   /* Phase 2 POI Unification (v2.1.2.0+) */
-  it('Phase 2: entry with maps + poi_type → 寫入 trip_entries.poi_id + pois master', async () => {
+  it('Phase 2: entry with maps + poi_type → 寫入 trip_entry_pois master + pois master', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-dn/days/3', 'PUT', {
         date: '2026-04-03', dayOfWeek: '五', label: 'Day 3',
@@ -216,11 +212,16 @@ describe('PUT /api/trips/:id/days/:num', () => {
 
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entries = await db.prepare(
-      'SELECT id, title, poi_id FROM trip_entries WHERE day_id = ? ORDER BY sort_order',
-    ).bind(dayId).all();
+      'SELECT id, title FROM trip_entries WHERE day_id = ? ORDER BY sort_order',
+    ).bind(dayId).all<{ id: number; title: string }>();
     expect(entries.results).toHaveLength(2);
-    for (const e of entries.results as Array<{ poi_id: number | null }>) {
-      expect(e.poi_id).not.toBeNull();
+    // v2.29.0: trip_entries.poi_id DROPPED. master POI 改查 trip_entry_pois.sort_order=1。
+    for (const e of entries.results) {
+      const master = await db.prepare(
+        'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+      ).bind(e.id).first<{ poi_id: number }>();
+      expect(master).not.toBeNull();
+      expect(master!.poi_id).toBeGreaterThan(0);
     }
 
     // Migration 0045: pois.maps dropped (use mapsUrl helper); google_rating renamed to rating.
@@ -253,7 +254,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
     expect('poi' in transportEntry!).toBe(false);
   });
 
-  it('Phase 2: POST /entries 建立 POI 並回填 poi_id', async () => {
+  it('Phase 2: POST /entries 建立 POI 並掛上 master (trip_entry_pois sort_order=1)', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-dn/days/2/entries', 'POST', {
         title: '美麗海水族館',
@@ -268,11 +269,17 @@ describe('PUT /api/trips/:id/days/:num', () => {
     });
     const resp = await callHandler(onRequestPostEntry, ctx);
     expect(resp.status).toBe(201);
-    const row = await resp.json() as { id: number; poiId: number; title: string };
-    expect(row.poiId).not.toBeNull();
-    expect(row.poiId).toBeGreaterThan(0);
+    const row = await resp.json() as { id: number; title: string };
+    expect(row.id).toBeGreaterThan(0);
 
-    const poi = await db.prepare("SELECT type, name FROM pois WHERE id = ?").bind(row.poiId).first() as { type: string; name: string };
+    // v2.29.0: trip_entries.poi_id DROPPED. 從 trip_entry_pois 查 master。
+    const master = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(row.id).first<{ poi_id: number }>();
+    expect(master).not.toBeNull();
+    expect(master!.poi_id).toBeGreaterThan(0);
+
+    const poi = await db.prepare("SELECT type, name FROM pois WHERE id = ?").bind(master!.poi_id).first() as { type: string; name: string };
     expect(poi.type).toBe('attraction');
     expect(poi.name).toBe('美麗海水族館');
   });
@@ -280,9 +287,13 @@ describe('PUT /api/trips/:id/days/:num', () => {
   it('Phase 2: PATCH /entries/:eid 不接受 poi_id（避免跨 trip 指向）', async () => {
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entry = await db.prepare(
-      'SELECT id, poi_id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
-    ).bind(dayId).first() as { id: number; poi_id: number };
-    const originalPoiId = entry.poi_id;
+      'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
+    ).bind(dayId).first() as { id: number };
+    // v2.29.0: trip_entries.poi_id DROPPED. master 從 trip_entry_pois 查。
+    const before = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first<{ poi_id: number }>();
+    const originalPoiId = before!.poi_id;
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}`, 'PATCH', {
@@ -295,9 +306,11 @@ describe('PUT /api/trips/:id/days/:num', () => {
     // poi_id 不在 ALLOWED_FIELDS，PATCH 視為沒有有效欄位 → 400
     expect((await callHandler(onRequestPatchEntry, ctx)).status).toBe(400);
 
-    // poi_id 保持原值未被改動
-    const row = await db.prepare('SELECT poi_id FROM trip_entries WHERE id = ?').bind(entry.id).first() as { poi_id: number };
-    expect(row.poi_id).toBe(originalPoiId);
+    // master poi_id 保持原值未被改動
+    const after = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first<{ poi_id: number }>();
+    expect(after!.poi_id).toBe(originalPoiId);
   });
 
   it('Phase 2: PUT /days/:num 拒絕非法 poi_type → 400', async () => {
@@ -316,8 +329,8 @@ describe('PUT /api/trips/:id/days/:num', () => {
   it('Phase 2: PUT /entries/:eid/poi-id 重掛到既有 POI（驗證存在）', async () => {
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entry = await db.prepare(
-      'SELECT id, poi_id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
-    ).bind(dayId).first() as { id: number; poi_id: number };
+      'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
+    ).bind(dayId).first() as { id: number };
 
     const newPoi = await db.prepare(
       "INSERT INTO pois (type, name, source) VALUES ('attraction', 'Admin Override POI', 'test') RETURNING id",
@@ -334,7 +347,10 @@ describe('PUT /api/trips/:id/days/:num', () => {
     const resp = await callHandler(onRequestPutPoiId, ctx);
     expect(resp.status).toBe(200);
 
-    const row = await db.prepare('SELECT poi_id FROM trip_entries WHERE id = ?').bind(entry.id).first() as { poi_id: number };
+    // v2.29.0: trip_entries.poi_id DROPPED. master 從 trip_entry_pois 查。
+    const row = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first() as { poi_id: number };
     expect(row.poi_id).toBe(newPoi.id);
   });
 
@@ -361,8 +377,13 @@ describe('PUT /api/trips/:id/days/:num', () => {
     // pre-v2.27.0 此分支事實上 unreachable（frontend 沒地方傳 null），現在 explicit 阻擋。
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entry = await db.prepare(
-      'SELECT id, poi_id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
-    ).bind(dayId).first() as { id: number; poi_id: number | null };
+      'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
+    ).bind(dayId).first() as { id: number };
+    // v2.29.0: trip_entries.poi_id DROPPED. master 從 trip_entry_pois 查。
+    const before = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first<{ poi_id: number | null }>();
+    const originalPoiId = before?.poi_id ?? null;
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
@@ -373,17 +394,24 @@ describe('PUT /api/trips/:id/days/:num', () => {
       params: { id: 'trip-dn', eid: String(entry.id) },
     });
     expect((await callHandler(onRequestPutPoiId, ctx)).status).toBe(400);
-    // entry.poi_id 不變
-    const row = await db.prepare('SELECT poi_id FROM trip_entries WHERE id = ?').bind(entry.id).first() as { poi_id: number | null };
-    expect(row.poi_id).toBe(entry.poi_id);
+    // master poi_id 不變
+    const after = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first<{ poi_id: number | null }>();
+    expect(after?.poi_id ?? null).toBe(originalPoiId);
   });
 
   // Round 9 — PUT /poi-id OCC token coverage (round 7 backend 加 entryPoisVersion body field)
   it('v2.27.0: PUT /poi-id 帶 stale entryPoisVersion → 409 STALE_ENTRY', async () => {
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entry = await db.prepare(
-      'SELECT id, poi_id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
-    ).bind(dayId).first() as { id: number; poi_id: number };
+      'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
+    ).bind(dayId).first() as { id: number };
+    // v2.29.0: trip_entries.poi_id DROPPED. master 從 trip_entry_pois 查。
+    const before = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first<{ poi_id: number }>();
+    const originalPoiId = before!.poi_id;
     const newPoi = await db.prepare(
       "INSERT INTO pois (type, name) VALUES ('attraction', 'R9-OCC-Stale-Target') RETURNING id",
     ).first() as { id: number };
@@ -399,16 +427,18 @@ describe('PUT /api/trips/:id/days/:num', () => {
     });
     const resp = await callHandler(onRequestPutPoiId, ctx);
     expect(resp.status).toBe(409);
-    // entry.poi_id 不變
-    const row = await db.prepare('SELECT poi_id FROM trip_entries WHERE id = ?').bind(entry.id).first() as { poi_id: number };
-    expect(row.poi_id).toBe(entry.poi_id);
+    // master poi_id 不變
+    const after = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first() as { poi_id: number };
+    expect(after.poi_id).toBe(originalPoiId);
   });
 
   it('v2.27.0: PUT /poi-id 帶正確 entryPoisVersion → 200 + bump version', async () => {
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entry = await db.prepare(
-      'SELECT id, poi_id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
-    ).bind(dayId).first() as { id: number; poi_id: number };
+      'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
+    ).bind(dayId).first() as { id: number };
     const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry.id).first<{ v: number }>();
     const newPoi = await db.prepare(
       "INSERT INTO pois (type, name) VALUES ('attraction', 'R9-OCC-OK-Target') RETURNING id",
@@ -450,8 +480,8 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
       .prepare("INSERT INTO pois (name, type) VALUES ('Alt-B', 'attraction') RETURNING id")
       .first<{ id: number }>();
     const entry = await db
-      .prepare("INSERT INTO trip_entries (day_id, sort_order, time, title, poi_id) VALUES (?, 1, '10:00', 'Master-X', ?) RETURNING id")
-      .bind(dayId, masterPoi!.id)
+      .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '10:00', 'Master-X') RETURNING id")
+      .bind(dayId)
       .first<{ id: number }>();
     await db.batch([
       db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, masterPoi!.id),
@@ -527,12 +557,12 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
       .first<{ id: number }>();
 
     const entry1 = await db
-      .prepare("INSERT INTO trip_entries (day_id, sort_order, time, title, poi_id) VALUES (?, 1, '08:00', 'Matsuya', ?) RETURNING id")
-      .bind(dayId, sharedMaster!.id)
+      .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '08:00', 'Matsuya') RETURNING id")
+      .bind(dayId)
       .first<{ id: number }>();
     const entry2 = await db
-      .prepare("INSERT INTO trip_entries (day_id, sort_order, time, title, poi_id) VALUES (?, 2, '18:00', 'Matsuya', ?) RETURNING id")
-      .bind(dayId, sharedMaster!.id)
+      .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 2, '18:00', 'Matsuya') RETURNING id")
+      .bind(dayId)
       .first<{ id: number }>();
     await db.batch([
       db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry1!.id, sharedMaster!.id),
