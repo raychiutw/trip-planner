@@ -1,10 +1,9 @@
 /**
- * TravelPill + TravelPillDialog tap-switch test (v2.24.0 Phase γ.0)
+ * TravelPill + TravelPillDialog tap-switch test (v2.24.0 Phase γ.0; v2.30.0 rewrite)
  *
  * 驗證：
  *   - 沒 segment props → 唯讀（v2.23 backwards compat）
- *   - 有 segment props → button + ▾ affordance + click 開 dialog
- *   - mode_source='user' → 顯示鎖頭 + 無 ▾
+ *   - 有 segment props → button + ▾ affordance + click 開 dialog（v2.30 永遠 ▾，不再上鎖）
  *   - dialog 三選一切換 + transit 手動填 min + Save → PATCH
  *   - transit 沒填 min / min 超界 → Save disabled
  *   - 取消 / Esc 關 dialog
@@ -41,9 +40,9 @@ describe('TravelPill — interactive (v2.24.0 segment-aware)', () => {
   const baseSegment = {
     id: 42,
     mode: 'driving' as const,
-    modeSource: 'auto' as const,
     min: 11,
     distanceM: 5300,
+    computedAt: 1700000000000,
   };
 
   it('segment + tripId → render 為 button + ▾ affordance', () => {
@@ -52,13 +51,6 @@ describe('TravelPill — interactive (v2.24.0 segment-aware)', () => {
     expect(pill.tagName).toBe('BUTTON');
     expect(pill).toHaveAttribute('aria-label', expect.stringContaining('交通方式'));
     expect(pill.textContent).toContain('▾');
-  });
-
-  it('mode_source=user → 顯示鎖頭 + 無 ▾', () => {
-    render(<TravelPill segment={{ ...baseSegment, modeSource: 'user' }} tripId="trip-1" />);
-    expect(screen.getByTestId('travel-pill-lock')).toBeInTheDocument();
-    const pill = screen.getByTestId('travel-pill');
-    expect(pill.textContent).not.toContain('▾');
   });
 
   it('click pill → 開 dialog（三個 mode option + driving 預選）', () => {
@@ -71,7 +63,7 @@ describe('TravelPill — interactive (v2.24.0 segment-aware)', () => {
   });
 
   it('切換 driving → walking → Save → PATCH 帶正確 body', async () => {
-    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, mode: 'walking', mode_source: 'user' }), { status: 200 }));
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, mode: 'walking' }), { status: 200 }));
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));
     fireEvent.click(screen.getByTestId('travel-mode-option-walking'));

@@ -23,13 +23,13 @@ beforeAll(async () => {
   const now = Date.now();
   await db.prepare(
     `INSERT INTO trip_segments
-     (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
-     VALUES (?, ?, ?, 'walking', 'auto', 5, 400, 'google', ?, ?)`,
+     (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+     VALUES (?, ?, ?, 'walking', 5, 400, 'google', ?, ?)`,
   ).bind('trip-seg-get', entry1, entry2, now, now).run();
   await db.prepare(
     `INSERT INTO trip_segments
-     (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
-     VALUES (?, ?, ?, 'driving', 'auto', 25, 18000, 'google', ?, ?)`,
+     (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+     VALUES (?, ?, ?, 'driving', 25, 18000, 'google', ?, ?)`,
   ).bind('trip-seg-get', entry2, entry3, now, now).run();
 });
 

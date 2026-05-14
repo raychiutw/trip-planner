@@ -4,8 +4,8 @@
  * 回傳該行程所有 trip_segments（兩 entry 之間的交通段）。
  * 前端 TimelineRail / TravelPill 用此 list 配對 entry，自行 join entry context。
  *
- * v2.24.0 起 segments 是 travel data 的 source of truth；trip_entries.travel_*
- * 仍 dual-write（legacy until Phase ε）。
+ * v2.24.0 起 segments 是 travel data 的 source of truth；v2.29.0 entry.travel_*
+ * 已 DROPPED。v2.30.0 mode_source 已 DROPPED — transit 自然代理 user override。
  *
  * Auth: trip read permission.
  */
@@ -21,7 +21,6 @@ interface SegmentRow {
   from_entry_id: number;
   to_entry_id: number;
   mode: string;
-  mode_source: string;
   min: number | null;
   distance_m: number | null;
   source: string | null;
@@ -44,7 +43,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const res = await db
     .prepare(
       `SELECT s.id, s.trip_id, s.from_entry_id, s.to_entry_id,
-              s.mode, s.mode_source, s.min, s.distance_m, s.source,
+              s.mode, s.min, s.distance_m, s.source,
               s.computed_at, s.updated_at
        FROM trip_segments s
        JOIN trip_entries fe ON fe.id = s.from_entry_id

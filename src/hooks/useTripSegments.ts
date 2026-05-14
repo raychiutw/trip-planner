@@ -22,7 +22,6 @@ export interface TripSegment {
   fromEntryId: number;
   toEntryId: number;
   mode: 'driving' | 'walking' | 'transit';
-  modeSource: 'auto' | 'user';
   min: number | null;
   distanceM: number | null;
   source: string | null;
