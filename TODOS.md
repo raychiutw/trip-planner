@@ -174,21 +174,19 @@
 
 ---
 
-## poi-favorites-rename — Shared components (deferred to PoiFavoritesPage redesign)
-
-**Priority:** P3 — quality-of-life，無功能阻擋
-**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §13
-
-§13 Shared component 抽取（與 §11/§12 mockup-driven redesign 一併處理較順）：
-- 抽 `<PageErrorState>` 共用 component 取代 `.favorites-error` inline pattern
-- 抽 `<EmptyState>` 共用 component 取代 `.favorites-empty-cta` inline pattern
-- 抽 `tp-action-btn` family 取代 `.favorites-toolbar-btn` 系列至 `css/components/action-button.css`
-
-**Note**: §15 (tp-request 「加入收藏」flow), §16 (mockup-first gate + Naming history 3 docs), §17 (DESIGN.md asymmetric labels rewrite), §18.3 (saved-pois-schema banner) 已分批完成 — 見 Completed section。
-
----
-
 ## Completed
+
+### v2.30.3 — `.tp-action-btn` family extract (poi-favorites-rename §13 收尾)
+
+**Priority:** P3
+**Completed:** v2.30.3 (2026-05-15)
+
+§13 Shared component 抽取最後一項 `tp-action-btn` family。3 子項：
+- `<PageErrorState>`：已在 v2.29.x 抽出
+- `<EmptyState>`：已在 v2.29.x 抽出
+- `.tp-action-btn` family：本 PR 完成，universal CSS 在 `css/tokens.css`（BEM modifier `--ghost` / `--destructive`），PoiFavoritesPage 既有 `.favorites-toolbar-btn` 系列 + ExplorePage dead CSS 一併收掉
+
+PoiFavorites destructive 從 `--color-priority-high-dot` fallback hack 改用 canonical `--color-destructive`，light/dark 視覺一致；新增 hover affordance（filter + destructive bg）對齊 ExplorePage 既有設計意圖。AddPoiFavoriteToTripPage scoped `.tp-action-btn` 是 large variant 留 follow-up。
 
 ### v2.30.2 — V2-P6 rate_limit_buckets cleanup cron
 

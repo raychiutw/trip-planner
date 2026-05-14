@@ -1079,6 +1079,45 @@ body.dark {
 }
 
 
+/* ===== .tp-action-btn — universal action button family =====
+ * Pill-shaped action button (filled accent default + ghost / destructive
+ * variants)。整合 PoiFavoritesPage 既有 favorites-toolbar-btn 系列 + ExplorePage 沿用
+ * 同樣 pattern 的重複定義（poi-favorites-rename §13），新頁應用此 class，舊頁
+ * 隨 redesign PR 漸進 migrate。
+ *
+ * 與 `.tp-page-bottom-bar` button 不同：bottom-bar 是 sticky chrome layout，
+ * 此 class 是 button 本身 visual treatment（toolbar / inline action 都通用）。 */
+.tp-action-btn {
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border: 1px solid var(--color-accent);
+  cursor: pointer;
+  min-height: 36px;
+}
+.tp-action-btn:hover:not(:disabled) { filter: brightness(var(--hover-brightness)); }
+.tp-action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.tp-action-btn--ghost {
+  background: transparent;
+  color: var(--color-foreground);
+  border-color: var(--color-line-strong);
+}
+.tp-action-btn--destructive {
+  background: transparent;
+  color: var(--color-destructive);
+  border-color: var(--color-destructive);
+}
+.tp-action-btn--destructive:hover:not(:disabled) {
+  background: var(--color-destructive-bg);
+  filter: none;
+}
+
+
 /* ===== .tp-form / .tp-form-row — vertical form scaffold (auth + dev forms 共用) =====
  * LoginPage / ForgotPasswordPage / DeveloperAppNewPage 原本各自重複定義。
  * 預設輸入尺寸 = 表單密集 (10px 12px padding)；auth 變體加 .tp-form--auth
