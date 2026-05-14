@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.2] - 2026-05-15
+
+**V2-P6 `rate_limit_buckets` cleanup cron — 兌現 migration 0035 註解承諾。**
+
+`migrations/0035` 註解承諾「V2-P6 cron job 每小時跑 DELETE WHERE locked_until IS NULL AND window_start + 1h < now」清過期 unlocked rows，但 cron 未在 repo 設定 → `rate_limit_buckets` table 隨每個 unique bucket key 持續累積。Tripline 目前 admin-only traffic 還不痛，但 long-running prod 仍會 index bloat。
+
+### Added
+
+- `.github/workflows/rate-limit-cleanup.yml` — hourly schedule (`cron: "0 * * * *"`)
+  - 直接 `wrangler d1 execute --remote --command "DELETE FROM rate_limit_buckets WHERE locked_until IS NULL AND window_start + 3600000 < (unixepoch() * 1000)"`
+  - Cloudflare Pages Functions 不原生支援 `functions/_scheduled.ts`，採用 `deploy.yml` 既有 pattern（GitHub Actions cron + wrangler CLI），免新增 Workers code
+  - `concurrency: d1-rate-limit-cleanup` + `cancel-in-progress: false` — 排隊不殺正在跑的
+  - 失敗 Telegram 即時告警（fail-loud）
+
+### Notes
+
+- Cutoff 用 `window_start + 3600000 < now_ms`（1h），覆蓋最長 `windowMs` = 1h（SIGNUP / FORGOT_PASSWORD）
+- 鎖中 rows（`locked_until IS NOT NULL AND > now`）保留，防誤清正在 throttle 的攻擊 bucket
+- 第一次 deploy 後手動 `gh workflow run rate-limit-cleanup.yml` 驗證一次（或等下個整點）
+
 ## [2.30.1] - 2026-05-14
 
 **P3 OCC quick wins — concurrent edit 防護升級 + cascade perf。**
