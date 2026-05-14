@@ -3,6 +3,47 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.1] - 2026-05-14
+
+**P3 OCC quick wins — concurrent edit 防護升級 + cascade perf。**
+
+3 個 P3 OCC / cascade 改動並 ship。Migration 0065 加 `trip_days.version`，PUT /days/:num 可選 `expectedDayVersion` 比對；4 個 entry-pois OCC callsite 把 pre-SELECT version 合進 snapshot Promise.all 省 1 RT；EditEntryPage refreshEntryPois 把 GET /entries 跟 GET /days 並行。
+
+### Added
+
+- **Day-level OCC token**（migration 0065 + PUT /days/:num + GET response 加 `version`）
+  - `trip_days.version INTEGER NOT NULL DEFAULT 0` — 比照 `trip_entries.entry_pois_version` pattern
+  - PUT /days/:num 接受 optional `expectedDayVersion: number`，不符 → 409 STALE_ENTRY（複用 error code，client 邏輯一致：refetch + retry）
+  - PUT response 加 `dayVersion` 給 client 下次 PUT 用；GET /days/:num response (via `assembleDay`) 加 `version`
+  - `expectedDayVersion` undefined 略過 OCC check — 既有 client 不破
+
+### Changed
+
+- **`_entry_pois.ts` OCC callsite parallelize**（perf）
+  - `setMaster` / `addAlternate` / `removeAlternate` / `reorderAlternates` 把 pre-SELECT `getEntryPoisVersion()` 合進已有的 snapshot `Promise.all`
+  - `expectedVersion` provided 時 sequential 2 RT 降到 1 RT；race-safety 由既有 UNIQUE constraint catch 保護
+  - `removeAlternate` 順便修錯誤碼語意：OCC fail-fast 提前到 row null check 之前，stale token 回 409 STALE_ENTRY 而非 404 (client 應 retry 不該誤判 POI 已刪)
+- **EditEntryPage `refreshEntryPois` parallelize**（perf）
+  - GET /entries/:id 跟 GET /days 改 `Promise.all` 並行 — 3 sequential RT 降到 2
+  - GET /days/:num 仍 sequential（needs dayNum from days list）
+
+### Tests
+
+- `days-num.integration.test.ts` 加 5 個 Day-level OCC integration tests：GET response 含 version / PUT bump / PUT match → 200 / PUT mismatch → 409 STALE_ENTRY / 未帶 expectedDayVersion → BWC skip check
+- 1533 unit tests pass / 74 integration tests pass (49 entry-pois + 25 days-num)
+
+### Deploy 順序
+
+1. Apply migration 0065（加欄位 DEFAULT 0，無 backfill / race window）
+2. Deploy backend 任意順序（新 backend `?? 0` null-coalesce，OLD backend SELECT 不會 5xx）
+
+### Follow-ups
+
+- Day-level OCC frontend wire — BulkEditDayPage / EditDayPage 帶 expectedDayVersion，接 409 STALE_ENTRY 提示 refetch
+- 真正 atomic CAS via UPDATE RETURNING — 跟 D1 batch atomicity 衝突，需要 redesign batch 結構
+- `syncEntryMaster` 加 `expectedVersion` 參數讓 PUT /entries/:eid/poi-id 真正帶 OCC token
+- `EditEntryPage.refreshEntryPois` 完整 hook 化 cascade（含 useTripSegments 協調）
+
 ## [2.30.0] - 2026-05-14
 
 **`trip_segments.mode_source` 欄位 DROPPED — transit 自然代理 user override，不再有「上鎖」概念。**
