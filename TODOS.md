@@ -11,29 +11,6 @@
 
 ---
 
-## v2.27.x Multi-POI Phase 2 + 後續優化
-
-**Found by**: v2.27.0 round 5/6/7 ship review deferred items
-**Phase 2 cutover (v2.27.1)** — `[Phase 2 cutover items 1-4 已於 v2.29.0 完成 → 見 Completed]`
-
-**ChangePoiPage 加 entry_pois_version 帶上** — `[v2.29.0 PR #529 已完成 → 見 Completed]`
-
-**Atomic CAS via UPDATE RETURNING** — `[partial v2.30.x PR #538 已完成 parallelize → 見 Completed]`
-
-真正 atomic CAS via UPDATE RETURNING 與 D1 batch atomicity 衝突，未實作。Follow-up：redesign batch 結構，或接受現有 UNIQUE catch fallback。
-
-**Day-level OCC token on PUT /days/:num** — `[v2.30.x PR #538 backend 已完成 → 見 Completed]`
-
-~~Frontend wire 留 follow-up：BulkEditDayPage / EditDayPage 帶 expectedDayVersion~~ — **N/A**：SPA 沒有 BulkEditDayPage / EditDayPage 這兩個頁面。PUT /days/:num 唯一 caller 是 `tp-create` / tp-modify-* CLI skills（sequential CLI session，無 concurrent edit race）。OCC token 已 backend-ready；未來真有 day-level UI 時再帶。
-
-**refreshEntryPois 3-way cascade UX** — `[v2.30.x PR #538 已完成 partial → 見 Completed]`
-
-3 sequential RT 改 2 sequential RT (Promise.all GET /entries + GET /days)。第 3 個 GET /days/:num 仍 sequential（needs dayNum from days list）。完整 hook 化 cascade 留 follow-up。
-
-**Tech debt — event name const-ize** — `[v2.29.0 PR #530 已完成 → 見 Completed]`
-
----
-
 ## Lighthouse — Blocking gate（2 週 baseline 後）
 
 **Current**: Lighthouse CI 已建立（PR #8），所有 assertion 為 warn 模式。
@@ -45,19 +22,6 @@
 4. 評估是否需要 PR preview URL integration（vs. master only）
 **Est**: 0.5 day CC（小）
 **Priority**: P2（2 週後升 P1）
-
----
-
-## OG Preview — Dynamic per-trip image
-
-**Current**: 所有 trip 用 static brand OG (`/og/tripline-default.png`).
-**Goal**: 每個 trip 有動態 OG image 顯示行程名 + 天數 + 目的地.
-**Blockers**:
-- Cloudflare Workers 的 Satori/@vercel/og 相容性驗證
-- 字型（Noto Sans TC）在 Worker 載入
-- Cache strategy（/api/og/:tripId → KV cache 24h）
-**Est**: 1 day CC (medium)
-**Priority**: P2 (static MVP 已 unblock distribution)
 
 ---
 
@@ -120,29 +84,6 @@
 
 **Est**: 1 day
 **Priority**: P2（依賴 reader validation）
-
----
-
-## Observability
-
-### `api_logs` source 欄位的 scheduler / companion 仍是 self-reported
-
-**Priority:** P3
-**Status:** NEEDS /plan-eng-review（架構議題，非 quick fix）
-**Source:** `functions/api/_middleware.ts:35-36` 註解已標註
-**Context:** 見 [ARCHITECTURE.md](ARCHITECTURE.md) Auth 段落「信任邊界重點」
-
-`detectSource()` 是 self-reported telemetry，不是 auth decision。daily-check 做 escalation 時只看 source 會被繞過。目前靠 path + error code 等 secondary signal 做 defense in depth，還算穩。
-
-長期若要收斂成單一驗證點需重設計：
-
-**選項 A**：在 scheduler / companion 端加 HMAC 簽章 header，middleware 驗簽才接受 `X-Tripline-Source` 宣告。優點可驗證、缺點金鑰管理成本。
-
-**選項 B**：改用 Cloudflare Service Token，不同 token 對應不同 source，`CF-Access-Client-Id` 直接是身份識別。優點 CF 原生支援、缺點綁 Cloudflare、Service Token 輪換有運維成本。
-
-**選項 C**：接受現況，在 daily-check escalation 邏輯加更多 secondary signals（URL 路徑、error code 分布、IP reputation 等），不靠 source 單點。成本最低、防禦層次多。
-
-建議先跑 `/office-hours` 探索威脅模型與業務影響，再 `/plan-eng-review` 選方案。**不適合塞進小 PR 直接做**。
 
 ---
 
