@@ -11,7 +11,11 @@ pois 表欄位（id, type, name, description, note, address, phone, email, websi
 
 ### 各 type 必填 / 建議欄位
 
-> ⚠️ pois master 與 trip_pois override 的欄位不同。checkout / breakfast_* / reservation* / must_buy 是 **trip_pois 欄位**，PATCH /pois/:id 不接受。
+> ⚠️ **v2.29.0 (migration 0060-0062)**：`trip_pois` 整表 DROPPED。所有 POI 資料現在分兩處：
+> - **`pois`（master）** — 客觀屬性（rating / hours / price / address / phone / place_id / hours / status）
+> - **`trip_entry_pois`（junction, entry × poi M:N）** — entry-level metadata（description / note / reservation / reservation_url）。`sort_order=1` 是 master，`sort_order > 1` 是 alternate
+> - **`trip_days.hotel_poi_id`（FK → pois）** — 飯店（每 day 一筆，透過 PUT /days/:num 寫入）
+> - 舊欄位 `checkout / breakfast_included / breakfast_note / must_buy / context / sort_order(top-level)` 全部 DROPPED
 
 **pois master（PATCH /pois/:id 可修改）：**
 
@@ -25,47 +29,55 @@ pois 表欄位（id, type, name, description, note, address, phone, email, websi
 | transport | name | description, hours |
 | activity | name, rating, hours | description, phone, website |
 
-> ⚠️ **2026-05-10 (migration 0054)**：`price` 欄位從 `trip_pois` 移到 `pois` master。語意：餐廳定價是客觀屬性（不會因 trip 而異），跟 rating/address/phone 同列。寫入路徑：`POST /trip-pois` body 帶 `price` 會寫進 `pois.price`（透過 findOrCreatePoi）；`PATCH /pois/:id` 直接接受 `price`。`PATCH /trip-pois/:tpid` 帶 `price` 會被 `POI_MASTER_ONLY_FIELDS` dispatch 到 pois。讀取路徑：v2.25.4 dual-read（`pois.price ?? trip_pois.price`）；migration 0055 後改純 `pois.price`。
+> ⚠️ **客觀屬性 (hours / price / rating / address / phone / hours)** 一律寫 `pois` master。新增 POI 走 `findOrCreatePoi` 自動寫；既有 POI 補資料走 `POST /api/pois/{id}/enrich`（首選），或 `PATCH /api/pois/{id}` 手動覆寫。
 
-> ⚠️ **2026-05-10 (migration 0055)**：`hours` 欄位從 `trip_pois` 移除（DROP COLUMN），純 `pois.hours`。語意：營業時間是 POI 客觀屬性。寫入：`findOrCreatePoi` 接受 hours；`PATCH /pois/:id` 直接接受；`PATCH /trip-pois/:tpid` 帶 hours auto-dispatch 到 pois。Place Details API `weekday_descriptions` 已含**全週時段 + 公休日**（例「星期三: 休息」），不需額外處理定休日欄位。
+**trip_entry_pois override（entry-level metadata）：**
 
-**trip_pois override（PATCH /trip-pois/:tpid 可修改）：**
+| 欄位 | 寫入路徑 | 說明 |
+|------|---------|------|
+| description | POST /entries/:eid/trip-pois \| POST /alternates | entry-level POI 描述（覆蓋 pois.description）|
+| note | 同上 | entry-level note |
+| reservation | 同上 | 餐廳預訂號 / 連結 |
+| reservation_url | 同上 | 預訂頁面 URL |
+| sort_order | 自動 assign（max + 1 = alternate）| 1 = master，> 1 = alternate；改 master 走 `PATCH /entries/:eid/master`、重排走 `PATCH /entries/:eid/alternates/reorder` |
 
-| type | 可覆寫欄位 |
-|------|-----------|
-| hotel | description, note, checkout, breakfast_included, breakfast_note |
-| restaurant | description, note, reservation, reservation_url |
-| shopping | description, note, must_buy |
+> ⚠️ **v2.29.0 後沒有 PATCH /trip-pois/:tpid 這個 endpoint。** 更新 alternate metadata（description / note / reservation）目前需 DELETE + POST 重建 — 若有需要可加 PATCH endpoint。
 
 pois.type 允許值：`hotel`, `restaurant`, `shopping`, `parking`, `attraction`, `transport`, `activity`, `other`（v2.1.2.0+ 納入 `activity`）
 
-### Phase 2 POI Unification：timeline entry 的 POI master（v2.1.2.0+）
+### Entry × POI canonical 結構（v2.29.0）
 
-每個 timeline entry 都會對應一筆 pois master，透過 `trip_entries.poi_id` FK 關聯。PUT /days/:num 與 POST /entries 會自動 find-or-create。
+每個 timeline entry 透過 `trip_entry_pois` junction table 掛 1 個 master (sort_order=1) + N 個 alternates (sort_order > 1)。
 
-- `poi_type`（body 欄位，選填）：決定這個 entry 的 POI 屬於哪一類。**預設 `attraction`**。
-  - `transport`：機場、車站、港口、碼頭（`title` 含「機場 / 空港 / 港 / 碼頭 / 站 / 駅 / airport / station / port」時必傳）
-  - `activity`：需預訂的體驗活動（浮潛、玉泉洞、鳳梨園、工作坊等，有 reservation 且耗時 > 1h）
-  - `attraction`：一般景點（寺廟、公園、城堡、海灘、觀景台）
-- 其餘欄位（`mapcode`, `lat`, `lng`, `rating`, `description`）會流進 pois master，由 find-or-create 用 `UNIQUE(name, type)` 去重（同 name + type 共享同一筆 pois row）。
-- PATCH /entries/:eid 可傳 `poi_id` 重新指向既有 POI master（例如統一兩個 entry 用同 POI）。
+- 建 entry + 第一個 POI：`POST /api/trips/:id/days/:num/entries`（body 帶 `poi: { name, type, ... }` 或省略走純 title）
+- 後續加 POI 到既有 entry：`POST /api/trips/:id/entries/:eid/trip-pois`（legacy name kept；backend 寫 trip_entry_pois as alternate）或 `POST /api/trips/:id/entries/:eid/alternates`
+- 變更 master：`PATCH /api/trips/:id/entries/:eid/master` body `{ poiId, entryPoisVersion? }`
+- 從搜尋結果 find-or-create master：`PUT /api/trips/:id/entries/:eid/poi-id` body `{ name, lat, lng, ... }`
+- 刪 alternate：`DELETE /api/trips/:id/entries/:eid/alternates/:poiId?entryPoisVersion=N`
+- 重排 alternates：`PATCH /api/trips/:id/entries/:eid/alternates/reorder` body `{ order: [poiId, poiId, ...], entryPoisVersion? }`
+
+OCC token `entryPoisVersion`（integer counter on `trip_entries.entry_pois_version`，migration 0058）— mutating endpoint 都接受並 bump；GET 也回。Cross-tab swap mismatch → `409 STALE_ENTRY`，client refetch。
 
 ### 資料所有權
 
-- `pois` = AI 維護的 master 資料（rating, address, hours, price 等客觀資訊）
-- `trip_pois` = 使用者可覆寫（description, note, checkout 等主觀/行程相關欄位）
-- COALESCE convention：trip_pois 欄位 NULL = 繼承 pois master
+- `pois` = AI 維護的 master（rating / address / hours / phone / price 等客觀資訊）
+- `trip_entry_pois` = entry-level metadata（description / note / reservation / reservation_url）— 同 POI 在不同 entry 可有不同筆記
+- `trip_days.hotel_poi_id` = 飯店 FK，描述性欄位（checkout / breakfast 已 DROP，restaurants 餐廳 description 改 entry-level）
 
 ### API 操作端點
 
 | 操作 | 端點 | 說明 |
 |------|------|------|
-| 新增 entry | `POST /api/trips/{id}/days/{dayNum}/entries` | 必填 `title`，選填 `sort_order`（省略 append 到最後） |
-| 新增 POI 到 entry | `POST /api/trips/{id}/entries/{eid}/trip-pois` | 餐廳、購物統一端點 |
-| 修改 trip_pois | `PATCH /api/trips/{id}/trip-pois/{tpid}` | 覆寫欄位；POI master 欄位（hours/price 等）auto-dispatch 到 pois |
-| 刪除 trip_pois | `DELETE /api/trips/{id}/trip-pois/{tpid}` | 移除關聯 |
-| 修改 pois master | `PATCH /api/pois/{id}` | admin 或帶 `tripId` 的有權限使用者 |
-| 刪除 pois master | `DELETE /api/pois/{id}` | admin only，會一併刪除所有關聯 trip_pois |
+| 新增 entry | `POST /api/trips/{id}/days/{dayNum}/entries` | 必填 `title`，選填 `sort_order`（省略 append 到最後）+ `poi: {...}`（建 entry 同時加 master POI）|
+| 新增 alternate POI（推薦）| `POST /api/trips/{id}/entries/{eid}/alternates` | body 帶 `{ poiId }`（既有 POI）或 `{ name, lat, lng, type?, ... }`（find-or-create）+ 選 `entryPoisVersion` |
+| 新增 alternate POI（legacy endpoint）| `POST /api/trips/{id}/entries/{eid}/trip-pois` | v2.29 後 backend 寫 trip_entry_pois，endpoint 名稱保留向後相容 |
+| 變更 master | `PATCH /api/trips/{id}/entries/{eid}/master` | body `{ poiId, entryPoisVersion? }`；POI 必須已是 alternate 或新 POI |
+| Search-driven master swap | `PUT /api/trips/{id}/entries/{eid}/poi-id` | body 帶 `{ poiId }` 或 `{ name, lat, lng, ... }` find-or-create |
+| 刪 alternate | `DELETE /api/trips/{id}/entries/{eid}/alternates/{poiId}?entryPoisVersion=N` | 不能刪 master（刪 entry 整筆走 DELETE /entries/:eid）|
+| 重排 alternates | `PATCH /api/trips/{id}/entries/{eid}/alternates/reorder` | body `{ order: [poiId,...], entryPoisVersion? }` |
+| 飯店設定 / 變更 | `PUT /api/trips/{id}/days/{num}` body `hotel: { name, lat, lng, ... }` | findOrCreatePoi 後寫 `trip_days.hotel_poi_id` |
+| 修改 pois master | `PATCH /api/pois/{id}` | admin 或帶 `tripId` 的有權限使用者 — 接受 hours / price / rating / address / phone 等客觀欄位 |
+| 刪除 pois master | `DELETE /api/pois/{id}` | admin only — ON DELETE RESTRICT，被 trip_days.hotel_poi_id / trip_entry_pois 引用時 fail |
 | **POI 補資料 / refresh（首選）** | `POST /api/pois/{id}/enrich` | **backend 直接打 Google Place Details API，自動寫 rating/address/phone/hours + business_status lifecycle。優先用此 endpoint 而非手動 PATCH。** |
 
 ## POI 補資料策略（migration 0051+ 後 v2.23.0）
