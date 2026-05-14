@@ -178,6 +178,112 @@ describe('ChangePoiPage — alternate mode', () => {
   });
 });
 
+describe('ChangePoiPage — entryPoisVersion OCC token', () => {
+  it('GET /entries/:eid on mount → entryPoisVersion attached to POST /alternates body', async () => {
+    (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url === '/trips/okinawa-2026/entries/42') {
+        return Promise.resolve({ entryPoisVersion: '7' });
+      }
+      return Promise.resolve([]);
+    });
+    mockPoiSearch.results = [{
+      place_id: 'ChIJ-occ',
+      name: 'OCC 餐廳',
+      address: '沖繩',
+      lat: 26.1,
+      lng: 127.6,
+      category: 'restaurant',
+      country: 'JP',
+      rating: 4.0,
+    }];
+    renderPage();
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/trips/okinawa-2026/entries/42');
+    });
+
+    fireEvent.click(screen.getByTestId('change-poi-search-item-ChIJ-occ'));
+    fireEvent.click(screen.getByTestId('change-poi-submit'));
+
+    await waitFor(() => {
+      expect(apiFetchRaw).toHaveBeenCalled();
+    });
+    const call = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    const body = JSON.parse((call[1] as RequestInit).body as string);
+    expect(body.entryPoisVersion).toBe('7');
+  });
+
+  it('alternate mode POST 409 DUPLICATE_POI → 「此景點已存在」error', async () => {
+    (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url === '/trips/okinawa-2026/entries/42') {
+        return Promise.resolve({ entryPoisVersion: '5' });
+      }
+      return Promise.resolve([]);
+    });
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 409,
+      text: () => Promise.resolve('{"error":{"code":"DUPLICATE_POI","message":"此景點已存在於 stop 中"}}'),
+    } as unknown as Response);
+    mockPoiSearch.results = [{
+      place_id: 'ChIJ-dup',
+      name: 'Dup',
+      address: '沖繩',
+      lat: 26.1,
+      lng: 127.6,
+      category: 'restaurant',
+      country: 'JP',
+      rating: 4.0,
+    }];
+    renderPage();
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/trips/okinawa-2026/entries/42'));
+
+    fireEvent.click(screen.getByTestId('change-poi-search-item-ChIJ-dup'));
+    fireEvent.click(screen.getByTestId('change-poi-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByText('此景點已存在於 stop 中')).toBeTruthy();
+    });
+  });
+
+  it('master mode PUT /poi-id 409 → user-friendly STALE_ENTRY error', async () => {
+    (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url === '/trips/okinawa-2026/entries/42') {
+        return Promise.resolve({ entryPoisVersion: '3' });
+      }
+      return Promise.resolve([]);
+    });
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 409,
+      text: () => Promise.resolve('{"error":"STALE_ENTRY"}'),
+    } as unknown as Response);
+    mockPoiSearch.results = [{
+      place_id: 'ChIJ-stale',
+      name: 'Stale',
+      address: '沖繩',
+      lat: 26.1,
+      lng: 127.6,
+      category: 'restaurant',
+      country: 'JP',
+      rating: 4.0,
+    }];
+    renderPage('/trip/okinawa-2026/stop/42/change-poi');
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/trips/okinawa-2026/entries/42');
+    });
+
+    fireEvent.click(screen.getByTestId('change-poi-search-item-ChIJ-stale'));
+    fireEvent.click(screen.getByTestId('change-poi-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByText('資料已被其他操作更新，請重新整理')).toBeTruthy();
+    });
+  });
+});
+
 describe('ChangePoiPage — master search mode', () => {
   it('normalises wrapped /api/poi-search results and keeps the search input editable', () => {
     renderPage('/trip/okinawa-2026/stop/42/change-poi');
