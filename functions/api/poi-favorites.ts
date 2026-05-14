@@ -63,12 +63,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                       )
                     )
                   UNION
-                  SELECT t.id AS trip_id, t.name AS trip_name, td.day_num, td.date AS day_date, tp.entry_id
-                  FROM trip_pois tp
-                  JOIN trips t ON t.id = tp.trip_id
-                  LEFT JOIN trip_days td ON td.id = tp.day_id
-                  WHERE tp.poi_id = pf.poi_id
-                    AND tp.context IN ('hotel', 'shopping')
+                  -- v2.29.0: trip_pois DROPPED. Hotel usage 從 trip_days.hotel_poi_id 取。
+                  SELECT t.id AS trip_id, t.name AS trip_name, td.day_num, td.date AS day_date, NULL AS entry_id
+                  FROM trip_days td
+                  JOIN trips t ON t.id = td.trip_id
+                  WHERE td.hotel_poi_id = pf.poi_id
                     AND (
                       t.owner_user_id = ?1
                       OR EXISTS (

@@ -3,23 +3,20 @@ import { AppError } from '../../../../_errors';
 import { json, getAuth } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
-const ALLOWED_TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois', 'poi_relations', 'trip_docs', 'trip_doc_entries', 'trip_requests', 'trip_permissions'] as const;
+// v2.29.0: trip_pois 整表 DROPPED。trip_entries.{time, poi_id, travel_*} 8 cols +
+// trip_destinations.{osm_id, osm_type} 2 cols 同步 DROPPED。
+// 指向已 drop table / cols 的歷史 audit row rollback 會 hard-fail with clear error
+// ('無效的表格名稱' / '無效的欄位')，admin 看到時知道「這個 audit 是 cutover 前的，不能 rollback」。
+const ALLOWED_TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'poi_relations', 'trip_docs', 'trip_doc_entries', 'trip_requests', 'trip_permissions'] as const;
 type AllowedTable = typeof ALLOWED_TABLES[number];
 
-// V2 cutover (migration 0047): trips.owner dropped → owner_user_id; trip_permissions.email
-// dropped → user_id only。Pre-cutover audit rows referencing 'owner' / 'email' columns
-// 不可 rollback（rewriteable via human migration; 此處 surface clear 失敗）。
 const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
-  trips:            ['id', 'name', 'owner_user_id', 'title', 'description', 'countries', 'published', 'data_source', 'default_travel_mode', 'lang', 'created_at', 'updated_at'],
-  trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'title', 'updated_at'],
-  // Migration 0056 (v2.26.0): start_time / end_time 拆分自 time。time 仍存在
-  // (dual-write 觀察期)，rollback 對舊 audit row 仍能還原舊行為。
-  trip_entries:     ['id', 'day_id', 'sort_order', 'time', 'start_time', 'end_time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min', 'travel_distance_m', 'travel_computed_at', 'travel_source', 'poi_id', 'updated_at'],
-  pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'mapcode', 'lat', 'lng', 'country', 'source', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at', 'created_at', 'updated_at'],
-  // Migration 0055 (v2.25.5): hours dropped from trip_pois (moved to pois master).
-  // Migration 0054 (v2.25.4) note: price still listed here for legacy audit rows;
-  // trip_pois.price drop pending future migration.
-  trip_pois:        ['id', 'trip_id', 'poi_id', 'context', 'day_id', 'entry_id', 'sort_order', 'description', 'note', 'checkout', 'breakfast_included', 'breakfast_note', 'price', 'reservation', 'reservation_url', 'must_buy', 'source', 'created_at', 'updated_at'],
+  trips:            ['id', 'name', 'owner_user_id', 'title', 'description', 'countries', 'published', 'data_source', 'default_travel_mode', 'lang', 'self_drive_enabled', 'self_drive_pickup_at', 'self_drive_return_at', 'self_drive_pickup_location', 'self_drive_return_location', 'created_at', 'updated_at'],
+  // v2.29.0: hotel_poi_id ADDED (migration 0060).
+  trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'title', 'hotel_poi_id', 'updated_at'],
+  // v2.29.0: time / poi_id / travel_* (6 cols) DROPPED (migration 0062).
+  trip_entries:     ['id', 'day_id', 'sort_order', 'start_time', 'end_time', 'title', 'description', 'source', 'note', 'entry_pois_version', 'updated_at'],
+  pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'mapcode', 'lat', 'lng', 'country', 'source', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at', 'price', 'photos', 'created_at', 'updated_at'],
   poi_relations:    ['id', 'poi_id', 'related_poi_id', 'relation_type', 'note'],
   trip_docs:     ['id', 'trip_id', 'doc_type', 'title', 'updated_at'],
   trip_doc_entries: ['id', 'doc_id', 'sort_order', 'section', 'title', 'content', 'updated_at'],

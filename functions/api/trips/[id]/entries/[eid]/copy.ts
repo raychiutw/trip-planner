@@ -90,7 +90,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     )
     .bind(eid)
     .all<SourceEntryPoi>()).results ?? [];
-  const copiedMasterPoiId = sourceStopPois.find((row) => row.sort_order === 1)?.poi_id ?? null;
 
   // sortOrder 預設追加到目標 day 末尾
   let sortOrder = body.sortOrder;
@@ -102,9 +101,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     sortOrder = (maxRow?.maxSort ?? -1) + 1;
   }
 
-  const overrideTime = body.time !== undefined ? body.time : source.time;
-  // v2.26.0 (migration 0056): 同步寫 start_time/end_time。若 body.time 覆寫，
-  // 用 _time.ts parseTime 解析；否則 copy source 的 start_time/end_time。
+  // v2.29.0: trip_entries.{time, poi_id, travel_*} DROPPED. copy 只搬 start_time/end_time。
+  // body.time legacy 入口仍接受（parseTime 拆 start/end），但 schema 不再寫 time。
   let copyStartTime: string | null;
   let copyEndTime: string | null;
   if (body.time !== undefined) {
@@ -116,30 +114,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     copyEndTime = (source.end_time as string | null) ?? null;
   }
 
-  // INSERT new entry — copy 所有 source 欄位除了 id、day_id、sort_order
+  // INSERT new entry — copy 所有 source 欄位除了 id、day_id、sort_order、time/poi_id/travel_*
   let newRow;
   try {
     newRow = await db
       .prepare(
         `INSERT INTO trip_entries
-          (day_id, sort_order, time, start_time, end_time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id, entry_pois_version)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (day_id, sort_order, start_time, end_time, title, description, source, note, entry_pois_version)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING *`,
       )
       .bind(
         targetDayId,
         sortOrder,
-        overrideTime,
         copyStartTime,
         copyEndTime,
         source.title,
         source.description,
         source.source,
         source.note,
-        source.travel_type,
-        source.travel_desc,
-        source.travel_min,
-        copiedMasterPoiId,
         sourceStopPois.length > 0 ? 1 : 0,
       )
       .first() as Record<string, unknown> | null;

@@ -89,18 +89,9 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const oldRow = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first();
   if (!oldRow) throw new AppError('DATA_NOT_FOUND', '找不到此 POI');
 
-  // 先刪除所有關聯的 trip_pois
-  const relatedTripPois = await db.prepare(
-    'SELECT id, trip_id FROM trip_pois WHERE poi_id = ?'
-  ).bind(poiId).all<{ id: number; trip_id: string }>();
-
-  if (relatedTripPois.results.length > 0) {
-    await db.prepare('DELETE FROM trip_pois WHERE poi_id = ?').bind(poiId).run();
-  }
-
-  // trip_entries.poi_id is a write-through mirror with a FK; clear it before
-  // deleting the master POI.
-  await db.prepare('UPDATE trip_entries SET poi_id = NULL WHERE poi_id = ?').bind(poiId).run();
+  // v2.29.0: trip_pois DROPPED, trip_entries.poi_id DROPPED. 只剩 trip_days.hotel_poi_id
+  // 需要 cascade clean (SQLite ALTER TABLE ADD COLUMN 不 enforce FK)。
+  await db.prepare('UPDATE trip_days SET hotel_poi_id = NULL WHERE hotel_poi_id = ?').bind(poiId).run();
 
   // trip_entry_pois.poi_id REFERENCES pois(id) ON DELETE RESTRICT, so canonical
   // entry POI rows must be deleted before the POI master.
@@ -127,7 +118,6 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
   return json({
     ok: true,
-    deleted_trip_pois: relatedTripPois.results.length,
     deleted_trip_entry_pois: deletedJunctionCount,
   });
 };

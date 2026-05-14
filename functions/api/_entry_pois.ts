@@ -10,8 +10,7 @@
  * 1. **sort_order=1 即 master**：UNIQUE (entry_id, sort_order) 保證單一 master
  * 2. **At-least-one master**：每 entry 必有 sort_order=1 row（backend enforce）
  * 3. **UNIQUE (entry_id, poi_id)**：同 POI 不能在同 entry 出現兩次
- * 4. **trip_entries.poi_id dual-write 過渡期**：Phase 1（v2.27.0）setMaster() 同步
- *    寫兩處；Phase 2（v2.27.1）DROP COLUMN 後改回單寫
+ * 4. ~~trip_entries.poi_id dual-write~~ — v2.29.0 DROP COLUMN，setMaster() 只寫 trip_entry_pois
  *
  * ## OCC（樂觀並發控制）
  *
@@ -169,15 +168,13 @@ export async function setMaster(
   const maxOrder = maxRow?.max_order ?? 0;
   const tempOrder = maxOrder + 100;
 
-  // No-op: already master. Phase 1 drift repair (round 4 adv-C2) — UPDATE trip_entries.poi_id
-  // + bump updated_at to clear any drift between trip_entries and trip_entry_pois.
-  // round 5 fix: also invalidate segments cache so a drift repair doesn't leave a stale
-  // travel time in TimelineRail. NO entry_pois_version bump — semantically nothing changed
-  // for multi-POI clients, so their tokens stay valid.
+  // No-op: already master. v2.29.0: trip_entries.poi_id DROPPED — drift repair 簡化為
+  // bump updated_at + invalidate segments cache。NO entry_pois_version bump — 語意上
+  // 對 multi-POI clients 沒變化，token 維持。
   if (oldMasterPoiId === newMasterPoiId) {
     const now = nowMs();
     await db.batch([
-      db.prepare('UPDATE trip_entries SET poi_id = ?, updated_at = ? WHERE id = ?').bind(newMasterPoiId, now, entryId),
+      db.prepare('UPDATE trip_entries SET updated_at = ? WHERE id = ?').bind(now, entryId),
       db.prepare(`UPDATE trip_segments SET computed_at = NULL, updated_at = ? WHERE from_entry_id = ? OR to_entry_id = ?`).bind(Date.now(), entryId, entryId),
     ]);
     const version = await getEntryPoisVersion(db, entryId);
@@ -238,13 +235,13 @@ export async function setMaster(
     }
   }
 
-  // Phase 1 dual-write: trip_entries.poi_id 同步 + bump entry_pois_version (round 5 fix —
-  // dedicated counter, only multi-POI helpers bump it, so PATCH /entries note edit doesn't
+  // v2.29.0: trip_entries.poi_id DROPPED, just bump updated_at + entry_pois_version (round
+  // 5 dedicated counter, only multi-POI helpers bump it, so PATCH /entries note edit doesn't
   // invalidate the OCC token).
   statements.push(
     db
-      .prepare(`UPDATE trip_entries SET poi_id = ?, updated_at = ?, entry_pois_version = entry_pois_version + 1 WHERE id = ?`)
-      .bind(newMasterPoiId, now, entryId),
+      .prepare(`UPDATE trip_entries SET updated_at = ?, entry_pois_version = entry_pois_version + 1 WHERE id = ?`)
+      .bind(now, entryId),
   );
 
   // Mark adjacent segments stale（per Codex #3）

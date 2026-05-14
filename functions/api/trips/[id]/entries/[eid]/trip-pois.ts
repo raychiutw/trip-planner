@@ -1,7 +1,10 @@
 /**
  * POST /api/trips/:id/entries/:eid/trip-pois — 新增 POI 到 entry
- * Shopping remains contextual trip_pois. Entry choices are canonical
- * trip_entry_pois rows.
+ *
+ * v2.29.0: trip_pois 整表 DROPPED。不論 POI type（shopping / restaurant / attraction），
+ * 全部寫 trip_entry_pois as alternate (sort_order = max + 1)。
+ *
+ * `body.must_buy`、`body.context` legacy field 不再被處理（schema 已無對應）。
  */
 
 import { logAudit } from '../../../../_audit';
@@ -30,7 +33,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   type AddPoiBody = {
     name: string;
     type: 'restaurant' | 'shopping' | 'attraction' | 'activity' | 'transport' | 'other';
-    context?: 'shopping';
     description?: string;
     note?: string;
     hours?: string;
@@ -39,11 +41,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     mapcode?: string;
     lat?: number;
     lng?: number;
-    // Type-specific
     price?: string;
     reservation?: string;
     reservation_url?: string;
-    must_buy?: string;
   };
 
   const body = await parseJsonBody<AddPoiBody>(context.request);
@@ -52,13 +52,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', '缺少必要欄位：name, type');
   }
 
-  // Find day_id from entry
-  const entry = await db.prepare('SELECT day_id FROM trip_entries WHERE id = ?').bind(entryId).first<{ day_id: number }>();
-  if (!entry) throw new AppError('DATA_NOT_FOUND', '找不到此 entry');
-
-  // Find or create POI master (shared helper, race-safe with UNIQUE index)
-  // Migration 0054 (v2.25.4): price 是 pois master 欄位。
-  // Migration 0055 (v2.25.5): hours 同樣是 pois master，跟著 findOrCreatePoi 寫入。
+  // Find or create POI master
+  // pois.{price, hours} 是客觀屬性，由 findOrCreatePoi 寫入。
   const poiId = await findOrCreatePoi(db, {
     name: body.name, type: body.type,
     description: body.description as string, hours: body.hours as string,
@@ -68,33 +63,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     price: body.price as string,
   });
 
-  if (body.type !== 'shopping') {
-    const maxSort = await db
-      .prepare('SELECT COALESCE(MAX(sort_order), 0) AS max_sort FROM trip_entry_pois WHERE entry_id = ?')
-      .bind(entryId)
-      .first<{ max_sort: number }>();
-    const sortOrder = (maxSort?.max_sort ?? 0) + 1;
-    const now = new Date().toISOString();
-    const result = await db
+  // v2.29.0: 全 type 統一寫 trip_entry_pois（sort_order = max+1 = alternate）。
+  // sort_order subquery atomic with INSERT 縮 race window — concurrent POST 同 entry
+  // 由 SQLite 單 writer + UNIQUE(entry_id, sort_order) catch 兜底。
+  const now = new Date().toISOString();
+  let result;
+  try {
+    result = await db
       .prepare(
         `INSERT INTO trip_entry_pois (
-           entry_id,
-           poi_id,
-           sort_order,
-           added_at,
-           updated_at,
-           description,
-           note,
-           reservation,
-           reservation_url
+           entry_id, poi_id, sort_order, added_at, updated_at,
+           description, note, reservation, reservation_url
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES (
+           ?, ?,
+           (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM trip_entry_pois WHERE entry_id = ?),
+           ?, ?, ?, ?, ?, ?
+         )
          RETURNING *`,
       )
       .bind(
         entryId,
         poiId,
-        sortOrder,
+        entryId,
         now,
         now,
         body.description ?? null,
@@ -103,39 +94,24 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         body.reservation_url ?? null,
       )
       .first();
-
-    const updates = [
-      db.prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?').bind(entryId),
-    ];
-    if (sortOrder === 1) {
-      updates.push(db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(poiId, entryId));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('UNIQUE') && msg.includes('entry_id, poi_id')) {
+      throw new AppError('DATA_CONFLICT', '此 POI 已存在於該 entry');
     }
-    await db.batch(updates);
-
-    await logAudit(db, {
-      tripId: id, tableName: 'trip_entry_pois', recordId: (result as { id: number }).id,
-      action: 'insert', changedBy: auth.email,
-      diffJson: JSON.stringify(body),
-    });
-
-    return json(result, 201);
+    if (msg.includes('UNIQUE') && msg.includes('sort_order')) {
+      throw new AppError('SYS_DB_ERROR', '同時新增 POI 衝突，請稍後重試');
+    }
+    throw err;
   }
 
-  const maxSort = await db.prepare(
-    "SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM trip_pois WHERE entry_id = ? AND context = 'shopping'"
-  ).bind(entryId).first<{ max_sort: number }>();
-
-  const result = await db.prepare(
-    `INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, description, note, must_buy) VALUES (?, ?, 'shopping', ?, ?, ?, ?, ?, ?) RETURNING *`
-  ).bind(
-    poiId, id, entryId, entry.day_id,
-    (maxSort?.max_sort ?? -1) + 1,
-    body.description ?? null, body.note ?? null,
-    body.must_buy ?? null,
-  ).first();
+  await db
+    .prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?')
+    .bind(entryId)
+    .run();
 
   await logAudit(db, {
-    tripId: id, tableName: 'trip_pois', recordId: (result as { id: number }).id,
+    tripId: id, tableName: 'trip_entry_pois', recordId: (result as { id: number }).id,
     action: 'insert', changedBy: auth.email,
     diffJson: JSON.stringify(body),
   });
