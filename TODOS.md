@@ -24,7 +24,7 @@
 
 **Day-level OCC token on PUT /days/:num** — `[v2.30.x PR #538 backend 已完成 → 見 Completed]`
 
-Frontend wire 留 follow-up：BulkEditDayPage / EditDayPage 帶 expectedDayVersion，接 409 STALE_ENTRY 提示 refetch。**Priority**: P3。
+~~Frontend wire 留 follow-up：BulkEditDayPage / EditDayPage 帶 expectedDayVersion~~ — **N/A**：SPA 沒有 BulkEditDayPage / EditDayPage 這兩個頁面。PUT /days/:num 唯一 caller 是 `tp-create` / tp-modify-* CLI skills（sequential CLI session，無 concurrent edit race）。OCC token 已 backend-ready；未來真有 day-level UI 時再帶。
 
 **refreshEntryPois 3-way cascade UX** — `[v2.30.x PR #538 已完成 partial → 見 Completed]`
 
