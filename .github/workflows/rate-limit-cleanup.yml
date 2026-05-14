@@ -1,0 +1,70 @@
+name: Cleanup — rate_limit_buckets
+
+# Hourly cleanup of expired unlocked rows in `rate_limit_buckets` (migration
+# 0035, V2-P6 brute-force defence)。Promise made in 0035 註解：
+#
+#   V2-P6 cron job 每小時跑 DELETE WHERE locked_until IS NULL AND
+#   window_start + 1h < now (清過期 unlocked rows 避無限長)。
+#
+# Cloudflare Pages Functions 不原生支援 `functions/_scheduled.ts` cron handler，
+# 採用與 `deploy.yml` 一致的 pattern：GitHub Actions schedule + `wrangler d1
+# execute --remote`，免新增 Workers code。
+#
+# Idempotent: DELETE WHERE 過期 row → 重跑 0 effect。
+#
+# Cutoff: `window_start + 3600000 < now_ms`（1h），對齊 0035 註解，覆蓋最長
+# `windowMs=1h`（SIGNUP / FORGOT_PASSWORD）。鎖中 rows（`locked_until IS NOT NULL`
+# 且 `> now`）保留，防誤清正在 throttle 的攻擊 bucket。
+
+on:
+  schedule:
+    # 每小時 00 分跑（avoid noon/midnight peak）。
+    - cron: '0 * * * *'
+
+  # Manual trigger for ad-hoc / first-deploy verify。
+  workflow_dispatch:
+
+# 防同時兩個 cron run 競爭。cancel-in-progress: false → 排隊不殺正在跑的（DELETE 是
+# 單 statement、無 mid-state 風險，但 belt-and-suspenders 比照 deploy.yml）。
+concurrency:
+  group: d1-rate-limit-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Delete expired unlocked rows
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Delete expired rows
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          npx wrangler d1 execute trip-planner-db --remote \
+            --command "DELETE FROM rate_limit_buckets WHERE locked_until IS NULL AND window_start + 3600000 < (unixepoch() * 1000)"
+
+      # Fail-loud：與 deploy.yml 一致。cron 默默 fail 等於沒設，會回到原本 TODO
+      # 的 index bloat 狀態。Telegram 立即看到比 daily-check 晚一天好。
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          curl -sf -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\":\"${TELEGRAM_CHAT_ID}\",\"text\":\"🚨 rate-limit cleanup cron FAILED\\nRun: ${RUN_URL}\"}" \
+            || true
