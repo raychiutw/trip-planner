@@ -519,6 +519,15 @@ function poiMeta(address: string | null | undefined, category: string | null | u
   return primary || category || '景點';
 }
 
+function parseErrorCode(text: string): string | null {
+  try {
+    const parsed = JSON.parse(text) as { error?: { code?: string } };
+    return parsed.error?.code ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function ChangePoiPage() {
   const { tripId, entryId: entryIdParam } = useParams<{ tripId: string; entryId: string }>();
   const entryId = Number(entryIdParam);
@@ -545,6 +554,10 @@ export default function ChangePoiPage() {
   const [favorites, setFavorites] = useState<PoiFavorite[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // v2.27.0 OCC token: GET on mount, attach to PUT /poi-id + POST /alternates body so
+  // concurrent multi-POI mutation (other tab swap / EditEntryPage) flips us to 409
+  // STALE_ENTRY instead of silently overwriting.
+  const [entryPoisVersion, setEntryPoisVersion] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const { results: searchResults, searching } = usePoiSearch({
@@ -602,15 +615,33 @@ export default function ChangePoiPage() {
     return () => { cancelled = true; };
   }, [tab, favorites]);
 
+  useEffect(() => {
+    if (!tripId || !Number.isInteger(entryId)) return;
+    let cancelled = false;
+    apiFetch<{ entryPoisVersion?: string | number | null }>(
+      `/trips/${encodeURIComponent(tripId)}/entries/${entryId}`,
+    )
+      .then((data) => {
+        if (cancelled) return;
+        if (data.entryPoisVersion != null) setEntryPoisVersion(String(data.entryPoisVersion));
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [tripId, entryId]);
+
   const handleSubmit = useCallback(async () => {
     if (!selected || !tripId || !Number.isInteger(entryId) || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
+      const occ = entryPoisVersion != null ? { entryPoisVersion } : {};
       if (mode === 'alternate') {
-        const body = selected.source === 'favorite' && selected.poiId
-          ? { poiId: selected.poiId }
-          : buildSearchPoiBody(selected);
+        const body = {
+          ...(selected.source === 'favorite' && selected.poiId
+            ? { poiId: selected.poiId }
+            : buildSearchPoiBody(selected)),
+          ...occ,
+        };
         const res = await apiFetchRaw(
           `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates`,
           {
@@ -621,6 +652,11 @@ export default function ChangePoiPage() {
         );
         if (!res.ok) {
           const text = await res.text();
+          if (res.status === 409) {
+            const code = parseErrorCode(text);
+            if (code === 'DUPLICATE_POI') throw new Error('此景點已存在於 stop 中');
+            throw new Error('資料已被其他操作更新，請重新整理');
+          }
           throw new Error(`加備選失敗 (${res.status}): ${text.slice(0, 200)}`);
         }
         window.dispatchEvent(new CustomEvent('tp-entry-updated', { detail: { tripId } }));
@@ -629,15 +665,21 @@ export default function ChangePoiPage() {
       }
 
       // master 模式（既有 PUT /poi-id 流程）
-      const body = selected.source === 'favorite' && selected.poiId
-        ? { poiId: selected.poiId }
-        : buildSearchPoiBody(selected);
+      const body = {
+        ...(selected.source === 'favorite' && selected.poiId
+          ? { poiId: selected.poiId }
+          : buildSearchPoiBody(selected)),
+        ...occ,
+      };
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/poi-id`, {
         method: 'PUT',
         body: JSON.stringify(body),
       });
       if (!res.ok) {
         const text = await res.text();
+        if (res.status === 409) {
+          throw new Error('資料已被其他操作更新，請重新整理');
+        }
         throw new Error(`PUT 失敗 (${res.status}): ${text.slice(0, 200)}`);
       }
       // fire-and-forget recompute current day（user 換 POI 後 distance/min 應更新）
@@ -650,7 +692,7 @@ export default function ChangePoiPage() {
       setError(err instanceof Error ? err.message : '置換景點失敗');
       setSubmitting(false);
     }
-  }, [selected, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody]);
+  }, [selected, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion]);
 
   const titleBarActions = useMemo(() => (
     <TitleBarPrimaryAction
