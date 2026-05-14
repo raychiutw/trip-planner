@@ -24,7 +24,7 @@
 
 **Day-level OCC token on PUT /days/:num** — `[v2.30.x PR #538 backend 已完成 → 見 Completed]`
 
-Frontend wire 留 follow-up：BulkEditDayPage / EditDayPage 帶 expectedDayVersion，接 409 STALE_ENTRY 提示 refetch。**Priority**: P3。
+~~Frontend wire 留 follow-up：BulkEditDayPage / EditDayPage 帶 expectedDayVersion~~ — **N/A**：SPA 沒有 BulkEditDayPage / EditDayPage 這兩個頁面。PUT /days/:num 唯一 caller 是 `tp-create` / tp-modify-* CLI skills（sequential CLI session，無 concurrent edit race）。OCC token 已 backend-ready；未來真有 day-level UI 時再帶。
 
 **refreshEntryPois 3-way cascade UX** — `[v2.30.x PR #538 已完成 partial → 見 Completed]`
 
@@ -188,21 +188,14 @@ Frontend wire 留 follow-up：BulkEditDayPage / EditDayPage 帶 expectedDayVersi
 
 ---
 
-## V2-P6 — rate_limit_buckets cleanup CRON 沒實作
-
-**Priority:** P3 — pre-existing tech debt（V2-P6 brute-force defence migration 0035），本 PR 未引入
-**Source:** `migrations/0035_rate_limit_buckets.sql:26-29` 註解
-**Symptom:** `migrations/0035` 註解承諾「V2-P6 cron job 每小時跑 DELETE WHERE locked_until IS NULL AND window_start + 1h < now」清過期 unlocked rows，但 cron 未在 repo 設定（`wrangler.toml [triggers]` 無 schedule）。`rate_limit_buckets` table 隨每個 unique bucket key（每個用過 POST 的 user / companion / IP）持續累積，long-running prod 會 index bloat。
-
-**Fix options:**
-- A) 加 `wrangler.toml [triggers] crons = ["0 * * * *"]` + `functions/_scheduled.ts` cleanup handler
-- B) opportunistic delete inside `bumpRateLimit`（1% probability `DELETE WHERE window_start+windowMs < ? AND locked_until IS NULL`）
-
-A 是標準做法但需 cron handler；B 簡單但 latency tail 可能受 1% 隨機影響。建議獨立 PR 處理。
-
----
-
 ## Completed
+
+### v2.30.2 — V2-P6 rate_limit_buckets cleanup cron
+
+**Priority:** P3
+**Completed:** v2.30.2 (2026-05-15)
+
+`migrations/0035` 註解承諾的 hourly cleanup cron 終於兌現。採 `deploy.yml` 既有 pattern（GitHub Actions schedule + `wrangler d1 execute --remote`），免新增 Workers code，繞開 Pages Functions 不原生支援 `functions/_scheduled.ts` 的限制。`.github/workflows/rate-limit-cleanup.yml` 每整點跑 `DELETE FROM rate_limit_buckets WHERE locked_until IS NULL AND window_start + 3600000 < (unixepoch() * 1000)`。鎖中 rows 保留。失敗 Telegram 即時告警。
 
 ### v2.30.x — P3 OCC quick wins (3 items)
 
