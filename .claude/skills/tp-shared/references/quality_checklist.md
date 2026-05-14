@@ -78,9 +78,9 @@
 | # | 嚴重度 | 問題 | 修正狀態 |
 |---|:---:|------|:---:|
 | D1 | 🔴 | tp-quality-rules R0 `travel.text` 應為 `travel.desc` | ✅ 已修正 |
-| D2 | 🔴 | tp-shared hotel 欄位混淆 pois master vs trip_pois | ✅ 已拆分兩張表格 |
+| D2 | 🔴 | tp-shared hotel 欄位混淆 pois master vs trip_pois | ✅ 已拆分兩張表格（v2.29.0 後 trip_pois DROPPED，飯店改 `trip_days.hotel_poi_id` FK，entry POI 改 `trip_entry_pois`）|
 | D3 | 🟡 | PATCH /entries/:eid travel 用 flat fields 未記載 | ✅ 已補註 |
-| D4 | 🟡 | POST /trip-pois 缺 context 欄位說明 | ✅ 已補 |
+| D4 | 🟡 | POST /trip-pois 缺 context 欄位說明 | ✅ 已補（後 v2.29.0：`context` 欄位 obsolete，`trip_pois` 表 DROPPED；endpoint 名稱保留但寫入 `trip_entry_pois`）|
 | D5 | 🟡 | tp-request 禁 PUT /days 但共用步驟未標註 | ✅ 已加標註 |
 | D6 | 🟢 | pois.type 允許值未列出 | ✅ 已補 7 個值 |
 
