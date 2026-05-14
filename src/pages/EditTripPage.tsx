@@ -35,6 +35,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetchRaw } from '../lib/apiClient';
+import { EVENT } from '../lib/events';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -542,7 +543,7 @@ export default function EditTripPage() {
       }
       showToast('行程已更新', 'success');
       // 廣播更新事件給 listening pages (ActiveTrip / TripsList)
-      window.dispatchEvent(new CustomEvent('tp-trip-updated', { detail: { tripId } }));
+      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
       navigate(routes.tripsSelected(tripId));
     } catch (err) {
       setError(err instanceof Error ? err.message : '儲存變更失敗');

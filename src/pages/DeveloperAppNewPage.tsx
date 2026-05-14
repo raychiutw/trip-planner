@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
+import { EVENT } from '../lib/events';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import TitleBar from '../components/shell/TitleBar';
@@ -271,7 +272,7 @@ export default function DeveloperAppNewPage() {
     // Notify DeveloperAppsPage to refetch — listener 跑 GET /api/dev/apps 拿
     // 真實 server row。不傳 detail (PR #452 client-side fabricate row 有 race +
     // 假造 created_at 不可靠，改 always refetch)。
-    window.dispatchEvent(new CustomEvent('tp-developer-app-created'));
+    window.dispatchEvent(new CustomEvent(EVENT.developerAppCreated));
     navigate(routes.developerApps());
   }
 

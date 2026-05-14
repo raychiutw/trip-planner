@@ -21,6 +21,7 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { EVENT } from '../lib/events';
 import { regionToApiParam } from '../lib/maps/region';
 import { mapNominatimCategory } from '../lib/poiCategory';
 import type { PoiFavorite } from '../types/api';
@@ -659,7 +660,7 @@ export default function ChangePoiPage() {
           }
           throw new Error(`加備選失敗 (${res.status}): ${text.slice(0, 200)}`);
         }
-        window.dispatchEvent(new CustomEvent('tp-entry-updated', { detail: { tripId } }));
+        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
         navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`, { replace: true });
         return;
       }
@@ -686,7 +687,7 @@ export default function ChangePoiPage() {
       void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, {
         method: 'POST',
       }).catch(() => undefined);
-      window.dispatchEvent(new CustomEvent('tp-entry-updated', { detail: { tripId } }));
+      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
       navigate(`/trips?selected=${encodeURIComponent(tripId)}`, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '置換景點失敗');

@@ -39,6 +39,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetchRaw } from '../lib/apiClient';
+import { EVENT } from '../lib/events';
 import { lsGet, lsSet } from '../lib/localStorage';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -603,7 +604,7 @@ export default function NewTripPage() {
       }
       const data = (await res.json()) as { tripId: string };
       // 廣播 tp-trip-created event 讓 TripsListPage refresh list
-      window.dispatchEvent(new CustomEvent('tp-trip-created', { detail: { tripId: data.tripId } }));
+      window.dispatchEvent(new CustomEvent(EVENT.tripCreated, { detail: { tripId: data.tripId } }));
       navigate(`/trips?selected=${encodeURIComponent(data.tripId)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '建立行程失敗。');

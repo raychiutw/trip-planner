@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { apiFetch } from '../lib/apiClient';
+import { EVENT } from '../lib/events';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
@@ -240,8 +241,8 @@ function TripPageInner(
         refetchCurrentDayRef.current?.();
       }
     }
-    window.addEventListener('tp-entry-updated', onEntryUpdated);
-    return () => window.removeEventListener('tp-entry-updated', onEntryUpdated);
+    window.addEventListener(EVENT.entryUpdated, onEntryUpdated);
+    return () => window.removeEventListener(EVENT.entryUpdated, onEntryUpdated);
   }, []);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */

@@ -292,7 +292,7 @@ describe('TimelineRail — drag reorder contract', () => {
   });
 
   it('broadcasts tp-entry-updated after successful reorder and reverts override on failure', () => {
-    expect(TIMELINE_RAIL_SRC).toContain("new CustomEvent('tp-entry-updated'");
+    expect(TIMELINE_RAIL_SRC).toContain('new CustomEvent(EVENT.entryUpdated');
     expect(TIMELINE_RAIL_SRC).toContain('reordered: true');
     expect(TIMELINE_RAIL_SRC).toContain('setOrderOverride(null)');
   });

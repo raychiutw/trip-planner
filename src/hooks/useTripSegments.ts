@@ -14,6 +14,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../lib/apiClient';
+import { EVENT } from '../lib/events';
 
 export interface TripSegment {
   id: number;
@@ -67,13 +68,13 @@ export function useTripSegments(tripId: string | null | undefined) {
       void fetchSegments();
     };
 
-    window.addEventListener('tp-segment-updated', handler);
-    window.addEventListener('tp-entry-updated', handler);
+    window.addEventListener(EVENT.segmentUpdated, handler);
+    window.addEventListener(EVENT.entryUpdated, handler);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('tp-segment-updated', handler);
-      window.removeEventListener('tp-entry-updated', handler);
+      window.removeEventListener(EVENT.segmentUpdated, handler);
+      window.removeEventListener(EVENT.entryUpdated, handler);
     };
   }, [tripId]);
 

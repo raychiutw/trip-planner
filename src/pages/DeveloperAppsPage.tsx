@@ -19,6 +19,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { EVENT } from '../lib/events';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import TitleBar from '../components/shell/TitleBar';
@@ -151,8 +152,8 @@ export default function DeveloperAppsPage() {
   // 一次 GET 換正確性。
   useEffect(() => {
     function handleAppCreated() { void loadApps(); }
-    window.addEventListener('tp-developer-app-created', handleAppCreated);
-    return () => window.removeEventListener('tp-developer-app-created', handleAppCreated);
+    window.addEventListener(EVENT.developerAppCreated, handleAppCreated);
+    return () => window.removeEventListener(EVENT.developerAppCreated, handleAppCreated);
   }, []);
 
   return (
