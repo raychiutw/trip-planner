@@ -151,22 +151,7 @@ const SCOPED_STYLES = `
   background: var(--color-accent-subtle); border: 1px solid var(--color-accent-bg);
 }
 .favorites-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.favorites-toolbar-btn {
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  padding: 8px 14px; border-radius: var(--radius-full);
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  border: 1px solid var(--color-accent);
-  cursor: pointer; min-height: 36px;
-}
-.favorites-toolbar-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.favorites-toolbar-btn-ghost {
-  background: transparent; color: var(--color-foreground);
-  border-color: var(--color-line-strong);
-}
-.favorites-toolbar-btn-destructive {
-  background: transparent; color: var(--color-priority-high-dot, #c0392b);
-  border-color: currentColor;
-}
+/* button visual treatment 由 .tp-action-btn / --ghost / --destructive 提供 (css/tokens.css) */
 
 .favorites-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
@@ -564,7 +549,7 @@ export default function PoiFavoritesPage() {
                 <div className="favorites-toolbar-actions">
                   <button
                     type="button"
-                    className="favorites-toolbar-btn favorites-toolbar-btn-ghost"
+                    className="tp-action-btn tp-action-btn--ghost"
                     onClick={selectAllVisible}
                     disabled={deletingSelected}
                     data-testid="favorites-select-all"
@@ -573,7 +558,7 @@ export default function PoiFavoritesPage() {
                   </button>
                   <button
                     type="button"
-                    className="favorites-toolbar-btn favorites-toolbar-btn-ghost"
+                    className="tp-action-btn tp-action-btn--ghost"
                     onClick={clearSelection}
                     disabled={deletingSelected}
                     data-testid="favorites-clear-selection"
@@ -582,7 +567,7 @@ export default function PoiFavoritesPage() {
                   </button>
                   <button
                     type="button"
-                    className="favorites-toolbar-btn favorites-toolbar-btn-destructive"
+                    className="tp-action-btn tp-action-btn--destructive"
                     onClick={requestDeleteSelected}
                     disabled={deletingSelected}
                     data-testid="favorites-delete-selected"
