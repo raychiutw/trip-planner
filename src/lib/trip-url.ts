@@ -8,7 +8,8 @@
  * or stale links can't throw.
  *
  * V2 cutover (migration 0046): 'ideas' tab retired. 備案概念合一進「我的收藏」
- * (saved_pois)，跨 trip universal pool 由 ExplorePage saved tab 維護。
+ * (poi_favorites — v2.22.0 rename from saved_pois)，跨 trip universal pool 由
+ * PoiFavoritesPage 維護。
  */
 
 import type { NavigateFunction } from 'react-router-dom';

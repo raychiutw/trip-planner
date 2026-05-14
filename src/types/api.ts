@@ -175,7 +175,7 @@ export interface Permission {
 /**
  * A POI favorite — 使用者跨 trip 的收藏清單，由 /favorites 頁面維護。
  *
- * DB table: poi_favorites（migration 0050 rename from saved_pois）
+ * DB table: poi_favorites
  * Columns: id, user_id, poi_id, favorited_at, note
  *
  * GET response 會 JOIN `pois` 補 POI 詳情（poiName / poiAddress / poiLat / poiLng / poiType）。

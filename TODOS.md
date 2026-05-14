@@ -210,21 +210,6 @@
 
 ---
 
-## poi-favorites-rename — Migration 0051 cleanup PR (DROP saved_pois)
-
-**Priority:** P2 — schedule after migration 0050 soak ≥ 1 week
-**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §24
-
-**Schedule:** 2026-05-11 之後（PR #474 merge + soak 1 week）。
-
-**Steps:**
-- §24.1 寫 migration 0051：`DROP TABLE saved_pois`
-- §24.2 移除 dual-read code path（handler 不再 fallback 試 saved_pois — 本 PR 已用 hard cutover，dual-read 實際未實作，但 verify 沒殘留 fallback try-catch）
-- §24.3 verify dual-read 期間 zero traffic 打到 saved_pois（D1 query: `SELECT COUNT(*) FROM saved_pois WHERE saved_at > <PR-merge-timestamp>` 應為 0）
-- §24.4 archive `openspec/changes/poi-favorites-rename/` → `openspec/changes/archive/2026-05-XX-poi-favorites-rename/`
-
----
-
 ## poi-favorites-rename — Shared components + skill / doc refinement
 
 **Priority:** P3 — quality-of-life，無功能阻擋
@@ -278,6 +263,19 @@ A 是標準做法但需 cron handler；B 簡單但 latency tail 可能受 1% 隨
 ---
 
 ## Completed
+
+### poi-favorites-rename — Phase 2 DROP saved_pois
+
+**Priority:** P2
+**Completed:** v2.29.1 (2026-05-14)
+**PR:** [#532](https://github.com/raychiutw/trip-planner/pull/532)
+
+migration 0050 (v2.22.0, 2026-05-04) expand-contract 10 天 soak 過後 cleanup：
+
+- §24.1 ~~Migration `0051` DROP TABLE saved_pois~~ — 改編 0063（0051 已被 google_maps_platform 占用）
+- §24.2 dual-read code path 確認移除（grep 0 reads/writes in functions/）
+- §24.3 verify zero traffic：`SELECT COUNT(*) FROM saved_pois WHERE saved_at > '2026-05-04'` → 0
+- §24.4 archive openspec → `openspec/changes/archive/2026-05-14-poi-favorites-rename/`
 
 ### Tech debt — event name const-ize
 
