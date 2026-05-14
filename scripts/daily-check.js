@@ -306,7 +306,7 @@ function queryNpmAudit() {
 async function queryRequestErrors() {
   // 只看過去 24h 內的非 completed 請求（陳年 failed 會自然淡出）
   var rows = await queryD1(
-    "SELECT id, trip_id, mode, status, substr(message, 1, 80) as message, " +
+    "SELECT id, trip_id, status, substr(message, 1, 80) as message, " +
     "substr(reply, 1, 80) as reply, created_at " +
     "FROM trip_requests " +
     "WHERE status != 'completed' " +
@@ -336,7 +336,6 @@ async function queryRequestErrors() {
       return {
         id: r.id,
         tripId: r.trip_id,
-        mode: r.mode,
         status: r.status,
         message: r.message || '',
         reply: r.reply || '',
