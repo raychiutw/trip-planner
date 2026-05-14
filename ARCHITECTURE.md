@@ -205,7 +205,7 @@ API endpoints:
 
 排程:
   scripts/poi-enrich-batch.ts        Bun 一次性 batch（D1 HTTP shim）
-  scripts/poi-enrich-scheduler.sh    launchd wrapper，每月 1 號 09:00 自動跑 --limit=200
+  .claude/skills/tp-poi-enrich-monthly/ Cowork daily fire + skill 內檢查 date +%d == 01
 ```
 
 ### 權限與審計
