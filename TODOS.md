@@ -151,37 +151,6 @@
 
 ---
 
-## poi-favorites-rename — Pre-merge gates (admin / SRE actions)
-
-### admin — provision TRIPLINE_API_TOKEN + TP_REQUEST_CLIENT_ID Pages secrets
-
-**Priority:** P0 — blocks merge of PR #474
-**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §1.2, §1.4
-**Symptom:** `TRIPLINE_API_TOKEN` 未 provisioned in Cloudflare Pages env → companion path 全 401。
-
-**步驟：**
-1. admin re-run `node scripts/provision-admin-cli-client.js`（已加 `companion` scope）取得新 client_secret（一次性 print）
-2. 用 `curl -X POST /api/oauth/token` with `client_credentials` + `client_secret` 換 access_token（含 `admin + companion` scopes）
-3. `wrangler pages secret put TRIPLINE_API_TOKEN --project-name trip-planner` 設為 access_token
-4. `wrangler pages secret put TP_REQUEST_CLIENT_ID --project-name trip-planner` 設為 `tripline-internal-cli`
-5. `wrangler pages secret list --project-name trip-planner` verify 兩個都有
-
-完成才能 merge PR #474。
-
-### SRE — mac mini cron sync (URL + OAuth token)
-
-**Priority:** P0 — blocks merge of PR #474
-**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §1.3, §19
-**Symptom:** mac mini cron `scripts/tp-request-scheduler.sh` 還在打 `/api/saved-pois`（middleware 白名單已 cutover 到 `/api/poi-favorites`）→ companion 會 403。
-
-**步驟：**
-1. SSH mac mini 改 `scripts/tp-request-scheduler.sh` base URL 4 條 endpoint：`/api/saved-pois*` → `/api/poi-favorites*`
-2. 換新 OAuth token（admin re-mint 含 `admin + companion` scope）並更新 cron env var
-3. dry-run smoke：trigger 測試 trip_requests row → assert tp-request 處理成功 + companion path 200
-4. PR description 附 commit hash / config diff / dry-run output 證據
-
----
-
 ## poi-favorites-rename — UI mockup-driven redesigns (PoiFavoritesPage + AddPoiFavoriteToTripPage)
 
 **Priority:** P2 — mockup signed-off (`docs/design-sessions/2026-05-04-favorites-redesign.html` v4)，React refactor 留 follow-up
@@ -210,41 +179,17 @@
 
 ---
 
-## poi-favorites-rename — Shared components + skill / doc refinement
+## poi-favorites-rename — Shared components (deferred to PoiFavoritesPage redesign)
 
 **Priority:** P3 — quality-of-life，無功能阻擋
-**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §13/§15/§16/§17/§18.3
-
-**Items:**
+**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §13
 
 §13 Shared component 抽取（與 §11/§12 mockup-driven redesign 一併處理較順）：
 - 抽 `<PageErrorState>` 共用 component 取代 `.favorites-error` inline pattern
 - 抽 `<EmptyState>` 共用 component 取代 `.favorites-empty-cta` inline pattern
 - 抽 `tp-action-btn` family 取代 `.favorites-toolbar-btn` 系列至 `css/components/action-button.css`
 
-§15 tp-request SKILL.md「加入收藏」flow（DX-F6.1 — 30s skim discoverability）：
-- 加 H3 段「3d.j 加入收藏 sub-flow」（top-level，不在 references 內藏）
-- 5 步流程 curl：(1) Google Maps 驗證 (2) GET /api/pois?name=X 取 poiId (3) POST /api/poi-favorites with companionRequestId + Bearer + X-Request-Scope (4) 處理 201/409/404/401 (5) PATCH /api/requests/:id status=completed
-- 401 debug 3-step checklist：(a) curl /api/oauth/introspect 確認 token (b) D1 SELECT id, status, submitted_by FROM trip_requests WHERE id=? (c) D1 SELECT id FROM users WHERE LOWER(email)=LOWER(?)
-
-§16 mockup-first systematic gate（部分已落 CLAUDE.md，Naming history 補完）：
-- §16.1 tp-team SKILL.md Build phase 加 sub-section「Mockup-first hard gate」展開規則
-- §16.3 CLAUDE.md 加「Naming history」section（saved_pois → poi_favorites, migration 0050, v2.22.0）
-- §16.4 DESIGN.md 加「Naming history」同上
-- §16.5 ARCHITECTURE.md 加「Naming history」同上
-
-§17 DESIGN.md asymmetric labels rewrite（9 處）：
-- L298 廢除「DesktopSidebar label 用『我的收藏』...asymmetric labels intentional」改為「Sidebar 與 BottomNav 第 4 slot 統一『收藏』，ownership 由 PoiFavoritesPage hero eyebrow 補回」
-- L259 TitleBar 文字「我的收藏」→「收藏」
-- L317 路由表 `/saved` → `/favorites`、`/saved-pois/:id/add-to-trip` → `/favorites/:id/add-to-trip`
-- L484 SavedPoisPage 收藏批次刪除 → PoiFavoritesPage
-- L565-657 整段「saved_pois universal pool」rename → 「poi_favorites universal pool」+ table/api/route 全 rename
-- 補 batch flow delete-only 規範
-- 補 PoiFavoritesPage 8-state matrix（取代原 5-state）
-- 補 viewport breakpoints + a11y 規範
-
-§18.3 archive saved-pois-schema banner：
-- 修改 `openspec/changes/archive/2026-04-25-layout-overlay-rules-and-schema/specs/saved-pois-schema/` README 頂端加 banner：`> ⚠️ Renamed to poi_favorites in migration 0050 — see openspec/changes/archive/2026-05-XX-poi-favorites-rename/`（archive 後 §24.4 才知最終 path）
+**Note**: §15 (tp-request 「加入收藏」flow), §16 (mockup-first gate + Naming history 3 docs), §17 (DESIGN.md asymmetric labels rewrite), §18.3 (saved-pois-schema banner) 已分批完成 — 見 Completed section。
 
 ---
 
@@ -263,6 +208,28 @@ A 是標準做法但需 cron handler；B 簡單但 latency tail 可能受 1% 隨
 ---
 
 ## Completed
+
+### v2.30.0 — drop trip_segments.mode_source
+
+**Priority:** P2
+**Completed:** v2.30.0 (2026-05-14)
+**PR:** [#536](https://github.com/raychiutw/trip-planner/pull/536)
+
+`trip_segments.mode_source` 欄位 DROPPED — 移除「上鎖」概念。PATCH /segments/:sid 新 contract：`mode='transit'` 必填 min（source='manual'），`mode='driving'`/`'walking'` 一律 Google Routes 重算（ignore body.min）。recompute-travel skip 條件 `mode_source='user'` → `mode='transit'`。Frontend 拔 🔒 icon + isLocked 變數 + 「已手動覆寫」title indicator + 「重設為自動」button。CLAUDE.md / DESIGN.md / ARCHITECTURE.md Naming history 三檔同步加 v2.30.0 + v2.29.x entries。
+
+### poi-favorites-rename — §15-§18 doc / skill items
+
+**Priority:** P3
+**Completed:** v2.29.x (2026-05-14)
+**PRs:** [#532](https://github.com/raychiutw/trip-planner/pull/532) / [#533](https://github.com/raychiutw/trip-planner/pull/533) / `chore/p3-todos-cleanup-may15`
+
+- §15 tp-request §3d-bis「加入收藏」curl flow + 401 debug 3-step checklist（PR #533）
+- §16.1 tp-team SKILL.md Build phase「Mockup-first hard gate」section
+- §16.3-§16.5 CLAUDE.md / DESIGN.md / ARCHITECTURE.md 三檔加 Naming history（已對齊 saved_pois→poi_favorites、trip_pois rip-out、mode_source DROPPED 全部歷史）
+- §17 DESIGN.md asymmetric labels rewrite（L298, L317, L578-587, L647, L656, L696 全對齊新名稱與 mockup v4 sign-off）
+- §18.3 saved-pois-schema archive banner Successor link 更新為 `openspec/changes/archive/2026-05-14-poi-favorites-rename/specs/poi-favorites/spec.md`
+
+§13 Shared component 抽取（PageErrorState / EmptyState / tp-action-btn）尚未處理 — 留 follow-up，等 PoiFavoritesPage redesign PR 一併。
 
 ### poi-favorites-rename — Phase 2 DROP saved_pois
 

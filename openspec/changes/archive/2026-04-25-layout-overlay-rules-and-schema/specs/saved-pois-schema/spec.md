@@ -6,7 +6,7 @@
 > 已對齊新名稱（無 alias）。owner column 也已從 `email` 升級為 `user_id`
 > （migration 0046+0047，v2.21.0 cutover phase 2）。
 >
-> **Successor spec**：`openspec/changes/poi-favorites-rename/specs/poi-favorites/spec.md`（archive 後進入 `openspec/specs/poi-favorites/`）。
+> **Successor spec**：`openspec/changes/archive/2026-05-14-poi-favorites-rename/specs/poi-favorites/spec.md`（v2.29.1 / 2026-05-14 archive 後 path）。
 >
 > 本檔僅作為 v2.21.0 之前的歷史描述保留，**不再為 source of truth**。
 > 開發新功能請參考 successor spec，不要參照本檔的 column 命名 / API path。
