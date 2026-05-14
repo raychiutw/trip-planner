@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.29.1] - 2026-05-14
+
+**`saved_pois` 表終於 DROP — poi-favorites-rename Phase 2 收尾。**
+
+migration 0050 (v2.22.0, 2026-05-04) 用 expand-contract 把 `saved_pois` rename 為 `poi_favorites`。10 天 soak 過後 (grep 確認 0 reads/writes、prod row count 對齊)，本次 migration 0063 把舊表清掉。openspec change archive 同步歸檔。
+
+### Changed
+
+- 拔掉 `src/types/api.ts` PoiFavorite docstring 內「(migration 0050 rename from saved_pois)」殘留字串
+- `src/lib/trip-url.ts` 收藏池來源字句改 `poi_favorites — v2.22.0 rename from saved_pois`
+
+### Removed
+
+- Migration 0063: `DROP TABLE saved_pois` + `DROP INDEX idx_saved_pois_poi`
+- 刪除 `tests/unit/migration-0050-data-copy.test.ts`（一次性 INSERT SELECT 測試，prod cutover 已 verify，table dropped 後無法 reseed）
+
+### Migrations
+
+- `0063_drop_saved_pois.sql` + rollback SQL
+- Pre-merge audit：prod `saved_pois` 2 rows（2026-04-26 + 2026-05-02，皆早於 v2.22.0 ship）、`poi_favorites` 4 rows、`WHERE saved_at > '2026-05-04'` count = 0 → 確認 v2.22.0 後 0 traffic
+
+### Verify
+
+- `npm run typecheck`
+- `npm run test:unit` — should drop ~7 tests (data-copy test deleted)
+
 ## [2.29.0] - 2026-05-14
 
 **Phase-2 schema cleanup：`trip_pois` 整表 + 10 個過期 column 一次清乾淨。**
