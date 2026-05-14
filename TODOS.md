@@ -18,22 +18,17 @@
 
 **ChangePoiPage 加 entry_pois_version 帶上** — `[v2.29.0 PR #529 已完成 → 見 Completed]`
 
-**Atomic CAS via UPDATE RETURNING**：
-- 目前 OCC 是「先 SELECT version → 比對 → bind 寫」兩段式，concurrent setMaster 仍 fall back 到 UNIQUE constraint catch + retry。SQLite ≥3.35 支援 `UPDATE ... WHERE version = ? RETURNING new_version` atomic CAS，可省一個 RTT + 簡化 race handling
-- Est: 30 min CC + 跑既有 OCC test suite 確認
-- Priority: P3（既有 UNIQUE catch 已足夠避免 silent data loss）
+**Atomic CAS via UPDATE RETURNING** — `[partial v2.30.x PR #538 已完成 parallelize → 見 Completed]`
 
-**Day-level OCC token on PUT /days/:num**：
-- 目前 PUT /days/:num 對整個 day 沒有 OCC 保護，兩 client 同時 PUT 全 timeline 可能 lost update
-- Fix: trip_days 加 `version` column + PUT 接受 expectedVersion
-- Est: 1 hr CC + 1 migration + frontend wire
-- Priority: P3（rare scenario — 一般只有單 user 編輯）
+真正 atomic CAS via UPDATE RETURNING 與 D1 batch atomicity 衝突，未實作。Follow-up：redesign batch 結構，或接受現有 UNIQUE catch fallback。
 
-**refreshEntryPois 3-way cascade UX**：
-- master swap 後 useTripSegments + refreshEntryPois + day refetch 三方需要協調，目前 EditEntryPage sequential 跑 — 可能短暫顯示 stale 狀態
-- Fix: 把三方 cascade 收到單一 hook 處理優先序
-- Est: 1 hr CC
-- Priority: P3
+**Day-level OCC token on PUT /days/:num** — `[v2.30.x PR #538 backend 已完成 → 見 Completed]`
+
+Frontend wire 留 follow-up：BulkEditDayPage / EditDayPage 帶 expectedDayVersion，接 409 STALE_ENTRY 提示 refetch。**Priority**: P3。
+
+**refreshEntryPois 3-way cascade UX** — `[v2.30.x PR #538 已完成 partial → 見 Completed]`
+
+3 sequential RT 改 2 sequential RT (Promise.all GET /entries + GET /days)。第 3 個 GET /days/:num 仍 sequential（needs dayNum from days list）。完整 hook 化 cascade 留 follow-up。
 
 **Tech debt — event name const-ize** — `[v2.29.0 PR #530 已完成 → 見 Completed]`
 
@@ -208,6 +203,18 @@ A 是標準做法但需 cron handler；B 簡單但 latency tail 可能受 1% 隨
 ---
 
 ## Completed
+
+### v2.30.x — P3 OCC quick wins (3 items)
+
+**Priority:** P3
+**Completed:** v2.30.x (2026-05-14)
+**PR:** [#538](https://github.com/raychiutw/trip-planner/pull/538)
+
+3 個 P3 quick wins 並 ship：
+
+1. **OCC parallelize**（perf）：`_entry_pois.ts` 4 個 OCC callsite (setMaster / addAlternate / removeAlternate / reorderAlternates) 把 pre-SELECT `getEntryPoisVersion()` 合進 snapshot `Promise.all` — sequential 2 RT 降到 1 RT。`syncEntryMaster` 無 pre-SELECT，skip。removeAlternate 順便修錯誤碼語意：OCC fail-fast 提前到 row null check 之前。**Note**：真正 atomic CAS via UPDATE RETURNING 跟 D1 batch atomicity 衝突，未實作；race-safety 由既有 UNIQUE constraint catch 保護。
+2. **Day-level OCC**（feat + migration 0065）：`trip_days.version INTEGER` 加 OCC counter。PUT /days/:num 接受 optional `expectedDayVersion`，不符 → 409 STALE_ENTRY（複用 error code）。GET response 加 `version`、PUT response 加 `dayVersion`。`expectedDayVersion` undefined 略過 check，既有 client 不破。Frontend wire 留 follow-up。
+3. **refreshEntryPois parallelize**（perf）：EditEntryPage `refreshEntryPois` 內 GET /entries + GET /days 並行 — 3 RT 降到 2 RT。GET /days/:num 仍 sequential。
 
 ### v2.30.0 — drop trip_segments.mode_source
 

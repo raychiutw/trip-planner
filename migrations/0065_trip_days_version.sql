@@ -12,8 +12,8 @@
 -- 比照 v2.27.x `trip_entries.entry_pois_version`（migration 0058 INTEGER counter）：
 --   - INTEGER NOT NULL DEFAULT 0
 --   - 每次 PUT /days/:num 完成時 bump +1
---   - PUT body 可選 `expectedDayVersion: number` — backend 拒絕 mismatch 帶
---     STALE_DAY 409
+--   - PUT body 可選 `expectedDayVersion: number` — backend 拒絕 mismatch 拋
+--     STALE_ENTRY 409（複用既有 OCC error code，client 邏輯一致：refetch + retry）
 --   - 既有 client 不帶 expectedDayVersion → backwards-compat 略過 check
 --
 -- ## Deploy
