@@ -11,7 +11,6 @@
  * 行為（per design doc + Codex Finding #1, #2, #3）：
  *   - poiId 是現有 alternate → swap sort_order（master 降為 alternate）
  *   - poiId 是新 POI → 既有 master 推到 max+1, INSERT 新 master sort_order=1
- *   - 同步 dual-write trip_entries.poi_id
  *   - 同 TX mark from/to segments stale
  *   - 失敗 throw AppError；STALE_ENTRY 409 表示 version mismatch（client 該 refetch）
  *
