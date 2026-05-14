@@ -77,17 +77,18 @@ describe('PUT /api/trips/:id', () => {
   // OSM PR (migration 0045)：destinations[] full-replacement semantics on PUT。
   it('帶 destinations[] → 全量取代 trip_destinations + scalar field 一起更新', async () => {
     // First seed an existing destination for trip-1
+    // v2.29.0: trip_destinations.{osm_id, osm_type} DROPPED.
     await db.prepare(
-      `INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, osm_id, osm_type)
-       VALUES ('trip-1', 0, '原沖繩', 26.21, 127.68, 5, 100, 'node')`,
+      `INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota)
+       VALUES ('trip-1', 0, '原沖繩', 26.21, 127.68, 5)`,
     ).run();
 
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', {
         title: '帶 dest 的更新',
         destinations: [
-          { name: '京都', lat: 35.01, lng: 135.76, day_quota: 3, osm_id: 200, osm_type: 'node' },
-          { name: '大阪', lat: 34.69, lng: 135.50, day_quota: 2, osm_id: 201, osm_type: 'relation' },
+          { name: '京都', lat: 35.01, lng: 135.76, day_quota: 3 },
+          { name: '大阪', lat: 34.69, lng: 135.50, day_quota: 2 },
         ],
       }),
       env,
@@ -101,13 +102,12 @@ describe('PUT /api/trips/:id', () => {
     expect((trip as Record<string, unknown>).title).toBe('帶 dest 的更新');
 
     const dests = await db.prepare(
-      'SELECT name, dest_order, day_quota, osm_id, osm_type FROM trip_destinations WHERE trip_id = ? ORDER BY dest_order',
+      'SELECT name, dest_order, day_quota FROM trip_destinations WHERE trip_id = ? ORDER BY dest_order',
     ).bind('trip-1').all();
     expect(dests.results).toHaveLength(2);
     expect((dests.results[0] as Record<string, unknown>).name).toBe('京都');
     expect((dests.results[0] as Record<string, unknown>).day_quota).toBe(3);
     expect((dests.results[1] as Record<string, unknown>).name).toBe('大阪');
-    expect((dests.results[1] as Record<string, unknown>).osm_type).toBe('relation');
     // Old 「原沖繩」 should be gone (full-replacement)
     const old = await db.prepare("SELECT name FROM trip_destinations WHERE trip_id = ? AND name = '原沖繩'")
       .bind('trip-1').first();

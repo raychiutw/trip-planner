@@ -47,7 +47,7 @@ beforeEach(async () => {
   await db.prepare("DELETE FROM poi_favorites WHERE user_id LIKE 'test-user-%'").run();
   await db.prepare("DELETE FROM trip_entries WHERE day_id IN (SELECT id FROM trip_days WHERE trip_id LIKE 'add-trip-%')").run();
   await db.prepare("DELETE FROM trip_entry_pois WHERE entry_id NOT IN (SELECT id FROM trip_entries)").run();
-  await db.prepare("DELETE FROM trip_pois WHERE trip_id LIKE 'add-trip-%'").run();
+  // v2.29.0: trip_pois table DROPPED — clean up via trip_days.hotel_poi_id instead if needed.
 });
 
 function companionAuth(overrides: Partial<AuthData> = {}): AuthData {
@@ -220,15 +220,16 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.4 sort_order auto-calc
     const { favId } = await seedFavorite({ email: '9-4-sort@test.com', poiName: 'POI 9-4' });
 
     // 已有 entry 11:00-12:00 sort_order=0
+    // v2.29.0: trip_entries.time DROPPED, 改寫 start_time/end_time。
     const day1 = await db
       .prepare('SELECT id FROM trip_days WHERE trip_id = ? AND day_num = 1')
       .bind(tripId)
       .first<{ id: number }>();
     await db
       .prepare(
-        `INSERT INTO trip_entries (day_id, sort_order, time, title) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title) VALUES (?, ?, ?, ?, ?)`,
       )
-      .bind(day1!.id, 0, '11:00-12:00', 'existing entry')
+      .bind(day1!.id, 0, '11:00', '12:00', 'existing entry')
       .run();
 
     const ctx = mockContext({
@@ -257,11 +258,12 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.5 conflict 409', () =>
       .prepare('SELECT id FROM trip_days WHERE trip_id = ? AND day_num = 1')
       .bind(tripId)
       .first<{ id: number }>();
+    // v2.29.0: trip_entries.time DROPPED, 改寫 start_time/end_time。
     await db
       .prepare(
-        `INSERT INTO trip_entries (day_id, sort_order, time, title) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title) VALUES (?, ?, ?, ?, ?)`,
       )
-      .bind(day1!.id, 0, '12:00-14:00', 'lunch')
+      .bind(day1!.id, 0, '12:00', '14:00', 'lunch')
       .run();
 
     const ctx = mockContext({
@@ -296,28 +298,25 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.6 V2 user happy path',
     const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(201);
 
+    // v2.29.0: trip_entries.{time, poi_id} DROPPED. 驗 start_time/end_time + trip_entry_pois。
     const day2 = await db
       .prepare('SELECT id FROM trip_days WHERE trip_id = ? AND day_num = 2')
       .bind(tripId)
       .first<{ id: number }>();
     const entries = await db
-      .prepare('SELECT id, time, title, poi_id FROM trip_entries WHERE day_id = ?')
+      .prepare('SELECT id, start_time, end_time, title FROM trip_entries WHERE day_id = ?')
       .bind(day2!.id)
-      .all<{ id: number; time: string; title: string; poi_id: number }>();
+      .all<{ id: number; start_time: string; end_time: string; title: string }>();
     expect(entries.results).toHaveLength(1);
-    expect(entries.results[0]!.time).toBe('09:00-10:30');
-    expect(entries.results[0]!.poi_id).toBe(poiId);
+    expect(entries.results[0]!.start_time).toBe('09:00');
+    expect(entries.results[0]!.end_time).toBe('10:30');
 
     const entryPois = await db
       .prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ?')
       .bind(entries.results[0]!.id)
       .all<{ poi_id: number; sort_order: number }>();
     expect(entryPois.results).toEqual([{ poi_id: poiId, sort_order: 1 }]);
-    const timelineTripPois = await db
-      .prepare("SELECT COUNT(*) AS c FROM trip_pois WHERE trip_id = ? AND context = 'timeline'")
-      .bind(tripId)
-      .first<{ c: number }>();
-    expect(timelineTripPois!.c).toBe(0);
+    // v2.29.0: trip_pois timeline rows 已不再寫 — 整表 DROPPED。
   });
 });
 

@@ -17,8 +17,6 @@ import {
   seedPoi,
   seedUser,
   seedTrip,
-  seedEntry,
-  getDayId,
   callHandler,
 } from './helpers';
 import { onRequestGet } from '../../functions/api/poi-favorites';
@@ -94,43 +92,8 @@ describe('GET /api/poi-favorites — §7.1 V2 user / anonymous', () => {
     expect(Array.isArray(data[0]!.usages)).toBe(true);
   });
 
-  it('usages 包含合法 contextual trip_pois，但忽略舊 timeline rows', async () => {
-    const userEmail = 'v2-get-contextual@test.com';
-    const userId = await seedUser(db, userEmail);
-    const poiX = await seedPoi(db, { name: 'Contextual Favorite', type: 'shopping' });
-    await db.prepare('INSERT INTO poi_favorites (user_id, poi_id) VALUES (?, ?)').bind(userId, poiX).run();
-
-    const tripId = 'contextual-usage-trip';
-    await seedTrip(db, { id: tripId, owner: userEmail });
-    const dayId = await getDayId(db, tripId, 1);
-    const legacyEntryId = await seedEntry(db, dayId, { title: 'Legacy timeline holder' });
-    await db.batch([
-      db
-        .prepare(
-          `INSERT INTO trip_pois (poi_id, trip_id, context, day_id, entry_id, sort_order)
-           VALUES (?, ?, 'shopping', ?, NULL, 0)`,
-        )
-        .bind(poiX, tripId, dayId),
-      db
-        .prepare(
-          `INSERT INTO trip_pois (poi_id, trip_id, context, day_id, entry_id, sort_order)
-           VALUES (?, ?, 'timeline', ?, ?, 0)`,
-        )
-        .bind(poiX, tripId, dayId, legacyEntryId),
-    ]);
-
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/poi-favorites'),
-      env,
-      auth: mockAuth({ email: userEmail }),
-    });
-    const resp = await callHandler(onRequestGet, ctx);
-    expect(resp.status).toBe(200);
-    const data = await resp.json() as Array<{ poiId: number; usages: Array<{ tripId: string; entryId: number | null }> }>;
-    const favorite = data.find((d) => d.poiId === poiX);
-    expect(favorite?.usages.some((usage) => usage.tripId === tripId)).toBe(true);
-    expect(favorite?.usages.some((usage) => usage.entryId === legacyEntryId)).toBe(false);
-  });
+  // v2.29.0: 「contextual trip_pois usage」test removed — trip_pois table DROPPED。
+  // usage 來源改為 trip_entry_pois + trip_days.hotel_poi_id（測在其他 it 涵蓋）。
 
   it('anonymous（無 auth）→ 200 + 空陣列', async () => {
     const ctx = mockContext({
@@ -171,12 +134,13 @@ describe('GET /api/poi-favorites — §7.1 V2 user / anonymous', () => {
       .prepare('SELECT id FROM trip_days WHERE trip_id = ? LIMIT 1')
       .bind('private-trip-of-b')
       .first<{ id: number }>();
+    // v2.29.0: trip_entries.poi_id DROPPED. master 走 trip_entry_pois sort_order=1。
     const entry = await db
       .prepare(
-        `INSERT INTO trip_entries (day_id, sort_order, title, poi_id)
-         VALUES (?, 0, 'Private usage', ?) RETURNING id`,
+        `INSERT INTO trip_entries (day_id, sort_order, title)
+         VALUES (?, 0, 'Private usage') RETURNING id`,
       )
-      .bind(dayRow!.id, sharedPoi)
+      .bind(dayRow!.id)
       .first<{ id: number }>();
     await db
       .prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)')

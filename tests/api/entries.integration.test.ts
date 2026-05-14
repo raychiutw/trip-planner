@@ -17,8 +17,8 @@ beforeAll(async () => {
   await seedTrip(db, { id: 'trip-e' });
   const dayId = await getDayId(db, 'trip-e', 1);
   const poiId = await seedPoi(db, { name: 'Original POI', type: 'attraction' });
+  // v2.29.0: seedEntry poiId 已自動 INSERT trip_entry_pois sort_order=1（backward-compat）
   entryId = await seedEntry(db, dayId, { title: 'Original', poiId });
-  await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entryId, poiId).run();
 });
 
 afterAll(disposeMiniflare);
@@ -41,7 +41,6 @@ describe('GET /api/trips/:id/entries/:eid', () => {
       id: number | bigint;
       dayId: number | bigint;
       title: string;
-      time?: string | null;
       startTime?: string | null;
       endTime?: string | null;
       note?: string | null;
@@ -54,8 +53,7 @@ describe('GET /api/trips/:id/entries/:eid', () => {
     expect(Number(body.id)).toBe(Number(entryId));
     expect(Number(body.dayId)).toBeGreaterThan(0);
     expect(body.title).toBeTruthy();
-    // v2.27.1 critical fields — frontend depends on these being present (即使是 null)
-    expect('time' in body).toBe(true);
+    // v2.29.0: trip_entries.{time, poi_id} DROPPED. start_time / end_time + note 必出現。
     expect('startTime' in body).toBe(true);
     expect('endTime' in body).toBe(true);
     expect('note' in body).toBe(true);
@@ -66,9 +64,8 @@ describe('GET /api/trips/:id/entries/:eid', () => {
     expect(body.stopPois).toHaveLength(1);
     expect(body.stopPois?.[0]?.sortOrder).toBe(1);
     expect(body.alternates).toEqual([]);
-    // seedEntry 寫 time='10:00'（new INSERT 沒觸發 migration 0056 backfill — start_time
-    // 仍 NULL；real entry 從 POST /entries 進來會走 dual-write 補 start/end）
-    expect(body.time).toBe('10:00');
+    // seedEntry 寫 start_time='10:00'
+    expect(body.startTime).toBe('10:00');
   });
 
   it('未認證 → 401', async () => {
@@ -141,8 +138,8 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(401);
   });
 
-  // v2.26.0 (migration 0056) — start_time / end_time 拆分 + dual-write 與 legacy time
-  it('PATCH start_time + end_time → 寫入 + 同步 compose time', async () => {
+  // v2.26.0 (migration 0056) — start_time / end_time 拆分；v2.29.0 time col DROPPED。
+  it('PATCH start_time + end_time → 寫入兩欄', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
         start_time: '12:00',
@@ -154,15 +151,14 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
     });
     const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
-    const row = await db.prepare('SELECT time, start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
+    const row = await db.prepare('SELECT start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
     expect((row as Record<string, unknown>).start_time).toBe('12:00');
     expect((row as Record<string, unknown>).end_time).toBe('13:30');
-    expect((row as Record<string, unknown>).time).toBe('12:00-13:30');
   });
 
-  it('PATCH 只給 start_time → end_time 從現值繼承，time 重組', async () => {
+  it('PATCH 只給 start_time → end_time 從現值繼承', async () => {
     // 先設一個基礎 end_time
-    await db.prepare('UPDATE trip_entries SET end_time = ?, time = ? WHERE id = ?').bind('15:00', '13:30-15:00', entryId).run();
+    await db.prepare('UPDATE trip_entries SET end_time = ? WHERE id = ?').bind('15:00', entryId).run();
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
@@ -173,13 +169,12 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
       params: { id: 'trip-e', eid: String(entryId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
-    const row = await db.prepare('SELECT time, start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
+    const row = await db.prepare('SELECT start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
     expect((row as Record<string, unknown>).start_time).toBe('14:00');
     expect((row as Record<string, unknown>).end_time).toBe('15:00');
-    expect((row as Record<string, unknown>).time).toBe('14:00-15:00');
   });
 
-  it('PATCH legacy time "HH:MM-HH:MM" → 同步寫 start_time / end_time', async () => {
+  it('PATCH legacy time "HH:MM-HH:MM" → parse 拆成 start_time / end_time', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
         time: '09:30-10:45',
@@ -189,8 +184,7 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
       params: { id: 'trip-e', eid: String(entryId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
-    const row = await db.prepare('SELECT time, start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
-    expect((row as Record<string, unknown>).time).toBe('09:30-10:45');
+    const row = await db.prepare('SELECT start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
     expect((row as Record<string, unknown>).start_time).toBe('09:30');
     expect((row as Record<string, unknown>).end_time).toBe('10:45');
   });
@@ -205,7 +199,7 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
       params: { id: 'trip-e', eid: String(entryId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
-    const row = await db.prepare('SELECT time, start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
+    const row = await db.prepare('SELECT start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
     expect((row as Record<string, unknown>).start_time).toBe('08:00');
     expect((row as Record<string, unknown>).end_time).toBeNull();
   });
@@ -237,8 +231,8 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
 
   it('PATCH 只給 start_time（晚於既有 end_time）→ effective merge 後 400', async () => {
     // 設 oldRow end_time = 13:30
-    await db.prepare('UPDATE trip_entries SET start_time = ?, end_time = ?, time = ? WHERE id = ?')
-      .bind('12:00', '13:30', '12:00-13:30', entryId).run();
+    await db.prepare('UPDATE trip_entries SET start_time = ?, end_time = ? WHERE id = ?')
+      .bind('12:00', '13:30', entryId).run();
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {

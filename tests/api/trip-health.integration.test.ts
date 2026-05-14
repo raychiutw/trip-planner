@@ -24,25 +24,21 @@ beforeEach(async () => {
 afterAll(disposeMiniflare);
 
 describe('GET /api/trips/:id/health', () => {
-  it('reads canonical trip_entry_pois and ignores stale trip_entries.poi_id mirror', async () => {
+  it('reads canonical trip_entry_pois (v2.29.0 trip_entries.poi_id DROPPED)', async () => {
     const tripId = 'trip-health-canonical';
     await seedTrip(db, { id: tripId });
     const dayId = await getDayId(db, tripId, 1);
 
-    const staleMirrorPoi = await seedPoi(db, { name: 'Stale Mirror', type: 'attraction' });
     const closedMasterPoi = await seedPoi(db, { name: 'Closed Master', type: 'attraction' });
     const missingAltPoi = await seedPoi(db, { name: 'Missing Alternate', type: 'restaurant' });
 
     await db.batch([
-      db.prepare("UPDATE pois SET status='closed', status_reason='stale mirror should be ignored' WHERE id = ?").bind(staleMirrorPoi),
       db.prepare("UPDATE pois SET status='closed', status_reason='永久歇業' WHERE id = ?").bind(closedMasterPoi),
       db.prepare("UPDATE pois SET status='missing', status_reason='Google Maps 查無資料' WHERE id = ?").bind(missingAltPoi),
     ]);
 
-    const entryId = await seedEntry(db, dayId, {
-      title: 'Health Entry',
-      poiId: staleMirrorPoi,
-    });
+    // v2.29.0: seedEntry 不帶 poiId — 直接 INSERT 兩 trip_entry_pois rows。
+    const entryId = await seedEntry(db, dayId, { title: 'Health Entry' });
     await db.batch([
       db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entryId, closedMasterPoi),
       db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(entryId, missingAltPoi),
