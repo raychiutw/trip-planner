@@ -280,12 +280,12 @@ async function checkDataAnomalies() {
       anomalies.push('空行程（無天數）：' + emptyTrips.map(function(r) { return r.id; }).join(', '));
     }
 
-    // 2. 孤立 POI（trip_pois 引用不存在的 poi_id）
+    // 2. 孤立 POI（trip_entry_pois 引用不存在的 poi_id；v2.29.0 trip_pois rip-out 後 canonical 改用 trip_entry_pois）
     var orphanPois = await queryD1(
-      "SELECT tp.id, tp.poi_id FROM trip_pois tp LEFT JOIN pois p ON tp.poi_id = p.id WHERE p.id IS NULL LIMIT 10"
+      "SELECT tep.entry_id, tep.poi_id FROM trip_entry_pois tep LEFT JOIN pois p ON tep.poi_id = p.id WHERE p.id IS NULL LIMIT 10"
     );
     if (orphanPois && orphanPois.length > 0) {
-      anomalies.push('孤立 trip_pois（poi 不存在）：' + orphanPois.length + ' 筆');
+      anomalies.push('孤立 trip_entry_pois（poi 不存在）：' + orphanPois.length + ' 筆');
     }
 
     // 3. 使用者錯誤回報（過去 24 小時）

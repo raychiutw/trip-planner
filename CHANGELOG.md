@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.4] - 2026-05-15
+
+**Daily-check follow-up fixes — daily-report `trip_pois` stale SELECT + skill docs `POST /api/poi-search` → `GET`。**
+
+兩個 2026-05-15 daily-check 告警的 root cause 修法：
+
+### Fixed
+
+- **`scripts/daily-report.js:285` stale `trip_pois` table SELECT**：v2.29.0 (PR #527, migration 0061+0062) trip_pois rip-out 後該 table 已 DROP，但 daily-report 的孤立 POI 偵測仍 query `trip_pois`，每天觸發 D1 400 → Telegram「⚠️ Tripline 資料異常 偵測失敗：D1 query failed: 400」告警。改 query 新 canonical table `trip_entry_pois`（保留同樣孤立 PO I 偵測語意）。同 PR #535 (queryRequestErrors fix v2.29.3) pattern。
+- **4 個 skill docs `POST /api/poi-search` → `GET`**：`functions/api/poi-search.ts` 只 export `onRequestGet`，但 `.claude/skills/tp-search-strategies/SKILL.md` × 2 處 + `.claude/skills/tp-request/SKILL.md:154` + `.claude/skills/tp-shared/references/poi-spec.md` × 3 處 + `.codex/` mirror (3 處) 寫成 POST。LLM 跟著 doc 用 POST → 405 ×4/day api_logs 噪音。改 GET + curl `-G --data-urlencode "q=..."`。Frontend callers (`usePoiSearch.ts` / `ExplorePage.tsx` / `google-poi-initial-backfill.ts`) 本來就 GET 正確，這次只動 docs。
+
+### Notes
+
+- 5/14 daily-check fix-result 早診斷出 POST/GET 問題，本來說「等 v2.30 segment-mode-rework land 後另開分支」— 今天順手清掉
+- 第三個 daily-check 告警「Phase 2 fix-result 缺失」root cause 是 LaunchDaemon ↔ macOS Keychain isolation（claude CLI OAuth 存 user keychain，LaunchDaemon 雖 `UserName=ray` 但跑 pre-login system context 沒附著 user keychain session）。本 PR 不處理 — 屬於 scheduler infra issue，需另外決策（split LaunchAgent for claude + LaunchDaemon for daily-check.js，或用 ANTHROPIC_API_KEY env 繞 keychain）
+
 ## [2.30.3] - 2026-05-15
 
 **`.tp-action-btn` family 抽出共用 — poi-favorites-rename §13 收尾。**
