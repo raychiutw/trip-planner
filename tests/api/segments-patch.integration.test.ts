@@ -1,13 +1,12 @@
 /**
  * Integration test — PATCH /api/trips/:id/segments/:sid
  *
- * User override travel mode：set mode_source='user' so recompute 不覆寫。
- * transit mode 必須帶 min（手動輸入）。
+ * v2.30.0：mode_source DROPPED。新 contract：
+ *   - mode='transit' → 必填 min（Japan Routes 無 transit 資料），source='manual'，不打 API
+ *   - mode='driving' / 'walking' → 一律 Google Routes 重算，ignore body.min, source='google'
  *
- * v2.26.2 regression：mode 從 driving 切 walking（或反向）且 user 未帶 min →
- * backend 必須自動 call Google Routes 重算 min（不能保留舊 mode 的時間）。
- * Bug 觀察：v2.26.0 EditEntryPage 切 mode 後顯示「步行 17 min / 9.3 km」（17 min
- * 是 driving 時間）。
+ * v2.26.2 regression：mode 從 driving 切 walking（或反向）→ backend 必須自動
+ * call Google Routes 重算 min（不能保留舊 mode 的時間）。
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 
@@ -55,8 +54,8 @@ beforeEach(async () => {
   const now = Date.now();
   const r = await db.prepare(
     `INSERT INTO trip_segments
-     (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
-     VALUES (?, ?, ?, 'walking', 'auto', 5, 400, 'google', ?, ?) RETURNING id`,
+     (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+     VALUES (?, ?, ?, 'walking', 5, 400, 'google', ?, ?) RETURNING id`,
   ).bind('trip-segp', e1, e2, now, now).first<{ id: number }>();
   segId = r!.id;
 });
@@ -64,7 +63,7 @@ beforeEach(async () => {
 afterAll(disposeMiniflare);
 
 describe('PATCH /api/trips/:id/segments/:sid', () => {
-  it('mode=driving → 200 + mode_source=user (recompute 不覆寫)', async () => {
+  it('mode=driving → 200 + mode 改了（缺 coords / 缺 API key 走 fallback，computed_at=NULL 標 stale）', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'driving' }),
       env,
@@ -73,9 +72,9 @@ describe('PATCH /api/trips/:id/segments/:sid', () => {
     });
     const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
-    const updated = await db.prepare('SELECT mode, mode_source FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string; mode_source: string }>();
+    const updated = await db.prepare('SELECT mode, computed_at FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string; computed_at: number | null }>();
     expect(updated!.mode).toBe('driving');
-    expect(updated!.mode_source).toBe('user');
+    expect(updated!.computed_at).toBeNull();
   });
 
   it('mode=transit 無 min → 400', async () => {
@@ -88,7 +87,7 @@ describe('PATCH /api/trips/:id/segments/:sid', () => {
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
   });
 
-  it('mode=transit + min=30 → 200 + source=manual', async () => {
+  it('mode=transit + min=30 → 200 + source=manual + distance_m=NULL', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'transit', min: 30 }),
       env,
@@ -97,11 +96,11 @@ describe('PATCH /api/trips/:id/segments/:sid', () => {
     });
     const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
-    const updated = await db.prepare('SELECT mode, "min", source, mode_source FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string; min: number; source: string; mode_source: string }>();
+    const updated = await db.prepare('SELECT mode, "min", source, distance_m FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string; min: number; source: string; distance_m: number | null }>();
     expect(updated!.mode).toBe('transit');
     expect(updated!.min).toBe(30);
     expect(updated!.source).toBe('manual');
-    expect(updated!.mode_source).toBe('user');
+    expect(updated!.distance_m).toBeNull();
   });
 
   it('mode=transit + min=99999 (> 1440 上界) → 400', async () => {
@@ -168,8 +167,8 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     // 起始為 driving / 18min（mock 速度算出）
     const r = await db.prepare(
       `INSERT INTO trip_segments
-       (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
-       VALUES (?, ?, ?, 'driving', 'auto', 18, 9300, 'google', ?, ?) RETURNING id`,
+       (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+       VALUES (?, ?, ?, 'driving', 18, 9300, 'google', ?, ?) RETURNING id`,
     ).bind('trip-segr', e1, e2, now, now).first<{ id: number }>();
     segIdR = r!.id;
   });
@@ -183,10 +182,9 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     });
     const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
-    const updated = await db.prepare('SELECT mode, mode_source, "min", source, distance_m FROM trip_segments WHERE id = ?')
-      .bind(segIdR).first<{ mode: string; mode_source: string; min: number; source: string; distance_m: number }>();
+    const updated = await db.prepare('SELECT mode, "min", source, distance_m FROM trip_segments WHERE id = ?')
+      .bind(segIdR).first<{ mode: string; min: number; source: string; distance_m: number }>();
     expect(updated!.mode).toBe('walking');
-    expect(updated!.mode_source).toBe('user'); // user override mode 不被 auto recompute 蓋
     expect(updated!.source).toBe('google');     // 重算來自 Google Routes
     // 9.3km / 5km/h ≈ 111 min；不該保留 driving 的 18 min
     expect(updated!.min).toBeGreaterThanOrEqual(90);
@@ -213,7 +211,7 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     expect(updated!.min).toBeLessThanOrEqual(25);
   });
 
-  it('user 自帶 min 時不重算 — manual override 優先', async () => {
+  it('v2.30.0：mode=walking 帶 body.min → backend 忽略 body.min 強制 Google 重算', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'walking', min: 42 }),
       env,
@@ -224,8 +222,10 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     const updated = await db.prepare('SELECT mode, "min", source FROM trip_segments WHERE id = ?')
       .bind(segIdR).first<{ mode: string; min: number; source: string }>();
     expect(updated!.mode).toBe('walking');
-    expect(updated!.min).toBe(42);
-    expect(updated!.source).toBe('manual');
+    // 9.3km / 5km/h ≈ 111 min；body.min=42 應被 ignore
+    expect(updated!.min).toBeGreaterThanOrEqual(90);
+    expect(updated!.min).toBeLessThanOrEqual(130);
+    expect(updated!.source).toBe('google');
   });
 
   it('entries 缺 coords → 保留舊 min（不能 call Google，fallback）', async () => {

@@ -10,10 +10,13 @@
  *
  * v2.24.0 tap-switch（Phase γ.0）：當 caller 提供 `segment + tripId` props 時，
  * pill 變 button、tap 開 TravelPillDialog 切換 mode（driving/walking/transit）。
- * 後者透過 PATCH /api/trips/:id/segments/:sid 寫入 + 設 mode_source='user'。
+ * 後者透過 PATCH /api/trips/:id/segments/:sid 寫入。
  *
- * Backwards compat：未提供 segment props → 沿用 v2.23 唯讀渲染（TimelineRail
- * 接線在 γ.1 PR）。
+ * v2.30.0：mode_source DROPPED — 不再有「上鎖」概念。
+ *   - 切 transit → 用 user 手填 min（source='manual'）
+ *   - 切回 driving / walking → backend 一律打 Google Routes 重算
+ *
+ * Backwards compat：未提供 segment props → 沿用 v2.23 唯讀渲染。
  */
 import { useState } from 'react';
 import Icon from '../shared/Icon';
@@ -73,12 +76,6 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-eyebrow); line-height: 1;
   margin-left: 2px;
 }
-.tp-travel-pill-lock {
-  color: var(--color-accent-deep);
-  display: inline-flex; align-items: center;
-  margin-left: 2px;
-}
-.tp-travel-pill-lock svg { width: 11px; height: 11px; }
 /* Stale-travel ⚠ indicator + recompute button — sibling of pill (not nested, avoid button-in-button) */
 .tp-travel-pill-stale {
   display: inline-flex; align-items: center; gap: 4px;
@@ -133,10 +130,9 @@ const TYPE_ICON_MAP: Record<string, string> = {
 export interface TravelPillSegment {
   id: number;
   mode: TravelMode;
-  modeSource: 'auto' | 'user';
-  /** segment.min（auto 是 Google Routes 算的；user 是手動覆寫值）*/
+  /** segment.min（driving/walking 是 Google Routes 算的；transit 是 user 手填值）*/
   min: number | null;
-  /** segment.distance_m（Google Routes 回傳；transit 因不打 API 為 0 / null）*/
+  /** segment.distance_m（Google Routes 回傳；transit 因不打 API 為 null）*/
   distanceM: number | null;
   /**
    * v2.29.1 stale 偵測：null = 還沒被 Google Routes 算過（master swap 後 backend
@@ -206,7 +202,6 @@ export default function TravelPill({
   const effectiveType = segment?.mode ?? type ?? null;
   const effectiveMin = isStale ? null : (segment?.min ?? min ?? null);
   const effectiveDist = isStale ? null : (segment?.distanceM ?? distanceM ?? null);
-  const isLocked = segment?.modeSource === 'user';
 
   const hasMin = typeof effectiveMin === 'number' && effectiveMin > 0;
   const hasDist = typeof effectiveDist === 'number' && effectiveDist > 0;
@@ -216,7 +211,6 @@ export default function TravelPill({
 
   const iconName = TYPE_ICON_MAP[(effectiveType ?? '').toLowerCase()] ?? 'car';
   const isInteractive = !!segment && !!tripId;
-  const showAffordance = isInteractive && !isLocked;
 
   // Pill 內部內容 — 必須只含 non-interactive elements（pill 本身可能 wrap 成 <button>，
   // 內部不可再有 <button>/<a>，否則 HTML5 違規 + a11y 破）。Stale ⚠ chip 含 recompute
@@ -234,19 +228,8 @@ export default function TravelPill({
         {(hasDist || hasMin) && hasDesc && <span className="tp-travel-pill-sep">·</span>}
         {hasDesc && <span className="tp-travel-pill-desc">{desc}</span>}
       </span>
-      {showAffordance && (
+      {isInteractive && (
         <span className="tp-travel-pill-affordance" aria-hidden="true">▾</span>
-      )}
-      {isLocked && (
-        <span
-          className="tp-travel-pill-lock"
-          aria-label="已手動覆寫"
-          data-testid="travel-pill-lock"
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 2a4 4 0 014 4v3h1a1 1 0 011 1v9a1 1 0 01-1 1H7a1 1 0 01-1-1v-9a1 1 0 011-1h1V6a4 4 0 014-4m0 2a2 2 0 00-2 2v3h4V6a2 2 0 00-2-2z"/>
-          </svg>
-        </span>
       )}
     </>
   );
@@ -282,7 +265,7 @@ export default function TravelPill({
             type="button"
             className="tp-travel-pill is-interactive"
             onClick={() => setDialogOpen(true)}
-            aria-label={`交通方式 ${effectiveType ?? ''}${hasMin ? ` ${effectiveMin} 分鐘` : ''}${isLocked ? '（已手動覆寫）' : ''}（點擊變更）`}
+            aria-label={`交通方式 ${effectiveType ?? ''}${hasMin ? ` ${effectiveMin} 分鐘` : ''}（點擊變更）`}
             data-testid="travel-pill"
           >
             {inner}
@@ -299,7 +282,6 @@ export default function TravelPill({
           tripId={tripId}
           segmentId={segment.id}
           currentMode={segment.mode}
-          modeSource={segment.modeSource}
           currentMin={segment.min}
           distanceM={segment.distanceM}
           fromName={fromName}

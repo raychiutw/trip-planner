@@ -53,7 +53,6 @@ function makeSegment(fromId: number, toId: number, computedAt: number | null): T
     fromEntryId: fromId,
     toEntryId: toId,
     mode: 'driving',
-    modeSource: 'auto',
     min: 27,
     distanceM: 11299,
     source: 'google',

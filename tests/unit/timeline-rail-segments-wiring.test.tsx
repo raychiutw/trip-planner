@@ -1,11 +1,10 @@
 /**
- * TimelineRail × useTripSegments wiring (v2.24.0 Phase γ.1)
+ * TimelineRail × useTripSegments wiring (v2.24.0 Phase γ.1; v2.30.0 rewrite)
  *
  * 驗證：
  *   - TimelineRail 用 useTripId() → 給 hook tripId → segmentMap O(1) lookup
  *   - 每對 (prev, curr) entry 從 segmentMap 取對應 row 給 TravelPill
  *   - 有 segment + tripId → TravelPill 變 button（v2.24.0 interactive）
- *   - segment 有 modeSource='user' → TravelPill 顯示鎖頭
  *   - segment 不存在但 travelObj 在 → fallback 用 travelObj 唯讀渲染
  *   - 第一個 entry（i=0）→ 上方無 TravelPill
  */
@@ -50,8 +49,7 @@ describe('TimelineRail × useTripSegments wiring', () => {
     const segMap = new Map([
       ['1-2', {
         id: 99, tripId: 'trip-okinawa', fromEntryId: 1, toEntryId: 2,
-        mode: 'driving' as const, modeSource: 'auto' as const,
-        min: 25, distanceM: 18000, source: 'google_routes',
+        mode: 'driving' as const, min: 25, distanceM: 18000, source: 'google_routes',
         computedAt: 1, updatedAt: 1,
       }],
     ]);
@@ -66,12 +64,12 @@ describe('TimelineRail × useTripSegments wiring', () => {
     expect(pills[0].textContent).toContain('25 min');
   });
 
-  it('segment.modeSource=user → TravelPill 顯示鎖頭（無 ▾）', () => {
+  it('segment.mode=transit → TravelPill 仍可點（v2.30 拔掉鎖頭概念）', () => {
     const segMap = new Map([
       ['1-2', {
         id: 99, tripId: 'trip-okinawa', fromEntryId: 1, toEntryId: 2,
-        mode: 'transit' as const, modeSource: 'user' as const,
-        min: 30, distanceM: null, source: null,
+        mode: 'transit' as const,
+        min: 30, distanceM: null, source: 'manual',
         computedAt: 1, updatedAt: 1,
       }],
     ]);
@@ -79,23 +77,22 @@ describe('TimelineRail × useTripSegments wiring', () => {
 
     renderRail([entry(1, '那霸機場'), entry(2, '本部午餐')]);
 
-    expect(screen.getByTestId('travel-pill-lock')).toBeInTheDocument();
     const pill = screen.getByTestId('travel-pill');
-    expect(pill.textContent).not.toContain('▾');
+    expect(pill.tagName).toBe('BUTTON');
+    expect(pill.textContent).toContain('▾');
+    expect(pill.textContent).toContain('30 min');
   });
 
   it('multiple entry pairs → multiple TravelPills, each with own segment', () => {
     const segMap = new Map([
       ['1-2', {
         id: 10, tripId: 'trip-okinawa', fromEntryId: 1, toEntryId: 2,
-        mode: 'walking' as const, modeSource: 'auto' as const,
-        min: 8, distanceM: 600, source: 'google_routes',
+        mode: 'walking' as const, min: 8, distanceM: 600, source: 'google_routes',
         computedAt: 1, updatedAt: 1,
       }],
       ['2-3', {
         id: 11, tripId: 'trip-okinawa', fromEntryId: 2, toEntryId: 3,
-        mode: 'driving' as const, modeSource: 'auto' as const,
-        min: 22, distanceM: 15000, source: 'google_routes',
+        mode: 'driving' as const, min: 22, distanceM: 15000, source: 'google_routes',
         computedAt: 1, updatedAt: 1,
       }],
     ]);
@@ -141,8 +138,7 @@ describe('TimelineRail × useTripSegments wiring', () => {
     const segMap = new Map([
       ['1-2', {
         id: 99, tripId: 'trip-okinawa', fromEntryId: 1, toEntryId: 2,
-        mode: 'driving' as const, modeSource: 'auto' as const,
-        min: 25, distanceM: 18000, source: 'google_routes',
+        mode: 'driving' as const, min: 25, distanceM: 18000, source: 'google_routes',
         computedAt: 1, updatedAt: 1,
       }],
     ]);

@@ -68,8 +68,8 @@ beforeAll(async () => {
   const travelE2 = await seedEntry(db, travelD1Id, { title: 'Trip-Travel D1 E2', sortOrder: 1 });
   await db.prepare(
     `INSERT INTO trip_segments
-     (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
-     VALUES (?, ?, ?, 'driving', 'auto', 30, NULL, NULL, ?, ?)`,
+     (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+     VALUES (?, ?, ?, 'driving', 30, NULL, NULL, ?, ?)`,
   ).bind('trip-travel', travelE1, travelE2, Date.now(), Date.now()).run();
 });
 

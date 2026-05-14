@@ -5,7 +5,10 @@
  *   - 1km gate（Haversine 本地算）：≤1km → walking + WALK API；>1km → driving + DRIVE API
  *   - 永遠 1 Google Routes call/pair（不打 TRANSIT — Japan 無資料）
  *   - 寫 trip_segments（first-class，v2.29.0 為唯一 source，entry.travel_* 已 DROPPED）
- *   - mode_source='user' 既有 segment 不覆寫（保留 user override）
+ *
+ * v2.30.0（mode_source DROPPED）：
+ *   - mode='transit' 既有 segment 不覆寫（user 手填 min，recompute 不能蓋）
+ *   - 切回 driving / walking 由 PATCH /segments/:sid 觸發 Google Routes 重算
  *
  * Self-drive 窗內也吃 1km gate（短程仍 walking — 找停車位比走路慢）。
  *
@@ -44,7 +47,7 @@ interface ExistingSegment {
   id: number;
   from_entry_id: number;
   to_entry_id: number;
-  mode_source: string;
+  mode: string;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -85,7 +88,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Pre-load 既有 segments（單一 SELECT 省 N 次 per-pair query）
   const existingRes = await db
-    .prepare('SELECT id, from_entry_id, to_entry_id, mode_source FROM trip_segments WHERE trip_id = ?')
+    .prepare('SELECT id, from_entry_id, to_entry_id, mode FROM trip_segments WHERE trip_id = ?')
     .bind(tripId)
     .all<ExistingSegment>();
   const existingMap = new Map<string, ExistingSegment>();
@@ -94,7 +97,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   let pairsComputed = 0;
-  let pairsSkippedUser = 0;
+  let pairsSkippedTransit = 0;
   const sourceBreakdown: Record<string, number> = {};
   const modeBreakdown: Record<string, number> = {};
   const errorsDetail: Array<{ entryId: number; message: string }> = [];
@@ -125,8 +128,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       if (prev.lat == null || prev.lng == null || curr.lat == null || curr.lng == null) continue;
 
       const existing = existingMap.get(`${prev.id}-${curr.id}`);
-      if (existing && existing.mode_source === 'user') {
-        pairsSkippedUser++;
+      if (existing && existing.mode === 'transit') {
+        // transit = user 手填 min（Japan Routes 無 transit 資料），recompute 不覆寫
+        pairsSkippedTransit++;
         continue;
       }
 
@@ -169,35 +173,33 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
   }
 
-  // 單一 db.batch 寫入所有 upserts + legacy dual-write（1 subrequest 不論 statement 數）
+  // 單一 db.batch 寫入所有 upserts（1 subrequest 不論 statement 數）
   if (segmentInserts.length > 0 || segmentUpdates.length > 0) {
     const stmts = [
       // INSERT 用 ON CONFLICT 防 TOCTOU race：preload 後若另一支 concurrent
       // recompute 已 INSERT 同 (from,to) pair，本 batch 不會炸 UNIQUE → atomic
-      // rollback；改成 upsert。WHERE mode_source = 'auto' 防 race PATCH 時 user
-      // override 被 auto recompute 蓋（preload→write 之間若 user 改過 mode_source
-      // 為 'user'，DO UPDATE 因 WHERE 不成立 → no-op，保留 user 覆寫）。
+      // rollback；改成 upsert。WHERE mode != 'transit' 防 race：preload→write
+      // 之間若 user PATCH 改成 transit（手填 min），DO UPDATE 不蓋。
       ...segmentInserts.map((s) => db.prepare(
         `INSERT INTO trip_segments
-         (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
-         VALUES (?, ?, ?, ?, 'auto', ?, ?, 'google', ?, ?)
+         (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'google', ?, ?)
          ON CONFLICT (from_entry_id, to_entry_id) DO UPDATE SET
            mode = excluded.mode,
-           mode_source = 'auto',
            min = excluded.min,
            distance_m = excluded.distance_m,
            source = 'google',
            computed_at = excluded.computed_at,
            updated_at = excluded.updated_at
-         WHERE trip_segments.mode_source = 'auto'`,
+         WHERE trip_segments.mode != 'transit'`,
       ).bind(s.tripId, s.from, s.to, s.mode, s.min, s.distM, s.now, s.now)),
-      // UPDATE 加 mode_source='auto' guard：preload→write 之間若 user PATCH 過
-      // mode_source='user'，本 UPDATE 因 WHERE 不成立 → 0 rows affected (correct)。
+      // UPDATE 加 mode != 'transit' guard：preload→write 之間若 user PATCH 改 transit，
+      // 本 UPDATE 因 WHERE 不成立 → 0 rows affected (correct)。
       ...segmentUpdates.map((s) => db.prepare(
         `UPDATE trip_segments
-         SET mode = ?, mode_source = 'auto', min = ?, distance_m = ?,
+         SET mode = ?, min = ?, distance_m = ?,
              source = 'google', computed_at = ?, updated_at = ?
-         WHERE id = ? AND mode_source = 'auto'`,
+         WHERE id = ? AND mode != 'transit'`,
       ).bind(s.mode, s.min, s.distM, s.now, s.now, s.id)),
     ];
     await db.batch(stmts);
@@ -208,7 +210,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     tripId,
     daysProcessed: daysRes.results.length,
     pairsComputed,
-    pairsSkippedUser,
+    pairsSkippedTransit,
     sourceBreakdown,
     modeBreakdown,
     errorsDetail,

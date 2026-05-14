@@ -3,6 +3,42 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.0] - 2026-05-14
+
+**`trip_segments.mode_source` 欄位 DROPPED — transit 自然代理 user override，不再有「上鎖」概念。**
+
+User 想自行輸入大眾運輸車程時間，但切回駕車 / 步行 → 直接 Google Routes 重算。v2.24.0 加的 `mode_source` lock concept 讓使用者改完 driving 後無法重新觸發計算，只能砍 segment 重建 — 不符合使用直覺。
+
+### Changed
+
+**Backend：**
+- `migrations/0064_drop_segments_mode_source.sql`：`ALTER TABLE trip_segments DROP COLUMN mode_source`（+ rollback SQL）
+- `PATCH /api/trips/:id/segments/:sid`：
+  - `mode='transit'` → 必填 `min`，save `source='manual'`、`distance_m=NULL`，不打 Routes API
+  - `mode='driving'` / `'walking'` → 永遠 Google Routes 重算（**ignore `body.min`**），`source='google'`；缺 coords / API key → 保留舊 min/distance，`computed_at=NULL` 標 stale
+- `POST /api/trips/:id/recompute-travel`：skip 條件由 `mode_source='user'` 改成 `mode='transit'`；response field `pairsSkippedUser` → `pairsSkippedTransit`
+- `GET /api/trips/:id/segments` + `_merge.ts fetchTripSegmentsMap`：SELECT 移除 `mode_source` 欄位
+
+**Frontend：**
+- `TravelPillSegment` interface 移除 `modeSource` field
+- `TravelPill`：拔掉 🔒 lock icon + `tp-travel-pill-lock` CSS + `isLocked` 變數 + aria-label「（已手動覆寫）」；▾ affordance 永遠顯示
+- `TravelPillDialog`：拔掉 `modeSource` prop、「已手動覆寫」title indicator + `.tp-travel-dialog-locked` CSS
+- `EditEntryPage`：移除「手動覆寫」section heading aux chip、「重設為自動」button、`tp-edit-entry-reset` + `is-lock` CSS、`resetMode` callback
+- `useTripSegments`：`TripSegment` interface 移除 `modeSource`
+
+### Migration / Deploy 順序
+
+1. Apply migration 0064 → `trip_segments` 無 `mode_source` col
+2. Pages deploy 新 backend（不讀寫 `mode_source`）
+
+順序顛倒 → migration 後 30-90s 內 OLD backend SELECT 會回 SQL error（已知短窗 race，accept；同 v2.29.0 trip_pois rip-out pattern）。
+
+### Tests
+
+- `tests/unit/`：移除 fixture `modeSource`、刪除「mode_source=user → 顯示鎖頭」cases
+- `tests/api/segments-patch.integration.test.ts`：「user 自帶 min 時不重算 — manual override 優先」改寫為「mode=walking 帶 body.min → backend 強制 Google 重算」
+- `tests/api/recompute-travel-segments.integration.test.ts`：「既有 `mode_source=user` segment 被 skip」改寫為「既有 `mode=transit` segment 被 skip」；response field `pairsSkippedUser` → `pairsSkippedTransit`
+
 ## [2.29.3] - 2026-05-14
 
 **`daily-check` 排程資料不完整 fix — `trip_requests.mode` stale SELECT 害 Telegram 每天誤報全綠。**
