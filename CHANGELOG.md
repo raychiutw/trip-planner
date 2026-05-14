@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.29.3] - 2026-05-14
+
+**`daily-check` 排程資料不完整 fix — `trip_requests.mode` stale SELECT 害 Telegram 每天誤報全綠。**
+
+`scripts/daily-check.js:309 queryRequestErrors` 仍 SELECT `trip_requests.mode`，但 migration 0049 (v2.21.3) 已 DROP 該欄位 → D1 query 回 400 → `Promise.allSettled` fallback 寫假 `{status:'ok', total:0}` 進 report → Telegram 每天 silent 誤報「未完成請求 0 筆」，掩蓋實際 open/processing/failed 請求。連續 5/12-5/14 三天 report.json 都吃 fallback 假資料。
+
+### Fixed
+
+- `daily-check.js queryRequestErrors`：移除 SELECT 與 `pending.map` 內的 `mode` 欄位引用
+- requestErrors 段恢復顯示真實資料（過去 24h 內非 completed 請求數、status 分布、卡住 >15min 計數）
+
+### Tests
+
+- `daily-check-trip-requests.test.ts`：新增 regression test (2 tests) — 抓 `queryRequestErrors` function source，斷言不再含 `mode` 字串 + `pending.map` 不再 surface `mode: r.mode`
+- 驗證 fail-without-fix → pass-with-fix 兩端對齊
+
+### Verify
+
+- 修前 log: `Source 4 failed: D1 query failed: 400`（連續 5/12-5/14 三天）
+- 修後 stdout: 無 Source failed 訊息，requestErrors 段拿到真實 D1 query 結果
+- `npx vitest run tests/unit/` — 181 files / 1535 tests pass（新增 2 test）
+
 ## [2.29.2] - 2026-05-14
 
 **`車程未更新` 警告全段亂噴 fix — 改用 `segment.computed_at` 信號。**
