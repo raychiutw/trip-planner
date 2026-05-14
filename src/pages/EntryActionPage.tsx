@@ -56,8 +56,6 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 
 interface DaysApiRow {
   id: number;
-  // _utils.json() 套 deepCamel — API 真實回 camelCase。下游 Day 「空 7/1」label
-  // 是因為這裡讀 snake_case 都 undefined → fall through。v2.21.0 修為 camelCase。
   dayNum: number;
   date?: string | null;
   dayOfWeek?: string | null;

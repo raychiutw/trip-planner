@@ -58,7 +58,6 @@ interface PoiFavoriteRow {
 
 interface DayApiRow {
   id: number;
-  // _utils.json() 套 deepCamel — API 回 camelCase。v2.21.0 對齊 (was snake_case)
   dayNum: number;
   date?: string | null;
   dayOfWeek?: string | null;
