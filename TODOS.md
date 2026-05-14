@@ -16,11 +16,7 @@
 **Found by**: v2.27.0 round 5/6/7 ship review deferred items
 **Phase 2 cutover (v2.27.1)** — `[Phase 2 cutover items 1-4 已於 v2.29.0 完成 → 見 Completed]`
 
-**ChangePoiPage 加 entry_pois_version 帶上**：
-- 目前 PUT /poi-id backend 接受 OCC token 但 ChangePoiPage 沒 fetch / 帶上 → cross-tab swap 仍可能 lost update（雖機率低，user 主動「變更景點」非 high-contention）
-- Fix: ChangePoiPage useEffect 抓 GET /entries/:eid 取 entryPoisVersion → submit body 帶上
-- Est: 15 min CC
-- Priority: P2
+**ChangePoiPage 加 entry_pois_version 帶上** — `[v2.29.0 PR #529 已完成 → 見 Completed]`
 
 **Atomic CAS via UPDATE RETURNING**：
 - 目前 OCC 是「先 SELECT version → 比對 → bind 寫」兩段式，concurrent setMaster 仍 fall back 到 UNIQUE constraint catch + retry。SQLite ≥3.35 支援 `UPDATE ... WHERE version = ? RETURNING new_version` atomic CAS，可省一個 RTT + 簡化 race handling
@@ -39,41 +35,7 @@
 - Est: 1 hr CC
 - Priority: P3
 
-**Tech debt — event name const-ize**：
-- `tp-segment-updated` / `tp-entry-updated` / `tp-trip-updated` 散在 16+ dispatch / listen sites 用字串 literal
-- Fix: `src/lib/events.ts` 集中 const
-- Est: 15 min CC
-- Priority: P3
-
----
-
-## Travel compute — 統一到 Mapbox（拔 ORS）
-
-**Found by**: 2026-05-06 user 問「車程計算用哪個 service」 → 發現 split：`/api/route` (Mapbox) + `src/server/travel/compute.ts` (ORS primary)
-**Why unify**: Mapbox 路網對東亞（沖繩 / 韓國 / 日本）比 ORS 準；polyline 細節一致；簡化 1 service / 1 token / 1 helper；移除 mac mini ORS_API_KEY env
-**Quota check**: 統一後 Mapbox usage ~3-6k/month (vs free 100k/month) — 安全
-**Implementation**:
-1. `src/server/travel/compute.ts` 加 `mapboxRoute(opts)` helper
-2. `computeTravel`: try Mapbox → Haversine fallback（跟 frontend `/api/route` 同 fallback chain）
-3. DELETE `src/server/routing/ors.ts`（or 標 @deprecated 留 1 week soak）
-4. mac mini cron `.env`：移除 ORS_API_KEY
-5. CHANGELOG 註記 ORS 退場
-**Risk**: 集中 Mapbox 一個 service — Mapbox down 全部走 Haversine（功能仍 work，只是 polyline 沒了）
-**Est**: 1 hr CC + 1 PR
-**Priority**: P3（technical debt cleanup，非 user-facing 痛點）
-
----
-
-## EntryActionPage / AddStopPage — API response snake/camel mismatch (Day 「空」 label)
-
-**Found by**: /office-hours implementation of P1 onRequestGet (2026-05-03)
-**Symptom**: `functions/api/_utils.ts:json()` 對所有 response 跑 `deepCamel` snake→camel,但 EntryActionPage L265-273 + AddStopPage L156, L635 還在讀 `d.day_num / d.day_of_week / d.entry_count / entryData.day_id`。real API 出 `dayNum / dayOfWeek / entryCount / dayId`,page 讀到全 undefined → day picker label 顯示「Day 空 7/1」(沒 day number),current day 不 highlight,stop count 永遠 0。功能仍 work(date+click 還在),純 cosmetic degrade。
-**Fix**:
-1. EntryActionPage interfaces L58-67 + reads L265-273 改 camelCase
-2. AddStopPage L156 + L635 改 camelCase
-3. tests/e2e/api-mocks.js MOCK_DAYS_* 拿掉 dual-key,只保留 camelCase
-**Est**: 15 min CC
-**Priority**: P2 (cosmetic but visible — picker 看起來壞掉)
+**Tech debt — event name const-ize** — `[v2.29.0 PR #530 已完成 → 見 Completed]`
 
 ---
 
@@ -316,6 +278,36 @@ A 是標準做法但需 cron handler；B 簡單但 latency tail 可能受 1% 隨
 ---
 
 ## Completed
+
+### Tech debt — event name const-ize
+
+**Priority:** P3
+**Completed:** v2.29.0 (2026-05-14)
+**PR:** [#530](https://github.com/raychiutw/trip-planner/pull/530)
+
+新 `src/lib/events.ts` 集中 `EVENT.entryUpdated` / `segmentUpdated` / `tripUpdated` / `tripCreated` / `developerAppCreated`。13 個 src/ 檔案 import 替換 literal；test files 保留 raw strings 當 contract assertion（防 events.ts 改 literal 但 listener 漏改）。1532 unit tests pass。
+
+### ChangePoiPage entry_pois_version OCC token
+
+**Priority:** P2
+**Completed:** v2.29.0 (2026-05-14)
+**PR:** [#529](https://github.com/raychiutw/trip-planner/pull/529)
+
+mount-time `GET /trips/:id/entries/:eid` 取 `entryPoisVersion` → submit body spread 進 `POST /alternates` 與 `PUT /poi-id` 兩個 mode。409 response 解析 `error.code`，區分 `STALE_ENTRY`（「資料已被其他操作更新，請重新整理」）與 `DUPLICATE_POI`（「此景點已存在於 stop 中」）給 user-friendly 訊息。+3 unit tests。
+
+### Travel compute — Mapbox/ORS rip-out（過時 TODO）
+
+**Priority:** P3
+**Completed:** v2.23.0（hard cutover 到 Google Maps Platform — 2026-05-09）
+
+TODO 文字描述「`/api/route` (Mapbox) + `src/server/travel/compute.ts` (ORS primary)」整段在 v2.23.0 `google-maps-migration` 一次全部 rip-out：Mapbox + ORS + OPENTRIPMAP + OSM Nominatim 全部移除，server-side single `GOOGLE_MAPS_API_KEY`（Places + Routes + Geocoding + Place Details）。`src/server/travel/compute.ts` + `src/server/routing/ors.ts` 兩個檔案在 v2.23.0 已 DELETE。`functions/api/_types.ts` 殘留的 `ORS_API_KEY` + `OPENTRIPMAP_API_KEY` env schema 已於 v2.29.0 PR #531 cleanup PR 一併拔除。
+
+### EntryActionPage / AddStopPage snake/camel mismatch（過時 TODO）
+
+**Priority:** P2
+**Completed:** v2.21.0（2026-05-04 audit）
+
+TODO 描述的 `d.day_num` / `d.day_of_week` / `d.entry_count` / `entryData.day_id` snake_case reads 早在 v2.21.0 已修為 camelCase（grep 確認 0 殘留）。Interface 內過時的「v2.21.0 修為 camelCase」歷史 comment 已於 v2.29.0 PR #531 cleanup PR 一併移除。
 
 ### v2.28.x Restaurants → alternates Phase 2
 
