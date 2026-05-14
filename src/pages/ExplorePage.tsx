@@ -101,27 +101,8 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-md);
   font-size: var(--font-size-callout); color: var(--color-accent);
 }
-.explore-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.explore-toolbar-btn {
-  padding: 8px 14px; border-radius: var(--radius-full);
-  border: 1px solid var(--color-accent);
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  font: inherit; font-weight: 600; font-size: var(--font-size-footnote);
-  cursor: pointer; min-height: 36px;
-}
-.explore-toolbar-btn-ghost {
-  background: transparent; color: var(--color-accent);
-}
-.explore-toolbar-btn-destructive {
-  background: transparent; color: var(--color-destructive);
-  border-color: var(--color-destructive);
-}
-.explore-toolbar-btn-destructive:hover:not(:disabled) {
-  background: var(--color-destructive-bg);
-  filter: none;
-}
-.explore-toolbar-btn:hover:not(:disabled) { filter: brightness(var(--hover-brightness)); }
-.explore-toolbar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* .explore-toolbar-btn* 在 JSX 從未引用（dead CSS），統一由 .tp-action-btn
+ * family (css/tokens.css) 提供 — 未來 toolbar UI 需要按鈕直接用新 class */
 
 .explore-section h2 {
   font-size: var(--font-size-title3); font-weight: 700;

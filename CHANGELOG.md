@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.3] - 2026-05-15
+
+**`.tp-action-btn` family 抽出共用 — poi-favorites-rename §13 收尾。**
+
+PoiFavoritesPage 既有 `.favorites-toolbar-btn` 系列（base / ghost / destructive）跟 ExplorePage 重複定義同 pattern（後者實際 JSX 從未 reference，是 dead CSS）。抽出 universal `.tp-action-btn` family 至 `css/tokens.css`，配合 design tokens canonical destructive 色（`--color-destructive` / `--color-destructive-bg`）。`§13` Shared component extract（`<PageErrorState>` / `<EmptyState>` 已在 v2.29.x 完成）這次補上最後 button family。
+
+### Changed
+
+- `css/tokens.css`：新增 `.tp-action-btn` + `.tp-action-btn--ghost` + `.tp-action-btn--destructive`（BEM 風格 modifier，對齊 `.tp-page-bottom-bar--end` 既有 pattern）
+- `src/pages/PoiFavoritesPage.tsx`：
+  - SCOPED_STYLES 移除 `.favorites-toolbar-btn` 3 條 rules
+  - className 換成 `tp-action-btn tp-action-btn--ghost` / `tp-action-btn tp-action-btn--destructive`
+  - destructive 從 `--color-priority-high-dot` (fallback `#c0392b`) 改用 canonical `--color-destructive` (`#C13515`)，light/dark 視覺一致
+  - 新增 hover affordance（`filter: brightness(0.92)` + destructive `background: --color-destructive-bg`），與 ExplorePage 既有設計意圖一致
+- `src/pages/ExplorePage.tsx`：移除 dead `.explore-toolbar-btn*` CSS（5 條 rules）+ `.explore-toolbar-actions`（JSX 從未引用）
+
+### Tests
+
+- 1532 unit tests pass
+- naming-convention test pass（先前 comment 內 `.favorites-toolbar-btn-*` 帶 trailing dash 誤觸 kebab-case lint，已修）
+
+### Follow-ups
+
+- `AddPoiFavoriteToTripPage` 內 scoped `.tp-favorites-add-to-trip .tp-action-btn`（font-size: 15px / padding: 12px 28px / min-width: 200px）是 large variant，未來可抽 `.tp-action-btn--large` 統一；本 PR 保持原 scope 避免擴大 diff
+- PoiFavoritesPage redesign（mockup v4）一併處理時可同時 sweep 其他 `.favorites-*` 系列 className → universal class
+
 ## [2.30.2] - 2026-05-15
 
 **V2-P6 `rate_limit_buckets` cleanup cron — 兌現 migration 0035 註解承諾。**
