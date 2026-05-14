@@ -40,6 +40,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
+import { EVENT } from '../lib/events';
 import { haversineMeters, avgLatLng, CROSS_REGION_THRESHOLD_M, type LatLng } from '../lib/geo';
 
 const SCOPED_STYLES = `
@@ -908,9 +909,9 @@ export default function EditEntryPage() {
       const failures = results.filter((r) => !r.ok);
       if (failures.length === 0) {
         // 通知 timeline + segments 重新 fetch
-        window.dispatchEvent(new CustomEvent('tp-entry-updated', { detail: { tripId, entryId } }));
+        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, entryId } }));
         if (dirty.segmentDirty) {
-          window.dispatchEvent(new CustomEvent('tp-segment-updated', { detail: { tripId, segmentId: segment?.id } }));
+          window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId: segment?.id } }));
         }
         showToast('已儲存', 'success');
         navigate(goBackHref, { replace: true });
@@ -1043,7 +1044,7 @@ export default function EditEntryPage() {
       setAltSwapConfirm(null);
       // round 5 fix: dispatch tp-segment-updated so useTripSegments refetches the now-stale
       // adjacent segments (backend marked computed_at=NULL in the setMaster batch).
-      window.dispatchEvent(new CustomEvent('tp-segment-updated', { detail: { tripId } }));
+      window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId } }));
       await refreshEntryPois();
       showToast(`已將「${alt.name}」設為正選`, 'success');
     } catch (err) {

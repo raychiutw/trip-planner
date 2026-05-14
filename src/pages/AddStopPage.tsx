@@ -34,6 +34,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { EVENT } from '../lib/events';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -768,7 +769,7 @@ export default function AddStopPage() {
         method: 'POST',
         credentials: 'same-origin',
       }).catch(() => undefined);
-      window.dispatchEvent(new CustomEvent('tp-entry-updated', { detail: { tripId, dayNum } }));
+      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, dayNum } }));
       showToast(`已加入 ${payloads.length} 個景點`, 'success');
       handleBack();
     } catch (err) {

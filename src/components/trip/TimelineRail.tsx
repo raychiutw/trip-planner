@@ -26,6 +26,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
 import { apiFetchRaw } from '../../lib/apiClient';
+import { EVENT } from '../../lib/events';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
@@ -402,7 +403,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       });
       if (!res.ok) throw new Error('儲存失敗');
       setEditingNote(false);
-      window.dispatchEvent(new CustomEvent('tp-entry-updated', {
+      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
         detail: { tripId, entryId: entryIdNum },
       }));
     } catch (err) {
@@ -435,7 +436,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         credentials: 'same-origin',
       });
       if (!res.ok) throw new Error('刪除失敗');
-      window.dispatchEvent(new CustomEvent('tp-entry-updated', {
+      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
         detail: { tripId, entryId: entryIdNum },
       }));
       setShowDeleteConfirm(false);
@@ -909,7 +910,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
         .catch(() => {
           showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
         });
-      window.dispatchEvent(new CustomEvent('tp-entry-updated', {
+      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
         detail: { tripId, entryId: active.id, reordered: true, travelRecomputeRequested: true },
       }));
     } catch {
@@ -934,7 +935,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
       .then((res) => {
         if (!res.ok) throw new Error(`recompute-travel ${res.status}`);
         showToast('車程已重新計算', 'info');
-        window.dispatchEvent(new CustomEvent('tp-entry-updated', {
+        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
           detail: { tripId, travelRecomputeRequested: true },
         }));
       })

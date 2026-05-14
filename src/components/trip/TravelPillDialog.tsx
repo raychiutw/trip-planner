@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../shared/Icon';
 import { apiFetchRaw } from '../../lib/apiClient';
+import { EVENT } from '../../lib/events';
 
 const SCOPED_STYLES = `
 .tp-travel-overlay {
@@ -309,7 +310,7 @@ export default function TravelPillDialog({
         min: selectedMode === 'transit' ? transitMinNumber : (currentMin ?? null),
         modeSource: 'user',
       });
-      window.dispatchEvent(new CustomEvent('tp-segment-updated', { detail: { tripId, segmentId } }));
+      window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId } }));
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : '儲存失敗');

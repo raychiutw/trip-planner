@@ -27,6 +27,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useNewTrip } from '../contexts/NewTripContext';
 import { apiFetchRaw } from '../lib/apiClient';
+import { EVENT } from '../lib/events';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -736,11 +737,11 @@ export default function TripsListPage() {
 
   useEffect(() => {
     function onTripCreated() { void loadTrips(); }
-    window.addEventListener('tp-trip-created', onTripCreated);
-    window.addEventListener('tp-trip-updated', onTripCreated);
+    window.addEventListener(EVENT.tripCreated, onTripCreated);
+    window.addEventListener(EVENT.tripUpdated, onTripCreated);
     return () => {
-      window.removeEventListener('tp-trip-created', onTripCreated);
-      window.removeEventListener('tp-trip-updated', onTripCreated);
+      window.removeEventListener(EVENT.tripCreated, onTripCreated);
+      window.removeEventListener(EVENT.tripUpdated, onTripCreated);
     };
   }, [loadTrips]);
 
