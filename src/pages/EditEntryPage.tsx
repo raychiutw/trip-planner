@@ -121,12 +121,6 @@ const SCOPED_STYLES = `
   text-transform: none;
   color: var(--color-muted);
 }
-.tp-edit-entry-section-aux.is-lock {
-  display: inline-flex; align-items: center; gap: 4px;
-  color: var(--color-accent-deep);
-  font-weight: 700;
-}
-.tp-edit-entry-section-aux.is-lock .svg-icon { width: 10px; height: 10px; }
 
 /* Time row */
 .tp-edit-entry-time-row {
@@ -228,16 +222,6 @@ const SCOPED_STYLES = `
   color: var(--color-foreground); font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.tp-edit-entry-reset {
-  font: inherit; font-size: var(--font-size-caption); font-weight: 600;
-  color: var(--color-accent); background: transparent;
-  border: 0; cursor: pointer;
-  padding: 4px 8px; border-radius: var(--radius-sm);
-}
-.tp-edit-entry-reset:hover {
-  background: var(--color-accent-subtle);
-}
-
 .tp-edit-entry-transit {
   margin-top: 12px;
   display: flex; align-items: center; gap: 8px;
@@ -939,13 +923,6 @@ export default function EditEntryPage() {
     }
   }, [dirty.any, goBack]);
 
-  const resetMode = useCallback(() => {
-    if (segment) {
-      setMode(segment.modeSource === 'auto' ? segment.mode : null);
-    }
-    // mode='auto' 我們無法直接 PATCH; user 留 mode 不變相當於不送 segment PATCH
-  }, [segment]);
-
   // v2.27.0 multi-POI handlers ----------------------------------------------
 
   // round 9 fix: refreshEntryPois 回傳新的 master + version 供 caller decision logic
@@ -1380,12 +1357,6 @@ export default function EditEntryPage() {
                   <h2 className="tp-edit-entry-section-h">
                     <Icon name="car" />
                     <span>從「{prevEntry.title}」移動</span>
-                    {segment?.modeSource === 'user' && (
-                      <span className="tp-edit-entry-section-aux is-lock">
-                        <Icon name="lock" />
-                        手動覆寫
-                      </span>
-                    )}
                   </h2>
                   {segment ? (
                     <>
@@ -1434,11 +1405,6 @@ export default function EditEntryPage() {
                           <span className="tp-edit-entry-transit-unit">
                             min · Japan Google Routes 沒 transit 資料，請手動填
                           </span>
-                          {segment.modeSource === 'user' && segment.mode !== 'transit' && (
-                            <button type="button" className="tp-edit-entry-reset" onClick={resetMode}>
-                              重設為自動
-                            </button>
-                          )}
                         </div>
                       )}
                     </>

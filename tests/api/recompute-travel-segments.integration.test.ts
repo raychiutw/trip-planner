@@ -1,10 +1,9 @@
 /**
  * Integration test — POST /api/trips/:id/recompute-travel
  *
- * v2.24.0 spec：
+ * v2.24.0 spec + v2.30.0 mode_source DROPPED：
  *   - 1km gate (Haversine)：≤1km → mode='walking' + WALK API；>1km → 'driving' + DRIVE API
- *   - mode_source='user' 既有 segment **不**覆寫
- *   - 寫 trip_segments + dual-write trip_entries.travel_* (legacy)
+ *   - mode='transit' 既有 segment **不**覆寫（transit 自然代理 user override）
  *
  * Mock：computeRoute 用 vi.mock 攔截，不打真實 Google Routes API。
  */
@@ -85,20 +84,20 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
     expect(body.modeBreakdown).toEqual({ walking: 1, driving: 1 });
 
     const segs = await db.prepare(
-      'SELECT from_entry_id, to_entry_id, mode, mode_source, source FROM trip_segments WHERE trip_id = ? ORDER BY from_entry_id',
-    ).bind('trip-rec-1').all<{ from_entry_id: number; to_entry_id: number; mode: string; mode_source: string; source: string }>();
+      'SELECT from_entry_id, to_entry_id, mode, source FROM trip_segments WHERE trip_id = ? ORDER BY from_entry_id',
+    ).bind('trip-rec-1').all<{ from_entry_id: number; to_entry_id: number; mode: string; source: string }>();
     expect(segs.results).toHaveLength(2);
-    expect(segs.results[0]).toMatchObject({ from_entry_id: e1, to_entry_id: e2, mode: 'walking', mode_source: 'auto', source: 'google' });
-    expect(segs.results[1]).toMatchObject({ from_entry_id: e2, to_entry_id: e3, mode: 'driving', mode_source: 'auto', source: 'google' });
+    expect(segs.results[0]).toMatchObject({ from_entry_id: e1, to_entry_id: e2, mode: 'walking', source: 'google' });
+    expect(segs.results[1]).toMatchObject({ from_entry_id: e2, to_entry_id: e3, mode: 'driving', source: 'google' });
   });
 
-  it('既有 mode_source=user segment 被 skip（不覆寫）', async () => {
+  it('既有 mode=transit segment 被 skip（不覆寫）', async () => {
     const { e1, e2 } = await setupTripWithEntries('trip-rec-user');
-    // 預先插一個 user-locked walking segment（A→B）
+    // 預先插一個 transit segment（A→B）user 手填 min
     const now = Date.now();
     await db.prepare(
-      `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
-       VALUES (?, ?, ?, 'transit', 'user', 999, 0, 'manual', ?, ?)`,
+      `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+       VALUES (?, ?, ?, 'transit', 999, NULL, 'manual', ?, ?)`,
     ).bind('trip-rec-user', e1, e2, now, now).run();
 
     const ctx = mockContext({
@@ -109,23 +108,23 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
     });
     const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(200);
-    const body = await resp.json() as { pairsSkippedUser: number; pairsComputed: number };
-    expect(body.pairsSkippedUser).toBe(1);
+    const body = await resp.json() as { pairsSkippedTransit: number; pairsComputed: number };
+    expect(body.pairsSkippedTransit).toBe(1);
     expect(body.pairsComputed).toBe(1); // 只算了 B→C
 
-    // 驗 user-locked segment 沒被覆寫
+    // 驗 transit segment 沒被覆寫
     const seg = await db.prepare(
-      'SELECT mode, mode_source, "min" FROM trip_segments WHERE from_entry_id = ? AND to_entry_id = ?',
-    ).bind(e1, e2).first<{ mode: string; mode_source: string; min: number }>();
-    expect(seg).toMatchObject({ mode: 'transit', mode_source: 'user', min: 999 });
+      'SELECT mode, "min" FROM trip_segments WHERE from_entry_id = ? AND to_entry_id = ?',
+    ).bind(e1, e2).first<{ mode: string; min: number }>();
+    expect(seg).toMatchObject({ mode: 'transit', min: 999 });
   });
 
-  it('既有 mode_source=auto segment 會被重新覆寫', async () => {
+  it('既有 driving/walking segment 會被重新覆寫', async () => {
     const { e1, e2 } = await setupTripWithEntries('trip-rec-auto');
     const now = Date.now();
     await db.prepare(
-      `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
-       VALUES (?, ?, ?, 'driving', 'auto', 100, 99999, 'google', ?, ?)`,
+      `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+       VALUES (?, ?, ?, 'driving', 100, 99999, 'google', ?, ?)`,
     ).bind('trip-rec-auto', e1, e2, now - 10000, now - 10000).run();
 
     const ctx = mockContext({

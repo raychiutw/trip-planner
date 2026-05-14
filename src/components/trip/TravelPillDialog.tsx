@@ -5,10 +5,12 @@
  * Desktop：popover anchored 相對於 trigger（外層自處理位置；本 component 純 render dialog body
  * + overlay）。
  *
- * 三選一：driving / walking / transit。Save → PATCH /api/trips/:id/segments/:sid
- * → set mode_source='user'（recompute-travel 不再覆寫此 segment）。
+ * 三選一：driving / walking / transit。Save → PATCH /api/trips/:id/segments/:sid。
  *
- * transit 必須手動填分鐘（1–1440）— Japan Google Routes API 沒 transit 資料。
+ * v2.30.0：
+ *   - driving / walking → backend 一律打 Google Routes 重算（ignore body.min）
+ *   - transit → user 手填分鐘（1–1440），backend save 為 source='manual'（Japan
+ *     Google Routes API 沒 transit 資料）
  *
  * 對齊 docs/design-sessions/2026-05-07-travel-pill-tap-switch.html。
  */
@@ -53,11 +55,6 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-headline);
   font-weight: 700;
   margin: 0 0 4px;
-}
-.tp-travel-dialog-locked {
-  font-size: var(--font-size-footnote);
-  font-weight: 500;
-  color: var(--color-accent-deep);
 }
 .tp-travel-dialog-meta {
   font-size: var(--font-size-footnote);
@@ -177,8 +174,6 @@ export interface TravelPillDialogProps {
   segmentId: number;
   /** 當前 mode（從 segments endpoint 來） */
   currentMode: TravelMode;
-  /** 當前 source — 'user' 顯示「已手動覆寫」 */
-  modeSource: 'auto' | 'user';
   /** 當前 min（顯示在現選 mode option 描述） */
   currentMin?: number | null;
   /** 距離 m，用於 walking 估算與顯示 */
@@ -189,7 +184,7 @@ export interface TravelPillDialogProps {
   /** 關閉 callback */
   onClose: () => void;
   /** Save 完成後 callback（傳更新後的 segment row） */
-  onSaved?: (updated: { mode: TravelMode; min: number | null; modeSource: 'auto' | 'user' }) => void;
+  onSaved?: (updated: { mode: TravelMode; min: number | null }) => void;
 }
 
 const MODE_DEFINITIONS: Array<{ mode: TravelMode; label: string; iconName: string; describe: (props: { distanceM?: number | null; currentMin?: number | null; isSelected: boolean }) => string }> = [
@@ -241,7 +236,6 @@ export default function TravelPillDialog({
   tripId,
   segmentId,
   currentMode,
-  modeSource,
   currentMin,
   distanceM,
   fromName,
@@ -308,7 +302,6 @@ export default function TravelPillDialog({
       onSaved?.({
         mode: selectedMode,
         min: selectedMode === 'transit' ? transitMinNumber : (currentMin ?? null),
-        modeSource: 'user',
       });
       window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId } }));
       onClose();
@@ -338,9 +331,6 @@ export default function TravelPillDialog({
           <div className="tp-travel-dialog-handle" />
           <h3 id={titleId} className="tp-travel-dialog-title">
             交通方式
-            {modeSource === 'user' && (
-              <span className="tp-travel-dialog-locked"> · 已手動覆寫</span>
-            )}
           </h3>
           {(fromName || toName || distanceM) && (
             <p className="tp-travel-dialog-meta">

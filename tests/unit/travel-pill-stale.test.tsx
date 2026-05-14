@@ -21,7 +21,6 @@ function seg(overrides: Partial<TravelPillSegment> = {}): TravelPillSegment {
   return {
     id: 1,
     mode: 'driving',
-    modeSource: 'auto',
     min: 15,
     distanceM: 5000,
     computedAt: 1700000000000,

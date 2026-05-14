@@ -20,7 +20,6 @@ type SegmentRow = {
   from_entry_id: number;
   to_entry_id: number;
   mode: string;
-  mode_source: string;
   min: number | null;
   distance_m: number | null;
   source: string | null;
@@ -39,7 +38,7 @@ export async function fetchTripSegmentsMap(
   const map = new Map<number, SegmentRow>();
   const { results } = await db
     .prepare(
-      `SELECT from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at
+      `SELECT from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at
        FROM trip_segments WHERE trip_id = ?`,
     )
     .bind(tripId)
