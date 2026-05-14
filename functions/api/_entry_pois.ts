@@ -136,20 +136,18 @@ export async function setMaster(
   newMasterPoiId: number,
   expectedVersion?: string,
 ): Promise<{ version: string; oldMasterPoiId: number | null }> {
-  // 1. OCC version check
+  // 1. Parallel OCC version check + snapshot SELECTs — 4 SELECTs in one round trip when
+  // expectedVersion is provided (was 1 RT for version + 1 RT for 3 parallel snapshots).
   // round 7 fix: 移除 detail string（中英混用 + 洩漏 token format）。STALE_ENTRY
   // 的 user-facing 中文 message 從 ERROR_MESSAGES catalog 取，client 需要 recover
   // 走 refetch 而非從 error message regex 解 version。
-  if (expectedVersion !== undefined) {
-    const current = await getEntryPoisVersion(db, entryId);
-    if (current !== expectedVersion) {
-      throw new AppError('STALE_ENTRY');
-    }
-  }
-
-  // 2. Snapshot current state — 3 SELECTs parallelized (round 4 perf P2 — D1 = network
-  // round trip per query; serial cost was 3 RTs, now 1).
-  const [oldMasterRow, newMasterRow, maxRow] = await Promise.all([
+  const [versionRow, oldMasterRow, newMasterRow, maxRow] = await Promise.all([
+    expectedVersion !== undefined
+      ? db
+          .prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+          .bind(entryId)
+          .first<{ v: number | null }>()
+      : Promise.resolve(null),
     db
       .prepare('SELECT id, poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
       .bind(entryId)
@@ -163,6 +161,11 @@ export async function setMaster(
       .bind(entryId)
       .first<{ max_order: number }>(),
   ]);
+
+  // OCC fail-fast — stringify to match getEntryPoisVersion contract (string-typed API surface).
+  if (expectedVersion !== undefined && String(versionRow?.v ?? 0) !== expectedVersion) {
+    throw new AppError('STALE_ENTRY');
+  }
   const oldMasterPoiId = oldMasterRow?.poi_id ?? null;
   const maxOrder = maxRow?.max_order ?? 0;
   const tempOrder = maxOrder + 100;
@@ -288,17 +291,16 @@ export async function addAlternate(
   poiId: number,
   expectedVersion?: string,
 ): Promise<{ sortOrder: number; version: string }> {
-  // OCC check (round 4 fix Codex F3 — alternates CRUD now uses same OCC as setMaster
-  // so two concurrent reorders/adds can't silently overwrite each other).
-  if (expectedVersion !== undefined) {
-    const current = await getEntryPoisVersion(db, entryId);
-    if (current !== expectedVersion) {
-      throw new AppError('STALE_ENTRY');
-    }
-  }
-
-  // 三段平行 SELECT 同 setMaster 模式減 round-trip：master 存在 + dup-check + max
-  const [masterCount, dup, maxRow] = await Promise.all([
+  // Parallel OCC version check + snapshot SELECTs — round 4 fix Codex F3 (alternates CRUD
+  // shares OCC with setMaster so concurrent reorders/adds can't silently overwrite).
+  // expectedVersion provided 時 4 SELECTs 並行 fetch + fail-fast 一個 RT 完成。
+  const [versionRow, masterCount, dup, maxRow] = await Promise.all([
+    expectedVersion !== undefined
+      ? db
+          .prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+          .bind(entryId)
+          .first<{ v: number | null }>()
+      : Promise.resolve(null),
     db
       .prepare('SELECT COUNT(*) AS c FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
       .bind(entryId)
@@ -312,6 +314,11 @@ export async function addAlternate(
       .bind(entryId)
       .first<{ max_order: number }>(),
   ]);
+
+  // OCC fail-fast — stringify to match getEntryPoisVersion contract (string-typed API surface).
+  if (expectedVersion !== undefined && String(versionRow?.v ?? 0) !== expectedVersion) {
+    throw new AppError('STALE_ENTRY');
+  }
 
   // At-least-one invariant: alternate 不能在沒 master 時加
   if (!masterCount || masterCount.c === 0) {
@@ -361,20 +368,29 @@ export async function removeAlternate(
   poiId: number,
   expectedVersion?: string,
 ): Promise<{ version: string }> {
-  // OCC check (round 4 fix F3)
-  if (expectedVersion !== undefined) {
-    const current = await getEntryPoisVersion(db, entryId);
-    if (current !== expectedVersion) {
-      throw new AppError('STALE_ENTRY');
-    }
+  // Parallel OCC version check + row lookup — round 4 fix F3; expectedVersion provided 時
+  // 2 SELECTs 並行 fetch + fail-fast 一個 RT 完成。
+  const [versionRow, row] = await Promise.all([
+    expectedVersion !== undefined
+      ? db
+          .prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+          .bind(entryId)
+          .first<{ v: number | null }>()
+      : Promise.resolve(null),
+    db
+      .prepare(
+        'SELECT id, sort_order FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ?',
+      )
+      .bind(entryId, poiId)
+      .first<{ id: number; sort_order: number }>(),
+  ]);
+
+  // OCC fail-fast 在 row null check 之前 — stale token 應該回 409 而非 404，避免 client
+  // 看到 POI_NOT_ALTERNATE 誤判 POI 已被別人 remove。
+  if (expectedVersion !== undefined && String(versionRow?.v ?? 0) !== expectedVersion) {
+    throw new AppError('STALE_ENTRY');
   }
 
-  const row = await db
-    .prepare(
-      'SELECT id, sort_order FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ?',
-    )
-    .bind(entryId, poiId)
-    .first<{ id: number; sort_order: number }>();
   if (!row) {
     throw new AppError('POI_NOT_ALTERNATE', `POI ${poiId} not in entry ${entryId}`);
   }
@@ -410,16 +426,23 @@ export async function reorderAlternates(
   orderedPoiIds: number[],
   expectedVersion?: string,
 ): Promise<{ version: string }> {
-  // OCC check (round 4 fix F3 — was missing entirely, two concurrent reorders silently
-  // overwrote each other).
-  if (expectedVersion !== undefined) {
-    const current = await getEntryPoisVersion(db, entryId);
-    if (current !== expectedVersion) {
-      throw new AppError('STALE_ENTRY');
-    }
+  // Parallel OCC version check + alternates fetch — round 4 fix F3 (was missing entirely,
+  // two concurrent reorders silently overwrote each other). expectedVersion provided 時
+  // 2 SELECTs 並行 fetch + fail-fast 一個 RT 完成。
+  const [versionRow, current] = await Promise.all([
+    expectedVersion !== undefined
+      ? db
+          .prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+          .bind(entryId)
+          .first<{ v: number | null }>()
+      : Promise.resolve(null),
+    getAlternates(db, entryId),
+  ]);
+
+  if (expectedVersion !== undefined && String(versionRow?.v ?? 0) !== expectedVersion) {
+    throw new AppError('STALE_ENTRY');
   }
 
-  const current = await getAlternates(db, entryId);
   const currentIds = new Set(current.map((a) => a.poiId));
   const orderedSet = new Set(orderedPoiIds);
 

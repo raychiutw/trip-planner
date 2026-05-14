@@ -132,12 +132,13 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   }
 
   const day = await db
-    .prepare('SELECT id FROM trip_days WHERE trip_id = ? AND day_num = ?')
+    .prepare('SELECT id, version FROM trip_days WHERE trip_id = ? AND day_num = ?')
     .bind(id, Number(num))
-    .first() as { id: number } | null;
+    .first() as { id: number; version: number } | null;
 
   if (!day) throw new AppError('DATA_NOT_FOUND');
   const dayId = day.id;
+  const currentDayVersion = day.version ?? 0;
 
   // Snapshot old data for audit
   // v2.29.0: trip_pois DROPPED. Snapshot 只含 entries + day.hotel_poi_id。
@@ -153,8 +154,17 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     label?: string;
     hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown[]; description?: unknown };
     timeline?: TimelineEntryBody[];
+    /** v2.30.x (migration 0065)：Day-level OCC token。Client 帶 GET 時拿到的
+     *  `version`，backend 比對 trip_days.version 不符 → 409 STALE_ENTRY，未帶
+     *  則 backwards-compat 略過 check（既有 client 不會受影響）。 */
+    expectedDayVersion?: number;
   };
   const body = await parseJsonBody<DayBody>(context.request);
+
+  // v2.30.x (migration 0065)：Day-level OCC check — body 帶 expectedDayVersion 才驗
+  if (body.expectedDayVersion !== undefined && body.expectedDayVersion !== currentDayVersion) {
+    throw new AppError('STALE_ENTRY');
+  }
 
   const validation = validateDayBody(body);
   if (!validation.ok) throw new AppError('DATA_VALIDATION', validation.error);
@@ -245,7 +255,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     batch1.push(
       db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(dayId),
-      db.prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ? WHERE id = ?')
+      // v2.30.x (migration 0065)：bump version 同 batch atomic，下次 PUT 用此 version 對齊 OCC
+      db.prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ?, version = version + 1 WHERE id = ?')
         .bind(body.date!, body.dayOfWeek!, body.label!, dayId),
     );
 
@@ -565,5 +576,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_SAVE_FAILED', '儲存失敗，請稍後再試');
   }
 
-  return json({ ok: true });
+  // v2.30.x (migration 0065)：surface new OCC token 給 client 下次 PUT 用
+  return json({ ok: true, dayVersion: currentDayVersion + 1 });
 };

@@ -928,6 +928,10 @@ export default function EditEntryPage() {
   // round 9 fix: refreshEntryPois 回傳新的 master + version 供 caller decision logic
   // 使用（如 cross-tab safety check in handleSetAsMaster）。useState setter 是 async，
   // 同 callback 內讀不到 fresh value，所以需要把 fresh value bubble up。
+  //
+  // v2.30.x perf: GET /entries/:id 與 GET /days 互不依賴（兩者都不需要對方結果），
+  // 改 Promise.all 並行從 3 個 sequential RT 降到 2 個（GET /entries + GET /days 並行，
+  // 然後依 entry.dayId 查 dayNum 再 GET /days/:num 拿 day detail）。
   const refreshEntryPois = useCallback(async (): Promise<{
     masterPoiId: number | null;
     masterName: string | null;
@@ -935,10 +939,12 @@ export default function EditEntryPage() {
   } | null> => {
     if (!tripId || !Number.isInteger(entryId)) return null;
     try {
-      const data = await apiFetch<EntryApi>(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`);
+      const [data, days] = await Promise.all([
+        apiFetch<EntryApi>(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`),
+        apiFetch<Array<{ id: number; dayNum: number }>>(`/trips/${encodeURIComponent(tripId)}/days`),
+      ]);
       setEntry((prev) => prev ? { ...prev, ...data } : data);
       // 重抓 day 拿 master/alternates（_merge.ts 已 populate）
-      const days = await apiFetch<Array<{ id: number; dayNum: number }>>(`/trips/${encodeURIComponent(tripId)}/days`);
       const day = days.find((d) => d.id === data.dayId);
       if (!day) return null;
       const dayData = await apiFetch<DayApi>(
