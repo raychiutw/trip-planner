@@ -3,6 +3,31 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.29.2] - 2026-05-14
+
+**`車程未更新` 警告全段亂噴 fix — 改用 `segment.computed_at` 信號。**
+
+Ray 沖繩行程 32 段 driving 段幾乎每段都顯示「⚠ 車程未更新」。原因：v2.28.1 的 stale-travel 偵測比對 Haversine 直線距離 vs `segment.distanceM` 道路距離，divergence > 20% 即警告。但道路本來就有 detour ratio（沖繩多山多灣 1.3-2.5x），driving 段永遠超過 threshold → false positive。
+
+正確 signal：backend `setMaster()` 在 master swap 時已經 `UPDATE trip_segments SET computed_at = NULL`。改用此欄位當 stale 唯一信號 — `computedAt IS NULL` = backend 確認需要重算。
+
+### Changed
+
+- `TravelPill`：stale 判斷改 `segment.computedAt == null`；stale 時清空 min/distance display，只渲染「⚠ 車程未更新 重新計算」chip
+- `TravelPillSegment` interface 加 `computedAt: number | null` 欄位
+- `TimelineRail`：拔掉 Haversine baseline 計算 + `staleHaversineM` prop 傳遞
+- `TravelPill` 移除 `STALE_TRAVEL_THRESHOLD_RATIO` const + `staleHaversineM` prop
+
+### Tests
+
+- `travel-pill-stale.test.tsx`：重寫覆蓋新 logic（8 tests）— 含 Ray 真實 S1 案例（11.3km 道路 / 5.2km 直線 / detour 54%）verify 不誤觸發
+- `timeline-rail-stale-travel.test.tsx`：重寫 wiring tests 走 segment 路徑（6 tests）
+
+### Verify
+
+- `npx tsc --noEmit` clean
+- `npx vitest run tests/unit/` — 180 files / 1531 tests pass
+
 ## [2.29.1] - 2026-05-14
 
 **`saved_pois` 表終於 DROP — poi-favorites-rename Phase 2 收尾。**

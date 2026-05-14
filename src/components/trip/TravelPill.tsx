@@ -138,6 +138,12 @@ export interface TravelPillSegment {
   min: number | null;
   /** segment.distance_m（Google Routes 回傳；transit 因不打 API 為 0 / null）*/
   distanceM: number | null;
+  /**
+   * v2.29.1 stale 偵測：null = 還沒被 Google Routes 算過（master swap 後 backend
+   * 會 `UPDATE trip_segments SET computed_at = NULL`，等用戶觸發 recompute）。
+   * 數字 = 算過的 epoch ms。
+   */
+  computedAt: number | null;
 }
 
 export interface TravelPillProps {
@@ -156,19 +162,9 @@ export interface TravelPillProps {
   /** 顯示在 dialog title 旁的 from→to entry 名稱（optional） */
   fromName?: string | null;
   toName?: string | null;
-  /**
-   * 預期大圓距離（公尺，由 caller 從 current masters lat/lng 算）。
-   * 顯示中的 distanceM 與此值 divergence > STALE_TRAVEL_THRESHOLD_RATIO 時，
-   * pill 旁渲染 ⚠ + 重新計算 button。
-   * 0/null/undefined → 不警告（caller 表示無法比較，例如 master 缺座標）。
-   */
-  staleHaversineM?: number | null;
   /** ⚠ button 點擊 callback（caller 呼叫 recompute-travel endpoint） */
   onRecompute?: () => void;
 }
-
-/** 公開 export 給 test 與 caller 同步閾值定義。 */
-export const STALE_TRAVEL_THRESHOLD_RATIO = 0.2;
 
 /**
  * Format distance in meters → human label.
@@ -197,32 +193,26 @@ export default function TravelPill({
   tripId,
   fromName,
   toName,
-  staleHaversineM,
   onRecompute,
 }: TravelPillProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // v2.29.1 stale 偵測：純看 segment.computedAt — backend mark stale 時設 NULL，
+  // user 觸發 recompute 後寫回 epoch ms。stale 時不顯示舊 min/distance，只渲染
+  // 「車程未更新 重新計算」chip。
+  const isStale = segment != null && segment.computedAt == null;
+
   // 若 segment 提供，優先用 segment.mode/min/distanceM 顯示（v2.24.0 SoT）
   const effectiveType = segment?.mode ?? type ?? null;
-  const effectiveMin = segment?.min ?? min ?? null;
-  const effectiveDist = segment?.distanceM ?? distanceM ?? null;
+  const effectiveMin = isStale ? null : (segment?.min ?? min ?? null);
+  const effectiveDist = isStale ? null : (segment?.distanceM ?? distanceM ?? null);
   const isLocked = segment?.modeSource === 'user';
 
   const hasMin = typeof effectiveMin === 'number' && effectiveMin > 0;
   const hasDist = typeof effectiveDist === 'number' && effectiveDist > 0;
   const hasDesc = typeof desc === 'string' && desc.trim().length > 0;
-  if (!hasMin && !hasDist && !hasDesc) return null;
-
-  // Stale-travel detection. 只在 distanceM 有值且 staleHaversineM 有值才比較；
-  // divergence = |haversine - displayed| / displayed > THRESHOLD → 渲染 ⚠。
-  // transit/walk 沒 distanceM 時 caller 不該傳 staleHaversineM（也比不出），跳過。
-  const isStale = (() => {
-    if (!hasDist) return false;
-    if (typeof staleHaversineM !== 'number' || staleHaversineM <= 0) return false;
-    const displayed = effectiveDist!;
-    const divergence = Math.abs(staleHaversineM - displayed) / displayed;
-    return divergence > STALE_TRAVEL_THRESHOLD_RATIO;
-  })();
+  // Stale render path：即使沒有 min/dist 也要露出 ⚠ chip 讓 user 觸發 recompute。
+  if (!hasMin && !hasDist && !hasDesc && !isStale) return null;
 
   const iconName = TYPE_ICON_MAP[(effectiveType ?? '').toLowerCase()] ?? 'car';
   const isInteractive = !!segment && !!tripId;
@@ -264,7 +254,7 @@ export default function TravelPill({
   const staleChip = isStale ? (
     <span
       className="tp-travel-pill-stale"
-      aria-label="車程未更新 — 新正選與舊資料 distance 差距 > 20%"
+      aria-label="車程未更新 — Google Routes 尚未重新計算"
       data-testid="travel-pill-stale"
     >
       <span aria-hidden="true">⚠</span>
