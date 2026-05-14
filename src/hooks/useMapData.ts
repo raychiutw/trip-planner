@@ -113,7 +113,7 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
         title: displayTitle,
         lat: coords.lat,
         lng: coords.lng,
-        time: entry.time,
+        time: entry.time ?? (entry.startTime && entry.endTime ? `${entry.startTime}-${entry.endTime}` : entry.startTime ?? null),
         googleRating: primaryStopPoi?.rating
           ?? null,
         travelMin: entry.travel?.min,

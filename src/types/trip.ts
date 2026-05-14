@@ -83,12 +83,11 @@ export interface Shopping {
 /**
  * Timeline entry (activity / spot).
  * DB table: trip_entries
- * DB columns: id, day_id, sort_order, time, title, description, source, maps,
- *             mapcode, google_rating, note, travel_type, travel_desc, travel_min,
- *             location, updated_at
+ * v2.29.0 (migration 0062) DB columns: id, day_id, sort_order, start_time, end_time,
+ *             title, description, source, note, entry_pois_version, updated_at
  * Notes:
- *   - location → parsed by mapRow JSON_FIELDS
- *   - travel_* cols → assembled into travel object by API handler
+ *   - travel object 由 trip_segments lookup 組裝（不再從 entry.travel_* cols）
+ *   - master/alternates 由 trip_entry_pois lookup 組裝
  */
 /**
  * Entry-bound POI (v2.27.0 multi-POI per entry)：
@@ -131,7 +130,7 @@ export interface Entry {
   description?: string | null;
   source?: string | null;
   note?: string | null;
-  /** Assembled from travel_type / travel_desc / travel_min columns */
+  /** Assembled from trip_segments by API handler (v2.29.0). */
   travel?: Travel | null;
   /**
    * v2.27.0 multi-POI per entry：master POI（sort_order=1）。Phase 1 dual-read
@@ -163,7 +162,7 @@ export interface Entry {
 
 /**
  * Hotel — at most one per day.
- * Now stored as pois (type=hotel) + trip_pois (context=hotel).
+ * v2.29.0: stored as pois (type=hotel) + trip_days.hotel_poi_id (FK).
  * This interface represents the merged view for frontend rendering.
  */
 export interface Hotel {
@@ -207,47 +206,6 @@ export interface Poi {
   source?: string | null;
   createdAt?: string;
   updatedAt?: string;
-}
-
-/** Trip-specific POI reference (fork) — user can override description/note/hours */
-export interface TripPoi {
-  id: number;
-  tripId: string;
-  poiId: number;
-  context: 'hotel' | 'shopping';
-  dayId?: number | null;
-  entryId?: number | null;
-  sortOrder: number;
-  /** Override description (NULL = inherit master) */
-  description?: string | null;
-  /** Trip-specific note */
-  note?: string | null;
-  /** Override hours (NULL = inherit master) */
-  hours?: string | null;
-  /** Hotel-specific (flattened) */
-  checkout?: string | null;
-  breakfastIncluded?: number | null;
-  breakfastNote?: string | null;
-  /** Shopping-specific (flattened) */
-  mustBuy?: string | null;
-  source?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-/** Merged POI view — COALESCE(trip_pois.field, pois.field), frontend reads directly */
-export interface MergedPoi extends Poi {
-  sortOrder: number;
-  tripPoiId: number;
-  context: 'hotel' | 'shopping';
-  dayId?: number | null;
-  entryId?: number | null;
-  /** Hotel-specific (from trip_pois flattened columns) */
-  checkout?: string | null;
-  breakfastIncluded?: number | null;
-  breakfastNote?: string | null;
-  /** Shopping-specific */
-  mustBuy?: string | null;
 }
 
 /**
@@ -318,8 +276,7 @@ export interface TripDestination {
   day_quota?: number | null;
   /** JSON-parsed array of sub-area names (e.g. ['梅田', '難波']) */
   sub_areas?: string[] | null;
-  osm_id?: number | null;
-  osm_type?: 'node' | 'way' | 'relation' | null;
+  // v2.29.0: osm_id / osm_type DROPPED (migration 0062)
 }
 
 /**

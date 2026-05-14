@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockContext, seedTrip, seedEntry, seedPoi, seedTripPoi, getDayId, callHandler } from './helpers';
+import { mockEnv, mockContext, seedTrip, seedEntry, seedPoi, seedHotelForDay, seedEntryAlternate, getDayId, callHandler } from './helpers';
 import { onRequestGet } from '../../functions/api/trips/[id]/days';
 import { onRequestGet as onRequestGetSingle } from '../../functions/api/trips/[id]/days/[num]';
 import type { Env } from '../../functions/api/_types';
@@ -29,54 +29,48 @@ beforeAll(async () => {
   const d1EntryId = await seedEntry(db, d1Id, {
     title: 'Day1 Entry',
     sortOrder: 0,
-    travelType: 'car',
-    travelDesc: '開車前往',
-    travelMin: 30,
     poiId: d1EntryPoiId,
   });
-  await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(d1EntryId, d1EntryPoiId).run();
   const d2EntryId = await seedEntry(db, d2Id, { title: 'Day2 Entry', sortOrder: 0 });
 
-  // Day1 restaurant POI
+  // Day1 restaurant POI (作為 alternate)
   const d1RestId = await seedPoi(db, { type: 'restaurant', name: 'Day1 Restaurant' });
-  await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(d1EntryId, d1RestId).run();
+  await seedEntryAlternate(db, { entryId: d1EntryId, poiId: d1RestId, sortOrder: 2 });
 
-  // Day2 restaurant POI
+  // Day2 restaurant POI (作為 master via seedEntry poiId? 不行—d2EntryId 已建。手動 INSERT master row)
   const d2RestId = await seedPoi(db, { type: 'restaurant', name: 'Day2 Restaurant' });
-  await db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(d2RestId, d2EntryId).run();
-  await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(d2EntryId, d2RestId).run();
+  await db.prepare(
+    'INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)',
+  ).bind(d2EntryId, d2RestId).run();
 
-  // Day1 shopping POI（shopping context）
+  // Day1 shopping POI — v2.29.0 改用 trip_entry_pois alternate (sort_order >= 2)
+  // 注意：shopping 'mustBuy' field 在 v2.29.0 cutover 後不再 surface 自獨立 schema
+  // （shopping POI 改為 alternates 中 type='shopping' 的 POI，由 frontend filter）。
   const d1ShopId = await seedPoi(db, { type: 'shopping', name: 'Day1 Shop' });
-  await seedTripPoi(db, {
-    poiId: d1ShopId,
-    tripId: 'trip-days',
-    entryId: d1EntryId,
-    dayId: d1Id,
-    context: 'shopping',
-    must_buy: '紀念品',
-  });
+  await seedEntryAlternate(db, { entryId: d1EntryId, poiId: d1ShopId, sortOrder: 3 });
 
-  // Day1 hotel + parking（hotel context，entry_id=null）
+  // Day1 hotel + parking — v2.29.0 用 trip_days.hotel_poi_id + poi_relations
   const d1HotelId = await seedPoi(db, { type: 'hotel', name: 'Day1 Hotel' });
-  await seedTripPoi(db, {
-    poiId: d1HotelId,
-    tripId: 'trip-days',
-    entryId: null,
-    dayId: d1Id,
-    context: 'hotel',
-  });
+  await seedHotelForDay(db, d1Id, d1HotelId);
+
   const d1ParkId = await seedPoi(db, { type: 'parking', name: 'Day1 Parking' });
-  await seedTripPoi(db, {
-    poiId: d1ParkId,
-    tripId: 'trip-days',
-    entryId: null,
-    dayId: d1Id,
-    context: 'hotel',
-  });
+  await db.prepare(
+    `INSERT INTO poi_relations (poi_id, related_poi_id, relation_type) VALUES (?, ?, 'parking')`,
+  ).bind(d1HotelId, d1ParkId).run();
 
   // Trip B: 3 天，無任何 entry / POI（測 fetchPoiMap empty branch）
   await seedTrip(db, { id: 'trip-empty', days: 3 });
+
+  // Trip C: travel segment 測試專用 trip（day1 兩 entries 之間有 segment）
+  await seedTrip(db, { id: 'trip-travel', days: 2 });
+  const travelD1Id = await getDayId(db, 'trip-travel', 1);
+  const travelE1 = await seedEntry(db, travelD1Id, { title: 'Trip-Travel D1 E1', sortOrder: 0 });
+  const travelE2 = await seedEntry(db, travelD1Id, { title: 'Trip-Travel D1 E2', sortOrder: 1 });
+  await db.prepare(
+    `INSERT INTO trip_segments
+     (trip_id, from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at)
+     VALUES (?, ?, ?, 'driving', 'auto', 30, NULL, NULL, ?, ?)`,
+  ).bind('trip-travel', travelE1, travelE2, Date.now(), Date.now()).run();
 });
 
 afterAll(disposeMiniflare);
@@ -171,7 +165,7 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     expect(data[1].hotel).toBeNull();
   });
 
-  it('shopping context 歸類到 entry.shopping', async () => {
+  it('shopping POI（v2.29.0 改 alternate type=shopping）出現在 stopPois', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
       env,
@@ -181,34 +175,36 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     const data = await resp.json() as Array<Record<string, unknown>>;
 
     const d1Timeline = data[0].timeline as Array<Record<string, unknown>>;
-    const shopping = d1Timeline[0].shopping as Array<Record<string, unknown>>;
-    expect(shopping).toHaveLength(1);
-    expect(shopping[0].name).toBe('Day1 Shop');
-    expect(shopping[0].mustBuy).toBe('紀念品');
+    // v2.29.0：entry.shopping array 廢除，shopping POI 改放 stopPois (type='shopping')
+    const stopPois = d1Timeline[0].stopPois as Array<Record<string, unknown>>;
+    const shopPoi = stopPois.find(p => p.type === 'shopping');
+    expect(shopPoi).toBeDefined();
+    expect(shopPoi!.name).toBe('Day1 Shop');
   });
 
-  it('entry travel fields 組成 travel 物件', async () => {
+  it('entry travel 物件來自 trip_segments', async () => {
+    // v2.29.0: trip_entries.travel_* DROPPED；travel 從 trip_segments 取
     const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
+      request: new Request('https://test.com/api/trips/trip-travel/days?all=1'),
       env,
-      params: { id: 'trip-days' },
+      params: { id: 'trip-travel' },
     });
     const resp = await callHandler(onRequestGet, ctx);
     const data = await resp.json() as Array<Record<string, unknown>>;
 
     const d1Timeline = data[0].timeline as Array<Record<string, unknown>>;
+    expect(d1Timeline).toHaveLength(2);
+    // segment 以 from_entry_id 為 key，所以 E1 (sortOrder=0) entry 帶 travel；
+    // E2 (sortOrder=1) 是 to_entry，沒人指它出去 → travel=null
     const travel = d1Timeline[0].travel as Record<string, unknown> | null;
     expect(travel).toEqual({
       type: 'car',
-      desc: '開車前往',
+      desc: null,
       min: 30,
       distanceM: null,
       source: null,
     });
-
-    // Day2 entry 沒設 travel → null
-    const d2Timeline = data[1].timeline as Array<Record<string, unknown>>;
-    expect(d2Timeline[0].travel).toBeNull();
+    expect(d1Timeline[1].travel).toBeNull();
   });
 
   it('Phase 3：entry.master 取 canonical POI master（取代舊 entry.location JSON）', async () => {

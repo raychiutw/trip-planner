@@ -207,7 +207,8 @@ export interface PoiFavorite {
   poiType?: string;
   /**
    * GET /api/poi-favorites 回傳每筆收藏目前出現在哪些 trip / day / entry。
-   * 透過 poi_favorites.poi_id ← trip_pois.poi_id 反查（單一 LEFT JOIN + json_group_array）。
+   * v2.29.0 (migration 0062): 透過 trip_days.hotel_poi_id ∪ trip_entry_pois.poi_id 反查
+   * (UNION + json_group_array)，trip_pois 整表已 drop。
    * 空陣列 = 此收藏尚未排進任何行程；可在 favorite card 顯示「目前在 N 個 trip」徽章。
    */
   usages?: PoiFavoriteUsage[];
@@ -228,7 +229,8 @@ export interface PoiFavoriteUsage {
 //
 // 「備案」概念合一進「收藏」(poi_favorites) — 跨 trip universal pool。
 // 既有 trip_ideas 資料 active rows 已 migrate 進 poi_favorites (trip owner's pool)。
-// 「目前在哪些 trip」資訊改透過 PoiFavorite.usages JOIN trip_pois 反查。
+// 「目前在哪些 trip」資訊改透過 PoiFavorite.usages 反查
+// (v2.29.0: trip_days.hotel_poi_id ∪ trip_entry_pois.poi_id)。
 
 /**
  * An audit log entry recording every insert / update / delete.

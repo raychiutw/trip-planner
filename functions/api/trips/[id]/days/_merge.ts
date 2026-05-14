@@ -1,5 +1,12 @@
 /**
- * 共用的 POI merge 與 Day 組裝邏輯（單天 GET 與 batch GET 共用）
+ * 共用的 Day 組裝邏輯（單天 GET 與 batch GET 共用）
+ *
+ * v2.29.0: trip_pois 整表 DROPPED。
+ *  - Hotel ← trip_days.hotel_poi_id (FK to pois)
+ *  - Hotel parking ← poi_relations(relation_type='parking')
+ *  - Entry POIs (master + alternates，含 ex-shopping) ← trip_entry_pois
+ *  - travel object ← trip_segments (lookup by from_entry_id)
+ *  - entry.shopping array DEPRECATED — shopping POI = alternates (frontend filter by type)
  */
 
 type EntryPoiBucket = {
@@ -9,81 +16,103 @@ type EntryPoiBucket = {
   version: string;
 };
 
-/**
- * 從任一帶 `poi_id` 欄位的 row set 取得所有關聯的 pois，建 poi_id → pois row 查找表。
- * Runtime only passes contextual trip_pois rows here; entry stops are loaded
- * separately from canonical trip_entry_pois.
- * 使用 `IN (...)` 批次查詢避免 N+1；null poi_id 直接過濾。
- */
-export async function fetchPoiMap(
-  db: D1Database,
-  ...rowLists: Record<string, unknown>[][]
-): Promise<Map<number, Record<string, unknown>>> {
-  const allIds = new Set<number>();
-  for (const rows of rowLists) {
-    for (const r of rows) {
-      const pid = r.poi_id;
-      if (typeof pid === 'number' && pid > 0) allIds.add(pid);
-    }
-  }
-  const poiMap = new Map<number, Record<string, unknown>>();
-  if (allIds.size === 0) return poiMap;
+type SegmentRow = {
+  from_entry_id: number;
+  to_entry_id: number;
+  mode: string;
+  mode_source: string;
+  min: number | null;
+  distance_m: number | null;
+  source: string | null;
+  computed_at: number | null;
+  updated_at: number | null;
+};
 
-  const poiIds = [...allIds];
-  const placeholders = poiIds.map(() => '?').join(',');
-  const { results } = await db.prepare(
-    `SELECT * FROM pois WHERE id IN (${placeholders})`,
-  ).bind(...poiIds).all();
-  for (const p of results as Record<string, unknown>[]) {
-    poiMap.set(p.id as number, p);
+/**
+ * 從 trip_segments 取 trip-scope 的 segments，建 from_entry_id → segment 查找表。
+ * 用於 assembleDay 將 travel response surface 到 timeline[i]。
+ */
+export async function fetchTripSegmentsMap(
+  db: D1Database,
+  tripId: string,
+): Promise<Map<number, SegmentRow>> {
+  const map = new Map<number, SegmentRow>();
+  const { results } = await db
+    .prepare(
+      `SELECT from_entry_id, to_entry_id, mode, mode_source, min, distance_m, source, computed_at, updated_at
+       FROM trip_segments WHERE trip_id = ?`,
+    )
+    .bind(tripId)
+    .all<SegmentRow>();
+  for (const r of results) {
+    map.set(r.from_entry_id, r);
   }
-  return poiMap;
+  return map;
 }
 
 /**
- * 合併 pois master row + trip_pois override row。
- * **COALESCE convention**：trip_pois 欄位非 null 時覆蓋 pois 欄位（`tp.x ?? poi.x`）。
- * 讓 user 可覆寫個別 POI 資料而不影響 master。
+ * 抓 hotel pois + parking relations 一起 map。
+ *
+ * @param db D1
+ * @param hotelPoiIds 該 trip 所有 day 的 hotel_poi_id (deduped, non-null)
+ * @returns
+ *   - poiMap: Map<poi_id, pois row>（hotel + parking POI 都進來）
+ *   - parkingMap: Map<hotelPoiId, parking poi[]>（hotel POI 對應的 parking 列表）
  */
-function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Record<string, unknown> {
-  return {
-    // POI master fields
-    poi_id: poi.id,
-    type: poi.type,
-    name: poi.name,
-    description: tp.description ?? poi.description,
-    note: tp.note ?? poi.note,
-    address: poi.address,
-    phone: poi.phone,
-    email: poi.email,
-    website: poi.website,
-    // Migration 0055 (v2.25.5): trip_pois.hours DROPPED, hours 純 pois master。
-    // Place Details API weekday_descriptions 已含全週時段 + 公休日。
-    hours: poi.hours,
-    rating: poi.rating,
-    // Migration 0054 (v2.25.4): price 從 trip_pois 移到 pois master。
-    // dual-read 保險：pois.price 優先，trip_pois.price 作 fallback（觀察期內舊資料）。
-    // Migration 0055 觀察期後 DROP trip_pois.price，這行會簡化成 `poi.price`。
-    price: (poi as { price?: unknown }).price ?? tp.price,
-    category: poi.category,
-    mapcode: poi.mapcode,
-    lat: poi.lat,
-    lng: poi.lng,
-    source: poi.source,
-    // trip_pois fields
-    trip_poi_id: tp.id,
-    context: tp.context,
-    day_id: tp.day_id,
-    entry_id: tp.entry_id,
-    sort_order: tp.sort_order,
-    // Type-specific (flattened in trip_pois)
-    checkout: tp.checkout,
-    breakfast_included: tp.breakfast_included,
-    breakfast_note: tp.breakfast_note,
-    reservation: tp.reservation,
-    reservation_url: tp.reservation_url,
-    must_buy: tp.must_buy,
-  };
+export async function fetchHotelAndParking(
+  db: D1Database,
+  hotelPoiIds: number[],
+): Promise<{
+  poiMap: Map<number, Record<string, unknown>>;
+  parkingMap: Map<number, Record<string, unknown>[]>;
+}> {
+  const poiMap = new Map<number, Record<string, unknown>>();
+  const parkingMap = new Map<number, Record<string, unknown>[]>();
+
+  if (hotelPoiIds.length === 0) return { poiMap, parkingMap };
+
+  const placeholders = hotelPoiIds.map(() => '?').join(',');
+
+  // 1. Hotel POI 主表
+  // 2. poi_relations parking links
+  // 3. 解 parking POI 主表
+  const [hotelsRes, relationsRes] = await Promise.all([
+    db.prepare(`SELECT * FROM pois WHERE id IN (${placeholders})`).bind(...hotelPoiIds).all(),
+    db
+      .prepare(
+        `SELECT poi_id, related_poi_id FROM poi_relations
+         WHERE relation_type = 'parking' AND poi_id IN (${placeholders})`,
+      )
+      .bind(...hotelPoiIds)
+      .all<{ poi_id: number; related_poi_id: number }>(),
+  ]);
+
+  for (const p of hotelsRes.results as Record<string, unknown>[]) {
+    poiMap.set(p.id as number, p);
+  }
+
+  // Fetch parking POI master rows
+  const parkingIds = [...new Set(relationsRes.results.map((r) => r.related_poi_id))];
+  if (parkingIds.length > 0) {
+    const parkingPh = parkingIds.map(() => '?').join(',');
+    const parkingRes = await db
+      .prepare(`SELECT * FROM pois WHERE id IN (${parkingPh})`)
+      .bind(...parkingIds)
+      .all();
+    for (const p of parkingRes.results as Record<string, unknown>[]) {
+      poiMap.set(p.id as number, p);
+    }
+  }
+
+  // Build parking map: hotelPoiId → [parking POI]
+  for (const r of relationsRes.results) {
+    const parkingPoi = poiMap.get(r.related_poi_id);
+    if (!parkingPoi) continue;
+    if (!parkingMap.has(r.poi_id)) parkingMap.set(r.poi_id, []);
+    parkingMap.get(r.poi_id)!.push(parkingPoi);
+  }
+
+  return { poiMap, parkingMap };
 }
 
 /**
@@ -108,9 +137,8 @@ export async function fetchEntryPoisByEntries(
   // while the write path validated trip_entries.updated_at — a fresh GET sent back a token
   // that the mutation path rejected as stale. Both paths now read the same integer counter.
   //
-  // v2.29.0：timeline trip_pois rows are migrated into trip_entry_pois by
-  // migration 0059. Runtime reads canonical entry POI rows only; no legacy
-  // promotion or trip_pois fallback.
+  // v2.29.0：timeline + shopping trip_pois rows migrated into trip_entry_pois by
+  // migrations 0059 / 0061. Runtime reads canonical rows only.
   const [poisQuery, versionsQuery] = await Promise.all([
     db
       .prepare(
@@ -173,7 +201,6 @@ export async function fetchEntryPoisByEntries(
       mapcode: r.mapcode,
       photos: r.photos,
       source: r.source,
-      // v2.28.0 — restaurant 共享屬性（master 也 surface 同欄位以對齊 schema）
       hours: r.hours,
       rating: r.rating,
       price: r.price,
@@ -194,88 +221,67 @@ export async function fetchEntryPoisByEntries(
 }
 
 /**
- * 組裝單天完整資料：hotel + timeline + POI 歸類。
+ * 組裝單天完整資料：hotel + timeline (含 travel from segments + multi-POI from entry_pois)。
  *
  * **前置條件**：`entries` 必須已依 `sort_order ASC` 排序（caller 負責）。
  * 本函式不排序，直接依輸入順序組裝 timeline。
  *
- * @param dayRow - trip_days row
+ * @param dayRow - trip_days row (含 hotel_poi_id)
  * @param entries - 該天的 trip_entries（已排序）
- * @param tripPois - 該天的 trip_pois
- * @param poiMap - poi_id → pois row 的查找表
- * @param entryPoisMap - canonical v2 entry POIs. Runtime does not promote legacy
- *   timeline trip_pois rows; migration 0059 must have moved them first.
+ * @param poiMap - poi_id → pois row 查找表（hotel + parking + 其他都進來）
+ * @param parkingMap - hotelPoiId → parking POI list (來自 poi_relations)
+ * @param entryPoisMap - canonical v2 entry POIs
+ * @param segmentsMap - from_entry_id → segment row (給 travel response)
  */
 export function assembleDay(
   dayRow: Record<string, unknown>,
   entries: Record<string, unknown>[],
-  tripPois: Record<string, unknown>[],
   poiMap: Map<number, Record<string, unknown>>,
-  entryPoisMap?: Map<number, EntryPoiBucket>,
+  parkingMap: Map<number, Record<string, unknown>[]>,
+  entryPoisMap: Map<number, EntryPoiBucket>,
+  segmentsMap: Map<number, SegmentRow>,
 ): Record<string, unknown> {
+  // Hotel ← trip_days.hotel_poi_id (FK to pois)
   let hotel: Record<string, unknown> | null = null;
-  const parkingList: Record<string, unknown>[] = [];
-  const shopByEntry = new Map<number, unknown[]>();
-
-  for (const tp of tripPois) {
-    const poi = poiMap.get(tp.poi_id as number);
-    if (!poi) continue;
-    const merged = mergePoi(poi, tp);
-    const poiType = poi.type as string;
-    const context = tp.context as string;
-
-    if (context === 'hotel' && poiType === 'hotel' && !hotel) {
-      hotel = merged;
-    } else if (context === 'hotel' && poiType === 'parking') {
-      parkingList.push(merged);
-    } else if (context === 'shopping') {
-      const eid = tp.entry_id as number;
-      if (eid) {
-        if (!shopByEntry.has(eid)) shopByEntry.set(eid, []);
-        shopByEntry.get(eid)!.push(merged);
-      }
+  const hotelPoiId = dayRow.hotel_poi_id as number | null;
+  if (hotelPoiId) {
+    const hotelPoi = poiMap.get(hotelPoiId);
+    if (hotelPoi) {
+      hotel = { ...hotelPoi, parking: parkingMap.get(hotelPoiId) ?? [] };
     }
   }
 
-  if (hotel) {
-    hotel.parking = parkingList;
-  }
-
-  const timeline = entries.map(e => {
+  const timeline = entries.map((e) => {
     const eid = e.id as number;
-    // v2.23.6：surface distance_m + source。recompute-travel 後 assembleDay 應
-    // surface travel object 即使 travel_type 仍 NULL（fallback 'car'），因為使用者要看到 km/min。
-    const hasTravelData = e.travel_type || e.travel_min != null || e.travel_distance_m != null;
-    const travel = hasTravelData ? {
-      type: e.travel_type ?? 'car',
-      desc: e.travel_desc,
-      min: e.travel_min,
-      distance_m: e.travel_distance_m,
-      source: e.travel_source,
-    } : null;
 
-    // v2.29.0 canonical model：populate all stop choices from trip_entry_pois.
-    // trip_entries.poi_id may still exist as a denormalized write-through cache, but
-    // read paths no longer use it as fallback.
-    const entryPoiBucket = entryPoisMap?.get(eid);
-    const storedMaster = entryPoiBucket?.master ?? null;
-    const storedAlternates = entryPoiBucket?.alternates ?? [];
-    const storedStopPois = entryPoiBucket?.stopPois ?? [];
-    const stop_pois = storedStopPois;
-    const master = storedMaster;
-    const alternates = storedAlternates;
+    // v2.29.0 canonical model: master + alternates 全來自 trip_entry_pois
+    const entryPoiBucket = entryPoisMap.get(eid);
+    const master = entryPoiBucket?.master ?? null;
+    const alternates = entryPoiBucket?.alternates ?? [];
+    const stop_pois = entryPoiBucket?.stopPois ?? [];
     const entry_pois_version = entryPoiBucket?.version ?? null;
-    const { poi_id: _legacyPoiId, ...entryFields } = e;
-    void _legacyPoiId;
+
+    // v2.29.0: travel object ← trip_segments (lookup by from_entry_id)
+    // Pre-cutover: travel 從 entry.travel_* cols 取。Phase 2 完成後改 segments 為唯一 source。
+    // Frontend 仍 expect { type, desc, min, distance_m, source } shape。
+    const segment = segmentsMap.get(eid);
+    const travel = segment
+      ? {
+          type: segment.mode === 'driving' ? 'car' : segment.mode === 'walking' ? 'walk' : segment.mode,
+          desc: null as string | null,
+          min: segment.min,
+          distance_m: segment.distance_m,
+          source: segment.source,
+        }
+      : null;
 
     return {
-      ...entryFields,
+      ...e,
       travel,
       master,
       alternates,
       stop_pois,
       entry_pois_version,
-      shopping: shopByEntry.get(eid) ?? [],
     };
   });
 
@@ -285,8 +291,7 @@ export function assembleDay(
     date: dayRow.date,
     day_of_week: dayRow.day_of_week,
     label: dayRow.label,
-    /** Section 4.3 (terracotta-mockup-parity-v2)：surface trip_days.title to client.
-     *  Nullable — old rows pre-migration-0042 surface as undefined. */
+    /** Section 4.3 (terracotta-mockup-parity-v2)：surface trip_days.title to client. */
     title: (dayRow as { title?: unknown }).title ?? null,
     hotel,
     timeline,

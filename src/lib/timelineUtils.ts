@@ -41,6 +41,26 @@ export function parseTimeRange(timeStr?: string | null): ParsedTime {
 }
 
 /**
+ * v2.29.0: trip_entries.time DROPPED。從 entry.{start_time, end_time} 直接取 ParsedTime。
+ */
+export function parseEntryTime(entry: { start_time?: string | null; end_time?: string | null }): ParsedTime {
+  const start = (entry.start_time ?? '').trim();
+  const end = (entry.end_time ?? '').trim();
+  let duration = 0;
+  if (start && end) {
+    const s = start.split(':');
+    const e = end.split(':');
+    if (s.length === 2 && e.length === 2) {
+      duration =
+        (parseInt(e[0] ?? '0', 10) * 60 + parseInt(e[1] ?? '0', 10)) -
+        (parseInt(s[0] ?? '0', 10) * 60 + parseInt(s[1] ?? '0', 10));
+      if (duration < 0) duration += 24 * 60;
+    }
+  }
+  return { start, end, duration };
+}
+
+/**
  * 格式化分鐘數為可讀字串（中文）。
  * QA 2026-04-26 BUG-038/048：raw 「30m」「1h 30m」 改中文化，整個 UI 中文一致。
  * 非有限數（NaN/Infinity）、0、負數一律回 ""；60 → "1 小時"；90 → "1 小時 30 分"；45 → "45 分鐘"。

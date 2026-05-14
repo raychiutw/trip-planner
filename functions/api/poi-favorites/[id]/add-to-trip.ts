@@ -15,7 +15,7 @@
  *   - companion：requireFavoriteActor(action='add_to_trip')；ownership 用 resolved
  *     userId（submitter）比 favorite.user_id；admin scope 不 bypass。
  *
- * travel_* 欄位 NULL，背景 tp-request 之後 fill（避免 LLM 8 秒等待感）。
+ * v2.29.0: travel_* DROPPED, trip_segments 由 /recompute-travel 在背景 fill。
  */
 import { logAudit } from '../../_audit';
 import { hasWritePermission } from '../../_auth';
@@ -38,15 +38,6 @@ interface Body {
   // 廢除欄位，存在即 reject
   position?: unknown;
   anchorEntryId?: unknown;
-}
-
-/** Parse "HH:MM-HH:MM" → [startMin, endMin]; null if not parseable. */
-function parseTimeRange(time: string | null | undefined): [number, number] | null {
-  if (!time) return null;
-  const m = /^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/.exec(time);
-  if (!m) return null;
-  const [, h1, m1, h2, m2] = m;
-  return [parseInt(h1!, 10) * 60 + parseInt(m1!, 10), parseInt(h2!, 10) * 60 + parseInt(m2!, 10)];
 }
 
 /** "HH:MM" → minutes since midnight. */
@@ -141,34 +132,28 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   }
 
   // Conflict detection + sort_order 計算（一次查 day 的所有 entries）
-  // v2.26.0 (migration 0056)：優先讀 start_time/end_time，fall back 到 legacy
-  // time 解析。為什麼這麼做：原本只 parseTimeRange(entry.time) 在 single-form
-  // "HH:MM"（無 end）或 NULL 時 skip 整個 conflict 檢查；新欄位 backfill 會把
-  // single-form 也記下 start_time（end_time = NULL）→ 可以用 start + 估計 stay
-  // 重建 range。簡化策略：start_time 有但 end_time NULL → 視為瞬間點（end = start）。
+  // v2.29.0: trip_entries.time DROPPED, 只看 start_time/end_time。
+  // start_time 有但 end_time NULL → 視為瞬間點（end = start）。
   const newStartMin = hhmmToMin(startTime);
   const newEndMin = hhmmToMin(endTime);
   const { results: dayEntries } = await db
-    .prepare('SELECT id, time, start_time, end_time, title, sort_order FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC')
+    .prepare('SELECT id, start_time, end_time, title, sort_order FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC')
     .bind(day.id)
     .all<{
       id: number;
-      time: string | null;
       start_time: string | null;
       end_time: string | null;
       title: string;
       sort_order: number;
     }>();
 
-  /** 取得 entry 的 [startMin, endMin]：優先 start_time/end_time，fall back time。 */
-  function entryRange(entry: { time: string | null; start_time: string | null; end_time: string | null }): [number, number] | null {
-    if (entry.start_time) {
-      const start = hhmmToMin(entry.start_time);
-      if (!Number.isFinite(start)) return null;
-      const end = entry.end_time ? hhmmToMin(entry.end_time) : start; // single-time = 瞬間點
-      return [start, Number.isFinite(end) ? end : start];
-    }
-    return parseTimeRange(entry.time);
+  /** 取得 entry 的 [startMin, endMin]：純看 start_time/end_time。 */
+  function entryRange(entry: { start_time: string | null; end_time: string | null }): [number, number] | null {
+    if (!entry.start_time) return null;
+    const start = hhmmToMin(entry.start_time);
+    if (!Number.isFinite(start)) return null;
+    const end = entry.end_time ? hhmmToMin(entry.end_time) : start; // single-time = 瞬間點
+    return [start, Number.isFinite(end) ? end : start];
   }
 
   for (const entry of dayEntries ?? []) {
@@ -182,7 +167,7 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
           entryId: entry.id,
           time: entry.start_time && entry.end_time
             ? `${entry.start_time}-${entry.end_time}`
-            : (entry.start_time ?? entry.time),
+            : (entry.start_time ?? null),
           title: entry.title,
           dayNum,
         },
@@ -213,13 +198,13 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     );
   }
 
-  // v2.26.0 (migration 0056): dual-write start_time/end_time（已是 4-field 純時間驅動，
-   // 直接寫入新欄位 + 同步 compose 寫 legacy time）。
+  // v2.29.0: trip_entries.{time, poi_id} DROPPED. INSERT 只寫 start_time/end_time，
+  // master poi 走下面 trip_entry_pois INSERT。
   stmts.push(
     db.prepare(
-      `INSERT INTO trip_entries (day_id, sort_order, time, start_time, end_time, title, description, source, note, poi_id, entry_pois_version)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1) RETURNING id`,
-    ).bind(day.id, insertSortOrder, `${startTime}-${endTime}`, startTime, endTime, favorite.poi_name, null, 'fast-path', favorite.note, favorite.poi_id),
+      `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, note, entry_pois_version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1) RETURNING id`,
+    ).bind(day.id, insertSortOrder, startTime, endTime, favorite.poi_name, null, 'fast-path', favorite.note),
   );
   stmts.push(
     db.prepare(
@@ -265,6 +250,6 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     sortOrder: insertSortOrder,
     startTime,
     endTime,
-    note: 'travel_* 欄位將由背景 tp-request 計算填入',
+    note: 'trip_segments 將由背景 /recompute-travel 計算填入',
   }, 201);
 };

@@ -1,7 +1,7 @@
 import { logAudit, computeDiff } from '../../../_audit';
 import { hasPermission, hasWritePermission, verifyEntryBelongsToTrip } from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { TIME_RE, composeTime, parseTime } from '../../../_time';
+import { TIME_RE, parseTime } from '../../../_time';
 import { validateEntryBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -14,8 +14,10 @@ import { fetchEntryPoisByEntries } from '../days/_merge';
 // v2.26.0 (migration 0056)：start_time / end_time 拆分 time。dual-write 觀察期：
 //   - body 若帶 start_time/end_time → 寫入 start/end + 同步 compose 寫 time
 //   - body 若帶 time（legacy）→ 寫 time + parseTime compose start/end
-// helpers (TIME_RE / composeTime / parseTime) 共用 _time.ts。
-const ALLOWED_FIELDS = ['day_id', 'sort_order', 'time', 'start_time', 'end_time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min'] as const;
+// helpers (TIME_RE / parseTime) 共用 _time.ts。
+// v2.29.0: trip_entries.{time, travel_type, travel_desc, travel_min} DROPPED.
+// PATCH 不再 accept 這些 field（schema 已無對應 col）。
+const ALLOWED_FIELDS = ['day_id', 'sort_order', 'start_time', 'end_time', 'title', 'description', 'source', 'note'] as const;
 
 /**
  * GET /api/trips/:id/entries/:eid → single entry meta + canonical entry POIs.
@@ -90,7 +92,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   }
 
   // 亂碼偵測：寫入 DB 前檢查文字欄位
-  const textFields = ['title', 'description', 'note', 'travel_desc'];
+  const textFields = ['title', 'description', 'note'];
   for (const f of textFields) {
     if (f in body && typeof body[f] === 'string' && detectGarbledText(body[f] as string)) {
       throw new AppError('DATA_ENCODING', `欄位 ${f} 包含疑似亂碼，請確認 encoding 為 UTF-8`);
@@ -111,10 +113,8 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     if (targetDay.trip_id !== id) throw new AppError('PERM_DENIED', '不可將 entry 移到其他 trip');
   }
 
-  // v2.26.0 (migration 0056) dual-write：start_time/end_time 與 legacy time 同步。
-  //   - 若 body 帶 start_time / end_time → 寫 start/end + compose 寫 time
-  //   - 若 body 帶 time（legacy 路徑）→ 解析 → 同步寫 start/end
-  //   - 兩者都帶 → 以 start_time/end_time 為準（compose time 覆寫）
+  // v2.29.0: trip_entries.time DROPPED. 只接受 start_time / end_time。
+  // 為 backward-compat 仍接 legacy body.time → parse 拆成 start/end（但不寫回 time col）。
   for (const f of ['start_time', 'end_time'] as const) {
     if (f in body && body[f] !== null && body[f] !== '' && typeof body[f] === 'string') {
       if (!TIME_RE.test(body[f] as string)) {
@@ -130,14 +130,15 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     if (typeof start === 'string' && typeof end === 'string' && start && end && start >= end) {
       throw new AppError('DATA_VALIDATION', 'start_time 必須早於 end_time');
     }
-    body.time = composeTime(start, end);
   } else if ('time' in body && typeof body.time === 'string') {
     const parsed = parseTime(body.time);
     body.start_time = parsed.start;
     body.end_time = parsed.end;
+    delete body.time;
   } else if ('time' in body && body.time === null) {
     body.start_time = null;
     body.end_time = null;
+    delete body.time;
   }
 
   const update = buildUpdateClause(body, ALLOWED_FIELDS);
@@ -188,12 +189,9 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const oldRow = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(eid).first() as Record<string, unknown> | null;
   if (!oldRow) throw new AppError('DATA_NOT_FOUND');
 
-  // Cascade delete trip_pois referencing this entry, then the entry itself
+  // v2.29.0: trip_pois DROPPED. trip_entry_pois has ON DELETE CASCADE so the entry delete cascades.
   try {
-    await db.batch([
-      db.prepare('DELETE FROM trip_pois WHERE entry_id = ?').bind(eid),
-      db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(eid),
-    ]);
+    await db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(eid).run();
   } catch (err: unknown) {
     throw new AppError('SYS_DB_ERROR', 'DB 暫時無法處理，請稍後重試');
   }

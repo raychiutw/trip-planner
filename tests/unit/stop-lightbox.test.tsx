@@ -12,7 +12,8 @@ import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent'
 
 const ENTRY: TimelineEntryData = {
   id: 42,
-  time: '11:30-14:00',
+  start_time: '11:30',
+  end_time: '14:00',
   title: '沖縄美ら海水族館',
   description: '世界第二大水族館，鎮館之寶是黑潮之海。',
   note: '提前線上買票省 ¥120。',

@@ -1,6 +1,11 @@
 import { json } from '../../_utils';
 import type { Env } from '../../_types';
-import { assembleDay, fetchEntryPoisByEntries } from './days/_merge';
+import {
+  assembleDay,
+  fetchEntryPoisByEntries,
+  fetchHotelAndParking,
+  fetchTripSegmentsMap,
+} from './days/_merge';
 
 /**
  * GET /api/trips/:id/days
@@ -8,7 +13,9 @@ import { assembleDay, fetchEntryPoisByEntries } from './days/_merge';
  * - `?all=1`：回傳完整 days 陣列（含 hotel + timeline + POI），解決前端 N+1
  *
  * Section 4.3 (terracotta-mockup-parity-v2)：summary 加 `title` 欄。
- * SELECT * 在 batch 模式自動 surface title (column 已 added by migration 0042)。
+ *
+ * v2.29.0: trip_pois 整表 drop。Hotel ← trip_days.hotel_poi_id，entry POIs ← trip_entry_pois，
+ * travel ← trip_segments。Parking ← poi_relations(relation_type='parking')。
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
@@ -23,8 +30,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return json(results);
   }
 
-  // Batch 模式：4 queries 全平行（pois 用 subquery 避免 serial round-trip）
-  const [daysResult, entriesResult, tripPoisResult, poisResult] = await Promise.all([
+  // Batch 模式：4 queries 平行（days + entries + segments + entry_pois 由 helper 內部完成）
+  const [daysResult, entriesResult, segmentsMap] = await Promise.all([
     db.prepare('SELECT * FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC').bind(id).all(),
     db.prepare(`
       SELECT e.* FROM trip_entries e
@@ -32,23 +39,25 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       WHERE d.trip_id = ?
       ORDER BY e.day_id ASC, e.sort_order ASC
     `).bind(id).all(),
-    db.prepare('SELECT * FROM trip_pois WHERE trip_id = ?').bind(id).all(),
-    db.prepare(`
-      SELECT * FROM pois
-      WHERE id IN (
-        SELECT DISTINCT poi_id FROM trip_pois WHERE trip_id = ?
-      )
-    `).bind(id).all(),
+    fetchTripSegmentsMap(db, id),
   ]);
 
   const dayRows = daysResult.results as Record<string, unknown>[];
   const entryRows = entriesResult.results as Record<string, unknown>[];
-  const tripPoiRows = tripPoisResult.results as Record<string, unknown>[];
 
-  const poiMap = new Map<number, Record<string, unknown>>();
-  for (const p of poisResult.results as Record<string, unknown>[]) {
-    poiMap.set(p.id as number, p);
-  }
+  // Collect hotel_poi_id list (dedup, non-null) → fetch hotel + parking POI
+  const hotelPoiIds = [
+    ...new Set(
+      dayRows
+        .map((d) => d.hotel_poi_id as number | null)
+        .filter((v): v is number => v != null && v > 0),
+    ),
+  ];
+  const { poiMap, parkingMap } = await fetchHotelAndParking(db, hotelPoiIds);
+
+  // v2.27.0 multi-POI per entry：1 query fetch all entry_pois，分 map per entry
+  const allEntryIds = entryRows.map((e) => e.id as number);
+  const entryPoisMap = await fetchEntryPoisByEntries(db, allEntryIds);
 
   const entriesByDay = new Map<number, Record<string, unknown>[]>();
   for (const e of entryRows) {
@@ -57,26 +66,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     entriesByDay.get(dayId)!.push(e);
   }
 
-  const tripPoisByDay = new Map<number, Record<string, unknown>[]>();
-  for (const tp of tripPoiRows) {
-    const dayId = tp.day_id as number;
-    if (dayId == null) continue;
-    if (!tripPoisByDay.has(dayId)) tripPoisByDay.set(dayId, []);
-    tripPoisByDay.get(dayId)!.push(tp);
-  }
-
-  // v2.27.0 multi-POI per entry：1 query fetch all entry_pois，分 map per entry
-  const allEntryIds = entryRows.map((e) => e.id as number);
-  const entryPoisMap = await fetchEntryPoisByEntries(db, allEntryIds);
-
-  const days = dayRows.map(day => {
+  const days = dayRows.map((day) => {
     const dayId = day.id as number;
     return assembleDay(
       day,
       entriesByDay.get(dayId) ?? [],
-      tripPoisByDay.get(dayId) ?? [],
       poiMap,
+      parkingMap,
       entryPoisMap,
+      segmentsMap,
     );
   });
 

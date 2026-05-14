@@ -4,7 +4,7 @@
  * v2.24.0 trip-segments：
  *   - 1km gate（Haversine 本地算）：≤1km → walking + WALK API；>1km → driving + DRIVE API
  *   - 永遠 1 Google Routes call/pair（不打 TRANSIT — Japan 無資料）
- *   - 寫 trip_segments（first-class）+ dual-write trip_entries.travel_*（legacy until Phase ε）
+ *   - 寫 trip_segments（first-class，v2.29.0 為唯一 source，entry.travel_* 已 DROPPED）
  *   - mode_source='user' 既有 segment 不覆寫（保留 user override）
  *
  * Self-drive 窗內也吃 1km gate（短程仍 walking — 找停車位比走路慢）。
@@ -102,7 +102,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 收集 batch statements 最後一次 db.batch 寫入（單一 subrequest）
   const segmentInserts: Array<{ tripId: string; from: number; to: number; mode: string; min: number; distM: number; now: number }> = [];
   const segmentUpdates: Array<{ id: number; mode: string; min: number; distM: number; now: number }> = [];
-  const legacyEntryUpdates: Array<{ entryId: number; distM: number; min: number; now: number; mode: string }> = [];
+  // v2.29.0: trip_entries.travel_* DROPPED. trip_segments 為唯一 source.
 
   for (const day of daysRes.results) {
     const entriesRes = await db
@@ -155,7 +155,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         } else {
           segmentInserts.push({ tripId, from: prev.id, to: curr.id, mode: chosenMode, min: minutes, distM, now });
         }
-        legacyEntryUpdates.push({ entryId: curr.id, distM, min: minutes, now, mode: chosenMode });
+        // v2.29.0: trip_entries.travel_* DROPPED, no dual-write to legacy cols.
 
         sourceBreakdown['google'] = (sourceBreakdown['google'] ?? 0) + 1;
         modeBreakdown[chosenMode] = (modeBreakdown[chosenMode] ?? 0) + 1;
@@ -170,7 +170,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   // 單一 db.batch 寫入所有 upserts + legacy dual-write（1 subrequest 不論 statement 數）
-  if (segmentInserts.length > 0 || segmentUpdates.length > 0 || legacyEntryUpdates.length > 0) {
+  if (segmentInserts.length > 0 || segmentUpdates.length > 0) {
     const stmts = [
       // INSERT 用 ON CONFLICT 防 TOCTOU race：preload 後若另一支 concurrent
       // recompute 已 INSERT 同 (from,to) pair，本 batch 不會炸 UNIQUE → atomic
@@ -199,12 +199,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
              source = 'google', computed_at = ?, updated_at = ?
          WHERE id = ? AND mode_source = 'auto'`,
       ).bind(s.mode, s.min, s.distM, s.now, s.now, s.id)),
-      ...legacyEntryUpdates.map((u) => db.prepare(
-        `UPDATE trip_entries
-         SET travel_distance_m = ?, travel_min = ?, travel_computed_at = ?,
-             travel_source = 'google', travel_type = ?
-         WHERE id = ?`,
-      ).bind(u.distM, u.min, u.now, u.mode, u.entryId)),
     ];
     await db.batch(stmts);
   }

@@ -27,10 +27,10 @@ beforeAll(async () => {
   day1Id = await getDayId(db, 'trip-cm', 1);
   day2Id = await getDayId(db, 'trip-cm', 2);
   day3Id = await getDayId(db, 'trip-cm', 3);
-  // seedEntry helper 只接 sortOrder/title/travel*，time + note 後續用 PATCH 上去
+  // v2.29.0: trip_entries.time DROPPED；用 start_time/end_time 直接 UPDATE。
   entryDay1Id = await seedEntry(db, day1Id, { title: '美ら海水族館' });
-  await db.prepare('UPDATE trip_entries SET time = ?, note = ? WHERE id = ?')
-    .bind('11:30-14:00', 'mock note', entryDay1Id).run();
+  await db.prepare('UPDATE trip_entries SET start_time = ?, end_time = ?, note = ? WHERE id = ?')
+    .bind('11:30', '14:00', 'mock note', entryDay1Id).run();
 });
 
 afterAll(disposeMiniflare);
@@ -51,7 +51,9 @@ describe('POST /api/trips/:id/entries/:eid/copy — Item 2', () => {
     // json() helper deep-camels keys: day_id → dayId, sort_order → sortOrder
     expect(newRow.dayId).toBe(day2Id);
     expect(newRow.title).toBe('美ら海水族館');
-    expect(newRow.time).toBe('11:30-14:00');
+    // v2.29.0: trip_entries.time DROPPED — 改驗 start_time / end_time
+    expect(newRow.startTime).toBe('11:30');
+    expect(newRow.endTime).toBe('14:00');
     expect(newRow.note).toBe('mock note');
     expect(newRow.id).not.toBe(entryDay1Id);
 
