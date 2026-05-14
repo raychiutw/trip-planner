@@ -146,34 +146,6 @@
 
 ---
 
-## poi-favorites-rename — UI mockup-driven redesigns (PoiFavoritesPage + AddPoiFavoriteToTripPage)
-
-**Priority:** P2 — mockup signed-off (`docs/design-sessions/2026-05-04-favorites-redesign.html` v4)，React refactor 留 follow-up
-**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §11.3-§11.10, §12.3-§12.11
-
-**Scope:**
-
-§11 PoiFavoritesPage redesign（mockup-driven hard gate）：
-- region pill row + type filter row 對齊 mockup
-- 8-state matrix（loading / empty-pool / filter-no-results / error / data / optimistic-delete / bulk-action-busy / pagination）
-- batch flow delete-only（不支援 batch add-to-trip — DUC1 user accept）
-- a11y: filter chip `role="group"` + `aria-pressed`（不是 `role="tab"`）/ checkbox `aria-label` per row / optimistic-delete `aria-live`
-- viewport breakpoints: 1024+ 3-col / 640-1023 2-col / <430 1-col / max-width 1040px
-- hierarchy rules: 0 favorites 隱藏 filters / 50 grid 為主 / 200+ sticky search + pagination
-- 8 處 `border: 1px solid var(--color-border)` 違反 H7 一併修（從 master SavedPoisPage 繼承的 pre-existing pattern）
-
-§12 AddPoiFavoriteToTripPage redesign：
-- 4-field 純時間驅動 form（trip / day / startTime / endTime）— 廢除 position radio + anchorEntryId
-- desktop 2-col grid（max-width 720px）/ phone stack 單欄 + button full-width
-- TitleBar title 靠左（flex:1）/ 左側返回 button / 右側無 confirm action
-- 「加入行程」primary button 在 `.tp-form-actions` wrapper 內、置中對齊、放在 4 fields 下方
-- 7-state matrix（loading / empty-no-trip / conflict / error / success / optimistic / partial）
-- trip 切換時 day field skeleton + 提交按鈕 disabled
-
-**建議 flow：** invoke `/tp-claude-design` 對照 mockup 產 React → invoke `/design-review` 視覺稽核 → /tp-code-verify。
-
----
-
 ## Completed
 
 ### v2.30.3 — `.tp-action-btn` family extract (poi-favorites-rename §13 收尾)
