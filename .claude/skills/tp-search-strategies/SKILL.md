@@ -22,7 +22,7 @@ Event type schema（各類型物件必填欄位）見 `references/event-schema.m
 
 **驗證流程：**
 
-1. **`POST /api/poi-search`** body `{ query: "POI 名稱 城市", region?: "JP|TW|KR" }` → 回傳 results array（含 place_id、name、formatted_address、location）
+1. **`GET /api/poi-search?q=POI 名稱 城市&region=JP|TW|KR&limit=20`** → 回傳 results array（含 place_id、name、formatted_address、location）
 2. 確認 results 有匹配項（place_id 必填）
 3. 找到 → 用 `findOrCreatePoi` 建 pois 行 + 寫 place_id；接著 `POST /api/pois/{id}/enrich` 補完整欄位
 4. 找不到 → 判定無效：
@@ -112,9 +112,8 @@ npx wrangler d1 execute trip-planner-db --remote --command \
   "SELECT id, name, place_id FROM pois WHERE id = $POI_ID" --json
 
 # 2. 若沒 place_id：先 search
-curl -s -X POST -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"花織そば 沖縄"}' \
+curl -s -G -H "Authorization: Bearer $TOKEN" \
+  --data-urlencode "q=花織そば 沖縄" \
   "https://trip-planner-dby.pages.dev/api/poi-search"
 # → 拿到 place_id，PATCH 寫回 pois.place_id
 

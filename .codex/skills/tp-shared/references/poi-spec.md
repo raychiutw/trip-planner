@@ -92,7 +92,7 @@ pois.type 允許值：`hotel`, `restaurant`, `shopping`, `parking`, `attraction`
 | LLM 補單一 POI 缺漏欄位 | `POST /api/pois/{poi_id}/enrich`（admin token 或帶 `?tripId={id}`） |
 | 跨行程批次補資料 | `/tp-patch` skill 用 admin token 對所有 `place_id IS NOT NULL AND status='active'` 的 POI loop call enrich |
 | 既有 cron refresh | `scripts/google-poi-refresh-30d.ts` 自動跑（50/day quota cap，每月所有 active POI 滾動更新一次） |
-| 新增 POI 缺 place_id | 先用 `findOrCreatePoi` 建 pois 行 → 跑 `POST /api/poi-search` 取 place_id 寫回 → 再 enrich |
+| 新增 POI 缺 place_id | 先用 `findOrCreatePoi` 建 pois 行 → 跑 `GET /api/poi-search?q=...` 取 place_id 寫回 → 再 enrich |
 
 ### 範例：批次補
 
@@ -131,11 +131,11 @@ done
 
 ## Google Maps 驗證（鐵律）
 
-**Google Maps 是所有 POI 資料的 source of truth。** 新增或更新 POI 前，必須先確認 Google Maps 上存在該 POI（透過 `POST /api/poi-search` text search，回傳 place_id + 基本資訊）。查不到 = 無效，不得新增或保留。
+**Google Maps 是所有 POI 資料的 source of truth。** 新增或更新 POI 前，必須先確認 Google Maps 上存在該 POI（透過 `GET /api/poi-search?q=...` text search，回傳 place_id + 基本資訊）。查不到 = 無效，不得新增或保留。
 
 驗證流程：
 
-1. `POST /api/poi-search` body `{ query: "POI 名稱 城市" }` → 拿 results array
+1. `GET /api/poi-search?q=POI 名稱 城市` → 拿 results array
 2. 取第一個結果的 `place_id`（必填，沒 place_id 不能 enrich）
 3. `findOrCreatePoi` 建 pois 行 + 寫 `place_id`
 4. `POST /api/pois/{id}/enrich` 補完整欄位

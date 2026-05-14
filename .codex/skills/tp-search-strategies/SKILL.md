@@ -22,7 +22,7 @@ Event type schema（各類型物件必填欄位）見 `references/event-schema.m
 
 **驗證流程：**
 
-1. **`POST /api/poi-search`** body `{ query: "POI 名稱 城市", region?: "JP|TW|KR" }` → 回傳 results array（含 place_id、name、formatted_address、location）
+1. **`GET /api/poi-search?q=POI 名稱 城市&region=JP|TW|KR&limit=20`** → 回傳 results array（含 place_id、name、formatted_address、location）
 2. 確認 results 有匹配項（place_id 必填）
 3. 找到 → 用 `findOrCreatePoi` 建 pois 行 + 寫 place_id；接著 `POST /api/pois/{id}/enrich` 補完整欄位
 4. 找不到 → 判定無效：
