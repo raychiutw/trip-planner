@@ -613,3 +613,125 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
     expect(e2Rows.results.map((r) => r.poi_id)).toEqual([sharedMaster!.id, altC!.id, altD!.id]);
   });
 });
+
+// v2.30.x (migration 0065): Day-level OCC token on PUT /days/:num
+describe('PUT /api/trips/:id/days/:num — v2.30.x Day-level OCC (migration 0065)', () => {
+  it('GET response 含 version field（initial 0）', async () => {
+    const TRIP = 'trip-dn-occ-get';
+    await seedTrip(db, { id: TRIP, days: 1 });
+    const ctx = mockContext({
+      request: new Request(`https://test.com/api/trips/${TRIP}/days/1`),
+      env,
+      params: { id: TRIP, num: '1' },
+    });
+    const resp = await callHandler(onRequestGet, ctx);
+    expect(resp.status).toBe(200);
+    const body = await resp.json() as { version?: number };
+    expect(body.version).toBe(0);
+  });
+
+  it('PUT 成功 bump version + response 帶 dayVersion=1', async () => {
+    const TRIP = 'trip-dn-occ-bump';
+    await seedTrip(db, { id: TRIP, days: 1 });
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+        date: '2026-04-01',
+        dayOfWeek: '三',
+        label: 'Day 1',
+        timeline: [],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: TRIP, num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(200);
+    const body = await resp.json() as { dayVersion?: number };
+    expect(body.dayVersion).toBe(1);
+
+    // DB row 也 bump
+    const dayId = await getDayId(db, TRIP, 1);
+    const row = await db.prepare('SELECT version FROM trip_days WHERE id = ?').bind(dayId).first<{ version: number }>();
+    expect(row!.version).toBe(1);
+  });
+
+  it('PUT 帶 expectedDayVersion 配對成功 → 200 + dayVersion bumped', async () => {
+    const TRIP = 'trip-dn-occ-match';
+    await seedTrip(db, { id: TRIP, days: 1 });
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+        date: '2026-04-01',
+        dayOfWeek: '三',
+        label: 'Day 1',
+        timeline: [],
+        expectedDayVersion: 0,
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: TRIP, num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(200);
+    const body = await resp.json() as { dayVersion?: number };
+    expect(body.dayVersion).toBe(1);
+  });
+
+  it('PUT 帶 expectedDayVersion 不符 → 409 STALE_ENTRY', async () => {
+    const TRIP = 'trip-dn-occ-stale';
+    await seedTrip(db, { id: TRIP, days: 1 });
+    // 先 bump 一次到 v=1
+    const ctx1 = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+        date: '2026-04-01', dayOfWeek: '三', label: 'D1', timeline: [],
+      }),
+      env, auth: mockAuth({ email: 'user@test.com' }), params: { id: TRIP, num: '1' },
+    });
+    await callHandler(onRequestPut, ctx1);
+
+    // 現在 trip_days.version = 1，client 帶 expectedDayVersion: 0 (stale) → 409
+    const ctx2 = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+        date: '2026-04-02', dayOfWeek: '四', label: 'D1-new', timeline: [],
+        expectedDayVersion: 0,
+      }),
+      env, auth: mockAuth({ email: 'user@test.com' }), params: { id: TRIP, num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx2);
+    expect(resp.status).toBe(409);
+    const body = await resp.json() as { error?: { code?: string } };
+    expect(body.error?.code).toBe('STALE_ENTRY');
+
+    // DB 沒被覆寫（仍是第一次 PUT 的 label）
+    const dayId = await getDayId(db, TRIP, 1);
+    const row = await db.prepare('SELECT label, version FROM trip_days WHERE id = ?').bind(dayId).first<{ label: string; version: number }>();
+    expect(row!.label).toBe('D1');
+    expect(row!.version).toBe(1);
+  });
+
+  it('未帶 expectedDayVersion → backwards-compat 略過 OCC check（既有 client 不破）', async () => {
+    const TRIP = 'trip-dn-occ-skip';
+    await seedTrip(db, { id: TRIP, days: 1 });
+    // 先 bump 兩次讓 version=2
+    for (let i = 0; i < 2; i++) {
+      const ctx = mockContext({
+        request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+          date: '2026-04-01', dayOfWeek: '三', label: `D1-${i}`, timeline: [],
+        }),
+        env, auth: mockAuth({ email: 'user@test.com' }), params: { id: TRIP, num: '1' },
+      });
+      await callHandler(onRequestPut, ctx);
+    }
+
+    // 不帶 expectedDayVersion，PUT 仍成功 → 不檢查
+    const ctxBwc = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+        date: '2026-04-01', dayOfWeek: '三', label: 'D1-bwc', timeline: [],
+      }),
+      env, auth: mockAuth({ email: 'user@test.com' }), params: { id: TRIP, num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctxBwc);
+    expect(resp.status).toBe(200);
+    const body = await resp.json() as { dayVersion?: number };
+    expect(body.dayVersion).toBe(3);
+  });
+});
