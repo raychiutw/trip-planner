@@ -3,6 +3,49 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.7] - 2026-05-15
+
+**Revert v2.30.6 over-removal + 改用 ephemeral tmux session 跑 claude（無 `-p` flag）。**
+
+v2.30.6 (PR #546) 誤解 user 指令「替換 claude -p」做過度刪除 — 整支 `processLoop` / `runClaude` / `POST /trigger` endpoint 全砍。User 澄清「不是整個移除 只是移除-p參數」。本 PR 先 `git revert 7d6b324` 還原 v2.30.6 刪除的 trigger/processLoop 結構，再把 `claude -p` spawn pattern 換成 ephemeral tmux session pattern：固定 prefix `tripline-request-` + timestamp suffix 命名、skill 處理完自殺、orphan > 30min 由 API server 強取回收。
+
+### Reverted
+
+- `Revert "v2.30.6 chore: remove last claude -p spawn (api-server /trigger 廢除) (#546)"` — 還原刪掉的 `runClaude` / `processLoop` / `fetchOldestOpen` / `patchStatus` / `authedFetch` / `authHeaders` / `POST /trigger` endpoint / state vars / `child_process` import / `recordEmailEvent` + `alertAdminTelegram` 用法 / `tests/unit/api-server-process-loop.test.js`
+
+### Changed
+
+- `scripts/tripline-api-server.ts`：
+  - `runClaude()` → `spawnTmuxRequest()`：以 `spawnSync('tmux', ['new-session', '-d', '-s', name, ...])` 開 detached session，session 內跑 `claude --dangerously-skip-permissions --name <session>`（**移除 `-p` flag**，但仍 `--dangerously-skip-permissions` 因為非 TTY 自動 skip workspace trust）。Inject `TRIPLINE_API_TOKEN` + `TRIPLINE_TMUX_SESSION` env var 給 skill 用
+  - 新 `cleanupOrphans(maxAgeMs)`：parse `tmux ls -F` 找 `tripline-request-*` session > 30 min 強取 kill
+  - 新 `hasActiveSession()`：檢查是否有 active session（同時只允一個 — 避免 race condition）
+  - `processLoop()` 大幅簡化：`cleanupOrphans → hasActiveSession check → spawnTmuxRequest`（單次 fire-and-forget，**不再 loop**）。skill 自己 drain queue 不需要 API server iterate
+  - 刪 `fetchOldestOpen` / `patchStatus` / `authedFetch` / `authHeaders` / `TripRequest` interface / `CLAUDE_TIMEOUT_MS` / `API_BASE`：skill 自己處理 queue + PATCH status
+  - 改 `spawn` → `spawnSync`（tmux 操作 synchronous，無 streaming buffer 需求）
+- `.claude/skills/tp-request/SKILL.md` + `.codex/skills/tp-request/SKILL.md`：結尾加 self-destruct 段落
+  ```bash
+  if [ -n "$TRIPLINE_TMUX_SESSION" ]; then
+    tmux kill-session -t "$TRIPLINE_TMUX_SESSION" 2>/dev/null || true
+  fi
+  ```
+  Cowork 觸發時無 `TRIPLINE_TMUX_SESSION` env var → skip（Cowork 自管 session lifecycle）
+- `tests/unit/api-server-process-loop.test.js`：移除 `consecutiveFailures` simulated test（行為已不存在），保留 health endpoint 結構 + verifyAuth + session prefix 命名測試（3 條）
+
+### Why tmux ephemeral
+
+- ✓ 隱藏執行（detached session，無視窗）
+- ✓ 沒 `-p` flag（user 明確要求）
+- ✓ 同時只允一個（避免 race condition 兩個 claude 競爭同 D1 request）
+- ✓ Ephemeral（用完即砍，避免 context 累積成本爆炸）
+- ✓ Orphan 30min 自動回收（token TTL 1h 之內 cleanup 一定發生）
+- ⚠ Concurrent /trigger 期間第二個 call 直接 return（active session 仍在 drain queue）
+
+### Tests
+
+- 1525 unit tests pass (181 files)
+- typecheck clean
+- npm test:api `tests/api/requests.integration.test.ts` 9 passed (未動 trigger caller，仍 fire-and-forget)
+
 ## [2.30.5] - 2026-05-15
 
 **Schedulers → Claude Cowork migration — 3 支 launchd-driven scheduler 全部廢除。**

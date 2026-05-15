@@ -27,6 +27,21 @@
 
 ## Completed
 
+### v2.30.7 — Revert v2.30.6 + ephemeral tmux session pattern 取代 `claude -p`
+
+**Priority:** P1
+**Completed:** v2.30.7 (2026-05-15)
+
+v2.30.6 過度解讀「替換 claude -p」做了整段刪除（PR #546 砍掉 `runClaude` / `processLoop` / `POST /trigger`）。User 澄清「不是整個移除 只是移除-p參數」+ 規範 ephemeral tmux session pattern。本 PR：
+
+1. `git revert 7d6b324` 還原 trigger/processLoop 結構
+2. `runClaude` 改用 `spawnSync('tmux', ['new-session', '-d', ...])` 開 detached session 跑 `claude --dangerously-skip-permissions --name <session>`（無 `-p`），session 命名 `tripline-request-<timestamp>-<pid>`
+3. Skill 內部 drain queue + PATCH status 完成後，SKILL.md 結尾 `tmux kill-session -t $TRIPLINE_TMUX_SESSION` 自殺
+4. API server `cleanupOrphans()` 在每次 `/trigger` 開頭掃 `tripline-request-*` session，> 30 min 強取 kill（兜底）
+5. `hasActiveSession()` 防止 concurrent /trigger 同時 spawn 兩個 claude race condition
+
+**Why tmux**：隱藏執行 + 無 `-p` + race-free single concurrent + ephemeral 避免 context 累積 + 30min token TTL 內保證 orphan cleanup。
+
 ### v2.30.5 — Schedulers → Claude Cowork migration
 
 **Priority:** P1

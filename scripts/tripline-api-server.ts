@@ -10,7 +10,7 @@
  *   GET  /health                  — 健康檢查
  */
 
-import { spawn } from 'child_process';
+import { spawnSync } from 'child_process';
 import { appendFileSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import nodemailer, { type Transporter } from 'nodemailer';
@@ -32,10 +32,8 @@ try {
 // --- Config ---
 const PORT = parseInt(process.env.TRIPLINE_PORT || '6688', 10);
 const API_SECRET = process.env.TRIPLINE_API_SECRET || '';
-const API_BASE = 'https://trip-planner-dby.pages.dev/api';
 const PROJECT_DIR = process.env.PROJECT_DIR || join(import.meta.dir, '..');
 const LOG_DIR = join(PROJECT_DIR, 'scripts', 'logs', 'api-server');
-const CLAUDE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 const TOKEN_HELPER = join(PROJECT_DIR, 'scripts', 'lib', 'get-tripline-token.js');
 
 // --- Mailer config (Gmail SMTP) ---
@@ -65,183 +63,149 @@ function logError(msg: string) {
   try { appendFileSync(join(LOG_DIR, `${todayStr()}.error.log`), line); } catch {}
 }
 
-// --- API helpers ---
-// V2 OAuth client_credentials replaces CF Access Service Token. The token helper
-// caches in /tmp; on 401 we invalidate and retry once via require() reload.
+// --- Token helper ---
+// v2.30.7: API server 只用 token helper 一次（mint 後 inject 到 tmux session env）。
+// queue drain + PATCH status 改由 /tp-request skill 自己做（curl + load-env.mjs）。
 const tokenHelper = require(TOKEN_HELPER) as {
   getToken: (opts?: { forceFresh?: boolean }) => Promise<string>;
   invalidateCache: () => void;
 };
 
-async function authHeaders(forceFresh = false): Promise<Record<string, string>> {
-  const token = await tokenHelper.getToken({ forceFresh });
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'Origin': API_BASE.replace('/api', ''),
-  };
-}
+// --- tmux session management ---
+// v2.30.7: 改用 ephemeral tmux session 跑 claude（非 -p）。每個 /trigger 開
+// 一個 `tripline-request-<timestamp>-<pid>` session，skill 處理完所有 request
+// 後自殺（SKILL.md 結尾 tmux kill-session）。Orphan > 30min 由 cleanupOrphans
+// 強取回收，token TTL (1h) 之內保證 cleanup。
 
-/** fetch wrapper that auto-retries once on 401 with a fresh token. */
-async function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
-  const headers = { ...(init.headers as Record<string, string> ?? {}), ...(await authHeaders()) };
-  let res = await fetch(url, { ...init, headers });
-  if (res.status === 401) {
-    tokenHelper.invalidateCache();
-    const freshHeaders = { ...(init.headers as Record<string, string> ?? {}), ...(await authHeaders(true)) };
-    res = await fetch(url, { ...init, headers: freshHeaders });
+const ORPHAN_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+const SESSION_PREFIX = 'tripline-request-';
+
+async function cleanupOrphans(maxAgeMs: number): Promise<number> {
+  try {
+    const result = spawnSync('tmux', ['ls', '-F', '#{session_name} #{session_created}'], { encoding: 'utf-8' });
+    // tmux ls exit 1 = no sessions exist — not an error
+    if (result.status !== 0) return 0;
+    const now = Math.floor(Date.now() / 1000);
+    let killed = 0;
+    for (const line of (result.stdout || '').split('\n')) {
+      const parts = line.split(' ');
+      if (parts.length !== 2) continue;
+      const [name, createdStr] = parts;
+      if (!name.startsWith(SESSION_PREFIX)) continue;
+      const created = parseInt(createdStr, 10);
+      if (!created) continue;
+      if ((now - created) * 1000 > maxAgeMs) {
+        spawnSync('tmux', ['kill-session', '-t', name]);
+        log(`Cleaned orphan tmux session: ${name} (age=${now - created}s)`);
+        killed++;
+      }
+    }
+    return killed;
+  } catch (err) {
+    logError(`cleanupOrphans error: ${(err as Error).message}`);
+    return 0;
   }
-  return res;
 }
 
-interface TripRequest {
-  id: number;
-  trip_id: string;
-  mode: string;
-  message: string;
-  status: string;
-}
-
-async function fetchOldestOpen(): Promise<TripRequest | null> {
-  const res = await authedFetch(`${API_BASE}/requests?status=open&limit=1&sort=asc`);
-  if (!res.ok) {
-    logError(`fetchOldestOpen failed: ${res.status}`);
-    return null;
+function hasActiveSession(): string | null {
+  const result = spawnSync('tmux', ['ls', '-F', '#{session_name}'], { encoding: 'utf-8' });
+  if (result.status !== 0) return null;
+  for (const line of (result.stdout || '').split('\n')) {
+    if (line.startsWith(SESSION_PREFIX)) return line;
   }
-  const data = await res.json() as { items?: TripRequest[] } | TripRequest[];
-  const items = Array.isArray(data) ? data : (data.items ?? []);
-  return items[0] ?? null;
+  return null;
 }
 
-async function patchStatus(
-  id: number,
-  status: string,
-  extra?: { processed_by?: string },
-): Promise<boolean> {
-  const body: Record<string, string> = { status };
-  if (extra?.processed_by) body.processed_by = extra.processed_by;
-
-  const res = await authedFetch(`${API_BASE}/requests/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    logError(`patchStatus(${id}, ${status}) failed: ${res.status}`);
-    return false;
-  }
-  return true;
-}
-
-async function runClaude(): Promise<boolean> {
+async function spawnTmuxRequest(): Promise<boolean> {
   // v2.22.0：claude /tp-request skill 用 `Authorization: Bearer $TRIPLINE_API_TOKEN`
   // 寫入 prod API（含 §6/§7/§8/§9 poi-favorites 4 條 path）。.env.local 只有
-  // TRIPLINE_API_CLIENT_ID/SECRET，沒 TOKEN — 必須 mint 後 inject 到 child env，
-  // 否則 skill 內 curl header 是 `Bearer ` (empty) → middleware 401 → skill 處理失敗。
+  // TRIPLINE_API_CLIENT_ID/SECRET，沒 TOKEN — 必須 mint 後 inject 到 tmux session
+  // env，否則 skill 內 curl header 是 `Bearer ` (empty) → middleware 401。
   let token = '';
   try {
     token = await tokenHelper.getToken();
   } catch (err) {
-    logError(`Token mint 失敗，claude 不啟動：${(err as Error).message}`);
+    logError(`Token mint 失敗，tmux 不啟動：${(err as Error).message}`);
     return false;
   }
 
-  return new Promise((resolve) => {
-    const claudePath = '/Users/ray/.local/bin/claude';
-    const proc = spawn(claudePath, ['--dangerously-skip-permissions', '-p', '/tp-request'], {
-      cwd: PROJECT_DIR,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        HOME: process.env.HOME,
-        PATH: `${process.env.PATH}:/Users/ray/.local/bin`,
-        TRIPLINE_API_TOKEN: token,
-      },
-    });
+  const sessionName = `${SESSION_PREFIX}${Date.now()}-${process.pid}`;
+  const claudePath = '/Users/ray/.local/bin/claude';
 
-    const MAX_BUF = 10_000; // cap buffer to avoid unbounded memory
-    let stdout = '';
-    let stderr = '';
-    proc.stdout.on('data', (d: Buffer) => { if (stdout.length < MAX_BUF) stdout += d.toString().slice(0, MAX_BUF - stdout.length); });
-    proc.stderr.on('data', (d: Buffer) => { if (stderr.length < MAX_BUF) stderr += d.toString().slice(0, MAX_BUF - stderr.length); });
+  // shell-escape token for the inline env assignment（避免 token 包含特殊字元）
+  const escapedToken = token.replace(/'/g, `'\\''`);
 
-    const timer = setTimeout(() => {
-      logError('Claude timeout — killing process');
-      proc.kill('SIGTERM');
-      setTimeout(() => { if (!proc.killed) proc.kill('SIGKILL'); }, 5000);
-    }, CLAUDE_TIMEOUT_MS);
+  // Detached tmux session — claude 跑 interactive REPL（無 -p）。透過 env var 把
+  // TRIPLINE_API_TOKEN + session name 傳給 skill；skill 結尾用 TRIPLINE_TMUX_SESSION
+  // 自殺。--name 給 claude session 一個顯示名稱（同 tmux session）方便人類辨識。
+  const create = spawnSync('tmux', [
+    'new-session', '-d', '-s', sessionName, '-c', PROJECT_DIR,
+    `TRIPLINE_API_TOKEN='${escapedToken}' TRIPLINE_TMUX_SESSION='${sessionName}' PATH='${process.env.PATH}:/Users/ray/.local/bin' ${claudePath} --dangerously-skip-permissions --name '${sessionName}'`
+  ], { encoding: 'utf-8' });
+  if (create.status !== 0) {
+    logError(`tmux new-session failed (status=${create.status}): ${create.stderr || ''}`);
+    return false;
+  }
 
-    proc.on('close', (code) => {
-      clearTimeout(timer);
-      if (code === 0) {
-        log(`Claude completed (${stdout.length} bytes output)`);
-        resolve(true);
-      } else {
-        logError(`Claude failed (exit ${code}): ${stderr.slice(0, 200)}`);
-        resolve(false);
-      }
-    });
+  // 等 claude REPL 啟動（plugin sync / CLAUDE.md load）。2.5s 是經驗值；起太早
+  // send-keys 可能輸入丟失。
+  await new Promise(r => setTimeout(r, 2500));
 
-    proc.on('error', (err) => {
-      clearTimeout(timer);
-      logError(`Claude spawn error: ${err.message}`);
-      resolve(false);
-    });
-  });
+  // 送 /tp-request 給 claude
+  const send = spawnSync('tmux', ['send-keys', '-t', sessionName, '/tp-request', 'Enter'], { encoding: 'utf-8' });
+  if (send.status !== 0) {
+    logError(`tmux send-keys failed: ${send.stderr || ''}`);
+    spawnSync('tmux', ['kill-session', '-t', sessionName]);
+    return false;
+  }
+
+  log(`Spawned tmux session: ${sessionName} (fire-and-forget; skill self-destructs at end)`);
+  return true;
 }
 
 // --- Process Loop ---
+// v2.30.7: skill 自己 drain queue (查 status=processing/open/received → 依序處理)，
+// API server 只負責「沒人在跑就 spawn 一隻」。多筆 stacked /trigger 期間若已有
+// session 活著，後續 /trigger return early。
 let isRunning = false;
 let lastProcessed: string | null = null;
 let processedCount = 0;
-const MAX_CONSECUTIVE_FAILURES = 3;
 
-async function processLoop(source: 'api' | 'job') {
-  if (isRunning) return false;
+async function processLoop(source: 'api' | 'job'): Promise<boolean> {
+  if (isRunning) {
+    log(`processLoop: already running, skip (source=${source})`);
+    return false;
+  }
   isRunning = true;
   log(`Process loop started (source: ${source})`);
 
-  let consecutiveFailures = 0;
-
   try {
-    while (true) {
-      const req = await fetchOldestOpen();
-      if (!req) {
-        log('No open requests, loop done');
-        break;
-      }
+    // Cleanup orphans (>30min) — token TTL 是 1h，30min cleanup 保證 active session
+    // 不會碰到 token expire
+    const cleaned = await cleanupOrphans(ORPHAN_MAX_AGE_MS);
+    if (cleaned > 0) log(`Cleaned ${cleaned} orphan session(s)`);
 
-      log(`Processing request ${req.id} (trip: ${req.trip_id}, mode: ${req.mode})`);
-      const claimed = await patchStatus(req.id, 'processing', { processed_by: source });
-      if (!claimed) {
-        logError(`Request ${req.id}: failed to claim (patchStatus → false), skipping`);
-        consecutiveFailures++;
-        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-          logError(`${MAX_CONSECUTIVE_FAILURES} consecutive failures, stopping loop`);
-          break;
-        }
-        continue;
-      }
+    // 只允許一個 active session — 既有 session 仍在處理 queue，不需重複 spawn
+    const active = hasActiveSession();
+    if (active) {
+      log(`Active session ${active} still running, skip new spawn`);
+      return false;
+    }
 
-      consecutiveFailures = 0;
-      const success = await runClaude();
-      log(`Request ${req.id} Claude ${success ? 'succeeded' : 'failed'}`);
-      const finalStatus = success ? 'completed' : 'failed';
-      const patched = await patchStatus(req.id, finalStatus);
-      if (!patched) {
-        logError(`Request ${req.id}: failed to patch final status '${finalStatus}'`);
-      }
-
-      log(`Request ${req.id} → ${finalStatus}`);
+    // Fire-and-forget tmux spawn — skill 內部 drain queue + 自殺
+    const success = await spawnTmuxRequest();
+    if (success) {
       lastProcessed = new Date().toISOString();
       processedCount++;
     }
+    return success;
   } catch (err) {
     logError(`Process loop error: ${err instanceof Error ? err.message : String(err)}`);
+    return false;
   } finally {
     isRunning = false;
     log('Process loop ended');
   }
-  return true;
 }
 
 // --- HTTP Server ---
