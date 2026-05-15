@@ -27,6 +27,13 @@
 
 ## Completed
 
+### v2.30.10 — `/account/appearance` 移除主題色 card grid
+
+**Priority:** P3
+**Completed:** v2.30.10 (2026-05-15)
+
+User 指出 AppearanceSettingsPage 兩個 section 操控同一 `colorMode` state（淺/自動/深），功能重複。刪「主題色 / 選擇色票」card grid 保留「深淺模式」`<ThemeToggle>`。連帶清掉 dead code：`src/lib/appearance.ts` 整檔刪除、`.color-mode-*` CSS family + `--cmp-light/dark-*` 6 個變數從 tokens.css 拔掉、tokens-css.test 斷言改 not.toContain。
+
 ### v2.30.9 — `scripts/_archived/` 整個目錄刪除
 
 **Priority:** P3

@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.10] - 2026-05-15
+
+**`/account/appearance` 移除「主題色 / 選擇色票」card grid — 跟「深淺模式」ThemeToggle 重複。**
+
+`AppearanceSettingsPage` 原本兩個 section 都操控同一個 `colorMode` state（淺/自動/深）：
+- 上方「深淺模式」：`<ThemeToggle>` pill 選 toggle
+- 下方「主題色 / 選擇色票」：`COLOR_MODE_OPTIONS` card grid 預覽 + 點選
+
+User 指出功能重複，刪掉下半段保留 ThemeToggle。連帶清掉 dead code：
+
+### Removed
+
+- `src/pages/AppearanceSettingsPage.tsx`：刪「主題色」section JSX、`useDarkMode` hook 呼叫（page-level 不再需要 colorMode state，`<ThemeToggle>` 自己管）、`COLOR_MODE_OPTIONS` / `clsx` import、`.tp-appearance-modes-grid` CSS class
+- `src/lib/appearance.ts` 整檔刪除（唯一 export `COLOR_MODE_OPTIONS` 已無消費者）
+- `css/tokens.css`：刪 `.color-mode-card` / `.color-mode-preview` / `.color-mode-{light,dark,auto}` 整 family（~33 lines）+ `--cmp-light-{bg,surface,input}` / `--cmp-dark-{bg,surface,input}` 6 個變數（color-mode preview mini UI 專用，無其他 consumer）
+- `tests/unit/tokens-css.test.ts:84`：`.color-mode-card` 存在斷言改為 not.toContain
+
+### Tests
+
+- 1525 unit tests pass (181 files)
+- typecheck clean
+
 ## [2.30.9] - 2026-05-15
 
 **`scripts/_archived/` 整個目錄刪除 — User 規則「不使用的就刪除」。**

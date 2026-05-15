@@ -257,12 +257,6 @@ body.dark {
 :root {
     --scrollbar-thumb: #C8B89F;
     --scrollbar-thumb-hover: #A89978;
-    --cmp-light-bg: #FBEEE4;
-    --cmp-light-surface: #FFFBF5;
-    --cmp-light-input: #EADFCF;
-    --cmp-dark-bg: #1A140F;
-    --cmp-dark-surface: #2A1F18;
-    --cmp-dark-input: #3D2D22;
     --color-badge-open: #D97848;
     --color-badge-closed: #B85C2E;
     --color-plan-bg: #FBEEE4;
@@ -377,37 +371,6 @@ body.dark {
     .nav-inline-title { opacity: 0; transition: opacity var(--duration-nav-fade, 250ms) ease; }
     .nav-inline-title.visible { opacity: 1; }
 
-    /* Appearance settings cards */
-    .color-mode-card {
-        appearance: none; border: 2px solid var(--color-border); border-radius: var(--radius-sm);
-        background: var(--color-secondary); padding: 8px; text-align: center; cursor: pointer;
-        transition: border-color var(--transition-duration-fast) var(--transition-timing-function-apple);
-    }
-    .color-mode-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
-    .color-mode-card.active { border-color: var(--color-accent); }
-    .color-mode-card:focus-visible { outline: none; }
-
-    /* Color mode preview mini UI */
-    .color-mode-preview {
-        width: 80px; height: 52px; border-radius: var(--radius-xs); overflow: hidden; margin: 0 auto 4px;
-        display: flex; flex-direction: column;
-    }
-    .color-mode-preview .cmp-top { flex: 1; }
-    .color-mode-preview .cmp-bottom { flex: 1; display: flex; align-items: center; gap: 4px; padding: 0 6px; }
-    .color-mode-preview .cmp-input { flex: 1; height: 8px; border-radius: var(--radius-xs); }
-    .color-mode-preview .cmp-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent); }
-    .color-mode-light .cmp-top { background: var(--cmp-light-bg); }
-    .color-mode-light .cmp-bottom { background: var(--cmp-light-surface); }
-    .color-mode-light .cmp-input { background: var(--cmp-light-input); }
-    .color-mode-dark .cmp-top { background: var(--cmp-dark-bg); }
-    .color-mode-dark .cmp-bottom { background: var(--cmp-dark-surface); }
-    .color-mode-dark .cmp-input { background: var(--cmp-dark-input); }
-    .color-mode-auto .cmp-top { background: linear-gradient(135deg, var(--cmp-light-bg) 50%, var(--cmp-dark-bg) 50%); }
-    .color-mode-auto .cmp-bottom { background: linear-gradient(135deg, var(--cmp-light-surface) 50%, var(--cmp-dark-surface) 50%); }
-    .color-mode-auto .cmp-input { background: linear-gradient(135deg, var(--cmp-light-input) 50%, var(--cmp-dark-input) 50%); }
-    @media (min-width: 768px) {
-        .color-mode-preview { width: 100px; height: 66px; }
-    }
 
     /* Trip button (info sheet) */
     .trip-btn {
