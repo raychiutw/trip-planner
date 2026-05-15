@@ -27,18 +27,20 @@
 
 ## Completed
 
-### v2.30.6 — Remove last `claude -p` spawn (api-server `/trigger` 廢除)
+### v2.30.7 — Revert v2.30.6 + ephemeral tmux session pattern 取代 `claude -p`
 
 **Priority:** P1
-**Completed:** v2.30.6 (2026-05-15)
+**Completed:** v2.30.7 (2026-05-15)
 
-v2.30.5 schedulers→Cowork migration 只清掉 cron-driven scheduler 的 `claude -p`，但 `scripts/tripline-api-server.ts` LaunchAgent 還有最後一個 `POST /trigger` endpoint spawn `claude -p /tp-request` 處理即時請求。本 PR 整支拔掉，貫徹 user 「替換所有 claude -p 方式」第 3 個目標。
+v2.30.6 過度解讀「替換 claude -p」做了整段刪除（PR #546 砍掉 `runClaude` / `processLoop` / `POST /trigger`）。User 澄清「不是整個移除 只是移除-p參數」+ 規範 ephemeral tmux session pattern。本 PR：
 
-- `tripline-api-server.ts` 縮到只剩 `GET /health` + `POST /internal/mail/send`，全部 trip-request 處理邏輯 / state / token helper / child_process import 整 chunk 刪除
-- `functions/api/requests.ts` 移除 POST 後 fire-and-forget `/trigger` 呼叫 + 失敗 Telegram alert
-- 1522 unit + 9 requests integration tests 全綠
+1. `git revert 7d6b324` 還原 trigger/processLoop 結構
+2. `runClaude` 改用 `spawnSync('tmux', ['new-session', '-d', ...])` 開 detached session 跑 `claude --dangerously-skip-permissions --name <session>`（無 `-p`），session 命名 `tripline-request-<timestamp>-<pid>`
+3. Skill 內部 drain queue + PATCH status 完成後，SKILL.md 結尾 `tmux kill-session -t $TRIPLINE_TMUX_SESSION` 自殺
+4. API server `cleanupOrphans()` 在每次 `/trigger` 開頭掃 `tripline-request-*` session，> 30 min 強取 kill（兜底）
+5. `hasActiveSession()` 防止 concurrent /trigger 同時 spawn 兩個 claude race condition
 
-Trade-off：real-time → hourly latency（同 v2.30.5 tp-request 降級，一致接受換零 spawn）。
+**Why tmux**：隱藏執行 + 無 `-p` + race-free single concurrent + ephemeral 避免 context 累積 + 30min token TTL 內保證 orphan cleanup。
 
 ### v2.30.5 — Schedulers → Claude Cowork migration
 

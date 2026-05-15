@@ -261,6 +261,21 @@ reply 必須用 `node -e` + `JSON.stringify` 生成 JSON，禁止 printf/echo/ba
 
 Markdown 支援欄位見 tp-shared/references.md
 
+## Self-destruct（tmux 觸發 only — v2.30.7+）
+
+skill 處理完所有 request 之後**必跑**最後一步：
+
+```bash
+# API server (scripts/tripline-api-server.ts) 透過 ephemeral tmux session 觸發本 skill 時
+# 會 inject TRIPLINE_TMUX_SESSION env var。drain queue 完成後砍 session 避免 orphan。
+# Cowork 觸發時無此 env var → skip（Cowork 自管 session lifecycle）。
+if [ -n "$TRIPLINE_TMUX_SESSION" ]; then
+  tmux kill-session -t "$TRIPLINE_TMUX_SESSION" 2>/dev/null || true
+fi
+```
+
+> ⚠️ 此 self-destruct 必須在所有 request 處理完成、reply 寫入完成、Telegram 通知（若有）之後執行。中途 kill 會打斷 in-flight curl。
+
 ## 注意事項
 
 - 所有資料讀寫均透過 API，不操作本地 MD 檔案
