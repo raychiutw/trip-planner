@@ -27,6 +27,19 @@
 
 ## Completed
 
+### v2.30.6 — Remove last `claude -p` spawn (api-server `/trigger` 廢除)
+
+**Priority:** P1
+**Completed:** v2.30.6 (2026-05-15)
+
+v2.30.5 schedulers→Cowork migration 只清掉 cron-driven scheduler 的 `claude -p`，但 `scripts/tripline-api-server.ts` LaunchAgent 還有最後一個 `POST /trigger` endpoint spawn `claude -p /tp-request` 處理即時請求。本 PR 整支拔掉，貫徹 user 「替換所有 claude -p 方式」第 3 個目標。
+
+- `tripline-api-server.ts` 縮到只剩 `GET /health` + `POST /internal/mail/send`，全部 trip-request 處理邏輯 / state / token helper / child_process import 整 chunk 刪除
+- `functions/api/requests.ts` 移除 POST 後 fire-and-forget `/trigger` 呼叫 + 失敗 Telegram alert
+- 1522 unit + 9 requests integration tests 全綠
+
+Trade-off：real-time → hourly latency（同 v2.30.5 tp-request 降級，一致接受換零 spawn）。
+
 ### v2.30.5 — Schedulers → Claude Cowork migration
 
 **Priority:** P1
