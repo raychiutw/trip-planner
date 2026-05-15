@@ -27,6 +27,13 @@
 
 ## Completed
 
+### v2.30.9 — `scripts/_archived/` 整個目錄刪除
+
+**Priority:** P3
+**Completed:** v2.30.9 (2026-05-15)
+
+User 規則「不使用的就刪除」。v2.30.8 archive 3 支 stale script 不夠徹底 — 連既有 `scripts/_archived/` 5 支也都刪。8 支 one-shot migration / backfill script 一次清完。日後需要重現 migration pattern 從 git history 撈。
+
 ### v2.30.8 — Dropped-table 殘留清理
 
 **Priority:** P2
