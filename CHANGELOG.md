@@ -3,6 +3,47 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.8] - 2026-05-15
+
+**Dropped-table 殘留清理 — dump-d1 table list 對齊 v2.30 schema + 3 支 stale one-shot script 歸檔。**
+
+User 觸發完整 audit「檢查還有沒有使用到 drop table 的程式碼」。掃 active code SQL 操作（FROM/JOIN/INTO/UPDATE/DELETE）發現 1 個 active bug + 3 支 stale script。其他 hit 全部是 historical comment / migration test 字串斷言 / endpoint URL 路徑保留 backward compat，無 active SQL ops。
+
+### Fixed
+
+- **`scripts/dump-d1.js:7` table list 對齊現況**：移除 dropped `trip_pois`（v2.29.0 migration 0061+0062）；補上 v2.22+v2.27+v2.x 加入的新表：
+  - `trip_entry_pois`（v2.27.0 multi-POI per entry junction）
+  - `trip_segments`（v2.x travel segment）
+  - `trip_destinations`（trip 目的地清單）
+  - `trip_invitations`（V2 OAuth signup invite）
+  - `poi_favorites`（v2.22.0 rename from `saved_pois`）
+  - `users`（V2 OAuth）
+  - `companion_request_actions`（v2.22.0 companion quota gate）
+  不含 ephemeral infra（`api_logs` / `pois_search_cache` / `rate_limit_buckets` / `oauth_models` / `session_devices` / `auth_audit_log` / `auth_identities` / `client_apps` / `error_reports` / `app_settings`）— 純 cache / log / config，無 user-data 價值。
+  舊版每次跑 backup 對 `trip_pois` 觸發 D1 400 + 漏 backup 新表 ~7 種 user-data。
+
+### Archived
+
+3 支 stale one-shot script 搬進 `scripts/_archived/`（同既有 `migrate-pois.js` pattern）：
+
+- **`scripts/resolve-poi-collisions.js`** → `scripts/_archived/`：pre-migration-0027 一次性 collision resolver，引用 `trip_pois`（DROPPED）+ `trip_entries.poi_id`（DROPPED v2.29.0 phase 2）。
+- **`scripts/backfill-user-id.js`** → `scripts/_archived/`：V2-P1 prep backfill (migration 0033 era)，`UPDATE saved_pois` / `UPDATE trip_ideas`（兩表都 DROPPED）。
+- **`scripts/verify-user-backfill.ts`** → `scripts/_archived/`：V2-P1 cutover hard gate，驗證 `saved_pois.email` / `trip_ideas.added_by` 都能 resolve 到 `users.id`。Migration 0046+0047 跑完後 obsolete。
+
+跑這 3 支會 crash on D1 400（query dropped table），歸檔避免誤觸。
+
+### Verified safe (historical comments only)
+
+掃描中其他 hit 都是無 SQL ops 的 historical 文字參照：
+
+- `functions/api/trips/[id]/entries/[eid]/trip-pois.ts` — endpoint URL 路徑保留 backward compat，內部寫 `trip_entry_pois`
+- `functions/api/{_poi,trips/[id]/days/_merge,trips/[id]/days/[num],trips/[id].ts,trips/[id]/audit/[aid]/rollback,trips/[id]/days,trips/[id]/entries/[eid],pois/[id]}.ts` — v2.29.0 trip_pois rip-out 說明 comment
+- `scripts/daily-report.js:283` — comment only（actual SELECT 在 v2.30.4 已修）
+- `tests/api/{oauth-signup,permissions-post,account-stats,invitations-list-revoke,trips}.integration.test.ts` — TODO v2.20.1 comment + 舊 schema SQL 字串斷言（測 migration 內容，不對 prod D1 跑）
+- `tests/unit/migration-0033-add-user-id-columns.test.ts` — 測 migration 0033 SQL 字串斷言
+- `tests/e2e/api-mocks.js:68` — 純 comment
+- `src/types/api.ts` / `src/lib/trip-url.ts` / `src/components/trip/InfoBox.tsx` — comment
+
 ## [2.30.7] - 2026-05-15
 
 **Revert v2.30.6 over-removal + 改用 ephemeral tmux session 跑 claude（無 `-p` flag）。**
