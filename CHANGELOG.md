@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.9] - 2026-05-15
+
+**`scripts/_archived/` 整個目錄刪除 — User 規則「不使用的就刪除」。**
+
+v2.30.8 把 3 支 stale script 搬進 `scripts/_archived/`，但 user 表態「不使用的就刪除」 — archive 不是答案，刪掉才是。本 PR 把 `scripts/_archived/` 整個目錄 8 支 one-shot script 一次清掉：
+
+### Removed
+
+- `scripts/_archived/backfill-pois.js`
+- `scripts/_archived/backfill-user-id.js` (v2.30.8 剛搬進來)
+- `scripts/_archived/migrate-docs-to-v2.js`
+- `scripts/_archived/migrate-md-to-d1.js`
+- `scripts/_archived/migrate-pois.js`
+- `scripts/_archived/migrate-trip-docs.js`
+- `scripts/_archived/resolve-poi-collisions.js` (v2.30.8 剛搬進來)
+- `scripts/_archived/verify-user-backfill.ts` (v2.30.8 剛搬進來)
+
+### Why safe
+
+全 8 支都是 one-shot migration / backfill script，prod 已跑過、obsolete。Active code 0 reference（grep 確認）；CHANGELOG 與 `openspec/changes/archive/` historical doc 提到不算 reference — 純歷史記載，無 functional dependency。日後若需要重現 migration pattern，可從 git history 撈（`git log --all --diff-filter=D --name-only -- scripts/_archived/` 找 commit 還原）。
+
 ## [2.30.8] - 2026-05-15
 
 **Dropped-table 殘留清理 — dump-d1 table list 對齊 v2.30 schema + 3 支 stale one-shot script 歸檔。**
