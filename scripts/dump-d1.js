@@ -1,10 +1,30 @@
 #!/usr/bin/env node
 // Dump all D1 trip data tables to backups/ directory
+//
+// v2.30.8: table list 對齊 v2.30 schema 現況：
+//   removed: trip_pois (DROPPED v2.29.0), saved_pois (DROPPED v2.29.1)
+//   added:   trip_entry_pois (v2.27.0), trip_segments, trip_destinations,
+//            trip_invitations, poi_favorites (v2.22.0 rename), users (V2 OAuth),
+//            companion_request_actions (v2.22.0)
+// 不含 ephemeral infra (api_logs / pois_search_cache / rate_limit_buckets /
+// oauth_models / session_devices / auth_audit_log / auth_identities / client_apps /
+// error_reports / app_settings) — 純 cache / log / config，無 user-data 價值
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const tables = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois', 'poi_relations', 'trip_docs', 'trip_doc_entries', 'trip_requests', 'trip_permissions', 'audit_log'];
+const tables = [
+  // Core trip data
+  'trips', 'trip_days', 'trip_entries', 'trip_entry_pois', 'trip_segments', 'trip_destinations',
+  // POI data
+  'pois', 'poi_relations', 'poi_favorites',
+  // Documents
+  'trip_docs', 'trip_doc_entries',
+  // Collaboration
+  'trip_requests', 'trip_permissions', 'trip_invitations', 'companion_request_actions',
+  // Audit + users
+  'audit_log', 'users',
+];
 const backupDir = path.join(__dirname, '..', 'backups');
 
 if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });

@@ -27,6 +27,18 @@
 
 ## Completed
 
+### v2.30.8 — Dropped-table 殘留清理
+
+**Priority:** P2
+**Completed:** v2.30.8 (2026-05-15)
+
+User audit「檢查還有沒有使用到 drop table 的程式碼」。Active code 找到 1 個 bug + 3 支 stale script：
+
+- `scripts/dump-d1.js` table list 含 dropped `trip_pois` + 漏 v2.22~v2.27 新表 7 種 → 修
+- 3 支 stale one-shot script (`resolve-poi-collisions.js` / `backfill-user-id.js` / `verify-user-backfill.ts`) 引用 dropped `trip_pois` / `saved_pois` / `trip_ideas` → 搬 `scripts/_archived/`
+
+其他 hit 全是 historical comment / migration test 字串斷言 / endpoint URL backward compat path（無 active SQL）。
+
 ### v2.30.7 — Revert v2.30.6 + ephemeral tmux session pattern 取代 `claude -p`
 
 **Priority:** P1
