@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.11] - 2026-05-15
+
+**DaySection ocean-hero `STOPS/Start/End` stats block 移除 — 與 `heroSub`「7 個 stops · 33 km · 預估 X 小時」資訊重複。**
+
+DayHero 卡片視覺：標題下方 `heroSub` 已顯示「N 個 stops · X km · 預估 Y 小時」字串，下方又有分隔線 + 3-col stats grid 重複顯示「STOPS / 7 / Start / End」（screenshot 紅框）。User 指出重複，刪 stats grid 保留 heroSub。
+
+### Removed
+
+- `src/components/trip/DaySection.tsx`：`<div className="ocean-hero-stats">` 整個 JSX block（21 行）— 含 Stops / Start / End 3 個 `<div className="ocean-hero-stat">`。`bounds` / `totalHours` 變數仍保留（feed 進 `heroSub` 文字組成）
+- `css/tokens.css` 4 個 dead CSS class block：
+  - `.ocean-hero-stats`（3-col grid + 上方淡白色分隔線，~9 lines）
+  - `.ocean-hero-stat`（label 上 value 下 block，~5 lines）
+  - `.ocean-hero-stat-label`（uppercase eyebrow label，~7 lines）
+  - `.ocean-hero-stat-value`（18px / 16px mobile，~5 lines）
+- `.ocean-hero-summary` orphan class（無 React consumer）順手清掉
+- `@media (min-width: 961px)` 內 `.ocean-hero-stat-value` desktop font-size override
+- `@media (max-width: 760px)` 內 `.ocean-hero-stat-value` mobile font-size override
+- `body.print-mode .ocean-hero-stat` / `body.print-mode .ocean-hero-stat-label, body.print-mode .ocean-hero-stat-value` 2 條 print-mode override
+
+### Tests
+
+- 1525 unit tests pass (181 files)
+- typecheck clean
+
 ## [2.30.10] - 2026-05-15
 
 **`/account/appearance` 移除「主題色 / 選擇色票」card grid — 跟「深淺模式」ThemeToggle 重複。**

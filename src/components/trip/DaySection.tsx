@@ -172,26 +172,6 @@ const DaySection = React.memo(function DaySection({
         </div>
         <h2 className="ocean-hero-title">{dayTitle}</h2>
         {heroSub && <div className="ocean-hero-sub">{heroSub}</div>}
-        {timeline.length > 0 && (
-          <div className="ocean-hero-stats">
-            <div className="ocean-hero-stat">
-              <div className="ocean-hero-stat-label">Stops</div>
-              <div className="ocean-hero-stat-value">{timeline.length}</div>
-            </div>
-            {bounds.start && (
-              <div className="ocean-hero-stat">
-                <div className="ocean-hero-stat-label">Start</div>
-                <div className="ocean-hero-stat-value">{bounds.start}</div>
-              </div>
-            )}
-            {bounds.end && (
-              <div className="ocean-hero-stat">
-                <div className="ocean-hero-stat-label">End</div>
-                <div className="ocean-hero-stat-value">{bounds.end}</div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <div
