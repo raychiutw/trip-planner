@@ -81,7 +81,8 @@ describe('tokens.css', () => {
     // .info-panel 已隨 InfoPanel.tsx orphan 一起刪除（F001 cleanup）
     expect(tokens).not.toContain('.info-panel');
     expect(tokens).toContain('.trip-btn');
-    expect(tokens).toContain('.color-mode-card');
+    // .color-mode-card 隨 AppearanceSettingsPage 主題色 section 一起刪除（v2.30.10）
+    expect(tokens).not.toContain('.color-mode-card');
     expect(tokens).toContain('.skeleton-bone');
     expect(tokens).toContain('#tripContent section');
   });
