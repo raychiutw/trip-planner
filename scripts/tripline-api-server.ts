@@ -1,17 +1,16 @@
 #!/usr/bin/env bun
 /**
- * Tripline API Server — Mac Mini 上的內部 mail relay 服務
+ * Tripline API Server — Mac Mini 上的請求處理服務
  *
- * v2.30.6 Cowork migration 後僅保留 `/internal/mail/send`（OAuth password reset
- * 寄信走這條 → Gmail SMTP）+ `/health`。舊 `/trigger?source=api|job` 觸發
- * `claude -p /tp-request` 處理迴圈已隨 schedulers→Cowork migration 廢除，
- * trip request 處理改由 Cowork Hourly `/tp-request` skill poll D1 直接做。
+ * D1 是唯一的佇列。收到 trigger 後從 CF API 撈 open 請求依序處理。
+ * 用 Bun HTTP server 監聽 port 6688，Caddy 反向代理 Tailscale Funnel。
  *
  * Endpoints:
- *   POST /internal/mail/send  — Pages Functions 寄 OAuth password reset email
- *   GET  /health              — 健康檢查
+ *   POST /trigger?source=api|job  — 啟動處理迴圈
+ *   GET  /health                  — 健康檢查
  */
 
+import { spawn } from 'child_process';
 import { appendFileSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import nodemailer, { type Transporter } from 'nodemailer';
@@ -33,8 +32,11 @@ try {
 // --- Config ---
 const PORT = parseInt(process.env.TRIPLINE_PORT || '6688', 10);
 const API_SECRET = process.env.TRIPLINE_API_SECRET || '';
+const API_BASE = 'https://trip-planner-dby.pages.dev/api';
 const PROJECT_DIR = process.env.PROJECT_DIR || join(import.meta.dir, '..');
 const LOG_DIR = join(PROJECT_DIR, 'scripts', 'logs', 'api-server');
+const CLAUDE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+const TOKEN_HELPER = join(PROJECT_DIR, 'scripts', 'lib', 'get-tripline-token.js');
 
 // --- Mailer config (Gmail SMTP) ---
 const GMAIL_USER = process.env.GMAIL_USERNAME || '';
@@ -63,11 +65,190 @@ function logError(msg: string) {
   try { appendFileSync(join(LOG_DIR, `${todayStr()}.error.log`), line); } catch {}
 }
 
+// --- API helpers ---
+// V2 OAuth client_credentials replaces CF Access Service Token. The token helper
+// caches in /tmp; on 401 we invalidate and retry once via require() reload.
+const tokenHelper = require(TOKEN_HELPER) as {
+  getToken: (opts?: { forceFresh?: boolean }) => Promise<string>;
+  invalidateCache: () => void;
+};
+
+async function authHeaders(forceFresh = false): Promise<Record<string, string>> {
+  const token = await tokenHelper.getToken({ forceFresh });
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'Origin': API_BASE.replace('/api', ''),
+  };
+}
+
+/** fetch wrapper that auto-retries once on 401 with a fresh token. */
+async function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const headers = { ...(init.headers as Record<string, string> ?? {}), ...(await authHeaders()) };
+  let res = await fetch(url, { ...init, headers });
+  if (res.status === 401) {
+    tokenHelper.invalidateCache();
+    const freshHeaders = { ...(init.headers as Record<string, string> ?? {}), ...(await authHeaders(true)) };
+    res = await fetch(url, { ...init, headers: freshHeaders });
+  }
+  return res;
+}
+
+interface TripRequest {
+  id: number;
+  trip_id: string;
+  mode: string;
+  message: string;
+  status: string;
+}
+
+async function fetchOldestOpen(): Promise<TripRequest | null> {
+  const res = await authedFetch(`${API_BASE}/requests?status=open&limit=1&sort=asc`);
+  if (!res.ok) {
+    logError(`fetchOldestOpen failed: ${res.status}`);
+    return null;
+  }
+  const data = await res.json() as { items?: TripRequest[] } | TripRequest[];
+  const items = Array.isArray(data) ? data : (data.items ?? []);
+  return items[0] ?? null;
+}
+
+async function patchStatus(
+  id: number,
+  status: string,
+  extra?: { processed_by?: string },
+): Promise<boolean> {
+  const body: Record<string, string> = { status };
+  if (extra?.processed_by) body.processed_by = extra.processed_by;
+
+  const res = await authedFetch(`${API_BASE}/requests/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    logError(`patchStatus(${id}, ${status}) failed: ${res.status}`);
+    return false;
+  }
+  return true;
+}
+
+async function runClaude(): Promise<boolean> {
+  // v2.22.0：claude /tp-request skill 用 `Authorization: Bearer $TRIPLINE_API_TOKEN`
+  // 寫入 prod API（含 §6/§7/§8/§9 poi-favorites 4 條 path）。.env.local 只有
+  // TRIPLINE_API_CLIENT_ID/SECRET，沒 TOKEN — 必須 mint 後 inject 到 child env，
+  // 否則 skill 內 curl header 是 `Bearer ` (empty) → middleware 401 → skill 處理失敗。
+  let token = '';
+  try {
+    token = await tokenHelper.getToken();
+  } catch (err) {
+    logError(`Token mint 失敗，claude 不啟動：${(err as Error).message}`);
+    return false;
+  }
+
+  return new Promise((resolve) => {
+    const claudePath = '/Users/ray/.local/bin/claude';
+    const proc = spawn(claudePath, ['--dangerously-skip-permissions', '-p', '/tp-request'], {
+      cwd: PROJECT_DIR,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        HOME: process.env.HOME,
+        PATH: `${process.env.PATH}:/Users/ray/.local/bin`,
+        TRIPLINE_API_TOKEN: token,
+      },
+    });
+
+    const MAX_BUF = 10_000; // cap buffer to avoid unbounded memory
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', (d: Buffer) => { if (stdout.length < MAX_BUF) stdout += d.toString().slice(0, MAX_BUF - stdout.length); });
+    proc.stderr.on('data', (d: Buffer) => { if (stderr.length < MAX_BUF) stderr += d.toString().slice(0, MAX_BUF - stderr.length); });
+
+    const timer = setTimeout(() => {
+      logError('Claude timeout — killing process');
+      proc.kill('SIGTERM');
+      setTimeout(() => { if (!proc.killed) proc.kill('SIGKILL'); }, 5000);
+    }, CLAUDE_TIMEOUT_MS);
+
+    proc.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0) {
+        log(`Claude completed (${stdout.length} bytes output)`);
+        resolve(true);
+      } else {
+        logError(`Claude failed (exit ${code}): ${stderr.slice(0, 200)}`);
+        resolve(false);
+      }
+    });
+
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      logError(`Claude spawn error: ${err.message}`);
+      resolve(false);
+    });
+  });
+}
+
+// --- Process Loop ---
+let isRunning = false;
+let lastProcessed: string | null = null;
+let processedCount = 0;
+const MAX_CONSECUTIVE_FAILURES = 3;
+
+async function processLoop(source: 'api' | 'job') {
+  if (isRunning) return false;
+  isRunning = true;
+  log(`Process loop started (source: ${source})`);
+
+  let consecutiveFailures = 0;
+
+  try {
+    while (true) {
+      const req = await fetchOldestOpen();
+      if (!req) {
+        log('No open requests, loop done');
+        break;
+      }
+
+      log(`Processing request ${req.id} (trip: ${req.trip_id}, mode: ${req.mode})`);
+      const claimed = await patchStatus(req.id, 'processing', { processed_by: source });
+      if (!claimed) {
+        logError(`Request ${req.id}: failed to claim (patchStatus → false), skipping`);
+        consecutiveFailures++;
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          logError(`${MAX_CONSECUTIVE_FAILURES} consecutive failures, stopping loop`);
+          break;
+        }
+        continue;
+      }
+
+      consecutiveFailures = 0;
+      const success = await runClaude();
+      log(`Request ${req.id} Claude ${success ? 'succeeded' : 'failed'}`);
+      const finalStatus = success ? 'completed' : 'failed';
+      const patched = await patchStatus(req.id, finalStatus);
+      if (!patched) {
+        logError(`Request ${req.id}: failed to patch final status '${finalStatus}'`);
+      }
+
+      log(`Request ${req.id} → ${finalStatus}`);
+      lastProcessed = new Date().toISOString();
+      processedCount++;
+    }
+  } catch (err) {
+    logError(`Process loop error: ${err instanceof Error ? err.message : String(err)}`);
+  } finally {
+    isRunning = false;
+    log('Process loop ended');
+  }
+  return true;
+}
+
 // --- HTTP Server ---
 /**
  * Constant-time Bearer token comparison — defends against timing side-channel
- * brute-force attacks now that /internal/mail/send is publicly reachable via
- * Tailscale Funnel (--https=8443) without per-IP rate limits (Q12).
+ * brute-force attacks now that /trigger and /internal/mail/send are publicly
+ * reachable via Tailscale Funnel (--https=8443) without per-IP rate limits (Q12).
  *
  * Using subtle.timingSafeEqual on equal-length byte buffers; length mismatch
  * short-circuits to false (timing leak there is acceptable — only reveals
@@ -130,8 +311,30 @@ Bun.serve({
 
     if (url.pathname === '/health' && req.method === 'GET') {
       return Response.json({
+        running: isRunning,
+        lastProcessed,
+        processedCount,
         uptime: process.uptime(),
       });
+    }
+
+    if (url.pathname === '/trigger' && req.method === 'POST') {
+      if (!verifyAuth(req)) {
+        return Response.json({ error: 'unauthorized' }, { status: 401 });
+      }
+
+      const source = (url.searchParams.get('source') === 'job' ? 'job' : 'api') as 'api' | 'job';
+
+      if (isRunning) {
+        return Response.json({ already_running: true });
+      }
+
+      // 非同步啟動，立即回傳
+      processLoop(source).catch((err) => {
+        logError(`processLoop unhandled: ${err}`);
+      });
+
+      return Response.json({ triggered: true, source });
     }
 
     if (url.pathname === '/internal/mail/send' && req.method === 'POST') {
