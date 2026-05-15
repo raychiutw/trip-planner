@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.6] - 2026-05-15
+
+**Remove last `claude -p` spawn — tp-request real-time trigger 廢除，全面交給 Cowork Hourly。**
+
+v2.30.5 schedulers → Cowork migration 只解掉 cron-driven scheduler 的 `claude -p`，但 `scripts/tripline-api-server.ts` 長駐 LaunchAgent 上的 `POST /trigger?source=api|job` endpoint 仍 `spawn('/Users/ray/.local/bin/claude', ['-p', '/tp-request'])` 處理即時請求。本 PR 整支拔除這條 path，貫徹 user 第 3 個目標「替換所有 claude -p 方式」。
+
+### Removed
+
+- `scripts/tripline-api-server.ts`：刪 `runClaude()` / `processLoop()` / `fetchOldestOpen()` / `patchStatus()` / `authedFetch()` / `authHeaders()` 等所有 trip-request 處理邏輯 + `POST /trigger` endpoint + 相關 state (`isRunning` / `lastProcessed` / `processedCount` / `MAX_CONSECUTIVE_FAILURES`) + `CLAUDE_TIMEOUT_MS` + `TOKEN_HELPER` + `child_process` 與 token helper imports。API server 縮到只剩 `GET /health` + `POST /internal/mail/send`（Gmail SMTP relay for OAuth password reset）
+- `functions/api/requests.ts`：刪 `POST /api/requests` 後 fire-and-forget `fetch(env.TRIPLINE_API_URL + '/trigger?source=api')` 整段（含 `recordEmailEvent` / `alertAdminTelegram` 觸發失敗 audit）。`recordEmailEvent` / `alertAdminTelegram` import 清掉
+- `tests/unit/api-server-process-loop.test.js` — 測 deleted `processLoop` consecutiveFailures 重試風暴防護，整檔刪除
+
+### Trade-off
+
+Real-time → hourly：新請求 D1 INSERT 後立即回 201，由下一輪 Cowork Hourly `/tp-request` skill poll D1 處理（max 1 h latency）。緊急情況 user 在 Claude Desktop 內手動跑 `/tp-request`。同 v2.30.5 tp-request hourly 降級的延伸 — 一致接受 trade-off 換 zero `claude -p` spawn + zero keychain isolation 風險。
+
+### Notes
+
+- `TRIPLINE_API_URL` / `TRIPLINE_API_SECRET` 仍是 OAuth password reset email 寄件路徑（`/internal/mail/send`）必要 env，不能刪
+- API server LaunchAgent (`com.tripline.api-server.plist`) 仍保留 — 不是 scheduler，是長駐 mail relay
+- 1522 unit + 9 requests integration tests 全綠
+
 ## [2.30.5] - 2026-05-15
 
 **Schedulers → Claude Cowork migration — 3 支 launchd-driven scheduler 全部廢除。**
