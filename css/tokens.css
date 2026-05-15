@@ -438,43 +438,9 @@ body.dark {
         font-variant-numeric: tabular-nums;
         margin: 0;
     }
-    .ocean-hero-summary {
-        font-size: 15px; line-height: 1.6;
-        color: color-mix(in srgb, var(--color-accent-foreground) 82%, transparent); max-width: 640px; margin-top: 12px;
-    }
-    .ocean-hero-stats {
-        /* mockup .tp-detail-hero-stats:1855 — 3 等寬欄 + 上方淡白色分隔線 */
-        display: grid; grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        margin-top: 16px;
-        padding-top: 14px;
-        border-top: 1px solid rgba(255, 251, 245, 0.24);
-        font-variant-numeric: tabular-nums;
-    }
-    .ocean-hero-stat {
-        /* label 上 value 下（block 直立），不要 baseline 並排 */
-        padding-left: 0;
-        border-left: none;
-        display: block;
-    }
-    .ocean-hero-stat-label {
-        /* mockup .tp-detail-hero-stat-label:1863 */
-        font-size: var(--font-size-eyebrow);
-        color: color-mix(in srgb, var(--color-accent-foreground) 75%, transparent);
-        letter-spacing: 0.12em; text-transform: uppercase;
-        font-weight: 600;
-        margin-bottom: 4px;
-    }
-    .ocean-hero-stat-value {
-        /* mockup .tp-detail-hero-stat-value:1871 — desktop 18px, mobile 16px */
-        font-size: 16px; font-weight: 700;
-        letter-spacing: -0.01em;
-        color: var(--color-accent-foreground);
-    }
     @media (min-width: 961px) {
         .ocean-hero { padding: 24px; }
         .ocean-hero-title { font-size: 28px; }
-        .ocean-hero-stat-value { font-size: 18px; }
     }
 
     /* Flight card (mockup FlightInfo) */
@@ -674,7 +640,6 @@ body.dark {
         .ocean-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .ocean-hero { padding: 18px; border-radius: var(--radius-md); }
         .ocean-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
-        .ocean-hero-stat-value { font-size: 16px; } /* mockup .tp-detail-mobile-frame .tp-detail-hero-stat-value:1877 */
         /* mockup .tp-detail-mobile-frame .tp-detail-row:1948 — 6-col compact grid */
         .ocean-rail-item {
             grid-template-columns: 20px 44px 24px 36px 1fr 16px;
@@ -751,8 +716,6 @@ body.dark {
     body.print-mode .ocean-hero { background: var(--color-background) !important; color: var(--color-foreground) !important; border: 1px solid var(--color-border); }
     body.print-mode .ocean-hero-title { color: var(--color-foreground); }
     body.print-mode .ocean-hero-chip, body.print-mode .ocean-hero-chip-muted { border-color: var(--color-border); color: var(--color-muted); }
-    body.print-mode .ocean-hero-stat { border-left-color: var(--color-border); }
-    body.print-mode .ocean-hero-stat-label, body.print-mode .ocean-hero-stat-value { color: var(--color-foreground); opacity: 1; }
 }
 
 /* v2.18.0:`.map-highlight` + `@keyframes map-highlight-pulse` 已 orphan(無 src 引用),整批刪除。 */
