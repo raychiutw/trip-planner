@@ -27,6 +27,13 @@
 
 ## Completed
 
+### v2.30.11 — DayHero stats block 移除（重複 heroSub）
+
+**Priority:** P3
+**Completed:** v2.30.11 (2026-05-15)
+
+DaySection ocean-hero 卡片下方 `STOPS / Start / End` 3-col stats grid 與標題下 `heroSub`「N 個 stops · X km · 預估 Y 小時」資訊重複。刪 stats JSX block + 對應 4 個 CSS class family + mobile/desktop/print-mode override 3 條 + dead `.ocean-hero-summary` 順手清掉。
+
 ### v2.30.10 — `/account/appearance` 移除主題色 card grid
 
 **Priority:** P3
