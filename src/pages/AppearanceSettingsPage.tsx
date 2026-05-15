@@ -2,19 +2,18 @@
  * AppearanceSettingsPage — Section 2 (terracotta-account-hub-page) sub-page
  *
  * Route: /account/appearance
- * 既有 sidebar `<ThemeToggle>` + 主題選擇 grid 拆出來作 standalone page，
- * Account hub「外觀設定」row 點進來。
+ * 既有 sidebar `<ThemeToggle>` 拆出來作 standalone page，Account hub「外觀設定」row 點進來。
+ *
+ * v2.30.10: 移除「主題色 / 選擇色票」card grid section — 跟「深淺模式」ThemeToggle
+ * 操控同一個 colorMode state（淺/自動/深），功能重複。
  */
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useDarkMode } from '../hooks/useDarkMode';
-import { COLOR_MODE_OPTIONS } from '../lib/appearance';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import ThemeToggle from '../components/shared/ThemeToggle';
-import clsx from 'clsx';
 
 const SCOPED_STYLES = `
 .tp-appearance-shell {
@@ -51,15 +50,10 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-callout);
   color: var(--color-muted);
 }
-.tp-appearance-modes-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
 `;
 
 export default function AppearanceSettingsPage() {
   useRequireAuth();
-  const { colorMode, setColorMode } = useDarkMode();
   const navigate = useNavigate();
 
   const sidebar = <DesktopSidebarConnected />;
@@ -72,32 +66,6 @@ export default function AppearanceSettingsPage() {
           <h2>跟系統 / 強制淺 / 強制深</h2>
           <p className="tp-appearance-helper">沒選的話走「自動」依系統喜好。</p>
           <ThemeToggle testId="appearance-theme" />
-        </section>
-
-        <section className="tp-appearance-section">
-          <div className="tp-appearance-section-label">主題色</div>
-          <h2>選擇色票</h2>
-          <p className="tp-appearance-helper">每個主題對應不同的 accent 跟暖色比例。</p>
-          <div className="tp-appearance-modes-grid">
-            {COLOR_MODE_OPTIONS.map((m) => (
-              <button
-                key={m.key}
-                type="button"
-                className={clsx('color-mode-card', m.key === colorMode && 'active')}
-                onClick={() => setColorMode(m.key)}
-                data-testid={`appearance-mode-${m.key}`}
-              >
-                <div className={`color-mode-preview color-mode-${m.key}`}>
-                  <div className="cmp-top"></div>
-                  <div className="cmp-bottom">
-                    <div className="cmp-input"></div>
-                    <div className="cmp-dot"></div>
-                  </div>
-                </div>
-                <div className="text-caption text-muted mt-1">{m.label}</div>
-              </button>
-            ))}
-          </div>
         </section>
       </div>
     </div>
