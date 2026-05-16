@@ -98,6 +98,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   let pairsComputed = 0;
   let pairsSkippedTransit = 0;
+  let pairsSkippedMissingCoords = 0;
   const sourceBreakdown: Record<string, number> = {};
   const modeBreakdown: Record<string, number> = {};
   const errorsDetail: Array<{ entryId: number; message: string }> = [];
@@ -125,7 +126,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       const prev = list[i - 1];
       const curr = list[i];
       if (!prev || !curr) continue;
-      if (prev.lat == null || prev.lng == null || curr.lat == null || curr.lng == null) continue;
+      if (prev.lat == null || prev.lng == null || curr.lat == null || curr.lng == null) {
+        pairsSkippedMissingCoords++;
+        continue;
+      }
 
       const existing = existingMap.get(`${prev.id}-${curr.id}`);
       if (existing && existing.mode === 'transit') {
@@ -211,6 +215,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     daysProcessed: daysRes.results.length,
     pairsComputed,
     pairsSkippedTransit,
+    pairsSkippedMissingCoords,
     sourceBreakdown,
     modeBreakdown,
     errorsDetail,

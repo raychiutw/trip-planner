@@ -3,6 +3,49 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.12] - 2026-05-16
+
+**TimelineRail mobile 緊湊版型（移除 time col）+ 重新計算 toast feedback 精準化。**
+
+User 兩個 issue：
+- 「橫條紅框為什麼有車程未更新 按下重新計算無效」— recompute 沉默 fail（後端 0 段被算，前端只 show 通用 toast）
+- 「長條紅框版面太空 移除這段空白 將右邊內容往左靠」+「行程展開後也是空白 調整讓版面緊湊」— rail 左側 time col 為空（user 沒填 entry.time），佔 50px 桌面 / 44px mobile 的 dead 寬度；expanded panel 與 TravelPill 因為對齊舊 dot 中心也 indent 過深。
+
+### Changed — TimelineRail layout 緊湊
+
+- `css/tokens.css` `.ocean-rail-item` grid 從 6-col `24 50 24 44 1fr 20` → 5-col `24 24 44 1fr 20`（移除 time col）；mobile 從 `20 44 24 36 1fr 16` → `20 24 36 1fr 16`
+- `.ocean-rail-dot` 移 `grid-column: 3` → `2`
+- `.ocean-rail-head` 移 `grid-column: 4 / span 3` → `3 / span 3`
+- `src/components/trip/TimelineRail.tsx`:
+  - 移除獨立 `<span className="ocean-rail-time">` JSX
+  - 若 `entry.time` 有值，在 `.ocean-rail-sub` 行首加 `.ocean-rail-sub-time` chip（rail row 仍可看到時間，只是位置從左 col 改 inline sub line）
+  - `.tp-rail-detail` margin-left desktop `110px → 56px`，mobile `92px → 44px`（對齊新 dot 中心 = item-pad + grip + gap + dot/2）
+- `src/components/trip/TravelPill.tsx` `.tp-travel-pill-wrap` margin-left `110px → 56px`，新增 mobile `@media (max-width: 760px)` 設 `44px`
+- `.ocean-rail-sub-time` 新 CSS：bold + tabular-nums + `var(--color-foreground)`，與 sub-type label 區隔
+
+mobile 寬度節省 ~52px（44px time col + 8px gap），expanded panel 與 TravelPill 左 indent 從 92px → 44px 節省 48px。
+
+### Changed — recompute toast 精準化
+
+- `functions/api/trips/[id]/recompute-travel.ts`:
+  - 新增 `pairsSkippedMissingCoords` counter（POI 缺 lat/lng 跳過時 ++）
+  - response 加 field `pairsSkippedMissingCoords` 給 frontend 解析
+- `src/components/trip/TimelineRail.tsx` `handleRecomputeTravel` 重寫 success branch：
+  - 解析 response JSON 拿 `pairsComputed` / `pairsSkippedMissingCoords` / `errorsDetail`
+  - `computed === 0 && missing > 0` → `「X 段缺少 POI 座標無法計算，請補上 lat/lng」`
+  - `computed === 0 && errs > 0` → `「X 段重算失敗（Google Routes API）」`
+  - `computed === 0` → `「沒有可重算的車程」`
+  - `errs > 0 || missing > 0` → `「重算 X 段，Y 段跳過」`
+  - 一般 success → `「已重新計算 X 段車程」`
+
+避免「車程未更新 重新計算」按下後系統明明 0 段被算卻 show「車程已重新計算」誤導 user。
+
+### Tests
+
+- 1525 unit tests pass (181 files)
+- typecheck clean
+- `tests/unit/timeline-rail-stale-travel.test.tsx` 3 個 mock response 補上 `json()` method（avoid 我的新 parsing 在 mock 上 TypeError）
+
 ## [2.30.11] - 2026-05-15
 
 **DaySection ocean-hero `STOPS/Start/End` stats block 移除 — 與 `heroSub`「7 個 stops · 33 km · 預估 X 小時」資訊重複。**

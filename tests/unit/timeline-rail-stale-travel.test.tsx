@@ -103,7 +103,11 @@ describe('TimelineRail — v2.29.2 stale-travel ⚠ (computed_at) wiring', () =>
   });
 
   it('click 重新計算 → POST /trips/{id}/recompute-travel + tp-entry-updated event', async () => {
-    apiFetchRawMock.mockResolvedValue({ ok: true, status: 200 } as Response);
+    apiFetchRawMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ pairsComputed: 1, pairsSkippedTransit: 0, pairsSkippedMissingCoords: 0, errorsDetail: [] }),
+    } as unknown as Response);
     const eventSpy = vi.fn();
     window.addEventListener('tp-entry-updated', eventSpy);
     renderRail(
@@ -137,13 +141,21 @@ describe('TimelineRail — v2.29.2 stale-travel ⚠ (computed_at) wiring', () =>
       typeof c[0] === 'string' && (c[0] as string).includes('/recompute-travel'),
     );
     expect(recomputeCalls).toHaveLength(1);
-    resolveFetch({ ok: true, status: 200 } as Response);
+    resolveFetch({
+      ok: true,
+      status: 200,
+      json: async () => ({ pairsComputed: 1, pairsSkippedMissingCoords: 0, errorsDetail: [] }),
+    } as unknown as Response);
     await new Promise((r) => setTimeout(r, 0));
   });
 
   it('failed POST → in-flight guard unlocks via .finally → retry POSTs again', async () => {
     apiFetchRawMock.mockResolvedValueOnce({ ok: false, status: 500 } as Response);
-    apiFetchRawMock.mockResolvedValueOnce({ ok: true, status: 200 } as Response);
+    apiFetchRawMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ pairsComputed: 1, pairsSkippedMissingCoords: 0, errorsDetail: [] }),
+    } as unknown as Response);
     renderRail(
       [entry(1, '那霸機場'), entry(2, '租車取車')],
       [makeSegment(1, 2, null)],

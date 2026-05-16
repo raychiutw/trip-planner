@@ -469,12 +469,13 @@ body.dark {
      * 統一採無連接線變體。CSS 規則保留供未來切回 line 變體用。 */
     .ocean-rail-line { display: none; }
 
-    /* mockup .tp-detail-row:1923 — 6-col grid: grip|time|dot|icon|body|caret.
-     * Cols: grip(24) | time(50) | dot(24) | icon(44) | body(1fr) | caret(20)。 */
+    /* v2.30.12: 5-col grid (drop time col — 多數 user 不填 time，空 col 浪費 mobile 寬度).
+     * Cols: grip(24) | dot(24) | icon(44) | body(1fr) | caret(20)。
+     * 如有 entry.time，time 渲在 .ocean-rail-sub 行末（chip 形式）而非佔獨立 col。 */
     .ocean-rail-item {
         position: relative;
         display: grid;
-        grid-template-columns: 24px 50px 24px 44px 1fr 20px;
+        grid-template-columns: 24px 24px 44px 1fr 20px;
         column-gap: 12px;
         align-items: center;
         width: 100%; padding: 12px 8px;
@@ -489,9 +490,9 @@ body.dark {
         background: var(--color-accent-subtle);
         box-shadow: 0 1px 2px rgba(42, 31, 24, 0.05);
     }
-    /* head button 跨 col 4-6（icon | body | caret），row click target */
+    /* head button 跨 col 3-5（icon | body | caret），row click target */
     .ocean-rail-head {
-        grid-column: 4 / span 3;
+        grid-column: 3 / span 3;
         display: grid; grid-template-columns: 44px 1fr 20px;
         column-gap: 12px; align-items: center; width: 100%;
         background: transparent; border: none; padding: 0;
@@ -500,19 +501,12 @@ body.dark {
         min-height: 44px;
     }
 
-    /* time — col 2，右對齊（mockup .tp-detail-time:1968） */
-    .ocean-rail-time {
-        grid-column: 2;
-        font-size: 14px; font-weight: 700;
-        font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
-        color: var(--color-foreground);
-        text-align: right;
-        line-height: 1.2;
-    }
+    /* time — v2.30.12 ripped from rail grid (空欄佔位浪費寬度).
+     * JSX 已不再渲染 .ocean-rail-time element；保留 selector 給歷史 CSS 不 error 即可。 */
 
-    /* dot — col 3，編號圓圈（mockup .tp-detail-dot:1981） */
+    /* dot — col 2，編號圓圈（mockup .tp-detail-dot:1981） */
     .ocean-rail-dot {
-        grid-column: 3;
+        grid-column: 2;
         width: 24px; height: 24px;
         display: grid; place-items: center;
         background: var(--color-background);
@@ -572,6 +566,11 @@ body.dark {
     .ocean-rail-item[data-accent="true"] .ocean-rail-sub-type { color: var(--color-accent); }
     .ocean-rail-sub-sep { opacity: 0.5; }
     .ocean-rail-sub-star { color: var(--color-warning, #C88500); }
+    /* v2.30.12: time chip 取代既有 col-2 time（time col 移除後 inline 顯示） */
+    .ocean-rail-sub-time {
+        font-weight: 700; color: var(--color-foreground);
+        font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+    }
 
     .ocean-rail-caret {
         font-size: 14px; color: var(--color-muted);
@@ -640,9 +639,9 @@ body.dark {
         .ocean-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .ocean-hero { padding: 18px; border-radius: var(--radius-md); }
         .ocean-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
-        /* mockup .tp-detail-mobile-frame .tp-detail-row:1948 — 6-col compact grid */
+        /* v2.30.12 mobile: 5-col compact (time col 移除) */
         .ocean-rail-item {
-            grid-template-columns: 20px 44px 24px 36px 1fr 16px;
+            grid-template-columns: 20px 24px 36px 1fr 16px;
             column-gap: 8px;
             padding: 10px 4px;
         }
@@ -650,7 +649,6 @@ body.dark {
             grid-template-columns: 36px 1fr 16px;
             column-gap: 8px;
         }
-        .ocean-rail-time { font-size: 13px; }
         .ocean-rail-icon { width: 36px; height: 36px; }
         .ocean-rail-icon .svg-icon { width: 18px; height: 18px; }
         .ocean-rail-name { font-size: 14px; }

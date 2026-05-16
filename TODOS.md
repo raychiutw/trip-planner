@@ -27,6 +27,15 @@
 
 ## Completed
 
+### v2.30.12 — TimelineRail 緊湊版型 + recompute toast 精準化
+
+**Priority:** P2
+**Completed:** v2.30.12 (2026-05-16)
+
+User 報兩個 issue：
+1. 「車程未更新 重新計算無效」— 後端 0 段被算（POI 缺座標跳過），前端只 show 通用 toast 看起來沒反應。修：後端加 `pairsSkippedMissingCoords` counter，前端解析 response 給精準 toast（缺座標 / Google Routes 失敗 / 沒可重算 / 部分跳過 / 全 success 5 種分支）。
+2. 「行程展開後也是空白 調整讓版面緊湊」— rail time col 多數 user 沒填仍佔 50px 桌面 / 44px mobile dead 寬度；expanded panel 與 TravelPill 對齊舊 dot 中心 indent 110/92px 過深。修：drop time col，dot/head 往左移 1 col；entry.time 有值改 inline `.ocean-rail-sub-time` chip；TravelPill / rail-detail indent 110→56 (mobile 92→44) px。
+
 ### v2.30.11 — DayHero stats block 移除（重複 heroSub）
 
 **Priority:** P3
