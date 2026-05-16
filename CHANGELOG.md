@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.8] - 2026-05-16
+
+**Fix: TravelPill 初始 render 閃顯反向 + AI 健檢 pending 文案 30s→3-7min。**
+
+v2.31.7 prod QA 抓到兩個小 bug：
+
+1. **TravelPill 閃顯反向（Bug #3）**：行程詳細頁初次載入瞬間，segments hook 還沒 resolve 時，TimelineRail 落地用 `entry.travel` fallback 渲染。v2.29.0 backend rewrite 後 `entry.travel` 從 `segmentsMap.get(from_entry_id=eid)` 取值，語意是「離開此 entry 到下一站」。但 UI pill 渲染位置在 (prev → curr) 中間，意思是「抵達 curr 的旅程」=「離開 prev」，應該讀 `prev.travel` 不是 `entry.travel`。Segments 載入後 segment prop 接手覆蓋 → 正確值，所以肉眼看起來只是「閃一下」但方向值是錯的（min/distance 對應錯 leg）。
+2. **AI 健檢「30 秒內完成」文案誤導（Bug #4）**：實測 request #190 跑 3m46s、#196 跑 9 分鐘、#187 worst case 1h19m。30 秒是早期 mockup 期樂觀估計，後續 prompt 強化 + dimensions 拓展後實際時間拉長，文案沒更新 → user 等 1 分鐘就以為卡住。
+
+### Changed
+
+- `src/components/trip/TimelineRail.tsx`：fallback `travelObj` 從 `entry.travel` 改 `prev?.travel`（修正 v2.29.0 backend semantic 與 UI 渲染位置不符）
+- `src/pages/TripHealthCheckPage.tsx`：empty state + pending state 「30 秒內完成」→ 「3-7 分鐘完成」
+- `tests/unit/timeline-rail-segments-wiring.test.tsx`：更新 fallback test 對齊 v2.29.0 backend semantic（travel 改掛 prev = entry 1），新增 regression test 確認 travel on curr 不會誤觸發 fallback
+
 ## [2.31.7] - 2026-05-16
 
 **Fix: D1 naive datetime UTC parsing — AI 健檢 / chat 時間戳顯示落差 TZ offset。**

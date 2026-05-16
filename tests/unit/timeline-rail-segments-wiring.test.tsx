@@ -110,20 +110,39 @@ describe('TimelineRail × useTripSegments wiring', () => {
     expect(pills[1].textContent).toContain('22 min');
   });
 
-  it('no segment + entry.travel exists → TravelPill 退回 v2.23 唯讀 div', () => {
+  it('no segment + prev.travel exists → TravelPill 退回唯讀 div (v2.31.8 fix)', () => {
+    // v2.31.8 fix: backend `entry.travel` 語意是 segmentsMap.get(from=eid)
+    // = 「離開此 entry 到下一站」。UI pill 在 (prev → curr) 中間，意思是
+    // 「抵達 curr 的旅程」= 「離開 prev」= `prev.travel`，所以 travel 要掛
+    // 在 entry 1（那霸機場）上，pill 才正確顯示在 entry 2 上方。
     useTripSegmentsMock.mockReturnValue({ segments: [], segmentMap: new Map(), loading: false });
 
     const entryWithTravel: TimelineEntryData = {
-      ...entry(2, '本部午餐'),
+      ...entry(1, '那霸機場'),
       travel: { type: 'driving', min: 25, distanceM: 18000, desc: null },
     };
 
-    renderRail([entry(1, '那霸機場'), entryWithTravel]);
+    renderRail([entryWithTravel, entry(2, '本部午餐')]);
 
     const pill = screen.getByTestId('travel-pill');
     expect(pill.tagName).toBe('DIV');
     expect(pill).toHaveAttribute('role', 'presentation');
     expect(pill.textContent).toContain('25 min');
+  });
+
+  it('v2.31.8 regression: travel on curr (semantic mismatch) → no fallback pill', () => {
+    // entry.travel on curr 是「離開 curr 到下一個」，UI pill 不該誤讀此值。
+    // segments 未載入 + travel only on curr → no pill。
+    useTripSegmentsMock.mockReturnValue({ segments: [], segmentMap: new Map(), loading: false });
+
+    const entryWithTravel: TimelineEntryData = {
+      ...entry(2, '本部午餐'),
+      travel: { type: 'driving', min: 99, distanceM: 99000, desc: null },
+    };
+
+    renderRail([entry(1, '那霸機場'), entryWithTravel]);
+
+    expect(screen.queryByTestId('travel-pill')).toBeNull();
   });
 
   it('no segment + no entry.travel → no TravelPill rendered', () => {
