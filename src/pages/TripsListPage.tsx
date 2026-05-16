@@ -538,9 +538,10 @@ interface EmbeddedActionMenuProps {
   tripId: string;
   tripPageRef: React.RefObject<TripPageHandle | null>;
   onCollab: () => void;
+  onHealthCheck: () => void;
 }
 
-function EmbeddedActionMenu({ tripId, tripPageRef, onCollab }: EmbeddedActionMenuProps) {
+function EmbeddedActionMenu({ tripId, tripPageRef, onCollab, onHealthCheck }: EmbeddedActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -623,6 +624,16 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onCollab }: EmbeddedActionMen
       >
         <Icon name="group" />
         <span>共編設定</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-embedded-menu-item"
+        onClick={runAndClose(onHealthCheck)}
+        data-testid={`trip-embedded-menu-health-${tripId}`}
+      >
+        <Icon name="sparkle" />
+        <span>AI 健檢</span>
       </button>
       <div className="tp-embedded-menu-divider" />
       <button
@@ -830,6 +841,11 @@ export default function TripsListPage() {
 
   const handleMenuEdit = useCallback(
     (tripId: string) => { navigate(`/trip/${encodeURIComponent(tripId)}/edit`); },
+    [navigate],
+  );
+
+  const handleMenuHealthCheck = useCallback(
+    (tripId: string) => { navigate(`/trip/${encodeURIComponent(tripId)}/health`); },
     [navigate],
   );
 
@@ -1088,6 +1104,7 @@ export default function TripsListPage() {
                       tripId={t.tripId}
                       onCollab={handleMenuCollab}
                       onEdit={handleMenuEdit}
+                      onHealthCheck={handleMenuHealthCheck}
                       onDelete={handleMenuDelete}
                     />
                   </div>
@@ -1154,6 +1171,7 @@ export default function TripsListPage() {
               tripId={effectiveSelectedId}
               tripPageRef={tripPageRef}
               onCollab={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/collab`)}
+              onHealthCheck={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/health`)}
             />
           </>
         )}

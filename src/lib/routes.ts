@@ -15,6 +15,7 @@ export const routes = {
   trip: (tripId: string) => `/trip/${encodeURIComponent(tripId)}`,
   tripEdit: (tripId: string) => `/trip/${encodeURIComponent(tripId)}/edit`,
   tripCollab: (tripId: string) => `/trip/${encodeURIComponent(tripId)}/collab`,
+  tripHealth: (tripId: string) => `/trip/${encodeURIComponent(tripId)}/health`,
   tripMap: (tripId: string) => `/trip/${encodeURIComponent(tripId)}/map`,
   tripAddStop: (tripId: string, dayNum: number) =>
     `/trip/${encodeURIComponent(tripId)}/add-stop?day=${dayNum}`,

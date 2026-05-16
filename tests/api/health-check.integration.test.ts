@@ -1,0 +1,244 @@
+/**
+ * Integration test — GET / POST /api/trips/:id/health-check + PATCH /api/requests/:id 健檢 hook
+ *
+ * 涵蓋：
+ * 1. POST 觸發 → UPSERT trip_health_reports pending + INSERT trip_requests with HEALTH_CHECK_PREFIX
+ * 2. GET 取最新 report
+ * 3. PATCH /api/requests/:id reply + completed → trip_health_reports findings 寫入
+ * 4. PATCH failed → trip_health_reports.status=failed + error_message
+ * 5. 30 秒去重保護
+ * 6. Permission denied (read-only viewer 不能 POST)
+ */
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, callHandler } from './helpers';
+import { onRequestGet, onRequestPost } from '../../functions/api/trips/[id]/health-check';
+import { onRequestPatch } from '../../functions/api/requests/[id]';
+import type { Env } from '../../functions/api/_types';
+
+let db: D1Database;
+let env: Env;
+
+beforeAll(async () => {
+  db = await createTestDb();
+  env = mockEnv(db);
+  await seedTrip(db, { id: 'trip-health' });
+});
+
+afterAll(disposeMiniflare);
+
+describe('POST /api/trips/:id/health-check', () => {
+  it('建立 pending report + trip_requests 帶 [AI 健檢] prefix', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-health/health-check', 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-health' },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(202);
+    const data = await resp.json() as { report: { status: string; tripId: string; requestId: number | null } };
+    expect(data.report.status).toBe('pending');
+    expect(data.report.tripId).toBe('trip-health');
+    expect(data.report.requestId).toBeTruthy();
+
+    // 驗 D1: trip_health_reports row 存在
+    const reportRow = await db
+      .prepare('SELECT * FROM trip_health_reports WHERE trip_id = ?')
+      .bind('trip-health')
+      .first() as Record<string, unknown> | null;
+    expect(reportRow).toBeTruthy();
+    expect(reportRow!.status).toBe('pending');
+    expect(reportRow!.request_id).toBe(data.report.requestId);
+
+    // 驗 D1: trip_requests row message 開頭 [AI 健檢]
+    const reqRow = await db
+      .prepare('SELECT * FROM trip_requests WHERE id = ?')
+      .bind(data.report.requestId)
+      .first() as Record<string, unknown> | null;
+    expect(reqRow).toBeTruthy();
+    expect((reqRow!.message as string).startsWith('[AI 健檢]')).toBe(true);
+  });
+
+  it('30 秒內重複觸發 → 不建新 row，回 200 + 同 report', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-health/health-check', 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-health' },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(200);
+  });
+
+  it('viewer 無 write 權 → 403', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-health/health-check', 'POST'),
+      env,
+      auth: mockAuth({ email: 'visitor@test.com' }),
+      params: { id: 'trip-health' },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(403);
+  });
+});
+
+describe('GET /api/trips/:id/health-check', () => {
+  it('取最新 report', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-health/health-check', 'GET'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-health' },
+    });
+    const resp = await callHandler(onRequestGet, ctx);
+    expect(resp.status).toBe(200);
+    const data = await resp.json() as { report: { status: string } | null };
+    expect(data.report).toBeTruthy();
+    expect(['pending', 'completed', 'failed']).toContain(data.report!.status);
+  });
+
+  it('沒做過健檢 → report: null', async () => {
+    await seedTrip(db, { id: 'trip-no-health' });
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-no-health/health-check', 'GET'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-no-health' },
+    });
+    const resp = await callHandler(onRequestGet, ctx);
+    expect(resp.status).toBe(200);
+    const data = await resp.json() as { report: unknown };
+    expect(data.report).toBeNull();
+  });
+});
+
+describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
+  it('reply 是 JSON array → findings 寫入 + status=completed', async () => {
+    // 先建 trip + request via POST endpoint 取得 requestId
+    await seedTrip(db, { id: 'trip-hook' });
+    const postCtx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-hook/health-check', 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-hook' },
+    });
+    const postResp = await callHandler(onRequestPost, postCtx);
+    const postData = await postResp.json() as { report: { requestId: number } };
+    const reqId = postData.report.requestId;
+
+    // PATCH request 完成 + reply 是 JSON findings
+    const reply = JSON.stringify([
+      { severity: 'high', title: 'Day 3 過密', description: '8 個景點 110km', action_target: { day: 3 } },
+      { severity: 'low', title: '可加水族館', description: '順路 5km' },
+    ]);
+    const patchCtx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/requests/${reqId}`,
+        'PATCH',
+        { reply, status: 'completed', processed_by: 'job' },
+      ),
+      env,
+      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      params: { id: String(reqId) },
+    });
+    const patchResp = await callHandler(onRequestPatch, patchCtx);
+    expect(patchResp.status).toBe(200);
+
+    // 驗 D1
+    const reportRow = await db
+      .prepare('SELECT * FROM trip_health_reports WHERE trip_id = ?')
+      .bind('trip-hook')
+      .first() as Record<string, unknown>;
+    expect(reportRow.status).toBe('completed');
+    expect(reportRow.findings_json).toBeTruthy();
+    const findings = JSON.parse(reportRow.findings_json as string);
+    expect(findings).toHaveLength(2);
+    expect(findings[0].severity).toBe('high');
+    expect(findings[0].action_target.day).toBe(3);
+  });
+
+  it('reply 包 ```json fence 也能 extract', async () => {
+    await seedTrip(db, { id: 'trip-hook-fence' });
+    const postResp = await callHandler(onRequestPost, mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-hook-fence/health-check', 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-hook-fence' },
+    }));
+    const reqId = ((await postResp.json()) as { report: { requestId: number } }).report.requestId;
+
+    const reply = '我幫你看過了：\n```json\n[{"severity":"medium","title":"X","description":"d"}]\n```\n以上。';
+    const patchResp = await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${reqId}`, 'PATCH', {
+        reply, status: 'completed', processed_by: 'job',
+      }),
+      env,
+      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      params: { id: String(reqId) },
+    }));
+    expect(patchResp.status).toBe(200);
+
+    const reportRow = await db
+      .prepare('SELECT * FROM trip_health_reports WHERE trip_id = ?')
+      .bind('trip-hook-fence')
+      .first() as Record<string, unknown>;
+    const findings = JSON.parse(reportRow.findings_json as string);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].severity).toBe('medium');
+  });
+
+  it('PATCH status=failed → trip_health_reports.status=failed + error_message', async () => {
+    await seedTrip(db, { id: 'trip-hook-fail' });
+    const postResp = await callHandler(onRequestPost, mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-hook-fail/health-check', 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-hook-fail' },
+    }));
+    const reqId = ((await postResp.json()) as { report: { requestId: number } }).report.requestId;
+
+    const patchResp = await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${reqId}`, 'PATCH', {
+        reply: 'Claude timeout', status: 'failed', processed_by: 'job',
+      }),
+      env,
+      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      params: { id: String(reqId) },
+    }));
+    expect(patchResp.status).toBe(200);
+
+    const reportRow = await db
+      .prepare('SELECT * FROM trip_health_reports WHERE trip_id = ?')
+      .bind('trip-hook-fail')
+      .first() as Record<string, unknown>;
+    expect(reportRow.status).toBe('failed');
+    expect(reportRow.error_message).toBe('Claude timeout');
+  });
+
+  it('非 health-check request（chat）completed → 不改 trip_health_reports', async () => {
+    // 建 chat request（非 [AI 健檢] prefix）
+    await seedTrip(db, { id: 'trip-chat-only' });
+    const chatRow = await db
+      .prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id')
+      .bind('trip-chat-only', '幫我加一間餐廳', 'user@test.com')
+      .first() as { id: number };
+
+    const patchResp = await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${chatRow.id}`, 'PATCH', {
+        reply: '好的我幫你加了', status: 'completed', processed_by: 'job',
+      }),
+      env,
+      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      params: { id: String(chatRow.id) },
+    }));
+    expect(patchResp.status).toBe(200);
+
+    // trip_health_reports 不應有此 trip 的 row
+    const reportRow = await db
+      .prepare('SELECT * FROM trip_health_reports WHERE trip_id = ?')
+      .bind('trip-chat-only')
+      .first();
+    expect(reportRow).toBeNull();
+  });
+});

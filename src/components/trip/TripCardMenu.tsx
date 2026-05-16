@@ -77,6 +77,8 @@ export interface TripCardMenuProps {
   onCollab: (tripId: string) => void;
   /** 用戶選「編輯」 — host 開 EditTripModal 預填現有 trip 值。 */
   onEdit: (tripId: string) => void;
+  /** 用戶選「AI 健檢」 — host 通常 navigate 到 `/trip/:id/health`。 */
+  onHealthCheck: (tripId: string) => void;
   /** 用戶選「刪除」 — host 應該 confirm + DELETE + 從 list 移除。 */
   onDelete: (tripId: string) => void;
   /** 預設關掉 menu 後 host 不需要做事。 */
@@ -86,7 +88,7 @@ export interface TripCardMenuProps {
 const MENU_WIDTH = 160;
 const VIEWPORT_MARGIN = 8;
 
-export default function TripCardMenu({ tripId, onCollab, onEdit, onDelete, onClose }: TripCardMenuProps) {
+export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, onDelete, onClose }: TripCardMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -162,6 +164,13 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onDelete, onClo
     close();
   }
 
+  function handleHealthCheck(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onHealthCheck(tripId);
+    close();
+  }
+
   function handleDelete(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -196,6 +205,16 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onDelete, onClo
       >
         <Icon name="group" />
         <span>共編設定</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-card-menu-item"
+        onClick={handleHealthCheck}
+        data-testid={`trip-card-menu-health-${tripId}`}
+      >
+        <Icon name="sparkle" />
+        <span>AI 健檢</span>
       </button>
       <button
         type="button"
