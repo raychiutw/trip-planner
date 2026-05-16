@@ -205,6 +205,8 @@ export interface PoiFavorite {
   poiLat?: number | null;
   poiLng?: number | null;
   poiType?: string;
+  /** v2.31.17: Google rating（pois.rating，1.0-5.0）。null 表 POI 未 enrich 或無評分。 */
+  poiRating?: number | null;
   /**
    * GET /api/poi-favorites 回傳每筆收藏目前出現在哪些 trip / day / entry。
    * v2.29.0 (migration 0062): 透過 trip_days.hotel_poi_id ∪ trip_entry_pois.poi_id 反查

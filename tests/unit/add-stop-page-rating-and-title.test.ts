@@ -39,14 +39,25 @@ describe('v2.31.10 AddStopPage rating + section title', () => {
     expect(SRC).toMatch(/tp-add-stop-card-meta-sep/);
   });
 
-  it('favorites card 拔掉孤兒 star icon（沒 rating data 避免誤導）', () => {
-    // 找 favorites card-name + card-meta block（r.poiName 在 card 內出現）
+  it('favorites card rating 存在才 render ★ N.N（v2.31.17 backend 補 rating SELECT 後恢復）', () => {
     const cardNameIdx = SRC.indexOf('className="tp-add-stop-card-name">{r.poiName}');
     expect(cardNameIdx).toBeGreaterThan(0);
-    // 取 card-name 起算 600 char 範圍涵蓋 card-meta 整段
-    const cardBlock = SRC.slice(cardNameIdx, cardNameIdx + 600);
-    expect(cardBlock).toContain('poiAddress');
-    // 不再有 star icon
-    expect(cardBlock).not.toMatch(/<Icon name="star" \/>/);
+    // window 取 1400 char（深縮排每行 ~80 chars × 18 行）涵蓋 card-body 整段
+    const cardBlock = SRC.slice(cardNameIdx, cardNameIdx + 1400);
+    expect(cardBlock).toMatch(/poiMeta\(r\.poiAddress/);
+    // v2.31.17: backend SELECT 補 p.rating，favorites card 跟 search card 一致顯 ★
+    expect(cardBlock).toMatch(/typeof r\.poiRating === 'number'/);
+    expect(cardBlock).toMatch(/r\.poiRating\.toFixed\(1\)/);
+  });
+});
+
+describe('v2.31.17 AddStopPage favorites rating wiring', () => {
+  it('PoiFavoriteRow type 含 poiRating 欄位', () => {
+    expect(SRC).toMatch(/poiRating\?:\s*number\s*\|\s*null/);
+  });
+
+  it('normalizePoiFavorites 抽 camelCase poiRating + snake_case poi_rating fallback', () => {
+    expect(SRC).toMatch(/typeof item\.poiRating === 'number'/);
+    expect(SRC).toMatch(/typeof item\.poi_rating === 'number'/);
   });
 });

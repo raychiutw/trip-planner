@@ -28,11 +28,22 @@ describe('v2.31.11 ChangePoiPage rating + section title', () => {
     expect(SRC).toMatch(/tp-change-poi-card-meta-sep/);
   });
 
-  it('favorites card 拔掉孤兒 star icon', () => {
+  it('favorites card rating 存在才 render ★ N.N（v2.31.17 backend 補 rating SELECT）', () => {
     const cardNameIdx = SRC.indexOf('className="tp-change-poi-card-name">{favorite.poiName}');
     expect(cardNameIdx).toBeGreaterThan(0);
-    const cardBlock = SRC.slice(cardNameIdx, cardNameIdx + 600);
-    expect(cardBlock).toContain('poiAddress');
-    expect(cardBlock).not.toMatch(/<Icon name="star" \/>/);
+    const cardBlock = SRC.slice(cardNameIdx, cardNameIdx + 1400);
+    expect(cardBlock).toMatch(/poiMeta\(favorite\.poiAddress/);
+    expect(cardBlock).toMatch(/typeof favorite\.poiRating === 'number'/);
+    expect(cardBlock).toMatch(/favorite\.poiRating\.toFixed\(1\)/);
+  });
+});
+
+describe('v2.31.17 PoiFavorite type 含 poiRating', () => {
+  it('src/types/api.ts PoiFavorite 含 poiRating?:', () => {
+    const TYPES = readFileSync(
+      path.resolve(__dirname, '../../src/types/api.ts'),
+      'utf8',
+    );
+    expect(TYPES).toMatch(/poiRating\?:\s*number\s*\|\s*null/);
   });
 });
