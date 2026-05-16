@@ -1,11 +1,12 @@
 /**
- * TimelineRail — entry POI choices in expanded entry detail.
+ * TimelineRail — entry POI rendering in expanded detail (v2.30.14 redesign).
  *
- * Renders entry.stopPois sorted by sortOrder ascending.
- * - 0/1 POI → no choice section
- * - ≥2 POIs → first = 正選 card, then 「備選」 divider, rest = same generic card
+ * v2.30.14：master POI 欄位（rating/hours/price/MapLinks/description）整合進
+ * 「景點說明」section，不再渲染獨立「正選」卡片。「景點選擇」section 改名
+ * 「備選景點」，只在備選存在時 (stopPois.length >= 2) 渲染，且只列備選
+ * (sortOrder >= 2)。Section 順序：景點說明 → 備註 → 備選景點。
  *
- * Sort is stable: null/undefined sortOrder falls to end (treated as 99).
+ * Sort 仍 stable：null/undefined sortOrder 落尾（視為 99）。
  */
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -36,32 +37,30 @@ function renderWithEntry(entry: TimelineEntryData) {
   );
 }
 
-describe('TimelineRail — 景點選擇 section', () => {
-  it('entry without stopPois → no 景點選擇 section after expand', () => {
+describe('TimelineRail — 備選景點 section (v2.30.14)', () => {
+  it('entry without stopPois → no 備選景點 section after expand', () => {
     renderWithEntry(makeEntry());
     fireEvent.click(screen.getByTestId('timeline-rail-row-437'));
-    expect(screen.queryByTestId('timeline-rail-pois-437')).toBeNull();
+    expect(screen.queryByTestId('timeline-rail-alternates-437')).toBeNull();
   });
 
-  it('entry with empty stopPois → no section', () => {
-    const entry = makeEntry({
-      stopPois: [],
-    });
+  it('entry with empty stopPois → no 備選景點 section', () => {
+    const entry = makeEntry({ stopPois: [] });
     renderWithEntry(entry);
     fireEvent.click(screen.getByTestId('timeline-rail-row-437'));
-    expect(screen.queryByTestId('timeline-rail-pois-437')).toBeNull();
+    expect(screen.queryByTestId('timeline-rail-alternates-437')).toBeNull();
   });
 
-  it('1 stop POI → no choice section', () => {
+  it('1 stop POI (master only) → no 備選景點 section（master 欄位升格到景點說明）', () => {
     const entry = makeEntry({
       stopPois: [{ name: '山原そば', sortOrder: 1, category: '沖繩麵' }],
     });
     renderWithEntry(entry);
     fireEvent.click(screen.getByTestId('timeline-rail-row-437'));
-    expect(screen.queryByTestId('timeline-rail-pois-437')).toBeNull();
+    expect(screen.queryByTestId('timeline-rail-alternates-437')).toBeNull();
   });
 
-  it('≥2 stop POIs → first 正選, second triggers 備選 divider, sorted by sortOrder', () => {
+  it('≥2 stop POIs → 備選景點 section 只列備選 (sortOrder >= 2)，無「正選」card', () => {
     const entry = makeEntry({
       stopPois: [
         { name: '海人食堂', sortOrder: 2, category: '生魚片' },
@@ -71,39 +70,114 @@ describe('TimelineRail — 景點選擇 section', () => {
     });
     renderWithEntry(entry);
     fireEvent.click(screen.getByTestId('timeline-rail-row-437'));
-    const list = screen.getByTestId('timeline-rail-pois-437');
+    const list = screen.getByTestId('timeline-rail-alternates-437');
 
-    const primaryCards = list.querySelectorAll('[data-variant="primary"]');
-    expect(primaryCards).toHaveLength(1);
-    expect(primaryCards[0]?.textContent).toContain('きしもと食堂');
-    expect(primaryCards[0]?.textContent).toContain('正選');
+    // master (sortOrder=1) 不該以「正選 card」形式出現在備選 section
+    expect(list.querySelector('[data-variant="primary"]')).toBeNull();
+    expect(list.textContent).not.toContain('正選');
 
-    // 備選 divider rendered exactly once
-    const dividers = list.querySelectorAll('.tp-rail-poi-alt-heading');
-    expect(dividers).toHaveLength(1);
-    expect(dividers[0]?.textContent).toBe('備選');
+    // 「備選」divider 已移除（整段 section 名稱就是備選景點）
+    expect(list.querySelector('.tp-rail-poi-alt-heading')).toBeNull();
 
-    // Order in DOM: primary (sortOrder 1) → divider → alternate (sortOrder 2) → alternate (sortOrder 3)
+    // 只列備選 2 個（sortOrder 2 + 3），不含 master「きしもと食堂」
+    const altCards = list.querySelectorAll('.tp-rail-poi-card');
+    expect(altCards).toHaveLength(2);
+    expect(list.textContent).not.toContain('きしもと食堂');
+
+    // 順序：sortOrder 2 → 3
     const html = list.innerHTML;
-    const idxHero = html.indexOf('きしもと食堂');
     const idxAlt1 = html.indexOf('海人食堂');
     const idxAlt2 = html.indexOf('焼肉もとぶ牧場');
-    expect(idxHero).toBeLessThan(idxAlt1);
+    expect(idxAlt1).toBeGreaterThan(-1);
     expect(idxAlt1).toBeLessThan(idxAlt2);
   });
 
-  it('null/undefined sortOrder → falls to end (treated as 99)', () => {
+  it('null/undefined sortOrder 在備選中落尾（視為 99）', () => {
     const entry = makeEntry({
       stopPois: [
+        { name: 'Master', sortOrder: 1, category: 'misc' },
         { name: 'NoOrder', sortOrder: null, category: 'misc' },
-        { name: 'First', sortOrder: 1, category: 'misc' },
+        { name: 'Second', sortOrder: 2, category: 'misc' },
       ],
     });
     renderWithEntry(entry);
     fireEvent.click(screen.getByTestId('timeline-rail-row-437'));
-    const list = screen.getByTestId('timeline-rail-pois-437');
-    const idxFirst = list.innerHTML.indexOf('First');
+    const list = screen.getByTestId('timeline-rail-alternates-437');
+    const idxSecond = list.innerHTML.indexOf('Second');
     const idxNoOrder = list.innerHTML.indexOf('NoOrder');
-    expect(idxFirst).toBeLessThan(idxNoOrder);
+    expect(idxSecond).toBeLessThan(idxNoOrder);
+    expect(list.innerHTML).not.toContain('Master');
+  });
+});
+
+describe('TimelineRail — 景點說明 section 整合 master POI 欄位 (v2.30.14)', () => {
+  it('master POI 有 rating / price / hours / location → 顯示在景點說明 meta + MapLinks', () => {
+    const entry = makeEntry({
+      stopPois: [{
+        name: 'きしもと食堂',
+        sortOrder: 1,
+        rating: 4.5,
+        price: '¥¥',
+        hours: '11:00–14:30',
+        location: {
+          name: 'きしもと食堂',
+          googleQuery: 'https://maps.google.com/?q=test',
+          appleQuery: 'https://maps.apple.com/?q=test',
+        },
+      }],
+    });
+    renderWithEntry(entry);
+    fireEvent.click(screen.getByTestId('timeline-rail-row-437'));
+
+    const desc = screen.getByTestId('timeline-rail-description-437');
+    expect(desc.textContent).toContain('4.5');
+    expect(desc.textContent).toContain('¥¥');
+    expect(desc.textContent).toContain('11:00–14:30');
+    // MapLinks 渲染在 description section 內
+    expect(desc.querySelector('a[href*="maps.google.com"]')).not.toBeNull();
+    expect(desc.querySelector('a[href*="maps.apple.com"]')).not.toBeNull();
+  });
+
+  it('master POI description 整合到 entry.description 下方', () => {
+    const entry = makeEntry({
+      description: '沖繩 No.1 潛水景點',
+      stopPois: [{
+        name: '青潛',
+        sortOrder: 1,
+        description: '自有停車場+接駁車',
+      }],
+    });
+    renderWithEntry(entry);
+    fireEvent.click(screen.getByTestId('timeline-rail-row-437'));
+
+    const desc = screen.getByTestId('timeline-rail-description-437');
+    expect(desc.textContent).toContain('沖繩 No.1 潛水景點');
+    expect(desc.textContent).toContain('自有停車場+接駁車');
+    // entry.description 在 master.description 前
+    const idxEntry = desc.textContent!.indexOf('沖繩 No.1');
+    const idxMaster = desc.textContent!.indexOf('自有停車場');
+    expect(idxEntry).toBeLessThan(idxMaster);
+  });
+
+  it('section 順序：景點說明 → 備註 → 備選景點', () => {
+    const entry = makeEntry({
+      description: 'desc',
+      note: 'my note',
+      stopPois: [
+        { name: 'Master', sortOrder: 1 },
+        { name: 'Alt', sortOrder: 2 },
+      ],
+    });
+    renderWithEntry(entry);
+    fireEvent.click(screen.getByTestId('timeline-rail-row-437'));
+
+    const detail = screen.getByTestId('timeline-rail-detail-437');
+    const sections = Array.from(detail.querySelectorAll('h4')).map((h) => h.textContent);
+    const idxDesc = sections.indexOf('景點說明');
+    const idxNote = sections.indexOf('備註');
+    const idxAlts = sections.indexOf('備選景點');
+    expect(idxDesc).toBeGreaterThan(-1);
+    expect(idxNote).toBeGreaterThan(idxDesc);
+    expect(idxAlts).toBeGreaterThan(idxNote);
   });
 });

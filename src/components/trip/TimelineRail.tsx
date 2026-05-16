@@ -12,7 +12,7 @@
  * reachable via list click.
  */
 
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   DndContext,
@@ -75,17 +75,24 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
   margin: 0;
 }
-.tp-rail-detail-locs {
-  display: flex; flex-wrap: wrap; gap: 6px;
+/* v2.30.14：景點說明 section — master POI 整合 meta row + MapLinks */
+.tp-rail-poi-meta {
+  display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap;
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
 }
-.tp-rail-detail-loc-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: var(--font-size-footnote); color: var(--color-foreground);
-  background: var(--color-background); border: 1px solid var(--color-border);
-  padding: 6px 10px; border-radius: var(--radius-full);
-  text-decoration: none; min-height: 32px;
+.tp-rail-poi-meta-sep { opacity: 0.4; }
+.tp-rail-poi-meta-star { color: var(--color-accent); font-weight: 700; }
+.tp-rail-poi-meta-strong { color: var(--color-foreground); font-weight: 600; }
+.tp-rail-detail-maps { margin-bottom: 10px; }
+.tp-rail-detail-desc-master {
+  margin-top: 8px;
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote);
 }
-.tp-rail-detail-loc-chip:hover { background: var(--color-accent-subtle); border-color: var(--color-accent-bg); color: var(--color-accent-deep); }
 
 .tp-rail-note-value {
   font-size: var(--font-size-body); line-height: 1.55;
@@ -146,22 +153,8 @@ const SCOPED_STYLES = `
 .ocean-rail-head[aria-expanded="true"] .ocean-rail-caret { transform: rotate(90deg); color: var(--color-accent-deep); }
 .ocean-rail-caret { transition: transform 120ms; display: inline-block; }
 
-/* Entry POI choices — one primary (sortOrder=1) followed by alternates.
- * Same layout for restaurants and non-restaurant stops. */
+/* 備選景點 list — alternates only (v2.30.14)。master POI 已升格到 .tp-rail-poi-meta */
 .tp-rail-poi-list { display: flex; flex-direction: column; gap: 8px; }
-.tp-rail-poi-alt-heading {
-  display: flex; align-items: center; gap: 10px;
-  font-size: var(--font-size-eyebrow);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  margin: 6px 0 -2px;
-  padding-left: 2px;
-}
-.tp-rail-poi-alt-heading::after {
-  content: ''; flex: 1; height: 1px; background: var(--color-border);
-}
 .tp-rail-poi-card {
   background: var(--color-background);
   border: 1px solid var(--color-border);
@@ -170,24 +163,12 @@ const SCOPED_STYLES = `
   transition: border-color 160ms var(--transition-timing-function-apple);
 }
 .tp-rail-poi-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border)); }
-.tp-rail-poi-card[data-variant="primary"] {
-  border-color: var(--color-accent);
-  background: linear-gradient(180deg, var(--color-accent-subtle) 0%, var(--color-background) 44%);
-}
 .tp-rail-poi-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; row-gap: 4px; }
 .tp-rail-poi-name {
   font-size: var(--font-size-callout);
   font-weight: 700;
   color: var(--color-foreground);
   line-height: 1.35;
-}
-.tp-rail-poi-role {
-  font-size: var(--font-size-caption);
-  font-weight: 700;
-  color: var(--color-accent-deep);
-  background: var(--color-accent-subtle);
-  border-radius: var(--radius-full);
-  padding: 2px 8px;
 }
 .tp-rail-poi-type {
   font-size: var(--font-size-caption);
@@ -196,7 +177,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-full);
   padding: 2px 8px;
 }
-.tp-rail-poi-meta {
+.tp-rail-poi-card-meta {
   font-size: var(--font-size-caption);
   color: var(--color-muted);
   margin-top: 4px;
@@ -312,13 +293,7 @@ const POI_TYPE_LABEL: Record<string, string> = {
   other: '其他',
 };
 
-function StopPoiChoiceCard({
-  poi,
-  variant,
-}: {
-  poi: StopPoiOptionData;
-  variant: 'primary' | 'alternate';
-}) {
+function StopPoiChoiceCard({ poi }: { poi: StopPoiOptionData }) {
   const metaParts: string[] = [];
   if (typeof poi.rating === 'number') metaParts.push(`★ ${poi.rating.toFixed(1)}`);
   if (poi.price) metaParts.push(poi.price);
@@ -326,16 +301,16 @@ function StopPoiChoiceCard({
   if (poi.reservation) metaParts.push(poi.reservation);
   const typeLabel = poi.category || (poi.type ? POI_TYPE_LABEL[poi.type] ?? poi.type : null);
 
+  // v2.30.14：StopPoiChoiceCard 只渲染備選 (alternate)，「正選」已升格到景點說明。
   return (
-    <article className="tp-rail-poi-card" data-variant={variant}>
+    <article className="tp-rail-poi-card" data-variant="alternate">
       <div className="tp-rail-poi-head">
-        {variant === 'primary' && <span className="tp-rail-poi-role">正選</span>}
         <span className="tp-rail-poi-name">{poi.name}</span>
         {typeLabel && <span className="tp-rail-poi-type">{typeLabel}</span>}
         {poi.location && <MapLinks location={poi.location} inline />}
       </div>
       {metaParts.length > 0 && (
-        <div className="tp-rail-poi-meta">{metaParts.join(' · ')}</div>
+        <div className="tp-rail-poi-card-meta">{metaParts.join(' · ')}</div>
       )}
       {poi.description && (
         <MarkdownText text={poi.description} as="div" className="tp-rail-poi-desc" inline />
@@ -456,8 +431,6 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
     navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryIdNum}/${action}`);
   }, [tripId, entryIdNum, navigate]);
 
-  const hasDescription = !!entry.description?.trim();
-  const hasLocations = !!entry.locations && entry.locations.length > 0;
   const hasNote = !!entry.note?.trim();
 
   const stopPois: StopPoiOptionData[] = useMemo(() => {
@@ -466,7 +439,31 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       .filter((p) => !!p.name?.trim())
       .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
   }, [entry.stopPois]);
-  const hasStopChoices = stopPois.length > 1;
+
+  // v2.30.14：master POI (sortOrder=1) 欄位升格到「景點說明」section、不再渲染獨立
+  // 「正選」卡片；備選 (sortOrder>=2) 留在「備選景點」section（只在 alternates 存
+  // 在時渲染）。Section 順序：景點說明 → 備註 → 備選景點。
+  const master = stopPois[0] ?? null;
+  const alternates = stopPois.slice(1);
+  const hasAlternates = alternates.length > 0;
+
+  const masterMeta = useMemo(() => {
+    const parts: { text: string; kind: 'star' | 'strong' | 'plain' }[] = [];
+    if (master && typeof master.rating === 'number') {
+      parts.push({ text: `★ ${master.rating.toFixed(1)}`, kind: 'star' });
+    }
+    if (master?.price) parts.push({ text: master.price, kind: 'strong' });
+    if (master?.hours) parts.push({ text: master.hours, kind: 'plain' });
+    if (master?.reservation) parts.push({ text: master.reservation, kind: 'plain' });
+    return parts;
+  }, [master]);
+
+  // MapLinks 來源優先 master.location → fallback entry.locations[0]（舊資料相容）
+  const mapLocation = master?.location ?? entry.locations?.[0] ?? null;
+  const entryDesc = entry.description?.trim() ?? '';
+  const masterDesc = master?.description?.trim() ?? '';
+  const hasDescriptionSection =
+    !!entryDesc || !!masterDesc || masterMeta.length > 0 || !!mapLocation;
 
   return (
     <>
@@ -556,54 +553,47 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
 
       {expanded && entry.id != null && (
         <div className="tp-rail-detail" data-testid={`timeline-rail-detail-${entry.id}`}>
-          {hasDescription && (
-            <div className="tp-rail-detail-section">
-              <h4>說明</h4>
-              {entry.description && <MarkdownText text={entry.description} as="p" className="tp-rail-detail-desc" />}
-            </div>
-          )}
-
-          {hasLocations && entry.locations && (
-            <div className="tp-rail-detail-section">
-              <h4>地點</h4>
-              <div className="tp-rail-detail-locs">
-                {entry.locations.map((loc, i) => {
-                  const display = loc.label || loc.name || loc.googleQuery || '地點';
-                  const query = loc.googleQuery || loc.url || loc.label || loc.name || '';
-                  const href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-                  return (
-                    <a
-                      key={`${display}-${i}`}
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="tp-rail-detail-loc-chip"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Icon name="map" />
-                      <span>{display}</span>
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {hasStopChoices && (
-            <div className="tp-rail-detail-section">
-              <h4>景點選擇</h4>
-              <div className="tp-rail-poi-list" data-testid={`timeline-rail-pois-${entry.id}`}>
-                {stopPois.map((poi, i) => {
-                  const isPrimary = i === 0;
-                  const showAltDivider = i === 1;
-                  return (
-                    <div key={`${poi.poiId ?? poi.name}-${i}`} onClick={(e) => e.stopPropagation()}>
-                      {showAltDivider && <h5 className="tp-rail-poi-alt-heading">備選</h5>}
-                      <StopPoiChoiceCard poi={poi} variant={isPrimary ? 'primary' : 'alternate'} />
-                    </div>
-                  );
-                })}
-              </div>
+          {hasDescriptionSection && (
+            <div
+              className="tp-rail-detail-section"
+              data-testid={`timeline-rail-description-${entry.id}`}
+            >
+              <h4>景點說明</h4>
+              {masterMeta.length > 0 && (
+                <div className="tp-rail-poi-meta">
+                  {masterMeta.map((m, i) => (
+                    <Fragment key={i}>
+                      {i > 0 && <span className="tp-rail-poi-meta-sep">·</span>}
+                      <span
+                        className={clsx({
+                          'tp-rail-poi-meta-star': m.kind === 'star',
+                          'tp-rail-poi-meta-strong': m.kind === 'strong',
+                        })}
+                      >
+                        {m.text}
+                      </span>
+                    </Fragment>
+                  ))}
+                </div>
+              )}
+              {mapLocation && (
+                <div
+                  className="tp-rail-detail-maps"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MapLinks location={mapLocation} inline />
+                </div>
+              )}
+              {entryDesc && (
+                <MarkdownText text={entryDesc} as="p" className="tp-rail-detail-desc" />
+              )}
+              {masterDesc && masterDesc !== entryDesc && (
+                <MarkdownText
+                  text={masterDesc}
+                  as="p"
+                  className="tp-rail-detail-desc tp-rail-detail-desc-master"
+                />
+              )}
             </div>
           )}
 
@@ -663,6 +653,25 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               </div>
             )}
           </div>
+
+          {hasAlternates && (
+            <div className="tp-rail-detail-section">
+              <h4>備選景點</h4>
+              <div
+                className="tp-rail-poi-list"
+                data-testid={`timeline-rail-alternates-${entry.id}`}
+              >
+                {alternates.map((poi, i) => (
+                  <div
+                    key={`${poi.poiId ?? poi.name}-${i}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <StopPoiChoiceCard poi={poi} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 2026-04-29 mockup parity:expanded toolbar 從 body 上方移到底部
            * (mockup S12 Variant A 規範);排列 4+2 grouped:左 4 常用編輯
