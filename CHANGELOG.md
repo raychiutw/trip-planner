@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.24] - 2026-05-17
+
+**Fix: 日本 24h POI 顯示日文「24時間」改為中文「24 小時」。**
+
+Bug #125（prod QA found）：那霸機場 timeline expand 顯示「★ 4.1 · 24時間」
+— `24時間` 是 Google Places 對日本 24h 商家回的日文 raw（同 24 hour）。
+中文 UI 顯日文「時間」字眼不一致，user 看了會困惑。
+
+**Fix：** `src/lib/poiHours.ts` `condenseHours` 加 special case：
+`/^24\s*時間(?:営業)?$/` → `'24 小時'`。涵蓋三種形式：
+- `24時間` → 24 小時
+- `24 時間`（含空格）→ 24 小時
+- `24時間営業` → 24 小時
+
+**Test：** `tests/unit/poiHours.test.ts` 4 個新 cases（3 個轉換 + 1 個
+「24小時」中文保留 regression）。
+
 ## [2.31.23] - 2026-05-17
 
 **Fix: transport POI label 統一為「交通」（之前 TimelineRail 顯「移動」與其他 4 處不一致）。**
