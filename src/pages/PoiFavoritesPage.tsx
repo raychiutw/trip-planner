@@ -35,6 +35,8 @@ interface PoiFavoriteRow {
   poiName: string;
   poiAddress: string | null;
   poiType: string;
+  /** v2.31.19: Google rating（pois.rating，1.0-5.0）。backend 已 SELECT。 */
+  poiRating?: number | null;
   favoritedAt: string;
   note: string | null;
   usages?: Array<{
@@ -176,6 +178,8 @@ const SCOPED_STYLES = `
 }
 .favorites-card .poi-name { font-size: var(--font-size-callout); font-weight: 700; color: var(--color-foreground); }
 .favorites-card .poi-address { font-size: var(--font-size-footnote); color: var(--color-muted); }
+.favorites-card .poi-rating { color: var(--color-accent); font-weight: 600; }
+.favorites-card .poi-meta-sep { color: var(--color-muted); }
 .favorites-card .poi-usage-badge {
   font-size: var(--font-size-footnote); color: var(--color-muted);
   margin-top: 2px;
@@ -606,7 +610,19 @@ export default function PoiFavoritesPage() {
                       >
                         <div className="poi-category">{row.poiType}</div>
                         <div className="poi-name">{row.poiName}</div>
-                        {row.poiAddress && <div className="poi-address">{row.poiAddress}</div>}
+                        {/* v2.31.19: backend poi-favorites SELECT 已含 rating（v2.31.17 補），
+                          * card 跟 add-stop / change-poi favorites card 一致顯 ★ N.N · address。 */}
+                        {(row.poiAddress || typeof row.poiRating === 'number') && (
+                          <div className="poi-address">
+                            {typeof row.poiRating === 'number' && (
+                              <>
+                                <span className="poi-rating">★ {row.poiRating.toFixed(1)}</span>
+                                {row.poiAddress && <span className="poi-meta-sep"> · </span>}
+                              </>
+                            )}
+                            {row.poiAddress}
+                          </div>
+                        )}
                         {usageCount > 0 && (
                           <div className="poi-usage-badge" data-testid={`favorites-usage-badge-${row.id}`}>
                             目前在 {usageCount} 個行程

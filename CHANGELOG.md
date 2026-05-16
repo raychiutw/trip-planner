@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.19] - 2026-05-17
+
+**Fix: PoiFavoritesPage 主收藏頁 card 補回 ★ rating 顯示。**
+
+Bug #120（prod QA found）：v2.31.17 補了 backend poi-favorites GET SELECT
+含 `p.rating AS poi_rating` + AddStopPage / ChangePoiPage favorites card 的
+★ N.N · address conditional 顯示。**忘了主收藏頁 `/favorites` PoiFavoritesPage**
+— card 三張都只顯 type chip / name / address / usage badge，沒有 ★ rating，
+雖然 backend 早已回 `poiRating: 4.1`。
+
+**Frontend：**
+- `src/pages/PoiFavoritesPage.tsx` `PoiFavoriteRow` interface 加
+  `poiRating?: number | null`。
+- card body 加 `★ N.N · address` conditional：rating 存在則「★ 4.1 · 地址」，
+  缺則只顯地址。
+- CSS 新增 `.favorites-card .poi-rating`（accent 色 weight 600）+
+  `.poi-meta-sep`（muted 色）。
+
+**Test：** `tests/unit/poi-favorites-page-rating.test.ts`（新）— interface
+含 poiRating + card conditional render + 分隔符 + CSS rule 存在。4 cases。
+
 ## [2.31.18] - 2026-05-17
 
 **Fix: AI 健檢 reply 在 chat 顯示為 raw JSON array。**
