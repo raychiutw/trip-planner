@@ -158,6 +158,57 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
     expect(findings[0].action_target.day).toBe(3);
   });
 
+  it('Phase 2: dimension + suggestion 欄位寫入 findings_json', async () => {
+    await seedTrip(db, { id: 'trip-hook-phase2' });
+    const postResp = await callHandler(onRequestPost, mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-hook-phase2/health-check', 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-hook-phase2' },
+    }));
+    const reqId = ((await postResp.json()) as { report: { requestId: number } }).report.requestId;
+
+    const reply = JSON.stringify([
+      {
+        severity: 'high',
+        dimension: 'timing',
+        title: 'Check-in 衝突',
+        description: '物理上不可行',
+        suggestion: '末站換更近的景點',
+        action_target: { day: 2, entry_id: 42 },
+      },
+      // dimension 不合法值 → 該欄位 drop，但 finding 保留
+      {
+        severity: 'low',
+        dimension: 'bogus',
+        title: 'X',
+        description: 'd',
+      },
+    ]);
+    const patchResp = await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${reqId}`, 'PATCH', {
+        reply, status: 'completed', processed_by: 'job',
+      }),
+      env,
+      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      params: { id: String(reqId) },
+    }));
+    expect(patchResp.status).toBe(200);
+
+    const reportRow = await db
+      .prepare('SELECT * FROM trip_health_reports WHERE trip_id = ?')
+      .bind('trip-hook-phase2')
+      .first() as Record<string, unknown>;
+    const findings = JSON.parse(reportRow.findings_json as string);
+    expect(findings).toHaveLength(2);
+    expect(findings[0].dimension).toBe('timing');
+    expect(findings[0].suggestion).toBe('末站換更近的景點');
+    expect(findings[0].action_target).toEqual({ day: 2, entry_id: 42 });
+    // bogus dimension 被 drop
+    expect(findings[1].dimension).toBeUndefined();
+    expect(findings[1].suggestion).toBeUndefined();
+  });
+
   it('reply 包 ```json fence 也能 extract', async () => {
     await seedTrip(db, { id: 'trip-hook-fence' });
     const postResp = await callHandler(onRequestPost, mockContext({
