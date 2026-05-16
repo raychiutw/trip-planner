@@ -517,16 +517,17 @@ function startDateMD(start: string | null | undefined): string | null {
 }
 
 function cardMeta(trip: TripInfo): string {
-  // mockup section 16:6906-6909 範例「張三李四 · 7/29 出發」 — meta 顯示「{owner} · M/D 出發」
-  const startMD = startDateMD(trip.startDate);
+  // v2.31.30: 移除重複出發日。range 已含起始日，「7/29 出發 · 7/29 – 8/2」資訊重複
+  // 且擠爆 176px card（被 ellipsis 切）。有 range 時只顯 range；沒 range fallback
+  // startDateMD「7/29 出發」（用於 endDate 未填的 trip）。
   const range = dateRange(trip.startDate, trip.endDate);
+  const startMD = startDateMD(trip.startDate);
   const members = typeof trip.memberCount === 'number' && trip.memberCount > 0
     ? `${trip.memberCount} 旅伴`
     : null;
-  if (startMD && range) return `${startMD} · ${range}`;
-  if (startMD) return startMD;
   if (range && members) return `${range} · ${members}`;
   if (range) return range;
+  if (startMD) return startMD;
   if (members) return members;
   return '';
 }

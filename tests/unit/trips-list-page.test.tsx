@@ -88,8 +88,9 @@ describe('TripsListPage', () => {
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeTruthy());
     // Section 4.7 (terracotta-ui-parity-polish): eyebrow 中文化「日本 · N 天」對齊 mockup
     expect(screen.getByText('日本 · 5 天')).toBeTruthy();
-    // mockup-parity-qa-fixes: cardMeta 改「{M}/{D} 出發 · {range}」格式（mockup section 16:6908）
-    expect(screen.getByText('7/26 出發 · 7/26 – 7/30')).toBeTruthy();
+    // v2.31.30: cardMeta 移除重複出發日（range 已含起始日）。有 range + memberCount 時
+    // 顯「{range} · {members} 旅伴」，sample 含 memberCount: 2。
+    expect(screen.getByText('7/26 – 7/30 · 2 旅伴')).toBeTruthy();
     expect(screen.getByText('韓國 · 4 天')).toBeTruthy();
   });
 
