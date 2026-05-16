@@ -161,10 +161,16 @@ function rowToMessages(row: RawRequestRow): ChatMessage[] {
   const userTs = row.createdAt ?? row.updatedAt ?? null;
   const assistantTs = row.updatedAt ?? row.createdAt ?? null;
   if (row.message) {
+    // v2.31.27 fix #128: AI 健檢 message 是整個 HEALTH_CHECK_MESSAGE system
+    // prompt (含 5 維度 + JSON schema + 範例)，user 看一大坨雜訊。改顯短摘要。
+    // 完整 prompt 仍存 trip_requests.message → api-server 拿到完整 text 送 Claude。
+    const displayText = row.message.startsWith('[AI 健檢]')
+      ? '已觸發 AI 行程健檢'
+      : row.message;
     out.push({
       id: baseId,
       role: 'user',
-      text: row.message,
+      text: displayText,
       createdAt: userTs,
       submittedBy: row.submittedBy ?? null,
       submittedByDisplayName: row.submittedByDisplayName ?? null,
