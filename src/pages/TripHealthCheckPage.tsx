@@ -631,7 +631,7 @@ export default function TripHealthCheckPage() {
               <Icon name="sparkle" />
             </div>
             <h2>尚未健檢過此行程</h2>
-            <div className="sub">由 AI 檢視整份行程，找出時間衝突、距離過遠、漏掉必排景點等問題。通常 30 秒內完成。</div>
+            <div className="sub">由 AI 檢視整份行程，找出時間衝突、距離過遠、漏掉必排景點等問題。通常 3-7 分鐘完成。</div>
           </div>
         )}
 
@@ -640,7 +640,7 @@ export default function TripHealthCheckPage() {
             <div className="pulse" />
             <div className="text">
               <div className="title">AI 健檢進行中…</div>
-              <div className="sub">通常 30 秒內完成，可以同時編輯行程</div>
+              <div className="sub">通常 3-7 分鐘完成，可以同時編輯行程</div>
             </div>
           </div>
         )}
