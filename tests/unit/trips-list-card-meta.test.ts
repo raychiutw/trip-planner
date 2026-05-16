@@ -35,12 +35,13 @@ describe('mockup-parity-qa-fixes TripsListPage card meta + filter', () => {
     expect(SRC).toMatch(/出發/);
   });
 
-  it('cardMeta 用 camelCase 欄位 startDate / endDate / memberCount', () => {
+  it('cardMeta 用 camelCase 欄位 startDate / endDate（v2.31.31 拔 memberCount）', () => {
     const cardMetaMatch = SRC.match(/function cardMeta[\s\S]*?\n\}/);
     expect(cardMetaMatch).not.toBeNull();
     expect(cardMetaMatch?.[0]).toMatch(/trip\.startDate/);
     expect(cardMetaMatch?.[0]).toMatch(/trip\.endDate/);
-    expect(cardMetaMatch?.[0]).toMatch(/trip\.memberCount/);
+    // v2.31.31: memberCount 從 cardMeta 拔掉（對齊 mockup「{owner} · 7/29 出發」spec）
+    expect(cardMetaMatch?.[0]).not.toMatch(/trip\.memberCount/);
     // 不能再用舊 snake_case
     expect(cardMetaMatch?.[0]).not.toMatch(/trip\.start_date/);
   });
@@ -64,14 +65,16 @@ describe('mockup-parity-qa-fixes TripsListPage card meta + filter', () => {
     expect(SRC).toMatch(/回到全部/);
   });
 
-  it('v2.31.30: cardMeta 不再「{startMD} · {range}」重複（range 已含起始日）', () => {
+  it('v2.31.31: cardMeta 簡化為 range / startMD（拔 memberCount + 拔重複出發日）', () => {
     const cardMetaMatch = SRC.match(/function cardMeta[\s\S]*?\n\}/);
     expect(cardMetaMatch).not.toBeNull();
-    // 既有「startMD && range」邏輯應該被拔除（兩者都有時只取 range）
+    // v2.31.30 修：「{startMD} · {range}」資訊重複（range 已含起始日）
     expect(cardMetaMatch?.[0]).not.toMatch(/startMD && range/);
     expect(cardMetaMatch?.[0]).not.toMatch(/\$\{startMD\}\s*·\s*\$\{range\}/);
+    // v2.31.31 修：拔 memberCount（mobile 117px card overflow）
+    expect(cardMetaMatch?.[0]).not.toMatch(/range && members/);
+    expect(cardMetaMatch?.[0]).not.toMatch(/\$\{members\}/);
     // 仍保留 range / startMD fallback chain
-    expect(cardMetaMatch?.[0]).toMatch(/range && members/);
     expect(cardMetaMatch?.[0]).toMatch(/if \(range\)/);
     expect(cardMetaMatch?.[0]).toMatch(/if \(startMD\)/);
   });
