@@ -32,13 +32,15 @@ vi.mock('react-router-dom', async () => {
 import PoiFavoritesPage from '../../src/pages/PoiFavoritesPage';
 
 function makeRow(id: number) {
+  // v2.31.32: region row 只有 ≥2 region group 才 render，poiAddress 用兩個 region keyword
+  // 交替（沖縄縣 / 京都府）避免單 group hide。
+  const addr = id % 2 === 0 ? '沖縄縣 demo' : '京都府 demo';
   return {
     id,
     poiId: id * 100,
     poiName: `POI ${id}`,
-    poiAddress: 'addr',
+    poiAddress: addr,
     poiType: 'restaurant',
-    poiRegion: '沖繩',
     favoritedAt: '2026-04-01T00:00:00Z',
     note: null,
     usages: [],

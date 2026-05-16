@@ -493,34 +493,38 @@ export default function PoiFavoritesPage() {
               />
             </div>
 
-            <div
-              className="favorites-region-row"
-              role="group"
-              aria-label="地區篩選"
-              data-testid="favorites-region-row"
-            >
-              <button
-                type="button"
-                className="favorites-chip"
-                aria-pressed={regionFilter === 'all'}
-                onClick={() => setRegionFilter('all')}
-                data-testid="favorites-region-all"
+            {/* v2.31.32: 只有 1 region group 時「全部 N / {region} N」count 完全等價，
+                UI 多餘。≥2 group 才顯 row（有實際 filter 意義）。 */}
+            {regionOptions.length >= 2 && (
+              <div
+                className="favorites-region-row"
+                role="group"
+                aria-label="地區篩選"
+                data-testid="favorites-region-row"
               >
-                全部 <span className="favorites-chip-count">{regionCounts.get('all') ?? 0}</span>
-              </button>
-              {regionOptions.map((r) => (
                 <button
-                  key={r}
                   type="button"
                   className="favorites-chip"
-                  aria-pressed={regionFilter === r}
-                  onClick={() => setRegionFilter(r)}
-                  data-testid={`favorites-region-${r}`}
+                  aria-pressed={regionFilter === 'all'}
+                  onClick={() => setRegionFilter('all')}
+                  data-testid="favorites-region-all"
                 >
-                  {r} <span className="favorites-chip-count">{regionCounts.get(r) ?? 0}</span>
+                  全部 <span className="favorites-chip-count">{regionCounts.get('all') ?? 0}</span>
                 </button>
-              ))}
-            </div>
+                {regionOptions.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    className="favorites-chip"
+                    aria-pressed={regionFilter === r}
+                    onClick={() => setRegionFilter(r)}
+                    data-testid={`favorites-region-${r}`}
+                  >
+                    {r} <span className="favorites-chip-count">{regionCounts.get(r) ?? 0}</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div
               className="favorites-type-row"
