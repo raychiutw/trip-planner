@@ -151,9 +151,18 @@ async function spawnTmuxRequest(): Promise<boolean> {
   // Detached tmux session — claude 跑 interactive REPL（無 -p）。透過 env var 把
   // TRIPLINE_API_TOKEN + session name 傳給 skill；skill 結尾用 TRIPLINE_TMUX_SESSION
   // 自殺。--name 給 claude session 一個顯示名稱（同 tmux session）方便人類辨識。
+  //
+  // PATH 含 homebrew dir — launchd 啟動的 api-server process.env.PATH 沒有
+  // /opt/homebrew/bin，skill 內 `tmux kill-session` self-destruct 會 ENOENT silent
+  // fail，session 變 stuck。`2>/dev/null || true` 在 skill 裡會吃掉錯誤。
+  // 同時 export TMUX_BIN 讓 skill 有更穩的 escape hatch。
+  const tmuxDir = TMUX_BIN.includes('/') ? TMUX_BIN.slice(0, TMUX_BIN.lastIndexOf('/')) : '';
+  const augmentedPath = [process.env.PATH || '', '/Users/ray/.local/bin', tmuxDir]
+    .filter(Boolean)
+    .join(':');
   const create = spawnSync(TMUX_BIN, [
     'new-session', '-d', '-s', sessionName, '-c', PROJECT_DIR,
-    `TRIPLINE_API_TOKEN='${escapedToken}' TRIPLINE_TMUX_SESSION='${sessionName}' PATH='${process.env.PATH}:/Users/ray/.local/bin' ${claudePath} --dangerously-skip-permissions --name '${sessionName}'`
+    `TRIPLINE_API_TOKEN='${escapedToken}' TRIPLINE_TMUX_SESSION='${sessionName}' TMUX_BIN='${TMUX_BIN}' PATH='${augmentedPath}' ${claudePath} --dangerously-skip-permissions --name '${sessionName}'`
   ], { encoding: 'utf-8' });
   if (create.status !== 0) {
     logError(`tmux new-session failed (status=${create.status}): ${create.stderr || ''}`);
