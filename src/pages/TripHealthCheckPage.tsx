@@ -40,7 +40,11 @@ interface Finding {
   dimension?: Dimension;
   /** v2.31.1 Phase 2: 建議怎麼修 — 顯示在 description 下方 */
   suggestion?: string;
-  action_target?: { day?: number; entry_id?: number };
+  // v2.31.14: backend response 經 deepCamel 是 camelCase（actionTarget / entryId）。
+  // 早期 snake_case 寫法 `f.action_target?.entry_id` 永遠 undefined → 「前往景點」/
+  // 「前往 Day」按鈕永不 render → user 看不到 finding 跳轉。Prod QA found，同 #573
+  // EditTripPage camelCase 對齊 bug 家族。
+  actionTarget?: { day?: number; entryId?: number };
 }
 
 const DIMENSION_LABEL: Record<Dimension, string> = {
@@ -729,24 +733,24 @@ export default function TripHealthCheckPage() {
                             </div>
                           )}
                           <div className="actions">
-                            {typeof f.action_target?.entry_id === 'number' && (
+                            {typeof f.actionTarget?.entryId === 'number' && (
                               <button
                                 type="button"
                                 className="action is-primary"
-                                onClick={() => goToEntry(f.action_target!.entry_id!)}
+                                onClick={() => goToEntry(f.actionTarget!.entryId!)}
                                 data-testid={`ai-health-finding-goto-entry-${sev}-${idx}`}
                               >
                                 前往景點
                               </button>
                             )}
-                            {typeof f.action_target?.day === 'number'
-                              && typeof f.action_target?.entry_id !== 'number' && (
+                            {typeof f.actionTarget?.day === 'number'
+                              && typeof f.actionTarget?.entryId !== 'number' && (
                               <button
                                 type="button"
                                 className="action is-primary"
-                                onClick={() => goToDay(f.action_target!.day!)}
+                                onClick={() => goToDay(f.actionTarget!.day!)}
                               >
-                                前往 Day {f.action_target.day}
+                                前往 Day {f.actionTarget.day}
                               </button>
                             )}
                           </div>
