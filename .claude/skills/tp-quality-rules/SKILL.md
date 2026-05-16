@@ -15,9 +15,9 @@ Timeline entry 除了既有欄位，新增兩個與 POI master 有關的 request
 - `poi_type`：選填。預設 `attraction`。機場/車站/港口 → `transport`；浮潛/玉泉洞/鳳梨園等預訂體驗 → `activity`；餐廳/購物/住宿走原本 nested 結構（restaurants/shopping/hotel）不變動。
 - `poi_id`：PATCH 專用。允許 admin 把 entry 改掛到既有 POI master（例如重新指向某個 attraction POI）。
 
-**R11 / R12 / R17 的資料來源 Phase 2 後為 `pois` master** — GET /days/:num 回傳 `entry.poi`（JOIN pois）欄位，優先於 entry 本身的 maps/mapcode/google_rating/location。Phase 3 後 entry 這幾個欄位將 DROP，但 R-rule 檢查邏輯（實體 POI 需 maps 或 lat+lng、需 google_rating）不變。
+**R11 / R12 / R17 的資料來源 Phase 2 後為 `pois` master** — GET /days/:num 回傳 `entry.poi`（JOIN pois）欄位，優先於 entry 本身的 maps/google_rating/location。Phase 3 後 entry 這幾個欄位將 DROP，但 R-rule 檢查邏輯（實體 POI 需 maps 或 lat+lng、需 google_rating）不變。v2.30.15 (migration 0066)：mapcode 已從 pois 整個 DROP — 不再寫入或檢查。
 
-建立 entry 時仍請在 body 附上 maps / mapcode / lat / lng / google_rating — 會透過 find-or-create 流到 POI master。
+建立 entry 時仍請在 body 附上 maps / lat / lng / google_rating — 會透過 find-or-create 流到 POI master。
 
 ### R0 JSON 結構與值約束
 
@@ -30,7 +30,7 @@ Timeline entry 除了既有欄位，新增兩個與 POI master 有關的 request
 - `googleQuery` 必須為 Google Maps URL，格式為 `https://www.google.com/maps/search/<percent-encoded-query>`。
 - `appleQuery` 必須為 Apple Maps URL，格式為 `https://maps.apple.com/?q=<percent-encoded-query>`。
 - `naverQuery` 必須為 Naver Maps URL（以 `https://map.naver.com/` 開頭），優先使用精確 place URL `https://map.naver.com/v5/entry/place/{placeId}`，查不到時 fallback 為 `https://map.naver.com/v5/search/{韓文關鍵字}`。
-- `mapcode` 格式為 `XX XXX XXX*XX`（如 `33 530 406*00`），正則：`/^\d{2,4}\s\d{3}\s\d{3}\*\d{2}$/`。僅 `meta.countries` 含 `"JP"` 且 `meta.selfDrive === true` 時必填。
+- ~~mapcode~~：v2.30.15 (migration 0066) 已從 pois DROP — Google/Apple Map link 涵蓋導航需求，自駕 trip 不再要求 mapcode。
 
 #### 根層級必填欄位
 - 必填：`meta`（含 `title` 非空字串、`selfDrive` boolean、`countries` 非空陣列，值為 ISO 3166-1 alpha-2 國碼如 `["JP"]`）、`days`（非空陣列）、`autoScrollDates`（非空陣列）、`footer`（含 `title`、`dates`）、`suggestions`、`checklist`。

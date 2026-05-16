@@ -82,16 +82,7 @@ describe('toTimelineEntry — stopPois 作為 canonical POI', () => {
     expect(entry.googleRating).toBeNull();
   });
 
-  it('stopPois.mapcode 存在時使用 canonical mapcode', () => {
-    const entry = toTimelineEntry({
-      title: 'mapcode test',
-      mapcode: '11 111 111*11',
-      stopPois: [{ poiId: 1, sortOrder: 1, type: 'transport', name: '車站', mapcode: '33 530 406*00' }],
-    });
-    expect(entry.locations[0].mapcode).toBe('33 530 406*00');
-  });
-
-  it('stopPois.maps 與 mapcode 都空時，整個 location block 省略', () => {
+  it('stopPois.maps 空時，整個 location block 省略 (v2.30.15: mapcode 已 DROP)', () => {
     const entry = toTimelineEntry({
       title: '純描述',
       stopPois: [{ poiId: 1, sortOrder: 1, type: 'attraction', name: '純描述' }],
@@ -108,7 +99,7 @@ describe('toTimelineEntry — stopPois 作為 canonical POI', () => {
           sortOrder: 1,
           type: 'restaurant',
           name: '第一順位拉麵',
-          mapcode: '22 222 222*22',
+          maps: 'https://maps.google.com/?q=%E7%AC%AC%E4%B8%80%E9%A0%86%E4%BD%8D%E6%8B%89%E9%BA%B5',
           rating: 4.6,
           lat: 26.222,
           lng: 127.222,
@@ -129,7 +120,7 @@ describe('toTimelineEntry — stopPois 作為 canonical POI', () => {
     expect(entry.poiType).toBe('restaurant');
     expect(entry.googleRating).toBe(4.6);
     expect(entry.locations[0].name).toBe('第一順位拉麵');
-    expect(entry.locations[0].mapcode).toBe('22 222 222*22');
+    expect(entry.locations[0].googleQuery).toContain('maps.google.com');
     expect(entry.stopPois.map((p) => [p.name, p.sortOrder])).toEqual([
       ['第一順位拉麵', 1],
       ['備選沖繩麵', 2],

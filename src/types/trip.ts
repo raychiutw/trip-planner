@@ -27,7 +27,6 @@ export interface Location {
   lng?: number;
   googleQuery?: string;
   appleQuery?: string;
-  mapcode?: string;
   geocodeStatus?: string;
 }
 
@@ -49,7 +48,6 @@ export interface Parking {
   price?: string;
   note?: string;
   maps?: string;
-  mapcode?: string;
 }
 
 // Migration 0045 (2026-05-02): trips.footer column dropped + Footer component
@@ -62,7 +60,7 @@ export interface Parking {
 /**
  * Shopping item — belongs to either a hotel or an entry.
  * DB columns: id, parent_type, parent_id, sort_order, name, category,
- *             hours, must_buy, note, rating, maps, mapcode, source
+ *             hours, must_buy, note, rating, maps, source
  */
 export interface Shopping {
   id: number;
@@ -76,7 +74,6 @@ export interface Shopping {
   note?: string | null;
   rating?: number | null;
   maps?: string | null;
-  mapcode?: string | null;
   source?: string | null;
 }
 
@@ -199,7 +196,6 @@ export interface Poi {
   googleRating?: number | null;
   category?: string | null;
   maps?: string | null;
-  mapcode?: string | null;
   lat?: number | null;
   lng?: number | null;
   country?: string | null;

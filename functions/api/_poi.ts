@@ -67,7 +67,7 @@ export interface FindOrCreatePoiData {
   type: string;
   description?: string | null;
   // Migration 0045: dropped `maps` (replaced by mapsUrl helper, commit 13)
-  mapcode?: string | null;
+  // Migration 0066 (v2.30.15): dropped `mapcode` — Google/Apple Map link 已涵蓋導航需求
   lat?: number | null;
   lng?: number | null;
   // Migration 0045: renamed google_rating → rating (1-7 OpenTripMap, was 1-5 Google)
@@ -114,7 +114,7 @@ export function normalizeFindOrCreatePoiPayload(raw: FindOrCreatePoiPayload): Fi
 }
 
 const COALESCE_FIELDS = [
-  'description', 'mapcode', 'lat', 'lng', 'rating',
+  'description', 'lat', 'lng', 'rating',
   'category', 'hours', 'address', 'phone', 'email', 'website', 'country',
   'price',
 ] as const;
@@ -157,11 +157,10 @@ export async function findOrCreatePoi(
   // Migration 0045: dropped maps col (use mapsUrl helper).
   // Migration 0054: added price col.
   const result = await db.prepare(
-    'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, mapcode, lat, lng, source, address, phone, email, website, country, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+    'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
   ).bind(
     data.type, data.name, data.description ?? null, data.hours ?? null,
     data.rating ?? null, data.category ?? null,
-    data.mapcode ?? null,
     data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
     data.address ?? null, data.phone ?? null, data.email ?? null,
     data.website ?? null, data.country ?? 'JP', data.price ?? null,
@@ -235,11 +234,10 @@ export async function batchFindOrCreatePois(
     const insertStmts = toInsert.map((idx) => {
       const data = uniqueItems[idx]!.data;
       return db.prepare(
-        'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, mapcode, lat, lng, source, address, phone, email, website, country, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+        'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
       ).bind(
         data.type, data.name, data.description ?? null, data.hours ?? null,
         data.rating ?? null, data.category ?? null,
-        data.mapcode ?? null,
         data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
         data.address ?? null, data.phone ?? null, data.email ?? null,
         data.website ?? null, data.country ?? 'JP', data.price ?? null,

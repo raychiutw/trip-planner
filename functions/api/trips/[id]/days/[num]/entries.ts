@@ -81,7 +81,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       name: title,
       type: (body.poi_type as string) || 'attraction',
       description: (body.description as string | undefined) ?? null,
-      mapcode: (body.mapcode as string | undefined) ?? null,
       lat: (body.lat as number | undefined) ?? null,
       lng: (body.lng as number | undefined) ?? null,
       rating: (body.rating as number | undefined) ?? null,

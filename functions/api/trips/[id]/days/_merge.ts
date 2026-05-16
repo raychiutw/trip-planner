@@ -143,7 +143,7 @@ export async function fetchEntryPoisByEntries(
       .prepare(
         `SELECT tep.entry_id, tep.poi_id, tep.sort_order, tep.updated_at,
                 p.name, p.lat, p.lng, p.type, p.category,
-                p.hours, p.rating, p.price, p.mapcode, p.photos, p.source,
+                p.hours, p.rating, p.price, p.photos, p.source,
                 tep.reservation, tep.reservation_url, tep.description, tep.note
          FROM trip_entry_pois tep
          JOIN pois p ON p.id = tep.poi_id
@@ -164,7 +164,6 @@ export async function fetchEntryPoisByEntries(
         hours: string | null;
         rating: number | null;
         price: string | null;
-        mapcode: string | null;
         photos: string | null;
         source: string | null;
         reservation: string | null;
@@ -197,7 +196,6 @@ export async function fetchEntryPoisByEntries(
       lng: r.lng,
       type: r.type,
       category: r.category,
-      mapcode: r.mapcode,
       photos: r.photos,
       source: r.source,
       hours: r.hours,

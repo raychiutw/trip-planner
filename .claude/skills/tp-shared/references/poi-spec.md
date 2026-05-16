@@ -4,7 +4,7 @@
 
 ### findOrCreatePoi 支援的完整欄位
 
-pois 表欄位（id, type, name, description, note, address, phone, email, website, hours, rating, price, category, mapcode, lat, lng, country, source, place_id, status, status_reason, status_checked_at, last_refreshed_at, created_at, updated_at），API `PUT /days/:num` 的 `findOrCreatePoi` 全部支援。
+pois 表欄位（id, type, name, description, note, address, phone, email, website, hours, rating, price, category, lat, lng, country, source, place_id, status, status_reason, status_checked_at, last_refreshed_at, created_at, updated_at），API `PUT /days/:num` 的 `findOrCreatePoi` 全部支援。v2.30.15 (migration 0066)：mapcode col 已 DROP。
 `PATCH /pois/:id`（admin 或帶 tripId 的有權限使用者）也支援所有欄位。
 
 > ⚠️ Migration 0045 (v2.19.x) 把 `pois.google_rating` 重命名為 `pois.rating`。新 code 一律用 `rating`；frontend `entry.googleRating` 是 mapDay 從 `poi.rating` 接出的 alias，DB 端不存在 `google_rating` col。
@@ -21,10 +21,10 @@ pois 表欄位（id, type, name, description, note, address, phone, email, websi
 
 | type | 必填 | 建議填 |
 |------|------|--------|
-| hotel | name, rating | description, address, phone, mapcode, hours |
+| hotel | name, rating | description, address, phone, hours |
 | restaurant | name, category, hours, rating | description, phone, address, **price** |
 | shopping | name, category, hours, rating | description, phone, address |
-| parking | name, description | mapcode, hours |
+| parking | name, description | hours |
 | attraction | name, rating | description, hours, address, phone |
 | transport | name | description, hours |
 | activity | name, rating, hours | description, phone, website |

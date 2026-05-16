@@ -38,7 +38,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     hours?: string;
     rating?: number;
     category?: string;
-    mapcode?: string;
     lat?: number;
     lng?: number;
     price?: string;
@@ -58,7 +57,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     name: body.name, type: body.type,
     description: body.description as string, hours: body.hours as string,
     rating: body.rating as number, category: body.category as string,
-    mapcode: body.mapcode as string,
     lat: body.lat as number, lng: body.lng as number, source: 'ai',
     price: body.price as string,
   });
