@@ -19,10 +19,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { EVENT } from '../lib/events';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import ErrorBanner from '../components/shared/ErrorBanner';
 
@@ -126,6 +128,7 @@ function statusPill(status: string): { className: string; label: string } {
 
 export default function DeveloperAppsPage() {
   useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
+  const { user } = useCurrentUser();
   const navigate = useNavigate();
   const [apps, setApps] = useState<ClientApp[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +163,7 @@ export default function DeveloperAppsPage() {
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
+      bottomNav={<GlobalBottomNav authed={!!user} />}
       main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-dev-shell" data-testid="developer-apps-page">
