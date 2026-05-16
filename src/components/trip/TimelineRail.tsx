@@ -43,6 +43,7 @@ import { parseEntryTime, formatDurationCompact, deriveTypeMeta } from '../../lib
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { useTripSegments } from '../../hooks/useTripSegments';
 import { getTimelineEntryDisplayTitle } from '../../lib/stopDisplay';
+import { condenseHours } from '../../lib/poiHours';
 
 const SCOPED_STYLES = `
 .tp-rail-detail {
@@ -297,7 +298,8 @@ function StopPoiChoiceCard({ poi }: { poi: StopPoiOptionData }) {
   const metaParts: string[] = [];
   if (typeof poi.rating === 'number') metaParts.push(`★ ${poi.rating.toFixed(1)}`);
   if (poi.price) metaParts.push(poi.price);
-  if (poi.hours) metaParts.push(poi.hours);
+  const hoursStr = condenseHours(poi.hours);
+  if (hoursStr) metaParts.push(hoursStr);
   if (poi.reservation) metaParts.push(poi.reservation);
   const typeLabel = poi.category || (poi.type ? POI_TYPE_LABEL[poi.type] ?? poi.type : null);
 
@@ -453,7 +455,8 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       parts.push({ text: `★ ${master.rating.toFixed(1)}`, kind: 'star' });
     }
     if (master?.price) parts.push({ text: master.price, kind: 'strong' });
-    if (master?.hours) parts.push({ text: master.hours, kind: 'plain' });
+    const condensedHours = condenseHours(master?.hours);
+    if (condensedHours) parts.push({ text: condensedHours, kind: 'plain' });
     if (master?.reservation) parts.push({ text: master.reservation, kind: 'plain' });
     return parts;
   }, [master]);
