@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.31] - 2026-05-17
+
+**Fix: trips list card meta mobile 仍 overflow，對齊 mockup 拔 memberCount。**
+
+Bug #132（mobile prod QA found）：v2.31.30 desktop 修好「重複出發日」（176px card 不再切），
+但 mobile 2-col grid 切換 viewport 後 card width 117px，meta「由你建立 · 7/29 – 8/2 · 1 旅伴」
+136px → overflow 19px → ellipsis 切成「... · 1 ...」。
+
+Root cause：v2.31.30 把 memberCount 也加進 cardMeta — `{range} · {members} 旅伴`。
+但 mockup spec line 5920 / 6213 是「{owner} · 7/29 出發」沒 memberCount。我加的
+memberCount 撐破 mobile card width。
+
+**Fix：** cardMeta 簡化為 `range / startMD` fallback chain，拔掉 memberCount path。
+對齊 mockup spec。Desktop / mobile 都 fit。
+
+**Test：** `trips-list-card-meta.test.ts` 加 regression 釘住 `not.toMatch(/range && members/)`
++ `not.toMatch(/trip\.memberCount/)`；`trips-list-page.test.tsx:92` 期望改回「7/26 – 7/30」。
+
+**Lesson learned：** v2.31.30 desktop 驗證 OK 就 ship，沒查 mobile responsive 是疏忽。
+日後 trips list / favorites / explore 等 grid layout 改動需 desktop + mobile 雙驗證。
+
 ## [2.31.30] - 2026-05-17
 
 **Fix: trips list card meta 移除重複出發日（range 已含起始日）。**
