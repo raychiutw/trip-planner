@@ -554,7 +554,7 @@ export default function AddPoiFavoriteToTripPage() {
                 onChange={(e) => setEndTime(e.target.value)}
                 data-testid="favorites-add-to-trip-end"
               />
-              <span className="tp-form-help">可空 — 依停留時間預估推</span>
+              <span className="tp-form-help">可空 — 依停留時間自動推算</span>
             </div>
           </div>
 
