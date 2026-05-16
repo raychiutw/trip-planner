@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.26] - 2026-05-17
+
+**Fix: sanitizeHtml 允許 SPA 相對路徑 href（v2.31.18 follow-up）。**
+
+Bug #127（prod QA found，v2.31.18 fix #115 完整驗證後發現的次級 issue）：
+v2.31.18 backend AI 健檢 reply 改寫為 user-friendly summary + markdown link
+`[前往健檢報告 →](/trip/:id/health)`，prod 驗證 chat 顯示「AI 健檢完成 —
+發現 8 個 finding（high 4 · medium 3 · low 1）。\n\n前往健檢報告 →」— 但
+inner HTML 是 `<a>前往健檢報告 →</a>` **沒有 href**！link 看起來是 link
+但點不下去。
+
+Root cause：`src/lib/sanitize.ts` line 44 allowed href regex
+`/^(https?:|tel:|mailto:|#)/` 只接受絕對 URL / hash anchor，**相對路徑
+`/trip/:id/health` 被 strip 掉**。
+
+**Fix：** allowed regex 加 `|\/(?!\/)` — 允許 `/path` 拒絕 protocol-relative
+`//host`（會打到不同 host = security 漏洞）。
+
+**Test：** `tests/unit/sanitize-href-relative.test.ts`（新）— 8 cases：
+SPA 相對路徑 + query/hash + protocol-relative regression + javascript:
+regression + data: regression + https/mailto/tel 保留。
+
 ## [2.31.25] - 2026-05-17
 
 **Fix: dark mode 跨 page 沒套用 body.dark class（嚴重 UX bug）。**
