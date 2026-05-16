@@ -99,6 +99,22 @@ Telegram 報告格式（有問題/全綠）和 Phase A/B 修復範圍詳見 `ref
 
 ## 環境需求
 
-- Cowork task 跑在 Claude Desktop session 內 → 自動繼承 user shell env（`.env.local` 透過 `scripts/lib/load-env.mjs` 載入）
+- v2.31.3 起由 `scripts/tripline-api-server.ts` 內建 cron 在每日 09:00 透過 ephemeral tmux session 觸發（取代 Cowork）；user shell env 透過 `scripts/lib/load-env.mjs` 載入 `.env.local`
 - `.env.local` 需有：`CLOUDFLARE_API_TOKEN`、`CF_ACCOUNT_ID`、`D1_DATABASE_ID`、`SENTRY_AUTH_TOKEN`、`SENTRY_ORG`、`SENTRY_PROJECT`、`TELEGRAM_BOT_HOME_TOKEN`（或 `TELEGRAM_BOT_TOKEN`）、`TELEGRAM_CHAT_ID`
 - Code fix 需要 git / npm / 既有 skill (tp-team / ship / land-and-deploy)
+
+## Self-destruct（tmux 觸發 only — v2.31.3+）
+
+skill **任何 termination path 之最後一步必跑**（含 Phase A 全綠提早結束、Phase B 完成、中途 fatal error abort）：
+
+```bash
+# scripts/tripline-api-server.ts 內建 cron 透過 ephemeral tmux session 觸發本 skill 時
+# 會 inject TRIPLINE_TMUX_SESSION + TMUX_BIN env var。執行完砍 session 避免 orphan。
+# 手動 invoke（無 env var）→ skip。
+if [ -n "$TRIPLINE_TMUX_SESSION" ]; then
+  "${TMUX_BIN:-tmux}" kill-session -t "$TRIPLINE_TMUX_SESSION" || \
+    echo "[tp-daily-check] WARNING: kill-session failed for $TRIPLINE_TMUX_SESSION" >&2
+fi
+```
+
+> ⚠️ 在所有 Sentry / Telegram / GitHub Issue 動作完成、reply 寫入後執行。中途 kill 會打斷 in-flight curl。

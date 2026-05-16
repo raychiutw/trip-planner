@@ -15,6 +15,7 @@ import { appendFileSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { makeMailHandler } from './lib/mailer-handler';
+import { computeNextDailyFire } from './lib/schedule-daily';
 
 // --- Load .env.local ---
 const envPath = join(import.meta.dir, '..', '.env.local');
@@ -129,7 +130,7 @@ function hasActiveSession(): string | null {
   return null;
 }
 
-async function spawnTmuxRequest(): Promise<boolean> {
+async function spawnTmuxRequest(skillCommand: string = '/tp-request'): Promise<boolean> {
   // v2.22.0：claude /tp-request skill 用 `Authorization: Bearer $TRIPLINE_API_TOKEN`
   // 寫入 prod API（含 §6/§7/§8/§9 poi-favorites 4 條 path）。.env.local 只有
   // TRIPLINE_API_CLIENT_ID/SECRET，沒 TOKEN — 必須 mint 後 inject 到 tmux session
@@ -173,15 +174,15 @@ async function spawnTmuxRequest(): Promise<boolean> {
   // send-keys 可能輸入丟失。
   await new Promise(r => setTimeout(r, 2500));
 
-  // 送 /tp-request 給 claude
-  const send = spawnSync(TMUX_BIN, ['send-keys', '-t', sessionName, '/tp-request', 'Enter'], { encoding: 'utf-8' });
+  // 送 skill command 給 claude（預設 /tp-request；v2.31.3 起支援多 skill 排程）
+  const send = spawnSync(TMUX_BIN, ['send-keys', '-t', sessionName, skillCommand, 'Enter'], { encoding: 'utf-8' });
   if (send.status !== 0) {
     logError(`tmux send-keys failed: ${send.stderr || ''}`);
     spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
     return false;
   }
 
-  log(`Spawned tmux session: ${sessionName} (fire-and-forget; skill self-destructs at end)`);
+  log(`Spawned tmux session: ${sessionName} (skill=${skillCommand}, fire-and-forget; skill self-destructs at end)`);
   return true;
 }
 
@@ -193,13 +194,13 @@ let isRunning = false;
 let lastProcessed: string | null = null;
 let processedCount = 0;
 
-async function processLoop(source: 'api' | 'job'): Promise<boolean> {
+async function processLoop(source: 'api' | 'job', skillCommand: string = '/tp-request'): Promise<boolean> {
   if (isRunning) {
-    log(`processLoop: already running, skip (source=${source})`);
+    log(`processLoop: already running, skip (source=${source}, skill=${skillCommand})`);
     return false;
   }
   isRunning = true;
-  log(`Process loop started (source: ${source})`);
+  log(`Process loop started (source: ${source}, skill: ${skillCommand})`);
 
   try {
     // Cleanup orphans (>30min) — token TTL 是 1h，30min cleanup 保證 active session
@@ -210,12 +211,12 @@ async function processLoop(source: 'api' | 'job'): Promise<boolean> {
     // 只允許一個 active session — 既有 session 仍在處理 queue，不需重複 spawn
     const active = hasActiveSession();
     if (active) {
-      log(`Active session ${active} still running, skip new spawn`);
+      log(`Active session ${active} still running, skip new spawn (skill=${skillCommand})`);
       return false;
     }
 
     // Fire-and-forget tmux spawn — skill 內部 drain queue + 自殺
-    const success = await spawnTmuxRequest();
+    const success = await spawnTmuxRequest(skillCommand);
     if (success) {
       lastProcessed = new Date().toISOString();
       processedCount++;
@@ -333,20 +334,48 @@ Bun.serve({
 
 log(`Tripline API Server listening on port ${PORT}`);
 
-// ── v2.30.18: 內建 15 分鐘 fallback cron ─────────────────────────────────
+// ── v2.31.3: 內建多 schedule cron（取代 Cowork） ─────────────────────────
 //
-// 歷史 context：之前外部 launchd job 每 15 分鐘 POST /trigger（兜底 CF Pages
-// 即時 trigger 失敗的場景，例如 Tailscale funnel 530）。v2.30.5 把 schedulers
-// 改進 Claude Desktop Cowork 後，Cowork 的 scheduled-tasks.json 重啟會清空 →
-// 觀察到 2026-05-07 起 cron 完全停跑，user-submitted chat 卡 open 至 11 天。
+// 歷史 context：v2.30.5 把 launchd schedulers 改進 Claude Desktop Cowork，
+// 但 Cowork 後端 API 化 + scheduled-tasks.json 不能直接寫，且重啟會清空 →
+// 觀察到 2026-05-07 起 cron 完全停跑，user-submitted chat 卡 open 至 11 天
+// （v2.30.18 加 15-min 內部 cron band-aid）。
 //
-// 改進：直接在 api-server 內 setInterval，無外部依賴 — 只要 launchd 守住
-// api-server 進程，cron 就活著。processLoop 內已有 isRunning 鎖防重入。
-const CRON_INTERVAL_MS = 15 * 60 * 1000;
-setInterval(() => {
-  if (isRunning) return; // processLoop 自己會 skip，但先檢查避免 log noise
-  processLoop('job').catch((err) => {
-    logError(`internal cron processLoop unhandled: ${err}`);
+// v2.31.3 廢棄 Cowork、擴成 3 schedule 主路徑：
+// - /tp-request   每 30 分鐘（兜底；CF Pages POST 是第一線即時 trigger）
+// - /tp-daily-check 每天 09:00（每日健康報告 + 自動 fix）
+// - /tp-poi-enrich-monthly 每天 08:00（skill 內 day-1 guard，不是 1 號 noop exit）
+//
+// 用 setInterval + setTimeout-to-next-occurrence chain，不引 cron parser dep。
+// processLoop isRunning lock 處理 concurrent fire（同時間 8/9 點不衝突，
+// 但若上一輪未結束則 skip）。
+function fireSchedule(skillCommand: string, label: string): void {
+  if (isRunning) {
+    log(`Skip ${label} schedule (isRunning, skill=${skillCommand})`);
+    return;
+  }
+  processLoop('job', skillCommand).catch((err) => {
+    logError(`internal cron ${label} processLoop unhandled: ${err}`);
   });
-}, CRON_INTERVAL_MS);
-log(`Internal cron started — processLoop every ${CRON_INTERVAL_MS / 60000} min`);
+}
+
+// 排程到下一次每日固定時段（hour:minute），之後改 24h interval
+function scheduleDaily(hour: number, minute: number, skillCommand: string, label: string): void {
+  const { next, delayMs } = computeNextDailyFire(new Date(), hour, minute);
+  log(`Scheduled ${label} (${skillCommand}) first fire at ${next.toISOString()} (in ${Math.round(delayMs / 60000)} min)`);
+  setTimeout(() => {
+    fireSchedule(skillCommand, label);
+    setInterval(() => fireSchedule(skillCommand, label), 24 * 60 * 60 * 1000);
+  }, delayMs);
+}
+
+// 30 分鐘 /tp-request 兜底
+const REQUEST_CRON_INTERVAL_MS = 30 * 60 * 1000;
+setInterval(() => fireSchedule('/tp-request', 'request-handler'), REQUEST_CRON_INTERVAL_MS);
+log(`Scheduled request-handler (/tp-request) every ${REQUEST_CRON_INTERVAL_MS / 60000} min`);
+
+// 每天 09:00 /tp-daily-check
+scheduleDaily(9, 0, '/tp-daily-check', 'daily-check');
+
+// 每天 08:00 /tp-poi-enrich-monthly（skill 內 day-1 guard）
+scheduleDaily(8, 0, '/tp-poi-enrich-monthly', 'poi-enrich');

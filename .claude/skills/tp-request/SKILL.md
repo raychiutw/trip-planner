@@ -62,7 +62,7 @@ TRIPLINE_API_TOKEN=$(node scripts/lib/get-tripline-token.js)
         "https://trip-planner-dby.pages.dev/api/requests?status=processing"
    ```
    若無結果，也依序查 `status=open` 和 `status=received`（向下相容）
-2. 無待處理請求 → 回報「沒有待處理的請求」並結束
+2. 無待處理請求 → 回報「沒有待處理的請求」**並跳到文末 Self-destruct 步驟**（仍須砍 tmux session，否則 cron 下一輪 spawn 會被 active session 擋下，浪費 30 分鐘）
 3. 依序處理每個請求：
 
 ### 3a. 更新 status → processing
@@ -263,7 +263,7 @@ Markdown 支援欄位見 tp-shared/references.md
 
 ## Self-destruct（tmux 觸發 only — v2.30.7+）
 
-skill 處理完所有 request 之後**必跑**最後一步：
+skill **任何 termination path 之最後一步必跑**（含 step 2 「無待處理請求」、step 3 處理完畢、step 3 中途 fatal error abort）：
 
 ```bash
 # API server (scripts/tripline-api-server.ts) 透過 ephemeral tmux session 觸發本 skill 時
