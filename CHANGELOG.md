@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.6] - 2026-05-16
+
+**Chat polling robust 化 — 解 SSE 逾時後 silent 卡死 bug。**
+
+User QA 回報：「等待更新技術逾時，剛剛送出的 request 沒回應」。Root cause 兩條無聲斷鏈：
+
+1. **SSE server 上限 10 min** (`functions/api/requests/[id]/events.ts`) — 但 request #187 曾跑 1h19m、AI 健檢 5–7 min 是常態。timeout 後 server close stream
+2. **EventSource auto-reconnect 不一定觸 client `onerror`** — 原本只有 `onerror → fallback to polling` 的 client 設計，server clean-close 觸發 browser 自動重連時走不到 fallback path → polling 永遠沒啟動 → 卡 spinner
+
+### Changed
+
+- `functions/api/requests/[id]/events.ts`：`MAX_DURATION_MS` `10 * 60 * 1000` → `30 * 60 * 1000`
+- `src/hooks/useRequestSSE.ts`：重寫 — polling 永遠跑（safety-net 每 30s），SSE 退位成 latency optimization；第一個看到 terminal 的 source 贏，cleanup 雙方。401 → `errorReason='auth_expired'`，新增 `elapsedMs` 給 UI 顯示等待時間
+- `src/pages/ChatPage.tsx`：用 new `errorReason` + `elapsedMs`；新增「AI 還在處理（已等候 N 分鐘）」提示（超過 3 min 顯示，避免 spinner-only 看起來卡死）；401 顯示「登入已過期，重新整理」CTA
+
+### Added
+
+- `tests/unit/use-request-sse.test.tsx`：6 cases — polling 跟 SSE 並行、polling 看到 completed、SSE message terminate polling、401 → auth_expired、elapsedMs 計時、null requestId no-op
+
 ## [2.31.5] - 2026-05-16
 
 **`/tp-request` 兜底 cron 30 min → 10 min。**
