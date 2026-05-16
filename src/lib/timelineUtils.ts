@@ -137,7 +137,10 @@ export function deriveTypeMeta(entry: TimelineEntryData): { icon: string; label:
   if (poiType === 'restaurant') return { icon: 'utensils', label: '用餐', accent: true };
   if (poiType === 'shopping') return { icon: 'shopping', label: '購物', accent: true };
   if (poiType === 'attraction') return { icon: 'location-pin', label: '景點', accent: true };
-  if (poiType === 'transport') return { icon: 'car', label: '移動', accent: false };
+  // v2.31.23: 對齊 POI_TYPE_LABELS canonical mapping（poiCategory.ts / TimelineRail
+  // POI_TYPE_LABEL / EditEntryPage POI_TYPE_LABEL 都用「交通」）。「移動」保留給
+  // line 154 text-based 「開車/drive」偵測，描述 segment 行為而非 POI 屬性。
+  if (poiType === 'transport') return { icon: 'car', label: '交通', accent: false };
   if (poiType === 'parking') return { icon: 'parking', label: '停車', accent: false };
   if (poiType === 'activity') return { icon: 'sparkle', label: '活動', accent: true };
 
