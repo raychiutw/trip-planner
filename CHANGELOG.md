@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.16] - 2026-05-16
+
+**Fix: EntryActionPage Day picker 永遠顯示「空」即使 day 有 stops。**
+
+Prod QA 抓到 `/trip/:id/stop/:eid/copy` 和 `/move` 的 day picker 每個 Day 顯示「空」，誤導 user 以為所有 day 都沒 stops。Root cause：fetch `/api/trips/:id/days`（no `?all=1`）讀 `d.entryCount`，但 backend 該端點不回此欄位 → 永遠 undefined → fallback 0 → UI 顯「空」。
+
+### Changed
+
+- `src/pages/EntryActionPage.tsx`：改用 `/days?all=1` endpoint（已存在），用 `Array.isArray(d.timeline) ? d.timeline.length : 0` 算 stopCount
+- `DaysApiRow` type 加 `timeline?: unknown[]`（取代 dead `entryCount` field）
+
+### Added
+
+- `tests/unit/entry-action-page-stop-count.test.ts` — 3 cases
+
 ## [2.31.15] - 2026-05-16
 
 **Fix: EditTripPage 「預設交通方式」永遠顯示「自駕」即使 trip 真實是 walking/transit — defaultTravelMode camelCase read。**
