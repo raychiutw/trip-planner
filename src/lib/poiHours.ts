@@ -50,6 +50,10 @@ export function condenseHours(raw: string | null | undefined): string {
   const trimmed = raw.trim();
   if (!trimmed) return '';
 
+  // v2.31.24: Google Places 對日本 24h 商家會回日文「24時間」/「24 時間営業」。
+  // 中文 UI 顯日文「時間」 confusing — 統一改「24 小時」。
+  if (/^24\s*時間(?:営業)?$/.test(trimmed)) return '24 小時';
+
   const parsed = parseWeeklyHours(trimmed);
   if (!parsed) return trimmed; // Not a weekly schedule — return as-is
 
