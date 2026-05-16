@@ -23,6 +23,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useRequestSSE } from '../hooks/useRequestSSE';
+import { parseUtcDate } from '../lib/parseUtcDate';
 import { useChatPagination } from '../hooks/useChatPagination';
 import { apiFetch } from '../lib/apiClient';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
@@ -69,8 +70,8 @@ interface ChatMessage {
 /** Section 4.8: format day-divider header — `2026/04/27（週六）`。 */
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
 function formatDayDivider(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
+  const d = parseUtcDate(iso);
+  if (!d) return iso;
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}（${WEEKDAY_LABELS[d.getDay()]}）`;
 }
 
@@ -82,8 +83,8 @@ export function buildMessagesWithDividers(messages: ChatMessage[]): ChatMessage[
   let lastDateKey = '';
   for (const m of messages) {
     if (m.createdAt) {
-      const d = new Date(m.createdAt);
-      if (!Number.isNaN(d.getTime())) {
+      const d = parseUtcDate(m.createdAt);
+      if (d) {
         const dateKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
         if (dateKey !== lastDateKey) {
           out.push({
@@ -123,8 +124,8 @@ interface RawRequestRow {
 /** QA 2026-04-26 PR-K：format chat bubble timestamp。同日只顯示 HH:mm，
  *  跨日加 MM/DD prefix。tabular-nums 字體穩定 alignment。 */
 function formatChatTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
+  const d = parseUtcDate(iso);
+  if (!d) return '';
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
   const today = new Date();

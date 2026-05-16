@@ -3,7 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.31.6] - 2026-05-16
+## [2.31.7] - 2026-05-16
+
+**Fix: D1 naive datetime UTC parsing — AI 健檢 / chat 時間戳顯示落差 TZ offset。**
+
+v2.31.6 prod QA 抓到「AI 健檢 8 小時前完成」實際 7 分鐘前的 bug。Root cause: D1 `datetime('now')` 回傳 `YYYY-MM-DD HH:MM:SS` 無 Z 後綴，前端 `new Date(s)` 在 Chrome 被當 local time → 顯示落差 TZ offset 小時（TPE +8）。
+
+Affected：
+- `TripHealthCheckPage.formatTimestamp` → 「N 小時前完成」label
+- `ChatPage.formatChatTime` + `formatDayDivider` + `buildMessagesWithDividers` → chat bubble HH:MM + day divider
+- `SessionsPage.relativeTime` → session 列表「N 分鐘前」
+- `DeveloperAppsPage` → app 建立日期
+
+### Added
+
+- `src/lib/parseUtcDate.ts` — 偵測 D1 naive datetime → 補 'Z' → UTC parse；ISO 8601 帶 Z/offset pass-through
+- `tests/unit/parse-utc-date.test.ts` — 7 cases（D1 naive / millis / ISO Z / offset / null / garbage / 不重複加 Z）
+
+### Changed
+
+- 4 個 `new Date(iso)` 用 D1 字串的 callsite → `parseUtcDate(iso)`
 
 **Chat polling robust 化 — 解 SSE 逾時後 silent 卡死 bug。**
 
