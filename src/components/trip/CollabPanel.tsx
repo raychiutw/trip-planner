@@ -521,7 +521,10 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
         {!permLoading && !permError && permissions.length > 0 && (
           <div className="tp-collab-list" role="list">
             {permissions.map((p) => {
-              const initial = p.email.charAt(0).toUpperCase() || '?';
+              // v2.31.35: avatar initial 一律用 displayName 第一字母（與 TripsListPage 一致）。
+              // displayName 缺漏 fallback email[0]。
+              const initialSource = (p.displayName?.trim() || p.email).charAt(0).toUpperCase();
+              const initial = initialSource || '?';
               const isOwnerLike = p.role === 'owner' || p.role === 'admin';
               const badgeInfo = ROLE_BADGE_INFO[p.role];
               const editable = !isOwnerLike;

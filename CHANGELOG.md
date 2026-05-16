@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.35] - 2026-05-17
+
+**Fix: CollabPanel avatar initial 用 displayName（與 TripsListPage 一致）。**
+
+Bug #136（mobile prod QA found）：`/trip/.../collab` 「擁有者」row email lean.lean@gmail.com，
+avatar 顯「L」(email[0])。但 TripsListPage / Sidebar 用 displayName 顯「R」(Ray)。Memory
+rule「avatar 一律用帳號名稱第一字母（不是 email）」CollabPanel 漏對齊。
+
+Root cause：`functions/api/permissions.ts` GET endpoint SELECT 只取 `u.email`，沒帶
+`u.display_name` → frontend Permission type 沒 displayName 欄位 → CollabPanel.tsx 直接
+`p.email.charAt(0).toUpperCase()`。
+
+**Fix（3-file change）：**
+1. `functions/api/permissions.ts` SELECT 加 `u.display_name`（deepCamel → `displayName`）
+2. `src/types/api.ts` `Permission` 加 `displayName?: string | null`
+3. `src/components/trip/CollabPanel.tsx` initial logic：`(p.displayName?.trim() || p.email).charAt(0).toUpperCase()`
+
+**Test：** `collab-panel-avatar-display-name.test.ts`（4 cases）— backend SELECT / type /
+panel logic / regression。1655 全綠 + 3 api integration test 全綠。
+
+**Deploy 順序：** backend deploy 先（frontend type 是 optional fallback 安全），rollout 自然
+合流。
+
 ## [2.31.34] - 2026-05-17
 
 **Fix: DeveloperAppsPage mobile 缺 GlobalBottomNav 5-tab。**
