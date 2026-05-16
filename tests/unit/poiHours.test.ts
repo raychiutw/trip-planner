@@ -72,4 +72,21 @@ describe('condenseHours', () => {
     const raw = '星期一: 08:00–17:30 星期二: 08:00–17:30';
     expect(condenseHours(raw)).toBe(raw);
   });
+
+  // v2.31.24 fix #125: 日本 24h POI 從 Google Places 回日文 raw text
+  it('日文「24時間」→ 中文「24 小時」', () => {
+    expect(condenseHours('24時間')).toBe('24 小時');
+  });
+
+  it('日文「24 時間」（含空格）→ 中文「24 小時」', () => {
+    expect(condenseHours('24 時間')).toBe('24 小時');
+  });
+
+  it('日文「24時間営業」→ 中文「24 小時」', () => {
+    expect(condenseHours('24時間営業')).toBe('24 小時');
+  });
+
+  it('「24小時」（已是中文）保留不變', () => {
+    expect(condenseHours('24小時')).toBe('24小時');
+  });
 });
