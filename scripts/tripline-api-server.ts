@@ -310,3 +310,21 @@ Bun.serve({
 });
 
 log(`Tripline API Server listening on port ${PORT}`);
+
+// ── v2.30.18: 內建 15 分鐘 fallback cron ─────────────────────────────────
+//
+// 歷史 context：之前外部 launchd job 每 15 分鐘 POST /trigger（兜底 CF Pages
+// 即時 trigger 失敗的場景，例如 Tailscale funnel 530）。v2.30.5 把 schedulers
+// 改進 Claude Desktop Cowork 後，Cowork 的 scheduled-tasks.json 重啟會清空 →
+// 觀察到 2026-05-07 起 cron 完全停跑，user-submitted chat 卡 open 至 11 天。
+//
+// 改進：直接在 api-server 內 setInterval，無外部依賴 — 只要 launchd 守住
+// api-server 進程，cron 就活著。processLoop 內已有 isRunning 鎖防重入。
+const CRON_INTERVAL_MS = 15 * 60 * 1000;
+setInterval(() => {
+  if (isRunning) return; // processLoop 自己會 skip，但先檢查避免 log noise
+  processLoop('job').catch((err) => {
+    logError(`internal cron processLoop unhandled: ${err}`);
+  });
+}, CRON_INTERVAL_MS);
+log(`Internal cron started — processLoop every ${CRON_INTERVAL_MS / 60000} min`);
