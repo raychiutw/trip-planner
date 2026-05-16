@@ -102,6 +102,7 @@ function normalizeSearchResults(data: unknown): PoiSearchResult[] {
     const id = typeof item.place_id === 'string' ? item.place_id : '';
     const name = typeof item.name === 'string' ? item.name : '';
     if (!id || !name.trim()) return [];
+    const rating = typeof item.rating === 'number' ? item.rating : undefined;
     return [{
       place_id: id,
       name,
@@ -109,6 +110,7 @@ function normalizeSearchResults(data: unknown): PoiSearchResult[] {
       lat: Number(item.lat) || 0,
       lng: Number(item.lng) || 0,
       category: typeof item.category === 'string' ? item.category : 'poi',
+      rating,
     }];
   });
 }
@@ -419,6 +421,10 @@ const SCOPED_STYLES = `
   color: var(--color-warning);
   vertical-align: -1px;
   margin-right: 4px;
+}
+.tp-add-stop-card-meta-sep {
+  margin: 0 6px;
+  opacity: 0.6;
 }
 
 .tp-add-stop-empty {
@@ -952,7 +958,9 @@ export default function AddStopPage() {
                     }
                     return (
                       <>
-                        <h3 className="tp-add-stop-result-title">熱門景點 · {region}</h3>
+                        <h3 className="tp-add-stop-result-title">
+                          {query.trim().length >= 2 ? '搜尋結果' : '熱門景點'} · {region}
+                        </h3>
                         <div className="tp-add-stop-grid">
                           {filtered.map((r, index) => {
                             const isSelected = selectedSearch.has(r.place_id);
@@ -978,8 +986,14 @@ export default function AddStopPage() {
                                 <div className="tp-add-stop-card-body">
                                   <div className="tp-add-stop-card-name">{r.name}</div>
                                   <div className="tp-add-stop-card-meta">
-                                    <Icon name="star" />
-                                    {poiMeta(r.address, r.category)}
+                                    {typeof r.rating === 'number' && (
+                                      <>
+                                        <Icon name="star" />
+                                        <span>{r.rating.toFixed(1)}</span>
+                                        <span className="tp-add-stop-card-meta-sep">·</span>
+                                      </>
+                                    )}
+                                    <span>{poiMeta(r.address, r.category)}</span>
                                   </div>
                                 </div>
                               </label>
@@ -1040,7 +1054,10 @@ export default function AddStopPage() {
                                 <div className="tp-add-stop-card-body">
                                   <div className="tp-add-stop-card-name">{r.poiName}</div>
                                   <div className="tp-add-stop-card-meta">
-                                    <Icon name="star" />
+                                    {/* v2.31.10: favorites API 沒 rating 欄位（schema 有 pois.rating
+                                      * 但 SELECT 沒拿），star icon 沒值會誤導 user 以為 broken。
+                                      * 暫先拔 star，只顯 address fragment。Backend SELECT 加 rating
+                                      * 是 follow-up enhancement。 */}
                                     {poiMeta(r.poiAddress, r.poiType)}
                                   </div>
                                 </div>
