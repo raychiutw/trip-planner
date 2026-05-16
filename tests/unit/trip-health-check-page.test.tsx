@@ -131,6 +131,82 @@ describe('TripHealthCheckPage', () => {
     expect(regen.textContent).toContain('重新生成');
   });
 
+  it('Phase 2: dimension chip + suggestion 顯示', async () => {
+    mockSequence([
+      makeResponse({
+        report: {
+          tripId: 'T1',
+          userId: 'ray@x.com',
+          status: 'completed',
+          requestId: 99,
+          findings: [
+            {
+              severity: 'high',
+              dimension: 'timing',
+              title: 'Check-in 衝突',
+              description: '17:10 結束 → travel 45 min → 17:30 check-in 物理上不可行',
+              suggestion: '把末站換成更近的景點',
+              action_target: { day: 2, entry_id: 42 },
+            },
+            {
+              severity: 'medium',
+              dimension: 'meals',
+              title: '缺午餐',
+              description: '11:30–14:30 連續景點',
+            },
+          ],
+          createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        },
+      }),
+    ]);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-health-results')).toBeTruthy();
+    });
+    expect(screen.getByTestId('ai-health-finding-dimension-high-0').textContent).toBe('時間');
+    expect(screen.getByTestId('ai-health-finding-dimension-medium-0').textContent).toBe('餐飲');
+    expect(screen.getByTestId('ai-health-finding-suggestion-high-0')).toBeTruthy();
+    expect(screen.getByText('把末站換成更近的景點')).toBeTruthy();
+    expect(screen.queryByTestId('ai-health-finding-suggestion-medium-0')).toBeNull();
+  });
+
+  it('Phase 2: action_target.entry_id → 「前往景點」優先於 day-only button', async () => {
+    mockSequence([
+      makeResponse({
+        report: {
+          tripId: 'T1',
+          userId: 'ray@x.com',
+          status: 'completed',
+          requestId: 99,
+          findings: [
+            {
+              severity: 'high',
+              title: 'Entry-level issue',
+              description: 'X',
+              action_target: { day: 2, entry_id: 42 },
+            },
+          ],
+          createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        },
+      }),
+    ]);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-health-results')).toBeTruthy();
+    });
+    const entryBtn = screen.getByTestId('ai-health-finding-goto-entry-high-0');
+    expect(entryBtn.textContent).toBe('前往景點');
+    expect(screen.queryByText('前往 Day 2')).toBeNull();
+    fireEvent.click(entryBtn);
+    expect(navigateMock).toHaveBeenCalledWith('/trip/T1/stop/42/edit');
+  });
+
   it('high finding 含 action_target.day → 顯示「前往 Day N」按鈕並導航', async () => {
     mockSequence([
       makeResponse({

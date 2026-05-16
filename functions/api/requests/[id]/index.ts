@@ -200,12 +200,25 @@ function sanitizeFindings(arr: unknown[]): unknown[] {
     const sev = typeof f.severity === 'string' ? f.severity.toLowerCase() : '';
     if (sev !== 'high' && sev !== 'medium' && sev !== 'low') continue;
     const title = typeof f.title === 'string' ? f.title.slice(0, 60) : '';
-    const description = typeof f.description === 'string' ? f.description.slice(0, 300) : '';
+    const description = typeof f.description === 'string' ? f.description.slice(0, 400) : '';
     if (!title) continue;
+    const cleaned: Record<string, unknown> = { severity: sev, title, description };
+
+    // v2.31.1 Phase 2: dimension + suggestion 欄位（皆可選，僅當合法值時保留）
+    const VALID_DIMENSIONS = ['timing', 'distance', 'meals', 'sights', 'hotel'] as const;
+    if (typeof f.dimension === 'string') {
+      const dim = f.dimension.toLowerCase();
+      if ((VALID_DIMENSIONS as readonly string[]).includes(dim)) {
+        cleaned.dimension = dim;
+      }
+    }
+    if (typeof f.suggestion === 'string' && f.suggestion.trim()) {
+      cleaned.suggestion = f.suggestion.slice(0, 200);
+    }
+
     const action = f.action_target && typeof f.action_target === 'object'
       ? f.action_target as Record<string, unknown>
       : null;
-    const cleaned: Record<string, unknown> = { severity: sev, title, description };
     if (action) {
       const day = typeof action.day === 'number' ? action.day : null;
       const entryId = typeof action.entry_id === 'number' ? action.entry_id : null;

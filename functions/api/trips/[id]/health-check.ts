@@ -25,15 +25,43 @@ import type { Env } from '../../_types';
 // 同步更新 functions/api/requests/[id]/index.ts。
 export const HEALTH_CHECK_PREFIX = '[AI 健檢]';
 
-const HEALTH_CHECK_MESSAGE = `${HEALTH_CHECK_PREFIX} 請以資深旅遊規劃師角度審視整份行程，找出 1) 時間配置問題（過密／空檔／開閉店）2) 移動距離過長或繞路 3) 餐飲安排缺漏 4) 漏掉的必排景點。
+const HEALTH_CHECK_MESSAGE = `${HEALTH_CHECK_PREFIX} 請以資深旅遊規劃師角度審視整份行程，產出健檢報告。
 
-回傳 JSON array，**只回 JSON、不要其他文字**。schema：
-[{ "severity": "high"|"medium"|"low",
-   "title": "簡短中文標題（≤15 字）",
-   "description": "具體描述（≤80 字）",
-   "action_target": { "day": 數字, "entry_id": 數字 (可選) } }]
+**5 個審查維度（dimension 欄位用這 5 個 key）：**
+1. \`timing\` — 時間配置：過密／空檔／開閉店衝突／飯店 check-in buffer
+2. \`distance\` — 移動：距離過長／繞路／來回擺盪／travel min 不合理
+3. \`meals\` — 餐飲：缺午晚餐／用餐間隔過長／餐廳營業時間衝突
+4. \`sights\` — 景點：漏掉必排／必看景點落空／同類景點重複
+5. \`hotel\` — 住宿：飯店未連線 polyline／跨日不合理／rating 偏低
 
-高 = 影響行程能否成行；中 = 體驗會打折；低 = 可選優化。沒問題回 []。`;
+**嚴重程度**：
+- \`high\` = 影響行程能否成行（時間軸物理上不可行、必排景點時間衝突）
+- \`medium\` = 體驗會打折（繞路 30min+、缺餐、開閉店）
+- \`low\` = 可選優化（rating 偏低、可加更順路的景點）
+
+**回傳純 JSON array，不要 markdown fence、不要前後文字。**
+
+Schema：
+\`\`\`json
+[{
+  "severity": "high|medium|low",
+  "dimension": "timing|distance|meals|sights|hotel",
+  "title": "簡短中文標題（≤15 字）",
+  "description": "具體描述：哪一站、為何有問題、影響為何（≤120 字）",
+  "suggestion": "建議怎麼修（≤80 字，可選）",
+  "action_target": { "day": 數字, "entry_id": 數字（可選） }
+}]
+\`\`\`
+
+範例（1 high + 1 low）：
+\`\`\`json
+[
+  {"severity":"high","dimension":"timing","title":"Day 2 飯店 check-in 衝突","description":"Day 2 末站 17:10 結束，但 travel 45 min → 17:30 check-in 物理上不可行","suggestion":"把 Day 2 末站換成更近的景點，或前移時間","action_target":{"day":2,"entry_id":42}},
+  {"severity":"low","dimension":"sights","title":"可加美麗海水族館","description":"Day 5 北上路線順路 5km，是沖繩必排景點","suggestion":"插入 Day 5 上午","action_target":{"day":5}}
+]
+\`\`\`
+
+若行程無問題，回 \`[]\`。`;
 
 // GET — 取最新 report
 export const onRequestGet: PagesFunction<Env> = async (context) => {
