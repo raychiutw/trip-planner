@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.22] - 2026-05-17
+
+**Fix: ExplorePage category filter 0 結果補 empty state。**
+
+Bug #123（prod QA found）：搜尋「拉麵」→ 切到「景點」filter chip → 0 個
+結果，grid 完全空白，user 不知如何救回（要點別 chip）。
+
+**Frontend：**
+- `src/pages/ExplorePage.tsx` `filtered.length === 0` 時 conditional render
+  empty state：`沒有符合「{CATEGORY_LABELS[category]}」的結果。試試其他分類
+  或回到「為你推薦」。` + 「回到為你推薦」button onClick `setCategory('all')`。
+- CATEGORY_LABELS map（all / attraction / food / hotel / shopping → 為你推薦
+  / 景點 / 美食 / 住宿 / 購物）。
+- CSS 新規則 `.explore-filter-empty`（dashed border placeholder）+
+  `.explore-filter-empty-reset`（accent pill button）。
+
+**Test：** `tests/unit/explore-filter-empty-state.test.ts`（新）— 4 cases：
+conditional 結構 + 文案含「沒有符合」+ CATEGORY_LABELS 五個 mapping +
+reset CTA onClick + CSS rule 存在。
+
 ## [2.31.21] - 2026-05-17
 
 **Fix: AddPoiFavoriteToTrip 結束時間 helper text 文字殘缺。**
