@@ -44,7 +44,7 @@ Event type schema（各類型物件必填欄位）見 `references/event-schema.m
 
 - 適用：restaurant / shopping / attraction / activity / parking / transport
 - Source: Place Details `regularOpeningHours.weekdayDescriptions`（array of "星期一: 11:00 – 14:30, 17:00 – 22:00" 全週）
-- 寫入：`pois.hours`（migration 0055 後 `trip_pois.hours` DROPPED，純 pois master）
+- 寫入：`pois.hours`（v2.29.0 後 `trip_pois` 整表 DROPPED，純 pois master — migration 0055 早已 drop trip_pois.hours col，0062 又 drop 整表）
 - **公休日**：weekday_descriptions 自動含「星期X: 休息」格式，不需另外處理
 - 24h / 全年無休 → "24 時間営業" / "全年無休"
 
@@ -82,7 +82,7 @@ Event type schema（各類型物件必填欄位）見 `references/event-schema.m
 - 適用：所有 type
 - Source: Place Details `location.latitude` / `location.longitude`（4 位小數）
 - 寫入：`pois.lat` / `pois.lng`
-- 同步 entry 用：trip_entries.location 仍是獨立 JSON（含 googleQuery / appleQuery / mapcode），但 lat/lng 應跟 pois 一致
+- 同步 entry 用：trip_entries.location 仍是獨立 JSON（含 googleQuery / appleQuery），但 lat/lng 應跟 pois 一致。v2.30.15: mapcode 已從 pois 整段 DROP，不再寫入。
 
 ### reservation（餐廳專屬，非 Place Details 欄位）
 
@@ -92,7 +92,7 @@ Event type schema（各類型物件必填欄位）見 `references/event-schema.m
   2. 搜尋 `{name} hotpepper 予約`
   3. 搜尋 `{name} TableCheck`
   4. 搜尋 `{name} 予約 公式サイト`
-- 寫入：`trip_pois.reservation`（仍是 user override 欄位）+ `reservation_url`
+- 寫入：`trip_entry_pois.reservation`（entry-level metadata，v2.29.0 後從 `trip_pois` 遷到 `trip_entry_pois`）+ `reservation_url`
   - 有預約頁面 → `available: "yes"` + method/url
   - 電話預約 → `method: "phone"`
   - 不可預約 → `available: "no"`
@@ -112,9 +112,8 @@ npx wrangler d1 execute trip-planner-db --remote --command \
   "SELECT id, name, place_id FROM pois WHERE id = $POI_ID" --json
 
 # 2. 若沒 place_id：先 search
-curl -s -X POST -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"花織そば 沖縄"}' \
+curl -s -G -H "Authorization: Bearer $TOKEN" \
+  --data-urlencode "q=花織そば 沖縄" \
   "https://trip-planner-dby.pages.dev/api/poi-search"
 # → 拿到 place_id，PATCH 寫回 pois.place_id
 
@@ -152,6 +151,6 @@ done
 | WebSearch「POI 名稱 営業時間」拼湊 hours | 同上 |
 | LLM 直接呼叫 Google Place Details API | 同上（透過 backend 統一 quota / key 管理） |
 | `PATCH /pois/:id` 手動寫 rating/hours/phone | enrich 自動處理（除非用戶 explicit override） |
-| `PATCH /trip-pois/:tpid` 寫 hours | hours 已 DROP from trip_pois (migration 0055)；body 帶 hours 會 auto-dispatch 到 pois |
+| `PATCH /trip-pois/:tpid` 寫任何欄位 | v2.29.0 整個 endpoint 已刪除（`trip_pois` 表 DROPPED）— 改 `PATCH /api/pois/:id` 或 `POST /api/pois/:id/enrich`（客觀屬性），entry-level metadata 改透過 `POST /entries/:eid/alternates`（建立時）|
 
 完整 schema + endpoint reference 見 `references/poi-spec.md`。
