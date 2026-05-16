@@ -155,6 +155,8 @@ async function applyHealthCheckCompletion(
       )
       .bind(errMsg.slice(0, 500), tripId, requestId)
       .run();
+    // v2.31.18: failed 也改寫 chat reply 為人話（覆蓋掉 Claude 失敗訊息 raw text）
+    await rewriteRequestReply(db, requestId, `AI 健檢失敗 — ${errMsg.slice(0, 200)}\n\n可重新觸發：[前往健檢報告](/trip/${tripId}/health)`);
     return;
   }
 
@@ -167,6 +169,40 @@ async function applyHealthCheckCompletion(
        WHERE trip_id = ? AND request_id = ?`,
     )
     .bind(JSON.stringify(findings), tripId, requestId)
+    .run();
+  // v2.31.18: trip_requests.reply 改寫為 user-friendly summary，避免 chat
+  // 顯示原本一大坨 raw JSON。原 raw findings 已存 trip_health_reports.findings_json。
+  await rewriteRequestReply(db, requestId, buildHealthCheckSummary(findings, tripId));
+}
+
+/**
+ * v2.31.18: AI 健檢完成後改寫 trip_requests.reply 為 user-friendly summary。
+ * Chat UI 把 reply 當 markdown 渲染，原 raw JSON array 對 user 無意義。
+ */
+function buildHealthCheckSummary(findings: unknown[], tripId: string): string {
+  const reportLink = `[前往健檢報告 →](/trip/${tripId}/health)`;
+  if (findings.length === 0) {
+    return `AI 健檢完成 — 行程沒發現問題。\n\n${reportLink}`;
+  }
+  const counts = { high: 0, medium: 0, low: 0 };
+  for (const f of findings) {
+    const sev = (f as { severity?: string })?.severity;
+    if (sev === 'high' || sev === 'medium' || sev === 'low') counts[sev]++;
+  }
+  const breakdown = (
+    [
+      counts.high > 0 ? `high ${counts.high}` : null,
+      counts.medium > 0 ? `medium ${counts.medium}` : null,
+      counts.low > 0 ? `low ${counts.low}` : null,
+    ].filter(Boolean) as string[]
+  ).join(' · ');
+  return `AI 健檢完成 — 發現 ${findings.length} 個 finding（${breakdown}）。\n\n${reportLink}`;
+}
+
+async function rewriteRequestReply(db: D1Database, requestId: number, newReply: string): Promise<void> {
+  await db
+    .prepare(`UPDATE trip_requests SET reply = ? WHERE id = ?`)
+    .bind(newReply, requestId)
     .run();
 }
 
