@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.12] - 2026-05-16
+
+**Fix: ExplorePage POI 卡片真的接 Google rating。**
+
+ExplorePage POI 卡片 rating meta 寫死 placeholder「探索更多評論」。Comment 寫「真實 rating 待 backend 提供」— 但 v2.23.0 google-maps-migration 後 backend `PoiSearchResult.rating` 已含 Google rating，UI 沒對齊。
+
+### Changed
+
+- `src/pages/ExplorePage.tsx`：`<span>{typeof poi.rating === 'number' ? poi.rating.toFixed(1) : '探索更多評論'}</span>`
+- 過時 comment 改成現況註解
+
+### Added
+
+- `tests/unit/explore-page-rating-display.test.ts` — 2 cases
+
 ## [2.31.11] - 2026-05-16
 
 **Fix: ChangePoiPage 同樣的 search rating + section title + favorites star bug。**
