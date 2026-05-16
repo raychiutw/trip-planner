@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.10] - 2026-05-16
+
+**Fix: add-stop 搜尋 rating 顯示 + section title 條件化。**
+
+Prod QA 抓到 `/trip/:id/add-stop` 三個小 bug：
+
+1. **Section title 寫死「熱門景點 · {region}」**：搜尋「美麗海」回 2 個 POI，標題仍顯示「熱門景點」誤導 user。
+2. **Card star icon 沒值**：`<Icon name="star" />` 後面直接接 address fragment，看起來像 broken display。Backend 其實有回 `rating: 4.6`，但 `normalizeSearchResults` 沒抽出來。
+3. **Favorites tab 同樣 broken star**：poi-favorites API 沒回 rating（schema 有 `pois.rating` 但 SELECT 沒拿），導致 favorites card 也是孤兒 star。Follow-up #114 處理 backend SELECT。
+
+### Changed
+
+- `src/pages/AddStopPage.tsx::normalizeSearchResults` 加 `rating: typeof item.rating === 'number' ? item.rating : undefined`
+- Search card meta：`{typeof r.rating === 'number' && ⟨★ {r.rating.toFixed(1)} · separator⟩} <span>{poiMeta(...)}</span>`
+- Section title：`{query.trim().length >= 2 ? '搜尋結果' : '熱門景點'} · {region}`
+- Favorites card：暫拔孤兒 star icon（沒 rating data 避免誤導），#114 backend follow-up 後補回
+- 新 CSS class `.tp-add-stop-card-meta-sep`（separator 視覺）
+
+### Added
+
+- `tests/unit/add-stop-page-rating-and-title.test.ts` — 4 cases 對應 4 個 fix point
+
 ## [2.31.9] - 2026-05-16
 
 **Perf: useTripSegments N+1 fix — TripPage 一次 fetch 取代每 day 一次。**
