@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.3] - 2026-05-16
+
+**api-server 內建多排程 cron 取代 launchd / Cowork — v2.30.18 band-aid 升級為主路徑。**
+
+v2.30.5 把 schedulers 從 launchd 搬進 Claude Desktop Cowork，預期重啟保留任務；觀察到 Cowork `scheduled-tasks.json` 重啟會清空 + 2026-05 起 backend API 化讓「直接寫 JSON」失效 → 2026-05-07 起 cron 完全停跑（自動 reply 卡 11 天 / poi enrich + daily check 完全沒跑）。v2.30.18 加 15-min `/tp-request` 兜底 internal cron 但只覆蓋 1 個 schedule。
+
+### Added
+
+- `scripts/lib/schedule-daily.ts` — `computeNextDailyFire(now, hour, minute)` pure helper（setTimeout-to-next-occurrence ↔ setInterval 24h chain 的計算邏輯）
+- `tests/unit/api-server-schedule-daily.test.ts` — 3 cases（目標時段晚/早於 now + 邊界等於 now 排到明天）
+- `scripts/tripline-api-server.ts`：3 schedules
+  - `/tp-request` 每 30 分鐘（兜底，CF Pages POST `/trigger` 仍是第一線即時觸發）
+  - `/tp-daily-check` 每天 09:00（每日健康報告 + 自動 fix）
+  - `/tp-poi-enrich-monthly` 每天 08:00（skill 內 day-1 guard 自行決定是否真的跑）
+- `spawnTmuxRequest(skillCommand)` + `processLoop(source, skillCommand)` — 支援 ephemeral tmux session 傳遞不同 skill command（之前 hard-code `/tp-request`）
+- `.claude/skills/tp-request/SKILL.md` + `.codex` mirror：step 2「無待處理請求」也跳到 self-destruct（之前 empty queue path 不砍 session → tmux 滯留到 30min orphan cleanup → cron 下一輪被 active session 擋掉）
+- `.claude/skills/tp-daily-check/SKILL.md` + `.claude/skills/tp-poi-enrich-monthly/SKILL.md` + `.codex` mirror：新增 Self-destruct section（任何 termination path 都跑 `tmux kill-session`）
+
+### Removed
+
+- `scripts/tripline-api-server.ts` v2.30.18 的 `CRON_INTERVAL_MS = 15 * 60 * 1000` 單一 setInterval band-aid
+
+### Migration
+
+- 不需 D1 migration
+- Deploy 順序：merge PR → CF Pages auto-deploy（不影響 api-server）→ `launchctl kickstart -k gui/501/com.tripline.api-server` 讓 mac mini restart 載入新 schedules
+- 觀察點：log 出現 3 行 `Scheduled <label> ...` 表示註冊成功；隔日 09:00 / 08:00 看 daily-check / poi-enrich 是否觸發
+
 ## [2.30.13] - 2026-05-16
 
 **TravelPill mobile margin cascade fix — v2.30.12 layout 緊湊化未生效在 mobile。**

@@ -93,11 +93,28 @@ fi
 
 ```bash
 bash scripts/lib/send-telegram.sh "$TG_MSG"
+```
+
+### Phase 4: Self-destruct（tmux 觸發 only — v2.31.3+）
+
+skill **任何 termination path 之最後一步必跑**（含 day-1 guard early exit、Phase 1 dry-run 完成、Phase 2 batch 完成、中途 fatal error abort）：
+
+```bash
+# scripts/tripline-api-server.ts 內建 cron 透過 ephemeral tmux session 觸發本 skill 時
+# 會 inject TRIPLINE_TMUX_SESSION + TMUX_BIN env var。執行完砍 session 避免 orphan。
+# 手動 invoke（無 env var）→ skip。
+if [ -n "$TRIPLINE_TMUX_SESSION" ]; then
+  "${TMUX_BIN:-tmux}" kill-session -t "$TRIPLINE_TMUX_SESSION" || \
+    echo "[tp-poi-enrich-monthly] WARNING: kill-session failed for $TRIPLINE_TMUX_SESSION" >&2
+fi
 exit "$EXIT_CODE"
 ```
 
+> ⚠️ 在 Telegram 通知與 batch script 結束後執行。中途 kill 會打斷 in-flight Place Details API call。
+
 ## 環境需求
 
+- v2.31.3 起由 `scripts/tripline-api-server.ts` 內建 cron 在每日 08:00 透過 ephemeral tmux session 觸發；skill 內 day-1 guard 自行 exit（非 1 號的 99% 場景）
 - `.env.local` 內：`TELEGRAM_BOT_HOME_TOKEN`（或 `TELEGRAM_BOT_TOKEN`）/ `TELEGRAM_CHAT_ID` / `CLOUDFLARE_API_TOKEN` / `D1_DATABASE_ID` / `CF_ACCOUNT_ID`
 - `bun` 在 `/opt/homebrew/bin/bun`（mac homebrew default path）
 - `scripts/poi-enrich-batch.ts` 仍是 batch 主體（未變）
