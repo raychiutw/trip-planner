@@ -142,7 +142,11 @@ async function querySentry() {
 
 async function queryApiErrors() {
   // 過濾可預期的 auth/rate-limit 錯誤（401/403/429 屬正常流程），
-  // 以及 optional docs 404（useTrip 會靜默略過 DATA_NOT_FOUND docs）。
+  // 以及 optional docs 404（useTrip 會靜默略過 DATA_NOT_FOUND docs）、
+  // bot 405 probe（unauthenticated 對 GET-only 或不存在 endpoint 試 POST）。
+  // v2.30.17：anonymous source 的 405 全 filter — Tripline OAuth 沒有 introspect
+  // endpoint、poi-search 是 GET-only，相關 405 都是外部 scanner / bot 嘗試 RFC 7662
+  // 或 API discovery，不是真實用戶 bug。
   var rows = await queryD1(
     "SELECT path, method, status, COUNT(*) as count, MAX(created_at) as lastOccurred " +
     "FROM api_logs " +
@@ -150,6 +154,7 @@ async function queryApiErrors() {
     "  AND status >= 400 " +
     "  AND status NOT IN (401, 403, 429) " +
     "  AND NOT (status = 404 AND path LIKE '/api/trips/%/docs/%') " +
+    "  AND NOT (status = 405 AND source = 'anonymous') " +
     "GROUP BY path, method, status " +
     "ORDER BY count DESC"
   );
