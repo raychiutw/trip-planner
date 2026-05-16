@@ -60,7 +60,9 @@ interface DaysApiRow {
   date?: string | null;
   dayOfWeek?: string | null;
   label?: string | null;
-  entryCount?: number | null;
+  // v2.31.16: backend /api/trips/:id/days (no all=1) 不回 entryCount。
+  // 改用 /days?all=1 拿 timeline 後算 .length（已存在 endpoint，沒新 backend work）。
+  timeline?: unknown[];
 }
 
 interface EntryApiRow {
@@ -257,7 +259,8 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
       setLoadError(null);
       try {
         const [daysData, entryData] = await Promise.all([
-          apiFetch<DaysApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days`),
+          // v2.31.16: ?all=1 才會回 timeline，否則沒法算 entryCount。
+          apiFetch<DaysApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days?all=1`),
           apiFetch<EntryApiRow>(`/trips/${encodeURIComponent(tripId)}/entries/${entryIdNum}`),
         ]);
         if (cancelled) return;
@@ -266,7 +269,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
           dayNum: d.dayNum,
           dayId: d.id,
           label: `${d.date ?? ''}${d.dayOfWeek ? `（${d.dayOfWeek}）` : ''}`,
-          stopCount: d.entryCount ?? 0,
+          stopCount: Array.isArray(d.timeline) ? d.timeline.length : 0,
           swatchColor: dayColor(d.dayNum),
         }));
 
