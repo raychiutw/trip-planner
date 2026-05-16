@@ -159,6 +159,9 @@ export type CollabRole = 'owner' | 'admin' | 'member' | 'viewer';
 export interface Permission {
   id: number;
   email: string;
+  /** v2.31.35: backend LEFT JOIN users.display_name → deepCamel → displayName.
+   *  CollabPanel avatar initial 用此優先（user 未設 displayName 時 fallback email[0]）。 */
+  displayName?: string | null;
   /** DB column `trip_id`; '*' means all trips */
   tripId: string;
   role: CollabRole;

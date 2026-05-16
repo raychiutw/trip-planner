@@ -59,10 +59,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   await ensureCanManageTripPerms(context, auth, tripId);
 
-  // V2 cutover phase 2: trip_permissions.email column dropped — JOIN users for display
+  // V2 cutover phase 2: trip_permissions.email column dropped — JOIN users for display.
+  // v2.31.35: 加 u.display_name 給 CollabPanel avatar initial 用（與 TripsListPage 一致）。
   const { results } = await context.env.DB
     .prepare(
-      `SELECT tp.id, u.email, tp.trip_id, tp.role, tp.user_id
+      `SELECT tp.id, u.email, u.display_name, tp.trip_id, tp.role, tp.user_id
        FROM trip_permissions tp
        LEFT JOIN users u ON u.id = tp.user_id
        WHERE tp.trip_id = ?
