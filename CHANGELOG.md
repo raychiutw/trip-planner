@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.11] - 2026-05-16
+
+**Fix: ChangePoiPage 同樣的 search rating + section title + favorites star bug。**
+
+v2.31.10 修了 AddStopPage，prod QA 順手測 `/trip/:id/stop/:eid/change-poi` 發現完全相同 3 個 bug（copy-paste pattern）：
+
+1. Section title 寫死「熱門景點 · {region}」
+2. Search card 孤兒 star icon
+3. Favorites card 孤兒 star icon
+
+修法同 v2.31.10：
+
+### Changed
+
+- `src/pages/ChangePoiPage.tsx` section title `query.trim().length >= 2 ? '搜尋結果' : '熱門景點'`
+- Search card 條件 render `★ {rating.toFixed(1)} · address`（ChangePoiPage `normalizeSearchResults` 用 cast，rating 已含）
+- Favorites card 暫拔 star（task #114 backend SELECT 補後再恢復）
+- 新 CSS class `.tp-change-poi-card-meta-sep`
+
+### Added
+
+- `tests/unit/change-poi-page-rating-and-title.test.ts` — 3 cases
+
 ## [2.31.10] - 2026-05-16
 
 **Fix: add-stop 搜尋 rating 顯示 + section title 條件化。**
