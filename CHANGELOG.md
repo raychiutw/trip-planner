@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.25] - 2026-05-17
+
+**Fix: dark mode 跨 page 沒套用 body.dark class（嚴重 UX bug）。**
+
+Bug #126（prod QA found）：user `/account/appearance` 切「深」mode 後，
+localStorage `tp-color-mode` 正確存「dark」，但切到 `/trips` `/chat`
+`/favorites` `/explore` 等 page 後 `body.dark` class 沒套用 → page bg
+還是 light cream。dark mode 切換只在 AppearanceSettingsPage / TripPage /
+GlobalMapPage 三處有效。
+
+Root cause：`useDarkMode` hook 只在 ThemeToggle / TripPage / GlobalMapPage
+三 component mount，其他 page (TripsListPage / ChatPage / PoiFavoritesPage /
+ExplorePage / etc.) 無 init body.dark class。
+
+**Fix：** 加 root-level `<DarkModeInit />` component（call `useDarkMode()`
++ return null）mount 在 `main.tsx` 內 `<BrowserRouter>` 之下、`<Routes>` 之外，
+確保每次 page mount 都 init body.dark class from localStorage。
+
+**Test：** `tests/unit/main-dark-mode-init.test.ts`（新）— 3 cases：
+import useDarkMode + DarkModeInit 定義 + root render 含 component。
+
 ## [2.31.24] - 2026-05-17
 
 **Fix: 日本 24h POI 顯示日文「24時間」改為中文「24 小時」。**
