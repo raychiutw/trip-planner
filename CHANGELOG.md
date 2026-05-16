@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.32] - 2026-05-17
+
+**Fix: PoiFavoritesPage 只有 1 region 時 hide region 篩選 row。**
+
+Bug #133（mobile prod QA found）：`/favorites` page region filter row 顯「全部 3 / 其他 3」。
+3 個 POI 全部 derive 進「其他」region bucket（沒任何 POI 配進 visible region）→ 兩個
+tab count 完全等價 → user 看到「全部 / 其他」兩 chip 困惑「該選哪個」。
+
+Root cause：`regionOptions` length 1 時 render row 顯「全部 N」+「{region} N」兩 chip
+但 count 等價，filter 無意義（點任一都看到全部 3 POI）。
+
+**Fix：** `regionOptions.length >= 2` guard — 只有 ≥2 region group（有實際 filter 意義）
+才 render row。單 group → hide row（節省空間）。
+
+**Test：** `favorites-region-row-hide-single.test.ts` 新（3 cases）+ 修 existing
+`poi-favorites-page-region-pill.test.tsx` + `poi-favorites-page-hierarchy.test.tsx` 用
+≥2 region fixtures。1644 全綠。
+
 ## [2.31.31] - 2026-05-17
 
 **Fix: trips list card meta mobile 仍 overflow，對齊 mockup 拔 memberCount。**

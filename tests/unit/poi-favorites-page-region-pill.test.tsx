@@ -81,7 +81,8 @@ describe('PoiFavoritesPage — region pill + type filter a11y', () => {
   });
 
   it('region pill chip 用 aria-pressed (不是 aria-selected)', async () => {
-    apiFetchMock.mockResolvedValue([makeRow(1, '沖繩')]);
+    // v2.31.32: 需 ≥2 region 才 render row（單 region 等價 tabs UI 多餘）
+    apiFetchMock.mockResolvedValue([makeRow(1, '沖繩'), makeRow(2, '京都')]);
     renderPage();
     await waitFor(() => expect(screen.getByTestId('favorites-region-all')).toBeTruthy());
     const allChip = screen.getByTestId('favorites-region-all');
