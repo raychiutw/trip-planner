@@ -82,8 +82,12 @@ interface TripApi {
   description?: string | null;
   countries?: string | null;
   published?: number | null;
-  data_source?: string | null;
-  default_travel_mode?: TravelMode | null;
+  // v2.31.15: backend response 經 deepCamel → camelCase。早期 snake_case 寫法
+  // (data_source / default_travel_mode) 讀 path 永遠 undefined → travelMode
+  // fallback 'driving'，UI 顯示永遠是「自駕」即使 trip 真實是 walking/transit。
+  // 同 #573 / #574 camelCase 對齊 bug 家族。
+  dataSource?: string | null;
+  defaultTravelMode?: TravelMode | null;
   lang?: Lang | null;
   destinations?: TripDestApi[];
   startDate?: string;
@@ -410,7 +414,7 @@ export default function EditTripPage() {
         setTitleHintDismissed(false);
         setDescription(data.description ?? '');
         setLang((data.lang as Lang) ?? 'zh-TW');
-        setTravelMode((data.default_travel_mode as TravelMode) ?? 'driving');
+        setTravelMode((data.defaultTravelMode as TravelMode) ?? 'driving');
         setPublished(data.published ?? 0);
         // v2.23.8 self-drive — load from API（datetime-local 接受 YYYY-MM-DDTHH:MM 格式）
         setSelfDriveEnabled(data.selfDriveEnabled === 1);
@@ -497,7 +501,9 @@ export default function EditTripPage() {
     if (title !== (original.title ?? '')) body.title = title || null;
     if (description !== (original.description ?? '')) body.description = description || null;
     if (lang !== ((original.lang as Lang) ?? 'zh-TW')) body.lang = lang;
-    if (travelMode !== ((original.default_travel_mode as TravelMode) ?? 'driving')) body.default_travel_mode = travelMode;
+    // v2.31.15: read 用 camelCase (response shape) / write 用 snake_case
+    // (backend WRITABLE_FIELDS allow-list 是 snake)。
+    if (travelMode !== ((original.defaultTravelMode as TravelMode) ?? 'driving')) body.default_travel_mode = travelMode;
     if (published !== (original.published ?? 0)) body.published = published;
 
     // v2.23.8 self-drive — diff each field individually
