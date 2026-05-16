@@ -29,13 +29,26 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 
 type Severity = 'high' | 'medium' | 'low';
+type Dimension = 'timing' | 'distance' | 'meals' | 'sights' | 'hotel';
 
 interface Finding {
   severity: Severity;
   title: string;
   description: string;
+  /** v2.31.1 Phase 2: audit dimension chip — timing/distance/meals/sights/hotel */
+  dimension?: Dimension;
+  /** v2.31.1 Phase 2: 建議怎麼修 — 顯示在 description 下方 */
+  suggestion?: string;
   action_target?: { day?: number; entry_id?: number };
 }
+
+const DIMENSION_LABEL: Record<Dimension, string> = {
+  timing: '時間',
+  distance: '移動',
+  meals: '餐飲',
+  sights: '景點',
+  hotel: '住宿',
+};
 
 interface HealthReport {
   tripId: string;
@@ -249,16 +262,54 @@ const SCOPED_STYLES = `
 .tp-ai-health-finding.is-high .bar { background: var(--color-priority-high-dot); }
 .tp-ai-health-finding.is-medium .bar { background: var(--color-priority-medium-dot); }
 .tp-ai-health-finding.is-low .bar { background: var(--color-priority-low-dot); }
+.tp-ai-health-finding .body .head-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .tp-ai-health-finding .body .title {
   font-size: 14px;
   line-height: 20px;
   font-weight: 700;
+}
+.tp-ai-health-finding .body .dimension-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-tertiary);
+  color: var(--color-muted);
+  font-size: var(--font-size-caption2);
+  line-height: 16px;
+  font-weight: 600;
 }
 .tp-ai-health-finding .body .desc {
   font-size: 13px;
   line-height: 20px;
   color: var(--color-muted);
   margin: 4px 0 8px;
+}
+.tp-ai-health-finding .body .suggestion {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding: 8px 10px;
+  margin: 4px 0 8px;
+  background: var(--color-accent-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--color-accent-deep);
+}
+.tp-ai-health-finding .body .suggestion .label {
+  font-size: var(--font-size-caption2);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  white-space: nowrap;
 }
 .tp-ai-health-finding .body .actions {
   display: flex;
@@ -513,6 +564,11 @@ export default function TripHealthCheckPage() {
     navigate(`${routes.trip(tripId)}?day=${day}`);
   }, [navigate, tripId]);
 
+  const goToEntry = useCallback((entryId: number) => {
+    if (!tripId) return;
+    navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`);
+  }, [navigate, tripId]);
+
   if (!auth.user || !tripId) {
     return null;
   }
@@ -650,10 +706,40 @@ export default function TripHealthCheckPage() {
                       >
                         <div className="bar" aria-hidden="true" />
                         <div className="body">
-                          <div className="title">{f.title}</div>
+                          <div className="head-row">
+                            <div className="title">{f.title}</div>
+                            {f.dimension && (
+                              <span
+                                className="dimension-chip"
+                                data-testid={`ai-health-finding-dimension-${sev}-${idx}`}
+                              >
+                                {DIMENSION_LABEL[f.dimension]}
+                              </span>
+                            )}
+                          </div>
                           {f.description && <div className="desc">{f.description}</div>}
+                          {f.suggestion && (
+                            <div
+                              className="suggestion"
+                              data-testid={`ai-health-finding-suggestion-${sev}-${idx}`}
+                            >
+                              <span className="label">建議</span>
+                              <span>{f.suggestion}</span>
+                            </div>
+                          )}
                           <div className="actions">
-                            {typeof f.action_target?.day === 'number' && (
+                            {typeof f.action_target?.entry_id === 'number' && (
+                              <button
+                                type="button"
+                                className="action is-primary"
+                                onClick={() => goToEntry(f.action_target!.entry_id!)}
+                                data-testid={`ai-health-finding-goto-entry-${sev}-${idx}`}
+                              >
+                                前往景點
+                              </button>
+                            )}
+                            {typeof f.action_target?.day === 'number'
+                              && typeof f.action_target?.entry_id !== 'number' && (
                               <button
                                 type="button"
                                 className="action is-primary"

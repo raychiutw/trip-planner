@@ -408,6 +408,21 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 
 **Mockup**：`/tmp/TripAIHealth-variants.html` Variant C (sign-off 2026-05-16)。
 
+**Finding card 結構（v2.31.1 Phase 2 extended）**
+
+```
+┌─ severity bar (6px column)
+│  ├─ head-row: title + dimension chip（「時間」「移動」「餐飲」「景點」「住宿」）
+│  ├─ desc: 具體描述（≤120 字）
+│  ├─ suggestion block: 「建議」label + 建議文字（accent-subtle bg、accent-deep text、accent eyebrow label）
+│  └─ actions: 「前往景點」（有 entry_id）優先於「前往 Day N」（只有 day）
+└─
+```
+
+- **Dimension chip** (`.dimension-chip`)：tertiary bg + muted text + caption2 + 中文 label，緊接 title 旁邊
+- **Suggestion block** (`.suggestion`)：accent-subtle bg + accent-deep text + caption2 eyebrow「建議」label，不用 emoji（DESIGN.md 第 10 條無裝飾原則）
+- **Navigation hierarchy**：`action_target.entry_id` 帶 → 直接 navigate `/trip/:id/stop/:eid/edit`（更具體）；只有 `day` → navigate `/trip/:id?day=N`
+
 ## Modal Dialogs
 
 ### Principle
