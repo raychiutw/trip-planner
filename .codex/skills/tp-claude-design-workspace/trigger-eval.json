@@ -17,7 +17,7 @@
   {"query": "我要把古宇利島座標從 26.8328 改成 26.7022", "should_trigger": false},
   {"query": "Code review 一下我剛改的 PageNav component 有沒有問題", "should_trigger": false},
   {"query": "寫個 unit test 驗證 mapDay.ts 的 dayColor() 函式回傳正確的 Tailwind class", "should_trigger": false},
-  {"query": "Rebuild Ray 沖繩 Day 3，補齊 POI 的 mapcode 跟 google_rating", "should_trigger": false},
+  {"query": "Rebuild Ray 沖繩 Day 3，補齊 POI 的 google_rating", "should_trigger": false},
   {"query": "幫我做 /canary 監控，看 production 部署後 console 有沒有 error", "should_trigger": false},
   {"query": "給我 3 個 Hero 區塊的 copy 變體（文案），Terracotta 感覺的 tagline", "should_trigger": false},
   {"query": "StopCard 右下角加一個「已造訪」badge，其他不動", "should_trigger": false},

@@ -7,7 +7,8 @@ import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '
 import type { Env } from '../../../_types';
 import { fetchEntryPoisByEntries } from '../days/_merge';
 
-// Phase 3：移除 location / maps / mapcode / rating — 這些欄位已 DROP，POI master JOIN 取代。
+// Phase 3：移除 location / maps / rating — 這些欄位已 DROP，POI master JOIN 取代。
+// v2.30.15: mapcode 也已 DROP (migration 0066) — Google/Apple Map link 涵蓋導航需求。
 // POI 重掛走 PUT /api/trips/:id/entries/:eid/poi-id（獨立端點，驗證 POI 存在）。
 // v2.10 Wave 1 (Item 3 move 跨天)：加 day_id — 須驗證 targetDay 屬於同 trip，
 // 不可改成不同 trip 的 day_id（防越權）。

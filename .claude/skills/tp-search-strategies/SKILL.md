@@ -82,7 +82,7 @@ Event type schema（各類型物件必填欄位）見 `references/event-schema.m
 - 適用：所有 type
 - Source: Place Details `location.latitude` / `location.longitude`（4 位小數）
 - 寫入：`pois.lat` / `pois.lng`
-- 同步 entry 用：trip_entries.location 仍是獨立 JSON（含 googleQuery / appleQuery / mapcode），但 lat/lng 應跟 pois 一致
+- 同步 entry 用：trip_entries.location 仍是獨立 JSON（含 googleQuery / appleQuery），但 lat/lng 應跟 pois 一致。v2.30.15: mapcode 已從 pois 整段 DROP，不再寫入。
 
 ### reservation（餐廳專屬，非 Place Details 欄位）
 

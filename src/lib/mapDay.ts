@@ -71,7 +71,6 @@ interface RawShop {
   note?: string | null;
   googleRating?: number | null;
   maps?: string | null;
-  mapcode?: string | null;
   lat?: number | null;
   lng?: number | null;
 }
@@ -92,7 +91,6 @@ interface RawEntryPoi {
   name?: string | null;
   category?: string | null;
   maps?: string | null;
-  mapcode?: string | null;
   lat?: number | null;
   lng?: number | null;
   googleRating?: number | null;
@@ -130,19 +128,17 @@ interface RawEntry {
 
 function buildLocation(
   maps?: string | null,
-  mapcode?: string | null,
   name?: string | null,
   _lat?: number | null,
   _lng?: number | null,
 ): NavLocation | null {
-  if (!maps && !mapcode && !_lat) return null;
+  if (!maps && !_lat) return null;
   const isUrl = maps ? /^https?:/i.test(maps) : false;
   const nameValue: string | undefined =
     (name ?? undefined) || (!isUrl && maps ? maps : undefined) || undefined;
   return {
     name: nameValue,
     googleQuery: isUrl ? (maps ?? undefined) : undefined,
-    mapcode: mapcode || undefined,
   };
 }
 
@@ -176,7 +172,7 @@ function toStopPoiOption(p: RawStopPoi): StopPoiOptionData | null {
     reservationUrl: p.reservationUrl ?? null,
     description: p.description ?? null,
     note: p.note ?? null,
-    location: buildLocation(p.maps ?? null, p.mapcode ?? null, name, p.lat ?? null, p.lng ?? null),
+    location: buildLocation(p.maps ?? null, name, p.lat ?? null, p.lng ?? null),
   };
 }
 
@@ -199,7 +195,7 @@ function toShopData(s: RawShop): ShopData {
     description: s.description ?? null,
     note: s.note ?? null,
     googleRating: s.googleRating ?? null,
-    location: buildLocation(s.maps ?? null, s.mapcode ?? null, s.name ?? null, s.lat ?? null, s.lng ?? null),
+    location: buildLocation(s.maps ?? null, s.name ?? null, s.lat ?? null, s.lng ?? null),
   };
 }
 
@@ -222,7 +218,6 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   // stop 的 canonical POI 是 stopPois.sortOrder=1；migration 0059 guarantees the data.
   const poi = getPrimaryStopPoi(raw.stopPois);
   const effMaps = poi?.maps ?? null;
-  const effMapcode = poi?.mapcode ?? null;
   // Migration 0045 (v2.19.x) 把 pois.google_rating 改名為 rating，但這裡的 mapping
   // 沒 follow up — entry.googleRating 永遠 null。Fallback 同時讀新舊 key 維持向前相容。
   const effGoogleRating = poi?.googleRating ?? (poi as { rating?: number | null })?.rating ?? null;
@@ -239,11 +234,10 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   });
 
   const locations: NavLocation[] = [];
-  if (effMaps || effMapcode) {
+  if (effMaps) {
     locations.push({
       name: displayTitle || raw.title || undefined,
       googleQuery: effMaps || undefined,
-      mapcode: effMapcode || undefined,
     });
   }
 
@@ -260,7 +254,6 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
         hours: p.hours ?? null,
         note: p.note ?? null,
         maps: null,
-        mapcode: null,
         lat: p.lat ?? null,
         lng: p.lng ?? null,
       } as RawShop)),

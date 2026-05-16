@@ -1,7 +1,9 @@
 /* ===== MapLinks Component ===== */
 /* v2.30.14 redesign: 拔 Google 「G」 brand badge + Apple SVG，改 terracotta */
 /* outline chip + location-pin icon + accent-deep text，與 timeline rail 其他 */
-/* chip 視覺語言一致。mapcode 渲染保留（PR-B mapcode rip-out 處理）。       */
+/* chip 視覺語言一致。                                                       */
+/* v2.30.15 (migration 0066): mapcode 整段 rip out — Google/Apple Map link  */
+/* 已涵蓋導航需求。                                                          */
 
 import { memo } from 'react';
 import clsx from 'clsx';
@@ -58,7 +60,6 @@ export interface MapLocation {
   naverQuery?: string;
   /** Legacy field – falls back for google link */
   url?: string;
-  mapcode?: string;
   label?: string;
 }
 
@@ -117,12 +118,6 @@ export const MapLinks = memo(function MapLinks({ location: loc, inline = false }
           <Icon name="location-pin" />
           <span>Naver 地圖</span>
         </a>
-      )}
-      {loc.mapcode && (
-        <span className={clsx(chipCls, 'tp-map-link-mapcode')}>
-          <Icon name="device" />
-          <span>{loc.mapcode}</span>
-        </span>
       )}
     </span>
   );

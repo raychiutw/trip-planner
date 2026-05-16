@@ -315,7 +315,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           poiItems.push({
             name: (p.name as string) || '停車場', type: 'parking',
             description: p.price ? `費用：${p.price}` : null,
-            mapcode: p.mapcode as string,
             lat: p.lat as number, lng: p.lng as number, source: 'ai',
           });
           tripPoiBuilders.push((ids) => [
@@ -342,7 +341,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         name: title,
         type: rawType,
         description: (e.description as string | undefined) ?? null,
-        mapcode: (e.mapcode as string | undefined) ?? null,
         lat: (e.lat as number | undefined) ?? null,
         lng: (e.lng as number | undefined) ?? null,
         rating: (e.rating as number | undefined) ?? null,
@@ -388,7 +386,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           hours: stringOrNull(item.hours),
           source: 'ai',
           price: stringOrNull(item.price),
-          mapcode: stringOrNull(item.mapcode),
           lat: numberOrNull(item.lat),
           lng: numberOrNull(item.lng),
         });
