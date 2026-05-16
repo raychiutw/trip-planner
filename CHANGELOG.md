@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.20] - 2026-05-17
+
+**Fix: ExplorePage 搜尋結果 card 顯示中文 type label。**
+
+Bug #121（prod QA found）：搜尋「拉麵」結果三張卡分別顯 `RAMEN_RESTAURANT`、
+`RESTAURANT`、`RAMEN_RESTAURANT` — Google Places primary type raw enum
+直接 dump 出來，對中文使用者無意義且不一致（同類別出 2 種 enum）。
+
+Root cause：`src/pages/ExplorePage.tsx` line 736 直接 render
+`{poi.category || 'POI'}`，沒走 `POI_TYPE_LABELS[mapNominatimCategory(...)]`
+helper 把 Google Places 細分 type → Tripline whitelist enum → 中文 label。
+Helper 都已存在於 `src/lib/poiCategory.ts`（AddStopPage / ChangePoiPage
+都已用），ExplorePage 漏 import + 漏 call。
+
+**Frontend：**
+- `src/pages/ExplorePage.tsx` import 加 `POI_TYPE_LABELS`，poi-category div
+  改用 `POI_TYPE_LABELS[mapNominatimCategory(poi.category)] ?? 'POI'`。
+
+**Test：** `tests/unit/explore-page-category-label.test.ts`（新）—
+import 含 POI_TYPE_LABELS + poi-category 走 helper + 不再 raw render
+poi.category + fallback 'POI' 保留。4 cases。
+
 ## [2.31.19] - 2026-05-17
 
 **Fix: PoiFavoritesPage 主收藏頁 card 補回 ★ rating 顯示。**
