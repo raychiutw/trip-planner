@@ -1,14 +1,54 @@
 /* ===== MapLinks Component ===== */
-/* Renders Google Map / Apple Map / Naver Map links + optional mapcode display */
+/* v2.30.14 redesign: 拔 Google 「G」 brand badge + Apple SVG，改 terracotta */
+/* outline chip + location-pin icon + accent-deep text，與 timeline rail 其他 */
+/* chip 視覺語言一致。mapcode 渲染保留（PR-B mapcode rip-out 處理）。       */
 
 import { memo } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
 import { escUrl } from '../../lib/sanitize';
 
-/** Apple logo SVG — embedded directly (sourced from app.js line 14). */
-const APPLE_SVG =
-  '<svg viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>';
+const SCOPED_STYLES = `
+.tp-map-links {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.tp-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: var(--radius-full);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  color: var(--color-accent-deep);
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 120ms;
+  line-height: 1.2;
+}
+.tp-map-link:hover { background: var(--color-hover); }
+.tp-map-link:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.tp-map-link .svg-icon { width: 14px; height: 14px; }
+.tp-map-link-block {
+  padding: 8px 14px;
+  min-height: var(--spacing-tap-min);
+}
+.tp-map-link-block .svg-icon { width: 16px; height: 16px; }
+@media (max-width: 760px) {
+  .tp-map-link {
+    padding: 5px 10px;
+    font-size: var(--font-size-caption);
+  }
+  .tp-map-link .svg-icon { width: 12px; height: 12px; }
+}
+`;
 
 /** Location data shape used by map link generation. */
 export interface MapLocation {
@@ -52,42 +92,39 @@ function resolveAppleUrl(loc: MapLocation): string {
 }
 
 export const MapLinks = memo(function MapLinks({ location: loc, inline = false }: MapLinksProps) {
-  const baseCls = clsx(
-    'inline-flex items-center gap-1 bg-transparent text-accent rounded-sm text-callout no-underline align-middle transition-colors duration-fast ease-apple hover:bg-hover hover:text-foreground',
-    inline ? 'py-1 px-2 mr-1' : 'py-2 px-3 mr-1 mb-1 min-h-tap-min',
+  const chipCls = clsx(
+    'tp-map-link',
+    inline ? 'tp-map-link-inline' : 'tp-map-link-block',
   );
   const googleUrl = resolveGoogleUrl(loc);
   const appleUrl = resolveAppleUrl(loc);
   const naverUrl = escUrl(loc.naverQuery || '');
   const showNaver = naverUrl && /^https?:/i.test(naverUrl);
 
-  const iconSizeCls = inline ? 'w-4 h-4' : 'w-5 h-5';
-  const appleIconSizeCls = inline ? 'w-3 h-3' : 'w-4 h-4';
-
   return (
-    <>
-      <a href={googleUrl} target="_blank" rel="noopener noreferrer" className={baseCls}>
-        <span className={clsx('inline-flex items-center justify-center rounded-full bg-[var(--color-google-maps)] text-accent-foreground text-footnote font-bold leading-none shrink-0', iconSizeCls)} style={{ fontFamily: "'Google Sans', Arial, sans-serif" }}>G</span> Map
+    <span className="tp-map-links">
+      <style>{SCOPED_STYLES}</style>
+      <a href={googleUrl} target="_blank" rel="noopener noreferrer" className={chipCls}>
+        <Icon name="location-pin" />
+        <span>Google 地圖</span>
       </a>
-      <a href={appleUrl} target="_blank" rel="noopener noreferrer" className={clsx(baseCls, 'text-foreground hover:bg-hover hover:text-foreground')}>
-        <span
-          className={clsx('inline-flex items-center shrink-0', appleIconSizeCls)}
-          dangerouslySetInnerHTML={{ __html: APPLE_SVG }}
-          style={{ width: inline ? 12 : 16, height: inline ? 12 : 16 }}
-        />
-        {' '}Map
+      <a href={appleUrl} target="_blank" rel="noopener noreferrer" className={chipCls}>
+        <Icon name="location-pin" />
+        <span>Apple 地圖</span>
       </a>
       {showNaver && (
-        <a href={naverUrl} target="_blank" rel="noopener noreferrer" className={clsx(baseCls, 'text-foreground hover:bg-hover hover:text-foreground')}>
-          <span className={clsx('inline-flex items-center justify-center rounded-full bg-[var(--color-naver-maps)] text-accent-foreground text-footnote font-bold leading-none shrink-0', iconSizeCls)} style={{ fontFamily: "'Google Sans', Arial, sans-serif" }}>N</span> N Map
+        <a href={naverUrl} target="_blank" rel="noopener noreferrer" className={chipCls}>
+          <Icon name="location-pin" />
+          <span>Naver 地圖</span>
         </a>
       )}
       {loc.mapcode && (
-        <span className={clsx(baseCls, 'text-accent hover:bg-hover hover:text-foreground')}>
-          <Icon name="device" /> {loc.mapcode}
+        <span className={clsx(chipCls, 'tp-map-link-mapcode')}>
+          <Icon name="device" />
+          <span>{loc.mapcode}</span>
         </span>
       )}
-    </>
+    </span>
   );
 });
 
