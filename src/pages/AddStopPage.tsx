@@ -54,6 +54,8 @@ interface PoiFavoriteRow {
   poiType: string;
   poiLat?: number | null;
   poiLng?: number | null;
+  // v2.31.17: backend SELECT 補 p.rating，favorites card 顯 ★ N.N。
+  poiRating?: number | null;
 }
 
 interface DayApiRow {
@@ -126,12 +128,16 @@ function normalizePoiFavorites(data: unknown): PoiFavoriteRow[] {
     if (!Number.isFinite(id) || typeof poiName !== 'string' || !poiName.trim()) return [];
     const poiAddress = item.poiAddress ?? item.poi_address;
     const poiType = item.poiType ?? item.poi_type;
+    const poiRating = typeof item.poiRating === 'number' ? item.poiRating
+      : typeof item.poi_rating === 'number' ? item.poi_rating
+      : undefined;
     return [{
       id,
       poiId: Number.isFinite(poiId) ? poiId : 0,
       poiName,
       poiAddress: typeof poiAddress === 'string' ? poiAddress : null,
       poiType: typeof poiType === 'string' ? poiType : 'poi',
+      poiRating,
     }];
   });
 }
@@ -1054,11 +1060,17 @@ export default function AddStopPage() {
                                 <div className="tp-add-stop-card-body">
                                   <div className="tp-add-stop-card-name">{r.poiName}</div>
                                   <div className="tp-add-stop-card-meta">
-                                    {/* v2.31.10: favorites API 沒 rating 欄位（schema 有 pois.rating
-                                      * 但 SELECT 沒拿），star icon 沒值會誤導 user 以為 broken。
-                                      * 暫先拔 star，只顯 address fragment。Backend SELECT 加 rating
-                                      * 是 follow-up enhancement。 */}
-                                    {poiMeta(r.poiAddress, r.poiType)}
+                                    {/* v2.31.17: backend SELECT 補 p.rating，favorites card 跟
+                                      * search card 一致：rating 存在則 ★ N.N · address，
+                                      * 否則只顯 address。 */}
+                                    {typeof r.poiRating === 'number' && (
+                                      <>
+                                        <Icon name="star" />
+                                        <span>{r.poiRating.toFixed(1)}</span>
+                                        <span className="tp-add-stop-card-meta-sep">·</span>
+                                      </>
+                                    )}
+                                    <span>{poiMeta(r.poiAddress, r.poiType)}</span>
                                   </div>
                                 </div>
                               </label>

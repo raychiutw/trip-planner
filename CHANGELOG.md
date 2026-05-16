@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.17] - 2026-05-17
+
+**Fix: AddStopPage / ChangePoiPage favorites card 補回 ★ rating 顯示。**
+
+Bug #114（prod QA found）：v2.31.10/11 因為 `functions/api/poi-favorites.ts`
+SELECT 沒拿 `p.rating`，favorites card 顯示孤兒 star icon（icon 後接 address
+看起來像 broken）— 當時的修法是直接拔掉 star icon、保留 address。本版補回
+backend SELECT 並把 frontend favorites card 改成跟 search card 一致：rating
+存在則顯 `★ N.N · address`，否則只顯 address。
+
+**Backend：**
+- `functions/api/poi-favorites.ts` GET SELECT 補 `p.rating AS poi_rating`
+  （deepCamel 自動轉成 response 的 `poiRating`）。
+
+**Frontend：**
+- `src/types/api.ts` `PoiFavorite` interface 加 `poiRating?: number | null`。
+- `src/pages/AddStopPage.tsx`：
+  - `PoiFavoriteRow` interface 加 `poiRating?: number | null`。
+  - `normalizePoiFavorites` 抽 `item.poiRating`（camelCase）+ `item.poi_rating`
+    （snake_case fallback，防 backend 沒同步 deploy）。
+  - favorites card body 改成 `★ N.N · address` conditional，rating 不存在
+    時只顯 address。
+- `src/pages/ChangePoiPage.tsx` favorites card 同 AddStopPage 一致改法。
+
+**Tests：**
+- `tests/unit/poi-favorites-select-rating.test.ts`（新）— GET SELECT 含
+  `p.rating AS poi_rating` regression + 原 pois 欄位不被誤刪。
+- `tests/unit/add-stop-page-rating-and-title.test.ts` v2.31.17 section 加
+  `PoiFavoriteRow.poiRating` + `normalizePoiFavorites` camelCase/snake_case
+  fallback 驗證 + favorites card 從「不該有 star」反轉為「rating 存在才
+  render star」。
+- `tests/unit/change-poi-page-rating-and-title.test.ts` 同步反轉 + 驗
+  `src/types/api.ts` PoiFavorite 含 `poiRating`。
+
 ## [2.31.16] - 2026-05-16
 
 **Fix: EntryActionPage Day picker 永遠顯示「空」即使 day 有 stops。**
