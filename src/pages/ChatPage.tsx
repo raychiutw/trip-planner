@@ -525,7 +525,9 @@ export default function ChatPage() {
   }, [trips]);
 
   // Subscribe to SSE for inflight request id; flips status to 'completed' / 'failed'.
-  const { status, error: sseError } = useRequestSSE(inflightId);
+  // v2.31.6: useRequestSSE 改成 polling-always-on + SSE optimization；errorReason
+  // 區分 'auth_expired' / 'sse_failed' / 'network'；elapsedMs 給 UI 顯示等待時間。
+  const { status, error: sseError, errorReason, elapsedMs } = useRequestSSE(inflightId);
 
   // Load trips list (mine + meta) once on mount.
   useEffect(() => {
@@ -891,7 +893,17 @@ export default function ChatPage() {
           );
         })}
 
-        {sseError && inflightId && (
+        {errorReason === 'auth_expired' && inflightId && (
+          <div className="tp-chat-msg tp-chat-msg-assistant is-failed" role="alert">
+            登入已過期。<button type="button" onClick={() => window.location.reload()} style={{ background: 'none', border: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}>重新整理</button>後再試。
+          </div>
+        )}
+        {inflightId && elapsedMs >= 3 * 60 * 1000 && errorReason !== 'auth_expired' && (
+          <div className="tp-chat-msg tp-chat-msg-assistant is-pending" role="status" aria-live="polite">
+            AI 還在處理（已等候 {Math.floor(elapsedMs / 60_000)} 分鐘）— 較大的請求例如 AI 健檢可能需要 5–15 分鐘。
+          </div>
+        )}
+        {sseError && inflightId && errorReason !== 'auth_expired' && errorReason !== 'sse_failed' && (
           <div className="tp-chat-msg tp-chat-msg-assistant is-failed" role="alert">
             連線異常：{sseError.message}
           </div>

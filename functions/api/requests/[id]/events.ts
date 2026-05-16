@@ -4,7 +4,10 @@
  * - 每 10 秒 poll D1 狀態
  * - 每 25 秒 keepalive ping
  * - status=completed/failed 時關閉
- * - 最長 10 分鐘
+ * - 最長 30 分鐘（v2.31.6：原 10 min 對 AI 健檢 / 行程審查不夠長，request #187 曾跑 1h19m）
+ *
+ * 注意：client 端 `useRequestSSE` 改成 polling-always-on，SSE 只是 latency
+ * optimization；即使這裡 timeout 也不會 silent 卡死 — polling 30s 兜底。
  */
 
 import { hasPermission } from '../../_auth';
@@ -14,7 +17,7 @@ import type { Env } from '../../_types';
 
 const POLL_INTERVAL_MS = 10_000;
 const KEEPALIVE_INTERVAL_MS = 25_000;
-const MAX_DURATION_MS = 10 * 60 * 1000;
+const MAX_DURATION_MS = 30 * 60 * 1000;
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
