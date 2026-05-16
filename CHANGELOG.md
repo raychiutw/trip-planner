@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.23] - 2026-05-17
+
+**Fix: transport POI label 統一為「交通」（之前 TimelineRail 顯「移動」與其他 4 處不一致）。**
+
+Bug #124（prod QA found）：那霸機場 POI（type='transport'）在 TripPage
+TimelineRail 顯「那霸機場 移動 · ★ 4.1」，但 EditEntryPage 同 POI 顯「交通」。
+4 處 POI_TYPE_LABEL mapping（poiCategory.ts / TimelineRail / EditEntryPage /
+其他）都用「交通」，只有 `timelineUtils.ts` `deriveTypeMeta` line 140 用
+「移動」造成不一致。User 連續 click 進去看到不同 label confuse。
+
+**Fix：**
+- `src/lib/timelineUtils.ts` line 140 `poiType === 'transport'` 返「移動」→
+  「交通」對齊 canonical POI_TYPE_LABELS。
+- line 157 text-based「開車/drive」keyword 偵測仍返「移動」（描述 segment
+  travel 行為而非 POI 屬性，保留）。
+
+**Test：** `tests/unit/timeline-transport-label.test.ts`（新）— 4 cases：
+transport POI → 交通 + 不再返移動 + text-based keyword 仍返移動 +
+其他 poiType regression（hotel/restaurant/attraction）。
+
 ## [2.31.22] - 2026-05-17
 
 **Fix: ExplorePage category filter 0 結果補 empty state。**
