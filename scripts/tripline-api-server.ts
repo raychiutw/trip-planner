@@ -377,5 +377,7 @@ log(`Scheduled request-handler (/tp-request) every ${REQUEST_CRON_INTERVAL_MS / 
 // 每天 09:00 /tp-daily-check
 scheduleDaily(9, 0, '/tp-daily-check', 'daily-check');
 
-// 每天 08:00 /tp-poi-enrich-monthly（skill 內 day-1 guard）
-scheduleDaily(8, 0, '/tp-poi-enrich-monthly', 'poi-enrich');
+// v2.31.4: 移除 /tp-poi-enrich-monthly schedule —
+// 原批次 scripts/poi-enrich-batch.ts 在 v2.23.0 Google Maps 切換時已刪除，
+// 新 enrich 流程改 daily scripts/google-poi-refresh-30d.ts（50 POI/day）+
+// 即時 POST /api/pois/:id/enrich，monthly batch 失去意義。
