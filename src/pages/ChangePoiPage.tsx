@@ -344,6 +344,10 @@ const SCOPED_STYLES = `
   vertical-align: -1px;
   margin-right: 4px;
 }
+.tp-change-poi-card-meta-sep {
+  margin: 0 6px;
+  opacity: 0.6;
+}
 .tp-change-poi-empty {
   min-height: 260px;
   padding: 40px 20px;
@@ -841,7 +845,9 @@ export default function ChangePoiPage() {
             )}
             {filteredSearchResults.length > 0 && (
               <>
-                <h3 className="tp-change-poi-result-title">熱門景點 · {region}</h3>
+                <h3 className="tp-change-poi-result-title">
+                  {query.trim().length >= 2 ? '搜尋結果' : '熱門景點'} · {region}
+                </h3>
                 <div className="tp-change-poi-grid">
                   {filteredSearchResults.map((result, index) => {
                     const isSelected = selected?.source === 'search' && selected.name === result.name && selected.lat === result.lat;
@@ -874,8 +880,14 @@ export default function ChangePoiPage() {
                         <div className="tp-change-poi-card-body">
                           <div className="tp-change-poi-card-name">{result.name}</div>
                           <div className="tp-change-poi-card-meta">
-                            <Icon name="star" />
-                            {poiMeta(result.address, result.category)}
+                            {typeof result.rating === 'number' && (
+                              <>
+                                <Icon name="star" />
+                                <span>{result.rating.toFixed(1)}</span>
+                                <span className="tp-change-poi-card-meta-sep">·</span>
+                              </>
+                            )}
+                            <span>{poiMeta(result.address, result.category)}</span>
                           </div>
                         </div>
                       </button>
@@ -937,7 +949,9 @@ export default function ChangePoiPage() {
                         <div className="tp-change-poi-card-body">
                           <div className="tp-change-poi-card-name">{favorite.poiName}</div>
                           <div className="tp-change-poi-card-meta">
-                            <Icon name="star" />
+                            {/* v2.31.11: 同 AddStopPage favorites — poi-favorites API SELECT
+                              * 沒拿 rating，孤兒 star icon 誤導 user，先拔。Task #114 backend
+                              * follow-up 後補回。 */}
                             {poiMeta(favorite.poiAddress, favorite.poiType)}
                           </div>
                         </div>
