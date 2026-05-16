@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.29] - 2026-05-17
+
+**Fix: EditEntryPage prev header displayTitle 從 master.name 計算（v2.31.28 follow-up）。**
+
+Bug #130（prod verify 抓到）：v2.31.28 deploy 後 trip `/trip/.../stop/420/edit`
+mode header 仍顯「從「抵達那霸機場」移動」，沒對齊 TimelineRail「那霸機場」。
+
+Root cause：v2.31.28 用 `getTimelineEntryDisplayTitle(prev)` 期望 prev 物件帶
+`displayTitle` 欄位，但 `src/lib/mapDay.ts` 的 `toTimelineEntry` 是 **frontend-only**
+mapper（只在 `DaySection.tsx` 內呼叫）。EditEntryPage 直接 fetch `/api/trips/:id/days/:dayNum`
+拿到的 raw response 沒 `displayTitle` 欄位 → fallback 取 `prev.title` = 「抵達那霸機場」。
+
+**Fix：** 直接用 `getStopDisplayTitle({title, poiName: prev.master?.name})`
+重算 — 這跟 `mapDay.ts:230` 內部規則一致（master.name ?? title）。Backend response
+帶 `master.name = "那霸機場"`，計算結果即「那霸機場」。
+
+**Test：** `tests/unit/edit-entry-prev-display-title.test.ts` 更新（4 cases）：
+import `getStopDisplayTitle` / 用 `poiName: prev.master?.name` / `setPrevEntry({title: derivedTitle})`
+/ retain `prev.title` fallback。
+
+**Lesson learned：** mapDay 是 frontend-only mapper，backend day endpoint 不算
+displayTitle。日後跟 mapDay 對齊的邏輯不應假設 backend response 帶 `displayTitle`，
+應直接從 raw 欄位（title / master.name / poi.name 等）重算。
+
 ## [2.31.28] - 2026-05-17
 
 **Fix: EditEntryPage 「從「prev」移動」header 改用 displayTitle 與 TimelineRail 對齊。**
