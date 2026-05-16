@@ -12,8 +12,9 @@
  * Empty/null tripId → no fetch，回 empty map。Failure → 不 retry，silently 留 empty
  * map（caller 端 graceful degrade — TravelPill 無 segment props 變 v2.23 唯讀渲染）。
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../lib/apiClient';
+import { TripSegmentsContext } from '../contexts/TripSegmentsContext';
 import { EVENT } from '../lib/events';
 
 export interface TripSegment {
@@ -30,10 +31,16 @@ export interface TripSegment {
 }
 
 export function useTripSegments(tripId: string | null | undefined) {
+  // v2.31.x N+1 fix: 若 TripPage 已 provide TripSegmentsContext，直接共用，
+  // 不再重新 fetch（5 個 TimelineRail / day → 1 個 fetch）。EditEntryPage 等
+  // 獨立頁面 context 為 null → 走原本 fetch path。
+  const fromCtx = useContext(TripSegmentsContext);
+
   const [segments, setSegments] = useState<TripSegment[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (fromCtx) return; // 由 provider 負責 fetch + lifecycle
     if (!tripId) {
       setSegments([]);
       return;
@@ -75,7 +82,7 @@ export function useTripSegments(tripId: string | null | undefined) {
       window.removeEventListener(EVENT.segmentUpdated, handler);
       window.removeEventListener(EVENT.entryUpdated, handler);
     };
-  }, [tripId]);
+  }, [tripId, fromCtx]);
 
   const segmentMap = useMemo(() => {
     const m = new Map<string, TripSegment>();
@@ -85,5 +92,8 @@ export function useTripSegments(tripId: string | null | undefined) {
     return m;
   }, [segments]);
 
+  if (fromCtx) {
+    return { segments: fromCtx.segments, segmentMap: fromCtx.segmentMap, loading: fromCtx.loading };
+  }
   return { segments, segmentMap, loading };
 }

@@ -16,6 +16,8 @@ import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '.
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
 import { TripIdContext } from '../contexts/TripIdContext';
 import { TripDaysContext } from '../contexts/TripDaysContext';
+import { TripSegmentsContext } from '../contexts/TripSegmentsContext';
+import { useTripSegments } from '../hooks/useTripSegments';
 import type { DayOption } from '../lib/entryAction';
 import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
@@ -329,6 +331,15 @@ function TripPageInner(
 
   const { trip, days, currentDayNum, switchDay, refetchCurrentDay, refetchDay, allDays, loading, error } =
     useTrip(activeTripId);
+
+  // v2.31.x N+1 fix: 集中 fetch segments，children TimelineRail 透過 context 共用。
+  // 不傳 provider 時 hook 退回自己 fetch（EditEntryPage 等獨立頁面適用）。
+  const segmentsHookResult = useTripSegments(activeTripId);
+  const tripSegmentsContextValue = useMemo(() => ({
+    segments: segmentsHookResult.segments,
+    segmentMap: segmentsHookResult.segmentMap,
+    loading: segmentsHookResult.loading,
+  }), [segmentsHookResult.segments, segmentsHookResult.segmentMap, segmentsHookResult.loading]);
 
   // Keep ref in sync so the online-status effect can call it without a stale closure
   refetchCurrentDayRef.current = refetchCurrentDay;
@@ -732,7 +743,9 @@ function TripPageInner(
   const wrappedMain = (
     <TripIdContext.Provider value={activeTripId}>
       <TripDaysContext.Provider value={dayOptions}>
-        {mainContent}
+        <TripSegmentsContext.Provider value={tripSegmentsContextValue}>
+          {mainContent}
+        </TripSegmentsContext.Provider>
       </TripDaysContext.Provider>
     </TripIdContext.Provider>
   );
