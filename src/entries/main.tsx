@@ -25,6 +25,19 @@ import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { NewTripProvider } from '../contexts/NewTripContext';
 import { ActiveTripProvider } from '../contexts/ActiveTripContext';
 import { lazy, Suspense, StrictMode } from 'react';
+import { useDarkMode } from '../hooks/useDarkMode';
+
+/**
+ * v2.31.25 fix #126: dark mode init root-level component。
+ * useDarkMode 之前只在 ThemeToggle / TripPage / GlobalMapPage 三處 mount，
+ * user 切「深」模式後切到 /trips /chat /favorites /explore 等 page，
+ * body.dark class 不會被 set → page bg 還是 light（localStorage 已存「dark」但 class 沒同步）。
+ * 把 hook mount 在 app root 確保每次 page mount 都 init body.dark。
+ */
+function DarkModeInit() {
+  useDarkMode();
+  return null;
+}
 
 import '../../css/tokens.css';
 
@@ -158,6 +171,7 @@ if (el) {
     <StrictMode>
       <ErrorBoundary>
         <BrowserRouter>
+          <DarkModeInit />
           <ActiveTripProvider>
           <NewTripProvider>
           <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
