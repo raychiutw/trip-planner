@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.27] - 2026-05-17
+
+**Fix: chat AI 健檢 user message 顯短摘要而非整個 system prompt（v2.31.18 follow-up）。**
+
+Bug #128（prod QA found）：user trigger AI 健檢 → `trip_requests.message`
+寫整個 `HEALTH_CHECK_MESSAGE` system prompt（含 5 維度 + JSON schema + 範例
++ 「若行程無問題回 []」等）→ chat UI 直接 render `row.message` → user
+看到一大坨雜訊。v2.31.18 fix 了 reply（buildHealthCheckSummary），但 message
+還是 raw prompt。
+
+Root cause：`src/pages/ChatPage.tsx` `buildPairsFromRequest` 直接用
+`row.message` 當 user message text，沒偵測 AI 健檢 prefix。
+
+**Fix：**
+- `buildPairsFromRequest` 偵測 `row.message.startsWith('[AI 健檢]')` →
+  `displayText = '已觸發 AI 行程健檢'` 短摘要。
+- 其他 message 維持原 `row.message`。
+- 完整 prompt 仍存 `trip_requests.message` → api-server 拿到完整 text
+  送 Claude（沒影響 backend 邏輯）。
+
+**Test：** `tests/unit/chat-ai-health-user-message.test.ts`（新）— 4 cases：
+prefix 偵測 + 短摘要文案 + regression (其他 message 維持) + push displayText。
+
 ## [2.31.26] - 2026-05-17
 
 **Fix: sanitizeHtml 允許 SPA 相對路徑 href（v2.31.18 follow-up）。**
