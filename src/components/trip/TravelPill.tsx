@@ -27,8 +27,12 @@ const SCOPED_STYLES = `
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 6px 0 6px 110px;
+  /* v2.30.12: time col 移除後 dot 中心 110→56px desktop / mobile 媒體查詢 → 44px */
+  margin: 6px 0 6px 56px;
   flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .tp-travel-pill-wrap { margin: 6px 0 6px 44px; }
 }
 .tp-travel-pill {
   display: inline-flex;

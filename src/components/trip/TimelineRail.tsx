@@ -46,9 +46,10 @@ import { getTimelineEntryDisplayTitle } from '../../lib/stopDisplay';
 
 const SCOPED_STYLES = `
 .tp-rail-detail {
-  /* mockup .tp-detail-expanded:2086 — margin: 4px 0 8px 110px desktop / 92px mobile。
-   * left=110px 對齊 TravelPill 同樣 indent，視覺從 dot 中心起算。 */
-  margin: 4px 0 8px 110px;
+  /* v2.30.12: time col 移除後 dot 中心從 110px → 56px (desktop) / 92px → 44px (mobile)
+   * 對齊新 dot center: item-pad(8) + grip(24) + gap(12) + dot/2(12) = 56px desktop
+   * mobile: item-pad(4) + grip(20) + gap(8) + dot/2(12) = 44px */
+  margin: 4px 0 8px 56px;
   padding: 14px 16px;
   background: var(--color-secondary);
   border: 1px solid var(--color-border);
@@ -57,7 +58,7 @@ const SCOPED_STYLES = `
   animation: tp-rail-detail-in 160ms var(--transition-timing-function-apple, ease-out);
 }
 @media (max-width: 760px) {
-  .tp-rail-detail { margin: 4px 0 8px 92px; padding: 12px; }
+  .tp-rail-detail { margin: 4px 0 8px 44px; padding: 12px; }
 }
 @keyframes tp-rail-detail-in {
   from { opacity: 0; transform: translateY(-4px); }
@@ -493,7 +494,6 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         >
           <Icon name="grip" />
         </button>
-        <span className="ocean-rail-time">{parsed.start}</span>
         <span className="ocean-rail-dot" aria-hidden="true">{index + 1}</span>
         <button
           type="button"
@@ -520,6 +520,12 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               const shortDesc = desc && desc.length <= 24 && !desc.includes('\n') ? desc : '';
               return (
                 <span className="ocean-rail-sub">
+                  {parsed.start && (
+                    <>
+                      <span className="ocean-rail-sub-time">{parsed.start}</span>
+                      <span className="ocean-rail-sub-sep">·</span>
+                    </>
+                  )}
                   <span className="ocean-rail-sub-type">{meta.label}</span>
                   {durLabel && (
                     <>
@@ -931,9 +937,30 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
       method: 'POST',
       credentials: 'same-origin',
     })
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) throw new Error(`recompute-travel ${res.status}`);
-        showToast('車程已重新計算', 'info');
+        // v2.30.12: 解析 response 給 user 精確 feedback。避免「重新計算」按了
+        // 卻 0 段被算（座標缺、kill switch）變沉默成功 toast。
+        const data = await res.json().catch(() => ({})) as {
+          pairsComputed?: number;
+          pairsSkippedMissingCoords?: number;
+          errorsDetail?: Array<{ entryId: number; message: string }>;
+        };
+        const computed = data.pairsComputed ?? 0;
+        const missing = data.pairsSkippedMissingCoords ?? 0;
+        const errs = (data.errorsDetail ?? []).length;
+        if (computed === 0 && missing > 0) {
+          showToast(`${missing} 段缺少 POI 座標無法計算，請補上 lat/lng`, 'info');
+        } else if (computed === 0 && errs > 0) {
+          showToast(`${errs} 段重算失敗（Google Routes API）`, 'info');
+        } else if (computed === 0) {
+          showToast('沒有可重算的車程', 'info');
+        } else if (errs > 0 || missing > 0) {
+          const skipped = missing + errs;
+          showToast(`重算 ${computed} 段，${skipped} 段跳過`, 'info');
+        } else {
+          showToast(`已重新計算 ${computed} 段車程`, 'info');
+        }
         window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
           detail: { tripId, travelRecomputeRequested: true },
         }));
