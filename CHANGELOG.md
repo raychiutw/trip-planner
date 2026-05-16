@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.33] - 2026-05-17
+
+**Fix: AddStopPage bottom counter mobile overflow 簡化為「→ DAY NN」。**
+
+Bug #134（mobile prod QA found）：`/trip/.../add-stop?day=1` bottom counter
+「已選 0 個 · 將加入 DAY 01 · 7/29（三）」248px 文字 > 191px counter container
+（mobile 375x812 viewport）→ overflow 57px → ellipsis 切「... · ...」。
+
+Root cause：counter 嵌入完整 `dayLabel`（含 date + weekday）。Page header 上方已顯
+完整 dayLabel，counter 不必重複。
+
+**Fix：** counter 簡化 `「已選 N 個 → DAY NN」` 短 day index（取 dayNum padStart）。
+Date + weekday 仍由 page header 提供，user 不會遺失 context。
+
+**Test：** `add-stop-counter-shorten.test.ts` 新（3 cases）+ 修 existing
+`add-stop-page-region-filter.test.ts` 期望從「· 將加入」改「→ DAY」。1647 全綠。
+
 ## [2.31.32] - 2026-05-17
 
 **Fix: PoiFavoritesPage 只有 1 region 時 hide region 篩選 row。**

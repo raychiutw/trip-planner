@@ -1162,7 +1162,9 @@ export default function AddStopPage() {
 
             <div className="tp-page-bottom-bar">
               <span className="tp-add-stop-counter" data-testid="add-stop-counter">
-                已選 <strong>{totalSelected}</strong> 個 · 將加入 {dayLabel}
+                {/* v2.31.33: mobile counter 191px 容不下完整 dayLabel（DAY 01 · 7/29（三））→
+                    簡化「將加入 DAY 01 · 7/29（三）」為「→ DAY 01」短 day index。Page header 已顯完整日期。 */}
+                已選 <strong>{totalSelected}</strong> 個 → DAY {String(dayNum).padStart(2, '0')}
                 {submitError && <span style={{ color: 'var(--color-destructive, #c0392b)', marginLeft: 8 }}>{submitError}</span>}
               </span>
               <div className="tp-add-stop-actions">
