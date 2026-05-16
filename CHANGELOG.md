@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.28] - 2026-05-17
+
+**Fix: EditEntryPage 「從「prev」移動」header 改用 displayTitle 與 TimelineRail 對齊。**
+
+Bug #129（prod QA found）：trip `/trip/.../stop/420/edit` mode section header
+顯示「從「抵達那霸機場」移動」，但 TripPage TimelineRail 同一 entry 顯示
+「那霸機場」（POI name 優先）。同一 entry 兩處 UI 名稱不一致，使用者困惑。
+
+Root cause：`mapDay.ts` 計算 `displayTitle = poiName ?? title`，TimelineRail
+用 `getTimelineEntryDisplayTitle` 取 displayTitle，但 `EditEntryPage.tsx` 直接
+讀 `prev.title` raw 欄位 → 跳過 displayTitle 推導。`DayApi.timeline` type 也
+沒宣告 `displayTitle?` → backend 回傳的 displayTitle 被 silent drop。
+
+**Fix：**
+- import `getTimelineEntryDisplayTitle` from `src/lib/stopDisplay`。
+- `DayApi.timeline` type 加 `displayTitle?: string | null` 欄位。
+- `setPrevEntry({ id, title: getTimelineEntryDisplayTitle(prev) })` —
+  state 儲存 derived 顯示用 title（不再儲存 raw title）。
+- 渲染端 `從「{prevEntry.title}」移動` 維持不變。
+
+**Test：** `tests/unit/edit-entry-prev-display-title.test.ts`（新）— 4 cases：
+import / type / setPrevEntry helper 用法 / render header pattern。
+
 ## [2.31.27] - 2026-05-17
 
 **Fix: chat AI 健檢 user message 顯短摘要而非整個 system prompt（v2.31.18 follow-up）。**
