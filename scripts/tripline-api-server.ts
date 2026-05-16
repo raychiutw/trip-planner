@@ -369,8 +369,8 @@ function scheduleDaily(hour: number, minute: number, skillCommand: string, label
   }, delayMs);
 }
 
-// 30 分鐘 /tp-request 兜底
-const REQUEST_CRON_INTERVAL_MS = 30 * 60 * 1000;
+// 10 分鐘 /tp-request 兜底（v2.31.5：30 min → 10 min，加快 CF Pages POST /trigger 失敗時的補救週期）
+const REQUEST_CRON_INTERVAL_MS = 10 * 60 * 1000;
 setInterval(() => fireSchedule('/tp-request', 'request-handler'), REQUEST_CRON_INTERVAL_MS);
 log(`Scheduled request-handler (/tp-request) every ${REQUEST_CRON_INTERVAL_MS / 60000} min`);
 
