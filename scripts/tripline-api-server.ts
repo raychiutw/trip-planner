@@ -80,9 +80,22 @@ const tokenHelper = require(TOKEN_HELPER) as {
 const ORPHAN_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 const SESSION_PREFIX = 'tripline-request-';
 
+// launchd PATH 不含 /opt/homebrew/bin，spawnSync(TMUX_BIN, ...) 抓不到。寫死絕對
+// 路徑，與 claudePath 同 pattern。Intel Mac 用 /usr/local/bin/tmux — homebrew
+// 預設位置不同，這邊偵測一次：找到的第一條存在路徑當 TMUX_BIN。
+const TMUX_BIN = (() => {
+  const candidates = ['/opt/homebrew/bin/tmux', '/usr/local/bin/tmux', '/usr/bin/tmux'];
+  for (const p of candidates) {
+    try {
+      if (require('fs').existsSync(p)) return p;
+    } catch {}
+  }
+  return 'tmux'; // fallback — let spawnSync resolve via PATH
+})();
+
 async function cleanupOrphans(maxAgeMs: number): Promise<number> {
   try {
-    const result = spawnSync('tmux', ['ls', '-F', '#{session_name} #{session_created}'], { encoding: 'utf-8' });
+    const result = spawnSync(TMUX_BIN, ['ls', '-F', '#{session_name} #{session_created}'], { encoding: 'utf-8' });
     // tmux ls exit 1 = no sessions exist — not an error
     if (result.status !== 0) return 0;
     const now = Math.floor(Date.now() / 1000);
@@ -95,7 +108,7 @@ async function cleanupOrphans(maxAgeMs: number): Promise<number> {
       const created = parseInt(createdStr, 10);
       if (!created) continue;
       if ((now - created) * 1000 > maxAgeMs) {
-        spawnSync('tmux', ['kill-session', '-t', name]);
+        spawnSync(TMUX_BIN, ['kill-session', '-t', name]);
         log(`Cleaned orphan tmux session: ${name} (age=${now - created}s)`);
         killed++;
       }
@@ -108,7 +121,7 @@ async function cleanupOrphans(maxAgeMs: number): Promise<number> {
 }
 
 function hasActiveSession(): string | null {
-  const result = spawnSync('tmux', ['ls', '-F', '#{session_name}'], { encoding: 'utf-8' });
+  const result = spawnSync(TMUX_BIN, ['ls', '-F', '#{session_name}'], { encoding: 'utf-8' });
   if (result.status !== 0) return null;
   for (const line of (result.stdout || '').split('\n')) {
     if (line.startsWith(SESSION_PREFIX)) return line;
@@ -138,7 +151,7 @@ async function spawnTmuxRequest(): Promise<boolean> {
   // Detached tmux session — claude 跑 interactive REPL（無 -p）。透過 env var 把
   // TRIPLINE_API_TOKEN + session name 傳給 skill；skill 結尾用 TRIPLINE_TMUX_SESSION
   // 自殺。--name 給 claude session 一個顯示名稱（同 tmux session）方便人類辨識。
-  const create = spawnSync('tmux', [
+  const create = spawnSync(TMUX_BIN, [
     'new-session', '-d', '-s', sessionName, '-c', PROJECT_DIR,
     `TRIPLINE_API_TOKEN='${escapedToken}' TRIPLINE_TMUX_SESSION='${sessionName}' PATH='${process.env.PATH}:/Users/ray/.local/bin' ${claudePath} --dangerously-skip-permissions --name '${sessionName}'`
   ], { encoding: 'utf-8' });
@@ -152,10 +165,10 @@ async function spawnTmuxRequest(): Promise<boolean> {
   await new Promise(r => setTimeout(r, 2500));
 
   // 送 /tp-request 給 claude
-  const send = spawnSync('tmux', ['send-keys', '-t', sessionName, '/tp-request', 'Enter'], { encoding: 'utf-8' });
+  const send = spawnSync(TMUX_BIN, ['send-keys', '-t', sessionName, '/tp-request', 'Enter'], { encoding: 'utf-8' });
   if (send.status !== 0) {
     logError(`tmux send-keys failed: ${send.stderr || ''}`);
-    spawnSync('tmux', ['kill-session', '-t', sessionName]);
+    spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
     return false;
   }
 
