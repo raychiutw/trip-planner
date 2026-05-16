@@ -267,10 +267,14 @@ skill 處理完所有 request 之後**必跑**最後一步：
 
 ```bash
 # API server (scripts/tripline-api-server.ts) 透過 ephemeral tmux session 觸發本 skill 時
-# 會 inject TRIPLINE_TMUX_SESSION env var。drain queue 完成後砍 session 避免 orphan。
+# 會 inject TRIPLINE_TMUX_SESSION + TMUX_BIN env var。drain queue 完成後砍 session 避免 orphan。
 # Cowork 觸發時無此 env var → skip（Cowork 自管 session lifecycle）。
+#
+# v2.31.2: 改用 ${TMUX_BIN:-tmux} 絕對路徑避免 launchd PATH 不含 homebrew 時
+# ENOENT silent fail（v2.30.18 / v2.31.0 stuck-session incident root cause）。
 if [ -n "$TRIPLINE_TMUX_SESSION" ]; then
-  tmux kill-session -t "$TRIPLINE_TMUX_SESSION" 2>/dev/null || true
+  "${TMUX_BIN:-tmux}" kill-session -t "$TRIPLINE_TMUX_SESSION" || \
+    echo "[tp-request] WARNING: kill-session failed for $TRIPLINE_TMUX_SESSION" >&2
 fi
 ```
 
