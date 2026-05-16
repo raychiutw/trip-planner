@@ -3,6 +3,38 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.30.13] - 2026-05-16
+
+**TravelPill mobile margin cascade fix — v2.30.12 layout 緊湊化未生效在 mobile。**
+
+QA prod (`/qa` + login) 發現 v2.30.12 改動實際在 mobile viewport (390x844) 上**沒生效**：
+
+```
+$B css '.tp-travel-pill-wrap' 'margin-left'
+→ 92px (should be 44px)
+```
+
+### Root cause
+
+`src/components/trip/TravelPill.tsx` SCOPED_STYLES 內**兩個** `@media (max-width: 760px)` block：
+
+- v2.30.12 我加在 line 34-36：`.tp-travel-pill-wrap { margin: 6px 0 6px 44px; }`
+- 舊 line 107-115 既有 block（未修）：`.tp-travel-pill-wrap { margin-left: 92px; }`
+
+CSS cascade 後者勝出 → mobile 實際 margin-left = 92px，等同 v2.30.12 沒做。Desktop 因為沒落入 mobile media query 才正確顯示 56px。
+
+### Fixed
+
+- 將 v2.30.12 新增的 mobile @media block 合併進舊 mobile @media block（消除 cascade race）
+- 舊 `.tp-travel-pill-wrap { margin-left: 92px; }` 改為 `margin: 6px 0 6px 44px;`（與設計值一致）
+
+QA 確認 `.tp-rail-detail` mobile margin-left = 44px ✓（既有單一 @media block 無 cascade 問題）。只有 TravelPill 因為兩個 @media block 才中招。
+
+### Verified
+
+- `$B css '.tp-travel-pill-wrap' 'margin-left'` 在 mobile 應顯示 44px
+- 1525 unit tests pass + typecheck clean
+
 ## [2.30.12] - 2026-05-16
 
 **TimelineRail mobile 緊湊版型（移除 time col）+ 重新計算 toast feedback 精準化。**

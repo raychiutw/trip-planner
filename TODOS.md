@@ -27,6 +27,17 @@
 
 ## Completed
 
+### v2.30.13 — TravelPill mobile margin cascade fix (v2.30.12 未生效於 mobile)
+
+**Priority:** P1
+**Completed:** v2.30.13 (2026-05-16)
+
+QA prod 用 login 跑 mobile viewport 發現 v2.30.12 layout 緊湊化在 mobile 上**沒生效**：computed margin-left 仍是 92px 而非預期 44px。
+
+Root cause：`src/components/trip/TravelPill.tsx` SCOPED_STYLES 內兩個 `@media (max-width: 760px)` block 重複 `.tp-travel-pill-wrap` 規則，cascade 後者勝出 → 92px override 掉 44px。修：合併兩個 mobile @media block。
+
+教訓：scoped inline `<style>` SCOPED_STYLES 多個 @media block 容易產生重複 selector race；應該每個 component 只放一個 mobile @media block。
+
 ### v2.30.12 — TimelineRail 緊湊版型 + recompute toast 精準化
 
 **Priority:** P2
