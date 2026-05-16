@@ -42,7 +42,7 @@ import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
 import { EVENT } from '../lib/events';
 import { haversineMeters, avgLatLng, CROSS_REGION_THRESHOLD_M, type LatLng } from '../lib/geo';
-import { getTimelineEntryDisplayTitle } from '../lib/stopDisplay';
+import { getStopDisplayTitle } from '../lib/stopDisplay';
 
 const SCOPED_STYLES = `
 .tp-edit-entry {
@@ -775,10 +775,15 @@ export default function EditEntryPage() {
         setSiblingMasterCoords(extractSiblingCoords(timeline, entryId));
         const prev = idx > 0 ? timeline[idx - 1] : null;
         if (prev?.id != null) {
-          // v2.31.28: 用 displayTitle（poiName 優先），與 TimelineRail 對齊。
-          // 例如 entry.title="抵達那霸機場" 但 POI name="那霸機場" 時，
-          // TimelineRail 顯示「那霸機場」，header 也應顯示「那霸機場」。
-          setPrevEntry({ id: prev.id, title: getTimelineEntryDisplayTitle(prev) });
+          // v2.31.29: 與 TimelineRail 對齊 — mapDay.ts 計算 displayTitle = poiName ?? title，
+          // 但 backend GET /days/:dayNum 不回此欄位（mapDay 是 frontend-only DaySection.tsx
+          // 內呼叫）。直接從 master.name 重算。例如 entry.title="抵達那霸機場" 但 POI
+          // name="那霸機場" 時，TimelineRail 顯「那霸機場」，header 也應顯「那霸機場」。
+          const derivedTitle = getStopDisplayTitle({
+            title: prev.title ?? null,
+            poiName: prev.master?.name ?? null,
+          }) ?? prev.title ?? '';
+          setPrevEntry({ id: prev.id, title: derivedTitle });
         }
       } catch {
         // graceful — don't block edit
