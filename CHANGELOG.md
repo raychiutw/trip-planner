@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.9] - 2026-05-16
+
+**Perf: useTripSegments N+1 fix — TripPage 一次 fetch 取代每 day 一次。**
+
+Trip 詳細頁有多少 day 就 mount 多少 `TimelineRail`，每個 `TimelineRail` 自己 call `useTripSegments(tripId)` → 5-day trip 平行打 5 個 `GET /api/trips/:id/segments`。同份 segments data 重複請求 5 次，浪費約 200-300ms。
+
+### Added
+
+- `src/contexts/TripSegmentsContext.tsx` — Provider 暴露 `{ segments, segmentMap, loading }` 給子樹共用
+- `tests/unit/use-trip-segments-context.test.tsx` — 3 cases：context 存在不 fetch、多 hook caller 共用、context 缺席 hook 自己 fetch（EditEntryPage path）
+
+### Changed
+
+- `src/hooks/useTripSegments.ts`：hook 偵測 `TripSegmentsContext` 存在 → 直接讀 context；context 缺席 → 走原本 fetch path（保留 EditEntryPage / 其他獨立頁面 fallback）
+- `src/pages/TripPage.tsx`：頂層 call 一次 `useTripSegments(activeTripId)`，用 `TripSegmentsContext.Provider` 包 main content；children TimelineRail 從 context 拿值
+
 ## [2.31.8] - 2026-05-16
 
 **Fix: TravelPill 初始 render 閃顯反向 + AI 健檢 pending 文案 30s→3-7min。**
