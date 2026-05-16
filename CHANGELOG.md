@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.14] - 2026-05-16
+
+**Fix: AI 健檢 findings 的「前往景點」/「前往 Day」按鈕永不 render — actionTarget camelCase 對齊。**
+
+Prod QA tour 抓到 AI 健檢 findings 沒有可點的「前往景點」/「前往 Day」 navigation button，即使 backend 有 `actionTarget: { day, entryId }` 資料。同 #573 EditTripPage 一樣的 camelCase 對齊 bug 家族。
+
+Frontend `Finding` type 寫 `action_target?: { day?, entry_id? }` (snake_case)，6 處 reference 都 snake；backend 經 `deepCamel` 回 `actionTarget: { day, entryId }` (camel) → `f.action_target?.entry_id` 永遠 undefined → button condition 永不 true → 不 render。
+
+### Changed
+
+- `src/pages/TripHealthCheckPage.tsx::Finding.actionTarget` 改 camelCase
+- 6 處 reference 改用 `f.actionTarget?.entryId` / `f.actionTarget?.day`
+- `tests/unit/trip-health-check-page.test.tsx` mock data 改 camelCase（對齊真實 API response shape）
+
+### Added
+
+- `tests/unit/health-finding-action-target-camel.test.ts` — 4 cases
+
 ## [2.31.13] - 2026-05-16
 
 **Fix: EditTripPage destinations 沒從 backend load — 顯示「尚無目的地」。**

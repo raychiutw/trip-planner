@@ -108,7 +108,7 @@ describe('TripHealthCheckPage', () => {
           status: 'completed',
           requestId: 99,
           findings: [
-            { severity: 'high', title: 'Day 3 行程過密', description: '8 個景點 110 km', action_target: { day: 3 } },
+            { severity: 'high', title: 'Day 3 行程過密', description: '8 個景點 110 km', actionTarget: { day: 3 } },
             { severity: 'medium', title: 'Day 2 缺午餐', description: '11:30-14:30 連續景點' },
             { severity: 'low', title: '可加美麗海水族館', description: '順路 5km' },
           ],
@@ -146,7 +146,7 @@ describe('TripHealthCheckPage', () => {
               title: 'Check-in 衝突',
               description: '17:10 結束 → travel 45 min → 17:30 check-in 物理上不可行',
               suggestion: '把末站換成更近的景點',
-              action_target: { day: 2, entry_id: 42 },
+              actionTarget: { day: 2, entryId: 42 },
             },
             {
               severity: 'medium',
@@ -186,7 +186,7 @@ describe('TripHealthCheckPage', () => {
               severity: 'high',
               title: 'Entry-level issue',
               description: 'X',
-              action_target: { day: 2, entry_id: 42 },
+              actionTarget: { day: 2, entryId: 42 },
             },
           ],
           createdAt: new Date().toISOString(),
@@ -216,7 +216,7 @@ describe('TripHealthCheckPage', () => {
           status: 'completed',
           requestId: 99,
           findings: [
-            { severity: 'high', title: 'X', description: 'd', action_target: { day: 3 } },
+            { severity: 'high', title: 'X', description: 'd', actionTarget: { day: 3 } },
           ],
           createdAt: new Date().toISOString(),
           completedAt: new Date().toISOString(),
