@@ -31,9 +31,6 @@ const SCOPED_STYLES = `
   margin: 6px 0 6px 56px;
   flex-wrap: wrap;
 }
-@media (max-width: 760px) {
-  .tp-travel-pill-wrap { margin: 6px 0 6px 44px; }
-}
 .tp-travel-pill {
   display: inline-flex;
   align-items: center;
@@ -105,7 +102,8 @@ const SCOPED_STYLES = `
 .tp-travel-pill-recompute:hover { background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.16)); filter: brightness(0.95); }
 .tp-travel-pill-recompute:focus-visible { outline: 2px solid var(--color-priority-high-dot, #c0392b); outline-offset: 2px; }
 @media (max-width: 760px) {
-  .tp-travel-pill-wrap { margin-left: 92px; }
+  /* v2.30.12: mobile dot 中心 56→44px (page padding 16 + grip 20 + gap 8 + dot/2 12 — 對齊 .tp-rail-detail mobile margin-left). */
+  .tp-travel-pill-wrap { margin: 6px 0 6px 44px; }
   .tp-travel-pill {
     padding: 4px 12px;
     gap: 8px;
