@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.5] - 2026-05-16
+
+**`/tp-request` 兜底 cron 30 min → 10 min。**
+
+CF Pages POST `/trigger` 仍是第一線即時觸發；30 min 兜底在 Tailscale Funnel 530 / Caddy 中斷等場景救援週期太長（一筆 trip_request 卡 open 最久要 30 min 才補救）。10 min 把 worst-case 拉短到 1/3。
+
+每 10 min spawn 開銷：tmux session + bun + claude 啟動約 2-3s，empty-queue 路徑直接 self-destruct → 每次成本可忽略。
+
+### Changed
+
+- `scripts/tripline-api-server.ts`：`REQUEST_CRON_INTERVAL_MS` `30 * 60 * 1000` → `10 * 60 * 1000`
+
+### Migration
+
+- Deploy 順序：merge → `launchctl kickstart -k gui/501/com.tripline.api-server`
+- 驗證點：log `Scheduled request-handler (/tp-request) every 10 min`
+
 ## [2.31.4] - 2026-05-16
 
 **Remove dead `/tp-poi-enrich-monthly` schedule — batch 腳本 v2.23.0 已刪除。**
