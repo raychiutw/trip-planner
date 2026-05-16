@@ -63,13 +63,16 @@ type TravelMode = 'driving' | 'walking' | 'transit';
 type Lang = 'zh-TW' | 'en' | 'ja';
 
 interface TripDestApi {
-  dest_order?: number;
+  // v2.31.13: backend response 經 deepCamel 是 camelCase（destOrder/dayQuota/subAreas）。
+  // trip_destinations 表沒 place_id 欄位 — 早期 snake_case 寫法是錯的，filter 用
+  // typeof d.place_id === 'number' 永遠 false → destinations 全 filter 掉 → UI
+  // 顯示「尚無目的地」(prod QA found)。改 camelCase + name-based valid check。
+  destOrder?: number;
   name?: string;
   lat?: number | null;
   lng?: number | null;
-  day_quota?: number | null;
-  place_id?: number | null;
-
+  dayQuota?: number | null;
+  subAreas?: unknown;
 }
 
 interface TripApi {
@@ -387,16 +390,18 @@ export default function EditTripPage() {
         const data = (await res.json()) as TripApi;
         if (cancelled) return;
         setOriginal(data);
+        // v2.31.13: backend trip_destinations 表沒 place_id 欄位（client-side 用
+        // React key 而已，沒 backend persist）。既有 dest 用 synthetic key，name
+        // 是 schema 必填 → 拿來做 valid check。
         const initialDests: DestinationRow[] = (data.destinations ?? [])
-          .filter((d): d is TripDestApi & { place_id: string; name: string } =>
-            typeof d.place_id === 'number' && typeof d.name === 'string')
-          .map((d) => ({
-            place_id: d.place_id,
-
+          .filter((d): d is TripDestApi & { name: string } =>
+            typeof d.name === 'string' && d.name.trim().length > 0)
+          .map((d, idx) => ({
+            place_id: `existing-${d.destOrder ?? idx}-${d.name}`,
             name: d.name,
             lat: d.lat ?? null,
             lng: d.lng ?? null,
-            day_quota: d.day_quota ?? null,
+            day_quota: d.dayQuota ?? null,
           }));
         setOriginalDests(initialDests);
         setDestinations(initialDests);

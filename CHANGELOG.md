@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.13] - 2026-05-16
+
+**Fix: EditTripPage destinations 沒從 backend load — 顯示「尚無目的地」。**
+
+Prod QA 抓到 `/trip/:id/edit` 顯示「尚無目的地」即使行程明明有 destinations。Backend GET `/api/trips/:id` 經 `deepCamel` 回 `destinations: [{destOrder, name, lat, lng, dayQuota, subAreas}]`，但 EditTripPage `TripDestApi` type 寫死 snake_case + filter 用 `typeof d.place_id === 'number'`（`trip_destinations` 表沒此欄位）→ 永遠 false → 全 filter 掉。
+
+### Changed
+
+- `src/pages/EditTripPage.tsx::TripDestApi` 對齊 backend camelCase：`destOrder` / `dayQuota` / `subAreas`
+- Filter logic 改 `typeof d.name === 'string' && d.name.trim().length > 0` (對齊 backend `isValidDestination`)
+- 既有 dest map 用 synthetic `existing-${destOrder}-${name}` 當 React key（backend `trip_destinations` 表沒 place_id 欄位）
+
+### Added
+
+- `tests/unit/edit-trip-page-destinations-load.test.ts` — 3 cases
+
 ## [2.31.12] - 2026-05-16
 
 **Fix: ExplorePage POI 卡片真的接 Google rating。**
