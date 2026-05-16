@@ -67,7 +67,8 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await expect(page.getByTestId('add-stop-custom-duration')).toBeVisible();
     await expect(page.getByTestId('add-stop-custom-note')).toBeVisible();
     await expect(page.getByTestId('add-stop-counter')).toContainText('已選');
-    await expect(page.getByTestId('add-stop-counter')).toContainText('將加入');
+    // v2.31.33: counter 簡化為「已選 N 個 → DAY NN」(mobile fit)，不再含「將加入」
+    await expect(page.getByTestId('add-stop-counter')).toContainText('DAY');
     await page.getByTestId('add-stop-custom-title').fill('海邊散步');
     await expect(page.getByTestId('add-stop-counter')).toContainText('已選 1 個');
   });
