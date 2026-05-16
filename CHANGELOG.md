@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.21] - 2026-05-17
+
+**Fix: AddPoiFavoriteToTrip 結束時間 helper text 文字殘缺。**
+
+Bug #122（prod QA found）：`src/pages/AddPoiFavoriteToTripPage.tsx`
+line 557 「可空 — 依停留時間預估推」缺字，對齊 line 544 開始時間
+「可空 — 依景點類型自動推算」風格改為「可空 — 依停留時間自動推算」。
+
+**Test：** `tests/unit/add-favorite-to-trip-helper-text.test.ts`（新）—
+3 cases：新文案存在 + 殘缺文案不存在 + 開始時間 helper regression。
+
 ## [2.31.20] - 2026-05-17
 
 **Fix: ExplorePage 搜尋結果 card 顯示中文 type label。**
