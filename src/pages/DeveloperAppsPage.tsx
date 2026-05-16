@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { EVENT } from '../lib/events';
+import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import TitleBar from '../components/shell/TitleBar';
@@ -221,7 +222,7 @@ export default function DeveloperAppsPage() {
                     <div className="tp-app-cid">{app.client_id}</div>
                   </div>
                   <div><span className={pill.className}>{pill.label}</span></div>
-                  <div>{new Date(app.created_at).toLocaleDateString('zh-TW')}</div>
+                  <div>{parseUtcDate(app.created_at)?.toLocaleDateString('zh-TW') ?? app.created_at}</div>
                   <div></div>
                 </div>
               );

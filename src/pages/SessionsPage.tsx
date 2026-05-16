@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -150,7 +151,9 @@ interface SessionRow {
 }
 
 function relativeTime(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
+  const d = parseUtcDate(iso);
+  if (!d) return iso;
+  const ms = Date.now() - d.getTime();
   const sec = Math.floor(ms / 1000);
   if (sec < 60) return '剛才';
   const min = Math.floor(sec / 60);

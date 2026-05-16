@@ -23,6 +23,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
 import { apiFetchRaw } from '../lib/apiClient';
+import { parseUtcDate } from '../lib/parseUtcDate';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
@@ -809,16 +810,14 @@ function severityHeading(sev: Severity): string {
 }
 
 function formatTimestamp(iso: string): string {
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    const now = new Date();
-    const diff = now.getTime() - d.getTime();
-    if (diff < 60_000) return '剛剛完成';
-    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分鐘前完成`;
-    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小時前完成`;
-    return d.toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' });
-  } catch {
-    return iso;
-  }
+  // v2.31.7: 用 parseUtcDate 統一處理 D1 naive datetime（'YYYY-MM-DD HH:MM:SS'）
+  // 直接 `new Date(iso)` 沒 Z 後綴被 Chrome 當 local time → 顯示落差 TZ offset 小時。
+  const d = parseUtcDate(iso);
+  if (!d) return iso;
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  if (diff < 60_000) return '剛剛完成';
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分鐘前完成`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小時前完成`;
+  return d.toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' });
 }
