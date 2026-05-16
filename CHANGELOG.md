@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.4] - 2026-05-16
+
+**Remove dead `/tp-poi-enrich-monthly` schedule — batch 腳本 v2.23.0 已刪除。**
+
+`scripts/poi-enrich-batch.ts`（OSM Nominatim 月度 enrich）在 commit `ac23d4e`（v2.23.0 Google Maps Platform 切換）已從 repo 移除。POI enrichment 流程已改：
+- 新 POI 即時 enrich：`POST /api/pois/:id/enrich` 同步打 Google Place Details
+- 既有 POI 30 天 refresh：`scripts/google-poi-refresh-30d.ts`（50 POI/day cap，由 daily-check 一併處理）
+
+monthly batch skill 失去意義，每天 fire 都 day-1 guard early exit；真到 1 號會撞 `bun: No such file` 紅 Telegram 警報。
+
+### Removed
+
+- `scripts/tripline-api-server.ts`：`scheduleDaily(8, 0, '/tp-poi-enrich-monthly', 'poi-enrich')` schedule（v2.31.3 才加，沒等到觸發就拔）
+- `.claude/skills/tp-poi-enrich-monthly/` + `.codex/skills/tp-poi-enrich-monthly/` 整個 skill 目錄
+
+### Migration
+
+- Deploy 順序：merge PR → `launchctl kickstart -k gui/501/com.tripline.api-server` 載入剩 2 schedules
+
 ## [2.31.3] - 2026-05-16
 
 **api-server 內建多排程 cron 取代 launchd / Cowork — v2.30.18 band-aid 升級為主路徑。**
