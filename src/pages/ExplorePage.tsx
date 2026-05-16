@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/apiClient';
-import { mapNominatimCategory } from '../lib/poiCategory';
+import { mapNominatimCategory, POI_TYPE_LABELS } from '../lib/poiCategory';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
@@ -733,7 +733,10 @@ export default function ExplorePage() {
                             </button>
                           </div>
                           <div className="explore-poi-body">
-                            <div className="poi-category">{poi.category || 'POI'}</div>
+                            {/* v2.31.20: poi.category 是 Google Places primary type
+                              * (例 'ramen_restaurant')。直接 render 會顯 RAMEN_RESTAURANT
+                              * raw enum；走 mapNominatimCategory → 中文 label。 */}
+                            <div className="poi-category">{POI_TYPE_LABELS[mapNominatimCategory(poi.category)] ?? 'POI'}</div>
                             <div className="poi-name">{poi.name}</div>
                             <div className="poi-address">{poi.address ?? ''}</div>
                             {/* v2.31.12: backend `PoiSearchResult.rating` 已含 Google rating
