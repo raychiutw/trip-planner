@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.15] - 2026-05-16
+
+**Fix: EditTripPage 「預設交通方式」永遠顯示「自駕」即使 trip 真實是 walking/transit — defaultTravelMode camelCase read。**
+
+Prod QA sweep 抓到 EditTripPage `TripApi` 仍含 snake_case `data_source` / `default_travel_mode`，read 時 `data.default_travel_mode` 永遠 undefined（backend 經 deepCamel 是 `defaultTravelMode`），fallback `'driving'` → UI 「預設交通方式」永遠顯示「自駕」。Driving trip 因 fallback 巧合正確 mask 此 bug；walking/transit trip user 看到錯誤 default。
+
+同 #573 / #574 camelCase 對齊 bug 家族。
+
+### Changed
+
+- `src/pages/EditTripPage.tsx::TripApi` 改 camelCase（`defaultTravelMode` / `dataSource`）
+- Read path `data.defaultTravelMode` + `original.defaultTravelMode`
+- Write path 維持 `body.default_travel_mode`（backend `WRITABLE_FIELDS` allow-list 是 snake_case）
+
+### Added
+
+- `tests/unit/edit-trip-page-default-travel-mode.test.ts` — 3 cases
+
 ## [2.31.14] - 2026-05-16
 
 **Fix: AI 健檢 findings 的「前往景點」/「前往 Day」按鈕永不 render — actionTarget camelCase 對齊。**
