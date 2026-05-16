@@ -8,6 +8,7 @@ import { hasPermission } from '../../_auth';
 import { AppError } from '../../_errors';
 import { sanitizeReply } from '../../_validate';
 import { json, getAuth, parseJsonBody } from '../../_utils';
+import { HEALTH_CHECK_PREFIX } from '../../trips/[id]/health-check';
 import type { Env } from '../../_types';
 
 // GET /api/requests/:id
@@ -113,5 +114,106 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     diffJson: oldRow ? computeDiff(oldRow, newFields) : JSON.stringify(newFields),
   });
 
+  // AI 健檢 hook：若這是 health-check request（message 開頭 [AI 健檢]）且
+  // status 推到 completed/failed，把 reply 解析成 findings JSON 寫進
+  // trip_health_reports。寫失敗只 log，不阻擋 PATCH success — chat trail 已留。
+  const message = (result as Record<string, unknown>).message as string | undefined;
+  if (message?.startsWith(HEALTH_CHECK_PREFIX)) {
+    const newStatus = (result as Record<string, unknown>).status as string;
+    if (newStatus === 'completed' || newStatus === 'failed') {
+      try {
+        await applyHealthCheckCompletion(env.DB, tripId, Number(id), result as Record<string, unknown>);
+      } catch (hookErr) {
+        console.error('[requests] health-check completion hook failed:', hookErr);
+      }
+    }
+  }
+
   return json(result);
 };
+
+/**
+ * Parse trip_requests.reply as JSON array of findings and write into
+ * trip_health_reports. Reply 應該是純 JSON array（per HEALTH_CHECK_MESSAGE
+ * 指示），但 Claude 偶爾會包 ```json fence 或加 prose — 寬鬆 extract 第一個
+ * `[...]` block。
+ */
+async function applyHealthCheckCompletion(
+  db: D1Database,
+  tripId: string,
+  requestId: number,
+  request: Record<string, unknown>,
+) {
+  const status = request.status as string;
+  if (status === 'failed') {
+    const errMsg = (request.reply as string) || '健檢失敗';
+    await db
+      .prepare(
+        `UPDATE trip_health_reports
+           SET status = 'failed', error_message = ?, completed_at = datetime('now')
+         WHERE trip_id = ? AND request_id = ?`,
+      )
+      .bind(errMsg.slice(0, 500), tripId, requestId)
+      .run();
+    return;
+  }
+
+  const reply = (request.reply as string) || '';
+  const findings = parseFindings(reply);
+  await db
+    .prepare(
+      `UPDATE trip_health_reports
+         SET status = 'completed', findings_json = ?, error_message = NULL, completed_at = datetime('now')
+       WHERE trip_id = ? AND request_id = ?`,
+    )
+    .bind(JSON.stringify(findings), tripId, requestId)
+    .run();
+}
+
+function parseFindings(reply: string): unknown[] {
+  if (!reply.trim()) return [];
+  // Try direct JSON parse first
+  try {
+    const parsed = JSON.parse(reply);
+    if (Array.isArray(parsed)) return sanitizeFindings(parsed);
+  } catch {
+    // fall through to bracket extraction
+  }
+  // Extract first [...] block from prose/fence wrapper
+  const match = reply.match(/\[[\s\S]*\]/);
+  if (match) {
+    try {
+      const parsed = JSON.parse(match[0]);
+      if (Array.isArray(parsed)) return sanitizeFindings(parsed);
+    } catch {
+      // give up
+    }
+  }
+  return [];
+}
+
+function sanitizeFindings(arr: unknown[]): unknown[] {
+  const out: unknown[] = [];
+  for (const item of arr) {
+    if (!item || typeof item !== 'object') continue;
+    const f = item as Record<string, unknown>;
+    const sev = typeof f.severity === 'string' ? f.severity.toLowerCase() : '';
+    if (sev !== 'high' && sev !== 'medium' && sev !== 'low') continue;
+    const title = typeof f.title === 'string' ? f.title.slice(0, 60) : '';
+    const description = typeof f.description === 'string' ? f.description.slice(0, 300) : '';
+    if (!title) continue;
+    const action = f.action_target && typeof f.action_target === 'object'
+      ? f.action_target as Record<string, unknown>
+      : null;
+    const cleaned: Record<string, unknown> = { severity: sev, title, description };
+    if (action) {
+      const day = typeof action.day === 'number' ? action.day : null;
+      const entryId = typeof action.entry_id === 'number' ? action.entry_id : null;
+      if (day !== null || entryId !== null) {
+        cleaned.action_target = { ...(day !== null && { day }), ...(entryId !== null && { entry_id: entryId }) };
+      }
+    }
+    out.push(cleaned);
+  }
+  return out;
+}
