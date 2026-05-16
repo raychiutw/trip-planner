@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.34] - 2026-05-17
+
+**Fix: DeveloperAppsPage mobile 缺 GlobalBottomNav 5-tab。**
+
+Bug #135（mobile prod QA found）：`/developer/apps` mobile (375x812) 底部沒 5-tab nav，
+user 只能透過 back button 切其他 page。其他 page（AccountPage / PoiFavoritesPage /
+DeveloperAppNewPage 等）都傳 `bottomNav` prop，這頁漏。一致性 bug。
+
+Root cause：`DeveloperAppsPage` 的 AppShell 只傳 `sidebar` + `main`，沒 `bottomNav`。
+DeveloperAppNewPage 已對 — 同類型 dev page 沒對齊。
+
+**Fix：** 加 import GlobalBottomNav + useCurrentUser → `bottomNav={<GlobalBottomNav authed={!!user} />}`。
+
+**Test：** `developer-apps-page-bottom-nav.test.ts`（4 cases）— import / hook / prop /
+regression sidebar。1651 全綠。
+
 ## [2.31.33] - 2026-05-17
 
 **Fix: AddStopPage bottom counter mobile overflow 簡化為「→ DAY NN」。**
