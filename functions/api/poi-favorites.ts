@@ -37,9 +37,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   const { results } = await context.env.DB.prepare(
+    // v2.31.17: 補 p.rating 進 SELECT，讓 AddStopPage / ChangePoiPage favorites
+    // card 可以顯 ★ N.N（之前是孤兒 star icon 拔掉，現在 backend 有 data 可補回）。
     `SELECT pf.id, pf.user_id, pf.poi_id, pf.favorited_at, pf.note,
             p.name AS poi_name, p.address AS poi_address,
             p.lat AS poi_lat, p.lng AS poi_lng, p.type AS poi_type,
+            p.rating AS poi_rating,
             COALESCE(
               (SELECT json_group_array(json_object(
                   'tripId', usage.trip_id,

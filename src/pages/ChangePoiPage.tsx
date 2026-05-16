@@ -949,10 +949,16 @@ export default function ChangePoiPage() {
                         <div className="tp-change-poi-card-body">
                           <div className="tp-change-poi-card-name">{favorite.poiName}</div>
                           <div className="tp-change-poi-card-meta">
-                            {/* v2.31.11: 同 AddStopPage favorites — poi-favorites API SELECT
-                              * 沒拿 rating，孤兒 star icon 誤導 user，先拔。Task #114 backend
-                              * follow-up 後補回。 */}
-                            {poiMeta(favorite.poiAddress, favorite.poiType)}
+                            {/* v2.31.17: backend SELECT 補 p.rating（poi-favorites GET），
+                              * favorites card 跟 search card 一致顯 ★ N.N · address。 */}
+                            {typeof favorite.poiRating === 'number' && (
+                              <>
+                                <Icon name="star" />
+                                <span>{favorite.poiRating.toFixed(1)}</span>
+                                <span className="tp-change-poi-card-meta-sep">·</span>
+                              </>
+                            )}
+                            <span>{poiMeta(favorite.poiAddress, favorite.poiType)}</span>
                           </div>
                         </div>
                       </button>
