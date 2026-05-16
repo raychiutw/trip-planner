@@ -1013,9 +1013,14 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
           const isNow = nowIndex >= 0 && i === nowIndex;
           const isLast = i === events.length - 1;
           const expanded = entry.id != null && expandedId === entry.id;
-          const travelObj = entry.travel && typeof entry.travel === 'object' ? entry.travel : null;
           // v2.24.0 γ.1：lookup segment for (prev, curr) pair
           const prev = i > 0 ? orderedEvents[i - 1] : null;
+          // v2.31.8: `entry.travel` 在 backend _merge.ts 是 segmentsMap.get(from=eid) =
+          // 「離開此 entry 到下一站」語意；UI pill 在 (prev → curr) 中間，意思是
+          // 「抵達 curr 的旅程」。所以 fallback 要用 `prev.travel`（離開 prev = 抵達 curr）
+          // 不是 `entry.travel`，否則 segments 還沒載入時會閃顯錯誤方向值。
+          // segments 載入後 segment prop 覆蓋 → 正確值。
+          const travelObj = prev?.travel && typeof prev.travel === 'object' ? prev.travel : null;
           const segment = (prev?.id != null && entry.id != null)
             ? segmentMap.get(`${prev.id}-${entry.id}`)
             : undefined;
