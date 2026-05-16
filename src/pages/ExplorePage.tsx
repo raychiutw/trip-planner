@@ -331,6 +331,24 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-md); font-size: var(--font-size-callout);
 }
 
+/* v2.31.22: category filter 0 結果 empty state — 暖 placeholder + reset CTA */
+.explore-filter-empty {
+  padding: 32px 24px; text-align: center;
+  background: var(--color-background); border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+}
+.explore-filter-empty p {
+  margin: 0; color: var(--color-muted); font-size: var(--font-size-callout);
+}
+.explore-filter-empty-reset {
+  padding: 8px 16px; border-radius: 999px;
+  background: var(--color-accent); color: var(--color-accent-foreground);
+  border: 0; font-weight: 600; cursor: pointer;
+  font-size: var(--font-size-footnote);
+}
+.explore-filter-empty-reset:hover { filter: brightness(0.95); }
+
 /* F6 design-review: landing empty state — 暖色 onboarding card + chip suggestions */
 .explore-landing-empty {
   padding: 48px 24px;
@@ -679,12 +697,34 @@ export default function ExplorePage() {
                 if (category === 'attraction' && /attract|museum|park|temple|景點|公園/.test(cat)) return true;
                 return false;
               });
+              // v2.31.22: category filter 沒符合結果時的中文 label，給 empty state 用。
+              const CATEGORY_LABELS: Record<string, string> = {
+                all: '為你推薦',
+                attraction: '景點',
+                food: '美食',
+                hotel: '住宿',
+                shopping: '購物',
+              };
               return (
                 <section className="explore-section" data-testid="explore-results">
                   <h2>搜尋結果</h2>
                   <p className="section-meta">
                     {filtered.length} / {results.length} 個 POI · 點愛心圖示加入我的收藏
                   </p>
+                  {filtered.length === 0 ? (
+                    // v2.31.22: filter 0 結果 empty state — 以前是空白讓 user 迷路。
+                    <div className="explore-filter-empty" data-testid="explore-filter-empty">
+                      <p>沒有符合「{CATEGORY_LABELS[category] ?? category}」的結果。試試其他分類或回到「為你推薦」。</p>
+                      <button
+                        type="button"
+                        className="explore-filter-empty-reset"
+                        onClick={() => setCategory('all')}
+                        data-testid="explore-filter-empty-reset"
+                      >
+                        回到為你推薦
+                      </button>
+                    </div>
+                  ) : (
                   <div className="explore-poi-grid">
                     {filtered.map((poi) => {
                       const key = `${poi.category || 'poi'}::${poi.name}`;
@@ -751,6 +791,7 @@ export default function ExplorePage() {
                       );
                     })}
                   </div>
+                  )}
                 </section>
               );
             })()}
