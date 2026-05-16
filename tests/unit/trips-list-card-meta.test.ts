@@ -63,4 +63,16 @@ describe('mockup-parity-qa-fixes TripsListPage card meta + filter', () => {
     expect(SRC).toMatch(/data-testid="trips-list-archived-reset"/);
     expect(SRC).toMatch(/回到全部/);
   });
+
+  it('v2.31.30: cardMeta 不再「{startMD} · {range}」重複（range 已含起始日）', () => {
+    const cardMetaMatch = SRC.match(/function cardMeta[\s\S]*?\n\}/);
+    expect(cardMetaMatch).not.toBeNull();
+    // 既有「startMD && range」邏輯應該被拔除（兩者都有時只取 range）
+    expect(cardMetaMatch?.[0]).not.toMatch(/startMD && range/);
+    expect(cardMetaMatch?.[0]).not.toMatch(/\$\{startMD\}\s*·\s*\$\{range\}/);
+    // 仍保留 range / startMD fallback chain
+    expect(cardMetaMatch?.[0]).toMatch(/range && members/);
+    expect(cardMetaMatch?.[0]).toMatch(/if \(range\)/);
+    expect(cardMetaMatch?.[0]).toMatch(/if \(startMD\)/);
+  });
 });

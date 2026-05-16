@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.30] - 2026-05-17
+
+**Fix: trips list card meta 移除重複出發日（range 已含起始日）。**
+
+Bug #131（prod QA found）：trips list `/trips` card 2「2026 沖繩五日自駕遊行程表」
+meta 顯「由你建立 · 7/29 出發 · 7/29 – 8/2」被 ellipsis 切成「由你建立 · 7/29 出發 · 7/29 – ...」。
+其他 card 因為文字較短沒被切，視覺不一致。
+
+Root cause：`cardMeta()` 邏輯 `startMD && range` → `${startMD} · ${range}` 重複 —
+「7/29 出發」是起始日，「7/29 – 8/2」range 也含起始日。資訊重複且擠爆 176px card
+（meta 文字實際 183px > card 176px = 7px overflow）。
+
+**Fix：** 移除 startMD + range 並列。改成優先順序：
+- range + members → `{range} · {members} 旅伴`
+- range → `{range}`
+- startMD → `{startMD}`（沒 endDate 才 fallback「7/29 出發」）
+- members → `{members} 旅伴`
+
+**Test：** `trips-list-card-meta.test.ts` 加 regression 釘住「不再 `startMD && range`」；
+`trips-list-page.test.tsx:92` 期望從「7/26 出發 · 7/26 – 7/30」改「7/26 – 7/30 · 2 旅伴」
+（sample 含 memberCount: 2）。
+
 ## [2.31.29] - 2026-05-17
 
 **Fix: EditEntryPage prev header displayTitle 從 master.name 計算（v2.31.28 follow-up）。**
