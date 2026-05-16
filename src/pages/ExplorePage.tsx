@@ -736,11 +736,12 @@ export default function ExplorePage() {
                             <div className="poi-category">{poi.category || 'POI'}</div>
                             <div className="poi-name">{poi.name}</div>
                             <div className="poi-address">{poi.address ?? ''}</div>
-                            {/* Section 4.9：rating meta — 真實 rating 待 backend
-                              提供 Google rating 接入；先用 placeholder ⭐ + 「待補」 */}
+                            {/* v2.31.12: backend `PoiSearchResult.rating` 已含 Google rating
+                              （v2.23.0 google-maps-migration 後）。有值顯示 ★ N.N，
+                              無 rating 仍 fallback 顯「探索更多評論」placeholder。 */}
                             <div className="explore-poi-rating">
                               <span className="explore-poi-rating-star">★</span>
-                              <span>探索更多評論</span>
+                              <span>{typeof poi.rating === 'number' ? poi.rating.toFixed(1) : '探索更多評論'}</span>
                             </div>
                           </div>
                         </article>
