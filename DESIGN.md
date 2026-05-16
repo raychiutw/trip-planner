@@ -381,6 +381,33 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - Stop 之間的交通段，左側 2px dashed terracotta border + icon + text。
 - 縮排 34px（對齊 stop 內 icon box 左緣）。
 
+### AI Health Check Page (`tp-ai-health-*`)
+
+行程 AI 健檢全頁。Route `/trip/:tripId/health`。入口：TripsListPage 卡片 ⋯ menu「AI 健檢」+ TripPage ⋯ menu「AI 健檢」。
+
+**命名注意**：避開 v2.23.0 既有 `<TripHealthBanner>` 與 `.tp-trip-health-banner-*`（POI lifecycle health：closed / missing）。AI 健檢 component 用 `tp-ai-health-*` 前綴與專屬 testid `ai-health-*`，**禁** 重用 `tp-trip-health-*` 或 `<TripHealthBanner>` 容器。
+
+**4 個 state**（依 `trip_health_reports.status`）+ overlay re-generating：
+
+| State | UI |
+|-------|----|
+| empty (`report === null`) | `tp-ai-health-empty` block + sparkle bubble + 「開始健檢」CTA |
+| pending (無舊 findings) | `tp-ai-health-loading` pulse animation + 「健檢進行中…」 / button 「健檢進行中…」disabled |
+| completed (有 findings) | severity-grouped findings（高/中/低）+ 「重新生成」button |
+| completed (`findings.length===0`) | success bubble + 「看起來沒有問題」 |
+| failed | `tp-ai-health-failed` destructive panel + errorMessage + 「重新生成」button |
+| re-generating (pending + 舊 findings) | 舊 results `opacity: 0.55` dim + 「準備中…」pulse banner + button 「再重新生成」disabled |
+
+**Severity 顏色**：用既有 `--color-priority-{high,medium,low}-{bg,dot}` token（不用 terracotta — accent 仍保留給 chrome / CTA / sight-food icon）。每張 finding card 左側 6px bar + bg = priority 半透明色 + foreground = priority dot。Count chip 同色系。
+
+**Finding action**：若 `action_target.day` 存在 → 「前往 Day N」accent-filled button，click → navigate `/trip/:id?day=N`。
+
+**Polling**：pending state 每 3000ms `GET /api/trips/:id/health-check` 直到 status 變 completed/failed。`pollRef` 持 timeout id 避免 effect 重渲漏清。`prefers-reduced-motion` → pulse animation 停。
+
+**Sticky bottom bar**：含「回行程」ghost button（report 存在時才顯示）+ 主 CTA（依 state 改字：開始健檢 / 重新生成 / 再重新生成 / 健檢進行中…）。
+
+**Mockup**：`/tmp/TripAIHealth-variants.html` Variant C (sign-off 2026-05-16)。
+
 ## Modal Dialogs
 
 ### Principle
