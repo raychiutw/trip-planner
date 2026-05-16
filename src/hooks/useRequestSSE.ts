@@ -1,95 +1,123 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiFetchRaw } from '../lib/apiClient';
 
 type RequestStatus = 'open' | 'processing' | 'completed' | 'failed';
 type ProcessedBy = 'api' | 'job' | null;
+type ErrorReason = 'auth_expired' | 'network' | 'sse_failed' | null;
 
 interface UseRequestSSEResult {
   status: RequestStatus | null;
   processedBy: ProcessedBy;
   error: Error | null;
+  errorReason: ErrorReason;
   isConnected: boolean;
+  elapsedMs: number;
 }
 
+const SAFETY_NET_POLL_INTERVAL_MS = 30_000;
+const ELAPSED_TICK_MS = 1_000;
+
 /**
- * SSE hook for real-time request status updates.
- * Falls back to 10s polling if SSE connection fails.
+ * Subscribe to a trip_request's status with SSE + always-on polling safety net.
+ *
+ * v2.31.6: polling 永遠跑（每 30s），SSE 只是 latency optimization。第一個看到
+ * terminal 的 source 贏，cleanup 雙方。原本只有 SSE-error→polling 切換的設計，
+ * 在 EventSource auto-reconnect 不觸 onerror 時會 silently 卡死（user 等不到 reply）。
  */
 export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
   const [status, setStatus] = useState<RequestStatus | null>(null);
   const [processedBy, setProcessedBy] = useState<ProcessedBy>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [errorReason, setErrorReason] = useState<ErrorReason>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(0);
+
   const esRef = useRef<EventSource | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sseFailedRef = useRef(false);
-  const statusRef = useRef(status);
-  statusRef.current = status;
-
-  const cleanup = useCallback(() => {
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-    }
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-    setIsConnected(false);
-  }, []);
-
-  // Fallback polling
-  const startPolling = useCallback((id: number) => {
-    if (pollingRef.current) return;
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await apiFetchRaw(`/requests/${id}`);
-        if (!res.ok) return;
-        const data = await res.json() as { status: RequestStatus; processedBy: string | null };
-        setStatus(data.status);
-        setProcessedBy((data.processedBy as ProcessedBy) ?? null);
-        if (data.status === 'completed' || data.status === 'failed') {
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-          }
-        }
-      } catch {
-        // network error — keep polling, next tick will retry
-      }
-    }, 10_000);
-  }, []);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tickTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const terminalRef = useRef(false);
 
   useEffect(() => {
     if (!requestId) {
-      cleanup();
+      // reset
       setStatus(null);
       setProcessedBy(null);
       setError(null);
-      sseFailedRef.current = false;
+      setErrorReason(null);
+      setIsConnected(false);
+      setElapsedMs(0);
+      terminalRef.current = false;
       return;
     }
 
-    // Terminal check via ref (avoids status in deps causing reconnects)
-    if (statusRef.current === 'completed' || statusRef.current === 'failed') {
-      cleanup();
-      return;
-    }
+    terminalRef.current = false;
+    const startTime = Date.now();
 
-    if (sseFailedRef.current) {
-      startPolling(requestId);
-      return;
-    }
+    const cleanupAll = () => {
+      if (esRef.current) {
+        esRef.current.close();
+        esRef.current = null;
+      }
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      if (tickTimerRef.current) {
+        clearInterval(tickTimerRef.current);
+        tickTimerRef.current = null;
+      }
+      setIsConnected(false);
+    };
 
+    const settle = (s: RequestStatus, pb: ProcessedBy) => {
+      if (terminalRef.current) return;
+      terminalRef.current = true;
+      setStatus(s);
+      setProcessedBy(pb);
+      cleanupAll();
+    };
+
+    // ── Elapsed timer (1s tick) ─────────────────────────────────────
+    tickTimerRef.current = setInterval(() => {
+      setElapsedMs(Date.now() - startTime);
+    }, ELAPSED_TICK_MS);
+
+    // ── Safety-net polling (every 30s, always on) ───────────────────
+    const pollOnce = async (): Promise<void> => {
+      if (terminalRef.current) return;
+      try {
+        const res = await apiFetchRaw(`/requests/${requestId}`);
+        if (res.status === 401) {
+          setErrorReason('auth_expired');
+          setError(new Error('登入已過期，請重新整理頁面'));
+          cleanupAll();
+          return;
+        }
+        if (!res.ok) return;
+        const data = await res.json() as { status: RequestStatus; processedBy: string | null };
+        if (!terminalRef.current) {
+          setStatus(data.status);
+          setProcessedBy((data.processedBy as ProcessedBy) ?? null);
+        }
+        if (data.status === 'completed' || data.status === 'failed') {
+          settle(data.status, (data.processedBy as ProcessedBy) ?? null);
+        }
+      } catch {
+        // network error — next tick retries
+      }
+    };
+    pollTimerRef.current = setInterval(() => { void pollOnce(); }, SAFETY_NET_POLL_INTERVAL_MS);
+
+    // ── SSE (fast path) ─────────────────────────────────────────────
     const baseUrl = import.meta.env.DEV ? 'http://localhost:8788' : '';
     const url = `${baseUrl}/api/requests/${requestId}/events`;
-
     const es = new EventSource(url, { withCredentials: true });
     esRef.current = es;
 
     es.onopen = () => {
       setIsConnected(true);
-      setError(null);
+      setError((prev) => (prev?.message === 'SSE 連線失敗' ? null : prev));
+      setErrorReason((prev) => (prev === 'sse_failed' ? null : prev));
     };
 
     es.onmessage = (event) => {
@@ -103,31 +131,26 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
           setError(new Error(data.error));
           return;
         }
-        if (data.status) {
+        if (data.status && !terminalRef.current) {
           setStatus(data.status);
           setProcessedBy((data.processedBy as ProcessedBy) ?? null);
           if (data.status === 'completed' || data.status === 'failed') {
-            es.close();
-            esRef.current = null;
-            setIsConnected(false);
+            settle(data.status, (data.processedBy as ProcessedBy) ?? null);
           }
         }
       } catch {
-        // malformed SSE data — ignore
+        // malformed SSE data — ignore; polling will catch up
       }
     };
 
     es.onerror = () => {
+      // 不 close — 讓 EventSource auto-reconnect。polling 兜底，不 silent fail。
       setIsConnected(false);
-      sseFailedRef.current = true;
-      es.close();
-      esRef.current = null;
-      setError(new Error('SSE 連線失敗，切換為輪詢模式'));
-      startPolling(requestId);
+      setErrorReason('sse_failed');
     };
 
-    return cleanup;
-  }, [requestId, cleanup, startPolling]); // status removed from deps
+    return cleanupAll;
+  }, [requestId]);
 
-  return { status, processedBy, error, isConnected };
+  return { status, processedBy, error, errorReason, isConnected, elapsedMs };
 }
