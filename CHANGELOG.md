@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.18] - 2026-05-17
+
+**Fix: AI 健檢 reply 在 chat 顯示為 raw JSON array。**
+
+Bug #115（prod QA found）：使用者觸發 AI 健檢後，chat 的 assistant
+bubble 直接 dump 一大坨 `[{"severity":"high","dimension":"distance",...}]`
+原始 JSON，使用者完全看不懂這是什麼、要怎麼處理。
+
+Root cause：Claude prompt 規定回純 JSON array（給 `applyHealthCheckCompletion`
+parse 進 `trip_health_reports.findings_json`），但 `trip_requests.reply`
+維持原樣，chat UI 又把 `row.reply` 當 markdown 渲染 → user 看到 raw JSON。
+
+**Fix（backend only）：**
+- `functions/api/requests/[id]/index.ts` `applyHealthCheckCompletion`
+  在 UPDATE `trip_health_reports` 之後同時 UPDATE
+  `trip_requests SET reply = <user-friendly summary>`：
+  - 完成 0 findings：`AI 健檢完成 — 行程沒發現問題。\n\n[前往健檢報告 →](/trip/:id/health)`
+  - 完成 N findings：`AI 健檢完成 — 發現 N 個 finding（high H · medium M · low L）。\n\n[前往健檢報告 →](/trip/:id/health)`（severity 0 的層級不列）
+  - failed：`AI 健檢失敗 — <err>\n\n可重新觸發：[前往健檢報告](/trip/:id/health)`
+- 原 raw findings 保留在 `trip_health_reports.findings_json`（健檢全頁讀此），
+  chat reply 只保留人話 summary。
+- 新 helper `buildHealthCheckSummary` + `rewriteRequestReply`。
+
+**Test：** `tests/unit/health-check-chat-reply-rewrite.test.ts`（新）—
+完成/失敗兩條 branch 各驗 UPDATE call + summary 內容 + markdown link。
+
 ## [2.31.17] - 2026-05-17
 
 **Fix: AddStopPage / ChangePoiPage favorites card 補回 ★ rating 顯示。**
