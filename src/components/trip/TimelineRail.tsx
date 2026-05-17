@@ -962,7 +962,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
         const missing = data.pairsSkippedMissingCoords ?? 0;
         const errs = (data.errorsDetail ?? []).length;
         if (computed === 0 && missing > 0) {
-          showToast(`${missing} 段缺少 POI 座標無法計算，請補上 lat/lng`, 'info');
+          showToast(`${missing} 段缺少景點座標無法計算，請補上經緯度`, 'info');
         } else if (computed === 0 && errs > 0) {
           showToast(`${errs} 段重算失敗（Google Routes API）`, 'info');
         } else if (computed === 0) {
