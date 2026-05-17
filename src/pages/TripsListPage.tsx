@@ -1185,6 +1185,7 @@ export default function TripsListPage() {
       <AppShell
         sidebar={<DesktopSidebarConnected />}
         main={main}
+        sheetPortalId={showEmbeddedTrip ? 'trip-sheet-portal' : undefined}
         bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     </>
