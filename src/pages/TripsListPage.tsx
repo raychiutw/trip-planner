@@ -19,7 +19,7 @@
  *   - GET /api/trips?all=1 → trip metadata (name, countries, day_count,
  *     start_date, end_date, member_count)
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -714,6 +714,12 @@ export default function TripsListPage() {
   const [myIds, setMyIds] = useState<string[] | null>(null);
   const [allTrips, setAllTrips] = useState<TripInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * v2.31.41 fix: embedded TripPage 透過 setEmbeddedSheet callback 把
+   * sticky map sheet content 推上來，wire 進下方 AppShell sheet prop。
+   * 沒 selected trip 時 undefined → AppShell 退 2-pane（grid mode）。
+   */
+  const [embeddedSheet, setEmbeddedSheet] = useState<ReactNode | undefined>(undefined);
 
   // 同 tab navigate 不會 remount TripsListPage — 必須由 tp-trip-created /
   // tp-trip-updated event 觸發 refetch，否則新增/編輯後回 list 看不到變更。
@@ -1173,7 +1179,7 @@ export default function TripsListPage() {
           </>
         )}
       />
-      <TripPage ref={tripPageRef} tripId={effectiveSelectedId!} noShell />
+      <TripPage ref={tripPageRef} tripId={effectiveSelectedId!} noShell setSheet={setEmbeddedSheet} />
     </div>
   ) : cardGridMain;
 
@@ -1185,6 +1191,7 @@ export default function TripsListPage() {
       <AppShell
         sidebar={<DesktopSidebarConnected />}
         main={main}
+        sheet={embeddedSheet}
         bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     </>

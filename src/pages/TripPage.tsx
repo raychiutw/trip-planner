@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
@@ -167,6 +167,13 @@ export interface TripPageProps {
    * skip the AppShell wrapper, sidebar, sheet, bottomNav. The hosting page
    * provides those. */
   noShell?: boolean;
+  /**
+   * v2.31.41 fix — embedded mode 把 sheet content (TripSheet with sticky map)
+   * 透過 callback 推給 host。Host (TripsListPage) 把 node wire 進自己的 AppShell
+   * sheet prop，desktop 3-pane layout 才有右側 sticky map。沒 callback 時
+   * sheet content 直接 throw away（v2.17.17 embedded refactor regression）。
+   */
+  setSheet?: (node: ReactNode | undefined) => void;
 }
 
 /* PR-SS/UU 2026-04-27：embedded mode 用 ref 從外部 trigger 各 actions。
@@ -181,7 +188,7 @@ export interface TripPageHandle {
 }
 
 function TripPageInner(
-  { tripId: propTripId, noShell = false }: TripPageProps,
+  { tripId: propTripId, noShell = false, setSheet }: TripPageProps,
   ref: React.Ref<TripPageHandle>,
 ) {
   const { tripId: urlTripId } = useParams<{ tripId: string }>();
@@ -625,16 +632,33 @@ function TripPageInner(
     );
   }
 
-  const sheetContent = !loading && trip ? (
-    <Suspense fallback={null}>
-      <TripSheet
-        tripId={trip.id}
-        allPins={mapRailData.allPins}
-        pinsByDay={mapRailData.pinsByDay}
-        dark={isDark}
-      />
-    </Suspense>
-  ) : undefined;
+  const sheetContent = useMemo<ReactNode | undefined>(() =>
+    !loading && trip ? (
+      <Suspense fallback={null}>
+        <TripSheet
+          tripId={trip.id}
+          allPins={mapRailData.allPins}
+          pinsByDay={mapRailData.pinsByDay}
+          dark={isDark}
+        />
+      </Suspense>
+    ) : undefined,
+    [loading, trip, mapRailData.allPins, mapRailData.pinsByDay, isDark],
+  );
+
+  /**
+   * v2.31.41 fix: embedded mode (noShell) 把 sheetContent 推給 host
+   * via setSheet callback。Host (TripsListPage) wire 進自己的 AppShell sheet
+   * prop，desktop 3-pane layout 才有右側 sticky map。v2.17.17 embedded
+   * refactor 後 sheet 被 throw away 是 regression。
+   */
+  useEffect(() => {
+    if (noShell && setSheet) {
+      setSheet(sheetContent);
+      return () => setSheet(undefined);
+    }
+    return undefined;
+  }, [noShell, setSheet, sheetContent]);
 
   // 「更多」 sheet 4 action 已遷移新家:
   // 共編 → trip TitleBar；切換行程 → /trips；外觀 → AccountPage；下載 → OverflowMenu
