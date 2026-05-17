@@ -187,20 +187,20 @@ export default function EmailVerifyPendingPage() {
         )}
 
         <p className="tp-verify-footer">
-          打錯 email？<a href="/signup">改用其他信箱</a>
+          打錯電子郵件？<a href="/signup">改用其他信箱</a>
         </p>
         </div>
       </div>
 
       <AuthBrandHero
-        eyebrow="Almost there"
+        eyebrow="就快好了"
         headline={<>差最後一步<br />就能開始。</>}
-        sub="驗證 email 是為了確保你能收到旅伴邀請、行程更新通知，以及哪天忘記密碼時的重設連結。"
+        sub="驗證電子郵件是為了確保你能收到旅伴邀請、行程更新通知，以及哪天忘記密碼時的重設連結。"
         items={[
           {
             icon: <polyline points="20,6 9,17 4,12" />,
             title: '驗證後立即可用',
-            desc: '點完連結會自動回到這個頁面，可以直接開始規劃 trip。',
+            desc: '點完連結會自動回到這個頁面，可以直接開始規劃旅程。',
           },
           {
             icon: (

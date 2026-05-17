@@ -152,7 +152,7 @@ export default function ForgotPasswordPage() {
           <>
             <div className="tp-auth-headline">
               <h1>忘記密碼</h1>
-              <p>輸入您註冊的 email，我們會寄重設連結給您。</p>
+              <p>輸入您註冊的電子郵件，我們會寄重設連結給您。</p>
             </div>
 
             {warning && (
@@ -193,9 +193,9 @@ export default function ForgotPasswordPage() {
       </div>
 
       <AuthBrandHero
-        eyebrow="Account Recovery"
+        eyebrow="找回帳號"
         headline={<>忘了沒關係<br />5 分鐘搞定。</>}
-        sub="我們不會請你回答秘密問題、不收手機號、不要身分證。Email 是唯一管道，最簡單也最不容易被釣魚。"
+        sub="我們不會請你回答秘密問題、不收手機號、不要身分證。電子郵件是唯一管道，最簡單也最不容易被釣魚。"
         items={[
           {
             icon: (
