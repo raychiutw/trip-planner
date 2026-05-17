@@ -43,7 +43,7 @@ describe('v2.31.39 ConnectedAppsPage nav regression fix', () => {
 
   it('TitleBar 帶 back callback navigate /account', () => {
     expect(CONNECTED_APPS_SRC).toMatch(
-      /<TitleBar\s+[^>]*title="已連結的應用"[^>]*back=\{[^}]+\}/s,
+      /<TitleBar\s+[^>]*title="已連結的應用程式"[^>]*back=\{[^}]+\}/s,
     );
     expect(CONNECTED_APPS_SRC).toMatch(/navigate\(['"]\/account['"]\)/);
   });
