@@ -834,7 +834,7 @@ export default function ChangePoiPage() {
             {searching && <div className="tp-change-poi-empty">搜尋中⋯</div>}
             {!searching && query.trim().length === 0 && (
               <div className="tp-change-poi-empty">
-                輸入關鍵字搜尋，或切到「收藏」tab 從你儲存的 POI 選取
+                輸入關鍵字搜尋，或切到「收藏」分頁從你儲存的景點選取
               </div>
             )}
             {!searching && query.trim().length >= 2 && searchResults.length === 0 && (
