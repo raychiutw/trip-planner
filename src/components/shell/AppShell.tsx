@@ -164,6 +164,14 @@ export interface AppShellProps {
   main: ReactNode;
   /** 桌機右側 sheet slot（可選；不傳即 2-pane；mobile 隱藏） */
   sheet?: ReactNode;
+  /**
+   * 桌機右側 sheet 的 React Portal target ID（v2.31.46 #143）。
+   * 設定後即使 `sheet` 為空也 render `<aside id={sheetPortalId}>` 並 layout
+   * 用 3-pane，讓 child component（embedded TripPage）可以 createPortal
+   * 推內容過來。避開 v2.31.41 callback prop + setState-from-effect 引發的
+   * strict mode 雙倍 fire / infinite re-render。
+   */
+  sheetPortalId?: string;
   /** 手機底部 nav slot（可選；桌機隱藏） */
   bottomNav?: ReactNode;
 }
@@ -174,8 +182,8 @@ export interface AppShellProps {
 const SCROLL_THRESHOLD_PX = 8;
 const SCROLL_TOP_BUFFER_PX = 60;
 
-export default function AppShell({ sidebar, main, sheet, bottomNav }: AppShellProps) {
-  const layout: AppShellLayout = sheet ? APP_SHELL_LAYOUT_3PANE : APP_SHELL_LAYOUT_2PANE;
+export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNav }: AppShellProps) {
+  const layout: AppShellLayout = (sheet || sheetPortalId) ? APP_SHELL_LAYOUT_3PANE : APP_SHELL_LAYOUT_2PANE;
   const mainRef = useRef<HTMLElement>(null);
   const [navHidden, setNavHidden] = useState(false);
   const lastYRef = useRef(0);
@@ -239,8 +247,8 @@ export default function AppShell({ sidebar, main, sheet, bottomNav }: AppShellPr
           )}
           {main}
         </main>
-        {sheet && (
-          <aside className="app-shell-sheet" data-testid="app-shell-sheet">
+        {(sheet || sheetPortalId) && (
+          <aside className="app-shell-sheet" data-testid="app-shell-sheet" id={sheetPortalId}>
             {sheet}
           </aside>
         )}

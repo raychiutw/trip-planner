@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
@@ -251,6 +252,21 @@ function TripPageInner(
   const { isDark, setIsDark } = useDarkMode();
 
   const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
+
+  /**
+   * v2.31.46 #143：portal target lookup for embedded mode sticky map sheet。
+   * 從 host AppShell（TripsListPage）拿 `<aside id="trip-sheet-portal">` DOM
+   * 後 createPortal 把 sheetContent 推過去。
+   *
+   * 為何 useState + useEffect：DOM target 需 host 先 mount AppShell，
+   * 第一次 render 取不到，useEffect 拿到後再 setState 觸發第二次 render 才
+   * portal。Strict mode 雙倍 fire setState 同值 → React bail out。
+   */
+  const [sheetPortalNode, setSheetPortalNode] = useState<Element | null>(null);
+  useEffect(() => {
+    if (!noShell) return;
+    setSheetPortalNode(document.getElementById('trip-sheet-portal'));
+  }, [noShell]);
 
   /* --- lsRenewAll once per session (#9) --- */
   useEffect(() => {
@@ -750,9 +766,17 @@ function TripPageInner(
     </TripIdContext.Provider>
   );
 
-  // Embedded mode: host page provides AppShell + sidebar + sheet + bottomNav.
+  // Embedded mode: host page provides AppShell + sidebar + sheet portal target + bottomNav.
+  // v2.31.46 #143：sheet content 透過 React Portal 掛到 host AppShell 的
+  // `<aside id="trip-sheet-portal">` 裡（host 須 AppShell pass `sheetPortalId`），
+  // 避開 v2.31.41 callback prop + setState-from-effect 引發的 strict mode race。
   if (noShell) {
-    return wrappedMain;
+    return (
+      <>
+        {wrappedMain}
+        {sheetPortalNode && sheetContent && createPortal(sheetContent, sheetPortalNode)}
+      </>
+    );
   }
 
   return (
