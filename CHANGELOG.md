@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.62] - 2026-05-17
+
+**LoginPage brand hero eyebrow「Why sign in」→「登入後可以」。**
+
+### Fixed: zh-TW 一致性
+
+Desktop split-screen Login 右側 brand hero 有 English eyebrow「Why sign in」。
+雖然外層 `aria-hidden` 給 screen reader 跳過，但 visual user 仍會看到
+英文 eyebrow 開頭、下面緊接 Chinese h2「把每次旅程留在身邊」 + Chinese
+features — 不一致。改為「登入後可以」。
+
 ## [2.31.61] - 2026-05-17
 
 **Error message 內混雜英文「stop」→ 統一中文「停留點」。**
