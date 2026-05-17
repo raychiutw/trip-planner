@@ -372,7 +372,7 @@ export default function ResetPasswordPage() {
           {
             icon: <polyline points="20,6 9,17 4,12" />,
             title: '即時生效',
-            desc: '設好密碼後立即可登入，不需等 email 或重新驗證。',
+            desc: '設好密碼後立即可登入，不需等電子郵件或重新驗證。',
           },
           {
             icon: (
