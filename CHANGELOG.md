@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.59] - 2026-05-17
+
+**LegacyRedirect 不再寫死 admin trip ID — multi-user 安全 fix。**
+
+### Fixed: 其他 user 走 legacy URL → 被 redirect 到 admin trip → 403
+
+`src/entries/main.tsx` line 137 `const DEFAULT_TRIP = 'okinawa-trip-2026-Ray'`
+是 admin（Ray）私有的 trip ID。當其他 user 訪問 unknown route（catch-all
+`<Route path="*">`），LegacyRedirect 沒 valid `?trip=xxx` query 時 fallback
+到 DEFAULT_TRIP → redirect 到 `/trips?selected=okinawa-trip-2026-Ray` →
+非 owner 看 403。
+
+**Fix**：移除 DEFAULT_TRIP 常數，沒 valid trip query 時 redirect 到 `/trips`
+（無 selected param，讓 TripsListPage 自然處理：fallback 到 user 最新編輯
+trip 或顯示 empty state）。
+
+### Regression coverage
+
+`tests/unit/legacy-redirect-no-default-trip.test.ts` — 4 個 source-grep test
+（DEFAULT_TRIP 常數移除 / `<Navigate to="/trips">` fallback / valid query
+仍處理 / executable code 無 admin trip hardcode）。
+
 ## [2.31.58] - 2026-05-17
 
 **Empty trip AI 健檢 guard + ForgotPasswordPage 文法 fix — 2 個 prod QA bug。**
