@@ -4163,8 +4163,9 @@
     background: #0F0B08;
   }
   /* TitleBar trip-picker — shared by Chat / Map header(production
-   * `.tp-titlebar-trip-picker`)。規範:桌機 SVG icon + 行程名 + chevron;
-   * 手機(<=760) icon-only。點擊展開 dropdown 切換當前綁定行程。 */
+   * `.tp-titlebar-trip-picker`)。規範:SVG icon + chevron(v2.31.47 拔
+   * trip name span,避免跟 TitleBar title 重複 — title 已顯 trip name)。
+   * 點擊展開 dropdown 切換當前綁定行程,dropdown rows 顯每個 trip name。 */
   .tp-titlebar-trip-picker {
     display: inline-flex;
     align-items: center;
@@ -4189,12 +4190,9 @@
     color: var(--tp-accent);
   }
   .tp-titlebar-trip-picker .tp-icon { width: 18px; height: 18px; flex-shrink: 0; }
-  .tp-titlebar-trip-picker-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-  }
+  /* v2.31.47：picker button 拔掉 trip name span（避免跟 TitleBar title 重複）。
+   * 只留 ⇄ icon + ▾ chevron，user click 開 dropdown 看完整 trip list。
+   * .tp-titlebar-trip-picker-name 規則保留註解化以記錄歷史；對應 mockup 已拔。 */
   .tp-titlebar-trip-picker-chevron {
     font-size: 10px;
     opacity: 0.6;
@@ -4207,7 +4205,6 @@
     justify-content: center;
     max-width: none;
   }
-  .tp-page-frame-compact .tp-titlebar-trip-picker-name,
   .tp-page-frame-compact .tp-titlebar-trip-picker-chevron { display: none; }
   /* Conversation message wrapper — assistant 用 row layout 把 avatar + bubble 並排。
    * user message 不渲染 avatar(維持非對稱 visual),直接 align-self flex-end。 */
@@ -4333,6 +4330,16 @@
   }
   .tp-explore-card-fav.is-saved .tp-icon {
     fill: var(--tp-accent);
+  }
+  /* v2.31.43：is-saved hover 紅化暗示「點擊取消收藏」雙 affordance。
+   * accent 紅 → priority-high 深紅 + scale 1.05 視覺 hint。 */
+  .tp-explore-card-fav.is-saved:hover {
+    background: var(--tp-priority-high-bg, #fee2e2);
+    color: var(--tp-priority-high-dot, #b91c1c);
+    transform: scale(1.05);
+  }
+  .tp-explore-card-fav.is-saved:hover .tp-icon {
+    fill: var(--tp-priority-high-dot, #b91c1c);
   }
   [data-theme="dark"] .tp-explore-card-fav {
     background: rgba(28, 20, 15, 0.7);
@@ -7198,13 +7205,12 @@
 
   <!-- ===== Chat conversation desktop ===== -->
   <div class="tp-page-frame">
-    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · titlebar = 行程名 + 右側 trip-picker(SVG icon + 行程名);訊息含時間戳記與日期分隔</span></div>
+    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · titlebar = 行程名 + 右側 trip-picker(SVG icon + ▾,v2.31.47 拔名稱避免跟 title 重複);訊息含時間戳記與日期分隔</span></div>
     <header class="tp-page-titlebar">
       <h3 class="tp-page-titlebar-title">沖繩 + 大阪 + 京都跨城</h3>
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
           <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
-          <span class="tp-titlebar-trip-picker-name">沖繩 + 大阪 + 京都跨城</span>
           <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
         </button>
       </div>
@@ -7248,7 +7254,6 @@
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
           <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
-          <span class="tp-titlebar-trip-picker-name">沖繩跨城</span>
           <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
         </button>
       </div>
@@ -7597,13 +7602,12 @@
   <p class="tp-section-lead">「地圖」主功能頁，full bleed map + 底部 sticky day tabs（src 風格 underline tabs）+ entry cards horizontal snap-scroll。Day strip 第一項是<strong>「總覽」</strong>（對齊 src `?day=all`），active tab 用 dayColor border-bottom。Entry cards 點 marker → activate（雙向 sync）。Reference: src/pages/MapPage.tsx + DESIGN.md DV palette。</p>
 
   <div class="tp-page-frame">
-    <div class="tp-page-frame-label">DESKTOP — OVERVIEW ACTIVE <span>full bleed map · bottom day tabs + entry cards · titlebar:行程名 + trip-picker(SVG icon + 名稱);無 back button(地圖 nav 切換走 sidebar)</span></div>
+    <div class="tp-page-frame-label">DESKTOP — OVERVIEW ACTIVE <span>full bleed map · bottom day tabs + entry cards · titlebar:行程名 + trip-picker(SVG icon + ▾,v2.31.47 拔名稱);無 back button(地圖 nav 切換走 sidebar)</span></div>
     <header class="tp-page-titlebar">
       <h3 class="tp-page-titlebar-title">地圖</h3>
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
           <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
-          <span class="tp-titlebar-trip-picker-name">沖繩 + 大阪 + 京都</span>
           <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
         </button>
       </div>
@@ -7777,7 +7781,6 @@
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
           <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
-          <span class="tp-titlebar-trip-picker-name">沖繩跨城</span>
           <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
         </button>
       </div>
@@ -7883,7 +7886,6 @@
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程" disabled>
           <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
-          <span class="tp-titlebar-trip-picker-name">沖繩 + 大阪 + 京都</span>
           <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
         </button>
       </div>
@@ -7911,7 +7913,6 @@
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
           <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
-          <span class="tp-titlebar-trip-picker-name">沖繩 + 大阪 + 京都</span>
           <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
         </button>
       </div>

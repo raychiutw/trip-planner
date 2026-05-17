@@ -279,7 +279,7 @@
 - `.tp-titlebar-back` — 左側返回 button, 44×44 ghost icon
 - `.tp-titlebar-action` — 右側 action (icon + 文字 / mobile icon-only)，可加 `.is-primary` 變實心 accent CTA
 - `.tp-titlebar-icon-btn` — OverflowMenu kebab trigger, 44×44 icon-only ghost
-- `.tp-titlebar-trip-picker` — Chat/Map「切換行程」 picker, ghost icon + text，radius-full（pill shape 因為 picker 內部 chevron + truncation 視覺需要 — 唯一例外）
+- `.tp-titlebar-trip-picker` — Chat/Map「切換行程」 picker，v2.31.47 起 icon + chevron only（拔掉 trip name span 避免跟 TitleBar title 重複；dropdown rows 仍顯每個 trip name）, radius-full pill shape
 - 漢堡選單 (TripsListPage embedded EmbeddedActionMenu) 直接複用 `.tp-titlebar-action`，不再有獨立 `.tp-embedded-menu-trigger` class
 
 **Sub-content 規則 (TitleBar 下方)**
