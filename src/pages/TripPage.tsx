@@ -639,7 +639,7 @@ function TripPageInner(
   // 「更多」 sheet 4 action 已遷移新家:
   // 共編 → trip TitleBar；切換行程 → /trips；外觀 → AccountPage；下載 → OverflowMenu
   const bottomNavContent = !loading && trip ? (
-    <GlobalBottomNav authed={!!currentUser} />
+    <GlobalBottomNav authed={currentUser !== null} />
   ) : undefined;
 
   const mainContent = (

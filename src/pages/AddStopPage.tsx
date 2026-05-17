@@ -804,7 +804,7 @@ export default function AddStopPage() {
             </div>
           </div>
         }
-        bottomNav={<GlobalBottomNav authed={!!user} />}
+        bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     );
   }
@@ -1190,7 +1190,7 @@ export default function AddStopPage() {
             </div>
           </div>
         }
-        bottomNav={<GlobalBottomNav authed={!!user} />}
+        bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     </>
   );

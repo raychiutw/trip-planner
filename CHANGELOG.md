@@ -3,6 +3,31 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.40] - 2026-05-17
+
+**GlobalBottomNav auth flicker 修正 — 22 callsite 統一 loading-aware。**
+
+### Fixed: 第 5 tab 短暫顯示「登入」flicker
+
+QA loop @ /favorites 截到 mobile bottom nav 第 5 tab 顯示「登入」label，但 user 已 login。reload 後變「帳號」。
+
+Root cause：`useCurrentUser` 三態 `user: CurrentUser | null | undefined`（loading / 未登入 / 已登入），docstring 明確警告「Caller 必須保留 undefined loading state，不要先當成未登入」。但所有 22 個 callsite 寫 `authed={!!user}` 把 loading 當未登入 → page mount 期間 fetch /api/oauth/userinfo 還沒回，bottom nav 渲染「登入」；fetch 完成 re-render「帳號」。flicker window 取決於 cold fetch latency。
+
+### Fix: callsite 改 `user !== null` 樂觀預設
+
+21 個 page sed `authed={!!user}` → `authed={user !== null}`（含 `!!auth.user` / `!!currentUser` 變體）：
+
+- AccountPage / AddPoiFavoriteToTripPage / AddStopPage / ChangePoiPage / ChatPage / CollabPage / ConnectedAppsPage / DeveloperAppNewPage / DeveloperAppsPage / EditEntryPage / EditTripPage / EntryActionPage / ExplorePage / GlobalMapPage / MapPage / NewTripPage / PoiFavoritesPage / SessionsPage / TripHealthCheckPage / TripPage / TripsListPage
+
+樂觀邏輯：
+- `user === undefined`（loading） → `user !== null` = `true` → 顯示「帳號」
+- `user === null`（401 fetch 確認未登入） → `false` → 顯示「登入」
+- `user === CurrentUser` → `true` → 顯示「帳號」
+
+### Tests
+
+`tests/unit/auth-flicker-bottomnav.test.ts`：2 個 page-source-grep regression（no callsite 用 `!!user` 變體 + 至少 20 callsite 用 `user !== null` pattern）。
+
 ## [2.31.39] - 2026-05-17
 
 **Settings sub-page 導航 regression — 修返回 button + 補 GlobalBottomNav。**

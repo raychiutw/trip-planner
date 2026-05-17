@@ -199,7 +199,7 @@ export default function ConnectedAppsPage() {
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
-      bottomNav={<GlobalBottomNav authed={!!user} />}
+      bottomNav={<GlobalBottomNav authed={user !== null} />}
       main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-settings-shell" data-testid="connected-apps-page">

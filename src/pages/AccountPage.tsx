@@ -309,7 +309,7 @@ export default function AccountPage() {
   return (
     <>
       <style>{SCOPED_STYLES}</style>
-      <AppShell sidebar={sidebar} main={main} bottomNav={<GlobalBottomNav authed={!!auth.user} />} />
+      <AppShell sidebar={sidebar} main={main} bottomNav={<GlobalBottomNav authed={auth.user !== null} />} />
     </>
   );
 }
