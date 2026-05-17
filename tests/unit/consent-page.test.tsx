@@ -26,7 +26,8 @@ describe('ConsentPage', () => {
   it('renders error when client_id missing', async () => {
     renderWithParams('scope=openid');
     await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
-    expect(screen.getByRole('alert').textContent).toContain('Missing client_id');
+    // v2.31.58：original English「Missing client_id」 → 中文 actionable hint。
+    expect(screen.getByRole('alert').textContent).toContain('授權連結缺少必要參數 client_id');
   });
 
   it('renders client app name + requested scopes', async () => {
