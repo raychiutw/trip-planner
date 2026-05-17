@@ -66,8 +66,14 @@ const SCOPED_STYLES = `
  * .trip-sheet-placeholder display:flex (specificity 0,1,0) 覆蓋
  * [hidden] (UA stylesheet specificity 0,0,1) → itinerary + chat
  * placeholder 即使非 active 也 visible，疊在 map tab 上下。
- * Selector specificity (0,2,0) 強制 hidden tabpanel 不顯示。 */
+ * Selector specificity (0,2,0) 強制 hidden tabpanel 不顯示。
+ *
+ * v2.31.49 follow-up：map tab 沒 className 也沒 flex:1，hidden 兄弟一
+ * display:none 後就 collapse 4px（trip-sheet-body 是 flex column，active
+ * map panel 沒 flex 屬性 → height 0）。給 active tabpanel 強制 flex:1 +
+ * min-height:0，讓 TripMapRail 100% height 規則拿得到實際高度。 */
 [role="tabpanel"][hidden] { display: none; }
+[role="tabpanel"]:not([hidden]) { flex: 1; min-height: 0; }
 
 /* TripMapRail 預設 .trip-map-rail 是給 main column scroll context 用：
    position:sticky + height:calc(100dvh - var(--spacing-nav-h))。
