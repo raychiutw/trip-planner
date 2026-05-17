@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.47] - 2026-05-17
+
+**ChatPage TitleBar title 跟 trip picker button 都顯 trip name → 視覺冗餘。**
+
+### Fixed: /chat TitleBar 跟 picker button 重複顯 trip name
+
+`ChatPage.tsx` line 714 TitleBar `title={activeTrip?.title || ... || '聊天'}`
+(v2.18 design SoT，existing test `chat-page-ai-avatar.test.tsx:134` 已 pin),
+line 727-729 picker button 內加 `<span class="tp-titlebar-trip-picker-name">`
+也顯**同**字串 → user 看到「2026 沖繩... ⇄ 2026 沖繩...」視覺冗餘。
+
+**Fix**：title 維持 trip name（existing design SoT 不動），picker button
+**拔掉 trip name span**，只留 ⇄ icon + ▾ chevron affordance。User click 開
+dropdown 看完整 trip list（dropdown rows 仍顯每個 trip name）。
+
+**Test**：4 個 source-grep regression（title 維持 dynamic / picker span 拔掉 /
+icon + chevron affordance regression / dropdown rows 顯 trip name regression）+
+existing `chat-page-ai-avatar.test.tsx` 7/7 GREEN。
+
 ## [2.31.46] - 2026-05-17
 
 **Desktop trip detail sticky map regression fix（v2.17.17 起 ~3 個月）— React Portal
