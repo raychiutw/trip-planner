@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.49] - 2026-05-17
+
+**TripSheet map tab collapse 4px — v2.31.48 hidden tabpanel fix follow-up。**
+
+### Fixed: 桌機 sticky map sheet 空白（map tab flex collapse）
+
+v2.31.48 把 hidden tabpanels 改 `display: none`，但 active map tab
+`<div role="tabpanel">` 沒 className 也沒 flex 屬性 → `trip-sheet-body`
+（display:flex column）內 collapse 到 4px。Sheet 顯空白，Google Map 沒
+空間 render。
+
+之前 placeholders `display: flex; flex: 1` 跟 map tab 一起撐 height；
+hidden 後 active panel 失去 height 來源。
+
+**Fix**：CSS `[role="tabpanel"]:not([hidden]) { flex: 1; min-height: 0 }`
+強制 active tabpanel 拿 flex:1。`min-height: 0` 給 `.trip-sheet-body .trip-map-rail
+{ height: 100% }` rule 拿得到實際高度。
+
+**Test**：2 個 source-grep regression（active flex + min-height / v2.31.48 [hidden]
+rule regression）。tsc clean。
+
 ## [2.31.48] - 2026-05-17
 
 **TripSheet hidden tabpanel CSS override — v2.31.46 sticky map portal 部署後
