@@ -27,14 +27,13 @@ const TRIP_PAGE = readFileSync(path.join(ROOT, 'src/pages/TripPage.tsx'), 'utf8'
 const TRIP_SHEET = readFileSync(path.join(ROOT, 'src/components/trip/TripSheet.tsx'), 'utf8');
 
 describe('v2.31.54 TripSheet robustness simplify', () => {
-  describe('TripPage portal node per-render lookup', () => {
-    it('不再用 useState<Element> + useEffect setSheetPortalNode 模式（stale ref hazard）', () => {
-      expect(TRIP_PAGE).not.toMatch(/const \[sheetPortalNode, setSheetPortalNode\] = useState/);
-      expect(TRIP_PAGE).not.toMatch(/setSheetPortalNode\(document\.getElementById/);
-    });
-
-    it('改 per-render lookup（getElementById fall through render，非 cached state）', () => {
-      expect(TRIP_PAGE).toMatch(/const sheetPortalNode = noShell[\s\S]{0,80}document\.getElementById\(\s*['"]trip-sheet-portal['"]/);
+  describe('TripPage portal node lookup (useState/useEffect two-phase, e2e safe)', () => {
+    // 之前嘗試改 per-render lookup 觸發 e2e 大批 timeout（render phase 拿不到 DOM）
+    // — reverted 回 useState/useEffect pattern。Two-phase: 第一次 render null
+    // → effect commit 拿 node setState → re-render portal 真正掛到 host。
+    it('useState/useEffect 模式 (e2e-safe)', () => {
+      expect(TRIP_PAGE).toMatch(/const \[sheetPortalNode, setSheetPortalNode\] = useState/);
+      expect(TRIP_PAGE).toMatch(/setSheetPortalNode\(document\.getElementById\(\s*['"]trip-sheet-portal['"]/);
     });
   });
 

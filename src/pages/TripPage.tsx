@@ -254,23 +254,20 @@ function TripPageInner(
   const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
 
   /**
-   * v2.31.46 #143 + v2.31.54 simplify follow-up：portal target lookup for
-   * embedded mode sticky map sheet。從 host AppShell（TripsListPage）拿
-   * `<aside id="trip-sheet-portal">` DOM 後 createPortal 把 sheetContent 推過去。
+   * v2.31.46 #143：portal target lookup for embedded mode sticky map sheet。
+   * 從 host AppShell（TripsListPage）拿 `<aside id="trip-sheet-portal">` DOM
+   * 後 createPortal 把 sheetContent 推過去。
    *
-   * v2.31.54 改 **per-render lookup** 取代之前 useState + useEffect 模式。
-   * 之前 useEffect deps `[noShell]` 只 mount 一次 setState，如果 host AppShell
-   * 因為任何原因 remount（StrictMode 雙倍 fire、route 切換、host re-render
-   * 觸發 portal target 重建）→ cached ref 變 stale → createPortal 推到 detached
-   * DOM → sheet 內容 silently disappear。
-   *
-   * Per-render lookup：`getElementById` 是 O(1) hash lookup，every render
-   * 跑一次的成本 ~1μs，比 stale ref 風險低得多。第一次 render（host AppShell
-   * 還沒 mount portal target）拿 null，正常 fall-through 不 portal；後續
-   * render 拿到 node 就推送。 */
-  const sheetPortalNode = noShell && typeof document !== 'undefined'
-    ? document.getElementById('trip-sheet-portal')
-    : null;
+   * v2.31.54 嘗試改 per-render lookup 觸發 e2e 大批 timeout（render phase
+   * `getElementById` 跑在 DOM commit 之前，拿不到 portal target → 第一次
+   * render no portal，e2e wait visible timeout）— reverted 回原 useState +
+   * useEffect 兩階段 pattern：第一次 render = null，effect commit 後 setState
+   * 觸發 re-render 拿 node 後 portal。 */
+  const [sheetPortalNode, setSheetPortalNode] = useState<Element | null>(null);
+  useEffect(() => {
+    if (!noShell) return;
+    setSheetPortalNode(document.getElementById('trip-sheet-portal'));
+  }, [noShell]);
 
   /* --- lsRenewAll once per session (#9) --- */
   useEffect(() => {

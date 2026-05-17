@@ -5,27 +5,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [2.31.54] - 2026-05-17
 
-**TripPage portal robustness + TripSheet CSS scope — `/simplify` 3-agent review
+**TripSheet useMemo sheetContent + CSS scope — `/simplify` 3-agent review
 follow-up（v2.31.46-49 sticky map chain ship 後）。**
 
-### Fixed: 3 個 robustness issues from /simplify review
+### Fixed: 2 個 robustness issues from /simplify review
 
-**(1) `TripPage` `sheetPortalNode` stale ref hazard**
+**(0) Attempted per-render `sheetPortalNode` lookup — REVERTED**
 
-之前 `useEffect(() => { setSheetPortalNode(...) }, [noShell])` 只 mount 一次
-setState。如果 host AppShell 任何原因 remount（StrictMode 雙倍 fire / route
-切換 / host re-render 觸發 portal target 重建）→ cached ref 變 stale → createPortal
-推到 detached DOM → sheet 內容 silent disappear。
+/simplify quality agent flagged `useEffect deps [noShell]` only mount → stale
+ref hazard if host AppShell remounts。第一輪嘗試 per-render
+`document.getElementById` lookup 觸發 e2e 10 個 trip detail timeout — React
+render phase 跑在 DOM commit 之前，第一次 render 拿不到 portal target →
+no portal mounted → e2e wait visible timeout。Reverted 回 useState +
+useEffect 兩階段 pattern。Stale ref 是 theoretical 風險（v2.31.46 prod 已
+3 個月穩定運行）— 不修了。
 
-**Fix**：改 **per-render lookup**。`getElementById` 是 O(1) hash lookup，
-每 render ~1μs，比 stale ref 風險低得多：
-```ts
-const sheetPortalNode = noShell && typeof document !== 'undefined'
-  ? document.getElementById('trip-sheet-portal') : null;
-```
-刪除 useState + useEffect 兩行 dead 代碼。
-
-**(2) `TripPage.sheetContent` 沒 useMemo → portal subtree reconcile 浪費**
+**(1) `TripPage.sheetContent` 沒 useMemo → portal subtree reconcile 浪費**
 
 每次 TripPage render 重建 `<Suspense><TripSheet/></Suspense>` JSX → portal
 target children prop 變新 reference → React reconcile lazy boundary +
@@ -35,7 +30,7 @@ TripSheet shallow prop diff。TripPage 有 30+ state hooks，scroll/day-switch
 **Fix**：`useMemo` 包 sheetContent，deps = `[loading, trip, mapRailData.allPins,
 mapRailData.pinsByDay, isDark]`（mapRailData 已是 useMemo stable identity）。
 
-**(3) `TripSheet [role="tabpanel"]` CSS selector 全 document scope**
+**(2) `TripSheet [role="tabpanel"]` CSS selector 全 document scope**
 
 v2.31.48/49 加的 `[role="tabpanel"][hidden]` + `:not([hidden])` 是 global
 selector，會影響其他 page 的 tabpanel（雖目前無），unintentional reach。
