@@ -382,7 +382,7 @@ export default function ResetPasswordPage() {
               </>
             ),
             title: '舊裝置全登出',
-            desc: '手機、平板、其他電腦的 session 全部清掉，重新登入才能用。',
+            desc: '手機、平板、其他電腦的登入狀態全部清掉，重新登入才能用。',
           },
         ]}
         footnote="© 2026 Tripline"
