@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.66] - 2026-05-18
+
+**4 處 user-visible「POI」洩漏 → 中文 — CSV 表頭 + 3 處 aria-label。**
+
+### Fixed: source-grep 找剩餘英文殘留
+
+源碼 grep `aria-label="POI 類別"` + `'POI名'/'POI類型'/'POI評分'/'POI價格'`：
+
+- `src/lib/tripExport.ts:190` — 用戶下載的 CSV 表頭 `'POI名'/'POI類型'/'POI評分'/'POI價格'` → `'景點名稱'/'景點類型'/'景點評分'/'景點價格'`。離線打開試算表的用戶第一眼看到的字一定要中文。
+- `src/pages/ChangePoiPage.tsx:714` `aria-label="POI 類別"` → `"景點類別"`（screen reader 朗讀字）
+- `src/pages/ExplorePage.tsx:691` 同上
+- `src/pages/AddStopPage.tsx:863` 同上
+
+5 個 source-grep regression test 防止 backsliding（CSV 4 個表頭 + 3 個 aria-label assertion）。
+
 ## [2.31.65] - 2026-05-18
 
 **AI 健檢 Claude prompt 加用詞規定，避免 schema field 借詞混雜中文。**
