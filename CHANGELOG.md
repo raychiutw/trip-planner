@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.48] - 2026-05-17
+
+**TripSheet hidden tabpanel CSS override — v2.31.46 sticky map portal 部署後
+prod QA 發現所有 placeholder 跟 active map tab 疊在一起。**
+
+### Fixed: 桌機 sticky map sheet 4 個 tabpanel 同時顯示
+
+prod QA：v2.31.46 sticky map portal fix 部署後，desktop trip detail 右側
+sheet `<aside id="trip-sheet-portal">` 內顯示「行程已顯示在左側 / Per-trip
+chat COMING SOON」 兩個 placeholder + 中間夾 map tab — `hidden` 沒生效。
+
+**Root cause**：`TripSheet.tsx:50-51` `.trip-sheet-placeholder { display: flex }`
+specificity (0,1,0) 蓋過 HTML `hidden` 預設 `display: none`（UA stylesheet
+specificity 0,0,1）。所有 placeholder tabpanel 即使 `hidden=true` 仍 `flex` 顯示。
+
+**Fix**：CSS `[role="tabpanel"][hidden] { display: none }` specificity (0,2,0)
+強制隱藏 hidden tabpanel。Active tab（無 hidden attr）仍 fall through 到
+`.trip-sheet-placeholder` rule。
+
+**Test**：2 個 source-grep regression（[hidden] rule + 保留 .trip-sheet-placeholder
+flex regression）。tsc clean。
+
 ## [2.31.47] - 2026-05-17
 
 **ChatPage TitleBar title 跟 trip picker button 都顯 trip name → 視覺冗餘。**

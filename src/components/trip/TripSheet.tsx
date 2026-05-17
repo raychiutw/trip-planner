@@ -62,6 +62,13 @@ const SCOPED_STYLES = `
 }
 .trip-sheet-placeholder p { font-size: var(--font-size-callout); max-width: 320px; }
 
+/* v2.31.48 fix：HTML hidden attr 預設 display: none，但
+ * .trip-sheet-placeholder display:flex (specificity 0,1,0) 覆蓋
+ * [hidden] (UA stylesheet specificity 0,0,1) → itinerary + chat
+ * placeholder 即使非 active 也 visible，疊在 map tab 上下。
+ * Selector specificity (0,2,0) 強制 hidden tabpanel 不顯示。 */
+[role="tabpanel"][hidden] { display: none; }
+
 /* TripMapRail 預設 .trip-map-rail 是給 main column scroll context 用：
    position:sticky + height:calc(100dvh - var(--spacing-nav-h))。
    放進 sheet 後 sticky 失效，且 100dvh 不等於 sheet 可用高度 → map 視覺只佔約 1/4。
