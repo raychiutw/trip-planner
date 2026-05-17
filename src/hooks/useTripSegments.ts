@@ -47,6 +47,7 @@ export function useTripSegments(tripId: string | null | undefined) {
     }
     let cancelled = false;
     let inFlight = false;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     const fetchSegments = async () => {
       if (inFlight) return;
@@ -67,11 +68,16 @@ export function useTripSegments(tripId: string | null | undefined) {
 
     void fetchSegments();
 
+    // drag-reorder / batch save 等 flow 會在 < 500ms 內 dispatch 多次 entry-updated /
+    // segment-updated；debounce 合併連發成單一 refetch 避免 N+1 segments 呼叫。
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as { tripId?: string } | null;
-      // 沒帶 tripId → 一律 re-fetch（保守）；帶且不符 → skip
       if (detail?.tripId && detail.tripId !== tripId) return;
-      void fetchSegments();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        void fetchSegments();
+      }, 200);
     };
 
     window.addEventListener(EVENT.segmentUpdated, handler);
@@ -79,6 +85,7 @@ export function useTripSegments(tripId: string | null | undefined) {
 
     return () => {
       cancelled = true;
+      if (debounceTimer) clearTimeout(debounceTimer);
       window.removeEventListener(EVENT.segmentUpdated, handler);
       window.removeEventListener(EVENT.entryUpdated, handler);
     };
