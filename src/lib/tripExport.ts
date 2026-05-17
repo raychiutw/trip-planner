@@ -187,7 +187,7 @@ export async function downloadTripFormat(
        * 住宿資訊改由 timeline[0] 的 check-out entry 承載，無需獨立欄位。 */
       const headers = [
         'Day', '日期', '星期', '時間', '地點', '評分', '說明', '備註',
-        '交通方式', '交通時間(分)', 'POI名', 'POI類型', 'POI評分', 'POI價格',
+        '交通方式', '交通時間(分)', '景點名稱', '景點類型', '景點評分', '景點價格',
         '購物店名', '購物類別', '購物必買',
       ];
       const rows: string[][] = [headers];
