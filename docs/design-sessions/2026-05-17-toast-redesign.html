@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Toast Redesign — Terracotta 對齊 + Centering 修正</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --tp-background: #FFFBF5;
+    --tp-secondary: #FAF4EA;
+    --tp-tertiary: #F2EAD9;
+    --tp-foreground: #2A1F18;
+    --tp-muted: #6F5A47;
+    --tp-border: #EADFCF;
+    --tp-line-strong: #C8B89F;
+    --tp-accent: #D97848;
+    --tp-accent-deep: #B85C2E;
+    --tp-accent-subtle: #FBEEE4;
+    --tp-destructive: #C13515;
+    --tp-destructive-bg: #FDECEC;
+    --tp-destructive-border: rgba(193, 53, 21, 0.32);
+    --tp-success: #06A77D;
+    --tp-success-bg: rgba(6, 167, 125, 0.12);
+    --tp-success-border: rgba(6, 167, 125, 0.32);
+    --tp-warning: #F48C06;
+    --tp-warning-bg: rgba(244, 140, 6, 0.14);
+    --tp-warning-border: rgba(244, 140, 6, 0.36);
+    --tp-info: #D97848;
+    --tp-info-bg: rgba(217, 120, 72, 0.12);
+    --tp-info-border: rgba(217, 120, 72, 0.34);
+    --tp-radius-md: 8px;
+    --tp-radius-lg: 12px;
+    --tp-shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+    --tp-shadow-lg: 0 16px 40px rgba(42, 31, 24, 0.14);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: #ECE3D2;
+    color: var(--tp-foreground);
+    font-family: 'Inter', 'Noto Sans TC', "PingFang TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 26px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .doc {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 32px 24px 96px;
+  }
+  .doc-header {
+    background: var(--tp-background);
+    border: 1px solid var(--tp-border);
+    border-radius: var(--tp-radius-lg);
+    padding: 22px 26px;
+    margin-bottom: 28px;
+    box-shadow: var(--tp-shadow-md);
+  }
+  .doc-header h1 {
+    margin: 0 0 6px;
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 700;
+  }
+  .doc-header p {
+    margin: 0;
+    color: var(--tp-muted);
+    font-size: 14px;
+    line-height: 22px;
+  }
+  .doc-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--tp-accent-subtle);
+    color: var(--tp-accent-deep);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .bug-callout {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    padding: 14px 16px;
+    margin-bottom: 28px;
+    border-radius: var(--tp-radius-md);
+    border: 1px solid var(--tp-warning-border);
+    background: var(--tp-warning-bg);
+  }
+  .bug-callout-icon {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--tp-radius-md);
+    background: var(--tp-background);
+    color: var(--tp-warning);
+    font-weight: 700;
+  }
+  .bug-callout h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 700;
+  }
+  .bug-callout p {
+    margin: 0;
+    color: var(--tp-foreground);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .bug-callout code {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 12px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(42, 31, 24, 0.08);
+  }
+
+  .variant {
+    background: var(--tp-background);
+    border: 1px solid var(--tp-border);
+    border-radius: var(--tp-radius-lg);
+    padding: 24px;
+    margin-bottom: 28px;
+    box-shadow: var(--tp-shadow-md);
+  }
+  .variant-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .variant-head h2 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 26px;
+    font-weight: 700;
+  }
+  .variant-tag {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--tp-muted);
+  }
+  .variant-desc {
+    margin: 0 0 18px;
+    color: var(--tp-muted);
+    font-size: 14px;
+    line-height: 22px;
+  }
+  .variant-tradeoff {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px 14px;
+    background: var(--tp-secondary);
+    border-radius: var(--tp-radius-md);
+    border: 1px solid var(--tp-border);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .variant-tradeoff strong {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--tp-muted);
+    margin-bottom: 4px;
+  }
+  .stage-row {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 360px minmax(0, 1fr);
+    align-items: stretch;
+  }
+  @media (max-width: 920px) {
+    .stage-row { grid-template-columns: 1fr; }
+  }
+  .stage-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--tp-muted);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .stage {
+    position: relative;
+    border-radius: var(--tp-radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--tp-line-strong);
+    background: var(--tp-secondary);
+  }
+  .stage-mobile {
+    width: 390px;
+    max-width: 100%;
+    height: 320px;
+  }
+  .stage-desktop {
+    width: 100%;
+    height: 320px;
+  }
+  .stage-frame-meta {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    z-index: 2;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--tp-muted);
+    background: rgba(255, 251, 245, 0.85);
+    backdrop-filter: blur(8px);
+    padding: 3px 7px;
+    border-radius: 999px;
+  }
+  .stage-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(200, 184, 159, 0.18) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(200, 184, 159, 0.18) 1px, transparent 1px),
+      var(--tp-secondary);
+    background-size: 28px 28px;
+  }
+
+  /* ============ Toast Container (shared by all variants) ============ */
+  .toast-stack {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    pointer-events: none;
+  }
+
+  /* ============ Variant V1 — Card + Dot (mockup-aligned) ============ */
+  .v1-toast {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 360px;
+    padding: 12px 16px 12px 14px;
+    border-radius: var(--tp-radius-lg);
+    border: 1px solid var(--tp-info-border);
+    background: var(--tp-background);
+    box-shadow: var(--tp-shadow-md);
+    color: var(--tp-foreground);
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 500;
+  }
+  .v1-toast::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--tp-info);
+    flex: 0 0 auto;
+  }
+  .v1-toast.is-error { border-color: var(--tp-destructive-border); }
+  .v1-toast.is-error::before { background: var(--tp-destructive); }
+  .v1-toast.is-success { border-color: var(--tp-success-border); }
+  .v1-toast.is-success::before { background: var(--tp-success); }
+  .v1-toast.is-warning { border-color: var(--tp-warning-border); }
+  .v1-toast.is-warning::before { background: var(--tp-warning); }
+
+  /* ============ Variant V2 — Filled Icon (close to existing) ============ */
+  .v2-toast {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 360px;
+    padding: 11px 16px 11px 14px;
+    border-radius: var(--tp-radius-lg);
+    background: var(--tp-info-bg);
+    color: var(--tp-foreground);
+    box-shadow: var(--tp-shadow-md);
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 600;
+  }
+  .v2-toast svg {
+    flex: 0 0 auto;
+    color: var(--tp-info);
+  }
+  .v2-toast.is-error { background: var(--tp-destructive-bg); }
+  .v2-toast.is-error svg { color: var(--tp-destructive); }
+  .v2-toast.is-success { background: var(--tp-success-bg); }
+  .v2-toast.is-success svg { color: var(--tp-success); }
+  .v2-toast.is-warning { background: var(--tp-warning-bg); }
+  .v2-toast.is-warning svg { color: var(--tp-warning); }
+
+  /* ============ Variant V3 — Cream + Left Stripe (alert-panel echo) ============ */
+  .v3-toast {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 360px;
+    padding: 11px 18px 11px 18px;
+    border-radius: var(--tp-radius-lg);
+    background: var(--tp-background);
+    border: 1px solid var(--tp-border);
+    box-shadow: var(--tp-shadow-md);
+    color: var(--tp-foreground);
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 600;
+    overflow: hidden;
+  }
+  .v3-toast::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--tp-info);
+  }
+  .v3-toast svg {
+    flex: 0 0 auto;
+    color: var(--tp-info);
+  }
+  .v3-toast.is-error::before { background: var(--tp-destructive); }
+  .v3-toast.is-error svg { color: var(--tp-destructive); }
+  .v3-toast.is-success::before { background: var(--tp-success); }
+  .v3-toast.is-success svg { color: var(--tp-success); }
+  .v3-toast.is-warning::before { background: var(--tp-warning); }
+  .v3-toast.is-warning svg { color: var(--tp-warning); }
+
+  /* fake page surface inside stage */
+  .stage-page {
+    position: absolute;
+    inset: 0;
+    padding: 28px 16px 16px;
+    overflow: hidden;
+  }
+  .stage-page-title {
+    font-size: 18px;
+    line-height: 26px;
+    font-weight: 700;
+    margin-top: 28px;
+  }
+  .stage-page-sub {
+    color: var(--tp-muted);
+    font-size: 13px;
+    line-height: 20px;
+    margin-top: 4px;
+  }
+  .stage-page-card {
+    margin-top: 14px;
+    height: 140px;
+    border-radius: var(--tp-radius-md);
+    border: 1px solid var(--tp-border);
+    background: var(--tp-background);
+    box-shadow: var(--tp-shadow-md);
+  }
+
+  .pick-row {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin-top: 16px;
+  }
+  .pick-card {
+    padding: 12px 14px;
+    border-radius: var(--tp-radius-md);
+    border: 1px solid var(--tp-border);
+    background: var(--tp-background);
+  }
+  .pick-card strong {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .pick-card span {
+    font-size: 12px;
+    color: var(--tp-muted);
+  }
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <header class="doc-header">
+    <h1>Toast Redesign — Centering 修正 + Terracotta 對齊</h1>
+    <p>
+      原 toast container 已改 <code>flex items-center</code> modern centering，但 <code>@keyframes toast-slide-down</code> 仍含 <code>translateX(-50%)</code> legacy transform 把 bubble 往左推 50% → 截圖看到「該筆資料已經存在」被切到左半邊。
+      順帶把視覺對齊 DESIGN.md + terracotta-preview-v2.html 既有 <code>.tp-status-toast</code> / <code>.tp-alert-panel</code> pattern。
+    </p>
+    <span class="doc-meta">2026-05-17 · v2.31.38 candidate</span>
+  </header>
+
+  <div class="bug-callout">
+    <div class="bug-callout-icon">!</div>
+    <div>
+      <h2>Root cause</h2>
+      <p>
+        <code>css/tokens.css:840</code> 的 <code>@keyframes toast-slide-down</code> 設 <code>transform: translateX(-50%) translateY(-12px)</code>，但 <code>Toast.tsx:64</code> 已改成 <code>flex items-center</code> 自動置中。
+        兩種 centering 機制疊加 → bubble 從 viewport 中心再往左偏 50% bubble 寬。修法：keyframes 拔掉 <code>translateX(-50%)</code> 只留 <code>translateY</code>。
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ V1 — Card + Dot ============ -->
+  <section class="variant">
+    <div class="variant-head">
+      <h2>V1 · Card with dot indicator</h2>
+      <span class="variant-tag">Mockup-aligned · 推薦</span>
+    </div>
+    <p class="variant-desc">
+      白底 + 8px coloured dot + 1px coloured border。直接 echo terracotta-preview-v2.html 的 <code>.tp-status-toast</code> pattern。文字主角，dot 是 type 訊號。視覺最輕，跟 page chrome 一致。
+    </p>
+    <div class="variant-tradeoff">
+      <div><strong>Pro</strong>跟 mockup SoT 100% 一致；視覺最輕；4 種 type 共用同 layout 只換 dot 色</div>
+      <div><strong>Con</strong>「該筆資料已經存在」error 在白底 dot 上比 filled 弱，user 可能掃過</div>
+    </div>
+
+    <div class="stage-row">
+      <div>
+        <div class="stage-label">Mobile · 390 × 320</div>
+        <div class="stage stage-mobile">
+          <div class="stage-bg"></div>
+          <div class="stage-frame-meta">/favorites</div>
+          <div class="stage-page">
+            <div class="stage-page-title">收藏的景點</div>
+            <div class="stage-page-sub">已收藏 1 個</div>
+            <div class="stage-page-card"></div>
+          </div>
+          <div class="toast-stack">
+            <div class="v1-toast is-error">該筆資料已經存在</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="stage-label">Desktop · 1280 wide (示意) · 320 高</div>
+        <div class="stage stage-desktop">
+          <div class="stage-bg"></div>
+          <div class="stage-frame-meta">/favorites</div>
+          <div class="stage-page">
+            <div class="stage-page-title" style="margin-top:32px">收藏的景點</div>
+            <div class="stage-page-sub">已收藏 1 個</div>
+            <div class="stage-page-card" style="max-width:520px"></div>
+          </div>
+          <div class="toast-stack">
+            <div class="v1-toast is-error">該筆資料已經存在</div>
+            <div class="v1-toast is-success">已加入收藏</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ V2 — Filled Icon ============ -->
+  <section class="variant">
+    <div class="variant-head">
+      <h2>V2 · Filled with icon</h2>
+      <span class="variant-tag">Closest to current</span>
+    </div>
+    <p class="variant-desc">
+      延續既有 <code>bg-(--color-destructive-bg) text-(--color-destructive)</code> filled pattern，只 fix centering bug 與調整 padding / icon size。視覺權重最重，error 一目了然。
+    </p>
+    <div class="variant-tradeoff">
+      <div><strong>Pro</strong>error / success 對比強，user 不會 miss；既有用戶習慣不變；改動最小</div>
+      <div><strong>Con</strong>filled bg + colour text 跟 V2 Terracotta cream 主視覺反差較重；多 toast 堆疊時視覺壓力大</div>
+    </div>
+
+    <div class="stage-row">
+      <div>
+        <div class="stage-label">Mobile · 390 × 320</div>
+        <div class="stage stage-mobile">
+          <div class="stage-bg"></div>
+          <div class="stage-frame-meta">/favorites</div>
+          <div class="stage-page">
+            <div class="stage-page-title">收藏的景點</div>
+            <div class="stage-page-sub">已收藏 1 個</div>
+            <div class="stage-page-card"></div>
+          </div>
+          <div class="toast-stack">
+            <div class="v2-toast is-error">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              該筆資料已經存在
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="stage-label">Desktop · 1280 wide (示意) · 320 高</div>
+        <div class="stage stage-desktop">
+          <div class="stage-bg"></div>
+          <div class="stage-frame-meta">/favorites</div>
+          <div class="stage-page">
+            <div class="stage-page-title" style="margin-top:32px">收藏的景點</div>
+            <div class="stage-page-sub">已收藏 1 個</div>
+            <div class="stage-page-card" style="max-width:520px"></div>
+          </div>
+          <div class="toast-stack">
+            <div class="v2-toast is-error">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              該筆資料已經存在
+            </div>
+            <div class="v2-toast is-success">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M6.5 10.5 L9 13 L14 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              已加入收藏
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ V3 — Cream + Left Stripe ============ -->
+  <section class="variant">
+    <div class="variant-head">
+      <h2>V3 · Cream card + left stripe + icon</h2>
+      <span class="variant-tag">Hybrid · alert-panel echo</span>
+    </div>
+    <p class="variant-desc">
+      白底 + 4px 左 stripe + icon。同時取 <code>.tp-alert-panel</code> 的 stripe 訊號感 + <code>.tp-status-toast</code> 的低調白底。停留時間長一點，user 有機會 scan 但又不過度抓眼。
+    </p>
+    <div class="variant-tradeoff">
+      <div><strong>Pro</strong>stripe + icon 雙訊號避免 V1 的「白底掃過」風險；視覺仍比 V2 輕；跟 page-level alert panel 風格一致</div>
+      <div><strong>Con</strong>元件較複雜（border + stripe + icon + text）；左 stripe 在 RTL 語言要 mirror</div>
+    </div>
+
+    <div class="stage-row">
+      <div>
+        <div class="stage-label">Mobile · 390 × 320</div>
+        <div class="stage stage-mobile">
+          <div class="stage-bg"></div>
+          <div class="stage-frame-meta">/favorites</div>
+          <div class="stage-page">
+            <div class="stage-page-title">收藏的景點</div>
+            <div class="stage-page-sub">已收藏 1 個</div>
+            <div class="stage-page-card"></div>
+          </div>
+          <div class="toast-stack">
+            <div class="v3-toast is-error">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              該筆資料已經存在
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="stage-label">Desktop · 1280 wide (示意) · 320 高</div>
+        <div class="stage stage-desktop">
+          <div class="stage-bg"></div>
+          <div class="stage-frame-meta">/favorites</div>
+          <div class="stage-page">
+            <div class="stage-page-title" style="margin-top:32px">收藏的景點</div>
+            <div class="stage-page-sub">已收藏 1 個</div>
+            <div class="stage-page-card" style="max-width:520px"></div>
+          </div>
+          <div class="toast-stack">
+            <div class="v3-toast is-error">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              該筆資料已經存在
+            </div>
+            <div class="v3-toast is-success">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M6.5 10.5 L9 13 L14 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              已加入收藏
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Reasoning ============ -->
+  <section class="variant" style="background:var(--tp-secondary)">
+    <div class="variant-head">
+      <h2>取捨</h2>
+      <span class="variant-tag">decision brief</span>
+    </div>
+    <p class="variant-desc">
+      三個 variant 共用 container modern centering（<code>position:fixed; top:safe-area; left:0; right:0; flex; items-center</code>）+ keyframes 拔掉 <code>translateX(-50%)</code>。
+      差異只在 bubble 視覺權重。
+    </p>
+    <div class="pick-row">
+      <div class="pick-card">
+        <strong>V1 推薦</strong>
+        <span>最忠於 mockup SoT；視覺最輕；4 type 共用 layout 只換 dot 色；長期維護成本最低。</span>
+      </div>
+      <div class="pick-card">
+        <strong>V2 保守</strong>
+        <span>跟既有 user 認知最一致；error 視覺權重最重；改動代碼最少（只動 keyframes + padding）。</span>
+      </div>
+      <div class="pick-card">
+        <strong>V3 折衷</strong>
+        <span>stripe + icon 雙訊號比 V1 強、比 V2 輕；跟 page-level alert-panel 風格 echo。</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

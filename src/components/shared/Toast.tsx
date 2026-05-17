@@ -70,15 +70,16 @@ export default function ToastContainer() {
 }
 
 // ---------------------------------------------------------------------------
-// Single Toast Item
+// Single Toast Item — v2.31.38: V1 redesign aligned with terracotta-preview-v2.html
+// `.tp-status-toast` pattern (white card + colored dot + colored border).
 // ---------------------------------------------------------------------------
 
-const TYPE_STYLES: Record<ToastType, string> = {
-  error: 'bg-(--color-destructive-bg) text-(--color-destructive)',
-  success: 'bg-(--color-success-bg) text-(--color-success)',
-  info: 'bg-(--color-glass-toast) text-foreground',
-  offline: 'bg-(--color-glass-toast) text-warning',
-  online: 'bg-(--color-glass-toast) text-success',
+const TYPE_CLASS: Record<ToastType, string> = {
+  error: 'tp-toast tp-toast--error',
+  success: 'tp-toast tp-toast--success',
+  info: 'tp-toast tp-toast--info',
+  offline: 'tp-toast tp-toast--warning',
+  online: 'tp-toast tp-toast--success',
 };
 
 function ToastBubble({ toast }: { toast: ToastItem }) {
@@ -99,58 +100,14 @@ function ToastBubble({ toast }: { toast: ToastItem }) {
   return (
     <div
       className={[
-        'flex items-center gap-2 px-5 py-3',
-        'rounded-lg backdrop-blur-xl',
-        'shadow-(--shadow-toast)',
-        'text-subheadline font-semibold whitespace-nowrap',
-        'max-w-[400px] w-full sm:w-auto',
-        TYPE_STYLES[toast.type],
+        TYPE_CLASS[toast.type],
         exiting ? 'animate-toast-slide-up opacity-0' : 'animate-toast-slide-down',
       ].join(' ')}
       role="alert"
       aria-live="polite"
       aria-atomic="true"
     >
-      <span className="flex items-center shrink-0" aria-hidden="true">
-        <ToastIcon type={toast.type} />
-      </span>
       <span className="truncate">{toast.message}</span>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Icons
-// ---------------------------------------------------------------------------
-
-function ToastIcon({ type }: { type: ToastType }) {
-  if (type === 'error') return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.6"/>
-      <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-    </svg>
-  );
-  if (type === 'success' || type === 'online') return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.6"/>
-      <path d="M6.5 10.5 L9 13 L14 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-  if (type === 'offline') return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M3 7.5a10 10 0 0 1 14 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-      <path d="M5.5 10.5a6.5 6.5 0 0 1 9 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-      <path d="M8 13.5a3 3 0 0 1 4 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-      <circle cx="10" cy="16" r="1.2" fill="currentColor"/>
-      <line x1="2" y1="18" x2="18" y2="2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-    </svg>
-  );
-  // info
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.6"/>
-      <path d="M10 9v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-      <circle cx="10" cy="6.5" r="1" fill="currentColor"/>
-    </svg>
   );
 }
