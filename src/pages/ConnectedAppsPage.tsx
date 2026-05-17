@@ -206,7 +206,7 @@ export default function ConnectedAppsPage() {
       <TitleBar title="已連結的應用程式" back={() => navigate('/account')} />
       <div className="tp-settings-inner">
         <p className="tp-page-eyebrow">設定</p>
-        <p className="tp-page-meta">這些 app 可以使用你的 Tripline 帳號。撤銷後該 app 將立即失去存取權。</p>
+        <p className="tp-page-meta">這些應用程式可以使用你的 Tripline 帳號。撤銷後該應用程式將立即失去存取權。</p>
 
         {error && <ErrorBanner message={error} testId="connected-apps-error" />}
 
