@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.45] - 2026-05-17
+
+**SessionsPage「IP TSdE1hEx…」label 改「裝置 ID」 — prod QA loop wording polish。**
+
+### Fixed: 登入裝置列表 IP label 誤導
+
+`SessionsPage.tsx:318` 顯示「· IP {ip_hash_prefix}…」但 `ip_hash_prefix`
+實際是 hashed IP 前綴（privacy by design，line 12 comment 有 hint），
+不是真實 IP。User 看到「IP TSdE1hEx…」會誤以為奇怪格式 IP。
+
+**Fix**：文案改「· 裝置 ID xxx…」+ 加 `title` attr 解釋
+「IP 位址的雜湊前綴（privacy）— 同一網路下相同」給好奇 user。
+Hash prefix 顯示維持（device fingerprint discoverable）。
+
+**Test**：3 個 source-grep regression（拿掉 raw IP label / 新文案 / 保留 hash prefix）。
+
 ## [2.31.44] - 2026-05-17
 
 **`apiFetch` 對 204 No Content empty body 補 short-circuit — v2.31.43 prod
