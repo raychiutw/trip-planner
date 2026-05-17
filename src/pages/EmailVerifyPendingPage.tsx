@@ -145,7 +145,7 @@ export default function EmailVerifyPendingPage() {
         </div>
         <h1 className="tp-verify-title">查看你的信箱</h1>
         <p className="tp-verify-subtitle">我們已寄出驗證信到</p>
-        <p className="tp-verify-email" data-testid="verify-email">{safeEmail || '（沒有 email）'}</p>
+        <p className="tp-verify-email" data-testid="verify-email">{safeEmail || '（沒有電子郵件）'}</p>
 
         <div className="tp-verify-banner" role="status">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
