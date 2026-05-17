@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.61] - 2026-05-17
+
+**Error message 內混雜英文「stop」→ 統一中文「停留點」。**
+
+### Fixed: 5 處 user-visible error messages 內 stop 英文混雜
+
+App UI 通篇用「景點」「停留點」指 trip entry，但 ERROR_MESSAGES 與 throw
+new Error 訊息混入 raw English 「stop」 → user 看到「此景點已存在於 stop 中」
+這種雜訊。
+
+**修 5 處 user-visible**：
+- `src/types/api.ts` `DUPLICATE_POI` 「此景點已存在於 stop 中」→ 「此景點已存在於這個停留點」
+- `src/types/api.ts` `POI_NOT_ALTERNATE` 「此景點不是此 stop 的備選」→ 「此景點不是這個停留點的備選」
+- `src/types/api.ts` `MISSING_MASTER` 「每個 stop 必須有正選景點」→ 「每個停留點必須有一個正選景點」
+- `src/pages/ChangePoiPage.tsx:662` `throw new Error('此景點已存在於 stop 中')` → 「此景點已存在於這個停留點」
+- `src/pages/EditEntryPage.tsx:1028` `throw new Error('此 stop 已被改成「${X}」...')` → 「這個停留點已被改成...」
+
+同步更新 `tests/unit/change-poi-page.test.tsx` mock + assert 對齊。
+
 ## [2.31.60] - 2026-05-17
 
 **TripSheet placeholder 英文 / dev jargon → 純中文 user-facing copy。**

@@ -1025,7 +1025,7 @@ export default function EditEntryPage() {
           const refreshed = await refreshEntryPois();
           if (refreshed && refreshed.masterPoiId !== userExpectedOldMaster) {
             const intoName = refreshed.masterName ?? `POI #${refreshed.masterPoiId}`;
-            throw new Error(`此 stop 已被改成「${intoName}」，請重新確認後再操作`);
+            throw new Error(`這個停留點已被改成「${intoName}」，請重新確認後再操作`);
           }
           // master 仍相同 — retry with refreshed version
           await sendSwap(refreshed?.entryPoisVersion ?? undefined);

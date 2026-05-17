@@ -223,7 +223,7 @@ describe('ChangePoiPage — entryPoisVersion OCC token', () => {
     (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: false,
       status: 409,
-      text: () => Promise.resolve('{"error":{"code":"DUPLICATE_POI","message":"此景點已存在於 stop 中"}}'),
+      text: () => Promise.resolve('{"error":{"code":"DUPLICATE_POI","message":"此景點已存在於這個停留點"}}'),
     } as unknown as Response);
     mockPoiSearch.results = [{
       place_id: 'ChIJ-dup',
@@ -243,7 +243,7 @@ describe('ChangePoiPage — entryPoisVersion OCC token', () => {
     fireEvent.click(screen.getByTestId('change-poi-submit'));
 
     await waitFor(() => {
-      expect(screen.getByText('此景點已存在於 stop 中')).toBeTruthy();
+      expect(screen.getByText('此景點已存在於這個停留點')).toBeTruthy();
     });
   });
 

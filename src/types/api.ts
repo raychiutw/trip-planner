@@ -71,9 +71,9 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   MAPS_LOCKED: '本月 Google API 已達配額，月初恢復',
   MAPS_UPSTREAM_FAILED: 'Google Maps 服務暫時無法回應，請稍後再試',
   STALE_ENTRY: '資料已被其他操作更新，請重新整理',
-  DUPLICATE_POI: '此景點已存在於 stop 中',
-  POI_NOT_ALTERNATE: '此景點不是此 stop 的備選',
-  MISSING_MASTER: '每個 stop 必須有正選景點',
+  DUPLICATE_POI: '此景點已存在於這個停留點',
+  POI_NOT_ALTERNATE: '此景點不是這個停留點的備選',
+  MISSING_MASTER: '每個停留點必須有一個正選景點',
   INVALID_ORDER: '備選排序格式不正確',
   TRIP_EMPTY: '此行程尚無景點，請先加入景點再執行健檢',
 };
