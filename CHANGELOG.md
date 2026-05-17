@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.38] - 2026-05-17
+
+**Toast 重設計 — centering 修正 + Terracotta SoT 對齊。**
+
+### Fixed: Toast bubble 跑到 viewport 左邊被切半
+
+`Toast.tsx:64` container 改 `flex items-center` 後忘記同步 `@keyframes toast-slide-down/up`（`css/tokens.css:840`），仍含 `transform: translateX(-50%) translateY(...)` legacy 自身置中 → bubble 從 flex 已置中位置再被往左推一半 bubble 寬 → 截圖看到「該筆資料已經存在」chip 卡在 viewport 左半邊只露半截。
+
+### Changed: Toast 視覺對齊 `.tp-status-toast` SoT
+
+- `src/components/shared/Toast.tsx`：拔 `ToastIcon` SVG component；改用 `tp-toast` + `tp-toast--{error|success|warning|info}` 命名 class；dot indicator 改 CSS `::before` pseudo-element 不入 DOM
+- `css/tokens.css`：新增 `.tp-toast` rules 對齊 `docs/design-sessions/terracotta-preview-v2.html` 的 `.tp-status-toast` pattern（白底 + 8px coloured dot + coloured border + `--shadow-md`），dark mode bg 改 `--color-secondary`；keyframes 拔 `translateX(-50%)`
+- mockup 紀錄：`docs/design-sessions/2026-05-17-toast-redesign.html`（3 variant 對比 + bug callout + V1 sign-off）
+
+### Tests
+
+`tests/unit/toast.test.tsx` 加 7 個 V1 regression：DOM 無 SVG、bubble 套 `tp-toast` prefix、`tp-toast--error`/`--success` modifier、`@keyframes toast-slide-down/up` source 無 `translateX`、`background severity` 走 info type。共 16 個 toast test 全綠。
+
 ## [2.31.37] - 2026-05-17
 
 **daily-check autofix：拔 SW unhandled rejection + segments refetch debounce。**
