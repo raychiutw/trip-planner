@@ -14,9 +14,15 @@ if ('serviceWorker' in navigator) {
     sessionStorage.setItem(reloadKey, '1');
     window.location.reload();
   });
-  navigator.serviceWorker.getRegistration().then((reg) => {
-    if (reg) reg.update();
-  });
+  // SW load 失敗（iOS Chrome 偶發 TypeError/SecurityError）會讓 getRegistration 或
+  // reg.update() reject。沒 catch 會 bubble 成 unhandled rejection 進 Sentry。
+  // 真實 user 沒 functional impact（SW 是 enhancement），靜默吞 reject。
+  navigator.serviceWorker
+    .getRegistration()
+    .then((reg) => {
+      if (reg) return reg.update();
+    })
+    .catch(() => {});
 }
 
 import { createRoot } from 'react-dom/client';
