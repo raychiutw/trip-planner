@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.60] - 2026-05-17
+
+**TripSheet placeholder 英文 / dev jargon → 純中文 user-facing copy。**
+
+### Fixed: itinerary / chat placeholder 文案不是給 user 看的
+
+- `Itinerary` (eyebrow) → 「行程」
+- `Coming soon · Phase 3` (eyebrow) → 「即將推出」
+- `Per-trip chat` (heading) → 「行程專屬對話」
+- 「Timeline 在 main 區已展開，未來會搬到這個 tab（Mindtrip 3-pane 模式）。」
+  → 「行程已在左側展開，未來會搬到這裡的分頁。」
+- 「針對這趟 trip 的 AI 對話。實作在 Workstream V2。」
+  → 「針對這趟行程的 AI 對話，下一階段推出。目前可在「聊天」分頁使用通用對話。」
+
+Trip detail 右 sheet 點「行程」/「聊天」 tab 看到開發 jargon（Timeline, main,
+tab, Mindtrip 3-pane, Workstream V2）+ 英文 placeholder（Itinerary, Coming
+soon · Phase 3, Per-trip chat）→ user 困惑。改純中文 + 拿掉技術術語。
+
 ## [2.31.59] - 2026-05-17
 
 **LegacyRedirect 不再寫死 admin trip ID — multi-user 安全 fix。**
