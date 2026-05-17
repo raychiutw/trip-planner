@@ -424,7 +424,7 @@ export default function LoginPage() {
 
         {verified && (
           <div className="tp-banner tp-banner-success" data-testid="login-banner-verified">
-            Email 驗證成功！請登入。
+            電子郵件驗證成功！請登入。
           </div>
         )}
 
