@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.55] - 2026-05-17
+
+**ExplorePage section header conditional — prod QA 發現語意衝突。**
+
+### Fixed: section title 跟 active tab 不符
+
+`ExplorePage` mount 自動 auto-search seed（region=全部地區 時 seed=「東京」）
+→ `results` 有值 → section header 寫死「搜尋結果」。但 user landing 點
+「為你推薦」tab 看到「搜尋結果」header → 語意衝突（user 沒 search 卻看到
+search results header）。
+
+**Fix**：對齊 AddStopPage（v2.31.10）/ ChangePoiPage（v2.31.11）同樣的
+search/landing conditional：
+
+```tsx
+const sectionTitle = query.trim().length >= 2 ? '搜尋結果' : '推薦景點';
+<h2>{sectionTitle}</h2>
+```
+
+`query` 空（landing 自動 seed）→「推薦景點」；user 主動輸入搜尋（≥2 字）
+→「搜尋結果」。
+
+### Regression coverage
+
+`tests/unit/explore-page-section-title.test.ts` — 3 個 source-grep test
+（query.trim 條件 / `<h2>{sectionTitle}</h2>` 動態 / 不再 hardcoded `<h2>搜尋結果</h2>`）。
+
 ## [2.31.54] - 2026-05-17
 
 **TripSheet useMemo sheetContent + CSS scope — `/simplify` 3-agent review
