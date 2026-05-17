@@ -5,7 +5,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [2.31.58] - 2026-05-17
 
-**Empty trip AI 健檢 guard — backend reject + frontend disable + hint。**
+**Empty trip AI 健檢 guard + ForgotPasswordPage 文法 fix — 2 個 prod QA bug。**
+
+### Fixed (2): ForgotPasswordPage rate-limit fallback「幾分鐘秒後」文法不通
+
+`setWarning(\`重設請求過多。請 ${'\\${retryAfter ?? \'幾分鐘\'}'} 秒後再試。\`)`
+— `retryAfter` null fallback「幾分鐘」與後綴「秒後再試」直接拼接 →
+user 看到「請幾分鐘秒後再試」(請 [few minutes] seconds later) 文法不通。
+Fix 條件式分支：retryAfter 存在用秒、null 用「請幾分鐘後再試」。
+
+
 
 ### Fixed: empty trip 也可觸發 AI 健檢 → 白燒 Claude quota
 
