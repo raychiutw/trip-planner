@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.37] - 2026-05-17
+
+**daily-check autofix：拔 SW unhandled rejection + segments refetch debounce。**
+
+### Sentry SW load failed (#7359874308 TypeError + #7355334934 SecurityError)
+
+iOS Chrome 偶發「Script /sw.js load failed」TypeError / SecurityError，原本
+`navigator.serviceWorker.getRegistration().then((reg) => reg.update())` 沒 `.catch`
+→ unhandled promise rejection bubble 進 `auto.browser.global_handlers.onunhandledrejection`
+上 Sentry。SW 是 enhancement，load failure 對真實 user 無 functional impact。
+
+Fix：chain `.then((reg) => { if (reg) return reg.update(); }).catch(() => {})` 靜默吞下。
+新增 source-grep regression test 防後續 refactor 又拔掉。
+
+### Sentry N+1 #7475580989 `/api/trips/*/segments`
+
+`useTripSegments` hook 內 `tp-entry-updated` / `tp-segment-updated` event handler
+直接 trigger fetch，drag-reorder / batch save flow 連 dispatch 多個 event
+→ 短時間內 5+ 個 `GET /segments` 觸發 Sentry N+1 偵測。
+
+Fix：handler 內加 200ms debounce，cleanup 取消 pending timer。新增 2 個 unit test
+（5 個 event in 200ms = 1 fetch、unmount 取消 pending refetch）。
+
+### Skipped
+
+- N+1 #7437512068 `/api/route?from=*&to=*` (/map, 32 spans)：MapPage 每 segment
+  lazy fetch 是架構必要（IndexedDB cache + per-segment polyline）。0 user
+  impact，HeadlessChrome e2e cold cache trigger。不修。
+
 ## [2.31.36] - 2026-05-17
 
 **Refactor: DROP 6 dead trip fields + POI address normalize（雙 fix 同 PR）。**
