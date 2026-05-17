@@ -12,6 +12,7 @@
  *   - 異地裝置警示（不同 ip_hash_prefix → 警示樣式）— optional V2-P6 future
  */
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { parseUtcDate } from '../lib/parseUtcDate';
@@ -166,6 +167,7 @@ function relativeTime(iso: string): string {
 
 export default function SessionsPage() {
   useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
+  const navigate = useNavigate();
   const { user } = useCurrentUser();
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -245,6 +247,7 @@ export default function SessionsPage() {
       <div className="tp-sessions-shell" data-testid="sessions-page">
       <TitleBar
         title="登入裝置"
+        back={() => navigate('/account')}
         actions={otherSessions.length > 0 && (
           <button
             type="button"
