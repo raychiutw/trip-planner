@@ -722,11 +722,12 @@ export default function ChatPage() {
               aria-haspopup="menu"
               aria-expanded={tripMenuOpen}
               aria-label="切換行程"
+              title="切換行程"
             >
+              {/* v2.31.47：拔掉 picker button 內的 trip name span（TitleBar title
+                  已顯 trip name；button 重複顯示視覺冗餘）。只留 ⇄ icon + ▾
+                  affordance，user click 開 dropdown 看完整 trip list。 */}
               <Icon name="swap-horiz" />
-              <span className="tp-titlebar-trip-picker-name">
-                {activeTrip?.title || activeTrip?.name || activeTripId || '選擇行程'}
-              </span>
               <span className="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
             </button>
             {tripMenuOpen && (
