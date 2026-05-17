@@ -71,9 +71,13 @@ const SCOPED_STYLES = `
  * v2.31.49 follow-up：map tab 沒 className 也沒 flex:1，hidden 兄弟一
  * display:none 後就 collapse 4px（trip-sheet-body 是 flex column，active
  * map panel 沒 flex 屬性 → height 0）。給 active tabpanel 強制 flex:1 +
- * min-height:0，讓 TripMapRail 100% height 規則拿得到實際高度。 */
-[role="tabpanel"][hidden] { display: none; }
-[role="tabpanel"]:not([hidden]) { flex: 1; min-height: 0; }
+ * min-height:0，讓 TripMapRail 100% height 規則拿得到實際高度。
+ *
+ * v2.31.54 simplify follow-up：scope to .trip-sheet-body — 之前 selector 是
+ * 全 document 範圍，會影響任何其他 page 的 [role="tabpanel"]。Scope 後只
+ * 影響 TripSheet 內的 tabpanel。 */
+.trip-sheet-body [role="tabpanel"][hidden] { display: none; }
+.trip-sheet-body [role="tabpanel"]:not([hidden]) { flex: 1; min-height: 0; }
 
 /* TripMapRail 預設 .trip-map-rail 是給 main column scroll context 用：
    position:sticky + height:calc(100dvh - var(--spacing-nav-h))。
