@@ -71,7 +71,7 @@ describe('DeveloperAppsPage', () => {
     await waitFor(() => expect(screen.queryByTestId('dev-apps-row-tp_abc')).toBeTruthy());
     expect(screen.getByText('Trip Buddy')).toBeTruthy();
     expect(screen.getByText('tp_abc')).toBeTruthy();
-    expect(screen.getByText('ACTIVE')).toBeTruthy();
+    expect(screen.getByText('使用中')).toBeTruthy();
   });
 
   it('「建立新應用」 button → navigate 到 /developer/apps/new (不再 mount modal)', async () => {
