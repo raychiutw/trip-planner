@@ -946,7 +946,13 @@ export default function AddStopPage() {
                     </div>
                   )}
                   {searching && <div className="tp-add-stop-empty">搜尋中⋯</div>}
-                  {!searching && query.trim().length === 0 && category === 'all' && poiFavorites && poiFavorites.length > 0 && (
+                  {/* v2.31.55 fix：landing empty state 之前 gate 在
+                    * `poiFavorites && poiFavorites.length > 0`，但 poiFavorites
+                    * 只在 user 切到「收藏」 tab 才 fetch（line 664-681 lazy load），
+                    * 搜尋 tab 預設 null → 永遠不 render → user 看到 blank page
+                    * 完全沒 hint「該做什麼」。decouple 條件，搜尋 tab + query 空
+                    * 一律顯示 hint。 */}
+                  {!searching && query.trim().length === 0 && category === 'all' && (
                     <div className="tp-add-stop-empty">
                       輸入關鍵字搜尋，或切到「收藏」 tab 從你儲存的 POI 加入
                     </div>

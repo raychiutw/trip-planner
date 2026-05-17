@@ -732,9 +732,14 @@ export default function ExplorePage() {
                 hotel: '住宿',
                 shopping: '購物',
               };
+              // v2.31.55：query 空時 user 在「為你推薦」auto-seed landing，
+              // header「搜尋結果」語意不對。改 conditional：query 有值 = 真正搜尋
+              // → 「搜尋結果」；query 空 = landing → 「推薦景點」。對齊 add-stop /
+              // change-poi page section title 同樣的 search/landing 切換邏輯。
+              const sectionTitle = query.trim().length >= 2 ? '搜尋結果' : '推薦景點';
               return (
                 <section className="explore-section" data-testid="explore-results">
-                  <h2>搜尋結果</h2>
+                  <h2>{sectionTitle}</h2>
                   <p className="section-meta">
                     {filtered.length} / {results.length} 個 POI · 點愛心圖示加入我的收藏
                   </p>

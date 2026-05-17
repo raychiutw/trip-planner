@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.55] - 2026-05-17
+
+**2 個 prod QA 發現的小 bug — ExplorePage section header + AddStopPage landing empty state。**
+
+### Fixed (1): ExplorePage section title 跟 active tab 不符
+
+`ExplorePage` mount 自動 auto-search seed（region=全部地區 時 seed=「東京」）
+→ `results` 有值 → section header 寫死「搜尋結果」。但 user landing 點
+「為你推薦」tab 看到「搜尋結果」header → 語意衝突（user 沒 search 卻看到
+search results header）。
+
+**Fix**：對齊 AddStopPage（v2.31.10）/ ChangePoiPage（v2.31.11）同樣的
+search/landing conditional：
+
+```tsx
+const sectionTitle = query.trim().length >= 2 ? '搜尋結果' : '推薦景點';
+<h2>{sectionTitle}</h2>
+```
+
+### Fixed (2): AddStopPage landing empty state 不再 gate 在 poiFavorites
+
+User 進 `/trip/:id/add-stop?day=N` 預設「搜尋」 tab + 「為你推薦」 category，
+empty state hint「輸入關鍵字搜尋，或切到「收藏」 tab」之前 gate 在
+`poiFavorites && poiFavorites.length > 0`。但 poiFavorites 只在 user 切到
+「收藏」 tab 才 lazy fetch（line 664-681）→ 搜尋 tab 預設 null → empty state
+永不 render → user 看到 blank page 完全沒 hint「該做什麼」。
+
+**Fix**：decouple empty state from poiFavorites state，搜尋 tab + query 空 +
+category=all 一律顯示 hint。
+
+### Regression coverage
+
+- `tests/unit/explore-page-section-title.test.ts` — 3 個 test（fix 1）
+- `tests/unit/add-stop-landing-empty-state.test.ts` — 3 個 test（fix 2）
+
 ## [2.31.54] - 2026-05-17
 
 **TripSheet useMemo sheetContent + CSS scope — `/simplify` 3-agent review
