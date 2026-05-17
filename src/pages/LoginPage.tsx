@@ -535,7 +535,7 @@ export default function LoginPage() {
               </div>
               <div className="tp-feat-body">
                 <div className="tp-feat-title">邀請旅伴共編</div>
-                <div className="tp-feat-desc">用一個 link 把家人朋友拉進行程，不用 LINE 截圖。</div>
+                <div className="tp-feat-desc">用一個連結把家人朋友拉進行程，不用 LINE 截圖。</div>
               </div>
             </div>
             <div className="tp-bs-feature">
@@ -546,7 +546,7 @@ export default function LoginPage() {
               </div>
               <div className="tp-feat-body">
                 <div className="tp-feat-title">收藏跟著你</div>
-                <div className="tp-feat-desc">看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進 trip。</div>
+                <div className="tp-feat-desc">看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進行程。</div>
               </div>
             </div>
             <div className="tp-bs-feature">
