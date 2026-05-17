@@ -7,12 +7,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 **Empty trip AI 健檢 guard + ForgotPasswordPage 文法 fix — 2 個 prod QA bug。**
 
-### Fixed (2): ForgotPasswordPage rate-limit fallback「幾分鐘秒後」文法不通
+### Fixed (2): ForgotPasswordPage + SignupPage rate-limit fallback「幾分鐘秒後」文法不通
 
-`setWarning(\`重設請求過多。請 ${'\\${retryAfter ?? \'幾分鐘\'}'} 秒後再試。\`)`
-— `retryAfter` null fallback「幾分鐘」與後綴「秒後再試」直接拼接 →
-user 看到「請幾分鐘秒後再試」(請 [few minutes] seconds later) 文法不通。
+兩處同 pattern：`{retryAfter ?? '幾分鐘'} 秒後` 在 null 路徑 →
+「請幾分鐘秒後再試」(請 [few minutes] seconds later) 文法不通。
 Fix 條件式分支：retryAfter 存在用秒、null 用「請幾分鐘後再試」。
+
+### Fixed (3): ConsentPage 缺 client_id 錯誤訊息英文
+
+`setError('Missing client_id')` 在 zh-TW UI 中突兀的英文 → user 看不懂。
+改為 actionable 中文「授權連結缺少必要參數 client_id，請從應用商家提供的
+連結重新進入。」。
+
+### Fixed (4): ConflictModal eyebrow 英文「Time conflict」
+
+aria-label 已正確「時段衝突」但 visible eyebrow 是英文，不一致。改中文。
 
 
 
