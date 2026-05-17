@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, callHandler } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, callHandler } from './helpers';
 import { onRequestGet, onRequestPost } from '../../functions/api/trips/[id]/health-check';
 import { onRequestPatch } from '../../functions/api/requests/[id]';
 import type { Env } from '../../functions/api/_types';
@@ -19,10 +19,22 @@ import type { Env } from '../../functions/api/_types';
 let db: D1Database;
 let env: Env;
 
+// v2.31.58 helper：給 health-check guard 用 — 任何 trip 需要 ≥1 entry 才能
+// 通過「empty trip → TRIP_EMPTY 422」防呆。fetch trip 第一天 day_id + 插 1 entry。
+async function seedOneEntry(tripId: string) {
+  const dayRow = await db
+    .prepare('SELECT id FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC LIMIT 1')
+    .bind(tripId)
+    .first<{ id: number }>();
+  if (!dayRow) throw new Error(`seedOneEntry: no trip_days for ${tripId}`);
+  await seedEntry(db, dayRow.id, { title: 'guard-fixture' });
+}
+
 beforeAll(async () => {
   db = await createTestDb();
   env = mockEnv(db);
   await seedTrip(db, { id: 'trip-health' });
+  await seedOneEntry('trip-health');
 });
 
 afterAll(disposeMiniflare);
@@ -81,6 +93,29 @@ describe('POST /api/trips/:id/health-check', () => {
     const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(403);
   });
+
+  it('empty trip（沒 entry）→ TRIP_EMPTY 422', async () => {
+    // v2.31.58 guard：trip 沒任何 entry 不該觸發 AI 健檢，浪費 Claude quota。
+    await seedTrip(db, { id: 'trip-empty-guard' });
+    // 故意不 seedOneEntry。
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-empty-guard/health-check', 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-empty-guard' },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(422);
+    const data = await resp.json() as { error: { code: string; message: string } };
+    expect(data.error.code).toBe('TRIP_EMPTY');
+    expect(data.error.message).toContain('尚無景點');
+    // 同步驗：empty trip 不該 INSERT trip_health_reports / trip_requests
+    const reportRow = await db
+      .prepare('SELECT * FROM trip_health_reports WHERE trip_id = ?')
+      .bind('trip-empty-guard')
+      .first();
+    expect(reportRow).toBeNull();
+  });
 });
 
 describe('GET /api/trips/:id/health-check', () => {
@@ -117,6 +152,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
   it('reply 是 JSON array → findings 寫入 + status=completed', async () => {
     // 先建 trip + request via POST endpoint 取得 requestId
     await seedTrip(db, { id: 'trip-hook' });
+    await seedOneEntry('trip-hook');
     const postCtx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-hook/health-check', 'POST'),
       env,
@@ -160,6 +196,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
 
   it('Phase 2: dimension + suggestion 欄位寫入 findings_json', async () => {
     await seedTrip(db, { id: 'trip-hook-phase2' });
+    await seedOneEntry('trip-hook-phase2');
     const postResp = await callHandler(onRequestPost, mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-hook-phase2/health-check', 'POST'),
       env,
@@ -211,6 +248,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
 
   it('reply 包 ```json fence 也能 extract', async () => {
     await seedTrip(db, { id: 'trip-hook-fence' });
+    await seedOneEntry('trip-hook-fence');
     const postResp = await callHandler(onRequestPost, mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-hook-fence/health-check', 'POST'),
       env,
@@ -241,6 +279,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
 
   it('PATCH status=failed → trip_health_reports.status=failed + error_message', async () => {
     await seedTrip(db, { id: 'trip-hook-fail' });
+    await seedOneEntry('trip-hook-fail');
     const postResp = await callHandler(onRequestPost, mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-hook-fail/health-check', 'POST'),
       env,

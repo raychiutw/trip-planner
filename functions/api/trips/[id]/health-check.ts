@@ -124,8 +124,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // v2.31.58 guard：empty trip（沒有任何 entry）不該觸發 AI 健檢 —
   // 浪費 Claude quota + 給 user 沒用的 findings。Frontend 也 disable
   // 開始健檢 button，但 backend 多一層保護防 race condition / direct API call。
+  // trip_entries 沒 trip_id 欄位，要 JOIN trip_days（沿用 _auth.ts:89 同 pattern）。
   const entryCount = await env.DB
-    .prepare('SELECT COUNT(*) as cnt FROM trip_entries WHERE trip_id = ?')
+    .prepare(
+      `SELECT COUNT(*) as cnt FROM trip_entries e
+       JOIN trip_days d ON e.day_id = d.id
+       WHERE d.trip_id = ?`,
+    )
     .bind(tripId)
     .first<{ cnt: number }>();
   if (!entryCount || entryCount.cnt === 0) {

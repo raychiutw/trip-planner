@@ -27,8 +27,11 @@ const API_TYPES = readFileSync(path.join(ROOT, 'src/types/api.ts'), 'utf8');
 
 describe('v2.31.58 empty trip AI 健檢 guard', () => {
   describe('Backend POST handler', () => {
-    it('hasWritePermission 後 SELECT COUNT(*) FROM trip_entries 檢查', () => {
-      expect(BACKEND).toMatch(/SELECT COUNT\(\*\) as cnt FROM trip_entries WHERE trip_id = \?/);
+    it('hasWritePermission 後 SELECT COUNT(*) FROM trip_entries JOIN trip_days 檢查', () => {
+      // trip_entries 沒 trip_id 欄位，JOIN trip_days 才能 WHERE d.trip_id = ?
+      expect(BACKEND).toMatch(/SELECT COUNT\(\*\) as cnt FROM trip_entries e/);
+      expect(BACKEND).toMatch(/JOIN trip_days d ON e\.day_id = d\.id/);
+      expect(BACKEND).toMatch(/WHERE d\.trip_id = \?/);
     });
 
     it('entry count === 0 throw TRIP_EMPTY AppError', () => {
