@@ -63,6 +63,23 @@ function initialSavedPois() {
   return [];
 }
 
+/**
+ * v2.31.43 mock helper — duplicate of src/lib/poiCategory.ts mapNominatimCategory()。
+ * 重複實作是因 e2e api-mocks.js 是 plain .js，不能 import .ts module。
+ * 邏輯必須跟 src 同步；white list ∈ pois.type CHECK constraint。
+ */
+function mockMapCategory(category) {
+  if (!category) return 'attraction';
+  const c = String(category).toLowerCase();
+  if (c.includes('hotel') || c.includes('lodging') || c.includes('tourism')) return 'hotel';
+  if (c.includes('restaurant') || c.includes('food') || c.includes('amenity')) return 'restaurant';
+  if (c.includes('shop') || c.includes('mall') || c.includes('retail')) return 'shopping';
+  if (c.includes('parking')) return 'parking';
+  if (c.includes('transport') || c.includes('railway') || c.includes('airport')) return 'transport';
+  if (c.includes('activity') || c.includes('leisure')) return 'activity';
+  return 'attraction';
+}
+
 // initialTripIdeas() retired in V2 cutover (migration 0046) — 備案概念合一進「我的收藏」
 // (saved_pois)。fixtures 繼承到 initialSavedPois() 若需要復原。
 
@@ -650,6 +667,11 @@ async function setupApiMocks(page) {
   let nextSavedId = 8000;
   let nextPoiId = 8800;
   let nextEntryId = 9000;
+  // v2.31.43：對齊 real backend — find-or-create body.type（client 已 mapNominatim
+  // 映射過）跟 POST /poi-favorites 經 JOIN 拿到的 pois.type 是同一個 mapped value。
+  // 之前 mock 寫死 raw `searchPoi.category`（'sight'）讓 frontend mapped key
+  // ('attraction::...') 跟 mock raw key ('sight::...') 對不上。
+  const poiTypeByPoiId = new Map();
 
   await page.route(/\/api\/oauth\/userinfo$/, (route) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_USER) });
@@ -732,6 +754,9 @@ async function setupApiMocks(page) {
     const body = route.request().postDataJSON?.() ?? {};
     const existing = savedPois.find((p) => p.poiName === body.name);
     const id = existing?.poiId ?? ++nextPoiId;
+    // Stash 客戶端 mapped type — 對齊 real backend pois.type 儲存 mapped value，
+    // 後面 POST /poi-favorites 透過 poiId 拿回此 type 寫進 row.poiType。
+    if (body.type) poiTypeByPoiId.set(id, body.type);
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id }) });
   });
 
@@ -744,17 +769,21 @@ async function setupApiMocks(page) {
     if (request.method() === 'POST') {
       const body = request.postDataJSON?.() ?? {};
       const searchPoi = MOCK_POI_SEARCH_RESULTS[0];
+      const poiId = body.poiId ?? nextPoiId++;
+      // v2.31.43：對齊 real backend — poiType 來自 pois.type（mapped value
+      // from find-or-create body.type），fallback 走 mapping helper 邏輯。
+      const mappedType = poiTypeByPoiId.get(poiId) ?? mockMapCategory(searchPoi.category);
       const row = {
         id: ++nextSavedId,
         email: MOCK_USER.email,
-        poiId: body.poiId ?? nextPoiId++,
+        poiId,
         savedAt: new Date().toISOString(),
         note: body.note ?? null,
         poiName: searchPoi.name,
         poiAddress: searchPoi.address,
         poiLat: searchPoi.lat,
         poiLng: searchPoi.lng,
-        poiType: searchPoi.category,
+        poiType: mappedType,
       };
       savedPois.unshift(row);
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(row) });
