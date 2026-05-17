@@ -507,7 +507,9 @@ export default function LoginPage() {
       </div>
 
       <aside className="tp-login-brand-hero" data-testid="login-brand-hero" aria-hidden="true">
-        <div className="tp-bs-eyebrow">Why sign in</div>
+        {/* v2.31.62 zh-TW polish：原本 English eyebrow「Why sign in」，
+            aria-hidden 仍 visible 給 visual user 看，整 page 中文應該一致。 */}
+        <div className="tp-bs-eyebrow">登入後可以</div>
         <div>
           <h2 className="tp-bs-display">把每次旅程<br />留在身邊。</h2>
           <div className="tp-bs-features">
