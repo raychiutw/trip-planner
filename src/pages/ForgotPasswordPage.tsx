@@ -106,7 +106,13 @@ export default function ForgotPasswordPage() {
       const code = errJson?.error?.code ?? 'UNKNOWN';
       if (code === 'FORGOT_PASSWORD_RATE_LIMITED') {
         const retryAfter = res.headers.get('Retry-After');
-        setWarning(`重設請求過多。請 ${retryAfter ?? '幾分鐘'} 秒後再試。`);
+        // v2.31.58 zh-TW fix：retryAfter null fallback「幾分鐘」與後綴「秒後」
+        // 直接拼接 → 「請幾分鐘秒後再試」文法不通。改條件式分支。
+        setWarning(
+          retryAfter
+            ? `重設請求過多。請 ${retryAfter} 秒後再試。`
+            : '重設請求過多。請幾分鐘後再試。',
+        );
       } else {
         setWarning('暫時無法處理，請稍後再試。');
       }
