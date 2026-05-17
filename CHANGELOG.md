@@ -3,6 +3,44 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.54] - 2026-05-17
+
+**TripSheet useMemo sheetContent + CSS scope — `/simplify` 3-agent review
+follow-up（v2.31.46-49 sticky map chain ship 後）。**
+
+### Fixed: 2 個 robustness issues from /simplify review
+
+**(0) Attempted per-render `sheetPortalNode` lookup — REVERTED**
+
+/simplify quality agent flagged `useEffect deps [noShell]` only mount → stale
+ref hazard if host AppShell remounts。第一輪嘗試 per-render
+`document.getElementById` lookup 觸發 e2e 10 個 trip detail timeout — React
+render phase 跑在 DOM commit 之前，第一次 render 拿不到 portal target →
+no portal mounted → e2e wait visible timeout。Reverted 回 useState +
+useEffect 兩階段 pattern。Stale ref 是 theoretical 風險（v2.31.46 prod 已
+3 個月穩定運行）— 不修了。
+
+**(1) `TripPage.sheetContent` 沒 useMemo → portal subtree reconcile 浪費**
+
+每次 TripPage render 重建 `<Suspense><TripSheet/></Suspense>` JSX → portal
+target children prop 變新 reference → React reconcile lazy boundary +
+TripSheet shallow prop diff。TripPage 有 30+ state hooks，scroll/day-switch
+時 render 頻繁。
+
+**Fix**：`useMemo` 包 sheetContent，deps = `[loading, trip, mapRailData.allPins,
+mapRailData.pinsByDay, isDark]`（mapRailData 已是 useMemo stable identity）。
+
+**(2) `TripSheet [role="tabpanel"]` CSS selector 全 document scope**
+
+v2.31.48/49 加的 `[role="tabpanel"][hidden]` + `:not([hidden])` 是 global
+selector，會影響其他 page 的 tabpanel（雖目前無），unintentional reach。
+
+**Fix**：scope 到 `.trip-sheet-body [role="tabpanel"]` 限定 TripSheet 內部。
+
+**Test**：5 個 source-grep regression（每 fix 對應）+ existing TripSheet 相關
+tests 全綠（hidden tabpanel / map tab flex / desktop sticky map portal 4 個
+test file，17/17 GREEN）+ 全 unit suite 1725/1725 GREEN。tsc clean。
+
 ## [2.31.53] - 2026-05-17
 
 **Mockup favorites region row hide 規範 align prod。**

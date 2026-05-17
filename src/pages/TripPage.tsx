@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -258,10 +258,11 @@ function TripPageInner(
    * 從 host AppShell（TripsListPage）拿 `<aside id="trip-sheet-portal">` DOM
    * 後 createPortal 把 sheetContent 推過去。
    *
-   * 為何 useState + useEffect：DOM target 需 host 先 mount AppShell，
-   * 第一次 render 取不到，useEffect 拿到後再 setState 觸發第二次 render 才
-   * portal。Strict mode 雙倍 fire setState 同值 → React bail out。
-   */
+   * v2.31.54 嘗試改 per-render lookup 觸發 e2e 大批 timeout（render phase
+   * `getElementById` 跑在 DOM commit 之前，拿不到 portal target → 第一次
+   * render no portal，e2e wait visible timeout）— reverted 回原 useState +
+   * useEffect 兩階段 pattern：第一次 render = null，effect commit 後 setState
+   * 觸發 re-render 拿 node 後 portal。 */
   const [sheetPortalNode, setSheetPortalNode] = useState<Element | null>(null);
   useEffect(() => {
     if (!noShell) return;
@@ -616,6 +617,25 @@ function TripPageInner(
   }), [handleDownloadFormat, togglePrint, trip, effectiveUrlTripId, navigate, currentDayNum]);
   const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
 
+  // v2.31.54 simplify follow-up：useMemo 避免每次 TripPage render 重建
+  // sheetContent JSX tree → portal subtree React reconcile 浪費。Deps =
+  // 實質會影響 TripSheet render 的 props（mapRailData 已是 useMemo stable
+  // identity，loading/trip/isDark 是 source state）。
+  // v2.31.55 fix：必須放在 early returns 之前，否則 hook order 不一致
+  // (loading path vs loaded path call count 不同) → React crash → e2e 全 timeout。
+  const sheetContent = useMemo<ReactNode | undefined>(() => (
+    !loading && trip ? (
+      <Suspense fallback={null}>
+        <TripSheet
+          tripId={trip.id}
+          allPins={mapRailData.allPins}
+          pinsByDay={mapRailData.pinsByDay}
+          dark={isDark}
+        />
+      </Suspense>
+    ) : undefined
+  ), [loading, trip, mapRailData.allPins, mapRailData.pinsByDay, isDark]);
+
   /* --- Early returns (#13: use hoisted static views) --- */
   if (resolveState.status === 'unpublished') return UNPUBLISHED_VIEW;
   if (resolveState.status === 'loading') return LOADING_VIEW;
@@ -640,17 +660,6 @@ function TripPageInner(
       </div>
     );
   }
-
-  const sheetContent = !loading && trip ? (
-    <Suspense fallback={null}>
-      <TripSheet
-        tripId={trip.id}
-        allPins={mapRailData.allPins}
-        pinsByDay={mapRailData.pinsByDay}
-        dark={isDark}
-      />
-    </Suspense>
-  ) : undefined;
 
   // 「更多」 sheet 4 action 已遷移新家:
   // 共編 → trip TitleBar；切換行程 → /trips；外觀 → AccountPage；下載 → OverflowMenu
