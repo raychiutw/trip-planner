@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.65] - 2026-05-18
+
+**AI 健檢 Claude prompt 加用詞規定，避免 schema field 借詞混雜中文。**
+
+### Fixed: HEALTH_CHECK_MESSAGE 引導 Claude 用全中文
+
+prod 登入截圖驗證發現 AI 健檢 findings 的 title / description / suggestion
+含「Day 4 重疊午餐 entry」「entry #877」「主 POI KOURI SHRIMP」「travel min」
+「check-in」「alt 七輪燒肉」等 schema field name 直接借詞 → user 看到中英混雜。
+
+`HEALTH_CHECK_MESSAGE` 加用詞規定段落：
+- 明確列禁用借詞表 (entry/min/km/POI/check-in/buffer/rating/travel/polyline/alt)
+- 範例 JSON 改全中文用詞示範
+- 強制 Claude 在 prose 用「景點/分鐘/公里/入住/緩衝時間/評分/移動/路線/替代」
+
+Prompt-engineering only — 後端 schema 與 frontend code 不變。
+已 ship 的舊 findings 不會自動 retro，user 點「重新生成」會用新 prompt。
+
 ## [2.31.64] - 2026-05-18
 
 **PoiFavoritesPage zh-TW 收尾 — eyebrow / count / card type / empty state / aria-label。**
