@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.42] - 2026-05-17
+
+**Sessions / Trip MapPage 缺 TitleBar back button — 同 #601 nav regression 家族。**
+
+(v2.31.41 sticky map fix 引入 prod ErrorBoundary 已 revert via #606，留待離線 debug。)
+
+### Fixed: `/settings/sessions` 缺 back button
+
+QA loop 截圖確認 user 進「登入裝置」頁無法返回 `/account` hub，只能用瀏覽器 back。
+
+`src/pages/SessionsPage.tsx`：import `useNavigate` + 加 `navigate` var + TitleBar 加 `back={() => navigate('/account')}`。
+
+### Fixed: `/trip/:id/map` MapPage 缺 back button
+
+trip-scoped map view 從 trip detail 進來但無返回 trip detail 的箭頭。Global `/map` (GlobalMapPage) 是 bottom nav root 不需 back ✓ 不受影響。
+
+`src/pages/MapPage.tsx`：TitleBar 加 `back={tripId ? () => navigate(\`/trip/${encodeURIComponent(tripId)}\`) : undefined}`。
+
+### Tests
+
+`tests/unit/missing-back-buttons.test.ts`：3 個 source-grep regression。
+
 ## [2.31.40] - 2026-05-17
 
 **GlobalBottomNav auth flicker 修正 — 22 callsite 統一 loading-aware。**
