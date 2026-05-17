@@ -121,9 +121,10 @@ interface ClientApp {
 // src/pages/DeveloperAppNewPage.tsx (form 全頁化後 list page 不需要)。
 
 function statusPill(status: string): { className: string; label: string } {
-  if (status === 'active') return { className: 'tp-pill tp-pill-active', label: 'ACTIVE' };
-  if (status === 'pending_review') return { className: 'tp-pill tp-pill-pending', label: 'PENDING' };
-  return { className: 'tp-pill tp-pill-suspended', label: status.toUpperCase() };
+  if (status === 'active') return { className: 'tp-pill tp-pill-active', label: '使用中' };
+  if (status === 'pending_review') return { className: 'tp-pill tp-pill-pending', label: '審核中' };
+  if (status === 'suspended') return { className: 'tp-pill tp-pill-suspended', label: '已停用' };
+  return { className: 'tp-pill tp-pill-suspended', label: status };
 }
 
 export default function DeveloperAppsPage() {
