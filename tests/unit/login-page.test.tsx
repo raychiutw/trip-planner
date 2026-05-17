@@ -118,7 +118,7 @@ describe('LoginPage form', () => {
     fireEvent.click(screen.getByTestId('login-submit'));
 
     await waitFor(() => expect(screen.queryByTestId('login-banner-error')).toBeTruthy());
-    expect(screen.getByTestId('login-banner-error').textContent).toContain('email 或密碼');
+    expect(screen.getByTestId('login-banner-error').textContent).toContain('電子郵件或密碼');
     expect(sessionStorage.getItem('tp_login_fail_count')).toBe('1');
   });
 
