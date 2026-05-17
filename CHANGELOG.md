@@ -3,6 +3,46 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.63] - 2026-05-17
+
+**AccountPage + EditEntryPage + TimelineRail + DaySection + GlobalMapPage zh-TW polish。**
+
+### Fixed: 20 處 user-visible 英文混雜
+
+`/account` 設定 hub 三個 settings row 的 title / helper 還是英文混雜：
+- `已連結 App` → `已連結的應用程式`
+- `OAuth client app 註冊` → `OAuth 應用程式註冊`
+- `管理所有 active session` → `管理所有登入中的裝置`
+
+`EditEntryPage` 刪除整個 entry 的 6 處 confirm modal + error message
+也還是「stop」raw English：
+- `刪除整個 stop` button label → `刪除整個停留點`
+- `刪除整個 stop？` modal title → `刪除整個停留點？`
+- `刪除 stop` modal confirmLabel → `刪除停留點`
+- `將從這個 stop 移除備選...` modal message → `將從這個停留點移除備選...`
+- `刪除 stop 失敗 (${status})` throw → `刪除停留點失敗`
+- `setError('刪除 stop 失敗')` catch fallback → `setError('刪除停留點失敗')`
+
+`TimelineRail`（trip 主時間軸 header）+ `DaySection`（day hero）+ `GlobalMapPage`
+（全圖 sheet overview） 4 處 stops/days/Itinerary 英文混雜：
+- `Itinerary` eyebrow → `行程`
+- `N stops` meta → `N 個停留點`
+- DaySection hero sub `N 個 stops` → `N 個停留點`
+- GlobalMapPage sheet overview `N stops · N days` → `N 個停留點 · N 天`
+- GlobalMapPage day list eyebrow `DAY XX · N stops` → `DAY XX · N 個停留點`
+
+LoginPage banner error 2 處「email」→「電子郵件」；ConsentPage scope 描述 +
+ForgotPasswordPage 安全承諾 + ResetPasswordPage value prop + ConnectedAppsPage
+TitleBar 「app/email/session」混雜 → 全中文化。
+
+SignupPage 右側 brand hero「Why Tripline」eyebrow（跟 v2.31.62 LoginPage
+「Why sign in」同 pattern）→「為什麼選 Tripline」。SignupPage / LoginPage
+hero items desc「用一個 link」→「用一個連結」；「下次規劃直接拉進 trip」
+→「下次規劃直接拉進行程」；「POI 一鍵加入下次 trip」→「景點一鍵加入下次旅程」。
+SignupPage form sub「用 email + 密碼註冊」→「用電子郵件 + 密碼註冊」。
+
+同 v2.31.61 / v2.31.62 zh-TW 系列收尾，不留半個英文。
+
 ## [2.31.62] - 2026-05-17
 
 **LoginPage brand hero eyebrow「Why sign in」→「登入後可以」。**

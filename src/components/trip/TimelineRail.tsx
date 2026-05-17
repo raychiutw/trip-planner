@@ -999,9 +999,9 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
     <div className="ocean-rail">
       <style>{SCOPED_STYLES}</style>
       <div className="ocean-rail-header">
-        <span className="ocean-rail-eyebrow">Itinerary</span>
+        <span className="ocean-rail-eyebrow">行程</span>
         <span className="ocean-rail-meta">
-          {orderedEvents.length} stops{firstTime && lastTime ? ` · ${firstTime}–${lastTime}` : ''}
+          {orderedEvents.length} 個停留點{firstTime && lastTime ? ` · ${firstTime}–${lastTime}` : ''}
         </span>
       </div>
       <DndContext sensors={sensors} accessibility={TP_DRAG_ACCESSIBILITY} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

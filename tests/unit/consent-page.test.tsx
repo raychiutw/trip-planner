@@ -42,7 +42,7 @@ describe('ConsentPage', () => {
   it('shows scope description in zh-tw', async () => {
     renderWithParams('client_id=p&scope=email&redirect_uri=&state=');
     await waitFor(() => expect(screen.getByTestId('consent-scope-email')).toBeTruthy());
-    expect(screen.getByTestId('consent-scope-email').textContent).toContain('email 地址');
+    expect(screen.getByTestId('consent-scope-email').textContent).toContain('電子郵件地址');
   });
 
   it('Allow button submits POST form to /api/oauth/consent with decision=allow', async () => {

@@ -135,7 +135,7 @@ const DaySection = React.memo(function DaySection({
   const totalHours = useMemo(() => getTotalHours(bounds.start, bounds.end), [bounds.start, bounds.end]);
   const heroSub = useMemo(() => {
     const parts: string[] = [];
-    if (timeline.length > 0) parts.push(`${timeline.length} 個 stops`);
+    if (timeline.length > 0) parts.push(`${timeline.length} 個停留點`);
     if (totalKm != null) parts.push(`${totalKm} km`);
     if (totalHours != null) parts.push(`預估 ${totalHours} 小時`);
     return parts.length > 1 ? parts.join(' · ') : '';

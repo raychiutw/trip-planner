@@ -310,11 +310,11 @@ export default function LoginPage() {
       const code = errJson?.error?.code ?? 'UNKNOWN';
       switch (code) {
         case 'LOGIN_INVALID_INPUT':
-          setBannerError('請輸入 email 與密碼');
+          setBannerError('請輸入電子郵件與密碼');
           break;
         case 'LOGIN_INVALID':
           bumpFailure();
-          setBannerError('email 或密碼錯誤');
+          setBannerError('電子郵件或密碼錯誤');
           break;
         case 'LOGIN_RATE_LIMITED': {
           const retryAfter = res.headers.get('Retry-After');
@@ -424,7 +424,7 @@ export default function LoginPage() {
 
         {verified && (
           <div className="tp-banner tp-banner-success" data-testid="login-banner-verified">
-            Email 驗證成功！請登入。
+            電子郵件驗證成功！請登入。
           </div>
         )}
 
@@ -449,7 +449,7 @@ export default function LoginPage() {
 
         <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
           <div className="tp-form-row">
-            <label htmlFor="login-email">Email</label>
+            <label htmlFor="login-email">電子郵件</label>
             <input
               id="login-email"
               type="email"
@@ -535,7 +535,7 @@ export default function LoginPage() {
               </div>
               <div className="tp-feat-body">
                 <div className="tp-feat-title">邀請旅伴共編</div>
-                <div className="tp-feat-desc">用一個 link 把家人朋友拉進行程，不用 LINE 截圖。</div>
+                <div className="tp-feat-desc">用一個連結把家人朋友拉進行程，不用 LINE 截圖。</div>
               </div>
             </div>
             <div className="tp-bs-feature">
@@ -546,7 +546,7 @@ export default function LoginPage() {
               </div>
               <div className="tp-feat-body">
                 <div className="tp-feat-title">收藏跟著你</div>
-                <div className="tp-feat-desc">看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進 trip。</div>
+                <div className="tp-feat-desc">看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進行程。</div>
               </div>
             </div>
             <div className="tp-bs-feature">
