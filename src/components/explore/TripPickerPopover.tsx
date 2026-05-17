@@ -74,7 +74,7 @@ export default function TripPickerPopover({ open, trips, selectedCount, onPick, 
       >
         <div className="tp-trip-picker-header">
           <h3>選擇要加入的行程</h3>
-          <p>已選 {selectedCount} 個 POI</p>
+          <p>已選 {selectedCount} 個景點</p>
         </div>
         <div className="tp-trip-picker-list">
           {trips === null && <div className="tp-trip-picker-empty">載入中…</div>}
