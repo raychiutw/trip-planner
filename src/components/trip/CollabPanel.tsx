@@ -399,7 +399,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
       }
       if (r.status === 409) {
         const data = await r.json().catch(() => null);
-        const msg = data?.error?.message ?? '此 email 已有權限或 pending 邀請';
+        const msg = data?.error?.message ?? '此電子郵件已有權限或待回覆邀請';
         throw new Error(msg);
       }
       if (r.status === 403) throw new Error('僅行程擁有者或管理者可操作');
@@ -501,7 +501,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
       <style>{SCOPED_STYLES}</style>
 
       <p className="tp-collab-hint">
-        共編成員可<strong>檢視與編輯</strong>此行程，檢視成員只可<strong>檢視</strong>。輸入對方的 email，他們下次登入會在自己的行程列表看到。
+        共編成員可<strong>檢視與編輯</strong>此行程，檢視成員只可<strong>檢視</strong>。輸入對方的電子郵件，他們下次登入會在自己的行程列表看到。
       </p>
 
       <section className="tp-collab-section">

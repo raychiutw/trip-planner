@@ -70,14 +70,14 @@ describe('PoiFavoritesPage — region pill + type filter a11y', () => {
     expect(row.getAttribute('aria-label')).toBe('地區篩選');
   });
 
-  it('type filter row role="group" + aria-label="POI 類型篩選" (不是 tablist)', async () => {
+  it('type filter row role="group" + aria-label="景點類型篩選" (不是 tablist)', async () => {
     apiFetchMock.mockResolvedValue([makeRow(1, '沖繩')]);
     renderPage();
     await waitFor(() => expect(screen.getByTestId('favorites-type-row')).toBeTruthy());
     const row = screen.getByTestId('favorites-type-row');
     expect(row.getAttribute('role')).toBe('group');
     expect(row.getAttribute('role')).not.toBe('tablist');
-    expect(row.getAttribute('aria-label')).toBe('POI 類型篩選');
+    expect(row.getAttribute('aria-label')).toBe('景點類型篩選');
   });
 
   it('region pill chip 用 aria-pressed (不是 aria-selected)', async () => {

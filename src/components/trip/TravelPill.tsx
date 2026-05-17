@@ -129,6 +129,16 @@ const TYPE_ICON_MAP: Record<string, string> = {
   plane: 'plane',
 };
 
+// v2.31.64 a11y zh-TW：aria-label 給 screen reader 念中文，不要 raw enum
+const MODE_LABEL: Record<string, string> = {
+  car: '開車', drive: '開車', driving: '開車',
+  walk: '步行', walking: '步行',
+  train: '火車', metro: '捷運', subway: '捷運',
+  bus: '公車', transit: '大眾運輸',
+  ferry: '渡輪',
+  flight: '飛機', plane: '飛機',
+};
+
 export interface TravelPillSegment {
   id: number;
   mode: TravelMode;
@@ -267,7 +277,7 @@ export default function TravelPill({
             type="button"
             className="tp-travel-pill is-interactive"
             onClick={() => setDialogOpen(true)}
-            aria-label={`交通方式 ${effectiveType ?? ''}${hasMin ? ` ${effectiveMin} 分鐘` : ''}（點擊變更）`}
+            aria-label={`交通方式 ${MODE_LABEL[(effectiveType ?? '').toLowerCase()] ?? effectiveType ?? ''}${hasMin ? ` ${effectiveMin} 分鐘` : ''}（點擊變更）`}
             data-testid="travel-pill"
           >
             {inner}

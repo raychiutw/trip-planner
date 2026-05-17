@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.64] - 2026-05-18
+
+**PoiFavoritesPage zh-TW 收尾 — eyebrow / count / card type / empty state / aria-label。**
+
+### Fixed: 6 處 user-visible 英文混雜
+
+prod 登入截圖驗證發現 `/favorites` 仍有大量英文殘留：
+- hero eyebrow「my favorites · 我的收藏」→「我的收藏」
+- count meta「N 個收藏 POI」→「N 個收藏景點」
+- card eyebrow `{row.poiType}` raw render (CSS uppercase「ATTRACTION/HOTEL」)
+  → `POI_TYPE_LABELS[mapNominatimCategory(row.poiType)]`（「景點/飯店/餐廳」中文）
+- delete confirm message「N 個收藏 POI」→「N 個收藏景點」
+- aria-label「POI 類型篩選」→「景點類型篩選」
+- empty state eyebrow「my favorites」→「我的收藏」
+- empty state message「點 heart 圖示收藏」→「點愛心圖示收藏」
+
+對齊 v2.31.63 系列：UI 全頁繁中無英文混雜（OAuth 標準術語 / 品牌名除外）。
+
+`poi-favorites-page-region-pill.test.tsx` aria-label assertion 同步更新。
+
 ## [2.31.63] - 2026-05-17
 
 **AccountPage + EditEntryPage + TimelineRail + DaySection + GlobalMapPage zh-TW polish。**

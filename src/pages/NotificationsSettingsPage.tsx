@@ -109,7 +109,7 @@ export default function NotificationsSettingsPage() {
           <div className="tp-notif-stub-icon" aria-hidden="true"><Icon name="lightbulb" /></div>
           <h2 className="tp-notif-stub-title">即將推出</h2>
           <p className="tp-notif-stub-copy">
-            通知功能還在開發中。下面列的是規劃中的通知類型，未來開放後可以分別 opt-in/opt-out。
+            通知功能還在開發中。下面列的是規劃中的通知類型，未來開放後可以分別開啟或關閉。
           </p>
         </section>
 

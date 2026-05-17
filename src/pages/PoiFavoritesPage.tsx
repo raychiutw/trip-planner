@@ -28,6 +28,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import { POI_TYPE_LABELS, mapNominatimCategory } from '../lib/poiCategory';
 
 interface PoiFavoriteRow {
   id: number;
@@ -463,9 +464,9 @@ export default function PoiFavoritesPage() {
 
         {status === 'data' && favorites.length === 0 && (
           <EmptyState
-            eyebrow="my favorites"
+            eyebrow="我的收藏"
             title="還沒有收藏"
-            message="在「探索」找景點，點 heart 圖示收藏，下次行程就能直接從這裡加入。"
+            message="在「探索」找景點，點愛心圖示收藏，下次行程就能直接從這裡加入。"
             ctaLabel="去探索找景點"
             onCta={() => navigate('/explore')}
             className="favorites-empty-cta"
@@ -477,8 +478,8 @@ export default function PoiFavoritesPage() {
         {status === 'data' && favorites.length > 0 && (
           <>
             <div>
-              <div className="favorites-eyebrow" data-testid="favorites-eyebrow">my favorites · 我的收藏</div>
-              <p className="favorites-count-meta" data-testid="favorites-count">{favorites.length} 個收藏 POI</p>
+              <div className="favorites-eyebrow" data-testid="favorites-eyebrow">我的收藏</div>
+              <p className="favorites-count-meta" data-testid="favorites-count">{favorites.length} 個收藏景點</p>
             </div>
 
             <div className="favorites-search">
@@ -529,7 +530,7 @@ export default function PoiFavoritesPage() {
             <div
               className="favorites-type-row"
               role="group"
-              aria-label="POI 類型篩選"
+              aria-label="景點類型篩選"
               data-testid="favorites-type-row"
             >
               {TYPE_FILTER_OPTIONS.map((opt) => (
@@ -612,7 +613,7 @@ export default function PoiFavoritesPage() {
                         data-testid={`favorites-card-${row.id}`}
                         {...(isDeleting ? { 'aria-live': 'polite' } : {})}
                       >
-                        <div className="poi-category">{row.poiType}</div>
+                        <div className="poi-category">{POI_TYPE_LABELS[mapNominatimCategory(row.poiType)] ?? '景點'}</div>
                         <div className="poi-name">{row.poiName}</div>
                         {/* v2.31.19: backend poi-favorites SELECT 已含 rating（v2.31.17 補），
                           * card 跟 add-stop / change-poi favorites card 一致顯 ★ N.N · address。 */}
@@ -708,7 +709,7 @@ export default function PoiFavoritesPage() {
       <ConfirmModal
         open={deleteConfirmOpen}
         title="確定刪除收藏？"
-        message={`即將刪除 ${selectedIds.size} 個收藏 POI，此操作無法復原。`}
+        message={`即將刪除 ${selectedIds.size} 個收藏景點，此操作無法復原。`}
         confirmLabel="刪除"
         busy={deletingSelected}
         onConfirm={handleDeleteSelected}

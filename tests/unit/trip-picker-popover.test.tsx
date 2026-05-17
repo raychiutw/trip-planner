@@ -32,7 +32,7 @@ describe('TripPickerPopover', () => {
       <TripPickerPopover open trips={TRIPS} selectedCount={3} onPick={vi.fn()} onClose={vi.fn()} />
     );
     expect(screen.getByTestId('explore-trip-picker')).toBeTruthy();
-    expect(screen.getByText('已選 3 個 POI')).toBeTruthy();
+    expect(screen.getByText('已選 3 個景點')).toBeTruthy();
     expect(screen.getByTestId('explore-trip-pick-okinawa-2026-Ray')).toBeTruthy();
     expect(screen.getByTestId('explore-trip-pick-seoul-2026')).toBeTruthy();
     expect(screen.getByTestId('explore-trip-pick-no-name-trip')).toBeTruthy();
