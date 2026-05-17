@@ -387,6 +387,15 @@ const SCOPED_STYLES = `
   background: var(--color-disabled);
   cursor: wait;
 }
+/* v2.31.58 empty trip guard：button 旁邊 inline hint。color: muted，
+   不搶 button focus；padding 與 button 對齊。 */
+.tp-ai-health-bottombar .tp-ai-health-empty-hint {
+  flex: 1;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-muted);
+  padding: 0 12px;
+}
 .tp-ai-health-bottombar .ghost {
   background: transparent;
   color: var(--color-foreground);
@@ -466,6 +475,9 @@ export default function TripHealthCheckPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // v2.31.58：empty trip guard — 沒任何 entry 不該允許觸發 AI 健檢。
+  // null = 還沒 fetch；number = 實際 entry 總數（跨所有天）。
+  const [entryCount, setEntryCount] = useState<number | null>(null);
 
   // Polling: 用 ref 持有 timeout id，避免 effect 重 render 時舊 timer 漏清
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -487,14 +499,24 @@ export default function TripHealthCheckPage() {
       setInitialLoading(true);
       setError(null);
       try {
-        const [tripRes, reportData] = await Promise.all([
+        const [tripRes, daysRes, reportData] = await Promise.all([
           apiFetchRaw(`/trips/${encodeURIComponent(tripId)}`, { signal: ctrl.signal }),
+          apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days?all=1`, { signal: ctrl.signal }),
           fetchReport(ctrl.signal),
         ]);
         if (cancelled) return;
         if (tripRes.ok) {
           const tripData = await tripRes.json() as TripSummary;
           setTrip({ id: tripData.id, title: tripData.title });
+        }
+        if (daysRes.ok) {
+          // v2.31.58 empty trip guard：?all=1 endpoint 回每天 timeline array，
+          // 累加跨天 entry 數判斷 trip 是否完全空白。
+          const daysData = await daysRes.json() as Array<{ timeline?: unknown[] }>;
+          const totalEntries = Array.isArray(daysData)
+            ? daysData.reduce((sum, d) => sum + (Array.isArray(d.timeline) ? d.timeline.length : 0), 0)
+            : 0;
+          setEntryCount(totalEntries);
         }
         setReport(reportData);
       } catch (err) {
@@ -554,7 +576,23 @@ export default function TripHealthCheckPage() {
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/health-check`, {
         method: 'POST',
       });
-      if (!res.ok) throw new Error(`start failed: ${res.status}`);
+      if (!res.ok) {
+        // v2.31.58：backend TRIP_EMPTY guard 拒絕（race window：frontend fetch
+        // 完 trip empty 後 user 加 entry，但 button 還沒 re-enable 就點到，
+        // 反之亦然）→ 顯示 backend 中文 message + 同步 entryCount = 0
+        // 讓 button 立即 disabled。
+        try {
+          const errData = await res.json() as { error?: { code?: string; message?: string } };
+          if (errData.error?.code === 'TRIP_EMPTY') {
+            setEntryCount(0);
+            setError(errData.error.message ?? '此行程尚無景點，請先加入景點再執行健檢');
+            return;
+          }
+        } catch {
+          /* ignore parse error, fall through to generic message */
+        }
+        throw new Error(`start failed: ${res.status}`);
+      }
       const data = await res.json() as { report: HealthReport };
       setReport(data.report);
     } catch {
@@ -769,6 +807,13 @@ export default function TripHealthCheckPage() {
 
       {!initialLoading && (
         <div className="tp-ai-health-bottombar">
+          {/* v2.31.58 empty trip guard：沒任何 entry 顯示 hint 取代 button。
+              entryCount === null 是 fetch 還沒完，先讓 button 維持原行為 disabled。 */}
+          {entryCount === 0 ? (
+            <div className="tp-ai-health-empty-hint" data-testid="ai-health-empty-hint">
+              此行程尚無景點，請先加入景點再執行健檢
+            </div>
+          ) : null}
           {report && (
             <button type="button" className="ghost" onClick={handleBack} data-testid="ai-health-back-btn">
               回行程
@@ -778,7 +823,7 @@ export default function TripHealthCheckPage() {
             type="button"
             className="regen-primary"
             onClick={handleStart}
-            disabled={submitting || isPending}
+            disabled={submitting || isPending || entryCount === 0}
             data-testid="ai-health-start-btn"
           >
             {submitting

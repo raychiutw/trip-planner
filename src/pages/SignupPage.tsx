@@ -171,9 +171,14 @@ export default function SignupPage() {
           break;
         case 'SIGNUP_RATE_LIMITED': {
           const retryAfter = res.headers.get('Retry-After');
+          // v2.31.58 zh-TW grammar fix（同 ForgotPasswordPage）：原本
+          // `{retryAfter ?? '幾分鐘'} 秒後` 在 null 路徑 → 「請幾分鐘秒後再試」
+          // 文法不通，改條件式分支。
           setBanner({
             kind: 'warning',
-            node: <span>註冊請求過多。請 {retryAfter ?? '幾分鐘'} 秒後再試。</span>,
+            node: retryAfter
+              ? <span>註冊請求過多。請 {retryAfter} 秒後再試。</span>
+              : <span>註冊請求過多。請幾分鐘後再試。</span>,
           });
           break;
         }

@@ -55,6 +55,13 @@ function mockSequence(responses: Response[]) {
   apiFetchRawMock.mockReset();
   let i = 0;
   apiFetchRawMock.mockImplementation(async (path: string) => {
+    // v2.31.58：days?all=1 fetch 給 entryCount state（empty trip guard）
+    // 預設 3 個 stops 讓 button enabled；測 empty 情境的 test 自己 override mock。
+    if (path.includes('/days?all=1')) {
+      return makeResponse([
+        { dayNum: 1, timeline: [{ id: 1 }, { id: 2 }, { id: 3 }] },
+      ]);
+    }
     // Trip name request 永遠回 same trip
     if (path.startsWith('/trips/T1') && !path.includes('/health-check')) {
       return makeResponse({ id: 'T1', title: '2026 沖繩七日遊' });
@@ -312,6 +319,10 @@ describe('TripHealthCheckPage', () => {
   it('「開始健檢」按下後送 POST /trips/:id/health-check', async () => {
     apiFetchRawMock.mockReset();
     apiFetchRawMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      // v2.31.58: empty-trip guard 需要 days?all=1 fetch；mock 3 stops 讓 button enabled。
+      if (path.includes('/days?all=1')) {
+        return makeResponse([{ dayNum: 1, timeline: [{ id: 1 }, { id: 2 }, { id: 3 }] }]);
+      }
       if (path.startsWith('/trips/T1') && !path.includes('/health-check')) {
         return makeResponse({ id: 'T1', title: '2026 沖繩七日遊' });
       }
