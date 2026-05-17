@@ -1122,7 +1122,7 @@ export default function GlobalMapPage() {
           <div className="tp-global-map-sheet-overview" data-testid="global-map-sheet-overview">
             <div className="tp-global-map-sheet-overview-header">
               <h2>{resolved.name}</h2>
-              <p>{resolved.pins.length} stops · {resolved.pinsByDay.size} days</p>
+              <p>{resolved.pins.length} 個停留點 · {resolved.pinsByDay.size} 天</p>
             </div>
             <ul className="tp-global-map-sheet-overview-days">
               {Array.from(resolved.pinsByDay.entries())
@@ -1146,7 +1146,7 @@ export default function GlobalMapPage() {
                         </span>
                         <span className="tp-global-map-sheet-day-text">
                           <span className="tp-global-map-sheet-day-eyebrow">
-                            DAY {String(dayNum).padStart(2, '0')} · {pins.length} stops
+                            DAY {String(dayNum).padStart(2, '0')} · {pins.length} 個停留點
                           </span>
                           <span className="tp-global-map-sheet-day-first">
                             {firstPin.title}
