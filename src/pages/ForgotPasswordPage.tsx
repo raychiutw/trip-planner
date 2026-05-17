@@ -214,13 +214,13 @@ export default function ForgotPasswordPage() {
                 <polyline points="22,6 12,13 2,6" />
               </>
             ),
-            title: '只透過 email',
-            desc: '不會 SMS、不會打電話、不會私訊。只看 email 收件匣即可。',
+            title: '只透過電子郵件',
+            desc: '不會傳簡訊、不會打電話、不會私訊。只看電子郵件收件匣即可。',
           },
           {
             icon: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
             title: '舊登入裝置自動登出',
-            desc: '重設後，所有手機/平板的 session 都失效，避免別人用你舊密碼。',
+            desc: '重設後，所有手機/平板的登入狀態都會失效，避免別人用你舊密碼。',
           },
         ]}
         footnote="© 2026 Tripline · 帳號安全最低承諾"

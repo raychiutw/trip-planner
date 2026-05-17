@@ -310,11 +310,11 @@ export default function LoginPage() {
       const code = errJson?.error?.code ?? 'UNKNOWN';
       switch (code) {
         case 'LOGIN_INVALID_INPUT':
-          setBannerError('請輸入 email 與密碼');
+          setBannerError('請輸入電子郵件與密碼');
           break;
         case 'LOGIN_INVALID':
           bumpFailure();
-          setBannerError('email 或密碼錯誤');
+          setBannerError('電子郵件或密碼錯誤');
           break;
         case 'LOGIN_RATE_LIMITED': {
           const retryAfter = res.headers.get('Retry-After');

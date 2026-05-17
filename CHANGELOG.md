@@ -7,7 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 **AccountPage + EditEntryPage + TimelineRail + DaySection + GlobalMapPage zh-TW polish。**
 
-### Fixed: 13 處 user-visible 英文混雜
+### Fixed: 20 處 user-visible 英文混雜
 
 `/account` 設定 hub 三個 settings row 的 title / helper 還是英文混雜：
 - `已連結 App` → `已連結的應用程式`
@@ -30,6 +30,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - DaySection hero sub `N 個 stops` → `N 個停留點`
 - GlobalMapPage sheet overview `N stops · N days` → `N 個停留點 · N 天`
 - GlobalMapPage day list eyebrow `DAY XX · N stops` → `DAY XX · N 個停留點`
+
+LoginPage banner error 2 處「email」→「電子郵件」；ConsentPage scope 描述 +
+ForgotPasswordPage 安全承諾 + ResetPasswordPage value prop + ConnectedAppsPage
+TitleBar 「app/email/session」混雜 → 全中文化。
 
 同 v2.31.61 / v2.31.62 zh-TW 系列收尾，不留半個英文。
 

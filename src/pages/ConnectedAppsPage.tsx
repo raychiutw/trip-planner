@@ -203,7 +203,7 @@ export default function ConnectedAppsPage() {
       main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-settings-shell" data-testid="connected-apps-page">
-      <TitleBar title="已連結的應用" back={() => navigate('/account')} />
+      <TitleBar title="已連結的應用程式" back={() => navigate('/account')} />
       <div className="tp-settings-inner">
         <p className="tp-page-eyebrow">設定</p>
         <p className="tp-page-meta">這些 app 可以使用你的 Tripline 帳號。撤銷後該 app 將立即失去存取權。</p>
@@ -226,7 +226,7 @@ export default function ConnectedAppsPage() {
                 </svg>
               </div>
               <h3>還沒有任何應用連結到你的帳號</h3>
-              <p>當你第一次用「Sign in with Tripline」登入第三方 app 時，會出現在這裡。</p>
+              <p>當你第一次用「Sign in with Tripline」登入第三方應用程式時，會出現在這裡。</p>
             </div>
           </div>
         )}
