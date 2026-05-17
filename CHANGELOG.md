@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.52] - 2026-05-17
+
+**Mockup chat empty state align prod — v2.31.51 follow-up，補 `.tp-chat-empty`
+CSS 規範 + 3 個 sub-state 描述。**
+
+### Updated: terracotta-preview-v2.html `.tp-chat-empty` CSS
+
+prod ChatPage 有 3 個 sub-state empty placeholder：
+1. `trips.length === 0` → 「還沒有行程可以聊」+「去新增行程」CTA → /trips
+2. `trips === null` → 「載入中…」inline placeholder
+3. `activeTripId set, history loading` → 「載入歷史對話…」placeholder
+
+Mockup 無對應 CSS 規範。加 `.tp-chat-empty` rule（flex center column +
+muted color）+ `.tp-chat-empty-icon`（accent-subtle circle bg + accent icon）
++ `.tp-chat-empty .cta`（accent pill button）+ comment 註明 3 sub-state +
+reference src/pages/ChatPage.tsx。
+
 ## [2.31.51] - 2026-05-17
 
 **Mockup empty state align prod loop ship — v2.31.50 follow-up，補 explore/favorites

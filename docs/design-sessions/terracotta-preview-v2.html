@@ -4539,6 +4539,39 @@
   }
 
   /* === Chat conversation view === */
+
+  /* Chat empty state — no trip selected / no trips at all。Spec source:
+   * src/pages/ChatPage.tsx `.tp-chat-empty`。3 個 sub-state:
+   *  (1) trips.length === 0 → 「還沒有行程可以聊」 + 「去新增行程」 CTA → /trips
+   *  (2) trips === null → 「載入中…」 inline placeholder
+   *  (3) activeTripId set, history loading → 「載入歷史對話…」 placeholder
+   * Cold-start hint：tp-request rows scoped to trip，先建 trip 才能 chat。 */
+  .tp-chat-empty {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; padding: 48px 24px;
+    text-align: center; color: var(--tp-muted);
+  }
+  .tp-chat-empty-icon {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--tp-accent-subtle, rgba(193, 90, 47, 0.12));
+    color: var(--tp-accent);
+    display: grid; place-items: center;
+  }
+  .tp-chat-empty h2 {
+    font-size: var(--tp-font-size-title3, 20px); font-weight: 700;
+    color: var(--tp-foreground); margin: 0;
+  }
+  .tp-chat-empty p { font-size: var(--tp-font-size-callout, 16px); max-width: 320px; margin: 0; }
+  .tp-chat-empty .cta {
+    margin-top: 8px;
+    padding: 10px 20px;
+    background: var(--tp-accent); color: var(--tp-accent-foreground, #fff);
+    border-radius: var(--tp-radius-full, 999px); text-decoration: none;
+    font-weight: 600;
+  }
+
   .tp-chat-conv {
     display: flex;
     flex-direction: column;
