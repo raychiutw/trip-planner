@@ -39,9 +39,9 @@ describe('mapRow — snake_case to camelCase conversion', () => {
   });
 
   // 2026-05-02 (migration 0045): trips.self_drive 已 DROP，改用 default_travel_mode。
-  // snakeToCamel 通用 rename 仍 work，這裡換用 default_travel_mode 驗證。
-  it('converts default_travel_mode to defaultTravelMode', () => {
-    expect(mapRow({ default_travel_mode: 'driving' }).defaultTravelMode).toBe('driving');
+  // v2.31.36 (migration 0068): default_travel_mode 也 DROP。改用 data_source 通用 rename 驗證 snakeToCamel。
+  it('converts data_source to dataSource', () => {
+    expect(mapRow({ data_source: 'manual' }).dataSource).toBe('manual');
   });
 
   it('converts day_num to dayNum', () => {

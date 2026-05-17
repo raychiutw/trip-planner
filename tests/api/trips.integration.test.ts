@@ -28,8 +28,7 @@ describe.skip('POST /api/trips', () => {
       startDate: '2026-04-01',
       endDate: '2026-04-03',
       title: '沖繩三日遊',
-      // Migration 0045 dropped self_drive — replaced by default_travel_mode (Q1).
-      default_travel_mode: 'driving',
+      // v2.31.36 (migration 0068): default_travel_mode + self_drive_* DROPPED (dead columns)。
       countries: 'JP',
     };
     const ctx = mockContext({
@@ -47,7 +46,7 @@ describe.skip('POST /api/trips', () => {
     // 驗證 DB 狀態
     const trip = await db.prepare('SELECT * FROM trips WHERE id = ?').bind('okinawa-2026').first();
     expect(trip).not.toBeNull();
-    expect((trip as Record<string, unknown>).default_travel_mode).toBe('driving');
+    // v2.31.36: default_travel_mode assertion removed (column dropped)。
 
     const days = await db.prepare('SELECT * FROM trip_days WHERE trip_id = ? ORDER BY day_num').bind('okinawa-2026').all();
     expect(days.results).toHaveLength(3);
@@ -123,17 +122,7 @@ describe.skip('POST /api/trips', () => {
   });
 
   // 2026-05-02 follow-up: enum validation defense-in-depth
-  it('POST default_travel_mode 非 enum 值 → 400', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips', 'POST', {
-        id: 'bad-mode-trip', name: 'x', startDate: '2026-04-01', endDate: '2026-04-01',
-        default_travel_mode: 'teleport',
-      }),
-      env,
-      auth: mockAuth({ email: 'test@test.com' }),
-    });
-    expect((await callHandler(onRequestPost, ctx)).status).toBe(400);
-  });
+  // v2.31.36 (migration 0068): default_travel_mode test removed — column dropped。
 
   it('POST lang 非 enum 值 → 400', async () => {
     const ctx = mockContext({
