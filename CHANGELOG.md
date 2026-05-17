@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.39] - 2026-05-17
+
+**Settings sub-page 導航 regression — 修返回 button + 補 GlobalBottomNav。**
+
+### Fixed: `/settings/connected-apps` 缺 GlobalBottomNav + 缺 back button
+
+QA loop 發現：user 進「已連結 App」設定頁後，mobile 看不到底部 5-tab nav（卡在 page 內），且 TitleBar 沒返回箭頭，無法回 `/account` hub，必須用瀏覽器 back。
+
+Fix `src/pages/ConnectedAppsPage.tsx`：
+- AppShell 補 `bottomNav={<GlobalBottomNav authed={!!user} />}`
+- TitleBar 加 `back={() => navigate('/account')}`
+- `useRequireAuth()` 改 destructure 拿 `user` 給 nav prop
+
+### Fixed: `/developer/apps` 缺 back button
+
+v2.31.34 fix #135 補了 GlobalBottomNav 但漏 TitleBar back，user 仍無法從「開發者後台」返回 `/account`。
+
+Fix `src/pages/DeveloperAppsPage.tsx`：TitleBar 加 `back={() => navigate('/account')}`。
+
+### Tests
+
+`tests/unit/settings-nav-back.test.ts`：5 個 source-grep test（import / AppShell bottomNav prop / TitleBar back callback / navigate /account）。
+
 ## [2.31.38] - 2026-05-17
 
 **Toast 重設計 — centering 修正 + Terracotta SoT 對齊。**

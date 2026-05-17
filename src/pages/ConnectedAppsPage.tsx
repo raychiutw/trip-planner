@@ -9,9 +9,11 @@
  * 安全 UX：撤銷必須二次確認（modal）— 破壞性操作。
  */
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import ConfirmModal from '../components/shared/ConfirmModal';
@@ -146,7 +148,8 @@ function relativeTime(ms: number): string {
 }
 
 export default function ConnectedAppsPage() {
-  useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
+  const { user } = useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
+  const navigate = useNavigate();
   const [apps, setApps] = useState<ConnectedApp[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
@@ -196,10 +199,11 @@ export default function ConnectedAppsPage() {
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
+      bottomNav={<GlobalBottomNav authed={!!user} />}
       main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-settings-shell" data-testid="connected-apps-page">
-      <TitleBar title="已連結的應用" />
+      <TitleBar title="已連結的應用" back={() => navigate('/account')} />
       <div className="tp-settings-inner">
         <p className="tp-page-eyebrow">設定</p>
         <p className="tp-page-meta">這些 app 可以使用你的 Tripline 帳號。撤銷後該 app 將立即失去存取權。</p>
