@@ -836,14 +836,56 @@ body.dark {
     * { -webkit-tap-highlight-color: transparent; }
 }
 
+/* ===== Toast (v2.31.38 V1 redesign — aligned with terracotta-preview-v2.html .tp-status-toast) =====
+ * 白底 + 8px coloured dot + coloured border。Container 用 flex items-center 置中（Toast.tsx），
+ * keyframes 不再自帶 translateX 避免雙重置中疊加。pointer-events:auto 讓 toast 可 hover (parent
+ * container 是 pointer-events:none 預防擋住下方互動)。 */
+.tp-toast {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 360px;
+    padding: 12px 16px 12px 14px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-info-border, rgba(217, 120, 72, 0.34));
+    background: var(--color-background);
+    box-shadow: var(--shadow-md);
+    color: var(--color-foreground);
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 500;
+    pointer-events: auto;
+}
+.tp-toast::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-info);
+    flex: 0 0 auto;
+}
+.tp-toast--error { border-color: rgba(193, 53, 21, 0.32); }
+.tp-toast--error::before { background: var(--color-destructive); }
+.tp-toast--success { border-color: rgba(6, 167, 125, 0.32); }
+.tp-toast--success::before { background: var(--color-success); }
+.tp-toast--warning { border-color: rgba(244, 140, 6, 0.36); }
+.tp-toast--warning::before { background: var(--color-warning); }
+.tp-toast--info { border-color: rgba(217, 120, 72, 0.34); }
+.tp-toast--info::before { background: var(--color-info); }
+
+@media (prefers-color-scheme: dark) {
+    .tp-toast { background: var(--color-secondary); }
+}
+
 /* ===== Keyframes ===== */
+/* v2.31.38: keyframes 拔 translateX(-50%)，container 已用 flex items-center 置中 */
 @keyframes toast-slide-down {
-    from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 @keyframes toast-slide-up {
-    from { opacity: 1; transform: translateX(-50%) translateY(0); }
-    to { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-12px); }
 }
 
 @keyframes stepper-pulse {
