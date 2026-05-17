@@ -163,7 +163,7 @@ export default function ForgotPasswordPage() {
 
             <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
               <div className="tp-form-row">
-                <label htmlFor="forgot-email">Email</label>
+                <label htmlFor="forgot-email">電子郵件</label>
                 <input
                   id="forgot-email"
                   type="email"

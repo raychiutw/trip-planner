@@ -449,7 +449,7 @@ export default function LoginPage() {
 
         <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
           <div className="tp-form-row">
-            <label htmlFor="login-email">Email</label>
+            <label htmlFor="login-email">電子郵件</label>
             <input
               id="login-email"
               type="email"
