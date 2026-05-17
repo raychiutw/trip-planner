@@ -11,7 +11,8 @@ const ALLOWED_TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'poi_relat
 type AllowedTable = typeof ALLOWED_TABLES[number];
 
 const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
-  trips:            ['id', 'name', 'owner_user_id', 'title', 'description', 'countries', 'published', 'data_source', 'default_travel_mode', 'lang', 'self_drive_enabled', 'self_drive_pickup_at', 'self_drive_return_at', 'self_drive_pickup_location', 'self_drive_return_location', 'created_at', 'updated_at'],
+  // v2.31.36 (migration 0068): DROP default_travel_mode + 5 self_drive_* — dead columns。
+  trips:            ['id', 'name', 'owner_user_id', 'title', 'description', 'countries', 'published', 'data_source', 'lang', 'created_at', 'updated_at'],
   // v2.29.0: hotel_poi_id ADDED (migration 0060).
   trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'title', 'hotel_poi_id', 'updated_at'],
   // v2.29.0: time / poi_id / travel_* (6 cols) DROPPED (migration 0062).

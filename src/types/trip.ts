@@ -245,9 +245,8 @@ export interface DaySummary {
 
 /**
  * Trip list item from GET /api/trips
- * Migration 0045 dropped self_drive/auto_scroll/footer/is_default. Added
- * data_source/default_travel_mode/lang. TripPage fallback now uses
- * `published === 1` instead of `isDefault === 1` (commit 18).
+ * Migration 0045 dropped self_drive/auto_scroll/footer/is_default. Added data_source/lang.
+ * Migration 0068 (v2.31.36): DROP default_travel_mode — dead column。
  */
 export interface TripListItem {
   tripId: string;
@@ -257,7 +256,6 @@ export interface TripListItem {
   countries?: string | null;
   published: number;
   dataSource?: string | null;
-  defaultTravelMode?: string | null;
   lang?: string | null;
 }
 
@@ -277,8 +275,9 @@ export interface TripDestination {
 
 /**
  * Single trip from GET /api/trips/:id
- * Migration 0045 dropped og_description/self_drive/food_prefs/auto_scroll/footer/
- * is_default. Added data_source/default_travel_mode/lang + destinations join.
+ * Migration 0045 dropped og_description/self_drive/food_prefs/auto_scroll/footer/is_default.
+ * Added data_source/lang + destinations join.
+ * Migration 0068 (v2.31.36): DROP default_travel_mode + 5 self_drive_* — dead columns。
  */
 export interface Trip {
   id: string;
@@ -290,15 +289,8 @@ export interface Trip {
   countries?: string | null;
   published?: number | null;
   dataSource?: string | null;
-  defaultTravelMode?: string | null;
   lang?: string | null;
   destinations?: TripDestination[];
   createdAt?: string;
   updatedAt?: string;
-  // v2.23.8 self-drive (migration 0052) — 全 nullable，支援後補
-  selfDriveEnabled?: number | null;            // 0 / 1
-  selfDrivePickupAt?: string | null;           // ISO datetime YYYY-MM-DDTHH:MM
-  selfDriveReturnAt?: string | null;           // ISO datetime
-  selfDrivePickupLocation?: string | null;
-  selfDriveReturnLocation?: string | null;
 }

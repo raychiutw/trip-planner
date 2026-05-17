@@ -11,7 +11,7 @@ const MAX_DESTINATIONS = 30;
 const MS_PER_DAY = 86400000;
 
 // 2026-05-02 follow-up: enum validation defense-in-depth — POST 端與 PUT 一致
-const VALID_TRAVEL_MODES = new Set(['driving', 'walking', 'transit']);
+// VALID_TRAVEL_MODES removed v2.31.36 (default_travel_mode column dropped — dead data).
 const VALID_LANGS = new Set(['zh-TW', 'en', 'ja']);
 const VALID_DATA_SOURCES = new Set(['manual', 'tp-create', 'imported']);
 
@@ -31,10 +31,7 @@ function str(val: unknown, fallback = ''): string {
   return fallback;
 }
 
-function nullableStr(val: unknown): string | null {
-  if (typeof val === 'string' && val.length > 0) return val;
-  return null;
-}
+// nullableStr removed v2.31.36 — only used by self_drive_* fields which were dropped.
 
 function nullableInt(val: unknown): number | null {
   if (typeof val === 'number' && Number.isFinite(val)) return val;
@@ -74,11 +71,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', `行程天數不可超過 ${MAX_DAYS} 天`);
   }
 
+  // v2.31.36: default_travel_mode DROPPED — backend 沒讀此 column 改變行為，整套 schema/UI/code 拔。
   // 2026-05-02 follow-up: enum validation defense-in-depth
-  if (body.default_travel_mode !== undefined &&
-      !VALID_TRAVEL_MODES.has(body.default_travel_mode as string)) {
-    throw new AppError('DATA_VALIDATION', 'default_travel_mode 必須為 driving / walking / transit 之一');
-  }
   if (body.lang !== undefined && !VALID_LANGS.has(body.lang as string)) {
     throw new AppError('DATA_VALIDATION', 'lang 必須為 zh-TW / en / ja 之一');
   }
@@ -106,13 +100,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const stmts: D1PreparedStatement[] = [];
 
   // Migration 0045: dropped self_drive/og_description/footer/food_prefs/auto_scroll/is_default.
-  // Added data_source/default_travel_mode/lang. `region` not added — derived from
-  // trip_destinations join in /api/trips/:id (commit 8).
+  // Added data_source/lang.
+  // Migration 0068 (v2.31.36): DROP default_travel_mode + 5 self_drive_* — dead columns（UI 收集但 backend 沒讀）。
   // V2 cutover phase 2: trips.owner email column dropped, NOT NULL owner_user_id only。
   if (!auth.userId) throw new AppError('AUTH_REQUIRED', '需 V2 OAuth 登入才能建立行程');
   stmts.push(
     db.prepare(
-      'INSERT INTO trips (id, name, owner_user_id, title, description, countries, published, data_source, default_travel_mode, lang, self_drive_enabled, self_drive_pickup_at, self_drive_return_at, self_drive_pickup_location, self_drive_return_location) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO trips (id, name, owner_user_id, title, description, countries, published, data_source, lang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       id, name, auth.userId,
       str(body.title),
@@ -120,14 +114,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       str(body.countries, 'JP'),
       body.published != null ? Number(body.published) : 0,
       str(body.data_source, 'manual'),
-      str(body.default_travel_mode, 'driving'),
       str(body.lang, 'zh-TW'),
-      // v2.23.8 self-drive — 全 nullable（POST 不填 = 後補）
-      body.self_drive_enabled ? 1 : 0,
-      nullableStr(body.self_drive_pickup_at),
-      nullableStr(body.self_drive_return_at),
-      nullableStr(body.self_drive_pickup_location),
-      nullableStr(body.self_drive_return_location),
     ),
   );
 
@@ -205,7 +192,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const baseCols = `t.id AS tripId, t.name,
                     u.email AS owner, u.display_name AS owner_display_name, t.owner_user_id,
                     t.title,
-                    t.countries, t.published, t.data_source, t.default_travel_mode, t.lang,
+                    t.countries, t.published, t.data_source, t.lang,
                     (SELECT COUNT(*) FROM trip_days d WHERE d.trip_id = t.id) AS day_count,
                     (SELECT MIN(date) FROM trip_days d WHERE d.trip_id = t.id AND date IS NOT NULL) AS start_date,
                     (SELECT MAX(date) FROM trip_days d WHERE d.trip_id = t.id AND date IS NOT NULL) AS end_date,

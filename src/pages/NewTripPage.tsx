@@ -462,12 +462,7 @@ export default function NewTripPage() {
   const formRef = useRef<HTMLFormElement>(null);
 
   const [destDays, setDestDays] = useState<Record<string, number>>({});
-  // v2.23.8 self-drive — 全 nullable / 後補 friendly
-  const [selfDriveEnabled, setSelfDriveEnabled] = useState(false);
-  const [selfDrivePickupAt, setSelfDrivePickupAt] = useState('');     // datetime-local format YYYY-MM-DDTHH:MM
-  const [selfDriveReturnAt, setSelfDriveReturnAt] = useState('');
-  const [selfDrivePickupLocation, setSelfDrivePickupLocation] = useState('');
-  const [selfDriveReturnLocation, setSelfDriveReturnLocation] = useState('');
+  // v2.31.36 (migration 0068): selfDrive* state removed — dead columns dropped。
 
   // monthChoices 一次計算 — page mount 時。
   const monthChoices = useMemo(() => buildMonthChoices(new Date()), []);
@@ -584,12 +579,7 @@ export default function NewTripPage() {
           description: combinedDescription || undefined,
           published: 1,
           destinations: destinationsPayload,
-          // v2.23.8 self-drive (全 nullable，未填留空字串轉 null)
-          self_drive_enabled: selfDriveEnabled ? 1 : 0,
-          self_drive_pickup_at: selfDrivePickupAt || undefined,
-          self_drive_return_at: selfDriveReturnAt || undefined,
-          self_drive_pickup_location: selfDrivePickupLocation || undefined,
-          self_drive_return_location: selfDriveReturnLocation || undefined,
+          // v2.31.36 (migration 0068): self_drive_* + default_travel_mode removed — dead columns。
         }),
       });
       if (!res.ok) {
@@ -907,66 +897,8 @@ export default function NewTripPage() {
               </div>
 
               {/* v2.23.8 self-drive section — 全可選；toggle 開啟才顯示 4 個欄位 */}
-              <div className="tp-new-form-row tp-new-form-row-spaced">
-                <label className="tp-new-form-toggle-row">
-                  <input
-                    type="checkbox"
-                    checked={selfDriveEnabled}
-                    onChange={(e) => setSelfDriveEnabled(e.target.checked)}
-                    data-testid="new-trip-self-drive-toggle"
-                  />
-                  <span>自駕行程（租車）</span>
-                </label>
-                <p className="tp-new-section-helper">取車 ~ 還車期間用汽車估車程，其他時段走路 ≤10 分鐘走路、超過用大眾運輸</p>
-              </div>
-              {selfDriveEnabled && (
-                <>
-                  <div className="tp-new-form-row tp-new-form-row-spaced">
-                    <label htmlFor="new-trip-self-drive-pickup-at">取車時間（選填，可後補）</label>
-                    <input
-                      id="new-trip-self-drive-pickup-at"
-                      type="datetime-local"
-                      value={selfDrivePickupAt}
-                      onChange={(e) => setSelfDrivePickupAt(e.target.value)}
-                      data-testid="new-trip-self-drive-pickup-at"
-                    />
-                  </div>
-                  <div className="tp-new-form-row tp-new-form-row-spaced">
-                    <label htmlFor="new-trip-self-drive-pickup-loc">取車地點（選填）</label>
-                    <input
-                      id="new-trip-self-drive-pickup-loc"
-                      type="text"
-                      value={selfDrivePickupLocation}
-                      onChange={(e) => setSelfDrivePickupLocation(e.target.value)}
-                      placeholder="例：那霸機場 OTS 取車櫃台"
-                      maxLength={200}
-                      data-testid="new-trip-self-drive-pickup-loc"
-                    />
-                  </div>
-                  <div className="tp-new-form-row tp-new-form-row-spaced">
-                    <label htmlFor="new-trip-self-drive-return-at">還車時間（選填，可後補）</label>
-                    <input
-                      id="new-trip-self-drive-return-at"
-                      type="datetime-local"
-                      value={selfDriveReturnAt}
-                      onChange={(e) => setSelfDriveReturnAt(e.target.value)}
-                      data-testid="new-trip-self-drive-return-at"
-                    />
-                  </div>
-                  <div className="tp-new-form-row tp-new-form-row-spaced">
-                    <label htmlFor="new-trip-self-drive-return-loc">還車地點（選填，可後補）</label>
-                    <input
-                      id="new-trip-self-drive-return-loc"
-                      type="text"
-                      value={selfDriveReturnLocation}
-                      onChange={(e) => setSelfDriveReturnLocation(e.target.value)}
-                      placeholder="例：那霸機場 OTS 還車櫃台"
-                      maxLength={200}
-                      data-testid="new-trip-self-drive-return-loc"
-                    />
-                  </div>
-                </>
-              )}
+              {/* v2.31.36 (migration 0068): self-drive form removed — dead columns dropped。
+                  UI 收集但 backend 沒讀取使用。日後若要重啟，先實作 segment 計算 read path 再加回 UI。 */}
 
               {error && <InlineError message={error} testId="new-trip-error" />}
             </form>
