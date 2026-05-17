@@ -88,7 +88,9 @@ export default function ConflictModal({
     <div className="tp-conflict-backdrop">
       <style>{SCOPED_STYLES}</style>
       <div className="tp-conflict-modal" role="dialog" aria-modal="true" aria-label="時段衝突">
-        <p className="tp-conflict-eyebrow">Time conflict</p>
+        {/* v2.31.58 zh-TW fix：原本 English「Time conflict」與 aria-label
+            「時段衝突」不一致，且整 page 中文 UI 中突兀 English eyebrow。 */}
+        <p className="tp-conflict-eyebrow">時段衝突</p>
         <h3 className="tp-conflict-title">此時段已有 {title}</h3>
         <p className="tp-conflict-copy">
           你選的 {time} 已有安排。請選擇換位置、併排，或取消這次拖曳。
