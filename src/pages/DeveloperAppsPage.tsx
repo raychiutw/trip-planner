@@ -169,6 +169,7 @@ export default function DeveloperAppsPage() {
       <div className="tp-dev-shell" data-testid="developer-apps-page">
       <TitleBar
         title="應用"
+        back={() => navigate('/account')}
         actions={
           <button
             type="button"
