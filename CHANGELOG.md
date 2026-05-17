@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.44] - 2026-05-17
+
+**`apiFetch` 對 204 No Content empty body 補 short-circuit — v2.31.43 prod
+QA surface 的 cross-page DELETE 失敗 root cause。**
+
+### Fixed: ExplorePage heart toggle off 顯「Failed to execute 'json' on R...」
+
+v2.31.43 部署後 prod QA 測 click 已收藏 heart 取消收藏 → toast 顯
+「取消收藏失敗：Failed to execute 'json' on 'R...」。`apiFetch` line 48
+永遠 `response.json() as Promise<T>`，但 backend `functions/api/poi-favorites/[id].ts:65`
+`return new Response(null, { status: 204 })` 是 empty body → `json()`
+throws `SyntaxError: Unexpected end of JSON input`。
+
+**影響範圍 pre-existing**：所有 `apiFetch` + DELETE callsite 都 broken。
+- PoiFavoritesPage selection delete 走 `Promise.all(...).then(... .catch(...))`
+  把 SyntaxError swallow 進 `{ ok: false }` → toast「刪除失敗 N 個」
+  但 backend 其實已經刪了 → user reload 看到 row 不見以為成功 → toast wrong
+  feedback 一直被忽略。
+- sessions revoke / connected-apps revoke / trip delete / day delete /
+  entries delete 同 pattern，全部隱性失敗。
+- ExplorePage v2.31.43 直接 surface 才被抓到。
+
+**Fix**（root cause）：`apiFetch` 偵測 `response.status === 204` 早返
+`undefined as T`，不 call `json()`。DELETE callers 通常不用 return value，
+cast 不破壞 type signature。
+
+**Test**：2 個 jsdom unit test（204 path 不 call json + 200 path 仍走 json）。
+
 ## [2.31.43] - 2026-05-17
 
 **ExplorePage 已收藏 heart 改可取消收藏 — prod QA loop user 訴求「不同顯示 + 取消收藏」。**

@@ -45,5 +45,12 @@ export async function apiFetch<T>(path: string, opts?: RequestInit & { signal?: 
   }
 
   reportFetchResult(true);
+  // 204 No Content：empty body，`response.json()` 會 throw SyntaxError
+  // ("Unexpected end of JSON input")。backend DELETE handlers 普遍返 204
+  // （poi-favorites / sessions / connected-apps / trip / day / entries…），
+  // 之前 callers 大多 `.catch(...)` swallow 後當失敗顯 toast，user 重整看到
+  // 資料消失才知道實際成功 — UX 一直壞，v2.31.43 ExplorePage 直接 surface
+  // 才被抓到。
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
