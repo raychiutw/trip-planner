@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.58] - 2026-05-17
+
+**Empty trip AI 健檢 guard — backend reject + frontend disable + hint。**
+
+### Fixed: empty trip 也可觸發 AI 健檢 → 白燒 Claude quota
+
+Prod QA：trip-rgp1（台南，5 天空白行程）⋯ menu → AI 健檢 仍可點。後端
+firing Claude with empty trip context → 回 nothing useful + 浪費 quota。
+
+### Fix: 三層防線
+
+**Backend** `functions/api/trips/[id]/health-check.ts`：在 hasWritePermission
+後加 `SELECT COUNT(*) FROM trip_entries WHERE trip_id = ?` guard，0 →
+throw `AppError('TRIP_EMPTY')` HTTP 422。防 race condition / direct API。
+
+**Frontend** `src/pages/TripHealthCheckPage.tsx`：
+- useEffect 同步 fetch `/trips/:id/days?all=1`，累加跨天 timeline length
+  得 totalEntries，存進 `entryCount` state
+- 開始健檢 button `disabled` 條件加 `entryCount === 0`
+- entryCount === 0 顯示 hint「此行程尚無景點，請先加入景點再執行健檢」
+- handleStart 收到 backend TRIP_EMPTY 422 → 同步 setEntryCount(0)
+  讓 button 立即 disable（race window 補救）
+
+**Error code**：`src/types/api.ts` 加 `ErrorCode.TRIP_EMPTY` +
+`ERROR_MESSAGES['TRIP_EMPTY']` 中文 message；`functions/api/_errors.ts`
+`STATUS_MAP['TRIP_EMPTY'] = 422`（unprocessable entity — semantic 比 400/409
+準確）。
+
+### Regression coverage
+
+`tests/unit/trip-health-check-empty-guard.test.ts` — 10 個 source-grep test
+（backend SELECT / throw / 順序、frontend useState / fetch / disabled / hint、
+ErrorCode 3 處同步）。
+
 ## [2.31.57] - 2026-05-17
 
 **繁體中文 Typography fix — user-visible 半形逗號 → 全形「，」。**

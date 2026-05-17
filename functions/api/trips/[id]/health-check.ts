@@ -121,6 +121,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
+  // v2.31.58 guard：empty trip（沒有任何 entry）不該觸發 AI 健檢 —
+  // 浪費 Claude quota + 給 user 沒用的 findings。Frontend 也 disable
+  // 開始健檢 button，但 backend 多一層保護防 race condition / direct API call。
+  const entryCount = await env.DB
+    .prepare('SELECT COUNT(*) as cnt FROM trip_entries WHERE trip_id = ?')
+    .bind(tripId)
+    .first<{ cnt: number }>();
+  if (!entryCount || entryCount.cnt === 0) {
+    throw new AppError('TRIP_EMPTY');
+  }
+
   // 防止短時間內重複觸發：若 30 秒內已有 pending report 就直接回該 report
   const existing = await env.DB
     .prepare(
