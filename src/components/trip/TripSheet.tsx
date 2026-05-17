@@ -146,9 +146,11 @@ export default function TripSheet({ tripId, allPins, pinsByDay, dark }: TripShee
           className="trip-sheet-placeholder"
           data-testid="tab-itinerary"
         >
-          <div className="eyebrow">Itinerary</div>
+          {/* v2.31.60 zh-TW polish：eyebrow / body 從英文 / 開發 jargon
+              改純中文 user-facing copy。 */}
+          <div className="eyebrow">行程</div>
           <h3>行程已顯示在左側</h3>
-          <p>Timeline 在 main 區已展開，未來會搬到這個 tab（Mindtrip 3-pane 模式）。</p>
+          <p>行程已在左側展開，未來會搬到這裡的分頁。</p>
         </div>
         <div
           role="tabpanel"
@@ -176,9 +178,11 @@ export default function TripSheet({ tripId, allPins, pinsByDay, dark }: TripShee
           className="trip-sheet-placeholder"
           data-testid="tab-chat"
         >
-          <div className="eyebrow">Coming soon · Phase 3</div>
-          <h3>Per-trip chat</h3>
-          <p>針對這趟 trip 的 AI 對話。實作在 Workstream V2。</p>
+          {/* v2.31.60 zh-TW polish：英文 + dev jargon (Workstream V2) →
+              純中文 user-facing copy。 */}
+          <div className="eyebrow">即將推出</div>
+          <h3>行程專屬對話</h3>
+          <p>針對這趟行程的 AI 對話，下一階段推出。目前可在「聊天」分頁使用通用對話。</p>
         </div>
       </div>
     </div>
