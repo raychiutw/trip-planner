@@ -152,7 +152,7 @@ export default function ForgotPasswordPage() {
           <>
             <div className="tp-auth-headline">
               <h1>忘記密碼</h1>
-              <p>輸入您註冊的 email，我們會寄重設連結給您。</p>
+              <p>輸入您註冊的電子郵件，我們會寄重設連結給您。</p>
             </div>
 
             {warning && (
@@ -163,7 +163,7 @@ export default function ForgotPasswordPage() {
 
             <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
               <div className="tp-form-row">
-                <label htmlFor="forgot-email">Email</label>
+                <label htmlFor="forgot-email">電子郵件</label>
                 <input
                   id="forgot-email"
                   type="email"
@@ -193,9 +193,9 @@ export default function ForgotPasswordPage() {
       </div>
 
       <AuthBrandHero
-        eyebrow="Account Recovery"
+        eyebrow="找回帳號"
         headline={<>忘了沒關係<br />5 分鐘搞定。</>}
-        sub="我們不會請你回答秘密問題、不收手機號、不要身分證。Email 是唯一管道，最簡單也最不容易被釣魚。"
+        sub="我們不會請你回答秘密問題、不收手機號、不要身分證。電子郵件是唯一管道，最簡單也最不容易被釣魚。"
         items={[
           {
             icon: (
@@ -214,13 +214,13 @@ export default function ForgotPasswordPage() {
                 <polyline points="22,6 12,13 2,6" />
               </>
             ),
-            title: '只透過 email',
-            desc: '不會 SMS、不會打電話、不會私訊。只看 email 收件匣即可。',
+            title: '只透過電子郵件',
+            desc: '不會傳簡訊、不會打電話、不會私訊。只看電子郵件收件匣即可。',
           },
           {
             icon: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
             title: '舊登入裝置自動登出',
-            desc: '重設後，所有手機/平板的 session 都失效，避免別人用你舊密碼。',
+            desc: '重設後，所有手機/平板的登入狀態都會失效，避免別人用你舊密碼。',
           },
         ]}
         footnote="© 2026 Tripline · 帳號安全最低承諾"

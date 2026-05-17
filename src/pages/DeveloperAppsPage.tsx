@@ -188,7 +188,7 @@ export default function DeveloperAppsPage() {
       />
       <div className="tp-dev-inner">
         <p className="tp-page-eyebrow">開發者後台</p>
-        <p className="tp-page-meta">管理你的 OAuth client。每個 app 對應一組 client_id。</p>
+        <p className="tp-page-meta">管理你的 OAuth client。每個應用程式對應一組 client_id。</p>
 
         {error && <ErrorBanner message={error} testId="dev-apps-error" />}
 

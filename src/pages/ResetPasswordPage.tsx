@@ -365,14 +365,14 @@ export default function ResetPasswordPage() {
       </div>
 
       <AuthBrandHero
-        eyebrow="Final Step"
+        eyebrow="最後一步"
         headline={<>最後一步<br />就完成了。</>}
         sub="設好新密碼，你會自動登入並進入「行程」頁。記得密碼存到密碼管理器（1Password / Apple Keychain / Google Password）。"
         items={[
           {
             icon: <polyline points="20,6 9,17 4,12" />,
             title: '即時生效',
-            desc: '設好密碼後立即可登入，不需等 email 或重新驗證。',
+            desc: '設好密碼後立即可登入，不需等電子郵件或重新驗證。',
           },
           {
             icon: (
@@ -382,7 +382,7 @@ export default function ResetPasswordPage() {
               </>
             ),
             title: '舊裝置全登出',
-            desc: '手機、平板、其他電腦的 session 全部清掉，重新登入才能用。',
+            desc: '手機、平板、其他電腦的登入狀態全部清掉，重新登入才能用。',
           },
         ]}
         footnote="© 2026 Tripline"

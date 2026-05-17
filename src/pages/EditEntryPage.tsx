@@ -1128,12 +1128,12 @@ export default function EditEntryPage() {
       });
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`刪除 stop 失敗 (${res.status})${text ? `: ${text.slice(0, 120)}` : ''}`);
+        throw new Error(`刪除停留點失敗 (${res.status})${text ? `: ${text.slice(0, 120)}` : ''}`);
       }
       setShowDeleteStopConfirm(false);
       navigate(goBackHref);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '刪除 stop 失敗');
+      setError(err instanceof Error ? err.message : '刪除停留點失敗');
       setShowDeleteStopConfirm(false);
     } finally {
       setSubmitting(false);
@@ -1473,7 +1473,7 @@ export default function EditEntryPage() {
                     data-testid="edit-entry-delete-stop"
                     disabled={submitting}
                   >
-                    <Icon name="trash" /> 刪除整個 stop
+                    <Icon name="trash" /> 刪除整個停留點
                   </button>
                 </div>
               )}
@@ -1512,7 +1512,7 @@ export default function EditEntryPage() {
       <ConfirmModal
         open={altRemoveConfirm != null}
         title="移除備選"
-        message={altRemoveConfirm ? `將從這個 stop 移除備選「${altRemoveConfirm.name}」。POI 本身不會被刪除，仍可從搜尋或收藏再次加入。` : ''}
+        message={altRemoveConfirm ? `將從這個停留點移除備選「${altRemoveConfirm.name}」。POI 本身不會被刪除，仍可從搜尋或收藏再次加入。` : ''}
         confirmLabel="移除備選"
         cancelLabel="取消"
         busy={altPending != null}
@@ -1523,11 +1523,11 @@ export default function EditEntryPage() {
       {/* v2.27.0 Delete stop confirm */}
       <ConfirmModal
         open={showDeleteStopConfirm}
-        title="刪除整個 stop？"
+        title="刪除整個停留點？"
         message={masterSummary
           ? `將同時刪除：正選景點「${masterSummary.name}」${alternates.length > 0 ? ` + ${alternates.length} 個備選` : ''}。前後路線時間也會重算。此操作不可復原。`
           : ''}
-        confirmLabel="刪除 stop"
+        confirmLabel="刪除停留點"
         cancelLabel="取消"
         busy={submitting}
         onConfirm={() => void handleDeleteStop()}
