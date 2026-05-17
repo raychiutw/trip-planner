@@ -265,6 +265,9 @@ body {
 }
 .tp-page-meta strong { color: var(--color-foreground); font-weight: 600; }
 
+/* v2.31.32 fix #133：只有 1 region 時 hide region row 避免單一 chip 的視覺
+ * 噪音（user 只有沖繩 trip → 「全部 4 / 沖繩 4」沒實際 filter 意義）。
+ * Spec: regionList.filter(r => r !== 'all').length > 1 才 render row。 */
 .favorites-region-row,
 .favorites-type-row {
   display: flex; gap: 8px; overflow-x: auto;

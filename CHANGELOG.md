@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.53] - 2026-05-17
+
+**Mockup favorites region row hide 規範 align prod。**
+
+### Updated: 2026-05-04-favorites-redesign.html
+
+加 spec comment 對齊 v2.31.32 fix #133 `PoiFavoritesPage` 只有 1 region 時 hide
+region row 行為。避免單一 chip 視覺噪音（user 只有沖繩 trip → 「全部 4 / 沖繩 4」
+無 filter 意義）。
+
 ## [2.31.52] - 2026-05-17
 
 **Mockup chat empty state align prod — v2.31.51 follow-up，補 `.tp-chat-empty`
