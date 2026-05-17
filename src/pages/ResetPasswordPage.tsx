@@ -365,7 +365,7 @@ export default function ResetPasswordPage() {
       </div>
 
       <AuthBrandHero
-        eyebrow="Final Step"
+        eyebrow="最後一步"
         headline={<>最後一步<br />就完成了。</>}
         sub="設好新密碼，你會自動登入並進入「行程」頁。記得密碼存到密碼管理器（1Password / Apple Keychain / Google Password）。"
         items={[
