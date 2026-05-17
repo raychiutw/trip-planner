@@ -3,6 +3,39 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.43] - 2026-05-17
+
+**ExplorePage 已收藏 heart 改可取消收藏 — prod QA loop user 訴求「不同顯示 + 取消收藏」。**
+
+### Fixed: `/explore` 搜尋結果已收藏 POI heart icon 可 toggle off
+
+QA loop user 提出：搜尋結果卡片如果已加入收藏，要不同顯示 + 要可以取消收藏。
+原本 `ExplorePage.tsx` line 745-748 `disabled={isSaving || isPoiFavorited}`
+鎖死「已收藏」狀態，user 必須切去 `/favorites` 多步驟刪除。
+
+**Bug 取證**：
+- Saved 狀態：heart `disabled`, `onClick` no-op, `aria-label='已收藏'`（無 affordance）
+- User 無法在 explore page 取消收藏
+- 額外發現 pre-existing key mismatch — `favoriteKeySet` key 用 `poi.category`
+  raw（Google Places enum）但 saved row `poiType` 已 `mapNominatimCategory()`
+  映射，兩邊永遠對不上，`isPoiFavorited` 即使資料有收藏也是 false → user
+  重複加同一個 POI 進收藏（重複 row）。同 PR 一併修。
+
+**Fix**：
+1. `SavedKeyRow` 加 `id: number` 欄位（reuse DELETE `/poi-favorites/:id`）。
+2. `favoriteKeySet: Set<string>` → `favoriteKeyMap: Map<string, number>`。
+3. `handleSave` → `handleToggleFavorite(poi, isPoiFavorited)`：is-saved
+   分支走 `DELETE /poi-favorites/:id` + toast「已取消收藏」，否則原 POST 流程。
+4. Heart button 拔掉 `disabled={isPoiFavorited}` 留 `disabled={isSaving}`
+   防雙擊；`aria-label` / `title` 動態切「已收藏 · 點擊取消」/「加入收藏」。
+5. Key 對齊 `mapNominatimCategory(poi.category ?? '')` 修 pre-existing bug。
+6. CSS `.is-saved:hover` 紅化暗示「點擊取消」affordance（保留 saved accent
+   主色，hover 才轉紅 + scale 1.05）。
+
+**Test**：6 個 source-grep regression（SavedKeyRow id 欄位 / Map<string,number>
+/ disabled 拔 isPoiFavorited / aria-label 取消 affordance / DELETE 分支 /
+path 含 :id）+ 既有 explore tests 27/27 全綠。
+
 ## [2.31.42] - 2026-05-17
 
 **Sessions / Trip MapPage 缺 TitleBar back button — 同 #601 nav regression 家族。**

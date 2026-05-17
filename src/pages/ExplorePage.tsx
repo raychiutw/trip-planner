@@ -32,10 +32,12 @@ import { regionToApiParam } from '../lib/maps/region';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 
 /**
- * Mini-fetch shape — 只用 poiType + poiName 算 favoriteKeySet (heart-disable correctness).
- * PoiFavoritesPage 用完整 PoiFavoriteRow 型別，這裡只取需要的欄位。
+ * Mini-fetch shape — favoriteKeyMap 用 (poiType, poiName) → favorite row id。
+ * v2.31.43：原本只取 poiType + poiName 算 favoriteKeySet（heart-disable）；
+ * 改為 toggle 後要拿 id 走 DELETE /poi-favorites/:id，故補 id 欄位。
  */
 interface SavedKeyRow {
+  id: number;
   poiName: string;
   poiType: string;
 }
@@ -164,9 +166,15 @@ const SCOPED_STYLES = `
   transition: background 120ms, color 120ms, transform 120ms;
   backdrop-filter: blur(8px);
 }
-.explore-poi-card .explore-poi-heart:hover { background: rgba(0, 0, 0, 0.65); transform: scale(1.05); }
+.explore-poi-card .explore-poi-heart:hover:not(:disabled) { background: rgba(0, 0, 0, 0.65); transform: scale(1.05); }
 .explore-poi-card .explore-poi-heart.is-saved {
   background: var(--color-accent); color: var(--color-accent-foreground);
+}
+/* v2.31.43 saved 狀態 hover 顯「取消收藏」affordance — 紅化 + 維持 scale 提示可 click。 */
+.explore-poi-card .explore-poi-heart.is-saved:hover:not(:disabled) {
+  background: var(--color-priority-high-bg, #fee2e2);
+  color: var(--color-priority-high-dot, #b91c1c);
+  transform: scale(1.05);
 }
 .explore-poi-card .explore-poi-heart .svg-icon { width: 18px; height: 18px; }
 /* v2.23.8: ➕ 加入行程 button — accent 實心並排 ❤ 右側偏左 */
@@ -476,8 +484,11 @@ export default function ExplorePage() {
 
   useEffect(() => { void loadSaved(); }, [loadSaved]);
 
-  const favoriteKeySet = useMemo(
-    () => new Set(savedKeyRows.map((r) => `${r.poiType}::${r.poiName}`)),
+  /* v2.31.43：Map<key, id> 取代 Set<key>，toggle off 走 DELETE 必須拿到 id。 */
+  const favoriteKeyMap = useMemo(
+    () => new Map<string, number>(
+      savedKeyRows.map((r) => [`${r.poiType}::${r.poiName}`, r.id] as const),
+    ),
     [savedKeyRows],
   );
 
@@ -535,12 +546,27 @@ export default function ExplorePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [region]);
 
-  async function handleSave(poi: PoiSearchResult) {
+  /**
+   * v2.31.43 toggle 版本：is-saved 走 DELETE，否則走原本的 find-or-create + POST。
+   * Heart icon click → 已收藏移除 / 未收藏加入，single button 兩種 affordance。
+   */
+  async function handleToggleFavorite(poi: PoiSearchResult, isPoiFavorited: boolean) {
     setSavingIds((s) => new Set(s).add(poi.place_id));
     try {
-      // PR-T 2026-04-26：原本直接送 poi.category（Nominatim raw 'tourism' /
-      // 'amenity' / 'shop' 等），會被 pois.type CHECK constraint 拒收 → 503。
-      // 走 mapNominatimCategory() 映射到 whitelist（同 AddStopPage 用法）。
+      if (isPoiFavorited) {
+        const key = `${mapNominatimCategory(poi.category ?? '')}::${poi.name}`;
+        const favoriteId = favoriteKeyMap.get(key);
+        if (favoriteId == null) {
+          showToast('找不到對應收藏 id，請重整頁面', 'error', 3000);
+          return;
+        }
+        await apiFetch(`/poi-favorites/${favoriteId}`, { method: 'DELETE' });
+        showToast(`已取消收藏「${poi.name}」`, 'success', 2000);
+        await loadSaved();
+        return;
+      }
+      // PR-T 2026-04-26：Nominatim raw 'tourism' / 'amenity' / 'shop' 會被
+      // pois.type CHECK constraint 拒收 → 503；走 mapNominatimCategory 映射。
       const createResp = await apiFetch<{ id: number }>('/pois/find-or-create', {
         method: 'POST',
         body: JSON.stringify({
@@ -561,7 +587,8 @@ export default function ExplorePage() {
       await loadSaved();
     } catch (err) {
       const msg = err instanceof Error ? err.message : '未知錯誤';
-      showToast(`加入收藏失敗：${msg}`, 'error', 3000);
+      const verb = isPoiFavorited ? '取消收藏' : '加入收藏';
+      showToast(`${verb}失敗：${msg}`, 'error', 3000);
     } finally {
       setSavingIds((s) => {
         const next = new Set(s);
@@ -727,8 +754,12 @@ export default function ExplorePage() {
                   ) : (
                   <div className="explore-poi-grid">
                     {filtered.map((poi) => {
-                      const key = `${poi.category || 'poi'}::${poi.name}`;
-                      const isPoiFavorited = favoriteKeySet.has(key);
+                      /* v2.31.43：key 用 mapped category 對齊 backend pois.type 寫法
+                       * （`/pois/find-or-create` body `type: mapNominatimCategory(...)`）。
+                       * 之前用 raw `poi.category` 算 key，永遠跟 saved row poiType 對不上，
+                       * isPoiFavorited heart 永遠 false → 重複加收藏。順手修。 */
+                      const key = `${mapNominatimCategory(poi.category ?? '')}::${poi.name}`;
+                      const isPoiFavorited = favoriteKeyMap.has(key);
                       const isSaving = savingIds.has(poi.place_id);
                       // Stable tone 1-8 derived from place_id char-sum hash（v2.23.0：string id）。
                       const placeIdHash = (poi.place_id || '').split('').reduce((s, c) => s + c.charCodeAt(0), 0);
@@ -743,9 +774,10 @@ export default function ExplorePage() {
                             <button
                               type="button"
                               className={`explore-poi-heart ${isPoiFavorited ? 'is-saved' : ''}`}
-                              onClick={() => !isPoiFavorited && !isSaving && handleSave(poi)}
-                              disabled={isSaving || isPoiFavorited}
-                              aria-label={isPoiFavorited ? '已收藏' : '加入收藏'}
+                              onClick={() => !isSaving && handleToggleFavorite(poi, isPoiFavorited)}
+                              disabled={isSaving}
+                              aria-label={isPoiFavorited ? '已收藏 · 點擊取消' : '加入收藏'}
+                              title={isPoiFavorited ? '已收藏 · 點擊取消' : '加入收藏'}
                               data-testid={`explore-save-btn-${poi.place_id}`}
                             >
                               <Icon name="heart" />
