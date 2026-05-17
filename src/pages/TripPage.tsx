@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -254,19 +254,23 @@ function TripPageInner(
   const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
 
   /**
-   * v2.31.46 #143：portal target lookup for embedded mode sticky map sheet。
-   * 從 host AppShell（TripsListPage）拿 `<aside id="trip-sheet-portal">` DOM
-   * 後 createPortal 把 sheetContent 推過去。
+   * v2.31.46 #143 + v2.31.54 simplify follow-up：portal target lookup for
+   * embedded mode sticky map sheet。從 host AppShell（TripsListPage）拿
+   * `<aside id="trip-sheet-portal">` DOM 後 createPortal 把 sheetContent 推過去。
    *
-   * 為何 useState + useEffect：DOM target 需 host 先 mount AppShell，
-   * 第一次 render 取不到，useEffect 拿到後再 setState 觸發第二次 render 才
-   * portal。Strict mode 雙倍 fire setState 同值 → React bail out。
-   */
-  const [sheetPortalNode, setSheetPortalNode] = useState<Element | null>(null);
-  useEffect(() => {
-    if (!noShell) return;
-    setSheetPortalNode(document.getElementById('trip-sheet-portal'));
-  }, [noShell]);
+   * v2.31.54 改 **per-render lookup** 取代之前 useState + useEffect 模式。
+   * 之前 useEffect deps `[noShell]` 只 mount 一次 setState，如果 host AppShell
+   * 因為任何原因 remount（StrictMode 雙倍 fire、route 切換、host re-render
+   * 觸發 portal target 重建）→ cached ref 變 stale → createPortal 推到 detached
+   * DOM → sheet 內容 silently disappear。
+   *
+   * Per-render lookup：`getElementById` 是 O(1) hash lookup，every render
+   * 跑一次的成本 ~1μs，比 stale ref 風險低得多。第一次 render（host AppShell
+   * 還沒 mount portal target）拿 null，正常 fall-through 不 portal；後續
+   * render 拿到 node 就推送。 */
+  const sheetPortalNode = noShell && typeof document !== 'undefined'
+    ? document.getElementById('trip-sheet-portal')
+    : null;
 
   /* --- lsRenewAll once per session (#9) --- */
   useEffect(() => {
@@ -641,16 +645,22 @@ function TripPageInner(
     );
   }
 
-  const sheetContent = !loading && trip ? (
-    <Suspense fallback={null}>
-      <TripSheet
-        tripId={trip.id}
-        allPins={mapRailData.allPins}
-        pinsByDay={mapRailData.pinsByDay}
-        dark={isDark}
-      />
-    </Suspense>
-  ) : undefined;
+  // v2.31.54 simplify follow-up：useMemo 避免每次 TripPage render 重建
+  // sheetContent JSX tree → portal subtree React reconcile 浪費。Deps =
+  // 實質會影響 TripSheet render 的 props（mapRailData 已是 useMemo stable
+  // identity，loading/trip/isDark 是 source state）。
+  const sheetContent = useMemo<ReactNode | undefined>(() => (
+    !loading && trip ? (
+      <Suspense fallback={null}>
+        <TripSheet
+          tripId={trip.id}
+          allPins={mapRailData.allPins}
+          pinsByDay={mapRailData.pinsByDay}
+          dark={isDark}
+        />
+      </Suspense>
+    ) : undefined
+  ), [loading, trip, mapRailData.allPins, mapRailData.pinsByDay, isDark]);
 
   // 「更多」 sheet 4 action 已遷移新家:
   // 共編 → trip TitleBar；切換行程 → /trips；外觀 → AccountPage；下載 → OverflowMenu
