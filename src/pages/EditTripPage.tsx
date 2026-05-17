@@ -59,7 +59,7 @@ interface DestinationRow {
   isNew?: boolean;
 }
 
-type TravelMode = 'driving' | 'walking' | 'transit';
+// v2.31.36: TravelMode removed — default_travel_mode column dropped (migration 0068)。
 type Lang = 'zh-TW' | 'en' | 'ja';
 
 interface TripDestApi {
@@ -82,22 +82,13 @@ interface TripApi {
   description?: string | null;
   countries?: string | null;
   published?: number | null;
-  // v2.31.15: backend response 經 deepCamel → camelCase。早期 snake_case 寫法
-  // (data_source / default_travel_mode) 讀 path 永遠 undefined → travelMode
-  // fallback 'driving'，UI 顯示永遠是「自駕」即使 trip 真實是 walking/transit。
-  // 同 #573 / #574 camelCase 對齊 bug 家族。
+  // v2.31.15: backend response 經 deepCamel → camelCase。
+  // v2.31.36 (migration 0068): DROP defaultTravelMode + selfDrive* — dead columns。
   dataSource?: string | null;
-  defaultTravelMode?: TravelMode | null;
   lang?: Lang | null;
   destinations?: TripDestApi[];
   startDate?: string;
   endDate?: string;
-  // v2.23.8 self-drive — 後補 friendly
-  selfDriveEnabled?: number | null;
-  selfDrivePickupAt?: string | null;
-  selfDriveReturnAt?: string | null;
-  selfDrivePickupLocation?: string | null;
-  selfDriveReturnLocation?: string | null;
 }
 
 /**
@@ -349,14 +340,8 @@ export default function EditTripPage() {
   const [titleHintDismissed, setTitleHintDismissed] = useState(false);
   const [description, setDescription] = useState('');
   const [lang, setLang] = useState<Lang>('zh-TW');
-  const [travelMode, setTravelMode] = useState<TravelMode>('driving');
   const [published, setPublished] = useState(0);
-  // v2.23.8 self-drive
-  const [selfDriveEnabled, setSelfDriveEnabled] = useState(false);
-  const [selfDrivePickupAt, setSelfDrivePickupAt] = useState('');
-  const [selfDriveReturnAt, setSelfDriveReturnAt] = useState('');
-  const [selfDrivePickupLocation, setSelfDrivePickupLocation] = useState('');
-  const [selfDriveReturnLocation, setSelfDriveReturnLocation] = useState('');
+  // v2.31.36 (migration 0068): travelMode + selfDrive* state removed — dead columns dropped。
 
   // POI search inline state
   const [showSearch, setShowSearch] = useState(false);
@@ -414,14 +399,8 @@ export default function EditTripPage() {
         setTitleHintDismissed(false);
         setDescription(data.description ?? '');
         setLang((data.lang as Lang) ?? 'zh-TW');
-        setTravelMode((data.defaultTravelMode as TravelMode) ?? 'driving');
         setPublished(data.published ?? 0);
-        // v2.23.8 self-drive — load from API（datetime-local 接受 YYYY-MM-DDTHH:MM 格式）
-        setSelfDriveEnabled(data.selfDriveEnabled === 1);
-        setSelfDrivePickupAt(data.selfDrivePickupAt ?? '');
-        setSelfDriveReturnAt(data.selfDriveReturnAt ?? '');
-        setSelfDrivePickupLocation(data.selfDrivePickupLocation ?? '');
-        setSelfDriveReturnLocation(data.selfDriveReturnLocation ?? '');
+        // v2.31.36 (migration 0068): defaultTravelMode + selfDrive* load removed — dead columns。
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : '載入行程失敗');
@@ -501,18 +480,8 @@ export default function EditTripPage() {
     if (title !== (original.title ?? '')) body.title = title || null;
     if (description !== (original.description ?? '')) body.description = description || null;
     if (lang !== ((original.lang as Lang) ?? 'zh-TW')) body.lang = lang;
-    // v2.31.15: read 用 camelCase (response shape) / write 用 snake_case
-    // (backend WRITABLE_FIELDS allow-list 是 snake)。
-    if (travelMode !== ((original.defaultTravelMode as TravelMode) ?? 'driving')) body.default_travel_mode = travelMode;
     if (published !== (original.published ?? 0)) body.published = published;
-
-    // v2.23.8 self-drive — diff each field individually
-    const origSelfDriveEnabled = original.selfDriveEnabled === 1;
-    if (selfDriveEnabled !== origSelfDriveEnabled) body.self_drive_enabled = selfDriveEnabled ? 1 : 0;
-    if (selfDrivePickupAt !== (original.selfDrivePickupAt ?? '')) body.self_drive_pickup_at = selfDrivePickupAt || null;
-    if (selfDriveReturnAt !== (original.selfDriveReturnAt ?? '')) body.self_drive_return_at = selfDriveReturnAt || null;
-    if (selfDrivePickupLocation !== (original.selfDrivePickupLocation ?? '')) body.self_drive_pickup_location = selfDrivePickupLocation || null;
-    if (selfDriveReturnLocation !== (original.selfDriveReturnLocation ?? '')) body.self_drive_return_location = selfDriveReturnLocation || null;
+    // v2.31.36 (migration 0068): default_travel_mode + 5 self_drive_* write removed — dead columns。
 
     const destsChanged = !destNamesEqual(destinations, originalDests)
       || destinations.some((d, i) => {
@@ -768,90 +737,9 @@ export default function EditTripPage() {
                     </select>
                   </div>
 
-                  {/* Default travel mode segment */}
-                  <div className="tp-edit-row">
-                    <label>預設交通方式</label>
-                    <div className="tp-edit-segment" role="radiogroup" aria-label="預設交通方式">
-                      {(['driving', 'walking', 'transit'] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          role="radio"
-                          aria-checked={travelMode === mode}
-                          className={travelMode === mode ? 'is-active' : ''}
-                          onClick={() => setTravelMode(mode)}
-                          data-testid={`edit-trip-travel-mode-${mode}`}
-                        >
-                          {mode === 'driving' ? '自駕' : mode === 'walking' ? '步行' : '大眾運輸'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* v2.23.8 self-drive — 後補 friendly */}
-                  <div className="tp-edit-row">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={selfDriveEnabled}
-                        onChange={(e) => setSelfDriveEnabled(e.target.checked)}
-                        data-testid="edit-trip-self-drive-toggle"
-                        style={{ marginRight: 8 }}
-                      />
-                      自駕行程（租車）
-                    </label>
-                    <p style={{ fontSize: 'var(--font-size-footnote)', color: 'var(--color-muted)', margin: '4px 0 0 24px' }}>
-                      取車 ~ 還車期間用汽車估車程；其餘時段走路 ≤10 分鐘走路、超過用大眾運輸
-                    </p>
-                  </div>
-                  {selfDriveEnabled && (
-                    <>
-                      <div className="tp-edit-row">
-                        <label htmlFor="edit-trip-self-drive-pickup-at">取車時間</label>
-                        <input
-                          id="edit-trip-self-drive-pickup-at"
-                          type="datetime-local"
-                          value={selfDrivePickupAt}
-                          onChange={(e) => setSelfDrivePickupAt(e.target.value)}
-                          data-testid="edit-trip-self-drive-pickup-at"
-                        />
-                      </div>
-                      <div className="tp-edit-row">
-                        <label htmlFor="edit-trip-self-drive-pickup-loc">取車地點</label>
-                        <input
-                          id="edit-trip-self-drive-pickup-loc"
-                          type="text"
-                          value={selfDrivePickupLocation}
-                          onChange={(e) => setSelfDrivePickupLocation(e.target.value)}
-                          placeholder="例：那霸機場 OTS 取車櫃台"
-                          maxLength={200}
-                          data-testid="edit-trip-self-drive-pickup-loc"
-                        />
-                      </div>
-                      <div className="tp-edit-row">
-                        <label htmlFor="edit-trip-self-drive-return-at">還車時間</label>
-                        <input
-                          id="edit-trip-self-drive-return-at"
-                          type="datetime-local"
-                          value={selfDriveReturnAt}
-                          onChange={(e) => setSelfDriveReturnAt(e.target.value)}
-                          data-testid="edit-trip-self-drive-return-at"
-                        />
-                      </div>
-                      <div className="tp-edit-row">
-                        <label htmlFor="edit-trip-self-drive-return-loc">還車地點</label>
-                        <input
-                          id="edit-trip-self-drive-return-loc"
-                          type="text"
-                          value={selfDriveReturnLocation}
-                          onChange={(e) => setSelfDriveReturnLocation(e.target.value)}
-                          placeholder="例：那霸機場 OTS 還車櫃台"
-                          maxLength={200}
-                          data-testid="edit-trip-self-drive-return-loc"
-                        />
-                      </div>
-                    </>
-                  )}
+                  {/* v2.31.36 (migration 0068): default travel mode + self-drive form removed
+                      — dead columns dropped。UI 收集了但 backend 沒讀取使用（recompute 用 Haversine gate）。
+                      若日後需要重啟此功能，先設計 segment computation read path 再加回 UI。 */}
 
                   {error && <InlineError message={error} testId="edit-trip-error" />}
                 </>

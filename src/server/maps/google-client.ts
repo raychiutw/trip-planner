@@ -28,6 +28,7 @@
  * billing tier. We use minimal masks per call site to avoid unnecessary cost.
  */
 import { AppError } from '../../../functions/api/_errors';
+import { normalizePoiAddress } from '../../lib/maps/normalize-address';
 
 const PLACES_BASE = 'https://places.googleapis.com';
 const DIRECTIONS_BASE = 'https://routes.googleapis.com';
@@ -164,7 +165,9 @@ export async function searchPlaces(
       return {
         place_id: p.id,
         name: p.displayName!.text,
-        address: p.formattedAddress || '',
+        // v2.31.36: normalize Google Places address — collapse doubled admin suffix
+        // (號號/縣縣/市市 等 user-submitted typo) + 連續逗號/空白。
+        address: normalizePoiAddress(p.formattedAddress) ?? '',
         lat: p.location!.latitude,
         lng: p.location!.longitude,
         category: p.primaryType || '',
@@ -251,7 +254,8 @@ export async function getPlaceDetails(
   return {
     place_id: json.id,
     name: json.displayName!.text,
-    address: json.formattedAddress || '',
+    // v2.31.36: normalize doubled admin suffix typo（同 searchPlaces）
+    address: normalizePoiAddress(json.formattedAddress) ?? '',
     lat: json.location!.latitude,
     lng: json.location!.longitude,
     rating: json.rating,

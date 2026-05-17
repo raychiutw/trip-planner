@@ -5,17 +5,14 @@ import { json, getAuth, parseJsonBody, buildUpdateClause } from '../_utils';
 import type { Env } from '../_types';
 
 // Migration 0045: dropped og_description/self_drive/food_prefs/auto_scroll/footer/is_default.
-// Added data_source/default_travel_mode/lang (Q1, Q2). `region` derived from
-// trip_destinations join — not a writable column.
-// V2 cutover phase 2 (migration 0047): trips.owner column dropped — 移除 'owner'
-// from PATCH-allowed fields。owner 改變需走 transfer-ownership flow（未實作，phase 3）。
+// Added data_source/lang (Q1, Q2). `region` derived from trip_destinations join — not a writable column.
+// V2 cutover phase 2 (migration 0047): trips.owner column dropped — owner 改變需走
+// transfer-ownership flow（未實作，phase 3）。
+// Migration 0068 (v2.31.36): DROP default_travel_mode + 5 self_drive_* — dead columns。
 const ALLOWED_FIELDS = [
   'name', 'title', 'description',
   'countries', 'published',
-  'data_source', 'default_travel_mode', 'lang',
-  // v2.23.8 self-drive (migration 0052) — PATCH 後補 ability
-  'self_drive_enabled', 'self_drive_pickup_at', 'self_drive_return_at',
-  'self_drive_pickup_location', 'self_drive_return_location',
+  'data_source', 'lang',
 ] as const;
 
 interface TripDestRow {
@@ -110,10 +107,8 @@ interface DestinationInput {
 
 const MAX_DESTINATIONS = 30;
 
-// 2026-05-02 follow-up: enum validation defense-in-depth — 雖然 frontend
-// EditTripModal segment 只送這 3 個值，PUT body 仍可能來自 CLI/外部 client。
-// /cso --diff sub-confidence 標 OK，但加 enum 檢查更穩健。
-const VALID_TRAVEL_MODES = new Set(['driving', 'walking', 'transit']);
+// 2026-05-02 follow-up: enum validation defense-in-depth — PUT body 來自 CLI/外部 client。
+// v2.31.36: VALID_TRAVEL_MODES removed — default_travel_mode column dropped (migration 0068)。
 const VALID_LANGS = new Set(['zh-TW', 'en', 'ja']);
 const VALID_DATA_SOURCES = new Set(['manual', 'tp-create', 'imported']);
 
@@ -132,11 +127,7 @@ function safeSubAreas(val: unknown): string | null {
 
 /** Validate enum body fields. Throws AppError on bad value. Allows undefined (field not being updated). */
 function validateEnumFields(body: Record<string, unknown>): void {
-  if (body.default_travel_mode !== undefined &&
-      !VALID_TRAVEL_MODES.has(body.default_travel_mode as string)) {
-    throw new AppError('DATA_VALIDATION',
-      `default_travel_mode 必須為 driving / walking / transit 之一`);
-  }
+  // v2.31.36: default_travel_mode validation removed — column dropped (migration 0068)。
   if (body.lang !== undefined && !VALID_LANGS.has(body.lang as string)) {
     throw new AppError('DATA_VALIDATION', `lang 必須為 zh-TW / en / ja 之一`);
   }

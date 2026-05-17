@@ -3,6 +3,72 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.36] - 2026-05-17
+
+**Refactor: DROP 6 dead trip fields + POI address normalize（雙 fix 同 PR）。**
+
+### Part 1: DROP dead trip fields（migration 0068）
+
+`trips` table 6 columns 自 v2.23.0 Google Maps Platform 切換後變 dead data — UI 收集
+user 輸入存進 DB，但 backend 沒任何 logic 讀取此 column 影響行為（`recompute-travel.ts:146`
+直接用 Haversine gate 決定 mode，沒讀 trip.default_travel_mode）。
+
+**移除：**
+- `default_travel_mode` TEXT
+- `self_drive_enabled` INTEGER（0/1）
+- `self_drive_pickup_at` TEXT
+- `self_drive_return_at` TEXT
+- `self_drive_pickup_location` TEXT
+- `self_drive_return_location` TEXT
+
+**Cleanup 範圍（11 files）：**
+- migration 0068 + rollback
+- `functions/api/trips.ts`：INSERT VALUES + VALID_TRAVEL_MODES + nullableStr helper + SELECT
+- `functions/api/trips/[id].ts`：ALLOWED_FIELDS + validateEnumFields + VALID_TRAVEL_MODES
+- `functions/api/trips/[id]/audit/[aid]/rollback.ts`：TABLE_COLUMNS.trips
+- `src/types/trip.ts`：TripListItem + Trip interface
+- `src/pages/EditTripPage.tsx`：state + form UI + read/write logic + TripApi/TravelMode type
+- `src/pages/NewTripPage.tsx`：state + form UI + POST body
+- `tests/api/trips-id.integration.test.ts` + `tests/api/trips.integration.test.ts` + `tests/unit/map-row.test.js` + `tests/e2e/api-mocks.js`
+
+**Deploy 順序（用戶選「單 PR」path）：**
+1. backend code 不再 read/write 此 6 columns（同 PR）
+2. merge PR + CF Pages auto-deploy
+3. apply migration 0068（DROP COLUMN）— 因 columns 都 nullable + 無 FK + 無 NOT NULL，race window 不會炸。
+
+SQLite 不允許 DROP COLUMN 當 index reference，migration 先 `DROP INDEX IF EXISTS idx_trips_self_drive_enabled`（migration 0052 創立）再 DROP COLUMN。
+
+### Part 2: POI address normalize（fix 「736 號號地下一層」doubled char）
+
+**Bug**：Google Places API 偶有 user-submitted typo 含 doubled admin suffix
+（「號號」/「縣縣」/「市市」等）。prod-found case：search「熊越岳」回 raw address
+「242 台灣新北市新莊區幸福路 736 號號地下一層」— 「號」字 doubled。
+
+**Fix：**
+1. `src/lib/maps/normalize-address.ts`（新）— `normalizePoiAddress` helper：
+   - Collapse consecutive admin/positional suffix chars（號 / 号 / 縣 / 県 / 市 / 区 /
+     區 / 鎮 / 鄉 / 村 / 里 / 路 / 街 / 巷 / 弄 / 町 / 丁）
+   - Collapse 連續逗號（含全形「，」）
+   - Collapse 連續空白
+   - Trim 頭尾
+2. `src/server/maps/google-client.ts` searchPlaces + getPlaceDetails return 邊界 apply
+   → 後續 INSERT/UPDATE 路徑 inherit clean data
+3. `functions/api/_poi.ts` `normalizeFindOrCreatePoiPayload` 也 apply（防 direct INSERT 漏）
+4. `scripts/backfill-poi-addresses.ts`（新）— 一次性 backfill existing pois.address
+   row。Idempotent，支援 `--local` / `--remote` × `--dry-run` / `--apply`。
+
+**Test：** `tests/unit/normalize-address.test.ts` 新（23 cases）：
+- 11 cases doubled admin suffix collapse（含 prod-found case + 日文 kanji 区/県/号/町/丁）
+- 4 cases non-admin 字不 collapse regression（化學詞 / 已乾淨 / 街口）
+- 4 cases comma + whitespace cleanup
+- 4 cases null / empty / non-string
+
+1675 unit test 全綠 + typecheck clean。
+
+**Backfill 操作（merge 後）：**
+1. `bun scripts/backfill-poi-addresses.ts --dry-run --remote` 確認 candidates
+2. `bun scripts/backfill-poi-addresses.ts --apply --remote` 執行
+
 ## [2.31.35] - 2026-05-17
 
 **Fix: CollabPanel avatar initial 用 displayName（與 TripsListPage 一致）。**

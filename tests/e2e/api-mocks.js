@@ -12,7 +12,8 @@
 
 /* ===== /api/trips (trip list) ===== */
 const MOCK_TRIPS_LIST = [
-  // 2026-05-02 (migration 0045): selfDrive/autoScroll/footer cols DROP'd → 改用 defaultTravelMode/lang/dataSource
+  // 2026-05-02 (migration 0045): selfDrive/autoScroll/footer cols DROP'd → 改用 lang/dataSource
+  // v2.31.36 (migration 0068): defaultTravelMode + 5 self_drive_* DROP'd — dead columns。
   {
     tripId: 'okinawa-trip-2026-Ray',
     name: '沖繩自駕五日遊',
@@ -20,7 +21,6 @@ const MOCK_TRIPS_LIST = [
     title: '2026 沖繩自駕五日遊',
     countries: '["JP"]',
     published: 1,
-    defaultTravelMode: 'driving',
     lang: 'zh-TW',
     dataSource: 'manual',
   },
@@ -31,7 +31,6 @@ const MOCK_TRIPS_LIST = [
     title: '2026 釜山三日遊',
     countries: '["KR"]',
     published: 1,
-    defaultTravelMode: 'transit',
     lang: 'zh-TW',
     dataSource: 'manual',
   },
@@ -68,8 +67,8 @@ function initialSavedPois() {
 // (saved_pois)。fixtures 繼承到 initialSavedPois() 若需要復原。
 
 /* ===== /api/trips/okinawa-trip-2026-Ray (single trip meta) =====
- * 2026-05-02 (migration 0045): ogDescription / selfDrive / autoScroll / footer
- * cols DROP'd → 改 defaultTravelMode / lang / dataSource + destinations[] join。 */
+ * 2026-05-02 (migration 0045): ogDescription / selfDrive / autoScroll / footer cols DROP'd → 改 lang / dataSource + destinations[] join。
+ * v2.31.36 (migration 0068): defaultTravelMode + 5 self_drive_* DROP'd — dead columns。 */
 const MOCK_TRIP_META_OKINAWA = {
   id: 'okinawa-trip-2026-Ray',
   tripId: 'okinawa-trip-2026-Ray',
@@ -79,7 +78,6 @@ const MOCK_TRIP_META_OKINAWA = {
   description: '五天四夜沖繩自駕行程',
   countries: '["JP"]',
   published: 1,
-  defaultTravelMode: 'driving',
   lang: 'zh-TW',
   dataSource: 'manual',
   destinations: [],
@@ -95,7 +93,6 @@ const MOCK_TRIP_META_BUSAN = {
   description: '三天兩夜釜山美食行程',
   countries: '["KR"]',
   published: 1,
-  defaultTravelMode: 'transit',
   lang: 'zh-TW',
   dataSource: 'manual',
   destinations: [],

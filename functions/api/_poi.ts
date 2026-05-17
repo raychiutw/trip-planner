@@ -4,6 +4,7 @@
  * COALESCE update: fills NULL fields on existing rows without overwriting.
  */
 import { AppError } from './_errors';
+import { normalizePoiAddress } from '../../src/lib/maps/normalize-address';
 
 const POI_TYPE_WHITELIST = [
   'hotel',
@@ -107,7 +108,8 @@ export function normalizeFindOrCreatePoiPayload(raw: FindOrCreatePoiPayload): Fi
     lng: normalizeCoordinate(raw.lng, 'lng'),
     rating: normalizeOptionalRating(raw.rating),
     category: normalizeOptionalString(raw.category, 'category'),
-    address: normalizeOptionalString(raw.address, 'address'),
+    // v2.31.36: address 經 normalizePoiAddress 清「號號」/「縣縣」等 typo doubled。
+    address: normalizePoiAddress(normalizeOptionalString(raw.address, 'address')),
     country: normalizeOptionalString(raw.country, 'country'),
     source: normalizeOptionalString(raw.source, 'source') ?? 'google',
   };
