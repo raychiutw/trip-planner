@@ -1,18 +1,21 @@
 // @vitest-environment node
 /**
- * v2.31.47 polish: ChatPage TitleBar 重複顯示 trip name。
+ * v2.31.47 polish: ChatPage TitleBar 跟 trip picker button 重複顯 trip name。
  *
  * Bug 取證（prod QA loop, desktop & mobile）：
- *   - ChatPage TitleBar `title` (line 714) 顯 `activeTrip?.title || ... || '聊天'`
- *   - 同一 row 的 `actions` 區（trip picker button）也顯同樣的 trip name
- *   - User 看到「2026 沖繩五日自駕遊行程表 ⇄ 2026 沖繩五日自駕遊...」
- *     兩個都是同一字串，視覺冗餘 + 信息重複。
+ *   - TitleBar `title` (line 713-714) 顯 activeTrip name（v2.18 design SoT，
+ *     對齊 existing test `chat-page-ai-avatar` line 134「TitleBar title 為
+ *     當前 trip name (取代「聊天」固定 title)」）。
+ *   - Trip picker button 內也加了 `<span class="tp-titlebar-trip-picker-name">`
+ *     顯**同樣** trip name (line 727-729) → 視覺冗餘 +「2026 沖繩... ⇄
+ *     2026 沖繩...」重複。
  *
- * Design 意圖：title 應該是 **page label**（「聊天」），actions 才是 active trip
- * 顯示 + switcher（其他 page e.g. SessionsPage title「登入裝置」/ AppearancePage
- * title「外觀設定」都是 page label not data）。
+ * 第一輪 fix 嘗試把 title 改回固定「聊天」（page label convention）— 但
+ * existing test `chat-page-ai-avatar.test.tsx:134` 已 codify「title=trip name」
+ * 為 design intent，改 title 破壞 SoT。
  *
- * Fix：`title` 永遠固定「聊天」字串；actions 的 trip picker 維持顯 trip name。
+ * 正確 fix：title 維持 trip name；**picker button 拔掉 trip name span**，只留
+ * ⇄ icon + ▾ chevron（user click 開 dropdown 看完整 trip list）。
  *
  * Pure-text grep on source。
  */
@@ -25,20 +28,22 @@ const SRC = readFileSync(
   'utf8',
 );
 
-describe('v2.31.47 ChatPage TitleBar title 改固定「聊天」', () => {
-  it('TitleBar title 是 string literal「聊天」，非 activeTrip 動態值', () => {
-    // 預期：`<TitleBar` 後緊接 `title="聊天"` (literal) 或 `title={'聊天'}` 形式
-    // 不再用 `title={activeTrip?.title || activeTrip?.name || '聊天'}`
-    expect(SRC).toMatch(/<TitleBar\s+title=["']聊天["']/);
+describe('v2.31.47 ChatPage picker button 不重複 trip name', () => {
+  it('TitleBar title 維持 activeTrip name（v2.18 design SoT）', () => {
+    expect(SRC).toMatch(/<TitleBar\s+title=\{activeTrip\?\.title\s*\|\|\s*activeTrip\?\.name\s*\|\|\s*['"]聊天['"]\}/);
   });
 
-  it('actions trip picker 維持顯 activeTrip name（regression: 切換 trip 仍可用）', () => {
-    // picker button span 仍含 activeTrip name 來源
-    expect(SRC).toMatch(/tp-titlebar-trip-picker-name[\s\S]*?activeTrip\?\.title\s*\|\|\s*activeTrip\?\.name/);
+  it('Picker button 內不再 render trip name span（避免跟 title 重複）', () => {
+    // 拿掉 `<span class="tp-titlebar-trip-picker-name">{activeTrip?.title || ...}</span>`
+    expect(SRC).not.toMatch(/tp-titlebar-trip-picker-name[^>]*>\s*\{?[\s\S]*?activeTrip\?\.title\s*\|\|\s*activeTrip\?\.name/);
   });
 
-  it('不再 dual-render activeTrip name 為 title', () => {
-    // 拿掉 `title={activeTrip?.title || activeTrip?.name || '聊天'}` 模式
-    expect(SRC).not.toMatch(/title=\{activeTrip\?\.title\s*\|\|\s*activeTrip\?\.name\s*\|\|\s*['"]聊天['"]\}/);
+  it('Picker button 仍有 swap-horiz icon + chevron（affordance regression）', () => {
+    expect(SRC).toMatch(/Icon\s+name=["']swap-horiz["']/);
+    expect(SRC).toMatch(/tp-titlebar-trip-picker-chevron/);
+  });
+
+  it('Dropdown trip rows 維持顯每個 trip name（切換功能 regression）', () => {
+    expect(SRC).toMatch(/tp-titlebar-trip-row-title[\s\S]{0,40}>\{?\s*t\.title\s*\|\|\s*t\.name/);
   });
 });

@@ -5,20 +5,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [2.31.47] - 2026-05-17
 
-**ChatPage TitleBar 重複顯 trip name — prod QA loop polish。**
+**ChatPage TitleBar 跟 trip picker button 重複顯 trip name — prod QA loop polish。**
 
 ### Fixed: /chat TitleBar title 跟 trip switcher 重複
 
-`ChatPage.tsx:714` title 顯 `activeTrip?.title || ... || '聊天'`，actions
-區的 trip picker button 也顯同一 trip name → user 看「2026 沖繩五日自駕遊行程表
-⇄ 2026 沖繩五日自駕遊...」兩個都是同字串視覺冗餘。
+`ChatPage.tsx:713-714` title 顯 activeTrip name（v2.18 起 design SoT，
+existing test `chat-page-ai-avatar.test.tsx:134` 已 codify），actions 區
+trip picker button line 727-729 也加了 `<span>` 顯同 trip name → user 看
+「2026 沖繩... ⇄ 2026 沖繩...」視覺冗餘。
 
-對齊其他 page convention（SessionsPage title「登入裝置」/ AppearancePage title
-「外觀設定」都是 page label not data）：title 改固定「聊天」，actions 區 trip
-picker 維持顯 active trip name + switch。
+第一輪嘗試把 title 改回固定「聊天」破壞 existing design SoT — revert。
+正確 fix：**title 維持 trip name；picker button 拔掉 trip name span**，
+只留 ⇄ icon + ▾ chevron affordance，user click 開 dropdown 看完整 trip
+list（dropdown rows 仍顯每個 trip name）。
 
-**Test**：3 個 source-grep regression（title literal「聊天」/ picker name regression /
-不再 dual-render activeTrip name as title）。
+**Test**：4 個 source-grep regression（title 維持 dynamic / picker span 拔掉 /
+icon + chevron affordance regression / dropdown rows 顯 trip name regression）+
+existing `chat-page-ai-avatar.test.tsx` 7/7 GREEN。
 
 ## [2.31.45] - 2026-05-17
 
