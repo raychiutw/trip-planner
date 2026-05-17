@@ -203,7 +203,7 @@ export default function SignupPage() {
         </div>
         <div className="tp-auth-headline">
           <h1>建立帳號</h1>
-          <p>用 email + 密碼註冊，開始規劃你的旅行</p>
+          <p>用電子郵件 + 密碼註冊，開始規劃你的旅行</p>
         </div>
 
         {banner && (
@@ -279,9 +279,9 @@ export default function SignupPage() {
       </div>
 
       <AuthBrandHero
-        eyebrow="Why Tripline"
+        eyebrow="為什麼選 Tripline"
         headline={<>把每次旅程<br />留在身邊。</>}
-        sub="註冊後可同步行程到所有裝置、邀請旅伴共編、儲存喜歡的 POI 一鍵加入下次 trip。"
+        sub="註冊後可同步行程到所有裝置、邀請旅伴共編、儲存喜歡的景點一鍵加入下次旅程。"
         items={[
           {
             icon: (
@@ -302,12 +302,12 @@ export default function SignupPage() {
               </>
             ),
             title: '邀請旅伴共編',
-            desc: '用一個 link 把家人朋友拉進行程，不用 LINE 截圖。',
+            desc: '用一個連結把家人朋友拉進行程，不用 LINE 截圖。',
           },
           {
             icon: <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />,
             title: '我的收藏跟著你',
-            desc: '看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進 trip。',
+            desc: '看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進行程。',
           },
         ]}
         footnote="© 2026 Tripline · 由旅人為旅人打造"

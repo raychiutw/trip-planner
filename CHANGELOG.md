@@ -35,6 +35,12 @@ LoginPage banner error 2 處「email」→「電子郵件」；ConsentPage scope
 ForgotPasswordPage 安全承諾 + ResetPasswordPage value prop + ConnectedAppsPage
 TitleBar 「app/email/session」混雜 → 全中文化。
 
+SignupPage 右側 brand hero「Why Tripline」eyebrow（跟 v2.31.62 LoginPage
+「Why sign in」同 pattern）→「為什麼選 Tripline」。SignupPage / LoginPage
+hero items desc「用一個 link」→「用一個連結」；「下次規劃直接拉進 trip」
+→「下次規劃直接拉進行程」；「POI 一鍵加入下次 trip」→「景點一鍵加入下次旅程」。
+SignupPage form sub「用 email + 密碼註冊」→「用電子郵件 + 密碼註冊」。
+
 同 v2.31.61 / v2.31.62 zh-TW 系列收尾，不留半個英文。
 
 ## [2.31.62] - 2026-05-17
