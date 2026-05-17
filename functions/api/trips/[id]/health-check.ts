@@ -39,6 +39,10 @@ const HEALTH_CHECK_MESSAGE = `${HEALTH_CHECK_PREFIX} 請以資深旅遊規劃師
 - \`medium\` = 體驗會打折（繞路 30min+、缺餐、開閉店）
 - \`low\` = 可選優化（rating 偏低、可加更順路的景點）
 
+**用詞規定（title / description / suggestion 三欄）**：
+- 一律使用繁體中文。**禁用** schema field 借詞：「entry」→「景點」、「min」→「分鐘」、「km」→「公里」、「POI」→「景點」、「check-in」→「入住」、「buffer」→「緩衝時間」、「rating」→「評分」、「travel」→「移動」、「polyline」→「路線」、「alt」→「替代」。
+- 範例：禁用「Day 2 重疊 entry 877」→ 用「Day 2 第 877 號景點重疊」。
+
 **回傳純 JSON array，不要 markdown fence、不要前後文字。**
 
 Schema：
@@ -53,11 +57,11 @@ Schema：
 }]
 \`\`\`
 
-範例（1 high + 1 low）：
+範例（1 high + 1 low，注意全中文用詞）：
 \`\`\`json
 [
-  {"severity":"high","dimension":"timing","title":"Day 2 飯店 check-in 衝突","description":"Day 2 末站 17:10 結束，但 travel 45 min → 17:30 check-in 物理上不可行","suggestion":"把 Day 2 末站換成更近的景點，或前移時間","action_target":{"day":2,"entry_id":42}},
-  {"severity":"low","dimension":"sights","title":"可加美麗海水族館","description":"Day 5 北上路線順路 5km，是沖繩必排景點","suggestion":"插入 Day 5 上午","action_target":{"day":5}}
+  {"severity":"high","dimension":"timing","title":"Day 2 飯店入住衝突","description":"Day 2 末站 17:10 結束，但移動 45 分鐘後 17:30 入住物理上不可行","suggestion":"把 Day 2 末站換成更近的景點，或前移時間","action_target":{"day":2,"entry_id":42}},
+  {"severity":"low","dimension":"sights","title":"可加美麗海水族館","description":"Day 5 北上路線順路 5 公里，是沖繩必排景點","suggestion":"插入 Day 5 上午","action_target":{"day":5}}
 ]
 \`\`\`
 
