@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.50] - 2026-05-17
+
+**Mockup align with prod loop ship — terracotta-preview-v2.html + DESIGN.md
+回頭對齊本 loop 多輪 polish/fix。**
+
+### Updated: terracotta-preview-v2.html
+
+對齊 v2.31.47 chat picker button 拔 trip name span：
+- 拔 6 處 `<span class="tp-titlebar-trip-picker-name">沖繩...</span>` 從 7
+  個 chat header sample frames（剩 2 個是 CSS 規則註解）。
+- CSS `.tp-titlebar-trip-picker-name` rule + `.tp-page-frame-compact` 對應
+  `.tp-titlebar-trip-picker-name` hide rule 都拔，留 explanatory comment。
+- 2 處 page-frame-label 描述「SVG icon + 行程名」改「SVG icon + ▾,v2.31.47
+  拔名稱避免跟 title 重複」。
+- Comment block 規範描述更新對齊 production behavior。
+
+對齊 v2.31.43 explore heart toggle off hover 紅化：
+- `.tp-explore-card-fav.is-saved:hover` 加紅化 + `transform: scale(1.05)`
+  affordance（暗示「點擊取消收藏」雙 affordance）。
+- fallback color inline `#fee2e2 / #b91c1c`（mockup 沒定義 priority tokens）。
+
+### Updated: DESIGN.md
+
+`.tp-titlebar-trip-picker` 規範描述更新 — v2.31.47 起 icon + chevron only，
+dropdown rows 顯每個 trip name 不變。
+
 ## [2.31.49] - 2026-05-17
 
 **TripSheet map tab collapse 4px — v2.31.48 hidden tabpanel fix follow-up。**
