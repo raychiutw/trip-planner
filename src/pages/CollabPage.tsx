@@ -99,7 +99,7 @@ export default function CollabPage() {
             </div>
           </div>
         }
-        bottomNav={<GlobalBottomNav authed={!!user} />}
+        bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     );
   }
@@ -123,7 +123,7 @@ export default function CollabPage() {
             <CollabPanel tripId={tripId} />
           </div>
         }
-        bottomNav={<GlobalBottomNav authed={!!user} />}
+        bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     </>
   );

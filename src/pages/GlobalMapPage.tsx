@@ -1177,7 +1177,7 @@ export default function GlobalMapPage() {
       sidebar={<DesktopSidebarConnected />}
       main={main}
       sheet={sheet}
-      bottomNav={<GlobalBottomNav authed={!!user} />}
+      bottomNav={<GlobalBottomNav authed={user !== null} />}
     />
   );
 }

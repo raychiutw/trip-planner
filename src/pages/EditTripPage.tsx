@@ -545,7 +545,7 @@ export default function EditTripPage() {
             </div>
           </div>
         }
-        bottomNav={<GlobalBottomNav authed={!!user} />}
+        bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     );
   }
@@ -796,7 +796,7 @@ export default function EditTripPage() {
             )}
           </div>
         }
-        bottomNav={<GlobalBottomNav authed={!!user} />}
+        bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     </>
   );

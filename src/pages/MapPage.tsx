@@ -551,7 +551,7 @@ export default function MapPage() {
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       main={main}
-      bottomNav={<GlobalBottomNav authed={!!user} />}
+      bottomNav={<GlobalBottomNav authed={user !== null} />}
     />
   );
 }

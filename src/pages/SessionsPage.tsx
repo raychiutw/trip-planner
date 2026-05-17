@@ -239,7 +239,7 @@ export default function SessionsPage() {
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
-      bottomNav={<GlobalBottomNav authed={!!user} />}
+      bottomNav={<GlobalBottomNav authed={user !== null} />}
       main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-sessions-shell" data-testid="sessions-page">
