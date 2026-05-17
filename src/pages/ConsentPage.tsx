@@ -86,7 +86,9 @@ const SCOPED_STYLES = `
 }
 .tp-consent-error {
   padding: 12px 16px; border-radius: var(--radius-md);
-  background: #fee2e2; color: #991b1b;
+  /* v2.31.58 fix：原本 hardcoded #fee2e2/#991b1b 不跟 dark mode token，
+     用 destructive token 對應 light/dark 自動切換。 */
+  background: var(--color-destructive-bg); color: var(--color-destructive);
   font-size: var(--font-size-callout);
 }
 `;
@@ -123,7 +125,8 @@ export default function ConsentPage() {
 
   useEffect(() => {
     if (!clientId) {
-      setError('Missing client_id');
+      // v2.31.58 zh-TW fix：原本英文「Missing client_id」 — user 看不懂、不一致。
+      setError('授權連結缺少必要參數 client_id，請從應用商家提供的連結重新進入。');
       return;
     }
     // V2-P5 next slice: fetch /api/oauth/client-info?client_id=... → app_name + logo + description

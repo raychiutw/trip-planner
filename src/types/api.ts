@@ -44,6 +44,8 @@ export const ErrorCode = {
   POI_NOT_ALTERNATE: 'POI_NOT_ALTERNATE',
   MISSING_MASTER: 'MISSING_MASTER',
   INVALID_ORDER: 'INVALID_ORDER',
+  // AI 健檢 guard (v2.31.58)
+  TRIP_EMPTY: 'TRIP_EMPTY',
 } as const;
 
 export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
@@ -73,6 +75,7 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   POI_NOT_ALTERNATE: '此景點不是此 stop 的備選',
   MISSING_MASTER: '每個 stop 必須有正選景點',
   INVALID_ORDER: '備選排序格式不正確',
+  TRIP_EMPTY: '此行程尚無景點，請先加入景點再執行健檢',
 };
 
 // ---------------------------------------------------------------------------
