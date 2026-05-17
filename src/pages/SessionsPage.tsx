@@ -315,7 +315,11 @@ export default function SessionsPage() {
                     </div>
                     <div className="tp-device-detail">
                       建立 {relativeTime(s.created_at)}
-                      {s.ip_hash_prefix && ` · IP ${s.ip_hash_prefix}…`}
+                      {s.ip_hash_prefix && (
+                        <span title="IP 位址的雜湊前綴（privacy）— 同一網路下相同">
+                          {' · 裝置 ID '}{s.ip_hash_prefix}…
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
