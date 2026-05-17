@@ -547,7 +547,7 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     });
   });
 
-  it('刪除整個 stop button 渲染 + tap 開 confirm modal', async () => {
+  it('刪除整個停留點 button 渲染 + tap 開 confirm modal', async () => {
     setupAltsMocks();
     renderPage();
     await waitFor(() => {
@@ -558,12 +558,12 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
     });
     const modalText = screen.getByTestId('confirm-modal').textContent ?? '';
-    expect(modalText).toMatch(/刪除整個 stop/);
+    expect(modalText).toMatch(/刪除整個停留點/);
     expect(modalText).toMatch(/花織そば/);
     expect(modalText).toMatch(/2 個備選/);
   });
 
-  it('Confirm 刪除 stop → 呼叫 DELETE /entries/:id + navigate back', async () => {
+  it('Confirm 刪除停留點 → 呼叫 DELETE /entries/:id + navigate back', async () => {
     setupAltsMocks();
     renderPage();
     await waitFor(() => {
