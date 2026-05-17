@@ -659,7 +659,7 @@ export default function ChangePoiPage() {
           const text = await res.text();
           if (res.status === 409) {
             const code = parseErrorCode(text);
-            if (code === 'DUPLICATE_POI') throw new Error('此景點已存在於 stop 中');
+            if (code === 'DUPLICATE_POI') throw new Error('此景點已存在於這個停留點');
             throw new Error('資料已被其他操作更新，請重新整理');
           }
           throw new Error(`加備選失敗 (${res.status}): ${text.slice(0, 200)}`);
