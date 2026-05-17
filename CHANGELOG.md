@@ -3,6 +3,48 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.46] - 2026-05-17
+
+**Desktop trip detail sticky map regression fix（v2.17.17 起 ~3 個月）— React Portal
+based，避開 v2.31.41 #604 setState-from-effect 引發的 prod ErrorBoundary。**
+
+### Fixed: viewport ≥1024 trip detail 右側 sticky map 缺席
+
+**Bug 取證**：v2.17.17 把 `TripPage` 改 embedded mode（`noShell=true`），
+TripsListPage 沒接 sheet → AppShell 退化 3-pane→2-pane，右側空白 ~40vw，
+違反 `CLAUDE.md` 「Desktop ≥1024px: 2-col timeline + sticky map」spec。
+
+**v2.31.41 #604 第一次 fix 失敗**：用 callback prop + `setSheet(content)` in
+useEffect → strict mode 雙倍 fire + useMemo deps `mapRailData.allPins`
+identity 變動 → infinite re-render → prod 觸發 ErrorBoundary，已 revert #606。
+
+**v2.31.46 safer approach — React Portal**：
+1. **`AppShell.tsx`** 加 `sheetPortalId?: string` prop。設定後即使 `sheet`
+   為空也 render `<aside id={sheetPortalId} className="app-shell-sheet" />`，
+   且 layout 用 3-pane（讓 grid 第 3 column 存在給 portal 掛載）。
+2. **`TripsListPage.tsx`** embedded mode 傳
+   `sheetPortalId={showEmbeddedTrip ? 'trip-sheet-portal' : undefined}`。
+3. **`TripPage.tsx`** embedded mode：
+   - `useEffect` lookup `document.getElementById('trip-sheet-portal')` 拿
+     DOM target → `setSheetPortalNode`（一次性，deps 只 `noShell`）。
+   - return fragment 含 `<wrappedMain>` + `createPortal(sheetContent, sheetPortalNode)`。
+
+**為何 portal 安全**：
+- Portal render 內容**直接掛 target DOM**，不經 parent setState → 無
+  re-render 風暴。
+- `useEffect` 只在 mount 時 lookup DOM 一次（deps `noShell`），strict mode
+  雙倍 fire setState 同值 → React bail out 不 re-render。
+- 不需要 callback prop 雙向溝通 → 無 v2.31.41 setState-from-effect race。
+
+**Test**：8 個 source-grep regression（AppShell prop / layout 3-pane 條件 /
+aside id / TripsListPage wire / TripPage createPortal import / portal node
+lookup / portal render call / 不再用 setSheet callback pattern）+ 既有 unit
+suite 1712/1712 GREEN，tsc clean。
+
+**注意**：本 PR 仍須 prod verify — 之前 #604 因 prod ErrorBoundary 才被抓到，
+unit/tsc green 不代表 strict mode race 完全消除。Portal approach 理論上安全，
+但 deploy 後 desktop viewport 仍須人工 verify。
+
 ## [2.31.45] - 2026-05-17
 
 **SessionsPage「IP TSdE1hEx…」label 改「裝置 ID」 — prod QA loop wording polish。**
