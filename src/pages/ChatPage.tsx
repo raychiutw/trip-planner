@@ -711,7 +711,7 @@ export default function ChatPage() {
     <div className="tp-chat-shell" data-testid="chat-page">
       <style>{SCOPED_STYLES}</style>
       <TitleBar
-        title={activeTrip?.title || activeTrip?.name || '聊天'}
+        title="聊天"
         actions={trips && trips.length > 0 && (
           <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
             <button

@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.47] - 2026-05-17
+
+**ChatPage TitleBar 重複顯 trip name — prod QA loop polish。**
+
+### Fixed: /chat TitleBar title 跟 trip switcher 重複
+
+`ChatPage.tsx:714` title 顯 `activeTrip?.title || ... || '聊天'`，actions
+區的 trip picker button 也顯同一 trip name → user 看「2026 沖繩五日自駕遊行程表
+⇄ 2026 沖繩五日自駕遊...」兩個都是同字串視覺冗餘。
+
+對齊其他 page convention（SessionsPage title「登入裝置」/ AppearancePage title
+「外觀設定」都是 page label not data）：title 改固定「聊天」，actions 區 trip
+picker 維持顯 active trip name + switch。
+
+**Test**：3 個 source-grep regression（title literal「聊天」/ picker name regression /
+不再 dual-render activeTrip name as title）。
+
 ## [2.31.45] - 2026-05-17
 
 **SessionsPage「IP TSdE1hEx…」label 改「裝置 ID」 — prod QA loop wording polish。**
