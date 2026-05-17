@@ -617,6 +617,25 @@ function TripPageInner(
   }), [handleDownloadFormat, togglePrint, trip, effectiveUrlTripId, navigate, currentDayNum]);
   const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
 
+  // v2.31.54 simplify follow-up：useMemo 避免每次 TripPage render 重建
+  // sheetContent JSX tree → portal subtree React reconcile 浪費。Deps =
+  // 實質會影響 TripSheet render 的 props（mapRailData 已是 useMemo stable
+  // identity，loading/trip/isDark 是 source state）。
+  // v2.31.55 fix：必須放在 early returns 之前，否則 hook order 不一致
+  // (loading path vs loaded path call count 不同) → React crash → e2e 全 timeout。
+  const sheetContent = useMemo<ReactNode | undefined>(() => (
+    !loading && trip ? (
+      <Suspense fallback={null}>
+        <TripSheet
+          tripId={trip.id}
+          allPins={mapRailData.allPins}
+          pinsByDay={mapRailData.pinsByDay}
+          dark={isDark}
+        />
+      </Suspense>
+    ) : undefined
+  ), [loading, trip, mapRailData.allPins, mapRailData.pinsByDay, isDark]);
+
   /* --- Early returns (#13: use hoisted static views) --- */
   if (resolveState.status === 'unpublished') return UNPUBLISHED_VIEW;
   if (resolveState.status === 'loading') return LOADING_VIEW;
@@ -641,23 +660,6 @@ function TripPageInner(
       </div>
     );
   }
-
-  // v2.31.54 simplify follow-up：useMemo 避免每次 TripPage render 重建
-  // sheetContent JSX tree → portal subtree React reconcile 浪費。Deps =
-  // 實質會影響 TripSheet render 的 props（mapRailData 已是 useMemo stable
-  // identity，loading/trip/isDark 是 source state）。
-  const sheetContent = useMemo<ReactNode | undefined>(() => (
-    !loading && trip ? (
-      <Suspense fallback={null}>
-        <TripSheet
-          tripId={trip.id}
-          allPins={mapRailData.allPins}
-          pinsByDay={mapRailData.pinsByDay}
-          dark={isDark}
-        />
-      </Suspense>
-    ) : undefined
-  ), [loading, trip, mapRailData.allPins, mapRailData.pinsByDay, isDark]);
 
   // 「更多」 sheet 4 action 已遷移新家:
   // 共編 → trip TitleBar；切換行程 → /trips；外觀 → AccountPage；下載 → OverflowMenu
