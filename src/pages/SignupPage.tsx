@@ -218,7 +218,7 @@ export default function SignupPage() {
 
         <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
           <div className="tp-form-row">
-            <label htmlFor="signup-email">Email</label>
+            <label htmlFor="signup-email">電子郵件</label>
             <input
               id="signup-email"
               type="email"
