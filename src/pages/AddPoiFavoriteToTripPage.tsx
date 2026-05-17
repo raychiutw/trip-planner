@@ -258,7 +258,7 @@ export default function AddPoiFavoriteToTripPage() {
     if (isDirectMode) {
       // direct mode：不打 /poi-favorites endpoint
       if (!directPoi) {
-        setLoadError('POI 資料缺漏 — 請從探索頁重新進入');
+        setLoadError('景點資料缺漏，請從探索頁重新進入');
         return;
       }
       let cancelled = false;

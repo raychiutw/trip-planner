@@ -1512,7 +1512,7 @@ export default function EditEntryPage() {
       <ConfirmModal
         open={altRemoveConfirm != null}
         title="移除備選"
-        message={altRemoveConfirm ? `將從這個停留點移除備選「${altRemoveConfirm.name}」。POI 本身不會被刪除，仍可從搜尋或收藏再次加入。` : ''}
+        message={altRemoveConfirm ? `將從這個停留點移除備選「${altRemoveConfirm.name}」。景點本身不會被刪除，仍可從搜尋或收藏再次加入。` : ''}
         confirmLabel="移除備選"
         cancelLabel="取消"
         busy={altPending != null}

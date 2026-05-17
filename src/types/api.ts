@@ -67,7 +67,7 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   SYS_INTERNAL: '系統發生錯誤，已通知開發團隊',
   SYS_DB_ERROR: '資料庫忙碌中，請稍後再試',
   SYS_RATE_LIMIT: '操作太頻繁，請稍等',
-  COMPANION_QUOTA_EXCEEDED: '此 request 已執行過此操作',
+  COMPANION_QUOTA_EXCEEDED: '此請求已執行過此操作',
   MAPS_LOCKED: '本月 Google API 已達配額，月初恢復',
   MAPS_UPSTREAM_FAILED: 'Google Maps 服務暫時無法回應，請稍後再試',
   STALE_ENTRY: '資料已被其他操作更新，請重新整理',
