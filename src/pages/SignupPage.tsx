@@ -153,7 +153,7 @@ export default function SignupPage() {
       const code = errJson?.error?.code ?? 'UNKNOWN';
       switch (code) {
         case 'SIGNUP_INVALID_EMAIL':
-          setEmailError('Email 格式無效');
+          setEmailError('電子郵件格式無效');
           break;
         case 'SIGNUP_INVALID_PASSWORD':
           setPasswordError('密碼至少 8 字元');
@@ -163,7 +163,7 @@ export default function SignupPage() {
             kind: 'error',
             node: (
               <span>
-                此 email 已註冊。<a href="/login">改用登入</a> 或{' '}
+                此電子郵件已註冊。<a href="/login">改用登入</a> 或{' '}
                 <a href="/login/forgot">忘記密碼</a>。
               </span>
             ),
