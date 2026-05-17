@@ -28,7 +28,9 @@ describe('v2.31.34 DeveloperAppsPage mobile bottomNav', () => {
   });
 
   it('AppShell 傳 bottomNav prop（GlobalBottomNav with authed）', () => {
-    expect(SRC).toMatch(/bottomNav=\{<GlobalBottomNav authed=\{!!user\}\s*\/>\}/);
+    // v2.31.40 update: callsite 從 `!!user` 改 `user !== null`（auth flicker fix），
+    // regex 放寬接受任一 authed expression。
+    expect(SRC).toMatch(/bottomNav=\{<GlobalBottomNav authed=\{[^}]+\}\s*\/>\}/);
   });
 
   it('sidebar prop 維持 DesktopSidebarConnected（regression）', () => {
