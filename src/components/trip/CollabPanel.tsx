@@ -330,7 +330,7 @@ const ROLE_BADGE_INFO: Record<CollabRole, { label: string; class: string }> = {
 
 const ROLE_DESCRIPTIONS: Record<EditableRole, string> = {
   member: '可檢視 + 編輯所有內容',
-  viewer: '只可檢視,不能編輯',
+  viewer: '只可檢視，不能編輯',
 };
 
 export interface CollabPanelProps {
@@ -501,7 +501,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
       <style>{SCOPED_STYLES}</style>
 
       <p className="tp-collab-hint">
-        共編成員可<strong>檢視與編輯</strong>此行程,檢視成員只可<strong>檢視</strong>。輸入對方的 email,他們下次登入會在自己的行程列表看到。
+        共編成員可<strong>檢視與編輯</strong>此行程，檢視成員只可<strong>檢視</strong>。輸入對方的 email，他們下次登入會在自己的行程列表看到。
       </p>
 
       <section className="tp-collab-section">
@@ -516,7 +516,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
           <div className="tp-collab-empty" role="alert">{permError}</div>
         )}
         {!permLoading && !permError && permissions.length === 0 && (
-          <div className="tp-collab-empty">尚未授權任何成員,可在下方新增。</div>
+          <div className="tp-collab-empty">尚未授權任何成員，可在下方新增。</div>
         )}
         {!permLoading && !permError && permissions.length > 0 && (
           <div className="tp-collab-list" role="list">
@@ -713,7 +713,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
       <ConfirmModal
         open={!!revokeTarget}
         title="撤銷邀請"
-        message={revokeTarget ? `對 ${revokeTarget} 的邀請將失效,對方收到的邀請信點下後會看到「邀請已撤銷」。` : ''}
+        message={revokeTarget ? `對 ${revokeTarget} 的邀請將失效，對方收到的邀請信點下後會看到「邀請已撤銷」。` : ''}
         confirmLabel="撤銷"
         busy={revokingEmail !== null}
         onConfirm={() => void confirmRevokeInvite()}

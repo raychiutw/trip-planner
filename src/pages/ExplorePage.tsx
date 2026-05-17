@@ -844,7 +844,7 @@ export default function ExplorePage() {
               <div className="explore-landing-empty" data-testid="explore-landing-empty">
                 <div className="landing-eyebrow">沒拿到結果</div>
                 <h3 className="landing-title">試試這些</h3>
-                <p className="landing-copy">看起來這個地區暫時沒結果,點下方建議或自行搜尋。</p>
+                <p className="landing-copy">看起來這個地區暫時沒結果，點下方建議或自行搜尋。</p>
                 <div className="landing-chips">
                   {SUGGESTED_QUERIES.map((s) => (
                     <button

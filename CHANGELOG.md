@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.57] - 2026-05-17
+
+**繁體中文 Typography fix — user-visible 半形逗號 → 全形「，」。**
+
+### Fixed: 5 處 user-visible 半形 ASCII comma in 中文 strings
+
+繁體中文（台灣）排版慣例：中文句子用全形「，」分隔，不是半形「,」。
+prod QA 看 collab 頁面 helper 文案發現「對方的 email,他們下次登入會...」
+用半形逗號 — 在中文 paragraph 中視覺斷裂、不符合 zh-TW typography 標準。
+
+**修 5 處**：
+- `CollabPanel.tsx:333` — viewer role 描述「只可檢視,不能編輯」
+- `CollabPanel.tsx:504` — collab page header 兩處
+- `CollabPanel.tsx:519` — 空成員 placeholder
+- `CollabPanel.tsx:716` — 撤銷邀請 confirm message
+- `ExplorePage.tsx:847` — landing empty state copy
+
+註解（comments）內的半形逗號保留，純 code-doc 不影響 user。
+
 ## [2.31.56] - 2026-05-17
 
 **AddPoiFavoriteToTripPage `tripDisplayName` 對齊 title-first canonical — prod QA 跨頁面 label 不一致。**
