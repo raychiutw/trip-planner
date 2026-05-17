@@ -134,14 +134,19 @@ const EditEntryPage = lazyWithRetry(() => import('../pages/EditEntryPage'));
 // v2.31.0: AI 健檢全頁 (severity-grouped findings, polling pending state)
 const TripHealthCheckPage = lazyWithRetry(() => import('../pages/TripHealthCheckPage'));
 
-const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
 
-/** 相容舊版 ?trip=xxx query string，轉為 /trips?selected=xxx route */
+/** 相容舊版 ?trip=xxx query string，轉為 /trips?selected=xxx route。
+ *  v2.31.59 fix：原本 fallback 寫死 'okinawa-trip-2026-Ray'（admin 的 trip），
+ *  其他 user 走 unknown route 會被 redirect 到非自己的 trip → 403。
+ *  改成沒 valid ?trip= 就回 /trips（無 selected param 讓 TripsListPage
+ *  fallback 到 user 最新編輯 trip 或顯示 empty state）。 */
 function LegacyRedirect() {
   const queryTrip = new URLSearchParams(window.location.search).get('trip');
-  const tripId = (queryTrip && /^[\w-]+$/.test(queryTrip)) ? queryTrip : DEFAULT_TRIP;
-  return <Navigate to={`/trips?selected=${encodeURIComponent(tripId)}`} replace />;
+  if (queryTrip && /^[\w-]+$/.test(queryTrip)) {
+    return <Navigate to={`/trips?selected=${encodeURIComponent(queryTrip)}`} replace />;
+  }
+  return <Navigate to="/trips" replace />;
 }
 
 /** /trip/:tripId index → /trips?selected=:tripId（unified URL pattern）*/
