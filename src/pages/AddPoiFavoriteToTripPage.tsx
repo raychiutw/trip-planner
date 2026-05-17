@@ -41,9 +41,14 @@ interface DayBrief {
   label: string | null;
 }
 
-/** trip dropdown 顯示文字：name 優先，其次 title，fallback tripId */
+/** trip dropdown 顯示文字：title 優先，其次 name，fallback tripId。
+ *  v2.31.55 fix：原本 name 優先 → user 在 trips list 看到 user-set
+ *  「2026 沖繩七日遊」但加入收藏 dropdown 顯示 backend auto-generated
+ *  「Hui Yun 的沖繩之旅」(name)，跨頁面 label 不一致。對齊 TripsListPage
+ *  line 1088 / TripPickerPopover / ChatPage / MapPage / GlobalMapPage
+ *  4 處同樣 `title || name || tripId` pattern。 */
 function tripDisplayName(t: TripBrief): string {
-  return t.name?.trim() || t.title?.trim() || t.tripId;
+  return t.title?.trim() || t.name?.trim() || t.tripId;
 }
 
 const SCOPED_STYLES = `
