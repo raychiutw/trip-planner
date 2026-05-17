@@ -215,15 +215,15 @@ export default function AccountPage() {
       key: 'collab',
       label: '共編 & 整合',
       rows: [
-        { key: 'connected-apps', icon: 'device', title: '已連結 App', helper: '管理透過 Tripline 登入的應用程式', to: '/settings/connected-apps' },
-        { key: 'developer', icon: 'code', title: '開發者選項', helper: 'OAuth client app 註冊', to: '/developer/apps' },
+        { key: 'connected-apps', icon: 'device', title: '已連結的應用程式', helper: '管理透過 Tripline 登入的應用程式', to: '/settings/connected-apps' },
+        { key: 'developer', icon: 'code', title: '開發者選項', helper: 'OAuth 應用程式註冊', to: '/developer/apps' },
       ],
     },
     {
       key: 'account',
       label: '帳號',
       rows: [
-        { key: 'sessions', icon: 'group', title: '已登入裝置', helper: '管理所有 active session', to: '/settings/sessions' },
+        { key: 'sessions', icon: 'group', title: '已登入裝置', helper: '管理所有登入中的裝置', to: '/settings/sessions' },
         { key: 'logout', icon: 'x-mark', title: '登出', helper: '清除目前裝置的登入狀態', onClick: () => setShowLogoutModal(true), danger: true },
       ],
     },
