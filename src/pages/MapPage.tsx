@@ -404,6 +404,7 @@ export default function MapPage() {
 
       <TitleBar
         title="地圖"
+        back={tripId ? () => navigate(`/trip/${encodeURIComponent(tripId)}`) : undefined}
         actions={trips && trips.length > 0 && (
           <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
             <button
