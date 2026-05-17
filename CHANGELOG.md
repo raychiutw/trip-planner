@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.56] - 2026-05-17
+
+**AddPoiFavoriteToTripPage `tripDisplayName` 對齊 title-first canonical — prod QA 跨頁面 label 不一致。**
+
+### Fixed: 同一 trip 跨頁面 label 不一致
+
+User 在 trips list 看到 user-set 標題「2026 沖繩七日遊行程表」(`trip.title`)，
+但點「加入行程」打開 AddPoiFavoriteToTripPage 後 trip dropdown 顯示
+「Hui Yun 的沖繩之旅」(`trip.name` backend auto-generated)。同一 trip 在不同
+頁面看到不同 label → user 困惑「這是同一個 trip 嗎」。
+
+**Root cause**：`tripDisplayName(t)` 寫成 `t.name || t.title || tripId`，
+但 TripsListPage:1088 / TripPickerPopover / ChatPage / MapPage / GlobalMapPage
+5 處 canonical pattern 都用 `t.title || t.name || tripId`。
+
+**Fix**：對齊 canonical pattern，title 優先 name 其次。
+
+### Regression coverage
+
+`tests/unit/add-poi-favorite-trip-display-name.test.ts` — 2 個 source-grep test。
+
 ## [2.31.55] - 2026-05-17
 
 **2 個 prod QA 發現的小 bug — ExplorePage section header + AddStopPage landing empty state。**
