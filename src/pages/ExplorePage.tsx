@@ -741,7 +741,7 @@ export default function ExplorePage() {
                 <section className="explore-section" data-testid="explore-results">
                   <h2>{sectionTitle}</h2>
                   <p className="section-meta">
-                    {filtered.length} / {results.length} 個 POI · 點愛心圖示加入我的收藏
+                    {filtered.length} / {results.length} 個景點 · 點愛心圖示加入我的收藏
                   </p>
                   {filtered.length === 0 ? (
                     // v2.31.22: filter 0 結果 empty state — 以前是空白讓 user 迷路。
