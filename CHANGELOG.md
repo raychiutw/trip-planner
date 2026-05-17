@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.63] - 2026-05-17
+
+**AccountPage 設定列 + EditEntryPage 刪除確認 zh-TW polish。**
+
+### Fixed: 9 處 user-visible 英文混雜
+
+`/account` 設定 hub 三個 settings row 的 title / helper 還是英文混雜：
+- `已連結 App` → `已連結的應用程式`
+- `OAuth client app 註冊` → `OAuth 應用程式註冊`
+- `管理所有 active session` → `管理所有登入中的裝置`
+
+`EditEntryPage` 刪除整個 entry 的 6 處 confirm modal + error message
+也還是「stop」raw English：
+- `刪除整個 stop` button label → `刪除整個停留點`
+- `刪除整個 stop？` modal title → `刪除整個停留點？`
+- `刪除 stop` modal confirmLabel → `刪除停留點`
+- `將從這個 stop 移除備選...` modal message → `將從這個停留點移除備選...`
+- `刪除 stop 失敗 (${status})` throw → `刪除停留點失敗`
+- `setError('刪除 stop 失敗')` catch fallback → `setError('刪除停留點失敗')`
+
+同 v2.31.61 / v2.31.62 zh-TW 系列收尾，不留半個英文。
+
 ## [2.31.62] - 2026-05-17
 
 **LoginPage brand hero eyebrow「Why sign in」→「登入後可以」。**
