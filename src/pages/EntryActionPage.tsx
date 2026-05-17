@@ -343,7 +343,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
             </div>
           </div>
         }
-        bottomNav={<GlobalBottomNav authed={!!user} />}
+        bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     );
   }
@@ -485,7 +485,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
             )}
           </div>
         }
-        bottomNav={<GlobalBottomNav authed={!!user} />}
+        bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     </>
   );

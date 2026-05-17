@@ -163,7 +163,7 @@ export default function DeveloperAppsPage() {
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
-      bottomNav={<GlobalBottomNav authed={!!user} />}
+      bottomNav={<GlobalBottomNav authed={user !== null} />}
       main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-dev-shell" data-testid="developer-apps-page">

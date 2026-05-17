@@ -456,7 +456,7 @@ export default function DeveloperAppNewPage() {
           </div>
         )}
       </>}
-      bottomNav={<GlobalBottomNav authed={!!user} />}
+      bottomNav={<GlobalBottomNav authed={user !== null} />}
     />
   );
 }

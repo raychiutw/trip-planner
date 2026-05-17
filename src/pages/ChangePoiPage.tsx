@@ -1028,7 +1028,7 @@ export default function ChangePoiPage() {
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       main={main}
-      bottomNav={<GlobalBottomNav authed={!!user} />}
+      bottomNav={<GlobalBottomNav authed={user !== null} />}
     />
   );
 }

@@ -926,7 +926,7 @@ export default function NewTripPage() {
             </div>
           </div>
         }
-        bottomNav={<GlobalBottomNav authed={!!user} />}
+        bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
     </>
   );
