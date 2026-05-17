@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.51] - 2026-05-17
+
+**Mockup empty state align prod loop ship — v2.31.50 follow-up，補 explore/favorites
+0-result placeholder UX。**
+
+### Updated: terracotta-preview-v2.html `.tp-explore-empty` CSS + 註解
+
+v2.31.22 fix #123：prod 的 ExplorePage 在 query/category 篩出 0 個結果時 render
+dashed-border placeholder + 中文「沒有符合「{label}」的結果。試試其他分類或回到
+「為你推薦」。」+ accent pill「回到為你推薦」reset。Mockup 之前無此 spec，加 CSS
+規則 + 註解註明 prod behavior + reference source。
+
+### Updated: 2026-05-04-favorites-redesign.html empty state 文案對齊
+
+Mockup line 989 之前寫「沒有符合條件的收藏。/ 清空篩選」，prod 改「目前的篩選沒
+有符合的收藏 / 清除篩選」。對齊 prod wording。
+
 ## [2.31.50] - 2026-05-17
 
 **Mockup align with prod loop ship — terracotta-preview-v2.html + DESIGN.md

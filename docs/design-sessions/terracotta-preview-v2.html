@@ -4279,6 +4279,20 @@
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
+  /* v2.31.22 empty state（filter 0 result）：當 query / category 篩出 0 個結果，
+   * 用 dashed-border placeholder + 中文文案「沒有符合「{label}」的結果。試試其他
+   * 分類或回到「為你推薦」。」+ accent pill button「回到為你推薦」reset 篩選回
+   * 'all'。avoid 「grid 空白讓 user 迷路」UX gap。Spec source: src/pages/ExplorePage.tsx
+   * (v2.31.22 fix #123)。 */
+  .tp-explore-empty {
+    grid-column: 1 / -1;
+    border: 1px dashed var(--tp-border);
+    border-radius: var(--tp-radius-md);
+    padding: 32px 24px;
+    text-align: center;
+    color: var(--tp-muted);
+    display: flex; flex-direction: column; gap: 12px; align-items: center;
+  }
   .tp-explore-card {
     border: 1px solid var(--tp-border);
     border-radius: var(--tp-radius-md);
