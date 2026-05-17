@@ -3,31 +3,6 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.31.41] - 2026-05-17
-
-**Desktop trip detail 缺右側 sticky map regression 修正（v2.17.17 起）。**
-
-### Fixed: Desktop ≥1024px trip detail 缺右側 sticky map
-
-QA loop @ /trips?selected=… viewport 1440 截圖：右側 sticky map 完全不 render，timeline cards 右邊大量空白。違反 CLAUDE.md「Desktop ≥1024px: 2-col timeline + sticky map」spec。
-
-Root cause：v2.17.17 把 `TripPage` 改 embedded mode (`noShell=true`)，sheet 內容（`<TripSheet>` with 地圖 + pins）直接被 throw away；host `TripsListPage` 也沒 pass `sheet` prop 給 AppShell → desktop 3-pane 退化成 2-pane (sidebar + main only)。
-
-### Fix
-
-- `src/pages/TripPage.tsx`
-  - `TripPageProps` 加 `setSheet?: (node: ReactNode | undefined) => void`
-  - `sheetContent` 改 `useMemo`（穩定 identity 避免 host re-render 風暴）
-  - `useEffect`：embedded mode 把 `sheetContent` 推給 host；cleanup 回 `undefined`
-- `src/pages/TripsListPage.tsx`
-  - `useState` `embeddedSheet`
-  - 把 `setSheet={setEmbeddedSheet}` 傳給 embedded `<TripPage>`
-  - AppShell 加 `sheet={embeddedSheet}` prop
-
-### Tests
-
-`tests/unit/desktop-sticky-map-wiring.test.ts`：8 個 source-grep regression（TripPageProps signature / destructure / useEffect / cleanup / useMemo + TripsListPage useState / setSheet prop / AppShell sheet prop）。
-
 ## [2.31.40] - 2026-05-17
 
 **GlobalBottomNav auth flicker 修正 — 22 callsite 統一 loading-aware。**
