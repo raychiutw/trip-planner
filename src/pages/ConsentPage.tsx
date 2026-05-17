@@ -123,7 +123,8 @@ export default function ConsentPage() {
 
   useEffect(() => {
     if (!clientId) {
-      setError('Missing client_id');
+      // v2.31.58 zh-TW fix：原本英文「Missing client_id」 — user 看不懂、不一致。
+      setError('授權連結缺少必要參數 client_id，請從應用商家提供的連結重新進入。');
       return;
     }
     // V2-P5 next slice: fetch /api/oauth/client-info?client_id=... → app_name + logo + description
