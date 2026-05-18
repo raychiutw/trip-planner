@@ -3,6 +3,36 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.74] - 2026-05-18
+
+**AI 健檢 findings backend post-process sanitizer — regex 強制替換 schema 詞不靠 LLM 服從。**
+
+### Fixed: Day 2 早餐 finding suggestion 「新增早餐 entry 並掛具體店家」leak
+
+prod browse QA (沖繩七日遊行程表，7 個 findings) 驗證 v2.31.65 prompt 用詞規定，6/7 全清 lean 但 1 處 leak：「新增早餐 **entry** 並掛具體店家」(Day 2 早餐 finding suggestion)。
+
+v2.31.65 強化 prompt instruction 仍無法 100% 服從 — Claude 在較長 prose 中偶爾退回 schema 借詞。改用 **backend regex sanitizer** 在 `sanitizeFindings()` 對 title / description / suggestion 三欄套 word-boundary regex 強制替換。
+
+`functions/api/requests/[id]/index.ts` 新 export `sanitizeSchemaWords(s: string)`：
+
+| Banword | Replacement |
+|---------|-------------|
+| `entry` / `entries` (case-insensitive) | `景點` |
+| `POI` / `POIs` (case-sensitive — acronym) | `景點` |
+| `check-in` / `check in` | `入住` |
+| `(\d+)\s*min` (numbered) | `$1 分鐘` |
+| `(\d+)\s*km` (numbered) | `$1 公里` |
+| `travel min` (no number) | `移動時間` |
+| `travel` (standalone) | `移動` |
+| `polyline` | `路線` |
+| `buffer` | `緩衝時間` |
+| `rating` | `評分` |
+| `alt` | `替代` |
+
+Regex 用 `\b` word-boundary 避免 false positive（`altitude` / `minute` / `alternate` 不被誤改）。
+
+10 個 unit test 涵蓋每個替換規則 + 邊界 case + prod 實際 leak 字串。tsc clean、build pass。
+
 ## [2.31.73] - 2026-05-18
 
 **Add 3 missing security headers in `public/_headers` — X-Frame-Options / HSTS / Permissions-Policy。**
