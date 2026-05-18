@@ -46,6 +46,13 @@ const SCOPED_STYLES = `
   font: inherit; font-size: 14px;
 }
 .trip-sheet-close:hover { border-color: var(--color-accent); color: var(--color-accent); }
+/* v2.31.81 #4：桌機 ≥1024px sheet 是 always-on 右側 column（3-pane layout 由
+ * AppShell 控），X 點下去 URL 改 closeSheet 但 sheet 仍 mount → user 看到「X 沒用」。
+ * 桌機 hide X — sheet 切換靠 tab header (.trip-sheet-tabs)，不需 close。
+ * Mobile <1024px X 仍保留（mobile sheet 是 slide-up overlay，X dismiss 合理）。 */
+@media (min-width: 1024px) {
+  .trip-sheet-close { display: none; }
+}
 .trip-sheet-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .trip-sheet-placeholder {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;

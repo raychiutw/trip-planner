@@ -279,6 +279,16 @@ const SCOPED_STYLES = `
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   color: var(--color-foreground); cursor: pointer;
   min-height: 32px;
+  /* v2.31.81 #3：pill 風格 select — 拔 native chrome + 自訂 chevron right-padding */
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B85F2A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px 14px;
+  padding-right: 28px;
+}
+body.dark .tp-trips-sort {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFBF5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
 }
 .tp-trips-search {
   display: inline-flex; align-items: center; gap: 6px;

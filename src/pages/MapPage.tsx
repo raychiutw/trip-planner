@@ -370,15 +370,23 @@ export default function MapPage() {
     return () => observer.disconnect();
   }, [cardEntryPins, activeTab]);
 
-  /* --- Card click → scroll into view + set active --- */
+  /* --- Card click → scroll into view + set active + sync day nav (v2.31.81 #1) --- */
   const handleCardClick = useCallback((entryId: number) => {
     setActiveEntryId((prev) => (prev === entryId ? prev : entryId));
+    // v2.31.81 #1：overview 模式 user 點 map pin 時，day nav 沒切到該 entry 的
+    // 那一天 — 用 entryDayMap 反查 dayNum，call handleTabClick 同步。
+    if (isOverview) {
+      const targetDay = entryDayMap.get(entryId);
+      if (typeof targetDay === 'number') {
+        handleTabClick(targetDay);
+      }
+    }
     const el = cardsRef.current?.querySelector<HTMLElement>(`[data-card-entry-id="${entryId}"]`);
     if (!el) return;
     scrollingProgrammatically.current = true;
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     setTimeout(() => { scrollingProgrammatically.current = false; }, 400);
-  }, []);
+  }, [isOverview, entryDayMap, handleTabClick]);
 
   /* --- On tab change / initial mount: scroll active card into centre BEFORE IO stabilises --- */
   useEffect(() => {
@@ -403,7 +411,8 @@ export default function MapPage() {
       <style>{SCOPED_STYLES}</style>
 
       <TitleBar
-        title="地圖"
+        // v2.31.81：title bar 對齊 ChatPage 格式 — 左 trip name，右 icon-only picker。
+        title={trip?.title || trip?.name || '地圖'}
         back={tripId ? () => navigate(`/trip/${encodeURIComponent(tripId)}`) : undefined}
         actions={trips && trips.length > 0 && (
           <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
@@ -415,11 +424,9 @@ export default function MapPage() {
               aria-haspopup="menu"
               aria-expanded={tripMenuOpen}
               aria-label="切換行程"
+              title="切換行程"
             >
               <Icon name="swap-horiz" />
-              <span className="tp-titlebar-trip-picker-name">
-                {trip?.title || trip?.name || tripId || '選擇行程'}
-              </span>
               <span className="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
             </button>
             {tripMenuOpen && (

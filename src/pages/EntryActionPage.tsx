@@ -173,6 +173,17 @@ const SCOPED_STYLES = `
   background: var(--color-secondary);
   min-height: var(--spacing-tap-min);
   color: var(--color-foreground);
+  /* v2.31.81 #3：拔 native UA chrome + 加 site-style chevron（accent terracotta） */
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B85F2A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+  padding-right: 36px;
+  cursor: pointer;
+}
+body.dark .tp-entry-action-time-select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFBF5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
 }
 .tp-entry-action-time-select:focus {
   outline: none; border-color: var(--color-accent);
