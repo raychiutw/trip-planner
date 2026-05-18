@@ -177,6 +177,7 @@ export default function DeveloperAppsPage() {
             className="tp-titlebar-action"
             onClick={() => navigate('/developer/apps/new')}
             aria-label="建立新應用"
+            title="建立新應用"
             data-testid="dev-apps-new"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">

@@ -8,9 +8,9 @@ import Icon from '../shared/Icon';
  * EntryActionPage / DeveloperAppNewPage). Single source for testid + busy state +
  * aria-label conventions.
  *
- * Visual: rounded-rect (radius-md), accent filled, icon + responsive label
- * (label hidden on mobile via `.tp-titlebar-action-label` @media). See
- * DESIGN.md "Page Titlebar > Action button" + mockup S23.
+ * Visual: rounded-rect (radius-md), accent filled, icon-only (v2.31.90+).
+ * Label hidden 全 viewport via `.tp-titlebar-action-label { display: none }`，
+ * hover tooltip (title attr) 補語意。See DESIGN.md "Page Titlebar > Action button" + mockup S23.
  */
 export interface TitleBarPrimaryActionProps {
   /** Icon name from src/components/shared/Icon registry. Default: 'check'. */
@@ -42,6 +42,7 @@ export default function TitleBarPrimaryAction({
       onClick={onClick}
       disabled={disabled || busy}
       aria-label={displayLabel}
+      title={displayLabel}
       data-testid={testId}
     >
       <Icon name={icon} />

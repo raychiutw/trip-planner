@@ -942,6 +942,7 @@ export default function TripsListPage() {
               className="tp-titlebar-action"
               onClick={openNewTrip}
               aria-label="新增行程"
+              title="新增行程"
               data-testid="trips-list-new-trip-titlebar"
             >
               <Icon name="plus" />

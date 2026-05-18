@@ -255,6 +255,7 @@ export default function SessionsPage() {
             onClick={() => setRevokeAllConfirmOpen(true)}
             disabled={revokingAll}
             aria-label="登出其他全部裝置"
+            title="登出其他全部裝置"
             data-testid="sessions-revoke-all"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
