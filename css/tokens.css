@@ -1409,13 +1409,14 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   padding: 0;
   justify-content: center;
 }
+/* v2.31.90：桌機也 icon-only — label 永遠 display:none，hover tooltip (title attr) 補語意。 */
+.tp-titlebar-action-label { display: none; }
 @media (max-width: 760px) {
   .tp-titlebar-action {
     width: var(--spacing-tap-min);
     padding: 0;
     justify-content: center;
   }
-  .tp-titlebar-action-label { display: none; }
 }
 
 /* primary variant — confirm action (儲存 / 完成 / 建立)。Accent 實心，
