@@ -1,8 +1,8 @@
 export interface DragScheduleEntry {
   id?: number | string | null;
   title?: string | null;
-  start_time?: string | null;
-  end_time?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
   sortOrder?: number | null;
   orderInDay?: number | null;
 }
@@ -49,15 +49,16 @@ export function formatMinutesAsClock(minutes: number): string {
 }
 
 /**
- * v2.29.0: trip_entries.time DROPPED — parse entry.{start_time, end_time} 直接。
+ * v2.29.0: trip_entries.time DROPPED — parse entry.{startTime, endTime} 直接。
+ * v2.31.77 fix #196: 改 camelCase（deepCamel'd API response）。
  */
 export function parseEntryTimeRange(
-  entry: { start_time?: string | null; end_time?: string | null },
+  entry: { startTime?: string | null; endTime?: string | null },
   fallbackDurationMinutes = DEFAULT_DURATION_MINUTES,
 ): TimeRangeMinutes | null {
-  const start = parseClockToMinutes(entry.start_time ?? '');
+  const start = parseClockToMinutes(entry.startTime ?? '');
   if (start == null) return null;
-  const parsedEnd = entry.end_time ? parseClockToMinutes(entry.end_time) : null;
+  const parsedEnd = entry.endTime ? parseClockToMinutes(entry.endTime) : null;
   let end = parsedEnd ?? start + fallbackDurationMinutes;
   if (end <= start) end += MINUTES_PER_DAY;
   return { startMinutes: start, endMinutes: end };

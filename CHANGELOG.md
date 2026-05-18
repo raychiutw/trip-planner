@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.77] - 2026-05-18
+
+**Fix #196：entry.start_time / end_time 全 frontend read path 全 broken since v2.29.0。**
+
+### Fixed: TimelineRail row 時間 chip 完全沒顯示 + 多項時間相依 logic 失效
+
+從 v2.29.0（migration 0062 `DROP COLUMN trip_entries.time`）起，backend 改回 `start_time` / `end_time`（D1 snake_case col），`json()` helper 經 `deepCamel` → response shape 是 `startTime` / `endTime` （camelCase）。但 frontend 6 個 read 模組 hard-code `entry.start_time` / `entry.end_time` snake_case，**runtime 永遠 undefined**。
+
+**影響範圍**：
+1. `src/lib/timelineUtils.ts::parseEntryTime` → TimelineRail row sub-line 時間 chip（`{parsed.start}`）永遠空字串 → UI 上看「景點 · ★ 4.2」直接接，沒時間
+2. `src/lib/drag-strategy.ts::parseEntryTimeRange` → smart placement / hasTimeConflict / getSmartPlacement 全 broken → drag-drop 新 entry 預設 09:00 永遠不會避開既有時段
+3. `src/lib/validateDay.ts::validateDay` → POI 營業時段對比的 warning 從未觸發
+4. `src/lib/weather.ts::buildWeatherDay` → entry start hour 永遠 0 → 早上 / 中午 / 傍晚 三段選 location 邏輯失效
+5. `src/lib/mapDay.ts::toTimelineEntry` → composedTime 永遠 null → entry.time display fallback 也壞
+6. `src/components/trip/TimelineEvent.tsx::TimelineEntryData` 型別宣告錯誤（讓 TS 沒 catch 此 bug）
+
+**Why prod hasn't caught fire**：desktop 行程一覽視覺重心在 POI 名稱 / 描述 / 評分；row 時間 chip 雖然消失但 user 還能從上下文推測時段，沒人 file bug。AI 健檢的時間數字（「Day 2 第 879 號景點 hoppepan 麵包店 10:13-10:33」）來自 Claude prompt context 的 entry 序列化，那條路徑不依賴 parseEntryTime → 顯示正常。Drag-drop 預設時段不避開既有 entry 也是 silently happened — user 改完才發現衝突。
+
+**Fix**：6 個檔案全部把 read 端的 `start_time` / `end_time` 改 camelCase `startTime` / `endTime`。`mapDay.ts::toTimelineEntry` output 也加 surface `startTime` / `endTime`（之前只 surface composed `time`，下游 parseEntryTime 拿不到）。
+
+**Write path 不變**：`src/pages/EditEntryPage.tsx:877-878` PATCH /trip-entries body 仍用 `body.start_time` / `body.end_time`（backend `ALLOWED_FIELDS` 是 snake_case，contract 不動）。
+
+**Test fixture 同步**：
+- `tests/unit/drag-strategy.test.ts` — 多筆 fixture `start_time` / `end_time` → `startTime` / `endTime`（之前 fixture 是 snake_case 是 stale assumption，從未驗證真實 API shape）
+- `tests/unit/stop-lightbox.test.tsx` — ENTRY fixture 改 camelCase
+
+**Regression test**：`tests/unit/v2_31_77-entry-time-camelcase-read.test.ts` — 11 個 assertion 鎖：
+- `parseEntryTime` / `parseEntryTimeRange` / `validateDay` / `buildWeatherDay` 接受 camelCase input 並回 expected 結果
+- 5 個檔 source-grep 沒有 `.start_time` / `.end_time` property reads
+- `EditEntryPage` write payload 仍含 `body.start_time` / `body.end_time`（contract lock）
+
+### Test results
+
+- 全套 vitest: **233 file / 1779 test 全綠**（+11 個新 regression）
+- tsc --noEmit: 0 errors
+- vite build: 0 errors
+
 ## [2.31.76] - 2026-05-18
 
 **Hotfix v2.31.75 follow-up：useGoogleMap 必須 await 'marker' library 才能 setMap。**

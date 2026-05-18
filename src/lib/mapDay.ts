@@ -110,8 +110,8 @@ type RawStopPoi = RawEntryPoi;
 /** Raw timeline entry as returned by the API. */
 interface RawEntry {
   id?: number | null;
-  start_time?: string | null;
-  end_time?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
   title?: string | null;
   description?: string | null;
   note?: string | null;
@@ -264,14 +264,19 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   const masterLat = poi?.lat ?? null;
   const masterLng = poi?.lng ?? null;
 
-  // v2.29.0: time DROPPED — 從 start_time/end_time 重組成顯示字串
-  const composedTime = raw.start_time && raw.end_time
-    ? `${raw.start_time}-${raw.end_time}`
-    : (raw.start_time ?? null);
+  // v2.29.0: time DROPPED — 從 startTime/endTime 重組成顯示字串
+  // v2.31.77 fix #196: 改 camelCase（deepCamel'd API response）+ surface
+  // startTime/endTime 到 output 讓下游 parseEntryTime 能讀到（原本只 surface
+  // composed `time` 但 TimelineRail 用 parseEntryTime 直接讀 startTime → 永遠空）。
+  const composedTime = raw.startTime && raw.endTime
+    ? `${raw.startTime}-${raw.endTime}`
+    : (raw.startTime ?? null);
 
   return {
     id: raw.id ?? null,
     time: composedTime,
+    startTime: raw.startTime ?? null,
+    endTime: raw.endTime ?? null,
     displayTitle,
     title: raw.title ?? null,
     description: raw.description ?? null,
