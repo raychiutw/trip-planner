@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.92] - 2026-05-18
+
+**Fix: 移除 stop toolbar 2 個重複/不需要 button + StopLightbox 改 Portal 修 backdrop 沒蓋住 viewport（user feedback 2 issue）。**
+
+### Changed
+
+- **`src/components/trip/TimelineRail.tsx`** expanded toolbar：
+  - 移除「置換景點」icon button（pin icon）— 編輯景點 path 已含此功能
+  - 移除「收合」icon button（minimize icon）— row click 已 toggle expand/collapse，重複 entry
+  - Toolbar 從 6+2 grouped 變 4+1 grouped（放大檢視 / 複製 / 移到他天 / 編輯 + spacer + 刪除）
+
+### Fixed
+
+- **`src/components/trip/StopLightbox.tsx`** backdrop overflow issue（user QA 截圖：TitleBar / day picker / sticky map 沒被 backdrop 蓋住）：
+  - 改用 `createPortal` mount 至 `document.body` — bypass embedded TripPage 的 transform / sticky containing block ancestor，確保 `position: fixed; inset: 0` 蓋滿 viewport
+  - z-index 寫死 `1100` → 改 `var(--z-modal, 9000)` 對齊系統 modal hierarchy token
+
+### Test
+
+- `tests/unit/timeline-rail-toolbar-pencil.test.tsx`：assertion 從「4 個 action button (放大/編輯/刪除/收合)」改「3 個 (放大/編輯/刪除)」，加 negative assertion `queryByTestId('timeline-rail-collapse-42')).toBeNull()` + `timeline-rail-change-poi-42` toBeNull。27/27 pass。
+
 ## [2.31.91] - 2026-05-18
 
 **Fix: chat 內 markdown link 樣式對齊 terracotta 風格（user feedback「健檢報告連結 樣式不符合網站風格」）。**

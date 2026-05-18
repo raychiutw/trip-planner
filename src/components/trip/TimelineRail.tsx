@@ -743,22 +743,8 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 <Icon name="pencil" />
               </button>
             )}
-            {/* v2.23.8 置換景點 — navigate to ChangePoiPage */}
-            {tripId && entry.id != null && (
-              <button
-                type="button"
-                className="tp-rail-action-icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entry.id}/change-poi`);
-                }}
-                aria-label="置換景點"
-                title="置換景點"
-                data-testid={`timeline-rail-change-poi-${entry.id}`}
-              >
-                <Icon name="pin" />
-              </button>
-            )}
+            {/* v2.31.92：移除「置換景點」button（編輯景點已含此功能 path）+「收合」
+                button（row click 已 toggle expand/collapse，重複 entry）。 */}
             <div className="tp-rail-action-spacer" />
             <button
               type="button"
@@ -769,16 +755,6 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               data-testid={`timeline-rail-delete-${entry.id}`}
             >
               <Icon name="trash" />
-            </button>
-            <button
-              type="button"
-              className="tp-rail-action-icon"
-              onClick={(e) => { e.stopPropagation(); onToggle(); }}
-              aria-label="收合"
-              title="收合"
-              data-testid={`timeline-rail-collapse-${entry.id}`}
-            >
-              <Icon name="minimize" />
             </button>
           </div>
         </div>
