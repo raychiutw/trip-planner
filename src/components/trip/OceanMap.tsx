@@ -131,6 +131,11 @@ export function markerStyle(
 /**
  * markerContent — build the HTMLDivElement consumed by
  * `AdvancedMarkerElement.content`. Pure DOM, no React.
+ *
+ * v2.31.79：marker 疊在一起時數字混在一起難讀。加 text-shadow halo
+ * (用 fill 當外框色) → 數字四周產生 1px ring 對比，疊圖時可分辨。
+ * box-shadow `0 0 0 1.5px ${fill}` 也加在 div 上做外圈分離環，防兩個
+ * stroke 邊框視覺貼齊難分清 marker 邊界。
  */
 export function markerContent(style: MarkerStyle): HTMLDivElement {
   const div = document.createElement('div');
@@ -142,10 +147,12 @@ export function markerContent(style: MarkerStyle): HTMLDivElement {
     border-radius: 50%;
     background: ${style.fill};
     border: ${style.borderWidth}px solid ${style.stroke};
+    box-shadow: 0 0 0 1.5px ${style.fill};
     color: ${style.text};
     font-size: ${style.fontSize};
     font-weight: 700;
     font-family: Inter, 'Noto Sans TC', sans-serif;
+    text-shadow: -1px -1px 0 ${style.fill}, 1px -1px 0 ${style.fill}, -1px 1px 0 ${style.fill}, 1px 1px 0 ${style.fill}, 0 -1px 0 ${style.fill}, 0 1px 0 ${style.fill}, -1px 0 0 ${style.fill}, 1px 0 0 ${style.fill};
     display: flex;
     align-items: center;
     justify-content: center;
