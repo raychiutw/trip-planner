@@ -326,6 +326,83 @@ const SCOPED_STYLES = `
 }
 .tp-add-stop-custom-hint-text strong { font-weight: 600; }
 
+/* v2.31.95 — desktop two-pane layout per mockup C (desktop-inline.html):
+   ≥1024px: 380px form pane left / 1fr map pane right.
+   <1024px: stacked single-column (mobile redirects to fullpage route via
+   useEffect 上方，這裡只是 fallback responsive). */
+.tp-add-stop-custom-twopane {
+  /* override .tp-add-stop-form gap on desktop two-pane */
+  gap: 0;
+}
+.tp-add-stop-custom-form-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tp-add-stop-custom-map-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tp-add-stop-custom-map-pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tp-add-stop-custom-map-pane-title {
+  font-size: var(--font-size-callout);
+  font-weight: 700;
+  color: var(--color-foreground);
+}
+.tp-add-stop-custom-map-pane-coord {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tp-add-stop-custom-sidehelp {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  padding: 12px 14px;
+  background: var(--color-accent-subtle);
+  border-radius: var(--radius-md);
+  line-height: 1.5;
+}
+.tp-add-stop-custom-sidehelp-title {
+  font-weight: 700;
+  color: var(--color-foreground);
+  margin-bottom: 4px;
+}
+@media (min-width: 1024px) {
+  /* allow custom-tab body to expand beyond 720px so 380+map fits */
+  .tp-add-stop-body:has(.tp-add-stop-custom-twopane) {
+    max-width: 1024px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .tp-add-stop-custom-twopane {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    min-height: 540px;
+    column-gap: 0;
+  }
+  .tp-add-stop-custom-form-pane {
+    padding: 20px 24px;
+    border-right: 1px solid var(--color-border);
+    background: var(--color-background);
+    overflow-y: auto;
+  }
+  .tp-add-stop-custom-map-pane {
+    padding: 20px 24px;
+    background: var(--color-secondary);
+  }
+  .tp-add-stop-custom-map-pane .tp-custom-picker-wrap {
+    flex: 1;
+    min-height: 380px;
+    height: auto;
+  }
+}
+
 .tp-add-stop-page-shell {
   min-height: 100%;
   background: var(--color-background);
@@ -1341,143 +1418,149 @@ export default function AddStopPage() {
               )}
 
               {tab === 'custom' && (
-                <form className="tp-add-stop-form" onSubmit={(e) => { e.preventDefault(); void handleConfirm(); }}>
-                  <div className="tp-add-stop-form-row is-full">
-                    <div className="tp-add-stop-form-field">
-                      <label htmlFor="add-stop-custom-title">標題 *</label>
-                      <input
-                        id="add-stop-custom-title"
-                        type="text"
-                        value={customTitle}
-                        onChange={(e) => { setCustomTitle(e.target.value); setCustomError(null); }}
-                        placeholder="輸入景點名稱（例：心型岩看夕陽）"
-                        autoFocus
-                        data-testid="add-stop-custom-title"
-                      />
-                      {customError && (
-                        <div className="tp-add-stop-form-row-error" data-testid="add-stop-custom-error">{customError}</div>
-                      )}
-                    </div>
-                  </div>
-                  {/* v2.31.94: 地址 typeahead + map pin — 取代之前的 placeholder */}
-                  <div className="tp-add-stop-form-row is-full">
-                    <div className="tp-add-stop-form-field">
-                      <label htmlFor="add-stop-custom-address">地址或地標</label>
-                      <div className="tp-add-stop-custom-typeahead-wrap">
+                <form
+                  className="tp-add-stop-form tp-add-stop-custom-twopane"
+                  onSubmit={(e) => { e.preventDefault(); void handleConfirm(); }}
+                  data-testid="add-stop-custom-twopane"
+                >
+                  {/* v2.31.95: two-pane layout per desktop-inline.html mockup C —
+                       form 左 / map 右 (≥1024px) */}
+                  <div className="tp-add-stop-custom-form-pane">
+                    <div className="tp-add-stop-form-row is-full">
+                      <div className="tp-add-stop-form-field">
+                        <label htmlFor="add-stop-custom-title">標題 *</label>
                         <input
-                          id="add-stop-custom-address"
+                          id="add-stop-custom-title"
                           type="text"
-                          value={customTypeahead.query}
-                          onChange={(e) => customTypeahead.setQuery(e.target.value)}
-                          placeholder="輸入地址縮放地圖（選填）"
-                          autoComplete="off"
-                          data-testid="add-stop-custom-address-typeahead"
-                          {...customTypeaheadKb.inputProps}
+                          value={customTitle}
+                          onChange={(e) => { setCustomTitle(e.target.value); setCustomError(null); }}
+                          placeholder="輸入景點名稱（例：心型岩看夕陽）"
+                          autoFocus
+                          data-testid="add-stop-custom-title"
                         />
-                        {customTypeahead.predictions.length > 0 && (
-                          <div
-                            id="add-stop-custom-suggestions"
-                            className="tp-add-stop-custom-typeahead-list"
-                            role="listbox"
-                          >
-                            {customTypeahead.predictions.map((p, i) => {
-                              const focused = customTypeaheadKb.focusedIndex === i;
-                              return (
-                                <button
-                                  key={p.placeId}
-                                  id={customTypeaheadKb.getOptionId(i)}
-                                  type="button"
-                                  role="option"
-                                  aria-selected={focused}
-                                  className={`tp-add-stop-custom-typeahead-item${focused ? ' is-focused' : ''}`}
-                                  onClick={() => void handleCustomPickSuggestion(p.placeId)}
-                                  data-testid={`add-stop-custom-suggestion-${p.placeId}`}
-                                >
-                                  <div className="tp-add-stop-custom-typeahead-main">{p.primaryText}</div>
-                                  {p.secondaryText && (
-                                    <div className="tp-add-stop-custom-typeahead-sub">{p.secondaryText}</div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
+                        {customError && (
+                          <div className="tp-add-stop-form-row-error" data-testid="add-stop-custom-error">{customError}</div>
                         )}
                       </div>
-                      <div className="tp-add-stop-form-helper">
-                        選填 — 用來把地圖縮放到大概區域，最終位置仍以地圖中心為準。
+                    </div>
+                    <div className="tp-add-stop-form-row is-full">
+                      <div className="tp-add-stop-form-field">
+                        <label htmlFor="add-stop-custom-address">地址或地標</label>
+                        <div className="tp-add-stop-custom-typeahead-wrap">
+                          <input
+                            id="add-stop-custom-address"
+                            type="text"
+                            value={customTypeahead.query}
+                            onChange={(e) => customTypeahead.setQuery(e.target.value)}
+                            placeholder="輸入地址縮放地圖（選填）"
+                            autoComplete="off"
+                            data-testid="add-stop-custom-address-typeahead"
+                            {...customTypeaheadKb.inputProps}
+                          />
+                          {customTypeahead.predictions.length > 0 && (
+                            <div
+                              id="add-stop-custom-suggestions"
+                              className="tp-add-stop-custom-typeahead-list"
+                              role="listbox"
+                            >
+                              {customTypeahead.predictions.map((p, i) => {
+                                const focused = customTypeaheadKb.focusedIndex === i;
+                                return (
+                                  <button
+                                    key={p.placeId}
+                                    id={customTypeaheadKb.getOptionId(i)}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={focused}
+                                    className={`tp-add-stop-custom-typeahead-item${focused ? ' is-focused' : ''}`}
+                                    onClick={() => void handleCustomPickSuggestion(p.placeId)}
+                                    data-testid={`add-stop-custom-suggestion-${p.placeId}`}
+                                  >
+                                    <div className="tp-add-stop-custom-typeahead-main">{p.primaryText}</div>
+                                    {p.secondaryText && (
+                                      <div className="tp-add-stop-custom-typeahead-sub">{p.secondaryText}</div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        <div className="tp-add-stop-form-helper">
+                          選填 — 縮放地圖到大概區域。最終 lat/lng 以地圖中心為準。
+                        </div>
+                      </div>
+                    </div>
+                    <div className="tp-add-stop-form-row">
+                      <div className="tp-add-stop-form-field">
+                        <label htmlFor="add-stop-custom-time">開始時間</label>
+                        <input
+                          id="add-stop-custom-time"
+                          type="text"
+                          value={customTime}
+                          onChange={(e) => setCustomTime(e.target.value)}
+                          placeholder={`Day ${String(dayNum).padStart(2, '0')} · 17:00`}
+                          data-testid="add-stop-custom-time"
+                        />
+                      </div>
+                      <div className="tp-add-stop-form-field">
+                        <label htmlFor="add-stop-custom-duration">預估停留</label>
+                        <input
+                          id="add-stop-custom-duration"
+                          type="number"
+                          inputMode="numeric"
+                          value={customDuration}
+                          onChange={(e) => setCustomDuration(e.target.value)}
+                          placeholder="90"
+                          data-testid="add-stop-custom-duration"
+                        />
+                      </div>
+                    </div>
+                    <div className="tp-add-stop-form-row is-full">
+                      <div className="tp-add-stop-form-field">
+                        <label htmlFor="add-stop-custom-note">備註（選填）</label>
+                        <textarea
+                          id="add-stop-custom-note"
+                          value={customNote}
+                          onChange={(e) => setCustomNote(e.target.value)}
+                          placeholder="想看夕陽 · 推薦避開週末"
+                          data-testid="add-stop-custom-note"
+                        />
                       </div>
                     </div>
                   </div>
 
-                  <div className="tp-add-stop-form-row is-full">
-                    <div className="tp-add-stop-form-field">
-                      <label>位置 *</label>
-                      <LocationPickerMap
-                        initialCenter={customInitialCenter}
-                        initialZoom={14}
-                        onCoordChange={setCustomCoord}
-                        flyToSignal={customFlyToSignal}
-                      />
-                      <div className="tp-add-stop-custom-hint">
-                        <input
-                          type="checkbox"
-                          id="add-stop-custom-hint"
-                          className="tp-add-stop-custom-hint-checkbox"
-                          checked={customHintConfirmed}
-                          onChange={(e) => setCustomHintConfirmed(e.target.checked)}
-                          data-testid="add-stop-custom-hint"
-                        />
-                        <label htmlFor="add-stop-custom-hint" className="tp-add-stop-custom-hint-text">
-                          <strong>已調整到正確位置</strong> — 拖地圖或用方向鍵微調
-                        </label>
-                      </div>
+                  <div className="tp-add-stop-custom-map-pane" data-testid="add-stop-custom-map-pane">
+                    <div className="tp-add-stop-custom-map-pane-head">
+                      <span className="tp-add-stop-custom-map-pane-title">在地圖上選位置</span>
+                      <span className="tp-add-stop-custom-map-pane-coord" data-testid="add-stop-custom-coord-readout">
+                        {customCoord
+                          ? `${customCoord.lat.toFixed(4)}°N ${customCoord.lng.toFixed(4)}°E`
+                          : '—'}
+                      </span>
                     </div>
-                  </div>
-                  <div className="tp-add-stop-form-row">
-                    <div className="tp-add-stop-form-field">
-                      <label htmlFor="add-stop-custom-time">開始時間</label>
+                    <LocationPickerMap
+                      initialCenter={customInitialCenter}
+                      initialZoom={14}
+                      onCoordChange={setCustomCoord}
+                      flyToSignal={customFlyToSignal}
+                    />
+                    <div className="tp-add-stop-custom-hint">
                       <input
-                        id="add-stop-custom-time"
-                        type="text"
-                        value={customTime}
-                        onChange={(e) => setCustomTime(e.target.value)}
-                        placeholder={`Day ${String(dayNum).padStart(2, '0')} · 17:00`}
-                        data-testid="add-stop-custom-time"
+                        type="checkbox"
+                        id="add-stop-custom-hint"
+                        className="tp-add-stop-custom-hint-checkbox"
+                        checked={customHintConfirmed}
+                        onChange={(e) => setCustomHintConfirmed(e.target.checked)}
+                        data-testid="add-stop-custom-hint"
                       />
+                      <label htmlFor="add-stop-custom-hint" className="tp-add-stop-custom-hint-text">
+                        <strong>已調整到正確位置</strong> — 拖地圖或用方向鍵微調
+                      </label>
                     </div>
-                    <div className="tp-add-stop-form-field">
-                      <label>結束時間</label>
-                      <div className="tp-add-stop-form-select"><span>自動估算</span><Icon name="chevron-down" /></div>
-                    </div>
-                  </div>
-                  <div className="tp-add-stop-form-row">
-                    <div className="tp-add-stop-form-field">
-                      <label>類型</label>
-                      <div className="tp-add-stop-form-select"><span>SIGHT · 景點</span><Icon name="chevron-down" /></div>
-                    </div>
-                    <div className="tp-add-stop-form-field">
-                      <label htmlFor="add-stop-custom-duration">預估停留</label>
-                      <input
-                        id="add-stop-custom-duration"
-                        type="number"
-                        inputMode="numeric"
-                        value={customDuration}
-                        onChange={(e) => setCustomDuration(e.target.value)}
-                        placeholder="90"
-                        data-testid="add-stop-custom-duration"
-                      />
-                    </div>
-                  </div>
-                  <div className="tp-add-stop-form-row is-full">
-                    <div className="tp-add-stop-form-field">
-                      <label htmlFor="add-stop-custom-note">備註（選填）</label>
-                      <textarea
-                        id="add-stop-custom-note"
-                        value={customNote}
-                        onChange={(e) => setCustomNote(e.target.value)}
-                        placeholder="想看夕陽 · 推薦避開週末"
-                        data-testid="add-stop-custom-note"
-                      />
+                    <div className="tp-add-stop-custom-sidehelp">
+                      <div className="tp-add-stop-custom-sidehelp-title">小提示</div>
+                      朋友家 / 隱藏小店地址常不精確 — 拖 pin 到實際位置，timeline 才會顯正確車程。鍵盤可用 ↑↓←→ 微調。
                     </div>
                   </div>
                 </form>
