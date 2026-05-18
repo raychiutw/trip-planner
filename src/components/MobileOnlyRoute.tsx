@@ -10,7 +10,9 @@ import { Navigate } from 'react-router-dom';
 const MOBILE_QUERY = '(max-width: 1023px)';
 
 function isMobile(): boolean {
-  if (typeof window === 'undefined' || !window.matchMedia) return true;
+  // SSR / no-matchMedia env → assume desktop (safer redirect, avoids
+  // showing mobile UI to desktop users on first paint).
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
   return window.matchMedia(MOBILE_QUERY).matches;
 }
 
