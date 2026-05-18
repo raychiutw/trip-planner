@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.90] - 2026-05-18
+
+**Fix: 桌機 TitleBar action 全 icon-only（user direction「檢查桌機版 title bar 都改為 icon 無說明文字」）。**
+
+### Changed
+
+- **`css/tokens.css`**：`.tp-titlebar-action-label { display: none; }` 從 `@media (max-width: 760px)` block 內 → top-level（all viewport），桌機也 icon-only。
+- 缺 `title` attr 的 button 補 hover tooltip（DOM `tp-titlebar-action-label` span 仍保留供 sr-only 但視覺 hidden）：
+  - `src/pages/TripsListPage.tsx` 新增行程 → `title="新增行程"`
+  - `src/pages/SessionsPage.tsx` 登出其他全部裝置 → `title="登出其他全部裝置"`
+  - `src/pages/DeveloperAppsPage.tsx` 建立新應用 → `title="建立新應用"`
+  - `src/components/shell/TitleBarPrimaryAction.tsx`（5+ pages reuse: 儲存 / 完成 / 建立）→ `title={displayLabel}`
+- 既有 ExplorePage「收藏」/ PoiFavoritesPage「探索」/ TripsListPage「探索」/「切換行程」已有 title attr，無變更。
+
+### Test
+
+- `tests/unit/v2_31_90-titlebar-action-icon-only.test.ts`：6 source-grep test 鎖 CSS top-level rule + 5 個 button title attr。tsc clean。
+
 ## [2.31.89] - 2026-05-18
 
 **Fix: 切換行程 button 改 dropdown picker（user feedback「要用的下拉選單的版本的 icon」）。**
