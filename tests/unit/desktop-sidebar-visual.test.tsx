@@ -1,10 +1,13 @@
 /**
- * DesktopSidebar visual + IA — v2.31.81 user batch UX fixes（sidebar all icon-only）。
+ * DesktopSidebar visual + IA — Section 2 + 4.1 (terracotta-mockup-parity-v2)
  *
- * Primary nav (logged-in)：聊天 / 探索 / 地圖 / 收藏 / 切換行程（5 items）。
- * Anonymous 多 1 個「登入」 = 6 items。「行程」 nav 移除（取代為「切換行程」）。
- * Label 隱藏於 sr-only span（visually hidden）；aria-label / title 仍 expose 給
- * screen reader + tooltip。
+ * 驗 mockup-aligned 結構：
+ *   - desktop nav：聊天 / 行程 / 地圖 / 探索；登入只在 guest 顯示
+ *   - active item 套 .is-active CSS class
+ *   - account chip name >10 字 → slice(0,10)+'…' truncation
+ *   - account chip Link 指向 /account
+ *   - logged-out 顯示「未登入」 chip 取代 account card
+ *   - dark theme bg 固定 deep-cocoa，不吃會反轉的 --color-foreground token
  */
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -25,60 +28,59 @@ function renderSidebar(opts: {
 }
 
 describe('DesktopSidebar — visual + nav IA', () => {
-  it('logged-in 顯示 5 nav: 聊天 / 探索 / 地圖 / 收藏 / 切換行程（v2.31.81 icon-only IA）', () => {
-    const { container } = renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trips' });
-    // aria-label 是 screen reader 真實 label，比 text 更穩
-    const navLinks = container.querySelectorAll('nav[aria-label="主要功能"] a');
-    expect(navLinks.length).toBe(5);
-    expect(navLinks[0]?.getAttribute('aria-label')).toBe('聊天');
-    expect(navLinks[1]?.getAttribute('aria-label')).toBe('探索');
-    expect(navLinks[2]?.getAttribute('aria-label')).toBe('地圖');
-    expect(navLinks[3]?.getAttribute('aria-label')).toBe('收藏');
-    expect(navLinks[4]?.getAttribute('aria-label')).toBe('切換行程');
+  /* 2026-04-29:user 拍板「桌機版 sidebar 不用帳號選項 避免重複」 — desktop
+   * 移除「帳號」 nav item,user 透過底部 user chip(.tp-account-card)進
+   * /account。Mobile GlobalBottomNav 維持 5 tab 含「帳號」。 */
+  it('logged-in 顯示 4 nav: 聊天 / 行程 / 地圖 / 收藏 (v2.21.0; 帳號移到底部 user chip)', () => {
+    renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trips' });
+    expect(screen.getByText('聊天')).toBeTruthy();
+    expect(screen.getByText('行程')).toBeTruthy();
+    expect(screen.getByText('地圖')).toBeTruthy();
+    expect(screen.getByText('收藏')).toBeTruthy();
     // desktop sidebar 不再有「帳號」 nav,改透過底部 user chip
-    expect(container.querySelector('a[aria-label="帳號"]')).toBeNull();
+    expect(screen.queryAllByText('帳號')).toHaveLength(0);
     // logged-in 不顯示「登入」
-    expect(container.querySelector('a[aria-label="登入"]')).toBeNull();
+    expect(screen.queryByText('登入')).toBeNull();
   });
 
-  it('logged-out 多顯示「登入」 icon（共 6 個 nav item）', () => {
-    const { container } = renderSidebar({ user: null, initialEntry: '/trips' });
-    const navLinks = container.querySelectorAll('nav[aria-label="主要功能"] a');
-    expect(navLinks.length).toBe(6);
-    expect(navLinks[5]?.getAttribute('aria-label')).toBe('登入');
+  it('logged-out 顯示「登入」(沒「帳號」)', () => {
+    renderSidebar({ user: null, initialEntry: '/trips' });
+    expect(screen.getByText('登入')).toBeTruthy();
+    expect(screen.queryByText('帳號')).toBeNull();
   });
 
   it('auth loading 不顯示「登入」「未登入」或「帳號」', () => {
-    const { container } = renderSidebar({ user: undefined, initialEntry: '/trips' });
-    expect(container.querySelector('a[aria-label="登入"]')).toBeNull();
-    expect(container.textContent).not.toContain('未登入');
+    renderSidebar({ user: undefined, initialEntry: '/trips' });
+    expect(screen.queryByText('登入')).toBeNull();
+    expect(screen.queryByText('未登入')).toBeNull();
+    expect(screen.queryByText('帳號')).toBeNull();
     expect(screen.queryByTestId('sidebar-account-card')).toBeNull();
     expect(screen.getByTestId('sidebar-user-loading')).toBeTruthy();
   });
 
-  it('current pathname 對應 nav item 套 .is-active（/trips → 切換行程）', () => {
-    const { container } = renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trips' });
-    const switchTripLink = container.querySelector('a[aria-label="切換行程"]');
-    expect(switchTripLink?.className).toContain('is-active');
-    const chatLink = container.querySelector('a[aria-label="聊天"]');
+  it('current pathname 對應 nav item 套 .is-active', () => {
+    renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trips' });
+    const tripsLink = screen.getByText('行程').closest('a');
+    expect(tripsLink?.className).toContain('is-active');
+    const chatLink = screen.getByText('聊天').closest('a');
     expect(chatLink?.className).not.toContain('is-active');
   });
 
-  it('「切換行程」 nav matches non-map /trip/* 子路由 (e.g. /trip/okinawa)', () => {
-    const { container } = renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trip/okinawa' });
-    const switchTripLink = container.querySelector('a[aria-label="切換行程"]');
-    expect(switchTripLink?.className).toContain('is-active');
+  it('「行程」 nav matches non-map /trip/* 子路由 (e.g. /trip/okinawa)', () => {
+    renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trip/okinawa' });
+    const tripsLink = screen.getByText('行程').closest('a');
+    expect(tripsLink?.className).toContain('is-active');
   });
 
-  it('「地圖」 nav matches /trip/:id/map and does not also activate 切換行程', () => {
-    const { container } = renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trip/okinawa/map' });
-    expect(container.querySelector('a[aria-label="地圖"]')?.className).toContain('is-active');
-    expect(container.querySelector('a[aria-label="切換行程"]')?.className).not.toContain('is-active');
+  it('「地圖」 nav matches /trip/:id/map and does not also activate 行程', () => {
+    renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trip/okinawa/map' });
+    expect(screen.getByText('地圖').closest('a')?.className).toContain('is-active');
+    expect(screen.getByText('行程').closest('a')?.className).not.toContain('is-active');
   });
 
-  it('「地圖」 nav exactOnly — /map 才 active', () => {
-    const { container } = renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/map' });
-    expect(container.querySelector('a[aria-label="地圖"]')?.className).toContain('is-active');
+  it('「地圖」 nav exactOnly — /map 才 active，/manage/map-xxx 不 active', () => {
+    renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/map' });
+    expect(screen.getByText('地圖').closest('a')?.className).toContain('is-active');
   });
 
   it('account chip name >10 字 → slice(0,10)+「…」 truncation', () => {
@@ -130,17 +132,9 @@ describe('DesktopSidebar — visual + nav IA', () => {
     expect(style).toMatch(/\.tp-nav-item\.is-active\s*\{[^}]*background:\s*var\(--color-accent\)/);
   });
 
-  it('v2.31.81：nav item icon-only — label sr-only hidden, aria-label + title 仍 expose', () => {
+  it('font-weight 600 套 .tp-nav-item base', () => {
     const { container } = renderSidebar({ user: null, initialEntry: '/trips' });
-    const navLink = container.querySelector('a[aria-label="聊天"]') as HTMLAnchorElement;
-    expect(navLink).toBeTruthy();
-    expect(navLink.getAttribute('title')).toBe('聊天');
-    // label 在 sr-only span 內
-    const labelSpan = navLink.querySelector('.tp-nav-item-label');
-    expect(labelSpan?.textContent).toBe('聊天');
-    // SCOPED_STYLES 含 sr-only class
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/\.tp-nav-item-label\s*\{[^}]*position:\s*absolute/);
-    expect(style).toMatch(/\.tp-nav-item-label\s*\{[^}]*clip:\s*rect\(0,\s*0,\s*0,\s*0\)/);
+    expect(style).toMatch(/\.tp-nav-item\s*\{[^}]*font-weight:\s*600/);
   });
 });
