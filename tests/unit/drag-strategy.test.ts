@@ -22,9 +22,9 @@ describe('drag-strategy smart placement', () => {
 
   it('places a Day-header drop one hour after the latest ending entry', () => {
     const placement = getSmartPlacement([
-      { id: 1, start_time: '09:00', end_time: '10:30', sortOrder: 0 },
-      { id: 2, start_time: '12:00', end_time: '13:00', sortOrder: 1 },
-      { id: 3, start_time: '10:45', end_time: '11:30', sortOrder: 2 },
+      { id: 1, startTime: '09:00', endTime: '10:30', sortOrder: 0 },
+      { id: 2, startTime: '12:00', endTime: '13:00', sortOrder: 1 },
+      { id: 3, startTime: '10:45', endTime: '11:30', sortOrder: 2 },
     ]);
 
     expect(placement.time).toBe('14:00-15:00');
@@ -33,13 +33,13 @@ describe('drag-strategy smart placement', () => {
   });
 
   it('uses a one-hour duration when the last entry has only a start time', () => {
-    expect(getSmartPlacement([{ start_time: '15:30', sortOrder: 0 }]).time).toBe('17:30-18:30');
+    expect(getSmartPlacement([{ startTime: '15:30', sortOrder: 0 }]).time).toBe('17:30-18:30');
   });
 
   it('detects overlapping time ranges but allows touching boundaries', () => {
     const entries = [
-      { start_time: '14:00', end_time: '16:00' },
-      { start_time: '18:00', end_time: '19:00' },
+      { startTime: '14:00', endTime: '16:00' },
+      { startTime: '18:00', endTime: '19:00' },
     ];
 
     expect(hasTimeConflict({ startMinutes: 870, endMinutes: 930 }, entries)).toBe(true);
@@ -50,8 +50,8 @@ describe('drag-strategy smart placement', () => {
     const conflict = findFirstTimeConflict(
       { startMinutes: 870, endMinutes: 930 },
       [
-        { title: '午餐', start_time: '12:00', end_time: '13:00' },
-        { title: '水族館', start_time: '14:00', end_time: '16:00' },
+        { title: '午餐', startTime: '12:00', endTime: '13:00' },
+        { title: '水族館', startTime: '14:00', endTime: '16:00' },
       ],
     );
 
@@ -65,7 +65,7 @@ describe('drag-strategy smart placement', () => {
   });
 
   it('uses an explicit Day slot as the placement start time', () => {
-    expect(getExplicitSlotPlacement('14:00', [{ start_time: '09:00', end_time: '10:00', sortOrder: 0 }])).toEqual({
+    expect(getExplicitSlotPlacement('14:00', [{ startTime: '09:00', endTime: '10:00', sortOrder: 0 }])).toEqual({
       startTime: '14:00',
       endTime: '15:00',
       time: '14:00-15:00',
