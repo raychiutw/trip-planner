@@ -661,23 +661,30 @@ export default function AddStopPage() {
   // POI search 由 usePoiSearch hook 處理 (見上方 hook call) — debounce + abort 內建
 
   // Saved fetch (lazy 切到 tab 才打)
+  // v2.31.78 fix: 切回 search tab 或 unmount 期間若 favorites fetch 還在 inflight,
+  // setPoiFavorites + setSavedLoading 會在 unmount 後觸發 → React state update
+  // warning + closure leak。加 cancelled flag guard。
   useEffect(() => {
     if (tab !== 'favorites' || poiFavorites !== null) return;
+    let cancelled = false;
     setSavedLoading(true);
     (async () => {
       try {
         const resp = await fetch('/api/poi-favorites', { credentials: 'same-origin' });
+        if (cancelled) return;
         if (resp.ok) {
           setPoiFavorites(normalizePoiFavorites(await resp.json()));
         } else {
           setPoiFavorites([]);
         }
       } catch {
+        if (cancelled) return;
         setPoiFavorites([]);
       } finally {
-        setSavedLoading(false);
+        if (!cancelled) setSavedLoading(false);
       }
     })();
+    return () => { cancelled = true; };
   }, [tab, poiFavorites]);
 
   function toggleSearch(id: string) {
