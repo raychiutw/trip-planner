@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.69] - 2026-05-18
+
+**Rip 4 個 abandoned API test files — v2.20.1 V2 cutover 後標 TODO 但 11 個版本沒人 rewrite。**
+
+### Removed: stale API integration tests pinned to dropped schema
+
+Inline tests/ audit 找出 4 個 `.test.ts` file 全部 `describe.skip` 從 v2.20.1 起：
+
+| 檔案 | describe.skip blocks | 等效新 coverage |
+|------|---------------------|----------------|
+| `tests/api/trips.integration.test.ts` | 2 | trips-id.integration / trip-health.integration / trip-entries-order-in-day-schema |
+| `tests/api/invitations-list-revoke.test.ts` | 2 | invitations-accept / invitations-get |
+| `tests/api/permissions-post.test.ts` | 5 | permissions.integration |
+| `tests/api/account-stats.integration.test.ts` | 1 | account-connected-apps / account-sessions |
+
+10 個 describe.skip blocks 全跳過，TODO comment pin 舊 schema（v2.21.0 migration 0046+0047 後 `trips.owner` / `trip_permissions.email` / `saved_pois.email` 已 dropped）。11 個 minor version 沒人 rewrite → 純死碼。
+
+`oauth-signup.test.ts` 雖也有同樣 TODO 但 13 個 `it()` 仍 active 跑成功 → 保留。
+
+`tsc --noEmit` 通過、`npm run test:api` 60 passed 不變（5 個 fail 是 local miniflare EADDRNOTAVAIL flake 非本改動）。
+
 ## [2.31.68] - 2026-05-18
 
 **Rip dead backend helper `functions/api/_poi-defaults.ts`（36 行整檔 0 callers）。**
