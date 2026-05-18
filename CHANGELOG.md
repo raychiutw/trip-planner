@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.84] - 2026-05-18
+
+**Fix: marker 重疊時數字外框顯示加強 — v2.31.79 的 1px halo + 1.5px ring 不夠強，user 反映 prod 仍難讀（4 marker 重疊那覇都心 5/6/4/3）。**
+
+### Fixed
+
+- **`src/components/trip/OceanMap.tsx` `markerContent()`**：
+  - text-shadow halo 1px → 2px（marker overlap 時自己 fill 蓋下方 marker bg 露出，halo 加粗讓對比更明顯）
+  - box-shadow 加 outer 3px `rgba(0, 0, 0, 0.18)` drop shadow：所有 state 統一 elevation，marker 間有明顯陰影分離（不依賴 fill 同色，普適於 idle/focused/past 三 state）
+  - 保留 v2.31.79 inner 1.5px `${fill}` ring（marker overlap 蓋層邏輯）
+- **`tests/unit/v2_31_79-marker-label-text-outline.test.ts`** 更新 lock 2px halo + drop shadow rgba(0,0,0,0.18) 雙條件。
+
 ## [2.31.83] - 2026-05-18
 
 **Revert: v2.31.81 #6+#7 sidebar 改動（user：「sidebar 復原, 原本的修正都是調整 content 頁面 不要動 sidebar」）。**
