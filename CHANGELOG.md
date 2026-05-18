@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.88] - 2026-05-18
+
+**Fix: TripMapRail zoom level 對齊 MapPage focusId flow（user 反映 v2.31.87 zoom 太大）。**
+
+User direction：「行程地圖的 zoom 太大 比照地圖功能的 zoom」。MapPage 點 stop card 用 OceanMap focusId flow → `flyTo z<12?13:undefined` zoom max 13。
+
+### Changed
+
+- **`src/components/trip/TripMapRail.tsx`** entryFocused listener：
+  - 展開 (isExpanding=true) → zoom 15 **→ 13**（對齊 MapPage focusId zoom）
+  - 收合 (isExpanding=false) → zoom 11 **→ 10**（對齊 MapPage 沖繩 overview fitBounds level）
+
+### Test
+
+- `tests/unit/v2_31_87-map-zoom-on-stop-toggle.test.ts`：assertion 對齊 zoom 13/10。6/6 pass。
+
 ## [2.31.87] - 2026-05-18
 
 **Feat: TimelineRail row click 展開 → map flyTo zoom 15；收合 → flyTo zoom 11 trip overview。**
