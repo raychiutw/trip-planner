@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.85] - 2026-05-18
+
+**Feat: trip detail page TitleBar icon-only + TripSheet 拿掉「行程」tab（用戶截圖標出紅框）。**
+
+### Changed
+
+- **TripsListPage embedded TitleBar**：
+  - 「探索」button 拿掉中文 label，保留 search icon + tooltip（aria-label / title 仍為「探索」可用）
+  - 加「切換行程」icon button（swap-horiz），onClick = clearSelected → 回 /trips 列表
+- **TripSheet**（右側 sticky sheet）：
+  - 拿掉「行程」tab — main column 已 render 行程內容，sheet 重複 placeholder 無 user value
+  - `SHEET_TABS = ['itinerary', 'map', 'chat']` → `['map', 'chat']`
+  - `?sheet=itinerary` legacy URL → parseSheetParam null → fallback 'map'
+  - TripSheetTabs TAB_LABELS 只剩 map/chat 2 key
+
+### Test
+
+- `tests/unit/trip-sheet.test.tsx`：itinerary placeholder assertion → degrades-to-map；click target → tab-chat；2-tab labels lock。
+- `tests/unit/trip-sheet-tabs-aria.test.tsx`：active aria-selected 改測 chat tab。
+- `tests/unit/trip-sheet-tabs-keyboard.test.tsx`：全 rewrite for 2-tab navigation (map ⇄ chat)。
+- 21/21 pass + tsc clean。
+
 ## [2.31.84] - 2026-05-18
 
 **Fix: marker 重疊時數字外框顯示加強 — v2.31.79 的 1px halo + 1.5px ring 不夠強，user 反映 prod 仍難讀（4 marker 重疊那覇都心 5/6/4/3）。**
