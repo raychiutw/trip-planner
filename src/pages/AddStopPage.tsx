@@ -261,7 +261,7 @@ const SCOPED_STYLES = `
   position: absolute;
   left: 8px;
   top: 8px;
-  font-size: 11px;
+  font-size: var(--font-size-caption2);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--color-foreground);
