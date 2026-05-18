@@ -4,3 +4,6 @@
 
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.open-meteo.com https://*.ingest.us.sentry.io https://cloudflareinsights.com https://maps.googleapis.com https://*.googleapis.com; img-src 'self' https: data:; worker-src 'self'; base-uri 'self'; form-action 'self';
+  X-Frame-Options: DENY
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: geolocation=(self), clipboard-write=(self), camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), midi=(), encrypted-media=(), fullscreen=(self)

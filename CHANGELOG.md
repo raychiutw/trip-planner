@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.73] - 2026-05-18
+
+**Add 3 missing security headers in `public/_headers` — X-Frame-Options / HSTS / Permissions-Policy。**
+
+### Added: defense-in-depth security headers
+
+curl prod response audit 發現 3 個 widely-recommended security header missing：
+
+- `X-Frame-Options: DENY` — 防 clickjacking。app 0 iframe usage（已 grep verify），全 deny 安全
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains` — 1 年 HSTS 強制 HTTPS。app 已 HTTPS-only via CF Pages，加 header 防 first-visit downgrade attack
+- `Permissions-Policy: geolocation=(self), clipboard-write=(self), camera=(), microphone=(), ...` — 只允許 self 的 geolocation（MapFabs「我的位置」用）+ clipboard-write（DeveloperAppNewPage copy token 用），其他 features (camera/mic/payment/usb/magnetometer/gyroscope/accelerometer/midi/encrypted-media) 全 deny，fullscreen 允許 self
+
+既有 Content-Security-Policy (CSP) 保留不動，已含 default-src 'self' + 必要白名單。
+
 ## [2.31.72] - 2026-05-18
 
 **Rip unused `AuditLog` TypeScript interface — 43 行整檔零 import。**
