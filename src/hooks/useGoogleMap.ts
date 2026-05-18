@@ -113,6 +113,11 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
           },
           gestureHandling: 'greedy', // mobile single-finger pan
           clickableIcons: false,     // disable Google's POI overlay clicks
+          // v2.31.75: AdvancedMarkerElement requires a mapId to render.
+          // 'DEMO_MAP_ID' is Google's demo mapId — works without cloud-styled
+          // map setup (we don't use cloud styles, all visuals stay in code).
+          // 換 production cloud map ID 需在 GCP Console「Map Management」建。
+          mapId: 'DEMO_MAP_ID',
         });
         setMap(instance);
       })

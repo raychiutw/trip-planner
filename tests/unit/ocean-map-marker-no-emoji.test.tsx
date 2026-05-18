@@ -1,16 +1,14 @@
 /**
- * ocean-map-marker-no-emoji — verify markerIcon never produces emoji label or
- * decorative symbols (post v2.23.0 Google Maps rewrite).
+ * ocean-map-marker-no-emoji — verify marker label never produces emoji or
+ * decorative symbols (post v2.23.0 Google Maps + v2.31.75 AdvancedMarkerElement migration).
  *
- * Old Leaflet version used `L.divIcon({ html: '...' })` which COULD smuggle
- * emoji into HTML; v2.23 uses `google.maps.MarkerLabel` { text } where the
- * text is `String(pin.index)` — pure number, no emoji possible. This test
- * locks that invariant against future regressions (someone adding 🛏 hotel
- * icon back, etc).
+ * v2.23 用 google.maps.MarkerLabel { text }; v2.31.75 改 AdvancedMarkerElement
+ * 用 HTMLDivElement.textContent。兩種都用 `String(pin.index)` 純數字，無 emoji
+ * 可能。Test 透過 `markerStyle.label` (pure data) lock 此 invariant 不需 DOM。
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { setupGoogleMapsMock } from './__mocks__/google-maps';
-import { markerIcon } from '../../src/components/trip/OceanMap';
+import { markerStyle, markerContent } from '../../src/components/trip/OceanMap';
 import type { MapPin } from '../../src/hooks/useMapData';
 
 beforeEach(setupGoogleMapsMock);
@@ -35,64 +33,70 @@ function containsEmoji(s: string): boolean {
   for (const ch of s) {
     const cp = ch.codePointAt(0);
     if (cp === undefined) continue;
-    // Emoji ranges (loose): surrogate pairs (cp > 0xFFFF) + Misc Symbols/Dingbats blocks
     if (cp > 0xFFFF) return true;
     if (cp >= 0x2600 && cp <= 0x27BF) return true;
   }
   return false;
 }
 
-describe('OceanMap markerIcon — no emoji label (post v2.23.0)', () => {
-  it('idle entry pin: label.text 是純數字「3」', () => {
-    const opts = markerIcon(SAMPLE, false, false);
-    expect(opts.label.text).toBe('3');
-    expect(containsEmoji(opts.label.text)).toBe(false);
+describe('OceanMap markerStyle — no emoji label (post v2.31.75 AdvancedMarkerElement)', () => {
+  it('idle entry pin: label 是純數字「3」', () => {
+    const style = markerStyle(SAMPLE, false, false);
+    expect(style.label).toBe('3');
+    expect(containsEmoji(style.label)).toBe(false);
   });
 
-  it('hotel pin: label.text 也是純數字（不再 🛏）', () => {
-    const opts = markerIcon(HOTEL, false, false);
-    expect(opts.label.text).toBe('1');
-    expect(containsEmoji(opts.label.text)).toBe(false);
+  it('hotel pin: label 也是純數字（不再 🛏）', () => {
+    const style = markerStyle(HOTEL, false, false);
+    expect(style.label).toBe('1');
+    expect(containsEmoji(style.label)).toBe(false);
   });
 
   it('focused (active) marker: 仍是純數字 + 較大 size', () => {
-    const opts = markerIcon(SAMPLE, true, false);
-    expect(opts.label.text).toBe('3');
-    expect(containsEmoji(opts.label.text)).toBe(false);
-    expect(opts.icon.scale).toBeGreaterThan(15); // larger than idle 14
+    const style = markerStyle(SAMPLE, true, false);
+    expect(style.label).toBe('3');
+    expect(containsEmoji(style.label)).toBe(false);
+    expect(style.size).toBeGreaterThan(28); // larger than idle 28 → focused 36
   });
 
   it('past pin: label 同 idle，色彩降級 mute', () => {
-    const opts = markerIcon(SAMPLE, false, true);
-    expect(opts.label.text).toBe('3');
-    expect(containsEmoji(opts.label.text)).toBe(false);
-  });
-
-  it('icon path 是 SymbolPath.CIRCLE（不是任何 SVG path with decorative shape）', () => {
-    const opts = markerIcon(SAMPLE, false, false);
-    // SymbolPath.CIRCLE = 0 in our mock; in real google.maps it's enum 0
-    expect(opts.icon.path).toBe(0);
+    const style = markerStyle(SAMPLE, false, true);
+    expect(style.label).toBe('3');
+    expect(containsEmoji(style.label)).toBe(false);
   });
 
   it('focused pin sets zIndex 1000 (raises above overlapping markers)', () => {
-    const opts = markerIcon(SAMPLE, true, false);
-    expect(opts.zIndex).toBe(1000);
+    const style = markerStyle(SAMPLE, true, false);
+    expect(style.zIndex).toBe(1000);
   });
 
   it('idle pin zIndex undefined (Google default)', () => {
-    const opts = markerIcon(SAMPLE, false, false);
-    expect(opts.zIndex).toBeUndefined();
+    const style = markerStyle(SAMPLE, false, false);
+    expect(style.zIndex).toBeUndefined();
   });
 
   it('dayColor inline style applies to idle marker stroke + label color', () => {
-    const opts = markerIcon(SAMPLE, false, false, '#FF6B35');
-    expect(opts.icon.strokeColor).toBe('#FF6B35');
-    expect(opts.label.color).toBe('#FF6B35');
+    const style = markerStyle(SAMPLE, false, false, '#FF6B35');
+    expect(style.stroke).toBe('#FF6B35');
+    expect(style.text).toBe('#FF6B35');
   });
 
   it('dayColor IGNORED when active (accent color overrides)', () => {
-    const opts = markerIcon(SAMPLE, true, false, '#FF6B35');
-    expect(opts.icon.strokeColor).not.toBe('#FF6B35');
-    expect(opts.label.color).not.toBe('#FF6B35');
+    const style = markerStyle(SAMPLE, true, false, '#FF6B35');
+    expect(style.stroke).not.toBe('#FF6B35');
+    expect(style.text).not.toBe('#FF6B35');
+  });
+
+  it('markerContent renders pure number text (no emoji injection possible via DOM)', () => {
+    const style = markerStyle(SAMPLE, false, false);
+    const el = markerContent(style);
+    expect(el.textContent).toBe('3');
+    expect(containsEmoji(el.textContent ?? '')).toBe(false);
+  });
+
+  it('markerContent border-radius is 50% (round shape per v2.23 Symbol.CIRCLE replacement)', () => {
+    const style = markerStyle(SAMPLE, false, false);
+    const el = markerContent(style);
+    expect(el.style.borderRadius).toBe('50%');
   });
 });
