@@ -466,7 +466,16 @@ const SUGGESTIONS = [
   '加入適合親子的水族館行程',
 ];
 
-export default function ChatPage() {
+export interface ChatPageProps {
+  /** v2.31.86：embedded mode — skip AppShell + DesktopSidebar + GlobalBottomNav，
+   *  讓 ChatPage 可嵌進 TripSheet chat tab。預設 false (standalone page mode)。 */
+  embedded?: boolean;
+  /** v2.31.86：lock active trip 到指定 tripId（embedded mode 在 TripPage 內，
+   *  trip context 已 fixed；不允 user 從 chat picker 切到別 trip 改 TripPage 行為）。 */
+  lockTripId?: string;
+}
+
+export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps = {}) {
   useRequireAuth();
   const { user } = useCurrentUser();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -475,6 +484,14 @@ export default function ChatPage() {
   // Section 5 (E4)：active trip 從 ActiveTripContext 讀寫，跨頁同步
   const { activeTripId, setActiveTrip } = useActiveTrip();
   const setActiveTripId = setActiveTrip;
+
+  // v2.31.86 embedded mode：lockTripId given → 強制 active trip 對齊 prop，
+  // 避免 user 進 TripSheet chat tab 後 active trip context 不一致。
+  useEffect(() => {
+    if (lockTripId && lockTripId !== activeTripId) {
+      setActiveTripId(lockTripId);
+    }
+  }, [lockTripId, activeTripId, setActiveTripId]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [input, setInput] = useState('');
@@ -708,9 +725,10 @@ export default function ChatPage() {
   const composerDisabled = !activeTripId || !!inflightId;
 
   const main = (
-    <div className="tp-chat-shell" data-testid="chat-page">
+    <div className="tp-chat-shell" data-testid="chat-page" data-embedded={embedded ? 'true' : undefined}>
       <style>{SCOPED_STYLES}</style>
-      <TitleBar
+      {/* v2.31.86 embedded mode：TripSheet 已有 trip name + tab header，skip TitleBar repeat。 */}
+      {!embedded && <TitleBar
         title={activeTrip?.title || activeTrip?.name || '聊天'}
         actions={trips && trips.length > 0 && (
           <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
@@ -749,7 +767,7 @@ export default function ChatPage() {
             )}
           </div>
         )}
-      />
+      />}
 
       <div className="tp-chat-body" ref={bodyRef} data-testid="chat-body">
         {loadError && activeTripId && (
@@ -953,6 +971,9 @@ export default function ChatPage() {
       </form>
     </div>
   );
+
+  // v2.31.86 embedded mode：skip AppShell（TripSheet 已是 nested context，重複會 broken layout）。
+  if (embedded) return main;
 
   return (
     <AppShell
