@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variant 1 — Mobile Fullpage · Add Custom Stop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { background: #f3ebdc; padding: 24px; }
+  .v-frame-grid {
+    display: grid;
+    grid-template-columns: 360px 360px;
+    gap: 32px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .v-frame {
+    width: 360px;
+    background: var(--tp-background);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: var(--tp-shadow-lg);
+    position: relative;
+    border: 8px solid #1a1410;
+  }
+  .v-frame-label {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--tp-muted);
+    font-weight: 600;
+  }
+  .v-page-title {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--tp-foreground);
+  }
+  .v-page-sub {
+    text-align: center;
+    font-size: 14px;
+    color: var(--tp-muted);
+    margin-bottom: 24px;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+  /* In-phone scroll */
+  .v-phone-scroll {
+    height: 720px;
+    overflow-y: auto;
+    background: var(--tp-background);
+  }
+</style>
+</head>
+<body>
+  <div class="v-page-title">Variant 1 — Mobile Fullpage Route</div>
+  <div class="v-page-sub">
+    <code>/trip/:id/day/:n/add-custom-stop</code> · MobileOnlyRoute responsive guard
+    （desktop redirect 回 AddStopPage tab）。Two-stage UX：左 = 預設 form，右 = typeahead focused 時鍵盤上 + predictions overlay。
+  </div>
+
+  <div class="v-frame-grid">
+
+    <!-- STATE A: default, map visible, pin terracotta -->
+    <div>
+      <div class="v-frame-label">State A — 預設（pin 已 drop / map 可拖）</div>
+      <div class="v-frame">
+        <div class="v-phone-scroll">
+
+          <header class="tp-titlebar">
+            <button class="tp-titlebar-back" aria-label="返回">‹</button>
+            <h1 class="tp-titlebar-title">自訂景點</h1>
+            <button class="tp-titlebar-action">完成</button>
+          </header>
+
+          <div class="tp-day-meta">
+            <strong>Day 3 · 7/28（一）</strong> · 沖繩・那霸
+          </div>
+
+          <div class="tp-form">
+
+            <div class="tp-field">
+              <label class="tp-field-label tp-field-label-required" for="t1">標題</label>
+              <input id="t1" type="text" class="tp-input" value="外婆家" />
+            </div>
+
+            <div class="tp-field">
+              <label class="tp-field-label" for="a1">地址或地標</label>
+              <div class="tp-typeahead-wrap">
+                <input id="a1" type="text" class="tp-input" placeholder="輸入地址縮放地圖（選填）" />
+              </div>
+              <div class="tp-field-help">選填 — 用來把地圖縮放到大概區域，最終位置仍以地圖中心為準。</div>
+            </div>
+
+            <div class="tp-field">
+              <label class="tp-field-label">位置</label>
+              <div class="tp-map" style="height: 240px;">
+                <div class="tp-map-coord">22.6724°N 120.2932°E</div>
+                <div class="tp-map-zoom">
+                  <button>+</button>
+                  <button>−</button>
+                </div>
+                <div class="tp-map-pin" aria-label="拖曳地圖選擇景點位置，目前選擇：22.6724 北緯 120.2932 東經">
+                  <svg viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 1 C8 1 2 7 2 15 c0 10 14 24 14 24 s14-14 14-24 c0-8-6-14-14-14 z" fill="#D97848" stroke="#B85C2E" stroke-width="1.5"/>
+                    <circle cx="16" cy="15" r="5" fill="#FFFBF5"/>
+                  </svg>
+                </div>
+                <div class="tp-map-attr">Google Maps</div>
+              </div>
+              <div class="tp-hint-row">
+                <input type="checkbox" id="hint1" class="tp-hint-checkbox" />
+                <label for="hint1" class="tp-hint-text">
+                  <strong>已調整到正確位置</strong> — 如果是用搜尋帶出的中心，請拖地圖微調
+                </label>
+              </div>
+            </div>
+
+            <div class="tp-field">
+              <label class="tp-field-label">時間（選填）</label>
+              <div class="tp-row-2col">
+                <div>
+                  <div style="font-size: 11px; color: var(--tp-muted); margin-bottom: 4px;">開始</div>
+                  <input type="time" class="tp-input" value="11:30" />
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: var(--tp-muted); margin-bottom: 4px;">停留（分鐘）</div>
+                  <input type="number" class="tp-input" value="60" />
+                </div>
+              </div>
+            </div>
+
+            <div class="tp-field">
+              <label class="tp-field-label" for="n1">備註</label>
+              <textarea id="n1" class="tp-textarea" placeholder="（選填）">外婆做的紅龜粿，建議提早一天告知</textarea>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATE B: typeahead focused, keyboard up, suggestions overlay -->
+    <div>
+      <div class="v-frame-label">State B — Typeahead focused（鍵盤上 + 預測 overlay）</div>
+      <div class="v-frame">
+        <div class="v-phone-scroll" style="position: relative;">
+
+          <header class="tp-titlebar">
+            <button class="tp-titlebar-back" aria-label="返回">‹</button>
+            <h1 class="tp-titlebar-title">自訂景點</h1>
+            <button class="tp-titlebar-action" disabled>完成</button>
+          </header>
+
+          <div class="tp-day-meta">
+            <strong>Day 3 · 7/28（一）</strong> · 沖繩・那霸
+          </div>
+
+          <div class="tp-form">
+            <div class="tp-field">
+              <label class="tp-field-label tp-field-label-required">標題</label>
+              <input type="text" class="tp-input" value="外婆家" />
+            </div>
+
+            <div class="tp-field" style="background: var(--tp-secondary);">
+              <label class="tp-field-label" for="a2">地址或地標</label>
+              <div class="tp-typeahead-wrap">
+                <input id="a2" type="text" class="tp-input" value="高雄市左營" autofocus style="border-color: var(--tp-accent); box-shadow: 0 0 0 3px var(--tp-accent-subtle);" />
+                <div class="tp-typeahead-list">
+                  <div class="tp-typeahead-item">
+                    <div class="tp-typeahead-item-main">高雄市左營區</div>
+                    <div class="tp-typeahead-item-sub">行政區 · 台灣高雄市</div>
+                  </div>
+                  <div class="tp-typeahead-item">
+                    <div class="tp-typeahead-item-main">左營高鐵站</div>
+                    <div class="tp-typeahead-item-sub">高雄市左營區站前北路</div>
+                  </div>
+                  <div class="tp-typeahead-item">
+                    <div class="tp-typeahead-item-main">左營蓮池潭</div>
+                    <div class="tp-typeahead-item-sub">高雄市左營區翠華路</div>
+                  </div>
+                </div>
+              </div>
+              <div class="tp-field-help">選預測項只會縮放地圖，最終 lat/lng 看你拖到哪。</div>
+            </div>
+
+            <div style="opacity: 0.25; pointer-events: none;">
+              <div class="tp-field">
+                <label class="tp-field-label">位置</label>
+                <div class="tp-map" style="height: 200px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fake mobile keyboard -->
+          <div class="tp-mock-keyboard">
+            <div style="text-align: center;">
+              <div style="font-weight: 600; margin-bottom: 4px;">[ 注音 / 英文鍵盤 ]</div>
+              <div>IME ~280px occlusion · map 暫時被擋</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="tp-anno">
+    <div class="tp-anno-title">IA decisions — Variant 1</div>
+    <ul>
+      <li>新 route fullpage、bottom nav 收</li>
+      <li>輸入順序：title → address → map → 時間 → 備註（高優先在上）</li>
+      <li>State B：keyboard 上時 map opacity 0.25 + pointer-none，避免 user 在被擋的 map 試圖點</li>
+      <li>選 suggestion 後 keyboard dismiss + map snap zoom 14 + checkbox 自動 prompt 確認位置</li>
+      <li>「完成」disabled 直到 pin valid（State B 顯示 disabled，state A enable）</li>
+      <li>Pin a11y label 含「拖曳地圖選擇⋯目前 22.6724N 120.2932E」</li>
+      <li>Address typeahead fail → silent，map 仍可拖（無 banner 干擾）</li>
+      <li>Map JS API fail → 全頁退化 error banner + 「請改用搜尋 tab」link（未顯示，後備態）</li>
+    </ul>
+  </div>
+</body>
+</html>

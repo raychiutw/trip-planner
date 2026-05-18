@@ -59,7 +59,7 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await expect(page.getByText(/還沒收藏景點/)).toBeVisible();
   });
 
-  test('自訂 tab → form fields render + counter 隨 title 更新', async ({ page }) => {
+  test('自訂 tab → form fields render + counter 顯示「已選 0 個」直到 title + coord 雙備齊', async ({ page }) => {
     await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     await page.getByTestId('add-stop-tab-custom').click();
     await expect(page.getByTestId('add-stop-custom-title')).toBeVisible();
@@ -69,16 +69,20 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await expect(page.getByTestId('add-stop-counter')).toContainText('已選');
     // v2.31.33: counter 簡化為「已選 N 個 → DAY NN」(mobile fit)，不再含「將加入」
     await expect(page.getByTestId('add-stop-counter')).toContainText('DAY');
+    // v2.31.94: title-only 不再 enable (counter 維持 0)，必須再有 map pin coord 才算 1
     await page.getByTestId('add-stop-custom-title').fill('海邊散步');
-    await expect(page.getByTestId('add-stop-counter')).toContainText('已選 1 個');
+    await expect(page.getByTestId('add-stop-counter')).toContainText('已選 0 個');
   });
 
-  test('自訂 tab 缺 title 點完成 → inline error', async ({ page }) => {
+  test('自訂 tab disabled 直到 title 填 + map pin coord 備齊（v2.31.94 wedge）', async ({ page }) => {
     await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     await page.getByTestId('add-stop-tab-custom').click();
-    await page.getByTestId('add-stop-confirm').click();
-    await expect(page.getByTestId('add-stop-custom-error')).toBeVisible();
-    await expect(page.getByTestId('add-stop-custom-error')).toContainText('請輸入');
+    // Title 空 + 無 coord → 完成 disabled
+    const bottomConfirm = page.getByTestId('add-stop-confirm');
+    await expect(bottomConfirm).toBeDisabled();
+    // Fill title → 仍 disabled（缺 coord）
+    await page.getByTestId('add-stop-custom-title').fill('海邊散步');
+    await expect(bottomConfirm).toBeDisabled();
   });
 
   test('TitleBar 返回按鈕 → 回到 trip 頁面', async ({ page }) => {
@@ -105,10 +109,11 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     const bottomConfirm = page.getByTestId('add-stop-confirm');
     await expect(titleBarConfirm).toBeDisabled();
     await expect(bottomConfirm).toBeDisabled();
-    // switch to custom + fill title → enable
+    // v2.31.94 wedge：自訂 tab 即使 title 填了，map pin coord 沒備齊（CI 無 Google
+    // Maps browser key → 地圖 fail load → coord 永遠 null）→ confirm 維持 disabled
     await page.getByTestId('add-stop-tab-custom').click();
     await page.getByTestId('add-stop-custom-title').fill('測試景點');
-    await expect(titleBarConfirm).toBeEnabled();
-    await expect(bottomConfirm).toBeEnabled();
+    await expect(titleBarConfirm).toBeDisabled();
+    await expect(bottomConfirm).toBeDisabled();
   });
 });

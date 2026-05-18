@@ -3,6 +3,48 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.94] - 2026-05-19
+
+**Feat: 自訂景點 + 地址 typeahead + 地圖 pin pick → 自動計算前後車程。** 旅伴加自訂 entry 時 UI 強制提供 lat/lng，map marker 不再 silent drop、travel pill 30s 內計算車程。
+
+### Context
+
+Owner Ray observation：旅伴**以為**自訂 entry 在 map 上、實際被 silent drop（無座標 → OceanMap 漏 marker + segment 跳過 → travel pill 空白 → timeline 整本帳斷掉）。這是 product expectation gap (bug 層級)，不是 nice-to-have feature。Design doc + reviewer 3 輪 + CSO HIGH 2 個全修。
+
+### Added
+
+- **新 backend endpoint** `POST /api/places/autocomplete` — Google Places API (New) `/v1/places:autocomplete` proxy with auth + per-user 1000/24h rate limit + sessionToken/regionCode length caps
+- **新 backend endpoint** `GET /api/places/resolve?placeId=...&sessionToken=...` — Place Details wrapper that closes Google billing session (one autocomplete + one details = 1 billable interaction). Per-user 500/24h rate limit
+- **新 mobile route** `/trip/:id/add-custom-stop?day=N` (AddCustomStopPage) — fullpage 自訂景點 picker，IME-occlusion 友善，per `<MobileOnlyRoute>` guard 桌面 redirect 回 inline tab
+- **新 frontend hook** `usePlacesAutocomplete` — 300ms debounce + crypto.randomUUID() session + LRU cache + abort + cleanup
+- **新 frontend hook** `useTypeaheadKeyboard` — ARIA combobox + Arrow/Enter/Escape 鍵盤導航（WCAG 2.1 Level A）
+- **新 frontend lib** `src/lib/locationPicker.ts` — isValidCoord / computeArrowKeyStepPixels / selectDefaultCenter fallback chain
+- **新 frontend component** `<LocationPickerMap>` — picker-mode Google Maps，CSS overlay center marker (NOT AdvancedMarkerElement)、`idle` listener、arrow-key panBy a11y
+- **新 frontend wrapper** `<MobileOnlyRoute>` — `matchMedia (max-width: 1023px)` responsive route guard
+
+### Changed
+
+- `AddStopPage` 自訂 tab — title/time/duration/note 4 欄位保留，新增 address typeahead + LocationPickerMap + 「已調整到正確位置」hint checkbox。Submit 強制 lat/lng + source='custom'。Mobile (≤1023px) auto-redirect 到 fullpage route 避免 IME occlusion
+- `functions/api/_validate.ts` validateEntryBody — 新增 lat/lng XOR + range check + source allowlist
+- `functions/api/trips/[id]/days/[num]/entries.ts:87` — forward `body.source` 進 pois.source (改 hardcode 'ai')
+- `src/server/maps/google-client.ts` getPlaceDetails 簽名 — 新增 optional sessionToken arg，URL `?sessionToken=` forward Google billing session
+
+### Security audit
+
+CSO HIGH 2 個 + LOW 3 個全部 address：
+1. ~~`auth.user.id` typo~~ → `auth.userId` (autocomplete 在 prod 之前是 500 broken)
+2. ~~/api/places/resolve 無 rate limit~~ → 加 500/24h per-user cap
+3. body.source 加 allowlist
+4. sessionToken / regionCode / placeId 加 length cap
+
+### Mockups
+
+`docs/design-sessions/2026-05-18-add-custom-stop/` — 3 cross-form-factor variants + compare board (V1 mobile fullpage + V3 desktop inline 為 ship combo).
+
+### Test
+
+新 89 個 vitest unit test，覆蓋 backend validation / autocomplete client / endpoint / resolve / hook / lib / a11y keyboard / route guard. 既有 1850 test 0 regression — total 1939/1939 green.
+
 ## [2.31.93] - 2026-05-18
 
 **Fix: TripMapRail 對齊 MapPage focusId flow — 點 stop marker 換 accent 視覺 + 浮頂避免被相鄰 marker 蓋住（user feedback 2 issue）。**
