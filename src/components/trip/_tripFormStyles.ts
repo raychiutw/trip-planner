@@ -141,6 +141,24 @@ export const TRIP_FORM_STYLES = `
   font-size: var(--font-size-body);
   min-height: var(--spacing-tap-min);
 }
+/* v2.31.82：page-scoped .tp-edit-row select 用 background shorthand 覆蓋了
+ * tokens.css .tp-select 的 chevron background-image。重新加 chevron + 用
+ * background-color + background-image (longhand) 不會互相覆蓋。padding-right
+ * 也要重設讓 chevron 不被文字蓋掉。 */
+.tp-edit-row select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B85F2A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+  padding-right: 40px;
+  cursor: pointer;
+}
+body.dark .tp-edit-row select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFBF5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+}
 .tp-new-form-row textarea,
 .tp-edit-row textarea {
   resize: vertical;
