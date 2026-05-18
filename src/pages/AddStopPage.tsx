@@ -118,19 +118,21 @@ function normalizeSearchResults(data: unknown): PoiSearchResult[] {
 }
 
 function normalizePoiFavorites(data: unknown): PoiFavoriteRow[] {
+  // v2.31.80：移除 ?? item.poi_* dead defensive fallback。`/api/poi-favorites`
+  // 用 functions/api/_utils.json() 經 deepCamel，response 永遠是 camelCase
+  // (poiId / poiName / poiAddress / poiType / poiRating)。snake_case 路徑
+  // 從未生效，留著只是製造混淆。
   if (!Array.isArray(data)) return [];
   return data.flatMap((row) => {
     if (!row || typeof row !== 'object') return [];
     const item = row as Record<string, unknown>;
     const id = Number(item.id);
-    const poiId = Number(item.poiId ?? item.poi_id);
-    const poiName = item.poiName ?? item.poi_name;
+    const poiId = Number(item.poiId);
+    const poiName = item.poiName;
     if (!Number.isFinite(id) || typeof poiName !== 'string' || !poiName.trim()) return [];
-    const poiAddress = item.poiAddress ?? item.poi_address;
-    const poiType = item.poiType ?? item.poi_type;
-    const poiRating = typeof item.poiRating === 'number' ? item.poiRating
-      : typeof item.poi_rating === 'number' ? item.poi_rating
-      : undefined;
+    const poiAddress = item.poiAddress;
+    const poiType = item.poiType;
+    const poiRating = typeof item.poiRating === 'number' ? item.poiRating : undefined;
     return [{
       id,
       poiId: Number.isFinite(poiId) ? poiId : 0,

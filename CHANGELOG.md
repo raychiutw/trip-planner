@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.80] - 2026-05-18
+
+**Cleanup: AddStopPage `normalizePoiFavorites` 移除 snake_case dead fallback。**
+
+### Cleaned: 4 個 `?? item.poi_*` defensive 路徑從未生效
+
+`/api/poi-favorites` 用 `functions/api/_utils.json()` 經 `deepCamel`，response 永遠 camelCase (`poiId` / `poiName` / `poiAddress` / `poiType` / `poiRating`)。`AddStopPage.normalizePoiFavorites` 寫 `item.poiId ?? item.poi_id` 等 4 個 defensive fallback 從未生效，留著只是製造混淆。
+
+Source 簡化：
+```ts
+// Before
+const poiId = Number(item.poiId ?? item.poi_id);
+const poiName = item.poiName ?? item.poi_name;
+const poiAddress = item.poiAddress ?? item.poi_address;
+const poiType = item.poiType ?? item.poi_type;
+const poiRating = typeof item.poiRating === 'number' ? item.poiRating
+  : typeof item.poi_rating === 'number' ? item.poi_rating
+  : undefined;
+// After
+const poiId = Number(item.poiId);
+const poiName = item.poiName;
+const poiAddress = item.poiAddress;
+const poiType = item.poiType;
+const poiRating = typeof item.poiRating === 'number' ? item.poiRating : undefined;
+```
+
+延續 v2.31.77 entry.start_time camelCase 修正的同精神 — TypeScript 型別、實際 runtime 跟 backend `deepCamel` 三方對齊。
+
+**Test update**：`tests/unit/add-stop-page-rating-and-title.test.ts` 既有 v2.31.17 assertion 「snake_case poi_rating fallback」改為 lock 「dead fallback 移除」。
+
+**New regression test**：`tests/unit/v2_31_80-normalize-poi-favorites-camel-only.test.ts` 3 個 assertion — fn block 含 camelCase 5 field、不含任何 `item.poi_*` snake property access。
+
+### Test results
+
+- vitest: **236 file / 1791 test 全綠**（+3 個 regression，1 個 v2.31.17 既有 test 更新）
+- tsc/build：0 errors
+
 ## [2.31.79] - 2026-05-18
 
 **Fix: OceanMap marker 疊在一起時數字看不清楚（user QA prod screenshot）。**
