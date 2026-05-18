@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.68] - 2026-05-18
+
+**Rip dead backend helper `functions/api/_poi-defaults.ts`（36 行整檔 0 callers）。**
+
+### Removed: _poi-defaults.ts（v2.26.0 TIME_RE 搬家後遺漏）
+
+dispatched Explore agent 做 `functions/api/` backend tech debt audit，發現：
+
+- `_poi-defaults.ts` exports `TIME_RE` / `stayMinutesFor` / `defaultStartFor` / `addMinutes` 全 0 caller
+- v2.26.0 migration 0056 後 `TIME_RE` canonical 搬到 `_time.ts`，所有 caller 改 import `_time` 但 `_poi-defaults.ts` 沒同步刪
+- 其他 3 個函數（stayMinutesFor/defaultStartFor/addMinutes）也 0 caller — historic dead
+
+順手清 2 處 stale comment reference：
+- `functions/api/poi-favorites/[id]/add-to-trip.ts:26` 提到 `_poi-defaults.ts:6 仍保留同 const 給 saved-pois fast-path（defense-in-depth）` — 過時，刪
+- `src/pages/AddPoiFavoriteToTripPage.tsx:335` 註解「後端 TIME_RE 同 functions/api/_poi-defaults.ts」→ 改「同 functions/api/_time.ts」
+
+tsc clean，57/57 sample test pass。零行為變動。
+
 ## [2.31.67] - 2026-05-18
 
 **Rip dead code — `src/components/trip/Restaurant.tsx` (168 行整檔零 imports)。**
