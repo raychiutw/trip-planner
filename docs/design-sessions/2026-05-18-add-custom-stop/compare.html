@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Side-by-side · Add Custom Stop · 3 Variants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { background: #f0e7d4; padding: 0; }
+
+  .v-hero {
+    padding: 32px 32px 16px;
+    border-bottom: 1px solid var(--tp-border);
+    background: var(--tp-background);
+  }
+  .v-hero h1 { font-size: 28px; font-weight: 700; color: var(--tp-foreground); }
+  .v-hero p { font-size: 14px; color: var(--tp-muted); margin-top: 8px; line-height: 1.6; max-width: 880px; }
+  .v-hero-meta {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .v-hero-chip {
+    padding: 4px 10px;
+    background: var(--tp-accent-subtle);
+    color: var(--tp-accent-deep);
+    border-radius: var(--tp-radius-full, 999px);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .v-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    padding: 0;
+  }
+
+  .v-col {
+    border-right: 1px solid var(--tp-border);
+    padding: 16px 16px 24px;
+    min-width: 0;
+  }
+  .v-col:last-child { border-right: none; }
+
+  .v-col h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--tp-foreground);
+    margin-bottom: 4px;
+  }
+  .v-col .v-tag {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--tp-muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .v-col p.v-summary {
+    font-size: 13px;
+    color: var(--tp-muted);
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .v-col .v-frame {
+    border: 1px solid var(--tp-border);
+    border-radius: var(--tp-radius-md);
+    overflow: hidden;
+    background: var(--tp-background);
+    box-shadow: var(--tp-shadow-md);
+    aspect-ratio: 360 / 720;
+    width: 100%;
+  }
+  .v-col .v-frame-desktop {
+    aspect-ratio: 16 / 10;
+  }
+  .v-col iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    transform: scale(0.55);
+    transform-origin: top left;
+    width: calc(100% / 0.55);
+    height: calc(100% / 0.55);
+  }
+  .v-col .v-frame-desktop iframe {
+    transform: scale(0.4);
+    width: calc(100% / 0.4);
+    height: calc(100% / 0.4);
+  }
+
+  .v-pros {
+    margin-top: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .v-pros h3 {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--tp-muted);
+    font-weight: 600;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+  .v-pros ul { margin: 0 0 0 18px; padding: 0; }
+  .v-pros li { margin: 2px 0; }
+
+  .v-open {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 12px;
+    background: var(--tp-accent);
+    color: var(--tp-on-accent);
+    border-radius: var(--tp-radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .v-open:hover { background: var(--tp-accent-deep); }
+
+  .v-footer {
+    padding: 20px 32px;
+    border-top: 1px solid var(--tp-border);
+    background: var(--tp-background);
+    font-size: 13px;
+    color: var(--tp-muted);
+    line-height: 1.6;
+  }
+  .v-footer-title { font-weight: 700; color: var(--tp-foreground); margin-bottom: 6px; }
+
+  /* Desktop grid: stack on narrow */
+  @media (max-width: 1100px) {
+    .v-grid { grid-template-columns: 1fr; }
+    .v-col { border-right: none; border-bottom: 1px solid var(--tp-border); }
+  }
+</style>
+</head>
+<body>
+
+  <header class="v-hero">
+    <h1>自訂景點 + 地址定位 — 3 個 mockup variants</h1>
+    <p>
+      Approach B：Map center pick + address typeahead 輔助。問題：旅伴加自訂 entry 時被 silent drop（無座標 → map 漏 + travel pill 空），這版本確保「保證有 coord 才能 submit」。3 個 variants 跨 form factor 比較。
+    </p>
+    <div class="v-hero-meta">
+      <span class="v-hero-chip">terracotta v2</span>
+      <span class="v-hero-chip">Inter + Noto Sans TC</span>
+      <span class="v-hero-chip">Places API New autocomplete</span>
+      <span class="v-hero-chip">a11y arrow nudge</span>
+      <span class="v-hero-chip">design doc · APPROVED 8/10</span>
+    </div>
+  </header>
+
+  <div class="v-grid">
+
+    <div class="v-col">
+      <div class="v-tag">Variant 1 · Mobile</div>
+      <h2>Fullpage Route</h2>
+      <p class="v-summary">
+        <code>/trip/:id/day/:n/add-custom-stop</code>。IME 強制走全頁、keyboard 上時 map 暫退讓 dim。
+      </p>
+      <div class="v-frame">
+        <iframe src="mobile-fullpage.html" title="Mobile fullpage"></iframe>
+      </div>
+      <a class="v-open" href="mobile-fullpage.html" target="_blank">開新分頁看細節 →</a>
+      <div class="v-pros">
+        <h3>✓ 適合</h3>
+        <ul>
+          <li>長 form / 多欄位</li>
+          <li>IME 高占用（注音輸入）</li>
+          <li>需要 dedicated route 給 back button</li>
+        </ul>
+        <h3>✗ 代價</h3>
+        <ul>
+          <li>新 route + MobileOnlyRoute guard</li>
+          <li>離開 trip context（page swap）</li>
+          <li>back button 行為要對齊既有 AddStopPage</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="v-col">
+      <div class="v-tag">Variant 2 · Mobile</div>
+      <h2>Bottom Sheet</h2>
+      <p class="v-summary">
+        Sheet 從底部上升、維持 trip 背景 dim 可見。鍵盤上 sheet shrink 自動避讓。
+      </p>
+      <div class="v-frame">
+        <iframe src="mobile-bottom-sheet.html" title="Mobile bottom sheet"></iframe>
+      </div>
+      <a class="v-open" href="mobile-bottom-sheet.html" target="_blank">開新分頁看細節 →</a>
+      <div class="v-pros">
+        <h3>✓ 適合</h3>
+        <ul>
+          <li>保留 trip 視覺 context</li>
+          <li>短任務感（drag-to-dismiss）</li>
+          <li>對齊現代 mobile UI pattern</li>
+        </ul>
+        <h3>✗ 代價</h3>
+        <ul>
+          <li>Dynamic-height keyboard 處理棘手</li>
+          <li>Map 折疊狀態需特別設計 transition</li>
+          <li>內容過多時 sheet 上推手感差</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="v-col">
+      <div class="v-tag">Variant 3 · Desktop</div>
+      <h2>Two-pane Inline</h2>
+      <p class="v-summary">
+        AddStopPage「自訂」tab body 擴充，form 左 / map 右。無 IME 限制，map 可大。
+      </p>
+      <div class="v-frame v-frame-desktop">
+        <iframe src="desktop-inline.html" title="Desktop inline"></iframe>
+      </div>
+      <a class="v-open" href="desktop-inline.html" target="_blank">開新分頁看細節 →</a>
+      <div class="v-pros">
+        <h3>✓ 適合</h3>
+        <ul>
+          <li>≥1024px 桌面、map 拖動空間大</li>
+          <li>對齊既有 3-tab pattern</li>
+          <li>無新 route / 無 reroute 邏輯</li>
+        </ul>
+        <h3>✗ 代價</h3>
+        <ul>
+          <li>13" 多視窗會擠（min-width 1024 不算寬鬆）</li>
+          <li>Mobile 必須 reroute 到 V1 fullpage（兩條 path 維護）</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="v-footer">
+    <div class="v-footer-title">下一步</div>
+    <div>
+      1. user 看 3 variants → 選 V1 / V2 用於 mobile，V3 用於 desktop（推薦組合：V1 + V3，或 V2 + V3）。
+    </div>
+    <div>
+      2. 選定後跑 30 min spike 驗證 5 件事（Map idle event、panBy 不衝突、AdvancedMarkerElement、arrow-key step、recompute-travel 新 segment）。spike 通過 → 進 <code>/tp-team</code> pipeline 寫 React + TDD。
+    </div>
+    <div>
+      3. SoT path：<code>docs/design-sessions/2026-05-18-add-custom-stop/</code> · Design doc：<code>~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260518-210133.md</code>
+    </div>
+  </div>
+
+</body>
+</html>

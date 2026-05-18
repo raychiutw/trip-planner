@@ -1,0 +1,95 @@
+/**
+ * GET /api/places/resolve?placeId=...
+ *
+ * v2.31.94 custom-stop-location-picker: lightweight Place Details wrapper for
+ * typeahead pick → map flyTo flow. Closes Google autocomplete session per
+ * billing semantics — caller should rotate the sessionToken on the frontend
+ * once this returns.
+ *
+ * Response: { placeId, lat, lng, name, address }
+ *
+ * Failures:
+ *   - missing placeId → 400 DATA_VALIDATION
+ *   - getPlaceDetails null (POI delisted) → 404 DATA_NOT_FOUND
+ *   - kill switch / upstream → 503 MAPS_LOCKED / 502 MAPS_UPSTREAM_FAILED
+ */
+import { AppError } from '../_errors';
+import { requireAuth } from '../_auth';
+import { json } from '../_utils';
+import { assertGoogleAvailable } from '../_maps_lock';
+import { bumpRateLimit } from '../_rate_limit';
+import { getPlaceDetails } from '../../../src/server/maps/google-client';
+import type { Env } from '../_types';
+
+// v2.31.94 rate limit: Place Details API is $17/1000 calls (10× autocomplete).
+// Per-user cap of 500/24h is generous for legitimate typeahead-pick flow
+// (~one resolve per user pick × ~30 picks/trip × ~30 trips/month) but stops
+// drain attacks well below kill-switch threshold.
+const RATE_LIMIT_CONFIG = {
+  maxAttempts: 500,
+  windowMs: 24 * 60 * 60 * 1000,
+  lockoutMs: 24 * 60 * 60 * 1000,
+};
+
+export const onRequestGet: PagesFunction<Env> = async (context) => {
+  const auth = requireAuth(context);
+
+  const url = new URL(context.request.url);
+  const placeId = url.searchParams.get('placeId')?.trim();
+  if (!placeId) {
+    throw new AppError('DATA_VALIDATION', 'placeId 必填');
+  }
+  if (placeId.length > 256) {
+    throw new AppError('DATA_VALIDATION', 'placeId 過長');
+  }
+  // v2.31.94: forward optional sessionToken so the autocomplete + this details
+  // call count as one billable Google session, not two.
+  const sessionTokenRaw = url.searchParams.get('sessionToken')?.trim();
+  if (sessionTokenRaw && sessionTokenRaw.length > 128) {
+    throw new AppError('DATA_VALIDATION', 'sessionToken 過長');
+  }
+  const sessionToken = sessionTokenRaw || undefined;
+
+  const apiKey = context.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new AppError('MAPS_UPSTREAM_FAILED', 'GOOGLE_MAPS_API_KEY not configured');
+  }
+
+  await assertGoogleAvailable(context.env.DB);
+
+  if (!auth.userId) {
+    throw new AppError('AUTH_REQUIRED', 'user session required for places resolve');
+  }
+  const userKey = `places-resolve:user-${auth.userId}`;
+  const limit = await bumpRateLimit(context.env.DB, userKey, RATE_LIMIT_CONFIG);
+  if (!limit.ok) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: 'RATE_LIMITED',
+          detail: '已達每日 Place Details 用量上限（500 / 24h），請明日再試',
+        },
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(limit.retryAfter ?? 3600),
+        },
+      },
+    );
+  }
+
+  const details = await getPlaceDetails(apiKey, placeId, sessionToken);
+  if (!details) {
+    throw new AppError('DATA_NOT_FOUND', 'Google 找不到此景點');
+  }
+
+  return json({
+    placeId: details.place_id,
+    lat: details.lat,
+    lng: details.lng,
+    name: details.name,
+    address: details.address,
+  });
+};

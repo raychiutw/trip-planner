@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variant 3 — Desktop Inline · Add Custom Stop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { background: #f3ebdc; padding: 24px; }
+  .v-page-title { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 8px; color: var(--tp-foreground); }
+  .v-page-sub { text-align: center; font-size: 14px; color: var(--tp-muted); margin-bottom: 24px; line-height: 1.6; max-width: 1024px; margin-left: auto; margin-right: auto; }
+
+  .v-frame {
+    max-width: 1024px;
+    margin: 0 auto;
+    background: var(--tp-background);
+    border-radius: var(--tp-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--tp-shadow-lg);
+    border: 1px solid var(--tp-border);
+  }
+
+  /* Desktop two-pane: form left, map right */
+  .tp-add-stop-body {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    min-height: 540px;
+  }
+  .tp-add-stop-form-pane {
+    padding: 0;
+    border-right: 1px solid var(--tp-border);
+    background: var(--tp-background);
+    overflow-y: auto;
+  }
+  .tp-add-stop-map-pane {
+    padding: 20px;
+    background: var(--tp-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .tp-add-stop-map-pane .tp-map {
+    flex: 1;
+    min-height: 380px;
+  }
+
+  /* Desktop titlebar (taller) */
+  .tp-titlebar-desktop {
+    height: var(--tp-titlebar-desktop);
+    background: var(--tp-glass);
+    border-bottom: 1px solid var(--tp-border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+  }
+  .tp-titlebar-desktop .tp-titlebar-title {
+    font-size: 20px;
+    line-height: 28px;
+  }
+
+  /* Tabs */
+  .tp-tabs-desktop {
+    display: flex;
+    padding: 0 24px;
+    background: var(--tp-background);
+    border-bottom: 1px solid var(--tp-border);
+    align-items: end;
+  }
+  .tp-tab-desktop {
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--tp-muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tp-tab-desktop.is-active {
+    color: var(--tp-accent);
+    border-bottom-color: var(--tp-accent);
+  }
+  .tp-tabs-desktop-spacer { flex: 1; }
+
+  .tp-side-help {
+    font-size: 13px;
+    color: var(--tp-muted);
+    padding: 12px 14px;
+    background: var(--tp-accent-subtle);
+    border-radius: var(--tp-radius-md);
+    line-height: 1.5;
+  }
+  .tp-side-help-title {
+    font-weight: 600;
+    color: var(--tp-foreground);
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+  <div class="v-page-title">Variant 3 — Desktop Inline（≥1024px）</div>
+  <div class="v-page-sub">
+    AddStopPage「自訂」tab body 直接擴充。Two-pane：左 form / 右 map。無 keyboard occlusion 限制，可平鋪。Mobile reroute 到 fullpage 版（per MobileOnlyRoute guard）。
+  </div>
+
+  <div class="v-frame">
+    <header class="tp-titlebar-desktop">
+      <button class="tp-titlebar-back" aria-label="返回">‹</button>
+      <h1 class="tp-titlebar-title">加入景點 · Day 3 · 7/28（一）· 沖繩・那霸</h1>
+      <button class="tp-titlebar-action">完成</button>
+    </header>
+
+    <div class="tp-tabs-desktop">
+      <button class="tp-tab-desktop">搜尋</button>
+      <button class="tp-tab-desktop">收藏</button>
+      <button class="tp-tab-desktop is-active">自訂</button>
+      <div class="tp-tabs-desktop-spacer"></div>
+    </div>
+
+    <div class="tp-add-stop-body">
+
+      <!-- Form pane left -->
+      <div class="tp-add-stop-form-pane">
+
+        <div class="tp-field">
+          <label class="tp-field-label tp-field-label-required" for="t3">標題</label>
+          <input id="t3" type="text" class="tp-input" value="外婆家" />
+        </div>
+
+        <div class="tp-field">
+          <label class="tp-field-label" for="a3">地址或地標</label>
+          <div class="tp-typeahead-wrap">
+            <input id="a3" type="text" class="tp-input" value="高雄市左營" style="border-color: var(--tp-accent); box-shadow: 0 0 0 3px var(--tp-accent-subtle);" />
+            <div class="tp-typeahead-list">
+              <div class="tp-typeahead-item">
+                <div class="tp-typeahead-item-main">高雄市左營區</div>
+                <div class="tp-typeahead-item-sub">行政區 · 台灣高雄市</div>
+              </div>
+              <div class="tp-typeahead-item">
+                <div class="tp-typeahead-item-main">左營高鐵站</div>
+                <div class="tp-typeahead-item-sub">高雄市左營區站前北路</div>
+              </div>
+              <div class="tp-typeahead-item">
+                <div class="tp-typeahead-item-main">左營蓮池潭</div>
+                <div class="tp-typeahead-item-sub">高雄市左營區翠華路</div>
+              </div>
+            </div>
+          </div>
+          <div class="tp-field-help">選填 — 縮放地圖到大概區域。最終 lat/lng 以地圖中心為準。</div>
+        </div>
+
+        <div class="tp-field">
+          <label class="tp-field-label">時間（選填）</label>
+          <div class="tp-row-2col">
+            <div>
+              <div style="font-size: 11px; color: var(--tp-muted); margin-bottom: 4px;">開始</div>
+              <input type="time" class="tp-input" value="11:30" />
+            </div>
+            <div>
+              <div style="font-size: 11px; color: var(--tp-muted); margin-bottom: 4px;">停留（分鐘）</div>
+              <input type="number" class="tp-input" value="60" />
+            </div>
+          </div>
+        </div>
+
+        <div class="tp-field">
+          <label class="tp-field-label" for="n3">備註</label>
+          <textarea id="n3" class="tp-textarea" placeholder="（選填）">外婆做的紅龜粿，建議提早一天告知</textarea>
+        </div>
+
+      </div>
+
+      <!-- Map pane right -->
+      <div class="tp-add-stop-map-pane">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-size: 14px; font-weight: 600; color: var(--tp-foreground);">在地圖上選位置</div>
+          <div style="font-size: 13px; color: var(--tp-muted); font-variant-numeric: tabular-nums;">22.6724°N 120.2932°E</div>
+        </div>
+
+        <div class="tp-map">
+          <div class="tp-map-zoom">
+            <button>+</button>
+            <button>−</button>
+          </div>
+          <div class="tp-map-pin" aria-label="拖曳地圖選擇景點位置，目前選擇：22.6724 北緯 120.2932 東經">
+            <svg viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 1 C8 1 2 7 2 15 c0 10 14 24 14 24 s14-14 14-24 c0-8-6-14-14-14 z" fill="#D97848" stroke="#B85C2E" stroke-width="1.5"/>
+              <circle cx="16" cy="15" r="5" fill="#FFFBF5"/>
+            </svg>
+          </div>
+          <div class="tp-map-attr">Google Maps</div>
+        </div>
+
+        <div class="tp-hint-row" style="margin-top: 0;">
+          <input type="checkbox" class="tp-hint-checkbox" />
+          <label class="tp-hint-text">
+            <strong>已調整到正確位置</strong> — 拖地圖或用方向鍵微調
+          </label>
+        </div>
+
+        <div class="tp-side-help">
+          <div class="tp-side-help-title">小提示</div>
+          地址典型不精確（朋友家、隱藏小店）— pin 拖到實際位置才會在 timeline 上顯正確車程。鍵盤可用 ↑↓←→ 微調。
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="tp-anno">
+    <div class="tp-anno-title">IA decisions — Variant 3</div>
+    <ul>
+      <li>Two-pane layout（form 380px / map flex），map 較大 ~380px 高，pin 拖動空間大</li>
+      <li>「加入景點」titlebar 一行顯示 Day + 日期 + 區域，省 day-meta sub-line</li>
+      <li>右 pane 加 sidehelp 解釋為什麼地址不夠、要拖 pin（cognitive aid 不擋路）</li>
+      <li>順序：title → address → 時間 → 備註（form 上下），map 在右 pane 隨時可看</li>
+      <li>「已調整到正確位置」hint 移到 map pane 內，跟 pin 視覺鄰近</li>
+      <li>Mobile fallback：matchMedia max-width 1023px → redirect 到 fullpage route</li>
+      <li>權衡：對齊既有 AddStopPage 三 tab pattern，user mental model 維持；但 desktop 需要 1024px+ 才放得下，narrow 桌面（如 13" 多視窗）會擠</li>
+      <li>Error：typeahead fail → silent，map fail → 整 pane 退化 banner</li>
+    </ul>
+  </div>
+</body>
+</html>
