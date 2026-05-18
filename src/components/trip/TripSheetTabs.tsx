@@ -6,7 +6,6 @@ import clsx from 'clsx';
 import { SHEET_TABS, sheetPanelId, sheetTabId, type SheetTab } from '../../lib/trip-url';
 
 const TAB_LABELS: Record<SheetTab, string> = {
-  itinerary: '行程',
   map: '地圖',
   chat: '聊天',
 };

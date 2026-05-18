@@ -1,7 +1,7 @@
 /**
  * trip-url.ts — per-trip sheet URL driver.
  *
- * Sheet state lives in `?sheet=itinerary|map|chat` so the tab is deep-linkable,
+ * Sheet state lives in `?sheet=map|chat` so the tab is deep-linkable,
  * browser back/forward works, and sharing a URL lands on the right pane.
  *
  * Invalid `?sheet=` values degrade to `null` (fallback = closed) so URL injection
@@ -14,7 +14,10 @@
 
 import type { NavigateFunction } from 'react-router-dom';
 
-export const SHEET_TABS = ['itinerary', 'map', 'chat'] as const;
+// v2.31.85：'itinerary' tab 拿掉 — 桌機 main column 已 render 行程內容，
+// sheet 重複 itinerary 是 placeholder「行程已顯示在左側」，無 user value。
+// 「?sheet=itinerary」legacy URL → parseSheetParam 回 null → fallback 'map'。
+export const SHEET_TABS = ['map', 'chat'] as const;
 export type SheetTab = typeof SHEET_TABS[number];
 
 const SHEET_TAB_SET = new Set<string>(SHEET_TABS);
