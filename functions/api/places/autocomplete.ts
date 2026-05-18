@@ -56,11 +56,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (typeof body.sessionToken !== 'string' || !body.sessionToken) {
     throw new AppError('DATA_VALIDATION', 'sessionToken 必填');
   }
+  if (body.sessionToken.length > 128) {
+    throw new AppError('DATA_VALIDATION', 'sessionToken 過長（max 128）');
+  }
   const sessionToken = body.sessionToken;
 
   const regionCode = typeof body.regionCode === 'string' && body.regionCode
     ? body.regionCode
     : undefined;
+  if (regionCode && regionCode.length > 8) {
+    throw new AppError('DATA_VALIDATION', 'regionCode 過長（max 8）');
+  }
 
   const apiKey = context.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
@@ -72,8 +78,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Per-user daily cap (1000 / 24h). Every call bumps regardless of outcome —
   // even cached / cheap requests count toward the user budget to prevent
-  // drain attacks.
-  const userKey = `places-autocomplete:user-${auth.user.id}`;
+  // drain attacks. userId can be null for service-token sessions; skip user
+  // key in that case (service tokens are already rate-limited at OAuth layer).
+  if (!auth.userId) {
+    throw new AppError('AUTH_REQUIRED', 'user session required for places autocomplete');
+  }
+  const userKey = `places-autocomplete:user-${auth.userId}`;
   const limit = await bumpRateLimit(context.env.DB, userKey, RATE_LIMIT_CONFIG);
   if (!limit.ok) {
     return new Response(

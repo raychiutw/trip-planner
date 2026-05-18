@@ -47,8 +47,26 @@ export interface EntryBody {
   title?: string | null;
   lat?: number | null;
   lng?: number | null;
+  source?: string | null;
   [key: string]: unknown;
 }
+
+/**
+ * Allowlist for entry/POI source values written to pois.source / trip_entries.source.
+ * v2.31.94: closes storage-abuse vector — unbounded user-supplied source string
+ * could inflate D1 rows. Allowlist matches the values actually written by
+ * frontend callers (see usage grep). Add new values here when adding new
+ * acquisition channels.
+ */
+const ALLOWED_SOURCES = new Set([
+  'ai',           // default + AI-generated
+  'google',       // Google Places search result
+  'favorite',     // poi_favorites → trip
+  'custom',       // v2.31.94 map pin (this PR)
+  'search',       // legacy frontend selected-state value (read-only path)
+  'user-explore', // /explore page save flow
+  'manual',       // future-proofing (aligns with trips.data_source)
+]);
 
 function coordPresent(v: unknown): boolean {
   return v !== undefined && v !== null;
@@ -84,6 +102,14 @@ export function validateEntryBody(body: EntryBody): ValidationResult {
   if (hasLat && hasLng) {
     if (!isValidCoord(body.lat, 'lat') || !isValidCoord(body.lng, 'lng')) {
       return { ok: false, status: 400, error: '無效座標：lat ∈ [-90,90] / lng ∈ [-180,180]' };
+    }
+  }
+
+  // v2.31.94: source allowlist — blocks unbounded string storage abuse.
+  // body.source absent / null is OK (entries.ts:87 forward falls back to 'ai').
+  if (body.source !== undefined && body.source !== null) {
+    if (typeof body.source !== 'string' || !ALLOWED_SOURCES.has(body.source)) {
+      return { ok: false, status: 400, error: `source 無效（允許：${[...ALLOWED_SOURCES].join(', ')}）` };
     }
   }
 

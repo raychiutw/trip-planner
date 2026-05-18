@@ -7,7 +7,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../functions/api/_auth', () => ({
-  requireAuth: vi.fn(() => ({ user: { id: 1, email: 'lean.lean@gmail.com' }, sessionId: 's1' })),
+  requireAuth: vi.fn(() => ({
+    email: 'lean.lean@gmail.com',
+    userId: 'u-1',
+    isAdmin: false,
+    isServiceToken: false,
+  })),
 }));
 
 vi.mock('../../functions/api/_maps_lock', () => ({
@@ -145,7 +150,7 @@ describe('POST /api/places/autocomplete', () => {
     await onRequestPost(makeContext({ q: 'tokyo', sessionToken: 'sess' }));
     expect(mockBumpRateLimit).toHaveBeenCalledOnce();
     const [, key, config] = mockBumpRateLimit.mock.calls[0]!;
-    expect(key).toBe('places-autocomplete:user-1');
+    expect(key).toBe('places-autocomplete:user-u-1');
     expect(config.maxAttempts).toBe(1000);
     expect(config.windowMs).toBe(24 * 60 * 60 * 1000);
   });

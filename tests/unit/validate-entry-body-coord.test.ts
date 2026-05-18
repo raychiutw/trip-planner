@@ -77,6 +77,29 @@ describe('validateEntryBody — lat/lng range check (v2.31.94)', () => {
     expect(result.ok).toBe(false);
   });
 
+  // v2.31.94 — source allowlist (CSO finding #4)
+  it('source not in allowlist → fails', () => {
+    const result = validateEntryBody({ title: 'a', source: 'malicious' });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('source');
+  });
+  it('source unbounded string → fails', () => {
+    const result = validateEntryBody({ title: 'a', source: 'x'.repeat(10_000) });
+    expect(result.ok).toBe(false);
+  });
+  it('source = "custom" passes', () => {
+    expect(validateEntryBody({ title: 'a', source: 'custom' }).ok).toBe(true);
+  });
+  it('source = "google" / "ai" / "favorite" / "user-explore" all pass', () => {
+    for (const s of ['ai', 'google', 'favorite', 'user-explore', 'manual', 'search']) {
+      expect(validateEntryBody({ title: 'a', source: s }).ok).toBe(true);
+    }
+  });
+  it('source absent / null still passes (backward-compat)', () => {
+    expect(validateEntryBody({ title: 'a' }).ok).toBe(true);
+    expect(validateEntryBody({ title: 'a', source: null }).ok).toBe(true);
+  });
+
   it('lat/lng as string ("22.6") → fails (must be number)', () => {
     const result = validateEntryBody({
       title: 'a',

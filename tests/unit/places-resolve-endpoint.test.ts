@@ -9,10 +9,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../functions/api/_auth', () => ({
-  requireAuth: vi.fn(() => ({ user: { id: 1, email: 'x@y' }, sessionId: 's' })),
+  requireAuth: vi.fn(() => ({
+    email: 'x@y',
+    userId: 'u-1',
+    isAdmin: false,
+    isServiceToken: false,
+  })),
 }));
 vi.mock('../../functions/api/_maps_lock', () => ({
   assertGoogleAvailable: vi.fn(async () => undefined),
+}));
+
+const mockBumpRateLimit = vi.fn(async () => ({ ok: true, count: 1 }));
+vi.mock('../../functions/api/_rate_limit', () => ({
+  bumpRateLimit: (...args: unknown[]) => mockBumpRateLimit(...args),
 }));
 
 const mockGetPlaceDetails = vi.fn();
@@ -30,7 +40,11 @@ function makeContext(qs: string, env: Record<string, unknown> = {}): any {
   };
 }
 
-beforeEach(() => mockGetPlaceDetails.mockReset());
+beforeEach(() => {
+  mockGetPlaceDetails.mockReset();
+  mockBumpRateLimit.mockReset();
+  mockBumpRateLimit.mockResolvedValue({ ok: true, count: 1 });
+});
 afterEach(() => vi.clearAllMocks());
 
 describe('GET /api/places/resolve', () => {
@@ -96,5 +110,41 @@ describe('GET /api/places/resolve', () => {
     await expect(
       onRequestGet(makeContext('?placeId=ChIJ_a', { GOOGLE_MAPS_API_KEY: undefined })),
     ).rejects.toMatchObject({ code: 'MAPS_UPSTREAM_FAILED' });
+  });
+
+  it('bumps per-user rate limit for resolve quota cap', async () => {
+    mockGetPlaceDetails.mockResolvedValueOnce({
+      place_id: 'ChIJ_a', name: 'A', address: 'A', lat: 1, lng: 2,
+      business_status: 'OPERATIONAL',
+    });
+    await onRequestGet(makeContext('?placeId=ChIJ_a'));
+    expect(mockBumpRateLimit).toHaveBeenCalledOnce();
+    const [, key, config] = mockBumpRateLimit.mock.calls[0]!;
+    expect(key).toBe('places-resolve:user-u-1');
+    expect(config.maxAttempts).toBe(500);
+  });
+
+  it('returns 429 RATE_LIMITED when resolve quota exceeded', async () => {
+    mockBumpRateLimit.mockResolvedValueOnce({
+      ok: false, retryAfter: 3600, count: 501,
+    });
+    const res = await onRequestGet(makeContext('?placeId=ChIJ_a'));
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('3600');
+    const body = await res.json();
+    expect(body.error.code).toBe('RATE_LIMITED');
+    expect(mockGetPlaceDetails).not.toHaveBeenCalled();
+  });
+
+  it('rejects placeId > 256 chars', async () => {
+    await expect(
+      onRequestGet(makeContext(`?placeId=${'a'.repeat(257)}`)),
+    ).rejects.toMatchObject({ code: 'DATA_VALIDATION' });
+  });
+
+  it('rejects sessionToken > 128 chars', async () => {
+    await expect(
+      onRequestGet(makeContext(`?placeId=ChIJ_a&sessionToken=${'b'.repeat(129)}`)),
+    ).rejects.toMatchObject({ code: 'DATA_VALIDATION' });
   });
 });
