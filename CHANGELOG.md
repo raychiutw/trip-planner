@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.87] - 2026-05-18
+
+**Feat: TimelineRail row click 展開 → map flyTo zoom 15；收合 → flyTo zoom 11 trip overview。**
+
+User direction（v2.31.85 follow-up #5+#6）：
+- 行程點選景點展開 → 地圖也要放大同地圖頁效果
+- 收合則縮小地圖
+
+### Changed
+
+- **`src/components/trip/TimelineRail.tsx`**：dispatch `EVENT.entryFocused` 加 `isExpanding: !expanded` detail（true = 將要展開 / false = 將要收合，next state）
+- **`src/components/trip/TripMapRail.tsx`**：
+  - `panToCoord` state 加 `zoom?: number` field
+  - listener 區分 `detail.isExpanding`：
+    - `true` (展開) → `setPanToCoord({ ..., zoom: 15 })` 景點 close-up
+    - `false` (收合) → `setPanToCoord({ ..., zoom: 11 })` trip overview level
+    - `undefined` (scroll spy fallback) → 維持 v2.31.81 panTo only no zoom
+- **`src/components/trip/OceanMap.tsx`**：
+  - `panToCoord` prop type 加 optional `zoom`
+  - useEffect 處理：`typeof zoom === 'number'` 走 `flyTo(coord, zoom)`，否則 `map.panTo(coord)` (backward compat)
+
+### Test
+
+- `tests/unit/v2_31_87-map-zoom-on-stop-toggle.test.ts`：6 個 source-grep test 鎖 isExpanding payload + zoom state + flyTo path。
+- timeline-rail-segments-wiring 既有 regression test 8/8 pass。
+
 ## [2.31.86] - 2026-05-18
 
 **Feat: TripSheet「聊天」tab 接 AI 聊天功能（user direction follow-up v2.31.85 #4）。**

@@ -48,8 +48,10 @@ export interface OceanMapProps {
   pinsByDay?: Map<number, MapPin[]>;
   /** Apply dayColor(dayNum) to flat polylines (single-day mode). Ignored when pinsByDay is set. */
   dayNum?: number;
-  /** Imperative soft pan — panTo this coord without changing zoom. Used by TripMapRail scroll spy. */
-  panToCoord?: { lat: number; lng: number };
+  /** Imperative soft pan — panTo this coord. zoom optional：給就 flyTo(lat/lng, zoom)，
+   *  沒給就 panTo（不變 zoom）。v2.31.87：TimelineRail 點 stop 展開 → zoom=15，
+   *  收合 → zoom=11（trip overview level）。 */
+  panToCoord?: { lat: number; lng: number; zoom?: number };
   /** When true, fitBounds runs once on mount then preserves user drag/pan. */
   fitOnce?: boolean;
   /** Imperative google.maps.Map handle for parent — used by /map page MapFabs / 全覽 / 我的位置.
@@ -533,8 +535,13 @@ const OceanMap = memo(function OceanMap({
   /* --- Imperative soft pan --- */
   useEffect(() => {
     if (!map || !panToCoord) return;
-    map.panTo({ lat: panToCoord.lat, lng: panToCoord.lng });
-  }, [map, panToCoord]);
+    if (typeof panToCoord.zoom === 'number') {
+      // v2.31.87：zoom 給就 flyTo (pan + setZoom 同步)，TimelineRail expand/collapse 用。
+      flyTo({ lat: panToCoord.lat, lng: panToCoord.lng }, panToCoord.zoom);
+    } else {
+      map.panTo({ lat: panToCoord.lat, lng: panToCoord.lng });
+    }
+  }, [map, panToCoord, flyTo]);
 
   /* --- Segments (polylines) --- */
   const segments = useMemo(() => {
