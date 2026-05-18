@@ -1163,6 +1163,7 @@ export default function TripsListPage() {
         backLabel="返回行程列表"
         actions={effectiveSelectedId && (
           <>
+            {/* v2.31.85：探索 icon-only（拿掉中文 label），桌機只剩 icon + tooltip */}
             <button
               type="button"
               className="tp-titlebar-action"
@@ -1172,7 +1173,17 @@ export default function TripsListPage() {
               data-testid="trip-explore-trigger"
             >
               <Icon name="search" />
-              <span className="tp-titlebar-action-label">探索</span>
+            </button>
+            {/* v2.31.85：切換行程 icon button（swap-horiz）→ 回 /trips 列表 */}
+            <button
+              type="button"
+              className="tp-titlebar-action"
+              onClick={clearSelected}
+              aria-label="切換行程"
+              title="切換行程"
+              data-testid="trip-switch-trigger"
+            >
+              <Icon name="swap-horiz" />
             </button>
             <EmbeddedActionMenu
               tripId={effectiveSelectedId}

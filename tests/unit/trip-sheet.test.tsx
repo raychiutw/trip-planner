@@ -4,7 +4,8 @@
  * Mock TripMapRail to avoid Leaflet dependency in jsdom.
  *
  * V2 cutover (migration 0046): 'ideas' tab retired — 備案概念合一進「我的收藏」。
- * SHEET_TABS now: itinerary / map / chat (3 tabs).
+ * v2.31.85：'itinerary' tab 拿掉（main column 已 render 行程，sheet 重複無價值）。
+ * SHEET_TABS now: map / chat (2 tabs).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
@@ -61,9 +62,9 @@ describe('TripSheet — URL-driven tab', () => {
     expect(await findByTestId('mock-trip-map-rail')).toBeTruthy();
   });
 
-  it('?sheet=itinerary renders Itinerary placeholder', () => {
-    const { getByTestId } = renderSheet('/trip/abc?sheet=itinerary');
-    expect(getByTestId('tab-itinerary')).toBeTruthy();
+  it('?sheet=itinerary (legacy v2.31.85 removal) degrades to default map', async () => {
+    const { findByTestId } = renderSheet('/trip/abc?sheet=itinerary');
+    expect(await findByTestId('mock-trip-map-rail')).toBeTruthy();
   });
 
   it('?sheet=chat renders Chat placeholder', () => {
@@ -76,14 +77,14 @@ describe('TripSheet — URL-driven tab', () => {
     const { getByTestId } = renderSheet('/trip/abc?sheet=map', (loc) => {
       locs.push(loc);
     });
-    fireEvent.click(getByTestId('trip-sheet-tab-itinerary'));
+    fireEvent.click(getByTestId('trip-sheet-tab-chat'));
     const last = locs[locs.length - 1];
-    expect(last.search).toContain('sheet=itinerary');
+    expect(last.search).toContain('sheet=chat');
   });
 
   it('close button clears sheet param', () => {
     const locs: Array<{ pathname: string; search: string }> = [];
-    const { getByTestId } = renderSheet('/trip/abc?sheet=itinerary', (loc) => {
+    const { getByTestId } = renderSheet('/trip/abc?sheet=chat', (loc) => {
       locs.push(loc);
     });
     fireEvent.click(getByTestId('trip-sheet-close'));
@@ -91,10 +92,11 @@ describe('TripSheet — URL-driven tab', () => {
     expect(last.search).not.toContain('sheet=');
   });
 
-  it('renders 3 tabs with expected labels', () => {
-    const { getByTestId } = renderSheet('/trip/abc?sheet=map');
-    expect(getByTestId('trip-sheet-tab-itinerary').textContent).toBe('行程');
+  it('renders 2 tabs with expected labels (no 行程 tab — v2.31.85)', () => {
+    const { getByTestId, queryByTestId } = renderSheet('/trip/abc?sheet=map');
     expect(getByTestId('trip-sheet-tab-map').textContent).toBe('地圖');
     expect(getByTestId('trip-sheet-tab-chat').textContent).toBe('聊天');
+    expect(queryByTestId('trip-sheet-tab-itinerary'), 'itinerary tab v2.31.85 拿掉').toBeNull();
+    expect(queryByTestId('tab-itinerary'), 'itinerary tabpanel v2.31.85 拿掉').toBeNull();
   });
 });

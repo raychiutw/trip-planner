@@ -142,23 +142,10 @@ export default function TripSheet({ tripId, allPins, pinsByDay, dark }: TripShee
         <TripSheetTabs currentTab={currentTab} onChange={handleTabChange} />
       </div>
       <div className="trip-sheet-body">
-        {/* ARIA tabs pattern: 4 個 tabpanel 都 in DOM 用 hidden 切換，
+        {/* ARIA tabs pattern: 2 個 tabpanel 都 in DOM 用 hidden 切換，
             這樣每個 tab 的 aria-controls 永遠 resolve 到實際 element。
-            map tab 內仍 conditional mount 維持 lazy + key={tripId} 重 init 行為。 */}
-        <div
-          role="tabpanel"
-          id={sheetPanelId('itinerary')}
-          aria-labelledby={sheetTabId('itinerary')}
-          hidden={currentTab !== 'itinerary'}
-          className="trip-sheet-placeholder"
-          data-testid="tab-itinerary"
-        >
-          {/* v2.31.60 zh-TW polish：eyebrow / body 從英文 / 開發 jargon
-              改純中文 user-facing copy。 */}
-          <div className="eyebrow">行程</div>
-          <h3>行程已顯示在左側</h3>
-          <p>行程已在左側展開，未來會搬到這裡的分頁。</p>
-        </div>
+            map tab 內仍 conditional mount 維持 lazy + key={tripId} 重 init 行為。
+            v2.31.85：itinerary tab 拿掉（main column 已 render 行程，sheet 重複無價值）。 */}
         <div
           role="tabpanel"
           id={sheetPanelId('map')}
