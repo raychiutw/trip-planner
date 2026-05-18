@@ -125,6 +125,9 @@ const EditTripPage = lazyWithRetry(() => import('../pages/EditTripPage'));
 const NewTripPage = lazyWithRetry(() => import('../pages/NewTripPage'));
 const EntryActionPage = lazyWithRetry(() => import('../pages/EntryActionPage'));
 const AddStopPage = lazyWithRetry(() => import('../pages/AddStopPage'));
+const AddCustomStopPage = lazyWithRetry(() => import('../pages/AddCustomStopPage'));
+// v2.31.94: mobile-only route guard
+import { MobileOnlyRoute } from '../components/MobileOnlyRoute';
 // poi-favorites-rename: poi_favorites universal pool → 加入行程 fast-path page
 const AddPoiFavoriteToTripPage = lazyWithRetry(() => import('../pages/AddPoiFavoriteToTripPage'));
 // v2.23.8: 變更 POI 全頁 form
@@ -241,6 +244,15 @@ if (el) {
                 <Route path="stop/:entryId/edit" element={<EditEntryPage />} />
                 {/* 2026-05-03 modal-to-fullpage migration: AddStopModal → /add-stop?day=N */}
                 <Route path="add-stop" element={<AddStopPage />} />
+                {/* v2.31.94: mobile-only fullpage 自訂景點（IME occlusion 避讓）— desktop redirect 回 add-stop?tab=custom */}
+                <Route
+                  path="add-custom-stop"
+                  element={
+                    <MobileOnlyRoute fallbackPath="/trips">
+                      <AddCustomStopPage />
+                    </MobileOnlyRoute>
+                  }
+                />
               </Route>
               <Route path="*" element={<LegacyRedirect />} />
             </Routes>
