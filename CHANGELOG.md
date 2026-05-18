@@ -3,6 +3,31 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.69] - 2026-05-18
+
+**Rip 74 個 unused CSS design tokens — css/tokens.css 縮 79 行。**
+
+### Removed: unused design tokens（v2.21-v2.31 refactor 留下的設計系統陳債）
+
+Inline grep audit 找出 css/tokens.css 179 defined token 中只有 117 個被 `var(--xxx)` reference，**74 個整檔 0 用** + `--sidebar-width-desktop` 1 個 reference 在 mockup 保留。87 處 occurrence（含 light/dark mode + media query duplicates）一起刪。
+
+刪除 token 分類：
+
+- **animation/duration (5)**: --animate-stepper-pulse / --animate-toast-slide-up/down / --duration-tap / --duration-indicator
+- **badge/plan (15)**: --badge-{open,processing,completed,failed}-{bg,text} + --color-badge-{open,closed} + --color-plan-{bg,text,hover}
+- **maps provider (2)**: --color-google-maps / --color-naver-maps
+- **typography vocab (10)**: --font-family-inherit + --font-weight-{light,normal,medium,semibold} + --line-height-{tight,relaxed} + --mobile-font-size-{callout,subheadline}
+- **layout/shadow (5)**: --content-max-w / --fab-size / --shadow-map-marker-{active,idle} / --shadow-toast
+- **spacing scale (13)**: --spacing-{1,2,4,5,8,10,12,16,half,content-h,page-max-w,page-pt,toast-top}
+- **text size vocab (12)**: --text-{body,callout,caption,caption2,eyebrow,footnote,headline,large-title,subheadline,title,title2,title3}
+- **theme system (4)**: --theme-font-weight-headline / --theme-header-gradient / --theme-line-height-body / --theme-section-gap
+- **z-index (4)**: --z-day-header / --z-fab / --z-print-exit / --z-quick-panel
+- **status colors (5)**: --color-{disabled-foreground,info-bg} + --destructive / --error / --info / --success / --warning
+
+DESIGN.md 0 reference、design-sessions/*.html 0 reference（只 1 個 --sidebar-width-desktop 在 mockup 保留）。
+
+`npm run build` 通過、tsc clean、57/57 sample test pass。零行為變動。
+
 ## [2.31.68] - 2026-05-18
 
 **Rip dead backend helper `functions/api/_poi-defaults.ts`（36 行整檔 0 callers）。**
