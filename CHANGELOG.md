@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.67] - 2026-05-18
+
+**Rip dead code — `src/components/trip/Restaurant.tsx` (168 行整檔零 imports)。**
+
+### Removed: Restaurant component（v2.21-v2.31 refactor 過程被孤立）
+
+dispatched 平行 Explore agent 做 dead-code audit，確認 `Restaurant.tsx` 與其 `RestaurantData` interface 在 src/、tests/、functions/ 內**零 import**。檔案 168 行 + memoized 元件 + 完整 CSS 都已死。
+
+歷史脈絡：Restaurant.tsx 起源於 v2.0.0 Ocean 大改版（ec01f940），最後 touched 是 d0e61b04 shell refactor Phase A。後續 v2.21-v2.31 把餐廳 rendering 整合到 timeline rail / InfoBox 既有 entry-poi 模型，舊獨立 Restaurant card 元件失去 caller，但檔案被遺忘在 repo。
+
+刪除後 `tsc --noEmit` clean，unit + integration test 全綠（57/57 sample run）。零行為變動。
+
 ## [2.31.66] - 2026-05-18
 
 **4 處 user-visible「POI」洩漏 → 中文 — CSV 表頭 + 3 處 aria-label。**
