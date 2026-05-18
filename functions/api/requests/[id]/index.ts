@@ -228,6 +228,34 @@ function parseFindings(reply: string): unknown[] {
   return [];
 }
 
+// v2.31.74: backend post-process sanitizer — 不靠 LLM 100% 服從 prompt 用詞規定。
+// v2.31.65 prompt 改強化用詞 instruction，但 prod QA (沖繩七日遊行程表) 仍有 1/7
+// finding suggestion 含「新增早餐 entry 並掛具體店家」schema 詞 leak。Regex 強制替換。
+const SCHEMA_WORD_RULES: Array<[RegExp, string]> = [
+  // 帶數字單位（先處理避免被獨立 min/km 規則吃掉）
+  [/(\d+)\s*min\b/g, '$1 分鐘'],
+  [/(\d+)\s*km\b/g, '$1 公里'],
+  // schema 借詞（皆 word-boundary，case-insensitive 處理 Claude 大小寫不一致）
+  [/\bentries\b/gi, '景點'],
+  [/\bentry\b/gi, '景點'],
+  [/\bPOIs\b/g, '景點'],
+  [/\bPOI\b/g, '景點'],
+  [/\bcheck-in\b/gi, '入住'],
+  [/\bcheck in\b/gi, '入住'],
+  [/\bbuffer\b/gi, '緩衝時間'],
+  [/\brating\b/gi, '評分'],
+  [/\btravel\s+min\b/gi, '移動時間'],
+  [/\btravel\b/gi, '移動'],
+  [/\bpolyline\b/gi, '路線'],
+  [/\balt\b/gi, '替代'],
+];
+
+export function sanitizeSchemaWords(s: string): string {
+  let r = s;
+  for (const [re, rep] of SCHEMA_WORD_RULES) r = r.replace(re, rep);
+  return r;
+}
+
 function sanitizeFindings(arr: unknown[]): unknown[] {
   const out: unknown[] = [];
   for (const item of arr) {
@@ -235,8 +263,8 @@ function sanitizeFindings(arr: unknown[]): unknown[] {
     const f = item as Record<string, unknown>;
     const sev = typeof f.severity === 'string' ? f.severity.toLowerCase() : '';
     if (sev !== 'high' && sev !== 'medium' && sev !== 'low') continue;
-    const title = typeof f.title === 'string' ? f.title.slice(0, 60) : '';
-    const description = typeof f.description === 'string' ? f.description.slice(0, 400) : '';
+    const title = typeof f.title === 'string' ? sanitizeSchemaWords(f.title.slice(0, 60)) : '';
+    const description = typeof f.description === 'string' ? sanitizeSchemaWords(f.description.slice(0, 400)) : '';
     if (!title) continue;
     const cleaned: Record<string, unknown> = { severity: sev, title, description };
 
@@ -249,7 +277,7 @@ function sanitizeFindings(arr: unknown[]): unknown[] {
       }
     }
     if (typeof f.suggestion === 'string' && f.suggestion.trim()) {
-      cleaned.suggestion = f.suggestion.slice(0, 200);
+      cleaned.suggestion = sanitizeSchemaWords(f.suggestion.slice(0, 200));
     }
 
     const action = f.action_target && typeof f.action_target === 'object'
