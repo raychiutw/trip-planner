@@ -19,6 +19,10 @@ export const EVENT = {
   tripCreated: 'tp-trip-created',
   /** no detail — developer console app just created (DeveloperAppNewPage success). */
   developerAppCreated: 'tp-developer-app-created',
+  /** v2.31.81 #5：dispatch detail `{ entryId: number }` — TimelineRail row 點下去
+   *  時觸發，TripMapRail listen 後 panTo + zoom 到該 entry pin。跨檔互動避免
+   *  TimelineRail 直接 import map ref。 */
+  entryFocused: 'tp-entry-focused',
 } as const;
 
 export type EventName = typeof EVENT[keyof typeof EVENT];
