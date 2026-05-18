@@ -20,8 +20,19 @@ import { AppError } from '../_errors';
 import { requireAuth } from '../_auth';
 import { json, parseJsonBody } from '../_utils';
 import { assertGoogleAvailable } from '../_maps_lock';
+import { bumpRateLimit } from '../_rate_limit';
 import { autocompletePlaces } from '../../../src/server/maps/google-client';
 import type { Env } from '../_types';
+
+// v2.31.94 rate limit: cap per-user typeahead calls to protect Google Maps
+// quota from authenticated abuse. 1000 / 24h is generous for legitimate use
+// (~30 trips/month × ~30 typeahead calls/trip) but stops `for(;;) fetch(...)`
+// authenticated-user drain attacks before the kill switch trips.
+const RATE_LIMIT_CONFIG = {
+  maxAttempts: 1000,
+  windowMs: 24 * 60 * 60 * 1000,
+  lockoutMs: 24 * 60 * 60 * 1000,
+};
 
 interface AutocompleteBody {
   q?: unknown;
@@ -30,7 +41,7 @@ interface AutocompleteBody {
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  requireAuth(context);
+  const auth = requireAuth(context);
 
   const body = await parseJsonBody<AutocompleteBody>(context.request);
 
@@ -58,6 +69,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   await assertGoogleAvailable(context.env.DB);
+
+  // Per-user daily cap (1000 / 24h). Every call bumps regardless of outcome —
+  // even cached / cheap requests count toward the user budget to prevent
+  // drain attacks.
+  const userKey = `places-autocomplete:user-${auth.user.id}`;
+  const limit = await bumpRateLimit(context.env.DB, userKey, RATE_LIMIT_CONFIG);
+  if (!limit.ok) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: 'RATE_LIMITED',
+          detail: '已達每日 typeahead 用量上限（1000 / 24h），請明日再試',
+        },
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(limit.retryAfter ?? 3600),
+        },
+      },
+    );
+  }
 
   const predictions = await autocompletePlaces(apiKey, q, sessionToken, regionCode);
 

@@ -14,6 +14,11 @@ vi.mock('../../functions/api/_maps_lock', () => ({
   assertGoogleAvailable: vi.fn(async () => undefined),
 }));
 
+const mockBumpRateLimit = vi.fn(async () => ({ ok: true, count: 1 }));
+vi.mock('../../functions/api/_rate_limit', () => ({
+  bumpRateLimit: (...args: unknown[]) => mockBumpRateLimit(...args),
+}));
+
 const mockAutocomplete = vi.fn();
 vi.mock('../../src/server/maps/google-client', () => ({
   autocompletePlaces: (...args: unknown[]) => mockAutocomplete(...args),
@@ -41,6 +46,8 @@ function makeContext(body: unknown, env: Record<string, unknown> = {}): any {
 
 beforeEach(() => {
   mockAutocomplete.mockReset();
+  mockBumpRateLimit.mockReset();
+  mockBumpRateLimit.mockResolvedValue({ ok: true, count: 1 });
 });
 
 afterEach(() => {
@@ -131,5 +138,30 @@ describe('POST /api/places/autocomplete', () => {
     await expect(
       onRequestPost(makeContext({ q: '   ', sessionToken: 'sess' })),
     ).rejects.toMatchObject({ code: 'DATA_VALIDATION' });
+  });
+
+  it('bumps per-user rate limit bucket on every call', async () => {
+    mockAutocomplete.mockResolvedValueOnce([]);
+    await onRequestPost(makeContext({ q: 'tokyo', sessionToken: 'sess' }));
+    expect(mockBumpRateLimit).toHaveBeenCalledOnce();
+    const [, key, config] = mockBumpRateLimit.mock.calls[0]!;
+    expect(key).toBe('places-autocomplete:user-1');
+    expect(config.maxAttempts).toBe(1000);
+    expect(config.windowMs).toBe(24 * 60 * 60 * 1000);
+  });
+
+  it('returns 429 with Retry-After when rate limit exceeded', async () => {
+    mockBumpRateLimit.mockResolvedValueOnce({
+      ok: false,
+      retryAfter: 7200,
+      count: 1001,
+    });
+    const res = await onRequestPost(makeContext({ q: 'tokyo', sessionToken: 'sess' }));
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('7200');
+    const body = await res.json();
+    expect(body.error.code).toBe('RATE_LIMITED');
+    // autocompletePlaces NOT called when rate limited
+    expect(mockAutocomplete).not.toHaveBeenCalled();
   });
 });
