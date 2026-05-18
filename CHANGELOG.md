@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.79] - 2026-05-18
+
+**Fix: OceanMap marker 疊在一起時數字看不清楚（user QA prod screenshot）。**
+
+### Fixed: 那霸都心多 marker 重疊區的數字混在一起難讀
+
+user prod 截圖（那覇都心 5/6/4/3 圈疊在一起）顯示 marker 重疊時數字邊界模糊：每個 marker 是 28px 白底圓 + 灰色 stroke 圈 + 內含 day-color 的數字，相鄰兩個 marker 的 stroke 圈與字體緊貼，沒有任何視覺 separator。
+
+**Fix**：`markerContent()` HTMLDivElement 加兩個視覺 separator：
+1. `text-shadow`：8 個方向各 1px offset 用 `style.fill` 顏色當 halo，數字四周生出 1px ring → 數字疊在相鄰 marker stroke 邊上仍可讀
+2. `box-shadow: 0 0 0 1.5px ${style.fill}`：marker stroke 外圈再加 1.5px fill-color outer ring → marker 邊界視覺與相鄰 marker stroke 分離
+
+對 focused (orange fill, white text) / past (white fill, mute text) / idle 三種 state 全 apply，halo 永遠等於該 marker 自己的 fill bg → 視覺像「字浮在 marker 上、marker 自己有發光外框」。
+
+**Regression test**：`tests/unit/v2_31_79-marker-label-text-outline.test.ts` — 6 個 assertion lock text-shadow ≥4 個 fill offsets + box-shadow 含 `1.5px ${fill}` + 三種 state 全 apply + dayColor 不影響 halo（halo 永遠等於 fill）+ v2.31.75 contract (textContent + borderRadius) 維持。
+
+### Test results
+
+- vitest: **235 file / 1788 test 全綠**（+6 個 regression）
+- tsc/build：0 errors
+
 ## [2.31.78] - 2026-05-18
 
 **Fix: AddStopPage lazy favorites fetch 缺 unmount guard。**
