@@ -3,6 +3,46 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.75] - 2026-05-18
+
+**Google Maps `Marker` → `AdvancedMarkerElement` 遷移（deprecated API 退場）。**
+
+### Migrated: 拔掉 `google.maps.Marker` 改用 `AdvancedMarkerElement` + custom HTMLDivElement content
+
+Google 2024-02-21 將 `google.maps.Marker` 標記 deprecated（仍可用、不再開發新功能、可能任意 release 被拔）。控制台會在 prod 印 deprecation warning，且新瀏覽器版本可能逐步退場。
+
+**Files:**
+
+- `src/hooks/useGoogleMap.ts` — `new google.maps.Map(...)` config 新增 `mapId: 'DEMO_MAP_ID'`（AdvancedMarkerElement 要求 mapId）。`libraries: ['maps', 'marker']` 早在 v2.23.0 已存在。
+- `src/components/trip/OceanMap.tsx` — 將原 `markerIcon(pin, isActive, isPast, dayColor?)` 拆兩個函式：
+  - `markerStyle(pin, isActive, isPast, dayColor?): MarkerStyle` — 純資料（fill / stroke / text / size / borderWidth / fontSize / label / zIndex），可純 logic test 不需 DOM。
+  - `markerContent(style: MarkerStyle): HTMLDivElement` — DOM 建構（border-radius 50% 圓形 + 中央數字 label）。
+  - 取代 `new google.maps.Marker({...})` 為 `new google.maps.marker.AdvancedMarkerElement({position, map, content: markerContent(style), title, gmpClickable: onMarkerClick !== undefined})`。
+  - Click event 由 `'click'` 改為 `'gmp-click'`（AdvancedMarkerElement 的 events 命名）。
+  - Marker 移除由 `m.setMap(null)` 改為 `m.map = null`（AdvancedMarkerElement 用 property 不是 method）。
+  - 更新時改 `marker.content = markerContent(newStyle); marker.zIndex = isFocused ? 1000 : null`（content 為 property assignment）。
+  - Type：`Map<number, google.maps.Marker>` → `Map<number, google.maps.marker.AdvancedMarkerElement>`。
+- `src/components/trip/MapFabs.tsx` — 「我的位置」FAB 觸發後的 user location marker 同步遷移至 AdvancedMarkerElement，用 16×16 圓點 `<div>` 取代原 `Symbol.CIRCLE` icon。
+
+**Test rewrites:**
+
+- `tests/unit/ocean-map-marker-no-emoji.test.tsx` — 10 個 test 全重寫，斷言 `markerStyle().label` 為純數字（不含 emoji）+ `markerContent().textContent` + `borderRadius: '50%'`。涵蓋 idle / focused / past / hotel / dayColor / zIndex 6 維度。
+- `tests/unit/ocean-map-imperative-effects.test.tsx` — 既有 "OceanMap.markerIcon (color contract)" describe block 5 個 assertion 重寫，將 `opts.icon.strokeColor` → `style.stroke`、`opts.label.color` → `style.text`、`opts.icon.fillColor` → `style.fill`、`opts.icon.scale > 15` → `style.size > 28`。
+
+**Visual contract 保證**：圓形外觀 + 中央數字 + day color stroke + 28px idle / 36px focused 全 round-trip 對齊原 Symbol.CIRCLE 視覺。
+
+### Why
+
+- 拔掉 deprecated API console warning（prod 巡視能看到 Google 印出的 deprecation 訊息）。
+- 為未來 Web Components 化 marker（可放任意 HTML / CSS）打底，自訂 marker UI 不再受 Symbol path / scale 限制。
+- 對齊 v2.31.74 的 prod stability 路線（先把已知 deprecation 清掉，避免日後突然強制退場）。
+
+### Test results
+
+- 全套 vitest: **231 file / 1764 test 全綠**。
+- tsc --noEmit: 0 errors。
+- vite build: 0 errors。
+
 ## [2.31.74] - 2026-05-18
 
 **AI 健檢 findings backend post-process sanitizer — regex 強制替換 schema 詞不靠 LLM 服從。**

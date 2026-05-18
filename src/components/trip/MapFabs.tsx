@@ -92,7 +92,7 @@ export default function MapFabs({ map, initialStyle = 'roadmap' }: MapFabsProps)
   const [open, setOpen] = useState(false);
   const [locating, setLocating] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const userMarkerRef = useRef<google.maps.Marker | null>(null);
+  const userMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -131,21 +131,24 @@ export default function MapFabs({ map, initialStyle = 'roadmap' }: MapFabsProps)
         const latLng = new google.maps.LatLng(latitude, longitude);
         map.panTo(latLng);
         map.setZoom(14);
+        // v2.31.75: google.maps.Marker (deprecated) → AdvancedMarkerElement。
         // 換掉舊 marker 或新增
         if (userMarkerRef.current) {
-          userMarkerRef.current.setMap(null);
+          userMarkerRef.current.map = null;
         }
-        userMarkerRef.current = new google.maps.Marker({
+        // Build pin DOM — 圓點 16×16 (scale 8 → diameter 16) with 3px border
+        const dot = document.createElement('div');
+        dot.style.cssText = `
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: rgba(184, 95, 42, 0.85);
+          border: 3px solid #B85F2A;
+        `;
+        userMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
           map,
           position: latLng,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: '#B85F2A',
-            fillOpacity: 0.85,
-            strokeColor: '#B85F2A',
-            strokeWeight: 3,
-          },
+          content: dot,
           title: '我的位置',
         });
         setLocating(false);

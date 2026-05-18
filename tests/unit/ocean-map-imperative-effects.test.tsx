@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { setupGoogleMapsMock } from './__mocks__/google-maps';
-import { markerIcon, buildSegments } from '../../src/components/trip/OceanMap';
+import { markerStyle, buildSegments } from '../../src/components/trip/OceanMap';
 import type { MapPin } from '../../src/hooks/useMapData';
 
 beforeEach(setupGoogleMapsMock);
@@ -137,29 +137,29 @@ describe('OceanMap.buildSegments (per-day mode)', () => {
   });
 });
 
-describe('OceanMap.markerIcon (color contract)', () => {
+describe('OceanMap.markerStyle (color contract)', () => {
   it('idle marker uses dayColor for stroke + label', () => {
-    const opts = markerIcon(pin(1, 1), false, false, '#FF6B35');
-    expect(opts.icon.strokeColor).toBe('#FF6B35');
-    expect(opts.label.color).toBe('#FF6B35');
+    const style = markerStyle(pin(1, 1), false, false, '#FF6B35');
+    expect(style.stroke).toBe('#FF6B35');
+    expect(style.text).toBe('#FF6B35');
   });
 
   it('idle without dayColor falls back to muted neutral', () => {
-    const opts = markerIcon(pin(1, 1), false, false);
-    expect(opts.icon.strokeColor).toBe('#C1C1C1');
-    expect(opts.label.color).toBe('#6A6A6A');
+    const style = markerStyle(pin(1, 1), false, false);
+    expect(style.stroke).toBe('#C1C1C1');
+    expect(style.text).toBe('#6A6A6A');
   });
 
   it('past marker mutes both stroke + label (regardless of dayColor)', () => {
-    const opts = markerIcon(pin(1, 1), false, true, '#FF6B35');
-    expect(opts.icon.strokeColor).toBe('#E0E0E0');
-    expect(opts.label.color).toBe('#C1C1C1');
+    const style = markerStyle(pin(1, 1), false, true, '#FF6B35');
+    expect(style.stroke).toBe('#E0E0E0');
+    expect(style.text).toBe('#C1C1C1');
   });
 
   it('focused marker uses accent color + larger size', () => {
-    const opts = markerIcon(pin(1, 1), true, false, '#FF6B35');
-    expect(opts.icon.fillColor).toBe('#D97848'); // ACCENT_COLOR
-    expect(opts.label.color).toBe('#FFFFFF');    // ACCENT_FG
-    expect(opts.icon.scale).toBeGreaterThan(15); // larger than idle 14
+    const style = markerStyle(pin(1, 1), true, false, '#FF6B35');
+    expect(style.fill).toBe('#D97848'); // ACCENT_COLOR
+    expect(style.text).toBe('#FFFFFF'); // ACCENT_FG
+    expect(style.size).toBeGreaterThan(28); // larger than idle 28 → focused 36
   });
 });
