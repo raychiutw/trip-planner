@@ -1,13 +1,13 @@
 /**
- * v2.31.81：user batch UX fixes — 8 點。
+ * v2.31.81：user batch UX fixes — 8 點（v2.31.83 sidebar 部分 revert）。
  *
- * 1. MapPage handleCardClick 在 overview 模式同步 handleTabClick(targetDay)
- * 2. MapPage TitleBar title 改用 trip name（對齊 ChatPage 格式）+ picker icon-only
- * 3. 5 個 native <select> 加 site-style chevron + appearance:none
- * 4. TripSheet .trip-sheet-close 桌機 ≥1024px hide
- * 5. TimelineRail row click dispatch EVENT.entryFocused，TripMapRail listen → panTo
- * 6+7. DesktopSidebar 全 icon-only、移除「行程」、加入「探索」+「切換行程」
- * 8. Sidebar「聊天」 nav → /chat（AI chat 維持）
+ * 1. MapPage handleCardClick 在 overview 模式同步 handleTabClick(targetDay) ✅
+ * 2. MapPage TitleBar title 改用 trip name（對齊 ChatPage 格式）+ picker icon-only ✅
+ * 3. 5 個 native <select> 加 site-style chevron + appearance:none ✅
+ * 4. TripSheet .trip-sheet-close 桌機 ≥1024px hide ✅
+ * 5. TimelineRail row click dispatch EVENT.entryFocused，TripMapRail listen → panTo ✅
+ * 6+7. DesktopSidebar 全 icon-only、移除「行程」、加入「探索」+「切換行程」— v2.31.83 revert
+ * 8. Sidebar「聊天」 nav → /chat（AI chat 維持）— v2.31.80 已是 /chat，sidebar revert 後仍 hold
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -86,37 +86,6 @@ describe('v2.31.81 #5: TimelineRail row click → entryFocused event → TripMap
   });
 });
 
-describe('v2.31.81 #6+#7: DesktopSidebar nav IA — icon-only + 探索 + 切換行程，no 行程', () => {
-  const src = read('src/components/shell/DesktopSidebar.tsx');
-  it('NavItemConfig key type 含 explore + switch-trip，不含 trips', () => {
-    expect(src).toMatch(/'chat'\s*\|\s*'explore'\s*\|\s*'map'\s*\|\s*'favorites'\s*\|\s*'switch-trip'\s*\|\s*'login'/);
-  });
-  it('NAV_ITEMS array 含 6 items：chat / explore / map / favorites / switch-trip / login', () => {
-    const m = src.match(/const NAV_ITEMS[\s\S]*?\];/);
-    expect(m).toBeTruthy();
-    const block = m![0];
-    expect(block).toMatch(/key:\s*'chat'/);
-    expect(block).toMatch(/key:\s*'explore'/);
-    expect(block).toMatch(/key:\s*'map'/);
-    expect(block).toMatch(/key:\s*'favorites'/);
-    expect(block).toMatch(/key:\s*'switch-trip'/);
-    expect(block).toMatch(/key:\s*'login'/);
-    // 「行程」 nav 已移除（取代為「切換行程」走 /trips href）
-    expect(block).not.toMatch(/key:\s*'trips'/);
-  });
-  it('JSX nav item 用 aria-label + title + sr-only span（icon-only）', () => {
-    expect(src).toMatch(/aria-label=\{item\.label\}/);
-    expect(src).toMatch(/title=\{item\.label\}/);
-    expect(src).toMatch(/className="tp-nav-item-label"/);
-  });
-  it('SCOPED_STYLES 內 .tp-nav-item-label 是 sr-only (clip rect 0 0 0 0)', () => {
-    expect(src).toMatch(/\.tp-nav-item-label\s*\{[^}]*clip:\s*rect\(0,\s*0,\s*0,\s*0\)/);
-  });
-});
-
-describe('v2.31.81 #8: sidebar 聊天 nav routes to /chat (AI chat)', () => {
-  it('NAV_ITEMS 內 chat key href: /chat（已驗證 ChatPage 即 AI chat 功能）', () => {
-    const src = read('src/components/shell/DesktopSidebar.tsx');
-    expect(src).toMatch(/key:\s*'chat'[^}]*href:\s*['"]\/chat['"]/);
-  });
-});
+// v2.31.83 surgical revert：sidebar 復原到 v2.31.80（user：「sidebar 復原, 原本的修正都是調整 content 頁面 不要動 sidebar」）。
+// v2.31.81 #6+#7（sidebar icon-only + 探索 + 切換行程）整個 revert，#8 sidebar chat→/chat 在 v2.31.80 已存在無需 lock。
+// 詳細 sidebar IA assertions 由 tests/unit/desktop-sidebar.test.tsx 主管。

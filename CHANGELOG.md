@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.83] - 2026-05-18
+
+**Revert: v2.31.81 #6+#7 sidebar 改動（user：「sidebar 復原, 原本的修正都是調整 content 頁面 不要動 sidebar」）。**
+
+### Reverted
+
+- **DesktopSidebar IA 回 v2.31.80**：5 nav items 中文 label（聊天 / 行程 / 地圖 / 收藏 / 登入），不再 icon-only。「探索」+「切換行程」icon 拔除；「行程」nav 還原。aria-label / title tooltip / sr-only `<span className="tp-nav-item-label">` / sidebar-nav-${key} testid 全部移除。icon size 16px / font 14px 600 / padding 10px 12px 對齊 v2.31.80。
+- **`tests/unit/desktop-sidebar.test.tsx` + `tests/unit/desktop-sidebar-visual.test.tsx`** 還原 v2.31.80 state（5-nav assertions）。
+- **`tests/unit/v2_31_81-batch-ux-fixes.test.ts`** 中 #6+#7 sidebar describe block 拔除，header doc 標 ✅ 區分保留 vs revert 點。
+
+### 不變（v2.31.81 其餘 6 點 + v2.31.82 chevron follow-up 保留）
+
+- #1 MapPage handleCardClick day nav sync ✅
+- #2 MapPage TitleBar trip name + picker icon-only ✅
+- #3 5 個 native `<select>` chevron + appearance:none（含 v2.31.82 EditTripPage .tp-edit-row 強化）✅
+- #4 TripSheet X 桌機 ≥1024px 隱藏 ✅
+- #5 TimelineRail row click → EVENT.entryFocused → TripMapRail panTo ✅
+- #8 Sidebar 聊天 nav /chat — v2.31.80 已是 /chat，sidebar revert 後仍 hold ✅
+
 ## [2.31.82] - 2026-05-18
 
 **Fix: v2.31.81 #3 chevron 在 EditTripPage 顯示語言 select 沒生效（QA 截圖 found）。**
