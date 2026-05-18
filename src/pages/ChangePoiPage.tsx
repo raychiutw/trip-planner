@@ -711,7 +711,7 @@ export default function ChangePoiPage() {
   ), [handleSubmit, selected, submitLabel, submitting]);
 
   const categoryFilter = useMemo(() => (
-    <div className="tp-change-poi-subtabs" role="group" aria-label="POI 類別">
+    <div className="tp-change-poi-subtabs" role="group" aria-label="景點類別">
       {CATEGORY_TABS.map((item) => (
         <button
           key={item.key}

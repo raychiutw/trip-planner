@@ -860,7 +860,7 @@ export default function AddStopPage() {
 
             <div className="tp-add-stop-body">
               {(tab === 'search' || tab === 'favorites') && (
-                <div className="tp-add-stop-subtabs" role="tablist" aria-label="POI 類別">
+                <div className="tp-add-stop-subtabs" role="tablist" aria-label="景點類別">
                   {CATEGORY_TABS.map((c) => (
                     <button
                       key={c.key}

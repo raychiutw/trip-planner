@@ -688,7 +688,7 @@ export default function ExplorePage() {
               </button>
             </form>
 
-            <div className="explore-subtabs" role="tablist" aria-label="POI 類別">
+            <div className="explore-subtabs" role="tablist" aria-label="景點類別">
               {([
                 { key: 'all', label: '為你推薦' },
                 { key: 'attraction', label: '景點' },
