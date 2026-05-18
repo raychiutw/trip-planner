@@ -60,9 +60,10 @@ describe('TripSheet — ARIA tabs pattern 完整關聯', () => {
   });
 
   it('aria-selected 對應當前 tab', () => {
-    const { container } = renderSheet('/trip/test-trip?sheet=itinerary');
-    const itineraryTab = container.querySelector(`#${sheetTabId('itinerary')}`);
-    expect(itineraryTab?.getAttribute('aria-selected')).toBe('true');
+    // v2.31.85：itinerary tab 拿掉，改測 chat tab active 時 aria-selected=true
+    const { container } = renderSheet('/trip/test-trip?sheet=chat');
+    const chatTab = container.querySelector(`#${sheetTabId('chat')}`);
+    expect(chatTab?.getAttribute('aria-selected')).toBe('true');
     const mapTab = container.querySelector(`#${sheetTabId('map')}`);
     expect(mapTab?.getAttribute('aria-selected')).toBe('false');
   });

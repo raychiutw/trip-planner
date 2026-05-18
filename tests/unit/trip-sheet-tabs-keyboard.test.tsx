@@ -10,7 +10,8 @@
  *
  * Reference: https://www.w3.org/WAI/ARIA/apg/patterns/tabs/examples/tabs-automatic/
  *
- * V2 cutover (migration 0046): SHEET_TABS = itinerary / map / chat (3 tabs)。
+ * V2 cutover (migration 0046): 'ideas' tab retired。
+ * v2.31.85：'itinerary' tab 拿掉，SHEET_TABS now: map / chat (2 tabs)。
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
@@ -29,39 +30,39 @@ function getTablist(container: HTMLElement) {
   return el;
 }
 
-describe('TripSheetTabs — keyboard navigation', () => {
-  it('ArrowRight 切到下一個 tab（itinerary→map）', () => {
-    const { container, onChange } = setup('itinerary');
+describe('TripSheetTabs — keyboard navigation (2-tab map/chat)', () => {
+  it('ArrowRight 切到下一個 tab（map→chat）', () => {
+    const { container, onChange } = setup('map');
+    fireEvent.keyDown(getTablist(container), { key: 'ArrowRight' });
+    expect(onChange).toHaveBeenCalledWith('chat');
+  });
+
+  it('ArrowRight 從最後一個 tab（chat）循環回第一個（map）', () => {
+    const { container, onChange } = setup('chat');
     fireEvent.keyDown(getTablist(container), { key: 'ArrowRight' });
     expect(onChange).toHaveBeenCalledWith('map');
   });
 
-  it('ArrowRight 從最後一個 tab（chat）循環回第一個（itinerary）', () => {
+  it('ArrowLeft 切到前一個 tab（chat→map）', () => {
     const { container, onChange } = setup('chat');
-    fireEvent.keyDown(getTablist(container), { key: 'ArrowRight' });
-    expect(onChange).toHaveBeenCalledWith('itinerary');
-  });
-
-  it('ArrowLeft 切到前一個 tab（map→itinerary）', () => {
-    const { container, onChange } = setup('map');
     fireEvent.keyDown(getTablist(container), { key: 'ArrowLeft' });
-    expect(onChange).toHaveBeenCalledWith('itinerary');
+    expect(onChange).toHaveBeenCalledWith('map');
   });
 
-  it('ArrowLeft 從第一個 tab（itinerary）循環到最後（chat）', () => {
-    const { container, onChange } = setup('itinerary');
+  it('ArrowLeft 從第一個 tab（map）循環到最後（chat）', () => {
+    const { container, onChange } = setup('map');
     fireEvent.keyDown(getTablist(container), { key: 'ArrowLeft' });
     expect(onChange).toHaveBeenCalledWith('chat');
   });
 
   it('Home 跳第一個 tab', () => {
-    const { container, onChange } = setup('map');
+    const { container, onChange } = setup('chat');
     fireEvent.keyDown(getTablist(container), { key: 'Home' });
-    expect(onChange).toHaveBeenCalledWith('itinerary');
+    expect(onChange).toHaveBeenCalledWith('map');
   });
 
   it('End 跳最後一個 tab', () => {
-    const { container, onChange } = setup('itinerary');
+    const { container, onChange } = setup('map');
     fireEvent.keyDown(getTablist(container), { key: 'End' });
     expect(onChange).toHaveBeenCalledWith('chat');
   });
@@ -81,11 +82,11 @@ describe('TripSheetTabs — keyboard navigation', () => {
   });
 
   it('切換後 focus 移到新 active tab button', () => {
-    const { container, rerender } = setup('itinerary');
+    const { container, rerender } = setup('map');
     fireEvent.keyDown(getTablist(container), { key: 'ArrowRight' });
-    // 模擬 parent re-render（onChange 更新 URL → location.search → currentTab='map'）
-    rerender(<TripSheetTabs currentTab="map" onChange={vi.fn()} />);
-    const mapBtn = container.querySelector(`#${sheetTabId('map')}`);
-    expect(document.activeElement).toBe(mapBtn);
+    // 模擬 parent re-render（onChange 更新 URL → location.search → currentTab='chat'）
+    rerender(<TripSheetTabs currentTab="chat" onChange={vi.fn()} />);
+    const chatBtn = container.querySelector(`#${sheetTabId('chat')}`);
+    expect(document.activeElement).toBe(chatBtn);
   });
 });
