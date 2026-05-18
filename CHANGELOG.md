@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.70] - 2026-05-18
+
+**Remove unused npm dependency `@dnd-kit/modifiers` — 0 imports across codebase。**
+
+### Removed: @dnd-kit/modifiers from package.json
+
+Inline npm deps audit 對 production `dependencies` 列表逐個 grep import：
+- `@dnd-kit/modifiers`: **0 imports** in src/, functions/, tests/, scripts/
+- `@dnd-kit/core` (5 imports) + `@dnd-kit/sortable` (4 imports) 仍在用 — 只 modifiers 是孤兒
+
+`npm uninstall @dnd-kit/modifiers` → tsc clean、build pass、package-lock 自動 prune。
+
+其他 dep audit findings：
+- `oidc-provider` 0 imports 但 V2-P2 計畫保留（`src/server/oauth-d1-adapter.ts` planning comment）→ **不刪**
+- `html2pdf.js` 0 static import 但有 dynamic `await import('html2pdf.js')` in `tripExport.ts:247` → **保留**
+- `nodemailer` 0 SPA import 但 `scripts/tripline-api-server.ts` mac mini server 用 → **保留**
+- 其他 13 個 production dep 都有 active import
+
 ## [2.31.69] - 2026-05-18
 
 **Rip 4 個 abandoned API test files — v2.20.1 V2 cutover 後標 TODO 但 11 個版本沒人 rewrite。**
