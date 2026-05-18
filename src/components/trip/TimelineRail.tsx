@@ -498,7 +498,14 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         <button
           type="button"
           className="ocean-rail-head"
-          onClick={onToggle}
+          onClick={() => {
+            // v2.31.81 #5：row click → dispatch entryFocused 讓 TripMapRail
+            // pan/zoom 到該 pin。toggle 行為照舊。
+            if (entry.id != null) {
+              window.dispatchEvent(new CustomEvent(EVENT.entryFocused, { detail: { entryId: entry.id } }));
+            }
+            onToggle();
+          }}
           disabled={!canExpand}
           aria-expanded={canExpand ? expanded : undefined}
           aria-label={`${expanded ? '收合' : '展開'}景點：${entryDisplayTitle}`}

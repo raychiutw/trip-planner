@@ -32,7 +32,7 @@ import clsx from 'clsx';
 import Icon from '../shared/Icon';
 
 interface NavItemConfig {
-  key: 'chat' | 'trips' | 'map' | 'favorites' | 'login';
+  key: 'chat' | 'explore' | 'map' | 'favorites' | 'switch-trip' | 'login';
   label: string;
   href: string;
   icon: string;
@@ -61,12 +61,17 @@ const TRIP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+(?:\/?$|\/(?!(?:map|stop\/[^/]+\/ma
 // sidebar 與 bottom-nav 都用「收藏」，ownership 由 PoiFavoritesPage hero eyebrow 補回。
 const FAVORITES_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/favorites\//];
 
+// v2.31.81：sidebar 全 icon-only（user：「桌機版只保留 icon 不要中文」）。
+// 「行程」 nav 移除；新增「探索」+「切換行程」（取代 /trips 入口路徑）。
+// 聊天 → /chat 維持 AI 聊天功能（v2.31.27 起 chat AI 健檢功能 surface 在此）。
+// label 保留供 aria-label + title tooltip + sr-only DOM（screen reader 仍 announce）。
 const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
-  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'sidebar-chat', matchPrefixes: ['/chat'] },
-  { key: 'trips',     label: '行程', href: '/trips',     icon: 'sidebar-trip', matchPrefixes: ['/trips'], additionalActivePatterns: TRIP_ACTIVE_PATTERNS },
-  { key: 'map',       label: '地圖', href: '/map',       icon: 'sidebar-map',  matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
-  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'heart',        matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
-  { key: 'login',     label: '登入', href: '/login',     icon: 'sidebar-user', matchPrefixes: ['/login'], guestOnly: true },
+  { key: 'chat',        label: '聊天',     href: '/chat',      icon: 'sidebar-chat', matchPrefixes: ['/chat'] },
+  { key: 'explore',     label: '探索',     href: '/explore',   icon: 'search',       matchPrefixes: ['/explore'] },
+  { key: 'map',         label: '地圖',     href: '/map',       icon: 'sidebar-map',  matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
+  { key: 'favorites',   label: '收藏',     href: '/favorites', icon: 'heart',        matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
+  { key: 'switch-trip', label: '切換行程', href: '/trips',     icon: 'swap-horiz',   matchPrefixes: ['/trips'], additionalActivePatterns: TRIP_ACTIVE_PATTERNS },
+  { key: 'login',       label: '登入',     href: '/login',     icon: 'sidebar-user', matchPrefixes: ['/login'], guestOnly: true },
 ];
 
 function isItemActive(pathname: string, item: NavItemConfig): boolean {
@@ -112,17 +117,16 @@ body.dark .tp-sidebar {
   display: flex; flex-direction: column; gap: 2px;
 }
 .tp-nav-item {
-  /* Section 4.1 (terracotta-ui-parity-polish): dark sidebar 上 inactive
-   * 用半透明 white 替代 muted (muted 在深棕底對比不夠)。font-weight 600
-   * 對齊 mockup line 5129。 */
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: var(--radius-md);
+  /* v2.31.81：icon-only mode。原本「icon + 中文 label」改為僅 icon + tooltip
+   * (title 屬性 hover) + sr-only label 給 screen reader。icon size 16 → 22
+   * 補回視覺份量，padding 對齊讓 hit area 仍 ≥40×40。 */
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px; border-radius: var(--radius-md);
   color: rgba(255, 251, 245, 0.78);
-  font-size: 14px; font-weight: 600;
   cursor: pointer; text-decoration: none;
   transition: background 150ms var(--transition-timing-function-apple),
               color 150ms var(--transition-timing-function-apple);
-  min-height: 40px;
+  min-height: 44px; min-width: 44px;
 }
 .tp-nav-item:hover {
   background: rgba(255, 251, 245, 0.06);
@@ -133,7 +137,17 @@ body.dark .tp-sidebar {
   background: var(--color-accent);
   color: var(--color-accent-foreground);
 }
-.tp-nav-item .svg-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.tp-nav-item .svg-icon { width: 22px; height: 22px; flex-shrink: 0; }
+/* sr-only：visually hide label，screen reader 仍能 announce */
+.tp-nav-item-label {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 .tp-sidebar-cta {
   margin-top: auto;
@@ -265,9 +279,12 @@ export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
                 to={item.href}
                 className={clsx('tp-nav-item', active && 'is-active')}
                 aria-current={active ? 'page' : undefined}
+                aria-label={item.label}
+                title={item.label}
+                data-testid={`sidebar-nav-${item.key}`}
               >
                 <Icon name={item.icon} />
-                <span>{item.label}</span>
+                <span className="tp-nav-item-label">{item.label}</span>
               </Link>
             );
           })}

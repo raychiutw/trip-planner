@@ -14,6 +14,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { EVENT } from '../../lib/events';
 import type { MapPin } from '../../hooks/useMapData';
 
 const OceanMap = lazy(() => import('./OceanMap'));
@@ -112,6 +113,22 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
     daySections.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, [isDesktop, dayCenters]);
+
+  // v2.31.81 #5：TimelineRail row click → dispatch entryFocused → pan map to pin。
+  // 比 scroll spy 的 day-center pan 更精準（單一 pin 而不是平均座標）。
+  useEffect(() => {
+    if (!isDesktop) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ entryId?: number }>).detail;
+      const entryId = detail?.entryId;
+      if (typeof entryId !== 'number') return;
+      const pin = pins.find((p) => p.id === entryId);
+      if (!pin) return;
+      setPanToCoord({ lat: pin.lat, lng: pin.lng });
+    };
+    window.addEventListener(EVENT.entryFocused, handler);
+    return () => window.removeEventListener(EVENT.entryFocused, handler);
+  }, [isDesktop, pins]);
 
   if (!isDesktop) return null;
 

@@ -727,6 +727,7 @@ export default function EditTripPage() {
                     <label htmlFor="edit-trip-lang">顯示語言</label>
                     <select
                       id="edit-trip-lang"
+                      className="tp-select"
                       value={lang}
                       onChange={(e) => setLang(e.target.value as Lang)}
                       data-testid="edit-trip-lang-select"
