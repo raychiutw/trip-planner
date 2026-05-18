@@ -49,8 +49,13 @@ describe('v2.31.84: marker label halo 2px + box-shadow drop shadow elevation', (
     expect(style.fill).toBe('#D97848');
     expect(el.style.textShadow).toContain(style.fill);
     expect(el.style.boxShadow).toContain(style.fill);
-    // drop shadow elevation 不依 state，永遠存在
-    expect(el.style.boxShadow.toLowerCase()).toMatch(/rgba\(0,\s*0,\s*0,\s*0\.18\)/);
+    // v2.31.93：focused marker box-shadow 改用「outer accent ring + 加深 drop shadow」
+    // 取代 idle 的 0.18 black drop shadow，user 反映 focused stop 被相鄰 marker 蓋住。
+    // 條件：accent rgba ring (217,120,72,0.35) + 深 drop shadow (42,31,24,0.35)。
+    expect(el.style.boxShadow.toLowerCase()).toMatch(/rgba\(217,\s*120,\s*72,\s*0?\.35\)/);
+    expect(el.style.boxShadow.toLowerCase()).toMatch(/rgba\(42,\s*31,\s*24,\s*0?\.35\)/);
+    // focused 不該再含 idle 的 0.18 black drop shadow
+    expect(el.style.boxShadow.toLowerCase()).not.toMatch(/rgba\(0,\s*0,\s*0,\s*0?\.18\)/);
   });
 
   it('past marker：halo + drop shadow 都還在（mute 不消失）', () => {
