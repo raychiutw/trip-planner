@@ -725,6 +725,20 @@ export default function TripsListPage() {
   const [allTrips, setAllTrips] = useState<TripInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // v2.31.89：embedded TitleBar「切換行程」改 dropdown picker（對齊 ChatPage UX）。
+  const [tripPickerOpen, setTripPickerOpen] = useState(false);
+  const tripPickerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!tripPickerOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (tripPickerRef.current && !tripPickerRef.current.contains(e.target as Node)) {
+        setTripPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [tripPickerOpen]);
+
   // 同 tab navigate 不會 remount TripsListPage — 必須由 tp-trip-created /
   // tp-trip-updated event 觸發 refetch，否則新增/編輯後回 list 看不到變更。
   const loadTrips = useCallback(async () => {
@@ -1174,17 +1188,47 @@ export default function TripsListPage() {
             >
               <Icon name="search" />
             </button>
-            {/* v2.31.85：切換行程 icon button（swap-horiz）→ 回 /trips 列表 */}
-            <button
-              type="button"
-              className="tp-titlebar-action"
-              onClick={clearSelected}
-              aria-label="切換行程"
-              title="切換行程"
-              data-testid="trip-switch-trigger"
-            >
-              <Icon name="swap-horiz" />
-            </button>
+            {/* v2.31.89：切換行程改 dropdown picker（對齊 ChatPage TitleBar trip picker） — swap-horiz + chevron ▾，click 開 dropdown 列 trips */}
+            {visibleTrips.length > 0 && (
+              <div className="tp-titlebar-trip-menu" ref={tripPickerRef}>
+                <button
+                  type="button"
+                  className="tp-titlebar-trip-picker"
+                  onClick={() => setTripPickerOpen((o) => !o)}
+                  aria-haspopup="menu"
+                  aria-expanded={tripPickerOpen}
+                  aria-label="切換行程"
+                  title="切換行程"
+                  data-testid="trip-switch-trigger"
+                >
+                  <Icon name="swap-horiz" />
+                  <span className="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
+                </button>
+                {tripPickerOpen && (
+                  <div className="tp-titlebar-trip-dropdown" role="menu">
+                    {visibleTrips.map((t) => (
+                      <button
+                        key={t.tripId}
+                        type="button"
+                        className={`tp-titlebar-trip-row ${t.tripId === effectiveSelectedId ? 'is-active' : ''}`}
+                        onClick={() => {
+                          setActiveTrip(t.tripId);
+                          const next = new URLSearchParams(searchParams);
+                          next.set('selected', t.tripId);
+                          setSearchParams(next, { replace: false });
+                          setTripPickerOpen(false);
+                        }}
+                        role="menuitem"
+                        data-testid={`trip-switch-pick-${t.tripId}`}
+                      >
+                        <span className="tp-titlebar-trip-row-title">{t.title || t.name || t.tripId}</span>
+                        <span className="tp-titlebar-trip-row-meta">{(t.countries ?? '').toUpperCase() || t.tripId}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <EmbeddedActionMenu
               tripId={effectiveSelectedId}
               tripPageRef={tripPageRef}

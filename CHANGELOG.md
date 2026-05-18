@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.89] - 2026-05-18
+
+**Fix: 切換行程 button 改 dropdown picker（user feedback「要用的下拉選單的版本的 icon」）。**
+
+v2.31.85 加的 simple swap-horiz icon button click 直接跳 /trips 列表。User 反映要對齊 ChatPage TitleBar trip picker 設計 — swap-horiz + chevron ▾ + dropdown 列 trips，user 不離開行程詳細頁直接切換。
+
+### Changed
+
+- **`src/pages/TripsListPage.tsx`** embedded TitleBar「切換行程」button：
+  - simple `<Icon name="swap-horiz" />` + `onClick=clearSelected` → **dropdown picker**
+  - `.tp-titlebar-trip-menu` wrap + `.tp-titlebar-trip-picker` button (swap-horiz + chevron ▾) + `.tp-titlebar-trip-dropdown` menu panel
+  - menu rows 顯示 trips 標題 + countries meta，active trip highlight
+  - row click → `setActiveTrip(tripId)` + `setSearchParams({ selected })` + close menu
+  - outside click close menu (mousedown listener)
+  - 加 `tripPickerOpen` state + `tripPickerRef`
+- CSS class 全 reuse `css/tokens.css` 既有 `.tp-titlebar-trip-*`（ChatPage 也用）— 無新 CSS。
+
+### Test
+
+- `tests/unit/v2_31_89-trip-picker-dropdown.test.ts`：7 source-grep test 鎖 button 結構 + dropdown menu + row click handler + outside click effect。tsc clean。
+
 ## [2.31.88] - 2026-05-18
 
 **Fix: TripMapRail zoom level 對齊 MapPage focusId flow（user 反映 v2.31.87 zoom 太大）。**
