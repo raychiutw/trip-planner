@@ -63,8 +63,11 @@ test.describe('QA Flow 1 — 新增行程', () => {
   });
 });
 
-test.describe('QA Flow 2 — 新增景點 (custom tab confirm)', () => {
-  test('custom tab 填 title → 完成 → POST entries → 觸發 tp-entry-updated', async ({ page }) => {
+test.describe('QA Flow 2 — 新增景點 (custom tab wedge guard)', () => {
+  // v2.31.94：自訂 tab 新 contract — 必須 title + map pin coord 雙備齊才能 submit
+  // (per design doc wedge: 保證有 coord 才能 submit)。POST entries 流程移到 search
+  // tab E2E 覆蓋 (search 路徑無 map 依賴) — 此 test 改驗 guard 行為。
+  test('custom tab title-only 維持 disabled — 無 map pin coord 不能 submit', async ({ page }) => {
     /** @type {string[]} */
     const entryPostUrls = [];
     page.on('request', (req) => {
@@ -73,8 +76,6 @@ test.describe('QA Flow 2 — 新增景點 (custom tab confirm)', () => {
       }
     });
 
-    // 先 goto /trip/:id 建 history，再 goto AddStopPage URL → handleBack 可回得到
-    // (v2.23.7：trip TitleBar 從「加景點」改「探索」，AddStopPage 直接 URL 進入)
     await page.goto('/trip/okinawa-trip-2026-Ray');
     await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     await expect(page.getByTestId('add-stop-page')).toBeVisible();
@@ -82,14 +83,14 @@ test.describe('QA Flow 2 — 新增景點 (custom tab confirm)', () => {
     await page.getByTestId('add-stop-tab-custom').click();
     await page.getByTestId('add-stop-custom-title').fill('海邊散步 — QA test');
 
+    // CI 無 Google Maps browser key → map fail-load → customCoord 永遠 null →
+    // 完成 disabled，不會 fire POST entries。確認 guard 阻擋。
     const titleBarConfirm = page.getByTestId('add-stop-titlebar-confirm');
-    await expect(titleBarConfirm).toBeEnabled();
-    await titleBarConfirm.click();
+    await expect(titleBarConfirm).toBeDisabled();
 
-    // POST 應發生 + 成功後 handleBack() → 回 /trip/:id 或 /trips?selected=:id (fallback)
-    await expect.poll(() => entryPostUrls.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
-    expect(entryPostUrls[0]).toMatch(/\/api\/trips\/okinawa-trip-2026-Ray\/days\/1\/entries/);
-    await page.waitForURL(/(?:\/trip\/okinawa-trip-2026-Ray|\/trips\?selected=okinawa-trip-2026-Ray)/, { timeout: 5000 });
+    // 確認沒 POST 漏出去
+    await page.waitForTimeout(500);
+    expect(entryPostUrls.length).toBe(0);
   });
 });
 
