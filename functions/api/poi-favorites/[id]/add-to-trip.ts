@@ -23,7 +23,6 @@ import { AppError, buildRateLimitResponse } from '../../_errors';
 import { detectGarbledText } from '../../_validate';
 import { json, parseIntParam, parseJsonBody } from '../../_utils';
 // v2.26.0: TIME_RE canonical 在 _time.ts（migration 0056 後 entry-time helpers 統一住處）。
-// _poi-defaults.ts:6 仍保留同 const 給 saved-pois fast-path（defense-in-depth）。
 import { TIME_RE } from '../../_time';
 import { assertFavoriteOwnership, pickFavoriteRateLimitBucket, requireFavoriteActor } from '../../_companion';
 import { bumpRateLimit, RATE_LIMITS } from '../../_rate_limit';
