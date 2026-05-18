@@ -12,8 +12,11 @@
  * /api/route proxy (Google Routes). On any Google failure → 503 from
  * server (no Haversine fallback per P11/T13); useRoute returns null.
  *
- *  pins[] ─┬─► google.maps.Marker (label + icon) ──────► map
+ *  pins[] ─┬─► google.maps.marker.AdvancedMarkerElement (content div) ─► map
  *          └─► useRoute(a,b) per segment ─► google.maps.Polyline ─► map
+ *
+ * v2.31.75: 從 google.maps.Marker (deprecated 2024-02) 遷移到
+ * AdvancedMarkerElement。Symbol path 改用 inline HTMLDivElement + CSS。
  */
 
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -56,7 +59,7 @@ export interface OceanMapProps {
   zoomControlPosition?: 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT';
 }
 
-/* ===== Marker icon construction (Google Maps Symbol path + label) ===== */
+/* ===== Marker content construction (AdvancedMarkerElement HTML div) ===== */
 
 const ACCENT_COLOR = '#D97848';
 const ACCENT_FG = '#FFFFFF';
@@ -67,8 +70,12 @@ const PAST_BORDER = '#E0E0E0';
 const PAST_FG = '#C1C1C1';
 
 /**
- * markerIcon — build google.maps.Marker icon + label options.
- * dayColor 套 idle marker；active 用 accent；past 用 muted。Exported for unit tests.
+ * markerStyle — derive marker visual props (colors, sizes) per state.
+ * Exported for unit tests; the pure-data shape lets us assert visual contract
+ * without rendering into DOM.
+ *
+ * v2.31.75: AdvancedMarkerElement 遷移後 markerIcon (return Symbol+label) 拆成兩個
+ * helper：`markerStyle` (pure data) + `markerContent` (build DOM)。
  */
 type MarkerState = 'focused' | 'past' | 'idle';
 
@@ -78,16 +85,31 @@ const STATE_COLORS: Record<MarkerState, { fill: string; stroke: string; text: st
   idle:    { fill: IDLE_BG,      stroke: IDLE_BORDER, text: IDLE_FG },
 };
 
-export function markerIcon(
+export interface MarkerStyle {
+  /** Background color (formerly Symbol fillColor). */
+  fill: string;
+  /** Border color (formerly Symbol strokeColor). */
+  stroke: string;
+  /** Label text color (formerly MarkerLabel color). */
+  text: string;
+  /** Diameter in px (formerly Symbol scale × 2). 18→36, 14→28. */
+  size: number;
+  /** Border width in px (formerly Symbol strokeWeight). */
+  borderWidth: number;
+  /** Label font size (formerly MarkerLabel fontSize). */
+  fontSize: string;
+  /** Label text (pin index as string). */
+  label: string;
+  /** Stacking order. focused → 1000，其他 undefined. */
+  zIndex?: number;
+}
+
+export function markerStyle(
   pin: MapPin,
   isFocused: boolean,
   isPast: boolean,
   dayCol?: string,
-): {
-  icon: google.maps.Symbol;
-  label: google.maps.MarkerLabel;
-  zIndex?: number;
-} {
+): MarkerStyle {
   const state: MarkerState = isFocused ? 'focused' : isPast ? 'past' : 'idle';
   const base = STATE_COLORS[state];
   // dayCol overrides idle stroke + text only — focused/past keep their tokens.
@@ -95,23 +117,43 @@ export function markerIcon(
   const text = state === 'idle' && dayCol ? dayCol : base.text;
 
   return {
-    icon: {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: isFocused ? 18 : 14,
-      fillColor: base.fill,
-      fillOpacity: 1,
-      strokeColor: stroke,
-      strokeWeight: isFocused ? 2 : 1.5,
-    },
-    label: {
-      text: String(pin.index),
-      color: text,
-      fontSize: isFocused ? '13px' : '12px',
-      fontWeight: '700',
-      fontFamily: 'Inter, sans-serif',
-    },
+    fill: base.fill,
+    stroke,
+    text,
+    size: isFocused ? 36 : 28,
+    borderWidth: isFocused ? 2 : 1.5,
+    fontSize: isFocused ? '13px' : '12px',
+    label: String(pin.index),
     zIndex: isFocused ? 1000 : undefined,
   };
+}
+
+/**
+ * markerContent — build the HTMLDivElement consumed by
+ * `AdvancedMarkerElement.content`. Pure DOM, no React.
+ */
+export function markerContent(style: MarkerStyle): HTMLDivElement {
+  const div = document.createElement('div');
+  div.className = 'tp-marker';
+  div.textContent = style.label;
+  div.style.cssText = `
+    width: ${style.size}px;
+    height: ${style.size}px;
+    border-radius: 50%;
+    background: ${style.fill};
+    border: ${style.borderWidth}px solid ${style.stroke};
+    color: ${style.text};
+    font-size: ${style.fontSize};
+    font-weight: 700;
+    font-family: Inter, 'Noto Sans TC', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    user-select: none;
+    cursor: pointer;
+  `;
+  return div;
 }
 
 /* ===== Inline styles (scoped to this component) ===== */
@@ -366,30 +408,34 @@ const OceanMap = memo(function OceanMap({
   }, [pinsByDay, dayNum, pins]);
 
   /* --- Markers: create once per pin-set, diff-update on focus change --- */
-  const markersRef = useRef<Map<number, google.maps.Marker>>(new Map());
+  // v2.31.75: google.maps.Marker (deprecated) → AdvancedMarkerElement。
+  const markersRef = useRef<Map<number, google.maps.marker.AdvancedMarkerElement>>(new Map());
 
   useEffect(() => {
     if (!map) return;
-    const markers = new Map<number, google.maps.Marker>();
+    const markers = new Map<number, google.maps.marker.AdvancedMarkerElement>();
     const listeners: google.maps.MapsEventListener[] = [];
     for (const pin of visiblePins) {
-      const opts = markerIcon(pin, false, false, pinIdToDayColor.get(pin.id));
-      const marker = new google.maps.Marker({
+      const style = markerStyle(pin, false, false, pinIdToDayColor.get(pin.id));
+      const marker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: pin.lat, lng: pin.lng },
         map,
-        icon: opts.icon,
-        label: opts.label,
+        content: markerContent(style),
         title: `第 ${pin.index} 站：${pin.title}`,
+        // gmpClickable 預設 false；onMarkerClick 才需要點擊
+        gmpClickable: onMarkerClick !== undefined,
       });
       if (onMarkerClick) {
-        listeners.push(marker.addListener('click', () => onMarkerClick(pin.id)));
+        // AdvancedMarkerElement: 'gmp-click' event (vs 舊 Marker 的 'click')
+        listeners.push(marker.addListener('gmp-click', () => onMarkerClick(pin.id)));
       }
       markers.set(pin.id, marker);
     }
     markersRef.current = markers;
     return () => {
       for (const l of listeners) l.remove();
-      for (const m of markers.values()) m.setMap(null);
+      // AdvancedMarkerElement: 設 map=null 從 map 移除
+      for (const m of markers.values()) m.map = null;
       if (markersRef.current === markers) markersRef.current = new Map();
     };
   }, [map, visiblePins, onMarkerClick, pinIdToDayColor]);
@@ -398,7 +444,7 @@ const OceanMap = memo(function OceanMap({
   const prevFocusRef = useRef<{
     focusId?: number;
     focusedIdx: number;
-    markers: Map<number, google.maps.Marker> | null;
+    markers: Map<number, google.maps.marker.AdvancedMarkerElement> | null;
   }>({ focusedIdx: -1, markers: null });
 
   useEffect(() => {
@@ -431,10 +477,10 @@ const OceanMap = memo(function OceanMap({
       const pin = visiblePinsById.get(pinId);
       if (!marker || !pin) continue;
       const isFocused = pinId === focusId;
-      const opts = markerIcon(pin, isFocused, isPastPin(pinId), pinIdToDayColor.get(pinId));
-      marker.setIcon(opts.icon);
-      marker.setLabel(opts.label);
-      marker.setZIndex(isFocused ? 1000 : 0);
+      const style = markerStyle(pin, isFocused, isPastPin(pinId), pinIdToDayColor.get(pinId));
+      // AdvancedMarkerElement: 整個 content node 換掉（diff-update via DOM replace）
+      marker.content = markerContent(style);
+      marker.zIndex = isFocused ? 1000 : null;
     }
 
     prevFocusRef.current = { focusId, focusedIdx, markers };
