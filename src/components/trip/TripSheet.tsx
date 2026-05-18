@@ -20,6 +20,8 @@ import Icon from '../shared/Icon';
 import type { MapPin } from '../../hooks/useMapData';
 
 const TripMapRail = lazy(() => import('./TripMapRail'));
+// v2.31.86：chat tab 從 placeholder「即將推出」改 embed ChatPage（embedded + lockTripId props）。
+const ChatPage = lazy(() => import('../../pages/ChatPage'));
 // Ideas tab retired — V2 cutover (migration 0046) 把備案合一進「我的收藏」。
 
 const DEFAULT_TAB: SheetTab = 'map';
@@ -169,14 +171,15 @@ export default function TripSheet({ tripId, allPins, pinsByDay, dark }: TripShee
           id={sheetPanelId('chat')}
           aria-labelledby={sheetTabId('chat')}
           hidden={currentTab !== 'chat'}
-          className="trip-sheet-placeholder"
           data-testid="tab-chat"
         >
-          {/* v2.31.60 zh-TW polish：英文 + dev jargon (Workstream V2) →
-              純中文 user-facing copy。 */}
-          <div className="eyebrow">即將推出</div>
-          <h3>行程專屬對話</h3>
-          <p>針對這趟行程的 AI 對話，下一階段推出。目前可在「聊天」分頁使用通用對話。</p>
+          {/* v2.31.86：chat tab embed ChatPage（embedded mode skip AppShell + TitleBar，
+              lockTripId 鎖 active trip 到當前 TripPage trip context）。 */}
+          {currentTab === 'chat' && (
+            <Suspense fallback={null}>
+              <ChatPage embedded lockTripId={tripId} />
+            </Suspense>
+          )}
         </div>
       </div>
     </div>

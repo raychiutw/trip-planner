@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.86] - 2026-05-18
+
+**Feat: TripSheet「聊天」tab 接 AI 聊天功能（user direction follow-up v2.31.85 #4）。**
+
+### Added
+
+- **`src/pages/ChatPage.tsx` 加 `ChatPageProps`**：
+  - `embedded?: boolean` — skip AppShell + DesktopSidebar + GlobalBottomNav + TitleBar，讓 ChatPage 可嵌 TripSheet 內
+  - `lockTripId?: string` — useEffect 強制 `setActiveTripId(lockTripId)` 鎖 trip context 到當前 TripPage trip
+  - `if (embedded) return main;` skip AppShell wrapper
+
+- **`src/components/trip/TripSheet.tsx` chat tab**：
+  - 拿掉 placeholder「即將推出 / 行程專屬對話 / 下一階段推出」copy + 結構
+  - `currentTab === 'chat'` 時 `<Suspense><ChatPage embedded lockTripId={tripId} /></Suspense>` lazy mount
+  - lazy import 對齊既有 TripMapRail pattern
+
+### Test
+
+- `tests/unit/v2_31_86-chat-page-embedded.test.ts`：7 個 source-grep test 鎖 ChatPageProps interface + embedded conditional render + TripSheet embed wiring。
+- 既有 5 個 chat-page tests + 1 trip-sheet test 27/27 pass。
+
 ## [2.31.85] - 2026-05-18
 
 **Feat: trip detail page TitleBar icon-only + TripSheet 拿掉「行程」tab（用戶截圖標出紅框）。**
