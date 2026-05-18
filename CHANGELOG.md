@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.95] - 2026-05-19
+
+**Fix: 桌機自訂景點 tab 改 two-pane layout 對齊 mockup C。** User QA feedback：桌機地圖位置和 mockup C 不同 — 之前 form 與 map 是上下 stacked，現在改回 mockup approved 的左 form 380px / 右 map 1fr。
+
+### Changed
+
+- `src/pages/AddStopPage.tsx` 自訂 tab JSX — 由 stacked form-rows 改為 two-pane grid（`.tp-add-stop-custom-twopane` 外層 + `.tp-add-stop-form-pane` 左 / `.tp-add-stop-map-pane` 右）。Map pane 含地圖 + 「已調整到正確位置」hint + 「小提示」sidehelp（解釋為什麼地址不夠、要拖 pin）
+- 新 testid：`add-stop-custom-twopane` / `add-stop-custom-map-pane` / `add-stop-custom-coord-readout`
+- 移除 unwired placeholders「結束時間 自動估算」+「類型 SIGHT · 景點」（pre-existing dead UI，這版順手清掉以對齊 mockup C 4-field form）
+- `.tp-add-stop-body:has(.tp-add-stop-custom-twopane)` 在 ≥1024px 放寬 max-width 1024px，讓 380+map 兩 pane 排得開（其他 tab 仍維持 720px）
+
+### Mockup reference
+
+`docs/design-sessions/2026-05-18-add-custom-stop/desktop-inline.html` (V3 chosen variant, APPROVED 2026-05-18)
+
 ## [2.31.94] - 2026-05-19
 
 **Feat: 自訂景點 + 地址 typeahead + 地圖 pin pick → 自動計算前後車程。** 旅伴加自訂 entry 時 UI 強制提供 lat/lng，map marker 不再 silent drop、travel pill 30s 內計算車程。
