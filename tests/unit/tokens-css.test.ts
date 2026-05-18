@@ -53,8 +53,6 @@ describe('tokens.css', () => {
 
   it('includes non-utility tokens (z-index, layout)', () => {
     expect(tokens).toContain('--z-sticky-nav:');
-    expect(tokens).toContain('--z-fab:');
-    expect(tokens).toContain('--spacing-page-max-w:');
     expect(tokens).toContain('--spacing-nav-h:');
     expect(tokens).toContain('--spacing-tap-min:');
   });
@@ -69,8 +67,7 @@ describe('tokens.css', () => {
     expect(tokens).not.toContain('.request-item');
     expect(tokens).not.toContain('.chat-container');
     expect(tokens).not.toContain('.admin-');
-    // keyframes 定義在 tokens.css
-    expect(tokens).toContain('@keyframes stepper-pulse');
+    // keyframes 定義在 tokens.css (v2.31.71: stepper-pulse/tl-pulse 0 ref → 一併刪)
     expect(tokens).toContain('@keyframes toast-slide-down');
     expect(tokens).toContain('@keyframes toast-slide-up');
     expect(tokens).toContain('@keyframes shimmer');
