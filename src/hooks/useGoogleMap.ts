@@ -97,8 +97,13 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
     }
 
     ensureLoaderInit(apiKey);
-    importLibrary('maps')
-      .then((mapsLib) => {
+    // v2.31.76 hotfix #642 follow-up：必須同時 await 'marker' library 才能 setMap，
+    // 否則 child component（OceanMap / MapFabs）會在 google.maps.marker 尚未注入時
+    // 嘗試 new google.maps.marker.AdvancedMarkerElement(...) → TypeError，整個 map
+    // 進 ErrorBoundary。v2.31.75 把 google.maps.Marker → AdvancedMarkerElement 但漏
+    // 等 marker lib，prod 整個 trip detail page 地圖紅屏。
+    Promise.all([importLibrary('maps'), importLibrary('marker')])
+      .then(([mapsLib]) => {
         if (cancelled) return;
         const instance = new mapsLib.Map(el, {
           center,

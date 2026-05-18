@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.76] - 2026-05-18
+
+**Hotfix v2.31.75 follow-up：useGoogleMap 必須 await 'marker' library 才能 setMap。**
+
+### Fixed: trip detail page 地圖整個進 ErrorBoundary
+
+v2.31.75 把 `google.maps.Marker` → `google.maps.marker.AdvancedMarkerElement` 但 `useGoogleMap.ts` 只 `await importLibrary('maps')`，'marker' library 沒等就 `setMap(instance)` → child component（OceanMap / MapFabs）render 時 `google.maps.marker` 還是 undefined → `new google.maps.marker.AdvancedMarkerElement(...)` 觸發 `TypeError: Cannot read properties of undefined (reading 'AdvancedMarkerElement')` → 整個 map 進 React ErrorBoundary 紅屏。
+
+prod 後驗截圖第一發就抓到（trip/okinawa-trip-2026-HuiYun detail page console error）。
+
+**Fix**: `src/hooks/useGoogleMap.ts` 改用 `Promise.all([importLibrary('maps'), importLibrary('marker')])` 等兩個 library 都 ready 才 setMap。
+
+**Regression test**：`tests/unit/v2_31_76-useGoogleMap-marker-library-await.test.ts`（source-grep 4 個 assertion）lock：
+1. `importLibrary('maps')` 仍存在
+2. `importLibrary('marker')` 也呼叫
+3. 兩者用 `Promise.all([...])` parallel await（不能拆成 sequential 也不能只等其一）
+4. `setOptions.libraries` 仍含 `['maps', 'marker']`
+
+### Why this missed the unit tests in v2.31.75
+
+`tests/unit/__mocks__/google-maps.ts` 的 `setupGoogleMapsMock()` 直接 install `globalThis.google.maps.*` 全套 constructor，跟真實 `@googlemaps/js-api-loader` 的 lazy import 行為不一致（mock 沒模擬「marker namespace 只在 importLibrary('marker') 後才出現」這個 race condition）。unit test 全綠不代表 prod 正常 — 視覺驗證（v2.31.75 PR test plan 第 4 項）才是抓到的關卡。
+
+未來建議：mock 改成在 `importLibrary('marker')` 被 await 後才 install `google.maps.marker.*`，讓 unit test 能模擬 race。本 PR 不做這項 mock 重構（hot fix 範圍最小化），列為 follow-up。
+
 ## [2.31.75] - 2026-05-18
 
 **Google Maps `Marker` → `AdvancedMarkerElement` 遷移（deprecated API 退場）。**
