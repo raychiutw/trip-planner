@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.91] - 2026-05-18
+
+**Fix: chat 內 markdown link 樣式對齊 terracotta 風格（user feedback「健檢報告連結 樣式不符合網站風格」）。**
+
+AI 健檢 reply 含 markdown link `[前往健檢報告](/trip/:id/health)`，prod chat bubble 用 browser 預設藍/紫 underline → 不符合 site terracotta UX。
+
+### Changed
+
+- **`src/pages/ChatPage.tsx` SCOPED_STYLES**：加 3 條 link rule：
+  - `.tp-chat-msg a`：terracotta `--color-accent-deep`（fallback `--color-accent`）+ underline 1px / offset 2px + weight 500
+  - `.tp-chat-msg a:hover`：opacity 0.7 transition
+  - `.tp-chat-msg-user a`：user bubble (accent bg) → text 用 `--color-accent-foreground` (white) + underline 半透明白
+- Assistant bubble (cream bg) link → terracotta deep；user bubble (orange bg) link → white。所有 chat 內 markdown link 統一套用，不只健檢 reply。
+
+### Test
+
+- `tests/unit/v2_31_91-chat-md-link-style.test.ts`：4 source-grep test 鎖 4 條 CSS rule。
+
 ## [2.31.90] - 2026-05-18
 
 **Fix: 桌機 TitleBar action 全 icon-only（user direction「檢查桌機版 title bar 都改為 icon 無說明文字」）。**
