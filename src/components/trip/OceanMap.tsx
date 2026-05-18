@@ -132,10 +132,14 @@ export function markerStyle(
  * markerContent — build the HTMLDivElement consumed by
  * `AdvancedMarkerElement.content`. Pure DOM, no React.
  *
- * v2.31.79：marker 疊在一起時數字混在一起難讀。加 text-shadow halo
- * (用 fill 當外框色) → 數字四周產生 1px ring 對比，疊圖時可分辨。
- * box-shadow `0 0 0 1.5px ${fill}` 也加在 div 上做外圈分離環，防兩個
- * stroke 邊框視覺貼齊難分清 marker 邊界。
+ * v2.31.84：v2.31.79 fix 1px halo + 1.5px ring 不夠強，user 反映 prod
+ * 仍難讀（4 marker 重疊那覇都心 5/6/4/3）。三層加強：
+ *   1. text-shadow halo 1px → 2px：marker overlap 時下方 marker bg 露出，
+ *      halo 用自己 fill 蓋住，2px halo 比 1px 明顯
+ *   2. box-shadow 加 `0 0 0 3px rgba(0,0,0,0.18)` drop shadow ring：
+ *      所有 state 統一 elevation，marker 間有明顯陰影分離（不依賴 fill 同
+ *      色，普適於 idle/focused/past）
+ *   3. 保留 v2.31.79 inner 1.5px ${fill} ring（marker overlap 蓋層邏輯）
  */
 export function markerContent(style: MarkerStyle): HTMLDivElement {
   const div = document.createElement('div');
@@ -147,12 +151,12 @@ export function markerContent(style: MarkerStyle): HTMLDivElement {
     border-radius: 50%;
     background: ${style.fill};
     border: ${style.borderWidth}px solid ${style.stroke};
-    box-shadow: 0 0 0 1.5px ${style.fill};
+    box-shadow: 0 0 0 1.5px ${style.fill}, 0 0 0 3px rgba(0, 0, 0, 0.18);
     color: ${style.text};
     font-size: ${style.fontSize};
     font-weight: 700;
     font-family: Inter, 'Noto Sans TC', sans-serif;
-    text-shadow: -1px -1px 0 ${style.fill}, 1px -1px 0 ${style.fill}, -1px 1px 0 ${style.fill}, 1px 1px 0 ${style.fill}, 0 -1px 0 ${style.fill}, 0 1px 0 ${style.fill}, -1px 0 0 ${style.fill}, 1px 0 0 ${style.fill};
+    text-shadow: -2px -2px 0 ${style.fill}, 2px -2px 0 ${style.fill}, -2px 2px 0 ${style.fill}, 2px 2px 0 ${style.fill}, 0 -2px 0 ${style.fill}, 0 2px 0 ${style.fill}, -2px 0 0 ${style.fill}, 2px 0 0 ${style.fill};
     display: flex;
     align-items: center;
     justify-content: center;
