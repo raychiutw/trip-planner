@@ -45,6 +45,21 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { regionToApiParam } from '../lib/maps/region';
 import type { PoiSearchResult } from '../types/poi';
+// v2.31.94: 自訂 tab 加 address typeahead + map pin 機制
+import { LocationPickerMap } from '../components/trip/LocationPickerMap';
+import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete';
+import {
+  selectDefaultCenter,
+  isValidCoord as isValidCustomCoord,
+  type Coord as CustomCoord,
+} from '../lib/locationPicker';
+
+interface TripDestApiLite {
+  destOrder: number;
+  name: string;
+  lat?: number | null;
+  lng?: number | null;
+}
 
 interface PoiFavoriteRow {
   id: number;
@@ -172,6 +187,143 @@ function deriveDayLabel(day: DayApiRow | null, dayNum: number): string {
 }
 
 const SCOPED_STYLES = `
+/* v2.31.94 自訂 tab — address typeahead + LocationPickerMap + hint checkbox */
+.tp-add-stop-custom-typeahead-wrap { position: relative; }
+.tp-add-stop-custom-typeahead-list {
+  margin-top: 4px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.tp-add-stop-custom-typeahead-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  width: 100%;
+  text-align: left;
+  color: var(--color-foreground);
+  font: inherit;
+}
+.tp-add-stop-custom-typeahead-item:last-child { border-bottom: none; }
+.tp-add-stop-custom-typeahead-item:hover,
+.tp-add-stop-custom-typeahead-item:focus-visible {
+  background: var(--color-accent-subtle);
+  outline: none;
+}
+.tp-add-stop-custom-typeahead-main {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-foreground);
+}
+.tp-add-stop-custom-typeahead-sub {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+.tp-custom-picker-wrap {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-secondary);
+  border: 1px solid var(--color-border);
+}
+.tp-custom-picker-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.tp-custom-picker-map:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: -3px;
+}
+.tp-custom-picker-pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  width: 32px;
+  height: 40px;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(42, 31, 24, 0.25));
+  z-index: 5;
+}
+.tp-custom-picker-pin svg { width: 100%; height: 100%; display: block; }
+.tp-custom-picker-coord {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-foreground);
+  background: rgba(255, 251, 245, 0.92);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  z-index: 6;
+}
+.tp-custom-picker-error {
+  padding: 12px 14px;
+  background: var(--color-destructive-bg);
+  color: var(--color-destructive);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  text-align: center;
+}
+.tp-add-stop-custom-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-bg);
+  border-radius: var(--radius-md);
+  margin-top: 12px;
+}
+.tp-add-stop-custom-hint-checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  background: var(--color-background);
+  margin: 0;
+}
+.tp-add-stop-custom-hint-checkbox:checked {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.tp-add-stop-custom-hint-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--color-accent-foreground);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.tp-add-stop-custom-hint-text {
+  font-size: 14px;
+  color: var(--color-foreground);
+  line-height: 1.4;
+  cursor: pointer;
+}
+.tp-add-stop-custom-hint-text strong { font-weight: 600; }
+
 .tp-add-stop-page-shell {
   min-height: 100%;
   background: var(--color-background);
@@ -637,6 +789,11 @@ export default function AddStopPage() {
   const [customDuration, setCustomDuration] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [customError, setCustomError] = useState<string | null>(null);
+  // v2.31.94: 自訂 tab 新增地址 typeahead + map pin 機制，確保 entry 一定有 lat/lng
+  const [customCoord, setCustomCoord] = useState<CustomCoord | null>(null);
+  const [customFlyToSignal, setCustomFlyToSignal] = useState<{ coord: CustomCoord; zoom?: number } | null>(null);
+  const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
+  const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -659,6 +816,24 @@ export default function AddStopPage() {
     })();
     return () => { cancelled = true; };
   }, [auth.user, tripId, dayNum]);
+
+  // v2.31.94: 自訂 tab 需要 trip destinations 當 map default center fallback chain
+  useEffect(() => {
+    if (!auth.user || !tripId || tab !== 'custom') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const tripBody = await apiFetch<{ destinations?: TripDestApiLite[] }>(
+          `/trips/${encodeURIComponent(tripId)}`,
+        );
+        if (cancelled) return;
+        setCustomDestinations(tripBody?.destinations ?? []);
+      } catch {
+        // silent — picker fallback to Tokyo Station
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [auth.user, tripId, tab]);
 
   // POI search 由 usePoiSearch hook 處理 (見上方 hook call) — debounce + abort 內建
 
@@ -710,10 +885,43 @@ export default function AddStopPage() {
   const totalSelected = useMemo(() => {
     if (tab === 'search') return selectedSearch.size;
     if (tab === 'favorites') return selectedSaved.size;
-    return customTitle.trim() ? 1 : 0;
-  }, [tab, selectedSearch, selectedSaved, customTitle]);
+    return customTitle.trim() && customCoord ? 1 : 0;
+  }, [tab, selectedSearch, selectedSaved, customTitle, customCoord]);
 
-  const confirmEnabled = tab === 'custom' ? !submitting : totalSelected > 0 && !submitting;
+  const confirmEnabled = tab === 'custom'
+    ? !submitting && !!customTitle.trim() && !!customCoord
+    : totalSelected > 0 && !submitting;
+
+  // v2.31.94: usePlacesAutocomplete hook 給自訂 tab address typeahead 用
+  const customTypeahead = usePlacesAutocomplete();
+
+  // 預設地圖中心 fallback chain：trip destinations → Tokyo Station hard fallback
+  const customInitialCenter = useMemo<CustomCoord>(() => {
+    return selectDefaultCenter({
+      prevEntry: null,
+      tripDestinations: customDestinations
+        .filter((d) => typeof d.lat === 'number' && typeof d.lng === 'number')
+        .map((d) => ({ lat: d.lat as number, lng: d.lng as number })),
+    });
+  }, [customDestinations]);
+
+  const handleCustomPickSuggestion = useCallback(
+    async (placeId: string) => {
+      customTypeahead.pickSuggestion(placeId);
+      try {
+        const res = await apiFetchRaw(
+          `/places/resolve?placeId=${encodeURIComponent(placeId)}`,
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as { lat: number; lng: number };
+        if (!isValidCustomCoord({ lat: data.lat, lng: data.lng })) return;
+        setCustomFlyToSignal({ coord: { lat: data.lat, lng: data.lng }, zoom: 15 });
+      } catch {
+        // silent — user can still drag map manually
+      }
+    },
+    [customTypeahead],
+  );
 
   const handleConfirm = useCallback(async () => {
     if (submitting || !tripId || !Number.isFinite(dayNum)) return;
@@ -757,8 +965,20 @@ export default function AddStopPage() {
         setCustomError('請輸入標題');
         return;
       }
+      // v2.31.94: 自訂 stop 必須有 map pin 座標，否則 entry 會 silent drop from map
+      if (!customCoord || !isValidCustomCoord(customCoord)) {
+        setCustomError('請先在地圖上選擇位置');
+        return;
+      }
       const note = [customDuration && `${customDuration} 分`, customNote].filter(Boolean).join(' · ') || undefined;
-      payloads = [{ title, time: customTime || undefined, note }];
+      payloads = [{
+        title,
+        time: customTime || undefined,
+        note,
+        lat: customCoord.lat,
+        lng: customCoord.lng,
+        source: 'custom',
+      }];
     }
 
     if (payloads.length === 0) return;
@@ -798,7 +1018,7 @@ export default function AddStopPage() {
       setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, tripId, dayNum]);
+  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, tripId, dayNum]);
 
   if (!auth.user) return null;
   if (!tripId || !Number.isFinite(dayNum)) {
@@ -1117,11 +1337,69 @@ export default function AddStopPage() {
                       )}
                     </div>
                   </div>
+                  {/* v2.31.94: 地址 typeahead + map pin — 取代之前的 placeholder */}
                   <div className="tp-add-stop-form-row is-full">
                     <div className="tp-add-stop-form-field">
-                      <label>地址 / 地標</label>
-                      <div className="tp-add-stop-form-placeholder"><span>街道地址或地標關鍵字</span><Icon name="location-pin" /></div>
-                      <div className="tp-add-stop-form-helper">輸入後系統自動定位座標（用於地圖 polyline 連結）</div>
+                      <label htmlFor="add-stop-custom-address">地址或地標</label>
+                      <div className="tp-add-stop-custom-typeahead-wrap">
+                        <input
+                          id="add-stop-custom-address"
+                          type="text"
+                          value={customTypeahead.query}
+                          onChange={(e) => customTypeahead.setQuery(e.target.value)}
+                          placeholder="輸入地址縮放地圖（選填）"
+                          autoComplete="off"
+                          data-testid="add-stop-custom-address-typeahead"
+                        />
+                        {customTypeahead.predictions.length > 0 && (
+                          <div className="tp-add-stop-custom-typeahead-list" role="listbox">
+                            {customTypeahead.predictions.map((p) => (
+                              <button
+                                key={p.placeId}
+                                type="button"
+                                role="option"
+                                aria-selected="false"
+                                className="tp-add-stop-custom-typeahead-item"
+                                onClick={() => void handleCustomPickSuggestion(p.placeId)}
+                                data-testid={`add-stop-custom-suggestion-${p.placeId}`}
+                              >
+                                <div className="tp-add-stop-custom-typeahead-main">{p.primaryText}</div>
+                                {p.secondaryText && (
+                                  <div className="tp-add-stop-custom-typeahead-sub">{p.secondaryText}</div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="tp-add-stop-form-helper">
+                        選填 — 用來把地圖縮放到大概區域，最終位置仍以地圖中心為準。
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="tp-add-stop-form-row is-full">
+                    <div className="tp-add-stop-form-field">
+                      <label>位置 *</label>
+                      <LocationPickerMap
+                        initialCenter={customInitialCenter}
+                        initialZoom={14}
+                        onCoordChange={setCustomCoord}
+                        flyToSignal={customFlyToSignal}
+                      />
+                      <div className="tp-add-stop-custom-hint">
+                        <input
+                          type="checkbox"
+                          id="add-stop-custom-hint"
+                          className="tp-add-stop-custom-hint-checkbox"
+                          checked={customHintConfirmed}
+                          onChange={(e) => setCustomHintConfirmed(e.target.checked)}
+                          data-testid="add-stop-custom-hint"
+                        />
+                        <label htmlFor="add-stop-custom-hint" className="tp-add-stop-custom-hint-text">
+                          <strong>已調整到正確位置</strong> — 拖地圖或用方向鍵微調
+                        </label>
+                      </div>
                     </div>
                   </div>
                   <div className="tp-add-stop-form-row">
