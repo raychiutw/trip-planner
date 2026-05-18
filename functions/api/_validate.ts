@@ -45,17 +45,48 @@ export function validateDayBody(body: DayBody): ValidationResult {
 
 export interface EntryBody {
   title?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   [key: string]: unknown;
+}
+
+function coordPresent(v: unknown): boolean {
+  return v !== undefined && v !== null;
+}
+
+function isValidCoord(value: unknown, kind: 'lat' | 'lng'): boolean {
+  if (typeof value !== 'number') return false;
+  if (!Number.isFinite(value)) return false;
+  const limit = kind === 'lat' ? 90 : 180;
+  return value >= -limit && value <= limit;
 }
 
 /**
  * 驗證 PATCH /entries/:eid 的 request body。
  * 回傳 { ok: true } 表示驗證通過；否則回傳 { ok: false, status, error }。
+ *
+ * v2.31.94: 加 lat/lng range check（custom stop with map pin 路徑）。
+ * - 任一存在 → 兩個都必填（XOR 拒絕）
+ * - 必為 finite number（非 NaN / Infinity / string）
+ * - lat ∈ [-90, 90], lng ∈ [-180, 180]
+ * - 既有純 title 路徑（無 lat/lng）不受影響
  */
 export function validateEntryBody(body: EntryBody): ValidationResult {
   if (!body.title) {
     return { ok: false, status: 400, error: '必填欄位缺失: title' };
   }
+
+  const hasLat = coordPresent(body.lat);
+  const hasLng = coordPresent(body.lng);
+  if (hasLat !== hasLng) {
+    return { ok: false, status: 400, error: '無效座標：lat/lng 必須同時提供' };
+  }
+  if (hasLat && hasLng) {
+    if (!isValidCoord(body.lat, 'lat') || !isValidCoord(body.lng, 'lng')) {
+      return { ok: false, status: 400, error: '無效座標：lat ∈ [-90,90] / lng ∈ [-180,180]' };
+    }
+  }
+
   return { ok: true, status: 200 };
 }
 
