@@ -4,8 +4,8 @@
  */
 
 interface ValidateEntry {
-  start_time?: string | null;
-  end_time?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
   title?: string | null;
   stopPois?: Array<{ name?: string | null; hours?: string | null }>;
 }
@@ -28,12 +28,13 @@ export function validateDay(timeline: ValidateEntry[]): string[] {
   if (!timeline?.length) return warnings;
 
   timeline.forEach((entry) => {
-    // v2.29.0: entry.time DROPPED — 用 start_time/end_time 重組 display string
-    const composedTime = entry.start_time && entry.end_time
-      ? `${entry.start_time}-${entry.end_time}`
-      : (entry.start_time ?? null);
+    // v2.29.0: entry.time DROPPED — 用 startTime/endTime 重組 display string
+    // v2.31.77 fix #196: 改用 camelCase (deepCamel'd API response)
+    const composedTime = entry.startTime && entry.endTime
+      ? `${entry.startTime}-${entry.endTime}`
+      : (entry.startTime ?? null);
     if (!composedTime) return;
-    const entryTime = entry.start_time ?? '';
+    const entryTime = entry.startTime ?? '';
     const entryHour = parseHour(composedTime);
     const title = entry.title || '';
 
