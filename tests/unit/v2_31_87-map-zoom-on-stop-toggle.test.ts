@@ -1,5 +1,7 @@
 /**
- * v2.31.87 #5+#6：TimelineRail row click 展開 → map flyTo zoom 15；收合 → flyTo zoom 11。
+ * v2.31.87 #5+#6：TimelineRail row click 展開 → map flyTo zoom；收合 → flyTo zoom out。
+ *
+ * v2.31.88：zoom level 對齊 MapPage focusId flow — expand 15→13，collapse 11→10。
  *
  * Source-grep lock：detail.isExpanding 區分 + panToCoord 接 zoom field + OceanMap flyTo path。
  */
@@ -22,11 +24,11 @@ describe('v2.31.87 #5+#6: map zoom on TimelineRail expand/collapse', () => {
     expect(tripMapRailSrc).toMatch(/useState<\{\s*lat:\s*number;\s*lng:\s*number;\s*zoom\?:\s*number\s*\}\s*\|\s*undefined>/);
   });
 
-  it('TripMapRail listener 區分 isExpanding=true/false 設不同 zoom', () => {
-    // expand → zoom 15
-    expect(tripMapRailSrc).toMatch(/isExpanding === true[\s\S]*?setPanToCoord\(\{\s*lat:\s*pin\.lat,\s*lng:\s*pin\.lng,\s*zoom:\s*15\s*\}\)/);
-    // collapse → zoom 11
-    expect(tripMapRailSrc).toMatch(/isExpanding === false[\s\S]*?setPanToCoord\(\{\s*lat:\s*pin\.lat,\s*lng:\s*pin\.lng,\s*zoom:\s*11\s*\}\)/);
+  it('TripMapRail listener 區分 isExpanding=true/false 設不同 zoom (v2.31.88 對齊 MapPage)', () => {
+    // expand → zoom 13 (v2.31.88：對齊 MapPage focusId z<12?13:undefined max zoom)
+    expect(tripMapRailSrc).toMatch(/isExpanding === true[\s\S]*?setPanToCoord\(\{\s*lat:\s*pin\.lat,\s*lng:\s*pin\.lng,\s*zoom:\s*13\s*\}\)/);
+    // collapse → zoom 10 (v2.31.88：對齊 MapPage 沖繩 overview fitBounds level)
+    expect(tripMapRailSrc).toMatch(/isExpanding === false[\s\S]*?setPanToCoord\(\{\s*lat:\s*pin\.lat,\s*lng:\s*pin\.lng,\s*zoom:\s*10\s*\}\)/);
   });
 
   it('TripMapRail listener isExpanding undefined → 維持 v2.31.81 panTo only (no zoom)', () => {
