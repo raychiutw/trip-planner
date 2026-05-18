@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.78] - 2026-05-18
+
+**Fix: AddStopPage lazy favorites fetch 缺 unmount guard。**
+
+### Fixed: tab='favorites' → 切回 search 期間 fetch 還在 inflight → React state update warning + closure leak
+
+`src/pages/AddStopPage.tsx` 切到 ★ 我的收藏 tab 才 lazy fetch `/api/poi-favorites`。若 user 立刻切回 search tab 或 unmount component，inflight fetch 完成後 `setPoiFavorites` + `setSavedLoading(false)` 仍會觸發 → React 印「Can't perform a state update on an unmounted component」warning，殘留 closure 不被 GC。
+
+實際 user impact 小（fetch 很快、tab toggle 不頻繁）但屬 known anti-pattern。對齊 codebase 其他 useEffect async fetch 的 cancelled-flag 風格（useTrip / useCurrentUser / useChatPagination / useGoogleMap 都有）。
+
+**Fix**: 加 `let cancelled = false` + `return () => { cancelled = true; }` cleanup + 3 個 `if (cancelled) return` guard（try happy / catch / finally setSavedLoading 全 cover）。
+
+**Regression test**：`tests/unit/v2_31_78-add-stop-favorites-cancelled.test.ts` — 3 個 source-grep assertion 鎖 cancelled flag 存在 + cleanup return 存在 + ≥2 個 guard + finally setSavedLoading 用 `!cancelled` 條件 set。
+
+### Test results
+
+- vitest: **234 file / 1782 test 全綠**（+3 個 regression）
+- tsc --noEmit: 0 errors
+
 ## [2.31.77] - 2026-05-18
 
 **Fix #196：entry.start_time / end_time 全 frontend read path 全 broken since v2.29.0。**
