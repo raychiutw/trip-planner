@@ -3,6 +3,39 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.93] - 2026-05-18
+
+**Fix: TripMapRail 對齊 MapPage focusId flow — 點 stop marker 換 accent 視覺 + 浮頂避免被相鄰 marker 蓋住（user feedback 2 issue）。**
+
+### Context
+
+User 反映兩個地圖互動問題：
+1. 「點行程的 stop 地圖的 icon 沒有換被點選的 marker (參考地圖頁的方式)」— TripMapRail 在 v2.31.87/88 用手動 `setPanToCoord+zoom` 控 flyTo，沒進 OceanMap `focusId` flow → marker 顏色 / size / accent ring 不變
+2. 「被點的 stop 沒有浮在最高 被壓住了」— `AdvancedMarkerElement.zIndex = 1000` 給 DOM stacking 但相鄰 marker overlap 時視覺凸度不夠
+
+### Changed
+
+- **`src/components/trip/TripMapRail.tsx`** entryFocused listener 重寫對齊 MapPage focusId flow：
+  - 新 `focusedEntryId` state，pass `focusId={focusedEntryId}` 給 OceanMap
+  - `isExpanding === true` → `setFocusedEntryId(entryId)` + clear panToCoord（觸發 OceanMap focusId useEffect 切 marker accent 視覺 + flyTo z<12?13:undefined）
+  - `isExpanding === false` → `setFocusedEntryId(undefined)` + clear panToCoord（觸發 OceanMap focusId useEffect collapse 自動 fitBounds visible pins 回 overview）
+  - `isExpanding === undefined` (scroll spy fallback) → 維持 v2.31.81 行為（panToCoord pan only no zoom，不切 marker 視覺）
+- **`src/components/trip/OceanMap.tsx::markerContent`** focused marker box-shadow 加強：
+  - 新增 `isFocused = typeof style.zIndex === 'number' && style.zIndex >= 1000` 偵測
+  - Focused 時 box-shadow 換「1.5px accent inner ring + 5px accent-subtle outer ring (217,120,72,0.35) + 6px 16px deeper drop shadow (42,31,24,0.35)」取代 idle 的 0.18 black drop shadow
+  - Focused 時 inline style 加 `position: relative; z-index: 1000;` 強化 CSS stacking
+
+### Why
+
+對齊 MapPage 行為 — 桌機 rail 點 timeline row 跟手機 MapPage 點 marker 應有一致 visual response（marker 變大、變橘、accent ring、flyTo zoom 13）。CSS box-shadow 補強解決 `AdvancedMarkerElement.zIndex` 在 Google Maps overlay layer 內已生效但 marker 本身視覺差異不夠的問題。
+
+### Test
+
+- `tests/unit/v2_31_93-trip-map-focusid-marker.test.ts` 新增 6 個 source-grep test（focusedEntryId state / focusId prop / isExpanding 兩 branch / markerContent isFocused 偵測 / accent ring + 加深 drop shadow / z-index:1000 inline style）
+- `tests/unit/v2_31_79-marker-label-text-outline.test.ts` 第 3 個 test 更新 — focused marker 不再含 idle 的 `rgba(0,0,0,0.18)` drop shadow，改 assert accent ring + 加深 drop shadow
+- `tests/unit/v2_31_87-map-zoom-on-stop-toggle.test.ts` 重寫 — 移除 obsolete「zoom 13/10」assertion（v2.31.93 改 focusId flow），保留仍 valid 的 TimelineRail dispatch / panToCoord prop shape / OceanMap flyTo path 三 contract，zoom 值 assertion 由 v2.31.93 test 接手
+- 全 unit suite 1839/1839 pass
+
 ## [2.31.92] - 2026-05-18
 
 **Fix: 移除 stop toolbar 2 個重複/不需要 button + StopLightbox 改 Portal 修 backdrop 沒蓋住 viewport（user feedback 2 issue）。**
