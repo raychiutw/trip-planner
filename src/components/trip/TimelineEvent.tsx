@@ -63,13 +63,13 @@ export interface StopPoiOptionData {
 
 export interface TimelineEntryData {
   id?: number | null;
-  /** v2.29.0: client-side composed display string (從 start_time/end_time 合成 by mapDay.ts).
+  /** v2.29.0: client-side composed display string (從 startTime/endTime 合成 by mapDay.ts).
    *  schema 已無 trip_entries.time col。frontend 仍接受此 field 作為 display fallback。 */
   time?: string | null;
-  /** 抵達時間 "HH:MM"。schema source. */
-  start_time?: string | null;
-  /** 離開時間 "HH:MM"。schema source. */
-  end_time?: string | null;
+  /** 抵達時間 "HH:MM"。schema source。v2.31.77 改 camelCase（backend deepCamel'd response）。 */
+  startTime?: string | null;
+  /** 離開時間 "HH:MM"。schema source。 */
+  endTime?: string | null;
   /** Display title used by list/map UI. Keeps raw `title` intact for edit/export semantics. */
   displayTitle?: string | null;
   title?: string | null;
