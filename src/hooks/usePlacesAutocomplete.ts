@@ -34,8 +34,12 @@ export interface UsePlacesAutocompleteResult {
   predictions: PlacePrediction[];
   loading: boolean;
   error: Error | null;
-  /** Call when user picks a suggestion — clears predictions and rotates session. */
-  pickSuggestion: (placeId: string) => void;
+  /**
+   * Call when user picks a suggestion — clears predictions and rotates the
+   * session token. Returns the closing token so the caller can pass it to
+   * `/places/resolve?sessionToken=...` (one billable Google session per pick).
+   */
+  pickSuggestion: (placeId: string) => string | null;
   /** Full reset (query + predictions + session). */
   reset: () => void;
 }
@@ -144,11 +148,13 @@ export function usePlacesAutocomplete(
     [debounceMs, minLength, regionCode],
   );
 
-  const pickSuggestion = useCallback((_placeId: string) => {
+  const pickSuggestion = useCallback((_placeId: string): string | null => {
+    const closingToken = sessionTokenRef.current;
     rotateSessionToken();
     setPredictions([]);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (abortRef.current) abortRef.current.abort();
+    return closingToken;
   }, []);
 
   const reset = useCallback(() => {

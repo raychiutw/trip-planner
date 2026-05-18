@@ -28,7 +28,7 @@
  *   - 完成按鈕同時放 TitleBar action + bottom bar (兩處同步 disabled state)
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
@@ -48,6 +48,7 @@ import type { PoiSearchResult } from '../types/poi';
 // v2.31.94: 自訂 tab 加 address typeahead + map pin 機制
 import { LocationPickerMap } from '../components/trip/LocationPickerMap';
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete';
+import { useTypeaheadKeyboard } from '../hooks/useTypeaheadKeyboard';
 import {
   selectDefaultCenter,
   isValidCoord as isValidCustomCoord,
@@ -212,7 +213,8 @@ const SCOPED_STYLES = `
 }
 .tp-add-stop-custom-typeahead-item:last-child { border-bottom: none; }
 .tp-add-stop-custom-typeahead-item:hover,
-.tp-add-stop-custom-typeahead-item:focus-visible {
+.tp-add-stop-custom-typeahead-item:focus-visible,
+.tp-add-stop-custom-typeahead-item.is-focused {
   background: var(--color-accent-subtle);
   outline: none;
 }
@@ -756,6 +758,7 @@ export default function AddStopPage() {
   const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
   const dayNumParam = searchParams.get('day');
@@ -816,6 +819,18 @@ export default function AddStopPage() {
     })();
     return () => { cancelled = true; };
   }, [auth.user, tripId, dayNum]);
+
+  // v2.31.94: 自訂 tab 在 mobile (≤1023px) 上 redirect 到 fullpage route，避免 IME
+  // occlusion 把 280px map 整個遮蓋。Desktop 仍走 inline tab。
+  useEffect(() => {
+    if (tab !== 'custom' || !tripId || !Number.isFinite(dayNum)) return;
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    if (!window.matchMedia('(max-width: 1023px)').matches) return;
+    navigate(
+      `/trip/${encodeURIComponent(tripId)}/add-custom-stop?day=${dayNum}`,
+      { replace: true },
+    );
+  }, [tab, tripId, dayNum, navigate]);
 
   // v2.31.94: 自訂 tab 需要 trip destinations 當 map default center fallback chain
   useEffect(() => {
@@ -907,11 +922,11 @@ export default function AddStopPage() {
 
   const handleCustomPickSuggestion = useCallback(
     async (placeId: string) => {
-      customTypeahead.pickSuggestion(placeId);
+      const closingToken = customTypeahead.pickSuggestion(placeId);
       try {
-        const res = await apiFetchRaw(
-          `/places/resolve?placeId=${encodeURIComponent(placeId)}`,
-        );
+        const qs = new URLSearchParams({ placeId });
+        if (closingToken) qs.set('sessionToken', closingToken);
+        const res = await apiFetchRaw(`/places/resolve?${qs.toString()}`);
         if (!res.ok) return;
         const data = (await res.json()) as { lat: number; lng: number };
         if (!isValidCustomCoord({ lat: data.lat, lng: data.lng })) return;
@@ -922,6 +937,13 @@ export default function AddStopPage() {
     },
     [customTypeahead],
   );
+
+  // v2.31.94 a11y: ARIA combobox keyboard nav for AddStopPage 自訂 tab typeahead.
+  const customTypeaheadKb = useTypeaheadKeyboard({
+    listId: 'add-stop-custom-suggestions',
+    options: customTypeahead.predictions,
+    onPick: (p) => void handleCustomPickSuggestion(p.placeId),
+  });
 
   const handleConfirm = useCallback(async () => {
     if (submitting || !tripId || !Number.isFinite(dayNum)) return;
@@ -1350,25 +1372,34 @@ export default function AddStopPage() {
                           placeholder="輸入地址縮放地圖（選填）"
                           autoComplete="off"
                           data-testid="add-stop-custom-address-typeahead"
+                          {...customTypeaheadKb.inputProps}
                         />
                         {customTypeahead.predictions.length > 0 && (
-                          <div className="tp-add-stop-custom-typeahead-list" role="listbox">
-                            {customTypeahead.predictions.map((p) => (
-                              <button
-                                key={p.placeId}
-                                type="button"
-                                role="option"
-                                aria-selected="false"
-                                className="tp-add-stop-custom-typeahead-item"
-                                onClick={() => void handleCustomPickSuggestion(p.placeId)}
-                                data-testid={`add-stop-custom-suggestion-${p.placeId}`}
-                              >
-                                <div className="tp-add-stop-custom-typeahead-main">{p.primaryText}</div>
-                                {p.secondaryText && (
-                                  <div className="tp-add-stop-custom-typeahead-sub">{p.secondaryText}</div>
-                                )}
-                              </button>
-                            ))}
+                          <div
+                            id="add-stop-custom-suggestions"
+                            className="tp-add-stop-custom-typeahead-list"
+                            role="listbox"
+                          >
+                            {customTypeahead.predictions.map((p, i) => {
+                              const focused = customTypeaheadKb.focusedIndex === i;
+                              return (
+                                <button
+                                  key={p.placeId}
+                                  id={customTypeaheadKb.getOptionId(i)}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={focused}
+                                  className={`tp-add-stop-custom-typeahead-item${focused ? ' is-focused' : ''}`}
+                                  onClick={() => void handleCustomPickSuggestion(p.placeId)}
+                                  data-testid={`add-stop-custom-suggestion-${p.placeId}`}
+                                >
+                                  <div className="tp-add-stop-custom-typeahead-main">{p.primaryText}</div>
+                                  {p.secondaryText && (
+                                    <div className="tp-add-stop-custom-typeahead-sub">{p.secondaryText}</div>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
                       </div>

@@ -28,6 +28,7 @@ import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { LocationPickerMap } from '../components/trip/LocationPickerMap';
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete';
+import { useTypeaheadKeyboard } from '../hooks/useTypeaheadKeyboard';
 import {
   selectDefaultCenter,
   isValidCoord,
@@ -151,7 +152,8 @@ const SCOPED_STYLES = `
   }
   .tp-custom-stop-typeahead-item:last-child { border-bottom: none; }
   .tp-custom-stop-typeahead-item:hover,
-  .tp-custom-stop-typeahead-item:focus {
+  .tp-custom-stop-typeahead-item:focus,
+  .tp-custom-stop-typeahead-item.is-focused {
     background: var(--color-accent-subtle);
     outline: none;
   }
@@ -332,11 +334,11 @@ export default function AddCustomStopPage() {
 
   const handlePickSuggestion = useCallback(
     async (placeId: string) => {
-      typeahead.pickSuggestion(placeId);
+      const closingToken = typeahead.pickSuggestion(placeId);
       try {
-        const res = await apiFetchRaw(
-          `/places/resolve?placeId=${encodeURIComponent(placeId)}`,
-        );
+        const qs = new URLSearchParams({ placeId });
+        if (closingToken) qs.set('sessionToken', closingToken);
+        const res = await apiFetchRaw(`/places/resolve?${qs.toString()}`);
         if (!res.ok) return;
         const data = (await res.json()) as { lat: number; lng: number };
         if (!isValidCoord({ lat: data.lat, lng: data.lng })) return;
@@ -347,6 +349,13 @@ export default function AddCustomStopPage() {
     },
     [typeahead],
   );
+
+  // v2.31.94 a11y: ARIA combobox keyboard nav (Arrow/Enter/Escape) for typeahead.
+  const typeaheadKb = useTypeaheadKeyboard({
+    listId: 'add-custom-stop-suggestions',
+    options: typeahead.predictions,
+    onPick: (p) => void handlePickSuggestion(p.placeId),
+  });
 
   const handleConfirm = useCallback(async () => {
     if (submitting || !tripId || !Number.isFinite(dayNum)) return;
@@ -475,25 +484,34 @@ export default function AddCustomStopPage() {
                     placeholder="輸入地址縮放地圖（選填）"
                     autoComplete="off"
                     data-testid="add-custom-stop-address-typeahead"
+                    {...typeaheadKb.inputProps}
                   />
                   {typeahead.predictions.length > 0 && (
-                    <div className="tp-custom-stop-typeahead-list" role="listbox">
-                      {typeahead.predictions.map((p) => (
-                        <button
-                          key={p.placeId}
-                          type="button"
-                          role="option"
-                          aria-selected="false"
-                          className="tp-custom-stop-typeahead-item"
-                          onClick={() => void handlePickSuggestion(p.placeId)}
-                          data-testid={`add-custom-stop-suggestion-${p.placeId}`}
-                        >
-                          <div className="tp-custom-stop-typeahead-main">{p.primaryText}</div>
-                          {p.secondaryText && (
-                            <div className="tp-custom-stop-typeahead-sub">{p.secondaryText}</div>
-                          )}
-                        </button>
-                      ))}
+                    <div
+                      id="add-custom-stop-suggestions"
+                      className="tp-custom-stop-typeahead-list"
+                      role="listbox"
+                    >
+                      {typeahead.predictions.map((p, i) => {
+                        const focused = typeaheadKb.focusedIndex === i;
+                        return (
+                          <button
+                            key={p.placeId}
+                            id={typeaheadKb.getOptionId(i)}
+                            type="button"
+                            role="option"
+                            aria-selected={focused}
+                            className={`tp-custom-stop-typeahead-item${focused ? ' is-focused' : ''}`}
+                            onClick={() => void handlePickSuggestion(p.placeId)}
+                            data-testid={`add-custom-stop-suggestion-${p.placeId}`}
+                          >
+                            <div className="tp-custom-stop-typeahead-main">{p.primaryText}</div>
+                            {p.secondaryText && (
+                              <div className="tp-custom-stop-typeahead-sub">{p.secondaryText}</div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

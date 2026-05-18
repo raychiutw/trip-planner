@@ -65,7 +65,20 @@ describe('GET /api/places/resolve', () => {
       business_status: 'OPERATIONAL',
     });
     await onRequestGet(makeContext('?placeId=ChIJ_a&sessionToken=sess-1'));
-    expect(mockGetPlaceDetails).toHaveBeenCalledWith('test-key', 'ChIJ_a');
+    expect(mockGetPlaceDetails).toHaveBeenCalledWith('test-key', 'ChIJ_a', 'sess-1');
+  });
+
+  it('omits sessionToken when not supplied', async () => {
+    mockGetPlaceDetails.mockResolvedValueOnce({
+      place_id: 'ChIJ_a',
+      name: 'A',
+      address: 'A',
+      lat: 1,
+      lng: 2,
+      business_status: 'OPERATIONAL',
+    });
+    await onRequestGet(makeContext('?placeId=ChIJ_a'));
+    expect(mockGetPlaceDetails).toHaveBeenCalledWith('test-key', 'ChIJ_a', undefined);
   });
 
   it('missing placeId → 400 DATA_VALIDATION', async () => {

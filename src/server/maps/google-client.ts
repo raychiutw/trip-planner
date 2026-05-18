@@ -307,9 +307,17 @@ const PLACE_DETAILS_FIELD_MASK = [
 export async function getPlaceDetails(
   apiKey: string,
   placeId: string,
+  /**
+   * Optional autocomplete session token. When this Place Details call closes a
+   * typeahead session, passing the token makes Google count autocomplete +
+   * details as **one** billable interaction instead of two (v2.31.94).
+   */
+  sessionToken?: string,
 ): Promise<PlaceDetailsResult | null> {
+  const params = new URLSearchParams({ languageCode: 'zh-TW' });
+  if (sessionToken) params.set('sessionToken', sessionToken);
   const res = await fetchWithTimeout(
-    `${PLACES_BASE}/v1/places/${encodeURIComponent(placeId)}?languageCode=zh-TW`,
+    `${PLACES_BASE}/v1/places/${encodeURIComponent(placeId)}?${params.toString()}`,
     {
       method: 'GET',
       headers: {

@@ -28,6 +28,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!placeId) {
     throw new AppError('DATA_VALIDATION', 'placeId 必填');
   }
+  // v2.31.94: forward optional sessionToken so the autocomplete + this details
+  // call count as one billable Google session, not two.
+  const sessionToken = url.searchParams.get('sessionToken')?.trim() || undefined;
 
   const apiKey = context.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
@@ -36,7 +39,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   await assertGoogleAvailable(context.env.DB);
 
-  const details = await getPlaceDetails(apiKey, placeId);
+  const details = await getPlaceDetails(apiKey, placeId, sessionToken);
   if (!details) {
     throw new AppError('DATA_NOT_FOUND', 'Google 找不到此景點');
   }
