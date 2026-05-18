@@ -60,7 +60,7 @@ const SCOPED_STYLES = `
 export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: TripMapRailProps) {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const navigate = useNavigate();
-  const [panToCoord, setPanToCoord] = useState<{ lat: number; lng: number } | undefined>();
+  const [panToCoord, setPanToCoord] = useState<{ lat: number; lng: number; zoom?: number } | undefined>();
 
   useEffect(() => {
     ensureStyle();
@@ -115,16 +115,27 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
   }, [isDesktop, dayCenters]);
 
   // v2.31.81 #5：TimelineRail row click → dispatch entryFocused → pan map to pin。
+  // v2.31.87 #5+#6：detail.isExpanding 區分展開/收合，加 zoom：
+  //   - 展開 (isExpanding=true) → flyTo zoom 15 (景點 close-up)
+  //   - 收合 (isExpanding=false) → flyTo zoom 11 (trip overview level)
   // 比 scroll spy 的 day-center pan 更精準（單一 pin 而不是平均座標）。
   useEffect(() => {
     if (!isDesktop) return;
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ entryId?: number }>).detail;
+      const detail = (e as CustomEvent<{ entryId?: number; isExpanding?: boolean }>).detail;
       const entryId = detail?.entryId;
       if (typeof entryId !== 'number') return;
       const pin = pins.find((p) => p.id === entryId);
       if (!pin) return;
-      setPanToCoord({ lat: pin.lat, lng: pin.lng });
+      // 預設視為展開（isExpanding undefined）— 維持 v2.31.81 行為（pan only，no zoom）。
+      // 明確 true/false 才觸發 zoom（v2.31.87 行為）。
+      if (detail?.isExpanding === true) {
+        setPanToCoord({ lat: pin.lat, lng: pin.lng, zoom: 15 });
+      } else if (detail?.isExpanding === false) {
+        setPanToCoord({ lat: pin.lat, lng: pin.lng, zoom: 11 });
+      } else {
+        setPanToCoord({ lat: pin.lat, lng: pin.lng });
+      }
     };
     window.addEventListener(EVENT.entryFocused, handler);
     return () => window.removeEventListener(EVENT.entryFocused, handler);

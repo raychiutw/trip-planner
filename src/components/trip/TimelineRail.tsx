@@ -499,10 +499,14 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
           type="button"
           className="ocean-rail-head"
           onClick={() => {
-            // v2.31.81 #5：row click → dispatch entryFocused 讓 TripMapRail
-            // pan/zoom 到該 pin。toggle 行為照舊。
+            // v2.31.81 #5：row click → dispatch entryFocused 讓 TripMapRail pan 到該 pin。
+            // v2.31.87 #5+#6：detail 加 isExpanding（! expanded = 點後 next state）
+            //   isExpanding=true (展開) → TripMapRail flyTo zoom 15
+            //   isExpanding=false (收合) → flyTo zoom 11（trip overview level）
             if (entry.id != null) {
-              window.dispatchEvent(new CustomEvent(EVENT.entryFocused, { detail: { entryId: entry.id } }));
+              window.dispatchEvent(new CustomEvent(EVENT.entryFocused, {
+                detail: { entryId: entry.id, isExpanding: !expanded },
+              }));
             }
             onToggle();
           }}
