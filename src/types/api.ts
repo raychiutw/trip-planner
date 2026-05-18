@@ -171,10 +171,6 @@ export interface Permission {
 }
 
 // ---------------------------------------------------------------------------
-// AuditLog
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
 // PoiFavorite — 使用者跨 trip 的 POI 收藏池（migration 0050 rename）
 // ---------------------------------------------------------------------------
 
@@ -240,42 +236,3 @@ export interface PoiFavoriteUsage {
 // 「目前在哪些 trip」資訊改透過 PoiFavorite.usages 反查
 // (v2.29.0: trip_days.hotel_poi_id ∪ trip_entry_pois.poi_id)。
 
-/**
- * An audit log entry recording every insert / update / delete.
- *
- * DB table: audit_log
- * Columns: id, trip_id, table_name, record_id, action, changed_by,
- *          request_id, diff_json, snapshot, created_at
- *
- * mapRow renames:
- *   trip_id    -> tripId
- *   table_name -> tableName
- *   record_id  -> recordId
- *   changed_by -> changedBy
- *   request_id -> requestId
- *   diff_json  -> diffJson  (string, NOT in JSON_FIELDS — not auto-parsed)
- *   created_at -> createdAt
- */
-export interface AuditLog {
-  id: number;
-  /** DB column `trip_id` */
-  tripId: string;
-  /** DB column `table_name` — which table was modified */
-  tableName: string;
-  /** DB column `record_id` — PK of the affected row (null for trip-level ops) */
-  recordId?: number | null;
-  action: 'insert' | 'update' | 'delete';
-  /** DB column `changed_by` — email of the actor */
-  changedBy?: string | null;
-  /** DB column `request_id` — links to requests.id if triggered by a request */
-  requestId?: number | null;
-  /**
-   * DB column `diff_json` — JSON string describing field-level changes.
-   * Not auto-parsed by mapRow (not in JSON_FIELDS); consumers must parse manually.
-   */
-  diffJson?: string | null;
-  /** Full-row JSON snapshot before the change (optional, not always populated) */
-  snapshot?: string | null;
-  /** DB column `created_at` */
-  createdAt: string;
-}

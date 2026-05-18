@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.72] - 2026-05-18
+
+**Rip unused `AuditLog` TypeScript interface — 43 行整檔零 import。**
+
+### Removed: src/types/api.ts AuditLog interface
+
+Inline `src/types/` 死 export audit：對每個 exported type/interface 用 word boundary grep 跨 src/ + functions/ + tests/，扣掉自身檔案的 self-reference，看 external usage：
+
+- `PoiFavoriteUsage` → transitively used via `PoiFavorite.usages?: PoiFavoriteUsage[]`（PoiFavorite imported in AddPoiFavoriteToTripPage.tsx）→ **保留**
+- `TripDestination` → transitively used via `Trip.destinations?: TripDestination[]`（Trip imported in useTrip / tripExport）→ **保留**
+- `AuditLog` → **0 import 全 codebase**（functions/ 內 `audit_log` 是 SQL string literal 非 type import）→ **刪除**
+
+刪除 AuditLog interface（22 行）+ section divider comment（4 行）+ 包含 docstring（17 行）= 43 行。tsc clean, build pass。
+
 ## [2.31.71] - 2026-05-18
 
 **Rip 53 unused CSS tokens + 2 dead keyframes — 67 行縮減（Tailwind-aware re-audit）。**
