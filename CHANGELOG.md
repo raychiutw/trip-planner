@@ -3,6 +3,45 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.81] - 2026-05-18
+
+**User batch UX fixes：8 點一次到位（地圖 day nav 同步 / title bar 對齊 / select 樣式 / 桌機 sheet X / timeline 點擊放大 / sidebar icon-only IA）。**
+
+### Fixed
+
+1. **#1 MapPage handleCardClick 在 overview 模式同步 day nav**：user 點 map pin 時 day nav 不會切到該 entry 的那一天。`handleCardClick` 加 `isOverview` check + `entryDayMap.get(entryId)` 反查 dayNum，call `handleTabClick(targetDay)` 同步切 tab + URL `?day=N`。
+
+2. **#2 MapPage TitleBar 對齊 ChatPage 格式**：左 trip name（`trip?.title || trip?.name || '地圖'`），右 picker icon-only（移除 `tp-titlebar-trip-picker-name` span 內 trip name 重複顯示）。對齊 v2.31.47 ChatPage 同步調整。
+
+3. **#3 5 個 native `<select>` 改 site-style**：
+   - `css/tokens.css` 加 `.tp-select` 全域 class + 擴 `.tp-form-row > select`：`appearance: none`、自訂 chevron data:image SVG（accent terracotta light / cream dark mode）+ `padding-right: 36px` 容 chevron。
+   - 各頁 page-scoped `.tp-form-select` / `.tp-entry-action-time-select` / `.tp-trips-sort` 加 `appearance: none` + chevron。
+   - `EditTripPage.tsx` 顯示語言 select 加 `className="tp-select"`。
+   - 保留 native `<select>` element → 鍵盤 a11y + mobile picker UX 完整不動（不 roll custom dropdown 避免 a11y regression）。
+
+4. **#4 桌機版 trip page 右側 sheet X close button 沒用**：sheet 在 desktop ≥1024px 是 always-on 右側 column（AppShell 3-pane 控），X click 改 URL `?sheet=` 但 sheet 仍 mount → user 看到 click 沒反應。修正：`@media (min-width: 1024px) { .trip-sheet-close { display: none } }`。Mobile <1024px X 仍保留（mobile sheet 是 slide-up overlay，X dismiss 合理）。Sheet tab 切換靠 header `.trip-sheet-tabs`，不需 close。
+
+5. **#5 桌機版 timeline stop 點擊地圖未放大到該景點**：原本 `TripMapRail` 只做 scroll-spy day-center pan（平均座標），無單一 pin focus。新增 `EVENT.entryFocused` (`tp-entry-focused`) custom event：
+   - `TimelineRail` row click handler 內 `dispatchEvent` 帶 `{ entryId }`。
+   - `TripMapRail` `useEffect` listen，find pin by id → `setPanToCoord({ lat, lng })` panTo 該景點精準座標。
+   - 跨檔互動走 window CustomEvent 模式（對齊 codebase `tp-entry-updated` / `tp-segment-updated` 風格），避免 TimelineRail 直接 import map ref。
+
+6. **#6+#7 桌機 sidebar 全 icon-only + 重組 IA**：
+   - NavItemConfig key type：`'chat' | 'explore' | 'map' | 'favorites' | 'switch-trip' | 'login'`（原 `'trips'` 移除，新增 `'explore'` + `'switch-trip'`）。
+   - 6 個 nav item（anonymous）/ 5 個（logged-in 隱藏「登入」）：聊天 / 探索 / 地圖 / 收藏 / 切換行程 / [登入]。
+   - 「行程」 nav 移除（取代為「切換行程」走相同 /trips href + TRIP_ACTIVE_PATTERNS active 條件）。
+   - 「探索」 nav 新加（icon=`search`），從 /favorites secondary action 升為 primary nav icon。
+   - 「切換行程」 nav 新加（icon=`swap-horiz`）。
+   - 視覺：icon size 16 → 22px、`min-height/width: 44px` 中心對齊、padding `10px 12px` → `10px`、`text-align: center`、新增 `.tp-nav-item-label` sr-only class（visually hidden 但 DOM 仍 surface 給 screen reader）+ `aria-label` + `title` tooltip。Sidebar width 保留 240px 不動，避免 grid template cascade。
+
+7. **#8 桌機 sidebar 聊天 → /chat (AI chat)**：驗證現狀正確（ChatPage 即 AI chat 功能，v2.31.27 起 chat AI 健檢功能 surface 在此）。無 code 變更。
+
+### Test results
+
+- vitest: **237 file / 1807 test 全綠**（+17 個 v2.31.81 regression test）
+- tsc + build：0 errors
+- Sidebar tests (desktop-sidebar.test.tsx + desktop-sidebar-visual.test.tsx) 全套對齊新 IA 重寫
+
 ## [2.31.80] - 2026-05-18
 
 **Cleanup: AddStopPage `normalizePoiFavorites` 移除 snake_case dead fallback。**
