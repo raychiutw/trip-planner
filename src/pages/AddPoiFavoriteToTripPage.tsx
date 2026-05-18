@@ -332,7 +332,7 @@ export default function AddPoiFavoriteToTripPage() {
     return () => { cancelled = true; };
   }, [tripId]);
 
-  // 後端 TIME_RE 同 functions/api/_poi-defaults.ts；前端 defense-in-depth，
+  // 後端 TIME_RE 同 functions/api/_time.ts；前端 defense-in-depth，
   // 防 legacy browser 把 type=time 退回 text、autofill 注入非 HH:MM、或測試直接 setState 髒值。
   const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
   const canSubmit = useMemo(() => {
