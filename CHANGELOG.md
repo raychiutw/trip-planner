@@ -3,6 +3,31 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.71] - 2026-05-18
+
+**Rip 53 unused CSS tokens + 2 dead keyframes — 67 行縮減（Tailwind-aware re-audit）。**
+
+### Removed: 53 unused CSS tokens + 2 dead @keyframes blocks
+
+v2.31.69 第一輪嘗試（PR #635）audit 只看 `var()` reference 漏掉 Tailwind 4 從 `@theme {}` block 生成的 utility class（`animate-toast-slide-up` / `text-body` / `p-12` 等）誤判 65 tokens 為 unused。Closed。
+
+v2.31.71 重做：分 `@theme` block (131 tokens) vs `:root`/`body.dark`/`@media` (48 tokens) 兩類 audit：
+- **@theme tokens**: 對每個 token 推導 Tailwind utility class pattern (e.g. `--color-X` → `bg-X` / `text-X` / `border-X` / `from-X` / etc.) + grep JSX `className=`，零 hit 才算 dead
+- **non-@theme tokens**: 只用 `var()` reference (Tailwind 不為這類生 utility)
+
+確認 dead：
+- **20 @theme tokens** (excluding `--sidebar-width-desktop` 在 mockup 用)
+  - animate (1: stepper-pulse)
+  - color (4: disabled-foreground, plan-bg/hover/text)
+  - font-family/font-weight (3: inherit, light, normal)
+  - spacing (6: 12/16/half/content-h/page-max-w/page-pt)
+  - text size shortcut (5: caption2/eyebrow/headline/large-title/title)
+  - z-index (1: fab)
+- **33 non-@theme tokens**: badge-*-bg/text (8), color-badge-open/closed (2), color-google-maps/naver-maps (2), content-max-w/fab-size, destructive/error/info/success/warning, duration-indicator/tap, mobile-font-size-* (2), shadow-map-marker-active/idle/toast, theme-* (4), z-day-header/print-exit/quick-panel
+- **2 dead keyframes**: `@keyframes stepper-pulse` / `@keyframes tl-pulse` (0 ref 也順手刪)
+
+`tokens-css.test.ts` 同步刪 `--z-fab:` + `--spacing-page-max-w:` + `@keyframes stepper-pulse` 三個 assertion。11/11 test pass、tsc clean、`npm run build` 通過、brace balance 304/304。
+
 ## [2.31.70] - 2026-05-18
 
 **Remove unused npm dependency `@dnd-kit/modifiers` — 0 imports across codebase。**
