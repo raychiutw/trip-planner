@@ -35,11 +35,7 @@ html { color-scheme: light dark; }
     --color-warning-bg: rgba(244, 140, 6, 0.12);
     --color-info: #D97848;
     --color-info-bg: rgba(217, 120, 72, 0.12);
-    --color-plan-bg: #FBEEE4;
-    --color-plan-text: #B85C2E;
-    --color-plan-hover: #F7DFCB;
     --color-disabled: #B8AC9B;
-    --color-disabled-foreground: #D8CDB8;
     --color-overlay: rgba(42, 31, 24, 0.35);
     --color-priority-high-bg: rgba(193, 53, 21, 0.12);
     --color-priority-high-dot: #C13515;
@@ -83,7 +79,6 @@ html { color-scheme: light dark; }
     --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
 
     /* Spacing — 4pt grid */
-    --spacing-half: 2px;
     --spacing-1: 4px;
     --spacing-2: 8px;
     --spacing-3: 12px;
@@ -92,8 +87,6 @@ html { color-scheme: light dark; }
     --spacing-6: 24px;
     --spacing-8: 32px;
     --spacing-10: 40px;
-    --spacing-12: 48px;
-    --spacing-16: 64px;
 
     /* AppShell layout grid templates.
      *   ≥1280px: 3-pane full (sidebar 240 / main fluid / sheet up to 780px)
@@ -122,26 +115,18 @@ html { color-scheme: light dark; }
     /* Tailwind 4 text-* utility aliases — expose HIG font scale as `text-<name>` classes.
        Without these, classes like `text-caption`/`text-body` are silently ignored and
        elements fall back to browser-default font-size (~13.33px on <button>). */
-    --text-large-title: var(--font-size-large-title);
-    --text-title: var(--font-size-title);
     --text-title2: var(--font-size-title2);
     --text-title3: var(--font-size-title3);
-    --text-headline: var(--font-size-headline);
     --text-body: var(--font-size-body);
     --text-callout: var(--font-size-callout);
     --text-subheadline: var(--font-size-subheadline);
     --text-footnote: var(--font-size-footnote);
     --text-caption: var(--font-size-caption);
-    --text-caption2: var(--font-size-caption2);
-    --text-eyebrow: var(--font-size-eyebrow);
 
     /* Font family — Inter primary, Noto Sans TC CJK fallback */
     --font-family-system: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "PingFang TC", system-ui, sans-serif;
-    --font-family-inherit: inherit;
 
     /* Font weight */
-    --font-weight-light: 300;
-    --font-weight-normal: 400;
     --font-weight-medium: 500;
     --font-weight-semibold: 600;
     --font-weight-bold: 700;
@@ -160,8 +145,6 @@ html { color-scheme: light dark; }
     /* Layout */
     --spacing-padding-h: 16px;
     --spacing-tap-min: 44px;
-    --spacing-page-max-w: min(60vw, 900px);
-    --spacing-page-pt: 24px;
     --spacing-nav-h: 48px;
 
     /* Sticky chrome dynamic heights — single source of truth for TitleBar +
@@ -177,7 +160,6 @@ html { color-scheme: light dark; }
 
     /* Z-index */
     --z-sticky-nav: 200;
-    --z-fab: 300;
     /* modal 必須高過所有 sticky (sticky-nav 200 / fab 300 / quick-panel 350 /
      * info-sheet 401)。9000 留 buffer 給未來 emergency banner / toast。 */
     --z-modal: 9000;
@@ -192,7 +174,6 @@ html { color-scheme: light dark; }
     --hover-brightness: 0.92;
 
     /* Animate */
-    --animate-stepper-pulse: stepper-pulse 2s infinite;
     --animate-toast-slide-down: toast-slide-down var(--transition-duration-slow) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     --animate-toast-slide-up: toast-slide-up var(--transition-duration-normal) ease forwards;
 
@@ -200,7 +181,6 @@ html { color-scheme: light dark; }
     /* Toast 距頂使用 safe-area inset (對齊 iOS HIG transient notification)。
      * 不能用固定 60px — page 沒 sticky topbar 時 toast 會直接蓋住 page heading。 */
     --spacing-toast-top: max(16px, env(safe-area-inset-top, 16px));
-    --spacing-content-h: calc(100dvh - var(--spacing-nav-h));
 }
 
 /* ===== Sheet animation tokens ===== */
@@ -209,9 +189,7 @@ html { color-scheme: light dark; }
     --ease-sheet-close: cubic-bezier(0.4, 0, 1, 1);
     --duration-sheet-open: 420ms;
     --duration-sheet-close: 280ms;
-    --duration-tap: 80ms;
     --duration-nav-fade: 200ms;
-    --duration-indicator: 350ms;
 }
 
 /* ===== Mobile type scale (≤760px) — DESIGN.md Type Scale (Mobile ≤760px) ===== */
@@ -219,8 +197,6 @@ html { color-scheme: light dark; }
 @media (max-width: 760px) {
     :root {
         --mobile-font-size-body: 1rem;         /* 16px (desktop: 17px) */
-        --mobile-font-size-callout: 0.9375rem; /* 15px (desktop: 16px) */
-        --mobile-font-size-subheadline: 0.875rem; /* 14px (desktop: 15px) */
     }
     body { font-size: var(--mobile-font-size-body); }
 }
@@ -229,14 +205,7 @@ html { color-scheme: light dark; }
 body {
     --color-glass-nav: color-mix(in srgb, var(--color-background) 92%, transparent);
     --color-glass-toast: color-mix(in srgb, var(--color-secondary) 92%, transparent);
-    --shadow-toast: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
     /* Map marker active state — DESIGN.md exception (multi-layer rgba inline allowed for map markers) */
-    --shadow-map-marker-active: 0 0 0 4px color-mix(in srgb, var(--color-accent) 30%, transparent), 0 4px 12px rgba(42, 31, 24, 0.32);
-    --shadow-map-marker-idle: 0 1px 4px rgba(42, 31, 24, 0.18);
-    --badge-open-bg: #FBEEE4;          --badge-open-text: #B85C2E;
-    --badge-processing-bg: #FFF3CD;    --badge-processing-text: #856404;
-    --badge-completed-bg: #D4EDDA;     --badge-completed-text: #155724;
-    --badge-failed-bg: #F8D7DA;        --badge-failed-text: #721C24;
 }
 
 /* Form element font inheritance — Tailwind 4 theme import doesn't include preflight,
@@ -247,34 +216,14 @@ button, input, select, textarea {
     font-size: inherit;
 }
 body.dark {
-    --badge-open-bg: #1E3040;          --badge-open-text: #7EC0E8;
-    --badge-processing-bg: #3D3520;    --badge-processing-text: #D4A520;
-    --badge-completed-bg: #1A3D2A;     --badge-completed-text: #7EC89A;
-    --badge-failed-bg: #3D1A1A;        --badge-failed-text: #E8A0A0;
 }
 
 /* ===== Non-utility tokens ===== */
 :root {
     --scrollbar-thumb: #C8B89F;
     --scrollbar-thumb-hover: #A89978;
-    --color-badge-open: #D97848;
-    --color-badge-closed: #B85C2E;
-    --color-plan-bg: #FBEEE4;
-    --color-plan-text: #B85C2E;
-    --color-plan-hover: #F7DFCB;
-    --color-google-maps: #4285F4;
-    --color-naver-maps: #03C75A;
-    --theme-header-gradient: none;
-    --theme-font-weight-headline: var(--font-weight-bold);
-    --theme-line-height-body: var(--line-height-normal);
-    --theme-section-gap: var(--spacing-6);
-    --content-max-w: 720px;
-    --fab-size: 56px;
-    --z-day-header: 100;
-    --z-quick-panel: 350;
     --z-info-sheet-backdrop: 400;
     --z-info-sheet: 401;
-    --z-print-exit: 9999;
 }
 
 /* ===== Global reset ===== */
@@ -754,13 +703,7 @@ body.dark {
         --scrollbar-thumb: #5A4634;
         --scrollbar-thumb-hover: #7A604A;
         --color-overlay: rgba(0,0,0,0.65);
-        --color-badge-open: #E89968;
-        --color-badge-closed: #B85C2E;
         --color-disabled: #5A4634;
-        --color-disabled-foreground: #3D2D22;
-        --color-plan-bg: #3A2A20;
-        --color-plan-text: #FFB890;
-        --color-plan-hover: #4D372A;
         /* Trip cover gradients — dark mode preserves the destination accent
          * while toning down luminance to fit deep-cocoa background. */
         --color-cover-jp-from: #B85C2E;
@@ -886,16 +829,6 @@ body.dark {
 @keyframes toast-slide-up {
     from { opacity: 1; transform: translateY(0); }
     to { opacity: 0; transform: translateY(-12px); }
-}
-
-@keyframes stepper-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 40%, transparent); }
-    50% { box-shadow: 0 0 8px 4px color-mix(in srgb, var(--color-accent) 20%, transparent); }
-}
-
-@keyframes tl-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(1.4); }
 }
 
 /* B-P6 task 3.4 — Respect prefers-reduced-motion (vestibular disorder accessibility).
