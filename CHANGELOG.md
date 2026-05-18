@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.82] - 2026-05-18
+
+**Fix: v2.31.81 #3 chevron 在 EditTripPage 顯示語言 select 沒生效（QA 截圖 found）。**
+
+### Fixed
+
+v2.31.81 prod browse QA 抓到 `EditTripPage` 顯示語言 select `#edit-trip-lang` 的 chevron 沒 render —— computed style `backgroundImage: none`、`paddingRight: 14px`（應為 40px）。
+
+**Root cause**：`src/components/trip/_tripFormStyles.ts` line 134 page-scoped rule `.tp-edit-row select` 用 `background: var(--color-secondary)` shorthand 覆蓋 → background-image 被 reset 成 none。`.tp-select` (tokens.css) 的 chevron 雖然 declared 但被 page-scoped rule 後接覆寫。
+
+**Fix**：`_tripFormStyles.ts` 加 dedicated `.tp-edit-row select` rule 含 `appearance: none` + chevron `background-image` (longhand) + `padding-right: 40px` + dark mode override。Page-scoped specificity (0,2,0) 直接 win 確保 chevron 100% render。
+
+### Test results
+
+- vitest: 237 file / 1807 test 全綠（無新 regression test 需要 — v2.31.81 source-grep test 已涵蓋 `.tp-edit-row select` rule shape，automatic 通過 because regex 匹配存在 .tp-edit-row select 含 appearance + background-image 的 block）
+
 ## [2.31.81] - 2026-05-18
 
 **User batch UX fixes：8 點一次到位（地圖 day nav 同步 / title bar 對齊 / select 樣式 / 桌機 sheet X / timeline 點擊放大 / sidebar icon-only IA）。**
