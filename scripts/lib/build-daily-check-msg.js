@@ -62,6 +62,15 @@ if (r.dataHygiene && r.dataHygiene.error) {
 } else if (r.dataHygiene && r.dataHygiene.total > 0) {
   issues.push(`⚠️ prod data hygiene: ${r.dataHygiene.total} 筆 test marker 殘留`);
 }
+// v2.31.96: Google Maps MTD 花費 — critical/warning 進 issue 列表
+if (r.googleMapsQuota && r.googleMapsQuota.status === 'critical') {
+  const q = r.googleMapsQuota;
+  const lock = q.isLocked ? '（已自動鎖）' : '';
+  issues.push(`🔴 Google Maps MTD: $${(q.mtdCost || 0).toFixed(2)} / $${q.budget || 200} (${(q.mtdPct || 0).toFixed(1)}%)${lock}`);
+} else if (r.googleMapsQuota && r.googleMapsQuota.status === 'warning' && !r.googleMapsQuota.error) {
+  const q = r.googleMapsQuota;
+  issues.push(`🟡 Google Maps MTD: $${(q.mtdCost || 0).toFixed(2)} / $${q.budget || 200} (${(q.mtdPct || 0).toFixed(1)}%) — 剩 $${(q.remainingUsd || 0).toFixed(2)}`);
+}
 
 if (issues.length === 0) {
   lines.push(`📊 ${today} ✅ 全綠`);
@@ -81,6 +90,12 @@ if (r.web && ((r.web.visits || 0) + (r.web.pageViews || 0)) > 0) {
 }
 if (r.npmAudit && !r.npmAudit.error && r.npmAudit.total === 0) {
   lines.push('📈 npm: 0 個漏洞');
+}
+// v2.31.96: Google Maps MTD 花費也放 metrics block（critical/warning 已上 issue list，但仍顯數字 = 透明）
+if (r.googleMapsQuota && !r.googleMapsQuota.error && typeof r.googleMapsQuota.mtdCost === 'number') {
+  const q = r.googleMapsQuota;
+  const pct = (q.mtdPct || 0).toFixed(1);
+  lines.push(`💰 Google Maps MTD: $${q.mtdCost.toFixed(2)} / $${q.budget || 200} (${pct}%)`);
 }
 const okItems = [];
 if (r.schedulerErrors && r.schedulerErrors.details) {

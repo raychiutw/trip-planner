@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.96] - 2026-05-19
+
+**Fix: 接 3 個 launchd 廢棄後的孤兒 daily script — Google Maps 花費、POI 30 天 refresh、auth-cleanup retention sweep。** 使用者 QA「每日檢查排程應該有 Google Maps 使用金額」抓到 v2.31.3 把 launchd 廢棄、改 api-server 內部 cron 時只搬 `/tp-daily-check`，其他 daily 任務變孤兒沒人觸發。
+
+### Context
+
+v2.31.3 廢棄 launchd `com.tripline.daily-check`，把 `/tp-daily-check` 改成 api-server 內部 cron (09:00)。但 `scripts/google-quota-monitor.ts` / `scripts/google-poi-refresh-30d.ts` / `scripts/auth-cleanup.js` 三個原由 launchd 觸發的 daily script 沒人搬，13 天沒跑：
+
+- **`google-quota-monitor.ts`** → Telegram 看不到 Google Maps MTD 花費 + 90% lock / <50% unlock 自動機制停擺
+- **`google-poi-refresh-30d.ts`** → `pois.status_checked_at` 不更新，`<TripHealthBanner>` 永遠綠燈（即使 POI 已永久結業也不知道）；650 個 POI 該 refresh 沒 refresh
+- **`auth-cleanup.js`** → V2-P6 30 天 retention 承諾失守，`auth_audit_log` / `session_devices` / `oauth_models` 三表無限長
+
+### Added
+
+- **新 lib** `scripts/lib/google-maps-quota.js` — 抽出 `PRICE_PER_1K` + `calcDailyCost` + `calcMtdCost` + `classifyStatus` 純函式（drift test 守住與 `google-quota-monitor.ts` SoT 對齊）
+- **`daily-check.js` 新增 7th section** `queryGoogleMapsQuota` — GET `/api/admin/maps-settings` + `/api/admin/quota-estimate` 算 MTD，threshold mapping（≥`lock_threshold_pct` → critical, ≥50% → warning, <50% → ok）
+- **`build-daily-check-msg.js` 新增 Google Maps section** — critical/warning 進 issue 列表（🔴/🟡），metrics block 永遠顯 `💰 Google Maps MTD: $X.XX / $200 (Y%)` 透明可見
+- **`tripline-api-server.ts` 新 helper** `fireScheduleScript` + `scheduleDailyScript` — fire-and-forget spawn shell script（不走 claude/tmux/token mint，獨立 log 到 `scripts/logs/api-server/script-<label>-YYYY-MM-DD.log`）
+- 新 cron 排程：
+  - `auth-cleanup.js` 每天 04:00
+  - `bun run refresh:google` 每天 04:30
+
+### Tests
+
+- 21 unit tests (cost calc + threshold + msg renderer + drift detection)
+- 全 suite 254 files / 1960 tests pass; tsc clean
+
+### Deploy 順序
+
+1. PR merge → master
+2. 重啟 launchd api-server：`launchctl unload ~/Library/LaunchAgents/com.tripline.api-server.plist && launchctl load ~/Library/LaunchAgents/com.tripline.api-server.plist`
+3. 觀察 `scripts/logs/api-server/<today>.log` 看到 3 行 `Scheduled <label> first fire at ...`
+4. 隔天 04:00 / 04:30 / 09:00 三條 schedule fire 後檢查各自 log + Telegram 訊息
+
 ## [2.31.95] - 2026-05-19
 
 **Fix: 桌機自訂景點 tab 改 two-pane layout 對齊 mockup C。** User QA feedback：桌機地圖位置和 mockup C 不同 — 之前 form 與 map 是上下 stacked，現在改回 mockup approved 的左 form 380px / 右 map 1fr。
