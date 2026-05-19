@@ -219,6 +219,12 @@ if (el) {
               <Route path="/account" element={<AccountPage />} />
               <Route path="/account/appearance" element={<AppearanceSettingsPage />} />
               <Route path="/account/notifications" element={<NotificationsSettingsPage />} />
+              {/* v2.32.4 cross-prefix aliases: account hub 用 /account/*, sessions/connected-apps
+                  歷史在 /settings/*。User 直接打 URL 或舊書籤可能用任一 prefix → 兩個都 valid。 */}
+              <Route path="/account/sessions" element={<SessionsPage />} />
+              <Route path="/account/connected-apps" element={<ConnectedAppsPage />} />
+              <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
+              <Route path="/settings/notifications" element={<NotificationsSettingsPage />} />
               <Route path="/oauth/consent" element={<ConsentPage />} />
               <Route path="/invite" element={<InvitePage />} />
               <Route path="/trips" element={<TripsListPage />} />
