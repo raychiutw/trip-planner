@@ -405,8 +405,11 @@ const REQUEST_CRON_INTERVAL_MS = 10 * 60 * 1000;
 setInterval(() => fireSchedule('/tp-request', 'request-handler'), REQUEST_CRON_INTERVAL_MS);
 log(`Scheduled request-handler (/tp-request) every ${REQUEST_CRON_INTERVAL_MS / 60000} min`);
 
-// 每天 09:00 /tp-daily-check
-scheduleDaily(9, 0, '/tp-daily-check', 'daily-check');
+// v2.31.97: 改 06:10（早於 4:00 auth-cleanup / 4:30 refresh:google 是不行的，
+// daily-check 必須在它要稽核的 schedule 之後 — Ray 想早一點看每日報告但不能撞 cron）。
+// 06:10 給 04:30 refresh 留 ~100 min 完成 50 POI × 1.5s sleep + Place Details
+// API + 緩衝（實測 ~3-5 min，但保險）。
+scheduleDaily(6, 10, '/tp-daily-check', 'daily-check');
 
 // v2.31.96: 接 v2.31.3 launchd 廢棄後 orphan 的 3 個 daily script。
 // 故事：v2.31.3 把 launchd com.tripline.daily-check 整批廢棄、改 api-server
