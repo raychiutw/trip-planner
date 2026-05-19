@@ -3,6 +3,36 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.32.2] - 2026-05-19
+
+**Fix: AddStopPage tab 初值從 URL param 讀取。** v2.32.1 QA 發現
+`/trip/:id/add-stop?tab=custom` direct URL 進來永遠 land 在「搜尋」tab，
+忽略 `?tab=custom` query string。Pre-existing bug，非 v2.32.1 引入。
+
+### Root cause
+
+`AddStopPage.tsx:693` hardcode `useState<Tab>('search')`，初值與 URL param
+無關係。`handleTabChange` 雖會 mutate URL，但 mount 階段不讀回去。
+
+### Fix
+
+`AddStopPage.tsx:693` 初值改用 IIFE 讀 `searchParams.get('tab')`，allowlist
+`'favorites' | 'custom' | 'search'`（拒任意值 forward）：
+
+```ts
+const initialTab: Tab = (() => {
+  const raw = searchParams.get('tab');
+  return raw === 'favorites' ? 'favorites' : raw === 'custom' ? 'custom' : 'search';
+})();
+const [tab, setTab] = useState<Tab>(initialTab);
+```
+
+對齊 ChangePoiPage 既有 URL→tab derivation pattern（line 578-579）。
+
+### Tests
+
+`tests/unit/add-stop-tab-url-init.test.ts` 4 個 source-grep regression test。
+
 ## [2.32.1] - 2026-05-19
 
 **Fix: LocationPickerMap initialCenter race — 自訂景點 map 永遠卡 Tokyo Station fallback。** v2.32.0 QA 發現 AddEntryPage / AddStopPage / AddCustomStopPage 自訂 tab map 中心不是 trip destination 而是 Tokyo Station (35.6812, 139.7671)。

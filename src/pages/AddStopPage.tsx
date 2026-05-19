@@ -690,7 +690,13 @@ export default function AddStopPage() {
   const dayNumParam = searchParams.get('day');
   const dayNum = dayNumParam ? parseInt(dayNumParam, 10) : NaN;
 
-  const [tab, setTab] = useState<Tab>('search');
+  // v2.32.2 fix: 初值從 URL param 讀，讓 `/add-stop?tab=custom` direct URL 進來
+  // 直接 land 在自訂 tab（之前 hardcoded 'search'，URL param 被忽略）。
+  const initialTab: Tab = (() => {
+    const raw = searchParams.get('tab');
+    return raw === 'favorites' ? 'favorites' : raw === 'custom' ? 'custom' : 'search';
+  })();
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [category, setCategory] = useState<AddStopCategory>('all');
   const [query, setQuery] = useState('');
   const [region, setRegion] = useState<RegionOption>('全部地區');
