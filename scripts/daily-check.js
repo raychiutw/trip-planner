@@ -61,9 +61,15 @@ var D1_DB = env('D1_DATABASE_ID');
 var SENTRY_TOKEN = env('SENTRY_AUTH_TOKEN');
 var SENTRY_ORG = env('SENTRY_ORG');
 var SENTRY_PROJECT = env('SENTRY_PROJECT');
-// v2.31.96: Google Maps quota section needs prod admin API access.
-var TRIPLINE_API_URL = env('TRIPLINE_API_URL');
-var TRIPLINE_API_TOKEN = env('TRIPLINE_API_TOKEN');
+// v2.31.96: Google Maps quota section needs prod admin API access. Token 在
+// runtime mint（同 cron-shared.ts，client_credentials flow），不直接讀
+// TRIPLINE_API_TOKEN env (.env.local 沒有，是用 CLIENT_ID + CLIENT_SECRET 換)。
+// IMPORTANT: 用 TRIPLINE_API_BASE (CF Pages prod) — TRIPLINE_API_URL 是 Tailscale
+// funnel 給 legacy /api 用的，不能打 admin endpoint。對齊 cron-shared.ts 註解。
+var TRIPLINE_API_BASE = env('TRIPLINE_API_BASE') || 'https://trip-planner-dby.pages.dev';
+var googleMapsTokenHelper = (function() {
+  try { return require('./lib/get-tripline-token'); } catch (_) { return null; }
+})();
 
 var googleMapsQuotaLib = require('./lib/google-maps-quota');
 
@@ -503,25 +509,26 @@ async function queryProdDataHygiene() {
 // 鎖狀態整合進 daily-check，讓 Telegram 每日報告看得到金額。
 // 計算邏輯抽到 lib/google-maps-quota.js 共用（drift test 守住）。
 
-async function adminApiGet(pathname) {
-  if (!TRIPLINE_API_URL || !TRIPLINE_API_TOKEN) {
-    throw new Error('TRIPLINE_API_URL/TRIPLINE_API_TOKEN missing');
-  }
-  var res = await fetch(TRIPLINE_API_URL + pathname, {
-    headers: { 'Authorization': 'Bearer ' + TRIPLINE_API_TOKEN }
+async function adminApiGet(pathname, token) {
+  var res = await fetch(TRIPLINE_API_BASE + pathname, {
+    headers: { 'Authorization': 'Bearer ' + token }
   });
   if (!res.ok) throw new Error(pathname + ' returned ' + res.status);
   return res.json();
 }
 
 async function queryGoogleMapsQuota() {
-  // env missing → skip silently (本機 dev 可能沒 token，避免炸 daily-check)
-  if (!TRIPLINE_API_URL || !TRIPLINE_API_TOKEN) {
-    return { status: 'ok', error: 'TRIPLINE_API_URL/TOKEN missing (skip)' };
+  // token helper 缺 / .env.local 沒 CLIENT_ID/SECRET → skip silently（本機 dev 可能沒 cred）
+  if (!googleMapsTokenHelper || typeof googleMapsTokenHelper.getToken !== 'function') {
+    return { status: 'ok', error: 'token helper unavailable (skip)' };
+  }
+  if (!env('TRIPLINE_API_CLIENT_ID') || !env('TRIPLINE_API_CLIENT_SECRET')) {
+    return { status: 'ok', error: 'TRIPLINE_API_CLIENT_ID/SECRET missing (skip)' };
   }
   try {
-    var settings = await adminApiGet('/api/admin/maps-settings');
-    var estimates = await adminApiGet('/api/admin/quota-estimate');
+    var token = await googleMapsTokenHelper.getToken();
+    var settings = await adminApiGet('/api/admin/maps-settings', token);
+    var estimates = await adminApiGet('/api/admin/quota-estimate', token);
     var dayOfMonth = new Date().getDate();
     var dailyCost = googleMapsQuotaLib.calcDailyCost(estimates);
     var mtdCost = googleMapsQuotaLib.calcMtdCost(estimates, dayOfMonth);
