@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.32.4] - 2026-05-19
+
+**Fix: `/account/*` vs `/settings/*` cross-prefix direct URL 落 /trips。**
+v2.32.1 QA round 4 發現，pre-existing。
+
+### Root cause
+
+Account hub 跑「terracotta-account-hub-page」重設時把 appearance/notifications
+配在 `/account/*`，但 sessions/connected-apps 歷史上仍在 `/settings/*`。
+AccountPage 用 `<Link>` 走 configured path，所以從 hub 進去都 OK。但
+user 直接打 URL 或舊書籤 `/settings/notifications` / `/account/sessions` /
+`/account/connected-apps` 沒對應 Route → catch-all 落 /trips。
+
+### Fix
+
+`src/entries/main.tsx` 加 4 個 alias Route 讓兩 prefix 都 valid:
+
+- `/account/sessions` → `<SessionsPage />`
+- `/account/connected-apps` → `<ConnectedAppsPage />`
+- `/settings/appearance` → `<AppearanceSettingsPage />`
+- `/settings/notifications` → `<NotificationsSettingsPage />`
+
+原 4 個 canonical Route 保留。AccountPage `<Link>` 不動。
+
+### Tests
+
+`tests/unit/settings-account-route-aliases.test.ts` 8 個 source-grep
+regression test（4 alias + 4 canonical preserved）。
+
 ## [2.32.3] - 2026-05-19
 
 **Fix: EditEntryPage 時間 row 在 mobile (≤390px viewport) horizontal
