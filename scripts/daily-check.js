@@ -61,6 +61,11 @@ var D1_DB = env('D1_DATABASE_ID');
 var SENTRY_TOKEN = env('SENTRY_AUTH_TOKEN');
 var SENTRY_ORG = env('SENTRY_ORG');
 var SENTRY_PROJECT = env('SENTRY_PROJECT');
+// v2.31.96: Google Maps quota section needs prod admin API access.
+var TRIPLINE_API_URL = env('TRIPLINE_API_URL');
+var TRIPLINE_API_TOKEN = env('TRIPLINE_API_TOKEN');
+
+var googleMapsQuotaLib = require('./lib/google-maps-quota');
 
 // ── D1 REST API helper ──────────────────────────────────────────
 
@@ -431,8 +436,8 @@ function querySchedulerErrors() {
 
 // ── summary 計算 ────────────────────────────────────────────────
 
-function calcSummary(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene) {
-  var sections = [sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene];
+function calcSummary(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota) {
+  var sections = [sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota];
   var critical = sections.filter(function(s) { return s && s.status === 'critical'; }).length;
   var warning = sections.filter(function(s) { return s && s.status === 'warning'; }).length;
   var ok = sections.filter(function(s) { return s && s.status === 'ok'; }).length;
@@ -490,6 +495,52 @@ async function queryProdDataHygiene() {
     // check 失敗本身就該 surface,別假裝綠燈遮蓋 silent failure
     console.error('Prod data hygiene check failed:', err.message);
     return { status: 'warning', total: 0, leaks: [], error: err.message };
+  }
+}
+
+// ── 數據來源 8: Google Maps quota (v2.31.96) ─────────────────────
+// google-quota-monitor.ts 原本是 launchd-only 孤兒，這裡把 MTD 花費 +
+// 鎖狀態整合進 daily-check，讓 Telegram 每日報告看得到金額。
+// 計算邏輯抽到 lib/google-maps-quota.js 共用（drift test 守住）。
+
+async function adminApiGet(pathname) {
+  if (!TRIPLINE_API_URL || !TRIPLINE_API_TOKEN) {
+    throw new Error('TRIPLINE_API_URL/TRIPLINE_API_TOKEN missing');
+  }
+  var res = await fetch(TRIPLINE_API_URL + pathname, {
+    headers: { 'Authorization': 'Bearer ' + TRIPLINE_API_TOKEN }
+  });
+  if (!res.ok) throw new Error(pathname + ' returned ' + res.status);
+  return res.json();
+}
+
+async function queryGoogleMapsQuota() {
+  // env missing → skip silently (本機 dev 可能沒 token，避免炸 daily-check)
+  if (!TRIPLINE_API_URL || !TRIPLINE_API_TOKEN) {
+    return { status: 'ok', error: 'TRIPLINE_API_URL/TOKEN missing (skip)' };
+  }
+  try {
+    var settings = await adminApiGet('/api/admin/maps-settings');
+    var estimates = await adminApiGet('/api/admin/quota-estimate');
+    var dayOfMonth = new Date().getDate();
+    var dailyCost = googleMapsQuotaLib.calcDailyCost(estimates);
+    var mtdCost = googleMapsQuotaLib.calcMtdCost(estimates, dayOfMonth);
+    var mtdPct = settings.budget_usd > 0 ? (mtdCost / settings.budget_usd) * 100 : 0;
+    var status = googleMapsQuotaLib.classifyStatus(mtdPct, settings.lock_threshold_pct);
+    var remainingUsd = Math.max(0, settings.budget_usd - mtdCost);
+    return {
+      status: status,
+      dailyCost: dailyCost,
+      mtdCost: mtdCost,
+      budget: settings.budget_usd,
+      mtdPct: mtdPct,
+      remainingUsd: remainingUsd,
+      isLocked: !!settings.is_locked,
+      services: estimates
+    };
+  } catch (err) {
+    console.error('Google Maps quota check failed:', err.message);
+    return { status: 'warning', error: err.message };
   }
 }
 
@@ -561,6 +612,7 @@ async function main() {
     queryRequestErrors(),    // 4
     queryRouteHealth(),      // 5 — B-P6 task 10.3
     queryProdDataHygiene(),  // 6 — mockup-parity-qa-fixes Sprint 7.2
+    queryGoogleMapsQuota(),  // 7 — v2.31.96: 接 google-quota-monitor 孤兒邏輯
   ]);
 
   function val(idx, fallback) {
@@ -577,8 +629,9 @@ async function main() {
   var requestErrors = val(4, { status: 'ok', total: 0, statusCounts: { open: 0, processing: 0, failed: 0 }, stuckProcessing: 0, pending: [] });
   var routeHealth = val(5, { status: 'ok', total: 0, checked: 0, routes: [] });
   var dataHygiene = val(6, { status: 'ok', total: 0, leaks: [] });
+  var googleMapsQuota = val(7, { status: 'ok', error: 'queryGoogleMapsQuota rejected' });
 
-  var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors, dataHygiene);
+  var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota);
 
   var report = {
     date: today,
@@ -592,7 +645,8 @@ async function main() {
     npmAudit: npmAuditResult,
     schedulerErrors: schedulerErrors,
     routeHealth: routeHealth,
-    dataHygiene: dataHygiene
+    dataHygiene: dataHygiene,
+    googleMapsQuota: googleMapsQuota
   };
 
   // 為所有 issue/error 項目加流水編號
