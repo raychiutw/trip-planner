@@ -369,6 +369,37 @@ function scheduleDaily(hour: number, minute: number, skillCommand: string, label
   }, delayMs);
 }
 
+// v2.31.96: 對外部 bash/bun script 的 fire-and-forget helper（不走 claude/tmux）
+// 接 v2.31.3 launchd 廢棄後 orphan 的 daily scripts（refresh:google / auth-cleanup）。
+// 不共用 isRunning 鎖 — 跑 script 不爭 tmux session，獨立走自己日誌。
+async function fireScheduleScript(cmd: string, args: string[], label: string): Promise<void> {
+  log(`Firing script: ${label} (${cmd} ${args.join(' ')})`);
+  try {
+    const { spawn } = await import('node:child_process');
+    const { openSync } = await import('node:fs');
+    const outFd = openSync(join(LOG_DIR, `script-${label}-${todayStr()}.log`), 'a');
+    const errFd = openSync(join(LOG_DIR, `script-${label}-${todayStr()}.err`), 'a');
+    const child = spawn(cmd, args, {
+      cwd: PROJECT_DIR,
+      detached: true,
+      stdio: ['ignore', outFd, errFd],
+    });
+    child.on('error', (err) => logError(`Script ${label} spawn error: ${err.message}`));
+    child.unref();
+  } catch (err) {
+    logError(`fireScheduleScript ${label} setup failed: ${(err as Error).message}`);
+  }
+}
+
+function scheduleDailyScript(hour: number, minute: number, cmd: string, args: string[], label: string): void {
+  const { next, delayMs } = computeNextDailyFire(new Date(), hour, minute);
+  log(`Scheduled ${label} first fire at ${next.toISOString()} (in ${Math.round(delayMs / 60000)} min)`);
+  setTimeout(() => {
+    void fireScheduleScript(cmd, args, label);
+    setInterval(() => void fireScheduleScript(cmd, args, label), 24 * 60 * 60 * 1000);
+  }, delayMs);
+}
+
 // 10 分鐘 /tp-request 兜底（v2.31.5：30 min → 10 min，加快 CF Pages POST /trigger 失敗時的補救週期）
 const REQUEST_CRON_INTERVAL_MS = 10 * 60 * 1000;
 setInterval(() => fireSchedule('/tp-request', 'request-handler'), REQUEST_CRON_INTERVAL_MS);
@@ -377,7 +408,16 @@ log(`Scheduled request-handler (/tp-request) every ${REQUEST_CRON_INTERVAL_MS / 
 // 每天 09:00 /tp-daily-check
 scheduleDaily(9, 0, '/tp-daily-check', 'daily-check');
 
-// v2.31.4: 移除 /tp-poi-enrich-monthly schedule —
-// 原批次 scripts/poi-enrich-batch.ts 在 v2.23.0 Google Maps 切換時已刪除，
-// 新 enrich 流程改 daily scripts/google-poi-refresh-30d.ts（50 POI/day）+
-// 即時 POST /api/pois/:id/enrich，monthly batch 失去意義。
+// v2.31.96: 接 v2.31.3 launchd 廢棄後 orphan 的 3 個 daily script。
+// 故事：v2.31.3 把 launchd com.tripline.daily-check 整批廢棄、改 api-server
+// 內部 cron，但只搬 /tp-daily-check，其他 daily 任務沒人接 → 13 天沒跑。
+//
+// google-poi-refresh-30d 04:30 — 30 天滾動 refresh POI lifecycle (50 POI/day cap)。
+//   沒跑：pois.status_checked_at 不更新、TripHealthBanner 看不到「永久結業」。
+// auth-cleanup 04:00 — V2-P6 retention sweep（auth_audit_log + session_devices
+//   + oauth_models 30 天）。沒跑：表會無限增長。
+//
+// /tp-poi-enrich-monthly 仍維持 v2.31.4 移除狀態（batch enrich 已被 即時
+// POST /api/pois/:id/enrich + 30d refresh 取代）。
+scheduleDailyScript(4, 0, 'node', ['scripts/auth-cleanup.js'], 'auth-cleanup');
+scheduleDailyScript(4, 30, '/Users/ray/.bun/bin/bun', ['run', 'refresh:google'], 'google-poi-refresh');
