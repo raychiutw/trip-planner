@@ -87,6 +87,15 @@ const SCOPED_STYLES = `
     padding: 16px 24px 96px;
   }
 }
+/* v2.31.98: 自訂 tab 兩段式 layout 需要更寬空間（mockup C 1024px）。
+   :has() 只在 ≥1024px 撐大；其他 tab 仍維持 720px 不變。 */
+@media (min-width: 1024px) {
+  .tp-change-poi-body:has(.tp-custom-poi-form-twopane) {
+    max-width: 1024px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
 .tp-change-poi-subtabs {
   display: flex;
   flex-wrap: wrap;
