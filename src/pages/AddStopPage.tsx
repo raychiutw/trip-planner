@@ -211,6 +211,61 @@ const SCOPED_STYLES = `
   padding: 12px 20px 0;
   margin: 0;
 }
+
+/* v2.31.99 day picker chip row — 加景點時讓 user 切換目標 day */
+.tp-add-stop-daypicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 20px 0;
+}
+.tp-add-stop-daypicker-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 14px;
+  min-height: 48px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font: inherit;
+  color: var(--color-foreground);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.tp-add-stop-daypicker-chip:hover {
+  background: var(--color-hover);
+}
+.tp-add-stop-daypicker-chip.is-active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+.tp-add-stop-daypicker-chip-num {
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.tp-add-stop-daypicker-chip-date {
+  font-size: var(--font-size-caption2);
+  opacity: 0.85;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.tp-add-stop-daypicker-empty {
+  margin: 12px 20px 0;
+  padding: 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote);
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .tp-add-stop-daypicker { padding: 12px 24px 0; }
+  .tp-add-stop-daypicker-empty { margin: 12px 24px 0; }
+}
 .tp-add-stop-tabs {
   display: flex; padding: 0 20px;
   border-bottom: 1px solid var(--color-border);
@@ -628,7 +683,7 @@ export default function AddStopPage() {
   const auth = useRequireAuth();
   const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
@@ -671,24 +726,39 @@ export default function AddStopPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [currentDay, setCurrentDay] = useState<DayApiRow | null>(null);
+  // v2.31.99: 載入所有 days 給 day picker chip row 用。currentDay 從 allDays
+  // 衍生（不另外 setState 避免兩條 state truth）。
+  const [allDays, setAllDays] = useState<DayApiRow[] | null>(null);
 
-  // Fetch day metadata for label rendering (replaces TripPage caller's inline derivation).
   useEffect(() => {
-    if (!auth.user || !tripId || !Number.isFinite(dayNum)) return;
+    if (!auth.user || !tripId) return;
     let cancelled = false;
     (async () => {
       try {
         const days = await apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days`);
         if (cancelled) return;
-        const found = (days ?? []).find((d) => d.dayNum === dayNum) ?? null;
-        setCurrentDay(found);
+        setAllDays(days ?? []);
       } catch {
         // silent — label fallback to DAY NN
       }
     })();
     return () => { cancelled = true; };
-  }, [auth.user, tripId, dayNum]);
+  }, [auth.user, tripId]);
+
+  const currentDay = useMemo<DayApiRow | null>(() => {
+    if (!allDays || !Number.isFinite(dayNum)) return null;
+    return allDays.find((d) => d.dayNum === dayNum) ?? null;
+  }, [allDays, dayNum]);
+
+  const hasDay = Number.isFinite(dayNum);
+
+  // v2.31.99: switch day via chip row → URL replaceState 不開新 history entry
+  const handlePickDay = useCallback((next: number) => {
+    if (next === dayNum) return;
+    const sp = new URLSearchParams(searchParams);
+    sp.set('day', String(next));
+    setSearchParams(sp, { replace: true });
+  }, [dayNum, searchParams, setSearchParams]);
 
   // v2.31.94: 自訂 tab 在 mobile (≤1023px) 上 redirect 到 fullpage route，避免 IME
   // occlusion 把 280px map 整個遮蓋。Desktop 仍走 inline tab。
@@ -773,9 +843,12 @@ export default function AddStopPage() {
     return customTitle.trim() && customCoord ? 1 : 0;
   }, [tab, selectedSearch, selectedSaved, customTitle, customCoord]);
 
-  const confirmEnabled = tab === 'custom'
-    ? !submitting && !!customTitle.trim() && !!customCoord
-    : totalSelected > 0 && !submitting;
+  // v2.31.99: hasDay 也成 submit gate — chip row 必須選一天才能提交
+  const confirmEnabled = hasDay && (
+    tab === 'custom'
+      ? !submitting && !!customTitle.trim() && !!customCoord
+      : totalSelected > 0 && !submitting
+  );
 
   // v2.31.98: 自訂 tab typeahead + map handlers 移進 CustomPoiForm component。
   // 父層只負責 fallback center 計算（依賴 trip destinations）。
@@ -886,7 +959,9 @@ export default function AddStopPage() {
   }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, tripId, dayNum]);
 
   if (!auth.user) return null;
-  if (!tripId || !Number.isFinite(dayNum)) {
+  // v2.31.99: tripId 必填，但 dayNum 改成 optional — 沒帶 ?day=N 時 chip row
+  // 上方讓 user 選一天再 unlock form（取代既有 invalid-params blocking page）。
+  if (!tripId) {
     return (
       <AppShell
         sidebar={<DesktopSidebarConnected />}
@@ -894,7 +969,7 @@ export default function AddStopPage() {
           <div className="tp-add-stop-page-shell" data-testid="add-stop-page">
             <TitleBar title="加入景點" back={handleBack} backLabel="返回行程列表" />
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
-              無效的行程或日期參數
+              無效的行程
             </div>
           </div>
         }
@@ -903,7 +978,7 @@ export default function AddStopPage() {
     );
   }
 
-  const dayLabel = deriveDayLabel(currentDay, dayNum);
+  const dayLabel = hasDay ? deriveDayLabel(currentDay, dayNum) : '請選擇加入哪天';
 
   const titleBarActions = (
     <TitleBarPrimaryAction
@@ -931,6 +1006,42 @@ export default function AddStopPage() {
               actions={titleBarActions}
             />
             <div className="tp-add-stop-page-day-meta">{dayLabel}</div>
+
+            {/* v2.31.99 day picker chip row — 沒帶 ?day=N 進來時讓 user 選；帶了
+                也仍顯，可隨時切換。Day metadata 還在 fetch 時不 render
+                （allDays === null）— 避免閃爍空列。 */}
+            {allDays && allDays.length > 0 && (
+              <div
+                className="tp-add-stop-daypicker"
+                role="tablist"
+                aria-label="選擇加入哪天"
+                data-testid="add-stop-daypicker"
+              >
+                {allDays.map((d) => {
+                  const isActive = d.dayNum === dayNum;
+                  const mmdd = (d.date ?? '').slice(5).replace('-', '/');
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      className={`tp-add-stop-daypicker-chip ${isActive ? 'is-active' : ''}`}
+                      onClick={() => handlePickDay(d.dayNum)}
+                      data-testid={`add-stop-daypicker-chip-${d.dayNum}`}
+                    >
+                      <span className="tp-add-stop-daypicker-chip-num">DAY {String(d.dayNum).padStart(2, '0')}</span>
+                      {mmdd && <span className="tp-add-stop-daypicker-chip-date">{mmdd}{d.dayOfWeek ? `（${d.dayOfWeek}）` : ''}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {!hasDay && allDays && allDays.length === 0 && (
+              <div className="tp-add-stop-daypicker-empty" data-testid="add-stop-daypicker-empty">
+                此行程尚無日期，請先在「編輯行程」設定起訖日。
+              </div>
+            )}
 
             <div className="tp-add-stop-tabs" role="tablist" aria-label="加入景點來源">
               {([
@@ -1245,7 +1356,10 @@ export default function AddStopPage() {
               <span className="tp-add-stop-counter" data-testid="add-stop-counter">
                 {/* v2.31.33: mobile counter 191px 容不下完整 dayLabel（DAY 01 · 7/29（三））→
                     簡化「將加入 DAY 01 · 7/29（三）」為「→ DAY 01」短 day index。Page header 已顯完整日期。 */}
-                已選 <strong>{totalSelected}</strong> 個 → DAY {String(dayNum).padStart(2, '0')}
+                {hasDay
+                  ? <>已選 <strong>{totalSelected}</strong> 個 → DAY {String(dayNum).padStart(2, '0')}</>
+                  : <>請先選擇加入哪天</>
+                }
                 {submitError && <span style={{ color: 'var(--color-destructive, #c0392b)', marginLeft: 8 }}>{submitError}</span>}
               </span>
               <div className="tp-add-stop-actions">
