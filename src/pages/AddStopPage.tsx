@@ -380,7 +380,9 @@ const SCOPED_STYLES = `
     padding-left: 0;
     padding-right: 0;
   }
-  .tp-add-stop-custom-twopane {
+  /* compound selector raises specificity above .tp-add-stop-form (defined
+     later in the stylesheet with display:flex) so grid actually wins */
+  .tp-add-stop-form.tp-add-stop-custom-twopane {
     display: grid;
     grid-template-columns: 380px 1fr;
     min-height: 540px;
