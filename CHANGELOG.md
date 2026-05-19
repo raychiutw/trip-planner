@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.97] - 2026-05-19
+
+**Change: daily-check 排程從 09:00 → 06:10。** Ray 想早一點看每日報告。06:10 留 100 min 緩衝給 04:30 google-poi-refresh 完成 50 POI × 1.5s sleep + Place Details API 後再稽核（實測 refresh 跑 ~3-5 min，緩衝充足）。
+
+### Changed
+
+- `scripts/tripline-api-server.ts:scheduleDaily(9, 0, '/tp-daily-check')` → `scheduleDaily(6, 10, ...)`
+
+### Deploy
+
+Same as v2.31.96 — `launchctl unload && load` api-server 後驗證 log 出現 `Scheduled daily-check (...) first fire at YYYY-MM-DDT22:10:00.000Z`（UTC 22:10 = 台灣 06:10）。
+
 ## [2.31.96] - 2026-05-19
 
 **Fix: 接 3 個 launchd 廢棄後的孤兒 daily script — Google Maps 花費、POI 30 天 refresh、auth-cleanup retention sweep。** 使用者 QA「每日檢查排程應該有 Google Maps 使用金額」抓到 v2.31.3 把 launchd 廢棄、改 api-server 內部 cron 時只搬 `/tp-daily-check`，其他 daily 任務變孤兒沒人觸發。
