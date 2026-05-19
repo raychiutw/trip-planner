@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.32.5] - 2026-05-19
+
+**Fix: `.tp-map-day-tabs` 水平 scroll 缺 affordance — user 不知 chips 可往右
+swipe。** v2.32.1 QA round 3 發現，原列為「minor non-blocking」follow-up，
+本 PR 完成。
+
+### Root cause
+
+7-day trip (沖繩七日遊) 在 mobile (≤390px viewport) day 6/7 chips 超出可視
+範圍，但：
+
+- `.tp-map-day-tabs` 設 `overflow-x: auto`（OK）
+- `scrollbar-width: none` + `::-webkit-scrollbar { display: none }`（隱藏 scrollbar）
+- 無 chevron icon、無 fade gradient → 完全沒視覺提示「往右還有 chips」
+
+User 常以為 trip 只有 5 天。
+
+### Fix
+
+`css/tokens.css` 加 `mask-image` 右側 24px fade linear-gradient：
+
+```css
+-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+        mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+```
+
+Trade-off：scroll 到末尾時最後一個 chip 會略微 fade（visible 但邊緣透明
+化），acceptable visual sacrifice for clearer scroll affordance。
+
+### Tests
+
+`tests/unit/day-tabs-scroll-affordance.test.ts` 3 個 source-grep regression
+（standard + -webkit- prefix + 原 overflow-x preserved）。
+
 ## [2.32.4] - 2026-05-19
 
 **Fix: `/account/*` vs `/settings/*` cross-prefix direct URL 落 /trips。**
