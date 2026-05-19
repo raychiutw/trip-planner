@@ -3,6 +3,36 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.99] - 2026-05-19
+
+**Feat: trip header「+ 新增景點」按鈕取代探索 icon + AddStopPage day picker chip row。** User feedback：「`/stop/419/edit` 要有新增景點的版本, 取代附圖宏框的放大鏡 icon, 改為 + 號 名稱為新增景點, 新增景點要多可以選擇加入哪天」。
+
+### Context
+
+之前的「新增景點」（AddStopPage）沒任何 UI button 接上（v2.31.94 已查過，`openAddStop` handle 是死路、ChatPage 註解提到的 DaySection button 已被拔）。trip 詳細頁 header 有個放大鏡 icon `trip-explore-trigger` → 跳 /explore，但 explore 還能從「收藏」tab 進，這格更該給「+ 新增景點」優先級。
+
+### Changed
+
+- **TripsListPage trip header**: `trip-explore-trigger`（🔍 → /explore）→ `trip-add-stop-trigger`（+ 新增景點 → /trip/:id/add-stop）。探索仍可由「收藏」tab TitleBar 入口進
+- **AddStopPage**: `?day=N` 改 optional。沒帶 day 進來時：
+  - 上方 render DAY 01-N chip row（含 mm/dd 日期 + 星期），click 切換 → URL replaceState
+  - 帶 day 也仍 render chip row，可隨時切換
+  - `confirmEnabled` 加 `hasDay` gate，沒選一天不能 submit
+  - Bottom counter「請先選擇加入哪天」prompt
+  - 既有 invalid-params blocking page 改成只 block 沒 tripId 的 case
+- **State refactor**: `currentDay` 從 useState 改 useMemo 從 `allDays` 衍生（單一 truth）。所有 days 一次 fetch 給 chip row 用
+
+### Tests
+
+- 新 12 個 source-grep test `tests/unit/add-stop-daypicker.test.ts` — 入口取代 + day picker state + chip row testid + hasDay gate
+- 更新 v2.31.33 counter-shorten test regex 對齊新 dayLabel 三元
+- 全 256 files / 1988 tests pass; tsc clean
+
+### Out-of-scope
+
+- AddStopPage 桌機 2-pane layout（自訂 tab）— v2.31.95+98 已設定，本 PR 不動
+- 其他 entry point（DaySection footer、TimelineRail 末尾）— 後續 PR 可加
+
 ## [2.31.98] - 2026-05-19
 
 **Feat: ChangePoiPage 加「自訂」tab — alternate / master 模式都能用地圖 pin 新增景點。** User feedback：「我要知道如何進去自訂景點 我找不到功能在哪」+「`/stop/420/change-poi?mode=alternate&tab=search` 這頁增加入口」。
