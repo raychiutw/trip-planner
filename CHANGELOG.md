@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.32.1] - 2026-05-19
+
+**Fix: LocationPickerMap initialCenter race — 自訂景點 map 永遠卡 Tokyo Station fallback。** v2.32.0 QA 發現 AddEntryPage / AddStopPage / AddCustomStopPage 自訂 tab map 中心不是 trip destination 而是 Tokyo Station (35.6812, 139.7671)。
+
+### Root cause
+
+`useGoogleMap` hook 一 mount 就 lock `initialCenter`，後續 prop 變更不會 re-center。3 頁原本 `customDestinations` / `destinations` 初值 `[]`：
+
+1. 首次 render → `customInitialCenter` useMemo 從空陣列推算 → fallback chain 走到 Tokyo Station hard fallback
+2. `<CustomPoiForm initialCenter={Tokyo}>` mount → useGoogleMap 鎖死 Tokyo
+3. fetch resolve 後 `setCustomDestinations([沖繩 destinations])` re-render → useMemo 重算 → 沖繩座標，但 useGoogleMap 不接受 dynamic center → 地圖永遠卡 Tokyo
+
+### Fix
+
+初值 `[]` → `null`（區分「未載入」與「載入後 0 個」），render gate `destinations !== null` 才 mount picker：
+
+- `ChangePoiPage` — `customDestinations: TripDestApiLite[] | null`、fetch effect 改 mount-gated（不再 `tab !== 'custom'` early return）、catch fallback `setCustomDestinations([])`、render gate `<CustomPoiForm>` 等 destinations 非 null（null 期間顯 `change-poi-custom-loading` placeholder）
+- `AddStopPage` — 相同 pattern，placeholder testid `add-stop-custom-loading`
+- `AddCustomStopPage` — `destinations: TripDestApi[] | null`、render gate 直接包 `<LocationPickerMap>`（null 顯 `add-custom-stop-loading`）
+
+### Tests
+
+`tests/unit/custom-poi-init-center-race.test.ts` 11 個 source-grep regression test，covering 3 pages × (null init + fetch effect mount-gated + catch fallback + render gate + loading placeholder)。
+
+### Verification
+
+QA 流程：trip 詳細頁 → 新增景點 → day 下拉選擇 → 自訂 button → AddEntryPage navigate ChangePoiPage mode=new&tab=custom → CustomPoiForm map 應 center 於 day 第一個 entry / trip destination（非 Tokyo）。
+
 ## [2.32.0] - 2026-05-19
 
 **Feat: 新增景點 wizard — EditEntryPage-style page + day 下拉 + 3 picker buttons → ChangePoiPage mode=new POST entries → redirect /edit。** User feedback：「頁面不正確 是 類似 .../stop/435/edit 但增加選擇天數下拉,然後相同的增加景點的方式, 第一個景點選完可以選替換, 也可以繼續增加備選以及調整順序」。

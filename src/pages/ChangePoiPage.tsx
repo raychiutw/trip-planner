@@ -602,7 +602,10 @@ export default function ChangePoiPage() {
   const [customCoord, setCustomCoord] = useState<CustomPoiCoord | null>(null);
   const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
   const [customError, setCustomError] = useState<string | null>(null);
-  const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[]>([]);
+  // v2.32.1 fix: 初值改 null（"未載入"），與「載入後是 0 個 destinations」區分。
+  // LocationPickerMap 只用 mount 時的 initialCenter，若 customDestinations 還是 null
+  // 就 render 會卡在 Tokyo Station fallback 改不掉 — 必須等 fetch 完才能 mount。
+  const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
   const { results: searchResults, searching } = usePoiSearch({
     enabled: tab === 'search',
@@ -677,22 +680,28 @@ export default function ChangePoiPage() {
   }, [tripId, entryId, mode]);
 
   // v2.31.98: 自訂 tab map default-center fallback chain 從 trip destinations 取
+  // v2.32.1 fix: 從 tab-gated 改 mount-gated — user 可能直接 ?tab=custom 進來，
+  // 等切到 custom 才 fetch 已晚 (LocationPickerMap 一 mount 就鎖 initialCenter)。
   useEffect(() => {
-    if (!tripId || tab !== 'custom') return;
+    if (!tripId) return;
     let cancelled = false;
     apiFetch<{ destinations?: TripDestApiLite[] }>(`/trips/${encodeURIComponent(tripId)}`)
       .then((data) => {
         if (cancelled) return;
         setCustomDestinations(data?.destinations ?? []);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        // Network fail → 標 [] 讓 customInitialCenter fallback 到 Tokyo（已是
+        // 最後一道安全網），避免 null 永遠卡 render
+        if (!cancelled) setCustomDestinations([]);
+      });
     return () => { cancelled = true; };
-  }, [tripId, tab]);
+  }, [tripId]);
 
   const customInitialCenter = useMemo<PickerCoord>(() => {
     return selectDefaultCenter({
       prevEntry: null,
-      tripDestinations: customDestinations
+      tripDestinations: (customDestinations ?? [])
         .filter((d) => typeof d.lat === 'number' && typeof d.lng === 'number')
         .map((d) => ({ lat: d.lat as number, lng: d.lng as number })),
     });
@@ -1149,7 +1158,14 @@ export default function ChangePoiPage() {
           </>
         )}
 
-        {tab === 'custom' && (
+        {/* v2.32.1 fix: 等 destinations 載完才 mount — LocationPickerMap 鎖 mount 時
+            initialCenter，若用 Tokyo fallback render 後沒救（map 不會 re-center）。 */}
+        {tab === 'custom' && customDestinations === null && (
+          <div className="tp-change-poi-empty" data-testid="change-poi-custom-loading">
+            載入中⋯
+          </div>
+        )}
+        {tab === 'custom' && customDestinations !== null && (
           <CustomPoiForm
             title={customTitle}
             onTitleChange={(v) => { setCustomTitle(v); setCustomError(null); }}

@@ -721,7 +721,8 @@ export default function AddStopPage() {
   // v2.31.94: 自訂 tab 新增地址 typeahead + map pin 機制，確保 entry 一定有 lat/lng
   const [customCoord, setCustomCoord] = useState<CustomCoord | null>(null);
   const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
-  const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[]>([]);
+  // v2.32.1 fix: 初值改 null 區分「未載入」與「載入後 0 個」
+  const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -773,8 +774,10 @@ export default function AddStopPage() {
   }, [tab, tripId, dayNum, navigate]);
 
   // v2.31.94: 自訂 tab 需要 trip destinations 當 map default center fallback chain
+  // v2.32.1 fix: 從 tab-gated 改 mount-gated — LocationPickerMap 鎖 mount 時
+  // initialCenter，等切到 custom tab 才 fetch 就太晚。
   useEffect(() => {
-    if (!auth.user || !tripId || tab !== 'custom') return;
+    if (!auth.user || !tripId) return;
     let cancelled = false;
     (async () => {
       try {
@@ -784,7 +787,8 @@ export default function AddStopPage() {
         if (cancelled) return;
         setCustomDestinations(tripBody?.destinations ?? []);
       } catch {
-        // silent — picker fallback to Tokyo Station
+        // network fail → 標 [] 讓 fallback chain 走 Tokyo（已是最後一道安全網）
+        if (!cancelled) setCustomDestinations([]);
       }
     })();
     return () => { cancelled = true; };
@@ -855,7 +859,7 @@ export default function AddStopPage() {
   const customInitialCenter = useMemo<CustomCoord>(() => {
     return selectDefaultCenter({
       prevEntry: null,
-      tripDestinations: customDestinations
+      tripDestinations: (customDestinations ?? [])
         .filter((d) => typeof d.lat === 'number' && typeof d.lng === 'number')
         .map((d) => ({ lat: d.lat as number, lng: d.lng as number })),
     });
@@ -1294,7 +1298,14 @@ export default function AddStopPage() {
                 </>
               )}
 
-              {tab === 'custom' && (
+              {/* v2.32.1 fix: 等 destinations 載完才 mount LocationPickerMap，
+                  避免 Tokyo fallback 鎖死 initial center。 */}
+              {tab === 'custom' && customDestinations === null && (
+                <div className="tp-add-stop-empty" data-testid="add-stop-custom-loading">
+                  載入中⋯
+                </div>
+              )}
+              {tab === 'custom' && customDestinations !== null && (
                 <form onSubmit={(e) => { e.preventDefault(); void handleConfirm(); }}>
                   <CustomPoiForm
                     title={customTitle}

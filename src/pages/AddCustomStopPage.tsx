@@ -284,7 +284,9 @@ export default function AddCustomStopPage() {
   const handleBack = useNavigateBack(tripId ? `/trip/${encodeURIComponent(tripId)}` : '/trips');
 
   const [currentDay, setCurrentDay] = useState<DayApiRow | null>(null);
-  const [destinations, setDestinations] = useState<TripDestApi[]>([]);
+  // v2.32.1 fix: 初值 null 區分「未載入」與「載入後 0 個」，避免 LocationPickerMap
+  // 用 Tokyo fallback initialCenter mount 後被鎖死。
+  const [destinations, setDestinations] = useState<TripDestApi[] | null>(null);
   // TODO v2.31.95: pre-fill from prev entry's coord (currently picker uses
   // destinations fallback). Leaving null for first ship.
   const prevEntryCoord: Coord | null = null;
@@ -302,7 +304,9 @@ export default function AddCustomStopPage() {
         setCurrentDay(days.find((d) => d.dayNum === dayNum) ?? null);
         setDestinations(tripBody?.destinations ?? []);
       } catch {
-        // Non-blocking: picker still works with hard fallback center.
+        // v2.32.1: network fail → 標 [] 讓 fallback chain 走 Tokyo（最後安全網），
+        // 避免 null 永遠卡 render
+        if (!cancelled) setDestinations([]);
       }
     })();
     return () => {
@@ -313,7 +317,7 @@ export default function AddCustomStopPage() {
   const initialCenter = useMemo<Coord>(() => {
     return selectDefaultCenter({
       prevEntry: prevEntryCoord,
-      tripDestinations: destinations
+      tripDestinations: (destinations ?? [])
         .filter((d) => typeof d.lat === 'number' && typeof d.lng === 'number')
         .map((d) => ({ lat: d.lat!, lng: d.lng! })),
     });
@@ -520,12 +524,20 @@ export default function AddCustomStopPage() {
 
               <div className="tp-custom-stop-field">
                 <label className="tp-custom-stop-label">位置 *</label>
-                <LocationPickerMap
-                  initialCenter={initialCenter}
-                  initialZoom={14}
-                  onCoordChange={setPickedCoord}
-                  flyToSignal={flyToSignal}
-                />
+                {/* v2.32.1 fix: destinations 還沒載完先 placeholder，避免地圖鎖
+                    Tokyo fallback center。 */}
+                {destinations === null ? (
+                  <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
+                    載入中⋯
+                  </div>
+                ) : (
+                  <LocationPickerMap
+                    initialCenter={initialCenter}
+                    initialZoom={14}
+                    onCoordChange={setPickedCoord}
+                    flyToSignal={flyToSignal}
+                  />
+                )}
                 <div className="tp-custom-stop-hint">
                   <input
                     type="checkbox"
