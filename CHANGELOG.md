@@ -3,6 +3,38 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.32.3] - 2026-05-19
+
+**Fix: EditEntryPage 時間 row 在 mobile (≤390px viewport) horizontal
+overflow，「離開」card 被切邊。** v2.32.1 QA round 2 發現，pre-existing
+非本 round 引入。
+
+### Root cause
+
+`<input type="time">` 在 mobile browser 有 intrinsic minimum width (~130px)
+含「10:45 AM」AM/PM label。`.tp-edit-entry-time-row` 用
+`grid-template-columns: 1fr auto 1fr`，1fr 預設 `min-width: auto = min-content`
+不允許 column 縮到 input intrinsic width 以下。實測 scrollWidth 374px
+> viewport content area 347px → 「離開」card 溢出 22-27px。
+
+### Fix
+
+`EditEntryPage.tsx` styled CSS：
+
+- `grid-template-columns: 1fr auto 1fr` → `minmax(0, 1fr) auto minmax(0, 1fr)`
+- `.tp-edit-entry-time-card` 加 `min-width: 0`
+- `.tp-edit-entry-time-card input` 加 `min-width: 0`
+
+放寬 grid/flex default min-content limit，allow column 縮到 intrinsic
+width 以下。Input 寬度跟著 column 縮，AM/PM 可能 truncate 顯示「···」
+但 click 後 native picker 仍可選；trade-off 比 overflow 切邊好。
+
+### Tests
+
+`tests/unit/edit-entry-time-row-overflow.test.ts` 4 個 source-grep
+regression test（minmax / card min-width / input min-width / 舊
+hardcoded gone）。
+
 ## [2.32.2] - 2026-05-19
 
 **Fix: AddStopPage tab 初值從 URL param 讀取。** v2.32.1 QA 發現
