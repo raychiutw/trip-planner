@@ -1178,13 +1178,13 @@ export default function TripsListPage() {
         backLabel="返回行程列表"
         actions={effectiveSelectedId && (
           <>
-            {/* v2.31.99：「新增景點」入口取代 v2.31.85 的探索 icon — 在 trip 詳細頁
-                user 想加景點時 1-click 進 AddStopPage（day 在頁內 chip row 選）。
-                探索仍可由「收藏」tab TitleBar 入口進。 */}
+            {/* v2.32.0：「新增景點」入口改 navigate /add-entry（EditEntryPage 形狀 +
+                day 下拉），取代 v2.31.99 直接進 /add-stop。/add-stop 仍是 backward-
+                compat 直連 URL（bulk add 用），但新 entry-creation 主流程走 /add-entry。 */}
             <button
               type="button"
               className="tp-titlebar-action"
-              onClick={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/add-stop`)}
+              onClick={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/add-entry`)}
               aria-label="新增景點"
               title="新增景點"
               data-testid="trip-add-stop-trigger"
