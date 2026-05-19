@@ -26,6 +26,19 @@ import { regionToApiParam } from '../lib/maps/region';
 import { mapNominatimCategory } from '../lib/poiCategory';
 import type { PoiFavorite } from '../types/api';
 import type { PoiSearchResult } from '../types/poi';
+// v2.31.98: 自訂 tab — 同 AddStopPage 共用 CustomPoiForm shared component。
+import { CustomPoiForm, type CustomPoiCoord } from '../components/trip/CustomPoiForm';
+import {
+  selectDefaultCenter,
+  type Coord as PickerCoord,
+} from '../lib/locationPicker';
+
+interface TripDestApiLite {
+  destOrder: number;
+  name: string;
+  lat?: number | null;
+  lng?: number | null;
+}
 
 const SCOPED_STYLES = `
 .tp-change-poi-page-shell {
@@ -464,7 +477,7 @@ const SCOPED_STYLES = `
 }
 `;
 
-type Tab = 'search' | 'favorites';
+type Tab = 'search' | 'favorites' | 'custom';
 type PoiCardTone = 'warm' | 'cool' | 'ocean' | 'amber';
 type ChangePoiCategory = 'all' | 'attraction' | 'food' | 'hotel' | 'shopping';
 
@@ -546,7 +559,8 @@ export default function ChangePoiPage() {
   // of raw window.location.search which doesn't re-render on client-side route changes.
   const [searchParams, setSearchParams] = useSearchParams();
   const mode: 'master' | 'alternate' = searchParams.get('mode') === 'alternate' ? 'alternate' : 'master';
-  const tab: Tab = searchParams.get('tab') === 'favorites' ? 'favorites' : 'search';
+  const rawTab = searchParams.get('tab');
+  const tab: Tab = rawTab === 'favorites' ? 'favorites' : rawTab === 'custom' ? 'custom' : 'search';
   const pageTitle = mode === 'alternate' ? '加入備選景點' : '置換景點';
   const submitLabel = mode === 'alternate' ? '加為備選' : '置換景點';
 
@@ -564,6 +578,13 @@ export default function ChangePoiPage() {
   // STALE_ENTRY instead of silently overwriting.
   const [entryPoisVersion, setEntryPoisVersion] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // v2.31.98: 自訂 tab state（同 AddStopPage 模式）。
+  const [customTitle, setCustomTitle] = useState('');
+  const [customCoord, setCustomCoord] = useState<CustomPoiCoord | null>(null);
+  const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
+  const [customError, setCustomError] = useState<string | null>(null);
+  const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[]>([]);
 
   const { results: searchResults, searching } = usePoiSearch({
     enabled: tab === 'search',
@@ -634,8 +655,76 @@ export default function ChangePoiPage() {
     return () => { cancelled = true; };
   }, [tripId, entryId]);
 
+  // v2.31.98: 自訂 tab map default-center fallback chain 從 trip destinations 取
+  useEffect(() => {
+    if (!tripId || tab !== 'custom') return;
+    let cancelled = false;
+    apiFetch<{ destinations?: TripDestApiLite[] }>(`/trips/${encodeURIComponent(tripId)}`)
+      .then((data) => {
+        if (cancelled) return;
+        setCustomDestinations(data?.destinations ?? []);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [tripId, tab]);
+
+  const customInitialCenter = useMemo<PickerCoord>(() => {
+    return selectDefaultCenter({
+      prevEntry: null,
+      tripDestinations: customDestinations
+        .filter((d) => typeof d.lat === 'number' && typeof d.lng === 'number')
+        .map((d) => ({ lat: d.lat as number, lng: d.lng as number })),
+    });
+  }, [customDestinations]);
+
   const handleSubmit = useCallback(async () => {
-    if (!selected || !tripId || !Number.isInteger(entryId) || submitting) return;
+    if (!tripId || !Number.isInteger(entryId) || submitting) return;
+    // v2.31.98: custom tab 走自己的 payload 構造（title + coord + source: 'custom'），
+    // search/favorites tab 仍走 selected POI 路徑。
+    if (tab === 'custom') {
+      const title = customTitle.trim();
+      if (!title) { setCustomError('請輸入標題'); return; }
+      if (!customCoord) { setCustomError('請在地圖上選擇位置'); return; }
+      setSubmitting(true);
+      setError(null);
+      try {
+        const occ = entryPoisVersion != null ? { entryPoisVersion } : {};
+        const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', ...occ };
+        const endpoint = mode === 'alternate'
+          ? `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates`
+          : `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/poi-id`;
+        const res = await apiFetchRaw(endpoint, {
+          method: mode === 'alternate' ? 'POST' : 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          if (res.status === 409) {
+            const code = parseErrorCode(text);
+            if (code === 'DUPLICATE_POI') throw new Error('此景點已存在於這個停留點');
+            throw new Error('資料已被其他操作更新，請重新整理');
+          }
+          throw new Error(`${mode === 'alternate' ? '加備選' : '置換'}失敗 (${res.status}): ${text.slice(0, 200)}`);
+        }
+        if (mode === 'master') {
+          void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, { method: 'POST' }).catch(() => undefined);
+        }
+        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
+        navigate(
+          mode === 'alternate'
+            ? `/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`
+            : `/trips?selected=${encodeURIComponent(tripId)}`,
+          { replace: true },
+        );
+        return;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '失敗');
+        setSubmitting(false);
+        return;
+      }
+    }
+    if (!selected) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -697,18 +786,23 @@ export default function ChangePoiPage() {
       setError(err instanceof Error ? err.message : '置換景點失敗');
       setSubmitting(false);
     }
-  }, [selected, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion]);
+  }, [selected, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord]);
+
+  // v2.31.98: custom tab submit 啟動條件不同（要 title + coord，不要 selected）
+  const submitDisabled = tab === 'custom'
+    ? !customTitle.trim() || !customCoord || submitting
+    : !selected || submitting;
 
   const titleBarActions = useMemo(() => (
     <TitleBarPrimaryAction
       label={submitLabel}
       busyLabel="處理中⋯"
       busy={submitting}
-      disabled={!selected}
+      disabled={submitDisabled}
       onClick={() => void handleSubmit()}
       testId="change-poi-titlebar-submit"
     />
-  ), [handleSubmit, selected, submitLabel, submitting]);
+  ), [handleSubmit, submitDisabled, submitLabel, submitting]);
 
   const categoryFilter = useMemo(() => (
     <div className="tp-change-poi-subtabs" role="group" aria-label="景點類別">
@@ -752,6 +846,16 @@ export default function ChangePoiPage() {
           data-testid="change-poi-tab-favorites"
         >
           收藏
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'custom'}
+          className={`tp-change-poi-tab ${tab === 'custom' ? 'is-active' : ''}`}
+          onClick={() => handleTabChange('custom')}
+          data-testid="change-poi-tab-custom"
+        >
+          自訂
         </button>
       </div>
 
@@ -969,12 +1073,29 @@ export default function ChangePoiPage() {
             )}
           </>
         )}
+
+        {tab === 'custom' && (
+          <CustomPoiForm
+            title={customTitle}
+            onTitleChange={(v) => { setCustomTitle(v); setCustomError(null); }}
+            coord={customCoord}
+            onCoordChange={setCustomCoord}
+            hintConfirmed={customHintConfirmed}
+            onHintConfirmedChange={setCustomHintConfirmed}
+            initialCenter={customInitialCenter}
+            error={customError}
+            testIdPrefix="change-poi-custom"
+          />
+        )}
       </main>
 
       <div className="tp-page-bottom-bar">
         <span className="tp-change-poi-counter" data-testid="change-poi-counter">
-          已選 <strong>{selected ? 1 : 0}</strong> 個
-          {selected ? ` · ${selected.name}` : ''}
+          {tab === 'custom' ? (
+            <>已選 <strong>{customTitle.trim() && customCoord ? 1 : 0}</strong> 個{customTitle.trim() ? ` · ${customTitle.trim()}` : ''}</>
+          ) : (
+            <>已選 <strong>{selected ? 1 : 0}</strong> 個{selected ? ` · ${selected.name}` : ''}</>
+          )}
           {error && <span className="tp-change-poi-error" role="alert">{error}</span>}
         </span>
         <div className="tp-change-poi-actions">
@@ -990,7 +1111,7 @@ export default function ChangePoiPage() {
           <button
             type="button"
             className="tp-change-poi-btn tp-change-poi-btn-confirm"
-            disabled={!selected || submitting}
+            disabled={submitDisabled}
             onClick={() => void handleSubmit()}
             data-testid="change-poi-submit"
           >
@@ -1020,8 +1141,14 @@ export default function ChangePoiPage() {
     selected,
     submitting,
     submitLabel,
+    submitDisabled,
     tab,
     titleBarActions,
+    customTitle,
+    customCoord,
+    customHintConfirmed,
+    customError,
+    customInitialCenter,
   ]);
 
   return (
