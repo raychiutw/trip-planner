@@ -1178,16 +1178,19 @@ export default function TripsListPage() {
         backLabel="返回行程列表"
         actions={effectiveSelectedId && (
           <>
-            {/* v2.31.85：探索 icon-only（拿掉中文 label），桌機只剩 icon + tooltip */}
+            {/* v2.31.99：「新增景點」入口取代 v2.31.85 的探索 icon — 在 trip 詳細頁
+                user 想加景點時 1-click 進 AddStopPage（day 在頁內 chip row 選）。
+                探索仍可由「收藏」tab TitleBar 入口進。 */}
             <button
               type="button"
               className="tp-titlebar-action"
-              onClick={() => navigate('/explore')}
-              aria-label="探索"
-              title="探索"
-              data-testid="trip-explore-trigger"
+              onClick={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/add-stop`)}
+              aria-label="新增景點"
+              title="新增景點"
+              data-testid="trip-add-stop-trigger"
             >
-              <Icon name="search" />
+              <Icon name="plus" />
+              <span className="tp-titlebar-action-label">新增景點</span>
             </button>
             {/* v2.31.89：切換行程改 dropdown picker（對齊 ChatPage TitleBar trip picker） — swap-horiz + chevron ▾，click 開 dropdown 列 trips */}
             {visibleTrips.length > 0 && (
