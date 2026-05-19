@@ -24,9 +24,9 @@ describe('TripsListPage — trip header「新增景點」入口取代探索 icon
     expect(TRIPS_LIST_SRC).not.toContain('trip-explore-trigger');
   });
 
-  it('新增 trip-add-stop-trigger button navigate 到 /trip/:id/add-stop（無 day param）', () => {
+  it('新增 trip-add-stop-trigger button navigate 到 /trip/:id/add-entry（v2.32.0 改 /add-entry）', () => {
     expect(TRIPS_LIST_SRC).toContain('trip-add-stop-trigger');
-    expect(TRIPS_LIST_SRC).toMatch(/navigate\(`\/trip\/\$\{encodeURIComponent\(effectiveSelectedId\)\}\/add-stop`\)/);
+    expect(TRIPS_LIST_SRC).toMatch(/navigate\(`\/trip\/\$\{encodeURIComponent\(effectiveSelectedId\)\}\/add-entry`\)/);
   });
 
   it('button 用 plus icon + 新增景點 label', () => {
