@@ -45,10 +45,8 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { regionToApiParam } from '../lib/maps/region';
 import type { PoiSearchResult } from '../types/poi';
-// v2.31.94: 自訂 tab 加 address typeahead + map pin 機制
-import { LocationPickerMap } from '../components/trip/LocationPickerMap';
-import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete';
-import { useTypeaheadKeyboard } from '../hooks/useTypeaheadKeyboard';
+// v2.31.94/98: 自訂 tab 用 shared <CustomPoiForm> component（同 ChangePoiPage）。
+import { CustomPoiForm } from '../components/trip/CustomPoiForm';
 import {
   selectDefaultCenter,
   isValidCoord as isValidCustomCoord,
@@ -188,220 +186,14 @@ function deriveDayLabel(day: DayApiRow | null, dayNum: number): string {
 }
 
 const SCOPED_STYLES = `
-/* v2.31.94 自訂 tab — address typeahead + LocationPickerMap + hint checkbox */
-.tp-add-stop-custom-typeahead-wrap { position: relative; }
-.tp-add-stop-custom-typeahead-list {
-  margin-top: 4px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
-}
-.tp-add-stop-custom-typeahead-item {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border);
-  cursor: pointer;
-  background: none;
-  border-left: none;
-  border-right: none;
-  border-top: none;
-  width: 100%;
-  text-align: left;
-  color: var(--color-foreground);
-  font: inherit;
-}
-.tp-add-stop-custom-typeahead-item:last-child { border-bottom: none; }
-.tp-add-stop-custom-typeahead-item:hover,
-.tp-add-stop-custom-typeahead-item:focus-visible,
-.tp-add-stop-custom-typeahead-item.is-focused {
-  background: var(--color-accent-subtle);
-  outline: none;
-}
-.tp-add-stop-custom-typeahead-main {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-foreground);
-}
-.tp-add-stop-custom-typeahead-sub {
-  font-size: 13px;
-  color: var(--color-muted);
-  margin-top: 2px;
-}
-.tp-custom-picker-wrap {
-  position: relative;
-  width: 100%;
-  height: 280px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
-}
-.tp-custom-picker-map {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.tp-custom-picker-map:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: -3px;
-}
-.tp-custom-picker-pin {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -100%);
-  width: 32px;
-  height: 40px;
-  pointer-events: none;
-  filter: drop-shadow(0 2px 4px rgba(42, 31, 24, 0.25));
-  z-index: 5;
-}
-.tp-custom-picker-pin svg { width: 100%; height: 100%; display: block; }
-.tp-custom-picker-coord {
-  position: absolute;
-  left: 8px;
-  top: 8px;
-  font-size: var(--font-size-caption2);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-foreground);
-  background: rgba(255, 251, 245, 0.92);
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
-  z-index: 6;
-}
-.tp-custom-picker-error {
-  padding: 12px 14px;
-  background: var(--color-destructive-bg);
-  color: var(--color-destructive);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  text-align: center;
-}
-.tp-add-stop-custom-hint {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  background: var(--color-accent-subtle);
-  border: 1px solid var(--color-accent-bg);
-  border-radius: var(--radius-md);
-  margin-top: 12px;
-}
-.tp-add-stop-custom-hint-checkbox {
-  appearance: none;
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--color-line-strong);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  position: relative;
-  flex-shrink: 0;
-  background: var(--color-background);
-  margin: 0;
-}
-.tp-add-stop-custom-hint-checkbox:checked {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-}
-.tp-add-stop-custom-hint-checkbox:checked::after {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 5px;
-  height: 10px;
-  border: solid var(--color-accent-foreground);
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-.tp-add-stop-custom-hint-text {
-  font-size: 14px;
-  color: var(--color-foreground);
-  line-height: 1.4;
-  cursor: pointer;
-}
-.tp-add-stop-custom-hint-text strong { font-weight: 600; }
-
-/* v2.31.95 — desktop two-pane layout per mockup C (desktop-inline.html):
-   ≥1024px: 380px form pane left / 1fr map pane right.
-   <1024px: stacked single-column (mobile redirects to fullpage route via
-   useEffect 上方，這裡只是 fallback responsive). */
-.tp-add-stop-custom-twopane {
-  /* override .tp-add-stop-form gap on desktop two-pane */
-  gap: 0;
-}
-.tp-add-stop-custom-form-pane {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.tp-add-stop-custom-map-pane {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.tp-add-stop-custom-map-pane-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.tp-add-stop-custom-map-pane-title {
-  font-size: var(--font-size-callout);
-  font-weight: 700;
-  color: var(--color-foreground);
-}
-.tp-add-stop-custom-map-pane-coord {
-  font-size: var(--font-size-caption);
-  color: var(--color-muted);
-  font-variant-numeric: tabular-nums;
-}
-.tp-add-stop-custom-sidehelp {
-  font-size: var(--font-size-footnote);
-  color: var(--color-muted);
-  padding: 12px 14px;
-  background: var(--color-accent-subtle);
-  border-radius: var(--radius-md);
-  line-height: 1.5;
-}
-.tp-add-stop-custom-sidehelp-title {
-  font-weight: 700;
-  color: var(--color-foreground);
-  margin-bottom: 4px;
-}
+/* v2.31.98: 自訂 tab CSS 全搬到 <CustomPoiForm>。下方 :has() rule 留著，讓
+   桌機切到自訂 tab 時放寬 .tp-add-stop-body max-width 720→1024px，
+   給 380 + map 兩 pane 排得開（其他 tab 仍 720px 不變）。 */
 @media (min-width: 1024px) {
-  /* allow custom-tab body to expand beyond 720px so 380+map fits */
-  .tp-add-stop-body:has(.tp-add-stop-custom-twopane) {
+  .tp-add-stop-body:has(.tp-custom-poi-form-twopane) {
     max-width: 1024px;
     padding-left: 0;
     padding-right: 0;
-  }
-  /* compound selector raises specificity above .tp-add-stop-form (defined
-     later in the stylesheet with display:flex) so grid actually wins */
-  .tp-add-stop-form.tp-add-stop-custom-twopane {
-    display: grid;
-    grid-template-columns: 380px 1fr;
-    min-height: 540px;
-    column-gap: 0;
-  }
-  .tp-add-stop-custom-form-pane {
-    padding: 20px 24px;
-    border-right: 1px solid var(--color-border);
-    background: var(--color-background);
-    overflow-y: auto;
-  }
-  .tp-add-stop-custom-map-pane {
-    padding: 20px 24px;
-    background: var(--color-secondary);
-  }
-  .tp-add-stop-custom-map-pane .tp-custom-picker-wrap {
-    flex: 1;
-    min-height: 380px;
-    height: auto;
   }
 }
 
@@ -873,7 +665,6 @@ export default function AddStopPage() {
   const [customError, setCustomError] = useState<string | null>(null);
   // v2.31.94: 自訂 tab 新增地址 typeahead + map pin 機制，確保 entry 一定有 lat/lng
   const [customCoord, setCustomCoord] = useState<CustomCoord | null>(null);
-  const [customFlyToSignal, setCustomFlyToSignal] = useState<{ coord: CustomCoord; zoom?: number } | null>(null);
   const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
   const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[]>([]);
 
@@ -986,10 +777,8 @@ export default function AddStopPage() {
     ? !submitting && !!customTitle.trim() && !!customCoord
     : totalSelected > 0 && !submitting;
 
-  // v2.31.94: usePlacesAutocomplete hook 給自訂 tab address typeahead 用
-  const customTypeahead = usePlacesAutocomplete();
-
-  // 預設地圖中心 fallback chain：trip destinations → Tokyo Station hard fallback
+  // v2.31.98: 自訂 tab typeahead + map handlers 移進 CustomPoiForm component。
+  // 父層只負責 fallback center 計算（依賴 trip destinations）。
   const customInitialCenter = useMemo<CustomCoord>(() => {
     return selectDefaultCenter({
       prevEntry: null,
@@ -998,31 +787,6 @@ export default function AddStopPage() {
         .map((d) => ({ lat: d.lat as number, lng: d.lng as number })),
     });
   }, [customDestinations]);
-
-  const handleCustomPickSuggestion = useCallback(
-    async (placeId: string) => {
-      const closingToken = customTypeahead.pickSuggestion(placeId);
-      try {
-        const qs = new URLSearchParams({ placeId });
-        if (closingToken) qs.set('sessionToken', closingToken);
-        const res = await apiFetchRaw(`/places/resolve?${qs.toString()}`);
-        if (!res.ok) return;
-        const data = (await res.json()) as { lat: number; lng: number };
-        if (!isValidCustomCoord({ lat: data.lat, lng: data.lng })) return;
-        setCustomFlyToSignal({ coord: { lat: data.lat, lng: data.lng }, zoom: 15 });
-      } catch {
-        // silent — user can still drag map manually
-      }
-    },
-    [customTypeahead],
-  );
-
-  // v2.31.94 a11y: ARIA combobox keyboard nav for AddStopPage 自訂 tab typeahead.
-  const customTypeaheadKb = useTypeaheadKeyboard({
-    listId: 'add-stop-custom-suggestions',
-    options: customTypeahead.predictions,
-    onPick: (p) => void handleCustomPickSuggestion(p.placeId),
-  });
 
   const handleConfirm = useCallback(async () => {
     if (submitting || !tripId || !Number.isFinite(dayNum)) return;
@@ -1420,151 +1184,59 @@ export default function AddStopPage() {
               )}
 
               {tab === 'custom' && (
-                <form
-                  className="tp-add-stop-form tp-add-stop-custom-twopane"
-                  onSubmit={(e) => { e.preventDefault(); void handleConfirm(); }}
-                  data-testid="add-stop-custom-twopane"
-                >
-                  {/* v2.31.95: two-pane layout per desktop-inline.html mockup C —
-                       form 左 / map 右 (≥1024px) */}
-                  <div className="tp-add-stop-custom-form-pane">
-                    <div className="tp-add-stop-form-row is-full">
-                      <div className="tp-add-stop-form-field">
-                        <label htmlFor="add-stop-custom-title">標題 *</label>
-                        <input
-                          id="add-stop-custom-title"
-                          type="text"
-                          value={customTitle}
-                          onChange={(e) => { setCustomTitle(e.target.value); setCustomError(null); }}
-                          placeholder="輸入景點名稱（例：心型岩看夕陽）"
-                          autoFocus
-                          data-testid="add-stop-custom-title"
-                        />
-                        {customError && (
-                          <div className="tp-add-stop-form-row-error" data-testid="add-stop-custom-error">{customError}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="tp-add-stop-form-row is-full">
-                      <div className="tp-add-stop-form-field">
-                        <label htmlFor="add-stop-custom-address">地址或地標</label>
-                        <div className="tp-add-stop-custom-typeahead-wrap">
-                          <input
-                            id="add-stop-custom-address"
-                            type="text"
-                            value={customTypeahead.query}
-                            onChange={(e) => customTypeahead.setQuery(e.target.value)}
-                            placeholder="輸入地址縮放地圖（選填）"
-                            autoComplete="off"
-                            data-testid="add-stop-custom-address-typeahead"
-                            {...customTypeaheadKb.inputProps}
-                          />
-                          {customTypeahead.predictions.length > 0 && (
-                            <div
-                              id="add-stop-custom-suggestions"
-                              className="tp-add-stop-custom-typeahead-list"
-                              role="listbox"
-                            >
-                              {customTypeahead.predictions.map((p, i) => {
-                                const focused = customTypeaheadKb.focusedIndex === i;
-                                return (
-                                  <button
-                                    key={p.placeId}
-                                    id={customTypeaheadKb.getOptionId(i)}
-                                    type="button"
-                                    role="option"
-                                    aria-selected={focused}
-                                    className={`tp-add-stop-custom-typeahead-item${focused ? ' is-focused' : ''}`}
-                                    onClick={() => void handleCustomPickSuggestion(p.placeId)}
-                                    data-testid={`add-stop-custom-suggestion-${p.placeId}`}
-                                  >
-                                    <div className="tp-add-stop-custom-typeahead-main">{p.primaryText}</div>
-                                    {p.secondaryText && (
-                                      <div className="tp-add-stop-custom-typeahead-sub">{p.secondaryText}</div>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
+                <form onSubmit={(e) => { e.preventDefault(); void handleConfirm(); }}>
+                  <CustomPoiForm
+                    title={customTitle}
+                    onTitleChange={(v) => { setCustomTitle(v); setCustomError(null); }}
+                    coord={customCoord}
+                    onCoordChange={setCustomCoord}
+                    hintConfirmed={customHintConfirmed}
+                    onHintConfirmedChange={setCustomHintConfirmed}
+                    initialCenter={customInitialCenter}
+                    error={customError}
+                    testIdPrefix="add-stop-custom"
+                    extraRows={
+                      <>
+                        <div className="tp-custom-poi-form-row">
+                          <div className="tp-custom-poi-form-field">
+                            <label htmlFor="add-stop-custom-time">開始時間</label>
+                            <input
+                              id="add-stop-custom-time"
+                              type="text"
+                              value={customTime}
+                              onChange={(e) => setCustomTime(e.target.value)}
+                              placeholder={`Day ${String(dayNum).padStart(2, '0')} · 17:00`}
+                              data-testid="add-stop-custom-time"
+                            />
+                          </div>
+                          <div className="tp-custom-poi-form-field">
+                            <label htmlFor="add-stop-custom-duration">預估停留</label>
+                            <input
+                              id="add-stop-custom-duration"
+                              type="number"
+                              inputMode="numeric"
+                              value={customDuration}
+                              onChange={(e) => setCustomDuration(e.target.value)}
+                              placeholder="90"
+                              data-testid="add-stop-custom-duration"
+                            />
+                          </div>
                         </div>
-                        <div className="tp-add-stop-form-helper">
-                          選填 — 縮放地圖到大概區域。最終 lat/lng 以地圖中心為準。
+                        <div className="tp-custom-poi-form-row is-full">
+                          <div className="tp-custom-poi-form-field">
+                            <label htmlFor="add-stop-custom-note">備註（選填）</label>
+                            <textarea
+                              id="add-stop-custom-note"
+                              value={customNote}
+                              onChange={(e) => setCustomNote(e.target.value)}
+                              placeholder="想看夕陽 · 推薦避開週末"
+                              data-testid="add-stop-custom-note"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="tp-add-stop-form-row">
-                      <div className="tp-add-stop-form-field">
-                        <label htmlFor="add-stop-custom-time">開始時間</label>
-                        <input
-                          id="add-stop-custom-time"
-                          type="text"
-                          value={customTime}
-                          onChange={(e) => setCustomTime(e.target.value)}
-                          placeholder={`Day ${String(dayNum).padStart(2, '0')} · 17:00`}
-                          data-testid="add-stop-custom-time"
-                        />
-                      </div>
-                      <div className="tp-add-stop-form-field">
-                        <label htmlFor="add-stop-custom-duration">預估停留</label>
-                        <input
-                          id="add-stop-custom-duration"
-                          type="number"
-                          inputMode="numeric"
-                          value={customDuration}
-                          onChange={(e) => setCustomDuration(e.target.value)}
-                          placeholder="90"
-                          data-testid="add-stop-custom-duration"
-                        />
-                      </div>
-                    </div>
-                    <div className="tp-add-stop-form-row is-full">
-                      <div className="tp-add-stop-form-field">
-                        <label htmlFor="add-stop-custom-note">備註（選填）</label>
-                        <textarea
-                          id="add-stop-custom-note"
-                          value={customNote}
-                          onChange={(e) => setCustomNote(e.target.value)}
-                          placeholder="想看夕陽 · 推薦避開週末"
-                          data-testid="add-stop-custom-note"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="tp-add-stop-custom-map-pane" data-testid="add-stop-custom-map-pane">
-                    <div className="tp-add-stop-custom-map-pane-head">
-                      <span className="tp-add-stop-custom-map-pane-title">在地圖上選位置</span>
-                      <span className="tp-add-stop-custom-map-pane-coord" data-testid="add-stop-custom-coord-readout">
-                        {customCoord
-                          ? `${customCoord.lat.toFixed(4)}°N ${customCoord.lng.toFixed(4)}°E`
-                          : '—'}
-                      </span>
-                    </div>
-                    <LocationPickerMap
-                      initialCenter={customInitialCenter}
-                      initialZoom={14}
-                      onCoordChange={setCustomCoord}
-                      flyToSignal={customFlyToSignal}
-                    />
-                    <div className="tp-add-stop-custom-hint">
-                      <input
-                        type="checkbox"
-                        id="add-stop-custom-hint"
-                        className="tp-add-stop-custom-hint-checkbox"
-                        checked={customHintConfirmed}
-                        onChange={(e) => setCustomHintConfirmed(e.target.checked)}
-                        data-testid="add-stop-custom-hint"
-                      />
-                      <label htmlFor="add-stop-custom-hint" className="tp-add-stop-custom-hint-text">
-                        <strong>已調整到正確位置</strong> — 拖地圖或用方向鍵微調
-                      </label>
-                    </div>
-                    <div className="tp-add-stop-custom-sidehelp">
-                      <div className="tp-add-stop-custom-sidehelp-title">小提示</div>
-                      朋友家 / 隱藏小店地址常不精確 — 拖 pin 到實際位置，timeline 才會顯正確車程。鍵盤可用 ↑↓←→ 微調。
-                    </div>
-                  </div>
+                      </>
+                    }
+                  />
                 </form>
               )}
             </div>

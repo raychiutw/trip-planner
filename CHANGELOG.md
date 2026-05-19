@@ -3,6 +3,42 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.31.98] - 2026-05-19
+
+**Feat: ChangePoiPage 加「自訂」tab — alternate / master 模式都能用地圖 pin 新增景點。** User feedback：「我要知道如何進去自訂景點 我找不到功能在哪」+「`/stop/420/change-poi?mode=alternate&tab=search` 這頁增加入口」。
+
+### Context
+
+v2.31.94 上線「自訂景點」feature，但**只在 AddStopPage（建立新 entry）有入口**。ChangePoiPage（置換景點 + 加為備選）只有「搜尋 / 收藏」tab，加備選的場景無法用 map pin custom POI。Symmetry gap。
+
+### Added
+
+- **新 shared component** `src/components/trip/CustomPoiForm.tsx` — 抽出 title + address typeahead + LocationPickerMap + hint checkbox + sidehelp 共用 UI/邏輯，跨 AddStopPage + ChangePoiPage（往後 AddCustomStopPage 也可遷移）
+- **ChangePoiPage 自訂 tab** — `?tab=custom` URL state，submit:
+  - `mode=alternate` → `POST /alternates` with `{name, lat, lng, source: 'custom'}`
+  - `mode=master` (預設) → `PUT /poi-id` with same payload
+- 新 testid: `change-poi-tab-custom` / `change-poi-custom-twopane` / `change-poi-custom-title` / `change-poi-custom-coord-readout` 等（共用 `testIdPrefix="change-poi-custom"` 命名空間）
+
+### Changed
+
+- `AddStopPage.tsx` 自訂 tab JSX 從 inline 改 `<CustomPoiForm testIdPrefix="add-stop-custom" extraRows={time/duration/note}>`，~200 行重複 JSX 消失
+- `AddStopPage.tsx` SCOPED_STYLES 大幅減少 — `.tp-add-stop-custom-*` / `.tp-custom-picker-*` / hint / sidehelp / two-pane grid 全搬進 `CustomPoiForm`
+- `LocationPickerMap` 的 base CSS 也搬進 `CustomPoiForm` SCOPED_STYLES（之前依賴 AddStopPage 載入才有樣式 — ChangePoiPage 用不了 fix）
+- ChangePoiPage `Tab` type extends 為 `'search' | 'favorites' | 'custom'`，`submitDisabled` gating 支援 custom tab（title + coord 必填）
+
+### Tests
+
+- 新 16 個 source-grep test `tests/unit/change-poi-custom-tab.test.ts` — Tab type / button / handleSubmit branch / shared component contract / 兩 pane media query
+- 既有 254 files / 1960 tests 全綠
+
+### Backend
+
+不動。`/alternates` + `/poi-id` 早已支援 `{name, lat, lng, source}` payload（via `findOrCreatePoi`）。
+
+### Mockup reference
+
+延用 `docs/design-sessions/2026-05-18-add-custom-stop/desktop-inline.html` 兩段式 layout（mockup C 已 APPROVED），ChangePoiPage 自訂 tab 自動繼承。
+
 ## [2.31.97] - 2026-05-19
 
 **Change: daily-check 排程從 09:00 → 06:10。** Ray 想早一點看每日報告。06:10 留 100 min 緩衝給 04:30 google-poi-refresh 完成 50 POI × 1.5s sleep + Place Details API 後再稽核（實測 refresh 跑 ~3-5 min，緩衝充足）。
