@@ -567,11 +567,20 @@ export default function ChangePoiPage() {
   // round 4 fix M5: use react-router's useSearchParams (reactive + SSR-safe) instead
   // of raw window.location.search which doesn't re-render on client-side route changes.
   const [searchParams, setSearchParams] = useSearchParams();
-  const mode: 'master' | 'alternate' = searchParams.get('mode') === 'alternate' ? 'alternate' : 'master';
+  // v2.32.0: mode=new → 從 AddEntryPage 過來「新增 entry」流程，submit 走
+  // POST /trips/:id/days/:N/entries 而不是 PUT /poi-id 或 POST /alternates。
+  // dayNum 從 ?day=N param 取得。完成後 navigate /stop/:newId/edit。
+  const rawMode = searchParams.get('mode');
+  const mode: 'master' | 'alternate' | 'new' =
+    rawMode === 'alternate' ? 'alternate' : rawMode === 'new' ? 'new' : 'master';
+  const newDayParam = searchParams.get('day');
+  const newDayNum = newDayParam ? parseInt(newDayParam, 10) : NaN;
   const rawTab = searchParams.get('tab');
   const tab: Tab = rawTab === 'favorites' ? 'favorites' : rawTab === 'custom' ? 'custom' : 'search';
-  const pageTitle = mode === 'alternate' ? '加入備選景點' : '置換景點';
-  const submitLabel = mode === 'alternate' ? '加為備選' : '置換景點';
+  const pageTitle =
+    mode === 'new' ? '新增景點' : mode === 'alternate' ? '加入備選景點' : '置換景點';
+  const submitLabel =
+    mode === 'new' ? '加入行程' : mode === 'alternate' ? '加為備選' : '置換景點';
 
   const [query, setQuery] = useState('');
   const [region, setRegion] = useState<string>('全部地區');
@@ -651,6 +660,9 @@ export default function ChangePoiPage() {
   }, [tab, favorites]);
 
   useEffect(() => {
+    // v2.32.0: mode=new 不對應任何既有 entry，跳過 entryPoisVersion fetch（OCC token
+    // 只在 PUT /poi-id + POST /alternates 用得到）
+    if (mode === 'new') return;
     if (!tripId || !Number.isInteger(entryId)) return;
     let cancelled = false;
     apiFetch<{ entryPoisVersion?: string | number | null }>(
@@ -662,7 +674,7 @@ export default function ChangePoiPage() {
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
-  }, [tripId, entryId]);
+  }, [tripId, entryId, mode]);
 
   // v2.31.98: 自訂 tab map default-center fallback chain 從 trip destinations 取
   useEffect(() => {
@@ -687,7 +699,10 @@ export default function ChangePoiPage() {
   }, [customDestinations]);
 
   const handleSubmit = useCallback(async () => {
-    if (!tripId || !Number.isInteger(entryId) || submitting) return;
+    if (!tripId || submitting) return;
+    // v2.32.0: mode=new 不需要 entryId，但需要 day param；其他 mode 需要 entryId。
+    if (mode !== 'new' && !Number.isInteger(entryId)) return;
+    if (mode === 'new' && !Number.isFinite(newDayNum)) return;
     // v2.31.98: custom tab 走自己的 payload 構造（title + coord + source: 'custom'），
     // search/favorites tab 仍走 selected POI 路徑。
     if (tab === 'custom') {
@@ -697,6 +712,27 @@ export default function ChangePoiPage() {
       setSubmitting(true);
       setError(null);
       try {
+        // v2.32.0: mode=new 走 POST /entries（建立新 entry + master），不需 OCC
+        if (mode === 'new') {
+          const body = { title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom' };
+          const res = await apiFetchRaw(
+            `/trips/${encodeURIComponent(tripId)}/days/${newDayNum}/entries`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+          );
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`新增景點失敗 (${res.status}): ${text.slice(0, 200)}`);
+          }
+          const created = (await res.json()) as { id?: number };
+          void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, { method: 'POST' }).catch(() => undefined);
+          window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
+          if (created.id) {
+            navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
+          } else {
+            navigate(`/trips?selected=${encodeURIComponent(tripId)}`, { replace: true });
+          }
+          return;
+        }
         const occ = entryPoisVersion != null ? { entryPoisVersion } : {};
         const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', ...occ };
         const endpoint = mode === 'alternate'
@@ -737,6 +773,36 @@ export default function ChangePoiPage() {
     setSubmitting(true);
     setError(null);
     try {
+      // v2.32.0: mode=new 走 POST /entries — search/favorites picked POI 改 body shape
+      if (mode === 'new') {
+        const fromFav = selected.source === 'favorite' && selected.poiId;
+        const body = fromFav
+          ? { title: selected.name, poiId: selected.poiId, source: 'favorite' }
+          : {
+              title: selected.name,
+              lat: selected.lat,
+              lng: selected.lng,
+              source: 'google',
+              note: selected.address ?? undefined,
+            };
+        const res = await apiFetchRaw(
+          `/trips/${encodeURIComponent(tripId)}/days/${newDayNum}/entries`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+        );
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`新增景點失敗 (${res.status}): ${text.slice(0, 200)}`);
+        }
+        const created = (await res.json()) as { id?: number };
+        void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, { method: 'POST' }).catch(() => undefined);
+        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
+        if (created.id) {
+          navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
+        } else {
+          navigate(`/trips?selected=${encodeURIComponent(tripId)}`, { replace: true });
+        }
+        return;
+      }
       const occ = entryPoisVersion != null ? { entryPoisVersion } : {};
       if (mode === 'alternate') {
         const body = {
@@ -795,7 +861,7 @@ export default function ChangePoiPage() {
       setError(err instanceof Error ? err.message : '置換景點失敗');
       setSubmitting(false);
     }
-  }, [selected, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord]);
+  }, [selected, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord, newDayNum]);
 
   // v2.31.98: custom tab submit 啟動條件不同（要 title + coord，不要 selected）
   const submitDisabled = tab === 'custom'

@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.32.0] - 2026-05-19
+
+**Feat: 新增景點 wizard — EditEntryPage-style page + day 下拉 + 3 picker buttons → ChangePoiPage mode=new POST entries → redirect /edit。** User feedback：「頁面不正確 是 類似 .../stop/435/edit 但增加選擇天數下拉,然後相同的增加景點的方式, 第一個景點選完可以選替換, 也可以繼續增加備選以及調整順序」。
+
+### Context
+
+v2.31.99 把「+ 新增景點」入口接 /add-stop（AddStopPage 多選 grid），但 user 期待是 EditEntryPage 形狀 — POI card + 備選 + 時間 + 移動方式 + 備註。本 PR 改寫入口流程：trip header 「+ 新增景點」 button 現改 navigate /add-entry，wizard 主路徑。AddStopPage chip row 仍保留給 direct URL `/add-stop?day=N` (bulk add fallback)。
+
+### Added
+
+- **新 page** `src/pages/AddEntryPage.tsx` — EditEntryPage 形狀的「新增景點」wizard:
+  - Day 下拉 (default 第一天, URL replaceState 切換)
+  - POI placeholder card + 3 picker buttons (搜尋 / 收藏 / 自訂)
+  - Preview greyed 備選 / 時間 / 移動方式 sections (提示完成後可在 EditEntryPage 編輯)
+- **新 route** `/trip/:tripId/add-entry` (in `src/entries/main.tsx`)
+- **ChangePoiPage mode=new branch** — picker UI 不變，submit 走 `POST /trips/:id/days/:N/entries` (而不是 PUT poi-id 或 POST alternates)。完成後 navigate `/trip/:id/stop/:newId/edit` 讓 user 接著加 alternates / 改時間
+- 12 個 v2.32.0 source-grep test `tests/unit/add-entry-page.test.ts`
+
+### Changed
+
+- **TripsListPage trip header** 「+ 新增景點」 button: `/add-stop` → `/add-entry`
+- ChangePoiPage `mode` union: `'master' | 'alternate'` → `'master' | 'alternate' | 'new'`
+- ChangePoiPage `?day=N` param 在 mode=new 下用於 POST entries endpoint path
+- ChangePoiPage entryPoisVersion fetch effect 跳過 mode=new (new entry 沒對應 OCC token)
+
+### Tests
+
+- 12 new source-grep test (file existence / route registration / layout / mode=new branch)
+- v2.31.99 既有 test regex 對齊 /add-entry navigate
+- 全 257 files / 2002 tests pass; tsc clean
+
+### Backend
+
+不動。`/trips/:id/days/:N/entries` POST 早已支援 `{title, lat?, lng?, source?, poiId?}` payload (v2.31.94 + earlier)。
+
 ## [2.31.99] - 2026-05-19
 
 **Feat: trip header「+ 新增景點」按鈕取代探索 icon + AddStopPage day picker chip row。** User feedback：「`/stop/419/edit` 要有新增景點的版本, 取代附圖宏框的放大鏡 icon, 改為 + 號 名稱為新增景點, 新增景點要多可以選擇加入哪天」。
