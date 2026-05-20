@@ -119,11 +119,10 @@ describe('POST /api/trips/:id/days — validation', () => {
   });
 });
 
-describe('DELETE /api/trips/:id/days/:num — middle day cascade', () => {
-  it('刪除中間天，cascade entries + 後續 day_num/date 上移', async () => {
+describe('DELETE /api/trips/:id/days/:num — middle day cascade (v2.33.1: preserve dates)', () => {
+  it('刪除中間天，cascade entries + 後續 day_num 上移；dates 保留（會留 gap）', async () => {
     await seedTrip(db, { id: 'del-mid', days: 5 });
     const d3Id = await getDayId(db, 'del-mid', 3);
-    // Day 3 加 2 個 entries
     await seedEntry(db, d3Id, { title: 'mid-e1', sortOrder: 0 });
     await seedEntry(db, d3Id, { title: 'mid-e2', sortOrder: 1 });
 
@@ -139,17 +138,37 @@ describe('DELETE /api/trips/:id/days/:num — middle day cascade', () => {
     expect(body.ok).toBe(true);
     expect(body.removedEntryCount).toBe(2);
 
-    // DB 確認剩 4 天，day_num 1-4，date 連續 4/1 - 4/4
+    // v2.33.1: 剩 4 天，day_num 1-4，dates 保留（Day 3=5/3 跳過，Day 3 變 5/4 原值）。
+    // 違反 contiguous 但保 user 意圖：「Day 3 那天我刪掉了，不要影響其他天的日期」
     const { results } = await db
       .prepare('SELECT day_num, date FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC')
       .bind('del-mid')
       .all() as { results: Array<{ day_num: number; date: string }> };
     expect(results).toHaveLength(4);
     expect(results.map((r) => r.day_num)).toEqual([1, 2, 3, 4]);
-    expect(results.map((r) => r.date)).toEqual(['2026-04-01', '2026-04-02', '2026-04-03', '2026-04-04']);
-    // 原 day_num=3 entries 已 cascade 刪
+    // dates 不再 contiguous — Day 3 (was 4/3) 已刪，原 Day 4 (4/4) → Day 3，date 保留 4/4
+    expect(results.map((r) => r.date)).toEqual(['2026-04-01', '2026-04-02', '2026-04-04', '2026-04-05']);
     const entryRows = await db.prepare('SELECT id FROM trip_entries WHERE day_id = ?').bind(d3Id).all();
     expect(entryRows.results).toHaveLength(0);
+  });
+
+  it('刪除第一天（prepend / delete-first 對稱）— 剩餘 dates 保留', async () => {
+    await seedTrip(db, { id: 'del-first', days: 3 });
+    // Original: Day 1=4/1, Day 2=4/2, Day 3=4/3
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/del-first/days/1', 'DELETE'),
+      env,
+      auth: mockAuth(),
+      params: { id: 'del-first', num: '1' },
+    });
+    const resp = await callHandler(onRequestDelete, ctx);
+    expect(resp.status).toBe(200);
+    const { results } = await db
+      .prepare('SELECT day_num, date FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC')
+      .bind('del-first')
+      .all() as { results: Array<{ day_num: number; date: string }> };
+    expect(results.map((r) => r.day_num)).toEqual([1, 2]);
+    expect(results.map((r) => r.date)).toEqual(['2026-04-02', '2026-04-03']);
   });
 });
 
