@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>V2 — Counter +/- (mobile inline)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { background: var(--color-secondary); }
+  .device-frame {
+    width: 390px;
+    min-height: 844px;
+    margin: 0 auto;
+    background: var(--color-background);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+    overflow: hidden;
+    position: relative;
+  }
+  /* V2 — pending tail summary list under counter */
+  .tp-edit-days-tail-summary {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: var(--color-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  .tp-edit-days-tail-summary-label {
+    font-size: var(--font-size-caption);
+    color: var(--color-muted);
+    margin: 0 0 8px;
+  }
+  .tp-edit-days-tail-summary-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0;
+    font-size: var(--font-size-footnote);
+  }
+  .tp-edit-days-tail-summary-row + .tp-edit-days-tail-summary-row {
+    border-top: 1px dashed var(--color-border);
+  }
+  .tp-edit-days-tail-num {
+    display: inline-grid; place-items: center;
+    width: 24px; height: 24px;
+    background: var(--color-accent-subtle);
+    color: var(--color-accent-deep);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-caption);
+    font-weight: 700;
+  }
+  .tp-edit-days-tail-meta {
+    flex: 1;
+    color: var(--color-foreground);
+  }
+  .tp-edit-days-tail-meta strong { font-weight: 700; }
+  .tp-edit-days-tail-meta.is-warning { color: var(--color-destructive); }
+</style>
+</head>
+<body>
+
+<div class="device-frame">
+  <div class="tp-edit-page-shell">
+    <!-- TitleBar -->
+    <header class="tp-edit-titlebar">
+      <button class="tp-edit-titlebar-back" aria-label="返回">←</button>
+      <h1 class="tp-edit-titlebar-title">編輯行程</h1>
+      <button class="tp-edit-titlebar-save" aria-label="儲存">✓</button>
+    </header>
+
+    <form class="tp-edit-page-form">
+      <p class="tp-edit-page-sub">修改行程基本設定 + 目的地。日期改動會直接 cascade。</p>
+
+      <!-- 目的地 -->
+      <div class="tp-edit-section">
+        <label class="tp-edit-section-label">目的地</label>
+        <div class="tp-edit-dest-row">
+          <span class="tp-edit-dest-handle">⇅</span>
+          <span class="tp-edit-dest-num">1</span>
+          <span class="tp-edit-dest-name">沖繩</span>
+          <button class="tp-edit-dest-remove" aria-label="移除目的地">✕</button>
+        </div>
+        <button type="button" class="tp-edit-dest-add-btn">
+          <span>+</span> 加入目的地
+        </button>
+      </div>
+
+      <!-- 天數管理 (NEW) -->
+      <div class="tp-edit-section">
+        <label class="tp-edit-section-label">行程天數</label>
+        <div class="tp-edit-days-counter">
+          <div>
+            <div class="tp-edit-days-counter-label">天數</div>
+            <div class="tp-edit-days-counter-range">7/29 – 8/2 · 共 5 天</div>
+          </div>
+          <div class="tp-edit-days-counter-controls">
+            <button type="button" class="tp-edit-days-counter-btn is-destructive" id="btn-minus" aria-label="減少 1 天">−</button>
+            <div class="tp-edit-days-counter-value" id="counter">5</div>
+            <button type="button" class="tp-edit-days-counter-btn" id="btn-plus" aria-label="增加 1 天">+</button>
+          </div>
+        </div>
+        <p class="tp-edit-section-helper" style="margin-top: 8px;">
+          只能從尾巴增加 / 移除。<strong>−</strong> 會嘗試刪除最後一天，若該天有景點需要確認。
+        </p>
+
+        <!-- Pending-remove summary (shown when user clicks − with entries on last day) -->
+        <div class="tp-edit-days-tail-summary" id="tail-summary" style="display:none;">
+          <p class="tp-edit-days-tail-summary-label">將刪除：</p>
+          <div class="tp-edit-days-tail-summary-row">
+            <span class="tp-edit-days-tail-num">5</span>
+            <span class="tp-edit-days-tail-meta is-warning">Day 5 · 8/2（日）· <strong>8 個景點 + 22 km 排程</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 行程名稱 -->
+      <div class="tp-edit-section">
+        <label class="tp-edit-section-label" for="title">行程名稱（選填）</label>
+        <input id="title" class="tp-edit-input" type="text" value="2026 沖繩五日自駕遊行程表">
+      </div>
+
+      <!-- 描述 -->
+      <div class="tp-edit-section">
+        <label class="tp-edit-section-label" for="desc">描述（選填，用於 SEO）</label>
+        <textarea id="desc" class="tp-edit-textarea">2026 沖繩五日自駕遊完整行程表：那霸、北谷美國村、青之洞窟、瀨底海灘、美麗海水族館、古宇利島。含餐廳推薦、地圖導航、預算規劃。</textarea>
+      </div>
+
+      <!-- 顯示語言 -->
+      <div class="tp-edit-section">
+        <label class="tp-edit-section-label" for="lang">顯示語言</label>
+        <select id="lang" class="tp-edit-select">
+          <option>繁體中文（台灣）</option>
+        </select>
+      </div>
+
+    </form>
+
+    <!-- Sticky bottom -->
+    <div class="tp-page-bottom-bar">
+      <div class="tp-edit-actions-publish">
+        <button><span class="dot"></span>草稿</button>
+        <button class="is-active is-published"><span class="dot"></span>上線</button>
+      </div>
+      <div class="tp-edit-actions-bar-cta">
+        <button class="tp-edit-actions-btn-cancel">取消</button>
+        <button class="tp-edit-actions-btn-save">儲存變更</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="tp-confirm-backdrop" id="confirm-modal" style="display:none;">
+  <div class="tp-confirm-modal" role="alertdialog">
+    <h2 class="tp-confirm-title">刪除 Day 5？</h2>
+    <p class="tp-confirm-message">Day 5 是 8/2（日），目前有 8 個景點。確認後將同時刪除這些景點。此操作不可復原。</p>
+    <div class="tp-confirm-actions">
+      <button class="tp-confirm-btn tp-confirm-btn-cancel" onclick="document.getElementById('confirm-modal').style.display='none'">取消</button>
+      <button class="tp-confirm-btn tp-confirm-btn-danger">刪除 Day 5</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('btn-minus').addEventListener('click', () => {
+    document.getElementById('tail-summary').style.display = 'block';
+    document.getElementById('confirm-modal').style.display = 'grid';
+  });
+  document.getElementById('btn-plus').addEventListener('click', () => {
+    const c = document.getElementById('counter');
+    c.textContent = parseInt(c.textContent) + 1;
+  });
+</script>
+
+</body>
+</html>
