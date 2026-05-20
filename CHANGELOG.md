@@ -3,6 +3,67 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.12] - 2026-05-21
+
+**Fix: 全域 input / textarea / select baseline — 確保任何新加 input 自動套
+Terracotta 樣式。** User 要求「Input 也用全域控制 避免遺漏」(v2.33.11 只
+管 date/time)。
+
+### Context
+
+v2.33.11 加了 native date/time input 全域 color-scheme: light 保護。但
+text/email/password/search/number/textarea/select 等仍散落各 page 自己
+scope CSS（`.tp-form-input` / `.tp-new-form-row input` / `.tp-edit-row
+input[type=text]` 等）。新增頁面忘加 page-scoped class → fallback 到
+browser native default（白底藍 focus ring），不符 Tripline 風格。
+
+### Fix
+
+`css/tokens.css @layer base` 加全域 baseline rule，用 `:where()` 把
+specificity 降為 0 讓 page-scoped class 易 override：
+
+```css
+:where(
+  input:not([type=checkbox|radio|file|range|color|button|submit|reset|hidden|image]),
+  textarea, select
+) {
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-secondary);
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: var(--font-size-body);
+  min-height: var(--spacing-tap-min);
+  outline: none;
+  transition: border-color 120ms, box-shadow 120ms, background-color 120ms;
+}
+:where(...):focus {
+  border-color: var(--color-accent);
+  background-color: var(--color-background);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+:where(input[type=checkbox], input[type=radio]) {
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+```
+
+### 涵蓋
+
+- 28+ text-type inputs (text/email/password/search/tel/url/number)
+- 14+ textarea
+- N selects
+- All checkbox/radio (accent-color)
+
+排除 checkbox/radio/file/range/color/button/submit/reset/hidden/image 從
+text-input baseline（這些有自己視覺語意）。
+
+### 不會 regression
+
+`:where()` specificity 0 → 既有 page-scoped class（`.tp-form-input`、
+`.tp-edit-row input[type=text]` 等）100% 仍 override 成功。
+
 ## [2.33.11] - 2026-05-21
 
 **Fix: 全域 native date/time input 在 iOS Safari dark mode 防護。** v2.33.10
