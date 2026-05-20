@@ -384,6 +384,43 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 .tp-edit-day-add-card .plus .svg-icon { width: 14px; height: 14px; }
+
+/* v2.33.7: gap placeholder — 中間刪 day 留 dashed 框，user 點即可加回 */
+.tp-edit-day-gap {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+  padding: 14px 14px;
+  min-height: 56px;
+  border: 1px dashed var(--color-line-strong);
+  background: var(--color-tertiary);
+  color: var(--color-muted);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms, transform 80ms;
+}
+.tp-edit-day-gap:hover:not(:disabled) {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+  color: var(--color-accent-deep);
+}
+.tp-edit-day-gap:active:not(:disabled) { transform: scale(0.98); }
+.tp-edit-day-gap:disabled { opacity: 0.5; cursor: not-allowed; }
+.tp-edit-day-gap .plus {
+  display: inline-grid; place-items: center;
+  width: 22px; height: 22px;
+  background: var(--color-line-strong);
+  color: var(--color-background);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+.tp-edit-day-gap:hover:not(:disabled) .plus {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+.tp-edit-day-gap .plus .svg-icon { width: 12px; height: 12px; }
 `;
 
 interface SortableDestinationRowProps {
@@ -433,7 +470,26 @@ function SortableDestRow({ dest, index, onRemove }: SortableDestinationRowProps)
   );
 }
 
-/** v2.33.3: 從 timeline sum travel.distanceM → rounded km (對齊 DaySection 邏輯) */
+/** v2.33.7: 算兩個 ISO date 之間相差幾天（正整數，可能為 0）。 */
+function daysBetween(d1: string, d2: string): number {
+  const t1 = new Date(d1 + 'T00:00:00Z').getTime();
+  const t2 = new Date(d2 + 'T00:00:00Z').getTime();
+  return Math.round((t2 - t1) / 86_400_000);
+}
+
+/** v2.33.7: 從 YYYY-MM-DD 偏移 N 天，回 YYYY-MM-DD。 */
+function shiftDateByDays(yyyyMmDd: string, delta: number): string {
+  const t = new Date(yyyyMmDd + 'T00:00:00Z').getTime();
+  return new Date(t + delta * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** v2.33.7: chinese weekday 從 ISO date 算出。 */
+function chineseDayOfWeek(yyyyMmDd: string): string {
+  const idx = new Date(yyyyMmDd + 'T00:00:00Z').getUTCDay();
+  return ['日', '一', '二', '三', '四', '五', '六'][idx]!;
+}
+
+/** v2.33.7: 從 timeline sum travel.distanceM → rounded km (對齊 DaySection 邏輯) */
 function computeTotalKm(timeline: unknown): number | null {
   if (!Array.isArray(timeline)) return null;
   let totalM = 0;
@@ -622,6 +678,37 @@ export default function EditTripPage() {
       showToast(position === 'start' ? '已在最前加入一天' : '已在最後加入一天', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : '新增天數失敗', 'error');
+    } finally {
+      setDaysMutating(false);
+    }
+  }, [tripId, daysMutating, refetchDays]);
+
+  // v2.33.7: 加回中間天 gap（例如刪 Day 3 後 5/2、5/4，中間 5/3 用 dashed
+  // placeholder 顯示，user 點即可加回）
+  const handleRestoreDay = useCallback(async (date: string) => {
+    if (!tripId || daysMutating) return;
+    setDaysMutating(true);
+    try {
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ position: 'insert', date }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = '加回天數失敗，請稍後再試。';
+        try {
+          const data = JSON.parse(text) as { error?: { message?: string } };
+          if (data?.error?.message) message = data.error.message;
+        } catch { /* not JSON */ }
+        throw new Error(message);
+      }
+      await refetchDays();
+      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
+      showToast(`已加回 ${formatShortDate(date)}`, 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : '加回天數失敗', 'error');
     } finally {
       setDaysMutating(false);
     }
@@ -942,35 +1029,63 @@ export default function EditTripPage() {
                         </button>
 
                         <div className="tp-edit-days-list" data-testid="edit-trip-days-list">
-                          {days.map((d) => (
-                            <div className="tp-edit-day-row" key={d.id} data-testid={`edit-trip-day-row-${d.dayNum}`}>
-                              <span className="tp-edit-day-num">{d.dayNum}</span>
-                              <div className="tp-edit-day-content">
-                                <div className="tp-edit-day-date">
-                                  {d.date ? `${formatShortDate(d.date)}（${d.dayOfWeek ?? ''}）` : `Day ${d.dayNum}`}
+                          {days.flatMap((d, idx, arr) => {
+                            const elements: React.ReactNode[] = [];
+                            elements.push(
+                              <div className="tp-edit-day-row" key={`day-${d.id}`} data-testid={`edit-trip-day-row-${d.dayNum}`}>
+                                <span className="tp-edit-day-num">{d.dayNum}</span>
+                                <div className="tp-edit-day-content">
+                                  <div className="tp-edit-day-date">
+                                    {d.date ? `${formatShortDate(d.date)}（${d.dayOfWeek ?? ''}）` : `Day ${d.dayNum}`}
+                                  </div>
+                                  <div
+                                    className={`tp-edit-day-meta ${d.entryCount > 0 ? 'has-entries' : 'is-empty'}`}
+                                  >
+                                    {d.entryCount > 0
+                                      ? d.totalKm != null
+                                        ? `${d.entryCount} 個景點 · ${d.totalKm} km`
+                                        : `${d.entryCount} 個景點`
+                                      : '空'}
+                                  </div>
                                 </div>
-                                <div
-                                  className={`tp-edit-day-meta ${d.entryCount > 0 ? 'has-entries' : 'is-empty'}`}
+                                <button
+                                  type="button"
+                                  className={`tp-edit-day-remove ${d.entryCount > 0 ? 'has-entries-warning' : ''}`}
+                                  onClick={() => handleRequestDelete(d)}
+                                  disabled={daysMutating || arr.length <= 1}
+                                  aria-label={`移除 Day ${d.dayNum}${d.entryCount > 0 ? `（會刪除 ${d.entryCount} 個景點）` : ''}`}
+                                  data-testid={`edit-trip-day-remove-${d.dayNum}`}
                                 >
-                                  {d.entryCount > 0
-                                    ? d.totalKm != null
-                                      ? `${d.entryCount} 個景點 · ${d.totalKm} km`
-                                      : `${d.entryCount} 個景點`
-                                    : '空'}
-                                </div>
+                                  <Icon name="x-mark" />
+                                </button>
                               </div>
-                              <button
-                                type="button"
-                                className={`tp-edit-day-remove ${d.entryCount > 0 ? 'has-entries-warning' : ''}`}
-                                onClick={() => handleRequestDelete(d)}
-                                disabled={daysMutating || days.length <= 1}
-                                aria-label={`移除 Day ${d.dayNum}${d.entryCount > 0 ? `（會刪除 ${d.entryCount} 個景點）` : ''}`}
-                                data-testid={`edit-trip-day-remove-${d.dayNum}`}
-                              >
-                                <Icon name="x-mark" />
-                              </button>
-                            </div>
-                          ))}
+                            );
+                            // v2.33.7: 偵測 gap — current day 跟 next day 之間有缺日 → render placeholder
+                            const next = arr[idx + 1];
+                            if (next && d.date && next.date) {
+                              const diff = daysBetween(d.date, next.date);
+                              for (let g = 1; g < diff; g++) {
+                                const gapDate = shiftDateByDays(d.date, g);
+                                elements.push(
+                                  <button
+                                    type="button"
+                                    key={`gap-${gapDate}`}
+                                    className="tp-edit-day-gap"
+                                    onClick={() => handleRestoreDay(gapDate)}
+                                    disabled={daysMutating}
+                                    data-testid={`edit-trip-day-gap-${gapDate}`}
+                                    aria-label={`加回 ${formatShortDate(gapDate)}（${chineseDayOfWeek(gapDate)}）`}
+                                  >
+                                    <span className="plus"><Icon name="plus" /></span>
+                                    <span className="tp-edit-day-gap-text">
+                                      加回 {formatShortDate(gapDate)}（{chineseDayOfWeek(gapDate)}）
+                                    </span>
+                                  </button>
+                                );
+                              }
+                            }
+                            return elements;
+                          })}
                         </div>
 
                         <button
