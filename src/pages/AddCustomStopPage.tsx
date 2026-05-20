@@ -20,6 +20,7 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
+import { formatDateLabel } from '../lib/mapDay';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -53,7 +54,9 @@ function deriveDayLabel(day: DayApiRow | null, dayNum: number): string {
   if (!day) return `Day ${dayNum}`;
   const date = day.date ?? '';
   const dow = day.dayOfWeek ?? '';
-  return `Day ${dayNum}${date ? ` · ${date}` : ''}${dow ? `（${dow}）` : ''}`;
+  // v2.33.4: 對齊 mockup「Day 3 · 7/28（一）」M/D 短格式（不再用 ISO 2026-07-31）
+  const shortDate = date ? formatDateLabel(date) : '';
+  return `Day ${dayNum}${shortDate ? ` · ${shortDate}` : ''}${dow ? `（${dow}）` : ''}`;
 }
 
 const SCOPED_STYLES = `
