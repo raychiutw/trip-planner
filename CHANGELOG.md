@@ -3,6 +3,52 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.11] - 2026-05-21
+
+**Fix: 全域 native date/time input 在 iOS Safari dark mode 防護。** v2.33.10
+只修了 EditTripPage shift modal 一個 input。User 要求 audit 所有 input 並
+統一修。
+
+### Audit (docs/design-sessions/2026-05-21-input-styles-audit/audit.html)
+
+7 個 native `<input type="date"|"time">` callsites 全部缺 `color-scheme:
+light` 保護：
+- NewTripPage.tsx:818, 829 — 出發 / 回程 date
+- AddPoiFavoriteToTripPage.tsx:557, 570 — 開始 / 結束時間
+- AddCustomStopPage.tsx:565 — 開始時間
+- EditEntryPage.tsx:1347, 1360 — 抵達 / 離開時間
+
+加上 EditTripPage shift modal date 共 8 處（後者 v2.33.10 已局部修）。
+
+### Fix
+
+`css/tokens.css` `@layer base` 加全域 rule，自動套到所有 `input[type=
+"date"|"time"|"datetime-local"|"month"|"week"]`：
+
+```css
+color-scheme: light;
+-webkit-appearance: none;
+appearance: none;
+background-color: var(--color-background);
+color: var(--color-foreground);
+font-variant-numeric: tabular-nums;
+
+::-webkit-date-and-time-value {
+  color: var(--color-foreground);
+  text-align: inherit;
+}
+::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  cursor: pointer;
+}
+```
+
+### 未來保證
+
+新增 native date/time input 自動 inherit 此防護，不會再發生 iOS dark mode
+黑底黑字事件。Page-scoped CSS 仍可 override `background-color` 對齊各 page
+palette。
+
 ## [2.33.10] - 2026-05-21
 
 **Fix: shift modal date input 在 iOS Safari 系統深色模式下背景變黑，文字幾乎
