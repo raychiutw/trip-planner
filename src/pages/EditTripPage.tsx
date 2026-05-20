@@ -421,6 +421,101 @@ const SCOPED_STYLES = `
   color: var(--color-accent-foreground);
 }
 .tp-edit-day-gap .plus .svg-icon { width: 12px; height: 12px; }
+
+/* v2.33.8: 整體平移行程 button + modal */
+.tp-edit-day-shift-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-callout);
+  margin-bottom: 8px;
+  text-align: left;
+  transition: background 120ms, border-color 120ms;
+}
+.tp-edit-day-shift-btn:hover:not(:disabled) {
+  background: var(--color-hover);
+  border-color: var(--color-accent);
+}
+.tp-edit-day-shift-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.tp-edit-day-shift-label {
+  flex: 1; min-width: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote);
+}
+.tp-edit-day-shift-label strong {
+  color: var(--color-foreground);
+  font-weight: 700;
+  font-size: var(--font-size-callout);
+}
+.tp-edit-day-shift-chev {
+  color: var(--color-muted);
+  font-size: 18px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.tp-shift-modal {
+  width: min(380px, 100%);
+  border-radius: var(--radius-xl);
+  background: var(--color-background);
+  padding: 20px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
+}
+.tp-shift-modal-title {
+  margin: 0 0 14px;
+  font-size: var(--font-size-title3);
+  font-weight: 700;
+}
+.tp-shift-modal-label {
+  display: block;
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  color: var(--color-foreground);
+  margin-bottom: 6px;
+}
+.tp-shift-modal-input {
+  width: 100%;
+  padding: 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  color: var(--color-foreground);
+  outline: none;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.tp-shift-modal-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+.tp-shift-modal-preview {
+  margin: 14px 0 16px;
+  padding: 10px 12px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-footnote);
+  line-height: 1.5;
+}
+.tp-shift-modal-confirm {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-color: var(--color-accent);
+}
+.tp-shift-modal-confirm:hover:not(:disabled) {
+  background: var(--color-accent-deep);
+  border-color: var(--color-accent-deep);
+}
+.tp-shift-modal-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 interface SortableDestinationRowProps {
@@ -723,6 +818,46 @@ export default function EditTripPage() {
     });
   }, []);
 
+  // v2.33.8: 整體平移行程 — POST /days/shift
+  const [shiftModalOpen, setShiftModalOpen] = useState(false);
+  const [shiftNewDate, setShiftNewDate] = useState<string>('');
+
+  const handleOpenShift = useCallback(() => {
+    if (!days || days.length === 0 || !days[0]?.date) return;
+    setShiftNewDate(days[0].date);
+    setShiftModalOpen(true);
+  }, [days]);
+
+  const handleConfirmShift = useCallback(async () => {
+    if (!tripId || daysMutating || !shiftNewDate) return;
+    setDaysMutating(true);
+    try {
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days/shift`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startDate: shiftNewDate }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = '平移失敗，請稍後再試。';
+        try {
+          const data = JSON.parse(text) as { error?: { message?: string } };
+          if (data?.error?.message) message = data.error.message;
+        } catch { /* not JSON */ }
+        throw new Error(message);
+      }
+      await refetchDays();
+      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
+      showToast(`已平移到 ${formatShortDate(shiftNewDate)}`, 'success');
+      setShiftModalOpen(false);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : '平移失敗', 'error');
+    } finally {
+      setDaysMutating(false);
+    }
+  }, [tripId, daysMutating, shiftNewDate, refetchDays]);
+
   const handleConfirmDelete = useCallback(async () => {
     if (!tripId || !pendingDelete || daysMutating) return;
     const dayNum = pendingDelete.dayNum;
@@ -1017,6 +1152,22 @@ export default function EditTripPage() {
                           。可在最前或最後加入新一天（日期自動順延 / 提前）；移除有景點的天會跳出確認。
                         </p>
 
+                        {/* v2.33.8: 整體平移行程 — 直接設定 Day 1 起始日期 */}
+                        {days.length > 0 && days[0]?.date && (
+                          <button
+                            type="button"
+                            className="tp-edit-day-shift-btn"
+                            onClick={handleOpenShift}
+                            disabled={daysMutating}
+                            data-testid="edit-trip-day-shift-btn"
+                          >
+                            <span className="tp-edit-day-shift-label">
+                              Day 1 起始日期：<strong>{formatShortDate(days[0]!.date)}（{days[0]!.dayOfWeek ?? ''}）</strong>
+                            </span>
+                            <span className="tp-edit-day-shift-chev" aria-hidden="true">›</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           className="tp-edit-day-add-card"
@@ -1250,6 +1401,54 @@ export default function EditTripPage() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
+      {/* v2.33.8: 整體平移行程 modal */}
+      {shiftModalOpen && days && days[0]?.date && (
+        <div className="tp-confirm-backdrop" role="presentation" onClick={() => setShiftModalOpen(false)} data-testid="edit-trip-shift-modal-backdrop">
+          <div className="tp-shift-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} data-testid="edit-trip-shift-modal">
+            <h2 className="tp-shift-modal-title">整體平移行程</h2>
+            <label className="tp-shift-modal-label" htmlFor="edit-trip-shift-date">Day 1 起始日期</label>
+            <input
+              type="date"
+              id="edit-trip-shift-date"
+              className="tp-shift-modal-input"
+              value={shiftNewDate}
+              onChange={(e) => setShiftNewDate(e.target.value)}
+              data-testid="edit-trip-shift-date-input"
+            />
+            <div className="tp-shift-modal-preview" data-testid="edit-trip-shift-preview">
+              {(() => {
+                const oldStart = days[0]!.date!;
+                const oldEnd = days[days.length - 1]!.date ?? oldStart;
+                const oldStartMs = new Date(oldStart + 'T00:00:00Z').getTime();
+                const newStartMs = new Date(shiftNewDate + 'T00:00:00Z').getTime();
+                const delta = Math.round((newStartMs - oldStartMs) / 86_400_000);
+                const newEndMs = new Date(oldEnd + 'T00:00:00Z').getTime() + delta * 86_400_000;
+                const newEnd = new Date(newEndMs).toISOString().slice(0, 10);
+                return `${formatShortDate(oldStart)}（${chineseDayOfWeek(oldStart)}）– ${formatShortDate(oldEnd)}（${chineseDayOfWeek(oldEnd)}） → ${formatShortDate(shiftNewDate)}（${chineseDayOfWeek(shiftNewDate)}）– ${formatShortDate(newEnd)}（${chineseDayOfWeek(newEnd)}）`;
+              })()}
+            </div>
+            <div className="tp-confirm-actions">
+              <button
+                type="button"
+                className="tp-confirm-btn tp-confirm-btn-cancel"
+                onClick={() => setShiftModalOpen(false)}
+                disabled={daysMutating}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="tp-confirm-btn tp-shift-modal-confirm"
+                onClick={handleConfirmShift}
+                disabled={daysMutating || shiftNewDate === days[0]!.date}
+                data-testid="edit-trip-shift-confirm-btn"
+              >
+                {daysMutating ? '平移中⋯' : '確認平移'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
