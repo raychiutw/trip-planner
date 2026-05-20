@@ -3,6 +3,57 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.0] - 2026-05-20
+
+**Feat: EditTripPage 加「行程天數」section — 任意天可增 / 減，移除有
+景點的天 → 紅色 destructive confirm + cascade 刪除 entries。** 取代
+v2.32.5 之前的 read-only date section。
+
+### Context
+
+Prod QA pain point：建好 trip 後想加 1 天或刪掉空的尾巴 day 必須建新行程。
+v2.32.5 之前的「修改日期請另建新行程」placeholder 不再夠用。本 PR 加完
+days CRUD + 即時 mutation pattern（atomic 比 queue-and-commit 安全，
+cascade 刪 entries 不可復原）。
+
+### Design (mockup sign-off 2026-05-20)
+
+`docs/design-sessions/2026-05-20-edit-trip-days-management/`：
+- V1 (per-day list + 雙向 card-style add button) 中選 + user 指定 visual:
+  card 同 row 大小 + accent-subtle 底色 + 「+ 加一天」label
+
+### Added
+
+- **Backend new endpoints**：
+  - `POST /api/trips/:id/days` body `{ position: 'start' | 'end' }`
+    - `end`: day_num = max+1, date = max+1d
+    - `start`: 既有 day_num 逆序 +1（D1 row-by-row UNIQUE check 要求逆序）,
+      INSERT day_num=1 + date = min-1d
+    - Returns `{ day: { id, dayNum, date, dayOfWeek, label, title } }`
+  - `DELETE /api/trips/:id/days/:dayNum`
+    - Cascade trip_entries via FK (ON DELETE CASCADE)
+    - 後續 days：day_num -= 1 + date 上移 1 天 + day_of_week 重算
+    - 最後一天禁刪（trip 至少 1 天）
+    - Returns `{ ok: true, removedEntryCount }`
+- **Frontend EditTripPage** 新「行程天數」section：
+  - 日期區間 header 從 days 衍生（取代 read-only date section）
+  - Card-style「+ 加一天」 button 雙向（list 上方 prepend / 下方 append）
+  - Per-day row 含 ✕ button + entry count（has-entries → 紅色 border）
+  - 點 ✕ → ConfirmModal「刪除 Day N？」+ has-entries 加「後續日期上移」warning
+  - Toast feedback「Day N 已刪除（連同 X 個景點）」/「已在最前 / 最後加入一天」
+- 9 個 backend integration tests `tests/api/trips-days-mutate.integration.test.ts`
+- 12 個 frontend source-grep tests `tests/unit/edit-trip-days-management.test.ts`
+
+### Changed
+
+- EditTripPage hint: 「修改行程基本設定 + 目的地。修改日期請另建新行程」
+  → 「修改行程基本設定 + 目的地 + 行程天數」
+- 移除 `dateRange` unused const（改由 days section header 計算）
+
+### Auth
+
+- POST/DELETE 都要求 trip write permission（owner/admin/member; viewer 拒）
+
 ## [2.32.5] - 2026-05-19
 
 **Fix: `.tp-map-day-tabs` 水平 scroll 缺 affordance — user 不知 chips 可往右

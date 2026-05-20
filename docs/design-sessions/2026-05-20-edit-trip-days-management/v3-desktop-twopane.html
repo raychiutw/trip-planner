@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440, initial-scale=1">
+<title>V3 — Desktop two-pane (1024+)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { background: var(--color-secondary); }
+
+  /* Two-pane desktop layout */
+  .v3-twopane {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 24px;
+    align-items: start;
+  }
+  .v3-left {
+    background: var(--color-background);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    border: 1px solid var(--color-border);
+  }
+  .v3-right {
+    position: sticky;
+    top: 80px;
+    background: var(--color-background);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    border: 1px solid var(--color-border);
+  }
+  .v3-right-title {
+    margin: 0 0 4px;
+    font-size: var(--font-size-headline);
+    font-weight: 700;
+  }
+  .v3-right-sub {
+    margin: 0 0 16px;
+    font-size: var(--font-size-caption);
+    color: var(--color-muted);
+  }
+  .v3-right-counter-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0 14px;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 12px;
+  }
+  .v3-right-counter-label {
+    font-size: var(--font-size-callout);
+    font-weight: 600;
+  }
+  .v3-right-counter-controls {
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .v3-right-day-rows {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .v3-right-day {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: var(--color-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-footnote);
+  }
+  .v3-right-day-num {
+    width: 26px; height: 26px;
+    background: var(--color-accent-subtle);
+    color: var(--color-accent-deep);
+    border-radius: var(--radius-full);
+    display: grid; place-items: center;
+    font-size: var(--font-size-caption);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .v3-right-day-info {
+    flex: 1; min-width: 0;
+  }
+  .v3-right-day-date { font-weight: 600; color: var(--color-foreground); }
+  .v3-right-day-meta {
+    font-size: var(--font-size-caption);
+    color: var(--color-muted);
+  }
+  .v3-right-day-meta.has-entries { color: var(--color-accent-deep); font-weight: 600; }
+  .v3-right-day-remove {
+    width: 30px; height: 30px;
+    display: grid; place-items: center;
+    border: 1px solid var(--color-border);
+    background: var(--color-background);
+    color: var(--color-muted);
+    cursor: pointer;
+    border-radius: var(--radius-full);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .v3-right-day-remove:hover {
+    border-color: var(--color-destructive);
+    background: var(--color-destructive-bg);
+    color: var(--color-destructive);
+  }
+  .v3-right-day-remove.has-entries-warning {
+    border-color: var(--color-destructive);
+    color: var(--color-destructive);
+  }
+  .v3-right-day-remove.has-entries-warning:hover {
+    background: var(--color-destructive);
+    color: #fff;
+  }
+  .v3-right-day.is-new {
+    background: var(--color-accent-subtle);
+    border-color: var(--color-accent);
+  }
+  .v3-right-add {
+    margin-top: 8px;
+    width: 100%;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 14px;
+    border: 1.5px dashed var(--color-border);
+    background: transparent;
+    color: var(--color-foreground);
+    border-radius: var(--radius-md);
+    font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+    cursor: pointer;
+    min-height: 40px;
+  }
+  .v3-right-add:hover {
+    background: var(--color-accent-subtle);
+    border-color: var(--color-accent);
+    color: var(--color-accent-deep);
+  }
+
+  /* Top page header */
+  .v3-page-header {
+    background: var(--color-background);
+    border-bottom: 1px solid var(--color-border);
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .v3-page-header h1 {
+    flex: 1;
+    margin: 0;
+    font-size: 20px; font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<header class="v3-page-header">
+  <button class="tp-edit-titlebar-back" aria-label="返回">←</button>
+  <h1>編輯行程</h1>
+  <button class="tp-edit-actions-btn-cancel">取消</button>
+  <button class="tp-edit-actions-btn-save is-dirty">儲存變更</button>
+</header>
+
+<div class="v3-twopane">
+
+  <!-- LEFT: existing EditTripPage form -->
+  <div class="v3-left">
+    <p class="tp-edit-page-sub">修改行程基本設定 + 目的地。修改日期請另建新行程。</p>
+
+    <!-- 目的地 -->
+    <div class="tp-edit-section">
+      <label class="tp-edit-section-label">目的地</label>
+      <div class="tp-edit-dest-row">
+        <span class="tp-edit-dest-handle">⇅</span>
+        <span class="tp-edit-dest-num">1</span>
+        <span class="tp-edit-dest-name">沖繩</span>
+        <button class="tp-edit-dest-remove" aria-label="移除目的地">✕</button>
+      </div>
+      <button type="button" class="tp-edit-dest-add-btn">
+        <span>+</span> 加入目的地
+      </button>
+    </div>
+
+    <!-- 行程名稱 -->
+    <div class="tp-edit-section">
+      <label class="tp-edit-section-label" for="title">行程名稱（選填）</label>
+      <input id="title" class="tp-edit-input" type="text" value="2026 沖繩五日自駕遊行程表">
+    </div>
+
+    <!-- 描述 -->
+    <div class="tp-edit-section">
+      <label class="tp-edit-section-label" for="desc">描述（選填，用於 SEO）</label>
+      <textarea id="desc" class="tp-edit-textarea">2026 沖繩五日自駕遊完整行程表：那霸、北谷美國村、青之洞窟、瀨底海灘、美麗海水族館、古宇利島。含餐廳推薦、地圖導航、預算規劃。</textarea>
+    </div>
+
+    <!-- 顯示語言 -->
+    <div class="tp-edit-section">
+      <label class="tp-edit-section-label" for="lang">顯示語言</label>
+      <select id="lang" class="tp-edit-select">
+        <option>繁體中文（台灣）</option>
+      </select>
+    </div>
+
+    <!-- Publish toggle -->
+    <div class="tp-edit-section">
+      <label class="tp-edit-section-label">狀態</label>
+      <div class="tp-edit-actions-publish">
+        <button><span class="dot"></span>草稿</button>
+        <button class="is-active is-published"><span class="dot"></span>上線</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: sticky days pane -->
+  <aside class="v3-right">
+    <h2 class="v3-right-title">行程天數</h2>
+    <p class="v3-right-sub">7/29（三）– 8/2（日） · 5 天</p>
+
+    <div class="v3-right-counter-row">
+      <span class="v3-right-counter-label">共 5 天</span>
+      <div class="v3-right-counter-controls">
+        <button class="tp-edit-days-counter-btn is-destructive" aria-label="減少 1 天">−</button>
+        <button class="tp-edit-days-counter-btn" aria-label="增加 1 天">+</button>
+      </div>
+    </div>
+
+    <div class="v3-right-day-rows">
+      <div class="v3-right-day">
+        <span class="v3-right-day-num">1</span>
+        <div class="v3-right-day-info">
+          <div class="v3-right-day-date">7/29（三）</div>
+          <div class="v3-right-day-meta has-entries">7 個景點 · 33 km</div>
+        </div>
+        <button class="v3-right-day-remove has-entries-warning" aria-label="移除 Day 1（會刪除 7 個景點）">✕</button>
+      </div>
+      <div class="v3-right-day">
+        <span class="v3-right-day-num">2</span>
+        <div class="v3-right-day-info">
+          <div class="v3-right-day-date">7/30（四）</div>
+          <div class="v3-right-day-meta has-entries">8 個景點 · 56 km</div>
+        </div>
+        <button class="v3-right-day-remove has-entries-warning" aria-label="移除 Day 2（會刪除 8 個景點）">✕</button>
+      </div>
+      <div class="v3-right-day">
+        <span class="v3-right-day-num">3</span>
+        <div class="v3-right-day-info">
+          <div class="v3-right-day-date">7/31（五）</div>
+          <div class="v3-right-day-meta has-entries">7 個景點 · 78 km</div>
+        </div>
+        <button class="v3-right-day-remove has-entries-warning" aria-label="移除 Day 3（會刪除 7 個景點）">✕</button>
+      </div>
+      <div class="v3-right-day">
+        <span class="v3-right-day-num">4</span>
+        <div class="v3-right-day-info">
+          <div class="v3-right-day-date">8/1（六）</div>
+          <div class="v3-right-day-meta has-entries">7 個景點 · 45 km</div>
+        </div>
+        <button class="v3-right-day-remove has-entries-warning" aria-label="移除 Day 4（會刪除 7 個景點）">✕</button>
+      </div>
+      <div class="v3-right-day">
+        <span class="v3-right-day-num">5</span>
+        <div class="v3-right-day-info">
+          <div class="v3-right-day-date">8/2（日）</div>
+          <div class="v3-right-day-meta has-entries">8 個景點 · 22 km</div>
+        </div>
+        <button class="v3-right-day-remove has-entries-warning" aria-label="移除 Day 5（會刪除 8 個景點）">✕</button>
+      </div>
+    </div>
+
+    <button class="v3-right-add">
+      <span>+</span> 加入一天
+    </button>
+
+    <p class="tp-edit-section-helper" style="margin-top: 12px;">
+      可任意天數移除；後續天數日期自動上移。儲存後立即生效。
+    </p>
+  </aside>
+
+</div>
+
+<!-- Confirm modal -->
+<div class="tp-confirm-backdrop" id="confirm-modal" style="display:none;">
+  <div class="tp-confirm-modal" role="alertdialog">
+    <h2 class="tp-confirm-title">刪除 Day 3？</h2>
+    <p class="tp-confirm-message">Day 3 是 7/31（五），目前有 7 個景點。確認後將同時刪除這些景點與排程。此操作不可復原。</p>
+    <div class="tp-confirm-warning">
+      <span class="tp-confirm-warning-icon" aria-hidden="true">⚠</span>
+      <span>後續 Day 4 / Day 5 的日期會自動上移（變成 Day 3 / Day 4）。</span>
+    </div>
+    <div class="tp-confirm-actions">
+      <button class="tp-confirm-btn tp-confirm-btn-cancel" onclick="document.getElementById('confirm-modal').style.display='none'">取消</button>
+      <button class="tp-confirm-btn tp-confirm-btn-danger">刪除 Day 3</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.v3-right-day-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('confirm-modal').style.display = 'grid';
+    });
+  });
+</script>
+
+</body>
+</html>
