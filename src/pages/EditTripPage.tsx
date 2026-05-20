@@ -1094,7 +1094,7 @@ export default function EditTripPage() {
         }
         warning={
           pendingDelete && pendingDelete.entryCount > 0
-            ? '後續天數的日期會自動上移（變成 Day ' + pendingDelete.dayNum + ' 的接續日期）。'
+            ? '後續天數的 Day 編號會往前遞補（日期保留，可能會留下空檔的日子）。'
             : undefined
         }
         confirmLabel={pendingDelete ? `刪除 Day ${pendingDelete.dayNum}` : '刪除'}
