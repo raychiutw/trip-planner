@@ -25,7 +25,7 @@
  *   - 取消改 navigate(-1)，儲存後 navigate(`/trips?selected=:id`)
  *   - Form 邏輯 + state machine 完全沿用 EditTripModal v2.19.0
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -43,6 +43,7 @@ import TitleBar from '../components/shell/TitleBar';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { TRIP_FORM_STYLES } from '../components/trip/_tripFormStyles';
@@ -57,6 +58,31 @@ interface DestinationRow {
   lng?: number | null;
   day_quota?: number | null;
   isNew?: boolean;
+}
+
+/** v2.33.0: GET /api/trips/:id/days?all=1 回傳的 day 含 timeline，用於算 entryCount。 */
+interface DaySummaryRow {
+  id: number;
+  dayNum: number;
+  date: string | null;
+  dayOfWeek: string | null;
+  label?: string | null;
+  timeline?: Array<unknown>;
+}
+
+interface DaySummary {
+  id: number;
+  dayNum: number;
+  date: string | null;
+  dayOfWeek: string | null;
+  entryCount: number;
+}
+
+interface PendingDelete {
+  dayNum: number;
+  date: string | null;
+  dayOfWeek: string | null;
+  entryCount: number;
 }
 
 // v2.31.36: TravelMode removed — default_travel_mode column dropped (migration 0068)。
@@ -257,6 +283,105 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote);
 }
 
+/* v2.33.0: 行程天數 section (mockup: docs/design-sessions/2026-05-20-edit-trip-days-management) */
+.tp-edit-days-list {
+  display: flex; flex-direction: column; gap: 8px;
+  margin: 8px 0;
+}
+.tp-edit-day-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.tp-edit-day-num {
+  width: 32px; height: 32px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  border-radius: var(--radius-full);
+  display: grid; place-items: center;
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.tp-edit-day-content { flex: 1; min-width: 0; }
+.tp-edit-day-date {
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.tp-edit-day-meta {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+.tp-edit-day-meta.has-entries {
+  color: var(--color-accent-deep);
+  font-weight: 600;
+}
+.tp-edit-day-meta.is-empty {
+  font-style: italic;
+}
+.tp-edit-day-remove {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-muted);
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: all 120ms;
+}
+.tp-edit-day-remove:hover:not(:disabled) {
+  border-color: var(--color-destructive);
+  background: var(--color-destructive-bg);
+  color: var(--color-destructive);
+}
+.tp-edit-day-remove:disabled { opacity: 0.4; cursor: not-allowed; }
+.tp-edit-day-remove.has-entries-warning {
+  border-color: var(--color-destructive);
+  color: var(--color-destructive);
+}
+.tp-edit-day-remove.has-entries-warning:hover:not(:disabled) {
+  background: var(--color-destructive);
+  color: #fff;
+}
+
+/* 加一天 card button — 同 day row 大小 + accent 底色 (per user 2026-05-20 sign-off) */
+.tp-edit-day-add-card {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+  padding: 14px 14px;
+  min-height: 56px;
+  border: 1px dashed var(--color-accent);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--font-size-callout);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, transform 80ms;
+}
+.tp-edit-day-add-card:hover:not(:disabled) {
+  background: var(--color-accent-bg);
+  border-style: solid;
+}
+.tp-edit-day-add-card:active:not(:disabled) { transform: scale(0.98); }
+.tp-edit-day-add-card:disabled { opacity: 0.5; cursor: not-allowed; }
+.tp-edit-day-add-card .plus {
+  display: inline-grid; place-items: center;
+  width: 24px; height: 24px;
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.tp-edit-day-add-card .plus .svg-icon { width: 14px; height: 14px; }
 `;
 
 interface SortableDestinationRowProps {
@@ -366,6 +491,33 @@ export default function EditTripPage() {
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // v2.33.0: days management — immediate-mutation pattern (cascade delete 不可
+  // 復原，atomic 比 queue-and-commit 安全)。「儲存變更」只管 scalar fields。
+  const [days, setDays] = useState<DaySummary[] | null>(null);
+  const [daysMutating, setDaysMutating] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+
+  const refetchDays = useCallback(async () => {
+    if (!tripId) return;
+    try {
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days?all=1`);
+      if (!res.ok) throw new Error(`days fetch failed: ${res.status}`);
+      const data = (await res.json()) as DaySummaryRow[];
+      setDays(
+        data.map((d) => ({
+          id: d.id,
+          dayNum: d.dayNum,
+          date: d.date ?? null,
+          dayOfWeek: d.dayOfWeek ?? null,
+          entryCount: Array.isArray(d.timeline) ? d.timeline.length : 0,
+        })),
+      );
+    } catch (err) {
+      // 非阻擋：days fetch fail 只影響 days section，scalar form 仍可用
+      console.error('refetchDays failed', err);
+    }
+  }, [tripId]);
+
   // GET trip on mount / tripId change
   useEffect(() => {
     if (!auth.user || !tripId) return;
@@ -410,6 +562,84 @@ export default function EditTripPage() {
     })();
     return () => { cancelled = true; };
   }, [auth.user, tripId]);
+
+  // v2.33.0: days fetch — parallel with trip fetch; refetch on each mutation
+  useEffect(() => {
+    if (!auth.user || !tripId) return;
+    void refetchDays();
+  }, [auth.user, tripId, refetchDays]);
+
+  const handleAddDay = useCallback(async (position: 'start' | 'end') => {
+    if (!tripId || daysMutating) return;
+    setDaysMutating(true);
+    try {
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ position }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = '新增天數失敗，請稍後再試。';
+        try {
+          const data = JSON.parse(text) as { error?: { message?: string } };
+          if (data?.error?.message) message = data.error.message;
+        } catch { /* not JSON */ }
+        throw new Error(message);
+      }
+      await refetchDays();
+      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
+      showToast(position === 'start' ? '已在最前加入一天' : '已在最後加入一天', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : '新增天數失敗', 'error');
+    } finally {
+      setDaysMutating(false);
+    }
+  }, [tripId, daysMutating, refetchDays]);
+
+  const handleRequestDelete = useCallback((day: DaySummary) => {
+    setPendingDelete({
+      dayNum: day.dayNum,
+      date: day.date,
+      dayOfWeek: day.dayOfWeek,
+      entryCount: day.entryCount,
+    });
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!tripId || !pendingDelete || daysMutating) return;
+    const dayNum = pendingDelete.dayNum;
+    setDaysMutating(true);
+    try {
+      const res = await apiFetchRaw(
+        `/trips/${encodeURIComponent(tripId)}/days/${dayNum}`,
+        { method: 'DELETE', credentials: 'same-origin' },
+      );
+      if (!res.ok) {
+        const text = await res.text();
+        let message = '刪除天數失敗，請稍後再試。';
+        try {
+          const data = JSON.parse(text) as { error?: { message?: string } };
+          if (data?.error?.message) message = data.error.message;
+        } catch { /* not JSON */ }
+        throw new Error(message);
+      }
+      const result = (await res.json()) as { removedEntryCount?: number };
+      const removed = result.removedEntryCount ?? 0;
+      await refetchDays();
+      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
+      showToast(
+        removed > 0 ? `Day ${dayNum} 已刪除（連同 ${removed} 個景點）` : `Day ${dayNum} 已刪除`,
+        'success',
+      );
+      setPendingDelete(null);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : '刪除天數失敗', 'error');
+    } finally {
+      setDaysMutating(false);
+    }
+  }, [tripId, pendingDelete, daysMutating, refetchDays]);
 
   // Region change hint logic — only show if (a) destinations names changed
   // vs original AND (b) user hasn't manually edited title since open AND (c)
@@ -550,9 +780,7 @@ export default function EditTripPage() {
     );
   }
 
-  const dateRange = original?.startDate && original?.endDate
-    ? `${original.startDate} ~ ${original.endDate}`
-    : null;
+  // v2.33.0: dateRange const removed — 改由 days section header 顯示日期區間。
 
   const titleBarActions = !loading && (
     <TitleBarPrimaryAction
@@ -581,7 +809,7 @@ export default function EditTripPage() {
             />
 
             <form id="edit-trip-form" ref={formRef} onSubmit={handleSubmit} className="tp-edit-page-form">
-              <p className="tp-edit-page-sub">修改行程基本設定 + 目的地。修改日期請另建新行程。</p>
+              <p className="tp-edit-page-sub">修改行程基本設定 + 目的地 + 行程天數。</p>
 
               {loading ? (
                 <div className="tp-edit-loading" data-testid="edit-trip-loading">載入中⋯</div>
@@ -658,19 +886,73 @@ export default function EditTripPage() {
                     </div>
                   </div>
 
-                  {/* Date read-only */}
-                  {dateRange && (
-                    <div className="tp-edit-row">
-                      <label>日期</label>
-                      <div className="tp-edit-date-readonly" data-testid="edit-trip-date-readonly">
-                        <div className="tp-edit-date-line">
-                          <span aria-hidden="true">📅</span>
-                          <span>{dateRange}</span>
+                  {/* v2.33.0: 行程天數（取代 v2.32.5 之前的 read-only date section）。
+                      增/減天即時呼叫 backend；移除有 entries 的天 → ConfirmModal。 */}
+                  <div className="tp-edit-row" data-testid="edit-trip-days-section">
+                    <label>行程天數</label>
+                    {days === null ? (
+                      <div className="tp-edit-loading" data-testid="edit-trip-days-loading">載入中⋯</div>
+                    ) : (
+                      <>
+                        <p className="tp-edit-date-helper" style={{ marginBottom: 8 }}>
+                          {days.length > 0 && days[0]?.date && days[days.length - 1]?.date
+                            ? `${days[0]!.date}（${days[0]!.dayOfWeek ?? ''}）– ${days[days.length - 1]!.date}（${days[days.length - 1]!.dayOfWeek ?? ''}），共 ${days.length} 天`
+                            : `共 ${days.length} 天`}
+                          。可在最前或最後加入新一天（日期自動順延 / 提前）；移除有景點的天會跳出確認。
+                        </p>
+
+                        <button
+                          type="button"
+                          className="tp-edit-day-add-card"
+                          onClick={() => handleAddDay('start')}
+                          disabled={daysMutating}
+                          data-testid="edit-trip-day-prepend"
+                        >
+                          <span className="plus"><Icon name="plus" /></span>
+                          <span>加一天</span>
+                        </button>
+
+                        <div className="tp-edit-days-list" data-testid="edit-trip-days-list">
+                          {days.map((d) => (
+                            <div className="tp-edit-day-row" key={d.id} data-testid={`edit-trip-day-row-${d.dayNum}`}>
+                              <span className="tp-edit-day-num">{d.dayNum}</span>
+                              <div className="tp-edit-day-content">
+                                <div className="tp-edit-day-date">
+                                  {d.date ? `${d.date}（${d.dayOfWeek ?? ''}）` : `Day ${d.dayNum}`}
+                                </div>
+                                <div
+                                  className={`tp-edit-day-meta ${d.entryCount > 0 ? 'has-entries' : 'is-empty'}`}
+                                >
+                                  {d.entryCount > 0 ? `${d.entryCount} 個景點` : '空'}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className={`tp-edit-day-remove ${d.entryCount > 0 ? 'has-entries-warning' : ''}`}
+                                onClick={() => handleRequestDelete(d)}
+                                disabled={daysMutating || days.length <= 1}
+                                aria-label={`移除 Day ${d.dayNum}${d.entryCount > 0 ? `（會刪除 ${d.entryCount} 個景點）` : ''}`}
+                                data-testid={`edit-trip-day-remove-${d.dayNum}`}
+                              >
+                                <Icon name="x" />
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                        <p className="tp-edit-date-helper">修改日期請另建新行程（v1 暫不支援編輯，避免影響 entries / hotels）</p>
-                      </div>
-                    </div>
-                  )}
+
+                        <button
+                          type="button"
+                          className="tp-edit-day-add-card"
+                          onClick={() => handleAddDay('end')}
+                          disabled={daysMutating}
+                          data-testid="edit-trip-day-append"
+                        >
+                          <span className="plus"><Icon name="plus" /></span>
+                          <span>加一天</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
 
                   {/* Title (with region change hint) */}
                   <div className="tp-edit-row">
@@ -798,6 +1080,27 @@ export default function EditTripPage() {
           </div>
         }
         bottomNav={<GlobalBottomNav authed={user !== null} />}
+      />
+      {/* v2.33.0: destructive confirm 移除 day with entries / 最後一天 fallback。 */}
+      <ConfirmModal
+        open={!!pendingDelete}
+        title={pendingDelete ? `刪除 Day ${pendingDelete.dayNum}？` : ''}
+        message={
+          pendingDelete
+            ? pendingDelete.entryCount > 0
+              ? `Day ${pendingDelete.dayNum}${pendingDelete.date ? `（${pendingDelete.date}）` : ''}目前有 ${pendingDelete.entryCount} 個景點。確認後將同時刪除這些景點與排程，此操作不可復原。`
+              : `Day ${pendingDelete.dayNum}${pendingDelete.date ? `（${pendingDelete.date}）` : ''}目前是空的。確認移除？`
+            : ''
+        }
+        warning={
+          pendingDelete && pendingDelete.entryCount > 0
+            ? '後續天數的日期會自動上移（變成 Day ' + pendingDelete.dayNum + ' 的接續日期）。'
+            : undefined
+        }
+        confirmLabel={pendingDelete ? `刪除 Day ${pendingDelete.dayNum}` : '刪除'}
+        busy={daysMutating}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </>
   );
