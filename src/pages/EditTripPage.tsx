@@ -460,6 +460,19 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 
+/* v2.33.9 fix: 之前 reuse .tp-confirm-backdrop 但該 class scoped 在
+   ConfirmModal SCOPED_STYLES（只在 ConfirmModal 開時注入）。Shift modal
+   單獨開時 backdrop 沒 position:fixed → 跌出 viewport。改用 local class。 */
+.tp-shift-backdrop {
+  position: fixed; inset: 0;
+  z-index: 1100;
+  background: rgba(20, 14, 9, 0.42);
+  display: grid; place-items: center;
+  padding: 20px;
+  animation: tp-shift-backdrop-in 150ms ease;
+}
+@keyframes tp-shift-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+
 .tp-shift-modal {
   width: min(380px, 100%);
   border-radius: var(--radius-xl);
@@ -467,6 +480,11 @@ const SCOPED_STYLES = `
   padding: 20px;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--color-border);
+  animation: tp-shift-modal-in 200ms ease;
+}
+@keyframes tp-shift-modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .tp-shift-modal-title {
   margin: 0 0 14px;
@@ -1401,9 +1419,10 @@ export default function EditTripPage() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
-      {/* v2.33.8: 整體平移行程 modal */}
+      {/* v2.33.8 / v2.33.9 fix: 整體平移行程 modal (本 component 自己定義
+          backdrop，避免依賴 ConfirmModal SCOPED_STYLES) */}
       {shiftModalOpen && days && days[0]?.date && (
-        <div className="tp-confirm-backdrop" role="presentation" onClick={() => setShiftModalOpen(false)} data-testid="edit-trip-shift-modal-backdrop">
+        <div className="tp-shift-backdrop" role="presentation" onClick={() => setShiftModalOpen(false)} data-testid="edit-trip-shift-modal-backdrop">
           <div className="tp-shift-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} data-testid="edit-trip-shift-modal">
             <h2 className="tp-shift-modal-title">整體平移行程</h2>
             <label className="tp-shift-modal-label" htmlFor="edit-trip-shift-date">Day 1 起始日期</label>
