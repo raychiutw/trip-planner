@@ -81,4 +81,17 @@ describe('EditTripPage — v2.33.0 行程天數 section', () => {
     expect(EDIT_TRIP_SRC).toMatch(/\.tp-edit-day-add-card\s*\{[\s\S]{0,500}min-height:\s*56px/);
     expect(EDIT_TRIP_SRC).toMatch(/\.tp-edit-day-add-card\s*\{[\s\S]{0,500}background:\s*var\(--color-accent-subtle\)/);
   });
+
+  it('v2.33.2: date 顯示用 formatShortDate (mockup 對齊 M/D 短格式)', () => {
+    expect(EDIT_TRIP_SRC).toMatch(/function formatShortDate/);
+    // day row date 呼叫 formatShortDate
+    expect(EDIT_TRIP_SRC).toMatch(
+      /\$\{formatShortDate\(d\.date\)\}（\$\{d\.dayOfWeek/,
+    );
+    // header date range 也用 formatShortDate
+    expect(EDIT_TRIP_SRC).toMatch(/formatShortDate\(days\[0\]!\.date\)/);
+    expect(EDIT_TRIP_SRC).toMatch(/formatShortDate\(days\[days\.length - 1\]!\.date\)/);
+    // ConfirmModal 內也用
+    expect(EDIT_TRIP_SRC).toMatch(/formatShortDate\(pendingDelete\.date\)/);
+  });
 });

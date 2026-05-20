@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.2] - 2026-05-20
+
+**Polish: EditTripPage 行程天數 section date 顯示對齊 mockup 用 M/D 短格式。**
+v2.33.0 prod QA 對比 mockup 發現視覺差異。
+
+### Root cause
+
+v2.33.0 day row + header + ConfirmModal 都用 raw ISO `2026-05-01（五）`，
+mockup 設計用 `5/1（五）` 短格式。長 ISO 在 mobile 390px viewport 占 row
+寬太多，跟原 mockup 的「Day 1 · 7/29（三）· 7 個景點 · 33 km」風格不符。
+
+### Fix
+
+新 helper `formatShortDate('2026-05-01')` → `'5/1'`，三處套用：
+- Day row date label
+- Section header「5/1（五）– 5/5（二），共 5 天」
+- ConfirmModal 對話「Day 1（5/1）目前是空的」
+
+### Tests
+
+`edit-trip-days-management.test.ts` 加 13th test 驗 formatShortDate 三處 wire。
+
 ## [2.33.1] - 2026-05-20
 
 **Fix: DELETE /api/trips/:id/days/:num 不再 shift dates — 修 prepend +
