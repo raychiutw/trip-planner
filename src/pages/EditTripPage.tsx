@@ -967,7 +967,7 @@ export default function EditTripPage() {
                                 aria-label={`移除 Day ${d.dayNum}${d.entryCount > 0 ? `（會刪除 ${d.entryCount} 個景點）` : ''}`}
                                 data-testid={`edit-trip-day-remove-${d.dayNum}`}
                               >
-                                <Icon name="x" />
+                                <Icon name="x-mark" />
                               </button>
                             </div>
                           ))}

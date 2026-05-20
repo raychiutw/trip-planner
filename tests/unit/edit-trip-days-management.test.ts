@@ -63,6 +63,11 @@ describe('EditTripPage — v2.33.0 行程天數 section', () => {
     expect(EDIT_TRIP_SRC).toMatch(/has-entries-warning/);
   });
 
+  it('v2.33.5: ✕ icon 用 name="x-mark" (不是 "x" — 後者 Icon component 沒對應)', () => {
+    expect(EDIT_TRIP_SRC).toMatch(/<Icon name="x-mark"/);
+    expect(EDIT_TRIP_SRC).not.toMatch(/<Icon name="x"\s*\/>/);
+  });
+
   it('取代既有 read-only date section（不再 render tp-edit-date-readonly）', () => {
     expect(EDIT_TRIP_SRC).not.toMatch(/data-testid="edit-trip-date-readonly"/);
     expect(EDIT_TRIP_SRC).not.toMatch(/修改日期請另建新行程/);
