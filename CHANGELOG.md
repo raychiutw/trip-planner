@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.6] - 2026-05-20
+
+**Feat: TripPage 右上「⋯」action menu 加「編輯行程」入口。** User 要求：
+詳細頁可從 menu 直接編輯，不用退回 trips list 用 card menu。
+
+### Added
+
+`TripsListPage.tsx::EmbeddedActionMenu`:
+- `onEdit` prop (() => void)
+- 新 menu item「編輯行程」放最前面（Icon edit + label），對齊
+  TripCardMenu 順序：編輯行程 → 共編設定 → AI 健檢 → 列印 → 下載格式
+- testid `trip-embedded-menu-edit-${tripId}`
+- Caller (line 1247) wire `onEdit={() => navigate('/trip/:id/edit')}`
+
+### Tests
+
+`tests/unit/trip-detail-action-menu-edit.test.ts` 5 個 source-grep。
+
 ## [2.33.5] - 2026-05-20
 
 **Fix: EditTripPage day-remove ✕ icon 沒 render — wrong Icon name。** User
