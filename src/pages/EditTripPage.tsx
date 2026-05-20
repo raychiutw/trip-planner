@@ -501,15 +501,25 @@ const SCOPED_STYLES = `
 .tp-shift-modal-input {
   width: 100%;
   padding: 12px;
+  /* v2.33.10 fix: 顯式 background + color-scheme: light，避免 iOS Safari
+     date input 在 system dark mode 下背景變深色（文字 dark on dark 幾乎看不見） */
+  background: var(--color-background);
+  color: var(--color-foreground);
+  color-scheme: light;
+  -webkit-appearance: none;
+  appearance: none;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
   font: inherit;
   font-size: var(--font-size-callout);
   font-weight: 600;
-  color: var(--color-foreground);
   outline: none;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+.tp-shift-modal-input::-webkit-date-and-time-value {
+  text-align: center;
+  color: var(--color-foreground);
 }
 .tp-shift-modal-input:focus {
   border-color: var(--color-accent);
