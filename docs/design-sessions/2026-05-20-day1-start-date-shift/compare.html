@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>「Day 1 起始日期」3 variants 比較</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body {
+    background: var(--color-secondary);
+    padding: 24px;
+  }
+  .wrap { max-width: 1600px; margin: 0 auto; }
+  h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; }
+  .lead { color: var(--color-muted); margin: 0 0 24px; font-size: var(--font-size-callout); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 1280px) { .grid { grid-template-columns: 1fr; } }
+  .variant {
+    background: var(--color-background);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+  }
+  .variant h2 { margin: 0 0 4px; font-size: var(--font-size-title3); font-weight: 800; }
+  .variant h2 .badge {
+    display: inline-block; margin-left: 8px;
+    padding: 2px 8px;
+    background: var(--color-accent-subtle); color: var(--color-accent-deep);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-eyebrow); font-weight: 700; vertical-align: middle;
+  }
+  .variant .sub { margin: 0 0 12px; color: var(--color-muted); font-size: var(--font-size-footnote); }
+  .variant iframe {
+    width: 100%; height: 720px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-secondary);
+    display: block;
+  }
+  .ia {
+    margin-top: 16px; padding: 14px;
+    background: var(--color-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+  }
+  .ia h3 { margin: 0 0 8px; font-size: var(--font-size-callout); font-weight: 700; }
+  .ia dl {
+    margin: 0; display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 6px 12px;
+    font-size: var(--font-size-caption);
+  }
+  .ia dt { color: var(--color-muted); font-weight: 600; }
+  .ia dd { margin: 0; color: var(--color-foreground); }
+  .pros, .cons { margin-top: 12px; font-size: var(--font-size-caption); }
+  .pros ul, .cons ul { margin: 4px 0 0; padding-left: 18px; }
+  .pros .h { color: #2e8540; font-weight: 700; }
+  .cons .h { color: var(--color-destructive); font-weight: 700; }
+  .footer {
+    margin-top: 32px; padding: 20px;
+    background: var(--color-background);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+  }
+  .footer h2 { margin: 0 0 8px; font-size: var(--font-size-title3); }
+  .footer p { margin: 0; color: var(--color-muted); font-size: var(--font-size-footnote); }
+  .footer ol { margin: 8px 0 0 20px; padding: 0; }
+  .footer ol li { margin: 4px 0; }
+  code {
+    background: var(--color-tertiary);
+    padding: 1px 5px; border-radius: 4px;
+    font-size: 0.9em;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>「Day 1 起始日期」整體平移 — 3 variants 比較</h1>
+  <p class="lead">需求：「修改天數提供另外一種模式 直接設定 Day 1 的起始日期」<br>
+  共同 SoT：terracotta tokens · 平移後保留 entries 時段（只變日期）· 後端走 PATCH /trips/:id with `dayShift` 或 `startDate` field。</p>
+
+  <div class="grid">
+
+    <!-- V1 -->
+    <article class="variant">
+      <h2>V1 · Inline 起始日期 row <span class="badge">Mobile</span></h2>
+      <p class="sub">「行程天數」section 頂部固定一個 inline date input row，user 改 date → confirm modal → 平移。</p>
+      <iframe src="v1-inline-date-row.html" title="V1 inline date row"></iframe>
+      <div class="ia">
+        <h3>IA decisions</h3>
+        <dl>
+          <dt>位置</dt><dd>section 頂端，「加一天」card 上方</dd>
+          <dt>觸發</dt><dd>change event 直接跳 confirm modal（避免誤觸）</dd>
+          <dt>Confirm 文字</dt><dd>「行程將從 5/1-5/5 平移至 8/15-8/19」</dd>
+          <dt>儲存語意</dt><dd>立即送 backend；entries 不變只變 dates</dd>
+          <dt>視覺權重</dt><dd>白底 + 一行 input；不搶 add/remove 焦點</dd>
+        </dl>
+      </div>
+      <div class="pros">
+        <span class="h">優點</span>
+        <ul>
+          <li>最直接 — 永遠看得到、永遠可改</li>
+          <li>無需多一個 layer（modal）— 1 tap 即可修改</li>
+          <li>對齊既有「目的地」、「行程名稱」inline pattern</li>
+        </ul>
+      </div>
+      <div class="cons">
+        <span class="h">缺點</span>
+        <ul>
+          <li>多佔 56px 垂直空間（即使 user 不常用）</li>
+          <li>誤觸 risk（user 想 scroll 但點到 input）— confirm modal 防禦</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- V2 -->
+    <article class="variant">
+      <h2>V2 · Button + Modal <span class="badge">Mobile</span></h2>
+      <p class="sub">「移動整個行程」card-style button → 點開 modal 含 date input + 即時 preview「5/1 → 8/15」+ 確認。</p>
+      <iframe src="v2-button-modal.html" title="V2 button + modal"></iframe>
+      <div class="ia">
+        <h3>IA decisions</h3>
+        <dl>
+          <dt>位置</dt><dd>section 頂端，calendar icon button card style</dd>
+          <dt>觸發</dt><dd>tap button → open modal</dd>
+          <dt>Modal 內</dt><dd>date input + 即時 preview「old → new」+ 取消/確認</dd>
+          <dt>儲存語意</dt><dd>modal 確認後送 backend</dd>
+          <dt>視覺權重</dt><dd>icon + 2 行 label + chev right；視覺像 settings row</dd>
+        </dl>
+      </div>
+      <div class="pros">
+        <span class="h">優點</span>
+        <ul>
+          <li>清楚標示「這是 destructive-ish action」需要確認</li>
+          <li>Modal 內可放 preview 文字幫 user 確認</li>
+          <li>不會誤觸（明確 tap → modal）</li>
+        </ul>
+      </div>
+      <div class="cons">
+        <span class="h">缺點</span>
+        <ul>
+          <li>多一步 modal interaction（比 V1 慢）</li>
+          <li>當前日期看不到（要先點開 button 才知道現值）</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- V3 -->
+    <article class="variant">
+      <h2>V3 · Tap Day 1 date inline <span class="badge">Mobile</span></h2>
+      <p class="sub">不加新 control — Day 1 row 的 date 本身變 tappable（dotted underline 提示），tap 開 popover 修改。</p>
+      <iframe src="v3-tap-day1-date.html" title="V3 tap day1 date"></iframe>
+      <div class="ia">
+        <h3>IA decisions</h3>
+        <dl>
+          <dt>位置</dt><dd>Day 1 row date 本身（reuse 既有 element）</dd>
+          <dt>觸發</dt><dd>tap Day 1 date → 開 popover</dd>
+          <dt>Popover 內</dt><dd>date input + 即時 preview + 取消/確認</dd>
+          <dt>視覺提示</dt><dd>Day 1 date dotted underline + ✏ icon hint</dd>
+          <dt>儲存語意</dt><dd>popover 確認後送 backend</dd>
+        </dl>
+      </div>
+      <div class="pros">
+        <span class="h">優點</span>
+        <ul>
+          <li>零新空間佔用 — reuse 既有 Day 1 row</li>
+          <li>直覺 — 想改起始日期就點起始日期</li>
+          <li>對齊 macOS / iOS inline edit pattern</li>
+        </ul>
+      </div>
+      <div class="cons">
+        <span class="h">缺點</span>
+        <ul>
+          <li>Discoverability — user 可能不知 date 可點（dotted underline + ✏ 不一定夠）</li>
+          <li>Day 2-5 dates 不可點 — 增加 inconsistency</li>
+          <li>誤觸 risk — 想 scroll 點到 row → popover 開啟</li>
+        </ul>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="footer">
+    <h2>建議：V2 (Button + Modal)，原因：</h2>
+    <ol>
+      <li><strong>明確標示 destructive-ish action</strong> — 平移整個 trip 是大改，user 需要 confirm</li>
+      <li><strong>Modal 可放即時 preview</strong>「5/1 → 8/15」幫 user 看見效果</li>
+      <li><strong>discoverability vs noise 平衡</strong> — button label「移動整個行程」清楚，不像 V3 要靠 dotted underline 提示</li>
+      <li><strong>不誤觸</strong> — 點 button 才能改，V1/V3 都有可能誤觸</li>
+      <li>缺點「多一步 modal」實際上是 feature — destructive action 應該慢一點</li>
+    </ol>
+    <p style="margin-top: 12px;">
+      V1 適合「user 常常改 date」case，但實際只在 trip 開始前 / 重新規劃時用，慢一點沒差。<br>
+      V3 適合「inline editing 文化重」的 app，但 Tripline 其他地方都是 navigate-to-edit 為主，不一致。
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>

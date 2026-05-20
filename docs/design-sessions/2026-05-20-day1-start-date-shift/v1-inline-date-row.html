@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>V1 — Inline 起始日期 row</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { background: var(--color-secondary); }
+  .device-frame {
+    width: 390px;
+    min-height: 844px;
+    margin: 0 auto;
+    background: var(--color-background);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+    overflow: hidden;
+    position: relative;
+  }
+  /* V1: inline date input — same row height as +加一天 card */
+  .tp-edit-day1-shift {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 8px;
+  }
+  .tp-edit-day1-shift-label {
+    font-size: var(--font-size-caption);
+    color: var(--color-muted);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .tp-edit-day1-shift-label strong {
+    display: block;
+    color: var(--color-foreground);
+    font-size: var(--font-size-callout);
+    font-weight: 700;
+  }
+  .tp-edit-day1-shift-input {
+    flex: 1;
+    padding: 10px 12px;
+    background: var(--color-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font: inherit;
+    font-size: var(--font-size-callout);
+    font-weight: 600;
+    color: var(--color-foreground);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+    min-width: 0;
+  }
+  .tp-edit-day1-shift-input:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-subtle);
+  }
+</style>
+</head>
+<body>
+
+<div class="device-frame">
+  <div class="tp-edit-page-shell">
+    <header class="tp-edit-titlebar">
+      <button class="tp-edit-titlebar-back" aria-label="返回">←</button>
+      <h1 class="tp-edit-titlebar-title">編輯行程</h1>
+      <button class="tp-edit-titlebar-save" aria-label="儲存">✓</button>
+    </header>
+
+    <form class="tp-edit-page-form">
+      <p class="tp-edit-page-sub">修改行程基本設定 + 目的地 + 行程天數。</p>
+
+      <!-- 目的地 略 -->
+      <div class="tp-edit-section">
+        <label class="tp-edit-section-label">目的地</label>
+        <div class="tp-edit-dest-row">
+          <span class="tp-edit-dest-handle">⇅</span>
+          <span class="tp-edit-dest-num">1</span>
+          <span class="tp-edit-dest-name">沖繩</span>
+          <button class="tp-edit-dest-remove">✕</button>
+        </div>
+      </div>
+
+      <!-- 行程天數 -->
+      <div class="tp-edit-section">
+        <label class="tp-edit-section-label">行程天數</label>
+        <p class="tp-edit-section-helper" style="margin-bottom:12px;">
+          5/1（五）– 5/5（二），共 5 天。設定 Day 1 起始日期可整體平移行程；增/減天請用下方 + / ✕。
+        </p>
+
+        <!-- V1: Day 1 起始日期 inline date row -->
+        <div class="tp-edit-day1-shift" data-testid="edit-trip-day1-shift">
+          <div class="tp-edit-day1-shift-label">
+            Day 1 起始日期
+            <strong>整體平移行程</strong>
+          </div>
+          <input
+            type="date"
+            value="2026-05-01"
+            class="tp-edit-day1-shift-input"
+            data-testid="edit-trip-day1-shift-input"
+          >
+        </div>
+
+        <!-- 加一天 + day rows + 加一天 -->
+        <button class="tp-edit-day-add-card" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; min-height: 56px; border: 1px dashed var(--color-accent); background: var(--color-accent-subtle); color: var(--color-accent-deep); border-radius: var(--radius-md); font: inherit; font-size: var(--font-size-callout); font-weight: 700; cursor: pointer; margin-bottom: 8px;">
+          <span style="display: inline-grid; place-items: center; width: 24px; height: 24px; background: var(--color-accent); color: var(--color-accent-foreground); border-radius: var(--radius-full); font-weight: 700;">+</span>
+          <span>加一天</span>
+        </button>
+
+        <div class="tp-edit-days-list">
+          <div class="tp-edit-day-row">
+            <span class="tp-edit-day-num">1</span>
+            <div class="tp-edit-day-content">
+              <div class="tp-edit-day-date">5/1（五）</div>
+              <div class="tp-edit-day-meta has-entries">7 個景點 · 33 km</div>
+            </div>
+            <button class="tp-edit-day-remove has-entries-warning">✕</button>
+          </div>
+          <div class="tp-edit-day-row">
+            <span class="tp-edit-day-num">2</span>
+            <div class="tp-edit-day-content">
+              <div class="tp-edit-day-date">5/2（六）</div>
+              <div class="tp-edit-day-meta has-entries">8 個景點 · 56 km</div>
+            </div>
+            <button class="tp-edit-day-remove has-entries-warning">✕</button>
+          </div>
+          <div class="tp-edit-day-row">
+            <span class="tp-edit-day-num">3</span>
+            <div class="tp-edit-day-content">
+              <div class="tp-edit-day-date">5/3（日）</div>
+              <div class="tp-edit-day-meta has-entries">9 個景點 · 78 km</div>
+            </div>
+            <button class="tp-edit-day-remove has-entries-warning">✕</button>
+          </div>
+          <div class="tp-edit-day-row">
+            <span class="tp-edit-day-num">4</span>
+            <div class="tp-edit-day-content">
+              <div class="tp-edit-day-date">5/4（一）</div>
+              <div class="tp-edit-day-meta has-entries">11 個景點 · 138 km</div>
+            </div>
+            <button class="tp-edit-day-remove has-entries-warning">✕</button>
+          </div>
+          <div class="tp-edit-day-row">
+            <span class="tp-edit-day-num">5</span>
+            <div class="tp-edit-day-content">
+              <div class="tp-edit-day-date">5/5（二）</div>
+              <div class="tp-edit-day-meta has-entries">11 個景點 · 126 km</div>
+            </div>
+            <button class="tp-edit-day-remove has-entries-warning">✕</button>
+          </div>
+        </div>
+
+        <button class="tp-edit-day-add-card" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; min-height: 56px; border: 1px dashed var(--color-accent); background: var(--color-accent-subtle); color: var(--color-accent-deep); border-radius: var(--radius-md); font: inherit; font-size: var(--font-size-callout); font-weight: 700; cursor: pointer; margin-top: 8px;">
+          <span style="display: inline-grid; place-items: center; width: 24px; height: 24px; background: var(--color-accent); color: var(--color-accent-foreground); border-radius: var(--radius-full); font-weight: 700;">+</span>
+          <span>加一天</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirm modal preview -->
+<div class="tp-confirm-backdrop" id="confirm-shift" style="display:none;">
+  <div class="tp-confirm-modal" role="alertdialog">
+    <h2 class="tp-confirm-title">移動整個行程？</h2>
+    <p class="tp-confirm-message">行程將從 5/1（五）– 5/5（二）平移至 8/15（六）– 8/19（三），所有景點的相對日子不變，只變日期。</p>
+    <div class="tp-confirm-actions">
+      <button class="tp-confirm-btn tp-confirm-btn-cancel" onclick="document.getElementById('confirm-shift').style.display='none'">取消</button>
+      <button class="tp-confirm-btn tp-confirm-btn-danger" style="background: var(--color-accent); border-color: var(--color-accent);">確認平移</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelector('.tp-edit-day1-shift-input').addEventListener('change', () => {
+    document.getElementById('confirm-shift').style.display = 'grid';
+  });
+</script>
+
+</body>
+</html>
