@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.4] - 2026-05-20
+
+**Polish: AddCustomStopPage Day context strip 改 M/D 短格式對齊 mockup。**
+QA 對比 2026-05-18 add-custom-stop mockup 發現 Day label 用 ISO `2026-07-31（五）`，
+mockup 是 `7/28（一）` 短格式（跟 v2.33.2 EditTripPage 同類問題）。
+
+### Fix
+
+`AddCustomStopPage.tsx::deriveDayLabel`：
+- import 既有 `formatDateLabel(date)` from `src/lib/mapDay.ts`
+- ISO date `2026-07-31` → `7/31`
+
+### Tests
+
+`add-custom-stop-day-label-short-date.test.ts` 3 個 source-grep。
+
 ## [2.33.3] - 2026-05-20
 
 **Polish: 行程天數 day row 加總距離「· X km」對齊 mockup。** v2.33.2 仍漏
