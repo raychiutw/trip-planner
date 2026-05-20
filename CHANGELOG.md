@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.9] - 2026-05-20
+
+**Fix: 整體平移行程 modal backdrop CSS 沒套用 → modal 跌到 viewport 外。**
+v2.33.8 prod QA 立刻發現。
+
+### Root cause
+
+v2.33.8 reuse `.tp-confirm-backdrop` className，但該 class 定義在
+`src/components/shared/ConfirmModal.tsx` 的 SCOPED_STYLES — 只在 ConfirmModal
+mount 時 inject 到 DOM。Shift modal 單獨開（無 ConfirmModal）時，
+`.tp-confirm-backdrop` 樣式沒注入 → backdrop 變 `position: static`、
+`display: block` → modal 子元素跌到 viewport 下面 (y=844px out of view)。
+
+### Fix
+
+`src/pages/EditTripPage.tsx` SCOPED_STYLES 加自己的 `.tp-shift-backdrop`
+class (與 `.tp-confirm-backdrop` 同 spec：`position: fixed; inset: 0;
+z-index: 1100; display: grid; place-items: center`)。Modal markup 改 className 對應。
+
+### Tests
+
+既有 5 個 frontend source-grep test 都仍 pass（不需新測試，純 CSS class
+rename）。
+
 ## [2.33.8] - 2026-05-20
 
 **Feat: EditTripPage 加「整體平移行程」入口，直接設定 Day 1 起始日期讓全
