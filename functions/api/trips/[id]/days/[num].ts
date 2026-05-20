@@ -589,8 +589,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 //
 // Auth: trip write permission（owner/admin/member; viewer 拒）。
 
-const DAY_MS_PER_DAY = 86_400_000;
-
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
@@ -632,24 +630,28 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   // Delete the day（trip_entries 透過 FK ON DELETE CASCADE 自動清掉）
   await db.prepare('DELETE FROM trip_days WHERE id = ?').bind(target.id).run();
 
-  // 後續 days: day_num -= 1 + date -= 1 day（contiguous range 維持）
-  // SQLite UNIQUE(trip_id, day_num) 在 statement end 才檢查，UPDATE 安全。
+  // 後續 days: day_num -= 1（date / day_of_week 不動，避免「日期 shift up」
+  // 違反 prepend / delete-first 對稱性）。
+  //
+  // v2.33.1 fix：v2.33.0 額外 shift dates 上移 1 天 → user prepend 加 4/30 後
+  // delete-first 預期回到原 5/1，但實際變 4/30-5/4（trip 提前 1 天）。
+  // 改為只 renumber day_num；dates 保留 → 若中間刪，會留 gap（acceptable，
+  // Tripline 不強制 contiguous dates）。
+  //
+  // SQLite UNIQUE(trip_id, day_num) 在 statement end 才檢查 OK，但 D1 row-by-row
+  // 檢查需要逐 row UPDATE，每 row 自己的 statement → 自然安全。
   const { results: subsequent } = await db
-    .prepare('SELECT id, day_num, date FROM trip_days WHERE trip_id = ? AND day_num > ? ORDER BY day_num ASC')
+    .prepare('SELECT id, day_num FROM trip_days WHERE trip_id = ? AND day_num > ? ORDER BY day_num ASC')
     .bind(id, dayNum)
-    .all<{ id: number; day_num: number; date: string | null }>();
+    .all<{ id: number; day_num: number }>();
 
   if (subsequent && subsequent.length > 0) {
     const stmts: D1PreparedStatement[] = [];
     for (const r of subsequent) {
-      const newDate = r.date ? shiftDateBack(r.date, 1) : null;
-      const newDayOfWeek = newDate
-        ? ['日', '一', '二', '三', '四', '五', '六'][new Date(newDate + 'T00:00:00Z').getUTCDay()]
-        : null;
       stmts.push(
         db
-          .prepare('UPDATE trip_days SET day_num = ?, date = ?, day_of_week = ? WHERE id = ?')
-          .bind(r.day_num - 1, newDate, newDayOfWeek, r.id),
+          .prepare('UPDATE trip_days SET day_num = ? WHERE id = ?')
+          .bind(r.day_num - 1, r.id),
       );
     }
     if (stmts.length > 0) await db.batch(stmts);
@@ -657,8 +659,3 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
   return json({ ok: true, removedEntryCount });
 };
-
-function shiftDateBack(yyyyMmDd: string, days: number): string {
-  const t = new Date(yyyyMmDd + 'T00:00:00Z').getTime();
-  return new Date(t - days * DAY_MS_PER_DAY).toISOString().slice(0, 10);
-}

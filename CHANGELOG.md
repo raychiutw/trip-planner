@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.1] - 2026-05-20
+
+**Fix: DELETE /api/trips/:id/days/:num 不再 shift dates — 修 prepend +
+delete-first 不對稱問題。** v2.33.0 prod QA 立刻發現的 bug。
+
+### Root cause
+
+v2.33.0 backend DELETE 在 cascade subsequent days 時，把 day_num **和**
+date 同時 shift up 1 天：
+- 用戶 prepend 加 Day 1 = 4/30（trip 4/30-5/5）→ delete Day 1（empty）
+  → 預期回到原 5/1-5/5，但實際變 4/30-5/4
+- 整個 trip 提前 1 天，違反 prepend / delete-first 對稱性
+- 中間刪除 day 也會「整體上移」→ entry 的 calendar date 跟著變
+
+### Fix
+
+`functions/api/trips/[id]/days/[num].ts onRequestDelete`：
+
+- 後續 days **只 renumber day_num**（`day_num -= 1`）
+- **dates / day_of_week 保留**不動
+- Trade-off: 中間刪 day 會在日期上留 gap（e.g. 5/1, 5/2, 5/4, 5/5）— 但
+  Tripline 不強制 contiguous dates，user 意圖「我刪掉那天，其他天不變」
+  比 contiguous 重要
+
+### Frontend warning 更新
+
+ConfirmModal warning「後續天數的日期會自動上移」→ 「後續天數的 Day
+編號會往前遞補（日期保留，可能會留下空檔的日子）。」
+
+### Tests
+
+更新 `trips-days-mutate.integration.test.ts`：
+- 中間天刪除測 dates 保留（剩 4/1, 4/2, 4/4, 4/5）
+- 新增「刪除第一天」test 確認 prepend / delete-first 對稱
+
 ## [2.33.0] - 2026-05-20
 
 **Feat: EditTripPage 加「行程天數」section — 任意天可增 / 減，移除有
