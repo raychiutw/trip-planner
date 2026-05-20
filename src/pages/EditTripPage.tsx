@@ -431,6 +431,14 @@ function SortableDestRow({ dest, index, onRemove }: SortableDestinationRowProps)
   );
 }
 
+/** v2.33.2: ISO date `2026-05-01` → `5/1` short form 對齊 mockup 視覺。 */
+function formatShortDate(yyyyMmDd: string | null | undefined): string {
+  if (!yyyyMmDd) return '';
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(yyyyMmDd);
+  if (!m) return yyyyMmDd;
+  return `${Number(m[1])}/${Number(m[2])}`;
+}
+
 function deriveAutoTitle(destinations: DestinationRow[], startDate?: string): string {
   if (destinations.length === 0) return '';
   const year = startDate ? startDate.slice(0, 4) : new Date().getFullYear().toString();
@@ -896,7 +904,7 @@ export default function EditTripPage() {
                       <>
                         <p className="tp-edit-date-helper" style={{ marginBottom: 8 }}>
                           {days.length > 0 && days[0]?.date && days[days.length - 1]?.date
-                            ? `${days[0]!.date}（${days[0]!.dayOfWeek ?? ''}）– ${days[days.length - 1]!.date}（${days[days.length - 1]!.dayOfWeek ?? ''}），共 ${days.length} 天`
+                            ? `${formatShortDate(days[0]!.date)}（${days[0]!.dayOfWeek ?? ''}）– ${formatShortDate(days[days.length - 1]!.date)}（${days[days.length - 1]!.dayOfWeek ?? ''}），共 ${days.length} 天`
                             : `共 ${days.length} 天`}
                           。可在最前或最後加入新一天（日期自動順延 / 提前）；移除有景點的天會跳出確認。
                         </p>
@@ -918,7 +926,7 @@ export default function EditTripPage() {
                               <span className="tp-edit-day-num">{d.dayNum}</span>
                               <div className="tp-edit-day-content">
                                 <div className="tp-edit-day-date">
-                                  {d.date ? `${d.date}（${d.dayOfWeek ?? ''}）` : `Day ${d.dayNum}`}
+                                  {d.date ? `${formatShortDate(d.date)}（${d.dayOfWeek ?? ''}）` : `Day ${d.dayNum}`}
                                 </div>
                                 <div
                                   className={`tp-edit-day-meta ${d.entryCount > 0 ? 'has-entries' : 'is-empty'}`}
@@ -1088,8 +1096,8 @@ export default function EditTripPage() {
         message={
           pendingDelete
             ? pendingDelete.entryCount > 0
-              ? `Day ${pendingDelete.dayNum}${pendingDelete.date ? `（${pendingDelete.date}）` : ''}目前有 ${pendingDelete.entryCount} 個景點。確認後將同時刪除這些景點與排程，此操作不可復原。`
-              : `Day ${pendingDelete.dayNum}${pendingDelete.date ? `（${pendingDelete.date}）` : ''}目前是空的。確認移除？`
+              ? `Day ${pendingDelete.dayNum}${pendingDelete.date ? `（${formatShortDate(pendingDelete.date)}）` : ''}目前有 ${pendingDelete.entryCount} 個景點。確認後將同時刪除這些景點與排程，此操作不可復原。`
+              : `Day ${pendingDelete.dayNum}${pendingDelete.date ? `（${formatShortDate(pendingDelete.date)}）` : ''}目前是空的。確認移除？`
             : ''
         }
         warning={
