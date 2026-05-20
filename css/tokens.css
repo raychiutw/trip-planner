@@ -244,6 +244,54 @@ body.dark {
 
 /* ===== TripPage base styles ===== */
 @layer base {
+    /* v2.33.12: 全域 input / textarea / select baseline — 確保任何新加 input
+     * 自動套 Terracotta 樣式（避免散落各 page 各自 scope CSS 導致遺漏 → 出現
+     * native browser default 的事故，例 v2.33.8 shift modal date input 黑底
+     * 黑字 / 未來新加 page 忘加 page-scoped class）。
+     *
+     * 用 `:where()` 把 specificity 降為 0，page-scoped class（如
+     * `.tp-form-input`、`.tp-edit-row input[type=text]`）可輕易 override。
+     *
+     * Checkbox/radio/file/range/color/button/submit/reset/hidden/image 排除
+     * （這些有自己的視覺語意，不該被 text input 樣式蓋）。 */
+    :where(
+        input:not([type="checkbox"]):not([type="radio"]):not([type="file"])
+              :not([type="range"]):not([type="color"]):not([type="button"])
+              :not([type="submit"]):not([type="reset"]):not([type="hidden"])
+              :not([type="image"]),
+        textarea,
+        select
+    ) {
+        padding: 12px 14px;
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background-color: var(--color-secondary);
+        color: var(--color-foreground);
+        font: inherit;
+        font-size: var(--font-size-body);
+        min-height: var(--spacing-tap-min);
+        outline: none;
+        transition: border-color 120ms, box-shadow 120ms, background-color 120ms;
+    }
+    :where(
+        input:not([type="checkbox"]):not([type="radio"]):not([type="file"])
+              :not([type="range"]):not([type="color"]):not([type="button"])
+              :not([type="submit"]):not([type="reset"]):not([type="hidden"])
+              :not([type="image"]),
+        textarea,
+        select
+    ):focus {
+        border-color: var(--color-accent);
+        background-color: var(--color-background);
+        box-shadow: 0 0 0 3px var(--color-accent-subtle);
+    }
+
+    /* Checkbox / radio baseline — accent-color 對齊 Terracotta */
+    :where(input[type="checkbox"], input[type="radio"]) {
+        accent-color: var(--color-accent);
+        cursor: pointer;
+    }
+
     /* v2.33.11: 全域 native date/time/datetime input 保護
      * 修 iOS Safari 在系統 dark mode 下把 input[type=date/time] 渲染成黑底黑字
      * 的問題（user 真機 v2.33.8 prod 截圖回報）。明確 color-scheme: light +
