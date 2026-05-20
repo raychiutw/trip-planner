@@ -76,6 +76,8 @@ interface DaySummary {
   date: string | null;
   dayOfWeek: string | null;
   entryCount: number;
+  /** v2.33.3: 對齊 mockup 「N 個景點 · X km」總距離（rounded km），無 segment data 時 null。 */
+  totalKm: number | null;
 }
 
 interface PendingDelete {
@@ -431,6 +433,24 @@ function SortableDestRow({ dest, index, onRemove }: SortableDestinationRowProps)
   );
 }
 
+/** v2.33.3: 從 timeline sum travel.distanceM → rounded km (對齊 DaySection 邏輯) */
+function computeTotalKm(timeline: unknown): number | null {
+  if (!Array.isArray(timeline)) return null;
+  let totalM = 0;
+  let hasAny = false;
+  for (const e of timeline) {
+    if (typeof e !== 'object' || e === null) continue;
+    const travel = (e as { travel?: { distanceM?: number | null } }).travel;
+    const d = travel?.distanceM;
+    if (typeof d === 'number' && Number.isFinite(d)) {
+      totalM += d;
+      hasAny = true;
+    }
+  }
+  if (!hasAny) return null;
+  return Math.round(totalM / 1000);
+}
+
 /** v2.33.2: ISO date `2026-05-01` → `5/1` short form 對齊 mockup 視覺。 */
 function formatShortDate(yyyyMmDd: string | null | undefined): string {
   if (!yyyyMmDd) return '';
@@ -518,6 +538,7 @@ export default function EditTripPage() {
           date: d.date ?? null,
           dayOfWeek: d.dayOfWeek ?? null,
           entryCount: Array.isArray(d.timeline) ? d.timeline.length : 0,
+          totalKm: computeTotalKm(d.timeline),
         })),
       );
     } catch (err) {
@@ -931,7 +952,11 @@ export default function EditTripPage() {
                                 <div
                                   className={`tp-edit-day-meta ${d.entryCount > 0 ? 'has-entries' : 'is-empty'}`}
                                 >
-                                  {d.entryCount > 0 ? `${d.entryCount} 個景點` : '空'}
+                                  {d.entryCount > 0
+                                    ? d.totalKm != null
+                                      ? `${d.entryCount} 個景點 · ${d.totalKm} km`
+                                      : `${d.entryCount} 個景點`
+                                    : '空'}
                                 </div>
                               </div>
                               <button
