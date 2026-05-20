@@ -544,11 +544,12 @@ const VIEWPORT_MARGIN = 8;
 interface EmbeddedActionMenuProps {
   tripId: string;
   tripPageRef: React.RefObject<TripPageHandle | null>;
+  onEdit: () => void;
   onCollab: () => void;
   onHealthCheck: () => void;
 }
 
-function EmbeddedActionMenu({ tripId, tripPageRef, onCollab, onHealthCheck }: EmbeddedActionMenuProps) {
+function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck }: EmbeddedActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -623,6 +624,16 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onCollab, onHealthCheck }: Em
       style={{ top: pos.top, left: pos.left }}
       data-testid={`trip-embedded-menu-${tripId}`}
     >
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-embedded-menu-item"
+        onClick={runAndClose(onEdit)}
+        data-testid={`trip-embedded-menu-edit-${tripId}`}
+      >
+        <Icon name="edit" />
+        <span>編輯行程</span>
+      </button>
       <button
         type="button"
         role="menuitem"
@@ -1236,6 +1247,7 @@ export default function TripsListPage() {
             <EmbeddedActionMenu
               tripId={effectiveSelectedId}
               tripPageRef={tripPageRef}
+              onEdit={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/edit`)}
               onCollab={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/collab`)}
               onHealthCheck={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/health`)}
             />
