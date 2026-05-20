@@ -82,6 +82,15 @@ describe('EditTripPage — v2.33.0 行程天數 section', () => {
     expect(EDIT_TRIP_SRC).toMatch(/\.tp-edit-day-add-card\s*\{[\s\S]{0,500}background:\s*var\(--color-accent-subtle\)/);
   });
 
+  it('v2.33.3: day row 顯示 「N 個景點 · X km」對齊 mockup', () => {
+    expect(EDIT_TRIP_SRC).toMatch(/function computeTotalKm/);
+    expect(EDIT_TRIP_SRC).toMatch(/totalKm: computeTotalKm\(d\.timeline\)/);
+    // Conditional render: 有 km 顯示「· X km」，無則只「N 個景點」
+    expect(EDIT_TRIP_SRC).toMatch(
+      /d\.totalKm != null[\s\S]{0,200}`\$\{d\.entryCount\} 個景點 · \$\{d\.totalKm\} km`/,
+    );
+  });
+
   it('v2.33.2: date 顯示用 formatShortDate (mockup 對齊 M/D 短格式)', () => {
     expect(EDIT_TRIP_SRC).toMatch(/function formatShortDate/);
     // day row date 呼叫 formatShortDate

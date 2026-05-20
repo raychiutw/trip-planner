@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.3] - 2026-05-20
+
+**Polish: 行程天數 day row 加總距離「· X km」對齊 mockup。** v2.33.2 仍漏
+mockup 「7 個景點 · 33 km」的 km 部分。
+
+### Fix
+
+`EditTripPage.tsx`：
+- 新 helper `computeTotalKm(timeline)`：從 `trip_entries[].travel.distanceM`
+  sum + rounded km（對齊 DaySection 既有 `getTotalKm` 邏輯）
+- `DaySummary` interface 加 `totalKm: number | null`
+- Day row conditional render：
+  - has entries + has km: `${count} 個景點 · ${totalKm} km`
+  - has entries no km: `${count} 個景點`
+  - empty: `空`
+
+### Tests
+
+`edit-trip-days-management.test.ts` 14th test 驗 computeTotalKm wire +
+conditional render。
+
 ## [2.33.2] - 2026-05-20
 
 **Polish: EditTripPage 行程天數 section date 顯示對齊 mockup 用 M/D 短格式。**
