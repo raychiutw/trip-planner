@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.8] - 2026-05-20
+
+**Feat: EditTripPage 加「整體平移行程」入口，直接設定 Day 1 起始日期讓全
+trip 平移。** User 需求：「修改天數提供另外一種模式 直接設定 Day 1 的
+起始日期」。
+
+### Design
+
+Mockup `docs/design-sessions/2026-05-20-day1-start-date-shift/` V2 button +
+modal 中選，user 指定：文字精簡 + 不需 icon。
+
+### Added
+
+**Backend** `POST /api/trips/:id/days/shift` body `{ startDate: 'YYYY-MM-DD' }`：
+- 計算 delta = startDate - day_num=1 之 date
+- Batch UPDATE 所有 trip_days 的 date + day_of_week (delta-based shift)
+- Gap-preserving：原 dates 之間的 gap 自動 preserve
+- 空 trip / 有 null date 拒 (400)
+- Returns `{ ok, newStartDate, newEndDate, daysShifted }`
+
+**Frontend** EditTripPage:
+- 「Day 1 起始日期：5/1（五）」精簡單行 button（chev right，無 icon），
+  放在 section helper text 下方、prepend「+ 加一天」card 上方
+- 點 button → modal（title「整體平移行程」+ date input + preview
+  「5/1（五）– 5/5（二）→ 8/15（六）– 8/19（三）」+ 取消/確認）
+- 確認後 POST `/days/shift` + refetch + toast「已平移到 8/15」
+- Confirm button disabled when new date 等於原 Day 1 date (no-op guard)
+
+### Tests
+
+- API: `tests/api/trips-days-shift.integration.test.ts` 6 tests (含
+  gap-preservation、no-op delta=0、validation、auth)
+- Frontend: `tests/unit/edit-trip-day1-start-date-shift.test.ts` 5
+  source-grep tests
+
 ## [2.33.7] - 2026-05-20
 
 **Feat: EditTripPage 中間天 gap 加 dashed placeholder「+ 加回 M/D」可點擊還原。**
