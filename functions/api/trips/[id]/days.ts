@@ -116,10 +116,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const trip = await db.prepare('SELECT id FROM trips WHERE id = ?').bind(tripId).first();
   if (!trip) throw new AppError('DATA_NOT_FOUND', '找不到該行程');
 
-  const body = (await context.request.json().catch(() => ({}))) as { position?: string };
-  const position = body.position === 'start' ? 'start' : body.position === 'end' ? 'end' : null;
+  const body = (await context.request.json().catch(() => ({}))) as { position?: string; date?: string };
+  const position =
+    body.position === 'start' ? 'start' :
+    body.position === 'end' ? 'end' :
+    body.position === 'insert' ? 'insert' :
+    null;
   if (!position) {
-    throw new AppError('DATA_VALIDATION', 'position 需為 "start" 或 "end"');
+    throw new AppError('DATA_VALIDATION', 'position 需為 "start" / "end" / "insert"');
+  }
+
+  // v2.33.7: insert mode 需 body.date (YYYY-MM-DD)
+  let insertDate: string | null = null;
+  if (position === 'insert') {
+    if (typeof body.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
+      throw new AppError('DATA_VALIDATION', 'insert 模式必須提供 date (YYYY-MM-DD)');
+    }
+    insertDate = body.date;
   }
 
   // 取目前所有 days 算 min/max
@@ -135,11 +148,36 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (existing.length === 0) {
     // 空 trip：第一天無 reference date
     newDayNum = 1;
-    newDate = null;
+    newDate = position === 'insert' ? insertDate : null;
   } else if (position === 'end') {
     const last = existing[existing.length - 1]!;
     newDayNum = last.day_num + 1;
     newDate = last.date ? shiftDate(last.date, +1) : null;
+  } else if (position === 'insert') {
+    // v2.33.7: insert at correct day_num based on date 排序。
+    // 找 < insertDate 的 days 數量 → newDayNum = count + 1。
+    // 後續 days (≥ newDayNum) 逆序 UPDATE day_num += 1。
+    newDate = insertDate;
+    let beforeCount = 0;
+    for (const r of existing) {
+      if (r.date && r.date < insertDate!) beforeCount++;
+      else if (r.date && r.date === insertDate) {
+        throw new AppError('DATA_VALIDATION', `日期 ${insertDate} 已存在，不能重複`);
+      }
+    }
+    newDayNum = beforeCount + 1;
+    // shift 後續 days (day_num >= newDayNum) 逆序 +1
+    const toShift = existing.filter((r) => r.day_num >= newDayNum);
+    const stmts: D1PreparedStatement[] = [];
+    for (let i = toShift.length - 1; i >= 0; i--) {
+      const r = toShift[i]!;
+      stmts.push(
+        db
+          .prepare('UPDATE trip_days SET day_num = ? WHERE trip_id = ? AND day_num = ?')
+          .bind(r.day_num + 1, tripId, r.day_num),
+      );
+    }
+    if (stmts.length > 0) await db.batch(stmts);
   } else {
     // prepend
     const first = existing[0]!;

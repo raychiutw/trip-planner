@@ -3,6 +3,37 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.7] - 2026-05-20
+
+**Feat: EditTripPage 中間天 gap 加 dashed placeholder「+ 加回 M/D」可點擊還原。**
+User 要求：「移除中間天後留下虛線框，然後可以加回」。
+
+### Context
+
+v2.33.1 fix DELETE 保留 dates → 中間天移除後 date 序列出現 gap (e.g. 5/1, 5/2, 5/4, 5/5)。
+之前 UI 沒視覺呈現這個 gap → user 不知道有缺日 / 無法加回。
+
+### Added
+
+**Backend**: `POST /api/trips/:id/days` 新 `position: 'insert'` + `date` body：
+- 找 < insertDate 的 days 數量 → newDayNum = count + 1
+- 後續 days (≥ newDayNum) 逆序 day_num += 1（避開 D1 UNIQUE constraint）
+- 拒重複日期（400 if date 已存在）
+
+**Frontend** EditTripPage：
+- 新 helpers: `daysBetween(d1, d2)` / `shiftDateByDays(date, n)` / `chineseDayOfWeek(date)`
+- `handleRestoreDay(date)` callback → POST insert + refetch + toast
+- 渲染 day list 用 `flatMap` 偵測連續兩天 date 是否 contiguous，gap 處 render
+  `<button class="tp-edit-day-gap">` dashed 邊框、accent-tertiary 底色、
+  「+ 加回 5/3（六）」label
+- Hover state 變成 accent dashed + colored plus icon
+- testid `edit-trip-day-gap-${gapDate}`
+
+### Tests
+
+- API: `trips-days-mutate.integration.test.ts` 加 3 個 insert tests (13 total)
+- Frontend: `edit-trip-days-management.test.ts` 加 gap detection + render + CSS test (16 total)
+
 ## [2.33.6] - 2026-05-20
 
 **Feat: TripPage 右上「⋯」action menu 加「編輯行程」入口。** User 要求：
