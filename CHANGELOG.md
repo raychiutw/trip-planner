@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.10] - 2026-05-21
+
+**Fix: shift modal date input 在 iOS Safari 系統深色模式下背景變黑，文字幾乎
+看不見。** User 真機截圖回報。
+
+### Root cause
+
+`<input type="date">` 在 iOS Safari 沒設 explicit `background` / `color` /
+`color-scheme` 時，會跟系統 dark mode 走 → 整個 input 變黑背景黑字。
+桌機 Chrome 沒問題（系統不在 dark mode）但 iOS Safari 立刻翻車。
+
+### Fix
+
+`src/pages/EditTripPage.tsx` `.tp-shift-modal-input`：
+- `background: var(--color-background)`
+- `color: var(--color-foreground)`
+- `color-scheme: light` — 明確告訴 iOS 不要跟系統 dark mode
+- `-webkit-appearance: none` + `appearance: none` — 移除 iOS native dark style
+- `::-webkit-date-and-time-value` 加 color override 保 value 文字色
+
+### Tests
+
+既有 5 個 source-grep test 仍 pass（CSS-only fix，testid + selector 不變）。
+
 ## [2.33.9] - 2026-05-20
 
 **Fix: 整體平移行程 modal backdrop CSS 沒套用 → modal 跌到 viewport 外。**
