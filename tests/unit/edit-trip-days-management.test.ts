@@ -68,6 +68,22 @@ describe('EditTripPage — v2.33.0 行程天數 section', () => {
     expect(EDIT_TRIP_SRC).not.toMatch(/<Icon name="x"\s*\/>/);
   });
 
+  it('v2.33.7: 中間天 gap 偵測 + dashed placeholder 加回功能', () => {
+    // gap detection helpers
+    expect(EDIT_TRIP_SRC).toMatch(/function daysBetween/);
+    expect(EDIT_TRIP_SRC).toMatch(/function shiftDateByDays/);
+    expect(EDIT_TRIP_SRC).toMatch(/function chineseDayOfWeek/);
+    // handleRestoreDay 呼叫 POST position: 'insert', date
+    expect(EDIT_TRIP_SRC).toMatch(/handleRestoreDay = useCallback/);
+    expect(EDIT_TRIP_SRC).toMatch(/JSON\.stringify\(\{ position: 'insert', date \}\)/);
+    // gap placeholder render with testid
+    expect(EDIT_TRIP_SRC).toMatch(/data-testid=\{`edit-trip-day-gap-\$\{gapDate\}`\}/);
+    expect(EDIT_TRIP_SRC).toMatch(/className="tp-edit-day-gap"/);
+    expect(EDIT_TRIP_SRC).toMatch(/加回 \$\{formatShortDate\(gapDate\)\}/);
+    // CSS .tp-edit-day-gap
+    expect(EDIT_TRIP_SRC).toMatch(/\.tp-edit-day-gap\s*\{[\s\S]{0,500}border: 1px dashed/);
+  });
+
   it('取代既有 read-only date section（不再 render tp-edit-date-readonly）', () => {
     expect(EDIT_TRIP_SRC).not.toMatch(/data-testid="edit-trip-date-readonly"/);
     expect(EDIT_TRIP_SRC).not.toMatch(/修改日期請另建新行程/);

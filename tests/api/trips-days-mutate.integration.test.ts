@@ -81,6 +81,74 @@ describe('POST /api/trips/:id/days — prepend (position=start)', () => {
   });
 });
 
+describe('POST /api/trips/:id/days — insert (position=insert, v2.33.7 fill gap)', () => {
+  it('insert middle date → 找對應 day_num，後續 days day_num +1', async () => {
+    await seedTrip(db, { id: 'insert-trip', days: 3 });
+    // Original: Day 1=4/1, Day 2=4/2, Day 3=4/3
+    // Delete Day 2 (mid) 留 gap 4/2 → 剩 Day 1=4/1, Day 2=4/3 (renumbered)
+    const ctxDel = mockContext({
+      request: jsonRequest('https://test.com/api/trips/insert-trip/days/2', 'DELETE'),
+      env,
+      auth: mockAuth(),
+      params: { id: 'insert-trip', num: '2' },
+    });
+    await callHandler((await import('../../functions/api/trips/[id]/days/[num]')).onRequestDelete, ctxDel);
+
+    // Now insert 4/2 back
+    const ctxIns = mockContext({
+      request: jsonRequest('https://test.com/api/trips/insert-trip/days', 'POST', {
+        position: 'insert',
+        date: '2026-04-02',
+      }),
+      env,
+      auth: mockAuth(),
+      params: { id: 'insert-trip' },
+    });
+    const resp = await callHandler(onRequestPost, ctxIns);
+    expect(resp.status).toBe(200);
+    const body = await resp.json() as { day: { dayNum: number; date: string; dayOfWeek: string } };
+    expect(body.day.date).toBe('2026-04-02');
+    expect(body.day.dayNum).toBe(2);
+
+    // DB 確認 3 天 day_num 1-3 contiguous dates
+    const { results } = await db
+      .prepare('SELECT day_num, date FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC')
+      .bind('insert-trip')
+      .all() as { results: Array<{ day_num: number; date: string }> };
+    expect(results.map((r) => r.day_num)).toEqual([1, 2, 3]);
+    expect(results.map((r) => r.date)).toEqual(['2026-04-01', '2026-04-02', '2026-04-03']);
+  });
+
+  it('insert date 已存在 → 400', async () => {
+    await seedTrip(db, { id: 'insert-dup', days: 3 });
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/insert-dup/days', 'POST', {
+        position: 'insert',
+        date: '2026-04-02', // 已存在
+      }),
+      env,
+      auth: mockAuth(),
+      params: { id: 'insert-dup' },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(400);
+  });
+
+  it('insert without date → 400', async () => {
+    await seedTrip(db, { id: 'insert-nodate', days: 1 });
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/insert-nodate/days', 'POST', {
+        position: 'insert',
+      }),
+      env,
+      auth: mockAuth(),
+      params: { id: 'insert-nodate' },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(400);
+  });
+});
+
 describe('POST /api/trips/:id/days — validation', () => {
   it('body 沒 position → 400', async () => {
     await seedTrip(db, { id: 'val-trip', days: 1 });
