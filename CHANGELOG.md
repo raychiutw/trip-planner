@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.5] - 2026-05-20
+
+**Fix: EditTripPage day-remove ✕ icon 沒 render — wrong Icon name。** User
+prod 截圖回報「紅框 ✕ 不見了」— remove button 顯示空圓圈。
+
+### Root cause
+
+`EditTripPage.tsx:970` 用 `<Icon name="x" />`，但 Icon component
+（`src/components/shared/Icon.tsx`）只有 `x-mark` / `x-circle`，沒有 `x`
+→ `IconMap[name]` undefined → `<svg>` 空白 → 圓圈內無 ✕ 符號。
+
+### Fix
+
+`name="x"` → `name="x-mark"`。
+
+### Tests
+
+`edit-trip-days-management.test.ts` 加 15th test 驗 icon name + 不再用「x」。
+
 ## [2.33.4] - 2026-05-20
 
 **Polish: AddCustomStopPage Day context strip 改 M/D 短格式對齊 mockup。**
