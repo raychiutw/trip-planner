@@ -244,6 +244,39 @@ body.dark {
 
 /* ===== TripPage base styles ===== */
 @layer base {
+    /* v2.33.11: 全域 native date/time/datetime input 保護
+     * 修 iOS Safari 在系統 dark mode 下把 input[type=date/time] 渲染成黑底黑字
+     * 的問題（user 真機 v2.33.8 prod 截圖回報）。明確 color-scheme: light +
+     * background + color，並 remove native appearance 統一 cross-browser。
+     *
+     * Note: 8 處 callsite 都 inherit 此 base（NewTripPage / AddPoiFavoriteToTrip /
+     * AddCustomStopPage / EditEntryPage / EditTripPage shift modal）。各自的
+     * scoped CSS 仍可 override background-color 對齊 page palette。 */
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input[type="week"] {
+        color-scheme: light;
+        -webkit-appearance: none;
+        appearance: none;
+        background-color: var(--color-background);
+        color: var(--color-foreground);
+        font-variant-numeric: tabular-nums;
+    }
+    input[type="date"]::-webkit-date-and-time-value,
+    input[type="time"]::-webkit-date-and-time-value,
+    input[type="datetime-local"]::-webkit-date-and-time-value {
+        color: var(--color-foreground);
+        text-align: inherit;
+    }
+    /* 隱藏 iOS calendar / clock icon 對齊既有 placeholder 樣式 */
+    input[type="date"]::-webkit-calendar-picker-indicator,
+    input[type="time"]::-webkit-calendar-picker-indicator {
+        opacity: 0.6;
+        cursor: pointer;
+    }
+
     /* Day header — Ocean primary hero */
     .day-header {
         background: var(--color-accent);
