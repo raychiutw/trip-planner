@@ -338,21 +338,24 @@ const SCOPED_STYLES = `
   transition: all 120ms;
 }
 .tp-edit-day-remove:hover:not(:disabled) {
-  border-color: var(--color-destructive);
-  background: var(--color-destructive-bg);
-  color: var(--color-destructive);
+  /* v2.33.14: 改 accent (terracotta) 不用 destructive red — user 不要紅色
+     (real destructive moment 是 confirm dialog，那邊保留紅色) */
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
 }
 .tp-edit-day-remove:disabled { opacity: 0.4; cursor: not-allowed; }
 .tp-edit-day-remove.has-entries-warning {
-  /* v2.33.13: 加 destructive-bg tint 統一桌機/手機 ✕ 視覺紅度（user 回報
-     desktop 看起來顏色較淡） — 紅 border + 淡紅 bg + 紅 icon 三層加總視覺
-     更貼近 mobile retina 渲染。 */
-  border-color: var(--color-destructive);
-  background: var(--color-destructive-bg);
-  color: var(--color-destructive);
+  /* v2.33.14: has-entries warning 用 accent-deep (terracotta) 取代 destructive
+     red — user 回報「不要紅色，要和手機一樣」。Mobile retina 上 destructive
+     #C13515 看起來偏 terracotta，desktop 大畫面看起來偏 vivid red。改 accent
+     一致對齊 Tripline 暖橘色系，無 cross-device 色差。 */
+  border-color: var(--color-accent-deep);
+  color: var(--color-accent-deep);
 }
 .tp-edit-day-remove.has-entries-warning:hover:not(:disabled) {
-  background: var(--color-destructive);
+  background: var(--color-accent-deep);
+  border-color: var(--color-accent-deep);
   color: #fff;
 }
 
