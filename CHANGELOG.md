@@ -3,6 +3,36 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.14] - 2026-05-21
+
+**Fix: day-remove ✕ button 改用 accent-deep (terracotta) 不用 destructive
+red。** User 回報「不要紅色，要和手機一樣」 — v2.33.13 加的 destructive-bg
+tint 反而讓桌機更紅，user 視覺對齊期待是 Tripline 暖橘色系。
+
+### Root cause
+
+`--color-destructive: #C13515` (warm-red vermilion) 在 mobile retina 高密度
+螢幕渲染偏 terracotta，desktop 大畫面看起來偏 vivid red。v2.33.13 又加
+`--color-destructive-bg` (#FDECEC) 淡紅 tint 加重紅感。
+
+### Fix
+
+`src/pages/EditTripPage.tsx` `.tp-edit-day-remove`：
+
+- Default hover: `var(--color-destructive)` → `var(--color-accent)` + accent-subtle bg + accent-deep text
+- `.has-entries-warning`: `var(--color-destructive)` → `var(--color-accent-deep)`
+  - border-color + color 都改 accent-deep (#B85C2E)
+  - 移除 v2.33.13 加的 destructive-bg tint
+- `.has-entries-warning:hover`: solid destructive → solid accent-deep + white text
+
+Real destructive moment (confirm dialog) 仍保留紅色（ConfirmModal 內部 token）。
+
+### Rationale
+
+Accent-deep 是 Tripline 既有設計系統暖橘色，跨 device 渲染一致。warning
+state 提示力道仍夠（border + icon 都變色），但不會造成 mobile/desktop
+色差感。
+
 ## [2.33.13] - 2026-05-21
 
 **Polish: shift 功能 copy 改「變更出發日期」+ ✕ button 視覺對齊手機紅度。**
