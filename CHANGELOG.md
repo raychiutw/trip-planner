@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.15] - 2026-05-21
+
+**Fix: shift modal「取消」button fallback browser native 黑底白字。** User
+prod 截圖回報「按鈕和 mockup 不同」— 取消看起來是 dark/black solid，
+不是 mockup 期待的 light outlined。
+
+### Root cause
+
+v2.33.8 起 shift modal cancel button 用 `.tp-confirm-btn` + `.tp-confirm-btn-cancel`
+className。這兩個 class 定義在 `ConfirmModal.tsx` 的 SCOPED_STYLES 內部
+— 只有 ConfirmModal mount 才注入到 DOM。Shift modal 單獨開時，
+`.tp-confirm-btn*` 樣式沒注入 → 取消 button fallback 到 browser native button
+default（dark/black bg + white text on Safari/Chrome）。
+
+同 v2.33.9 `.tp-confirm-backdrop` 同類 bug。
+
+### Fix
+
+`src/pages/EditTripPage.tsx`：
+- JSX：`tp-confirm-btn tp-confirm-btn-cancel` → `tp-shift-modal-btn tp-shift-modal-cancel`
+- 同步：`tp-confirm-btn tp-shift-modal-confirm` → `tp-shift-modal-btn tp-shift-modal-confirm`
+- Container：`tp-confirm-actions` → `tp-shift-modal-actions`
+- SCOPED_STYLES 加完整定義（cancel: secondary bg / foreground text / border;
+  confirm 保留 accent solid）
+
+避免再依賴別 component 的 scoped CSS。
+
 ## [2.33.14] - 2026-05-21
 
 **Fix: day-remove ✕ button 改用 accent-deep (terracotta) 不用 destructive

@@ -541,6 +541,38 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote);
   line-height: 1.5;
 }
+/* v2.33.15: 改用 local class — 之前 reuse .tp-confirm-btn / .tp-confirm-btn-cancel
+   是 ConfirmModal SCOPED_STYLES 內部 class，shift modal 單獨開時樣式沒注入
+   → cancel button fallback browser native (黑底白字)。同 v2.33.9 backdrop 修法。 */
+.tp-shift-modal-actions {
+  display: flex; gap: 8px;
+}
+.tp-shift-modal-btn {
+  flex: 1; min-width: 112px;
+  min-height: var(--spacing-tap-min);
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--font-size-footnote);
+  cursor: pointer;
+  border: 1px solid;
+  transition: background 120ms, border-color 120ms, filter 120ms;
+}
+.tp-shift-modal-cancel {
+  background: var(--color-secondary);
+  color: var(--color-foreground);
+  border-color: var(--color-border);
+}
+.tp-shift-modal-cancel:hover:not(:disabled) {
+  background: var(--color-tertiary);
+  border-color: var(--color-line-strong);
+}
+.tp-shift-modal-cancel:focus-visible {
+  outline: 2px solid var(--color-foreground);
+  outline-offset: 2px;
+}
+.tp-shift-modal-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .tp-shift-modal-confirm {
   background: var(--color-accent);
   color: var(--color-accent-foreground);
@@ -1463,10 +1495,10 @@ export default function EditTripPage() {
                 return `${formatShortDate(oldStart)}（${chineseDayOfWeek(oldStart)}）– ${formatShortDate(oldEnd)}（${chineseDayOfWeek(oldEnd)}） → ${formatShortDate(shiftNewDate)}（${chineseDayOfWeek(shiftNewDate)}）– ${formatShortDate(newEnd)}（${chineseDayOfWeek(newEnd)}）`;
               })()}
             </div>
-            <div className="tp-confirm-actions">
+            <div className="tp-shift-modal-actions">
               <button
                 type="button"
-                className="tp-confirm-btn tp-confirm-btn-cancel"
+                className="tp-shift-modal-btn tp-shift-modal-cancel"
                 onClick={() => setShiftModalOpen(false)}
                 disabled={daysMutating}
               >
@@ -1474,7 +1506,7 @@ export default function EditTripPage() {
               </button>
               <button
                 type="button"
-                className="tp-confirm-btn tp-shift-modal-confirm"
+                className="tp-shift-modal-btn tp-shift-modal-confirm"
                 onClick={handleConfirmShift}
                 disabled={daysMutating || shiftNewDate === days[0]!.date}
                 data-testid="edit-trip-shift-confirm-btn"
