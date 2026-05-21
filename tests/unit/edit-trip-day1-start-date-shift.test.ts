@@ -19,20 +19,24 @@ describe('EditTripPage — v2.33.8 Day 1 起始日期平移', () => {
     expect(SRC).toMatch(/JSON\.stringify\(\{ startDate: shiftNewDate \}\)/);
   });
 
-  it('shift button — 精簡單行「Day 1 起始日期：M/D（週幾）」+ chev，無 icon', () => {
+  it('v2.33.13: shift button — 精簡單行「出發日期：M/D（週幾）」+ chev，無 icon', () => {
     expect(SRC).toMatch(/data-testid="edit-trip-day-shift-btn"/);
-    expect(SRC).toMatch(/Day 1 起始日期：/);
+    expect(SRC).toMatch(/出發日期：/);
     expect(SRC).toMatch(/className="tp-edit-day-shift-chev"/);
     // 不該有 icon (calendar / 📅)
     expect(SRC).not.toMatch(/<Icon name="calendar"\s*\/>[\s\S]{0,200}tp-edit-day-shift-btn/);
+    // v2.33.13: 不再用「Day 1 起始日期」前綴
+    expect(SRC).not.toMatch(/Day 1 起始日期：<strong>/);
   });
 
-  it('shift modal — title「整體平移行程」+ date input + preview「old → new」', () => {
+  it('v2.33.13: shift modal — title「變更出發日期」+ date input + preview「old → new」', () => {
     expect(SRC).toMatch(/data-testid="edit-trip-shift-modal"/);
-    expect(SRC).toMatch(/整體平移行程/);
+    expect(SRC).toMatch(/變更出發日期/);
     expect(SRC).toMatch(/data-testid="edit-trip-shift-date-input"/);
     expect(SRC).toMatch(/data-testid="edit-trip-shift-preview"/);
     expect(SRC).toMatch(/data-testid="edit-trip-shift-confirm-btn"/);
+    // v2.33.13: 不再用「整體平移行程」title
+    expect(SRC).not.toMatch(/<h2 className="tp-shift-modal-title">整體平移行程/);
   });
 
   it('confirm button disabled when shiftNewDate === current Day 1 date (no-op)', () => {

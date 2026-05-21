@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.13] - 2026-05-21
+
+**Polish: shift 功能 copy 改「變更出發日期」+ ✕ button 視覺對齊手機紅度。**
+User prod 回報「版面不正確 working 改為變更出發日期」+「紅框刪除按鈕顏色
+與手機不同 請對齊手機色碼」。
+
+### Copy 改動 (`src/pages/EditTripPage.tsx`)
+
+- Section button: 「Day 1 起始日期：5/1（五）」→「出發日期：5/1（五）」
+- Modal title: 「整體平移行程」→「變更出發日期」
+- Modal label: 「Day 1 起始日期」→「出發日期」
+- Confirm button: 「確認平移 / 平移中⋯」→「確認變更 / 變更中⋯」
+- Toast: 「已平移到 8/15」→「出發日期已變更為 8/15」
+
+### ✕ button 視覺對齊
+
+`.tp-edit-day-remove.has-entries-warning` 加 `background:
+var(--color-destructive-bg)` (淡紅 tint #FDECEC)。原本只有 red border +
+red icon，background 還是 cream，desktop 大畫面下 anti-aliasing 讓 ✕ icon
+看起來偏淡。加 bg tint 後三層 (border + bg + icon) 都帶紅，視覺更貼近
+mobile retina 渲染。Hover 仍走 destructive solid 不變。
+
+### Tests
+
+`edit-trip-day1-start-date-shift.test.ts` 更新驗新 copy + 確認舊 copy
+不再 render（21 tests）。
+
 ## [2.33.12] - 2026-05-21
 
 **Fix: 全域 input / textarea / select baseline — 確保任何新加 input 自動套
