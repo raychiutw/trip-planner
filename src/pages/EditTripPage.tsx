@@ -344,7 +344,11 @@ const SCOPED_STYLES = `
 }
 .tp-edit-day-remove:disabled { opacity: 0.4; cursor: not-allowed; }
 .tp-edit-day-remove.has-entries-warning {
+  /* v2.33.13: 加 destructive-bg tint 統一桌機/手機 ✕ 視覺紅度（user 回報
+     desktop 看起來顏色較淡） — 紅 border + 淡紅 bg + 紅 icon 三層加總視覺
+     更貼近 mobile retina 渲染。 */
   border-color: var(--color-destructive);
+  background: var(--color-destructive-bg);
   color: var(--color-destructive);
 }
 .tp-edit-day-remove.has-entries-warning:hover:not(:disabled) {
@@ -877,7 +881,7 @@ export default function EditTripPage() {
       }
       await refetchDays();
       window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
-      showToast(`已平移到 ${formatShortDate(shiftNewDate)}`, 'success');
+      showToast(`出發日期已變更為 ${formatShortDate(shiftNewDate)}`, 'success');
       setShiftModalOpen(false);
     } catch (err) {
       showToast(err instanceof Error ? err.message : '平移失敗', 'error');
@@ -1190,7 +1194,7 @@ export default function EditTripPage() {
                             data-testid="edit-trip-day-shift-btn"
                           >
                             <span className="tp-edit-day-shift-label">
-                              Day 1 起始日期：<strong>{formatShortDate(days[0]!.date)}（{days[0]!.dayOfWeek ?? ''}）</strong>
+                              出發日期：<strong>{formatShortDate(days[0]!.date)}（{days[0]!.dayOfWeek ?? ''}）</strong>
                             </span>
                             <span className="tp-edit-day-shift-chev" aria-hidden="true">›</span>
                           </button>
@@ -1434,8 +1438,8 @@ export default function EditTripPage() {
       {shiftModalOpen && days && days[0]?.date && (
         <div className="tp-shift-backdrop" role="presentation" onClick={() => setShiftModalOpen(false)} data-testid="edit-trip-shift-modal-backdrop">
           <div className="tp-shift-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} data-testid="edit-trip-shift-modal">
-            <h2 className="tp-shift-modal-title">整體平移行程</h2>
-            <label className="tp-shift-modal-label" htmlFor="edit-trip-shift-date">Day 1 起始日期</label>
+            <h2 className="tp-shift-modal-title">變更出發日期</h2>
+            <label className="tp-shift-modal-label" htmlFor="edit-trip-shift-date">出發日期</label>
             <input
               type="date"
               id="edit-trip-shift-date"
@@ -1472,7 +1476,7 @@ export default function EditTripPage() {
                 disabled={daysMutating || shiftNewDate === days[0]!.date}
                 data-testid="edit-trip-shift-confirm-btn"
               >
-                {daysMutating ? '平移中⋯' : '確認平移'}
+                {daysMutating ? '變更中⋯' : '確認變更'}
               </button>
             </div>
           </div>
