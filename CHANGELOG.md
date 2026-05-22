@@ -3,6 +3,36 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.22] - 2026-05-22
+
+**Chore: page-scoped input/select CSS cleanup (v2.33.16/17/19/21 follow-up)**
+
+v2.33.16-21 把所有 native `<select>` / `<input type="date">` / `<input
+type="time">` 換成 Trip* components 後，多支 page 的 page-scoped CSS rules
+已成 dead code（無 callsite）。本次 sweep 移除：
+
+- `src/pages/AddPoiFavoriteToTripPage.tsx`：`.tp-favorites-add-to-trip
+  .tp-form-select`/`.tp-form-input` 整批規則（含 dark mode + mobile font-size）
+- `src/pages/AddEntryPage.tsx`：`.tp-add-entry-daypicker-select`（含
+  chevron data:image + focus ring）
+- `src/pages/EditTripPage.tsx`：`.tp-shift-modal-input`（含 webkit-date-time-value
+  + focus ring）
+
+順手收：
+- `src/pages/AddCustomStopPage.tsx`：title input className `.tp-custom-stop-input`
+  → `.tp-input-long`（page-scoped rule 同步移除）
+- `src/pages/EditEntryPage.tsx`：抵達/離開卡片 (`.tp-edit-entry-time-card`)
+  原 wrapper 自帶 border + padding，TripTimePicker 自己也有 trigger border →
+  double frame 視覺 bug。改 wrapper 只保留 label + flex（gap 6px），由
+  TripTimePicker 顯示 input frame。
+
+### Tests
+
+tsc clean / vitest 269 files / 2082 tests pass。`edit-entry-time-row-overflow.test.ts`
+assert 反轉：原 `.tp-edit-entry-time-card input` 規則消失，overflow guard
+改靠 grid minmax(0, 1fr) + card min-width: 0 兩道防線（button trigger
+overflow:hidden text-overflow:ellipsis 在 TripTimePicker.styles 自帶）。
+
 ## [2.33.21] - 2026-05-22
 
 **Feat: TripTimePicker — 5 個 native `<input type="time">` 改網站風格**

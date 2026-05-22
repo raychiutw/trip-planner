@@ -31,10 +31,15 @@ describe('EditEntryPage — 時間 row mobile overflow fix', () => {
     );
   });
 
-  it('.tp-edit-entry-time-card input 含 min-width: 0', () => {
-    expect(EDIT_ENTRY_SRC).toMatch(
-      /\.tp-edit-entry-time-card input\s*\{[\s\S]{0,400}min-width:\s*0/,
-    );
+  // v2.33.22: native <input type="time"> 換 TripTimePicker (button-based)，
+  // `.tp-edit-entry-time-card input` 規則整 block 移除。overflow guard 已被
+  // grid minmax(0, 1fr) + card min-width: 0 涵蓋；button trigger 自帶
+  // overflow:hidden text-overflow:ellipsis on .tp-time-value (TripTimePicker.styles)。
+  it('.tp-edit-entry-time-card label (TripTimePicker 觸發 button 內字段) 不會撐爆 grid', () => {
+    // 確認 grid minmax 仍然防 blow-out (主防線)
+    expect(EDIT_ENTRY_SRC).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    // 確認時間 card 自己仍是 min-width: 0
+    expect(EDIT_ENTRY_SRC).toMatch(/\.tp-edit-entry-time-card\s*\{[\s\S]{0,400}min-width:\s*0/);
   });
 
   it('原本 hardcoded `grid-template-columns: 1fr auto 1fr` 已替換', () => {
