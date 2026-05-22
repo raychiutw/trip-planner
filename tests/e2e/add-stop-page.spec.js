@@ -59,7 +59,11 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await expect(page.getByText(/還沒收藏景點/)).toBeVisible();
   });
 
-  test('自訂 tab → form fields render + counter 顯示「已選 0 個」直到 title + coord 雙備齊', async ({ page }) => {
+  test('自訂 tab → form fields render + counter 顯示「已選 0 個」直到 title + coord 雙備齊', async ({ page }, testInfo) => {
+    // v2.31.94 設計：mobile (≤1023px) 切自訂 tab → 自動 redirect 到 /add-custom-stop
+    // (fullpage IME-safe 路徑)，testid 改 add-custom-stop-* 不是 add-stop-custom-*。
+    // 本 spec 鎖 desktop inline tab 路徑；mobile 由 add-custom-stop-*.spec 覆蓋。
+    testInfo.skip(testInfo.project.name.startsWith('mobile-'), 'desktop-only inline tab; mobile uses /add-custom-stop fullpage');
     await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     await page.getByTestId('add-stop-tab-custom').click();
     await expect(page.getByTestId('add-stop-custom-title')).toBeVisible();
@@ -74,7 +78,8 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await expect(page.getByTestId('add-stop-counter')).toContainText('已選 0 個');
   });
 
-  test('自訂 tab disabled 直到 title 填 + map pin coord 備齊（v2.31.94 wedge）', async ({ page }) => {
+  test('自訂 tab disabled 直到 title 填 + map pin coord 備齊（v2.31.94 wedge）', async ({ page }, testInfo) => {
+    testInfo.skip(testInfo.project.name.startsWith('mobile-'), 'desktop-only inline tab; mobile uses /add-custom-stop fullpage');
     await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     await page.getByTestId('add-stop-tab-custom').click();
     // Title 空 + 無 coord → 完成 disabled
@@ -102,7 +107,8 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await expect(page.getByTestId('add-stop-subtab-all')).not.toHaveClass(/is-active/);
   });
 
-  test('TitleBar 完成按鈕 (responsive icon+text/icon-only) 與 bottom bar 同步 disabled', async ({ page }) => {
+  test('TitleBar 完成按鈕 (responsive icon+text/icon-only) 與 bottom bar 同步 disabled', async ({ page }, testInfo) => {
+    testInfo.skip(testInfo.project.name.startsWith('mobile-'), 'desktop-only inline tab; mobile uses /add-custom-stop fullpage');
     await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     // search tab default 0 selected → 兩處 confirm 都 disabled
     const titleBarConfirm = page.getByTestId('add-stop-titlebar-confirm');

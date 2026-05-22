@@ -69,7 +69,11 @@ test.describe('QA Flow 2 — 新增景點 (custom tab wedge guard)', () => {
   // v2.31.94：自訂 tab 新 contract — 必須 title + map pin coord 雙備齊才能 submit
   // (per design doc wedge: 保證有 coord 才能 submit)。POST entries 流程移到 search
   // tab E2E 覆蓋 (search 路徑無 map 依賴) — 此 test 改驗 guard 行為。
-  test('custom tab title-only 維持 disabled — 無 map pin coord 不能 submit', async ({ page }) => {
+  test('custom tab title-only 維持 disabled — 無 map pin coord 不能 submit', async ({ page }, testInfo) => {
+    // v2.31.94 設計：mobile 切自訂 tab 會 redirect 到 /add-custom-stop，testid 不同。
+    // 本 test 鎖 desktop inline tab 路徑（map IME wedge）。mobile fullpage 由
+    // add-custom-stop tests 覆蓋。
+    testInfo.skip(testInfo.project.name.startsWith('mobile-'), 'desktop-only inline tab; mobile uses /add-custom-stop fullpage');
     /** @type {string[]} */
     const entryPostUrls = [];
     page.on('request', (req) => {
