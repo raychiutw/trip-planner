@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.24] - 2026-05-22
+
+**Fix: AddStopPage 自訂 tab 開始時間 input migrated to TripTimePicker**
+
+v2.33.21 inventory `type="time"` grep 漏抓 `AddStopPage.tsx:1331` — 該
+input 用 `type="text"` 接受 free-form 文字（placeholder 顯示「Day 01 ·
+17:00」hint）。Prod QA 驗證 v2.33.23 scroll-center fix 時，把 AddStopPage
+自訂 tab 開啟發現它仍 native input。
+
+Fix: 同 5 個 native time 改 TripTimePicker — wrapper div 帶 testid，picker
+trigger 自帶 22px bold center + chevron。Placeholder 統一成預設「--:--」。
+
+無 prod 行為改動（state 仍 `customTime: string`，submit 仍經 join HH:MM
+join）。
+
 ## [2.33.23] - 2026-05-22
 
 **Fix: TripTimePicker popover 開啟時不 scroll center 到 selected value**

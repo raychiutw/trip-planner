@@ -42,6 +42,7 @@ import TitleBar from '../components/shell/TitleBar';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import { TripTimePicker } from '../components/TripTimePicker';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { regionToApiParam } from '../lib/maps/region';
 import type { PoiSearchResult } from '../types/poi';
@@ -1326,15 +1327,13 @@ export default function AddStopPage() {
                     extraRows={
                       <>
                         <div className="tp-custom-poi-form-row">
-                          <div className="tp-custom-poi-form-field">
+                          <div className="tp-custom-poi-form-field" data-testid="add-stop-custom-time">
                             <label htmlFor="add-stop-custom-time">開始時間</label>
-                            <input
+                            <TripTimePicker
                               id="add-stop-custom-time"
-                              type="text"
                               value={customTime}
-                              onChange={(e) => setCustomTime(e.target.value)}
-                              placeholder={`Day ${String(dayNum).padStart(2, '0')} · 17:00`}
-                              data-testid="add-stop-custom-time"
+                              onChange={setCustomTime}
+                              ariaLabel={`Day ${String(dayNum).padStart(2, '0')} 開始時間`}
                             />
                           </div>
                           <div className="tp-custom-poi-form-field">
