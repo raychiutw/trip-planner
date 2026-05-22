@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.23] - 2026-05-22
+
+**Fix: TripTimePicker popover 開啟時不 scroll center 到 selected value**
+
+Prod QA 發現 EditEntryPage 開「抵達 22:07」picker 時，popover 顯示 00-04
++ 00-20（沒 scroll 到 22 + 05）。
+
+Root cause 2 個：
+1. `requestAnimationFrame` 內 query 元素時，PopoverPanel portal 雖 mount
+   但 layout/scroll 尚未 ready → scrollIntoView 無效
+2. 既有 value 的 minute 若非 `minuteStep` 整數倍（22:07，step=5），minute
+   column 內無對應 cell → 完全無 scroll target
+
+Fix:
+- `setTimeout(60ms)` 取代 `requestAnimationFrame`（等 transition + layout）
+- `scrollTop = offsetTop - half-height` 直接設 parent scroll，避免
+  `scrollIntoView` 把整頁也 scroll
+- 既有 mm 非 step 整數倍 → reduce 找最近 step cell（07 → 05）
+
 ## [2.33.22] - 2026-05-22
 
 **Chore: page-scoped input/select CSS cleanup (v2.33.16/17/19/21 follow-up)**
