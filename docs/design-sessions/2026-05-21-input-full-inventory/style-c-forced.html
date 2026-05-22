@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>強制 Style C 全域 — 視覺預覽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+body { background: var(--color-secondary); padding: 32px 16px; }
+.wrap { max-width: 880px; margin: 0 auto; }
+h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; }
+.lead { color: var(--color-muted); margin: 0 0 20px; line-height: 1.6; }
+.warn-box {
+  background: var(--color-priority-high-bg);
+  border: 1.5px solid var(--color-destructive);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: var(--color-destructive);
+  line-height: 1.6;
+}
+.section {
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--color-border);
+}
+.section h2 {
+  margin: 0 0 6px;
+  font-size: var(--font-size-callout);
+  font-weight: 800;
+}
+.section p.sub {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+/* === FORCED Style C — applied to all inputs === */
+.style-c-card {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--color-background);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  min-width: 0;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.style-c-card:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+.style-c-card label,
+.style-c-card .label {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.style-c-card input,
+.style-c-card textarea,
+.style-c-card select {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-foreground);
+  border: 0;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  color-scheme: light;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.style-c-card textarea { resize: vertical; min-height: 56px; line-height: 1.4; }
+
+.row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bad { color: var(--color-destructive); font-weight: 600; }
+.ok { color: #2e8540; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<h1>強制 Style C 全域 — 視覺預覽</h1>
+<p class="lead">把全部 input 套 Style C (no border / transparent / <strong>22px bold</strong>)。下方各種真實 use case 看效果。</p>
+
+<div class="warn-box">
+⚠️ <strong>已知 UX 問題</strong>：22px bold 對長文字（email / 描述 / 標題）破板嚴重。對短值（time / date / number）有效果。
+</div>
+
+<!-- === 短值 OK === -->
+<div class="section">
+  <h2><span class="ok">✓</span> 短值（time / date / number）— OK，視覺強烈</h2>
+  <p class="sub">這是 Style C 原本設計目的。</p>
+  <div class="row-grid">
+    <label class="style-c-card">
+      <span>抵達</span>
+      <input type="time" value="10:45">
+    </label>
+    <label class="style-c-card">
+      <span>離開</span>
+      <input type="time" value="12:00">
+    </label>
+  </div>
+  <label class="style-c-card">
+    <span>出發日期</span>
+    <input type="date" value="2026-07-01">
+  </label>
+  <label class="style-c-card">
+    <span>停留分鐘</span>
+    <input type="number" value="60">
+  </label>
+</div>
+
+<!-- === 中等長度 — 還可以 === -->
+<div class="section">
+  <h2><span class="ok">~</span> 中等長度（trip 名稱 / 描述短）— 還可</h2>
+  <p class="sub">字元數 < 20 字 OK，超過會擠或撞框。</p>
+  <label class="style-c-card">
+    <span>行程名稱</span>
+    <input type="text" value="2026 沖繩五日">
+  </label>
+  <label class="style-c-card">
+    <span>POI 標題</span>
+    <input type="text" value="美麗海水族館">
+  </label>
+</div>
+
+<!-- === 長值 BAD === -->
+<div class="section">
+  <h2><span class="bad">✗</span> 長值（email / 完整 trip 名 / 地址）— 破板</h2>
+  <p class="sub">22px 把字撐太大，超出 input 寬度時 user 看不到尾巴。</p>
+  <label class="style-c-card">
+    <span>電子郵件</span>
+    <input type="email" value="lean.lean@gmail.com">
+  </label>
+  <label class="style-c-card">
+    <span>完整行程名稱</span>
+    <input type="text" value="2026 沖繩五日自駕遊行程表">
+  </label>
+  <label class="style-c-card">
+    <span>地址</span>
+    <input type="text" value="日本〒150-8377 Tokyo, Shibuya">
+  </label>
+  <label class="style-c-card">
+    <span>密碼（隱藏星號也太大）</span>
+    <input type="password" value="placeholder">
+  </label>
+</div>
+
+<!-- === Textarea 災難 === -->
+<div class="section">
+  <h2><span class="bad">✗✗</span> Textarea（備註 / 描述）— 災難</h2>
+  <p class="sub">22px bold 段落文字基本上沒辦法讀。SEO description 失去意義。</p>
+  <label class="style-c-card">
+    <span>描述（用於 SEO）</span>
+    <textarea rows="3">2026 沖繩五日自駕遊完整行程表：那霸、北谷美國村、青之洞窟、瀨底海灘、美麗海水族館、古宇利島。含餐廳推薦、地圖導航、預算規劃。</textarea>
+  </label>
+  <label class="style-c-card">
+    <span>備註</span>
+    <textarea rows="3">機場接機 — 必點山苦瓜炒麵，週三休息。記得帶充電器跟轉接頭。</textarea>
+  </label>
+</div>
+
+<!-- === Search BAD === -->
+<div class="section">
+  <h2><span class="bad">✗</span> 搜尋（POI / 收藏 / trips）— 不適合</h2>
+  <p class="sub">22px bold + label 把搜尋框做大，跟既有 inline 搜尋 UX (chip-style) 衝突。</p>
+  <label class="style-c-card">
+    <span>搜尋景點、餐廳、住宿</span>
+    <input type="search" placeholder="輸入關鍵字...">
+  </label>
+</div>
+
+<!-- === Select OK === -->
+<div class="section">
+  <h2><span class="ok">~</span> Select dropdown — 看起來 OK</h2>
+  <p class="sub">但 select 跟 input 同樣大會增加垂直 form 長度。</p>
+  <label class="style-c-card">
+    <span>顯示語言</span>
+    <select>
+      <option>繁體中文（台灣）</option>
+    </select>
+  </label>
+  <label class="style-c-card">
+    <span>排序方式</span>
+    <select>
+      <option>最新編輯</option>
+    </select>
+  </label>
+</div>
+
+<!-- === Login form 對比 === -->
+<div class="section">
+  <h2>實際應用：LoginPage 強制 Style C</h2>
+  <p class="sub">原本 email / password 兩個 flat input → 變成兩張 card。表單變高，但結構更清楚。</p>
+  <label class="style-c-card">
+    <span>電子郵件</span>
+    <input type="email" placeholder="your@email.com">
+  </label>
+  <label class="style-c-card">
+    <span>密碼</span>
+    <input type="password" placeholder="••••••••">
+  </label>
+</div>
+
+</div>
+
+</body>
+</html>

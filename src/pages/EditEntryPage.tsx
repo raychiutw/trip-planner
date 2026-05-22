@@ -1417,6 +1417,7 @@ export default function EditEntryPage() {
                           <label htmlFor="edit-entry-transit-min">分鐘</label>
                           <input
                             id="edit-entry-transit-min"
+                            className="tp-input-short"
                             type="number"
                             min="1"
                             max="1440"

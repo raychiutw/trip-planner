@@ -244,6 +244,122 @@ body.dark {
 
 /* ===== TripPage base styles ===== */
 @layer base {
+    /* v2.33.16: 二系統 input — long (一般文字) / short (固定格式短值卡片)
+     * 取代既有散落的 page-scoped class (.tp-form-input / .tp-custom-stop-input /
+     * .tp-shift-modal-input / .tp-edit-row input[type=text] ...)。
+     *
+     * 規則：
+     *  - email / password / 標題 / 地址 / 描述 / 備註 / 搜尋 / 長 select / textarea
+     *    → .tp-input-long
+     *  - time / date / 短 number / 短 select
+     *    → .tp-input-short (外卡 + 內 label + 22px bold value)
+     *
+     * Co-exist with v2.33.12 :where() base — 沒套 long/short 的 input 仍走 base
+     * fallback。 */
+    .tp-input-long {
+        display: block;
+        width: 100%;
+        padding: 12px 14px;
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background-color: var(--color-secondary);
+        color: var(--color-foreground);
+        font: inherit;
+        font-size: var(--font-size-body);
+        min-height: var(--spacing-tap-min);
+        outline: none;
+        transition: border-color 120ms, background-color 120ms, box-shadow 120ms;
+        color-scheme: light;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    .tp-input-long:focus {
+        border-color: var(--color-accent);
+        background-color: var(--color-background);
+        box-shadow: 0 0 0 3px var(--color-accent-subtle);
+    }
+    textarea.tp-input-long { min-height: 72px; resize: vertical; line-height: 1.5; }
+    select.tp-input-long {
+        cursor: pointer;
+        padding-right: 40px;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B85F2A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        background-size: 16px 16px;
+    }
+
+    /* tp-input-short — 卡片式 + label + 22px bold 數字。
+     * Markup pattern: <label class="tp-input-short"><span class="label">...</span><input/></label>
+     * 或 nested span > label。 */
+    .tp-input-short {
+        display: flex; flex-direction: column; gap: 2px;
+        background: var(--color-background);
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 10px 14px;
+        min-width: 0;
+        transition: border-color 120ms, box-shadow 120ms;
+        cursor: text;
+    }
+    .tp-input-short:focus-within {
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 3px var(--color-accent-subtle);
+    }
+    .tp-input-short > .label,
+    .tp-input-short > span,
+    .tp-input-short > label {
+        font-size: var(--font-size-caption);
+        color: var(--color-muted);
+        font-weight: 600;
+    }
+    .tp-input-short input,
+    .tp-input-short select {
+        font: inherit;
+        font-variant-numeric: tabular-nums;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--color-foreground);
+        border: 0;
+        background: transparent;
+        outline: none;
+        padding: 0;
+        width: 100%;
+        min-width: 0;
+        min-height: 32px;
+        color-scheme: light;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    /* Solo variant — 直接套在 <input>/<select> 上（不用 wrapper + label）。
+     * 用於遷移既有 single-input callsites 避免 JSX restructure。 */
+    input.tp-input-short,
+    select.tp-input-short {
+        display: block;
+        width: 100%;
+        padding: 12px 14px;
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background-color: var(--color-background);
+        color: var(--color-foreground);
+        font: inherit;
+        font-size: 22px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+        min-height: var(--spacing-tap-min);
+        outline: none;
+        transition: border-color 120ms, box-shadow 120ms;
+        color-scheme: light;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    input.tp-input-short:focus,
+    select.tp-input-short:focus {
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 3px var(--color-accent-subtle);
+    }
+
     /* v2.33.12: 全域 input / textarea / select baseline — 確保任何新加 input
      * 自動套 Terracotta 樣式（避免散落各 page 各自 scope CSS 導致遺漏 → 出現
      * native browser default 的事故，例 v2.33.8 shift modal date input 黑底

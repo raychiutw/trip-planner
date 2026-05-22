@@ -553,7 +553,7 @@ export default function AddPoiFavoriteToTripPage() {
               <label className="tp-form-label" htmlFor="atstr-start">開始時間</label>
               <input
                 id="atstr-start"
-                className="tp-form-input tabular"
+                className="tp-input-short"
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
@@ -566,7 +566,7 @@ export default function AddPoiFavoriteToTripPage() {
               <label className="tp-form-label" htmlFor="atstr-end">結束時間</label>
               <input
                 id="atstr-end"
-                className="tp-form-input tabular"
+                className="tp-input-short"
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}

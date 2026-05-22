@@ -381,6 +381,7 @@ export default function TravelPillDialog({
               </label>
               <input
                 id={`tp-transit-min-${segmentId}`}
+                className="tp-input-short"
                 type="number"
                 inputMode="numeric"
                 min={1}
