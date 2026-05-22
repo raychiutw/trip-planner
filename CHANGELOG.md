@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.20] - 2026-05-22
+
+**Fix: companion-resolver.test.ts beforeAll hookTimeout — CI flaky 修復**
+
+`tests/unit/companion-resolver.test.ts` 在 master CI 多次 fail：
+`Hook timed out in 10000ms` 於 `beforeAll`。Local 跑通常 5-6s 但 CI
+runner cold-start miniflare D1 偶爾 >10s 觸發 vitest default hookTimeout。
+Fix：`beforeAll(..., 30_000)` 明確 30s budget。
+
+加入 v2.33.19 prod QA 完整 v2.33.19 verify 截圖：
+- `qa-2-v2.33.19-newtrip-end-date.png`
+- `qa-4a-v2.33.19-favorites-trip.png`
+- `qa-4b-v2.33.19-favorites-day.png`
+
+對齊 qa-5/6/7 的 v2.33.19 再 screenshot — 5 個 TripSelect 全驗 dual chevron 拔掉。
+
 ## [2.33.19] - 2026-05-22
 
 **Fix: dual chevron on TripSelect — `.tp-select` class name collision**
