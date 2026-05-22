@@ -576,3 +576,86 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   // v2.30.x (migration 0065)：surface new OCC token 給 client 下次 PUT 用
   return json({ ok: true, dayVersion: currentDayVersion + 1 });
 };
+
+// ---------------------------------------------------------------------------
+// DELETE /api/trips/:id/days/:num — remove a day (cascade entries via FK)
+// ---------------------------------------------------------------------------
+//
+// v2.33.0: 移除某天 + cascade trip_entries（FK ON DELETE CASCADE）+ 後續 days
+// day_num 上移 + date 上移（trip 整體上縮 1 天）。最後一天禁刪（trip 至少 1 天）。
+//
+// Note：返回 { ok: true, removedEntryCount } 讓 frontend 可顯示 toast
+// 「Day N 已刪除（連同 X 個景點）」。
+//
+// Auth: trip write permission（owner/admin/member; viewer 拒）。
+
+export const onRequestDelete: PagesFunction<Env> = async (context) => {
+  const auth = getAuth(context);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
+
+  const { id, num } = context.params as { id: string; num: string };
+  const dayNum = Number(num);
+  if (!Number.isFinite(dayNum) || dayNum < 1) {
+    throw new AppError('DATA_VALIDATION', 'day_num 必須為正整數');
+  }
+
+  const db = context.env.DB;
+  if (!(await hasWritePermission(db, auth, id, auth.isAdmin))) {
+    throw new AppError('PERM_DENIED');
+  }
+
+  // 取目標 day + 計算 trip 共幾天（最後一天禁刪）
+  const target = await db
+    .prepare('SELECT id, day_num, date FROM trip_days WHERE trip_id = ? AND day_num = ?')
+    .bind(id, dayNum)
+    .first<{ id: number; day_num: number; date: string | null }>();
+  if (!target) throw new AppError('DATA_NOT_FOUND', '找不到該天');
+
+  const totalRow = await db
+    .prepare('SELECT COUNT(*) AS c FROM trip_days WHERE trip_id = ?')
+    .bind(id)
+    .first<{ c: number }>();
+  const total = Number(totalRow?.c || 0);
+  if (total <= 1) {
+    throw new AppError('DATA_VALIDATION', '行程至少要保留 1 天，無法刪除最後一天');
+  }
+
+  // 算將被 cascade 刪除的 entries 數（FK ON DELETE CASCADE 處理實際刪除）
+  const entryCountRow = await db
+    .prepare('SELECT COUNT(*) AS c FROM trip_entries WHERE day_id = ?')
+    .bind(target.id)
+    .first<{ c: number }>();
+  const removedEntryCount = Number(entryCountRow?.c || 0);
+
+  // Delete the day（trip_entries 透過 FK ON DELETE CASCADE 自動清掉）
+  await db.prepare('DELETE FROM trip_days WHERE id = ?').bind(target.id).run();
+
+  // 後續 days: day_num -= 1（date / day_of_week 不動，避免「日期 shift up」
+  // 違反 prepend / delete-first 對稱性）。
+  //
+  // v2.33.1 fix：v2.33.0 額外 shift dates 上移 1 天 → user prepend 加 4/30 後
+  // delete-first 預期回到原 5/1，但實際變 4/30-5/4（trip 提前 1 天）。
+  // 改為只 renumber day_num；dates 保留 → 若中間刪，會留 gap（acceptable，
+  // Tripline 不強制 contiguous dates）。
+  //
+  // SQLite UNIQUE(trip_id, day_num) 在 statement end 才檢查 OK，但 D1 row-by-row
+  // 檢查需要逐 row UPDATE，每 row 自己的 statement → 自然安全。
+  const { results: subsequent } = await db
+    .prepare('SELECT id, day_num FROM trip_days WHERE trip_id = ? AND day_num > ? ORDER BY day_num ASC')
+    .bind(id, dayNum)
+    .all<{ id: number; day_num: number }>();
+
+  if (subsequent && subsequent.length > 0) {
+    const stmts: D1PreparedStatement[] = [];
+    for (const r of subsequent) {
+      stmts.push(
+        db
+          .prepare('UPDATE trip_days SET day_num = ? WHERE id = ?')
+          .bind(r.day_num - 1, r.id),
+      );
+    }
+    if (stmts.length > 0) await db.batch(stmts);
+  }
+
+  return json({ ok: true, removedEntryCount });
+};

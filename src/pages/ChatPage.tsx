@@ -314,6 +314,23 @@ const SCOPED_STYLES = `
   align-self: flex-start;
   margin-left: calc(40px + 8px);
 }
+/* v2.31.91：markdown link 對齊 site terracotta 風格（取代 browser 預設藍/紫 underline）。
+ * Assistant bubble: terracotta accent text + subtle underline，hover 變淺。
+ * User bubble (accent bg): 文字用 accent-foreground (white)，underline 用 rgba(255,255,255,.5)。
+ * AI 健檢 reply 內「前往健檢報告 →」link 是主要 trigger。 */
+.tp-chat-msg a {
+  color: var(--color-accent-deep, var(--color-accent));
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  font-weight: 500;
+  transition: opacity 150ms;
+}
+.tp-chat-msg a:hover { opacity: 0.7; }
+.tp-chat-msg-user a {
+  color: var(--color-accent-foreground);
+  text-decoration-color: rgba(255, 255, 255, 0.55);
+}
 /* Bubble meta：每則訊息下方時間 + AI agent 標籤(F-004,2026-04-29 對齊 mockup)
  * — user 對齊 right、assistant 對齊 left。font-size caption2 + muted color +
  * weight 500 + margin-top 4。 */

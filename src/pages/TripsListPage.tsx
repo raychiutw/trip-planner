@@ -38,6 +38,7 @@ import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import { TripSelect } from '../components/TripSelect';
 import TripPage, { type TripPageHandle } from './TripPage';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 
@@ -544,11 +545,12 @@ const VIEWPORT_MARGIN = 8;
 interface EmbeddedActionMenuProps {
   tripId: string;
   tripPageRef: React.RefObject<TripPageHandle | null>;
+  onEdit: () => void;
   onCollab: () => void;
   onHealthCheck: () => void;
 }
 
-function EmbeddedActionMenu({ tripId, tripPageRef, onCollab, onHealthCheck }: EmbeddedActionMenuProps) {
+function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck }: EmbeddedActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -623,6 +625,16 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onCollab, onHealthCheck }: Em
       style={{ top: pos.top, left: pos.left }}
       data-testid={`trip-embedded-menu-${tripId}`}
     >
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-embedded-menu-item"
+        onClick={runAndClose(onEdit)}
+        data-testid={`trip-embedded-menu-edit-${tripId}`}
+      >
+        <Icon name="edit" />
+        <span>編輯行程</span>
+      </button>
       <button
         type="button"
         role="menuitem"
@@ -981,17 +993,19 @@ export default function TripsListPage() {
                   </button>
                 ))}
               </div>
-              <select
-                className="tp-trips-sort"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'updated' | 'start' | 'name')}
-                data-testid="trips-list-sort"
-                aria-label="排序方式"
-              >
-                <option value="updated">最新編輯</option>
-                <option value="start">出發日近</option>
-                <option value="name">名稱 A→Z</option>
-              </select>
+              <div data-testid="trips-list-sort">
+                <TripSelect<'updated' | 'start' | 'name'>
+                  value={sortBy}
+                  onChange={setSortBy}
+                  variant="pill"
+                  ariaLabel="排序方式"
+                  options={[
+                    { value: 'updated', label: '最新編輯' },
+                    { value: 'start', label: '出發日近' },
+                    { value: 'name', label: '名稱 A→Z' },
+                  ]}
+                />
+              </div>
               <div className={`tp-trips-search ${searchOpen ? 'is-open' : ''}`}>
                 <button
                   type="button"
@@ -1178,16 +1192,19 @@ export default function TripsListPage() {
         backLabel="返回行程列表"
         actions={effectiveSelectedId && (
           <>
-            {/* v2.31.85：探索 icon-only（拿掉中文 label），桌機只剩 icon + tooltip */}
+            {/* v2.32.0：「新增景點」入口改 navigate /add-entry（EditEntryPage 形狀 +
+                day 下拉），取代 v2.31.99 直接進 /add-stop。/add-stop 仍是 backward-
+                compat 直連 URL（bulk add 用），但新 entry-creation 主流程走 /add-entry。 */}
             <button
               type="button"
               className="tp-titlebar-action"
-              onClick={() => navigate('/explore')}
-              aria-label="探索"
-              title="探索"
-              data-testid="trip-explore-trigger"
+              onClick={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/add-entry`)}
+              aria-label="新增景點"
+              title="新增景點"
+              data-testid="trip-add-stop-trigger"
             >
-              <Icon name="search" />
+              <Icon name="plus" />
+              <span className="tp-titlebar-action-label">新增景點</span>
             </button>
             {/* v2.31.89：切換行程改 dropdown picker（對齊 ChatPage TitleBar trip picker） — swap-horiz + chevron ▾，click 開 dropdown 列 trips */}
             {visibleTrips.length > 0 && (
@@ -1233,6 +1250,7 @@ export default function TripsListPage() {
             <EmbeddedActionMenu
               tripId={effectiveSelectedId}
               tripPageRef={tripPageRef}
+              onEdit={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/edit`)}
               onCollab={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/collab`)}
               onHealthCheck={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/health`)}
             />

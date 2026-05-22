@@ -49,6 +49,7 @@ import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
 import ToastContainer from '../components/shared/Toast';
+import { TripDatePicker } from '../components/TripDatePicker';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { TRIP_FORM_STYLES } from '../components/trip/_tripFormStyles';
 import { usePoiSearch } from '../hooks/usePoiSearch';
@@ -811,27 +812,25 @@ export default function NewTripPage() {
 
               {dateMode === 'select' ? (
                 <div className="tp-new-form-grid">
-                  <div className="tp-new-form-row">
+                  <div className="tp-new-form-row" data-testid="new-trip-start-input">
                     <label htmlFor="new-trip-start">出發</label>
-                    <input
+                    <TripDatePicker
                       id="new-trip-start"
-                      type="date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={setStartDate}
                       required
-                      data-testid="new-trip-start-input"
+                      ariaLabel="出發日期"
                     />
                   </div>
-                  <div className="tp-new-form-row">
+                  <div className="tp-new-form-row" data-testid="new-trip-end-input">
                     <label htmlFor="new-trip-end">回程</label>
-                    <input
+                    <TripDatePicker
                       id="new-trip-end"
-                      type="date"
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      required
+                      onChange={setEndDate}
                       min={startDate || undefined}
-                      data-testid="new-trip-end-input"
+                      required
+                      ariaLabel="回程日期"
                     />
                   </div>
                 </div>

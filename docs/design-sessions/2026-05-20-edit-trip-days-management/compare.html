@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EditTripPage 天數管理 — 3 Variants 比較</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body {
+    background: var(--color-secondary);
+    padding: 24px;
+  }
+  .wrap {
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; }
+  .lead { color: var(--color-muted); margin: 0 0 24px; font-size: var(--font-size-callout); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 1280px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  .variant {
+    background: var(--color-background);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+  }
+  .variant h2 {
+    margin: 0 0 4px;
+    font-size: var(--font-size-title3);
+    font-weight: 800;
+  }
+  .variant h2 .badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: var(--color-accent-subtle);
+    color: var(--color-accent-deep);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-eyebrow);
+    font-weight: 700;
+    vertical-align: middle;
+  }
+  .variant .sub { margin: 0 0 12px; color: var(--color-muted); font-size: var(--font-size-footnote); }
+  .variant iframe {
+    width: 100%;
+    height: 720px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-secondary);
+    display: block;
+  }
+  .ia {
+    margin-top: 16px;
+    padding: 14px;
+    background: var(--color-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+  }
+  .ia h3 {
+    margin: 0 0 8px;
+    font-size: var(--font-size-callout);
+    font-weight: 700;
+  }
+  .ia dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 6px 12px;
+    font-size: var(--font-size-caption);
+  }
+  .ia dt { color: var(--color-muted); font-weight: 600; }
+  .ia dd { margin: 0; color: var(--color-foreground); }
+  .pros, .cons {
+    margin-top: 12px;
+    font-size: var(--font-size-caption);
+  }
+  .pros ul, .cons ul {
+    margin: 4px 0 0;
+    padding-left: 18px;
+  }
+  .pros { color: var(--color-foreground); }
+  .pros .h { color: #2e8540; font-weight: 700; }
+  .cons .h { color: var(--color-destructive); font-weight: 700; }
+  .footer {
+    margin-top: 32px;
+    padding: 20px;
+    background: var(--color-background);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+  }
+  .footer h2 { margin: 0 0 8px; font-size: var(--font-size-title3); }
+  .footer p { margin: 0; color: var(--color-muted); font-size: var(--font-size-footnote); }
+  .footer ol { margin: 8px 0 0 20px; padding: 0; }
+  .footer ol li { margin: 4px 0; }
+  code {
+    background: var(--color-tertiary);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>EditTripPage「天數管理」mockup — 3 variants 比較</h1>
+  <p class="lead">需求：增加/減少行程天數；移除有景點的天 → 紅色警告 + confirm dialog（確認後 cascade 刪除該天所有 entries）。<br>
+  共同 SoT：terracotta tokens · DESIGN.md · 既有 ConfirmModal pattern · destructive 走 <code>--color-destructive</code>。</p>
+
+  <div class="grid">
+
+    <!-- V1 -->
+    <article class="variant">
+      <h2>V1 · Days list with per-day delete <span class="badge">Mobile fullpage</span></h2>
+      <p class="sub">每天獨立一張 row card，含 date + entry count + ✕ button。「+ 加入一天」append 在 list 結尾。任意天可移除（中間刪 → 後續 day_num 重編）。</p>
+      <iframe src="v1-days-list-mobile.html" title="V1 — Days list"></iframe>
+      <div class="ia">
+        <h3>IA decisions</h3>
+        <dl>
+          <dt>新增天</dt><dd>列表結尾「+ 加入一天」append，date 接續上一天 +1</dd>
+          <dt>移除天</dt><dd>每 row 自己的 ✕，empty / has-entries 都跳 confirm（has-entries 紅色 border + 紅色 button）</dd>
+          <dt>Shift 語意</dt><dd>中間天移除 → 後續天 day_num 重編、日期 cascade 上移</dd>
+          <dt>Confirm 內文</dt><dd>「Day N 是 M/D（週X）目前有 K 個景點」+ shift 提醒 warning box</dd>
+          <dt>Dirty state</dt><dd>新增/移除 → 「儲存變更」啟用，新天 row 套 <code>.is-new</code> highlight</dd>
+        </dl>
+      </div>
+      <div class="pros">
+        <span class="h">優點</span>
+        <ul>
+          <li>每天獨立可見 — 5 天 → 5 row，user 看到「正在改 Day 3」直覺</li>
+          <li>任意天移除（不只結尾）— 中間插入的 day 可以單獨刪</li>
+          <li>視覺對齊「目的地」list pattern（同樣 row + handle + remove）</li>
+        </ul>
+      </div>
+      <div class="cons">
+        <span class="h">缺點</span>
+        <ul>
+          <li>7 天 trip → 7 rows 占垂直空間，scroll 較長</li>
+          <li>中間天移除 + 日期 cascade 語意對 user 可能複雜（需 warning 解釋）</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- V2 -->
+    <article class="variant">
+      <h2>V2 · Counter +/- <span class="badge">Mobile inline</span></h2>
+      <p class="sub">緊湊 counter `[−] 5 [+]` 風格。只能從尾巴增減。<strong>−</strong> 時若最後一天有景點，展開 inline summary +「將刪除 Day N · X 個景點」紅色 row → 點確認跳 modal。</p>
+      <iframe src="v2-counter-mobile.html" title="V2 — Counter"></iframe>
+      <div class="ia">
+        <h3>IA decisions</h3>
+        <dl>
+          <dt>新增天</dt><dd>「+」直接 append，date 自動順延（不需 confirm）</dd>
+          <dt>移除天</dt><dd>「−」嘗試刪最後一天；empty 直接刪，has-entries 展開 inline summary + 跳 confirm modal</dd>
+          <dt>Shift 語意</dt><dd>不存在（只動結尾，前面 days 不變）— UX 最直覺</dd>
+          <dt>Confirm 內文</dt><dd>「Day N 是 M/D（週X）目前有 K 個景點」（不需 shift warning）</dd>
+          <dt>Dirty state</dt><dd>counter value vs original 不同 → dirty</dd>
+        </dl>
+      </div>
+      <div class="pros">
+        <span class="h">優點</span>
+        <ul>
+          <li>佔位最小（1 row）— 9 成 user case「想加減幾天」滿足</li>
+          <li>無 shift 語意 — 一律從尾巴動，user 不需理解 day_num 重編</li>
+          <li>實作最簡單 — backend 只需 POST/DELETE last day</li>
+        </ul>
+      </div>
+      <div class="cons">
+        <span class="h">缺點</span>
+        <ul>
+          <li>不能單獨移除中間天 — 想刪 Day 3 必須先刪 4/5 再加回</li>
+          <li>每 day 的 metadata（景點數）看不到，user 不清楚刪掉的是空 day 還是滿 day（需 click − 才浮出）</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- V3 -->
+    <article class="variant">
+      <h2>V3 · Desktop two-pane <span class="badge">Desktop 1024+</span></h2>
+      <p class="sub">桌機 form 左、days pane 右 sticky。每天 compact row + 全域 [−] [+] 上方 + 任意 row ✕ 移除。Mobile 自動 fallback V1 stacked。</p>
+      <iframe src="v3-desktop-twopane.html" title="V3 — Desktop two-pane"></iframe>
+      <div class="ia">
+        <h3>IA decisions</h3>
+        <dl>
+          <dt>桌機 layout</dt><dd>1024+ 兩 pane：左 form / 右 sticky days pane</dd>
+          <dt>新增天</dt><dd>頂部 counter 「+」append；任意 row 沒有「插入」action（避免複雜化）</dd>
+          <dt>移除天</dt><dd>每 row ✕（任意天）+ 頂部 counter 「−」（捷徑刪最後一天）兩種入口</dd>
+          <dt>Shift 語意</dt><dd>中間刪 → 後續 day_num cascade 上移（同 V1）</dd>
+          <dt>Mobile fallback</dt><dd>≤1023px 切回 V1 stacked layout（days 區塊 inline）</dd>
+        </dl>
+      </div>
+      <div class="pros">
+        <span class="h">優點</span>
+        <ul>
+          <li>桌機長 form 不被 days 列表撐長 — 右 sticky 不滾動</li>
+          <li>兩種 affordance — 快速 counter +/- 或精準 per-row ✕</li>
+          <li>跟既有 trip detail 桌機 right map sticky pattern 一致</li>
+        </ul>
+      </div>
+      <div class="cons">
+        <span class="h">缺點</span>
+        <ul>
+          <li>兩種入口可能造成混亂（counter「−」vs row ✕ 行為差一個刪最後、一個任意）</li>
+          <li>桌機 sticky pane 在 narrow viewport 1024 邊緣可能擠（右 380px）</li>
+        </ul>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="footer">
+    <h2>建議選 V1（per-day list with shift），原因：</h2>
+    <ol>
+      <li><strong>User 需求「移除有行程的天要紅色提醒」</strong>明確指向「per-day」決定，counter 風格的 V2 無法表達「移除 Day 3 而非 Day 7」</li>
+      <li><strong>視覺對齊既有「目的地」list pattern</strong> — user 學一次 list-with-remove 行為，跨 sections 重用</li>
+      <li><strong>5–7 天 trip vertical scroll 可接受</strong>（既有 trip detail 也是長 timeline scroll）</li>
+      <li><strong>桌機可後續加 V3 two-pane 優化</strong> — 先把 V1 ship，V3 是後續 layout polish 不影響功能</li>
+    </ol>
+    <p style="margin-top: 12px;">
+      V2 適合「我只想簡單加幾天」case，但本需求重點是「移除有景點的天要警告」— V2 把所有 days 隱藏在 counter 後，user 看不到誰被刪。
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>

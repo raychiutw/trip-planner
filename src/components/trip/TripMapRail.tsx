@@ -61,6 +61,9 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const navigate = useNavigate();
   const [panToCoord, setPanToCoord] = useState<{ lat: number; lng: number; zoom?: number } | undefined>();
+  // v2.31.93：focusedEntryId 觸發 OceanMap 換 marker 視覺（accent orange + 36px focused style）
+  // + 內建 flyTo zoom 13 + collapse 自動 fitBounds（對齊 MapPage focusId flow）。
+  const [focusedEntryId, setFocusedEntryId] = useState<number | undefined>();
 
   useEffect(() => {
     ensureStyle();
@@ -115,11 +118,12 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
   }, [isDesktop, dayCenters]);
 
   // v2.31.81 #5：TimelineRail row click → dispatch entryFocused → pan map to pin。
-  // v2.31.87 #5+#6：detail.isExpanding 區分展開/收合，加 zoom。
-  // v2.31.88：zoom level 對齊 MapPage focusId flow（OceanMap line 516 `z<12?13:undefined`）。
-  //   - 展開 (isExpanding=true) → zoom 13 (對齊 MapPage 點 stop card zoom)
-  //   - 收合 (isExpanding=false) → zoom 10 (對齊 MapPage 初始 fitBounds 沖繩 overview level)
-  // 比 scroll spy 的 day-center pan 更精準（單一 pin 而不是平均座標）。
+  // v2.31.93：對齊 MapPage focusId flow — 不再 manual panToCoord+zoom，改用
+  //   focusedEntryId 觸發 OceanMap useEffect 同時切 marker 視覺（accent orange + 36px）
+  //   + flyTo z<12?13:undefined + collapse 自動 fitBounds(visible pins) 回 overview。
+  //   - 展開 (isExpanding=true) → setFocusedEntryId(entryId)
+  //   - 收合 (isExpanding=false) → setFocusedEntryId(undefined) → OceanMap fitBounds reset
+  //   - undefined (scroll spy fallback) → 維持 v2.31.81 panToCoord pan only no zoom
   useEffect(() => {
     if (!isDesktop) return;
     const handler = (e: Event) => {
@@ -128,12 +132,12 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
       if (typeof entryId !== 'number') return;
       const pin = pins.find((p) => p.id === entryId);
       if (!pin) return;
-      // 預設視為展開（isExpanding undefined）— 維持 v2.31.81 行為（pan only，no zoom）。
-      // 明確 true/false 才觸發 zoom（v2.31.87 行為，v2.31.88 對齊 MapPage zoom level）。
       if (detail?.isExpanding === true) {
-        setPanToCoord({ lat: pin.lat, lng: pin.lng, zoom: 13 });
+        setFocusedEntryId(entryId);
+        setPanToCoord(undefined);
       } else if (detail?.isExpanding === false) {
-        setPanToCoord({ lat: pin.lat, lng: pin.lng, zoom: 10 });
+        setFocusedEntryId(undefined);
+        setPanToCoord(undefined);
       } else {
         setPanToCoord({ lat: pin.lat, lng: pin.lng });
       }
@@ -156,6 +160,7 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
           fitOnce={true}
           onMarkerClick={handleMarkerClick}
           panToCoord={panToCoord}
+          focusId={focusedEntryId}
           dark={dark}
         />
       </Suspense>

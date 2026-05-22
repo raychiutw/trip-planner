@@ -8,6 +8,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { pickFromTripSelect } from './__helpers__/tripSelect';
+import { pickTime } from './__helpers__/tripTimePicker';
 
 const apiFetchMock = vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>();
 vi.mock('../../src/lib/apiClient', () => ({
@@ -107,15 +109,17 @@ describe('AddPoiFavoriteToTripPage — 7-state matrix', () => {
     });
     renderPage();
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-trip')).toBeTruthy());
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-trip'), { target: { value: 't1' } });
+    await pickFromTripSelect('favorites-add-to-trip-trip', /T1/);
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-day'), { target: { value: '1' } });
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-start'), { target: { value: '12:00' } });
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-end'), { target: { value: '13:00' } });
+    await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
+    pickTime('favorites-add-to-trip-start', '12:00');
+    pickTime('favorites-add-to-trip-end', '13:00');
     fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
     await waitFor(() => {
-      // ConflictModal 開
-      const modal = document.querySelector('[data-testid="conflict-modal"], [role="dialog"]');
+      // ConflictModal 開（exclude TripSelect listbox dialog）
+      const modal = document.querySelector(
+        '[data-testid="conflict-modal"], [role="dialog"]:not([aria-labelledby])',
+      );
       expect(modal).toBeTruthy();
     });
   });
@@ -130,9 +134,9 @@ describe('AddPoiFavoriteToTripPage — 7-state matrix', () => {
     });
     renderPage();
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-trip')).toBeTruthy());
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-trip'), { target: { value: 't1' } });
+    await pickFromTripSelect('favorites-add-to-trip-trip', /T1/);
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-day'), { target: { value: '1' } });
+    await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
     fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
     await waitFor(() => {
       const btn = screen.getByTestId('favorites-add-to-trip-submit') as HTMLButtonElement;
@@ -159,7 +163,7 @@ describe('AddPoiFavoriteToTripPage — trip-day skeleton (§12.4)', () => {
     renderPage();
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-trip')).toBeTruthy());
     // 切到 t2 — days 載入中
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-trip'), { target: { value: 't2' } });
+    await pickFromTripSelect('favorites-add-to-trip-trip', /T2/);
     await waitFor(() => {
       // skeleton 出現
       expect(screen.getByTestId('favorites-add-to-trip-day-skeleton')).toBeTruthy();

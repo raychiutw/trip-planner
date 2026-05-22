@@ -10,6 +10,7 @@
  * ESC / close button / backdrop click → onClose.
  */
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
 import { parseEntryTime, deriveTypeMeta } from '../../lib/timelineUtils';
@@ -20,7 +21,9 @@ const SCOPED_STYLES = `
 .tp-lightbox-backdrop {
   position: fixed; inset: 0;
   background: rgba(42, 31, 24, 0.85);
-  z-index: 1100;
+  /* v2.31.92：z-index 改用 --z-modal token（9000）取代寫死 1100。
+     對齊系統 modal hierarchy，避免被 sticky map / TripSheet 撞穿。 */
+  z-index: var(--z-modal, 9000);
   display: grid; place-items: center;
   padding: 24px;
   animation: tp-lightbox-fade 160ms var(--transition-timing-function-apple, ease-out);
@@ -219,7 +222,11 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
     if (e.target === e.currentTarget) onClose();
   };
 
-  return (
+  // v2.31.92：用 React Portal mount 至 document.body — bypass embedded TripPage
+  // 的 transform / sticky containing block，避免 position:fixed backdrop 被
+  // ancestor 限制 viewport 範圍（user QA 截圖：TitleBar / map 沒被 backdrop 蓋）。
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <div
       className="tp-lightbox-backdrop"
       onMouseDown={handleBackdrop}
@@ -372,6 +379,7 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -60,7 +60,7 @@ describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
     expect(screen.queryByTestId('timeline-rail-detail-42')).toBeNull();
   });
 
-  it('click row → 展開 toolbar 含 4 個 action button (放大/編輯/刪除/收合)', () => {
+  it('click row → 展開 toolbar 含 3 個 action button (放大/編輯/刪除) — v2.31.92 移除 collapse + change-poi', () => {
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     expect(screen.getByTestId('timeline-rail-detail-42')).toBeTruthy();
@@ -68,7 +68,10 @@ describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
     // v2.26.0: 「編」testid 改為 timeline-rail-edit-N（取代 timeline-rail-edit-note-N）
     expect(screen.getByTestId('timeline-rail-edit-42')).toBeTruthy();
     expect(screen.getByTestId('timeline-rail-delete-42')).toBeTruthy();
-    expect(screen.getByTestId('timeline-rail-collapse-42')).toBeTruthy();
+    // v2.31.92：「收合」button 拿掉（row click 已 toggle expand/collapse）
+    expect(screen.queryByTestId('timeline-rail-collapse-42')).toBeNull();
+    // v2.31.92：「置換景點」button 拿掉（編輯景點已含 path）
+    expect(screen.queryByTestId('timeline-rail-change-poi-42')).toBeNull();
   });
 
   it('pencil button click → navigate to EditEntryPage', () => {

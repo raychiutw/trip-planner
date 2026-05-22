@@ -26,6 +26,19 @@ import { regionToApiParam } from '../lib/maps/region';
 import { mapNominatimCategory } from '../lib/poiCategory';
 import type { PoiFavorite } from '../types/api';
 import type { PoiSearchResult } from '../types/poi';
+// v2.31.98: 自訂 tab — 同 AddStopPage 共用 CustomPoiForm shared component。
+import { CustomPoiForm, type CustomPoiCoord } from '../components/trip/CustomPoiForm';
+import {
+  selectDefaultCenter,
+  type Coord as PickerCoord,
+} from '../lib/locationPicker';
+
+interface TripDestApiLite {
+  destOrder: number;
+  name: string;
+  lat?: number | null;
+  lng?: number | null;
+}
 
 const SCOPED_STYLES = `
 .tp-change-poi-page-shell {
@@ -72,6 +85,15 @@ const SCOPED_STYLES = `
 @media (min-width: 768px) {
   .tp-change-poi-body {
     padding: 16px 24px 96px;
+  }
+}
+/* v2.31.98: 自訂 tab 兩段式 layout 需要更寬空間（mockup C 1024px）。
+   :has() 只在 ≥1024px 撐大；其他 tab 仍維持 720px 不變。 */
+@media (min-width: 1024px) {
+  .tp-change-poi-body:has(.tp-custom-poi-form-twopane) {
+    max-width: 1024px;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 .tp-change-poi-subtabs {
@@ -464,7 +486,7 @@ const SCOPED_STYLES = `
 }
 `;
 
-type Tab = 'search' | 'favorites';
+type Tab = 'search' | 'favorites' | 'custom';
 type PoiCardTone = 'warm' | 'cool' | 'ocean' | 'amber';
 type ChangePoiCategory = 'all' | 'attraction' | 'food' | 'hotel' | 'shopping';
 
@@ -545,10 +567,20 @@ export default function ChangePoiPage() {
   // round 4 fix M5: use react-router's useSearchParams (reactive + SSR-safe) instead
   // of raw window.location.search which doesn't re-render on client-side route changes.
   const [searchParams, setSearchParams] = useSearchParams();
-  const mode: 'master' | 'alternate' = searchParams.get('mode') === 'alternate' ? 'alternate' : 'master';
-  const tab: Tab = searchParams.get('tab') === 'favorites' ? 'favorites' : 'search';
-  const pageTitle = mode === 'alternate' ? '加入備選景點' : '置換景點';
-  const submitLabel = mode === 'alternate' ? '加為備選' : '置換景點';
+  // v2.32.0: mode=new → 從 AddEntryPage 過來「新增 entry」流程，submit 走
+  // POST /trips/:id/days/:N/entries 而不是 PUT /poi-id 或 POST /alternates。
+  // dayNum 從 ?day=N param 取得。完成後 navigate /stop/:newId/edit。
+  const rawMode = searchParams.get('mode');
+  const mode: 'master' | 'alternate' | 'new' =
+    rawMode === 'alternate' ? 'alternate' : rawMode === 'new' ? 'new' : 'master';
+  const newDayParam = searchParams.get('day');
+  const newDayNum = newDayParam ? parseInt(newDayParam, 10) : NaN;
+  const rawTab = searchParams.get('tab');
+  const tab: Tab = rawTab === 'favorites' ? 'favorites' : rawTab === 'custom' ? 'custom' : 'search';
+  const pageTitle =
+    mode === 'new' ? '新增景點' : mode === 'alternate' ? '加入備選景點' : '置換景點';
+  const submitLabel =
+    mode === 'new' ? '加入行程' : mode === 'alternate' ? '加為備選' : '置換景點';
 
   const [query, setQuery] = useState('');
   const [region, setRegion] = useState<string>('全部地區');
@@ -564,6 +596,16 @@ export default function ChangePoiPage() {
   // STALE_ENTRY instead of silently overwriting.
   const [entryPoisVersion, setEntryPoisVersion] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // v2.31.98: 自訂 tab state（同 AddStopPage 模式）。
+  const [customTitle, setCustomTitle] = useState('');
+  const [customCoord, setCustomCoord] = useState<CustomPoiCoord | null>(null);
+  const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
+  const [customError, setCustomError] = useState<string | null>(null);
+  // v2.32.1 fix: 初值改 null（"未載入"），與「載入後是 0 個 destinations」區分。
+  // LocationPickerMap 只用 mount 時的 initialCenter，若 customDestinations 還是 null
+  // 就 render 會卡在 Tokyo Station fallback 改不掉 — 必須等 fetch 完才能 mount。
+  const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
   const { results: searchResults, searching } = usePoiSearch({
     enabled: tab === 'search',
@@ -621,6 +663,9 @@ export default function ChangePoiPage() {
   }, [tab, favorites]);
 
   useEffect(() => {
+    // v2.32.0: mode=new 不對應任何既有 entry，跳過 entryPoisVersion fetch（OCC token
+    // 只在 PUT /poi-id + POST /alternates 用得到）
+    if (mode === 'new') return;
     if (!tripId || !Number.isInteger(entryId)) return;
     let cancelled = false;
     apiFetch<{ entryPoisVersion?: string | number | null }>(
@@ -632,13 +677,141 @@ export default function ChangePoiPage() {
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
-  }, [tripId, entryId]);
+  }, [tripId, entryId, mode]);
+
+  // v2.31.98: 自訂 tab map default-center fallback chain 從 trip destinations 取
+  // v2.32.1 fix: 從 tab-gated 改 mount-gated — user 可能直接 ?tab=custom 進來，
+  // 等切到 custom 才 fetch 已晚 (LocationPickerMap 一 mount 就鎖 initialCenter)。
+  useEffect(() => {
+    if (!tripId) return;
+    let cancelled = false;
+    apiFetch<{ destinations?: TripDestApiLite[] }>(`/trips/${encodeURIComponent(tripId)}`)
+      .then((data) => {
+        if (cancelled) return;
+        setCustomDestinations(data?.destinations ?? []);
+      })
+      .catch(() => {
+        // Network fail → 標 [] 讓 customInitialCenter fallback 到 Tokyo（已是
+        // 最後一道安全網），避免 null 永遠卡 render
+        if (!cancelled) setCustomDestinations([]);
+      });
+    return () => { cancelled = true; };
+  }, [tripId]);
+
+  const customInitialCenter = useMemo<PickerCoord>(() => {
+    return selectDefaultCenter({
+      prevEntry: null,
+      tripDestinations: (customDestinations ?? [])
+        .filter((d) => typeof d.lat === 'number' && typeof d.lng === 'number')
+        .map((d) => ({ lat: d.lat as number, lng: d.lng as number })),
+    });
+  }, [customDestinations]);
 
   const handleSubmit = useCallback(async () => {
-    if (!selected || !tripId || !Number.isInteger(entryId) || submitting) return;
+    if (!tripId || submitting) return;
+    // v2.32.0: mode=new 不需要 entryId，但需要 day param；其他 mode 需要 entryId。
+    if (mode !== 'new' && !Number.isInteger(entryId)) return;
+    if (mode === 'new' && !Number.isFinite(newDayNum)) return;
+    // v2.31.98: custom tab 走自己的 payload 構造（title + coord + source: 'custom'），
+    // search/favorites tab 仍走 selected POI 路徑。
+    if (tab === 'custom') {
+      const title = customTitle.trim();
+      if (!title) { setCustomError('請輸入標題'); return; }
+      if (!customCoord) { setCustomError('請在地圖上選擇位置'); return; }
+      setSubmitting(true);
+      setError(null);
+      try {
+        // v2.32.0: mode=new 走 POST /entries（建立新 entry + master），不需 OCC
+        if (mode === 'new') {
+          const body = { title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom' };
+          const res = await apiFetchRaw(
+            `/trips/${encodeURIComponent(tripId)}/days/${newDayNum}/entries`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+          );
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`新增景點失敗 (${res.status}): ${text.slice(0, 200)}`);
+          }
+          const created = (await res.json()) as { id?: number };
+          void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, { method: 'POST' }).catch(() => undefined);
+          window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
+          if (created.id) {
+            navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
+          } else {
+            navigate(`/trips?selected=${encodeURIComponent(tripId)}`, { replace: true });
+          }
+          return;
+        }
+        const occ = entryPoisVersion != null ? { entryPoisVersion } : {};
+        const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', ...occ };
+        const endpoint = mode === 'alternate'
+          ? `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates`
+          : `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/poi-id`;
+        const res = await apiFetchRaw(endpoint, {
+          method: mode === 'alternate' ? 'POST' : 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          if (res.status === 409) {
+            const code = parseErrorCode(text);
+            if (code === 'DUPLICATE_POI') throw new Error('此景點已存在於這個停留點');
+            throw new Error('資料已被其他操作更新，請重新整理');
+          }
+          throw new Error(`${mode === 'alternate' ? '加備選' : '置換'}失敗 (${res.status}): ${text.slice(0, 200)}`);
+        }
+        if (mode === 'master') {
+          void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, { method: 'POST' }).catch(() => undefined);
+        }
+        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
+        navigate(
+          mode === 'alternate'
+            ? `/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`
+            : `/trips?selected=${encodeURIComponent(tripId)}`,
+          { replace: true },
+        );
+        return;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '失敗');
+        setSubmitting(false);
+        return;
+      }
+    }
+    if (!selected) return;
     setSubmitting(true);
     setError(null);
     try {
+      // v2.32.0: mode=new 走 POST /entries — search/favorites picked POI 改 body shape
+      if (mode === 'new') {
+        const fromFav = selected.source === 'favorite' && selected.poiId;
+        const body = fromFav
+          ? { title: selected.name, poiId: selected.poiId, source: 'favorite' }
+          : {
+              title: selected.name,
+              lat: selected.lat,
+              lng: selected.lng,
+              source: 'google',
+              note: selected.address ?? undefined,
+            };
+        const res = await apiFetchRaw(
+          `/trips/${encodeURIComponent(tripId)}/days/${newDayNum}/entries`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+        );
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`新增景點失敗 (${res.status}): ${text.slice(0, 200)}`);
+        }
+        const created = (await res.json()) as { id?: number };
+        void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, { method: 'POST' }).catch(() => undefined);
+        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
+        if (created.id) {
+          navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
+        } else {
+          navigate(`/trips?selected=${encodeURIComponent(tripId)}`, { replace: true });
+        }
+        return;
+      }
       const occ = entryPoisVersion != null ? { entryPoisVersion } : {};
       if (mode === 'alternate') {
         const body = {
@@ -697,18 +870,23 @@ export default function ChangePoiPage() {
       setError(err instanceof Error ? err.message : '置換景點失敗');
       setSubmitting(false);
     }
-  }, [selected, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion]);
+  }, [selected, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord, newDayNum]);
+
+  // v2.31.98: custom tab submit 啟動條件不同（要 title + coord，不要 selected）
+  const submitDisabled = tab === 'custom'
+    ? !customTitle.trim() || !customCoord || submitting
+    : !selected || submitting;
 
   const titleBarActions = useMemo(() => (
     <TitleBarPrimaryAction
       label={submitLabel}
       busyLabel="處理中⋯"
       busy={submitting}
-      disabled={!selected}
+      disabled={submitDisabled}
       onClick={() => void handleSubmit()}
       testId="change-poi-titlebar-submit"
     />
-  ), [handleSubmit, selected, submitLabel, submitting]);
+  ), [handleSubmit, submitDisabled, submitLabel, submitting]);
 
   const categoryFilter = useMemo(() => (
     <div className="tp-change-poi-subtabs" role="group" aria-label="景點類別">
@@ -752,6 +930,16 @@ export default function ChangePoiPage() {
           data-testid="change-poi-tab-favorites"
         >
           收藏
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'custom'}
+          className={`tp-change-poi-tab ${tab === 'custom' ? 'is-active' : ''}`}
+          onClick={() => handleTabChange('custom')}
+          data-testid="change-poi-tab-custom"
+        >
+          自訂
         </button>
       </div>
 
@@ -969,12 +1157,36 @@ export default function ChangePoiPage() {
             )}
           </>
         )}
+
+        {/* v2.32.1 fix: 等 destinations 載完才 mount — LocationPickerMap 鎖 mount 時
+            initialCenter，若用 Tokyo fallback render 後沒救（map 不會 re-center）。 */}
+        {tab === 'custom' && customDestinations === null && (
+          <div className="tp-change-poi-empty" data-testid="change-poi-custom-loading">
+            載入中⋯
+          </div>
+        )}
+        {tab === 'custom' && customDestinations !== null && (
+          <CustomPoiForm
+            title={customTitle}
+            onTitleChange={(v) => { setCustomTitle(v); setCustomError(null); }}
+            coord={customCoord}
+            onCoordChange={setCustomCoord}
+            hintConfirmed={customHintConfirmed}
+            onHintConfirmedChange={setCustomHintConfirmed}
+            initialCenter={customInitialCenter}
+            error={customError}
+            testIdPrefix="change-poi-custom"
+          />
+        )}
       </main>
 
       <div className="tp-page-bottom-bar">
         <span className="tp-change-poi-counter" data-testid="change-poi-counter">
-          已選 <strong>{selected ? 1 : 0}</strong> 個
-          {selected ? ` · ${selected.name}` : ''}
+          {tab === 'custom' ? (
+            <>已選 <strong>{customTitle.trim() && customCoord ? 1 : 0}</strong> 個{customTitle.trim() ? ` · ${customTitle.trim()}` : ''}</>
+          ) : (
+            <>已選 <strong>{selected ? 1 : 0}</strong> 個{selected ? ` · ${selected.name}` : ''}</>
+          )}
           {error && <span className="tp-change-poi-error" role="alert">{error}</span>}
         </span>
         <div className="tp-change-poi-actions">
@@ -990,7 +1202,7 @@ export default function ChangePoiPage() {
           <button
             type="button"
             className="tp-change-poi-btn tp-change-poi-btn-confirm"
-            disabled={!selected || submitting}
+            disabled={submitDisabled}
             onClick={() => void handleSubmit()}
             data-testid="change-poi-submit"
           >
@@ -1020,8 +1232,14 @@ export default function ChangePoiPage() {
     selected,
     submitting,
     submitLabel,
+    submitDisabled,
     tab,
     titleBarActions,
+    customTitle,
+    customCoord,
+    customHintConfirmed,
+    customError,
+    customInitialCenter,
   ]);
 
   return (

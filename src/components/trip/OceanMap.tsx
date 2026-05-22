@@ -147,13 +147,21 @@ export function markerContent(style: MarkerStyle): HTMLDivElement {
   const div = document.createElement('div');
   div.className = 'tp-marker';
   div.textContent = style.label;
+  // v2.31.93：focused marker (zIndex ≥ 1000) 加 accent-subtle outer ring +
+  // 加深 drop shadow，user 反映「被點的 stop 沒浮在最高 被壓住了」。
+  // Google AdvancedMarkerElement.zIndex 已給 DOM stacking，但相鄰 marker
+  // overlap 時視覺凸度不夠 — CSS box-shadow 補強。
+  const isFocused = typeof style.zIndex === 'number' && style.zIndex >= 1000;
+  const shadow = isFocused
+    ? `0 0 0 1.5px ${style.fill}, 0 0 0 5px rgba(217, 120, 72, 0.35), 0 6px 16px rgba(42, 31, 24, 0.35)`
+    : `0 0 0 1.5px ${style.fill}, 0 0 0 3px rgba(0, 0, 0, 0.18)`;
   div.style.cssText = `
     width: ${style.size}px;
     height: ${style.size}px;
     border-radius: 50%;
     background: ${style.fill};
     border: ${style.borderWidth}px solid ${style.stroke};
-    box-shadow: 0 0 0 1.5px ${style.fill}, 0 0 0 3px rgba(0, 0, 0, 0.18);
+    box-shadow: ${shadow};
     color: ${style.text};
     font-size: ${style.fontSize};
     font-weight: 700;
@@ -165,6 +173,8 @@ export function markerContent(style: MarkerStyle): HTMLDivElement {
     line-height: 1;
     user-select: none;
     cursor: pointer;
+    position: relative;
+    ${isFocused ? 'z-index: 1000;' : ''}
   `;
   return div;
 }
