@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.18] - 2026-05-22
+
+**Fix: E2E qa-flows.spec.js 用 TripDatePicker helper 取代 native fill('YYYY-MM-DD')**
+
+v2.33.17 把 NewTripPage 的 `<input type="date">` 換成 TripDatePicker（button-based）
+之後，e2e Flow 1「新增行程」test 跑 `page.getByTestId('new-trip-start-input').fill(iso)`
+失敗 — Element is not an `<input>`。新 helper `tests/e2e/_helpers/pickDate.js`：
+
+- 點 trigger 開 popover
+- 比對 `.rdp-month_caption` 中文 caption「2026 年 8 月」+ navigate prev/next 到 target month
+- 點 `.rdp-day:not(.rdp-outside)` day cell（避開 muted prev/next-month days）
+- 等 popover 關閉再 return
+
+無 prod 行為改動。
+
 ## [2.33.17] - 2026-05-22
 
 **Feat: 日曆 + Select 改網站風格（取代 native popup）。** User sign-off
