@@ -22,6 +22,7 @@ import ConflictModal, { type ConflictWith } from '../components/shared/ConflictM
 import PageErrorState from '../components/shared/PageErrorState';
 import EmptyState from '../components/shared/EmptyState';
 import { TripSelect } from '../components/TripSelect';
+import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
@@ -544,28 +545,24 @@ export default function AddPoiFavoriteToTripPage() {
               )}
             </div>
 
-            <div className="tp-form-field">
+            <div className="tp-form-field" data-testid="favorites-add-to-trip-start">
               <label className="tp-form-label" htmlFor="atstr-start">開始時間</label>
-              <input
+              <TripTimePicker
                 id="atstr-start"
-                className="tp-input-short"
-                type="time"
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                data-testid="favorites-add-to-trip-start"
+                onChange={setStartTime}
+                ariaLabel="開始時間"
               />
               <span className="tp-form-help">可空 — 依景點類型自動推算</span>
             </div>
 
-            <div className="tp-form-field">
+            <div className="tp-form-field" data-testid="favorites-add-to-trip-end">
               <label className="tp-form-label" htmlFor="atstr-end">結束時間</label>
-              <input
+              <TripTimePicker
                 id="atstr-end"
-                className="tp-input-short"
-                type="time"
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                data-testid="favorites-add-to-trip-end"
+                onChange={setEndTime}
+                ariaLabel="結束時間"
               />
               <span className="tp-form-help">可空 — 依停留時間自動推算</span>
             </div>

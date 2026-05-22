@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { pickFromTripSelect } from './__helpers__/tripSelect';
+import { pickTime } from './__helpers__/tripTimePicker';
 
 const apiFetchMock = vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>();
 vi.mock('../../src/lib/apiClient', () => ({
@@ -105,8 +106,8 @@ describe('AddPoiFavoriteToTripPage — form fields (4 純時間驅動)', () => {
     await pickFromTripSelect('favorites-add-to-trip-trip', /沖繩 7 日/);
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
     await pickFromTripSelect('favorites-add-to-trip-day', /Day 2/);
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-start'), { target: { value: '12:00' } });
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-end'), { target: { value: '13:30' } });
+    pickTime('favorites-add-to-trip-start', '12:00');
+    pickTime('favorites-add-to-trip-end', '13:30');
 
     fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
 
@@ -131,7 +132,7 @@ describe('AddPoiFavoriteToTripPage — form fields (4 純時間驅動)', () => {
     await pickFromTripSelect('favorites-add-to-trip-trip', /沖繩 7 日/);
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
     await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-start'), { target: { value: '10:00' } });
+    pickTime('favorites-add-to-trip-start', '10:00');
     fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
     await waitFor(() => {
       const calls = apiFetchMock.mock.calls;
@@ -190,8 +191,8 @@ describe('AddPoiFavoriteToTripPage — direct mode（無 favoriteId）', () => {
     await pickFromTripSelect('favorites-add-to-trip-trip', /沖繩 7 日/);
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
     await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-start'), { target: { value: '14:00' } });
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-end'), { target: { value: '15:30' } });
+    pickTime('favorites-add-to-trip-start', '14:00');
+    pickTime('favorites-add-to-trip-end', '15:30');
 
     fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
 
