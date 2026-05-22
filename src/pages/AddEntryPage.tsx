@@ -20,6 +20,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import Icon from '../components/shared/Icon';
+import { TripSelect } from '../components/TripSelect';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -286,19 +287,17 @@ export default function AddEntryPage() {
             <div className="tp-add-entry-daypicker">
               <span className="tp-add-entry-daypicker-label">DAY</span>
               {allDays && allDays.length > 0 ? (
-                <select
-                  className="tp-add-entry-daypicker-select"
-                  value={Number.isFinite(dayNum) ? dayNum : ''}
-                  onChange={(e) => handlePickDay(Number(e.target.value))}
-                  data-testid="add-entry-daypicker"
-                  aria-label="選擇加入哪天"
-                >
-                  {allDays.map((d) => (
-                    <option key={d.id} value={d.dayNum} data-testid={`add-entry-daypicker-opt-${d.dayNum}`}>
-                      {formatDayLabel(d)}
-                    </option>
-                  ))}
-                </select>
+                <div data-testid="add-entry-daypicker" style={{ flex: 1 }}>
+                  <TripSelect<number>
+                    value={Number.isFinite(dayNum) ? dayNum : (allDays[0]?.dayNum ?? 0)}
+                    onChange={handlePickDay}
+                    ariaLabel="選擇加入哪天"
+                    options={allDays.map((d) => ({
+                      value: d.dayNum,
+                      label: formatDayLabel(d),
+                    }))}
+                  />
+                </div>
               ) : (
                 <span style={{ color: 'var(--color-muted)' }}>載入中…</span>
               )}

@@ -21,6 +21,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import ConflictModal, { type ConflictWith } from '../components/shared/ConflictModal';
 import PageErrorState from '../components/shared/PageErrorState';
 import EmptyState from '../components/shared/EmptyState';
+import { TripSelect } from '../components/TripSelect';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
@@ -494,23 +495,19 @@ export default function AddPoiFavoriteToTripPage() {
           onSubmit={onFormSubmit}
         >
           <div className="tp-form-grid-2col">
-            <div className="tp-form-field">
+            <div className="tp-form-field" data-testid="favorites-add-to-trip-trip">
               <label className="tp-form-label" htmlFor="atstr-trip">行程</label>
-              <select
+              <TripSelect
                 id="atstr-trip"
-                className="tp-form-select"
                 value={tripId}
-                onChange={(e) => setTripId(e.target.value)}
-                data-testid="favorites-add-to-trip-trip"
-              >
-                <option value="">選擇行程…</option>
-                {trips.map((t) => (
-                  <option key={t.tripId} value={t.tripId}>
-                    {tripDisplayName(t)}
-                    {t.totalDays ? ` · ${t.totalDays} 天` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setTripId}
+                placeholder="選擇行程…"
+                ariaLabel="行程"
+                options={trips.map((t) => ({
+                  value: t.tripId,
+                  label: `${tripDisplayName(t)}${t.totalDays ? ` · ${t.totalDays} 天` : ''}`,
+                }))}
+              />
             </div>
 
             <div className="tp-form-field">
@@ -523,26 +520,24 @@ export default function AddPoiFavoriteToTripPage() {
                   aria-live="polite"
                 />
               ) : (
-                <select
-                  id="atstr-day"
-                  className="tp-form-select"
-                  value={String(dayNum)}
-                  onChange={(e) => setDayNum(e.target.value === '' ? '' : Number(e.target.value))}
-                  disabled={!days || days.length === 0}
-                  data-testid="favorites-add-to-trip-day"
-                >
-                  {days && days.length === 0 && <option value="">該行程沒有天數</option>}
-                  {days && days.length > 0 && (
-                    <>
-                      <option value="">選擇天數…</option>
-                      {days.map((d) => (
-                        <option key={d.dayNum} value={d.dayNum}>
-                          Day {d.dayNum}{d.label ? ` · ${d.label}` : ''} ({d.date})
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
+                <div data-testid="favorites-add-to-trip-day">
+                  <TripSelect<string>
+                    id="atstr-day"
+                    value={String(dayNum)}
+                    onChange={(v) => setDayNum(v === '' ? '' : Number(v))}
+                    disabled={!days || days.length === 0}
+                    placeholder={days && days.length === 0 ? '該行程沒有天數' : '選擇天數…'}
+                    ariaLabel="天數"
+                    options={
+                      days && days.length > 0
+                        ? days.map((d) => ({
+                            value: String(d.dayNum),
+                            label: `Day ${d.dayNum}${d.label ? ` · ${d.label}` : ''} (${d.date})`,
+                          }))
+                        : []
+                    }
+                  />
+                </div>
               )}
               {selectedDay?.label && (
                 <span className="tp-form-help">{selectedDay.label}</span>

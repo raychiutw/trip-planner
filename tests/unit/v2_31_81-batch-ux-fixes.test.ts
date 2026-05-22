@@ -41,25 +41,26 @@ describe('v2.31.81 #2: MapPage TitleBar matches ChatPage format', () => {
   });
 });
 
-describe('v2.31.81 #3: 5 native selects 拔 native UA chrome + 加 chevron', () => {
-  const cases: Array<{ file: string; rule: string }> = [
-    { file: 'css/tokens.css',                              rule: '\\.tp-select' },
-    { file: 'src/pages/AddPoiFavoriteToTripPage.tsx',      rule: '\\.tp-favorites-add-to-trip \\.tp-form-select' },
-    { file: 'src/pages/EntryActionPage.tsx',               rule: '\\.tp-entry-action-time-select' },
-    { file: 'src/pages/TripsListPage.tsx',                 rule: '\\.tp-trips-sort' },
+describe('v2.33.17 (was v2.31.81 #3): 5 native selects 全部遷移到 TripSelect', () => {
+  // v2.31.81 #3 用 appearance:none + custom chevron 把 native select 美化成 pill；
+  // v2.33.17 native popup 仍 OS chrome 不一致 → 整批換成 headlessui Listbox-based
+  // TripSelect，這些頁面不再 import native <select>。
+  const callsites = [
+    'src/pages/AddPoiFavoriteToTripPage.tsx',
+    'src/pages/EditTripPage.tsx',
+    'src/pages/EntryActionPage.tsx',
+    'src/pages/TripsListPage.tsx',
+    'src/pages/AddEntryPage.tsx',
   ];
-  for (const c of cases) {
-    it(`${c.file} ${c.rule}：appearance:none + chevron data:image SVG`, () => {
-      const content = read(c.file);
-      // 找含 appearance: none 的 block 跟 chevron data:image SVG
-      const re = new RegExp(`${c.rule}[^}]*appearance:\\s*none[^}]*background-image:\\s*url\\("data:image/svg`);
-      expect(content).toMatch(re);
+  for (const file of callsites) {
+    it(`${file} import TripSelect`, () => {
+      const content = read(file);
+      expect(content).toContain("import { TripSelect } from '../components/TripSelect'");
     });
   }
 
-  it('EditTripPage 顯示語言 select 加 className="tp-select"', () => {
-    const src = read('src/pages/EditTripPage.tsx');
-    expect(src).toMatch(/id="edit-trip-lang"\s+className="tp-select"/);
+  it('TripSelect component 存在', () => {
+    expect(read('src/components/TripSelect.tsx')).toContain('export function TripSelect');
   });
 });
 
