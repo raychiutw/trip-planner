@@ -122,17 +122,35 @@ function TimePickerBody({
   onChange,
 }: TimePickerBodyProps) {
   // Scroll selected items into center when popover opens.
+  // headlessui PopoverPanel renders via portal — refs ready after open=true commit
+  // but layout/scroll may not be ready in same tick. setTimeout(50ms) waits for
+  // popover transition + layout calc + paint. v2.33.23 fix (was rAF, unreliable).
   useEffect(() => {
     if (!open) return;
-    requestAnimationFrame(() => {
+    const timer = setTimeout(() => {
       const hh = parsed?.hh ?? '12';
-      const mm = parsed?.mm ?? '00';
+      // If existing minute isn't on a step boundary, scroll to nearest cell.
+      const mmTarget = parsed?.mm
+        ? minutes.reduce((best, m) =>
+            Math.abs(Number(m) - Number(parsed.mm)) < Math.abs(Number(best) - Number(parsed.mm))
+              ? m
+              : best,
+          )
+        : '00';
+      const hourScroll = hourColRef.current?.querySelector<HTMLElement>('.tp-time-col-scroll');
+      const minScroll = minuteColRef.current?.querySelector<HTMLElement>('.tp-time-col-scroll');
       const hourBtn = hourColRef.current?.querySelector<HTMLElement>(`[data-h="${hh}"]`);
-      const minBtn = minuteColRef.current?.querySelector<HTMLElement>(`[data-m="${mm}"]`);
-      hourBtn?.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
-      minBtn?.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
-    });
-  }, [open, parsed, hourColRef, minuteColRef]);
+      const minBtn = minuteColRef.current?.querySelector<HTMLElement>(`[data-m="${mmTarget}"]`);
+      // Use parent scrollTop instead of scrollIntoView (which can scroll page too).
+      if (hourScroll && hourBtn) {
+        hourScroll.scrollTop = hourBtn.offsetTop - hourScroll.clientHeight / 2 + hourBtn.clientHeight / 2;
+      }
+      if (minScroll && minBtn) {
+        minScroll.scrollTop = minBtn.offsetTop - minScroll.clientHeight / 2 + minBtn.clientHeight / 2;
+      }
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [open, parsed, minutes, hourColRef, minuteColRef]);
 
   const pick = (hh: string, mm: string) => {
     onChange(`${hh}:${mm}`);
