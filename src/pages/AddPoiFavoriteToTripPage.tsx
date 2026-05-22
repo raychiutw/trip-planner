@@ -117,44 +117,10 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote); font-weight: 600;
   color: var(--color-foreground);
 }
-.tp-favorites-add-to-trip .tp-form-select,
-.tp-favorites-add-to-trip .tp-form-input {
-  padding: 10px 12px; border: 1px solid var(--color-border);
-  border-radius: var(--radius-md); background: var(--color-background);
-  color: var(--color-foreground); font: inherit; font-size: 15px;
-  min-height: var(--spacing-tap-min);
-  width: 100%;
-}
-/* v2.31.81 #3：拔 native UA chrome + 加 site-style chevron（accent terracotta） */
-.tp-favorites-add-to-trip .tp-form-select {
-  appearance: none; -webkit-appearance: none; -moz-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B85F2A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 16px 16px;
-  padding-right: 36px;
-  cursor: pointer;
-}
-body.dark .tp-favorites-add-to-trip .tp-form-select {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFBF5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-}
-.tp-favorites-add-to-trip .tp-form-select:focus,
-.tp-favorites-add-to-trip .tp-form-input:focus {
-  outline: none; border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-subtle);
-}
-.tp-favorites-add-to-trip .tp-form-select:disabled,
-.tp-favorites-add-to-trip .tp-form-input:disabled {
-  opacity: 0.5; cursor: not-allowed;
-}
-.tp-favorites-add-to-trip .tp-form-input.tabular { font-variant-numeric: tabular-nums; }
-/* iOS Safari 對 input/select font-size < 16px 自動 zoom 破版；mobile 用 16px 防 zoom */
-@media (max-width: 760px) {
-  .tp-favorites-add-to-trip .tp-form-select,
-  .tp-favorites-add-to-trip .tp-form-input {
-    font-size: 16px;
-  }
-}
+/* v2.33.22 cleanup: page-scoped .tp-form-select / .tp-form-input CSS rules
+   全 移除 — v2.33.17 (select to TripSelect) + v2.33.21 (time input to
+   TripTimePicker) 後本頁無 native select / time input；text input 用
+   :where() base layer (DESIGN.md, tokens.css)。 */
 
 .tp-favorites-add-to-trip .tp-form-help {
   font-size: var(--font-size-caption2);

@@ -135,34 +135,16 @@ const SCOPED_STYLES = `
   gap: 8px;
   align-items: center;
 }
+/* v2.33.22: 抵達/離開卡片 — TripTimePicker 自帶 trigger border + bg，
+   wrapper 只負責 label + flex；移除外層 border/padding 避免 double frame。 */
 .tp-edit-entry-time-card {
-  display: flex; flex-direction: column; gap: 2px;
-  background: var(--color-background);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  transition: all 120ms;
+  display: flex; flex-direction: column; gap: 6px;
   min-width: 0;
 }
-.tp-edit-entry-time-card:focus-within {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
-}
-.tp-edit-entry-time-card label {
+.tp-edit-entry-time-card > span {
   font-size: var(--font-size-caption);
   color: var(--color-muted);
   font-weight: 600;
-}
-.tp-edit-entry-time-card input {
-  font: inherit;
-  font-variant-numeric: tabular-nums;
-  font-size: var(--font-size-title2);
-  font-weight: 700;
-  color: var(--color-foreground);
-  border: 0; background: transparent; outline: none; padding: 0;
-  width: 100%;
-  min-width: 0;
-  min-height: 32px;
 }
 .tp-edit-entry-time-arrow {
   display: flex; align-items: center; justify-content: center;
