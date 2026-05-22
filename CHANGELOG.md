@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.19] - 2026-05-22
+
+**Fix: dual chevron on TripSelect — `.tp-select` class name collision**
+
+Prod QA 截圖發現 v2.33.17 ship 完 TripSelect 渲染出兩個 chevron：
+
+1. trigger button 內 `.tp-select-chev` SVG（正確 — 開啟時 rotate 180）
+2. 同一 row 右側 12px 額外 down-chevron（多餘）
+
+Root cause: v2.31.81 在 `css/tokens.css` 加 native `<select>` chrome
+override，selectors 含 `.tp-form-row > select` 與 `.tp-select` 兩條，包
+含 `appearance: none` + `background-image: data:image/svg... chevron`
++ `padding-right: 36px` + `min-height: 40px`。v2.33.17 TripSelect
+wrapper `<div>` 用了同名 class `.tp-select`，wrapper div 被 legacy CSS
+誤套用 chevron background → user 看到第二個 chevron。
+
+Fix: 刪掉 `css/tokens.css` 內 `.tp-form-row > select` + `.tp-select`
+規則（v2.33.17 migrated 6 個 callsites 已不用 native `<select>`；4 個
+auth pages 驗過 `<input>` only 無 `<select>`）。共 3 個 block 移除：
+
+- `.tp-form-row > input, ... > select, .tp-select { padding... }` —
+  從中移除 `> select, .tp-select`
+- `.tp-form-row > select, .tp-select { appearance: none; ... }` — 整 block 移除
+- `body.dark .tp-form-row > select, body.dark .tp-select { ... }` — 整 block 移除
+- `.tp-form-row > input:focus, ... > select:focus, .tp-select:focus` —
+  從中移除 `> select:focus, .tp-select:focus`
+
+tsc clean / TripSelect 6 tests pass / v2.31.81 13 tests pass。
+
 ## [2.33.18] - 2026-05-22
 
 **Fix: E2E qa-flows.spec.js 用 TripDatePicker helper 取代 native fill('YYYY-MM-DD')**

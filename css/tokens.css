@@ -1228,9 +1228,7 @@ body.dark {
   align-items: baseline;
 }
 .tp-form-row > input,
-.tp-form-row > textarea,
-.tp-form-row > select,
-.tp-select {
+.tp-form-row > textarea {
   font-family: inherit;
   font-size: var(--font-size-callout);
   padding: var(--tp-form-input-pad-y, 10px) var(--tp-form-input-pad-x, 12px);
@@ -1246,32 +1244,13 @@ body.dark {
   min-height: 80px;
   resize: vertical;
 }
-/* v2.31.81 #3：native <select> 樣式對齊 input — 拔掉 OS default UA chrome
- * （Windows 灰底邊 / macOS 圓角 / Chrome blue focus ring），改用 site 風格
- * + 自訂 chevron（accent terracotta arrow）。保留 native a11y（keyboard / mobile
- * picker UX），不 roll custom dropdown 避免 accessibility regression。 */
-.tp-form-row > select,
-.tp-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B85F2A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 16px 16px;
-  padding-right: 36px;
-  cursor: pointer;
-  min-height: 40px;
-}
-body.dark .tp-form-row > select,
-body.dark .tp-select {
-  /* Dark mode：chevron 改 light cream 對比 */
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFBF5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-}
+/* v2.31.81 native <select> chevron CSS (.tp-form-row > select / .tp-select)
+   removed in v2.33.19 — v2.33.17 migrated 全部 callsites 到 TripSelect (headless-ui
+   Listbox + tp-select-trigger 自帶 SVG chevron)，留著 .tp-select 反而碰撞 wrapper
+   class name 造成 dual chevron。Native <select> rule 也同步清掉（4 個 auth pages
+   驗過無 <select>）。 */
 .tp-form-row > input:focus,
-.tp-form-row > textarea:focus,
-.tp-form-row > select:focus,
-.tp-select:focus {
+.tp-form-row > textarea:focus {
   outline: 2px solid var(--color-accent);
   outline-offset: -2px;
   border-color: var(--color-accent);
