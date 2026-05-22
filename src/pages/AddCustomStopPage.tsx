@@ -27,6 +27,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import { TripTimePicker } from '../components/TripTimePicker';
 import { LocationPickerMap } from '../components/trip/LocationPickerMap';
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete';
 import { useTypeaheadKeyboard } from '../hooks/useTypeaheadKeyboard';
@@ -559,14 +560,12 @@ export default function AddCustomStopPage() {
               <div className="tp-custom-stop-field">
                 <label className="tp-custom-stop-label">時間（選填）</label>
                 <div className="tp-custom-stop-row-2col">
-                  <div>
+                  <div data-testid="add-custom-stop-time">
                     <div style={{ fontSize: 11, color: 'var(--color-muted)', marginBottom: 4 }}>開始</div>
-                    <input
-                      type="time"
-                      className="tp-input-short"
+                    <TripTimePicker
                       value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      data-testid="add-custom-stop-time"
+                      onChange={setStartTime}
+                      ariaLabel="開始時間"
                     />
                   </div>
                   <div>

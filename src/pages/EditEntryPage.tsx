@@ -35,6 +35,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import Icon from '../components/shared/Icon';
 import InlineError from '../components/shared/InlineError';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
@@ -1341,29 +1342,29 @@ export default function EditEntryPage() {
                   <span>時間</span>
                 </h2>
                 <div className="tp-edit-entry-time-row">
-                  <label className="tp-edit-entry-time-card">
+                  <div className="tp-edit-entry-time-card">
                     <span>抵達</span>
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      placeholder="HH:MM"
-                      data-testid="edit-entry-start-time"
-                    />
-                  </label>
+                    <div data-testid="edit-entry-start-time">
+                      <TripTimePicker
+                        value={startTime}
+                        onChange={setStartTime}
+                        ariaLabel="抵達時間"
+                      />
+                    </div>
+                  </div>
                   <span className="tp-edit-entry-time-arrow" aria-hidden="true">
                     <Icon name="arrow-right" />
                   </span>
-                  <label className="tp-edit-entry-time-card">
+                  <div className="tp-edit-entry-time-card">
                     <span>離開</span>
-                    <input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      placeholder="HH:MM"
-                      data-testid="edit-entry-end-time"
-                    />
-                  </label>
+                    <div data-testid="edit-entry-end-time">
+                      <TripTimePicker
+                        value={endTime}
+                        onChange={setEndTime}
+                        ariaLabel="離開時間"
+                      />
+                    </div>
+                  </div>
                 </div>
                 {stayMinutes != null && (
                   <div className="tp-edit-entry-duration" data-testid="edit-entry-duration">
