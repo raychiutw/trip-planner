@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Input 一致性對比 — v2.33.15</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+body { background: var(--color-secondary); padding: 32px 16px; }
+.wrap { max-width: 1280px; margin: 0 auto; }
+h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; }
+.lead { color: var(--color-muted); margin: 0 0 24px; line-height: 1.7; }
+.row {
+  display: grid;
+  grid-template-columns: 220px 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  border: 1px solid var(--color-border);
+}
+.row > .label {
+  font-size: var(--font-size-footnote);
+  font-weight: 700;
+  color: var(--color-foreground);
+}
+.row > .label small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-muted);
+  font-weight: 500;
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+}
+.row > .sample {
+  display: flex; flex-direction: column;
+}
+.row > .sample h4 {
+  margin: 0 0 8px;
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+/* === Style A — v2.33.12 :where() base layer === */
+.style-a {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-secondary);
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: var(--font-size-body);
+  min-height: 48px;
+  font-variant-numeric: tabular-nums;
+  color-scheme: light;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* === Style B — .tp-favorites-add-to-trip .tp-form-input === */
+.style-b {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: 15px;
+  min-height: 48px;
+  font-variant-numeric: tabular-nums;
+  color-scheme: light;
+  -webkit-appearance: none;
+}
+
+/* === Style C — .tp-edit-entry-time-card === */
+.style-c-card {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--color-background);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  min-width: 0;
+}
+.style-c-card label {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.style-c-card input {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-foreground);
+  border: 0;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  color-scheme: light;
+}
+
+/* === Style D — .tp-shift-modal-input === */
+.style-d {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  color-scheme: light;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  outline: none;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  font-size: 13px;
+}
+.summary-table th, .summary-table td {
+  padding: 10px 12px; text-align: left; vertical-align: top;
+}
+.summary-table th { background: var(--color-tertiary); font-weight: 700; }
+.summary-table tr:not(:last-child) td { border-bottom: 1px dashed var(--color-border); }
+.diff { background: var(--color-priority-high-bg); color: var(--color-destructive); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 11px; }
+.same { background: rgba(46, 133, 64, 0.12); color: #2e8540; padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 11px; }
+
+.decision {
+  margin-top: 32px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+.decision h2 { margin: 0 0 12px; font-size: var(--font-size-title3); font-weight: 800; }
+.decision .opt {
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary);
+}
+.decision .opt h3 {
+  margin: 0 0 6px;
+  font-size: var(--font-size-callout);
+  font-weight: 800;
+}
+.decision .opt p { margin: 4px 0; font-size: var(--font-size-footnote); color: var(--color-foreground); line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<h1>Input 一致性對比 — 「包含 calendar 都一致嗎？」</h1>
+<p class="lead">
+<strong>結論：目前不一致</strong>。74 個 input 都有 <code>color-scheme: light</code> + Terracotta tokens（顏色一致），但<strong>尺寸 / padding / border / font</strong> 分 4 種 styles。Calendar (date input) 在不同 page 看起來不一樣。
+</p>
+
+<h2 style="margin: 24px 0 14px;">4 種樣式並列對比 (date input 例)</h2>
+
+<!-- Style A row -->
+<div class="row">
+  <div class="label">
+    Style A — 全域 base
+    <small>v2.33.12 :where()<br>padding: 12 14<br>border: 1.5px<br>radius: lg (16px)<br>bg: secondary<br>font: body (16-17px)</small>
+  </div>
+  <div class="sample">
+    <h4>Date input (NewTripPage 出發/回程)</h4>
+    <input class="style-a" type="date" value="2026-07-01">
+  </div>
+  <div class="sample">
+    <h4>Text input (LoginPage email)</h4>
+    <input class="style-a" type="email" placeholder="lean.lean@gmail.com">
+  </div>
+  <div class="sample">
+    <h4>Textarea (general)</h4>
+    <textarea class="style-a" rows="2" placeholder="備註..."></textarea>
+  </div>
+</div>
+
+<!-- Style B row -->
+<div class="row">
+  <div class="label">
+    Style B — Favorites form
+    <small>.tp-favorites-add-to-trip .tp-form-input<br>padding: 10 12<br>border: 1px<br>radius: md (12px)<br>bg: background<br>font: 15px</small>
+  </div>
+  <div class="sample">
+    <h4>Time input (favorites add-to-trip)</h4>
+    <input class="style-b" type="time" value="10:45">
+  </div>
+  <div class="sample">
+    <h4>Date input (would be)</h4>
+    <input class="style-b" type="date" value="2026-07-01">
+  </div>
+  <div class="sample">
+    <h4>Text input (would be)</h4>
+    <input class="style-b" type="text" placeholder="placeholder">
+  </div>
+</div>
+
+<!-- Style C row -->
+<div class="row">
+  <div class="label">
+    Style C — Time card (no border on input)
+    <small>.tp-edit-entry-time-card input<br>padding: 0<br>border: 0<br>bg: transparent (parent has card)<br>font: 22px <strong>bold</strong></small>
+  </div>
+  <div class="sample">
+    <h4>Time input (EditEntryPage 抵達)</h4>
+    <label class="style-c-card">
+      <span>抵達</span>
+      <input type="time" value="10:45">
+    </label>
+  </div>
+  <div class="sample">
+    <h4>Time input (EditEntryPage 離開)</h4>
+    <label class="style-c-card">
+      <span>離開</span>
+      <input type="time" value="12:00">
+    </label>
+  </div>
+  <div class="sample">
+    <h4>Date input (would be)</h4>
+    <label class="style-c-card">
+      <span>出發</span>
+      <input type="date" value="2026-07-01">
+    </label>
+  </div>
+</div>
+
+<!-- Style D row -->
+<div class="row">
+  <div class="label">
+    Style D — Shift modal (centered, no left-align)
+    <small>.tp-shift-modal-input<br>padding: 12px<br>border: 1.5px<br>radius: md<br>bg: background<br>font: callout, bold 600, <strong>center</strong></small>
+  </div>
+  <div class="sample">
+    <h4>Date input (shift modal)</h4>
+    <input class="style-d" type="date" value="2026-07-01">
+  </div>
+  <div class="sample">
+    <h4>Time input (would be)</h4>
+    <input class="style-d" type="time" value="10:45">
+  </div>
+  <div class="sample">
+    <h4>Text input (would be)</h4>
+    <input class="style-d" type="text" value="居中文字">
+  </div>
+</div>
+
+<h2 style="margin: 32px 0 14px;">樣式 props 對比表</h2>
+<table class="summary-table">
+  <thead>
+    <tr><th>Style</th><th>padding</th><th>border</th><th>radius</th><th>bg</th><th>font-size</th><th>font-weight</th><th>align</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>A 全域 base</td>
+      <td><span class="same">12 14</span></td>
+      <td><span class="same">1.5px</span></td>
+      <td><span class="same">lg (16)</span></td>
+      <td><span class="same">secondary</span></td>
+      <td><span class="same">body 16-17</span></td>
+      <td><span class="same">400</span></td>
+      <td><span class="same">left</span></td>
+    </tr>
+    <tr>
+      <td>B Favorites</td>
+      <td><span class="diff">10 12</span></td>
+      <td><span class="diff">1px</span></td>
+      <td><span class="diff">md (12)</span></td>
+      <td><span class="diff">background</span></td>
+      <td><span class="diff">15px</span></td>
+      <td><span class="same">400</span></td>
+      <td><span class="same">left</span></td>
+    </tr>
+    <tr>
+      <td>C Time card</td>
+      <td><span class="diff">0</span></td>
+      <td><span class="diff">0</span></td>
+      <td>—</td>
+      <td><span class="diff">transparent</span></td>
+      <td><span class="diff">22px</span></td>
+      <td><span class="diff">700</span></td>
+      <td><span class="same">left</span></td>
+    </tr>
+    <tr>
+      <td>D Shift modal</td>
+      <td><span class="diff">12 12</span></td>
+      <td><span class="same">1.5px</span></td>
+      <td><span class="diff">md (12)</span></td>
+      <td><span class="diff">background</span></td>
+      <td><span class="diff">callout 16-17</span></td>
+      <td><span class="diff">600</span></td>
+      <td><span class="diff">center</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="decision">
+  <h2>是否要強制一致？兩個選項</h2>
+
+  <div class="opt">
+    <h3>選項 1 — 強制一致（全部用 Style A）</h3>
+    <p>把 Style B / C / D 全部砍掉，所有 input 統一 Style A。<strong>變化</strong>：</p>
+    <ul style="font-size: 13px; line-height: 1.7; margin: 6px 0 0 20px; color: var(--color-foreground);">
+      <li>EditEntryPage 「抵達 10:45 AM」失去 22px bold 視覺重點，變成跟其他 input 一樣大小 — 時間欄位視覺權重下降</li>
+      <li>Favorites form 變大 (10→12 padding, 1→1.5 border, radius 12→16)</li>
+      <li>Shift modal date 不再 center align — 跟 form input 一樣 left align</li>
+    </ul>
+    <p style="margin-top: 8px;"><strong>適合</strong>：強調「全 app 視覺統一」/ 不太在意 visual hierarchy。</p>
+  </div>
+
+  <div class="opt">
+    <h3>選項 2 — 保持現狀（4 種 styles，intentional variation）</h3>
+    <p>各 page-scoped class 保留差異，因為都是<strong>有意義的視覺層級</strong>：</p>
+    <ul style="font-size: 13px; line-height: 1.7; margin: 6px 0 0 20px; color: var(--color-foreground);">
+      <li>Style A 是 default 通用 form (NewTripPage / LoginPage / 一般 text)</li>
+      <li>Style B (Favorites) 較 compact — 適合 modal-like form</li>
+      <li>Style C (Time card) <strong>強調時間數字</strong> — EditEntryPage UX 重點</li>
+      <li>Style D (Shift modal) <strong>居中</strong> 短 date 字串 — modal 視覺對稱</li>
+    </ul>
+    <p style="margin-top: 8px;"><strong>適合</strong>：保留 page-specific UX 強調。</p>
+  </div>
+
+  <p style="margin-top: 12px; font-size: 13px; color: var(--color-muted);">
+  <strong>建議</strong>：選項 2（現狀）— 因為 Style C 是 EditEntryPage 時間 UX 重點（22px bold 強調），改回 16px 會失去視覺權重。其他 (A/B/D) 差異本來就很小（padding 2px 等），用戶不易察覺。
+  </p>
+</div>
+
+</div>
+
+</body>
+</html>

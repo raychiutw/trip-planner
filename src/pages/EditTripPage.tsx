@@ -1478,7 +1478,7 @@ export default function EditTripPage() {
             <input
               type="date"
               id="edit-trip-shift-date"
-              className="tp-shift-modal-input"
+              className="tp-input-short"
               value={shiftNewDate}
               onChange={(e) => setShiftNewDate(e.target.value)}
               data-testid="edit-trip-shift-date-input"

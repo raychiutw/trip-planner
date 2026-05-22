@@ -815,6 +815,7 @@ export default function NewTripPage() {
                     <label htmlFor="new-trip-start">出發</label>
                     <input
                       id="new-trip-start"
+                      className="tp-input-short"
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
@@ -826,6 +827,7 @@ export default function NewTripPage() {
                     <label htmlFor="new-trip-end">回程</label>
                     <input
                       id="new-trip-end"
+                      className="tp-input-short"
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}

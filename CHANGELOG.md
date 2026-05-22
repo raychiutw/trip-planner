@@ -3,6 +3,55 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.16] - 2026-05-22
+
+**Refactor: Input 二系統 — `.tp-input-long` (一般文字) + `.tp-input-short`
+(固定格式短值 22px bold)。** User sign-off mockup
+`docs/design-sessions/2026-05-21-input-full-inventory/two-styles-proposal.html`。
+
+### Design
+
+74 個 input 用 4 種 styles 收斂成 2 種正式 system class：
+
+- **`.tp-input-long`** — email / password / 標題 / 地址 / 描述 / 備註 /
+  搜尋 / textarea / 長 select。Padding 12 14 / border 1.5px / radius lg /
+  bg secondary / font body / left align。
+- **`.tp-input-short`** — time / date / 短 number / 短 select。提供兩種
+  pattern：(a) wrapper + label + input nested、(b) solo 直接套 input
+  (透過 `input.tp-input-short` 高 specificity override)，避免 JSX 重構。
+
+### Added
+
+`css/tokens.css @layer base`：
+- 完整 `.tp-input-long` rule (含 textarea 加長 + select chevron 變化)
+- 完整 `.tp-input-short` wrapper pattern + solo input pattern
+- 兩者都 inherit v2.33.11 + v2.33.12 base 的 `color-scheme: light` /
+  `appearance: none` / accent focus ring
+
+### Migrated 7 callsites to `.tp-input-short` (solo)
+
+- NewTripPage 出發 / 回程 date
+- EditTripPage shift modal date (替換 `.tp-shift-modal-input`)
+- AddPoiFavoriteToTripPage 開始 / 結束時間 (替換 `.tp-form-input.tabular`)
+- AddCustomStopPage 開始時間 + 停留分鐘 (替換 `.tp-custom-stop-input`)
+- AddStopPage 預估停留 number
+- TravelPillDialog transit min
+- EditEntryPage transit min
+
+EditEntryPage 抵達 / 離開 (`.tp-edit-entry-time-card` wrapper pattern)
+保留 — 已在 card pattern，rename 屬未來 cleanup。
+
+### Long callsites 不顯式遷移
+
+無 className 的 text/email/textarea/select 由 v2.33.12 `:where()` base
+layer 處理（Terracotta tokens 同 `.tp-input-long`，視覺等效）。後續若要
+拔除 `.tp-form-input` / `.tp-new-form-row input` / `.tp-edit-row input`
+等 page-scoped class 再做 sweep。
+
+### Tests
+
+tsc clean / vitest 266 files / 2061 tests pass。
+
 ## [2.33.15] - 2026-05-21
 
 **Fix: shift modal「取消」button fallback browser native 黑底白字。** User
