@@ -1341,6 +1341,7 @@ export default function AddStopPage() {
                             <label htmlFor="add-stop-custom-duration">預估停留</label>
                             <input
                               id="add-stop-custom-duration"
+                              className="tp-input-short"
                               type="number"
                               inputMode="numeric"
                               value={customDuration}

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tripline Input 全盤點 — v2.33.15</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+body { background: var(--color-secondary); padding: 32px 16px; font-size: 14px; }
+.wrap { max-width: 1280px; margin: 0 auto; }
+h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; }
+h2 { margin: 28px 0 12px; font-size: var(--font-size-title3); font-weight: 800; }
+.lead { color: var(--color-muted); margin: 0 0 24px; line-height: 1.7; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+th, td { padding: 10px 12px; text-align: left; vertical-align: top; }
+th { background: var(--color-tertiary); font-weight: 700; color: var(--color-foreground); border-bottom: 1px solid var(--color-border); }
+tr:not(:last-child) td { border-bottom: 1px dashed var(--color-border); }
+td.file { font-family: ui-monospace, monospace; font-size: 11px; color: var(--color-muted); white-space: nowrap; }
+td.cls { font-family: ui-monospace, monospace; font-size: 12px; }
+.badge {
+  display: inline-block; padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-eyebrow); font-weight: 700;
+}
+.badge.ok { background: rgba(46, 133, 64, 0.12); color: #2e8540; }
+.badge.warn { background: var(--color-priority-high-bg); color: var(--color-destructive); }
+.badge.info { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+.badge.muted { background: var(--color-tertiary); color: var(--color-muted); }
+.summary {
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  margin-bottom: 24px;
+}
+.summary h3 { margin: 0 0 6px; font-size: var(--font-size-callout); font-weight: 800; color: var(--color-accent-deep); }
+.summary ul { margin: 0; padding-left: 20px; line-height: 1.7; }
+code { background: var(--color-tertiary); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+.cat-color { color: var(--color-accent-deep); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<h1>Tripline Input 全盤點 <span class="badge info">v2.33.15</span></h1>
+<p class="lead">
+截至 2026-05-21 (prod 9b8fdde)，盤點全 src/ 內 74 個 <code>&lt;input&gt;</code> / <code>&lt;textarea&gt;</code> / <code>&lt;select&gt;</code> 用法。<br>
+<strong>分 4 大層級</strong>：A 全域 base / B 共用 class / C 頁面 scoped class / D component scoped class / E hidden。<br>
+所有路徑都有 fallback：page-scoped 失效時，<strong>v2.33.12 全域 base layer</strong> 確保 Terracotta 樣式。
+</p>
+
+<div class="summary">
+  <h3>盤點結論</h3>
+  <ul>
+    <li><strong>74</strong> input/textarea/select element，全部都套 Terracotta 樣式（無 native fallback）</li>
+    <li><strong>v2.33.12 全域 base layer</strong>（<code>:where()</code> specificity 0）覆蓋所有文字類 input + textarea + select + 全 date/time + checkbox/radio accent-color</li>
+    <li><strong>14</strong> hidden inputs（ConsentPage OAuth form）— 不需樣式</li>
+    <li><strong>v2.33.9 / v2.33.15 lesson</strong>：避免 reuse 別 component 的 scoped class（ConfirmModal 的 <code>.tp-confirm-*</code>），單獨開時 SCOPED_STYLES 不注入會 fallback native</li>
+  </ul>
+</div>
+
+<!-- A. 全域 base layer (v2.33.11/12) -->
+<h2>A. 全域 base layer <span class="badge ok">tokens.css @layer base</span></h2>
+<p>用 <code>:where()</code> specificity 0，page-scoped class 永遠贏。所有未列在下方的 input 都 inherit 這層樣式。</p>
+<table>
+  <thead><tr><th width="200">CSS Selector</th><th>樣式</th><th width="150">引入版本</th></tr></thead>
+  <tbody>
+    <tr><td class="cls">:where(input[type≠special]:not, textarea, select)</td><td>padding 12 14 / border 1.5px / radius lg / bg secondary / color foreground / min-height 48 / focus accent</td><td>v2.33.12</td></tr>
+    <tr><td class="cls">input[type="date|time|datetime|month|week"]</td><td>color-scheme: light / -webkit-appearance: none / bg + color / ::-webkit-date-and-time-value / ::-webkit-calendar-picker-indicator</td><td>v2.33.11</td></tr>
+    <tr><td class="cls">:where(input[type="checkbox|radio"])</td><td>accent-color: var(--color-accent) / cursor pointer</td><td>v2.33.12</td></tr>
+  </tbody>
+</table>
+
+<!-- B. 共用 class (_tripFormStyles.ts) -->
+<h2>B. 共用 class <span class="badge ok">_tripFormStyles.ts</span></h2>
+<p>用於 trip 系列頁面（NewTripPage / EditTripPage），shared styling。</p>
+<table>
+  <thead><tr><th>Class</th><th>Inputs 使用處</th><th width="180">說明</th></tr></thead>
+  <tbody>
+    <tr><td class="cls">.tp-new-form-row input</td><td>NewTripPage.tsx:707, 816(date), 827(date)</td><td>選擇器 wrap input</td></tr>
+    <tr><td class="cls">.tp-new-form-row textarea</td><td>NewTripPage.tsx:888</td><td>選擇器 wrap textarea</td></tr>
+    <tr><td class="cls">.tp-edit-row input[type="text"]</td><td>EditTripPage.tsx:1326</td><td>type-specific selector</td></tr>
+    <tr><td class="cls">.tp-edit-row textarea</td><td>EditTripPage.tsx:1363</td><td></td></tr>
+    <tr><td class="cls">.tp-edit-row select</td><td>EditTripPage.tsx:1376</td><td>含 chevron background-image override</td></tr>
+  </tbody>
+</table>
+
+<!-- C. 頁面 scoped class -->
+<h2>C. 頁面 scoped class <span class="badge info">page-specific SCOPED_STYLES</span></h2>
+<p>各 page 自己定義的 input class，常見命名 <code>.tp-{page}-{element}</code>。</p>
+<table>
+  <thead><tr><th width="220">Class</th><th>檔案位置</th><th>類型</th></tr></thead>
+  <tbody>
+    <tr><td class="cls">.tp-form-input (.tabular)</td><td class="file">AddPoiFavoriteToTripPage.tsx:554, 567</td><td>time × 2</td></tr>
+    <tr><td class="cls">.tp-form-select</td><td class="file">AddPoiFavoriteToTripPage.tsx:499, 526</td><td>select × 2</td></tr>
+    <tr><td class="cls">.tp-input-field</td><td class="file">InputModal.tsx:196</td><td>text input (general modal)</td></tr>
+    <tr><td class="cls">.tp-collab-add-input</td><td class="file">CollabPanel.tsx:664</td><td>email input</td></tr>
+    <tr><td class="cls">.tp-custom-stop-input</td><td class="file">AddCustomStopPage.tsx:469, 485, 564(time), 574(number)</td><td>text/time/number × 4</td></tr>
+    <tr><td class="cls">.tp-custom-stop-textarea</td><td class="file">AddCustomStopPage.tsx:590</td><td>textarea</td></tr>
+    <tr><td class="cls">.tp-custom-stop-hint-checkbox</td><td class="file">AddCustomStopPage.tsx:545</td><td>checkbox（額外 accent override）</td></tr>
+    <tr><td class="cls">.tp-custom-poi-hint-checkbox</td><td class="file">CustomPoiForm.tsx:453</td><td>checkbox</td></tr>
+    <tr><td class="cls">.tp-rail-note-input</td><td class="file">TimelineRail.tsx:618</td><td>textarea (inline note edit)</td></tr>
+    <tr><td class="cls">.tp-shift-modal-input</td><td class="file">EditTripPage.tsx:1478</td><td>date (v2.33.10 iOS fix + v2.33.11 global covers)</td></tr>
+    <tr><td class="cls">.tp-trips-sort</td><td class="file">TripsListPage.tsx:995</td><td>select (compact 排序)</td></tr>
+    <tr><td class="cls">.tp-entry-action-time-select</td><td class="file">EntryActionPage.tsx:452</td><td>select (時間選擇)</td></tr>
+    <tr><td class="cls">.tp-add-stop-search-input</td><td class="file">AddStopPage.tsx:1135</td><td>text (搜尋 input)</td></tr>
+    <tr><td class="cls">.tp-add-stop-card-checkbox</td><td class="file">AddStopPage.tsx:1200, 1268</td><td>checkbox（v2.33.12 accent base 覆蓋）</td></tr>
+    <tr><td class="cls">.tp-add-entry-daypicker-select</td><td class="file">AddEntryPage.tsx:289</td><td>select (day picker)</td></tr>
+    <tr><td class="cls">.tp-chat-input</td><td class="file">ChatPage.tsx:963</td><td>textarea (chat compose auto-grow)</td></tr>
+    <tr><td class="cls">.tp-edit-entry-note</td><td class="file">EditEntryPage.tsx:1447</td><td>textarea</td></tr>
+    <tr><td class="cls">.tp-edit-entry-time-card input</td><td class="file">EditEntryPage.tsx:1346, 1359</td><td>time × 2 (parent class)</td></tr>
+    <tr><td class="cls">.tp-select</td><td class="file">EditTripPage.tsx:1378</td><td>select chevron variant</td></tr>
+  </tbody>
+</table>
+
+<!-- D. 全域 base inherit only (沒 page class) -->
+<h2>D. 全域 base inherit only <span class="badge ok">無 page class — 完全靠 v2.33.12 base</span></h2>
+<p>這些 input 沒額外 className，純依賴全域 base layer。</p>
+<table>
+  <thead><tr><th>Type</th><th>檔案</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td>email</td><td class="file">LoginPage.tsx:453, SignupPage.tsx:222, ForgotPasswordPage.tsx:167</td><td>登入/註冊/忘記密碼 email field</td></tr>
+    <tr><td>password</td><td class="file">LoginPage.tsx:468, SignupPage.tsx:236, ResetPasswordPage.tsx:288, 339</td><td>密碼 fields</td></tr>
+    <tr><td>text</td><td class="file">SignupPage.tsx:254, TripsListPage.tsx:1023, EditTripPage.tsx:1171, CustomPoiForm.tsx:361, 385, AddStopPage.tsx:1331, ChangePoiPage.tsx:988, DeveloperAppNewPage.tsx:312, ExplorePage.tsx:679, AddStopPage.tsx:1331</td><td>各種 text inputs</td></tr>
+    <tr><td>number</td><td class="file">TravelPillDialog.tsx:382, AddStopPage.tsx:1342, EditEntryPage.tsx:1418</td><td>數字 fields</td></tr>
+    <tr><td>search</td><td class="file">PoiFavoritesPage.tsx:487</td><td>收藏 search input</td></tr>
+    <tr><td>checkbox</td><td class="file">DeveloperAppNewPage.tsx:370, PoiFavoritesPage.tsx:642</td><td>scopes / 選取 checkboxes</td></tr>
+    <tr><td>radio</td><td class="file">DeveloperAppNewPage.tsx:338, 351</td><td>radio</td></tr>
+    <tr><td>textarea</td><td class="file">DeveloperAppNewPage.tsx:325, AddStopPage.tsx:1356</td><td>無 class textarea</td></tr>
+  </tbody>
+</table>
+
+<!-- E. Hidden (no styling) -->
+<h2>E. Hidden inputs <span class="badge muted">無需樣式</span></h2>
+<p>OAuth form 隱藏 fields，不可見不影響 UI。</p>
+<table>
+  <thead><tr><th>類型</th><th>檔案</th><th>計數</th></tr></thead>
+  <tbody>
+    <tr><td>type="hidden"</td><td class="file">ConsentPage.tsx:195-202, 213-220</td><td>14 instances（OAuth consent form）</td></tr>
+  </tbody>
+</table>
+
+<!-- v2.33.x lesson -->
+<h2>v2.33.x lesson — 跨 component scoped class 風險</h2>
+<table>
+  <thead><tr><th>事件</th><th>版本</th><th>Lesson</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>v2.33.8 shift modal date input 黑底黑字</strong></td>
+      <td>iOS Safari dark mode</td>
+      <td>無 <code>color-scheme: light</code> → fallback dark system → <strong>v2.33.11 全域 base layer 修</strong></td>
+    </tr>
+    <tr>
+      <td><strong>v2.33.9 backdrop 跌出 viewport</strong></td>
+      <td>shift modal reuse <code>.tp-confirm-backdrop</code></td>
+      <td>該 class 在 ConfirmModal SCOPED_STYLES，shift modal 單獨開時樣式沒注入 → 改 local <code>.tp-shift-backdrop</code></td>
+    </tr>
+    <tr>
+      <td><strong>v2.33.15 取消 button 黑底白字</strong></td>
+      <td>shift modal reuse <code>.tp-confirm-btn-cancel</code></td>
+      <td>同 v2.33.9 模式 → 改 local <code>.tp-shift-modal-cancel</code> + 完整 SCOPED_STYLES</td>
+    </tr>
+  </tbody>
+</table>
+<p>
+<strong>規則</strong>：未來新增 modal / dialog，<u>不要 reuse 別 component 的 scoped class</u>。
+要嘛把樣式 lift 到 tokens.css 共用，要嘛 component 內自己 SCOPED_STYLES 定義。
+</p>
+
+</div>
+
+</body>
+</html>
