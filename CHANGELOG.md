@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.25] - 2026-05-23
+
+**Fix: master CI mobile e2e flaky — skip 4 desktop-only AddStopPage tests on mobile**
+
+master CI 連續 5 個 fail 全在 mobile-chrome / mobile-safari project。Root cause：
+`AddStopPage.tsx:776-787` 設計 — mobile (≤1023px) 切自訂 tab 自動 redirect 到
+`/add-custom-stop` (fullpage, IME-safe)，testid 改 `add-custom-stop-*` 不再是
+`add-stop-custom-*`。
+
+`add-stop-page.spec.js` (3 個) + `qa-flows.spec.js` (1 個) 直接 assert
+`add-stop-custom-*` testid → mobile redirect 後 element 找不到 → 失敗。
+
+PR CI 因為只跑 chromium (`.github/workflows/ci.yml` matrix gated on `pull_request`)
+所以這些 mobile fail 只在 master push 才暴露。
+
+Fix：4 個 affected tests 加 `testInfo.skip(testInfo.project.name.startsWith('mobile-'))`
+明確標示「desktop-only inline tab」。mobile 路徑 (/add-custom-stop) 由 e2e
+`add-custom-stop-*.spec.js` 覆蓋（未來 follow-up）。
+
 ## [2.33.24] - 2026-05-22
 
 **Fix: AddStopPage 自訂 tab 開始時間 input migrated to TripTimePicker**
