@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.26] - 2026-05-23
+
+**Feat: mobile e2e coverage for `/add-custom-stop` fullpage（v2.33.25 follow-up）**
+
+v2.33.25 skip 了 4 個 AddStopPage tests on mobile（因 mobile 切自訂 tab 會
+redirect 到 /add-custom-stop fullpage）。本版補完 mobile 路徑 coverage。
+
+新檔 `tests/e2e/add-custom-stop-page.spec.js`：
+
+- **mobile-only: page render + 4 form fields + confirm disabled wedge**
+  驗 mobile viewport 進 /add-custom-stop 後 add-custom-stop-page render，
+  title/address/time/duration/note 5 個 fields visible，confirm 在 title-only
+  無 map coord 時保持 disabled（對齊 AddStopPage v2.31.94 wedge guard）
+- **mobile-only: TripTimePicker trigger 顯 --:-- placeholder**
+  驗 v2.33.21 TripTimePicker migration 仍 render 在 mobile fullpage
+- **desktop redirect 反向驗證**
+  Desktop project 進 /add-custom-stop 應被 MobileOnlyRoute redirect 到 /trips
+
+每個 test 用 `testInfo.skip(...)` 明確區分 mobile-only / desktop-only。
+
 ## [2.33.25] - 2026-05-23
 
 **Fix: master CI mobile e2e flaky — skip 4 desktop-only AddStopPage tests on mobile**
