@@ -38,6 +38,7 @@ import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import { TripSelect } from '../components/TripSelect';
 import TripPage, { type TripPageHandle } from './TripPage';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 
@@ -992,17 +993,19 @@ export default function TripsListPage() {
                   </button>
                 ))}
               </div>
-              <select
-                className="tp-trips-sort"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'updated' | 'start' | 'name')}
-                data-testid="trips-list-sort"
-                aria-label="排序方式"
-              >
-                <option value="updated">最新編輯</option>
-                <option value="start">出發日近</option>
-                <option value="name">名稱 A→Z</option>
-              </select>
+              <div data-testid="trips-list-sort">
+                <TripSelect<'updated' | 'start' | 'name'>
+                  value={sortBy}
+                  onChange={setSortBy}
+                  variant="pill"
+                  ariaLabel="排序方式"
+                  options={[
+                    { value: 'updated', label: '最新編輯' },
+                    { value: 'start', label: '出發日近' },
+                    { value: 'name', label: '名稱 A→Z' },
+                  ]}
+                />
+              </div>
               <div className={`tp-trips-search ${searchOpen ? 'is-open' : ''}`}>
                 <button
                   type="button"

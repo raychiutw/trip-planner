@@ -45,6 +45,8 @@ import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import { TripDatePicker } from '../components/TripDatePicker';
+import { TripSelect } from '../components/TripSelect';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { TRIP_FORM_STYLES } from '../components/trip/_tripFormStyles';
 import { usePoiSearch } from '../hooks/usePoiSearch';
@@ -1371,19 +1373,19 @@ export default function EditTripPage() {
                   </div>
 
                   {/* Lang */}
-                  <div className="tp-edit-row">
+                  <div className="tp-edit-row" data-testid="edit-trip-lang-select">
                     <label htmlFor="edit-trip-lang">顯示語言</label>
-                    <select
+                    <TripSelect<Lang>
                       id="edit-trip-lang"
-                      className="tp-select"
                       value={lang}
-                      onChange={(e) => setLang(e.target.value as Lang)}
-                      data-testid="edit-trip-lang-select"
-                    >
-                      <option value="zh-TW">繁體中文（台灣）</option>
-                      <option value="en">English</option>
-                      <option value="ja">日本語</option>
-                    </select>
+                      onChange={setLang}
+                      ariaLabel="顯示語言"
+                      options={[
+                        { value: 'zh-TW', label: '繁體中文（台灣）' },
+                        { value: 'en', label: 'English' },
+                        { value: 'ja', label: '日本語' },
+                      ]}
+                    />
                   </div>
 
                   {/* v2.31.36 (migration 0068): default travel mode + self-drive form removed
@@ -1475,14 +1477,14 @@ export default function EditTripPage() {
           <div className="tp-shift-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} data-testid="edit-trip-shift-modal">
             <h2 className="tp-shift-modal-title">變更出發日期</h2>
             <label className="tp-shift-modal-label" htmlFor="edit-trip-shift-date">出發日期</label>
-            <input
-              type="date"
-              id="edit-trip-shift-date"
-              className="tp-input-short"
-              value={shiftNewDate}
-              onChange={(e) => setShiftNewDate(e.target.value)}
-              data-testid="edit-trip-shift-date-input"
-            />
+            <div data-testid="edit-trip-shift-date-input">
+              <TripDatePicker
+                id="edit-trip-shift-date"
+                value={shiftNewDate}
+                onChange={setShiftNewDate}
+                ariaLabel="變更出發日期"
+              />
+            </div>
             <div className="tp-shift-modal-preview" data-testid="edit-trip-shift-preview">
               {(() => {
                 const oldStart = days[0]!.date!;
