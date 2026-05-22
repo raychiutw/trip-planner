@@ -39,9 +39,9 @@
 
 ### 介面架構（v2.4.0+）
 
-- 🖥️ **桌機 3-pane shell（≥1024px）** — 左 sidebar 240px（5 nav：聊天 / 行程 / 地圖 / 探索 / 帳號 logged-in 或 登入 guest）+ 中央 timeline + 右 sheet（min(780px, 40vw)）
-- 📱 **手機單欄 + bottom nav（<1024px）** — sticky bottom nav 5-tab IA：聊天 / 行程 / 地圖 / 探索 / 帳號（logged-in）。配合 ActiveTripContext，從 trip 進其他 tab 自動帶入當前 trip context
-- 🔗 **URL-driven sheet state** — `/trip/:id?sheet=itinerary|ideas|map|chat` 可深度連結 + 瀏覽器 back/forward 正常
+- 🖥️ **桌機 3-pane shell（≥1024px）** — 左 sidebar 240px（中文 label nav：聊天 / 行程 / 地圖 / 收藏，未登入加「登入」）+ 中央 timeline + 右 sheet（min(780px, 40vw)）。Trip detail TitleBar action 全 icon-only（探索 🔍 + 切換行程 ⇄ dropdown picker + ⋮ menu）
+- 📱 **手機單欄 + bottom nav（<1024px）** — sticky bottom nav 5-tab IA：聊天 / 行程 / 地圖 / 收藏 / 帳號（logged-in）。配合 ActiveTripContext，從 trip 進其他 tab 自動帶入當前 trip context
+- 🔗 **URL-driven sheet state** — `/trip/:id?sheet=map|chat` 可深度連結 + 瀏覽器 back/forward 正常（v2.31.85 拿掉 itinerary tab — main column 已 render 行程；chat tab embed `<ChatPage embedded lockTripId>` trip-scoped AI 聊天）
 - 🎨 **V2 Terracotta 設計系統** — `#D97848` accent + `#FFFBF5` cream bg + `#2A1F18` warm-dark fg，5 個 auth page 桌機版 split-screen（左 form card、右 brand hero gradient pane）
 - 🗺️ **`/trips` landing** — country-keyed peach-gradient trip cards（JP / KR / TW / 其他），點進去 → trip detail
 - 🗺️ **POI Master + Per-trip overrides** — `pois` 是 AI 維護的 master，`trip_pois` 允許 user 覆寫（NULL = 繼承 master）
