@@ -18,6 +18,7 @@
  */
 import { test, expect } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
+import { pickDate } from './_helpers/pickDate.js';
 
 test.beforeEach(async ({ page }) => {
   await setupApiMocks(page);
@@ -42,9 +43,10 @@ test.describe('QA Flow 1 — 新增行程', () => {
     await page.getByTestId('new-trip-dest-result-ChIJPZ5hUjH65DQR_p_dD3CmCOo').click();
     await expect(page.getByTestId('new-trip-destination-row-ChIJPZ5hUjH65DQR_p_dD3CmCOo')).toBeVisible();
 
-    // 預設 dateMode = select → 填 start/end
-    await page.getByTestId('new-trip-start-input').fill('2026-08-01');
-    await page.getByTestId('new-trip-end-input').fill('2026-08-05');
+    // 預設 dateMode = select → 用 TripDatePicker helper 選 start/end
+    // (v2.33.17 之後 native <input type="date"> 已換成 TripDatePicker)
+    await pickDate(page, 'new-trip-start-input', '2026-08-01');
+    await pickDate(page, 'new-trip-end-input', '2026-08-05');
 
     // titleBar 完成按鈕
     const submitBtn = page.getByTestId('new-trip-titlebar-create');
