@@ -563,7 +563,7 @@ export default function AddCustomStopPage() {
                     <div style={{ fontSize: 11, color: 'var(--color-muted)', marginBottom: 4 }}>開始</div>
                     <input
                       type="time"
-                      className="tp-custom-stop-input"
+                      className="tp-input-short"
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
                       data-testid="add-custom-stop-time"
@@ -573,7 +573,7 @@ export default function AddCustomStopPage() {
                     <div style={{ fontSize: 11, color: 'var(--color-muted)', marginBottom: 4 }}>停留（分鐘）</div>
                     <input
                       type="number"
-                      className="tp-custom-stop-input"
+                      className="tp-input-short"
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
                       placeholder="60"
