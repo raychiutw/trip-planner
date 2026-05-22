@@ -19,6 +19,17 @@ if (typeof globalThis.localStorage !== 'undefined' && typeof globalThis.localSto
   Object.defineProperty(globalThis, 'localStorage', { value: ls, writable: true, configurable: true });
 }
 
+// jsdom 不提供 ResizeObserver — @headlessui Listbox 內部 element-movement
+// observer 需要它。提供 no-op stub。
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = ResizeObserverStub;
+}
+
 // jsdom 不提供 window.matchMedia — useDarkMode / ThemeToggle 需要它。
 // 提供一個保守的 stub（永遠回傳 matches=false + 標準 EventTarget 介面）。
 if (typeof globalThis.window !== 'undefined' && typeof globalThis.window.matchMedia !== 'function') {
