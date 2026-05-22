@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variant 2 — Mobile Bottom Sheet · Add Custom Stop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  body { background: #f3ebdc; padding: 24px; }
+  .v-frame-grid {
+    display: grid;
+    grid-template-columns: 360px 360px;
+    gap: 32px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .v-frame {
+    width: 360px;
+    background: var(--tp-background);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: var(--tp-shadow-lg);
+    position: relative;
+    border: 8px solid #1a1410;
+    height: 720px;
+  }
+  .v-frame-label {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--tp-muted);
+    font-weight: 600;
+  }
+  .v-page-title { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 8px; color: var(--tp-foreground); }
+  .v-page-sub { text-align: center; font-size: 14px; color: var(--tp-muted); margin-bottom: 24px; max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+
+  /* === Backdrop trip page (dimmed) === */
+  .tp-backdrop-page {
+    position: absolute;
+    inset: 0;
+    background: var(--tp-secondary);
+    overflow: hidden;
+  }
+  .tp-backdrop-titlebar {
+    height: 56px;
+    background: var(--tp-glass);
+    border-bottom: 1px solid var(--tp-border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .tp-backdrop-row {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--tp-border);
+    font-size: 14px;
+    color: var(--tp-muted);
+  }
+  .tp-backdrop-row strong { color: var(--tp-foreground); font-weight: 600; margin-right: 8px; }
+  .tp-sheet-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--tp-overlay);
+    z-index: 5;
+  }
+
+  /* === Bottom Sheet === */
+  .tp-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--tp-background);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    box-shadow: 0 -12px 32px rgba(42,31,24,0.18);
+    z-index: 10;
+    max-height: 88%;
+    display: flex;
+    flex-direction: column;
+  }
+  .tp-sheet-handle {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 6px;
+    cursor: grab;
+  }
+  .tp-sheet-handle-bar {
+    width: 36px;
+    height: 4px;
+    background: var(--tp-line-strong);
+    border-radius: 2px;
+  }
+  .tp-sheet-header {
+    display: flex;
+    align-items: center;
+    padding: 4px 16px 12px;
+    border-bottom: 1px solid var(--tp-border);
+  }
+  .tp-sheet-title {
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 700;
+    flex: 1;
+  }
+  .tp-sheet-close {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--tp-radius-md);
+    color: var(--tp-muted);
+    font-size: 18px;
+    margin-right: -8px;
+  }
+  .tp-sheet-body {
+    overflow-y: auto;
+    flex: 1;
+  }
+  .tp-sheet-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--tp-border);
+    background: var(--tp-glass);
+    backdrop-filter: blur(8px);
+    display: flex;
+    gap: 12px;
+  }
+  .tp-sheet-footer .tp-btn-secondary {
+    flex: 1;
+    height: 44px;
+    border-radius: var(--tp-radius-md);
+    background: var(--tp-tertiary);
+    color: var(--tp-foreground);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .tp-sheet-footer .tp-btn-primary {
+    flex: 2;
+    height: 44px;
+    border-radius: var(--tp-radius-md);
+    background: var(--tp-accent);
+    color: var(--tp-on-accent);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .tp-sheet-footer .tp-btn-primary:disabled {
+    background: var(--tp-disabled);
+    color: var(--tp-background);
+    cursor: not-allowed;
+  }
+</style>
+</head>
+<body>
+  <div class="v-page-title">Variant 2 — Mobile Bottom Sheet</div>
+  <div class="v-page-sub">
+    維持「自訂 tab 一條 flow」概念，從底部上升。左 = 正常 / map 可拖；右 = typeahead focused，IME 上 + sheet 自動上移到可用高度 + map 折疊隱藏。
+  </div>
+
+  <div class="v-frame-grid">
+
+    <!-- STATE A: sheet up, map visible -->
+    <div>
+      <div class="v-frame-label">State A — Sheet 預設展開</div>
+      <div class="v-frame">
+        <!-- backdrop -->
+        <div class="tp-backdrop-page">
+          <div class="tp-backdrop-titlebar">沖繩夏日小旅行</div>
+          <div class="tp-backdrop-row"><strong>Day 3</strong> 7/28（一）· 那霸 · 4 個景點</div>
+          <div class="tp-backdrop-row" style="opacity: 0.7;">09:00 · 那霸機場</div>
+          <div class="tp-backdrop-row" style="opacity: 0.7;">10:30 · 國際通</div>
+        </div>
+        <div class="tp-sheet-overlay"></div>
+
+        <div class="tp-sheet" style="height: 88%;">
+          <div class="tp-sheet-handle"><div class="tp-sheet-handle-bar"></div></div>
+          <div class="tp-sheet-header">
+            <div class="tp-sheet-title">加入自訂景點</div>
+            <button class="tp-sheet-close" aria-label="關閉">×</button>
+          </div>
+
+          <div class="tp-sheet-body">
+            <div class="tp-field">
+              <label class="tp-field-label tp-field-label-required">標題</label>
+              <input type="text" class="tp-input" value="外婆家" />
+            </div>
+
+            <div class="tp-field">
+              <label class="tp-field-label">地址或地標</label>
+              <input type="text" class="tp-input" placeholder="輸入地址縮放地圖（選填）" />
+            </div>
+
+            <div class="tp-field">
+              <label class="tp-field-label">位置</label>
+              <div class="tp-map" style="height: 200px;">
+                <div class="tp-map-coord">22.6724°N 120.2932°E</div>
+                <div class="tp-map-zoom"><button>+</button><button>−</button></div>
+                <div class="tp-map-pin">
+                  <svg viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 1 C8 1 2 7 2 15 c0 10 14 24 14 24 s14-14 14-24 c0-8-6-14-14-14 z" fill="#D97848" stroke="#B85C2E" stroke-width="1.5"/>
+                    <circle cx="16" cy="15" r="5" fill="#FFFBF5"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="tp-hint-row">
+                <input type="checkbox" class="tp-hint-checkbox" />
+                <label class="tp-hint-text">
+                  <strong>已調整到正確位置</strong> — 拖地圖微調，或直接送出
+                </label>
+              </div>
+            </div>
+
+            <div class="tp-field">
+              <label class="tp-field-label">時間 / 停留</label>
+              <div class="tp-row-2col">
+                <input type="time" class="tp-input" value="11:30" />
+                <input type="number" class="tp-input" placeholder="分鐘" value="60" />
+              </div>
+            </div>
+          </div>
+
+          <div class="tp-sheet-footer">
+            <button class="tp-btn-secondary">取消</button>
+            <button class="tp-btn-primary">完成</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATE B: typeahead focused, IME up, sheet pushed -->
+    <div>
+      <div class="v-frame-label">State B — IME 上、Sheet 內部折疊 map</div>
+      <div class="v-frame">
+        <div class="tp-backdrop-page">
+          <div class="tp-backdrop-titlebar">沖繩夏日小旅行</div>
+        </div>
+        <div class="tp-sheet-overlay"></div>
+
+        <!-- Sheet shrunk to top portion to avoid keyboard overlap -->
+        <div class="tp-sheet" style="height: 56%;">
+          <div class="tp-sheet-handle"><div class="tp-sheet-handle-bar"></div></div>
+          <div class="tp-sheet-header">
+            <div class="tp-sheet-title">加入自訂景點</div>
+            <button class="tp-sheet-close" aria-label="關閉">×</button>
+          </div>
+
+          <div class="tp-sheet-body">
+            <div class="tp-field">
+              <label class="tp-field-label tp-field-label-required">標題</label>
+              <input type="text" class="tp-input" value="外婆家" />
+            </div>
+
+            <div class="tp-field" style="background: var(--tp-secondary);">
+              <label class="tp-field-label">地址或地標</label>
+              <div class="tp-typeahead-wrap">
+                <input type="text" class="tp-input" value="高雄市左營" style="border-color: var(--tp-accent); box-shadow: 0 0 0 3px var(--tp-accent-subtle);" />
+                <div class="tp-typeahead-list">
+                  <div class="tp-typeahead-item">
+                    <div class="tp-typeahead-item-main">高雄市左營區</div>
+                    <div class="tp-typeahead-item-sub">行政區 · 台灣高雄市</div>
+                  </div>
+                  <div class="tp-typeahead-item">
+                    <div class="tp-typeahead-item-main">左營高鐵站</div>
+                    <div class="tp-typeahead-item-sub">高雄市左營區站前北路</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="tp-field" style="opacity: 0.45;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <label class="tp-field-label" style="margin: 0;">位置（被鍵盤遮蓋，選預測會自動回來）</label>
+                <span style="font-size: 12px; color: var(--tp-muted);">▾</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="tp-sheet-footer">
+            <button class="tp-btn-secondary">取消</button>
+            <button class="tp-btn-primary" disabled>完成</button>
+          </div>
+        </div>
+
+        <!-- IME keyboard fills bottom -->
+        <div class="tp-mock-keyboard">
+          <div style="text-align: center;">
+            <div style="font-weight: 600; margin-bottom: 4px;">[ 注音 / 英文鍵盤 ]</div>
+            <div>Sheet 自動縮高度避讓鍵盤</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="tp-anno">
+    <div class="tp-anno-title">IA decisions — Variant 2</div>
+    <ul>
+      <li>Sheet 從底部 88% 展開，drag handle + close × + cancel/完成 雙 footer button</li>
+      <li>State B：鍵盤上時 sheet 自動 shrink 到 56%（避讓 280px IME）</li>
+      <li>Map 在 typeahead focus 時折疊成單行（accordion 收起），suggestion pick 後展開</li>
+      <li>輸入順序：title → address → map → 時間（最重要在 sheet 頂部，鍵盤上仍可見）</li>
+      <li>背景 trip 頁面 dim 35% overlay，user 知道自己「半疊在 trip 上」</li>
+      <li>Cancel 按下 → sheet 下滑消失（無中介確認）；完成 disabled 直到 pin valid</li>
+      <li>權衡：sheet 比 fullpage 保留「context」感（trip 仍可見），但 keyboard occlusion 處理需 dynamic-height（複雜度 +1）</li>
+      <li>Map JS API fail → sheet 內顯 error banner，仍可填 title/time/note 之後 fallback search tab</li>
+    </ul>
+  </div>
+</body>
+</html>

@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import EditEntryPage from '../../src/pages/EditEntryPage';
+import { pickTime } from './__helpers__/tripTimePicker';
 
 // Mocks
 const navigateSpy = vi.fn();
@@ -218,15 +219,16 @@ beforeEach(() => {
 });
 
 describe('EditEntryPage — 載入 + 初始呈現', () => {
-  it('載入 entry → 起訖時間 input 顯示既有值', async () => {
+  it('載入 entry → 起訖時間 picker trigger 顯示既有值', async () => {
     renderPage();
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
     });
-    const start = screen.getByTestId('edit-entry-start-time') as HTMLInputElement;
-    const end = screen.getByTestId('edit-entry-end-time') as HTMLInputElement;
-    expect(start.value).toBe('12:00');
-    expect(end.value).toBe('13:30');
+    // v2.33.21: native <input type="time"> → TripTimePicker (button trigger 顯示 HH:MM)
+    const startTrigger = screen.getByTestId('edit-entry-start-time').querySelector('button');
+    const endTrigger = screen.getByTestId('edit-entry-end-time').querySelector('button');
+    expect(startTrigger?.textContent).toContain('12:00');
+    expect(endTrigger?.textContent).toContain('13:30');
   });
 
   it('備註 textarea 顯示既有值 + counter', async () => {
@@ -351,8 +353,7 @@ describe('EditEntryPage — 驗證', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
     });
-    const start = screen.getByTestId('edit-entry-start-time') as HTMLInputElement;
-    fireEvent.change(start, { target: { value: '14:00' } });
+    pickTime('edit-entry-start-time', '14:00');
     expect(screen.queryByTestId('edit-entry-validation')).toBeTruthy();
     const save = screen.getByTestId('edit-entry-titlebar-save') as HTMLButtonElement;
     expect(save.disabled).toBe(true);
@@ -365,8 +366,7 @@ describe('EditEntryPage — 儲存', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
     });
-    const start = screen.getByTestId('edit-entry-start-time') as HTMLInputElement;
-    fireEvent.change(start, { target: { value: '11:30' } });
+    pickTime('edit-entry-start-time', '11:30');
     const save = screen.getByTestId('edit-entry-titlebar-save');
     fireEvent.click(save);
     await waitFor(() => {

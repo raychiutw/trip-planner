@@ -35,6 +35,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import Icon from '../components/shared/Icon';
 import InlineError from '../components/shared/InlineError';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
@@ -126,7 +127,11 @@ const SCOPED_STYLES = `
 /* Time row */
 .tp-edit-entry-time-row {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /* v2.32.3 fix: minmax(0, 1fr) 允許 grid column 縮短到 input intrinsic
+     width 以下，避免 mobile (≤390px viewport) 兩個 time card horizontal
+     overflow 22-27px。Input min-width:0 一起放寬 flexbox 預設 min-width
+     auto 限制。 */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 8px;
   align-items: center;
 }
@@ -137,6 +142,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-md);
   padding: 10px 14px;
   transition: all 120ms;
+  min-width: 0;
 }
 .tp-edit-entry-time-card:focus-within {
   border-color: var(--color-accent);
@@ -155,6 +161,7 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
   border: 0; background: transparent; outline: none; padding: 0;
   width: 100%;
+  min-width: 0;
   min-height: 32px;
 }
 .tp-edit-entry-time-arrow {
@@ -1335,29 +1342,29 @@ export default function EditEntryPage() {
                   <span>時間</span>
                 </h2>
                 <div className="tp-edit-entry-time-row">
-                  <label className="tp-edit-entry-time-card">
+                  <div className="tp-edit-entry-time-card">
                     <span>抵達</span>
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      placeholder="HH:MM"
-                      data-testid="edit-entry-start-time"
-                    />
-                  </label>
+                    <div data-testid="edit-entry-start-time">
+                      <TripTimePicker
+                        value={startTime}
+                        onChange={setStartTime}
+                        ariaLabel="抵達時間"
+                      />
+                    </div>
+                  </div>
                   <span className="tp-edit-entry-time-arrow" aria-hidden="true">
                     <Icon name="arrow-right" />
                   </span>
-                  <label className="tp-edit-entry-time-card">
+                  <div className="tp-edit-entry-time-card">
                     <span>離開</span>
-                    <input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      placeholder="HH:MM"
-                      data-testid="edit-entry-end-time"
-                    />
-                  </label>
+                    <div data-testid="edit-entry-end-time">
+                      <TripTimePicker
+                        value={endTime}
+                        onChange={setEndTime}
+                        ariaLabel="離開時間"
+                      />
+                    </div>
+                  </div>
                 </div>
                 {stayMinutes != null && (
                   <div className="tp-edit-entry-duration" data-testid="edit-entry-duration">
@@ -1411,6 +1418,7 @@ export default function EditEntryPage() {
                           <label htmlFor="edit-entry-transit-min">分鐘</label>
                           <input
                             id="edit-entry-transit-min"
+                            className="tp-input-short"
                             type="number"
                             min="1"
                             max="1440"

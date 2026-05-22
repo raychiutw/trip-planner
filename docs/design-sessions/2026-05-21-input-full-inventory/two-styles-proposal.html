@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Input 二系統 — 長值 / 短值</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<style>
+body { background: var(--color-secondary); padding: 32px 16px; }
+.wrap { max-width: 920px; margin: 0 auto; }
+h1 { margin: 0 0 6px; font-size: 28px; font-weight: 800; }
+.lead { color: var(--color-muted); margin: 0 0 24px; line-height: 1.6; }
+
+.section {
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  margin-bottom: 22px;
+  border: 1px solid var(--color-border);
+}
+.section h2 {
+  margin: 0 0 6px;
+  font-size: var(--font-size-title3);
+  font-weight: 800;
+  display: flex; align-items: center; gap: 10px;
+}
+.section h2 .pill {
+  display: inline-block;
+  padding: 3px 10px;
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+}
+.section h2 .pill.short { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+.section p.sub {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+.section p.sub code { background: var(--color-tertiary); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+
+/* ==================== STYLE: LONG (text-heavy) ==================== */
+/* 用於：email/password/text/textarea/search/select(long) */
+.tp-input-long {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-secondary);
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: var(--font-size-body);
+  min-height: 48px;
+  outline: none;
+  transition: border-color 120ms, background-color 120ms, box-shadow 120ms;
+  color-scheme: light;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.tp-input-long:focus {
+  border-color: var(--color-accent);
+  background-color: var(--color-background);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+textarea.tp-input-long { min-height: 72px; resize: vertical; line-height: 1.5; }
+select.tp-input-long {
+  cursor: pointer;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B85F2A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+}
+
+/* ==================== STYLE: SHORT (fixed-format short values) ==================== */
+/* 用於：time/date/datetime/month/week/number（短數字）/short text */
+.tp-input-short {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--color-background);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  min-width: 0;
+  transition: border-color 120ms, box-shadow 120ms;
+  cursor: text;
+}
+.tp-input-short:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+.tp-input-short > .label,
+.tp-input-short > label {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.tp-input-short input,
+.tp-input-short select {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-foreground);
+  border: 0;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  color-scheme: light;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.demo-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 14px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.demo-row .descr {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.demo-row .descr strong {
+  display: block;
+  color: var(--color-foreground);
+  font-weight: 700;
+  margin-bottom: 2px;
+  font-size: 14px;
+}
+.row-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.summary {
+  background: var(--color-accent-subtle);
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  margin-top: 16px;
+}
+.summary h3 { margin: 0 0 6px; font-weight: 800; color: var(--color-accent-deep); }
+.summary table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.summary td { padding: 4px 8px; border-bottom: 1px dashed rgba(184, 92, 46, 0.2); }
+.summary td:first-child { font-weight: 600; color: var(--color-foreground); width: 35%; }
+.summary tr:last-child td { border-bottom: 0; }
+
+.mig-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  font-size: 13px;
+}
+.mig-table th, .mig-table td { padding: 9px 12px; text-align: left; vertical-align: top; }
+.mig-table th { background: var(--color-tertiary); font-weight: 700; }
+.mig-table tr:not(:last-child) td { border-bottom: 1px dashed var(--color-border); }
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+}
+.tag.long { background: var(--color-accent); color: var(--color-accent-foreground); }
+.tag.short { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<h1>Input 二系統提案 — 長值 / 短值</h1>
+<p class="lead">
+把目前 4 種 styles 合併為 <strong>2 種正式 system styles</strong>。
+按「值的長度 + 是否固定格式」分類，每個 input 屬於其中一種。
+</p>
+
+<!-- ==================== STYLE LONG ==================== -->
+<div class="section">
+  <h2><span class="pill">長</span> tp-input-long — 一般文字輸入</h2>
+  <p class="sub">
+    用於 <strong>長文字 / 不固定格式</strong> 內容：email / 密碼 / 標題 /
+    地址 / 描述 / 備註 / 搜尋 / 多選下拉。
+    <br>規格：<code>padding 12 14 · border 1.5px · radius lg · bg secondary · font body (16-17px) · left align</code>
+  </p>
+
+  <div class="demo-row">
+    <div class="descr"><strong>Email</strong>登入 / 註冊</div>
+    <input class="tp-input-long" type="email" placeholder="lean.lean@gmail.com">
+  </div>
+  <div class="demo-row">
+    <div class="descr"><strong>密碼</strong>登入 / 重設</div>
+    <input class="tp-input-long" type="password" placeholder="••••••••">
+  </div>
+  <div class="demo-row">
+    <div class="descr"><strong>行程名稱</strong>EditTripPage / NewTripPage</div>
+    <input class="tp-input-long" type="text" value="2026 沖繩五日自駕遊行程表">
+  </div>
+  <div class="demo-row">
+    <div class="descr"><strong>地址 / POI 名</strong>CustomPoiForm</div>
+    <input class="tp-input-long" type="text" value="日本〒150-8377 Tokyo, Shibuya">
+  </div>
+  <div class="demo-row">
+    <div class="descr"><strong>搜尋</strong>POI / favorites / trips</div>
+    <input class="tp-input-long" type="search" placeholder="搜尋景點、餐廳、住宿...">
+  </div>
+  <div class="demo-row">
+    <div class="descr"><strong>描述 / 備註</strong>SEO / entry note</div>
+    <textarea class="tp-input-long" rows="3">2026 沖繩五日自駕遊完整行程表：那霸、北谷美國村、青之洞窟、瀨底海灘、美麗海水族館。</textarea>
+  </div>
+  <div class="demo-row">
+    <div class="descr"><strong>顯示語言</strong>下拉</div>
+    <select class="tp-input-long">
+      <option>繁體中文（台灣）</option>
+      <option>English</option>
+      <option>日本語</option>
+    </select>
+  </div>
+</div>
+
+<!-- ==================== STYLE SHORT ==================== -->
+<div class="section">
+  <h2><span class="pill short">短</span> tp-input-short — 固定格式短值（card + label + 大字）</h2>
+  <p class="sub">
+    用於 <strong>固定格式 / 短值</strong>：time / date / 短數字。
+    <br>規格：<code>card padding 10 14 · border 1.5px · radius md · label caption muted · value 22px bold tabular-nums</code>
+  </p>
+
+  <div class="row-grid-2">
+    <label class="tp-input-short">
+      <span class="label">抵達</span>
+      <input type="time" value="10:45">
+    </label>
+    <label class="tp-input-short">
+      <span class="label">離開</span>
+      <input type="time" value="12:00">
+    </label>
+  </div>
+  <div class="row-grid-2">
+    <label class="tp-input-short" style="margin-top: 10px;">
+      <span class="label">出發日期</span>
+      <input type="date" value="2026-07-01">
+    </label>
+    <label class="tp-input-short" style="margin-top: 10px;">
+      <span class="label">回程日期</span>
+      <input type="date" value="2026-07-07">
+    </label>
+  </div>
+  <div class="row-grid-2">
+    <label class="tp-input-short" style="margin-top: 10px;">
+      <span class="label">停留分鐘</span>
+      <input type="number" value="60">
+    </label>
+    <label class="tp-input-short" style="margin-top: 10px;">
+      <span class="label">人數</span>
+      <input type="number" value="2">
+    </label>
+  </div>
+</div>
+
+<!-- ==================== Migration map ==================== -->
+<div class="section">
+  <h2>📋 74 個 input → 2 systems 對應表</h2>
+  <p class="sub">下面列出每個既有 callsite 應歸哪一種。</p>
+
+  <table class="mig-table">
+    <thead>
+      <tr><th>檔案 / 用途</th><th>目前 style</th><th>歸類</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>LoginPage email / password</td><td>無 class (base)</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>SignupPage email / password / name</td><td>無 class (base)</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>ForgotPasswordPage / ResetPasswordPage</td><td>無 class (base)</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>NewTripPage 行程名稱 / 描述 / 想做什麼</td><td>.tp-new-form-row input/textarea</td><td><span class="tag long">長</span></td></tr>
+      <tr><td><strong>NewTripPage 出發 / 回程 date</strong></td><td>.tp-new-form-row input</td><td><span class="tag short">短</span></td></tr>
+      <tr><td>EditTripPage title / description / lang</td><td>.tp-edit-row input/textarea/select</td><td><span class="tag long">長</span></td></tr>
+      <tr><td><strong>EditTripPage shift modal date</strong></td><td>.tp-shift-modal-input</td><td><span class="tag short">短</span></td></tr>
+      <tr><td><strong>EditEntryPage 抵達 / 離開 time</strong></td><td>.tp-edit-entry-time-card input</td><td><span class="tag short">短</span>（已是）</td></tr>
+      <tr><td>EditEntryPage note textarea</td><td>.tp-edit-entry-note</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>EditEntryPage number 編輯</td><td>無 class</td><td><span class="tag short">短</span></td></tr>
+      <tr><td>AddCustomStopPage 標題 / 地址</td><td>.tp-custom-stop-input</td><td><span class="tag long">長</span></td></tr>
+      <tr><td><strong>AddCustomStopPage 時間 / 分鐘</strong></td><td>.tp-custom-stop-input</td><td><span class="tag short">短</span></td></tr>
+      <tr><td>AddCustomStopPage 備註</td><td>.tp-custom-stop-textarea</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>AddCustomStopPage 確認 checkbox</td><td>.tp-custom-stop-hint-checkbox</td><td>（不變，checkbox）</td></tr>
+      <tr><td>AddPoiFavoriteToTripPage form fields</td><td>.tp-form-input / .tp-form-select</td><td><span class="tag long">長</span> 標題；<span class="tag short">短</span> 時間</td></tr>
+      <tr><td>AddStopPage 搜尋 / 標題 / 描述</td><td>.tp-add-stop-search-input / 無 class</td><td><span class="tag long">長</span></td></tr>
+      <tr><td><strong>AddStopPage 分鐘 number</strong></td><td>無 class</td><td><span class="tag short">短</span></td></tr>
+      <tr><td>TripsListPage 搜尋 / 排序</td><td>.tp-trips-sort</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>ChatPage chat compose</td><td>.tp-chat-input</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>CustomPoiForm 標題 / 地址 typeahead</td><td>無 class</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>CustomPoiForm 確認 checkbox</td><td>.tp-custom-poi-hint-checkbox</td><td>（不變）</td></tr>
+      <tr><td>CollabPanel email 邀請</td><td>.tp-collab-add-input</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>TravelPillDialog 分鐘</td><td>無 class</td><td><span class="tag short">短</span></td></tr>
+      <tr><td>InputModal text</td><td>.tp-input-field</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>ChangePoiPage 搜尋 / 標題</td><td>無 class</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>ExplorePage 搜尋</td><td>無 class</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>DeveloperAppNewPage name / desc / scopes / type</td><td>無 class</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>EntryActionPage 時間 select</td><td>.tp-entry-action-time-select</td><td><span class="tag short">短</span></td></tr>
+      <tr><td>TimelineRail note 編輯</td><td>.tp-rail-note-input</td><td><span class="tag long">長</span></td></tr>
+      <tr><td>AddEntryPage day picker</td><td>.tp-add-entry-daypicker-select</td><td><span class="tag short">短</span>（短選擇）</td></tr>
+      <tr><td>ConsentPage hidden</td><td>type="hidden"</td><td>—（不可見）</td></tr>
+    </tbody>
+  </table>
+
+  <div class="summary">
+    <h3>實作步驟（v2.33.16）</h3>
+    <table>
+      <tr><td>1. tokens.css @layer base</td><td>定義 .tp-input-long（取代 v2.33.12 :where base）</td></tr>
+      <tr><td>2. tokens.css @layer base</td><td>定義 .tp-input-short（card + label + 22px input）</td></tr>
+      <tr><td>3. Migration</td><td>~30+ 個 callsite 標 className 對應 long / short</td></tr>
+      <tr><td>4. 廢除 page-scoped 重複 class</td><td>.tp-form-input / .tp-custom-stop-input / .tp-shift-modal-input 等 → unify</td></tr>
+      <tr><td>5. Regression test</td><td>每個 page 都驗 — 視覺 + 互動</td></tr>
+    </table>
+  </div>
+</div>
+
+<p style="font-size: 13px; color: var(--color-muted); margin-top: 20px;">
+<strong>注意</strong>：這是 large refactor，影響 30+ callsites。建議分 PR ship：
+<br>(1) 加 long/short base class 不動既有 → (2) 1 page 遷移驗 OK → (3) 其他 pages 批次遷移
+</p>
+
+</div>
+
+</body>
+</html>

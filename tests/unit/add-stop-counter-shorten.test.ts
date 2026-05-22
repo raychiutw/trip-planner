@@ -39,6 +39,7 @@ describe('v2.31.33 AddStopPage counter shorten', () => {
   it('dayLabel 仍可用於其他位置（page header 等）', () => {
     // deriveDayLabel helper 保留 — 不能因 counter 改而拔除
     expect(SRC).toMatch(/function deriveDayLabel/);
-    expect(SRC).toMatch(/const dayLabel = deriveDayLabel/);
+    // v2.31.99: dayLabel 改 hasDay 三元 — 仍 call deriveDayLabel 但加 fallback string
+    expect(SRC).toMatch(/dayLabel\s*=[\s\S]{0,80}deriveDayLabel\(/);
   });
 });

@@ -5,6 +5,7 @@
  * Invalid values degrade to null so URL injection can't crash the page.
  *
  * V2 cutover (migration 0046): 'ideas' tab retired — invalid value now degrades to null.
+ * v2.31.85: 'itinerary' tab retired (TripSheet IA 簡化為地圖 + 聊天)；deep-link 'itinerary' degrades to null.
  */
 import { describe, it, expect, vi } from 'vitest';
 import {
@@ -18,7 +19,6 @@ import {
 describe('parseSheetParam', () => {
   it('returns tab when valid', () => {
     expect(parseSheetParam('?sheet=map')).toBe('map');
-    expect(parseSheetParam('?sheet=itinerary')).toBe('itinerary');
     expect(parseSheetParam('?sheet=chat')).toBe('chat');
   });
 
@@ -33,6 +33,8 @@ describe('parseSheetParam', () => {
     expect(parseSheetParam('?sheet=undefined')).toBeNull();
     // 'ideas' was a valid value pre-cutover; now degrades to null (deep-link compat)
     expect(parseSheetParam('?sheet=ideas')).toBeNull();
+    // v2.31.85: 'itinerary' retired (TripSheet 簡化為 map + chat)，deep-link degrades to null
+    expect(parseSheetParam('?sheet=itinerary')).toBeNull();
   });
 
   it('accepts URLSearchParams instance', () => {
@@ -56,7 +58,7 @@ describe('setSheetParam', () => {
 
   it('replaces existing sheet param', () => {
     const navigate = vi.fn();
-    setSheetParam(navigate, '/trip/abc', '?sheet=itinerary&day=2', 'map');
+    setSheetParam(navigate, '/trip/abc', '?sheet=chat&day=2', 'map');
     expect(navigate).toHaveBeenCalledWith(
       '/trip/abc?sheet=map&day=2',
       { replace: true },
@@ -85,12 +87,12 @@ describe('closeSheet', () => {
 });
 
 describe('SHEET_TABS constant', () => {
-  it('has exactly 3 tabs in expected order (post-V2-cutover)', () => {
-    expect(SHEET_TABS).toEqual(['itinerary', 'map', 'chat']);
+  it('has exactly 2 tabs in expected order (v2.31.85: itinerary tab retired)', () => {
+    expect(SHEET_TABS).toEqual(['map', 'chat']);
   });
 
   it('SheetTab type matches tab values', () => {
-    const tab: SheetTab = 'itinerary';
+    const tab: SheetTab = 'map';
     expect(SHEET_TABS).toContain(tab);
   });
 });

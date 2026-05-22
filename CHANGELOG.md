@@ -3,6 +3,1124 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.21] - 2026-05-22
+
+**Feat: TripTimePicker — 5 個 native `<input type="time">` 改網站風格**
+
+v2.33.17 把 calendar + select 改 headless library + terracotta theme，但
+5 個 `type="time"` 仍是 native OS chrome（iOS rotating drum / Chrome native
+list）。v2.33.21 補完三件套 — TripTimePicker = `@headlessui/react` Popover +
+2-col scrolling lists (hour 0-23 + minute 0-55 by 5)。
+
+### Added
+
+- `src/components/TripTimePicker.tsx` + `TripTimePicker.styles.ts`
+  - Trigger: tp-input-short solo 22px bold center, 44px tap target
+  - Popover: 2-col scrolling lists, 240px height, scroll-snap-y
+  - Hour cell 0-23 (data-h attr), Minute cell by `minuteStep` prop
+    (default 5, options 1/5/10/15/30)
+  - scrollIntoView center on open，is-selected accent bg
+- `tests/unit/__helpers__/tripTimePicker.ts` — `pickTime(testId, 'HH:MM')`
+
+### Migrated 5 callsites
+
+- AddCustomStopPage 開始時間 (`add-custom-stop-time`)
+- AddPoiFavoriteToTripPage 開始/結束時間 (`favorites-add-to-trip-start/end`)
+- EditEntryPage 抵達/離開 (`edit-entry-start-time/end-time`) +
+  順手把 `<label>` wrapper 改 `<div>` 因為 picker 自帶 button trigger
+
+### Test refactors (fireEvent.change → pickTime helper)
+
+- poi-favorite-add-to-trip-form: 5 callsites updated
+- poi-favorite-add-to-trip-states: 2 callsites updated
+- edit-entry-page: 3 callsites updated（含 value 讀取 → button textContent）
+
+### Tests
+
+tsc clean / vitest 269 files / 2082 tests pass / 新 TripTimePicker 8 tests.
+
+## [2.33.20] - 2026-05-22
+
+**Fix: companion-resolver.test.ts beforeAll hookTimeout — CI flaky 修復**
+
+`tests/unit/companion-resolver.test.ts` 在 master CI 多次 fail：
+`Hook timed out in 10000ms` 於 `beforeAll`。Local 跑通常 5-6s 但 CI
+runner cold-start miniflare D1 偶爾 >10s 觸發 vitest default hookTimeout。
+Fix：`beforeAll(..., 30_000)` 明確 30s budget。
+
+加入 v2.33.19 prod QA 完整 v2.33.19 verify 截圖：
+- `qa-2-v2.33.19-newtrip-end-date.png`
+- `qa-4a-v2.33.19-favorites-trip.png`
+- `qa-4b-v2.33.19-favorites-day.png`
+
+對齊 qa-5/6/7 的 v2.33.19 再 screenshot — 5 個 TripSelect 全驗 dual chevron 拔掉。
+
+## [2.33.19] - 2026-05-22
+
+**Fix: dual chevron on TripSelect — `.tp-select` class name collision**
+
+Prod QA 截圖發現 v2.33.17 ship 完 TripSelect 渲染出兩個 chevron：
+
+1. trigger button 內 `.tp-select-chev` SVG（正確 — 開啟時 rotate 180）
+2. 同一 row 右側 12px 額外 down-chevron（多餘）
+
+Root cause: v2.31.81 在 `css/tokens.css` 加 native `<select>` chrome
+override，selectors 含 `.tp-form-row > select` 與 `.tp-select` 兩條，包
+含 `appearance: none` + `background-image: data:image/svg... chevron`
++ `padding-right: 36px` + `min-height: 40px`。v2.33.17 TripSelect
+wrapper `<div>` 用了同名 class `.tp-select`，wrapper div 被 legacy CSS
+誤套用 chevron background → user 看到第二個 chevron。
+
+Fix: 刪掉 `css/tokens.css` 內 `.tp-form-row > select` + `.tp-select`
+規則（v2.33.17 migrated 6 個 callsites 已不用 native `<select>`；4 個
+auth pages 驗過 `<input>` only 無 `<select>`）。共 3 個 block 移除：
+
+- `.tp-form-row > input, ... > select, .tp-select { padding... }` —
+  從中移除 `> select, .tp-select`
+- `.tp-form-row > select, .tp-select { appearance: none; ... }` — 整 block 移除
+- `body.dark .tp-form-row > select, body.dark .tp-select { ... }` — 整 block 移除
+- `.tp-form-row > input:focus, ... > select:focus, .tp-select:focus` —
+  從中移除 `> select:focus, .tp-select:focus`
+
+tsc clean / TripSelect 6 tests pass / v2.31.81 13 tests pass。
+
+## [2.33.18] - 2026-05-22
+
+**Fix: E2E qa-flows.spec.js 用 TripDatePicker helper 取代 native fill('YYYY-MM-DD')**
+
+v2.33.17 把 NewTripPage 的 `<input type="date">` 換成 TripDatePicker（button-based）
+之後，e2e Flow 1「新增行程」test 跑 `page.getByTestId('new-trip-start-input').fill(iso)`
+失敗 — Element is not an `<input>`。新 helper `tests/e2e/_helpers/pickDate.js`：
+
+- 點 trigger 開 popover
+- 比對 `.rdp-month_caption` 中文 caption「2026 年 8 月」+ navigate prev/next 到 target month
+- 點 `.rdp-day:not(.rdp-outside)` day cell（避開 muted prev/next-month days）
+- 等 popover 關閉再 return
+
+無 prod 行為改動。
+
+## [2.33.17] - 2026-05-22
+
+**Feat: 日曆 + Select 改網站風格（取代 native popup）。** User sign-off
+mockup `docs/design-sessions/2026-05-22-calendar-select-mockup/` Variant B
+Spacious（44px cell / 20px padding / iOS HIG tap target）。
+
+### Why
+
+v2.33.16 把 input trigger 樣式統一到 `tp-input-short`，但 native
+`type="date"` 跟 `<select>` 的彈出層仍是 OS chrome（iOS rotating drum /
+macOS native calendar / Chrome native list），跨平台不一致也不符合
+Terracotta 視覺。改用 headless library + 自訂 popover 才能根本解決。
+
+### Added
+
+- `react-day-picker@9` + `date-fns@4` + `@headlessui/react@2` deps
+- `src/components/TripDatePicker.tsx` + `TripDatePicker.styles.ts`
+  - Wrap `DayPicker`，trigger 重用 tp-input-short solo 樣式
+  - 44px cell, 18px nav button, terracotta accent/today/selected
+  - ISO string ("YYYY-MM-DD") 進出，與既有 callsites drop-in 相容
+  - 中文星期 / 月份 formatter（日一二三四五六 / 2026 年 5 月）
+  - Outside-click 關 + Esc 關 + a11y aria-haspopup="dialog"
+- `src/components/TripSelect.tsx` + `TripSelect.styles.ts`
+  - Wrap headless-ui `Listbox`，44px row, accent-subtle hover
+  - `variant: 'default' | 'pill'`：pill (32px / footnote / radius-full)
+    給 TripsListPage 排序 toolbar；default 給 form field
+  - Generic `<V extends string | number>` 保留 type safety
+- `tests/unit/__helpers__/tripSelect.ts` — pickFromTripSelect helper
+  替代 native fireEvent.change pattern
+- `tests/unit/trip-date-picker.test.tsx` (6 test)
+- `tests/unit/trip-select.test.tsx` (6 test)
+- `tests/setup-jest-dom.js` 加 ResizeObserver stub（@headlessui 需要）
+
+### Migrated 3 date callsites → TripDatePicker
+
+- NewTripPage 出發 / 回程
+- EditTripPage shift modal「變更出發日期」
+
+### Migrated 6 select callsites → TripSelect
+
+- AddPoiFavoriteToTripPage 行程 + 天數
+- EditTripPage 顯示語言
+- EntryActionPage copy/move 時段
+- TripsListPage 排序（variant="pill"）
+- AddEntryPage Day dropdown
+
+### Test refactors（fireEvent.change → click trigger + click option）
+
+- poi-favorite-add-to-trip-form.test.tsx × 4 callsites
+- poi-favorite-add-to-trip-states.test.tsx × 3 callsites
+- add-entry-page.test.ts — option-testid assertion 改 TripSelect import
+- v2_31_81-batch-ux-fixes.test.ts §3 重寫：5 callsites import TripSelect
+
+### Tests
+
+tsc clean / vitest 268 files / 2074 tests pass。
+
+## [2.33.16] - 2026-05-22
+
+**Refactor: Input 二系統 — `.tp-input-long` (一般文字) + `.tp-input-short`
+(固定格式短值 22px bold)。** User sign-off mockup
+`docs/design-sessions/2026-05-21-input-full-inventory/two-styles-proposal.html`。
+
+### Design
+
+74 個 input 用 4 種 styles 收斂成 2 種正式 system class：
+
+- **`.tp-input-long`** — email / password / 標題 / 地址 / 描述 / 備註 /
+  搜尋 / textarea / 長 select。Padding 12 14 / border 1.5px / radius lg /
+  bg secondary / font body / left align。
+- **`.tp-input-short`** — time / date / 短 number / 短 select。提供兩種
+  pattern：(a) wrapper + label + input nested、(b) solo 直接套 input
+  (透過 `input.tp-input-short` 高 specificity override)，避免 JSX 重構。
+
+### Added
+
+`css/tokens.css @layer base`：
+- 完整 `.tp-input-long` rule (含 textarea 加長 + select chevron 變化)
+- 完整 `.tp-input-short` wrapper pattern + solo input pattern
+- 兩者都 inherit v2.33.11 + v2.33.12 base 的 `color-scheme: light` /
+  `appearance: none` / accent focus ring
+
+### Migrated 7 callsites to `.tp-input-short` (solo)
+
+- NewTripPage 出發 / 回程 date
+- EditTripPage shift modal date (替換 `.tp-shift-modal-input`)
+- AddPoiFavoriteToTripPage 開始 / 結束時間 (替換 `.tp-form-input.tabular`)
+- AddCustomStopPage 開始時間 + 停留分鐘 (替換 `.tp-custom-stop-input`)
+- AddStopPage 預估停留 number
+- TravelPillDialog transit min
+- EditEntryPage transit min
+
+EditEntryPage 抵達 / 離開 (`.tp-edit-entry-time-card` wrapper pattern)
+保留 — 已在 card pattern，rename 屬未來 cleanup。
+
+### Long callsites 不顯式遷移
+
+無 className 的 text/email/textarea/select 由 v2.33.12 `:where()` base
+layer 處理（Terracotta tokens 同 `.tp-input-long`，視覺等效）。後續若要
+拔除 `.tp-form-input` / `.tp-new-form-row input` / `.tp-edit-row input`
+等 page-scoped class 再做 sweep。
+
+### Tests
+
+tsc clean / vitest 266 files / 2061 tests pass。
+
+## [2.33.15] - 2026-05-21
+
+**Fix: shift modal「取消」button fallback browser native 黑底白字。** User
+prod 截圖回報「按鈕和 mockup 不同」— 取消看起來是 dark/black solid，
+不是 mockup 期待的 light outlined。
+
+### Root cause
+
+v2.33.8 起 shift modal cancel button 用 `.tp-confirm-btn` + `.tp-confirm-btn-cancel`
+className。這兩個 class 定義在 `ConfirmModal.tsx` 的 SCOPED_STYLES 內部
+— 只有 ConfirmModal mount 才注入到 DOM。Shift modal 單獨開時，
+`.tp-confirm-btn*` 樣式沒注入 → 取消 button fallback 到 browser native button
+default（dark/black bg + white text on Safari/Chrome）。
+
+同 v2.33.9 `.tp-confirm-backdrop` 同類 bug。
+
+### Fix
+
+`src/pages/EditTripPage.tsx`：
+- JSX：`tp-confirm-btn tp-confirm-btn-cancel` → `tp-shift-modal-btn tp-shift-modal-cancel`
+- 同步：`tp-confirm-btn tp-shift-modal-confirm` → `tp-shift-modal-btn tp-shift-modal-confirm`
+- Container：`tp-confirm-actions` → `tp-shift-modal-actions`
+- SCOPED_STYLES 加完整定義（cancel: secondary bg / foreground text / border;
+  confirm 保留 accent solid）
+
+避免再依賴別 component 的 scoped CSS。
+
+## [2.33.14] - 2026-05-21
+
+**Fix: day-remove ✕ button 改用 accent-deep (terracotta) 不用 destructive
+red。** User 回報「不要紅色，要和手機一樣」 — v2.33.13 加的 destructive-bg
+tint 反而讓桌機更紅，user 視覺對齊期待是 Tripline 暖橘色系。
+
+### Root cause
+
+`--color-destructive: #C13515` (warm-red vermilion) 在 mobile retina 高密度
+螢幕渲染偏 terracotta，desktop 大畫面看起來偏 vivid red。v2.33.13 又加
+`--color-destructive-bg` (#FDECEC) 淡紅 tint 加重紅感。
+
+### Fix
+
+`src/pages/EditTripPage.tsx` `.tp-edit-day-remove`：
+
+- Default hover: `var(--color-destructive)` → `var(--color-accent)` + accent-subtle bg + accent-deep text
+- `.has-entries-warning`: `var(--color-destructive)` → `var(--color-accent-deep)`
+  - border-color + color 都改 accent-deep (#B85C2E)
+  - 移除 v2.33.13 加的 destructive-bg tint
+- `.has-entries-warning:hover`: solid destructive → solid accent-deep + white text
+
+Real destructive moment (confirm dialog) 仍保留紅色（ConfirmModal 內部 token）。
+
+### Rationale
+
+Accent-deep 是 Tripline 既有設計系統暖橘色，跨 device 渲染一致。warning
+state 提示力道仍夠（border + icon 都變色），但不會造成 mobile/desktop
+色差感。
+
+## [2.33.13] - 2026-05-21
+
+**Polish: shift 功能 copy 改「變更出發日期」+ ✕ button 視覺對齊手機紅度。**
+User prod 回報「版面不正確 working 改為變更出發日期」+「紅框刪除按鈕顏色
+與手機不同 請對齊手機色碼」。
+
+### Copy 改動 (`src/pages/EditTripPage.tsx`)
+
+- Section button: 「Day 1 起始日期：5/1（五）」→「出發日期：5/1（五）」
+- Modal title: 「整體平移行程」→「變更出發日期」
+- Modal label: 「Day 1 起始日期」→「出發日期」
+- Confirm button: 「確認平移 / 平移中⋯」→「確認變更 / 變更中⋯」
+- Toast: 「已平移到 8/15」→「出發日期已變更為 8/15」
+
+### ✕ button 視覺對齊
+
+`.tp-edit-day-remove.has-entries-warning` 加 `background:
+var(--color-destructive-bg)` (淡紅 tint #FDECEC)。原本只有 red border +
+red icon，background 還是 cream，desktop 大畫面下 anti-aliasing 讓 ✕ icon
+看起來偏淡。加 bg tint 後三層 (border + bg + icon) 都帶紅，視覺更貼近
+mobile retina 渲染。Hover 仍走 destructive solid 不變。
+
+### Tests
+
+`edit-trip-day1-start-date-shift.test.ts` 更新驗新 copy + 確認舊 copy
+不再 render（21 tests）。
+
+## [2.33.12] - 2026-05-21
+
+**Fix: 全域 input / textarea / select baseline — 確保任何新加 input 自動套
+Terracotta 樣式。** User 要求「Input 也用全域控制 避免遺漏」(v2.33.11 只
+管 date/time)。
+
+### Context
+
+v2.33.11 加了 native date/time input 全域 color-scheme: light 保護。但
+text/email/password/search/number/textarea/select 等仍散落各 page 自己
+scope CSS（`.tp-form-input` / `.tp-new-form-row input` / `.tp-edit-row
+input[type=text]` 等）。新增頁面忘加 page-scoped class → fallback 到
+browser native default（白底藍 focus ring），不符 Tripline 風格。
+
+### Fix
+
+`css/tokens.css @layer base` 加全域 baseline rule，用 `:where()` 把
+specificity 降為 0 讓 page-scoped class 易 override：
+
+```css
+:where(
+  input:not([type=checkbox|radio|file|range|color|button|submit|reset|hidden|image]),
+  textarea, select
+) {
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-secondary);
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: var(--font-size-body);
+  min-height: var(--spacing-tap-min);
+  outline: none;
+  transition: border-color 120ms, box-shadow 120ms, background-color 120ms;
+}
+:where(...):focus {
+  border-color: var(--color-accent);
+  background-color: var(--color-background);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+:where(input[type=checkbox], input[type=radio]) {
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+```
+
+### 涵蓋
+
+- 28+ text-type inputs (text/email/password/search/tel/url/number)
+- 14+ textarea
+- N selects
+- All checkbox/radio (accent-color)
+
+排除 checkbox/radio/file/range/color/button/submit/reset/hidden/image 從
+text-input baseline（這些有自己視覺語意）。
+
+### 不會 regression
+
+`:where()` specificity 0 → 既有 page-scoped class（`.tp-form-input`、
+`.tp-edit-row input[type=text]` 等）100% 仍 override 成功。
+
+## [2.33.11] - 2026-05-21
+
+**Fix: 全域 native date/time input 在 iOS Safari dark mode 防護。** v2.33.10
+只修了 EditTripPage shift modal 一個 input。User 要求 audit 所有 input 並
+統一修。
+
+### Audit (docs/design-sessions/2026-05-21-input-styles-audit/audit.html)
+
+7 個 native `<input type="date"|"time">` callsites 全部缺 `color-scheme:
+light` 保護：
+- NewTripPage.tsx:818, 829 — 出發 / 回程 date
+- AddPoiFavoriteToTripPage.tsx:557, 570 — 開始 / 結束時間
+- AddCustomStopPage.tsx:565 — 開始時間
+- EditEntryPage.tsx:1347, 1360 — 抵達 / 離開時間
+
+加上 EditTripPage shift modal date 共 8 處（後者 v2.33.10 已局部修）。
+
+### Fix
+
+`css/tokens.css` `@layer base` 加全域 rule，自動套到所有 `input[type=
+"date"|"time"|"datetime-local"|"month"|"week"]`：
+
+```css
+color-scheme: light;
+-webkit-appearance: none;
+appearance: none;
+background-color: var(--color-background);
+color: var(--color-foreground);
+font-variant-numeric: tabular-nums;
+
+::-webkit-date-and-time-value {
+  color: var(--color-foreground);
+  text-align: inherit;
+}
+::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  cursor: pointer;
+}
+```
+
+### 未來保證
+
+新增 native date/time input 自動 inherit 此防護，不會再發生 iOS dark mode
+黑底黑字事件。Page-scoped CSS 仍可 override `background-color` 對齊各 page
+palette。
+
+## [2.33.10] - 2026-05-21
+
+**Fix: shift modal date input 在 iOS Safari 系統深色模式下背景變黑，文字幾乎
+看不見。** User 真機截圖回報。
+
+### Root cause
+
+`<input type="date">` 在 iOS Safari 沒設 explicit `background` / `color` /
+`color-scheme` 時，會跟系統 dark mode 走 → 整個 input 變黑背景黑字。
+桌機 Chrome 沒問題（系統不在 dark mode）但 iOS Safari 立刻翻車。
+
+### Fix
+
+`src/pages/EditTripPage.tsx` `.tp-shift-modal-input`：
+- `background: var(--color-background)`
+- `color: var(--color-foreground)`
+- `color-scheme: light` — 明確告訴 iOS 不要跟系統 dark mode
+- `-webkit-appearance: none` + `appearance: none` — 移除 iOS native dark style
+- `::-webkit-date-and-time-value` 加 color override 保 value 文字色
+
+### Tests
+
+既有 5 個 source-grep test 仍 pass（CSS-only fix，testid + selector 不變）。
+
+## [2.33.9] - 2026-05-20
+
+**Fix: 整體平移行程 modal backdrop CSS 沒套用 → modal 跌到 viewport 外。**
+v2.33.8 prod QA 立刻發現。
+
+### Root cause
+
+v2.33.8 reuse `.tp-confirm-backdrop` className，但該 class 定義在
+`src/components/shared/ConfirmModal.tsx` 的 SCOPED_STYLES — 只在 ConfirmModal
+mount 時 inject 到 DOM。Shift modal 單獨開（無 ConfirmModal）時，
+`.tp-confirm-backdrop` 樣式沒注入 → backdrop 變 `position: static`、
+`display: block` → modal 子元素跌到 viewport 下面 (y=844px out of view)。
+
+### Fix
+
+`src/pages/EditTripPage.tsx` SCOPED_STYLES 加自己的 `.tp-shift-backdrop`
+class (與 `.tp-confirm-backdrop` 同 spec：`position: fixed; inset: 0;
+z-index: 1100; display: grid; place-items: center`)。Modal markup 改 className 對應。
+
+### Tests
+
+既有 5 個 frontend source-grep test 都仍 pass（不需新測試，純 CSS class
+rename）。
+
+## [2.33.8] - 2026-05-20
+
+**Feat: EditTripPage 加「整體平移行程」入口，直接設定 Day 1 起始日期讓全
+trip 平移。** User 需求：「修改天數提供另外一種模式 直接設定 Day 1 的
+起始日期」。
+
+### Design
+
+Mockup `docs/design-sessions/2026-05-20-day1-start-date-shift/` V2 button +
+modal 中選，user 指定：文字精簡 + 不需 icon。
+
+### Added
+
+**Backend** `POST /api/trips/:id/days/shift` body `{ startDate: 'YYYY-MM-DD' }`：
+- 計算 delta = startDate - day_num=1 之 date
+- Batch UPDATE 所有 trip_days 的 date + day_of_week (delta-based shift)
+- Gap-preserving：原 dates 之間的 gap 自動 preserve
+- 空 trip / 有 null date 拒 (400)
+- Returns `{ ok, newStartDate, newEndDate, daysShifted }`
+
+**Frontend** EditTripPage:
+- 「Day 1 起始日期：5/1（五）」精簡單行 button（chev right，無 icon），
+  放在 section helper text 下方、prepend「+ 加一天」card 上方
+- 點 button → modal（title「整體平移行程」+ date input + preview
+  「5/1（五）– 5/5（二）→ 8/15（六）– 8/19（三）」+ 取消/確認）
+- 確認後 POST `/days/shift` + refetch + toast「已平移到 8/15」
+- Confirm button disabled when new date 等於原 Day 1 date (no-op guard)
+
+### Tests
+
+- API: `tests/api/trips-days-shift.integration.test.ts` 6 tests (含
+  gap-preservation、no-op delta=0、validation、auth)
+- Frontend: `tests/unit/edit-trip-day1-start-date-shift.test.ts` 5
+  source-grep tests
+
+## [2.33.7] - 2026-05-20
+
+**Feat: EditTripPage 中間天 gap 加 dashed placeholder「+ 加回 M/D」可點擊還原。**
+User 要求：「移除中間天後留下虛線框，然後可以加回」。
+
+### Context
+
+v2.33.1 fix DELETE 保留 dates → 中間天移除後 date 序列出現 gap (e.g. 5/1, 5/2, 5/4, 5/5)。
+之前 UI 沒視覺呈現這個 gap → user 不知道有缺日 / 無法加回。
+
+### Added
+
+**Backend**: `POST /api/trips/:id/days` 新 `position: 'insert'` + `date` body：
+- 找 < insertDate 的 days 數量 → newDayNum = count + 1
+- 後續 days (≥ newDayNum) 逆序 day_num += 1（避開 D1 UNIQUE constraint）
+- 拒重複日期（400 if date 已存在）
+
+**Frontend** EditTripPage：
+- 新 helpers: `daysBetween(d1, d2)` / `shiftDateByDays(date, n)` / `chineseDayOfWeek(date)`
+- `handleRestoreDay(date)` callback → POST insert + refetch + toast
+- 渲染 day list 用 `flatMap` 偵測連續兩天 date 是否 contiguous，gap 處 render
+  `<button class="tp-edit-day-gap">` dashed 邊框、accent-tertiary 底色、
+  「+ 加回 5/3（六）」label
+- Hover state 變成 accent dashed + colored plus icon
+- testid `edit-trip-day-gap-${gapDate}`
+
+### Tests
+
+- API: `trips-days-mutate.integration.test.ts` 加 3 個 insert tests (13 total)
+- Frontend: `edit-trip-days-management.test.ts` 加 gap detection + render + CSS test (16 total)
+
+## [2.33.6] - 2026-05-20
+
+**Feat: TripPage 右上「⋯」action menu 加「編輯行程」入口。** User 要求：
+詳細頁可從 menu 直接編輯，不用退回 trips list 用 card menu。
+
+### Added
+
+`TripsListPage.tsx::EmbeddedActionMenu`:
+- `onEdit` prop (() => void)
+- 新 menu item「編輯行程」放最前面（Icon edit + label），對齊
+  TripCardMenu 順序：編輯行程 → 共編設定 → AI 健檢 → 列印 → 下載格式
+- testid `trip-embedded-menu-edit-${tripId}`
+- Caller (line 1247) wire `onEdit={() => navigate('/trip/:id/edit')}`
+
+### Tests
+
+`tests/unit/trip-detail-action-menu-edit.test.ts` 5 個 source-grep。
+
+## [2.33.5] - 2026-05-20
+
+**Fix: EditTripPage day-remove ✕ icon 沒 render — wrong Icon name。** User
+prod 截圖回報「紅框 ✕ 不見了」— remove button 顯示空圓圈。
+
+### Root cause
+
+`EditTripPage.tsx:970` 用 `<Icon name="x" />`，但 Icon component
+（`src/components/shared/Icon.tsx`）只有 `x-mark` / `x-circle`，沒有 `x`
+→ `IconMap[name]` undefined → `<svg>` 空白 → 圓圈內無 ✕ 符號。
+
+### Fix
+
+`name="x"` → `name="x-mark"`。
+
+### Tests
+
+`edit-trip-days-management.test.ts` 加 15th test 驗 icon name + 不再用「x」。
+
+## [2.33.4] - 2026-05-20
+
+**Polish: AddCustomStopPage Day context strip 改 M/D 短格式對齊 mockup。**
+QA 對比 2026-05-18 add-custom-stop mockup 發現 Day label 用 ISO `2026-07-31（五）`，
+mockup 是 `7/28（一）` 短格式（跟 v2.33.2 EditTripPage 同類問題）。
+
+### Fix
+
+`AddCustomStopPage.tsx::deriveDayLabel`：
+- import 既有 `formatDateLabel(date)` from `src/lib/mapDay.ts`
+- ISO date `2026-07-31` → `7/31`
+
+### Tests
+
+`add-custom-stop-day-label-short-date.test.ts` 3 個 source-grep。
+
+## [2.33.3] - 2026-05-20
+
+**Polish: 行程天數 day row 加總距離「· X km」對齊 mockup。** v2.33.2 仍漏
+mockup 「7 個景點 · 33 km」的 km 部分。
+
+### Fix
+
+`EditTripPage.tsx`：
+- 新 helper `computeTotalKm(timeline)`：從 `trip_entries[].travel.distanceM`
+  sum + rounded km（對齊 DaySection 既有 `getTotalKm` 邏輯）
+- `DaySummary` interface 加 `totalKm: number | null`
+- Day row conditional render：
+  - has entries + has km: `${count} 個景點 · ${totalKm} km`
+  - has entries no km: `${count} 個景點`
+  - empty: `空`
+
+### Tests
+
+`edit-trip-days-management.test.ts` 14th test 驗 computeTotalKm wire +
+conditional render。
+
+## [2.33.2] - 2026-05-20
+
+**Polish: EditTripPage 行程天數 section date 顯示對齊 mockup 用 M/D 短格式。**
+v2.33.0 prod QA 對比 mockup 發現視覺差異。
+
+### Root cause
+
+v2.33.0 day row + header + ConfirmModal 都用 raw ISO `2026-05-01（五）`，
+mockup 設計用 `5/1（五）` 短格式。長 ISO 在 mobile 390px viewport 占 row
+寬太多，跟原 mockup 的「Day 1 · 7/29（三）· 7 個景點 · 33 km」風格不符。
+
+### Fix
+
+新 helper `formatShortDate('2026-05-01')` → `'5/1'`，三處套用：
+- Day row date label
+- Section header「5/1（五）– 5/5（二），共 5 天」
+- ConfirmModal 對話「Day 1（5/1）目前是空的」
+
+### Tests
+
+`edit-trip-days-management.test.ts` 加 13th test 驗 formatShortDate 三處 wire。
+
+## [2.33.1] - 2026-05-20
+
+**Fix: DELETE /api/trips/:id/days/:num 不再 shift dates — 修 prepend +
+delete-first 不對稱問題。** v2.33.0 prod QA 立刻發現的 bug。
+
+### Root cause
+
+v2.33.0 backend DELETE 在 cascade subsequent days 時，把 day_num **和**
+date 同時 shift up 1 天：
+- 用戶 prepend 加 Day 1 = 4/30（trip 4/30-5/5）→ delete Day 1（empty）
+  → 預期回到原 5/1-5/5，但實際變 4/30-5/4
+- 整個 trip 提前 1 天，違反 prepend / delete-first 對稱性
+- 中間刪除 day 也會「整體上移」→ entry 的 calendar date 跟著變
+
+### Fix
+
+`functions/api/trips/[id]/days/[num].ts onRequestDelete`：
+
+- 後續 days **只 renumber day_num**（`day_num -= 1`）
+- **dates / day_of_week 保留**不動
+- Trade-off: 中間刪 day 會在日期上留 gap（e.g. 5/1, 5/2, 5/4, 5/5）— 但
+  Tripline 不強制 contiguous dates，user 意圖「我刪掉那天，其他天不變」
+  比 contiguous 重要
+
+### Frontend warning 更新
+
+ConfirmModal warning「後續天數的日期會自動上移」→ 「後續天數的 Day
+編號會往前遞補（日期保留，可能會留下空檔的日子）。」
+
+### Tests
+
+更新 `trips-days-mutate.integration.test.ts`：
+- 中間天刪除測 dates 保留（剩 4/1, 4/2, 4/4, 4/5）
+- 新增「刪除第一天」test 確認 prepend / delete-first 對稱
+
+## [2.33.0] - 2026-05-20
+
+**Feat: EditTripPage 加「行程天數」section — 任意天可增 / 減，移除有
+景點的天 → 紅色 destructive confirm + cascade 刪除 entries。** 取代
+v2.32.5 之前的 read-only date section。
+
+### Context
+
+Prod QA pain point：建好 trip 後想加 1 天或刪掉空的尾巴 day 必須建新行程。
+v2.32.5 之前的「修改日期請另建新行程」placeholder 不再夠用。本 PR 加完
+days CRUD + 即時 mutation pattern（atomic 比 queue-and-commit 安全，
+cascade 刪 entries 不可復原）。
+
+### Design (mockup sign-off 2026-05-20)
+
+`docs/design-sessions/2026-05-20-edit-trip-days-management/`：
+- V1 (per-day list + 雙向 card-style add button) 中選 + user 指定 visual:
+  card 同 row 大小 + accent-subtle 底色 + 「+ 加一天」label
+
+### Added
+
+- **Backend new endpoints**：
+  - `POST /api/trips/:id/days` body `{ position: 'start' | 'end' }`
+    - `end`: day_num = max+1, date = max+1d
+    - `start`: 既有 day_num 逆序 +1（D1 row-by-row UNIQUE check 要求逆序）,
+      INSERT day_num=1 + date = min-1d
+    - Returns `{ day: { id, dayNum, date, dayOfWeek, label, title } }`
+  - `DELETE /api/trips/:id/days/:dayNum`
+    - Cascade trip_entries via FK (ON DELETE CASCADE)
+    - 後續 days：day_num -= 1 + date 上移 1 天 + day_of_week 重算
+    - 最後一天禁刪（trip 至少 1 天）
+    - Returns `{ ok: true, removedEntryCount }`
+- **Frontend EditTripPage** 新「行程天數」section：
+  - 日期區間 header 從 days 衍生（取代 read-only date section）
+  - Card-style「+ 加一天」 button 雙向（list 上方 prepend / 下方 append）
+  - Per-day row 含 ✕ button + entry count（has-entries → 紅色 border）
+  - 點 ✕ → ConfirmModal「刪除 Day N？」+ has-entries 加「後續日期上移」warning
+  - Toast feedback「Day N 已刪除（連同 X 個景點）」/「已在最前 / 最後加入一天」
+- 9 個 backend integration tests `tests/api/trips-days-mutate.integration.test.ts`
+- 12 個 frontend source-grep tests `tests/unit/edit-trip-days-management.test.ts`
+
+### Changed
+
+- EditTripPage hint: 「修改行程基本設定 + 目的地。修改日期請另建新行程」
+  → 「修改行程基本設定 + 目的地 + 行程天數」
+- 移除 `dateRange` unused const（改由 days section header 計算）
+
+### Auth
+
+- POST/DELETE 都要求 trip write permission（owner/admin/member; viewer 拒）
+
+## [2.32.5] - 2026-05-19
+
+**Fix: `.tp-map-day-tabs` 水平 scroll 缺 affordance — user 不知 chips 可往右
+swipe。** v2.32.1 QA round 3 發現，原列為「minor non-blocking」follow-up，
+本 PR 完成。
+
+### Root cause
+
+7-day trip (沖繩七日遊) 在 mobile (≤390px viewport) day 6/7 chips 超出可視
+範圍，但：
+
+- `.tp-map-day-tabs` 設 `overflow-x: auto`（OK）
+- `scrollbar-width: none` + `::-webkit-scrollbar { display: none }`（隱藏 scrollbar）
+- 無 chevron icon、無 fade gradient → 完全沒視覺提示「往右還有 chips」
+
+User 常以為 trip 只有 5 天。
+
+### Fix
+
+`css/tokens.css` 加 `mask-image` 右側 24px fade linear-gradient：
+
+```css
+-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+        mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+```
+
+Trade-off：scroll 到末尾時最後一個 chip 會略微 fade（visible 但邊緣透明
+化），acceptable visual sacrifice for clearer scroll affordance。
+
+### Tests
+
+`tests/unit/day-tabs-scroll-affordance.test.ts` 3 個 source-grep regression
+（standard + -webkit- prefix + 原 overflow-x preserved）。
+
+## [2.32.4] - 2026-05-19
+
+**Fix: `/account/*` vs `/settings/*` cross-prefix direct URL 落 /trips。**
+v2.32.1 QA round 4 發現，pre-existing。
+
+### Root cause
+
+Account hub 跑「terracotta-account-hub-page」重設時把 appearance/notifications
+配在 `/account/*`，但 sessions/connected-apps 歷史上仍在 `/settings/*`。
+AccountPage 用 `<Link>` 走 configured path，所以從 hub 進去都 OK。但
+user 直接打 URL 或舊書籤 `/settings/notifications` / `/account/sessions` /
+`/account/connected-apps` 沒對應 Route → catch-all 落 /trips。
+
+### Fix
+
+`src/entries/main.tsx` 加 4 個 alias Route 讓兩 prefix 都 valid:
+
+- `/account/sessions` → `<SessionsPage />`
+- `/account/connected-apps` → `<ConnectedAppsPage />`
+- `/settings/appearance` → `<AppearanceSettingsPage />`
+- `/settings/notifications` → `<NotificationsSettingsPage />`
+
+原 4 個 canonical Route 保留。AccountPage `<Link>` 不動。
+
+### Tests
+
+`tests/unit/settings-account-route-aliases.test.ts` 8 個 source-grep
+regression test（4 alias + 4 canonical preserved）。
+
+## [2.32.3] - 2026-05-19
+
+**Fix: EditEntryPage 時間 row 在 mobile (≤390px viewport) horizontal
+overflow，「離開」card 被切邊。** v2.32.1 QA round 2 發現，pre-existing
+非本 round 引入。
+
+### Root cause
+
+`<input type="time">` 在 mobile browser 有 intrinsic minimum width (~130px)
+含「10:45 AM」AM/PM label。`.tp-edit-entry-time-row` 用
+`grid-template-columns: 1fr auto 1fr`，1fr 預設 `min-width: auto = min-content`
+不允許 column 縮到 input intrinsic width 以下。實測 scrollWidth 374px
+> viewport content area 347px → 「離開」card 溢出 22-27px。
+
+### Fix
+
+`EditEntryPage.tsx` styled CSS：
+
+- `grid-template-columns: 1fr auto 1fr` → `minmax(0, 1fr) auto minmax(0, 1fr)`
+- `.tp-edit-entry-time-card` 加 `min-width: 0`
+- `.tp-edit-entry-time-card input` 加 `min-width: 0`
+
+放寬 grid/flex default min-content limit，allow column 縮到 intrinsic
+width 以下。Input 寬度跟著 column 縮，AM/PM 可能 truncate 顯示「···」
+但 click 後 native picker 仍可選；trade-off 比 overflow 切邊好。
+
+### Tests
+
+`tests/unit/edit-entry-time-row-overflow.test.ts` 4 個 source-grep
+regression test（minmax / card min-width / input min-width / 舊
+hardcoded gone）。
+
+## [2.32.2] - 2026-05-19
+
+**Fix: AddStopPage tab 初值從 URL param 讀取。** v2.32.1 QA 發現
+`/trip/:id/add-stop?tab=custom` direct URL 進來永遠 land 在「搜尋」tab，
+忽略 `?tab=custom` query string。Pre-existing bug，非 v2.32.1 引入。
+
+### Root cause
+
+`AddStopPage.tsx:693` hardcode `useState<Tab>('search')`，初值與 URL param
+無關係。`handleTabChange` 雖會 mutate URL，但 mount 階段不讀回去。
+
+### Fix
+
+`AddStopPage.tsx:693` 初值改用 IIFE 讀 `searchParams.get('tab')`，allowlist
+`'favorites' | 'custom' | 'search'`（拒任意值 forward）：
+
+```ts
+const initialTab: Tab = (() => {
+  const raw = searchParams.get('tab');
+  return raw === 'favorites' ? 'favorites' : raw === 'custom' ? 'custom' : 'search';
+})();
+const [tab, setTab] = useState<Tab>(initialTab);
+```
+
+對齊 ChangePoiPage 既有 URL→tab derivation pattern（line 578-579）。
+
+### Tests
+
+`tests/unit/add-stop-tab-url-init.test.ts` 4 個 source-grep regression test。
+
+## [2.32.1] - 2026-05-19
+
+**Fix: LocationPickerMap initialCenter race — 自訂景點 map 永遠卡 Tokyo Station fallback。** v2.32.0 QA 發現 AddEntryPage / AddStopPage / AddCustomStopPage 自訂 tab map 中心不是 trip destination 而是 Tokyo Station (35.6812, 139.7671)。
+
+### Root cause
+
+`useGoogleMap` hook 一 mount 就 lock `initialCenter`，後續 prop 變更不會 re-center。3 頁原本 `customDestinations` / `destinations` 初值 `[]`：
+
+1. 首次 render → `customInitialCenter` useMemo 從空陣列推算 → fallback chain 走到 Tokyo Station hard fallback
+2. `<CustomPoiForm initialCenter={Tokyo}>` mount → useGoogleMap 鎖死 Tokyo
+3. fetch resolve 後 `setCustomDestinations([沖繩 destinations])` re-render → useMemo 重算 → 沖繩座標，但 useGoogleMap 不接受 dynamic center → 地圖永遠卡 Tokyo
+
+### Fix
+
+初值 `[]` → `null`（區分「未載入」與「載入後 0 個」），render gate `destinations !== null` 才 mount picker：
+
+- `ChangePoiPage` — `customDestinations: TripDestApiLite[] | null`、fetch effect 改 mount-gated（不再 `tab !== 'custom'` early return）、catch fallback `setCustomDestinations([])`、render gate `<CustomPoiForm>` 等 destinations 非 null（null 期間顯 `change-poi-custom-loading` placeholder）
+- `AddStopPage` — 相同 pattern，placeholder testid `add-stop-custom-loading`
+- `AddCustomStopPage` — `destinations: TripDestApi[] | null`、render gate 直接包 `<LocationPickerMap>`（null 顯 `add-custom-stop-loading`）
+
+### Tests
+
+`tests/unit/custom-poi-init-center-race.test.ts` 11 個 source-grep regression test，covering 3 pages × (null init + fetch effect mount-gated + catch fallback + render gate + loading placeholder)。
+
+### Verification
+
+QA 流程：trip 詳細頁 → 新增景點 → day 下拉選擇 → 自訂 button → AddEntryPage navigate ChangePoiPage mode=new&tab=custom → CustomPoiForm map 應 center 於 day 第一個 entry / trip destination（非 Tokyo）。
+
+## [2.32.0] - 2026-05-19
+
+**Feat: 新增景點 wizard — EditEntryPage-style page + day 下拉 + 3 picker buttons → ChangePoiPage mode=new POST entries → redirect /edit。** User feedback：「頁面不正確 是 類似 .../stop/435/edit 但增加選擇天數下拉,然後相同的增加景點的方式, 第一個景點選完可以選替換, 也可以繼續增加備選以及調整順序」。
+
+### Context
+
+v2.31.99 把「+ 新增景點」入口接 /add-stop（AddStopPage 多選 grid），但 user 期待是 EditEntryPage 形狀 — POI card + 備選 + 時間 + 移動方式 + 備註。本 PR 改寫入口流程：trip header 「+ 新增景點」 button 現改 navigate /add-entry，wizard 主路徑。AddStopPage chip row 仍保留給 direct URL `/add-stop?day=N` (bulk add fallback)。
+
+### Added
+
+- **新 page** `src/pages/AddEntryPage.tsx` — EditEntryPage 形狀的「新增景點」wizard:
+  - Day 下拉 (default 第一天, URL replaceState 切換)
+  - POI placeholder card + 3 picker buttons (搜尋 / 收藏 / 自訂)
+  - Preview greyed 備選 / 時間 / 移動方式 sections (提示完成後可在 EditEntryPage 編輯)
+- **新 route** `/trip/:tripId/add-entry` (in `src/entries/main.tsx`)
+- **ChangePoiPage mode=new branch** — picker UI 不變，submit 走 `POST /trips/:id/days/:N/entries` (而不是 PUT poi-id 或 POST alternates)。完成後 navigate `/trip/:id/stop/:newId/edit` 讓 user 接著加 alternates / 改時間
+- 12 個 v2.32.0 source-grep test `tests/unit/add-entry-page.test.ts`
+
+### Changed
+
+- **TripsListPage trip header** 「+ 新增景點」 button: `/add-stop` → `/add-entry`
+- ChangePoiPage `mode` union: `'master' | 'alternate'` → `'master' | 'alternate' | 'new'`
+- ChangePoiPage `?day=N` param 在 mode=new 下用於 POST entries endpoint path
+- ChangePoiPage entryPoisVersion fetch effect 跳過 mode=new (new entry 沒對應 OCC token)
+
+### Tests
+
+- 12 new source-grep test (file existence / route registration / layout / mode=new branch)
+- v2.31.99 既有 test regex 對齊 /add-entry navigate
+- 全 257 files / 2002 tests pass; tsc clean
+
+### Backend
+
+不動。`/trips/:id/days/:N/entries` POST 早已支援 `{title, lat?, lng?, source?, poiId?}` payload (v2.31.94 + earlier)。
+
+## [2.31.99] - 2026-05-19
+
+**Feat: trip header「+ 新增景點」按鈕取代探索 icon + AddStopPage day picker chip row。** User feedback：「`/stop/419/edit` 要有新增景點的版本, 取代附圖宏框的放大鏡 icon, 改為 + 號 名稱為新增景點, 新增景點要多可以選擇加入哪天」。
+
+### Context
+
+之前的「新增景點」（AddStopPage）沒任何 UI button 接上（v2.31.94 已查過，`openAddStop` handle 是死路、ChatPage 註解提到的 DaySection button 已被拔）。trip 詳細頁 header 有個放大鏡 icon `trip-explore-trigger` → 跳 /explore，但 explore 還能從「收藏」tab 進，這格更該給「+ 新增景點」優先級。
+
+### Changed
+
+- **TripsListPage trip header**: `trip-explore-trigger`（🔍 → /explore）→ `trip-add-stop-trigger`（+ 新增景點 → /trip/:id/add-stop）。探索仍可由「收藏」tab TitleBar 入口進
+- **AddStopPage**: `?day=N` 改 optional。沒帶 day 進來時：
+  - 上方 render DAY 01-N chip row（含 mm/dd 日期 + 星期），click 切換 → URL replaceState
+  - 帶 day 也仍 render chip row，可隨時切換
+  - `confirmEnabled` 加 `hasDay` gate，沒選一天不能 submit
+  - Bottom counter「請先選擇加入哪天」prompt
+  - 既有 invalid-params blocking page 改成只 block 沒 tripId 的 case
+- **State refactor**: `currentDay` 從 useState 改 useMemo 從 `allDays` 衍生（單一 truth）。所有 days 一次 fetch 給 chip row 用
+
+### Tests
+
+- 新 12 個 source-grep test `tests/unit/add-stop-daypicker.test.ts` — 入口取代 + day picker state + chip row testid + hasDay gate
+- 更新 v2.31.33 counter-shorten test regex 對齊新 dayLabel 三元
+- 全 256 files / 1988 tests pass; tsc clean
+
+### Out-of-scope
+
+- AddStopPage 桌機 2-pane layout（自訂 tab）— v2.31.95+98 已設定，本 PR 不動
+- 其他 entry point（DaySection footer、TimelineRail 末尾）— 後續 PR 可加
+
+## [2.31.98] - 2026-05-19
+
+**Feat: ChangePoiPage 加「自訂」tab — alternate / master 模式都能用地圖 pin 新增景點。** User feedback：「我要知道如何進去自訂景點 我找不到功能在哪」+「`/stop/420/change-poi?mode=alternate&tab=search` 這頁增加入口」。
+
+### Context
+
+v2.31.94 上線「自訂景點」feature，但**只在 AddStopPage（建立新 entry）有入口**。ChangePoiPage（置換景點 + 加為備選）只有「搜尋 / 收藏」tab，加備選的場景無法用 map pin custom POI。Symmetry gap。
+
+### Added
+
+- **新 shared component** `src/components/trip/CustomPoiForm.tsx` — 抽出 title + address typeahead + LocationPickerMap + hint checkbox + sidehelp 共用 UI/邏輯，跨 AddStopPage + ChangePoiPage（往後 AddCustomStopPage 也可遷移）
+- **ChangePoiPage 自訂 tab** — `?tab=custom` URL state，submit:
+  - `mode=alternate` → `POST /alternates` with `{name, lat, lng, source: 'custom'}`
+  - `mode=master` (預設) → `PUT /poi-id` with same payload
+- 新 testid: `change-poi-tab-custom` / `change-poi-custom-twopane` / `change-poi-custom-title` / `change-poi-custom-coord-readout` 等（共用 `testIdPrefix="change-poi-custom"` 命名空間）
+
+### Changed
+
+- `AddStopPage.tsx` 自訂 tab JSX 從 inline 改 `<CustomPoiForm testIdPrefix="add-stop-custom" extraRows={time/duration/note}>`，~200 行重複 JSX 消失
+- `AddStopPage.tsx` SCOPED_STYLES 大幅減少 — `.tp-add-stop-custom-*` / `.tp-custom-picker-*` / hint / sidehelp / two-pane grid 全搬進 `CustomPoiForm`
+- `LocationPickerMap` 的 base CSS 也搬進 `CustomPoiForm` SCOPED_STYLES（之前依賴 AddStopPage 載入才有樣式 — ChangePoiPage 用不了 fix）
+- ChangePoiPage `Tab` type extends 為 `'search' | 'favorites' | 'custom'`，`submitDisabled` gating 支援 custom tab（title + coord 必填）
+
+### Tests
+
+- 新 16 個 source-grep test `tests/unit/change-poi-custom-tab.test.ts` — Tab type / button / handleSubmit branch / shared component contract / 兩 pane media query
+- 既有 254 files / 1960 tests 全綠
+
+### Backend
+
+不動。`/alternates` + `/poi-id` 早已支援 `{name, lat, lng, source}` payload（via `findOrCreatePoi`）。
+
+### Mockup reference
+
+延用 `docs/design-sessions/2026-05-18-add-custom-stop/desktop-inline.html` 兩段式 layout（mockup C 已 APPROVED），ChangePoiPage 自訂 tab 自動繼承。
+
+## [2.31.97] - 2026-05-19
+
+**Change: daily-check 排程從 09:00 → 06:10。** Ray 想早一點看每日報告。06:10 留 100 min 緩衝給 04:30 google-poi-refresh 完成 50 POI × 1.5s sleep + Place Details API 後再稽核（實測 refresh 跑 ~3-5 min，緩衝充足）。
+
+### Changed
+
+- `scripts/tripline-api-server.ts:scheduleDaily(9, 0, '/tp-daily-check')` → `scheduleDaily(6, 10, ...)`
+
+### Deploy
+
+Same as v2.31.96 — `launchctl unload && load` api-server 後驗證 log 出現 `Scheduled daily-check (...) first fire at YYYY-MM-DDT22:10:00.000Z`（UTC 22:10 = 台灣 06:10）。
+
+## [2.31.96] - 2026-05-19
+
+**Fix: 接 3 個 launchd 廢棄後的孤兒 daily script — Google Maps 花費、POI 30 天 refresh、auth-cleanup retention sweep。** 使用者 QA「每日檢查排程應該有 Google Maps 使用金額」抓到 v2.31.3 把 launchd 廢棄、改 api-server 內部 cron 時只搬 `/tp-daily-check`，其他 daily 任務變孤兒沒人觸發。
+
+### Context
+
+v2.31.3 廢棄 launchd `com.tripline.daily-check`，把 `/tp-daily-check` 改成 api-server 內部 cron (09:00)。但 `scripts/google-quota-monitor.ts` / `scripts/google-poi-refresh-30d.ts` / `scripts/auth-cleanup.js` 三個原由 launchd 觸發的 daily script 沒人搬，13 天沒跑：
+
+- **`google-quota-monitor.ts`** → Telegram 看不到 Google Maps MTD 花費 + 90% lock / <50% unlock 自動機制停擺
+- **`google-poi-refresh-30d.ts`** → `pois.status_checked_at` 不更新，`<TripHealthBanner>` 永遠綠燈（即使 POI 已永久結業也不知道）；650 個 POI 該 refresh 沒 refresh
+- **`auth-cleanup.js`** → V2-P6 30 天 retention 承諾失守，`auth_audit_log` / `session_devices` / `oauth_models` 三表無限長
+
+### Added
+
+- **新 lib** `scripts/lib/google-maps-quota.js` — 抽出 `PRICE_PER_1K` + `calcDailyCost` + `calcMtdCost` + `classifyStatus` 純函式（drift test 守住與 `google-quota-monitor.ts` SoT 對齊）
+- **`daily-check.js` 新增 7th section** `queryGoogleMapsQuota` — GET `/api/admin/maps-settings` + `/api/admin/quota-estimate` 算 MTD，threshold mapping（≥`lock_threshold_pct` → critical, ≥50% → warning, <50% → ok）
+- **`build-daily-check-msg.js` 新增 Google Maps section** — critical/warning 進 issue 列表（🔴/🟡），metrics block 永遠顯 `💰 Google Maps MTD: $X.XX / $200 (Y%)` 透明可見
+- **`tripline-api-server.ts` 新 helper** `fireScheduleScript` + `scheduleDailyScript` — fire-and-forget spawn shell script（不走 claude/tmux/token mint，獨立 log 到 `scripts/logs/api-server/script-<label>-YYYY-MM-DD.log`）
+- 新 cron 排程：
+  - `auth-cleanup.js` 每天 04:00
+  - `bun run refresh:google` 每天 04:30
+
+### Tests
+
+- 21 unit tests (cost calc + threshold + msg renderer + drift detection)
+- 全 suite 254 files / 1960 tests pass; tsc clean
+
+### Deploy 順序
+
+1. PR merge → master
+2. 重啟 launchd api-server：`launchctl unload ~/Library/LaunchAgents/com.tripline.api-server.plist && launchctl load ~/Library/LaunchAgents/com.tripline.api-server.plist`
+3. 觀察 `scripts/logs/api-server/<today>.log` 看到 3 行 `Scheduled <label> first fire at ...`
+4. 隔天 04:00 / 04:30 / 09:00 三條 schedule fire 後檢查各自 log + Telegram 訊息
+
+## [2.31.95] - 2026-05-19
+
+**Fix: 桌機自訂景點 tab 改 two-pane layout 對齊 mockup C。** User QA feedback：桌機地圖位置和 mockup C 不同 — 之前 form 與 map 是上下 stacked，現在改回 mockup approved 的左 form 380px / 右 map 1fr。
+
+### Changed
+
+- `src/pages/AddStopPage.tsx` 自訂 tab JSX — 由 stacked form-rows 改為 two-pane grid（`.tp-add-stop-custom-twopane` 外層 + `.tp-add-stop-form-pane` 左 / `.tp-add-stop-map-pane` 右）。Map pane 含地圖 + 「已調整到正確位置」hint + 「小提示」sidehelp（解釋為什麼地址不夠、要拖 pin）
+- 新 testid：`add-stop-custom-twopane` / `add-stop-custom-map-pane` / `add-stop-custom-coord-readout`
+- 移除 unwired placeholders「結束時間 自動估算」+「類型 SIGHT · 景點」（pre-existing dead UI，這版順手清掉以對齊 mockup C 4-field form）
+- `.tp-add-stop-body:has(.tp-add-stop-custom-twopane)` 在 ≥1024px 放寬 max-width 1024px，讓 380+map 兩 pane 排得開（其他 tab 仍維持 720px）
+
+### Mockup reference
+
+`docs/design-sessions/2026-05-18-add-custom-stop/desktop-inline.html` (V3 chosen variant, APPROVED 2026-05-18)
+
+## [2.31.94] - 2026-05-19
+
+**Feat: 自訂景點 + 地址 typeahead + 地圖 pin pick → 自動計算前後車程。** 旅伴加自訂 entry 時 UI 強制提供 lat/lng，map marker 不再 silent drop、travel pill 30s 內計算車程。
+
+### Context
+
+Owner Ray observation：旅伴**以為**自訂 entry 在 map 上、實際被 silent drop（無座標 → OceanMap 漏 marker + segment 跳過 → travel pill 空白 → timeline 整本帳斷掉）。這是 product expectation gap (bug 層級)，不是 nice-to-have feature。Design doc + reviewer 3 輪 + CSO HIGH 2 個全修。
+
+### Added
+
+- **新 backend endpoint** `POST /api/places/autocomplete` — Google Places API (New) `/v1/places:autocomplete` proxy with auth + per-user 1000/24h rate limit + sessionToken/regionCode length caps
+- **新 backend endpoint** `GET /api/places/resolve?placeId=...&sessionToken=...` — Place Details wrapper that closes Google billing session (one autocomplete + one details = 1 billable interaction). Per-user 500/24h rate limit
+- **新 mobile route** `/trip/:id/add-custom-stop?day=N` (AddCustomStopPage) — fullpage 自訂景點 picker，IME-occlusion 友善，per `<MobileOnlyRoute>` guard 桌面 redirect 回 inline tab
+- **新 frontend hook** `usePlacesAutocomplete` — 300ms debounce + crypto.randomUUID() session + LRU cache + abort + cleanup
+- **新 frontend hook** `useTypeaheadKeyboard` — ARIA combobox + Arrow/Enter/Escape 鍵盤導航（WCAG 2.1 Level A）
+- **新 frontend lib** `src/lib/locationPicker.ts` — isValidCoord / computeArrowKeyStepPixels / selectDefaultCenter fallback chain
+- **新 frontend component** `<LocationPickerMap>` — picker-mode Google Maps，CSS overlay center marker (NOT AdvancedMarkerElement)、`idle` listener、arrow-key panBy a11y
+- **新 frontend wrapper** `<MobileOnlyRoute>` — `matchMedia (max-width: 1023px)` responsive route guard
+
+### Changed
+
+- `AddStopPage` 自訂 tab — title/time/duration/note 4 欄位保留，新增 address typeahead + LocationPickerMap + 「已調整到正確位置」hint checkbox。Submit 強制 lat/lng + source='custom'。Mobile (≤1023px) auto-redirect 到 fullpage route 避免 IME occlusion
+- `functions/api/_validate.ts` validateEntryBody — 新增 lat/lng XOR + range check + source allowlist
+- `functions/api/trips/[id]/days/[num]/entries.ts:87` — forward `body.source` 進 pois.source (改 hardcode 'ai')
+- `src/server/maps/google-client.ts` getPlaceDetails 簽名 — 新增 optional sessionToken arg，URL `?sessionToken=` forward Google billing session
+
+### Security audit
+
+CSO HIGH 2 個 + LOW 3 個全部 address：
+1. ~~`auth.user.id` typo~~ → `auth.userId` (autocomplete 在 prod 之前是 500 broken)
+2. ~~/api/places/resolve 無 rate limit~~ → 加 500/24h per-user cap
+3. body.source 加 allowlist
+4. sessionToken / regionCode / placeId 加 length cap
+
+### Mockups
+
+`docs/design-sessions/2026-05-18-add-custom-stop/` — 3 cross-form-factor variants + compare board (V1 mobile fullpage + V3 desktop inline 為 ship combo).
+
+### Test
+
+新 89 個 vitest unit test，覆蓋 backend validation / autocomplete client / endpoint / resolve / hook / lib / a11y keyboard / route guard. 既有 1850 test 0 regression — total 1939/1939 green.
+
+## [2.31.93] - 2026-05-18
+
+**Fix: TripMapRail 對齊 MapPage focusId flow — 點 stop marker 換 accent 視覺 + 浮頂避免被相鄰 marker 蓋住（user feedback 2 issue）。**
+
+### Context
+
+User 反映兩個地圖互動問題：
+1. 「點行程的 stop 地圖的 icon 沒有換被點選的 marker (參考地圖頁的方式)」— TripMapRail 在 v2.31.87/88 用手動 `setPanToCoord+zoom` 控 flyTo，沒進 OceanMap `focusId` flow → marker 顏色 / size / accent ring 不變
+2. 「被點的 stop 沒有浮在最高 被壓住了」— `AdvancedMarkerElement.zIndex = 1000` 給 DOM stacking 但相鄰 marker overlap 時視覺凸度不夠
+
+### Changed
+
+- **`src/components/trip/TripMapRail.tsx`** entryFocused listener 重寫對齊 MapPage focusId flow：
+  - 新 `focusedEntryId` state，pass `focusId={focusedEntryId}` 給 OceanMap
+  - `isExpanding === true` → `setFocusedEntryId(entryId)` + clear panToCoord（觸發 OceanMap focusId useEffect 切 marker accent 視覺 + flyTo z<12?13:undefined）
+  - `isExpanding === false` → `setFocusedEntryId(undefined)` + clear panToCoord（觸發 OceanMap focusId useEffect collapse 自動 fitBounds visible pins 回 overview）
+  - `isExpanding === undefined` (scroll spy fallback) → 維持 v2.31.81 行為（panToCoord pan only no zoom，不切 marker 視覺）
+- **`src/components/trip/OceanMap.tsx::markerContent`** focused marker box-shadow 加強：
+  - 新增 `isFocused = typeof style.zIndex === 'number' && style.zIndex >= 1000` 偵測
+  - Focused 時 box-shadow 換「1.5px accent inner ring + 5px accent-subtle outer ring (217,120,72,0.35) + 6px 16px deeper drop shadow (42,31,24,0.35)」取代 idle 的 0.18 black drop shadow
+  - Focused 時 inline style 加 `position: relative; z-index: 1000;` 強化 CSS stacking
+
+### Why
+
+對齊 MapPage 行為 — 桌機 rail 點 timeline row 跟手機 MapPage 點 marker 應有一致 visual response（marker 變大、變橘、accent ring、flyTo zoom 13）。CSS box-shadow 補強解決 `AdvancedMarkerElement.zIndex` 在 Google Maps overlay layer 內已生效但 marker 本身視覺差異不夠的問題。
+
+### Test
+
+- `tests/unit/v2_31_93-trip-map-focusid-marker.test.ts` 新增 6 個 source-grep test（focusedEntryId state / focusId prop / isExpanding 兩 branch / markerContent isFocused 偵測 / accent ring + 加深 drop shadow / z-index:1000 inline style）
+- `tests/unit/v2_31_79-marker-label-text-outline.test.ts` 第 3 個 test 更新 — focused marker 不再含 idle 的 `rgba(0,0,0,0.18)` drop shadow，改 assert accent ring + 加深 drop shadow
+- `tests/unit/v2_31_87-map-zoom-on-stop-toggle.test.ts` 重寫 — 移除 obsolete「zoom 13/10」assertion（v2.31.93 改 focusId flow），保留仍 valid 的 TimelineRail dispatch / panToCoord prop shape / OceanMap flyTo path 三 contract，zoom 值 assertion 由 v2.31.93 test 接手
+- 全 unit suite 1839/1839 pass
+
+## [2.31.92] - 2026-05-18
+
+**Fix: 移除 stop toolbar 2 個重複/不需要 button + StopLightbox 改 Portal 修 backdrop 沒蓋住 viewport（user feedback 2 issue）。**
+
+### Changed
+
+- **`src/components/trip/TimelineRail.tsx`** expanded toolbar：
+  - 移除「置換景點」icon button（pin icon）— 編輯景點 path 已含此功能
+  - 移除「收合」icon button（minimize icon）— row click 已 toggle expand/collapse，重複 entry
+  - Toolbar 從 6+2 grouped 變 4+1 grouped（放大檢視 / 複製 / 移到他天 / 編輯 + spacer + 刪除）
+
+### Fixed
+
+- **`src/components/trip/StopLightbox.tsx`** backdrop overflow issue（user QA 截圖：TitleBar / day picker / sticky map 沒被 backdrop 蓋住）：
+  - 改用 `createPortal` mount 至 `document.body` — bypass embedded TripPage 的 transform / sticky containing block ancestor，確保 `position: fixed; inset: 0` 蓋滿 viewport
+  - z-index 寫死 `1100` → 改 `var(--z-modal, 9000)` 對齊系統 modal hierarchy token
+
+### Test
+
+- `tests/unit/timeline-rail-toolbar-pencil.test.tsx`：assertion 從「4 個 action button (放大/編輯/刪除/收合)」改「3 個 (放大/編輯/刪除)」，加 negative assertion `queryByTestId('timeline-rail-collapse-42')).toBeNull()` + `timeline-rail-change-poi-42` toBeNull。27/27 pass。
+
+## [2.31.91] - 2026-05-18
+
+**Fix: chat 內 markdown link 樣式對齊 terracotta 風格（user feedback「健檢報告連結 樣式不符合網站風格」）。**
+
+AI 健檢 reply 含 markdown link `[前往健檢報告](/trip/:id/health)`，prod chat bubble 用 browser 預設藍/紫 underline → 不符合 site terracotta UX。
+
+### Changed
+
+- **`src/pages/ChatPage.tsx` SCOPED_STYLES**：加 3 條 link rule：
+  - `.tp-chat-msg a`：terracotta `--color-accent-deep`（fallback `--color-accent`）+ underline 1px / offset 2px + weight 500
+  - `.tp-chat-msg a:hover`：opacity 0.7 transition
+  - `.tp-chat-msg-user a`：user bubble (accent bg) → text 用 `--color-accent-foreground` (white) + underline 半透明白
+- Assistant bubble (cream bg) link → terracotta deep；user bubble (orange bg) link → white。所有 chat 內 markdown link 統一套用，不只健檢 reply。
+
+### Test
+
+- `tests/unit/v2_31_91-chat-md-link-style.test.ts`：4 source-grep test 鎖 4 條 CSS rule。
+
 ## [2.31.90] - 2026-05-18
 
 **Fix: 桌機 TitleBar action 全 icon-only（user direction「檢查桌機版 title bar 都改為 icon 無說明文字」）。**

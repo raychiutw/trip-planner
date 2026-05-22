@@ -180,6 +180,91 @@ export async function searchPlaces(
 }
 
 // ---------------------------------------------------------------------------
+// Places API — Autocomplete (typeahead for /add-custom-stop, v2.31.94)
+// ---------------------------------------------------------------------------
+
+export interface PlacesAutocompletePrediction {
+  /** Google canonical place id, e.g. "ChIJ..." */
+  placeId: string;
+  /** Bold main text (e.g. "高雄市左營區") */
+  primaryText: string;
+  /** Address tail (e.g. "Kaohsiung City, Taiwan") */
+  secondaryText: string;
+}
+
+interface PlacesAutocompleteResponse {
+  suggestions?: Array<{
+    placePrediction?: {
+      placeId?: string;
+      text?: { text?: string };
+      structuredFormat?: {
+        mainText?: { text?: string };
+        secondaryText?: { text?: string };
+      };
+    };
+    // queryPrediction etc. filtered out by callers
+  }>;
+}
+
+const AUTOCOMPLETE_FIELD_MASK = [
+  'suggestions.placePrediction.placeId',
+  'suggestions.placePrediction.text',
+  'suggestions.placePrediction.structuredFormat',
+].join(',');
+
+/**
+ * Places API (New) — POST /v1/places:autocomplete
+ *
+ * Typeahead suggestions for custom-stop UI. Returns placeId + structured text.
+ * **Does NOT return lat/lng** — coords resolve via getPlaceDetails on user pick
+ * (Google billing pattern: autocomplete + details = one session).
+ *
+ * @param sessionToken Caller-generated UUID, scoped to one typeahead session
+ *                     (rotate on suggestion pick / clear / unmount per Google
+ *                     billing semantics — see usePlacesAutocomplete hook).
+ * @param regionCode   ISO 3166-1 alpha-2 (case-insensitive, normalized to
+ *                     lowercase per existing searchPlaces convention).
+ */
+export async function autocompletePlaces(
+  apiKey: string,
+  q: string,
+  sessionToken: string,
+  regionCode?: string,
+): Promise<PlacesAutocompletePrediction[]> {
+  const body: Record<string, unknown> = {
+    input: q,
+    sessionToken,
+    languageCode: 'zh-TW',
+  };
+  if (regionCode) body.includedRegionCodes = [regionCode.toLowerCase()];
+
+  const res = await fetchWithTimeout(`${PLACES_BASE}/v1/places:autocomplete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': AUTOCOMPLETE_FIELD_MASK,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) fail(`Places autocomplete ${res.status}`);
+
+  const json = (await res.json().catch(() => null)) as PlacesAutocompleteResponse | null;
+  if (!json) fail('Places autocomplete invalid JSON');
+  if (!json.suggestions) return [];
+
+  return json.suggestions
+    .map((s) => s.placePrediction)
+    .filter((p): p is NonNullable<typeof p> => Boolean(p && p.placeId))
+    .map((p) => ({
+      placeId: p.placeId!,
+      primaryText:
+        p.structuredFormat?.mainText?.text ?? p.text?.text ?? '',
+      secondaryText: p.structuredFormat?.secondaryText?.text ?? '',
+    }));
+}
+
+// ---------------------------------------------------------------------------
 // Places API — Place Details (lifecycle refresh)
 // ---------------------------------------------------------------------------
 
@@ -222,9 +307,17 @@ const PLACE_DETAILS_FIELD_MASK = [
 export async function getPlaceDetails(
   apiKey: string,
   placeId: string,
+  /**
+   * Optional autocomplete session token. When this Place Details call closes a
+   * typeahead session, passing the token makes Google count autocomplete +
+   * details as **one** billable interaction instead of two (v2.31.94).
+   */
+  sessionToken?: string,
 ): Promise<PlaceDetailsResult | null> {
+  const params = new URLSearchParams({ languageCode: 'zh-TW' });
+  if (sessionToken) params.set('sessionToken', sessionToken);
   const res = await fetchWithTimeout(
-    `${PLACES_BASE}/v1/places/${encodeURIComponent(placeId)}?languageCode=zh-TW`,
+    `${PLACES_BASE}/v1/places/${encodeURIComponent(placeId)}?${params.toString()}`,
     {
       method: 'GET',
       headers: {

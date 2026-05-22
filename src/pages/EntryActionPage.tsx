@@ -53,6 +53,7 @@ import TitleBar from '../components/shell/TitleBar';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import { TripSelect } from '../components/TripSelect';
 
 interface DaysApiRow {
   id: number;
@@ -445,21 +446,17 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
                     })}
                   </div>
 
-                  <div className="tp-entry-action-time-row">
+                  <div className="tp-entry-action-time-row" data-testid="entry-action-timeslot">
                     <label className="tp-entry-action-time-label" htmlFor="entry-action-timeslot">
                       {ctaLabel}到時段
                     </label>
-                    <select
+                    <TripSelect<string>
                       id="entry-action-timeslot"
-                      className="tp-entry-action-time-select"
                       value={timeSlot}
-                      onChange={(e) => setTimeSlot(e.target.value)}
-                      data-testid="entry-action-timeslot"
-                    >
-                      {ENTRY_ACTION_TIME_SLOTS.map((s) => (
-                        <option key={s.key} value={s.key}>{s.label}</option>
-                      ))}
-                    </select>
+                      onChange={setTimeSlot}
+                      ariaLabel={`${ctaLabel}到時段`}
+                      options={ENTRY_ACTION_TIME_SLOTS.map((s) => ({ value: s.key, label: s.label }))}
+                    />
                   </div>
 
                   {submitError && (

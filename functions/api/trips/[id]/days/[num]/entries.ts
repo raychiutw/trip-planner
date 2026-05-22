@@ -84,7 +84,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       lat: (body.lat as number | undefined) ?? null,
       lng: (body.lng as number | undefined) ?? null,
       rating: (body.rating as number | undefined) ?? null,
-      source: 'ai',
+      // v2.31.94: forward body.source to pois.source as dedup/audit signal.
+      // String-typed guard rejects accidental non-string values; falls back to
+      // 'ai' for the existing search/favorite paths that don't supply source.
+      source: (typeof body.source === 'string' && body.source) || 'ai',
     });
 
     // v2.29.0: trip_entries.{time, travel_*, poi_id} DROPPED. resolveEntryTimes 仍接受

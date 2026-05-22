@@ -125,6 +125,11 @@ const EditTripPage = lazyWithRetry(() => import('../pages/EditTripPage'));
 const NewTripPage = lazyWithRetry(() => import('../pages/NewTripPage'));
 const EntryActionPage = lazyWithRetry(() => import('../pages/EntryActionPage'));
 const AddStopPage = lazyWithRetry(() => import('../pages/AddStopPage'));
+const AddCustomStopPage = lazyWithRetry(() => import('../pages/AddCustomStopPage'));
+// v2.32.0: 「新增景點」EditEntryPage 形狀的 wizard page，day 下拉 + 3 個 picker buttons。
+const AddEntryPage = lazyWithRetry(() => import('../pages/AddEntryPage'));
+// v2.31.94: mobile-only route guard
+import { MobileOnlyRoute } from '../components/MobileOnlyRoute';
 // poi-favorites-rename: poi_favorites universal pool → 加入行程 fast-path page
 const AddPoiFavoriteToTripPage = lazyWithRetry(() => import('../pages/AddPoiFavoriteToTripPage'));
 // v2.23.8: 變更 POI 全頁 form
@@ -214,6 +219,12 @@ if (el) {
               <Route path="/account" element={<AccountPage />} />
               <Route path="/account/appearance" element={<AppearanceSettingsPage />} />
               <Route path="/account/notifications" element={<NotificationsSettingsPage />} />
+              {/* v2.32.4 cross-prefix aliases: account hub 用 /account/*, sessions/connected-apps
+                  歷史在 /settings/*。User 直接打 URL 或舊書籤可能用任一 prefix → 兩個都 valid。 */}
+              <Route path="/account/sessions" element={<SessionsPage />} />
+              <Route path="/account/connected-apps" element={<ConnectedAppsPage />} />
+              <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
+              <Route path="/settings/notifications" element={<NotificationsSettingsPage />} />
               <Route path="/oauth/consent" element={<ConsentPage />} />
               <Route path="/invite" element={<InvitePage />} />
               <Route path="/trips" element={<TripsListPage />} />
@@ -241,6 +252,17 @@ if (el) {
                 <Route path="stop/:entryId/edit" element={<EditEntryPage />} />
                 {/* 2026-05-03 modal-to-fullpage migration: AddStopModal → /add-stop?day=N */}
                 <Route path="add-stop" element={<AddStopPage />} />
+                {/* v2.32.0: 新增景點 wizard — EditEntryPage 形狀 + day 下拉 + picker buttons → ChangePoiPage mode=new */}
+                <Route path="add-entry" element={<AddEntryPage />} />
+                {/* v2.31.94: mobile-only fullpage 自訂景點（IME occlusion 避讓）— desktop redirect 回 add-stop?tab=custom */}
+                <Route
+                  path="add-custom-stop"
+                  element={
+                    <MobileOnlyRoute fallbackPath="/trips">
+                      <AddCustomStopPage />
+                    </MobileOnlyRoute>
+                  }
+                />
               </Route>
               <Route path="*" element={<LegacyRedirect />} />
             </Routes>

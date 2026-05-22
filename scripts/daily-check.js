@@ -61,6 +61,17 @@ var D1_DB = env('D1_DATABASE_ID');
 var SENTRY_TOKEN = env('SENTRY_AUTH_TOKEN');
 var SENTRY_ORG = env('SENTRY_ORG');
 var SENTRY_PROJECT = env('SENTRY_PROJECT');
+// v2.31.96: Google Maps quota section needs prod admin API access. Token 在
+// runtime mint（同 cron-shared.ts，client_credentials flow），不直接讀
+// TRIPLINE_API_TOKEN env (.env.local 沒有，是用 CLIENT_ID + CLIENT_SECRET 換)。
+// IMPORTANT: 用 TRIPLINE_API_BASE (CF Pages prod) — TRIPLINE_API_URL 是 Tailscale
+// funnel 給 legacy /api 用的，不能打 admin endpoint。對齊 cron-shared.ts 註解。
+var TRIPLINE_API_BASE = env('TRIPLINE_API_BASE') || 'https://trip-planner-dby.pages.dev';
+var googleMapsTokenHelper = (function() {
+  try { return require('./lib/get-tripline-token'); } catch (_) { return null; }
+})();
+
+var googleMapsQuotaLib = require('./lib/google-maps-quota');
 
 // ── D1 REST API helper ──────────────────────────────────────────
 
@@ -431,8 +442,8 @@ function querySchedulerErrors() {
 
 // ── summary 計算 ────────────────────────────────────────────────
 
-function calcSummary(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene) {
-  var sections = [sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene];
+function calcSummary(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota) {
+  var sections = [sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota];
   var critical = sections.filter(function(s) { return s && s.status === 'critical'; }).length;
   var warning = sections.filter(function(s) { return s && s.status === 'warning'; }).length;
   var ok = sections.filter(function(s) { return s && s.status === 'ok'; }).length;
@@ -490,6 +501,53 @@ async function queryProdDataHygiene() {
     // check 失敗本身就該 surface,別假裝綠燈遮蓋 silent failure
     console.error('Prod data hygiene check failed:', err.message);
     return { status: 'warning', total: 0, leaks: [], error: err.message };
+  }
+}
+
+// ── 數據來源 8: Google Maps quota (v2.31.96) ─────────────────────
+// google-quota-monitor.ts 原本是 launchd-only 孤兒，這裡把 MTD 花費 +
+// 鎖狀態整合進 daily-check，讓 Telegram 每日報告看得到金額。
+// 計算邏輯抽到 lib/google-maps-quota.js 共用（drift test 守住）。
+
+async function adminApiGet(pathname, token) {
+  var res = await fetch(TRIPLINE_API_BASE + pathname, {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if (!res.ok) throw new Error(pathname + ' returned ' + res.status);
+  return res.json();
+}
+
+async function queryGoogleMapsQuota() {
+  // token helper 缺 / .env.local 沒 CLIENT_ID/SECRET → skip silently（本機 dev 可能沒 cred）
+  if (!googleMapsTokenHelper || typeof googleMapsTokenHelper.getToken !== 'function') {
+    return { status: 'ok', error: 'token helper unavailable (skip)' };
+  }
+  if (!env('TRIPLINE_API_CLIENT_ID') || !env('TRIPLINE_API_CLIENT_SECRET')) {
+    return { status: 'ok', error: 'TRIPLINE_API_CLIENT_ID/SECRET missing (skip)' };
+  }
+  try {
+    var token = await googleMapsTokenHelper.getToken();
+    var settings = await adminApiGet('/api/admin/maps-settings', token);
+    var estimates = await adminApiGet('/api/admin/quota-estimate', token);
+    var dayOfMonth = new Date().getDate();
+    var dailyCost = googleMapsQuotaLib.calcDailyCost(estimates);
+    var mtdCost = googleMapsQuotaLib.calcMtdCost(estimates, dayOfMonth);
+    var mtdPct = settings.budget_usd > 0 ? (mtdCost / settings.budget_usd) * 100 : 0;
+    var status = googleMapsQuotaLib.classifyStatus(mtdPct, settings.lock_threshold_pct);
+    var remainingUsd = Math.max(0, settings.budget_usd - mtdCost);
+    return {
+      status: status,
+      dailyCost: dailyCost,
+      mtdCost: mtdCost,
+      budget: settings.budget_usd,
+      mtdPct: mtdPct,
+      remainingUsd: remainingUsd,
+      isLocked: !!settings.is_locked,
+      services: estimates
+    };
+  } catch (err) {
+    console.error('Google Maps quota check failed:', err.message);
+    return { status: 'warning', error: err.message };
   }
 }
 
@@ -561,6 +619,7 @@ async function main() {
     queryRequestErrors(),    // 4
     queryRouteHealth(),      // 5 — B-P6 task 10.3
     queryProdDataHygiene(),  // 6 — mockup-parity-qa-fixes Sprint 7.2
+    queryGoogleMapsQuota(),  // 7 — v2.31.96: 接 google-quota-monitor 孤兒邏輯
   ]);
 
   function val(idx, fallback) {
@@ -577,8 +636,9 @@ async function main() {
   var requestErrors = val(4, { status: 'ok', total: 0, statusCounts: { open: 0, processing: 0, failed: 0 }, stuckProcessing: 0, pending: [] });
   var routeHealth = val(5, { status: 'ok', total: 0, checked: 0, routes: [] });
   var dataHygiene = val(6, { status: 'ok', total: 0, leaks: [] });
+  var googleMapsQuota = val(7, { status: 'ok', error: 'queryGoogleMapsQuota rejected' });
 
-  var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors, dataHygiene);
+  var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota);
 
   var report = {
     date: today,
@@ -592,7 +652,8 @@ async function main() {
     npmAudit: npmAuditResult,
     schedulerErrors: schedulerErrors,
     routeHealth: routeHealth,
-    dataHygiene: dataHygiene
+    dataHygiene: dataHygiene,
+    googleMapsQuota: googleMapsQuota
   };
 
   // 為所有 issue/error 項目加流水編號

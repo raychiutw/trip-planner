@@ -28,7 +28,7 @@
  *   - 完成按鈕同時放 TitleBar action + bottom bar (兩處同步 disabled state)
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
@@ -45,6 +45,20 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { regionToApiParam } from '../lib/maps/region';
 import type { PoiSearchResult } from '../types/poi';
+// v2.31.94/98: 自訂 tab 用 shared <CustomPoiForm> component（同 ChangePoiPage）。
+import { CustomPoiForm } from '../components/trip/CustomPoiForm';
+import {
+  selectDefaultCenter,
+  isValidCoord as isValidCustomCoord,
+  type Coord as CustomCoord,
+} from '../lib/locationPicker';
+
+interface TripDestApiLite {
+  destOrder: number;
+  name: string;
+  lat?: number | null;
+  lng?: number | null;
+}
 
 interface PoiFavoriteRow {
   id: number;
@@ -172,6 +186,17 @@ function deriveDayLabel(day: DayApiRow | null, dayNum: number): string {
 }
 
 const SCOPED_STYLES = `
+/* v2.31.98: 自訂 tab CSS 全搬到 <CustomPoiForm>。下方 :has() rule 留著，讓
+   桌機切到自訂 tab 時放寬 .tp-add-stop-body max-width 720→1024px，
+   給 380 + map 兩 pane 排得開（其他 tab 仍 720px 不變）。 */
+@media (min-width: 1024px) {
+  .tp-add-stop-body:has(.tp-custom-poi-form-twopane) {
+    max-width: 1024px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
 .tp-add-stop-page-shell {
   min-height: 100%;
   background: var(--color-background);
@@ -185,6 +210,61 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   padding: 12px 20px 0;
   margin: 0;
+}
+
+/* v2.31.99 day picker chip row — 加景點時讓 user 切換目標 day */
+.tp-add-stop-daypicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 20px 0;
+}
+.tp-add-stop-daypicker-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 14px;
+  min-height: 48px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font: inherit;
+  color: var(--color-foreground);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.tp-add-stop-daypicker-chip:hover {
+  background: var(--color-hover);
+}
+.tp-add-stop-daypicker-chip.is-active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+.tp-add-stop-daypicker-chip-num {
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.tp-add-stop-daypicker-chip-date {
+  font-size: var(--font-size-caption2);
+  opacity: 0.85;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.tp-add-stop-daypicker-empty {
+  margin: 12px 20px 0;
+  padding: 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote);
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .tp-add-stop-daypicker { padding: 12px 24px 0; }
+  .tp-add-stop-daypicker-empty { margin: 12px 24px 0; }
 }
 .tp-add-stop-tabs {
   display: flex; padding: 0 20px;
@@ -603,13 +683,20 @@ export default function AddStopPage() {
   const auth = useRequireAuth();
   const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
   const dayNumParam = searchParams.get('day');
   const dayNum = dayNumParam ? parseInt(dayNumParam, 10) : NaN;
 
-  const [tab, setTab] = useState<Tab>('search');
+  // v2.32.2 fix: 初值從 URL param 讀，讓 `/add-stop?tab=custom` direct URL 進來
+  // 直接 land 在自訂 tab（之前 hardcoded 'search'，URL param 被忽略）。
+  const initialTab: Tab = (() => {
+    const raw = searchParams.get('tab');
+    return raw === 'favorites' ? 'favorites' : raw === 'custom' ? 'custom' : 'search';
+  })();
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [category, setCategory] = useState<AddStopCategory>('all');
   const [query, setQuery] = useState('');
   const [region, setRegion] = useState<RegionOption>('全部地區');
@@ -637,28 +724,81 @@ export default function AddStopPage() {
   const [customDuration, setCustomDuration] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [customError, setCustomError] = useState<string | null>(null);
+  // v2.31.94: 自訂 tab 新增地址 typeahead + map pin 機制，確保 entry 一定有 lat/lng
+  const [customCoord, setCustomCoord] = useState<CustomCoord | null>(null);
+  const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
+  // v2.32.1 fix: 初值改 null 區分「未載入」與「載入後 0 個」
+  const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [currentDay, setCurrentDay] = useState<DayApiRow | null>(null);
+  // v2.31.99: 載入所有 days 給 day picker chip row 用。currentDay 從 allDays
+  // 衍生（不另外 setState 避免兩條 state truth）。
+  const [allDays, setAllDays] = useState<DayApiRow[] | null>(null);
 
-  // Fetch day metadata for label rendering (replaces TripPage caller's inline derivation).
   useEffect(() => {
-    if (!auth.user || !tripId || !Number.isFinite(dayNum)) return;
+    if (!auth.user || !tripId) return;
     let cancelled = false;
     (async () => {
       try {
         const days = await apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days`);
         if (cancelled) return;
-        const found = (days ?? []).find((d) => d.dayNum === dayNum) ?? null;
-        setCurrentDay(found);
+        setAllDays(days ?? []);
       } catch {
         // silent — label fallback to DAY NN
       }
     })();
     return () => { cancelled = true; };
-  }, [auth.user, tripId, dayNum]);
+  }, [auth.user, tripId]);
+
+  const currentDay = useMemo<DayApiRow | null>(() => {
+    if (!allDays || !Number.isFinite(dayNum)) return null;
+    return allDays.find((d) => d.dayNum === dayNum) ?? null;
+  }, [allDays, dayNum]);
+
+  const hasDay = Number.isFinite(dayNum);
+
+  // v2.31.99: switch day via chip row → URL replaceState 不開新 history entry
+  const handlePickDay = useCallback((next: number) => {
+    if (next === dayNum) return;
+    const sp = new URLSearchParams(searchParams);
+    sp.set('day', String(next));
+    setSearchParams(sp, { replace: true });
+  }, [dayNum, searchParams, setSearchParams]);
+
+  // v2.31.94: 自訂 tab 在 mobile (≤1023px) 上 redirect 到 fullpage route，避免 IME
+  // occlusion 把 280px map 整個遮蓋。Desktop 仍走 inline tab。
+  useEffect(() => {
+    if (tab !== 'custom' || !tripId || !Number.isFinite(dayNum)) return;
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    if (!window.matchMedia('(max-width: 1023px)').matches) return;
+    navigate(
+      `/trip/${encodeURIComponent(tripId)}/add-custom-stop?day=${dayNum}`,
+      { replace: true },
+    );
+  }, [tab, tripId, dayNum, navigate]);
+
+  // v2.31.94: 自訂 tab 需要 trip destinations 當 map default center fallback chain
+  // v2.32.1 fix: 從 tab-gated 改 mount-gated — LocationPickerMap 鎖 mount 時
+  // initialCenter，等切到 custom tab 才 fetch 就太晚。
+  useEffect(() => {
+    if (!auth.user || !tripId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const tripBody = await apiFetch<{ destinations?: TripDestApiLite[] }>(
+          `/trips/${encodeURIComponent(tripId)}`,
+        );
+        if (cancelled) return;
+        setCustomDestinations(tripBody?.destinations ?? []);
+      } catch {
+        // network fail → 標 [] 讓 fallback chain 走 Tokyo（已是最後一道安全網）
+        if (!cancelled) setCustomDestinations([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [auth.user, tripId, tab]);
 
   // POI search 由 usePoiSearch hook 處理 (見上方 hook call) — debounce + abort 內建
 
@@ -710,10 +850,26 @@ export default function AddStopPage() {
   const totalSelected = useMemo(() => {
     if (tab === 'search') return selectedSearch.size;
     if (tab === 'favorites') return selectedSaved.size;
-    return customTitle.trim() ? 1 : 0;
-  }, [tab, selectedSearch, selectedSaved, customTitle]);
+    return customTitle.trim() && customCoord ? 1 : 0;
+  }, [tab, selectedSearch, selectedSaved, customTitle, customCoord]);
 
-  const confirmEnabled = tab === 'custom' ? !submitting : totalSelected > 0 && !submitting;
+  // v2.31.99: hasDay 也成 submit gate — chip row 必須選一天才能提交
+  const confirmEnabled = hasDay && (
+    tab === 'custom'
+      ? !submitting && !!customTitle.trim() && !!customCoord
+      : totalSelected > 0 && !submitting
+  );
+
+  // v2.31.98: 自訂 tab typeahead + map handlers 移進 CustomPoiForm component。
+  // 父層只負責 fallback center 計算（依賴 trip destinations）。
+  const customInitialCenter = useMemo<CustomCoord>(() => {
+    return selectDefaultCenter({
+      prevEntry: null,
+      tripDestinations: (customDestinations ?? [])
+        .filter((d) => typeof d.lat === 'number' && typeof d.lng === 'number')
+        .map((d) => ({ lat: d.lat as number, lng: d.lng as number })),
+    });
+  }, [customDestinations]);
 
   const handleConfirm = useCallback(async () => {
     if (submitting || !tripId || !Number.isFinite(dayNum)) return;
@@ -757,8 +913,20 @@ export default function AddStopPage() {
         setCustomError('請輸入標題');
         return;
       }
+      // v2.31.94: 自訂 stop 必須有 map pin 座標，否則 entry 會 silent drop from map
+      if (!customCoord || !isValidCustomCoord(customCoord)) {
+        setCustomError('請先在地圖上選擇位置');
+        return;
+      }
       const note = [customDuration && `${customDuration} 分`, customNote].filter(Boolean).join(' · ') || undefined;
-      payloads = [{ title, time: customTime || undefined, note }];
+      payloads = [{
+        title,
+        time: customTime || undefined,
+        note,
+        lat: customCoord.lat,
+        lng: customCoord.lng,
+        source: 'custom',
+      }];
     }
 
     if (payloads.length === 0) return;
@@ -798,10 +966,12 @@ export default function AddStopPage() {
       setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, tripId, dayNum]);
+  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, tripId, dayNum]);
 
   if (!auth.user) return null;
-  if (!tripId || !Number.isFinite(dayNum)) {
+  // v2.31.99: tripId 必填，但 dayNum 改成 optional — 沒帶 ?day=N 時 chip row
+  // 上方讓 user 選一天再 unlock form（取代既有 invalid-params blocking page）。
+  if (!tripId) {
     return (
       <AppShell
         sidebar={<DesktopSidebarConnected />}
@@ -809,7 +979,7 @@ export default function AddStopPage() {
           <div className="tp-add-stop-page-shell" data-testid="add-stop-page">
             <TitleBar title="加入景點" back={handleBack} backLabel="返回行程列表" />
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
-              無效的行程或日期參數
+              無效的行程
             </div>
           </div>
         }
@@ -818,7 +988,7 @@ export default function AddStopPage() {
     );
   }
 
-  const dayLabel = deriveDayLabel(currentDay, dayNum);
+  const dayLabel = hasDay ? deriveDayLabel(currentDay, dayNum) : '請選擇加入哪天';
 
   const titleBarActions = (
     <TitleBarPrimaryAction
@@ -846,6 +1016,42 @@ export default function AddStopPage() {
               actions={titleBarActions}
             />
             <div className="tp-add-stop-page-day-meta">{dayLabel}</div>
+
+            {/* v2.31.99 day picker chip row — 沒帶 ?day=N 進來時讓 user 選；帶了
+                也仍顯，可隨時切換。Day metadata 還在 fetch 時不 render
+                （allDays === null）— 避免閃爍空列。 */}
+            {allDays && allDays.length > 0 && (
+              <div
+                className="tp-add-stop-daypicker"
+                role="tablist"
+                aria-label="選擇加入哪天"
+                data-testid="add-stop-daypicker"
+              >
+                {allDays.map((d) => {
+                  const isActive = d.dayNum === dayNum;
+                  const mmdd = (d.date ?? '').slice(5).replace('-', '/');
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      className={`tp-add-stop-daypicker-chip ${isActive ? 'is-active' : ''}`}
+                      onClick={() => handlePickDay(d.dayNum)}
+                      data-testid={`add-stop-daypicker-chip-${d.dayNum}`}
+                    >
+                      <span className="tp-add-stop-daypicker-chip-num">DAY {String(d.dayNum).padStart(2, '0')}</span>
+                      {mmdd && <span className="tp-add-stop-daypicker-chip-date">{mmdd}{d.dayOfWeek ? `（${d.dayOfWeek}）` : ''}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {!hasDay && allDays && allDays.length === 0 && (
+              <div className="tp-add-stop-daypicker-empty" data-testid="add-stop-daypicker-empty">
+                此行程尚無日期，請先在「編輯行程」設定起訖日。
+              </div>
+            )}
 
             <div className="tp-add-stop-tabs" role="tablist" aria-label="加入景點來源">
               {([
@@ -1098,79 +1304,68 @@ export default function AddStopPage() {
                 </>
               )}
 
-              {tab === 'custom' && (
-                <form className="tp-add-stop-form" onSubmit={(e) => { e.preventDefault(); void handleConfirm(); }}>
-                  <div className="tp-add-stop-form-row is-full">
-                    <div className="tp-add-stop-form-field">
-                      <label htmlFor="add-stop-custom-title">標題 *</label>
-                      <input
-                        id="add-stop-custom-title"
-                        type="text"
-                        value={customTitle}
-                        onChange={(e) => { setCustomTitle(e.target.value); setCustomError(null); }}
-                        placeholder="輸入景點名稱（例：心型岩看夕陽）"
-                        autoFocus
-                        data-testid="add-stop-custom-title"
-                      />
-                      {customError && (
-                        <div className="tp-add-stop-form-row-error" data-testid="add-stop-custom-error">{customError}</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="tp-add-stop-form-row is-full">
-                    <div className="tp-add-stop-form-field">
-                      <label>地址 / 地標</label>
-                      <div className="tp-add-stop-form-placeholder"><span>街道地址或地標關鍵字</span><Icon name="location-pin" /></div>
-                      <div className="tp-add-stop-form-helper">輸入後系統自動定位座標（用於地圖 polyline 連結）</div>
-                    </div>
-                  </div>
-                  <div className="tp-add-stop-form-row">
-                    <div className="tp-add-stop-form-field">
-                      <label htmlFor="add-stop-custom-time">開始時間</label>
-                      <input
-                        id="add-stop-custom-time"
-                        type="text"
-                        value={customTime}
-                        onChange={(e) => setCustomTime(e.target.value)}
-                        placeholder={`Day ${String(dayNum).padStart(2, '0')} · 17:00`}
-                        data-testid="add-stop-custom-time"
-                      />
-                    </div>
-                    <div className="tp-add-stop-form-field">
-                      <label>結束時間</label>
-                      <div className="tp-add-stop-form-select"><span>自動估算</span><Icon name="chevron-down" /></div>
-                    </div>
-                  </div>
-                  <div className="tp-add-stop-form-row">
-                    <div className="tp-add-stop-form-field">
-                      <label>類型</label>
-                      <div className="tp-add-stop-form-select"><span>SIGHT · 景點</span><Icon name="chevron-down" /></div>
-                    </div>
-                    <div className="tp-add-stop-form-field">
-                      <label htmlFor="add-stop-custom-duration">預估停留</label>
-                      <input
-                        id="add-stop-custom-duration"
-                        type="number"
-                        inputMode="numeric"
-                        value={customDuration}
-                        onChange={(e) => setCustomDuration(e.target.value)}
-                        placeholder="90"
-                        data-testid="add-stop-custom-duration"
-                      />
-                    </div>
-                  </div>
-                  <div className="tp-add-stop-form-row is-full">
-                    <div className="tp-add-stop-form-field">
-                      <label htmlFor="add-stop-custom-note">備註（選填）</label>
-                      <textarea
-                        id="add-stop-custom-note"
-                        value={customNote}
-                        onChange={(e) => setCustomNote(e.target.value)}
-                        placeholder="想看夕陽 · 推薦避開週末"
-                        data-testid="add-stop-custom-note"
-                      />
-                    </div>
-                  </div>
+              {/* v2.32.1 fix: 等 destinations 載完才 mount LocationPickerMap，
+                  避免 Tokyo fallback 鎖死 initial center。 */}
+              {tab === 'custom' && customDestinations === null && (
+                <div className="tp-add-stop-empty" data-testid="add-stop-custom-loading">
+                  載入中⋯
+                </div>
+              )}
+              {tab === 'custom' && customDestinations !== null && (
+                <form onSubmit={(e) => { e.preventDefault(); void handleConfirm(); }}>
+                  <CustomPoiForm
+                    title={customTitle}
+                    onTitleChange={(v) => { setCustomTitle(v); setCustomError(null); }}
+                    coord={customCoord}
+                    onCoordChange={setCustomCoord}
+                    hintConfirmed={customHintConfirmed}
+                    onHintConfirmedChange={setCustomHintConfirmed}
+                    initialCenter={customInitialCenter}
+                    error={customError}
+                    testIdPrefix="add-stop-custom"
+                    extraRows={
+                      <>
+                        <div className="tp-custom-poi-form-row">
+                          <div className="tp-custom-poi-form-field">
+                            <label htmlFor="add-stop-custom-time">開始時間</label>
+                            <input
+                              id="add-stop-custom-time"
+                              type="text"
+                              value={customTime}
+                              onChange={(e) => setCustomTime(e.target.value)}
+                              placeholder={`Day ${String(dayNum).padStart(2, '0')} · 17:00`}
+                              data-testid="add-stop-custom-time"
+                            />
+                          </div>
+                          <div className="tp-custom-poi-form-field">
+                            <label htmlFor="add-stop-custom-duration">預估停留</label>
+                            <input
+                              id="add-stop-custom-duration"
+                              className="tp-input-short"
+                              type="number"
+                              inputMode="numeric"
+                              value={customDuration}
+                              onChange={(e) => setCustomDuration(e.target.value)}
+                              placeholder="90"
+                              data-testid="add-stop-custom-duration"
+                            />
+                          </div>
+                        </div>
+                        <div className="tp-custom-poi-form-row is-full">
+                          <div className="tp-custom-poi-form-field">
+                            <label htmlFor="add-stop-custom-note">備註（選填）</label>
+                            <textarea
+                              id="add-stop-custom-note"
+                              value={customNote}
+                              onChange={(e) => setCustomNote(e.target.value)}
+                              placeholder="想看夕陽 · 推薦避開週末"
+                              data-testid="add-stop-custom-note"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    }
+                  />
                 </form>
               )}
             </div>
@@ -1179,7 +1374,10 @@ export default function AddStopPage() {
               <span className="tp-add-stop-counter" data-testid="add-stop-counter">
                 {/* v2.31.33: mobile counter 191px 容不下完整 dayLabel（DAY 01 · 7/29（三））→
                     簡化「將加入 DAY 01 · 7/29（三）」為「→ DAY 01」短 day index。Page header 已顯完整日期。 */}
-                已選 <strong>{totalSelected}</strong> 個 → DAY {String(dayNum).padStart(2, '0')}
+                {hasDay
+                  ? <>已選 <strong>{totalSelected}</strong> 個 → DAY {String(dayNum).padStart(2, '0')}</>
+                  : <>請先選擇加入哪天</>
+                }
                 {submitError && <span style={{ color: 'var(--color-destructive, #c0392b)', marginLeft: 8 }}>{submitError}</span>}
               </span>
               <div className="tp-add-stop-actions">
