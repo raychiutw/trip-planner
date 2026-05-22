@@ -507,33 +507,8 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
   margin-bottom: 6px;
 }
-.tp-shift-modal-input {
-  width: 100%;
-  padding: 12px;
-  /* v2.33.10 fix: 顯式 background + color-scheme: light，避免 iOS Safari
-     date input 在 system dark mode 下背景變深色（文字 dark on dark 幾乎看不見） */
-  background: var(--color-background);
-  color: var(--color-foreground);
-  color-scheme: light;
-  -webkit-appearance: none;
-  appearance: none;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font: inherit;
-  font-size: var(--font-size-callout);
-  font-weight: 600;
-  outline: none;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-.tp-shift-modal-input::-webkit-date-and-time-value {
-  text-align: center;
-  color: var(--color-foreground);
-}
-.tp-shift-modal-input:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
-}
+/* v2.33.22 cleanup: .tp-shift-modal-input 規則移除 — v2.33.17 shift modal
+   已切到 TripDatePicker（react-day-picker 自帶 trigger button）。 */
 .tp-shift-modal-preview {
   margin: 14px 0 16px;
   padding: 10px 12px;
