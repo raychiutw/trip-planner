@@ -3,6 +3,42 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.21] - 2026-05-22
+
+**Feat: TripTimePicker — 5 個 native `<input type="time">` 改網站風格**
+
+v2.33.17 把 calendar + select 改 headless library + terracotta theme，但
+5 個 `type="time"` 仍是 native OS chrome（iOS rotating drum / Chrome native
+list）。v2.33.21 補完三件套 — TripTimePicker = `@headlessui/react` Popover +
+2-col scrolling lists (hour 0-23 + minute 0-55 by 5)。
+
+### Added
+
+- `src/components/TripTimePicker.tsx` + `TripTimePicker.styles.ts`
+  - Trigger: tp-input-short solo 22px bold center, 44px tap target
+  - Popover: 2-col scrolling lists, 240px height, scroll-snap-y
+  - Hour cell 0-23 (data-h attr), Minute cell by `minuteStep` prop
+    (default 5, options 1/5/10/15/30)
+  - scrollIntoView center on open，is-selected accent bg
+- `tests/unit/__helpers__/tripTimePicker.ts` — `pickTime(testId, 'HH:MM')`
+
+### Migrated 5 callsites
+
+- AddCustomStopPage 開始時間 (`add-custom-stop-time`)
+- AddPoiFavoriteToTripPage 開始/結束時間 (`favorites-add-to-trip-start/end`)
+- EditEntryPage 抵達/離開 (`edit-entry-start-time/end-time`) +
+  順手把 `<label>` wrapper 改 `<div>` 因為 picker 自帶 button trigger
+
+### Test refactors (fireEvent.change → pickTime helper)
+
+- poi-favorite-add-to-trip-form: 5 callsites updated
+- poi-favorite-add-to-trip-states: 2 callsites updated
+- edit-entry-page: 3 callsites updated（含 value 讀取 → button textContent）
+
+### Tests
+
+tsc clean / vitest 269 files / 2082 tests pass / 新 TripTimePicker 8 tests.
+
 ## [2.33.20] - 2026-05-22
 
 **Fix: companion-resolver.test.ts beforeAll hookTimeout — CI flaky 修復**

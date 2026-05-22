@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { pickFromTripSelect } from './__helpers__/tripSelect';
+import { pickTime } from './__helpers__/tripTimePicker';
 
 const apiFetchMock = vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>();
 vi.mock('../../src/lib/apiClient', () => ({
@@ -111,8 +112,8 @@ describe('AddPoiFavoriteToTripPage — 7-state matrix', () => {
     await pickFromTripSelect('favorites-add-to-trip-trip', /T1/);
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
     await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-start'), { target: { value: '12:00' } });
-    fireEvent.change(screen.getByTestId('favorites-add-to-trip-end'), { target: { value: '13:00' } });
+    pickTime('favorites-add-to-trip-start', '12:00');
+    pickTime('favorites-add-to-trip-end', '13:00');
     fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
     await waitFor(() => {
       // ConflictModal 開（exclude TripSelect listbox dialog）
