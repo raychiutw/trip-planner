@@ -30,11 +30,13 @@ let env: Env;
 const SUBMITTER_EMAIL = 'companion-submitter@test.com';
 const TP_REQUEST_CLIENT_ID = 'tripline-internal-cli';
 
+// CI runner: createTestDb (miniflare cold-start D1) regularly >10s default.
+// v2.33.20 增 30s timeout 避免 flaky CI fail (hook timeout 10000ms 過短)。
 beforeAll(async () => {
   db = await createTestDb();
   env = mockEnv(db, { TP_REQUEST_CLIENT_ID });
   await seedUser(db, SUBMITTER_EMAIL);
-});
+}, 30_000);
 
 afterAll(disposeMiniflare);
 
