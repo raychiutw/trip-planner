@@ -93,21 +93,8 @@ const SCOPED_STYLES = `
     content: ' *';
     color: var(--color-destructive);
   }
-  .tp-custom-stop-input {
-    width: 100%;
-    height: 44px;
-    padding: 10px 12px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-background);
-    color: var(--color-foreground);
-    font-size: 16px;
-    outline: none;
-  }
-  .tp-custom-stop-input:focus {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px var(--color-accent-subtle);
-  }
+  /* v2.33.22 cleanup: .tp-custom-stop-input 規則移除 — title input 已切到
+     .tp-input-long（tokens.css @layer base）。 */
   .tp-custom-stop-textarea {
     width: 100%;
     min-height: 64px;
@@ -470,7 +457,7 @@ export default function AddCustomStopPage() {
                 <input
                   id="cs-title"
                   type="text"
-                  className="tp-custom-stop-input"
+                  className="tp-input-long"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="例如：外婆家、朋友推薦的隱藏景點"

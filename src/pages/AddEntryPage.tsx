@@ -72,29 +72,8 @@ const SCOPED_STYLES = `
   letter-spacing: 0.08em;
   color: var(--color-muted);
 }
-.tp-add-entry-daypicker-select {
-  flex: 1;
-  padding: 10px 14px;
-  min-height: 44px;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  font: inherit;
-  font-size: var(--font-size-callout);
-  font-weight: 600;
-  color: var(--color-foreground);
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M3 4.5l3 3 3-3' stroke='currentColor' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 36px;
-}
-.tp-add-entry-daypicker-select:focus-visible {
-  outline: none;
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
-}
+/* v2.33.22 cleanup: .tp-add-entry-daypicker-select 規則移除 — v2.33.17
+   daypicker 已切到 TripSelect（headless-ui Listbox + tp-select-trigger）。 */
 
 /* POI placeholder */
 .tp-add-entry-poi-placeholder {
