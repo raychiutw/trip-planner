@@ -39,9 +39,13 @@ describe('AddEntryPage — EditEntryPage-shape layout', () => {
     expect(ADD_ENTRY_SRC).toContain("'新增景點'");
   });
 
-  it('Day dropdown <select> 含 dayNum options + testid', () => {
+  it('Day dropdown 用 TripSelect render + dayNum options + testid', () => {
+    expect(ADD_ENTRY_SRC).toContain("import { TripSelect } from '../components/TripSelect'");
     expect(ADD_ENTRY_SRC).toContain('data-testid="add-entry-daypicker"');
-    expect(ADD_ENTRY_SRC).toMatch(/data-testid=\{`add-entry-daypicker-opt-\$\{d\.dayNum\}`\}/);
+    // v2.33.17: native <select> → TripSelect 拔了 per-option testid，
+    // options 透過 .map 構造為 { value: d.dayNum, label: formatDayLabel(d) } 餵 TripSelect。
+    expect(ADD_ENTRY_SRC).toMatch(/value:\s*d\.dayNum/);
+    expect(ADD_ENTRY_SRC).toMatch(/label:\s*formatDayLabel\(d\)/);
   });
 
   it('Empty POI placeholder + 3 picker buttons (search / favorites / custom)', () => {

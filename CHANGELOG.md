@@ -3,6 +3,63 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.17] - 2026-05-22
+
+**Feat: 日曆 + Select 改網站風格（取代 native popup）。** User sign-off
+mockup `docs/design-sessions/2026-05-22-calendar-select-mockup/` Variant B
+Spacious（44px cell / 20px padding / iOS HIG tap target）。
+
+### Why
+
+v2.33.16 把 input trigger 樣式統一到 `tp-input-short`，但 native
+`type="date"` 跟 `<select>` 的彈出層仍是 OS chrome（iOS rotating drum /
+macOS native calendar / Chrome native list），跨平台不一致也不符合
+Terracotta 視覺。改用 headless library + 自訂 popover 才能根本解決。
+
+### Added
+
+- `react-day-picker@9` + `date-fns@4` + `@headlessui/react@2` deps
+- `src/components/TripDatePicker.tsx` + `TripDatePicker.styles.ts`
+  - Wrap `DayPicker`，trigger 重用 tp-input-short solo 樣式
+  - 44px cell, 18px nav button, terracotta accent/today/selected
+  - ISO string ("YYYY-MM-DD") 進出，與既有 callsites drop-in 相容
+  - 中文星期 / 月份 formatter（日一二三四五六 / 2026 年 5 月）
+  - Outside-click 關 + Esc 關 + a11y aria-haspopup="dialog"
+- `src/components/TripSelect.tsx` + `TripSelect.styles.ts`
+  - Wrap headless-ui `Listbox`，44px row, accent-subtle hover
+  - `variant: 'default' | 'pill'`：pill (32px / footnote / radius-full)
+    給 TripsListPage 排序 toolbar；default 給 form field
+  - Generic `<V extends string | number>` 保留 type safety
+- `tests/unit/__helpers__/tripSelect.ts` — pickFromTripSelect helper
+  替代 native fireEvent.change pattern
+- `tests/unit/trip-date-picker.test.tsx` (6 test)
+- `tests/unit/trip-select.test.tsx` (6 test)
+- `tests/setup-jest-dom.js` 加 ResizeObserver stub（@headlessui 需要）
+
+### Migrated 3 date callsites → TripDatePicker
+
+- NewTripPage 出發 / 回程
+- EditTripPage shift modal「變更出發日期」
+
+### Migrated 6 select callsites → TripSelect
+
+- AddPoiFavoriteToTripPage 行程 + 天數
+- EditTripPage 顯示語言
+- EntryActionPage copy/move 時段
+- TripsListPage 排序（variant="pill"）
+- AddEntryPage Day dropdown
+
+### Test refactors（fireEvent.change → click trigger + click option）
+
+- poi-favorite-add-to-trip-form.test.tsx × 4 callsites
+- poi-favorite-add-to-trip-states.test.tsx × 3 callsites
+- add-entry-page.test.ts — option-testid assertion 改 TripSelect import
+- v2_31_81-batch-ux-fixes.test.ts §3 重寫：5 callsites import TripSelect
+
+### Tests
+
+tsc clean / vitest 268 files / 2074 tests pass。
+
 ## [2.33.16] - 2026-05-22
 
 **Refactor: Input 二系統 — `.tp-input-long` (一般文字) + `.tp-input-short`
