@@ -133,6 +133,10 @@ export default function Icon({ name }: { name: string }) {
   const pathData = ICONS[name];
   if (!pathData) return null;
 
+  // v2.33.45 round 6b LOW: dangerouslySetInnerHTML 取自 ICONS hardcoded map
+  // (line 11~)，name 由 component caller 提供，無 user/CMS-supplied SVG path。
+  // **不要**將 ICONS 改為動態 fetch / CMS — 一旦 user-controlled 字串進 path，
+  // 即 stored-XSS via SVG。改寫請保證 ICONS 永遠是 hardcoded literal map。
   return (
     <span className="svg-icon" aria-hidden="true">
       <svg

@@ -186,9 +186,10 @@ const HourlyWeather = memo(function HourlyWeather({
     iconCount[ic] = (iconCount[ic] ?? 0) + 1;
   }
 
+  // v2.33.45 round 6b: for-in 對 Record 不安全（會 iterate prototype keys）。
+  // 改 Object.entries 對 strict mode 友善。
   let maxCnt = 0;
-  for (const k in iconCount) {
-    const cnt = iconCount[k] ?? 0;
+  for (const [k, cnt] of Object.entries(iconCount)) {
     if (cnt > maxCnt) {
       maxCnt = cnt;
       bestIcon = k;

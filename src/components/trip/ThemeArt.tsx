@@ -2,21 +2,12 @@
  * ThemeArt — decorative SVG marks for Ocean theme.
  *
  * Design direction: minimal / clean. Ocean theme uses whitespace, not decorative
- * illustrations, so these components render subtle marks or nothing.
+ * illustrations. v2.33.45 round 6b cleanup: 移除 DayHeaderArt / DividerArt /
+ * NavArt 三個一直回 null 的 dead exports（only FooterArt 實際 render）。
  */
 
 interface ThemeArtProps {
   dark: boolean;
-}
-
-/** Day header decoration (used inside DaySection header). */
-export function DayHeaderArt(_: ThemeArtProps) {
-  return null;
-}
-
-/** Divider art — rendered between major sections. */
-export function DividerArt(_: ThemeArtProps) {
-  return null;
 }
 
 /** Footer art — rendered below the timeline list. */
@@ -43,9 +34,4 @@ export function FooterArt({ dark }: ThemeArtProps) {
       </svg>
     </div>
   );
-}
-
-/** Nav art — right-side ornament in the sticky nav. */
-export function NavArt(_: ThemeArtProps) {
-  return null;
 }

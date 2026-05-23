@@ -213,7 +213,12 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
       lastYRef.current = y;
     }
     el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      // v2.33.45 round 6b: reset lastYRef on cleanup — bottomNav 切換移除 +
+      // 重 mount 時，舊 scrollTop 值會留 staticked。
+      lastYRef.current = 0;
+    };
   }, [bottomNav]);
 
   return (
