@@ -20,6 +20,7 @@
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { hashPassword, MIN_PASSWORD_LEN } from '../../../src/server/password';
 import { parseJsonBody } from '../_utils';
+import { bumpRateLimit, checkRateLimit, clientIp, RATE_LIMITS } from '../_rate_limit';
 import { revokeAllOtherSessions } from '../_session';
 import { sendEmail, EmailError } from '../../../src/server/email';
 import { recordEmailEvent } from '../_audit';
@@ -52,6 +53,18 @@ function errorResponse(code: string, message: string, status: number): Response 
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
+  // v2.33.52 cleanup (round 5d defer): per-IP rate limit。Token entropy 256-bit
+  // brute force 已不可行，但 scanner / credential stuffing 仍會 burn D1 work +
+  // log noise。重用 LOGIN policy (5/15min window, 30min lockout)。
+  const ipKey = `reset-password:${clientIp(context.request)}`;
+  const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.LOGIN);
+  if (!ipCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: { code: 'RESET_RATE_LIMITED', message: '密碼重設嘗試過多，請稍後再試' } }),
+      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
+    );
+  }
+
   const body = (await parseJsonBody<ResetBody>(context.request)) ?? {};
   const token = (body.token ?? '').trim();
   const password = body.password ?? '';
@@ -62,6 +75,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!password || password.length < MIN_PASSWORD_LEN) {
     return errorResponse('RESET_PASSWORD_TOO_SHORT', `密碼至少 ${MIN_PASSWORD_LEN} 字元`, 400);
   }
+
+  // Bump 計數（每次正常呼叫都 +1，正常 user 通常 1 次即成功）。
+  await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.LOGIN);
 
   const adapter = new D1Adapter(context.env.DB, 'PasswordReset');
   const tokenRow = (await adapter.find(token)) as ResetTokenPayload | undefined;
