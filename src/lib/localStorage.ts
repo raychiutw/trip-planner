@@ -14,10 +14,19 @@ interface LsEntry<T> {
 
 /**
  * Persists a value under `tp-{key}` with a 6-month expiry timestamp.
+ *
+ * Returns `true` on success, `false` if storage was unavailable
+ * (Safari private mode, QuotaExceededError). v2.33.36 code review round 1:
+ * previous version threw inside `useEffect` and crashed the page.
  */
-export function lsSet<T>(key: string, value: T): void {
-  const entry: LsEntry<T> = { v: value, exp: Date.now() + LS_TTL };
-  localStorage.setItem(LS_PREFIX + key, JSON.stringify(entry));
+export function lsSet<T>(key: string, value: T): boolean {
+  try {
+    const entry: LsEntry<T> = { v: value, exp: Date.now() + LS_TTL };
+    localStorage.setItem(LS_PREFIX + key, JSON.stringify(entry));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -49,20 +58,24 @@ export function lsRemove(key: string): void {
  */
 export function lsRenewAll(): void {
   const newExp = Date.now() + LS_TTL;
+  // v2.33.36: snapshot keys first — a parallel tab removing items mid-iteration
+  // would shift `localStorage.key(i)` indices and skip entries.
+  const keys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && k.indexOf(LS_PREFIX) === 0) {
-      try {
-        const raw = localStorage.getItem(k);
-        if (!raw) continue;
-        const d = JSON.parse(raw) as LsEntry<unknown>;
-        if (d && d.exp) {
-          d.exp = newExp;
-          localStorage.setItem(k, JSON.stringify(d));
-        }
-      } catch (_e) {
-        // ignore malformed entries
+    if (k && k.indexOf(LS_PREFIX) === 0) keys.push(k);
+  }
+  for (const k of keys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const d = JSON.parse(raw) as LsEntry<unknown>;
+      if (d && d.exp) {
+        d.exp = newExp;
+        localStorage.setItem(k, JSON.stringify(d));
       }
+    } catch {
+      // ignore malformed entries
     }
   }
 }

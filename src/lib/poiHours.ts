@@ -14,16 +14,17 @@
  * v2.30.16：terracotta UX 精修，PR-A 後續 follow-up（task #71）。
  */
 
-const WEEKDAY_RE = /(?:星期[一二三四五六日天])\s*:?\s*(.+?)(?=\s*星期[一二三四五六日天]|$)/g;
+// v2.33.36 code review round 1: 之前 export 過會踩到 stateful `lastIndex` bug。
+// 每次 parse 建立新 regex 完全 stateless，且不再依賴 lastIndex reset。
+const WEEKDAY_RE_SOURCE = '(?:星期[一二三四五六日天])\\s*:?\\s*(.+?)(?=\\s*星期[一二三四五六日天]|$)';
 
 /** 把整週時段字串拆成 { 一/二/.../日: time-or-rest } map。 */
 function parseWeeklyHours(raw: string): Map<string, string> | null {
   const map = new Map<string, string>();
   // Normalize: 換行 / 多空格 → 單空格
   const flat = raw.replace(/\s+/g, ' ').trim();
-  // Reset regex state
-  WEEKDAY_RE.lastIndex = 0;
-  const matches = [...flat.matchAll(WEEKDAY_RE)];
+  const re = new RegExp(WEEKDAY_RE_SOURCE, 'g');
+  const matches = [...flat.matchAll(re)];
   if (matches.length < 5) return null;
   for (const m of matches) {
     const fullMatch = m[0];

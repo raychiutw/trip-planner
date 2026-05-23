@@ -19,7 +19,12 @@ export class ApiError extends Error {
     super(ERROR_MESSAGES[code] || code);
     this.code = code;
     this.status = status;
-    this.detail = detail;
+    // v2.33.36 security audit round 1: cap backend `detail` so a malicious
+    // backend / SQL fragment leak / accidentally long error message can't
+    // propagate full payload to Toast / Sentry. Strip newlines for one-line UI.
+    this.detail = typeof detail === 'string'
+      ? detail.replace(/[\r\n]+/g, ' ').slice(0, 200)
+      : detail;
     this.payload = payload;
     this.severity = classifySeverity(code);
   }

