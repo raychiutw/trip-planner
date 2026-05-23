@@ -3,6 +3,54 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.27] - 2026-05-23
+
+**Fix: api-server daily-check race condition — 5/19 起 4 天沒 fire**
+
+Symptom: `scripts/logs/daily-check/` 最後 report 在 2026-05-19，5/20-5/22
+完全沒新 log。api-server process 仍 running（PID 98173, started 5/19 10am）。
+
+Root cause: `hasActiveSession()` 用共用 `tripline-request-` prefix 不分
+skill。`/tp-request` 排程在 :09 fire（10 min interval），`/tp-daily-check`
+排程在 :10 fire（06:10 daily）— 兩者只差 60 秒，daily-check fire 時偵測到
+`/tp-request` 剛 spawn 的 tmux session 還活著 → SKIP。
+
+Log evidence:
+```
+[2026-05-20T22:09:42] Process loop started (skill: /tp-request)
+[2026-05-20T22:09:45] Spawned tmux session: tripline-request-1779...
+[2026-05-20T22:10:00] Process loop started (skill: /tp-daily-check)
+[2026-05-20T22:10:00] Active session tripline-request-1779... still running, skip
+```
+
+每天 22:10 UTC（06:10 +0800）都重演同 race。
+
+Fix（per-skill lock, not global）：
+
+1. `sessionPrefixForSkill('/tp-request')` → `'tripline-tp-request-'`
+   `sessionPrefixForSkill('/tp-daily-check')` → `'tripline-tp-daily-check-'`
+2. `hasActiveSession(skillCommand?)` 接 optional filter — 只擋同 skill
+3. spawn tmux session name 用 per-skill prefix
+4. `isRunning` global boolean → `runningSkills: Set<string>` per-skill 鎖
+5. `/health` endpoint 回 `{ running, runningSkills }`（boolean 保留兼容）
+6. `/trigger` lock 只擋 `/tp-request`（per-skill）
+
+兩個 skill **可平行跑** — claude REPL 兩個 instance 互不干擾，
+daily-check audit 跟 request queue drain 是 disjoint workload。
+
+Backward-compat：`hasActiveSession('/tp-request')` 仍辨識 legacy
+`tripline-request-` prefix（api-server restart 過渡期）。
+
+### Test
+
+10 個 source-grep regression test (`tests/unit/api-server-per-skill-session.test.ts`)。
+Vitest 270 files / 2092 tests pass。
+
+### Deploy
+
+Ship 後手動 `kill <api-server pid> && launchd / nohup restart api-server`
+讓新 logic 上線。下次 06:10 +0800 daily-check 應正常 fire。
+
 ## [2.33.26] - 2026-05-23
 
 **Feat: mobile e2e coverage for `/add-custom-stop` fullpage（v2.33.25 follow-up）**
