@@ -17,12 +17,17 @@ const SRC = readFileSync(
   path.resolve(__dirname, '../../src/pages/AddStopPage.tsx'),
   'utf8'
 );
+// v2.33.34: REGION_OPTIONS extract 到 poiSearchHelpers.ts。
+const HELPER_SRC = readFileSync(
+  path.resolve(__dirname, '../../src/lib/poiSearchHelpers.ts'),
+  'utf8'
+);
 
 describe('mockup-parity-qa-fixes AddStopPage region + filter + DAY format', () => {
   it('REGION_OPTIONS 含 6 個 hardcode region', () => {
-    expect(SRC).toMatch(/REGION_OPTIONS\s*=\s*\[/);
+    expect(HELPER_SRC).toMatch(/REGION_OPTIONS\s*=\s*\[/);
     ['全部地區', '沖繩', '東京', '京都', '首爾', '台南'].forEach((r) => {
-      expect(SRC).toContain(`'${r}'`);
+      expect(HELPER_SRC).toContain(`'${r}'`);
     });
   });
 

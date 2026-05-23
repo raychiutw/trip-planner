@@ -35,6 +35,17 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
+import {
+  REGION_OPTIONS,
+  CATEGORY_TABS,
+  matchCategory,
+  normalizeSearchResults,
+  poiTone,
+  poiMeta,
+  type PoiSearchTab as Tab,
+  type PoiSearchCategory,
+  type RegionOption,
+} from '../lib/poiSearchHelpers';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -45,7 +56,6 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { regionToApiParam } from '../lib/maps/region';
-import type { PoiSearchResult } from '../types/poi';
 // v2.31.94/98: 自訂 tab 用 shared <CustomPoiForm> component（同 ChangePoiPage）。
 import { CustomPoiForm } from '../components/trip/CustomPoiForm';
 import {
@@ -80,57 +90,10 @@ interface DayApiRow {
   dayOfWeek?: string | null;
 }
 
-type PoiCardTone = 'warm' | 'cool' | 'ocean' | 'amber';
-
-const REGION_OPTIONS = ['全部地區', '沖繩', '東京', '京都', '首爾', '台南'] as const;
-type RegionOption = typeof REGION_OPTIONS[number];
-
-type Tab = 'search' | 'favorites' | 'custom';
-
-type AddStopCategory = 'all' | 'attraction' | 'food' | 'hotel' | 'shopping';
-
-const CATEGORY_TABS: ReadonlyArray<{ key: AddStopCategory; label: string }> = [
-  { key: 'all', label: '為你推薦' },
-  { key: 'attraction', label: '景點' },
-  { key: 'food', label: '美食' },
-  { key: 'hotel', label: '住宿' },
-  { key: 'shopping', label: '購物' },
-];
-
-function matchCategory(category: string | null | undefined, target: AddStopCategory): boolean {
-  if (target === 'all') return true;
-  const cat = (category ?? '').toLowerCase();
-  if (target === 'food') return /restaurant|cafe|food|bar|bakery|餐|食/.test(cat);
-  if (target === 'hotel') return /hotel|hostel|guest|inn|住宿|飯店/.test(cat);
-  if (target === 'shopping') return /shop|mall|market|購物/.test(cat);
-  if (target === 'attraction') return /attract|museum|park|temple|景點|公園/.test(cat);
-  return false;
-}
-
-function normalizeSearchResults(data: unknown): PoiSearchResult[] {
-  const rows = Array.isArray(data)
-    ? data
-    : data && typeof data === 'object' && Array.isArray((data as { results?: unknown }).results)
-      ? (data as { results: unknown[] }).results
-      : [];
-  return rows.flatMap((row) => {
-    if (!row || typeof row !== 'object') return [];
-    const item = row as Record<string, unknown>;
-    const id = typeof item.place_id === 'string' ? item.place_id : '';
-    const name = typeof item.name === 'string' ? item.name : '';
-    if (!id || !name.trim()) return [];
-    const rating = typeof item.rating === 'number' ? item.rating : undefined;
-    return [{
-      place_id: id,
-      name,
-      address: typeof item.address === 'string' ? item.address : '',
-      lat: Number(item.lat) || 0,
-      lng: Number(item.lng) || 0,
-      category: typeof item.category === 'string' ? item.category : 'poi',
-      rating,
-    }];
-  });
-}
+// v2.33.34: PoiCardTone / Tab / REGION_OPTIONS / CATEGORY_TABS / matchCategory /
+// normalizeSearchResults / poiTone / poiMeta 全 extract 到
+// src/lib/poiSearchHelpers.ts (shared with ChangePoiPage)。
+type AddStopCategory = PoiSearchCategory;
 
 function normalizePoiFavorites(data: unknown): PoiFavoriteRow[] {
   // v2.31.80：移除 ?? item.poi_* dead defensive fallback。`/api/poi-favorites`
@@ -159,19 +122,7 @@ function normalizePoiFavorites(data: unknown): PoiFavoriteRow[] {
   });
 }
 
-function poiTone(category: string | null | undefined, index: number): PoiCardTone {
-  const cat = (category ?? '').toLowerCase();
-  if (/restaurant|cafe|food|bar|bakery|餐|食/.test(cat)) return 'warm';
-  if (/shop|mall|market|購物/.test(cat)) return 'amber';
-  if (/hotel|hostel|guest|inn|住宿|飯店/.test(cat)) return 'cool';
-  const tones: readonly PoiCardTone[] = ['ocean', 'cool', 'amber', 'warm'];
-  return tones[index % tones.length] ?? 'ocean';
-}
-
-function poiMeta(address: string | null | undefined, category: string | null | undefined): string {
-  const primary = (address ?? '').split(',')[0]?.trim();
-  return primary || category || '景點';
-}
+// v2.33.34: poiTone + poiMeta moved to src/lib/poiSearchHelpers.ts
 
 function deriveDayLabel(day: DayApiRow | null, dayNum: number): string {
   const dayPad = String(dayNum).padStart(2, '0');

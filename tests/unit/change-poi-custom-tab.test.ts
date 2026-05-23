@@ -23,8 +23,14 @@ describe('ChangePoiPage — v2.31.98 自訂 tab wiring', () => {
     expect(SRC).toMatch(/import\s+\{\s*CustomPoiForm[\s\S]*?\}\s+from\s+['"]\.\.\/components\/trip\/CustomPoiForm['"]/);
   });
 
-  it('Tab type includes custom', () => {
-    expect(SRC).toMatch(/type\s+Tab\s*=\s*'search'\s*\|\s*'favorites'\s*\|\s*'custom'/);
+  it('Tab type includes custom (via shared lib/poiSearchHelpers PoiSearchTab)', () => {
+    // v2.33.34: Tab 改 import from poiSearchHelpers as PoiSearchTab
+    expect(SRC).toMatch(/type\s+PoiSearchTab\s+as\s+Tab/);
+    const helperSrc = fs.readFileSync(
+      path.resolve(__dirname, '../../src/lib/poiSearchHelpers.ts'),
+      'utf8',
+    );
+    expect(helperSrc).toMatch(/PoiSearchTab\s*=\s*'search'\s*\|\s*'favorites'\s*\|\s*'custom'/);
   });
 
   it('renders 自訂 tab button with testid', () => {

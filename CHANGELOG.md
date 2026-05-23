@@ -3,6 +3,37 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.34] - 2026-05-23
+
+**Refactor (simplify PR-7): AddStopPage / ChangePoiPage extract shared poi-search helpers**
+
+`/simplify` quality finding: AddStopPage / ChangePoiPage 100% 複製 8 個
+constants/functions —
+`REGION_OPTIONS` / `CATEGORY_TABS` / `matchCategory` / `normalizeSearchResults` /
+`poiTone` / `poiMeta` / `PoiCardTone` / `Tab`。Drift 已存在：ChangePoi 的
+`normalizeSearchResults` 是 cast-only，AddStop 的版本嚴格 type check。
+
+Extract `src/lib/poiSearchHelpers.ts` exporting canonical（取嚴格版）:
+
+- `REGION_OPTIONS` + `RegionOption` type
+- `CATEGORY_TABS` + `PoiSearchCategory` type
+- `PoiCardTone` + `PoiSearchTab` types
+- `matchCategory()` + `normalizeSearchResults()` + `poiTone()` + `poiMeta()`
+
+Both pages now `import { ... } from '../lib/poiSearchHelpers'` and drop
+local definitions. ~150 LOC removed across the 2 pages.
+
+**完整 component extraction** (`<PoiSearchTab>` / `<PoiFavoritesTab>` 共用
+React component) 留 future PR — 涉及 React component restructure，本 PR
+只做 pure function 收斂。
+
+Test 同步:
+- `add-stop-page-rating-and-title` / `add-stop-page-region-filter`: grep
+  改 read poiSearchHelpers.ts source
+- `change-poi-custom-tab`: 改驗 `type PoiSearchTab as Tab` import pattern
+
+270 files / 2092 tests pass。
+
 ## [2.33.33] - 2026-05-23
 
 **Refactor (simplify PR-6): apiFetch migration — 19 files / 31 callsites**

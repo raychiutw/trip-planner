@@ -18,12 +18,17 @@ const SRC = readFileSync(
   path.resolve(__dirname, '../../src/pages/AddStopPage.tsx'),
   'utf8',
 );
+// v2.33.34: normalizeSearchResults extract 到 poiSearchHelpers.ts (shared)。
+const HELPER_SRC = readFileSync(
+  path.resolve(__dirname, '../../src/lib/poiSearchHelpers.ts'),
+  'utf8',
+);
 
 describe('v2.31.10 AddStopPage rating + section title', () => {
   it('normalizeSearchResults 抽出 rating（v2.31.10 fix）', () => {
-    expect(SRC).toMatch(/typeof item\.rating === 'number'/);
+    expect(HELPER_SRC).toMatch(/typeof item\.rating === 'number'/);
     // 確保 rating 真的塞進 return object
-    const fnMatch = SRC.match(/function normalizeSearchResults[\s\S]*?\n\}\n/);
+    const fnMatch = HELPER_SRC.match(/function normalizeSearchResults[\s\S]*?\n\}\n/);
     expect(fnMatch).not.toBeNull();
     expect(fnMatch?.[0]).toMatch(/rating,?\s*\n/);
   });
