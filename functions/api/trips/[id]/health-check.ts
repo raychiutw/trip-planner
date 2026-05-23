@@ -13,9 +13,9 @@
  * trip_health_reports.findings_json + status='completed'。
  */
 
-import { hasPermission, hasWritePermission } from '../../_auth';
+import { hasPermission, hasWritePermission, requireAuth} from '../../_auth';
 import { AppError } from '../../_errors';
-import { json, getAuth } from '../../_utils';
+import { json } from '../../_utils';
 import { recordEmailEvent } from '../../_audit';
 import { alertAdminTelegram } from '../../_alert';
 import type { Env } from '../../_types';
@@ -70,8 +70,7 @@ Schema：
 // GET — 取最新 report
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
   const tripId = params.id as string;
 
   if (!(await hasPermission(env.DB, auth, tripId, auth.isAdmin))) {
@@ -117,8 +116,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 // POST — 觸發新一輪 health check
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
   const tripId = params.id as string;
 
   if (!(await hasWritePermission(env.DB, auth, tripId, auth.isAdmin))) {

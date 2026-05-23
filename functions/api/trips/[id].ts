@@ -1,7 +1,7 @@
 import { logAudit, computeDiff } from '../_audit';
-import { hasWritePermission } from '../_auth';
+import { hasWritePermission, requireAuth} from '../_auth';
 import { AppError } from '../_errors';
-import { json, getAuth, parseJsonBody, buildUpdateClause } from '../_utils';
+import { json, parseJsonBody, buildUpdateClause } from '../_utils';
 import type { Env } from '../_types';
 
 // Migration 0045: dropped og_description/self_drive/food_prefs/auto_scroll/footer/is_default.
@@ -63,8 +63,7 @@ function safeParseJson(raw: string): unknown {
  * trip_requests 都有 FK ON DELETE CASCADE references trips(id)，自動清。
  */
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id } = context.params as { id: string };
   const db = context.env.DB;
@@ -137,8 +136,7 @@ function validateEnumFields(body: Record<string, unknown>): void {
 }
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id } = context.params as { id: string };
 

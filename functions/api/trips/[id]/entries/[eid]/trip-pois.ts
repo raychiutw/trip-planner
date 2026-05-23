@@ -8,15 +8,14 @@
  */
 
 import { logAudit } from '../../../../_audit';
-import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
+import { hasWritePermission, verifyEntryBelongsToTrip, requireAuth} from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { findOrCreatePoi } from '../../../../_poi';
-import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
+import { json, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, eid } = context.params as { id: string; eid: string };
   const entryId = parseIntParam(eid);

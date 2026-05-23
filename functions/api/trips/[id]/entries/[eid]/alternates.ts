@@ -12,11 +12,11 @@
  * Entry 無 master → 400 MISSING_MASTER（先設 master 再加 alternate）。
  */
 import { logAudit } from '../../../../_audit';
-import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
+import { hasWritePermission, verifyEntryBelongsToTrip, requireAuth} from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { addAlternate } from '../../../../_entry_pois';
 import { findOrCreatePoi, normalizeFindOrCreatePoiPayload, type FindOrCreatePoiPayload } from '../../../../_poi';
-import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
+import { json, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
 interface AddAlternateBody extends FindOrCreatePoiPayload {
@@ -25,8 +25,7 @@ interface AddAlternateBody extends FindOrCreatePoiPayload {
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, eid: eidStr } = context.params as { id: string; eid: string };
   const eid = parseIntParam(eidStr);

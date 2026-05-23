@@ -1,7 +1,7 @@
 import { logAudit } from '../../../_audit';
-import { hasWritePermission } from '../../../_auth';
+import { hasWritePermission, requireAuth} from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { json, getAuth, parseJsonBody } from '../../../_utils';
+import { json, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 const VALID_TYPES = new Set(['flights', 'checklist', 'backup', 'suggestions', 'emergency']);
@@ -52,8 +52,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 // PUT /api/trips/:id/docs/:type — 接收 { title, entries: [{section, title, content}] }
 // ---------------------------------------------------------------------------
 export const onRequestPut: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, type } = context.params as { id: string; type: string };
   if (!VALID_TYPES.has(type)) throw new AppError('DATA_VALIDATION', '無效的文件類型');

@@ -17,9 +17,9 @@
  * Auth: trip write permission.
  */
 
-import { hasWritePermission } from '../../../_auth';
+import { hasWritePermission, requireAuth} from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { json, getAuth, parseJsonBody, parseIntParam } from '../../../_utils';
+import { json, parseJsonBody, parseIntParam } from '../../../_utils';
 import type { Env } from '../../../_types';
 import { computeRoute } from '../../../../../src/server/maps/google-client';
 
@@ -32,8 +32,7 @@ const VALID_MODES = ['driving', 'walking', 'transit'] as const;
 const MAX_MIN = 1440;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const tripId = context.params.id as string;
   const sidStr = context.params.sid as string;

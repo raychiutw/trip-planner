@@ -12,9 +12,8 @@
  * gone (was here, no longer)，不是 not found。
  */
 import { hashInvitationToken } from '../../src/server/invitation-token';
+import { requireAuth } from './_auth';
 import { ensureCanManageTripPerms } from './permissions';
-import { AppError } from './_errors';
-import { getAuth } from './_utils';
 import type { Env } from './_types';
 
 interface InvitationRow {
@@ -48,8 +47,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // Branch 2: list pending invitations for a trip (owner / admin only)
   if (tripId) {
-    const auth = getAuth(context);
-    if (!auth) throw new AppError('AUTH_REQUIRED');
+    const auth = requireAuth(context);
     await ensureCanManageTripPerms(context, auth, tripId);
 
     // LIMIT 100：一個 trip 同時 pending 邀請超過 100 已不正常，cap 防 DoS + 大 payload

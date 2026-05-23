@@ -20,9 +20,9 @@
  * Auth: trip write permission.
  */
 
-import { hasWritePermission } from '../../_auth';
+import { hasWritePermission, requireAuth} from '../../_auth';
 import { AppError } from '../../_errors';
-import { json, getAuth } from '../../_utils';
+import { json } from '../../_utils';
 import { assertGoogleAvailable } from '../../_maps_lock';
 import { computeRoute } from '../../../../src/server/maps/google-client';
 import { haversineMeters } from '../../../../src/lib/geo';
@@ -51,8 +51,7 @@ interface ExistingSegment {
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const tripId = context.params.id as string;
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');
