@@ -3,6 +3,52 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.51] - 2026-05-24
+
+**scripts/ round 8c — final polish (closes Round 8)**
+
+最後一個 module 整體 review 收尾。doc: `docs/code-review/round-8c-scripts-polish.md`。
+
+**HIGH**
+
+- `mac-mini-cron-patch/apply-patch.sh:167` — 拔 `set -a; source "$ENV_PATH"`
+  (`.env` 含 `$(...)` 即 RCE)。改用 node helper parse + key shell-safe
+  regex + 0600 mode stat check before parse。
+- `tripline-api-server.ts:22-31` — inline `.env` parser drift from
+  `lib/load-env.js`。改 quote strip 雙+單 + key validate 對齊 sister scripts。
+
+**MEDIUM**
+
+- `dump-d1.js`: backup dir 含 PII → mkdir mode 0o700 + 個別 JSON 0o600。
+- `daily-check.js:246`: npm audit execSync 加 `maxBuffer: 32MB` (拔 ENOBUFS on
+  heavy deps output)。
+- `google-poi-refresh-30d.ts:67`: `firstCall = false` 搬進 `finally` block —
+  之前 success path 才設，第一個 POI 拋 non-401 後第二個 401 即誤觸
+  "first-call 401" Telegram alert。
+
+**Tests (+10)**
+
+- `tests/unit/round8c-scripts-polish.test.ts` — 5 fix area source-grep guard。
+
+2316/2316 unit pass。
+
+**Round 8 closure**
+
+| Round | PR | Fixes | Tests |
+|---|---|---|---|
+| 8a | #728 | 1 CRITICAL + 5 HIGH + 1 MED | +25 |
+| 8b | #729 | 2 HIGH + 4 MED | +11 |
+| 8c | #730 (this) | 2 HIGH + 3 MED | +10 |
+| **Total** | | **1 CRITICAL + 9 HIGH + 8 MED** | **+46** |
+
+scripts/ 38 檔 / 4.5k LOC review complete。剩 LOW + 部分 MED 在
+`round-8a/b/c` docs 列為 backlog。
+
+**整個 repo review sweep 完成** — 6 modules × 多輪 PRs：
+- lib (rounds 1-3) / hooks (4-4.5) / api (5a-5c) / components (6a-6b) /
+  pages (7a-7c) / scripts (8a-8c)
+- 累計 17 PRs (#715-#730) + 8 個 review docs in `docs/code-review/`
+
 ## [2.33.50] - 2026-05-24
 
 **scripts/ round 8b — HIGH residuals + MED polish**

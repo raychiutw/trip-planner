@@ -245,9 +245,13 @@ async function queryRouteHealth() {
 
 function queryNpmAudit() {
   try {
+    // v2.33.51 round 8c: add maxBuffer — npm audit on deps-heavy project routinely
+    // 吐 multi-MB JSON。default 1MB → throw ENOBUFS (timeout/buffer 都不算 shell
+    // error，`; true` 無法 recover)。32MB 是 npm audit typical output 上限。
     var output = execSync('npm audit --json --omit=dev 2>/dev/null; true', {
       encoding: 'utf8',
       timeout: 60000,
+      maxBuffer: 32 * 1024 * 1024,
       cwd: path.join(__dirname, '..')
     });
     var parsed = output.trim() ? JSON.parse(output) : {};

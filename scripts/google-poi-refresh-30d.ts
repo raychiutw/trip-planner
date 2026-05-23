@@ -58,13 +58,15 @@ async function main(): Promise<void> {
   let firstCall = true;
 
   for (const poi of rows) {
+    // v2.33.51 round 8c: firstCall = false 必須在 finally 而非 success path
+    // — 之前若第一個 POI 拋 non-401，firstCall 還是 true，第二個 POI 401
+    // 就誤觸「first-call 401」alert。
     try {
       const enrich = await api<EnrichResult>('POST', `/api/pois/${poi.id}/enrich`, {});
       if (enrich.status === 'closed') closed += 1;
       else if (enrich.status === 'missing') missing += 1;
       else active += 1;
       console.log(`  [${poi.id}] ${poi.name} → ${enrich.status}`);
-      firstCall = false;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       // First-call 401 → likely env misconfig (autoplan T15)
@@ -75,6 +77,8 @@ async function main(): Promise<void> {
         process.exit(1);
       }
       console.error(`  [${poi.id}] ${poi.name} → ERROR: ${msg}`);
+    } finally {
+      firstCall = false;
     }
     await sleep(SLEEP_MS);
   }

@@ -23,6 +23,7 @@
 | 7c | src/pages/ test gap fill | — | [#727](https://github.com/raychiutw/trip-planner/pull/727) | 2026-05-24 | [round-7c-pages-tests.md](./round-7c-pages-tests.md) |
 | 8a | scripts/ HIGH security | 4,552 | [#728](https://github.com/raychiutw/trip-planner/pull/728) | 2026-05-24 | [round-8a-scripts-security.md](./round-8a-scripts-security.md) |
 | 8b | scripts/ HIGH residuals + MED | — | [#729](https://github.com/raychiutw/trip-planner/pull/729) | 2026-05-24 | [round-8b-scripts-residuals.md](./round-8b-scripts-residuals.md) |
+| 8c | scripts/ final polish | — | [#730](https://github.com/raychiutw/trip-planner/pull/730) | 2026-05-24 | [round-8c-scripts-polish.md](./round-8c-scripts-polish.md) |
 
 ## 流程
 
