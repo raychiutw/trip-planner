@@ -39,6 +39,8 @@ import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
+import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
+import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
 import { EVENT } from '../lib/events';
@@ -470,25 +472,10 @@ const POI_TYPE_ICON: Record<string, string> = {
   parking: 'parking',
   activity: 'sparkle',
 };
-const POI_TYPE_LABEL: Record<string, string> = {
-  hotel: '住宿',
-  restaurant: '餐廳',
-  shopping: '購物',
-  attraction: '景點',
-  transport: '交通',
-  parking: '停車',
-  activity: '活動',
-};
-const MODE_LABEL: Record<TripSegment['mode'], string> = {
-  driving: '開車',
-  walking: '步行',
-  transit: '大眾運輸',
-};
-const MODE_ICON: Record<TripSegment['mode'], string> = {
-  driving: 'car',
-  walking: 'walking',
-  transit: 'bus',
-};
+// v2.33.28: dedupe — POI_TYPE_LABEL 用 canonical POI_TYPE_LABELS（poiCategory.ts），
+// MODE_LABEL/ICON 用 canonical TRAVEL_MODE_LABEL/ICON（travelMode.ts）。
+// 移除本地 const 解 v2.31.23 一系列 drift bug 家族 root cause。
+// (hotel canonical = '飯店'，TimelineRail/EditEntry 之前 local 用 '住宿' 屬 drift。)
 
 // v2.29.0: POI card display uses the canonical entry master.
 type TimelineEntryLike = {
@@ -1181,7 +1168,7 @@ export default function EditEntryPage() {
                   <div className="tp-edit-entry-poi-meta">
                     <div className="tp-edit-entry-poi-name">{poiInfo.name}</div>
                     <div className="tp-edit-entry-poi-sub">
-                      {POI_TYPE_LABEL[poiInfo.poiType ?? 'attraction'] ?? '景點'}
+                      {POI_TYPE_LABELS[(poiInfo.poiType ?? 'attraction') as PoiType] ?? '景點'}
                     </div>
                   </div>
                   <button
@@ -1228,7 +1215,7 @@ export default function EditEntryPage() {
                           <div className="tp-edit-entry-alt-name">{alt.name}</div>
                           {alt.type && (
                             <div className="tp-edit-entry-alt-category">
-                              {POI_TYPE_LABEL[alt.type] ?? alt.type}
+                              {POI_TYPE_LABELS[alt.type as PoiType] ?? alt.type}
                               {alt.rating != null && (
                                 <span className="tp-edit-entry-alt-rating">
                                   <Icon name="star" /> {alt.rating.toFixed(1)}
@@ -1376,8 +1363,8 @@ export default function EditEntryPage() {
                             onClick={() => setMode(m)}
                             data-testid={`edit-entry-mode-${m}`}
                           >
-                            <Icon name={MODE_ICON[m]} />
-                            <span className="tp-edit-entry-mode-lab">{MODE_LABEL[m]}</span>
+                            <Icon name={TRAVEL_MODE_ICON[m]} />
+                            <span className="tp-edit-entry-mode-lab">{TRAVEL_MODE_LABEL[m]}</span>
                           </button>
                         ))}
                       </div>

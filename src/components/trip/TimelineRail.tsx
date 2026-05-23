@@ -27,6 +27,7 @@ import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
 import { apiFetchRaw } from '../../lib/apiClient';
 import { EVENT } from '../../lib/events';
+import { POI_TYPE_LABELS, type PoiType } from '../../lib/poiCategory';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
@@ -283,16 +284,8 @@ interface RailRowProps {
   dayId?: number | null;
 }
 
-const POI_TYPE_LABEL: Record<string, string> = {
-  restaurant: '餐廳',
-  attraction: '景點',
-  shopping: '購物',
-  hotel: '住宿',
-  parking: '停車',
-  transport: '交通',
-  activity: '活動',
-  other: '其他',
-};
+// v2.33.28: dedupe — 改 import POI_TYPE_LABELS canonical (poiCategory.ts)。
+// hotel canonical = '飯店'（之前本地 '住宿' 屬 drift bug 家族 v2.31.23 root cause）。
 
 function StopPoiChoiceCard({ poi }: { poi: StopPoiOptionData }) {
   const metaParts: string[] = [];
@@ -301,7 +294,7 @@ function StopPoiChoiceCard({ poi }: { poi: StopPoiOptionData }) {
   const hoursStr = condenseHours(poi.hours);
   if (hoursStr) metaParts.push(hoursStr);
   if (poi.reservation) metaParts.push(poi.reservation);
-  const typeLabel = poi.category || (poi.type ? POI_TYPE_LABEL[poi.type] ?? poi.type : null);
+  const typeLabel = poi.category || (poi.type ? POI_TYPE_LABELS[poi.type as PoiType] ?? poi.type : null);
 
   // v2.30.14：StopPoiChoiceCard 只渲染備選 (alternate)，「正選」已升格到景點說明。
   return (
