@@ -321,8 +321,8 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
     // 應顯示 master.name "New Master POI"，不是 entry.title "Old Stale Title"
     expect(poiCard.textContent).toContain('New Master POI');
     expect(poiCard.textContent).not.toContain('Old Stale Title');
-    // type label：master.type='hotel' → '住宿'
-    expect(poiCard.textContent).toContain('住宿');
+    // type label：master.type='hotel' → '飯店' (v2.33.28 改 canonical POI_TYPE_LABELS)
+    expect(poiCard.textContent).toContain('飯店');
   });
 
   it('Day 1 第一個 entry（無 prev）→ mode section 不渲染', async () => {
