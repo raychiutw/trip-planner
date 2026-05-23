@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { apiFetch } from '../lib/apiClient';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -178,15 +179,10 @@ export default function SessionsPage() {
   async function load() {
     setError(null);
     try {
-      const res = await fetch('/api/account/sessions', { credentials: 'same-origin' });
-      if (!res.ok) {
-        setError('無法載入登入裝置，請重新整理頁面。');
-        return;
-      }
-      const json = (await res.json()) as { sessions: SessionRow[] };
+      const json = await apiFetch<{ sessions: SessionRow[] }>('/account/sessions');
       setSessions(json.sessions);
-    } catch {
-      setError('網路連線失敗，請重新整理頁面。');
+    } catch (err) {
+      setError(err instanceof Error ? '無法載入登入裝置，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
     }
   }
 
@@ -197,17 +193,10 @@ export default function SessionsPage() {
   async function revokeOne(sid: string) {
     setRevokingSid(sid);
     try {
-      const res = await fetch(`/api/account/sessions/${encodeURIComponent(sid)}`, {
-        method: 'DELETE',
-        credentials: 'same-origin',
-      });
-      if (res.ok) {
-        setSessions((prev) => prev?.filter((s) => s.sid !== sid) ?? null);
-      } else {
-        setError('登出此裝置失敗，請稍後再試。');
-      }
+      await apiFetch(`/account/sessions/${encodeURIComponent(sid)}`, { method: 'DELETE' });
+      setSessions((prev) => prev?.filter((s) => s.sid !== sid) ?? null);
     } catch {
-      setError('網路連線失敗，請稍後再試。');
+      setError('登出此裝置失敗，請稍後再試。');
     } finally {
       setRevokingSid(null);
     }
@@ -218,19 +207,12 @@ export default function SessionsPage() {
     setRevokeAllConfirmOpen(false);
     setRevokingAll(true);
     try {
-      const res = await fetch('/api/account/sessions', {
-        method: 'DELETE',
-        credentials: 'same-origin',
-      });
-      if (res.ok) {
-        // Optimistic: remove all non-current rows locally — match revokeOne() pattern,
-        // saves a round-trip vs reloading the list
-        setSessions((prev) => prev?.filter((s) => s.is_current) ?? null);
-      } else {
-        setError('登出其他裝置失敗，請稍後再試。');
-      }
+      await apiFetch('/account/sessions', { method: 'DELETE' });
+      // Optimistic: remove all non-current rows locally — match revokeOne() pattern,
+      // saves a round-trip vs reloading the list
+      setSessions((prev) => prev?.filter((s) => s.is_current) ?? null);
     } catch {
-      setError('網路連線失敗，請稍後再試。');
+      setError('登出其他裝置失敗，請稍後再試。');
     } finally {
       setRevokingAll(false);
     }

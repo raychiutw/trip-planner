@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { apiFetch } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
@@ -137,15 +138,10 @@ export default function DeveloperAppsPage() {
   async function loadApps() {
     setError(null);
     try {
-      const res = await fetch('/api/dev/apps', { credentials: 'same-origin' });
-      if (!res.ok) {
-        setError('無法載入應用列表，請重新整理頁面。');
-        return;
-      }
-      const json = (await res.json()) as { apps: ClientApp[] };
+      const json = await apiFetch<{ apps: ClientApp[] }>('/dev/apps');
       setApps(json.apps);
-    } catch {
-      setError('網路連線失敗，請重新整理頁面。');
+    } catch (err) {
+      setError(err instanceof Error ? '無法載入應用列表，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
     }
   }
 

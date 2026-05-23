@@ -26,7 +26,8 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useNewTrip } from '../contexts/NewTripContext';
-import { apiFetchRaw } from '../lib/apiClient';
+import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 import { EVENT } from '../lib/events';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -755,23 +756,18 @@ export default function TripsListPage() {
   // tp-trip-updated event 觸發 refetch，否則新增/編輯後回 list 看不到變更。
   const loadTrips = useCallback(async () => {
     try {
-      const [myRes, allRes] = await Promise.all([
-        fetch('/api/my-trips', { credentials: 'same-origin' }),
-        fetch('/api/trips?all=1', { credentials: 'same-origin' }),
+      const [myRes, allRes] = await Promise.allSettled([
+        apiFetch<MyTripRow[]>('/my-trips'),
+        apiFetch<TripInfo[]>('/trips?all=1'),
       ]);
-      if (!myRes.ok) {
-        if (myRes.status === 401 || myRes.status === 403) return;
+      if (myRes.status === 'rejected') {
+        const err = myRes.reason;
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return;
         setError('無法載入你的行程清單。');
         return;
       }
-      const myJson = (await myRes.json()) as MyTripRow[];
-      setMyIds(myJson.map((r) => r.tripId));
-      if (allRes.ok) {
-        const allJson = (await allRes.json()) as TripInfo[];
-        setAllTrips(allJson);
-      } else {
-        setAllTrips([]);
-      }
+      setMyIds(myRes.value.map((r) => r.tripId));
+      setAllTrips(allRes.status === 'fulfilled' ? allRes.value : []);
     } catch {
       setError('網路連線失敗，請稍後再試。');
     }

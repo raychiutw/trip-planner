@@ -11,6 +11,7 @@
  */
 import { useState } from 'react';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
+import { apiFetchRaw } from '../lib/apiClient';
 
 const SCOPED_STYLES = `
 .tp-auth-shell {
@@ -93,9 +94,8 @@ export default function ForgotPasswordPage() {
     setSubmitting(true);
     setWarning(null);
     try {
-      const res = await fetch('/api/oauth/forgot-password', {
+      const res = await apiFetchRaw('/oauth/forgot-password', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
       });
       if (res.ok) {

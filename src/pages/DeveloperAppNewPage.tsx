@@ -21,6 +21,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
+import { apiFetch } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 import { routes } from '../lib/routes';
 import { EVENT } from '../lib/events';
 import AppShell from '../components/shell/AppShell';
@@ -233,10 +235,8 @@ export default function DeveloperAppNewPage() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch('/api/dev/apps', {
+      const result = await apiFetch<NewAppResult>('/dev/apps', {
         method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           app_name: form.app_name.trim(),
           client_type: form.client_type,
@@ -244,15 +244,14 @@ export default function DeveloperAppNewPage() {
           allowed_scopes: Array.from(form.scopes),
         }),
       });
-      if (res.ok) {
-        const result = (await res.json()) as NewAppResult;
-        setSecretResult(result);
-        return;
+      setSecretResult(result);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        // ApiError.detail = backend `error.message` 人話；err.message = code (例 'invalid_redirect')
+        setCreateError(err.detail ?? '建立失敗，請稍後再試。');
+      } else {
+        setCreateError('網路連線失敗，請稍後再試。');
       }
-      const errJson = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
-      setCreateError(errJson?.error?.message ?? '建立失敗，請稍後再試。');
-    } catch {
-      setCreateError('網路連線失敗，請稍後再試。');
     } finally {
       setSubmitting(false);
     }

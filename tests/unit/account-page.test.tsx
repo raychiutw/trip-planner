@@ -14,8 +14,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const apiFetchMock = vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>();
+const apiFetchRawMock = vi.fn<(path: string, init?: RequestInit) => Promise<Response>>();
 vi.mock('../../src/lib/apiClient', () => ({
   apiFetch: (path: string, init?: RequestInit) => apiFetchMock(path, init),
+  apiFetchRaw: (path: string, init?: RequestInit) => apiFetchRawMock(path, init),
 }));
 
 vi.mock('../../src/hooks/useRequireAuth', () => ({
@@ -141,13 +143,15 @@ describe('AccountPage', () => {
   });
 
   it('confirm logout → POST /api/oauth/logout + navigate /login', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(null, { status: 204 }));
     renderPage();
     fireEvent.click(screen.getByTestId('account-row-logout'));
     fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    // v2.33.33: logout 改透過 apiFetchRaw('/oauth/logout', { method: 'POST' })
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/oauth/logout',
-        expect.objectContaining({ method: 'POST', credentials: 'same-origin' }),
+      expect(apiFetchRawMock).toHaveBeenCalledWith(
+        '/oauth/logout',
+        expect.objectContaining({ method: 'POST' }),
       );
     });
     await waitFor(() => {

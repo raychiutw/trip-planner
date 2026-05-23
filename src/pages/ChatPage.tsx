@@ -575,14 +575,14 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     let cancelled = false;
     async function load() {
       try {
-        const [myRes, allRes] = await Promise.all([
-          fetch('/api/my-trips', { credentials: 'same-origin' }),
-          fetch('/api/trips?all=1', { credentials: 'same-origin' }),
+        const [myRes, allRes] = await Promise.allSettled([
+          apiFetch<MyTripRow[]>('/my-trips'),
+          apiFetch<TripSummary[]>('/trips?all=1'),
         ]);
         if (cancelled) return;
-        if (!myRes.ok) return;
-        const myJson = (await myRes.json()) as MyTripRow[];
-        const allJson = allRes.ok ? ((await allRes.json()) as TripSummary[]) : [];
+        if (myRes.status === 'rejected') return;
+        const myJson = myRes.value;
+        const allJson = allRes.status === 'fulfilled' ? allRes.value : [];
         const mine = new Set(myJson.map((r) => r.tripId));
         const myTrips = allJson.filter((t) => mine.has(t.tripId));
         setTrips(myTrips);
@@ -690,17 +690,10 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
     try {
       // mode rip-out (migration 0048): tp-request skill auto-classifies intent.
-      const res = await fetch('/api/requests', {
+      const row = await apiFetch<{ id: number }>('/requests', {
         method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tripId: activeTripId, message: text }),
       });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || `HTTP ${res.status}`);
-      }
-      const row = (await res.json()) as { id: number };
       // Bind placeholder bubble to the real request id so the SSE effect can
       // replace it once Mac Mini fills the reply.
       setMessages((prev) =>
