@@ -24,8 +24,17 @@ import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
 import { regionToApiParam } from '../lib/maps/region';
 import { mapNominatimCategory } from '../lib/poiCategory';
+import {
+  REGION_OPTIONS,
+  CATEGORY_TABS,
+  matchCategory,
+  normalizeSearchResults,
+  poiTone,
+  poiMeta,
+  type PoiSearchTab as Tab,
+  type PoiSearchCategory,
+} from '../lib/poiSearchHelpers';
 import type { PoiFavorite } from '../types/api';
-import type { PoiSearchResult } from '../types/poi';
 // v2.31.98: 自訂 tab — 同 AddStopPage 共用 CustomPoiForm shared component。
 import { CustomPoiForm, type CustomPoiCoord } from '../components/trip/CustomPoiForm';
 import {
@@ -486,19 +495,9 @@ const SCOPED_STYLES = `
 }
 `;
 
-type Tab = 'search' | 'favorites' | 'custom';
-type PoiCardTone = 'warm' | 'cool' | 'ocean' | 'amber';
-type ChangePoiCategory = 'all' | 'attraction' | 'food' | 'hotel' | 'shopping';
-
-const REGION_OPTIONS = ['全部地區', '沖繩', '東京', '京都', '首爾', '台南'] as const;
-
-const CATEGORY_TABS: ReadonlyArray<{ key: ChangePoiCategory; label: string }> = [
-  { key: 'all', label: '為你推薦' },
-  { key: 'attraction', label: '景點' },
-  { key: 'food', label: '美食' },
-  { key: 'hotel', label: '住宿' },
-  { key: 'shopping', label: '購物' },
-];
+// v2.33.34: Tab / PoiCardTone / REGION_OPTIONS / CATEGORY_TABS extract 到
+// src/lib/poiSearchHelpers.ts (shared with AddStopPage)。
+type ChangePoiCategory = PoiSearchCategory;
 
 interface SelectedPoi {
   source: 'search' | 'favorite';
@@ -515,36 +514,9 @@ interface SelectedPoi {
   country?: string | null;
 }
 
-function normalizeSearchResults(data: unknown): PoiSearchResult[] {
-  const rows = Array.isArray(data)
-    ? data
-    : (data as { results?: unknown[] })?.results;
-  return Array.isArray(rows) ? (rows as PoiSearchResult[]) : [];
-}
-
-function matchCategory(category: string | null | undefined, target: ChangePoiCategory): boolean {
-  if (target === 'all') return true;
-  const cat = (category ?? '').toLowerCase();
-  if (target === 'food') return /restaurant|cafe|food|bar|bakery|餐|食/.test(cat);
-  if (target === 'hotel') return /hotel|hostel|guest|inn|住宿|飯店/.test(cat);
-  if (target === 'shopping') return /shop|mall|market|購物/.test(cat);
-  if (target === 'attraction') return /attract|museum|park|temple|景點|公園/.test(cat);
-  return false;
-}
-
-function poiTone(category: string | null | undefined, index: number): PoiCardTone {
-  const cat = (category ?? '').toLowerCase();
-  if (/restaurant|cafe|food|bar|bakery|餐|食/.test(cat)) return 'warm';
-  if (/shop|mall|market|購物/.test(cat)) return 'amber';
-  if (/hotel|hostel|guest|inn|住宿|飯店/.test(cat)) return 'cool';
-  const tones: readonly PoiCardTone[] = ['ocean', 'cool', 'amber', 'warm'];
-  return tones[index % tones.length] ?? 'ocean';
-}
-
-function poiMeta(address: string | null | undefined, category: string | null | undefined): string {
-  const primary = (address ?? '').split(',')[0]?.trim();
-  return primary || category || '景點';
-}
+// v2.33.34: normalizeSearchResults / matchCategory / poiTone / poiMeta extract
+// to src/lib/poiSearchHelpers.ts. ChangePoi 之前 normalizeSearchResults 是
+// cast-only 無 type 檢查；現在用 shared 嚴格版（同 AddStop pre-extract 行為）。
 
 function parseErrorCode(text: string): string | null {
   try {
