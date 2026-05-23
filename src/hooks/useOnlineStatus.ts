@@ -1,40 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+// v2.33.54 round 10: pub/sub registry 拆到 src/lib/networkBus 解 lib→hooks
+// reverse import（apiClient.ts 以前從這檔 import reportFetchResult）。
+// 仍 re-export 給既有 caller 用，未來 callers 改 import lib/networkBus。
+import { registerNetworkCallbacks, reportFetchResult } from '../lib/networkBus';
 
-/* ===== Module-level subscriber registry =====
- * v2.33.39 round 4: 改 Set 取代 single-slot — 之前 single ref last-mount-wins
- * clobber，StrictMode dev double-mount 或多 instance（admin overlay / devtools
- * panel）下，第一個 hook 的 state machine 會被第二個 unmount 清空。 */
-const offlineSubscribers = new Set<() => void>();
-const onlineSubscribers = new Set<() => void>();
-
-/**
- * Called by useOnlineStatus to register its internal update functions.
- * apiFetch uses reportFetchResult() to drive the same state machine.
- * Returns an unsubscribe function for cleanup.
- */
-export function registerNetworkCallbacks(
-  onOffline: () => void,
-  onOnline: () => void,
-): () => void {
-  offlineSubscribers.add(onOffline);
-  onlineSubscribers.add(onOnline);
-  return () => {
-    offlineSubscribers.delete(onOffline);
-    onlineSubscribers.delete(onOnline);
-  };
-}
-
-/**
- * Called by apiFetch after each request.
- * success=true  → signal online immediately
- * success=false → signal offline (debounced inside the hook)
- *
- * @internal — only call from useApi.ts apiFetch
- */
-export function reportFetchResult(success: boolean) {
-  const subscribers = success ? onlineSubscribers : offlineSubscribers;
-  for (const cb of subscribers) cb();
-}
+export { registerNetworkCallbacks, reportFetchResult };
 
 /* ===== Hook ===== */
 

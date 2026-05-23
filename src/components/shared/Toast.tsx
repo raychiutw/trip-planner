@@ -1,51 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { ErrorSeverity } from '../../lib/errors';
+// v2.33.54 round 10: state machine + helpers 拆到 src/lib/toastBus
+// 解 lib→components reverse import（tripExport.ts 以前從這檔 import showToast）。
+// 仍 re-export 既有公開 API 維持 backward compat (17 個 caller 不動)。
+import {
+  ToastType,
+  ToastItem,
+  showToast,
+  dismissToast,
+  resetToasts,
+  showErrorToast,
+  subscribeToasts,
+  getToasts,
+} from '../../lib/toastBus';
 
-// ---------------------------------------------------------------------------
-// Toast Types
-// ---------------------------------------------------------------------------
-
-export type ToastType = 'error' | 'success' | 'info' | 'offline' | 'online';
-
-export interface ToastItem {
-  id: number;
-  message: string;
-  type: ToastType;
-  duration?: number; // ms, 預設 3000
-}
-
-// ---------------------------------------------------------------------------
-// Global Toast Store（module-level singleton）
-// ---------------------------------------------------------------------------
-
-type Listener = () => void;
-let nextId = 1;
-let toasts: ToastItem[] = [];
-const listeners = new Set<Listener>();
-
-function notify() { listeners.forEach(fn => fn()); }
-
-export function showToast(message: string, type: ToastType = 'info', duration = 3000) {
-  toasts = [...toasts, { id: nextId++, message, type, duration }];
-  notify();
-}
-
-export function dismissToast(id: number) {
-  toasts = toasts.filter(t => t.id !== id);
-  notify();
-}
-
-/** @internal — for testing only */
-export function resetToasts() {
-  toasts = [];
-  notify();
-}
-
-/** 根據錯誤嚴重度顯示 Toast */
-export function showErrorToast(message: string, severity: ErrorSeverity) {
-  if (severity === 'minor') return; // 輕微錯誤不跳 Toast
-  showToast(message, severity === 'background' ? 'info' : 'error');
-}
+export type { ToastType, ToastItem };
+export { showToast, dismissToast, resetToasts, showErrorToast };
 
 // ---------------------------------------------------------------------------
 // Toast Container（render 所有 toast）
@@ -55,14 +24,12 @@ export default function ToastContainer() {
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
-    const listener = () => forceUpdate(n => n + 1);
-    listeners.add(listener);
-    return () => { listeners.delete(listener); };
+    return subscribeToasts(() => forceUpdate((n) => n + 1));
   }, []);
 
   return (
     <div className="fixed top-toast-top left-0 right-0 z-250 flex flex-col items-center gap-2 pointer-events-none px-4">
-      {toasts.map(toast => (
+      {getToasts().map((toast) => (
         <ToastBubble key={toast.id} toast={toast} />
       ))}
     </div>

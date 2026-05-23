@@ -1,6 +1,8 @@
 /* ===== API Fetch Helpers ===== */
 
-import { reportFetchResult } from '../hooks/useOnlineStatus';
+// v2.33.54 round 10: import from lib/networkBus (was '../hooks/useOnlineStatus'
+// — broke lib→hooks reverse import, lib is leaf layer).
+import { reportFetchResult } from './networkBus';
 import { ApiError } from './errors';
 import * as Sentry from '@sentry/react';
 
