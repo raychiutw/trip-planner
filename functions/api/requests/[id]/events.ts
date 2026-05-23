@@ -119,7 +119,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
+      // v2.33.42 security audit: 拔掉 `Access-Control-Allow-Origin: *`。同
+      // origin SPA 不需要 CORS header；EventSource 跨 origin 也不會送 cookie
+      // 所以這個 header 之前只是放鬆 attack surface。
     },
   });
 };

@@ -3,6 +3,84 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.42] - 2026-05-24
+
+**Security round 5b — remaining HIGH/MED backend findings**
+
+延續 v2.33.41 anonymous-read fix，本 PR 處理 `functions/api/` round 1
+review 剩餘的 HIGH + MED security findings：
+
+**user-enumeration oracles 全收尾**
+
+- `permissions.ts POST` response shape 統一 (`'permission_added'` →
+  `'invitation_sent'`，已註冊 + 未註冊兩 branch 走同 message)。之前任何
+  logged-in user 可探測任意 email 是否已註冊。
+- `oauth/login.ts` `LOGIN_RATE_LIMITED` 訊息 unify — 之前 IP-bucket 用
+  「登入嘗試過多」，email-bucket 用「此 email 登入嘗試過多」，攻擊者燒
+  5 個 attempt 觀察訊息差就知 email 是否存在。
+- `oauth/forgot-password.ts` `FORGOT_PASSWORD_RATE_LIMITED` 同樣 unify
+  message。
+
+**Privilege escalation chain (dev/apps)**
+
+- `dev/apps.ts::validateScopes` 改 allowlist (`openid` / `profile` /
+  `email` / `offline_access`)，拒絕 `admin` / `companion` scope。之前
+  user-self-service 可在 `allowed_scopes` 塞 `admin`，雖 status 初始
+  `pending_review` 但 ops flip 為 active 而沒 scrub scope，attacker 拿
+  `client_credentials` 即得 admin-token (透過 `_middleware.ts:371`
+  `isAdmin = scopes.includes('admin')`)。
+
+**SSE CORS leakage**
+
+- `requests/[id]/events.ts` 拔掉 `Access-Control-Allow-Origin: *` —
+  同 origin SPA 不需要，EventSource 跨 origin 不會送 cookie，這 header
+  之前只是放鬆 attack surface。
+
+**Public proxy paid quota DoS**
+
+- 新 `RATE_LIMITS.ROUTE_PER_IP` / `POI_SEARCH_PER_IP` / `REPORTS_PER_IP`：
+  - `/api/route` (Google Routes ~$5/1000): 100/24h per IP
+  - `/api/poi-search` (Google Places Text Search ~$32/1000): 200/24h per IP
+  - `/api/reports` (anonymous report write): 200/24h per IP
+- Auth'd user 走 autocomplete 已有 1000/24h，本 PR 補匿名 endpoint 防線。
+
+**reports.ts hardening**
+
+- Field-length cap (`url` / `errorMessage` / `userAgent` / `context` 等
+  全 clamp 到 2000 char + strip newline)。
+- TripId 必須存在於 `trips` table — 之前任意字串可寫 D1 spam。
+
+**Pagination bug**
+
+- `requests.ts` `after` / `afterId` 分支從 `<` 改 `>` (符合 cursor semantic
+  「比此 cursor 新」)。sort=asc 拿到的 page 之前是錯方向。
+
+**Tests**
+
+- `tests/api/round5b-security.integration.test.ts` — 7 case:
+  - permissions response shape unified (registered vs unregistered same shape)
+  - dev/apps validateScopes 拒 admin (source-grep)
+  - reports nonexistent tripId → 404
+  - reports field > 2000 char 被 clamp
+  - SSE 不再帶 `Access-Control-Allow-Origin: *`
+  - requests.ts after/afterId 用 `>` 比較
+- 19/19 既有 impacted API tests 過。2221/2221 unit 過。
+
+**Round 5c 留 follow-up（更大手術）**
+
+- `_middleware.ts` Bearer skip CSRF (XSS-stolen token bypass Origin) —
+  defense-in-depth Origin check 即使有 Bearer
+- `oauth/authorize.ts` `prompt=consent` 不 invalidate consent — scope
+  escalation 需要 step-up auth 或 per-user max-scope cap
+- `entries/[num]/entries.ts` POST + `entries/[eid]/copy.ts` +
+  `entries/[eid]/trip-pois.ts` — 3 個 non-atomic write violation，
+  collect statements into single `db.batch([...])` 避免「master 不存在」
+  invariant break
+- `entries/[eid].ts` SQL error swallow — re-classify UNIQUE / FK constraint
+  to 409 instead of 503
+- `account/connected-apps/[client_id].ts` revoke 加 cascade refresh-token
+  revoke parity
+
 ## [2.33.41] - 2026-05-24
 
 **CRITICAL security fix — `/api/trips/:id/*` anonymous-read hole**

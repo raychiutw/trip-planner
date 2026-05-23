@@ -229,10 +229,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       isExistingUser: true,
     });
 
+    // v2.33.42 security audit fix: unify response shape with Branch B
+    // (invitation_sent) — 之前 `status='permission_added'` vs `'invitation_sent'`
+    // 給 user-enumeration oracle（任何 logged-in user 可探測任意 email 是否
+    // 已註冊）。改回統一 `invitation_sent` + `permRow.id` 仍 surface 給呼叫端
+    // (audit log / admin UI)。
     return new Response(
       JSON.stringify({
         ok: true,
-        status: 'permission_added',
+        status: 'invitation_sent',
         email: lowerEmail,
         id: permRow.id,
       }),

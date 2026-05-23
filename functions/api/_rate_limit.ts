@@ -175,4 +175,11 @@ export const RATE_LIMITS = {
   // 形態：`poi-favorites-post:user:${userId}` 與 `poi-favorites-post:companion:${requestId}`，
   // 配合 D16 bucket 隔離防 companion 攻擊耗光 user web quota。
   POI_FAVORITES_WRITE: { maxAttempts: 10, windowMs: 60 * 1000, lockoutMs: 60 * 1000 },
+  // v2.33.42 security audit: public anonymous endpoints — 防 paid quota DoS.
+  // 200/24h per IP 對 normal user 完全沒影響但能擋自動化 scanner。
+  REPORTS_PER_IP: { maxAttempts: 200, windowMs: 24 * 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
+  // Google Routes API ~$5/1000 — 嚴一點。
+  ROUTE_PER_IP: { maxAttempts: 100, windowMs: 24 * 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
+  // Google Places Text Search ~$32/1000 — 最嚴。auth'd user 不會打中（autocomplete 已有 1000/24h）。
+  POI_SEARCH_PER_IP: { maxAttempts: 200, windowMs: 24 * 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
 } as const;

@@ -13,6 +13,7 @@
  */
 import { AppError } from './_errors';
 import { assertGoogleAvailable } from './_maps_lock';
+import { bumpRateLimit, clientIp, RATE_LIMITS } from './_rate_limit';
 import { searchPlaces, type PlacesSearchTextResult } from '../../src/server/maps/google-client';
 import { getCachedSearch, setCachedSearch } from '../../src/lib/maps/cache';
 import { regionToLocationBias } from '../../src/lib/maps/region';
@@ -47,6 +48,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', 'query (q) 過長（max 200）');
   }
   const limit = Math.min(Math.max(parseInt(limitParam ?? '10', 10) || 10, 1), 20);
+
+  // v2.33.42 security audit: per-IP rate limit — public anonymous proxy 直接打
+  // Google Places Text Search ($32/1000)，cache miss 唯一鎖。auth'd users 走
+  // autocomplete 已有 1000/24h；本 endpoint 給 search box 用，200/24h/IP 夠。
+  const ip = clientIp(context.request);
+  await bumpRateLimit(context.env.DB, `poi-search:ip:${ip}`, RATE_LIMITS.POI_SEARCH_PER_IP);
 
   const apiKey = context.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {

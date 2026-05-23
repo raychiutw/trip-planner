@@ -75,7 +75,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const emailCheck = await checkRateLimit(context.env.DB, emailKey, RATE_LIMITS.LOGIN);
   if (!emailCheck.ok) {
     return new Response(
-      JSON.stringify({ error: { code: 'LOGIN_RATE_LIMITED', message: '此 email 登入嘗試過多，請稍後再試' } }),
+      // v2.33.42 security audit: 統一 wording 不洩漏 email 是否已註冊
+      // （之前「此 email 登入嘗試過多」 vs IP-bucket「登入嘗試過多」 給
+      // user-enumeration oracle — 攻擊者 burn 5 個 attempt 觀察 message 差
+      // 即可判斷 email 是否存在於系統）。
+      JSON.stringify({ error: { code: 'LOGIN_RATE_LIMITED', message: '登入嘗試過多，請稍後再試' } }),
       { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(emailCheck.retryAfter) } },
     );
   }
