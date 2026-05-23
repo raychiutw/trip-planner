@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.54] - 2026-05-24
+
+**Round 10 — src/lib runtime reverse imports rip-out (backlog #117)**
+
+`src/lib/` 是架構 leaf 層 — 不允許 import hooks / components / pages。
+拆掉 2 個違規 import 並立 architectural guard test 鎖住未來。
+
+**REFACTOR**
+
+- `src/lib/networkBus.ts` 新增 — pub/sub registry 從 `useOnlineStatus.ts`
+  搬下 leaf 層。`apiClient.ts` 改 `import './networkBus'`（原本反向 import
+  `'../hooks/useOnlineStatus'`）。
+- `src/lib/toastBus.ts` 新增 — state machine + helpers 從
+  `components/shared/Toast.tsx` 搬下 leaf 層（17 個 caller backward
+  compat 經 component re-export）。`tripExport.ts` 改 `import './toastBus'`
+  （原本反向 import `'../components/shared/Toast'`）。
+- `src/hooks/useOnlineStatus.ts` / `src/components/shared/Toast.tsx`
+  改成 thin re-export shell，純 React 邏輯保留。
+
+**TESTING**
+
+- `tests/unit/lib-no-reverse-import.test.ts` — walk `src/lib/` 全部 .ts，
+  對 9 個 forbidden prefix 做 grep guard。未來任何反向 import 都會 fail。
+- 2381 / 2381 全綠 (+1 從 2380)。
+
+closes backlog #117。剩餘 backlog：#122 (oauth/authorize + entries
+batch)、#124 (OceanMap 拆分)。
+
 ## [2.33.53] - 2026-05-24
 
 **Round 9 — src/lib zero-test catch-up (backlog #116)**
