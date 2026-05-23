@@ -24,17 +24,26 @@ function getConfig() {
 async function rawQuery(sql, params = []) {
   const { CF_TOKEN, CF_ACCOUNT, D1_DB } = getConfig();
   const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/d1/database/${D1_DB}/query`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${CF_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ sql, params }),
-  });
+  // v2.33.50 round 8b: 1 retry on transient 5xx — D1 偶發 capacity / control-plane
+  // hiccup，daily cron 不該因一次 503 整輪 fail。500ms backoff 避免 thundering。
+  let res;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${CF_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sql, params }),
+    });
+    if (res.status < 500 || attempt > 0) break;
+    await new Promise((r) => setTimeout(r, 500));
+  }
   const json = await res.json();
   if (!json.success) {
-    throw new Error(`D1 query failed: ${JSON.stringify(json.errors || json)}`);
+    // v2.33.50 round 8b: only stringify errors (json fallback 含 request body，
+    // 可能 leak SQL params to log)。
+    throw new Error(`D1 query failed: ${JSON.stringify(json.errors || 'unknown')}`);
   }
   return (json.result && json.result[0]) || {};
 }

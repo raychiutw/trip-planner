@@ -129,11 +129,33 @@ async function hashPassword(plain) {
     }
     await execD1('DELETE FROM client_apps WHERE client_id = ?', [CLIENT_ID]);
     console.error(`Existing client deleted (status was: ${existing[0].status}). Reissuing…`);
-    // Note (CSO follow-up): existing access_tokens issued under the old client are NOT
-    // cascade-deleted (they live in `oauth_access_tokens` keyed by jti，not client_id FK).
-    // Live tokens stay valid until natural expiry. If you need immediate revocation,
-    // run `wrangler d1 execute --remote --command "DELETE FROM oauth_access_tokens WHERE client_id = '${CLIENT_ID}'"`.
-    // For ordinary key rotation this is acceptable — tokens expire within `expires_in` seconds.
+    // v2.33.50 round 8b security: cascade-revoke live access_tokens — 之前 comment
+    // 說「需自己 wrangler delete」，但 incident response 時無人會記得，1h grace
+    // window 不可接受。--rotate-secret 預設就 cascade-revoke。
+    // --keep-tokens flag 給「graceful rollover」rare case opt-out。
+    const keepTokens = process.argv.includes('--keep-tokens');
+    if (keepTokens) {
+      console.error('[--keep-tokens] live access tokens 保留至自然 expiry。請手動 revoke 視需求。');
+    } else {
+      try {
+        const tokensRevoked = await execD1(
+          'DELETE FROM oauth_access_tokens WHERE client_id = ?',
+          [CLIENT_ID],
+        );
+        const refreshRevoked = await execD1(
+          'DELETE FROM oauth_refresh_tokens WHERE client_id = ?',
+          [CLIENT_ID],
+        );
+        console.error(
+          `Cascade revoked ${tokensRevoked} access_token(s) + ${refreshRevoked} refresh_token(s).`,
+        );
+      } catch (err) {
+        console.error(
+          `Warning: failed to cascade-revoke tokens (${(err && err.message) || err}). ` +
+            'New client issued but live tokens may persist 1h。請手動 wrangler delete。',
+        );
+      }
+    }
   }
 
   // Generate + hash + insert

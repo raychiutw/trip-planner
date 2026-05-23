@@ -27,6 +27,9 @@ var PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY || '';
 // ── D1 REST API helper ──────────────────────────────────────────
 // v2.33.29: 移到 scripts/lib/d1-client.js
 var { queryD1 } = require('./lib/d1-client');
+// v2.33.50 round 8b: mint OAuth token for authenticated /api/trips fetch
+// (post v2.33.41 anonymous-read fix，unpublished trip GET 需 auth)。
+var { getToken: getTriplineToken } = require('./lib/get-tripline-token');
 
 // ── 數據來源 1: 行程修改統計 ────────────────────────────────────
 
@@ -181,8 +184,18 @@ async function runLighthouse() {
 // ── 壞連結檢查 ─────────────────────────────────────────────────
 
 async function checkLinks() {
+  // v2.33.50 round 8b: mint token first — post v2.33.41 anonymous-read fix
+  // 後 unpublished trip GET 需 auth；published trip 仍可匿名讀但 /api/trips
+  // listing 也 protected (need auth to see own + published)。
+  var token = '';
+  try { token = await getTriplineToken(); } catch (err) {
+    console.warn('[checkLinks] token mint failed, skipping checkLinks:', (err && err.message) || err);
+    return [];
+  }
+  var authHeaders = { Authorization: 'Bearer ' + token };
+
   // 1. 取得所有行程
-  var tripsRes = await fetch(SITE_URL + '/api/trips');
+  var tripsRes = await fetch(SITE_URL + '/api/trips', { headers: authHeaders });
   if (!tripsRes.ok) throw new Error('Failed to fetch trips: ' + tripsRes.status);
   var trips = await tripsRes.json();
 
@@ -194,7 +207,7 @@ async function checkLinks() {
     var id = trip.id || trip.tripId;
     if (!id) continue;
     try {
-      var daysRes = await fetch(SITE_URL + '/api/trips/' + id + '/days');
+      var daysRes = await fetch(SITE_URL + '/api/trips/' + id + '/days', { headers: authHeaders });
       if (!daysRes.ok) continue;
       var days = await daysRes.json();
       collectMapsUrls(days, mapsUrls);
