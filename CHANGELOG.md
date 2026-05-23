@@ -3,6 +3,46 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.48] - 2026-05-24
+
+**src/pages/ review round 7c — critical test gap fill**
+
+關 round 7 三輪 sweep：補 round 7a/7b test-engineer audit 點出的最 critical
+test gap。完整 doc: `docs/code-review/round-7c-pages-tests.md`。
+
+**Tests added (+22)**
+
+- `new-trip-page-smoke.test.tsx` (+13) — NewTripPage 932 LOC 原本**零測試**
+  (onboarding 主流程 CRITICAL gap)。本檔 source-grep + wiring smoke：auth
+  gate / 7 個 testid / POST `/trips` / TripDatePicker / dnd-kit Sortable /
+  usePoiSearch / v2.31.36 migration 0068 regression guard (`default_travel_mode`
+  / `self_drive_*` 不該再寫)。
+- `trip-page-focus-id.test.tsx` (+9) — v2.31.93 just shipped `?focus=<entryId>`
+  deep-link flow，page-level wiring 之前無 regression test。本檔守 searchParam
+  read / `data-scroll-anchor` selector / `CSS.escape` / scrollIntoView /
+  early return / requestAnimationFrame wrap / `?sheet=collab` legacy redirect
+  / v2.33.46 round 7a setTimeout cleanup regression。
+
+**Skipped (with rationale)**
+
+- EditTripPage `defaultTravelMode` camelCase regression — 該欄位 migration
+  0068 已 DROP，risk = 0
+- ChatPage SSE/polling integration — 需 mock 整個 useRequestSSE state machine，
+  e2e 較適合
+- AddPoiFavoriteToTripPage full flow — 575 LOC 多 hook，獨立 spec
+- TripPage TripSegmentsContext — 已有 dedicated hook test
+
+**Round 7 closure**
+
+- 7a: 3 HIGH security + 2 HIGH effect bug + 3 MED security
+- 7b: 3 HIGH effect bug + 1 MED + 3 LOW
+- 7c: 22 case regression test + NewTripPage smoke
+
+src/pages 33 files / 20.1k LOC review 完成。剩 13 MED + 7 LOW + 4 test gap
+列在 round-7b doc 7c section，下批次處理。
+
+2270/2270 unit pass (+22)。
+
 ## [2.33.47] - 2026-05-24
 
 **src/pages/ review round 7b — HIGH effect bugs + selective MED + LOW**
