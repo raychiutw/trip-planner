@@ -38,20 +38,22 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     return rawJson({ error: { code: 'CONSENT_NOT_FOUND', message: '此 app 未授權給你的帳號' } }, 404);
   }
 
-  // Destroy consent
-  await consentAdapter.destroy(consentKey);
-
-  // Destroy all access + refresh tokens for this (user, client) pair
-  // 立即生效（不等 access_token 1h TTL）
-  await context.env.DB
-    .prepare(
-      `DELETE FROM oauth_models
-       WHERE name IN ('AccessToken', 'RefreshToken')
-         AND json_extract(payload, '$.user_id') = ?
-         AND json_extract(payload, '$.client_id') = ?`,
-    )
-    .bind(session.uid, clientId)
-    .run();
+  // v2.33.55 round 5d residual: 改 atomic batch — 之前 destroy consent 與
+  // DELETE tokens 分兩步。如果第二步失敗 → consent 已刪但 token 仍有效，
+  // 撤銷後 app 仍能呼叫 API（security 缺口）。
+  await context.env.DB.batch([
+    context.env.DB
+      .prepare(`DELETE FROM oauth_models WHERE name = 'Consent' AND id = ?`)
+      .bind(consentKey),
+    context.env.DB
+      .prepare(
+        `DELETE FROM oauth_models
+         WHERE name IN ('AccessToken', 'RefreshToken')
+           AND json_extract(payload, '$.user_id') = ?
+           AND json_extract(payload, '$.client_id') = ?`,
+      )
+      .bind(session.uid, clientId),
+  ]);
 
   return rawJson({ ok: true, revoked_client_id: clientId });
 };
