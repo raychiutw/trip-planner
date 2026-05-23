@@ -17,53 +17,14 @@
  */
 'use strict';
 
-var fs = require('fs');
-var path = require('path');
+// v2.33.29: 用 shared scripts/lib/load-env + d1-client，原本 inline 的
+// loadEnvLocal + execD1 已移除。
+require('./lib/load-env').loadEnvLocal();
+const { execD1 } = require('./lib/d1-client');
 
-function loadEnvLocal() {
-  try {
-    var envPath = path.join(__dirname, '..', '.env.local');
-    var content = fs.readFileSync(envPath, 'utf8');
-    var env = {};
-    content.split('\n').forEach(function (line) {
-      var m = line.match(/^(\w+)=(.+)/);
-      if (m) env[m[1]] = m[2].trim();
-    });
-    return env;
-  } catch (e) {
-    return {};
-  }
-}
-
-var localEnv = loadEnvLocal();
-function envVar(key) { return process.env[key] || localEnv[key] || ''; }
-
-var CF_TOKEN = envVar('CLOUDFLARE_API_TOKEN');
-var CF_ACCOUNT = envVar('CF_ACCOUNT_ID');
-var D1_DB = envVar('D1_DATABASE_ID');
-
-if (!CF_TOKEN || !CF_ACCOUNT || !D1_DB) {
+if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CF_ACCOUNT_ID || !process.env.D1_DATABASE_ID) {
   console.error('[auth-cleanup] missing CLOUDFLARE_API_TOKEN / CF_ACCOUNT_ID / D1_DATABASE_ID');
   process.exit(2);
-}
-
-async function execD1(sql) {
-  var url = 'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT +
-    '/d1/database/' + D1_DB + '/query';
-  var res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + CF_TOKEN,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ sql: sql }),
-  });
-  var json = await res.json();
-  if (!json.success) {
-    throw new Error('D1 query failed: ' + JSON.stringify(json.errors || json));
-  }
-  var meta = (json.result && json.result[0] && json.result[0].meta) || {};
-  return meta.changes || 0;
 }
 
 (async function main() {

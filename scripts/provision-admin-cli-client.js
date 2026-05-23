@@ -62,22 +62,8 @@ if (!CF_TOKEN || !CF_ACCOUNT || !D1_DB) {
   process.exit(2);
 }
 
-async function execD1(sql, params = []) {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/d1/database/${D1_DB}/query`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${CF_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ sql, params }),
-  });
-  const json = await res.json();
-  if (!json.success) {
-    throw new Error(`D1 query failed: ${JSON.stringify(json.errors || json)}`);
-  }
-  return json.result?.[0]?.results || [];
-}
+// v2.33.29: 改用 shared scripts/lib/d1-client (returns rows for SELECT).
+const { queryD1: execD1 } = require('./lib/d1-client');
 
 /** Generate base32 secret (matches /api/dev/apps tps_ format) */
 function generateClientSecret() {
