@@ -82,12 +82,25 @@ const ORPHAN_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 const SESSION_PREFIX = 'tripline-request-';
 
 // v2.33.27: per-skill session prefix。原本 SESSION_PREFIX 對所有 skill 共用，
+// v2.33.49 round 8a security audit: skillCommand allowlist — 之前 sessionPrefixForSkill
+// 只 lowercase + 拔 leading /，無嚴格驗證。任何未來 PR 把 skill 暴露給 HTTP query
+// 都會引入 shell-quote / command injection。明定 allowlist 防止 design widening。
+const ALLOWED_SKILLS = new Set(['/tp-request', '/tp-daily-check']);
+function assertAllowedSkill(skillCommand: string): string {
+  if (!ALLOWED_SKILLS.has(skillCommand)) {
+    throw new Error(`Disallowed skillCommand: ${skillCommand.slice(0, 40)} (allowlist: ${[...ALLOWED_SKILLS].join(', ')})`);
+  }
+  return skillCommand;
+}
+
 // hasActiveSession() 偵測到 /tp-request session 就會 skip /tp-daily-check fire
 // → daily-check 5/19 起連 4 天被擋（log: "Active session ... still running"）。
 // Fix：每個 skill 有自己的 session prefix，hasActiveSession 接 skillFilter。
 function sessionPrefixForSkill(skillCommand: string): string {
   // '/tp-request' → 'tripline-tp-request-'；'/tp-daily-check' → 'tripline-tp-daily-check-'
-  const slug = skillCommand.replace(/^\//, '').toLowerCase();
+  // v2.33.49: validate through allowlist 保證 prefix 內無 shell metacharacter。
+  const verified = assertAllowedSkill(skillCommand);
+  const slug = verified.replace(/^\//, '').toLowerCase();
   return `tripline-${slug}-`;
 }
 
@@ -148,6 +161,9 @@ function hasActiveSession(skillCommand?: string): string | null {
 }
 
 async function spawnTmuxRequest(skillCommand: string = '/tp-request'): Promise<boolean> {
+  // v2.33.49 round 8a: enforce allowlist at every entry point — defense in
+  // depth (sessionPrefixForSkill also asserts but defensive double-gate).
+  assertAllowedSkill(skillCommand);
   // v2.22.0：claude /tp-request skill 用 `Authorization: Bearer $TRIPLINE_API_TOKEN`
   // 寫入 prod API（含 §6/§7/§8/§9 poi-favorites 4 條 path）。.env.local 只有
   // TRIPLINE_API_CLIENT_ID/SECRET，沒 TOKEN — 必須 mint 後 inject 到 tmux session
@@ -216,6 +232,8 @@ let lastProcessed: string | null = null;
 let processedCount = 0;
 
 async function processLoop(source: 'api' | 'job', skillCommand: string = '/tp-request'): Promise<boolean> {
+  // v2.33.49 round 8a: allowlist gate also at processLoop entry.
+  assertAllowedSkill(skillCommand);
   if (runningSkills.has(skillCommand)) {
     log(`processLoop: already running, skip (source=${source}, skill=${skillCommand})`);
     return false;
