@@ -47,25 +47,21 @@ const SAMPLE_REQUEST_ROW = {
 
 beforeEach(() => {
   apiFetchMock.mockReset();
-  // history fetch (apiFetch '/requests?...')
+  // v2.33.33: /my-trips + /trips?all=1 改走 apiFetch（從 raw fetch 遷移）
   apiFetchMock.mockImplementation((path: string) => {
     if (path.startsWith('/requests')) {
       return Promise.resolve({ items: [SAMPLE_REQUEST_ROW], hasMore: false });
     }
+    if (path === '/my-trips') {
+      return Promise.resolve([{ tripId: 'okinawa-2026' }]);
+    }
+    if (path.startsWith('/trips')) {
+      return Promise.resolve([
+        { tripId: 'okinawa-2026', name: '沖繩 2026', title: '沖繩 2026', countries: 'JP' },
+      ]);
+    }
     return Promise.resolve(null);
   });
-  // /my-trips + /trips?all=1 走 raw fetch（不在 apiFetch 內）
-  global.fetch = vi.fn().mockImplementation((url: string) => {
-    if (url === '/api/my-trips') {
-      return Promise.resolve(new Response(JSON.stringify([{ tripId: 'okinawa-2026' }]), { status: 200 }));
-    }
-    if (url.startsWith('/api/trips')) {
-      return Promise.resolve(new Response(JSON.stringify([
-        { tripId: 'okinawa-2026', name: '沖繩 2026', title: '沖繩 2026', countries: 'JP' },
-      ]), { status: 200 }));
-    }
-    return Promise.resolve(new Response('null', { status: 200 }));
-  }) as typeof fetch;
 });
 
 function renderPage() {

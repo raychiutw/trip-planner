@@ -24,7 +24,7 @@ describe('離線暫存 pendingErrorReports', () => {
     ];
     localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
 
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('ok', { status: 201 }));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }));
     await flushPendingReports();
 
     expect(localStorage.getItem(PENDING_KEY)).toBeNull();
@@ -53,7 +53,7 @@ describe('離線暫存 pendingErrorReports', () => {
     let callCount = 0;
     vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return Promise.resolve(new Response('ok', { status: 201 }));
+      if (callCount === 1) return Promise.resolve(new Response(null, { status: 204 }));
       return Promise.reject(new Error('fail'));
     });
     await flushPendingReports();

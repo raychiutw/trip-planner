@@ -15,6 +15,7 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
+import { apiFetchRaw } from '../lib/apiClient';
 import InlineError from '../components/shared/InlineError';
 
 const SCOPED_STYLES = `
@@ -169,9 +170,8 @@ export default function ResetPasswordPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/oauth/reset-password', {
+      const res = await apiFetchRaw('/oauth/reset-password', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ token, password }),
       });
       if (res.ok) {
