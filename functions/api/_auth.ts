@@ -52,6 +52,38 @@ export async function hasPermission(
 }
 
 /**
+ * v2.33.41 security audit: read-access gate for `/api/trips/:id/*` endpoints.
+ * Accepts a request if:
+ *   - the trip is `published=1` (public-share row), OR
+ *   - the caller is authenticated AND has a `trip_permissions` row (any role).
+ *
+ * 之前 `_middleware.ts:415` 對所有 `GET /api/trips/**` 直接 bypass auth，多個
+ * GET handler 沒做 published / permission 檢查，導致 anonymous 知 tripId 即可
+ * 讀 doc 航班 / hotel POI / 緊急聯絡。tripId 是 user-chosen lowercase slug
+ * (`/^[a-z0-9-]+$/`)，極易猜（`tokyo-2026` 等）。
+ *
+ * Throws `DATA_NOT_FOUND` 若 trip 不存在；throws `PERM_DENIED` 若需要 auth 卻無權。
+ * 統一回 PERM_DENIED 而非 AUTH_REQUIRED 避免 enumerate published vs unpublished tripId。
+ */
+export async function requireTripReadAccess(
+  db: D1Database,
+  auth: AuthData | null,
+  tripId: string,
+): Promise<{ published: boolean; isMember: boolean }> {
+  const trip = await db
+    .prepare('SELECT published FROM trips WHERE id = ?')
+    .bind(tripId)
+    .first<{ published: number | null }>();
+  if (!trip) throw new AppError('DATA_NOT_FOUND');
+  const published = trip.published === 1;
+  if (published) return { published: true, isMember: false };
+  if (!auth) throw new AppError('PERM_DENIED');
+  const isMember = await hasPermission(db, auth, tripId, auth.isAdmin);
+  if (!isMember) throw new AppError('PERM_DENIED');
+  return { published: false, isMember: true };
+}
+
+/**
  * Returns true if the authenticated user can write to the given trip.
  * viewer role is BLOCKED here per migration 0043 ("viewer = read-only collaborator").
  * Admins and service tokens always pass. owner / admin / member roles return true.

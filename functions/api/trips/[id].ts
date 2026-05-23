@@ -1,7 +1,7 @@
 import { logAudit, computeDiff } from '../_audit';
-import { hasWritePermission, requireAuth} from '../_auth';
+import { hasWritePermission, requireAuth, requireTripReadAccess } from '../_auth';
 import { AppError } from '../_errors';
-import { json, parseJsonBody, buildUpdateClause } from '../_utils';
+import { json, parseJsonBody, buildUpdateClause, getAuth } from '../_utils';
 import type { Env } from '../_types';
 
 // Migration 0045: dropped og_description/self_drive/food_prefs/auto_scroll/footer/is_default.
@@ -27,6 +27,10 @@ interface TripDestRow {
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
   const db = context.env.DB;
+
+  // v2.33.41 security: gate read access — published trips allow anonymous;
+  // 否則必須 owner / member。
+  await requireTripReadAccess(db, getAuth(context), id);
 
   const row = await db.prepare('SELECT *, id AS tripId FROM trips WHERE id = ?').bind(id).first<Record<string, unknown>>();
   if (!row) throw new AppError('DATA_NOT_FOUND');

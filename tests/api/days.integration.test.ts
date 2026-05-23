@@ -93,15 +93,14 @@ describe('GET /api/trips/:id/days — summary 模式', () => {
     expect(data[0].hotel).toBeUndefined();
   });
 
-  it('不存在的行程 → 空陣列', async () => {
+  it('不存在的行程 → 404 (v2.33.41 security: trip read access 先檢查存在)', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/trips/nope/days'),
       env,
       params: { id: 'nope' },
     });
     const resp = await callHandler(onRequestGet, ctx);
-    const data = await resp.json() as Array<unknown>;
-    expect(data).toHaveLength(0);
+    expect(resp.status).toBe(404);
   });
 });
 
@@ -241,15 +240,14 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     });
   });
 
-  it('不存在的行程 → 空陣列', async () => {
+  it('不存在的行程 → 404 (v2.33.41 security: trip read access 先檢查存在)', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/trips/nope/days?all=1'),
       env,
       params: { id: 'nope' },
     });
     const resp = await callHandler(onRequestGet, ctx);
-    const data = await resp.json() as Array<unknown>;
-    expect(data).toHaveLength(0);
+    expect(resp.status).toBe(404);
   });
 
   it('batch 輸出與 single-day 端點每日資料完全一致（regression guard）', async () => {
