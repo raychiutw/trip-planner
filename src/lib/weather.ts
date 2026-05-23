@@ -197,7 +197,10 @@ export async function fetchWeatherForDay(
     }
   }
 
-  // Batch-fetch all uncached coordinates in one Open-Meteo call
+  // Batch-fetch all uncached coordinates in one Open-Meteo call.
+  // v2.33.36 code review round 1: wrap in try/catch + 8s AbortSignal timeout
+  // so a hung Open-Meteo doesn't stall the awaiting render — caller still
+  // gets `makeDefaultMg()` via fall-through.
   if (uncachedKeys.length > 0) {
     const lats = uncachedKeys.map((k) => k.split(',')[0] ?? '');
     const lons = uncachedKeys.map((k) => k.split(',')[1] ?? '');
@@ -209,25 +212,31 @@ export async function fetchWeatherForDay(
       end_date: fetchEnd,
       timezone,
     });
-    const resp = await fetch(
-      'https://api.open-meteo.com/v1/forecast?' + params.toString(),
-    );
-    if (resp.ok) {
-      const raw = await resp.json();
-      // Single coordinate returns object; multiple returns array
-      const items: OpenMeteoResponse[] =
-        uncachedKeys.length === 1 ? [raw as OpenMeteoResponse] : (raw as OpenMeteoResponse[]);
-      for (let i = 0; i < uncachedKeys.length; i++) {
-        const data = items[i];
-        if (!data) continue;
-        const k = uncachedKeys[i]!;
-        if (Object.keys(weatherCache).length >= MAX_WEATHER_CACHE) {
-          const oldest = Object.keys(weatherCache)[0];
-          if (oldest) delete weatherCache[oldest];
+    try {
+      const resp = await fetch(
+        'https://api.open-meteo.com/v1/forecast?' + params.toString(),
+        { signal: AbortSignal.timeout(8000) },
+      );
+      if (resp.ok) {
+        const raw = await resp.json();
+        // Single coordinate returns object; multiple returns array
+        const items: OpenMeteoResponse[] =
+          uncachedKeys.length === 1 ? [raw as OpenMeteoResponse] : (raw as OpenMeteoResponse[]);
+        for (let i = 0; i < uncachedKeys.length; i++) {
+          const data = items[i];
+          if (!data) continue;
+          const k = uncachedKeys[i]!;
+          if (Object.keys(weatherCache).length >= MAX_WEATHER_CACHE) {
+            const oldest = Object.keys(weatherCache)[0];
+            if (oldest) delete weatherCache[oldest];
+          }
+          weatherCache[k] = data;
+          results[k] = data;
         }
-        weatherCache[k] = data;
-        results[k] = data;
       }
+    } catch {
+      // Network error / timeout / non-OK — fall through with whatever cached
+      // entries we have. Caller eventually returns makeDefaultMg() if empty.
     }
   }
 

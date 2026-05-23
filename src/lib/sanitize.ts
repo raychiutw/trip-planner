@@ -10,42 +10,54 @@ export function escUrl(url: unknown): string {
 }
 
 /**
+ * URI-bearing HTML attributes — any of these can carry a URL/script payload and
+ * must be allowlist-checked. v2.33.36 security review (round 1): added
+ * `formaction` / `xlink:href` / `srcset` / `poster` / `background` / `data` /
+ * `ping` / `cite` after audit found the old `href|src|action` set missed
+ * SVG `<use href>`, button override `formaction`, and `srcset`/`poster` sinks.
+ */
+const URI_ATTRS = new Set([
+  'href', 'src', 'action',
+  'formaction', 'xlink:href',
+  'srcset', 'poster', 'background', 'data', 'ping', 'cite',
+]);
+
+/**
  * Sanitizes an HTML string by:
- * - Removing dangerous tags (script, iframe, object, embed, form)
+ * - Removing dangerous tags (script, iframe, object, embed, form, svg)
  * - Stripping all `on*` event-handler attributes
- * - Stripping unsafe `href`, `src`, and `action` values
+ * - Stripping `style` attributes entirely (clickjacking / CSS exfil防範)
+ * - Stripping unsafe URL-bearing attributes
  * - Adding `rel="noopener noreferrer"` to `<a target="_blank">` elements
  *
  * Requires a browser `DOMParser` environment.
  */
 export function sanitizeHtml(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  doc.querySelectorAll('script,iframe,object,embed,form').forEach((el) => {
+  doc.querySelectorAll('script,iframe,object,embed,form,svg').forEach((el) => {
     el.remove();
   });
   doc.querySelectorAll('*').forEach((el) => {
     Array.from(el.attributes).forEach((attr) => {
-      if (attr.name.indexOf('on') === 0) {
-        el.removeAttribute(attr.name);
+      const name = attr.name;
+      const lowerName = name.toLowerCase();
+      if (lowerName.indexOf('on') === 0) {
+        el.removeAttribute(name);
+        return;
       }
-      if (attr.name === 'style') {
-        const val = attr.value.toLowerCase();
-        // Remove styles that could execute JS or load external resources
-        if (/expression\s*\(|javascript:|url\s*\(|@import|behavior\s*:|binding\s*:|-moz-binding/i.test(val)) {
-          el.removeAttribute(attr.name);
-        }
+      // v2.33.36: 移掉所有 `style`（含 `position:fixed`/`opacity:0` 的 clickjack
+      // 風險、`content:` 屬性選擇器 exfil）。chat / AI reply markdown 不需要 style。
+      if (lowerName === 'style') {
+        el.removeAttribute(name);
+        return;
       }
-      if (
-        attr.name === 'href' ||
-        attr.name === 'src' ||
-        attr.name === 'action'
-      ) {
+      if (URI_ATTRS.has(lowerName)) {
         const val = (attr.value || '').trim().toLowerCase();
         // v2.31.26 fix #127: 加 `/(?!\/)` 允許 SPA 相對路徑（例 `/trip/:id/health`），
         // 但拒絕 protocol-relative URL `//evil.com`（會打到不同 host）。
         // 之前 backend AI 健檢 reply 寫 markdown link 但 href 被 strip → `<a>` 無法 click。
         if (val && !/^(https?:|tel:|mailto:|#|\/(?!\/))/.test(val)) {
-          el.removeAttribute(attr.name);
+          el.removeAttribute(name);
         }
       }
     });
