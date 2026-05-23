@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
+import { escUrl } from '../../lib/sanitize';
 import { parseEntryTime, deriveTypeMeta } from '../../lib/timelineUtils';
 import { getTimelineEntryDisplayTitle } from '../../lib/stopDisplay';
 import type { TimelineEntryData } from './TimelineEvent';
@@ -266,9 +267,11 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
             <div>
               <div className="tp-lightbox-carousel" data-testid="stop-lightbox-carousel">
                 <img
-                  src={currentPhoto.thumbUrl || currentPhoto.url}
+                  src={escUrl(currentPhoto.thumbUrl || currentPhoto.url)}
                   alt={currentPhoto.caption || displayTitle || '景點照片'}
                   loading="lazy"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
                 />
                 {photos.length > 1 && (
                   <>
@@ -303,8 +306,12 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
                   {currentPhoto.caption}
                   {currentPhoto.caption && currentPhoto.attribution && ' · '}
                   {currentPhoto.attribution && (
-                    currentPhoto.source ? (
-                      <a href={currentPhoto.source} target="_blank" rel="noopener noreferrer">
+                    currentPhoto.source && escUrl(currentPhoto.source) ? (
+                      <a
+                        href={escUrl(currentPhoto.source)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         {currentPhoto.attribution}
                       </a>
                     ) : currentPhoto.attribution

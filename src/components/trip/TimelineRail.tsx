@@ -12,7 +12,7 @@
  * reachable via list click.
  */
 
-import { Fragment, memo, useCallback, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
   DndContext,
@@ -869,8 +869,10 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
   }, [events, orderOverride]);
 
   // events prop 變動 → reset override（refetch 帶回 backend authoritative order）
+  // v2.33.44 round 6a: useMemo() 內呼 setState 是 side-effect masquerading as memo
+  // (React 19 concurrent / strict mode 會 fire twice + warning)。改 useEffect 正確路徑。
   const eventsKey = events.map((e) => e.id ?? -1).join(',');
-  useMemo(() => { setOrderOverride(null); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [eventsKey]);
+  useEffect(() => { setOrderOverride(null); }, [eventsKey]);
 
   const handleDragEnd = useCallback(async (e: DragEndEvent) => {
     const { active, over } = e;

@@ -3,6 +3,78 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.44] - 2026-05-24
+
+**src/components/ review round 1 — CRITICAL + HIGH security + 3 top test gap**
+
+3-agent review on `src/components/` 63 檔 / 11.6k LOC（code reviewer +
+security auditor + test engineer 平行）。本 PR 撿 CRITICAL + HIGH +
+critical MED + top-3 test gap；剩 IMPORTANT 留 round 6b。
+
+**CRITICAL fix**
+
+- `TimelineRail.tsx:873` — `useMemo(() => setOrderOverride(null), [eventsKey])`
+  side-effect masquerading as memo (React 19 concurrent / strict mode fires
+  twice + warning) → 改正確的 `useEffect`。
+
+**HIGH security fix**
+
+- `StopLightbox.tsx:307` `<a href={currentPhoto.source}>` 套 `escUrl()` —
+  之前無 scheme check，若 `pois.photos` JSON column 含 `javascript:` URI
+  (insider write / future user-photo upload / 被入侵 enrichment pipeline)
+  → XSS-on-click。
+
+**MEDIUM security**
+
+- `StopLightbox.tsx:269` `<img src>` 加 `escUrl()` + `referrerPolicy="no-referrer"`
+  + `crossOrigin="anonymous"` — 避免 Referer 洩漏 trip URL 給 Google CDN，
+  + 防 `data:` SVG / 任意 cross-origin host 追蹤像素。
+- `mapDay.ts::parsePhotos` 加 `isSafePhotoUrl(u)` `https://` allowlist —
+  defense in depth：任何未來 write path 寫進非 https URI 都在 parse 時被剝
+  除（不仰賴每個 consumer 自己防）。
+- `ErrorPlaceholder.tsx` 寫 `pendingErrorReports` localStorage 前 strip
+  query string + fragment：`new URL(window.location.href).pathname` 才存。
+  避免 share token / OAuth code 跨 session 持久化。
+- `ErrorBoundary.tsx` `console.error` gate 在 `import.meta.env.DEV` — Sentry
+  已捕，prod console 噴 stack 不增資訊且 leak filename / line 給 devtools。
+
+**Quality**
+
+- `HourlyWeather.tsx:64` ref write during render 搬進 `useEffect` (React
+  anti-pattern，strict mode fires twice)。
+
+**Tests (3 new files, +28 cases)**
+
+- `tests/unit/markdown-text-xss.test.tsx` — 12 case 端到端 XSS pipeline
+  (markdown → sanitize → DOM): script tag / on* attr / svg use / formaction /
+  SPA path keep / protocol-relative reject / javascript: href reject / inline
+  mode XSS guard / style strip / target=_blank rel injection。
+- `tests/unit/infobox-safetext.test.ts` — 10 case `safeText()` shape
+  adapter (null / string / number / boolean / `{label, text}` / `{text}` /
+  `{name}` 優先順序 / 未知 shape fallback / array / mixed types)。
+- `tests/unit/error-boundary.test.tsx` — 5 case (normal children / fallback
+  UI / Sentry capture wire / custom fallback prop / retry counter 達 max
+  隱藏 reload)。
+
+2249/2249 unit pass (+28)。
+
+**Round 6b 留 follow-up（IMPORTANT 較大手術）**
+
+- `TimelineRail.tsx:875-916` `handleDragEnd` stale state bug
+- `TimelineRail.tsx:764-839` inline-style confirm modal → 用 portal-mounted ConfirmModal
+- `OceanMap.tsx:282` Segment polyline effect missing `dayNum` dep
+- `OceanMap.tsx:464` Marker rebuild on every parent re-render
+- `TripMapRail.tsx:97` scroll-spy IntersectionObserver 跟 DaySection mount 賽跑
+- `Segment` from/to refs 新 → 拆 scalar props (defeats memo)
+- `StopPoiChoiceCard` not memo
+- `Toast.tsx` module singleton cross-test pollution
+- `AppShell.tsx` `lastYRef` reset
+- `TripDatePicker` nested popover outside-click 衝突
+- Style injection helper extraction (42 callers）
+- Orphan candidates: `trip/UndoToast.tsx` / `trip/ConflictModal.tsx`（與
+  shared/ 重複）— 需 grep verify 全 codebase 後刪
+- Test gaps: ConfirmModal / InputModal a11y / focusId rail-side regression
+
 ## [2.33.43] - 2026-05-24
 
 **Security round 5c — backend residual HIGH/MED fixes**
