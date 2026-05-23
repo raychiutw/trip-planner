@@ -9,8 +9,9 @@
  *
  * doc 不存在 → key value 為 null（caller 不需 catch DATA_NOT_FOUND per doc）。
  */
+import { requireTripReadAccess } from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { json } from '../../../_utils';
+import { json, getAuth } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 const VALID_TYPES = ['flights', 'checklist', 'backup', 'suggestions', 'emergency'] as const;
@@ -37,6 +38,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!id) throw new AppError('DATA_VALIDATION', '缺少 tripId');
 
   const db = context.env.DB;
+
+  // v2.33.41 security: gate anonymous read — published trips allow, otherwise
+  // owner/member only。
+  await requireTripReadAccess(db, getAuth(context), id);
 
   // 1) 拿全部 docs for this trip
   const docsRes = await db

@@ -10,9 +10,9 @@
  * Auth: trip read permission.
  */
 
-import { hasPermission, requireAuth} from '../../../_auth';
+import { requireTripReadAccess } from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { json } from '../../../_utils';
+import { json, getAuth } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 interface SegmentRow {
@@ -29,15 +29,14 @@ interface SegmentRow {
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = requireAuth(context);
-
   const tripId = context.params.id as string;
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');
 
   const db = context.env.DB;
-  if (!await hasPermission(db, auth, tripId, auth.isAdmin)) {
-    throw new AppError('PERM_DENIED');
-  }
+  // v2.33.41 security: gate anonymous read — published trips allow,
+  // otherwise owner/member only (取代之前 requireAuth + hasPermission，
+  // 對齊其他 trips/[id]/* GET handler 的 published-aware 模型)。
+  await requireTripReadAccess(db, getAuth(context), tripId);
 
   const res = await db
     .prepare(

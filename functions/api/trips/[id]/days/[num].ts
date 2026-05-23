@@ -1,11 +1,11 @@
 import { logAudit } from '../../../_audit';
-import { hasWritePermission, requireAuth} from '../../../_auth';
+import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../../_auth';
 import { syncEntryMaster } from '../../../_entry_pois';
 import { AppError } from '../../../_errors';
 import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
 import { resolveEntryTimes } from '../../../_time';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
-import { json, parseJsonBody } from '../../../_utils';
+import { json, parseJsonBody, getAuth } from '../../../_utils';
 import type { Env } from '../../../_types';
 import {
   assembleDay,
@@ -21,6 +21,9 @@ import {
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id, num } = context.params as { id: string; num: string };
   const db = context.env.DB;
+
+  // v2.33.41 security: gate anonymous read.
+  await requireTripReadAccess(db, getAuth(context), id);
 
   const day = await db
     .prepare('SELECT * FROM trip_days WHERE trip_id = ? AND day_num = ?')
