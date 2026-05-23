@@ -227,7 +227,8 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   const effMaps = poi?.maps ?? null;
   // Migration 0045 (v2.19.x) 把 pois.google_rating 改名為 rating，但這裡的 mapping
   // 沒 follow up — entry.googleRating 永遠 null。Fallback 同時讀新舊 key 維持向前相容。
-  const effGoogleRating = poi?.googleRating ?? (poi as { rating?: number | null })?.rating ?? null;
+  // v2.33.38 round 3: 拔掉 `as { rating?... }` redundant cast — RawEntryPoi.rating 已 typed (line 104)。
+  const effGoogleRating = poi?.googleRating ?? poi?.rating ?? null;
   // v2.12 Wave 3：parse pois.photos JSON 字串。malformed → 視為 null（不 throw）。
   const effPhotos: PoiPhoto[] | null = parsePhotos(poi?.photos);
   const stopPois = (raw.stopPois ?? [])

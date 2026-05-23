@@ -3,6 +3,73 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.38] - 2026-05-24
+
+**Round 3: LOW-priority finding cleanup — `src/lib/` review**
+
+延續 v2.33.36 / v2.33.37 兩輪，本 PR 把 3-agent review 剩餘 LOW priority
+finding 全部處理（含 audit 寫的「defense in depth」項目）。
+
+**Hardening / defensive coding**
+
+- `errors.ts`:
+  - `ApiError.code` 增 64-char cap，防 malicious server 回 giant code 串字。
+  - `sniffErrorCode` 改 anchored phrase patterns 取代 `includes` substring：
+    - `「administered」` 不再誤命中 admin
+    - 「已系統管理員處理過」不再誤命中 PERM_ADMIN_ONLY
+    - 「encoding」需 word-boundary 才命中（非 `encoded` 等變形）
+    - 「conflict」需 `\bconflict\b` 避免「conflictResolver」誤命中
+  - JS `\b` 對 CJK 不適用（CJK 字符非 word char），改用 specific phrase。
+- `localStorage.ts`:
+  - 新 `isLsEntry()` type guard — 驗證 `{v, exp}` envelope shape（`exp`
+    必須 finite number），同 origin 攻擊者寫入 malformed JSON 不會撐死。
+  - `lsGet` 在 JSON.parse throw 時也 remove 壞 entry，省下後續 retry 解析。
+  - `removeItem` 包 try/catch — Safari profile locked 情境也能繼續執行。
+- `routes.ts`:
+  - 新 `safeReturnTo()` helper 集中 redirect target 驗證：
+    - 拒絕 protocol-relative `//evil.com`
+    - 拒絕 absolute URL `https://evil.com`
+    - 拒絕 backslash variant `/\\evil.com` (Safari open-redirect 歷史)
+    - 拒絕 empty / non-string input
+    - 只接受 same-origin `/path` 形式
+- `poiSearchHelpers.ts`:
+  - `poiMeta` `景點` fallback 改用 `POI_TYPE_LABELS.attraction`，避免
+    將來 PR-1 canonical label 改名造成 drift。
+
+**Dead code / cleanup**
+
+- `constants.ts`: 移除 `EXTERNAL_NAVIGATION_URL_BASE`（grep 確認零 caller）。
+- `drag-strategy.ts`: 新 `DEFAULT_START_MINUTES = 9 * 60` 取代
+  `parseClockToMinutes(DEFAULT_START)!` non-null assertion + double-parse。
+- `mapDay.ts`: 移除 `effGoogleRating` redundant `as { rating?... }` cast
+  — `RawEntryPoi.rating` 早已 typed (line 104)。
+- `lib/maps/region.ts`: `regionToCountryCode` 加 `@deprecated` JSDoc tag —
+  零 production caller，僅留 `tests/unit/region-to-country-code.test.ts`
+  為向後相容。
+
+**New tests (3 files, 21 tests)**
+
+- `tests/unit/routes-safe-return-to.test.ts` — 7 case
+  (same-origin / protocol-relative / absolute URL / backslash / relative /
+  empty / custom fallback)。
+- `tests/unit/errors-code-cap.test.ts` — 8 case
+  (64-char cap / 短 code / 6 個 sniff phrase pattern variant /
+  「administered by user」false-positive regression)。
+- `tests/unit/local-storage-shape.test.ts` — 8 case
+  (broken JSON / missing exp / wrong-type exp / NaN exp / non-object payload /
+  null payload / expired / lsRemove smoke test)。
+
+2193/2193 unit suite green (+21 新 test)。
+
+**Round 4 留 follow-up**
+
+- runtime 反向依賴 (apiClient → useOnlineStatus, tripExport → Toast 的
+  `showToast` callback) — 需注入 pattern 或 EventTarget
+- 11 個剩餘 zero-test 檔: weather (257 LOC) / tripExport (272 LOC) /
+  mapDay (313 LOC) / dayArtMapping / entryAction / sentry / sanitize 更全 /
+  apiClient 完整 / parseUtcDate edges / events / maps/cache
+- 開始下個 module: src/hooks/ 或 functions/api/
+
 ## [2.33.37] - 2026-05-24
 
 **Architecture refactor + coverage — `src/lib/` review round 2**

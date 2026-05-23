@@ -75,6 +75,10 @@ export function regionToLocationBias(region: string | null | undefined): Locatio
  * Legacy helper kept for backward compat — v2.23.3 only resolved to ISO
  * country code. Now delegates to locationBias and returns the country code
  * field. New code should call `regionToLocationBias` directly.
+ *
+ * @deprecated v2.33.38 — no production caller remains (verified by grep).
+ *   Kept solely to satisfy `tests/unit/region-to-country-code.test.ts`. New
+ *   code should call `regionToLocationBias(region)?.countryCode` directly.
  */
 export function regionToCountryCode(region: string | null | undefined): string | undefined {
   return regionToLocationBias(region)?.countryCode;
