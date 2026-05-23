@@ -44,9 +44,16 @@ interface PendingReport {
 
 function ReportButton({ error, tripId }: { error: ApiError; tripId: string }) {
   const handleReport = async () => {
+    // v2.33.44 round 6a security audit: strip query string + fragment 避免把
+    // 未來可能含 share token / OAuth code / pending magic link 的 URL 寫進
+    // localStorage 過期不會清。
+    const safeUrl = (() => {
+      try { return new URL(window.location.href).pathname; }
+      catch { return window.location.pathname; }
+    })();
     const report: PendingReport = {
       tripId,
-      url: window.location.href,
+      url: safeUrl,
       errorCode: error.code,
       errorMessage: error.message,
       userAgent: navigator.userAgent,

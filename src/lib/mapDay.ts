@@ -303,6 +303,17 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
 }
 
 /**
+ * Validate a photo URL allowing only https URLs. v2.33.44 round 6 security
+ * audit: defense in depth — `pois.photos` is JSON column, and if any future
+ * write path (custom POI photo upload, malicious enrichment) sneaks in
+ * `javascript:` / `data:` URI, downstream `<img src>` / `<a href>` would
+ * become XSS-on-click. Strip non-https from the moment we parse.
+ */
+function isSafePhotoUrl(u: unknown): u is string {
+  return typeof u === 'string' && /^https:\/\//i.test(u);
+}
+
+/**
  * Parse `pois.photos` JSON-encoded TEXT column. Returns null on missing /
  * empty / malformed input — frontend then falls back to placeholder UI.
  */
@@ -311,9 +322,16 @@ function parsePhotos(raw: string | null | undefined): PoiPhoto[] | null {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
-    const valid: PoiPhoto[] = parsed.filter(
-      (p): p is PoiPhoto => p && typeof p === 'object' && typeof (p as { url?: unknown }).url === 'string',
-    );
+    const valid: PoiPhoto[] = parsed
+      .filter((p): p is Record<string, unknown> => p != null && typeof p === 'object')
+      .filter((p) => isSafePhotoUrl(p.url))
+      .map((p) => ({
+        url: p.url as string,
+        thumbUrl: isSafePhotoUrl(p.thumbUrl) ? (p.thumbUrl as string) : undefined,
+        caption: typeof p.caption === 'string' ? p.caption : undefined,
+        source: isSafePhotoUrl(p.source) ? (p.source as string) : undefined,
+        attribution: typeof p.attribution === 'string' ? p.attribution : undefined,
+      }));
     return valid.length > 0 ? valid : null;
   } catch {
     return null;
