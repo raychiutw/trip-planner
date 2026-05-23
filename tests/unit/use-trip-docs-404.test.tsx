@@ -1,12 +1,13 @@
 /**
- * useTrip docs 404 silent-skip 測試 — PR-HH 2026-04-26
+ * useTrip docs batch endpoint 測試 — v2.33.35 simplify PR-8。
  *
- * Bug：開新行程時 docs（flights/checklist/backup/emergency/suggestions）尚未建立，
- * GET /api/trips/:id/docs/:key 統一回 404 → ApiError code=DATA_NOT_FOUND
- * severity='severe' → showErrorToast 觸發，5 個 docs 噴 5 個 toast。
+ * 從原 PR-HH 2026-04-26「5 個 sequential calls + 404 silent-skip」
+ * 改為「1 個 batch endpoint GET /trips/:id/docs 回 Record<DocKey, DocData|null>」。
  *
- * 修：fetchAllDocs 對 404 視為「該 doc 尚未建立」靜默略過，不再 toast。
- * 其他 severe 錯誤（500、網路）仍正常顯示。
+ * 驗證：
+ * - 全部 null（新 trip 還沒建 docs）→ docs state 為空 + 不 toast
+ * - 500 → toast severe（regression guard）
+ * - 部分有資料部分 null → 有資料的 wire 到 state、null 不會誤覆蓋
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
@@ -42,6 +43,16 @@ const TRIP_FIXTURE = {
   countryCode: null,
 };
 
+const ALL_NULL_DOCS = {
+  docs: {
+    flights: null,
+    checklist: null,
+    backup: null,
+    suggestions: null,
+    emergency: null,
+  },
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -49,56 +60,68 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function setupMocks(docHandler: (key: string) => Promise<unknown>) {
+function setupMocks(docsHandler: () => Promise<unknown>) {
   mockApiFetch.mockImplementation(async (path: string) => {
     if (path.match(/^\/trips\/[^/]+$/)) return TRIP_FIXTURE;
     if (path.match(/\/days\?all=1$/)) {
       return [{ id: 1, dayNum: 1, date: '2026-07-01', dayOfWeek: '一', label: '出發', timeline: [] }];
     }
-    const docMatch = path.match(/\/docs\/([^/]+)$/);
-    if (docMatch) return docHandler(docMatch[1]);
+    if (path.match(/^\/trips\/[^/]+\/docs$/)) return docsHandler();
     throw new Error(`Unexpected path: ${path}`);
   });
 }
 
-describe('useTrip — docs 404 處理（PR-HH）', () => {
-  it('5 個 docs 全部 404 → showErrorToast 完全不被呼叫', async () => {
-    setupMocks(() => Promise.reject(new ApiError('DATA_NOT_FOUND', 404)));
+describe('useTrip — batch /docs endpoint（v2.33.35 PR-8）', () => {
+  it('batch 回 all-null（新 trip）→ docs state 為空 + 完全不 toast', async () => {
+    setupMocks(() => Promise.resolve(ALL_NULL_DOCS));
 
     const { result } = renderHook(() => useTrip('trip-1'));
     await waitFor(() => expect(result.current.loading).toBe(false));
-    // 給 fetchAllDocs 的 Promise.allSettled 完成時間
     await waitFor(() => {
       expect(mockApiFetch).toHaveBeenCalledWith(
-        expect.stringMatching(/\/docs\/suggestions$/),
+        expect.stringMatching(/\/trips\/trip-1\/docs$/),
         expect.anything(),
       );
     });
-    // 等微任務 flush
     await new Promise((r) => setTimeout(r, 0));
 
+    expect(result.current.docs.flights).toBeUndefined();
+    expect(result.current.docs.checklist).toBeUndefined();
     expect(mockShowErrorToast).not.toHaveBeenCalled();
   });
 
-  it('docs 500 仍會 toast（regression guard：別把所有 docs 錯誤都吃掉）', async () => {
+  it('batch endpoint 500 → toast severe', async () => {
     setupMocks(() => Promise.reject(new ApiError('SYS_INTERNAL', 500)));
 
     const { result } = renderHook(() => useTrip('trip-1'));
     await waitFor(() => expect(result.current.loading).toBe(false));
     await waitFor(() => expect(mockShowErrorToast).toHaveBeenCalled());
 
-    // 確認被當 severe 處理
     expect(mockShowErrorToast.mock.calls[0][1]).toBe('severe');
   });
 
-  it('docs 部分 200、部分 404 → 200 寫入 state，404 完全靜默', async () => {
-    const NOT_FOUND_KEYS = new Set(['flights', 'backup', 'emergency']);
-    setupMocks((key) => {
-      if (NOT_FOUND_KEYS.has(key)) {
-        return Promise.reject(new ApiError('DATA_NOT_FOUND', 404));
-      }
-      return Promise.resolve({ docType: key, title: `${key} doc`, entries: [] });
-    });
+  it('batch endpoint 404 DATA_NOT_FOUND（trip 不存在）→ 靜默', async () => {
+    setupMocks(() => Promise.reject(new ApiError('DATA_NOT_FOUND', 404)));
+
+    const { result } = renderHook(() => useTrip('trip-1'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockShowErrorToast).not.toHaveBeenCalled();
+  });
+
+  it('部分 null 部分有資料 → 有資料 wire 進 state、null key 不會佔位', async () => {
+    setupMocks(() =>
+      Promise.resolve({
+        docs: {
+          flights: null,
+          checklist: { docType: 'checklist', title: 'Checklist', entries: [] },
+          backup: null,
+          suggestions: { docType: 'suggestions', title: 'Suggestions', entries: [] },
+          emergency: null,
+        },
+      }),
+    );
 
     const { result } = renderHook(() => useTrip('trip-1'));
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -111,5 +134,19 @@ describe('useTrip — docs 404 處理（PR-HH）', () => {
     expect(result.current.docs.backup).toBeUndefined();
     expect(result.current.docs.emergency).toBeUndefined();
     expect(mockShowErrorToast).not.toHaveBeenCalled();
+  });
+
+  it('batch endpoint 只 fire 一次（不再 5 個 sequential calls）', async () => {
+    setupMocks(() => Promise.resolve(ALL_NULL_DOCS));
+
+    const { result } = renderHook(() => useTrip('trip-1'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await new Promise((r) => setTimeout(r, 0));
+
+    const docsCalls = mockApiFetch.mock.calls.filter((c) =>
+      typeof c[0] === 'string' && /\/docs/.test(c[0]),
+    );
+    expect(docsCalls).toHaveLength(1);
+    expect(docsCalls[0][0]).toMatch(/\/trips\/trip-1\/docs$/);
   });
 });
