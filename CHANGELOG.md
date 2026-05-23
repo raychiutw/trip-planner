@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.29] - 2026-05-23
+
+**Chore (simplify PR-2): scripts/lib/d1-client.js + load-env 統一**
+
+`/simplify` agent finding: 4 個 script (`auth-cleanup` / `daily-check` /
+`daily-report` / `provision-admin-cli-client`) 各自重寫 `loadEnvLocal` +
+`queryD1`/`execD1`。原本的 `/^(\w+)=(.+)/` regex 不處理 values with `=`
+in them（base64 / JWT / JSON），引發過 multi-line env bug。
+
+Added:
+- `scripts/lib/load-env.js` — CommonJS .env.local loader (indexOf 取代 regex,
+  strip-quotes safe)
+- `scripts/lib/d1-client.js` — shared `queryD1` (returns rows) + `execD1`
+  (returns changes count) + `rawQuery` (returns full result)
+
+Migrated:
+- `scripts/auth-cleanup.js`：~45 LOC removed
+- `scripts/daily-check.js`：~30 LOC removed（保留 `loadConfigYaml`）
+- `scripts/daily-report.js`：~17 LOC removed
+- `scripts/provision-admin-cli-client.js`：~16 LOC removed
+
+無行為改動，純 dedupe。270 files / 2092 tests pass。
+
 ## [2.33.28] - 2026-05-23
 
 **Chore (simplify PR-1): dedupe POI_TYPE_LABEL + MODE_LABEL stringly-typed sprawl**

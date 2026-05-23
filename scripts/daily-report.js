@@ -25,23 +25,8 @@ var SITE_URL = process.env.SITE_URL || 'https://trip-planner-dby.pages.dev';
 var PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY || '';
 
 // ── D1 REST API helper ──────────────────────────────────────────
-
-async function queryD1(sql) {
-  var url = 'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT +
-    '/d1/database/' + D1_DB + '/query';
-  var res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + CF_TOKEN,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ sql: sql })
-  });
-  if (!res.ok) throw new Error('D1 query failed: ' + res.status);
-  var data = await res.json();
-  if (!data.success) throw new Error('D1 query error: ' + JSON.stringify(data.errors));
-  return data.result[0].results;
-}
+// v2.33.29: 移到 scripts/lib/d1-client.js
+var { queryD1 } = require('./lib/d1-client');
 
 // ── 數據來源 1: 行程修改統計 ────────────────────────────────────
 
