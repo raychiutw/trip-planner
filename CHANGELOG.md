@@ -3,6 +3,47 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.47] - 2026-05-24
+
+**src/pages/ review round 7b — HIGH effect bugs + selective MED + LOW**
+
+延續 v2.33.46 round 7a，處理 round 1 留下 3 個 HIGH effect bug + 1 個 MED +
+3 個 LOW。完整 finding doc 在 `docs/code-review/round-7b-pages-effect-bugs.md`。
+
+**HIGH effect bug**
+
+- `ChatPage.tsx:601` — `useEffect([])` 內讀 `activeTripId` stale closure
+  (strict-mode double-mount 第二 pass 抓 initial value clobber persisted
+  ActiveTripContext)。改 `activeTripIdRef` sync + 讀 ref.current。
+- `EditEntryPage.tsx:1131` — Global `keydown` listener `⌘+Enter/⌘+S/Esc`
+  沒 check inner modal 開著 → Esc-trap conflict (Escape 同時 fire 內外 modal
+  cancel)。加 `showDiscardModal || altSwapConfirm` guard + skip TEXTAREA/
+  INPUT for Escape + skip e.repeat。
+- `AccountPage.tsx:188` — Logout 失敗 modal 卡死，success/fail 都不關 modal
+  + raw error.message leak backend detail。改 success/fail 都 close modal +
+  失敗顯 toast + `navigate('/login', {replace: true})` + ApiError 分支不
+  leak detail。
+
+**LOW**
+
+- `ChatPage.tsx:836` — `buildMessagesWithDividers(messages)` 每 keystroke
+  重 walk → `useMemo([messages])`。
+- `LoginPage.tsx:230` — `failureCount` mount-effect read 改 lazy
+  `useState(() => sessionStorage.getItem(...))` 避免 first-paint flash。
+- `EmailVerifyPendingPage.tsx:99` — 1Hz interval 不停 fire on hidden tab
+  → 加 `visibilitychange` listener pause/resume + catch-up tick。
+
+**Tests**
+
+- 既有 `account-page.test.tsx` navigate assertion 更新 `{ replace: true }`
+- 2248/2248 unit pass
+
+**Round 7c/7d follow-up**
+
+完整 13 個 MED + 7 個 LOW + 5 個 critical test gap 列在
+`docs/code-review/round-7b-pages-effect-bugs.md`。NewTripPage 932 LOC
+zero coverage 最高優先。
+
 ## [2.33.46] - 2026-05-24
 
 **src/pages/ review round 7a — HIGH security + critical effect bugs**

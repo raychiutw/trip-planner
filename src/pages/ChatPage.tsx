@@ -570,6 +570,20 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   // 區分 'auth_expired' / 'sse_failed' / 'network'；elapsedMs 給 UI 顯示等待時間。
   const { status, error: sseError, errorReason, elapsedMs } = useRequestSSE(inflightId);
 
+  // v2.33.47 round 7b LOW: memoize buildMessagesWithDividers — 之前每 keystroke
+  // 都 O(n) walk messages list。1000-msg trip 在打字時明顯卡。
+  const messagesWithDividers = useMemo(
+    () => buildMessagesWithDividers(messages),
+    [messages],
+  );
+
+  // v2.33.47 round 7b: activeTripId 改用 ref 抓 latest value — 之前 useEffect
+  // 內讀 activeTripId 但 dep 是 [] (intentional, mount-only)；strict-mode
+  // double-mount 時第二 pass 還抓 initial closure，可能 clobber 已 persisted 的
+  // ActiveTripContext 值。
+  const activeTripIdRef = useRef(activeTripId);
+  useEffect(() => { activeTripIdRef.current = activeTripId; }, [activeTripId]);
+
   // Load trips list (mine + meta) once on mount.
   useEffect(() => {
     let cancelled = false;
@@ -588,8 +602,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         setTrips(myTrips);
 
         // Section 5 (E4)：優先用 ActiveTripContext (cross-page persisted)，
-        // fallback 第一個可見 trip
-        const pref = activeTripId;
+        // fallback 第一個可見 trip。v2.33.47: 讀 ref 而非 closure capture。
+        const pref = activeTripIdRef.current;
         const valid = pref && myTrips.some((t) => t.tripId === pref) ? pref : (myTrips[0]?.tripId ?? null);
         setActiveTripId(valid);
       } catch {
@@ -834,7 +848,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
           </div>
         )}
 
-        {activeTripId && buildMessagesWithDividers(messages).map((m) => {
+        {activeTripId && messagesWithDividers.map((m) => {
           if (m.role === 'day-divider') {
             return (
               <div

@@ -227,21 +227,21 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
-  const [failureCount, setFailureCount] = useState(0);
+  // v2.33.47 round 7b LOW: lazy init via useState — 之前 mount-effect read 後
+  // 才 setFailureCount，first paint 顯 0 然後 warning banner 突然冒出。lazy
+  // init 直接從 sessionStorage 起手避免 flash。
+  const [failureCount, setFailureCount] = useState<number>(() => {
+    try {
+      const stored = sessionStorage.getItem('tp_login_fail_count');
+      return stored ? (parseInt(stored, 10) || 0) : 0;
+    } catch {
+      return 0;
+    }
+  });
   // Whether the deployment has Google OIDC env configured. We optimistically
   // assume "no" so the button doesn't flash on slow networks; the probe flips
   // it on if /api/public-config confirms.
   const [googleAvailable, setGoogleAvailable] = useState(false);
-
-  // Read failure count from sessionStorage to show defensive UX warning
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem('tp_login_fail_count');
-      if (stored) setFailureCount(parseInt(stored, 10) || 0);
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   // Probe public-config to know which providers are enabled. Side-effect-free.
   useEffect(() => {
