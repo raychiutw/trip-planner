@@ -1,4 +1,5 @@
 import { logAudit } from './_audit';
+import { requireAuth } from './_auth';
 import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
 import type { Env } from './_types';
@@ -39,8 +40,7 @@ function nullableInt(val: unknown): number | null {
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const body = await parseJsonBody<Record<string, unknown>>(context.request);
 

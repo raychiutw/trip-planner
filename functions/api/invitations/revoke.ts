@@ -13,9 +13,9 @@
  * trip_permissions row），那要走 DELETE /api/permissions/:id。
  */
 import { ensureCanManageTripPerms } from '../permissions';
+import { requireAuth } from '../_auth';
 import { logAudit } from '../_audit';
-import { AppError } from '../_errors';
-import { getAuth, parseJsonBody } from '../_utils';
+import {  parseJsonBody } from '../_utils';
 import type { Env } from '../_types';
 
 interface RevokeBody {
@@ -24,8 +24,7 @@ interface RevokeBody {
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const body = (await parseJsonBody<RevokeBody>(context.request)) ?? {};
   const tripId = body.tripId?.trim();

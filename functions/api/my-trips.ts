@@ -7,8 +7,8 @@
  *   只 read tripId 仍 work。
  */
 
-import { AppError } from './_errors';
-import { json, getAuth } from './_utils';
+import { requireAuth } from './_auth';
+import { json } from './_utils';
 import type { Env } from './_types';
 
 const SELECT_BASE = `
@@ -23,8 +23,7 @@ const SELECT_BASE = `
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env } = context;
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   // INNER JOIN trips so orphan permission rows (trip deleted but permission left
   // behind) never leak into /trips landing or ManagePage trip selector.

@@ -1,11 +1,11 @@
 import { logAudit } from '../../../_audit';
-import { hasWritePermission } from '../../../_auth';
+import { hasWritePermission, requireAuth} from '../../../_auth';
 import { syncEntryMaster } from '../../../_entry_pois';
 import { AppError } from '../../../_errors';
 import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
 import { resolveEntryTimes } from '../../../_time';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
-import { json, getAuth, parseJsonBody } from '../../../_utils';
+import { json, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
 import {
   assembleDay,
@@ -120,8 +120,7 @@ function canonicalChoiceInputs(entry: TimelineEntryBody): Array<{ item: Record<s
 }
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, num } = context.params as { id: string; num: string };
   const changedBy = auth.email;
@@ -590,8 +589,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 // Auth: trip write permission（owner/admin/member; viewer 拒）。
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, num } = context.params as { id: string; num: string };
   const dayNum = Number(num);

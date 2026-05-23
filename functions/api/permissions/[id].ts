@@ -13,16 +13,16 @@
  */
 
 import { ensureCanManageTripPerms } from '../permissions';
+import { requireAuth } from '../_auth';
 import { logAudit } from '../_audit';
 import { AppError } from '../_errors';
-import { json, getAuth } from '../_utils';
+import { json } from '../_utils';
 import type { Env } from '../_types';
 
 const ALLOWED_PATCH_ROLES = new Set(['member', 'viewer']);
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const id = context.params.id as string;
 
@@ -59,8 +59,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const id = context.params.id as string;
   const body = await context.request.json().catch(() => null) as { role?: unknown } | null;

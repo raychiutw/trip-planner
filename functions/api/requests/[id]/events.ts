@@ -10,9 +10,8 @@
  * optimization；即使這裡 timeout 也不會 silent 卡死 — polling 30s 兜底。
  */
 
-import { hasPermission } from '../../_auth';
+import { hasPermission, requireAuth} from '../../_auth';
 import { AppError } from '../../_errors';
-import { getAuth } from '../../_utils';
 import type { Env } from '../../_types';
 
 const POLL_INTERVAL_MS = 10_000;
@@ -21,8 +20,7 @@ const MAX_DURATION_MS = 30 * 60 * 1000;
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
   const id = params.id as string;
 
   // 驗證使用者有權限看這個 request 所屬的 trip

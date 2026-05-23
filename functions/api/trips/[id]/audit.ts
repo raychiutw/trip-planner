@@ -1,14 +1,14 @@
 
 import { AppError } from '../../_errors';
-import { json, getAuth } from '../../_utils';
+import { requireAuth } from '../../_auth';
+import { json } from '../../_utils';
 import type { Env } from '../../_types';
 
 // GET /api/trips/:id/audit
 // Query params: limit (default 20), request_id (optional filter)
 // Only admin can access
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
   if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const { id } = context.params as { id: string };

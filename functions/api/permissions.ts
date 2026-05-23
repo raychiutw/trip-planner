@@ -15,9 +15,10 @@
  */
 
 import { logAudit, recordEmailEvent } from './_audit';
+import { requireAuth } from './_auth';
 import { alertAdminTelegram } from './_alert';
 import { AppError } from './_errors';
-import { json, getAuth, parseJsonBody } from './_utils';
+import { json, parseJsonBody } from './_utils';
 import { sendEmail, EmailError } from '../../src/server/email';
 import { tripInvitation } from '../../src/server/email-templates';
 import {
@@ -47,8 +48,7 @@ export async function ensureCanManageTripPerms(
 
 // GET /api/permissions?tripId=xxx
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const url = new URL(context.request.url);
   const tripId = url.searchParams.get('tripId');
@@ -141,8 +141,7 @@ async function sendInvitationEmailBestEffort(
 
 // POST /api/permissions { email, tripId, role? }
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const body = await parseJsonBody<{ email?: string; tripId?: string; role?: string }>(
     context.request,
