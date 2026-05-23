@@ -20,6 +20,7 @@
 | 6b | src/components/ IMPORTANT + LOW | — | [#724](https://github.com/raychiutw/trip-planner/pull/724) | 2026-05-24 | [round-6b-components-low.md](./round-6b-components-low.md) |
 | 7a | src/pages/ HIGH security | 20,110 | [#725](https://github.com/raychiutw/trip-planner/pull/725) | 2026-05-24 | [round-7a-pages-security.md](./round-7a-pages-security.md) |
 | 7b | src/pages/ effect bugs + LOW | — | [#726](https://github.com/raychiutw/trip-planner/pull/726) | 2026-05-24 | [round-7b-pages-effect-bugs.md](./round-7b-pages-effect-bugs.md) |
+| 7c | src/pages/ test gap fill | — | [#727](https://github.com/raychiutw/trip-planner/pull/727) | 2026-05-24 | [round-7c-pages-tests.md](./round-7c-pages-tests.md) |
 
 ## 流程
 
