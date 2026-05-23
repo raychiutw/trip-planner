@@ -1,3 +1,23 @@
+> # ⛔ CANCELLED — 2026-05-23
+>
+> Ray 拍板：SaaS pivot 整個取消。tripline 維持私人工具定位，**不**做
+> OAuth-server-as-service / 對外開放註冊 / Mindtrip 化。
+>
+> 取消理由：Day-0 demand verification 兩件任務（Cloudflare Access deny
+> log 查證 + 第三方 dev 訪談）均未完成，缺乏「別人也想要」的證據，
+> 14 週 sprint 風險過高。
+>
+> 已 ship 的「V2 OAuth」(email/password 自助登入 + opaque cookie)
+> **保留** — 那是內部 auth 取代 Cloudflare Access，與本文件「OAuth
+> Server for external clients」是**不同概念**。
+>
+> 本文件以下內容保留作歷史紀錄。未來若有第三方明確需求可 revisit。
+>
+> 相關：`docs/2026-04-25-session-retro.md` 同步標 CANCELLED；memory
+> `project_v2_oauth_decision` + `project_day0_demand_verify` 已更新。
+
+---
+
 # 2026-04-24 Tripline SaaS Pivot Roadmap
 
 trip-planner 從 2-user 私人工具（Cloudflare Access + email 白名單）轉為**開放註冊 + Mindtrip 化**的 SaaS。本文件彙整 2026-04-24 session 所有規劃產出、待開發項目、時程與依賴。

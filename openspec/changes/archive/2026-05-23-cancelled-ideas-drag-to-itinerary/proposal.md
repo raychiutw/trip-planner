@@ -1,12 +1,18 @@
 ## Status
 
-> ⏸ **Deferred to V2**（2026-04-25 retro 決定）
+> ⛔ **CANCELLED — 2026-05-23**
 >
-> B-P5 在 SaaS pivot roadmap 中被識別為「Ideas drag UX」，但前提依賴 Ideas tab 真實 UI（目前還是 placeholder，B-P4 只做 Explore + saved pool）。先做 Ideas tab real UI，再做 drag。
+> 原 deferred to V2，但 V2 SaaS pivot 已在 2026-05-23 整批取消（見
+> `docs/2026-04-24-saas-pivot-roadmap.md` 頂部 CANCELLED 區塊）。
 >
-> **不 archive 此 change** — 留 active 等 V2 排程進來時拿來用。Schema 已 ship（`trip_entries.order_in_day` + `trip_ideas.promoted_to_entry_id` from B-P1）。
+> Ideas drag UX 是 Mindtrip-style 開放 SaaS layout 的一環，SaaS pivot 拿掉
+> 後 tripline 維持私人工具 + text-based promote 已足夠，drag UX 投入 ROI
+> 不成比例。
 >
-> 相關：`docs/2026-04-25-session-retro.md` / `docs/2026-04-24-saas-pivot-roadmap.md`。
+> Schema 已 ship 不會回退（`trip_entries.order_in_day`），未來若重新評估
+> drag UX 需求可恢復本 proposal。
+>
+> 以下內容保留作 archive。
 
 ## Why
 

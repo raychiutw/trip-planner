@@ -1,3 +1,14 @@
+> # ⛔ V2 OAuth 部分 CANCELLED — 2026-05-23
+>
+> 本檔的 **V2 OAuth Server 選型決定** + 14 週 sprint 規劃 已隨 2026-05-23
+> SaaS pivot 取消而作廢。詳見 `docs/2026-04-24-saas-pivot-roadmap.md` 頂部
+> CANCELLED 區塊。
+>
+> 本檔的「B workstream 收尾」部分（layout / nav / sheet / explore）已 ship
+> 仍有效，僅 V2 OAuth 選型相關段落視為廢稿。
+
+---
+
 # 2026-04-25 Session Retro — B workstream 收尾 + V2 OAuth 選型
 
 **Date:** 2026-04-25
