@@ -63,35 +63,49 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // v2.29.0: 全 type 統一寫 trip_entry_pois（sort_order = max+1 = alternate）。
   // sort_order subquery atomic with INSERT 縮 race window — concurrent POST 同 entry
   // 由 SQLite 單 writer + UNIQUE(entry_id, sort_order) catch 兜底。
+  //
+  // v2.33.43 security audit: 把 INSERT + UPDATE entry_pois_version 合進
+  // 同一個 db.batch — 之前 INSERT 成功但 UPDATE 失敗，會留下 entry_pois_version
+  // 未 bump 的 stale entry → 後續 OCC 檢查穿過，破壞「entries 改動必 bump
+  // version」 invariant。D1 batch 內任一 statement 失敗會 rollback。
   const now = new Date().toISOString();
   let result;
   try {
-    result = await db
-      .prepare(
-        `INSERT INTO trip_entry_pois (
-           entry_id, poi_id, sort_order, added_at, updated_at,
-           description, note, reservation, reservation_url
-         )
-         VALUES (
-           ?, ?,
-           (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM trip_entry_pois WHERE entry_id = ?),
-           ?, ?, ?, ?, ?, ?
-         )
-         RETURNING *`,
-      )
-      .bind(
-        entryId,
-        poiId,
-        entryId,
-        now,
-        now,
-        body.description ?? null,
-        body.note ?? null,
-        body.reservation ?? null,
-        body.reservation_url ?? null,
-      )
-      .first();
+    const batchResults = await db.batch([
+      db
+        .prepare(
+          `INSERT INTO trip_entry_pois (
+             entry_id, poi_id, sort_order, added_at, updated_at,
+             description, note, reservation, reservation_url
+           )
+           VALUES (
+             ?, ?,
+             (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM trip_entry_pois WHERE entry_id = ?),
+             ?, ?, ?, ?, ?, ?
+           )
+           RETURNING *`,
+        )
+        .bind(
+          entryId,
+          poiId,
+          entryId,
+          now,
+          now,
+          body.description ?? null,
+          body.note ?? null,
+          body.reservation ?? null,
+          body.reservation_url ?? null,
+        ),
+      db
+        .prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?')
+        .bind(entryId),
+    ]);
+    result = (batchResults[0]?.results as Array<Record<string, unknown>> | undefined)?.[0];
+    if (!result) {
+      throw new AppError('SYS_DB_ERROR', 'INSERT trip_entry_pois 未回傳資料');
+    }
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes('UNIQUE') && msg.includes('entry_id, poi_id')) {
       throw new AppError('DATA_CONFLICT', '此 POI 已存在於該 entry');
@@ -101,11 +115,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
     throw err;
   }
-
-  await db
-    .prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?')
-    .bind(entryId)
-    .run();
 
   await logAudit(db, {
     tripId: id, tableName: 'trip_entry_pois', recordId: (result as { id: number }).id,

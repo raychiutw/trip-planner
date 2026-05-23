@@ -150,6 +150,15 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       .bind(...update.values, eid)
       .first();
   } catch (err: unknown) {
+    // v2.33.43 security audit: re-classify constraint failures to 409 (was
+    // silently swallowed as 503，UX 與 client retry 邏輯都受影響).
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/UNIQUE constraint/i.test(msg) || /SQLITE_CONSTRAINT_UNIQUE/i.test(msg)) {
+      throw new AppError('DATA_CONFLICT', '此 entry 與既有資料衝突');
+    }
+    if (/FOREIGN KEY constraint/i.test(msg) || /SQLITE_CONSTRAINT_FOREIGNKEY/i.test(msg)) {
+      throw new AppError('DATA_VALIDATION', '欄位參考的資料不存在');
+    }
     throw new AppError('SYS_DB_ERROR', 'DB 暫時無法處理，請稍後重試');
   }
 
@@ -191,6 +200,11 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   try {
     await db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(eid).run();
   } catch (err: unknown) {
+    // v2.33.43 security audit: re-classify FK constraint failures.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/FOREIGN KEY constraint/i.test(msg) || /SQLITE_CONSTRAINT_FOREIGNKEY/i.test(msg)) {
+      throw new AppError('DATA_CONFLICT', '此 entry 仍有相依資料無法刪除');
+    }
     throw new AppError('SYS_DB_ERROR', 'DB 暫時無法處理，請稍後重試');
   }
 

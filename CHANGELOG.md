@@ -3,6 +3,55 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.43] - 2026-05-24
+
+**Security round 5c — backend residual HIGH/MED fixes**
+
+延續 v2.33.41 + v2.33.42，本 PR 收尾 functions/api/ review 的最後一批
+findings：
+
+**Bearer CSRF defense in depth**
+
+- `_middleware.ts::checkCsrf` Bearer 請求若帶 Origin header，仍 enforce
+  `isAllowedOrigin(origin, env)`。之前 Bearer skip CSRF 完全，意味著 XSS
+  從 evil.com 偷到 access_token 後直接從 evil.com server-side 發 mutating
+  call 即可繞 Origin check。新邏輯：
+  - Bearer + 無 Origin → skip（CLI / scheduler legitimate use case）
+  - Bearer + Origin 在 allowlist → allow
+  - Bearer + Origin 非 allowlist → 403 (XSS-stolen token reuse 擋下)
+
+**SQL error swallow → constraint re-classification**
+
+- `trips/[id]/entries/[eid].ts` PATCH catch:
+  - `UNIQUE constraint` failure → `DATA_CONFLICT` (409) 而非 503
+  - `FOREIGN KEY constraint` failure → `DATA_VALIDATION` (400)
+  - 其他 → 仍 `SYS_DB_ERROR` (503)
+- DELETE 同 pattern (FK 相依資料 → 409)。
+
+**Atomic write — trip_entry_pois INSERT**
+
+- `trips/[id]/entries/[eid]/trip-pois.ts` 把 `INSERT trip_entry_pois` +
+  `UPDATE trip_entries.entry_pois_version` 收進同一 `db.batch([...])`。
+  之前兩個分開 await，INSERT 成功 + UPDATE 失敗會留下「entry 新增 POI
+  但 version 沒 bump」的 inconsistent state，破壞 OCC invariant。D1 batch
+  整體 rollback 保 atomic。
+
+**Tests**
+
+- 新 `tests/api/round5c-security.test.ts` (+6 source-grep case): middleware
+  Bearer + Origin gate、entries[eid] PATCH/DELETE UNIQUE/FK re-classify、
+  trip-pois batch atomicity。
+- 既有 middleware + entry-pois integration suite 83/83 過。2221/2221 unit pass。
+
+**Round 5d 留 (small remaining)**
+
+- `oauth/authorize.ts` `prompt=consent` 不 invalidate consent — 政策決定
+  待議 (per-user max-scope cap vs step-up auth)
+- `entries/[num]/entries.ts` POST + `entries/[eid]/copy.ts` 同樣 split write
+  patterns 待 batch refactor (體積大，獨立 PR 較好)
+- Misc MED/LOW: oauth/reset-password rate limit、oauth/send-verification
+  rate limit、reports 文字 validate 一致性
+
 ## [2.33.42] - 2026-05-24
 
 **Security round 5b — remaining HIGH/MED backend findings**
