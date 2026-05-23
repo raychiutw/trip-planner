@@ -4,9 +4,9 @@
 import { memo } from 'react';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
-import MapLinks, { type MapLocation } from './MapLinks';
+import MapLinks from './MapLinks';
 // v2.29.0: restaurants infoBox 移除（trip_pois timeline 已 cutover 到 trip_entry_pois）
-import Shop, { type ShopData } from './Shop';
+import Shop from './Shop';
 import { escUrl } from '../../lib/sanitize';
 
 // ---------------------------------------------------------------------------
@@ -30,59 +30,17 @@ function safeText(value: unknown): string {
 // Souvenir item shape
 // ---------------------------------------------------------------------------
 
-interface SouvenirItem {
-  name: string;
-  url?: string | null;
-  note?: string | null;
-  location?: MapLocation | null;
-}
-
-// ---------------------------------------------------------------------------
-// Gas station shape
-// ---------------------------------------------------------------------------
-
-interface GasStationDetail {
-  name: string;
-  address?: string | null;
-  hours?: string | null;
-  service?: string | null;
-  phone?: string | null;
-  location?: MapLocation | null;
-}
+// v2.33.37 round 2: SouvenirItem canonical 已移到 src/types/timeline.ts。
+import type { SouvenirItem } from '../../types/timeline';
 
 // ---------------------------------------------------------------------------
 // InfoBox data — union of all known box types
+// v2.33.37 round 2: canonical 已移到 src/types/timeline.ts。
+// SouvenirItem / GasStationDetail / ShopData / InfoBoxType / InfoBoxData
+// 全部從 types/timeline 取，本檔不再自己定義。
 // ---------------------------------------------------------------------------
-
-export type InfoBoxType = 'reservation' | 'parking' | 'souvenir' | 'shopping' | 'gasStation';
-
-export interface InfoBoxData {
-  type: InfoBoxType;
-  title?: string | null;
-  content?: string | null;
-
-  /* reservation */
-  items?: (string | SouvenirItem)[] | null;
-  notes?: string | null;
-
-  /* parking */
-  price?: string | null;
-  note?: string | null;
-  location?: MapLocation | null;
-
-  /* souvenir */
-  // items is reused (string[] for reservation, SouvenirItem[] for souvenir)
-  // We handle the polymorphism inside the component.
-
-
-
-  /* shopping */
-  shops?: ShopData[] | null;
-
-  /* gasStation */
-  googleRating?: number | null;
-  station?: GasStationDetail | null;
-}
+import type { InfoBoxType, InfoBoxData } from '../../types/timeline';
+export type { InfoBoxType, InfoBoxData };
 
 // ---------------------------------------------------------------------------
 // Shared styles (eyebrow heading, backup row, generic box surface)

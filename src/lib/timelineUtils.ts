@@ -5,7 +5,8 @@
  * 兩個 component 共享相同邏輯，單一來源避免分歧。
  */
 
-import type { TimelineEntryData } from '../components/trip/TimelineEvent';
+// v2.33.37 round 2: type extracted to src/types/timeline.ts (was inverted dep).
+import type { TimelineEntryData } from '../types/timeline';
 
 /* ===== Types ===== */
 

@@ -3,10 +3,17 @@
  * POI Schema: API returns canonical trip_entry_pois rows for timeline entries.
  */
 
-import type { TimelineEntryData, TravelData, PoiPhoto, StopPoiOptionData } from '../components/trip/TimelineEvent';
-import type { NavLocation } from '../components/trip/MapLinks';
-import type { InfoBoxData } from '../components/trip/InfoBox';
-import type { ShopData } from '../components/trip/Shop';
+// v2.33.37 round 2: types extracted to src/types/timeline.ts (was inverted dep
+// on src/components/trip/*; lib should be leaf module).
+import type {
+  TimelineEntryData,
+  TravelData,
+  PoiPhoto,
+  StopPoiOptionData,
+  NavLocation,
+  InfoBoxData,
+  ShopData,
+} from '../types/timeline';
 import type { Day, Entry } from '../types/trip';
 import { getStopDisplayTitle } from './stopDisplay';
 

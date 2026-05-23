@@ -1,0 +1,163 @@
+/**
+ * timeline.ts — shared timeline data shapes（v2.33.37 round 2 architecture refactor）
+ *
+ * 之前這些 interface 散在 `src/components/trip/*.tsx` 內，但 `src/lib/mapDay.ts`
+ * 與 `src/lib/timelineUtils.ts` 需要它們做純資料 transform。lib → components
+ * import 是反向依賴（util layer 應為 leaf），會綁定不必要的 React render tree。
+ *
+ * 集中到 `src/types/` 後：
+ *  - lib 從這裡取，components 也從這裡取（或繼續經 component re-export 過渡）
+ *  - 沒有 React import，純 type 模組
+ */
+
+/** Location data shape used by map link generation. */
+export interface MapLocation {
+  name?: string;
+  googleQuery?: string;
+  appleQuery?: string;
+  naverQuery?: string;
+  /** Legacy field – falls back for google link */
+  url?: string;
+  label?: string;
+}
+
+/** Location with a display label (for `NavLinks` rendering). */
+export interface NavLocation extends MapLocation {
+  label?: string;
+}
+
+/** Item inside `InfoBoxData.items` for souvenir / shopping boxes. */
+export interface SouvenirItem {
+  name: string;
+  url?: string | null;
+  note?: string | null;
+  location?: MapLocation | null;
+}
+
+/** Allowed InfoBox category tags. */
+export type InfoBoxType = 'reservation' | 'parking' | 'souvenir' | 'shopping' | 'gasStation';
+
+/** Free-form info box rendered between timeline entries. */
+export interface InfoBoxData {
+  type: InfoBoxType;
+  title?: string | null;
+  content?: string | null;
+
+  /* reservation */
+  items?: (string | SouvenirItem)[] | null;
+  notes?: string | null;
+
+  /* parking */
+  price?: string | null;
+  note?: string | null;
+  location?: MapLocation | null;
+
+  /* souvenir — `items` reused (string[] for reservation, SouvenirItem[] for souvenir) */
+
+  /* shopping */
+  shops?: ShopData[] | null;
+
+  /* gasStation */
+  googleRating?: number | null;
+  station?: GasStationDetail | null;
+}
+
+/** Shop data shape from dist JSON `infoBoxes.shops[]`. */
+export interface ShopData {
+  name: string;
+  category?: string | null;
+  hours?: string | null;
+  mustBuy?: string[] | null;
+  description?: string | null;
+  note?: string | null;
+  googleRating?: number | null;
+  location?: MapLocation | null;
+}
+
+/** Gas station entry inside `InfoBoxData.station` for gasStation boxes. */
+export interface GasStationDetail {
+  name: string;
+  address?: string | null;
+  hours?: string | null;
+  service?: string | null;
+  phone?: string | null;
+  location?: MapLocation | null;
+}
+
+/** Travel segment between two stops. */
+export interface TravelData {
+  type?: string | null;
+  /** Free-form description (e.g.「沿縣道 58 號北上」). API surface as `desc`. */
+  desc?: string | null;
+  /** Travel duration in minutes. */
+  min?: number | null;
+  /** Driving distance in meters (Google Routes API). NULL for legacy entries. */
+  distanceM?: number | null;
+  /** Legacy alias kept for backwards compat — map source still emits `text`. */
+  text?: string | null;
+}
+
+/**
+ * v2.12 Wave 3：POI 照片 schema。`pois.photos` 是 JSON-encoded TEXT column，
+ * mapDay.toTimelineEntry 會 parse 後 surface 為 PoiPhoto[]。
+ */
+export interface PoiPhoto {
+  url: string;
+  thumbUrl?: string;
+  caption?: string;
+  source?: string;
+  attribution?: string;
+}
+
+/** Master / alternate POI option attached to a timeline entry (`trip_entry_pois` row). */
+export interface StopPoiOptionData {
+  poiId?: number | null;
+  sortOrder?: number | null;
+  name?: string | null;
+  type?: string | null;
+  category?: string | null;
+  rating?: number | null;
+  hours?: string | null;
+  price?: string | null;
+  reservation?: string | null;
+  reservationUrl?: string | null;
+  description?: string | null;
+  note?: string | null;
+  location?: NavLocation | null;
+}
+
+/** Single timeline entry (one stop on a trip day). */
+export interface TimelineEntryData {
+  id?: number | null;
+  /** v2.29.0: client-side composed display string (從 startTime/endTime 合成 by mapDay.ts).
+   *  schema 已無 trip_entries.time col。frontend 仍接受此 field 作為 display fallback。 */
+  time?: string | null;
+  /** 抵達時間 "HH:MM"。schema source。v2.31.77 改 camelCase（backend deepCamel'd response）。 */
+  startTime?: string | null;
+  /** 離開時間 "HH:MM"。schema source。 */
+  endTime?: string | null;
+  /** Display title used by list/map UI. Keeps raw `title` intact for edit/export semantics. */
+  displayTitle?: string | null;
+  title?: string | null;
+  description?: string | null;
+  note?: string | null;
+  googleRating?: number | null;
+  source?: string | null;
+  travel?: TravelData | string | null;
+  locations?: NavLocation[] | null;
+  infoBoxes?: InfoBoxData[] | null;
+  /** Canonical entry POIs: first row (`sortOrder=1`) is the primary pick; remaining rows are alternates. */
+  stopPois?: StopPoiOptionData[] | null;
+  /** v2.12 Wave 3：POI photos （from pois.photos JSON column）。null = 還沒抓到，
+   *  StopLightbox 顯示「即將推出」 placeholder。 */
+  photos?: PoiPhoto[] | null;
+  /** POI master type — surface 給 deriveTypeMeta 優先 over text-based keyword match。
+   *  pois.type ∈ hotel|restaurant|shopping|parking|attraction|transport|activity|other */
+  poiType?: string | null;
+  /**
+   * POI master coords — TimelineRail 用來算 Haversine(prev, curr) 與
+   * `travel.distanceM` 比對，divergence > 20% 顯 ⚠「車程未更新」。
+   */
+  masterLat?: number | null;
+  masterLng?: number | null;
+}
