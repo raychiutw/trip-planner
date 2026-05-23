@@ -1,6 +1,6 @@
-import { hasWritePermission, requireAuth} from '../../_auth';
+import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../_auth';
 import { AppError } from '../../_errors';
-import { json } from '../../_utils';
+import { json, getAuth } from '../../_utils';
 import type { Env } from '../../_types';
 import {
   assembleDay,
@@ -26,6 +26,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
   const db = context.env.DB;
   const all = new URL(context.request.url).searchParams.get('all') === '1';
+
+  // v2.33.41 security: gate anonymous read.
+  await requireTripReadAccess(db, getAuth(context), id);
 
   if (!all) {
     const { results } = await db

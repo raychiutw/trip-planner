@@ -1,7 +1,7 @@
 import { logAudit } from '../../../_audit';
-import { hasWritePermission, requireAuth} from '../../../_auth';
+import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { json, parseJsonBody } from '../../../_utils';
+import { json, parseJsonBody, getAuth } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 const VALID_TYPES = new Set(['flights', 'checklist', 'backup', 'suggestions', 'emergency']);
@@ -27,6 +27,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!VALID_TYPES.has(type)) throw new AppError('DATA_VALIDATION', '無效的文件類型');
 
   const db = context.env.DB;
+
+  // v2.33.41 security: gate anonymous read — published trips allow, otherwise
+  // owner/member only。
+  await requireTripReadAccess(db, getAuth(context), id);
 
   const doc = await db
     .prepare('SELECT id, doc_type, title, updated_at FROM trip_docs WHERE trip_id = ? AND doc_type = ?')

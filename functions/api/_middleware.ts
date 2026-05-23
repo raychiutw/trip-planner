@@ -409,10 +409,13 @@ async function handleAuth(
     }
   }
 
-  // 公開讀取：GET /api/trips/** 不需認證 — anonymous 直接 next() 不附 auth。
-  // V2 logged-in users were already auth-decorated by the V2 session block
-  // above, so they reach this branch only when V2 fell through (anonymous).
+  // v2.33.41 security audit: 之前 `GET /api/trips/**` 一律不需認證 → handler
+  // 也沒 published / hasPermission 檢查，anonymous 讀全行程（含 doc 航班 /
+  // emergency contact）。改 attach `auth=null` 後 next()，每 handler 自己
+  // gate via `requireTripReadAccess` helper (in _auth.ts) — published trip
+  // 仍 allow anonymous read，unpublished 必須 owner / member。
   if (request.method === 'GET' && url.pathname.startsWith('/api/trips')) {
+    (context.data as Record<string, unknown>).auth = null;
     return context.next();
   }
 

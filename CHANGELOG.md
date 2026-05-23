@@ -3,6 +3,68 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.41] - 2026-05-24
+
+**CRITICAL security fix — `/api/trips/:id/*` anonymous-read hole**
+
+Security audit (functions/api/ round 1) confirmed by both code-reviewer +
+security-auditor agents：`_middleware.ts:413-417` 對所有 `GET /api/trips/**`
+直接 bypass auth，而下游 GET handlers 沒做 `published=1 OR hasPermission`
+check。意思：**任何人 enumerate tripId 即可讀全行程（含 doc 航班 / hotel
+POI / 緊急聯絡）**。tripId 是 user-chosen lowercase slug
+(`^[a-z0-9-]+$/`)，極易猜（`tokyo-2026` / `okinawa-jul` 等）。
+
+**Fix**
+
+- 新 `functions/api/_auth.ts::requireTripReadAccess(db, auth, tripId)`
+  helper:
+  - SELECT `trips.published`
+  - 不存在 → throw `DATA_NOT_FOUND` (404)
+  - `published=1` → allow (anonymous OK，public share semantics)
+  - `published=0` + `!auth` → throw `PERM_DENIED` (403)
+  - `published=0` + auth → 走 `hasPermission` (admin / owner / member /
+    viewer 任何 role 都允許 read)
+  - 統一回 `PERM_DENIED` 而非 `AUTH_REQUIRED` 避免 enumerate published vs
+    unpublished tripId (anti-enumeration)
+- `_middleware.ts:415` 把 GET `/api/trips/**` 從 anon bypass 改為「attach
+  `auth=null` 後 next()」，handler 自己 gate。
+- 5 個 GET handler wire `requireTripReadAccess`:
+  - `trips/[id].ts` (GET 單 trip)
+  - `trips/[id]/days.ts` (GET days list summary + ?all=1 batch)
+  - `trips/[id]/days/[num].ts` (GET 單 day detail)
+  - `trips/[id]/docs/index.ts` (v2.33.35 batch endpoint)
+  - `trips/[id]/docs/[type].ts` (single doc fetch)
+  - `trips/[id]/segments/index.ts` (取代之前的 `requireAuth + hasPermission`，
+    改為 published-aware；對齊其他 sibling handler)
+
+**Behavior change**
+
+- Previous: any `GET /api/trips/nope/days` → 200 + empty array
+- Now: any `GET /api/trips/nope/days` → 404 DATA_NOT_FOUND
+
+**Tests**
+
+- 新 `tests/api/trips-read-access.integration.test.ts` — 13 case
+  - published trip: 4 GET handler anon OK
+  - unpublished trip: 6 GET handler anon → 403
+  - unpublished + owner → 200, unpublished + non-member → 403
+  - nonexistent → 404
+- 既有 `days.integration.test.ts` 2 個「不存在 → 空陣列」 test 改為「→ 404」
+  對齊新 contract。
+
+**Round 5b 留 follow-up（其他 HIGH security finding）**
+
+- `_middleware.ts` Bearer skip CSRF (XSS-stolen token bypass Origin)
+- `permissions.ts` user-enumeration via response status diff (`permission_added`
+  vs `invitation_sent`)
+- `oauth/authorize.ts` `prompt=consent` 不 invalidate consent（scope escalation）
+- `dev/apps.ts` `validateScopes` 接受 `admin` / `companion` scope（privilege
+  escalation chain）
+- `requests/[id]/events.ts:122` SSE CORS `*` header
+- 3 個 non-atomic write violation (entries POST + copy + alternates)
+- 缺 per-IP rate limit on `/api/route` / `/api/poi-search` / `/api/reports`
+  (paid quota DoS)
+
 ## [2.33.40] - 2026-05-24
 
 **src/hooks/ review round 2 — IMPORTANT fixes + coverage**
