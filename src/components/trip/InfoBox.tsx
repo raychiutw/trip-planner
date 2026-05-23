@@ -13,7 +13,12 @@ import { escUrl } from '../../lib/sanitize';
 // Safe text extraction — API may return objects like {text, checked} or {label, text}
 // ---------------------------------------------------------------------------
 
-function safeText(value: unknown): string {
+/**
+ * v2.33.44 round 6a: export for unit testing (內部 helper，外部不該 import)。
+ * 之前 silent fall-through 到 `String(value)` 可能 render `[object Object]`；
+ * unit test 守住所有 known shape branch + unknown shape graceful fallback。
+ */
+export function safeText(value: unknown): string {
   if (value == null) return '';
   if (typeof value === 'string') return value;
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);

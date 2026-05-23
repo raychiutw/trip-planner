@@ -23,7 +23,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, info.componentStack);
+    // v2.33.44 round 6a: gate console.error 在 DEV — Sentry 已捕，prod console
+    // 噴 stack 不增資訊且 leak filenames / line numbers 給 devtools 訪客。
+    if (import.meta.env.DEV) {
+      console.error('ErrorBoundary caught:', error, info.componentStack);
+    }
     captureException(error, { extra: { componentStack: info.componentStack } });
   }
 

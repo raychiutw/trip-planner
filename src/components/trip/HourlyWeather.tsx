@@ -60,8 +60,10 @@ const HourlyWeather = memo(function HourlyWeather({
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
+  // v2.33.44 round 6a: ref write during render 是 react anti-pattern (strict
+  // mode fires twice)，搬進 useEffect 確保 render pure。
   const weatherDayRef = useRef(weatherDay);
-  weatherDayRef.current = weatherDay;
+  useEffect(() => { weatherDayRef.current = weatherDay; }, [weatherDay]);
 
   /* --- Fetch weather data on mount — skipped when tooFarAway --- */
   useEffect(() => {
