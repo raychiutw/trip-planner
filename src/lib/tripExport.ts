@@ -6,7 +6,9 @@
 import { apiFetch } from './apiClient';
 // v2.33.37 round 2: DOC_KEYS 從 lib/docKeys 取（之前 import hooks/useTrip 反向依賴）。
 import { DOC_KEYS } from './docKeys';
-import { showToast } from '../components/shared/Toast';
+// v2.33.54 round 10: import from lib/toastBus (was '../components/shared/Toast'
+// — broke lib→components reverse import, lib is leaf layer).
+import { showToast } from './toastBus';
 import type { Trip } from '../types/trip';
 
 /* ===== Internal raw types for API responses ===== */
