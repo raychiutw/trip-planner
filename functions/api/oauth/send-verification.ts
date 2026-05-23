@@ -18,6 +18,7 @@
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { parseJsonBody, generateOpaqueToken } from '../_utils';
+import { bumpRateLimit, checkRateLimit, clientIp, RATE_LIMITS } from '../_rate_limit';
 import { sendEmail, EmailError } from '../../../src/server/email';
 import { emailVerification } from '../../../src/server/email-templates';
 import { recordEmailEvent } from '../_audit';
@@ -31,6 +32,18 @@ interface SendVerificationBody {
 const EMAIL_VERIFY_TOKEN_TTL_SEC = 24 * 60 * 60; // 24h per V2-P2 spec
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
+  // v2.33.52 cleanup (round 5d defer): per-IP + per-email rate limit。Anonymous
+  // POST 可 trigger Resend email send (quota / cost drain)。重用 FORGOT_PASSWORD
+  // policy (3/h window, 1h lockout)。
+  const ipKey = `send-verification:${clientIp(context.request)}`;
+  const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.FORGOT_PASSWORD);
+  if (!ipCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: { code: 'VERIFY_RATE_LIMITED', message: '驗證信寄送過多，請稍後再試' } }),
+      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
+    );
+  }
+
   const body = (await parseJsonBody<SendVerificationBody>(context.request)) ?? {};
   const email = (body.email ?? '').trim().toLowerCase();
 
@@ -40,6 +53,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   );
 
   if (!email) return genericResponse;
+
+  // Bump per-email (anti-enumeration: 統一 message 不 leak existence)
+  const emailKey = `send-verification:${email}`;
+  const emailCheck = await checkRateLimit(context.env.DB, emailKey, RATE_LIMITS.FORGOT_PASSWORD);
+  if (!emailCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: { code: 'VERIFY_RATE_LIMITED', message: '驗證信寄送過多，請稍後再試' } }),
+      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(emailCheck.retryAfter) } },
+    );
+  }
+  await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.FORGOT_PASSWORD);
+  await bumpRateLimit(context.env.DB, emailKey, RATE_LIMITS.FORGOT_PASSWORD);
 
   // Look up unverified user (joined to display_name for email greeting)
   const user = await context.env.DB

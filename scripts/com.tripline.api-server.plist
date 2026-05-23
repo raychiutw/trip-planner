@@ -14,12 +14,19 @@
     <string>/Users/ray/Projects/trip-planner</string>
     <key>RunAtLoad</key>
     <true/>
+    <!-- v2.33.52 cleanup (round 8d defer): SuccessfulExit=false 避免 controlled
+         process.exit(0) 也 respawn；ThrottleInterval 10s 防 panic loop hot-spin。 -->
     <key>KeepAlive</key>
-    <true/>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/Users/ray/.bun/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>/opt/homebrew/bin:/Users/ray/.bun/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
     <key>StandardOutPath</key>
     <string>/Users/ray/Projects/trip-planner/scripts/logs/api-server/stdout.log</string>
