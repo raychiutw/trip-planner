@@ -18,6 +18,8 @@
 
 import { useEffect, useState } from 'react';
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+// v2.33.39 round 4: 走 apiFetchRaw 對齊 sibling hook + 補 polyline shape 驗證。
+import { apiFetchRaw } from '../lib/apiClient';
 
 export interface RouteResult {
   /** [lat, lng] points for polyline */
@@ -135,14 +137,28 @@ export function useRoute(
       }
 
       try {
-        const res = await fetch(
-          `/api/route?from=${from.lng},${from.lat}&to=${to.lng},${to.lat}`,
+        const res = await apiFetchRaw(
+          `/route?from=${from.lng},${from.lat}&to=${to.lng},${to.lat}`,
         );
         if (!res.ok) throw new Error(`status ${res.status}`);
-        const data = (await res.json()) as {
-          polyline: [number, number][];
-          duration: number | null;
-          distance: number;
+        const raw = (await res.json()) as Record<string, unknown>;
+        // v2.33.39 round 4: validate polyline shape — backend / proxy 可能回
+        // 任意物件，下游 cache 100 個 entry，poisoned data 會 replay。
+        const polylineRaw = raw.polyline;
+        if (
+          !Array.isArray(polylineRaw) ||
+          !polylineRaw.every(
+            (p): p is [number, number] =>
+              Array.isArray(p) && p.length === 2 &&
+              Number.isFinite(p[0]) && Number.isFinite(p[1]),
+          )
+        ) {
+          throw new Error('invalid polyline shape');
+        }
+        const data = {
+          polyline: polylineRaw,
+          duration: typeof raw.duration === 'number' ? raw.duration : null,
+          distance: typeof raw.distance === 'number' ? raw.distance : 0,
         };
         if (cancelled) return;
         const entry: CacheEntry = {

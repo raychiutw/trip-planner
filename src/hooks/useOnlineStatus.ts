@@ -1,16 +1,27 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-/* ===== Module-level callbacks for apiFetch integration ===== */
-let _notifyOffline: (() => void) | null = null;
-let _notifyOnline: (() => void) | null = null;
+/* ===== Module-level subscriber registry =====
+ * v2.33.39 round 4: 改 Set 取代 single-slot — 之前 single ref last-mount-wins
+ * clobber，StrictMode dev double-mount 或多 instance（admin overlay / devtools
+ * panel）下，第一個 hook 的 state machine 會被第二個 unmount 清空。 */
+const offlineSubscribers = new Set<() => void>();
+const onlineSubscribers = new Set<() => void>();
 
 /**
  * Called by useOnlineStatus to register its internal update functions.
  * apiFetch uses reportFetchResult() to drive the same state machine.
+ * Returns an unsubscribe function for cleanup.
  */
-export function registerNetworkCallbacks(onOffline: () => void, onOnline: () => void) {
-  _notifyOffline = onOffline;
-  _notifyOnline = onOnline;
+export function registerNetworkCallbacks(
+  onOffline: () => void,
+  onOnline: () => void,
+): () => void {
+  offlineSubscribers.add(onOffline);
+  onlineSubscribers.add(onOnline);
+  return () => {
+    offlineSubscribers.delete(onOffline);
+    onlineSubscribers.delete(onOnline);
+  };
 }
 
 /**
@@ -21,11 +32,8 @@ export function registerNetworkCallbacks(onOffline: () => void, onOnline: () => 
  * @internal — only call from useApi.ts apiFetch
  */
 export function reportFetchResult(success: boolean) {
-  if (success) {
-    _notifyOnline?.();
-  } else {
-    _notifyOffline?.();
-  }
+  const subscribers = success ? onlineSubscribers : offlineSubscribers;
+  for (const cb of subscribers) cb();
 }
 
 /* ===== Hook ===== */
@@ -55,16 +63,14 @@ export function useOnlineStatus(): boolean {
   }, []);
 
   useEffect(() => {
-    // Register callbacks so apiFetch can drive status updates
-    registerNetworkCallbacks(
-      () => updateStatus(false),
-      () => updateStatus(true),
-    );
+    const onOffline = () => updateStatus(false);
+    const onOnline = () => updateStatus(true);
+    // Register callbacks so apiFetch can drive status updates。
+    // registerNetworkCallbacks 回傳 unsubscribe 函式（Set-based registry）。
+    const unsubscribe = registerNetworkCallbacks(onOffline, onOnline);
 
-    const goOnline = () => updateStatus(true);
-    const goOffline = () => updateStatus(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
 
     // Listen for SW postMessage NETWORK_STATUS notifications
     const handleMessage = (event: MessageEvent) => {
@@ -77,13 +83,11 @@ export function useOnlineStatus(): boolean {
     navigator.serviceWorker?.addEventListener('message', handleMessage);
 
     return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
       navigator.serviceWorker?.removeEventListener('message', handleMessage);
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      // Clear module-level callbacks on unmount
-      _notifyOffline = null;
-      _notifyOnline = null;
+      unsubscribe();
     };
   }, [updateStatus]);
 

@@ -79,9 +79,19 @@ export function usePlacesAutocomplete(
     };
   }, []);
 
+  // v2.33.39 round 4: feature-detect crypto.randomUUID — Safari < 15.4 +
+  // 部分 embedded browser 沒有；缺席時 fallback 用 time + random（session token
+  // 只需 per-pick 唯一，非 cryptographic id）。
+  function generateSessionToken(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
+  }
+
   function ensureSessionToken(): string {
     if (!sessionTokenRef.current) {
-      sessionTokenRef.current = crypto.randomUUID();
+      sessionTokenRef.current = generateSessionToken();
     }
     return sessionTokenRef.current;
   }

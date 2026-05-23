@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import { apiFetchRaw } from '../lib/apiClient';
+import { sanitizeRedirectAfter } from '../lib/redirect';
 
 const SCOPED_STYLES = `
 .tp-login-shell {
@@ -207,11 +208,8 @@ function GoogleLogo() {
   );
 }
 
-function sanitizeRedirectAfter(value: string | null): string | null {
-  if (!value) return null;
-  if (!value.startsWith('/') || value.startsWith('//')) return null;
-  return value;
-}
+// v2.33.39 round 4: sanitizeRedirectAfter 移到 src/lib/redirect.ts 集中
+// hardening (`\\` / `%2f` / whitespace 等 open-redirect 變形)。
 
 const RATE_LIMIT_WARN_THRESHOLD = 4;
 

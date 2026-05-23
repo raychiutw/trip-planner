@@ -3,6 +3,81 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.39] - 2026-05-24
+
+**Security + stability — `src/hooks/` review round 1**
+
+3-agent `/simplify` review on `src/hooks/` 24 檔 / 2650 LOC。本 PR 撿
+CRITICAL + HIGH + MED finding 加 top auth-gate test gap：
+
+**Critical**
+
+- `useGoogleMap`: `flyTo` / `fitBounds` 加 `useCallback` 包 `[map]` deps。
+  之前每父 render 都產新 closure，`OceanMap.tsx` fitBounds effect 把它放在
+  deps 裡會每 render re-fire fitBounds — 每 state 變動地圖重新 fit。
+- `useTrip.fetchDay`: 拔掉 `allDaysRef.current[dayNum] = day` 直接 mutate
+  ref，改用 `setAllDays((prev) => ...)` single writer。之前 caller 讀 React
+  state 看不到 cache fill；switchDay 後手動補 setAllDays，其它 caller 失準。
+
+**Security (HIGH)**
+
+- `useGoogleMap`: `mapId` 從 hardcoded `'DEMO_MAP_ID'` 改 env
+  `VITE_GOOGLE_MAPS_MAP_ID` (fallback DEMO_MAP_ID 維持 dev 體驗)。Google
+  共享 demo ID 在 prod 列為可隨時停用 + 無 analytics 隔離。
+- 新 `src/lib/redirect.ts` `sanitizeRedirectAfter()` — 之前 `LoginPage.tsx`
+  inline 只擋 `//evil`，漏：
+  - 反斜線 `/\evil.com`（部分瀏覽器 normalize）
+  - URL-encoded `/%2f%2fevil.com` / `/%5cevil.com`
+  - whitespace-prefixed `  //evil.com`（browser nav 前 trim）
+
+**Security (MED)**
+
+- `useRequestSSE`:
+  - 新 `narrowStatus()` / `narrowProcessedBy()` runtime guard — `status` /
+    `processedBy` 不再 blind cast。malformed JSON / compromised proxy → 不
+    branch on 未知字串 → UI 不會 silent hang。
+  - 新 `clampErrorMessage()` 500 char cap + strip newline，防 multi-MB blast
+    或未來 markdown render 路徑變 stored-DOM-XSS。
+  - `pollOnce` 立即 fire 一次（之前要等 30s 第一次 poll）— AI 健檢可能 7s
+    SSE silent-fail 就完成，user 不再等 30s。
+- `usePoiSearch.ts` / `useRoute.ts` 改走 `apiFetchRaw` 而非 bare `fetch`
+  — 對齊 sibling hook，重新接上 `reportFetchResult` → useOnlineStatus
+  ledger。`useRoute` 同時加 polyline shape 驗證（IndexedDB cache 100 entry
+  cache-poisoning 風險）。
+- `useOnlineStatus`: module-level callback singleton 改 `Set<callback>` —
+  StrictMode dev double-mount / 多 instance 不再 last-mount-wins clobber。
+- `useCurrentUser`: `cancelled` flag 換 `AbortController`，快速 reload()
+  時 in-flight 真正 cancel，slower response 不會覆蓋。
+- `useRequestSSE`: stale comment 「1s tick」改「1-minute tick」對齊
+  `ELAPSED_TICK_MS = 60_000`。
+
+**Security (LOW)**
+
+- `usePlacesAutocomplete`: `crypto.randomUUID` 加 feature-detect — Safari
+  < 15.4 + 部分 embedded browser 沒有，過去第一個 keystroke throw 整支
+  AddCustomStopPage 死。session token 非 cryptographic，fallback time +
+  Math.random 足夠。
+
+**Tests (2 new files, 15 tests)**
+
+- `tests/unit/redirect-sanitize.test.ts` — 10 case open-redirect 攻擊面
+  + same-origin path / query / hash 接受。
+- `tests/unit/use-require-auth.test.tsx` — 4 case auth gate
+  (loading / authed / unauthed / query+hash encode)。
+
+**Round 4 follow-up**
+
+- 其餘 hook test gap (usePermissions / useTrip.refetchDay /
+  usePoiSearch full / useDarkMode body-class effect)
+- IMPORTANT: useChatPagination missing deps stale closure / useNavigateBack
+  history.length unreliable / useTripSegments unused state / useDarkMode
+  double initial read / useSheetBehavior 查詢 cache / useDragDrop sensor
+  options stable / usePullToRefresh ref pattern / usePlacesAutocomplete
+  LRU cap
+- 開始下個 module: functions/api/ 或 src/components/
+
+2208/2208 unit pass (+15 新 test)。
+
 ## [2.33.38] - 2026-05-24
 
 **Round 3: LOW-priority finding cleanup — `src/lib/` review**

@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PoiSearchResult } from '../types/poi';
+// v2.33.39 round 4: 改走 apiFetchRaw，與 sibling hook (useTrip / useChatPagination)
+// 一致。bare fetch 會繞過 reportFetchResult → useOnlineStatus offline-toast 失效。
+import { apiFetchRaw } from '../lib/apiClient';
 
 interface UsePoiSearchOptions {
   /** Disable the hook entirely (e.g. when not on search tab). Default: true (enabled). */
@@ -101,8 +104,8 @@ export function usePoiSearch({
       setSearching(true);
       try {
         const regionParam = region ? `&region=${encodeURIComponent(region)}` : '';
-        const resp = await fetch(
-          `/api/poi-search?q=${encodeURIComponent(trimmed)}&limit=${limit}${regionParam}`,
+        const resp = await apiFetchRaw(
+          `/poi-search?q=${encodeURIComponent(trimmed)}&limit=${limit}${regionParam}`,
           { signal: ctrl.signal },
         );
         if (!resp.ok) {
