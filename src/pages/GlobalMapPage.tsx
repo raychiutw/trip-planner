@@ -39,6 +39,7 @@ import { useDarkMode } from '../hooks/useDarkMode';
 import { useNewTrip } from '../contexts/NewTripContext';
 import { extractPinsFromDay, type MapPin } from '../hooks/useMapData';
 import { apiFetch } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -654,18 +655,19 @@ export default function GlobalMapPage() {
     let cancelled = false;
     async function load() {
       try {
-        const [myRes, allRes] = await Promise.all([
-          fetch('/api/my-trips', { credentials: 'same-origin' }),
-          fetch('/api/trips?all=1', { credentials: 'same-origin' }),
+        const [myRes, allRes] = await Promise.allSettled([
+          apiFetch<MyTripRow[]>('/my-trips'),
+          apiFetch<TripSummary[]>('/trips?all=1'),
         ]);
         if (cancelled) return;
-        if (!myRes.ok) {
-          if (myRes.status === 401 || myRes.status === 403) return;
+        if (myRes.status === 'rejected') {
+          const err = myRes.reason;
+          if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return;
           setError('無法載入行程清單。');
           return;
         }
-        const myJson = (await myRes.json()) as MyTripRow[];
-        const allJson = allRes.ok ? ((await allRes.json()) as TripSummary[]) : [];
+        const myJson = myRes.value;
+        const allJson = allRes.status === 'fulfilled' ? allRes.value : [];
         const mine = new Set(myJson.map((r) => r.tripId));
         const myTrips = allJson.filter((t) => mine.has(t.tripId));
         setTrips(myTrips);

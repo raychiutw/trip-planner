@@ -1,3 +1,4 @@
+import { apiFetch } from '../../lib/apiClient';
 import type { ApiError } from '../../lib/errors';
 
 interface ErrorPlaceholderProps {
@@ -54,17 +55,12 @@ function ReportButton({ error, tripId }: { error: ApiError; tripId: string }) {
     };
 
     try {
-      const res = await fetch('/api/reports', {
+      await apiFetch('/reports', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(report),
       });
-      if (res.ok) {
-        const { showToast } = await import('./Toast');
-        showToast('已回報問題，感謝！', 'success', 2000);
-      } else {
-        throw new Error('report failed');
-      }
+      const { showToast } = await import('./Toast');
+      showToast('已回報問題，感謝！', 'success', 2000);
     } catch {
       // 離線暫存
       savePendingReport(report);
@@ -103,9 +99,8 @@ export async function flushPendingReports() {
 
     const results = await Promise.allSettled(
       pending.map(r =>
-        fetch('/api/reports', {
+        apiFetch('/reports', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(r),
         })
       )

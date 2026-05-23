@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { apiFetch } from '../lib/apiClient';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -158,15 +159,10 @@ export default function ConnectedAppsPage() {
   async function load() {
     setError(null);
     try {
-      const res = await fetch('/api/account/connected-apps', { credentials: 'same-origin' });
-      if (!res.ok) {
-        setError('無法載入已連結應用，請重新整理頁面。');
-        return;
-      }
-      const json = (await res.json()) as { apps: ConnectedApp[] };
+      const json = await apiFetch<{ apps: ConnectedApp[] }>('/account/connected-apps');
       setApps(json.apps);
-    } catch {
-      setError('網路連線失敗，請重新整理頁面。');
+    } catch (err) {
+      setError(err instanceof Error ? '無法載入已連結應用，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
     }
   }
 
@@ -177,18 +173,11 @@ export default function ConnectedAppsPage() {
   async function confirmRevoke(clientId: string) {
     setRevokeBusy(true);
     try {
-      const res = await fetch(`/api/account/connected-apps/${encodeURIComponent(clientId)}`, {
-        method: 'DELETE',
-        credentials: 'same-origin',
-      });
-      if (res.ok) {
-        setApps((prev) => prev?.filter((a) => a.client_id !== clientId) ?? null);
-        setRevokingId(null);
-      } else {
-        setError('撤銷失敗，請稍後再試。');
-      }
+      await apiFetch(`/account/connected-apps/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
+      setApps((prev) => prev?.filter((a) => a.client_id !== clientId) ?? null);
+      setRevokingId(null);
     } catch {
-      setError('網路連線失敗，請稍後再試。');
+      setError('撤銷失敗，請稍後再試。');
     } finally {
       setRevokeBusy(false);
     }

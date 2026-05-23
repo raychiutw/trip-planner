@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { apiFetch } from '../lib/apiClient';
+import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -188,7 +188,7 @@ export default function AccountPage() {
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);
     try {
-      await fetch('/api/oauth/logout', { method: 'POST', credentials: 'same-origin' });
+      await apiFetchRaw('/oauth/logout', { method: 'POST' });
       navigate('/login');
     } catch {
       setLoggingOut(false);

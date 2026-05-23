@@ -813,13 +813,9 @@ export default function AddStopPage() {
     setSavedLoading(true);
     (async () => {
       try {
-        const resp = await fetch('/api/poi-favorites', { credentials: 'same-origin' });
+        const json = await apiFetch<unknown>('/poi-favorites');
         if (cancelled) return;
-        if (resp.ok) {
-          setPoiFavorites(normalizePoiFavorites(await resp.json()));
-        } else {
-          setPoiFavorites([]);
-        }
+        setPoiFavorites(normalizePoiFavorites(json));
       } catch {
         if (cancelled) return;
         setPoiFavorites([]);

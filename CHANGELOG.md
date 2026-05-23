@@ -3,6 +3,52 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.33] - 2026-05-23
+
+**Refactor (simplify PR-6): apiFetch migration — 19 files / 31 callsites**
+
+`/simplify` reuse finding: 30+ pages 用 raw `fetch('/api/...')` 繞過
+`apiFetch` wrapper → 失去 offline-banner trigger (`reportFetchResult`) +
+Sentry SYS_* 自動上報 + ApiError 結構化。
+
+Migrated to `apiFetch` / `apiFetchRaw`：
+
+- `src/pages/SessionsPage.tsx` (3 callsites)
+- `src/pages/ConnectedAppsPage.tsx` (2)
+- `src/pages/AccountPage.tsx` (1)
+- `src/components/trip/TripHealthBanner.tsx` (1)
+- `src/hooks/usePlacesAutocomplete.ts` (1)
+- `src/pages/TripsListPage.tsx` (2)
+- `src/pages/ChatPage.tsx` (3)
+- `src/pages/MapPage.tsx` (2)
+- `src/pages/GlobalMapPage.tsx` (2)
+- `src/pages/AddStopPage.tsx` (1)
+- `src/pages/DeveloperAppsPage.tsx` (1)
+- `src/pages/DeveloperAppNewPage.tsx` (1)
+- `src/pages/InvitePage.tsx` (2)
+- `src/components/shared/ErrorPlaceholder.tsx` (2)
+- `src/pages/LoginPage.tsx` (2 → apiFetchRaw for header inspection)
+- `src/pages/SignupPage.tsx` (2)
+- `src/pages/ForgotPasswordPage.tsx` (1)
+- `src/pages/ResetPasswordPage.tsx` (1)
+- `src/pages/EmailVerifyPendingPage.tsx` (1)
+
+**Deferred**：`ExplorePage.tsx` poi-search 暫保留 raw fetch — test suite
+mocks fetch directly with detailed payload assertions, 重構成本太高。
+
+**Bug fix incidentally**：`ApiError.fromResponse` 現在同時讀 `error.detail`
+與 `error.message`（之前只讀 detail，後端用 message 的 endpoint 失去
+human-message detail）。
+
+### Test 同步
+
+- `tests/unit/account-page.test.tsx` 加 apiFetchRaw mock
+- `tests/unit/chat-page-ai-avatar.test.tsx` mock 改 apiFetch path
+- `tests/unit/error-placeholder.test.ts` Response 改 204
+- `tests/unit/invite-page` / `developer-app-new-page` 等隨 detail 修正
+
+vitest 270 files / 2092 tests pass。
+
 ## [2.33.32] - 2026-05-23
 
 **Perf (simplify PR-5): recompute-travel backend N+1 fix**

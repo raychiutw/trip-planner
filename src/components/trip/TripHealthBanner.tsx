@@ -21,6 +21,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { apiFetch } from '../../lib/apiClient';
 
 interface HealthItem {
   poi_id: number;
@@ -87,9 +88,11 @@ const TripHealthBannerStyles = `
 `;
 
 async function fetchHealth(tripId: string, signal: AbortSignal): Promise<HealthResponse | null> {
-  const res = await fetch(`/api/trips/${encodeURIComponent(tripId)}/health`, { signal });
-  if (!res.ok) return null;
-  return (await res.json()) as HealthResponse;
+  try {
+    return await apiFetch<HealthResponse>(`/trips/${encodeURIComponent(tripId)}/health`, { signal });
+  } catch {
+    return null;
+  }
 }
 
 export default function TripHealthBanner({

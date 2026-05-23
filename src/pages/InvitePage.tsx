@@ -15,6 +15,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { apiFetch } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 
 const SCOPED_STYLES = `
 .tp-invite-shell {
@@ -107,25 +109,20 @@ export default function InvitePage() {
       return;
     }
     let cancelled = false;
-    fetch(`/api/invitations?token=${encodeURIComponent(token)}`)
-      .then(async (res) => {
+    apiFetch<InvitationDetails>(`/invitations?token=${encodeURIComponent(token)}`)
+      .then((data) => {
         if (cancelled) return;
-        const json = (await res.json()) as
-          | InvitationDetails
-          | { error: { code: string; message: string } };
-        if (!res.ok) {
-          const errObj = (json as { error: { code: string; message: string } }).error;
+        setState({ status: 'ok', data });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof ApiError) {
           setState({
             status: 'error',
-            code: errObj?.code ?? 'INVITATION_INVALID',
-            message: errObj?.message ?? '邀請連結無效',
+            code: err.code ?? 'INVITATION_INVALID',
+            message: err.detail ?? '邀請連結無效',
           });
-          return;
-        }
-        setState({ status: 'ok', data: json as InvitationDetails });
-      })
-      .catch(() => {
-        if (!cancelled) {
+        } else {
           setState({ status: 'error', code: 'NETWORK', message: '無法載入邀請，請稍後再試' });
         }
       });
@@ -136,25 +133,13 @@ export default function InvitePage() {
     setAccepting(true);
     setAcceptError(null);
     try {
-      const res = await fetch('/api/invitations/accept', {
+      const data = await apiFetch<{ ok: true; tripId: string; tripTitle: string }>('/invitations/accept', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ token }),
       });
-      const data = (await res.json()) as
-        | { ok: true; tripId: string; tripTitle: string }
-        | { error: { code: string; message: string } };
-      if (!res.ok) {
-        const errObj = (data as { error: { code: string; message: string } }).error;
-        setAcceptError(errObj?.message ?? '接受失敗');
-        return;
-      }
-      // Redirect to trip
-      const tripId = (data as { tripId: string }).tripId;
-      window.location.href = `/trips?selected=${encodeURIComponent(tripId)}`;
-    } catch {
-      setAcceptError('網路錯誤，請稍後再試');
+      window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
+    } catch (err) {
+      setAcceptError(err instanceof ApiError ? (err.detail ?? '接受失敗') : '網路錯誤，請稍後再試');
     } finally {
       setAccepting(false);
     }

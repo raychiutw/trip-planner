@@ -30,13 +30,16 @@ export class ApiError extends Error {
       const body = await res.json() as Record<string, unknown>;
 
       // 新格式：{ error: { code, message, detail } }
+      // v2.33.33: 後端的人話 message 可能在 `message` 也可能在 `detail` 欄位。
+      // 兩個都嘗試 — `detail` 優先 (legacy)，`message` fallback (新後端 _errors.ts pattern)。
       if (body.error && typeof body.error === 'object') {
         const err = body.error as Record<string, unknown>;
         if (err.code && typeof err.code === 'string') {
+          const detail = (err.detail as string | undefined) ?? (err.message as string | undefined);
           return new ApiError(
             err.code as ErrorCodeType,
             res.status,
-            err.detail as string | undefined,
+            detail,
             body, // payload preserves full body for structured 409 etc.
           );
         }

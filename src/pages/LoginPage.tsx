@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import { apiFetchRaw } from '../lib/apiClient';
 
 const SCOPED_STYLES = `
 .tp-login-shell {
@@ -247,7 +248,7 @@ export default function LoginPage() {
   // Probe public-config to know which providers are enabled. Side-effect-free.
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/public-config')
+    apiFetchRaw('/public-config')
       .then((r) => (r.ok ? r.json() : null))
       .then((cfg) => {
         if (cancelled || !cfg) return;
@@ -276,9 +277,8 @@ export default function LoginPage() {
     setBannerError(null);
     setSubmitting(true);
     try {
-      const res = await fetch('/api/oauth/login', {
+      const res = await apiFetchRaw('/oauth/login', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
       });
       if (res.ok) {
@@ -286,10 +286,8 @@ export default function LoginPage() {
         // V2 共編：若有 invitation token，嘗試接受 → 成功則導到該 trip
         if (invitationToken) {
           try {
-            const acceptRes = await fetch('/api/invitations/accept', {
+            const acceptRes = await apiFetchRaw('/invitations/accept', {
               method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              credentials: 'include',
               body: JSON.stringify({ token: invitationToken }),
             });
             if (acceptRes.ok) {
