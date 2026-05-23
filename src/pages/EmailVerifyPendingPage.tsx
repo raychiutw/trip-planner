@@ -95,10 +95,35 @@ export default function EmailVerifyPendingPage() {
   const [resending, setResending] = useState(false);
   const [resendStatus, setResendStatus] = useState<'idle' | 'sent' | 'error'>('idle');
 
-  // Single 1Hz interval re-renders to update countdown; cleaner than chained setTimeout
+  // Single 1Hz interval re-renders to update countdown; cleaner than chained setTimeout.
+  // v2.33.47 round 7b LOW: pause on tab hidden — long-open tabs 沒必要 burn
+  // battery 每秒重 render。visibility 切回 visible 立即 tick 一次保 UI 正確。
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (id !== null) return;
+      id = setInterval(() => setTick((t) => t + 1), 1000);
+    };
+    const stop = () => {
+      if (id !== null) {
+        clearInterval(id);
+        id = null;
+      }
+    };
+    const onVis = () => {
+      if (document.visibilityState === 'visible') {
+        setTick((t) => t + 1); // catch-up render on regain visibility
+        start();
+      } else {
+        stop();
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    if (document.visibilityState === 'visible') start();
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, []);
 
   const cooldown = Math.max(0, Math.ceil((cooldownEndsAt - Date.now()) / 1000));

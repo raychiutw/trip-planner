@@ -1118,18 +1118,30 @@ export default function EditEntryPage() {
   }, [tripId, entryId, navigate, goBackHref]);
 
   // ⌘+Enter / ⌘+S 儲存
+  // v2.33.47 round 7b: 加 modal-aware guard — 若 inner ConfirmModal 開著（discard
+  // 確認 / alt swap 確認）不該被 page-level shortcut 偷 Esc。同時跳過 e.repeat
+  // 連發 + 跳過 textarea / contentEditable 內的 ⌘+S (browser native save dialog
+  // 雖被 preventDefault 但 inner edit shortcut 可能也用到 Cmd+S)。
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      // 任一 modal 開著 → 讓 modal 自己的 Escape handler 接 (ConfirmModal 內部
+      // 有 onCancel)，page-level shortcut 不介入。
+      if (showDiscardModal || altSwapConfirm) return;
       if ((e.metaKey || e.ctrlKey) && (e.key === 'Enter' || e.key === 's')) {
         e.preventDefault();
         void handleSave();
       } else if (e.key === 'Escape') {
+        // 不擋輸入中的 textarea / input — 雖然 modal 已擋，但 inner inputs
+        // 可能 still want native Escape (e.g. cancel IME composition)。
+        const target = e.target as HTMLElement | null;
+        if (target?.tagName === 'TEXTAREA' || target?.tagName === 'INPUT') return;
         handleCancel();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleSave, handleCancel]);
+  }, [handleSave, handleCancel, showDiscardModal, altSwapConfirm]);
 
   const titleBarActions = (
     <TitleBarPrimaryAction

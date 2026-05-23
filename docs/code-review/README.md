@@ -19,6 +19,7 @@
 | 6a | src/components/ (CRITICAL + HIGH) | 11,654 | [#723](https://github.com/raychiutw/trip-planner/pull/723) | 2026-05-24 | [round-6a-components-critical.md](./round-6a-components-critical.md) |
 | 6b | src/components/ IMPORTANT + LOW | — | [#724](https://github.com/raychiutw/trip-planner/pull/724) | 2026-05-24 | [round-6b-components-low.md](./round-6b-components-low.md) |
 | 7a | src/pages/ HIGH security | 20,110 | [#725](https://github.com/raychiutw/trip-planner/pull/725) | 2026-05-24 | [round-7a-pages-security.md](./round-7a-pages-security.md) |
+| 7b | src/pages/ effect bugs + LOW | — | [#726](https://github.com/raychiutw/trip-planner/pull/726) | 2026-05-24 | [round-7b-pages-effect-bugs.md](./round-7b-pages-effect-bugs.md) |
 
 ## 流程
 
