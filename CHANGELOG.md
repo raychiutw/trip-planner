@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.32] - 2026-05-23
+
+**Perf (simplify PR-5): recompute-travel backend N+1 fix**
+
+`/simplify` efficiency finding: `POST /api/trips/:id/recompute-travel` 在
+N-day trip 跑 N 個 `SELECT trip_entries WHERE day_id=?` sequential round
+trips。30-day trip = 30 個 D1 round trips before Routes API 呼叫即開始
+擦邊 CF Pages Functions 50/invocation subrequest 上限。
+
+Fix：batch 成單一 `WHERE e.day_id IN (?,?,...)` query + in-memory group
+by `day_id`，從 N round trips → 1。30-day trip 省 ~29 subrequests，安全
+留出 budget 給 Routes calls。
+
+無行為改動，純 SQL 改寫。270 files / 2092 tests pass (frontend);
+`npm run test:api` 上 pre-existing miniflare EADDRNOTAVAIL fail 同 master
+基線，與本 PR 無關。
+
 ## [2.33.31] - 2026-05-23
 
 **Perf (simplify PR-4): useRequestSSE elapsedMs tick 1s → 60s**
