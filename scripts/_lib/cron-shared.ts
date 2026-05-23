@@ -21,7 +21,12 @@ export interface CronEnv {
 const DEFAULT_API = 'https://trip-planner-dby.pages.dev';
 const REFRESH_LEADTIME_SEC = 60;
 
-/** Load TRIPLINE_API_URL + TRIPLINE_API_CLIENT_ID/SECRET from env then .env.local fallback. */
+/** Load TRIPLINE_API_URL + TRIPLINE_API_CLIENT_ID/SECRET from env then .env.local fallback.
+ * v2.33.49 round 8a: align quote-strip with `lib/load-env.js` (handle both
+ * single and double quotes; previously only `"` → silent value-corruption if
+ * any secret is wrapped in single quotes). 同時驗 key 不含 shell metacharacter
+ * (defense in depth — .env.local 是 source of truth)。
+ */
 export function loadCronEnv(): CronEnv {
   const envPath = join(process.cwd(), '.env.local');
   const raw = (() => {
@@ -29,10 +34,20 @@ export function loadCronEnv(): CronEnv {
   })();
   const map = new Map<string, string>();
   for (const line of raw.split('\n')) {
-    if (!line || line.startsWith('#')) continue;
-    const idx = line.indexOf('=');
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const idx = trimmed.indexOf('=');
     if (idx < 0) continue;
-    map.set(line.slice(0, idx).trim(), line.slice(idx + 1).trim().replace(/^"|"$/g, ''));
+    const key = trimmed.slice(0, idx).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    let val = trimmed.slice(idx + 1).trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
+      val = val.slice(1, -1);
+    }
+    map.set(key, val);
   }
   // TRIPLINE_API_BASE = CF Pages deployment (admin endpoints + new v2.23 endpoints).
   // TRIPLINE_API_URL = mac mini Tailscale funnel (legacy /api routes only) — DO NOT USE.

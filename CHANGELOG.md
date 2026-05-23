@@ -3,6 +3,59 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.49] - 2026-05-24
+
+**scripts/ review round 8a — CRITICAL + HIGH security + critical test gap**
+
+3-agent review on `scripts/` 38 files / ~4,552 LOC（最後一個 module）。本
+PR 撿 1 CRITICAL + 5 HIGH security + 1 MED security + 25 critical test。完整
+finding (含 5 HIGH + 16 MED + 11 LOW + test gap 留 round 8b/8c) doc:
+`docs/code-review/round-8a-scripts-security.md`。
+
+**CRITICAL**
+
+- `tripline-api-server.ts:88` — `sessionPrefixForSkill` 只 lowercase + 拔 `/`，
+  無嚴格驗證 → 未來 PR 把 skill 暴露給 HTTP query 即 shell command injection。
+  加 `ALLOWED_SKILLS` Set + `assertAllowedSkill()` 3 個 entry-point gate
+  (sessionPrefixForSkill / spawnTmuxRequest / processLoop)。
+
+**HIGH**
+
+- `tripline-job.sh:22` — `.env.local` parser 不 strip 外層 quote → 含 quote
+  的 secret 被原樣 export → curl 401。加雙/單 quote strip + key shell-safe
+  regex validate。
+- `tripline-job.sh:99` — API server unreachable 時 `exit 0` mask outage。改
+  `exit 1` 讓 launchd 看到 error。
+- `lib/get-tripline-token.js:41` — Legacy regex parser 跟 sister script drift
+  silent fail。改 shared `loadEnvLocal()` from `./load-env`。
+- `_lib/cron-shared.ts:35` — 同樣 drift (只 strip 雙引號)。雙/單 quote 都
+  strip + key validate。
+- `smoke/poi-favorites-rename-post-deploy.sh:14` — `set -uo pipefail` 缺
+  `-e`，prod D1 INSERT 後 partial failure 不 abort → leak orphan rows。
+  改 `set -euo pipefail`。
+
+**MEDIUM security**
+
+- `lib/send-telegram.sh:32` — `${TOKEN}` unquoted interpolate into curl URL，
+  攻擊者寫 `.env.local` 可 inject query string redirect。加 TOKEN regex
+  `^[0-9]+:[A-Za-z0-9_-]+$` + CHAT_ID numeric-only validate。
+
+**Tests (+25)**
+
+- `d1-client-script.test.ts` (+14) — test-engineer **CRITICAL gap**：
+  scripts/lib/d1-client.js 5 個 callers 共用但**零測試**。守 SELECT path /
+  INSERT path / failure path / auth header / URL composition。
+- `round8a-scripts-security.test.ts` (+11) — source-grep wiring guard 6 個 fix
+
+2295/2295 unit pass (+25)。
+
+**Round 8b/8c follow-up (見 round-8a doc)**
+
+- 5 HIGH 留下 round: provision-admin-cli `--rotate-secret` cascade revoke /
+  daily-report `/api/trips` 加 auth / execSync SQL refactor (5 callsite) /
+  init-local-db string-built SQL / apply-patch.sh source `.env` RCE
+- 16 MED + 11 LOW 列在 doc
+
 ## [2.33.48] - 2026-05-24
 
 **src/pages/ review round 7c — critical test gap fill**
