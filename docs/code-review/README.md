@@ -17,7 +17,8 @@
 | 5b | functions/api/ HIGH/MED | — | [#721](https://github.com/raychiutw/trip-planner/pull/721) | 2026-05-23 | [round-5b-api-anti-enum-dos.md](./round-5b-api-anti-enum-dos.md) |
 | 5c | functions/api/ residuals | — | [#722](https://github.com/raychiutw/trip-planner/pull/722) | 2026-05-24 | [round-5c-api-bearer-csrf-atomic.md](./round-5c-api-bearer-csrf-atomic.md) |
 | 6a | src/components/ (CRITICAL + HIGH) | 11,654 | [#723](https://github.com/raychiutw/trip-planner/pull/723) | 2026-05-24 | [round-6a-components-critical.md](./round-6a-components-critical.md) |
-| 6b | src/components/ IMPORTANT + LOW | — | (in progress) | 2026-05-24 | [round-6b-components-low.md](./round-6b-components-low.md) |
+| 6b | src/components/ IMPORTANT + LOW | — | [#724](https://github.com/raychiutw/trip-planner/pull/724) | 2026-05-24 | [round-6b-components-low.md](./round-6b-components-low.md) |
+| 7a | src/pages/ HIGH security | 20,110 | [#725](https://github.com/raychiutw/trip-planner/pull/725) | 2026-05-24 | [round-7a-pages-security.md](./round-7a-pages-security.md) |
 
 ## 流程
 
