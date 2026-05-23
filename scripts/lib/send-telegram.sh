@@ -27,6 +27,18 @@ if [ -z "$TOKEN" ]; then
   exit 1
 fi
 
+# v2.33.49 round 8a security: validate TOKEN format — 之前 unquoted ${TOKEN}
+# interpolate 進 curl URL 沒驗 → 若 .env.local 被攻擊者寫，可注入 query string
+# redirect 走別的 endpoint。Telegram bot token format: <bot_id>:<base58 secret>
+if [[ ! "$TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]]; then
+  echo "TELEGRAM_BOT_TOKEN 格式不合法（必須是 <bot_id>:<secret>）" >&2
+  exit 1
+fi
+if [[ ! "$CHAT_ID" =~ ^-?[0-9]+$ ]]; then
+  echo "TELEGRAM_CHAT_ID 必須是純數字" >&2
+  exit 1
+fi
+
 BODY=$(node -e "console.log(JSON.stringify({chat_id:'${CHAT_ID}',text:process.argv[1]}))" "$MSG")
 
 curl -sf -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \

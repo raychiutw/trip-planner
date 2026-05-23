@@ -11,7 +11,9 @@
 #   0 = all pass
 #   非 0 = 第幾項 fail（同 §22.N）
 #
-set -uo pipefail
+# v2.33.49 round 8a security: 加 -e — 之前缺 -e 讓 partial failure 不 abort，
+# smoke 寫 prod D1 INSERT 後若 SIGINT / 網路斷，DELETE 跳過會 leak ghost rows。
+set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 PROJECT_DIR="$(pwd)"

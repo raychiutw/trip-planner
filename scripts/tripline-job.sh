@@ -18,12 +18,23 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"; }
 find "$LOG_DIR" -name "tripline-job-*.log" -mtime +7 -delete 2>/dev/null || true
 
 # Load env
+# v2.33.49 round 8a: strip 外層 quote (lib/load-env.js parser 行為一致)
+# 之前 `TRIPLINE_API_SECRET="foo"` 被原樣 export 為 `"foo"` (含 quote)
+# → curl `Authorization: Bearer "foo"` 401。
 if [ -f "$PROJECT_DIR/.env.local" ]; then
   while IFS= read -r line; do
     [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
     key="${line%%=*}"
     value="${line#*=}"
     [[ -z "$key" ]] && continue
+    # Strip surrounding double or single quotes
+    if [[ "$value" =~ ^\".*\"$ ]]; then value="${value:1:${#value}-2}"; fi
+    if [[ "$value" =~ ^\'.*\'$ ]]; then value="${value:1:${#value}-2}"; fi
+    # Validate key 不含 shell metacharacter (defense in depth)
+    if [[ ! "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+      log "skip malformed key in .env.local: ${key:0:40}"
+      continue
+    fi
     export "$key=$value"
   done < "$PROJECT_DIR/.env.local"
 fi
@@ -85,7 +96,9 @@ TRIGGER_RESULT=$(curl -sf -X POST \
   "http://127.0.0.1:6688/trigger?source=job" 2>&1) || {
   log "API server 觸發失敗（可能離線）: $TRIGGER_RESULT"
   log "--- Job 結束（API server 不可用）---"
-  exit 0
+  # v2.33.49 round 8a: exit 1 instead of 0 — 之前 exit 0 讓 launchd 看不到
+  # outage，Telegram alert 也不 fire (daily-check 寫日報靠 launchd error log)。
+  exit 1
 }
 
 log "API server 回應: $TRIGGER_RESULT"
