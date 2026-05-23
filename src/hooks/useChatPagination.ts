@@ -84,6 +84,20 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
 
+  // v2.33.40 round 4.5: stash callbacks in refs so caller can pass inline
+  // arrows without 撼動 effect deps（之前依賴「caller 傳穩定 ref」隱性 contract，
+  // 任何 ChatPage:531-534 inline arrow drift 都會 silently 觸發 stale closure）。
+  const setMessagesRef = useRef(setMessages);
+  const rowToMessagesRef = useRef(rowToMessages);
+  const isInflightStatusRef = useRef(isInflightStatus);
+  const onInitialResumeRef = useRef(onInitialResume);
+  const setHistoryLoadingRef = useRef(setHistoryLoading);
+  useEffect(() => { setMessagesRef.current = setMessages; }, [setMessages]);
+  useEffect(() => { rowToMessagesRef.current = rowToMessages; }, [rowToMessages]);
+  useEffect(() => { isInflightStatusRef.current = isInflightStatus; }, [isInflightStatus]);
+  useEffect(() => { onInitialResumeRef.current = onInitialResume; }, [onInitialResume]);
+  useEffect(() => { setHistoryLoadingRef.current = setHistoryLoading; }, [setHistoryLoading]);
+
   /** Prepend scroll 補位用：setMessages 前記下 scrollHeight + scrollTop,
    *  auto-scroll useEffect 觀察到 messages 變後算 delta 補回 scrollTop。 */
   const prependScrollRef = useRef<{ height: number; top: number } | null>(null);
@@ -103,7 +117,7 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
   // Initial load: 最新 CHAT_PAGE_SIZE 筆。sort=desc 拿最新,client reverse 成時間軸 asc。
   useEffect(() => {
     if (!activeTripId) {
-      setMessages([]);
+      setMessagesRef.current([]);
       setOldestCursor(null);
       setHasMoreOlder(false);
       setLoadError(null);
@@ -111,8 +125,8 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
       return;
     }
     let cancelled = false;
-    setHistoryLoading?.(true);
-    setMessages([]);
+    setHistoryLoadingRef.current?.(true);
+    setMessagesRef.current([]);
     setOldestCursor(null);
     setHasMoreOlder(false);
     setLoadError(null);
@@ -127,24 +141,22 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
         const next: TMsg[] = [];
         let resumeId: number | null = null;
         for (const row of rows) {
-          for (const m of rowToMessages(row)) next.push(m);
-          if (isInflightStatus?.(row)) resumeId = row.id;
+          for (const m of rowToMessagesRef.current(row)) next.push(m);
+          if (isInflightStatusRef.current?.(row)) resumeId = row.id;
         }
-        setMessages(next);
+        setMessagesRef.current(next);
         if (oldest) setOldestCursor(oldest);
         setHasMoreOlder(hasMore);
-        if (resumeId != null) onInitialResume?.(resumeId);
+        if (resumeId != null) onInitialResumeRef.current?.(resumeId);
       } catch (err) {
         if (!cancelled) {
           setLoadError(err instanceof Error ? err : new Error(String(err)));
         }
       } finally {
-        if (!cancelled) setHistoryLoading?.(false);
+        if (!cancelled) setHistoryLoadingRef.current?.(false);
       }
     })();
     return () => { cancelled = true; };
-    // 故意 omit setMessages / rowToMessages / callbacks (caller 應傳穩定 ref)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTripId]);
 
   // 同步 activeTripIdRef 給 loadOlder 用作 race guard
@@ -183,14 +195,14 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
       }
       const older: TMsg[] = [];
       for (const row of rows) {
-        for (const m of rowToMessages(row)) older.push(m);
+        for (const m of rowToMessagesRef.current(row)) older.push(m);
       }
       // 記下 prepend 前的 scrollHeight + scrollTop,autoscroll useEffect 用來補位
       const el = bodyRef.current;
       if (el) {
         prependScrollRef.current = { height: el.scrollHeight, top: el.scrollTop };
       }
-      setMessages((prev) => [...older, ...prev]);
+      setMessagesRef.current((prev) => [...older, ...prev]);
       if (oldest) setOldestCursor(oldest);
       setHasMoreOlder(hasMore);
       setLoadError(null);
@@ -200,8 +212,6 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     } finally {
       loadingOlderRef.current = false;
     }
-    // setMessages / rowToMessages 由 caller 提供,假設穩定 ref
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTripId, oldestCursor, hasMoreOlder, loadError, bodyRef]);
 
   const retryLoadOlder = useCallback(() => {

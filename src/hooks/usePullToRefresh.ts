@@ -47,6 +47,11 @@ export function usePullToRefresh(
   const refreshingRef = useRef(false);
   useEffect(() => { refreshingRef.current = refreshing; }, [refreshing]);
 
+  // v2.33.40 round 4.5: stash onRefresh in ref so caller can pass inline arrow
+  // without re-binding all 4 touch listeners on every parent render.
+  const onRefreshRef = useRef(onRefresh);
+  useEffect(() => { onRefreshRef.current = onRefresh; }, [onRefresh]);
+
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -95,7 +100,7 @@ export function usePullToRefresh(
         // keep visual at threshold during refresh
         setPullPx(threshold);
         try {
-          onRefresh();
+          onRefreshRef.current();
         } catch {
           // onRefresh might throw（e.g. window.location 沒準備好）— still reset
           setRefreshing(false);
@@ -116,7 +121,9 @@ export function usePullToRefresh(
       el.removeEventListener('touchend', handleTouchEnd);
       el.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [scrollerRef, onRefresh, threshold, friction, maxPull]);
+    // v2.33.40 round 4.5: onRefresh 移到 ref，不再放 deps（之前 inline arrow
+    // 每父 render 都新 ref → 重綁 4 個 listener。
+  }, [scrollerRef, threshold, friction, maxPull]);
 
   return { pullPx, refreshing };
 }

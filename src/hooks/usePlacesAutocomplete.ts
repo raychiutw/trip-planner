@@ -45,10 +45,33 @@ export interface UsePlacesAutocompleteResult {
   reset: () => void;
 }
 
+// v2.33.40 round 4.5: LRU cap on cache — SPA-lifetime Map 無界限長期 typing
+// session 後變幾百個 entry。Map insertion order = LRU；新寫入時若滿，evict 最舊。
+const CACHE_LRU_MAX = 50;
 const cache = new Map<string, PlacePrediction[]>();
+
+function cacheGet(key: string): PlacePrediction[] | undefined {
+  const value = cache.get(key);
+  if (value !== undefined) {
+    // Touch — re-insert moves to "newest" position in Map iteration order
+    cache.delete(key);
+    cache.set(key, value);
+  }
+  return value;
+}
+
+function cacheSet(key: string, value: PlacePrediction[]): void {
+  if (cache.has(key)) cache.delete(key);
+  cache.set(key, value);
+  if (cache.size > CACHE_LRU_MAX) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) cache.delete(oldestKey);
+  }
+}
 
 export const __internal = {
   clearCache: () => cache.clear(),
+  cacheSize: () => cache.size,
 };
 
 function cacheKey(q: string, region: string | undefined): string {
@@ -114,7 +137,7 @@ export function usePlacesAutocomplete(
         return;
       }
 
-      const cached = cache.get(cacheKey(next.trim(), regionCode));
+      const cached = cacheGet(cacheKey(next.trim(), regionCode));
       if (cached) {
         setPredictions(cached);
         setLoading(false);
@@ -140,7 +163,7 @@ export function usePlacesAutocomplete(
           .then((json) => {
             if (!mountedRef.current) return;
             const list = Array.isArray(json.predictions) ? json.predictions : [];
-            cache.set(cacheKey(q, region), list);
+            cacheSet(cacheKey(q, region), list);
             setPredictions(list);
             setLoading(false);
           })
