@@ -21,6 +21,7 @@
 import { useState } from 'react';
 import Icon from '../shared/Icon';
 import TravelPillDialog, { type TravelMode } from './TravelPillDialog';
+import { TRAVEL_MODE_LABEL } from '../../lib/travelMode';
 
 const SCOPED_STYLES = `
 .tp-travel-pill-wrap {
@@ -130,11 +131,14 @@ const TYPE_ICON_MAP: Record<string, string> = {
 };
 
 // v2.31.64 a11y zh-TW：aria-label 給 screen reader 念中文，不要 raw enum
+// v2.33.28: 3 個 canonical (driving/walking/transit) 從 lib/travelMode 引入，避免本地重複定義；
+// 額外 alias (car/drive/walk/train/bus/...) 是 backend raw entry.travel.type 的 legacy 值。
 const MODE_LABEL: Record<string, string> = {
-  car: '開車', drive: '開車', driving: '開車',
-  walk: '步行', walking: '步行',
+  ...TRAVEL_MODE_LABEL,
+  car: '開車', drive: '開車',
+  walk: '步行',
   train: '火車', metro: '捷運', subway: '捷運',
-  bus: '公車', transit: '大眾運輸',
+  bus: '公車',
   ferry: '渡輪',
   flight: '飛機', plane: '飛機',
 };

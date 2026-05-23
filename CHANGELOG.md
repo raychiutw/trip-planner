@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.28] - 2026-05-23
+
+**Chore (simplify PR-1): dedupe POI_TYPE_LABEL + MODE_LABEL stringly-typed sprawl**
+
+`/simplify` agent 全 repo scan finding：TimelineRail / EditEntryPage 各
+自定義 POI_TYPE_LABEL，hotel: '住宿' 與 canonical `POI_TYPE_LABELS` 的
+'飯店' drift — 屬於 v2.31.23 同類 bug 家族 root cause。MODE_LABEL/ICON
+也在 EditEntryPage 重複 canonical 3 modes。
+
+Fix：
+- 新增 `src/lib/travelMode.ts` exports `TravelMode` type + `TRAVEL_MODE_LABEL` + `TRAVEL_MODE_ICON`
+- TimelineRail 改 import `POI_TYPE_LABELS` from `poiCategory.ts`，移除本地 POI_TYPE_LABEL
+- EditEntryPage 同上，再 import `TRAVEL_MODE_LABEL/ICON` 取代本地 const
+- TravelPill 用 `...TRAVEL_MODE_LABEL` spread 為 base，本地僅留 legacy
+  alias (car/drive/walk/train/bus/...) 給 backend raw `entry.travel.type`
+
+**User-facing diff**：TimelineRail / EditEntryPage 顯 hotel 類型景點時
+標籤從「住宿」→「飯店」（對齊 /favorites 既有用法）。
+
+vitest test `edit-entry-page.test.tsx:325` 同步 assertion 改「住宿」→「飯店」。
+
+270 files / 2092 tests pass。
+
 ## [2.33.27] - 2026-05-23
 
 **Fix: api-server daily-check race condition — 5/19 起 4 天沒 fire**
