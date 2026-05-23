@@ -35,10 +35,12 @@ export function useCurrentUser(): UseCurrentUserResult {
   const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch(USERINFO_ENDPOINT, { credentials: 'include' })
+    // v2.33.39 round 4: AbortController 取代 cancelled flag — 快速連 reload()
+    // 時舊 in-flight 會被取消，slower-arrived response 不再覆蓋。
+    const controller = new AbortController();
+    fetch(USERINFO_ENDPOINT, { credentials: 'include', signal: controller.signal })
       .then(async (res) => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         if (!res.ok) {
           // 401 / 503 / etc. → 視為未登入
           setUser(null);
@@ -47,11 +49,12 @@ export function useCurrentUser(): UseCurrentUserResult {
         const data = (await res.json()) as CurrentUser;
         setUser(data);
       })
-      .catch(() => {
-        if (!cancelled) setUser(null);
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setUser(null);
       });
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [reloadCount]);
 

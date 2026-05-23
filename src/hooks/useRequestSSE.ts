@@ -5,6 +5,23 @@ type RequestStatus = 'open' | 'processing' | 'completed' | 'failed';
 type ProcessedBy = 'api' | 'job' | null;
 type ErrorReason = 'auth_expired' | 'network' | 'sse_failed' | null;
 
+/**
+ * Narrow untrusted backend / SSE JSON to canonical RequestStatus / ProcessedBy.
+ * v2.33.39 round 4 security audit: avoid blindly casting `as RequestStatus`
+ * — a regressed backend / compromised proxy could send arbitrary strings the
+ * UI then branches on (settle() never fires → UI hangs).
+ */
+const VALID_STATUSES = new Set<RequestStatus>(['open', 'processing', 'completed', 'failed']);
+function narrowStatus(s: unknown): RequestStatus | null {
+  return typeof s === 'string' && VALID_STATUSES.has(s as RequestStatus) ? (s as RequestStatus) : null;
+}
+function narrowProcessedBy(p: unknown): ProcessedBy {
+  return p === 'api' || p === 'job' ? p : null;
+}
+function clampErrorMessage(msg: unknown): string {
+  return typeof msg === 'string' ? msg.replace(/[\r\n]+/g, ' ').slice(0, 500) : '未知錯誤';
+}
+
 interface UseRequestSSEResult {
   status: RequestStatus | null;
   processedBy: ProcessedBy;
@@ -83,7 +100,7 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
       cleanupAll();
     };
 
-    // ── Elapsed timer (1s tick) ─────────────────────────────────────
+    // ── Elapsed timer (1-minute tick, per ELAPSED_TICK_MS comment) ──
     tickTimerRef.current = setInterval(() => {
       setElapsedMs(Date.now() - startTime);
     }, ELAPSED_TICK_MS);
@@ -100,18 +117,24 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
           return;
         }
         if (!res.ok) return;
-        const data = await res.json() as { status: RequestStatus; processedBy: string | null };
+        const data = (await res.json()) as { status?: unknown; processedBy?: unknown };
+        const narrowedStatus = narrowStatus(data.status);
+        const narrowedProcessedBy = narrowProcessedBy(data.processedBy);
+        if (!narrowedStatus) return; // unknown status — ignore, next poll retries
         if (!terminalRef.current) {
-          setStatus(data.status);
-          setProcessedBy((data.processedBy as ProcessedBy) ?? null);
+          setStatus(narrowedStatus);
+          setProcessedBy(narrowedProcessedBy);
         }
-        if (data.status === 'completed' || data.status === 'failed') {
-          settle(data.status, (data.processedBy as ProcessedBy) ?? null);
+        if (narrowedStatus === 'completed' || narrowedStatus === 'failed') {
+          settle(narrowedStatus, narrowedProcessedBy);
         }
       } catch {
         // network error — next tick retries
       }
     };
+    // v2.33.39 round 4: 立即 fire 一次，原本只 schedule 30s 後第一次 poll，
+    // AI 健檢可能 7s 內 SSE silent-fail 就完成（user 等 30s 才看到結果）。
+    void pollOnce();
     pollTimerRef.current = setInterval(() => { void pollOnce(); }, SAFETY_NET_POLL_INTERVAL_MS);
 
     // ── SSE (fast path) ─────────────────────────────────────────────
@@ -128,20 +151,21 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
 
     es.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data) as {
-          status?: RequestStatus;
-          processedBy?: string | null;
-          error?: string;
-        };
+        const data = JSON.parse(event.data) as Record<string, unknown>;
         if (data.error) {
-          setError(new Error(data.error));
+          // v2.33.39 round 4: clamp untrusted SSE error string to 500 chars +
+          // strip newlines。defense against multi-MB blast or future render
+          // path 透過 markdown 觸發 stored-DOM-XSS。
+          setError(new Error(clampErrorMessage(data.error)));
           return;
         }
-        if (data.status && !terminalRef.current) {
-          setStatus(data.status);
-          setProcessedBy((data.processedBy as ProcessedBy) ?? null);
-          if (data.status === 'completed' || data.status === 'failed') {
-            settle(data.status, (data.processedBy as ProcessedBy) ?? null);
+        const narrowedStatus = narrowStatus(data.status);
+        if (narrowedStatus && !terminalRef.current) {
+          const narrowedProcessedBy = narrowProcessedBy(data.processedBy);
+          setStatus(narrowedStatus);
+          setProcessedBy(narrowedProcessedBy);
+          if (narrowedStatus === 'completed' || narrowedStatus === 'failed') {
+            settle(narrowedStatus, narrowedProcessedBy);
           }
         }
       } catch {
