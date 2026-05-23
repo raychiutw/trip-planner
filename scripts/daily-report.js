@@ -215,8 +215,31 @@ async function checkLinks() {
   }
 
   // 3. HEAD check with concurrency limit of 5
+  // v2.33.52 cleanup (round 8d defer): host allowlist 防 SSRF — trip 的 maps
+  // URL 來自 user-submitted chat / POI，如果有 attacker 注入 internal host
+  // (e.g. http://192.168.x.x:port) → HEAD with redirect:follow 可達內網。
+  var ALLOWED_HOSTS = new Set([
+    'maps.google.com',
+    'www.google.com',
+    'goo.gl',
+    'maps.app.goo.gl',
+    'maps.apple.com',
+    'apple.co',
+    'map.naver.com',
+    'naver.me',
+  ]);
+  function isAllowedUrl(u) {
+    try {
+      var parsed = new URL(u);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+      return ALLOWED_HOSTS.has(parsed.hostname);
+    } catch (_) {
+      return false;
+    }
+  }
+
   var broken = [];
-  var urls = dedup(mapsUrls);
+  var urls = dedup(mapsUrls).filter(isAllowedUrl);
   var batches = chunk(urls, 5);
 
   for (var b = 0; b < batches.length; b++) {

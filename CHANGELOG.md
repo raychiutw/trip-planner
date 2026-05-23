@@ -3,6 +3,57 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.52] - 2026-05-24
+
+**Round 8d — cleanup backlog sweep**
+
+收尾 round 5d / 6c / 8d defer list 中可獨立完成的 5 個 finding，
+不需要 mockup / refactor 的低風險修正一次性 ship。doc:
+`docs/code-review/round-8d-cleanup-backlog.md`。
+
+**SECURITY (HIGH)**
+
+- `functions/api/oauth/reset-password.ts` — 加 per-IP rate limit
+  (LOGIN policy 5/15min + 30min lockout)。原本 endpoint 沒套
+  rate limit，attacker 可暴力嘗試 reset token。429
+  `RESET_RATE_LIMITED` + `Retry-After` header。
+- `functions/api/oauth/send-verification.ts` — 加 per-IP + per-email
+  rate limit (FORGOT_PASSWORD 3/h + 1h lockout)。原本可被當 email
+  spam relay + timing-based user enumeration。anti-enumeration：
+  per-IP / per-email 兩個 key message 完全統一不洩漏 email 是否存在。
+- `scripts/daily-report.js` — SSRF defense 加 ALLOWED_HOSTS allowlist。
+  原本只 filter `/^https?:\/\//`，attacker 控的 `trip_requests.message`
+  含 `http://169.254.169.254/...` internal URL 也會被 probe（mac mini
+  在 funnel network 能 reach 內網）。新 `isAllowedUrl()` parse URL +
+  protocol guard + 8 個合法 maps host exact match。
+
+**RELIABILITY (HIGH)**
+
+- `src/components/trip/TripMapRail.tsx` — scroll-spy race fix。
+  原本 `useEffect` 一次性 `querySelectorAll('[data-day]')`，TripPage
+  async fetch trip + days 期間 `<DayCard>` 還沒 mount → observer
+  看不到任何 target → scroll-spy 永遠不 trigger。新 MutationObserver
+  fallback + WeakSet 去重：初次找不到時掛 body subtree watcher，
+  detect 到第一批 section mount → attach IntersectionObserver →
+  disconnect mutation observer。cleanup `disconnect` 兩個。
+- `scripts/com.tripline.api-server.plist` — launchd hardening。
+  `KeepAlive=<true/>` 改 dict `<SuccessfulExit><false/></...>`
+  (exit 0 不 respawn，例如 self-destruct empty queue 路徑) +
+  `ThrottleInterval=10` (防 panic loop hot-spin) +
+  `EnvironmentVariables.PATH` 前綴 `/opt/homebrew/bin` (tmux
+  discovery on Apple Silicon)。
+
+**TESTING**
+
+- `tests/unit/cleanup-backlog.test.ts` — 12 個 source-grep test。
+- `npm test` 全綠 2328 / 2328。
+
+**剩餘 defer**（留原 task，需要 plan-eng-review）
+
+- Round 5d: oauth/authorize prompt=consent + entries POST/copy batch transaction
+- Round 6c: OceanMap internals 拆分 + style helper 抽取
+- Round 8d: scripts/api-server.ts polish + scripts/logs/ rotation
+
 ## [2.33.51] - 2026-05-24
 
 **scripts/ round 8c — final polish (closes Round 8)**

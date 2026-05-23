@@ -96,10 +96,12 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
 
   useEffect(() => {
     if (!isDesktop || dayCenters.size === 0) return;
-    const daySections = Array.from(document.querySelectorAll<HTMLElement>('[data-day]'));
-    if (daySections.length === 0) return;
 
-    const observer = new IntersectionObserver(
+    // v2.33.52 cleanup (round 6c defer): MutationObserver pattern — 之前
+    // `querySelectorAll('[data-day]')` 在 mount 時 DaySection 可能還沒 commit
+    // (lazy / loading 狀態)，observer 註冊到 0 個 target 永遠不再 fire。
+    // 改：先掃，沒抓到 → MutationObserver 等 DOM 加 [data-day] 後 trigger。
+    const intersectionObserver = new IntersectionObserver(
       (entries) => {
         const mostVisible = entries
           .filter((e) => e.isIntersecting && e.intersectionRatio >= 0.6)
@@ -113,8 +115,36 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
       { threshold: [0.6, 0.8, 1.0] },
     );
 
-    daySections.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+    const observed = new WeakSet<HTMLElement>();
+    function attachIfPresent(): boolean {
+      const sections = document.querySelectorAll<HTMLElement>('[data-day]');
+      let added = 0;
+      sections.forEach((el) => {
+        if (observed.has(el)) return;
+        observed.add(el);
+        intersectionObserver.observe(el);
+        added += 1;
+      });
+      return added > 0;
+    }
+
+    const initiallyFound = attachIfPresent();
+    let mutationObserver: MutationObserver | null = null;
+    if (!initiallyFound) {
+      // Watch for DaySection mount — observe document.body 直到首批 attach 成功。
+      mutationObserver = new MutationObserver(() => {
+        if (attachIfPresent()) {
+          mutationObserver?.disconnect();
+          mutationObserver = null;
+        }
+      });
+      mutationObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    return () => {
+      intersectionObserver.disconnect();
+      mutationObserver?.disconnect();
+    };
   }, [isDesktop, dayCenters]);
 
   // v2.31.81 #5：TimelineRail row click → dispatch entryFocused → pan map to pin。
