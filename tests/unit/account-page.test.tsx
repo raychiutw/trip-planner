@@ -155,7 +155,8 @@ describe('AccountPage', () => {
       );
     });
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith('/login');
+      // v2.33.47 round 7b: navigate 改 { replace: true } 不留 history entry
+      expect(navigateMock).toHaveBeenCalledWith('/login', { replace: true });
     });
   });
 

@@ -10,6 +10,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
+import { showToast } from '../components/shared/Toast';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -181,7 +183,12 @@ export default function AccountPage() {
     let cancelled = false;
     apiFetch<AccountStats>('/account/stats')
       .then((data) => { if (!cancelled) setStats(data); })
-      .catch((e) => { if (!cancelled) setStatsError((e as Error).message); });
+      // v2.33.47 round 7b: 不直接 surface raw error.message (可能 leak backend
+      // detail / SQL fragment)。改 ApiError 與 network error 分開 generic 文案。
+      .catch((e) => {
+        if (cancelled) return;
+        setStatsError(e instanceof ApiError ? '統計資料載入失敗' : '網路錯誤，請稍後再試');
+      });
     return () => { cancelled = true; };
   }, [auth.user]);
 
@@ -189,9 +196,15 @@ export default function AccountPage() {
     setLoggingOut(true);
     try {
       await apiFetchRaw('/oauth/logout', { method: 'POST' });
-      navigate('/login');
+      // v2.33.47 round 7b: navigate 前先關 modal — success 路徑也要關 (避免在
+      // /login 看到 stale modal 殘影 if route transition 慢)。
+      setShowLogoutModal(false);
+      navigate('/login', { replace: true });
     } catch {
+      // v2.33.47 round 7b: 失敗路徑也關 modal + 顯 toast (之前 modal 卡死)。
       setLoggingOut(false);
+      setShowLogoutModal(false);
+      showToast('登出失敗，請稍後再試', 'error');
     }
   }, [navigate]);
 
