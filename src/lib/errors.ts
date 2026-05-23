@@ -17,7 +17,11 @@ export class ApiError extends Error {
 
   constructor(code: ErrorCodeType, status: number, detail?: string, payload?: unknown) {
     super(ERROR_MESSAGES[code] || code);
-    this.code = code;
+    // v2.33.38 round 3: cap code length too — malicious server could return
+    // `{ error: { code: 'AUTH'.repeat(1e5) } }` and propagate giant string.
+    this.code = typeof code === 'string' && code.length > 64
+      ? (code.slice(0, 64) as ErrorCodeType)
+      : code;
     this.status = status;
     // v2.33.36 security audit round 1: cap backend `detail` so a malicious
     // backend / SQL fragment leak / accidentally long error message can't
@@ -26,7 +30,7 @@ export class ApiError extends Error {
       ? detail.replace(/[\r\n]+/g, ' ').slice(0, 200)
       : detail;
     this.payload = payload;
-    this.severity = classifySeverity(code);
+    this.severity = classifySeverity(this.code);
   }
 
   /** 從 fetch Response 解析（支援新舊格式） */
@@ -85,14 +89,22 @@ function statusToCode(status: number): ErrorCodeType {
   return 'SYS_INTERNAL';
 }
 
-/** 從舊格式的錯誤訊息 sniff 更精確的錯誤碼 */
+/**
+ * 從舊格式的錯誤訊息 sniff 更精確的錯誤碼。
+ * v2.33.38 round 3: 改 specific phrase match 避免「管理」誤命中
+ * 「已系統管理員處理過」這類非權限訊息；「administered」誤命中 admin。
+ * 不用 `\b` — JS regex word boundary 對 CJK 不適用（CJK 字符非 word char）。
+ */
 function sniffErrorCode(status: number, message: string): ErrorCodeType {
   const lower = message.toLowerCase();
-  if (lower.includes('encoding') || lower.includes('utf')) return 'DATA_ENCODING';
-  if (lower.includes('亂碼')) return 'DATA_ENCODING';
-  if (lower.includes('管理') || lower.includes('admin')) return 'PERM_ADMIN_ONLY';
-  if (lower.includes('權限')) return 'PERM_DENIED';
-  if (lower.includes('已存在') || lower.includes('conflict')) return 'DATA_CONFLICT';
+  if (/\b(encoding|utf-?8)\b/.test(lower) || /亂碼/.test(message)) return 'DATA_ENCODING';
+  // 管理員 / 管理者（zh-TW 兩種寫法）+ admin-only English variants。
+  // 不用 `\b` — JS regex word boundary 對 CJK 不適用。
+  if (/(admin[-\s_]?only|administrator only|僅(限)?管理(員|者)|管理(員|者)[僅只]限)/i.test(message)) {
+    return 'PERM_ADMIN_ONLY';
+  }
+  if (/權限不足|無權限|forbidden|permission denied/i.test(message)) return 'PERM_DENIED';
+  if (/已存在|already exists|\bconflict\b/i.test(message)) return 'DATA_CONFLICT';
   return statusToCode(status);
 }
 

@@ -42,3 +42,24 @@ export const routes = {
   map: () => '/map',
   explore: () => '/explore',
 } as const;
+
+/**
+ * Validate an untrusted `?returnTo=` / `?next=` style redirect target.
+ * v2.33.38 round 3: previously no shared helper, each callsite did ad-hoc
+ * checks. Centralizing here prevents open-redirect bugs:
+ *   - Reject empty / non-string input.
+ *   - Reject protocol-relative `//evil.com`（會打到不同 host）。
+ *   - Reject absolute URL `https://evil.com` (would leave the SPA).
+ *   - Accept only same-origin path starting with `/path`.
+ *
+ * Returns the safe path, or `fallback` (default `/trips`).
+ */
+export function safeReturnTo(raw: unknown, fallback = '/trips'): string {
+  if (typeof raw !== 'string' || !raw) return fallback;
+  // 拒 protocol-relative `//host` 與 absolute URL `https://host`
+  if (raw.startsWith('//')) return fallback;
+  if (!raw.startsWith('/')) return fallback;
+  // backslash variants (Safari) - reject
+  if (raw.includes('\\')) return fallback;
+  return raw;
+}
