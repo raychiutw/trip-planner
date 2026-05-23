@@ -81,6 +81,16 @@ const tokenHelper = require(TOKEN_HELPER) as {
 const ORPHAN_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 const SESSION_PREFIX = 'tripline-request-';
 
+// v2.33.27: per-skill session prefix。原本 SESSION_PREFIX 對所有 skill 共用，
+// hasActiveSession() 偵測到 /tp-request session 就會 skip /tp-daily-check fire
+// → daily-check 5/19 起連 4 天被擋（log: "Active session ... still running"）。
+// Fix：每個 skill 有自己的 session prefix，hasActiveSession 接 skillFilter。
+function sessionPrefixForSkill(skillCommand: string): string {
+  // '/tp-request' → 'tripline-tp-request-'；'/tp-daily-check' → 'tripline-tp-daily-check-'
+  const slug = skillCommand.replace(/^\//, '').toLowerCase();
+  return `tripline-${slug}-`;
+}
+
 // launchd PATH 不含 /opt/homebrew/bin，spawnSync(TMUX_BIN, ...) 抓不到。寫死絕對
 // 路徑，與 claudePath 同 pattern。Intel Mac 用 /usr/local/bin/tmux — homebrew
 // 預設位置不同，這邊偵測一次：找到的第一條存在路徑當 TMUX_BIN。
@@ -121,11 +131,18 @@ async function cleanupOrphans(maxAgeMs: number): Promise<number> {
   }
 }
 
-function hasActiveSession(): string | null {
+function hasActiveSession(skillCommand?: string): string | null {
+  // v2.33.27: 加 skillCommand filter。沒傳 = 看 ANY tripline session（legacy
+  // SESSION_PREFIX）；傳了 = 只看該 skill 自己的 session prefix。
+  // 同 skill 才會擋（不同 skill 可以平行跑，例：/tp-request 跑時 /tp-daily-check 不該被擋）。
   const result = spawnSync(TMUX_BIN, ['ls', '-F', '#{session_name}'], { encoding: 'utf-8' });
   if (result.status !== 0) return null;
+  const filter = skillCommand ? sessionPrefixForSkill(skillCommand) : SESSION_PREFIX;
   for (const line of (result.stdout || '').split('\n')) {
-    if (line.startsWith(SESSION_PREFIX)) return line;
+    if (line.startsWith(filter)) return line;
+    // v2.33.27 backward-compat：legacy 'tripline-request-' 是 /tp-request 的 prefix；
+    // 如果 caller 是 /tp-request 也要看到 legacy session（process restart 過渡期）。
+    if (skillCommand === '/tp-request' && line.startsWith('tripline-request-')) return line;
   }
   return null;
 }
@@ -143,7 +160,9 @@ async function spawnTmuxRequest(skillCommand: string = '/tp-request'): Promise<b
     return false;
   }
 
-  const sessionName = `${SESSION_PREFIX}${Date.now()}-${process.pid}`;
+  // v2.33.27: session name 含 skill slug，讓 hasActiveSession 區分。
+  // 例：'tripline-tp-request-1779...' vs 'tripline-tp-daily-check-1779...'
+  const sessionName = `${sessionPrefixForSkill(skillCommand)}${Date.now()}-${process.pid}`;
   const claudePath = '/Users/ray/.local/bin/claude';
 
   // shell-escape token for the inline env assignment（避免 token 包含特殊字元）
@@ -190,16 +209,18 @@ async function spawnTmuxRequest(skillCommand: string = '/tp-request'): Promise<b
 // v2.30.7: skill 自己 drain queue (查 status=processing/open/received → 依序處理)，
 // API server 只負責「沒人在跑就 spawn 一隻」。多筆 stacked /trigger 期間若已有
 // session 活著，後續 /trigger return early。
-let isRunning = false;
+// v2.33.27: per-skill isRunning lock。原本 global boolean 讓不同 skill
+// 同時 fire 互擋（/tp-request 跑時 /tp-daily-check 被卡 → 4 天沒 fire）。
+const runningSkills = new Set<string>();
 let lastProcessed: string | null = null;
 let processedCount = 0;
 
 async function processLoop(source: 'api' | 'job', skillCommand: string = '/tp-request'): Promise<boolean> {
-  if (isRunning) {
+  if (runningSkills.has(skillCommand)) {
     log(`processLoop: already running, skip (source=${source}, skill=${skillCommand})`);
     return false;
   }
-  isRunning = true;
+  runningSkills.add(skillCommand);
   log(`Process loop started (source: ${source}, skill: ${skillCommand})`);
 
   try {
@@ -208,10 +229,10 @@ async function processLoop(source: 'api' | 'job', skillCommand: string = '/tp-re
     const cleaned = await cleanupOrphans(ORPHAN_MAX_AGE_MS);
     if (cleaned > 0) log(`Cleaned ${cleaned} orphan session(s)`);
 
-    // 只允許一個 active session — 既有 session 仍在處理 queue，不需重複 spawn
-    const active = hasActiveSession();
+    // 只擋同 skill active session — 不同 skill 可平行跑（v2.33.27）
+    const active = hasActiveSession(skillCommand);
     if (active) {
-      log(`Active session ${active} still running, skip new spawn (skill=${skillCommand})`);
+      log(`Active ${skillCommand} session ${active} still running, skip new spawn`);
       return false;
     }
 
@@ -226,8 +247,8 @@ async function processLoop(source: 'api' | 'job', skillCommand: string = '/tp-re
     logError(`Process loop error: ${err instanceof Error ? err.message : String(err)}`);
     return false;
   } finally {
-    isRunning = false;
-    log('Process loop ended');
+    runningSkills.delete(skillCommand);
+    log(`Process loop ended (skill=${skillCommand})`);
   }
 }
 
@@ -298,7 +319,9 @@ Bun.serve({
 
     if (url.pathname === '/health' && req.method === 'GET') {
       return Response.json({
-        running: isRunning,
+        // v2.33.27: running 改報 array — backward-compat boolean 也保留
+        running: runningSkills.size > 0,
+        runningSkills: Array.from(runningSkills),
         lastProcessed,
         processedCount,
         uptime: process.uptime(),
@@ -312,7 +335,8 @@ Bun.serve({
 
       const source = (url.searchParams.get('source') === 'job' ? 'job' : 'api') as 'api' | 'job';
 
-      if (isRunning) {
+      // /trigger 預設跑 /tp-request；per-skill lock 只擋同 skill
+      if (runningSkills.has('/tp-request')) {
         return Response.json({ already_running: true });
       }
 
@@ -347,11 +371,10 @@ log(`Tripline API Server listening on port ${PORT}`);
 // - /tp-poi-enrich-monthly 每天 08:00（skill 內 day-1 guard，不是 1 號 noop exit）
 //
 // 用 setInterval + setTimeout-to-next-occurrence chain，不引 cron parser dep。
-// processLoop isRunning lock 處理 concurrent fire（同時間 8/9 點不衝突，
-// 但若上一輪未結束則 skip）。
+// v2.33.27: 鎖改 per-skill — 不同 skill 不互擋。
 function fireSchedule(skillCommand: string, label: string): void {
-  if (isRunning) {
-    log(`Skip ${label} schedule (isRunning, skill=${skillCommand})`);
+  if (runningSkills.has(skillCommand)) {
+    log(`Skip ${label} schedule (already running, skill=${skillCommand})`);
     return;
   }
   processLoop('job', skillCommand).catch((err) => {
