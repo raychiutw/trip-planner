@@ -161,10 +161,20 @@ export function checkCsrf(request: Request, env: Env, url: URL): Response | null
   // OAuth wire endpoints handle their own auth — skip session-cookie CSRF.
   if (url.pathname.startsWith('/api/oauth/')) return null;
 
-  // V2 Bearer token = service-to-service, not browser. No Origin needed.
-  if (request.headers.get('Authorization')?.startsWith('Bearer ')) return null;
-
+  const hasBearer = !!request.headers.get('Authorization')?.startsWith('Bearer ');
   const origin = request.headers.get('Origin');
+
+  // v2.33.43 security audit: Bearer 不能直接 skip CSRF — XSS-stolen access_token
+  // 從 evil.com 仍可發 cross-origin 請求且帶 stolen Bearer。Defense in depth:
+  // Bearer 請求 IF Origin header 存在，仍必須是 allow-listed origin。
+  // 缺 Origin（純 CLI / 排程，無 browser context）→ Bearer 才 skip。
+  if (hasBearer) {
+    if (origin && !isAllowedOrigin(origin, env)) {
+      return errorResponse(new AppError('PERM_DENIED', 'Invalid origin'));
+    }
+    return null;
+  }
+
   if (!origin) {
     // Allow service-token requests that omit Origin (e.g. CLI / scheduler)
     const hasServiceToken = !!request.headers.get('CF-Access-Client-Id') && !!request.headers.get('CF-Access-Client-Secret');
