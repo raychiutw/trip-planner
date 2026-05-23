@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.52] - 2026-05-24
+
+**deps: brace-expansion overrides ^5.0.6（修 GHSA-jxxr-4gwj-5jf2）**
+
+daily-check 2026-05-24 報告 1 個 prod moderate vuln：`brace-expansion`
+5.0.2-5.0.5 large numeric range 規避 documented `max` DoS 保護 (CVSS 6.5)。透過
+`@sentry/vite-plugin → glob → minimatch` 傳染。`package.json` 加 npm
+`overrides` 強制 `^5.0.6`，deduped 所有 transitive 路徑（含 workbox-build /
+serve-handler dev tree）。patch 升級無 ABI 變化。
+
+驗證：`npm audit --omit=dev` 0 vuln、typecheck pass、vite build pass、`npm test`
+292 files / 2316 tests 全綠。
+
 ## [2.33.51] - 2026-05-24
 
 **scripts/ round 8c — final polish (closes Round 8)**
