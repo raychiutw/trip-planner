@@ -52,16 +52,9 @@ const SCOPED_STYLES = `
 }
 `;
 
-/** Location data shape used by map link generation. */
-export interface MapLocation {
-  name?: string;
-  googleQuery?: string;
-  appleQuery?: string;
-  naverQuery?: string;
-  /** Legacy field – falls back for google link */
-  url?: string;
-  label?: string;
-}
+// v2.33.37 round 2: MapLocation canonical 已移到 src/types/timeline.ts。
+export type { MapLocation } from '../../types/timeline';
+import type { MapLocation } from '../../types/timeline';
 
 interface MapLinksProps {
   location: MapLocation;
@@ -127,9 +120,9 @@ export default MapLinks;
 
 /* ===== NavLinks — renders labelled groups of map links ===== */
 
-export interface NavLocation extends MapLocation {
-  label?: string;
-}
+// v2.33.37 round 2: NavLocation canonical 已移到 src/types/timeline.ts。
+import type { NavLocation } from '../../types/timeline';
+export type { NavLocation };
 
 interface NavLinksProps {
   locations: NavLocation[];

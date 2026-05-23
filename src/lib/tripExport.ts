@@ -4,7 +4,8 @@
  */
 
 import { apiFetch } from './apiClient';
-import { DOC_KEYS } from '../hooks/useTrip';
+// v2.33.37 round 2: DOC_KEYS 從 lib/docKeys 取（之前 import hooks/useTrip 反向依賴）。
+import { DOC_KEYS } from './docKeys';
 import { showToast } from '../components/shared/Toast';
 import type { Trip } from '../types/trip';
 

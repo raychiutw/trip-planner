@@ -3,6 +3,53 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.37] - 2026-05-24
+
+**Architecture refactor + coverage — `src/lib/` review round 2**
+
+延續 v2.33.36 round 1 fixes，本 PR 處理兩類 finding：
+1. **反向依賴**：`src/lib/` 不該 import `src/components/` 或 `src/hooks/`
+   (utility layer 應為 leaf module)。code-reviewer agent 點出 5 個 callsite。
+2. **零測試 high-impact 檔**：test-engineer agent top-5 priority gap 中
+   `poiCategory.ts` / `poiSearchHelpers.ts` / `travelMode.ts` 直接補 unit test。
+
+**Architecture refactor**
+
+- 新 `src/types/timeline.ts` — 9 個 timeline / map 共用 type 集中:
+  `MapLocation` / `NavLocation` / `SouvenirItem` / `InfoBoxType` /
+  `InfoBoxData` / `ShopData` / `GasStationDetail` / `TravelData` / `PoiPhoto`
+  / `StopPoiOptionData` / `TimelineEntryData`。沒有 React import。
+- 5 個檔改 import 路徑：
+  - `src/lib/mapDay.ts` 從 4 個 `components/trip/*` import 7 個 type → 改取
+    `src/types/timeline`。
+  - `src/lib/timelineUtils.ts` `TimelineEntryData` 改取 `src/types/timeline`。
+  - `src/components/trip/{TimelineEvent,MapLinks,InfoBox,Shop}.tsx` 移除
+    local interface declaration 改 re-export from `src/types/timeline` 保留
+    向後相容（既有 import path 不破）。
+- 新 `src/lib/docKeys.ts` — `DOC_KEYS` const 從 `src/hooks/useTrip.ts` extract。
+  `src/lib/tripExport.ts` 改 import lib path。`useTrip.ts` re-export 向後相容
+  (DocKey 是 `(typeof DOC_KEYS)[number]`)。
+
+留下的反向依賴（round 3 處理）：`apiClient.ts → hooks/useOnlineStatus`
+(`reportFetchResult` 需要 React context-like 注入)、`tripExport.ts → 
+components/shared/Toast` (`showToast` 同理)。這兩個是 runtime side-effect 不
+是 pure type，需 callback 注入 pattern。
+
+**New tests (3 files, 41 tests)**
+
+- `tests/unit/poi-category.test.ts` — 27 case `mapNominatimCategory` mapping
+  (hotel/restaurant/shopping/parking/transport/activity/attraction/fallback) +
+  `POI_TYPE_LABELS` 8 個 canonical zh-TW label (含 hotel→飯店 PR-1 fix +
+  transport→交通 v2.31.23 fix)。
+- `tests/unit/poi-search-helpers.test.ts` — 24 case `matchCategory` /
+  `poiTone` / `poiMeta` / `normalizeSearchResults` (strict shape validation
+  + array vs `{ results: [...] }` 兩種 input shape + null/undefined fallback
+  + missing place_id/name filter)。
+- `tests/unit/travel-mode.test.ts` — 7 case canonical labels (開車/步行/大眾
+  運輸) + icons (car/walking/bus) + 完整性 invariant。
+
+2167/2167 unit suite green (+41)。
+
 ## [2.33.36] - 2026-05-23
 
 **Security + stability hardening — `src/lib/` review round 1**

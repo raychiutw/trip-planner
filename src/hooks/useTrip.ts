@@ -35,9 +35,12 @@ function mapDayResponse(raw: Record<string, unknown>): Day {
 }
 
 /* ===== Doc Types ===== */
-
-export const DOC_KEYS = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'] as const;
-export type DocKey = (typeof DOC_KEYS)[number];
+// v2.33.37 round 2: DOC_KEYS canonical 移到 src/lib/docKeys.ts（lib → hooks
+// 反向依賴）。本檔 re-export 維持向後相容。
+export { DOC_KEYS } from '../lib/docKeys';
+export type { DocKey } from '../lib/docKeys';
+import { DOC_KEYS } from '../lib/docKeys';
+import type { DocKey } from '../lib/docKeys';
 
 /* ===== Hook Return Type ===== */
 
