@@ -27,7 +27,9 @@ const tables = [
 ];
 const backupDir = path.join(__dirname, '..', 'backups');
 
-if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+// v2.33.51 round 8c security: backup dir 含 users 表 PII，要 0700 (owner only)。
+if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true, mode: 0o700 });
+try { fs.chmodSync(backupDir, 0o700); } catch { /* best-effort */ }
 
 const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const snapshotDir = path.join(backupDir, timestamp);
@@ -47,7 +49,8 @@ for (const table of tables) {
     const jsonStart = raw.indexOf('[');
     const parsed = JSON.parse(raw.slice(jsonStart));
     const rows = parsed[0]?.results || [];
-    fs.writeFileSync(path.join(snapshotDir, `${table}.json`), JSON.stringify(rows, null, 2));
+    // v2.33.51 round 8c security: write JSON with 0600 (owner read/write only)
+    fs.writeFileSync(path.join(snapshotDir, `${table}.json`), JSON.stringify(rows, null, 2), { mode: 0o600 });
     summary[table] = rows.length;
     console.log(`  ✓ ${table}: ${rows.length} rows`);
   } catch (err) {

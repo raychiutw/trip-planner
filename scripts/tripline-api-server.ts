@@ -18,15 +18,25 @@ import { makeMailHandler } from './lib/mailer-handler';
 import { computeNextDailyFire } from './lib/schedule-daily';
 
 // --- Load .env.local ---
+// v2.33.51 round 8c: 統一 parser — 之前 inline 邏輯不 strip 外 quote，跟
+// sister script (lib/load-env.js / _lib/cron-shared) 行為不一致。
 const envPath = join(import.meta.dir, '..', '.env.local');
 try {
-  for (const line of readFileSync(envPath, 'utf-8').split('\n')) {
-    if (!line || line.startsWith('#')) continue;
-    const idx = line.indexOf('=');
+  for (const rawLine of readFileSync(envPath, 'utf-8').split('\n')) {
+    const trimmed = rawLine.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const idx = trimmed.indexOf('=');
     if (idx < 0) continue;
-    const key = line.slice(0, idx).trim();
-    const val = line.slice(idx + 1).trim();
-    if (key && !process.env[key]) process.env[key] = val;
+    const key = trimmed.slice(0, idx).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    let val = trimmed.slice(idx + 1).trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
+      val = val.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = val;
   }
 } catch {}
 
