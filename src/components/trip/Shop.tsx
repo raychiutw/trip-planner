@@ -4,19 +4,11 @@
 import { memo } from 'react';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
-import MapLinks, { type MapLocation } from './MapLinks';
+import MapLinks from './MapLinks';
 
-/** Shop data shape from dist JSON infoBoxes.shops[]. */
-export interface ShopData {
-  name: string;
-  category?: string | null;
-  hours?: string | null;
-  mustBuy?: string[] | null;
-  description?: string | null;
-  note?: string | null;
-  googleRating?: number | null;
-  location?: MapLocation | null;
-}
+// v2.33.37 round 2: ShopData canonical 已移到 src/types/timeline.ts。
+import type { ShopData } from '../../types/timeline';
+export type { ShopData };
 
 interface ShopProps {
   shop: ShopData;
