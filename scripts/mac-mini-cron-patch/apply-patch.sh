@@ -164,7 +164,38 @@ fi
 # ---------------------------------------------------------------------------
 echo
 echo "${CYAN}Step 5: mint token smoke (用 .env 的 client_secret 試呼叫)${RESET}"
-set -a; source "$ENV_PATH"; set +a
+# v2.33.51 round 8c security: 拔掉 `set -a; source $ENV_PATH` (.env 內 `EVIL=$(...)`
+# 任意行會被 evaluate 即 RCE)。改用 node helper parse 後 inline export 純 KV。
+# Defense in depth: stat the .env file mode before parsing；非 0600 即 abort。
+ENV_MODE=$(stat -f '%Lp' "$ENV_PATH" 2>/dev/null || stat -c '%a' "$ENV_PATH" 2>/dev/null)
+if [ "$ENV_MODE" != "600" ] && [ "$ENV_MODE" != "400" ]; then
+  echo "  ${RED}ABORT${RESET} .env file mode is $ENV_MODE — must be 0600 (chmod 600 \"$ENV_PATH\")"
+  exit 5
+fi
+# 用 node helper parse 而非 source — 同 lib/load-env.js 邏輯，純 KV-only。
+ENV_LINES=$(node -e "
+  const fs = require('fs');
+  const content = fs.readFileSync('$ENV_PATH', 'utf8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const idx = trimmed.indexOf('=');
+    if (idx < 0) continue;
+    const key = trimmed.slice(0, idx).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*\$/.test(key)) continue;
+    let val = trimmed.slice(idx + 1).trim();
+    if ((val.startsWith('\"') && val.endsWith('\"')) || (val.startsWith(\"'\") && val.endsWith(\"'\"))) val = val.slice(1, -1);
+    if (key === 'TRIPLINE_API_CLIENT_ID' || key === 'TRIPLINE_API_CLIENT_SECRET') {
+      console.log(key + '=' + val);
+    }
+  }
+")
+TRIPLINE_API_CLIENT_ID=$(echo "$ENV_LINES" | grep -E '^TRIPLINE_API_CLIENT_ID=' | head -1 | cut -d= -f2-)
+TRIPLINE_API_CLIENT_SECRET=$(echo "$ENV_LINES" | grep -E '^TRIPLINE_API_CLIENT_SECRET=' | head -1 | cut -d= -f2-)
+if [ -z "$TRIPLINE_API_CLIENT_ID" ] || [ -z "$TRIPLINE_API_CLIENT_SECRET" ]; then
+  echo "  ${RED}ABORT${RESET} TRIPLINE_API_CLIENT_ID/SECRET missing from $ENV_PATH"
+  exit 5
+fi
 SMOKE_RESP="$(curl -sf -X POST 'https://trip-planner-dby.pages.dev/api/oauth/token' \
   -d "grant_type=client_credentials" \
   -d "client_id=${TRIPLINE_API_CLIENT_ID}" \
