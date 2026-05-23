@@ -1,9 +1,9 @@
 import { logAudit, computeDiff } from '../../../_audit';
-import { hasPermission, hasWritePermission, verifyEntryBelongsToTrip } from '../../../_auth';
+import { hasPermission, hasWritePermission, verifyEntryBelongsToTrip, requireAuth} from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { TIME_RE, parseTime } from '../../../_time';
 import { validateEntryBody, detectGarbledText } from '../../../_validate';
-import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
+import { json, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 import { fetchEntryPoisByEntries } from '../days/_merge';
 
@@ -28,8 +28,7 @@ const ALLOWED_FIELDS = ['day_id', 'sort_order', 'start_time', 'end_time', 'title
  * 也可看)。
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, eid: eidStr } = context.params as { id: string; eid: string };
   const eid = parseIntParam(eidStr);
@@ -65,8 +64,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, eid: eidStr } = context.params as { id: string; eid: string };
   const eid = parseIntParam(eidStr);
@@ -171,8 +169,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, eid: eidStr } = context.params as { id: string; eid: string };
   const eid = parseIntParam(eidStr);

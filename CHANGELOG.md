@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.30] - 2026-05-23
+
+**Chore (simplify PR-3): requireAuth codemod — 32 backend handlers**
+
+`/simplify` agent finding: 32 個 handlers inline 2-line auth check
+`const auth = getAuth(context); if (!auth) throw new AppError('AUTH_REQUIRED');`
+when `_auth.ts` already exports `requireAuth(context)` that wraps the same
+logic.
+
+Codemod 把所有 callsite 改用 `requireAuth(context)`、補對應 import、
+清理不再用的 `getAuth` / `AppError` import。`functions/api/trips.ts:185`
+保留 `getAuth` 因為是 optional `auth?.isAdmin` 用途（不 throw）。
+
+無行為改動。270 files / 2092 tests pass。tsc clean (frontend + functions).
+
 ## [2.33.29] - 2026-05-23
 
 **Chore (simplify PR-2): scripts/lib/d1-client.js + load-env 統一**

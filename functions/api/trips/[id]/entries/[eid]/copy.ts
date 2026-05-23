@@ -22,10 +22,10 @@
  */
 
 import { logAudit } from '../../../../_audit';
-import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
+import { hasWritePermission, verifyEntryBelongsToTrip, requireAuth} from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { parseTime } from '../../../../_time';
-import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
+import { json, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
 interface CopyEntryBody {
@@ -44,8 +44,7 @@ interface SourceEntryPoi {
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, eid: eidStr } = context.params as { id: string; eid: string };
   const eid = parseIntParam(eidStr);

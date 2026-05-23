@@ -1,6 +1,6 @@
-import { hasWritePermission } from '../../_auth';
+import { hasWritePermission, requireAuth} from '../../_auth';
 import { AppError } from '../../_errors';
-import { json, getAuth } from '../../_utils';
+import { json } from '../../_utils';
 import type { Env } from '../../_types';
 import {
   assembleDay,
@@ -102,8 +102,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
  * Returns { day: { id, day_num, date, day_of_week, label, title } }.
  */
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const tripId = context.params.id as string;
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');

@@ -4,18 +4,17 @@
  */
 
 import { logAudit, computeDiff } from '../../_audit';
-import { hasPermission } from '../../_auth';
+import { hasPermission, requireAuth} from '../../_auth';
 import { AppError } from '../../_errors';
 import { sanitizeReply } from '../../_validate';
-import { json, getAuth, parseJsonBody } from '../../_utils';
+import { json, parseJsonBody } from '../../_utils';
 import { HEALTH_CHECK_PREFIX } from '../../trips/[id]/health-check';
 import type { Env } from '../../_types';
 
 // GET /api/requests/:id
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
   const id = params.id as string;
 
   // 2026-05-07：LEFT JOIN users 取 display_name 給 chat avatar / sender label。
@@ -35,8 +34,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
   const id = params.id as string;
 
   // 僅 admin / service token 可 PATCH（Claude CLI 回覆用）

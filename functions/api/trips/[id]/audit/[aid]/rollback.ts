@@ -1,6 +1,7 @@
 import { logAudit } from '../../../../_audit';
+import { requireAuth } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
-import { json, getAuth } from '../../../../_utils';
+import { json } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
 // v2.29.0: trip_pois 整表 DROPPED。trip_entries.{time, poi_id, travel_*} 8 cols +
@@ -43,8 +44,7 @@ interface AuditRow {
 // POST /api/trips/:id/audit/:aid/rollback
 // Only admin can rollback
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
   if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const { id, aid } = context.params as { id: string; aid: string };
