@@ -15,7 +15,13 @@ interface UseRequestSSEResult {
 }
 
 const SAFETY_NET_POLL_INTERVAL_MS = 30_000;
-const ELAPSED_TICK_MS = 1_000;
+// v2.33.31 (simplify PR-4): tick at minute boundary, not every second.
+// UI consumers (ChatPage:944-946) only read elapsedMs in 1-minute buckets
+// (`>= 3 * 60 * 1000` threshold + `Math.floor(elapsedMs / 60_000)` display),
+// so per-second setState forced ChatPage to re-render up to 900× per AI-health-check
+// wait (5-15 min). Tick once per minute via setInterval keeps the value fresh
+// enough for the 3-minute threshold without burning React renders.
+const ELAPSED_TICK_MS = 60_000;
 
 /**
  * Subscribe to a trip_request's status with SSE + always-on polling safety net.
