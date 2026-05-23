@@ -22,7 +22,7 @@
  *                 ▼
  *         null state + (Google Maps 無 .remove())
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 
 export interface UseGoogleMapOptions {
@@ -119,10 +119,11 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
           gestureHandling: 'greedy', // mobile single-finger pan
           clickableIcons: false,     // disable Google's POI overlay clicks
           // v2.31.75: AdvancedMarkerElement requires a mapId to render.
-          // 'DEMO_MAP_ID' is Google's demo mapId — works without cloud-styled
-          // map setup (we don't use cloud styles, all visuals stay in code).
-          // 換 production cloud map ID 需在 GCP Console「Map Management」建。
-          mapId: 'DEMO_MAP_ID',
+          // v2.33.39 (round 4 security audit): 改讀 VITE_GOOGLE_MAPS_MAP_ID
+          // env var；Google 共享的 'DEMO_MAP_ID' 在 GCP Console 列為可隨時停用，
+          // 且為跨 app 共用、無自家 analytics 隔離。env 未設時仍 fallback DEMO_MAP_ID
+          // 以維持 dev 開發體驗。
+          mapId: (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) ?? 'DEMO_MAP_ID',
         });
         setMap(instance);
       })
@@ -141,33 +142,39 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const flyTo = (latLng: { lat: number; lng: number }, zoomLevel?: number) => {
-    if (!map) return;
-    if (prefersReducedMotion()) {
-      map.setCenter(latLng);
-      if (zoomLevel !== undefined) map.setZoom(zoomLevel);
-    } else {
-      map.panTo(latLng);
-      if (zoomLevel !== undefined) map.setZoom(zoomLevel);
-    }
-  };
+  // v2.33.39 (round 4): wrap in useCallback with `[map]` dep — 之前每 render
+  // 都產新 closure，OceanMap fitBounds effect dep 包含 fitBounds 會 re-fire 每
+  // 次父 render → 地圖每次 state 變動都重新 fit。
+  const flyTo = useCallback(
+    (latLng: { lat: number; lng: number }, zoomLevel?: number) => {
+      if (!map) return;
+      if (prefersReducedMotion()) {
+        map.setCenter(latLng);
+        if (zoomLevel !== undefined) map.setZoom(zoomLevel);
+      } else {
+        map.panTo(latLng);
+        if (zoomLevel !== undefined) map.setZoom(zoomLevel);
+      }
+    },
+    [map],
+  );
 
-  const fitBounds = (
-    latlngs: Array<{ lat: number; lng: number }>,
-    paddingPx = 40,
-  ) => {
-    if (!map || latlngs.length === 0) return;
-    if (latlngs.length === 1) {
-      const only = latlngs[0]!;
-      map.setCenter(only);
-      const z = map.getZoom() ?? 11;
-      map.setZoom(Math.max(z, 14));
-      return;
-    }
-    const bounds = new google.maps.LatLngBounds();
-    for (const ll of latlngs) bounds.extend(ll);
-    map.fitBounds(bounds, paddingPx);
-  };
+  const fitBounds = useCallback(
+    (latlngs: Array<{ lat: number; lng: number }>, paddingPx = 40) => {
+      if (!map || latlngs.length === 0) return;
+      if (latlngs.length === 1) {
+        const only = latlngs[0]!;
+        map.setCenter(only);
+        const z = map.getZoom() ?? 11;
+        map.setZoom(Math.max(z, 14));
+        return;
+      }
+      const bounds = new google.maps.LatLngBounds();
+      for (const ll of latlngs) bounds.extend(ll);
+      map.fitBounds(bounds, paddingPx);
+    },
+    [map],
+  );
 
   return { containerRef, map, loadError, flyTo, fitBounds };
 }

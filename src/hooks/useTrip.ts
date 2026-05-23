@@ -86,7 +86,11 @@ export function useTrip(tripId: string | null): UseTripReturn {
       try {
         const raw = await apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${dayNum}`);
         const day = mapDayResponse(raw);
-        allDaysRef.current[dayNum] = day;
+        // v2.33.39 round 4: 之前直接 allDaysRef.current[dayNum] = day mutate ref
+        // 而 caller 讀的 React state 沒同步 → switchDay 後手動補 setAllDays，
+        // 但其它 caller (allDays return value) 看不到 cache。改用 setAllDays
+        // 作 single writer，ref mirror 由 useEffect 同步（既有 line 76-77 pattern）。
+        setAllDays((prev) => (prev[dayNum] === day ? prev : { ...prev, [dayNum]: day }));
         return day;
       } catch (err) {
         if (err instanceof ApiError) {
