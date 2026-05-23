@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.31] - 2026-05-23
+
+**Perf (simplify PR-4): useRequestSSE elapsedMs tick 1s → 60s**
+
+`/simplify` efficiency finding: `useRequestSSE` tick `setElapsedMs` 每 1
+秒一次，但 UI consumer (ChatPage:944-946) 只在 `>= 3 * 60 * 1000`
+threshold 跟 `Math.floor(elapsedMs / 60_000)` 顯示分鐘。AI 健檢 5-15 分鐘
+wait 期間 ChatPage 大子樹重 render **300-900 次** 全是 no-op。
+
+Fix: `ELAPSED_TICK_MS` 從 `1_000` 改 `60_000`。UI 行為不變（3 min
+threshold 與 minute display 都在 minute boundary 才變）。
+
+Test：`use-request-sse.test.tsx` `elapsedMs ticks up` assertion 從每 5 s
+改 minute boundary，新邏輯 60 s 內維持 0、60 s 後跳一次。
+
+270 files / 2092 tests pass。
+
 ## [2.33.30] - 2026-05-23
 
 **Chore (simplify PR-3): requireAuth codemod — 32 backend handlers**
