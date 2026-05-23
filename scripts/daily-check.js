@@ -37,23 +37,11 @@ function loadConfigYaml() {
   } catch(e) { return {}; }
 }
 
-// 從 .env.local 讀取本機 secrets（不進版控）
-function loadEnvLocal() {
-  try {
-    var envPath = path.join(__dirname, '..', '.env.local');
-    var content = fs.readFileSync(envPath, 'utf8');
-    var env = {};
-    content.split('\n').forEach(function(line) {
-      var m = line.match(/^(\w+)=(.+)/);
-      if (m) env[m[1]] = m[2].trim();
-    });
-    return env;
-  } catch(e) { return {}; }
-}
+// v2.33.29: .env.local 載入改用 shared scripts/lib/load-env（注入 process.env）
+require('./lib/load-env').loadEnvLocal();
 
 var yamlEnv = loadConfigYaml();
-var localEnv = loadEnvLocal();
-function env(key) { return process.env[key] || localEnv[key] || yamlEnv[key] || ''; }
+function env(key) { return process.env[key] || yamlEnv[key] || ''; }
 
 var CF_TOKEN = env('CLOUDFLARE_API_TOKEN');
 var CF_ACCOUNT = env('CF_ACCOUNT_ID');
@@ -74,23 +62,8 @@ var googleMapsTokenHelper = (function() {
 var googleMapsQuotaLib = require('./lib/google-maps-quota');
 
 // ── D1 REST API helper ──────────────────────────────────────────
-
-async function queryD1(sql) {
-  var url = 'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT +
-    '/d1/database/' + D1_DB + '/query';
-  var res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + CF_TOKEN,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ sql: sql })
-  });
-  if (!res.ok) throw new Error('D1 query failed: ' + res.status);
-  var data = await res.json();
-  if (!data.success) throw new Error('D1 query error: ' + JSON.stringify(data.errors));
-  return data.result[0].results;
-}
+// v2.33.29: 移到 scripts/lib/d1-client.js
+var { queryD1 } = require('./lib/d1-client');
 
 // ── 日期工具 ────────────────────────────────────────────────────
 
