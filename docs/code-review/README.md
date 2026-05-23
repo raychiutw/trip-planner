@@ -24,7 +24,8 @@
 | 8a | scripts/ HIGH security | 4,552 | [#728](https://github.com/raychiutw/trip-planner/pull/728) | 2026-05-24 | [round-8a-scripts-security.md](./round-8a-scripts-security.md) |
 | 8b | scripts/ HIGH residuals + MED | — | [#729](https://github.com/raychiutw/trip-planner/pull/729) | 2026-05-24 | [round-8b-scripts-residuals.md](./round-8b-scripts-residuals.md) |
 | 8c | scripts/ final polish | — | [#730](https://github.com/raychiutw/trip-planner/pull/730) | 2026-05-24 | [round-8c-scripts-polish.md](./round-8c-scripts-polish.md) |
-| 8d | cleanup backlog sweep | — | TBD | 2026-05-24 | [round-8d-cleanup-backlog.md](./round-8d-cleanup-backlog.md) |
+| 8d | cleanup backlog sweep | — | [#732](https://github.com/raychiutw/trip-planner/pull/732) | 2026-05-24 | [round-8d-cleanup-backlog.md](./round-8d-cleanup-backlog.md) |
+| 9 | src/lib zero-test catch-up | — | TBD | 2026-05-24 | [round-9-lib-test-catchup.md](./round-9-lib-test-catchup.md) |
 
 ## 流程
 

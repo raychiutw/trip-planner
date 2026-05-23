@@ -3,6 +3,36 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.53] - 2026-05-24
+
+**Round 9 — src/lib zero-test catch-up (backlog #116)**
+
+`src/lib/` 5 個無覆蓋率模組補測試。tripExport.ts 用 source-grep
+鎖死 v2.33.36 security audit round 1 mitigation（path traversal +
+CSV injection），其餘走 behavioural test。
+
+**TESTING**
+
+- `tests/unit/dayArtMapping.test.ts` — 9 個 test
+  (extractArtKeys 優先序 / dedup / limit / 中日英 keyword)
+- `tests/unit/mapRow.test.ts` — 9 個 test
+  (snakeToCamel + mapRow + mapRows + JSON_FIELDS 為空 array contract)
+- `tests/unit/constants.test.ts` — 16 個 test
+  (SAFE_COLOR_RE 接受 hex/rgb/var/named + 拒絕 javascript:/expression()/url() +
+   safeColor fallback + TRIP_TIMEZONE 4 個目的地 + getLocalToday YYYY-MM-DD)
+- `tests/unit/docKeys.test.ts` — 4 個 test
+  (5 個 doc type + UI tab order + 與 backend `[type].ts` VALID_TYPES 對齊)
+- `tests/unit/tripExport.test.ts` — 14 個 test (source-grep)
+  (safeFileBase strip 控制字元 + 80 char limit + csvSafe 偵測 =+-@\\t\\r +
+   單引號 prefix + console.error log + showToast user feedback + CSV BOM +
+   17-column schema + 4 format dispatch)
+
+未測：`src/lib/sentry.ts` — 純初始化 side effect (init() in PROD only)，無
+testable surface 而 skip。
+
+**剩餘 backlog**: #117 src/lib runtime reverse imports（需 scan import
+graph），#122 oauth/authorize + entries batch，#124 OceanMap 拆分。
+
 ## [2.33.52] - 2026-05-24
 
 **Round 8d — cleanup backlog sweep**
