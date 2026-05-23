@@ -3,6 +3,46 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.50] - 2026-05-24
+
+**scripts/ round 8b — HIGH residuals + MED polish**
+
+延續 v2.33.49 round 8a，處理 round 8a 留下的最高優先 HIGH residuals + 4 個
+MED。完整 doc: `docs/code-review/round-8b-scripts-residuals.md`。
+
+**HIGH**
+
+- `provision-admin-cli-client.js` `--rotate-secret` 預設 cascade revoke
+  `oauth_access_tokens` + `oauth_refresh_tokens`，新 `--keep-tokens` opt-out
+  flag for graceful rollover。之前 1h grace window 不可接受 (incident response)。
+- `daily-report.js` `/api/trips` + `/api/trips/:id/days` 加 OAuth Bearer
+  auth via `lib/get-tripline-token` — post v2.33.41 anonymous-read fix 後
+  daily-report 已 silent green (讀不到 unpublished trip 但無 error surface)。
+  Token mint 失敗 graceful skip checkLinks (不 crash 整 report)。
+
+**MEDIUM**
+
+- `_lib/cron-shared.ts::alertTelegram` env missing → `console.warn` once
+  (拔 silent no-op 故障模式) + TOKEN format validate (同 send-telegram.sh
+  v2.33.49)。
+- `lib/d1-client.js`:
+  - 1 retry on 5xx + 500ms backoff (D1 capacity hiccup recovery)
+  - error stringify 改 `'unknown'` fallback (拔 json body SQL params leak)
+
+**Tests (+11)**
+
+- `tests/unit/round8b-scripts-residuals.test.ts` — source-grep wiring guard
+  for 4 fix area (provision cascade / daily-report auth / cron-shared warn /
+  d1-client retry + safer error)
+
+2306/2306 unit pass。
+
+**Round 8c follow-up (doc 列)**
+
+- HIGH 留 3 個: execSync SQL refactor 5 callsite / init-local-db / apply-patch source RCE
+- MED 留 14 個 (api-server polish / log rotation / daily-* misc / launchd plist hardening / etc)
+- LOW 留 11 個
+
 ## [2.33.49] - 2026-05-24
 
 **scripts/ review round 8a — CRITICAL + HIGH security + critical test gap**
