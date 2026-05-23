@@ -27,6 +27,9 @@ export interface SmartPlacement extends TimeRangeMinutes {
 }
 
 const DEFAULT_START = '09:00';
+// v2.33.38 round 3: numeric const — 拔掉之前 `parseClockToMinutes(DEFAULT_START)!`
+// 的 double-parse + non-null assertion。
+const DEFAULT_START_MINUTES = 9 * 60;
 const DEFAULT_DURATION_MINUTES = 60;
 const DEFAULT_GAP_MINUTES = 60;
 const MINUTES_PER_DAY = 24 * 60;
@@ -90,7 +93,7 @@ export function getSmartPlacement(
 ): SmartPlacement {
   const durationMinutes = options.durationMinutes ?? DEFAULT_DURATION_MINUTES;
   const gapMinutes = options.gapMinutes ?? DEFAULT_GAP_MINUTES;
-  const defaultStart = parseClockToMinutes(options.defaultStart ?? DEFAULT_START) ?? parseClockToMinutes(DEFAULT_START)!;
+  const defaultStart = parseClockToMinutes(options.defaultStart ?? DEFAULT_START) ?? DEFAULT_START_MINUTES;
   const ranges = entries
     .map((entry) => parseEntryTimeRange(entry, durationMinutes))
     .filter((range): range is TimeRangeMinutes => range != null);
