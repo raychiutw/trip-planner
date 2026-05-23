@@ -18,9 +18,9 @@
  * Auth: 同 PATCH /pois/:id — admin OR trip owner（passing tripId for link check）。
  */
 
-import { hasWritePermission, verifyPoiBelongsToTrip } from '../../_auth';
+import { hasWritePermission, verifyPoiBelongsToTrip, requireAuth} from '../../_auth';
 import { AppError } from '../../_errors';
-import { json, getAuth, parseIntParam } from '../../_utils';
+import { json, parseIntParam } from '../../_utils';
 import { assertGoogleAvailable } from '../../_maps_lock';
 import { getPlaceDetails } from '../../../../src/server/maps/google-client';
 import type { Env } from '../../_types';
@@ -32,8 +32,7 @@ interface PoiRow {
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const poiId = parseIntParam(context.params.id as string);
   if (!poiId) throw new AppError('DATA_VALIDATION', 'POI ID 格式錯誤');

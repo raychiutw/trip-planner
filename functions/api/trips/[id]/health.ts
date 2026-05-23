@@ -22,9 +22,8 @@
  * Empty (closed=0 + missing=0) → still returns 200 with items: [].
  * Frontend `<TripHealthBanner>` returns null on empty (does NOT render stub).
  */
-import { hasPermission } from '../../_auth';
+import { hasPermission, requireAuth} from '../../_auth';
 import { AppError } from '../../_errors';
-import { getAuth } from '../../_utils';
 import type { Env } from '../../_types';
 
 interface HealthRow {
@@ -35,8 +34,7 @@ interface HealthRow {
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const tripId = context.params.id as string;
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');

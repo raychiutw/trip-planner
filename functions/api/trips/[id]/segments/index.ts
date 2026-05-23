@@ -10,9 +10,9 @@
  * Auth: trip read permission.
  */
 
-import { hasPermission } from '../../../_auth';
+import { hasPermission, requireAuth} from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { json, getAuth } from '../../../_utils';
+import { json } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 interface SegmentRow {
@@ -29,8 +29,7 @@ interface SegmentRow {
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const tripId = context.params.id as string;
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');

@@ -12,17 +12,16 @@
  *
  * Returns: { ok: true, newStartDate, newEndDate, daysShifted }
  */
-import { hasWritePermission } from '../../../_auth';
+import { hasWritePermission, requireAuth} from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { json, getAuth } from '../../../_utils';
+import { json } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const MS_PER_DAY = 86_400_000;
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const tripId = context.params.id as string;
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');

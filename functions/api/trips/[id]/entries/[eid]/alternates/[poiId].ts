@@ -11,15 +11,14 @@
  * POI 不在此 entry → 404 POI_NOT_ALTERNATE。
  */
 import { logAudit } from '../../../../../_audit';
-import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../../_auth';
+import { hasWritePermission, verifyEntryBelongsToTrip, requireAuth} from '../../../../../_auth';
 import { AppError } from '../../../../../_errors';
 import { removeAlternate } from '../../../../../_entry_pois';
-import { json, getAuth, parseIntParam } from '../../../../../_utils';
+import { json, parseIntParam } from '../../../../../_utils';
 import type { Env } from '../../../../../_types';
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, eid: eidStr, poiId: poiIdStr } = context.params as {
     id: string;

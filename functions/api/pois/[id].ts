@@ -7,9 +7,9 @@
  */
 
 import { logAudit, computeDiff } from '../_audit';
-import { hasWritePermission, verifyPoiBelongsToTrip } from '../_auth';
+import { hasWritePermission, verifyPoiBelongsToTrip, requireAuth} from '../_auth';
 import { AppError } from '../_errors';
-import { json, getAuth, parseJsonBody, buildUpdateClause, parseIntParam } from '../_utils';
+import { json, parseJsonBody, buildUpdateClause, parseIntParam } from '../_utils';
 import type { Env } from '../_types';
 
 // Migration 0045: rename google_rating → rating; drop maps (use mapsUrl helper).
@@ -27,8 +27,7 @@ const ALLOWED_FIELDS = [
 ] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const poiId = parseIntParam(context.params.id as string);
   if (!poiId) throw new AppError('DATA_VALIDATION', 'POI ID 格式錯誤');
@@ -77,8 +76,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
  * Admin only（Service Token 視為 admin）
  */
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
   if (!auth.isAdmin) throw new AppError('PERM_DENIED', '僅 admin 可刪除 master POI');
 
   const poiId = parseIntParam(context.params.id as string);

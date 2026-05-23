@@ -14,16 +14,15 @@
 
 import { logAudit, recordEmailEvent } from './_audit';
 import { alertAdminTelegram } from './_alert';
-import { hasPermission, hasWritePermission } from './_auth';
+import { hasPermission, hasWritePermission, requireAuth} from './_auth';
 import { AppError } from './_errors';
-import { json, getAuth, parseJsonBody } from './_utils';
+import { json, parseJsonBody } from './_utils';
 import type { Env } from './_types';
 
 // GET /api/requests
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env, request } = context;
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
   const url = new URL(request.url);
   const tripId = url.searchParams.get('tripId');
   const status = url.searchParams.get('status');
@@ -105,8 +104,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 // POST /api/requests
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env, request } = context;
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   type RequestBody = { tripId?: string; mode?: string; message?: string; title?: string; body?: string };
   const body = await parseJsonBody<RequestBody>(request);

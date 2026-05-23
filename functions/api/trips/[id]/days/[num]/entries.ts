@@ -1,19 +1,18 @@
 import { logAudit } from '../../../../_audit';
-import { hasWritePermission } from '../../../../_auth';
+import { hasWritePermission, requireAuth} from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { findOrCreatePoi } from '../../../../_poi';
 import { syncEntryMaster } from '../../../../_entry_pois';
 import { resolveEntryTimes } from '../../../../_time';
 import { validateEntryBody, detectGarbledText } from '../../../../_validate';
-import { json, getAuth, parseJsonBody } from '../../../../_utils';
+import { json, parseJsonBody } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
 /**
  * POST /api/trips/:id/days/:num/entries — 新增 entry 到指定天
  */
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
-  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const auth = requireAuth(context);
 
   const { id, num } = context.params as { id: string; num: string };
   const dayNum = Number(num);

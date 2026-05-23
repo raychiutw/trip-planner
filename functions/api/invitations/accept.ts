@@ -13,11 +13,11 @@
  * 共用 helper src/server/invitation-accept.ts，確保 signup endpoint 跟此 endpoint
  * 同邏輯（不會 drift）。
  */
+import { AppError } from '../_errors';
 import { requireSessionUser } from '../_session';
 import { tryAcceptInvitation } from '../../../src/server/invitation-accept';
 import { parseJsonBody } from '../_utils';
 import { logAudit } from '../_audit';
-import { AppError } from '../_errors';
 import type { Env } from '../_types';
 
 interface AcceptBody {
