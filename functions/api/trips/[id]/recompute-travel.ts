@@ -107,20 +107,33 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const segmentUpdates: Array<{ id: number; mode: string; min: number; distM: number; now: number }> = [];
   // v2.29.0: trip_entries.travel_* DROPPED. trip_segments 為唯一 source.
 
-  for (const day of daysRes.results) {
-    const entriesRes = await db
+  // v2.33.32 (simplify PR-5): batch all-days entries lookup into 1 query (was N
+  // sequential SELECT WHERE day_id=?). 30-day trip 從 ~30 D1 round trips → 1。
+  // 仍 ORDER BY day_id, sort_order；in-memory group。
+  const dayIds = daysRes.results.map((d) => d.id);
+  const entriesByDay = new Map<number, EntryWithCoords[]>();
+  if (dayIds.length > 0) {
+    const placeholders = dayIds.map(() => '?').join(',');
+    const allEntriesRes = await db
       .prepare(
         `SELECT e.id, e.day_id, e.sort_order, p.lat, p.lng
          FROM trip_entries e
          LEFT JOIN trip_entry_pois tep ON tep.entry_id = e.id AND tep.sort_order = 1
          LEFT JOIN pois p ON p.id = tep.poi_id
-         WHERE e.day_id = ?
-         ORDER BY e.sort_order ASC`,
+         WHERE e.day_id IN (${placeholders})
+         ORDER BY e.day_id ASC, e.sort_order ASC`,
       )
-      .bind(day.id)
+      .bind(...dayIds)
       .all<EntryWithCoords>();
+    for (const row of allEntriesRes.results) {
+      const arr = entriesByDay.get(row.day_id) ?? [];
+      arr.push(row);
+      entriesByDay.set(row.day_id, arr);
+    }
+  }
 
-    const list = entriesRes.results;
+  for (const day of daysRes.results) {
+    const list = entriesByDay.get(day.id) ?? [];
     for (let i = 1; i < list.length; i++) {
       const prev = list[i - 1];
       const curr = list[i];
