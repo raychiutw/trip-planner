@@ -42,8 +42,10 @@ function updateMetaThemeColor(dark: boolean) {
  * Applies `body.dark` class and updates `<meta name="theme-color">`.
  */
 export function useDarkMode() {
+  // v2.33.40 round 4.5: 之前 readColorMode() 在 initial render 跑兩次（一次給
+  // colorMode、一次給 isDark），兩次都打 localStorage。改用單一 init 函式。
   const [colorMode, setColorModeState] = useState<ColorMode>(readColorMode);
-  const [isDark, setIsDark] = useState(() => resolveDark(readColorMode()));
+  const [isDark, setIsDark] = useState(() => resolveDark(colorMode));
 
   useEffect(() => {
     updateMetaThemeColor(isDark);

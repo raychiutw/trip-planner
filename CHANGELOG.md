@@ -3,6 +3,50 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.40] - 2026-05-24
+
+**src/hooks/ review round 2 — IMPORTANT fixes + coverage**
+
+延續 v2.33.39 (round 1 CRITICAL+HIGH+MED+LOW)，本 PR 處理 round 1 留下的
+IMPORTANT 問題與 top test gap。
+
+**IMPORTANT fixes**
+
+- `useDarkMode`: 拔 double `readColorMode()` 初始 call（2 個 useState
+  initializer 各跑一次 localStorage 讀）→ 改用 `resolveDark(colorMode)`
+  共享 first init 結果。
+- `useChatPagination`: `setMessages` / `rowToMessages` / `isInflightStatus`
+  / `onInitialResume` / `setHistoryLoading` 5 個 callback stash 到 ref。
+  之前依賴「caller 傳穩定 ref」隱性 contract，ChatPage.tsx 任何 inline
+  arrow drift 都會 silently stale closure。
+- `usePullToRefresh`: `onRefresh` stash 到 ref，不再放 effect deps —
+  inline arrow 不會每 parent render 重新綁 4 個 touch listener。
+- `usePlacesAutocomplete`: 加 LRU cap 50 entries — SPA-lifetime Map
+  原本無界限長期 typing 後變幾百個 entry。新 `cacheGet()` (touch =
+  re-insert) / `cacheSet()` (FIFO evict)。
+
+**Tests (2 new files, +13 cases)**
+
+- `tests/unit/use-permissions.test.tsx` — 6 case (happy / empty tripId /
+  401 / 403 / invitation fail graceful / race guard via currentTripIdRef)
+  — top-2 zero-test gap，CollabSheet 加載核心。
+- `tests/unit/use-dark-mode-body-class.test.tsx` — 7 case body.dark class
+  effect (default / saved dark / saved light / setColorMode 切換 /
+  toggleDark / legacy backfill) — v2.31.25 regression guard。
+
+**Skipped from round 1 IMPORTANT list (rationale)**
+
+- `useTripSegments` unused state when `fromCtx` non-null — context-命中
+  時 useState/useMemo trivial cost (empty Map)，restructure 為 split hook
+  成本高於收益。保留註解。
+- `useNavigateBack` history.length unreliable — `useNavigationType` 替
+  代需 RouterProvider context 全頁面 audit + 共用 fallback 策略，留
+  follow-up PR。
+- `useTrip.refetchDay` 測試 + `usePoiSearch` 完整測試 — round 4.6 PR
+  繼續。
+
+2221/2221 unit pass (+13)。
+
 ## [2.33.39] - 2026-05-24
 
 **Security + stability — `src/hooks/` review round 1**
