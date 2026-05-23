@@ -11,7 +11,7 @@
  *   ?redirect_after=/path → 成功登入後 navigate 此 path（已 sanitize 內部 path only）
  *   ?invitation=token → 登入成功後自動 POST /api/invitations/accept → redirect 該 trip
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import { apiFetchRaw } from '../lib/apiClient';
@@ -327,21 +327,33 @@ export default function LoginPage() {
     }
   }
 
-  // Lockout countdown
+  // Lockout countdown — v2.33.46 round 7a: 用 Date.now() baseline 取代純 -1
+  // counter，避免 tab background throttling 後 counter 漂移卡住 user (browser
+  // 把 setInterval throttle 到 1s+ 之後 N 秒不 fire 但 absolute time 已過)。
+  // lockedUntilRef 在 setLockedRetryAfter 被外部呼叫時同步重設。
+  const lockedUntilRef = useRef<number | null>(null);
   useEffect(() => {
-    if (lockedRetryAfter === null) return;
+    if (lockedRetryAfter === null) {
+      lockedUntilRef.current = null;
+      return;
+    }
+    lockedUntilRef.current = Date.now() + lockedRetryAfter * 1000;
     const id = setInterval(() => {
-      setLockedRetryAfter((s) => {
-        if (s === null) return null;
-        if (s <= 1) {
-          clearInterval(id);
-          return null;
-        }
-        return s - 1;
-      });
+      const until = lockedUntilRef.current;
+      if (until === null) {
+        clearInterval(id);
+        return;
+      }
+      const remain = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+      setLockedRetryAfter(remain > 0 ? remain : null);
+      if (remain === 0) {
+        lockedUntilRef.current = null;
+        clearInterval(id);
+      }
     }, 1000);
     return () => clearInterval(id);
-  }, [lockedRetryAfter !== null]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedRetryAfter !== null]);
 
   // Lockout view — single-column (no brand hero, full-bleed alarming UX)
   if (lockedRetryAfter !== null) {

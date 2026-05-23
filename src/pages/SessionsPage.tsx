@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { apiFetch } from '../lib/apiClient';
+import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -344,13 +344,25 @@ export default function SessionsPage() {
             <span className="tp-account-footer-label">深淺模式</span>
             <ThemeToggle testId="sessions-theme" />
           </div>
-          <a
-            href="/api/oauth/logout"
+          {/* v2.33.46 round 7a security audit: 改 POST button — 之前 <a href>
+              是 GET-trigger state-changing endpoint，任何 forum 內 <img src=
+              "/api/oauth/logout"> 即可登出 victim (CSRF logout DoS)。對齊
+              AccountPage 既有 POST pattern。 */}
+          <button
+            type="button"
             className="tp-account-logout-btn"
             data-testid="sessions-logout"
+            onClick={async () => {
+              try {
+                await apiFetchRaw('/oauth/logout', { method: 'POST' });
+              } catch {
+                /* ignore — navigate to /login regardless */
+              }
+              navigate('/login', { replace: true });
+            }}
           >
             登出此帳號
-          </a>
+          </button>
         </div>
       </div>
       </div>

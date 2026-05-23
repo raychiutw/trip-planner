@@ -43,6 +43,7 @@ import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
+import { escUrl } from '../lib/sanitize';
 import { EVENT } from '../lib/events';
 import { haversineMeters, avgLatLng, CROSS_REGION_THRESHOLD_M, type LatLng } from '../lib/geo';
 import { getStopDisplayTitle } from '../lib/stopDisplay';
@@ -1228,20 +1229,23 @@ export default function EditEntryPage() {
                             <div className="tp-edit-entry-alt-extra" data-testid={`edit-entry-alt-extra-${alt.poiId}`}>
                               {alt.price && <span className="alt-extra-chip price">{alt.price}</span>}
                               {alt.hours && <span className="alt-extra-chip hours">{alt.hours}</span>}
-                              {alt.reservation && (
-                                alt.reservationUrl ? (
+                              {alt.reservation && (() => {
+                                // v2.33.46 round 7a security audit: 套 escUrl 防 javascript:/data: URI XSS
+                                // (co-editor 可寫 trip_pois.reservation_url) + 加 noopener 防 tabnabbing。
+                                const safeUrl = alt.reservationUrl ? escUrl(alt.reservationUrl) : '';
+                                return safeUrl ? (
                                   <a
-                                    href={alt.reservationUrl}
+                                    href={safeUrl}
                                     target="_blank"
-                                    rel="noreferrer"
+                                    rel="noopener noreferrer"
                                     className="alt-extra-chip reservation is-link"
                                   >
                                     {alt.reservation}
                                   </a>
                                 ) : (
                                   <span className="alt-extra-chip reservation">{alt.reservation}</span>
-                                )
-                              )}
+                                );
+                              })()}
                             </div>
                           )}
                         </div>
