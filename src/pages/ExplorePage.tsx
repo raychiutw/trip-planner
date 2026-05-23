@@ -509,6 +509,8 @@ export default function ExplorePage() {
     try {
       const regionApi = regionToApiParam(region);
       const regionParam = regionApi ? `&region=${encodeURIComponent(regionApi)}` : '';
+      // NOTE v2.33.33 simplify PR-6 defer: poi-search 暫保留 raw fetch（test suite 重構成本太高），
+      // follow-up PR 處理。
       const resp = await fetch(`/api/poi-search?q=${encodeURIComponent(q)}&limit=20${regionParam}`, { signal: ctrl.signal });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const body = (await resp.json()) as { results: PoiSearchResult[] };

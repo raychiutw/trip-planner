@@ -15,6 +15,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
+import { apiFetchRaw } from '../lib/apiClient';
 import InlineError from '../components/shared/InlineError';
 
 const SCOPED_STYLES = `
@@ -113,9 +114,8 @@ export default function SignupPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('/api/oauth/signup', {
+      const res = await apiFetchRaw('/oauth/signup', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           email: email.trim(),
           password,
@@ -129,9 +129,8 @@ export default function SignupPage() {
         const json = (await res.json()) as SignupOk;
         // Best-effort send-verification (don't block on failure)
         try {
-          await fetch('/api/oauth/send-verification', {
+          await apiFetchRaw('/oauth/send-verification', {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ email: json.email }),
           });
         } catch {

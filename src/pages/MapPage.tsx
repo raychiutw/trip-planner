@@ -25,6 +25,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState, useCallback } fro
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTripContext } from '../contexts/TripContext';
 import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hooks/useMapData';
+import { apiFetch } from '../lib/apiClient';
 import { dayColor } from '../lib/dayPalette';
 import { findEntryInDays, formatDateLabel } from '../lib/mapDay';
 import Icon from '../components/shared/Icon';
@@ -198,14 +199,11 @@ export default function MapPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [myRes, allRes] = await Promise.all([
-          fetch('/api/my-trips', { credentials: 'same-origin' }),
-          fetch('/api/trips?all=1', { credentials: 'same-origin' }),
+        const [myJson, allJson] = await Promise.all([
+          apiFetch<MyTripRow[]>('/my-trips'),
+          apiFetch<TripSummary[]>('/trips?all=1'),
         ]);
         if (cancelled) return;
-        if (!myRes.ok || !allRes.ok) return;
-        const myJson = (await myRes.json()) as MyTripRow[];
-        const allJson = (await allRes.json()) as TripSummary[];
         const mine = new Set(myJson.map((r) => r.tripId));
         if (!cancelled) setTrips(allJson.filter((t) => mine.has(t.tripId)));
       } catch {
