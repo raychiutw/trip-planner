@@ -287,7 +287,10 @@ interface RailRowProps {
 // v2.33.28: dedupe — 改 import POI_TYPE_LABELS canonical (poiCategory.ts)。
 // hotel canonical = '飯店'（之前本地 '住宿' 屬 drift bug 家族 v2.31.23 root cause）。
 
-function StopPoiChoiceCard({ poi }: { poi: StopPoiOptionData }) {
+// v2.33.45 round 6b: wrap memo — 之前 alternate POI 列表每筆 row 都會在
+// RailRow re-render 時跟著 re-render，trips 含 hotel + ~10 alternates 時
+// 浪費 render。poi prop 來自 entry.stopPois.filter(sort_order>1)，引用穩定。
+const StopPoiChoiceCard = memo(function StopPoiChoiceCard({ poi }: { poi: StopPoiOptionData }) {
   const metaParts: string[] = [];
   if (typeof poi.rating === 'number') metaParts.push(`★ ${poi.rating.toFixed(1)}`);
   if (poi.price) metaParts.push(poi.price);
@@ -315,7 +318,7 @@ function StopPoiChoiceCard({ poi }: { poi: StopPoiOptionData }) {
       )}
     </article>
   );
-}
+});
 
 const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId }: RailRowProps) {
   const tripId = useTripId();

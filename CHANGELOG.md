@@ -3,6 +3,60 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.45] - 2026-05-24
+
+**src/components/ review round 6b — IMPORTANT + LOW + orphan cleanup + docs**
+
+User 新規則「LOW finding 也要做 + 每次 review 留下文件」啟動。
+全 round 1-6 review 報告回填到 `docs/code-review/`，本 round 起完整 finding 包
+含 LOW 都進 doc + LOW 該做的都做。
+
+**New: `docs/code-review/` review reports**
+
+10 個 markdown 文件回填過去所有 round：
+- README.md (index + 流程)
+- round-1-lib-security.md ~ round-6b-components-low.md
+
+每 doc 含：HIGH / MED / LOW finding triage + status (✅ fixed / 🔄 defer / ❌
+won't fix + rationale)。
+
+**Code fixes**
+
+IMPORTANT:
+- `TimelineRail` `StopPoiChoiceCard` 加 `memo` (之前 alternate POI 列表跟著
+  RailRow 重 render — 10 alternates × 7 day trip 多餘 70 個 render)
+- `AppShell` scroll listener cleanup reset `lastYRef = 0` (bottomNav 切換
+  重 mount stale state)
+- `HourlyWeather` `for-in` over Record → `Object.entries`（strict mode 安全）
+
+LOW:
+- `Icon.tsx` dangerouslySetInnerHTML 加 inline 註解警告 ICONS map 必須
+  hardcoded (CSP-strict / future regression guard)
+- `DesktopSidebar.tsx` user.name truncation 改 `Array.from(...).slice` —
+  CJK / emoji surrogate pair 不在中間切 broken glyph
+- `ThemeArt.tsx` 刪 3 個 dead export (`DayHeaderArt` / `DividerArt` / `NavArt`
+  一直回 null)，留 `FooterArt` 唯一活的
+
+Orphan cleanup (grep 確認 0 import):
+- 刪 `trip/UndoToast.tsx` + test
+- 刪 `trip/ConflictModal.tsx` (`shared/ConflictModal.tsx` 是 canonical) + test
+- 刪 `trip/TripHealthBanner.tsx` + test
+
+**Tests (+8, -12 deleted orphan tests)**
+
+- `confirm-modal-a11y.test.tsx` — 8 case (open/close/auto-focus/Escape/backdrop/
+  confirm click/busy disable/warning conditional/cleanup Escape after close)
+
+2237/2237 unit pass (net -4 from deleted orphan tests, +8 new)。
+
+**Won't fix from agent suggestions (留在 doc 內附 rationale)**
+
+- CollabPanel tripIdRef indirection — 是 race-guard 正確 pattern 非 anti-pattern
+- TimelineRail handleDragEnd stale state — 重新分析 flow 正確
+- Style injection helper extraction (42 callers) — 大規模 refactor 獨立 PR
+- OceanMap marker rebuild / Segment dep / TripMapRail scroll-spy race —
+  巨型 component 內部 refactor 獨立 PR
+
 ## [2.33.44] - 2026-05-24
 
 **src/components/ review round 1 — CRITICAL + HIGH security + 3 top test gap**

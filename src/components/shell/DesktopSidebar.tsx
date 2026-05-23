@@ -306,7 +306,12 @@ export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
                  * page）。Card parent flex align-items: center 已將 name 跟
                  * avatar 上下置中對齊。 */}
                 <div className="tp-account-name">
-                  {user.name.length > 10 ? `${user.name.slice(0, 10)}…` : user.name}
+                  {/* v2.33.45 round 6b: Array.from CJK-safe slice — `string.slice(0, 10)`
+                      會在 surrogate pair / emoji 中間切，render 出 broken glyph。 */}
+                  {(() => {
+                    const chars = Array.from(user.name);
+                    return chars.length > 10 ? `${chars.slice(0, 10).join('')}…` : user.name;
+                  })()}
                 </div>
               </div>
             </Link>
