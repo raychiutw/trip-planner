@@ -70,7 +70,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const emailCheck = await checkRateLimit(context.env.DB, emailKey, RATE_LIMITS.FORGOT_PASSWORD);
   if (!emailCheck.ok) {
     return new Response(
-      JSON.stringify({ error: { code: 'FORGOT_PASSWORD_RATE_LIMITED', message: '此 email 重設請求過多，請稍後再試' } }),
+      // v2.33.42 security audit: 統一 wording — 之前「此 email 重設請求過多」
+      // 確認 email 存在於系統（其他無法區分情境都走匿名 200 generic message），
+      // 給 attacker user-enumeration oracle。
+      JSON.stringify({ error: { code: 'FORGOT_PASSWORD_RATE_LIMITED', message: '密碼重設請求過多，請稍後再試' } }),
       { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(emailCheck.retryAfter) } },
     );
   }

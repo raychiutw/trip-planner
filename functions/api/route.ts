@@ -17,6 +17,7 @@
 
 import { AppError } from './_errors';
 import { assertGoogleAvailable } from './_maps_lock';
+import { bumpRateLimit, clientIp, RATE_LIMITS } from './_rate_limit';
 import { computeRoute } from '../../src/server/maps/google-client';
 import type { Env } from './_types';
 
@@ -74,6 +75,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!from || !to) {
     throw new AppError('DATA_VALIDATION', 'from/to must be lng,lat within range');
   }
+
+  // v2.33.42 security audit: per-IP rate limit — public anonymous endpoint
+  // 直接打 Google Routes API ($5/1000)，無限制會被 attacker 拉爆 quota。
+  const ip = clientIp(context.request);
+  await bumpRateLimit(context.env.DB, `route:ip:${ip}`, RATE_LIMITS.ROUTE_PER_IP);
 
   const apiKey = context.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {

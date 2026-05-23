@@ -68,13 +68,32 @@ function generateClientSecret(): string {
   return `tps_${base32(bytes)}`;
 }
 
+/**
+ * v2.33.42 security audit: user-self-service registration MUST NOT include
+ * `admin` / `companion` scope。之前接受 caller body 的任意 scope，雖然 status
+ * 初始為 `pending_review`，但 ops 一旦 flip 為 active 而沒 scrub scope，attacker
+ * 拿 client_credentials grant 即得 admin-token (privilege escalation chain
+ * via `_middleware.ts:371` isAdmin via scope)。
+ *
+ * Allowlist whitelist：admin / companion 必須 ops 手動 INSERT D1 才能擁有。
+ */
+const ALLOWED_USER_SCOPES = new Set(['openid', 'profile', 'email', 'offline_access']);
 function validateScopes(scopes: unknown): string[] {
   if (!Array.isArray(scopes)) return DEFAULT_SCOPES;
   if (scopes.length === 0) return DEFAULT_SCOPES;
   const cleaned = scopes
     .filter((s): s is string => typeof s === 'string' && s.length > 0)
     .map((s) => s.trim());
-  return cleaned.length === 0 ? DEFAULT_SCOPES : cleaned;
+  if (cleaned.length === 0) return DEFAULT_SCOPES;
+  for (const scope of cleaned) {
+    if (!ALLOWED_USER_SCOPES.has(scope)) {
+      throw new AppError(
+        'DATA_VALIDATION',
+        `不支援的 scope: ${scope}（user-self-service 限 openid/profile/email/offline_access）`,
+      );
+    }
+  }
+  return cleaned;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {

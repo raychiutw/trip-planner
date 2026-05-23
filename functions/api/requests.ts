@@ -70,11 +70,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
   }
   if (after) {
+    // v2.33.42 fix: 之前 after/afterId 用 `<` (與 before 同向)，sort=asc 拿到的
+    // page 是錯方向 — `after` 邏輯該對應「比此 cursor 新」即 `>`。
     if (afterId) {
-      conditions.push('(r.created_at < ? OR (r.created_at = ? AND r.id < ?))');
+      conditions.push('(r.created_at > ? OR (r.created_at = ? AND r.id > ?))');
       params.push(after, after, parseInt(afterId, 10) || 0);
     } else {
-      conditions.push('r.created_at < ?');
+      conditions.push('r.created_at > ?');
       params.push(after);
     }
   }
