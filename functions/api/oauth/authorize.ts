@@ -105,6 +105,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // V2-P5: Consent check — lookup D1 Consent for (user_id, client_id)
   // 若無 consent 或 stored scopes 不含 requested scopes → redirect to /oauth/consent
   // prompt=consent 時强制 re-prompt（user 主動要重新確認）
+  //
+  // v2.33.55 round 5d policy: prompt=consent 不主動 invalidate 既有 consent 或 tokens。
+  //   - 既有 tokens (access/refresh) 保持有效，直到 TTL 或 user 走
+  //     `/account/connected-apps` 手動 revoke
+  //   - consent.ts POST 走 `adapter.upsert()` overwrite 既有 consent row（新 scope 取代舊）
+  //   - 此設計對應 OAuth 2.0 spec — prompt=consent 只強制 UI re-prompt，不 invalidate
+  //     authorization 狀態。invalidate 是 token revocation endpoint 的責任。
   const consentAdapter = new D1Adapter(context.env.DB, 'Consent');
   const consentRow = (await consentAdapter.find(`${session.uid}:${result.client.client_id}`)) as
     | { user_id: string; client_id: string; scopes: string[]; grantedAt: number }

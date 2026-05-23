@@ -3,6 +3,47 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.55] - 2026-05-24
+
+**Round 5d residuals — atomic write fixes (backlog #122)**
+
+Round 5c defer 提到 4 個 backend residual。其中 oauth/reset-password +
+oauth/send-verification rate limit 已於 v2.33.52 (round 8d) 補。本 PR
+處理剩餘 3 個 atomic write 議題 + 1 個政策註解。
+
+**SECURITY (HIGH)**
+
+- `account/connected-apps/[client_id].ts` — revoke 改 `db.batch([
+  deleteConsent, deleteTokens])` 原子執行。之前 `consentAdapter.destroy()` +
+  DELETE tokens 分兩步，第二步失敗 → consent 已刪但 token 仍有效，撤銷後
+  app 仍能呼叫 API（security 缺口）。
+
+**RELIABILITY (HIGH)**
+
+- `trips/[id]/days/[num]/entries.ts` (POST) — `syncEntryMaster` 失敗 →
+  compensating `DELETE FROM trip_entries WHERE id = ?` + rethrow
+  `SYS_DB_ERROR`。之前 entry 存在但無 master，後續 addAlternate 觸發
+  MISSING_MASTER 直到下次 GET self-heal。
+- `trips/[id]/entries/[eid]/copy.ts` — trip_entry_pois batch 失敗 →
+  compensating DELETE 補救。D1 無 BEGIN/COMMIT，best-effort 是現有 platform
+  能做到的最好方案。
+
+**DOCS**
+
+- `oauth/authorize.ts` `prompt=consent` 政策註解：既有 tokens 保持有效
+  直到 TTL 或 user 手動 revoke；consent.ts upsert overwrites；對應 OAuth
+  2.0 spec — prompt=consent 只強制 UI re-prompt，不 invalidate
+  authorization 狀態。
+
+**TESTING**
+
+- `tests/unit/round-5d-residuals.test.ts` — 11 個 source-grep test。
+- `npm test` 全綠 2392 / 2392 (+11)。
+
+closes backlog #122。剩餘: #124 (OceanMap 拆分 — 需 mockup 決策)。
+
+doc: docs/code-review/round-5d-residuals.md
+
 ## [2.33.54] - 2026-05-24
 
 **Round 10 — src/lib runtime reverse imports rip-out (backlog #117)**

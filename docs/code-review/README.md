@@ -26,7 +26,8 @@
 | 8c | scripts/ final polish | — | [#730](https://github.com/raychiutw/trip-planner/pull/730) | 2026-05-24 | [round-8c-scripts-polish.md](./round-8c-scripts-polish.md) |
 | 8d | cleanup backlog sweep | — | [#732](https://github.com/raychiutw/trip-planner/pull/732) | 2026-05-24 | [round-8d-cleanup-backlog.md](./round-8d-cleanup-backlog.md) |
 | 9 | src/lib zero-test catch-up | — | [#733](https://github.com/raychiutw/trip-planner/pull/733) | 2026-05-24 | [round-9-lib-test-catchup.md](./round-9-lib-test-catchup.md) |
-| 10 | src/lib reverse imports rip-out | — | TBD | 2026-05-24 | [round-10-lib-reverse-imports.md](./round-10-lib-reverse-imports.md) |
+| 10 | src/lib reverse imports rip-out | — | [#734](https://github.com/raychiutw/trip-planner/pull/734) | 2026-05-24 | [round-10-lib-reverse-imports.md](./round-10-lib-reverse-imports.md) |
+| 5d-resid | round 5d backend residuals (atomic writes) | — | TBD | 2026-05-24 | [round-5d-residuals.md](./round-5d-residuals.md) |
 
 ## 流程
 

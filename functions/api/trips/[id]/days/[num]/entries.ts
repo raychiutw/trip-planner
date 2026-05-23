@@ -116,9 +116,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // v2.27.0：同步 trip_entry_pois.sort_order=1（multi-POI per entry invariant）。
   // 若不寫此 helper，後續 addAlternate 會 fire MISSING_MASTER 直到第一次 GET 自我修復
   // (Codex pre-landing CRITICAL #2)。
+  //
+  // v2.33.55 round 5d residual: syncEntryMaster 失敗 → compensating DELETE。
+  // D1 不支援 BEGIN/COMMIT cross-statement transaction，只能 best-effort 補救。
+  // 否則 entry exists 但無 master，下次 GET self-heal 之前 addAlternate 會 MISSING_MASTER。
   const insertedEntryId = (row as { id?: unknown }).id;
   if (poiId != null && typeof insertedEntryId === 'number') {
-    await syncEntryMaster(db, insertedEntryId, poiId);
+    try {
+      await syncEntryMaster(db, insertedEntryId, poiId);
+    } catch (err) {
+      console.error('[entries POST] syncEntryMaster failed, compensating delete', { insertedEntryId, err });
+      await db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(insertedEntryId).run();
+      throw new AppError('SYS_DB_ERROR', 'entry 建立失敗，請稍後重試');
+    }
   }
 
   await logAudit(db, {
