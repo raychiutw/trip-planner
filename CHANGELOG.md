@@ -3,6 +3,54 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.35] - 2026-05-23
+
+**Perf (simplify PR-8): batch `GET /api/trips/:id/docs` endpoint**
+
+`/simplify` efficiency finding: `useTrip` startup 對 5 個 doc_type 各打一次
+`GET /api/trips/:id/docs/:type` = **5 個 sequential CF Function calls + 10
+D1 queries**（每 type 一個 trip_docs SELECT + 一個 trip_doc_entries SELECT），
+其中 4 個 callsite 對新 trip 永遠 404（trip_docs 還沒建）— 純浪費。
+
+新增 batch endpoint `functions/api/trips/[id]/docs/index.ts`:
+
+- `SELECT id, doc_type, title, updated_at FROM trip_docs WHERE trip_id = ?` (1 query)
+- `SELECT * FROM trip_doc_entries WHERE doc_id IN (?,?,...)` (1 query)
+- Group entries by doc_id in-memory
+- Return `{ docs: { flights: DocData | null, checklist: ..., ... } }` —
+  5 個 doc_type key 永遠 present，不存在的 doc 為 `null`，caller 不需
+  per-doc catch `DATA_NOT_FOUND`
+
+`src/hooks/useTrip.ts` `fetchAllDocs` 改為單一 batch call：
+
+```ts
+const res = await apiFetch<{ docs: Record<DocKey, DocData | null> }>(
+  `/trips/${tripId}/docs`,
+  { signal: controller.signal },
+);
+const next: Partial<Record<DocKey, DocData>> = {};
+for (const key of DOC_KEYS) {
+  const data = res.docs[key];
+  if (data) next[key] = data;
+}
+setDocs((prev) => ({ ...prev, ...next }));
+```
+
+效能：5 個 CF Function calls + 10 D1 queries → **1 個 CF Function call + 2
+D1 queries**。對「新 trip 5 連 404」的 cold path 改善尤其明顯（之前 5 個
+404 都要付 CF Function 冷啟動 + Auth + D1 round-trip）。
+
+寫路徑（`PUT /api/trips/:id/docs/:type`）維持原 single-doc 端點不變 —
+寫一個 doc 不該觸發 batch 邏輯。
+
+Test:
+- `tests/api/docs.integration.test.ts` + 2 個 batch test（trip 含 docs 與
+  trip 空 docs 兩 case）
+- `tests/unit/use-trip-docs-404.test.tsx` 重寫對齊新 contract（5 個 case：
+  all-null / 500 / 404 / 部分 null / 只 fire 1 次 regression guard）
+
+Total 12 test pass。270/270 unit suite green。
+
 ## [2.33.34] - 2026-05-23
 
 **Refactor (simplify PR-7): AddStopPage / ChangePoiPage extract shared poi-search helpers**

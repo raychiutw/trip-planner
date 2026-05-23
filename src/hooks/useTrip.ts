@@ -171,30 +171,31 @@ export function useTrip(tripId: string | null): UseTripReturn {
         }
 
         async function fetchAllDocs() {
-          const results = await Promise.allSettled(
-            DOC_KEYS.map((key) =>
-              apiFetch<DocData>(`/trips/${tripId}/docs/${key}`, { signal: controller.signal })
-                .then((data) => ({ key, data }))
-            ),
-          );
-          if (cancelled) return;
-          for (const result of results) {
-            if (result.status === 'rejected') {
-              const err = result.reason;
-              // 404 = 該 doc 尚未建立。docs 是 optional sub-resource（新行程
-              // 不會自動寫 5 種 docs），靜默略過避免每個 doc 各噴一個 toast
-              // （PR-HH 2026-04-26：開新行程 5 連 toast bug）。
-              if (err instanceof ApiError && err.code === 'DATA_NOT_FOUND') {
-                continue;
-              }
-              if (err instanceof ApiError && err.severity !== 'minor') {
-                showErrorToast(err.message, err.severity);
-              }
-              continue;
+          // v2.33.35 (simplify PR-8): 用 batch endpoint GET /trips/:id/docs 取代
+          // 原本 5 個 sequential CF Function calls (10 D1 queries)。
+          // 新端點回 { docs: { flights | checklist | ... : DocData | null } }
+          // — 不存在的 doc 為 null，caller 不需 per-doc catch DATA_NOT_FOUND。
+          try {
+            const res = await apiFetch<{ docs: Record<DocKey, DocData | null> }>(
+              `/trips/${tripId}/docs`,
+              { signal: controller.signal },
+            );
+            if (cancelled) return;
+            const next: Partial<Record<DocKey, DocData>> = {};
+            for (const key of DOC_KEYS) {
+              const data = res.docs[key];
+              if (data) next[key] = data;
             }
-            const { key, data } = result.value;
-            // 新格式：API 直接回傳 { title, entries }，不需 JSON unwrap
-            setDocs((prev) => ({ ...prev, [key]: data }));
+            setDocs((prev) => ({ ...prev, ...next }));
+          } catch (err) {
+            if (cancelled) return;
+            if (err instanceof ApiError && err.code === 'DATA_NOT_FOUND') {
+              // batch endpoint 404（trip 找不到等）— 上游已 setLoadError，這裡靜默
+              return;
+            }
+            if (err instanceof ApiError && err.severity !== 'minor') {
+              showErrorToast(err.message, err.severity);
+            }
           }
         }
         fetchAllDocs();
