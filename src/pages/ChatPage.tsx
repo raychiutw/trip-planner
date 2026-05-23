@@ -901,7 +901,12 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
                       <span className="tp-chat-msg-garbled" aria-label="訊息含編碼錯誤" title="此訊息含編碼錯誤無法顯示">
                         訊息含編碼錯誤，無法顯示
                       </span>
-                    ) : m.markdown ? (
+                    ) : m.markdown && m.role === 'assistant' ? (
+                      /* v2.33.46 round 7a security audit: 只給 assistant role 渲
+                       * markdown — 即使 backend 對 user message column 寫 markdown=1，
+                       * 也不 trust。collaborative trip 內 co-editor 訊息變相經
+                       * sanitize.ts pipeline 不增風險，但 defense in depth：user
+                       * 內容不應走 markdown render path。 */
                       <MarkdownText text={m.text} as="div" />
                     ) : (
                       /* F8 design-review: 把 user 打的 `\n` literal 轉真正換行，

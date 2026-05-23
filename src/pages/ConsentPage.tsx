@@ -102,6 +102,23 @@ const SCOPE_DESCRIPTIONS: Record<string, string> = {
   'trips:write': '建立 / 修改您的行程',
 };
 
+// v2.33.46 round 7a security audit: scope allowlist — 未知 scope (`scope=admin`
+// 等) 仍 render 給 user click Allow 培養忽略警告的行為。allowlist 外 scope
+// 顯紅色「未知範圍」 chip 並不附說明。
+const KNOWN_SCOPES = new Set(Object.keys(SCOPE_DESCRIPTIONS));
+
+// v2.33.46 round 7a: redirect_uri 客戶端基本驗證 (defense in depth — server
+// 是 source of truth)。拒 javascript: / data: / file: 等 dangerous scheme。
+function isPlausibleRedirectUri(uri: string): boolean {
+  if (!uri) return false;
+  try {
+    const url = new URL(uri);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 interface ClientAppInfo {
   app_name: string;
   app_description: string | null;
@@ -129,11 +146,20 @@ export default function ConsentPage() {
       setError('授權連結缺少必要參數 client_id，請從應用商家提供的連結重新進入。');
       return;
     }
+    // v2.33.46 round 7a: client-side redirect_uri sanity check (defense in
+    // depth — backend 仍是 source of truth)。
+    if (redirectUri && !isPlausibleRedirectUri(redirectUri)) {
+      setError('授權連結的 redirect_uri 不合法（必須 https:// 或 http://）。請聯繫應用程式提供者。');
+      return;
+    }
     // V2-P5 next slice: fetch /api/oauth/client-info?client_id=... → app_name + logo + description
-    // V2-P5 first slice (本 PR): placeholder mock
+    // v2.33.46 round 7a security audit: 之前 placeholder mock 直接把 URL ?client_id=
+    // 當 app_name 顯，attacker 可構 `?client_id=Tripline%20Official%20Login` 騙
+    // user click Allow。改顯「未知應用程式 (client_id=...)」並補警告，直到
+    // backend /api/oauth/client-info endpoint 上線。
     setClientInfo({
-      app_name: clientId,
-      app_description: null,
+      app_name: `未知應用程式 (client_id=${clientId})`,
+      app_description: '此應用程式的詳細資訊尚未經過 Tripline 驗證。',
       app_logo_url: null,
       homepage_url: null,
     });
@@ -176,17 +202,32 @@ export default function ConsentPage() {
           {requestedScopes.length === 0 ? (
             <div>無 scope 請求</div>
           ) : (
-            requestedScopes.map((s) => (
-              <div key={s} className="tp-consent-scope-row" data-testid={`consent-scope-${s}`}>
-                <svg className="tp-consent-scope-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
-                </svg>
-                <span>
-                  <strong>{s}</strong>
-                  {SCOPE_DESCRIPTIONS[s] && <> — {SCOPE_DESCRIPTIONS[s]}</>}
-                </span>
-              </div>
-            ))
+            // v2.33.46 round 7a: scope 顯示加 allowlist guard — 未知 scope 標警告，
+            // 字串長度 cap 64 char 避免破壞 layout。
+            requestedScopes.map((sRaw) => {
+              const s = sRaw.slice(0, 64);
+              const known = KNOWN_SCOPES.has(s);
+              return (
+                <div
+                  key={s}
+                  className={`tp-consent-scope-row${known ? '' : ' unknown'}`}
+                  data-testid={`consent-scope-${s}`}
+                  data-unknown={known ? undefined : 'true'}
+                >
+                  <svg className="tp-consent-scope-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
+                  </svg>
+                  <span>
+                    <strong>{s}</strong>
+                    {known ? (
+                      SCOPE_DESCRIPTIONS[s] && <> — {SCOPE_DESCRIPTIONS[s]}</>
+                    ) : (
+                      <> — <span className="tp-consent-scope-warning">⚠ 未知範圍 — 請勿授權</span></>
+                    )}
+                  </span>
+                </div>
+              );
+            })
           )}
         </div>
 

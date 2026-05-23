@@ -3,6 +3,60 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.46] - 2026-05-24
+
+**src/pages/ review round 7a — HIGH security + critical effect bugs**
+
+3-agent review on `src/pages/` 33 files / 20,110 LOC (最大模組)。本 PR 撿
+HIGH security + 2 個 HIGH effect bug + 3 個 MED security。剩 16 個 MED + 10
+個 LOW + 5 個 test gap 留 round 7b/7c (完整 finding doc 在
+`docs/code-review/round-7a-pages-security.md`)。
+
+**HIGH security (security-auditor flagged)**
+
+- `SessionsPage.tsx:348` — Logout `<a href="/api/oauth/logout">` GET-trigger
+  state change → 任何 forum/chat `<img src=...>` 即登出 victim (CSRF logout
+  DoS)。改 POST button via `apiFetchRaw + navigate('/login', {replace})`
+  對齊 AccountPage pattern。
+- `EditEntryPage.tsx:1232` — `<a href={alt.reservationUrl}>` 無 scheme check
+  + 只 `rel="noreferrer"` → co-editor 寫 `javascript:` URI 即 XSS-on-click
+  + tabnabbing。加 `escUrl()` + `rel="noopener noreferrer"`。
+- `ConsentPage.tsx:134` — `app_name = clientId` 直接反映 URL param → attacker
+  構 `?client_id=Tripline%20Official%20Login` 騙 user click Allow。改顯
+  「未知應用程式 (client_id=...)」+ 警告 description until backend
+  `/api/oauth/client-info` 上線。
+
+**HIGH effect bug (code-reviewer flagged)**
+
+- `TripPage.tsx:529` — 300ms `setTimeout` 無 cleanup，rapid nav 後 fire
+  `scrollIntoView` on stale DOM。加 `cancelAnimationFrame + clearTimeout`。
+- `LoginPage.tsx:344` — Countdown timer 純 -1 counter，tab background
+  throttling 後 absolute time 已過 counter 沒減 → user stuck in locked UI。
+  改 `Date.now()` baseline via `lockedUntilRef`。
+
+**MEDIUM security**
+
+- `ConsentPage.tsx:121` — Scope render 加 `KNOWN_SCOPES` allowlist + 未知
+  scope 顯「⚠ 未知範圍 — 請勿授權」+ cap 64 char。
+- `ConsentPage.tsx:215` — `redirect_uri` 加 `isPlausibleRedirectUri()`
+  client-side guard (https/http only)。
+- `ChatPage.tsx:904` — `m.markdown` 限 `role === 'assistant'` 才走
+  MarkdownText path (defense in depth — co-editor message 即使 column 誤
+  標 markdown=1 也不 trust)。
+
+**Tests (+11)**
+
+- `round7a-security.test.tsx` — source-grep + behavior assertion，6 個
+  describe block 對應 6 個 fix area。
+
+**Round 7b/7c follow-up（doc 完整列出）**
+
+3 個 HIGH (ChatPage stale closure / EditEntryPage keydown modal-aware /
+AccountPage logout flow) + 14 個 MED + 10 個 LOW + 5 個 critical test gap
+(NewTripPage 932 LOC zero coverage 最高優)。
+
+2248/2248 unit pass。
+
 ## [2.33.45] - 2026-05-24
 
 **src/components/ review round 6b — IMPORTANT + LOW + orphan cleanup + docs**

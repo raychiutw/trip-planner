@@ -521,12 +521,16 @@ function TripPageInner(
     // Auto-locate to today (timezone-aware)
     const idx = autoScrollDates.indexOf(localToday);
     const todayDayNum = idx >= 0 ? dayNums[idx] : undefined;
+    // v2.33.46 round 7a: timer / rAF cleanup — 之前 nav away within 300ms 後
+    // 還 fire scrollIntoView 到 stale node。雖目前無 [data-now] visible，但
+    // unmount leak pattern 不該保留。
+    let rafId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     if (todayDayNum !== undefined) {
-      requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
         switchDay(todayDayNum);
         scrollToDay(todayDayNum);
-        // Scroll to [data-now] if it exists (delayed for DOM update)
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           const nowEl = document.querySelector('[data-now]');
           if (nowEl) {
             nowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -534,6 +538,10 @@ function TripPageInner(
         }, 300);
       });
     }
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (timeoutId !== null) clearTimeout(timeoutId);
+    };
   }, [loading, dayNums, autoScrollDates, switchDay, localToday]);
 
   /* --- scrollMarginTop dynamic alignment (#7) --- */
