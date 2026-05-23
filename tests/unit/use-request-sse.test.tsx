@@ -79,16 +79,23 @@ describe('useRequestSSE — safety-net polling', () => {
     expect(result.current.errorReason).toBe('auth_expired');
   });
 
-  it('elapsedMs ticks up while in flight', async () => {
+  it('elapsedMs ticks up at minute boundaries while in flight', async () => {
+    // v2.33.31 (simplify PR-4): tick changed from 1s to 60s — UI consumers
+    // only read minute buckets so per-second updates wasted React renders.
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
       new Response(JSON.stringify({ status: 'processing', processedBy: null }), { status: 200 }),
     );
 
     const { result } = renderHook(() => useRequestSSE(77));
+    // 5 s 後 still 0（ tick 是 60 s interval）
     await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
-    expect(result.current.elapsedMs).toBeGreaterThanOrEqual(5_000);
+    expect(result.current.elapsedMs).toBe(0);
+    // 60 s 後第一次 tick
     await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
-    expect(result.current.elapsedMs).toBeGreaterThanOrEqual(65_000);
+    expect(result.current.elapsedMs).toBeGreaterThanOrEqual(60_000);
+    // 65 s 累計 + 60 s = 125 s 後第二次 tick
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(result.current.elapsedMs).toBeGreaterThanOrEqual(120_000);
   });
 
   it('SSE onmessage completed terminates polling', async () => {
