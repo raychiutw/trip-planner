@@ -5,6 +5,11 @@ initSentry();
 // 上線後自動送出離線暫存的錯誤回報
 flushPendingReports();
 
+// v2.33.67 round 17: 清掉 lazyWithRetry 上次 reload 留下的 flag。之前 successful
+// reload 後此 key 永遠殘留，下次任何 chunk load fail 直接 reject 無 retry，等於
+// 重試機制只能用一次/tab session。Mount 時清掉 = 每次 fresh load 都重置 retry budget。
+sessionStorage.removeItem('lazyWithRetry_reloaded');
+
 if ('serviceWorker' in navigator) {
   const hadController = Boolean(navigator.serviceWorker.controller);
   const reloadKey = 'tp-sw-controller-reload';
