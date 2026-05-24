@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.79] - 2026-05-24
+
+**Round 28 — npm audit fix (1 moderate CVE 清掉)**
+
+`brace-expansion 5.0.2-5.0.5` GHSA-jxxr-4gwj-5jf2 (Large numeric range
+defeats DoS protection, moderate) via glob transitive。`npm audit fix`
+跑完 730 packages → 0 vulnerability。
+
+**FIX**
+
+- `package-lock.json` — bump brace-expansion 透過 npm audit fix
+
+**VERIFIED**
+
+- `npm audit` → found 0 vulnerabilities
+
+**ATTEMPTED but reverted**
+
+- vitest.config.api.mts `pool: 'forks' + singleFork: true` 想解 Miniflare
+  port exhaustion (EADDRNOTAVAIL)。實測 baseline 28 failed → 36 failed，
+  反向結果，revert。Root cause 是 Vitest 4 per-file module isolation 使
+  setup.ts 的 module-level singleton 失效；要解需設 `isolate: false`，
+  但 cross-test state leak 風險過高，deferred。
+
 ## [2.33.78] - 2026-05-24
 
 **Final Loop summary — Rounds 1-27 retro**
