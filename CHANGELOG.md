@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.102] - 2026-05-25
+
+**Round 51 — /review batch 6: CR-7 health-check atomic write + CR-8 confused-deputy hook linkage**
+
+1. **CR-7 `trips/[id]/health-check.ts` 3-step write 收成 2-step**：之前流程是 (1) UPSERT
+   trip_health_reports request_id=NULL → (2) INSERT trip_requests RETURNING id →
+   (3) UPDATE trip_health_reports SET request_id。Step 2/3 之間失敗會留下 orphan
+   pending report 卡在 'pending'，30s 內 user 觸發新一輪也會被既有 row 擋住。
+   Reorder 為 INSERT request 先拿 id → UPSERT report 一發到位帶 request_id。
+   沒 UPDATE 步驟。
+
+2. **CR-8 `requests/[id]/index.ts` health-check hook confused-deputy fix**：之前
+   hook 單靠 `message.startsWith('[AI 健檢]')` 判 health-check request。任何 user
+   chat 打 `[AI 健檢] hello` 就能誘騙 admin/service PATCH 觸發
+   `applyHealthCheckCompletion` → UPSERT trip_health_reports 覆蓋該 trip 的
+   report。改用 `trip_health_reports.request_id = ?` linkage 驗證
+   （POST /trips/:id/health-check 唯一寫入點）。Hook 只在 linkage row 存在時
+   觸發。6 個 source-grep regression test。
+
+Verified: 732/732 API integration pass + 21/21 health-check unit pass。
+
 ## [2.33.101] - 2026-05-25
 
 **Round 50 — /review batch 5: CR-6 sha256Base64 unsound cast + CR-9 oauth/token rate-limit DB write amp**

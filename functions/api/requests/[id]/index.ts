@@ -8,7 +8,6 @@ import { hasPermission, requireAuth} from '../../_auth';
 import { AppError } from '../../_errors';
 import { sanitizeReply } from '../../_validate';
 import { json, parseJsonBody } from '../../_utils';
-import { HEALTH_CHECK_PREFIX } from '../../trips/[id]/health-check';
 import type { Env } from '../../_types';
 
 // GET /api/requests/:id
@@ -112,13 +111,18 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     diffJson: oldRow ? computeDiff(oldRow, newFields) : JSON.stringify(newFields),
   });
 
-  // AI 健檢 hook：若這是 health-check request（message 開頭 [AI 健檢]）且
-  // status 推到 completed/failed，把 reply 解析成 findings JSON 寫進
-  // trip_health_reports。寫失敗只 log，不阻擋 PATCH success — chat trail 已留。
-  const message = (result as Record<string, unknown>).message as string | undefined;
-  if (message?.startsWith(HEALTH_CHECK_PREFIX)) {
-    const newStatus = (result as Record<string, unknown>).status as string;
-    if (newStatus === 'completed' || newStatus === 'failed') {
+  // AI 健檢 hook：v2.33.102 CR-8 confused-deputy fix — 之前單靠 `message.startsWith([AI 健檢])`
+  // 認 health-check request。任何 user 在 chat 打 `[AI 健檢] ...` 都能觸發 hook，
+  // 讓 admin/service PATCH reply 後被誤 parse 成 findings → UPSERT trip_health_reports
+  // 覆蓋（或產生）該 trip 的 report row。改用 trip_health_reports.request_id linkage
+  // 當 authoritative signal（POST /trips/:id/health-check 唯一寫入點）。
+  const newStatus = (result as Record<string, unknown>).status as string;
+  if (newStatus === 'completed' || newStatus === 'failed') {
+    const linked = await env.DB
+      .prepare('SELECT 1 FROM trip_health_reports WHERE request_id = ? AND trip_id = ? LIMIT 1')
+      .bind(Number(id), tripId)
+      .first();
+    if (linked) {
       try {
         await applyHealthCheckCompletion(env.DB, tripId, Number(id), result as Record<string, unknown>);
       } catch (hookErr) {

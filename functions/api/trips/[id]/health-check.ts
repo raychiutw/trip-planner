@@ -3,11 +3,15 @@
  * POST /api/trips/:id/health-check  — 觸發新一輪 AI 健檢
  *
  * 流程（POST）：
- * 1. UPSERT trip_health_reports (status='pending', request_id=null)
- * 2. INSERT trip_requests (message='[AI 健檢] ...') — chat trail 同步
- * 3. UPDATE trip_health_reports.request_id = new request id
- * 4. Fire-and-forget trigger api-server processLoop
- * 5. Return { status: 'pending', requestId }
+ * 1. INSERT trip_requests (message='[AI 健檢] ...') RETURNING id — chat trail 同步先建立
+ * 2. UPSERT trip_health_reports (status='pending', request_id=<from step 1>) 一發到位
+ * 3. Fire-and-forget trigger api-server processLoop
+ * 4. Return { status: 'pending', requestId }
+ *
+ * v2.33.102 CR-7: 之前是 3-step（UPSERT report null → INSERT request → UPDATE report.request_id），
+ * step 2/3 之間失敗會留下 orphan pending report 沒 request_id；orphan 永遠 stuck
+ * 'pending' 把 user button disable 直到 30s 過期。Reorder 後沒 UPDATE 步驟，
+ * UPSERT 直接寫死 request_id。
  *
  * Claude 完成後由 PATCH /api/requests/:id hook 把 reply JSON parse 進
  * trip_health_reports.findings_json + status='completed'。
@@ -163,43 +167,39 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }, 200);
   }
 
-  // 1. UPSERT trip_health_reports → status='pending'
+  // 1. INSERT trip_requests — chat trail 先建立拿 id，下一步直接寫進 report
+  const reqRow = await env.DB
+    .prepare(
+      'INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id',
+    )
+    .bind(tripId, HEALTH_CHECK_MESSAGE, auth.email)
+    .first<{ id: number }>();
+
+  if (!reqRow) {
+    throw new AppError('SYS_DB_ERROR', '建立健檢 request 失敗');
+  }
+  const requestId = reqRow.id;
+
+  // 2. UPSERT trip_health_reports → status='pending' 帶 request_id（v2.33.102 CR-7：
+  // 一發到位，沒有 step 3 UPDATE，斷在中間不會留 orphan request_id=NULL row）
+  // v2.33.85 bug fix: 之前用 auth.email 寫進 user_id（FK to users.id），
+  // migration 0069 加 FK 後此 INSERT FK-fail。Email ≠ userId（users.id 是 uuid）。
   await env.DB
     .prepare(
       `INSERT INTO trip_health_reports
          (trip_id, user_id, status, request_id, findings_json, error_message, created_at, completed_at)
-       VALUES (?, ?, 'pending', NULL, NULL, NULL, datetime('now'), NULL)
+       VALUES (?, ?, 'pending', ?, NULL, NULL, datetime('now'), NULL)
        ON CONFLICT(trip_id) DO UPDATE SET
          user_id = excluded.user_id,
          status = 'pending',
-         request_id = NULL,
+         request_id = excluded.request_id,
          findings_json = NULL,
          error_message = NULL,
          created_at = datetime('now'),
          completed_at = NULL`,
     )
-    // v2.33.85 bug fix: 之前用 auth.email 寫進 user_id（FK to users.id），
-    // migration 0069 加 FK 後此 INSERT FK-fail。Email ≠ userId（users.id 是 uuid）。
-    .bind(tripId, auth.userId)
+    .bind(tripId, auth.userId, requestId)
     .run();
-
-  // 2. INSERT trip_requests — chat trail
-  const reqRow = await env.DB
-    .prepare(
-      'INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING *',
-    )
-    .bind(tripId, HEALTH_CHECK_MESSAGE, auth.email)
-    .first();
-
-  const requestId = reqRow ? (reqRow as Record<string, unknown>).id as number : null;
-
-  // 3. Link report → request
-  if (requestId !== null) {
-    await env.DB
-      .prepare('UPDATE trip_health_reports SET request_id = ? WHERE trip_id = ?')
-      .bind(requestId, tripId)
-      .run();
-  }
 
   // 4. Fire-and-forget trigger Mac Mini API server (與 POST /api/requests 同 pattern)
   context.waitUntil(
