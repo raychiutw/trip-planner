@@ -23,6 +23,12 @@
 import { D1Adapter, type AdapterPayload } from '../../../src/server/oauth-d1-adapter';
 import { verifyPassword } from '../../../src/server/password';
 import { parseFormOrJson, parseBasicAuth } from '../_utils';
+import {
+  checkRateLimit,
+  bumpRateLimit,
+  clientIp,
+  RATE_LIMITS,
+} from '../_rate_limit';
 import type { Env } from '../_types';
 
 interface ClientAppRow {
@@ -76,6 +82,26 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!clientId) {
     return jsonError('invalid_client', 'Missing client_id', 401);
   }
+
+  // v2.33.103 SEC-7: per-IP rate-limit 在 PBKDF2 verify 前。Confidential client
+  // verifyPassword 100k iter ~50ms CPU；attacker 反覆送 wrong secret → CPU DoS。
+  // Bump 在 IP check pass 後即發，與 token endpoint 共用同個 preset 但不同 bucket。
+  const ipKey = `oauth-revoke:ip:${clientIp(context.request)}`;
+  const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.OAUTH_TOKEN_PER_IP);
+  if (!ipCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: 'rate_limited', error_description: 'Too many revoke requests from this IP' }),
+      {
+        status: 429,
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'no-store',
+          'Retry-After': String(ipCheck.retryAfter),
+        },
+      },
+    );
+  }
+  await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.OAUTH_TOKEN_PER_IP);
 
   const client = await context.env.DB
     .prepare(
