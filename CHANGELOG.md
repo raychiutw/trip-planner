@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.67] - 2026-05-24
+
+**Round 17 — src/entries/main.tsx mini audit (lazyWithRetry budget bug)**
+
+Self-review src/entries/main.tsx + index.html + src/types/{api,poi,timeline}.ts。
+找 1 個 MED bug + 確認多項 false-positive。
+
+**FIX (MED)**
+
+- `src/entries/main.tsx`: `lazyWithRetry_reloaded` sessionStorage key 之前
+  successful reload 後永遠殘留。下次同 tab session 任何 chunk load fail 直接
+  reject 無 retry — retry budget 只能用一次/tab。**Fix**: mount 時 removeItem，
+  每次 fresh load 重置 retry budget。
+
+**False positive checked**
+
+- index.html favicon path "relative vs absolute": Vite build 自動把 `images/X`
+  重寫為 hashed `/assets/X-HASH`，deep URL 不會 404。保持 relative 正確
+- index.html robots meta: CF Pages preview 已自動加 X-Robots-Tag，不需 HTML meta；
+  prod indexing 是產品決策非 review fix
+- src/types/poi.ts snake_case (place_id / country_name): 是 Google Places API
+  wire-format pass-through，刻意保留
+
+**TESTING**
+
+- `tests/unit/round-17-main-tsx.test.ts` — 2 個 source-grep guard
+- 2601 / 2601 全綠 (+2 從 2599)
+- tsc clean
+
 ## [2.33.66] - 2026-05-24
 
 **Round 16 — CI workflow security hardening (backlog #138)**
