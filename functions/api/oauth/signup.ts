@@ -86,7 +86,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       outcome: 'failure',
       failureReason: 'email_taken',
       metadata: { email },
-    });
+    }, context.env);
     return errorResponse('SIGNUP_EMAIL_TAKEN', '此 email 已註冊，請改用登入或忘記密碼', 409);
   }
 
@@ -178,6 +178,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     outcome: 'success',
     userId,
     metadata: { email, displayName, invitationAccepted: joinedTrip?.id ?? null },
-  });
+  }, context.env);
   return response;
 };

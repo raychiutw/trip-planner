@@ -1,4 +1,7 @@
 /og/*
+  # v2.33.62: OG assets 24h cache — 內容大致穩定（年改一次）但 PR rewrite 需
+  # 較短 invalidation window。若未來改 content-hash filename → 升 immutable +
+  # max-age=31536000 (1y).
   Cache-Control: public, max-age=86400
   X-Content-Type-Options: nosniff
 
@@ -8,7 +11,15 @@
   # frame-ancestors / object-src / upgrade-insecure-requests。
   # 'unsafe-inline' style 由 Tailwind 4 + Vite 強制 (build-time 無法消除)，記錄為已知
   # trade-off — 等 Vite 9 / Tailwind 5 提供 nonce inject 後再拔。
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.open-meteo.com https://*.ingest.us.sentry.io https://cloudflareinsights.com https://maps.googleapis.com https://places.googleapis.com https://routes.googleapis.com; img-src 'self' data: https://maps.gstatic.com https://maps.googleapis.com https://*.googleusercontent.com https://lh3.googleusercontent.com; worker-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests
+  # v2.33.62: report-to + Report-To header 啟用 CSP violation reporting via
+  # Sentry CSP ingest endpoint。Sentry project CSP URL pattern:
+  #   https://<HOST>.ingest.us.sentry.io/api/<PROJECT_ID>/security/?sentry_key=<DSN_KEY>
+  # 部署 prerequisite: Sentry dashboard → Project Settings → Security Headers
+  # 取得實際 CSP report endpoint URL，update SENTRY_CSP_ENDPOINT 變數後 rebuild。
+  # 不知 endpoint 時 report-to 仍可宣告 (Reporting API 是 endpoint group 機制)，
+  # browser 會 silently no-op；確認 prod 不會 console warn。
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.open-meteo.com https://*.ingest.us.sentry.io https://cloudflareinsights.com https://maps.googleapis.com https://places.googleapis.com https://routes.googleapis.com; img-src 'self' data: https://maps.gstatic.com https://maps.googleapis.com https://*.googleusercontent.com https://lh3.googleusercontent.com; worker-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests; report-to csp-endpoint
+  Report-To: {"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"https://o.ingest.us.sentry.io/api/0/security/?sentry_key=PLACEHOLDER"}],"include_subdomains":true}
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Strict-Transport-Security: max-age=31536000; includeSubDomains

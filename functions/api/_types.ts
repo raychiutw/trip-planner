@@ -12,6 +12,10 @@ export interface Env {
   CF_ACCESS_POLICY_ID: string;
   ADMIN_EMAIL: string;
   ALLOWED_ORIGIN?: string;
+  /** v2.33.62 round 14c: 'production' / 'preview' / 'development'。靠 wrangler.toml
+   * [env.X.vars]。Used by isAllowedOrigin (preview origin gate) + middleware
+   * DEV_MOCK_EMAIL guard。 */
+  ENVIRONMENT?: 'production' | 'preview' | 'development';
   /**
    * v2.33.59 round 13: 取代 `new URL(request.url).origin` 拾 outbound email
    * link / OIDC issuer。Defense — 不再信任 attacker-spoofable Host header。
@@ -26,6 +30,13 @@ export interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> };
   // V2-P1 OAuth (optional during staged rollout)
   SESSION_SECRET?: string;
+  /**
+   * v2.33.62 round 14c: HMAC key for IP hash in auth_audit_log / session_devices.
+   * 未設 → fallback unsalted SHA-256 (backward compat)。設了之後新 audit row HMAC，
+   * 防 DB dump + rainbow-table reverse 一次 enable。建議 32-byte base64url random。
+   * 部署: wrangler env set SESSION_IP_HASH_SECRET <value>。
+   */
+  SESSION_IP_HASH_SECRET?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   // V2-P5 RS256 signing — PKCS8 private key (PEM or raw base64)

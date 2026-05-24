@@ -21,6 +21,36 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { sha256Base64 } from './_utils';
 
+/**
+ * v2.33.62 round 14c: HMAC-based IP hash if SESSION_IP_HASH_SECRET set,
+ * fallback to SHA-256 for backward compat。
+ *
+ * Background: SHA-256(IP) 是 unsalted，IPv4 4B 空間 rainbow-table-reversible 幾小時
+ * (per migrations/0036 acknowledgment)。HMAC with secret key 防 dump-then-reverse —
+ * 攻擊者需同時拿 DB dump + env SECRET。
+ *
+ * 部署: wrangler env set SESSION_IP_HASH_SECRET <32-byte-random-base64>。
+ * Set 後新 row HMAC，old SHA-256 row 在 30-day retention 後自然消失。
+ */
+async function hashIp(env: { SESSION_IP_HASH_SECRET?: string }, ip: string): Promise<string> {
+  const secret = env.SESSION_IP_HASH_SECRET;
+  if (!secret || secret.length === 0) {
+    return sha256Base64(ip); // backward compat
+  }
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret) as unknown as ArrayBuffer,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(ip));
+  const bytes = new Uint8Array(sig);
+  let str = '';
+  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]!);
+  return btoa(str);
+}
+
 export type AuthEventType =
   | 'signup'
   | 'login'
@@ -57,10 +87,13 @@ export async function recordAuthEvent(
   db: D1Database,
   request: Request,
   event: AuthAuditEvent,
+  // v2.33.62 round 14c: env optional — 未傳 fallback unsalted SHA-256 (backward compat
+  // for callers not yet migrated)。傳 env 走 HMAC if SESSION_IP_HASH_SECRET set。
+  env?: { SESSION_IP_HASH_SECRET?: string },
 ): Promise<void> {
   try {
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-    const ipHash = await sha256Base64(ip);
+    const ipHash = env ? await hashIp(env, ip) : await sha256Base64(ip);
     const userAgent = (request.headers.get('User-Agent') ?? '').slice(0, USER_AGENT_MAX_LEN);
 
     await db

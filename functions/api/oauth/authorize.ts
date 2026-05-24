@@ -159,7 +159,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     userId: session.uid,
     clientId: result.client.client_id,
     metadata: { scopes: result.scopes, redirect_uri: result.redirectUri },
-  });
+  }, context.env);
 
   // Redirect back to client with code + state
   const redirectParams = new URLSearchParams({ code });

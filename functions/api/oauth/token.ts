@@ -257,7 +257,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       userId: null,
       clientId,
       metadata: { grant_type: 'client_credentials', scopes: finalScopes },
-    });
+    }, context.env);
 
     return new Response(
       JSON.stringify({
@@ -302,7 +302,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         clientId,
         failureReason: 'refresh_token_reuse',
         metadata: { grantId: refreshRow.grantId },
-      });
+      }, context.env);
       return jsonError('invalid_grant', 'refresh_token reuse detected — token family revoked');
     }
     if (refreshRow.client_id !== clientId) {
@@ -336,7 +336,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         clientId,
         failureReason: 'refresh_token_concurrent_rotation',
         metadata: { grantId: refreshRow.grantId },
-      });
+      }, context.env);
       return jsonError('invalid_grant', 'refresh_token concurrent rotation detected — token family revoked');
     }
     const tokens = await issueTokenPair(
@@ -358,7 +358,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       userId: refreshRow.user_id,
       clientId,
       metadata: { grant_type: 'refresh_token', scopes: finalScopes },
-    });
+    }, context.env);
     return tokenResponse(tokens, finalScopes, idToken);
   }
 
@@ -385,7 +385,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       clientId,
       failureReason: 'auth_code_replay',
       metadata: { grantId: codeRow.grantId ?? null, scopes: codeRow.scopes },
-    });
+    }, context.env);
     return jsonError('invalid_grant', 'Authorization code already used (replay detected — tokens revoked)');
   }
   if (codeRow.client_id !== clientId) {
@@ -420,7 +420,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       clientId,
       failureReason: 'auth_code_concurrent_exchange',
       metadata: { scopes: codeRow.scopes },
-    });
+    }, context.env);
     return jsonError('invalid_grant', 'Authorization code concurrent exchange detected');
   }
   // Won the race — issue tokens + bind grantId for replay-revoke。
@@ -441,6 +441,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     userId: codeRow.user_id,
     clientId,
     metadata: { grant_type: 'authorization_code', scopes: codeRow.scopes },
-  });
+  }, context.env);
   return tokenResponse(tokens, codeRow.scopes, idToken);
 };

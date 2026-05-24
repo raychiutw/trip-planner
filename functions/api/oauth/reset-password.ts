@@ -87,7 +87,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       eventType: 'password_reset_complete',
       outcome: 'failure',
       failureReason: 'invalid_token',
-    });
+    }, context.env);
     return errorResponse('RESET_TOKEN_INVALID', '重設連結已過期或無效', 400);
   }
 
@@ -98,7 +98,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       outcome: 'failure',
       userId: tokenRow.userId,
       failureReason: 'token_used',
-    });
+    }, context.env);
     return errorResponse('RESET_TOKEN_INVALID', '重設連結已使用，請重新申請', 400);
   }
 
@@ -183,7 +183,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     outcome: 'success',
     userId: tokenRow.userId,
     metadata: { email: tokenRow.email },
-  });
+  }, context.env);
 
   return new Response(
     JSON.stringify({ ok: true, message: '密碼已更新，請用新密碼登入' }),

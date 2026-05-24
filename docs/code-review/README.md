@@ -32,7 +32,9 @@
 | 11 | OceanMap internals split (606→303 LOC) | — | [#737](https://github.com/raychiutw/trip-planner/pull/737) | 2026-05-24 | [round-11-oceanmap-split.md](./round-11-oceanmap-split.md) |
 | 12 | src/server/ security + test catch-up | 1,851 | [#738](https://github.com/raychiutw/trip-planner/pull/738) | 2026-05-24 | [round-12-server-security.md](./round-12-server-security.md) |
 | 13 | src/server/ defer MEDIUM 全做 (6 fix) | — | [#739](https://github.com/raychiutw/planner/pull/739) | 2026-05-24 | [round-13-server-residuals.md](./round-13-server-residuals.md) |
-| 14 | frontend infra + migrations (10 fix) | — | TBD | 2026-05-24 | [round-14-infra.md](./round-14-infra.md) |
+| 14 | frontend infra + migrations (10 fix) | — | [#740](https://github.com/raychiutw/trip-planner/pull/740) | 2026-05-24 | [round-14-infra.md](./round-14-infra.md) |
+| 14b | round 14 residuals (3 CVE + 2 sweep + dead CSS) | — | [#741](https://github.com/raychiutw/trip-planner/pull/741) | 2026-05-24 | (see CHANGELOG v2.33.61) |
+| 14c | round 14 真做完所有 (7 fix + 6 wontfix doc) | — | TBD | 2026-05-24 | [round-14c-residuals.md](./round-14c-residuals.md) |
 
 ## 流程
 

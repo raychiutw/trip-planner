@@ -137,7 +137,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         outcome: 'success',
         userId,
         metadata: { email },
-      });
+      }, context.env);
     } catch (err) {
       const msg = err instanceof EmailError
         ? `${err.status} ${err.message}`
@@ -155,7 +155,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         outcome: 'failure',
         userId,
         metadata: { email, reason: 'email_send_failed', error: msg },
-      });
+      }, context.env);
       await alertAdminTelegram(
         context.env,
         `重設密碼信寄送失敗: ${email} (${msg})`,

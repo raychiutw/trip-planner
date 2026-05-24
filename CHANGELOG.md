@@ -3,6 +3,64 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.62] - 2026-05-24
+
+**Round 14c — 真做完所有 deferred finding (backlog #135)**
+
+User 要求「先完成所有 finding」→ Round 14 doc 列了 deferred items 中
+7 個可實作的做完，6 個真 wontfix 顯式 document。
+doc: `docs/code-review/round-14c-residuals.md`。
+
+**SECURITY**
+
+- `_auth_audit.ts` hashIp HMAC fallback — 加 `SESSION_IP_HASH_SECRET` env，
+  set 後新 audit row HMAC-SHA256(secret, IP)，未設 fallback SHA-256 backward compat。
+  防 DB dump + rainbow-table reverse 一次 enable (per migration 0036 ack)
+- 8 個 oauth handler callsite 全 migrate 傳 `context.env` 到 `recordAuthEvent`
+- `_middleware.ts isAllowedOrigin` preview-deploy origin pattern 加
+  `env.ENVIRONMENT === 'preview'` gate (之前 prod 也信任 preview origin)
+- `vite.config workbox` 加 `cacheWillUpdate` plugin — request 帶 Cookie 或
+  response Cache-Control private/no-store 不寫 SW cache。防 shared device
+  cross-user PII (SW cache 是 origin-wide 共用)
+- `_headers` CSP 加 `report-to csp-endpoint` directive + `Report-To` header
+  with Sentry CSP ingest URL pattern (placeholder — deploy 後填實際 endpoint)
+
+**MIGRATION**
+
+- `migrations/0071_audit_log_user_id.sql` — audit_log swap pattern 加
+  `changed_by_user_id TEXT REFERENCES users(id) ON DELETE SET NULL`，backfill
+  via LEFT JOIN users.email，新 idx_audit_user index。保留 companion_failure_reason col (0050)。
+
+**INFRA**
+
+- 新 `functions/api/_app_settings.ts` — typed accessor (APP_SETTINGS_SCHEMA +
+  parseAppSetting / serialiseAppSetting / getAppSetting helper)。集中 5 個
+  已知 key 的 type 定義，未來 callsite migrate 即可享 type safety
+- `_headers` /og cache TTL 加 comment 標 future content-hash → immutable 升級 path
+
+**TESTING**
+
+- `tests/unit/round-14c-residuals.test.ts` — 18 個 source-grep guard
+- 2556 / 2556 全綠 (+18 從 2538)
+- tsc clean
+
+**真 wontfix (documented)**:
+
+- Manifest maskable icon (需 asset design)
+- CSP `style-src 'unsafe-inline'` (Tailwind 4 forced)
+- 5 個 moderate CVE (postcss/ws/brace-expansion/miniflare/wrangler — upstream)
+- Migration 0011/0013 (歷史不可逆)
+- Stale version comments (低 value，git blame 可查)
+
+**部署 reminder**:
+
+1. `wrangler env set SESSION_IP_HASH_SECRET <32B random base64>` (啟 HMAC IP hash)
+2. CF Pages dashboard 設 `ENVIRONMENT=production` (preview 設 `preview`)
+3. Sentry dashboard 取 CSP report endpoint URL 填 `_headers` PLACEHOLDER
+4. Apply migration 0071 (audit_log FK)
+
+closes backlog #135. 完整收尾 Round 14。
+
 ## [2.33.61] - 2026-05-24
 
 **Round 14b — Round 14 residuals (補做 deferred 中可立刻完成)**
