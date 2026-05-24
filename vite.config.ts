@@ -49,6 +49,10 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Production API — 只快取公開行程端點，排除 /api/permissions、/api/requests 等需認證的端點
+            // v2.33.62 round 14c: 加 cacheWillUpdate 防 cross-user PII leak —
+            // 只 cache 真正 anonymous + public response (request 沒帶 Cookie +
+            // response Cache-Control 不含 private/no-store)。已 authenticated 走
+            // network 但不寫入共用 SW cache，避免登出後下個 user 讀到上個 user PII。
             urlPattern: /^https:\/\/trip-planner-dby\.pages\.dev\/api\/trips\/.*/,
             handler: 'NetworkFirst',
             options: {
@@ -57,6 +61,16 @@ export default defineConfig({
               networkTimeoutSeconds: 5,
               cacheableResponse: { statuses: [0, 200] },
               fetchOptions: { cache: 'no-cache' },
+              plugins: [
+                {
+                  cacheWillUpdate: async ({ request, response }) => {
+                    if (request.headers.get('Cookie')) return null;
+                    const cc = response.headers.get('Cache-Control') ?? '';
+                    if (cc.includes('private') || cc.includes('no-store')) return null;
+                    return response;
+                  },
+                },
+              ],
             },
             method: 'GET',
           },
@@ -70,6 +84,16 @@ export default defineConfig({
               networkTimeoutSeconds: 5,
               cacheableResponse: { statuses: [0, 200] },
               fetchOptions: { cache: 'no-cache' },
+              plugins: [
+                {
+                  cacheWillUpdate: async ({ request, response }) => {
+                    if (request.headers.get('Cookie')) return null;
+                    const cc = response.headers.get('Cache-Control') ?? '';
+                    if (cc.includes('private') || cc.includes('no-store')) return null;
+                    return response;
+                  },
+                },
+              ],
             },
             method: 'GET',
           },

@@ -164,7 +164,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     userId: session.uid,
     clientId: body.client_id,
     metadata: { scopes, decision: 'allow' },
-  });
+  }, context.env);
 
   // Redirect back to authorize with original params — this time will
   // pick up consent and proceed to code gen

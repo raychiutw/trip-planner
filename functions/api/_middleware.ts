@@ -130,8 +130,16 @@ export function isAllowedOrigin(origin: string, env: Env): boolean {
   if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
   // Allow production origin
   if (origin === PRODUCTION_ORIGIN) return true;
-  // Allow Cloudflare Pages preview deployments
-  if (/^https:\/\/[a-f0-9]+\.trip-planner-dby\.pages\.dev$/.test(origin)) return true;
+  // v2.33.62 round 14c: preview-deploy origin only allowed if env explicitly opt in。
+  // 之前 hex hostname pattern 永遠 allow → prod 也信任 preview origin (即使
+  // preview 攻擊面較大 / leaked preview URL 可能被當合法 client 帶 session
+  // cookie 過來)。改 gate on `env.ENVIRONMENT === 'preview'`。
+  if (
+    env.ENVIRONMENT === 'preview' &&
+    /^https:\/\/[a-f0-9]+\.trip-planner-dby\.pages\.dev$/.test(origin)
+  ) {
+    return true;
+  }
   // Allow custom origins from env (comma-separated)
   if (env.ALLOWED_ORIGIN) {
     const allowed = env.ALLOWED_ORIGIN.split(',').map(s => s.trim());
