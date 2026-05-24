@@ -19,9 +19,14 @@
  */
 
 /**
- * 標準化 email — NFKC + lowercase。Idempotent (normalize 已 normalize 過的
- * email 結果相同)。用於寫入 + 比對兩端。
+ * 標準化 email — trim + NFKC + lowercase。Idempotent (normalize 已 normalize
+ * 過的 email 結果相同)。用於寫入 + 比對兩端。
+ *
+ * v2.33.92 fix: 補 `.trim()` — 之前散落 callsites 都先 `.trim().toLowerCase()`，
+ * v2.33.91 替換成 `normalizeEmail()` 後丟了 trim → 帶前後空白的 input 不再
+ * 正規化（e.g. `'  user@x.com  '` ≠ stored `'user@x.com'`）。Trim 屬於 email
+ * 比對 semantic 的一部分，集中在 helper 是正確的 SoT。
  */
 export function normalizeEmail(email: string): string {
-  return email.normalize('NFKC').toLowerCase();
+  return email.trim().normalize('NFKC').toLowerCase();
 }
