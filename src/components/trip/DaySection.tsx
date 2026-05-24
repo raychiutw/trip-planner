@@ -1,8 +1,8 @@
 /**
- * DaySection — memoised per-day renderer (Ocean design).
+ * DaySection — memoised per-day renderer (Terracotta design).
  *
  * Renders:
- *  - Ocean hero card (Day eyebrow + 看地圖 chip + title + date + stats)
+ *  - Terracotta hero card (Day eyebrow + 看地圖 chip + title + date + stats)
  *  - Weather card (HourlyWeather)
  *  - Timeline stop cards
  */
@@ -159,7 +159,7 @@ const DaySection = React.memo(function DaySection({
   return (
     <section className="tp-day day-section" data-day={dayNum}>
       <style>{MAP_CHIP_STYLES}</style>
-      {/* Ocean Hero card */}
+      {/* Terracotta Hero card */}
       <div className="tp-hero" id={`day${dayNum}`}>
         <div className="tp-hero-chips">
           <div className="tp-hero-chips-left">

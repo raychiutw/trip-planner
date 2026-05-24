@@ -2,14 +2,19 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { lsSet, lsGet, LS_PREFIX } from '../../src/lib/localStorage';
 
 /**
- * Unit tests for useDarkMode hook logic — Ocean-only design system.
+ * Unit tests for useDarkMode hook logic — V2 Terracotta single-theme design system.
  *
- * The project now ships one theme (Ocean). The hook only manages `body.dark`
- * and `<meta name="theme-color">`, no more per-theme class switching.
+ * v2.33.90: 改 OCEAN_COLORS 藍 → THEME_COLORS Terracotta 橘對齊
+ * `src/hooks/useDarkMode.ts` THEME_COLORS = { light: '#D97848', dark: '#1A140F' }。
+ * 之前 test 使用本地 OCEAN_COLORS = { light: '#0077B6', dark: '#0D1B2A' } 是舊
+ * Ocean palette 殘留，與 source 完全不一致（test 用自己的常數所以假性 green）。
+ *
+ * Hook only manages `body.dark` and `<meta name="theme-color">`, no more
+ * per-theme class switching.
  */
 
-/** Ocean theme colors (mirror of OCEAN_COLORS in useDarkMode.ts). */
-const OCEAN_COLORS = { light: '#0077B6', dark: '#0D1B2A' };
+/** Terracotta theme colors (mirror of THEME_COLORS in useDarkMode.ts). */
+const THEME_COLORS = { light: '#D97848', dark: '#1A140F' };
 
 beforeEach(() => {
   localStorage.clear();
@@ -55,27 +60,27 @@ describe('meta theme-color 更新', () => {
   function updateMeta(isDark) {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute('content', isDark ? OCEAN_COLORS.dark : OCEAN_COLORS.light);
+      meta.setAttribute('content', isDark ? THEME_COLORS.dark : THEME_COLORS.light);
     }
   }
 
-  it('淺色模式使用 Ocean primary #0077B6', () => {
+  it('淺色模式使用 Terracotta accent #D97848', () => {
     updateMeta(false);
     const meta = document.querySelector('meta[name="theme-color"]');
-    expect(meta.getAttribute('content')).toBe('#0077B6');
+    expect(meta.getAttribute('content')).toBe('#D97848');
   });
 
-  it('深色模式使用 Ocean deep navy #0D1B2A', () => {
+  it('深色模式使用 Terracotta deep #1A140F', () => {
     updateMeta(true);
     const meta = document.querySelector('meta[name="theme-color"]');
-    expect(meta.getAttribute('content')).toBe('#0D1B2A');
+    expect(meta.getAttribute('content')).toBe('#1A140F');
   });
 });
 
-describe('Ocean-only — 舊主題 class 不再被程式產生', () => {
-  it('OCEAN_COLORS 沒有 sun/sky/zen/forest/sakura/night', () => {
-    expect(OCEAN_COLORS.sun).toBeUndefined();
-    expect(OCEAN_COLORS.sky).toBeUndefined();
-    expect(OCEAN_COLORS.night).toBeUndefined();
+describe('Terracotta single-theme — 舊主題 class 不再被程式產生', () => {
+  it('THEME_COLORS 沒有 sun/sky/zen/forest/sakura/night legacy keys', () => {
+    expect(THEME_COLORS.sun).toBeUndefined();
+    expect(THEME_COLORS.sky).toBeUndefined();
+    expect(THEME_COLORS.night).toBeUndefined();
   });
 });
