@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.73] - 2026-05-24
+
+**Round 23 — 7 個剩 untested page smoke test**
+
+Round 22 follow-up，補完 12 個 untested page 中的剩餘 7 個。
+
+**NEW**
+
+- `tests/unit/untested-pages-smoke-batch-2.test.tsx` — 7 個 smoke:
+  - NewTripPage (/trips/new)
+  - EditTripPage (/trip/:id/edit)
+  - EntryActionPage (/trip/:id/stop/:eid/copy)
+  - AddStopPage (/trip/:id/add-stop)
+  - AddEntryPage (/trip/:id/add-entry)
+  - AddCustomStopPage (/trip/:id/add-custom-stop)
+  - MapPage (/trip/:id/map, wrapped under TripLayout for TripContext)
+
+**TESTING**
+
+- 2646 / 2646 全綠 (+7 從 2639)
+- tsc clean
+- 12/12 untested pages 都已有 smoke coverage (Round 22 5 + Round 23 7)
+
 ## [2.33.72] - 2026-05-24
 
 **Round 22 — 5 個 untested page smoke test (Round 15 deferred)**
