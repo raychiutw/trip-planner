@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.74] - 2026-05-24
+
+**Round 24 — 8 個 admin endpoint security guard test**
+
+Round 15 finding: `functions/api/admin/*.ts` 8 個 endpoint 缺 unit-level security
+guard 驗證。Integration test 因 Miniflare 平行跑 71 個 file → EADDRNOTAVAIL port
+exhaustion 不穩。改 source-grep 模式，穩定 + 抓 regression。
+
+**NEW**
+
+- `tests/unit/admin-endpoints-guard.test.ts` — 19 個 test，3 個 group:
+  1. **Inventory**: 8 個預期 admin endpoint 全存在（catch rename / 漏檔）
+  2. **Auth guard**: 每個 admin endpoint `import + call requireAdmin`（catch
+     v2.31.16 family — admin route 漏 auth check）
+  3. **Audit log**: stateful endpoint（maps-lock / maps-unlock）一定有 `logAudit`
+     call（catch silent state change without trail）
+  4. **Handler export**: `PagesFunction<Env>` shape 驗證
+
+**Why source-grep not integration**: 51 個 test 平行 spawn Miniflare → 71 個 port
+被搶 → EADDRNOTAVAIL fail。Source-grep 在 100ms 內驗 regression-prone pattern
+（漏 guard / 漏 audit / 漏檔），integration test 留 local sandbox 跑（手動）。
+
+**Coverage**: 8 admin endpoint × 3 layer = 24 assertion，19 個 test case。
+
 ## [2.33.73] - 2026-05-24
 
 **Round 23 — 7 個剩 untested page smoke test**
