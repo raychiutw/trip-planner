@@ -80,8 +80,9 @@ function mockMapCategory(category) {
   return 'attraction';
 }
 
-// initialTripIdeas() retired in V2 cutover (migration 0046) — 備案概念合一進「我的收藏」
-// (saved_pois)。fixtures 繼承到 initialSavedPois() 若需要復原。
+// initialTripIdeas() retired in V2 cutover (migration 0046) — 備案概念合一進「我的收藏」。
+// v2.22.0 (migration 0050) saved_pois → poi_favorites。v2.29.1 (migration 0063) DROP TABLE saved_pois。
+// fixtures 繼承到 initialSavedPois() 名稱保留（routes mock /api/poi-favorites）。
 
 /* ===== /api/trips/okinawa-trip-2026-Ray (single trip meta) =====
  * 2026-05-02 (migration 0045): ogDescription / selfDrive / autoScroll / footer cols DROP'd → 改 lang / dataSource + destinations[] join。
@@ -773,11 +774,17 @@ async function setupApiMocks(page) {
       // v2.31.43：對齊 real backend — poiType 來自 pois.type（mapped value
       // from find-or-create body.type），fallback 走 mapping helper 邏輯。
       const mappedType = poiTypeByPoiId.get(poiId) ?? mockMapCategory(searchPoi.category);
+      // Round 25 (v2.33.75): align with backend reality
+      // - poi_favorites schema (migration 0050): id / user_id / poi_id / favorited_at / note
+      // - email column DROP'd in v2.21.0
+      // - saved_at renamed to favorited_at (migration 0050) → deepCamel → favoritedAt
+      // - poiName/poiAddress/poiLat/poiLng/poiType/poiRating are JOIN'd from pois (GET only;
+      //   POST RETURNING * 不含；mock 多餘地塞入是為了下一輪 GET 不必補 fixture，accept this fiction)
       const row = {
         id: ++nextSavedId,
-        email: MOCK_USER.email,
+        userId: MOCK_USER.userId ?? MOCK_USER.id ?? 'mock-user-id',
         poiId,
-        savedAt: new Date().toISOString(),
+        favoritedAt: new Date().toISOString(),
         note: body.note ?? null,
         poiName: searchPoi.name,
         poiAddress: searchPoi.address,

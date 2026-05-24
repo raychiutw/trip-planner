@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.75] - 2026-05-24
+
+**Round 25 — E2E api-mocks schema parity fix**
+
+Round 15 finding follow-up: `tests/e2e/api-mocks.js` 959 LOC 對 v2.21-v2.31
+schema 大規模 drift。Audit subagent 找到 3 個 critical bug:
+
+**FIX**
+
+- `tests/e2e/api-mocks.js` POST /api/poi-favorites mock row shape align backend:
+  - `savedAt` → `favoritedAt`（migration 0050 column rename）
+  - 移除 `email: MOCK_USER.email`（v2.21.0 dropped poi_favorites.email）
+  - 補 `userId`（real backend GET 回此欄位）
+  - 更新註解 reference v2.22.0 + v2.29.1 migration trail
+
+**Why it mattered**: 之前 mock 回 `savedAt` 但 backend 經 deepCamel 回
+`favoritedAt`，frontend 任何讀 `row.favoritedAt` 的 code 在 E2E 環境永遠 undefined
+→ 假性 green test 蓋住真 bug（同 v2.31.14/15/27 family camelCase drift 模式）。
+
+**NEW**
+
+- `tests/unit/e2e-api-mocks-shape.test.ts` — 6 個 regression guard:
+  - `savedAt` 不應出現
+  - `saved_at` 不該以 active code reference 形式出現
+  - 必須有 `favoritedAt`
+  - poi_favorites mock 不該 leak `email` field
+  - 註解語意校正
+  - `initialTripIdeas` 不該有 active call site
+
 ## [2.33.74] - 2026-05-24
 
 **Round 24 — 8 個 admin endpoint security guard test**
