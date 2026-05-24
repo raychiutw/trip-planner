@@ -24,6 +24,11 @@ name: Deploy — D1 migrations
 # (timeout, SIGKILL), the DB is left half-applied. Migrations MUST be
 # idempotent (use IF NOT EXISTS / IF EXISTS) so re-running is safe.
 
+# v2.33.66 round 16 HIGH-1: minimal default permissions; wrangler 用 secrets.* 不
+# 需 GITHUB_TOKEN write 權限。Telegram notifier 同理。
+permissions:
+  contents: read
+
 on:
   push:
     branches: [master]
@@ -51,9 +56,10 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v4
+      # v2.33.66 round 16 LOW-1: pin SHA per OpenSSF
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           cache: 'npm'

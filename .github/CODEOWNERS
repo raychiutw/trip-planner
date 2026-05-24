@@ -1,0 +1,29 @@
+# v2.33.66 round 16 MED-2: CODEOWNERS 守 .github/workflows/ + 敏感 SQL
+# Workflow change 必須 owner review (即使 solo repo 也防誤 commit + 加 explicit gate)
+
+# Workflow edits (supply chain risk)
+/.github/workflows/  @raychiutw
+
+# Dependabot config (governs auto-PR scope)
+/.github/dependabot.yml  @raychiutw
+
+# CI cleanup SQL — destructive query
+/scripts/cleanup-rate-limit.sql  @raychiutw
+
+# Migrations (D1 schema change)
+/migrations/  @raychiutw
+
+# Auth + crypto modules (security boundary)
+/src/server/  @raychiutw
+/functions/api/_middleware.ts  @raychiutw
+/functions/api/_auth*.ts  @raychiutw
+/functions/api/_session.ts  @raychiutw
+/functions/api/oauth/  @raychiutw
+
+# CSP / security headers
+/public/_headers  @raychiutw
+
+# Build / deploy config
+/wrangler.toml  @raychiutw
+/vite.config.ts  @raychiutw
+/tsconfig*.json  @raychiutw
