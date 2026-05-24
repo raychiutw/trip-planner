@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>OceanMap internals split — architecture mockup</title>
+<style>
+  :root {
+    --terracotta: #C13515;
+    --accent: #D97848;
+    --terracotta-bg: rgba(193, 53, 21, 0.08);
+    --bg: #FAF7F2;
+    --ink: #2A1F18;
+    --muted: #6B5D4F;
+    --line: #E5D9C9;
+    --line-strong: #C5B098;
+    --paper: #FFFFFF;
+    --green: #06A77D;
+    --green-bg: rgba(6, 167, 125, 0.08);
+    --amber: #F48C06;
+    --amber-bg: rgba(244, 140, 6, 0.08);
+    --blue: #2B6CB0;
+    --blue-bg: rgba(43, 108, 176, 0.08);
+    --purple: #6B46C1;
+    --purple-bg: rgba(107, 70, 193, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Inter, 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 32px;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 24px;
+    font-weight: 800;
+    margin: 0 0 4px;
+    color: var(--terracotta);
+  }
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0 0 32px;
+  }
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 32px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--line);
+  }
+  h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 16px 0 8px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .panel {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .panel.before { border-left: 4px solid var(--amber); }
+  .panel.after { border-left: 4px solid var(--green); }
+  .panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 4px;
+  }
+  .before .panel-title { color: var(--amber); }
+  .after .panel-title { color: var(--green); }
+  .panel-meta {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .box {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .box.marker { border-color: var(--blue); background: var(--blue-bg); }
+  .box.viewport { border-color: var(--purple); background: var(--purple-bg); }
+  .box.segment { border-color: var(--terracotta); background: var(--terracotta-bg); }
+  .box.pure { border-color: var(--muted); background: var(--bg); border-style: dashed; }
+  .box.compose { border-color: var(--green); background: var(--green-bg); }
+  .box-title {
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .badge-loc { background: rgba(0,0,0,0.06); color: var(--muted); }
+  .badge-new { background: var(--green-bg); color: var(--green); }
+  .badge-extract { background: var(--terracotta-bg); color: var(--terracotta); }
+  .box-detail {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .box-detail code {
+    background: rgba(0,0,0,0.04);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 12px 0;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    background: var(--bg);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--muted);
+  }
+  tr:last-child td { border-bottom: none; }
+  td code {
+    background: rgba(0,0,0,0.04);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 12px 0;
+    font-size: 12px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+  .dot-marker { background: var(--blue); }
+  .dot-viewport { background: var(--purple); }
+  .dot-segment { background: var(--terracotta); }
+  .dot-pure { background: var(--muted); }
+  .dot-compose { background: var(--green); }
+
+  .arrow {
+    text-align: center;
+    font-size: 18px;
+    color: var(--terracotta);
+    margin: 8px 0;
+  }
+  .flow {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+  pre {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .signature {
+    color: #FFD580;
+  }
+  .keyword {
+    color: #C792EA;
+  }
+  .string {
+    color: #C3E88D;
+  }
+  .comment {
+    color: #5C6370;
+    font-style: italic;
+  }
+  .risks {
+    background: var(--amber-bg);
+    border-left: 3px solid var(--amber);
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin: 12px 0;
+  }
+  .risks strong { color: var(--amber); }
+  .mitigation {
+    background: var(--green-bg);
+    border-left: 3px solid var(--green);
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin: 12px 0;
+  }
+  .mitigation strong { color: var(--green); }
+</style>
+</head>
+<body>
+
+<h1>OceanMap internals split</h1>
+<p class="subtitle">backlog #130 — 606 LOC monolith → 4 modules（3 hook + 1 pure lib）。0 UX change，純內部重組。</p>
+
+<h2>1. 並排對照</h2>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot dot-marker"></span> Marker 邏輯</div>
+  <div class="legend-item"><span class="legend-dot dot-viewport"></span> Viewport 邏輯</div>
+  <div class="legend-item"><span class="legend-dot dot-segment"></span> Segment 邏輯</div>
+  <div class="legend-item"><span class="legend-dot dot-pure"></span> Pure helper</div>
+  <div class="legend-item"><span class="legend-dot dot-compose"></span> Composition shell</div>
+</div>
+
+<div class="grid">
+
+  <!-- BEFORE -->
+  <div class="panel before">
+    <p class="panel-title">Before — Monolith</p>
+    <p class="panel-meta">606 LOC · 20 hook · 1 檔</p>
+
+    <div class="box compose">
+      <div class="box-title">
+        OceanMap.tsx
+        <span class="badge badge-loc">606 LOC</span>
+      </div>
+      <div class="box-detail">
+        Props 處理 + useGoogleMap + 6 個 useMemo +
+        <strong>3 個 concern 混在一起</strong> + render
+      </div>
+    </div>
+
+    <div class="box marker" style="margin-left: 16px;">
+      <div class="box-title">
+        Marker concern <span class="badge badge-loc">~120 LOC</span>
+      </div>
+      <div class="box-detail">
+        <code>markerStyle()</code> + <code>markerContent()</code> + <code>markersRef</code>
+        + <code>prevFocusRef</code> + 2 個 useEffect（建 marker / diff-update focus）
+      </div>
+    </div>
+
+    <div class="box viewport" style="margin-left: 16px;">
+      <div class="box-title">
+        Viewport concern <span class="badge badge-loc">~50 LOC</span>
+      </div>
+      <div class="box-detail">
+        <code>fitDoneRef</code> + 3 個 useEffect（fit/follow / resize / pan）
+      </div>
+    </div>
+
+    <div class="box segment" style="margin-left: 16px;">
+      <div class="box-title">
+        Segment concern <span class="badge badge-loc">~80 LOC</span>
+      </div>
+      <div class="box-detail">
+        <code>segmentStyle()</code> + <code>buildSegments()</code> +
+        <code>&lt;Segment&gt;</code> 子 component（內含 <code>useRoute</code> + 2 useEffect）
+        + segments useMemo
+      </div>
+    </div>
+  </div>
+
+  <!-- AFTER -->
+  <div class="panel after">
+    <p class="panel-title">After — 4 模組</p>
+    <p class="panel-meta">~150 + 110 + 50 + 80 + 60 LOC · 各 hook 單一職責</p>
+
+    <div class="box compose">
+      <div class="box-title">
+        OceanMap.tsx <span class="badge badge-loc">~150 LOC</span>
+      </div>
+      <div class="box-detail">
+        Props 處理 + useGoogleMap + onMapReady + 6 個 useMemo + 3 個 hook 呼叫 + render（不變）
+      </div>
+    </div>
+
+    <div class="box pure" style="margin-left: 16px;">
+      <div class="box-title">
+        src/lib/mapHelpers.ts <span class="badge badge-extract">extract</span>
+      </div>
+      <div class="box-detail">
+        <code>markerStyle()</code> · <code>markerContent()</code> ·
+        <code>segmentStyle()</code> · <code>buildSegments()</code><br>
+        <strong>已 export</strong>，搬到 lib 後 OceanMap 也 import 用。
+        0 行為變化，現有 unit test 沿用。
+      </div>
+    </div>
+
+    <div class="box marker" style="margin-left: 16px;">
+      <div class="box-title">
+        src/hooks/useMapMarkers.ts <span class="badge badge-new">new</span>
+      </div>
+      <div class="box-detail">
+        Owns <code>markersRef</code> + <code>prevFocusRef</code>。
+        Returns nothing（imperative side effect on map）。
+      </div>
+    </div>
+
+    <div class="box viewport" style="margin-left: 16px;">
+      <div class="box-title">
+        src/hooks/useMapViewport.ts <span class="badge badge-new">new</span>
+      </div>
+      <div class="box-detail">
+        Owns <code>fitDoneRef</code>。負責 fit/follow + resize + pan 三個 effect。
+        Returns nothing。
+      </div>
+    </div>
+
+    <div class="box segment" style="margin-left: 16px;">
+      <div class="box-title">
+        src/hooks/useMapSegments.ts <span class="badge badge-new">new</span>
+      </div>
+      <div class="box-detail">
+        Returns <code>SegmentPair[]</code> for OceanMap 渲染 <code>&lt;Segment&gt;</code>。
+        <code>&lt;Segment&gt;</code> child component 留在 OceanMap.tsx（render 邏輯不抽）。
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<h2>2. Hook API 設計</h2>
+
+<pre><span class="comment">// src/hooks/useMapMarkers.ts</span>
+<span class="keyword">export function</span> <span class="signature">useMapMarkers</span>(params: {
+  map: google.maps.Map | <span class="keyword">null</span>;
+  visiblePins: MapPin[];
+  visiblePinsById: Map&lt;<span class="keyword">number</span>, MapPin&gt;;
+  pinIndexById: Map&lt;<span class="keyword">number</span>, <span class="keyword">number</span>&gt;;
+  focusId?: <span class="keyword">number</span>;
+  focusedIdx: <span class="keyword">number</span>;
+  isPastPin: (id: <span class="keyword">number</span>) =&gt; <span class="keyword">boolean</span>;
+  pinIdToDayColor: Map&lt;<span class="keyword">number</span>, <span class="keyword">string</span>&gt;;
+  onMarkerClick?: (id: <span class="keyword">number</span>) =&gt; <span class="keyword">void</span>;
+}): <span class="keyword">void</span>;
+
+<span class="comment">// src/hooks/useMapViewport.ts</span>
+<span class="keyword">export function</span> <span class="signature">useMapViewport</span>(params: {
+  map: google.maps.Map | <span class="keyword">null</span>;
+  mode: <span class="string">'detail'</span> | <span class="string">'overview'</span>;
+  focusId?: <span class="keyword">number</span>;
+  pins: MapPin[];
+  visiblePins: MapPin[];
+  pinIndexById: Map&lt;<span class="keyword">number</span>, <span class="keyword">number</span>&gt;;
+  fitOnce: <span class="keyword">boolean</span>;
+  panToCoord?: { lat: <span class="keyword">number</span>; lng: <span class="keyword">number</span>; zoom?: <span class="keyword">number</span> };
+  fitBounds: (latlngs: Coord[]) =&gt; <span class="keyword">void</span>;
+  flyTo: (coord: Coord, zoom?: <span class="keyword">number</span>) =&gt; <span class="keyword">void</span>;
+}): <span class="keyword">void</span>;
+
+<span class="comment">// src/hooks/useMapSegments.ts</span>
+<span class="keyword">export function</span> <span class="signature">useMapSegments</span>(params: {
+  pins: MapPin[];
+  pinsByDay?: Map&lt;<span class="keyword">number</span>, MapPin[]&gt;;
+  showRoutes: <span class="keyword">boolean</span>;
+  focusedIdx: <span class="keyword">number</span>;
+  pinIndexById: Map&lt;<span class="keyword">number</span>, <span class="keyword">number</span>&gt;;
+  dayNum?: <span class="keyword">number</span>;
+}): SegmentPair[];
+</pre>
+
+<h2>3. OceanMap.tsx after — compose shell</h2>
+
+<pre><span class="keyword">const</span> OceanMap = memo(<span class="keyword">function</span> OceanMap(props: OceanMapProps) {
+  <span class="comment">// 1. Setup + memos (same as before, ~50 LOC)</span>
+  <span class="keyword">const</span> { containerRef, map, loadError, fitBounds, flyTo } = <span class="signature">useGoogleMap</span>({...});
+  <span class="signature">useEffect</span>(() =&gt; { onMapReady?.(map); ... }, [map, onMapReady]);
+
+  <span class="keyword">const</span> visiblePins = <span class="signature">useMemo</span>(...);
+  <span class="keyword">const</span> pinIndexById = <span class="signature">useMemo</span>(...);
+  <span class="keyword">const</span> focusedIdx = <span class="signature">useMemo</span>(...);
+  <span class="keyword">const</span> visiblePinsById = <span class="signature">useMemo</span>(...);
+  <span class="keyword">const</span> isPastPin = <span class="signature">useCallback</span>(...);
+  <span class="keyword">const</span> pinIdToDayColor = <span class="signature">useMemo</span>(...);
+
+  <span class="comment">// 2. Three hooks — composition</span>
+  <span class="signature">useMapMarkers</span>({ map, visiblePins, visiblePinsById, pinIndexById,
+                  focusId, focusedIdx, isPastPin, pinIdToDayColor, onMarkerClick });
+
+  <span class="signature">useMapViewport</span>({ map, mode, focusId, pins, visiblePins, pinIndexById,
+                   fitOnce, panToCoord, fitBounds, flyTo });
+
+  <span class="keyword">const</span> segments = <span class="signature">useMapSegments</span>({ pins, pinsByDay,
+                                       showRoutes: routes ?? mode === <span class="string">'overview'</span>,
+                                       focusedIdx, pinIndexById, dayNum });
+
+  <span class="comment">// 3. Render (unchanged)</span>
+  <span class="keyword">return</span> (
+    &lt;&gt;
+      &lt;style&gt;{SCOPED_STYLES}&lt;/style&gt;
+      &lt;div className=<span class="string">"ocean-map-container"</span> ...&gt;...&lt;/div&gt;
+      {segments.map((s) =&gt; &lt;Segment key={s.key} {...s} map={map} /&gt;)}
+    &lt;/&gt;
+  );
+});
+</pre>
+
+<h2>4. 風險與緩解</h2>
+
+<div class="risks">
+  <strong>R1 — Effect 執行順序變動</strong><br>
+  React 對同 component 內 hook 的 effect 依宣告順序執行。重組成 3 個 custom hook
+  時，內部 effect 順序若無意換位，可能讓 markersRef setup 在 viewport fit 之後跑
+  → fit 時 marker 還沒 mount → bounds 算錯。
+</div>
+
+<div class="mitigation">
+  <strong>M1</strong>：useMapMarkers 第一個 call、useMapViewport 第二個、useMapSegments
+  第三個 — 對齊原檔 line 437 → 514 → 557 順序。內部 effect 也按原檔順序。
+</div>
+
+<div class="risks">
+  <strong>R2 — useEffect deps 漏掉或多加</strong><br>
+  把 effect body 搬進 custom hook 時，dep array 必須完全比照原本（含 eslint-disable
+  的部分）。否則 re-run frequency 變化 → 多餘 marker 重建或漏更新。
+</div>
+
+<div class="mitigation">
+  <strong>M2</strong>：逐 effect copy-paste，dep array 一字不動。<code>// eslint-disable</code>
+  註解也搬。Refactor 後 grep diff 確認 dep arrays 完全相同。
+</div>
+
+<div class="risks">
+  <strong>R3 — StrictMode double-mount 行為改變</strong><br>
+  Dev mode 下 StrictMode 跑 effect 兩次。若 hook 內部 ref 管理跟 cleanup 順序變化，
+  可能多殘留一個 marker 或 polyline。
+</div>
+
+<div class="mitigation">
+  <strong>M3</strong>：手動 dev mode 測 detail / overview 切換、focus 變化、pan/zoom；
+  檢查 markersRef 與 google.maps 殘留 instance count；新 e2e smoke test 覆蓋。
+</div>
+
+<h2>5. 測試策略</h2>
+
+<table>
+  <thead><tr><th>類型</th><th>覆蓋</th><th>檔案</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Unit — pure helper</td>
+      <td>markerStyle / markerContent / segmentStyle / buildSegments</td>
+      <td><code>tests/unit/mapHelpers.test.ts</code>（既有 test 沿用 + 補 segmentStyle）</td>
+    </tr>
+    <tr>
+      <td>Unit — useMapSegments</td>
+      <td>showRoutes=false 返回 []、有 pinsByDay 跨日不畫、focusedIdx isActive</td>
+      <td><code>tests/unit/useMapSegments.test.ts</code></td>
+    </tr>
+    <tr>
+      <td>Source-grep</td>
+      <td>3 hook 呼叫順序對齊原 effect 順序、dep array 對應</td>
+      <td><code>tests/unit/round-11-oceanmap-split.test.ts</code></td>
+    </tr>
+    <tr>
+      <td>Integration — visual smoke</td>
+      <td>TripPage detail / overview / focus 變化 marker count + segment count 不變</td>
+      <td><code>tests/integration/ocean-map.test.tsx</code>（既有）</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>6. PR plan</h2>
+
+<table>
+  <thead><tr><th>Step</th><th>動作</th><th>LOC delta</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>建 <code>src/lib/mapHelpers.ts</code>，搬 4 個 pure helper，OceanMap 改 import</td><td>+80 / -80（移轉）</td></tr>
+    <tr><td>2</td><td>建 <code>src/hooks/useMapMarkers.ts</code>，把 markersRef / 2 effect / diff-update 搬過去</td><td>+120 / -120</td></tr>
+    <tr><td>3</td><td>建 <code>src/hooks/useMapViewport.ts</code>，把 fitDoneRef / 3 effect 搬過去</td><td>+60 / -60</td></tr>
+    <tr><td>4</td><td>建 <code>src/hooks/useMapSegments.ts</code>，segments useMemo 搬過去</td><td>+30 / -30</td></tr>
+    <tr><td>5</td><td>OceanMap.tsx 改 compose shell；新增 4 個 test 檔；rounded-doc</td><td>+50 (test/doc)</td></tr>
+  </tbody>
+</table>
+
+<p class="subtitle" style="margin-top: 32px;">完整 PR 1 個（全 atomic）。預估 OceanMap.tsx 從 606 → ~150 LOC。</p>
+
+</body>
+</html>

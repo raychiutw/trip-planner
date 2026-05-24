@@ -9,23 +9,13 @@ import { useMemo } from 'react';
 import type { Day, Entry, Hotel } from '../types/trip';
 import { getStopDisplayTitle } from '../lib/stopDisplay';
 
-/* ===== Types ===== */
+/* ===== Types =====
+ * v2.33.57 round 11: MapPin / MapPinType 拆到 src/lib/mapTypes 解 lib→hooks
+ * reverse import（lib/mapHelpers 要用 MapPin）。仍 re-export 維持 backward
+ * compat（17+ 個 caller 不動）。 */
 
-export type MapPinType = 'entry' | 'hotel';
-
-export interface MapPin {
-  id: number;
-  type: MapPinType;
-  index: number;       // 顯示順序 (1-based)，hotel 用 0
-  title: string;
-  lat: number;
-  lng: number;
-  time?: string | null;
-  googleRating?: number | null;
-  travelMin?: number | null;
-  travelType?: string | null;
-  sortOrder: number;
-}
+export type { MapPin, MapPinType } from '../lib/mapTypes';
+import type { MapPin } from '../lib/mapTypes';
 
 export interface UseMapDataReturn {
   pins: MapPin[];

@@ -21,11 +21,26 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useGoogleMap } from '../../hooks/useGoogleMap';
-import { useRoute, type Coord } from '../../hooks/useRoute';
-import { dayColor, dayPolylineStyle } from '../../lib/dayPalette';
-import type { MapPin } from '../../hooks/useMapData';
+import { useRoute } from '../../hooks/useRoute';
+import { useMapMarkers } from '../../hooks/useMapMarkers';
+import { useMapViewport } from '../../hooks/useMapViewport';
+import { useMapSegments } from '../../hooks/useMapSegments';
+import { dayColor } from '../../lib/dayPalette';
+import {
+  markerStyle,
+  markerContent,
+  segmentStyle,
+  buildSegments,
+  type MarkerStyle,
+  type SegmentPair,
+} from '../../lib/mapHelpers';
+import type { MapPin, Coord } from '../../lib/mapTypes';
 import MapSkeleton from './MapSkeleton';
 import PageErrorState from '../shared/PageErrorState';
+
+// Re-export for callers that still import from OceanMap (backward compat)
+export { markerStyle, markerContent, buildSegments };
+export type { MarkerStyle, SegmentPair };
 
 /* ===== Props ===== */
 
@@ -61,124 +76,6 @@ export interface OceanMapProps {
   zoomControlPosition?: 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT';
 }
 
-/* ===== Marker content construction (AdvancedMarkerElement HTML div) ===== */
-
-const ACCENT_COLOR = '#D97848';
-const ACCENT_FG = '#FFFFFF';
-const IDLE_BG = '#FFFFFF';
-const IDLE_BORDER = '#C1C1C1';
-const IDLE_FG = '#6A6A6A';
-const PAST_BORDER = '#E0E0E0';
-const PAST_FG = '#C1C1C1';
-
-/**
- * markerStyle — derive marker visual props (colors, sizes) per state.
- * Exported for unit tests; the pure-data shape lets us assert visual contract
- * without rendering into DOM.
- *
- * v2.31.75: AdvancedMarkerElement 遷移後 markerIcon (return Symbol+label) 拆成兩個
- * helper：`markerStyle` (pure data) + `markerContent` (build DOM)。
- */
-type MarkerState = 'focused' | 'past' | 'idle';
-
-const STATE_COLORS: Record<MarkerState, { fill: string; stroke: string; text: string }> = {
-  focused: { fill: ACCENT_COLOR, stroke: ACCENT_FG, text: ACCENT_FG },
-  past:    { fill: IDLE_BG,      stroke: PAST_BORDER, text: PAST_FG },
-  idle:    { fill: IDLE_BG,      stroke: IDLE_BORDER, text: IDLE_FG },
-};
-
-export interface MarkerStyle {
-  /** Background color (formerly Symbol fillColor). */
-  fill: string;
-  /** Border color (formerly Symbol strokeColor). */
-  stroke: string;
-  /** Label text color (formerly MarkerLabel color). */
-  text: string;
-  /** Diameter in px (formerly Symbol scale × 2). 18→36, 14→28. */
-  size: number;
-  /** Border width in px (formerly Symbol strokeWeight). */
-  borderWidth: number;
-  /** Label font size (formerly MarkerLabel fontSize). */
-  fontSize: string;
-  /** Label text (pin index as string). */
-  label: string;
-  /** Stacking order. focused → 1000，其他 undefined. */
-  zIndex?: number;
-}
-
-export function markerStyle(
-  pin: MapPin,
-  isFocused: boolean,
-  isPast: boolean,
-  dayCol?: string,
-): MarkerStyle {
-  const state: MarkerState = isFocused ? 'focused' : isPast ? 'past' : 'idle';
-  const base = STATE_COLORS[state];
-  // dayCol overrides idle stroke + text only — focused/past keep their tokens.
-  const stroke = state === 'idle' && dayCol ? dayCol : base.stroke;
-  const text = state === 'idle' && dayCol ? dayCol : base.text;
-
-  return {
-    fill: base.fill,
-    stroke,
-    text,
-    size: isFocused ? 36 : 28,
-    borderWidth: isFocused ? 2 : 1.5,
-    fontSize: isFocused ? '13px' : '12px',
-    label: String(pin.index),
-    zIndex: isFocused ? 1000 : undefined,
-  };
-}
-
-/**
- * markerContent — build the HTMLDivElement consumed by
- * `AdvancedMarkerElement.content`. Pure DOM, no React.
- *
- * v2.31.84：v2.31.79 fix 1px halo + 1.5px ring 不夠強，user 反映 prod
- * 仍難讀（4 marker 重疊那覇都心 5/6/4/3）。三層加強：
- *   1. text-shadow halo 1px → 2px：marker overlap 時下方 marker bg 露出，
- *      halo 用自己 fill 蓋住，2px halo 比 1px 明顯
- *   2. box-shadow 加 `0 0 0 3px rgba(0,0,0,0.18)` drop shadow ring：
- *      所有 state 統一 elevation，marker 間有明顯陰影分離（不依賴 fill 同
- *      色，普適於 idle/focused/past）
- *   3. 保留 v2.31.79 inner 1.5px ${fill} ring（marker overlap 蓋層邏輯）
- */
-export function markerContent(style: MarkerStyle): HTMLDivElement {
-  const div = document.createElement('div');
-  div.className = 'tp-marker';
-  div.textContent = style.label;
-  // v2.31.93：focused marker (zIndex ≥ 1000) 加 accent-subtle outer ring +
-  // 加深 drop shadow，user 反映「被點的 stop 沒浮在最高 被壓住了」。
-  // Google AdvancedMarkerElement.zIndex 已給 DOM stacking，但相鄰 marker
-  // overlap 時視覺凸度不夠 — CSS box-shadow 補強。
-  const isFocused = typeof style.zIndex === 'number' && style.zIndex >= 1000;
-  const shadow = isFocused
-    ? `0 0 0 1.5px ${style.fill}, 0 0 0 5px rgba(217, 120, 72, 0.35), 0 6px 16px rgba(42, 31, 24, 0.35)`
-    : `0 0 0 1.5px ${style.fill}, 0 0 0 3px rgba(0, 0, 0, 0.18)`;
-  div.style.cssText = `
-    width: ${style.size}px;
-    height: ${style.size}px;
-    border-radius: 50%;
-    background: ${style.fill};
-    border: ${style.borderWidth}px solid ${style.stroke};
-    box-shadow: ${shadow};
-    color: ${style.text};
-    font-size: ${style.fontSize};
-    font-weight: 700;
-    font-family: Inter, 'Noto Sans TC', sans-serif;
-    text-shadow: -2px -2px 0 ${style.fill}, 2px -2px 0 ${style.fill}, -2px 2px 0 ${style.fill}, 2px 2px 0 ${style.fill}, 0 -2px 0 ${style.fill}, 0 2px 0 ${style.fill}, -2px 0 0 ${style.fill}, 2px 0 0 ${style.fill};
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    user-select: none;
-    cursor: pointer;
-    position: relative;
-    ${isFocused ? 'z-index: 1000;' : ''}
-  `;
-  return div;
-}
-
 /* ===== Inline styles (scoped to this component) ===== */
 
 const SCOPED_STYLES = `
@@ -207,57 +104,6 @@ interface SegmentProps {
   isActive: boolean;
   /** If provided, polyline uses dayPolylineStyle(dayNum) for color + dashArray (color-blind aid). */
   dayNum?: number;
-}
-
-interface PolylineStyle {
-  strokeColor: string;
-  strokeOpacity: number;
-  strokeWeight: number;
-  /** Set to dashed when approx fallback OR even-day (color-blind aid). */
-  icons?: google.maps.IconSequence[];
-}
-
-/**
- * Build Google Polyline style options matching prior Leaflet style logic.
- * dashArray '6,6' → use IconSequence with line dash icon (Google's idiom).
- */
-function segmentStyle(isActive: boolean, approx: boolean, dayNum?: number): PolylineStyle {
-  let color: string;
-  let weight: number;
-  let dashed: boolean;
-
-  if (dayNum !== undefined) {
-    const palette = dayPolylineStyle(dayNum);
-    color = palette.color;
-    weight = isActive ? 4 : palette.weight;
-    dashed = approx || palette.dashArray !== undefined;
-  } else {
-    color = isActive ? ACCENT_COLOR : '#C8B89F';
-    weight = isActive ? 4 : 3;
-    dashed = approx;
-  }
-
-  const style: PolylineStyle = {
-    strokeColor: color,
-    strokeOpacity: dashed ? 0 : (isActive ? 0.85 : 0.6),
-    strokeWeight: weight,
-  };
-
-  if (dashed) {
-    style.icons = [
-      {
-        icon: {
-          path: 'M 0,-1 0,1',
-          strokeOpacity: isActive ? 0.85 : 0.6,
-          scale: weight,
-        },
-        offset: '0',
-        repeat: '12px',
-      },
-    ];
-  }
-
-  return style;
 }
 
 const Segment = memo(function Segment({ map, from, to, isActive, dayNum }: SegmentProps) {
@@ -297,62 +143,6 @@ const Segment = memo(function Segment({ map, from, to, isActive, dayNum }: Segme
 
   return null;
 });
-
-/* ===== Pure segment-pair builder (exported for unit tests) ===== */
-
-export interface SegmentPair {
-  from: Coord;
-  to: Coord;
-  isActive: boolean;
-  key: string;
-  dayNum?: number;
-}
-
-export function buildSegments(params: {
-  pins: MapPin[];
-  pinsByDay?: Map<number, MapPin[]>;
-  focusedIdx: number;
-  pinIndexById: Map<number, number>;
-  dayNum?: number;
-}): SegmentPair[] {
-  const { pins, pinsByDay, focusedIdx, pinIndexById, dayNum } = params;
-  const pairs: SegmentPair[] = [];
-
-  if (pinsByDay && pinsByDay.size > 0) {
-    const sortedDays = [...pinsByDay.keys()].sort((a, b) => a - b);
-    for (const d of sortedDays) {
-      const dayPins = [...(pinsByDay.get(d) ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
-      for (let i = 0; i < dayPins.length - 1; i++) {
-        const a = dayPins[i]!;
-        const b = dayPins[i + 1]!;
-        const aIdx = pinIndexById.get(a.id) ?? -1;
-        const bIdx = pinIndexById.get(b.id) ?? -1;
-        pairs.push({
-          from: { lat: a.lat, lng: a.lng },
-          to: { lat: b.lat, lng: b.lng },
-          isActive: focusedIdx === aIdx || focusedIdx === bIdx,
-          key: `${a.id}->${b.id}`,
-          dayNum: d,
-        });
-      }
-    }
-    return pairs;
-  }
-
-  if (pins.length < 2) return [];
-  for (let i = 0; i < pins.length - 1; i++) {
-    const a = pins[i]!;
-    const b = pins[i + 1]!;
-    pairs.push({
-      from: { lat: a.lat, lng: a.lng },
-      to: { lat: b.lat, lng: b.lng },
-      isActive: focusedIdx === i || focusedIdx === i + 1,
-      key: `${a.id}->${b.id}`,
-      dayNum,
-    });
-  }
-  return pairs;
-}
 
 /* ===== Main component ===== */
 
@@ -430,134 +220,41 @@ const OceanMap = memo(function OceanMap({
     return m;
   }, [pinsByDay, dayNum, pins]);
 
-  /* --- Markers: create once per pin-set, diff-update on focus change --- */
-  // v2.31.75: google.maps.Marker (deprecated) → AdvancedMarkerElement。
-  const markersRef = useRef<Map<number, google.maps.marker.AdvancedMarkerElement>>(new Map());
+  /* --- 3 hook composition (order matches original line 220 → 299 → 343) --- */
 
-  useEffect(() => {
-    if (!map) return;
-    const markers = new Map<number, google.maps.marker.AdvancedMarkerElement>();
-    const listeners: google.maps.MapsEventListener[] = [];
-    for (const pin of visiblePins) {
-      const style = markerStyle(pin, false, false, pinIdToDayColor.get(pin.id));
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        position: { lat: pin.lat, lng: pin.lng },
-        map,
-        content: markerContent(style),
-        title: `第 ${pin.index} 站：${pin.title}`,
-        // gmpClickable 預設 false；onMarkerClick 才需要點擊
-        gmpClickable: onMarkerClick !== undefined,
-      });
-      if (onMarkerClick) {
-        // AdvancedMarkerElement: 'gmp-click' event (vs 舊 Marker 的 'click')
-        listeners.push(marker.addListener('gmp-click', () => onMarkerClick(pin.id)));
-      }
-      markers.set(pin.id, marker);
-    }
-    markersRef.current = markers;
-    return () => {
-      for (const l of listeners) l.remove();
-      // AdvancedMarkerElement: 設 map=null 從 map 移除
-      for (const m of markers.values()) m.map = null;
-      if (markersRef.current === markers) markersRef.current = new Map();
-    };
-  }, [map, visiblePins, onMarkerClick, pinIdToDayColor]);
+  useMapMarkers({
+    map,
+    visiblePins,
+    visiblePinsById,
+    pinIndexById,
+    focusId,
+    focusedIdx,
+    isPastPin,
+    pinIdToDayColor,
+    onMarkerClick,
+  });
 
-  // Diff-based focus update.
-  const prevFocusRef = useRef<{
-    focusId?: number;
-    focusedIdx: number;
-    markers: Map<number, google.maps.marker.AdvancedMarkerElement> | null;
-  }>({ focusedIdx: -1, markers: null });
+  useMapViewport({
+    map,
+    mode,
+    focusId,
+    pins,
+    visiblePins,
+    pinIndexById,
+    fitOnce,
+    panToCoord,
+    fitBounds,
+    flyTo,
+  });
 
-  useEffect(() => {
-    const markers = markersRef.current;
-    const prev = prevFocusRef.current;
-    const rebuilt = prev.markers !== markers;
-
-    const affected = new Set<number>();
-    if (rebuilt) {
-      for (const pin of visiblePins) affected.add(pin.id);
-    } else {
-      if (prev.focusId !== undefined) affected.add(prev.focusId);
-      if (focusId !== undefined) affected.add(focusId);
-      const prevIdx = prev.focusedIdx;
-      const currIdx = focusedIdx;
-      if (prevIdx !== currIdx) {
-        const lo = Math.max(0, Math.min(prevIdx, currIdx));
-        const hi = Math.max(prevIdx, currIdx);
-        if (hi >= 0) {
-          for (const pin of visiblePins) {
-            const idx = pinIndexById.get(pin.id) ?? -1;
-            if (idx >= lo && idx <= hi) affected.add(pin.id);
-          }
-        }
-      }
-    }
-
-    for (const pinId of affected) {
-      const marker = markers.get(pinId);
-      const pin = visiblePinsById.get(pinId);
-      if (!marker || !pin) continue;
-      const isFocused = pinId === focusId;
-      const style = markerStyle(pin, isFocused, isPastPin(pinId), pinIdToDayColor.get(pinId));
-      // AdvancedMarkerElement: 整個 content node 換掉（diff-update via DOM replace）
-      marker.content = markerContent(style);
-      marker.zIndex = isFocused ? 1000 : null;
-    }
-
-    prevFocusRef.current = { focusId, focusedIdx, markers };
-  }, [map, onMarkerClick, visiblePins, visiblePinsById, focusId, focusedIdx, pinIndexById, isPastPin, pinIdToDayColor]);
-
-  /* --- Viewport fit / focus follow --- */
-  const fitDoneRef = useRef(false);
-  useEffect(() => {
-    if (!map) return;
-    if (mode === 'detail' && visiblePins[0]) {
-      map.setCenter({ lat: visiblePins[0].lat, lng: visiblePins[0].lng });
-      map.setZoom(15);
-      return;
-    }
-    if (focusId !== undefined) {
-      const idx = pinIndexById.get(focusId);
-      const pin = idx !== undefined ? pins[idx] : undefined;
-      if (pin) {
-        const z = map.getZoom() ?? 11;
-        flyTo({ lat: pin.lat, lng: pin.lng }, z < 12 ? 13 : undefined);
-        return;
-      }
-    }
-    if (fitOnce && fitDoneRef.current) return;
-    const latlngs = visiblePins.map((p) => ({ lat: p.lat, lng: p.lng }));
-    fitBounds(latlngs);
-    fitDoneRef.current = true;
-  }, [map, mode, focusId, pins, pinIndexById, visiblePins, fitBounds, flyTo, fitOnce]);
-
-  /* --- Resize on container changes (Suspense / mode toggle) --- */
-  useEffect(() => {
-    if (!map) return;
-    const t = setTimeout(() => {
-      google.maps.event.trigger(map, 'resize');
-    }, 50);
-    return () => clearTimeout(t);
-  }, [map, mode]);
-
-  /* --- Imperative soft pan --- */
-  useEffect(() => {
-    if (!map || !panToCoord) return;
-    if (typeof panToCoord.zoom === 'number') {
-      // v2.31.87：zoom 給就 flyTo (pan + setZoom 同步)，TimelineRail expand/collapse 用。
-      flyTo({ lat: panToCoord.lat, lng: panToCoord.lng }, panToCoord.zoom);
-    } else {
-      map.panTo({ lat: panToCoord.lat, lng: panToCoord.lng });
-    }
-  }, [map, panToCoord, flyTo]);
-
-  /* --- Segments (polylines) --- */
-  const segments = useMemo(() => {
-    if (!showRoutes) return [];
-    return buildSegments({ pins, pinsByDay, focusedIdx, pinIndexById, dayNum });
-  }, [pins, showRoutes, focusedIdx, pinsByDay, pinIndexById, dayNum]);
+  const segments = useMapSegments({
+    pins,
+    pinsByDay,
+    showRoutes,
+    focusedIdx,
+    pinIndexById,
+    dayNum,
+  });
 
   // Loading + error overlay (Google Maps JS bundle ~300-500KB)
   const showSkeleton = !map && !loadError;
