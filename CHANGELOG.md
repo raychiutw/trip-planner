@@ -3,6 +3,47 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.70] - 2026-05-24
+
+**Round 20 — shared mock factories (Round 15 deferred)**
+
+User: "Loop 全部都做" → 開始 Round 15 大型架構 defer 的 actionable 部分。
+此 PR 建 shared mock factory 防 v2.31.14/15/27 family drift bug 重演。
+
+**NEW**
+
+- `tests/unit/__factories__/` — 6 個 factory:
+  - `makeTrip` + `makeTripListItem` — trip shape (含 TripDestination camelCase)
+  - `makeEntry` + `makeStopPoi` — entry shape (含 startTime/endTime/master/alternates)
+  - `makeDay` — day shape (含 timeline entry array)
+  - `makeUser` + `makeAuthData` — auth shape (對齊 AuthData type)
+  - `makePoiFavorite` — favorite shape (含 usages camelCase)
+  - `makeSegment` — TripSegment shape (fromEntryId / toEntryId / distanceM)
+- `tests/unit/__helpers__/renderPage.tsx` — wrap MemoryRouter +
+  ActiveTripProvider + NewTripProvider for unit test (取代 17+ inline 重複 setup)
+
+**WHY**
+
+Round 15 code-reviewer agent finding: 23 個 test 各自 `vi.mock('apiClient')` + 22
+個各自 `vi.mock('useCurrentUser')`，mock shape drift 重演 v2.31.14/15/27 camelCase
+bug 家族 — test snake_case 但 backend camelCase → false-green test mask real bug。
+
+Factory canonical shape **對齊 backend response (deepCamel'd)**:
+- snake_case 寫法被 TypeScript 阻擋 + runtime shape check
+- 新 test 直接 import + `Partial<T>` override 既可
+
+**TESTING**
+
+- `tests/unit/round-20-mock-factories.test.ts` — 12 個 smoke test 驗 shape
+- 2633 / 2633 全綠 (+12 從 2621)
+- tsc clean
+- 既有 test 不動 (純 additive，現有 inline mock 之後可漸進 migrate)
+
+**Migration path (defer follow-up)**
+
+下個 PR 可開始 migrate hot-spot test (e.g. edit-entry-page / chat-page) inline
+mock 改用 factory，drop 重複 fixture data。
+
 ## [2.33.69] - 2026-05-24
 
 **Round 19 — runbooks + docs cleanup (Round 18 deferred items)**
