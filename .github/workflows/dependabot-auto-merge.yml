@@ -1,0 +1,49 @@
+name: Dependabot auto-merge
+
+# 自動 enable auto-merge on dependabot 安全（safe）類型的更新：
+#   1. Security update (任何 severity, alert-state=fixed) — 立即 queue merge
+#   2. patch / minor version bump (非 security) — 也 queue merge
+#   3. major version bump — 留 default，人工 review
+#
+# Why: dependabot config 已限 vite/tailwind major 不 PR，剩 minor/patch 風險低；
+# 手動 merge 5 個 deps PR/週是 toil。Security update 不卡是核心 security
+# posture（CVE 修復不該排隊等人工 review）。
+#
+# Note: master 目前無 branch protection → `gh pr merge --auto` 等 status
+# checks 全綠後 squash merge；無 required check 則立即 merge。
+# 不需 approve step（repo 設定 can_approve_pull_request_reviews=false）。
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # actions/checkout@v4 pinned per OpenSSF
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      # dependabot/fetch-metadata@v2.4.0 pinned per OpenSSF
+      - name: Fetch dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@d7267f607e9d3fb96fc2fbe83e0af444713e90b7 # v2.4.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge (squash) on safe updates
+        if: |
+          steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+          steps.meta.outputs.update-type == 'version-update:semver-minor' ||
+          steps.meta.outputs.alert-state == 'fixed'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
