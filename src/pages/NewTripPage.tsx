@@ -146,7 +146,7 @@ const SCOPED_STYLES = `
 }
 .tp-new-quota-title { font-weight: 700; color: var(--color-foreground); }
 .tp-new-quota-sum { color: var(--color-muted); font-variant-numeric: tabular-nums; }
-.tp-new-quota-sum.is-mismatch { color: var(--color-priority-high-dot, #c0392b); font-weight: 700; }
+.tp-new-quota-sum.is-mismatch { color: var(--color-priority-high-dot); font-weight: 700; }
 .tp-new-quota-rows {
   display: flex; flex-direction: column; gap: 6px;
 }

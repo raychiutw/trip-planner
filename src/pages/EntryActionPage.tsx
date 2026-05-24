@@ -193,11 +193,11 @@ body.dark .tp-entry-action-time-select {
 .tp-entry-action-error {
   margin: 16px 0 0;
   padding: 10px 12px;
-  background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.08));
-  border: 1px solid var(--color-priority-high-dot, #c0392b);
+  background: var(--color-priority-high-bg);
+  border: 1px solid var(--color-priority-high-dot);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-footnote);
-  color: var(--color-priority-high-dot, #c0392b);
+  color: var(--color-priority-high-dot);
   display: flex; align-items: flex-start; gap: 6px;
 }
 .tp-entry-action-error .svg-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }

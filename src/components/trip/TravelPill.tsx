@@ -83,15 +83,15 @@ const SCOPED_STYLES = `
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.10));
-  color: var(--color-priority-high-dot, #c0392b);
+  background: var(--color-priority-high-bg);
+  color: var(--color-priority-high-dot);
   font-size: var(--font-size-caption);
   font-weight: 600;
 }
 .tp-travel-pill-recompute {
   appearance: none; background: none; border: 0; padding: 2px 6px;
   margin-left: 2px;
-  color: var(--color-priority-high-dot, #c0392b);
+  color: var(--color-priority-high-dot);
   font: inherit; font-size: var(--font-size-caption);
   font-weight: 700;
   cursor: pointer;
@@ -100,8 +100,8 @@ const SCOPED_STYLES = `
   min-height: var(--spacing-tap-min);
   display: inline-flex; align-items: center;
 }
-.tp-travel-pill-recompute:hover { background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.16)); filter: brightness(0.95); }
-.tp-travel-pill-recompute:focus-visible { outline: 2px solid var(--color-priority-high-dot, #c0392b); outline-offset: 2px; }
+.tp-travel-pill-recompute:hover { background: var(--color-priority-high-bg); filter: brightness(0.95); }
+.tp-travel-pill-recompute:focus-visible { outline: 2px solid var(--color-priority-high-dot); outline-offset: 2px; }
 @media (max-width: 760px) {
   /* v2.30.12: mobile dot 中心 56→44px (page padding 16 + grip 20 + gap 8 + dot/2 12 — 對齊 .tp-rail-detail mobile margin-left). */
   .tp-travel-pill-wrap { margin: 6px 0 6px 44px; }

@@ -3,6 +3,45 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.56] - 2026-05-24
+
+**Round 6c style token drift fix (backlog #124 partial)**
+
+audit Round 6c "style helper" finding 時實際發現的是 27+ 個寫死的
+stale Flat UI 紅 `#c0392b` fallback，跟現在 terracotta token
+`#C13515` 不一致。strip 所有 fallback（非 update value）+ 立 guard test。
+
+**VISUAL (token drift)**
+
+10 個 component / page 全部 `var(--color-priority-high-dot, #c0392b)` 改
+`var(--color-priority-high-dot)`：
+
+- `src/components/shared/AlertPanel.tsx` (5)
+- `src/components/shared/ConflictModal.tsx` (3)
+- `src/components/shared/ConfirmModal.tsx` (7)
+- `src/components/trip/TravelPill.tsx` (5)
+- `src/components/trip/CustomPoiForm.tsx` (destructive, 1)
+- `src/components/trip/TimelineRail.tsx` (inline style, 2)
+- `src/pages/NewTripPage.tsx` (1)
+- `src/pages/AddStopPage.tsx` (destructive, 2)
+- `src/pages/AccountPage.tsx` (6)
+- `src/pages/EntryActionPage.tsx` (3)
+
+CSS variable 在 2026 全 browser universal，token 未定義 = UI 整體已壞，
+fallback 救不了反而長期 drift。strip 後若 token miss 直接 inherit /
+transparent，視覺上更容易 spot 問題。
+
+**TESTING**
+
+- `tests/unit/no-stale-terracotta-fallback.test.ts` — walk src/+css/ grep
+  `#c0392b` / `rgba(192, 57, 43, ...)`。未來偷渡舊 fallback 回來都 fail。
+  + 驗證 `css/tokens.css` 仍含 canonical token (對齊 DESIGN.md)。
+- `npm test` 全綠 2394 / 2394 (+2)。
+
+#124 部分完成；OceanMap 拆分仍待 mockup 決策。
+
+doc: docs/code-review/round-6c-style-token-drift.md
+
 ## [2.33.55] - 2026-05-24
 
 **Round 5d residuals — atomic write fixes (backlog #122)**

@@ -580,7 +580,7 @@ const SCOPED_STYLES = `
   line-height: 1.45;
 }
 .tp-add-stop-form-row-error {
-  color: var(--color-destructive, #c0392b);
+  color: var(--color-destructive);
   font-size: var(--font-size-caption2);
   margin-top: 2px;
 }
@@ -1324,7 +1324,7 @@ export default function AddStopPage() {
                   ? <>已選 <strong>{totalSelected}</strong> 個 → DAY {String(dayNum).padStart(2, '0')}</>
                   : <>請先選擇加入哪天</>
                 }
-                {submitError && <span style={{ color: 'var(--color-destructive, #c0392b)', marginLeft: 8 }}>{submitError}</span>}
+                {submitError && <span style={{ color: 'var(--color-destructive)', marginLeft: 8 }}>{submitError}</span>}
               </span>
               <div className="tp-add-stop-actions">
                 <button
