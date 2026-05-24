@@ -68,13 +68,18 @@ describe('GET /api/trips/:id/entries/:eid', () => {
     expect(body.startTime).toBe('10:00');
   });
 
-  it('未認證 → 401', async () => {
+  it('未認證 + 非 published trip → 403（v2.33.97 sibling endpoint contract align requireTripReadAccess）', async () => {
+    // seedTrip 預設 published=1 → anon 可讀 (與 sibling /days /segments 一致)。
+    // 非 published trip 才 403 PERM_DENIED。建獨立 trip 避免污染其他 test。
+    await seedTrip(db, { id: 'trip-e-private', published: 0 });
+    const privDayId = await getDayId(db, 'trip-e-private', 1);
+    const privEntryId = await seedEntry(db, privDayId, { title: 'Private' });
     const ctx = mockContext({
-      request: new Request(`https://test.com/api/trips/trip-e/entries/${entryId}`, { method: 'GET' }),
+      request: new Request(`https://test.com/api/trips/trip-e-private/entries/${privEntryId}`, { method: 'GET' }),
       env,
-      params: { id: 'trip-e', eid: String(entryId) },
+      params: { id: 'trip-e-private', eid: String(privEntryId) },
     });
-    expect((await callHandler(onRequestGet, ctx)).status).toBe(401);
+    expect((await callHandler(onRequestGet, ctx)).status).toBe(403);
   });
 
   it('entry 不屬於該 trip → 404', async () => {

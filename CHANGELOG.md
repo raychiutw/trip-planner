@@ -3,6 +3,65 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.97] - 2026-05-25
+
+**Round 46 — /review batch 1: 5 個 HIGH security/correctness fix**
+
+3 個 specialist agent (code-reviewer / security-auditor / test-engineer) 平行
+audit 全 repo → 28 個 finding。本批 ship 最 critical 5 個 HIGH。
+
+**SECURITY**
+
+1. **`functions/api/oauth/token.ts` cascade revoke ordering**（HIGH）：
+   `client_id !== clientId` check 移到 `consumed` cascade 之前。原順序讓任意
+   registered client B 提交 client A 的 leaked-once refresh_token / auth code
+   即觸發 victim grantId family revoke = permanent DoS handle。
+   修 refresh_token grant + auth_code grant 兩處。
+
+2. **`functions/api/_middleware.ts:184` CSRF gate for `/api/oauth/consent`**
+   （HIGH）：之前 `startsWith('/api/oauth/')` 一律 skip CSRF。`/api/oauth/consent`
+   是 session-cookie 認證 browser form POST，SameSite=Lax 對 top-level
+   navigation form submit 仍允許。攻擊者從 evil.com 觸發 top-level POST
+   /api/oauth/consent 用 victim session 對 attacker_client 點 allow → 取得
+   authorization_code = account takeover。改 `pathname !== '/api/oauth/consent'`
+   排除即可走 CSRF gate。
+
+**CORRECTNESS**
+
+3. **`functions/api/poi-favorites/[id]/add-to-trip.ts:208-217` 拆 `last_insert_rowid()`
+   cross-statement**（HIGH）：D1 batch 沒文檔保證 batched prepared statement
+   間的 `last_insert_rowid()` connection-scoped 拿到正確 id。Future D1
+   pipeline / serialise 改變後可能 FK 接錯 row → silent corruption。
+   改 INSERT RETURNING id → explicit bind to trip_entry_pois。Trade-off:
+   trip_entries commit 後 trip_entry_pois INSERT 失敗 → entry orphan（可重新
+   attach；非 data loss）。
+
+4. **`functions/api/trips/[id]/entries/batch.ts` sort_order UNIQUE invariant
+   validation**（HIGH）：客端 misbehave 送同 (day_id, sort_order) duplicate
+   兩筆 UPDATE 都 commit → timeline order 非 deterministic silently corrupt。
+   Reject upfront with DATA_VALIDATION 而非靠 DDL UNIQUE（暫態衝突需）。
+
+5. **`functions/api/trips/[id]/entries/[eid].ts:30` requireAuth → requireTripReadAccess**
+   （HIGH）：sibling endpoint contract drift — `days.ts` `/segments/index.ts`
+   `/[id].ts` 全走 `requireTripReadAccess`（published trip 允許 anon），
+   `entries/[eid].ts` GET 走 `requireAuth` → 同 trip 經 `/days/:num` anon
+   可讀，但 `/entries/:eid` 直連 anon 401。修對齊。Tests 更新 401 → 403
+   non-published case。
+
+**Verified**
+
+- `npm test` → 2665/2665 unit pass
+- `npm run test:api` → 731/731 integration pass
+- `tsc --noEmit` clean
+
+**Next batch**（v2.33.98 plan）
+
+- 5 個 HIGH security 剩：SEC-1 oauth/callback/google email merge gap +
+  SEC-2 requireFavoriteActor permission ordering + SEC-3 permissions.ts
+  email-verified guard
+- 9 個 MEDIUM finding
+- 10 個 test coverage gap
+
 ## [2.33.95] - 2026-05-24
 
 **Round 44 — /simplify EFF-2 middleware body scan skip for JSON**
