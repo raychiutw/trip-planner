@@ -114,6 +114,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const now = new Date().toISOString();
 
   // 5. Lookup or create auth_identities + users
+  // v2.33.98 security: email merge — 之前若 user 先用 local password signup 同 email，
+  // 再用 Google login 走 else 分支 INSERT INTO users 撞 UNIQUE constraint → 500
+  // 也阻擋了合法 user 用兩個 provider。改：先 SELECT users by email 看是否存在，
+  // 若存在 + email_verified_at 已設 → link new auth_identity 到 existing user，
+  // 若存在但 unverified → reject (防 squat) 要求走 password reset 或 verify 路徑。
   const existing = await context.env.DB
     .prepare('SELECT user_id FROM auth_identities WHERE provider = ? AND provider_user_id = ?')
     .bind('google', sub)
@@ -127,19 +132,52 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       .bind(now, 'google', sub)
       .run();
   } else {
-    userId = crypto.randomUUID();
-    await context.env.DB
-      .prepare(
-        'INSERT INTO users (id, email, email_verified_at, display_name, avatar_url) VALUES (?, ?, ?, ?, ?)',
-      )
-      .bind(userId, email, email_verified ? now : null, name ?? null, picture ?? null)
-      .run();
-    await context.env.DB
-      .prepare(
-        'INSERT INTO auth_identities (user_id, provider, provider_user_id, last_used_at) VALUES (?, ?, ?, ?)',
-      )
-      .bind(userId, 'google', sub, now)
-      .run();
+    // v2.33.98 security: new account creation 路徑強制 email_verified=true。
+    // 防 attacker 用 alias email 註冊 Google account 預先 squat victim's email。
+    if (!email_verified) {
+      return errorResponse(
+        'OAUTH_EMAIL_UNVERIFIED',
+        'Google account email 未驗證，請先在 Google 完成 email 驗證後再登入',
+        400,
+      );
+    }
+    // 檢查 email 是否已被 local provider 佔用
+    const existingUserByEmail = await context.env.DB
+      .prepare('SELECT id, email_verified_at FROM users WHERE email = ?')
+      .bind(email)
+      .first<{ id: string; email_verified_at: string | null }>();
+
+    if (existingUserByEmail) {
+      // Email 已存在 — 若已驗證則 link Google identity；否則 reject 防 squat
+      if (!existingUserByEmail.email_verified_at) {
+        return errorResponse(
+          'OAUTH_EMAIL_CONFLICT',
+          '此 email 已註冊但未驗證 — 請先用密碼登入並完成 email 驗證，再合併 Google 登入',
+          409,
+        );
+      }
+      userId = existingUserByEmail.id;
+      await context.env.DB
+        .prepare(
+          'INSERT INTO auth_identities (user_id, provider, provider_user_id, last_used_at) VALUES (?, ?, ?, ?)',
+        )
+        .bind(userId, 'google', sub, now)
+        .run();
+    } else {
+      userId = crypto.randomUUID();
+      await context.env.DB
+        .prepare(
+          'INSERT INTO users (id, email, email_verified_at, display_name, avatar_url) VALUES (?, ?, ?, ?, ?)',
+        )
+        .bind(userId, email, now, name ?? null, picture ?? null)
+        .run();
+      await context.env.DB
+        .prepare(
+          'INSERT INTO auth_identities (user_id, provider, provider_user_id, last_used_at) VALUES (?, ?, ?, ?)',
+        )
+        .bind(userId, 'google', sub, now)
+        .run();
+    }
   }
 
   // 6. Issue session + redirect
