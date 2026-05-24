@@ -29,6 +29,7 @@ import {
 } from '../_rate_limit';
 import { recordAuthEvent } from '../_auth_audit';
 import { normalizeEmail } from '../../../src/server/email-utils';
+import { AppError, errorResponse as appErrorResponse } from '../_errors';
 import type { Env } from '../_types';
 
 interface LoginBody {
@@ -47,11 +48,11 @@ interface AuthIdentityRow {
 // v2.33.87 EMERGENCY: 600000 → 100000 對齊 CF Workers PBKDF2 100k iteration 上限。
 const TIMING_PROBE_HASH = 'pbkdf2$100000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
-function errorResponse(code: string, message: string, status: number): Response {
-  return new Response(
-    JSON.stringify({ error: { code, message } }),
-    { status, headers: { 'content-type': 'application/json' } },
-  );
+// v2.33.96 simplify: 私有 errorResponse(code, msg, status) 收編。改 throw new
+// AppError 並由 _errors.ts canonical errorResponse() 統一處理 wire shape。
+// detail 帶 context-specific message override default ERROR_MESSAGES。
+function loginError(code: 'LOGIN_INVALID_INPUT' | 'LOGIN_INVALID', detail?: string): Response {
+  return appErrorResponse(new AppError(code, detail));
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -60,7 +61,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const password = body.password ?? '';
 
   if (!email || !password) {
-    return errorResponse('LOGIN_INVALID_INPUT', 'email + password 必填', 400);
+    return loginError('LOGIN_INVALID_INPUT');
   }
 
   // V2-P6 rate limit: per-IP + per-email buckets (defence in depth)
@@ -110,7 +111,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       failureReason: !identity ? 'unknown_email' : 'wrong_password',
       metadata: { email },
     }, context.env);
-    return errorResponse('LOGIN_INVALID', 'email 或密碼錯誤', 401);
+    return loginError('LOGIN_INVALID');
   }
 
   // Success: reset counters (legitimate user not penalised by past failed attempts)

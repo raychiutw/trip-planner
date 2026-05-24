@@ -46,6 +46,13 @@ const STATUS_MAP: Partial<Record<ErrorCodeType, number>> = {
   MISSING_MASTER: 400,
   INVALID_ORDER: 422,
   TRIP_EMPTY: 422,
+  // V2 OAuth login / signup (v2.33.96)
+  LOGIN_INVALID_INPUT: 400,
+  LOGIN_INVALID: 401,
+  SIGNUP_INVALID_EMAIL: 400,
+  SIGNUP_PASSWORD_TOO_SHORT: 400,
+  SIGNUP_EMAIL_TAKEN: 409,
+  SIGNUP_PASSWORD_FORMAT: 400,
 };
 
 export class AppError extends Error {

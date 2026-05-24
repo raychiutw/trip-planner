@@ -48,6 +48,15 @@ export const ErrorCode = {
   INVALID_ORDER: 'INVALID_ORDER',
   // AI 健檢 guard (v2.31.58)
   TRIP_EMPTY: 'TRIP_EMPTY',
+  // V2 OAuth login / signup user-facing errors (v2.33.96: 從 oauth/login.ts +
+  // signup.ts 私有 errorResponse(code,msg,status) 收編 — handler 一律 throw
+  // new AppError + middleware errorResponse() 統一處理)
+  LOGIN_INVALID_INPUT: 'LOGIN_INVALID_INPUT',
+  LOGIN_INVALID: 'LOGIN_INVALID',
+  SIGNUP_INVALID_EMAIL: 'SIGNUP_INVALID_EMAIL',
+  SIGNUP_PASSWORD_TOO_SHORT: 'SIGNUP_PASSWORD_TOO_SHORT',
+  SIGNUP_EMAIL_TAKEN: 'SIGNUP_EMAIL_TAKEN',
+  SIGNUP_PASSWORD_FORMAT: 'SIGNUP_PASSWORD_FORMAT',
 } as const;
 
 export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
@@ -79,6 +88,14 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   MISSING_MASTER: '每個停留點必須有一個正選景點',
   INVALID_ORDER: '備選排序格式不正確',
   TRIP_EMPTY: '此行程尚無景點，請先加入景點再執行健檢',
+  // V2 OAuth — message 為 default fallback；handler 可用 AppError 第 2 參數 detail
+  // 帶 context-specific text（例：`密碼至少 8 字元`）
+  LOGIN_INVALID_INPUT: 'email + password 必填',
+  LOGIN_INVALID: 'email 或密碼錯誤',
+  SIGNUP_INVALID_EMAIL: 'Email 格式無效',
+  SIGNUP_PASSWORD_TOO_SHORT: '密碼長度不足',
+  SIGNUP_EMAIL_TAKEN: '此 email 已註冊，請改用登入或忘記密碼',
+  SIGNUP_PASSWORD_FORMAT: '密碼格式不符',
 };
 
 // ---------------------------------------------------------------------------

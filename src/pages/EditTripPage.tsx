@@ -93,10 +93,8 @@ interface PendingDelete {
 type Lang = 'zh-TW' | 'en' | 'ja';
 
 interface TripDestApi {
-  // v2.31.13: backend response 經 deepCamel 是 camelCase（destOrder/dayQuota/subAreas）。
-  // trip_destinations 表沒 place_id 欄位 — 早期 snake_case 寫法是錯的，filter 用
-  // typeof d.place_id === 'number' 永遠 false → destinations 全 filter 掉 → UI
-  // 顯示「尚無目的地」(prod QA found)。改 camelCase + name-based valid check。
+  // Backend deepCamel'd response (destOrder/dayQuota/subAreas)。
+  // trip_destinations 表沒 place_id 欄位 — valid 條件以 name 為準。
   destOrder?: number;
   name?: string;
   lat?: number | null;

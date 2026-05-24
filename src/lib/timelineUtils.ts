@@ -19,13 +19,8 @@ interface ParsedTime {
 /* ===== Functions ===== */
 
 /**
- * v2.29.0: trip_entries.time DROPPED。從 entry.{startTime, endTime} 直接取 ParsedTime。
- *
- * v2.31.77 fix #196：原本 read sig 寫 `start_time` / `end_time` snake_case，但
- * backend `json()` 經 `deepCamel` → response 是 `startTime` / `endTime` camelCase。
- * snake_case read 永遠 undefined → parsed.start='' → TimelineRail row sub-line 整
- * 條時間 chip 消失（regression 從 v2.29.0 起 silently broken；prod 至今 hidden 因
- * desktop layout 視覺重點放在 POI 名稱與描述，沒人 file bug）。
+ * 從 entry.{startTime, endTime} (camelCase, deepCamel'd backend response) 取 ParsedTime。
+ * v2.29.0 trip_entries.time DROPPED → 改 read 雙欄；fields 是 camelCase。
  */
 export function parseEntryTime(entry: { startTime?: string | null; endTime?: string | null }): ParsedTime {
   const start = (entry.startTime ?? '').trim();
