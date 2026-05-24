@@ -168,10 +168,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const lowerEmail = normalizeEmail(email);
 
   // Lookup invited user — 決定走 existing-user vs new-email 分支
+  // v2.33.98 security: SELECT email_verified_at 一起拿，Branch A 用 verified-guard
+  // 防 attacker 預先 signup unverified 帳號 squat 別人 email，等 owner 邀請即取得權限。
   const invitedUser = await context.env.DB
-    .prepare('SELECT id, display_name FROM users WHERE email = ? LIMIT 1')
+    .prepare('SELECT id, display_name, email_verified_at FROM users WHERE email = ? LIMIT 1')
     .bind(lowerEmail)
-    .first<{ id: string; display_name: string | null }>();
+    .first<{ id: string; display_name: string | null; email_verified_at: string | null }>();
 
   // Trip title + inviter info 兩條分支共用（寄信都需要）
   const [trip, inviter] = await Promise.all([
@@ -188,9 +190,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const inviterDisplayName = inviter?.display_name ?? null;
   const inviterEmail = inviter?.email ?? auth.email;
 
-  if (invitedUser) {
-    // ===== Branch A: invited email 已註冊 =====
+  if (invitedUser && invitedUser.email_verified_at) {
+    // ===== Branch A: invited email 已註冊 + 已驗證 =====
     // V2 cutover phase 2: 純 user_id-keyed insert (email column dropped)
+    // v2.33.98 security: 要求 email_verified_at 不 null — unverified 帳號 fall
+    // back 到 Branch B (invitation token route)，invitee 點 link 才證明 mailbox
+    // 所有權，預防 attacker 預先 signup unverified squat 別人 email。
     let permRow: { id: number };
     try {
       const row = await context.env.DB
