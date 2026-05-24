@@ -610,10 +610,9 @@ body.dark {
     .ocean-rail-meta { font-size: var(--font-size-caption2); color: var(--color-muted); }
 
     .ocean-rail-body { position: relative; padding: 0; }
-    /* 連接線取消（user 2026-05-10 feedback：垂直連接線造成視覺破版）。
-     * 對應 mockup [data-rail-style="none"]:2209 把 rail-line display:none — 現在
-     * 統一採無連接線變體。CSS 規則保留供未來切回 line 變體用。 */
-    .ocean-rail-line { display: none; }
+    /* v2.33.61 round 14b: 拔 .ocean-rail-line CSS + DOM (TimelineRail.tsx)。
+     * 2026-05-10 連接線取消後 CSS 留 display:none 殼 + DOM 留節點 = 純 dead
+     * code。Switch back 變體用 git revert 即可。 */
 
     /* v2.30.12: 5-col grid (drop time col — 多數 user 不填 time，空 col 浪費 mobile 寬度).
      * Cols: grip(24) | dot(24) | icon(44) | body(1fr) | caret(20)。
@@ -798,8 +797,7 @@ body.dark {
         .ocean-rail-icon { width: 36px; height: 36px; }
         .ocean-rail-icon .svg-icon { width: 18px; height: 18px; }
         .ocean-rail-name { font-size: 14px; }
-        /* mockup .tp-detail-mobile-frame .tp-detail-rail-line:1918 — left: 96px */
-        .ocean-rail-line { left: 96px; }
+        /* v2.33.61 round 14b: 拔 .ocean-rail-line (見 line 613 dead-code 拔除說明) */
         /* Compact viewport titlebar 從 64 縮 56，--titlebar-h 同步調，
          * --sticky-chrome-h 跟 --anchor-scroll-margin 自動 follow。 */
         :root { --titlebar-h: 56px; }

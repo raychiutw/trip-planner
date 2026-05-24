@@ -334,9 +334,11 @@ async function checkDataAnomalies() {
 }
 
 // ── 清理舊 api_logs ────────────────────────────────────────────
-
+// v2.33.61 round 14b: api_logs retention 挪到 scripts/auth-cleanup.js (60d) —
+// daily-report.js 跑在 mac mini，offline > 30d 風險。auth-cleanup 走 CF Pages
+// cron 較可靠。本 function 留空殼避免 caller 改錯 (auth-cleanup 接手後即可拔)。
 async function cleanupOldLogs() {
-  await queryD1("DELETE FROM api_logs WHERE created_at < datetime('now', '-30 days')");
+  // No-op — see scripts/auth-cleanup.js step 9。
 }
 
 // ── Telegram 通知 ──────────────────────────────────────────────

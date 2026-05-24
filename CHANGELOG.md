@@ -3,6 +3,50 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.61] - 2026-05-24
+
+**Round 14b — Round 14 residuals (補做 deferred 中可立刻完成)**
+
+User 問 "所有 finding 都做了嗎" → audit Round 14 doc 發現 4 個 deferred
+item 其實可立刻做，補上。
+
+**SECURITY**
+
+- `package.json` `overrides` pin 3 個 HIGH CVE (npm audit fix):
+  - `@babel/plugin-transform-modules-systemjs` ≥ 7.29.4 (CVSS 8.2 RCE)
+  - `serialize-javascript` ≥ 7.0.5 (CVSS 8.1 RCE)
+  - `fast-uri` ≥ 3.1.2 (CVSS 7.5 path traversal)
+  - npm audit HIGH 全清，剩 5 個 moderate (postcss / ws / brace-expansion /
+    miniflare / wrangler) 待 upstream 升級
+
+**RETENTION SWEEP**
+
+- `auth-cleanup.js` +2 表：
+  - `trip_health_reports` 30 天 (completed_at) — findings_json 含 PII
+    (emergency contact / 醫療資訊)
+  - `api_logs` 60 天 — 從 daily-report.js 挪過來，CF cron 比 mac mini 可靠
+- `daily-report.js cleanupOldLogs` 改 no-op (auth-cleanup 接手)
+
+**CLEANUP**
+
+- `css/tokens.css` 拔 `.ocean-rail-line` CSS rule 兩處 — DOM 已拔 (v2.33.60)
+  + 留 display:none 殼 1.5 年沒切回 = 純 dead code
+
+**TESTING**
+
+- `tests/unit/round-14b-residuals.test.ts` — 10 個 source-grep guard
+- 2538 / 2538 全綠 (+10 從 2528)
+
+**真的還 defer 的（架構性）**:
+
+- CSP report-uri/report-to (需 Sentry dashboard 取 project CSP endpoint URL)
+- audit_log FK + ip_hash HMAC (需 infra 決策)
+- SW cache cross-user PII (需 cacheKey 設計)
+- Preview-deploy origin policy (架構)
+- Manifest maskable icon (需新 icon asset design)
+- CSP `style-src 'unsafe-inline'` (Tailwind 4 forced)
+- Migration 0011/0013 (歷史不可改)
+
 ## [2.33.60] - 2026-05-24
 
 **Round 14 — frontend infra + migrations review (backlog #133)**
