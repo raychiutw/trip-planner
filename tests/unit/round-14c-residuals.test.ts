@@ -44,9 +44,10 @@ describe('v2.33.62 #2 — CSP report-to + Report-To header', () => {
     expect(HEADERS).toMatch(/ingest\.us\.sentry\.io/);
   });
 
-  it('comment 標 Sentry dashboard 取 endpoint URL prerequisite', () => {
-    expect(HEADERS).toMatch(/Sentry dashboard/);
-    expect(HEADERS).toMatch(/取得/);
+  it('comment 含 DSN ↔ CSP endpoint mapping 公式（v2.33.81: 移除 dashboard 取 endpoint 指令）', () => {
+    // v2.33.81 hardcode 真正 endpoint，comment 改寫成 DSN ↔ CSP URL pattern 公式
+    expect(HEADERS).toMatch(/Sentry CSP/);
+    expect(HEADERS).toMatch(/DSN/);
   });
 });
 
