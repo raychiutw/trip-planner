@@ -5,7 +5,11 @@ compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
 
-[[d1_databases]]
+# v2.33.89 fix: CF Pages wrangler.toml 慣例 — 頂層 `[[d1_databases]]` 套用 preview，
+# production 須走 `[[env.production.d1_databases]]` 才 inject。之前頂層 binding +
+# 沒有 env.production override → prod context.env.DB undefined → 所有 /api/oauth/*
+# /api/my-trips TypeError 500（Pbkdf2 / DB.prepare）。多週時間 prod login 全壞。
+[[env.production.d1_databases]]
 binding = "DB"
 database_name = "trip-planner-db"
 database_id = "d61c42d5-8083-4e18-9b6c-70e133e37322"
