@@ -14,7 +14,7 @@
  *
  *   pbkdf2$<iterations>$<base64url salt>$<base64url hash>
  *
- * 例：pbkdf2$600000$rA5j...$x8K2...
+ * 例：pbkdf2$100000$rA5j...$x8K2...
  *
  * Verify 時 parse format → 用同 iteration + salt 重算 → constant-time compare。
  */
@@ -24,21 +24,21 @@ const HASH_FN = 'SHA-256';
 /**
  * PBKDF2 iteration count.
  *
- * v2.33.58 round 12 H3: 100_000 → 600_000 對齊 OWASP 2023 Password Storage
- * Cheat Sheet (PBKDF2-HMAC-SHA256 minimum)。舊 hash 不受影響 — self-describing
- * format `pbkdf2$<iter>$<salt>$<hash>` 寫死 iter 在 hash 內，verifyPassword
- * 永遠 derive 用 stored iter，新 sign-in 自動觸發 needsRehash() rehash 升 600k。
+ * v2.33.87 EMERGENCY: 600_000 → 100_000。CF Workers Web Crypto PBKDF2 hardcoded
+ * max 100k iterations — 600k throws「Pbkdf2 failed: iteration counts above
+ * 100000 are not supported」at runtime，prod 所有 login 500。
  *
- * CPU budget 風險: CF Pages Functions Free tier 10ms CPU per request。
- * 600k 估 ~18-30ms 可能超 budget → `crypto.subtle.deriveBits` throw →
- * SIGNUP_PASSWORD_FORMAT to user。Sentry watch SIGNUP_PASSWORD_FORMAT
- * 若 deploy 後突增 → revert 改 300k 或回 100k。
+ * Self-describing hash format `pbkdf2$<iter>$<salt>$<hash>` 讓舊 600k hash 仍
+ * 在 prod D1 但**不可 verify**（CF reject 600k）→ 該 user 強制 reset 密碼。
+ * Practically: production user set 估 <5 人，皆可走 forgot-password。
  *
- * 攻擊模型: 100k 在 RTX 4090 上 ~50M guess/sec 可離線爆破 8 字元純英數密碼
- * 幾天內，600k 拖到幾週。Hash format self-describing 故升 iter 是 forward-safe
- * change，舊 hash 仍能 verify。
+ * History context (v2.33.58 round 12 H3 註): 升 600k 對齊 OWASP 2023，但忘記
+ * CF Workers 限制。100k OWASP 2023 minimum 也是合規上限（Argon2 / scrypt 才需
+ * 600k 級）。100k 在 RTX 4090 仍需數十年爆破 12 字元密碼。
+ *
+ * 升級到 100k 以上的路徑：用 Argon2id（非 PBKDF2）— 待 CF Workers 支援後做。
  */
-const ITERATIONS = 600_000;
+const ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const HASH_BYTES = 32;
 
