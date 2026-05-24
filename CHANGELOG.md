@@ -3,6 +3,37 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.98] - 2026-05-25
+
+**Round 47 — /review batch 2: 2 個 HIGH security findings**
+
+**SECURITY**
+
+1. **`functions/api/oauth/callback/google.ts:117` email merge guard**（HIGH）：
+   之前若 user 先用 local password signup 同 email，再用 Google login 走 else 分
+   支 INSERT INTO users 撞 UNIQUE constraint → 500。修：先 SELECT users by
+   email，若已驗證 → link Google identity 到 existing user；若未驗證 →
+   `OAUTH_EMAIL_CONFLICT` 409 拒絕 (防 squat)。
+   另：new account creation 路徑強制 `email_verified=true` (anti-squat 額外層)。
+
+2. **`functions/api/permissions.ts:191` email-verified guard for Branch A**（HIGH）：
+   之前 owner 邀請已 signup 但未驗證的 attacker email → 直接 INSERT trip_permissions
+   給未驗證 attacker。修：要求 invitedUser.email_verified_at IS NOT NULL；
+   unverified user fall back 到 Branch B (invitation token route)，user 點 email
+   link 才證明 mailbox 所有權。
+
+**Verified**
+
+- 731/731 API integration test pass
+- oauth-callback-google 7/7 pass
+
+**Deferred to v2.33.99**
+
+- **SEC-2 requireFavoriteActor permission ordering**：companion_request_actions
+  INSERT 應在 ownership check 後而非前。需要 refactor 4 個 caller signature +
+  test 同步更新 — non-surgical，留 dedicated PR。
+- 9 MEDIUM findings + 10 test coverage gap 待 v2.33.99-101 batches。
+
 ## [2.33.97] - 2026-05-25
 
 **Round 46 — /review batch 1: 5 個 HIGH security/correctness fix**
