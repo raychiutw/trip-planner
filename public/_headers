@@ -14,12 +14,12 @@
   # v2.33.62: report-to + Report-To header 啟用 CSP violation reporting via
   # Sentry CSP ingest endpoint。Sentry project CSP URL pattern:
   #   https://<HOST>.ingest.us.sentry.io/api/<PROJECT_ID>/security/?sentry_key=<DSN_KEY>
-  # 部署 prerequisite: Sentry dashboard → Project Settings → Security Headers
-  # 取得實際 CSP report endpoint URL，update SENTRY_CSP_ENDPOINT 變數後 rebuild。
-  # 不知 endpoint 時 report-to 仍可宣告 (Reporting API 是 endpoint group 機制)，
-  # browser 會 silently no-op；確認 prod 不會 console warn。
+  # 從 DSN (VITE_SENTRY_DSN) 拼出：
+  #   DSN:  https://<key>@<host>/<project_id>
+  #   CSP:  https://<host>/api/<project_id>/security/?sentry_key=<key>
+  # v2.33.81: hardcode 真正 endpoint（取代 PLACEHOLDER）。換 Sentry project 時需同步改。
   Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.open-meteo.com https://*.ingest.us.sentry.io https://cloudflareinsights.com https://maps.googleapis.com https://places.googleapis.com https://routes.googleapis.com; img-src 'self' data: https://maps.gstatic.com https://maps.googleapis.com https://*.googleusercontent.com https://lh3.googleusercontent.com; worker-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests; report-to csp-endpoint
-  Report-To: {"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"https://o.ingest.us.sentry.io/api/0/security/?sentry_key=PLACEHOLDER"}],"include_subdomains":true}
+  Report-To: {"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"https://o4511070098161664.ingest.us.sentry.io/api/4511072117325824/security/?sentry_key=9b704a3b3a8d3edbd985d31a32b7b7bd"}],"include_subdomains":true}
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Strict-Transport-Security: max-age=31536000; includeSubDomains

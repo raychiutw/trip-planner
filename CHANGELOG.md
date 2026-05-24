@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.81] - 2026-05-24
+
+**Round 30 — Sentry CSP report endpoint 真實 URL 取代 PLACEHOLDER**
+
+v2.33.62 加 CSP `Report-To` header 但 endpoint URL 留 PLACEHOLDER（不知具體
+endpoint 時 browser silent no-op）。本版從 VITE_SENTRY_DSN 拼出真實 endpoint：
+
+**FIX**
+
+- `public/_headers` `Report-To` header URL: PLACEHOLDER → 真 Sentry CSP ingest
+  endpoint。From DSN 拆解 host + project_id + key，per Sentry CSP URL pattern。
+- 註解 update — 移除 "SENTRY_CSP_ENDPOINT 變數後 rebuild" 過時指令，加 DSN ↔ CSP
+  endpoint mapping 公式。
+
+**VERIFIED**
+
+- DSN 結構驗證：`https://<key>@<host>/<project_id>` ↔ CSP `https://<host>/api/<project_id>/security/?sentry_key=<key>`
+- prod 部署後 violation report 應送進 Sentry dashboard → Issues → Security
+
 ## [2.33.80] - 2026-05-24
 
 **Round 29 — Dependabot auto-merge workflow**
