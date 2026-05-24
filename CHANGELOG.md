@@ -3,6 +3,45 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.57] - 2026-05-24
+
+**Round 11 — OceanMap internals split (backlog #130)**
+
+OceanMap.tsx 606→303 LOC (-50%)，拆成 1 type + 1 helper + 3 hook + 1
+compose shell。0 UX change，純內部架構重組。doc:
+`docs/code-review/round-11-oceanmap-split.md`。
+
+**REFACTOR**
+
+- `src/lib/mapTypes.ts` 新增 — MapPin / MapPinType / Coord pure type
+- `src/lib/mapHelpers.ts` 新增 — markerStyle / markerContent / segmentStyle /
+  buildSegments pure helper
+- `src/hooks/useMapMarkers.ts` 新增 — markersRef + prevFocusRef + 2 effect
+  (marker lifecycle / focus diff-update)
+- `src/hooks/useMapViewport.ts` 新增 — fitDoneRef + 3 effect (fit / resize / pan)
+- `src/hooks/useMapSegments.ts` 新增 — SegmentPair[] useMemo
+- `src/components/trip/OceanMap.tsx` — compose shell + Segment subcomponent
+
+**BACKWARD COMPAT**
+
+- OceanMap.tsx re-export markerStyle / markerContent / buildSegments / MarkerStyle / SegmentPair
+- useMapData.ts re-export MapPin / MapPinType
+- useRoute.ts re-export Coord
+- 17+ 個既有 caller 完全不動
+
+**ARCHITECTURE GUARD**
+
+- `tests/unit/round-11-oceanmap-split.test.ts` — 9 個 source-grep guard
+  (lib leaf-ness / 3 hook 單一職責 / OceanMap compose shell / hook call 順序 /
+   backward-compat re-export)
+- `lib-no-reverse-import.test.ts` 仍綠 — mapTypes 拆掉解 lib→hooks reverse
+- 既有 4 個 OceanMap test 全綠 (33 pass)
+- 2 個 source-grep test 路徑更新 (v2_31_93 / v2_31_87)
+
+closes #130 + 完整收尾 #124 (Round 6c)。
+
+**Stats**: 2403 / 2403 全綠 (+9 從 2394). tsc clean.
+
 ## [2.33.56] - 2026-05-24
 
 **Round 6c style token drift fix (backlog #124 partial)**

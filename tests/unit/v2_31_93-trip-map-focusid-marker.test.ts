@@ -27,6 +27,11 @@ const OCEAN_MAP = readFileSync(
   resolve(__dirname, '../../src/components/trip/OceanMap.tsx'),
   'utf8',
 );
+// v2.33.57 round 11: markerContent + markerStyle 拆到 src/lib/mapHelpers.ts
+const MAP_HELPERS = readFileSync(
+  resolve(__dirname, '../../src/lib/mapHelpers.ts'),
+  'utf8',
+);
 
 describe('v2.31.93: TripMapRail focusId marker + 浮頂視覺', () => {
   it('TripMapRail 有 focusedEntryId state', () => {
@@ -45,17 +50,17 @@ describe('v2.31.93: TripMapRail focusId marker + 浮頂視覺', () => {
     expect(TRIP_MAP_RAIL).toMatch(/setFocusedEntryId\(undefined\)/);
   });
 
-  it('OceanMap.markerContent 含 isFocused 偵測（zIndex ≥ 1000）', () => {
-    expect(OCEAN_MAP).toMatch(/const\s+isFocused\s*=\s*typeof\s+style\.zIndex\s*===\s*'number'\s*&&\s*style\.zIndex\s*>=\s*1000/);
+  it('markerContent 含 isFocused 偵測（zIndex ≥ 1000）', () => {
+    expect(MAP_HELPERS).toMatch(/const\s+isFocused\s*=\s*typeof\s+style\.zIndex\s*===\s*'number'\s*&&\s*style\.zIndex\s*>=\s*1000/);
   });
 
-  it('OceanMap.markerContent focused 時用 accent outer ring (217,120,72,0.35) + 加深 drop shadow (42,31,24,0.35)', () => {
-    expect(OCEAN_MAP).toMatch(/rgba\(217,\s*120,\s*72,\s*0?\.35\)/);
-    expect(OCEAN_MAP).toMatch(/rgba\(42,\s*31,\s*24,\s*0?\.35\)/);
+  it('markerContent focused 時用 accent outer ring (217,120,72,0.35) + 加深 drop shadow (42,31,24,0.35)', () => {
+    expect(MAP_HELPERS).toMatch(/rgba\(217,\s*120,\s*72,\s*0?\.35\)/);
+    expect(MAP_HELPERS).toMatch(/rgba\(42,\s*31,\s*24,\s*0?\.35\)/);
   });
 
-  it('OceanMap.markerContent focused 時 inline style 含 z-index:1000 浮頂', () => {
+  it('markerContent focused 時 inline style 含 z-index:1000 浮頂', () => {
     // markerContent 內 isFocused 條件 render `z-index: 1000;`
-    expect(OCEAN_MAP).toMatch(/isFocused\s*\?\s*'z-index:\s*1000;'/);
+    expect(MAP_HELPERS).toMatch(/isFocused\s*\?\s*'z-index:\s*1000;'/);
   });
 });
