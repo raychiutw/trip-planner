@@ -1,7 +1,7 @@
 /**
  * GET /api/oauth/login/google unit test — V2-P1
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestGet } from '../../functions/api/oauth/login/google';
 
 interface MockEnv {
@@ -38,6 +38,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('GET /api/oauth/login/google', () => {
   it('returns 503 OAUTH_NOT_CONFIGURED when GOOGLE_CLIENT_ID missing', async () => {

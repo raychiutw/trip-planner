@@ -1,7 +1,7 @@
 /**
  * /api/dev/apps/:client_id — V2-P4 detail / update / suspend
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   onRequestGet,
   onRequestPatch,
@@ -77,6 +77,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('GET /api/dev/apps/:client_id', () => {
   it('401 when no session', async () => {

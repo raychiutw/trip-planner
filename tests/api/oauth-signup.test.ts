@@ -2,7 +2,7 @@
 /**
  * POST /api/oauth/signup unit test — V2-P2
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestPost } from '../../functions/api/oauth/signup';
 
 interface MockEnv {
@@ -39,6 +39,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('POST /api/oauth/signup', () => {
   it('400 SIGNUP_INVALID_EMAIL when email missing or invalid', async () => {

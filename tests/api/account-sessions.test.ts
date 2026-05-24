@@ -1,7 +1,7 @@
 /**
  * /api/account/sessions + /sessions/:sid — V2-P6 multi-device session API
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestGet, onRequestDelete as onDeleteAll } from '../../functions/api/account/sessions';
 import { onRequestDelete as onDeleteOne } from '../../functions/api/account/sessions/[sid]';
 import { issueSession } from '../../functions/api/_session';
@@ -57,6 +57,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('GET /api/account/sessions', () => {
   it('401 when no session', async () => {

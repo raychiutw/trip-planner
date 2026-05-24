@@ -3,7 +3,7 @@
  *
  * Integration of _cookies + src/server/session — wraps Pages Function-style helpers。
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   getSessionUser,
   requireSessionUser,
@@ -18,6 +18,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('getSessionUser', () => {
   it('returns null when no cookie', async () => {

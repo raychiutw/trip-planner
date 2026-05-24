@@ -1,7 +1,7 @@
 /**
  * GET /api/oauth/userinfo unit test — V2-P1
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestGet } from '../../functions/api/oauth/userinfo';
 import { signSessionToken } from '../../src/server/session';
 
@@ -36,6 +36,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('GET /api/oauth/userinfo', () => {
   it('throws AUTH_REQUIRED when no session cookie', async () => {

@@ -4,7 +4,7 @@
  * 需 session（getSessionUser）+ user.email 必須 match invited_email（防 phishing：
  * 別人不能接走不屬於自己的邀請）+ atomic INSERT trip_permissions + UPDATE accepted_at。
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestPost } from '../../functions/api/invitations/accept';
 import { hashInvitationToken } from '../../src/server/invitation-token';
 
@@ -53,6 +53,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-27T10:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 /**
  * Stub session: mock requireSessionUser by injecting a session cookie that the real

@@ -1,7 +1,7 @@
 /**
  * /api/oauth/verify + /api/oauth/send-verification — V2-P2 email verification
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestGet } from '../../functions/api/oauth/verify';
 import { onRequestPost as onSendVerification } from '../../functions/api/oauth/send-verification';
 
@@ -49,6 +49,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('GET /api/oauth/verify', () => {
   it('302 → /login?verify_error=missing_token when token query absent', async () => {

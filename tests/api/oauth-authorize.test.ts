@@ -1,7 +1,7 @@
 /**
  * GET /api/oauth/authorize unit test — V2-P4
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestGet } from '../../functions/api/oauth/authorize';
 import { signSessionToken } from '../../src/server/session';
 
@@ -46,6 +46,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 const buildUrl = (params: Record<string, string>) => {
   const sp = new URLSearchParams(params);

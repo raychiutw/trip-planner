@@ -1,7 +1,7 @@
 /**
  * /api/account/connected-apps — V2-P5 user-side OAuth grant management
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestGet } from '../../functions/api/account/connected-apps';
 import { onRequestDelete } from '../../functions/api/account/connected-apps/[client_id]';
 import { issueSession } from '../../functions/api/_session';
@@ -68,6 +68,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('GET /api/account/connected-apps', () => {
   it('401 when no session', async () => {
