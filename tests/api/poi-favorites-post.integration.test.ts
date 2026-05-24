@@ -360,7 +360,7 @@ describe('POST /api/poi-favorites — §6.5 SQL injection on note', () => {
 // ----- §6.7 burst concurrent → mix 201 / 409 / 429 -----
 
 describe('POST /api/poi-favorites — §6.7 burst concurrent companion', () => {
-  it('100 burst concurrent 同 requestId → companion 雙重防護（UNIQUE 409 + bucket 429）', async () => {
+  it('100 burst concurrent 同 requestId → companion_request_actions UNIQUE 防護（v2.33.105 SEC-2 post-gate bucket order）', async () => {
     const requestId = await seedTripRequest({});
     // 100 個不同 poiId（避免 V2 user UNIQUE 撞）
     const poiIds: number[] = [];
@@ -388,9 +388,12 @@ describe('POST /api/poi-favorites — §6.7 burst concurrent companion', () => {
       {},
     );
 
-    // 預期：1 × 201（首次成功）+ 9 × 409（rate limit 內部 UNIQUE）+ 90 × 429（bucket lock）
-    expect(counts[201] ?? 0).toBeGreaterThanOrEqual(1);
-    expect(counts[429] ?? 0).toBeGreaterThanOrEqual(1);
+    // v2.33.105 SEC-2: actor resolve 順序前移，per-requestId bucket bump 改在
+    // resolve 之後。100 個同 (requestId, action='favorite_create') concurrent →
+    // companion_request_actions UNIQUE 在第一個 INSERT 之後鎖死，後續 99 個 throw
+    // COMPANION_QUOTA_EXCEEDED → 409。100 < 200 pre-gate IP 不會觸 429。
+    expect(counts[201] ?? 0).toBe(1);
+    expect(counts[409] ?? 0).toBe(99);
     // 不應全部 201（會破壞 quota 防護）
     expect(counts[201] ?? 0).toBeLessThan(10);
   });

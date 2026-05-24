@@ -7,8 +7,9 @@
  * specific reason lives in audit_log.companion_failure_reason so prod can
  * distinguish root cause without leaking gate semantics to attackers.
  */
-import { AppError } from './_errors';
+import { AppError, buildRateLimitResponse } from './_errors';
 import { logAudit, type CompanionFailureReason } from './_audit';
+import { bumpRateLimit, checkRateLimit, clientIp, RATE_LIMITS } from './_rate_limit';
 import type { Env, AuthData } from './_types';
 
 // --------------------------------------------------------------------------
@@ -223,36 +224,57 @@ export async function requireFavoriteActor(
 // --------------------------------------------------------------------------
 
 /**
- * Bucket key picker for poi-favorites write endpoints.
+ * v2.33.105 SEC-2: pre-gate per-IP throttle for poi-favorites endpoints。
  *
- * Companion (header + valid claimed requestId) is always rate-limited even when
- * the underlying service token has admin scope — companion path lives behind
- * separate enumeration / abuse boundary. V2 user is bypassed only for admin.
+ * 在 `requireFavoriteActor` 之前呼叫，保護 actor resolve 階段的 DB work
+ * （UPDATE trip_requests claim + SELECT users）不被 unauthenticated attacker
+ * 大量 hammer。寬鬆 200/5min/IP — 人類速度遠低於每秒 1 個 favorite write，
+ * 攻擊者 100 個 concurrent 才會觸 lock。
  *
- * Returns null when no bucket should apply (admin V2 user, or unauthenticated
- * caller — gate will reject downstream).
+ * 回 429 Response（直接帶 Retry-After header）→ caller 直接 return；
+ * 回 null 表示通過。
  */
-export function pickFavoriteRateLimitBucket(
+export async function preGateFavoriteThrottle(
+  env: Env,
   request: Request,
-  body: { companionRequestId?: unknown },
-  prefix: string,
-  auth: AuthData | null,
-): string | null {
-  const headerScope = request.headers.get('X-Request-Scope');
-  const claimedRequestId =
-    typeof body.companionRequestId === 'number'
-      && Number.isInteger(body.companionRequestId)
-      && body.companionRequestId > 0
-      ? body.companionRequestId
-      : null;
-  if (headerScope === 'companion' && claimedRequestId !== null) {
-    return `${prefix}:companion:${claimedRequestId}`;
+): Promise<Response | null> {
+  const key = `poi-favorites-pre-gate-ip:${clientIp(request)}`;
+  const check = await checkRateLimit(env.DB, key, RATE_LIMITS.POI_FAVORITES_PRE_GATE_IP);
+  if (!check.ok) {
+    return buildRateLimitResponse(check.retryAfter ?? 300, { error: 'RATE_LIMITED' });
   }
-  if (auth?.userId && !auth.isAdmin) {
-    return `${prefix}:user:${auth.userId}`;
-  }
+  await bumpRateLimit(env.DB, key, RATE_LIMITS.POI_FAVORITES_PRE_GATE_IP);
   return null;
 }
+
+/**
+ * v2.33.105 SEC-2: post-gate bucket picker — 用 RESOLVED actor 而非 claimed body。
+ *
+ * 之前 `pickFavoriteRateLimitBucket` 從 `body.companionRequestId` (claimed)
+ * 直接組 bucket key。Attack：unauthenticated attacker 送 X-Request-Scope:
+ * companion + companionRequestId: 999 → bucket `poi-favorites-post:companion:999`
+ * 被 bump 即使後續 actor resolve 401。連續 10 個 → bucket lock → legit user
+ * with requestId=999 被擋。
+ *
+ * 改：actor 解析完才呼叫此 picker，bucket 基於 verified identity。
+ *
+ * - Companion path: `${prefix}:companion:${actor.requestId}` — 跨 action 防 spam。
+ * - V2 user path: `${prefix}:user:${actor.userId}` — admin 不 bypass 此 helper
+ *   控制權，caller 自行判斷（保留既有 admin V2 user bypass 語意）。
+ * - Admin V2 user (caller-determined): null。
+ */
+export function pickFavoriteBucketForActor(
+  actor: FavoriteActor,
+  prefix: string,
+  isAdminBypass: boolean,
+): string | null {
+  if (actor.isCompanion) {
+    return `${prefix}:companion:${actor.requestId}`;
+  }
+  if (isAdminBypass) return null;
+  return `${prefix}:user:${actor.userId}`;
+}
+
 
 /**
  * Ownership gate shared by DELETE / add-to-trip handlers.
