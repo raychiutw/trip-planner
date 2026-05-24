@@ -1,7 +1,7 @@
 /**
  * /api/dev/apps unit test — V2-P4 OAuth client_app management
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestPost, onRequestGet } from '../../functions/api/dev/apps';
 import { issueSession } from '../../functions/api/_session';
 
@@ -57,6 +57,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('POST /api/dev/apps', () => {
   it('401 when no session cookie', async () => {

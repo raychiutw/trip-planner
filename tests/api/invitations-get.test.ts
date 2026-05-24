@@ -7,7 +7,7 @@
  *   - INVITATION_EXPIRED  : expires_at < now
  *   - INVITATION_ACCEPTED : accepted_at IS NOT NULL（避免重複觸發）
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestGet } from '../../functions/api/invitations';
 import { hashInvitationToken } from '../../src/server/invitation-token';
 
@@ -42,6 +42,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-27T10:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('GET /api/invitations', () => {
   it('400 when token query param missing', async () => {

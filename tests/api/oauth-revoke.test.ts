@@ -1,7 +1,7 @@
 /**
  * POST /api/oauth/revoke unit test — V2-P5 RFC 7009
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestPost } from '../../functions/api/oauth/revoke';
 
 interface MockEnv {
@@ -44,6 +44,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('POST /api/oauth/revoke', () => {
   it('400 invalid_request when token missing', async () => {

@@ -19,6 +19,11 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
+});
+
+
+afterEach(() => {
   vi.unstubAllGlobals();
 });
 

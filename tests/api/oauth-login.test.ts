@@ -1,7 +1,7 @@
 /**
  * POST /api/oauth/login unit test — V2-P2
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestPost } from '../../functions/api/oauth/login';
 import { hashPassword } from '../../src/server/password';
 
@@ -39,6 +39,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 
 describe('POST /api/oauth/login', () => {
   it('400 LOGIN_INVALID_INPUT when email or password missing', async () => {
