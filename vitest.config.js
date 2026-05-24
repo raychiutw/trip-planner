@@ -1,16 +1,63 @@
 import { defineConfig } from 'vitest/config';
 
+/**
+ * v2.33.71 round 21: projects split — dom vs node 環境分流。
+ *
+ * Round 15 finding: 197/210 .test.ts 不需 jsdom (pure source-grep / unit logic)，
+ * 跑 node env 30-50% 更快。100 .test.tsx + 9 .test.js + 5 真用 DOM 的 .test.ts
+ * 留 jsdom project。
+ *
+ * 切回單 project: 移除 `projects:` 區塊 + 還原 `environment: 'jsdom'`.
+ */
+// .test.ts 真實依賴 jsdom (localStorage / window / document / TypeError 等
+// browser-only globals)。Empirical list — fail-then-add 後得出。
+const TS_DOM_FILES = [
+  'tests/unit/trip-page-sheet-default.test.ts',
+  'tests/unit/use-places-autocomplete.test.ts',
+  'tests/unit/use-route.test.ts',
+  'tests/unit/use-map-data.test.ts',
+  'tests/unit/online-status.test.ts',
+  'tests/unit/api-error.test.ts',
+  'tests/unit/error-placeholder.test.ts',
+  'tests/unit/local-storage-shape.test.ts',
+  'tests/unit/sanitize-uri-attrs.test.ts',
+  'tests/unit/scroll-spy.test.ts',
+  'tests/unit/v2_31_79-marker-label-text-outline.test.ts',
+];
+
 export default defineConfig({
   test: {
     globals: true,
-    // v2.33.65 round 15: renamed from setup-jest-dom.js (project uses vitest, not Jest)
-    setupFiles: ['./tests/setup-dom.js'],
-    environment: 'jsdom',
-    // v2.33.65 round 15: clearMocks + restoreMocks 自動 reset mock state between
-    // every it() — 防 global.fetch = vi.fn() / vi.spyOn() 等 cross-test leak。
-    // 271 unit test 略 afterEach 也仍能正常 reset。Vitest 4.1 idiom。
+    // v2.33.65 round 15: clearMocks + restoreMocks 自動 reset mock state
+    // 防 global.fetch / vi.spyOn 等 cross-test leak。
     clearMocks: true,
     restoreMocks: true,
     exclude: ['tests/e2e/**', 'tests/api/**', 'node_modules/**', 'server/node_modules/**', '.claude/**', '.agents/**', '.codex/**'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit-dom',
+          include: [
+            'tests/unit/**/*.test.tsx',
+            'tests/unit/**/*.test.js',
+            ...TS_DOM_FILES,
+          ],
+          environment: 'jsdom',
+          // v2.33.65: renamed from setup-jest-dom.js
+          setupFiles: ['./tests/setup-dom.js'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'unit-node',
+          include: ['tests/unit/**/*.test.ts'],
+          exclude: TS_DOM_FILES,
+          environment: 'node',
+          // 不需 jsdom polyfill setup
+        },
+      },
+    ],
   },
 });
