@@ -3,6 +3,39 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.82] - 2026-05-24
+
+**Round 31 — 19 個 fake timer test files 加 afterEach cleanup**
+
+Path A attempt (Vitest `isolate: false` 解 Miniflare port exhaustion) 過程
+audit 出 19 個 fake timer test 缺 `useRealTimers()` cleanup — 即使不開
+`isolate: false`，這也是 test hygiene 該補。
+
+**FIX**
+
+19 個 tests/api/*.test.ts 統一 pattern：
+```ts
+import { ..., afterEach } from 'vitest';
+beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(...); });
+afterEach(() => { vi.useRealTimers(); });
+```
+
+Files: account-sessions / account-connected-apps / dev-apps / dev-apps-detail /
+email-module / invitations-get / invitations-accept / oauth-authorize /
+oauth-login-google / oauth-reset-password / oauth-revoke / oauth-consent /
+oauth-userinfo / oauth-login / oauth-verify / oauth-forgot-password /
+oauth-signup / oauth-token / session-helper
+
+**ATTEMPTED but reverted**
+
+- `isolate: false + singleFork: true` 想讓 setup.ts Miniflare singleton 真正
+  共用。實測 baseline 27 fail → 48 fail（worse）。Root cause 是 module-level
+  `vi.mock(...)` 在 4 個 file（oauth-callback-google / invitations-accept /
+  segments-patch / recompute-travel-segments）spillover 到其他 test，破壞
+  module isolation。重構成 per-test mock 工作量 vs ROI 不划算，deferred。
+
+**Net effect**: test cleanup 改善，port exhaustion 接受現況（CI retry 已 cover）。
+
 ## [2.33.81] - 2026-05-24
 
 **Round 30 — Sentry CSP report endpoint 真實 URL 取代 PLACEHOLDER**
