@@ -19,29 +19,6 @@ interface ParsedTime {
 /* ===== Functions ===== */
 
 /**
- * 解析時間字串（如 "10:45-12:00"）為結構化物件。
- * 支援跨日（如 "23:00-01:00"，duration=120）。
- */
-export function parseTimeRange(timeStr?: string | null): ParsedTime {
-  if (!timeStr) return { start: '', end: '', duration: 0 };
-  const parts = timeStr.split('-');
-  const start = (parts[0] ?? '').trim();
-  const end = parts.length > 1 ? (parts[1] ?? '').trim() : '';
-  let duration = 0;
-  if (start && end) {
-    const s = start.split(':');
-    const e = end.split(':');
-    if (s.length === 2 && e.length === 2) {
-      duration =
-        (parseInt(e[0] ?? '0', 10) * 60 + parseInt(e[1] ?? '0', 10)) -
-        (parseInt(s[0] ?? '0', 10) * 60 + parseInt(s[1] ?? '0', 10));
-      if (duration < 0) duration += 24 * 60;
-    }
-  }
-  return { start, end, duration };
-}
-
-/**
  * v2.29.0: trip_entries.time DROPPED。從 entry.{startTime, endTime} 直接取 ParsedTime。
  *
  * v2.31.77 fix #196：原本 read sig 寫 `start_time` / `end_time` snake_case，但

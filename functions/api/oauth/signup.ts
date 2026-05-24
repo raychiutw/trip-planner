@@ -29,6 +29,7 @@ import {
   clientIp,
   RATE_LIMITS,
 } from '../_rate_limit';
+import { normalizeEmail } from '../../../src/server/email-utils';
 import type { Env } from '../_types';
 
 interface SignupBody {
@@ -51,7 +52,7 @@ function errorResponse(code: string, message: string, status: number): Response 
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = (await parseJsonBody<SignupBody>(context.request)) ?? {};
-  const email = (body.email ?? '').trim().toLowerCase();
+  const email = normalizeEmail(body.email ?? '');
   const password = body.password ?? '';
   const displayName = body.displayName?.trim() || null;
 

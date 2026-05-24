@@ -18,6 +18,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../shared/Icon';
 import { apiFetchRaw } from '../../lib/apiClient';
 import { EVENT } from '../../lib/events';
+import type { TravelMode } from '../../lib/travelMode';
+
+// v2.33.91: 移除本地 type 宣告，從 lib/travelMode canonical 來源 import + 為 backward-compat
+// 透過 `export type` re-export（之前 TravelPill.tsx 等檔案經 `from './TravelPillDialog'` import）。
+export type { TravelMode };
 
 const SCOPED_STYLES = `
 .tp-travel-overlay {
@@ -166,8 +171,6 @@ const SCOPED_STYLES = `
   border-color: var(--color-border);
 }
 `;
-
-export type TravelMode = 'driving' | 'walking' | 'transit';
 
 export interface TravelPillDialogProps {
   tripId: string;
