@@ -16,7 +16,7 @@
 ## 給 AI agent 的最低限度 onboarding
 
 - **Tech**：React 19 + Vite + Cloudflare Pages Functions + D1 SQLite。**不是** vanilla JS、**不是** markdown source。
-- **資料**：行程在 D1 `trips` / `trip_days` / `trip_entries` 表，POI 走 `pois` master + `trip_pois` 覆寫。`data/dist/` 已不存在。
+- **資料**：行程在 D1 `trips` / `trip_days` / `trip_entries` 表，POI 走 `pois` master + `trip_entry_pois` junction (v2.27.0 多 POI per entry)。`trip_pois` 已 DROP (v2.29.0 migration 0062)。`data/dist/` 已不存在。
 - **Skills**：以 Claude Code skills 為主（`/tp-create` `/tp-edit` `/tp-check` 等走 API），非 Gemini CLI。Gemini CLI 也可用，但 skill set 在 `.claude/skills/` 不是 `.gemini/skills/`。
 - **語言**：所有溝通與 commit message 用繁體中文（台灣）。
 - **Pipeline**：code 變更走 7 階段（Think → Plan → Build → Review → Test → Ship → Reflect），詳見 CLAUDE.md。
