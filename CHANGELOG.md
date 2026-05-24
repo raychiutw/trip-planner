@@ -3,6 +3,39 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.87] - 2026-05-24
+
+**Round 36 EMERGENCY — PBKDF2 600k iter 超 CF Workers 100k 限制，prod login 全 500**
+
+`/land-and-deploy` canary 階段 curl prod `/api/oauth/login` 拿到 500 errors。查
+`api_logs` 表發現 prod 真正 error message：
+
+```
+Pbkdf2 failed: iteration counts above 100000 are not supported (requested 600000)
+```
+
+CF Workers Web Crypto PBKDF2 hardcoded max **100k iterations**。v2.33.58
+round 12 H3 把 ITERATIONS 從 100k 升 600k 對齊 OWASP 2023，當時 comment
+self-warn「若 deploy 後突增 → revert 改 300k 或回 100k」但漏掉 deploy 後沒
+驗證 prod login。CI port exhaustion 噪音蓋住沒人發現。
+
+**Prod impact**: 自 v2.33.58 部署起所有 user login 直接 500（含 admin 自己），
+僅 anonymous read endpoints 可用。
+
+**FIX**
+
+- `src/server/password.ts` — `ITERATIONS = 600_000` → `100_000`
+- `functions/api/oauth/login.ts` — `TIMING_PROBE_HASH` iter `600000` → `100000`
+- `tests/unit/round-12-server-security.test.ts` — assertion 對齊新 ITERATIONS
+- Comments + example doc string update
+
+**Data side effect**: 任何 stored hash 是 `pbkdf2$600000$...` 的 user 將
+**無法 verify 密碼**（CF reject 600k），需走 forgot-password reset。Self-describing
+hash format 讓新 hash 寫 100k 後可正常 verify。
+
+**RUNBOOK followup needed**: 升 PBKDF2 以上 cost factor 需切 Argon2id（CF
+Workers 暫無 native 支援，需 polyfill）— defer。
+
 ## [2.33.86] - 2026-05-24
 
 **Round 35 — round-14c-residuals stale regression follow-up**

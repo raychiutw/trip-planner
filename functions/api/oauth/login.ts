@@ -43,7 +43,8 @@ interface AuthIdentityRow {
 // Fake hash to compute against when email not found — defeats timing oracle
 // (PBKDF2 takes constant time regardless of input)。Static value, doesn't matter
 // since constant-time compare against unrelated hash will always fail。
-const TIMING_PROBE_HASH = 'pbkdf2$600000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+// v2.33.87 EMERGENCY: 600000 → 100000 對齊 CF Workers PBKDF2 100k iteration 上限。
+const TIMING_PROBE_HASH = 'pbkdf2$100000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 function errorResponse(code: string, message: string, status: number): Response {
   return new Response(

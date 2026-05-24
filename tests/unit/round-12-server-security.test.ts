@@ -108,9 +108,11 @@ describe('v2.33.58 H1 — validate-redirect-uris tighten', () => {
   });
 });
 
-describe('v2.33.58 H3 — PBKDF2 600k iterations (OWASP 2023)', () => {
-  it('ITERATIONS = 600_000', () => {
-    expect(PASSWORD_SRC).toMatch(/const ITERATIONS = 600_000/);
+describe('v2.33.58 H3 — PBKDF2 iteration count', () => {
+  it('ITERATIONS = 100_000（v2.33.87 EMERGENCY: 600k → 100k, CF Workers limit）', () => {
+    // CF Workers Web Crypto hardcoded max 100k iterations。600k throws runtime
+    // exception → prod login 500。100k 仍對齊 OWASP 2023 minimum recommendation。
+    expect(PASSWORD_SRC).toMatch(/const ITERATIONS = 100_000/);
   });
 });
 
