@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { setupGoogleMapsMock } from './__mocks__/google-maps';
-import { markerStyle, markerContent } from '../../src/components/trip/OceanMap';
+import { markerStyle, markerContent } from '../../src/components/trip/TpMap';
 import type { MapPin } from '../../src/hooks/useMapData';
 
 beforeEach(setupGoogleMapsMock);

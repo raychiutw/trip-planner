@@ -311,7 +311,7 @@ const SCOPED_STYLES = `
   background: linear-gradient(135deg, var(--color-poi-card-tone-cool-from), var(--color-poi-card-tone-cool-to));
 }
 .tp-change-poi-card-photo[data-tone="ocean"] {
-  background: linear-gradient(135deg, var(--color-poi-card-tone-ocean-from), var(--color-poi-card-tone-ocean-to));
+  background: linear-gradient(135deg, var(--color-poi-card-tone-tp-from), var(--color-poi-card-tone-tp-to));
 }
 .tp-change-poi-card-photo[data-tone="amber"] {
   background: linear-gradient(135deg, var(--color-poi-card-tone-amber-from), var(--color-poi-card-tone-amber-to));

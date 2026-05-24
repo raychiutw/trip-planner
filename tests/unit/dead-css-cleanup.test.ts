@@ -2,9 +2,9 @@
  * dead-css-cleanup.test.ts — F001 TDD red test
  *
  * 驗證 tokens.css 不含 top-level (非 @media print 內) 的 dead CSS selectors：
- * - .ocean-body
- * - .ocean-main
- * - .ocean-side（非 .ocean-side-card 等衍生 class）
+ * - .tp-body
+ * - .tp-main
+ * - .tp-side（非 .tp-side-card 等衍生 class）
  * - .info-panel（InfoPanel 已 orphan）
  *
  * 同時驗證 TripPage.tsx 的 SCOPED_STYLES 不含 dead .info-panel rule（InfoPanel 已於 F001 刪除）
@@ -34,20 +34,20 @@ function removePrintBlocks(src: string): string {
 const nonPrintCss = removePrintBlocks(css);
 
 describe('tokens.css — dead CSS 清理 (F001)', () => {
-  it('不含 top-level .ocean-body selector（非 print-mode）', () => {
-    // Match standalone .ocean-body { (not inside body.print-mode)
-    const match = nonPrintCss.match(/(?<![a-z-])\.(ocean-body)\s*\{/);
+  it('不含 top-level .tp-body selector（非 print-mode）', () => {
+    // Match standalone .tp-body { (not inside body.print-mode)
+    const match = nonPrintCss.match(/(?<![a-z-])\.(tp-body)\s*\{/);
     expect(match).toBeNull();
   });
 
-  it('不含 top-level .ocean-main selector', () => {
-    const match = nonPrintCss.match(/(?<![a-z-])\.(ocean-main)\s*\{/);
+  it('不含 top-level .tp-main selector', () => {
+    const match = nonPrintCss.match(/(?<![a-z-])\.(tp-main)\s*\{/);
     expect(match).toBeNull();
   });
 
-  it('不含 top-level .ocean-side selector（ocean-side-card 允許保留）', () => {
-    // Match .ocean-side { but not .ocean-side-card
-    const match = nonPrintCss.match(/\.(ocean-side)\s*\{/);
+  it('不含 top-level .tp-side selector（tp-side-card 允許保留）', () => {
+    // Match .tp-side { but not .tp-side-card
+    const match = nonPrintCss.match(/\.(tp-side)\s*\{/);
     expect(match).toBeNull();
   });
 

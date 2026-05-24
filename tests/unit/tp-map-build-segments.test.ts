@@ -1,5 +1,5 @@
 /**
- * ocean-map-build-segments.test.ts — runtime coverage for buildSegments pure helper.
+ * tp-map-build-segments.test.ts — runtime coverage for buildSegments pure helper.
  *
  * Per DESIGN.md「地圖 Polyline 規格」:
  * - hotel (sortOrder=-1) IS the day's first node — must form the leading segment
@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildSegments } from '../../src/components/trip/OceanMap';
+import { buildSegments } from '../../src/components/trip/TpMap';
 import type { MapPin } from '../../src/hooks/useMapData';
 
 function makeEntry(id: number, lat: number, lng: number): MapPin {

@@ -26,7 +26,7 @@ describe('MapPage — ?day=N query support (Item 7 source guard)', () => {
 
   it('uses dayColor from dayPalette for polyline colouring', () => {
     // MapPage should use dayColor() for coloured routes
-    // (currently handled by OceanMap routes prop — check that it is still present)
+    // (currently handled by TpMap routes prop — check that it is still present)
     expect(source).toContain('routes');
   });
 
@@ -78,8 +78,8 @@ vi.mock('../../src/contexts/TripContext', async (importOriginal) => {
   };
 });
 
-// Mock OceanMap (lazy) to avoid Leaflet in JSDOM
-vi.mock('../../src/components/trip/OceanMap', () => ({
+// Mock TpMap (lazy) to avoid Leaflet in JSDOM
+vi.mock('../../src/components/trip/TpMap', () => ({
   default: () => null,
 }));
 

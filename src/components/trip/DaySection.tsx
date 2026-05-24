@@ -33,11 +33,11 @@ const MAP_CHIP_STYLES = `
 }
 .day-map-chip:hover { opacity: 0.75; }
 .day-map-chip .svg-icon { width: 12px; height: 12px; }
-.ocean-hero-chips {
+.tp-hero-chips {
   display: flex; align-items: center; justify-content: space-between;
   flex-wrap: wrap; gap: 6px;
 }
-.ocean-hero-chips-left {
+.tp-hero-chips-left {
   display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
 }
 
@@ -157,21 +157,21 @@ const DaySection = React.memo(function DaySection({
   const dayTitle = day?.title?.trim() || area || `Day ${dayNum}`;
 
   return (
-    <section className="ocean-day day-section" data-day={dayNum}>
+    <section className="tp-day day-section" data-day={dayNum}>
       <style>{MAP_CHIP_STYLES}</style>
       {/* Ocean Hero card */}
-      <div className="ocean-hero" id={`day${dayNum}`}>
-        <div className="ocean-hero-chips">
-          <div className="ocean-hero-chips-left">
-            <span className="ocean-hero-chip">
+      <div className="tp-hero" id={`day${dayNum}`}>
+        <div className="tp-hero-chips">
+          <div className="tp-hero-chips-left">
+            <span className="tp-hero-chip">
               {eyebrow}
               {dateLabel && ` · ${dateLabel}`}
             </span>
-            {area && area !== dayTitle && <span className="ocean-hero-chip-muted">{area}</span>}
+            {area && area !== dayTitle && <span className="tp-hero-chip-muted">{area}</span>}
           </div>
         </div>
-        <h2 className="ocean-hero-title">{dayTitle}</h2>
-        {heroSub && <div className="ocean-hero-sub">{heroSub}</div>}
+        <h2 className="tp-hero-title">{dayTitle}</h2>
+        {heroSub && <div className="tp-hero-sub">{heroSub}</div>}
       </div>
 
       <div

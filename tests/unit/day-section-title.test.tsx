@@ -42,7 +42,7 @@ describe('DaySection day title fallback', () => {
         tripEnd="2026-04-30"
       />,
     );
-    const heroTitle = document.querySelector('.ocean-hero-title');
+    const heroTitle = document.querySelector('.tp-hero-title');
     expect(heroTitle?.textContent).toBe('美瑛拼布之路');
   });
 
@@ -56,7 +56,7 @@ describe('DaySection day title fallback', () => {
         tripEnd="2026-04-30"
       />,
     );
-    const heroTitle = document.querySelector('.ocean-hero-title');
+    const heroTitle = document.querySelector('.tp-hero-title');
     expect(heroTitle?.textContent).toBe('那霸');
   });
 
@@ -70,7 +70,7 @@ describe('DaySection day title fallback', () => {
         tripEnd="2026-04-30"
       />,
     );
-    const heroTitle = document.querySelector('.ocean-hero-title');
+    const heroTitle = document.querySelector('.tp-hero-title');
     expect(heroTitle?.textContent).toBe('Day 3');
   });
 
@@ -84,7 +84,7 @@ describe('DaySection day title fallback', () => {
         tripEnd="2026-04-30"
       />,
     );
-    const chips = document.querySelectorAll('.ocean-hero-chip-muted');
+    const chips = document.querySelectorAll('.tp-hero-chip-muted');
     expect(chips.length).toBe(0);
   });
 
@@ -98,7 +98,7 @@ describe('DaySection day title fallback', () => {
         tripEnd="2026-04-30"
       />,
     );
-    const chip = document.querySelector('.ocean-hero-chip-muted');
+    const chip = document.querySelector('.tp-hero-chip-muted');
     expect(chip?.textContent).toBe('美瑛');
   });
 
@@ -112,7 +112,7 @@ describe('DaySection day title fallback', () => {
         tripEnd="2026-04-30"
       />,
     );
-    const heroTitle = document.querySelector('.ocean-hero-title');
+    const heroTitle = document.querySelector('.tp-hero-title');
     expect(heroTitle?.textContent).toBe('那霸');
   });
 });

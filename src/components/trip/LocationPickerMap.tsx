@@ -11,7 +11,7 @@
  *   - Keyboard a11y: arrow keys nudge map via panBy with step ~10 m at current zoom
  *   - Container focused with tabIndex; aria-live updates on coord change
  *
- * Distinct from OceanMap by intent: OceanMap renders read-only trip markers via
+ * Distinct from TpMap by intent: TpMap renders read-only trip markers via
  * AdvancedMarkerElement + polylines. This component owns picker-mode concerns
  * (one marker that doesn't move, plus center-extraction).
  */
