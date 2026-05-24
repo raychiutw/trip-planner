@@ -75,14 +75,23 @@ export class D1Adapter {
     return JSON.parse(row.payload) as AdapterPayload;
   }
 
-  async consume(id: string): Promise<void> {
-    // Mark authorization_code as used (one-shot guard against replay)
-    await this.db
+  /**
+   * Mark authorization_code / refresh_token as used (one-shot guard against replay)。
+   *
+   * v2.33.58 round 12 C4: 改 conditional UPDATE with `consumed IS NULL` guard。
+   * 返 boolean 表示是否實際 mark (winner) — 平行雙重 POST /token 只有第一個拿到 true。
+   * 之前 unconditional UPDATE 兩個 caller 都 success，雙重 grantId 漏接。
+   * Caller 必須檢 return value，false 表示已被 consume，要 abort + revokeByGrantId。
+   */
+  async consume(id: string): Promise<boolean> {
+    const result = await this.db
       .prepare(
-        'UPDATE oauth_models SET payload = json_set(payload, ?, ?) WHERE name = ? AND id = ?',
+        `UPDATE oauth_models SET payload = json_set(payload, ?, ?)
+         WHERE name = ? AND id = ? AND json_extract(payload, '$.consumed') IS NULL`,
       )
       .bind('$.consumed', Date.now(), this.name, id)
       .run();
+    return (result.meta?.changes ?? 0) === 1;
   }
 
   async destroy(id: string): Promise<void> {
@@ -93,9 +102,15 @@ export class D1Adapter {
   }
 
   async revokeByGrantId(grantId: string): Promise<void> {
-    // 跨所有 name 刪 — grantId 是跨 model 的 link key（一個 grant 含多個 access_token / refresh_token）
+    // 跨 token model 刪 — grantId 是 access_token / refresh_token 共享 link key。
+    // v2.33.58 round 12: 加 name IN allowlist 避免未來新 model（例如 audit log）誤含
+    // grantId field 被無辜刪除。
     await this.db
-      .prepare('DELETE FROM oauth_models WHERE json_extract(payload, ?) = ?')
+      .prepare(
+        `DELETE FROM oauth_models
+         WHERE name IN ('AccessToken', 'RefreshToken')
+           AND json_extract(payload, ?) = ?`,
+      )
       .bind('$.grantId', grantId)
       .run();
   }

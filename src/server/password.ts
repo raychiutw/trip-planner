@@ -24,19 +24,21 @@ const HASH_FN = 'SHA-256';
 /**
  * PBKDF2 iteration count.
  *
- * OWASP 2023 ideal is 600,000 for SHA-256, but Cloudflare Workers Free tier has a
- * 10ms CPU time budget per request. 600k iterations consistently exceeds that on
- * the production isolate, throwing inside `crypto.subtle.deriveBits` and
- * surfacing as `SIGNUP_PASSWORD_FORMAT` to the user. 100,000 is the older OWASP
- * minimum (still considered secure for non-government use) and runs in ~3-5ms
- * on Workers, well under the budget.
+ * v2.33.58 round 12 H3: 100_000 → 600_000 對齊 OWASP 2023 Password Storage
+ * Cheat Sheet (PBKDF2-HMAC-SHA256 minimum)。舊 hash 不受影響 — self-describing
+ * format `pbkdf2$<iter>$<salt>$<hash>` 寫死 iter 在 hash 內，verifyPassword
+ * 永遠 derive 用 stored iter，新 sign-in 自動觸發 needsRehash() rehash 升 600k。
  *
- * Format is self-describing (`pbkdf2$<iter>$<salt>$<hash>`) so old hashes with
- * different iter counts still verify — this is a safe forward change.
+ * CPU budget 風險: CF Pages Functions Free tier 10ms CPU per request。
+ * 600k 估 ~18-30ms 可能超 budget → `crypto.subtle.deriveBits` throw →
+ * SIGNUP_PASSWORD_FORMAT to user。Sentry watch SIGNUP_PASSWORD_FORMAT
+ * 若 deploy 後突增 → revert 改 300k 或回 100k。
  *
- * Bump back to 600k once the project moves to Workers Paid plan (50ms budget).
+ * 攻擊模型: 100k 在 RTX 4090 上 ~50M guess/sec 可離線爆破 8 字元純英數密碼
+ * 幾天內，600k 拖到幾週。Hash format self-describing 故升 iter 是 forward-safe
+ * change，舊 hash 仍能 verify。
  */
-const ITERATIONS = 100_000;
+const ITERATIONS = 600_000;
 const SALT_BYTES = 16;
 const HASH_BYTES = 32;
 
@@ -97,8 +99,10 @@ function constantTimeEquals(a: Uint8Array, b: Uint8Array): boolean {
  * Returns format: `pbkdf2$<iter>$<salt-b64u>$<hash-b64u>`
  */
 export async function hashPassword(plain: string): Promise<string> {
-  if (!plain || plain.length < 8) {
-    throw new Error('Password must be at least 8 chars');
+  // v2.33.58 round 12 I1: 之前寫死 8，跟 MIN_PASSWORD_LEN 漂移 — 若未來 bump
+  // MIN_PASSWORD_LEN，hashPassword 仍會接受更短密碼造成漏洞。
+  if (!plain || plain.length < MIN_PASSWORD_LEN) {
+    throw new Error(`Password must be at least ${MIN_PASSWORD_LEN} chars`);
   }
   const salt = new Uint8Array(SALT_BYTES);
   crypto.getRandomValues(salt);

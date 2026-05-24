@@ -120,7 +120,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .run();
 
   // Mark token consumed (kept until expires_at so re-clicks return 'used')
-  await adapter.consume(token);
+  // v2.33.58 round 12 C4: consume 改 boolean 返值，這裡無 race detect 需求
+  // (重複 click 走 .consumed 早期擋的 path)。void 忽略。
+  void (await adapter.consume(token));
 
   // Revoke ALL existing sessions for this user — security boundary: an attacker
   // who held a stolen session cookie loses access the moment the user resets

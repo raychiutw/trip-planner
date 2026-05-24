@@ -10,7 +10,12 @@
  *   - uid: user.id
  *   - iat: issued at (unix sec)
  *   - exp: expires at (unix sec)
- *   - csrf: CSRF token (32 bytes random，POST/PUT/DELETE 都驗)
+ *   - csrf: 32-byte random nonce — **未實際做 double-submit token 驗證**。
+ *     v2.33.58 round 12 H5: 之前 comment 誇大「POST/PUT/DELETE 都驗」實際無
+ *     endpoint 讀 payload.csrf 跟 request header / form field 比對。CSRF
+ *     defense 目前**僅靠** `_middleware.ts` Origin allowlist + Cookie
+ *     `SameSite=Lax`。`csrf` field 保留為 future-proof（如要加 double-submit
+ *     檢查可基於此 field），但勿假設此防護已啟用。
  *
  * 驗證：HMAC(secret, payload) === provided_hmac → 接受；過期 reject。
  *

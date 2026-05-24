@@ -55,20 +55,37 @@ export async function verifyGoogleIdToken(
   }
   const jwks = await fetchGoogleJwks();
   const matchingKey = jwks.keys.find((k) => k.kid === header.kid);
+  let claims: JwtClaims;
   if (!matchingKey) {
     // Possible if Google just rotated keys; force-refresh once and retry.
     jwksCache = null;
     const refreshed = await fetchGoogleJwks();
     const retry = refreshed.keys.find((k) => k.kid === header.kid);
     if (!retry) throw new Error(`Google id_token kid "${header.kid}" not in JWKS`);
-    return verifyJwt(idToken, await importPublicJwk(retry), {
+    claims = await verifyJwt(idToken, await importPublicJwk(retry), {
+      expectedIss: ALLOWED_ISSUERS,
+      expectedAud,
+    });
+  } else {
+    const publicKey = await importPublicJwk(matchingKey);
+    claims = await verifyJwt(idToken, publicKey, {
       expectedIss: ALLOWED_ISSUERS,
       expectedAud,
     });
   }
-  const publicKey = await importPublicJwk(matchingKey);
-  return verifyJwt(idToken, publicKey, {
-    expectedIss: ALLOWED_ISSUERS,
-    expectedAud,
-  });
+
+  // v2.33.58 round 12 C2/H4: Enforce email_verified === true here (defense in depth)。
+  // 之前 callback/google.ts 雖讀 email_verified 但不 enforce — 攻擊者拿未 verified 的
+  // Google 帳號（hostile domain workspace / federated mis-config）若 callback 未阻擋，
+  // 可能 squat 既有 email。在 verifier 內擋。
+  const emailVerified = (claims as { email_verified?: unknown }).email_verified;
+  if (emailVerified !== true) {
+    throw new Error('Google id_token email_verified is not true');
+  }
+  // OIDC §3.1.3.7 step 8: if azp (authorized party) is present, MUST equal expectedAud。
+  const azp = (claims as { azp?: unknown }).azp;
+  if (typeof azp === 'string' && azp !== expectedAud) {
+    throw new Error(`Google id_token azp mismatch: got "${azp}"`);
+  }
+  return claims;
 }
