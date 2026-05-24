@@ -9,7 +9,7 @@
  *           （含 computedAt field）→ TravelPill.isStale 判斷
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TimelineRail from '../../src/components/trip/TimelineRail';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
@@ -121,8 +121,8 @@ describe('TimelineRail — v2.29.2 stale-travel ⚠ (computed_at) wiring', () =>
     expect(call).toBeTruthy();
     expect((call![1] as RequestInit).method).toBe('POST');
 
-    await new Promise((r) => setTimeout(r, 0));
-    expect(eventSpy).toHaveBeenCalled();
+    // v2.33.65 round 15: waitFor 取代 setTimeout(0) microtask flush (anti-pattern)
+    await waitFor(() => expect(eventSpy).toHaveBeenCalled());
     window.removeEventListener('tp-entry-updated', eventSpy);
   });
 
@@ -146,7 +146,8 @@ describe('TimelineRail — v2.29.2 stale-travel ⚠ (computed_at) wiring', () =>
       status: 200,
       json: async () => ({ pairsComputed: 1, pairsSkippedMissingCoords: 0, errorsDetail: [] }),
     } as unknown as Response);
-    await new Promise((r) => setTimeout(r, 0));
+    // v2.33.65 round 15: waitFor 取代 setTimeout(0) — 等 setState batch flush
+    await waitFor(() => expect(apiFetchRawMock).toHaveBeenCalled());
   });
 
   it('failed POST → in-flight guard unlocks via .finally → retry POSTs again', async () => {
@@ -162,12 +163,14 @@ describe('TimelineRail — v2.29.2 stale-travel ⚠ (computed_at) wiring', () =>
     );
     const btn = screen.getByTestId('travel-pill-recompute');
     fireEvent.click(btn);
-    await new Promise((r) => setTimeout(r, 0));
+    // v2.33.65 round 15: waitFor 第一個 POST settle (失敗 unlock guard)
+    await waitFor(() => expect(apiFetchRawMock).toHaveBeenCalledTimes(1));
     fireEvent.click(btn);
-    await new Promise((r) => setTimeout(r, 0));
-    const recomputeCalls = apiFetchRawMock.mock.calls.filter((c) =>
-      typeof c[0] === 'string' && (c[0] as string).includes('/recompute-travel'),
-    );
-    expect(recomputeCalls).toHaveLength(2);
+    await waitFor(() => {
+      const recomputeCalls = apiFetchRawMock.mock.calls.filter((c) =>
+        typeof c[0] === 'string' && (c[0] as string).includes('/recompute-travel'),
+      );
+      expect(recomputeCalls).toHaveLength(2);
+    });
   });
 });

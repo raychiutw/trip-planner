@@ -33,6 +33,11 @@ describe('D1Adapter — Panva oidc-provider Adapter contract', () => {
     vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
   });
 
+  // v2.33.65 round 15: restore real timers to prevent cross-file leak inside same worker
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe('upsert', () => {
     it('INSERT OR REPLACE with name + id + JSON payload + expires_at = now + ms', async () => {
       const { db, stmt, prepare } = makeMockDb();
