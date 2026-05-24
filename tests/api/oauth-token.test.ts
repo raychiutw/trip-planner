@@ -593,6 +593,8 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
 
   it('429 rate_limited when client bucket locked (V2-P6 throughput cap)', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      // v2.33.101 CR-9: rate-limit check 在 client_apps SELECT 之後，須先 mock active
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
       if (sql.includes('FROM rate_limit_buckets')) {
         return makeStmt({
           bucket_key: 'oauth-token:mobile',
@@ -616,7 +618,7 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
     expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
   });
 
-  it('Bumps oauth-token bucket on every request (success or failure)', async () => {
+  it('不 bump oauth-token bucket 當 client_id 未知 (v2.33.101 CR-9: prevent DB write DoS amp)', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
       if (sql.includes('FROM client_apps')) return makeStmt(null);
@@ -625,11 +627,32 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
     const env: MockEnv = { DB: { prepare: dbPrepare } };
     const res = await onRequestPost(makeContext({
       grant_type: 'authorization_code',
-      client_id: 'mobile',
+      client_id: 'unknown-mobile',
       code: 'c', redirect_uri: 'r',
     }, env));
     expect(res.status).toBe(401);
-    // poi-favorites-rename §3.3: bumpRateLimit 改 atomic INSERT...ON CONFLICT
+    // v2.33.101: unknown client → no rate_limit_buckets INSERT (anti DoS amp)
+    const inserts = dbPrepare.mock.calls.filter(
+      (c) => typeof c[0] === 'string'
+        && c[0].includes('INTO rate_limit_buckets')
+        && c[0].includes('ON CONFLICT'),
+    );
+    expect(inserts.length).toBe(0);
+  });
+
+  it('Bumps oauth-token bucket on every known-client request', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c', redirect_uri: 'r',
+    }, env));
+    expect(res.status).toBe(400); // invalid_grant — code not found
     const inserts = dbPrepare.mock.calls.filter(
       (c) => typeof c[0] === 'string'
         && c[0].includes('INTO rate_limit_buckets')
