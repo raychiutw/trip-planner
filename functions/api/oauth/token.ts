@@ -160,6 +160,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return jsonError('invalid_client', 'Missing client_id');
   }
 
+  // v2.33.101 CR-9: 先 SELECT client_apps 確認 client_id 存在再 rate-limit bump。
+  // 之前 unbounded write amplification — attacker POST 任意 client_id 字串都會
+  // INSERT rate_limit_buckets row（D1 寫不停）。改：unknown client → 直接
+  // invalid_client 不 bump。
+  const client = await context.env.DB
+    .prepare(
+      `SELECT client_id, client_type, client_secret_hash, status, allowed_scopes
+       FROM client_apps WHERE client_id = ?`,
+    )
+    .bind(clientId)
+    .first<ClientAppRow>();
+
+  if (!client || client.status !== 'active') {
+    return jsonError('invalid_client', 'Unknown or inactive client_id', 401);
+  }
+
   // V2-P6 rate limit: per-client_id bucket — throughput cap
   // Preset: 100 attempts / minute, 5min lockout (per RATE_LIMITS.OAUTH_TOKEN)
   // Bump regardless of grant_type / outcome — total per-minute throughput cap
@@ -179,18 +195,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     );
   }
   await bumpRateLimit(context.env.DB, tokenKey, RATE_LIMITS.OAUTH_TOKEN);
-
-  const client = await context.env.DB
-    .prepare(
-      `SELECT client_id, client_type, client_secret_hash, status, allowed_scopes
-       FROM client_apps WHERE client_id = ?`,
-    )
-    .bind(clientId)
-    .first<ClientAppRow>();
-
-  if (!client || client.status !== 'active') {
-    return jsonError('invalid_client', 'Unknown or inactive client_id', 401);
-  }
 
   // Confidential client: verify client_secret (both grant types)
   if (client.client_type === 'confidential') {
