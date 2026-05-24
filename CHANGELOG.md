@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.63] - 2026-05-24
+
+**Round 14d — LOW finding 全做 (backlog #136)**
+
+User: "Loop 持續做，Low 的 finding 也要做" → 把 Round 12 + 14 的 LOW finding
+真的做完。
+
+**FIX**
+
+- `permissions.ts` `invitationExpiresAt(7)` 改 `invitationExpiresAt()` 用 default
+  常數，避免跟 `INVITATION_TTL_DAYS` 漂移
+- `oauth-d1-adapter.upsert` 加 16KB payload size cap — 防 caller 寫超大 payload
+  burn D1 quota
+- `session.ts importHmacKey` 加 in-isolate CryptoKey cache (Map<secret, key>) —
+  之前 verifySessionToken 每 request importKey (~1ms) × 多 route 累積
+- `google-id-token` JWKS cache 加 comment 標 V2-P7 KV cache upgrade path
+  (cross-isolate consistency)
+
+**ASSET**
+
+- 用 `sharp` 從 icon-512.png 產 maskable 變體 (terracotta safe-zone) 兩個尺寸：
+  `icon-192-maskable.png` + `icon-512-maskable.png`
+- `manifest.json` icons 加 2 個 maskable purpose 變體
+
+**CLEANUP**
+
+- `tokens.css` 拔 1 個真 stale v2.18.0 version prefix comment (6+ 月前)。
+  其他 v2.30+ comment 留作 historical context (git blame 可查)
+
+**TESTING**
+
+- `tests/unit/round-14d-low-findings.test.ts` — 9 個 source-grep guard
+- 2565 / 2565 全綠 (+9 從 2556)
+- tsc clean
+
+closes backlog #136. Round 14 finding 100% 處理完。
+
 ## [2.33.62] - 2026-05-24
 
 **Round 14c — 真做完所有 deferred finding (backlog #135)**

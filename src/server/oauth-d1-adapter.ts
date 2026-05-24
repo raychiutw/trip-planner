@@ -37,11 +37,18 @@ export class D1Adapter {
   }
 
   async upsert(id: string, payload: AdapterPayload, expiresIn: number): Promise<void> {
+    // v2.33.63 round 14d: 16KB payload size cap — 避免任 caller 把超大 payload
+    // 寫入塞 D1 row (free tier ~1MB 上限 quota burn)。OAuth model 正常 payload
+    // 含 scopes / grantId / user_id 等小欄位，遠低於 16KB；超出代表 logic bug。
+    const serialised = JSON.stringify(payload);
+    if (serialised.length > 16 * 1024) {
+      throw new Error(`oauth_models payload too large: ${serialised.length}B for ${this.name}/${id}`);
+    }
     await this.db
       .prepare(
         'INSERT OR REPLACE INTO oauth_models (name, id, payload, expires_at) VALUES (?, ?, ?, ?)',
       )
-      .bind(this.name, id, JSON.stringify(payload), Date.now() + expiresIn * 1000)
+      .bind(this.name, id, serialised, Date.now() + expiresIn * 1000)
       .run();
   }
 

@@ -19,7 +19,14 @@ interface GoogleJwks {
   keys: Array<JsonWebKey & { kid?: string }>;
 }
 
-/** In-isolate JWKS cache. Google rotates keys ~daily; 1h TTL is conservative. */
+/**
+ * In-isolate JWKS cache. Google rotates keys ~daily; 1h TTL is conservative.
+ *
+ * v2.33.63 round 14d: 已知 limitation — 每個 CF Worker isolate 各自 cache，
+ * key rotation 時不同 isolate 可能短暫服務不同 JWKS (max gap ~1h)。retry-on-miss
+ * path (line 59-64) 已處理 transient miss。長期改 KV cache 達到 cross-isolate
+ * consistency 需 V2-P7 infra (binding + cron warmer)，目前風險可接受。
+ */
 let jwksCache: { fetchedAt: number; jwks: GoogleJwks } | null = null;
 const JWKS_TTL_MS = 60 * 60 * 1000;
 
