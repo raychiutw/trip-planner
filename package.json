@@ -54,6 +54,12 @@
     "vitest": "^4.1.0",
     "wrangler": "^4.80.0"
   },
+  "_overrides_note": "v2.33.61 round 14: pin transitive deps to patch HIGH CVE per `npm audit` 2026-05-24. Re-audit + remove if upstream releases fix.",
+  "overrides": {
+    "@babel/plugin-transform-modules-systemjs": "^7.29.4",
+    "serialize-javascript": "^7.0.5",
+    "fast-uri": "^3.1.2"
+  },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
