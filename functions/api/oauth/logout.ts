@@ -48,7 +48,7 @@ async function buildLogoutResponse(request: Request, env: Env): Promise<Response
     eventType: 'logout',
     outcome: 'success',
     userId: session?.uid ?? null,
-  });
+  }, env);
 
   return response;
 }

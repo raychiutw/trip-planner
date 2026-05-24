@@ -107,7 +107,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       userId: identity?.user_id ?? null,
       failureReason: !identity ? 'unknown_email' : 'wrong_password',
       metadata: { email },
-    });
+    }, context.env);
     return errorResponse('LOGIN_INVALID', 'email 或密碼錯誤', 401);
   }
 
@@ -138,6 +138,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     outcome: 'success',
     userId: identity.user_id,
     metadata: { email },
-  });
+  }, context.env);
   return response;
 };
