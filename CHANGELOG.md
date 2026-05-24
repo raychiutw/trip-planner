@@ -3,6 +3,31 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.72] - 2026-05-24
+
+**Round 22 — 5 個 untested page smoke test (Round 15 deferred)**
+
+Round 15 finding: 4 core page (CollabPage / TripLayout / Appearance /
+Notifications) 沒 unit test + VerifyEmailPage (Round 13 新加) 也沒測。本 PR 補
+smoke render guard。
+
+**NEW**
+
+- `tests/unit/untested-pages-smoke.test.tsx` — 6 個 smoke test:
+  - TripLayout mount + outlet (route wrapper)
+  - AppearanceSettingsPage mount + 外觀/主題 text
+  - NotificationsSettingsPage mount + 通知/提醒 text
+  - CollabPage mount under `/trip/:id/collab` route
+  - VerifyEmailPage with `?token=abc` (verifying state)
+  - VerifyEmailPage without token (error state)
+
+Smoke 只驗 mount 不 throw + 含預期 text/testid。完整 behavior test 後續 PR。
+
+**TESTING**
+
+- 2639 / 2639 全綠 (+6 從 2633)
+- tsc clean
+
 ## [2.33.71] - 2026-05-24
 
 **Round 21 — vitest workspace split (Round 15 deferred, CI speedup)**
