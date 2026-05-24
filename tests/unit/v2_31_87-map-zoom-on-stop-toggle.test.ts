@@ -22,6 +22,8 @@ describe('v2.31.87 #5+#6: map zoom on TimelineRail expand/collapse', () => {
   const railSrc = read('src/components/trip/TimelineRail.tsx');
   const tripMapRailSrc = read('src/components/trip/TripMapRail.tsx');
   const oceanMapSrc = read('src/components/trip/OceanMap.tsx');
+  // v2.33.57 round 11: panToCoord effect 拆到 src/hooks/useMapViewport.ts
+  const useMapViewportSrc = read('src/hooks/useMapViewport.ts');
 
   it('TimelineRail row click dispatch event detail 含 isExpanding: !expanded', () => {
     expect(railSrc).toMatch(/detail:\s*\{\s*entryId:\s*entry\.id,\s*isExpanding:\s*!expanded\s*\}/);
@@ -44,8 +46,8 @@ describe('v2.31.87 #5+#6: map zoom on TimelineRail expand/collapse', () => {
     expect(oceanMapSrc).toMatch(/panToCoord\?:\s*\{\s*lat:\s*number;\s*lng:\s*number;\s*zoom\?:\s*number\s*\}/);
   });
 
-  it('OceanMap panToCoord 處理：zoom given 走 flyTo，否則 panTo (no zoom change)', () => {
-    expect(oceanMapSrc).toMatch(/typeof panToCoord\.zoom === 'number'[\s\S]*?flyTo\(\{\s*lat:\s*panToCoord\.lat,\s*lng:\s*panToCoord\.lng\s*\},\s*panToCoord\.zoom\)/);
-    expect(oceanMapSrc).toMatch(/} else \{\s*map\.panTo\(\{\s*lat:\s*panToCoord\.lat,\s*lng:\s*panToCoord\.lng\s*\}\)/);
+  it('panToCoord 處理：zoom given 走 flyTo，否則 panTo (no zoom change)', () => {
+    expect(useMapViewportSrc).toMatch(/typeof panToCoord\.zoom === 'number'[\s\S]*?flyTo\(\{\s*lat:\s*panToCoord\.lat,\s*lng:\s*panToCoord\.lng\s*\},\s*panToCoord\.zoom\)/);
+    expect(useMapViewportSrc).toMatch(/} else \{\s*map\.panTo\(\{\s*lat:\s*panToCoord\.lat,\s*lng:\s*panToCoord\.lng\s*\}\)/);
   });
 });

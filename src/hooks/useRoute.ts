@@ -89,10 +89,10 @@ async function writeWithLru(entry: CacheEntry): Promise<void> {
   await tx.done;
 }
 
-export interface Coord {
-  lat: number;
-  lng: number;
-}
+// v2.33.57 round 11: Coord 拆到 src/lib/mapTypes 解 lib→hooks reverse import
+// (lib/mapHelpers 要用 Coord)。re-export 維持 backward compat (callers 不動)。
+export type { Coord } from '../lib/mapTypes';
+import type { Coord } from '../lib/mapTypes';
 
 export interface UseRouteOptions {
   /** If provided, cache is invalidated when either timestamp exceeds the cached entry's ts */
