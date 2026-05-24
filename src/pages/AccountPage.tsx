@@ -143,14 +143,14 @@ const SCOPED_STYLES = `
 
 /* destructive variant — title + helper 都覆寫成紅字（不能只設 row color，
  * .tp-account-row-title/.tp-account-row-helper 有 explicit color 不繼承）。 */
-.tp-account-row.is-danger { color: var(--color-priority-high-dot, #c0392b); }
-.tp-account-row.is-danger .tp-account-row-title { color: var(--color-priority-high-dot, #c0392b); }
-.tp-account-row.is-danger .tp-account-row-helper { color: var(--color-priority-high-dot, #c0392b); opacity: 0.78; }
+.tp-account-row.is-danger { color: var(--color-priority-high-dot); }
+.tp-account-row.is-danger .tp-account-row-title { color: var(--color-priority-high-dot); }
+.tp-account-row.is-danger .tp-account-row-helper { color: var(--color-priority-high-dot); opacity: 0.78; }
 .tp-account-row.is-danger .tp-account-row-icon {
-  background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.08));
-  color: var(--color-priority-high-dot, #c0392b);
+  background: var(--color-priority-high-bg);
+  color: var(--color-priority-high-dot);
 }
-.tp-account-row.is-danger:hover { background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.06)); }
+.tp-account-row.is-danger:hover { background: var(--color-priority-high-bg); }
 
 .tp-logout-stats-error {
   font-size: var(--font-size-caption2);

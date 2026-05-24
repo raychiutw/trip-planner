@@ -810,8 +810,8 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 style={{
                   flex: 1, minWidth: 112, minHeight: 'var(--spacing-tap-min)',
                   borderRadius: 'var(--radius-full)',
-                  background: 'var(--color-priority-high-dot, #c0392b)',
-                  borderColor: 'var(--color-priority-high-dot, #c0392b)',
+                  background: 'var(--color-priority-high-dot)',
+                  borderColor: 'var(--color-priority-high-dot)',
                   color: '#fff',
                   font: 'inherit', fontWeight: 800, fontSize: 'var(--font-size-footnote)',
                   cursor: 'pointer', border: '1px solid',

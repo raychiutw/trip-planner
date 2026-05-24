@@ -27,7 +27,8 @@
 | 8d | cleanup backlog sweep | — | [#732](https://github.com/raychiutw/trip-planner/pull/732) | 2026-05-24 | [round-8d-cleanup-backlog.md](./round-8d-cleanup-backlog.md) |
 | 9 | src/lib zero-test catch-up | — | [#733](https://github.com/raychiutw/trip-planner/pull/733) | 2026-05-24 | [round-9-lib-test-catchup.md](./round-9-lib-test-catchup.md) |
 | 10 | src/lib reverse imports rip-out | — | [#734](https://github.com/raychiutw/trip-planner/pull/734) | 2026-05-24 | [round-10-lib-reverse-imports.md](./round-10-lib-reverse-imports.md) |
-| 5d-resid | round 5d backend residuals (atomic writes) | — | TBD | 2026-05-24 | [round-5d-residuals.md](./round-5d-residuals.md) |
+| 5d-resid | round 5d backend residuals (atomic writes) | — | [#735](https://github.com/raychiutw/trip-planner/pull/735) | 2026-05-24 | [round-5d-residuals.md](./round-5d-residuals.md) |
+| 6c-style | round 6c style token drift fix | — | TBD | 2026-05-24 | [round-6c-style-token-drift.md](./round-6c-style-token-drift.md) |
 
 ## 流程
 

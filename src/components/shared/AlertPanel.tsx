@@ -87,15 +87,15 @@ const SCOPED_STYLES = `
 
 /* Error variant — 紅 destructive border + icon */
 .tp-alert-panel.is-error {
-  background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.06));
-  border-color: var(--color-priority-high-dot, #c0392b);
-  color: var(--color-priority-high-dot, #c0392b);
+  background: var(--color-priority-high-bg);
+  border-color: var(--color-priority-high-dot);
+  color: var(--color-priority-high-dot);
 }
 .tp-alert-panel.is-error .tp-alert-panel-icon {
-  background: var(--color-priority-high-dot, #c0392b);
+  background: var(--color-priority-high-dot);
   color: #fff;
 }
-.tp-alert-panel.is-error .tp-alert-panel-title { color: var(--color-priority-high-dot, #c0392b); }
+.tp-alert-panel.is-error .tp-alert-panel-title { color: var(--color-priority-high-dot); }
 
 /* Warning variant — amber border */
 .tp-alert-panel.is-warning {

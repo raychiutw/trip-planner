@@ -80,12 +80,12 @@ const SCOPED_STYLES = `
   transition: background 120ms, border-color 120ms;
 }
 .tp-conflict-btn-replace {
-  background: var(--color-priority-high-dot, #c0392b);
+  background: var(--color-priority-high-dot);
   color: #fff;
-  border-color: var(--color-priority-high-dot, #c0392b);
+  border-color: var(--color-priority-high-dot);
 }
 .tp-conflict-btn-replace:hover { filter: brightness(0.92); }
-.tp-conflict-btn-replace:focus-visible { outline: 2px solid var(--color-priority-high-dot, #c0392b); outline-offset: 2px; }
+.tp-conflict-btn-replace:focus-visible { outline: 2px solid var(--color-priority-high-dot); outline-offset: 2px; }
 
 .tp-conflict-btn-after {
   background: var(--color-accent);

@@ -132,7 +132,7 @@ const SCOPED_STYLES = `
   box-shadow: 0 0 0 2px var(--color-accent-subtle);
 }
 .tp-custom-poi-form-row-error {
-  color: var(--color-destructive, #c0392b);
+  color: var(--color-destructive);
   font-size: var(--font-size-caption2);
   margin-top: 2px;
 }
