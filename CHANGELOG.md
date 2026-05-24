@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.77] - 2026-05-24
+
+**Round 27 — 刪掉 dead source-grep test**
+
+Round 15 finding follow-up: `tests/unit/migration-0033-add-user-id-columns.test.ts`
+test 3 個表 (saved_pois / trip_permissions / trip_ideas) 加 user_id 的 SQL 結構。
+其中 2/3 表已 DROP（saved_pois v2.29.1、trip_ideas v2.21.0）。Test 只讀
+historical migration file regex，沒 regression value，pure 歷史 documentation。
+
+**DELETE**
+
+- `tests/unit/migration-0033-add-user-id-columns.test.ts` — dead historical test
+
+**Why not delete other migration tests**: 0034/0035/0036/0037/0040/0041/0050/0057/0058
+testing migrations that 表/欄位 still alive 或仍是 active flow（rate limit /
+session devices / trip_invitations 等）。0033 是唯一 2/3 表已 drop 的例外。
+
 ## [2.33.76] - 2026-05-24
 
 **Round 26 — ARCHITECTURE Key Decisions section 對齊 v2.31.x reality**
