@@ -19,6 +19,7 @@
  *   - Mobile <1024px: 1-pane chat + bottom nav
  */
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import clsx from 'clsx';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -880,10 +881,12 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
           const selfDisplayName = user?.displayName || user?.email?.split('@')[0] || '我';
           const senderDisplay = isOtherUser ? otherDisplayName : selfDisplayName;
           const senderInitial = senderDisplay.charAt(0).toUpperCase();
-          const rowClass = isAssistant ? 'is-assistant' : isOtherUser ? 'is-other-user' : 'is-user';
+          // v2.33.93 simplify: 兩個 ternary 同時依 isAssistant/isOtherUser/user 分支，
+          // 抽 byRole 一次決定。clsx 已在其他 component 用，這裡也採用。
+          const byRole = <A, O, U>(a: A, o: O, u: U): A | O | U => (isAssistant ? a : isOtherUser ? o : u);
           return (
             <Fragment key={m.id}>
-              <div className={`tp-chat-msg-row ${rowClass}`}>
+              <div className={clsx('tp-chat-msg-row', byRole('is-assistant', 'is-other-user', 'is-user'))}>
                 {isAssistant && (
                   <div className="tp-chat-avatar is-ai" aria-hidden="true" data-testid="chat-avatar-ai">AI</div>
                 )}
@@ -902,7 +905,12 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
                     <div className="tp-chat-msg-sender-name" data-testid={`chat-sender-${m.id}`}>{senderDisplay}</div>
                   )}
                   <div
-                    className={`tp-chat-msg ${isAssistant ? 'tp-chat-msg-assistant' : isOtherUser ? 'tp-chat-msg-other-user' : 'tp-chat-msg-user'} ${m.pendingRequestId ? 'is-pending' : ''} ${m.failed ? 'is-failed' : ''}`}
+                    className={clsx(
+                      'tp-chat-msg',
+                      byRole('tp-chat-msg-assistant', 'tp-chat-msg-other-user', 'tp-chat-msg-user'),
+                      m.pendingRequestId && 'is-pending',
+                      m.failed && 'is-failed',
+                    )}
                     data-testid={`chat-msg-${isOtherUser ? 'other-user' : m.role}`}
                   >
                     {m.pendingRequestId ? (

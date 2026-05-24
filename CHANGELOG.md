@@ -3,6 +3,36 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.93] - 2026-05-24
+
+**Round 42 — /simplify deferred batch 1（5 個 surgical quality fix）**
+
+v2.33.91 deferred findings ship 第一批。
+
+**REUSE**
+
+- `src/pages/EditTripPage.tsx:1469` 重用 `daysBetween()` + `shiftDateByDays()`
+  helpers（同檔已存在），shift-modal preview 拔掉 inline ms 數學。
+
+**QUALITY**
+
+- `src/pages/ChatPage.tsx:883,905` rowClass 雙 ternary 抽 `byRole<A,O,U>(a,o,u)`
+  + 採用 `clsx`（其他 component 已用）。
+- `src/pages/EditTripPage.tsx:687-688` `titleEdited` + `titleHintDismissed` 兩個
+  bool 唯一 consumer 是 line 944 OR；合一為 `titleHintHidden`。
+- `src/components/trip/TimelineRail.tsx:675` 拔掉純 event-stop wrapper `<div>`，
+  `onClick={e.stopPropagation()}` 搬上 `StopPoiChoiceCard` 的 `<article>`。
+
+**Verified**
+
+- 2665/2665 test pass
+- tsc clean
+
+**Skipped (not surgical, larger refactor needed)**
+
+- REUSE-4 oauth `errorResponse(code, msg, status)` → AppError 需 8 個 new codes
+  入 ERROR_MESSAGES + 模板字串重構，不是 surgical fix
+
 ## [2.33.92] - 2026-05-24
 
 **Round 41 hotfix — `normalizeEmail()` 補回 `.trim()`**
