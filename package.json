@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260524.1",
-    "@playwright/test": "^1.58.2",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.2.2",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -36,8 +36,8 @@
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitest/runner": "^4.1.0",
-    "@vitest/snapshot": "^4.1.0",
+    "@vitest/runner": "^4.1.7",
+    "@vitest/snapshot": "^4.1.7",
     "axe-core": "^4.11.3",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
@@ -51,7 +51,7 @@
     "typescript": "^5.9.3",
     "vite": "^8.0.0",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^4.1.0",
+    "vitest": "^4.1.7",
     "wrangler": "^4.80.0"
   },
   "_overrides_note": "v2.33.61 round 14: pin transitive deps to patch HIGH CVE per `npm audit` 2026-05-24. Re-audit + remove if upstream releases fix.",
