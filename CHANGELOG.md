@@ -3,6 +3,50 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.65] - 2026-05-24
+
+**Round 15b — tests/ quality fixes + types drift (backlog #137 partial)**
+
+2 個 parallel agent (code-reviewer + test-engineer) review tests/ (375 files /
+46k LOC) 找出大量 finding。本 PR 處理可獨立完成 6 個 (HIGH 2 + MED 3 + LOW 1)。
+剩餘大型 finding (source-grep tests 重構、jsdom split、shared factory) 留下輪。
+
+**TEST INFRA (HIGH/MED)**
+
+- `vitest.config.js` `clearMocks: true` + `restoreMocks: true` — 防 global.fetch /
+  vi.spyOn cross-test leak (271/316 test 略 afterEach 仍 safe)
+- `playwright.config.js` `retries: process.env.CI ? 2 : 0` + `workers: 2 in CI` —
+  吸收 transient flake + 並行加速
+- 3 個 fake-timer test 加 `afterEach(vi.useRealTimers)` (maps-lock / oauth-d1-adapter /
+  session-module) — 防 cross-file leak
+- `timeline-rail-stale-travel.test.tsx` setTimeout(0) microtask flush → waitFor (8 處)
+
+**INFRA RENAME**
+
+- `tests/setup-jest-dom.js` → `tests/setup-dom.js` (project 用 vitest 不用 Jest)
+
+**TYPES**
+
+- `src/types/trip.ts TripDestination` snake_case (dest_order / day_quota / sub_areas) →
+  camelCase (destOrder / dayQuota / subAreas)。對齊 v2.31.13 fix family — backend
+  經 deepCamel 回 camelCase。未來 caller 誤用避免同類 silent filter 0 bug。
+
+**TESTING**
+
+- `tests/unit/round-15b-tests-quality.test.ts` — 11 個 source-grep guard
+- 2582 / 2582 全綠 (+11 從 2571)
+- tsc clean
+
+**Round 15 剩餘 (defer 大型重構)**
+
+- 113-137 個 source-grep test 重構/刪 (架構決策)
+- vitest workspace split (.ts vs .tsx) — 30-50% CI 提速
+- Shared mock factory (tests/unit/__factories__/) — 防 v2.31.14/15/27 drift bug
+- 4 untested core pages (CollabPage / TripLayout 等)
+- 25 untested API endpoint (admin/maps-* / JWKS)
+- E2E mocks 959 LOC stale schema cleanup
+- 14 個 v2_3X_XX-bug.test.ts file-per-bug 整合
+
 ## [2.33.64] - 2026-05-24
 
 **Round 15a — src/contexts/ silent-failure mode fix (mini)**

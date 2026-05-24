@@ -18,6 +18,11 @@ describe('session module', () => {
     vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
   });
 
+  // v2.33.65 round 15: restore real timers to prevent cross-file leak inside same worker
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe('generateCsrfToken', () => {
     it('returns base64url string ~43 chars (32 bytes)', () => {
       const token = generateCsrfToken();

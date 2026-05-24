@@ -3,8 +3,10 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests/e2e',
   timeout: 30000,
-  retries: 0,
-  workers: 1,
+  // v2.33.65 round 15: CI retries=2 (吸收 transient network / SW race flake;
+  // local dev 仍 retries=0 fail fast)。workers=2 in CI for parallel run。
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 2 : 1,
   use: {
     baseURL: 'http://localhost:3000',
     headless: true,
