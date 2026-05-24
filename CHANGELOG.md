@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.92] - 2026-05-24
+
+**Round 41 hotfix — `normalizeEmail()` 補回 `.trim()`**
+
+v2.33.91 把 6 處 `(email).trim().toLowerCase()` 替換成 `normalizeEmail()` 時，
+canonical helper 只做 NFKC + toLowerCase，**沒做 trim** → 帶前後空白的 email
+input（複製貼上 / Gmail trailing space）不再對齊 stored value → potential
+auth bypass / lookup miss。CI catch on `oauth-verify.test.ts:278` lowercase+trim test。
+
+**FIX**
+
+- `src/server/email-utils.ts:26` — `email.normalize('NFKC').toLowerCase()` →
+  `email.trim().normalize('NFKC').toLowerCase()`
+
+Trim 屬於 email 比對 semantic 的一部分，集中在 helper 是正確的 SoT。
+v2.33.91 已經把全部 callsites 統一走 helper，所以這一行 fix 一次全收。
+
+**Verified**
+
+- `npm test` → 2665/2665 pass（includes the failing CI test）
+- `tsc --noEmit` → clean
+
 ## [2.33.91] - 2026-05-24
 
 **Round 40 — /simplify 整 repo 全掃 7 個高 ROI 修法**
