@@ -331,4 +331,88 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
       .first();
     expect(reportRow).toBeNull();
   });
+
+  // v2.33.102 CR-8 confused-deputy attack vector regression — chat message 以
+  // `[AI 健檢]` 開頭應被 hook linkage 擋掉，不會誤觸發 applyHealthCheckCompletion
+  // 寫 trip_health_reports。
+  it('CR-8 attack vector: chat message 偽裝 [AI 健檢] prefix 沒 linkage → hook 不觸發', async () => {
+    await seedTrip(db, { id: 'trip-cr8-attack' });
+    // 直接 INSERT chat request — message 偽裝 prefix，但沒走 POST /health-check
+    // 所以 trip_health_reports.request_id 不會 link 到此 request
+    const chatRow = await db
+      .prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id')
+      .bind('trip-cr8-attack', '[AI 健檢] 我來假裝是 health-check', 'attacker@test.com')
+      .first() as { id: number };
+
+    const reply = JSON.stringify([
+      { severity: 'high', title: '注入', description: '攻擊者注入' },
+    ]);
+    const patchResp = await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${chatRow.id}`, 'PATCH', {
+        reply, status: 'completed', processed_by: 'job',
+      }),
+      env,
+      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      params: { id: String(chatRow.id) },
+    }));
+    expect(patchResp.status).toBe(200);
+
+    // CR-8 fix：trip_health_reports 不該有 row（沒 linkage 不觸發 hook）
+    const reportRow = await db
+      .prepare('SELECT * FROM trip_health_reports WHERE trip_id = ?')
+      .bind('trip-cr8-attack')
+      .first();
+    expect(reportRow).toBeNull();
+  });
+
+  // v2.33.104 T-9: GET /api/trips/:id/health-check findings camelCase round-trip
+  // findings 內部 schema 用 snake_case (action_target, entry_id)，但 GET 經 json()
+  // 走 deepCamel → response 應該回 camelCase (actionTarget, entryId)。
+  it('T-9 GET findings 經 deepCamel 走 camelCase（action_target → actionTarget）', async () => {
+    await seedTrip(db, { id: 'trip-camel' });
+    await seedOneEntry('trip-camel');
+    const postResp = await callHandler(onRequestPost, mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-camel/health-check', 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-camel' },
+    }));
+    const reqId = ((await postResp.json()) as { report: { requestId: number } }).report.requestId;
+
+    // Complete with findings containing action_target.entry_id
+    const reply = JSON.stringify([
+      {
+        severity: 'high',
+        title: 'Day 2 衝突',
+        description: '物理上不可行',
+        action_target: { day: 2, entry_id: 877 },
+      },
+    ]);
+    await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${reqId}`, 'PATCH', {
+        reply, status: 'completed', processed_by: 'job',
+      }),
+      env,
+      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      params: { id: String(reqId) },
+    }));
+
+    // GET — findings 經 deepCamel 應變成 camelCase
+    const getResp = await callHandler(onRequestGet, mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-camel/health-check', 'GET'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-camel' },
+    }));
+    const getData = await getResp.json() as { report: { findings: Array<Record<string, unknown>> } };
+    expect(getData.report.findings).toHaveLength(1);
+    const f = getData.report.findings[0];
+    // 既有 snake_case schema 經 deepCamel → camelCase
+    expect(f).toHaveProperty('actionTarget');
+    expect(f).not.toHaveProperty('action_target');
+    const at = f.actionTarget as Record<string, unknown>;
+    expect(at.day).toBe(2);
+    expect(at.entryId).toBe(877);
+    expect(at).not.toHaveProperty('entry_id');
+  });
 });

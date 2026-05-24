@@ -152,4 +152,57 @@ describe('PATCH /api/trips/:id/entries/batch', () => {
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
   });
+
+  // v2.33.104 T-10: sort_order UNIQUE invariant validation + atomic rollback。
+  // 之前 v2.33.97 補 (day_id, sort_order) UNIQUE 預檢，避免 SQLite UNIQUE 失敗
+  // 落到中途留 partial state。
+  describe('sort_order UNIQUE invariant (T-10)', () => {
+    it('同 day_id + 同 sort_order 在同 batch 重複 → 400 atomic（無一被改）', async () => {
+      const dayId = await getDayId(db, 'trip-batch', 1);
+      const e1 = await seedEntry(db, dayId, { title: 'A', sortOrder: 1000 });
+      const e2 = await seedEntry(db, dayId, { title: 'B', sortOrder: 1001 });
+
+      const ctx = mockContext({
+        request: jsonRequest('https://test.com/api/trips/trip-batch/entries/batch', 'PATCH', {
+          updates: [
+            { id: e1, sort_order: 2000 },
+            { id: e2, sort_order: 2000 }, // 同 day_id 重複
+          ],
+        }),
+        env,
+        auth: mockAuth({ email: 'user@test.com' }),
+        params: { id: 'trip-batch' },
+      });
+      const resp = await callHandler(onRequestPatch, ctx);
+      expect(resp.status).toBe(400);
+      const data = await resp.json() as { error?: { message?: string } };
+      expect(JSON.stringify(data)).toContain('重複');
+
+      // atomic: 兩個 entry 都沒被改
+      const r1 = await db.prepare('SELECT sort_order FROM trip_entries WHERE id = ?').bind(e1).first<{ sort_order: number }>();
+      const r2 = await db.prepare('SELECT sort_order FROM trip_entries WHERE id = ?').bind(e2).first<{ sort_order: number }>();
+      expect(r1?.sort_order).toBe(1000);
+      expect(r2?.sort_order).toBe(1001);
+    });
+
+    it('不同 day_id 同 sort_order 允許（key 含 day_id）', async () => {
+      const day1 = await getDayId(db, 'trip-batch', 1);
+      const day2 = await getDayId(db, 'trip-batch', 2);
+      const e1 = await seedEntry(db, day1, { title: 'D1A', sortOrder: 3000 });
+      const e2 = await seedEntry(db, day2, { title: 'D2A', sortOrder: 3001 });
+
+      const ctx = mockContext({
+        request: jsonRequest('https://test.com/api/trips/trip-batch/entries/batch', 'PATCH', {
+          updates: [
+            { id: e1, day_id: day1, sort_order: 5000 },
+            { id: e2, day_id: day2, sort_order: 5000 }, // 不同 day_id 同 sort_order OK
+          ],
+        }),
+        env,
+        auth: mockAuth({ email: 'user@test.com' }),
+        params: { id: 'trip-batch' },
+      });
+      expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    });
+  });
 });
