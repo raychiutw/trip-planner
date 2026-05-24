@@ -884,8 +884,11 @@ body.dark {
         --color-destructive-bg: rgba(232, 160, 160, 0.15);
         --color-success: #7EC89A;
         --color-success-bg: rgba(126, 200, 154, 0.15);
-        --color-warning: #F0D060;
-        --color-warning-bg: rgba(240, 208, 96, 0.15);
+        /* v2.33.60 round 14: warning 維持 orange (#F48C06) hue 系列，不要切 yellow
+           — 之前 light/dark 跨 hue 會讓 brand 感不一致 (orange ↔ yellow 跳)。
+           Dark mode 用較亮 orange (#FAA94B) 提高對比，仍同 hue family。 */
+        --color-warning: #FAA94B;
+        --color-warning-bg: rgba(250, 169, 75, 0.18);
         --color-info: #E89968;
         --color-info-bg: rgba(232, 153, 104, 0.15);
         --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
@@ -1004,13 +1007,15 @@ body.dark {
     background: var(--color-info);
     flex: 0 0 auto;
 }
-.tp-toast--error { border-color: rgba(193, 53, 21, 0.32); }
+/* v2.33.60 round 14: 改 color-mix 從 token 算 border 透明度，dark mode 自動跟 token 變色。
+   之前寫死 rgba(193,53,21,...) → 在 dark mode 下 token 變色但 border 不變 = 視覺不一致。 */
+.tp-toast--error { border-color: color-mix(in srgb, var(--color-destructive) 32%, transparent); }
 .tp-toast--error::before { background: var(--color-destructive); }
-.tp-toast--success { border-color: rgba(6, 167, 125, 0.32); }
+.tp-toast--success { border-color: color-mix(in srgb, var(--color-success) 32%, transparent); }
 .tp-toast--success::before { background: var(--color-success); }
-.tp-toast--warning { border-color: rgba(244, 140, 6, 0.36); }
+.tp-toast--warning { border-color: color-mix(in srgb, var(--color-warning) 36%, transparent); }
 .tp-toast--warning::before { background: var(--color-warning); }
-.tp-toast--info { border-color: rgba(217, 120, 72, 0.34); }
+.tp-toast--info { border-color: color-mix(in srgb, var(--color-info) 34%, transparent); }
 .tp-toast--info::before { background: var(--color-info); }
 
 @media (prefers-color-scheme: dark) {

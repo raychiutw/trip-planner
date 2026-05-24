@@ -88,6 +88,13 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/') || id.includes('node_modules/react-router')) return 'vendor';
           if (id.includes('node_modules/@sentry')) return 'sentry';
+          // v2.33.60 round 14: heavy deps 各自 chunk，避免 lazy-route load 拖整 sibling
+          if (id.includes('node_modules/@googlemaps/')) return 'gmaps';
+          if (id.includes('node_modules/@headlessui/')) return 'headlessui';
+          if (id.includes('node_modules/@dnd-kit/')) return 'dndkit';
+          if (id.includes('node_modules/react-day-picker') || id.includes('node_modules/date-fns/')) return 'datepicker';
+          if (id.includes('node_modules/marked/')) return 'marked';
+          if (id.includes('node_modules/html2pdf') || id.includes('node_modules/jspdf') || id.includes('node_modules/html2canvas')) return 'pdf';
         },
       },
     },
@@ -97,9 +104,8 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
-  optimizeDeps: {
-    include: ['leaflet'],
-  },
+  // v2.33.60 round 14: 拔 optimizeDeps['leaflet'] — v2.23.0 已切 Google Maps，
+  // leaflet 不在 package.json，留著會 trigger Vite dev startup warning。
   server: {
     proxy: process.env.MOCK_API ? {} : {
       '/api': {

@@ -3,7 +3,15 @@
   X-Content-Type-Options: nosniff
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.open-meteo.com https://*.ingest.us.sentry.io https://cloudflareinsights.com https://maps.googleapis.com https://*.googleapis.com; img-src 'self' https: data:; worker-src 'self'; base-uri 'self'; form-action 'self';
+  # v2.33.60 round 14: CSP tighten — narrow connect-src to exact Google subdomains,
+  # img-src 從 `https:` wildcard 縮為 known Google + self + data: 來源，加
+  # frame-ancestors / object-src / upgrade-insecure-requests。
+  # 'unsafe-inline' style 由 Tailwind 4 + Vite 強制 (build-time 無法消除)，記錄為已知
+  # trade-off — 等 Vite 9 / Tailwind 5 提供 nonce inject 後再拔。
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.open-meteo.com https://*.ingest.us.sentry.io https://cloudflareinsights.com https://maps.googleapis.com https://places.googleapis.com https://routes.googleapis.com; img-src 'self' data: https://maps.gstatic.com https://maps.googleapis.com https://*.googleusercontent.com https://lh3.googleusercontent.com; worker-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests
   X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
   Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Referrer-Policy: strict-origin-when-cross-origin
+  Cross-Origin-Opener-Policy: same-origin
   Permissions-Policy: geolocation=(self), clipboard-write=(self), camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), midi=(), encrypted-media=(), fullscreen=(self)

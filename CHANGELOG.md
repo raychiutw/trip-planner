@@ -3,6 +3,57 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.60] - 2026-05-24
+
+**Round 14 — frontend infra + migrations review (backlog #133)**
+
+2 個 parallel agent review 5 個 frontend infra file + 70 個 migration。
+找 11 HIGH / 13 MED / 10 LOW finding，本 PR 處理 10 個可獨立完成 fix。
+doc: `docs/code-review/round-14-infra.md`。
+
+**SECURITY (HIGH)**
+
+- `public/_headers` CSP narrow: `connect-src` 拔 `*.googleapis.com` wildcard
+  改 3 個精確子網域 (maps/places/routes); `img-src` 拔 `https:` wildcard
+  改 Google CDN 白名單; 加 `frame-ancestors 'none'` + `object-src 'none'` +
+  `upgrade-insecure-requests`; global `nosniff` + `Referrer-Policy` + COOP
+- `index.html` theme-color `#0077B6` (v2.23.0 前 ocean blue 殘留) → `#F47B5E`
+  對齊 manifest terracotta
+- `public/manifest.json` 補 scope/id/lang/description + icon purpose (PWA
+  identity 缺漏可能讓 preview deploy 蓋掉 user 安裝)
+- `public/_routes.json` exclude 加 `/og/*` (避免 CF Function cold-start)
+- 2 個新 migration: `0069_trip_health_reports_fk` (補 user_id / request_id FK)
+  + `0070_fix_0047_sqlite_sequence` (修補 AUTOINCREMENT ID collision 風險)
+
+**SECURITY (MED)**
+
+- `wrangler.toml` 加 `[env.production.vars] ENVIRONMENT = "production"` —
+  middleware `DEV_MOCK_EMAIL` 守衛靠此 var 判 fail-closed
+- `scripts/auth-cleanup.js` 4 個新 retention sweep (trip_invitations 90d/30d /
+  pois_search_cache TTL / companion_request_actions 90d / error_reports 90d)
+
+**RELIABILITY**
+
+- `vite.config.ts` 拔 stale `optimizeDeps: ['leaflet']` (v2.23.0 後已切 Google Maps)
+- `vite.config.ts` manualChunks 補 5 個 heavy deps (gmaps/headlessui/dndkit/datepicker/marked/pdf)
+- `tsconfig.functions.json` 加 exclude node_modules/dist
+- `css/tokens.css` warning hue light/dark 對齊 (拔 yellow 改 orange family) +
+  toast border 改 `color-mix` (dark mode 跟 token 變色)
+- `TimelineRail.tsx` 拔 orphan `<div.ocean-rail-line>` DOM (CSS 早已 display:none)
+
+**TESTING**
+
+- `tests/unit/round-14-infra.test.ts` — 24 個 source-grep guard
+- 2528 / 2528 全綠 (+24 從 2504)
+- tsc clean
+
+**Deferred (個別 PR)**
+
+- 3 個 npm audit CVE 走 overrides pin
+- audit_log FK + ip_hash HMAC + SW cache cross-user PII 等需架構決策
+
+closes backlog #133.
+
 ## [2.33.59] - 2026-05-24
 
 **Round 13 — Round 12 defer MEDIUM 全部完成 (backlog #132)**
