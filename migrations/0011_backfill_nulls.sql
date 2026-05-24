@@ -67,6 +67,10 @@ WHERE label IS NULL OR label = '';
 UPDATE days SET label = 'Day ' || day_num WHERE label IS NULL;
 
 -- Step 4: 驗證 — 確認無 NULL 值
+-- v2.33.60 round 14 note: 以下 SELECT COUNT(*) 在 `wrangler d1 migrations apply` 下
+-- output 被吃掉、無人讀到，「manual verify」comment 誤導但歷史 migration 不能再改 SQL
+-- (已 apply prod + fresh DB rebuild 會跑此版本)。未來 migration 改用 D1 trigger RAISE
+-- ABORT 機制做 post-condition assertion，新流程示範待 0070+。
 -- 注意：D1 不支援 ASSERT，以下 SELECT 在執行後應回傳 0（可手動驗證用）
 SELECT COUNT(*) as remaining_null_date FROM days WHERE date IS NULL OR date = '';
 SELECT COUNT(*) as remaining_null_dow FROM days WHERE day_of_week IS NULL;

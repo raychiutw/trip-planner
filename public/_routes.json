@@ -1,5 +1,5 @@
 {
   "version": 1,
   "include": ["/api/*", "/trip/*"],
-  "exclude": ["/assets/*", "/icons/*", "/manifest.json", "/sw.js", "/registerSW.js"]
+  "exclude": ["/assets/*", "/icons/*", "/og/*", "/manifest.json", "/sw.js", "/registerSW.js"]
 }

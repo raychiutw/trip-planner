@@ -28,7 +28,16 @@ if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CF_ACCOUNT_ID || !process.
 }
 
 (async function main() {
-  var report = { auth_audit_log: 0, session_devices: 0, oauth_models: 0 };
+  var report = {
+    auth_audit_log: 0,
+    session_devices: 0,
+    oauth_models: 0,
+    // v2.33.60 round 14: retention sweep 新增 4 個表
+    trip_invitations: 0,
+    pois_search_cache: 0,
+    companion_request_actions: 0,
+    error_reports: 0,
+  };
 
   // 1. auth_audit_log — 30 天保留
   report.auth_audit_log = await execD1(
@@ -45,6 +54,31 @@ if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CF_ACCOUNT_ID || !process.
   // 3. oauth_models — 過期 row 也順便清（D1Adapter.sweepExpired 邏輯，cron 統一在這跑）
   report.oauth_models = await execD1(
     "DELETE FROM oauth_models WHERE expires_at < strftime('%s', 'now') * 1000"
+  );
+
+  // 4. trip_invitations — v2.33.60: PII (invited_email + trip_id 對應) 與
+  //    token_hash (HMAC of raw token) 不該無限保留。Accepted 90 天 / Expired 30 天後刪。
+  report.trip_invitations = await execD1(
+    "DELETE FROM trip_invitations " +
+    "WHERE (accepted_at IS NOT NULL AND accepted_at < datetime('now', '-90 days')) " +
+    "   OR (accepted_at IS NULL AND expires_at < datetime('now', '-30 days'))"
+  );
+
+  // 5. pois_search_cache — v2.33.60: expires_at 是 TTL signal 但無人 sweep。
+  //    Stale row 仍占 index + 增 DB scan cost。
+  report.pois_search_cache = await execD1(
+    "DELETE FROM pois_search_cache WHERE expires_at < datetime('now')"
+  );
+
+  // 6. companion_request_actions — v2.33.60: append-only audit row，90 天足夠 forensics。
+  report.companion_request_actions = await execD1(
+    "DELETE FROM companion_request_actions WHERE created_at < datetime('now', '-90 days')"
+  );
+
+  // 7. error_reports — v2.33.60: 含 user_agent fingerprint + 攻擊者控的 context 字串，
+  //    無限保留 = PII bloat + 攻擊面增加。90 天 forensics 已夠。
+  report.error_reports = await execD1(
+    "DELETE FROM error_reports WHERE created_at < datetime('now', '-90 days')"
   );
 
   console.log(JSON.stringify({

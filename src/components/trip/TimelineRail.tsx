@@ -992,7 +992,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
       <DndContext sensors={sensors} accessibility={TP_DRAG_ACCESSIBILITY} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
       <div className="ocean-rail-body">
-        <div className="ocean-rail-line" aria-hidden="true" />
+        {/* v2.33.60 round 14: 拔 <div.ocean-rail-line> orphan — CSS 已 display:none，DOM 也清掉 */}
         {orderedEvents.map((entry, i) => {
           const isPast = nowIndex >= 0 && i < nowIndex;
           const isNow = nowIndex >= 0 && i === nowIndex;
