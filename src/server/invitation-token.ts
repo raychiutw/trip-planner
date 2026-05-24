@@ -10,6 +10,9 @@
  * 不互相影響。
  */
 
+// v2.33.59 round 13: HKDF domain separation
+import { deriveSubSecret } from './hkdf';
+
 const ALG = 'SHA-256';
 
 /**
@@ -42,9 +45,16 @@ async function importHmacKey(secret: string): Promise<CryptoKey> {
   );
 }
 
-/** Compute HMAC-SHA256(secret, rawToken) → base64url string for DB storage. */
+/**
+ * Compute HMAC-SHA256(derived_secret, rawToken) → base64url for DB storage。
+ *
+ * v2.33.59 round 13: HMAC 改用 HKDF derived sub-secret (domain separation 跟
+ * session.ts 隔離)。Invitations TTL 7 天 — 7 天後 backward compat 不需要，
+ * 既有 token_hash 全 expire。直接 cutover, 無 dual-verify。
+ */
 export async function hashInvitationToken(rawToken: string, secret: string): Promise<string> {
-  const key = await importHmacKey(secret);
+  const subSecret = await deriveSubSecret(secret, 'invitation_token_v1');
+  const key = await importHmacKey(subSecret);
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawToken));
   return base64urlEncodeBytes(new Uint8Array(sig));
 }

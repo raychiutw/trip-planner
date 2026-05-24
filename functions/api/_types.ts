@@ -12,6 +12,14 @@ export interface Env {
   CF_ACCESS_POLICY_ID: string;
   ADMIN_EMAIL: string;
   ALLOWED_ORIGIN?: string;
+  /**
+   * v2.33.59 round 13: 取代 `new URL(request.url).origin` 拾 outbound email
+   * link / OIDC issuer。Defense — 不再信任 attacker-spoofable Host header。
+   * Pages prod 用 `https://trip-planner-dby.pages.dev`；dev 用
+   * `http://localhost:8788`。Helper `getPublicOrigin(env, request)` 在
+   * `_utils.ts`，fallback to request.url.origin 若 env 未設（dev 漸進採用）。
+   */
+  PUBLIC_ORIGIN?: string;
   DEV_MOCK_EMAIL?: string;
   TRIPLINE_API_URL?: string;
   TRIPLINE_API_SECRET?: string;

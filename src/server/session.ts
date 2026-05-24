@@ -64,6 +64,9 @@ function base64urlDecode(s: string): Uint8Array {
   return bytes;
 }
 
+// v2.33.59 round 13: HKDF domain separation
+import { deriveSubSecret } from './hkdf';
+
 async function importHmacKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     'raw',
@@ -118,7 +121,9 @@ export async function signSessionToken(
     ...(sid ? { sid } : {}),
   };
   const payloadStr = base64urlEncode(JSON.stringify(payload));
-  const sig = await hmacSign(secret, payloadStr);
+  // v2.33.59 round 13: HMAC sign 改用 HKDF derived sub-secret (domain separation)
+  const sessionKey = await deriveSubSecret(secret, 'session_v1');
+  const sig = await hmacSign(sessionKey, payloadStr);
   return `${payloadStr}.${sig}`;
 }
 
@@ -141,8 +146,18 @@ export async function verifySessionToken(
   // noUncheckedIndexedAccess 推為 string | undefined — runtime 已 length===2 但 TS 不知
   if (!payloadStr || !providedSig) return null;
 
-  const expectedSig = await hmacSign(secret, payloadStr);
-  if (!constantTimeEquals(expectedSig, providedSig)) return null;
+  // v2.33.59 round 13: 雙路徑 verify — 先試 derived (新 sign 用)，再 fallback 試 raw
+  // (舊 sessions backward compat, 30-day TTL 後 fallback 可拔)。Both branches return
+  // null on mismatch — constant-time within each attempt; total time leak < 1 path
+  // difference, acceptable for 30d migration window。
+  const sessionKey = await deriveSubSecret(secret, 'session_v1');
+  const derivedSig = await hmacSign(sessionKey, payloadStr);
+  let signatureOk = constantTimeEquals(derivedSig, providedSig);
+  if (!signatureOk) {
+    const legacySig = await hmacSign(secret, payloadStr);
+    signatureOk = constantTimeEquals(legacySig, providedSig);
+  }
+  if (!signatureOk) return null;
 
   let payload: SessionPayload;
   try {

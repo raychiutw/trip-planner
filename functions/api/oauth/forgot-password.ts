@@ -22,7 +22,7 @@
  * Reset URL: {origin}/auth/password/reset?token={token}
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
-import { parseJsonBody, generateOpaqueToken } from '../_utils';
+import { parseJsonBody, generateOpaqueToken, getPublicOrigin } from '../_utils';
 import {
   checkRateLimit,
   bumpRateLimit,
@@ -106,59 +106,61 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     RESET_TOKEN_TTL_SEC,
   );
 
-  // 2026-05-02 cutover: sync send via mac mini tunnel + audit + telegram alert.
-  // Q7 全 endpoint（含 forgot-password）失敗誠實回 500，捨棄 anti-enumeration
-  // 設計（trip-planner 私人圈規模可接受）。
-  const origin = new URL(context.request.url).origin;
+  // v2.33.59 round 13: 改用 getPublicOrigin 避免信 Host header
+  const origin = getPublicOrigin(context.env, context.request);
   const resetUrl = `${origin}/auth/password/reset?token=${encodeURIComponent(token)}`;
   const tpl = passwordReset(resetUrl, user.display_name);
 
-  try {
-    const result = await sendEmail(context.env, {
-      to: email,
-      subject: tpl.subject,
-      html: tpl.html,
-      text: tpl.text,
-      template: 'forgot-password',
-    });
-    await recordEmailEvent(context.env.DB, {
-      template: 'forgot-password',
-      recipient: email,
-      status: 'sent',
-      latencyMs: result.elapsed,
-    });
-    await recordAuthEvent(context.env.DB, context.request, {
-      eventType: 'password_reset_request',
-      outcome: 'success',
-      userId: user.user_id,
-      metadata: { email },
-    });
-    return genericResponse;
-  } catch (err) {
-    const msg = err instanceof EmailError
-      ? `${err.status} ${err.message}`
-      : err instanceof Error
-        ? err.message
-        : String(err);
-    await recordEmailEvent(context.env.DB, {
-      template: 'forgot-password',
-      recipient: email,
-      status: 'failed',
-      error: msg,
-    });
-    await recordAuthEvent(context.env.DB, context.request, {
-      eventType: 'password_reset_request',
-      outcome: 'failure',
-      userId: user.user_id,
-      metadata: { email, reason: 'email_send_failed', error: msg },
-    });
-    await alertAdminTelegram(
-      context.env,
-      `重設密碼信寄送失敗: ${email} (${msg})`,
-    );
-    return new Response(
-      JSON.stringify({ error: { code: 'EMAIL_SEND_FAILED', message: '重設密碼信寄送失敗，請稍後再試' } }),
-      { status: 500, headers: { 'content-type': 'application/json' } },
-    );
-  }
+  // v2.33.59 round 13: 改 background send via waitUntil — anti-enumeration
+  // (known vs unknown email 同 timing ~20ms)。失敗 silent (audit + telegram alert)，
+  // user 看不到失敗訊息但 ops 仍可 monitor。
+  // 之前 2026-05-02 Q7 抉擇是「誠實回 500，捨棄 anti-enum (私人圈)」，本 round
+  // 因 security audit 找到 1000ms+ timing oracle 反向修正。
+  const userId = user.user_id;
+  context.waitUntil((async () => {
+    try {
+      const result = await sendEmail(context.env, {
+        to: email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+        template: 'forgot-password',
+      });
+      await recordEmailEvent(context.env.DB, {
+        template: 'forgot-password',
+        recipient: email,
+        status: 'sent',
+        latencyMs: result.elapsed,
+      });
+      await recordAuthEvent(context.env.DB, context.request, {
+        eventType: 'password_reset_request',
+        outcome: 'success',
+        userId,
+        metadata: { email },
+      });
+    } catch (err) {
+      const msg = err instanceof EmailError
+        ? `${err.status} ${err.message}`
+        : err instanceof Error
+          ? err.message
+          : String(err);
+      await recordEmailEvent(context.env.DB, {
+        template: 'forgot-password',
+        recipient: email,
+        status: 'failed',
+        error: msg,
+      });
+      await recordAuthEvent(context.env.DB, context.request, {
+        eventType: 'password_reset_request',
+        outcome: 'failure',
+        userId,
+        metadata: { email, reason: 'email_send_failed', error: msg },
+      });
+      await alertAdminTelegram(
+        context.env,
+        `重設密碼信寄送失敗: ${email} (${msg})`,
+      );
+    }
+  })());
+  return genericResponse;
 };
