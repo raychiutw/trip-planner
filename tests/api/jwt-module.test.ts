@@ -113,10 +113,10 @@ describe('verifyJwt claim validation', () => {
     await expect(verifyJwt(token, publicKey)).rejects.toThrow(/expired/i);
   });
 
-  it('passes when exp is within clock-skew window (default 60s)', async () => {
-    // exp 30s in the past — within default 60s skew
+  it('throws JWT expired when exp < now（v2.33.58 round 12 I2: skew 只 apply nbf 不放寬 exp）', async () => {
+    // exp 30s in the past — round 12 I2 stricter: no skew tolerance on exp
     const { token, publicKey } = await signedToken({ exp: nowSec - 30 });
-    await expect(verifyJwt(token, publicKey)).resolves.toBeDefined();
+    await expect(verifyJwt(token, publicKey)).rejects.toThrow(/expired/i);
   });
 
   it('throws when nbf is in the future (token not yet valid)', async () => {

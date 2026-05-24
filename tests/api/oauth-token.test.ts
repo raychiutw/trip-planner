@@ -273,8 +273,12 @@ describe('POST /api/oauth/token', () => {
       code: 'c',
       redirect_uri: 'https://x.com/cb',
     }, env));
-    // revokeByGrantId fires DELETE FROM oauth_models WHERE json_extract(payload, '$.grantId')
-    expect(sqls.some((s) => s.includes('DELETE FROM oauth_models WHERE json_extract(payload'))).toBe(true);
+    // revokeByGrantId fires DELETE FROM oauth_models WHERE name IN ('AccessToken', 'RefreshToken')
+    //   AND json_extract(payload, ?) = ?
+    // (v2.33.58 round 12 加 name IN allowlist 防誤刪 — SQL 中 json_extract 不再緊跟 WHERE)
+    expect(sqls.some((s) =>
+      s.includes('DELETE FROM oauth_models') && s.includes('json_extract(payload'),
+    )).toBe(true);
   });
 
   it('confidential client requires + verifies client_secret', async () => {
@@ -374,7 +378,10 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
     expect(res.status).toBe(400);
     expect((await res.json() as { error_description: string }).error_description).toContain('reuse detected');
     // Cascade DELETE on grantId ran for both AccessToken + RefreshToken
-    const cascadeCalls = sqls.filter((s) => s.includes('DELETE FROM oauth_models WHERE json_extract(payload'));
+    // (v2.33.58 round 12 加 name IN allowlist — SQL 含 DELETE...json_extract 但不緊鄰)
+    const cascadeCalls = sqls.filter((s) =>
+      s.includes('DELETE FROM oauth_models') && s.includes('json_extract(payload'),
+    );
     expect(cascadeCalls.length).toBeGreaterThanOrEqual(2);
   });
 

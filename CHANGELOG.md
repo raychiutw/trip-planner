@@ -3,6 +3,60 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.85] - 2026-05-24
+
+**Round 34 — 修 v2.33.84 暴露的 27 pre-existing real bugs**
+
+v2.33.84 解 EADDRNOTAVAIL 後，27 個 fail 暴露出來。逐個 fix：
+
+**Production bug (1 個)**
+
+- `functions/api/trips/[id]/health-check.ts:181,254` — INSERT trip_health_reports
+  寫 `auth.email` 到 `user_id` 欄位（FK to users.id）。Migration 0069 加 FK 後
+  此 INSERT FK-fail。改 `auth.userId`。**這是真實 prod bug**（health-check
+  POST 在 prod 也會 FK-fail），不只 test 問題。
+
+**Stale test expectations (5 個)**
+
+- `tests/api/oauth-verify.test.ts` — v2.33.59 round 13 H2 改 `context.waitUntil`
+  background send + 200 generic anti-enum。原 5 test 仍期 500 / sync send。
+  更新：`waitUntil` collect promises + `await Promise.all` + expect 200。
+- `tests/api/oauth-forgot-password.test.ts` — 同 send-verification pattern，1 test。
+- `tests/api/jwt-module.test.ts` — v2.33.58 round 12 I2 加固 exp 嚴格拒（不放寬
+  60s skew）。原 test 期 within-skew pass。改 expect rejects /expired/。
+- `tests/api/middleware.test.ts` — v2.33.62 round 14c 把 Pages preview origin
+  gate on `env.ENVIRONMENT === 'preview'`。原 test 用 baseEnv 沒 set。補 ENVIRONMENT。
+- `tests/api/oauth-authorize.test.ts` — handler enforces PKCE per OAuth 2.1
+  baseline。5 test buildUrl 缺 code_challenge/method，補上。
+
+**Test infrastructure mismatches (7 個)**
+
+- `tests/api/segments-get.integration.test.ts` — `seedTrip` 預設 published=1，
+  anonymous read allowed → 401/403 test fail。改 published=0。401 改 403
+  對齊 v2.33.41 `requireTripReadAccess` 統一 PERM_DENIED 設計。
+- `tests/api/oauth-reset-password.test.ts` 2 個 — handler 跑 IP rate-limit 在前，
+  mock DB `vi.fn()` 返 undefined → undefined.bind() crash。補 makeStmt-returning
+  prepare stub。
+- `tests/api/account-connected-apps.test.ts` — handler 用 `DB.batch()` atomic
+  delete，mock 缺 batch method。補 vi.fn().mockResolvedValue stub。
+- `tests/api/oauth-token.test.ts` 2 個 — handler 用 `revokeByGrantId` SQL
+  `DELETE FROM oauth_models WHERE name IN (...) AND json_extract(payload, ?) = ?`
+  （v2.33.58 round 12 加 name IN allowlist）。原 test substring 期
+  `DELETE...WHERE json_extract` 緊鄰，現實 SQL 中間有 `name IN` clause。改用
+  雙 substring check (`DELETE FROM oauth_models` + `json_extract(payload`)。
+
+**Final state**:
+
+| Metric | Before v2.33.84 | After v2.33.84 | After v2.33.85 |
+|--------|-----------------|----------------|----------------|
+| Test files passed | 48 | 60 | **70/70** |
+| Tests passed | 583-639 | 704 | **731/731** |
+| Tests failed | 27-48 | 27 | **0** |
+| EADDRNOTAVAIL | 25+ | 0 | **0** |
+| Skipped | 65 | 0 | **0** |
+
+**100% deterministic green test suite**。CI retry 從此可移除。
+
 ## [2.33.84] - 2026-05-24
 
 **Round 33 — EADDRNOTAVAIL port exhaustion 真正 root cause + fix**

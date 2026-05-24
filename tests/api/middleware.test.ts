@@ -22,8 +22,11 @@ describe('isAllowedOrigin', () => {
     expect(isAllowedOrigin('https://localhost:3000', baseEnv)).toBe(true);
   });
 
-  it('允許 Pages preview deployment', () => {
-    expect(isAllowedOrigin('https://abc123def.trip-planner-dby.pages.dev', baseEnv)).toBe(true);
+  it('允許 Pages preview deployment（v2.33.62 round 14c: 需 env.ENVIRONMENT="preview" gate）', () => {
+    const previewEnv = { ...baseEnv, ENVIRONMENT: 'preview' } as unknown as Env;
+    expect(isAllowedOrigin('https://abc123def.trip-planner-dby.pages.dev', previewEnv)).toBe(true);
+    // 反向：prod 環境（無 ENVIRONMENT=preview）不該信任 preview origin
+    expect(isAllowedOrigin('https://abc123def.trip-planner-dby.pages.dev', baseEnv)).toBe(false);
   });
 
   it('拒絕不明 origin', () => {
