@@ -103,6 +103,9 @@ describe('GET /api/oauth/authorize', () => {
       response_type: 'code',
       scope: 'openid',
       state: 's',
+      // v2.33.85: handler enforces PKCE per OAuth 2.1 baseline
+      code_challenge: 'test-pkce-challenge',
+      code_challenge_method: 'S256',
     }), env));
     expect(res.status).toBe(302);
     const loc = res.headers.get('Location') ?? '';
@@ -128,6 +131,9 @@ describe('GET /api/oauth/authorize', () => {
       response_type: 'code',
       scope: 'openid profile',
       state: 'csrf-xyz',
+      // v2.33.85: handler enforces PKCE per OAuth 2.1 baseline
+      code_challenge: 'test-pkce-challenge',
+      code_challenge_method: 'S256',
     }), env, `tripline_session=${token}`));
 
     expect(res.status).toBe(302);
@@ -167,6 +173,9 @@ describe('GET /api/oauth/authorize', () => {
       response_type: 'code',
       scope: 'openid profile',
       state: 'csrf-xyz',
+      // v2.33.85: handler enforces PKCE per OAuth 2.1 baseline
+      code_challenge: 'test-pkce-challenge',
+      code_challenge_method: 'S256',
     }), env, `tripline_session=${token}`));
 
     expect(res.status).toBe(302);
@@ -198,6 +207,9 @@ describe('GET /api/oauth/authorize', () => {
       response_type: 'code',
       scope: 'openid profile', // requesting profile not in stored consent
       state: 's',
+      // v2.33.85: handler enforces PKCE per OAuth 2.1 baseline
+      code_challenge: 'test-pkce-challenge',
+      code_challenge_method: 'S256',
     }), env, `tripline_session=${token}`));
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toMatch(/^\/oauth\/consent\?/);
@@ -228,6 +240,9 @@ describe('GET /api/oauth/authorize', () => {
       scope: 'openid',
       state: 's',
       prompt: 'consent',
+      // v2.33.85: handler enforces PKCE per OAuth 2.1 baseline
+      code_challenge: 'test-pkce-challenge',
+      code_challenge_method: 'S256',
     }), env, `tripline_session=${token}`));
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toMatch(/^\/oauth\/consent\?/);
