@@ -860,7 +860,7 @@ body.dark {
     body.print-mode .ocean-hero-chip, body.print-mode .ocean-hero-chip-muted { border-color: var(--color-border); color: var(--color-muted); }
 }
 
-/* v2.18.0:`.map-highlight` + `@keyframes map-highlight-pulse` 已 orphan(無 src 引用),整批刪除。 */
+/* .map-highlight + @keyframes map-highlight-pulse 已 orphan 整批刪除 (git blame for date). */
 
 /* ===== Dark mode override (Terracotta deep-cocoa) ===== */
 @layer base {

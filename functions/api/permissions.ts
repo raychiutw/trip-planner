@@ -262,7 +262,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   const { rawToken, tokenHash } = await generateInvitationToken(context.env.SESSION_SECRET);
-  const expiresAt = invitationExpiresAt(7);
+  // v2.33.63 round 14d: 用 default (INVITATION_TTL_DAYS 常數) 取代寫死 7,
+  // 避免 src/server/invitation-token.ts 常數改但這裡漂移。
+  const expiresAt = invitationExpiresAt();
 
   try {
     await context.env.DB
