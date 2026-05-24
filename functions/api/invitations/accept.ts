@@ -16,6 +16,7 @@
 import { AppError } from '../_errors';
 import { requireSessionUser } from '../_session';
 import { tryAcceptInvitation } from '../../../src/server/invitation-accept';
+import { normalizeEmail } from '../../../src/server/email-utils';
 import { parseJsonBody } from '../_utils';
 import { logAudit } from '../_audit';
 import type { Env } from '../_types';
@@ -101,7 +102,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     recordId: null,
     action: 'update',
     changedBy: userRow.email,
-    diffJson: JSON.stringify({ event: 'accepted', invited_email: userRow.email.toLowerCase() }),
+    diffJson: JSON.stringify({ event: 'accepted', invited_email: normalizeEmail(userRow.email) }),
   });
 
   return new Response(

@@ -28,12 +28,16 @@ const ACTIVE_PUBLIC: ClientAppRow = {
 const SUSPENDED: ClientAppRow = { ...ACTIVE_CONFIDENTIAL, status: 'suspended' };
 const PENDING: ClientAppRow = { ...ACTIVE_CONFIDENTIAL, status: 'pending_review' };
 
+// v2.33.59 round 13: VALID_REQUEST 加 code_challenge/method — PKCE 改 mandatory
+// (OAuth 2.1 baseline)，public + confidential 都需。
 const VALID_REQUEST: AuthorizeRequest = {
   response_type: 'code',
   client_id: 'partner-x',
   redirect_uri: 'https://partner-x.com/cb',
   scope: 'openid profile email',
   state: 'csrf-token-123',
+  code_challenge: 'pkce-challenge-base64url',
+  code_challenge_method: 'S256',
 };
 
 function isErr(v: ValidatedRequest | ValidationError): v is ValidationError {
@@ -136,7 +140,10 @@ describe('validateAuthorizeRequest — scope', () => {
 
 describe('validateAuthorizeRequest — PKCE', () => {
   it('Public client without code_challenge → invalid_request (PKCE required)', () => {
-    const r = validateAuthorizeRequest(VALID_REQUEST, ACTIVE_PUBLIC);
+    const r = validateAuthorizeRequest(
+      { ...VALID_REQUEST, code_challenge: undefined, code_challenge_method: undefined },
+      ACTIVE_PUBLIC,
+    );
     expect(isErr(r) && r.code).toBe('invalid_request');
     if (isErr(r)) expect(r.message).toContain('PKCE');
   });
@@ -157,17 +164,26 @@ describe('validateAuthorizeRequest — PKCE', () => {
     expect(isErr(r) && r.code).toBe('invalid_request');
   });
 
-  it('Confidential client without PKCE → ok (V2-P4 optional)', () => {
-    const r = validateAuthorizeRequest(VALID_REQUEST, ACTIVE_CONFIDENTIAL);
-    expect(isErr(r)).toBe(false);
+  it('v2.33.59 round 13: Confidential client without PKCE → invalid_request (OAuth 2.1 mandatory)', () => {
+    const r = validateAuthorizeRequest(
+      { ...VALID_REQUEST, code_challenge: undefined, code_challenge_method: undefined },
+      ACTIVE_CONFIDENTIAL,
+    );
+    expect(isErr(r) && r.code).toBe('invalid_request');
+    if (isErr(r)) expect(r.message).toContain('PKCE');
   });
 
-  it('Confidential client with PKCE plain → invalid_request (S256 only when provided)', () => {
+  it('Confidential client with PKCE plain → invalid_request (S256 only)', () => {
     const r = validateAuthorizeRequest(
       { ...VALID_REQUEST, code_challenge: 'abc', code_challenge_method: 'plain' },
       ACTIVE_CONFIDENTIAL,
     );
     expect(isErr(r) && r.code).toBe('invalid_request');
+  });
+
+  it('v2.33.59 round 13: Confidential client with valid PKCE → ok (default flow)', () => {
+    const r = validateAuthorizeRequest(VALID_REQUEST, ACTIVE_CONFIDENTIAL);
+    expect(isErr(r)).toBe(false);
   });
 });
 
@@ -186,7 +202,8 @@ describe('validateAuthorizeRequest — prompt', () => {
 });
 
 describe('validateAuthorizeRequest — successful return shape', () => {
-  it('Returns parsed scopes + state + redirectUri', () => {
+  it('Returns parsed scopes + state + redirectUri + codeChallenge', () => {
+    // v2.33.59 round 13: VALID_REQUEST 預設帶 PKCE，return shape 含 codeChallenge
     const r = validateAuthorizeRequest(VALID_REQUEST, ACTIVE_CONFIDENTIAL);
     expect(isErr(r)).toBe(false);
     if (!isErr(r)) {
@@ -194,8 +211,8 @@ describe('validateAuthorizeRequest — successful return shape', () => {
       expect(r.redirectUri).toBe('https://partner-x.com/cb');
       expect(r.scopes).toEqual(['openid', 'profile', 'email']);
       expect(r.state).toBe('csrf-token-123');
-      expect(r.codeChallenge).toBeNull();
-      expect(r.codeChallengeMethod).toBeNull();
+      expect(r.codeChallenge).toBe('pkce-challenge-base64url');
+      expect(r.codeChallengeMethod).toBe('S256');
     }
   });
 

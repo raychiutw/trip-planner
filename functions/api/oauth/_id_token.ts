@@ -8,6 +8,7 @@
  * catches and falls back to omitting id_token from the response）。
  */
 import { signJwt, importPrivateKey, computeKid } from '../../../src/server/jwt';
+import { getPublicOrigin } from '../_utils';
 import type { Env } from '../_types';
 
 const ID_TOKEN_TTL_SEC = 60 * 60; // 1h
@@ -45,7 +46,9 @@ export async function issueIdToken(
     throw new Error(`User ${userId} not found — cannot issue id_token`);
   }
 
-  const issuer = new URL(request.url).origin;
+  // v2.33.59 round 13: 用 PUBLIC_ORIGIN env 取代 Host header (id_token iss
+  // 是 OIDC trust anchor — 必須穩定且不可 attacker-spoofable)
+  const issuer = getPublicOrigin(env, request);
   const now = Math.floor(Date.now() / 1000);
 
   const claims: Record<string, unknown> = {
