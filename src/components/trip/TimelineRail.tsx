@@ -300,8 +300,10 @@ const StopPoiChoiceCard = memo(function StopPoiChoiceCard({ poi }: { poi: StopPo
   const typeLabel = poi.category || (poi.type ? POI_TYPE_LABELS[poi.type as PoiType] ?? poi.type : null);
 
   // v2.30.14：StopPoiChoiceCard 只渲染備選 (alternate)，「正選」已升格到景點說明。
+  // v2.33.93 simplify: onClick stopPropagation 從 wrapper <div> 搬上 <article>，
+  // 拔掉純為 event isolation 而存在的無布局意義 wrapper。
   return (
-    <article className="tp-rail-poi-card" data-variant="alternate">
+    <article className="tp-rail-poi-card" data-variant="alternate" onClick={(e) => e.stopPropagation()}>
       <div className="tp-rail-poi-head">
         <span className="tp-rail-poi-name">{poi.name}</span>
         {typeLabel && <span className="tp-rail-poi-type">{typeLabel}</span>}
@@ -672,12 +674,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 data-testid={`timeline-rail-alternates-${entry.id}`}
               >
                 {alternates.map((poi, i) => (
-                  <div
-                    key={`${poi.poiId ?? poi.name}-${i}`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <StopPoiChoiceCard poi={poi} />
-                  </div>
+                  <StopPoiChoiceCard key={`${poi.poiId ?? poi.name}-${i}`} poi={poi} />
                 ))}
               </div>
             </div>
