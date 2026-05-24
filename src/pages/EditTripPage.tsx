@@ -684,8 +684,9 @@ export default function EditTripPage() {
   // editable state
   const [destinations, setDestinations] = useState<DestinationRow[]>([]);
   const [title, setTitle] = useState('');
-  const [titleEdited, setTitleEdited] = useState(false);
-  const [titleHintDismissed, setTitleHintDismissed] = useState(false);
+  // v2.33.93 simplify: merged titleEdited + titleHintDismissed → titleHintHidden.
+  // 之前兩個 flag 唯一 consumer 是 line 944 OR；分立沒意義。
+  const [titleHintHidden, setTitleHintHidden] = useState(false);
   const [description, setDescription] = useState('');
   const [lang, setLang] = useState<Lang>('zh-TW');
   const [published, setPublished] = useState(0);
@@ -771,8 +772,7 @@ export default function EditTripPage() {
         setOriginalDests(initialDests);
         setDestinations(initialDests);
         setTitle(data.title ?? '');
-        setTitleEdited(false);
-        setTitleHintDismissed(false);
+        setTitleHintHidden(false);
         setDescription(data.description ?? '');
         setLang((data.lang as Lang) ?? 'zh-TW');
         setPublished(data.published ?? 0);
@@ -941,9 +941,9 @@ export default function EditTripPage() {
   // hint not dismissed.
   const showTitleHint = useMemo(() => {
     if (loading || !original) return false;
-    if (titleEdited || titleHintDismissed) return false;
+    if (titleHintHidden) return false;
     return !destNamesEqual(destinations, originalDests);
-  }, [loading, original, titleEdited, titleHintDismissed, destinations, originalDests]);
+  }, [loading, original, titleHintHidden, destinations, originalDests]);
 
   const suggestedTitle = useMemo(
     () => deriveAutoTitle(destinations, original?.startDate),
@@ -985,12 +985,11 @@ export default function EditTripPage() {
 
   function applyTitleSuggestion() {
     setTitle(suggestedTitle);
-    setTitleEdited(true);
-    setTitleHintDismissed(true);
+    setTitleHintHidden(true);
   }
 
   function dismissTitleHint() {
-    setTitleHintDismissed(true);
+    setTitleHintHidden(true);
   }
 
 
@@ -1304,7 +1303,7 @@ export default function EditTripPage() {
                       id="edit-trip-title-input"
                       type="text"
                       value={title}
-                      onChange={(e) => { setTitle(e.target.value); setTitleEdited(true); }}
+                      onChange={(e) => { setTitle(e.target.value); setTitleHintHidden(true); }}
                       placeholder={suggestedTitle || '由「年份+目的地」自動命名'}
                       data-testid="edit-trip-title-input"
                     />
@@ -1462,13 +1461,11 @@ export default function EditTripPage() {
             </div>
             <div className="tp-shift-modal-preview" data-testid="edit-trip-shift-preview">
               {(() => {
+                // v2.33.93 simplify: 重用 daysBetween + shiftDateByDays 而非 inline 重複 ms 數學
                 const oldStart = days[0]!.date!;
                 const oldEnd = days[days.length - 1]!.date ?? oldStart;
-                const oldStartMs = new Date(oldStart + 'T00:00:00Z').getTime();
-                const newStartMs = new Date(shiftNewDate + 'T00:00:00Z').getTime();
-                const delta = Math.round((newStartMs - oldStartMs) / 86_400_000);
-                const newEndMs = new Date(oldEnd + 'T00:00:00Z').getTime() + delta * 86_400_000;
-                const newEnd = new Date(newEndMs).toISOString().slice(0, 10);
+                const delta = daysBetween(oldStart, shiftNewDate);
+                const newEnd = shiftDateByDays(oldEnd, delta);
                 return `${formatShortDate(oldStart)}（${chineseDayOfWeek(oldStart)}）– ${formatShortDate(oldEnd)}（${chineseDayOfWeek(oldEnd)}） → ${formatShortDate(shiftNewDate)}（${chineseDayOfWeek(shiftNewDate)}）– ${formatShortDate(newEnd)}（${chineseDayOfWeek(newEnd)}）`;
               })()}
             </div>
