@@ -3,6 +3,10 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.101] - 2026-05-25
+
+**Round 50 — /review batch 5: CR-6 sha256Base64 unsound cast + CR-9 oauth/token rate-limit DB write amp**
+
 ## [2.33.100] - 2026-05-25
 
 **Round 49 — /review batch 4: 3 個 MEDIUM finding**

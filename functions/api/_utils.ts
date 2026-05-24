@@ -91,10 +91,10 @@ export function generateOpaqueToken(byteLen = 32): string {
  * Centralised so a single hash-algorithm change applies everywhere.
  */
 export async function sha256Base64(input: string): Promise<string> {
-  const buf = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(input) as unknown as ArrayBuffer,
-  );
+  // v2.33.101 CR-6: crypto.subtle.digest 接受 BufferSource (= ArrayBuffer |
+  // ArrayBufferView)。Uint8Array 是 ArrayBufferView，可直接傳；之前 `as unknown
+  // as ArrayBuffer` 是 unsound double-cast (lying about type to silence TS)。
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
   const arr = new Uint8Array(buf);
   let str = '';
   for (let i = 0; i < arr.length; i++) str += String.fromCharCode(arr[i]!);
