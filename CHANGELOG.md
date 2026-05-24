@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.103] - 2026-05-25
+
+**Round 52 — /review batch 7: SEC-7 OAuth endpoints per-IP rate-limit（PBKDF2 amp DoS）**
+
+`oauth/token.ts` + `oauth/revoke.ts` confidential client_secret 驗證走 PBKDF2
+(100k iter ~50ms CPU)。Attacker 同一 client_id 反覆送 wrong secret，原本
+per-client_id bucket 擋在 100/min 但前 100 個已經燒 ~5s CPU；若 attacker
+concurrent 數百 request → CF Worker CPU 配額爆。
+
+Fix：在 client lookup + PBKDF2 verify 前，加 per-IP rate-limit（50/min/IP，
+5min lockout）。新 `RATE_LIMITS.OAUTH_TOKEN_PER_IP` preset。Bucket key prefix
+`oauth-token:ip:<IP>` 與 `oauth-revoke:ip:<IP>` 分開。8 個 source-grep
+regression test。
+
+Verified: 732/732 API integration pass + 8/8 SEC-7 unit pass + tsc clean。
+
 ## [2.33.102] - 2026-05-25
 
 **Round 51 — /review batch 6: CR-7 health-check atomic write + CR-8 confused-deputy hook linkage**

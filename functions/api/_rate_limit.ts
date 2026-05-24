@@ -164,6 +164,11 @@ export const RATE_LIMITS = {
   FORGOT_PASSWORD: { maxAttempts: 3, windowMs: 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
   // OAuth token endpoint per-client: 100 attempts / minute, 5min lockout
   OAUTH_TOKEN: { maxAttempts: 100, windowMs: 60 * 1000, lockoutMs: 5 * 60 * 1000 },
+  // v2.33.103 SEC-7：OAuth token endpoint per-IP — 防 PBKDF2 amplification DoS。
+  // Confidential client_secret 驗證走 PBKDF2 (100k iter ~50ms CPU)。Attacker
+  // 用同 client_id 反覆送 wrong secret，per-client_id bucket 擋在 100/min 但
+  // 前 100 個 request 已經燒 ~5s CPU。加 per-IP 50/min cap 提前擋掉。
+  OAUTH_TOKEN_PER_IP: { maxAttempts: 50, windowMs: 60 * 1000, lockoutMs: 5 * 60 * 1000 },
   // Saved POI write per-user: 10/min window, locked until window end.
   // 防 POI enumeration oracle attack — too-fast POSTs probe non-existent poiId 404s.
   // lockoutMs must be > 0：當 newCount > maxAttempts 時 bumpRateLimit 才把 locked_until
