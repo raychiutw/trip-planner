@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.104] - 2026-05-25
+
+**Round 53 — /review batch 8: test coverage gaps 補上 18 個 test (T-5/T-8/T-9/T-10)**
+
+非 code 行為變動，補 test gap：
+
+1. **T-5 PATCH /api/requests/:id status 推進 monotonicity**：5 個 test 覆蓋
+   open→completed 允許 / completed→open 拒絕 / completed→processing 拒絕 /
+   completed→failed 允許（任何狀態都可標記 failed）/ 未知 value 拒絕。
+2. **T-8 POST /api/places/autocomplete（新 test 檔）**：9 個 test 覆蓋 auth
+   gate / q 長度驗證 / sessionToken 驗證 / regionCode 驗證 / API key 缺失
+   502 / happy path / rate-limit 429 + Retry-After。
+3. **T-9 GET /api/trips/:id/health-check findings camelCase round-trip**：
+   驗 action_target → actionTarget、entry_id → entryId 經 deepCamel 轉換。
+4. **T-9 CR-8 attack vector regression**：chat 偽裝 `[AI 健檢]` prefix 但無
+   linkage row → hook 不觸發、trip_health_reports 不被誤寫。
+5. **T-10 entries-batch sort_order UNIQUE invariant**：同 day_id 重複 →
+   400 atomic（無一被改）；不同 day_id 同 sort_order 允許。
+
+剩餘 deferred 不收的 finding：
+- **SEC-2**（4-caller requireFavoriteActor permission-ordering refactor）— 大
+  幅 cross-callsite 改動，需獨立 design session 而非 surgical 修法；推到後續
+  專案週期。
+- T-1/T-3/T-4/T-6/T-7：低 ROI（pre-existing coverage / frontend infra-only /
+  cosmetic test lint）。
+
+Verified: 750/750 API integration pass（前 732，+18）+ tsc clean。
+
 ## [2.33.103] - 2026-05-25
 
 **Round 52 — /review batch 7: SEC-7 OAuth endpoints per-IP rate-limit（PBKDF2 amp DoS）**
