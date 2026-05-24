@@ -289,6 +289,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return jsonError('invalid_grant', 'refresh_token expired or invalid');
     }
 
+    // v2.33.97 security: client_id 不對 → reject 不 cascade。否則 leaked-once
+    // refresh_token 被任意 registered client B 提交即觸發 victim grantId family
+    // revoke = permanent DoS handle on victim。先驗 client_id 再驗 consumed。
+    if (refreshRow.client_id !== clientId) {
+      return jsonError('invalid_grant', 'refresh_token does not belong to this client');
+    }
+
     // Reuse detection (RFC 6749 §10.4 / OAuth 2.1 §6.1): if this row was already
     // consumed by a prior rotation, the refresh token has been replayed →
     // attacker likely has a stolen token. Cascade-revoke the entire family.
@@ -304,9 +311,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         metadata: { grantId: refreshRow.grantId },
       }, context.env);
       return jsonError('invalid_grant', 'refresh_token reuse detected — token family revoked');
-    }
-    if (refreshRow.client_id !== clientId) {
-      return jsonError('invalid_grant', 'refresh_token does not belong to this client');
     }
 
     // Optional scope downgrade: caller can request narrower scope
@@ -372,6 +376,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!codeRow) {
     return jsonError('invalid_grant', 'Authorization code expired or invalid');
   }
+  // v2.33.97 security: client_id 不對 → reject 不 cascade。否則 leaked auth code
+  // 被任意 registered client B 提交即觸發 victim grantId family revoke (DoS)。
+  if (codeRow.client_id !== clientId) {
+    return jsonError('invalid_grant', 'code does not belong to this client');
+  }
   if (codeRow.consumed) {
     // Replay attack — RFC 6749 §10.5: cascade-revoke all tokens issued from this grant
     if (codeRow.grantId) {
@@ -387,9 +396,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       metadata: { grantId: codeRow.grantId ?? null, scopes: codeRow.scopes },
     }, context.env);
     return jsonError('invalid_grant', 'Authorization code already used (replay detected — tokens revoked)');
-  }
-  if (codeRow.client_id !== clientId) {
-    return jsonError('invalid_grant', 'code does not belong to this client');
   }
   if (codeRow.redirect_uri !== body.redirect_uri) {
     return jsonError('invalid_grant', 'redirect_uri mismatch');
