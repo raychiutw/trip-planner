@@ -1,0 +1,65 @@
+# v2.33.66 round 16 LOW-2: dependabot config
+# Action SHA 一旦 pin 就需要 process 升級，否則 known-CVE 版本停留。
+
+version: 2
+updates:
+  # GitHub Actions SHA pin auto-bump
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Asia/Taipei
+    labels:
+      - 'deps'
+      - 'github-actions'
+    commit-message:
+      prefix: 'chore(deps)'
+      include: scope
+
+  # npm production + dev deps (grouped to avoid flood)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Asia/Taipei
+    open-pull-requests-limit: 5
+    labels:
+      - 'deps'
+      - 'npm'
+    groups:
+      # Group major framework升級避免一次多 PR
+      react-stack:
+        patterns:
+          - 'react'
+          - 'react-*'
+          - '@types/react*'
+      sentry:
+        patterns:
+          - '@sentry/*'
+      cf-stack:
+        patterns:
+          - 'wrangler'
+          - 'miniflare'
+          - '@cloudflare/*'
+      testing:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+          - '@testing-library/*'
+          - 'playwright'
+          - '@playwright/*'
+    commit-message:
+      prefix: 'chore(deps)'
+      include: scope
+    ignore:
+      # vite/tailwind/marked major bumps 走人工 review (breaking change 風險高)
+      - dependency-name: 'vite'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'tailwindcss'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@tailwindcss/vite'
+        update-types: ['version-update:semver-major']

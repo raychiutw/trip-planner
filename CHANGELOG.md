@@ -3,6 +3,52 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.66] - 2026-05-24
+
+**Round 16 — CI workflow security hardening (backlog #138)**
+
+Security-auditor agent review 6 個 `.github/workflows/` YAML 找 3 HIGH +
+4 MED + 4 LOW。本 PR 全做 (含 LOW)。
+
+**SECURITY (HIGH)**
+
+- **HIGH-1**: 6 個 workflow 全加 `permissions: contents: read` — 之前 default
+  RW GITHUB_TOKEN，supply chain (compromised npm dep) = repo takeover
+- **HIGH-2**: `dawidd6/action-send-mail@v3` → SHA pin `4226df7d...` —
+  community-maintained action, 收 GMAIL_APP_PASSWORD + CF token
+- **HIGH-3**: `treosh/lighthouse-ci-action@v12` → SHA pin `3e7e23fb...` —
+  community-maintained, 收 LHCI_GITHUB_APP_TOKEN
+
+**SECURITY (MED)**
+
+- **MED-2**: `rate-limit-cleanup.yml` inline SQL → `scripts/cleanup-rate-limit.sql`
+  + 新 `.github/CODEOWNERS` 守 .github/workflows/** + migrations/ + src/server/ +
+  oauth/ + _headers + wrangler/vite/tsconfig
+
+**CONFIG**
+
+- **LOW-1**: `actions/checkout@v4` + `actions/setup-node@v4` → 都 SHA pin per OpenSSF
+- **LOW-2**: 新 `.github/dependabot.yml` (github-actions + npm 自動 PR 升 SHA pin)
+  + grouped (react-stack / sentry / cf-stack / testing) 避免 PR flood
+- **LOW-3**: `lighthouse.yml` 加 `concurrency: { group: lighthouse-${ref}, cancel-in-progress: true }`
+- **LOW-4 note**: sleep 30 wait for CF Pages deploy 仍存，加 comment 標 future
+  poll CF API improvement
+
+**真 wontfix / 需 GitHub web UI 設定**:
+
+- MED-1: 分割 CLOUDFLARE_API_TOKEN 為 deploy / analytics 兩個 (需 CF dashboard create + GH secrets 更新)
+- MED-3: GitHub Environment protection 包 production secrets (需 GH Settings web UI)
+- MED-4: Telegram bot token in URL path — Telegram API spec 沒提供 body 傳法，
+  defense-in-depth 已 `-sf` flags suppress most output
+
+**TESTING**
+
+- `tests/unit/round-16-ci-security.test.ts` — 17 個 source-grep guard
+- 2599 / 2599 全綠 (+17 從 2582)
+- tsc clean
+
+closes backlog #138.
+
 ## [2.33.65] - 2026-05-24
 
 **Round 15b — tests/ quality fixes + types drift (backlog #137 partial)**

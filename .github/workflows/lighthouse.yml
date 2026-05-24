@@ -5,24 +5,39 @@ on:
     branches: [master]
   workflow_dispatch:
 
+# v2.33.66 round 16 HIGH-1: minimal default permissions
+permissions:
+  contents: read
+
+# v2.33.66 round 16 LOW-3: rapid master push 不要 spawn parallel Lighthouse 雙計
+# (cost + flaky LHCI baseline)。最新 push 取代舊跑。
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lighthouse:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # v2.33.66 round 16 LOW-1: pin SHA
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
 
       - name: 安裝相依套件
         run: npm ci
 
+      # v2.33.66 round 16 LOW-4 note: sleep 30 是 best-effort wait for CF Pages
+      # deploy。實際 deploy 60-120s 常超過此 wait，audit 舊版可能漏掉新 regression。
+      # 未來改 poll CF API for deploy status 是 nice-to-have，目前接受誤差。
       - name: 等待 Cloudflare Pages 部署完成
         run: sleep 30
 
+      # v2.33.66 round 16 HIGH-3: pin SHA — community-maintained, 收 LHCI_GITHUB_APP_TOKEN
       - name: 執行 Lighthouse CI
-        uses: treosh/lighthouse-ci-action@v12
+        uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
         with:
           configPath: './lighthouserc.json'
           uploadArtifacts: true
