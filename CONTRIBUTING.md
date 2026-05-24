@@ -6,8 +6,9 @@
 
 | 工具 | 版本 | 用途 |
 |------|------|------|
-| Node.js | 20+ | vite, wrangler, vitest |
+| Node.js | 22+ | vite, wrangler, vitest (CI 用 22, package.json `engines`) |
 | npm | 10+ | 隨 Node 來的那個就行 |
+| bun | 1.0+ | google-poi-*.ts scripts (cron backfill / refresh / quota monitor) |
 | git | 任何近代版本 | — |
 | [gh CLI](https://cli.github.com/) | 任何 | 開 PR、查 CI |
 | [Claude Code](https://claude.com/claude-code) | 最新版 | 跑 gstack pipeline（非必須，但工作流建議用）|
@@ -31,16 +32,25 @@ npm run dev
 
 打開 http://localhost:5173 — 看到行程首頁就成功。
 
-### `.env.local`
+### `.dev.vars`
 
-API 需要身份模擬，建一份 `.env.local`：
+API 需要身份模擬。**用 `.dev.vars` 不是 `.env.local`** — wrangler pages dev
+只讀前者；後者只有 vite 讀，wrangler 完全看不到。
 
 ```bash
-# 本機 mock 認證用（跳過 Cloudflare Access）
+# .dev.vars (放在 project root)
+# 本機 mock 認證用（V2 OAuth 之前是 Cloudflare Access；v2.32+ 改 session cookie，
+# DEV_MOCK_EMAIL 仍跳過 prod auth flow 給 dev 用）
 DEV_MOCK_EMAIL=you@example.com
 ```
 
+複製範本：`cp .dev.vars.example .dev.vars`。
+
 沒設會以 anonymous 身份跑，能讀已發布的 trips，不能寫。
+
+**Prod 安全**: `_middleware.ts:241-247` 守衛靠 `env.ENVIRONMENT === 'production'`
+拒絕 `DEV_MOCK_EMAIL` 生效 (v2.33.60+ 此 var 在 wrangler.toml [env.production.vars]
+強制聲明)。
 
 ## 每次改 code 前
 
@@ -141,7 +151,7 @@ migrations/               D1 schema（0001 ~ 00NN，idempotent）
 css/tokens.css            唯一 CSS 檔（Tailwind 4 @theme）
 tests/                    unit / api / e2e
 scripts/                  init-local-db, dump-d1, daily-check, poi-enrich-batch ...
-src/server/               osm/, routing/, travel/, poi/ (server-side OSM enrichment stack, v2.19.0)
+src/server/               jwt / oauth-d1-adapter / password / email / session / invitation-token / hkdf / email-utils / maps/google-client / oauth-server/ / oauth-client/ (v2.23.0+ Google Maps + V2 OAuth)
 ```
 
 ## 常見任務速查
@@ -158,10 +168,10 @@ src/server/               osm/, routing/, travel/, poi/ (server-side OSM enrichm
 
 ## 遇到問題
 
-1. **本機 API 500 錯誤** — `npm run dev:reset` 重建本機 D1。若仍失敗，檢查 `.env.local` 是否存在。
+1. **本機 API 500 錯誤** — `npm run dev:reset` 重建本機 D1。若仍失敗，檢查 `.dev.vars` 是否存在。
 2. **測試 flaky** — 跑 `npm test -- --run <file>` 單檔重跑；仍 flaky 的話回報 issue，不要 retry 掩蓋問題。
 3. **CF Pages build 失敗** — 多半是 `vite build` 出錯或 migration 沒 idempotent。看 GitHub Actions log。
-4. **Playwright 找不到 element** — 本機 POI 資料可能缺失（`trip_pois=0 rows`）。用 production URL 跑 e2e，或重建本機 D1。
+4. **Playwright 找不到 element** — 本機 POI 資料可能缺失。v2.29.0 後 POI 走 `pois` master + `trip_entry_pois` junction (trip_pois 已 DROP)。用 production URL 跑 e2e，或重建本機 D1。
 
 ## 其他文件
 

@@ -31,10 +31,15 @@
 | 6c-style | round 6c style token drift fix | — | [#736](https://github.com/raychiutw/trip-planner/pull/736) | 2026-05-24 | [round-6c-style-token-drift.md](./round-6c-style-token-drift.md) |
 | 11 | OceanMap internals split (606→303 LOC) | — | [#737](https://github.com/raychiutw/trip-planner/pull/737) | 2026-05-24 | [round-11-oceanmap-split.md](./round-11-oceanmap-split.md) |
 | 12 | src/server/ security + test catch-up | 1,851 | [#738](https://github.com/raychiutw/trip-planner/pull/738) | 2026-05-24 | [round-12-server-security.md](./round-12-server-security.md) |
-| 13 | src/server/ defer MEDIUM 全做 (6 fix) | — | [#739](https://github.com/raychiutw/planner/pull/739) | 2026-05-24 | [round-13-server-residuals.md](./round-13-server-residuals.md) |
+| 13 | src/server/ defer MEDIUM 全做 (6 fix) | — | [#739](https://github.com/raychiutw/trip-planner/pull/739) | 2026-05-24 | [round-13-server-residuals.md](./round-13-server-residuals.md) |
 | 14 | frontend infra + migrations (10 fix) | — | [#740](https://github.com/raychiutw/trip-planner/pull/740) | 2026-05-24 | [round-14-infra.md](./round-14-infra.md) |
 | 14b | round 14 residuals (3 CVE + 2 sweep + dead CSS) | — | [#741](https://github.com/raychiutw/trip-planner/pull/741) | 2026-05-24 | (see CHANGELOG v2.33.61) |
-| 14c | round 14 真做完所有 (7 fix + 6 wontfix doc) | — | TBD | 2026-05-24 | [round-14c-residuals.md](./round-14c-residuals.md) |
+| 14c | round 14 真做完所有 (7 fix + 6 wontfix doc) | — | [#742](https://github.com/raychiutw/trip-planner/pull/742) | 2026-05-24 | [round-14c-residuals.md](./round-14c-residuals.md) |
+| 14d | LOW finding 全做 (5 fix + maskable icon + cleanup) | — | [#743](https://github.com/raychiutw/trip-planner/pull/743) | 2026-05-24 | (see CHANGELOG v2.33.63) |
+| 15a | src/contexts/ silent-failure mode fix | — | [#744](https://github.com/raychiutw/trip-planner/pull/744) | 2026-05-24 | (see CHANGELOG v2.33.64) |
+| 15b | tests/ infra quality + TripDestination camelCase | — | [#745](https://github.com/raychiutw/trip-planner/pull/745) | 2026-05-24 | (see CHANGELOG v2.33.65) |
+| 16 | .github/workflows/ CI security (3 HIGH + 4 MED + 4 LOW) | — | [#746](https://github.com/raychiutw/trip-planner/pull/746) | 2026-05-24 | (see CHANGELOG v2.33.66) |
+| 17 | src/entries/main.tsx lazyWithRetry budget fix | — | [#755](https://github.com/raychiutw/trip-planner/pull/755) | 2026-05-24 | (see CHANGELOG v2.33.67) |
 
 ## 流程
 
