@@ -106,12 +106,12 @@ describe('GET /api/oauth/verify', () => {
     const updateCall = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && c[0].includes('UPDATE users SET email_verified_at'),
     );
-    expect(updateCall).toBeTruthy();
+    expect(updateCall).toBeDefined();
     // Assert consume() called (UPDATE oauth_models SET payload = json_set, NOT DELETE)
     const consumeCall = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && c[0].includes('UPDATE oauth_models SET payload = json_set'),
     );
-    expect(consumeCall).toBeTruthy();
+    expect(consumeCall).toBeDefined();
     // DELETE no longer called — token is kept until expires_at so re-clicks return 'used'
     const deleteCall = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM oauth_models'),
@@ -307,7 +307,7 @@ describe('POST /api/oauth/send-verification', () => {
     const mailerCall = fetchMock.mock.calls.find(
       (c) => typeof c[0] === 'string' && (c[0] as string).includes('/internal/mail/send'),
     );
-    expect(mailerCall).toBeTruthy();
+    expect(mailerCall).toBeDefined();
     const init = mailerCall![1] as RequestInit;
     const headers = init.headers as Record<string, string>;
     expect(headers.Authorization).toBe('Bearer test-bearer');
@@ -345,7 +345,7 @@ describe('POST /api/oauth/send-verification', () => {
     const auditInsert = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && (c[0] as string).includes('INSERT INTO audit_log'),
     );
-    expect(auditInsert).toBeTruthy();
+    expect(auditInsert).toBeDefined();
 
     // No mailer fetch (sendEmail throws before fetch when TRIPLINE_API_URL missing)
     const mailerCall = fetchMock.mock.calls.find(

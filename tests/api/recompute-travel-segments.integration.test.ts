@@ -156,4 +156,80 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
     });
     expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
   });
+
+  // v2.33.106 T-4: failure paths — 補既有 happy path 缺乏的 negative tests
+  describe('failure paths (T-4)', () => {
+    it('無寫權限 user → 403', async () => {
+      await setupTripWithEntries('trip-rec-noperm');
+      const ctx = mockContext({
+        request: jsonRequest('https://test.com/api/trips/trip-rec-noperm/recompute-travel', 'POST'),
+        env,
+        auth: mockAuth({ email: 'stranger@test.com', userId: 'stranger-1' }),
+        params: { id: 'trip-rec-noperm' },
+      });
+      expect((await callHandler(onRequestPost, ctx)).status).toBe(403);
+    });
+
+    it('trip 不存在 → 403（沒寫權限視為不存在）', async () => {
+      const ctx = mockContext({
+        request: jsonRequest('https://test.com/api/trips/trip-rec-missing/recompute-travel', 'POST'),
+        env,
+        auth: mockAuth({ email: 'user@test.com' }),
+        params: { id: 'trip-rec-missing' },
+      });
+      const status = (await callHandler(onRequestPost, ctx)).status;
+      expect([403, 404]).toContain(status);
+    });
+
+    it('trip 沒任何 entry → 0 pairs computed', async () => {
+      await seedTrip(db, { id: 'trip-rec-empty' });
+      const ctx = mockContext({
+        request: jsonRequest('https://test.com/api/trips/trip-rec-empty/recompute-travel?day=all', 'POST'),
+        env,
+        auth: mockAuth({ email: 'user@test.com' }),
+        params: { id: 'trip-rec-empty' },
+      });
+      const resp = await callHandler(onRequestPost, ctx);
+      expect(resp.status).toBe(200);
+      const body = await resp.json() as { pairsComputed: number };
+      expect(body.pairsComputed).toBe(0);
+    });
+
+    it('GOOGLE_MAPS_API_KEY 缺 → 500 / 502', async () => {
+      const envNoKey = mockEnv(db);
+      envNoKey.GOOGLE_MAPS_API_KEY = '';
+      await setupTripWithEntries('trip-rec-nokey');
+      const ctx = mockContext({
+        request: jsonRequest('https://test.com/api/trips/trip-rec-nokey/recompute-travel?day=all', 'POST'),
+        env: envNoKey,
+        auth: mockAuth({ email: 'user@test.com' }),
+        params: { id: 'trip-rec-nokey' },
+      });
+      const status = (await callHandler(onRequestPost, ctx)).status;
+      expect([500, 502]).toContain(status);
+    });
+
+    it('Entry 缺 lat/lng → pair 被 skip（不算 computed）', async () => {
+      await seedTrip(db, { id: 'trip-rec-nocoord' });
+      const day1 = await getDayId(db, 'trip-rec-nocoord', 1);
+      const poiA = await seedPoi(db, { name: 'NoCoordA' });
+      // 不更新 lat/lng → 預設 null
+      const poiB = await seedPoi(db, { name: 'NoCoordB' });
+      await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(26.0, 127.0, poiB).run();
+      await seedEntry(db, day1, { sortOrder: 1, title: 'A', poiId: poiA });
+      await seedEntry(db, day1, { sortOrder: 2, title: 'B', poiId: poiB });
+
+      const ctx = mockContext({
+        request: jsonRequest('https://test.com/api/trips/trip-rec-nocoord/recompute-travel?day=all', 'POST'),
+        env,
+        auth: mockAuth({ email: 'user@test.com' }),
+        params: { id: 'trip-rec-nocoord' },
+      });
+      const resp = await callHandler(onRequestPost, ctx);
+      expect(resp.status).toBe(200);
+      const body = await resp.json() as { pairsComputed: number };
+      // 缺 coords 的 pair 不該被算進 google route
+      expect(body.pairsComputed).toBe(0);
+    });
+  });
 });

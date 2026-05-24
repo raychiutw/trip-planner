@@ -144,7 +144,7 @@ describe('POST /api/oauth/consent', () => {
     const insertCall = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO oauth_models'),
     );
-    expect(insertCall).toBeTruthy();
+    expect(insertCall).toBeDefined();
     const stmt = dbPrepare.mock.results.find(
       (_, i) => typeof dbPrepare.mock.calls[i][0] === 'string' &&
                 (dbPrepare.mock.calls[i][0] as string).includes('INSERT OR REPLACE'),

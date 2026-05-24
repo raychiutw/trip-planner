@@ -37,22 +37,28 @@ describe('useRoute', () => {
   });
 
   it('returns null on fetch error (no Haversine fallback per P11/T13)', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('network'));
+    // v2.33.106 T-3: 用 waitFor 等 fetch promise reject + hook setState 完成，
+    // 取代 setTimeout(50) — CI 慢機可能 race；正常 < 50ms 也可能比 hook 完成更慢。
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network'));
+    global.fetch = fetchMock;
     const { result } = renderHook(() => useRoute(FROM, TO));
-    // Wait long enough for any async resolution (null is the expected end state)
-    await new Promise((r) => setTimeout(r, 50));
-    expect(result.current).toBeNull();
+    // 先等 fetch 被 call（hook effect 啟動）
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    // 再等 result settle 到 null（rejection 處理完成）
+    await waitFor(() => expect(result.current).toBeNull());
   });
 
   it('returns null on backend 502/503 (MAPS_UPSTREAM_FAILED / MAPS_LOCKED)', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    // v2.33.106 T-3: 同上 — 用 waitFor 取代 setTimeout(50) race。
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 503,
       json: async () => ({ error: { code: 'MAPS_LOCKED' } }),
     } as unknown as Response);
+    global.fetch = fetchMock;
     const { result } = renderHook(() => useRoute(FROM, TO));
-    await new Promise((r) => setTimeout(r, 50));
-    expect(result.current).toBeNull();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await waitFor(() => expect(result.current).toBeNull());
   });
 
   it('returns polyline on successful fetch (Google Routes shape)', async () => {
