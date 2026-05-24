@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.78] - 2026-05-24
+
+**Final Loop summary — Rounds 1-27 retro**
+
+`/loop Loop review 全部程式碼 全部修正` 完整 sweep 結束。
+
+**NEW**
+
+- `docs/code-review/round-final-loop-summary.md` — 27-round retro
+  - 4 phase breakdown (foundation → architecture → deferred deep-dive → final cleanup)
+  - Metrics delta: +312 test、-24% test runtime、-3 HIGH CVE、-5 doc drift
+  - Lessons learned + open items (intentional defers)
+
+Master clean at v2.33.78。
+
 ## [2.33.77] - 2026-05-24
 
 **Round 27 — 刪掉 dead source-grep test**
