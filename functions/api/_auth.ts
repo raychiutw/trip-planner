@@ -70,16 +70,28 @@ export async function requireTripReadAccess(
   auth: AuthData | null,
   tripId: string,
 ): Promise<{ published: boolean; isMember: boolean }> {
-  const trip = await db
-    .prepare('SELECT published FROM trips WHERE id = ?')
-    .bind(tripId)
-    .first<{ published: number | null }>();
-  if (!trip) throw new AppError('DATA_NOT_FOUND');
-  const published = trip.published === 1;
+  // v2.33.94 simplify: 從 2 個 sequential SELECT 合成 1 LEFT JOIN
+  // 之前 `SELECT published` + `hasPermission`（再 SELECT trip_permissions）。
+  // Admin/service-token 仍走 hasPermission()（無 DB call）短路；
+  // 一般 V2 user 從 2 round-trip → 1。
+  const userIdForJoin = auth?.userId ?? '__no_match__';
+  const row = await db
+    .prepare(
+      `SELECT t.published, tp.user_id AS perm_user_id
+       FROM trips t
+       LEFT JOIN trip_permissions tp ON tp.trip_id = t.id AND tp.user_id = ?
+       WHERE t.id = ?`,
+    )
+    .bind(userIdForJoin, tripId)
+    .first<{ published: number | null; perm_user_id: string | null }>();
+  if (!row) throw new AppError('DATA_NOT_FOUND');
+  const published = row.published === 1;
   if (published) return { published: true, isMember: false };
   if (!auth) throw new AppError('PERM_DENIED');
-  const isMember = await hasPermission(db, auth, tripId, auth.isAdmin);
-  if (!isMember) throw new AppError('PERM_DENIED');
+  // Admin / service-token bypass — hasPermission() 邏輯不 DB-touch
+  if (auth.isAdmin) return { published: false, isMember: true };
+  if (auth.isServiceToken) throw new AppError('PERM_DENIED');
+  if (!auth.userId || row.perm_user_id === null) throw new AppError('PERM_DENIED');
   return { published: false, isMember: true };
 }
 

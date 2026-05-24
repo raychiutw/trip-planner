@@ -230,14 +230,20 @@ export async function fetchEntryPoisByEntries(
  * @param entryPoisMap - canonical v2 entry POIs
  * @param segmentsMap - from_entry_id → segment row (給 travel response)
  */
-export function assembleDay(
-  dayRow: Record<string, unknown>,
-  entries: Record<string, unknown>[],
-  poiMap: Map<number, Record<string, unknown>>,
-  parkingMap: Map<number, Record<string, unknown>[]>,
-  entryPoisMap: Map<number, EntryPoiBucket>,
-  segmentsMap: Map<number, SegmentRow>,
-): Record<string, unknown> {
+// v2.33.94 simplify: 6 個 positional 參數 → object param。每加一 lookup table
+// (v2.27 entryPois, v2.29 hotel, v2.30 segments) callsites 都要記順序，object
+// 讓 caller 自說明且 type 補位失誤可抓。
+export interface AssembleDayDeps {
+  dayRow: Record<string, unknown>;
+  entries: Record<string, unknown>[];
+  poiMap: Map<number, Record<string, unknown>>;
+  parkingMap: Map<number, Record<string, unknown>[]>;
+  entryPoisMap: Map<number, EntryPoiBucket>;
+  segmentsMap: Map<number, SegmentRow>;
+}
+
+export function assembleDay(deps: AssembleDayDeps): Record<string, unknown> {
+  const { dayRow, entries, poiMap, parkingMap, entryPoisMap, segmentsMap } = deps;
   // Hotel ← trip_days.hotel_poi_id (FK to pois)
   let hotel: Record<string, unknown> | null = null;
   const hotelPoiId = dayRow.hotel_poi_id as number | null;
