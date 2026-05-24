@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.64] - 2026-05-24
+
+**Round 15a — src/contexts/ silent-failure mode fix (mini)**
+
+Loop iteration 中等 tests/ review agent 完成時順手 audit src/contexts/ 6 個 file。
+找到 2 個 MED finding (silent failure mode)，立刻 fix。
+
+**FIX**
+
+- `NewTripContext.useNewTrip` outside provider 之前 silent no-op (button 點了
+  完全無反應)。改 createContext null sentinel + dev-mode `console.warn`，prod
+  仍 graceful (避免 single missing provider 整 app 崩)
+- `ActiveTripContext.useActiveTrip` outside provider 之前 LS fallback 但
+  `setActiveTrip` 寫 LS 後其他 consumer 不 re-render (state 跟 LS 不 sync)。
+  保留 LS fallback (backward compat for test) + 加 dev warn
+
+**TESTING**
+
+- `tests/unit/round-15a-contexts-warn.test.ts` — 6 個 source-grep guard
+- 2571 / 2571 全綠 (+6 從 2565)
+- tsc clean
+
+Round 15 主 PR (tests/ quality) 待 2 個 agent 完成後 ship。
+
 ## [2.33.63] - 2026-05-24
 
 **Round 14d — LOW finding 全做 (backlog #136)**
