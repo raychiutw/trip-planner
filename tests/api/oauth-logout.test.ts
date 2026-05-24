@@ -82,7 +82,7 @@ describe('GET/POST /api/oauth/logout', () => {
     const auditCall = (db.prepare as ReturnType<typeof vi.fn>).mock.calls.find(
       (c) => typeof c[0] === 'string' && (c[0] as string).includes('INSERT INTO auth_audit_log'),
     );
-    expect(auditCall).toBeTruthy();
+    expect(auditCall).toBeDefined();
     const args = stmt.bind.mock.calls[0];
     expect(args[1]).toBe('logout');     // event_type
     expect(args[2]).toBe('success');    // outcome

@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.106] - 2026-05-25
+
+**Round 55 — /review batch 10: 收尾全部 deferred test gaps (T-1/T-3/T-4/T-6/T-7)**
+
+非 code 行為變動，純補 deferred test gap：
+
+1. **T-1 POI enrich integration test（新檔 `poi-enrich.integration.test.ts`）**：
+   12 個 test 涵蓋 auth gate / id 驗證 / 非 admin tripId 必填 / 寫權限 / POI 不存在
+   / 缺 place_id / API key 缺 / OPERATIONAL / CLOSED_PERMANENTLY / CLOSED_TEMPORARILY
+   / Google 404 missing / owner with trip write permission。Google client 走
+   vi.mock fixture。
+
+2. **T-4 recompute-travel failure paths（既有檔擴充）**：5 個 negative test
+   covering 無寫權限 403 / trip 不存在 / 空 trip 0 pairs / API key 缺 5xx /
+   entry 缺 coords skip pair。
+
+3. **T-7 alternates POST validation（既有檔擴充）**：9 個 body validation test
+   涵蓋 string body / array body / entryPoisVersion 型別 / poiId 負數 / 0 /
+   小數 / string / 不存在 ID 404 / empty body。
+
+4. **T-3 use-route.test.ts setTimeout race fix**：2 個 test 把 `setTimeout(50)`
+   race 改為 `waitFor` 等 fetch 被 call + result settle，避免 CI 慢機 race。
+
+5. **T-6 oauth toBeTruthy → toBeDefined（lint）**：5 個 oauth test 檔 8 個
+   mock-find 結果 assertion 改為更精確的 `.toBeDefined()`。Retry-After
+   header / kid 等語意上 truthy 是正確的，不動。
+
+Verified: 780/780 API integration pass + tsc clean。
+
 ## [2.33.105] - 2026-05-25
 
 **Round 54 — /review batch 9: SEC-2 poi-favorites bucket-spoof DoS prevention（4-caller refactor）**

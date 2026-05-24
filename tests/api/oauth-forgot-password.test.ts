@@ -88,7 +88,7 @@ describe('POST /api/oauth/forgot-password', () => {
     const insertCall = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO oauth_models'),
     );
-    expect(insertCall).toBeTruthy();
+    expect(insertCall).toBeDefined();
     vi.unstubAllGlobals();
   });
 
@@ -130,7 +130,7 @@ describe('POST /api/oauth/forgot-password', () => {
     const userLookupSql = dbPrepare.mock.calls
       .map((c) => c[0] as string)
       .find((s) => s.includes('SELECT u.id'));
-    expect(userLookupSql).toBeTruthy();
+    expect(userLookupSql).toBeDefined();
     expect(userLookupSql).toContain("provider = 'local'");
   });
 
@@ -196,7 +196,7 @@ describe('POST /api/oauth/forgot-password', () => {
     const mailerCall = fetchMock.mock.calls.find(
       (c) => typeof c[0] === 'string' && (c[0] as string).includes('/internal/mail/send'),
     );
-    expect(mailerCall).toBeTruthy();
+    expect(mailerCall).toBeDefined();
     expect(mailerCall![0]).toBe('https://mac-mini.tail.ts.net:8443/internal/mail/send');
     const init = mailerCall![1] as RequestInit;
     const headers = init.headers as Record<string, string>;
@@ -232,7 +232,7 @@ describe('POST /api/oauth/forgot-password', () => {
     const auditInsert = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && (c[0] as string).includes('INSERT INTO audit_log'),
     );
-    expect(auditInsert).toBeTruthy();
+    expect(auditInsert).toBeDefined();
 
     // No fetch attempted (sendEmail throws before fetch when env missing,
     // alertAdminTelegram also skips when TELEGRAM_* env missing)

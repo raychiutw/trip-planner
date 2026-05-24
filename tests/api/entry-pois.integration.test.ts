@@ -337,6 +337,145 @@ describe('POST /alternates — add', () => {
     const body = (await resp.json()) as { error: { code: string } };
     expect(body.error.code).toBe('MISSING_MASTER');
   });
+
+  // v2.33.106 T-7: 補 POST /alternates body validation 路徑 — 既有 coverage
+  // 主要在 happy path / MISSING_MASTER / DUPLICATE_POI，缺 body shape / poiId 型別
+  // / unknown poiId / empty body validation。
+  describe('body validation (T-7)', () => {
+    it('body 非 object (string) → 400', async () => {
+      const { entryId } = await seedEntryWithMaster({ poiName: 'AltValid-StringBody' });
+      const ctx = mockContext({
+        request: new Request(
+          `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+          { method: 'POST', headers: { 'content-type': 'application/json' }, body: '"a string"' },
+        ),
+        env,
+        auth: mockAuth({ email: USER_EMAIL }),
+        params: { id: TRIP_ID, eid: String(entryId) },
+      });
+      expect((await callHandler(alternatesPost, ctx)).status).toBe(400);
+    });
+
+    it('body 非 object (array) → 400', async () => {
+      const { entryId } = await seedEntryWithMaster({ poiName: 'AltValid-ArrayBody' });
+      const ctx = mockContext({
+        request: new Request(
+          `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+          { method: 'POST', headers: { 'content-type': 'application/json' }, body: '[1,2,3]' },
+        ),
+        env,
+        auth: mockAuth({ email: USER_EMAIL }),
+        params: { id: TRIP_ID, eid: String(entryId) },
+      });
+      expect((await callHandler(alternatesPost, ctx)).status).toBe(400);
+    });
+
+    it('entryPoisVersion 非字串（number）→ 400', async () => {
+      const { entryId } = await seedEntryWithMaster({ poiName: 'AltValid-VersionType' });
+      const altPoiId = await seedPoi(db, { name: 'AltValid-VersionTypePOI' });
+      const ctx = mockContext({
+        request: jsonRequest(
+          `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+          'POST',
+          { poiId: altPoiId, entryPoisVersion: 123 },
+        ),
+        env,
+        auth: mockAuth({ email: USER_EMAIL }),
+        params: { id: TRIP_ID, eid: String(entryId) },
+      });
+      expect((await callHandler(alternatesPost, ctx)).status).toBe(400);
+    });
+
+    it('poiId 是負數 → 400', async () => {
+      const { entryId } = await seedEntryWithMaster({ poiName: 'AltValid-NegId' });
+      const ctx = mockContext({
+        request: jsonRequest(
+          `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+          'POST',
+          { poiId: -5 },
+        ),
+        env,
+        auth: mockAuth({ email: USER_EMAIL }),
+        params: { id: TRIP_ID, eid: String(entryId) },
+      });
+      expect((await callHandler(alternatesPost, ctx)).status).toBe(400);
+    });
+
+    it('poiId 是 0 → 400', async () => {
+      const { entryId } = await seedEntryWithMaster({ poiName: 'AltValid-ZeroId' });
+      const ctx = mockContext({
+        request: jsonRequest(
+          `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+          'POST',
+          { poiId: 0 },
+        ),
+        env,
+        auth: mockAuth({ email: USER_EMAIL }),
+        params: { id: TRIP_ID, eid: String(entryId) },
+      });
+      expect((await callHandler(alternatesPost, ctx)).status).toBe(400);
+    });
+
+    it('poiId 是非整數（小數）→ 400', async () => {
+      const { entryId } = await seedEntryWithMaster({ poiName: 'AltValid-FloatId' });
+      const ctx = mockContext({
+        request: jsonRequest(
+          `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+          'POST',
+          { poiId: 3.14 },
+        ),
+        env,
+        auth: mockAuth({ email: USER_EMAIL }),
+        params: { id: TRIP_ID, eid: String(entryId) },
+      });
+      expect((await callHandler(alternatesPost, ctx)).status).toBe(400);
+    });
+
+    it('poiId 非數字（string）→ 400', async () => {
+      const { entryId } = await seedEntryWithMaster({ poiName: 'AltValid-StrId' });
+      const ctx = mockContext({
+        request: jsonRequest(
+          `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+          'POST',
+          { poiId: 'abc' },
+        ),
+        env,
+        auth: mockAuth({ email: USER_EMAIL }),
+        params: { id: TRIP_ID, eid: String(entryId) },
+      });
+      expect((await callHandler(alternatesPost, ctx)).status).toBe(400);
+    });
+
+    it('poiId 指向不存在的 POI → 404', async () => {
+      const { entryId } = await seedEntryWithMaster({ poiName: 'AltValid-UnknownId' });
+      const ctx = mockContext({
+        request: jsonRequest(
+          `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+          'POST',
+          { poiId: 99999999 },
+        ),
+        env,
+        auth: mockAuth({ email: USER_EMAIL }),
+        params: { id: TRIP_ID, eid: String(entryId) },
+      });
+      expect((await callHandler(alternatesPost, ctx)).status).toBe(404);
+    });
+
+    it('empty body（無 poiId 也無 name/lat/lng）→ 400', async () => {
+      const { entryId } = await seedEntryWithMaster({ poiName: 'AltValid-Empty' });
+      const ctx = mockContext({
+        request: jsonRequest(
+          `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/alternates`,
+          'POST',
+          {},
+        ),
+        env,
+        auth: mockAuth({ email: USER_EMAIL }),
+        params: { id: TRIP_ID, eid: String(entryId) },
+      });
+      expect((await callHandler(alternatesPost, ctx)).status).toBe(400);
+    });
+  });
 });
 
 describe('DELETE /alternates/:poiId — remove', () => {
