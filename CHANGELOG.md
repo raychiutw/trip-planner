@@ -3,6 +3,46 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.89] - 2026-05-24
+
+**Round 38 EMERGENCY — wrangler.toml D1 binding 套用範圍 fix（prod login 全壞 root cause）**
+
+`/land-and-deploy` canary 抓到 v2.33.87 後 prod login 仍 500，wrangler tail 顯示：
+
+```
+TypeError: Cannot read properties of undefined (reading 'prepare')
+```
+
+`context.env.DB` 在 prod undefined。先以為 dashboard binding 缺失，PATCH CF API
+寫 production.d1_databases 雖回 success 但 wrangler.toml 在後續 deploy 仍把它
+覆寫回 null。
+
+**Root cause**: CF Pages wrangler.toml 慣例 — 頂層 `[[d1_databases]]` 只套用
+**preview environment**，production 須明示 `[[env.production.d1_databases]]`。
+v2.33.60 round 14 把 vars 寫進 `[env.production.vars]` 時忘記同步搬 D1 binding。
+頂層 binding 變成 preview-only，production 沒有 binding → env.DB undefined。
+
+**Production impact**:
+- 多週時間（從 round 14 deploy 起）prod 所有 /api/oauth/* /api/my-trips
+  500 with TypeError
+- v2.33.84 解 EADDRNOTAVAIL 後 api_logs 才能信賴，v2.33.87 PBKDF2 fix 後
+  wrangler tail 才看到真實 TypeError, v2.33.89 終於修對 root cause
+
+**FIX**
+
+```diff
+- [[d1_databases]]
++ [[env.production.d1_databases]]
+  binding = "DB"
+  database_name = "trip-planner-db"
+  database_id = "d61c42d5-8083-4e18-9b6c-70e133e37322"
+```
+
+**Verification path**:
+1. Merge → CF Pages auto-deploy
+2. curl /api/oauth/login should return 401 (not 500)
+3. wrangler tail 應該不再有 TypeError
+
 ## [2.33.88] - 2026-05-24
 
 **Round 37 — `ocean-*` → `tp-*` prefix mass rename**
