@@ -3,6 +3,31 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.76] - 2026-05-24
+
+**Round 26 — ARCHITECTURE Key Decisions section 對齊 v2.31.x reality**
+
+Round 18 doc drift audit follow-up: Key Architectural Decisions section 仍寫
+「Cloudflare Access 而非 app-level auth」（v2.21.x V2 OAuth 已切）+ 「POI 雙層
+所有權（pois + trip_pois）」（v2.29.0 整表 rip-out）— 兩個 ADR 與現狀矛盾。
+
+**FIX ARCHITECTURE.md `## Key Architectural Decisions`**:
+
+- ADR #2 rewrite: 「POI 雙層所有權」→ 「POI master + per-entry alternates
+  (v2.29.0 起)」對齊 `trip_entry_pois` junction model
+- ADR #3 rewrite: 「Cloudflare Access」→ 「V2 OAuth 自建 (v2.21.x 起)」說明 vendor
+  lock-in + 成本動機，pointer 到 oauth-env-setup runbook
+- ADR #6 NEW: Google Maps Platform 切換 (v2.23.0)，kill switch + quota monitor
+- ADR #7 NEW: OCC token (entry_pois_version) 設計，限定 multi-POI per entry
+
+**NEW**
+
+- `tests/unit/architecture-key-decisions.test.ts` — 7 個 regression guard:
+  - 不該再寫「Cloudflare Access 而非 app-level auth」當 current ADR
+  - 必須含 V2 OAuth / Google Maps / OCC 三大決策
+  - 不該再講 trip_pois 雙層所有權當「現狀」
+  - 必須含 multi-POI per entry 模型
+
 ## [2.33.75] - 2026-05-24
 
 **Round 25 — E2E api-mocks schema parity fix**
