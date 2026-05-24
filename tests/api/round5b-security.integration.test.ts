@@ -91,7 +91,9 @@ describe('dev/apps.ts POST — reject privileged scopes', () => {
 });
 
 describe('reports.ts POST — field-length cap + tripId existence', () => {
-  it('不存在 tripId → 404', async () => {
+  it('不存在 tripId → 201 silently dropped (v2.33.99 拔 enum oracle)', async () => {
+    // v2.33.99 security: rate-limit bump 在 tripExists 之前 + 不存在 silently
+    // 回 201，避免 attacker 用 200 vs 404 區別 enum 已 published trip slugs。
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/reports', 'POST', {
         tripId: 'nonexistent-trip',
@@ -101,7 +103,7 @@ describe('reports.ts POST — field-length cap + tripId existence', () => {
       env,
     });
     const resp = await callHandler(postReports, ctx);
-    expect(resp.status).toBe(404);
+    expect(resp.status).toBe(201);
   });
 
   it('field > 2000 char 被 clamp', async () => {

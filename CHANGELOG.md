@@ -9,11 +9,28 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [2.33.100] - 2026-05-25
 
-**Round 49 — /review batch 4: CR-5 V2-user DELETE audit + SEC-8 service-token email sentinel + SEC-6 DEV_MOCK_EMAIL allowlist**
+**Round 49 — /review batch 4: 3 個 MEDIUM finding**
+
+1. **CR-5 `poi-favorites/[id].ts` V2-user DELETE audit log**: always log (was companion only)
+2. **SEC-8 service-token email = ADMIN_EMAIL forge fix**: 永遠 `service:${id}` sentinel
+3. **SEC-6 DEV_MOCK_EMAIL allowlist guard**: deny-list → allowlist fail-closed
+
+Verified: 731/731 API integration pass。
 
 ## [2.33.99] - 2026-05-25
 
-**Round 48 — /review batch 3: SEC-5 reports.ts enum oracle + SEC-9 TRIPLINE_API_URL SSRF guard**
+**Round 48 — /review batch 3: 2 個 MEDIUM security findings**
+
+1. **SEC-5 reports.ts trip-id enumeration oracle**: rate-limit bump 移到 tripExists
+   之前 + 不存在 silently 回 201。Attacker 仍受 200/24h IP quota 但無法用 200
+   vs 404 區別 enum published trip slugs（易猜 lowercase user-chosen slug）。
+2. **SEC-9 email.ts TRIPLINE_API_URL SSRF / config-tamper guard**: inline allowlist
+   `https://` scheme + hostname `.ts.net` Tailscale funnel 或 dev localhost。
+   Attacker 改 TRIPLINE_API_URL → TRIPLINE_API_SECRET 跟著洩漏 → reject upfront。
+   Helper `assertTriplineApiUrlSafe()` 在 `_utils.ts` 供 reuse。
+
+Verified: 731/731 API integration pass。
+
 
 ## [2.33.98] - 2026-05-25
 

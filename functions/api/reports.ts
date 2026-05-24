@@ -34,15 +34,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', '缺少 tripId');
   }
 
-  // v2.33.42: tripId 必須存在（防 attacker 拿任意字串 spam D1）
-  const tripExists = await db.prepare('SELECT 1 FROM trips WHERE id = ? LIMIT 1').bind(tripId).first();
-  if (!tripExists) {
-    throw new AppError('DATA_NOT_FOUND', 'trip 不存在');
-  }
-
-  // v2.33.42: per-IP layered rate limit — 200/24h per IP（防 anonymous spam）
+  // v2.33.99 security: rate-limit bump 移到 tripExists 之前 — 之前 attacker 探測
+  // 任意 tripId 觀察 404 vs 201 區分（trip-id enumeration oracle）+ 不消耗 quota，
+  // 可無限枚舉 published trip slug (slug 是 user-chosen lowercase 易猜)。改先
+  // bump quota，再 silently drop unknown tripId (回 201 with `ok:true` 不洩漏)。
   const ip = clientIp(request);
   await bumpRateLimit(db, `reports:ip:${ip}`, RATE_LIMITS.REPORTS_PER_IP);
+
+  // v2.33.42: tripId 必須存在（防 attacker 拿任意字串 spam D1）
+  // v2.33.99 security: 不存在時 silently drop 而非 404 — 拔 enum oracle 同時
+  // 已 bump quota 故 attacker 仍受 200/24h 限制。
+  const tripExists = await db.prepare('SELECT 1 FROM trips WHERE id = ? LIMIT 1').bind(tripId).first();
+  if (!tripExists) {
+    return json({ ok: true }, 201);
+  }
 
   // 簡易 rate limit — 同 tripId + URL 30 秒內不可重複
   const url = (body.url as string) || '';

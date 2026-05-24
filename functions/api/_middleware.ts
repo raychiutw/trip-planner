@@ -265,11 +265,17 @@ async function handleAuth(
 
   // Mock auth for local development — DEV_MOCK_EMAIL set in .dev.vars (not committed)
   if (env.DEV_MOCK_EMAIL) {
-    // Fail-safe：DEV_MOCK_EMAIL 不應該在 prod 啟用，意外設定的話 admin flag bypass 風險高。
-    // Env type 由 wrangler.toml 推出，沒固定 ENVIRONMENT/NODE_ENV — 走 Record cast 讀任意 key。
+    // v2.33.100 SEC-6: 從「deny-list (prod) fail-open」改 allowlist fail-closed。
+    // 之前 ENVIRONMENT === 'production' 條件 deny；若 env var 沒設 / typo，guard
+    // 失效 → DEV_MOCK_EMAIL 在 prod 生效 = 完全 auth bypass。
+    // 改要求顯式 ENVIRONMENT='development'（或 'preview'）+ ALLOW_DEV_MOCK='1'
+    // 雙條件才允許 DEV_MOCK_EMAIL；任一缺 → deny。Prod env 不該同時設這兩個，
+    // 確保 misconfig fail-closed。
     const envBag = env as unknown as Record<string, string | undefined>;
-    if (envBag.ENVIRONMENT === 'production' || envBag.NODE_ENV === 'production') {
-      return errorResponse(new AppError('SYS_INTERNAL', 'DEV_MOCK_EMAIL 不可在 production 啟用'));
+    const isDevEnv = envBag.ENVIRONMENT === 'development' || envBag.ENVIRONMENT === 'preview';
+    const allowDevMock = envBag.ALLOW_DEV_MOCK === '1';
+    if (!isDevEnv || !allowDevMock) {
+      return errorResponse(new AppError('SYS_INTERNAL', `DEV_MOCK_EMAIL 不可在此環境啟用 (need ENVIRONMENT=development|preview + ALLOW_DEV_MOCK=1; got ENVIRONMENT=${envBag.ENVIRONMENT}, ALLOW_DEV_MOCK=${envBag.ALLOW_DEV_MOCK})`));
     }
     const email = env.DEV_MOCK_EMAIL.toLowerCase();
     // V2 cutover：解析 mock email → user_id 一次。DB miss 一律 fail-closed，
@@ -415,10 +421,11 @@ async function handleAuth(
           if (tokenRow.user_id === null) {
             isServiceToken = true;
             isAdmin = safeScopes.includes('admin');
-            // Non-admin service tokens MUST NOT inherit ADMIN_EMAIL: audit_log.changed_by
-            // would forge admin identity. Use service:${client_id} sentinel; admin-scope
-            // tokens keep ADMIN_EMAIL since their actions are admin-equivalent.
-            email = isAdmin ? (env.ADMIN_EMAIL ?? '') : `service:${safeClientId}`;
+            // v2.33.100 SEC-8: admin-scope service token 也用 service:${id} sentinel，
+            // 不再 inherit ADMIN_EMAIL。原本 admin token 寫 audit log 時 changed_by =
+            // ADMIN_EMAIL → forensic confusion（人類 admin 行為 vs token 攻擊難分）。
+            // 改：永遠 service:${id}；admin 權限靠 isAdmin flag gating 不靠 email。
+            email = `service:${safeClientId}`;
           } else {
             try {
               const userRow = await env.DB
