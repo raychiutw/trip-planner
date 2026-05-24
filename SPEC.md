@@ -1,9 +1,17 @@
 # SPEC — POI Unification for Timeline Stops
 
-**Status**: Draft
-**Target**: v2.2.0.0
-**Related planning**: `.claude/skills/` + `openspec/changes/poi-attraction-unification/` (後續 OpenSpec propose)
-**Last updated**: 2026-04-23
+**Status**: ✅ SUPERSEDED — POI unification 已完成於 v2.27-v2.29 系列 migration
+**Originally targeted**: v2.2.0.0 (2026-04-23)
+**Actual landing**: v2.27.0 / v2.28.0 / v2.29.x (migrations 0057-0062, 2026-04 ~ 2026-05)
+**Current state**: see [ARCHITECTURE.md](ARCHITECTURE.md) + CLAUDE.md naming history v2.27-v2.29
+**Last updated**: 2026-04-23 (本檔僅保留作歷史紀錄)
+
+> **不要 follow 本檔做 implementation** — 描述的 `trip_entries.location` JSON field、
+> `migrations/0027_drop_entry_location.sql`、`scripts/migrate-entries-to-pois.js`
+> 等已不存在。實際上 POI unification 改用 `trip_entry_pois` junction table
+> (v2.27.0 migration 0057+0058) 完成，trip_entries 不含 location JSON。
+>
+> 完整歷史見 CHANGELOG.md v2.27.0 / v2.28.0 / v2.29.x 區段。
 
 ## 1. Objective
 

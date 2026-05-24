@@ -3,6 +3,57 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.68] - 2026-05-24
+
+**Round 18 — docs review + refresh (backlog #139)**
+
+Code-reviewer agent review root *.md + docs/ 找 5 CRITICAL + 5 MED + 5 LOW
+(doc drift / stale info / broken refs)。本 PR 處理大部分 actionable。
+
+**REFRESH (CRITICAL)**
+
+- `ARCHITECTURE.md` Auth section 整段重寫 V2 OAuth + .dev.vars (不再
+  Cloudflare Access + .env.local)
+- `ARCHITECTURE.md` Maps stack OSM/Nominatim/ORS/Haversine 全標 ripped out，
+  改 Google Maps Platform (v2.23.0+)
+- `ARCHITECTURE.md` POI 模型: `trip_pois` 標 DROPPED，改 `pois` master +
+  `trip_entry_pois` junction (v2.27-v2.29)
+- `ARCHITECTURE.md` `/manage` `/admin` route 標 拆 2026-04-26
+- `README.md` 同步移除 OSM/ORS/Haversine 描述，改 Google Places + Routes
+- `README.md` 3-theme (Sunshine/Clear Sky/Japanese Zen) → V2 Terracotta only
+- `README.md` 拔 broken screenshot ref (docs/daily-report-flow.png 不存在)
+- `CONTRIBUTING.md` Node 20+ → Node 22+, 加 bun prereq (google-poi-*.ts)
+- `CONTRIBUTING.md` `.env.local` → `.dev.vars` (與 CLAUDE.md / AGENTS.md 對齊)
+- `CONTRIBUTING.md` trip_pois → trip_entry_pois
+- `SPEC.md` Mark `SUPERSEDED` — POI unification 已 v2.27-v2.29 完成 via
+  `trip_entry_pois`; SPEC 描述的 `trip_entries.location` JSON + Phase 3 migration
+  script 都不存在
+
+**SYNC**
+
+- `AGENTS.md` 加 CLAUDE.md "Hard Rules" (Code change → tp-team / Mockup-first
+  hard gate) + "Naming history" summary (v2.23/v2.27/v2.29/v2.31.13-15-27/v2.33.5x-67)
+- `AGENTS.md` typo `.Codex/skills/` → `.claude/skills/`
+- `GEMINI.md` `trip_pois` 覆寫 → `trip_entry_pois` junction
+- `docs/code-review/README.md` PR URL typo 修 (round 13: `planner` → `trip-planner`) +
+  backfill round 14b/14c/14d/15a/15b/16/17 7 個 PR# (TBD → 實際 #)
+
+**MOVE**
+
+- `optimization-report-2026-03-22.md` → `docs/archive/` (stale 14 月 artifact)
+
+**TESTING**
+
+- `tests/unit/round-18-docs-refresh.test.ts` — 20 個 source-grep guard
+- 2621 / 2621 全綠 (+20 從 2601)
+- tsc clean
+
+**Deferred (架構性)**
+
+- `docs/runbooks/` 補 migration deploy + OAuth env setup runbook
+- README inline version note (v2.31.85) cleanup
+- ARCHITECTURE.md Key Architectural Decisions 全面重寫
+
 ## [2.33.67] - 2026-05-24
 
 **Round 17 — src/entries/main.tsx mini audit (lazyWithRetry budget bug)**

@@ -17,10 +17,10 @@
 
 ### 行程編輯（v2.19.0+）
 
-- ✏️ **新增 / 編輯行程** — 可改名稱、描述、語言、預設交通方式、發布狀態、目的地清單（拖排 / 加 POI / 分配天數）
-- 🔁 **正選 / 備選景點** — 同一個行程 entry 可掛 1 個正選 POI + 多個備選 POI，搜尋與收藏都能加入備選
-- 🌐 **OSM POI 自動補資料** — Nominatim + Overpass + OpenTripMap + Wikidata 拉景點 lat/lng / address / phone / 評分 / cuisine / opening_hours / wikidata_id，90 天 cache，每月 1 號 09:00 自動跑批次補新 POI
-- 🚗 **景點重排自動更新車程** — 拖拉景點順序時自動重算 ORS 路徑（自駕 / 步行）+ Haversine fallback（大眾運輸）
+- ✏️ **新增 / 編輯行程** — 可改名稱、描述、語言、發布狀態、目的地清單（拖排 / 加 POI / 分配天數）
+- 🔁 **正選 / 備選景點** — 同一個行程 entry 可掛 1 個正選 POI + 多個備選 POI（v2.27.0 `trip_entry_pois` junction table），搜尋與收藏都能加入備選
+- 🌐 **Google Places 自動補資料** — v2.23.0 起切 Google Maps Platform。POI 即時 `POST /api/pois/:id/enrich` (Place Details API) + 30 天 daily refresh (50/day cap) 自動更新評分 / 營業時間 / 狀態 (active / closed / missing)
+- 🚗 **景點重排自動更新車程** — 拖拉景點順序時自動 Google Routes API 重算路徑 (driving / walking / transit)。無 fallback，網路失敗顯示 stale ⚠
 - 📅 **多目的地子表** — 跨城市行程可分配每地天數（沖繩 3 天 / 京都 2 天）
 
 ### 即時資訊
@@ -32,10 +32,10 @@
 ### 外觀與體驗
 
 - 🌙 **深色模式** — 支援淺色、深色、跟隨系統三種模式
-- 🎨 **3 套色彩主題** — 陽光（Sunshine）、晴空（Clear Sky）、和風（Japanese Zen）
+- 🎨 **V2 Terracotta 設計系統** — `#D97848` 暖色 accent + cream bg (v2.4.0+，取代舊 Sunshine/ClearSky/Japanese 三主題)
 - 🖨️ **列印模式** — A4 排版最佳化，可直接列印或輸出 PDF
 - 📱 **響應式設計** — 手機、平板、桌機均有對應排版
-- ⚡ **PWA 體驗** — 可加入主畫面，離線瀏覽快取
+- ⚡ **PWA 體驗** — 可加入主畫面，離線瀏覽快取（含 maskable icon v2.33.63）
 
 ### 介面架構（v2.4.0+）
 
@@ -44,7 +44,9 @@
 - 🔗 **URL-driven sheet state** — `/trip/:id?sheet=map|chat` 可深度連結 + 瀏覽器 back/forward 正常（v2.31.85 拿掉 itinerary tab — main column 已 render 行程；chat tab embed `<ChatPage embedded lockTripId>` trip-scoped AI 聊天）
 - 🎨 **V2 Terracotta 設計系統** — `#D97848` accent + `#FFFBF5` cream bg + `#2A1F18` warm-dark fg，5 個 auth page 桌機版 split-screen（左 form card、右 brand hero gradient pane）
 - 🗺️ **`/trips` landing** — country-keyed peach-gradient trip cards（JP / KR / TW / 其他），點進去 → trip detail
-- 🗺️ **POI Master + Per-trip overrides** — `pois` 是 AI 維護的 master，`trip_pois` 允許 user 覆寫（NULL = 繼承 master）
+- 🗺️ **POI Master + Entry junction** — `pois` 是 master (AI 維護)，`trip_entry_pois` junction (v2.27.0) 可一 entry 掛多 POI (master sort_order=1 + alternates)。v2.29.0 起 `trip_pois` 已 drop，metadata 改 master / junction 兩處
+- 🤖 **AI 健檢** — `/trip/:id/health` 全頁 (v2.31.0)，severity-grouped findings + action_target deep-link 跳轉
+- 📨 **OAuth invitation** — invitation token HMAC stored，30 天 / 7 天 retention auto sweep (v2.33.61)
 
 ### 帳號與認證（v2.4.0+）
 
@@ -64,12 +66,6 @@
 - 💾 **下載行程** — 支援 PDF、Markdown、JSON、CSV 四種格式
 
 ---
-
-## 截圖
-
-> 截圖存放於 `docs/` 目錄。
-
-![每日行程流程](docs/daily-report-flow.png)
 
 ---
 
