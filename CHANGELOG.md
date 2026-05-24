@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.80] - 2026-05-24
+
+**Round 29 — Dependabot auto-merge workflow**
+
+啟用 dependabot 安全 + patch/minor 更新自動 merge。手動 merge 5 個 deps PR/週
+是 toil。Security update（alert-state=fixed）不卡 review queue。
+
+**NEW**
+
+- `.github/workflows/dependabot-auto-merge.yml`:
+  - trigger: pull_request opened/sync/reopened/ready_for_review
+  - filter: `github.actor == 'dependabot[bot]'`
+  - 條件：semver-patch / semver-minor / alert-state=fixed → `gh pr merge --auto --squash`
+  - major version bump 留人工 review
+  - action SHA pin per OpenSSF (`actions/checkout@v4` + `dependabot/fetch-metadata@v2.4.0`)
+
+**REPO CONFIG**
+
+- Enabled `allow_auto_merge: true` via `gh api -X PATCH /repos/raychiutw/trip-planner`
+- `can_approve_pull_request_reviews: false` 不變（master 無 branch protection 不需 approve）
+
+**Why**: dependabot.yml 已限 vite/tailwind major 不 PR + groups 抑制 flood；
+剩 minor/patch 風險低 + security update 應立即 merge。
+
 ## [2.33.79] - 2026-05-24
 
 **Round 28 — npm audit fix (1 moderate CVE 清掉)**
