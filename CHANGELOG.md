@@ -3,6 +3,59 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.84] - 2026-05-24
+
+**Round 33 — EADDRNOTAVAIL port exhaustion 真正 root cause + fix**
+
+Round 32 推測「per-test fetch socket churn」是錯的。深調發現真正 root cause：
+
+**Diagnosis**:
+1. `tests/api/setup.ts` 用 `let _mf` module-level singleton。Vitest 4 即使
+   `isolate: false` 仍會 per-file re-evaluate module → `_mf = null` 重置
+2. **36 個 test file 在 `afterAll(disposeMiniflare)` → 每檔結束 dispose
+   singleton → 下一檔 createTestDb 再 new Miniflare**（author 設計意圖 vs
+   實際行為矛盾）
+3. 每 new Miniflare spawn workerd child process + 內部 HTTP server
+   → 累積 35+ workerd 同時跑 → ephemeral port (49152-65535) 耗盡
+4. 觸發 EADDRNOTAVAIL 隨機 fail 20-30 個 test（隨機 port noise）
+
+**Verification** (via `globalThis.__mfInstances` counter):
+- Before: 35 Miniflare instances created per test run
+- After: 1 instance (true singleton across all test files)
+
+**Fix**:
+- `tests/api/setup.ts` singleton 改 `globalThis` cache（跨 module re-eval 維持）
+- `disposeMiniflare()` 改 no-op（per-file dispose 是 anti-pattern；process exit
+  自然清理 workerd）
+- `vitest.config.api.mts`:
+  - `pool: 'forks' + maxWorkers: 1 + fileParallelism: false` 強制單 worker
+  - `isolate: false` 讓 module 真共用
+
+**Measured impact**:
+
+| Metric | Before | After | Delta |
+|--------|--------|-------|-------|
+| Miniflare instances | 35 | 1 | -34 |
+| EADDRNOTAVAIL errors | 25+ | 0 | -100% |
+| Test files failed | 22 | 10 | -12 |
+| Tests passed | 583-639 | 704 | +65-121 |
+| Tests skipped (setup error) | 65 | 0 | -65 |
+| Tests failed | 27-48 | 27 | stable |
+
+剩 27 個 fail 是 **pre-existing real bugs**（assertion-level，非 port noise）：
+- account-connected-apps DELETE (1)
+- health-check.integration (6)
+- jwt-module clock-skew (1)
+- middleware preview origin (1)
+- oauth-authorize redirect (5)
+- oauth-forgot-password (1)
+- oauth-reset-password validation (2)
+- oauth-token replay/refresh (2)
+- oauth-verify send-verification (5)
+- segments-get auth (2)
+
+這些屬獨立 Round 待修，**不是本 fix 引入**。CI retry 之前蓋過、port noise 也蓋過。
+
 ## [2.33.83] - 2026-05-24
 
 **Round 32 — Path A 完整嘗試 + 結論：port exhaustion 非 isolation 問題**

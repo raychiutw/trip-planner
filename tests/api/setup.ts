@@ -31,44 +31,51 @@ function extractStatements(sql: string): string[] {
     .filter(s => s.length > 0);
 }
 
-let _mf: Miniflare | null = null;
-let _db: D1Database | null = null;
-let _migrated = false;
+// v2.33.84: globalThis singleton — Vitest 4 即使在 isolate: false +
+// maxWorkers: 1 仍會 per-file re-evaluate module，module-level `let _mf`
+// 會被重置 → 新建 Miniflare → 累積 35+ workerd subprocess → port 耗盡。
+// globalThis 是 process-scoped，跨 file re-eval 維持。
+interface GlobalCache {
+  __tp_mf?: Miniflare;
+  __tp_db?: D1Database;
+  __tp_migrated?: boolean;
+}
+const _cache = globalThis as unknown as GlobalCache;
 
 /**
  * 取得共用 D1 database（lazy init + migration 只跑一次）
  */
 export async function createTestDb(): Promise<D1Database> {
-  if (!_mf) {
-    _mf = new Miniflare({
+  if (!_cache.__tp_mf) {
+    _cache.__tp_mf = new Miniflare({
       modules: true,
       script: 'export default { fetch() { return new Response("ok"); } }',
       d1Databases: ['DB'],
     });
   }
-  if (!_db) {
-    _db = await _mf.getD1Database('DB');
+  if (!_cache.__tp_db) {
+    _cache.__tp_db = await _cache.__tp_mf.getD1Database('DB');
   }
-  if (!_migrated) {
+  if (!_cache.__tp_migrated) {
     for (const fileSql of getMigrationFiles()) {
       for (const stmt of extractStatements(fileSql)) {
-        await _db.prepare(stmt).run();
+        await _cache.__tp_db.prepare(stmt).run();
       }
     }
-    _migrated = true;
+    _cache.__tp_migrated = true;
   }
-  return _db;
+  return _cache.__tp_db;
 }
 
 /**
  * 清理 Miniflare — 由 vitest globalTeardown 或最後一個測試呼叫
  * 多次呼叫安全（第二次起為 no-op）
  */
+/**
+ * v2.33.84 DEBUG: 改 no-op。原本每個 test file 在 afterAll 呼叫 dispose 害
+ * singleton 失效（36 個 file × dispose = 不停 new Miniflare）。真正 dispose 應
+ * 該在 vitest globalTeardown 跑一次即可，否則 per-file dispose = port leak。
+ */
 export async function disposeMiniflare(): Promise<void> {
-  if (_mf) {
-    await _mf.dispose();
-    _mf = null;
-    _db = null;
-    _migrated = false;
-  }
+  // intentionally empty - dispose only at globalTeardown
 }
