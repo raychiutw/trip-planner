@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.86] - 2026-05-24
+
+**Round 35 — round-14c-residuals stale regression follow-up**
+
+v2.33.81 改 `public/_headers` Sentry CSP comment 從「Sentry dashboard 取得」
+指令文字 → DSN ↔ CSP URL pattern 公式（hardcode 真 endpoint 後不需指令）。
+忘記同步更新 `tests/unit/round-14c-residuals.test.ts` regression assertion
+還 match `/Sentry dashboard/` + `/取得/` → CI fail。
+
+**FIX**
+
+- `tests/unit/round-14c-residuals.test.ts` — assertion 改 `/Sentry CSP/` + `/DSN/`
+  對齊 v2.33.81 comment 結構。
+
 ## [2.33.85] - 2026-05-24
 
 **Round 34 — 修 v2.33.84 暴露的 27 pre-existing real bugs**
