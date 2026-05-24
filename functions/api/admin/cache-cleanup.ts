@@ -9,13 +9,11 @@
  */
 import { requireAdmin } from '../_auth';
 import { cleanupExpiredCache } from '../../../src/lib/maps/cache';
+import { json } from '../_utils';
 import type { Env } from '../_types';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   requireAdmin(context);
   const deleted = await cleanupExpiredCache(context.env.DB);
-  return new Response(JSON.stringify({ deleted }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return json({ deleted });
 };

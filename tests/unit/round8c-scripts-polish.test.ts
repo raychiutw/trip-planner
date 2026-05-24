@@ -79,15 +79,15 @@ describe('v2.33.51 round 8c — daily-check.js npm audit maxBuffer', () => {
   });
 });
 
-describe('v2.33.51 round 8c — google-poi-refresh-30d firstCall finally', () => {
-  it('firstCall = false 在 finally block', () => {
-    expect(POI_REFRESH_SRC).toMatch(/} finally \{\s*firstCall = false;\s*\}/);
+describe('v2.33.91 simplify — google-poi-refresh-30d batched parallel + first-batch 401 check', () => {
+  // v2.33.91: 從 sequential for-of + firstCall finally pattern (v2.33.51 round 8c)
+  // 改 batched Promise.allSettled。`isFirstBatch` 取代 `firstCall`，401 偵測仍生效。
+  it('用 batched parallel via Promise.allSettled', () => {
+    expect(POI_REFRESH_SRC).toMatch(/Promise\.allSettled/);
   });
 
-  it('firstCall 不在 try success path 末尾 (regression check)', () => {
-    // success branch 不應再有 `firstCall = false;`
-    const trySection = POI_REFRESH_SRC.match(/try \{\s*const enrich[\s\S]*?\} catch/);
-    expect(trySection).not.toBeNull();
-    expect(trySection?.[0]).not.toMatch(/firstCall = false;/);
+  it('first batch 401 detection 仍生效 (autoplan T15 regression)', () => {
+    expect(POI_REFRESH_SRC).toMatch(/isFirstBatch.*401|Unauthorized/);
+    expect(POI_REFRESH_SRC).toContain('GOOGLE_MAPS_API_KEY rejected');
   });
 });

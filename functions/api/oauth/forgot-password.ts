@@ -34,6 +34,7 @@ import { passwordReset } from '../../../src/server/email-templates';
 import { recordAuthEvent } from '../_auth_audit';
 import { recordEmailEvent } from '../_audit';
 import { alertAdminTelegram } from '../_alert';
+import { normalizeEmail } from '../../../src/server/email-utils';
 import type { Env } from '../_types';
 
 interface ForgotBody {
@@ -44,7 +45,7 @@ const RESET_TOKEN_TTL_SEC = 60 * 60; // 1h per spec
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = (await parseJsonBody<ForgotBody>(context.request)) ?? {};
-  const email = (body.email ?? '').trim().toLowerCase();
+  const email = normalizeEmail(body.email ?? '');
 
   // Generic message regardless of outcome (anti-enumeration)
   const genericResponse = new Response(

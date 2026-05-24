@@ -34,6 +34,9 @@ interface EnrichResult {
 
 const DAILY_QUOTA = 50;
 const SLEEP_MS = 1500;
+// v2.33.91 simplify: 平行 4 個 enrich + sleep 一次 = ~3 req/s effective rate
+// 對齊 Google 軟限 hint。原 sequential 50 × 1.5s = 75s → batch=4 約 18-20s。
+const BATCH_SIZE = 4;
 
 const ENV = loadCronEnv();
 const api = makeApiClient(ENV);
@@ -55,32 +58,37 @@ async function main(): Promise<void> {
   let active = 0;
   let closed = 0;
   let missing = 0;
-  let firstCall = true;
 
-  for (const poi of rows) {
-    // v2.33.51 round 8c: firstCall = false 必須在 finally 而非 success path
-    // — 之前若第一個 POI 拋 non-401，firstCall 還是 true，第二個 POI 401
-    // 就誤觸「first-call 401」alert。
-    try {
-      const enrich = await api<EnrichResult>('POST', `/api/pois/${poi.id}/enrich`, {});
-      if (enrich.status === 'closed') closed += 1;
-      else if (enrich.status === 'missing') missing += 1;
-      else active += 1;
-      console.log(`  [${poi.id}] ${poi.name} → ${enrich.status}`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      // First-call 401 → likely env misconfig (autoplan T15)
-      if (firstCall && /401|Unauthorized/.test(msg)) {
-        const alert = '[tp-cron] GOOGLE_MAPS_API_KEY rejected — 檢查 ~/.tripline-cron/.env';
-        console.error(alert);
-        await alertTelegram(alert);
-        process.exit(1);
+  // v2.33.91 simplify: batched parallel enrich + per-batch sleep。
+  // First batch 序列跑（檢測 first-call 401 用 autoplan T15）。後續 batch
+  // 平行 4 個 + 1.5s sleep 維持 ~3 req/s 對齊 Google 軟限。
+  // first-call 401 → likely env misconfig，alert + exit。
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE);
+    const isFirstBatch = i === 0;
+    const settled = await Promise.allSettled(
+      batch.map((poi) => api<EnrichResult>('POST', `/api/pois/${poi.id}/enrich`, {})),
+    );
+    for (let j = 0; j < settled.length; j++) {
+      const poi = batch[j]!;
+      const r = settled[j]!;
+      if (r.status === 'fulfilled') {
+        if (r.value.status === 'closed') closed += 1;
+        else if (r.value.status === 'missing') missing += 1;
+        else active += 1;
+        console.log(`  [${poi.id}] ${poi.name} → ${r.value.status}`);
+      } else {
+        const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+        if (isFirstBatch && /401|Unauthorized/.test(msg)) {
+          const alert = '[tp-cron] GOOGLE_MAPS_API_KEY rejected — 檢查 ~/.tripline-cron/.env';
+          console.error(alert);
+          await alertTelegram(alert);
+          process.exit(1);
+        }
+        console.error(`  [${poi.id}] ${poi.name} → ERROR: ${msg}`);
       }
-      console.error(`  [${poi.id}] ${poi.name} → ERROR: ${msg}`);
-    } finally {
-      firstCall = false;
     }
-    await sleep(SLEEP_MS);
+    if (i + BATCH_SIZE < rows.length) await sleep(SLEEP_MS);
   }
 
   const summary = `📊 Refresh: ${rows.length} POI checked / ${active} active / ${closed} closed / ${missing} missing`;

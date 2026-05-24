@@ -200,18 +200,19 @@ async function checkLinks() {
   var trips = await tripsRes.json();
 
   // 2. 收集所有 maps URLs
+  // v2.33.91 simplify: 平行 fetch /days per trip。之前 sequential await loop
+  // 20 個 published trip = 20 個 round-trip 串接（~20s），改 Promise.all (~1s)。
   var mapsUrls = [];
-  for (var i = 0; i < trips.length; i++) {
-    var trip = trips[i];
-    if (!trip.published) continue;
-    var id = trip.id || trip.tripId;
-    if (!id) continue;
-    try {
-      var daysRes = await fetch(SITE_URL + '/api/trips/' + id + '/days', { headers: authHeaders });
-      if (!daysRes.ok) continue;
-      var days = await daysRes.json();
-      collectMapsUrls(days, mapsUrls);
-    } catch (_) { /* skip trip on error */ }
+  var publishedTripIds = trips
+    .filter(function (t) { return t.published && (t.id || t.tripId); })
+    .map(function (t) { return t.id || t.tripId; });
+  var daysResults = await Promise.all(publishedTripIds.map(function (id) {
+    return fetch(SITE_URL + '/api/trips/' + id + '/days', { headers: authHeaders })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+  }));
+  for (var i = 0; i < daysResults.length; i++) {
+    if (daysResults[i]) collectMapsUrls(daysResults[i], mapsUrls);
   }
 
   // 3. HEAD check with concurrency limit of 5

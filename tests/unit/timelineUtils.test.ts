@@ -12,37 +12,12 @@ import fs from 'fs';
 import path from 'path';
 
 /* ============================================================
-   F001 — parseTimeRange / formatDuration / deriveTypeMeta
+   F001 — formatDuration / deriveTypeMeta
+   v2.33.91: parseTimeRange 删（v2.29.0 trip_entries.time DROPPED 後死碼），改 parseEntryTime
    ============================================================ */
 
-import { parseTimeRange, formatDuration, formatDurationCompact, deriveTypeMeta } from '../../src/lib/timelineUtils';
+import { formatDuration, formatDurationCompact, deriveTypeMeta } from '../../src/lib/timelineUtils';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
-
-describe('parseTimeRange', () => {
-  it('undefined → empty', () => {
-    expect(parseTimeRange(undefined)).toEqual({ start: '', end: '', duration: 0 });
-  });
-
-  it('null → empty', () => {
-    expect(parseTimeRange(null)).toEqual({ start: '', end: '', duration: 0 });
-  });
-
-  it('"09:00-11:30" → start=09:00, end=11:30, duration=150', () => {
-    expect(parseTimeRange('09:00-11:30')).toEqual({ start: '09:00', end: '11:30', duration: 150 });
-  });
-
-  it('"10:45-12:00" → start=10:45, end=12:00, duration=75', () => {
-    expect(parseTimeRange('10:45-12:00')).toEqual({ start: '10:45', end: '12:00', duration: 75 });
-  });
-
-  it('"10:45" (no end) → start=10:45, end="", duration=0', () => {
-    expect(parseTimeRange('10:45')).toEqual({ start: '10:45', end: '', duration: 0 });
-  });
-
-  it('"23:00-01:00" midnight crossing → duration=120', () => {
-    expect(parseTimeRange('23:00-01:00')).toEqual({ start: '23:00', end: '01:00', duration: 120 });
-  });
-});
 
 describe('formatDuration', () => {
   it('0 → ""', () => {
