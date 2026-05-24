@@ -102,7 +102,7 @@ describe('POST /api/oauth/revoke', () => {
     const deleteCall = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM oauth_models'),
     );
-    expect(deleteCall).toBeTruthy();
+    expect(deleteCall).toBeDefined();
   });
 
   it('200 silent when token belongs to different client (anti-leak)', async () => {
