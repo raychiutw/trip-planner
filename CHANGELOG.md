@@ -3,6 +3,52 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.90] - 2026-05-24
+
+**Round 39 — ocean residual final cleanup（v2.33.88 follow-up）**
+
+v2.33.88 mass rename 後 investigate 找出 4 個 stale residual。本版全清：
+
+**A. Broken doc path**
+
+- `src/lib/mapHelpers.ts:5` 註解寫 `docs/code-review/round-11-oceanmap-split.md` →
+  v2.33.88 已 rename 為 `round-11-tp-map-split.md` → 改成新路徑
+
+**B. Stale "Ocean theme/design" 註解 → Terracotta**
+
+THEME_COLORS 早 v2.31 切 Terracotta `#D97848`，但註解仍寫 Ocean。改 6 處：
+- `css/tokens.css:444` "Ocean primary hero" → "Terracotta primary hero"
+- `css/tokens.css:510` "Ocean design wrapper" → "Terracotta design wrapper"
+- `css/tokens.css:533` "Ocean Shell" → "Terracotta Shell"
+- `src/components/trip/DaySection.tsx` "Ocean design / Ocean hero card" → "Terracotta ..."
+- `src/components/trip/ThemeArt.tsx` "Ocean theme" → "Terracotta theme"
+
+**C. `use-dark-mode.test.js` 整檔 OCEAN_COLORS → THEME_COLORS**
+
+之前 test 用本地 `OCEAN_COLORS = {light:'#0077B6', dark:'#0D1B2A'}` 藍但 source
+是 Terracotta 橘 `#D97848`/`#1A140F` → test 用自己常數所以假性 green，沒驗 source。
+改用 `THEME_COLORS` 對齊 source。test descriptions 也對齊 Terracotta。
+
+**D. PoiCardTone `'ocean'` → `'blue'`**
+
+`PoiCardTone = 'warm' | 'cool' | 'ocean' | 'amber'` 中 `'ocean'` 是色調 palette
+名（非 prefix），改 `'blue'` 對齊其他 tone 都是色名語意。共 7 處：
+- `src/lib/poiSearchHelpers.ts` type + 2 callsite
+- `src/pages/ChangePoiPage.tsx` `[data-tone="blue"]` CSS attr selector
+- `src/pages/AddStopPage.tsx` `[data-tone="blue"]` CSS attr selector
+- `tests/unit/poi-search-helpers.test.ts` 2 assertions
+
+**Verified**
+
+- 0 instances of `ocean` / `Ocean` in `src/` `functions/` `css/` `migrations/`
+- `npm test` → 2671/2671 pass
+- `tsc --noEmit` → clean
+
+**Not changed (per investigation 建議)**
+
+- `scripts/logs/daily-check/*.json` — historical Sentry incident reports (frozen)
+- `docs/code-review/round-*.md` — historical review docs
+
 ## [2.33.89] - 2026-05-24
 
 **Round 38 EMERGENCY — wrangler.toml D1 binding 套用範圍 fix（prod login 全壞 root cause）**

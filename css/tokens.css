@@ -441,7 +441,7 @@ body.dark {
         cursor: pointer;
     }
 
-    /* Day header — Ocean primary hero */
+    /* Day header — Terracotta primary hero */
     .day-header {
         background: var(--color-accent);
         color: #ffffff;
@@ -507,7 +507,7 @@ body.dark {
     [data-reply-content] pre code { background: none; padding: 0; }
 
     /* tripContent section cards + link styles。
-     * Exclude tp-day — Ocean design wrapper 不該有 wrapper bg；hero / rows 自帶
+     * Exclude tp-day — Terracotta design wrapper 不該有 wrapper bg；hero / rows 自帶
      * 視覺結構，加上 secondary tint 會變「大片暖色底色」感（user 2026-05-10 feedback）。 */
     #tripContent section:not(.tp-day) { background: var(--color-secondary); border-radius: var(--radius-md); margin-bottom: var(--spacing-3); overflow: clip; }
     #tripContent a:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); text-decoration: underline; }
@@ -530,7 +530,7 @@ body.dark {
     body.dark .trip-btn:hover { background: var(--color-tertiary); }
 }
 
-/* ===== Ocean Shell — Page wrapper used by TripPage ===== */
+/* ===== Terracotta Shell — Page wrapper used by TripPage ===== */
 @layer base {
     .tp-shell { min-height: 100dvh; background: var(--color-background); color: var(--color-foreground); }
 

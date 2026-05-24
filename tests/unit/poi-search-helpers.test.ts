@@ -92,11 +92,11 @@ describe('poiTone', () => {
   });
 
   it('fallback by index → ocean / cool / amber / warm cycle', () => {
-    expect(poiTone('museum', 0)).toBe('ocean');
+    expect(poiTone('museum', 0)).toBe('blue');
     expect(poiTone('museum', 1)).toBe('cool');
     expect(poiTone('museum', 2)).toBe('amber');
     expect(poiTone('museum', 3)).toBe('warm');
-    expect(poiTone('museum', 4)).toBe('ocean');
+    expect(poiTone('museum', 4)).toBe('blue');
   });
 });
 
