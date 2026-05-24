@@ -255,7 +255,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Need inviter user_id for invited_by FK
   const inviterRow = await context.env.DB
     .prepare('SELECT id FROM users WHERE email = ? LIMIT 1')
-    .bind(auth.email.toLowerCase())
+    .bind(normalizeEmail(auth.email))
     .first<{ id: string }>();
   if (!inviterRow) {
     throw new AppError('SYS_INTERNAL', '邀請者帳號不存在');

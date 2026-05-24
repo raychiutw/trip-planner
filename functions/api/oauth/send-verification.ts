@@ -23,6 +23,7 @@ import { sendEmail, EmailError } from '../../../src/server/email';
 import { emailVerification } from '../../../src/server/email-templates';
 import { recordEmailEvent } from '../_audit';
 import { alertAdminTelegram } from '../_alert';
+import { normalizeEmail } from '../../../src/server/email-utils';
 import type { Env } from '../_types';
 
 interface SendVerificationBody {
@@ -45,7 +46,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   const body = (await parseJsonBody<SendVerificationBody>(context.request)) ?? {};
-  const email = (body.email ?? '').trim().toLowerCase();
+  const email = normalizeEmail(body.email ?? '');
 
   const genericResponse = new Response(
     JSON.stringify({ ok: true, message: '若帳號需要驗證，驗證信會寄至信箱' }),

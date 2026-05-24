@@ -28,6 +28,7 @@ import {
   RATE_LIMITS,
 } from '../_rate_limit';
 import { recordAuthEvent } from '../_auth_audit';
+import { normalizeEmail } from '../../../src/server/email-utils';
 import type { Env } from '../_types';
 
 interface LoginBody {
@@ -55,7 +56,7 @@ function errorResponse(code: string, message: string, status: number): Response 
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = (await parseJsonBody<LoginBody>(context.request)) ?? {};
-  const email = (body.email ?? '').trim().toLowerCase();
+  const email = normalizeEmail(body.email ?? '');
   const password = body.password ?? '';
 
   if (!email || !password) {

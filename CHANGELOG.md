@@ -3,6 +3,57 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.91] - 2026-05-24
+
+**Round 40 — /simplify 整 repo 全掃 7 個高 ROI 修法**
+
+3 個 agent 平行 audit (reuse / quality / efficiency) → 21 個 finding → ship 7 個
+high-confidence surgical fix。
+
+**REUSE / CORRECTNESS**
+
+1. **`normalizeEmail()` 取代 `.trim().toLowerCase()`**（4 個 OAuth + invitations
+   + permissions.ts 共 6 處）— canonical NFKC 正規化。修 latent Unicode email
+   bug：寫 (signup) vs 讀 (login/invitation) 不一致時 attacker 可用 full-width
+   `＠` 或 Turkish I/i 走 enum side-channel。同 issue 也讓 permissions.ts:258
+   寫入 invited_email lookup 不對齊 middleware 標準化結果。
+2. **`functions/api/admin/cache-cleanup.ts:17`** 用 `json()` helper 取代手寫
+   `new Response(JSON.stringify(...), {...})`。
+3. **`src/components/trip/TravelPillDialog.tsx:170`** 移除 duplicate `TravelMode`
+   type 宣告，從 `src/lib/travelMode.ts` 真正 single source import + re-export
+   backward-compat。
+
+**DEAD CODE**
+
+4. **Delete `parseTimeRange()`** in `src/lib/timelineUtils.ts:25` — v2.29.0
+   `trip_entries.time` DROPPED 後死碼，已被 `parseEntryTime(entry)` 取代。
+   `tests/unit/timelineUtils.test.ts` 6 個 parseTimeRange test 同步刪。
+
+**EFFICIENCY**
+
+5. **`scripts/daily-report.js:204`** N+1 fetch loop → Promise.all。20 個 published
+   trip 從 ~20s 串接 → ~1s 平行。
+6. **`scripts/google-poi-refresh-30d.ts:60`** sequential 50×1.5s sleep
+   (~75s wall clock) → batched Promise.allSettled (BATCH_SIZE=4 + per-batch sleep)
+   ~3 req/s effective rate 對齊 Google 軟限，wall clock ~18-20s。
+   `firstCall` 變數簡化成 `isFirstBatch` constant；401 detection 仍生效
+   (autoplan T15 regression coverage updated)。
+
+**Verified**
+
+- `npm test` → 2665/2665 pass
+- `tsc --noEmit` → clean
+- Regression test `round8c-scripts-polish.test.ts` 更新為 v2.33.91 結構
+
+**Deferred (out of scope per /simplify rules)**
+
+- `_middleware.ts` body double-read (hot path, risky semantics)
+- `requireTripReadAccess` 合 1 query (cross-cutting refactor)
+- `useTrip` + segments 平行 fetch (React context restructure)
+- `api_logs` 4xx cap (behavior change needs decision)
+- 237 個 stale `// v2.X` historical comments (主觀大 diff)
+- `assembleDay` 6-param → object (內部 refactor，blast radius 大)
+
 ## [2.33.90] - 2026-05-24
 
 **Round 39 — ocean residual final cleanup（v2.33.88 follow-up）**

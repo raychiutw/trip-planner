@@ -16,6 +16,7 @@ import { ensureCanManageTripPerms } from '../permissions';
 import { requireAuth } from '../_auth';
 import { logAudit } from '../_audit';
 import {  parseJsonBody } from '../_utils';
+import { normalizeEmail } from '../../../src/server/email-utils';
 import type { Env } from '../_types';
 
 interface RevokeBody {
@@ -28,7 +29,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const body = (await parseJsonBody<RevokeBody>(context.request)) ?? {};
   const tripId = body.tripId?.trim();
-  const email = body.email?.trim().toLowerCase();
+  const email = body.email ? normalizeEmail(body.email) : undefined;
 
   if (!tripId || !email) {
     return new Response(
