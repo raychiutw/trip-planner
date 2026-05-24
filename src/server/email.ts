@@ -67,6 +67,23 @@ export async function sendEmail(
   if (!env.TRIPLINE_API_SECRET) {
     throw new EmailError('TRIPLINE_API_SECRET not configured', 500, null);
   }
+  // v2.33.99 security: SSRF / config-tamper guard — reject 非 Tailscale funnel
+  // URL，避免 attacker 改 TRIPLINE_API_URL 後 TRIPLINE_API_SECRET 跟著洩漏。
+  // inline check (避 dynamic import 在 worker runtime 行為差異)
+  try {
+    const parsed = new URL(env.TRIPLINE_API_URL);
+    const host = parsed.hostname;
+    const httpsOk = parsed.protocol === 'https:';
+    const devOk = parsed.protocol === 'http:'
+      && (host === 'localhost' || host === 'host.docker.internal' || host === '127.0.0.1');
+    const hostOk = host.endsWith('.ts.net')
+      || host === 'localhost' || host === 'host.docker.internal' || host === '127.0.0.1';
+    if (!(httpsOk || devOk) || !hostOk) {
+      throw new Error(`host ${host} 不在 allowlist`);
+    }
+  } catch (err) {
+    throw new EmailError(`TRIPLINE_API_URL invalid: ${(err as Error).message}`, 500, null);
+  }
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), MAILER_TIMEOUT_MS);

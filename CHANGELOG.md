@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.99] - 2026-05-25
+
+**Round 48 — /review batch 3: 2 個 MEDIUM security findings**
+
+1. **SEC-5 reports.ts trip-id enumeration oracle**: rate-limit bump 移到 tripExists
+   之前 + 不存在 silently 回 201。Attacker 仍受 200/24h IP quota 但無法用 200
+   vs 404 區別 enum published trip slugs（易猜 lowercase user-chosen slug）。
+2. **SEC-9 email.ts TRIPLINE_API_URL SSRF / config-tamper guard**: inline allowlist
+   `https://` scheme + hostname `.ts.net` Tailscale funnel 或 dev localhost。
+   Attacker 改 TRIPLINE_API_URL → TRIPLINE_API_SECRET 跟著洩漏 → reject upfront。
+   Helper `assertTriplineApiUrlSafe()` 在 `_utils.ts` 供 reuse。
+
+Verified: 731/731 API integration pass。
+
 ## [2.33.98] - 2026-05-25
 
 **Round 47 — /review batch 2: 2 個 HIGH security findings**
