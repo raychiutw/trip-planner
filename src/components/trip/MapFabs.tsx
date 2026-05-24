@@ -7,7 +7,7 @@
  *
  * v2.23.0: Leaflet → Google Maps JS API。preset 改用 google.maps.MapTypeId。
  *
- * 收 `map: google.maps.Map | null` prop（由 OceanMap 既有 onMapReady 拉出來）。
+ * 收 `map: google.maps.Map | null` prop（由 TpMap 既有 onMapReady 拉出來）。
  * 當 map 為 null（還沒 mount）FAB 被 disable。
  */
 import { useEffect, useRef, useState } from 'react';

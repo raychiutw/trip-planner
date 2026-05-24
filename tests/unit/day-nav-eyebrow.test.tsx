@@ -70,7 +70,7 @@ describe('DayNav — MapDayTab 共用視覺對齊', () => {
     expect(eyebrowTexts().some((t) => t.includes('今天'))).toBe(false);
   });
 
-  it('舊 chip CSS hooks (.dn-* / [data-dn] / .ocean-day-strip) 全清', () => {
+  it('舊 chip CSS hooks (.dn-* / [data-dn] / .tp-day-strip) 全清', () => {
     render(
       <DayNav
         days={makeDays()}
@@ -84,7 +84,7 @@ describe('DayNav — MapDayTab 共用視覺對齊', () => {
     expect(document.querySelector('.dn-dow')).toBeNull();
     expect(document.querySelector('.dn-area')).toBeNull();
     expect(document.querySelector('[data-dn]')).toBeNull();
-    expect(document.querySelector('.ocean-day-strip')).toBeNull();
+    expect(document.querySelector('.tp-day-strip')).toBeNull();
   });
 
   it('eyebrow 主文字為「DAY NN」 zero-pad 格式', () => {

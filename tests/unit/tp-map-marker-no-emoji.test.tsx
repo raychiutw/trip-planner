@@ -1,5 +1,5 @@
 /**
- * ocean-map-marker-no-emoji — verify marker label never produces emoji or
+ * tp-map-marker-no-emoji — verify marker label never produces emoji or
  * decorative symbols (post v2.23.0 Google Maps + v2.31.75 AdvancedMarkerElement migration).
  *
  * v2.23 用 google.maps.MarkerLabel { text }; v2.31.75 改 AdvancedMarkerElement
@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { setupGoogleMapsMock } from './__mocks__/google-maps';
-import { markerStyle, markerContent } from '../../src/components/trip/OceanMap';
+import { markerStyle, markerContent } from '../../src/components/trip/TpMap';
 import type { MapPin } from '../../src/hooks/useMapData';
 
 beforeEach(setupGoogleMapsMock);
@@ -39,7 +39,7 @@ function containsEmoji(s: string): boolean {
   return false;
 }
 
-describe('OceanMap markerStyle — no emoji label (post v2.31.75 AdvancedMarkerElement)', () => {
+describe('TpMap markerStyle — no emoji label (post v2.31.75 AdvancedMarkerElement)', () => {
   it('idle entry pin: label 是純數字「3」', () => {
     const style = markerStyle(SAMPLE, false, false);
     expect(style.label).toBe('3');

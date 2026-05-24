@@ -1,14 +1,14 @@
 /**
  * TripMapRail — sticky right-column map for desktop ≥1024px.
  *
- * Thin wrapper around OceanMap that adds:
+ * Thin wrapper around TpMap that adds:
  *   - Sticky positioning (≥1024px only, returns null below)
  *   - Scroll spy: when a day section ([data-day]) enters viewport 60%+, panTo that
  *     day's center without changing zoom
  *   - Pin click → navigate to /trip/:tripId/stop/:entryId
  *
  * The actual map rendering (tiles, pins, per-day colored polylines along real
- * roads via Mapbox Directions) is delegated to OceanMap so desktop rail + mobile
+ * roads via Mapbox Directions) is delegated to TpMap so desktop rail + mobile
  * MapPage share the same polyline engine and font stack.
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
@@ -17,7 +17,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { EVENT } from '../../lib/events';
 import type { MapPin } from '../../hooks/useMapData';
 
-const OceanMap = lazy(() => import('./OceanMap'));
+const TpMap = lazy(() => import('./TpMap'));
 
 /* ===== Singleton style injection ===== */
 function ensureStyle(): void {
@@ -36,7 +36,7 @@ interface TripMapRailProps {
   tripId: string;
   /** Group pins by day for polyline colouring. Key = dayNum. */
   pinsByDay?: Map<number, MapPin[]>;
-  /** Pass through to OceanMap — use dark tile layer when true. */
+  /** Pass through to TpMap — use dark tile layer when true. */
   dark?: boolean;
 }
 
@@ -61,7 +61,7 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const navigate = useNavigate();
   const [panToCoord, setPanToCoord] = useState<{ lat: number; lng: number; zoom?: number } | undefined>();
-  // v2.31.93：focusedEntryId 觸發 OceanMap 換 marker 視覺（accent orange + 36px focused style）
+  // v2.31.93：focusedEntryId 觸發 TpMap 換 marker 視覺（accent orange + 36px focused style）
   // + 內建 flyTo zoom 13 + collapse 自動 fitBounds（對齊 MapPage focusId flow）。
   const [focusedEntryId, setFocusedEntryId] = useState<number | undefined>();
 
@@ -149,10 +149,10 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
 
   // v2.31.81 #5：TimelineRail row click → dispatch entryFocused → pan map to pin。
   // v2.31.93：對齊 MapPage focusId flow — 不再 manual panToCoord+zoom，改用
-  //   focusedEntryId 觸發 OceanMap useEffect 同時切 marker 視覺（accent orange + 36px）
+  //   focusedEntryId 觸發 TpMap useEffect 同時切 marker 視覺（accent orange + 36px）
   //   + flyTo z<12?13:undefined + collapse 自動 fitBounds(visible pins) 回 overview。
   //   - 展開 (isExpanding=true) → setFocusedEntryId(entryId)
-  //   - 收合 (isExpanding=false) → setFocusedEntryId(undefined) → OceanMap fitBounds reset
+  //   - 收合 (isExpanding=false) → setFocusedEntryId(undefined) → TpMap fitBounds reset
   //   - undefined (scroll spy fallback) → 維持 v2.31.81 panToCoord pan only no zoom
   useEffect(() => {
     if (!isDesktop) return;
@@ -181,7 +181,7 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
   return (
     <div className="trip-map-rail">
       <Suspense fallback={<div />}>
-        <OceanMap
+        <TpMap
           pins={pins}
           mode="overview"
           pinsByDay={pinsByDay}

@@ -49,9 +49,9 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
     expect(tokens).toMatch(/font-size:\s*18px;[\s\S]*?line-height:\s*24px/);
   });
 
-  it('.ocean-hero-title desktop 對齊 mockup .tp-detail-hero-title 28px', () => {
-    expect(tokens).toMatch(/\.ocean-hero-title\s*\{\s*font-size:\s*28px/);
-    expect(tokens).not.toMatch(/\.ocean-hero-title\s*\{\s*font-size:\s*32px/);
+  it('.tp-hero-title desktop 對齊 mockup .tp-detail-hero-title 28px', () => {
+    expect(tokens).toMatch(/\.tp-hero-title\s*\{\s*font-size:\s*28px/);
+    expect(tokens).not.toMatch(/\.tp-hero-title\s*\{\s*font-size:\s*32px/);
   });
 
   it('.tp-trip-card-eyebrow 對齊 mockup .tp-list-card-eyebrow 10px / 0.12em', () => {

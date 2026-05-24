@@ -1,7 +1,7 @@
 /**
  * TimelineEvent — type-only module（PR2 v2.7 之後）
  *
- * 之前是 4-col 「ocean-stop」 stop card component，但 Timeline.tsx 早已只 render
+ * 之前是 4-col 「tp-stop」 stop card component，但 Timeline.tsx 早已只 render
  * TimelineRail，TimelineEvent component 是 orphan。PR2 把 V3 inline expansion
  * 行為 port 到 TimelineRail（實際 render path），這裡只保留 5 個檔案還在用的
  * `TimelineEntryData` / `TravelData` 兩個 type。

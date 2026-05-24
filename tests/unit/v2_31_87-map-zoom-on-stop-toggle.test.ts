@@ -5,12 +5,12 @@
  *
  * v2.31.93：refactor — TripMapRail 改用 focusId flow（同 MapPage），
  *           expand/collapse 不再手動 setPanToCoord+zoom，改 setFocusedEntryId 觸發
- *           OceanMap useEffect 切 marker 視覺 + flyTo zoom 13 + collapse fitBounds reset。
- *           本檔保留仍 valid 的 contract：TimelineRail dispatch shape + OceanMap panToCoord
+ *           TpMap useEffect 切 marker 視覺 + flyTo zoom 13 + collapse fitBounds reset。
+ *           本檔保留仍 valid 的 contract：TimelineRail dispatch shape + TpMap panToCoord
  *           prop shape（pin-click fallback / scroll spy 仍用）。Zoom 值 assertion 由
  *           v2_31_93-trip-map-focusid-marker.test.ts 接手。
  *
- * Source-grep lock：detail.isExpanding 區分 + panToCoord 接 zoom field + OceanMap flyTo path。
+ * Source-grep lock：detail.isExpanding 區分 + panToCoord 接 zoom field + TpMap flyTo path。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -21,7 +21,7 @@ const read = (rel: string) => readFileSync(join(__dirname, '../..', rel), 'utf8'
 describe('v2.31.87 #5+#6: map zoom on TimelineRail expand/collapse', () => {
   const railSrc = read('src/components/trip/TimelineRail.tsx');
   const tripMapRailSrc = read('src/components/trip/TripMapRail.tsx');
-  const oceanMapSrc = read('src/components/trip/OceanMap.tsx');
+  const tpMapSrc = read('src/components/trip/TpMap.tsx');
   // v2.33.57 round 11: panToCoord effect 拆到 src/hooks/useMapViewport.ts
   const useMapViewportSrc = read('src/hooks/useMapViewport.ts');
 
@@ -42,8 +42,8 @@ describe('v2.31.87 #5+#6: map zoom on TimelineRail expand/collapse', () => {
     expect(tripMapRailSrc).toMatch(/setPanToCoord\(\{\s*lat:\s*pin\.lat,\s*lng:\s*pin\.lng\s*\}\)/);
   });
 
-  it('OceanMap panToCoord prop type 含 optional zoom', () => {
-    expect(oceanMapSrc).toMatch(/panToCoord\?:\s*\{\s*lat:\s*number;\s*lng:\s*number;\s*zoom\?:\s*number\s*\}/);
+  it('TpMap panToCoord prop type 含 optional zoom', () => {
+    expect(tpMapSrc).toMatch(/panToCoord\?:\s*\{\s*lat:\s*number;\s*lng:\s*number;\s*zoom\?:\s*number\s*\}/);
   });
 
   it('panToCoord 處理：zoom given 走 flyTo，否則 panTo (no zoom change)', () => {

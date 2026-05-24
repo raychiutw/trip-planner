@@ -1,9 +1,9 @@
 /**
- * trip-map-rail-ocean-map-props.test.tsx — runtime behavior contract after refactor
+ * trip-map-rail-tp-map-props.test.tsx — runtime behavior contract after refactor
  *
- * TripMapRail is now a thin wrapper that delegates rendering to OceanMap. This test
+ * TripMapRail is now a thin wrapper that delegates rendering to TpMap. This test
  * verifies the wrapper's public behavior:
- *   - Passes pins / pinsByDay / dark through to OceanMap
+ *   - Passes pins / pinsByDay / dark through to TpMap
  *   - onMarkerClick → navigate to /trip/:id/stop/:entryId for entry pins
  *   - IntersectionObserver on [data-day] → updates panToCoord prop
  */
@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
-interface CapturedOceanMapProps {
+interface CapturedTpMapProps {
   pins?: unknown;
   pinsByDay?: Map<number, unknown>;
   dark?: boolean;
@@ -20,7 +20,7 @@ interface CapturedOceanMapProps {
   onMarkerClick?: (id: number) => void;
 }
 
-const oceanMapCalls: CapturedOceanMapProps[] = [];
+const tpMapCalls: CapturedTpMapProps[] = [];
 
 vi.mock('../../src/hooks/useMediaQuery', () => ({
   useMediaQuery: () => true,
@@ -32,9 +32,9 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...orig, useNavigate: () => mockNavigate };
 });
 
-vi.mock('../../src/components/trip/OceanMap', () => ({
-  default: (props: CapturedOceanMapProps) => {
-    oceanMapCalls.push(props);
+vi.mock('../../src/components/trip/TpMap', () => ({
+  default: (props: CapturedTpMapProps) => {
+    tpMapCalls.push(props);
     return null;
   },
 }));
@@ -62,9 +62,9 @@ const PINS_DAY1 = [
 ];
 const PINS_BY_DAY = new Map([[1, PINS_DAY1]]);
 
-describe('TripMapRail — OceanMap wrapper contract', () => {
+describe('TripMapRail — TpMap wrapper contract', () => {
   beforeEach(() => {
-    oceanMapCalls.length = 0;
+    tpMapCalls.length = 0;
     mockNavigate.mockClear();
     capturedIOCallback = null;
   });
@@ -75,8 +75,8 @@ describe('TripMapRail — OceanMap wrapper contract', () => {
         <TripMapRail pins={PINS_DAY1} tripId="test-trip" pinsByDay={PINS_BY_DAY} dark={false} />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(oceanMapCalls.length).toBeGreaterThan(0));
-    const props = oceanMapCalls[oceanMapCalls.length - 1]! as Record<string, unknown>;
+    await waitFor(() => expect(tpMapCalls.length).toBeGreaterThan(0));
+    const props = tpMapCalls[tpMapCalls.length - 1]! as Record<string, unknown>;
     expect(props.pins).toBe(PINS_DAY1);
     expect(props.pinsByDay).toBe(PINS_BY_DAY);
     expect(props.dark).toBe(false);
@@ -89,14 +89,14 @@ describe('TripMapRail — OceanMap wrapper contract', () => {
     expect(props).not.toHaveProperty('cluster');
   });
 
-  it('propagates dark=true to OceanMap', async () => {
+  it('propagates dark=true to TpMap', async () => {
     render(
       <MemoryRouter>
         <TripMapRail pins={PINS_DAY1} tripId="test-trip" pinsByDay={PINS_BY_DAY} dark={true} />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(oceanMapCalls.length).toBeGreaterThan(0));
-    expect(oceanMapCalls[oceanMapCalls.length - 1]!.dark).toBe(true);
+    await waitFor(() => expect(tpMapCalls.length).toBeGreaterThan(0));
+    expect(tpMapCalls[tpMapCalls.length - 1]!.dark).toBe(true);
   });
 
   it('onMarkerClick navigates to /trip/:id/stop/:eid for entry pins', async () => {
@@ -105,8 +105,8 @@ describe('TripMapRail — OceanMap wrapper contract', () => {
         <TripMapRail pins={PINS_DAY1} tripId="test-trip" pinsByDay={PINS_BY_DAY} />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(oceanMapCalls.length).toBeGreaterThan(0));
-    const onClick = oceanMapCalls[oceanMapCalls.length - 1]!.onMarkerClick!;
+    await waitFor(() => expect(tpMapCalls.length).toBeGreaterThan(0));
+    const onClick = tpMapCalls[tpMapCalls.length - 1]!.onMarkerClick!;
     onClick(101);
     expect(mockNavigate).toHaveBeenCalledWith('/trip/test-trip/stop/101');
   });
@@ -118,13 +118,13 @@ describe('TripMapRail — OceanMap wrapper contract', () => {
         <TripMapRail pins={[hotelPin]} tripId="test-trip" />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(oceanMapCalls.length).toBeGreaterThan(0));
-    const onClick = oceanMapCalls[oceanMapCalls.length - 1]!.onMarkerClick!;
+    await waitFor(() => expect(tpMapCalls.length).toBeGreaterThan(0));
+    const onClick = tpMapCalls[tpMapCalls.length - 1]!.onMarkerClick!;
     onClick(999);
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('IntersectionObserver firing on [data-day] → panToCoord is set on OceanMap', async () => {
+  it('IntersectionObserver firing on [data-day] → panToCoord is set on TpMap', async () => {
     const section = document.createElement('section');
     section.setAttribute('data-day', '1');
     document.body.appendChild(section);
@@ -151,10 +151,10 @@ describe('TripMapRail — OceanMap wrapper contract', () => {
     });
 
     await waitFor(() => {
-      const last = oceanMapCalls[oceanMapCalls.length - 1]!;
+      const last = tpMapCalls[tpMapCalls.length - 1]!;
       expect(last.panToCoord).toBeDefined();
     });
-    const last = oceanMapCalls[oceanMapCalls.length - 1]!;
+    const last = tpMapCalls[tpMapCalls.length - 1]!;
     // Center is the average of the two entry pins in Day 1
     expect(last.panToCoord!.lat).toBeCloseTo(26.15, 2);
     expect(last.panToCoord!.lng).toBeCloseTo(127.65, 2);

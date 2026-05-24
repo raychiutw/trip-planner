@@ -136,7 +136,7 @@ export interface ExtractAllDaysResult {
  * - MapPage overview mode（多天多色 polyline）
  * - TripMapRail 桌機 sticky map（全行程 pins）
  *
- * 回傳 pinsByDay 以 dayNum 為 key，用於 OceanMap / TripMapRail 依天著色 polyline。
+ * 回傳 pinsByDay 以 dayNum 為 key，用於 TpMap / TripMapRail 依天著色 polyline。
  */
 export function extractPinsFromAllDays(
   allDays: Record<number, Day> | null | undefined,

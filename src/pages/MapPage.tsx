@@ -10,7 +10,7 @@
  *  │ ← 返回   總覽 · 7/29 – 8/4  |  DAY NN ...  │  52px topbar
  *  ├────────────────────────────────────────────┤
  *  │                                            │
- *  │          OceanMap (flyTo activeEntry       │  flex-1
+ *  │          TpMap (flyTo activeEntry       │  flex-1
  *  │          or fitBounds in overview)         │
  *  ├────────────────────────────────────────────┤
  *  │ 總覽 · 7天  DAY 01 · 7/29  DAY 02 · ···   │  day tabs (snap-scroll)
@@ -39,7 +39,7 @@ import MapFabs from '../components/trip/MapFabs';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 
 
-const OceanMap = lazy(() => import('../components/trip/OceanMap'));
+const TpMap = lazy(() => import('../components/trip/TpMap'));
 
 const SCOPED_STYLES = `
 .map-page-wrap {
@@ -266,7 +266,7 @@ export default function MapPage() {
   const [activeTab, setActiveTab] = useState<'overview' | number>(initialTab);
   const isOverview = activeTab === 'overview';
 
-  // Section 4.10：MapFabs 需要 google.maps.Map instance；OceanMap 透過 onMapReady prop
+  // Section 4.10：MapFabs 需要 google.maps.Map instance；TpMap 透過 onMapReady prop
   // 在 mount 時 surface ref，unmount 時 reset 為 null。
   const [googleMap, setGoogleMap] = useState<google.maps.Map | null>(null);
 
@@ -286,7 +286,7 @@ export default function MapPage() {
     return extractPinsFromDay(currentDay).pins;
   }, [currentDay]);
 
-  // Flat pins passed to OceanMap (overview aggregates all days)
+  // Flat pins passed to TpMap (overview aggregates all days)
   const mapPins: MapPin[] = useMemo(() => {
     if (isOverview && overviewData) return overviewData.pins;
     return singleDayPins;
@@ -313,7 +313,7 @@ export default function MapPage() {
   const [activeEntryId, setActiveEntryId] = useState<number | null>(urlEntryId);
 
   // When tab changes (or first load), default active entry to URL entry or first card.
-  // Overview mode without explicit entryId: leave unfocused so OceanMap falls back to
+  // Overview mode without explicit entryId: leave unfocused so TpMap falls back to
   // fitBounds (shows whole trip) instead of flyTo on first pin.
   useEffect(() => {
     if (urlEntryId != null && cardEntryPins.some((p) => p.id === urlEntryId)) {
@@ -477,7 +477,7 @@ export default function MapPage() {
               </div>
             }
           >
-            <OceanMap
+            <TpMap
               pins={mapPins}
               mode="overview"
               focusId={activeEntryId ?? undefined}

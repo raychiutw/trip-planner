@@ -5,7 +5,7 @@
  *   1. package.json overrides pin 3 HIGH CVE
  *   2. auth-cleanup.js +2 retention sweep (trip_health_reports + api_logs)
  *   3. daily-report.js api_logs sweep moved away
- *   4. .ocean-rail-line CSS rule removed
+ *   4. .tp-rail-line CSS rule removed
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -60,12 +60,12 @@ describe('v2.33.61 #3 — daily-report.js api_logs sweep no-op', () => {
   });
 });
 
-describe('v2.33.61 #4 — .ocean-rail-line dead code 拔', () => {
-  it('CSS rule 不再有 .ocean-rail-line { display: none } 殼', () => {
-    expect(TOKENS_CSS).not.toMatch(/\.ocean-rail-line\s*\{\s*display:\s*none/);
+describe('v2.33.61 #4 — .tp-rail-line dead code 拔', () => {
+  it('CSS rule 不再有 .tp-rail-line { display: none } 殼', () => {
+    expect(TOKENS_CSS).not.toMatch(/\.tp-rail-line\s*\{\s*display:\s*none/);
   });
 
-  it('CSS rule 不再有 .ocean-rail-line { left: 96px }', () => {
-    expect(TOKENS_CSS).not.toMatch(/\.ocean-rail-line\s*\{\s*left:\s*96px/);
+  it('CSS rule 不再有 .tp-rail-line { left: 96px }', () => {
+    expect(TOKENS_CSS).not.toMatch(/\.tp-rail-line\s*\{\s*left:\s*96px/);
   });
 });

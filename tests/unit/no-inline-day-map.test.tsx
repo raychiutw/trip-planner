@@ -1,9 +1,9 @@
 /**
  * no-inline-day-map.test.tsx — TDD tests for Item 4:
- * DaySection must NOT contain <OceanMap mode="overview"> inline map.
+ * DaySection must NOT contain <TpMap mode="overview"> inline map.
  *
  * Covers:
- * - DaySection source code has no OceanMap import used inline
+ * - DaySection source code has no TpMap import used inline
  * - The "看地圖" link chip is present instead (Item 6)
  */
 
@@ -14,20 +14,20 @@ import { resolve } from 'path';
 const DAY_SECTION_PATH = resolve(__dirname, '../../src/components/trip/DaySection.tsx');
 const source = readFileSync(DAY_SECTION_PATH, 'utf-8');
 
-describe('DaySection — no inline OceanMap map (Item 4)', () => {
-  it('does not render <OceanMap mode="overview"> inline', () => {
+describe('DaySection — no inline TpMap map (Item 4)', () => {
+  it('does not render <TpMap mode="overview"> inline', () => {
     // After PR3, the inline map block is removed
-    expect(source).not.toContain('<OceanMap');
+    expect(source).not.toContain('<TpMap');
   });
 
   it('does not contain hideDayMap prop usage for inline map rendering', () => {
-    // The hideDayMap flag gated the old inline OceanMap render
+    // The hideDayMap flag gated the old inline TpMap render
     expect(source).not.toContain('hideDayMap');
   });
 
-  it('does not contain OceanMap lazy import', () => {
-    // lazy(() => import('./OceanMap')) should be removed from DaySection
-    expect(source).not.toContain("import('./OceanMap')");
+  it('does not contain TpMap lazy import', () => {
+    // lazy(() => import('./TpMap')) should be removed from DaySection
+    expect(source).not.toContain("import('./TpMap')");
   });
 });
 

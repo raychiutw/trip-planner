@@ -1,7 +1,7 @@
 /**
  * mapHelpers.ts — pure helpers for Google Maps marker / polyline construction.
  *
- * v2.33.57 round 11: extracted from `src/components/trip/OceanMap.tsx`
+ * v2.33.57 round 11: extracted from `src/components/trip/TpMap.tsx`
  * as part of the 4-module split (see docs/code-review/round-11-oceanmap-split.md).
  * No behaviour change — these are the exact same functions, just relocated.
  *

@@ -3,6 +3,42 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.88] - 2026-05-24
+
+**Round 37 — `ocean-*` → `tp-*` prefix mass rename**
+
+歷史 `.ocean-*` CSS prefix 跟 Terracotta accent palette 名稱不符是早期 ship 殘留。
+User 拍板移除歷史包袱，全 codebase 改 `tp-` prefix 對齊新 component 命名規範。
+
+**RENAME**
+
+- **44 CSS classes**: `.ocean-{shell,page,hero,hero-title,hero-sub,hero-chip,hero-chip-muted,
+  hero-chips,hero-chips-left,day,stop,from,to,rail,rail-body,rail-caret,rail-content,
+  rail-dot,rail-expand,rail-eyebrow,rail-grip,rail-head,rail-header,rail-icon,rail-item,
+  rail-line,rail-meta,rail-name,rail-row-wrap,rail-sub,rail-sub-sep,rail-sub-star,
+  rail-sub-time,rail-sub-type,rail-time,side-card,side-card-header,side-card-title,
+  overflow-menu,overflow-item,overflow-divider,flight-card,bottom-nav,bottom-nav-btn,
+  map-container}` → `.tp-*`
+- **Component**: `OceanMap` → `TpMap` + `OceanMapMode` → `TpMapMode` +
+  `OceanMapProps` → `TpMapProps` + file `OceanMap.tsx` → `TpMap.tsx`
+- **Test files**: `tests/unit/ocean-map-*.test.ts*` → `tp-map-*` (5 files)
+- **Docs**: `docs/code-review/round-11-oceanmap-split.md` → `round-11-tp-map-split.md`,
+  `docs/design-sessions/2026-05-24-oceanmap-split/` → `2026-05-24-tp-map-split/`
+
+**Not renamed (legitimate non-prefix usage)**
+
+- `PoiCardTone = 'ocean'` — color tone value（同 `'warm'`/`'cool'`/`'amber'` 一組
+  palette name），非 prefix
+- `data-tone="ocean"` HTML attribute — 同上
+- `round-14-infra.test.ts` 「舊 ocean blue」comment — 歷史說明，非實際 ref
+
+**Verified**
+
+- 0 instances of `.ocean-*` CSS class remaining
+- 0 instances of `OceanMap` / `oceanMap*` identifier remaining
+- `npm test` → 2671/2671 pass
+- `tsc --noEmit` → clean
+
 ## [2.33.87] - 2026-05-24
 
 **Round 36 EMERGENCY — PBKDF2 600k iter 超 CF Workers 100k 限制，prod login 全 500**

@@ -1,7 +1,7 @@
 /**
  * day-section-no-inline-style.test.tsx — F002 TDD red test
  *
- * 驗證：DaySection render 後的 DOM 中 ocean-hero-chips 區域
+ * 驗證：DaySection render 後的 DOM 中 tp-hero-chips 區域
  * 不含 style="..." attribute（靜態 layout style 應移至 CSS class）。
  *
  * 允許例外：有 dynamic value 的 inline style（若存在）
@@ -42,19 +42,19 @@ function renderDay() {
   );
 }
 
-describe('DaySection — ocean-hero-chips 無靜態 inline style (F002)', () => {
-  it('ocean-hero-chips div 不含 style attribute（靜態 layout 已移至 CSS class）', () => {
+describe('DaySection — tp-hero-chips 無靜態 inline style (F002)', () => {
+  it('tp-hero-chips div 不含 style attribute（靜態 layout 已移至 CSS class）', () => {
     const { container } = renderDay();
-    const chipsDiv = container.querySelector('.ocean-hero-chips');
+    const chipsDiv = container.querySelector('.tp-hero-chips');
     expect(chipsDiv).not.toBeNull();
     // 靜態 layout style 不應以 inline style 形式存在
     const styleAttr = chipsDiv?.getAttribute('style');
     expect(styleAttr).toBeNull();
   });
 
-  it('ocean-hero-chips 的直接子 div 不含靜態 layout inline style', () => {
+  it('tp-hero-chips 的直接子 div 不含靜態 layout inline style', () => {
     const { container } = renderDay();
-    const chipsDiv = container.querySelector('.ocean-hero-chips');
+    const chipsDiv = container.querySelector('.tp-hero-chips');
     const innerDiv = chipsDiv?.querySelector('div');
     expect(innerDiv).not.toBeNull();
     const styleAttr = innerDiv?.getAttribute('style');

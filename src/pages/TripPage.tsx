@@ -676,7 +676,7 @@ function TripPageInner(
   ) : undefined;
 
   const mainContent = (
-    <div className="ocean-shell">
+    <div className="tp-shell">
       <style>{SCOPED_STYLES}</style>
 
       {/* v2.17.17:TripPage 永遠透過 TripsListPage embedded mode 渲染(noShell=true)
@@ -687,7 +687,7 @@ function TripPageInner(
 
       <ToastContainer />
 
-      <main className="ocean-page">
+      <main className="tp-page">
         {/* Section 4.10：persistent offline banner — 取代 useOfflineToast 的
           * 短暫 toast，給 user 一個常駐的「目前在離線模式」 hint */}
         {!isOnline && !loading && trip && (
