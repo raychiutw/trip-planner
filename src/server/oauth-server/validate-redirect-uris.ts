@@ -34,6 +34,18 @@ export function validateRedirectUris(uris: unknown): string[] {
     if (parsed.protocol !== 'https:' && !isLocalhost) {
       throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 必須是 HTTPS（localhost 例外）`);
     }
+    // v2.33.58 round 12 H1: reject fragment / userinfo / query — exact-match downstream
+    // 在 validate-authorize-request.ts 走 string equality，這些區段會被 parser confusion
+    // / browser quirk 利用做 open-redirect 或 code leak via fragment。
+    if (parsed.hash !== '') {
+      throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 不可含 #fragment`);
+    }
+    if (parsed.username !== '' || parsed.password !== '') {
+      throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 不可含 userinfo (user:password@)`);
+    }
+    if (parsed.search !== '') {
+      throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 不可含 ?query (OAuth 2.1 baseline)`);
+    }
     return u;
   });
 }

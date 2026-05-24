@@ -3,6 +3,59 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.58] - 2026-05-24
+
+**Round 12 — src/server/ security + test catch-up (backlog #131)**
+
+3 個 parallel agent review src/server/ (12 檔 1851 LOC). 4 CRITICAL +
+3 HIGH + 4 MED security fix + 3 CRITICAL ZERO_COVERAGE 補測試。
+doc: `docs/code-review/round-12-server-security.md`。
+
+**CRITICAL SECURITY**
+
+- `src/server/jwt.ts` `verifyJwt` 加 header.alg pin (default `['RS256']`)，
+  拒 `none` / `HS256` → 防 algorithm confusion latent CVE
+- `src/server/oauth-client/google-id-token.ts` enforce `email_verified === true`
+  + OIDC azp check → 防 unverified-email account squatting
+- `src/server/email-templates.ts` `sanitizeHeaderField()` strip CR/LF on
+  Subject 用 tripTitle / inviterLabel → 防 SMTP header injection (Bcc 注入)
+- `src/server/oauth-d1-adapter.ts` `consume()` 改 conditional UPDATE
+  `WHERE consumed IS NULL` + boolean return；token.ts 兩處 caller
+  (auth_code / refresh rotation) 改先 consume 再 issue → 防平行 POST /token
+  雙重兌換造成 grant family 分裂
+
+**HIGH SECURITY**
+
+- `src/server/oauth-server/validate-redirect-uris.ts` reject #fragment /
+  userinfo / ?query → 防 exact-match downstream parser confusion
+- `src/server/password.ts` PBKDF2 ITERATIONS 100k → 600k (OWASP 2023)。
+  Self-describing format 舊 hash 自動 needsRehash() 升級
+- `src/server/session.ts` comment 修正 — 移除「CSRF POST/PUT/DELETE 都驗」
+  誤導聲明，明寫 csrf field 未實 wire，defense 靠 Origin + SameSite
+
+**MEDIUM**
+
+- `src/server/password.ts` hashPassword 用 MIN_PASSWORD_LEN 常數 (拔死寫 8)
+- `src/server/jwt.ts` exp 拔 60s skew (nbf 仍保留 issuer clock-ahead tolerance)
+- `src/server/maps/google-client.ts` requireApiKey pre-check + 新 MAPS_CONFIG
+  error code
+- `src/server/oauth-d1-adapter.ts` revokeByGrantId 加 name IN allowlist scope
+
+**TEST CATCH-UP** (+75 test, 2403 → 2478)
+
+- `tests/unit/google-id-token.test.ts` (10) — 之前整 module 被 vi.mock
+- `tests/unit/invitation-token.test.ts` (11) — HMAC parity / entropy / TTL
+- `tests/unit/invitation-accept.test.ts` (9) — 5 outcome path + batch shape
+- `tests/unit/validate-redirect-uris.test.ts` (17) — bypass scheme + 邊界
+- `tests/unit/jwt-alg-pin.test.ts` (8) — C1 regression
+- `tests/unit/round-12-server-security.test.ts` (20) — source-grep guard
+
+**剩餘 defer** (個別 PR): verify GET→POST + Referrer-Policy, HMAC HKDF
+domain sep, Unicode email NFKC, PKCE for confidential, PUBLIC_ORIGIN
+env, forgot-password timing waitUntil。
+
+closes backlog #131.
+
 ## [2.33.57] - 2026-05-24
 
 **Round 11 — OceanMap internals split (backlog #130)**

@@ -55,6 +55,17 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
   }
 }
 
+/**
+ * v2.33.58 round 12 I5: pre-check apiKey 非空，否則拋 `MAPS_CONFIG` 而非
+ * 等 Google 回 401 → 用戶/ops 才能秒辨「設定問題」vs「Google 上游壞」。
+ * 所有 exported function entry call 一次。
+ */
+function requireApiKey(apiKey: string): void {
+  if (!apiKey || apiKey.length === 0) {
+    throw new AppError('MAPS_CONFIG', 'GOOGLE_MAPS_API_KEY 未設定或為空');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Places API — Search Text
 // ---------------------------------------------------------------------------
@@ -128,6 +139,7 @@ export async function searchPlaces(
   maxCount = 10,
   locationBias?: LocationBias,
 ): Promise<PlacesSearchTextResult[]> {
+  requireApiKey(apiKey);
   const body: Record<string, unknown> = {
     textQuery: query,
     maxResultCount: Math.min(Math.max(maxCount, 1), 20),
@@ -231,6 +243,7 @@ export async function autocompletePlaces(
   sessionToken: string,
   regionCode?: string,
 ): Promise<PlacesAutocompletePrediction[]> {
+  requireApiKey(apiKey);
   const body: Record<string, unknown> = {
     input: q,
     sessionToken,
@@ -314,6 +327,7 @@ export async function getPlaceDetails(
    */
   sessionToken?: string,
 ): Promise<PlaceDetailsResult | null> {
+  requireApiKey(apiKey);
   const params = new URLSearchParams({ languageCode: 'zh-TW' });
   if (sessionToken) params.set('sessionToken', sessionToken);
   const res = await fetchWithTimeout(
@@ -397,6 +411,7 @@ export async function computeRoute(
    * DRIVE/WALK 不需，傳了會被 Routes API 拒（only valid for TRANSIT/DRIVE）。 */
   departureTime?: string,
 ): Promise<ComputeRouteResult> {
+  requireApiKey(apiKey);
   const body: Record<string, unknown> = {
     origin: { location: { latLng: { latitude: origin.lat, longitude: origin.lng } } },
     destination: { location: { latLng: { latitude: destination.lat, longitude: destination.lng } } },

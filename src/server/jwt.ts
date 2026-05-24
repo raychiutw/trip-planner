@@ -169,6 +169,8 @@ export interface VerifyJwtOptions {
   expectedAud?: string;
   clockSkewSec?: number;
   now?: number;
+  /** v2.33.58 round 12 C1: Allowed alg allowlist (default ['RS256']). */
+  expectedAlg?: string[];
 }
 
 /**
@@ -176,6 +178,13 @@ export interface VerifyJwtOptions {
  *
  * Signature-only verification is NOT sufficient for bearer-token authentication —
  * pass `expectedIss` and `expectedAud` to defend against token-substitution.
+ *
+ * v2.33.58 round 12 C1: Pin header.alg = 'RS256' explicitly before signature verify。
+ * Web Crypto's `crypto.subtle.verify` uses the ALG.name (RSASSA-PKCS1-v1_5) of the
+ * imported key — so today's single-algo callers are safe by accident. Pin alg
+ * pre-emptively so any future multi-algo support doesn't silently introduce
+ * algorithm-confusion CVE. Also rejects `alg: "none"` and `alg: "HS256"` (would
+ * verify against a forged signature crafted from the public key).
  */
 export async function verifyJwt(
   token: string,
@@ -185,6 +194,18 @@ export async function verifyJwt(
   const parts = token.split('.');
   if (parts.length !== 3) throw new Error('JWT must have 3 parts');
   const [encodedHeader, encodedPayload, encodedSig] = parts as [string, string, string];
+
+  // v2.33.58 round 12 C1: Pin alg before signature verify (algorithm-confusion defense).
+  const headerJson = new TextDecoder().decode(base64urlToBytes(encodedHeader));
+  const header = JSON.parse(headerJson) as { alg?: unknown; typ?: unknown };
+  const allowedAlgs = options.expectedAlg ?? ['RS256'];
+  if (typeof header.alg !== 'string' || !allowedAlgs.includes(header.alg)) {
+    throw new Error(`JWT alg not permitted: ${String(header.alg)}`);
+  }
+  if (header.typ !== undefined && header.typ !== 'JWT') {
+    throw new Error(`JWT typ invalid: ${String(header.typ)}`);
+  }
+
   const signingInput = `${encodedHeader}.${encodedPayload}`;
   const ok = await crypto.subtle.verify(
     ALG.name,
@@ -199,7 +220,9 @@ export async function verifyJwt(
   const skew = options.clockSkewSec ?? 60;
   const nowSec = options.now ?? Math.floor(Date.now() / 1000);
 
-  if (typeof claims.exp === 'number' && nowSec - skew >= claims.exp) {
+  // v2.33.58 round 12 I2: clockSkew only on nbf (issuer clock ahead tolerance)。
+  // exp 嚴格 nowSec >= claims.exp 拒，不放寬 — 過期就過期，不給 60s 加時。
+  if (typeof claims.exp === 'number' && nowSec >= claims.exp) {
     throw new Error('JWT expired');
   }
   if (typeof claims.nbf === 'number' && nowSec + skew < claims.nbf) {

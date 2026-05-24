@@ -29,7 +29,8 @@
 | 10 | src/lib reverse imports rip-out | — | [#734](https://github.com/raychiutw/trip-planner/pull/734) | 2026-05-24 | [round-10-lib-reverse-imports.md](./round-10-lib-reverse-imports.md) |
 | 5d-resid | round 5d backend residuals (atomic writes) | — | [#735](https://github.com/raychiutw/trip-planner/pull/735) | 2026-05-24 | [round-5d-residuals.md](./round-5d-residuals.md) |
 | 6c-style | round 6c style token drift fix | — | [#736](https://github.com/raychiutw/trip-planner/pull/736) | 2026-05-24 | [round-6c-style-token-drift.md](./round-6c-style-token-drift.md) |
-| 11 | OceanMap internals split (606→303 LOC) | — | TBD | 2026-05-24 | [round-11-oceanmap-split.md](./round-11-oceanmap-split.md) |
+| 11 | OceanMap internals split (606→303 LOC) | — | [#737](https://github.com/raychiutw/trip-planner/pull/737) | 2026-05-24 | [round-11-oceanmap-split.md](./round-11-oceanmap-split.md) |
+| 12 | src/server/ security + test catch-up | 1,851 | TBD | 2026-05-24 | [round-12-server-security.md](./round-12-server-security.md) |
 
 ## 流程
 

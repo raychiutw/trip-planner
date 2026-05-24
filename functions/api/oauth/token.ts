@@ -320,11 +320,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       finalScopes = requestedScopes;
     }
 
-    // Rotation: mark old as consumed (NOT destroy) so future reuse attempts trigger
-    // family revoke above. Issue new pair inheriting the grantId so revokeByGrantId
-    // can cascade later. consume() sets payload.$.consumed timestamp; cron sweeps
-    // expired refresh-token rows after expires_at.
-    await refreshAdapter.consume(refreshTokenInput);
+    // v2.33.58 round 12 C4: 改 atomic CAS consume — 之前先 issue 再 consume，平行
+    // POST /token 兩個都過 .consumed 檢查、都 issue、都 consume，refresh family
+    // 分裂。現在先 atomic consume(returns boolean)，輸的 caller 收到 false 就 abort
+    // + revoke family (race lost = 雙重 rotation 試圖)。
+    const won = await refreshAdapter.consume(refreshTokenInput);
+    if (!won) {
+      // Race lost — 另一個 caller 同時 rotation 已贏走，cascade revoke 保護
+      await new D1Adapter(context.env.DB, 'AccessToken').revokeByGrantId(refreshRow.grantId);
+      await new D1Adapter(context.env.DB, 'RefreshToken').revokeByGrantId(refreshRow.grantId);
+      await recordAuthEvent(context.env.DB, context.request, {
+        eventType: 'token_revoke',
+        outcome: 'failure',
+        userId: refreshRow.user_id,
+        clientId,
+        failureReason: 'refresh_token_concurrent_rotation',
+        metadata: { grantId: refreshRow.grantId },
+      });
+      return jsonError('invalid_grant', 'refresh_token concurrent rotation detected — token family revoked');
+    }
     const tokens = await issueTokenPair(
       context.env.DB,
       clientId,
@@ -392,9 +406,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
   }
 
-  // Issue tokens, then mark code as consumed + bind grantId for replay-revoke
+  // v2.33.58 round 12 C4: atomic CAS consume BEFORE issueTokenPair。
+  // 之前 unconditional UPDATE，平行 2 個 POST /token 都過 consumed 檢查、都 issue、
+  // 都 consume，產生 2 個獨立 grantId。改 conditional UPDATE 後輸的 caller 收到 false
+  // 就 abort，避免 double-spend。
+  const won = await codeAdapter.consume(code);
+  if (!won) {
+    // Race lost — 另一個 caller 平行 exchange 同 code，treat 同 replay
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'token_issue',
+      outcome: 'failure',
+      userId: codeRow.user_id,
+      clientId,
+      failureReason: 'auth_code_concurrent_exchange',
+      metadata: { scopes: codeRow.scopes },
+    });
+    return jsonError('invalid_grant', 'Authorization code concurrent exchange detected');
+  }
+  // Won the race — issue tokens + bind grantId for replay-revoke。
   const tokens = await issueTokenPair(context.env.DB, clientId, codeRow.user_id, codeRow.scopes);
-  await codeAdapter.consume(code);
   await context.env.DB
     .prepare('UPDATE oauth_models SET payload = json_set(payload, ?, ?) WHERE name = ? AND id = ?')
     .bind('$.grantId', tokens.grantId, 'AuthorizationCode', code)

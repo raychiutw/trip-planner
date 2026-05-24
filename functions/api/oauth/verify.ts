@@ -69,7 +69,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // Consume (mark used in-place) — row is kept until expires_at so re-click
   // returns 'verify_error=used' instead of the misleading 'expired'.
-  await adapter.consume(token);
+  // v2.33.58 round 12 C4: consume 改 boolean，verify 無 race detect 需求。
+  void (await adapter.consume(token));
 
   return redirect('/login?verified=1');
 };

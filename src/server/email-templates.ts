@@ -38,6 +38,15 @@ function escapeHtml(input: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * v2.33.58 round 12 C3: strip CR/LF/NUL from string used in email Subject (or
+ * any header). 防 SMTP header injection — 含 `\r\n` 的欄位會被下游 mailer 解析成
+ * 額外 header (Bcc: attacker@x.com)。順手 trim 連續空白。
+ */
+function sanitizeHeaderField(input: string): string {
+  return input.replace(/[\r\n\0]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function shellHtml(innerHtml: string): string {
   return `<!DOCTYPE html>
 <html lang="zh-TW">
@@ -125,12 +134,16 @@ export interface TripInvitationParams {
 }
 
 export function tripInvitation(params: TripInvitationParams): EmailTemplate {
-  const inviterLabel = params.inviterDisplayName?.trim() || params.inviterEmail;
+  // v2.33.58 round 12 C3: strip CR/LF from user-controlled fields used in Subject
+  // to prevent email header injection (e.g. tripTitle 含 \r\n Bcc: attacker@x.com →
+  // 下游 SMTP relay 解析成額外 header)。Body 仍 escapeHtml render，不受此影響。
+  const inviterLabel = sanitizeHeaderField(params.inviterDisplayName?.trim() || params.inviterEmail);
+  const safeTripTitle = sanitizeHeaderField(params.tripTitle);
   const ctaLabel = params.isExistingUser ? '登入並加入' : '註冊並加入';
   const introVerb = params.isExistingUser ? '登入後即可開始共編。' : '註冊帳號後即可開始共編。';
 
   return {
-    subject: `${inviterLabel} 邀請你加入「${params.tripTitle}」行程`,
+    subject: `${inviterLabel} 邀請你加入「${safeTripTitle}」行程`,
     html: shellHtml(`
 <div style="background:#fff; border:1px solid #EADFCF; border-radius:14px; padding:32px;">
   <p style="margin:0 0 8px; font-size:13px; letter-spacing:0.18em; text-transform:uppercase; color:${MUTED_COLOR}; font-weight:700;">行程邀請</p>
