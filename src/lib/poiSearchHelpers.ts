@@ -14,7 +14,7 @@ import type { PoiSearchResult } from '../types/poi';
 // (PR-1 統一後若 attraction label 改名，這裡會 drift)。
 import { POI_TYPE_LABELS } from './poiCategory';
 
-export type PoiCardTone = 'warm' | 'cool' | 'ocean' | 'amber';
+export type PoiCardTone = 'warm' | 'cool' | 'blue' | 'amber';
 
 /** Add-stop / change-poi page tabs（search 預設、收藏池、自訂 POI）。 */
 export type PoiSearchTab = 'search' | 'favorites' | 'custom';
@@ -48,8 +48,8 @@ export function poiTone(category: string | null | undefined, index: number): Poi
   if (/restaurant|cafe|food|bar|bakery|餐|食/.test(cat)) return 'warm';
   if (/shop|mall|market|購物/.test(cat)) return 'amber';
   if (/hotel|hostel|guest|inn|住宿|飯店/.test(cat)) return 'cool';
-  const tones: readonly PoiCardTone[] = ['ocean', 'cool', 'amber', 'warm'];
-  return tones[index % tones.length] ?? 'ocean';
+  const tones: readonly PoiCardTone[] = ['blue', 'cool', 'amber', 'warm'];
+  return tones[index % tones.length] ?? 'blue';
 }
 
 export function poiMeta(address: string | null | undefined, category: string | null | undefined): string {

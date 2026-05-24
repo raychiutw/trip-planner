@@ -1,7 +1,7 @@
 /**
- * ThemeArt — decorative SVG marks for Ocean theme.
+ * ThemeArt — decorative SVG marks for Terracotta theme.
  *
- * Design direction: minimal / clean. Ocean theme uses whitespace, not decorative
+ * Design direction: minimal / clean. Terracotta theme uses whitespace, not decorative
  * illustrations. v2.33.45 round 6b cleanup: 移除 DayHeaderArt / DividerArt /
  * NavArt 三個一直回 null 的 dead exports（only FooterArt 實際 render）。
  */

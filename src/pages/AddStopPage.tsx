@@ -403,7 +403,7 @@ const SCOPED_STYLES = `
 .tp-add-stop-card-photo[data-tone="cool"] {
   background: linear-gradient(135deg, #DCE7E0, #C8DCE0);
 }
-.tp-add-stop-card-photo[data-tone="ocean"] {
+.tp-add-stop-card-photo[data-tone="blue"] {
   background: linear-gradient(135deg, #C7DBE5, #A6C5D2);
 }
 .tp-add-stop-card-photo[data-tone="amber"] {
