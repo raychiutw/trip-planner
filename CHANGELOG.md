@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.71] - 2026-05-24
+
+**Round 21 — vitest workspace split (Round 15 deferred, CI speedup)**
+
+User "Loop 全部都做" → 繼續 Round 15 大型 defer。本 PR 拆 vitest 為 unit-dom +
+unit-node 兩 project，pure source-grep / logic test 跑 node env 跳過 jsdom init。
+
+**PERF**
+
+- Suite duration **21s → 16s (24% speedup)**
+- setup 10s → 4s; environment 65s → 28s
+- 199 個 `.test.ts` 跑 node project (no jsdom polyfill)
+- 109 個 `.test.tsx` + `.test.js` + 11 個真用 DOM 的 `.test.ts` 跑 jsdom project
+
+**CONFIG**
+
+- `vitest.config.js` 改用 `projects: []` (Vitest 4 idiom，原 `vitest.workspace.ts`
+  v4 已 deprecate `--workspace` flag)
+- 兩 project `extends: true` 共用 global `clearMocks` / `restoreMocks`
+- TS_DOM_FILES 11 個例外列：empirical (fail-then-add) 找出真用 DOM 的 .test.ts
+
+**TESTING**
+
+- 2633 / 2633 全綠 (unchanged)
+- tsc clean
+- 既有 test 完全不動 (純 config refactor)
+
 ## [2.33.70] - 2026-05-24
 
 **Round 20 — shared mock factories (Round 15 deferred)**
