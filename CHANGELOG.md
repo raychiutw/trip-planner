@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.95] - 2026-05-24
+
+**Round 44 — /simplify EFF-2 middleware body scan skip for JSON**
+
+`functions/api/_middleware.ts:286` 對 POST/PUT/PATCH JSON content-type request
+skip 整 body TextDecoder + detectGarbledText scan：
+- UTF-8 validity 由 handler 的 JSON.parse 自帶 fail-safe
+- 亂碼偵測由 handler 對 user-facing 欄位各自 detectGarbledText
+- 非 JSON body 仍跑 middleware scan
+
+每次 mutating JSON request 省 ~0.5-2ms CPU + body buffer alloc。
+
+Verified: 731/731 API integration test pass。
+
+(完整 /simplify 16/19 finding 狀態見 v2.33.94 CHANGELOG entry merged via PR #783)
+
 ## [2.33.93] - 2026-05-24
 
 **Round 42 — /simplify deferred batch 1（5 個 surgical quality fix）**
