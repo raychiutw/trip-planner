@@ -26,6 +26,7 @@ import { issueIdToken } from './_id_token';
 import {
   checkRateLimit,
   bumpRateLimit,
+  clientIp,
   RATE_LIMITS,
 } from '../_rate_limit';
 import { recordAuthEvent } from '../_auth_audit';
@@ -159,6 +160,28 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!clientId) {
     return jsonError('invalid_client', 'Missing client_id');
   }
+
+  // v2.33.103 SEC-7: per-IP rate-limit 在 client lookup + PBKDF2 verify 前。
+  // Confidential client_secret 驗證走 PBKDF2 (100k iter ~50ms CPU)。Attacker
+  // 反覆送 wrong secret，per-client_id bucket 擋在 100/min 但前 100 個已經燒
+  // ~5s CPU。加 per-IP 50/min cap 提前擋掉。Bump 在 checkRateLimit pass 後即發，
+  // 不依賴後續 client 存在與否（任何 POST 都計入 IP quota）。
+  const ipKey = `oauth-token:ip:${clientIp(context.request)}`;
+  const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.OAUTH_TOKEN_PER_IP);
+  if (!ipCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: 'rate_limited', error_description: 'Too many token requests from this IP' }),
+      {
+        status: 429,
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'no-store',
+          'Retry-After': String(ipCheck.retryAfter),
+        },
+      },
+    );
+  }
+  await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.OAUTH_TOKEN_PER_IP);
 
   // v2.33.101 CR-9: 先 SELECT client_apps 確認 client_id 存在再 rate-limit bump。
   // 之前 unbounded write amplification — attacker POST 任意 client_id 字串都會
