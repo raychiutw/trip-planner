@@ -48,19 +48,18 @@ export const onRequestDelete: PagesFunction<Env, 'id'> = async (context) => {
     .bind(id)
     .run();
 
-  // companion 模式寫 audit_log（fire-and-forget 不阻塞 response）
-  if (actor.isCompanion) {
-    context.waitUntil(
-      logAudit(context.env.DB, {
-        tripId: actor.audit.tripId,
-        tableName: 'poi_favorites',
-        recordId: id,
-        action: 'delete',
-        changedBy: actor.audit.changedBy,
-        requestId: actor.requestId,
-      }),
-    );
-  }
+  // v2.33.100 CR-5: V2-user DELETE 也寫 audit (對齊 INSERT 對稱) — 之前只有
+  // companion path log，V2-user 刪掉 favorite 無 forensic trail。
+  context.waitUntil(
+    logAudit(context.env.DB, {
+      tripId: actor.isCompanion ? actor.audit.tripId : 'user',
+      tableName: 'poi_favorites',
+      recordId: id,
+      action: 'delete',
+      changedBy: actor.isCompanion ? actor.audit.changedBy : (auth?.email ?? 'unknown'),
+      ...(actor.isCompanion ? { requestId: actor.requestId } : {}),
+    }),
+  );
 
   return new Response(null, { status: 204 });
 };
