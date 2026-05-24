@@ -3,22 +3,22 @@
  * that the source-level regex guards cannot catch.
  *
  * Covers:
- * 1. ?day=all without entryId → OceanMap receives focusId=undefined
+ * 1. ?day=all without entryId → TpMap receives focusId=undefined
  *    (so it fitBounds the whole trip, instead of flyTo the first pin)
- * 2. ?day=all → OceanMap receives pinsByDay and dayNum=undefined
+ * 2. ?day=all → TpMap receives pinsByDay and dayNum=undefined
  * 3. handleTabClick — clicking 總覽 writes ?day=all; clicking DAY 02 writes ?day=2
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-interface CapturedOceanMapProps {
+interface CapturedTpMapProps {
   focusId?: number;
   pinsByDay?: Map<number, unknown>;
   dayNum?: number;
 }
 
-// Capture OceanMap props across renders
-const oceanMapCalls: CapturedOceanMapProps[] = [];
+// Capture TpMap props across renders
+const tpMapCalls: CapturedTpMapProps[] = [];
 
 vi.mock('react-router-dom', async (importOriginal) => {
   const orig = await importOriginal<typeof import('react-router-dom')>();
@@ -53,10 +53,10 @@ vi.mock('../../src/contexts/TripContext', async (importOriginal) => {
   };
 });
 
-// Props-capturing OceanMap mock
-vi.mock('../../src/components/trip/OceanMap', () => ({
-  default: (props: CapturedOceanMapProps) => {
-    oceanMapCalls.push(props);
+// Props-capturing TpMap mock
+vi.mock('../../src/components/trip/TpMap', () => ({
+  default: (props: CapturedTpMapProps) => {
+    tpMapCalls.push(props);
     return null;
   },
 }));
@@ -80,7 +80,7 @@ if (!Element.prototype.scrollIntoView) {
 }
 
 // extractPinsFromDay / extractPinsFromAllDays need fake pins so mapPins.length > 0
-// (otherwise MapPage short-circuits to empty state before rendering OceanMap)
+// (otherwise MapPage short-circuits to empty state before rendering TpMap)
 vi.mock('../../src/hooks/useMapData', async (importOriginal) => {
   const orig = await importOriginal<typeof import('../../src/hooks/useMapData')>();
   const fakePin = {
@@ -110,37 +110,37 @@ async function mountMapPage(url: string) {
       </Routes>
     </MemoryRouter>,
   );
-  // OceanMap is lazy() — wait until the mock has been invoked at least once
-  await waitFor(() => expect(oceanMapCalls.length).toBeGreaterThan(0));
+  // TpMap is lazy() — wait until the mock has been invoked at least once
+  await waitFor(() => expect(tpMapCalls.length).toBeGreaterThan(0));
   return result;
 }
 
 describe('MapPage overview runtime — fitBounds vs flyTo', () => {
   beforeEach(() => {
-    oceanMapCalls.length = 0;
+    tpMapCalls.length = 0;
   });
 
-  it('?day=all without entryId: OceanMap.focusId is undefined (→ fitBounds whole trip)', async () => {
+  it('?day=all without entryId: TpMap.focusId is undefined (→ fitBounds whole trip)', async () => {
     await mountMapPage('/trip/test-trip/map?day=all');
     // Find the last overview-mode call (with pinsByDay set)
-    const overviewCalls = oceanMapCalls.filter((p) => p.pinsByDay !== undefined);
+    const overviewCalls = tpMapCalls.filter((p) => p.pinsByDay !== undefined);
     expect(overviewCalls.length).toBeGreaterThan(0);
     const last = overviewCalls[overviewCalls.length - 1]!;
     expect(last.focusId).toBeUndefined();
   });
 
-  it('?day=all: OceanMap receives pinsByDay and dayNum=undefined', async () => {
+  it('?day=all: TpMap receives pinsByDay and dayNum=undefined', async () => {
     await mountMapPage('/trip/test-trip/map?day=all');
-    const overviewCalls = oceanMapCalls.filter((p) => p.pinsByDay !== undefined);
+    const overviewCalls = tpMapCalls.filter((p) => p.pinsByDay !== undefined);
     const last = overviewCalls[overviewCalls.length - 1]!;
     expect(last.pinsByDay).toBeInstanceOf(Map);
     expect(last.pinsByDay!.size).toBeGreaterThan(0);
     expect(last.dayNum).toBeUndefined();
   });
 
-  it('?day=2: OceanMap receives dayNum=2 and pinsByDay=undefined (single-day mode)', async () => {
+  it('?day=2: TpMap receives dayNum=2 and pinsByDay=undefined (single-day mode)', async () => {
     await mountMapPage('/trip/test-trip/map?day=2');
-    const last = oceanMapCalls[oceanMapCalls.length - 1]!;
+    const last = tpMapCalls[tpMapCalls.length - 1]!;
     expect(last.pinsByDay).toBeUndefined();
     expect(last.dayNum).toBe(2);
   });
@@ -148,34 +148,34 @@ describe('MapPage overview runtime — fitBounds vs flyTo', () => {
 
 describe('MapPage overview runtime — handleTabClick URL sync', () => {
   beforeEach(() => {
-    oceanMapCalls.length = 0;
+    tpMapCalls.length = 0;
   });
 
-  it('clicking 總覽 tab switches OceanMap to overview props (pinsByDay set, dayNum undefined)', async () => {
+  it('clicking 總覽 tab switches TpMap to overview props (pinsByDay set, dayNum undefined)', async () => {
     const { getByText } = await mountMapPage('/trip/test-trip/map?day=1');
     // Initially single-day
-    const initial = oceanMapCalls[oceanMapCalls.length - 1]!;
+    const initial = tpMapCalls[tpMapCalls.length - 1]!;
     expect(initial.dayNum).toBe(1);
     expect(initial.pinsByDay).toBeUndefined();
 
     // Click 總覽 tab
     fireEvent.click(getByText('總覽'));
 
-    // After click: OceanMap should now receive overview props
-    const after = oceanMapCalls[oceanMapCalls.length - 1]!;
+    // After click: TpMap should now receive overview props
+    const after = tpMapCalls[tpMapCalls.length - 1]!;
     expect(after.pinsByDay).toBeInstanceOf(Map);
     expect(after.dayNum).toBeUndefined();
   });
 
-  it('clicking DAY 02 from overview switches OceanMap to single-day props', async () => {
+  it('clicking DAY 02 from overview switches TpMap to single-day props', async () => {
     const { getByText } = await mountMapPage('/trip/test-trip/map?day=all');
     // Initially overview
-    expect(oceanMapCalls[oceanMapCalls.length - 1]!.pinsByDay).toBeInstanceOf(Map);
+    expect(tpMapCalls[tpMapCalls.length - 1]!.pinsByDay).toBeInstanceOf(Map);
 
     // Click DAY 02
     fireEvent.click(getByText(/DAY 02/i));
 
-    const after = oceanMapCalls[oceanMapCalls.length - 1]!;
+    const after = tpMapCalls[tpMapCalls.length - 1]!;
     expect(after.pinsByDay).toBeUndefined();
     expect(after.dayNum).toBe(2);
   });

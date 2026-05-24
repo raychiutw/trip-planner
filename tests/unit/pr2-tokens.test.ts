@@ -120,8 +120,8 @@ describe('hardcode px → token 替換', () => {
 });
 
 // ——— Review follow-up Item 3: Bottom nav tap target ———
-describe('ocean-bottom-nav-btn — tap target 防呆', () => {
-  it('.ocean-bottom-nav-btn 包含 min-height: 44px（Apple HIG tap target）', () => {
+describe('tp-bottom-nav-btn — tap target 防呆', () => {
+  it('.tp-bottom-nav-btn 包含 min-height: 44px（Apple HIG tap target）', () => {
     expect(tokens).toContain('min-height: 44px');
   });
 });

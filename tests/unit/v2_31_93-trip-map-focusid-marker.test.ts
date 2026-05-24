@@ -7,9 +7,9 @@
  *
  * Fix：
  *   - TripMapRail 加 `focusedEntryId` state，entryFocused isExpanding=true 設、
- *     isExpanding=false 清；pass 給 OceanMap `focusId={focusedEntryId}` 觸發
+ *     isExpanding=false 清；pass 給 TpMap `focusId={focusedEntryId}` 觸發
  *     既有 focusId useEffect 換 marker accent 視覺 + flyTo zoom 13。
- *   - OceanMap.markerContent 加 isFocused 偵測（zIndex ≥ 1000）→ box-shadow
+ *   - TpMap.markerContent 加 isFocused 偵測（zIndex ≥ 1000）→ box-shadow
  *     換 outer accent ring + 加深 drop shadow + z-index:1000 浮頂。
  *
  * 與 MapPage focusId flow 對齊（地圖頁點 marker 已是同邏輯，這版讓 desktop
@@ -24,7 +24,7 @@ const TRIP_MAP_RAIL = readFileSync(
   'utf8',
 );
 const OCEAN_MAP = readFileSync(
-  resolve(__dirname, '../../src/components/trip/OceanMap.tsx'),
+  resolve(__dirname, '../../src/components/trip/TpMap.tsx'),
   'utf8',
 );
 // v2.33.57 round 11: markerContent + markerStyle 拆到 src/lib/mapHelpers.ts
@@ -39,7 +39,7 @@ describe('v2.31.93: TripMapRail focusId marker + 浮頂視覺', () => {
     expect(TRIP_MAP_RAIL).toMatch(/focusedEntryId/);
   });
 
-  it('TripMapRail 把 focusedEntryId pass 給 OceanMap focusId prop', () => {
+  it('TripMapRail 把 focusedEntryId pass 給 TpMap focusId prop', () => {
     expect(TRIP_MAP_RAIL).toMatch(/focusId=\{focusedEntryId\}/);
   });
 

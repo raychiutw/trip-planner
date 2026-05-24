@@ -1,5 +1,5 @@
 /**
- * OceanMap — Google Maps JS map component (v2.23.0 google-maps-migration).
+ * TpMap — Google Maps JS map component (v2.23.0 google-maps-migration).
  *
  * Replaces Leaflet+OSM with Google Maps Platform. Same prop surface as
  * Leaflet version — caller pages/imports unchanged.
@@ -38,17 +38,17 @@ import type { MapPin, Coord } from '../../lib/mapTypes';
 import MapSkeleton from './MapSkeleton';
 import PageErrorState from '../shared/PageErrorState';
 
-// Re-export for callers that still import from OceanMap (backward compat)
+// Re-export for callers that still import from TpMap (backward compat)
 export { markerStyle, markerContent, buildSegments };
 export type { MarkerStyle, SegmentPair };
 
 /* ===== Props ===== */
 
-export type OceanMapMode = 'detail' | 'overview';
+export type TpMapMode = 'detail' | 'overview';
 
-export interface OceanMapProps {
+export interface TpMapProps {
   pins: MapPin[];
-  mode: OceanMapMode;
+  mode: TpMapMode;
   /** In overview mode, focused pin gets the accent-active state. In detail mode, this is the single pin to show. */
   focusId?: number;
   /** Draw polylines between consecutive pins (default true in overview, false in detail) */
@@ -79,16 +79,16 @@ export interface OceanMapProps {
 /* ===== Inline styles (scoped to this component) ===== */
 
 const SCOPED_STYLES = `
-.ocean-map-container {
+.tp-map-container {
   width: 100%;
   border-radius: var(--radius-md, 8px);
   overflow: hidden;
   border: 1px solid var(--color-border, #EBEBEB);
   position: relative;
 }
-.ocean-map-container[data-mode="detail"] { height: 280px; }
-.ocean-map-container[data-mode="overview"] { height: 420px; }
-.ocean-map-container[data-fill-parent="true"] {
+.tp-map-container[data-mode="detail"] { height: 280px; }
+.tp-map-container[data-mode="overview"] { height: 420px; }
+.tp-map-container[data-fill-parent="true"] {
   height: 100%;
   min-height: 0;
   border-radius: 0;
@@ -146,7 +146,7 @@ const Segment = memo(function Segment({ map, from, to, isActive, dayNum }: Segme
 
 /* ===== Main component ===== */
 
-const OceanMap = memo(function OceanMap({
+const TpMap = memo(function TpMap({
   pins,
   mode,
   focusId,
@@ -162,7 +162,7 @@ const OceanMap = memo(function OceanMap({
   fitOnce = false,
   onMapReady,
   zoomControlPosition,
-}: OceanMapProps) {
+}: TpMapProps) {
   const showRoutes = routes ?? (mode === 'overview');
 
   const { containerRef, map, loadError, fitBounds, flyTo } = useGoogleMap({
@@ -264,7 +264,7 @@ const OceanMap = memo(function OceanMap({
     <>
       <style>{SCOPED_STYLES}</style>
       <div
-        className={className ? `ocean-map-container ${className}` : 'ocean-map-container'}
+        className={className ? `tp-map-container ${className}` : 'tp-map-container'}
         data-mode={mode}
         data-fill-parent={fillParent ? 'true' : undefined}
         style={style}
@@ -300,4 +300,4 @@ const OceanMap = memo(function OceanMap({
   );
 });
 
-export default OceanMap;
+export default TpMap;

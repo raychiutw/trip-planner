@@ -1,11 +1,11 @@
 /**
- * ocean-map-imperative-effects — verify pure helpers exported from OceanMap.tsx
+ * tp-map-imperative-effects — verify pure helpers exported from TpMap.tsx
  * (post v2.23.0 Google Maps rewrite).
  *
  * Old test focused on Leaflet imperative side effects (marker.setIcon /
  * map.panTo / etc.). The Google rewrite delegates much of that to googleMaps.*
  * native methods, so direct DOM/effect testing is not high-value. This rewrite
- * tests the **pure functions** OceanMap exports — buildSegments() — which is
+ * tests the **pure functions** TpMap exports — buildSegments() — which is
  * where the per-day polyline pairing logic lives. That's the bug-prone area.
  *
  * Also verify markerIcon's day-color contract round-trip (idle uses dayColor;
@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { setupGoogleMapsMock } from './__mocks__/google-maps';
-import { markerStyle, buildSegments } from '../../src/components/trip/OceanMap';
+import { markerStyle, buildSegments } from '../../src/components/trip/TpMap';
 import type { MapPin } from '../../src/hooks/useMapData';
 
 beforeEach(setupGoogleMapsMock);
@@ -28,7 +28,7 @@ const pin = (id: number, idx: number, dayLat = 26, dayLng = 127, sortOrder = idx
   sortOrder,
 });
 
-describe('OceanMap.buildSegments (flat pins mode)', () => {
+describe('TpMap.buildSegments (flat pins mode)', () => {
   it('empty pins → no segments', () => {
     const result = buildSegments({
       pins: [],
@@ -83,7 +83,7 @@ describe('OceanMap.buildSegments (flat pins mode)', () => {
   });
 });
 
-describe('OceanMap.buildSegments (per-day mode)', () => {
+describe('TpMap.buildSegments (per-day mode)', () => {
   it('cross-day pairs NOT drawn (僅 within-day segments)', () => {
     // Day 1: pin 1, 2 / Day 2: pin 3, 4
     // Should produce 2 segments (1→2 in day1, 3→4 in day2), NOT 2→3 cross-day
@@ -137,7 +137,7 @@ describe('OceanMap.buildSegments (per-day mode)', () => {
   });
 });
 
-describe('OceanMap.markerStyle (color contract)', () => {
+describe('TpMap.markerStyle (color contract)', () => {
   it('idle marker uses dayColor for stroke + label', () => {
     const style = markerStyle(pin(1, 1), false, false, '#FF6B35');
     expect(style.stroke).toBe('#FF6B35');

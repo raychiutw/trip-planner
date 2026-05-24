@@ -11,7 +11,7 @@
  *   - Mobile <1024px: 1-pane map + bottom POI carousel + bottom nav
  *
  * Map render:
- *   - 重用 `OceanMap mode="overview"` — 內建 useRoute 走 /api/route
+ *   - 重用 `TpMap mode="overview"` — 內建 useRoute 走 /api/route
  *     proxy（Mapbox driving directions），落地真實導航折線而不是直線。
  *   - Per-day polyline 按 dayColor(N)，hotel sortOrder=-1 入線（DESIGN.md
  *     「地圖 Polyline 規格」）。
@@ -47,9 +47,9 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
 import type { Day } from '../types/trip';
 
-// OceanMap is heavy (leaflet bundle). Lazy-load so /map's first paint
+// TpMap is heavy (leaflet bundle). Lazy-load so /map's first paint
 // (header + sheet skeleton) lands before the leaflet bundle finishes parsing.
-const OceanMap = lazy(() => import('../components/trip/OceanMap'));
+const TpMap = lazy(() => import('../components/trip/TpMap'));
 
 interface MyTripRow { tripId: string; }
 interface TripSummary {
@@ -163,7 +163,7 @@ const SCOPED_STYLES = `
   flex: 1; min-height: 0;
   position: relative;
 }
-.tp-global-map-canvas .ocean-map-container { height: 100%; }
+.tp-global-map-canvas .tp-map-container { height: 100%; }
 
 /* 全覽 / 我的位置 pill bar — PR-R：上移到選擇行程 chip 下方，靠近 trip
  * switcher 視覺群組（user 截圖指示）。z-index 600 floats above leaflet panes。
@@ -908,7 +908,7 @@ export default function GlobalMapPage() {
             {isLoadingList && <div className="tp-global-map-loading">載入中…</div>}
             {resolved && (
               <Suspense fallback={<div className="tp-global-map-loading">載入地圖…</div>}>
-                <OceanMap
+                <TpMap
                   pins={resolved.pins}
                   pinsByDay={displayPinsByDay}
                   mode="overview"
@@ -919,7 +919,7 @@ export default function GlobalMapPage() {
                   onMapReady={onMapReady}
                   zoomControlPosition="TOP_RIGHT"
                   dark={isDark}
-                  className="ocean-map-container"
+                  className="tp-map-container"
                 />
               </Suspense>
             )}

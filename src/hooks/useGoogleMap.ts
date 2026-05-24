@@ -6,7 +6,7 @@
  * 載入策略：@googlemaps/js-api-loader 確保 google.maps 全域唯一 instance（多 component
  * 同 page 不重複載 ~300-500KB bundle）。Loader is singleton；多 hook call 共用同 promise。
  *
- * Bundle 載入期間 caller 改 render <MapSkeleton>（OceanMap 自己也會在 map=null 期間
+ * Bundle 載入期間 caller 改 render <MapSkeleton>（TpMap 自己也會在 map=null 期間
  * 渲染 skeleton）。
  *
  * Auth：browser key 從 import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY 取（HTTP referrer
@@ -98,7 +98,7 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
 
     ensureLoaderInit(apiKey);
     // v2.31.76 hotfix #642 follow-up：必須同時 await 'marker' library 才能 setMap，
-    // 否則 child component（OceanMap / MapFabs）會在 google.maps.marker 尚未注入時
+    // 否則 child component（TpMap / MapFabs）會在 google.maps.marker 尚未注入時
     // 嘗試 new google.maps.marker.AdvancedMarkerElement(...) → TypeError，整個 map
     // 進 ErrorBoundary。v2.31.75 把 google.maps.Marker → AdvancedMarkerElement 但漏
     // 等 marker lib，prod 整個 trip detail page 地圖紅屏。
@@ -143,7 +143,7 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
   }, []);
 
   // v2.33.39 (round 4): wrap in useCallback with `[map]` dep — 之前每 render
-  // 都產新 closure，OceanMap fitBounds effect dep 包含 fitBounds 會 re-fire 每
+  // 都產新 closure，TpMap fitBounds effect dep 包含 fitBounds 會 re-fire 每
   // 次父 render → 地圖每次 state 變動都重新 fit。
   const flyTo = useCallback(
     (latLng: { lat: number; lng: number }, zoomLevel?: number) => {

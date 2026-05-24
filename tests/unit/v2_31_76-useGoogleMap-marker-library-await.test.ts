@@ -1,7 +1,7 @@
 /**
  * v2.31.76 hotfix: useGoogleMap must `await importLibrary('marker')` in
  * addition to 'maps' before exposing the map instance — otherwise
- * `google.maps.marker.AdvancedMarkerElement` is undefined when OceanMap /
+ * `google.maps.marker.AdvancedMarkerElement` is undefined when TpMap /
  * MapFabs render and the whole map enters ErrorBoundary.
  *
  * Source-grep style — locks the two `importLibrary` call sites in

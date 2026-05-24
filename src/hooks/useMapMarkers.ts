@@ -1,7 +1,7 @@
 /**
  * useMapMarkers — manage AdvancedMarkerElement lifecycle + focus diff-update.
  *
- * v2.33.57 round 11: extracted from `src/components/trip/OceanMap.tsx`
+ * v2.33.57 round 11: extracted from `src/components/trip/TpMap.tsx`
  * line 220-297 as part of the 4-module split. Effects + ref ownership
  * preserved exactly to maintain v2.31.75 diff-update semantics.
  *

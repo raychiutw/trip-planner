@@ -1,10 +1,10 @@
 /**
  * round-11-oceanmap-split.test.ts — architectural guard for v2.33.57 split
  *
- * OceanMap.tsx 606→303 LOC split 後架構鎖：
+ * TpMap.tsx 606→303 LOC split 後架構鎖：
  *  1. lib/mapHelpers + lib/mapTypes 存在且 leaf (no React import)
  *  2. 3 個 hook (useMapMarkers / useMapViewport / useMapSegments) 存在
- *  3. OceanMap.tsx call 3 hook 對齊原 effect 順序 (markers → viewport → segments)
+ *  3. TpMap.tsx call 3 hook 對齊原 effect 順序 (markers → viewport → segments)
  *  4. 17+ 個 backward-compat re-export 維持
  */
 import { describe, it, expect } from 'vitest';
@@ -14,7 +14,7 @@ import path from 'node:path';
 const root = path.resolve(__dirname, '../..');
 const read = (rel: string) => readFileSync(path.join(root, rel), 'utf-8');
 
-const OCEAN_MAP = read('src/components/trip/OceanMap.tsx');
+const OCEAN_MAP = read('src/components/trip/TpMap.tsx');
 const HELPERS = read('src/lib/mapHelpers.ts');
 const TYPES = read('src/lib/mapTypes.ts');
 const HOOK_MARKERS = read('src/hooks/useMapMarkers.ts');
@@ -23,7 +23,7 @@ const HOOK_SEGMENTS = read('src/hooks/useMapSegments.ts');
 const USE_MAP_DATA = read('src/hooks/useMapData.ts');
 const USE_ROUTE = read('src/hooks/useRoute.ts');
 
-describe('v2.33.57 round 11 — OceanMap split: lib leaf-ness', () => {
+describe('v2.33.57 round 11 — TpMap split: lib leaf-ness', () => {
   it('mapHelpers.ts 不 import React or hook', () => {
     expect(HELPERS).not.toMatch(/from\s+['"]react['"]/);
     expect(HELPERS).not.toMatch(/from\s+['"]\.\.\/hooks\//);
@@ -61,7 +61,7 @@ describe('v2.33.57 round 11 — 3 hooks 存在 + 單一職責', () => {
   });
 });
 
-describe('v2.33.57 round 11 — OceanMap.tsx compose shell', () => {
+describe('v2.33.57 round 11 — TpMap.tsx compose shell', () => {
   it('LOC under 350 (compose shell, was 606)', () => {
     const lineCount = OCEAN_MAP.split('\n').length;
     expect(lineCount).toBeLessThan(350);

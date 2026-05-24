@@ -1,7 +1,7 @@
 /**
  * useMapViewport — manage map viewport: fit/focus follow, resize, imperative pan.
  *
- * v2.33.57 round 11: extracted from `src/components/trip/OceanMap.tsx`
+ * v2.33.57 round 11: extracted from `src/components/trip/TpMap.tsx`
  * line 299-341 as part of the 4-module split. Three effects + fitDoneRef
  * preserved exactly.
  *

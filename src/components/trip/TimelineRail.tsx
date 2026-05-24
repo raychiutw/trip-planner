@@ -152,8 +152,8 @@ const SCOPED_STYLES = `
   margin-top: 4px;
 }
 
-.ocean-rail-head[aria-expanded="true"] .ocean-rail-caret { transform: rotate(90deg); color: var(--color-accent-deep); }
-.ocean-rail-caret { transition: transform 120ms; display: inline-block; }
+.tp-rail-head[aria-expanded="true"] .tp-rail-caret { transform: rotate(90deg); color: var(--color-accent-deep); }
+.tp-rail-caret { transition: transform 120ms; display: inline-block; }
 
 /* 備選景點 list — alternates only (v2.30.14)。master POI 已升格到 .tp-rail-poi-meta */
 .tp-rail-poi-list { display: flex; flex-direction: column; gap: 8px; }
@@ -241,7 +241,7 @@ const SCOPED_STYLES = `
 /* 2026-05-01 mockup S12 Variant A 對齊 — grip 在 row grid col 1，永遠淡顯
  * (opacity 0.4) 而非 hover-only 隱形，hover 才變 accent。提升 discoverability
  * 同時不喧賓奪主。觸控裝置同樣 0.4，避免「找不到拖拉把手」。 */
-.ocean-rail-grip {
+.tp-rail-grip {
   grid-column: 1;
   border: 0; background: transparent;
   display: inline-flex; align-items: center; justify-content: center;
@@ -254,14 +254,14 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
   transition: color 120ms, opacity 160ms;
 }
-.ocean-rail-row-wrap:hover .ocean-rail-grip,
-.ocean-rail-grip:hover,
-.ocean-rail-grip:focus-visible {
+.tp-rail-row-wrap:hover .tp-rail-grip,
+.tp-rail-grip:hover,
+.tp-rail-grip:focus-visible {
   opacity: 1;
   color: var(--color-accent);
 }
-.ocean-rail-grip:active { cursor: grabbing; }
-.ocean-rail-grip .svg-icon { width: 16px; height: 16px; }
+.tp-rail-grip:active { cursor: grabbing; }
+.tp-rail-grip .svg-icon { width: 16px; height: 16px; }
 `;
 
 interface TimelineRailProps {
@@ -469,7 +469,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       <div
         ref={sortable.setNodeRef}
         style={sortableStyle}
-        className="ocean-rail-item"
+        className="tp-rail-item"
         data-now={isNow || undefined}
         data-past={isPast || undefined}
         data-accent={meta.accent || undefined}
@@ -478,11 +478,11 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         data-scroll-anchor={entry.id != null ? `entry-${entry.id}` : undefined}
       >
         {/* mockup .tp-detail-row:1923 — 6-col grid: grip(24) | time(50) | dot(24) | icon(44) | body(1fr) | caret(20)。
-         * 2026-05-10 (#510)：重新加回 .ocean-rail-dot — 編號圓圈是 wayfinding，
+         * 2026-05-10 (#510)：重新加回 .tp-rail-dot — 編號圓圈是 wayfinding，
          * mockup terracotta-preview-v2.html 6241 一直都有，移除它的舊註解（基於更早 S12 Variant A）已過期。 */}
         <button
           type="button"
-          className="ocean-rail-grip"
+          className="tp-rail-grip"
           {...sortable.listeners}
           {...sortable.attributes}
           aria-label={`拖拉排序：${entryDisplayTitle}`}
@@ -490,10 +490,10 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         >
           <Icon name="grip" />
         </button>
-        <span className="ocean-rail-dot" aria-hidden="true">{index + 1}</span>
+        <span className="tp-rail-dot" aria-hidden="true">{index + 1}</span>
         <button
           type="button"
-          className="ocean-rail-head"
+          className="tp-rail-head"
           onClick={() => {
             // v2.31.81 #5：row click → dispatch entryFocused 讓 TripMapRail pan 到該 pin。
             // v2.31.87 #5+#6：detail 加 isExpanding（! expanded = 點後 next state）
@@ -511,11 +511,11 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
           aria-label={`${expanded ? '收合' : '展開'}景點：${entryDisplayTitle}`}
           data-testid={entry.id != null ? `timeline-rail-row-${entry.id}` : undefined}
         >
-          <span className="ocean-rail-icon" aria-hidden="true">
+          <span className="tp-rail-icon" aria-hidden="true">
             <Icon name={meta.icon} />
           </span>
-          <span className="ocean-rail-content">
-            <span className="ocean-rail-name">{entryDisplayTitle}</span>
+          <span className="tp-rail-content">
+            <span className="tp-rail-name">{entryDisplayTitle}</span>
             {(() => {
               const durLabel = formatDurationCompact(parsed.duration);
               // mockup hotel row sub-line 是「HOTEL · 退房 + 早餐」— 不顯示 rating
@@ -526,30 +526,30 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               const desc = entry.description?.trim() ?? '';
               const shortDesc = desc && desc.length <= 24 && !desc.includes('\n') ? desc : '';
               return (
-                <span className="ocean-rail-sub">
+                <span className="tp-rail-sub">
                   {parsed.start && (
                     <>
-                      <span className="ocean-rail-sub-time">{parsed.start}</span>
-                      <span className="ocean-rail-sub-sep">·</span>
+                      <span className="tp-rail-sub-time">{parsed.start}</span>
+                      <span className="tp-rail-sub-sep">·</span>
                     </>
                   )}
-                  <span className="ocean-rail-sub-type">{meta.label}</span>
+                  <span className="tp-rail-sub-type">{meta.label}</span>
                   {durLabel && (
                     <>
-                      <span className="ocean-rail-sub-sep">·</span>
+                      <span className="tp-rail-sub-sep">·</span>
                       <span>{durLabel}</span>
                     </>
                   )}
                   {rating != null && (
                     <>
-                      <span className="ocean-rail-sub-sep">·</span>
-                      <span className="ocean-rail-sub-star">★</span>
+                      <span className="tp-rail-sub-sep">·</span>
+                      <span className="tp-rail-sub-star">★</span>
                       <span>{rating.toFixed(1)}</span>
                     </>
                   )}
                   {shortDesc && (
                     <>
-                      <span className="ocean-rail-sub-sep">·</span>
+                      <span className="tp-rail-sub-sep">·</span>
                       <span>{shortDesc}</span>
                     </>
                   )}
@@ -557,7 +557,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               );
             })()}
           </span>
-          <span className="ocean-rail-caret" aria-hidden="true">›</span>
+          <span className="tp-rail-caret" aria-hidden="true">›</span>
         </button>
       </div>
 
@@ -981,18 +981,18 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
   const sortableItems = orderedEvents.map((e, i) => e.id ?? `idx-${i}`);
 
   return (
-    <div className="ocean-rail">
+    <div className="tp-rail">
       <style>{SCOPED_STYLES}</style>
-      <div className="ocean-rail-header">
-        <span className="ocean-rail-eyebrow">行程</span>
-        <span className="ocean-rail-meta">
+      <div className="tp-rail-header">
+        <span className="tp-rail-eyebrow">行程</span>
+        <span className="tp-rail-meta">
           {orderedEvents.length} 個停留點{firstTime && lastTime ? ` · ${firstTime}–${lastTime}` : ''}
         </span>
       </div>
       <DndContext sensors={sensors} accessibility={TP_DRAG_ACCESSIBILITY} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
-      <div className="ocean-rail-body">
-        {/* v2.33.60 round 14: 拔 <div.ocean-rail-line> orphan — CSS 已 display:none，DOM 也清掉 */}
+      <div className="tp-rail-body">
+        {/* v2.33.60 round 14: 拔 <div.tp-rail-line> orphan — CSS 已 display:none，DOM 也清掉 */}
         {orderedEvents.map((entry, i) => {
           const isPast = nowIndex >= 0 && i < nowIndex;
           const isNow = nowIndex >= 0 && i === nowIndex;
@@ -1010,7 +1010,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
             ? segmentMap.get(`${prev.id}-${entry.id}`)
             : undefined;
           return (
-            <div key={entry.id ?? i} className="ocean-rail-row-wrap">
+            <div key={entry.id ?? i} className="tp-rail-row-wrap">
               {i > 0 && (travelObj || segment) && (
                 <TravelPill
                   type={travelObj?.type ?? null}
