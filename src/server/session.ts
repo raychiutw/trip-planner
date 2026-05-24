@@ -67,14 +67,23 @@ function base64urlDecode(s: string): Uint8Array {
 // v2.33.59 round 13: HKDF domain separation
 import { deriveSubSecret } from './hkdf';
 
+// v2.33.63 round 14d: in-isolate CryptoKey cache — 之前 verifySessionToken 每
+// request 都 importKey(~1ms)，每 authenticated route 都 fire 一次。Cache 1 key/secret
+// keep CryptoKey alive 整 isolate lifetime。secret 不 rotate 期間穩定。
+const keyCache = new Map<string, CryptoKey>();
+
 async function importHmacKey(secret: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
+  const hit = keyCache.get(secret);
+  if (hit) return hit;
+  const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
     { name: 'HMAC', hash: ALG },
     false,
     ['sign', 'verify'],
   );
+  keyCache.set(secret, key);
+  return key;
 }
 
 async function hmacSign(secret: string, data: string): Promise<string> {
