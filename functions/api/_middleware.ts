@@ -181,7 +181,12 @@ export function checkCsrf(request: Request, env: Env, url: URL): Response | null
   if (!mutating) return null;
 
   // OAuth wire endpoints handle their own auth — skip session-cookie CSRF.
-  if (url.pathname.startsWith('/api/oauth/')) return null;
+  // v2.33.97 security: 但 /api/oauth/consent 是 session-cookie 認證 browser form
+  // POST，必須 CSRF gate (SameSite=Lax 在 top-level navigation 仍允許 form
+  // submit，攻擊者可從 evil.com 觸發 victim's session 點 consent allow)。
+  // 其他 /api/oauth/* (token/authorize/revoke/par/jwks/.well-known) 自帶
+  // client_secret / PKCE / Bearer 不需 cookie 防護。
+  if (url.pathname.startsWith('/api/oauth/') && url.pathname !== '/api/oauth/consent') return null;
 
   const hasBearer = !!request.headers.get('Authorization')?.startsWith('Bearer ');
   const origin = request.headers.get('Origin');

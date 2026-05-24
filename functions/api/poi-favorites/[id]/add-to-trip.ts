@@ -199,25 +199,35 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
 
   // v2.29.0: trip_entries.{time, poi_id} DROPPED. INSERT 只寫 start_time/end_time，
   // master poi 走下面 trip_entry_pois INSERT。
+  // v2.33.97 security: 拆 last_insert_rowid() cross-statement assumption — D1
+  // 沒文檔保證 batched prepared statements 的 last_insert_rowid() 在 future
+  // pipeline / serialise 改變後仍 connection-scoped 拿到正確 id。改 INSERT
+  // RETURNING id + 顯式 bind 到 trip_entry_pois，杜絕 FK 接錯 row 的 silent
+  // corruption。Trade-off: trip_entries 已 commit 但 trip_entry_pois INSERT
+  // 失敗 → entry orphan 無 master POI（user 可重新 attach；不算 data loss）。
   stmts.push(
     db.prepare(
       `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, note, entry_pois_version)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1) RETURNING id`,
     ).bind(day.id, insertSortOrder, startTime, endTime, favorite.poi_name, null, 'fast-path', favorite.note),
   );
-  stmts.push(
-    db.prepare(
-      `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-       VALUES (last_insert_rowid(), ?, 1, ?, ?)`,
-    ).bind(favorite.poi_id, new Date().toISOString(), new Date().toISOString()),
-  );
 
   const batchResults = await db.batch<{ id: number }>(stmts);
-  const insertEntryResult = batchResults[batchResults.length - 2];
+  const insertEntryResult = batchResults[batchResults.length - 1];
   const newEntryId = insertEntryResult?.results?.[0]?.id ?? null;
   if (newEntryId === null) {
     throw new AppError('SYS_INTERNAL', 'INSERT trip_entries RETURNING 未回傳 id');
   }
+
+  // 顯式 bind entry id，不依賴 last_insert_rowid() cross-statement 隱含 state
+  const nowIso = new Date().toISOString();
+  await db
+    .prepare(
+      `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
+       VALUES (?, ?, 1, ?, ?)`,
+    )
+    .bind(newEntryId, favorite.poi_id, nowIso, nowIso)
+    .run();
 
   // Audit log — companion 走 system:companion sentinel + 攜 companionTripId 反查；
   // V2 user 走實際 tripId + auth.email。fire-and-forget 不阻塞 response。

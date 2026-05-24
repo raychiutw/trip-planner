@@ -90,6 +90,23 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     }
   }
 
+  // v2.33.97 review: 防客戶端 misbehave 送同 (day_id, sort_order) duplicate →
+  // 兩筆 UPDATE 都 commit but timeline order 不確定。Reject upfront 而非靠
+  // DDL UNIQUE (schema 沒加 partial index 因 sort_order shift 過程允許暫態衝突)。
+  const sortOrderPairs = new Set<string>();
+  for (const u of validated) {
+    if (typeof u.fields.sort_order === 'number') {
+      // day_id 沒帶時表示 sort_order 在原 day_id 改動 — 同 day 內 dedupe
+      // 需 SELECT 原 day_id 但代價高；簡化：只 dedupe 客端「同時 (day_id, sort_order)」
+      // 都帶的 case (drag-drop reorder 典型 shape)。
+      const key = `${u.fields.day_id ?? 'same'}-${u.fields.sort_order}`;
+      if (sortOrderPairs.has(key)) {
+        throw new AppError('DATA_VALIDATION', `batch 內 (day_id, sort_order)=(${u.fields.day_id ?? 'same-day'}, ${u.fields.sort_order}) 重複`);
+      }
+      sortOrderPairs.add(key);
+    }
+  }
+
   const targetDayIds = Array.from(new Set(
     validated
       .map((u) => u.fields.day_id)

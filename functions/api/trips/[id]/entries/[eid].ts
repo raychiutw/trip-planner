@@ -1,6 +1,7 @@
 import { logAudit, computeDiff } from '../../../_audit';
-import { hasPermission, hasWritePermission, verifyEntryBelongsToTrip, requireAuth} from '../../../_auth';
+import { hasWritePermission, verifyEntryBelongsToTrip, requireAuth, requireTripReadAccess } from '../../../_auth';
 import { AppError } from '../../../_errors';
+import { getAuth } from '../../../_utils';
 import { TIME_RE, parseTime } from '../../../_time';
 import { validateEntryBody, detectGarbledText } from '../../../_validate';
 import { json, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
@@ -28,18 +29,20 @@ const ALLOWED_FIELDS = ['day_id', 'sort_order', 'start_time', 'end_time', 'title
  * 也可看)。
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = requireAuth(context);
-
   const { id, eid: eidStr } = context.params as { id: string; eid: string };
   const eid = parseIntParam(eidStr);
   if (!eid) throw new AppError('DATA_VALIDATION', 'ID 格式錯誤');
   const db = context.env.DB;
 
-  const [hasPerm, belongsToTrip] = await Promise.all([
-    hasPermission(db, auth, id, auth.isAdmin),
+  // v2.33.97 security: 對齊 sibling read endpoints (days.ts, segments/index.ts,
+  // [id].ts) 走 requireTripReadAccess — published trip 允許 anonymous read，
+  // 否則 owner / member only。之前 requireAuth 讓 anon 對 published trip
+  // 401 with sibling endpoint contract drift。
+  const [_access, belongsToTrip] = await Promise.all([
+    requireTripReadAccess(db, getAuth(context), id),
     verifyEntryBelongsToTrip(db, eid, id),
   ]);
-  if (!hasPerm) throw new AppError('PERM_DENIED');
+  void _access;
   if (!belongsToTrip) throw new AppError('DATA_NOT_FOUND');
 
   const row = await db
