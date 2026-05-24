@@ -38,6 +38,8 @@ export const ErrorCode = {
   // Google Maps Platform (v2.23.0 google-maps-migration)
   MAPS_LOCKED: 'MAPS_LOCKED',
   MAPS_UPSTREAM_FAILED: 'MAPS_UPSTREAM_FAILED',
+  // v2.33.58 round 12 I5: distinct from UPSTREAM_FAILED — config error not transient
+  MAPS_CONFIG: 'MAPS_CONFIG',
   // Multi-POI per entry (v2.27.0)
   STALE_ENTRY: 'STALE_ENTRY',
   DUPLICATE_POI: 'DUPLICATE_POI',
@@ -70,6 +72,7 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   COMPANION_QUOTA_EXCEEDED: '此請求已執行過此操作',
   MAPS_LOCKED: '本月 Google API 已達配額，月初恢復',
   MAPS_UPSTREAM_FAILED: 'Google Maps 服務暫時無法回應，請稍後再試',
+  MAPS_CONFIG: 'Google Maps API 設定錯誤，請聯絡管理員',
   STALE_ENTRY: '資料已被其他操作更新，請重新整理',
   DUPLICATE_POI: '此景點已存在於這個停留點',
   POI_NOT_ALTERNATE: '此景點不是這個停留點的備選',

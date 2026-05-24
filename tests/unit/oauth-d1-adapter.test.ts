@@ -134,12 +134,16 @@ describe('D1Adapter — Panva oidc-provider Adapter contract', () => {
   });
 
   describe('revokeByGrantId', () => {
-    it('DELETE across all names by json_extract($.grantId)', async () => {
+    it('DELETE scoped to AccessToken / RefreshToken names by json_extract($.grantId)', async () => {
+      // v2.33.58 round 12: name IN allowlist 避免未來新 model 含 grantId 被誤刪
       const { db, stmt, prepare } = makeMockDb();
       const adapter = new D1Adapter(db, 'AccessToken');
       await adapter.revokeByGrantId('grant-xyz');
 
-      expect(prepare).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM oauth_models WHERE json_extract(payload, ?)'));
+      expect(prepare).toHaveBeenCalledWith(
+        expect.stringContaining(`name IN ('AccessToken', 'RefreshToken')`),
+      );
+      expect(prepare).toHaveBeenCalledWith(expect.stringContaining('json_extract(payload, ?)'));
       expect(stmt.bind).toHaveBeenCalledWith('$.grantId', 'grant-xyz');
     });
   });
