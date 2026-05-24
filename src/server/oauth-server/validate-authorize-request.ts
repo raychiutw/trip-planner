@@ -125,31 +125,23 @@ export function validateAuthorizeRequest(
     };
   }
 
-  // 5. PKCE for public clients
-  if (client.client_type === 'public') {
-    if (!req.code_challenge) {
-      return {
-        code: 'invalid_request',
-        message: 'PKCE code_challenge required for public clients',
-        redirectableToClient: true,
-      };
-    }
-    if (req.code_challenge_method !== 'S256') {
-      return {
-        code: 'invalid_request',
-        message: 'PKCE code_challenge_method must be S256 (plain not supported)',
-        redirectableToClient: true,
-      };
-    }
-  } else {
-    // confidential client：PKCE optional V2-P4，V2-P6 may enforce always
-    if (req.code_challenge && req.code_challenge_method !== 'S256') {
-      return {
-        code: 'invalid_request',
-        message: 'PKCE code_challenge_method must be S256 if provided',
-        redirectableToClient: true,
-      };
-    }
+  // 5. PKCE mandatory for all clients (v2.33.59 round 13: OAuth 2.1 baseline)
+  // Previously confidential clients could skip PKCE; per OAuth 2.1 §4.1.1 PKCE
+  // gives meaningful defense against authorization-code interception even with
+  // client_secret (MITM / malicious extension / address-bar snoop)。
+  if (!req.code_challenge) {
+    return {
+      code: 'invalid_request',
+      message: 'PKCE code_challenge required (OAuth 2.1 baseline)',
+      redirectableToClient: true,
+    };
+  }
+  if (req.code_challenge_method !== 'S256') {
+    return {
+      code: 'invalid_request',
+      message: 'PKCE code_challenge_method must be S256 (plain not supported)',
+      redirectableToClient: true,
+    };
   }
 
   // 6. prompt validation (optional)

@@ -9,6 +9,7 @@ import type { Env } from './_types';
 import { detectGarbledText } from './_validate';
 import { getSessionUser } from './_session';
 import { D1Adapter, type AdapterPayload } from '../../src/server/oauth-d1-adapter';
+import { normalizeEmail } from '../../src/server/email-utils';
 
 import { AppError, errorResponse } from './_errors';
 
@@ -340,7 +341,7 @@ async function handleAuth(
         .prepare('SELECT email FROM users WHERE id = ?')
         .bind(v2Session.uid)
         .first<{ email: string }>();
-      if (userRow?.email) userEmail = userRow.email.toLowerCase();
+      if (userRow?.email) userEmail = normalizeEmail(userRow.email);
     } catch {
       // best-effort — DB miss leaves email empty, isAdmin will be false
     }
@@ -390,8 +391,8 @@ async function handleAuth(
                 .bind(tokenRow.user_id)
                 .first<{ email: string }>();
               if (userRow?.email) {
-                email = userRow.email.toLowerCase();
-                isAdmin = env.ADMIN_EMAIL ? email === env.ADMIN_EMAIL.toLowerCase() : false;
+                email = normalizeEmail(userRow.email);
+                isAdmin = env.ADMIN_EMAIL ? email === normalizeEmail(env.ADMIN_EMAIL) : false;
               }
             } catch {
               /* best-effort */

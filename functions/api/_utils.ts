@@ -62,6 +62,22 @@ export function parseIntParam(s: string): number | null {
  * URL-safe identifier. Centralised here so a single bug fix (e.g. unfilled bytes)
  * applies everywhere.
  */
+/**
+ * v2.33.59 round 13: Return trusted origin for outbound email links / OIDC issuer。
+ *
+ * 之前 `new URL(context.request.url).origin` 信 attacker-spoofable Host header —
+ * CF Pages edge 通常會 normalise，但 zero-trust 不假設。
+ *
+ * Prefer `env.PUBLIC_ORIGIN` if set (prod: `https://trip-planner-dby.pages.dev`)。
+ * Fallback to `request.url.origin` if 未設（dev 漸進採用，wrangler.toml 補完即可拔）。
+ */
+export function getPublicOrigin(env: { PUBLIC_ORIGIN?: string }, request: Request): string {
+  if (env.PUBLIC_ORIGIN && env.PUBLIC_ORIGIN.length > 0) {
+    return env.PUBLIC_ORIGIN.replace(/\/+$/, '');
+  }
+  return new URL(request.url).origin;
+}
+
 export function generateOpaqueToken(byteLen = 32): string {
   const bytes = new Uint8Array(byteLen);
   crypto.getRandomValues(bytes);

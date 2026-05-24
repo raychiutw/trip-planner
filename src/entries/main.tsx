@@ -108,6 +108,7 @@ const SignupPage = lazyWithRetry(() => import('../pages/SignupPage'));
 const EmailVerifyPendingPage = lazyWithRetry(() => import('../pages/EmailVerifyPendingPage'));
 const ForgotPasswordPage = lazyWithRetry(() => import('../pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazyWithRetry(() => import('../pages/ResetPasswordPage'));
+const VerifyEmailPage = lazyWithRetry(() => import('../pages/VerifyEmailPage'));
 const ConnectedAppsPage = lazyWithRetry(() => import('../pages/ConnectedAppsPage'));
 const DeveloperAppsPage = lazyWithRetry(() => import('../pages/DeveloperAppsPage'));
 const DeveloperAppNewPage = lazyWithRetry(() => import('../pages/DeveloperAppNewPage'));
@@ -210,6 +211,8 @@ if (el) {
               <Route path="/signup/check-email" element={<EmailVerifyPendingPage />} />
               <Route path="/login/forgot" element={<ForgotPasswordPage />} />
               <Route path="/auth/password/reset" element={<ResetPasswordPage />} />
+              {/* v2.33.59 round 13 H2: email-link landing page (auto-POST verify) */}
+              <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
               <Route path="/settings/connected-apps" element={<ConnectedAppsPage />} />
               <Route path="/developer/apps" element={<DeveloperAppsPage />} />
               {/* 2026-05-03 modal-to-fullpage migration: create-app modal → /developer/apps/new */}

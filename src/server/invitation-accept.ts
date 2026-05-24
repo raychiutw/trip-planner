@@ -14,6 +14,7 @@
  */
 import type { D1Database } from '@cloudflare/workers-types';
 import { hashInvitationToken } from './invitation-token';
+import { normalizeEmail } from './email-utils';
 
 export type InvitationAcceptResult =
   | { ok: true; tripId: string; tripTitle: string }
@@ -56,7 +57,8 @@ export async function tryAcceptInvitation(
   if (new Date(invitation.expires_at).getTime() < Date.now()) {
     return { ok: false, code: 'INVITATION_EXPIRED' };
   }
-  if (user.email.toLowerCase() !== invitation.invited_email.toLowerCase()) {
+  // v2.33.59 round 13: Unicode-correct email compare (NFKC + casefold)
+  if (normalizeEmail(user.email) !== normalizeEmail(invitation.invited_email)) {
     return { ok: false, code: 'INVITATION_EMAIL_MISMATCH' };
   }
 
@@ -68,7 +70,7 @@ export async function tryAcceptInvitation(
         `INSERT OR IGNORE INTO trip_permissions (email, trip_id, role, user_id)
          VALUES (?, ?, 'member', ?)`,
       )
-      .bind(user.email.toLowerCase(), invitation.trip_id, user.id),
+      .bind(normalizeEmail(user.email), invitation.trip_id, user.id),
     db
       .prepare(
         `UPDATE trip_invitations SET accepted_at = ?, accepted_by = ?

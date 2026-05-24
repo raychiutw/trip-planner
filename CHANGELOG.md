@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.59] - 2026-05-24
+
+**Round 13 — Round 12 defer MEDIUM 全部完成 (backlog #132)**
+
+User 2026-05-24 逐項討論 6 個 Round 12 defer → 全做。doc:
+`docs/code-review/round-13-server-residuals.md`。
+
+**SECURITY (HIGH)**
+
+- `verify` POST primary + GET backward compat + `Referrer-Policy: no-referrer` →
+  防 image-preload silent consume / Referer leak / browser history token (H2)
+- PKCE mandatory for confidential clients (OAuth 2.1 §4.1.1 baseline) — 拔掉
+  client_type 分支
+- `forgot-password` / `send-verification` 改 `context.waitUntil()` background send →
+  anti-enumeration timing oracle 修正 (之前 1000ms vs 20ms)
+- `PUBLIC_ORIGIN` env 取代 Host header trust → 5 callsite 全 migrate
+  (verify / forgot / send-verification / permissions / _id_token)
+- HMAC HKDF domain separation (新 `src/server/hkdf.ts`) → session_v1 /
+  invitation_token_v1 derived sub-secret，session 雙路徑 backward compat 30 天
+- Unicode email NFKC + casefold (新 `src/server/email-utils.ts`) → 6 callsite
+  migrate，防 Turkish İ / homograph mismatch
+
+**FRONTEND**
+
+- 新 SPA page `src/pages/VerifyEmailPage.tsx` — auto-POST verify token，
+  狀態 UI (verifying/success/error) + retry/login/home button + no-JS form fallback
+- `main.tsx` route table 加 `/auth/verify-email`
+
+**TESTING**
+
+- `tests/unit/round-13-server-residuals.test.ts` — 25 個 source-grep guard
+- 全 suite 2478 → 2504 (+26)，tsc clean
+
+closes backlog #132。本系列 (round 12 + 13) 完整收尾 src/server/ security audit。
+
 ## [2.33.58] - 2026-05-24
 
 **Round 12 — src/server/ security + test catch-up (backlog #131)**

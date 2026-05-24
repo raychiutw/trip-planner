@@ -18,9 +18,10 @@ import { logAudit, recordEmailEvent } from './_audit';
 import { requireAuth } from './_auth';
 import { alertAdminTelegram } from './_alert';
 import { AppError } from './_errors';
-import { json, parseJsonBody } from './_utils';
+import { json, parseJsonBody, getPublicOrigin } from './_utils';
 import { sendEmail, EmailError } from '../../src/server/email';
 import { tripInvitation } from '../../src/server/email-templates';
+import { normalizeEmail } from '../../src/server/email-utils';
 import {
   generateInvitationToken,
   invitationExpiresAt,
@@ -163,7 +164,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', 'email 格式不正確');
   }
 
-  const lowerEmail = email.toLowerCase();
+  // v2.33.59 round 13: Unicode-correct (NFKC + casefold)
+  const lowerEmail = normalizeEmail(email);
 
   // Lookup invited user — 決定走 existing-user vs new-email 分支
   const invitedUser = await context.env.DB
@@ -179,7 +181,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .first<{ title: string }>(),
     context.env.DB
       .prepare('SELECT display_name, email FROM users WHERE email = ? LIMIT 1')
-      .bind(auth.email.toLowerCase())
+      .bind(normalizeEmail(auth.email))
       .first<{ display_name: string | null; email: string }>(),
   ]);
   const tripTitle = trip?.title ?? tripId;
@@ -223,7 +225,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       to: lowerEmail,
       tripId,
       inviterEmail,
-      inviteUrl: `${new URL(context.request.url).origin}/trips?selected=${encodeURIComponent(tripId)}`,
+      inviteUrl: `${getPublicOrigin(context.env, context.request)}/trips?selected=${encodeURIComponent(tripId)}`,
       inviterDisplayName,
       tripTitle,
       isExistingUser: true,
@@ -291,7 +293,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     to: lowerEmail,
     tripId,
     inviterEmail,
-    inviteUrl: `${new URL(context.request.url).origin}/invite?token=${encodeURIComponent(rawToken)}`,
+    inviteUrl: `${getPublicOrigin(context.env, context.request)}/invite?token=${encodeURIComponent(rawToken)}`,
     inviterDisplayName,
     tripTitle,
     isExistingUser: false,
