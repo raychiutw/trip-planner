@@ -261,15 +261,20 @@ export interface TripListItem {
 
 /**
  * Trip destination row (multi-dest normalization, migration 0045 added trip_destinations).
+ *
+ * v2.33.65 round 15b: 對齊 v2.31.13 fix family — backend GET /api/trips/:id 經
+ * `deepCamel` 回 camelCase (`destOrder` / `dayQuota` / `subAreas`)。之前 snake_case
+ * 此 type 是 unused (pages 自己定 inline interface)，避免未來 caller 誤用造成同
+ * v2.31.13「permissions 永遠 false → 全 filter 掉」家族 bug。
  */
 export interface TripDestination {
-  dest_order: number;
+  destOrder: number;
   name: string;
   lat?: number | null;
   lng?: number | null;
-  day_quota?: number | null;
+  dayQuota?: number | null;
   /** JSON-parsed array of sub-area names (e.g. ['梅田', '難波']) */
-  sub_areas?: string[] | null;
+  subAreas?: string[] | null;
   // v2.29.0: osm_id / osm_type DROPPED (migration 0062)
 }
 

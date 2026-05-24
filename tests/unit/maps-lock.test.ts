@@ -33,6 +33,11 @@ beforeEach(() => {
   vi.setSystemTime(0);
 });
 
+// v2.33.65 round 15: restore real timers to prevent cross-file leak inside same worker
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe('readLockState', () => {
   it('returns locked=false when app_settings.google_maps_locked = "false"', async () => {
     const db = makeDb([
