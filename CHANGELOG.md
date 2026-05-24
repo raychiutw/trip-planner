@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.100] - 2026-05-25
+
+**Round 49 — /review batch 4: 3 個 MEDIUM finding**
+
+1. **CR-5 `poi-favorites/[id].ts` V2-user DELETE audit log**: always log (was companion only)
+2. **SEC-8 service-token email = ADMIN_EMAIL forge fix**: 永遠 `service:${id}` sentinel
+3. **SEC-6 DEV_MOCK_EMAIL allowlist guard**: deny-list → allowlist fail-closed
+
+Verified: 731/731 API integration pass。
+
+## [2.33.99] - 2026-05-25
+
+**Round 48 — /review batch 3: SEC-5 reports.ts enum oracle + SEC-9 TRIPLINE_API_URL SSRF guard**
+
 ## [2.33.98] - 2026-05-25
 
 **Round 47 — /review batch 2: 2 個 HIGH security findings**
