@@ -3,6 +3,39 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.69] - 2026-05-24
+
+**Round 19 — runbooks + docs cleanup (Round 18 deferred items)**
+
+User: "Loop 全部都做" → 把 Round 18 deferred 的 actionable items 全做完。
+
+**RUNBOOKS** (Round 18 defer 補)
+
+- `docs/runbooks/v2.33-migration-deploy-order.md` — v2.33.x migration list
+  (0067-0071) + additive FK vs destructive DROP 2-phase pattern + race window
+  + sqlite_sequence verify cmd + 不可逆 migration list + post-deploy env reminder
+- `docs/runbooks/oauth-env-setup.md` — V2 OAuth env (SESSION_SECRET /
+  SESSION_IP_HASH_SECRET / PUBLIC_ORIGIN / ENVIRONMENT / OAUTH_SIGNING_PRIVATE_KEY)
+  initial setup + rotation procedure + DEV_MOCK_EMAIL safety + Sentry CSP
+  endpoint setup + verification curl + common issues table
+
+**CLEANUP**
+
+- `README.md` 拔 v2.31.85 inline version note (Round 18 LOW)
+- `tests/README.md` 新建 — naming convention (round-N current vs v2_31_*
+  legacy) + Round 15 deferred refactor list
+
+**Decisions documented**
+
+- 14 個 `v2_31_*.test.ts` 保留不動 (合併 risk vs. reward 不值，加 README
+  說明 convention 變遷 instead)
+
+**TESTING**
+
+- 純文檔 PR — 無新 source-grep test
+- 2621 / 2621 全綠 (unchanged)
+- tsc clean
+
 ## [2.33.68] - 2026-05-24
 
 **Round 18 — docs review + refresh (backlog #139)**
