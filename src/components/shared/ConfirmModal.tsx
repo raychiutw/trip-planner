@@ -57,9 +57,9 @@ const SCOPED_STYLES = `
   margin: 0 0 16px;
   padding: 10px 12px;
   border-radius: var(--radius-md, 12px);
-  background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.08));
-  border: 1px solid var(--color-priority-high-dot, #c0392b);
-  color: var(--color-priority-high-dot, #c0392b);
+  background: var(--color-priority-high-bg);
+  border: 1px solid var(--color-priority-high-dot);
+  color: var(--color-priority-high-dot);
   font-size: var(--font-size-footnote);
   line-height: 1.45;
 }
@@ -88,12 +88,12 @@ const SCOPED_STYLES = `
 .tp-confirm-btn-cancel:focus-visible { outline: 2px solid var(--color-foreground); outline-offset: 2px; }
 
 .tp-confirm-btn-danger {
-  background: var(--color-priority-high-dot, #c0392b);
+  background: var(--color-priority-high-dot);
   color: #fff;
-  border-color: var(--color-priority-high-dot, #c0392b);
+  border-color: var(--color-priority-high-dot);
 }
 .tp-confirm-btn-danger:hover { filter: brightness(0.92); }
-.tp-confirm-btn-danger:focus-visible { outline: 2px solid var(--color-priority-high-dot, #c0392b); outline-offset: 2px; }
+.tp-confirm-btn-danger:focus-visible { outline: 2px solid var(--color-priority-high-dot); outline-offset: 2px; }
 .tp-confirm-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
