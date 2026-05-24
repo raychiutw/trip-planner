@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.83] - 2026-05-24
+
+**Round 32 — Path A 完整嘗試 + 結論：port exhaustion 非 isolation 問題**
+
+繼 v2.33.82 prerequisite work（19 個 fake timer cleanup）後完成完整 Path A：
+- 重構 1 個 module-level mock conflict file
+- 啟用 `isolate: false + singleFork: true`
+- 實測：21 file fail（baseline 22）+ 28 test fail（baseline 27）— **same as baseline**
+
+**結論**：EADDRNOTAVAIL **不是 Miniflare instance 過多造成**，而是 **per-test
+fetch() round-trip 在 Miniflare 內部 HTTP layer 累 socket TIME_WAIT**。`isolate: false`
+讓 singleton 真正生效 ≠ 解 socket churn。Path A 不可行。
+
+**FIX**
+
+- `tests/api/invitations-accept.test.ts` 重構：top-level `vi.mock('_session')` →
+  scoped `beforeEach` 內 `vi.doMock` + dynamic import SUT + dynamic import AppError。
+  即使不開 isolate: false，這是 test hygiene 改善（無 module-level 全域污染風險）。
+
+**REVERTED**
+
+- `vitest.config.api.mts` `isolate: false + pool=forks + singleFork=true` — 確認
+  對 port exhaustion 無實際助益，反而留下 future devs vi.mock 全域污染 footgun。
+
+**Path A retrospective written**：root cause 是 architecture-level（每 test
+HTTP round-trip 走 Miniflare），要解需 rewrite handler 直接 call（無 HTTP），
+工作量 → 數十小時 vs CI retry 已 cover，不做。
+
 ## [2.33.82] - 2026-05-24
 
 **Round 31 — 19 個 fake timer test files 加 afterEach cleanup**
