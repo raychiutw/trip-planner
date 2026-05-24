@@ -295,18 +295,27 @@ async function handleAuth(
   if (scopeError) return scopeError;
 
   // UTF-8 body validation for mutating requests
+  // v2.33.95 simplify: 對 JSON content-type request skip middleware body 全 scan。
+  // 1. UTF-8 validity → handler 之後 JSON.parse 失敗就 throw DATA_VALIDATION
+  // 2. 亂碼偵測 → handler 對 user-facing 欄位（trip name / entry note）各自
+  //    detectGarbledText，全 body scan 多 CPU 卻沒額外阻擋價值
+  // 非 JSON body（form-encoded / multipart / raw text）仍跑 middleware scan，
+  // 因為這些 path 沒進 parseJsonBody，handler 不會自帶 fail-safe。
   const method = request.method.toUpperCase();
   if (['POST', 'PUT', 'PATCH'].includes(method)) {
-    const cloned = request.clone();
-    try {
-      const decoder = new TextDecoder('utf-8', { fatal: true });
-      const bodyText = decoder.decode(new Uint8Array(await cloned.arrayBuffer()));
-      // 亂碼偵測（常見於 CP950/Big5 → UTF-8 誤轉），統一在 middleware 層阻擋
-      if (detectGarbledText(bodyText)) {
-        return errorResponse(new AppError('DATA_ENCODING', 'Request body 包含疑似亂碼，請確認 encoding 為 UTF-8'));
+    const contentType = request.headers.get('content-type') ?? '';
+    const isJson = contentType.includes('application/json');
+    if (!isJson) {
+      const cloned = request.clone();
+      try {
+        const decoder = new TextDecoder('utf-8', { fatal: true });
+        const bodyText = decoder.decode(new Uint8Array(await cloned.arrayBuffer()));
+        if (detectGarbledText(bodyText)) {
+          return errorResponse(new AppError('DATA_ENCODING', 'Request body 包含疑似亂碼，請確認 encoding 為 UTF-8'));
+        }
+      } catch {
+        return errorResponse(new AppError('DATA_ENCODING', 'Request body is not valid UTF-8'));
       }
-    } catch {
-      return errorResponse(new AppError('DATA_ENCODING', 'Request body is not valid UTF-8'));
     }
   }
 
