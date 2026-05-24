@@ -48,14 +48,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const entryPoisMap = await fetchEntryPoisByEntries(db, entryRows.map((e) => e.id as number));
 
-  const assembled = assembleDay(
-    day,
-    entryRows,
+  const assembled = assembleDay({
+    dayRow: day,
+    entries: entryRows,
     poiMap,
     parkingMap,
     entryPoisMap,
     segmentsMap,
-  );
+  });
 
   return json(assembled);
 };

@@ -65,12 +65,23 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   let cachedSource: ReturnType<typeof detectSource> | undefined;
   const getSource = () => (cachedSource ??= detectSource(request));
 
+  // v2.33.94 simplify: bot scanner anonymous 4xx noise filter — 不寫 api_logs。
+  // Bot 大量 GET /admin /wp-login /.env 等 → 401/403/404/405 在 daily-check 全
+  // 被 filter 掉，但 INSERT 仍 burn D1 writes + 表無上限長大。Auth 過的 4xx
+  // (V2 user / service-token / companion / scheduler) 仍 log 為 legitimate
+  // user-error 追蹤。500 一律 log 因屬內部 bug。
+  function shouldLogStatus(status: number): boolean {
+    if (status >= 500) return true;
+    if (status < 400) return false;
+    return getSource() !== 'anonymous';
+  }
+
   try {
     const response = await handleAuth(context);
 
     // Log 4xx/5xx responses
     const duration = Date.now() - start;
-    if (response.status >= 400) {
+    if (response.status >= 400 && shouldLogStatus(response.status)) {
       context.waitUntil(
         env.DB.prepare(
           'INSERT INTO api_logs (method, path, status, duration, source) VALUES (?, ?, ?, ?, ?)',
@@ -85,13 +96,15 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
     // AppError = 預期錯誤（handler throw）→ 結構化回應
     if (err instanceof AppError) {
-      context.waitUntil(
-        env.DB.prepare(
-          'INSERT INTO api_logs (method, path, status, error, duration, source) VALUES (?, ?, ?, ?, ?, ?)',
-        )
-          .bind(request.method, url.pathname, err.status, err.detail ? `${err.code}: ${err.detail}` : err.code, duration, getSource())
-          .run(),
-      );
+      if (shouldLogStatus(err.status)) {
+        context.waitUntil(
+          env.DB.prepare(
+            'INSERT INTO api_logs (method, path, status, error, duration, source) VALUES (?, ?, ?, ?, ?, ?)',
+          )
+            .bind(request.method, url.pathname, err.status, err.detail ? `${err.code}: ${err.detail}` : err.code, duration, getSource())
+            .run(),
+        );
+      }
       return errorResponse(err);
     }
 

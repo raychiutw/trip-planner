@@ -76,14 +76,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const days = dayRows.map((day) => {
     const dayId = day.id as number;
-    return assembleDay(
-      day,
-      entriesByDay.get(dayId) ?? [],
+    return assembleDay({
+      dayRow: day,
+      entries: entriesByDay.get(dayId) ?? [],
       poiMap,
       parkingMap,
       entryPoisMap,
       segmentsMap,
-    );
+    });
   });
 
   return json(days);
