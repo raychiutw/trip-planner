@@ -17,6 +17,14 @@ function makeStmt(firstResult: unknown = null) {
   return stmt;
 }
 
+/**
+ * v2.33.85: handler 跑 IP rate-limit check FIRST (line 56)，需 prepare 返
+ * statement chain 而非 undefined。預設返 empty rate limit row (allow)。
+ */
+function makeDbWithRateLimitStub(): MockEnv['DB'] {
+  return { prepare: vi.fn().mockReturnValue(makeStmt()) };
+}
+
 function makeContext(body: unknown, env: MockEnv): Parameters<typeof onRequestPost>[0] {
   return {
     request: new Request('https://x.com/api/oauth/reset-password', {
@@ -45,14 +53,14 @@ afterEach(() => {
 
 describe('POST /api/oauth/reset-password', () => {
   it('400 RESET_TOKEN_MISSING when token empty', async () => {
-    const env: MockEnv = { DB: { prepare: vi.fn() } };
+    const env: MockEnv = { DB: makeDbWithRateLimitStub() };
     const res = await onRequestPost(makeContext({ password: 'newpass123' }, env));
     expect(res.status).toBe(400);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('RESET_TOKEN_MISSING');
   });
 
   it('400 RESET_PASSWORD_TOO_SHORT when password < 8 chars', async () => {
-    const env: MockEnv = { DB: { prepare: vi.fn() } };
+    const env: MockEnv = { DB: makeDbWithRateLimitStub() };
     const res = await onRequestPost(makeContext({ token: 'tok', password: 'short' }, env));
     expect(res.status).toBe(400);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('RESET_PASSWORD_TOO_SHORT');

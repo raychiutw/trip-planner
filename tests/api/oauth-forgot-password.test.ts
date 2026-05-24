@@ -209,7 +209,7 @@ describe('POST /api/oauth/forgot-password', () => {
     vi.unstubAllGlobals();
   });
 
-  it('returns 500 + audit + alert when TRIPLINE_API_URL unset (Q7 — UX > anti-enum)', async () => {
+  it('200 generic + audit + alert when TRIPLINE_API_URL unset (v2.33.59 round 13: background send anti-enum)', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
@@ -217,12 +217,16 @@ describe('POST /api/oauth/forgot-password', () => {
       if (sql.includes('SELECT u.id')) return makeStmt({ user_id: 'u', display_name: null });
       return makeStmt();
     });
-    const env: MockEnv = { DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({ email: 'u@x.com' }, env));
-    expect(res.status).toBe(500);
-    const json = await res.json() as { error: { code: string; message: string } };
-    expect(json.error.code).toBe('EMAIL_SEND_FAILED');
-    expect(json.error.message).toContain('寄送失敗');
+    const waitPromises: Promise<unknown>[] = [];
+    const ctx = makeContext({ email: 'u@x.com' }, { DB: { prepare: dbPrepare } });
+    (ctx as unknown as { waitUntil: (p: Promise<unknown>) => void }).waitUntil = (p) => {
+      waitPromises.push(p);
+    };
+    const res = await onRequestPost(ctx);
+    // v2.33.59 round 13: 改 background send via context.waitUntil → 200 generic
+    // (anti-enum)。失敗只記 audit + telegram，不洩漏給 caller。
+    expect(res.status).toBe(200);
+    await Promise.all(waitPromises);
 
     // audit_log INSERT for 'failed' email event
     const auditInsert = dbPrepare.mock.calls.find(

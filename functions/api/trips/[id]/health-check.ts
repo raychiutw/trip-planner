@@ -178,7 +178,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
          created_at = datetime('now'),
          completed_at = NULL`,
     )
-    .bind(tripId, auth.email)
+    // v2.33.85 bug fix: 之前用 auth.email 寫進 user_id（FK to users.id），
+    // migration 0069 加 FK 後此 INSERT FK-fail。Email ≠ userId（users.id 是 uuid）。
+    .bind(tripId, auth.userId)
     .run();
 
   // 2. INSERT trip_requests — chat trail
@@ -249,7 +251,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     {
       report: {
         tripId,
-        userId: auth.email,
+        userId: auth.userId,
         status: 'pending',
         requestId,
         findings: [],

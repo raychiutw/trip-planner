@@ -196,9 +196,13 @@ describe('DELETE /api/account/connected-apps/:client_id', () => {
       if (sql.includes('DELETE FROM oauth_models')) return makeStmt();
       return makeStmt();
     });
+    // v2.33.85: handler 用 DB.batch() 做 atomic delete，mock 需提供 batch stub
     const env: MockEnv = {
       SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
+      DB: {
+        prepare: dbPrepare,
+        batch: vi.fn().mockResolvedValue([{ meta: { changes: 1 } }, { meta: { changes: 2 } }]),
+      } as unknown as MockEnv['DB'],
     };
     const req = await makeAuthedRequest('https://x.com/api/account/connected-apps/tp_abc', 'DELETE');
     const res = await onRequestDelete(makeDeleteContext(req, env, 'tp_abc'));
@@ -207,7 +211,7 @@ describe('DELETE /api/account/connected-apps/:client_id', () => {
     expect(json.ok).toBe(true);
     expect(json.revoked_client_id).toBe('tp_abc');
 
-    // Two DELETE calls: consent destroy + bulk token cleanup
+    // Two DELETE statements: consent destroy + bulk token cleanup (batched together)
     const deleteCalls = dbPrepare.mock.calls.filter(
       (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM oauth_models'),
     );

@@ -17,6 +17,16 @@ function makeStmt(firstResult: unknown = null) {
   };
 }
 
+/**
+ * v2.33.85: handler 跑 IP+email rate-limit check BEFORE everything else
+ * (v2.33.52 round 8d 引入)。預設返 empty rate-limit row (allow)。tests 需
+ * vi.fn().mockReturnValue(makeStmt()) 而不能用 raw vi.fn()，否則 prepare 返
+ * undefined 後 .bind() 炸 TypeError。
+ */
+function makeRateLimitDb(): MockEnv['DB'] {
+  return { prepare: vi.fn().mockReturnValue(makeStmt()) };
+}
+
 function makeVerifyContext(query: string, env: MockEnv): Parameters<typeof onRequestGet>[0] {
   return {
     request: new Request(`https://x.com/api/oauth/verify?${query}`, { method: 'GET' }),
@@ -178,7 +188,7 @@ describe('GET /api/oauth/verify', () => {
 
 describe('POST /api/oauth/send-verification', () => {
   it('200 generic response when email empty (no enum leak)', async () => {
-    const env: MockEnv = { DB: { prepare: vi.fn() } };
+    const env: MockEnv = { DB: makeRateLimitDb() };
     const res = await onSendVerification(makeSendContext({}, env));
     expect(res.status).toBe(200);
     const json = await res.json() as { ok: boolean; message: string };
@@ -253,8 +263,11 @@ describe('POST /api/oauth/send-verification', () => {
     const env: MockEnv = { DB: { prepare: dbPrepare } };
     await onSendVerification(makeSendContext({ email: 'u@x.com' }, env));
 
-    const sql = dbPrepare.mock.calls[0][0] as string;
-    expect(sql).toContain('email_verified_at IS NULL');
+    // v2.33.85: rate-limit check 跑在前，user SELECT 不一定是 calls[0]。
+    // 改 find 含 'email_verified_at IS NULL' 的 call。
+    const sqls = dbPrepare.mock.calls.map((c) => c[0] as string);
+    const userSelect = sqls.find((s) => s.includes('email_verified_at IS NULL'));
+    expect(userSelect).toBeDefined();
   });
 
   it('email lowercase + trim before lookup', async () => {
@@ -277,12 +290,19 @@ describe('POST /api/oauth/send-verification', () => {
       }
       return makeStmt();
     });
-    const env = {
+    // v2.33.85: v2.33.59 round 13 H2 改 background send via context.waitUntil
+    // → 必須 collect promise 並 await，否則 mailer call 還沒發 test 已結束。
+    const waitPromises: Promise<unknown>[] = [];
+    const ctx = makeSendContext({ email: 'u@x.com' }, {
       DB: { prepare: dbPrepare },
       TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
       TRIPLINE_API_SECRET: 'test-bearer',
+    } as never);
+    (ctx as unknown as { waitUntil: (p: Promise<unknown>) => void }).waitUntil = (p) => {
+      waitPromises.push(p);
     };
-    await onSendVerification(makeSendContext({ email: 'u@x.com' }, env as never));
+    await onSendVerification(ctx);
+    await Promise.all(waitPromises);
 
     const mailerCall = fetchMock.mock.calls.find(
       (c) => typeof c[0] === 'string' && (c[0] as string).includes('/internal/mail/send'),
@@ -294,12 +314,13 @@ describe('POST /api/oauth/send-verification', () => {
     const body = JSON.parse(init.body as string) as Record<string, unknown>;
     expect(body.to).toBe('u@x.com');
     expect(body.subject).toContain('驗證');
-    expect(body.html).toContain('https://x.com/api/oauth/verify?token=');
+    // v2.33.59 round 13 H2: email link 改指 SPA landing /auth/verify-email
+    expect(body.html).toContain('/auth/verify-email?token=');
     expect(body.template).toBe('verification');
     vi.unstubAllGlobals();
   });
 
-  it('returns 500 + audit when TRIPLINE_API_URL missing (Q7 — UX > anti-enum)', async () => {
+  it('200 generic + audit + alert when TRIPLINE_API_URL missing (v2.33.59 round 13: background send anti-enum)', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
@@ -309,9 +330,16 @@ describe('POST /api/oauth/send-verification', () => {
       }
       return makeStmt();
     });
-    const env = { DB: { prepare: dbPrepare } }; // NO TRIPLINE_API_URL
-    const res = await onSendVerification(makeSendContext({ email: 'u@x.com' }, env as never));
-    expect(res.status).toBe(500);
+    const waitPromises: Promise<unknown>[] = [];
+    const ctx = makeSendContext({ email: 'u@x.com' }, { DB: { prepare: dbPrepare } } as never);
+    (ctx as unknown as { waitUntil: (p: Promise<unknown>) => void }).waitUntil = (p) => {
+      waitPromises.push(p);
+    };
+    const res = await onSendVerification(ctx);
+    // v2.33.59 round 13 H2: 改 background send，response 永遠 200 generic (anti-enum)。
+    // sendEmail 失敗只記 audit + telegram，不洩漏給 caller。
+    expect(res.status).toBe(200);
+    await Promise.all(waitPromises);
 
     // audit_log INSERT for failed email event
     const auditInsert = dbPrepare.mock.calls.find(
@@ -319,12 +347,15 @@ describe('POST /api/oauth/send-verification', () => {
     );
     expect(auditInsert).toBeTruthy();
 
-    // No fetch (sendEmail throws before fetch; alertAdminTelegram skipped — no env)
-    expect(fetchMock).not.toHaveBeenCalled();
+    // No mailer fetch (sendEmail throws before fetch when TRIPLINE_API_URL missing)
+    const mailerCall = fetchMock.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('/internal/mail/send'),
+    );
+    expect(mailerCall).toBeFalsy();
     vi.unstubAllGlobals();
   });
 
-  it('returns 500 when mac mini mailer fails (Q7 strict for primary deliverable)', async () => {
+  it('200 generic + audit when mac mini mailer fails (v2.33.59 round 13: silent failure)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ error: 'SMTP unreachable' }), { status: 500 }),
     ));
@@ -335,13 +366,19 @@ describe('POST /api/oauth/send-verification', () => {
       }
       return makeStmt();
     });
-    const env = {
+    const waitPromises: Promise<unknown>[] = [];
+    const ctx = makeSendContext({ email: 'u@x.com' }, {
       DB: { prepare: dbPrepare },
       TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
       TRIPLINE_API_SECRET: 'test-bearer',
+    } as never);
+    (ctx as unknown as { waitUntil: (p: Promise<unknown>) => void }).waitUntil = (p) => {
+      waitPromises.push(p);
     };
-    const res = await onSendVerification(makeSendContext({ email: 'u@x.com' }, env as never));
-    expect(res.status).toBe(500);
+    const res = await onSendVerification(ctx);
+    // v2.33.59 round 13 H2: 200 generic even on mailer failure
+    expect(res.status).toBe(200);
+    await Promise.all(waitPromises);
     vi.unstubAllGlobals();
   });
 });
