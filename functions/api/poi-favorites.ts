@@ -3,14 +3,21 @@
  * POST /api/poi-favorites { poiId, note?, companionRequestId? } — 新增收藏
  *
  * Companion path: see functions/api/_companion.ts (requireFavoriteActor +
- * pickFavoriteRateLimitBucket). companion always rate-limited; V2 user admin bypasses.
+ * pickFavoriteBucketForActor). companion always rate-limited; V2 user admin bypasses.
+ *
+ * v2.33.105 SEC-2: pre-gate per-IP throttle 在 actor resolve 之前；post-gate
+ * bucket 用 resolved actor 而非 claimed body 防 bucket-spoof DoS。
  */
 import { AppError } from './_errors';
 import { buildRateLimitResponse } from './_errors';
 import { logAudit } from './_audit';
 import { json, parseJsonBody } from './_utils';
 import { bumpRateLimit, RATE_LIMITS } from './_rate_limit';
-import { pickFavoriteRateLimitBucket, requireFavoriteActor } from './_companion';
+import {
+  pickFavoriteBucketForActor,
+  preGateFavoriteThrottle,
+  requireFavoriteActor,
+} from './_companion';
 import type { Env, AuthData } from './_types';
 
 interface PoiFavoritePostBody {
@@ -28,6 +35,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   let effectiveUserId: string;
   const headerScope = context.request.headers.get('X-Request-Scope');
   if (headerScope === 'companion') {
+    // v2.33.105 SEC-2: pre-gate per-IP throttle 防 actor resolve DB hammering
+    const preGate = await preGateFavoriteThrottle(context.env, context.request);
+    if (preGate) return preGate;
     const actor = await requireFavoriteActor(context, null, 'favorite_list');
     effectiveUserId = actor.userId;
   } else if (auth?.userId) {
@@ -99,13 +109,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = (context.data as { auth?: AuthData }).auth ?? null;
 
-  // 解析 body 第一步（要 companionRequestId 算 bucket key）。malformed body 直接 400。
+  // v2.33.105 SEC-2: pre-gate per-IP throttle 在 actor resolve 之前。寬鬆
+  // 200/5min/IP，正常 user 不會打中；攻擊者 hammer 才會觸 lock。
+  const preGate = await preGateFavoriteThrottle(context.env, context.request);
+  if (preGate) return preGate;
+
+  // 解析 body。malformed body 直接 400。
   const body = await parseJsonBody<PoiFavoritePostBody>(context.request);
 
-  const bucket = pickFavoriteRateLimitBucket(context.request, body, 'poi-favorites-post', auth);
-  if (bucket) {
-    const bump = await bumpRateLimit(context.env.DB, bucket, RATE_LIMITS.POI_FAVORITES_WRITE);
-    if (!bump.ok) return buildRateLimitResponse(bump.retryAfter ?? 60, { error: 'RATE_LIMITED' });
+  // 先驗 poiId 早 reject 不浪費 actor resolve（companion 與 V2 user 共用）
+  if (!body.poiId || !Number.isInteger(body.poiId) || body.poiId <= 0) {
+    throw new AppError('DATA_VALIDATION', '缺少或無效的 poiId');
   }
 
   // 真正解 effective userId。companion gate 失敗 → V2 user fallback；
@@ -113,9 +127,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 同時為 companion 模式寫 companion_request_actions（UNIQUE 衝突 → 409 COMPANION_QUOTA_EXCEEDED）。
   const actor = await requireFavoriteActor(context, body, 'favorite_create');
 
-  // 驗 poiId（companion 與 V2 user 共用）
-  if (!body.poiId || !Number.isInteger(body.poiId) || body.poiId <= 0) {
-    throw new AppError('DATA_VALIDATION', '缺少或無效的 poiId');
+  // v2.33.105 SEC-2: post-gate bucket 用 RESOLVED actor，而非 claimed body。
+  // V2 user admin bypass 由 caller 決定（保留既有語意）。
+  const bucket = pickFavoriteBucketForActor(
+    actor,
+    'poi-favorites-post',
+    !actor.isCompanion && auth?.isAdmin === true,
+  );
+  if (bucket) {
+    const bump = await bumpRateLimit(context.env.DB, bucket, RATE_LIMITS.POI_FAVORITES_WRITE);
+    if (!bump.ok) return buildRateLimitResponse(bump.retryAfter ?? 60, { error: 'RATE_LIMITED' });
   }
 
   // INSERT poi_favorites — FK 失敗（POI 不存在）轉 404；UNIQUE 違反 → 409

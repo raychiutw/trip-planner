@@ -13,7 +13,7 @@
 import { AppError } from '../_errors';
 import { logAudit } from '../_audit';
 import { parseIntParam, parseJsonBody } from '../_utils';
-import { assertFavoriteOwnership, requireFavoriteActor } from '../_companion';
+import { assertFavoriteOwnership, preGateFavoriteThrottle, requireFavoriteActor } from '../_companion';
 import type { Env, AuthData } from '../_types';
 
 interface DeleteBody {
@@ -24,6 +24,10 @@ export const onRequestDelete: PagesFunction<Env, 'id'> = async (context) => {
   const auth = (context.data as { auth?: AuthData }).auth ?? null;
   const id = parseIntParam(context.params.id as string);
   if (!id) throw new AppError('DATA_VALIDATION', 'id 須為正整數');
+
+  // v2.33.105 SEC-2: pre-gate per-IP throttle 在 actor resolve / DB work 之前
+  const preGate = await preGateFavoriteThrottle(context.env, context.request);
+  if (preGate) return preGate;
 
   // body 為 optional（V2 user DELETE 通常無 body）。companion 模式需要 companionRequestId。
   let body: DeleteBody | null = null;

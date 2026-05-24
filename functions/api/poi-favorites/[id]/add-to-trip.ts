@@ -24,7 +24,12 @@ import { detectGarbledText } from '../../_validate';
 import { json, parseIntParam, parseJsonBody } from '../../_utils';
 // v2.26.0: TIME_RE canonical 在 _time.ts（migration 0056 後 entry-time helpers 統一住處）。
 import { TIME_RE } from '../../_time';
-import { assertFavoriteOwnership, pickFavoriteRateLimitBucket, requireFavoriteActor } from '../../_companion';
+import {
+  assertFavoriteOwnership,
+  pickFavoriteBucketForActor,
+  preGateFavoriteThrottle,
+  requireFavoriteActor,
+} from '../../_companion';
 import { bumpRateLimit, RATE_LIMITS } from '../../_rate_limit';
 import type { Env, AuthData } from '../../_types';
 
@@ -50,6 +55,10 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   const favoriteId = parseIntParam(context.params.id as string);
   if (!favoriteId) throw new AppError('DATA_VALIDATION', 'favoriteId 須為正整數');
 
+  // v2.33.105 SEC-2: pre-gate per-IP throttle 在 actor resolve / DB work 之前
+  const preGate = await preGateFavoriteThrottle(context.env, context.request);
+  if (preGate) return preGate;
+
   const body = await parseJsonBody<Body>(context.request);
 
   // 廢除欄位 reject — 防止 client/skill 送 stale schema（design D14）
@@ -72,15 +81,20 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     throw new AppError('DATA_VALIDATION', 'endTime 必填，須為 HH:MM 格式');
   }
 
-  // Rate limit — bucket key 與 POST /api/poi-favorites 區隔（自己一池），避免互相吃 quota。
-  const rlBucket = pickFavoriteRateLimitBucket(context.request, body, 'poi-favorites-add-to-trip', auth);
+  // Resolve effective actor（V2 user 或 companion submitter；gate 失敗 → 401）
+  const actor = await requireFavoriteActor(context, body, 'add_to_trip');
+
+  // v2.33.105 SEC-2: post-gate bucket — 用 RESOLVED actor，bucket key 與 POST
+  // /api/poi-favorites 區隔（自己一池），避免互相吃 quota。
+  const rlBucket = pickFavoriteBucketForActor(
+    actor,
+    'poi-favorites-add-to-trip',
+    !actor.isCompanion && auth?.isAdmin === true,
+  );
   if (rlBucket) {
     const bump = await bumpRateLimit(context.env.DB, rlBucket, RATE_LIMITS.POI_FAVORITES_WRITE);
     if (!bump.ok) return buildRateLimitResponse(bump.retryAfter ?? 60, { error: 'RATE_LIMITED' });
   }
-
-  // Resolve effective actor（V2 user 或 companion submitter；gate 失敗 → 401）
-  const actor = await requireFavoriteActor(context, body, 'add_to_trip');
 
   const db = context.env.DB;
 

@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.105] - 2026-05-25
+
+**Round 54 — /review batch 9: SEC-2 poi-favorites bucket-spoof DoS prevention（4-caller refactor）**
+
+`pickFavoriteRateLimitBucket` 之前從 `body.companionRequestId` (claimed) 直接
+組 bucket key 並在 actor resolve 之前 bump。Attack：unauthenticated attacker
+送 X-Request-Scope: companion + companionRequestId: 999 → bucket
+`poi-favorites-post:companion:999` 被 bump 即使後續 actor resolve 401。
+10 個 fake request → bucket lock 60s → 之後 legit user with requestId=999
+被擋 429。
+
+Fix（4-caller refactor）：
+- 新 `preGateFavoriteThrottle(env, request)` — pre-gate per-IP throttle
+  (200/5min/IP)，在 actor resolve / DB work 之前擋 unauthenticated hammering。
+- 新 `pickFavoriteBucketForActor(actor, prefix, isAdminBypass)` — bucket key
+  用 RESOLVED actor 而非 claimed body。Admin V2 user bypass 由 caller 控制
+  （保留既有語意）。
+- 移除舊 `pickFavoriteRateLimitBucket` 完全 rip-out。
+- 4 callers 改流程：pre-gate IP throttle → parse body → validation early reject
+  → resolve actor → pick post-gate bucket → bump → proceed。
+- 新 `RATE_LIMITS.POI_FAVORITES_PRE_GATE_IP` preset (200/5min/IP, 5min lockout)。
+
+涵蓋 endpoints：
+- `GET /api/poi-favorites`（companion path 新增 pre-gate）
+- `POST /api/poi-favorites`
+- `DELETE /api/poi-favorites/:id`（新增 pre-gate）
+- `POST /api/poi-favorites/:id/add-to-trip`
+
+更新 1 個 burst-concurrent test 對齊 post-gate bucket order；新增 4 個 SEC-2
+regression test（spoof, lock prevention, pre-gate enforcement, resolved-actor
+bucket）。
+
+Verified: 754/754 API integration pass + tsc clean。
+
 ## [2.33.104] - 2026-05-25
 
 **Round 53 — /review batch 8: test coverage gaps 補上 18 個 test (T-5/T-8/T-9/T-10)**
