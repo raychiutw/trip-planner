@@ -81,9 +81,19 @@ export function ActiveTripProvider({ children }: ActiveTripProviderProps) {
 export function useActiveTrip(): ActiveTripContextValue {
   const ctx = useContext(ActiveTripContext);
   if (ctx == null) {
-    // SSR / 未包 provider 時 fallback：直接讀 localStorage（非 reactive，唯讀）
+    // v2.33.64 round 15: SSR no-op (server render 無 state)。
     if (typeof window === 'undefined') {
       return { activeTripId: null, setActiveTrip: () => {} };
+    }
+    // Browser without provider: 之前 fallback 直接讀寫 localStorage 但其他 consumer
+    // 不 re-render (state 跟 LS 不 sync)，silent 失敗。改 dev warn + 保留 LS-only
+    // fallback 避免破既有 test。
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[useActiveTrip] called outside <ActiveTripProvider> — setActiveTrip() ' +
+          'will write localStorage but NOT trigger re-render in other consumers.',
+      );
     }
     return {
       activeTripId: lsGet<string>(LS_KEY_TRIP_PREF),

@@ -21,10 +21,24 @@ interface NewTripContextValue {
   openModal: () => void;
 }
 
-const NewTripContext = createContext<NewTripContextValue>({ openModal: () => {} });
+// v2.33.64 round 15: default 改 dev-mode warn + prod silent no-op。之前
+// pure silent no-op 讓 caller outside provider 點 button 完全沒反應，bug 難 trace。
+// Warning 在 dev 立刻暴露，prod 保留 graceful (避免 single missing provider 整 app 崩)。
+const NewTripContext = createContext<NewTripContextValue | null>(null);
 
 export function useNewTrip(): NewTripContextValue {
-  return useContext(NewTripContext);
+  const ctx = useContext(NewTripContext);
+  if (ctx == null) {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[useNewTrip] called outside <NewTripProvider> — openModal() will no-op. ' +
+          'Wrap with <NewTripProvider> in src/entries/main.tsx.',
+      );
+    }
+    return { openModal: () => {} };
+  }
+  return ctx;
 }
 
 export function NewTripProvider({ children }: { children: ReactNode }) {
