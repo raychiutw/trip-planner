@@ -68,7 +68,7 @@
     "@sentry/react": "^10.45.0",
     "@sentry/vite-plugin": "^5.1.1",
     "@types/google.maps": "^3.64.0",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react": "^6.0.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.2.1",
     "html2pdf.js": "^0.14.0",
