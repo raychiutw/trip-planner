@@ -404,9 +404,9 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 
 **Polling**：pending state 每 3000ms `GET /api/trips/:id/health-check` 直到 status 變 completed/failed。`pollRef` 持 timeout id 避免 effect 重渲漏清。`prefers-reduced-motion` → pulse animation 停。
 
-**Sticky bottom bar**：含「回行程」ghost button（report 存在時才顯示）+ 主 CTA（依 state 改字：開始健檢 / 重新生成 / 再重新生成 / 健檢進行中…）。
+**Title bar action**（v2.33.110+）：主 CTA `<TitleBarPrimaryAction icon="sparkle">` 放 TitleBar `actions` slot，依 state 改 label：開始健檢 / 重新生成 / 再重新生成 / 健檢進行中⋯ / 送出中⋯。「回行程」由 TitleBar 左上 `←` 取代（`backLabel="回行程"`），不再重複 button。`entryCount===0` 時 title bar action `disabled` + 頁面顯示 `.tp-ai-health-notice` banner 補語意。
 
-**Mockup**：`/tmp/TripAIHealth-variants.html` Variant C (sign-off 2026-05-16)。
+**Mockup**：`/tmp/TripAIHealth-variants.html` Variant C (sign-off 2026-05-16) — sticky bar 版本，v2.33.110 拔掉 sticky bar 改 title bar action。
 
 **Finding card 結構（v2.31.1 Phase 2 extended）**
 

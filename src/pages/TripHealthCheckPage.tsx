@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TitleBar from '../components/shell/TitleBar';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -356,65 +357,18 @@ const SCOPED_STYLES = `
   opacity: 0.55;
 }
 
-/* Bottom action bar — v2.33.109 dark mode fix：原本 background 寫死 rgba(250,244,234)
- * 米色，dark mode 下整條 bar 跟 page bg (#1A140F) 完全不和諧。改 color-mix from
- * --color-background token 對齊既有 frosted glass nav pattern，dark mode 自動跟。 */
-.tp-ai-health-bottombar {
-  position: sticky;
-  bottom: 0;
-  background: color-mix(in srgb, var(--color-background) 86%, transparent);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
-  border-top: 1px solid var(--color-border);
-  padding: 12px 16px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
-}
-.tp-ai-health-bottombar .regen-primary {
-  flex: 1;
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  border: 0;
-  border-radius: var(--radius-full);
-  padding: 12px 18px;
-  font-size: 15px;
-  line-height: 20px;
-  font-weight: 600;
-  cursor: pointer;
-  min-height: 44px;
-}
-.tp-ai-health-bottombar .regen-primary:hover { background: var(--color-accent-deep); }
-.tp-ai-health-bottombar .regen-primary:disabled {
-  background: var(--color-disabled);
-  cursor: wait;
-}
-/* v2.31.58 empty trip guard：button 旁邊 inline hint。color: muted，
-   不搶 button focus；padding 與 button 對齊。 */
-.tp-ai-health-bottombar .tp-ai-health-empty-hint {
-  flex: 1;
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--color-muted);
-  padding: 0 12px;
-}
-.tp-ai-health-bottombar .ghost {
-  background: transparent;
-  color: var(--color-foreground);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  padding: 12px 16px;
+/* Empty trip guard banner — entryCount===0 時顯示。border-left accent + muted text
+ * 對齊 .tp-ai-health-error 視覺重量（low-key info / advisory）。CTA disabled
+ * 在 title bar action，這個 banner 補語意說明為什麼 disabled。 */
+.tp-ai-health-notice {
+  background: color-mix(in srgb, var(--color-tertiary-bg, var(--color-background)) 70%, transparent);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 16px;
   font-size: 14px;
-  line-height: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  min-height: 44px;
-}
-.tp-ai-health-bottombar .ghost:hover {
-  background: var(--color-hover);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  line-height: 20px;
+  color: var(--color-foreground);
 }
 
 /* Error state */
@@ -633,12 +587,40 @@ export default function TripHealthCheckPage() {
   const hasResults = isCompleted && findings.length > 0;
   const hasNoIssues = isCompleted && findings.length === 0;
 
+  const ctaLabel = submitting
+    ? '送出中⋯'
+    : isPending && isRegenerating
+      ? '再重新生成'
+      : isPending
+        ? '健檢進行中⋯'
+        : report
+          ? '重新生成'
+          : '開始健檢';
+
   const main = (
     <div className="tp-ai-health-shell" data-testid="ai-health-page">
       <style>{SCOPED_STYLES}</style>
-      <TitleBar title="AI 健檢" back={handleBack} backLabel="回行程" />
+      <TitleBar
+        title="AI 健檢"
+        back={handleBack}
+        backLabel="回行程"
+        actions={!initialLoading && (
+          <TitleBarPrimaryAction
+            icon="sparkle"
+            label={ctaLabel}
+            disabled={submitting || isPending || entryCount === 0}
+            onClick={handleStart}
+            testId="ai-health-start-btn"
+          />
+        )}
+      />
 
       <div className="tp-ai-health-body">
+        {!initialLoading && entryCount === 0 && (
+          <div className="tp-ai-health-notice" role="status" data-testid="ai-health-empty-hint">
+            此行程尚無景點，請先加入景點再執行健檢
+          </div>
+        )}
         <div className="tp-ai-health-hero">
           <div className="eyebrow">AI 行程建議</div>
           <h1 data-testid="ai-health-title">{tripTitle}</h1>
@@ -807,40 +789,6 @@ export default function TripHealthCheckPage() {
           </div>
         )}
       </div>
-
-      {!initialLoading && (
-        <div className="tp-ai-health-bottombar">
-          {/* v2.31.58 empty trip guard：沒任何 entry 顯示 hint 取代 button。
-              entryCount === null 是 fetch 還沒完，先讓 button 維持原行為 disabled。 */}
-          {entryCount === 0 ? (
-            <div className="tp-ai-health-empty-hint" data-testid="ai-health-empty-hint">
-              此行程尚無景點，請先加入景點再執行健檢
-            </div>
-          ) : null}
-          {report && (
-            <button type="button" className="ghost" onClick={handleBack} data-testid="ai-health-back-btn">
-              回行程
-            </button>
-          )}
-          <button
-            type="button"
-            className="regen-primary"
-            onClick={handleStart}
-            disabled={submitting || isPending || entryCount === 0}
-            data-testid="ai-health-start-btn"
-          >
-            {submitting
-              ? '送出中…'
-              : isPending && isRegenerating
-                ? '再重新生成'
-                : isPending
-                  ? '健檢進行中…'
-                  : report
-                    ? '重新生成'
-                    : '開始健檢'}
-          </button>
-        </div>
-      )}
     </div>
   );
 

@@ -11,6 +11,59 @@
 
 ---
 
+## Active
+
+### Funnel-guard launchd 護衛（自動偵測 funnel :443 drift + auto-heal）
+
+**Priority:** P1
+**Discovered:** 2026-05-25（v2.33.109 ship 後 AI 健檢手動觸發 530，第三次 funnel→serve regression）
+
+Tailscale funnel 反覆被 macOS update / GUI app / 第三方 brew 改成 `serve` (tailnet only) → CF Worker public `fetch(TRIPLINE_API_URL + '/trigger')` 全 530。Memory `project_tailscale_funnel_caddy_architecture.md` 已記「regression 過 2+ 次」，本次第三次。Tailscale `localapi` 設計上開放給任何 local process 呼叫，無法 ACL block — 走「auto-heal + alert」比試圖封鎖實際。
+
+方案：
+1. `scripts/funnel-guard/guard.sh` — `tailscale funnel status` 偵測 `:443 → 127.0.0.1:8080`，drift 就 reset+restore + Telegram alert
+2. `~/Library/LaunchAgents/com.tripline.funnel-guard.plist` — StartInterval=120, RunAtLoad=true
+3. `/etc/sudoers.d/tripline-funnel-guard` — ray NOPASSWD 跑 `tailscale serve reset` + `tailscale funnel`
+4. `scripts/funnel-guard/install.sh` 一鍵安裝
+5. api-server 加 `POST /internal/funnel-alert` endpoint（給 guard 推 Telegram）
+
+下次 drift 2 分鐘內自動修，user 收 alert 但不用親手介入。
+
+### cleanupOrphans SESSION_PREFIX 過時 — orphan tmux session 永遠不清
+
+**Priority:** P0
+**Discovered:** 2026-05-25（v2.33.109 ship 後追 AI 健檢 cron 為何沒撈補）
+
+`scripts/tripline-api-server.ts:92` `SESSION_PREFIX = 'tripline-request-'`，但 v2.33.27 per-skill rename 後 session 命名是 `tripline-tp-request-...` / `tripline-tp-daily-check-...`（多一個 `tp-`）。`cleanupOrphans` 用 `name.startsWith(SESSION_PREFIX)` filter 永遠 false → tmux orphan 完全不被清。
+
+實證：今早 04:38 UTC 一個 `tripline-tp-request-1779683905609-1669` session 卡 9h26m+ 沒結束，cron 每 10 分鐘 fire 都因 `hasActiveSession()` 偵測到 → skip。AI 健檢 request 208/209 status='open' 永遠不會被撈處理。
+
+Fix（小）：
+```ts
+const SESSION_PREFIX_LEGACY = 'tripline-request-';
+const SESSION_PREFIX_PER_SKILL = 'tripline-tp-';
+// startsWith check 接受兩種
+```
+
+或更乾淨：直接掃所有以 `tripline-` 開頭的 session（cleanup 範圍夠窄）。
+
+兩者邏輯都要加 regression unit test。
+
+### AI 健檢歷史資料丟失（v2.31.0 ~ v2.33.85，3 週窗口）
+
+**Priority:** P3（已根治，僅資料補救）
+**Discovered:** 2026-05-25（user 問 「健檢資料不見了嗎？」）
+**Root cause:** v2.31.0 (2026-05-04) AI 健檢上線時 `health-check.ts` INSERT trip_health_reports 寫 `auth.email` 進 `user_id` 欄位（應該是 uuid）。v2.33.60 (2026-05-24 14:32) migration 0069 加 FK `REFERENCES users(id)` + swap pattern `INNER JOIN users u ON u.id = h.user_id` 把所有 email-as-user_id 既存 row drop。v2.33.85 (2026-05-24 22:06) 才修 `auth.email → auth.userId`。
+
+影響：
+- DB `trip_health_reports`: 0 rows（migration 0069 全 drop + 後續寫入 FK fail）
+- DB `trip_requests`: 8 個 `[AI 健檢]` reply 摘要保留（只有 finding count，無 raw findings_json）
+- Local Claude session jsonl `~/.claude/projects/-Users-ray-Projects-trip-planner/3dd31b9e-d898-42c5-8793-07c4520239a9.jsonl`(May 18) 含 HuiYun request 202 完整 10 個 findings（4 high + 5 medium + 1 low）可恢復
+
+User decision: 不救也不重跑（v2.33.109 confirmed）— 維持現狀。其他 INSERT user_id 的 endpoint（trips / poi_favorites / trip_permissions / auth_identities / session_devices / trip_invitations）全部正確用 uuid，無類似 bug。
+
+---
+
 ## Completed
 
 ### Lighthouse — Blocking gate（v2.33.107）

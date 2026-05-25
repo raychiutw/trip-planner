@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.110] - 2026-05-25
+
+**Polish — AI 健檢頁拔 sticky bottom bar 改 title bar action**
+
+QA prod 報告（沖繩七日遊行程表 mobile）：往上捲動時 GlobalBottomNav 5-tab nav 隱藏，但 AI 健檢 sticky bottom bar (`.tp-ai-health-bottombar`) 留在原位，下方留出 nav 高度空白，緊接下一張 finding card 從 bar 底下「冒出來」視覺奇怪。
+
+修：拔掉 sticky bottom bar 整塊，把主 CTA「開始健檢／重新生成／再重新生成／健檢進行中⋯／送出中⋯」改用 `<TitleBarPrimaryAction icon="sparkle">` 放 TitleBar `actions` slot（icon-only + hover tooltip + label hidden via CSS 對齊既有 5 個 form page pattern）。「回行程」由 TitleBar 左上 `←` 取代（`backLabel="回行程"`），不再重複 button。
+
+`entryCount === 0` empty trip guard 從 bottombar inline hint 改頁面 body 的 `.tp-ai-health-notice` banner（accent border-left + tertiary-bg），與 title bar action `disabled` 配合補語意。
+
+也順便 update DESIGN.md (line 407) 把 「Sticky bottom bar」描述改 「Title bar action」。
+
+**修改**：
+- `src/pages/TripHealthCheckPage.tsx`：import TitleBarPrimaryAction、TitleBar 加 `actions`、移除整個 bottombar JSX block (line 811-843)、加 `.tp-ai-health-notice` banner、CSS 移除 64 行 `.tp-ai-health-bottombar` 規則、加 8 行 notice 規則
+- `DESIGN.md`：line 407-409 描述更新
+
+**測試**：`npx vitest run tests/unit/trip-health-check` 19/19 pass（`ai-health-start-btn` testid 保留在 TitleBarPrimaryAction，`ai-health-empty-hint` testid 保留在 notice banner，文字 `textContent` assertion 仍命中 hidden span label）
+
 ## [2.33.109] - 2026-05-25
 
 **Fix — AI 健檢頁 dark mode bottombar 顏色**
