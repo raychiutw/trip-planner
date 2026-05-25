@@ -356,12 +356,15 @@ const SCOPED_STYLES = `
   opacity: 0.55;
 }
 
-/* Bottom action bar */
+/* Bottom action bar — v2.33.109 dark mode fix：原本 background 寫死 rgba(250,244,234)
+ * 米色，dark mode 下整條 bar 跟 page bg (#1A140F) 完全不和諧。改 color-mix from
+ * --color-background token 對齊既有 frosted glass nav pattern，dark mode 自動跟。 */
 .tp-ai-health-bottombar {
   position: sticky;
   bottom: 0;
-  background: rgba(250, 244, 234, 0.86);
-  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--color-background) 86%, transparent);
+  backdrop-filter: blur(var(--blur-glass, 14px));
+  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
   border-top: 1px solid var(--color-border);
   padding: 12px 16px;
   display: flex;
