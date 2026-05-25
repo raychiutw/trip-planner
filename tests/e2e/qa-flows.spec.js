@@ -179,8 +179,8 @@ test.describe('QA Flow 4 — 移除收藏 (v2.22.0 PoiFavoritesPage)', () => {
   });
 });
 
-test.describe('QA Flow 5 — 編輯行程', () => {
-  test('EditTripPage 改 title + desc → 完成 → PUT /api/trips/:id', async ({ page }) => {
+test.describe('QA Flow 5 — 編輯行程 (v2.33.108 auto-save)', () => {
+  test('EditTripPage 改 title + desc → debounce 800ms → PUT /api/trips/:id (auto-save)', async ({ page }) => {
     /** @type {string[]} */
     const puts = [];
     page.on('request', (req) => {
@@ -189,57 +189,39 @@ test.describe('QA Flow 5 — 編輯行程', () => {
       }
     });
 
-    // 先進 trip → 從 TitleBar 觸發 edit (建立 history,handleBack 不跳 about:blank)
     await page.goto('/trip/okinawa-trip-2026-Ray/edit');
     await expect(page.getByTestId('edit-trip-page')).toBeVisible();
 
-    // 改 title
+    // v2.33.108: 移除「儲存」button，改 onChange + 800ms debounce → PUT
     const titleInput = page.getByTestId('edit-trip-title-input');
     await expect(titleInput).toBeVisible();
     await titleInput.fill('沖繩 QA test 改名');
 
-    // 改 description
     await page.getByTestId('edit-trip-desc-input').fill('QA spec 編輯描述');
 
-    // 用 TitleBar 「儲存」 (formRef.requestSubmit)。
-    const submit = page.getByTestId('edit-trip-titlebar-save');
-    await expect(submit).toBeEnabled();
-    await submit.click();
-
+    // 等 debounce 800ms + auto-save fire → PUT
     await expect.poll(() => puts.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
-    const body = JSON.parse(puts[0]);
+    // Take latest PUT (multiple may fire as user types — auto-save coalesces）
+    const body = JSON.parse(puts[puts.length - 1]);
     expect(body.title).toBe('沖繩 QA test 改名');
     expect(body.description).toContain('QA spec');
   });
 
-  test('bottom edit-trip-submit button (form="edit-trip-form") 也應觸發 PUT', async ({ page }) => {
-    // Regression: v2.19.13 加 id="edit-trip-form" 到 form 後 (原本 form 沒設 id,
-    // bottom button form="edit-trip-form" 對不到 → click 不觸發 submit, 是 dead
-    // button)。本 spec lock bottom button click → PUT 觸發。
-    /** @type {string[]} */
-    const puts = [];
-    page.on('request', (req) => {
-      if (req.method() === 'PUT' && /\/api\/trips\/[^/]+$/.test(req.url())) {
-        puts.push(req.postData() ?? '');
-      }
-    });
-
+  test('返回 button → navigate back (v2.33.108: 無 ConfirmModal — auto-save 已 commit)', async ({ page }) => {
     await page.goto('/trip/okinawa-trip-2026-Ray/edit');
     await expect(page.getByTestId('edit-trip-page')).toBeVisible();
-    await page.getByTestId('edit-trip-title-input').fill('bottom button 觸發測試');
 
-    const bottomSubmit = page.getByTestId('edit-trip-submit');
-    await expect(bottomSubmit).toBeEnabled();
-    await bottomSubmit.click();
-
-    await expect.poll(() => puts.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
-    const body = JSON.parse(puts[0]);
-    expect(body.title).toBe('bottom button 觸發測試');
+    // 「返回」button (rename from「取消」)
+    const back = page.getByTestId('edit-trip-back');
+    await expect(back).toBeVisible();
+    await back.click();
+    // navigate occurs，URL 離開 /edit
+    await expect(page).not.toHaveURL(/\/edit$/);
   });
 });
 
-test.describe('QA Flow 6 — 編輯景點 (note inline)', () => {
-  test('TimelineRail 展開 entry → 編輯備註 → 儲存 → PATCH /api/trips/:id/entries/:eid', async ({ page }) => {
+test.describe('QA Flow 6 — 編輯景點 (note inline, v2.33.108 auto-save)', () => {
+  test('TimelineRail 展開 entry → 編輯備註 → onBlur → PATCH /api/trips/:id/entries/:eid', async ({ page }) => {
     /** @type {string[]} */
     const patches = [];
     page.on('request', (req) => {
@@ -249,19 +231,17 @@ test.describe('QA Flow 6 — 編輯景點 (note inline)', () => {
     });
 
     await page.goto('/trip/okinawa-trip-2026-Ray');
-    // 展開 entry 101 (首里城)
     const row = page.getByTestId('timeline-rail-row-101');
     await expect(row).toBeVisible();
     await row.click();
     await expect(page.getByTestId('timeline-rail-detail-101')).toBeVisible();
 
-    // v2.26.0：「編」按鈕 navigate 到 EditEntryPage；inline note edit 改走點 note-value
-    // 直接觸發 textarea (pattern 不變，testid `timeline-rail-note-value-N`)。
+    // v2.33.108: 移除「儲存」button，改 onBlur 觸發 auto-save PATCH
     await page.getByTestId('timeline-rail-note-value-101').click();
     const noteInput = page.getByTestId('timeline-rail-note-input-101');
     await expect(noteInput).toBeVisible();
     await noteInput.fill('QA spec 改的備註');
-    await page.getByTestId('timeline-rail-note-save-101').click();
+    await noteInput.blur(); // onBlur → flush autosave
 
     await expect.poll(() => patches.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
     expect(patches[0]).toMatch(/\/api\/trips\/okinawa-trip-2026-Ray\/entries\/101$/);

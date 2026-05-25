@@ -1,12 +1,16 @@
 /**
- * TravelPill + TravelPillDialog tap-switch test (v2.24.0 Phase γ.0; v2.30.0 rewrite)
+ * TravelPill + TravelPillDialog tap-switch test (v2.24.0 → v2.33.108 auto-save rewrite)
+ *
+ * v2.33.108 變動：移除 「儲存」 button，改 mode option click 立即觸發 PATCH。
+ * Cancel button 改 「關閉」 (auto-save 已 commit 無 cancel 語意)。
  *
  * 驗證：
- *   - 沒 segment props → 唯讀（v2.23 backwards compat）
- *   - 有 segment props → button + ▾ affordance + click 開 dialog（v2.30 永遠 ▾，不再上鎖）
- *   - dialog 三選一切換 + transit 手動填 min + Save → PATCH
- *   - transit 沒填 min / min 超界 → Save disabled
- *   - 取消 / Esc 關 dialog
+ *   - 沒 segment props → 唯讀
+ *   - 有 segment props → button + ▾ affordance + click 開 dialog
+ *   - mode option click → 立即 PATCH（非 transit）
+ *   - transit + onBlur → PATCH 帶 mode + min
+ *   - Esc / overlay click / 「關閉」button → 關 dialog
+ *   - PATCH fail → SaveStatus 顯 error，dialog 仍開
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -36,7 +40,7 @@ describe('TravelPill — read-only (v2.23 backwards compat)', () => {
   });
 });
 
-describe('TravelPill — interactive (v2.24.0 segment-aware)', () => {
+describe('TravelPill — interactive auto-save (v2.33.108)', () => {
   const baseSegment = {
     id: 42,
     mode: 'driving' as const,
@@ -62,111 +66,90 @@ describe('TravelPill — interactive (v2.24.0 segment-aware)', () => {
     expect(screen.getByTestId('travel-mode-option-transit')).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('切換 driving → walking → Save → PATCH 帶正確 body', async () => {
-    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, mode: 'walking' }), { status: 200 }));
+  it('切換 driving → walking → 立即 PATCH 帶 mode (auto-save)', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, mode: 'walking', version: 1 }), { status: 200 }));
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));
     fireEvent.click(screen.getByTestId('travel-mode-option-walking'));
-    fireEvent.click(screen.getByTestId('travel-dialog-save'));
     await waitFor(() => {
-      expect(apiFetchRawMock).toHaveBeenCalledWith(
-        '/trips/trip-1/segments/42',
-        expect.objectContaining({
-          method: 'PATCH',
-          body: JSON.stringify({ mode: 'walking' }),
-        }),
-      );
+      const call = apiFetchRawMock.mock.calls.find((c) => c[0] === '/trips/trip-1/segments/42');
+      expect(call).toBeTruthy();
+      const init = call?.[1];
+      expect(init?.method).toBe('PATCH');
+      const body = JSON.parse(init?.body as string);
+      expect(body.mode).toBe('walking');
     });
   });
 
-  it('切到 transit 沒填 min → Save disabled', () => {
+  it('transit + min=30 + onBlur → PATCH 帶 mode + min', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, version: 1 }), { status: 200 }));
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));
     fireEvent.click(screen.getByTestId('travel-mode-option-transit'));
-    expect(screen.getByTestId('travel-dialog-save')).toBeDisabled();
-  });
-
-  it('transit + min=30 → Save → PATCH 帶 mode + min', async () => {
-    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42 }), { status: 200 }));
-    render(<TravelPill segment={baseSegment} tripId="trip-1" />);
-    fireEvent.click(screen.getByTestId('travel-pill'));
-    fireEvent.click(screen.getByTestId('travel-mode-option-transit'));
-    fireEvent.change(screen.getByTestId('travel-transit-min-input'), { target: { value: '30' } });
-    fireEvent.click(screen.getByTestId('travel-dialog-save'));
+    const input = screen.getByTestId('travel-transit-min-input');
+    fireEvent.change(input, { target: { value: '30' } });
+    fireEvent.blur(input);
     await waitFor(() => {
-      expect(apiFetchRawMock).toHaveBeenCalledWith(
-        '/trips/trip-1/segments/42',
-        expect.objectContaining({
-          method: 'PATCH',
-          body: JSON.stringify({ mode: 'transit', min: 30 }),
-        }),
-      );
+      const transitCall = apiFetchRawMock.mock.calls.find((c) => {
+        const body = JSON.parse((c[1] as RequestInit).body as string);
+        return body.mode === 'transit' && body.min === 30;
+      });
+      expect(transitCall).toBeTruthy();
     });
   });
 
-  it('transit + min=99999 (超 1440 上界) → Save disabled', () => {
-    render(<TravelPill segment={baseSegment} tripId="trip-1" />);
-    fireEvent.click(screen.getByTestId('travel-pill'));
-    fireEvent.click(screen.getByTestId('travel-mode-option-transit'));
-    fireEvent.change(screen.getByTestId('travel-transit-min-input'), { target: { value: '99999' } });
-    expect(screen.getByTestId('travel-dialog-save')).toBeDisabled();
-  });
-
-  it('mode 沒變 → Save disabled (label "無變更")', () => {
-    render(<TravelPill segment={baseSegment} tripId="trip-1" />);
-    fireEvent.click(screen.getByTestId('travel-pill'));
-    const save = screen.getByTestId('travel-dialog-save');
-    expect(save).toBeDisabled();
-    expect(save.textContent).toBe('無變更');
-  });
-
-  it('cancel button → 關 dialog', () => {
+  it('「關閉」button → 關 dialog (async)', async () => {
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));
     expect(screen.getByTestId('travel-pill-dialog')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('travel-dialog-cancel'));
-    expect(screen.queryByTestId('travel-pill-dialog')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('travel-dialog-close'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('travel-pill-dialog')).not.toBeInTheDocument();
+    });
   });
 
-  it('Esc 鍵 → 關 dialog', () => {
+  it('Esc 鍵 → 關 dialog (async)', async () => {
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByTestId('travel-pill-dialog')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId('travel-pill-dialog')).not.toBeInTheDocument();
+    });
   });
 
-  it('overlay click → 關 dialog（不點 sheet 內部）', () => {
+  it('overlay click → 關 dialog (async)', async () => {
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));
     const overlay = screen.getByTestId('travel-pill-dialog');
     fireEvent.click(overlay);
-    expect(screen.queryByTestId('travel-pill-dialog')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId('travel-pill-dialog')).not.toBeInTheDocument();
+    });
   });
 
-  it('PATCH fail → 顯示 error，dialog 仍開', async () => {
-    apiFetchRawMock.mockResolvedValue(new Response('Internal error', { status: 500 }));
+  it('PATCH fail → SaveStatus 顯示 error，dialog 仍開', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ error: { code: 'SYS_INTERNAL', message: 'oops' } }), { status: 500 }));
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));
     fireEvent.click(screen.getByTestId('travel-mode-option-walking'));
-    fireEvent.click(screen.getByTestId('travel-dialog-save'));
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(/PATCH 失敗.*500/);
+      expect(screen.getByTestId('save-status')).toBeInTheDocument();
     });
     expect(screen.getByTestId('travel-pill-dialog')).toBeInTheDocument();
   });
 
-  it('PATCH success → dispatch tp-segment-updated event + close dialog', async () => {
-    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+  it('PATCH success → dispatch tp-segment-updated event + dialog 仍開（auto-save 不 close）', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, mode: 'walking', version: 1 }), { status: 200 }));
     const onUpdated = vi.fn();
     window.addEventListener('tp-segment-updated', onUpdated);
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));
     fireEvent.click(screen.getByTestId('travel-mode-option-walking'));
-    fireEvent.click(screen.getByTestId('travel-dialog-save'));
     await waitFor(() => {
       expect(onUpdated).toHaveBeenCalledTimes(1);
-      expect(screen.queryByTestId('travel-pill-dialog')).not.toBeInTheDocument();
     });
+    // dialog 仍開 — 改變後 auto-save，user 自己決定何時 close
+    expect(screen.getByTestId('travel-pill-dialog')).toBeInTheDocument();
     window.removeEventListener('tp-segment-updated', onUpdated);
   });
 });

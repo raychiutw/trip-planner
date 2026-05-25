@@ -26,6 +26,8 @@ import { computeRoute } from '../../../../../src/server/maps/google-client';
 interface PatchBody {
   mode?: string;
   min?: number;
+  /** v2.33.108: OCC token — autosave 帶；不符回 409 STALE_ENTRY。omit → backward compat。 */
+  expectedVersion?: number;
 }
 
 const VALID_MODES = ['driving', 'walking', 'transit'] as const;
@@ -46,16 +48,25 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
-  // 驗 segment 屬於該 trip（防 IDOR）
+  // 驗 segment 屬於該 trip（防 IDOR）+ 取 version for OCC
   const seg = await db
-    .prepare('SELECT id, trip_id FROM trip_segments WHERE id = ?')
+    .prepare('SELECT id, trip_id, version FROM trip_segments WHERE id = ?')
     .bind(sid)
-    .first<{ id: number; trip_id: string }>();
+    .first<{ id: number; trip_id: string; version: number }>();
   if (!seg || seg.trip_id !== tripId) {
     throw new AppError('DATA_NOT_FOUND', '找不到此 segment');
   }
 
   const body = await parseJsonBody<PatchBody>(context.request);
+
+  // v2.33.108: OCC token check（pre-SELECT — segments 多 UPDATE 分支不適合
+  // atomic CAS WHERE。frequency 低，TOCTOU race window 接受）。
+  if (typeof body.expectedVersion === 'number' && Number.isInteger(body.expectedVersion)) {
+    if (seg.version !== body.expectedVersion) {
+      throw new AppError('STALE_ENTRY', `expected version ${body.expectedVersion}, current ${seg.version}`);
+    }
+  }
+
   const mode = typeof body.mode === 'string' ? body.mode : null;
   if (!mode || !VALID_MODES.includes(mode as typeof VALID_MODES[number])) {
     throw new AppError('DATA_VALIDATION', 'mode 必須為 driving / walking / transit');
@@ -73,7 +84,8 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       .prepare(
         `UPDATE trip_segments
          SET mode = 'transit', min = ?, distance_m = NULL,
-             source = 'manual', computed_at = ?, updated_at = ?
+             source = 'manual', computed_at = ?, updated_at = ?,
+             version = version + 1
          WHERE id = ?`,
       )
       .bind(Math.round(body.min!), now, now, sid)
@@ -114,7 +126,8 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
           .prepare(
             `UPDATE trip_segments
              SET mode = ?, min = ?, distance_m = ?,
-                 source = 'google', computed_at = ?, updated_at = ?
+                 source = 'google', computed_at = ?, updated_at = ?,
+                 version = version + 1
              WHERE id = ?`,
           )
           .bind(mode, minutes, result.distance_meters, now, now, sid)
@@ -124,7 +137,8 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
         await db
           .prepare(
             `UPDATE trip_segments
-             SET mode = ?, computed_at = NULL, updated_at = ?
+             SET mode = ?, computed_at = NULL, updated_at = ?,
+                 version = version + 1
              WHERE id = ?`,
           )
           .bind(mode, now, sid)
@@ -146,7 +160,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const updated = await db
     .prepare(
       `SELECT id, trip_id, from_entry_id, to_entry_id, mode,
-              min, distance_m, source, computed_at, updated_at
+              min, distance_m, source, computed_at, updated_at, version
        FROM trip_segments WHERE id = ?`,
     )
     .bind(sid)

@@ -1,23 +1,30 @@
 /**
  * TravelPillDialog — v2.24.0 segment travel mode picker.
  *
- * Mobile (<760px)：bottom sheet 由下滑出。
- * Desktop：popover anchored 相對於 trigger（外層自處理位置；本 component 純 render dialog body
- * + overlay）。
+ * v2.33.108: 移除「儲存 / 取消」button — 改 auto-save。
+ *   - mode option click → 立即 patch (driving/walking 不需 min；transit 需 min 並
+ *     等 valid input 後 patch)
+ *   - transit min input → onBlur flush 立即 patch
+ *   - footer 顯示 SaveStatus（pending/saving/saved/error/offline）+ 「關閉」button
  *
- * 三選一：driving / walking / transit。Save → PATCH /api/trips/:id/segments/:sid。
+ * Mobile (<760px)：bottom sheet 由下滑出。Desktop：popover 樣式 360px。
  *
- * v2.30.0：
+ * Backend (v2.30.0)：
  *   - driving / walking → backend 一律打 Google Routes 重算（ignore body.min）
- *   - transit → user 手填分鐘（1–1440），backend save 為 source='manual'（Japan
- *     Google Routes API 沒 transit 資料）
+ *   - transit → user 手填分鐘（1–1440），backend save 為 source='manual'
+ *
+ * OCC (v2.33.108)：currentVersion prop → autosave hook 帶 expectedVersion；
+ * concurrent edit race 時 backend 回 409 STALE_ENTRY → hook 自動 refresh + retry。
  *
  * 對齊 docs/design-sessions/2026-05-07-travel-pill-tap-switch.html。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../shared/Icon';
+import SaveStatus from '../shared/SaveStatus';
 import { apiFetchRaw } from '../../lib/apiClient';
+import { ApiError } from '../../lib/errors';
 import { EVENT } from '../../lib/events';
+import { useAutosave } from '../../hooks/useAutosave';
 import type { TravelMode } from '../../lib/travelMode';
 
 // v2.33.91: 移除本地 type 宣告，從 lib/travelMode canonical 來源 import + 為 backward-compat
@@ -141,35 +148,24 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-caption);
   color: var(--color-muted);
 }
-.tp-travel-dialog-error {
-  margin-top: 8px;
-  font-size: var(--font-size-footnote);
-  color: var(--color-destructive);
-}
+/* v2.33.108: footer 只剩「關閉」button + SaveStatus inline。auto-save 後不需 cancel/save 二選一。 */
 .tp-travel-dialog-footer {
   display: flex; gap: 8px;
   margin-top: 16px;
+  align-items: center;
+  justify-content: space-between;
 }
 .tp-travel-dialog-btn {
-  flex: 1;
   min-height: var(--spacing-tap-min, 44px);
-  padding: 10px 16px;
+  padding: 10px 20px;
   border-radius: var(--radius-full);
   font: inherit; font-size: var(--font-size-body); font-weight: 600;
   cursor: pointer;
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-foreground);
 }
-.tp-travel-dialog-btn-primary {
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
-}
-.tp-travel-dialog-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
-.tp-travel-dialog-btn-secondary {
-  background: transparent;
-  color: var(--color-muted);
-  border-color: var(--color-border);
-}
+.tp-travel-dialog-btn:hover { background: var(--color-hover); }
 `;
 
 export interface TravelPillDialogProps {
@@ -179,6 +175,8 @@ export interface TravelPillDialogProps {
   currentMode: TravelMode;
   /** 當前 min（顯示在現選 mode option 描述） */
   currentMin?: number | null;
+  /** v2.33.108: 當前 OCC version；undefined → skip OCC check（向後相容）。 */
+  currentVersion?: number;
   /** 距離 m，用於 walking 估算與顯示 */
   distanceM?: number | null;
   /** 顯示 from→to entry 名稱（純展示，optional） */
@@ -235,11 +233,17 @@ function formatKm(m: number): string {
   return `${Math.round(m / 50) * 50} m`;
 }
 
+interface SegmentPatchBody {
+  mode: TravelMode;
+  min?: number;
+}
+
 export default function TravelPillDialog({
   tripId,
   segmentId,
   currentMode,
   currentMin,
+  currentVersion,
   distanceM,
   fromName,
   toName,
@@ -250,25 +254,8 @@ export default function TravelPillDialog({
   const [transitMin, setTransitMin] = useState<string>(
     currentMode === 'transit' && typeof currentMin === 'number' ? String(currentMin) : '',
   );
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const titleId = `tp-travel-dialog-title-${segmentId}`;
-
-  // ESC 關閉
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  // 自動聚焦第一個 option（mount 後）
-  useEffect(() => {
-    const first = overlayRef.current?.querySelector<HTMLButtonElement>('.tp-travel-mode-option');
-    first?.focus();
-  }, []);
 
   const transitMinNumber = useMemo(() => {
     const n = parseInt(transitMin, 10);
@@ -279,43 +266,85 @@ export default function TravelPillDialog({
     selectedMode !== 'transit' ||
     (Number.isFinite(transitMinNumber) && transitMinNumber >= 1 && transitMinNumber <= 1440);
 
-  const isDirty =
-    selectedMode !== currentMode ||
-    (selectedMode === 'transit' && transitMinNumber !== currentMin);
-
-  const canSubmit = !submitting && isDirty && isTransitMinValid;
-
-  const handleSubmit = useCallback(async () => {
-    if (!canSubmit) return;
-    setSubmitting(true);
-    setError(null);
-    const body: { mode: TravelMode; min?: number } = { mode: selectedMode };
-    if (selectedMode === 'transit') {
-      body.min = transitMinNumber;
-    }
-    try {
+  // v2.33.108: auto-save hook 取代 handleSubmit
+  const autosave = useAutosave<SegmentPatchBody>({
+    initialVersion: currentVersion,
+    debounceMs: 600,
+    save: async (body, expectedVersion) => {
+      const payload: SegmentPatchBody & { expectedVersion?: number } = { ...body } as SegmentPatchBody & { expectedVersion?: number };
+      if (typeof expectedVersion === 'number') payload.expectedVersion = expectedVersion;
       const res = await apiFetchRaw(
         `/trips/${encodeURIComponent(tripId)}/segments/${segmentId}`,
-        { method: 'PATCH', body: JSON.stringify(body) },
+        { method: 'PATCH', body: JSON.stringify(payload) },
       );
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`PATCH 失敗 (${res.status}): ${text.slice(0, 160)}`);
-      }
+      if (!res.ok) throw await ApiError.fromResponse(res);
+      const updated = await res.json() as { mode?: TravelMode; min?: number | null; version?: number };
       onSaved?.({
-        mode: selectedMode,
-        min: selectedMode === 'transit' ? transitMinNumber : (currentMin ?? null),
+        mode: (updated.mode ?? body.mode) as TravelMode,
+        min: typeof updated.min === 'number' ? updated.min : null,
       });
       window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId } }));
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '儲存失敗');
-      setSubmitting(false);
+      return updated as Record<string, unknown>;
+    },
+    onStale: async () => {
+      // GET segments 拿最新 version (segments index endpoint 已加 version)
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments`);
+      if (!res.ok) throw new Error('Failed to refresh segments');
+      const list = await res.json() as Array<{ id: number; version: number }>;
+      const found = list.find((s) => s.id === segmentId);
+      if (!found) throw new Error('Segment not found after refresh');
+      return found.version;
+    },
+  });
+
+  // v2.33.108: mode click → 立即觸發 PATCH (debounce 短)
+  const handleSelectMode = useCallback((mode: TravelMode) => {
+    setSelectedMode(mode);
+    if (mode !== 'transit') {
+      autosave.patch({ mode });
+      // 非 transit 立即 flush — 不等 debounce
+      void autosave.flush();
+    } else if (isTransitMinValid && Number.isFinite(transitMinNumber)) {
+      autosave.patch({ mode, min: transitMinNumber });
+      void autosave.flush();
     }
-  }, [canSubmit, selectedMode, transitMinNumber, tripId, segmentId, currentMin, onSaved, onClose]);
+    // transit 模式但 min 未 valid → 等 user 填完 onBlur 再觸發
+  }, [autosave, isTransitMinValid, transitMinNumber]);
+
+  // v2.33.108: transit min input → onChange 寫 state，onBlur 觸發 PATCH
+  const handleTransitMinChange = useCallback((value: string) => {
+    setTransitMin(value);
+  }, []);
+
+  const handleTransitMinBlur = useCallback(() => {
+    if (selectedMode === 'transit' && isTransitMinValid && Number.isFinite(transitMinNumber)) {
+      autosave.patch({ mode: 'transit', min: transitMinNumber });
+      void autosave.flush();
+    }
+  }, [autosave, selectedMode, isTransitMinValid, transitMinNumber]);
+
+  // 關閉前 flush 任何 pending patch — 防 user 改了 transit min 後直接 close
+  const handleClose = useCallback(() => {
+    void autosave.flush().finally(onClose);
+  }, [autosave, onClose]);
+
+  // ESC 關閉
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [handleClose]);
+
+  // 自動聚焦第一個 option（mount 後）
+  useEffect(() => {
+    const first = overlayRef.current?.querySelector<HTMLButtonElement>('.tp-travel-mode-option');
+    first?.focus();
+  }, []);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
+    if (e.target === e.currentTarget) handleClose();
   };
 
   return (
@@ -350,7 +379,7 @@ export default function TravelPillDialog({
                   key={def.mode}
                   type="button"
                   className={`tp-travel-mode-option ${isSelected ? 'is-selected' : ''}`}
-                  onClick={() => setSelectedMode(def.mode)}
+                  onClick={() => handleSelectMode(def.mode)}
                   aria-pressed={isSelected}
                   data-testid={`travel-mode-option-${def.mode}`}
                 >
@@ -390,7 +419,8 @@ export default function TravelPillDialog({
                 min={1}
                 max={1440}
                 value={transitMin}
-                onChange={(e) => setTransitMin(e.target.value)}
+                onChange={(e) => handleTransitMinChange(e.target.value)}
+                onBlur={handleTransitMinBlur}
                 autoFocus
                 data-testid="travel-transit-min-input"
               />
@@ -398,29 +428,15 @@ export default function TravelPillDialog({
             </div>
           )}
 
-          {error && (
-            <div className="tp-travel-dialog-error" role="alert">
-              {error}
-            </div>
-          )}
-
           <div className="tp-travel-dialog-footer">
+            <SaveStatus state={autosave.state} error={autosave.error} onRetry={autosave.retry} />
             <button
               type="button"
-              className="tp-travel-dialog-btn tp-travel-dialog-btn-secondary"
-              onClick={onClose}
-              data-testid="travel-dialog-cancel"
+              className="tp-travel-dialog-btn"
+              onClick={handleClose}
+              data-testid="travel-dialog-close"
             >
-              取消
-            </button>
-            <button
-              type="button"
-              className="tp-travel-dialog-btn tp-travel-dialog-btn-primary"
-              disabled={!canSubmit}
-              onClick={() => void handleSubmit()}
-              data-testid="travel-dialog-save"
-            >
-              {submitting ? '儲存中…' : isDirty ? '儲存' : '無變更'}
+              關閉
             </button>
           </div>
         </div>
