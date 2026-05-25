@@ -1,6 +1,6 @@
 {
   "name": "tripline",
-  "version": "2.33.111",
+  "version": "2.33.113",
   "private": true,
   "scripts": {
     "dev": "concurrently -n vite,api -c cyan,green \"vite\" \"wrangler pages dev dist --local --port 8788\"",

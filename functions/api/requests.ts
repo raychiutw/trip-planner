@@ -184,7 +184,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
       try {
         const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 3000);
+        // v2.33.113: 3000 → 8000ms — CF edge → Tailscale Funnel cold connection
+        // (DNS + TCP + TLS handshake from a CF colo first-touch / post-idle)
+        // 偶爾 4-5s，3s 必 abort → Telegram 噪音 alert（如 request 210 2026-05-25
+        // 15:57 UTC：實測 INSERT 到 mac mini 收到 /trigger 4.978s）。8s 涵蓋 99%
+        // cold path；request 仍由 10min cron 兜底保證最終一致性。
+        const timer = setTimeout(() => ctrl.abort(), 8000);
         const res = await fetch(env.TRIPLINE_API_URL + '/trigger?source=api', {
           method: 'POST',
           headers: {
