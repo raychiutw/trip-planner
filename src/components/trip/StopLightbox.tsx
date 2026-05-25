@@ -113,7 +113,9 @@ const SCOPED_STYLES = `
 .tp-lightbox-carousel .nav {
   position: absolute; top: 50%; transform: translateY(-50%);
   width: var(--spacing-tap-min); height: var(--spacing-tap-min);
-  background: rgba(0,0,0,0.45); color: #fff;
+  /* H6 exception: nav button on permanent rgba(0,0,0) overlay — text must
+     stay light in both light/dark mode for contrast against dark backdrop. */
+  background: rgba(0,0,0,0.45); color: #ffffff;
   border: 0; border-radius: var(--radius-full);
   cursor: pointer;
   display: grid; place-items: center;

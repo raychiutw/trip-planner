@@ -18,7 +18,7 @@
  *   500 SYS_INTERNAL
  */
 import { issueSession } from '../_session';
-import { AppError } from '../_errors';
+import { AppError, buildRateLimitResponse } from '../_errors';
 import { parseJsonBody } from '../_utils';
 import { hashPassword, MIN_PASSWORD_LEN } from '../../../src/server/password';
 import { recordAuthEvent } from '../_auth_audit';
@@ -43,13 +43,6 @@ interface SignupBody {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function errorResponse(code: string, message: string, status: number): Response {
-  return new Response(
-    JSON.stringify({ error: { code, message } }),
-    { status, headers: { 'content-type': 'application/json' } },
-  );
-}
-
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = (await parseJsonBody<SignupBody>(context.request)) ?? {};
   const email = normalizeEmail(body.email ?? '');
@@ -58,10 +51,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Validation
   if (!email || !EMAIL_REGEX.test(email)) {
-    return errorResponse('SIGNUP_INVALID_EMAIL', 'Email 格式無效', 400);
+    throw new AppError('SIGNUP_INVALID_EMAIL');
   }
   if (!password || password.length < MIN_PASSWORD_LEN) {
-    return errorResponse('SIGNUP_PASSWORD_TOO_SHORT', `密碼至少 ${MIN_PASSWORD_LEN} 字元`, 400);
+    throw new AppError('SIGNUP_PASSWORD_TOO_SHORT', `密碼至少 ${MIN_PASSWORD_LEN} 字元`);
   }
 
   // V2-P6 rate limit: per-IP bucket — anti signup-spam.
@@ -69,10 +62,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const ipKey = `signup:${clientIp(context.request)}`;
   const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.SIGNUP);
   if (!ipCheck.ok) {
-    return new Response(
-      JSON.stringify({ error: { code: 'SIGNUP_RATE_LIMITED', message: '註冊嘗試過多，請稍後再試' } }),
-      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
-    );
+    return buildRateLimitResponse(ipCheck.retryAfter ?? 60, {
+      error: { code: 'SIGNUP_RATE_LIMITED', message: '註冊嘗試過多，請稍後再試' },
+    });
   }
   await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.SIGNUP);
 
@@ -88,7 +80,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       failureReason: 'email_taken',
       metadata: { email },
     }, context.env);
-    return errorResponse('SIGNUP_EMAIL_TAKEN', '此 email 已註冊，請改用登入或忘記密碼', 409);
+    throw new AppError('SIGNUP_EMAIL_TAKEN');
   }
 
   // Hash + INSERT
@@ -96,7 +88,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     passwordHash = await hashPassword(password);
   } catch {
-    return errorResponse('SIGNUP_PASSWORD_FORMAT', '密碼格式不符', 400);
+    throw new AppError('SIGNUP_PASSWORD_FORMAT');
   }
 
   const userId = crypto.randomUUID();
@@ -117,7 +109,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Race condition：同時兩個 signup 同 email — UNIQUE constraint trap
     const msg = (err as Error).message ?? '';
     if (msg.toUpperCase().includes('UNIQUE')) {
-      return errorResponse('SIGNUP_EMAIL_TAKEN', '此 email 已註冊（race condition）', 409);
+      throw new AppError('SIGNUP_EMAIL_TAKEN', '此 email 已註冊（race condition）');
     }
     throw new AppError('SYS_INTERNAL', `Signup INSERT 失敗：${msg.slice(0, 200)}`);
   }

@@ -334,7 +334,7 @@ const SCOPED_STYLES = `
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
 }
 .tp-ai-health-finding .body .action:hover {
   background: var(--color-hover);

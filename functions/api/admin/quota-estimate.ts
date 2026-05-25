@@ -4,26 +4,32 @@
  * Returns 24h Google Maps API request counts per service. Used by
  * scripts/google-quota-monitor.ts to estimate MTD spend.
  *
- * v1 implementation: counts cache rows by service from `pois_search_cache`
- * + counts /api/route + /api/poi-search hits from `api_logs` if available.
- * This is an APPROXIMATION — full Cloud Monitoring API integration deferred
- * to v2.24.0 (TODO).
+ * v2.33.107 #4: Ground-truth from Google Cloud Monitoring API
+ * (`serviceruntime.googleapis.com/api/request_count`, grouped by `consumed_api`
+ * label). 若 GCP service account env (GCP_SERVICE_ACCOUNT_KEY_JSON +
+ * optional GCP_PROJECT_ID) 未設定 / API 失敗 → fallback 到 D1 proxy 估算
+ * (cache hits + status checks + placeholder constants)，保證 endpoint 不會
+ * 因 GCP 設定缺漏 down。
  *
  * Auth: admin only.
  *
- * Response: Array<{ service: string, count_24h: number }>
+ * Response: Array<{ service: string, count_24h: number, source: 'gcp' | 'd1-proxy' }>
  *   Services: search_text / place_details / directions / maps_js / geocoding / autocomplete
  */
 
 import { requireAdmin } from '../_auth';
+import { fetchMapsQuotaFromCloudMonitoring } from '../_gcp_monitoring';
 import type { Env } from '../_types';
 
-export const onRequestGet: PagesFunction<Env> = async (context) => {
-  requireAdmin(context);
-  const db = context.env.DB;
+interface ServiceCount {
+  service: string;
+  count_24h: number;
+  source: 'gcp' | 'd1-proxy';
+}
 
+/** D1 proxy estimation — fallback path when Cloud Monitoring unreachable. */
+async function estimateFromD1Proxy(db: Env['DB']): Promise<ServiceCount[]> {
   // Search Text: count cache misses fetched in last 24h (cache HIT vs MISS proxy).
-  // pois_search_cache fetched_at within 24h tells us how many fresh searches landed.
   const search = await db.prepare(
     `SELECT COUNT(*) AS n FROM pois_search_cache
      WHERE fetched_at > datetime('now', '-1 day')`,
@@ -37,18 +43,49 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   ).first<{ n: number }>();
 
   // Directions / Maps JS / Geocoding / Autocomplete — no D1 trace yet.
-  // Return rough estimates based on Ray's typical scale (50-100 trip views/day).
-  // Real values to be filled by Cloud Monitoring API in v2.24.0.
+  // Rough scale-based placeholders（typical 50-100 trip views/day）。
+  return [
+    { service: 'search_text', count_24h: search?.n || 0, source: 'd1-proxy' },
+    { service: 'place_details', count_24h: details?.n || 0, source: 'd1-proxy' },
+    { service: 'directions', count_24h: 50, source: 'd1-proxy' },
+    { service: 'maps_js', count_24h: 20, source: 'd1-proxy' },
+    { service: 'geocoding', count_24h: 5, source: 'd1-proxy' },
+    { service: 'autocomplete', count_24h: 10, source: 'd1-proxy' },
+  ];
+}
 
-  return new Response(
-    JSON.stringify([
-      { service: 'search_text', count_24h: search?.n || 0 },
-      { service: 'place_details', count_24h: details?.n || 0 },
-      { service: 'directions', count_24h: 50 }, // placeholder estimate
-      { service: 'maps_js', count_24h: 20 },    // placeholder estimate
-      { service: 'geocoding', count_24h: 5 },   // placeholder estimate
-      { service: 'autocomplete', count_24h: 10 }, // placeholder estimate
-    ]),
-    { status: 200, headers: { 'Content-Type': 'application/json' } },
+export const onRequestGet: PagesFunction<Env> = async (context) => {
+  requireAdmin(context);
+
+  // 先試 Cloud Monitoring（ground truth）。env 缺失 / 失敗回 null → fallback。
+  const gcpCounts = await fetchMapsQuotaFromCloudMonitoring(
+    context.env as { GCP_SERVICE_ACCOUNT_KEY_JSON?: string; GCP_PROJECT_ID?: string },
   );
+
+  let results: ServiceCount[];
+  if (gcpCounts && gcpCounts.length > 0) {
+    // Merge GCP counts with full service list — 沒回的 service 補 0（避免 caller
+    // 用 indexOf 找不到 service crash）。GCP returns only services with traffic.
+    const gcpMap = new Map(gcpCounts.map((c) => [c.service, c.count_24h]));
+    const ALL_SERVICES = [
+      'search_text',
+      'place_details',
+      'directions',
+      'maps_js',
+      'geocoding',
+      'autocomplete',
+    ] as const;
+    results = ALL_SERVICES.map((service) => ({
+      service,
+      count_24h: gcpMap.get(service) ?? 0,
+      source: 'gcp',
+    }));
+  } else {
+    results = await estimateFromD1Proxy(context.env.DB);
+  }
+
+  return new Response(JSON.stringify(results), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
 };

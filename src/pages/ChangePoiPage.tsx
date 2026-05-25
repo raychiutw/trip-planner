@@ -121,7 +121,7 @@ const SCOPED_STYLES = `
   font-weight: 600;
   color: var(--color-foreground);
   cursor: pointer;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
 }
 .tp-change-poi-subtab.is-active {
   background: var(--color-foreground);

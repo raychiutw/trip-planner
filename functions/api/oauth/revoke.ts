@@ -29,6 +29,7 @@ import {
   clientIp,
   RATE_LIMITS,
 } from '../_rate_limit';
+import { oauthErrorResponse, buildRateLimitResponse } from '../_errors';
 import type { Env } from '../_types';
 
 interface ClientAppRow {
@@ -54,18 +55,12 @@ interface RefreshTokenPayload extends AdapterPayload {
 
 function silent200(): Response {
   // RFC 7009 §2.2: server responds with HTTP status 200 if token is invalid /
-  // expired / already revoked. 不洩 token 存在性。
+  // expired / already revoked. 不洩 token 存在性。本 helper 保留為自建 — return
+  // 200 empty body 不適用 oauthErrorResponse 的 error JSON shape。
   return new Response(null, {
     status: 200,
     headers: { 'cache-control': 'no-store', 'pragma': 'no-cache' },
   });
-}
-
-function jsonError(error: string, error_description: string, status = 400): Response {
-  return new Response(
-    JSON.stringify({ error, error_description }),
-    { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } },
-  );
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -73,14 +68,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const token = body.token;
   // Per RFC 7009 §2.1: missing token = invalid_request (only error case)
   if (!token) {
-    return jsonError('invalid_request', 'Missing token parameter');
+    return oauthErrorResponse('invalid_request', 'Missing token parameter');
   }
 
   const basic = parseBasicAuth(context.request);
   const clientId = basic?.id ?? body.client_id;
   const clientSecret = basic?.secret ?? body.client_secret;
   if (!clientId) {
-    return jsonError('invalid_client', 'Missing client_id', 401);
+    return oauthErrorResponse('invalid_client', 'Missing client_id', 401);
   }
 
   // v2.33.103 SEC-7: per-IP rate-limit 在 PBKDF2 verify 前。Confidential client
@@ -89,17 +84,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const ipKey = `oauth-revoke:ip:${clientIp(context.request)}`;
   const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.OAUTH_TOKEN_PER_IP);
   if (!ipCheck.ok) {
-    return new Response(
-      JSON.stringify({ error: 'rate_limited', error_description: 'Too many revoke requests from this IP' }),
-      {
-        status: 429,
-        headers: {
-          'content-type': 'application/json',
-          'cache-control': 'no-store',
-          'Retry-After': String(ipCheck.retryAfter),
-        },
-      },
-    );
+    return buildRateLimitResponse(ipCheck.retryAfter ?? 60, {
+      error: 'rate_limited',
+      error_description: 'Too many revoke requests from this IP',
+    });
   }
   await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.OAUTH_TOKEN_PER_IP);
 
@@ -112,15 +100,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .first<ClientAppRow>();
 
   if (!client || client.status !== 'active') {
-    return jsonError('invalid_client', 'Unknown or inactive client_id', 401);
+    return oauthErrorResponse('invalid_client', 'Unknown or inactive client_id', 401);
   }
 
   if (client.client_type === 'confidential') {
     if (!clientSecret || !client.client_secret_hash) {
-      return jsonError('invalid_client', 'client_secret required for confidential client', 401);
+      return oauthErrorResponse('invalid_client', 'client_secret required for confidential client', 401);
     }
     const ok = await verifyPassword(clientSecret, client.client_secret_hash);
-    if (!ok) return jsonError('invalid_client', 'Invalid client_secret', 401);
+    if (!ok) return oauthErrorResponse('invalid_client', 'Invalid client_secret', 401);
   }
 
   // Try access_token first, then refresh_token (token_type_hint speeds the lookup

@@ -14,8 +14,8 @@
  * last-mount-wins clobbers under StrictMode dev double-mount or when
  * multiple useOnlineStatus instances mount (admin overlay / devtools panel).
  */
-const offlineSubscribers = new Set<() => void>();
-const onlineSubscribers = new Set<() => void>();
+const OFFLINE_SUBSCRIBERS = new Set<() => void>();
+const ONLINE_SUBSCRIBERS = new Set<() => void>();
 
 /**
  * Subscribe to network status changes (typically called by useOnlineStatus).
@@ -27,11 +27,11 @@ export function registerNetworkCallbacks(
   onOffline: () => void,
   onOnline: () => void,
 ): () => void {
-  offlineSubscribers.add(onOffline);
-  onlineSubscribers.add(onOnline);
+  OFFLINE_SUBSCRIBERS.add(onOffline);
+  ONLINE_SUBSCRIBERS.add(onOnline);
   return () => {
-    offlineSubscribers.delete(onOffline);
-    onlineSubscribers.delete(onOnline);
+    OFFLINE_SUBSCRIBERS.delete(onOffline);
+    ONLINE_SUBSCRIBERS.delete(onOnline);
   };
 }
 
@@ -43,6 +43,6 @@ export function registerNetworkCallbacks(
  * @internal — only call from apiClient.ts apiFetch / sse driver
  */
 export function reportFetchResult(success: boolean): void {
-  const subscribers = success ? onlineSubscribers : offlineSubscribers;
+  const subscribers = success ? ONLINE_SUBSCRIBERS : OFFLINE_SUBSCRIBERS;
   for (const cb of subscribers) cb();
 }

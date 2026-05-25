@@ -196,6 +196,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         });
         clearTimeout(timer);
         if (!res.ok) {
+          // Inner control-flow throw — 立即被下方 catch 抓並 recordEmailEvent
+          // log；非 AppError 因不對外回應（fire-and-forget background task）。
           throw new Error(`Trigger responded ${res.status}`);
         }
         // 成功不寫 audit — trigger 量大，正常情況無需 trail

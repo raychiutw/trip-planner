@@ -26,64 +26,6 @@ export interface NavLocation extends MapLocation {
   label?: string;
 }
 
-/** Item inside `InfoBoxData.items` for souvenir / shopping boxes. */
-export interface SouvenirItem {
-  name: string;
-  url?: string | null;
-  note?: string | null;
-  location?: MapLocation | null;
-}
-
-/** Allowed InfoBox category tags. */
-export type InfoBoxType = 'reservation' | 'parking' | 'souvenir' | 'shopping' | 'gasStation';
-
-/** Free-form info box rendered between timeline entries. */
-export interface InfoBoxData {
-  type: InfoBoxType;
-  title?: string | null;
-  content?: string | null;
-
-  /* reservation */
-  items?: (string | SouvenirItem)[] | null;
-  notes?: string | null;
-
-  /* parking */
-  price?: string | null;
-  note?: string | null;
-  location?: MapLocation | null;
-
-  /* souvenir — `items` reused (string[] for reservation, SouvenirItem[] for souvenir) */
-
-  /* shopping */
-  shops?: ShopData[] | null;
-
-  /* gasStation */
-  googleRating?: number | null;
-  station?: GasStationDetail | null;
-}
-
-/** Shop data shape from dist JSON `infoBoxes.shops[]`. */
-export interface ShopData {
-  name: string;
-  category?: string | null;
-  hours?: string | null;
-  mustBuy?: string[] | null;
-  description?: string | null;
-  note?: string | null;
-  googleRating?: number | null;
-  location?: MapLocation | null;
-}
-
-/** Gas station entry inside `InfoBoxData.station` for gasStation boxes. */
-export interface GasStationDetail {
-  name: string;
-  address?: string | null;
-  hours?: string | null;
-  service?: string | null;
-  phone?: string | null;
-  location?: MapLocation | null;
-}
-
 /** Travel segment between two stops. */
 export interface TravelData {
   type?: string | null;
@@ -145,7 +87,6 @@ export interface TimelineEntryData {
   source?: string | null;
   travel?: TravelData | string | null;
   locations?: NavLocation[] | null;
-  infoBoxes?: InfoBoxData[] | null;
   /** Canonical entry POIs: first row (`sortOrder=1`) is the primary pick; remaining rows are alternates. */
   stopPois?: StopPoiOptionData[] | null;
   /** v2.12 Wave 3：POI photos （from pois.photos JSON column）。null = 還沒抓到，

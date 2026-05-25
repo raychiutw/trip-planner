@@ -42,13 +42,21 @@ function renderPage() {
   );
 }
 
+/** Helper：mock /poi-search response on apiFetchMock (auto-search at mount fires once). */
+type SearchResult = { place_id: string; name: string; address: string; lat: number; lng: number; category: string };
+function mockSearch(results: SearchResult[] = []): void {
+  apiFetchMock.mockImplementation((path: string) => {
+    if (path === '/poi-favorites') return Promise.resolve([]);
+    if (path.startsWith('/poi-search')) return Promise.resolve({ results });
+    if (path === '/pois/find-or-create') return Promise.resolve({ id: 42 });
+    return Promise.resolve({});
+  });
+}
+
 describe('ExplorePage', () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
-    apiFetchMock.mockImplementation((path: string) => {
-      if (path === '/poi-favorites') return Promise.resolve([]);
-      return Promise.resolve({});
-    });
+    mockSearch([]);
     global.fetch = vi.fn();
   });
 
@@ -64,53 +72,41 @@ describe('ExplorePage', () => {
 
   it('shows error toast when search query < 2 chars', () => {
     /* 2026-04-29 (E5):mount 後 auto runSearch with default region seed
-     * → fetch 已被 call 一次。Test 改驗 user input < 2 字 click submit
-     * 不會 trigger 第二次 fetch(維持 fetch call count = 1,不是 2)。 */
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ results: [] }),
-    });
+     * → apiFetch /poi-search 已被 call 一次。Test 改驗 user input < 2 字 click submit
+     * 不會 trigger 第二次 search call。 */
+    mockSearch([]);
     const { getByTestId } = renderPage();
-    const initialFetchCount = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+    const initialSearchCalls = apiFetchMock.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && c[0].startsWith('/poi-search'),
+    ).length;
     const input = getByTestId('explore-search-input') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'a' } });
     fireEvent.click(getByTestId('explore-search-submit'));
-    // showToast is mocked — assertion via no NEW network call after submit
-    expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(initialFetchCount);
+    const afterSearchCalls = apiFetchMock.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && c[0].startsWith('/poi-search'),
+    ).length;
+    expect(afterSearchCalls).toBe(initialSearchCalls);
   });
 
-  it('calls /api/poi-search on valid submit + renders results', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
-        results: [
-          { place_id: "p1", name: '沖繩水族館', address: 'Japan', lat: 26.6941, lng: 127.8778, category: 'tourism' },
-        ],
-      }),
-    });
+  it('calls /poi-search on valid submit + renders results', async () => {
+    mockSearch([
+      { place_id: 'p1', name: '沖繩水族館', address: 'Japan', lat: 26.6941, lng: 127.8778, category: 'tourism' },
+    ]);
     const { getByTestId, findByText } = renderPage();
     const input = getByTestId('explore-search-input') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '沖繩' } });
     fireEvent.click(getByTestId('explore-search-submit'));
     expect(await findByText('沖繩水族館')).toBeTruthy();
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/poi-search?q='),
+    expect(apiFetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/poi-search?q='),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
 
   it('save button triggers find-or-create + poi-favorites POST', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
-        results: [{ place_id: "p99", name: 'Test POI', address: 'Addr', lat: 25, lng: 121, category: 'food' }],
-      }),
-    });
-    apiFetchMock.mockImplementation((path: string) => {
-      if (path === '/poi-favorites') return Promise.resolve([]);
-      if (path === '/pois/find-or-create') return Promise.resolve({ id: 42 });
-      return Promise.resolve({});
-    });
+    mockSearch([
+      { place_id: 'p99', name: 'Test POI', address: 'Addr', lat: 25, lng: 121, category: 'food' },
+    ]);
 
     const { getByTestId, findByTestId } = renderPage();
     const input = getByTestId('explore-search-input') as HTMLInputElement;
@@ -136,10 +132,7 @@ describe('ExplorePage', () => {
 describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
-    apiFetchMock.mockImplementation((path: string) => {
-      if (path === '/poi-favorites') return Promise.resolve([]);
-      return Promise.resolve({});
-    });
+    mockSearch([]);
     global.fetch = vi.fn();
   });
 
@@ -173,14 +166,9 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
   });
 
   it('search results 渲染 cover photo (data-tone) + heart save button', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
-        results: [
-          { place_id: "p7", name: '美ら海水族館', address: '沖縄県', lat: 26.69, lng: 127.87, category: 'tourism' },
-        ],
-      }),
-    });
+    mockSearch([
+      { place_id: 'p7', name: '美ら海水族館', address: '沖縄県', lat: 26.69, lng: 127.87, category: 'tourism' },
+    ]);
     const { getByTestId, container } = renderPage();
     fireEvent.change(getByTestId('explore-search-input'), { target: { value: '美ら海' } });
     fireEvent.click(getByTestId('explore-search-submit'));
@@ -196,14 +184,9 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
   });
 
   it('rating meta line 顯示 ★ icon', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
-        results: [
-          { place_id: "p8", name: '首爾塔', address: '首爾', lat: 37.5, lng: 126.99, category: 'tourism' },
-        ],
-      }),
-    });
+    mockSearch([
+      { place_id: 'p8', name: '首爾塔', address: '首爾', lat: 37.5, lng: 126.99, category: 'tourism' },
+    ]);
     const { getByTestId, container } = renderPage();
     fireEvent.change(getByTestId('explore-search-input'), { target: { value: '首爾' } });
     fireEvent.click(getByTestId('explore-search-submit'));
@@ -215,15 +198,10 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
   });
 
   it('subtab category filter — food 過濾掉非餐廳結果', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
-        results: [
-          { place_id: "p1", name: 'A 餐廳', address: 'X', lat: 1, lng: 1, category: 'restaurant' },
-          { place_id: "p2", name: 'B 景點', address: 'X', lat: 1, lng: 1, category: 'tourism' },
-        ],
-      }),
-    });
+    mockSearch([
+      { place_id: 'p1', name: 'A 餐廳', address: 'X', lat: 1, lng: 1, category: 'restaurant' },
+      { place_id: 'p2', name: 'B 景點', address: 'X', lat: 1, lng: 1, category: 'tourism' },
+    ]);
     const { getByTestId } = renderPage();
     fireEvent.change(getByTestId('explore-search-input'), { target: { value: 'foo' } });
     fireEvent.click(getByTestId('explore-search-submit'));

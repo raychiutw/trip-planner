@@ -230,7 +230,7 @@ const SCOPED_STYLES = `
   color: var(--color-accent-foreground);
   font: inherit; font-weight: 600; font-size: var(--font-size-caption);
   cursor: pointer;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
 }
 .tp-edit-title-hint-dismiss {
   width: 28px; height: 28px;
@@ -358,7 +358,7 @@ const SCOPED_STYLES = `
 .tp-edit-day-remove.has-entries-warning:hover:not(:disabled) {
   background: var(--color-accent-deep);
   border-color: var(--color-accent-deep);
-  color: #fff;
+  color: var(--color-accent-foreground);
 }
 
 /* 加一天 card button — 同 day row 大小 + accent 底色 (per user 2026-05-20 sign-off) */

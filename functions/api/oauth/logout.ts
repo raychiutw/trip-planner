@@ -31,9 +31,13 @@ function sanitizeRedirect(value: string | null): string {
   return value;
 }
 
-async function buildLogoutResponse(request: Request, env: Env): Promise<Response> {
+async function buildLogoutResponse(
+  request: Request,
+  env: Env,
+  waitUntil?: (promise: Promise<unknown>) => void,
+): Promise<Response> {
   // V2-P6 audit: capture user_id from session (if any) before clearing
-  const session = await getSessionUser(request, env);
+  const session = await getSessionUser(request, env, waitUntil);
 
   const url = new URL(request.url);
   const redirectAfter = sanitizeRedirect(url.searchParams.get('redirect_after'));
@@ -54,9 +58,9 @@ async function buildLogoutResponse(request: Request, env: Env): Promise<Response
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  return buildLogoutResponse(context.request, context.env);
+  return buildLogoutResponse(context.request, context.env, context.waitUntil.bind(context));
 };
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  return buildLogoutResponse(context.request, context.env);
+  return buildLogoutResponse(context.request, context.env, context.waitUntil.bind(context));
 };

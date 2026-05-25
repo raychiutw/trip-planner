@@ -14,6 +14,7 @@
 import { hashInvitationToken } from '../../src/server/invitation-token';
 import { requireAuth } from './_auth';
 import { ensureCanManageTripPerms } from './permissions';
+import { AppError } from './_errors';
 import type { Env } from './_types';
 
 interface InvitationRow {
@@ -31,13 +32,6 @@ interface PendingInvitationRow {
   invited_email: string;
   created_at: string;
   expires_at: string;
-}
-
-function errorResponse(code: string, message: string, status: number): Response {
-  return new Response(
-    JSON.stringify({ error: { code, message } }),
-    { status, headers: { 'content-type': 'application/json' } },
-  );
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -87,11 +81,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // Branch 1: public preview by token (existing behaviour)
   if (!rawToken) {
-    return errorResponse('INVITATION_TOKEN_MISSING', '邀請連結缺少 token 參數', 400);
+    throw new AppError('INVITATION_TOKEN_MISSING');
   }
 
   if (!context.env.SESSION_SECRET) {
-    return errorResponse('SERVER_MISCONFIG', 'SESSION_SECRET 未設定', 500);
+    throw new AppError('SERVER_MISCONFIG', 'SESSION_SECRET 未設定');
   }
 
   const tokenHash = await hashInvitationToken(rawToken, context.env.SESSION_SECRET);
@@ -116,15 +110,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .first<InvitationRow>();
 
   if (!row) {
-    return errorResponse('INVITATION_INVALID', '邀請連結無效，請聯絡邀請者重寄', 410);
+    throw new AppError('INVITATION_INVALID');
   }
 
   if (row.accepted_at) {
-    return errorResponse('INVITATION_ACCEPTED', '此邀請已接受過，請直接登入', 410);
+    throw new AppError('INVITATION_ACCEPTED');
   }
 
   if (new Date(row.expires_at).getTime() < Date.now()) {
-    return errorResponse('INVITATION_EXPIRED', '邀請已過期，請聯絡邀請者重寄', 410);
+    throw new AppError('INVITATION_EXPIRED');
   }
 
   return new Response(

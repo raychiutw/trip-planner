@@ -39,6 +39,9 @@ const SCOPED_STYLES = `
 }
 .tp-alert-panel-icon {
   flex-shrink: 0;
+  /* H13 exception: non-interactive decorative icon container（panel 本身不是
+     interactive element；icon 只表 status，no click handler）。32×32 對齊
+     panel typography metrics，不適用 44px tap-target 規則。 */
   width: 32px; height: 32px; border-radius: 50%;
   display: grid; place-items: center;
   background: var(--color-secondary);
@@ -93,7 +96,7 @@ const SCOPED_STYLES = `
 }
 .tp-alert-panel.is-error .tp-alert-panel-icon {
   background: var(--color-priority-high-dot);
-  color: #fff;
+  color: var(--color-accent-foreground);
 }
 .tp-alert-panel.is-error .tp-alert-panel-title { color: var(--color-priority-high-dot); }
 
@@ -105,7 +108,7 @@ const SCOPED_STYLES = `
 }
 .tp-alert-panel.is-warning .tp-alert-panel-icon {
   background: rgb(244, 140, 6);
-  color: #fff;
+  color: var(--color-accent-foreground);
 }
 .tp-alert-panel.is-warning .tp-alert-panel-title { color: rgb(184, 100, 4); }
 

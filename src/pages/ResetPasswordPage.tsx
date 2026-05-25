@@ -60,7 +60,7 @@ ${AUTH_LAYOUT_STYLES}
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
 }
 .tp-pw-bar {
-  height: 4px; border-radius: 2px;
+  height: 4px; border-radius: var(--radius-full);
   background: var(--color-tertiary);
 }
 .tp-pw-bar-weak { background: var(--color-destructive); }

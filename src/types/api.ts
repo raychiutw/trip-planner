@@ -48,6 +48,26 @@ export const ErrorCode = {
   INVALID_ORDER: 'INVALID_ORDER',
   // AI 健檢 guard (v2.31.58)
   TRIP_EMPTY: 'TRIP_EMPTY',
+  // Trip invitations lifecycle（被邀請者點 link 收到的 410 GONE）
+  INVITATION_TOKEN_MISSING: 'INVITATION_TOKEN_MISSING',
+  INVITATION_INVALID: 'INVITATION_INVALID',
+  INVITATION_ACCEPTED: 'INVITATION_ACCEPTED',
+  INVITATION_EXPIRED: 'INVITATION_EXPIRED',
+  SERVER_MISCONFIG: 'SERVER_MISCONFIG',
+  // Tripline auth flow（login / signup / reset-password）—— 對 frontend 提供穩定 code
+  LOGIN_INVALID_INPUT: 'LOGIN_INVALID_INPUT',
+  LOGIN_INVALID: 'LOGIN_INVALID',
+  LOGIN_RATE_LIMITED: 'LOGIN_RATE_LIMITED',
+  SIGNUP_INVALID_EMAIL: 'SIGNUP_INVALID_EMAIL',
+  SIGNUP_PASSWORD_TOO_SHORT: 'SIGNUP_PASSWORD_TOO_SHORT',
+  SIGNUP_PASSWORD_FORMAT: 'SIGNUP_PASSWORD_FORMAT',
+  SIGNUP_EMAIL_TAKEN: 'SIGNUP_EMAIL_TAKEN',
+  SIGNUP_RATE_LIMITED: 'SIGNUP_RATE_LIMITED',
+  RESET_TOKEN_MISSING: 'RESET_TOKEN_MISSING',
+  RESET_PASSWORD_TOO_SHORT: 'RESET_PASSWORD_TOO_SHORT',
+  RESET_TOKEN_INVALID: 'RESET_TOKEN_INVALID',
+  RESET_PASSWORD_FORMAT: 'RESET_PASSWORD_FORMAT',
+  RESET_RATE_LIMITED: 'RESET_RATE_LIMITED',
 } as const;
 
 export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
@@ -79,6 +99,24 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   MISSING_MASTER: '每個停留點必須有一個正選景點',
   INVALID_ORDER: '備選排序格式不正確',
   TRIP_EMPTY: '此行程尚無景點，請先加入景點再執行健檢',
+  INVITATION_TOKEN_MISSING: '邀請連結缺少 token 參數',
+  INVITATION_INVALID: '邀請連結無效，請聯絡邀請者重寄',
+  INVITATION_ACCEPTED: '此邀請已接受過，請直接登入',
+  INVITATION_EXPIRED: '邀請已過期，請聯絡邀請者重寄',
+  SERVER_MISCONFIG: '伺服器設定錯誤，請聯絡管理員',
+  LOGIN_INVALID_INPUT: 'email + password 必填',
+  LOGIN_INVALID: 'email 或密碼錯誤',
+  LOGIN_RATE_LIMITED: '登入嘗試過多，請稍後再試',
+  SIGNUP_INVALID_EMAIL: 'Email 格式無效',
+  SIGNUP_PASSWORD_TOO_SHORT: '密碼長度不足',
+  SIGNUP_PASSWORD_FORMAT: '密碼格式不符',
+  SIGNUP_EMAIL_TAKEN: '此 email 已註冊，請改用登入或忘記密碼',
+  SIGNUP_RATE_LIMITED: '註冊嘗試過多，請稍後再試',
+  RESET_TOKEN_MISSING: '缺少 token',
+  RESET_PASSWORD_TOO_SHORT: '密碼長度不足',
+  RESET_TOKEN_INVALID: '重設連結已過期或無效',
+  RESET_PASSWORD_FORMAT: '密碼格式不符',
+  RESET_RATE_LIMITED: '密碼重設嘗試過多，請稍後再試',
 };
 
 // ---------------------------------------------------------------------------

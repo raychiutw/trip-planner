@@ -374,7 +374,7 @@ async function handleAuth(
   // skipping the CF Access JWT path entirely. CF Access still works as fallback for
   // sessions issued before the cutover; once `_session.ts` becomes the sole token
   // issuer the CF JWT block below becomes dead code.
-  const v2Session = await getSessionUser(request, env);
+  const v2Session = await getSessionUser(request, env, context.waitUntil.bind(context));
   if (v2Session) {
     let userEmail = '';
     try {

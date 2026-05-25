@@ -70,10 +70,10 @@ import { deriveSubSecret } from './hkdf';
 // v2.33.63 round 14d: in-isolate CryptoKey cache — 之前 verifySessionToken 每
 // request 都 importKey(~1ms)，每 authenticated route 都 fire 一次。Cache 1 key/secret
 // keep CryptoKey alive 整 isolate lifetime。secret 不 rotate 期間穩定。
-const keyCache = new Map<string, CryptoKey>();
+const KEY_CACHE = new Map<string, CryptoKey>();
 
 async function importHmacKey(secret: string): Promise<CryptoKey> {
-  const hit = keyCache.get(secret);
+  const hit = KEY_CACHE.get(secret);
   if (hit) return hit;
   const key = await crypto.subtle.importKey(
     'raw',
@@ -82,7 +82,7 @@ async function importHmacKey(secret: string): Promise<CryptoKey> {
     false,
     ['sign', 'verify'],
   );
-  keyCache.set(secret, key);
+  KEY_CACHE.set(secret, key);
   return key;
 }
 

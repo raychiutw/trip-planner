@@ -40,6 +40,13 @@ import { FooterArt } from '../components/trip/ThemeArt';
 import DaySkeleton from '../components/trip/DaySkeleton';
 import type { TripListItem } from '../types/trip';
 
+function isTripListItem(item: Record<string, unknown>): item is Record<string, unknown> & TripListItem {
+  return typeof item.tripId === 'string'
+    && typeof item.name === 'string'
+    && typeof item.owner === 'string'
+    && typeof item.published === 'number';
+}
+
 import '../../css/tokens.css';
 
 /* ===== Module-level constants (#14: hoist inline styles) ===== */
@@ -296,7 +303,7 @@ function TripPageInner(
     apiFetch<Record<string, unknown>[]>('/trips')
       .then((raw) => {
         if (cancelled) return;
-        const trips = raw.map(r => mapRow(r)) as unknown as TripListItem[];
+        const trips: TripListItem[] = raw.map(r => mapRow(r)).filter(isTripListItem);
 
         // Migration 0045 dropped trips.is_default. Fallback改用 user 第一個
         // published=1 的 trip — TripsListPage 列表已是 published=1 ordered by

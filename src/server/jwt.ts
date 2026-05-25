@@ -18,6 +18,8 @@
  *   - email / name / picture (per scope)
  */
 
+import { toArrayBuffer } from './cryptoBuffer';
+
 const ALG: RsaHashedImportParams = {
   name: 'RSASSA-PKCS1-v1_5',
   hash: 'SHA-256',
@@ -88,7 +90,7 @@ export async function importPrivateKey(pkcs8: string): Promise<CryptoKey> {
   );
   return crypto.subtle.importKey(
     'pkcs8',
-    bytes as unknown as ArrayBuffer,
+    toArrayBuffer(bytes),
     ALG,
     true, // extractable: true 因為 JWKS 要 derive public key
     ['sign'],
@@ -148,7 +150,7 @@ export async function signJwt(
   const signature = await crypto.subtle.sign(
     ALG.name,
     privateKey,
-    new TextEncoder().encode(signingInput) as unknown as ArrayBuffer,
+    toArrayBuffer(new TextEncoder().encode(signingInput)),
   );
   const encodedSig = base64urlFromBytes(new Uint8Array(signature));
   return `${signingInput}.${encodedSig}`;
@@ -210,8 +212,8 @@ export async function verifyJwt(
   const ok = await crypto.subtle.verify(
     ALG.name,
     publicKey,
-    base64urlToBytes(encodedSig) as unknown as ArrayBuffer,
-    new TextEncoder().encode(signingInput) as unknown as ArrayBuffer,
+    toArrayBuffer(base64urlToBytes(encodedSig)),
+    toArrayBuffer(new TextEncoder().encode(signingInput)),
   );
   if (!ok) throw new Error('JWT signature invalid');
   const claimsJson = new TextDecoder().decode(base64urlToBytes(encodedPayload));
@@ -270,7 +272,7 @@ export async function computeKid(privateKey: CryptoKey): Promise<string> {
   // SHA-256 of n + e is RFC 7638 Thumbprint compatible (close enough for kid)
   const buf = await crypto.subtle.digest(
     'SHA-256',
-    new TextEncoder().encode(`{"e":"${jwk.e}","kty":"RSA","n":"${jwk.n}"}`) as unknown as ArrayBuffer,
+    toArrayBuffer(new TextEncoder().encode(`{"e":"${jwk.e}","kty":"RSA","n":"${jwk.n}"}`)),
   );
   return base64urlFromBytes(new Uint8Array(buf)).slice(0, 16);
 }

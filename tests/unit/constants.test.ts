@@ -53,11 +53,11 @@ describe('SAFE_COLOR_RE / safeColor', () => {
     expect(safeColor('var(--color-accent)')).toBe('var(--color-accent)');
   });
 
-  it('safeColor() 對不合法 / null / undefined fallback 到 var(--blue-light)', () => {
-    expect(safeColor(null)).toBe('var(--blue-light)');
-    expect(safeColor(undefined)).toBe('var(--blue-light)');
-    expect(safeColor('')).toBe('var(--blue-light)');
-    expect(safeColor('javascript:alert(1)')).toBe('var(--blue-light)');
+  it('safeColor() 對不合法 / null / undefined fallback 到 var(--color-accent)', () => {
+    expect(safeColor(null)).toBe('var(--color-accent)');
+    expect(safeColor(undefined)).toBe('var(--color-accent)');
+    expect(safeColor('')).toBe('var(--color-accent)');
+    expect(safeColor('javascript:alert(1)')).toBe('var(--color-accent)');
   });
 });
 

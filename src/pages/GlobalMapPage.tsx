@@ -330,7 +330,7 @@ const SCOPED_STYLES = `
   width: 28px; height: 28px; border-radius: var(--radius-full);
   display: grid; place-items: center;
   background: var(--color-muted);
-  color: #fff; font-weight: 700; font-size: var(--font-size-caption);
+  color: var(--color-accent-foreground); font-weight: 700; font-size: var(--font-size-caption);
   flex-shrink: 0;
 }
 .tp-global-map-sheet-day-text { flex: 1; min-width: 0; }
@@ -469,7 +469,7 @@ const SCOPED_STYLES = `
   pointer-events: auto;
 }
 .tp-global-map-mobile-handle {
-  width: 36px; height: 4px; border-radius: 2px;
+  width: 36px; height: 4px; border-radius: var(--radius-full);
   background: var(--color-line-strong);
   margin: 0 auto 8px;
 }

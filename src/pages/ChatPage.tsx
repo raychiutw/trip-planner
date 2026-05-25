@@ -281,7 +281,7 @@ const SCOPED_STYLES = `
 .tp-chat-msg {
   max-width: min(640px, 80%);
   padding: 10px 14px;
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   font-size: var(--font-size-footnote);
   line-height: 1.55;
   white-space: pre-wrap;
@@ -432,7 +432,7 @@ const SCOPED_STYLES = `
   font: inherit; font-size: var(--font-size-footnote);
   padding: 10px 14px;
   border: 1px solid var(--color-border);
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: var(--color-background);
   color: var(--color-foreground);
   min-height: 44px; max-height: 160px;

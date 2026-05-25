@@ -3,6 +3,60 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.107] - 2026-05-25
+
+**Round 56 — /tp-code-review 100% mode + actionable TODOs ship + Lighthouse blocking gate**
+
+完整 code quality sweep（24 項 fix）+ actionable TODOs 上 prod + 移除不啟動 TODOs。
+
+### Code review fixes (rounds 1-5)
+
+**CR rules**
+- **CR-6** 刪 dead `InfoBox.tsx` + `Shop.tsx` + `mapDay.ts` infoBoxes build + `timeline.ts` types；`safeText` helper 搬 `src/lib/safeText.ts`
+- **CR-7** 新 `src/server/cryptoBuffer.ts` 抽 `toArrayBuffer` helper，`jwt.ts` 5→0、`hkdf.ts` 3→0 `as unknown as`
+- **CR-10** `TripPage.tsx` 用 `isTripListItem` type guard 取代強制陣列轉型
+- **AppError 統一**：`invitations.ts` / `oauth/login` / `oauth/signup` / `oauth/reset-password` 自建 `errorResponse` → `AppError` + 加 13 codes 進 `ErrorCode` enum；OAuth wire (`authorize.ts` / `revoke.ts` / `token.ts`) 自建 `jsonError` → `oauthErrorResponse`；inline 429 → `buildRateLimitResponse`；OAuth `consent.ts` / `forgot-password.ts` / `send-verification.ts` 同步處理
+- `_id_token.ts` 2 處 `throw new Error` → `AppError('SYS_INTERNAL', detail)`
+
+**React Best Practices**
+- **RBP-21** `DaySkeleton.tsx` + `TpMap.tsx` inline styles hoist module-level const
+- **RBP-26** `TripCardMenu.tsx` + `TripsListPage.tsx` scroll/resize 加 `{capture, passive}`
+- **RBP-30** `poiHours.ts` 平日/週末 `.map().filter()` → `reduce` 一次過
+
+**CSS HIG**
+- **H2** 4 styles.ts + `AppShell.tsx` 寫死 0.15s/0.12s/200ms → `var(--transition-duration-fast/normal)`；PTR 80ms 保留 + H2 exception 註釋
+- **H6** 10 處 accent surface 改 `var(--color-accent-foreground)`；overlay / sidebar 5 處加 H6 exception 註釋
+- **H13** 14 處 button `min-height: 32px` + TripCardMenu 32×32 → `var(--spacing-tap-min)` (44px)
+- **H16** 11 處寫死 border-radius (8/10/16/999/2/4px) → `var(--radius-md/lg/xl/full)`
+
+**命名規範**
+- `keyCache` → `KEY_CACHE`、`offlineSubscribers/onlineSubscribers` → `_SUBSCRIBERS`
+- API `id` 命名加 documented design intent 註釋（POI/permission record id 不適用 tripId 規則）
+
+**Misc**
+- `ExplorePage` `/poi-search` raw fetch → `apiFetch`（含 abort signal）；test mock 改 `apiFetchMock`
+- `oauth/login.ts` docstring 修 `Rate limit deferred V2-P6` → 實際已實作的 per-IP + per-email rate-limit
+- AlertPanel icon 32×32 加 documented exception（non-interactive container）
+- `cache.ts` async chain 加 documented exception（`bind(key)` depends on `buildKey`，無 parallel 機會）
+
+### Actionable TODOs ship
+
+- **safeColor bug fix**：`src/lib/constants.ts:19` fallback `var(--blue-light)` token 不存在 → 改 `var(--color-accent)`（v2.23.0 google-maps-migration 後 `--blue-light` 已不存在）
+- **trip_invitations 30-day cleanup cron**：新 `.github/workflows/invitation-cleanup.yml` + `scripts/cleanup-invitations.sql`，daily 03:00 UTC DELETE 30 天前 expired/accepted invitations，兌現 `migration 0040` 註解承諾
+- **Lighthouse blocking gate**：`lighthouserc.json` 5 assertion 由 `warn` → `error` 阻擋效能 regression。閾值 LCP 3000ms、TBT 400ms、CLS 0.15、performance 0.7、accessibility 0.9（後續觀察 baseline 再 tighten）
+
+### Source TODOs upgraded to shipped features
+
+- **#1 picker pre-fill (`AddCustomStopPage.tsx`)**：custom-stop picker `initialCenter` 改用 currentDay timeline 最後 entry 的 master stopPoi coord（`?all=1` endpoint 取 timeline + `stopPois[sortOrder=1]`）。空 timeline / 缺 coord → 退回 destinations fallback chain。
+- **#2 `_session.ts` ctx.waitUntil thread**：`getSessionUser` / `requireSessionUser` 簽名加 optional `waitUntil` param，4 callers（`_middleware.ts` / `oauth/consent.ts` / `oauth/logout.ts` / `oauth/authorize.ts` 走 consent 路徑）pass `context.waitUntil.bind(context)`。session_devices `last_seen_at` UPDATE 不再依賴 microtask survival — Workers runtime 保證 fire-and-forget UPDATE 在 response return 後仍跑完。
+- **#4 Google Cloud Monitoring API integration**：新 `functions/api/_gcp_monitoring.ts` — service-account JWT (RS256) auth → OAuth2 jwt-bearer grant → access_token cache (in-isolate, 50min refresh)；`monitoring.googleapis.com/v3/projects/:id/timeSeries` query `serviceruntime.googleapis.com/api/request_count` 依 `consumed_api` label 分組。`quota-estimate.ts` 先試 GCP（ground truth）失敗 / env 缺失 fallback D1 proxy。Required env: `GCP_SERVICE_ACCOUNT_KEY_JSON` + optional `GCP_PROJECT_ID`。Response 加 `source: 'gcp' | 'd1-proxy'` 欄位讓 caller 區分準度。
+
+### 測試
+
+- TypeScript src/ + functions/: 0 error
+- Unit tests: **325 files / 2679 tests** pass
+- API tests: **73 files / 780 tests** pass
+
 ## [2.33.106] - 2026-05-25
 
 **Round 55 — /review batch 10: 收尾全部 deferred test gaps (T-1/T-3/T-4/T-6/T-7)**
