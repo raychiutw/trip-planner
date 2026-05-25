@@ -154,25 +154,28 @@ describe('TimelineRail — click-to-edit note', () => {
     expect(textarea.value).toBe('提前線上買票省 ¥120。');
   });
 
-  it('shows kbd hint + save/cancel buttons in edit mode', () => {
+  it('shows kbd hint + close button in edit mode (v2.33.108 auto-save)', () => {
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     fireEvent.click(screen.getByTestId('timeline-rail-note-value-42'));
     const detail = screen.getByTestId('timeline-rail-detail-42');
-    expect(within(detail).getByTestId('timeline-rail-note-save-42')).toBeTruthy();
-    expect(within(detail).getByTestId('timeline-rail-note-cancel-42')).toBeTruthy();
+    // v2.33.108: 「儲存 / 取消」改「完成」(auto-save)
+    expect(within(detail).getByTestId('timeline-rail-note-close-42')).toBeTruthy();
     expect(detail.textContent).toMatch(/⌘.*↩/);
   });
 
-  it('ESC cancels edit, restores original note', () => {
+  it('ESC closes edit mode (v2.33.108: 已 auto-save commit，不再 revert)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    vi.stubGlobal('fetch', fetchMock);
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     fireEvent.click(screen.getByTestId('timeline-rail-note-value-42'));
     const textarea = screen.getByTestId('timeline-rail-note-input-42') as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: '改成這個' } });
     fireEvent.keyDown(textarea, { key: 'Escape' });
-    expect(screen.queryByTestId('timeline-rail-note-input-42')).toBeNull();
-    expect(screen.getByTestId('timeline-rail-note-value-42').textContent).toContain('提前線上買票省 ¥120');
+    await waitFor(() => {
+      expect(screen.queryByTestId('timeline-rail-note-input-42')).toBeNull();
+    });
   });
 
   it('Cmd+Enter saves, calls PATCH with new note', async () => {
@@ -191,7 +194,7 @@ describe('TimelineRail — click-to-edit note', () => {
     expect(JSON.parse((opts as RequestInit).body as string)).toEqual({ note: '推薦 11:00 餵食秀' });
   });
 
-  it('Save button click also triggers PATCH', async () => {
+  it('onBlur triggers auto-save PATCH (v2.33.108)', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
     vi.stubGlobal('fetch', fetchMock);
     renderRail();
@@ -199,7 +202,7 @@ describe('TimelineRail — click-to-edit note', () => {
     fireEvent.click(screen.getByTestId('timeline-rail-note-value-42'));
     const textarea = screen.getByTestId('timeline-rail-note-input-42') as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: '改備註' } });
-    fireEvent.click(screen.getByTestId('timeline-rail-note-save-42'));
+    fireEvent.blur(textarea);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
   });
 

@@ -32,6 +32,9 @@ import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
 import InlineError from '../shared/InlineError';
+import SaveStatus from '../shared/SaveStatus';
+import { useAutosave } from '../../hooks/useAutosave';
+import { ApiError } from '../../lib/errors';
 import MarkdownText from '../shared/MarkdownText';
 import StopLightbox from './StopLightbox';
 // 2026-05-03 modal-to-fullpage migration: EntryActionPopover 由 /trip/:id/stop/:eid/(copy|move) page 取代。
@@ -345,56 +348,64 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
 
   const [editingNote, setEditingNote] = useState(false);
   const [draftNote, setDraftNote] = useState('');
-  const [savingNote, setSavingNote] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  // v2.33.108: note save 走 useAutosave hook（state/error 由 hook 管）。
+  // deleteError 保留 separate state — 跟 note edit error 互不干擾。
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const navigate = useNavigate();
   // Section 4.5 (terracotta-ui-parity-polish): 取代 window.confirm 為 ConfirmModal pattern
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const beginEditNote = (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation();
-    setDraftNote(entry.note ?? '');
-    setSaveError(null);
-    setEditingNote(true);
-  };
-
-  const cancelEditNote = useCallback(() => {
-    setEditingNote(false);
-    setDraftNote('');
-    setSaveError(null);
-  }, []);
-
-  const saveNote = useCallback(async () => {
-    if (!tripId || entryIdNum == null) return;
-    setSavingNote(true);
-    setSaveError(null);
-    try {
+  // v2.33.108: note 改 auto-save — onBlur 立即 flush，Cmd+Enter 仍 flush。
+  // 移除「儲存 / 取消」button，改「完成」按鈕（純關閉 edit mode，狀態已 auto-saved）。
+  // ESC 改 revert + 關 — 若未 save 直接 cancel；若已 save 則 revert 需透過原值重 PATCH（保守做法：ESC 一律 flush + close）。
+  const noteAutosave = useAutosave<{ note: string }>({
+    debounceMs: 800,
+    save: async (body) => {
+      if (!tripId || entryIdNum == null) throw new Error('Missing tripId / entryId');
       const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryIdNum}`, {
         method: 'PATCH',
         credentials: 'same-origin',
-        body: JSON.stringify({ note: draftNote }),
+        body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error('儲存失敗');
-      setEditingNote(false);
+      if (!res.ok) throw await ApiError.fromResponse(res);
       window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
         detail: { tripId, entryId: entryIdNum },
       }));
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : '儲存失敗');
-    } finally {
-      setSavingNote(false);
-    }
-  }, [tripId, entryIdNum, draftNote]);
+      return await res.json() as Record<string, unknown>;
+    },
+  });
+
+  const beginEditNote = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    setDraftNote(entry.note ?? '');
+    setEditingNote(true);
+  };
+
+  const closeEditNote = useCallback(async () => {
+    await noteAutosave.flush();
+    setEditingNote(false);
+    setDraftNote('');
+  }, [noteAutosave]);
+
+  const handleNoteChange = (value: string) => {
+    setDraftNote(value);
+    noteAutosave.patch({ note: value });
+  };
+
+  const handleNoteBlur = () => {
+    void noteAutosave.flush();
+  };
 
   const handleNoteKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Escape') {
       e.preventDefault();
-      cancelEditNote();
+      // ESC 直接關閉（已 auto-save flushed 或仍 in pending — flush 後關）
+      void closeEditNote();
     } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      void saveNote();
+      void closeEditNote();
     }
   };
 
@@ -417,7 +428,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       setShowDeleteConfirm(false);
     } catch (err) {
       // 顯示錯誤但保留 modal 開啟讓 user 重試
-      setSaveError(err instanceof Error ? err.message : '刪除失敗');
+      setDeleteError(err instanceof Error ? err.message : '刪除失敗');
     } finally {
       setDeleting(false);
     }
@@ -616,36 +627,34 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 <textarea
                   className="tp-rail-note-input"
                   value={draftNote}
-                  onChange={(e) => setDraftNote(e.target.value)}
+                  onChange={(e) => handleNoteChange(e.target.value)}
+                  onBlur={handleNoteBlur}
                   onKeyDown={handleNoteKey}
                   onClick={(e) => e.stopPropagation()}
                   autoFocus
                   data-testid={`timeline-rail-note-input-${entry.id}`}
                 />
                 <div className="tp-rail-note-actions">
-                  <button
-                    type="button"
-                    className="tp-rail-note-save"
-                    onClick={(e) => { e.stopPropagation(); void saveNote(); }}
-                    disabled={savingNote}
-                    data-testid={`timeline-rail-note-save-${entry.id}`}
-                  >
-                    {savingNote ? '儲存中…' : '儲存'}
-                  </button>
+                  <SaveStatus
+                    state={noteAutosave.state}
+                    error={noteAutosave.error}
+                    onRetry={noteAutosave.retry}
+                  />
                   <button
                     type="button"
                     className="tp-rail-note-cancel"
-                    onClick={(e) => { e.stopPropagation(); cancelEditNote(); }}
-                    disabled={savingNote}
-                    data-testid={`timeline-rail-note-cancel-${entry.id}`}
+                    onClick={(e) => { e.stopPropagation(); void closeEditNote(); }}
+                    data-testid={`timeline-rail-note-close-${entry.id}`}
                   >
-                    取消
+                    完成
                   </button>
                   <span className="tp-rail-note-kbd">
-                    <kbd>⌘</kbd> + <kbd>↩</kbd> 儲存 · <kbd>esc</kbd> 取消
+                    <kbd>⌘</kbd> + <kbd>↩</kbd> 完成 · <kbd>esc</kbd> 關閉
                   </span>
                 </div>
-                {saveError && <InlineError message={saveError} />}
+                {noteAutosave.state === 'error' && noteAutosave.error && (
+                  <InlineError message={noteAutosave.error} />
+                )}
               </>
             ) : (
               <div
@@ -793,9 +802,9 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
             <p style={{ margin: '10px 0 16px', fontSize: 'var(--font-size-callout)', color: 'var(--color-muted)' }}>
               「{entryDisplayTitle}」將從行程中移除。此操作無法復原。
             </p>
-            {saveError && (
+            {deleteError && (
               <p style={{ fontSize: 'var(--font-size-footnote)', color: 'var(--color-destructive)', margin: '0 0 8px' }}>
-                {saveError}
+                {deleteError}
               </p>
             )}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

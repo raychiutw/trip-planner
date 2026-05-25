@@ -30,7 +30,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
-import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
+import SaveStatus from '../components/shared/SaveStatus';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import Icon from '../components/shared/Icon';
 import InlineError from '../components/shared/InlineError';
@@ -884,8 +884,14 @@ export default function EditEntryPage() {
         if (dirty.segmentDirty) {
           window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId: segment?.id } }));
         }
-        showToast('已儲存', 'success');
-        navigate(goBackHref, { replace: true });
+        // v2.33.108: auto-save 後不再 navigate（user 仍在 edit page），update
+        // originalRef 讓 dirty 重置避免重複 save，setSubmitting(false) 讓 SaveStatus
+        // 從 saving → saved transit。
+        originalRef.current = {
+          ...originalRef.current,
+          startTime, endTime, note, mode, transitMin,
+        };
+        setSubmitting(false);
         return;
       }
       const msg = failures
@@ -899,16 +905,24 @@ export default function EditEntryPage() {
     }
   }, [
     tripId, entry, entryId, submitting, validation, dirty,
-    startTime, endTime, note, mode, transitMin, segment, navigate, goBackHref,
+    startTime, endTime, note, mode, transitMin, segment,
   ]);
 
+  // v2.33.108: auto-save 後不再需要 discard confirmation — handleCancel 直接 back，
+  // pending patch 由 handleSave debounce 內 flush（user 等 800ms 後 navigate）。
   const handleCancel = useCallback(() => {
-    if (dirty.any) {
-      setShowDiscardModal(true);
-    } else {
-      goBack();
-    }
-  }, [dirty.any, goBack]);
+    goBack();
+  }, [goBack]);
+
+  // v2.33.108: debounce auto-save effect — dirty+valid+!submitting 800ms 後 fire handleSave。
+  // 取代「儲存」button reassurance（user 改完 800ms 自動 PATCH，SaveStatus 顯示進度）。
+  useEffect(() => {
+    if (!dirty.any || validation || submitting) return;
+    const timer = setTimeout(() => {
+      void handleSave();
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [dirty.any, validation, submitting, startTime, endTime, note, mode, transitMin, handleSave]);
 
   // v2.27.0 multi-POI handlers ----------------------------------------------
 
@@ -1143,14 +1157,20 @@ export default function EditEntryPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [handleSave, handleCancel, showDiscardModal, altSwapConfirm]);
 
+  // v2.33.108: TitleBar 移除「儲存」button — auto-save 已 wire；改 SaveStatus indicator。
+  // saveState 從 submitting + dirty + error 推導：submitting='saving', !dirty+!error='saved',
+  // dirty+!submitting='pending', error='error'。
+  type DerivedSaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
+  const derivedSaveState: DerivedSaveState =
+    submitting ? 'saving'
+    : error ? 'error'
+    : dirty.any ? 'pending'
+    : 'idle';
   const titleBarActions = (
-    <TitleBarPrimaryAction
-      label="儲存"
-      busyLabel="儲存中⋯"
-      busy={submitting}
-      disabled={!dirty.any || !!validation}
-      onClick={() => void handleSave()}
-      testId="edit-entry-titlebar-save"
+    <SaveStatus
+      state={derivedSaveState}
+      error={error}
+      onRetry={() => void handleSave()}
     />
   );
 
