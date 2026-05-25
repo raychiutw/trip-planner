@@ -26,13 +26,15 @@ describe('api-server v2.33.27 per-skill lock (regression)', () => {
   });
 
   it('hasActiveSession 接 skillCommand 參數 + 用 sessionPrefixForSkill 過濾', () => {
-    expect(SRC).toMatch(/function hasActiveSession\(skillCommand\?: string\)/);
+    // v2.33.110: signature required（原 optional 三元 fallback 從未 reach，dead code 已刪）
+    expect(SRC).toMatch(/function hasActiveSession\(skillCommand: string\)/);
     expect(SRC).toMatch(/sessionPrefixForSkill\(skillCommand\)/);
   });
 
-  it('hasActiveSession 保留 /tp-request legacy SESSION_PREFIX backward-compat', () => {
+  it('hasActiveSession 保留 /tp-request legacy backward-compat', () => {
     // /tp-request 接 legacy session prefix（process restart 過渡期既有 session 還活著）
-    expect(SRC).toMatch(/skillCommand === '\/tp-request' && line\.startsWith\('tripline-request-'\)/);
+    // v2.33.110: literal `'tripline-request-'` 抽成 LEGACY_SESSION_PREFIX 常數
+    expect(SRC).toMatch(/skillCommand === '\/tp-request' && line\.startsWith\(LEGACY_SESSION_PREFIX\)/);
   });
 
   it('spawnTmuxRequest session name 用 sessionPrefixForSkill', () => {

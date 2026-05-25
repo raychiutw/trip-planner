@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.111] - 2026-05-25
+
+**Fix — orphan tmux session 永遠不被清，AI 健檢 cron 永真 skip**
+
+Prod 觀察：今天下午 3:07 user 觸發 AI 健檢（trip_requests #209），CF Worker fetch funnel `/trigger` 收 530（funnel drift 第三次發生，另一個 issue 已修），cron 15min 兜底 retry 仍 530 → Telegram alert。即使 funnel 之後自然恢復，request 209 仍卡 1h21m 才完成。同期 request 208 也卡 3h08m。
+
+Root cause：`scripts/tripline-api-server.ts:92` `SESSION_PREFIX = 'tripline-request-'`，但 v2.33.27 per-skill rename 後實際 session 命名是 `tripline-tp-request-*` / `tripline-tp-daily-check-*`。`cleanupOrphans` 用 `name.startsWith(SESSION_PREFIX)` filter 永遠 false → orphan 完全不被清。其後 cron 每 10 min fire 都因 `hasActiveSession()` 命中 → skip 新 spawn。AI 健檢 / tp-request request 永遠卡在 status='open'。
+
+實證：今早 04:38 UTC 一個 `tripline-tp-request-1779683905609-1669` session 卡 9h26m+ 沒結束，cron 每 10 分鐘 fire 都 skip。
+
+### Changed
+- `cleanupOrphans` 改用「ALLOWED_SKILLS-derived prefix set + LEGACY」allowlist-driven 比對 — 自動跟著新 skill 走免雙重維護，也不誤殺 user 手動的 `tripline-debug` 等 ad-hoc session
+- `tmux ls -F` format 改 `#{session_name}|#{session_created}` + `split('|')`（tmux 自 2017 起拒絕 `|` 在 session name），防 session name 含空格時 cleanupOrphans skip 但 hasActiveSession 仍 match 的同病灶 race（adversarial review 發現）
+- `hasActiveSession(skillCommand)` 簽名改 required（原 optional 三元 fallback 從未 reach）
+- `LEGACY_SESSION_PREFIX = 'tripline-request-'` 抽常數取代 hardcoded literal
+
+### Removed
+- 死碼 `SESSION_PREFIX` const + hasActiveSession 三元 fallback path
+- stale comment 寫 `tripline-request-<timestamp>-<pid>` v2.33.27 後已不正確 → 更新 per-skill 命名
+
+### Added
+- `getKnownSessionPrefixes()` helper：從 ALLOWED_SKILLS derive 已知 prefix list
+- `tests/unit/api-server-cleanup-orphans-prefix.test.ts` regression 9 條：source-grep + sample logic（含 negative case 防誤殺 `tripline-debug`）
+
 ## [2.33.110] - 2026-05-25
 
 **Polish — AI 健檢頁拔 sticky bottom bar 改 title bar action**

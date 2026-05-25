@@ -29,26 +29,6 @@ Tailscale funnel 反覆被 macOS update / GUI app / 第三方 brew 改成 `serve
 
 下次 drift 2 分鐘內自動修，user 收 alert 但不用親手介入。
 
-### cleanupOrphans SESSION_PREFIX 過時 — orphan tmux session 永遠不清
-
-**Priority:** P0
-**Discovered:** 2026-05-25（v2.33.109 ship 後追 AI 健檢 cron 為何沒撈補）
-
-`scripts/tripline-api-server.ts:92` `SESSION_PREFIX = 'tripline-request-'`，但 v2.33.27 per-skill rename 後 session 命名是 `tripline-tp-request-...` / `tripline-tp-daily-check-...`（多一個 `tp-`）。`cleanupOrphans` 用 `name.startsWith(SESSION_PREFIX)` filter 永遠 false → tmux orphan 完全不被清。
-
-實證：今早 04:38 UTC 一個 `tripline-tp-request-1779683905609-1669` session 卡 9h26m+ 沒結束，cron 每 10 分鐘 fire 都因 `hasActiveSession()` 偵測到 → skip。AI 健檢 request 208/209 status='open' 永遠不會被撈處理。
-
-Fix（小）：
-```ts
-const SESSION_PREFIX_LEGACY = 'tripline-request-';
-const SESSION_PREFIX_PER_SKILL = 'tripline-tp-';
-// startsWith check 接受兩種
-```
-
-或更乾淨：直接掃所有以 `tripline-` 開頭的 session（cleanup 範圍夠窄）。
-
-兩者邏輯都要加 regression unit test。
-
 ### AI 健檢歷史資料丟失（v2.31.0 ~ v2.33.85，3 週窗口）
 
 **Priority:** P3（已根治，僅資料補救）
@@ -65,6 +45,15 @@ User decision: 不救也不重跑（v2.33.109 confirmed）— 維持現狀。其
 ---
 
 ## Completed
+
+### cleanupOrphans SESSION_PREFIX 過時 — orphan tmux session 永遠不清
+
+**Priority**: P0
+**Completed**: v2.33.111 (2026-05-25)
+
+`scripts/tripline-api-server.ts:92` `SESSION_PREFIX = 'tripline-request-'`，v2.33.27 per-skill rename 後實際 session 命名是 `tripline-tp-request-*` / `tripline-tp-daily-check-*` → `cleanupOrphans` filter 永遠 false → orphan 完全不被清 → `hasActiveSession()` 永真 → cron 每次 skip → AI 健檢 request 209 卡 1h21m。
+
+Fix：(1) cleanupOrphans 改 ALLOWED_SKILLS-derived prefix set + LEGACY_SESSION_PREFIX allowlist-driven 比對；(2) tmux ls format 從 space-delimited 改 `|`-delimited（防 session name 含空格的同病灶 race，adversarial review 點名）；(3) hasActiveSession 簽名改 required，刪 SESSION_PREFIX 死碼；(4) 9 條 regression test。
 
 ### Lighthouse — Blocking gate（v2.33.107）
 
