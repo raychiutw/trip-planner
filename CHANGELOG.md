@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.108] - 2026-05-25
+
+**Round 57 — 編輯即儲存（auto-save）+ 移除「儲存」button + entries/segments OCC version**
+
+完整 UX 轉換：edit pages 移除 explicit「儲存」button，改為 inline auto-save。
+
+### Backend
+- **Migration 0072**：`trip_entries.version` + `trip_segments.version` INTEGER OCC counter
+- **PATCH /api/trips/:id/entries/:eid**：接 `expectedVersion` body field → 用 atomic SQL CAS（`WHERE id = ? AND version = ?`）+ `SET version = version + 1`；不符 → 409 `STALE_ENTRY`。omit `expectedVersion` → backward-compat skip check（但 version 仍 bump）
+- **PATCH /api/trips/:id/segments/:sid**：同 OCC pattern（pre-SELECT check，multi-branch UPDATE 不適合 atomic CAS）。所有 UPDATE 分支加 `version = version + 1`
+- **GET /api/trips/:id/segments**：response 加 `version` 欄位給 frontend OCC 用
+
+### Frontend infra
+- **`src/hooks/useAutosave.ts`** — debounce 800ms + onBlur flush + OCC retry-once + offline state（networkBus）+ saved 2s indicator
+- **`src/components/shared/SaveStatus.tsx`** — pending/saving/saved/error/offline indicator pill 取代 explicit「儲存」button reassurance
+
+### UI 變動（移除「儲存」button + auto-save wired）
+- **TravelPillDialog (modal)**：mode option click → 立即 PATCH（非 transit）；transit min input → onBlur PATCH；移除「儲存」「取消」button，改「關閉」+ SaveStatus
+- **TimelineRail note inline edit**：textarea onBlur / Cmd+Enter / ESC 都 flush + close；改「完成」button + SaveStatus
+- **EditEntryPage**：useEffect 800ms debounce auto-save；TitleBar 儲存 button → SaveStatus；移除 ConfirmModal discard flow
+- **EditTripPage**：同 pattern，PUT /trips full body；移除底部「儲存變更」button；「取消」改「返回」
+
+### Test 更新
+- `travel-pill-tap-switch.test.tsx`、`timeline-rail-inline-expand.test.tsx`、`edit-entry-page.test.tsx` 重寫對齊 auto-save flow
+
+### 既有 patterns 保留
+- ExplorePage heart toggle / CollabPanel role select / Drag-reorder optimistic（已是 immediate save baseline）
+- Tier 2 creation pages「建立 / 完成」button 保留（commit semantic，非 save）
+- Tier 3 destructive button（Delete / OAuth invite）保留 explicit confirm
+
+### 測試
+- TypeScript src/ + functions/: 0 error
+- Unit tests: **325 files / 2675 tests** pass
+- API tests: **73 files / 780 tests** pass
+
 ## [2.33.107] - 2026-05-25
 
 **Round 56 — /tp-code-review 100% mode + actionable TODOs ship + Lighthouse blocking gate**

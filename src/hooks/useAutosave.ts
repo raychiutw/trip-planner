@@ -1,0 +1,225 @@
+/**
+ * useAutosave — debounce + onBlur + OCC retry 統一 autosave primitive
+ *
+ * 設計目標：取代 explicit「儲存」button UX，使用者編輯欄位後 800ms debounce 或
+ * onBlur 即觸發背景 PATCH，視覺以 `SaveStatus` indicator 取代 button reassurance。
+ *
+ * 行為：
+ *   - patch(updates) → merge into pendingPatch + 重置 debounce timer
+ *   - flush() → 立即清 timer + 走 save flow（onBlur / form submit / unmount caller）
+ *   - cancel() → 清 timer + 丟 pendingPatch（用於 cancel button 路徑）
+ *   - save success → bump version + clear pendingPatch + 'saved' 2s → 'idle'
+ *   - 409 STALE_ENTRY → onStale() refresh version + retry once with same patch
+ *   - 其他 error → 'error' + 保留 patch 等 manual retry
+ *   - offline (networkBus) → 'offline' + 保留 patch，online 重連時 flush 重送
+ *
+ * OCC：save() 接受 expectedVersion；handler 不符回 409，hook 自動 refresh + retry。
+ *
+ * 不負責：
+ *   - LocalStorage offline queue（A8 task 另作）
+ *   - beforeunload guard（caller 自己 wire）— hook 提供 state.hasPending 供 caller 判斷
+ */
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { registerNetworkCallbacks } from '../lib/networkBus';
+import { ApiError } from '../lib/errors';
+
+export type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'offline';
+
+export interface UseAutosaveOptions<T> {
+  /** 初始 entity version（OCC）。若 entity 沒 version 欄位 → omit；hook skip OCC。 */
+  initialVersion?: number;
+  /** Debounce ms。Default 800. */
+  debounceMs?: number;
+  /**
+   * 實際 PATCH 函式。caller 提供，hook call with merged body + expectedVersion。
+   * 回傳新 entity（含 version）— hook 取出 .version bump 內部 token。
+   */
+  save: (body: Partial<T>, expectedVersion: number | undefined) => Promise<Record<string, unknown>>;
+  /**
+   * STALE_ENTRY refresh hook — 回傳最新 version。caller 通常做 GET 取 latest。
+   * 不提供 → 失敗直接顯 error 不 retry。
+   */
+  onStale?: () => Promise<number>;
+  /** 'saved' 狀態自動轉 'idle' 的延遲 (ms). Default 2000. */
+  savedDisplayMs?: number;
+}
+
+export interface UseAutosaveReturn<T> {
+  state: SaveState;
+  error: string | null;
+  /** 有 pending update 等 save。caller 可用來 beforeunload guard。 */
+  hasPending: boolean;
+  /** Schedule debounced save with field updates. */
+  patch: (updates: Partial<T>) => void;
+  /** Force immediate save — onBlur / form submit / unmount. */
+  flush: () => Promise<void>;
+  /** Discard pending updates (clear timer + drop merged patch). */
+  cancel: () => void;
+  /** 手動 retry — 失敗後 user click「重試」 button。 */
+  retry: () => Promise<void>;
+}
+
+export function useAutosave<T extends object>(
+  options: UseAutosaveOptions<T>,
+): UseAutosaveReturn<T> {
+  const { initialVersion, debounceMs = 800, save, onStale, savedDisplayMs = 2000 } = options;
+
+  const [state, setState] = useState<SaveState>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [hasPending, setHasPending] = useState(false);
+
+  // Stable refs to avoid stale closures in async / setTimeout
+  const pendingPatchRef = useRef<Partial<T>>({});
+  const versionRef = useRef<number | undefined>(initialVersion);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isOnlineRef = useRef(true);
+  const inFlightRef = useRef(false);
+
+  const clearDebounceTimer = useCallback(() => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const clearSavedTimer = useCallback(() => {
+    if (savedTimerRef.current !== null) {
+      clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = null;
+    }
+  }, []);
+
+  /** Perform actual save (call save() + handle response + OCC retry). */
+  const performSave = useCallback(async (): Promise<void> => {
+    // Snapshot + clear pending — 若 save 期間 user 又 patch，下一輪會接著 save
+    const body = pendingPatchRef.current;
+    if (Object.keys(body).length === 0) return;
+    if (inFlightRef.current) return; // already saving
+    if (!isOnlineRef.current) {
+      setState('offline');
+      return;
+    }
+    pendingPatchRef.current = {};
+    inFlightRef.current = true;
+    setState('saving');
+    setError(null);
+    clearSavedTimer();
+
+    try {
+      const result = await save(body, versionRef.current);
+      const newVersion = typeof result.version === 'number' ? result.version : undefined;
+      if (newVersion !== undefined) versionRef.current = newVersion;
+      setHasPending(Object.keys(pendingPatchRef.current).length > 0);
+      setState('saved');
+      savedTimerRef.current = setTimeout(() => {
+        setState((prev) => (prev === 'saved' ? 'idle' : prev));
+        savedTimerRef.current = null;
+      }, savedDisplayMs);
+    } catch (err) {
+      // 409 STALE_ENTRY — refresh version + retry once
+      if (err instanceof ApiError && err.code === 'STALE_ENTRY' && onStale) {
+        try {
+          const freshVersion = await onStale();
+          versionRef.current = freshVersion;
+          // Re-merge dropped patch（user 編輯中 → 仍在 pendingPatchRef）+ original body
+          pendingPatchRef.current = { ...body, ...pendingPatchRef.current };
+          const retryResult = await save(pendingPatchRef.current, versionRef.current);
+          pendingPatchRef.current = {};
+          const retryVersion = typeof retryResult.version === 'number' ? retryResult.version : undefined;
+          if (retryVersion !== undefined) versionRef.current = retryVersion;
+          setHasPending(false);
+          setState('saved');
+          savedTimerRef.current = setTimeout(() => {
+            setState((prev) => (prev === 'saved' ? 'idle' : prev));
+            savedTimerRef.current = null;
+          }, savedDisplayMs);
+          return;
+        } catch (retryErr) {
+          // Retry 失敗 → 把 body merge 回 pending，user 可手動 retry
+          pendingPatchRef.current = { ...body, ...pendingPatchRef.current };
+          setHasPending(true);
+          setState('error');
+          setError(retryErr instanceof Error ? retryErr.message : '儲存衝突，請重新整理');
+          return;
+        }
+      }
+      // 其他 error — 保留 patch 等 retry
+      pendingPatchRef.current = { ...body, ...pendingPatchRef.current };
+      setHasPending(true);
+      setState('error');
+      setError(err instanceof Error ? err.message : '儲存失敗');
+    } finally {
+      inFlightRef.current = false;
+    }
+  }, [save, onStale, savedDisplayMs, clearSavedTimer]);
+
+  /** Schedule debounced save. */
+  const patch = useCallback(
+    (updates: Partial<T>): void => {
+      pendingPatchRef.current = { ...pendingPatchRef.current, ...updates };
+      setHasPending(true);
+      setState((prev) => (prev === 'saving' || prev === 'offline' ? prev : 'pending'));
+      clearDebounceTimer();
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        void performSave();
+      }, debounceMs);
+    },
+    [debounceMs, performSave, clearDebounceTimer],
+  );
+
+  /** Force immediate save — cancel debounce, fire now. */
+  const flush = useCallback(async (): Promise<void> => {
+    clearDebounceTimer();
+    await performSave();
+  }, [clearDebounceTimer, performSave]);
+
+  /** Discard pending updates. */
+  const cancel = useCallback((): void => {
+    clearDebounceTimer();
+    pendingPatchRef.current = {};
+    setHasPending(false);
+    setState('idle');
+    setError(null);
+  }, [clearDebounceTimer]);
+
+  /** Manual retry after error. */
+  const retry = useCallback(async (): Promise<void> => {
+    setError(null);
+    await performSave();
+  }, [performSave]);
+
+  // Wire networkBus — online → flush, offline → state='offline'
+  useEffect(() => {
+    const unsub = registerNetworkCallbacks(
+      // onOffline
+      () => {
+        isOnlineRef.current = false;
+        // Don't override 'saving' or 'saved' transient states
+        setState((prev) => (prev === 'pending' || prev === 'error' || prev === 'idle' ? 'offline' : prev));
+      },
+      // onOnline
+      () => {
+        isOnlineRef.current = true;
+        // 自動 flush 重送
+        if (Object.keys(pendingPatchRef.current).length > 0) {
+          void performSave();
+        } else {
+          setState((prev) => (prev === 'offline' ? 'idle' : prev));
+        }
+      },
+    );
+    return unsub;
+  }, [performSave]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      clearDebounceTimer();
+      clearSavedTimer();
+    };
+  }, [clearDebounceTimer, clearSavedTimer]);
+
+  return { state, error, hasPending, patch, flush, cancel, retry };
+}

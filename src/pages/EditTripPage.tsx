@@ -26,7 +26,7 @@
  *   - Form 邏輯 + state machine 完全沿用 EditTripModal v2.19.0
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -40,7 +40,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
-import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
+import SaveStatus from '../components/shared/SaveStatus';
 import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
@@ -674,7 +674,6 @@ export default function EditTripPage() {
   const auth = useRequireAuth();
   const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
-  const navigate = useNavigate();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
   const [loading, setLoading] = useState(true);
@@ -1045,15 +1044,47 @@ export default function EditTripPage() {
         } catch { /* not JSON */ }
         throw new Error(message);
       }
-      showToast('行程已更新', 'success');
-      // 廣播更新事件給 listening pages (ActiveTrip / TripsList)
+      // v2.33.108: auto-save 後不再 navigate（user 仍在 edit page）。
+      // 廣播更新事件給 listening pages (ActiveTrip / TripsList) + reset original
+      // 讓 dirty 重置，避免下次 effect 又觸發。
       window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
-      navigate(routes.tripsSelected(tripId));
+      setOriginal({
+        ...(original ?? {}),
+        title, description, lang, published,
+      } as typeof original);
+      setOriginalDests(destinations.map((d) => ({ ...d })));
+      setSubmitting(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : '儲存變更失敗');
       setSubmitting(false);
     }
   }
+
+  // v2.33.108: 移除「儲存」TitleBar button → SaveStatus 顯示 auto-save 狀態。
+  // dirty 從 destsChanged + field 比較推導。
+  // 注意：hooks 必須在 early return 之前 — rules of hooks。
+  const isDirty = useMemo(() => {
+    if (!original) return false;
+    if (title !== (original.title ?? '')) return true;
+    if (description !== (original.description ?? '')) return true;
+    if (lang !== ((original.lang as Lang) ?? 'zh-TW')) return true;
+    if (published !== (original.published ?? 0)) return true;
+    if (!destNamesEqual(destinations, originalDests)) return true;
+    if (destinations.some((d, i) => {
+      const o = originalDests[i];
+      return !o || o.place_id !== d.place_id || (o.day_quota ?? null) !== (d.day_quota ?? null);
+    })) return true;
+    return false;
+  }, [original, originalDests, title, description, lang, published, destinations]);
+
+  // v2.33.108: debounce auto-save effect — 800ms 後 fire handleSubmit。
+  useEffect(() => {
+    if (!isDirty || submitting) return;
+    const timer = setTimeout(() => {
+      formRef.current?.requestSubmit();
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [isDirty, submitting, title, description, lang, published, destinations]);
 
   if (!auth.user) return null;
 
@@ -1076,13 +1107,19 @@ export default function EditTripPage() {
 
   // v2.33.0: dateRange const removed — 改由 days section header 顯示日期區間。
 
+  // titleBarActions: SaveStatus 推導自 submitting/error/isDirty（hook 已在 early
+  // return 之前定義；此區純 derived value 不含 hook）。
+  type DerivedSaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
+  const derivedSaveState: DerivedSaveState =
+    submitting ? 'saving'
+    : error ? 'error'
+    : isDirty ? 'pending'
+    : 'idle';
   const titleBarActions = !loading && (
-    <TitleBarPrimaryAction
-      label="儲存"
-      busyLabel="儲存中⋯"
-      busy={submitting}
-      onClick={() => formRef.current?.requestSubmit()}
-      testId="edit-trip-titlebar-save"
+    <SaveStatus
+      state={derivedSaveState}
+      error={error}
+      onRetry={() => formRef.current?.requestSubmit()}
     />
   );
 
@@ -1397,24 +1434,15 @@ export default function EditTripPage() {
                     <span>上線</span>
                   </button>
                 </div>
+                {/* v2.33.108: 移除「儲存變更」button — auto-save 已 wire。剩「返回」（已 auto-saved 無需 cancel 語意）。 */}
                 <div className="tp-edit-actions-btns">
                   <button
                     type="button"
                     className="tp-edit-btn"
                     onClick={handleBack}
-                    disabled={submitting}
-                    data-testid="edit-trip-cancel"
+                    data-testid="edit-trip-back"
                   >
-                    取消
-                  </button>
-                  <button
-                    type="submit"
-                    form="edit-trip-form"
-                    className="tp-edit-btn tp-edit-btn-primary"
-                    disabled={submitting}
-                    data-testid="edit-trip-submit"
-                  >
-                    {submitting ? '儲存中⋯' : '儲存變更'}
+                    返回
                   </button>
                 </div>
               </div>

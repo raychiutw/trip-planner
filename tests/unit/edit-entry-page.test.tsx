@@ -347,28 +347,29 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
   });
 });
 
-describe('EditEntryPage — 驗證', () => {
-  it('start_time >= end_time → validation error + 儲存 disabled', async () => {
+describe('EditEntryPage — 驗證 (v2.33.108)', () => {
+  it('start_time >= end_time → validation error 顯示 (auto-save skipped)', async () => {
     renderPage();
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
     });
     pickTime('edit-entry-start-time', '14:00');
     expect(screen.queryByTestId('edit-entry-validation')).toBeTruthy();
-    const save = screen.getByTestId('edit-entry-titlebar-save') as HTMLButtonElement;
-    expect(save.disabled).toBe(true);
+    // v2.33.108: 「儲存」button 移除，改 SaveStatus indicator (saved/pending/error)
+    // validation error 時 effect skip auto-save — 不會 PATCH。
   });
 });
 
-describe('EditEntryPage — 儲存', () => {
-  it('改 start_time + 點儲存 → PATCH /entries 含 start_time', async () => {
+describe('EditEntryPage — auto-save (v2.33.108)', () => {
+  it('改 start_time → debounce 後 PATCH /entries 含 start_time', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     renderPage();
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
     });
     pickTime('edit-entry-start-time', '11:30');
-    const save = screen.getByTestId('edit-entry-titlebar-save');
-    fireEvent.click(save);
+    // useEffect debounce 800ms 後 fire handleSave
+    await vi.advanceTimersByTimeAsync(900);
     await waitFor(() => {
       const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
       const patchCall = calls.find((c: unknown[]) => {
@@ -380,16 +381,18 @@ describe('EditEntryPage — 儲存', () => {
       const body = JSON.parse(opts.body);
       expect(body.start_time).toBe('11:30');
     });
+    vi.useRealTimers();
   });
 
-  it('改備註 + 點儲存 → PATCH /entries 含 note', async () => {
+  it('改備註 → debounce 後 PATCH /entries 含 note', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     renderPage();
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-note')).toBeTruthy();
     });
     const note = screen.getByTestId('edit-entry-note') as HTMLTextAreaElement;
     fireEvent.change(note, { target: { value: '更新的備註' } });
-    fireEvent.click(screen.getByTestId('edit-entry-titlebar-save'));
+    await vi.advanceTimersByTimeAsync(900);
     await waitFor(() => {
       const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
       const patchCall = calls.find((c: unknown[]) => {
@@ -401,23 +404,23 @@ describe('EditEntryPage — 儲存', () => {
       const body = JSON.parse(opts.body);
       expect(body.note).toBe('更新的備註');
     });
+    vi.useRealTimers();
   });
 });
 
-describe('EditEntryPage — 取消保護', () => {
-  it('未改 → 點返回 → 直接 navigate', async () => {
+describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-save 已 commit)', () => {
+  it('點返回 → 直接 navigate (無 ConfirmModal)', async () => {
     renderPage();
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
     });
-    // back button 由 TitleBar 渲染（aria-label="返回行程"）
     const back = screen.getByLabelText('返回行程');
     fireEvent.click(back);
     expect(navigateSpy).toHaveBeenCalled();
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
   });
 
-  it('已改 → 點返回 → 跳 ConfirmModal', async () => {
+  it('改值後返回 → 仍直接 navigate (auto-save 已寫，無需 confirm)', async () => {
     renderPage();
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-note')).toBeTruthy();
@@ -425,17 +428,7 @@ describe('EditEntryPage — 取消保護', () => {
     const note = screen.getByTestId('edit-entry-note') as HTMLTextAreaElement;
     fireEvent.change(note, { target: { value: 'dirty' } });
     fireEvent.click(screen.getByLabelText('返回行程'));
-    expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
-  });
-
-  it('ConfirmModal「繼續編輯」 → modal 關閉', async () => {
-    renderPage();
-    await waitFor(() => {
-      expect(screen.queryByTestId('edit-entry-note')).toBeTruthy();
-    });
-    fireEvent.change(screen.getByTestId('edit-entry-note'), { target: { value: 'dirty' } });
-    fireEvent.click(screen.getByLabelText('返回行程'));
-    fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
+    expect(navigateSpy).toHaveBeenCalled();
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
   });
 });

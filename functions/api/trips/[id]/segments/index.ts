@@ -26,6 +26,7 @@ interface SegmentRow {
   source: string | null;
   computed_at: number | null;
   updated_at: number | null;
+  version: number;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -42,7 +43,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .prepare(
       `SELECT s.id, s.trip_id, s.from_entry_id, s.to_entry_id,
               s.mode, s.min, s.distance_m, s.source,
-              s.computed_at, s.updated_at
+              s.computed_at, s.updated_at, s.version
        FROM trip_segments s
        JOIN trip_entries fe ON fe.id = s.from_entry_id
        JOIN trip_days fd ON fd.id = fe.day_id

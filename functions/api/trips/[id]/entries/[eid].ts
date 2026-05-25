@@ -19,6 +19,8 @@ import { fetchEntryPoisByEntries } from '../days/_merge';
 // helpers (TIME_RE / parseTime) 共用 _time.ts。
 // v2.29.0: trip_entries.{time, travel_type, travel_desc, travel_min} DROPPED.
 // PATCH 不再 accept 這些 field（schema 已無對應 col）。
+// v2.33.108: `version` 不在 ALLOWED_FIELDS — autosave 透過 body.expectedVersion 做 OCC，
+// version 由 SQL CAS 自動 bump（SET version = version + 1）。
 const ALLOWED_FIELDS = ['day_id', 'sort_order', 'start_time', 'end_time', 'title', 'description', 'source', 'note'] as const;
 
 /**
@@ -143,15 +145,40 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     delete body.time;
   }
 
+  // v2.33.108: OCC token — autosave hook 帶 expectedVersion；不符 → 409 STALE_ENTRY
+  // 讓 client refresh + retry。omit → backward compat skip check（但 version 仍 bump）。
+  const expectedVersion = typeof body.expectedVersion === 'number'
+    && Number.isInteger(body.expectedVersion)
+    ? body.expectedVersion
+    : null;
+  if (expectedVersion !== null) delete body.expectedVersion;
+
   const update = buildUpdateClause(body, ALLOWED_FIELDS);
   if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
+  // 一律 atomic SET version = version + 1（無 OCC token 時 backward-compat 仍 bump）
+  const setClausesWithVersion = `${update.setClauses}, version = version + 1`;
+
   let row;
   try {
-    row = await db
-      .prepare(`UPDATE trip_entries SET ${update.setClauses} WHERE id = ? RETURNING *`)
-      .bind(...update.values, eid)
-      .first();
+    if (expectedVersion !== null) {
+      // OCC CAS：UPDATE only if version matches
+      row = await db
+        .prepare(`UPDATE trip_entries SET ${setClausesWithVersion} WHERE id = ? AND version = ? RETURNING *`)
+        .bind(...update.values, eid, expectedVersion)
+        .first();
+      if (!row) {
+        // CAS fail — version mismatch（或 row 同時被 deleted）
+        const cur = await db.prepare('SELECT version FROM trip_entries WHERE id = ?').bind(eid).first<{ version: number }>();
+        if (!cur) throw new AppError('DATA_NOT_FOUND');
+        throw new AppError('STALE_ENTRY', `expected version ${expectedVersion}, current ${cur.version}`);
+      }
+    } else {
+      row = await db
+        .prepare(`UPDATE trip_entries SET ${setClausesWithVersion} WHERE id = ? RETURNING *`)
+        .bind(...update.values, eid)
+        .first();
+    }
   } catch (err: unknown) {
     // v2.33.43 security audit: re-classify constraint failures to 409 (was
     // silently swallowed as 503，UX 與 client retry 邏輯都受影響).
