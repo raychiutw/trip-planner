@@ -200,7 +200,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-full);
   font: inherit; font-size: var(--font-size-footnote);
   color: var(--color-foreground); cursor: pointer;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
 }
 .tp-new-dest-chip-quick:hover {
   background: var(--color-accent-subtle);
@@ -259,7 +259,7 @@ const SCOPED_STYLES = `
   mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
 }
 .tp-new-flex-months::-webkit-scrollbar { height: 4px; }
-.tp-new-flex-months::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 2px; }
+.tp-new-flex-months::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: var(--radius-full); }
 .tp-new-flex-month {
   flex: 0 0 auto; min-width: 80px;
   font: inherit;

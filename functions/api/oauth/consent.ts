@@ -25,6 +25,7 @@
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { getSessionUser } from '../_session';
 import { recordAuthEvent } from '../_auth_audit';
+import { oauthErrorResponse } from '../_errors';
 import type { D1Database } from '@cloudflare/workers-types';
 import type { Env } from '../_types';
 
@@ -87,17 +88,11 @@ async function safeRedirect(
   state?: string,
 ): Promise<Response> {
   if (!clientId || !redirectUri) {
-    return new Response(
-      JSON.stringify({ error: 'invalid_request' }),
-      { status: 400, headers: { 'content-type': 'application/json' } },
-    );
+    return oauthErrorResponse('invalid_request', 'Missing client_id or redirect_uri', 400);
   }
   if (!(await isAllowedRedirectUri(db, clientId, redirectUri))) {
     // Open-redirect guard — never reflect attacker-supplied redirect_uri.
-    return new Response(
-      JSON.stringify({ error: 'invalid_request', error_description: 'redirect_uri not registered for this client' }),
-      { status: 400, headers: { 'content-type': 'application/json' } },
-    );
+    return oauthErrorResponse('invalid_request', 'redirect_uri not registered for this client', 400);
   }
   const params = new URLSearchParams({ error: errorCode });
   if (state) params.set('state', state);
@@ -108,7 +103,7 @@ async function safeRedirect(
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const session = await getSessionUser(context.request, context.env);
+  const session = await getSessionUser(context.request, context.env, context.waitUntil.bind(context));
   const body = await parseBody(context.request);
 
   if (!session) {
@@ -133,18 +128,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   if (body.decision !== 'allow') {
-    return new Response(
-      JSON.stringify({ error: 'invalid_request', error_description: 'decision must be allow or deny' }),
-      { status: 400, headers: { 'content-type': 'application/json' } },
-    );
+    return oauthErrorResponse('invalid_request', 'decision must be allow or deny', 400);
   }
 
   // decision='allow'
   if (!body.client_id) {
-    return new Response(
-      JSON.stringify({ error: 'invalid_request', error_description: 'Missing client_id' }),
-      { status: 400, headers: { 'content-type': 'application/json' } },
-    );
+    return oauthErrorResponse('invalid_request', 'Missing client_id', 400);
   }
 
   const scopes = (body.scope ?? '').split(/\s+/).filter(Boolean);

@@ -9,6 +9,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestGet } from '../../functions/api/invitations';
+import { AppError, errorResponse } from '../../functions/api/_errors';
 import { hashInvitationToken } from '../../src/server/invitation-token';
 
 interface MockEnv {
@@ -38,6 +39,20 @@ function makeContext(query: string, env: MockEnv): Parameters<typeof onRequestGe
   } as unknown as Parameters<typeof onRequestGet>[0];
 }
 
+/**
+ * Mirror functions/api/_middleware.ts try/catch: production stack catches
+ * AppError → errorResponse(err). Direct onRequestGet() invocation in unit
+ * tests bypasses middleware, so wrap here to assert final HTTP shape.
+ */
+async function invoke(query: string, env: MockEnv): Promise<Response> {
+  try {
+    return await onRequestGet(makeContext(query, env));
+  } catch (err) {
+    if (err instanceof AppError) return errorResponse(err);
+    throw err;
+  }
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-27T10:00:00Z'));
@@ -51,7 +66,7 @@ afterEach(() => {
 describe('GET /api/invitations', () => {
   it('400 when token query param missing', async () => {
     const env: MockEnv = { DB: { prepare: vi.fn() }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestGet(makeContext('', env));
+    const res = await invoke('', env);
     expect(res.status).toBe(400);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('INVITATION_TOKEN_MISSING');
@@ -59,14 +74,14 @@ describe('GET /api/invitations', () => {
 
   it('500 when SESSION_SECRET not set (server misconfig)', async () => {
     const env: MockEnv = { DB: { prepare: vi.fn() } };
-    const res = await onRequestGet(makeContext('token=anything', env));
+    const res = await invoke('token=anything', env);
     expect(res.status).toBe(500);
   });
 
   it('410 INVITATION_INVALID when token_hash not found', async () => {
     const stmt = makeStmt(null);
     const env: MockEnv = { DB: { prepare: vi.fn().mockReturnValue(stmt) }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestGet(makeContext('token=fake-token', env));
+    const res = await invoke('token=fake-token', env);
     expect(res.status).toBe(410);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('INVITATION_INVALID');
@@ -83,7 +98,7 @@ describe('GET /api/invitations', () => {
       accepted_at: null,
     }));
     const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestGet(makeContext('token=expired-token', env));
+    const res = await invoke('token=expired-token', env);
     expect(res.status).toBe(410);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('INVITATION_EXPIRED');
@@ -100,7 +115,7 @@ describe('GET /api/invitations', () => {
       accepted_at: '2026-04-26T10:00:00Z',
     }));
     const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestGet(makeContext('token=accepted-token', env));
+    const res = await invoke('token=accepted-token', env);
     expect(res.status).toBe(410);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('INVITATION_ACCEPTED');
@@ -117,7 +132,7 @@ describe('GET /api/invitations', () => {
       accepted_at: null,
     }));
     const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestGet(makeContext('token=valid-token', env));
+    const res = await invoke('token=valid-token', env);
     expect(res.status).toBe(200);
     const json = await res.json() as {
       tripId: string;
@@ -141,7 +156,7 @@ describe('GET /api/invitations', () => {
     const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
 
     const rawToken = 'my-raw-token-xyz';
-    await onRequestGet(makeContext(`token=${rawToken}`, env));
+    await invoke(`token=${rawToken}`, env);
 
     const expectedHash = await hashInvitationToken(rawToken, TEST_SECRET);
     expect(stmt.bind).toHaveBeenCalledWith(expectedHash);
@@ -152,7 +167,7 @@ describe('GET /api/invitations', () => {
   it('SQL JOINs trips for trip_title + users for inviter info', async () => {
     const dbPrepare = vi.fn().mockReturnValue(makeStmt(null));
     const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    await onRequestGet(makeContext('token=t', env));
+    await invoke('token=t', env);
 
     const sql = dbPrepare.mock.calls[0][0] as string;
     expect(sql).toMatch(/FROM trip_invitations/i);

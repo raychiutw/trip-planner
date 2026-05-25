@@ -7,7 +7,7 @@
  * 會 render `[object Object]`。本 spec 守每個 branch。
  */
 import { describe, it, expect } from 'vitest';
-import { safeText } from '../../src/components/trip/InfoBox';
+import { safeText } from '../../src/lib/safeText';
 
 describe('safeText', () => {
   it('null / undefined → empty string', () => {

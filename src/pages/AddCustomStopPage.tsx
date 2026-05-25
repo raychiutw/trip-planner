@@ -42,6 +42,15 @@ interface DayApiRow {
   dayNum: number;
   date?: string | null;
   dayOfWeek?: string | null;
+  /** v2.33.107 #1: `?all=1` 回 timeline 含 stopPois，用來取 prev entry master coord
+   *  做 picker initialCenter pre-fill。 */
+  timeline?: TimelineEntryRow[];
+}
+
+interface TimelineEntryRow {
+  id?: number;
+  /** master is sortOrder=1; mapDay shape from backend `_merge.assembleDay`. */
+  stopPois?: { lat?: number | null; lng?: number | null; sortOrder?: number | null }[] | null;
 }
 
 interface TripDestApi {
@@ -278,17 +287,16 @@ export default function AddCustomStopPage() {
   // v2.32.1 fix: 初值 null 區分「未載入」與「載入後 0 個」，避免 LocationPickerMap
   // 用 Tokyo fallback initialCenter mount 後被鎖死。
   const [destinations, setDestinations] = useState<TripDestApi[] | null>(null);
-  // TODO v2.31.95: pre-fill from prev entry's coord (currently picker uses
-  // destinations fallback). Leaving null for first ship.
-  const prevEntryCoord: Coord | null = null;
 
   useEffect(() => {
     if (!tripId || !Number.isFinite(dayNum)) return;
     let cancelled = false;
     (async () => {
       try {
+        // v2.33.107 #1: `?all=1` 回 timeline 讓我們取得 prev entry coord 做
+        // picker pre-fill；若 timeline 空（day 還沒 stop）fallback 走 destinations。
         const [days, tripBody] = await Promise.all([
-          apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days`),
+          apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days?all=1`),
           apiFetch<{ destinations?: TripDestApi[] }>(`/trips/${encodeURIComponent(tripId)}`),
         ]);
         if (cancelled) return;
@@ -304,6 +312,24 @@ export default function AddCustomStopPage() {
       cancelled = true;
     };
   }, [tripId, dayNum]);
+
+  /**
+   * v2.33.107 #1: prev-entry coord pre-fill — 取 currentDay.timeline 最後一個 entry
+   * 的 master stopPoi (sortOrder=1) lat/lng 作為 picker initialCenter，讓使用者
+   * 加新 stop 時地圖預設在 day 最後一個既有 stop 附近（而非 destinations 中心）。
+   * Empty timeline / 缺 coord → null fallback 給 destinations / Tokyo。
+   */
+  const prevEntryCoord = useMemo<Coord | null>(() => {
+    const timeline = currentDay?.timeline ?? [];
+    for (let i = timeline.length - 1; i >= 0; i--) {
+      const stopPois = timeline[i]?.stopPois ?? [];
+      const master = stopPois.find((p) => p.sortOrder === 1) ?? stopPois[0];
+      if (master && typeof master.lat === 'number' && typeof master.lng === 'number') {
+        return { lat: master.lat, lng: master.lng };
+      }
+    }
+    return null;
+  }, [currentDay]);
 
   const initialCenter = useMemo<Coord>(() => {
     return selectDefaultCenter({

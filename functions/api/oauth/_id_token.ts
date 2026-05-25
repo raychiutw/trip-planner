@@ -9,6 +9,7 @@
  */
 import { signJwt, importPrivateKey, computeKid } from '../../../src/server/jwt';
 import { getPublicOrigin } from '../_utils';
+import { AppError } from '../_errors';
 import type { Env } from '../_types';
 
 const ID_TOKEN_TTL_SEC = 60 * 60; // 1h
@@ -34,7 +35,7 @@ export async function issueIdToken(
   if (!scopes.includes('openid')) return null;
 
   if (!env.OAUTH_SIGNING_PRIVATE_KEY) {
-    throw new Error('OAUTH_SIGNING_PRIVATE_KEY env not set — cannot issue id_token');
+    throw new AppError('SYS_INTERNAL', 'OAUTH_SIGNING_PRIVATE_KEY env not set — cannot issue id_token');
   }
 
   // Look up user fields needed for claims
@@ -43,7 +44,7 @@ export async function issueIdToken(
     .bind(userId)
     .first<UserRow>();
   if (!user) {
-    throw new Error(`User ${userId} not found — cannot issue id_token`);
+    throw new AppError('SYS_INTERNAL', `User ${userId} not found — cannot issue id_token`);
   }
 
   // v2.33.59 round 13: 用 PUBLIC_ORIGIN env 取代 Host header (id_token iss

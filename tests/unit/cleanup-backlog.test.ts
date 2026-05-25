@@ -42,7 +42,9 @@ describe('v2.33.52 cleanup — oauth/reset-password rate limit', () => {
 
   it('429 response with RESET_RATE_LIMITED code', () => {
     expect(RESET_SRC).toContain("'RESET_RATE_LIMITED'");
-    expect(RESET_SRC).toContain('status: 429');
+    // v2.33.107 refactor: 429 + Retry-After 走 buildRateLimitResponse helper
+    // (不再 inline `{status: 429, headers: {Retry-After: ...}}`).
+    expect(RESET_SRC).toContain('buildRateLimitResponse');
   });
 });
 

@@ -11,8 +11,6 @@ import type {
   PoiPhoto,
   StopPoiOptionData,
   NavLocation,
-  InfoBoxData,
-  ShopData,
 } from '../types/timeline';
 import type { Day, Entry } from '../types/trip';
 import { getStopDisplayTitle } from './stopDisplay';
@@ -67,20 +65,6 @@ export function formatDateLabel(date: string | null | undefined): string {
 }
 
 /* ===== Raw input interfaces (camelCase, matching API response from mergePoi) ===== */
-
-/** Raw shopping POI as returned by the API. */
-interface RawShop {
-  name?: string | null;
-  category?: string | null;
-  hours?: string | null;
-  mustBuy?: string | string[] | null;
-  description?: string | null;
-  note?: string | null;
-  googleRating?: number | null;
-  maps?: string | null;
-  lat?: number | null;
-  lng?: number | null;
-}
 
 /** Raw travel object nested in a timeline entry. */
 interface RawTravel {
@@ -183,29 +167,6 @@ function toStopPoiOption(p: RawStopPoi): StopPoiOptionData | null {
   };
 }
 
-/* ===== Shopping (from merged POI) ===== */
-
-function toShopData(s: RawShop): ShopData {
-  const raw = s.mustBuy;
-  let mustBuy: string[] | null = null;
-  if (typeof raw === 'string' && raw) {
-    mustBuy = raw.split(/[,、]/).map((v) => v.trim()).filter(Boolean);
-  } else if (Array.isArray(raw)) {
-    mustBuy = raw;
-  }
-
-  return {
-    name: s.name || '',
-    category: s.category ?? null,
-    hours: s.hours ?? null,
-    mustBuy,
-    description: s.description ?? null,
-    note: s.note ?? null,
-    googleRating: s.googleRating ?? null,
-    location: buildLocation(s.maps ?? null, s.name ?? null, s.lat ?? null, s.lng ?? null),
-  };
-}
-
 /* ===== Timeline Entry ===== */
 
 export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
@@ -249,25 +210,6 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     });
   }
 
-  // v2.29.0: shopping 不再是獨立 array — 從 stopPois 過濾 type='shopping' 取出。
-  const infoBoxes: InfoBoxData[] = [];
-  const shoppingAlternates = (raw.stopPois ?? []).filter((p) => p.type === 'shopping' && p.sortOrder !== 1);
-  if (shoppingAlternates.length > 0) {
-    infoBoxes.push({
-      type: 'shopping',
-      shops: shoppingAlternates.map((p) => toShopData({
-        name: p.name ?? '',
-        category: p.category ?? null,
-        rating: p.rating ?? null,
-        hours: p.hours ?? null,
-        note: p.note ?? null,
-        maps: null,
-        lat: p.lat ?? null,
-        lng: p.lng ?? null,
-      } as RawShop)),
-    });
-  }
-
   // master coord：使用 canonical stop POI。
   const masterLat = poi?.lat ?? null;
   const masterLng = poi?.lng ?? null;
@@ -294,7 +236,6 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     travel: travelData,
     poiType: poi?.type ?? null,
     locations: locations.length > 0 ? locations : null,
-    infoBoxes: infoBoxes.length > 0 ? infoBoxes : null,
     stopPois: stopPois.length > 0 ? stopPois : null,
     photos: effPhotos,
     masterLat,

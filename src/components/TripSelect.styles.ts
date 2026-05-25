@@ -32,7 +32,7 @@ export const TRIP_SELECT_STYLES = `
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
   color-scheme: light;
   -webkit-appearance: none;
   appearance: none;
@@ -52,7 +52,7 @@ export const TRIP_SELECT_STYLES = `
 }
 .tp-select--pill .tp-select-trigger {
   padding: 6px 12px;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
   border-radius: var(--radius-full);
   border-width: 1px;
   font-size: var(--font-size-footnote);
@@ -74,7 +74,7 @@ export const TRIP_SELECT_STYLES = `
   height: 18px;
   color: var(--color-muted);
   flex-shrink: 0;
-  transition: transform 0.15s;
+  transition: transform var(--transition-duration-fast);
 }
 .tp-select-trigger[data-open] .tp-select-chev {
   transform: rotate(180deg);
@@ -93,7 +93,7 @@ export const TRIP_SELECT_STYLES = `
   overflow-y: auto;
   z-index: var(--z-popover, 1100);
   outline: none;
-  animation: tp-select-pop 0.12s ease-out;
+  animation: tp-select-pop var(--transition-duration-fast) ease-out;
 }
 @keyframes tp-select-pop {
   from { opacity: 0; transform: translateY(-4px); }
@@ -111,7 +111,7 @@ export const TRIP_SELECT_STYLES = `
   font-size: 16px;
   color: var(--color-foreground);
   cursor: pointer;
-  transition: background-color 0.12s, color 0.12s;
+  transition: background-color var(--transition-duration-fast), color var(--transition-duration-fast);
   user-select: none;
 }
 .tp-select-item + .tp-select-item {

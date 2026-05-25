@@ -145,11 +145,11 @@ describe('safeColor', () => {
   });
 
   it('falls back for CSS injection', () => {
-    expect(safeColor('red;} body{display:none')).toBe('var(--blue-light)');
+    expect(safeColor('red;} body{display:none')).toBe('var(--color-accent)');
   });
 
   it('falls back for null/undefined', () => {
-    expect(safeColor(null)).toBe('var(--blue-light)');
-    expect(safeColor(undefined)).toBe('var(--blue-light)');
+    expect(safeColor(null)).toBe('var(--color-accent)');
+    expect(safeColor(undefined)).toBe('var(--color-accent)');
   });
 });

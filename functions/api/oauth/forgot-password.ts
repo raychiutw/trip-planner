@@ -33,6 +33,7 @@ import { sendEmail, EmailError } from '../../../src/server/email';
 import { passwordReset } from '../../../src/server/email-templates';
 import { recordAuthEvent } from '../_auth_audit';
 import { recordEmailEvent } from '../_audit';
+import { buildRateLimitResponse } from '../_errors';
 import { alertAdminTelegram } from '../_alert';
 import { normalizeEmail } from '../../../src/server/email-utils';
 import type { Env } from '../_types';
@@ -63,20 +64,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.FORGOT_PASSWORD);
   if (!ipCheck.ok) {
-    return new Response(
-      JSON.stringify({ error: { code: 'FORGOT_PASSWORD_RATE_LIMITED', message: '密碼重設請求過多，請稍後再試' } }),
-      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
-    );
+    return buildRateLimitResponse(ipCheck.retryAfter ?? 60, {
+      error: { code: 'FORGOT_PASSWORD_RATE_LIMITED', message: '密碼重設請求過多，請稍後再試' },
+    });
   }
   const emailCheck = await checkRateLimit(context.env.DB, emailKey, RATE_LIMITS.FORGOT_PASSWORD);
   if (!emailCheck.ok) {
-    return new Response(
-      // v2.33.42 security audit: 統一 wording — 之前「此 email 重設請求過多」
-      // 確認 email 存在於系統（其他無法區分情境都走匿名 200 generic message），
-      // 給 attacker user-enumeration oracle。
-      JSON.stringify({ error: { code: 'FORGOT_PASSWORD_RATE_LIMITED', message: '密碼重設請求過多，請稍後再試' } }),
-      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(emailCheck.retryAfter) } },
-    );
+    // v2.33.42 security audit: 統一 wording — 之前「此 email 重設請求過多」
+    // 確認 email 存在於系統（其他無法區分情境都走匿名 200 generic message），
+    // 給 attacker user-enumeration oracle。
+    return buildRateLimitResponse(emailCheck.retryAfter ?? 60, {
+      error: { code: 'FORGOT_PASSWORD_RATE_LIMITED', message: '密碼重設請求過多，請稍後再試' },
+    });
   }
 
   // Bump both buckets — every valid request counts (anti-enumeration: response is generic anyway)

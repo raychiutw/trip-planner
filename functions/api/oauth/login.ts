@@ -9,15 +9,17 @@
  *     (避免 email enumeration attack)
  *   - 失敗仍跑 verifyPassword 的 hash compute 避免 timing oracle leak
  *     (constant time guarantee — fake hash for unknown email)
- *   - Rate limit deferred V2-P6
+ *   - V2-P6 rate limit: per-IP + per-email buckets (5/15min window, 30min lockout)
  *   - Update auth_identities.last_used_at on success
  *
  * Error codes:
  *   400 LOGIN_INVALID_INPUT
  *   401 LOGIN_INVALID  (generic — 防 email enumeration)
+ *   429 LOGIN_RATE_LIMITED (per-IP or per-email bucket exhausted)
  *   500 SYS_INTERNAL
  */
 import { issueSession } from '../_session';
+import { AppError, buildRateLimitResponse } from '../_errors';
 import { parseJsonBody } from '../_utils';
 import { verifyPassword } from '../../../src/server/password';
 import {
@@ -47,20 +49,13 @@ interface AuthIdentityRow {
 // v2.33.87 EMERGENCY: 600000 → 100000 對齊 CF Workers PBKDF2 100k iteration 上限。
 const TIMING_PROBE_HASH = 'pbkdf2$100000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
-function errorResponse(code: string, message: string, status: number): Response {
-  return new Response(
-    JSON.stringify({ error: { code, message } }),
-    { status, headers: { 'content-type': 'application/json' } },
-  );
-}
-
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = (await parseJsonBody<LoginBody>(context.request)) ?? {};
   const email = normalizeEmail(body.email ?? '');
   const password = body.password ?? '';
 
   if (!email || !password) {
-    return errorResponse('LOGIN_INVALID_INPUT', 'email + password 必填', 400);
+    throw new AppError('LOGIN_INVALID_INPUT');
   }
 
   // V2-P6 rate limit: per-IP + per-email buckets (defence in depth)
@@ -69,21 +64,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.LOGIN);
   if (!ipCheck.ok) {
-    return new Response(
-      JSON.stringify({ error: { code: 'LOGIN_RATE_LIMITED', message: '登入嘗試過多，請稍後再試' } }),
-      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
-    );
+    return buildRateLimitResponse(ipCheck.retryAfter ?? 60, {
+      error: { code: 'LOGIN_RATE_LIMITED', message: '登入嘗試過多，請稍後再試' },
+    });
   }
   const emailCheck = await checkRateLimit(context.env.DB, emailKey, RATE_LIMITS.LOGIN);
   if (!emailCheck.ok) {
-    return new Response(
-      // v2.33.42 security audit: 統一 wording 不洩漏 email 是否已註冊
-      // （之前「此 email 登入嘗試過多」 vs IP-bucket「登入嘗試過多」 給
-      // user-enumeration oracle — 攻擊者 burn 5 個 attempt 觀察 message 差
-      // 即可判斷 email 是否存在於系統）。
-      JSON.stringify({ error: { code: 'LOGIN_RATE_LIMITED', message: '登入嘗試過多，請稍後再試' } }),
-      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(emailCheck.retryAfter) } },
-    );
+    // v2.33.42 security audit: 統一 wording 不洩漏 email 是否已註冊
+    // （之前「此 email 登入嘗試過多」 vs IP-bucket「登入嘗試過多」 給
+    // user-enumeration oracle — 攻擊者 burn 5 個 attempt 觀察 message 差
+    // 即可判斷 email 是否存在於系統）。
+    return buildRateLimitResponse(emailCheck.retryAfter ?? 60, {
+      error: { code: 'LOGIN_RATE_LIMITED', message: '登入嘗試過多，請稍後再試' },
+    });
   }
 
   // Lookup local provider identity
@@ -110,7 +103,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       failureReason: !identity ? 'unknown_email' : 'wrong_password',
       metadata: { email },
     }, context.env);
-    return errorResponse('LOGIN_INVALID', 'email 或密碼錯誤', 401);
+    throw new AppError('LOGIN_INVALID');
   }
 
   // Success: reset counters (legitimate user not penalised by past failed attempts)

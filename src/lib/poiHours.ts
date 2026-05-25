@@ -65,8 +65,18 @@ export function condenseHours(raw: string | null | undefined): string {
   }
 
   // Weekday vs weekend split (平日 vs 週末)?
-  const weekdayValues = WEEKDAY_KEYS.map((k) => parsed.get(k)).filter(Boolean);
-  const weekendValues = WEEKEND_KEYS.map((k) => parsed.get(k)).filter(Boolean);
+  // 用 reduce 一次過 — RBP-30 spirit：避免 map+filter 重複 iter（雖然 5/2 元素
+  // micro-optimisation 影響微，pattern 維持一致）。
+  const weekdayValues = WEEKDAY_KEYS.reduce<string[]>((acc, k) => {
+    const v = parsed.get(k);
+    if (v) acc.push(v);
+    return acc;
+  }, []);
+  const weekendValues = WEEKEND_KEYS.reduce<string[]>((acc, k) => {
+    const v = parsed.get(k);
+    if (v) acc.push(v);
+    return acc;
+  }, []);
   if (weekdayValues.length === 5 && weekendValues.length === 2) {
     const weekdaySet = new Set(weekdayValues);
     const weekendSet = new Set(weekendValues);

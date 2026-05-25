@@ -11,21 +11,16 @@
 
 ---
 
-## Lighthouse — Blocking gate（2 週 baseline 後）
+## Completed
 
-**Current**: Lighthouse CI 已建立（PR #8），所有 assertion 為 warn 模式。
-**Goal**: 2 週 baseline 資料收集後，將 warn 改為 error，設 blocking gate 阻擋效能 regression。
-**步驟**:
-1. 從 GitHub Actions artifact 收集 2 週 p50 / p95 數字
-2. 計算合理閾值（p50 + 10% buffer）
-3. `lighthouserc.json` assertions 由 `warn` 改 `error`
-4. 評估是否需要 PR preview URL integration（vs. master only）
-**Est**: 0.5 day CC（小）
-**Priority**: P2（2 週後升 P1）
+### Lighthouse — Blocking gate（v2.33.107）
+
+**Priority**: P2
+**Completed**: v2.33.107 (2026-05-25)
+
+5 assertion 由 `warn` 改 `error` 設 blocking gate；閾值給 warn × 1.2 buffer（LCP 3000ms、TBT 400ms、CLS 0.15、performance 0.7、accessibility 0.85）避免首次 deploy 過度敏感 fail。後續觀察 GitHub Actions artifact 數據再 tighten 閾值。
 
 ---
-
-## Completed
 
 ### v2.30.13 — TravelPill mobile margin cascade fix (v2.30.12 未生效於 mobile)
 

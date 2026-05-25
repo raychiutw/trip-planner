@@ -31,6 +31,7 @@ import {
 } from '../_rate_limit';
 import { recordAuthEvent } from '../_auth_audit';
 import { generateOpaqueToken, parseFormOrJson, parseBasicAuth } from '../_utils';
+import { oauthErrorResponse, buildRateLimitResponse } from '../_errors';
 import type { Env } from '../_types';
 
 const ACCESS_TOKEN_TTL_SEC = 60 * 60;          // 1h
@@ -64,12 +65,8 @@ interface ClientAppRow {
   allowed_scopes: string;
 }
 
-function jsonError(error: string, error_description: string, status = 400): Response {
-  return new Response(
-    JSON.stringify({ error, error_description }),
-    { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } },
-  );
-}
+// oauthErrorResponse() helper 已抽到 _errors.ts oauthErrorResponse — RFC 6749 §5.2 flat
+// shape 給 OAuth wire endpoint 用。
 
 /** Compute SHA-256 hash of code_verifier and base64url encode (per RFC 7636 §4.6). */
 async function pkceTransform(verifier: string): Promise<string> {
@@ -146,7 +143,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     grant_type !== 'refresh_token' &&
     grant_type !== 'client_credentials'
   ) {
-    return jsonError(
+    return oauthErrorResponse(
       'unsupported_grant_type',
       'Supported: authorization_code, refresh_token, client_credentials',
     );
@@ -158,7 +155,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const clientSecret = basic?.secret ?? body.client_secret;
 
   if (!clientId) {
-    return jsonError('invalid_client', 'Missing client_id');
+    return oauthErrorResponse('invalid_client', 'Missing client_id');
   }
 
   // v2.33.103 SEC-7: per-IP rate-limit 在 client lookup + PBKDF2 verify 前。
@@ -169,17 +166,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const ipKey = `oauth-token:ip:${clientIp(context.request)}`;
   const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.OAUTH_TOKEN_PER_IP);
   if (!ipCheck.ok) {
-    return new Response(
-      JSON.stringify({ error: 'rate_limited', error_description: 'Too many token requests from this IP' }),
-      {
-        status: 429,
-        headers: {
-          'content-type': 'application/json',
-          'cache-control': 'no-store',
-          'Retry-After': String(ipCheck.retryAfter),
-        },
-      },
-    );
+    return buildRateLimitResponse(ipCheck.retryAfter ?? 60, {
+      error: 'rate_limited',
+      error_description: 'Too many token requests from this IP',
+    });
   }
   await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.OAUTH_TOKEN_PER_IP);
 
@@ -196,7 +186,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .first<ClientAppRow>();
 
   if (!client || client.status !== 'active') {
-    return jsonError('invalid_client', 'Unknown or inactive client_id', 401);
+    return oauthErrorResponse('invalid_client', 'Unknown or inactive client_id', 401);
   }
 
   // V2-P6 rate limit: per-client_id bucket — throughput cap
@@ -205,27 +195,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const tokenKey = `oauth-token:${clientId}`;
   const tokenCheck = await checkRateLimit(context.env.DB, tokenKey, RATE_LIMITS.OAUTH_TOKEN);
   if (!tokenCheck.ok) {
-    return new Response(
-      JSON.stringify({ error: 'rate_limited', error_description: 'Too many token requests for this client' }),
-      {
-        status: 429,
-        headers: {
-          'content-type': 'application/json',
-          'cache-control': 'no-store',
-          'Retry-After': String(tokenCheck.retryAfter),
-        },
-      },
-    );
+    return buildRateLimitResponse(tokenCheck.retryAfter ?? 60, {
+      error: 'rate_limited',
+      error_description: 'Too many token requests for this client',
+    });
   }
   await bumpRateLimit(context.env.DB, tokenKey, RATE_LIMITS.OAUTH_TOKEN);
 
   // Confidential client: verify client_secret (both grant types)
   if (client.client_type === 'confidential') {
     if (!clientSecret || !client.client_secret_hash) {
-      return jsonError('invalid_client', 'client_secret required for confidential client', 401);
+      return oauthErrorResponse('invalid_client', 'client_secret required for confidential client', 401);
     }
     const ok = await verifyPassword(clientSecret, client.client_secret_hash);
-    if (!ok) return jsonError('invalid_client', 'Invalid client_secret', 401);
+    if (!ok) return oauthErrorResponse('invalid_client', 'Invalid client_secret', 401);
   }
 
   // Branch on grant_type — client_credentials first (RFC 6749 §4.4)
@@ -234,7 +217,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Public clients have no secret to authenticate with → would be unauthenticated
     // service-to-service call, which violates the grant's purpose.
     if (client.client_type !== 'confidential') {
-      return jsonError(
+      return oauthErrorResponse(
         'unauthorized_client',
         'client_credentials grant requires a confidential client',
         401,
@@ -256,7 +239,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const finalScopes = requestedScopes.length === 0 ? allowedScopes : requestedScopes;
     const invalid = finalScopes.filter((s) => !allowedScopes.includes(s));
     if (invalid.length > 0) {
-      return jsonError(
+      return oauthErrorResponse(
         'invalid_scope',
         `Scope not permitted for this client: ${invalid.join(', ')}`,
       );
@@ -306,21 +289,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (grant_type === 'refresh_token') {
     const refreshTokenInput = body.refresh_token;
     if (!refreshTokenInput) {
-      return jsonError('invalid_request', 'Missing refresh_token');
+      return oauthErrorResponse('invalid_request', 'Missing refresh_token');
     }
 
     const refreshAdapter = new D1Adapter(context.env.DB, 'RefreshToken');
     const refreshRow = (await refreshAdapter.find(refreshTokenInput)) as RefreshTokenPayload | undefined;
 
     if (!refreshRow) {
-      return jsonError('invalid_grant', 'refresh_token expired or invalid');
+      return oauthErrorResponse('invalid_grant', 'refresh_token expired or invalid');
     }
 
     // v2.33.97 security: client_id 不對 → reject 不 cascade。否則 leaked-once
     // refresh_token 被任意 registered client B 提交即觸發 victim grantId family
     // revoke = permanent DoS handle on victim。先驗 client_id 再驗 consumed。
     if (refreshRow.client_id !== clientId) {
-      return jsonError('invalid_grant', 'refresh_token does not belong to this client');
+      return oauthErrorResponse('invalid_grant', 'refresh_token does not belong to this client');
     }
 
     // Reuse detection (RFC 6749 §10.4 / OAuth 2.1 §6.1): if this row was already
@@ -337,7 +320,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         failureReason: 'refresh_token_reuse',
         metadata: { grantId: refreshRow.grantId },
       }, context.env);
-      return jsonError('invalid_grant', 'refresh_token reuse detected — token family revoked');
+      return oauthErrorResponse('invalid_grant', 'refresh_token reuse detected — token family revoked');
     }
 
     // Optional scope downgrade: caller can request narrower scope
@@ -346,7 +329,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (requestedScopes.length > 0) {
       const invalid = requestedScopes.filter((s) => !refreshRow.scopes.includes(s));
       if (invalid.length > 0) {
-        return jsonError('invalid_scope', `Cannot widen scope: ${invalid.join(', ')}`);
+        return oauthErrorResponse('invalid_scope', `Cannot widen scope: ${invalid.join(', ')}`);
       }
       finalScopes = requestedScopes;
     }
@@ -368,7 +351,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         failureReason: 'refresh_token_concurrent_rotation',
         metadata: { grantId: refreshRow.grantId },
       }, context.env);
-      return jsonError('invalid_grant', 'refresh_token concurrent rotation detected — token family revoked');
+      return oauthErrorResponse('invalid_grant', 'refresh_token concurrent rotation detected — token family revoked');
     }
     const tokens = await issueTokenPair(
       context.env.DB,
@@ -395,18 +378,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // grant_type === 'authorization_code'
   const code = body.code;
-  if (!code) return jsonError('invalid_request', 'Missing code');
+  if (!code) return oauthErrorResponse('invalid_request', 'Missing code');
 
   const codeAdapter = new D1Adapter(context.env.DB, 'AuthorizationCode');
   const codeRow = (await codeAdapter.find(code)) as AuthorizationCodePayload | undefined;
 
   if (!codeRow) {
-    return jsonError('invalid_grant', 'Authorization code expired or invalid');
+    return oauthErrorResponse('invalid_grant', 'Authorization code expired or invalid');
   }
   // v2.33.97 security: client_id 不對 → reject 不 cascade。否則 leaked auth code
   // 被任意 registered client B 提交即觸發 victim grantId family revoke (DoS)。
   if (codeRow.client_id !== clientId) {
-    return jsonError('invalid_grant', 'code does not belong to this client');
+    return oauthErrorResponse('invalid_grant', 'code does not belong to this client');
   }
   if (codeRow.consumed) {
     // Replay attack — RFC 6749 §10.5: cascade-revoke all tokens issued from this grant
@@ -422,20 +405,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       failureReason: 'auth_code_replay',
       metadata: { grantId: codeRow.grantId ?? null, scopes: codeRow.scopes },
     }, context.env);
-    return jsonError('invalid_grant', 'Authorization code already used (replay detected — tokens revoked)');
+    return oauthErrorResponse('invalid_grant', 'Authorization code already used (replay detected — tokens revoked)');
   }
   if (codeRow.redirect_uri !== body.redirect_uri) {
-    return jsonError('invalid_grant', 'redirect_uri mismatch');
+    return oauthErrorResponse('invalid_grant', 'redirect_uri mismatch');
   }
 
   // PKCE verify (if code_challenge was present at authorize)
   if (codeRow.code_challenge) {
     if (!body.code_verifier) {
-      return jsonError('invalid_grant', 'code_verifier required (PKCE)');
+      return oauthErrorResponse('invalid_grant', 'code_verifier required (PKCE)');
     }
     const expectedChallenge = await pkceTransform(body.code_verifier);
     if (expectedChallenge !== codeRow.code_challenge) {
-      return jsonError('invalid_grant', 'code_verifier does not match code_challenge');
+      return oauthErrorResponse('invalid_grant', 'code_verifier does not match code_challenge');
     }
   }
 
@@ -454,7 +437,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       failureReason: 'auth_code_concurrent_exchange',
       metadata: { scopes: codeRow.scopes },
     }, context.env);
-    return jsonError('invalid_grant', 'Authorization code concurrent exchange detected');
+    return oauthErrorResponse('invalid_grant', 'Authorization code concurrent exchange detected');
   }
   // Won the race — issue tokens + bind grantId for replay-revoke。
   const tokens = await issueTokenPair(context.env.DB, clientId, codeRow.user_id, codeRow.scopes);

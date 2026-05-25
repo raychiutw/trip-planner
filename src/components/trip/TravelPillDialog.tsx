@@ -52,7 +52,7 @@ const SCOPED_STYLES = `
 .tp-travel-dialog-handle {
   width: 36px; height: 4px;
   background: var(--color-line-strong);
-  border-radius: 2px;
+  border-radius: var(--radius-full);
   margin: 0 auto 12px;
 }
 @media (min-width: 760px) { .tp-travel-dialog-handle { display: none; } }

@@ -28,7 +28,7 @@ export const TRIP_TIME_PICKER_STYLES = `
   font-variant-numeric: tabular-nums;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
   color-scheme: light;
   -webkit-appearance: none;
   appearance: none;
@@ -71,7 +71,7 @@ export const TRIP_TIME_PICKER_STYLES = `
   padding: 12px;
   z-index: var(--z-popover, 1100);
   outline: none;
-  animation: tp-time-pop 0.12s ease-out;
+  animation: tp-time-pop var(--transition-duration-fast) ease-out;
 }
 @keyframes tp-time-pop {
   from { opacity: 0; transform: translateY(-4px); }
@@ -114,7 +114,7 @@ export const TRIP_TIME_PICKER_STYLES = `
 }
 .tp-time-col-scroll::-webkit-scrollbar-thumb {
   background: var(--color-border);
-  border-radius: 2px;
+  border-radius: var(--radius-full);
 }
 
 .tp-time-cell {
@@ -131,7 +131,7 @@ export const TRIP_TIME_PICKER_STYLES = `
   font-variant-numeric: tabular-nums;
   color: var(--color-foreground);
   cursor: pointer;
-  transition: background-color 0.12s, color 0.12s;
+  transition: background-color var(--transition-duration-fast), color var(--transition-duration-fast);
   scroll-snap-align: center;
   text-align: center;
 }

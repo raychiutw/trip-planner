@@ -42,7 +42,7 @@ const PoiStatusBadgeStyles = `
 .tp-badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: var(--font-size-caption2); font-weight: 600;
   vertical-align: middle;
   white-space: nowrap;

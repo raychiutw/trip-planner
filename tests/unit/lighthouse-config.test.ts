@@ -55,11 +55,11 @@ describe('lighthouserc.json', () => {
     expect(config.ci.assert.assertions).toHaveProperty('cumulative-layout-shift');
   });
 
-  it('所有 assertion 均為 warn 模式（non-blocking）', () => {
+  it('所有 assertion 均為 error 模式（v2.33.107 blocking gate；阻擋效能 regression）', () => {
     const assertions = config.ci.assert.assertions;
-    for (const [key, value] of Object.entries(assertions)) {
+    for (const [, value] of Object.entries(assertions)) {
       const arr = value as [string, unknown];
-      expect(arr[0]).toBe('warn');
+      expect(arr[0]).toBe('error');
     }
   });
 });

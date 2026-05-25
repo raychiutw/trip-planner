@@ -38,5 +38,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const poiId = await findOrCreatePoi(context.env.DB, data);
 
+  // Field name `id` 是 POI table PK 的 canonical alias — 對 frontend caller
+  // (ExplorePage createResp.id) 直接 consume，避免 nested `poi.id` ↔ tripId 風格
+  // 重命名造成的 breaking change。naming-rules.md「API tripId」規則 specific
+  // 針對 trip identifier 避歧義，POI 單一 endpoint response 不存在歧義。
   return json({ id: poiId });
 };
