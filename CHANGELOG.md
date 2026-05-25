@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.113] - 2026-05-26
+
+**Fix — CF Worker `/trigger` fetch 3s AbortController timeout 太緊 → Telegram 噪音 alert**
+
+Prod 觀察（request 210, 2026-05-25 15:57 UTC）：user POST `/api/requests` → CF Worker `fetch(TRIPLINE_API_URL + '/trigger')` 在 3s 內收 abort → Telegram alert「即時觸發失敗 (The operation was aborted)」。但 mac mini api-server log 顯示 /trigger HTTP 是有收到的（INSERT 15:57:10 → mac mini 收 15:57:14.978 = **4.978s**），只是早超過 CF AbortController 的 3s 上限。Request 仍由 10min cron 兜底處理完成，functional 沒壞，但 user 收 noise alert + 體感 lag。
+
+Root cause：CF Edge → Tailscale Funnel (`*.ts.net`) 的 cold connection 路徑——DNS 解析 + TCP connect 跨洲 + TLS handshake + 偶爾 DERP relay setup——首次或 idle 後可達 4-5s，3s timeout 必 abort。Hot path 連線正常 < 1s 沒事，所以 alert 是 intermittent noise。
+
+### Changed
+- `functions/api/requests.ts:187` AbortController timeout 3000 → 8000ms
+- `functions/api/trips/[id]/health-check.ts:220` 同樣 3000 → 8000ms
+- 8s 涵蓋 99% cold path；request 仍由 10min mac mini cron 兜底保證最終一致性
+
 ## [2.33.112] - 2026-05-26
 
 **Fix — Sentry 過濾 Playwright / Lighthouse / localhost noise（防 prod issue queue 被 CI 噪音污染）**

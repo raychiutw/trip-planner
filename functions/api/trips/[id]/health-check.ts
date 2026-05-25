@@ -217,7 +217,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
       try {
         const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 3000);
+        // v2.33.113: 3000 → 8000ms — see functions/api/requests.ts for full rationale
+        // (CF edge → Tailscale Funnel cold connection setup can hit 4-5s)
+        const timer = setTimeout(() => ctrl.abort(), 8000);
         const res = await fetch(env.TRIPLINE_API_URL + '/trigger?source=api', {
           method: 'POST',
           headers: {
