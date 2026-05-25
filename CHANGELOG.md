@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.112] - 2026-05-26
+
+**Fix — Sentry 過濾 Playwright / Lighthouse / localhost noise（防 prod issue queue 被 CI 噪音污染）**
+
+Daily-check 2026-05-26 抓到 2 個 Sentry unresolved issue 都是 CI 環境噪音、userCount=0：
+
+- `#7464853493` Error: 系統發生錯誤 — `localhost:3001/login` + HeadlessChrome 145，breadcrumbs 顯示 fetch `/api/trips/...` 502（local backend 沒在跑）→ apiClient.fromResponse 拋 ApiError → ErrorBoundary 報。
+- `#7504308794` React error #310 (Rendered more hooks) — `localhost:3000/trip/.../edit` + HeadlessChrome 145，breadcrumbs 含 `Service Worker registration blocked by Playwright`，stack 落在 `datepicker` chunk 內 `useMemo` → react-day-picker 9.14 + React 19 在 production-mode 縮寫下的 internal hooks-count mismatch。
+
+Root cause：兩者皆 Playwright / Lighthouse 在本機 preview build 跑出來的，從未影響真實 user。`src/lib/sentry.ts` `init` 完全沒 `beforeSend`，所有事件都進 prod queue。
+
+### Added
+- `src/lib/sentry.ts::isNoiseEvent(event)` — drop event when URL host 是 `localhost` / `127.0.0.1`，或 User-Agent / `contexts.browser.name` match `HeadlessChrome|Playwright|Lighthouse`
+- Sentry `init` 套用 `beforeSend(event) => isNoiseEvent(event) ? null : event`
+- 10 個 unit test：localhost:3000/3001/127.0.0.1 URL、HeadlessChrome/Playwright/Lighthouse UA、browser context name、真實 Chrome 不誤殺、defaults-to-ship、`docs#localhost` path 不誤殺
+
+### Verified
+- `npm run typecheck` 通過
+- `npx vitest run` 全綠（327 files / 2698 tests）
+- production user 用真實 Chrome + URL 是 `trip-planner-dby.pages.dev` → filter 不誤殺
+
+### Follow-up
+- react-day-picker 9.14 + React 19 hooks mismatch 真實 root cause 待真實 user 觸發後再 prioritize（目前 0 user impact）
+
 ## [2.33.111] - 2026-05-25
 
 **Fix — orphan tmux session 永遠不被清，AI 健檢 cron 永真 skip**
