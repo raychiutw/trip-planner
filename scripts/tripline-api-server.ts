@@ -84,12 +84,17 @@ const tokenHelper = require(TOKEN_HELPER) as {
 
 // --- tmux session management ---
 // v2.30.7: 改用 ephemeral tmux session 跑 claude（非 -p）。每個 /trigger 開
-// 一個 `tripline-request-<timestamp>-<pid>` session，skill 處理完所有 request
-// 後自殺（SKILL.md 結尾 tmux kill-session）。Orphan > 30min 由 cleanupOrphans
-// 強取回收，token TTL (1h) 之內保證 cleanup。
+// 一個 session（v2.33.27 起 per-skill 命名 `tripline-{slug}-<timestamp>-<pid>`，
+// 例 `tripline-tp-request-...` / `tripline-tp-daily-check-...`），skill 處理完
+// 所有 request 後自殺（SKILL.md 結尾 tmux kill-session）。Orphan > 30min 由
+// cleanupOrphans 強取回收，token TTL (1h) 之內保證 cleanup。
 
 const ORPHAN_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
-const SESSION_PREFIX = 'tripline-request-';
+// v2.33.110: cleanupOrphans / hasActiveSession 的 prefix 從 allowlist derive，
+// 不再 hardcode。原本 SESSION_PREFIX = 'tripline-request-' 僅 match legacy（v2.33.26 前）
+// → v2.33.27 per-skill rename 後 orphan `tripline-tp-*-*` 完全不被清 → hasActiveSession
+// 永真 → cron 每次 skip（2026-05-25 AI 健檢 request 209 卡 1h21m）。改用 allowlist-driven
+// 既 cover 兩世代又不誤殺人類 `tripline-debug` 等 ad-hoc session。
 
 // v2.33.27: per-skill session prefix。原本 SESSION_PREFIX 對所有 skill 共用，
 // v2.33.49 round 8a security audit: skillCommand allowlist — 之前 sessionPrefixForSkill
@@ -114,6 +119,21 @@ function sessionPrefixForSkill(skillCommand: string): string {
   return `tripline-${slug}-`;
 }
 
+// v2.33.110: cleanupOrphans 用「ALLOWED_SKILLS-derived prefix set」判斷哪些 tmux session
+// 是本 server spawn 的 — 自動跟著新 skill 走免雙重維護，也不誤殺 user 手動的
+// `tripline-debug` 等 ad-hoc session。Legacy `tripline-request-` 保留是 v2.33.27
+// 前 spawn 的 session 過渡期可能還在跑（30min orphan timeout 內）。
+// TODO(2026-06-08): v2.33.27 ship 已 2+ 週 + 多輪 Mac mini 重啟，legacy session 早被
+// orphan timeout 清光。確認 prod `tmux ls` 0 個 `tripline-request-*` 後可刪 const +
+// hasActiveSession line 185 backward-compat branch + api-server-per-skill-session.test.ts:33。
+const LEGACY_SESSION_PREFIX = 'tripline-request-';
+function getKnownSessionPrefixes(): string[] {
+  return [
+    ...Array.from(ALLOWED_SKILLS).map(sessionPrefixForSkill),
+    LEGACY_SESSION_PREFIX,
+  ];
+}
+
 // launchd PATH 不含 /opt/homebrew/bin，spawnSync(TMUX_BIN, ...) 抓不到。寫死絕對
 // 路徑，與 claudePath 同 pattern。Intel Mac 用 /usr/local/bin/tmux — homebrew
 // 預設位置不同，這邊偵測一次：找到的第一條存在路徑當 TMUX_BIN。
@@ -129,16 +149,21 @@ const TMUX_BIN = (() => {
 
 async function cleanupOrphans(maxAgeMs: number): Promise<number> {
   try {
-    const result = spawnSync(TMUX_BIN, ['ls', '-F', '#{session_name} #{session_created}'], { encoding: 'utf-8' });
+    // v2.33.110: format 用 `|` delimiter 而非 space — tmux session name 允許空格，
+    // space-split + `parts.length !== 2` 會 silent skip 含空格的 session（hasActiveSession
+    // 仍 match → orphan 永不清 + cron 永真 skip，跟原 bug 同病灶）。tmux session name
+    // 不允許 `|`（自 2017 起拒絕），用它當 delimiter 安全。
+    const result = spawnSync(TMUX_BIN, ['ls', '-F', '#{session_name}|#{session_created}'], { encoding: 'utf-8' });
     // tmux ls exit 1 = no sessions exist — not an error
     if (result.status !== 0) return 0;
+    const knownPrefixes = getKnownSessionPrefixes();
     const now = Math.floor(Date.now() / 1000);
     let killed = 0;
     for (const line of (result.stdout || '').split('\n')) {
-      const parts = line.split(' ');
+      const parts = line.split('|');
       if (parts.length !== 2) continue;
       const [name, createdStr] = parts;
-      if (!name.startsWith(SESSION_PREFIX)) continue;
+      if (!knownPrefixes.some(p => name.startsWith(p))) continue;
       const created = parseInt(createdStr, 10);
       if (!created) continue;
       if ((now - created) * 1000 > maxAgeMs) {
@@ -154,18 +179,18 @@ async function cleanupOrphans(maxAgeMs: number): Promise<number> {
   }
 }
 
-function hasActiveSession(skillCommand?: string): string | null {
-  // v2.33.27: 加 skillCommand filter。沒傳 = 看 ANY tripline session（legacy
-  // SESSION_PREFIX）；傳了 = 只看該 skill 自己的 session prefix。
+function hasActiveSession(skillCommand: string): string | null {
   // 同 skill 才會擋（不同 skill 可以平行跑，例：/tp-request 跑時 /tp-daily-check 不該被擋）。
+  // v2.33.110: 參數改 required — 唯一 caller (processLoop) 必傳，原本三元 fallback
+  // 從未 reach。同步刪 SESSION_PREFIX const（死碼）。
   const result = spawnSync(TMUX_BIN, ['ls', '-F', '#{session_name}'], { encoding: 'utf-8' });
   if (result.status !== 0) return null;
-  const filter = skillCommand ? sessionPrefixForSkill(skillCommand) : SESSION_PREFIX;
+  const filter = sessionPrefixForSkill(skillCommand);
   for (const line of (result.stdout || '').split('\n')) {
     if (line.startsWith(filter)) return line;
-    // v2.33.27 backward-compat：legacy 'tripline-request-' 是 /tp-request 的 prefix；
+    // v2.33.27 backward-compat：legacy LEGACY_SESSION_PREFIX 是 /tp-request 的 prefix；
     // 如果 caller 是 /tp-request 也要看到 legacy session（process restart 過渡期）。
-    if (skillCommand === '/tp-request' && line.startsWith('tripline-request-')) return line;
+    if (skillCommand === '/tp-request' && line.startsWith(LEGACY_SESSION_PREFIX)) return line;
   }
   return null;
 }

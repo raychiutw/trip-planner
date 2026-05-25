@@ -32,10 +32,23 @@ describe('API server HTTP endpoints', () => {
     expect(verifyAuth('', 'test')).toBe(false);
   });
 
-  it('tmux session prefix 命名一致 (cleanupOrphans grep 依賴)', () => {
-    const SESSION_PREFIX = 'tripline-request-';
-    const sample = `${SESSION_PREFIX}${Date.now()}-${process.pid}`;
-    expect(sample).toMatch(/^tripline-request-\d+-\d+$/);
-    expect(sample.startsWith(SESSION_PREFIX)).toBe(true);
+  it('tmux session prefix 命名一致 (cleanupOrphans 多 prefix match 依賴)', () => {
+    // v2.33.110: cleanupOrphans 用「ALLOWED_SKILLS-derived + LEGACY」prefix set，
+    // 不再 hardcode 單一 prefix。確認三種樣本 session 命名都會被歸類為已知。
+    const knownPrefixes = [
+      'tripline-tp-request-',     // /tp-request per-skill (v2.33.27+)
+      'tripline-tp-daily-check-', // /tp-daily-check per-skill
+      'tripline-request-',        // LEGACY (v2.33.26 前)
+    ];
+    const samples = [
+      `${knownPrefixes[0]}${Date.now()}-${process.pid}`,
+      `${knownPrefixes[1]}${Date.now()}-${process.pid}`,
+      `${knownPrefixes[2]}${Date.now()}-${process.pid}`,
+    ];
+    for (const name of samples) {
+      expect(knownPrefixes.some(p => name.startsWith(p))).toBe(true);
+    }
+    // human ad-hoc 不該被 match（quality agent finding）
+    expect(knownPrefixes.some(p => 'tripline-debug'.startsWith(p))).toBe(false);
   });
 });
