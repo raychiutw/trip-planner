@@ -1060,6 +1060,32 @@ export default function EditTripPage() {
     }
   }
 
+  // v2.33.108: 移除「儲存」TitleBar button → SaveStatus 顯示 auto-save 狀態。
+  // dirty 從 destsChanged + field 比較推導。
+  // 注意：hooks 必須在 early return 之前 — rules of hooks。
+  const isDirty = useMemo(() => {
+    if (!original) return false;
+    if (title !== (original.title ?? '')) return true;
+    if (description !== (original.description ?? '')) return true;
+    if (lang !== ((original.lang as Lang) ?? 'zh-TW')) return true;
+    if (published !== (original.published ?? 0)) return true;
+    if (!destNamesEqual(destinations, originalDests)) return true;
+    if (destinations.some((d, i) => {
+      const o = originalDests[i];
+      return !o || o.place_id !== d.place_id || (o.day_quota ?? null) !== (d.day_quota ?? null);
+    })) return true;
+    return false;
+  }, [original, originalDests, title, description, lang, published, destinations]);
+
+  // v2.33.108: debounce auto-save effect — 800ms 後 fire handleSubmit。
+  useEffect(() => {
+    if (!isDirty || submitting) return;
+    const timer = setTimeout(() => {
+      formRef.current?.requestSubmit();
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [isDirty, submitting, title, description, lang, published, destinations]);
+
   if (!auth.user) return null;
 
   if (!tripId) {
@@ -1081,22 +1107,8 @@ export default function EditTripPage() {
 
   // v2.33.0: dateRange const removed — 改由 days section header 顯示日期區間。
 
-  // v2.33.108: 移除「儲存」TitleBar button → SaveStatus 顯示 auto-save 狀態。
-  // dirty 從 destsChanged + field 比較推導；用 useMemo 避免每 render 重算。
-  const isDirty = useMemo(() => {
-    if (!original) return false;
-    if (title !== (original.title ?? '')) return true;
-    if (description !== (original.description ?? '')) return true;
-    if (lang !== ((original.lang as Lang) ?? 'zh-TW')) return true;
-    if (published !== (original.published ?? 0)) return true;
-    if (!destNamesEqual(destinations, originalDests)) return true;
-    if (destinations.some((d, i) => {
-      const o = originalDests[i];
-      return !o || o.place_id !== d.place_id || (o.day_quota ?? null) !== (d.day_quota ?? null);
-    })) return true;
-    return false;
-  }, [original, originalDests, title, description, lang, published, destinations]);
-
+  // titleBarActions: SaveStatus 推導自 submitting/error/isDirty（hook 已在 early
+  // return 之前定義；此區純 derived value 不含 hook）。
   type DerivedSaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
   const derivedSaveState: DerivedSaveState =
     submitting ? 'saving'
@@ -1110,15 +1122,6 @@ export default function EditTripPage() {
       onRetry={() => formRef.current?.requestSubmit()}
     />
   );
-
-  // v2.33.108: debounce auto-save effect — 800ms 後 fire handleSubmit。
-  useEffect(() => {
-    if (!isDirty || submitting) return;
-    const timer = setTimeout(() => {
-      formRef.current?.requestSubmit();
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [isDirty, submitting, title, description, lang, published, destinations]);
 
   return (
     <>
