@@ -215,7 +215,7 @@ const SCOPED_STYLES = `
   padding: 6px 16px;
   border-radius: var(--radius-full);
   cursor: pointer;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
   min-width: 64px;
   white-space: nowrap;
   flex-shrink: 0;

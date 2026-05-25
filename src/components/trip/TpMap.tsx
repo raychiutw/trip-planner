@@ -42,6 +42,9 @@ import PageErrorState from '../shared/PageErrorState';
 export { markerStyle, markerContent, buildSegments };
 export type { MarkerStyle, SegmentPair };
 
+/** Module-level constant styles — avoid recreating object literals each render. */
+const MAP_OVERLAY_STYLE = { position: 'absolute', inset: 0 } as const;
+
 /* ===== Props ===== */
 
 export type TpMapMode = 'detail' | 'overview';
@@ -276,12 +279,12 @@ const TpMap = memo(function TpMap({
           aria-label={mode === 'detail' ? '地圖：單點景點' : '地圖：行程景點總覽'}
         />
         {showSkeleton && (
-          <div style={{ position: 'absolute', inset: 0 }}>
+          <div style={MAP_OVERLAY_STYLE}>
             <MapSkeleton />
           </div>
         )}
         {showError && (
-          <div style={{ position: 'absolute', inset: 0 }}>
+          <div style={MAP_OVERLAY_STYLE}>
             <PageErrorState
               title="服務暫停"
               message={loadError?.message?.includes('quota') || loadError?.message?.includes('LOCKED')

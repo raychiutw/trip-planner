@@ -7,6 +7,7 @@
  *
  * Web Crypto 原生支援 HKDF (deriveBits)。in-isolate cache 避免重複 importKey。
  */
+import { toArrayBuffer } from './cryptoBuffer';
 
 const INFO_PREFIX = 'tripline.';
 type SubKeyName = 'session_v1' | 'invitation_token_v1';
@@ -32,7 +33,7 @@ export async function deriveSubSecret(masterSecret: string, info: SubKeyName): P
 
   const masterKey = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(masterSecret) as unknown as ArrayBuffer,
+    toArrayBuffer(new TextEncoder().encode(masterSecret)),
     'HKDF',
     false,
     ['deriveBits'],
@@ -41,8 +42,8 @@ export async function deriveSubSecret(masterSecret: string, info: SubKeyName): P
     {
       name: 'HKDF',
       hash: 'SHA-256',
-      salt: new Uint8Array(0) as unknown as ArrayBuffer,
-      info: new TextEncoder().encode(INFO_PREFIX + info) as unknown as ArrayBuffer,
+      salt: toArrayBuffer(new Uint8Array(0)),
+      info: toArrayBuffer(new TextEncoder().encode(INFO_PREFIX + info)),
     },
     masterKey,
     256,

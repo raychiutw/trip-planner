@@ -81,7 +81,7 @@ const SCOPED_STYLES = `
 }
 .tp-conflict-btn-replace {
   background: var(--color-priority-high-dot);
-  color: #fff;
+  color: var(--color-accent-foreground);
   border-color: var(--color-priority-high-dot);
 }
 .tp-conflict-btn-replace:hover { filter: brightness(0.92); }

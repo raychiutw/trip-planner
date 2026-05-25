@@ -38,6 +38,8 @@ export function parseAppSetting<T = unknown>(key: string, raw: string | null | u
     case 'integer': {
       const n = Number.parseInt(raw, 10);
       if (!Number.isFinite(n)) {
+        // 純 utility throw plain Error — caller (admin endpoint) catch 後決定
+        // HTTP shape；helper 不該 hardcode AppError code（layering 違反）。
         throw new Error(`app_settings.${key} parse failed: expected integer, got "${raw}"`);
       }
       return n as unknown as T;
@@ -46,6 +48,7 @@ export function parseAppSetting<T = unknown>(key: string, raw: string | null | u
       try {
         return JSON.parse(raw) as T;
       } catch {
+        // 純 utility throw plain Error — 同上 layering 考量。
         throw new Error(`app_settings.${key} parse failed: invalid JSON`);
       }
     case 'string':

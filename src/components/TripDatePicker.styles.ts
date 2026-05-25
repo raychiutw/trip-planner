@@ -27,7 +27,7 @@ export const TRIP_DATE_PICKER_STYLES = `
   font-variant-numeric: tabular-nums;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
   color-scheme: light;
   -webkit-appearance: none;
   appearance: none;
@@ -72,7 +72,7 @@ export const TRIP_DATE_PICKER_STYLES = `
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   padding: 20px;
-  animation: tp-date-pop 0.12s ease-out;
+  animation: tp-date-pop var(--transition-duration-fast) ease-out;
 }
 @keyframes tp-date-pop {
   from { opacity: 0; transform: translateY(-4px); }
@@ -158,7 +158,7 @@ export const TRIP_DATE_PICKER_STYLES = `
   color: var(--color-foreground);
   font-weight: 500;
   border-radius: var(--radius-md);
-  transition: background-color 0.15s, color 0.15s;
+  transition: background-color var(--transition-duration-fast), color var(--transition-duration-fast);
 }
 .tp-date-popover .rdp-day_button:hover:not(:disabled) {
   background: var(--color-accent-subtle);

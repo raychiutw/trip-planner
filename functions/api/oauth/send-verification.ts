@@ -24,6 +24,7 @@ import { emailVerification } from '../../../src/server/email-templates';
 import { recordEmailEvent } from '../_audit';
 import { alertAdminTelegram } from '../_alert';
 import { normalizeEmail } from '../../../src/server/email-utils';
+import { buildRateLimitResponse } from '../_errors';
 import type { Env } from '../_types';
 
 interface SendVerificationBody {
@@ -39,10 +40,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const ipKey = `send-verification:${clientIp(context.request)}`;
   const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.FORGOT_PASSWORD);
   if (!ipCheck.ok) {
-    return new Response(
-      JSON.stringify({ error: { code: 'VERIFY_RATE_LIMITED', message: '驗證信寄送過多，請稍後再試' } }),
-      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
-    );
+    return buildRateLimitResponse(ipCheck.retryAfter ?? 60, {
+      error: { code: 'VERIFY_RATE_LIMITED', message: '驗證信寄送過多，請稍後再試' },
+    });
   }
 
   const body = (await parseJsonBody<SendVerificationBody>(context.request)) ?? {};
@@ -59,10 +59,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const emailKey = `send-verification:${email}`;
   const emailCheck = await checkRateLimit(context.env.DB, emailKey, RATE_LIMITS.FORGOT_PASSWORD);
   if (!emailCheck.ok) {
-    return new Response(
-      JSON.stringify({ error: { code: 'VERIFY_RATE_LIMITED', message: '驗證信寄送過多，請稍後再試' } }),
-      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(emailCheck.retryAfter) } },
-    );
+    return buildRateLimitResponse(emailCheck.retryAfter ?? 60, {
+      error: { code: 'VERIFY_RATE_LIMITED', message: '驗證信寄送過多，請稍後再試' },
+    });
   }
   await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.FORGOT_PASSWORD);
   await bumpRateLimit(context.env.DB, emailKey, RATE_LIMITS.FORGOT_PASSWORD);

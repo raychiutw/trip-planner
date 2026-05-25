@@ -241,6 +241,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // 給 user-enumeration oracle（任何 logged-in user 可探測任意 email 是否
     // 已註冊）。改回統一 `invitation_sent` + `permRow.id` 仍 surface 給呼叫端
     // (audit log / admin UI)。
+    //
+    // Field name `id` 為 permission table PK；GET /permissions 同 endpoint 列
+    // permission rows 也用 `id` 對齊 — 保持 GET/POST shape 一致比強制 `permissionId`
+    // 重命名更重要（naming-rules.md tripId 規則 specific 針對 trip identifier）。
     return new Response(
       JSON.stringify({
         ok: true,

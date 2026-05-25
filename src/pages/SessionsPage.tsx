@@ -72,7 +72,7 @@ const SCOPED_STYLES = `
 .tp-device-icon svg { width: 18px; height: 18px; }
 .tp-device-icon-current {
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-accent-foreground);
 }
 .tp-device-meta { font-size: var(--font-size-subheadline); }
 .tp-device-name { font-weight: 600; display: flex; align-items: center; gap: 8px; }

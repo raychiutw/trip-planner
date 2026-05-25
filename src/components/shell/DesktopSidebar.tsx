@@ -104,6 +104,8 @@ body.dark .tp-sidebar {
   display: flex; align-items: center; gap: 8px;
   font-size: 20px; font-weight: 700; letter-spacing: -0.01em;
   /* Dark sidebar 上文字反白 */
+  /* H6 exception: brand sidebar is fixed deep-cocoa surface in both modes
+     (mockup line 5126); text stays warm-cream cross-mode for design lock. */
   color: #FFFBF5;
 }
 .tp-sidebar-brand .accent-dot { color: var(--color-accent); }
@@ -126,6 +128,8 @@ body.dark .tp-sidebar {
 }
 .tp-nav-item:hover {
   background: rgba(255, 251, 245, 0.06);
+  /* H6 exception: brand sidebar is fixed deep-cocoa surface in both modes
+     (mockup line 5126); text stays warm-cream cross-mode for design lock. */
   color: #FFFBF5;
 }
 .tp-nav-item.is-active {
@@ -216,6 +220,8 @@ body.dark .tp-sidebar {
 .tp-account-card .tp-account-name {
   font-size: 13px; font-weight: 600;
   /* Dark sidebar：name 用 reverse foreground (cream on dark) */
+  /* H6 exception: brand sidebar is fixed deep-cocoa surface in both modes
+     (mockup line 5126); text stays warm-cream cross-mode for design lock. */
   color: #FFFBF5;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }

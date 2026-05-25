@@ -159,8 +159,10 @@ const SCOPED_STYLES = `
   top: 8px; right: 8px;
   width: 36px; height: 36px;
   border: 0; border-radius: 50%;
+  /* H6 exception: heart icon on permanent rgba(0,0,0) overlay — text must
+     stay light in both light/dark mode for contrast against dark backdrop. */
   background: rgba(0, 0, 0, 0.45);
-  color: #fff;
+  color: #ffffff;
   display: grid; place-items: center;
   cursor: pointer;
   transition: background 120ms, color 120ms, transform 120ms;
@@ -225,7 +227,7 @@ const SCOPED_STYLES = `
   background: var(--color-background);
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   color: var(--color-foreground); cursor: pointer;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
 }
 .explore-region-pill:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .explore-region-pill[aria-expanded="true"] { border-color: var(--color-accent); color: var(--color-accent); }
@@ -283,7 +285,7 @@ const SCOPED_STYLES = `
   padding: 6px 12px; border-radius: var(--radius-full);
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   color: var(--color-muted); cursor: pointer;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
 }
 .explore-subtab:hover { color: var(--color-foreground); }
 .explore-subtab.is-active {
@@ -304,7 +306,7 @@ const SCOPED_STYLES = `
   padding: 6px 12px; border-radius: var(--radius-full);
   border: 1px solid var(--color-border); background: var(--color-background);
   font: inherit; font-size: 12px; font-weight: 600;
-  color: var(--color-foreground); cursor: pointer; min-height: 32px;
+  color: var(--color-foreground); cursor: pointer; min-height: var(--spacing-tap-min);
 }
 .explore-poi-card .poi-actions button:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .explore-poi-card .poi-actions button.saved { background: var(--color-accent); color: var(--color-accent-foreground); border-color: var(--color-accent); }
@@ -350,7 +352,7 @@ const SCOPED_STYLES = `
   margin: 0; color: var(--color-muted); font-size: var(--font-size-callout);
 }
 .explore-filter-empty-reset {
-  padding: 8px 16px; border-radius: 999px;
+  padding: 8px 16px; border-radius: var(--radius-full);
   background: var(--color-accent); color: var(--color-accent-foreground);
   border: 0; font-weight: 600; cursor: pointer;
   font-size: var(--font-size-footnote);
@@ -509,14 +511,15 @@ export default function ExplorePage() {
     try {
       const regionApi = regionToApiParam(region);
       const regionParam = regionApi ? `&region=${encodeURIComponent(regionApi)}` : '';
-      // NOTE v2.33.33 simplify PR-6 defer: poi-search 暫保留 raw fetch（test suite 重構成本太高），
-      // follow-up PR 處理。
-      const resp = await fetch(`/api/poi-search?q=${encodeURIComponent(q)}&limit=20${regionParam}`, { signal: ctrl.signal });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const body = (await resp.json()) as { results: PoiSearchResult[] };
-      if (searchAbortRef.current === ctrl) setResults(body.results);
-    } catch (err) {
-      if ((err as { name?: string })?.name === 'AbortError') return;
+      const body = await apiFetch<{ results?: PoiSearchResult[] }>(
+        `/poi-search?q=${encodeURIComponent(q)}&limit=20${regionParam}`,
+        { signal: ctrl.signal },
+      );
+      if (searchAbortRef.current === ctrl) setResults(body.results ?? []);
+    } catch (_err) {
+      // signal.aborted 直接判 — apiFetch 把 AbortError wrap 成 NET_TIMEOUT，
+      // 用 signal state 比 err.name 更精準（avoids ApiError → DOMException name 損失）。
+      if (ctrl.signal.aborted) return;
       showToast('搜尋失敗，請稍後再試', 'error', 3000);
       if (searchAbortRef.current === ctrl) setResults([]);
     } finally {

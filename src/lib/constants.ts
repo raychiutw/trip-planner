@@ -14,9 +14,11 @@ export const ARROW_COLLAPSE = '－';
 export const SAFE_COLOR_RE =
   /^(#[0-9a-fA-F]{3,8}|rgb\(\d+,\s*\d+,\s*\d+\)|var\(--[\w-]+\)|[a-z]+)$/i;
 
-/** Returns the colour string if it passes SAFE_COLOR_RE, otherwise a default. */
+/** Returns the colour string if it passes SAFE_COLOR_RE, otherwise a default.
+ *  Fallback uses `--color-accent`（Terracotta active token；舊版用 `--blue-light`
+ *  在 v2.23.0 google-maps-migration 後 token 已不存在）。 */
 export function safeColor(c: string | null | undefined): string {
-  return c && SAFE_COLOR_RE.test(c) ? c : 'var(--blue-light)';
+  return c && SAFE_COLOR_RE.test(c) ? c : 'var(--color-accent)';
 }
 
 /** Selectors for focusable elements inside modal/sheet panels. */

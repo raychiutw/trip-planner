@@ -111,7 +111,7 @@ const SCOPED_STYLES = `
 }
 .tp-bs-feature .tp-feat-icon {
   width: 36px; height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: rgba(255, 251, 245, 0.12);
   display: grid; place-items: center;
   flex-shrink: 0;

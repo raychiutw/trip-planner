@@ -33,16 +33,10 @@ import {
 import { getSessionUser } from '../_session';
 import { recordAuthEvent } from '../_auth_audit';
 import { generateOpaqueToken } from '../_utils';
+import { oauthErrorResponse } from '../_errors';
 import type { Env } from '../_types';
 
 const CODE_TTL_SEC = 10 * 60; // RFC 6749 §4.1.2 recommends short
-
-function jsonError(code: string, message: string, status: number): Response {
-  return new Response(
-    JSON.stringify({ error: code, error_description: message }),
-    { status, headers: { 'content-type': 'application/json' } },
-  );
-}
 
 function redirectError(
   redirectUri: string,
@@ -91,7 +85,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     if (result.redirectableToClient && req.redirect_uri) {
       return redirectError(req.redirect_uri, result.code, result.message, req.state ?? null);
     }
-    return jsonError(result.code, result.message, 400);
+    return oauthErrorResponse(result.code, result.message, 400);
   }
 
   // Check user logged in

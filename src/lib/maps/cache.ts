@@ -36,6 +36,8 @@ export async function getCachedSearch(
   query: string,
   region: string | undefined,
 ): Promise<PlacesSearchTextResult[] | null> {
+  // 兩個 await 串行：bind(key) depends on buildKey 結果，不能 parallel。
+  // RBP-18 async-defer-await 不適用此 dependent chain。
   const key = await buildKey(query, region);
   const row = await db
     .prepare(

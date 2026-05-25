@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestPost } from '../../functions/api/oauth/reset-password';
+import { AppError, errorResponse } from '../../functions/api/_errors';
 
 interface MockEnv {
   DB?: { prepare: ReturnType<typeof vi.fn> };
@@ -41,6 +42,16 @@ function makeContext(body: unknown, env: MockEnv): Parameters<typeof onRequestPo
   } as unknown as Parameters<typeof onRequestPost>[0];
 }
 
+/** Mirror _middleware.ts try/catch: AppError → errorResponse(err). */
+async function invoke(body: unknown, env: MockEnv): Promise<Response> {
+  try {
+    return await onRequestPost(makeContext(body, env));
+  } catch (err) {
+    if (err instanceof AppError) return errorResponse(err);
+    throw err;
+  }
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
@@ -54,14 +65,14 @@ afterEach(() => {
 describe('POST /api/oauth/reset-password', () => {
   it('400 RESET_TOKEN_MISSING when token empty', async () => {
     const env: MockEnv = { DB: makeDbWithRateLimitStub() };
-    const res = await onRequestPost(makeContext({ password: 'newpass123' }, env));
+    const res = await invoke({ password: 'newpass123' }, env);
     expect(res.status).toBe(400);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('RESET_TOKEN_MISSING');
   });
 
   it('400 RESET_PASSWORD_TOO_SHORT when password < 8 chars', async () => {
     const env: MockEnv = { DB: makeDbWithRateLimitStub() };
-    const res = await onRequestPost(makeContext({ token: 'tok', password: 'short' }, env));
+    const res = await invoke({ token: 'tok', password: 'short' }, env);
     expect(res.status).toBe(400);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('RESET_PASSWORD_TOO_SHORT');
   });
@@ -69,7 +80,7 @@ describe('POST /api/oauth/reset-password', () => {
   it('400 RESET_TOKEN_INVALID when token not in D1 (expired or never existed)', async () => {
     const stmt = makeStmt(null);
     const env: MockEnv = { DB: { prepare: vi.fn().mockReturnValue(stmt) } };
-    const res = await onRequestPost(makeContext({ token: 'expired', password: 'newpass1234' }, env));
+    const res = await invoke({ token: 'expired', password: 'newpass1234' }, env);
     expect(res.status).toBe(400);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('RESET_TOKEN_INVALID');
   });
@@ -89,10 +100,10 @@ describe('POST /api/oauth/reset-password', () => {
       return makeStmt();
     });
     const env: MockEnv = { DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({
+    const res = await invoke({
       token: 'valid-token',
       password: 'new-secure-password-123',
-    }, env));
+    }, env);
 
     expect(res.status).toBe(200);
     const json = await res.json() as { ok: boolean; message: string };
@@ -118,7 +129,7 @@ describe('POST /api/oauth/reset-password', () => {
       return makeStmt();
     });
     const env: MockEnv = { DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({ token: 'used-tok', password: 'newpass1234' }, env));
+    const res = await invoke({ token: 'used-tok', password: 'newpass1234' }, env);
     expect(res.status).toBe(400);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('RESET_TOKEN_INVALID');
   });
@@ -134,7 +145,7 @@ describe('POST /api/oauth/reset-password', () => {
       return makeStmt();
     });
     const env: MockEnv = { DB: { prepare: dbPrepare } };
-    await onRequestPost(makeContext({ token: 't', password: 'newpass1234' }, env));
+    await invoke({ token: 't', password: 'newpass1234' }, env);
 
     const updateSql = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && c[0].includes('UPDATE auth_identities'),
@@ -165,7 +176,7 @@ describe('POST /api/oauth/reset-password', () => {
       TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
       TRIPLINE_API_SECRET: 'test-bearer',
     };
-    await onRequestPost(makeContext({ token: 't', password: 'newpass1234' }, env as never));
+    await invoke({ token: 't', password: 'newpass1234' }, env as never);
 
     const mailerCall = fetchMock.mock.calls.find(
       (c) => typeof c[0] === 'string' && (c[0] as string).includes('/internal/mail/send'),
@@ -197,7 +208,7 @@ describe('POST /api/oauth/reset-password', () => {
       return makeStmt();
     });
     const env: MockEnv = { DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({ token: 't', password: 'newpass1234' }, env));
+    const res = await invoke({ token: 't', password: 'newpass1234' }, env);
     expect(res.status).toBe(200);
 
     // audit_log INSERT for failed email event

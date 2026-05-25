@@ -44,7 +44,7 @@ export const APP_SHELL_STYLES = `
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   pointer-events: none;
   opacity: calc(var(--ptr-pull-px, 0px) / 80);
-  transition: opacity 200ms ease-out;
+  transition: opacity var(--transition-duration-normal) ease-out;
   z-index: 1;
 }
 .app-shell-ptr-spinner {
@@ -53,6 +53,8 @@ export const APP_SHELL_STYLES = `
   border-top-color: var(--color-accent);
   border-radius: 50%;
   transform: rotate(calc(var(--ptr-pull-px, 0px) * 4.5deg));
+  /* 80ms 為 PTR spinner pixel-to-rotation 物理同步速率（pull 距離 × 4.5deg），
+     非標準互動 transition；H2 explicit exception。 */
   transition: transform 80ms ease-out;
 }
 .app-shell-ptr[data-refreshing="true"] .app-shell-ptr-spinner {
@@ -75,7 +77,7 @@ export const APP_SHELL_STYLES = `
  * e2e flake root cause)。Pulling 期間才提示瀏覽器把 main 升 GPU layer。 */
 .app-shell-main {
   position: relative;
-  transition: transform 200ms ease-out;
+  transition: transform var(--transition-duration-normal) ease-out;
 }
 .app-shell-main[data-pulling="true"] {
   transition: none;

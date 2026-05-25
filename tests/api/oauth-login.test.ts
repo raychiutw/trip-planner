@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestPost } from '../../functions/api/oauth/login';
+import { AppError, errorResponse } from '../../functions/api/_errors';
 import { hashPassword } from '../../src/server/password';
 
 interface MockEnv {
@@ -35,6 +36,16 @@ function makeContext(body: unknown, env: MockEnv): Parameters<typeof onRequestPo
   } as unknown as Parameters<typeof onRequestPost>[0];
 }
 
+/** Mirror _middleware.ts try/catch: AppError → errorResponse(err). */
+async function invoke(body: unknown, env: MockEnv): Promise<Response> {
+  try {
+    return await onRequestPost(makeContext(body, env));
+  } catch (err) {
+    if (err instanceof AppError) return errorResponse(err);
+    throw err;
+  }
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
@@ -48,10 +59,10 @@ afterEach(() => {
 describe('POST /api/oauth/login', () => {
   it('400 LOGIN_INVALID_INPUT when email or password missing', async () => {
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: vi.fn() } };
-    const r1 = await onRequestPost(makeContext({ email: 'a@b.com' }, env));
+    const r1 = await invoke({ email: 'a@b.com' }, env);
     expect(r1.status).toBe(400);
     expect((await r1.json() as { error: { code: string } }).error.code).toBe('LOGIN_INVALID_INPUT');
-    const r2 = await onRequestPost(makeContext({ password: 'pwd123' }, env));
+    const r2 = await invoke({ password: 'pwd123' }, env);
     expect(r2.status).toBe(400);
   });
 
@@ -61,7 +72,7 @@ describe('POST /api/oauth/login', () => {
       SESSION_SECRET: 's',
       DB: { prepare: vi.fn().mockReturnValue(stmt) },
     };
-    const res = await onRequestPost(makeContext({ email: 'unknown@x.com', password: 'whatever' }, env));
+    const res = await invoke({ email: 'unknown@x.com', password: 'whatever' }, env);
     expect(res.status).toBe(401);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('LOGIN_INVALID');
   }, 30_000);
@@ -73,7 +84,7 @@ describe('POST /api/oauth/login', () => {
       SESSION_SECRET: 's',
       DB: { prepare: vi.fn().mockReturnValue(stmt) },
     };
-    const res = await onRequestPost(makeContext({ email: 'a@b.com', password: 'wrong-pass' }, env));
+    const res = await invoke({ email: 'a@b.com', password: 'wrong-pass' }, env);
     expect(res.status).toBe(401);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('LOGIN_INVALID');
   }, 60_000);
@@ -91,7 +102,7 @@ describe('POST /api/oauth/login', () => {
       SESSION_SECRET: 'session-secret-test',
       DB: { prepare: dbPrepare },
     };
-    const res = await onRequestPost(makeContext({ email: 'a@b.com', password: 'correct-pass' }, env));
+    const res = await invoke({ email: 'a@b.com', password: 'correct-pass' }, env);
     expect(res.status).toBe(200);
     const json = await res.json() as { ok: boolean; userId: string; email: string };
     expect(json.ok).toBe(true);
@@ -108,14 +119,14 @@ describe('POST /api/oauth/login', () => {
     const stmt = makeStmt(null);
     const dbPrepare = vi.fn().mockReturnValue(stmt);
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
-    await onRequestPost(makeContext({ email: '  Mixed.Case@EXAMPLE.com  ', password: 'whatever' }, env));
+    await invoke({ email: '  Mixed.Case@EXAMPLE.com  ', password: 'whatever' }, env);
     expect(stmt.bind).toHaveBeenCalledWith('local', 'mixed.case@example.com');
   }, 30_000);
 
   it('still 401 even if DB returns identity with NULL password_hash (e.g. only Google identity)', async () => {
     const stmt = makeStmt({ user_id: 'u1', password_hash: null }); // Google-only user attempting password login
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: vi.fn().mockReturnValue(stmt) } };
-    const res = await onRequestPost(makeContext({ email: 'a@b.com', password: 'whatever' }, env));
+    const res = await invoke({ email: 'a@b.com', password: 'whatever' }, env);
     expect(res.status).toBe(401);
   }, 30_000);
 
@@ -133,7 +144,7 @@ describe('POST /api/oauth/login', () => {
       return makeStmt();
     });
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({ email: 'a@b.com', password: 'pw1234' }, env));
+    const res = await invoke({ email: 'a@b.com', password: 'pw1234' }, env);
     expect(res.status).toBe(429);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('LOGIN_RATE_LIMITED');
@@ -150,7 +161,7 @@ describe('POST /api/oauth/login', () => {
       return makeStmt();
     });
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({ email: 'unknown@x.com', password: 'wrong' }, env));
+    const res = await invoke({ email: 'unknown@x.com', password: 'wrong' }, env);
     expect(res.status).toBe(401);
 
     // Both ipKey + emailKey buckets should be bumped (atomic INSERT...ON CONFLICT called twice)
@@ -182,7 +193,7 @@ describe('POST /api/oauth/login', () => {
       return makeStmt();
     });
     const env: MockEnv = { SESSION_SECRET: 'session-secret-test', DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({ email: 'user@x.com', password: 'correct-pass' }, env));
+    const res = await invoke({ email: 'user@x.com', password: 'correct-pass' }, env);
     expect(res.status).toBe(200);
 
     // Both bucket keys reset

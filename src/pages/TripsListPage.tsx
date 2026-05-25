@@ -164,7 +164,7 @@ const SCOPED_STYLES = `
   left: 12px;
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--color-accent);
   z-index: 2;
   box-shadow: 0 0 0 3px var(--color-accent-subtle);
@@ -251,7 +251,7 @@ const SCOPED_STYLES = `
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   color: var(--color-muted);
   display: inline-flex; align-items: center; gap: 6px;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -280,7 +280,7 @@ const SCOPED_STYLES = `
   padding: 6px 12px;
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   color: var(--color-foreground); cursor: pointer;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
   /* v2.31.81 #3：pill 風格 select — 拔 native chrome + 自訂 chevron right-padding */
   appearance: none; -webkit-appearance: none; -moz-appearance: none;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B85F2A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
@@ -298,7 +298,7 @@ body.dark .tp-trips-sort {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 4px 8px 4px 10px;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
   transition: width 160ms ease;
   width: 36px; overflow: hidden;
 }
@@ -582,12 +582,12 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthChe
       });
     }
     recompute();
-    window.addEventListener('resize', scheduleRecompute);
-    window.addEventListener('scroll', scheduleRecompute, true);
+    window.addEventListener('resize', scheduleRecompute, { passive: true });
+    window.addEventListener('scroll', scheduleRecompute, { capture: true, passive: true });
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener('resize', scheduleRecompute);
-      window.removeEventListener('scroll', scheduleRecompute, true);
+      window.removeEventListener('scroll', scheduleRecompute, { capture: true });
     };
   }, [open]);
 

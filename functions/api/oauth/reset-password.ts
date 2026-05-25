@@ -18,6 +18,7 @@
  * 不 issue session 自動：force user 用新密碼 explicit login，verify 他記得新密碼。
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
+import { AppError, buildRateLimitResponse } from '../_errors';
 import { hashPassword, MIN_PASSWORD_LEN } from '../../../src/server/password';
 import { parseJsonBody } from '../_utils';
 import { bumpRateLimit, checkRateLimit, clientIp, RATE_LIMITS } from '../_rate_limit';
@@ -45,13 +46,6 @@ interface ResetTokenPayload {
   [key: string]: unknown;
 }
 
-function errorResponse(code: string, message: string, status: number): Response {
-  return new Response(
-    JSON.stringify({ error: { code, message } }),
-    { status, headers: { 'content-type': 'application/json' } },
-  );
-}
-
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   // v2.33.52 cleanup (round 5d defer): per-IP rate limit。Token entropy 256-bit
   // brute force 已不可行，但 scanner / credential stuffing 仍會 burn D1 work +
@@ -59,10 +53,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const ipKey = `reset-password:${clientIp(context.request)}`;
   const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.LOGIN);
   if (!ipCheck.ok) {
-    return new Response(
-      JSON.stringify({ error: { code: 'RESET_RATE_LIMITED', message: '密碼重設嘗試過多，請稍後再試' } }),
-      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
-    );
+    return buildRateLimitResponse(ipCheck.retryAfter ?? 60, {
+      error: { code: 'RESET_RATE_LIMITED', message: '密碼重設嘗試過多，請稍後再試' },
+    });
   }
 
   const body = (await parseJsonBody<ResetBody>(context.request)) ?? {};
@@ -70,10 +63,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const password = body.password ?? '';
 
   if (!token) {
-    return errorResponse('RESET_TOKEN_MISSING', '缺少 token', 400);
+    throw new AppError('RESET_TOKEN_MISSING');
   }
   if (!password || password.length < MIN_PASSWORD_LEN) {
-    return errorResponse('RESET_PASSWORD_TOO_SHORT', `密碼至少 ${MIN_PASSWORD_LEN} 字元`, 400);
+    throw new AppError('RESET_PASSWORD_TOO_SHORT', `密碼至少 ${MIN_PASSWORD_LEN} 字元`);
   }
 
   // Bump 計數（每次正常呼叫都 +1，正常 user 通常 1 次即成功）。
@@ -88,7 +81,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       outcome: 'failure',
       failureReason: 'invalid_token',
     }, context.env);
-    return errorResponse('RESET_TOKEN_INVALID', '重設連結已過期或無效', 400);
+    throw new AppError('RESET_TOKEN_INVALID', '重設連結已過期或無效');
   }
 
   // One-time use safeguard (handle both legacy `used:true` rows and new `consumed:<ts>`)
@@ -99,7 +92,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       userId: tokenRow.userId,
       failureReason: 'token_used',
     }, context.env);
-    return errorResponse('RESET_TOKEN_INVALID', '重設連結已使用，請重新申請', 400);
+    throw new AppError('RESET_TOKEN_INVALID', '重設連結已使用，請重新申請');
   }
 
   // Hash + UPDATE
@@ -107,7 +100,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     passwordHash = await hashPassword(password);
   } catch {
-    return errorResponse('RESET_PASSWORD_FORMAT', '密碼格式不符', 400);
+    throw new AppError('RESET_PASSWORD_FORMAT');
   }
 
   await context.env.DB

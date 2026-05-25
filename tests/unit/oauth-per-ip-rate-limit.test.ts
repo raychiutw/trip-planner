@@ -51,8 +51,10 @@ describe('v2.33.103 SEC-7 per-IP rate-limit', () => {
   });
 
   it('oauth/token.ts per-IP check 失敗回 429', () => {
+    // v2.33.107 refactor: inline `status: 429` 改 buildRateLimitResponse helper
+    // (一致 RATE_LIMIT pattern + Retry-After header)。pattern 配對 helper call。
     const block = TOKEN_SRC.match(
-      /ipCheck\s*=\s*await checkRateLimit\([\s\S]*?if\s*\(!ipCheck\.ok\)\s*{[\s\S]*?status:\s*429/,
+      /ipCheck\s*=\s*await checkRateLimit\([\s\S]*?if\s*\(!ipCheck\.ok\)\s*{[\s\S]*?buildRateLimitResponse/,
     );
     expect(block).not.toBeNull();
   });

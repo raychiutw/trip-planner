@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { onRequestPost } from '../../functions/api/oauth/signup';
+import { AppError, errorResponse } from '../../functions/api/_errors';
 
 interface MockEnv {
   SESSION_SECRET?: string;
@@ -35,6 +36,16 @@ function makeContext(body: unknown, env: MockEnv): Parameters<typeof onRequestPo
   } as unknown as Parameters<typeof onRequestPost>[0];
 }
 
+/** Mirror _middleware.ts try/catch: AppError → errorResponse(err). */
+async function invoke(body: unknown, env: MockEnv): Promise<Response> {
+  try {
+    return await onRequestPost(makeContext(body, env));
+  } catch (err) {
+    if (err instanceof AppError) return errorResponse(err);
+    throw err;
+  }
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
@@ -48,18 +59,18 @@ afterEach(() => {
 describe('POST /api/oauth/signup', () => {
   it('400 SIGNUP_INVALID_EMAIL when email missing or invalid', async () => {
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: vi.fn() } };
-    const r1 = await onRequestPost(makeContext({ password: 'longenough' }, env));
+    const r1 = await invoke({ password: 'longenough' }, env);
     expect(r1.status).toBe(400);
     expect((await r1.json() as { error: { code: string } }).error.code).toBe('SIGNUP_INVALID_EMAIL');
 
-    const r2 = await onRequestPost(makeContext({ email: 'not-an-email', password: 'longenough' }, env));
+    const r2 = await invoke({ email: 'not-an-email', password: 'longenough' }, env);
     expect(r2.status).toBe(400);
     expect((await r2.json() as { error: { code: string } }).error.code).toBe('SIGNUP_INVALID_EMAIL');
   });
 
   it('400 SIGNUP_PASSWORD_TOO_SHORT when password < 8 chars', async () => {
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: vi.fn() } };
-    const res = await onRequestPost(makeContext({ email: 'a@b.com', password: 'short' }, env));
+    const res = await invoke({ email: 'a@b.com', password: 'short' }, env);
     expect(res.status).toBe(400);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_PASSWORD_TOO_SHORT');
   });
@@ -70,7 +81,7 @@ describe('POST /api/oauth/signup', () => {
       SESSION_SECRET: 's',
       DB: { prepare: vi.fn().mockReturnValue(stmt) },
     };
-    const res = await onRequestPost(makeContext({ email: 'taken@example.com', password: 'longenough' }, env));
+    const res = await invoke({ email: 'taken@example.com', password: 'longenough' }, env);
     expect(res.status).toBe(409);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_EMAIL_TAKEN');
   });
@@ -86,11 +97,11 @@ describe('POST /api/oauth/signup', () => {
       SESSION_SECRET: 'session-secret-test-32-chars-long',
       DB: { prepare: dbPrepare },
     };
-    const res = await onRequestPost(makeContext({
+    const res = await invoke({
       email: 'new@example.com',
       password: 'a-secure-password-1234',
       displayName: 'New User',
-    }, env));
+    }, env);
 
     expect(res.status).toBe(201);
     const json = await res.json() as { ok: boolean; userId: string; email: string; requiresVerification: boolean };
@@ -116,10 +127,10 @@ describe('POST /api/oauth/signup', () => {
       SESSION_SECRET: 'session-secret-test',
       DB: { prepare: dbPrepare },
     };
-    await onRequestPost(makeContext({
+    await invoke({
       email: '  Mixed.Case@EXAMPLE.com  ',
       password: 'password123',
-    }, env));
+    }, env);
 
     // Find the user-lookup stmt by SQL pattern (rate limit calls now precede it)
     const userLookupIdx = dbPrepare.mock.calls.findIndex(
@@ -142,10 +153,10 @@ describe('POST /api/oauth/signup', () => {
       SESSION_SECRET: 's',
       DB: { prepare: dbPrepare },
     };
-    const res = await onRequestPost(makeContext({
+    const res = await invoke({
       email: 'race@example.com',
       password: 'longenough',
-    }, env));
+    }, env);
     expect(res.status).toBe(409);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_EMAIL_TAKEN');
   }, 30_000);
@@ -163,10 +174,10 @@ describe('POST /api/oauth/signup', () => {
       return makeStmt();
     });
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({
+    const res = await invoke({
       email: 'a@b.com',
       password: 'longenough',
-    }, env));
+    }, env);
     expect(res.status).toBe(429);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('SIGNUP_RATE_LIMITED');
@@ -181,10 +192,10 @@ describe('POST /api/oauth/signup', () => {
       return makeStmt();
     });
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({
+    const res = await invoke({
       email: 'taken@example.com',
       password: 'longenough',
-    }, env));
+    }, env);
     // dup email → 409, but rate limit bucket should still be bumped
     expect(res.status).toBe(409);
     // poi-favorites-rename §3.3: bumpRateLimit 改 atomic INSERT...ON CONFLICT
@@ -239,11 +250,11 @@ describe('POST /api/oauth/signup with invitationToken', () => {
       SESSION_SECRET: TEST_SECRET,
       DB: { prepare: dbPrepare, batch: dbBatch } as unknown as MockEnv['DB'],
     };
-    const res = await onRequestPost(makeContext({
+    const res = await invoke({
       email: 'newperson@x.com',
       password: 'longenough',
       invitationToken: 'raw-invite-token',
-    }, env));
+    }, env);
 
     expect(res.status).toBe(201);
     const json = await res.json() as {
@@ -274,11 +285,11 @@ describe('POST /api/oauth/signup with invitationToken', () => {
       return makeStmt();
     });
     const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({
+    const res = await invoke({
       email: 'newperson@x.com',
       password: 'longenough',
       invitationToken: 'expired-token',
-    }, env));
+    }, env);
 
     expect(res.status).toBe(201);
     const json = await res.json() as {
@@ -306,11 +317,11 @@ describe('POST /api/oauth/signup with invitationToken', () => {
       return makeStmt();
     });
     const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({
+    const res = await invoke({
       email: 'newperson@x.com',
       password: 'longenough',
       invitationToken: 'wrong-email-token',
-    }, env));
+    }, env);
 
     expect(res.status).toBe(201);
     const json = await res.json() as { invitationError: string; joinedTrip: unknown };
@@ -328,11 +339,11 @@ describe('POST /api/oauth/signup with invitationToken', () => {
       return makeStmt();
     });
     const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({
+    const res = await invoke({
       email: 'newperson@x.com',
       password: 'longenough',
       invitationToken: 'bogus',
-    }, env));
+    }, env);
 
     expect(res.status).toBe(201);
     const json = await res.json() as { invitationError: string };
@@ -348,10 +359,10 @@ describe('POST /api/oauth/signup with invitationToken', () => {
       return makeStmt();
     });
     const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({
+    const res = await invoke({
       email: 'newperson@x.com',
       password: 'longenough',
-    }, env));
+    }, env);
 
     expect(res.status).toBe(201);
     const json = await res.json() as { joinedTrip: unknown; invitationError: unknown };

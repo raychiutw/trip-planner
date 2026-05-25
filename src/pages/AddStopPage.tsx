@@ -259,7 +259,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-full);
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   color: var(--color-foreground); cursor: pointer;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
 }
 .tp-add-stop-subtab:hover { color: var(--color-foreground); }
 .tp-add-stop-subtab.is-active {

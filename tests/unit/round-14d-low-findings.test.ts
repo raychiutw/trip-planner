@@ -38,13 +38,13 @@ describe('v2.33.63 #2 — D1Adapter payload size cap', () => {
 });
 
 describe('v2.33.63 #3 — session CryptoKey cache', () => {
-  it('keyCache Map<secret, CryptoKey> 加入', () => {
-    expect(SESSION).toMatch(/const keyCache = new Map<string, CryptoKey>/);
+  it('KEY_CACHE Map<secret, CryptoKey> 加入', () => {
+    expect(SESSION).toMatch(/const KEY_CACHE = new Map<string, CryptoKey>/);
   });
 
   it('importHmacKey 先查 cache', () => {
-    expect(SESSION).toMatch(/keyCache\.get\(secret\)/);
-    expect(SESSION).toMatch(/keyCache\.set\(secret, key\)/);
+    expect(SESSION).toMatch(/KEY_CACHE\.get\(secret\)/);
+    expect(SESSION).toMatch(/KEY_CACHE\.set\(secret, key\)/);
   });
 });
 

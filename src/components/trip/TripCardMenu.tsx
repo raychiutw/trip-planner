@@ -16,7 +16,7 @@ import Icon from '../shared/Icon';
 const SCOPED_STYLES = `
 .tp-card-menu-trigger {
   position: absolute; top: 8px; right: 8px;
-  width: 32px; height: 32px;
+  width: var(--spacing-tap-min); height: var(--spacing-tap-min);
   border-radius: var(--radius-full);
   /* PR-EE 2026-04-26：原本 rgba(255,255,255,0.92) hardcode 白色，dark mode
    * 跳出來像浮白圓圈。改 --color-glass-toast token 自動 light/dark 切換。 */
@@ -112,11 +112,11 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
       setPos({ top: r.bottom + 6, left });
     }
     recompute();
-    window.addEventListener('resize', recompute);
-    window.addEventListener('scroll', recompute, true);
+    window.addEventListener('resize', recompute, { passive: true });
+    window.addEventListener('scroll', recompute, { capture: true, passive: true });
     return () => {
       window.removeEventListener('resize', recompute);
-      window.removeEventListener('scroll', recompute, true);
+      window.removeEventListener('scroll', recompute, { capture: true });
     };
   }, [open]);
 

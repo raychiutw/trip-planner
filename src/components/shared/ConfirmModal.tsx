@@ -89,7 +89,7 @@ const SCOPED_STYLES = `
 
 .tp-confirm-btn-danger {
   background: var(--color-priority-high-dot);
-  color: #fff;
+  color: var(--color-accent-foreground);
   border-color: var(--color-priority-high-dot);
 }
 .tp-confirm-btn-danger:hover { filter: brightness(0.92); }

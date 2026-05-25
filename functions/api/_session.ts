@@ -76,6 +76,7 @@ function summarizeUserAgent(ua: string): string {
 export async function getSessionUser(
   request: Request,
   env: EnvWithSession,
+  waitUntil?: (promise: Promise<unknown>) => void,
 ): Promise<SessionPayload | null> {
   const token = getSessionCookie(request);
   if (!token) return null;
@@ -96,14 +97,11 @@ export async function getSessionUser(
       }
       // Best-effort touch last_seen_at, throttled to 5min so D1 write churn
       // stays bounded（per-request UPDATE on hot path otherwise ~1 write/click）。
-      // Fire-and-forget without ctx.waitUntil — acceptable since miss is just
-      // a stale last_seen_at not security-critical。SQL filter pushes the
-      // throttle into D1 so most calls become 0-row no-op writes (still cheap)。
-      //
-      // TODO(V2-P7): thread context.executionCtx + ctx.waitUntil(promise) if
-      // last_seen_at accuracy becomes load-bearing for stale-session cleanup。
-      // 目前 cron cleanup 用 created_at + 30 天 cap 不依賴 last_seen_at 精度。
-      void env.DB
+      // v2.33.107 #2: thread context.waitUntil — caller 傳入 ctx.waitUntil.bind(ctx)
+      // 保證 fire-and-forget UPDATE 在 response return 後仍跑完 (Workers runtime
+      // 否則 cancel 未 await 的 microtask)。Fallback：caller 沒 thread → 退回
+      // void Promise + .catch（dev / test path）。
+      const touchPromise = env.DB
         .prepare(
           `UPDATE session_devices SET last_seen_at = datetime('now')
            WHERE sid = ? AND last_seen_at < datetime('now', '-5 minutes')`,
@@ -111,6 +109,11 @@ export async function getSessionUser(
         .bind(payload.sid)
         .run()
         .catch(() => undefined);
+      if (waitUntil) {
+        waitUntil(touchPromise);
+      } else {
+        void touchPromise;
+      }
     } catch {
       // DB unavailable — cookie still valid (degrade gracefully)
     }
@@ -126,8 +129,9 @@ export async function getSessionUser(
 export async function requireSessionUser(
   request: Request,
   env: EnvWithSession,
+  waitUntil?: (promise: Promise<unknown>) => void,
 ): Promise<SessionPayload> {
-  const payload = await getSessionUser(request, env);
+  const payload = await getSessionUser(request, env, waitUntil);
   if (!payload) throw new AppError('AUTH_REQUIRED');
   return payload;
 }

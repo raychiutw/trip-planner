@@ -157,7 +157,7 @@ const SCOPED_STYLES = `
   gap: 12px; word-break: break-all;
 }
 .tp-code-block-secret {
-  background: var(--color-destructive); color: #fff;
+  background: var(--color-destructive); color: var(--color-accent-foreground);
 }
 .tp-code-block code { flex: 1; user-select: all; }
 .tp-code-block button {
@@ -169,7 +169,7 @@ const SCOPED_STYLES = `
 }
 .tp-code-block-secret button {
   background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  color: var(--color-accent-foreground);
 }
 .tp-secret-warning {
   font-size: var(--font-size-caption);
