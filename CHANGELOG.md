@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.109] - 2026-05-25
+
+**Fix — AI 健檢頁 dark mode bottombar 顏色**
+
+QA prod 報告（沖繩七日遊行程表 mobile dark mode）：「開始健檢」button 所在 sticky bottom bar 是淺米色 `rgba(250, 244, 234, 0.86)`，dark mode 下整條 bar 跟頁面 `#1A140F` 深棕背景完全不和諧。
+
+修：`src/pages/TripHealthCheckPage.tsx` `.tp-ai-health-bottombar` background 從寫死米色改 `color-mix(in srgb, var(--color-background) 86%, transparent)` 對齊既有 frosted-glass nav pattern。dark mode token 自動 follow，無需新 override。順便加 `-webkit-backdrop-filter` for Safari + 用 `var(--blur-glass)` token 取代寫死 14px。
+
+**Note — AI 健檢報告資料 missing 不是 v2.33.108 regression**
+
+同 QA report：「資料不見了」。D1 query 確認 `trip_health_reports` 表 0 rows。Root cause: migration 0069 (v2.33.60 round 14, 加 FK constraint) 用 `INSERT SELECT INNER JOIN users` swap 舊 row，但 v2.33.85 前 code bug 把 `auth.email` 寫進 `user_id` (應為 uuid)，那些 row 在 INNER JOIN 階段全 filter 掉 → 0 rows 留存。當前 GET endpoint 對空 table 回 `report: null` 正確；前端 empty state「尚未健檢過此行程」正確顯示。User 需要重新跑「開始健檢」(3-7 分鐘 Claude call) 生成新報告。
+
+非 v2.33.108 introduced — 歷史 data loss event，無 backup 可 restore。
+
 ## [2.33.108] - 2026-05-25
 
 **Round 57 — 編輯即儲存（auto-save）+ 移除「儲存」button + entries/segments OCC version**
