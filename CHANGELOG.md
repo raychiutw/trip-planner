@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.116] - 2026-05-26
+
+**Fix — `/auth/password/reset` success / error state 的 `<a class="tp-btn">` 沒置中**
+
+QA prod 復現（user 完成密碼重設後）：「密碼已更新」success page 上「前往登入」button 靠左、不對齊上方置中的標題與 icon。Error state「這個連結無法使用了」+「重新申請重設密碼」button 同 pattern。
+
+Root cause：`.tp-auth-card` 沒設 text-align，內層 `<a>` 是 inline-block → 預設靠左。其他元素（brand / icon / headline）都各自有 centering style；只有 standalone button 沒包 centering wrapper。
+
+### Changed
+
+- `src/pages/ResetPasswordPage.tsx` SCOPED_STYLES 加 1 條 CSS rule：
+  `.tp-auth-card > .tp-btn-primary { display: block; width: fit-content; margin: 0 auto; }`
+- 只命中 result/success state 的 standalone button（form 內的 submit button 在 `<form>` 內，不受此 selector 影響 — 不破壞登入 / 註冊 form 既有 layout）
+
 ## [2.33.115] - 2026-05-26
 
 **Fix — `/map` 頁空 trips 時右側面板半屏空白，左右兩邊都顯重複的「先建立行程」hint**
