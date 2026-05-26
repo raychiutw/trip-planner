@@ -1178,7 +1178,9 @@ export default function GlobalMapPage() {
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       main={main}
-      sheet={sheet}
+      // v2.33.115: 空 trips 時拔掉右側 sheet，AppShell 自動降 2-pane（避免空白
+      // hint「左側建立第一個行程後...」與左側 empty-state card 訊息重複佔半屏）
+      sheet={hasNoTrips ? undefined : sheet}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
     />
   );
