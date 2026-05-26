@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.114] - 2026-05-26
+
+**Fix — Email verification token 被企業 email scanner pre-consume，user 點信件連結看到「已使用」**
+
+QA 復現（2026-05-25, rayschiu@fetci.com signup）：
+
+- 23:37:45 signup → 寄 verification 信
+- 23:38:02 (+17s) `email_verified_at` 自動寫入 timestamp — **user 還沒收到信**
+- User 點信件連結 → `VerifyEmailPage` 顯「此驗證連結已經使用過了」誤導訊息
+
+Root cause：v2.33.59 `VerifyEmailPage.tsx` `useEffect(() => performVerify(), [token])` mount 時 auto-POST `/api/oauth/verify`。設計假設是「Email client image-preview 不會跑 JS」，但 enterprise email security 服務（**Mimecast / Microsoft Safe Links / Proofpoint URL Sandbox**）跑 headless Chromium 做 deep link inspection：載入頁面 → JS 執行 → useEffect 觸發 → silent consume token。所有企業 user 都中。
+
+帳號其實已 verified（scanner 那次完成的），但 UX 像 broken — 永遠收不到「成功」的反饋。
+
+### Changed
+
+- `src/pages/VerifyEmailPage.tsx` 拔掉 `useEffect` auto-POST。Mount 時若有 token → `status='idle'` 顯示「點此完成驗證」button；user 點擊才 POST `/api/oauth/verify` consume token。Scanner headless render 不會自動 click button → token 不被 pre-consume。
+- 拔 `useEffect` import（只剩 `useState`）；`missing_token` error 改在 `useState` initializer derive，不再 render 時 setState。
+
+### Added
+
+- `tests/unit/round-13-server-residuals.test.ts` regression：grep 鎖 `useEffect(...performVerify)` 不存在 + `verify-email-confirm-btn` testid + import 簽名
+- `tests/unit/untested-pages-smoke.test.tsx` 加 `verify-email-status-idle` + `verify-email-confirm-btn` 預期 assertion
+
+### Defense rationale
+
+User gesture (click button) 不能被 headless scanner 觸發 — 它們不會「假裝 user」點 UI element（會被 reCAPTCHA / behavior detection 偵測到）。是該類 token 消費點的標準防護。
+
 ## [2.33.113] - 2026-05-26
 
 **Fix — CF Worker `/trigger` fetch 3s AbortController timeout 太緊 → Telegram 噪音 alert**
