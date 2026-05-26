@@ -108,3 +108,6 @@ day3.json
 !.codex/skills/**
 .codex/skills/tp-workspace/trigger-results/
 .codex/skills/tp-team-workspace/
+
+# funnel-guard kill-switch（incident response，本機不入 repo）
+scripts/funnel-guard/.disabled
