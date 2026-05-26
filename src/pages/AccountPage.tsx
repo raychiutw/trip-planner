@@ -61,9 +61,89 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
   margin: 0;
 }
+/* v2.33.122: name + edit pencil icon flex row (置中對齊 avatar 軸) */
+.tp-account-hero-name-row {
+  display: flex; align-items: center; gap: 8px;
+  justify-content: center;
+}
+.tp-account-hero-name-edit {
+  display: grid; place-items: center;
+  width: 32px; height: 32px;
+  background: transparent; border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms;
+}
+.tp-account-hero-name-edit:hover {
+  background: var(--color-hover);
+  color: var(--color-accent);
+}
+.tp-account-hero-name-edit:focus-visible {
+  outline: none; box-shadow: var(--shadow-ring);
+}
+.tp-account-hero-name-edit .svg-icon { width: 16px; height: 16px; }
 .tp-account-hero-email {
   font-size: var(--font-size-callout);
   color: var(--color-muted);
+}
+
+/* v2.33.122: 編輯名稱 modal — overlay + dialog 對齊 ConfirmModal 視覺 */
+.tp-account-edit-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid; place-items: center;
+  z-index: var(--z-modal, 1000);
+  padding: 24px;
+  animation: tp-account-edit-fade 150ms ease-out;
+}
+@keyframes tp-account-edit-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.tp-account-edit-dialog {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+}
+.tp-account-edit-title {
+  font-size: var(--font-size-title3);
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--color-foreground);
+}
+.tp-account-edit-help {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+.tp-account-edit-input {
+  width: 100%;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: var(--font-size-body);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  box-sizing: border-box;
+}
+.tp-account-edit-input:focus-visible {
+  outline: none; border-color: var(--color-accent);
+  box-shadow: var(--shadow-ring);
+}
+.tp-account-edit-input:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
+.tp-account-edit-actions {
+  display: flex; gap: 8px;
+  justify-content: flex-end;
+  margin-top: 20px;
 }
 .tp-account-hero-stats {
   display: grid; grid-template-columns: repeat(3, 1fr);
@@ -170,13 +250,43 @@ interface SettingsRow {
 
 export default function AccountPage() {
   const auth = useRequireAuth();
-  const { user } = useCurrentUser();
+  const { user, reload: reloadUser } = useCurrentUser();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState<AccountStats | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // v2.33.122: 編輯 display_name modal
+  const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [editingName, setEditingName] = useState('');
+  const [savingName, setSavingName] = useState(false);
+
+  function openEditName(): void {
+    setEditingName(user?.displayName ?? '');
+    setShowEditNameModal(true);
+  }
+
+  async function handleSaveName(): Promise<void> {
+    setSavingName(true);
+    try {
+      const trimmed = editingName.trim();
+      await apiFetch('/account/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ displayName: trimmed.length === 0 ? null : trimmed }),
+        headers: { 'content-type': 'application/json' },
+      });
+      reloadUser();
+      setShowEditNameModal(false);
+      showToast('名稱已更新', 'success');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '更新失敗';
+      showToast(msg, 'error');
+    } finally {
+      setSavingName(false);
+    }
+  }
 
   useEffect(() => {
     if (!auth.user) return;
@@ -250,7 +360,19 @@ export default function AccountPage() {
         <section className="tp-account-hero" data-testid="account-hero">
           <div className="tp-account-hero-avatar" aria-hidden="true">{initial}</div>
           <div>
-            <h2 className="tp-account-hero-name">{displayName}</h2>
+            <div className="tp-account-hero-name-row">
+              <h2 className="tp-account-hero-name">{displayName}</h2>
+              <button
+                type="button"
+                className="tp-account-hero-name-edit"
+                onClick={openEditName}
+                aria-label="編輯名稱"
+                title="編輯名稱"
+                data-testid="account-edit-name-btn"
+              >
+                <Icon name="pencil" />
+              </button>
+            </div>
             <div className="tp-account-hero-email">{user.email}</div>
           </div>
           <div className="tp-account-hero-stats">
@@ -316,6 +438,65 @@ export default function AccountPage() {
         onConfirm={handleLogout}
         onCancel={() => setShowLogoutModal(false)}
       />
+
+      {/* v2.33.122: 編輯名稱 modal */}
+      {showEditNameModal && (
+        <div
+          className="tp-account-edit-overlay"
+          onClick={() => !savingName && setShowEditNameModal(false)}
+          data-testid="account-edit-name-overlay"
+        >
+          <div
+            className="tp-account-edit-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tp-account-edit-name-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="tp-account-edit-name-title" className="tp-account-edit-title">編輯名稱</h3>
+            <p className="tp-account-edit-help">顯示在 sidebar 與帳號頁面，留空會 fallback 顯 email 開頭。</p>
+            <input
+              type="text"
+              className="tp-account-edit-input"
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              maxLength={50}
+              placeholder={user.email.split('@')[0]}
+              autoFocus
+              disabled={savingName}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !savingName) {
+                  void handleSaveName();
+                }
+                if (e.key === 'Escape' && !savingName) {
+                  setShowEditNameModal(false);
+                }
+              }}
+              data-testid="account-edit-name-input"
+            />
+            <div className="tp-account-edit-actions">
+              <button
+                type="button"
+                className="tp-new-modal-btn"
+                onClick={() => setShowEditNameModal(false)}
+                disabled={savingName}
+                data-testid="account-edit-name-cancel"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="tp-new-modal-btn tp-new-modal-btn-primary"
+                onClick={() => void handleSaveName()}
+                disabled={savingName}
+                data-testid="account-edit-name-save"
+              >
+                {savingName ? '儲存中⋯' : '儲存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

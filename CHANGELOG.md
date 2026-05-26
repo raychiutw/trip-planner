@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.122] - 2026-05-26
+
+**Feat — AccountPage 加編輯 display_name modal + 新 PATCH /api/account/profile endpoint**
+
+User QA 提問「rayschiu 顯示 email」後 follow-up：v2.33.121 已對齊 sidebar/AccountPage fallback chain，本版補 user 主動設定 display_name 的 UI（之前只能透過 signup 「名稱（選填）」一次決定）。
+
+### Added
+
+- `functions/api/account/profile.ts`：新 `PATCH /api/account/profile` endpoint
+  - Body `{ displayName?: string | null }`
+  - Validation: trim、max 50 chars、empty string 視同 null（clear name）
+  - `UPDATE users SET display_name + updated_at` + audit log (`table_name='user', action='update'`)
+  - Response mirror `/api/oauth/userinfo` shape (camelCase)
+- `src/pages/AccountPage.tsx`：hero name 旁加 ✏ pencil edit button → 點開 modal
+  - Modal 含 input (auto-focus, maxLength 50) + 取消/儲存 button + ESC/Enter 鍵盤 a11y
+  - 儲存成功 → `reloadUser()` + close + toast「名稱已更新」
+  - Placeholder 顯 email local-part 暗示 fallback 行為
+
+### Tests
+
+- `tests/unit/account-display-name-edit.test.tsx` 12 條 regression：testid / state hooks / PATCH wire / trim / a11y / backend handler 結構
+
 ## [2.33.121] - 2026-05-26
 
 **Fix — sidebar 顯整 email 而非 local-part，與 /account hero 不一致**
