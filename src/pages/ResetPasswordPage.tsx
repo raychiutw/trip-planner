@@ -99,6 +99,10 @@ ${AUTH_LAYOUT_STYLES}
 .tp-result-icon-success { background: var(--color-success-bg); color: var(--color-success); }
 .tp-result-icon-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
 
+/* v2.33.116: result/success state 的 standalone <a class="tp-btn"> 直接子層 → 置中
+ * （form 內的 submit button 在 <form> 內，不受此 selector 影響） */
+.tp-auth-card > .tp-btn-primary { display: block; width: fit-content; margin: 0 auto; }
+
 .tp-auth-footer {
   text-align: center; margin-top: 24px;
   font-size: var(--font-size-footnote); color: var(--color-muted);
