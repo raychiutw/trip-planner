@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.115] - 2026-05-26
+
+**Fix — `/map` 頁空 trips 時右側面板半屏空白，左右兩邊都顯重複的「先建立行程」hint**
+
+QA prod 復現：新 user 登入後若無任何 trip，`/map` 顯示左側「還沒有行程可以看」card + `+ 新增行程` button，**同時**右側 sheet 仍渲染顯示「左側建立第一個行程後，地圖會用真實導航路線把每個景點串起來」hint。兩邊訊息語意重複且右側佔半屏空白 → 視覺很怪、UX 像 broken。
+
+### Changed
+
+- `src/pages/GlobalMapPage.tsx`：AppShell `sheet={sheet}` → `sheet={hasNoTrips ? undefined : sheet}`
+- AppShell 收到 undefined sheet 自動降 2-pane layout（per AppShell.tsx:188 `(sheet || sheetPortalId) ? 3PANE : 2PANE`）
+- 空 trips 改顯 1-col layout（sidebar + main only），左側 empty-state card 居中顯示
+
+### Added
+
+- `tests/unit/global-map-empty-hide-sheet.test.ts` regression：grep 鎖 `sheet={hasNoTrips ? undefined : sheet}` pattern
+
 ## [2.33.114] - 2026-05-26
 
 **Fix — Email verification token 被企業 email scanner pre-consume，user 點信件連結看到「已使用」**
