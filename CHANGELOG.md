@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.119] - 2026-05-26
+
+**Polish — 拔 AI 健檢 titlebar 數字 badge（孤兒 + 重複）**
+
+v2.33.118 加的 titlebar refresh-cw icon 旁的 findings 數字 badge：在頁面內無價值（meta「共 N 項建議」+ 下方 findings list 已重複此資訊），跨頁入口（TripCardMenu / trip card）目前都沒帶 badge，所以這顆是孤兒。
+
+### Changed
+
+- `src/pages/TripHealthCheckPage.tsx`：拔掉 titlebar `.tp-ai-health-titlebar-badge` JSX block (4 lines) + CSS rule (16 lines)
+- titlebar button 純粹是「重新生成」action，與 findings count 解耦
+- Regression test 反轉 assertion — 鎖 badge 不再存在（防後續誤加）
+
 ## [2.33.118] - 2026-05-26
 
 **Fix — AI 健檢 page CTA 風格不一致 + 意義不明 (dark mode QA 復現)**

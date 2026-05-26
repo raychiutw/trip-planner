@@ -68,10 +68,11 @@ describe('TripHealthCheckPage v2.33.118 CTA redesign (regression)', () => {
     expect(SRC).toMatch(/@keyframes tp-ai-health-spin/);
   });
 
-  it('titlebar button completed 時加數字 badge 顯 findings 數量', () => {
-    expect(SRC).toMatch(/hasResults && \(/);
-    expect(SRC).toMatch(/tp-ai-health-titlebar-badge/);
-    expect(SRC).toContain('{findings.length}');
+  it('v2.33.119: badge 已拔除（badge 跟 findings count 解耦，meta + body 已重複此資訊）', () => {
+    // 拔除理由：AI 健檢頁面內 meta「共 N 項建議」+ findings list 已顯示數量，
+    // titlebar badge 多餘 (孤兒 — 其他入口 TripCardMenu / trip card 也沒帶 badge)
+    expect(SRC).not.toMatch(/tp-ai-health-titlebar-badge/);
+    expect(SRC).not.toMatch(/hasResults && \(/);
   });
 
   it('idle/empty 改用 body CTA — accent-filled pill button + ai-health-start-btn testid', () => {
