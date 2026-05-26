@@ -106,7 +106,7 @@ describe('Round 22 — CollabPage smoke', () => {
 });
 
 describe('Round 22 — VerifyEmailPage smoke (v2.33.59 round 13 H2)', () => {
-  it('mount with ?token=abc shows verifying state', async () => {
+  it('mount with ?token=abc shows idle button (v2.33.114 — require user gesture)', async () => {
     const { default: VerifyEmailPage } = await import('../../src/pages/VerifyEmailPage');
     const { container, getByTestId } = wrap(
       <Routes>
@@ -115,8 +115,10 @@ describe('Round 22 — VerifyEmailPage smoke (v2.33.59 round 13 H2)', () => {
       '/auth/verify-email?token=abc123',
     );
     expect(container).toBeTruthy();
-    // initial render → status='verifying'
     expect(getByTestId('verify-email-page')).toBeTruthy();
+    // v2.33.114: initial render → status='idle' (button to click), 不是 auto-POST「驗證中…」
+    expect(getByTestId('verify-email-status-idle')).toBeTruthy();
+    expect(getByTestId('verify-email-confirm-btn')).toBeTruthy();
   });
 
   it('mount without token → error missing_token', async () => {
