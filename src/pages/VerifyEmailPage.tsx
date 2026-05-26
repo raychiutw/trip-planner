@@ -1,22 +1,30 @@
 /**
- * VerifyEmailPage — v2.33.59 round 13 H2
+ * VerifyEmailPage — v2.33.59 round 13 H2 + v2.33.114 user-gesture-required
  *
  * Email 驗證 landing page。Email link 從 `/api/oauth/verify?token=...` (GET-with-side-effect)
  * 改指 `/auth/verify-email?token=...` 本 page。
  *
  * Flow:
- *   1. Mount: read token from query
- *   2. Auto-POST to `/api/oauth/verify` with body { token }
+ *   1. Mount: read token from query → idle state 顯示「點此完成驗證」button
+ *   2. User click button → POST `/api/oauth/verify` with body { token }
  *   3. Success → navigate /login?verified=1
  *   4. Error → 顯示對應訊息 + 提供「重寄」/ 「回首頁」 button
- *   5. No-JS fallback: 顯示「點此驗證」<button> 提交 form
+ *   5. No-JS fallback: noscript <form> 直接 POST /api/oauth/verify
  *
- * Defense vs 舊 GET-with-side-effect:
- *   - Email client image-preview 不會 silent consume (需 JS POST)
+ * Defense vs 舊 GET-with-side-effect (v2.33.59):
+ *   - Email client image-preview 不會 silent consume
  *   - Token 不留 browser history (URL 改為 SPA path，POST body 帶 token)
- *   - Referer leak 透過 POST body 不放 URL，且本 page 設 Referrer-Policy
+ *   - Referer leak 透過 POST body 不放 URL
+ *
+ * v2.33.114 — 拔 auto-POST，require user gesture:
+ *   v2.33.59 的 auto-POST on mount 對 image-preview-only scanner 有用，
+ *   但企業 email security（Mimecast / Microsoft Safe Links / Proofpoint
+ *   URL Sandbox）會跑 headless Chromium deep inspection，render 整個 page
+ *   觸發 useEffect → silent consume token。User 之後點信件連結看到「已使用」
+ *   誤導訊息（rayschiu@fetci.com 2026-05-25 QA 復現）。改用 button click =
+ *   require user gesture，scanner headless render 不會自動 click button。
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetchRaw } from '../lib/apiClient';
 
@@ -34,10 +42,10 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<Status>('idle');
-  const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
-
   const token = searchParams.get('token') ?? '';
+  // v2.33.114: missing_token 在 mount 時就 derive 進 initial state（避免 useEffect setState 副作用）
+  const [status, setStatus] = useState<Status>(token ? 'idle' : 'error');
+  const [errorCode, setErrorCode] = useState<ErrorCode | null>(token ? null : 'missing_token');
 
   async function performVerify(): Promise<void> {
     setStatus('verifying');
@@ -63,16 +71,6 @@ export default function VerifyEmailPage() {
     }
   }
 
-  // Auto-POST on mount when token present
-  useEffect(() => {
-    if (!token) {
-      setStatus('error');
-      setErrorCode('missing_token');
-      return;
-    }
-    void performVerify();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
 
   return (
     <div
@@ -101,7 +99,35 @@ export default function VerifyEmailPage() {
           Email 驗證
         </h1>
 
-        {status === 'idle' || status === 'verifying' ? (
+        {status === 'idle' ? (
+          <>
+            <p
+              style={{ color: 'var(--color-muted)', margin: '0 0 20px', lineHeight: 1.5 }}
+              data-testid="verify-email-status-idle"
+            >
+              點下方按鈕完成 Email 驗證。
+            </p>
+            <button
+              type="button"
+              onClick={() => void performVerify()}
+              data-testid="verify-email-confirm-btn"
+              style={{
+                padding: '12px 28px',
+                borderRadius: 'var(--radius-full)',
+                background: 'var(--color-accent)',
+                color: '#fff',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: 'pointer',
+              }}
+            >
+              點此完成驗證
+            </button>
+          </>
+        ) : null}
+
+        {status === 'verifying' ? (
           <p style={{ color: 'var(--color-muted)', margin: 0 }} data-testid="verify-email-status-verifying">
             驗證中…
           </p>

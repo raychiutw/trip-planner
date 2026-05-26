@@ -157,6 +157,17 @@ describe('v2.33.59 Step 6 — verify endpoint POST + landing page', () => {
     expect(VERIFY_PAGE_SRC).toContain('method="POST"');
   });
 
+  it('v2.33.114: VerifyEmailPage 拔 useEffect auto-POST，require user gesture', () => {
+    // 防 enterprise email scanner (Mimecast / Safe Links) headless render
+    // 觸發 useEffect → silent consume token。
+    expect(VERIFY_PAGE_SRC).not.toMatch(/useEffect\([^)]*performVerify/);
+    expect(VERIFY_PAGE_SRC).not.toContain('import { useEffect, useState }');
+    expect(VERIFY_PAGE_SRC).toContain("import { useState } from 'react'");
+    // idle button + testid 鎖
+    expect(VERIFY_PAGE_SRC).toContain('verify-email-confirm-btn');
+    expect(VERIFY_PAGE_SRC).toContain('onClick={() => void performVerify()}');
+  });
+
   it('main.tsx 加 route /auth/verify-email', () => {
     expect(MAIN_SRC).toMatch(/path="\/auth\/verify-email"/);
     expect(MAIN_SRC).toMatch(/VerifyEmailPage/);
