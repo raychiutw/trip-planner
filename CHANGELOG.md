@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.124] - 2026-05-27
+
+**Security — CSP sha256 hash 給 v2.33.117 FOUC inline script**
+
+Daily-check 2026-05-27 偵測：Sentry CSP「Blocked 'script' from 'inline:'」123 occurrences / 10 users。Root cause：v2.33.117 在 `index.html` 加 inline `<script>`（dark mode FOUC 防護，必須同步 in-line），但 `public/_headers` CSP `script-src` 沒 `'unsafe-inline'` 也沒 hash → 瀏覽器 block → FOUC 防護在 prod 對所有訪客失效（user 切 dark 後刷新仍見白色 flash）。
+
+### Changed
+
+- `public/_headers`：CSP `script-src` 加 `'sha256-K9c6IED/vAgi6+Q1IxV73uyRPODOAH5d9V9iqSWTS6g='` — 對應 `index.html` FOUC `<script>` 區塊內容（含 leading/trailing whitespace 必須完全一致）
+
+### Added
+
+- `tests/unit/csp-inline-script-hash.test.ts`（3 條 regression）：從 source `index.html` 抽 FOUC script → 即時算 sha256 → 驗 `public/_headers` 含此 hash。日後編輯 script 忘了更新 hash → CI fail。順手 pin 「CSP `script-src` 不含 `'unsafe-inline'`」防退化。
+
+### Why hash 而不是 `'unsafe-inline'`
+
+`'unsafe-inline'` 允許所有 inline script → XSS 任何位置都跑 → 抵消 CSP 大半作用。Hash 模式只允許這個 byte-identical script，security 不退讓。Trade-off：script 任何字元變動（包括空白）都要重算 hash，regression test 自動 catch。
+
 ## [2.33.123] - 2026-05-26
 
 **Infra — funnel-guard launchd job：auto-heal Tailscale funnel :443 drift + Telegram alert**
