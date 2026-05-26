@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.120] - 2026-05-26
+
+**Polish — NewTripPage 重複 CTA + TripDatePicker placeholder 高度落差 + 關 P3 TODO**
+
+QA prod 截圖 3 個 follow-up：
+
+### Changed
+
+- `src/pages/NewTripPage.tsx`：拔 titlebar 右上「建立行程」`TitleBarPrimaryAction` button — 與下方 sticky bottom bar 已有的「建立行程」重複（兩個一模一樣的 CTA 視覺干擾）。Bottom bar 為 form context 內主 CTA，視覺平衡更穩。順手刪 `TitleBarPrimaryAction` import + 中間 `titleBarActions` 變數 + `actions={...}` prop。
+- `src/components/TripDatePicker.styles.ts`：`.tp-date-value.is-placeholder` `font-size: 16px` → `22px` 對齊 value 字體。原本「出發」(有值 22px 字) 比「回程」(placeholder 16px 字) 約高 4-6px → trigger button 視覺不對齊。Placeholder 仍是 muted color + weight 500 維持「未填寫」hint，但 box 高度一致。
+
+### Removed
+
+- `TODOS.md` Active section 拔「AI 健檢歷史資料丟失（v2.31.0 ~ v2.33.85，3 週窗口）」P3 entry — v2.33.85 已根治 root cause（auth.email → auth.userId），user 2026-05-25 confirmed 不救也不重跑既存 8 筆 `[AI 健檢]` request reply (raw findings_json 無)。Active 剩 P1 Funnel-guard launchd 護衛 1 項。
+
+### Updated tests
+
+- `tests/e2e/qa-flows.spec.js`: `new-trip-titlebar-create` testid → `new-trip-submit`（bottom bar button）
+- `tests/unit/new-trip-page-smoke.test.tsx`: TitleBarPrimaryAction assertion 反轉 — 鎖 `not.toMatch(/TitleBarPrimaryAction/)` + 鎖 `new-trip-submit` testid 存在
+
 ## [2.33.119] - 2026-05-26
 
 **Polish — 拔 AI 健檢 titlebar 數字 badge（孤兒 + 重複）**

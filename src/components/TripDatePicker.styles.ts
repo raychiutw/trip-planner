@@ -50,10 +50,11 @@ export const TRIP_DATE_PICKER_STYLES = `
   text-align: center;
   pointer-events: none;
 }
+/* v2.33.120: placeholder 字體 16px → 22px 對齊 value，避免「出發」(有值) 與「回程」(placeholder) trigger 高度落差 */
 .tp-date-value.is-placeholder {
   color: var(--color-muted);
   font-weight: 500;
-  font-size: 16px;
+  font-size: 22px;
 }
 .tp-date-chev {
   width: 18px;

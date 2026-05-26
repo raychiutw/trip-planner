@@ -82,8 +82,11 @@ describe('NewTripPage — wiring smoke (v2.33.48 round 7c)', () => {
     expect(SRC).toMatch(/<AppShell/);
   });
 
-  it('TitleBarPrimaryAction 建立按鈕 wired', () => {
-    expect(SRC).toMatch(/TitleBarPrimaryAction/);
+  it('v2.33.120: titlebar action 拔除，主 CTA 只在 bottom bar (new-trip-submit)', () => {
+    // 重複 CTA UX 修正：原本 titlebar 右上 + bottom bar 兩個「建立行程」button，
+    // 視覺干擾。bottom bar 為 form context 內主 CTA。
+    expect(SRC).not.toMatch(/TitleBarPrimaryAction/);
+    expect(SRC).toMatch(/data-testid="new-trip-submit"/);
   });
 
   it('v2.31.36 migration 0068 dropped fields not present in write payload', () => {
