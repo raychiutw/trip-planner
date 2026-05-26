@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.117] - 2026-05-26
+
+**Fix — 未登入 page 不認 user dark mode 設定 / 系統 prefers-color-scheme（FOUC）**
+
+QA 復現：user 在 app 內切過 dark 後登出，再進 `/login` / `/signup` / `/login/forgot` / `/auth/verify-email` / `/auth/password/reset` 任一 pre-login page，**第一個 paint 是 light**，再切 dark（FOUC, Flash of Unstyled Content）。視覺感受像「未登入頁不認 dark 設定」。
+
+Root cause：`<DarkModeInit />` 雖然 mount 在 `<Routes>` 外（v2.31.25 fix），但 `useDarkMode` 用 `useEffect` 加 `body.dark` class — 必須等 React mount + 第一輪 commit phase 才會 fire，第一個 paint 用的是 body 預設（light）。
+
+### Added
+
+- `index.html` `<body>` 開頭加 **inline blocking script**：sync 讀 `tp-color-mode` localStorage + 檢查 `prefers-color-scheme` + 加 `body.dark` class + 更新 `<meta name="theme-color">`。在 React mount **之前**完成，第一個 paint 就是正確主題。
+- Script mirror `src/lib/localStorage.ts` LsEntry shape (`{v, exp}` + TTL 檢查) 和 `useDarkMode.readColorMode` logic（含 legacy `tp-dark` boolean key fallback）
+- `tests/unit/index-html-fouc-dark.test.ts` regression 7 條：grep 鎖 script 內容 + 在 reactRoot 之前 + VerifyEmailPage token 對齊
+
+### Changed
+
+- `src/pages/VerifyEmailPage.tsx`：`var(--color-bg)` → `var(--color-secondary)`、`var(--color-paper)` → `var(--color-background)`。前兩個 token 從未定義（fallback `transparent` 偶然看起來 dark mode "正常"，但實際是 body bg 穿透，無 contrast）。對齊其他 auth page (Forgot / Reset / Signup) 標準 token 慣例。
+
 ## [2.33.116] - 2026-05-26
 
 **Fix — `/auth/password/reset` success / error state 的 `<a class="tp-btn">` 沒置中**
