@@ -80,7 +80,7 @@ export default function VerifyEmailPage() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 24,
-        background: 'var(--color-bg)',
+        background: 'var(--color-secondary)',
       }}
     >
       <div
@@ -88,7 +88,7 @@ export default function VerifyEmailPage() {
           maxWidth: 420,
           width: '100%',
           padding: 32,
-          background: 'var(--color-paper)',
+          background: 'var(--color-background)',
           border: '1px solid var(--color-border)',
           borderRadius: 14,
           textAlign: 'center',

@@ -33,6 +33,48 @@
     <link rel="preconnect" href="https://api.open-meteo.com">
 </head>
 <body>
+    <!-- v2.33.117: FOUC-prevention dark mode init — sync before React mount，避免 light flash。
+         必須 mirror src/lib/localStorage.ts LsEntry shape (v + exp) 和
+         src/hooks/useDarkMode.ts readColorMode logic（含 legacy `tp-dark` key 0/1）。 -->
+    <script>
+      (function () {
+        try {
+          function readMode() {
+            var raw = localStorage.getItem('tp-color-mode');
+            if (raw) {
+              try {
+                var e = JSON.parse(raw);
+                if (e && (!e.exp || e.exp > Date.now()) &&
+                    (e.v === 'light' || e.v === 'dark' || e.v === 'auto')) {
+                  return e.v;
+                }
+              } catch (_) {}
+            }
+            // Legacy `tp-dark` key (v2.33.40 前 boolean)
+            var legacy = localStorage.getItem('tp-dark');
+            if (legacy) {
+              try {
+                var le = JSON.parse(legacy);
+                if (le && le.v === '1') return 'dark';
+                if (le && le.v === '0') return 'light';
+              } catch (_) {}
+            }
+            return 'auto';
+          }
+          var mode = readMode();
+          var dark = mode === 'dark' ||
+            (mode === 'auto' && window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) {
+            document.body.classList.add('dark');
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', '#1A140F');
+          }
+        } catch (_) {
+          /* fail silently — useDarkMode hook 仍會 mount 後 catch up（無 FOUC 防護但不破壞功能） */
+        }
+      })();
+    </script>
     <div id="reactRoot"></div>
     <script type="module" src="src/entries/main.tsx"></script>
 </body>
