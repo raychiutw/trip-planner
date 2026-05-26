@@ -176,23 +176,6 @@ const SCOPED_STYLES = `
   animation: tp-ai-health-spin 1.5s linear infinite;
 }
 @keyframes tp-ai-health-spin { to { transform: rotate(360deg); } }
-.tp-ai-health-titlebar-badge {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-eyebrow);
-  font-weight: 700;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--color-background);
-  line-height: 1;
-}
 @media (prefers-reduced-motion: reduce) {
   .tp-ai-health-titlebar-btn.is-spinning .svg-icon { animation: none; }
 }
@@ -669,11 +652,6 @@ export default function TripHealthCheckPage() {
           >
             <Icon name="refresh-cw" />
             <span className="tp-titlebar-action-label">{ctaLabel}</span>
-            {hasResults && (
-              <span className="tp-ai-health-titlebar-badge" aria-hidden="true">
-                {findings.length}
-              </span>
-            )}
           </button>
         )}
       />
