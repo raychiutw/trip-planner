@@ -45,7 +45,6 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
-import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
 import ToastContainer from '../components/shared/Toast';
@@ -614,19 +613,8 @@ export default function NewTripPage() {
       ? `${destShown}${startDate && endDate ? ` · ${startDate} – ${endDate}` : ''}`
       : '請先選擇目的地';
 
-  const titleBarActions = (
-    <TitleBarPrimaryAction
-      label="建立行程"
-      busyLabel="建立中⋯"
-      busy={submitting}
-      disabled={!canSubmit}
-      onClick={() => {
-        formRef.current?.requestSubmit();
-      }}
-      testId="new-trip-titlebar-create"
-    />
-  );
-
+  // v2.33.120: titlebar action 拔掉 — 與下方 sticky bottom bar 的「建立行程」button 重複。
+  // 保留 bottom bar 為主 CTA（form context 內，視覺平衡更穩）。
   return (
     <>
       <ToastContainer />
@@ -640,7 +628,6 @@ export default function NewTripPage() {
               title="新增行程"
               back={handleBack}
               backLabel="返回前頁"
-              actions={titleBarActions}
             />
 
             <form ref={formRef} id="new-trip-form" onSubmit={handleSubmit} className="tp-new-page-form">

@@ -29,19 +29,6 @@ Tailscale funnel 反覆被 macOS update / GUI app / 第三方 brew 改成 `serve
 
 下次 drift 2 分鐘內自動修，user 收 alert 但不用親手介入。
 
-### AI 健檢歷史資料丟失（v2.31.0 ~ v2.33.85，3 週窗口）
-
-**Priority:** P3（已根治，僅資料補救）
-**Discovered:** 2026-05-25（user 問 「健檢資料不見了嗎？」）
-**Root cause:** v2.31.0 (2026-05-04) AI 健檢上線時 `health-check.ts` INSERT trip_health_reports 寫 `auth.email` 進 `user_id` 欄位（應該是 uuid）。v2.33.60 (2026-05-24 14:32) migration 0069 加 FK `REFERENCES users(id)` + swap pattern `INNER JOIN users u ON u.id = h.user_id` 把所有 email-as-user_id 既存 row drop。v2.33.85 (2026-05-24 22:06) 才修 `auth.email → auth.userId`。
-
-影響：
-- DB `trip_health_reports`: 0 rows（migration 0069 全 drop + 後續寫入 FK fail）
-- DB `trip_requests`: 8 個 `[AI 健檢]` reply 摘要保留（只有 finding count，無 raw findings_json）
-- Local Claude session jsonl `~/.claude/projects/-Users-ray-Projects-trip-planner/3dd31b9e-d898-42c5-8793-07c4520239a9.jsonl`(May 18) 含 HuiYun request 202 完整 10 個 findings（4 high + 5 medium + 1 low）可恢復
-
-User decision: 不救也不重跑（v2.33.109 confirmed）— 維持現狀。其他 INSERT user_id 的 endpoint（trips / poi_favorites / trip_permissions / auth_identities / session_devices / trip_invitations）全部正確用 uuid，無類似 bug。
-
 ---
 
 ## Completed
