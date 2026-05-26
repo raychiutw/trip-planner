@@ -58,13 +58,15 @@ describe('DesktopSidebarConnected', () => {
     expect(container.querySelector('[data-testid="sidebar-user-loading"]')).toBeNull();
   });
 
-  it('falls back to email as name when displayName is null', async () => {
+  it('v2.33.121: falls back to email local-part (not full email) when displayName is null', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ ...SAMPLE_USER, displayName: null }), { status: 200 }),
     );
     const { container } = renderConnected();
-    // displayName=null → name 退回 email；name 仍渲染（slice 10 + ellipsis）
-    await waitFor(() => expect(container.textContent).toContain('me@exampl'));
+    // displayName=null → email='me@example.com' → name='me' (local-part)，與 AccountPage hero 一致
+    await waitFor(() => expect(container.textContent).toContain('me'));
+    // 不該再顯整 email
+    expect(container.textContent).not.toContain('me@example.com');
   });
 
   it('401 response → renders confirmed unauthed sidebar', async () => {
