@@ -48,8 +48,8 @@ test.describe('QA Flow 1 — 新增行程', () => {
     await pickDate(page, 'new-trip-start-input', '2026-08-01');
     await pickDate(page, 'new-trip-end-input', '2026-08-05');
 
-    // titleBar 完成按鈕
-    const submitBtn = page.getByTestId('new-trip-titlebar-create');
+    // v2.33.120: titlebar action 拔掉，改用 bottom bar submit button
+    const submitBtn = page.getByTestId('new-trip-submit');
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
