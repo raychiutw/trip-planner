@@ -3,6 +3,39 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.118] - 2026-05-26
+
+**Fix — AI 健檢 page CTA 風格不一致 + 意義不明 (dark mode QA 復現)**
+
+prod QA mobile dark mode 截圖顯示：titlebar 右上的 sparkle icon-only button (`TitleBarPrimaryAction is-primary`) 在 dark mode 下 brown accent fill 與 chrome 不協調，icon 沒 label 看不出按下會做什麼（pending state 還 disabled brown box 仍佔位）。
+
+### Redesign — state-based CTA
+
+| State | CTA 位置 | 樣式 |
+|---|---|---|
+| empty (entryCount=0) | titlebar **無 action** | 上方 banner 提示「先加入景點再執行健檢」|
+| idle (entry > 0 + 未做過) | **body 中央 pill button**「開始 AI 健檢」 | accent-filled pill (主 CTA) |
+| pending | titlebar ghost icon button | refresh-cw + spin animation, disabled |
+| completed | titlebar ghost icon button | refresh-cw + 數字 badge (findings 數量) |
+| failed | titlebar ghost icon button | refresh-cw 重試 |
+
+### Why ghost + refresh-cw
+
+- **Ghost**（`.tp-titlebar-action` 無 `.is-primary`）= 與其他 form page titlebar functional icon 同 family，不在 dark mode 突兀
+- **refresh-cw**（lucide dual-arrow cycle）= 「重新生成」語意明確（取代 sparkle 的「魔法／裝飾」感）
+- **Spin animation** when pending = 動態 affordance 表「正在進行」（`prefers-reduced-motion` 關掉動畫保 a11y）
+- **數字 badge** = completed 時直接顯 findings 數量，user 不需打開頁面就知 N 個建議
+
+### Changed
+
+- `src/pages/TripHealthCheckPage.tsx` 拔 `TitleBarPrimaryAction` import；titlebar action 改 conditional render（只 report 存在時顯）；empty card 加 body CTA
+- `src/components/shared/Icon.tsx` 加 lucide `refresh-cw` icon (dual-arrow cycle)
+
+### Added
+
+- `tests/unit/trip-health-check-cta-redesign.test.ts` regression 9 條：icon registry / titlebar conditional / ghost style / refresh-cw / spin / badge / body CTA / pill style / reduced-motion
+- 既有 `trip-health-check-empty-guard.test.ts` `button disabled 條件` assertion 對齊新設計（CTA 拆 2 個 button，entryCount === 0 guard 搬到 body CTA）
+
 ## [2.33.117] - 2026-05-26
 
 **Fix — 未登入 page 不認 user dark mode 設定 / 系統 prefers-color-scheme（FOUC）**

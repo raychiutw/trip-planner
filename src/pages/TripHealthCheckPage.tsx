@@ -18,7 +18,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TitleBar from '../components/shell/TitleBar';
-import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -147,6 +146,55 @@ const SCOPED_STYLES = `
   line-height: 22px;
   color: var(--color-muted);
   max-width: 360px;
+}
+/* v2.33.118: body 主 CTA — accent-filled pill button，比 titlebar icon-only 直覺 */
+.tp-ai-health-body-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 14px 28px;
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border: none;
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 150ms;
+}
+.tp-ai-health-body-cta:hover:not(:disabled) { filter: brightness(0.95); }
+.tp-ai-health-body-cta:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-ai-health-body-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+.tp-ai-health-body-cta .svg-icon { width: 18px; height: 18px; }
+
+/* v2.33.118: titlebar refresh-cw button — ghost style (繼承 .tp-titlebar-action)
+   + spin animation when pending + 數字 badge when has findings */
+.tp-ai-health-titlebar-btn { position: relative; }
+.tp-ai-health-titlebar-btn.is-spinning .svg-icon {
+  animation: tp-ai-health-spin 1.5s linear infinite;
+}
+@keyframes tp-ai-health-spin { to { transform: rotate(360deg); } }
+.tp-ai-health-titlebar-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-eyebrow);
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--color-background);
+  line-height: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-ai-health-titlebar-btn.is-spinning .svg-icon { animation: none; }
 }
 
 /* Loading pulse */
@@ -604,14 +652,29 @@ export default function TripHealthCheckPage() {
         title="AI 健檢"
         back={handleBack}
         backLabel="回行程"
-        actions={!initialLoading && (
-          <TitleBarPrimaryAction
-            icon="sparkle"
-            label={ctaLabel}
-            disabled={submitting || isPending || entryCount === 0}
+        // v2.33.118 redesign: titlebar action 只在有狀態時顯（pending / completed / failed）。
+        // empty (entryCount=0) 或 idle (entry > 0 + 未做過) 不顯 — body 改主 CTA。
+        // 風格從 .is-primary (accent fill) 改 ghost (`.tp-titlebar-action`) — 與其他
+        // titlebar functional icon 同 family 但用 refresh-cw icon 區辨「重新生成」action，
+        // pending 時 icon spin 表進行中，completed 加數字 badge 顯 findings 數量。
+        actions={!initialLoading && report && (
+          <button
+            type="button"
+            className={`tp-titlebar-action tp-titlebar-action--icon-only tp-ai-health-titlebar-btn${isPending ? ' is-spinning' : ''}`}
             onClick={handleStart}
-            testId="ai-health-start-btn"
-          />
+            disabled={submitting || isPending}
+            aria-label={ctaLabel}
+            title={ctaLabel}
+            data-testid="ai-health-start-btn"
+          >
+            <Icon name="refresh-cw" />
+            <span className="tp-titlebar-action-label">{ctaLabel}</span>
+            {hasResults && (
+              <span className="tp-ai-health-titlebar-badge" aria-hidden="true">
+                {findings.length}
+              </span>
+            )}
+          </button>
         )}
       />
 
@@ -659,6 +722,19 @@ export default function TripHealthCheckPage() {
             </div>
             <h2>尚未健檢過此行程</h2>
             <div className="sub">由 AI 檢視整份行程，找出時間衝突、距離過遠、漏掉必排景點等問題。通常 3-7 分鐘完成。</div>
+            {/* v2.33.118 redesign: idle state 主 CTA 從 titlebar 移到 body — 中央大 button
+                明確「開始健檢」action affordance，比 titlebar 右上 icon-only 更直覺。
+                entryCount=0 時 disabled + 上方 banner 已告知「先加入景點」 */}
+            <button
+              type="button"
+              className="tp-ai-health-body-cta"
+              onClick={handleStart}
+              disabled={submitting || entryCount === 0}
+              data-testid="ai-health-start-btn"
+            >
+              <Icon name="sparkle" />
+              <span>{ctaLabel}</span>
+            </button>
           </div>
         )}
 
