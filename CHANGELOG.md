@@ -3,6 +3,37 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.123] - 2026-05-26
+
+**Infra — funnel-guard launchd job：auto-heal Tailscale funnel :443 drift + Telegram alert**
+
+關 P1 TODO「Funnel-guard launchd 護衛」。Tailscale funnel `:443` 反覆被 macOS update / GUI app / brew 改成 `serve` (tailnet only) → CF Worker public `/trigger` 全 530。已第 3 次（v2.33.111 紀錄）+ 本次開發中第 4 次發生（guard.sh 在實機自動修復）。
+
+### Added
+
+- `scripts/funnel-guard/guard.sh`：drift detect (jq parse `tailscale serve status --json`) + heal (`serve reset` + `funnel --bg --https=443 http://127.0.0.1:8080`) + Telegram alert via existing `scripts/lib/send-telegram.sh`
+  - State-transition alerting：避免 sustained drift loop Telegram flood。state cache `/tmp/funnel-guard.state`，rule 表：healthy steady silent / recovery 永遠 alert / 同 state 1hr throttle
+  - Kill-switch `.disabled` file：incident response 時暫停 auto-heal（`touch scripts/funnel-guard/.disabled`）
+  - Telegram env loader：line-by-line scan 只 export `TELEGRAM_*` key（`.env.local` 含 multi-line JSON / `<` chars 無法整檔 source）
+- `scripts/com.tripline.funnel-guard.plist`：launchd job，StartInterval=120, RunAtLoad=true, KeepAlive.SuccessfulExit=false, ThrottleInterval=10（對齊 api-server plist 模式）
+- `scripts/funnel-guard/install.sh`：idempotent symlink + bootout/bootstrap，prereq check（tailscale + jq + guard.sh +x）
+- `scripts/funnel-guard/README.md`：install / drift test / 緊急停用 / alert 頻率設計 / 偵錯
+- `.gitignore`：`scripts/funnel-guard/.disabled` exclude
+
+### Design tradeoffs
+
+- **不開 sudo NOPASSWD**：`tailscale funnel` user perm 透過 tailscaled socket 即可，少一個攻擊面
+- **Telegram via `send-telegram.sh` 而非 api-server endpoint**：guard 不依賴 api-server 健康（api-server crash 時仍能 alert）
+- **Polling 120s 而非 WatchPaths**：tailscale config 內部結構不公開，version drift 風險高；120s + 8s CF timeout + 30min cron 兜底，足夠覆蓋
+- **每次 heal 都通知（receive throttle）**：drift 頻率是外部 root cause 訊號
+
+### Verification
+
+- `/review` APPROVE（reviewer N1-N7 全修：install.sh exit code 註解 / jq macOS 內建提示 / drift test 指令 / shebang 一致 / log rotation 文件 / 5s heal re-verify / TODOS 搬 Completed）
+- `/cso --diff` SAFE TO MERGE + M1 kill-switch + M2 state-transition 已併入同 PR；shell injection / secrets handling / Telegram URL injection 全 fuzz pass
+- 實機 smoke test：guard.sh 在 prod box 偵測到第 4 次 drift + 自動 heal + Telegram alert
+- syntax: zsh -n + plutil -lint 全綠
+
 ## [2.33.122] - 2026-05-26
 
 **Feat — AccountPage 加編輯 display_name modal + 新 PATCH /api/account/profile endpoint**

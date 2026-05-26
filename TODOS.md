@@ -13,25 +13,25 @@
 
 ## Active
 
-### Funnel-guard launchd 護衛（自動偵測 funnel :443 drift + auto-heal）
-
-**Priority:** P1
-**Discovered:** 2026-05-25（v2.33.109 ship 後 AI 健檢手動觸發 530，第三次 funnel→serve regression）
-
-Tailscale funnel 反覆被 macOS update / GUI app / 第三方 brew 改成 `serve` (tailnet only) → CF Worker public `fetch(TRIPLINE_API_URL + '/trigger')` 全 530。Memory `project_tailscale_funnel_caddy_architecture.md` 已記「regression 過 2+ 次」，本次第三次。Tailscale `localapi` 設計上開放給任何 local process 呼叫，無法 ACL block — 走「auto-heal + alert」比試圖封鎖實際。
-
-方案：
-1. `scripts/funnel-guard/guard.sh` — `tailscale funnel status` 偵測 `:443 → 127.0.0.1:8080`，drift 就 reset+restore + Telegram alert
-2. `~/Library/LaunchAgents/com.tripline.funnel-guard.plist` — StartInterval=120, RunAtLoad=true
-3. `/etc/sudoers.d/tripline-funnel-guard` — ray NOPASSWD 跑 `tailscale serve reset` + `tailscale funnel`
-4. `scripts/funnel-guard/install.sh` 一鍵安裝
-5. api-server 加 `POST /internal/funnel-alert` endpoint（給 guard 推 Telegram）
-
-下次 drift 2 分鐘內自動修，user 收 alert 但不用親手介入。
+（無）
 
 ---
 
 ## Completed
+
+### Funnel-guard launchd 護衛（自動偵測 funnel :443 drift + auto-heal）
+
+**Priority:** P1
+**Completed:** v2.33.123 (2026-05-26)
+
+Tailscale funnel 反覆被 macOS update / GUI app / 第三方 brew 改成 `serve` (tailnet only) → CF Worker public `/trigger` 全 530。已第 3 次（v2.33.111）+ 本 PR 開發中第 4 次發生（guard.sh 在實機自動修復）。
+
+實際 shipped 方案（從原 5 step 收斂為 4 step）：
+1. `scripts/funnel-guard/guard.sh` — jq parse `tailscale serve status --json`，drift 就 `serve reset` + `funnel --bg --https=443 http://127.0.0.1:8080` + Telegram alert（via 既有 `scripts/lib/send-telegram.sh`）+ state-transition alerting（避免 sustained drift Telegram flood）+ kill-switch `.disabled` file（incident response）
+2. `scripts/com.tripline.funnel-guard.plist` — StartInterval=120, RunAtLoad=true
+3. ~~`/etc/sudoers.d/tripline-funnel-guard`~~ — **drop**：`tailscale funnel` user perm 透過 tailscaled socket 即可，少一個攻擊面
+4. `scripts/funnel-guard/install.sh` — idempotent symlink + bootout/bootstrap
+5. ~~api-server `/internal/funnel-alert` endpoint~~ — **drop**：guard 直接打 Telegram 解耦（api-server crash 時 guard 仍能 alert）
 
 ### cleanupOrphans SESSION_PREFIX 過時 — orphan tmux session 永遠不清
 
