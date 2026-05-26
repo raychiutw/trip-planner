@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.121] - 2026-05-26
+
+**Fix — sidebar 顯整 email 而非 local-part，與 /account hero 不一致**
+
+QA prod (rayschiu@fetci.com 帳號 `display_name=null`)：sidebar 左下顯「rayschiu@f...」(整 email 截字)，但 `/account` hero 顯「rayschiu」(local-part)。
+
+Root cause：`DesktopSidebarConnected.tsx:29` 用 2-層 fallback `displayName ?? email`，但 `AccountPage.tsx:215` + `ChatPage.tsx:881` 用 canonical 3-層 `displayName || email.split('@')[0] || email`。Sidebar 後來沒同步。
+
+### Changed
+
+- `src/components/shell/DesktopSidebarConnected.tsx:29` 對齊 canonical 3-層 fallback chain
+- `displayName ?? email.split('@')[0] ?? email` — null displayName 時用 email `@` 前段，與其他 4 處顯示位置一致
+
+### Tests
+
+- 新 `tests/unit/sidebar-name-fallback.test.ts` 6 條 regression（grep + sample-based 4 cases）
+- 既有 `desktop-sidebar-connected.test.tsx`「falls back to email as name」test 對齊 — `'me@exampl'` (整 email truncated) → `'me'` (local-part) + 反向 assertion 鎖整 email 不再出現
+
 ## [2.33.120] - 2026-05-26
 
 **Polish — NewTripPage 重複 CTA + TripDatePicker placeholder 高度落差 + 關 P3 TODO**

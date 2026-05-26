@@ -26,7 +26,10 @@ export default function DesktopSidebarConnected(props: DesktopSidebarConnectedPr
     if (user === undefined) return undefined;
     if (user === null) return null;
     return {
-      name: user.displayName ?? user.email,
+      // v2.33.121: 對齊 AccountPage:215 + ChatPage:881 fallback chain — 沒設 displayName
+      // 時用 email local-part（@ 前段）而非整個 email。原本 `?? email` 在 rayschiu@fetci.com
+      // 沒設 displayName 時顯整 email 截字「rayschiu@f...」，與 /account hero「rayschiu」不一致。
+      name: user.displayName ?? user.email.split('@')[0] ?? user.email,
       email: user.email,
     };
   }, [user]);
