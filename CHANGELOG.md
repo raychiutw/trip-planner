@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.126] - 2026-05-27
+
+**Feat — GET /api/health endpoint + uptime monitor doc**
+
+監控告警統一設計 6 PR 系列 **#3 of 6**。給外部 uptime monitor pin CF Pages 邊緣健康，不用等 daily-check 24h batch。
+
+### Added
+
+- `functions/api/health.ts`：public `GET /api/health`，無 auth，回 `{ status: healthy|degraded|unhealthy, checks: { d1, googleMapsKey }, ts }`
+  - D1 fail → 503 unhealthy（critical）
+  - Google Maps key missing → 200 degraded（仍 serve non-Maps 流量）
+  - 全 ok → 200 healthy
+  - **不**檢查 mac mini api-server / funnel — 那些走 funnel-guard launchd + daily-check.js（職責分離 + 避 single point of failure）
+- `docs/monitoring/uptime-monitor.md`：給 UptimeRobot / Pingdom / curl cron 三選一設定 + 與既有 monitoring 的關係表
+- `tests/unit/api-health-endpoint.test.ts`：12 條 — endpoint shape / public no-auth / 3 status path / doc 完整性
+
+### Verification
+
+- vitest 12/12 pass
+- tsc --noEmit clean
+
 ## [2.33.125] - 2026-05-27
 
 **Fix — 前端 global error listeners + AI 健檢 findings_json silent fail**
