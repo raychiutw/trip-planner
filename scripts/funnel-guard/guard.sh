@@ -18,8 +18,10 @@ TAILSCALE="/opt/homebrew/bin/tailscale"
 EXPECTED_PROXY="http://127.0.0.1:8080"
 LOG_PREFIX="[funnel-guard]"
 KILL_SWITCH="$REPO_ROOT/scripts/funnel-guard/.disabled"
-STATE_FILE="/tmp/funnel-guard.state"
-ALERT_THROTTLE_SEC=3600
+
+# v2.33.124：state-transition / throttle 改用共用 helper scripts/lib/throttled-alert.sh
+# shellcheck disable=SC1091
+source "$REPO_ROOT/scripts/lib/throttled-alert.sh"
 
 cd "$REPO_ROOT"
 
@@ -76,69 +78,6 @@ heal_funnel() {
   "$TAILSCALE" funnel --bg --https=443 "$EXPECTED_PROXY" 2>&1 | sed "s/^/$LOG_PREFIX  /"
 }
 
-# Telegram alert via 既有 helper（validates token format + chat_id）
-send_alert() {
-  local msg="$1"
-  if [ -x "$REPO_ROOT/scripts/lib/send-telegram.sh" ]; then
-    bash "$REPO_ROOT/scripts/lib/send-telegram.sh" "$msg" 2>&1 | sed "s/^/$LOG_PREFIX  /" || true
-  else
-    log "send-telegram.sh 不存在 — 跳過 alert"
-  fi
-}
-
-# State-transition alerting：避免持續 drift 時 Telegram flood（every 120s ping）。
-# 規則：
-#   - healthy steady-state：silent
-#   - unhealthy → healthy（recovery）：always alert
-#   - 任何 state change：alert
-#   - 同 state 連續：每 ALERT_THROTTLE_SEC (1hr) 最多 1 個
-read_state() {
-  if [ -f "$STATE_FILE" ]; then
-    cat "$STATE_FILE"
-  else
-    echo "unknown|0"
-  fi
-}
-
-write_state() {
-  printf '%s|%s\n' "$1" "$2" > "$STATE_FILE"
-}
-
-should_alert() {
-  local prev_state="$1" new_state="$2" prev_ts="$3" now="$4"
-  # Recovery transition：unhealthy* → healthy always
-  if [ "$new_state" = "healthy" ] && [ "$prev_state" != "healthy" ] && [ "$prev_state" != "unknown" ]; then
-    return 0
-  fi
-  # Healthy steady-state never
-  if [ "$new_state" = "healthy" ]; then
-    return 1
-  fi
-  # State change always
-  if [ "$prev_state" != "$new_state" ]; then
-    return 0
-  fi
-  # Same state — throttle
-  if [ $(( now - prev_ts )) -ge $ALERT_THROTTLE_SEC ]; then
-    return 0
-  fi
-  return 1
-}
-
-# 包 send_alert + state file update。only_on_change=true 時不重置 throttle 計時。
-maybe_alert() {
-  local prev_state="$1" prev_ts="$2" new_state="$3" msg="$4"
-  local now
-  now=$(date +%s)
-  if should_alert "$prev_state" "$new_state" "$prev_ts" "$now"; then
-    send_alert "$msg"
-    write_state "$new_state" "$now"
-  else
-    # 保留舊 ts 維持 throttle window
-    write_state "$new_state" "$prev_ts"
-  fi
-}
-
 main() {
   # M1 kill-switch：incident response 時 `touch .disabled` 暫停 auto-heal
   if [ -f "$KILL_SWITCH" ]; then
@@ -146,15 +85,10 @@ main() {
     exit 0
   fi
 
-  local state_line prev_state prev_ts
-  state_line=$(read_state)
-  prev_state="${state_line%%|*}"
-  prev_ts="${state_line##*|}"
-
   if is_funnel_healthy; then
     log "healthy"
-    maybe_alert "$prev_state" "$prev_ts" "healthy" \
-      "🛡️ Tripline funnel-guard：funnel 已恢復 healthy（之前狀態 $prev_state）"
+    throttled_alert "funnel-guard" "healthy" \
+      "🛡️ Tripline funnel-guard：funnel 已恢復 healthy" 2>&1 | sed "s/^/$LOG_PREFIX  /" || true
     exit 0
   fi
 
@@ -164,19 +98,22 @@ main() {
     sleep 5
     if is_funnel_healthy; then
       log "heal 成功"
-      maybe_alert "$prev_state" "$prev_ts" "healed" \
-        "🛡️ Tripline funnel-guard：偵測 :443 drift → 已自動 reset + 重設 funnel → http://127.0.0.1:8080"
+      throttled_alert "funnel-guard" "healed" \
+        "🛡️ Tripline funnel-guard：偵測 :443 drift → 已自動 reset + 重設 funnel → http://127.0.0.1:8080" \
+        2>&1 | sed "s/^/$LOG_PREFIX  /" || true
       exit 0
     else
       log "heal 後仍 unhealthy"
-      maybe_alert "$prev_state" "$prev_ts" "heal_failed" \
-        "🚨 Tripline funnel-guard：偵測 :443 drift，自動 heal 後仍 unhealthy，請手動檢查 \`tailscale serve status\`"
+      throttled_alert "funnel-guard" "heal_failed" \
+        "🚨 Tripline funnel-guard：偵測 :443 drift，自動 heal 後仍 unhealthy，請手動檢查 \`tailscale serve status\`" \
+        2>&1 | sed "s/^/$LOG_PREFIX  /" || true
       exit 1
     fi
   else
     log "heal 指令本身失敗"
-    maybe_alert "$prev_state" "$prev_ts" "heal_failed" \
-      "🚨 Tripline funnel-guard：偵測 :443 drift，\`tailscale funnel\` 指令執行失敗，請手動檢查"
+    throttled_alert "funnel-guard" "heal_failed" \
+      "🚨 Tripline funnel-guard：偵測 :443 drift，\`tailscale funnel\` 指令執行失敗，請手動檢查" \
+      2>&1 | sed "s/^/$LOG_PREFIX  /" || true
     exit 1
   fi
 }
