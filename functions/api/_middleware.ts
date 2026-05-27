@@ -12,6 +12,7 @@ import { D1Adapter, type AdapterPayload } from '../../src/server/oauth-d1-adapte
 import { normalizeEmail } from '../../src/server/email-utils';
 
 import { AppError, errorResponse } from './_errors';
+import { alertAdminTelegram } from './_alert';
 
 interface AccessTokenPayload extends AdapterPayload {
   client_id: string;
@@ -108,7 +109,18 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       return errorResponse(err);
     }
 
-    // 非預期錯誤 → 500 + log
+    // 非預期錯誤 → 500 + log + 即時 Telegram alert (v2.33.129 G5)
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const errStack = err instanceof Error ? err.stack ?? '' : '';
+    // CF Workers tail / logpush 看得到
+    console.error('[_middleware unhandled 5xx]', {
+      method: request.method,
+      path: url.pathname,
+      duration,
+      source: getSource(),
+      error: errMsg,
+      stack: errStack.slice(0, 500),
+    });
     context.waitUntil(
       env.DB.prepare(
         'INSERT INTO api_logs (method, path, status, error, duration, source) VALUES (?, ?, ?, ?, ?, ?)',
@@ -117,11 +129,23 @@ export const onRequest: PagesFunction<Env> = async (context) => {
           request.method,
           url.pathname,
           500,
-          err instanceof Error ? err.message : String(err),
+          errMsg,
           duration,
           getSource(),
         )
         .run(),
+    );
+    // 即時 Telegram alert：之前 5xx 只進 api_logs，daily-check 24h batch 才知道
+    // (G5 fix)。CF 端不像 mac mini 有 throttledAlert local state，先 plain
+    // alertAdminTelegram；若 future 5xx flood 變問題，加 D1-based throttle。
+    context.waitUntil(
+      alertAdminTelegram(
+        env,
+        `🚨 Tripline CF Worker 5xx unhandled\n` +
+          `${request.method} ${url.pathname}\n` +
+          `source=${getSource()} duration=${duration}ms\n` +
+          `error: ${errMsg.slice(0, 200)}`,
+      ),
     );
     return errorResponse(new AppError('SYS_INTERNAL'));
   }

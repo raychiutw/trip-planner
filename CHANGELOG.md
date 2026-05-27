@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.129] - 2026-05-27
+
+**Feat — backend 5xx 即時 alert + SSE poll timeout + ServerStatusBanner**
+
+監控告警統一設計 6 PR 系列 **#6 of 6（完）**。三項 P1 gap 一次併修。
+
+### Changed
+
+- **G5 `functions/api/_middleware.ts`**：unhandled 5xx catch path 加 `console.error`（含 method/path/duration/source/error/stack 前 500 字）+ `alertAdminTelegram`（之前只進 api_logs，daily-check 24h batch 才知道）。`context.waitUntil` 包 alert 不阻 response。
+- **G9 `src/hooks/useRequestSSE.ts`**：`pollOnce` 加 `AbortController` 10s timeout（之前 fetch 沒 timeout，CF Worker stuck 時 promise 永不 resolve，下輪 setInterval fire 仍卡，user 看到 spinner 永遠不動）。10s 是 conservative（CF p99 < 1s），timeout 後 next tick retries。
+
+### Added
+
+- **G11 `src/components/ServerStatusBanner.tsx`**：sticky top-of-page banner 訂閱 `useOnlineStatus()`，offline 時提示「連線中斷，等待恢復網路中。已輸入的資料會在連線後自動上傳。」online 不 render（zero overhead）
+- mount 在 `src/entries/main.tsx` ErrorBoundary > BrowserRouter > DarkModeInit 旁
+- `tests/unit/monitoring-pr6-regression.test.tsx`：11 條 — G5 source-grep × 4 + G9 abort source-grep × 4 + G11 render (online null / offline alert + mount point)
+
+### Verification
+
+- vitest 11/11 pass
+- tsc --noEmit clean
+
+### Series complete — 監控告警統一設計 6 PR 系列
+
+| PR | 版本 | Gap | 已 ship |
+|---|---|---|---|
+| #1 | v2.33.124 | throttled-alert helper | ✅ |
+| #2 | v2.33.125 | 前端 global error + JSON.parse silent | ✅ |
+| #3 | v2.33.126 | /api/health + uptime monitor doc | ✅ |
+| #4 | v2.33.127 | detached spawn exit code + /tp-daily-check alert | ✅ |
+| #5 | v2.33.128 | /internal/mail/send observability hook | ✅ |
+| #6 | v2.33.129 | backend 5xx + SSE timeout + ServerStatusBanner | ✅ |
+
+完整 design proposal 對應 P0/P1 gap 全修；P2/P3 deferred 進 TODOS。
+
 ## [2.33.128] - 2026-05-27
 
 **Fix — /internal/mail/send observability hook (G2)**

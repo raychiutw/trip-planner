@@ -106,10 +106,17 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
     }, ELAPSED_TICK_MS);
 
     // ── Safety-net polling (every 30s, always on) ───────────────────
+    // v2.33.129 G9: 加 AbortController 10s timeout —之前 pollOnce fetch 沒
+    // timeout，CF Worker stuck 時 promise 永不 resolve，下一輪 setInterval
+    // 仍 fire 但全部卡，user 看到 spinner 永遠不動。10s 是 conservative
+    // (95% CF p99 < 1s)，超 10s 直接視為 unresponsive 進下輪 retry。
+    const POLL_FETCH_TIMEOUT_MS = 10_000;
     const pollOnce = async (): Promise<void> => {
       if (terminalRef.current) return;
+      const ctrl = new AbortController();
+      const abortTimer = setTimeout(() => ctrl.abort(), POLL_FETCH_TIMEOUT_MS);
       try {
-        const res = await apiFetchRaw(`/requests/${requestId}`);
+        const res = await apiFetchRaw(`/requests/${requestId}`, { signal: ctrl.signal });
         if (res.status === 401) {
           setErrorReason('auth_expired');
           setError(new Error('登入已過期，請重新整理頁面'));
@@ -129,7 +136,9 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
           settle(narrowedStatus, narrowedProcessedBy);
         }
       } catch {
-        // network error — next tick retries
+        // network error / abort timeout — next tick retries
+      } finally {
+        clearTimeout(abortTimer);
       }
     };
     // v2.33.39 round 4: 立即 fire 一次，原本只 schedule 30s 後第一次 poll，
