@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.130] - 2026-05-27
+
+**Feat — apiClient 429 Retry-After 解析 + 1 次 idempotent retry (G10)**
+
+監控告警統一設計 P2/P3 follow-up #1 of 3。修 G10：之前 429 直接 throw 到 toast，user 看「rate limit」即使 backend 暗示 1s 後可重試也得手動再點。
+
+### Added
+
+- `parseRetryAfter(header)` export — RFC 7231 `Retry-After` parser（支援 delta-seconds + HTTP-date 兩種形式）+ 30s 上限（避免 UI 卡太久）
+- `apiFetch` 內部 retry 邏輯：429 + idempotent method (GET/HEAD) → wait Retry-After → 1 次 retry；POST/PATCH/DELETE 不 retry（避免 double-mutate）
+- `signal.aborted` 在 wait 期間被 abort → throw NET_TIMEOUT 不發第二次 fetch
+- `tests/unit/api-client-429-retry.test.ts`：14 條 — parseRetryAfter 7 cases (null/empty/delta-sec/上限/HTTP-date 未來/過去/超 30s/無效) + apiFetch retry path 7 cases (GET success retry / GET 2nd 429 throw / POST 不 retry / PATCH 不 retry / 無 Retry-After fallback 1s / signal abort / 200 不 retry)
+
+### Verification
+
+- vitest 14/14 pass
+- tsc --noEmit clean
+
 ## [2.33.129] - 2026-05-27
 
 **Feat — backend 5xx 即時 alert + SSE poll timeout + ServerStatusBanner**

@@ -41,6 +41,30 @@ export function apiFetchRaw(path: string, opts?: RequestInit): Promise<Response>
   );
 }
 
+/**
+ * Parse `Retry-After` header to milliseconds. Supports two RFC 7231 forms:
+ *   - delta-seconds: 整數秒數
+ *   - HTTP-date: e.g. "Wed, 21 Oct 2026 07:28:00 GMT"
+ *
+ * Cap upper bound at 30s — avoid blocking UI 太久。Backend rate-limit 通常
+ * < 5s；超過 30s 表示 server 想拒更久，第一輪 retry 沒意義。
+ */
+export function parseRetryAfter(header: string | null): number {
+  if (!header) return 0;
+  const trimmed = header.trim();
+  if (/^\d+$/.test(trimmed)) {
+    const sec = Number(trimmed);
+    return Math.min(sec, 30) * 1000;
+  }
+  const dateMs = Date.parse(trimmed);
+  if (!Number.isNaN(dateMs)) {
+    const delta = dateMs - Date.now();
+    if (delta <= 0) return 0;
+    return Math.min(delta, 30_000);
+  }
+  return 0;
+}
+
 export async function apiFetch<T>(path: string, opts?: RequestInit & { signal?: AbortSignal }): Promise<T> {
   const headers: Record<string, string> = { ...(opts?.headers ?? {}) as Record<string, string> };
   const method = (opts?.method ?? 'GET').toUpperCase();
@@ -52,14 +76,35 @@ export async function apiFetch<T>(path: string, opts?: RequestInit & { signal?: 
   }
 
   let response: Response;
-  try {
-    response = await fetch('/api' + path, {
-      ...opts,
-      headers,
-    });
-  } catch (networkError) {
-    reportFetchResult(false);
-    throw ApiError.fromNetworkError(networkError);
+  let retried = false;
+
+  // 內部 helper 跑單次 fetch（不重試）。Network error 直接 throw。
+  const doFetch = async (): Promise<Response> => {
+    try {
+      return await fetch('/api' + path, { ...opts, headers });
+    } catch (networkError) {
+      reportFetchResult(false);
+      throw ApiError.fromNetworkError(networkError);
+    }
+  };
+
+  response = await doFetch();
+
+  // v2.33.130 G10: 429 → 讀 Retry-After 等候 + 1 次 retry（idempotent methods
+  // 才 retry — POST/PATCH/DELETE retry 可能 double-mutate）。第二次仍 429 才
+  // throw → user 看 toast，自己決定要不要再試。
+  if (response.status === 429 && !retried) {
+    const isIdempotent = method === 'GET' || method === 'HEAD';
+    if (isIdempotent) {
+      const waitMs = parseRetryAfter(response.headers.get('Retry-After')) || 1000;
+      await new Promise((r) => setTimeout(r, waitMs));
+      // 檢查 signal 是否在 wait 期間被 abort
+      if (opts?.signal?.aborted) {
+        throw ApiError.fromNetworkError(new DOMException('aborted', 'AbortError'));
+      }
+      retried = true;
+      response = await doFetch();
+    }
   }
 
   if (!response.ok) {
