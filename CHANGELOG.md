@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.134] - 2026-05-27
+
+**Feat — funnel-guard 3-layer probe + CF alertAdminTelegram observability**
+
+Forensic from forgot-password silent fail incident（rayschiu@fetci.com 沒收到信，CF Worker 也沒響 Telegram alert）。雙修：
+
+### Part 1: funnel-guard 加 public DNS + HTTPS reach probe
+
+之前 `is_funnel_healthy` 只檢 local `tailscale serve status` → 完全錯失 incident（TS 控制平面說 funnel on，但 public DNS NXDOMAIN）。改 3-layer probe：
+
+- **L1 local**: AllowFunnel + Proxy jq query（原邏輯保留）
+- **L2 DNS**: multi-resolver fallback `1.1.1.1 → 8.8.8.8 → 9.9.9.9 → 208.67.222.222`（first non-empty IP 勝）— 實測 `1.1.1.1` 對 `.tail2750c0.ts.net` 永久 NXDOMAIN 但其他 OK，也是 CF Worker forgot-password 530 的真正 root cause
+- **L3 reach**: `curl --resolve` 強制走 public IP（避過本機 MagicDNS），任何 3-digit HTTP code 算 reachable（不需 200 — TCP+TLS handshake 過了就行），10s timeout 涵蓋 DERP relay cold path
+
+任一層 fail → `is_funnel_healthy` return 非 0 → 觸發 `heal_funnel` reset + 重註冊 funnel + throttledAlert。Portable array syntax（bash + zsh 都跑）。
+
+### Part 2: CF alertAdminTelegram 強化 log + admin test endpoint
+
+之前 alertAdminTelegram 失敗只 `console.warn`（wrangler tail default filter 掉）→ forensic 完全沒 trace。
+
+- **`functions/api/_alert.ts`**：env 缺 `console.warn` → `console.error`（wrangler tail 預設顯示）；呼叫前 `console.log` "sending" 含 token prefix(10) + chat tail(4) + msg preview(80) + msgLen；成功 `console.log` "sent OK" 含 status + elapsedMs；非 2xx + fetch error 都 `console.error` 含 elapsedMs + aborted flag + token/chat prefix（forensic 比對是否與 expected match）
+- **`functions/api/admin/test-alert.ts`** NEW：admin-only `POST /api/admin/test-alert` 觸發 alertAdminTelegram + 回 diag（env 狀態 + token prefix + chat tail），給 prod forensic 用。配合 `wrangler pages deployment tail` 看 console output 立即知道失敗點
+
+### Added
+
+- `tests/unit/funnel-guard-public-probe.test.ts`：13 條 — 3-layer 流程 / multi-resolver fallback / portable syntax / curl --resolve / 3-digit reachable / docstring incident reference
+- `tests/unit/cf-alert-observability.test.ts`：8 條 — log 強化 / elapsedMs / token prefix surface / test endpoint admin gate
+
+### Verification
+
+- 實機 smoke funnel-guard：bash + zsh 都跑 → healthy
+- 21/21 vitest pass
+- tsc --noEmit clean
+- 待 deploy 後 `curl -X POST .../api/admin/test-alert` + `wrangler pages deployment tail` 觀察 forensic forgot-password silent fail root cause
+
 ## [2.33.133] - 2026-05-27
 
 **Fix (HOTFIX) — throttled-alert.sh sourced-vs-exec guard 拔掉**

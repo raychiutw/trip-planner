@@ -1,0 +1,80 @@
+/**
+ * CF alertAdminTelegram observability + admin test endpoint — v2.33.134 PR10 part 2
+ *
+ * 2026-05-27 incident：rayschiu@fetci.com forgot-password 失敗，CF Worker
+ * 內 catch 跑 alertAdminTelegram 但 user 沒收到 Telegram。原 impl 失敗時只
+ * console.warn（wrangler tail default filter 掉）→ forensic 完全沒 trace。
+ * 加 console.error 強化 + admin test endpoint 給 forensic 跑。
+ */
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const ALERT = readFileSync(
+  join(__dirname, '../../functions/api/_alert.ts'),
+  'utf8',
+);
+const TEST_ENDPOINT = readFileSync(
+  join(__dirname, '../../functions/api/admin/test-alert.ts'),
+  'utf8',
+);
+
+describe('alertAdminTelegram 強化 log', () => {
+  it('env 缺從 console.warn → console.error (wrangler tail default 顯示)', () => {
+    expect(ALERT).toMatch(/console\.error\('\[alert\] SKIP — TELEGRAM_BOT_TOKEN/);
+    expect(ALERT).toMatch(/hasToken: !!token,\s+hasChatId: !!chatId,/);
+  });
+
+  it('呼叫前 console.log "sending" 含 token prefix(10) + chat tail(4) + msg preview(80)', () => {
+    expect(ALERT).toMatch(/const tokenPrefix = token\.slice\(0, 10\)/);
+    expect(ALERT).toMatch(/const chatTail = chatId\.slice\(-4\)/);
+    expect(ALERT).toMatch(/const msgPreview = message\.slice\(0, 80\)/);
+    expect(ALERT).toMatch(/console\.log\('\[alert\] sending'/);
+  });
+
+  it('成功 path console.log "sent OK" 含 status + elapsedMs', () => {
+    expect(ALERT).toMatch(/console\.log\('\[alert\] sent OK', \{ status: res\.status, elapsedMs \}\)/);
+  });
+
+  it('非 2xx console.error 含 status + body(200) + elapsedMs + token/chat prefix', () => {
+    expect(ALERT).toMatch(/\[alert\] Telegram API non-2xx/);
+    expect(ALERT).toMatch(/body: errText\.slice\(0, 200\),/);
+    expect(ALERT).toMatch(/elapsedMs,\s+tokenPrefix,\s+chatTail/);
+  });
+
+  it('fetch catch 含 elapsedMs + aborted flag + token/chat prefix', () => {
+    expect(ALERT).toMatch(/\[alert\] Telegram fetch failed/);
+    expect(ALERT).toMatch(/aborted: ctrl\.signal\.aborted/);
+  });
+
+  it('elapsedMs 用 Date.now\\() 量 start→end', () => {
+    expect(ALERT).toMatch(/const t0 = Date\.now\(\);/);
+    expect(ALERT).toMatch(/const elapsedMs = Date\.now\(\) - t0;/);
+  });
+
+  it('clearTimeout 仍在 finally 保 timer 不 leak', () => {
+    expect(ALERT).toMatch(/} finally \{\s+clearTimeout\(timer\)/);
+  });
+});
+
+describe('POST /api/admin/test-alert endpoint', () => {
+  it('export onRequestPost (CF Pages function shape)', () => {
+    expect(TEST_ENDPOINT).toMatch(/export const onRequestPost: PagesFunction<Env>/);
+  });
+
+  it('admin only (requireAuth + isAdmin gate)', () => {
+    expect(TEST_ENDPOINT).toMatch(/requireAuth\(context\)/);
+    expect(TEST_ENDPOINT).toMatch(/if \(!auth\.isAdmin\)/);
+    expect(TEST_ENDPOINT).toMatch(/throw new AppError\('PERM_DENIED', 'admin only'\)/);
+  });
+
+  it('回傳 diag 含 token prefix + chat tail（forensic 比對是否與 expected match）', () => {
+    expect(TEST_ENDPOINT).toMatch(/tokenPrefix: token \? token\.slice\(0, 10\) : null/);
+    expect(TEST_ENDPOINT).toMatch(/chatTail: chatId \? chatId\.slice\(-4\) : null/);
+  });
+
+  it('呼叫 alertAdminTelegram 訊息含 ISO timestamp + admin email（給 chat 端對比）', () => {
+    expect(TEST_ENDPOINT).toMatch(/await alertAdminTelegram\(/);
+    expect(TEST_ENDPOINT).toMatch(/test-alert from \/api\/admin\/test-alert at \$\{new Date\(\)\.toISOString\(\)\} by \$\{auth\.email\}/);
+  });
+});
