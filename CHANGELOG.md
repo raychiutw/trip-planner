@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.125] - 2026-05-27
+
+**Fix — 前端 global error listeners + AI 健檢 findings_json silent fail**
+
+監控告警統一設計 6 PR 系列 **#2 of 6**。修兩個 P0 silent fail：
+
+### Changed
+
+- `src/lib/sentry.ts`：加 `installExplicitGlobalErrorListeners()` — `window.addEventListener('error' | 'unhandledrejection')` 全 mode 安裝
+  - Dev mode + prod 無 DSN：`logOnly:true` → 至少 `console.error` 出 trace（之前 dev unhandled rejection 完全靜默）
+  - Prod 有 DSN：`logOnly:false` → 額外 lazy import `@sentry/react` captureException（防禦性 — Sentry 7+ `globalHandlersIntegration` 預設已啟用，explicit listener 保 init fail 或 integrations override 不會 silent）
+  - Idempotent `_globalListenersInstalled` flag 防 double install
+  - Sentry import rename `ErrorEvent → SentryErrorEvent` 避撞 DOM `ErrorEvent`
+- `functions/api/trips/[id]/health-check.ts:97-120`：GET findings_json JSON.parse catch 不再 swallow
+  - `console.error` 含 `tripId` / `reportRequestId` / `rawPreview` (120 字)
+  - `alertAdminTelegram` 1 次 admin Telegram 含完整 context（user 仍看到空 array，避免整頁卡死；admin 自動知道有壞 row 要查）
+
+### Added
+
+- `tests/unit/sentry-global-listeners.test.ts`：10 條 regression — 3 init path (dev / prod-no-dsn / prod-dsn) + 2 listener tags + idempotent guard + lazy import + 健檢 catch 路徑
+
+### Verification
+
+- `vitest` 10/10 pass
+- `tsc --noEmit` 全綠
+
 ## [2.33.124] - 2026-05-27
 
 **Infra — throttled-alert helper（funnel-guard state-machine 抽通用）**

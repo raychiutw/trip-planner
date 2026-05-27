@@ -91,15 +91,31 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   // 解析 findings_json（DB 是字串）。失敗回空 array 而不爆，避免 stale row
-  // 卡住整個頁面。
+  // 卡住整個頁面。但要 surface 壞 row — 之前 v2.33.124 之前 silent fail 完全
+  // 沒人知道（user 看不到健檢結果但無 log）。
   let findings: unknown[] = [];
   const rawFindings = (row as Record<string, unknown>).findings_json;
   if (typeof rawFindings === 'string' && rawFindings.trim()) {
     try {
       const parsed = JSON.parse(rawFindings);
       if (Array.isArray(parsed)) findings = parsed;
-    } catch {
-      // findings 壞掉視為 0 項
+    } catch (err) {
+      // findings 壞掉視為 0 項，但 alert 一次 admin 知道 DB 有壞 row
+      const reportRequestId = (row as Record<string, unknown>).request_id;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[health-check GET] findings_json JSON.parse failed', {
+        tripId,
+        reportRequestId,
+        error: msg,
+        rawPreview: rawFindings.slice(0, 120),
+      });
+      void alertAdminTelegram(
+        context.env,
+        `🚨 AI 健檢 findings_json 壞 row\n` +
+          `trip=${tripId} request=${reportRequestId}\n` +
+          `parse 失敗 (${msg}) → 回空 array；\n` +
+          `rawFindings 前 120 字：${rawFindings.slice(0, 120)}`,
+      );
     }
   }
 
