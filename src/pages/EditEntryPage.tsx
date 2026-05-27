@@ -854,12 +854,20 @@ export default function EditEntryPage() {
       if (startTime !== originalRef.current.startTime) body.start_time = startTime || null;
       if (endTime !== originalRef.current.endTime) body.end_time = endTime || null;
       if (note !== originalRef.current.note) body.note = note;
-      requests.push(
-        apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`, {
-          method: 'PATCH',
-          body: JSON.stringify(body),
-        }).then(async (res) => ({ scope: 'entry', ok: res.ok, status: res.status, text: res.ok ? undefined : await res.text() })),
-      );
+      // v2.33.136 fix: race guard — dirty.entryDirty memo 跟 body 各自比 originalRef，
+      // 但 originalRef 是 ref 不在 memo deps。若 dirty 計算後、handleSave 跑前外部
+      // 路徑（entry refetch useEffect、prior save 成功 hook）把 originalRef 寫到
+      // 跟 current state 一致，dirty 仍 stale=true 但 body={} → backend 400
+      // "DATA_VALIDATION: 無有效欄位可更新"（api_logs 過去多次此 error）。
+      // Empty body 表示資料其實沒變，跳過 request。
+      if (Object.keys(body).length > 0) {
+        requests.push(
+          apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(body),
+          }).then(async (res) => ({ scope: 'entry', ok: res.ok, status: res.status, text: res.ok ? undefined : await res.text() })),
+        );
+      }
     }
 
     if (dirty.segmentDirty && segment && mode) {
@@ -873,6 +881,14 @@ export default function EditEntryPage() {
           body: JSON.stringify(body),
         }).then(async (res) => ({ scope: 'segment', ok: res.ok, status: res.status, text: res.ok ? undefined : await res.text() })),
       );
+    }
+
+    // v2.33.136 race guard：若 entry race-empty + segmentDirty false → 整 requests
+    // 為空，避免空 Promise.all 走進 success path 寫 originalRef 把 stale dirty
+    // 鎖死的怪行為，直接 setSubmitting(false) early return。
+    if (requests.length === 0) {
+      setSubmitting(false);
+      return;
     }
 
     try {
@@ -898,9 +914,15 @@ export default function EditEntryPage() {
         .map((f) => `${f.scope === 'entry' ? '景點' : '移動方式'}儲存失敗 (${f.status})`)
         .join('；');
       setError(msg);
+      // v2.33.136: 對齊 mockup `docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html`
+      // 第 789 行 spec：「儲存失敗 → 重試 + toast error」。titleBar 只顯 重試 button，
+      // 細節走 toast — 不再 inline 顯 titleBar / body InlineError。
+      showToast(msg, 'error', 6000);
       setSubmitting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '儲存失敗');
+      const msg = err instanceof Error ? err.message : '儲存失敗';
+      setError(msg);
+      showToast(msg, 'error', 6000);
       setSubmitting(false);
     }
   }, [
@@ -1465,14 +1487,12 @@ export default function EditEntryPage() {
                 </div>
               </section>
 
+              {/* validation 仍走 inline error（form-level，user 知道哪個欄位錯）。
+                  save error v2.33.136 改 toast — 對齊 mockup
+                  docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html */}
               {validation && (
                 <div className="tp-edit-entry-error" data-testid="edit-entry-validation">
                   <InlineError message={validation} />
-                </div>
-              )}
-              {error && (
-                <div className="tp-edit-entry-error" data-testid="edit-entry-save-error">
-                  <InlineError message={error} />
                 </div>
               )}
 
