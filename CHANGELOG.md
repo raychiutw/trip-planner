@@ -3,6 +3,44 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.132] - 2026-05-27
+
+**Feat — daily-check `queryAuditAnomaly` (G14)**
+
+監控告警統一設計 P2/P3 follow-up #3 of 3（完）。修 G14：之前 `audit_log` 表完全沒被 daily-check 查，異常 mutation pattern（script abuse / restore loop / 突發 delete）只能事後翻 D1 才知道。
+
+### Added
+
+- `scripts/daily-check.js` 新增 `queryAuditAnomaly()` 並接進 Promise.allSettled idx 8：
+  - **heavyUsers**: 24h 內 `changed_by_user_id` > **200 mutations** → `warning`（一般 user < 50/day）
+  - **heavyTrips**: 24h 內 `trip_id != 'system'` > **100 mutations** → `warning`（重度編輯也 < 50）
+  - **criticalDeletes**: 24h 內 `action='delete'` on `trips`/`users` 表 > **10** → `critical`（罕見操作）
+  - LIMIT 10 result rows 避免報告爆量
+- `calcSummary` 加 auditAnomaly 第 8 個 section 參與 critical/warning/ok 統計
+- report object 加 `auditAnomaly` field 給 daily-report.js / Telegram summary 取
+- `tests/unit/daily-check-audit-anomaly.test.ts`：15 條 — 3 threshold 常數 / 5 SQL query shape / 3 status classification / 4 main pipeline wiring
+
+### Verification
+
+- vitest 15/15 pass
+- tsc --noEmit clean
+
+### Series complete — 監控告警統一設計 9 PR 全 ship
+
+| PR | 版本 | Gap |
+|---|---|---|
+| #1 | v2.33.124 | throttled-alert helper |
+| #2 | v2.33.125 | 前端 global error + JSON.parse silent |
+| #3 | v2.33.126 | /api/health + uptime monitor doc |
+| #4 | v2.33.127 | detached spawn exit code + cron alert |
+| #5 | v2.33.128 | /internal/mail/send observability |
+| #6 | v2.33.129 | backend 5xx + SSE timeout + ServerStatusBanner |
+| #7 | v2.33.130 | apiClient 429 retry-after + 1 retry |
+| #8 | v2.33.131 | log retention sweep |
+| #9 | v2.33.132 | daily-check audit_log anomaly query |
+
+Design proposal P0/P1/P2/P3 全修；defer 清單剩 G12 Sentry Terraform（doc spec + manual audit 已足）。
+
 ## [2.33.131] - 2026-05-27
 
 **Infra — log retention sweep (G13)**
