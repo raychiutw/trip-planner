@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.136] - 2026-05-28
+
+**Fix — FOUC dark-mode init 改 external script 避開 CSP block**
+
+Daily-check Sentry 偵測到 issue `7506089366`「Blocked 'script' from 'inline:'」累積 260 events / 22 users。Root cause：v2.33.117 dark mode FOUC fix 把同步 init 邏輯放 `index.html` `<body>` inline `<script>`，但 v2.33.60 round 14 CSP `script-src 'self' https://static.cloudflareinsights.com https://maps.googleapis.com` 沒帶 `'unsafe-inline'`/nonce/hash → 瀏覽器 block inline script → 第一個 paint 沒套 dark class，user 看到 FOUC，CSP report endpoint 持續累積 violation。
+
+### Changed
+
+- `index.html`：拔 inline `<script>` block，改為 `<script src="/dark-mode-init.js"></script>`（sync，無 `defer`/`async`，仍 block render 維持 FOUC 防護）
+- `public/dark-mode-init.js`：新檔，內容 mirror 原 inline 邏輯 + 加 `document.body` 不存在時 `DOMContentLoaded` fallback（external script 可放 head 也安全）
+- `tests/unit/index-html-fouc-dark.test.ts`：refactor — 鎖 inline 字串不再出現 + external script tag 存在 + sync (no defer/async) + 順序 (在 reactRoot/main.tsx 之前) + 從 `public/dark-mode-init.js` 驗 content mirror
+
+### Verification
+
+- vitest 11/11 pass (regression suite)
+- tsc clean
+- CSP `script-src 'self'` 已涵蓋 same-origin `/dark-mode-init.js`，deploy 後 Sentry 7506089366 應停止累積
+
 ## [2.33.135] - 2026-05-27
 
 **Fix (HOTFIX) — `/api/health` 加 middleware public bypass**
