@@ -84,8 +84,9 @@ describe('throttled-alert.sh helper guard 條件', () => {
     'utf8',
   );
 
-  it('禁止 standalone exec（必須 source）', () => {
-    expect(HELPER).toMatch(/source this file, do not execute directly/);
+  it('v2.33.133 regression: sourced-vs-exec guard 已拔（zsh launchd FUNCTION_ARGZERO 誤判 → exit 2 funnel-guard 2hr orphan）', () => {
+    expect(HELPER).not.toMatch(/source this file, do not execute directly/);
+    expect(HELPER).not.toMatch(/exit 2$/m);
   });
 
   it('key 內非 [A-Za-z0-9_-] 字元被替換（防 path traversal）', () => {

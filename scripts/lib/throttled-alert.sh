@@ -17,11 +17,10 @@
 #
 # State cache：/tmp/throttled-alert-<key>.state，格式 "state|epoch_ts"
 
-# Guard：only source this file，不要 exec
-if [ "${ZSH_EVAL_CONTEXT:-${BASH_SOURCE[0]}}" = "toplevel" ] || [ "${0##*/}" = "throttled-alert.sh" ]; then
-  echo "throttled-alert.sh: source this file, do not execute directly" >&2
-  exit 2
-fi
+# v2.33.133 fix: 移除原 sourced-vs-exec guard — zsh launchd 環境下
+# FUNCTION_ARGZERO option 預設 ON，sourced file 內 $0 = throttled-alert.sh，
+# 觸發誤判 → exit 2，funnel-guard 12:00 後完全停擺 (~2hr orphan)。
+# 沒有實際安全 risk 需要 guard（手動誤跑就只是定義 function 沒呼叫）。
 
 : "${THROTTLED_ALERT_STATE_DIR:=/tmp}"
 : "${THROTTLED_ALERT_DEFAULT_TTL:=3600}"
