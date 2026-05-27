@@ -566,3 +566,6 @@ scheduleDaily(6, 10, '/tp-daily-check', 'daily-check');
 // POST /api/pois/:id/enrich + 30d refresh 取代）。
 scheduleDailyScript(4, 0, 'node', ['scripts/auth-cleanup.js'], 'auth-cleanup');
 scheduleDailyScript(4, 30, '/Users/ray/.bun/bin/bun', ['run', 'refresh:google'], 'google-poi-refresh');
+// v2.33.131 G13: log retention sweep — scripts/logs/ 下 per-date files > 30d
+// 刪除 + 超大單檔 truncate 保留 tail 50%。PR4 exit code wrapper 自動接 alert。
+scheduleDailyScript(3, 30, 'zsh', ['scripts/log-rotate.sh'], 'log-rotate');
