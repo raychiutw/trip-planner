@@ -3,6 +3,39 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.128] - 2026-05-27
+
+**Fix — /internal/mail/send observability hook (G2)**
+
+監控告警統一設計 6 PR 系列 **#5 of 6**。修 P0 silent SMTP fail：之前 mail send timeout / Gmail SMTP auth failure 只 logError 到 mac mini stderr，CF Worker caller 已 commit DB（OAuth token / invitation）但 user 收不到信，admin 完全不知道。
+
+### Changed
+
+- `scripts/lib/mailer-handler.ts`：
+  - 新 `MailSendResult` interface + `MailHandlerDeps.onSendResult?: (result: MailSendResult) => void` optional hook
+  - 成功 / 失敗 path 都 fire hook（fire-and-forget，hook throw 不影響 HTTP response，只 logError）
+  - 新增 `elapsedMs` field 給觀測 SMTP latency
+- `scripts/tripline-api-server.ts`：注入 `onSendResult` callback → `throttledAlert(key='mail-<template>', state)`
+  - 成功 → `healthy` state（recovery 自動 trigger，從 failed → healthy 1 次 alert）
+  - 失敗 → `failed` state 含 `template/to/subject(80)/error(200)/重發 hint`（"user 可重新 trigger 該流程"）
+  - per-template key：password-reset 失敗 alert 不會跟 invitation flood 在一起
+
+### Added
+
+- `tests/unit/mailer-handler-onsendresult.test.ts`：8 條 — hook fire success/failure path + hook throw 不影響 response + api-server source-grep（callback 形狀 / per-template key）
+
+### Verification
+
+- 既有 `tests/unit/mailer-handler.test.ts` 18/18 pass（新欄位 optional，backward-compat）
+- 新 `mailer-handler-onsendresult.test.ts` 8/8 pass
+- tsc --noEmit clean
+
+### Behavior change
+
+- 之前 SMTP fail → 只 stderr，admin 第二天 daily-check 才看到（甚至 daily-check 沒查 mailer log）
+- 現在 SMTP fail → Telegram 即時 alert（throttled 1hr per template）+ recovery alert 自動發
+- User 流程不變（CF caller 仍回 500），admin alert 含完整 context 可決定要不要手動重 trigger CF endpoint
+
 ## [2.33.127] - 2026-05-27
 
 **Fix — api-server cron 失敗 / detached spawn 非 0 exit 加 throttledAlert**
