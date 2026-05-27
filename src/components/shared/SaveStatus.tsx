@@ -13,6 +13,12 @@ import type { SaveState } from '../../hooks/useAutosave';
 
 interface SaveStatusProps {
   state: SaveState;
+  /**
+   * Error 訊息 — v2.33.136 起 SaveStatus 本身不再 inline 顯示細節（對齊
+   * mockup 2026-05-11-entry-time-segment-mode-edit.html: 「儲存失敗 → 重試
+   * + toast error」）。仍 export 給 SR 用 aria-label，caller (EditEntryPage)
+   * 負責 showToast 顯細節。
+   */
   error?: string | null;
   /** Retry handler — 顯示 error 時的 button onClick。 */
   onRetry?: () => void | Promise<void>;
@@ -98,14 +104,21 @@ function SaveStatusBase({ state, error, onRetry, compact = false }: SaveStatusPr
   const label = STATE_LABEL[state];
   const icon = STATE_ICON[state];
   const className = `tp-save-status tp-save-status--${state}${compact ? ' tp-save-status--pill' : ''}`;
+  // v2.33.136: error state 不再 inline 顯細節 — 細節走 toast (mockup
+  // 2026-05-11-entry-time-segment-mode-edit.html L789)。仍把 error 寫進
+  // aria-label 給 screen reader.
+  const ariaLabel = state === 'error' && error ? `儲存失敗：${error}` : undefined;
   return (
-    <span className={className} role="status" aria-live="polite" data-testid="save-status">
+    <span
+      className={className}
+      role="status"
+      aria-live="polite"
+      aria-label={ariaLabel}
+      data-testid="save-status"
+    >
       <style>{SCOPED_STYLES}</style>
       {icon && <span className="tp-save-status-icon" aria-hidden="true">{icon}</span>}
       <span className="tp-save-status-label">{label}</span>
-      {state === 'error' && error && (
-        <span className="tp-save-status-error-detail" data-testid="save-status-error">（{error}）</span>
-      )}
       {state === 'error' && onRetry && (
         <button
           type="button"

@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.137] - 2026-05-28
+
+**Fix — EditEntryPage 400 "無有效欄位可更新" race + SaveStatus titleBar UI 對齊 mockup**
+
+Prod QA 2026-05-28：rayschiu 編輯 entry 781（okinawa-trip-2026-HuiYun, 天久琉貿樂市）顯示「景點儲存失敗 (400)」，且錯誤訊息出現在 TitleBar 違反 mockup 設計。
+
+### Bug A — 400 empty-body race (auto-save)
+
+D1 `api_logs` 過去多次 `DATA_VALIDATION: 無有效欄位可更新` 是同一個 bug。Root cause：
+- `dirty` useMemo 比對 `originalRef.current.*` 但 ref 不在 memo deps（refs 不 trigger re-eval）
+- `handleSave` 內 body assembly 做同樣 ref 比對
+- 若 dirty 計算後、handleSave 跑前外部路徑（如 prior save success hook、`useEffect[entry]` refetch）把 `originalRef` 寫到與 current state 一致，`dirty` 仍 stale=true 但 `body={}`
+- requests.push 仍 fire → backend `buildUpdateClause(body, ALLOWED_FIELDS)` return null → 400
+
+**Fix** `src/pages/EditEntryPage.tsx`：
+- entry body push 前檢 `Object.keys(body).length > 0` — empty body 表示資料其實沒變，跳過 request
+- requests.length === 0 → 早 return 不走 success path 寫 originalRef（避免奇怪 state lock）
+
+### Bug B — error UI 違反 mockup (`docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html` L789)
+
+Mockup spec：「儲存失敗 → 重試 button + toast error」。實作 v2.33.108 auto-save ship 時把 error 顯示在 `SaveStatus` titleBar inline `（{error}）`，且 body 內也 inline `<InlineError>` — 雙顯且違 mockup。
+
+**Fix**：
+- `src/components/shared/SaveStatus.tsx`：拔 `tp-save-status-error-detail` inline span + testid `save-status-error`。error state 只保 ⚠ icon + "儲存失敗" label + 重試 button。error 訊息寫進 `aria-label` 給 screen reader
+- `src/pages/EditEntryPage.tsx`：handleSave fail path（partial fail + catch）加 `showToast(msg, 'error', 6000)` 顯細節
+- 拔 body 內 `data-testid="edit-entry-save-error"` `<InlineError>`（duplicate of toast）
+- 保留 `data-testid="edit-entry-validation"` `<InlineError>`（form-level user 知哪個欄位錯）
+
+### Added
+
+- `tests/unit/edit-entry-empty-body-race-fix.test.ts`：12 條 — race guard 3 cases / SaveStatus mockup-align 4 cases / handleSave toast wiring 4 cases / mockup spec source-of-truth 1 case
+
+### Verification
+
+- vitest 12/12 pass + 既有 `edit-entry-page.test.tsx` 31/31 pass (no regression)
+- tsc --noEmit clean
+
 ## [2.33.136] - 2026-05-28
 
 **Fix — FOUC dark-mode init 改 external script 避開 CSP block**
