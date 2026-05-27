@@ -37,6 +37,7 @@ import { NewTripProvider } from '../contexts/NewTripContext';
 import { ActiveTripProvider } from '../contexts/ActiveTripContext';
 import { lazy, Suspense, StrictMode } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { ServerStatusBanner } from '../components/ServerStatusBanner';
 
 /**
  * v2.31.25 fix #126: dark mode init root-level component。
@@ -194,6 +195,7 @@ if (el) {
       <ErrorBoundary>
         <BrowserRouter>
           <DarkModeInit />
+          <ServerStatusBanner />
           <ActiveTripProvider>
           <NewTripProvider>
           <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
