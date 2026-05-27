@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.131] - 2026-05-27
+
+**Infra — log retention sweep (G13)**
+
+監控告警統一設計 P2/P3 follow-up #2 of 3。修 G13：`scripts/logs/` 下檔案無 TTL，累積。Mac OS 內建 `newsyslog` 對 per-date filename 模式不適用，改寫 zsh sweep script 走 `find -mtime` + truncate。
+
+### Added
+
+- `scripts/log-rotate.sh`：
+  - Rule 1：`find -type f \( -name '*.log' -o -name '*.err' \) -mtime +30` → delete（per-date files）
+  - Rule 2：oversized single-file logs (`api-server-stdout.log` / `request-job-stderr.log`) > 10MB → `tail -c 50%` truncate 保留尾段
+  - Rule 3：高頻 log (`api-server-stderr.log` / `funnel-guard/*.log`) > 1MB tighter cap
+  - 輸出 deleted/truncated count（PR4 exit code wrapper 自動接 alert：first success → recovery alert，非 0 → failed alert）
+- `scripts/tripline-api-server.ts` 新 schedule：`scheduleDailyScript(3, 30, 'zsh', ['scripts/log-rotate.sh'], 'log-rotate')`
+- `tests/unit/log-rotate-script.test.ts`：10 條 — retention 常數 / 3 rule source-grep / set -eo pipefail / summary 對齊 PR4 alert / api-server schedule wiring
+
+### Verification
+
+- 實機 sanity run：刪 26 個 > 30 天舊 log file（4/22 之前的 api-server per-date logs + legacy tripline-api-2026-04-* + request-job-stdout）
+- vitest 10/10 pass
+- tsc --noEmit clean
+
 ## [2.33.130] - 2026-05-27
 
 **Feat — apiClient 429 Retry-After 解析 + 1 次 idempotent retry (G10)**
