@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.135] - 2026-05-27
+
+**Fix (HOTFIX) — `/api/health` 加 middleware public bypass**
+
+PR3 v2.33.126 加 `/api/health` endpoint 但忘記加進 `functions/api/_middleware.ts` 公開白名單 → 外部 UptimeRobot / Pingdom curl 永遠收 401 AUTH_REQUIRED，endpoint 形同虛設。Forensic 時 `curl https://trip-planner-dby.pages.dev/api/health` 發現的。
+
+### Changed
+
+- `functions/api/_middleware.ts`：加 `GET /api/health` bypass（與 `/api/poi-search` 同 pattern）
+- `tests/unit/api-health-endpoint.test.ts`：加 regression 驗 middleware bypass 存在
+
+### Verification
+
+- vitest 13/13 pass
+- tsc clean
+- 待 deploy 後 `curl https://trip-planner-dby.pages.dev/api/health` 應回 200 + JSON
+
 ## [2.33.134] - 2026-05-27
 
 **Feat — funnel-guard 3-layer probe + CF alertAdminTelegram observability**
