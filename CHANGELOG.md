@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.138] - 2026-05-28
+
+**Fix — EditEntryPage 備選 row mobile layout 過窄**
+
+QA browser sweep 2026-05-28 mobile (390px) `/trip/.../stop/:eid/edit` 截圖發現：備選 row 內 `alt-extra-chip.hours` 含整週營業時段 string (`星期一: 10:00 – 20:30 星期二: ...`)。Mobile viewport 下 `alt-actions` 4 個 button × 44px ≈ 200px 把 meta column 擠到 ~120px，hours chip 文字被迫斷成單字垂直堆疊，視覺像 textarea 高度爆屏。
+
+### Changed
+
+- `src/pages/EditEntryPage.tsx` `SCOPED_STYLES`：加 `@media (max-width: 640px)` rule
+  - `.tp-edit-entry-alt-row` `flex-wrap: wrap` + `align-items: flex-start`
+  - `.tp-edit-entry-alt-meta` `flex-basis: calc(100% - 28px)` 取近全寬（扣 order chip）
+  - `.tp-edit-entry-alt-actions` `flex-basis: 100%` + `justify-content: flex-end` + `margin-top: 4px`，actions 換到 meta 下方 align right
+- Desktop layout (`>640px`) 完全不影響 — base `.tp-edit-entry-alt-row` 仍 row flex
+
+### Added
+
+- `tests/unit/edit-entry-alt-row-mobile.test.ts`：7 條 — media query breakpoint / mobile flex-wrap / meta flex-basis / actions full-width align-end / root cause comment / desktop base 未改
+
+### Verification
+
+- vitest 7/7 pass
+- tsc --noEmit clean
+
 ## [2.33.137] - 2026-05-28
 
 **Fix — EditEntryPage 400 "無有效欄位可更新" race + SaveStatus titleBar UI 對齊 mockup**

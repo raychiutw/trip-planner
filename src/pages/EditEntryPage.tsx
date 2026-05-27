@@ -357,6 +357,24 @@ const SCOPED_STYLES = `
   font-variant-numeric: tabular-nums;
 }
 .tp-edit-entry-alt-meta { flex: 1; min-width: 0; }
+
+/* v2.33.138 mobile fix: 4 button actions (44px each) 在 ≤640px 把 meta 擠到 ~120px，
+   alt-extra-chip.hours 含整週營業時段被迫 wrap 成多行看似多行 textarea。
+   Mobile 改 flex-wrap, meta 取全寬, actions 換到下一行 align right。 */
+@media (max-width: 640px) {
+  .tp-edit-entry-alt-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .tp-edit-entry-alt-meta {
+    flex-basis: calc(100% - 28px);
+  }
+  .tp-edit-entry-alt-actions {
+    flex-basis: 100%;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+}
 .tp-edit-entry-alt-name {
   font-weight: 600;
   font-size: var(--font-size-subheadline);
