@@ -359,6 +359,28 @@ const mailHandler = makeMailHandler({
   emailFrom: EMAIL_FROM_DEFAULT,
   log,
   logError,
+  // v2.33.128 G2：mail send observability — 失敗 throttledAlert + 成功 healthy
+  // recovery（key per template，避免 password-reset 失敗 alert 跟 invitation 混在一起）
+  onSendResult: (result) => {
+    const key = `mail-${result.template ?? 'unknown'}`;
+    if (result.ok) {
+      void throttledAlert(
+        key,
+        'healthy',
+        `🛡️ Tripline mail (${result.template ?? '-'}) 恢復寄送`,
+      );
+    } else {
+      void throttledAlert(
+        key,
+        'failed',
+        `🚨 Tripline /internal/mail/send 失敗\n` +
+          `template=${result.template ?? '-'} to=${result.to}\n` +
+          `subject=${result.subject.slice(0, 80)}\n` +
+          `error=${(result.error ?? 'unknown').slice(0, 200)}\n` +
+          `→ user 可重新 trigger 該流程（如 /api/oauth/send-verification）重發`,
+      );
+    }
+  },
 });
 
 Bun.serve({
