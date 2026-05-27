@@ -391,6 +391,13 @@ async function handleAuth(
     return context.next();
   }
 
+  // 公開讀取：GET /api/health（uptime monitor pin 用，v2.33.135 fix —
+  // PR3 v2.33.126 加 endpoint 時漏列 bypass → 外部 UptimeRobot 收 401 永遠 down）
+  if (request.method === 'GET' && url.pathname === '/api/health') {
+    (context.data as Record<string, unknown>).auth = null;
+    return context.next();
+  }
+
   // V2 OAuth — sole auth path (CF Access blocks below are kept transitional during cutover).
   //
   // Order: try V2 session cookie first (browser users), then V2 Bearer token (service

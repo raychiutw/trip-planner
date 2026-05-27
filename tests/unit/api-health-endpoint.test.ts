@@ -49,6 +49,20 @@ describe('GET /api/health', () => {
   });
 });
 
+describe('v2.33.135 fix: /api/health 進 middleware public bypass', () => {
+  const MW = readFileSync(
+    join(__dirname, '../../functions/api/_middleware.ts'),
+    'utf8',
+  );
+
+  it('middleware GET /api/health bypass 與 /api/poi-search 同 pattern', () => {
+    expect(MW).toMatch(
+      /if \(request\.method === 'GET' && url\.pathname === '\/api\/health'\) \{/,
+    );
+    expect(MW).toMatch(/v2\.33\.135 fix.*PR3.*漏列 bypass.*UptimeRobot.*401/s);
+  });
+});
+
 describe('docs/monitoring/uptime-monitor.md', () => {
   const DOC = readFileSync(
     join(__dirname, '../../docs/monitoring/uptime-monitor.md'),
