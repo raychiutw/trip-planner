@@ -25,11 +25,28 @@ export async function alertAdminTelegram(env: AlertEnv, message: string): Promis
   const token = env.TELEGRAM_BOT_TOKEN;
   const chatId = env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) {
-    console.warn('[alert] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set; alert skipped');
+    // v2.33.134: 從 console.warn 提到 console.error — 之前 warn 在 wrangler tail
+    // 預設 filter 掉，user forgot-password 530 alert 沒響但 log 看不到原因。
+    console.error('[alert] SKIP — TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set', {
+      hasToken: !!token,
+      hasChatId: !!chatId,
+    });
     return;
   }
+  // v2.33.134：log start + end 含 token prefix（前 10 chars）/ chat_id 末 4 / 訊息長度
+  // → wrangler tail 可看到呼叫鏈，forensic forgot-password silent fail 用
+  const tokenPrefix = token.slice(0, 10);
+  const chatTail = chatId.slice(-4);
+  const msgPreview = message.slice(0, 80);
+  console.log('[alert] sending', {
+    tokenPrefix,
+    chatTail,
+    msgPreview,
+    msgLen: message.length,
+  });
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 5_000);
+  const t0 = Date.now();
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
@@ -40,12 +57,28 @@ export async function alertAdminTelegram(env: AlertEnv, message: string): Promis
       }),
       signal: ctrl.signal,
     });
+    const elapsedMs = Date.now() - t0;
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
-      console.error('[alert] Telegram API non-2xx:', res.status, errText);
+      console.error('[alert] Telegram API non-2xx', {
+        status: res.status,
+        body: errText.slice(0, 200),
+        elapsedMs,
+        tokenPrefix,
+        chatTail,
+      });
+      return;
     }
+    console.log('[alert] sent OK', { status: res.status, elapsedMs });
   } catch (err) {
-    console.error('[alert] Telegram alert failed:', err instanceof Error ? err.message : err);
+    const elapsedMs = Date.now() - t0;
+    console.error('[alert] Telegram fetch failed', {
+      error: err instanceof Error ? err.message : String(err),
+      elapsedMs,
+      aborted: ctrl.signal.aborted,
+      tokenPrefix,
+      chatTail,
+    });
   } finally {
     clearTimeout(timer);
   }
