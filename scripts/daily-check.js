@@ -338,6 +338,77 @@ async function queryRequestErrors() {
   };
 }
 
+// ── 數據來源 8: audit_log 異常 mutation pattern (v2.33.132 G14) ──
+//
+// 偵測過去 24h 內 mutation 突發：可能是 script abuse / 程式 bug 寫 loop /
+// restore 失敗反覆 retry。Surface 進每日報告，不阻擋（沒有 auto-fix path）。
+//
+// Threshold（保守 — 偽陽性比偽陰性糟，這 alert 給人 triage）：
+//   - per user_id 24h > 200 mutation → warning（一般使用者 < 50/day）
+//   - per trip_id 24h > 100 mutation → warning（重度編輯也 < 50；超過 100
+//     表示 thrash loop）
+//   - delete 在 trip / users 表 > 10 → critical（這些 table delete 罕見）
+var AUDIT_USER_MUTATION_WARNING = 200;
+var AUDIT_TRIP_MUTATION_WARNING = 100;
+var AUDIT_DELETE_CRITICAL = 10;
+
+async function queryAuditAnomaly() {
+  var oneDayAgo = "datetime('now', '-1 day')";
+
+  // Heavy user actors（changed_by_user_id 可能 NULL for service token）
+  var heavyUsers = await queryD1(
+    "SELECT changed_by_user_id AS userId, changed_by AS actor, COUNT(*) AS mutations " +
+    "FROM audit_log " +
+    "WHERE created_at >= " + oneDayAgo + " " +
+    "  AND changed_by_user_id IS NOT NULL " +
+    "GROUP BY changed_by_user_id " +
+    "HAVING COUNT(*) > " + AUDIT_USER_MUTATION_WARNING + " " +
+    "ORDER BY mutations DESC " +
+    "LIMIT 10"
+  );
+
+  var heavyTrips = await queryD1(
+    "SELECT trip_id AS tripId, COUNT(*) AS mutations " +
+    "FROM audit_log " +
+    "WHERE created_at >= " + oneDayAgo + " " +
+    "  AND trip_id != 'system' " +
+    "GROUP BY trip_id " +
+    "HAVING COUNT(*) > " + AUDIT_TRIP_MUTATION_WARNING + " " +
+    "ORDER BY mutations DESC " +
+    "LIMIT 10"
+  );
+
+  // critical table delete spike — table_name IN ('trips', 'users')
+  var criticalDeletes = await queryD1(
+    "SELECT table_name AS tableName, COUNT(*) AS deletes " +
+    "FROM audit_log " +
+    "WHERE created_at >= " + oneDayAgo + " " +
+    "  AND action = 'delete' " +
+    "  AND table_name IN ('trips', 'users') " +
+    "GROUP BY table_name " +
+    "HAVING COUNT(*) > " + AUDIT_DELETE_CRITICAL
+  );
+
+  var status = 'ok';
+  if (criticalDeletes.length > 0) {
+    status = 'critical';
+  } else if (heavyUsers.length > 0 || heavyTrips.length > 0) {
+    status = 'warning';
+  }
+
+  return {
+    status: status,
+    heavyUsers: heavyUsers,
+    heavyTrips: heavyTrips,
+    criticalDeletes: criticalDeletes,
+    thresholds: {
+      userMutationWarning: AUDIT_USER_MUTATION_WARNING,
+      tripMutationWarning: AUDIT_TRIP_MUTATION_WARNING,
+      deleteCritical: AUDIT_DELETE_CRITICAL,
+    },
+  };
+}
+
 // ── 數據來源 7: 排程 error log ────────────────────────────────
 
 function querySchedulerErrors() {
@@ -419,8 +490,8 @@ function querySchedulerErrors() {
 
 // ── summary 計算 ────────────────────────────────────────────────
 
-function calcSummary(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota) {
-  var sections = [sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota];
+function calcSummary(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota, auditAnomaly) {
+  var sections = [sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota, auditAnomaly];
   var critical = sections.filter(function(s) { return s && s.status === 'critical'; }).length;
   var warning = sections.filter(function(s) { return s && s.status === 'warning'; }).length;
   var ok = sections.filter(function(s) { return s && s.status === 'ok'; }).length;
@@ -597,6 +668,7 @@ async function main() {
     queryRouteHealth(),      // 5 — B-P6 task 10.3
     queryProdDataHygiene(),  // 6 — mockup-parity-qa-fixes Sprint 7.2
     queryGoogleMapsQuota(),  // 7 — v2.31.96: 接 google-quota-monitor 孤兒邏輯
+    queryAuditAnomaly(),     // 8 — v2.33.132 G14: audit_log mutation anomaly
   ]);
 
   function val(idx, fallback) {
@@ -614,8 +686,9 @@ async function main() {
   var routeHealth = val(5, { status: 'ok', total: 0, checked: 0, routes: [] });
   var dataHygiene = val(6, { status: 'ok', total: 0, leaks: [] });
   var googleMapsQuota = val(7, { status: 'ok', error: 'queryGoogleMapsQuota rejected' });
+  var auditAnomaly = val(8, { status: 'ok', heavyUsers: [], heavyTrips: [], criticalDeletes: [], error: 'queryAuditAnomaly rejected' });
 
-  var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota);
+  var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota, auditAnomaly);
 
   var report = {
     date: today,
@@ -630,7 +703,8 @@ async function main() {
     schedulerErrors: schedulerErrors,
     routeHealth: routeHealth,
     dataHygiene: dataHygiene,
-    googleMapsQuota: googleMapsQuota
+    googleMapsQuota: googleMapsQuota,
+    auditAnomaly: auditAnomaly
   };
 
   // 為所有 issue/error 項目加流水編號
