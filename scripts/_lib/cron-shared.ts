@@ -185,3 +185,85 @@ export async function alertTelegram(msg: string): Promise<void> {
 export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
+
+// ── throttled-alert (TS variant) ──────────────────────────────────────────
+//
+// 配對 scripts/lib/throttled-alert.sh — 給 cron scripts / api-server 用同一
+// state-transition + 1hr throttle 規則，避免 sustained failure 把 Telegram flood。
+//
+// State cache：~/.gstack/throttled-alert-<key>.state（若 ~/.gstack 不存在則 fallback /tmp）
+// 格式 "state|epoch_seconds"。
+//
+// Rules（與 .sh 版完全對齊）：
+//   - new="healthy" + prev != healthy/unknown → recovery alert always
+//   - new="healthy" + prev=healthy/unknown → silent
+//   - state change → alert
+//   - same state → 每 ttlSec 一次（default 3600）
+
+// (mkdirSync 取 node:fs；existsSync/readFileSync/writeFileSync + join 同 top imports)
+import { mkdirSync } from 'fs';
+import { homedir } from 'os';
+
+const THROTTLE_DEFAULT_DIR = (() => {
+  const gstack = join(homedir(), '.gstack');
+  return existsSync(gstack) ? gstack : '/tmp';
+})();
+
+function stateFilePath(key: string, dir = THROTTLE_DEFAULT_DIR): string {
+  const safe = key.replace(/[^A-Za-z0-9_-]/g, '_');
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return join(dir, `throttled-alert-${safe}.state`);
+}
+
+function readState(file: string): { state: string; ts: number } {
+  if (!existsSync(file)) return { state: 'unknown', ts: 0 };
+  const raw = readFileSync(file, 'utf8').trim();
+  const [state, tsStr] = raw.split('|');
+  const ts = /^\d+$/.test(tsStr ?? '') ? Number(tsStr) : 0;
+  return { state: state || 'unknown', ts };
+}
+
+function writeState(file: string, state: string, ts: number): void {
+  writeFileSync(file, `${state}|${ts}\n`);
+}
+
+export function shouldSendAlert(
+  prevState: string,
+  newState: string,
+  prevTs: number,
+  now: number,
+  ttlSec: number,
+): boolean {
+  if (newState === 'healthy' && prevState !== 'healthy' && prevState !== 'unknown') {
+    return true; // recovery
+  }
+  if (newState === 'healthy') return false;
+  if (prevState !== newState) return true;
+  return now - prevTs >= ttlSec;
+}
+
+/**
+ * Send Telegram alert respecting state-transition + throttle rules.
+ *
+ * @returns true if alert was sent, false if suppressed by throttle/steady-state
+ */
+export async function throttledAlert(
+  key: string,
+  newState: string,
+  message: string,
+  options?: { ttlSec?: number; stateDir?: string },
+): Promise<boolean> {
+  const ttlSec = options?.ttlSec ?? 3600;
+  const file = stateFilePath(key, options?.stateDir);
+  const { state: prevState, ts: prevTs } = readState(file);
+  const now = Math.floor(Date.now() / 1000);
+
+  if (shouldSendAlert(prevState, newState, prevTs, now, ttlSec)) {
+    await alertTelegram(message);
+    writeState(file, newState, now);
+    return true;
+  }
+  // 保留舊 ts 維持 throttle window
+  writeState(file, newState, prevTs);
+  return false;
+}

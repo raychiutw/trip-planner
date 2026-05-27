@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.124] - 2026-05-27
+
+**Infra — throttled-alert helper（funnel-guard state-machine 抽通用）**
+
+第一個批次的 **監控告警統一設計** PR（6 of 6 計劃中 #1）。抽出 funnel-guard 的 state-transition / 1hr throttle 邏輯成共用 helper，給後續 alert callers (mail, cron, 5xx) 共用，避免重複實作 + 確保所有 alert 一致 throttle 規則。
+
+### Added
+
+- `scripts/lib/throttled-alert.sh` — sourceable shell helper（zsh/bash）`throttled_alert "<key>" "<state>" "<message>" [ttl_sec]`。包 send-telegram.sh 加 dedup key + state file 自動寫 + send 失敗不更新 ts。Key sanitize 防 path traversal。
+- `scripts/_lib/cron-shared.ts` 新 export `throttledAlert(key, newState, message, options?)` + 純函式 `shouldSendAlert(prevState, newState, prevTs, now, ttlSec)` 供 unit test。Default state dir `~/.gstack` (fallback `/tmp`)。
+- `tests/unit/throttled-alert-helper.test.ts` 15 條 regression：state-transition rules（recovery / steady silent / unknown→healthy silent / state change / throttle window in/out）+ source-grep funnel-guard 遷移 + helper guard 條件。
+
+### Changed
+
+- `scripts/funnel-guard/guard.sh` 移除內含的 `read_state` / `write_state` / `should_alert` / `maybe_alert` 函式（共 ~60 行），改 source `scripts/lib/throttled-alert.sh` + 用 `throttled_alert "funnel-guard" ...` 三呼。行為對齊：同 throttle window + 同 state file format（key="funnel-guard" → `/tmp/throttled-alert-funnel-guard.state`，舊 `/tmp/funnel-guard.state` 會被忽略 → 第一次 install/upgrade 等於 fresh state，behavior 一致 unknown→healthy silent）。
+- `STATE_FILE` / `ALERT_THROTTLE_SEC` 變數移除（helper 內部管理）。
+
+### Verification
+
+- 實機 smoke test：refactored guard.sh 跑 healthy + 二次跑 cached state 行為對齊原 v2.33.123（unknown→healthy silent）
+- `npx vitest run tests/unit/throttled-alert-helper.test.ts` 15/15 pass
+- `npx tsc --noEmit` 全綠
+- `zsh -n` 兩 shell script
+
 ## [2.33.123] - 2026-05-26
 
 **Infra — funnel-guard launchd job：auto-heal Tailscale funnel :443 drift + Telegram alert**
