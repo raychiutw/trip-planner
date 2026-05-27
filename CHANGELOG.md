@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.127] - 2026-05-27
+
+**Fix — api-server cron 失敗 / detached spawn 非 0 exit 加 throttledAlert**
+
+監控告警統一設計 6 PR 系列 **#4 of 6**。修兩個 P0 silent fail，用 PR1 的 throttledAlert helper 統一 throttle 規則。
+
+### Changed
+
+- `scripts/tripline-api-server.ts`：
+  - **G3 fireScheduleScript exit code wrapper**：之前 detached spawn 只 listen `child.on('error')`（catch spawn ENOENT），不檢查 `child.on('exit')` 的 code/signal → npm script crash / node 路徑失效時完全 silent skip。
+    - 新增 `child.on('exit')`：code=0 → `throttledAlert(state='healthy')` 觸發 recovery alert（若先前曾 fail）；非 0 → `throttledAlert(state='failed')` 含 cmd/args/log 路徑指引
+    - `child.on('error')` + setup catch 路徑也走 throttledAlert（key=`script-spawn-` / `script-setup-`）
+  - **G8 fireSchedule processLoop unhandled error**：之前只 `logError`，silent。對齊 `/tp-request` alertAdminTelegram pattern → `throttledAlert(key='cron-<label>', state='failed')` 含 skill / error 前 200 字
+- `scripts/tripline-api-server.ts`：import `throttledAlert` from `./_lib/cron-shared`
+
+### Added
+
+- `tests/unit/api-server-cron-alert.test.ts`：10 條 regression — exit code 0/non-0 path / spawn error / setup catch / processLoop unhandled / dedup key 命名一致
+
+### Verification
+
+- vitest 10/10 pass
+- tsc --noEmit clean
+
+### Impact
+
+- google-poi-refresh / auth-cleanup 之後 exit 0 會 trigger 一次 healthy alert（throttledAlert recovery 機制），1hr throttle 後 silent；exit 非 0 立刻 alert 1 次，1hr 內同 state silent
+- 已知 cron loop unhandled exception 之前是「daily-check 第二天看到 stale data 才知道」→ 改成「失敗當下 Telegram」
+
 ## [2.33.126] - 2026-05-27
 
 **Feat — GET /api/health endpoint + uptime monitor doc**

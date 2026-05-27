@@ -16,6 +16,7 @@ import { join } from 'path';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { makeMailHandler } from './lib/mailer-handler';
 import { computeNextDailyFire } from './lib/schedule-daily';
+import { throttledAlert } from './_lib/cron-shared';
 
 // --- Load .env.local ---
 // v2.33.51 round 8c: 統一 parser — 之前 inline 邏輯不 strip 外 quote，跟
@@ -431,7 +432,15 @@ function fireSchedule(skillCommand: string, label: string): void {
     return;
   }
   processLoop('job', skillCommand).catch((err) => {
-    logError(`internal cron ${label} processLoop unhandled: ${err}`);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    logError(`internal cron ${label} processLoop unhandled: ${errMsg}`);
+    // v2.33.127 G8：對齊 /tp-request alertAdminTelegram pattern — 之前 /tp-daily-check
+    // 跟其他 cron processLoop 失敗只 logError 不告警，silently 死掉
+    void throttledAlert(
+      `cron-${label}`,
+      'failed',
+      `🚨 Tripline api-server cron ${label} processLoop unhandled error\nskill=${skillCommand}\nerror: ${errMsg.slice(0, 200)}`,
+    );
   });
 }
 
@@ -460,10 +469,45 @@ async function fireScheduleScript(cmd: string, args: string[], label: string): P
       detached: true,
       stdio: ['ignore', outFd, errFd],
     });
-    child.on('error', (err) => logError(`Script ${label} spawn error: ${err.message}`));
+    child.on('error', (err) => {
+      logError(`Script ${label} spawn error: ${err.message}`);
+      void throttledAlert(
+        `script-spawn-${label}`,
+        'failed',
+        `🚨 Tripline cron script ${label} spawn error\ncmd=${cmd} args=${args.join(' ')}\nerror: ${err.message.slice(0, 200)}`,
+      );
+    });
+    // v2.33.127 G3：之前 detached spawn 完全不檢查 exit code → node ENOENT /
+    // npm script crash 全 silent skip。listen exit + 非 0 alert（unref 後仍 fire，
+    // bun 不 detach event loop）。
+    child.on('exit', (code, signal) => {
+      if (code === 0) {
+        log(`Script ${label} exited cleanly (code=0)`);
+        // 成功：throttledAlert 用 'healthy' state（若先前 failed 會發 recovery alert）
+        void throttledAlert(
+          `script-exit-${label}`,
+          'healthy',
+          `🛡️ Tripline cron script ${label} 恢復正常`,
+        );
+      } else {
+        const reason = signal ? `signal=${signal}` : `code=${code}`;
+        logError(`Script ${label} exited non-zero (${reason})`);
+        void throttledAlert(
+          `script-exit-${label}`,
+          'failed',
+          `🚨 Tripline cron script ${label} exit ${reason}\ncmd=${cmd} args=${args.join(' ')}\n` +
+            `查 log：scripts/logs/script-${label}-${todayStr()}.{log,err}`,
+        );
+      }
+    });
     child.unref();
   } catch (err) {
     logError(`fireScheduleScript ${label} setup failed: ${(err as Error).message}`);
+    void throttledAlert(
+      `script-setup-${label}`,
+      'failed',
+      `🚨 Tripline cron script ${label} setup failed\nerror: ${(err as Error).message}`,
+    );
   }
 }
 
