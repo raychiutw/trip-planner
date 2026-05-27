@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.133] - 2026-05-27
+
+**Fix (HOTFIX) — throttled-alert.sh sourced-vs-exec guard 拔掉**
+
+PR1 v2.33.124 helper 開頭加的 `if [ "${0##*/}" = "throttled-alert.sh" ]; then exit 2` guard 在 zsh launchd 環境下誤判（FUNCTION_ARGZERO option 預設 ON → sourced file 內 `$0` = sourced filename 而非 caller name）→ funnel-guard 每 120s exit 2，stdout log 自 ship 時 ~12:00 起完全停寫，**~6hr orphan 期間若有 funnel drift 不會 auto-heal**。實機驗證：stdout 停 11:52，stderr 持續寫 "do not execute directly" 至 18:42 被本 hotfix 修。
+
+### Changed
+
+- `scripts/lib/throttled-alert.sh`：移除 sourced-vs-exec guard block。沒有實際安全 risk 需要 guard（手動誤跑只是 define function 沒呼叫，無 side effect）。
+- `tests/unit/throttled-alert-helper.test.ts`：原 "禁止 standalone exec" assertion 改為 regression negative — `expect(HELPER).not.toMatch('source this file...')` 防再 regress。
+
+### Verification
+
+- 實機 smoke：refactored funnel-guard 跑 healthy，state file 寫入正確
+- vitest 15/15 pass
+- 本 hotfix merge 後需重啟 funnel-guard launchd
+
+### Lesson
+
+v2.33.124 review 階段沒 launchd-context test，只跑 user shell（FUNCTION_ARGZERO 行為不同）。未來 helper 改動需 `launchctl kickstart -k ... && tail stderr` 觀察 5 min 確認 prod env 對。
+
 ## [2.33.132] - 2026-05-27
 
 **Feat — daily-check `queryAuditAnomaly` (G14)**
