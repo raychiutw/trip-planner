@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.15] - 2026-05-28
+
+**Test — 行程筆記 PR15 / 19：FlightsSection unit test coverage**
+
+9 條 unit test 覆蓋 FlightsSection 全 CRUD flow。Add / Edit / Delete / no-change blur / ConfirmModal / boarding pass display。
+
+### Added
+
+- `tests/unit/flights-section.test.tsx` 9 條：
+  - empty (0 row) → 只 add button
+  - boarding pass display (airline / flight_no / time / airport)
+  - Add → POST + onChange callback + edit mode
+  - Edit airline blur → PATCH with field + expectedVersion OCC
+  - no-change blur → no PATCH (optimize)
+  - close edit button → exit edit mode
+  - Trash icon → ConfirmModal「刪除航班？CI 120」
+  - Confirm 刪除 → DELETE call + onChange empty
+
 ## [2.34.14] - 2026-05-28
 
 **Polish — 行程筆記 PR14 / 19：TripCardMenu + EmbeddedActionMenu 加「行程筆記」入口**
