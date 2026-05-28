@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.1] - 2026-05-28
+
+**Feature — 行程筆記 PR2 / 19：backend GET endpoints + import script JSON parser hotfix**
+
+5 個 per-section GET + 1 aggregator + import script wrangler banner strip。13 條 integration test。
+
+### Added
+
+- `functions/api/trips/[id]/notes.ts` — aggregator `GET /api/trips/:id/notes` 一次回 5 section（flights / lodgings / reservations / pretripNotes / emergencyContacts）。5 個 parallel SELECT，camelCase response (deepCamel auto)，PERM_DENIED 對非授權 user
+- `functions/api/trips/[id]/notes/_shared.ts` — `listNotesSection(ctx, table)` helper 抽出 auth check + SELECT * + ORDER BY pattern，5 個 per-section endpoint 共用
+- `functions/api/trips/[id]/notes/flights.ts` — `GET /api/trips/:id/notes/flights`
+- `functions/api/trips/[id]/notes/lodgings.ts` — `GET /api/trips/:id/notes/lodgings`
+- `functions/api/trips/[id]/notes/reservations.ts` — `GET /api/trips/:id/notes/reservations`
+- `functions/api/trips/[id]/notes/pretrip.ts` — `GET /api/trips/:id/notes/pretrip`
+- `functions/api/trips/[id]/notes/emergency.ts` — `GET /api/trips/:id/notes/emergency`
+- `tests/api/trip-notes-get.integration.test.ts` — 13 條：aggregator 5 section / empty trip / camelCase response 欄位對齊 / ORDER BY sort_order 對 / PERM_DENIED / per-section { items: [...] } shape / pretrip ai_source NULL vs general-tips vs lodging-tips 都 surface / emergency phone / kind 對
+
+### Fixed
+
+- `scripts/import-huiyun-trip-notes.ts` idempotent guard JSON parser bug — wrangler v4 `--json` output 前段有 banner (`🌀 ...` lines)，原 `JSON.parse(out)` 直接爆「Unexpected identifier "Cloudflare"」導致 `--apply` 跑不起來。改 `out.slice(out.indexOf('['))` strip banner 後再 parse
+
 ## [2.34.0] - 2026-05-28
 
 **Feature epoch — 行程筆記 (Trip Notes) PR1 / 19：migration 0073 + 5 table + AI linkage + HuiYun rescue import**

@@ -234,11 +234,14 @@ async function main() {
     return;
   }
 
-  // Idempotent guard
+  // Idempotent guard — wrangler --json 前段有 banner 要 strip 才能 parse
   const dbFlag = flags.remote ? '--remote' : '--local';
   const guardSql = `SELECT COUNT(*) AS n FROM trip_pretrip_notes WHERE trip_id = '${escapeSqlString(flags.tripId)}'`;
   const guardOut = exec(`npx wrangler d1 execute trip-planner-db ${dbFlag} --json --command="${guardSql}"`);
-  const guard = JSON.parse(guardOut);
+  // Strip banner before first `[` — wrangler v4 prints "🌀 ..." lines first
+  const jsonStart = guardOut.indexOf('[');
+  if (jsonStart < 0) throw new Error(`Cannot parse wrangler output:\n${guardOut}`);
+  const guard = JSON.parse(guardOut.slice(jsonStart));
   const guardCount = guard?.[0]?.results?.[0]?.n ?? 0;
   if (guardCount > 0) {
     console.log(`\n[skip] trip ${flags.tripId} 已有 ${guardCount} 個 trip_pretrip_notes row — 已匯入過。`);
