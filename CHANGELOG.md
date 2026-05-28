@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.6] - 2026-05-28
+
+**Feature — 行程筆記 PR6 / 19：住宿 LodgingsSection CRUD UI**
+
+第二個 section CRUD UI。沿用 FlightsSection pattern，住宿 row layout（名稱大字 + chip 訂房編號 + 入住/退房 + 地址 + 備註）+ 7 fields edit + autosave OCC + drag-reorder + ConfirmModal delete。HuiYun 3 個 imported 住宿可在前端顯示 / 編輯。
+
+### Added
+
+- `src/components/trip-notes/LodgingsSection.tsx`：
+  - Display：飯店名稱（15px bold）+ 訂房編號 chip + 入住→退房 range + 地址 + 備註
+  - Edit mode：7 fields 2-col grid（name / address 全寬 + check_in/out datetime + booking_no / phone + note 全寬 textarea）
+  - PATCH 對齊 v2.33.108 OCC `expectedVersion` STALE_ENTRY → AlertPanel
+  - Drag-reorder + optimistic + revert
+  - ConfirmModal delete
+- `src/pages/TripNotesPage.tsx` — wire `<LodgingsSection>` 進住宿 section body
+
+### Deferred
+
+- `day_id` Day picker UI 還沒接（PR6 簡化先沒做）— 後續 polish PR 補 Day select dropdown + 反向 navigation TripPage hotel POI → notes focus
+
 ## [2.34.5] - 2026-05-28
 
 **Feature — 行程筆記 PR5 / 19：航班 section CRUD UI + 7 fields inline edit + drag-reorder**
