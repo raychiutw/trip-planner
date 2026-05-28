@@ -9,14 +9,17 @@
  *
  * autosave / drag-reorder / delete pattern 同 FlightsSection。
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useContext, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useNavigate } from 'react-router-dom';
 import Icon from '../shared/Icon';
 import AlertPanel from '../shared/AlertPanel';
 import ConfirmModal from '../shared/ConfirmModal';
 import { apiFetch } from '../../lib/apiClient';
+import { TripContext } from '../../contexts/TripContext';
+import { routes } from '../../lib/routes';
 
 export interface TripLodging {
   id: number;
@@ -79,7 +82,15 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   font-size: 11px; font-weight: 600;
   white-space: nowrap;
+  border: none; cursor: default;
 }
+.tp-notes-lodging-chip.is-day {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  cursor: pointer;
+  transition: background 150ms;
+}
+.tp-notes-lodging-chip.is-day:hover { background: var(--color-accent-bg); }
 .tp-notes-lodging-note { margin-top: 6px; font-size: var(--font-size-footnote); color: var(--color-muted); word-break: break-word; }
 
 /* Edit mode (shared with FlightsSection styles convention) */
@@ -131,16 +142,20 @@ const SCOPED_STYLES = `
 .tp-notes-lodging-icon-btn .svg-icon { width: 14px; height: 14px; }
 `;
 
+interface DayOption { id: number; dayNum: number; label: string; }
+
 interface SortableRowProps {
   lodging: TripLodging;
   isEditing: boolean;
+  days: DayOption[];
   onEdit: () => void;
   onCloseEdit: () => void;
   onSaveField: (field: keyof TripLodging, value: string | number | null) => void;
   onDelete: () => void;
+  onNavigateDay: (dayNum: number) => void;
 }
 
-function SortableLodgingRow({ lodging, isEditing, onEdit, onCloseEdit, onSaveField, onDelete }: SortableRowProps) {
+function SortableLodgingRow({ lodging, isEditing, days, onEdit, onCloseEdit, onSaveField, onDelete, onNavigateDay }: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lodging.id,
     disabled: isEditing,
@@ -206,6 +221,19 @@ function SortableLodgingRow({ lodging, isEditing, onEdit, onCloseEdit, onSaveFie
                 placeholder="例：+81-98-867-2231"
               />
             </div>
+            <div className="tp-notes-lodging-edit-full">
+              <div className="tp-notes-lodging-edit-label">連結到 Day</div>
+              <select
+                defaultValue={lodging.dayId ?? ''}
+                onChange={(e) => onSaveField('dayId', e.target.value ? Number(e.target.value) : null)}
+                data-testid={`lodging-input-day-${lodging.id}`}
+              >
+                <option value="">不連結特定 Day</option>
+                {days.map((d) => (
+                  <option key={d.id} value={d.id}>{d.label}</option>
+                ))}
+              </select>
+            </div>
             <textarea
               className="tp-notes-lodging-edit-full tp-notes-lodging-edit-note"
               defaultValue={lodging.note}
@@ -259,6 +287,20 @@ function SortableLodgingRow({ lodging, isEditing, onEdit, onCloseEdit, onSaveFie
       <div className="tp-notes-lodging-body" onClick={onEdit} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onEdit()}>
         <div className="tp-notes-lodging-name">{lodging.name || '（未命名住宿）'}</div>
         <div className="tp-notes-lodging-meta">
+          {(() => {
+            const day = lodging.dayId !== null ? days.find((d) => d.id === lodging.dayId) : null;
+            return day ? (
+              <button
+                type="button"
+                className="tp-notes-lodging-chip is-day"
+                onClick={(e) => { e.stopPropagation(); onNavigateDay(day.dayNum); }}
+                data-testid={`lodging-day-chip-${lodging.id}`}
+                title={`跳到 ${day.label}`}
+              >
+                {day.label} →
+              </button>
+            ) : null;
+          })()}
           {lodging.bookingNo && <span className="tp-notes-lodging-chip">訂房 {lodging.bookingNo}</span>}
           {lodging.checkInAt && (
             <span>
@@ -297,6 +339,17 @@ function SortableLodgingRow({ lodging, isEditing, onEdit, onCloseEdit, onSaveFie
 }
 
 export default function LodgingsSection({ tripId, items, onChange }: LodgingsSectionProps) {
+  const tripCtx = useContext(TripContext);
+  const navigate = useNavigate();
+  const days: DayOption[] = (tripCtx?.days ?? []).map((d) => ({
+    id: d.id,
+    dayNum: d.dayNum,
+    label: d.title ? `Day ${d.dayNum} · ${d.title}` : (d.label ?? `Day ${d.dayNum}`),
+  }));
+  const handleNavigateDay = useCallback((dayNum: number) => {
+    if (!tripId) return;
+    navigate(`${routes.tripsSelected(tripId)}&day=${dayNum}`);
+  }, [navigate, tripId]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -395,10 +448,12 @@ export default function LodgingsSection({ tripId, items, onChange }: LodgingsSec
                   key={lodging.id}
                   lodging={lodging}
                   isEditing={editingId === lodging.id}
+                  days={days}
                   onEdit={() => setEditingId(lodging.id)}
                   onCloseEdit={() => setEditingId(null)}
                   onSaveField={(field, value) => void handleSaveField(lodging.id, field, value)}
                   onDelete={() => setPendingDeleteId(lodging.id)}
+                  onNavigateDay={handleNavigateDay}
                 />
               ))}
             </div>
