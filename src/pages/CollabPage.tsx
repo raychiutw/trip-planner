@@ -75,11 +75,10 @@ export default function CollabPage() {
     return () => { cancelled = true; };
   }, [auth.user, tripId]);
 
+  // v2.33.139: 拔 history.back 改 explicit URL (對齊 useNavigateBack hook
+  // 的新行為)。回 trip detail（/trips?selected=:id）或 /trips fallback。
   const handleBack = () => {
-    // 優先用 browser history(回到原進入頁面),否則 fallback /trips
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-    } else if (tripId) {
+    if (tripId) {
       navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
     } else {
       navigate('/trips');

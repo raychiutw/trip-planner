@@ -24,7 +24,7 @@
  *   - 拿掉 portal / backdrop / close X button / ESC handler
  *   - 從 props (open, tripId, dayNum, dayLabel, defaultRegion) 改 useParams +
  *     useSearchParams + 自己 fetch days 取 dayLabel
- *   - onClose / onAdded 改 navigate(-1) + dispatch tp-entry-updated
+ *   - onClose / onAdded 走 useNavigateBack(routes.tripsSelected(id)) explicit URL + dispatch tp-entry-updated
  *   - 完成按鈕同時放 TitleBar action + bottom bar (兩處同步 disabled state)
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';

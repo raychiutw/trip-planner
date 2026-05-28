@@ -3,6 +3,45 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.139] - 2026-05-28
+
+**Fix — titleBar SaveStatus 拔除 + back nav 全改 explicit URL**
+
+User feedback 2026-05-28 QA 截圖：
+1. titleBar 右上「即將儲存…」/「儲存中…」狀態 noise，user 不需要看（auto-save 默默完成，失敗才需告知）
+2. 回前頁不該用 history `navigate(-1)`，要明確指定 prev URL
+
+### Changed
+
+#### (A) titleBar SaveStatus 拔除（EditEntryPage + EditTripPage）
+
+- `src/pages/EditEntryPage.tsx`：
+  - 移除 `import SaveStatus`、`derivedSaveState`、`titleBarActions`
+  - `<TitleBar>` 不再傳 `actions` prop — 右上完全 silent
+  - 拔 `[error, setError]` useState — UI 不讀，改 showToast 直接呈現
+  - handleSave 失敗 path + delete-stop catch 全走 `showToast(msg, 'error', 6000)` 對齊 mockup spec
+- `src/pages/EditTripPage.tsx`：同樣 pattern
+- `SaveStatus` component 本身保留（TimelineRail inline + TravelPillDialog footer 仍用）
+
+#### (B) Back navigation 永遠走 explicit URL
+
+- `src/hooks/useNavigateBack.ts`：拔 `window.history.length > 1 ? navigate(-1) : navigate(fallbackPath)` 二分法 → 永遠 `navigate(fallbackPath)`
+  - Footgun fix：history 含 external referrer / login redirect 時 `navigate(-1)` 跳到非預期 URL；open in new tab 也走 fallback 正確
+- `src/pages/CollabPage.tsx` `handleBack()`：拔同樣的 history check，改 `if (tripId) navigate('/trips?selected=:id') else navigate('/trips')`
+- 4 處 stale docstring 註解（NewTrip / EditTrip / EntryAction / AddStop）改寫對齊「explicit URL via useNavigateBack」現狀
+
+### Added
+
+- `tests/unit/silent-savestatus-explicit-back-nav.test.ts`：12 條 regression
+  - (A) EditEntryPage / EditTripPage 不再 import SaveStatus / 不傳 actions / 失敗仍 showToast
+  - (B) useNavigateBack 永遠 navigate(fallback) / CollabPage 改 explicit URL
+  - 全 codebase grep — `src/pages` `src/hooks` `src/components` 0 個 `navigate(-N)` 殘留（排除 docstring）
+
+### Verification
+
+- vitest 12/12 pass
+- tsc --noEmit clean
+
 ## [2.33.138] - 2026-05-28
 
 **Fix — EditEntryPage 備選 row mobile layout 過窄**
