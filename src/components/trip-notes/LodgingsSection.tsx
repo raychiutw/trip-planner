@@ -80,7 +80,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-full);
   background: var(--color-tertiary);
   color: var(--color-muted);
-  font-size: 11px; font-weight: 600;
+  font-size: var(--font-size-caption2); font-weight: 600;
   white-space: nowrap;
   border: none; cursor: default;
 }

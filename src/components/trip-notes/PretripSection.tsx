@@ -69,7 +69,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-full);
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
-  font-size: 11px; font-weight: 600;
+  font-size: var(--font-size-caption2); font-weight: 600;
   white-space: nowrap;
 }
 .tp-notes-pretrip-ai-chip .svg-icon { width: 10px; height: 10px; }
@@ -84,7 +84,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-sm);
   background: var(--color-tertiary);
   color: var(--color-muted);
-  font-size: 10px; font-weight: 600;
+  font-size: var(--font-size-eyebrow); font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   margin-right: 6px;
