@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.4] - 2026-05-28
+
+**Polish — 行程筆記 PR4 QA follow-up：TitleBar + empty hero eyebrow 顯 trip name**
+
+Browser QA 後發現 mockup spec 規定 hero eyebrow + titlebar subtitle 應顯 trip 名稱，但 PR4 hardcoded「此行程」。改 useContext(TripContext) 取 trip name。TripLayout 已經 wrap 整個 `/trip/:tripId/*` 路徑，所以 context 預設可用。Fallback 為「此行程」保 test 環境不在 Router 內 mount 仍能 render。
+
+### Changed
+
+- `src/pages/TripNotesPage.tsx`：
+  - 加 `useContext(TripContext)` 取 trip name (`tripCtx?.trip?.title`)
+  - TitleBar `title` 從 `'行程筆記'` 改成 `${trip name ? '行程筆記 — ${trip name}' : '行程筆記'}`
+  - Empty hero eyebrow 從 hardcoded `'此行程'` 改成 `tripName ?? '此行程'`
+
+對齊 mockup `v1-accordion-stack.html` desktop 顯「行程筆記 — 沖繩 7 日」+ `v1-states.html` empty hero eyebrow 顯 trip name。
+
 ## [2.34.3] - 2026-05-28
 
 **Feature — 行程筆記 PR4 / 19：NotesPage React shell + accordion frame + skeleton + empty hero**
