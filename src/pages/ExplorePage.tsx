@@ -7,7 +7,7 @@
  *   - heart toggle 加入「我的收藏」(loadSaved mini-fetch 維 favoriteKeySet 正確 disable)
  *
  * Auth: useRequireAuth — page is for logged-in users.
- * TitleBar 右上 ghost action「收藏」→ navigate /favorites.
+ * TitleBar 右上 action 拔除 (v2.33.140) — back ← 已回 /favorites，重複入口。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -606,24 +606,12 @@ export default function ExplorePage() {
   const main = (
     <div className="explore-shell">
       <style>{SCOPED_STYLES}</style>
-      {/* v2.21.0 IA reshuffle: TitleBar 右上 ghost action「收藏」 → /favorites */}
+      {/* v2.33.140: 拔 TitleBar 右上「收藏」ghost action — back ← 已回 /favorites，
+          重複入口 user feedback「不需要右上角的按鈕」。 */}
       <TitleBar
         title="探索"
         back={goBack}
         backLabel="返回收藏"
-        actions={
-          <button
-            type="button"
-            className="tp-titlebar-action"
-            onClick={() => navigate('/favorites')}
-            aria-label="收藏"
-            title="收藏"
-            data-testid="explore-favorites-titlebar"
-          >
-            <Icon name="heart" />
-            <span className="tp-titlebar-action-label">收藏</span>
-          </button>
-        }
       />
       <div className="explore-wrap" data-testid="explore-page">
         <ToastContainer />
