@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.18] - 2026-05-28
+
+**Docs — 行程筆記 PR18 / 19：DESIGN.md add Trip Notes section**
+
+DESIGN.md 加 `### Trip Notes Page (\`tp-notes-*\`)` 章節，作為 source of truth for future polish + component reuse。
+
+### Added
+
+- `DESIGN.md` 加 Trip Notes Page section 對齊 AI Health Check Page pattern，包含：
+  - Route + 入口（TripCardMenu / EmbeddedActionMenu）
+  - Accordion responsive 行為 (mobile / desktop ≥768px)
+  - 4 state (loading / error / empty / hasData / ai-pending)
+  - AI button location + disabled state + 30s debounce
+  - Visual specs (section card / icon box 36×36 / Edit mode 2px accent box-shadow / ConfirmModal delete)
+  - autosave 對齊 v2.33.108 OCC pattern
+  - Stop Type Color exception（emergency kind icon semantic 色 — police/medical destructive、embassy accent、hotel success）
+
 ## [2.34.17] - 2026-05-28
 
 **Test — 行程筆記 PR17 / 19：E2E happy path spec**
