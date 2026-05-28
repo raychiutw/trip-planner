@@ -549,9 +549,10 @@ interface EmbeddedActionMenuProps {
   onEdit: () => void;
   onCollab: () => void;
   onHealthCheck: () => void;
+  onNotes?: () => void;
 }
 
-function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck }: EmbeddedActionMenuProps) {
+function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck, onNotes }: EmbeddedActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -655,6 +656,18 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthChe
         <Icon name="sparkle" />
         <span>AI 健檢</span>
       </button>
+      {onNotes && (
+        <button
+          type="button"
+          role="menuitem"
+          className="tp-embedded-menu-item"
+          onClick={runAndClose(onNotes)}
+          data-testid={`trip-embedded-menu-notes-${tripId}`}
+        >
+          <Icon name="file-text" />
+          <span>行程筆記</span>
+        </button>
+      )}
       <div className="tp-embedded-menu-divider" />
       <button
         type="button"
@@ -1137,6 +1150,7 @@ export default function TripsListPage() {
                       onCollab={handleMenuCollab}
                       onEdit={handleMenuEdit}
                       onHealthCheck={handleMenuHealthCheck}
+                      onNotes={(id) => navigate(`/trip/${encodeURIComponent(id)}/notes`)}
                       onDelete={handleMenuDelete}
                     />
                   </div>
@@ -1249,6 +1263,7 @@ export default function TripsListPage() {
               onEdit={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/edit`)}
               onCollab={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/collab`)}
               onHealthCheck={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/health`)}
+              onNotes={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/notes`)}
             />
           </>
         )}
