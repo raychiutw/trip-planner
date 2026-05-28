@@ -1,9 +1,8 @@
 /**
- * AccountPage display_name 編輯 modal — regression for v2.33.122.
+ * AccountPage display_name inline edit — v2.33.142 替代 v2.33.122 modal。
  *
- * Feature: hero name 旁 ✏ pencil icon → 點開 modal → input → Enter / 儲存 →
- * PATCH /api/account/profile → reloadUser() → toast。null displayName 走 sidebar
- * fallback (email local-part)，與 v2.33.121 對齊。
+ * User feedback 2026-05-28：「筆的編輯 直接修改名稱 離開焦點後 auto save,
+ * 不要 pop 編輯窗」。Hero name 直接變 input，blur auto-save，無 modal。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -15,78 +14,106 @@ const BACKEND = readFileSync(
   'utf8',
 );
 
-describe('AccountPage v2.33.122 display_name edit modal (regression)', () => {
-  it('hero name 旁有 ✏ edit button (testid + aria-label)', () => {
-    expect(SRC).toContain('data-testid="account-edit-name-btn"');
-    expect(SRC).toContain('aria-label="編輯名稱"');
-    expect(SRC).toMatch(/<Icon name="pencil"/);
+describe('PR17 (v2.33.142) inline edit — modal 已拔', () => {
+  it('無 showEditNameModal state / overlay testid / dialog className', () => {
+    expect(SRC).not.toMatch(/showEditNameModal/);
+    expect(SRC).not.toMatch(/account-edit-name-overlay/);
+    expect(SRC).not.toMatch(/tp-account-edit-dialog/);
   });
 
-  it('modal state hooks: showEditNameModal + editingName + savingName', () => {
-    expect(SRC).toMatch(/showEditNameModal, setShowEditNameModal/);
-    expect(SRC).toMatch(/editingName, setEditingName/);
-    expect(SRC).toMatch(/savingName, setSavingName/);
+  it('無 modal-only testid (cancel / save button)', () => {
+    expect(SRC).not.toMatch(/data-testid="account-edit-name-cancel"/);
+    expect(SRC).not.toMatch(/data-testid="account-edit-name-save"/);
   });
 
-  it('modal input + cancel + save testid', () => {
-    expect(SRC).toContain('data-testid="account-edit-name-overlay"');
-    expect(SRC).toContain('data-testid="account-edit-name-input"');
-    expect(SRC).toContain('data-testid="account-edit-name-cancel"');
-    expect(SRC).toContain('data-testid="account-edit-name-save"');
+  it('CSS 拔 tp-account-edit-overlay / dialog / title / help / actions', () => {
+    expect(SRC).not.toMatch(/\.tp-account-edit-overlay/);
+    expect(SRC).not.toMatch(/\.tp-account-edit-dialog/);
+    expect(SRC).not.toMatch(/\.tp-account-edit-title/);
+    expect(SRC).not.toMatch(/\.tp-account-edit-help/);
+    expect(SRC).not.toMatch(/\.tp-account-edit-actions/);
+    expect(SRC).not.toMatch(/@keyframes tp-account-edit-fade/);
+  });
+});
+
+describe('PR17 inline state hooks + helpers', () => {
+  it('editingName boolean + draftName string + savingName + nameInputRef + draftBaselineRef', () => {
+    expect(SRC).toMatch(/const \[editingName, setEditingName\] = useState\(false\)/);
+    expect(SRC).toMatch(/const \[draftName, setDraftName\] = useState\(''\)/);
+    expect(SRC).toMatch(/const \[savingName, setSavingName\] = useState\(false\)/);
+    expect(SRC).toMatch(/const nameInputRef = useRef<HTMLInputElement>\(null\)/);
+    expect(SRC).toMatch(/draftBaselineRef = useRef\(''\)/);
   });
 
-  it('handleSaveName 打 PATCH /account/profile + trim + null fallback (empty → null)', () => {
+  it('startEditName: useCallback + setDraftName + setEditingName(true) + focus + select via setTimeout', () => {
+    expect(SRC).toMatch(/const startEditName = useCallback/);
+    expect(SRC).toMatch(/setDraftName\(current\)/);
+    expect(SRC).toMatch(/draftBaselineRef\.current = current/);
+    expect(SRC).toMatch(/setEditingName\(true\)/);
+    expect(SRC).toMatch(/nameInputRef\.current\?\.focus\(\)/);
+    expect(SRC).toMatch(/nameInputRef\.current\?\.select\(\)/);
+  });
+
+  it('cancelEditName: revert draftName 並 setEditingName(false)', () => {
+    expect(SRC).toMatch(/const cancelEditName = useCallback/);
+    expect(SRC).toMatch(/setDraftName\(draftBaselineRef\.current\)/);
+  });
+
+  it('commitEditName: trimmed === baseline 跳過 API call', () => {
+    expect(SRC).toMatch(/const commitEditName = useCallback/);
+    expect(SRC).toMatch(/if \(trimmed === draftBaselineRef\.current\.trim\(\)\)/);
+  });
+
+  it('commitEditName: PATCH /account/profile + reloadUser + 成功 silent (無 toast)', () => {
     expect(SRC).toMatch(/apiFetch\(['"]\/account\/profile['"]/);
     expect(SRC).toMatch(/method: ['"]PATCH['"]/);
     expect(SRC).toMatch(/displayName: trimmed\.length === 0 \? null : trimmed/);
-  });
-
-  it('成功 reload user + 關 modal + toast', () => {
     expect(SRC).toMatch(/reloadUser\(\)/);
-    expect(SRC).toMatch(/setShowEditNameModal\(false\)/);
-    expect(SRC).toMatch(/showToast\(['"]名稱已更新['"]/);
+    // 成功 path 不應有 showToast('名稱已更新'...) — v2.33.122 已拔
+    expect(SRC).not.toMatch(/showToast\(['"]名稱已更新['"]/);
   });
 
-  it('鍵盤 a11y: Enter save + Escape cancel', () => {
-    expect(SRC).toMatch(/e\.key === ['"]Enter['"]/);
-    expect(SRC).toMatch(/e\.key === ['"]Escape['"]/);
+  it('commitEditName 失敗 path 仍 showToast (error)', () => {
+    expect(SRC).toMatch(/showToast\(msg, 'error'\)/);
+  });
+});
+
+describe('PR17 JSX render', () => {
+  it('editingName=true → render <input> 含 onBlur=commitEditName', () => {
+    expect(SRC).toMatch(/onBlur=\{\(\) => void commitEditName\(\)\}/);
+  });
+
+  it('editingName=true → input onKeyDown Enter blur + ESC cancel', () => {
+    expect(SRC).toMatch(/e\.key === 'Enter'/);
+    expect(SRC).toMatch(/\(e\.target as HTMLInputElement\)\.blur\(\)/);
+    expect(SRC).toMatch(/e\.key === 'Escape'/);
+    expect(SRC).toMatch(/cancelEditName\(\)/);
+  });
+
+  it('editingName=false → render h2 name (cursor:text) 點擊 startEditName', () => {
+    expect(SRC).toMatch(/<h2[\s\S]+?className="tp-account-hero-name"[\s\S]+?onClick=\{startEditName\}/);
+    expect(SRC).toMatch(/\.tp-account-hero-name \{[\s\S]*?cursor: text/);
+  });
+
+  it('pencil button 仍存在 + click 也 trigger startEditName', () => {
+    expect(SRC).toMatch(/data-testid="account-edit-name-btn"/);
+    expect(SRC).toMatch(/<button[\s\S]+?className="tp-account-hero-name-edit"[\s\S]+?onClick=\{startEditName\}/);
   });
 
   it('input maxLength 50 對齊 backend MAX_DISPLAY_NAME_LEN', () => {
     expect(SRC).toMatch(/maxLength=\{50\}/);
     expect(BACKEND).toMatch(/MAX_DISPLAY_NAME_LEN = 50/);
   });
+
+  it('input style class .tp-account-hero-name-input — font size/weight 對齊 hero-name 避免 jump', () => {
+    expect(SRC).toMatch(/\.tp-account-hero-name-input \{[\s\S]*?font-size: var\(--font-size-title2\);[\s\S]*?font-weight: 800/);
+  });
 });
 
-describe('PATCH /api/account/profile backend handler', () => {
-  it('export onRequestPatch + requireAuth + userId guard', () => {
+describe('PATCH /api/account/profile backend handler 未動', () => {
+  it('export onRequestPatch + auth + validation 三層仍在', () => {
     expect(BACKEND).toMatch(/export const onRequestPatch/);
     expect(BACKEND).toMatch(/requireAuth\(context\)/);
-    expect(BACKEND).toMatch(/AppError\(['"]AUTH_REQUIRED['"]\)/);
-  });
-
-  it('validate displayName: null / string / undefined 3 path', () => {
-    expect(BACKEND).toMatch(/body\.displayName === undefined/);
-    expect(BACKEND).toMatch(/body\.displayName === null/);
-    expect(BACKEND).toMatch(/typeof body\.displayName !== ['"]string['"]/);
-  });
-
-  it('trim + empty 視同 null + max 50 length 拒', () => {
-    expect(BACKEND).toMatch(/\.trim\(\)/);
-    expect(BACKEND).toMatch(/trimmed\.length === 0/);
-    expect(BACKEND).toMatch(/trimmed\.length > MAX_DISPLAY_NAME_LEN/);
-  });
-
-  it('UPDATE users SET display_name + audit log', () => {
-    expect(BACKEND).toMatch(/UPDATE users SET display_name = \?, updated_at = \?/);
-    expect(BACKEND).toMatch(/logAudit\(/);
-    expect(BACKEND).toMatch(/tableName: ['"]user['"]/);
-  });
-
-  it('response mirror /api/oauth/userinfo shape (camelCase)', () => {
-    expect(BACKEND).toMatch(/emailVerified: row\.email_verified_at !== null/);
-    expect(BACKEND).toMatch(/displayName: row\.display_name/);
-    expect(BACKEND).toMatch(/avatarUrl: row\.avatar_url/);
-    expect(BACKEND).toMatch(/createdAt: row\.created_at/);
+    expect(BACKEND).toMatch(/MAX_DISPLAY_NAME_LEN = 50/);
   });
 });
