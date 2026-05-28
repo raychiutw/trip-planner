@@ -16,7 +16,7 @@
  *
  * CRUD UI per section (PR5-8) 還沒 — section body 顯示 row count + 「加項」placeholder。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import TitleBar from '../components/shell/TitleBar';
 import AppShell from '../components/shell/AppShell';
@@ -29,6 +29,7 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
+import { TripContext } from '../contexts/TripContext';
 
 interface TripFlight { id: number; sortOrder: number; airline: string; flightNo: string; cabinClass: string; departAirport: string; arriveAirport: string; departAt: string; arriveAt: string; note: string; version: number; }
 interface TripLodging { id: number; sortOrder: number; name: string; address: string; checkInAt: string; checkOutAt: string; bookingNo: string; phone: string; note: string; dayId: number | null; version: number; }
@@ -199,6 +200,9 @@ export default function TripNotesPage() {
   const user = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
+  // Trip name 從 TripLayout 提供的 TripContext 取；不在 layout 範圍內 (test) 時 fallback
+  const tripCtx = useContext(TripContext);
+  const tripName = tripCtx?.trip?.title ?? null;
 
   const [data, setData] = useState<NotesAggregator | null>(null);
   const [loading, setLoading] = useState(true);
@@ -265,7 +269,7 @@ export default function TripNotesPage() {
   const main = (
     <div className="tp-notes-shell" data-testid="trip-notes-page">
       <style>{SCOPED_STYLES}</style>
-      <TitleBar title="行程筆記" back={handleBack} backLabel="回行程" />
+      <TitleBar title={tripName ? `行程筆記 — ${tripName}` : '行程筆記'} back={handleBack} backLabel="回行程" />
 
       <div className="tp-notes-page-body">
         {loading && (
@@ -291,7 +295,7 @@ export default function TripNotesPage() {
             <div className="tp-notes-empty-hero-bubble">
               <Icon name="file-text" />
             </div>
-            <div className="tp-notes-empty-hero-eyebrow">{tripId ? '此行程' : ''}</div>
+            <div className="tp-notes-empty-hero-eyebrow">{tripName ?? '此行程'}</div>
             <div className="tp-notes-empty-hero-title">建立行程筆記</div>
             <div className="tp-notes-empty-hero-sub">
               航班、住宿、預訂、行前須知、緊急聯絡 — 跨工具的雜訊集中在這一頁。
