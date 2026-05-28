@@ -3,6 +3,44 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.19] - 2026-05-28
+
+**Test — 行程筆記 PR19 / 19：TripCardMenu「行程筆記」menu item regression test (B-3 / Phase 完整)**
+
+`tests/unit/trip-card-menu-notes-entry.test.tsx` — 4 條 PR14 regression test。完整 19 PR phase B-1/B-2/B-3 ship 完成。
+
+### Added
+
+- `tests/unit/trip-card-menu-notes-entry.test.tsx` 4 條：
+  - 行程筆記 menu item 渲染 when onNotes provided
+  - 行程筆記 menu item 不渲染 when onNotes omitted（向後相容）
+  - click → onNotes(tripId) called
+  - menu items 順序對：編輯 / 共編 / AI 健檢 / **行程筆記** / 刪除
+
+### B-1 / B-2 / B-3 phase 完整 — 行程筆記 feature shipped
+
+19 PR / 12 day session：
+
+| Phase | PRs (versions) | Status |
+|---|---|---|
+| B-1 (CRUD) | v2.34.0 - 2.34.8 + 2.34.4 polish | ✓ migration + backend + 5 sections UI |
+| B-2 (AI) | v2.34.9 - 2.34.12 | ✓ generate endpoint + completion hook + frontend trigger + verified end-to-end (6 emergency contacts inserted by Claude) |
+| B-3 (polish + test) | v2.34.13 - 2.34.19 | ✓ day_id picker / menu entries / unit tests (38) / E2E spec / DESIGN.md update |
+
+**Test coverage**：
+- Migration: 17 tests
+- Import: 9 tests
+- Backend GET: 13 tests
+- Backend mutations: 22 tests
+- Generate endpoint: 8 tests
+- Completion hook: 7 tests
+- Page shell: 13 tests
+- FlightsSection: 9 tests
+- 4 sections batch: 16 tests
+- TripCardMenu regression: 4 tests
+- E2E: 4 specs
+- **Total: 122 tests covering trip-notes feature**
+
 ## [2.34.18] - 2026-05-28
 
 **Docs — 行程筆記 PR18 / 19：DESIGN.md add Trip Notes section**
