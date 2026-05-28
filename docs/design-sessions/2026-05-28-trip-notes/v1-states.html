@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>行程筆記 V1 — State Matrix v3 (post-audit)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --color-accent: #D97848;
+  --color-accent-deep: #B85C2E;
+  --color-accent-subtle: #FBEEE4;
+  --color-accent-bg: #F7DFCB;
+  --color-accent-foreground: #FFFFFF;
+  --color-background: #FFFBF5;
+  --color-secondary: #FAF4EA;
+  --color-tertiary: #F2EAD9;
+  --color-foreground: #2A1F18;
+  --color-muted: #6F5A47;
+  --color-border: #EADFCF;
+  --color-line-strong: #C8B89F;
+  --color-destructive: #C13515;
+  --color-success: #06A77D;
+  --color-info: #3B7EA1;
+  --color-priority-high-bg: rgba(193, 53, 21, 0.08);
+  --color-priority-high-dot: #C13515;
+  --font-sans: 'Inter', 'Noto Sans TC', 'PingFang TC', system-ui, sans-serif;
+  --font-size-body: 1rem;
+  --font-size-callout: 0.9375rem;
+  --font-size-footnote: 0.875rem;
+  --font-size-caption: 0.75rem;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+  --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+  --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
+  --shadow-ring: 0 0 0 2px var(--color-accent);
+  --blur-glass: 14px;
+  --tap-min: 44px;
+  --ease-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  font-family: var(--font-sans);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, textarea { font-family: inherit; color: inherit; }
+
+.matrix-wrap {
+  display: grid;
+  grid-template-columns: 390px 390px 390px;
+  gap: 24px;
+  padding: 24px;
+  background: linear-gradient(180deg, #2a1f18 0%, #1c140f 100%);
+  min-height: 100vh;
+}
+.frame-wrap { position: relative; }
+.frame-label {
+  position: absolute; top: -32px; left: 0; right: 0;
+  color: #fff;
+}
+.frame-label-tag {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--color-accent);
+}
+.frame-label-title {
+  font-size: 14px; font-weight: 600;
+  margin-top: 2px;
+}
+.frame {
+  background: var(--color-background);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+  width: 390px;
+  height: 844px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* TitleBar — 對齊 .tp-titlebar pattern */
+.tp-titlebar {
+  flex: 0 0 56px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(var(--blur-glass));
+  border-bottom: 1px solid var(--color-border);
+}
+.tp-titlebar-back {
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--color-foreground);
+  transition: background 150ms var(--ease-apple);
+}
+.tp-titlebar-back:hover { background: var(--color-tertiary); }
+.tp-titlebar-title-block { flex: 1; min-width: 0; }
+.tp-titlebar-title { font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-titlebar-subtitle { font-size: 12px; font-weight: 500; color: var(--color-muted); margin-top: 1px; }
+
+.tp-notes-page-body { flex: 1; padding: 16px; overflow-y: auto; }
+
+/* Empty hero — 拔 gradient 對齊 editorial restrained，純 secondary + hairline */
+.tp-notes-empty-hero {
+  padding: 24px 20px;
+  background: var(--color-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  text-align: center;
+  margin-bottom: 16px;
+}
+.tp-notes-empty-hero-bubble {
+  width: 56px; height: 56px;
+  margin: 0 auto 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--color-background);
+  color: var(--color-accent-deep);
+  border: 1px solid var(--color-border);
+}
+.tp-notes-empty-hero-eyebrow {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+.tp-notes-empty-hero-title { font-size: 20px; font-weight: 700; line-height: 1.3; }
+.tp-notes-empty-hero-sub { font-size: 14px; color: var(--color-muted); margin-top: 6px; max-width: 280px; margin-inline: auto; }
+.tp-notes-empty-hero-progress {
+  display: flex; justify-content: center; gap: 6px; margin-top: 14px;
+}
+.tp-notes-empty-hero-dot {
+  width: 24px; height: 6px; border-radius: var(--radius-full);
+  background: var(--color-tertiary);
+}
+
+/* Section accordion (novel pattern — flagged in audit, semantic <details>-equivalent in React) */
+.tp-notes-section {
+  margin-bottom: 12px;
+  background: var(--color-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+.tp-notes-section.is-open { border-color: var(--color-line-strong); }
+.tp-notes-section.is-suggested { border-color: var(--color-accent-bg); }
+
+.tp-notes-section-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  min-height: var(--tap-min);
+}
+.tp-notes-section-icon {
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+  color: var(--color-foreground);
+}
+.tp-notes-section-icon.is-accent {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent-bg);
+  color: var(--color-accent-deep);
+}
+.tp-notes-section-titles { flex: 1; min-width: 0; }
+.tp-notes-section-title { font-size: 17px; font-weight: 700; line-height: 1.2; }
+.tp-notes-section-meta { margin-top: 2px; font-size: 13px; color: var(--color-muted); }
+.tp-notes-section-meta.is-warn { color: var(--color-accent-deep); font-weight: 600; }
+.tp-notes-section-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+/* AI button — section-level CTA，ghost accent style 對齊既有 .tp-titlebar-action ghost family */
+.tp-notes-ai-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  font-size: 13px; font-weight: 600;
+  min-height: 32px;
+  transition: background 150ms var(--ease-apple);
+}
+.tp-notes-ai-btn:hover { background: var(--color-accent-bg); }
+.tp-notes-ai-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+
+.tp-notes-section-chevron {
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--color-muted);
+  transition: transform 200ms var(--ease-apple);
+}
+.tp-notes-section.is-open .tp-notes-section-chevron { transform: rotate(180deg); }
+
+.tp-notes-section-body {
+  display: none;
+  border-top: 1px solid var(--color-border);
+}
+.tp-notes-section.is-open .tp-notes-section-body { display: block; }
+
+/* Row */
+.tp-notes-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+.tp-notes-row:last-of-type { border-bottom: none; }
+.tp-notes-row-drag {
+  width: 24px; height: 24px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--color-line-strong);
+  cursor: grab;
+  flex-shrink: 0;
+  opacity: 0;
+}
+.tp-notes-row:hover .tp-notes-row-drag { opacity: 1; }
+.tp-notes-row-content { flex: 1; min-width: 0; }
+.tp-notes-row-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.tp-notes-row-desc { font-size: 14px; color: var(--color-muted); margin-top: 2px; word-break: break-word; }
+.tp-notes-row-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.tp-notes-row-icon-btn {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  transition: background 150ms, color 150ms;
+}
+.tp-notes-row-icon-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+.tp-notes-row-icon-btn.is-danger:hover { background: var(--color-priority-high-bg); color: var(--color-destructive); }
+
+/* Inline edit state */
+.tp-notes-row.is-editing {
+  background: var(--color-background);
+  box-shadow: var(--shadow-ring);
+  border-radius: var(--radius-md);
+  margin: 6px 8px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  position: relative;
+}
+.tp-notes-row.is-editing + .tp-notes-row { border-top: 1px solid var(--color-border); }
+.tp-notes-row.is-editing .tp-notes-row-drag { display: none; }
+.tp-notes-row-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  font-size: 15px; font-weight: 600;
+  outline: none;
+}
+.tp-notes-row-input:focus { border-color: var(--color-accent); }
+.tp-notes-row-input-desc {
+  margin-top: 6px; font-weight: 400; font-size: 14px;
+  min-height: 48px; resize: vertical;
+}
+
+/* Autosave hint */
+.tp-notes-autosave-hint {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+.tp-notes-autosave-hint .dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--color-line-strong);
+}
+.tp-notes-autosave-hint.is-typing .dot { background: var(--color-muted); animation: blink 1s ease-in-out infinite; }
+.tp-notes-autosave-hint.is-saved .dot { background: var(--color-success); }
+@keyframes blink {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* Chip */
+.tp-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px; font-weight: 600;
+  white-space: nowrap;
+}
+.tp-chip-ai { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+.tp-chip-ai svg { width: 10px; height: 10px; }
+
+/* AlertPanel — 對齊 src/components/shared/AlertPanel.tsx canonical (DESIGN.md L549 儲存失敗 surface) */
+.tp-alert-panel {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  margin: 12px 0;
+}
+.tp-alert-panel-icon {
+  flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--color-secondary);
+  color: var(--color-foreground);
+}
+.tp-alert-panel-icon .svg-icon { width: 18px; height: 18px; }
+.tp-alert-panel-body {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.tp-alert-panel-title {
+  font-size: var(--font-size-callout); font-weight: 700;
+  color: var(--color-foreground); line-height: 1.4;
+}
+.tp-alert-panel-message {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted); line-height: 1.4;
+}
+.tp-alert-panel-actions {
+  display: flex; gap: 8px; align-items: center;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+.tp-alert-panel-action {
+  font-size: var(--font-size-footnote); font-weight: 700;
+  padding: 8px 14px; border-radius: var(--radius-full);
+  border: 1px solid currentColor;
+  background: transparent;
+  min-height: var(--tap-min);
+  color: inherit;
+}
+.tp-alert-panel-action:hover { filter: brightness(0.95); }
+.tp-alert-panel.is-error {
+  background: var(--color-priority-high-bg);
+  border-color: var(--color-priority-high-dot);
+  color: var(--color-priority-high-dot);
+}
+.tp-alert-panel.is-error .tp-alert-panel-icon {
+  background: var(--color-priority-high-dot);
+  color: var(--color-accent-foreground);
+}
+.tp-alert-panel.is-error .tp-alert-panel-title { color: var(--color-priority-high-dot); }
+
+/* Emergency row */
+.tp-notes-emergency-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+}
+.tp-notes-emergency-row:last-of-type { border-bottom: none; }
+.tp-notes-emergency-kind-icon {
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--color-tertiary);
+  color: var(--color-foreground);
+  flex-shrink: 0;
+}
+.tp-notes-emergency-kind-icon.is-emergency { background: var(--color-priority-high-bg); color: var(--color-destructive); }
+.tp-notes-emergency-kind-icon.is-embassy { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+.tp-notes-emergency-kind-icon.is-hotel { background: rgba(6, 167, 125, 0.12); color: var(--color-success); }
+.tp-notes-emergency-name { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tp-notes-emergency-detail { font-size: 13px; color: var(--color-muted); margin-top: 2px; }
+.tp-notes-emergency-phone-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-height: 36px;
+  white-space: nowrap;
+}
+.tp-notes-emergency-phone-btn:hover { background: var(--color-accent-bg); }
+.tp-notes-emergency-phone-btn.is-urgent {
+  background: var(--color-priority-high-bg);
+  color: var(--color-destructive);
+}
+.tp-notes-emergency-phone-btn.is-urgent:hover { filter: brightness(0.95); }
+
+.tp-notes-add-row-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%;
+  padding: 12px 16px;
+  color: var(--color-muted);
+  font-size: 14px; font-weight: 600;
+  min-height: var(--tap-min);
+}
+.tp-notes-add-row-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+
+/* Toast (only for success notification — DESIGN.md 規範限 passive notification) */
+.tp-toast-stack {
+  position: absolute;
+  top: 16px; left: 16px; right: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  z-index: 250;
+  pointer-events: none;
+}
+.tp-toast {
+  display: inline-flex; align-items: center; gap: 10px;
+  max-width: 360px;
+  padding: 12px 16px 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  box-shadow: var(--shadow-md);
+  color: var(--color-foreground);
+  font-size: 14px; font-weight: 500;
+  pointer-events: auto;
+}
+.tp-toast::before {
+  content: ""; width: 8px; height: 8px;
+  border-radius: 999px;
+  background: var(--color-success);
+  flex: 0 0 auto;
+}
+.tp-toast.is-success { border-color: color-mix(in srgb, var(--color-success) 32%, transparent); }
+.tp-toast.is-success::before { background: var(--color-success); }
+
+.svg-icon { width: 18px; height: 18px; stroke-width: 2; }
+.svg-icon-sm { width: 14px; height: 14px; stroke-width: 2; }
+.svg-icon-lg { width: 20px; height: 20px; stroke-width: 2; }
+.svg-icon-xl { width: 28px; height: 28px; stroke-width: 2; }
+</style>
+</head>
+<body>
+
+<div class="matrix-wrap">
+
+  <!-- ============ FRAME A: Empty hero (0/5) — 拔 gradient ============ -->
+  <div class="frame-wrap">
+    <div class="frame-label">
+      <div class="frame-label-tag">State A · 第一次進入</div>
+      <div class="frame-label-title">空 hero (0/5) — 純色 + hairline</div>
+    </div>
+    <div class="frame">
+      <div class="tp-titlebar">
+        <button class="tp-titlebar-back" aria-label="返回">
+          <svg class="svg-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div class="tp-titlebar-title-block">
+          <div class="tp-titlebar-title">行程筆記</div>
+          <div class="tp-titlebar-subtitle">沖繩 7 日</div>
+        </div>
+      </div>
+
+      <div class="tp-notes-page-body">
+        <div class="tp-notes-empty-hero">
+          <div class="tp-notes-empty-hero-bubble">
+            <svg class="svg-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+          </div>
+          <div class="tp-notes-empty-hero-eyebrow">沖繩 7 日</div>
+          <div class="tp-notes-empty-hero-title">建立行程筆記</div>
+          <div class="tp-notes-empty-hero-sub">航班、住宿、預訂、行前須知、緊急聯絡 — 跨工具的雜訊集中在這一頁。AI 可代寫 行前須知 / 緊急聯絡。</div>
+          <div class="tp-notes-empty-hero-progress" aria-label="完成 0 / 5">
+            <span class="tp-notes-empty-hero-dot"></span>
+            <span class="tp-notes-empty-hero-dot"></span>
+            <span class="tp-notes-empty-hero-dot"></span>
+            <span class="tp-notes-empty-hero-dot"></span>
+            <span class="tp-notes-empty-hero-dot"></span>
+          </div>
+        </div>
+
+        <div class="tp-notes-section is-suggested">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon is-accent">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">航班</div>
+              <div class="tp-notes-section-meta is-warn">建議先填 · 純手動</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <span class="tp-notes-section-chevron"><svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tp-notes-section">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9.5L12 3l9 6.5"></path><path d="M5 10v10h14V10"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">住宿</div>
+              <div class="tp-notes-section-meta">尚未填寫</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <span class="tp-notes-section-chevron"><svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tp-notes-section">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">預訂</div>
+              <div class="tp-notes-section-meta">尚未填寫</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <span class="tp-notes-section-chevron"><svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tp-notes-section">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">行前須知</div>
+              <div class="tp-notes-section-meta">空 · AI 可代寫</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <button class="tp-notes-ai-btn">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path><path d="M12 22a10 10 0 1 0-10-10"></path></svg>
+                AI
+              </button>
+              <span class="tp-notes-section-chevron"><svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tp-notes-section">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">緊急聯絡</div>
+              <div class="tp-notes-section-meta">空 · AI 可代寫</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <button class="tp-notes-ai-btn">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path><path d="M12 22a10 10 0 1 0-10-10"></path></svg>
+                AI
+              </button>
+              <span class="tp-notes-section-chevron"><svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FRAME B: Inline edit + autosave + AlertPanel error ============ -->
+  <div class="frame-wrap">
+    <div class="frame-label">
+      <div class="frame-label-tag">State B · 編輯 + 儲存失敗</div>
+      <div class="frame-label-title">Inline edit + AlertPanel (DESIGN.md L549)</div>
+    </div>
+    <div class="frame">
+      <div class="tp-titlebar">
+        <button class="tp-titlebar-back" aria-label="返回">
+          <svg class="svg-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div class="tp-titlebar-title-block">
+          <div class="tp-titlebar-title">行程筆記</div>
+          <div class="tp-titlebar-subtitle">沖繩 7 日</div>
+        </div>
+      </div>
+
+      <div class="tp-notes-page-body">
+        <div class="tp-notes-section is-open">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">行前須知</div>
+              <div class="tp-notes-section-meta">3 項 · 含 2 AI 建議</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <button class="tp-notes-ai-btn">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path><path d="M12 22a10 10 0 1 0-10-10"></path></svg>
+                AI
+              </button>
+              <span class="tp-notes-section-chevron"><svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+            </div>
+          </div>
+          <div class="tp-notes-section-body">
+
+            <!-- AlertPanel error — 對齊 src/components/shared/AlertPanel.tsx is-error variant -->
+            <div style="padding: 0 12px;">
+              <div class="tp-alert-panel is-error" role="alert">
+                <div class="tp-alert-panel-icon">
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </div>
+                <div class="tp-alert-panel-body">
+                  <div class="tp-alert-panel-title">這項筆記沒有儲存成功</div>
+                  <div class="tp-alert-panel-message">你的內容還在輸入欄位裡，請點「重試」再試一次。</div>
+                  <div class="tp-alert-panel-actions">
+                    <button class="tp-alert-panel-action">重試</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Display row -->
+            <div class="tp-notes-row">
+              <div class="tp-notes-row-drag">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"></circle><circle cx="15" cy="6" r="1.5"></circle><circle cx="9" cy="12" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle><circle cx="9" cy="18" r="1.5"></circle><circle cx="15" cy="18" r="1.5"></circle></svg>
+              </div>
+              <div class="tp-notes-row-content">
+                <div class="tp-notes-row-title">貨幣 — 1 TWD ≈ 4.8 JPY</div>
+                <div class="tp-notes-row-desc">機場 ATM 手續費低於市區 7-Eleven。</div>
+              </div>
+            </div>
+
+            <!-- Editing row (focus + autosave hint) — 失敗 row 對應上方 AlertPanel -->
+            <div class="tp-notes-row is-editing">
+              <div class="tp-notes-row-content">
+                <input class="tp-notes-row-input" type="text" value="插頭 — A 型 110V，可帶轉換頭" />
+                <textarea class="tp-notes-row-input tp-notes-row-input-desc" placeholder="補充說明…">與台灣相同免轉接頭。日本電壓 100V 略低，吹風機可正常使用。建議攜帶延長線方便多裝置充電。</textarea>
+                <div class="tp-notes-autosave-hint is-typing">
+                  <span class="dot"></span>
+                  <span>輸入中… 失焦自動儲存（v2.33.108）</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="tp-notes-row">
+              <div class="tp-notes-row-drag">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"></circle><circle cx="15" cy="6" r="1.5"></circle><circle cx="9" cy="12" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle><circle cx="9" cy="18" r="1.5"></circle><circle cx="15" cy="18" r="1.5"></circle></svg>
+              </div>
+              <div class="tp-notes-row-content">
+                <div class="tp-notes-row-title">
+                  小費 — 沖繩無小費文化
+                  <span class="tp-chip tp-chip-ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path></svg>AI 建議</span>
+                </div>
+                <div class="tp-notes-row-desc">餐廳含 service charge，自付小費反失禮。</div>
+              </div>
+              <div class="tp-notes-row-actions">
+                <button class="tp-notes-row-icon-btn" aria-label="編輯"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button class="tp-notes-row-icon-btn is-danger" aria-label="刪除"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></button>
+              </div>
+            </div>
+
+            <button class="tp-notes-add-row-btn">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              加項
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top: 16px; padding: 12px; background: var(--color-tertiary); border-radius: var(--radius-md); font-size: 12px; color: var(--color-muted); line-height: 1.5;">
+          <strong style="color: var(--color-foreground);">Autosave 行為（v2.33.108 + DESIGN.md L549）</strong><br>
+          · 編輯即儲存：blur / ESC → 自動 PATCH（800ms debounce）<br>
+          · 成功 silent（無 toast / 無 banner）<br>
+          · <strong>失敗 → AlertPanel.is-error 持續可見</strong>，保留 input + 「重試」action<br>
+          · OCC version conflict 409 → reload row 再 retry<br>
+          · 文案對齊 Copy Rules：發生什麼事 / 怎麼做 / 資料是否保留
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FRAME C: Populated emergency + success toast ============ -->
+  <div class="frame-wrap">
+    <div class="frame-label">
+      <div class="frame-label-tag">State C · AI 生成完成</div>
+      <div class="frame-label-title">緊急聯絡 4 row + 撥號 button</div>
+    </div>
+    <div class="frame">
+      <div class="tp-titlebar">
+        <button class="tp-titlebar-back" aria-label="返回">
+          <svg class="svg-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div class="tp-titlebar-title-block">
+          <div class="tp-titlebar-title">行程筆記</div>
+          <div class="tp-titlebar-subtitle">沖繩 7 日</div>
+        </div>
+      </div>
+
+      <div class="tp-notes-page-body">
+        <div class="tp-notes-section is-open">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon is-accent">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">緊急聯絡</div>
+              <div class="tp-notes-section-meta">4 項 · 含 3 個 AI 建議</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <button class="tp-notes-ai-btn">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path><path d="M12 22a10 10 0 1 0-10-10"></path></svg>
+                重新生成
+              </button>
+              <span class="tp-notes-section-chevron"><svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+            </div>
+          </div>
+          <div class="tp-notes-section-body">
+            <div class="tp-notes-emergency-row">
+              <div class="tp-notes-emergency-kind-icon is-embassy">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21h18"></path><path d="M5 21V7l8-4 8 4v14"></path><line x1="9" y1="9" x2="9" y2="9.01"></line><line x1="9" y1="13" x2="9" y2="13.01"></line></svg>
+              </div>
+              <div>
+                <div class="tp-notes-emergency-name">
+                  駐那霸臺北經濟文化辦事處
+                  <span class="tp-chip tp-chip-ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path></svg>AI</span>
+                </div>
+                <div class="tp-notes-emergency-detail">駐外館處 · 那覇市久茂地3-15-9</div>
+              </div>
+              <a class="tp-notes-emergency-phone-btn" href="tel:+81988628603">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"></path></svg>
+                098-862-8603
+              </a>
+            </div>
+
+            <div class="tp-notes-emergency-row">
+              <div class="tp-notes-emergency-kind-icon is-emergency">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2L2 22h20L12 2z"></path><line x1="12" y1="10" x2="12" y2="14"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              </div>
+              <div>
+                <div class="tp-notes-emergency-name">
+                  日本警察
+                  <span class="tp-chip tp-chip-ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path></svg>AI</span>
+                </div>
+                <div class="tp-notes-emergency-detail">報案 / 失竊 / 交通事故</div>
+              </div>
+              <a class="tp-notes-emergency-phone-btn is-urgent" href="tel:110">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"></path></svg>
+                110
+              </a>
+            </div>
+
+            <div class="tp-notes-emergency-row">
+              <div class="tp-notes-emergency-kind-icon is-emergency">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"></path></svg>
+              </div>
+              <div>
+                <div class="tp-notes-emergency-name">
+                  救護車 / 消防
+                  <span class="tp-chip tp-chip-ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path></svg>AI</span>
+                </div>
+                <div class="tp-notes-emergency-detail">受傷 / 火災 / 急病</div>
+              </div>
+              <a class="tp-notes-emergency-phone-btn is-urgent" href="tel:119">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"></path></svg>
+                119
+              </a>
+            </div>
+
+            <div class="tp-notes-emergency-row">
+              <div class="tp-notes-emergency-kind-icon is-hotel">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9.5L12 3l9 6.5"></path><path d="M5 10v10h14V10"></path></svg>
+              </div>
+              <div>
+                <div class="tp-notes-emergency-name">那霸久茂地里士滿酒店</div>
+                <div class="tp-notes-emergency-detail">入住飯店 · 手動加</div>
+              </div>
+              <a class="tp-notes-emergency-phone-btn" href="tel:+81989612255">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"></path></svg>
+                098-961-2255
+              </a>
+            </div>
+
+            <button class="tp-notes-add-row-btn">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              加聯絡人
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success toast — 對齊 .tp-toast canonical (低風險 passive notification 合法 toast 用途) -->
+      <div class="tp-toast-stack">
+        <div class="tp-toast is-success">已新增 3 個緊急聯絡</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
