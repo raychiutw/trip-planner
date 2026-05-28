@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.5] - 2026-05-28
+
+**Feature — 行程筆記 PR5 / 19：航班 section CRUD UI + 7 fields inline edit + drag-reorder**
+
+第一個 section CRUD UI 上線。航班 boarding pass row + 7 fields inline edit + click-to-edit + @dnd-kit drag-reorder + ConfirmModal delete。autosave 對齊 v2.33.108 OCC pattern。
+
+### Added
+
+- `src/components/trip-notes/FlightsSection.tsx`：
+  - Display mode — boarding pass layout（航空 + 航班 chip top row + 從→到 grid with 22px 起飛/抵達 time + airport + date）
+  - Edit mode — 7 inputs 2-col grid（airline / flight_no / depart_airport / arrive_airport / depart_at datetime / arrive_at datetime / note textarea）
+  - **autosave on blur**（對齊 v2.33.108 + 設計 doc Premise）— PATCH `/api/trips/:id/notes/flights/:id` with `expectedVersion` OCC
+  - **Drag-reorder** via `@dnd-kit/sortable` → PATCH `/flights/reorder` bulk + optimistic update + revert on error
+  - **Delete** via `<ConfirmModal>` (對齊 DESIGN.md「Destructive 必走 ConfirmModal」)
+  - **Add** auto-create empty row + auto-enter edit mode → user 即時填寫
+  - **Error** → `<AlertPanel variant="error">` 持續可見 (DESIGN.md L549) + 重試按鈕
+- `src/pages/TripNotesPage.tsx`：
+  - import + wire `<FlightsSection>` 進航班 section body
+  - 加 `.tp-notes-section-body.is-placeholder` modifier 分開 CRUD 區與 placeholder 文字
+  - flights array mutation 透過 `onChange(next)` 上拋給 TripNotesPage state — single source of truth
+
+### Notes
+
+- FlightsSection 用 boarding pass row + datetime input (browser native picker)
+- `disabled={isEditing}` 在 useSortable 上 — edit mode 不能拖
+- mockup-aligned visual：22px 大時間 tabular-nums + `✈` icon + 1px hairline divider with arrow tail
+- `prefers-reduced-motion` 沿用既有 fade transition
+
 ## [2.34.4] - 2026-05-28
 
 **Polish — 行程筆記 PR4 QA follow-up：TitleBar + empty hero eyebrow 顯 trip name**
