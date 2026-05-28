@@ -145,6 +145,7 @@ const ChangePoiPage = lazyWithRetry(() => import('../pages/ChangePoiPage'));
 const EditEntryPage = lazyWithRetry(() => import('../pages/EditEntryPage'));
 // v2.31.0: AI 健檢全頁 (severity-grouped findings, polling pending state)
 const TripHealthCheckPage = lazyWithRetry(() => import('../pages/TripHealthCheckPage'));
+const TripNotesPage = lazyWithRetry(() => import('../pages/TripNotesPage'));
 
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
 
@@ -251,6 +252,8 @@ if (el) {
                 {/* v2.18.0:共編設定獨立頁(取代 ?sheet=collab bottom-sheet) */}
                 <Route path="collab" element={<CollabPage />} />
                 <Route path="health" element={<TripHealthCheckPage />} />
+                {/* v2.34.x 行程筆記 — 5 section accordion + AI gen pretrip/emergency */}
+                <Route path="notes" element={<TripNotesPage />} />
                 {/* 2026-05-03 modal-to-fullpage migration: EditTripModal → /trip/:id/edit */}
                 <Route path="edit" element={<EditTripPage />} />
                 {/* 2026-05-03 modal-to-fullpage migration: EntryActionPopover → /stop/:eid/(copy|move) */}
