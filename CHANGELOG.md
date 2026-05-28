@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.142] - 2026-05-28
+
+**Fix — AccountPage display_name 改 inline 編輯 + blur auto-save（拔 modal）**
+
+User feedback 2026-05-28：「筆的編輯 直接修改名稱 離開焦點後 auto save, 不要 pop 編輯窗」。v2.33.122 用 modal 對話框（overlay + dialog + 取消/儲存 button），user 想要直接 inline edit pattern。
+
+### Changed
+
+- `src/pages/AccountPage.tsx`：
+  - 拔 `showEditNameModal` state，改 `editingName: boolean` + `draftName: string` + `nameInputRef: HTMLInputElement` + `draftBaselineRef`（無改 skip API call）
+  - 拔 modal JSX block（overlay + dialog + 取消/儲存 button + 60+ 行）
+  - Hero name JSX 改條件 render：`editingName ? <input/> : <h2/+button/>`
+  - `<h2 className="tp-account-hero-name">` 加 `onClick={startEditName}` + `cursor:text`（name 本身可點）
+  - `<input>` `onBlur={commitEditName}` + `Enter`→blur (trigger save) / `Escape`→cancel revert
+  - 成功路徑 silent（無 toast）— 對齊 user 一脈相承「右上角不用顯示狀態」靜默 auto-save 原則
+  - 失敗路徑保留 `showToast(msg, 'error')` 對齊 mockup spec
+  - 拔 CSS `.tp-account-edit-overlay` / `.tp-account-edit-dialog` / `.tp-account-edit-title` / `.tp-account-edit-help` / `.tp-account-edit-input` / `.tp-account-edit-actions` / `@keyframes tp-account-edit-fade`（modal-only styles 全清）
+  - 新 CSS `.tp-account-hero-name-input` 字體 `var(--font-size-title2)` + `font-weight: 800` 對齊 hero-name 避免 layout jump
+- Backend `functions/api/account/profile.ts` 完全未動（PATCH endpoint 已 stable v2.33.122）
+
+### Added
+
+- `tests/unit/account-display-name-edit.tsx`：16 條 regression — modal 完全拔除驗證 + inline state hooks (5 個) + startEdit/cancel/commit 三 helper + JSX render (input onBlur / Enter / ESC / h2 onClick / pencil button 保留 / maxLength 50 / font 對齊) + backend handler 未動
+
+### Verification
+
+- vitest 16/16 pass
+- tsc --noEmit clean
+
 ## [2.33.141] - 2026-05-28
 
 **Fix — ChangePoiPage titleBar 右上 ✓ submit action 拔除（重複 bottom CTA）**

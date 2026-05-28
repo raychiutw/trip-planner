@@ -5,7 +5,7 @@
  * 對應 mockup section 19 (line 7425-7583)。Profile hero + 3 group settings
  * rows，整合既有分散的 /settings/* page 為 entry hub。
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -60,6 +60,10 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-title2); font-weight: 800;
   color: var(--color-foreground);
   margin: 0;
+  cursor: text;
+}
+.tp-account-hero-name:hover {
+  color: var(--color-accent);
 }
 /* v2.33.122: name + edit pencil icon flex row (置中對齊 avatar 軸) */
 .tp-account-hero-name-row {
@@ -88,62 +92,29 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 
-/* v2.33.122: 編輯名稱 modal — overlay + dialog 對齊 ConfirmModal 視覺 */
-.tp-account-edit-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: grid; place-items: center;
-  z-index: var(--z-modal, 1000);
-  padding: 24px;
-  animation: tp-account-edit-fade 150ms ease-out;
-}
-@keyframes tp-account-edit-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.tp-account-edit-dialog {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: 24px;
-  max-width: 420px;
-  width: 100%;
-  box-shadow: var(--shadow-lg);
-}
-.tp-account-edit-title {
-  font-size: var(--font-size-title3);
-  font-weight: 700;
-  margin: 0 0 8px;
-  color: var(--color-foreground);
-}
-.tp-account-edit-help {
-  font-size: var(--font-size-footnote);
-  color: var(--color-muted);
-  margin: 0 0 16px;
-  line-height: 1.5;
-}
-.tp-account-edit-input {
-  width: 100%;
-  padding: 12px 14px;
+/* v2.33.142: inline edit input — 取代 v2.33.122 modal。Blur auto-save。
+   字體 size/weight 對齊 .tp-account-hero-name 避免 width jump。 */
+.tp-account-hero-name-input {
   font: inherit;
-  font-size: var(--font-size-body);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
+  font-size: var(--font-size-title2);
+  font-weight: 800;
   color: var(--color-foreground);
+  background: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px 10px;
+  text-align: center;
+  width: 240px;
+  max-width: 100%;
   box-sizing: border-box;
 }
-.tp-account-edit-input:focus-visible {
-  outline: none; border-color: var(--color-accent);
+.tp-account-hero-name-input:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
   box-shadow: var(--shadow-ring);
 }
-.tp-account-edit-input:disabled {
-  opacity: 0.5; cursor: not-allowed;
-}
-.tp-account-edit-actions {
-  display: flex; gap: 8px;
-  justify-content: flex-end;
-  margin-top: 20px;
+.tp-account-hero-name-input:disabled {
+  opacity: 0.6;
 }
 .tp-account-hero-stats {
   display: grid; grid-template-columns: repeat(3, 1fr);
@@ -258,35 +229,59 @@ export default function AccountPage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // v2.33.122: 編輯 display_name modal
-  const [showEditNameModal, setShowEditNameModal] = useState(false);
-  const [editingName, setEditingName] = useState('');
+  // v2.33.142: inline edit display_name — 取代 v2.33.122 modal。
+  // pencil 或 name click → 變 input → blur 自動 save → 成功 silent / 失敗 toast。
+  // ESC 取消還原。Enter blur (trigger save)。
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState('');
   const [savingName, setSavingName] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  // 進入編輯前的快照 — ESC 還原 / 比對是否真的有改 (無改省 API call)
+  const draftBaselineRef = useRef('');
 
-  function openEditName(): void {
-    setEditingName(user?.displayName ?? '');
-    setShowEditNameModal(true);
-  }
+  const startEditName = useCallback(() => {
+    const current = user?.displayName ?? '';
+    setDraftName(current);
+    draftBaselineRef.current = current;
+    setEditingName(true);
+    // next tick focus + select
+    setTimeout(() => {
+      nameInputRef.current?.focus();
+      nameInputRef.current?.select();
+    }, 0);
+  }, [user?.displayName]);
 
-  async function handleSaveName(): Promise<void> {
+  const cancelEditName = useCallback(() => {
+    setDraftName(draftBaselineRef.current);
+    setEditingName(false);
+  }, []);
+
+  const commitEditName = useCallback(async (): Promise<void> => {
+    const trimmed = draftName.trim();
+    // 無改 → 不打 API，直接退出 editing
+    if (trimmed === draftBaselineRef.current.trim()) {
+      setEditingName(false);
+      return;
+    }
     setSavingName(true);
     try {
-      const trimmed = editingName.trim();
       await apiFetch('/account/profile', {
         method: 'PATCH',
         body: JSON.stringify({ displayName: trimmed.length === 0 ? null : trimmed }),
         headers: { 'content-type': 'application/json' },
       });
       reloadUser();
-      setShowEditNameModal(false);
-      showToast('名稱已更新', 'success');
+      setEditingName(false);
+      // v2.33.142: 成功 silent (user feedback 「右上角不用顯示狀態」一脈相承)。
+      // 失敗才走 toast。
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '更新失敗';
       showToast(msg, 'error');
+      // 失敗保留 editing=true 讓 user retry
     } finally {
       setSavingName(false);
     }
-  }
+  }, [draftName, reloadUser]);
 
   useEffect(() => {
     if (!auth.user) return;
@@ -361,17 +356,50 @@ export default function AccountPage() {
           <div className="tp-account-hero-avatar" aria-hidden="true">{initial}</div>
           <div>
             <div className="tp-account-hero-name-row">
-              <h2 className="tp-account-hero-name">{displayName}</h2>
-              <button
-                type="button"
-                className="tp-account-hero-name-edit"
-                onClick={openEditName}
-                aria-label="編輯名稱"
-                title="編輯名稱"
-                data-testid="account-edit-name-btn"
-              >
-                <Icon name="pencil" />
-              </button>
+              {editingName ? (
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  className="tp-account-hero-name-input"
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  onBlur={() => void commitEditName()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      (e.target as HTMLInputElement).blur();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelEditName();
+                    }
+                  }}
+                  maxLength={50}
+                  placeholder={user.email.split('@')[0]}
+                  disabled={savingName}
+                  aria-label="編輯名稱"
+                  data-testid="account-edit-name-input"
+                />
+              ) : (
+                <>
+                  <h2
+                    className="tp-account-hero-name"
+                    onClick={startEditName}
+                    title="點擊編輯"
+                  >
+                    {displayName}
+                  </h2>
+                  <button
+                    type="button"
+                    className="tp-account-hero-name-edit"
+                    onClick={startEditName}
+                    aria-label="編輯名稱"
+                    title="編輯名稱"
+                    data-testid="account-edit-name-btn"
+                  >
+                    <Icon name="pencil" />
+                  </button>
+                </>
+              )}
             </div>
             <div className="tp-account-hero-email">{user.email}</div>
           </div>
@@ -439,64 +467,7 @@ export default function AccountPage() {
         onCancel={() => setShowLogoutModal(false)}
       />
 
-      {/* v2.33.122: 編輯名稱 modal */}
-      {showEditNameModal && (
-        <div
-          className="tp-account-edit-overlay"
-          onClick={() => !savingName && setShowEditNameModal(false)}
-          data-testid="account-edit-name-overlay"
-        >
-          <div
-            className="tp-account-edit-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="tp-account-edit-name-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 id="tp-account-edit-name-title" className="tp-account-edit-title">編輯名稱</h3>
-            <p className="tp-account-edit-help">顯示在 sidebar 與帳號頁面，留空會 fallback 顯 email 開頭。</p>
-            <input
-              type="text"
-              className="tp-account-edit-input"
-              value={editingName}
-              onChange={(e) => setEditingName(e.target.value)}
-              maxLength={50}
-              placeholder={user.email.split('@')[0]}
-              autoFocus
-              disabled={savingName}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !savingName) {
-                  void handleSaveName();
-                }
-                if (e.key === 'Escape' && !savingName) {
-                  setShowEditNameModal(false);
-                }
-              }}
-              data-testid="account-edit-name-input"
-            />
-            <div className="tp-account-edit-actions">
-              <button
-                type="button"
-                className="tp-new-modal-btn"
-                onClick={() => setShowEditNameModal(false)}
-                disabled={savingName}
-                data-testid="account-edit-name-cancel"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                className="tp-new-modal-btn tp-new-modal-btn-primary"
-                onClick={() => void handleSaveName()}
-                disabled={savingName}
-                data-testid="account-edit-name-save"
-              >
-                {savingName ? '儲存中⋯' : '儲存'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* v2.33.142: 編輯名稱 modal 拔除 — 改 inline edit (hero name input)。 */}
     </div>
   );
 
