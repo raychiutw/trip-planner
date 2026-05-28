@@ -426,22 +426,46 @@ export default function TripNotesPage() {
                   <div className={`tp-notes-section-meta${isSuggested ? ' is-warn' : ''}`}>{metaText}</div>
                 </div>
                 <div className="tp-notes-section-actions" onClick={(e) => e.stopPropagation()}>
-                  {sec.hasAI && (
+                  {sec.hasAI && sec.key === 'pretrip' && (
+                    <>
+                      <button
+                        type="button"
+                        className="tp-notes-ai-btn"
+                        aria-label="AI 生成一般行前須知"
+                        data-testid="trip-notes-ai-btn-pretrip"
+                        onClick={(e) => { e.stopPropagation(); void handleAiTrigger('tips'); }}
+                        disabled={aiJob !== null}
+                        title={aiJob !== null ? 'AI 正在處理另一個請求' : 'AI 生成一般行前須知（貨幣 / 通訊 / 簽證等）'}
+                      >
+                        <Icon name="sparkle" />
+                        {aiJob?.docType === 'tips' ? '生成中…' : '一般'}
+                      </button>
+                      <button
+                        type="button"
+                        className="tp-notes-ai-btn"
+                        aria-label="AI 生成住宿在地建議"
+                        data-testid="trip-notes-ai-btn-pretrip-lodging"
+                        onClick={(e) => { e.stopPropagation(); void handleAiTrigger('lodging-tips'); }}
+                        disabled={aiJob !== null}
+                        title={aiJob !== null ? 'AI 正在處理另一個請求' : 'AI 生成住宿在地建議（基於行程飯店）'}
+                      >
+                        <Icon name="sparkle" />
+                        {aiJob?.docType === 'lodging-tips' ? '生成中…' : '住宿'}
+                      </button>
+                    </>
+                  )}
+                  {sec.hasAI && sec.key === 'emergency' && (
                     <button
                       type="button"
                       className="tp-notes-ai-btn"
-                      aria-label={`AI 生成${sec.title}`}
-                      data-testid={`trip-notes-ai-btn-${sec.key}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const docType = sec.key === 'pretrip' ? 'tips' : 'emergency';
-                        void handleAiTrigger(docType);
-                      }}
+                      aria-label="AI 生成緊急聯絡"
+                      data-testid="trip-notes-ai-btn-emergency"
+                      onClick={(e) => { e.stopPropagation(); void handleAiTrigger('emergency'); }}
                       disabled={aiJob !== null}
-                      title={aiJob !== null ? 'AI 正在處理另一個請求' : `AI 生成${sec.title}`}
+                      title={aiJob !== null ? 'AI 正在處理另一個請求' : 'AI 生成緊急聯絡（駐外館處 / 警察 / 救護）'}
                     >
                       <Icon name="sparkle" />
-                      {aiJob?.docType === (sec.key === 'pretrip' ? 'tips' : 'emergency') ? '生成中…' : 'AI'}
+                      {aiJob?.docType === 'emergency' ? '生成中…' : 'AI'}
                     </button>
                   )}
                   <span className="tp-notes-section-chevron" aria-hidden="true">
