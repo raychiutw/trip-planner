@@ -20,7 +20,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../shared/Icon';
-import SaveStatus from '../shared/SaveStatus';
+import { showToast } from '../shared/Toast';
 import { apiFetchRaw } from '../../lib/apiClient';
 import { ApiError } from '../../lib/errors';
 import { EVENT } from '../../lib/events';
@@ -337,6 +337,17 @@ export default function TravelPillDialog({
     return () => document.removeEventListener('keydown', onKey);
   }, [handleClose]);
 
+  // v2.33.143: autosave error 走 toast（拔 SaveStatus 後唯一錯誤 surface）
+  const lastErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (autosave.state === 'error' && autosave.error && autosave.error !== lastErrorRef.current) {
+      lastErrorRef.current = autosave.error;
+      showToast(`交通方式儲存失敗：${autosave.error}`, 'error', 6000);
+    } else if (autosave.state !== 'error') {
+      lastErrorRef.current = null;
+    }
+  }, [autosave.state, autosave.error]);
+
   // 自動聚焦第一個 option（mount 後）
   useEffect(() => {
     const first = overlayRef.current?.querySelector<HTMLButtonElement>('.tp-travel-mode-option');
@@ -428,8 +439,8 @@ export default function TravelPillDialog({
             </div>
           )}
 
+          {/* v2.33.143: SaveStatus 拔除 — silent auto-save，失敗走 toast (上方 useEffect)。 */}
           <div className="tp-travel-dialog-footer">
-            <SaveStatus state={autosave.state} error={autosave.error} onRetry={autosave.retry} />
             <button
               type="button"
               className="tp-travel-dialog-btn"

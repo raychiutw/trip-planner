@@ -15,6 +15,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import TravelPill from '../../src/components/trip/TravelPill';
+// v2.33.143 PR18: SaveStatus 拔除後改 toast — 用 toastBus 訂閱攔截 toast 出現
+import { showToast, dismissToast } from '../../src/components/shared/Toast';
+import { resetToasts } from '../../src/lib/toastBus';
+void showToast; void dismissToast;
 
 const apiFetchRawMock = vi.fn<(path: string, init?: RequestInit) => Promise<Response>>();
 vi.mock('../../src/lib/apiClient', () => ({
@@ -127,15 +131,25 @@ describe('TravelPill — interactive auto-save (v2.33.108)', () => {
     });
   });
 
-  it('PATCH fail → SaveStatus 顯示 error，dialog 仍開', async () => {
+  it('PATCH fail → toastBus 收到 error toast，dialog 仍開（v2.33.143 拔 SaveStatus 後改 toast）', async () => {
+    // 訂閱 toastBus 攔截 — TravelPill 沒 render ToastContainer，無法用 DOM query
+    const toasts: Array<{ message: string; type: string }> = [];
+    const { subscribeToasts, getToasts } = await import('../../src/lib/toastBus');
+    resetToasts();
+    const unsub = subscribeToasts(() => {
+      // listener fires on each change — snapshot current toasts
+      getToasts().forEach((t) => toasts.push({ message: t.message, type: t.type }));
+    });
     apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ error: { code: 'SYS_INTERNAL', message: 'oops' } }), { status: 500 }));
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));
     fireEvent.click(screen.getByTestId('travel-mode-option-walking'));
     await waitFor(() => {
-      expect(screen.getByTestId('save-status')).toBeInTheDocument();
+      expect(toasts.some((t) => t.type === 'error' && t.message.includes('交通方式儲存失敗'))).toBe(true);
     });
     expect(screen.getByTestId('travel-pill-dialog')).toBeInTheDocument();
+    expect(screen.queryByTestId('save-status')).toBeNull();
+    unsub();
   });
 
   it('PATCH success → dispatch tp-segment-updated event + dialog 仍開（auto-save 不 close）', async () => {

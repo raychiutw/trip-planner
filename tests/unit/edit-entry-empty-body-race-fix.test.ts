@@ -22,10 +22,6 @@ const EDIT = readFileSync(
   join(__dirname, '../../src/pages/EditEntryPage.tsx'),
   'utf8',
 );
-const SAVE_STATUS = readFileSync(
-  join(__dirname, '../../src/components/shared/SaveStatus.tsx'),
-  'utf8',
-);
 const MOCKUP = readFileSync(
   join(__dirname, '../../docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html'),
   'utf8',
@@ -46,41 +42,22 @@ describe('PR12 (A): empty body race guard', () => {
   });
 });
 
-describe('PR12 (B): SaveStatus error 不再 inline 顯細節（mockup-align）', () => {
-  it('SaveStatus 拔掉 inline error detail span', () => {
-    expect(SAVE_STATUS).not.toMatch(/tp-save-status-error-detail/);
-    expect(SAVE_STATUS).not.toMatch(/data-testid="save-status-error"/);
-  });
+// PR12 (B) SaveStatus assertions removed — component 已於 v2.33.143 刪除（PR18）。
+// 失敗走 showToast 由下方 describe 驗證。
 
-  it('error state 仍保留 重試 button + ⚠ icon', () => {
-    expect(SAVE_STATUS).toMatch(/state === 'error' && onRetry/);
-    expect(SAVE_STATUS).toMatch(/data-testid="save-status-retry"/);
-    expect(SAVE_STATUS).toMatch(/error: '⚠'/);
-  });
-
-  it('error message 寫進 aria-label 給 screen reader', () => {
-    expect(SAVE_STATUS).toMatch(/const ariaLabel = state === 'error' && error \? `儲存失敗：\$\{error\}` : undefined/);
-    expect(SAVE_STATUS).toMatch(/aria-label=\{ariaLabel\}/);
-  });
-
-  it('注解引用 mockup spec 路徑', () => {
-    expect(SAVE_STATUS).toMatch(/2026-05-11-entry-time-segment-mode-edit\.html/);
-    expect(SAVE_STATUS).toMatch(/儲存失敗 → 重試\s+\+\s+toast error|儲存失敗 → 重試/);
-  });
-});
-
-describe('PR12 (B): EditEntryPage handleSave 失敗走 toast', () => {
+describe('PR12 (B) / PR14 / PR18: EditEntryPage handleSave 失敗走 toast', () => {
   it('failures path 加 showToast(msg, "error", 6000)', () => {
-    // 失敗 path 含 setError + showToast 二者，message 重用同變數
+    // v2.33.139 起拔 setError，PR12 (B) 留 setError + toast 的 assertion 過時
     const idx = EDIT.indexOf("'移動方式'}儲存失敗");
     expect(idx).toBeGreaterThan(0);
     const snippet = EDIT.slice(idx, idx + 600);
-    expect(snippet).toContain('setError(msg);');
     expect(snippet).toContain("showToast(msg, 'error', 6000)");
+    // setError 已不存在（v2.33.139 拔 error state）
+    expect(snippet).not.toContain('setError(');
   });
 
   it('catch path 也加 showToast', () => {
-    expect(EDIT).toMatch(/const msg = err instanceof Error \? err\.message : '儲存失敗';\s+setError\(msg\);\s+showToast\(msg, 'error', 6000\)/);
+    expect(EDIT).toMatch(/const msg = err instanceof Error \? err\.message : '儲存失敗';\s+showToast\(msg, 'error', 6000\)/);
   });
 
   it('body 內 InlineError 拔掉（duplicate of toast）', () => {

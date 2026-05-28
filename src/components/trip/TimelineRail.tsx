@@ -31,8 +31,6 @@ import { POI_TYPE_LABELS, type PoiType } from '../../lib/poiCategory';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
-import InlineError from '../shared/InlineError';
-import SaveStatus from '../shared/SaveStatus';
 import { useAutosave } from '../../hooks/useAutosave';
 import { ApiError } from '../../lib/errors';
 import MarkdownText from '../shared/MarkdownText';
@@ -377,6 +375,18 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
     },
   });
 
+  // v2.33.143: autosave error 走 toast（拔 SaveStatus inline UI 後唯一錯誤 surface）。
+  // 監聽 state==='error' transition 觸發 1 次 toast，避免每 re-render 都 toast。
+  const lastNoteErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (noteAutosave.state === 'error' && noteAutosave.error && noteAutosave.error !== lastNoteErrorRef.current) {
+      lastNoteErrorRef.current = noteAutosave.error;
+      showToast(`備註儲存失敗：${noteAutosave.error}`, 'error', 6000);
+    } else if (noteAutosave.state !== 'error') {
+      lastNoteErrorRef.current = null;
+    }
+  }, [noteAutosave.state, noteAutosave.error]);
+
   const beginEditNote = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     setDraftNote(entry.note ?? '');
@@ -635,11 +645,8 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                   data-testid={`timeline-rail-note-input-${entry.id}`}
                 />
                 <div className="tp-rail-note-actions">
-                  <SaveStatus
-                    state={noteAutosave.state}
-                    error={noteAutosave.error}
-                    onRetry={noteAutosave.retry}
-                  />
+                  {/* v2.33.143: SaveStatus indicator 拔除 — silent auto-save，失敗
+                      走 toast (見 noteAutosave 旁 useEffect)。 */}
                   <button
                     type="button"
                     className="tp-rail-note-cancel"
@@ -652,9 +659,6 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                     <kbd>⌘</kbd> + <kbd>↩</kbd> 完成 · <kbd>esc</kbd> 關閉
                   </span>
                 </div>
-                {noteAutosave.state === 'error' && noteAutosave.error && (
-                  <InlineError message={noteAutosave.error} />
-                )}
               </>
             ) : (
               <div

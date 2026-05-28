@@ -3,6 +3,44 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.143] - 2026-05-28
+
+**Fix — 拔除剩餘 2 處 SaveStatus + 刪 component**
+
+User feedback「都要拔」— 接續 v2.33.139 titleBar 拔 SaveStatus 後，最後 2 處 instance (TimelineRail inline note edit + TravelPillDialog footer) 也拔。0 caller 後整個 SaveStatus.tsx component file 刪除。
+
+### Changed
+
+- `src/components/trip/TimelineRail.tsx`：
+  - 拔 `SaveStatus` import + `InlineError` import（後者 note error 一併走 toast 後 unused）
+  - 拔 `.tp-rail-note-actions` 內 `<SaveStatus state={...} error={...} onRetry={...} />` JSX
+  - 拔下方 `noteAutosave.state === 'error' && <InlineError>` 重複 surface
+  - 新增 `lastNoteErrorRef` + `useEffect` 監聽 `noteAutosave.state==='error'` → `showToast('備註儲存失敗：...', 'error', 6000)`（state-transition 防 toast spam）
+  - 完成 button + ⌘+↩ kbd hint 保留
+- `src/components/trip/TravelPillDialog.tsx`：
+  - 拔 `SaveStatus` import，加 `showToast` from `Toast`
+  - 拔 `.tp-travel-dialog-footer` 內 `<SaveStatus>`，footer 只剩 `關閉` button
+  - 新增 `lastErrorRef` + `useEffect` 監聽 `autosave.state==='error'` → `showToast('交通方式儲存失敗：...', 'error', 6000)`
+
+### Removed
+
+- `src/components/shared/SaveStatus.tsx` — 整 component file 刪除（0 caller）
+- `tests/unit/edit-entry-empty-body-race-fix.test.ts` 內 PR12 (B) SaveStatus 4 條 assertion 刪除（component 不存在）+ 既有 setError 殘留 assertion 改寫對齊 v2.33.139 拔 error state 後現況
+
+### Added
+
+- `tests/unit/savestatus-component-removed.test.ts`：8 條 regression
+  - TimelineRail：無 SaveStatus/InlineError import / note-actions block 無 SaveStatus / error toast useEffect / 完成 button 仍存在
+  - TravelPillDialog：showToast import 加 / footer 無 SaveStatus / error toast useEffect / 關閉 button 仍存在
+  - SaveStatus.tsx 檔案不存在驗證
+  - 全 codebase grep — `src/` 0 個 `import SaveStatus` 殘留
+- `tests/unit/travel-pill-tap-switch.test.tsx`：原「PATCH fail → SaveStatus 顯 error」assertion 改寫 → toastBus subscribe 攔截驗 `showToast('交通方式儲存失敗', 'error')` 觸發
+
+### Verification
+
+- vitest 30/30 pass (3 affected test files)
+- tsc --noEmit clean
+
 ## [2.33.142] - 2026-05-28
 
 **Fix — AccountPage display_name 改 inline 編輯 + blur auto-save（拔 modal）**
