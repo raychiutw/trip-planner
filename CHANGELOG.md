@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.0] - 2026-05-28
+
+**Feature epoch — 行程筆記 (Trip Notes) PR1 / 19：migration 0073 + 5 table + AI linkage + HuiYun rescue import**
+
+行程筆記 feature 第一版：跨工具的 trip-level metadata（航班 / 住宿 / 預訂 / 行前須知 / 緊急聯絡）集中入 Tripline，不再切換 TripIt / Notion / Wanderlog。AI 可代寫 3 個 prompt prefix（lodging-tips / general-tips / emergency）。
+
+完整 design doc: `~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260528-144009.md`（reviewer iter 2 / 9 of 10 PASS）
+Mockup sign-off (V1 Accordion Stack): `docs/design-sessions/2026-05-28-trip-notes/v1-accordion-stack.html` + `v1-states.html`（含 audit 7 項全修：toast→AlertPanel / Copy Rules 3 件事 / class tp-notes-* / hero 純色 / phone btn token / AI ghost button family）
+
+### Added
+
+- `migrations/0073_trip_notes.sql` — 6 個新 table：
+  - `trip_flights` 純手動，9 columns（航空公司 / 航班 / 艙等 / 出發抵達機場 / 出發抵達時間 / note）+ version OCC
+  - `trip_lodgings` 純手動，9 columns（名稱 / 地址 / 入退房 / 訂房號 / 電話 / note）+ 可選 `day_id` ON DELETE SET NULL + version OCC
+  - `trip_reservations` 純手動，9 columns（kind enum 限 restaurant/experience/ticket/transport/other / title / 時間 / 人數 / 預訂編號 / 電話 / note）+ version OCC
+  - `trip_pretrip_notes` 可 AI（lodging-tips + general-tips 共用，靠 `ai_source` 區分避免 dedup 互相污染）— `section` / `title` / `content` markdown / `ai_generated` / `ai_source` / version OCC + partial index `idx_trip_pretrip_notes_ai_source WHERE ai_source IS NOT NULL`
+  - `trip_emergency_contacts` 可 AI — kind enum 限 personal/embassy/police/medical/insurance/hotel/other + version OCC
+  - `trip_note_ai_jobs` linkage table — UNIQUE `request_id` REFERENCES trip_requests + doc_type CHECK enum + status pending/completed/failed + inserted_count + error_message。對齊 v2.33.102 CR-8 trip_health_reports.request_id pattern（避免 v2.33.27 prefix sniffing）
+- `migrations/rollback/0073_trip_notes_rollback.sql` — 反向 DROP 順序考慮 FK
+- `scripts/import-huiyun-trip-notes.ts` — one-shot import HuiYun trip 舊 `backups/2026-03-28T18-21-54/trip_docs.json` 進新表。Mapping policy：7 checklist cards → 7 trip_pretrip_notes (markdown bullet list) + 4 emergency contacts → 4 trip_emergency_contacts (110→police / 119→medical / 駐外館→embassy) + 3 emergency notes 聚合成 1 額外 trip_pretrip_notes + 3 hotels (Mercure / BUZZ RESORT / HOPE VILLA) → 3 trip_lodgings (cross-ref checklist + emergency)。Idempotent guard 偵測既有 row → skip
+- `tests/unit/migration-0073-trip-notes.test.ts` — 17 條：6 table 存在 + version OCC + ai_source partial index + 4 CHECK enum + UNIQUE constraint + CASCADE / SET NULL
+- `tests/unit/import-huiyun-trip-notes.test.ts` — 9 條 buildImportPlan pure mapping：3 table 都有 / 7 cards → 8 pretrip rows / 4 contacts / 3 hotels / kind 對 / sort_order 遞增 / markdown bullet / ai_generated=0 ai_source=null
+- `docs/design-sessions/2026-05-28-trip-notes/` — 4 mockup HTML + 4 PNG（V1 accordion + V2 tab + V3 cards + V1 states matrix）
+
+### Changed
+
+- `VERSION` 2.33.143 → 2.34.0（feature epoch bump，後續 trip-notes 19 PR 用 2.34.x）
+
 ## [2.33.143] - 2026-05-28
 
 **Fix — 拔除剩餘 2 處 SaveStatus + 刪 component**

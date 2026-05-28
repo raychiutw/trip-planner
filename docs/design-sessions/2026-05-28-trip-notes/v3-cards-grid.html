@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>行程筆記 V3 — Editorial Cards Grid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --color-accent: #D97848;
+  --color-accent-deep: #B85C2E;
+  --color-accent-subtle: #FBEEE4;
+  --color-accent-bg: #F7DFCB;
+  --color-background: #FFFBF5;
+  --color-secondary: #FAF4EA;
+  --color-tertiary: #F2EAD9;
+  --color-foreground: #2A1F18;
+  --color-muted: #6F5A47;
+  --color-border: #EADFCF;
+  --color-line-strong: #C8B89F;
+  --color-destructive: #C13515;
+  --font-sans: 'Inter', 'Noto Sans TC', 'PingFang TC', system-ui, sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+  --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+  --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
+  --blur-glass: 14px;
+  --tap-min: 44px;
+  --ease-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  font-family: var(--font-sans);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+.compare-wrap {
+  display: grid;
+  grid-template-columns: 390px 1fr;
+  gap: 24px;
+  padding: 24px;
+  background: linear-gradient(180deg, #2a1f18 0%, #1c140f 100%);
+  min-height: 100vh;
+}
+.compare-label {
+  position: absolute; top: -28px; left: 0;
+  color: #fff; font-size: 12px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.frame {
+  position: relative;
+  background: var(--color-background);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+}
+.frame.mobile { width: 390px; height: 844px; }
+.frame.desktop { height: 844px; }
+
+.titlebar {
+  position: sticky; top: 0; z-index: 100;
+  height: 56px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(var(--blur-glass));
+  border-bottom: 1px solid var(--color-border);
+}
+.titlebar-back {
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md);
+  transition: background 150ms var(--ease-apple);
+}
+.titlebar-back:hover { background: var(--color-tertiary); }
+.titlebar-title { flex: 1; font-size: 18px; font-weight: 700; }
+.frame.desktop .titlebar { height: 64px; padding: 0 24px; }
+.frame.desktop .titlebar-title { font-size: 20px; }
+
+.page-body {
+  padding: 16px;
+  max-width: 1040px;
+  margin: 0 auto;
+  overflow-y: auto;
+  height: calc(100% - 56px);
+}
+.frame.desktop .page-body { padding: 24px; height: calc(100% - 64px); }
+
+/* Hero block */
+.hero {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, var(--color-accent-subtle) 0%, var(--color-secondary) 100%);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+}
+.hero-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-accent-deep);
+}
+.hero-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+.hero-meta {
+  font-size: 14px;
+  color: var(--color-muted);
+  margin-top: 6px;
+}
+.hero-progress {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+.hero-progress-dot {
+  width: 28px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-tertiary);
+}
+.hero-progress-dot.is-filled { background: var(--color-accent); }
+
+/* Cards grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.frame.desktop .cards-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: var(--color-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  transition: border-color 200ms var(--ease-apple), box-shadow 200ms;
+  min-height: 200px;
+}
+.card:hover {
+  border-color: var(--color-line-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.card-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.card-icon.is-accent {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent-bg);
+  color: var(--color-accent-deep);
+}
+.card-head-meta { flex: 1; min-width: 0; }
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.card-subtitle {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+.card-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.preview-row {
+  font-size: 13px;
+  color: var(--color-foreground);
+  padding: 6px 8px;
+  background: var(--color-background);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.preview-row.has-ai-bullet::before {
+  content: '';
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  flex-shrink: 0;
+}
+.preview-row-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview-row-meta { color: var(--color-muted); font-size: 12px; margin-left: auto; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+.card-empty {
+  padding: 16px 8px;
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 13px;
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+  border: 1.5px dashed var(--color-border);
+}
+.card-empty-title { font-weight: 600; color: var(--color-foreground); margin-bottom: 4px; font-size: 14px; }
+
+.card-pending {
+  padding: 12px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.pulse-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+.card-view-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent-deep);
+  min-height: 32px;
+}
+.card-view-all:hover { color: var(--color-accent); }
+.card-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-tertiary);
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.card-ai-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+.card-ai-btn.is-cta {
+  background: var(--color-accent);
+  color: #fff;
+}
+.card-ai-btn.is-cta:hover { background: var(--color-accent-deep); }
+.card-add-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  font-size: 12px; font-weight: 600;
+  min-height: 32px;
+}
+.card-add-btn:hover { background: var(--color-tertiary); color: var(--color-foreground); }
+
+.svg-icon { width: 18px; height: 18px; stroke-width: 2; }
+.svg-icon-sm { width: 12px; height: 12px; stroke-width: 2; }
+.svg-icon-lg { width: 20px; height: 20px; stroke-width: 2; }
+</style>
+</head>
+<body>
+
+<div class="compare-wrap">
+
+  <!-- ============ MOBILE — single column grid ============ -->
+  <div style="position: relative;">
+    <div class="compare-label">V3 · 手機 (單欄 cards)</div>
+    <div class="frame mobile">
+      <div class="titlebar">
+        <button class="titlebar-back" aria-label="返回">
+          <svg class="svg-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div class="titlebar-title">行程筆記</div>
+      </div>
+
+      <div class="page-body">
+        <div class="hero">
+          <div class="hero-eyebrow">沖繩 7 日</div>
+          <div class="hero-title">行程筆記</div>
+          <div class="hero-meta">3 / 5 已填 · 緊急聯絡建議補上</div>
+          <div class="hero-progress" aria-label="完成 3 / 5">
+            <span class="hero-progress-dot is-filled"></span>
+            <span class="hero-progress-dot is-filled"></span>
+            <span class="hero-progress-dot is-filled"></span>
+            <span class="hero-progress-dot"></span>
+            <span class="hero-progress-dot"></span>
+          </div>
+        </div>
+
+        <div class="cards-grid">
+          <!-- 航班 card -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon is-accent">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>
+              </div>
+              <div class="card-head-meta">
+                <div class="card-title">航班</div>
+                <div class="card-subtitle">2 個航段</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="preview-row">
+                <span class="preview-row-title">CI 120 TPE → OKA</span>
+                <span class="preview-row-meta">7/26 09:35</span>
+              </div>
+              <div class="preview-row">
+                <span class="preview-row-title">CI 123 OKA → TPE</span>
+                <span class="preview-row-meta">8/1 13:00</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <a href="#" class="card-view-all">查看全部 <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg></a>
+              <button class="card-add-btn"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>加</button>
+            </div>
+          </div>
+
+          <!-- 緊急聯絡 card — empty state with AI CTA -->
+          <div class="card" style="border-color: var(--color-accent-bg);">
+            <div class="card-head">
+              <div class="card-icon is-accent">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"></path></svg>
+              </div>
+              <div class="card-head-meta">
+                <div class="card-title">緊急聯絡</div>
+                <div class="card-subtitle">尚未填寫</div>
+              </div>
+              <span class="card-ai-badge">AI 可生</span>
+            </div>
+            <div class="card-body">
+              <div class="card-empty">
+                <div class="card-empty-title">建議先用 AI 填底</div>
+                駐外館處 · 110 · 119 · 在地保險諮詢
+              </div>
+            </div>
+            <div class="card-actions">
+              <a href="#" class="card-view-all">手動加 <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg></a>
+              <button class="card-ai-btn is-cta">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path></svg>
+                AI 生成
+              </button>
+            </div>
+          </div>
+
+          <!-- 行前須知 card -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon is-accent">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              </div>
+              <div class="card-head-meta">
+                <div class="card-title">行前須知</div>
+                <div class="card-subtitle">3 項 · 2 AI</div>
+              </div>
+              <span class="card-ai-badge">AI 可生</span>
+            </div>
+            <div class="card-body">
+              <div class="preview-row">
+                <span class="preview-row-title">貨幣 — 1 TWD ≈ 4.8 JPY</span>
+              </div>
+              <div class="preview-row has-ai-bullet">
+                <span class="preview-row-title">插頭 — A 型 110V</span>
+              </div>
+              <div class="preview-row has-ai-bullet">
+                <span class="preview-row-title">小費 — 無小費文化</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <a href="#" class="card-view-all">查看全部 <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg></a>
+              <button class="card-ai-btn">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path></svg>
+                AI
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DESKTOP — 2-col grid all 5 cards ============ -->
+  <div style="position: relative;">
+    <div class="compare-label">V3 · 桌機 (2-col dashboard)</div>
+    <div class="frame desktop">
+      <div class="titlebar">
+        <button class="titlebar-back" aria-label="返回">
+          <svg class="svg-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div class="titlebar-title">行程筆記 — 沖繩 7 日</div>
+      </div>
+
+      <div class="page-body">
+        <div class="hero">
+          <div class="hero-eyebrow">沖繩 7 日 · 2026 / 7 / 26 出發 · 6 晚</div>
+          <div class="hero-title">行程筆記</div>
+          <div class="hero-meta">3 / 5 section 已填 · 緊急聯絡建議用 AI 補上，AI 也可代寫行前須知</div>
+          <div class="hero-progress" aria-label="完成 3 / 5">
+            <span class="hero-progress-dot is-filled"></span>
+            <span class="hero-progress-dot is-filled"></span>
+            <span class="hero-progress-dot is-filled"></span>
+            <span class="hero-progress-dot"></span>
+            <span class="hero-progress-dot"></span>
+          </div>
+        </div>
+
+        <div class="cards-grid">
+          <!-- 航班 -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon is-accent">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>
+              </div>
+              <div class="card-head-meta">
+                <div class="card-title">航班</div>
+                <div class="card-subtitle">2 個航段</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="preview-row">
+                <span class="preview-row-title">CI 120 TPE → OKA</span>
+                <span class="preview-row-meta">7/26 09:35</span>
+              </div>
+              <div class="preview-row">
+                <span class="preview-row-title">CI 123 OKA → TPE</span>
+                <span class="preview-row-meta">8/1 13:00</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <a href="#" class="card-view-all">查看全部 <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg></a>
+              <button class="card-add-btn"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>加航段</button>
+            </div>
+          </div>
+
+          <!-- 住宿 -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9.5L12 3l9 6.5"></path><path d="M5 10v10h14V10"></path><rect x="9" y="14" width="6" height="6"></rect></svg>
+              </div>
+              <div class="card-head-meta">
+                <div class="card-title">住宿</div>
+                <div class="card-subtitle">1 間 · Day 1–6</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="preview-row">
+                <span class="preview-row-title">那霸久茂地里士滿酒店</span>
+                <span class="preview-row-meta">6 晚</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <a href="#" class="card-view-all">查看全部 <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg></a>
+              <button class="card-add-btn"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>加住宿</button>
+            </div>
+          </div>
+
+          <!-- 預訂 -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              </div>
+              <div class="card-head-meta">
+                <div class="card-title">預訂</div>
+                <div class="card-subtitle">1 筆 · 餐廳</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="preview-row">
+                <span class="preview-row-title">蕎麥麵 そば処 鶴亀庵</span>
+                <span class="preview-row-meta">Day 3 · 12:00</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <a href="#" class="card-view-all">查看全部 <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg></a>
+              <button class="card-add-btn"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>加預訂</button>
+            </div>
+          </div>
+
+          <!-- 行前須知 — has AI -->
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              </div>
+              <div class="card-head-meta">
+                <div class="card-title">行前須知</div>
+                <div class="card-subtitle">3 項 · 含 2 AI</div>
+              </div>
+              <span class="card-ai-badge">AI 可生</span>
+            </div>
+            <div class="card-body">
+              <div class="preview-row">
+                <span class="preview-row-title">貨幣 — 1 TWD ≈ 4.8 JPY</span>
+              </div>
+              <div class="preview-row has-ai-bullet">
+                <span class="preview-row-title">插頭 — A 型 110V</span>
+              </div>
+              <div class="preview-row has-ai-bullet">
+                <span class="preview-row-title">小費 — 沖繩無小費文化</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <a href="#" class="card-view-all">查看全部 <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg></a>
+              <button class="card-ai-btn">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path></svg>
+                AI 重新生成
+              </button>
+            </div>
+          </div>
+
+          <!-- 緊急聯絡 — empty + pending state demo -->
+          <div class="card" style="border-color: var(--color-accent-bg); grid-column: span 1;">
+            <div class="card-head">
+              <div class="card-icon is-accent">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"></path></svg>
+              </div>
+              <div class="card-head-meta">
+                <div class="card-title">緊急聯絡</div>
+                <div class="card-subtitle" style="color: var(--color-accent-deep); font-weight: 600;">AI 生成中…</div>
+              </div>
+              <span class="card-ai-badge">AI 可生</span>
+            </div>
+            <div class="card-body">
+              <div class="card-pending">
+                <span class="pulse-dot"></span>
+                預計 3–7 分鐘，可繼續用其他 section
+              </div>
+            </div>
+            <div class="card-actions">
+              <a href="#" class="card-view-all">手動加聯絡人 <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg></a>
+              <button class="card-ai-btn is-cta" disabled style="opacity: 0.55;">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path></svg>
+                生成中…
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

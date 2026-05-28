@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>行程筆記 V1 — Accordion Stack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --color-accent: #D97848;
+  --color-accent-deep: #B85C2E;
+  --color-accent-subtle: #FBEEE4;
+  --color-accent-bg: #F7DFCB;
+  --color-background: #FFFBF5;
+  --color-secondary: #FAF4EA;
+  --color-tertiary: #F2EAD9;
+  --color-foreground: #2A1F18;
+  --color-muted: #6F5A47;
+  --color-border: #EADFCF;
+  --color-line-strong: #C8B89F;
+  --color-destructive: #C13515;
+  --color-success: #06A77D;
+  --color-info: #3B7EA1;
+
+  --font-sans: 'Inter', 'Noto Sans TC', 'PingFang TC', system-ui, -apple-system, sans-serif;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+  --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+  --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
+  --shadow-ring: 0 0 0 2px var(--color-accent);
+
+  --blur-glass: 14px;
+  --tap-min: 44px;
+  --titlebar-h: 56px;
+  --content-max-w: 1040px;
+
+  --ease-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: var(--font-sans);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+input, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Comparison wrapper (mockup only — shows mobile + desktop side by side) */
+.compare-wrap {
+  display: grid;
+  grid-template-columns: 390px 1fr;
+  gap: 24px;
+  padding: 24px;
+  background: linear-gradient(180deg, #2a1f18 0%, #1c140f 100%);
+  min-height: 100vh;
+}
+.compare-label {
+  position: absolute;
+  top: -28px;
+  left: 0;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.frame {
+  position: relative;
+  background: var(--color-background);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+}
+.frame.mobile { width: 390px; height: 844px; }
+.frame.desktop { height: 844px; }
+
+/* TitleBar (compact 56px) */
+.titlebar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border-bottom: 1px solid var(--color-border);
+}
+.titlebar-back {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--color-foreground);
+  transition: background 150ms var(--ease-apple);
+}
+.titlebar-back:hover { background: var(--color-tertiary); }
+.titlebar-title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.titlebar-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-muted);
+  margin-top: 1px;
+}
+
+/* Desktop TitleBar variant */
+.frame.desktop .titlebar { height: 64px; padding: 0 24px; }
+.frame.desktop .titlebar-title { font-size: 20px; }
+
+/* Page body */
+.page-body {
+  padding: 16px;
+  max-width: var(--content-max-w);
+  margin: 0 auto;
+  overflow-y: auto;
+  height: calc(100% - 56px);
+}
+.frame.desktop .page-body { padding: 24px; height: calc(100% - 64px); }
+
+/* Hero block */
+.hero {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--color-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+.tp-notes-hero-trip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.tp-notes-hero-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--color-line-strong); }
+.tp-notes-hero-meta {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+.tp-notes-hero-meta strong {
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+
+/* Section accordion */
+.tp-notes-section {
+  margin-bottom: 12px;
+  background: var(--color-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  transition: border-color 200ms var(--ease-apple);
+}
+.tp-notes-section.is-open { border-color: var(--color-line-strong); }
+
+.tp-notes-section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  min-height: var(--tap-min);
+  user-select: none;
+}
+.tp-notes-section-head:hover { background: var(--color-tertiary); }
+
+.tp-notes-section-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+  color: var(--color-foreground);
+}
+.tp-notes-section-icon.is-accent {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent-bg);
+  color: var(--color-accent-deep);
+}
+
+.tp-notes-section-titles { flex: 1; min-width: 0; }
+.tp-notes-section-title {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.tp-notes-section-meta {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.tp-notes-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.tp-notes-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 150ms var(--ease-apple);
+}
+.tp-notes-ai-btn:hover { background: var(--color-accent-bg); }
+.tp-notes-ai-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+
+.tp-notes-section-chevron {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+  transition: transform 200ms var(--ease-apple);
+}
+.tp-notes-section.is-open .tp-notes-section-chevron { transform: rotate(180deg); }
+
+.tp-notes-section-body {
+  display: none;
+  border-top: 1px solid var(--color-border);
+}
+.tp-notes-section.is-open .tp-notes-section-body { display: block; }
+
+/* Rows */
+.tp-notes-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+}
+.tp-notes-row:last-child { border-bottom: none; }
+.tp-notes-row:hover { background: var(--color-background); }
+
+.tp-notes-row-drag {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-line-strong);
+  cursor: grab;
+  margin-top: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 150ms;
+}
+.tp-notes-row:hover .tp-notes-row-drag { opacity: 1; }
+
+.tp-notes-row-content { flex: 1; min-width: 0; }
+.tp-notes-row-title {
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tp-notes-row-desc {
+  font-size: 14px;
+  color: var(--color-muted);
+  margin-top: 2px;
+  word-break: break-word;
+}
+.tp-notes-row-meta {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+
+.tp-notes-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.tp-notes-row-icon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  transition: background 150ms, color 150ms;
+}
+.tp-notes-row-icon-btn:hover {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+}
+.tp-notes-row-icon-btn.is-danger:hover {
+  background: rgba(193, 53, 21, 0.1);
+  color: var(--color-destructive);
+}
+
+/* Chip — AI generated indicator */
+.tp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.tp-chip-ai {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+}
+.tp-chip-ai svg { width: 10px; height: 10px; }
+.tp-chip-day {
+  background: var(--color-tertiary);
+  color: var(--color-muted);
+}
+
+/* Add row button */
+.add-row-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 600;
+  min-height: var(--tap-min);
+  transition: background 150ms, color 150ms;
+}
+.add-row-btn:hover {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+}
+
+/* Empty state inside section */
+.empty-state {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+.empty-state-title {
+  font-weight: 600;
+  color: var(--color-foreground);
+  margin-bottom: 4px;
+}
+
+/* Pending banner inside section */
+.pending-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  font-size: 14px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-border);
+}
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: pulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* Inline editing state */
+.tp-notes-row.is-editing {
+  background: var(--color-background);
+  box-shadow: var(--shadow-ring);
+  border-radius: var(--radius-md);
+  margin: 4px 8px;
+  padding-left: 12px;
+}
+.tp-notes-row.is-editing + .tp-notes-row { border-top: 1px solid var(--color-border); }
+.tp-notes-row-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+}
+.tp-notes-row-input:focus { border-color: var(--color-accent); }
+.tp-notes-row-input-desc {
+  margin-top: 6px;
+  min-height: 36px;
+  font-weight: 400;
+  font-size: 14px;
+  resize: vertical;
+}
+
+/* Flight row layout */
+.tp-notes-flight-row { gap: 0; padding: 16px; flex-direction: column; align-items: stretch; }
+.tp-notes-flight-row + .tp-notes-flight-row { border-top: 1px solid var(--color-border); }
+.tp-notes-flight-airline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.tp-notes-flight-code { font-size: 13px; font-weight: 600; color: var(--color-muted); letter-spacing: 0.04em; }
+.tp-notes-flight-route {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+}
+.tp-notes-flight-stop { text-align: center; }
+.tp-notes-flight-time { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.tp-notes-flight-airport { font-size: 13px; font-weight: 600; color: var(--color-muted); margin-top: 2px; }
+.tp-notes-flight-date { font-size: 12px; color: var(--color-muted); margin-top: 2px; }
+.tp-notes-flight-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--color-line-strong);
+  font-size: 11px;
+}
+.tp-notes-flight-divider-line {
+  width: 60px;
+  height: 1px;
+  background: var(--color-line-strong);
+  position: relative;
+}
+.tp-notes-flight-divider-line::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  border: 4px solid transparent;
+  border-left-color: var(--color-line-strong);
+}
+
+/* Lodging row */
+.tp-notes-lodging-row { display: block; padding: 14px 16px; border-bottom: 1px solid var(--color-border); }
+.tp-notes-lodging-row:last-child { border-bottom: none; }
+.tp-notes-lodging-title { font-size: 15px; font-weight: 700; }
+.tp-notes-lodging-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tp-notes-lodging-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent-deep);
+}
+
+/* Emergency row */
+.tp-notes-emergency-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+}
+.tp-notes-emergency-row:last-child { border-bottom: none; }
+.tp-notes-emergency-kind-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--color-tertiary);
+  color: var(--color-foreground);
+}
+.tp-notes-emergency-kind-icon.is-emergency { background: rgba(193, 53, 21, 0.1); color: var(--color-destructive); }
+.tp-notes-emergency-kind-icon.is-embassy { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+.tp-notes-emergency-name { font-size: 15px; font-weight: 600; }
+.tp-notes-emergency-detail { font-size: 13px; color: var(--color-muted); margin-top: 2px; }
+.tp-notes-emergency-phone-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* SVG icon helper */
+.svg-icon { width: 18px; height: 18px; stroke-width: 2; }
+.svg-icon-sm { width: 14px; height: 14px; stroke-width: 2; }
+.svg-icon-lg { width: 20px; height: 20px; stroke-width: 2; }
+
+/* Desktop overrides */
+@media (min-width: 768px) {
+  .frame.desktop .page-body { padding: 32px 24px; }
+  .frame.desktop .hero { padding: 20px; }
+  .frame.desktop .tp-notes-section { margin-bottom: 16px; }
+  .frame.desktop .tp-notes-section-head { padding: 16px 20px; min-height: 56px; }
+  .frame.desktop .tp-notes-section-title { font-size: 18px; }
+  /* Desktop ≥768px: all sections expanded by default per design doc Premise 8 */
+}
+</style>
+</head>
+<body>
+
+<div class="compare-wrap">
+
+  <!-- ============ MOBILE FRAME ============ -->
+  <div style="position: relative;">
+    <div class="compare-label">V1 · 手機 (390×844)</div>
+    <div class="frame mobile">
+      <div class="tp-titlebar">
+        <button class="tp-titlebar-back" aria-label="返回行程">
+          <svg class="svg-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div style="flex: 1; min-width: 0;">
+          <div class="tp-titlebar-title">行程筆記</div>
+          <div class="tp-titlebar-subtitle">沖繩 7 日</div>
+        </div>
+      </div>
+
+      <div class="tp-notes-page-body">
+        <!-- Hero -->
+        <div class="tp-notes-hero">
+          <div class="tp-notes-hero-trip">
+            <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2L4 7v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7l-8-5z"></path><polyline points="12 2 12 22"></polyline></svg>
+            <span>沖繩 7 日 · 2026 / 7 / 26 出發</span>
+          </div>
+          <div class="tp-notes-hero-meta">航班、住宿、預訂、行前須知、緊急聯絡都記在這。<strong>AI 可代寫</strong>「行前須知」與「緊急聯絡」。</div>
+        </div>
+
+        <!-- 航班 (default expanded mobile) -->
+        <div class="tp-notes-section is-open">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon is-accent">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">航班</div>
+              <div class="tp-notes-section-meta">2 個航段 · 純手動</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <span class="tp-notes-section-chevron">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+          </div>
+          <div class="tp-notes-section-body">
+            <div class="tp-notes-flight-row">
+              <div class="tp-notes-flight-airline">
+                <span style="font-weight: 600; font-size: 14px;">中華航空</span>
+                <span class="tp-notes-flight-code">CI 120</span>
+              </div>
+              <div class="tp-notes-flight-route">
+                <div class="tp-notes-flight-stop">
+                  <div class="tp-notes-flight-time">09:35</div>
+                  <div class="tp-notes-flight-airport">TPE</div>
+                  <div class="tp-notes-flight-date">7/26 (六)</div>
+                </div>
+                <div class="tp-notes-flight-divider">
+                  <span>2h 25m</span>
+                  <div class="tp-notes-flight-divider-line"></div>
+                </div>
+                <div class="tp-notes-flight-stop">
+                  <div class="tp-notes-flight-time">12:00</div>
+                  <div class="tp-notes-flight-airport">OKA</div>
+                  <div class="tp-notes-flight-date">7/26 (六)</div>
+                </div>
+              </div>
+            </div>
+            <div class="tp-notes-flight-row">
+              <div class="tp-notes-flight-airline">
+                <span style="font-weight: 600; font-size: 14px;">中華航空</span>
+                <span class="tp-notes-flight-code">CI 123</span>
+              </div>
+              <div class="tp-notes-flight-route">
+                <div class="tp-notes-flight-stop">
+                  <div class="tp-notes-flight-time">13:00</div>
+                  <div class="tp-notes-flight-airport">OKA</div>
+                  <div class="tp-notes-flight-date">8/1 (五)</div>
+                </div>
+                <div class="tp-notes-flight-divider">
+                  <span>1h 50m</span>
+                  <div class="tp-notes-flight-divider-line"></div>
+                </div>
+                <div class="tp-notes-flight-stop">
+                  <div class="tp-notes-flight-time">14:50</div>
+                  <div class="tp-notes-flight-airport">TPE</div>
+                  <div class="tp-notes-flight-date">8/1 (五)</div>
+                </div>
+              </div>
+            </div>
+            <button class="tp-notes-add-row-btn">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              加航段
+            </button>
+          </div>
+        </div>
+
+        <!-- 住宿 (collapsed mobile) -->
+        <div class="tp-notes-section">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9.5L12 3l9 6.5"></path><path d="M5 10v10h14V10"></path><rect x="9" y="14" width="6" height="6"></rect></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">住宿</div>
+              <div class="tp-notes-section-meta">1 間 · Day 1–6</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <span class="tp-notes-section-chevron">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 預訂 (collapsed mobile) -->
+        <div class="tp-notes-section">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">預訂</div>
+              <div class="tp-notes-section-meta">1 筆 · 餐廳</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <span class="tp-notes-section-chevron">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 行前須知 (collapsed, has AI button) -->
+        <div class="tp-notes-section">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">行前須知</div>
+              <div class="tp-notes-section-meta">3 項 · 含 2 個 AI 建議</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <button class="tp-notes-ai-btn" aria-label="AI 生成行前須知">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path><path d="M12 22a10 10 0 1 0-10-10"></path></svg>
+                AI
+              </button>
+              <span class="tp-notes-section-chevron">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 緊急聯絡 (collapsed, has AI button, empty state inside) -->
+        <div class="tp-notes-section">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">緊急聯絡</div>
+              <div class="tp-notes-section-meta" style="color: var(--color-accent-deep); font-weight: 600;">尚未填寫 · 建議 AI 生成</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <button class="tp-notes-ai-btn" aria-label="AI 生成緊急聯絡">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path><path d="M12 22a10 10 0 1 0-10-10"></path></svg>
+                AI
+              </button>
+              <span class="tp-notes-section-chevron">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DESKTOP FRAME ============ -->
+  <div style="position: relative;">
+    <div class="compare-label">V1 · 桌機 ≥768px (全 section 展開)</div>
+    <div class="frame desktop">
+      <div class="tp-titlebar">
+        <button class="tp-titlebar-back" aria-label="返回行程">
+          <svg class="svg-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div style="flex: 1; min-width: 0;">
+          <div class="tp-titlebar-title">行程筆記 — 沖繩 7 日</div>
+        </div>
+      </div>
+
+      <div class="tp-notes-page-body">
+        <!-- Hero -->
+        <div class="tp-notes-hero">
+          <div class="tp-notes-hero-trip">
+            <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2L4 7v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7l-8-5z"></path></svg>
+            <span>沖繩 7 日 · 2026 / 7 / 26 出發 · 6 晚</span>
+          </div>
+          <div class="tp-notes-hero-meta">航班、住宿、預訂、行前須知、緊急聯絡都記在這裡，與行程明細頁分開保存。<strong>AI 可代寫</strong>「行前須知」與「緊急聯絡」兩個 section。</div>
+        </div>
+
+        <!-- 航班 expanded -->
+        <div class="tp-notes-section is-open">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon is-accent">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">航班</div>
+              <div class="tp-notes-section-meta">2 個航段 · 純手動</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <span class="tp-notes-section-chevron">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+          </div>
+          <div class="tp-notes-section-body">
+            <div class="tp-notes-flight-row">
+              <div class="tp-notes-flight-airline">
+                <span style="font-weight: 600; font-size: 14px;">中華航空</span>
+                <span class="tp-notes-flight-code">CI 120 · 經濟艙</span>
+              </div>
+              <div class="tp-notes-flight-route">
+                <div class="tp-notes-flight-stop">
+                  <div class="tp-notes-flight-time">09:35</div>
+                  <div class="tp-notes-flight-airport">TPE 桃園</div>
+                  <div class="tp-notes-flight-date">7/26 (六)</div>
+                </div>
+                <div class="tp-notes-flight-divider">
+                  <span>2h 25m</span>
+                  <div class="tp-notes-flight-divider-line"></div>
+                </div>
+                <div class="tp-notes-flight-stop">
+                  <div class="tp-notes-flight-time">12:00</div>
+                  <div class="tp-notes-flight-airport">OKA 那霸</div>
+                  <div class="tp-notes-flight-date">7/26 (六)</div>
+                </div>
+              </div>
+            </div>
+            <div class="tp-notes-flight-row">
+              <div class="tp-notes-flight-airline">
+                <span style="font-weight: 600; font-size: 14px;">中華航空</span>
+                <span class="tp-notes-flight-code">CI 123 · 經濟艙</span>
+              </div>
+              <div class="tp-notes-flight-route">
+                <div class="tp-notes-flight-stop">
+                  <div class="tp-notes-flight-time">13:00</div>
+                  <div class="tp-notes-flight-airport">OKA 那霸</div>
+                  <div class="tp-notes-flight-date">8/1 (五)</div>
+                </div>
+                <div class="tp-notes-flight-divider">
+                  <span>1h 50m</span>
+                  <div class="tp-notes-flight-divider-line"></div>
+                </div>
+                <div class="tp-notes-flight-stop">
+                  <div class="tp-notes-flight-time">14:50</div>
+                  <div class="tp-notes-flight-airport">TPE 桃園</div>
+                  <div class="tp-notes-flight-date">8/1 (五)</div>
+                </div>
+              </div>
+            </div>
+            <button class="tp-notes-add-row-btn">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              加航段
+            </button>
+          </div>
+        </div>
+
+        <!-- 住宿 expanded -->
+        <div class="tp-notes-section is-open">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9.5L12 3l9 6.5"></path><path d="M5 10v10h14V10"></path><rect x="9" y="14" width="6" height="6"></rect></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">住宿</div>
+              <div class="tp-notes-section-meta">1 間 · Day 1–6</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <span class="tp-notes-section-chevron">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+          </div>
+          <div class="tp-notes-section-body">
+            <div class="tp-notes-lodging-row">
+              <div class="tp-notes-lodging-title">那霸久茂地里士滿酒店</div>
+              <div class="tp-notes-lodging-meta">
+                <span class="tp-chip chip-day">Day 1–6 · 6 晚</span>
+                <span style="font-size: 13px; color: var(--color-muted);">沖繩県那覇市久茂地2-15-21 · 訂房編號 #BK-7281</span>
+              </div>
+              <a href="#" class="tp-notes-lodging-link">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                查看 Day 1 行程
+              </a>
+            </div>
+            <button class="tp-notes-add-row-btn">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              加住宿
+            </button>
+          </div>
+        </div>
+
+        <!-- 預訂 expanded -->
+        <div class="tp-notes-section is-open">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">預訂</div>
+              <div class="tp-notes-section-meta">1 筆 · 餐廳</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <span class="tp-notes-section-chevron">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+          </div>
+          <div class="tp-notes-section-body">
+            <div class="tp-notes-row">
+              <div class="tp-notes-row-drag">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"></circle><circle cx="15" cy="6" r="1.5"></circle><circle cx="9" cy="12" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle><circle cx="9" cy="18" r="1.5"></circle><circle cx="15" cy="18" r="1.5"></circle></svg>
+              </div>
+              <div class="tp-notes-row-content">
+                <div class="tp-notes-row-title">蕎麥麵 — そば処 鶴亀庵 <span class="tp-chip chip-day">Day 3 · 12:00</span></div>
+                <div class="tp-notes-row-desc">4 大人 · 預訂編號 R-9182</div>
+                <div class="tp-notes-row-meta">確認電話 +81 98-XXX-XXXX</div>
+              </div>
+              <div class="tp-notes-row-actions">
+                <button class="tp-notes-row-icon-btn" aria-label="編輯">
+                  <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button class="tp-notes-row-icon-btn is-danger" aria-label="刪除">
+                  <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            </div>
+            <button class="tp-notes-add-row-btn">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              加預訂
+            </button>
+          </div>
+        </div>
+
+        <!-- 行前須知 expanded with AI -->
+        <div class="tp-notes-section is-open">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">行前須知</div>
+              <div class="tp-notes-section-meta">3 項 · 含 2 個 AI 建議</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <button class="tp-notes-ai-btn" aria-label="AI 重新生成行前須知">
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path><path d="M12 22a10 10 0 1 0-10-10"></path></svg>
+                AI 重新生成
+              </button>
+              <span class="tp-notes-section-chevron">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+          </div>
+          <div class="tp-notes-section-body">
+            <div class="tp-notes-row">
+              <div class="tp-notes-row-drag">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"></circle><circle cx="15" cy="6" r="1.5"></circle><circle cx="9" cy="12" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle><circle cx="9" cy="18" r="1.5"></circle><circle cx="15" cy="18" r="1.5"></circle></svg>
+              </div>
+              <div class="tp-notes-row-content">
+                <div class="tp-notes-row-title">貨幣 — 1 TWD ≈ 4.8 JPY</div>
+                <div class="tp-notes-row-desc">機場 ATM 手續費低於市區 7-Eleven，當地 Visa 接受度高但小店面僅收現金。</div>
+              </div>
+              <div class="tp-notes-row-actions">
+                <button class="tp-notes-row-icon-btn" aria-label="編輯"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button class="tp-notes-row-icon-btn is-danger" aria-label="刪除"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></button>
+              </div>
+            </div>
+            <div class="tp-notes-row">
+              <div class="tp-notes-row-drag">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"></circle><circle cx="15" cy="6" r="1.5"></circle><circle cx="9" cy="12" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle><circle cx="9" cy="18" r="1.5"></circle><circle cx="15" cy="18" r="1.5"></circle></svg>
+              </div>
+              <div class="tp-notes-row-content">
+                <div class="tp-notes-row-title">
+                  插頭 — A 型 110V
+                  <span class="tp-chip chip-ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path></svg>AI 建議</span>
+                </div>
+                <div class="tp-notes-row-desc">與台灣相同，免轉接頭。日本電壓 100V 略低，吹風機可正常使用。</div>
+              </div>
+              <div class="tp-notes-row-actions">
+                <button class="tp-notes-row-icon-btn" aria-label="編輯"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button class="tp-notes-row-icon-btn is-danger" aria-label="刪除"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></button>
+              </div>
+            </div>
+            <div class="tp-notes-row">
+              <div class="tp-notes-row-drag">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"></circle><circle cx="15" cy="6" r="1.5"></circle><circle cx="9" cy="12" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle><circle cx="9" cy="18" r="1.5"></circle><circle cx="15" cy="18" r="1.5"></circle></svg>
+              </div>
+              <div class="tp-notes-row-content">
+                <div class="tp-notes-row-title">
+                  小費 — 沖繩無小費文化
+                  <span class="tp-chip chip-ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path></svg>AI 建議</span>
+                </div>
+                <div class="tp-notes-row-desc">餐廳含 10% service charge，自行付小費反而失禮。計程車找零也不留。</div>
+              </div>
+              <div class="tp-notes-row-actions">
+                <button class="tp-notes-row-icon-btn" aria-label="編輯"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button class="tp-notes-row-icon-btn is-danger" aria-label="刪除"><svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></button>
+              </div>
+            </div>
+            <button class="tp-notes-add-row-btn">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              加項
+            </button>
+          </div>
+        </div>
+
+        <!-- 緊急聯絡 — pending state -->
+        <div class="tp-notes-section is-open">
+          <div class="tp-notes-section-head">
+            <div class="tp-notes-section-icon">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"></path></svg>
+            </div>
+            <div class="tp-notes-section-titles">
+              <div class="tp-notes-section-title">緊急聯絡</div>
+              <div class="tp-notes-section-meta">AI 正在生成…</div>
+            </div>
+            <div class="tp-notes-section-actions">
+              <button class="tp-notes-ai-btn" disabled>
+                <svg class="svg-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11.5l3 3 5-5"></path><path d="M12 22a10 10 0 1 0-10-10"></path></svg>
+                生成中…
+              </button>
+              <span class="tp-notes-section-chevron">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+          </div>
+          <div class="tp-notes-section-body">
+            <div class="tp-notes-pending-banner">
+              <span class="tp-pulse-dot"></span>
+              AI 正在生成沖繩當地的緊急聯絡資訊…通常 3–7 分鐘完成
+            </div>
+            <button class="tp-notes-add-row-btn">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              手動加聯絡人（不需等 AI）
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
