@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.25] - 2026-05-29
+
+**Docs — ARCHITECTURE.md 加 Trip Notes section（schema + AI generation flow）**
+
+QA loop dev round 發現 ARCHITECTURE.md 完全沒提 trip-notes feature。新加完整 section 描述 6 table schema + AI generation 3 prompts + CR-7/CR-8 linkage pattern + tests coverage。Future engineers 不用 grep design doc 也能理解。
+
+### Added
+
+- `ARCHITECTURE.md` 加 `### Trip Notes (v2.34.0+)` 章節：
+  - 6 table schema overview (5 data + 1 linkage)
+  - AI generation 3 prompt prefixes mapping
+  - Trigger flow (POST /generate → INSERT linkage → Mac mini → PATCH hook → applyNotesGenerationCompletion)
+  - Frontend page + component structure
+  - Tests stats (137 tests trip-notes-related)
+
 ## [2.34.24] - 2026-05-29
 
 **Polish — 行程筆記 PR24：「✦ 住宿」AI button empty-lodgings guard**
