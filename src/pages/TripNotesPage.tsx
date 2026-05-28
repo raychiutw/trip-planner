@@ -24,6 +24,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
 import AlertPanel from '../components/shared/AlertPanel';
+import FlightsSection from '../components/trip-notes/FlightsSection';
 import { apiFetch } from '../lib/apiClient';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -170,12 +171,14 @@ const SCOPED_STYLES = `
 .tp-notes-section-body {
   display: none;
   border-top: 1px solid var(--color-border);
+}
+.tp-notes-section.is-open .tp-notes-section-body { display: block; }
+.tp-notes-section-body.is-placeholder {
   padding: 16px;
   color: var(--color-muted);
   font-size: 14px;
   text-align: center;
 }
-.tp-notes-section.is-open .tp-notes-section-body { display: block; }
 
 /* Skeleton (loading state) */
 .tp-notes-skel {
@@ -358,14 +361,27 @@ export default function TripNotesPage() {
                   </span>
                 </div>
               </button>
-              <div
-                id={`trip-notes-body-${sec.key}`}
-                className="tp-notes-section-body"
-                data-testid={`trip-notes-section-body-${sec.key}`}
-              >
-                {/* PR5-8 各 section CRUD UI 接這裡 */}
-                {n === 0 ? '尚未填寫，加項即可。' : `已有 ${n} 項，待後續 PR 接 CRUD UI。`}
-              </div>
+              {sec.key === 'flights' && tripId ? (
+                <div
+                  id={`trip-notes-body-${sec.key}`}
+                  className="tp-notes-section-body"
+                  data-testid={`trip-notes-section-body-${sec.key}`}
+                >
+                  <FlightsSection
+                    tripId={tripId}
+                    items={data.flights}
+                    onChange={(next) => setData({ ...data, flights: next })}
+                  />
+                </div>
+              ) : (
+                <div
+                  id={`trip-notes-body-${sec.key}`}
+                  className="tp-notes-section-body is-placeholder"
+                  data-testid={`trip-notes-section-body-${sec.key}`}
+                >
+                  {n === 0 ? '尚未填寫，加項即可。' : `已有 ${n} 項，待後續 PR 接 CRUD UI。`}
+                </div>
+              )}
             </div>
           );
         })}
