@@ -423,6 +423,50 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - **Suggestion block** (`.suggestion`)：accent-subtle bg + accent-deep text + caption2 eyebrow「建議」label，不用 emoji（DESIGN.md 第 10 條無裝飾原則）
 - **Navigation hierarchy**：`action_target.entry_id` 帶 → 直接 navigate `/trip/:id/stop/:eid/edit`（更具體）；只有 `day` → navigate `/trip/:id?day=N`
 
+### Trip Notes Page (`tp-notes-*`)
+
+行程筆記全頁（v2.34.x）。Route `/trip/:tripId/notes`。5 section accordion（航班 / 住宿 / 預訂 / 行前須知 / 緊急聯絡）+ 3 AI generation prompt (lodging-tips / general-tips / emergency) 寫進 行前須知 + 緊急聯絡 兩 section。
+
+**入口**：
+- TripCardMenu「行程筆記」menu item (PR14)
+- EmbeddedActionMenu「行程筆記」menu item (PR14)
+
+**Accordion**：
+- Mobile (compact)：default 只 航班 expanded
+- Desktop ≥768px：5 個 section 全 expanded
+- `matchMedia('(min-width: 768px)')` listener 動態切換
+- `<button>` head + `aria-expanded` + `aria-controls` 給 screen reader
+
+**4 個 state**（依資料 + AI job）：
+
+| State | UI |
+|-------|----|
+| loading | 3 row shimmer skeleton (`prefers-reduced-motion` 停 animation) |
+| error | `<AlertPanel variant="error">` + actionLabel「重試」(對齊 L549) |
+| empty (counts=0) | hero「建立行程筆記」+ 5 dot progress + 航班 is-suggested accent border + 「建議先填」warn meta |
+| hasData | 5 section accordion + meta count |
+| ai-pending | accent-subtle banner + pulse dot + 「AI 正在生成 ... 通常 3-7 分鐘完成」 |
+
+**AI button**：
+- 只在 行前須知 + 緊急聯絡 section header
+- Disabled state when ai-pending + text 改「生成中…」
+- 30s debounce backend（重複 click → return existing job）
+
+**Visual specs**：
+- Section card: 12px gap + 1px hairline border + secondary bg + `tp-notes-section.is-open` border 改 `line-strong`
+- Section icon box: 36×36 + radius-md + `is-accent` variant accent-subtle bg + accent-deep color
+- Row hover: bg → `--color-background` + grip handle (1.5×14 SVG) 顯示
+- Edit mode: 2px accent box-shadow + 6/8/12 margin + 2-col edit grid
+- ConfirmModal delete: 對齊 DESIGN.md「Destructive 必走 ConfirmModal」
+
+**autosave (對齊 v2.33.108 OCC)**：
+- field blur → PATCH `/api/trips/:id/notes/{section}/:rowId` with `expectedVersion`
+- 成功 silent
+- 失敗 → AlertPanel error 持續可見 + 「重試」action
+- 409 STALE_ENTRY → refresh + retry
+
+**Stop Type Color exception**：emergency contacts kind icon 用 semantic 色（police/medical 用 destructive red、embassy 用 accent、hotel 用 success green）— 屬「semantic encoding 例外」（同 priority dot 邏輯）。
+
 ## Modal Dialogs
 
 ### Principle
