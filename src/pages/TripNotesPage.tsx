@@ -25,6 +25,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
 import AlertPanel from '../components/shared/AlertPanel';
 import FlightsSection from '../components/trip-notes/FlightsSection';
+import LodgingsSection from '../components/trip-notes/LodgingsSection';
 import { apiFetch } from '../lib/apiClient';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -371,6 +372,18 @@ export default function TripNotesPage() {
                     tripId={tripId}
                     items={data.flights}
                     onChange={(next) => setData({ ...data, flights: next })}
+                  />
+                </div>
+              ) : sec.key === 'lodgings' && tripId ? (
+                <div
+                  id={`trip-notes-body-${sec.key}`}
+                  className="tp-notes-section-body"
+                  data-testid={`trip-notes-section-body-${sec.key}`}
+                >
+                  <LodgingsSection
+                    tripId={tripId}
+                    items={data.lodgings}
+                    onChange={(next) => setData({ ...data, lodgings: next })}
                   />
                 </div>
               ) : (
