@@ -246,6 +246,35 @@ API endpoints:
 | `api_logs` | 錯誤日誌（`source` 欄位做分類） |
 | `trip_docs` | 行程附件（機票、訂房 PDF）|
 
+### Trip Notes (v2.34.0+) — trip-level metadata 5 sections + AI generation
+
+行程筆記（航班 / 住宿 / 預訂 / 行前須知 / 緊急聯絡）trip-level metadata 集中入 Tripline，user 不再切換 TripIt / Notion / Wanderlog。對齊 design doc `~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260528-144009.md`。
+
+```
+trip_flights              航班 (純手動，9 col + version OCC)
+trip_lodgings             住宿 (純手動，可選 day_id ON DELETE SET NULL)
+trip_reservations         預訂 (5-kind CHECK enum)
+trip_pretrip_notes        行前須知 (AI 可生，ai_source 區分 lodging-tips / general-tips)
+trip_emergency_contacts   緊急聯絡 (AI 可生，7-kind CHECK enum)
+trip_note_ai_jobs         AI generation linkage (對齊 v2.33.102 CR-8 confused-deputy fix)
+```
+
+**AI generation 3 prompts**：
+- `lodging-tips`（住宿在地建議）→ INSERT trip_pretrip_notes with ai_source='lodging-tips'
+- `tips`（一般行前須知）→ INSERT trip_pretrip_notes with ai_source='general-tips'
+- `emergency`（緊急聯絡）→ INSERT trip_emergency_contacts with kind narrowed
+
+Trigger flow（CR-7 + CR-8 pattern）：
+1. POST `/api/trips/:id/notes/:type/generate` → INSERT trip_requests + INSERT trip_note_ai_jobs linkage
+2. Fire-and-forget trigger api-server（8s AbortController for CF Edge → Tailscale Funnel cold path）
+3. Mac mini api-server tp-request skill 處理 message → PATCH /requests/:id with reply JSON
+4. PATCH hook `applyNotesGenerationCompletion` 識別 linkage → 路由 doc_type → parse + dedup + INSERT rows + summary reply
+
+**Frontend** `src/pages/TripNotesPage.tsx`（route `/trip/:tripId/notes`）：5 section accordion，mobile 預設展 航班，desktop ≥768px 全展開。`<FlightsSection>` / `<LodgingsSection>` / `<ReservationsSection>` / `<PretripSection>` / `<EmergencySection>` 每 section 獨立 component 處理 CRUD + autosave OCC + drag-reorder。
+
+**Tests**（122+ tests）：
+- migration 0073 17 + import HuiYun 9 + page shell 17 + section components 25 + integration 50 + E2E 4 + a11y 13 = 137 tests covering trip-notes
+
 ---
 
 ## Auth (v2.32+ V2 OAuth)
