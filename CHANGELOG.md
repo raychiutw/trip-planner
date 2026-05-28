@@ -3,6 +3,36 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.12] - 2026-05-28
+
+**Feature — 行程筆記 PR12 / 19：frontend AI button trigger + pending banner + polling (B-2 完整)**
+
+完整 AI generation user flow 上線！AI button click → POST /generate → polling 直到 completed → refetch + success toast。B-2 phase 完整。
+
+### Added
+
+- `src/pages/TripNotesPage.tsx`：
+  - `useRequestSSE(aiJob?.requestId)` polling — 跟 chat / 健檢同 pattern (SSE + 30s safety net poll)
+  - `handleAiTrigger(docType)` — POST /api/trips/:id/notes/:type/generate + 鎖 aiJob 狀態
+  - 行前須知 AI button → `docType = 'tips'`（general-tips prompt）
+  - 緊急聯絡 AI button → `docType = 'emergency'`
+  - **Pending banner**：accent-subtle bg + pulse dot animation + 「AI 正在生成 ... 通常 3-7 分鐘完成」
+  - AI button disabled + text 改「生成中…」when active
+  - Terminal status (completed/failed) → clear aiJob + 完成 / 失敗 handler
+  - 完成 → loadData() refetch aggregator + showToast 「AI 生成完成（緊急聯絡）」success 4s
+  - 失敗 → setAiError → AlertPanel.is-error 持續可見 + 「關閉」action
+- pulse animation CSS keyframes (`prefers-reduced-motion` 停)
+
+### B-2 phase 完整 (PR9-12)
+
+| PR | Backend | Frontend |
+|---|---|---|
+| PR9 | POST /generate endpoint + debounce + trigger | — |
+| PR10 | Completion hook + parseNotesItems + dedup + INSERT routing | — |
+| PR12 | — | AI button + polling + pending banner + completed toast |
+
+PR11 (mac mini tp-* skill update) 不需要 — prompt 自含 instruction，tp-request 通用處理 chat-style request。
+
 ## [2.34.10] - 2026-05-28
 
 **Feature — 行程筆記 PR10 / 19：applyNotesGenerationCompletion hook 接 PATCH /api/requests/:id**
