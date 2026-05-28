@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.8] - 2026-05-28
+
+**Feature — 行程筆記 PR8 / 19：行前須知 + 緊急聯絡 CRUD UI（B-1 phase 完整）**
+
+第 4、5 個 section CRUD UI 一波 ship 完整 B-1 phase。AI 建議 chip 顯示但 AI generation flow PR9+ 才接。
+
+### Added
+
+- `src/components/trip-notes/PretripSection.tsx` — 行前須知 3 fields edit（分類 / 標題 / 內容 markdown textarea）+ AI 建議 chip + 分類 chip
+- `src/components/trip-notes/EmergencySection.tsx` — 緊急聯絡 5 fields edit + kind enum (personal/embassy/police/medical/insurance/hotel/other) + kind icon (color-coded: 報警/醫療 destructive red / embassy accent / hotel success green) + 「tel:」phone 撥號 button (44px tap target)
+- TripNotesPage `kind` field narrow 成 7-value union 對齊 type
+
+### Status — B-1 phase 完整 5/5
+
+| Section | CRUD UI | AI |
+|---|---|---|
+| 航班 (PR5) | ✓ | — (純手動) |
+| 住宿 (PR6) | ✓ | — (純手動) |
+| 預訂 (PR7) | ✓ | — (純手動) |
+| 行前須知 (PR8) | ✓ | PR9+ AI generation 接 |
+| 緊急聯絡 (PR8) | ✓ | PR9+ AI generation 接 |
+
 ## [2.34.7] - 2026-05-28
 
 **Feature — 行程筆記 PR7 / 19：預訂 ReservationsSection CRUD UI + kind enum**
