@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.2] - 2026-05-28
+
+**Feature — 行程筆記 PR3 / 19：mutation endpoints + OCC 409 + 22 條 integration test**
+
+POST / PATCH / DELETE / reorder 5 個 section 都齊全。共用 `_shared.ts` 抽出 4 個 helper（createNotesRow / updateNotesRow / deleteNotesRow / reorderNotesRows）+ ALLOWED_FIELDS whitelist + enum validation。對齊 v2.33.108 OCC `expectedVersion` 409 STALE_ENTRY pattern。
+
+### Added
+
+- `functions/api/trips/[id]/notes/_shared.ts` extended：
+  - `ALLOWED_FIELDS` map per-table whitelist（snake_case，`version` 不在 — autosave OCC bump 由 SQL CAS）
+  - `createNotesRow(ctx, table)` — POST handler，auto sort_order = MAX+1，body 不能 inject `trip_id`（path 提供），201 + row
+  - `updateNotesRow(ctx, table)` — PATCH handler，OCC `expectedVersion` CAS，cross-trip rowId 403，empty body 400
+  - `deleteNotesRow(ctx, table)` — DELETE handler，cross-trip rowId 403
+  - `reorderNotesRows(ctx, table)` — bulk PATCH，body `{ items: [{ id, sortOrder }] }`，D1 batch atomic，cross-trip id 403
+  - `validateEnums` helper — `kind` (reservations/emergency) + `ai_source` (pretrip) 400 早返回避免 500
+- `functions/api/trips/[id]/notes/{flights,lodgings,reservations,pretrip,emergency}.ts` 5 個 file 加 `onRequestPost`
+- `functions/api/trips/[id]/notes/{flights,lodgings,reservations,pretrip,emergency}/[rowId].ts` 5 個 file — `onRequestPatch` + `onRequestDelete`
+- `functions/api/trips/[id]/notes/{flights,lodgings,reservations,pretrip,emergency}/reorder.ts` 5 個 file — `onRequestPatch`
+- `tests/api/trip-notes-mutations.integration.test.ts` 22 條：
+  - POST：auto sort_order / 用 user 指定 / kind enum 5 種接受 / 1 種拒絕 / ai_source null / cross-trip trip_id inject 被 ignore / 非授權 403
+  - PATCH：note update / expectedVersion match bump 1→2 / mismatch 409 STALE_ENTRY / cross-trip 403 / 不存在 404 / empty body 400
+  - DELETE：row gone / cross-trip 403
+  - reorder：3 row sort_order swap + version bump on all / cross-trip id 403 / empty items 400 / 非 number id 400
+
 ## [2.34.1] - 2026-05-28
 
 **Feature — 行程筆記 PR2 / 19：backend GET endpoints + import script JSON parser hotfix**
