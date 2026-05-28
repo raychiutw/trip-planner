@@ -16,7 +16,7 @@
  *
  * CRUD UI per section (PR5-8) 還沒 — section body 顯示 row count + 「加項」placeholder。
  */
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import TitleBar from '../components/shell/TitleBar';
 import AppShell from '../components/shell/AppShell';
@@ -30,9 +30,11 @@ import ReservationsSection from '../components/trip-notes/ReservationsSection';
 import PretripSection from '../components/trip-notes/PretripSection';
 import EmergencySection from '../components/trip-notes/EmergencySection';
 import { apiFetch } from '../lib/apiClient';
+import { showToast } from '../components/shared/Toast';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
+import { useRequestSSE } from '../hooks/useRequestSSE';
 import { routes } from '../lib/routes';
 import { TripContext } from '../contexts/TripContext';
 
@@ -197,6 +199,10 @@ const SCOPED_STYLES = `
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+@keyframes tp-notes-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
 @media (prefers-reduced-motion: reduce) {
   .tp-notes-skel { animation: none; }
 }
@@ -252,6 +258,49 @@ export default function TripNotesPage() {
     void loadData();
   }, [loadData]);
 
+  // ============================================================
+  // v2.34.x PR12: AI generation state + polling
+  // ============================================================
+  const [aiJob, setAiJob] = useState<{ requestId: number; jobId: number; docType: 'lodging-tips' | 'tips' | 'emergency' } | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const aiSse = useRequestSSE(aiJob?.requestId ?? null);
+  const aiJobIdRef = useRef<number | null>(null);
+
+  // Track terminal status — refetch + clear job on completed/failed
+  useEffect(() => {
+    if (!aiJob || !aiSse.status) return;
+    if (aiSse.status === 'completed' || aiSse.status === 'failed') {
+      // Avoid double-trigger if state lags
+      if (aiJobIdRef.current === aiJob.jobId) return;
+      aiJobIdRef.current = aiJob.jobId;
+      const docType = aiJob.docType;
+      setAiJob(null);
+      void (async () => {
+        if (aiSse.status === 'completed') {
+          await loadData(); // refetch aggregator
+          showToast(`AI 生成完成（${docType === 'emergency' ? '緊急聯絡' : '行前須知'}）`, 'success', 4000);
+        } else {
+          setAiError(aiSse.error?.message || 'AI 生成失敗');
+        }
+      })();
+    }
+  }, [aiSse.status, aiSse.error, aiJob, loadData]);
+
+  const handleAiTrigger = useCallback(async (docType: 'lodging-tips' | 'tips' | 'emergency') => {
+    if (!tripId || aiJob) return;
+    setAiError(null);
+    try {
+      const res = await apiFetch<{ jobId: number; requestId: number; status: string; tripId: string; docType: string }>(
+        `/trips/${tripId}/notes/${docType}/generate`,
+        { method: 'POST', body: JSON.stringify({}) },
+      );
+      setAiJob({ requestId: res.requestId, jobId: res.jobId, docType });
+      aiJobIdRef.current = null;
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'AI 觸發失敗');
+    }
+  }, [tripId, aiJob]);
+
   const counts = useMemo(() => {
     if (!data) return { flights: 0, lodgings: 0, reservations: 0, pretrip: 0, emergency: 0, total: 0 };
     return {
@@ -295,6 +344,38 @@ export default function TripNotesPage() {
             actionLabel="重試"
             onAction={() => void loadData()}
           />
+        )}
+
+        {aiError && (
+          <AlertPanel
+            variant="error"
+            title="AI 生成失敗"
+            message={`${aiError}。可重試或手動填寫。`}
+            actionLabel="關閉"
+            onAction={() => setAiError(null)}
+          />
+        )}
+
+        {aiJob && (
+          <div data-testid="trip-notes-ai-pending" style={{
+            padding: '12px 16px',
+            background: 'var(--color-accent-subtle)',
+            color: 'var(--color-accent-deep)',
+            borderRadius: 'var(--radius-md)',
+            margin: '12px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '14px',
+            fontWeight: 600,
+          }}>
+            <span style={{
+              width: '8px', height: '8px', borderRadius: '50%',
+              background: 'var(--color-accent)',
+              animation: 'tp-notes-pulse 1.4s ease-in-out infinite',
+            }} />
+            AI 正在生成{aiJob.docType === 'emergency' ? '緊急聯絡' : '行前須知'}…通常 3–7 分鐘完成
+          </div>
         )}
 
         {!loading && !error && data && counts.total === 0 && (
@@ -353,11 +434,14 @@ export default function TripNotesPage() {
                       data-testid={`trip-notes-ai-btn-${sec.key}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        // PR9+ 接 AI generation flow
+                        const docType = sec.key === 'pretrip' ? 'tips' : 'emergency';
+                        void handleAiTrigger(docType);
                       }}
+                      disabled={aiJob !== null}
+                      title={aiJob !== null ? 'AI 正在處理另一個請求' : `AI 生成${sec.title}`}
                     >
                       <Icon name="sparkle" />
-                      AI
+                      {aiJob?.docType === (sec.key === 'pretrip' ? 'tips' : 'emergency') ? '生成中…' : 'AI'}
                     </button>
                   )}
                   <span className="tp-notes-section-chevron" aria-hidden="true">
