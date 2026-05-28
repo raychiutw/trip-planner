@@ -137,7 +137,7 @@ export function buildImportPlan(
       values: [
         tripId,
         pretripOrder++,
-        '行前提醒（from emergency notes）',
+        '保險 / 住宿地址',
         standaloneNotes.map((n) => `- ${n}`).join('\n'),
         0,
         null,

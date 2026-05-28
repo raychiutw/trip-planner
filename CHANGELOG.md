@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.21] - 2026-05-29
+
+**Polish — HuiYun import script aggregated row title cleanup**
+
+QA loop visual inspection 發現 HuiYun import 產生的 aggregated row title「行前提醒（from emergency notes）」對 user 暴露 script 內部細節（"from emergency notes" 是 debugging annotation）。改為「保險 / 住宿地址」（描述實際內容）。
+
+### Changed
+
+- `scripts/import-huiyun-trip-notes.ts:140` — title「行前提醒（from emergency notes）」→「保險 / 住宿地址」
+- HuiYun prod row 同步 UPDATE 改新 title
+
 ## [2.34.20] - 2026-05-28
 
 **Fix — 行程筆記 token hardcode cleanup (pr2-tokens regression)**
