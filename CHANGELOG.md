@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.9] - 2026-05-28
+
+**Feature — 行程筆記 PR9 / 19：POST /generate AI 觸發 endpoint (B-2 phase 開始)**
+
+行程筆記 AI generation B-2 phase 開始。POST /api/trips/:id/notes/:type/generate 觸發 AI 生成行前須知 / 緊急聯絡內容。
+
+### Added
+
+- `functions/api/trips/[id]/notes/[type]/generate.ts`：
+  - type 限 'lodging-tips' / 'tips' / 'emergency' (對齊 design doc Premise 6 + trip_note_ai_jobs.doc_type CHECK enum)
+  - INSERT `trip_requests` with `[行程筆記-{type}]` prefix AI prompt (繁中)
+  - INSERT `trip_note_ai_jobs` linkage row (對齊 v2.33.102 CR-8 confused-deputy fix)
+  - Fire-and-forget trigger Mac Mini api-server (8s AbortController 對齊 v2.33.113)
+  - 30s debounce — 同 trip+type pending → return existing job (防 user 多次 click 浪費 quota)
+  - Return 202 + { jobId, requestId, status: 'pending', tripId, docType }
+- `tests/api/trip-notes-generate.integration.test.ts` 8 條：3 valid types / invalid type 400 / PERM_DENIED / trip_requests prefix / linkage row 對 / debounce 重複返回 existing job
+
+### Pending
+
+- PR10: applyNotesGenerationCompletion hook integration into PATCH /api/requests/:id (識別 trip_note_ai_jobs linkage + parse reply → INSERT 對應 section table rows)
+- PR11: mac mini tp-* skill spawn handler (sub-section selection logic)
+- PR12: frontend AI button click → POST generate + polling
+- PR13: pending banner + completed toast + AlertPanel failed
+
 ## [2.34.8] - 2026-05-28
 
 **Feature — 行程筆記 PR8 / 19：行前須知 + 緊急聯絡 CRUD UI（B-1 phase 完整）**
