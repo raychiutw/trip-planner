@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.141] - 2026-05-28
+
+**Fix — ChangePoiPage titleBar 右上 ✓ submit action 拔除（重複 bottom CTA）**
+
+User feedback 2026-05-28 第二次「右上角紅框移除」(screenshot 加入備選景點 page)。`/change-poi` `/add-entry` `/alternates` 3 mode 共用 `ChangePoiPage`，bottom sticky bar 已有 primary button 同 `submitLabel`（加為備選 / 加入行程 / 置換景點），titleBar 右上 ✓ TitleBarPrimaryAction 完全重複。
+
+### Changed
+
+- `src/pages/ChangePoiPage.tsx`：
+  - 拔 `titleBarActions` useMemo（含 `TitleBarPrimaryAction` JSX 與 `handleSubmit` wire）
+  - `<TitleBar title={pageTitle} back={goBack} />` 移除 `actions={titleBarActions}` prop
+  - `main` useMemo deps array 移除 `titleBarActions`
+  - 拔 unused `import TitleBarPrimaryAction`
+  - 加 v2.33.141 註解引用 user feedback
+
+### Added
+
+- `tests/unit/change-poi-titlebar-action-removed.test.ts`：7 條 regression — 無 TitleBarPrimaryAction import / 無 titleBarActions useMemo / 無 testid `change-poi-titlebar-submit` / TitleBar 無 actions prop / 全檔無 `titleBarActions` 殘留 / 底部 `change-poi-submit` button 保留 / 註解引用 user feedback
+
+### Verification
+
+- vitest 7/7 pass
+- tsc --noEmit clean
+
 ## [2.33.140] - 2026-05-28
 
 **Fix — ExplorePage 拔 titleBar 右上 heart action（重複入口）**
