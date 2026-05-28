@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.14] - 2026-05-28
+
+**Polish — 行程筆記 PR14 / 19：TripCardMenu + EmbeddedActionMenu 加「行程筆記」入口**
+
+行程列表 trip card kebab menu + 行程詳細頁 ⋯ menu 都加「行程筆記」入口。對齊 AI 健檢同 menu pattern。
+
+### Added
+
+- `src/components/trip/TripCardMenu.tsx` — 加 `onNotes` optional prop + 「行程筆記」 menu item (file-text icon)。順序：編輯 / 共編 / AI 健檢 / **行程筆記** / 刪除
+- `src/pages/TripsListPage.tsx`：
+  - TripsListPage card menu wire `onNotes={(id) => navigate('/trip/:id/notes')}`
+  - `EmbeddedActionMenu` (詳細頁⋯) 也加同 prop + 同 menu item
+- 用 file-text icon 對齊 NotesPage empty hero bubble icon
+
 ## [2.34.13] - 2026-05-28
 
 **Polish — 行程筆記 PR13 / 19：Lodgings day_id picker + day chip reverse navigation (B-3 開始)**
