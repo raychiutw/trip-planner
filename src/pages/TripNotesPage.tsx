@@ -27,6 +27,8 @@ import AlertPanel from '../components/shared/AlertPanel';
 import FlightsSection from '../components/trip-notes/FlightsSection';
 import LodgingsSection from '../components/trip-notes/LodgingsSection';
 import ReservationsSection from '../components/trip-notes/ReservationsSection';
+import PretripSection from '../components/trip-notes/PretripSection';
+import EmergencySection from '../components/trip-notes/EmergencySection';
 import { apiFetch } from '../lib/apiClient';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -38,7 +40,7 @@ interface TripFlight { id: number; sortOrder: number; airline: string; flightNo:
 interface TripLodging { id: number; sortOrder: number; name: string; address: string; checkInAt: string; checkOutAt: string; bookingNo: string; phone: string; note: string; dayId: number | null; version: number; }
 interface TripReservation { id: number; sortOrder: number; kind: 'restaurant' | 'experience' | 'ticket' | 'transport' | 'other'; title: string; reservedAt: string; partySize: number; reservationNo: string; phone: string; note: string; version: number; }
 interface TripPretripNote { id: number; sortOrder: number; section: string; title: string; content: string; aiGenerated: number; aiSource: string | null; version: number; }
-interface TripEmergencyContact { id: number; sortOrder: number; name: string; relationship: string; phone: string; email: string; kind: string; aiGenerated: number; version: number; }
+interface TripEmergencyContact { id: number; sortOrder: number; name: string; relationship: string; phone: string; email: string; kind: 'personal' | 'embassy' | 'police' | 'medical' | 'insurance' | 'hotel' | 'other'; aiGenerated: number; version: number; }
 
 interface NotesAggregator {
   flights: TripFlight[];
@@ -397,6 +399,30 @@ export default function TripNotesPage() {
                     tripId={tripId}
                     items={data.reservations}
                     onChange={(next) => setData({ ...data, reservations: next })}
+                  />
+                </div>
+              ) : sec.key === 'pretrip' && tripId ? (
+                <div
+                  id={`trip-notes-body-${sec.key}`}
+                  className="tp-notes-section-body"
+                  data-testid={`trip-notes-section-body-${sec.key}`}
+                >
+                  <PretripSection
+                    tripId={tripId}
+                    items={data.pretripNotes}
+                    onChange={(next) => setData({ ...data, pretripNotes: next })}
+                  />
+                </div>
+              ) : sec.key === 'emergency' && tripId ? (
+                <div
+                  id={`trip-notes-body-${sec.key}`}
+                  className="tp-notes-section-body"
+                  data-testid={`trip-notes-section-body-${sec.key}`}
+                >
+                  <EmergencySection
+                    tripId={tripId}
+                    items={data.emergencyContacts}
+                    onChange={(next) => setData({ ...data, emergencyContacts: next })}
                   />
                 </div>
               ) : (
