@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.23] - 2026-05-29
+
+**Test — 行程筆記 PR23：PR22 lodging-tips button regression test (2 條)**
+
+PR22 加 lodging-tips UI trigger 後立刻補 regression test 鎖住未來變動。
+
+### Added
+
+- `tests/unit/trip-notes-page.test.tsx` 2 條新測試：
+  - `PR22 — pretrip section render 2 AI buttons (一般 + 住宿)`：驗 2 button testid + label「一般」/「住宿」+ aria-label distinct
+  - `PR22 — emergency section still has 1 AI button (no lodging counterpart)`：驗 emergency 只有 1 AI button，無 lodging counterpart
+
+Total trip-notes-page unit test: 13 → 15
+
 ## [2.34.22] - 2026-05-29
 
 **Feature — 行程筆記 PR22：lodging-tips AI UI trigger（補完 3/3 AI prompts UX）**

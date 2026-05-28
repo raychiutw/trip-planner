@@ -145,6 +145,31 @@ describe('TripNotesPage — shell', () => {
     expect(screen.queryByTestId('trip-notes-ai-btn-reservations')).toBeNull();
   });
 
+  it('PR22 — pretrip section render 2 AI buttons (一般 + 住宿)', async () => {
+    apiFetchMock.mockResolvedValue({
+      flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('trip-notes-ai-btn-pretrip')).toBeInTheDocument());
+    // PR22: lodging-tips trigger button
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip-lodging')).toBeInTheDocument();
+    // Labels
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip').textContent).toContain('一般');
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip-lodging').textContent).toContain('住宿');
+    // aria-labels distinct
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip').getAttribute('aria-label')).toContain('一般行前須知');
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip-lodging').getAttribute('aria-label')).toContain('住宿在地建議');
+  });
+
+  it('PR22 — emergency section still has 1 AI button (no lodging counterpart)', async () => {
+    apiFetchMock.mockResolvedValue({
+      flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('trip-notes-ai-btn-emergency')).toBeInTheDocument());
+    expect(screen.queryByTestId('trip-notes-ai-btn-emergency-lodging')).toBeNull();
+  });
+
   it('mobile default — 只 航班 is-open + chevron 旋轉', async () => {
     apiFetchMock.mockResolvedValue({
       flights: [{ id: 1, sortOrder: 0, airline: 'CI', flightNo: 'CI 120' }],
