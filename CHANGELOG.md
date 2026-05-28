@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.7] - 2026-05-28
+
+**Feature — 行程筆記 PR7 / 19：預訂 ReservationsSection CRUD UI + kind enum**
+
+第三個 section CRUD UI。kind enum dropdown（餐廳/體驗/門票/交通/其他）+ 7 fields edit + autosave OCC + drag-reorder + ConfirmModal delete。
+
+### Added
+
+- `src/components/trip-notes/ReservationsSection.tsx`：
+  - Display：kind chip (accent-subtle) + title + 預訂時間 + 人數 + 編號 + 電話 + 備註
+  - Edit：8 fields incl. kind select dropdown + datetime + textarea note
+  - kind enum 5 種 onBlur + onChange 都觸發 save (select 行為跨瀏覽器一致)
+- `src/pages/TripNotesPage.tsx` — TripReservation `kind` 從 string narrow 成 5-value union 對齊 type
+- wire `<ReservationsSection>` 進預訂 section body
+
 ## [2.34.6] - 2026-05-28
 
 **Feature — 行程筆記 PR6 / 19：住宿 LodgingsSection CRUD UI**
