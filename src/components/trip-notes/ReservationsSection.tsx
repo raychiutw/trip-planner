@@ -80,7 +80,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-full);
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
-  font-size: 11px; font-weight: 600;
+  font-size: var(--font-size-caption2); font-weight: 600;
   white-space: nowrap;
 }
 .tp-notes-reservation-title { font-size: 15px; font-weight: 600; }

@@ -96,7 +96,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-full);
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
-  font-size: 11px; font-weight: 600;
+  font-size: var(--font-size-caption2); font-weight: 600;
 }
 .tp-notes-emergency-ai-chip .svg-icon { width: 10px; height: 10px; }
 .tp-notes-emergency-detail { font-size: var(--font-size-footnote); color: var(--color-muted); margin-top: 2px; }
