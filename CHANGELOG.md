@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.22] - 2026-05-29
+
+**Feature — 行程筆記 PR22：lodging-tips AI UI trigger（補完 3/3 AI prompts UX）**
+
+PR12 frontend AI button 只 wire 2/3 prefix（pretrip→tips, emergency→emergency）。lodging-tips backend 已 work end-to-end（驗證 ship 7 hotel-specific Claude rows）但缺 UI trigger。
+
+PR22 完整補 UX：行前須知 section header 拆成 2 個 AI button：
+- 「✦ 一般」→ tips prompt（貨幣 / 通訊 / 簽證 / 禮儀 等普通行前須知）
+- 「✦ 住宿」→ lodging-tips prompt（基於行程飯店生成 hotel-specific 建議）
+
+緊急聯絡 section 保持單一「✦ AI」button。對齊 design doc Premise 6（AI button 只在行前須知 + 緊急聯絡 section header）。
+
+### Changed
+
+- `src/pages/TripNotesPage.tsx`：行前須知 section render 2 個 AI button + 緊急聯絡保 1 個
+- 新 testid: `trip-notes-ai-btn-pretrip-lodging`
+- 兩 pretrip button 都 disabled when aiJob !== null（互鎖防多重觸發）
+
 ## [2.34.21] - 2026-05-29
 
 **Polish — HuiYun import script aggregated row title cleanup**
