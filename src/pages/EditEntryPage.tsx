@@ -30,7 +30,6 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
-import SaveStatus from '../components/shared/SaveStatus';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import Icon from '../components/shared/Icon';
 import InlineError from '../components/shared/InlineError';
@@ -669,7 +668,9 @@ export default function EditEntryPage() {
   }>({ startTime: '', endTime: '', note: '', mode: null, transitMin: '' });
 
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // v2.33.139: 移除 `error` state — titleBar SaveStatus 已拔 (user feedback
+  // 「右上角不用顯示狀態」)，error 細節走 showToast 即時呈現，不需 useState 持有。
+  // 保留以前的 setError(...) call sites 改 showToast(...)。
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   const { segmentMap } = useTripSegments(tripId);
@@ -863,7 +864,6 @@ export default function EditEntryPage() {
     if (!tripId || !entry || submitting) return;
     if (validation || !dirty.any) return;
     setSubmitting(true);
-    setError(null);
 
     const requests: Promise<{ scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string }>[] = [];
 
@@ -931,15 +931,13 @@ export default function EditEntryPage() {
       const msg = failures
         .map((f) => `${f.scope === 'entry' ? '景點' : '移動方式'}儲存失敗 (${f.status})`)
         .join('；');
-      setError(msg);
-      // v2.33.136: 對齊 mockup `docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html`
-      // 第 789 行 spec：「儲存失敗 → 重試 + toast error」。titleBar 只顯 重試 button，
-      // 細節走 toast — 不再 inline 顯 titleBar / body InlineError。
+      // v2.33.136-139: 對齊 mockup spec「儲存失敗 → 重試 + toast error」+
+      // user feedback「右上角不用顯示狀態」。失敗走 toast，無 inline / titleBar
+      // 顯示。
       showToast(msg, 'error', 6000);
       setSubmitting(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '儲存失敗';
-      setError(msg);
       showToast(msg, 'error', 6000);
       setSubmitting(false);
     }
@@ -1150,7 +1148,6 @@ export default function EditEntryPage() {
   const handleDeleteStop = useCallback(async () => {
     if (!tripId) return;
     setSubmitting(true);
-    setError(null);
     try {
       // apiFetchRaw 不 throw on 4xx/5xx — 必須自己檢查 res.ok 防止 backend reject
       // 仍 navigate-away（Codex 2nd-pass review CRITICAL）。
@@ -1164,7 +1161,8 @@ export default function EditEntryPage() {
       setShowDeleteStopConfirm(false);
       navigate(goBackHref);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '刪除停留點失敗');
+      // v2.33.139: 走 toast (對齊 save fail path)，不再 setError state。
+      showToast(err instanceof Error ? err.message : '刪除停留點失敗', 'error', 6000);
       setShowDeleteStopConfirm(false);
     } finally {
       setSubmitting(false);
@@ -1197,23 +1195,10 @@ export default function EditEntryPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [handleSave, handleCancel, showDiscardModal, altSwapConfirm]);
 
-  // v2.33.108: TitleBar 移除「儲存」button — auto-save 已 wire；改 SaveStatus indicator。
-  // saveState 從 submitting + dirty + error 推導：submitting='saving', !dirty+!error='saved',
-  // dirty+!submitting='pending', error='error'。
-  type DerivedSaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
-  const derivedSaveState: DerivedSaveState =
-    submitting ? 'saving'
-    : error ? 'error'
-    : dirty.any ? 'pending'
-    : 'idle';
-  const titleBarActions = (
-    <SaveStatus
-      state={derivedSaveState}
-      error={error}
-      onRetry={() => void handleSave()}
-    />
-  );
-
+  // v2.33.139: titleBar 拔 SaveStatus indicator — user feedback「右上角不用
+  // 顯示狀態」。靜默 auto-save，只在失敗時 showToast (v2.33.137 已實作對齊
+  // mockup `儲存失敗 → 重試 + toast error`)。idle/pending/saving/saved 狀態
+  // 都不再顯示視覺干擾，user 信任 auto-save 默默完成。
   const main = (
     <div className="tp-app">
       <style>{SCOPED_STYLES}</style>
@@ -1221,7 +1206,6 @@ export default function EditEntryPage() {
         title={tripName ? `編輯景點 · ${tripName}` : '編輯景點'}
         back={handleCancel}
         backLabel="返回行程"
-        actions={titleBarActions}
       />
       <main className="tp-page-content">
         <div className="tp-edit-entry">
