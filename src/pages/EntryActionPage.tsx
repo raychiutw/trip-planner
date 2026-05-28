@@ -25,7 +25,7 @@
  * 跟舊 EntryActionPopover 差別:
  *   - 從 anchored absolute popover 變獨立 route
  *   - 從 props (action / days / currentDayId / onClose / onConfirm) 改 useParams +
- *     fetch days API + dispatch 同 event + navigate(-1)
+ *     fetch days API + dispatch 同 event + useNavigateBack(routes.tripsSelected(id)) explicit URL
  *   - shortenDateLabel + DayOption type 抽到 src/lib/entryAction.ts (test 共用)
  *
  * Backend endpoints (sama 原 popover):

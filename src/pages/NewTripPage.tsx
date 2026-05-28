@@ -26,7 +26,7 @@
  *   - 拿掉 portal / backdrop / close X button / ESC handler / cleanup-on-close effect
  *   - 從 props 收 ownerEmail 改成 useCurrentUser
  *   - 從 props 收 onClose/onCreated 改成 useNavigate + dispatch tp-trip-created
- *   - 取消改 navigate(-1)，建立後 navigate(`/trips?selected=:id`)
+ *   - 取消走 useNavigateBack(routes.trips()) explicit URL，建立後 navigate(`/trips?selected=:id`)
  *   - 「建立」 primary action 在 TitleBar (responsive icon+文字 / icon-only)
  */
 import { useEffect, useMemo, useRef, useState } from 'react';

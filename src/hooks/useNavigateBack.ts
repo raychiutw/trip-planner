@@ -2,23 +2,20 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * useNavigateBack — history-aware back navigation with fallback path.
+ * useNavigateBack — explicit-URL back navigation.
  *
- * Form-page convention:
- *   - If browser has prior history, navigate(-1) (cancel feels like Back)
- *   - Otherwise navigate to fallback (e.g. '/trips') so users entering via
- *     direct deep-link don't end up at about:blank
+ * v2.33.139 拔掉 history-aware fallback：之前用 `navigate(-1)` if history > 1
+ * 才 fallback，結果回前頁 destination 不可預測（看 browser 紀錄是什麼）。
+ * 改成永遠走 caller-passed explicit URL — 行為一致、可測、無 history footgun
+ * （e.g. open in new tab → history.length===1 但仍走 fallback 正確；history 含
+ *  external referrer 不會跳回 evil.com / login redirect 之類）。
  *
- * Replaces the identical handleBack() block in 5 form pages
- * (NewTripPage / EditTripPage / AddStopPage / EntryActionPage / DeveloperAppNewPage).
+ * Caller pattern (no change):
+ *   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
  */
 export function useNavigateBack(fallbackPath: string): () => void {
   const navigate = useNavigate();
   return useCallback(() => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate(fallbackPath);
-    }
+    navigate(fallbackPath);
   }, [navigate, fallbackPath]);
 }

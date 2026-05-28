@@ -22,7 +22,7 @@
  *   - 拿掉 portal / backdrop / close X button / ESC handler
  *   - 從 props 收 tripId 改成 useParams
  *   - 從 props 收 onClose/onSaved 改成 useNavigate
- *   - 取消改 navigate(-1)，儲存後 navigate(`/trips?selected=:id`)
+ *   - 取消走 useNavigateBack(routes.tripsSelected(id)) explicit URL，儲存後 navigate(`/trips?selected=:id`)
  *   - Form 邏輯 + state machine 完全沿用 EditTripModal v2.19.0
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -40,7 +40,6 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
-import SaveStatus from '../components/shared/SaveStatus';
 import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
@@ -1107,22 +1106,8 @@ export default function EditTripPage() {
 
   // v2.33.0: dateRange const removed — 改由 days section header 顯示日期區間。
 
-  // titleBarActions: SaveStatus 推導自 submitting/error/isDirty（hook 已在 early
-  // return 之前定義；此區純 derived value 不含 hook）。
-  type DerivedSaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
-  const derivedSaveState: DerivedSaveState =
-    submitting ? 'saving'
-    : error ? 'error'
-    : isDirty ? 'pending'
-    : 'idle';
-  const titleBarActions = !loading && (
-    <SaveStatus
-      state={derivedSaveState}
-      error={error}
-      onRetry={() => formRef.current?.requestSubmit()}
-    />
-  );
-
+  // v2.33.139: titleBar 拔 SaveStatus indicator（同 EditEntryPage）— user
+  // feedback「右上角不用顯示狀態」。靜默 auto-save，error 走 toast。
   return (
     <>
       <ToastContainer />
@@ -1136,7 +1121,6 @@ export default function EditTripPage() {
               title="編輯行程"
               back={handleBack}
               backLabel="返回前頁"
-              actions={titleBarActions}
             />
 
             <form id="edit-trip-form" ref={formRef} onSubmit={handleSubmit} className="tp-edit-page-form">
