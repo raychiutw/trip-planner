@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.13] - 2026-05-28
+
+**Polish — 行程筆記 PR13 / 19：Lodgings day_id picker + day chip reverse navigation (B-3 開始)**
+
+PR6 defer 的 day_id Day picker UI + design doc Premise 5.2 反向 navigation。住宿 row 顯 day chip click → navigate `/trips?selected=:id&day=N`。
+
+### Added
+
+- `src/components/trip-notes/LodgingsSection.tsx`：
+  - Edit mode 加 `<select>` connect 到 Day（從 `TripContext` 取 trip.days）
+  - 「不連結特定 Day」option + per-day option `Day N [· title]`
+  - Display mode 顯 `.is-day` chip（accent-subtle bg + 「Day N → 」）
+  - Day chip click → `navigate(routes.tripsSelected(tripId)&day=N)` 反向跳到 TripPage 對應 day
+  - `useContext(TripContext)` 取 days array
+
 ## [2.34.12] - 2026-05-28
 
 **Feature — 行程筆記 PR12 / 19：frontend AI button trigger + pending banner + polling (B-2 完整)**
