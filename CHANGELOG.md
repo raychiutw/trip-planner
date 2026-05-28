@@ -3,6 +3,44 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.3] - 2026-05-28
+
+**Feature — 行程筆記 PR4 / 19：NotesPage React shell + accordion frame + skeleton + empty hero**
+
+`/trip/:tripId/notes` 全頁上線。13 條 unit test 全綠。Mockup v1-accordion-stack + v1-states sign-off 對齊。
+
+### Added
+
+- `src/pages/TripNotesPage.tsx` — page shell with 4 state:
+  - **loading**: 3 row shimmer skeleton (`prefers-reduced-motion` 停 animation)
+  - **error**: `<AlertPanel variant="error" actionLabel="重試">` 持續可見 + 對齊 DESIGN.md L549 (儲存失敗 surface) 文案三件事 (發生什麼事 / 怎麼做 / 資料是否保留)
+  - **empty (counts=0)**: hero「建立行程筆記」+ 5 dot progress + 5 section collapsed accent border (`.tp-notes-section.is-suggested` 在航班 + `is-warn` meta「建議先填」引導第一步)
+  - **hasData**: 5 section accordion + meta count（「N 個航段」/「N 間」/「N 筆」/「N 項」/「N 個聯絡人」）
+- `src/entries/main.tsx` — `<Route path="notes" element={<TripNotesPage />}>` 註冊在 `/trip/:tripId/*` 下
+- `src/components/shared/Icon.tsx` — 加 `check-square` (預訂 section) + `file-text` (empty hero bubble)
+- `tests/unit/trip-notes-page.test.tsx` — 13 條：render testid / loading skeleton / error AlertPanel + 重試 / empty hero + 5 dot / 5 sections + meta / 航班 is-suggested + 建議先填 / AI button 只在 pretrip + emergency / mobile default 只 航班 is-open / chevron toggle + aria-expanded / count meta / aria-controls / TitleBar / apiFetch 路徑對
+
+### Responsive
+
+- Mobile (compact): default 只 航班 is-open，其他 4 摺疊（節省 scroll）
+- Desktop ≥768px: 5 個 section 全 is-open（一覽全資料），透過 `matchMedia('(min-width: 768px)')` listener resize 動態切換
+
+### Accordion semantics
+
+- `<button>` head + `aria-expanded` + `aria-controls` 給 screen reader
+- AI button stopPropagation 不觸發 section toggle
+- chevron 旋轉 180° via CSS transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)
+
+### CRUD UI placeholder
+
+5 section body 內顯「尚未填寫，加項即可。」或「已有 N 項，待後續 PR 接 CRUD UI。」。PR5-8 各 section CRUD UI inline edit + autosave + drag-reorder 接進來。
+
+### Notes
+
+- 對齊 `feedback_mockup_variants_span_form_factors` — V1 Accordion 是 sign-off 選定的 form factor
+- 對齊 `feedback_polish_in_same_pr` — pre-existing test fail 都不在本 PR；本 PR 引入的 hardcoded 11px 一併 fix (`var(--font-size-caption2)`)
+- AI generation flow (PR9+) 還沒接，AI button click 暫 noop
+
 ## [2.34.2] - 2026-05-28
 
 **Feature — 行程筆記 PR3 / 19：mutation endpoints + OCC 409 + 22 條 integration test**
