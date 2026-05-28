@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.33.140] - 2026-05-28
+
+**Fix — ExplorePage 拔 titleBar 右上 heart action（重複入口）**
+
+User feedback 2026-05-28：「返回已經是回到收藏，不需要右上角的按鈕」。`/explore` page back ← 已 wire `useNavigateBack('/favorites')`，右上 heart icon 點下去也是去 /favorites — 完全重複的入口。
+
+User 同時問：如果 /favorites 沒被其他頁面 link，可以順手刪。實際 audit：
+- `src/components/shell/DesktopSidebar.tsx:68` sidebar primary nav 有 `{ href: '/favorites' }`
+- `src/components/shell/GlobalBottomNav.tsx:41,49` bottom-nav (authed + guest) 都有 `{ href: '/favorites' }`
+
+→ /favorites 是 primary nav 兩處 link，page 保留不動。
+
+### Changed
+
+- `src/pages/ExplorePage.tsx`：
+  - 拔 `TitleBar` 的 `actions={...}` prop 與 heart button JSX（含 testid `explore-favorites-titlebar`）
+  - 拔 doc comment 內「TitleBar 右上 ghost action 收藏」描述，加 v2.33.140 註解
+  - `back` / `backLabel="返回收藏"` / `goBack = useNavigateBack('/favorites')` 全保留 ← 仍正確 wire 回 /favorites
+
+### Added
+
+- `tests/unit/explore-titlebar-heart-removed.test.ts`：7 條 regression — TitleBar 無 actions / testid 不存在 / back+backLabel 保留 / useNavigateBack 仍 wire / 註解引用 user feedback / sidebar+bottom-nav 仍 link /favorites
+
+### Verification
+
+- vitest 7/7 pass
+- tsc --noEmit clean
+
 ## [2.33.139] - 2026-05-28
 
 **Fix — titleBar SaveStatus 拔除 + back nav 全改 explicit URL**
