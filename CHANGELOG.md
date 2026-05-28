@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.16] - 2026-05-28
+
+**Test — 行程筆記 PR16 / 19：Lodgings / Reservations / Pretrip / Emergency batch unit tests**
+
+16 條 unit test 覆蓋其他 4 個 section component。批 1 PR ship coverage。
+
+### Added
+
+- `tests/unit/notes-sections-coverage.test.tsx` 16 條：
+  - **LodgingsSection** 4 條：empty / display chip / Add POST / ConfirmModal「刪除住宿」
+  - **ReservationsSection** 3 條：display kind chip / 5-kind enum labels / Edit PATCH OCC
+  - **PretripSection** 4 條：display section chip / AI chip 視覺 / manual no AI chip / Add POST
+  - **EmergencySection** 5 條：display kind icon + phone / tel: href / AI chip / Add POST / ConfirmModal「刪除聯絡人」
+
 ## [2.34.15] - 2026-05-28
 
 **Test — 行程筆記 PR15 / 19：FlightsSection unit test coverage**
