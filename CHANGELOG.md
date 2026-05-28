@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.10] - 2026-05-28
+
+**Feature — 行程筆記 PR10 / 19：applyNotesGenerationCompletion hook 接 PATCH /api/requests/:id**
+
+AI generation 完成後自動 parse Claude reply → INSERT 對應 section row。對齊 v2.33.102 CR-8 linkage table pattern（confused-deputy 防護）。
+
+### Added
+
+- `functions/api/requests/[id]/index.ts` 加 PR10 hook：
+  - SELECT `trip_note_ai_jobs` linkage row → 識別 notes generation request (對齊 CR-8 fix)
+  - `applyNotesGenerationCompletion(db, tripId, requestId, jobId, docType, request)` — 路由 docType → 對應 INSERT logic
+  - `lodging-tips` + `tips` → INSERT `trip_pretrip_notes` with ai_source 區分 (對齊 ai_source partial index)
+  - `emergency` → INSERT `trip_emergency_contacts` with kind 7-enum narrowed (unknown kind → 'other')
+  - `parseNotesItems` 獨立 parser（health-check `parseFindings` 要求 `severity` 會把 notes items 全 filter 掉）
+  - Dedup: LOWER(TRIM(title)) / LOWER(TRIM(name)) exact match skip 既有 row
+  - UPDATE `trip_note_ai_jobs` status=completed/failed + inserted_count + error_message + completed_at
+  - Rewrite `trip_requests.reply` 為 user-friendly summary「AI 生成完成 — 已新增 N 個項目」+ [前往行程筆記] link
+- `tests/api/trip-notes-completion-hook.integration.test.ts` 7 條：lodging-tips INSERT + ai_source / tips ai_source=general-tips 區分 / emergency kind narrow / dedup skip 既有 / failed status 寫 error_message / 無 linkage no side effect / reply 改 summary
+
 ## [2.34.9] - 2026-05-28
 
 **Feature — 行程筆記 PR9 / 19：POST /generate AI 觸發 endpoint (B-2 phase 開始)**
