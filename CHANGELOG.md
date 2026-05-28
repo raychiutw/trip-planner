@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.17] - 2026-05-28
+
+**Test — 行程筆記 PR17 / 19：E2E happy path spec**
+
+`tests/e2e/trip-notes.spec.js` — Playwright E2E test cover trip-notes page read path。
+
+### Added
+
+- `tests/e2e/trip-notes.spec.js` 4 條：
+  - render TitleBar + 5 section accordion 全 visible
+  - section meta counts 對 (1 個航段 / 1 間 / 1 筆 / 2 項 / 2 個聯絡人)
+  - AI button 只在 pretrip + emergency 兩 section
+  - empty trip → empty hero「建立行程筆記」
+
+`page.route` mock `/api/trips/:id/notes$` 帶 fixture 包含每 section 至少 1 row + 1 AI-generated row 驗證 chip 顯示。
+
 ## [2.34.16] - 2026-05-28
 
 **Test — 行程筆記 PR16 / 19：Lodgings / Reservations / Pretrip / Emergency batch unit tests**
