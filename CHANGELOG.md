@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.24] - 2026-05-29
+
+**Polish — 行程筆記 PR24：「✦ 住宿」AI button empty-lodgings guard**
+
+QA loop dev round 發現 UX gap：lodging-tips prompt 依賴 trip 飯店資料（Claude 讀 trip lodgings 生成 hotel-specific 建議），但 PR22 button 沒 guard 0-lodging 情況。User 在沒填 lodging 時 click 會觸發 AI 但 Claude 生不出有意義內容（沒原料）。
+
+### Changed
+
+- `src/pages/TripNotesPage.tsx` 「✦ 住宿」button：
+  - `disabled={counts.lodgings === 0}` — 0 lodging 時 disabled
+  - `title` 顯「需要先填寫住宿才能 AI 生成在地建議」(hover hint)
+  - Click handler 加 guard — 0 lodging 時 showToast info「請先填寫住宿 section」
+  - 「✦ 一般」button (tips) 不受影響，任何狀態都可觸發
+
+### Tests
+
+- 2 條 regression test in `tests/unit/trip-notes-page.test.tsx`：
+  - `0 lodgings → 住宿 button disabled + 一般 button enabled`
+  - `≥1 lodging → 住宿 button enabled + title 改「基於行程飯店」`
+- trip-notes-page.test.tsx: 15 → 17 tests
+
 ## [2.34.23] - 2026-05-29
 
 **Test — 行程筆記 PR23：PR22 lodging-tips button regression test (2 條)**
