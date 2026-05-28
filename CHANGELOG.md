@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.20] - 2026-05-28
+
+**Fix — 行程筆記 token hardcode cleanup (pr2-tokens regression)**
+
+QA loop sweep 發現 4 個 trip-notes section components 各自有 11px hardcode (Emergency / Reservations / Lodgings / Pretrip section-chip) + Pretrip 還有 10px hardcode。pr2-tokens.test.ts 2 條 fail。改成 token：
+
+### Fixed
+
+- `src/components/trip-notes/{Emergency,Reservations,Lodgings,Pretrip}Section.tsx`：
+  - 4 個 ai-chip / kind-chip / section-chip 的 `font-size: 11px` → `var(--font-size-caption2)`
+- `src/components/trip-notes/PretripSection.tsx`：
+  - section-chip uppercase 的 `font-size: 10px` → `var(--font-size-eyebrow)`
+
+`pr2-tokens.test.ts` 16/16 pass after fix.
+
 ## [2.34.19] - 2026-05-28
 
 **Test — 行程筆記 PR19 / 19：TripCardMenu「行程筆記」menu item regression test (B-3 / Phase 完整)**
