@@ -15,7 +15,6 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
-import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -849,16 +848,9 @@ export default function ChangePoiPage() {
     ? !customTitle.trim() || !customCoord || submitting
     : !selected || submitting;
 
-  const titleBarActions = useMemo(() => (
-    <TitleBarPrimaryAction
-      label={submitLabel}
-      busyLabel="處理中⋯"
-      busy={submitting}
-      disabled={submitDisabled}
-      onClick={() => void handleSubmit()}
-      testId="change-poi-titlebar-submit"
-    />
-  ), [handleSubmit, submitDisabled, submitLabel, submitting]);
+  // v2.33.141: 拔 titleBar 右上 ✓ submit action — bottom sticky bar 已有
+  // primary button 同 submitLabel (加為備選 / 加入行程 / 置換景點)，完全重複。
+  // user feedback 2026-05-28「右上角紅框移除」。
 
   const categoryFilter = useMemo(() => (
     <div className="tp-change-poi-subtabs" role="group" aria-label="景點類別">
@@ -880,7 +872,7 @@ export default function ChangePoiPage() {
   const main = useMemo(() => (
     <div className="tp-change-poi-page-shell" data-testid="change-poi-page">
       <style>{SCOPED_STYLES}</style>
-      <TitleBar title={pageTitle} back={goBack} actions={titleBarActions} />
+      <TitleBar title={pageTitle} back={goBack} />
 
       <div className="tp-change-poi-tabs" role="tablist" aria-label="景點來源">
         <button
@@ -1206,7 +1198,6 @@ export default function ChangePoiPage() {
     submitLabel,
     submitDisabled,
     tab,
-    titleBarActions,
     customTitle,
     customCoord,
     customHintConfirmed,
