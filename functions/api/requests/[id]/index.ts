@@ -129,6 +129,21 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
         console.error('[requests] health-check completion hook failed:', hookErr);
       }
     }
+
+    // v2.34.x 行程筆記 PR10: notes generation linkage hook
+    // 對齊 CR-8 confused-deputy fix — SELECT linkage row 是 authoritative signal
+    // (POST /trips/:id/notes/:type/generate 唯一寫入點，admin/service 不會誤觸發)
+    const notesJob = await env.DB
+      .prepare('SELECT id, doc_type FROM trip_note_ai_jobs WHERE request_id = ? AND trip_id = ? LIMIT 1')
+      .bind(Number(id), tripId)
+      .first<{ id: number; doc_type: string }>();
+    if (notesJob) {
+      try {
+        await applyNotesGenerationCompletion(env.DB, tripId, Number(id), notesJob.id, notesJob.doc_type, result as Record<string, unknown>);
+      } catch (hookErr) {
+        console.error('[requests] notes-generation completion hook failed:', hookErr);
+      }
+    }
   }
 
   return json(result);
@@ -295,4 +310,138 @@ function sanitizeFindings(arr: unknown[]): unknown[] {
     out.push(cleaned);
   }
   return out;
+}
+
+// ============================================================================
+// v2.34.x 行程筆記 PR10: notes generation completion hook
+// ============================================================================
+
+const PRETRIP_AI_SOURCES: Record<string, string> = {
+  'lodging-tips': 'lodging-tips',
+  'tips': 'general-tips',
+};
+
+// notes generation 用獨立 parser（health-check 的 parseFindings 嚴格要求 severity，
+// 對 notes items 的 title/content/name/phone 全 filter 掉）
+function parseNotesItems(reply: string): unknown[] {
+  if (!reply.trim()) return [];
+  try {
+    const parsed = JSON.parse(reply);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {
+    /* fall through */
+  }
+  const match = reply.match(/\[[\s\S]*\]/);
+  if (match) {
+    try {
+      const parsed = JSON.parse(match[0]);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      /* give up */
+    }
+  }
+  return [];
+}
+
+async function applyNotesGenerationCompletion(
+  db: D1Database,
+  tripId: string,
+  requestId: number,
+  jobId: number,
+  docType: string,
+  request: Record<string, unknown>,
+) {
+  const status = request.status as string;
+  if (status === 'failed') {
+    const errMsg = (request.reply as string) || 'AI 生成失敗';
+    await db
+      .prepare(
+        `UPDATE trip_note_ai_jobs SET status = 'failed', error_message = ?, completed_at = datetime('now') WHERE id = ?`,
+      )
+      .bind(errMsg.slice(0, 500), jobId)
+      .run();
+    await rewriteRequestReply(db, requestId, `AI 生成失敗 — ${errMsg.slice(0, 200)}\n\n可重試：[前往行程筆記 →](/trip/${tripId}/notes)`);
+    return;
+  }
+
+  const reply = (request.reply as string) || '';
+  const items = parseNotesItems(reply); // notes 不需 severity，獨立 parser
+  let insertedCount = 0;
+  const validItems = items.filter((it): it is Record<string, unknown> => it !== null && typeof it === 'object');
+
+  // Dedup against existing rows for this trip/type — case-insensitive title compare
+  if (docType === 'lodging-tips' || docType === 'tips') {
+    const aiSource = PRETRIP_AI_SOURCES[docType];
+    const existing = await db
+      .prepare(
+        `SELECT LOWER(TRIM(title)) AS k FROM trip_pretrip_notes WHERE trip_id = ?`,
+      )
+      .bind(tripId)
+      .all<{ k: string }>();
+    const seen = new Set((existing.results ?? []).map((r) => r.k));
+    const maxOrder = await db
+      .prepare(`SELECT COALESCE(MAX(sort_order), -1) AS m FROM trip_pretrip_notes WHERE trip_id = ?`)
+      .bind(tripId)
+      .first<{ m: number }>();
+    let nextOrder = (maxOrder?.m ?? -1) + 1;
+    for (const it of validItems) {
+      const title = typeof it.title === 'string' ? it.title.trim().slice(0, 100) : '';
+      const content = typeof it.content === 'string' ? it.content.slice(0, 1000) : '';
+      const section = typeof it.section === 'string' ? it.section.trim().slice(0, 50) : '';
+      if (!title) continue;
+      const key = title.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      await db
+        .prepare(
+          `INSERT INTO trip_pretrip_notes (trip_id, sort_order, section, title, content, ai_generated, ai_source) VALUES (?, ?, ?, ?, ?, 1, ?)`,
+        )
+        .bind(tripId, nextOrder++, section, title, content, aiSource)
+        .run();
+      insertedCount++;
+    }
+  } else if (docType === 'emergency') {
+    const existing = await db
+      .prepare(`SELECT LOWER(TRIM(name)) AS k FROM trip_emergency_contacts WHERE trip_id = ?`)
+      .bind(tripId)
+      .all<{ k: string }>();
+    const seen = new Set((existing.results ?? []).map((r) => r.k));
+    const maxOrder = await db
+      .prepare(`SELECT COALESCE(MAX(sort_order), -1) AS m FROM trip_emergency_contacts WHERE trip_id = ?`)
+      .bind(tripId)
+      .first<{ m: number }>();
+    let nextOrder = (maxOrder?.m ?? -1) + 1;
+    const VALID_KINDS = ['personal', 'embassy', 'police', 'medical', 'insurance', 'hotel', 'other'];
+    for (const it of validItems) {
+      const name = typeof it.name === 'string' ? it.name.trim().slice(0, 100) : '';
+      const phone = typeof it.phone === 'string' ? it.phone.trim().slice(0, 50) : '';
+      const relationship = typeof it.relationship === 'string' ? it.relationship.trim().slice(0, 100) : '';
+      const kindRaw = typeof it.kind === 'string' ? it.kind.toLowerCase().trim() : 'other';
+      const kind = VALID_KINDS.includes(kindRaw) ? kindRaw : 'other';
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      await db
+        .prepare(
+          `INSERT INTO trip_emergency_contacts (trip_id, sort_order, name, relationship, phone, kind, ai_generated) VALUES (?, ?, ?, ?, ?, ?, 1)`,
+        )
+        .bind(tripId, nextOrder++, name, relationship, phone, kind)
+        .run();
+      insertedCount++;
+    }
+  }
+
+  await db
+    .prepare(
+      `UPDATE trip_note_ai_jobs SET status = 'completed', inserted_count = ?, error_message = NULL, completed_at = datetime('now') WHERE id = ?`,
+    )
+    .bind(insertedCount, jobId)
+    .run();
+
+  // Rewrite trip_requests.reply 為 user-friendly summary (對齊 v2.31.18 health-check)
+  const summary = insertedCount > 0
+    ? `AI 生成完成 — 已新增 ${insertedCount} 個項目（${docType}）。\n\n[前往行程筆記 →](/trip/${tripId}/notes)`
+    : `AI 生成完成 — 沒有新項目可加（既有資料已涵蓋）。\n\n[前往行程筆記 →](/trip/${tripId}/notes)`;
+  await rewriteRequestReply(db, requestId, summary);
 }
