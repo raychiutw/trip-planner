@@ -445,9 +445,21 @@ export default function TripNotesPage() {
                         className="tp-notes-ai-btn"
                         aria-label="AI 生成住宿在地建議"
                         data-testid="trip-notes-ai-btn-pretrip-lodging"
-                        onClick={(e) => { e.stopPropagation(); void handleAiTrigger('lodging-tips'); }}
-                        disabled={aiJob !== null}
-                        title={aiJob !== null ? 'AI 正在處理另一個請求' : 'AI 生成住宿在地建議（基於行程飯店）'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // PR24 guard: lodging-tips 依賴 trip 飯店資料，0 lodging 時不應觸發
+                          if (counts.lodgings === 0) {
+                            showToast('請先在住宿 section 填寫至少 1 間飯店才能 AI 生成在地建議', 'info', 4000);
+                            return;
+                          }
+                          void handleAiTrigger('lodging-tips');
+                        }}
+                        disabled={aiJob !== null || counts.lodgings === 0}
+                        title={
+                          aiJob !== null ? 'AI 正在處理另一個請求' :
+                          counts.lodgings === 0 ? '需要先填寫住宿才能 AI 生成在地建議' :
+                          'AI 生成住宿在地建議（基於行程飯店）'
+                        }
                       >
                         <Icon name="sparkle" />
                         {aiJob?.docType === 'lodging-tips' ? '生成中…' : '住宿'}
