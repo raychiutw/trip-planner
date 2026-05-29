@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.26] - 2026-05-29
+
+**Audit log — 行程筆記 PR26：trip-notes mutations 補 audit_log integration**
+
+QA loop dev round 發現安全/合規 gap：trip-notes 5 個 table 的 POST/PATCH/DELETE/reorder 共 20 個 endpoint 完全沒 call `logAudit()`，其他 mutation endpoint（entries / segments / days）都有。User 在 prod 改 lodging / flight / emergency contact 時 audit_log table 完全沒留下記錄，事後 incident 無法重建時間軸。
+
+### Added
+
+- `functions/api/trips/[id]/notes/_shared.ts` import `logAudit` + `computeDiff` from `_audit.ts`，4 個 helper 全補 audit：
+  - `createNotesRow` → action='insert' + 全 row snapshot
+  - `updateNotesRow` → action='update' + `computeDiff(oldRow, newFields)` 細粒度欄位變化
+  - `deleteNotesRow` → action='delete' + 全 oldRow snapshot 供 forensics 重建
+  - `reorderNotesRows` → action='update' + recordId=null + 摘要 `{op:'reorder', items}`（bulk 不寫 per-row 噪音）
+
+### Changed
+
+- `updateNotesRow` 從只 SELECT trip_id 改 SELECT *（拿 oldRow 給 computeDiff 用），多 1 個欄位但 trip-notes 表都很小可接受
+- `deleteNotesRow` 同上，刪除前先抓 oldRow 留 snapshot
+
+### Tests
+
+- `tests/api/trip-notes-mutations.integration.test.ts` +5 audit assertion：insert / update with diff / delete with snapshot / reorder summary + recordId=null / cross-table coverage (pretrip / emergency / reservations)。27/27 全過。
+
+### Why
+
+合規 / forensics：trip-notes 含 PII（航班 confirmation code / 飯店地址 / 緊急聯絡電話）與行程隱私資料，沒 audit_log 等於沒留證。對齊 `functions/api/trips/[id]/entries/[eid].ts:198` 既有 pattern。
+
 ## [2.34.25] - 2026-05-29
 
 **Docs — ARCHITECTURE.md 加 Trip Notes section（schema + AI generation flow）**
