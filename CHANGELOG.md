@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.30] - 2026-05-29
+
+**Polish — DesktopSidebar PR30：sidebar dark accent token 化 + 7 font-size 對齊 DESIGN.md**
+
+QA loop repo-wide audit 發現 DesktopSidebar 是最大 token drift（8 hex literals + 7 hardcoded font-size + 4 rgba()）。Foundation PR：tokens.css 新增 sidebar dark accent token，DesktopSidebar 整檔 token 化。
+
+### Added (css/tokens.css)
+
+7 個新 sidebar token（DESIGN.md H6 exception，deep-cocoa surface 兩 mode 固定）：
+- `--color-sidebar-bg` light=`#2A1F18`, body.dark override=`#0F0B08`
+- `--color-sidebar-fg` warm cream `#FFFBF5`（brand title / account name / nav hover）
+- `--color-sidebar-fg-muted` `rgba(255, 251, 245, 0.78)`（inactive nav / chip）
+- `--color-sidebar-fg-hover` `rgba(255, 251, 245, 0.06)`（hover background）
+- `--color-sidebar-fg-faint` `rgba(255, 251, 245, 0.12)`（border + loading skel）
+- `--color-sidebar-fg-skel-secondary` `rgba(255, 251, 245, 0.09)`（skel 次要 line）
+- `--color-sidebar-fg-skel-faint` `rgba(255, 251, 245, 0.14)`（skel 主要 line）
+
+### Changed (src/components/shell/DesktopSidebar.tsx)
+
+- 8 hex literals (`#2A1F18` / `#0F0B08` / `#FFFBF5`) → token references
+- 4 rgba alpha 變體 → 對應 token
+- 7 hardcoded font-size → DESIGN.md token：
+  - brand 20px → `--font-size-title3`
+  - nav-item / new-trip-btn / user-chip / avatar / account-card-name 14/13px → `--font-size-footnote`
+- body.dark .tp-sidebar override 從 component CSS 搬到 tokens.css（`body.dark { --color-sidebar-bg: #0F0B08; }`）— component 不再 duplicate dark mode 邏輯
+
+### Tests
+
+- `tests/unit/desktop-sidebar-visual.test.tsx` 2 個 source-grep assertion 改驗 token reference 而非 hex（保 regression）
+- 3003/3003 全綠
+
+### Why
+
+PR29 trip-notes token 化的 follow-up：DesktopSidebar 是 repo-wide font-size 最大 drift 檔案（7 處）+ 4 hex literals。Token 化後 dark mode override 只在 tokens.css 一個地方維護（過去 component 也定義 body.dark rule 重複）。
+
 ## [2.34.29] - 2026-05-29
 
 **Polish — 行程筆記 PR29：18 處 hardcoded font-size 全 DESIGN.md token 化**

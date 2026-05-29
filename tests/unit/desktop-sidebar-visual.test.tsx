@@ -113,17 +113,19 @@ describe('DesktopSidebar — visual + nav IA', () => {
     expect(screen.getByTestId('sidebar-user-chip').textContent).toContain('未登入');
   });
 
-  it('dark theme bg — SCOPED_STYLES 固定 deep-cocoa light/dark 背景', () => {
+  it('dark theme bg — SCOPED_STYLES 用 --color-sidebar-bg token (light=#2A1F18, dark=#0F0B08 via tokens.css)', () => {
+    // v2.34.30 PR30: hex 抽 tokens.css --color-sidebar-bg；body.dark override 也搬到 tokens.css
     const { container } = renderSidebar({ user: null, initialEntry: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*background:\s*#2A1F18/);
-    expect(style).toMatch(/body\.dark \.tp-sidebar\s*\{[^}]*background:\s*#0F0B08/);
+    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*background:\s*var\(--color-sidebar-bg\)/);
+    expect(style).not.toMatch(/body\.dark\s+\.tp-sidebar/);
   });
 
-  it('inactive item 文字用 mockup 半透明 cream rgba(255, 251, 245, 0.78)', () => {
+  it('inactive item 文字用 --color-sidebar-fg-muted token (mockup 半透明 cream)', () => {
+    // v2.34.30 PR30: rgba(255, 251, 245, 0.78) 抽 tokens.css --color-sidebar-fg-muted
     const { container } = renderSidebar({ user: null, initialEntry: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toContain('rgba(255, 251, 245, 0.78)');
+    expect(style).toContain('var(--color-sidebar-fg-muted)');
   });
 
   it('active item bg 用 accent', () => {

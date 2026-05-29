@@ -44,6 +44,17 @@ html { color-scheme: light dark; }
     --color-priority-low-bg: rgba(6, 167, 125, 0.10);
     --color-priority-low-dot: #06A77D;
 
+    /* Sidebar dark accent — DesktopSidebar 永遠深棕底（DESIGN.md H6 exception，
+     * 兩 mode 都 fixed deep-cocoa surface 對齊 mockup line 5126）。dark mode 改更深。
+     * v2.34.30 PR30：從 DesktopSidebar.tsx hardcoded #2A1F18/#0F0B08/#FFFBF5 抽出。 */
+    --color-sidebar-bg: #2A1F18;                       /* deep cocoa light */
+    --color-sidebar-fg: #FFFBF5;                       /* warm cream text */
+    --color-sidebar-fg-muted: rgba(255, 251, 245, 0.78); /* inactive nav / chip */
+    --color-sidebar-fg-hover: rgba(255, 251, 245, 0.06); /* hover background */
+    --color-sidebar-fg-faint: rgba(255, 251, 245, 0.12); /* border + loading skel */
+    --color-sidebar-fg-skel-secondary: rgba(255, 251, 245, 0.09); /* skel 次要 line */
+    --color-sidebar-fg-skel-faint: rgba(255, 251, 245, 0.14);     /* skel 主要 line */
+
     /* Trip cover gradients — TripsListPage destination cards (jp/kr/tw/other).
      * 4 fixed combinations; preserves visual identity while removing hex
      * literals from component CSS (anti-slop hex hardcoding cleanup). */
@@ -216,6 +227,8 @@ button, input, select, textarea {
     font-size: inherit;
 }
 body.dark {
+    /* Sidebar dark accent — 更深 cocoa surface（DESIGN.md H6 exception line 5126）。 */
+    --color-sidebar-bg: #0F0B08;
 }
 
 /* ===== Non-utility tokens ===== */
