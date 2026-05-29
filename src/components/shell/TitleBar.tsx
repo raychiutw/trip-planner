@@ -34,7 +34,7 @@ export interface TitleBarProps {
 export default function TitleBar({ id, className, title, back, actions, backLabel = '返回' }: TitleBarProps) {
   const headerClass = className ? `tp-titlebar ${className}` : 'tp-titlebar';
   return (
-    <header id={id} className={headerClass} data-titlebar="true">
+    <header id={id} className={headerClass} data-titlebar="true" data-testid="titlebar">
       {back && (
         <button
           type="button"

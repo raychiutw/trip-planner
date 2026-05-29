@@ -49,10 +49,10 @@ describe('v2.31.90: 桌機 TitleBar action icon-only + title tooltip', () => {
     expect(src).toMatch(/title=\{displayLabel\}/);
   });
 
-  it('ExplorePage + PoiFavoritesPage 既有 title 仍 in place (regression check)', () => {
-    const explorePage = read('src/pages/ExplorePage.tsx');
+  it('PoiFavoritesPage 既有 title 仍 in place (regression check)', () => {
+    // v2.33.140: ExplorePage 收藏 action 拔除（back ← 已回 /favorites 重複入口），
+    // 但 PoiFavoritesPage 探索 action 保留（從 favorites 到 explore 無 back path）。
     const favoritesPage = read('src/pages/PoiFavoritesPage.tsx');
-    expect(explorePage).toMatch(/title="收藏"/);
     expect(favoritesPage).toMatch(/title="探索"/);
   });
 });
