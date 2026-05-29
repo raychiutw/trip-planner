@@ -3,6 +3,47 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.31] - 2026-05-29
+
+**Polish — PR31：repo-wide font-size token cleanup（71/72 處 hardcoded → DESIGN.md token）**
+
+QA loop repo-wide audit 發現 72 處 hardcoded font-size 跨 27 個檔案。一次批次 sed + 人工判斷對齊 DESIGN.md token system。
+
+### Changed
+
+對應 token map：
+| 原值 | Token | 用途 |
+|---|---|---|
+| 9px | `--font-size-eyebrow` (10px) | 微型 label / chip caret |
+| 12px | `--font-size-caption` | muted secondary |
+| 13px | 分歧 | muted hint→caption；CTA/UI text→footnote |
+| 14px | `--font-size-footnote` | sub / button / placeholder |
+| 15px | `--font-size-subheadline` | row title / input |
+| 16px | `--font-size-body` | body / mobile input zoom 防 |
+| 18px | `--font-size-headline` (17px，1px drift) | section title / auth form title |
+| 20px | `--font-size-title3` | section hero |
+| 22px | `--font-size-title2` | flight number |
+| 24px | `--font-size-title2` (22px，2px drift) | hero approximation |
+| 26px | `--font-size-title` (28px，2px drift) | brand 800-weight 標題 |
+| 28px | `--font-size-title` | exact match |
+| 38px / 42px | `--font-size-large-title` (34px) | auth brand hero "Tripline" |
+
+涵蓋 27 個檔案：18 個 `src/pages/`、9 個 `src/components/`。
+
+### Exception (1 處)
+
+- `src/components/trip/StopLightbox.tsx:89` `.tp-lightbox-photo .icon { font-size: 36px }` — 36px 是裝飾 icon size 非 text；介於 large-title (34) 與 title (28) 之間用 token 都不對。Inline comment 標 v2.34.31 exception。
+
+### Results
+
+- 72 處 hardcoded → 1 處 intentional exception（98.6% 收斂）
+- 3003/3003 全綠
+- npx tsc 零錯誤
+
+### Why
+
+PR29 / PR30 trip-notes + sidebar token 化的 follow-up。Repo-wide 一次掃乾淨避免之後 PR review 還在處理零散 drift。
+
 ## [2.34.30] - 2026-05-29
 
 **Polish — DesktopSidebar PR30：sidebar dark accent token 化 + 7 font-size 對齊 DESIGN.md**

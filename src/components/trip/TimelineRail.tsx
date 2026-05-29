@@ -216,7 +216,7 @@ const SCOPED_STYLES = `
 .tp-rail-action-icon {
   /* v2.10 Wave 1: copy/move icon-only buttons. relative for popover absolute pos. */
   position: relative;
-  font: inherit; font-size: 16px;
+  font: inherit; font-size: var(--font-size-body);
   width: var(--spacing-tap-min); height: var(--spacing-tap-min);
   border-radius: var(--radius-full);
   background: var(--color-secondary); color: var(--color-foreground);

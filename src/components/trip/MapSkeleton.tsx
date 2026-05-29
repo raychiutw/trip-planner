@@ -43,7 +43,7 @@ const MapSkeletonStyles = `
 @keyframes tp-map-skeleton-spin { to { transform: rotate(360deg); } }
 .tp-map-skeleton-text {
   color: var(--color-muted, #6B5F52);
-  font-size: 14px;
+  font-size: var(--font-size-footnote);
 }
 @media (prefers-reduced-motion: reduce) {
   .tp-map-skeleton::before { animation: none; }

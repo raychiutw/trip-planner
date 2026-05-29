@@ -357,7 +357,7 @@ body.dark .tp-trips-sort {
   background: var(--color-accent-subtle);
   color: var(--color-accent);
   display: grid; place-items: center;
-  font-size: 20px;
+  font-size: var(--font-size-title3);
   font-weight: 700;
   transition: background 120ms;
 }
@@ -377,10 +377,10 @@ body.dark .tp-trips-sort {
     gap: 4px;
   }
   .tp-trip-card-eyebrow {
-    font-size: 9px;
+    font-size: var(--font-size-eyebrow);
   }
   .tp-trip-card-title {
-    font-size: 13px;
+    font-size: var(--font-size-footnote);
     line-height: 1.3;
   }
   .tp-trip-card-meta {
@@ -400,7 +400,7 @@ body.dark .tp-trips-sort {
   .tp-trip-card-new .tp-new-icon {
     width: 36px;
     height: 36px;
-    font-size: 16px;
+    font-size: var(--font-size-body);
   }
 }
 

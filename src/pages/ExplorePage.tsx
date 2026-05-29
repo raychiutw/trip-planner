@@ -72,19 +72,19 @@ const SCOPED_STYLES = `
 .explore-search .search-icon { width: 18px; height: 18px; color: var(--color-muted); flex-shrink: 0; }
 .explore-search input {
   flex: 1; border: none; background: transparent;
-  font: inherit; font-size: 15px; color: var(--color-foreground);
+  font: inherit; font-size: var(--font-size-subheadline); color: var(--color-foreground);
   outline: none;
 }
 .explore-search input::placeholder { color: var(--color-muted); }
 /* iOS Safari 對 input font-size < 16px 自動 zoom 破版；mobile 用 16px 防 zoom，desktop 維持 15px */
 @media (max-width: 760px) {
-  .explore-search input { font-size: 16px; }
+  .explore-search input { font-size: var(--font-size-body); }
 }
 .explore-search button {
   padding: 8px 16px; border-radius: var(--radius-full);
   background: var(--color-accent); color: var(--color-accent-foreground);
   border: none; cursor: pointer;
-  font: inherit; font-size: 14px; font-weight: 600;
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   min-height: 36px;
 }
 .explore-search button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -305,7 +305,7 @@ const SCOPED_STYLES = `
 .explore-poi-card .poi-actions button {
   padding: 6px 12px; border-radius: var(--radius-full);
   border: 1px solid var(--color-border); background: var(--color-background);
-  font: inherit; font-size: 12px; font-weight: 600;
+  font: inherit; font-size: var(--font-size-caption); font-weight: 600;
   color: var(--color-foreground); cursor: pointer; min-height: var(--spacing-tap-min);
 }
 .explore-poi-card .poi-actions button:hover { border-color: var(--color-accent); color: var(--color-accent); }

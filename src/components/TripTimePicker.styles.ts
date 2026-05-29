@@ -90,7 +90,7 @@ export const TRIP_TIME_PICKER_STYLES = `
 }
 .tp-time-col-label {
   text-align: center;
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   font-weight: 700;
   color: var(--color-muted);
   text-transform: uppercase;

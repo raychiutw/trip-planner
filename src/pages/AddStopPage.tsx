@@ -274,7 +274,7 @@ const SCOPED_STYLES = `
   padding: 0;
   border: 0;
   background: transparent;
-  font: inherit; font-size: 18px; font-weight: 700;
+  font: inherit; font-size: var(--font-size-headline); font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--color-foreground); cursor: pointer;
 }

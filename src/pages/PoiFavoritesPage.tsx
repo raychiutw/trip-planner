@@ -113,13 +113,13 @@ const SCOPED_STYLES = `
 .favorites-search .search-icon { width: 18px; height: 18px; color: var(--color-muted); flex-shrink: 0; }
 .favorites-search input {
   flex: 1; border: none; background: transparent;
-  font: inherit; font-size: 15px; color: var(--color-foreground);
+  font: inherit; font-size: var(--font-size-subheadline); color: var(--color-foreground);
   outline: none;
 }
 .favorites-search input::placeholder { color: var(--color-muted); }
 /* iOS Safari 對 input font-size < 16px 自動 zoom 破版；mobile 用 16px 防 zoom，desktop 維持 15px */
 @media (max-width: 760px) {
-  .favorites-search input { font-size: 16px; }
+  .favorites-search input { font-size: var(--font-size-body); }
 }
 
 .favorites-region-row,

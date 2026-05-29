@@ -334,7 +334,7 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   cursor: pointer;
   border-radius: var(--radius-full);
-  font-size: 18px;
+  font-size: var(--font-size-headline);
   flex-shrink: 0;
   transition: all 120ms;
 }
@@ -463,7 +463,7 @@ const SCOPED_STYLES = `
 }
 .tp-edit-day-shift-chev {
   color: var(--color-muted);
-  font-size: 18px;
+  font-size: var(--font-size-headline);
   font-weight: 600;
   flex-shrink: 0;
 }

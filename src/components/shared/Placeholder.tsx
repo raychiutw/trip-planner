@@ -31,7 +31,7 @@ const PLACEHOLDER_STYLES = `
   padding: 12px 20px; border-radius: var(--radius-full);
   background: var(--color-accent); color: var(--color-accent-foreground);
   text-decoration: none;
-  font: inherit; font-size: 14px; font-weight: 600;
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   min-height: var(--spacing-tap-min);
 }
 .tp-placeholder .ph-cta:hover { filter: brightness(var(--hover-brightness)); }
