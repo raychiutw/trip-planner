@@ -16,6 +16,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import TripNotesPage from '../../src/pages/TripNotesPage';
+import { TripContext } from '../../src/contexts/TripContext';
+import type { UseTripReturn } from '../../src/hooks/useTrip';
+import type { Trip } from '../../src/types/trip';
 
 // Mock dependencies
 const apiFetchMock = vi.fn();
@@ -288,5 +291,84 @@ describe('TripNotesPage — shell', () => {
     });
     renderPage('trip-foo');
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith('/trips/trip-foo/notes'));
+  });
+});
+
+// Regression: F1 — empty-string trip title → blank eyebrow + nameless TitleBar
+// Found by /qa on 2026-05-29 (prod v2.34.46, trip-a7df「東京青森」/「台南」)
+// Report: .gstack/qa-reports/qa-report-trip-notes-2026-05-29.md
+//
+// tripName 之前用 `tripCtx?.trip?.title ?? null`，?? 接不到空字串 → 對
+// destination-named 行程（title=''，name 帶顯示名）標題列缺行程名、空 hero
+// eyebrow 空白。Fix 對齊 canonical `title || name` 顯示名 pattern（TripsListPage）。
+describe('TripNotesPage — trip name fallback (F1 regression)', () => {
+  function ctxValue(trip: Partial<Trip> | null): UseTripReturn {
+    return {
+      trip: trip as Trip | null,
+      days: [],
+      currentDay: null,
+      currentDayNum: 1,
+      switchDay: () => {},
+      refetchCurrentDay: () => {},
+      refetchDay: () => {},
+      docs: {},
+      allDays: {},
+      loading: false,
+      error: null,
+    };
+  }
+
+  function renderPageWithTrip(trip: Partial<Trip> | null, tripId = 'trip-1') {
+    return render(
+      <MemoryRouter initialEntries={[`/trip/${tripId}/notes`]}>
+        <TripContext.Provider value={ctxValue(trip)}>
+          <Routes>
+            <Route path="/trip/:tripId/notes" element={<TripNotesPage />} />
+          </Routes>
+        </TripContext.Provider>
+      </MemoryRouter>,
+    );
+  }
+
+  beforeEach(() => {
+    // empty data → counts.total === 0 → empty hero (with eyebrow) renders
+    apiFetchMock.mockResolvedValue({
+      flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
+    });
+  });
+
+  it('empty title (destination-named) → TitleBar + eyebrow fall back to trip.name', async () => {
+    const { container } = renderPageWithTrip({ title: '', name: '東京都、青森縣' });
+    await waitFor(() => expect(screen.getByTestId('trip-notes-empty-hero')).toBeInTheDocument());
+    // TitleBar shows trip identifier, not bare 「行程筆記」
+    expect(screen.getByTestId('titlebar').textContent).toContain('東京都、青森縣');
+    // empty-hero eyebrow no longer blank
+    const eyebrow = container.querySelector('.tp-notes-empty-hero-eyebrow');
+    expect(eyebrow?.textContent).toBe('東京都、青森縣');
+  });
+
+  it('explicit title wins over name', async () => {
+    const { container } = renderPageWithTrip({ title: '2026 沖繩五日自駕遊行程表', name: '沖繩' });
+    await waitFor(() => expect(screen.getByTestId('trip-notes-empty-hero')).toBeInTheDocument());
+    expect(screen.getByTestId('titlebar').textContent).toContain('2026 沖繩五日自駕遊行程表');
+    const eyebrow = container.querySelector('.tp-notes-empty-hero-eyebrow');
+    expect(eyebrow?.textContent).toBe('2026 沖繩五日自駕遊行程表');
+  });
+
+  it('whitespace-only title → trimmed away, falls back to name', async () => {
+    const { container } = renderPageWithTrip({ title: '   ', name: '台南' });
+    await waitFor(() => expect(screen.getByTestId('trip-notes-empty-hero')).toBeInTheDocument());
+    expect(screen.getByTestId('titlebar').textContent).toContain('台南');
+    const eyebrow = container.querySelector('.tp-notes-empty-hero-eyebrow');
+    expect(eyebrow?.textContent).toBe('台南');
+  });
+
+  it('no title and no name → graceful 此行程 eyebrow + bare 行程筆記 title', async () => {
+    const { container } = renderPageWithTrip({ title: '', name: '' });
+    await waitFor(() => expect(screen.getByTestId('trip-notes-empty-hero')).toBeInTheDocument());
+    const eyebrow = container.querySelector('.tp-notes-empty-hero-eyebrow');
+    expect(eyebrow?.textContent).toBe('此行程');
+    // TitleBar falls back to bare 行程筆記 (no 「— name」 suffix)
+    expect(screen.getByTestId('titlebar').textContent).not.toContain('—');
   });
 });
