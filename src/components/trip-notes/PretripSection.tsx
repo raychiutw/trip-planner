@@ -170,16 +170,10 @@ function SortablePretripRow({ note, isEditing, onEdit, onCloseEdit, onSaveField,
         <div />
         <div className="tp-notes-pretrip-body">
           <div className="tp-notes-pretrip-edit-grid">
-            <div>
-              <div className="tp-notes-pretrip-edit-label">分類</div>
-              <input
-                type="text"
-                defaultValue={note.section}
-                onBlur={(e) => onSaveField('section', e.target.value)}
-                placeholder="貨幣 / 通訊 / 禮儀"
-              />
-            </div>
-            <div>
+            {/* v2.34.44 PR44 follow-up: 拔「分類」field（user feedback「行前須知 不要分類」）。
+              題目自然分類由 title + content 自描述，不再用 section column。
+              既有 section value 保留 DB（未 NULL），但 user 無法 edit 也不顯示。 */}
+            <div className="tp-notes-pretrip-edit-full">
               <div className="tp-notes-pretrip-edit-label">標題</div>
               <input
                 type="text"
@@ -217,7 +211,7 @@ function SortablePretripRow({ note, isEditing, onEdit, onCloseEdit, onSaveField,
       </button>
       <div className="tp-notes-pretrip-body" onClick={onEdit} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onEdit()}>
         <div className="tp-notes-pretrip-title-row">
-          {note.section && <span className="tp-notes-pretrip-section-chip">{note.section}</span>}
+          {/* v2.34.44 PR44 follow-up: 拔讀模式 section chip（user feedback「不要分類」） */}
           <span className="tp-notes-pretrip-title">{note.title || '（未命名項目）'}</span>
           {note.aiGenerated === 1 && (
             <span className="tp-notes-pretrip-ai-chip">
