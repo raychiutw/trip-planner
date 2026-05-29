@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.35] - 2026-05-29
+
+**Docs — PR35：Endpoint test coverage 精準分析（68/96 = 70.8% direct coverage）**
+
+QA loop audit 收尾：產出 96 個 `functions/api/**/*.ts` endpoint 的精準 test 覆蓋率分析。28 untested 分類後實際真 gap 只 11 個（其餘 8 indirect / 9 admin defer）。
+
+### Added
+
+- `docs/perf/endpoint-coverage-v2.34.34.md`：
+  - Methodology + grep script
+  - 68 tested / 28 untested 完整列表
+  - 8 indirect-tested（trip-notes /reorder + /[rowId] 共用 `_shared.ts`）
+  - 9 admin endpoints defer rationale
+  - 11 real gap 按 risk 排優先級（account/profile / poi-search / route / pois/find-or-create / 等）
+  - 5 follow-up PR 建議（PR36-40）含預估 line count
+
+### State
+
+- 70.8% direct coverage（業界 SaaS 平均 60-70%）
+- 全 mutation endpoints 都有 audit_log（PR26/27/32）
+- 全 trip-notes feature 各 path 都有 unit test 鎖 OCC + permission
+- 11 個 real gap 中 P0 (HIGH risk) 是 `account/profile.ts` + `poi-search.ts` + `route.ts`
+
 ## [2.34.34] - 2026-05-29
 
 **Docs — PR34：Bundle size baseline 紀錄（PR26-33 後 720.9 KB gzipped）**
