@@ -82,6 +82,13 @@ describe('NoteDateTimeField — split/combine datetime helpers', () => {
     expect(combineDateTime('', '')).toBe('');
   });
 
+  it('time picker is nowrap (regression: narrow slot let --:-- wrap → trigger ballooned to 125px)', () => {
+    const src = readFileSync(join(SECTION_DIR, 'NoteDateTimeField.tsx'), 'utf8');
+    // The trigger value must not wrap, or the 22px-bold placeholder breaks at
+    // its hyphens and the time control grows far taller than the date control.
+    expect(src).toMatch(/white-space:\s*nowrap/);
+  });
+
   it('round-trips: combine(split(v)) === v for a full datetime', () => {
     const v = '2026-08-02T09:00';
     const { date, time } = splitDateTime(v);

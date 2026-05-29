@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.49] - 2026-05-30
+
+**Fix — 行程筆記 NoteDateTimeField 時間選擇器爆高（v2.34.48 prod QA follow-up）**
+
+v2.34.48 把原生 date/time 換成 `NoteDateTimeField`（date + time picker）後，時間選擇器被擠在 92px 窄欄，22px 粗體的「--:--」placeholder 在連字號處斷行 → 觸發器爆到 125px 高，跟旁邊 44px 的日期選擇器高度不齊。修正：時間欄寬度 92px → 128px（容得下單行「--:--」+ chevron）、加 `white-space: nowrap`、欄位上限 460px（日期不再被撐到全寬留白）。日期與時間選擇器現在等高並排。
+
+### Fixed
+- `NoteDateTimeField` 時間選擇器高度爆增 / 與日期選擇器不齊（prod QA round 1）。1 條 regression test 鎖 `white-space: nowrap`。
+
 ## [2.34.48] - 2026-05-30
 
 **Fix — 行程筆記編輯表單對齊 canonical input 系統（QA：高度不一致 + 原生 date/time）**
