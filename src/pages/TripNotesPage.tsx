@@ -213,9 +213,11 @@ export default function TripNotesPage() {
   const user = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
-  // Trip name 從 TripLayout 提供的 TripContext 取；不在 layout 範圍內 (test) 時 fallback
+  // Trip name 從 TripLayout 提供的 TripContext 取；不在 layout 範圍內 (test) 時 fallback。
+  // v2.34.x QA F1: 對齊 canonical 顯示名 pattern (title || name)。?? 接不到空字串，
+  // destination-named 行程 (title='') 會落到 name (如「東京都、青森縣」) 而非缺名。
   const tripCtx = useContext(TripContext);
-  const tripName = tripCtx?.trip?.title ?? null;
+  const tripName = tripCtx?.trip?.title?.trim() || tripCtx?.trip?.name?.trim() || null;
 
   const [data, setData] = useState<NotesAggregator | null>(null);
   const [loading, setLoading] = useState(true);
