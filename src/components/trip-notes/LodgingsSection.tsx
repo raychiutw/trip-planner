@@ -68,7 +68,7 @@ const SCOPED_STYLES = `
 .tp-notes-lodging-grip .svg-icon { width: 14px; height: 14px; }
 .tp-notes-lodging-body { min-width: 0; }
 
-.tp-notes-lodging-name { font-size: 15px; font-weight: 700; }
+.tp-notes-lodging-name { font-size: var(--font-size-subheadline); font-weight: 700; }
 .tp-notes-lodging-meta {
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
   margin-top: 6px;
@@ -111,7 +111,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
-  font-size: 15px;
+  font-size: var(--font-size-subheadline);
   outline: none;
 }
 .tp-notes-lodging-edit-grid input:focus,

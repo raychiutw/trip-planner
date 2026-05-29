@@ -97,7 +97,7 @@ const SCOPED_STYLES = `
 }
 .tp-notes-flight-stop { text-align: center; }
 .tp-notes-flight-time {
-  font-size: 22px; font-weight: 700;
+  font-size: var(--font-size-title2); font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
@@ -146,7 +146,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
-  font-size: 15px;
+  font-size: var(--font-size-subheadline);
   outline: none;
 }
 .tp-notes-flight-edit-grid input:focus,
@@ -181,7 +181,7 @@ const SCOPED_STYLES = `
   padding: 12px 16px;
   color: var(--color-muted);
   background: transparent; border: none;
-  font-size: 14px; font-weight: 600;
+  font-size: var(--font-size-footnote); font-weight: 600;
   min-height: 44px; cursor: pointer;
   transition: background 150ms, color 150ms;
 }

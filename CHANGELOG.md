@@ -3,6 +3,46 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.29] - 2026-05-29
+
+**Polish — 行程筆記 PR29：18 處 hardcoded font-size 全 DESIGN.md token 化**
+
+QA loop UI audit 發現 trip-notes feature 6 個檔案（1 page + 5 section）共 18 處寫 hardcoded font-size px，違反 DESIGN.md token system。一次批次改全部，新增 source-grep regression test 鎖未來 drift。
+
+### Changed
+
+| 檔案 / 行 | 原值 | 新 token |
+|---|---|---|
+| TripNotesPage:97 | 20px | `var(--font-size-title3)` |
+| TripNotesPage:98 | 14px | `var(--font-size-footnote)` |
+| TripNotesPage:147 | 17px | `var(--font-size-headline)` |
+| TripNotesPage:148 | 13px | `var(--font-size-caption)` (section meta muted secondary) |
+| TripNotesPage:159 | 13px | `var(--font-size-footnote)` (AI button) |
+| TripNotesPage:185 | 14px | `var(--font-size-footnote)` |
+| FlightsSection:100 | 22px | `var(--font-size-title2)` (flight number 大顯示) |
+| FlightsSection:149 / 184 | 15 / 14px | subheadline / footnote |
+| EmergencySection:92 / 110 / 143 | 15 / 13 / 15px | subheadline / footnote (phone btn) / subheadline |
+| LodgingsSection:71 / 114 | 15 / 15px | subheadline / subheadline |
+| PretripSection:65 / 110 | 15 / 15px | subheadline / subheadline |
+| ReservationsSection:86 / 112 | 15 / 15px | subheadline / subheadline |
+
+13px 分歧處理（DESIGN.md 沒 13px token）：
+- `section-meta` (TripNotesPage:148, muted secondary) → 降 `--font-size-caption` (12px)
+- AI button + phone button (主要 CTA) → 升 `--font-size-footnote` (14px)
+- 不同層級語意對齊，避免單一規則犧牲訊息層次
+
+### Added
+
+- `tests/unit/trip-notes-token-compliance.test.ts` — 9 個 source-grep regression test：
+  - 6 個檔案每個 1 test 鎖「零 hardcoded font-size px」
+  - 1 test 鎖 TripNotesPage 用 4 個 token
+  - 1 test 鎖 FlightsSection 用 title2
+  - 1 test 鎖 5 section 都用 subheadline
+
+### Why
+
+DESIGN.md token system 是設計系統 source of truth。Hardcoded px 在 dark mode / responsive scale / future theme 變動時不會跟著走，造成視覺破版。Source-grep regression test 確保未來不會 drift 回去。
+
 ## [2.34.28] - 2026-05-29
 
 **Test cleanup — 一次修 master CI 6 個 stale failure + 2 個 unhandled rejection**
