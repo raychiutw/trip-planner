@@ -98,6 +98,11 @@ const SCOPED_STYLES = `
   margin: 6px 8px;
   padding: 12px;
   border: 1px solid transparent;
+  grid-template-columns: 24px 1fr;
+}
+.tp-notes-reservation-edit-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 12px;
 }
 .tp-notes-reservation-edit-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
@@ -229,28 +234,14 @@ function SortableReservationRow({ reservation, isEditing, onEdit, onCloseEdit, o
               placeholder="備註 (取消政策、特殊需求等)…"
             />
           </div>
-        </div>
-        <div className="tp-notes-reservation-actions">
-          <button
-            type="button"
-            className="tp-notes-reservation-icon-btn"
-            onClick={onCloseEdit}
-            aria-label="完成編輯"
-            title="完成"
-            data-testid={`reservation-close-edit-${reservation.id}`}
-          >
-            <Icon name="check" />
-          </button>
-          <button
-            type="button"
-            className="tp-notes-reservation-icon-btn is-danger"
-            onClick={onDelete}
-            aria-label="刪除預訂"
-            title="刪除"
-            data-testid={`reservation-delete-${reservation.id}`}
-          >
-            <Icon name="trash" />
-          </button>
+          <div className="tp-notes-reservation-edit-actions">
+            <button type="button" className="tp-btn tp-btn-destructive" onClick={onDelete} data-testid={`reservation-delete-${reservation.id}`}>
+              刪除
+            </button>
+            <button type="button" className="tp-btn tp-btn-primary" onClick={onCloseEdit} data-testid={`reservation-close-edit-${reservation.id}`}>
+              完成
+            </button>
+          </div>
         </div>
       </div>
     );
