@@ -809,13 +809,15 @@ export default function ExplorePage() {
                             <div className="poi-category">{POI_TYPE_LABELS[mapNominatimCategory(poi.category)] ?? 'POI'}</div>
                             <div className="poi-name">{poi.name}</div>
                             <div className="poi-address">{poi.address ?? ''}</div>
-                            {/* v2.31.12: backend `PoiSearchResult.rating` 已含 Google rating
-                              （v2.23.0 google-maps-migration 後）。有值顯示 ★ N.N，
-                              無 rating 仍 fallback 顯「探索更多評論」placeholder。 */}
-                            <div className="explore-poi-rating">
-                              <span className="explore-poi-rating-star">★</span>
-                              <span>{typeof poi.rating === 'number' ? poi.rating.toFixed(1) : '探索更多評論'}</span>
-                            </div>
+                            {/* v2.31.12: backend `PoiSearchResult.rating` 已含 Google rating。
+                              v2.34.38 prod audit fix: 無 rating 不 render ★（之前 fallback
+                              「探索更多評論」是 CTA-as-rating 怪 UX 看似 link 實則無動作）。 */}
+                            {typeof poi.rating === 'number' && (
+                              <div className="explore-poi-rating">
+                                <span className="explore-poi-rating-star">★</span>
+                                <span>{poi.rating.toFixed(1)}</span>
+                              </div>
+                            )}
                           </div>
                         </article>
                       );
