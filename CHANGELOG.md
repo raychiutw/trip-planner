@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.36] - 2026-05-29
+
+**Test — PR36：account/profile.ts integration test 補上（PR35 P0 HIGH gap #1）**
+
+PR35 doc 中標 P0 HIGH risk 的 `account/profile.ts`（v2.33.122 PATCH display_name）原本沒 integration test。一次補 9 個 test 涵蓋完整 lifecycle。
+
+### Added
+
+- `tests/api/account-profile.integration.test.ts` — 9 個 test：
+  - trim 後寫入 ✓
+  - null → clear ✓
+  - empty string → clear ✓
+  - 50 chars 邊界 OK ✓
+  - 51 chars → 400 DATA_VALIDATION + detail 含 "50" ✓
+  - 欄位省略 → 400 ✓
+  - 非 string 型別（number）→ 400 ✓
+  - Response mirror /api/oauth/userinfo shape（camelCase + emailVerified）+ 拒絕 snake_case 出現 ✓
+  - audit_log 寫入（tableName='user' + action='update' + diffJson 含 displayName）✓
+
+### Why
+
+`account/profile.ts` 是 v2.33.122 新增 user-facing PATCH endpoint。display_name 有 trim / 50 char cap / null clear 三種 normalization rule，audit_log 寫 user table。沒 test 等於改動只靠 manual QA 抓 regression。
+
+### Note
+
+`AppError` shape：`error.message` 是 generic（i18n-friendly），`error.detail` 是 handler-supplied 具體理由。Test 假設都對齊這 contract。
+
 ## [2.34.35] - 2026-05-29
 
 **Docs — PR35：Endpoint test coverage 精準分析（68/96 = 70.8% direct coverage）**
