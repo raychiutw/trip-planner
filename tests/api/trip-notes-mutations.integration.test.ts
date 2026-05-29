@@ -245,3 +245,99 @@ describe('PATCH /flights/reorder — bulk', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// PR26 — audit_log integration for trip-notes mutations
+describe('audit_log — PR26 trip-notes mutations', () => {
+  const tripAudit = 'trip-notes-audit';
+
+  beforeAll(async () => {
+    await seedTrip(db, { id: tripAudit, owner: ownerEmail });
+  });
+
+  async function fetchAuditRows(table: string) {
+    const rs = await db.prepare(
+      `SELECT action, table_name AS tableName, record_id AS recordId, changed_by AS changedBy, diff_json AS diffJson
+       FROM audit_log WHERE trip_id = ? AND table_name = ? ORDER BY id ASC`,
+    ).bind(tripAudit, table).all<{ action: string; tableName: string; recordId: number | null; changedBy: string; diffJson: string }>();
+    return rs.results ?? [];
+  }
+
+  it('POST /flights writes audit_log action=insert', async () => {
+    const res = await call(postFlights, tripAudit, { airline: 'CI', flight_no: 'CI 999' });
+    expect(res.status).toBe(201);
+    const rows = await fetchAuditRows('trip_flights');
+    expect(rows.length).toBe(1);
+    expect(rows[0].action).toBe('insert');
+    expect(rows[0].changedBy).toBe(ownerEmail);
+    expect(rows[0].recordId).toBeGreaterThan(0);
+    expect(rows[0].diffJson).toContain('CI 999');
+  });
+
+  it('PATCH /flights/:rowId writes audit_log action=update with diff', async () => {
+    const createRes = await call(postFlights, tripAudit, { airline: 'JX', flight_no: 'JX 100' });
+    const created = await createRes.json() as any;
+    const before = await fetchAuditRows('trip_flights');
+
+    const res = await call(patchFlights, tripAudit, { flight_no: 'JX 999' }, { rowId: String(created.id) }, ownerEmail, 'PATCH');
+    expect(res.status).toBe(200);
+
+    const after = await fetchAuditRows('trip_flights');
+    expect(after.length).toBe(before.length + 1);
+    const last = after[after.length - 1];
+    expect(last.action).toBe('update');
+    expect(last.recordId).toBe(created.id);
+    expect(last.diffJson).toContain('JX 999');
+  });
+
+  it('DELETE /flights/:rowId writes audit_log action=delete with snapshot', async () => {
+    const createRes = await call(postFlights, tripAudit, { airline: 'BR', flight_no: 'BR 222' });
+    const created = await createRes.json() as any;
+    const before = await fetchAuditRows('trip_flights');
+
+    const res = await call(deleteFlights, tripAudit, undefined, { rowId: String(created.id) }, ownerEmail, 'DELETE');
+    expect(res.status).toBe(200);
+
+    const after = await fetchAuditRows('trip_flights');
+    expect(after.length).toBe(before.length + 1);
+    const last = after[after.length - 1];
+    expect(last.action).toBe('delete');
+    expect(last.recordId).toBe(created.id);
+    expect(last.diffJson).toContain('BR 222');
+  });
+
+  it('PATCH /flights/reorder writes audit_log action=update with op=reorder summary + recordId=null', async () => {
+    const a = await (await call(postFlights, tripAudit, { airline: 'A1', flight_no: 'A1-1' })).json() as any;
+    const b = await (await call(postFlights, tripAudit, { airline: 'B1', flight_no: 'B1-1' })).json() as any;
+    const before = await fetchAuditRows('trip_flights');
+
+    const res = await call(reorderFlights, tripAudit, {
+      items: [{ id: a.id, sortOrder: 1 }, { id: b.id, sortOrder: 0 }],
+    }, {}, ownerEmail, 'PATCH');
+    expect(res.status).toBe(200);
+
+    const after = await fetchAuditRows('trip_flights');
+    expect(after.length).toBe(before.length + 1);
+    const last = after[after.length - 1];
+    expect(last.action).toBe('update');
+    expect(last.recordId).toBeNull();
+    expect(last.diffJson).toContain('"op":"reorder"');
+    expect(last.diffJson).toContain(`"id":${a.id}`);
+  });
+
+  it('POST /pretrip / /emergency / /reservations 也都寫 audit_log（其他 table 不漏）', async () => {
+    await call(postPretrip, tripAudit, { kind: 'general', title: '行前提醒' });
+    await call(postEmergency, tripAudit, { kind: 'embassy', name: '駐外館處', phone: '+81-3-1234-5678' });
+    await call(postReservations, tripAudit, { title: '居酒屋', kind: 'restaurant' });
+
+    const pretrip = await fetchAuditRows('trip_pretrip_notes');
+    const emergency = await fetchAuditRows('trip_emergency_contacts');
+    const reservation = await fetchAuditRows('trip_reservations');
+
+    expect(pretrip.length).toBeGreaterThanOrEqual(1);
+    expect(pretrip[pretrip.length - 1].action).toBe('insert');
+    expect(emergency.length).toBeGreaterThanOrEqual(1);
+    expect(emergency[emergency.length - 1].action).toBe('insert');
+    expect(reservation.length).toBeGreaterThanOrEqual(1);
+    expect(reservation[reservation.length - 1].action).toBe('insert');
+  });
+});
