@@ -80,7 +80,7 @@ const SCOPED_STYLES = `
     padding: 10px 20px;
     background: var(--color-tertiary);
     border-bottom: 1px solid var(--color-border);
-    font-size: 14px;
+    font-size: var(--font-size-footnote);
     color: var(--color-muted);
   }
   .tp-custom-stop-day-meta strong { color: var(--color-foreground); font-weight: 600; }
@@ -92,7 +92,7 @@ const SCOPED_STYLES = `
   .tp-custom-stop-field:last-child { border-bottom: none; }
   .tp-custom-stop-label {
     display: block;
-    font-size: 12px;
+    font-size: var(--font-size-caption);
     line-height: 16px;
     font-weight: 600;
     color: var(--color-muted);
@@ -112,7 +112,7 @@ const SCOPED_STYLES = `
     border-radius: var(--radius-md);
     background: var(--color-background);
     color: var(--color-foreground);
-    font-size: 16px;
+    font-size: var(--font-size-body);
     outline: none;
     resize: vertical;
     font-family: inherit;
@@ -120,7 +120,7 @@ const SCOPED_STYLES = `
   }
   .tp-custom-stop-help {
     margin-top: 6px;
-    font-size: 13px;
+    font-size: var(--font-size-footnote);
     color: var(--color-muted);
     line-height: 1.5;
   }
@@ -158,12 +158,12 @@ const SCOPED_STYLES = `
     outline: none;
   }
   .tp-custom-stop-typeahead-main {
-    font-size: 15px;
+    font-size: var(--font-size-subheadline);
     font-weight: 500;
     color: var(--color-foreground);
   }
   .tp-custom-stop-typeahead-sub {
-    font-size: 13px;
+    font-size: var(--font-size-footnote);
     color: var(--color-muted);
     margin-top: 2px;
   }
@@ -217,7 +217,7 @@ const SCOPED_STYLES = `
     background: var(--color-destructive-bg);
     color: var(--color-destructive);
     border-radius: var(--radius-md);
-    font-size: 14px;
+    font-size: var(--font-size-footnote);
     text-align: center;
   }
   .tp-custom-stop-hint {
@@ -258,7 +258,7 @@ const SCOPED_STYLES = `
     transform: rotate(45deg);
   }
   .tp-custom-stop-hint-text {
-    font-size: 14px;
+    font-size: var(--font-size-footnote);
     color: var(--color-foreground);
     line-height: 1.4;
   }
@@ -269,7 +269,7 @@ const SCOPED_STYLES = `
     background: var(--color-destructive-bg);
     border-left: 3px solid var(--color-destructive);
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--font-size-footnote);
     color: var(--color-destructive);
     line-height: 1.4;
   }

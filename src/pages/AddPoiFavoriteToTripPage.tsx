@@ -133,7 +133,7 @@ const SCOPED_STYLES = `
   display: flex; justify-content: center;
 }
 .tp-favorites-add-to-trip .tp-action-btn {
-  font: inherit; font-weight: 700; font-size: 15px;
+  font: inherit; font-weight: 700; font-size: var(--font-size-subheadline);
   padding: 12px 28px; border-radius: var(--radius-full);
   background: var(--color-accent); color: var(--color-accent-foreground);
   border: 1px solid var(--color-accent);

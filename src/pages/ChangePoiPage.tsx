@@ -139,7 +139,7 @@ const SCOPED_STYLES = `
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: 18px;
+  font-size: var(--font-size-headline);
   font-weight: 700;
   letter-spacing: 0;
   color: var(--color-foreground);

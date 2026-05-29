@@ -102,16 +102,16 @@ const SCOPED_STYLES = `
 }
 .tp-ai-health-hero h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: var(--font-size-title2);
   line-height: 32px;
   font-weight: 700;
   color: var(--color-foreground);
 }
 @media (min-width: 1024px) {
-  .tp-ai-health-hero h1 { font-size: 28px; line-height: 36px; }
+  .tp-ai-health-hero h1 { font-size: var(--font-size-title); line-height: 36px; }
 }
 .tp-ai-health-hero .meta {
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   line-height: 20px;
   color: var(--color-muted);
 }
@@ -137,12 +137,12 @@ const SCOPED_STYLES = `
 }
 .tp-ai-health-empty h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--font-size-headline);
   line-height: 24px;
   font-weight: 700;
 }
 .tp-ai-health-empty .sub {
-  font-size: 14px;
+  font-size: var(--font-size-footnote);
   line-height: 22px;
   color: var(--color-muted);
   max-width: 360px;
@@ -208,12 +208,12 @@ const SCOPED_STYLES = `
   animation: tp-aih-pulse-ring 1.6s ease-out infinite;
 }
 .tp-ai-health-loading .text .title {
-  font-size: 14px;
+  font-size: var(--font-size-footnote);
   line-height: 20px;
   font-weight: 700;
 }
 .tp-ai-health-loading .text .sub {
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   line-height: 18px;
   color: var(--color-muted);
 }
@@ -245,7 +245,7 @@ const SCOPED_STYLES = `
   gap: 6px;
   padding: 4px 10px;
   border-radius: var(--radius-full);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   line-height: 16px;
   font-weight: 600;
 }
@@ -306,7 +306,7 @@ const SCOPED_STYLES = `
   flex-wrap: wrap;
 }
 .tp-ai-health-finding .body .title {
-  font-size: 14px;
+  font-size: var(--font-size-footnote);
   line-height: 20px;
   font-weight: 700;
 }
@@ -322,7 +322,7 @@ const SCOPED_STYLES = `
   font-weight: 600;
 }
 .tp-ai-health-finding .body .desc {
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   line-height: 20px;
   color: var(--color-muted);
   margin: 4px 0 8px;
@@ -336,7 +336,7 @@ const SCOPED_STYLES = `
   margin: 4px 0 8px;
   background: var(--color-accent-subtle);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   line-height: 20px;
   color: var(--color-accent-deep);
 }
@@ -359,7 +359,7 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
   padding: 6px 12px;
   border-radius: var(--radius-full);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   line-height: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -397,7 +397,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-md);
   padding: 12px 14px;
   margin-bottom: 16px;
-  font-size: 14px;
+  font-size: var(--font-size-footnote);
   line-height: 20px;
   color: var(--color-foreground);
 }
@@ -412,13 +412,13 @@ const SCOPED_STYLES = `
   margin-bottom: 16px;
 }
 .tp-ai-health-error .title {
-  font-size: 14px;
+  font-size: var(--font-size-footnote);
   line-height: 20px;
   font-weight: 700;
   color: var(--color-destructive);
 }
 .tp-ai-health-error .desc {
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   line-height: 20px;
   color: var(--color-foreground);
   margin-top: 4px;

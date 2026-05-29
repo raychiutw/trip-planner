@@ -38,7 +38,7 @@ ${AUTH_LAYOUT_STYLES}
 .tp-auth-brand {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   margin-bottom: 28px;
-  font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+  font-size: var(--font-size-headline); font-weight: 800; letter-spacing: -0.02em;
 }
 .tp-auth-brand-dot { color: var(--color-accent); }
 .tp-auth-headline { text-align: center; margin-bottom: 28px; }
