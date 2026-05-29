@@ -3,6 +3,34 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.41] - 2026-05-29
+
+**Test — PR41：invitations/revoke + permissions/[id] integration test (PR35 P2 收尾)**
+
+PR35 doc 最後一個 P2 MEDIUM collab gap。3 endpoint × 12 test 涵蓋 validation / not found / role transitions / audit_log。**完成 PR35 doc 全 P0/P1/P2 follow-up（5 個 PR 全 ship）**。
+
+### Added
+
+- `tests/api/invitations-permissions.integration.test.ts` — 12 個 test：
+
+  **POST /api/invitations/revoke (4 tests)**: 缺 tripId/email → 400 / 找不到 → 404 / 正常 → 200 + audit_log
+
+  **PATCH /api/permissions/:id (5 tests)**: 找不到 → 404 / invalid role → 400 / owner 不可改 → 403 / viewer→member → 200 + audit / no-op 不寫 audit
+
+  **DELETE /api/permissions/:id (3 tests)**: 找不到 → 404 / owner 不可刪 → 403 / 正常 DELETE → 200 + audit snapshot
+
+### PR35 follow-up 完成
+
+| PR | Priority | Status |
+|---|---|---|
+| PR36 (account/profile) | P0 HIGH | ✓ |
+| PR37 (Google APIs) | P0 HIGH | ✓ |
+| PR39 (POI find-or-create + entry trip-pois) | P1 | ✓ + DATA_CONFLICT prod bug fix |
+| PR40 (trip-notes cross-section) | P1 | ✓ |
+| **PR41 (invitations + permissions)** | **P2** | **✓ this PR** |
+
+**PR35 audit plan 100% 完成**。
+
 ## [2.34.40] - 2026-05-29
 
 **Test — PR40：trip-notes cross-section dispatch integration test (PR35 P1 gap)**
