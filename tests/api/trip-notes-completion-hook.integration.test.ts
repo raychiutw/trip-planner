@@ -156,4 +156,74 @@ describe('PATCH /requests/:id — notes generation completion hook', () => {
       expect(row!.reply).not.toContain('"phone"'); // raw JSON not surfaced
     });
   });
+
+  // PR27 — AI-driven INSERT 補 audit_log
+  describe('PR27 audit_log on AI insert', () => {
+    async function fetchAudit(tableName: string, requestId: number) {
+      const rs = await db
+        .prepare(
+          `SELECT action, changed_by AS changedBy, request_id AS requestId, diff_json AS diffJson, record_id AS recordId
+           FROM audit_log WHERE trip_id = ? AND table_name = ? AND request_id = ? ORDER BY id ASC`,
+        )
+        .bind(tripId, tableName, requestId)
+        .all<{ action: string; changedBy: string; requestId: number; diffJson: string; recordId: number }>();
+      return rs.results ?? [];
+    }
+
+    it('lodging-tips AI insert → audit_log action=insert + changedBy=ai:<submitted_by>', async () => {
+      const { requestId } = await createJobAndRequest('lodging-tips');
+      const reply = JSON.stringify([{ title: 'AI lodging tip', content: 'foo', section: '住宿在地' }]);
+      await callPatch(requestId, { status: 'completed', reply });
+
+      const rows = await fetchAudit('trip_pretrip_notes', requestId);
+      expect(rows.length).toBe(1);
+      expect(rows[0].action).toBe('insert');
+      expect(rows[0].changedBy).toBe(`ai:${ownerEmail}`);
+      expect(rows[0].requestId).toBe(requestId);
+      expect(rows[0].diffJson).toContain('AI lodging tip');
+      expect(rows[0].recordId).toBeGreaterThan(0);
+    });
+
+    it('emergency AI insert → audit_log per row', async () => {
+      const { requestId } = await createJobAndRequest('emergency');
+      const reply = JSON.stringify([
+        { name: 'PR27 警察局', phone: '110', kind: 'police' },
+        { name: 'PR27 醫院', phone: '119', kind: 'medical' },
+      ]);
+      await callPatch(requestId, { status: 'completed', reply });
+
+      const rows = await fetchAudit('trip_emergency_contacts', requestId);
+      expect(rows.length).toBe(2);
+      expect(rows.every((r) => r.action === 'insert')).toBe(true);
+      expect(rows.every((r) => r.changedBy === `ai:${ownerEmail}`)).toBe(true);
+      const joined = rows.map((r) => r.diffJson).join('|');
+      expect(joined).toContain('PR27 警察局');
+      expect(joined).toContain('PR27 醫院');
+    });
+
+    it('submitted_by NULL → changedBy=system:ai fallback', async () => {
+      const req = await db
+        .prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, NULL) RETURNING id')
+        .bind(tripId, '[行程筆記-tips] sysai test')
+        .first<{ id: number }>();
+      await db
+        .prepare('INSERT INTO trip_note_ai_jobs (request_id, trip_id, doc_type) VALUES (?, ?, ?)')
+        .bind(req!.id, tripId, 'tips')
+        .run();
+      const reply = JSON.stringify([{ title: 'sysai tip', content: 'x', section: '一般' }]);
+      await callPatch(req!.id, { status: 'completed', reply });
+
+      const rows = await fetchAudit('trip_pretrip_notes', req!.id);
+      expect(rows.length).toBe(1);
+      expect(rows[0].changedBy).toBe('system:ai');
+    });
+
+    it('failed status → 不寫 audit_log（沒 INSERT 就沒記錄）', async () => {
+      const { requestId } = await createJobAndRequest('lodging-tips');
+      await callPatch(requestId, { status: 'failed', reply: 'Claude timeout' });
+
+      const rows = await fetchAudit('trip_pretrip_notes', requestId);
+      expect(rows.length).toBe(0);
+    });
+  });
 });

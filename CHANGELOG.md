@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.27] - 2026-05-29
+
+**Audit log — 行程筆記 PR27：AI generation hook 補 audit_log integration**
+
+PR26 補完 user mutation 4 個 helper 後，發現 AI generation completion hook（`applyNotesGenerationCompletion`）在 `trip_pretrip_notes` / `trip_emergency_contacts` 直接 INSERT 完全沒 audit_log。Prod user 看到 AI 生成的「住宿在地建議」「緊急聯絡 entry」時 audit_log 沒記錄是誰觸發的，事後 forensics 抓不到 trigger 路徑。
+
+### Added
+
+- `functions/api/requests/[id]/index.ts:applyNotesGenerationCompletion` 在 2 個 AI INSERT 點加 `logAudit()`：
+  - `INSERT INTO trip_pretrip_notes` 改 `RETURNING *` 拿 row + `logAudit` action='insert' + requestId 對齊原 PR10 linkage
+  - `INSERT INTO trip_emergency_contacts` 同上
+- `aiActor` derive：`submitted_by` 存在 → `ai:<email>`（標明 AI 動作的觸發人）；NULL → `system:ai` fallback。前綴 `ai:` 讓 audit_log query 容易分辨「user 自己手動 vs AI 代寫」
+
+### Tests
+
+- `tests/api/trip-notes-completion-hook.integration.test.ts` +4 audit assertion：
+  - lodging-tips insert → action='insert' + changedBy=`ai:owner@hook.test` + recordId 正確 + diffJson 含 row 資料
+  - emergency insert → 多 row 每 row 一筆 audit_log
+  - submitted_by NULL → changedBy='system:ai' fallback
+  - failed status → 不寫 audit_log（沒 INSERT 就沒記錄，避免雜訊）
+- 11/11 全過
+
+### Why
+
+合規 / forensics：v2.34.27 後 audit_log 可重建「誰觸發 AI → AI 寫了什麼 row」的完整時間軸（用 requestId 串 linkage）。對應 PR26 補 user mutation；這兩 PR 完成 trip-notes 全 write path audit 覆蓋率。
+
 ## [2.34.26] - 2026-05-29
 
 **Audit log — 行程筆記 PR26：trip-notes mutations 補 audit_log integration**
