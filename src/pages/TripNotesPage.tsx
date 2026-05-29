@@ -94,8 +94,8 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
 }
 .tp-notes-empty-hero-eyebrow { font-size: var(--font-size-caption2); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 4px; }
-.tp-notes-empty-hero-title { font-size: 20px; font-weight: 700; line-height: 1.3; }
-.tp-notes-empty-hero-sub { font-size: 14px; color: var(--color-muted); margin-top: 6px; max-width: 280px; margin-inline: auto; }
+.tp-notes-empty-hero-title { font-size: var(--font-size-title3); font-weight: 700; line-height: 1.3; }
+.tp-notes-empty-hero-sub { font-size: var(--font-size-footnote); color: var(--color-muted); margin-top: 6px; max-width: 280px; margin-inline: auto; }
 .tp-notes-empty-hero-progress { display: flex; justify-content: center; gap: 6px; margin-top: 14px; }
 .tp-notes-empty-hero-dot { width: 24px; height: 6px; border-radius: var(--radius-full); background: var(--color-tertiary); }
 .tp-notes-empty-hero-dot.is-filled { background: var(--color-accent); }
@@ -144,8 +144,8 @@ const SCOPED_STYLES = `
 .tp-notes-section-icon .svg-icon { width: 18px; height: 18px; }
 
 .tp-notes-section-titles { flex: 1; min-width: 0; }
-.tp-notes-section-title { font-size: 17px; font-weight: 700; line-height: 1.2; }
-.tp-notes-section-meta { margin-top: 2px; font-size: 13px; color: var(--color-muted); }
+.tp-notes-section-title { font-size: var(--font-size-headline); font-weight: 700; line-height: 1.2; }
+.tp-notes-section-meta { margin-top: 2px; font-size: var(--font-size-caption); color: var(--color-muted); }
 .tp-notes-section-meta.is-warn { color: var(--color-accent-deep); font-weight: 600; }
 
 .tp-notes-section-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
@@ -156,7 +156,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-md);
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
-  font-size: 13px; font-weight: 600;
+  font-size: var(--font-size-footnote); font-weight: 600;
   min-height: 32px;
   border: none;
   cursor: pointer;
@@ -182,7 +182,7 @@ const SCOPED_STYLES = `
 .tp-notes-section-body.is-placeholder {
   padding: 16px;
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--font-size-footnote);
   text-align: center;
 }
 

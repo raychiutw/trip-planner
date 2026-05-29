@@ -83,7 +83,7 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-caption2); font-weight: 600;
   white-space: nowrap;
 }
-.tp-notes-reservation-title { font-size: 15px; font-weight: 600; }
+.tp-notes-reservation-title { font-size: var(--font-size-subheadline); font-weight: 600; }
 .tp-notes-reservation-meta {
   margin-top: 4px;
   font-size: var(--font-size-footnote); color: var(--color-muted);
@@ -109,7 +109,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
-  font-size: 15px;
+  font-size: var(--font-size-subheadline);
   outline: none;
 }
 .tp-notes-reservation-edit-grid input:focus,

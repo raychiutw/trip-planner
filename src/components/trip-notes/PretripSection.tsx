@@ -62,7 +62,7 @@ const SCOPED_STYLES = `
 .tp-notes-pretrip-title-row {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
 }
-.tp-notes-pretrip-title { font-size: 15px; font-weight: 600; }
+.tp-notes-pretrip-title { font-size: var(--font-size-subheadline); font-weight: 600; }
 .tp-notes-pretrip-ai-chip {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px;
@@ -107,7 +107,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
-  font-size: 15px;
+  font-size: var(--font-size-subheadline);
   outline: none;
 }
 .tp-notes-pretrip-edit-grid input:focus,
