@@ -13,6 +13,8 @@ import { CSS } from '@dnd-kit/utilities';
 import Icon from '../shared/Icon';
 import AlertPanel from '../shared/AlertPanel';
 import ConfirmModal from '../shared/ConfirmModal';
+import NoteDateTimeField from './NoteDateTimeField';
+import { TripSelect } from '../TripSelect';
 import { apiFetch } from '../../lib/apiClient';
 
 export interface TripReservation {
@@ -105,24 +107,10 @@ const SCOPED_STYLES = `
   margin-top: 12px;
 }
 .tp-notes-reservation-edit-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
 }
-.tp-notes-reservation-edit-grid input,
-.tp-notes-reservation-edit-grid select,
-.tp-notes-reservation-edit-grid textarea {
-  width: 100%; padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-size: var(--font-size-subheadline);
-  outline: none;
-}
-.tp-notes-reservation-edit-grid input:focus,
-.tp-notes-reservation-edit-grid select:focus,
-.tp-notes-reservation-edit-grid textarea:focus { border-color: var(--color-accent); }
+.tp-notes-reservation-edit-field { min-width: 0; }
 .tp-notes-reservation-edit-full { grid-column: 1 / -1; }
-.tp-notes-reservation-edit-note { min-height: 48px; resize: vertical; }
 .tp-notes-reservation-edit-label {
   font-size: var(--font-size-caption); font-weight: 600;
   color: var(--color-muted);
@@ -170,22 +158,20 @@ function SortableReservationRow({ reservation, isEditing, onEdit, onSaveField, o
         <div />
         <div className="tp-notes-reservation-body">
           <div className="tp-notes-reservation-edit-grid">
-            <div>
+            <div className="tp-notes-reservation-edit-field">
               <div className="tp-notes-reservation-edit-label">類型</div>
-              <select
-                defaultValue={reservation.kind}
-                onBlur={(e) => onSaveField('kind', e.target.value)}
-                onChange={(e) => onSaveField('kind', e.target.value)}
-                data-testid={`reservation-input-kind-${reservation.id}`}
-              >
-                {KIND_KEYS.map((k) => (
-                  <option key={k} value={k}>{KIND_LABEL[k]}</option>
-                ))}
-              </select>
+              <TripSelect
+                value={reservation.kind}
+                onChange={(v) => onSaveField('kind', v)}
+                options={KIND_KEYS.map((k) => ({ value: k, label: KIND_LABEL[k] }))}
+                ariaLabel="類型"
+                id={`reservation-input-kind-${reservation.id}`}
+              />
             </div>
-            <div>
+            <div className="tp-notes-reservation-edit-field">
               <div className="tp-notes-reservation-edit-label">人數</div>
               <input
+                className="tp-input-long"
                 type="number"
                 min="0"
                 defaultValue={reservation.partySize || ''}
@@ -193,9 +179,10 @@ function SortableReservationRow({ reservation, isEditing, onEdit, onSaveField, o
                 placeholder="例：4"
               />
             </div>
-            <div className="tp-notes-reservation-edit-full">
+            <div className="tp-notes-reservation-edit-field tp-notes-reservation-edit-full">
               <div className="tp-notes-reservation-edit-label">名稱 / 標題</div>
               <input
+                className="tp-input-long"
                 type="text"
                 defaultValue={reservation.title}
                 onBlur={(e) => onSaveField('title', e.target.value)}
@@ -203,26 +190,28 @@ function SortableReservationRow({ reservation, isEditing, onEdit, onSaveField, o
                 data-testid={`reservation-input-title-${reservation.id}`}
               />
             </div>
-            <div className="tp-notes-reservation-edit-full">
+            <div className="tp-notes-reservation-edit-field tp-notes-reservation-edit-full">
               <div className="tp-notes-reservation-edit-label">預訂時間</div>
-              <input
-                type="datetime-local"
-                defaultValue={reservation.reservedAt}
-                onBlur={(e) => onSaveField('reservedAt', e.target.value)}
+              <NoteDateTimeField
+                value={reservation.reservedAt}
+                onChange={(v) => onSaveField('reservedAt', v)}
+                ariaLabel="預訂"
               />
             </div>
-            <div>
+            <div className="tp-notes-reservation-edit-field">
               <div className="tp-notes-reservation-edit-label">預訂編號</div>
               <input
+                className="tp-input-long"
                 type="text"
                 defaultValue={reservation.reservationNo}
                 onBlur={(e) => onSaveField('reservationNo', e.target.value)}
                 placeholder="例：R-9182"
               />
             </div>
-            <div>
+            <div className="tp-notes-reservation-edit-field">
               <div className="tp-notes-reservation-edit-label">電話</div>
               <input
+                className="tp-input-long"
                 type="tel"
                 defaultValue={reservation.phone}
                 onBlur={(e) => onSaveField('phone', e.target.value)}
@@ -230,7 +219,7 @@ function SortableReservationRow({ reservation, isEditing, onEdit, onSaveField, o
               />
             </div>
             <textarea
-              className="tp-notes-reservation-edit-full tp-notes-reservation-edit-note"
+              className="tp-input-long tp-notes-reservation-edit-full tp-notes-reservation-edit-note"
               defaultValue={reservation.note}
               onBlur={(e) => onSaveField('note', e.target.value)}
               placeholder="備註 (取消政策、特殊需求等)…"

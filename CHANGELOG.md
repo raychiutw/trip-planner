@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.48] - 2026-05-30
+
+**Fix — 行程筆記編輯表單對齊 canonical input 系統（QA：高度不一致 + 原生 date/time）**
+
+行程筆記 5 個 section 的編輯表單原本用原生 `<input>` / `<select>` / `<input type="datetime-local">` + 各自散落的 ad-hoc CSS（沒設 min-height），導致原生日期/時間欄位比文字欄位高、同一列高度不齊，且出現原生瀏覽器 date/time 介面，未遵守設計規範。改為全站 canonical 系統：文字/textarea → `.tp-input-long`（44px）、原生 `<select>` → `TripSelect`、原生 `datetime-local` → 新 `NoteDateTimeField`（terracotta `TripDatePicker` + `TripTimePicker` popover）。所有編輯欄位高度一致、無原生 chrome。
+
+### Changed
+- 行程筆記 FlightsSection / LodgingsSection / ReservationsSection / PretripSection / EmergencySection 編輯表單改用 canonical input 元件（`.tp-input-long` / `TripSelect` / `NoteDateTimeField`），移除各 section 散落的 ad-hoc edit-grid input CSS。
+
+### Added
+- `NoteDateTimeField` — 組合 `TripDatePicker` + `TripTimePicker` 取代原生 `datetime-local`，I/O 維持 datetime 字串（含 split/combine helper）。11 條 regression test 鎖定（無原生 date/time/select、canonical 元件接線、datetime helper round-trip）。
+
 ## [2.34.47] - 2026-05-30
 
 **Fix — 行程筆記頁標題對沒有自訂名稱的行程顯示行程名（QA F1）**
