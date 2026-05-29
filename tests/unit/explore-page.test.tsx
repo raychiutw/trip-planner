@@ -182,8 +182,10 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
   });
 
   it('rating meta line 顯示 ★ icon', async () => {
+    // v2.34.38 prod audit fix: 有 rating 才顯示 ★。
+    // mock 加 rating field 確保 .explore-poi-rating 真的 render。
     mockSearch([
-      { place_id: 'p8', name: '首爾塔', address: '首爾', lat: 37.5, lng: 126.99, category: 'tourism' },
+      { place_id: 'p8', name: '首爾塔', address: '首爾', lat: 37.5, lng: 126.99, category: 'tourism', rating: 4.6 },
     ]);
     const { getByTestId, container } = renderPage();
     fireEvent.change(getByTestId('explore-search-input'), { target: { value: '首爾' } });
@@ -192,7 +194,23 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
       expect(getByTestId('explore-save-btn-p8')).toBeTruthy();
     });
     const rating = container.querySelector('.explore-poi-rating');
+    expect(rating).not.toBeNull();
     expect(rating?.textContent).toContain('★');
+    expect(rating?.textContent).toContain('4.6');
+  });
+
+  it('v2.34.38 prod audit fix: 無 rating → 不 render ★（不再顯示「探索更多評論」placeholder）', async () => {
+    mockSearch([
+      { place_id: 'p9', name: '無評論景點', address: '某地', lat: 0, lng: 0, category: 'tourism' },
+    ]);
+    const { getByTestId, container } = renderPage();
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: '無評論景點' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => {
+      expect(getByTestId('explore-save-btn-p9')).toBeTruthy();
+    });
+    expect(container.querySelector('.explore-poi-rating')).toBeNull();
+    expect(container.textContent).not.toContain('探索更多評論');
   });
 
   it('subtab category filter — food 過濾掉非餐廳結果', async () => {

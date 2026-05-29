@@ -165,8 +165,16 @@ function rowToMessages(row: RawRequestRow): ChatMessage[] {
     // v2.31.27 fix #128: AI 健檢 message 是整個 HEALTH_CHECK_MESSAGE system
     // prompt (含 5 維度 + JSON schema + 範例)，user 看一大坨雜訊。改顯短摘要。
     // 完整 prompt 仍存 trip_requests.message → api-server 拿到完整 text 送 Claude。
+    // v2.34.38 prod audit fix: trip-notes feature 3 個新 AI prefix 也是 long system
+    //   prompt（JSON schema + 5-8 維度），同樣 raw 顯示 → 套同 pattern substitution。
     const displayText = row.message.startsWith('[AI 健檢]')
       ? '已觸發 AI 行程健檢'
+      : row.message.startsWith('[行程筆記-lodging-tips]')
+      ? '已觸發 AI 行程筆記生成（住宿在地建議）'
+      : row.message.startsWith('[行程筆記-tips]')
+      ? '已觸發 AI 行程筆記生成（行前須知）'
+      : row.message.startsWith('[行程筆記-emergency]')
+      ? '已觸發 AI 行程筆記生成（緊急聯絡）'
       : row.message;
     out.push({
       id: baseId,

@@ -3,6 +3,44 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.38] - 2026-05-29
+
+**Fix — PR38：Prod audit 3 issue 批次修（HIGH ChatPage prompt leak + 2 LOW polish）**
+
+User 要求 prod login QA 深度 audit → 列清單 → 一次批次修。3 個 real issue 全修 + regression test。
+
+### Fixed
+
+1. **HIGH — ChatPage user message 顯示 raw AI prompt**
+   - `src/pages/ChatPage.tsx:168` `displayText` substitution 加 3 個 trip-notes prefix：
+     - `[行程筆記-lodging-tips]` → 「已觸發 AI 行程筆記生成（住宿在地建議）」
+     - `[行程筆記-tips]` → 「已觸發 AI 行程筆記生成（行前須知）」
+     - `[行程筆記-emergency]` → 「已觸發 AI 行程筆記生成（緊急聯絡）」
+   - 對齊 v2.31.27 `[AI 健檢]` substitution pattern；之前 user 在 /chat 看到「Schema: \`\`\`json [{ "title": "string", "content": "string", "section": "..." }]\`\`\`」等內部 prompt template
+
+2. **LOW — Explore 卡 rating「★ 探索更多評論」placeholder UX 怪**
+   - `src/pages/ExplorePage.tsx:815` 無 rating 不 render ★ element（之前 fallback 字串看似 link 實則無動作）
+   - 改 `{typeof poi.rating === 'number' && <div>...</div>}` conditional render
+
+3. **LOW (doc) — EditTripPage 副標題 stale**
+   - `src/pages/EditTripPage.tsx:1127` 「修改行程基本設定 + 目的地 + 行程天數」→「修改目的地 + 行程天數」
+   - 之前文案承諾「基本設定」但畫面只有後 2 項，誤導 user 找不到 trip name 設定
+
+### Tests
+
+- `tests/unit/chat-trip-notes-prefix-substitution.test.ts` — 7 個 source-grep test 鎖：
+  - 3 個 prefix detection
+  - 3 個短摘要文字
+  - AI 健檢 regression（不能因新 substitution 拔了舊邏輯）
+- `tests/unit/explore-page.test.tsx` 更新：
+  - rating mock 加 `rating: 4.6` 確保 ★ 真 render
+  - 新 test「無 rating → 不 render ★」鎖 v2.34.38 行為
+- 3011/3011 全綠 + TS 零錯誤
+
+### Why
+
+Prod audit 流程：login QA → audit list → user 決定 scope → batch fix。對應 user 「登入後先 audit 所有問題 然後再一次修正」指示。Excluded 5 個 false-positive（data quality issue、URL 猜錯、intentional design）。
+
 ## [2.34.37] - 2026-05-29
 
 **Test — PR37：Google APIs integration test (PR35 P0 HIGH gaps #6 + #10)**
