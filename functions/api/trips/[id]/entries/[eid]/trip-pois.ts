@@ -107,7 +107,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   } catch (err) {
     if (err instanceof AppError) throw err;
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes('UNIQUE') && msg.includes('entry_id, poi_id')) {
+    // v2.34.39 PR39 fix: D1 SQLITE UNIQUE error 訊息格式為
+    // "UNIQUE constraint failed: trip_entry_pois.entry_id, trip_entry_pois.poi_id"
+    // 中間夾 "trip_entry_pois." prefix，原 includes('entry_id, poi_id') 不 match
+    // → 落到 throw err 變 500。改 includes 分開判斷 entry_id + poi_id 兩 column。
+    if (msg.includes('UNIQUE') && msg.includes('entry_id') && msg.includes('poi_id')) {
       throw new AppError('DATA_CONFLICT', '此 POI 已存在於該 entry');
     }
     if (msg.includes('UNIQUE') && msg.includes('sort_order')) {
