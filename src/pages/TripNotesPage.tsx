@@ -426,7 +426,9 @@ export default function TripNotesPage() {
                   <div className={`tp-notes-section-meta${isSuggested ? ' is-warn' : ''}`}>{metaText}</div>
                 </div>
                 <div className="tp-notes-section-actions" onClick={(e) => e.stopPropagation()}>
-                  {sec.hasAI && sec.key === 'pretrip' && (
+                  {/* v2.34.43 prod audit: AI button 只在 section 展開後才 render，
+                     避免 user 想點 chevron 展開 section 時誤觸發 AI 生成 long-running job。 */}
+                  {isOpen && sec.hasAI && sec.key === 'pretrip' && (
                     <>
                       <button
                         type="button"
@@ -466,7 +468,7 @@ export default function TripNotesPage() {
                       </button>
                     </>
                   )}
-                  {sec.hasAI && sec.key === 'emergency' && (
+                  {isOpen && sec.hasAI && sec.key === 'emergency' && (
                     <button
                       type="button"
                       className="tp-notes-ai-btn"
