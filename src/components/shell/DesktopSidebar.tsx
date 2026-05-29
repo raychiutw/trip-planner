@@ -85,28 +85,24 @@ function isItemActive(pathname: string, item: NavItemConfig): boolean {
 const SCOPED_STYLES = `
 .tp-sidebar {
   /* Section 4.1 (terracotta-ui-parity-polish): mockup dark sidebar
-   * (line 5126) — fixed deep-cocoa surface in both light and dark mode. */
-  background: #2A1F18;
-  border-right: 1px solid #2A1F18;
+   * (line 5126) — fixed deep-cocoa surface in both light and dark mode.
+   * v2.34.30: --color-sidebar-bg token (light=#2A1F18, dark=#0F0B08)。 */
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-sidebar-bg);
   padding: 20px 14px;
   display: flex; flex-direction: column;
   gap: 2px;
   height: 100%;
   overflow-y: auto;
 }
-body.dark .tp-sidebar {
-  background: #0F0B08;
-  border-right-color: #0F0B08;
-}
 .tp-sidebar-brand {
   padding: 0 8px;
   margin-bottom: 18px;
   display: flex; align-items: center; gap: 8px;
-  font-size: 20px; font-weight: 700; letter-spacing: -0.01em;
-  /* Dark sidebar 上文字反白 */
+  font-size: var(--font-size-title3); font-weight: 700; letter-spacing: -0.01em;
   /* H6 exception: brand sidebar is fixed deep-cocoa surface in both modes
      (mockup line 5126); text stays warm-cream cross-mode for design lock. */
-  color: #FFFBF5;
+  color: var(--color-sidebar-fg);
 }
 .tp-sidebar-brand .accent-dot { color: var(--color-accent); }
 
@@ -119,18 +115,18 @@ body.dark .tp-sidebar {
    * 對齊 mockup line 5129。 */
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px; border-radius: var(--radius-md);
-  color: rgba(255, 251, 245, 0.78);
-  font-size: 14px; font-weight: 600;
+  color: var(--color-sidebar-fg-muted);
+  font-size: var(--font-size-footnote); font-weight: 600;
   cursor: pointer; text-decoration: none;
   transition: background 150ms var(--transition-timing-function-apple),
               color 150ms var(--transition-timing-function-apple);
   min-height: 40px;
 }
 .tp-nav-item:hover {
-  background: rgba(255, 251, 245, 0.06);
+  background: var(--color-sidebar-fg-hover);
   /* H6 exception: brand sidebar is fixed deep-cocoa surface in both modes
      (mockup line 5126); text stays warm-cream cross-mode for design lock. */
-  color: #FFFBF5;
+  color: var(--color-sidebar-fg);
 }
 .tp-nav-item.is-active {
   /* mockup HIGH active 為 accent 實心 (line 5128) */
@@ -143,7 +139,7 @@ body.dark .tp-sidebar {
   margin-top: auto;
   padding-top: 16px;
   /* Dark sidebar 上 border 用半透明 white */
-  border-top: 1px solid rgba(255, 251, 245, 0.12);
+  border-top: 1px solid var(--color-sidebar-fg-faint);
   display: flex; flex-direction: column; gap: 8px;
 }
 .tp-new-trip-btn {
@@ -152,7 +148,7 @@ body.dark .tp-sidebar {
   background: var(--color-accent);
   color: var(--color-accent-foreground);
   border: none;
-  font: inherit; font-size: 14px; font-weight: 600;
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   cursor: pointer; min-height: var(--spacing-tap-min);
   transition: filter 150ms var(--transition-timing-function-apple);
 }
@@ -162,20 +158,20 @@ body.dark .tp-sidebar {
 .tp-user-chip {
   display: flex; align-items: center; gap: 10px;
   padding: 8px; border-radius: var(--radius-md);
-  color: rgba(255, 251, 245, 0.78); font-size: 13px;
+  color: var(--color-sidebar-fg-muted); font-size: var(--font-size-footnote);
 }
 .tp-user-chip .tp-avatar {
   width: 32px; height: 32px; border-radius: 50%;
   background: var(--color-accent);
   color: var(--color-accent-foreground);
   display: grid; place-items: center;
-  font-size: 13px; font-weight: 700; flex-shrink: 0;
+  font-size: var(--font-size-footnote); font-weight: 700; flex-shrink: 0;
 }
 .tp-user-chip-loading {
   min-height: 52px;
 }
 .tp-user-chip-loading .tp-avatar {
-  background: rgba(255, 251, 245, 0.12);
+  background: var(--color-sidebar-fg-faint);
   color: transparent;
 }
 .tp-user-skeleton-stack {
@@ -186,12 +182,12 @@ body.dark .tp-sidebar {
   display: block;
   height: 8px;
   border-radius: var(--radius-full);
-  background: rgba(255, 251, 245, 0.14);
+  background: var(--color-sidebar-fg-skel-faint);
 }
 .tp-user-skeleton-line.is-primary { width: 76px; }
 .tp-user-skeleton-line.is-secondary {
   width: 116px;
-  background: rgba(255, 251, 245, 0.09);
+  background: var(--color-sidebar-fg-skel-secondary);
 }
 
 .tp-account-card {
@@ -201,28 +197,27 @@ body.dark .tp-sidebar {
   background: transparent;
   display: flex; align-items: center; gap: 10px;
   text-decoration: none;
-  color: rgba(255, 251, 245, 0.78);
+  color: var(--color-sidebar-fg-muted);
   transition: background 150ms var(--transition-timing-function-apple);
   min-height: 52px;
 }
-.tp-account-card:hover { background: rgba(255, 251, 245, 0.06); }
+.tp-account-card:hover { background: var(--color-sidebar-fg-hover); }
 .tp-account-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .tp-account-card .tp-avatar-md {
   width: 32px; height: 32px; border-radius: 50%;
   background: var(--color-accent);
   color: var(--color-accent-foreground);
   display: grid; place-items: center;
-  font-size: 13px; font-weight: 700; flex-shrink: 0;
+  font-size: var(--font-size-footnote); font-weight: 700; flex-shrink: 0;
 }
 .tp-account-card .tp-account-body {
   flex: 1; min-width: 0;
 }
 .tp-account-card .tp-account-name {
-  font-size: 13px; font-weight: 600;
-  /* Dark sidebar：name 用 reverse foreground (cream on dark) */
+  font-size: var(--font-size-footnote); font-weight: 600;
   /* H6 exception: brand sidebar is fixed deep-cocoa surface in both modes
      (mockup line 5126); text stays warm-cream cross-mode for design lock. */
-  color: #FFFBF5;
+  color: var(--color-sidebar-fg);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 `;
