@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.45] - 2026-05-29
+
+**Fix — PR45：trip-notes aggregator endpoint 漏 lodging.day_ids（PR44 prod regression hotfix）**
+
+PR44 把 `trip_lodgings.day_id INT` 改 `trip_lodging_days` junction table 後，prod trip-notes 頁面 crash「Cannot read properties of undefined (reading 'map')」。
+
+Root cause：PR44 把 junction batch fetch 加在 `_shared.ts::listNotesSection`（individual section endpoints 走得到），但主入口 `functions/api/trips/[id]/notes.ts` aggregator 走自己的 5×raw SELECT，不經 `listNotesSection` → `lodgings[].dayIds` 永遠 `undefined` → frontend `LodgingsSection.tsx` 對 dayIds `.includes(d.id)` / `.map(...)` 全 crash。
+
+Fix：`notes.ts` aggregator 加同樣 junction batch query — `SELECT lodging_id, day_id FROM trip_lodging_days WHERE lodging_id IN (...)`，map 進 `lodgingsWithDayIds`，response `lodgings` 改回 `lodgingsWithDayIds`。
+
+4 條 source-grep regression test 鎖 aggregator 路徑：
+1. `FROM trip_lodging_days WHERE lodging_id IN` 存在
+2. `day_ids: byLodgingId.get` 賦值
+3. `?? []` 空 array fallback
+4. response 用 `lodgings: lodgingsWithDayIds`
+
 ## [2.34.44] - 2026-05-29
 
 **Feat + Fix — PR44：trip-notes UI polish + 住宿多天 schema 正規化（user 多 feedback 一次處理）**
