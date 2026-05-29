@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.40] - 2026-05-29
+
+**Test — PR40：trip-notes cross-section dispatch integration test (PR35 P1 gap)**
+
+PR35 doc 標 P1 indirect-tested 的 4 個 section（lodgings/reservations/pretrip/emergency）`/[rowId]` + `/reorder` + parent endpoint，共用 `_shared.ts` 但缺直接 dispatch 驗證。1 個 parametrized test 涵蓋 4 sections × 4 ops = 16 assertions。
+
+### Added
+
+- `tests/api/trip-notes-cross-section-dispatch.integration.test.ts` — parametrized cross-section test：
+  - **POST** → row 進對應 table（trip_lodgings / trip_reservations / trip_pretrip_notes / trip_emergency_contacts）
+  - **PATCH /[rowId]** → 200 + version 加 1
+  - **PATCH /reorder** → 200 + audit_log written（PR26 audit 對齊）
+  - **DELETE /[rowId]** → 200 + row 消失
+
+Total 16 tests / 4 sections。
+
+### Why
+
+trip-notes-mutations.integration.test.ts 只 cover flights/* path（透過 `_shared.ts` helpers）。剩 4 section dispatch 是否正確（每個 section file 是否傳對 table name）沒 test。1 parametrized test 補齊 dispatch contract，避免 4 × 4 = 16 個重複 test。
+
+完成 PR35 P0/P1 follow-up 全部（PR36-37 P0 + PR39/40 P1）。剩 PR41 P2 invitations/permissions。
+
 ## [2.34.39] - 2026-05-29
 
 **Test + Fix — PR39：POI find-or-create + entry trip-pois integration test (PR35 P1 gap) + 修發現的 DATA_CONFLICT bug**
