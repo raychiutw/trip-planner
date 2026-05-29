@@ -3,6 +3,42 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.37] - 2026-05-29
+
+**Test — PR37：Google APIs integration test (PR35 P0 HIGH gaps #6 + #10)**
+
+PR35 doc 標 **P0 HIGH risk** 的 `poi-search.ts` + `route.ts` 兩個 Google API endpoint 原本沒 integration test。一次補 12 個 test 涵蓋 validation / mock dispatch / response shape / source-grep regression。
+
+### Added
+
+- `tests/api/google-apis.integration.test.ts` — 12 個 test：
+
+  **poi-search.ts (8 tests)**:
+  - query < 2 字 → 400
+  - query > 200 字 → 400 + detail 含 "200"
+  - q 缺失 → 400
+  - 正常 query → call searchPlaces + 200 + X-Cache=MISS header
+  - limit clamp 到 [1, 20]
+  - searchPlaces throw → 不額外 catch（handler 假設上游 client 處理）
+
+  **route.ts (4 tests)**:
+  - from / to 缺失 → 400 DATA_VALIDATION
+  - 正常 coords → call computeRoute + 200 + polyline decode + duration / distance + mode=DRIVE
+  - computeRoute throw → 不額外 catch
+  - Cache-Control: public, max-age=86400 (24h edge)
+
+  **source-grep regression (2 tests)**:
+  - poi-search.ts 仍 import searchPlaces from google-client
+  - route.ts 仍 import computeRoute from google-client
+
+### Strategy
+
+`vi.mock('../../src/server/maps/google-client', ...)` 避免實打 Google API（cost + flaky）。Tests 鎖 contract（query validation / mock dispatch / response shape）而非 third-party behavior。
+
+### Why
+
+PR35 doc 評估 `poi-search.ts` ($32/1000) 和 `route.ts` ($5/1000) 是兩個最高 billing impact + accuracy-critical endpoint。沒 test 等於 schema 改 / response 改 / Google API 升級時無 safety net。
+
 ## [2.34.36] - 2026-05-29
 
 **Test — PR36：account/profile.ts integration test 補上（PR35 P0 HIGH gap #1）**
