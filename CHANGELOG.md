@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.47] - 2026-05-30
+
+**Fix — 行程筆記頁標題對沒有自訂名稱的行程顯示行程名（QA F1）**
+
+用目的地命名的行程（如「東京都、青森縣」、「台南」，沒有自訂 title）在行程筆記頁，標題列原本只顯「行程筆記」、空狀態 hero 的行程名也空白，看不出在哪一趟。現在對齊行程卡片與其他頁面的 canonical `title || name` 顯示名 pattern：標題列顯「行程筆記 — 東京都、青森縣」、hero 也帶行程名。有自訂標題的行程不受影響。
+
+### Fixed
+- 行程筆記頁 TitleBar 與空狀態 hero eyebrow 對 `title` 為空字串的行程改用 `title || name` fallback（之前用 `?? null` 接不到空字串 → 缺行程識別）。prod QA v2.34.46 發現，4 條 regression test 鎖定（空字串 / 自訂標題 / 純空白 / 兩者皆空）。
+
 ## [2.34.46] - 2026-05-29
 
 **Revert + Drop — PR46：移除旅館 Day 關聯（整套）+ 還原 autosave-on-blur + edit mode 只剩刪除 button**
