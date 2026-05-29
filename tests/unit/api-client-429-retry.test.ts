@@ -89,9 +89,10 @@ describe('apiFetch — 429 retry (GET idempotent)', () => {
         }),
       );
 
-    const promise = apiFetch('/test');
+    // 用 expectation pattern 一開始就 attach catch handler，避免 unhandled rejection 雜訊
+    const expectation = expect(apiFetch('/test')).rejects.toThrow();
     await vi.advanceTimersByTimeAsync(1100);
-    await expect(promise).rejects.toThrow();
+    await expectation;
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
@@ -142,10 +143,11 @@ describe('apiFetch — 429 retry (GET idempotent)', () => {
     );
 
     const ctrl = new AbortController();
-    const promise = apiFetch('/test', { signal: ctrl.signal });
+    // expectation pattern：開始就 attach catch handler 避免 NET_TIMEOUT unhandled rejection
+    const expectation = expect(apiFetch('/test', { signal: ctrl.signal })).rejects.toThrow();
     ctrl.abort();
     await vi.advanceTimersByTimeAsync(5100);
-    await expect(promise).rejects.toThrow();
+    await expectation;
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 

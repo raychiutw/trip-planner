@@ -125,9 +125,9 @@ test.describe('QA Flow 3 — 搜尋景點加入收藏', () => {
     // POST /api/poi-favorites 應發生
     await expect.poll(() => savedPosts.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
 
-    // v2.21.0: TitleBar action 「收藏」 navigate to /favorites (was: in-page tab toggle)
-    await page.getByTestId('explore-favorites-titlebar').click();
-    await page.waitForURL(/\/favorites$/, { timeout: 5000 });
+    // v2.33.140: ExplorePage 收藏 TitleBar action 拔除（back ← 已回 /favorites 重複入口），
+    // 直接 navigate 走 URL — E2E 測 favorites 顯示，不 test 導航 UI。
+    await page.goto('/favorites');
     await expect(page.getByTestId('favorites-page')).toBeVisible();
     await expect(page.getByTestId('favorites-count')).toContainText('1 個');
     await expect(page.getByText('沖繩美麗海水族館').first()).toBeVisible();
@@ -153,9 +153,8 @@ test.describe('QA Flow 4 — 移除收藏 (v2.22.0 PoiFavoritesPage)', () => {
       page.getByTestId('explore-save-btn-ChIJPZ5hUjH65DQR_p_dD3CmCOo').click(),
     ]);
 
-    // Step 2: v2.22.0 TitleBar action navigate to /favorites (was in-page tab toggle)
-    await page.getByTestId('explore-favorites-titlebar').click();
-    await page.waitForURL(/\/favorites$/, { timeout: 5000 });
+    // Step 2: v2.33.140 ExplorePage 收藏 action 拔除，直接 navigate /favorites
+    await page.goto('/favorites');
     await expect(page.getByTestId('favorites-page')).toBeVisible();
     await expect(page.getByTestId('favorites-count')).toContainText('1 個');
 

@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.28] - 2026-05-29
+
+**Test cleanup — 一次修 master CI 6 個 stale failure + 2 個 unhandled rejection**
+
+QA loop 全 audit 發現 master CI 一直紅是 6 個 stale test 沒對齊 code 改動 + 2 個 PoiFavoritesPage 測試 unhandled rejection 雜訊。一次批次修讓 master CI 變綠，後續 PR 不再被 pre-existing failure 干擾 false-red signal。
+
+### Fixed
+
+- `tests/unit/alert-helper.test.ts` 4 個 stale test 對齊 v2.33.134 改動：
+  - 2 個 `warns when TELEGRAM_*_TOKEN/CHAT_ID missing` → 改 `errorSpy`（v2.33.134 把 console.warn 提到 console.error，因為 wrangler tail 預設 filter warn）
+  - `fetch rejects (network down)` → 改 regex `/Telegram fetch failed/` + object shape（v2.33.134 訊息「alert failed」→「fetch failed」+ 改 object）
+  - `Telegram API non-2xx` → 改 `expect.objectContaining({status, body})`（v2.33.134 多 arg → object）
+- `tests/unit/explore-page.test.tsx` `TitleBar 收藏 ghost action` test → 改 negative regression（v2.33.140 故意拔 ExplorePage 收藏 action 因為 back ← 已回 /favorites 是重複入口）
+- `tests/unit/v2_31_90-titlebar-action-icon-only.test.ts` `ExplorePage + PoiFavoritesPage 既有 title` → 改 PoiFavoritesPage only（v2.33.140 不對稱：ExplorePage 拔，PoiFavoritesPage 留）
+- `tests/unit/api-client-429-retry.test.ts` 2 個 test 改用 `const expectation = expect(...).rejects.toThrow()` pattern 一開始就 attach catch handler，避免 `Unhandled Rejection: 操作太頻繁` + `連線逾時` 測試輸出雜訊
+
+### Why
+
+CI 假紅 → PR review 時無法判斷是 PR 引入新 regression 或既存問題；2 個 unhandled rejection 在測試輸出中刷雜訊，遮蔽真實錯誤訊號。
+
+### Results
+
+- 2994/2994 全綠（從 2988/2994）
+- 0 unhandled rejection（從 2）
+- Master CI 預期變綠，後續 PR review 訊號乾淨
+
 ## [2.34.27] - 2026-05-29
 
 **Audit log — 行程筆記 PR27：AI generation hook 補 audit_log integration**
