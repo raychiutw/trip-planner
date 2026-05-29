@@ -21,6 +21,7 @@
  */
 
 import { hasWritePermission, requireAuth} from '../../_auth';
+import { logAudit } from '../../_audit';
 import { AppError } from '../../_errors';
 import { json } from '../../_utils';
 import { assertGoogleAvailable } from '../../_maps_lock';
@@ -220,6 +221,24 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     ];
     await db.batch(stmts);
   }
+
+  // PR32: audit log for recompute-travel bulk batch（recordId=null + 摘要）
+  await logAudit(db, {
+    tripId,
+    tableName: 'trip_segments',
+    recordId: null,
+    action: 'update',
+    changedBy: auth.email,
+    diffJson: JSON.stringify({
+      op: 'recompute-travel',
+      daysProcessed: daysRes.results.length,
+      pairsComputed,
+      pairsSkippedTransit,
+      pairsSkippedMissingCoords,
+      sourceBreakdown,
+      modeBreakdown,
+    }),
+  });
 
   return json({
     ok: true,
