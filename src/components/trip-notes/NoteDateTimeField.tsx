@@ -43,11 +43,13 @@ export function combineDateTime(date: string, time: string): string {
 }
 
 const STYLES = `
-.tp-notes-datetime { display: flex; gap: 8px; align-items: stretch; }
+.tp-notes-datetime { display: flex; gap: 8px; align-items: stretch; max-width: 460px; }
 .tp-notes-datetime > .tp-date-picker { flex: 1 1 auto; min-width: 0; }
-.tp-notes-datetime > .tp-time-picker { flex: 0 0 92px; }
+/* 128px fits the 22px-bold "--:--" value + chevron on one line; narrower
+ * widths let the placeholder wrap at its hyphens → trigger balloons tall. */
+.tp-notes-datetime > .tp-time-picker { flex: 0 0 128px; }
 .tp-notes-datetime .tp-date-trigger,
-.tp-notes-datetime .tp-time-trigger { width: 100%; }
+.tp-notes-datetime .tp-time-trigger { width: 100%; white-space: nowrap; }
 `;
 
 export default function NoteDateTimeField({
