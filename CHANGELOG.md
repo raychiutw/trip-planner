@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.34] - 2026-05-29
+
+**Docs — PR34：Bundle size baseline 紀錄（PR26-33 後 720.9 KB gzipped）**
+
+QA loop audit 收尾：產出 v2.34.33 prod build bundle 分析做 baseline。Future PR diff 對齊 baseline 抓意外 bloat。
+
+### Added
+
+- `docs/perf/bundle-baseline-v2.34.33.md` — 89 chunks / 720.9 KB gzipped baseline：
+  - Top 20 chunks 表（含 lazy-load 標記 + 用途）
+  - 4 個 observation：pdf 256KB borderline / TripsListPage 37.7KB first impression / sentry 45.7KB eager / vendor 68.7KB React 19 lean
+  - Comparison gate 提案（5% warn / 10% block，script 待實作）
+
+### State after PR26-33 batch
+
+- Total gzipped JS: **720.9 KB**（well below 1MB SPA budget）
+- All 89 chunks ≤ 300 KB gate（pdf 256KB borderline）
+- TripNotesPage 11.7 KB（PR29 token cleanup 後 lean）
+- Bundle gate: ✓ pass
+
 ## [2.34.33] - 2026-05-29
 
 **Chore — PR33：24 個 dep minor/patch batch upgrade（6 majors held）**
