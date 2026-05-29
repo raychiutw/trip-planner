@@ -106,22 +106,10 @@ const SCOPED_STYLES = `
   margin-top: 12px;
 }
 .tp-notes-pretrip-edit-grid {
-  display: grid; grid-template-columns: 1fr 2fr; gap: 8px;
+  display: grid; grid-template-columns: 1fr; gap: 12px;
 }
-.tp-notes-pretrip-edit-grid input,
-.tp-notes-pretrip-edit-grid textarea {
-  width: 100%; padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-size: var(--font-size-subheadline);
-  outline: none;
-}
-.tp-notes-pretrip-edit-grid input:focus,
-.tp-notes-pretrip-edit-grid textarea:focus { border-color: var(--color-accent); }
 .tp-notes-pretrip-edit-full { grid-column: 1 / -1; }
-.tp-notes-pretrip-edit-content { min-height: 80px; resize: vertical; }
+.tp-notes-pretrip-edit-content { min-height: 96px; }
 .tp-notes-pretrip-edit-label {
   font-size: var(--font-size-caption); font-weight: 600;
   color: var(--color-muted);
@@ -175,6 +163,7 @@ function SortablePretripRow({ note, isEditing, onEdit, onSaveField, onDelete }: 
             <div className="tp-notes-pretrip-edit-full">
               <div className="tp-notes-pretrip-edit-label">標題</div>
               <input
+                className="tp-input-long"
                 type="text"
                 defaultValue={note.title}
                 onBlur={(e) => onSaveField('title', e.target.value)}
@@ -183,7 +172,7 @@ function SortablePretripRow({ note, isEditing, onEdit, onSaveField, onDelete }: 
               />
             </div>
             <textarea
-              className="tp-notes-pretrip-edit-full tp-notes-pretrip-edit-content"
+              className="tp-input-long tp-notes-pretrip-edit-full tp-notes-pretrip-edit-content"
               defaultValue={note.content}
               onBlur={(e) => onSaveField('content', e.target.value)}
               placeholder="內容支援 markdown，例：- 機場 ATM 手續費低於市區"

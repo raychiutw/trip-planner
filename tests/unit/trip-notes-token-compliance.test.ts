@@ -48,7 +48,10 @@ describe('trip-notes feature — DESIGN.md token compliance (PR29)', () => {
     expect(src).toMatch(/font-size:\s*var\(--font-size-title2\)/);
   });
 
-  it('5 section 都用 --font-size-subheadline (row title + input)', () => {
+  // v2.34.x QA input-styling: edit-form inputs 改用 canonical .tp-input-long
+  // (取代各 section 散落的 ad-hoc edit-grid input CSS)，font-size 不再硬掛
+  // subheadline。改鎖「5 section text input 都走 canonical .tp-input-long」。
+  it('5 section 都用 canonical .tp-input-long (text input/textarea)', () => {
     const sections = [
       'FlightsSection.tsx',
       'LodgingsSection.tsx',
@@ -58,7 +61,7 @@ describe('trip-notes feature — DESIGN.md token compliance (PR29)', () => {
     ];
     for (const f of sections) {
       const src = readFileSync(join(ROOT, 'src/components/trip-notes', f), 'utf8');
-      expect(src, `${f} 應用 --font-size-subheadline`).toMatch(/font-size:\s*var\(--font-size-subheadline\)/);
+      expect(src, `${f} 應用 canonical .tp-input-long`).toMatch(/tp-input-long/);
     }
   });
 });

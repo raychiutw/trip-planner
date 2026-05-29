@@ -13,6 +13,7 @@ import { CSS } from '@dnd-kit/utilities';
 import Icon from '../shared/Icon';
 import AlertPanel from '../shared/AlertPanel';
 import ConfirmModal from '../shared/ConfirmModal';
+import { TripSelect } from '../TripSelect';
 import { apiFetch } from '../../lib/apiClient';
 
 export type EmergencyKind = 'personal' | 'embassy' | 'police' | 'medical' | 'insurance' | 'hotel' | 'other';
@@ -136,21 +137,10 @@ const SCOPED_STYLES = `
   margin-top: 12px;
 }
 .tp-notes-emergency-edit-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
   grid-column: 1;
 }
-.tp-notes-emergency-edit-grid input,
-.tp-notes-emergency-edit-grid select {
-  width: 100%; padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-size: var(--font-size-subheadline);
-  outline: none;
-}
-.tp-notes-emergency-edit-grid input:focus,
-.tp-notes-emergency-edit-grid select:focus { border-color: var(--color-accent); }
+.tp-notes-emergency-edit-field { min-width: 0; }
 .tp-notes-emergency-edit-full { grid-column: 1 / -1; }
 .tp-notes-emergency-edit-label {
   font-size: var(--font-size-caption); font-weight: 600;
@@ -213,9 +203,10 @@ function SortableEmergencyRow({ contact, isEditing, onEdit, onSaveField, onDelet
     return (
       <div ref={setNodeRef} style={style} className="tp-notes-emergency-row is-editing" data-testid={`emergency-row-${contact.id}`}>
         <div className="tp-notes-emergency-edit-grid">
-          <div className="tp-notes-emergency-edit-full">
+          <div className="tp-notes-emergency-edit-field tp-notes-emergency-edit-full">
             <div className="tp-notes-emergency-edit-label">名稱</div>
             <input
+              className="tp-input-long"
               type="text"
               defaultValue={contact.name}
               onBlur={(e) => onSaveField('name', e.target.value)}
@@ -223,31 +214,30 @@ function SortableEmergencyRow({ contact, isEditing, onEdit, onSaveField, onDelet
               data-testid={`emergency-input-name-${contact.id}`}
             />
           </div>
-          <div>
+          <div className="tp-notes-emergency-edit-field">
             <div className="tp-notes-emergency-edit-label">類型</div>
-            <select
-              defaultValue={contact.kind}
-              onChange={(e) => onSaveField('kind', e.target.value)}
-              onBlur={(e) => onSaveField('kind', e.target.value)}
-              data-testid={`emergency-input-kind-${contact.id}`}
-            >
-              {KIND_KEYS.map((k) => (
-                <option key={k} value={k}>{KIND_LABEL[k]}</option>
-              ))}
-            </select>
+            <TripSelect
+              value={contact.kind}
+              onChange={(v) => onSaveField('kind', v)}
+              options={KIND_KEYS.map((k) => ({ value: k, label: KIND_LABEL[k] }))}
+              ariaLabel="類型"
+              id={`emergency-input-kind-${contact.id}`}
+            />
           </div>
-          <div>
+          <div className="tp-notes-emergency-edit-field">
             <div className="tp-notes-emergency-edit-label">關係 / 用途</div>
             <input
+              className="tp-input-long"
               type="text"
               defaultValue={contact.relationship}
               onBlur={(e) => onSaveField('relationship', e.target.value)}
               placeholder="例：報案 / 失竊 / 家屬"
             />
           </div>
-          <div>
+          <div className="tp-notes-emergency-edit-field">
             <div className="tp-notes-emergency-edit-label">電話</div>
             <input
+              className="tp-input-long"
               type="tel"
               defaultValue={contact.phone}
               onBlur={(e) => onSaveField('phone', e.target.value)}
@@ -255,9 +245,10 @@ function SortableEmergencyRow({ contact, isEditing, onEdit, onSaveField, onDelet
               data-testid={`emergency-input-phone-${contact.id}`}
             />
           </div>
-          <div className="tp-notes-emergency-edit-full">
+          <div className="tp-notes-emergency-edit-field tp-notes-emergency-edit-full">
             <div className="tp-notes-emergency-edit-label">Email</div>
             <input
+              className="tp-input-long"
               type="email"
               defaultValue={contact.email}
               onBlur={(e) => onSaveField('email', e.target.value)}
