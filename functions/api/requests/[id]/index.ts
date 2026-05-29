@@ -369,6 +369,11 @@ async function applyNotesGenerationCompletion(
   let insertedCount = 0;
   const validItems = items.filter((it): it is Record<string, unknown> => it !== null && typeof it === 'object');
 
+  // PR27: AI 觸發人 → audit changedBy（fallback 'system:ai' 處理舊資料 submitted_by NULL）
+  const aiActor = (typeof request.submitted_by === 'string' && request.submitted_by.length > 0)
+    ? `ai:${request.submitted_by}`
+    : 'system:ai';
+
   // Dedup against existing rows for this trip/type — case-insensitive title compare
   if (docType === 'lodging-tips' || docType === 'tips') {
     const aiSource = PRETRIP_AI_SOURCES[docType];
@@ -392,13 +397,26 @@ async function applyNotesGenerationCompletion(
       const key = title.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      await db
+      const inserted = await db
         .prepare(
-          `INSERT INTO trip_pretrip_notes (trip_id, sort_order, section, title, content, ai_generated, ai_source) VALUES (?, ?, ?, ?, ?, 1, ?)`,
+          `INSERT INTO trip_pretrip_notes (trip_id, sort_order, section, title, content, ai_generated, ai_source) VALUES (?, ?, ?, ?, ?, 1, ?) RETURNING *`,
         )
         .bind(tripId, nextOrder++, section, title, content, aiSource)
-        .run();
+        .first<Record<string, unknown>>();
       insertedCount++;
+
+      // PR27: AI 寫入 audit_log（user_email → ai:<email>，submitted_by NULL → system:ai）
+      if (inserted) {
+        await logAudit(db, {
+          tripId,
+          tableName: 'trip_pretrip_notes',
+          recordId: inserted.id as number,
+          action: 'insert',
+          changedBy: aiActor,
+          requestId,
+          diffJson: JSON.stringify(inserted),
+        });
+      }
     }
   } else if (docType === 'emergency') {
     const existing = await db
@@ -422,13 +440,26 @@ async function applyNotesGenerationCompletion(
       const key = name.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      await db
+      const inserted = await db
         .prepare(
-          `INSERT INTO trip_emergency_contacts (trip_id, sort_order, name, relationship, phone, kind, ai_generated) VALUES (?, ?, ?, ?, ?, ?, 1)`,
+          `INSERT INTO trip_emergency_contacts (trip_id, sort_order, name, relationship, phone, kind, ai_generated) VALUES (?, ?, ?, ?, ?, ?, 1) RETURNING *`,
         )
         .bind(tripId, nextOrder++, name, relationship, phone, kind)
-        .run();
+        .first<Record<string, unknown>>();
       insertedCount++;
+
+      // PR27: AI 寫入 audit_log
+      if (inserted) {
+        await logAudit(db, {
+          tripId,
+          tableName: 'trip_emergency_contacts',
+          recordId: inserted.id as number,
+          action: 'insert',
+          changedBy: aiActor,
+          requestId,
+          diffJson: JSON.stringify(inserted),
+        });
+      }
     }
   }
 
