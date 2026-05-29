@@ -89,7 +89,7 @@ const SCOPED_STYLES = `
 .tp-notes-emergency-name-row {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
 }
-.tp-notes-emergency-name { font-size: 15px; font-weight: 600; }
+.tp-notes-emergency-name { font-size: var(--font-size-subheadline); font-weight: 600; }
 .tp-notes-emergency-ai-chip {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px;
@@ -107,7 +107,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-md);
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
-  font-size: 13px; font-weight: 700;
+  font-size: var(--font-size-footnote); font-weight: 700;
   font-variant-numeric: tabular-nums;
   min-height: 36px;
   white-space: nowrap;
@@ -140,7 +140,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
-  font-size: 15px;
+  font-size: var(--font-size-subheadline);
   outline: none;
 }
 .tp-notes-emergency-edit-grid input:focus,
