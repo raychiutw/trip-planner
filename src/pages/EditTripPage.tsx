@@ -1124,7 +1124,7 @@ export default function EditTripPage() {
             />
 
             <form id="edit-trip-form" ref={formRef} onSubmit={handleSubmit} className="tp-edit-page-form">
-              <p className="tp-edit-page-sub">修改行程基本設定 + 目的地 + 行程天數。</p>
+              <p className="tp-edit-page-sub">修改目的地 + 行程天數。</p>
 
               {loading ? (
                 <div className="tp-edit-loading" data-testid="edit-trip-loading">載入中⋯</div>
