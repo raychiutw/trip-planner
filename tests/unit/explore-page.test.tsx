@@ -60,14 +60,12 @@ describe('ExplorePage', () => {
     global.fetch = vi.fn();
   });
 
-  it('renders search input + TitleBar 收藏 ghost action navigates to /favorites (v2.21.0)', () => {
-    const { getByTestId } = renderPage();
+  it('renders search input (TitleBar 收藏 action 已於 v2.33.140 拔除 — back ← 已回 /favorites 重複入口)', () => {
+    const { getByTestId, queryByTestId } = renderPage();
     expect(getByTestId('explore-page')).toBeTruthy();
     expect(getByTestId('explore-search-input')).toBeTruthy();
-    // v2.21.0 IA reshuffle: 拆 page 後 TitleBar action 改 navigate('/favorites')，不再 toggle in-page。
-    const action = getByTestId('explore-favorites-titlebar') as HTMLButtonElement;
-    expect(action.getAttribute('aria-label')).toBe('收藏');
-    expect(action.textContent).toContain('收藏');
+    // v2.33.140 regression — 收藏 action 不應再 render
+    expect(queryByTestId('explore-favorites-titlebar')).toBeNull();
   });
 
   it('shows error toast when search query < 2 chars', () => {

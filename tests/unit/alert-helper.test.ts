@@ -22,22 +22,29 @@ describe('alertAdminTelegram', () => {
     errorSpy.mockRestore();
   });
 
-  it('skips + warns when TELEGRAM_BOT_TOKEN missing', async () => {
+  it('skips + errors when TELEGRAM_BOT_TOKEN missing', async () => {
+    // v2.33.134: 從 console.warn 提到 console.error — 之前 warn 被 wrangler tail filter 掉
     const fetchMock = vi.fn();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     globalThis.fetch = fetchMock as any;
     await alertAdminTelegram({ TELEGRAM_CHAT_ID: '123' }, 'test msg');
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/not set/));
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/not set/),
+      expect.objectContaining({ hasToken: false, hasChatId: true }),
+    );
   });
 
-  it('skips + warns when TELEGRAM_CHAT_ID missing', async () => {
+  it('skips + errors when TELEGRAM_CHAT_ID missing', async () => {
     const fetchMock = vi.fn();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     globalThis.fetch = fetchMock as any;
     await alertAdminTelegram({ TELEGRAM_BOT_TOKEN: 'abc' }, 'test msg');
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/not set/),
+      expect.objectContaining({ hasToken: true, hasChatId: false }),
+    );
   });
 
   it('posts to Telegram API with correct URL + body', async () => {
@@ -65,6 +72,7 @@ describe('alertAdminTelegram', () => {
   });
 
   it('does not throw when fetch rejects (network down)', async () => {
+    // v2.33.134: 訊息「Telegram alert failed」→「Telegram fetch failed」+ 改 object shape
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error')) as any;
     await expect(
@@ -74,12 +82,13 @@ describe('alertAdminTelegram', () => {
       ),
     ).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/Telegram alert failed/),
-      expect.anything(),
+      expect.stringMatching(/Telegram fetch failed/),
+      expect.objectContaining({ error: 'network error', aborted: false }),
     );
   });
 
   it('does not throw on Telegram API non-2xx (logs error)', async () => {
+    // v2.33.134: 從多 arg `(msg, status, body)` 改 object shape `{status, body, elapsedMs}`
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -94,8 +103,7 @@ describe('alertAdminTelegram', () => {
     ).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringMatching(/Telegram API non-2xx/),
-      500,
-      'internal error',
+      expect.objectContaining({ status: 500, body: 'internal error' }),
     );
   });
 });
