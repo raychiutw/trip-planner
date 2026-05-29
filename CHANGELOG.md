@@ -3,6 +3,38 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.39] - 2026-05-29
+
+**Test + Fix — PR39：POI find-or-create + entry trip-pois integration test (PR35 P1 gap) + 修發現的 DATA_CONFLICT bug**
+
+PR35 doc P1 MEDIUM gap：`pois/find-or-create.ts` 和 `trips/:id/entries/:eid/trip-pois.ts` 兩 endpoint 沒 integration test。寫 test 過程中發現 `trip-pois.ts` 處理 duplicate POI 時 UNIQUE error includes 判斷不匹配 D1 實際格式 → 落到 raw 500，並順手修。
+
+### Added
+
+- `tests/api/poi-find-or-create-trip-pois.integration.test.ts` — 10 個 test：
+
+  **find-or-create.ts (5 tests)**:
+  - 缺 name → 400 DATA_VALIDATION
+  - 缺 type → 400
+  - name trim 空字串 → 400
+  - 正常 POST → 200 + id（新建到 pois table）
+  - 重複 POST 同 name+type → 同 id（dedup via findOrCreatePoi）
+
+  **trip-pois.ts (5 tests)**:
+  - entry id 格式錯（非數字）→ 400
+  - stranger 無 write perm → 403
+  - 缺 name / type → 400
+  - 正常 POST → 201 + result row + `entry_pois_version` 加 1 + audit_log 寫入
+  - 重複 POI 同 entry → 409 DATA_CONFLICT（**PR39 修 prod bug 後通過**）
+
+### Fixed (Prod bug discovered by tests)
+
+- `functions/api/trips/[id]/entries/[eid]/trip-pois.ts:110` — D1 SQLITE UNIQUE error 訊息實際格式為「UNIQUE constraint failed: trip_entry_pois.entry_id, trip_entry_pois.poi_id」，中間夾 `trip_entry_pois.` prefix。原 `msg.includes('entry_id, poi_id')` literal 不 match → 落到 `throw err` 變 raw 500。改 `msg.includes('entry_id') && msg.includes('poi_id')` 分開判斷。User 操作體驗：之前重複加 POI 看到 500，現在看到 409 DATA_CONFLICT「此 POI 已存在於該 entry」訊息。
+
+### Why
+
+PR35 doc 評估這兩個是 P1 MEDIUM risk（POI dedup + entry editing core path）。沒 test 等於上述 bug masked 在 prod。
+
 ## [2.34.38] - 2026-05-29
 
 **Fix — PR38：Prod audit 3 issue 批次修（HIGH ChatPage prompt leak + 2 LOW polish）**
