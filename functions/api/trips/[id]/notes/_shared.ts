@@ -28,8 +28,9 @@ export const ALLOWED_FIELDS: Record<NotesTable, readonly string[]> = {
     'depart_airport', 'arrive_airport', 'depart_at', 'arrive_at', 'note',
   ],
   trip_lodgings: [
+    // v2.34.44 PR44 migration 0074: day_id INTEGER → trip_lodging_days junction table
     'sort_order', 'name', 'address', 'check_in_at', 'check_out_at',
-    'booking_no', 'phone', 'note', 'day_id',
+    'booking_no', 'phone', 'note',
   ],
   trip_reservations: [
     'sort_order', 'kind', 'title', 'reserved_at', 'party_size',
@@ -70,9 +71,61 @@ export async function listNotesSection(
   const { results } = await env.DB
     .prepare(`SELECT * FROM ${table} WHERE trip_id = ? ORDER BY sort_order ASC, id ASC`)
     .bind(tripId)
-    .all();
+    .all<Record<string, unknown>>();
 
-  return json({ items: results ?? [] });
+  let items: Record<string, unknown>[] = results ?? [];
+
+  // v2.34.44 PR44: trip_lodgings 需 batch fetch trip_lodging_days junction
+  if (table === 'trip_lodgings' && items.length > 0) {
+    const lodgingIds = items.map((r) => r.id as number);
+    const placeholders = lodgingIds.map(() => '?').join(', ');
+    const { results: junctionRows } = await env.DB
+      .prepare(`SELECT lodging_id, day_id FROM trip_lodging_days WHERE lodging_id IN (${placeholders})`)
+      .bind(...lodgingIds)
+      .all<{ lodging_id: number; day_id: number }>();
+    const byLodgingId = new Map<number, number[]>();
+    for (const j of junctionRows ?? []) {
+      const arr = byLodgingId.get(j.lodging_id) ?? [];
+      arr.push(j.day_id);
+      byLodgingId.set(j.lodging_id, arr);
+    }
+    items = items.map((r) => ({ ...r, day_ids: byLodgingId.get(r.id as number) ?? [] }));
+  }
+
+  return json({ items });
+}
+
+/**
+ * v2.34.44 PR44: 替換 lodging 的 day_ids junction row。
+ * @param db D1 binding
+ * @param lodgingId — 該 lodging row id
+ * @param dayIds — 新 day_ids 陣列；空陣列代表清空
+ */
+async function replaceLodgingDayIds(db: D1Database, lodgingId: number, dayIds: number[]): Promise<void> {
+  // Atomic: DELETE + INSERT 在 batch
+  const stmts: D1PreparedStatement[] = [
+    db.prepare('DELETE FROM trip_lodging_days WHERE lodging_id = ?').bind(lodgingId),
+  ];
+  for (const dayId of dayIds) {
+    if (!Number.isInteger(dayId) || dayId <= 0) {
+      throw new AppError('DATA_VALIDATION', `day_ids 元素必須是正整數，得到 ${JSON.stringify(dayId)}`);
+    }
+    stmts.push(
+      db.prepare('INSERT INTO trip_lodging_days (lodging_id, day_id) VALUES (?, ?)').bind(lodgingId, dayId),
+    );
+  }
+  await db.batch(stmts);
+}
+
+function extractDayIds(body: Record<string, unknown>): number[] | undefined {
+  if (!('day_ids' in body)) return undefined;
+  const raw = body.day_ids;
+  if (!Array.isArray(raw)) {
+    throw new AppError('DATA_VALIDATION', 'day_ids 必須是 number array');
+  }
+  // de-dup + sort ascending
+  const ids = Array.from(new Set(raw.map((v) => Number(v)))).sort((a, b) => a - b);
+  return ids;
 }
 
 // ============================================================================
@@ -103,6 +156,9 @@ export async function createNotesRow(
     body.sort_order = (max?.m ?? -1) + 1;
   }
 
+  // v2.34.44 PR44: trip_lodgings 額外處理 day_ids junction（不在 ALLOWED_FIELDS）
+  const dayIds = table === 'trip_lodgings' ? extractDayIds(body) : undefined;
+
   const allowed = ALLOWED_FIELDS[table];
   const fields = Object.keys(body).filter((k) => (allowed as readonly string[]).includes(k));
   // trip_id 永遠由 path param 提供，不從 body
@@ -113,20 +169,30 @@ export async function createNotesRow(
   const row = await env.DB
     .prepare(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders}) RETURNING *`)
     .bind(...values)
-    .first();
+    .first<Record<string, unknown>>();
+
+  // v2.34.44 PR44: trip_lodgings junction
+  if (row && table === 'trip_lodgings' && dayIds !== undefined) {
+    await replaceLodgingDayIds(env.DB, row.id as number, dayIds);
+  }
 
   // PR26: audit log for create
   if (row) {
+    const auditPayload = table === 'trip_lodgings' ? { ...row, day_ids: dayIds ?? [] } : row;
     await logAudit(env.DB, {
       tripId,
       tableName: table,
       recordId: row.id as number,
       action: 'insert',
       changedBy: auth.email,
-      diffJson: JSON.stringify(row),
+      diffJson: JSON.stringify(auditPayload),
     });
   }
 
+  // Echo day_ids in response so client can immediately use it
+  if (row && table === 'trip_lodgings') {
+    return json({ ...row, day_ids: dayIds ?? [] }, 201);
+  }
   return json(row, 201);
 }
 
@@ -171,31 +237,55 @@ export async function updateNotesRow(
     : null;
   if (expectedVersion !== null) delete body.expectedVersion;
 
-  const update = buildUpdateClause(body, ALLOWED_FIELDS[table]);
-  if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
+  // v2.34.44 PR44: trip_lodgings 額外處理 day_ids junction
+  const dayIds = table === 'trip_lodgings' ? extractDayIds(body) : undefined;
 
-  const setClausesWithVersion = `${update.setClauses}, version = version + 1`;
+  const update = buildUpdateClause(body, ALLOWED_FIELDS[table]);
+  // 若只更新 day_ids（day_ids 不在 ALLOWED_FIELDS），buildUpdateClause 回 null。
+  // 仍要 bump version + replace junction，所以特殊 handle。
+  if (!update && dayIds === undefined) {
+    throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
+  }
 
   let row;
   try {
-    if (expectedVersion !== null) {
-      row = await env.DB
-        .prepare(`UPDATE ${table} SET ${setClausesWithVersion} WHERE id = ? AND version = ? RETURNING *`)
-        .bind(...update.values, id, expectedVersion)
-        .first();
-      if (!row) {
-        const cur = await env.DB
-          .prepare(`SELECT version FROM ${table} WHERE id = ?`)
-          .bind(id)
-          .first<{ version: number }>();
-        if (!cur) throw new AppError('DATA_NOT_FOUND');
-        throw new AppError('STALE_ENTRY', `expected version ${expectedVersion}, current ${cur.version}`);
+    if (update) {
+      const setClausesWithVersion = `${update.setClauses}, version = version + 1`;
+      if (expectedVersion !== null) {
+        row = await env.DB
+          .prepare(`UPDATE ${table} SET ${setClausesWithVersion} WHERE id = ? AND version = ? RETURNING *`)
+          .bind(...update.values, id, expectedVersion)
+          .first<Record<string, unknown>>();
+        if (!row) {
+          const cur = await env.DB
+            .prepare(`SELECT version FROM ${table} WHERE id = ?`)
+            .bind(id)
+            .first<{ version: number }>();
+          if (!cur) throw new AppError('DATA_NOT_FOUND');
+          throw new AppError('STALE_ENTRY', `expected version ${expectedVersion}, current ${cur.version}`);
+        }
+      } else {
+        row = await env.DB
+          .prepare(`UPDATE ${table} SET ${setClausesWithVersion} WHERE id = ? RETURNING *`)
+          .bind(...update.values, id)
+          .first<Record<string, unknown>>();
       }
     } else {
-      row = await env.DB
-        .prepare(`UPDATE ${table} SET ${setClausesWithVersion} WHERE id = ? RETURNING *`)
-        .bind(...update.values, id)
-        .first();
+      // 只更新 day_ids — 仍 bump version
+      if (expectedVersion !== null) {
+        row = await env.DB
+          .prepare(`UPDATE ${table} SET version = version + 1 WHERE id = ? AND version = ? RETURNING *`)
+          .bind(id, expectedVersion)
+          .first<Record<string, unknown>>();
+        if (!row) {
+          throw new AppError('STALE_ENTRY', `expected version ${expectedVersion}`);
+        }
+      } else {
+        row = await env.DB
+          .prepare(`UPDATE ${table} SET version = version + 1 WHERE id = ? RETURNING *`)
+          .bind(id)
+          .first<Record<string, unknown>>();
+      }
     }
   } catch (err: unknown) {
     if (err instanceof AppError) throw err;
@@ -209,9 +299,19 @@ export async function updateNotesRow(
     throw err;
   }
 
+  // v2.34.44 PR44: replace junction（若 body 含 day_ids）
+  if (row && table === 'trip_lodgings' && dayIds !== undefined) {
+    await replaceLodgingDayIds(env.DB, id, dayIds);
+  }
+
   // PR26: audit log for update
   if (row) {
-    const newFields = Object.fromEntries(update.fields.map((f) => [f, body[f]]));
+    const newFields = update
+      ? Object.fromEntries(update.fields.map((f) => [f, body[f]]))
+      : {};
+    if (dayIds !== undefined) {
+      (newFields as Record<string, unknown>).day_ids = dayIds;
+    }
     await logAudit(env.DB, {
       tripId,
       tableName: table,
@@ -222,7 +322,21 @@ export async function updateNotesRow(
     });
   }
 
+  // Echo day_ids
+  if (row && table === 'trip_lodgings') {
+    const finalDayIds = dayIds ?? await loadLodgingDayIds(env.DB, id);
+    return json({ ...row, day_ids: finalDayIds });
+  }
   return json(row);
+}
+
+/** v2.34.44 PR44: 讀單一 lodging 的 day_ids 陣列 */
+async function loadLodgingDayIds(db: D1Database, lodgingId: number): Promise<number[]> {
+  const { results } = await db
+    .prepare('SELECT day_id FROM trip_lodging_days WHERE lodging_id = ? ORDER BY day_id ASC')
+    .bind(lodgingId)
+    .all<{ day_id: number }>();
+  return (results ?? []).map((r) => r.day_id);
 }
 
 // ============================================================================

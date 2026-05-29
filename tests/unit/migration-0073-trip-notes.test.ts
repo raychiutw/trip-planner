@@ -245,25 +245,35 @@ describe('migration 0073 — trip_notes 5 table + 1 linkage', () => {
       }
     });
 
-    it('trip_lodgings.day_id ON DELETE SET NULL — 刪 day 後 lodging row 保留 + day_id 變 NULL', async () => {
+    it('v2.34.44 migration 0074: trip_lodging_days junction — 刪 day 後 junction row CASCADE，lodging row 保留', async () => {
+      // 從 migration 0074 起 trip_lodgings.day_id COLUMN 已被 DROP，改 trip_lodging_days junction。
+      // 原 0073 SET NULL semantic 改為 junction CASCADE：刪 day 只清 junction，lodging row 保留。
       const { id: tripId } = await seedTrip(db, { id: 'mig73-lodging-setnull' });
       const day = await db
         .prepare('SELECT id FROM trip_days WHERE trip_id = ? ORDER BY day_num LIMIT 1')
         .bind(tripId)
         .first<{ id: number }>();
+      const inserted = await db
+        .prepare(`INSERT INTO trip_lodgings (trip_id, name) VALUES (?, ?) RETURNING id`)
+        .bind(tripId, 'Naha Hotel')
+        .first<{ id: number }>();
       await db
-        .prepare(`INSERT INTO trip_lodgings (trip_id, name, day_id) VALUES (?, ?, ?)`)
-        .bind(tripId, 'Naha Hotel', day!.id)
+        .prepare(`INSERT INTO trip_lodging_days (lodging_id, day_id) VALUES (?, ?)`)
+        .bind(inserted!.id, day!.id)
         .run();
 
       await db.prepare('DELETE FROM trip_days WHERE id = ?').bind(day!.id).run();
 
-      const row = await db
-        .prepare('SELECT day_id FROM trip_lodgings WHERE trip_id = ?')
+      const lodgingRow = await db
+        .prepare('SELECT id FROM trip_lodgings WHERE trip_id = ?')
         .bind(tripId)
-        .first<{ day_id: number | null }>();
-      expect(row, 'lodging row 應該還在').not.toBeNull();
-      expect(row!.day_id).toBeNull();
+        .first<{ id: number }>();
+      expect(lodgingRow, 'lodging row 應該還在').not.toBeNull();
+      const junctionRow = await db
+        .prepare('SELECT lodging_id FROM trip_lodging_days WHERE lodging_id = ?')
+        .bind(inserted!.id)
+        .first();
+      expect(junctionRow, 'junction row 應被 CASCADE 清掉').toBeNull();
     });
   });
 });

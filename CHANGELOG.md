@@ -3,6 +3,53 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.44] - 2026-05-29
+
+**Feat + Fix — PR44：trip-notes UI polish + 住宿多天 schema 正規化（user 多 feedback 一次處理）**
+
+User 截圖 prod 後反饋 4 個問題 + 1 個新需求，全 1 commit 處理：
+
+### Changed
+
+1. **拔讀模式 edit pencil button**（5 section）— row body click 已可進編輯，pencil ✏ 多餘 → 拔。
+2. **Trash icon ghost 風格對齊**（5 section）— `.is-danger:hover` 拔 background fill，只 opacity 0.7→1 + 文字色變化，對齊 `.tp-btn-ghost` 慣例。Icon 16×16（原 14px）。
+3. **編輯 input value 顯示** — 5 section edit-grid input/textarea 補 `color: var(--color-foreground)` rule，修「飯店名稱沒帶出來」低 contrast bug。
+4. **住宿連結 Day 多選 + schema 正規化**（user 指示「不要 JSON，要 table 正規化設計」）：
+   - Migration **0074_trip_lodging_days_junction.sql**：
+     - 新 `trip_lodging_days` junction table (lodging_id, day_id) 複合 PK
+     - `ON DELETE CASCADE` 雙向（刪 lodging 或 day → junction 自清）
+     - Backfill：原 `trip_lodgings.day_id NOT NULL` 寫進 junction
+     - 拔 `trip_lodgings.day_id` column（NEW TABLE pattern）
+   - Backend `functions/api/trips/[id]/notes/_shared.ts`：
+     - `ALLOWED_FIELDS['trip_lodgings']` 拔 `day_id`
+     - 新 helper `replaceLodgingDayIds()` + `loadLodgingDayIds()` + `extractDayIds()`
+     - `listNotesSection`：lodgings batch 補 `day_ids` 陣列
+     - `createNotesRow` + `updateNotesRow`：handle body.day_ids → INSERT/replace junction
+     - PATCH 容許只更新 day_ids（bump version 即使無其他欄位）
+   - Frontend `LodgingsSection.tsx`：
+     - `TripLodging.dayId: number | null` → `dayIds: number[]`
+     - 讀模式 multiple chip 顯每個 day
+     - 編輯模式 single `<select>` → multi-checkbox chip UI（label 註明「可多選 — 不連續天請拆多筆」）
+   - User feedback「不連續天的相同飯店視為不同紀錄」→ UI 提示由 user 拆 row（系統不自動拆，給 user 控制權）
+
+### Why
+
+User 直接 prod 截圖反饋：(a) UI 多餘 icon (✏)（b) icon 風格不一致（c) 編輯值顯示異常（d) 跨天住宿無法表達 multi-day。一次 1 commit 全處理，schema 改動走正規化（無 JSON column）。
+
+### Tests
+
+- `tests/unit/migration-0073-trip-notes.test.ts` 既有 `trip_lodgings.day_id SET NULL` test 改成「v2.34.44 migration 0074: junction CASCADE — 刪 day junction 清，lodging 保留」
+- `tests/unit/notes-sections-coverage.test.tsx` mock data `dayId: null` → `dayIds: []`
+- `tests/unit/trip-notes-page.test.tsx` 同上 mock 更新
+- 3033/3033 unit + 902/902 API 全綠
+
+### Migration deploy 順序
+
+1. Apply migration 0074 → DB schema 改
+2. Backend deploy（新版 read/write junction）
+3. Frontend deploy（type + UI 多選）
+4. Migration vs backend deploy 中間若有舊 frontend 嘗試送 `day_id` field → 被 ALLOWED_FIELDS 過濾無傷（fail-safe）
+
 ## [2.34.43] - 2026-05-29
 
 **Fix — PR43：trip-notes AI button 只在 section 展開後 render（prod audit fix）**

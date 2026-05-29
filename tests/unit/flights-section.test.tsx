@@ -86,7 +86,7 @@ describe('FlightsSection — Edit', () => {
     expect(screen.getByTestId('flight-input-no-1')).toBeInTheDocument();
   });
 
-  it('Edit airline + blur → PATCH with field + expectedVersion', async () => {
+  it('v2.34.44: Edit airline + blur → NO PATCH（stage only），完成 click → batch PATCH with field + expectedVersion', async () => {
     const onChange = vi.fn();
     const updated = mkFlight({ airline: '長榮', version: 1 });
     apiFetchMock.mockResolvedValue(updated);
@@ -95,6 +95,10 @@ describe('FlightsSection — Edit', () => {
     const input = screen.getByTestId('flight-input-airline-1');
     fireEvent.change(input, { target: { value: '長榮' } });
     fireEvent.blur(input);
+    // v2.34.44: blur 不再 fire PATCH（只 stage 到 pendingRef）
+    expect(apiFetchMock).not.toHaveBeenCalled();
+    // 點完成 → batch PATCH
+    fireEvent.click(screen.getByTestId('flight-close-edit-1'));
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalled());
     const init = apiFetchMock.mock.calls[0][1] as any;
     expect(apiFetchMock.mock.calls[0][0]).toBe('/trips/trip-1/notes/flights/1');
@@ -105,11 +109,12 @@ describe('FlightsSection — Edit', () => {
     expect(onChange).toHaveBeenCalledWith([updated]);
   });
 
-  it('no-change blur → no PATCH', async () => {
+  it('v2.34.44: no-change blur + 完成 → no PATCH（pendingRef 空，flush 早 return）', async () => {
     render(<FlightsSection tripId="trip-1" items={[mkFlight()]} onChange={vi.fn()} />);
     fireEvent.click(screen.getByTestId('flight-row-1').querySelector('.tp-notes-flight-body')!);
     const input = screen.getByTestId('flight-input-airline-1');
     fireEvent.blur(input);
+    fireEvent.click(screen.getByTestId('flight-close-edit-1'));
     await new Promise((r) => setTimeout(r, 50));
     expect(apiFetchMock).not.toHaveBeenCalled();
   });

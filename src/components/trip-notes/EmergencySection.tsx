@@ -6,7 +6,7 @@
  * Display: kind icon + name + AI 建議 chip + phone tel: button (large tap target)
  * Edit: 6 fields (name / relationship / phone / email / kind / ai_generated readonly)
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -145,6 +145,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
+  color: var(--color-foreground);
   font-size: var(--font-size-subheadline);
   outline: none;
 }
@@ -170,9 +171,11 @@ const SCOPED_STYLES = `
   cursor: pointer;
   transition: background 150ms, color 150ms;
 }
-.tp-notes-emergency-icon-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
-.tp-notes-emergency-icon-btn.is-danger:hover { background: var(--color-priority-high-bg); color: var(--color-destructive); }
-.tp-notes-emergency-icon-btn .svg-icon { width: 14px; height: 14px; }
+/* v2.34.44 PR44 user feedback: ghost style */
+.tp-notes-emergency-icon-btn { opacity: 0.7; }
+.tp-notes-emergency-icon-btn:hover { opacity: 1; color: var(--color-accent-deep); }
+.tp-notes-emergency-icon-btn.is-danger:hover { opacity: 1; color: var(--color-destructive); }
+.tp-notes-emergency-icon-btn .svg-icon { width: 16px; height: 16px; }
 `;
 
 function kindIconName(kind: EmergencyKind): string {
@@ -309,11 +312,9 @@ function SortableEmergencyRow({ contact, isEditing, onEdit, onCloseEdit, onSaveF
           {contact.phone}
         </a>
       ) : (
+        // v2.34.44 PR44: 拔 edit pencil + trash ghost
         <div className="tp-notes-emergency-actions">
-          <button type="button" className="tp-notes-emergency-icon-btn" onClick={onEdit} aria-label={`編輯：${contact.name}`} title="編輯" data-testid={`emergency-edit-${contact.id}`}>
-            <Icon name="edit" />
-          </button>
-          <button type="button" className="tp-notes-emergency-icon-btn is-danger" onClick={onDelete} aria-label={`刪除：${contact.name}`} title="刪除" data-testid={`emergency-delete-${contact.id}`}>
+          <button type="button" className="tp-notes-emergency-icon-btn is-danger" onClick={(e) => { e.stopPropagation(); onDelete(); }} aria-label={`刪除：${contact.name}`} title="刪除" data-testid={`emergency-delete-${contact.id}`}>
             <Icon name="trash" />
           </button>
         </div>
@@ -342,18 +343,38 @@ export default function EmergencySection({ tripId, items, onChange }: EmergencyS
     }
   }, [tripId, items, onChange, busy]);
 
-  const handleSaveField = useCallback(async (contactId: number, field: keyof TripEmergencyContact, value: string) => {
+  // v2.34.44 PR44 follow-up: stage + batch flush
+  const pendingRef = useRef<Map<number, Record<string, unknown>>>(new Map());
+
+  const handleSaveField = useCallback((contactId: number, field: keyof TripEmergencyContact, value: string) => {
     const contact = items.find((c) => c.id === contactId);
     if (!contact) return;
     if (contact[field] === value) return;
+    const map = pendingRef.current.get(contactId) ?? {};
+    map[field as string] = value;
+    pendingRef.current.set(contactId, map);
+  }, [items]);
+
+  const handleCompleteEdit = useCallback(async (contactId: number) => {
+    const pending = pendingRef.current.get(contactId);
+    setEditingId(null);
+    if (!pending || Object.keys(pending).length === 0) return;
+    const contact = items.find((c) => c.id === contactId);
+    if (!contact) return;
     setError(null);
     try {
-      const snake = field.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+      const snakeBody: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(pending)) {
+        const sk = k.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+        snakeBody[sk] = v;
+      }
+      snakeBody.expectedVersion = contact.version;
       const updated = await apiFetch<TripEmergencyContact>(`/trips/${tripId}/notes/emergency/${contactId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ [snake]: value, expectedVersion: contact.version }),
+        body: JSON.stringify(snakeBody),
       });
       onChange(items.map((c) => (c.id === contactId ? updated : c)));
+      pendingRef.current.delete(contactId);
     } catch (err) {
       setError(err instanceof Error ? err.message : '儲存失敗');
     }
@@ -411,8 +432,8 @@ export default function EmergencySection({ tripId, items, onChange }: EmergencyS
                   contact={contact}
                   isEditing={editingId === contact.id}
                   onEdit={() => setEditingId(contact.id)}
-                  onCloseEdit={() => setEditingId(null)}
-                  onSaveField={(field, value) => void handleSaveField(contact.id, field, value)}
+                  onCloseEdit={() => void handleCompleteEdit(contact.id)}
+                  onSaveField={(field, value) => handleSaveField(contact.id, field, value)}
                   onDelete={() => setPendingDeleteId(contact.id)}
                 />
               ))}

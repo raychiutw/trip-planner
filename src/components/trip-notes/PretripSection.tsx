@@ -6,7 +6,7 @@
  *
  * ai_generated=1 row 顯「AI 建議」chip + 不可手動改 ai_source（PR9+ AI gen 寫入）
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -114,6 +114,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
+  color: var(--color-foreground);
   font-size: var(--font-size-subheadline);
   outline: none;
 }
@@ -138,11 +139,13 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   background: transparent; border: none;
   cursor: pointer;
-  transition: background 150ms, color 150ms;
+  transition: opacity 150ms, color 150ms;
 }
-.tp-notes-pretrip-icon-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
-.tp-notes-pretrip-icon-btn.is-danger:hover { background: var(--color-priority-high-bg); color: var(--color-destructive); }
-.tp-notes-pretrip-icon-btn .svg-icon { width: 14px; height: 14px; }
+/* v2.34.44 PR44 user feedback: ghost style — 拔 bg hover，只 opacity + 變色 */
+.tp-notes-pretrip-icon-btn { opacity: 0.7; }
+.tp-notes-pretrip-icon-btn:hover { opacity: 1; color: var(--color-accent-deep); }
+.tp-notes-pretrip-icon-btn.is-danger:hover { opacity: 1; color: var(--color-destructive); }
+.tp-notes-pretrip-icon-btn .svg-icon { width: 16px; height: 16px; }
 `;
 
 interface SortableRowProps {
@@ -167,16 +170,10 @@ function SortablePretripRow({ note, isEditing, onEdit, onCloseEdit, onSaveField,
         <div />
         <div className="tp-notes-pretrip-body">
           <div className="tp-notes-pretrip-edit-grid">
-            <div>
-              <div className="tp-notes-pretrip-edit-label">分類</div>
-              <input
-                type="text"
-                defaultValue={note.section}
-                onBlur={(e) => onSaveField('section', e.target.value)}
-                placeholder="貨幣 / 通訊 / 禮儀"
-              />
-            </div>
-            <div>
+            {/* v2.34.44 PR44 follow-up: 拔「分類」field（user feedback「行前須知 不要分類」）。
+              題目自然分類由 title + content 自描述，不再用 section column。
+              既有 section value 保留 DB（未 NULL），但 user 無法 edit 也不顯示。 */}
+            <div className="tp-notes-pretrip-edit-full">
               <div className="tp-notes-pretrip-edit-label">標題</div>
               <input
                 type="text"
@@ -214,7 +211,7 @@ function SortablePretripRow({ note, isEditing, onEdit, onCloseEdit, onSaveField,
       </button>
       <div className="tp-notes-pretrip-body" onClick={onEdit} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onEdit()}>
         <div className="tp-notes-pretrip-title-row">
-          {note.section && <span className="tp-notes-pretrip-section-chip">{note.section}</span>}
+          {/* v2.34.44 PR44 follow-up: 拔讀模式 section chip（user feedback「不要分類」） */}
           <span className="tp-notes-pretrip-title">{note.title || '（未命名項目）'}</span>
           {note.aiGenerated === 1 && (
             <span className="tp-notes-pretrip-ai-chip">
@@ -225,11 +222,9 @@ function SortablePretripRow({ note, isEditing, onEdit, onCloseEdit, onSaveField,
         </div>
         {note.content && <div className="tp-notes-pretrip-content">{note.content}</div>}
       </div>
+      {/* v2.34.44 PR44 user feedback: 拔 edit pencil（row body 點擊已進編輯）+ trash ghost style */}
       <div className="tp-notes-pretrip-actions">
-        <button type="button" className="tp-notes-pretrip-icon-btn" onClick={onEdit} aria-label={`編輯：${note.title}`} title="編輯" data-testid={`pretrip-edit-${note.id}`}>
-          <Icon name="edit" />
-        </button>
-        <button type="button" className="tp-notes-pretrip-icon-btn is-danger" onClick={onDelete} aria-label={`刪除：${note.title}`} title="刪除" data-testid={`pretrip-delete-${note.id}`}>
+        <button type="button" className="tp-notes-pretrip-icon-btn is-danger" onClick={(e) => { e.stopPropagation(); onDelete(); }} aria-label={`刪除：${note.title}`} title="刪除" data-testid={`pretrip-delete-${note.id}`}>
           <Icon name="trash" />
         </button>
       </div>
@@ -257,18 +252,38 @@ export default function PretripSection({ tripId, items, onChange }: PretripSecti
     }
   }, [tripId, items, onChange, busy]);
 
-  const handleSaveField = useCallback(async (noteId: number, field: keyof TripPretripNote, value: string) => {
+  // v2.34.44 PR44 follow-up: stage + batch flush（拔 autosave-on-blur）
+  const pendingRef = useRef<Map<number, Record<string, unknown>>>(new Map());
+
+  const handleSaveField = useCallback((noteId: number, field: keyof TripPretripNote, value: string) => {
     const note = items.find((n) => n.id === noteId);
     if (!note) return;
     if (note[field] === value) return;
+    const map = pendingRef.current.get(noteId) ?? {};
+    map[field as string] = value;
+    pendingRef.current.set(noteId, map);
+  }, [items]);
+
+  const handleCompleteEdit = useCallback(async (noteId: number) => {
+    const pending = pendingRef.current.get(noteId);
+    setEditingId(null);
+    if (!pending || Object.keys(pending).length === 0) return;
+    const note = items.find((n) => n.id === noteId);
+    if (!note) return;
     setError(null);
     try {
-      const snake = field.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+      const snakeBody: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(pending)) {
+        const sk = k.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+        snakeBody[sk] = v;
+      }
+      snakeBody.expectedVersion = note.version;
       const updated = await apiFetch<TripPretripNote>(`/trips/${tripId}/notes/pretrip/${noteId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ [snake]: value, expectedVersion: note.version }),
+        body: JSON.stringify(snakeBody),
       });
       onChange(items.map((n) => (n.id === noteId ? updated : n)));
+      pendingRef.current.delete(noteId);
     } catch (err) {
       setError(err instanceof Error ? err.message : '儲存失敗');
     }
@@ -326,8 +341,8 @@ export default function PretripSection({ tripId, items, onChange }: PretripSecti
                   note={note}
                   isEditing={editingId === note.id}
                   onEdit={() => setEditingId(note.id)}
-                  onCloseEdit={() => setEditingId(null)}
-                  onSaveField={(field, value) => void handleSaveField(note.id, field, value)}
+                  onCloseEdit={() => void handleCompleteEdit(note.id)}
+                  onSaveField={(field, value) => handleSaveField(note.id, field, value)}
                   onDelete={() => setPendingDeleteId(note.id)}
                 />
               ))}

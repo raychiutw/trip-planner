@@ -6,7 +6,7 @@
  * Display: kind chip + title + 預訂時間 + 人數 + 預訂編號 + 電話 + 備註
  * Edit: 8 fields incl. kind select dropdown
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -114,6 +114,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
+  color: var(--color-foreground);
   font-size: var(--font-size-subheadline);
   outline: none;
 }
@@ -141,9 +142,11 @@ const SCOPED_STYLES = `
   cursor: pointer;
   transition: background 150ms, color 150ms;
 }
-.tp-notes-reservation-icon-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
-.tp-notes-reservation-icon-btn.is-danger:hover { background: var(--color-priority-high-bg); color: var(--color-destructive); }
-.tp-notes-reservation-icon-btn .svg-icon { width: 14px; height: 14px; }
+/* v2.34.44 PR44 user feedback: ghost style */
+.tp-notes-reservation-icon-btn { opacity: 0.7; }
+.tp-notes-reservation-icon-btn:hover { opacity: 1; color: var(--color-accent-deep); }
+.tp-notes-reservation-icon-btn.is-danger:hover { opacity: 1; color: var(--color-destructive); }
+.tp-notes-reservation-icon-btn .svg-icon { width: 16px; height: 16px; }
 `;
 
 interface SortableRowProps {
@@ -276,21 +279,12 @@ function SortableReservationRow({ reservation, isEditing, onEdit, onCloseEdit, o
         </div>
         {reservation.note && <div className="tp-notes-reservation-note">{reservation.note}</div>}
       </div>
+      {/* v2.34.44 PR44: 拔 edit pencil（row body 點擊已進編輯）+ trash ghost */}
       <div className="tp-notes-reservation-actions">
         <button
           type="button"
-          className="tp-notes-reservation-icon-btn"
-          onClick={onEdit}
-          aria-label={`編輯預訂：${reservation.title}`}
-          title="編輯"
-          data-testid={`reservation-edit-${reservation.id}`}
-        >
-          <Icon name="edit" />
-        </button>
-        <button
-          type="button"
           className="tp-notes-reservation-icon-btn is-danger"
-          onClick={onDelete}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
           aria-label={`刪除預訂：${reservation.title}`}
           title="刪除"
           data-testid={`reservation-delete-${reservation.id}`}
@@ -325,18 +319,38 @@ export default function ReservationsSection({ tripId, items, onChange }: Reserva
     }
   }, [tripId, items, onChange, busy]);
 
-  const handleSaveField = useCallback(async (reservationId: number, field: keyof TripReservation, value: string | number) => {
+  // v2.34.44 PR44 follow-up: stage + batch flush（拔 autosave）
+  const pendingRef = useRef<Map<number, Record<string, unknown>>>(new Map());
+
+  const handleSaveField = useCallback((reservationId: number, field: keyof TripReservation, value: string | number) => {
     const reservation = items.find((r) => r.id === reservationId);
     if (!reservation) return;
     if (reservation[field] === value) return;
+    const map = pendingRef.current.get(reservationId) ?? {};
+    map[field as string] = value;
+    pendingRef.current.set(reservationId, map);
+  }, [items]);
+
+  const handleCompleteEdit = useCallback(async (reservationId: number) => {
+    const pending = pendingRef.current.get(reservationId);
+    setEditingId(null);
+    if (!pending || Object.keys(pending).length === 0) return;
+    const reservation = items.find((r) => r.id === reservationId);
+    if (!reservation) return;
     setError(null);
     try {
-      const snake = field.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+      const snakeBody: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(pending)) {
+        const sk = k.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+        snakeBody[sk] = v;
+      }
+      snakeBody.expectedVersion = reservation.version;
       const updated = await apiFetch<TripReservation>(`/trips/${tripId}/notes/reservations/${reservationId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ [snake]: value, expectedVersion: reservation.version }),
+        body: JSON.stringify(snakeBody),
       });
       onChange(items.map((r) => (r.id === reservationId ? updated : r)));
+      pendingRef.current.delete(reservationId);
     } catch (err) {
       setError(err instanceof Error ? err.message : '預訂儲存失敗');
     }
@@ -402,8 +416,8 @@ export default function ReservationsSection({ tripId, items, onChange }: Reserva
                   reservation={reservation}
                   isEditing={editingId === reservation.id}
                   onEdit={() => setEditingId(reservation.id)}
-                  onCloseEdit={() => setEditingId(null)}
-                  onSaveField={(field, value) => void handleSaveField(reservation.id, field, value)}
+                  onCloseEdit={() => void handleCompleteEdit(reservation.id)}
+                  onSaveField={(field, value) => handleSaveField(reservation.id, field, value)}
                   onDelete={() => setPendingDeleteId(reservation.id)}
                 />
               ))}
