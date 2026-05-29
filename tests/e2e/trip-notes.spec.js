@@ -19,7 +19,7 @@ const NOTES_FIXTURE = {
     { id: 1, sortOrder: 0, airline: '中華航空', flightNo: 'CI 120', cabinClass: '', departAirport: 'TPE', arriveAirport: 'OKA', departAt: '2026-07-26T09:35', arriveAt: '2026-07-26T12:00', note: '', version: 0 },
   ],
   lodgings: [
-    { id: 1, sortOrder: 0, name: 'Naha Hotel', address: '沖繩縣那霸市', checkInAt: '2026-07-26T15:00', checkOutAt: '2026-07-28T11:00', bookingNo: 'BK-7281', phone: '', note: '', dayIds: [], version: 0 },
+    { id: 1, sortOrder: 0, name: 'Naha Hotel', address: '沖繩縣那霸市', checkInAt: '2026-07-26T15:00', checkOutAt: '2026-07-28T11:00', bookingNo: 'BK-7281', phone: '', note: '', version: 0 },
   ],
   reservations: [
     { id: 1, sortOrder: 0, kind: 'restaurant', title: 'そば処 鶴亀庵', reservedAt: '2026-07-28T12:00', partySize: 4, reservationNo: 'R-9182', phone: '', note: '', version: 0 },

@@ -245,10 +245,17 @@ describe('migration 0073 — trip_notes 5 table + 1 linkage', () => {
       }
     });
 
-    it('v2.34.44 migration 0074: trip_lodging_days junction — 刪 day 後 junction row CASCADE，lodging row 保留', async () => {
-      // 從 migration 0074 起 trip_lodgings.day_id COLUMN 已被 DROP，改 trip_lodging_days junction。
-      // 原 0073 SET NULL semantic 改為 junction CASCADE：刪 day 只清 junction，lodging row 保留。
-      const { id: tripId } = await seedTrip(db, { id: 'mig73-lodging-setnull' });
+    it('v2.34.46 migration 0075: trip_lodging_days junction table 已 DROP — 旅館不再關聯 day', async () => {
+      // v2.34.44 (migration 0074) 引入 junction 模型把 trip_lodgings.day_id 改 M:N。
+      // v2.34.46 (migration 0075) DROP junction：user 決定旅館不需要關聯 day。
+      // 此 test 鎖：(1) trip_lodging_days 不存在；(2) lodging row 仍可獨立 CRUD，
+      // 刪 day 不影響 lodging（因為已無關聯）。
+      const tableExists = await db
+        .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='trip_lodging_days'`)
+        .first<{ name: string }>();
+      expect(tableExists, 'trip_lodging_days table 應該已被 DROP').toBeNull();
+
+      const { id: tripId } = await seedTrip(db, { id: 'mig75-lodging-no-junction' });
       const day = await db
         .prepare('SELECT id FROM trip_days WHERE trip_id = ? ORDER BY day_num LIMIT 1')
         .bind(tripId)
@@ -257,10 +264,7 @@ describe('migration 0073 — trip_notes 5 table + 1 linkage', () => {
         .prepare(`INSERT INTO trip_lodgings (trip_id, name) VALUES (?, ?) RETURNING id`)
         .bind(tripId, 'Naha Hotel')
         .first<{ id: number }>();
-      await db
-        .prepare(`INSERT INTO trip_lodging_days (lodging_id, day_id) VALUES (?, ?)`)
-        .bind(inserted!.id, day!.id)
-        .run();
+      expect(inserted, 'lodging insert 應成功').not.toBeNull();
 
       await db.prepare('DELETE FROM trip_days WHERE id = ?').bind(day!.id).run();
 
@@ -268,12 +272,7 @@ describe('migration 0073 — trip_notes 5 table + 1 linkage', () => {
         .prepare('SELECT id FROM trip_lodgings WHERE trip_id = ?')
         .bind(tripId)
         .first<{ id: number }>();
-      expect(lodgingRow, 'lodging row 應該還在').not.toBeNull();
-      const junctionRow = await db
-        .prepare('SELECT lodging_id FROM trip_lodging_days WHERE lodging_id = ?')
-        .bind(inserted!.id)
-        .first();
-      expect(junctionRow, 'junction row 應被 CASCADE 清掉').toBeNull();
+      expect(lodgingRow, '刪 day 後 lodging row 應該保留（無關聯）').not.toBeNull();
     });
   });
 });
