@@ -100,7 +100,7 @@ describe('ReservationsSection', () => {
     }
   });
 
-  it('Edit → PATCH with field + expectedVersion', async () => {
+  it('v2.34.44: Edit + blur stage only，完成 click → batch PATCH with field + expectedVersion', async () => {
     const onChange = vi.fn();
     apiFetchMock.mockResolvedValue(mkReservation({ title: 'updated', version: 1 }));
     render(<ReservationsSection tripId="trip-1" items={[mkReservation()]} onChange={onChange} />);
@@ -108,6 +108,9 @@ describe('ReservationsSection', () => {
     const input = screen.getByTestId('reservation-input-title-1');
     fireEvent.change(input, { target: { value: 'updated' } });
     fireEvent.blur(input);
+    // v2.34.44: blur no PATCH（stage only）
+    expect(apiFetchMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('reservation-close-edit-1'));
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalled());
     const init = apiFetchMock.mock.calls[0][1] as any;
     const body = JSON.parse(init.body);

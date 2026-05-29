@@ -6,7 +6,7 @@
  * Display: kind chip + title + 預訂時間 + 人數 + 預訂編號 + 電話 + 備註
  * Edit: 8 fields incl. kind select dropdown
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -319,18 +319,38 @@ export default function ReservationsSection({ tripId, items, onChange }: Reserva
     }
   }, [tripId, items, onChange, busy]);
 
-  const handleSaveField = useCallback(async (reservationId: number, field: keyof TripReservation, value: string | number) => {
+  // v2.34.44 PR44 follow-up: stage + batch flush（拔 autosave）
+  const pendingRef = useRef<Map<number, Record<string, unknown>>>(new Map());
+
+  const handleSaveField = useCallback((reservationId: number, field: keyof TripReservation, value: string | number) => {
     const reservation = items.find((r) => r.id === reservationId);
     if (!reservation) return;
     if (reservation[field] === value) return;
+    const map = pendingRef.current.get(reservationId) ?? {};
+    map[field as string] = value;
+    pendingRef.current.set(reservationId, map);
+  }, [items]);
+
+  const handleCompleteEdit = useCallback(async (reservationId: number) => {
+    const pending = pendingRef.current.get(reservationId);
+    setEditingId(null);
+    if (!pending || Object.keys(pending).length === 0) return;
+    const reservation = items.find((r) => r.id === reservationId);
+    if (!reservation) return;
     setError(null);
     try {
-      const snake = field.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+      const snakeBody: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(pending)) {
+        const sk = k.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+        snakeBody[sk] = v;
+      }
+      snakeBody.expectedVersion = reservation.version;
       const updated = await apiFetch<TripReservation>(`/trips/${tripId}/notes/reservations/${reservationId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ [snake]: value, expectedVersion: reservation.version }),
+        body: JSON.stringify(snakeBody),
       });
       onChange(items.map((r) => (r.id === reservationId ? updated : r)));
+      pendingRef.current.delete(reservationId);
     } catch (err) {
       setError(err instanceof Error ? err.message : '預訂儲存失敗');
     }
@@ -396,8 +416,8 @@ export default function ReservationsSection({ tripId, items, onChange }: Reserva
                   reservation={reservation}
                   isEditing={editingId === reservation.id}
                   onEdit={() => setEditingId(reservation.id)}
-                  onCloseEdit={() => setEditingId(null)}
-                  onSaveField={(field, value) => void handleSaveField(reservation.id, field, value)}
+                  onCloseEdit={() => void handleCompleteEdit(reservation.id)}
+                  onSaveField={(field, value) => handleSaveField(reservation.id, field, value)}
                   onDelete={() => setPendingDeleteId(reservation.id)}
                 />
               ))}

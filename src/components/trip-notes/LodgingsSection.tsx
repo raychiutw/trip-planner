@@ -9,7 +9,7 @@
  *
  * autosave / drag-reorder / delete pattern 同 FlightsSection。
  */
-import { useCallback, useContext, useState } from 'react';
+import { useCallback, useContext, useRef, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -404,22 +404,43 @@ export default function LodgingsSection({ tripId, items, onChange }: LodgingsSec
     }
   }, [tripId, items, onChange, busy]);
 
-  const handleSaveField = useCallback(async (lodgingId: number, field: keyof TripLodging, value: string | number | null | number[]) => {
+  // v2.34.44 PR44 follow-up: 拔 autosave-on-blur。改為 stage to ref map → 完成 button batch flush。
+  // User feedback「行程筆記沒有 auto save 應該是點完成後才存檔」。
+  const pendingRef = useRef<Map<number, Record<string, unknown>>>(new Map());
+
+  const handleStageField = useCallback((lodgingId: number, field: keyof TripLodging, value: string | number | null | number[]) => {
     const lodging = items.find((l) => l.id === lodgingId);
     if (!lodging) return;
-    // v2.34.44 PR44: array compare for dayIds
+    // dirty check 仍 keep — 避免 stage 無變化的 field
     if (Array.isArray(value) && Array.isArray(lodging[field])) {
       const prev = lodging[field] as number[];
       if (prev.length === value.length && prev.every((v, i) => v === value[i])) return;
     } else if (lodging[field] === value) return;
+    const map = pendingRef.current.get(lodgingId) ?? {};
+    map[field as string] = value;
+    pendingRef.current.set(lodgingId, map);
+  }, [items]);
+
+  const handleCompleteEdit = useCallback(async (lodgingId: number) => {
+    const pending = pendingRef.current.get(lodgingId);
+    setEditingId(null); // 立即 close edit 給 snappy UX；PATCH 在 background
+    if (!pending || Object.keys(pending).length === 0) return;
+    const lodging = items.find((l) => l.id === lodgingId);
+    if (!lodging) return;
     setError(null);
     try {
-      const snake = field.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+      const snakeBody: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(pending)) {
+        const sk = k.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+        snakeBody[sk] = v;
+      }
+      snakeBody.expectedVersion = lodging.version;
       const updated = await apiFetch<TripLodging>(`/trips/${tripId}/notes/lodgings/${lodgingId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ [snake]: value, expectedVersion: lodging.version }),
+        body: JSON.stringify(snakeBody),
       });
       onChange(items.map((l) => (l.id === lodgingId ? updated : l)));
+      pendingRef.current.delete(lodgingId);
     } catch (err) {
       setError(err instanceof Error ? err.message : '住宿儲存失敗');
     }
@@ -486,8 +507,8 @@ export default function LodgingsSection({ tripId, items, onChange }: LodgingsSec
                   isEditing={editingId === lodging.id}
                   days={days}
                   onEdit={() => setEditingId(lodging.id)}
-                  onCloseEdit={() => setEditingId(null)}
-                  onSaveField={(field, value) => void handleSaveField(lodging.id, field, value)}
+                  onCloseEdit={() => void handleCompleteEdit(lodging.id)}
+                  onSaveField={(field, value) => handleStageField(lodging.id, field, value)}
                   onDelete={() => setPendingDeleteId(lodging.id)}
                   onNavigateDay={handleNavigateDay}
                 />

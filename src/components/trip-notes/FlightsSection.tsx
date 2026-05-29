@@ -18,7 +18,7 @@
  *
  * Drag-reorder via @dnd-kit/sortable → PATCH /flights/reorder bulk
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -391,18 +391,38 @@ export default function FlightsSection({ tripId, items, onChange }: FlightsSecti
     }
   }, [tripId, items, onChange, busy]);
 
-  const handleSaveField = useCallback(async (flightId: number, field: keyof TripFlight, value: string) => {
+  // v2.34.44 PR44 follow-up: stage + batch flush
+  const pendingRef = useRef<Map<number, Record<string, unknown>>>(new Map());
+
+  const handleSaveField = useCallback((flightId: number, field: keyof TripFlight, value: string) => {
     const flight = items.find((f) => f.id === flightId);
     if (!flight) return;
-    if (flight[field] === value) return; // no change
+    if (flight[field] === value) return;
+    const map = pendingRef.current.get(flightId) ?? {};
+    map[field as string] = value;
+    pendingRef.current.set(flightId, map);
+  }, [items]);
+
+  const handleCompleteEdit = useCallback(async (flightId: number) => {
+    const pending = pendingRef.current.get(flightId);
+    setEditingId(null);
+    if (!pending || Object.keys(pending).length === 0) return;
+    const flight = items.find((f) => f.id === flightId);
+    if (!flight) return;
     setError(null);
     try {
-      const snake = field.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+      const snakeBody: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(pending)) {
+        const sk = k.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
+        snakeBody[sk] = v;
+      }
+      snakeBody.expectedVersion = flight.version;
       const updated = await apiFetch<TripFlight>(`/trips/${tripId}/notes/flights/${flightId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ [snake]: value, expectedVersion: flight.version }),
+        body: JSON.stringify(snakeBody),
       });
       onChange(items.map((f) => (f.id === flightId ? updated : f)));
+      pendingRef.current.delete(flightId);
     } catch (err) {
       setError(err instanceof Error ? err.message : '航班儲存失敗');
     }
@@ -470,8 +490,8 @@ export default function FlightsSection({ tripId, items, onChange }: FlightsSecti
                   flight={flight}
                   isEditing={editingId === flight.id}
                   onEdit={() => setEditingId(flight.id)}
-                  onCloseEdit={() => setEditingId(null)}
-                  onSaveField={(field, value) => void handleSaveField(flight.id, field, value)}
+                  onCloseEdit={() => void handleCompleteEdit(flight.id)}
+                  onSaveField={(field, value) => handleSaveField(flight.id, field, value)}
                   onDelete={() => setPendingDeleteId(flight.id)}
                 />
               ))}
