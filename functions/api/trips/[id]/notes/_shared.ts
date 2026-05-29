@@ -6,6 +6,7 @@
  * 抽出來避免 5 個 file 各寫一次。
  */
 import { hasPermission, hasWritePermission, requireAuth } from '../../../_auth';
+import { logAudit, computeDiff } from '../../../_audit';
 import { AppError } from '../../../_errors';
 import { buildUpdateClause, json, parseIntParam, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -114,6 +115,18 @@ export async function createNotesRow(
     .bind(...values)
     .first();
 
+  // PR26: audit log for create
+  if (row) {
+    await logAudit(env.DB, {
+      tripId,
+      tableName: table,
+      recordId: row.id as number,
+      action: 'insert',
+      changedBy: auth.email,
+      diffJson: JSON.stringify(row),
+    });
+  }
+
   return json(row, 201);
 }
 
@@ -140,13 +153,13 @@ export async function updateNotesRow(
     throw new AppError('PERM_DENIED');
   }
 
-  // 驗證 row 屬於該 trip（防越權）
-  const existing = await env.DB
-    .prepare(`SELECT trip_id FROM ${table} WHERE id = ?`)
+  // 驗證 row 屬於該 trip（防越權）+ 抓 oldRow 給 audit diff
+  const oldRow = await env.DB
+    .prepare(`SELECT * FROM ${table} WHERE id = ?`)
     .bind(id)
-    .first<{ trip_id: string }>();
-  if (!existing) throw new AppError('DATA_NOT_FOUND');
-  if (existing.trip_id !== tripId) throw new AppError('PERM_DENIED', '此 row 不屬於該 trip');
+    .first<Record<string, unknown>>();
+  if (!oldRow) throw new AppError('DATA_NOT_FOUND');
+  if (oldRow.trip_id !== tripId) throw new AppError('PERM_DENIED', '此 row 不屬於該 trip');
 
   const body = await parseJsonBody<Record<string, unknown>>(context.request);
   validateEnums(table, body);
@@ -196,6 +209,19 @@ export async function updateNotesRow(
     throw err;
   }
 
+  // PR26: audit log for update
+  if (row) {
+    const newFields = Object.fromEntries(update.fields.map((f) => [f, body[f]]));
+    await logAudit(env.DB, {
+      tripId,
+      tableName: table,
+      recordId: id,
+      action: 'update',
+      changedBy: auth.email,
+      diffJson: computeDiff(oldRow, newFields),
+    });
+  }
+
   return json(row);
 }
 
@@ -218,14 +244,25 @@ export async function deleteNotesRow(
     throw new AppError('PERM_DENIED');
   }
 
-  const existing = await env.DB
-    .prepare(`SELECT trip_id FROM ${table} WHERE id = ?`)
+  const oldRow = await env.DB
+    .prepare(`SELECT * FROM ${table} WHERE id = ?`)
     .bind(id)
-    .first<{ trip_id: string }>();
-  if (!existing) throw new AppError('DATA_NOT_FOUND');
-  if (existing.trip_id !== tripId) throw new AppError('PERM_DENIED', '此 row 不屬於該 trip');
+    .first<Record<string, unknown>>();
+  if (!oldRow) throw new AppError('DATA_NOT_FOUND');
+  if (oldRow.trip_id !== tripId) throw new AppError('PERM_DENIED', '此 row 不屬於該 trip');
 
   await env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
+
+  // PR26: audit log for delete
+  await logAudit(env.DB, {
+    tripId,
+    tableName: table,
+    recordId: id,
+    action: 'delete',
+    changedBy: auth.email,
+    diffJson: JSON.stringify(oldRow),
+  });
+
   return json({ ok: true });
 }
 
@@ -279,6 +316,16 @@ export async function reorderNotesRows(
       .bind(it.sortOrder, it.id),
   );
   await env.DB.batch(stmts);
+
+  // PR26: audit log for reorder — recordId=null + action='update' + 摘要 diff（bulk 不寫 per-row 噪音）
+  await logAudit(env.DB, {
+    tripId,
+    tableName: table,
+    recordId: null,
+    action: 'update',
+    changedBy: auth.email,
+    diffJson: JSON.stringify({ op: 'reorder', items: items.map((it) => ({ id: it.id, sortOrder: it.sortOrder })) }),
+  });
 
   return json({ ok: true, updated: items.length });
 }
