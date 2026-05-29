@@ -32,7 +32,7 @@ beforeEach(() => {
 function mkLodging(over: Partial<TripLodging> = {}): TripLodging {
   return {
     id: 1, sortOrder: 0, name: 'Naha Hotel', address: '沖繩縣那霸市', checkInAt: '2026-07-26T15:00',
-    checkOutAt: '2026-07-28T11:00', bookingNo: 'BK-7281', phone: '', note: '', dayId: null, version: 0,
+    checkOutAt: '2026-07-28T11:00', bookingNo: 'BK-7281', phone: '', note: '', dayIds: [], version: 0,
     ...over,
   };
 }

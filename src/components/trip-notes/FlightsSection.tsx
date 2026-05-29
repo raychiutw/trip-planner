@@ -152,6 +152,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
+  color: var(--color-foreground);
   font-size: var(--font-size-subheadline);
   outline: none;
 }
@@ -177,9 +178,11 @@ const SCOPED_STYLES = `
   cursor: pointer;
   transition: background 150ms, color 150ms;
 }
-.tp-notes-flight-icon-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
-.tp-notes-flight-icon-btn.is-danger:hover { background: var(--color-priority-high-bg); color: var(--color-destructive); }
-.tp-notes-flight-icon-btn .svg-icon { width: 14px; height: 14px; }
+/* v2.34.44 PR44 user feedback: ghost style */
+.tp-notes-flight-icon-btn { opacity: 0.7; }
+.tp-notes-flight-icon-btn:hover { opacity: 1; color: var(--color-accent-deep); }
+.tp-notes-flight-icon-btn.is-danger:hover { opacity: 1; color: var(--color-destructive); }
+.tp-notes-flight-icon-btn .svg-icon { width: 16px; height: 16px; }
 
 .tp-notes-add-row-btn {
   display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -348,21 +351,12 @@ function SortableFlightRow({ flight, isEditing, onEdit, onCloseEdit, onSaveField
         </div>
         {flight.note && <div className="tp-notes-flight-note">{flight.note}</div>}
       </div>
+      {/* v2.34.44 PR44: 拔 edit pencil + trash ghost */}
       <div className="tp-notes-flight-actions">
         <button
           type="button"
-          className="tp-notes-flight-icon-btn"
-          onClick={onEdit}
-          aria-label={`編輯航班：${flight.airline} ${flight.flightNo}`}
-          title="編輯"
-          data-testid={`flight-edit-${flight.id}`}
-        >
-          <Icon name="edit" />
-        </button>
-        <button
-          type="button"
           className="tp-notes-flight-icon-btn is-danger"
-          onClick={onDelete}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
           aria-label={`刪除航班：${flight.airline} ${flight.flightNo}`}
           title="刪除"
           data-testid={`flight-delete-${flight.id}`}

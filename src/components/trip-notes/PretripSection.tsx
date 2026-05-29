@@ -114,6 +114,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
+  color: var(--color-foreground);
   font-size: var(--font-size-subheadline);
   outline: none;
 }
@@ -138,11 +139,13 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   background: transparent; border: none;
   cursor: pointer;
-  transition: background 150ms, color 150ms;
+  transition: opacity 150ms, color 150ms;
 }
-.tp-notes-pretrip-icon-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
-.tp-notes-pretrip-icon-btn.is-danger:hover { background: var(--color-priority-high-bg); color: var(--color-destructive); }
-.tp-notes-pretrip-icon-btn .svg-icon { width: 14px; height: 14px; }
+/* v2.34.44 PR44 user feedback: ghost style — 拔 bg hover，只 opacity + 變色 */
+.tp-notes-pretrip-icon-btn { opacity: 0.7; }
+.tp-notes-pretrip-icon-btn:hover { opacity: 1; color: var(--color-accent-deep); }
+.tp-notes-pretrip-icon-btn.is-danger:hover { opacity: 1; color: var(--color-destructive); }
+.tp-notes-pretrip-icon-btn .svg-icon { width: 16px; height: 16px; }
 `;
 
 interface SortableRowProps {
@@ -225,11 +228,9 @@ function SortablePretripRow({ note, isEditing, onEdit, onCloseEdit, onSaveField,
         </div>
         {note.content && <div className="tp-notes-pretrip-content">{note.content}</div>}
       </div>
+      {/* v2.34.44 PR44 user feedback: 拔 edit pencil（row body 點擊已進編輯）+ trash ghost style */}
       <div className="tp-notes-pretrip-actions">
-        <button type="button" className="tp-notes-pretrip-icon-btn" onClick={onEdit} aria-label={`編輯：${note.title}`} title="編輯" data-testid={`pretrip-edit-${note.id}`}>
-          <Icon name="edit" />
-        </button>
-        <button type="button" className="tp-notes-pretrip-icon-btn is-danger" onClick={onDelete} aria-label={`刪除：${note.title}`} title="刪除" data-testid={`pretrip-delete-${note.id}`}>
+        <button type="button" className="tp-notes-pretrip-icon-btn is-danger" onClick={(e) => { e.stopPropagation(); onDelete(); }} aria-label={`刪除：${note.title}`} title="刪除" data-testid={`pretrip-delete-${note.id}`}>
           <Icon name="trash" />
         </button>
       </div>

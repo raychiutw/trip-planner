@@ -114,6 +114,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
+  color: var(--color-foreground);
   font-size: var(--font-size-subheadline);
   outline: none;
 }
@@ -141,9 +142,11 @@ const SCOPED_STYLES = `
   cursor: pointer;
   transition: background 150ms, color 150ms;
 }
-.tp-notes-reservation-icon-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
-.tp-notes-reservation-icon-btn.is-danger:hover { background: var(--color-priority-high-bg); color: var(--color-destructive); }
-.tp-notes-reservation-icon-btn .svg-icon { width: 14px; height: 14px; }
+/* v2.34.44 PR44 user feedback: ghost style */
+.tp-notes-reservation-icon-btn { opacity: 0.7; }
+.tp-notes-reservation-icon-btn:hover { opacity: 1; color: var(--color-accent-deep); }
+.tp-notes-reservation-icon-btn.is-danger:hover { opacity: 1; color: var(--color-destructive); }
+.tp-notes-reservation-icon-btn .svg-icon { width: 16px; height: 16px; }
 `;
 
 interface SortableRowProps {
@@ -276,21 +279,12 @@ function SortableReservationRow({ reservation, isEditing, onEdit, onCloseEdit, o
         </div>
         {reservation.note && <div className="tp-notes-reservation-note">{reservation.note}</div>}
       </div>
+      {/* v2.34.44 PR44: 拔 edit pencil（row body 點擊已進編輯）+ trash ghost */}
       <div className="tp-notes-reservation-actions">
         <button
           type="button"
-          className="tp-notes-reservation-icon-btn"
-          onClick={onEdit}
-          aria-label={`編輯預訂：${reservation.title}`}
-          title="編輯"
-          data-testid={`reservation-edit-${reservation.id}`}
-        >
-          <Icon name="edit" />
-        </button>
-        <button
-          type="button"
           className="tp-notes-reservation-icon-btn is-danger"
-          onClick={onDelete}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
           aria-label={`刪除預訂：${reservation.title}`}
           title="刪除"
           data-testid={`reservation-delete-${reservation.id}`}

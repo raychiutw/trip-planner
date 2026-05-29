@@ -145,6 +145,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
+  color: var(--color-foreground);
   font-size: var(--font-size-subheadline);
   outline: none;
 }
@@ -170,9 +171,11 @@ const SCOPED_STYLES = `
   cursor: pointer;
   transition: background 150ms, color 150ms;
 }
-.tp-notes-emergency-icon-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
-.tp-notes-emergency-icon-btn.is-danger:hover { background: var(--color-priority-high-bg); color: var(--color-destructive); }
-.tp-notes-emergency-icon-btn .svg-icon { width: 14px; height: 14px; }
+/* v2.34.44 PR44 user feedback: ghost style */
+.tp-notes-emergency-icon-btn { opacity: 0.7; }
+.tp-notes-emergency-icon-btn:hover { opacity: 1; color: var(--color-accent-deep); }
+.tp-notes-emergency-icon-btn.is-danger:hover { opacity: 1; color: var(--color-destructive); }
+.tp-notes-emergency-icon-btn .svg-icon { width: 16px; height: 16px; }
 `;
 
 function kindIconName(kind: EmergencyKind): string {
@@ -309,11 +312,9 @@ function SortableEmergencyRow({ contact, isEditing, onEdit, onCloseEdit, onSaveF
           {contact.phone}
         </a>
       ) : (
+        // v2.34.44 PR44: 拔 edit pencil + trash ghost
         <div className="tp-notes-emergency-actions">
-          <button type="button" className="tp-notes-emergency-icon-btn" onClick={onEdit} aria-label={`編輯：${contact.name}`} title="編輯" data-testid={`emergency-edit-${contact.id}`}>
-            <Icon name="edit" />
-          </button>
-          <button type="button" className="tp-notes-emergency-icon-btn is-danger" onClick={onDelete} aria-label={`刪除：${contact.name}`} title="刪除" data-testid={`emergency-delete-${contact.id}`}>
+          <button type="button" className="tp-notes-emergency-icon-btn is-danger" onClick={(e) => { e.stopPropagation(); onDelete(); }} aria-label={`刪除：${contact.name}`} title="刪除" data-testid={`emergency-delete-${contact.id}`}>
             <Icon name="trash" />
           </button>
         </div>

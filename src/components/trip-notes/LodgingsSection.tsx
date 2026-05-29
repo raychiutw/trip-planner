@@ -31,7 +31,9 @@ export interface TripLodging {
   bookingNo: string;
   phone: string;
   note: string;
-  dayId: number | null;
+  // v2.34.44 PR44 migration 0074: single dayId → dayIds[] junction table
+  // 不連續天的相同飯店視為不同紀錄（user 自己拆 row）。
+  dayIds: number[];
   version: number;
 }
 
@@ -117,8 +119,38 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-background);
+  color: var(--color-foreground);
+  /* v2.34.44 PR44 fix: 加 color 避免 input value 顯示 muted（user feedback「飯店名稱沒帶出來」） */
+  color: var(--color-foreground);
   font-size: var(--font-size-subheadline);
   outline: none;
+}
+/* v2.34.44 PR44: multi-day checkboxes 改用 chip-style wrap */
+.tp-notes-lodging-day-checkboxes {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 6px 0;
+}
+.tp-notes-lodging-day-chk {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-tertiary);
+  color: var(--color-foreground);
+  font-size: var(--font-size-footnote);
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+  transition: background 150ms;
+}
+.tp-notes-lodging-day-chk:hover { background: var(--color-hover); }
+.tp-notes-lodging-day-chk.is-checked {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  border-color: var(--color-accent);
+}
+.tp-notes-lodging-day-chk input[type="checkbox"] { margin: 0; cursor: pointer; }
+.tp-notes-lodging-day-empty {
+  font-size: var(--font-size-footnote); color: var(--color-muted);
 }
 .tp-notes-lodging-edit-grid input:focus,
 .tp-notes-lodging-edit-grid textarea:focus { border-color: var(--color-accent); }
@@ -134,6 +166,8 @@ const SCOPED_STYLES = `
 .tp-notes-lodging-actions {
   display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;
 }
+/* v2.34.44 PR44 user feedback: 拔 edit pencil + trash 改 ghost 風格（無 bg fill 對齊 .tp-btn-ghost 慣例）。
+ * 32×32 size 對齊 minimum tap target，但 hover 不再 bg-fill；只 color 變化 + opacity。 */
 .tp-notes-lodging-icon-btn {
   width: 32px; height: 32px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -141,11 +175,12 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   background: transparent; border: none;
   cursor: pointer;
-  transition: background 150ms, color 150ms;
+  opacity: 0.7;
+  transition: opacity 150ms, color 150ms;
 }
-.tp-notes-lodging-icon-btn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
-.tp-notes-lodging-icon-btn.is-danger:hover { background: var(--color-priority-high-bg); color: var(--color-destructive); }
-.tp-notes-lodging-icon-btn .svg-icon { width: 14px; height: 14px; }
+.tp-notes-lodging-icon-btn:hover { opacity: 1; color: var(--color-accent-deep); }
+.tp-notes-lodging-icon-btn.is-ghost.is-danger:hover { opacity: 1; color: var(--color-destructive); }
+.tp-notes-lodging-icon-btn .svg-icon { width: 16px; height: 16px; }
 `;
 
 interface DayOption { id: number; dayNum: number; label: string; }
@@ -156,7 +191,7 @@ interface SortableRowProps {
   days: DayOption[];
   onEdit: () => void;
   onCloseEdit: () => void;
-  onSaveField: (field: keyof TripLodging, value: string | number | null) => void;
+  onSaveField: (field: keyof TripLodging, value: string | number | null | number[]) => void;
   onDelete: () => void;
   onNavigateDay: (dayNum: number) => void;
 }
@@ -228,17 +263,28 @@ function SortableLodgingRow({ lodging, isEditing, days, onEdit, onCloseEdit, onS
               />
             </div>
             <div className="tp-notes-lodging-edit-full">
-              <div className="tp-notes-lodging-edit-label">連結到 Day</div>
-              <select
-                defaultValue={lodging.dayId ?? ''}
-                onChange={(e) => onSaveField('dayId', e.target.value ? Number(e.target.value) : null)}
-                data-testid={`lodging-input-day-${lodging.id}`}
-              >
-                <option value="">不連結特定 Day</option>
-                {days.map((d) => (
-                  <option key={d.id} value={d.id}>{d.label}</option>
-                ))}
-              </select>
+              <div className="tp-notes-lodging-edit-label">連結到 Day（可多選 — 不連續天請拆多筆）</div>
+              <div className="tp-notes-lodging-day-checkboxes" data-testid={`lodging-input-day-${lodging.id}`}>
+                {days.map((d) => {
+                  const checked = lodging.dayIds.includes(d.id);
+                  return (
+                    <label key={d.id} className={`tp-notes-lodging-day-chk${checked ? ' is-checked' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? Array.from(new Set([...lodging.dayIds, d.id])).sort((a, b) => a - b)
+                            : lodging.dayIds.filter((id) => id !== d.id);
+                          onSaveField('dayIds', next);
+                        }}
+                      />
+                      <span>{d.label}</span>
+                    </label>
+                  );
+                })}
+                {days.length === 0 && <div className="tp-notes-lodging-day-empty">此 trip 還沒有 Day</div>}
+              </div>
             </div>
             <textarea
               className="tp-notes-lodging-edit-full tp-notes-lodging-edit-note"
@@ -279,20 +325,23 @@ function SortableLodgingRow({ lodging, isEditing, days, onEdit, onCloseEdit, onS
       <div className="tp-notes-lodging-body" onClick={onEdit} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onEdit()}>
         <div className="tp-notes-lodging-name">{lodging.name || '（未命名住宿）'}</div>
         <div className="tp-notes-lodging-meta">
-          {(() => {
-            const day = lodging.dayId !== null ? days.find((d) => d.id === lodging.dayId) : null;
-            return day ? (
+          {/* v2.34.44 PR44: multi-day support — 顯示每個 day 一個 chip */}
+          {lodging.dayIds.map((dayId) => {
+            const day = days.find((d) => d.id === dayId);
+            if (!day) return null;
+            return (
               <button
+                key={dayId}
                 type="button"
                 className="tp-notes-lodging-chip is-day"
                 onClick={(e) => { e.stopPropagation(); onNavigateDay(day.dayNum); }}
-                data-testid={`lodging-day-chip-${lodging.id}`}
+                data-testid={`lodging-day-chip-${lodging.id}-${dayId}`}
                 title={`跳到 ${day.label}`}
               >
                 {day.label} →
               </button>
-            ) : null;
-          })()}
+            );
+          })}
           {lodging.bookingNo && <span className="tp-notes-lodging-chip">訂房 {lodging.bookingNo}</span>}
           {lodging.checkInAt && (
             <span>
@@ -304,21 +353,12 @@ function SortableLodgingRow({ lodging, isEditing, days, onEdit, onCloseEdit, onS
         {lodging.address && <div className="tp-notes-lodging-note">{lodging.address}</div>}
         {lodging.note && <div className="tp-notes-lodging-note">{lodging.note}</div>}
       </div>
+      {/* v2.34.44 PR44 user feedback: 拔 edit pencil（點 row body 進編輯）；trash 改 ghost style */}
       <div className="tp-notes-lodging-actions">
         <button
           type="button"
-          className="tp-notes-lodging-icon-btn"
-          onClick={onEdit}
-          aria-label={`編輯住宿：${lodging.name}`}
-          title="編輯"
-          data-testid={`lodging-edit-${lodging.id}`}
-        >
-          <Icon name="edit" />
-        </button>
-        <button
-          type="button"
-          className="tp-notes-lodging-icon-btn is-danger"
-          onClick={onDelete}
+          className="tp-notes-lodging-icon-btn is-ghost is-danger"
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
           aria-label={`刪除住宿：${lodging.name}`}
           title="刪除"
           data-testid={`lodging-delete-${lodging.id}`}
@@ -364,10 +404,14 @@ export default function LodgingsSection({ tripId, items, onChange }: LodgingsSec
     }
   }, [tripId, items, onChange, busy]);
 
-  const handleSaveField = useCallback(async (lodgingId: number, field: keyof TripLodging, value: string | number | null) => {
+  const handleSaveField = useCallback(async (lodgingId: number, field: keyof TripLodging, value: string | number | null | number[]) => {
     const lodging = items.find((l) => l.id === lodgingId);
     if (!lodging) return;
-    if (lodging[field] === value) return;
+    // v2.34.44 PR44: array compare for dayIds
+    if (Array.isArray(value) && Array.isArray(lodging[field])) {
+      const prev = lodging[field] as number[];
+      if (prev.length === value.length && prev.every((v, i) => v === value[i])) return;
+    } else if (lodging[field] === value) return;
     setError(null);
     try {
       const snake = field.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
