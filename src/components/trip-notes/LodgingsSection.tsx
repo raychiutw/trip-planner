@@ -14,6 +14,7 @@ import { CSS } from '@dnd-kit/utilities';
 import Icon from '../shared/Icon';
 import AlertPanel from '../shared/AlertPanel';
 import ConfirmModal from '../shared/ConfirmModal';
+import NoteDateTimeField from './NoteDateTimeField';
 import { apiFetch } from '../../lib/apiClient';
 
 export interface TripLodging {
@@ -94,22 +95,10 @@ const SCOPED_STYLES = `
   margin-top: 12px;
 }
 .tp-notes-lodging-edit-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
 }
-.tp-notes-lodging-edit-grid input,
-.tp-notes-lodging-edit-grid textarea {
-  width: 100%; padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-size: var(--font-size-subheadline);
-  outline: none;
-}
-.tp-notes-lodging-edit-grid input:focus,
-.tp-notes-lodging-edit-grid textarea:focus { border-color: var(--color-accent); }
+.tp-notes-lodging-edit-field { min-width: 0; }
 .tp-notes-lodging-edit-full { grid-column: 1 / -1; }
-.tp-notes-lodging-edit-note { min-height: 48px; resize: vertical; }
 .tp-notes-lodging-edit-label {
   font-size: var(--font-size-caption); font-weight: 600;
   color: var(--color-muted);
@@ -156,9 +145,10 @@ function SortableLodgingRow({ lodging, isEditing, onEdit, onSaveField, onDelete 
         <div />
         <div className="tp-notes-lodging-body">
           <div className="tp-notes-lodging-edit-grid">
-            <div className="tp-notes-lodging-edit-full">
+            <div className="tp-notes-lodging-edit-field tp-notes-lodging-edit-full">
               <div className="tp-notes-lodging-edit-label">飯店 / 民宿</div>
               <input
+                className="tp-input-long"
                 type="text"
                 defaultValue={lodging.name}
                 onBlur={(e) => onSaveField('name', e.target.value)}
@@ -166,43 +156,46 @@ function SortableLodgingRow({ lodging, isEditing, onEdit, onSaveField, onDelete 
                 data-testid={`lodging-input-name-${lodging.id}`}
               />
             </div>
-            <div className="tp-notes-lodging-edit-full">
+            <div className="tp-notes-lodging-edit-field tp-notes-lodging-edit-full">
               <div className="tp-notes-lodging-edit-label">地址</div>
               <input
+                className="tp-input-long"
                 type="text"
                 defaultValue={lodging.address}
                 onBlur={(e) => onSaveField('address', e.target.value)}
                 placeholder="例：沖繩縣那霸市久茂地 2-15-21"
               />
             </div>
-            <div>
+            <div className="tp-notes-lodging-edit-field tp-notes-lodging-edit-full">
               <div className="tp-notes-lodging-edit-label">入住</div>
-              <input
-                type="datetime-local"
-                defaultValue={lodging.checkInAt}
-                onBlur={(e) => onSaveField('checkInAt', e.target.value)}
+              <NoteDateTimeField
+                value={lodging.checkInAt}
+                onChange={(v) => onSaveField('checkInAt', v)}
+                ariaLabel="入住"
               />
             </div>
-            <div>
+            <div className="tp-notes-lodging-edit-field tp-notes-lodging-edit-full">
               <div className="tp-notes-lodging-edit-label">退房</div>
-              <input
-                type="datetime-local"
-                defaultValue={lodging.checkOutAt}
-                onBlur={(e) => onSaveField('checkOutAt', e.target.value)}
+              <NoteDateTimeField
+                value={lodging.checkOutAt}
+                onChange={(v) => onSaveField('checkOutAt', v)}
+                ariaLabel="退房"
               />
             </div>
-            <div>
+            <div className="tp-notes-lodging-edit-field">
               <div className="tp-notes-lodging-edit-label">訂房編號</div>
               <input
+                className="tp-input-long"
                 type="text"
                 defaultValue={lodging.bookingNo}
                 onBlur={(e) => onSaveField('bookingNo', e.target.value)}
                 placeholder="例：BK-7281"
               />
             </div>
-            <div>
+            <div className="tp-notes-lodging-edit-field">
               <div className="tp-notes-lodging-edit-label">電話</div>
               <input
+                className="tp-input-long"
                 type="tel"
                 defaultValue={lodging.phone}
                 onBlur={(e) => onSaveField('phone', e.target.value)}
@@ -210,7 +203,7 @@ function SortableLodgingRow({ lodging, isEditing, onEdit, onSaveField, onDelete 
               />
             </div>
             <textarea
-              className="tp-notes-lodging-edit-full tp-notes-lodging-edit-note"
+              className="tp-input-long tp-notes-lodging-edit-full tp-notes-lodging-edit-note"
               defaultValue={lodging.note}
               onBlur={(e) => onSaveField('note', e.target.value)}
               placeholder="備註 (入住須知、停車、早餐等)…"

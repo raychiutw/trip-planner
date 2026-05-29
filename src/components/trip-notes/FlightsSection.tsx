@@ -25,6 +25,7 @@ import { CSS } from '@dnd-kit/utilities';
 import Icon from '../shared/Icon';
 import AlertPanel from '../shared/AlertPanel';
 import ConfirmModal from '../shared/ConfirmModal';
+import NoteDateTimeField from './NoteDateTimeField';
 import { apiFetch } from '../../lib/apiClient';
 
 export interface TripFlight {
@@ -144,21 +145,11 @@ const SCOPED_STYLES = `
   margin-top: 12px;
 }
 .tp-notes-flight-edit-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
 }
-.tp-notes-flight-edit-grid input,
-.tp-notes-flight-edit-grid textarea {
-  width: 100%; padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-size: var(--font-size-subheadline);
-  outline: none;
-}
-.tp-notes-flight-edit-grid input:focus,
-.tp-notes-flight-edit-grid textarea:focus { border-color: var(--color-accent); }
-.tp-notes-flight-edit-note { grid-column: 1 / -1; min-height: 48px; resize: vertical; }
+.tp-notes-flight-edit-field { min-width: 0; }
+.tp-notes-flight-edit-full { grid-column: 1 / -1; }
+.tp-notes-flight-edit-note { grid-column: 1 / -1; }
 .tp-notes-flight-edit-label {
   font-size: var(--font-size-caption); font-weight: 600;
   color: var(--color-muted);
@@ -237,9 +228,10 @@ function SortableFlightRow({ flight, isEditing, onEdit, onSaveField, onDelete }:
         <div /> {/* no grip in edit mode */}
         <div className="tp-notes-flight-body">
           <div className="tp-notes-flight-edit-grid">
-            <div>
+            <div className="tp-notes-flight-edit-field">
               <div className="tp-notes-flight-edit-label">航空</div>
               <input
+                className="tp-input-long"
                 type="text"
                 defaultValue={flight.airline}
                 onBlur={(e) => onSaveField('airline', e.target.value)}
@@ -247,9 +239,10 @@ function SortableFlightRow({ flight, isEditing, onEdit, onSaveField, onDelete }:
                 data-testid={`flight-input-airline-${flight.id}`}
               />
             </div>
-            <div>
+            <div className="tp-notes-flight-edit-field">
               <div className="tp-notes-flight-edit-label">航班</div>
               <input
+                className="tp-input-long"
                 type="text"
                 defaultValue={flight.flightNo}
                 onBlur={(e) => onSaveField('flightNo', e.target.value)}
@@ -257,42 +250,44 @@ function SortableFlightRow({ flight, isEditing, onEdit, onSaveField, onDelete }:
                 data-testid={`flight-input-no-${flight.id}`}
               />
             </div>
-            <div>
+            <div className="tp-notes-flight-edit-field">
               <div className="tp-notes-flight-edit-label">出發機場</div>
               <input
+                className="tp-input-long"
                 type="text"
                 defaultValue={flight.departAirport}
                 onBlur={(e) => onSaveField('departAirport', e.target.value)}
                 placeholder="例：TPE 桃園"
               />
             </div>
-            <div>
+            <div className="tp-notes-flight-edit-field">
               <div className="tp-notes-flight-edit-label">抵達機場</div>
               <input
+                className="tp-input-long"
                 type="text"
                 defaultValue={flight.arriveAirport}
                 onBlur={(e) => onSaveField('arriveAirport', e.target.value)}
                 placeholder="例：OKA 那霸"
               />
             </div>
-            <div>
+            <div className="tp-notes-flight-edit-field tp-notes-flight-edit-full">
               <div className="tp-notes-flight-edit-label">起飛時間</div>
-              <input
-                type="datetime-local"
-                defaultValue={flight.departAt}
-                onBlur={(e) => onSaveField('departAt', e.target.value)}
+              <NoteDateTimeField
+                value={flight.departAt}
+                onChange={(v) => onSaveField('departAt', v)}
+                ariaLabel="起飛"
               />
             </div>
-            <div>
+            <div className="tp-notes-flight-edit-field tp-notes-flight-edit-full">
               <div className="tp-notes-flight-edit-label">抵達時間</div>
-              <input
-                type="datetime-local"
-                defaultValue={flight.arriveAt}
-                onBlur={(e) => onSaveField('arriveAt', e.target.value)}
+              <NoteDateTimeField
+                value={flight.arriveAt}
+                onChange={(v) => onSaveField('arriveAt', v)}
+                ariaLabel="抵達"
               />
             </div>
             <textarea
-              className="tp-notes-flight-edit-note"
+              className="tp-input-long tp-notes-flight-edit-note"
               defaultValue={flight.note}
               onBlur={(e) => onSaveField('note', e.target.value)}
               placeholder="備註 (座位、訂位編號、艙等)…"
