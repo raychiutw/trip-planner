@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.42] - 2026-05-29
+
+**Polish — PR42：trip-notes 5 section 編輯模式 actions 改 `.tp-btn` 文字 button（prod audit fix）**
+
+User prod 截圖反應編輯模式右側「✓ + 🗑」32px icon-only button 不明顯，看不到確定/取消。改 form 下方 2 文字 button 對齊 DESIGN.md L534「取消 ghost / 確認 destructive 實心」+ `.tp-btn` family 規範。
+
+### Changed (5 sections × 2 files modify = 5 component edit)
+
+| Section | Before | After |
+|---|---|---|
+| Pretrip | 右側 column 2 個 32px icon-btn (✓ + 🗑) | form 底下 footer 2 個 `.tp-btn` 文字 button「刪除」`.tp-btn-destructive` + 「完成」`.tp-btn-primary` |
+| Lodgings | 同上 | 同上 |
+| Reservations | 同上 | 同上 |
+| Emergency | 同上 (grid 1fr auto) | grid 1fr + edit-actions footer |
+| Flights | 同上 | 同上 |
+
+每 section CSS 加 `.tp-notes-{section}-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }` footer row + `.is-editing` grid 拔右側 actions col。
+
+### Tests
+
+- `tests/unit/trip-notes-edit-actions-text-buttons.test.ts` — 21 source-grep regression：
+  - 5 section × 4 assertion: edit-actions CSS class / .tp-btn-primary 完成 / .tp-btn-destructive 刪除 / 不再 render Icon name=check
+  - 1 整體: css/tokens.css `.tp-btn` family 仍存
+
+3032/3032 全綠（前 3011 + 21 新）。
+
+### Why
+
+DESIGN.md L1086+ `.tp-btn` family 是 page content button single source of truth（含 primary / secondary / destructive / ghost / block / lg）。trip-notes 編輯模式繞過 token system 用 32px inline icon-only button → 對 user 不明顯，且與其他 page form 風格不一致。Conform 規範。
+
+### Note
+
+testid 完全保留（`{section}-close-edit-{id}` + `{section}-delete-{id}`），既有 E2E + unit test 全 pass。
+
 ## [2.34.41] - 2026-05-29
 
 **Test — PR41：invitations/revoke + permissions/[id] integration test (PR35 P2 收尾)**

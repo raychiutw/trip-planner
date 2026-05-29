@@ -97,6 +97,13 @@ const SCOPED_STYLES = `
   margin: 6px 8px;
   padding: 12px;
   border: 1px solid transparent;
+  /* v2.34.42 prod audit: 編輯模式拔右側 actions 欄，改 form 底下 .tp-btn 文字 button */
+  grid-template-columns: 24px 1fr;
+}
+/* v2.34.42: edit-mode footer text buttons (取代右側 icon-only) — 對齊 DESIGN.md L534 取消 ghost / 確認 destructive */
+.tp-notes-pretrip-edit-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 12px;
 }
 .tp-notes-pretrip-edit-grid {
   display: grid; grid-template-columns: 1fr 2fr; gap: 8px;
@@ -187,14 +194,14 @@ function SortablePretripRow({ note, isEditing, onEdit, onCloseEdit, onSaveField,
               data-testid={`pretrip-input-content-${note.id}`}
             />
           </div>
-        </div>
-        <div className="tp-notes-pretrip-actions">
-          <button type="button" className="tp-notes-pretrip-icon-btn" onClick={onCloseEdit} aria-label="完成編輯" title="完成" data-testid={`pretrip-close-edit-${note.id}`}>
-            <Icon name="check" />
-          </button>
-          <button type="button" className="tp-notes-pretrip-icon-btn is-danger" onClick={onDelete} aria-label="刪除" title="刪除" data-testid={`pretrip-delete-${note.id}`}>
-            <Icon name="trash" />
-          </button>
+          <div className="tp-notes-pretrip-edit-actions">
+            <button type="button" className="tp-btn tp-btn-destructive" onClick={onDelete} data-testid={`pretrip-delete-${note.id}`}>
+              刪除
+            </button>
+            <button type="button" className="tp-btn tp-btn-primary" onClick={onCloseEdit} data-testid={`pretrip-close-edit-${note.id}`}>
+              完成
+            </button>
+          </div>
         </div>
       </div>
     );

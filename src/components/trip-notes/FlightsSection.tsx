@@ -136,6 +136,12 @@ const SCOPED_STYLES = `
   margin: 6px 8px;
   padding: 12px;
   border: 1px solid transparent;
+  /* v2.34.42 prod audit: 編輯模式拔右側 actions 欄，改 form 底下 .tp-btn 文字 button */
+  grid-template-columns: 24px 1fr;
+}
+.tp-notes-flight-edit-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 12px;
 }
 .tp-notes-flight-edit-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
@@ -290,28 +296,14 @@ function SortableFlightRow({ flight, isEditing, onEdit, onCloseEdit, onSaveField
               placeholder="備註 (座位、訂位編號、艙等)…"
             />
           </div>
-        </div>
-        <div className="tp-notes-flight-actions">
-          <button
-            type="button"
-            className="tp-notes-flight-icon-btn"
-            onClick={onCloseEdit}
-            aria-label="完成編輯"
-            title="完成"
-            data-testid={`flight-close-edit-${flight.id}`}
-          >
-            <Icon name="check" />
-          </button>
-          <button
-            type="button"
-            className="tp-notes-flight-icon-btn is-danger"
-            onClick={onDelete}
-            aria-label="刪除航班"
-            title="刪除"
-            data-testid={`flight-delete-${flight.id}`}
-          >
-            <Icon name="trash" />
-          </button>
+          <div className="tp-notes-flight-edit-actions">
+            <button type="button" className="tp-btn tp-btn-destructive" onClick={onDelete} data-testid={`flight-delete-${flight.id}`}>
+              刪除
+            </button>
+            <button type="button" className="tp-btn tp-btn-primary" onClick={onCloseEdit} data-testid={`flight-close-edit-${flight.id}`}>
+              完成
+            </button>
+          </div>
         </div>
       </div>
     );

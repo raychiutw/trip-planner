@@ -128,7 +128,12 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-md);
   margin: 6px 8px;
   padding: 12px;
-  grid-template-columns: 1fr auto;
+  /* v2.34.42 prod audit: 編輯模式 single col，actions 改 form 底下 .tp-btn */
+  grid-template-columns: 1fr;
+}
+.tp-notes-emergency-edit-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 12px;
 }
 .tp-notes-emergency-edit-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
@@ -258,12 +263,12 @@ function SortableEmergencyRow({ contact, isEditing, onEdit, onCloseEdit, onSaveF
             />
           </div>
         </div>
-        <div className="tp-notes-emergency-actions">
-          <button type="button" className="tp-notes-emergency-icon-btn" onClick={onCloseEdit} aria-label="完成編輯" title="完成" data-testid={`emergency-close-edit-${contact.id}`}>
-            <Icon name="check" />
+        <div className="tp-notes-emergency-edit-actions">
+          <button type="button" className="tp-btn tp-btn-destructive" onClick={onDelete} data-testid={`emergency-delete-${contact.id}`}>
+            刪除
           </button>
-          <button type="button" className="tp-notes-emergency-icon-btn is-danger" onClick={onDelete} aria-label="刪除" title="刪除" data-testid={`emergency-delete-${contact.id}`}>
-            <Icon name="trash" />
+          <button type="button" className="tp-btn tp-btn-primary" onClick={onCloseEdit} data-testid={`emergency-close-edit-${contact.id}`}>
+            完成
           </button>
         </div>
       </div>

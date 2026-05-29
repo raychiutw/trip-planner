@@ -101,6 +101,12 @@ const SCOPED_STYLES = `
   margin: 6px 8px;
   padding: 12px;
   border: 1px solid transparent;
+  /* v2.34.42 prod audit: 編輯模式拔右側 actions 欄，改 form 底下 .tp-btn 文字 button */
+  grid-template-columns: 24px 1fr;
+}
+.tp-notes-lodging-edit-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 12px;
 }
 .tp-notes-lodging-edit-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
@@ -241,28 +247,14 @@ function SortableLodgingRow({ lodging, isEditing, days, onEdit, onCloseEdit, onS
               placeholder="備註 (入住須知、停車、早餐等)…"
             />
           </div>
-        </div>
-        <div className="tp-notes-lodging-actions">
-          <button
-            type="button"
-            className="tp-notes-lodging-icon-btn"
-            onClick={onCloseEdit}
-            aria-label="完成編輯"
-            title="完成"
-            data-testid={`lodging-close-edit-${lodging.id}`}
-          >
-            <Icon name="check" />
-          </button>
-          <button
-            type="button"
-            className="tp-notes-lodging-icon-btn is-danger"
-            onClick={onDelete}
-            aria-label="刪除住宿"
-            title="刪除"
-            data-testid={`lodging-delete-${lodging.id}`}
-          >
-            <Icon name="trash" />
-          </button>
+          <div className="tp-notes-lodging-edit-actions">
+            <button type="button" className="tp-btn tp-btn-destructive" onClick={onDelete} data-testid={`lodging-delete-${lodging.id}`}>
+              刪除
+            </button>
+            <button type="button" className="tp-btn tp-btn-primary" onClick={onCloseEdit} data-testid={`lodging-close-edit-${lodging.id}`}>
+              完成
+            </button>
+          </div>
         </div>
       </div>
     );
