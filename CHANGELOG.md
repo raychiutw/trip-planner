@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.43] - 2026-05-29
+
+**Fix — PR43：trip-notes AI button 只在 section 展開後 render（prod audit fix）**
+
+User 指示「AI 生成要展開後才能選」。原本 AI button（行前須知 `一般` / `住宿` + 緊急聯絡 `AI`）即使 section 在 collapsed 狀態也 render，user 想點 chevron 展開時會誤觸發 AI 生成 long-running job。
+
+### Fixed
+
+- `src/pages/TripNotesPage.tsx:429,469` — AI button 加 `isOpen &&` 條件：
+  - `isOpen && sec.hasAI && sec.key === 'pretrip'` → 2 個 button（一般 + 住宿）
+  - `isOpen && sec.hasAI && sec.key === 'emergency'` → 1 個 button（AI）
+
+### Tests
+
+- `tests/unit/trip-notes-page.test.tsx` 5 個既有 test 更新加 `fireEvent.click(section-head)` 先展開
+- 新 test「v2.34.43 — AI button 在 collapsed section 不 render」鎖新行為
+- 18/18 trip-notes-page suite + 3033/3033 全綠
+
+### Why
+
+防止 user 誤觸發。AI 生成是 long-running job（3-7 分鐘），accidentally 觸發後 section 進 pending state user 困惑。Progressive disclosure UX：先 expand → 看到 section 內容 → 才能 trigger AI。
+
 ## [2.34.42] - 2026-05-29
 
 **Polish — PR42：trip-notes 5 section 編輯模式 actions 改 `.tp-btn` 文字 button（prod audit fix）**

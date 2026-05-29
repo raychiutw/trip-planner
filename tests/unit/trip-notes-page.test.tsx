@@ -133,11 +133,15 @@ describe('TripNotesPage — shell', () => {
     expect(flights.textContent).toContain('建議先填');
   });
 
-  it('AI button 只在 pretrip / emergency 兩 section', async () => {
+  it('AI button 只在 pretrip / emergency 兩 section (v2.34.43: 需展開後才 render)', async () => {
     apiFetchMock.mockResolvedValue({
       flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
     });
     renderPage();
+    // v2.34.43 fix: AI button 只在展開後才 render，先 click section head 展開
+    await waitFor(() => expect(screen.getByTestId('trip-notes-section-head-pretrip')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('trip-notes-section-head-pretrip'));
+    fireEvent.click(screen.getByTestId('trip-notes-section-head-emergency'));
     await waitFor(() => expect(screen.getByTestId('trip-notes-ai-btn-pretrip')).toBeInTheDocument());
     expect(screen.getByTestId('trip-notes-ai-btn-emergency')).toBeInTheDocument();
     expect(screen.queryByTestId('trip-notes-ai-btn-flights')).toBeNull();
@@ -145,11 +149,28 @@ describe('TripNotesPage — shell', () => {
     expect(screen.queryByTestId('trip-notes-ai-btn-reservations')).toBeNull();
   });
 
+  it('v2.34.43 — AI button 在 collapsed section 不 render (避免誤觸發)', async () => {
+    apiFetchMock.mockResolvedValue({
+      flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
+    });
+    renderPage();
+    // Mobile default: 只 flights is-open，pretrip + emergency collapsed
+    await waitFor(() => expect(screen.getByTestId('trip-notes-section-pretrip')).toBeInTheDocument());
+    expect(screen.getByTestId('trip-notes-section-pretrip').className).not.toContain('is-open');
+    expect(screen.getByTestId('trip-notes-section-emergency').className).not.toContain('is-open');
+    // AI buttons 不應 render
+    expect(screen.queryByTestId('trip-notes-ai-btn-pretrip')).toBeNull();
+    expect(screen.queryByTestId('trip-notes-ai-btn-pretrip-lodging')).toBeNull();
+    expect(screen.queryByTestId('trip-notes-ai-btn-emergency')).toBeNull();
+  });
+
   it('PR22 — pretrip section render 2 AI buttons (一般 + 住宿)', async () => {
     apiFetchMock.mockResolvedValue({
       flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
     });
     renderPage();
+    await waitFor(() => expect(screen.getByTestId('trip-notes-section-head-pretrip')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('trip-notes-section-head-pretrip'));
     await waitFor(() => expect(screen.getByTestId('trip-notes-ai-btn-pretrip')).toBeInTheDocument());
     // PR22: lodging-tips trigger button
     expect(screen.getByTestId('trip-notes-ai-btn-pretrip-lodging')).toBeInTheDocument();
@@ -166,6 +187,8 @@ describe('TripNotesPage — shell', () => {
       flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
     });
     renderPage();
+    await waitFor(() => expect(screen.getByTestId('trip-notes-section-head-emergency')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('trip-notes-section-head-emergency'));
     await waitFor(() => expect(screen.getByTestId('trip-notes-ai-btn-emergency')).toBeInTheDocument());
     expect(screen.queryByTestId('trip-notes-ai-btn-emergency-lodging')).toBeNull();
   });
@@ -175,6 +198,8 @@ describe('TripNotesPage — shell', () => {
       flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
     });
     renderPage();
+    await waitFor(() => expect(screen.getByTestId('trip-notes-section-head-pretrip')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('trip-notes-section-head-pretrip'));
     await waitFor(() => expect(screen.getByTestId('trip-notes-ai-btn-pretrip-lodging')).toBeInTheDocument());
     const lodgingBtn = screen.getByTestId('trip-notes-ai-btn-pretrip-lodging');
     expect(lodgingBtn.hasAttribute('disabled')).toBe(true);
@@ -192,6 +217,8 @@ describe('TripNotesPage — shell', () => {
       emergencyContacts: [],
     });
     renderPage();
+    await waitFor(() => expect(screen.getByTestId('trip-notes-section-head-pretrip')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('trip-notes-section-head-pretrip'));
     await waitFor(() => expect(screen.getByTestId('trip-notes-ai-btn-pretrip-lodging')).toBeInTheDocument());
     const lodgingBtn = screen.getByTestId('trip-notes-ai-btn-pretrip-lodging');
     expect(lodgingBtn.hasAttribute('disabled')).toBe(false);
