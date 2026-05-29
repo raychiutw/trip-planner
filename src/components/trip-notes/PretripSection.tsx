@@ -6,7 +6,7 @@
  *
  * ai_generated=1 row 顯「AI 建議」chip + 不可手動改 ai_source（PR9+ AI gen 寫入）
  */
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -152,12 +152,11 @@ interface SortableRowProps {
   note: TripPretripNote;
   isEditing: boolean;
   onEdit: () => void;
-  onCloseEdit: () => void;
   onSaveField: (field: keyof TripPretripNote, value: string) => void;
   onDelete: () => void;
 }
 
-function SortablePretripRow({ note, isEditing, onEdit, onCloseEdit, onSaveField, onDelete }: SortableRowProps) {
+function SortablePretripRow({ note, isEditing, onEdit, onSaveField, onDelete }: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: note.id,
     disabled: isEditing,
@@ -194,9 +193,6 @@ function SortablePretripRow({ note, isEditing, onEdit, onCloseEdit, onSaveField,
           <div className="tp-notes-pretrip-edit-actions">
             <button type="button" className="tp-btn tp-btn-destructive" onClick={onDelete} data-testid={`pretrip-delete-${note.id}`}>
               刪除
-            </button>
-            <button type="button" className="tp-btn tp-btn-primary" onClick={onCloseEdit} data-testid={`pretrip-close-edit-${note.id}`}>
-              完成
             </button>
           </div>
         </div>
@@ -252,38 +248,19 @@ export default function PretripSection({ tripId, items, onChange }: PretripSecti
     }
   }, [tripId, items, onChange, busy]);
 
-  // v2.34.44 PR44 follow-up: stage + batch flush（拔 autosave-on-blur）
-  const pendingRef = useRef<Map<number, Record<string, unknown>>>(new Map());
-
-  const handleSaveField = useCallback((noteId: number, field: keyof TripPretripNote, value: string) => {
+  // v2.34.46 PR46: 還原 autosave-on-blur — 單一 field PATCH with OCC
+  const handleSaveField = useCallback(async (noteId: number, field: keyof TripPretripNote, value: string) => {
     const note = items.find((n) => n.id === noteId);
     if (!note) return;
     if (note[field] === value) return;
-    const map = pendingRef.current.get(noteId) ?? {};
-    map[field as string] = value;
-    pendingRef.current.set(noteId, map);
-  }, [items]);
-
-  const handleCompleteEdit = useCallback(async (noteId: number) => {
-    const pending = pendingRef.current.get(noteId);
-    setEditingId(null);
-    if (!pending || Object.keys(pending).length === 0) return;
-    const note = items.find((n) => n.id === noteId);
-    if (!note) return;
     setError(null);
     try {
-      const snakeBody: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(pending)) {
-        const sk = k.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
-        snakeBody[sk] = v;
-      }
-      snakeBody.expectedVersion = note.version;
+      const snakeField = (field as string).replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
       const updated = await apiFetch<TripPretripNote>(`/trips/${tripId}/notes/pretrip/${noteId}`, {
         method: 'PATCH',
-        body: JSON.stringify(snakeBody),
+        body: JSON.stringify({ [snakeField]: value, expectedVersion: note.version }),
       });
       onChange(items.map((n) => (n.id === noteId ? updated : n)));
-      pendingRef.current.delete(noteId);
     } catch (err) {
       setError(err instanceof Error ? err.message : '儲存失敗');
     }
@@ -341,8 +318,7 @@ export default function PretripSection({ tripId, items, onChange }: PretripSecti
                   note={note}
                   isEditing={editingId === note.id}
                   onEdit={() => setEditingId(note.id)}
-                  onCloseEdit={() => void handleCompleteEdit(note.id)}
-                  onSaveField={(field, value) => handleSaveField(note.id, field, value)}
+                  onSaveField={(field, value) => void handleSaveField(note.id, field, value)}
                   onDelete={() => setPendingDeleteId(note.id)}
                 />
               ))}

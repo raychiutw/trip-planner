@@ -211,7 +211,7 @@ describe('TripNotesPage — shell', () => {
   it('PR24 — 「住宿」AI button enabled when ≥1 lodging exists', async () => {
     apiFetchMock.mockResolvedValue({
       flights: [],
-      lodgings: [{ id: 1, sortOrder: 0, name: 'Test Hotel', address: '', checkInAt: '', checkOutAt: '', bookingNo: '', phone: '', note: '', dayIds: [], version: 0 }],
+      lodgings: [{ id: 1, sortOrder: 0, name: 'Test Hotel', address: '', checkInAt: '', checkOutAt: '', bookingNo: '', phone: '', note: '', version: 0 }],
       reservations: [],
       pretripNotes: [],
       emergencyContacts: [],
