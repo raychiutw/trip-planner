@@ -13,6 +13,7 @@
  * Returns: { ok: true, newStartDate, newEndDate, daysShifted }
  */
 import { hasWritePermission, requireAuth} from '../../../_auth';
+import { logAudit } from '../../../_audit';
 import { AppError } from '../../../_errors';
 import { json } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -83,6 +84,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     newEndDate = newDate;
   }
   await db.batch(stmts);
+
+  // PR32: audit log for bulk shift（recordId=null + 摘要含 deltaDays + 影響天數）
+  await logAudit(db, {
+    tripId,
+    tableName: 'trip_days',
+    recordId: null,
+    action: 'update',
+    changedBy: auth.email,
+    diffJson: JSON.stringify({
+      op: 'shift',
+      deltaDays,
+      daysShifted: existing.length,
+      oldStartDate: day1.date,
+      newStartDate,
+      newEndDate,
+    }),
+  });
 
   return json({
     ok: true,

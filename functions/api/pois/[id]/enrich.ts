@@ -19,6 +19,7 @@
  */
 
 import { hasWritePermission, verifyPoiBelongsToTrip, requireAuth} from '../../_auth';
+import { logAudit } from '../../_audit';
 import { AppError } from '../../_errors';
 import { json, parseIntParam } from '../../_utils';
 import { assertGoogleAvailable } from '../../_maps_lock';
@@ -115,6 +116,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     )
     .bind(rating, lat, lng, address, phone, hours, status, statusReason, now, now, poiId)
     .run();
+
+  // PR32: audit log for POI enrich（tripId 從 query param，可能 null → 用空字串 fallback）
+  await logAudit(db, {
+    tripId: tripId ?? '',
+    tableName: 'pois',
+    recordId: poiId,
+    action: 'update',
+    changedBy: auth.email,
+    diffJson: JSON.stringify({
+      op: 'enrich',
+      placeId: poi.place_id,
+      status,
+      statusReason,
+      hasRating: rating != null,
+      hasCoords: lat != null && lng != null,
+    }),
+  });
 
   return json({
     poi_id: poiId,

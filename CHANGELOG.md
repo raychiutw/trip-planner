@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.32] - 2026-05-29
+
+**Audit log — PR32：4 個 mutation endpoint 補 logAudit（trip mutation 覆蓋率收尾）**
+
+QA loop audit 發現 7 個 trip mutation endpoint 沒 logAudit 對齊 entries/segments/trip-notes 既有 pattern。Filter 後實際 4 個高價值：
+
+### Added
+
+| Endpoint | action | recordId | diffJson |
+|---|---|---|---|
+| `POST /api/trips/:id/days` | `insert` | newDayId | `{day_num, date, day_of_week}` |
+| `POST /api/trips/:id/days/shift` | `update` | `null` | `{op:'shift', deltaDays, daysShifted, oldStartDate, newStartDate, newEndDate}` |
+| `POST /api/trips/:id/recompute-travel` | `update` | `null` | `{op:'recompute-travel', daysProcessed, pairsComputed, pairsSkipped*, sourceBreakdown, modeBreakdown}` |
+| `POST /api/pois/:id/enrich` | `update` | poiId | `{op:'enrich', placeId, status, statusReason, hasRating, hasCoords}` |
+
+### Skipped (with rationale)
+
+- `reports.ts` — `error_reports` table 本身就是 forensics audit
+- `health-check.ts` / `notes/[type]/generate.ts` — trigger 僅 trip_requests INSERT，AI 完成的實際 INSERT 已在 PR26/27 audit
+- OAuth `login.ts` / `verify.ts` / `signup.ts` / `token.ts` / `callback/google.ts` — 用獨立 `logAuthAudit` (auth_audit table)，無 trip 上下文
+- `dev/apps.ts` / `account/connected-apps/[client_id].ts` — 開發者 OAuth app 管理，無 trip 上下文
+- 7 個 internal helper file (`_*.ts`) — 不是 endpoint
+
+### Tests
+
+- `tests/api/audit-log-pr32.integration.test.ts` — 4 個 assertion：
+  - days POST insert audit + recordId
+  - shift +3d audit + op:shift summary
+  - shift delta=0 早 return 不寫 audit
+  - source-grep 4 檔都 import + call logAudit
+
+843/843 全綠（前 839 + 4 新）。
+
+### Why
+
+PR26/27 trip-notes audit 的 follow-up：補齊 trip-scoped mutation 全 write path audit 覆蓋率。Forensics 重建時間軸（user 改了哪些 day / 改了哪些 segment / refresh 了哪些 POI）有 audit_log 才追得到。
+
 ## [2.34.31] - 2026-05-29
 
 **Polish — PR31：repo-wide font-size token cleanup（71/72 處 hardcoded → DESIGN.md token）**

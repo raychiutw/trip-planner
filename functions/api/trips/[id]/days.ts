@@ -1,4 +1,5 @@
 import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../_auth';
+import { logAudit } from '../../_audit';
 import { AppError } from '../../_errors';
 import { json, getAuth } from '../../_utils';
 import type { Env } from '../../_types';
@@ -211,6 +212,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .run();
 
   const newDayId = (insertResult.meta?.last_row_id as number | undefined) ?? null;
+
+  // PR32: audit log for day INSERT
+  if (newDayId) {
+    await logAudit(db, {
+      tripId,
+      tableName: 'trip_days',
+      recordId: newDayId,
+      action: 'insert',
+      changedBy: auth.email,
+      diffJson: JSON.stringify({ day_num: newDayNum, date: newDate, day_of_week: dayOfWeek }),
+    });
+  }
 
   return json({
     day: {
