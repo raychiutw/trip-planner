@@ -19,7 +19,7 @@ const SCOPED_STYLES = `
 .trip-sheet-tab {
   padding: 8px 14px; border: none; background: transparent;
   border-bottom: 2px solid transparent; margin-bottom: -1px;
-  font: inherit; font-size: 13px; font-weight: 500;
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 500;
   color: var(--color-muted); cursor: pointer;
   white-space: nowrap; min-height: var(--spacing-tap-min);
   transition: color 150ms, border-bottom-color 150ms;

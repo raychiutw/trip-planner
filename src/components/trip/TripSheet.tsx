@@ -45,7 +45,7 @@ const SCOPED_STYLES = `
   background: var(--color-background);
   color: var(--color-muted);
   display: grid; place-items: center; cursor: pointer;
-  font: inherit; font-size: 14px;
+  font: inherit; font-size: var(--font-size-footnote);
 }
 .trip-sheet-close:hover { border-color: var(--color-accent); color: var(--color-accent); }
 /* v2.31.81 #4：桌機 ≥1024px sheet 是 always-on 右側 column（3-pane layout 由

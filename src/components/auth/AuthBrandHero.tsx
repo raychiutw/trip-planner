@@ -78,14 +78,14 @@ const HERO_STYLES = `
   position: relative; z-index: 2;
 }
 .tp-bs-display {
-  font-size: 38px; font-weight: 900;
+  font-size: var(--font-size-large-title); font-weight: 900;
   letter-spacing: -0.03em; line-height: 1.1;
   margin: 16px 0 24px;
   position: relative; z-index: 2;
   max-width: 400px;
 }
 .tp-bs-sub {
-  font-size: 15px; line-height: 1.6;
+  font-size: var(--font-size-subheadline); line-height: 1.6;
   opacity: 0.85;
   max-width: 380px;
   margin-bottom: 24px;
@@ -115,11 +115,11 @@ const HERO_STYLES = `
 }
 .tp-bs-feature .tp-feat-body { padding-top: 4px; }
 .tp-bs-feature .tp-feat-title {
-  font-size: 15px; font-weight: 700;
+  font-size: var(--font-size-subheadline); font-weight: 700;
   letter-spacing: -0.005em;
 }
 .tp-bs-feature .tp-feat-desc {
-  font-size: 13px; opacity: 0.78;
+  font-size: var(--font-size-caption); opacity: 0.78;
   margin-top: 2px; line-height: 1.5;
 }
 .tp-bs-footnote {

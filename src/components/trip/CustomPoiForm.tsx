@@ -95,7 +95,7 @@ const SCOPED_STYLES = `
   background: var(--color-destructive-bg);
   color: var(--color-destructive);
   border-radius: var(--radius-md);
-  font-size: 14px;
+  font-size: var(--font-size-footnote);
   text-align: center;
 }
 
@@ -178,7 +178,7 @@ const SCOPED_STYLES = `
   font-weight: 600;
 }
 .tp-custom-poi-typeahead-sub {
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   color: var(--color-muted);
   margin-top: 2px;
 }
@@ -221,7 +221,7 @@ const SCOPED_STYLES = `
   transform: rotate(45deg);
 }
 .tp-custom-poi-hint-text {
-  font-size: 14px;
+  font-size: var(--font-size-footnote);
   color: var(--color-foreground);
   line-height: 1.4;
   cursor: pointer;

@@ -225,7 +225,7 @@ const SCOPED_STYLES = `
   background: var(--color-error-soft, color-mix(in srgb, var(--color-error) 12%, var(--color-background)));
   color: var(--color-error, #b00020);
   border-radius: var(--radius-md, 8px);
-  font-size: 14px;
+  font-size: var(--font-size-footnote);
   margin-bottom: 8px;
 }
 .tp-chat-load-error-text { flex: 1; min-width: 0; }
@@ -234,7 +234,7 @@ const SCOPED_STYLES = `
   background: var(--color-error, #b00020);
   color: var(--color-on-error, #fff);
   border: none; border-radius: var(--radius-sm, 4px);
-  font-size: 13px; font-weight: 500; cursor: pointer;
+  font-size: var(--font-size-footnote); font-weight: 500; cursor: pointer;
 }
 .tp-chat-load-error-retry:hover { opacity: 0.92; }
 
@@ -441,7 +441,7 @@ const SCOPED_STYLES = `
 /* iOS Safari 對 input/textarea font-size < 16px 自動 zoom（讓字 16px 可讀），
    把 viewport 放大造成破版。mobile 一律 16px 防 auto-zoom；desktop 維持 14px 設計感。 */
 @media (max-width: 760px) {
-  .tp-chat-input { font-size: 16px; }
+  .tp-chat-input { font-size: var(--font-size-body); }
 }
 .tp-chat-input:focus {
   outline: none; border-color: var(--color-accent);

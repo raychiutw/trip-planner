@@ -65,7 +65,7 @@ const SCOPED_STYLES = `
   background: var(--color-accent-subtle);
   color: var(--color-accent);
   display: grid; place-items: center;
-  font-weight: 700; font-size: 18px;
+  font-weight: 700; font-size: var(--font-size-headline);
   flex-shrink: 0;
 }
 .tp-app-info { flex: 1; min-width: 0; }

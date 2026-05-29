@@ -228,7 +228,7 @@ const SCOPED_STYLES = `
   background: var(--color-background);
   cursor: pointer;
   display: grid; place-items: center;
-  font-size: 22px; color: var(--color-foreground);
+  font-size: var(--font-size-title2); color: var(--color-foreground);
 }
 .tp-new-flex-step:hover:not(:disabled) {
   background: var(--color-accent-subtle);

@@ -61,7 +61,7 @@ const SCOPED_STYLES = `
   display: grid; place-items: center;
   background: var(--color-secondary); border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
-  cursor: pointer; font-size: 18px; color: var(--color-muted);
+  cursor: pointer; font-size: var(--font-size-headline); color: var(--color-muted);
 }
 .tp-lightbox-iconbtn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); border-color: var(--color-accent-bg); }
 
@@ -86,6 +86,7 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   text-align: center;
 }
+/* v2.34.31 token-cleanup exception: 36px 是裝飾 icon size 非 text；介於 large-title (34) 與 title (28) 之間用 token 都不對。 */
 .tp-lightbox-photo .icon { font-size: 36px; opacity: 0.6; }
 .tp-lightbox-photo .label {
   font-size: var(--font-size-callout); font-weight: 700;
@@ -119,7 +120,7 @@ const SCOPED_STYLES = `
   border: 0; border-radius: var(--radius-full);
   cursor: pointer;
   display: grid; place-items: center;
-  font-size: 22px;
+  font-size: var(--font-size-title2);
   backdrop-filter: blur(8px);
 }
 .tp-lightbox-carousel .nav:hover { background: rgba(0,0,0,0.65); }
@@ -180,7 +181,7 @@ const SCOPED_STYLES = `
   min-height: var(--spacing-tap-min);
 }
 .tp-lightbox-loc:hover { background: var(--color-accent-subtle); }
-.tp-lightbox-loc .ico { color: var(--color-accent); font-size: 16px; margin-top: 2px; }
+.tp-lightbox-loc .ico { color: var(--color-accent); font-size: var(--font-size-body); margin-top: 2px; }
 .tp-lightbox-loc .text { flex: 1; min-width: 0; }
 .tp-lightbox-loc .name { font-size: var(--font-size-callout); font-weight: 700; }
 .tp-lightbox-loc .addr { font-size: var(--font-size-footnote); color: var(--color-muted); margin-top: 2px; }

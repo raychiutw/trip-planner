@@ -159,7 +159,7 @@ const SCOPED_STYLES = `
   outline: 2px solid var(--color-accent); outline-offset: 2px;
 }
 .tp-collab-badge-trigger .tp-collab-badge-caret {
-  font-size: 9px;
+  font-size: var(--font-size-eyebrow);
   opacity: 0.7;
   margin-left: -2px;
 }

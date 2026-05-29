@@ -54,7 +54,7 @@ const SCOPED_STYLES = `
   background: var(--color-accent);
   color: var(--color-accent-foreground);
   display: grid; place-items: center;
-  font-size: 26px; font-weight: 800;
+  font-size: var(--font-size-title); font-weight: 800;
 }
 .tp-account-hero-name {
   font-size: var(--font-size-title2); font-weight: 800;

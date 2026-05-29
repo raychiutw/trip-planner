@@ -127,7 +127,7 @@ const SCOPED_STYLES = `
 .tp-global-map-trip-btn .caret {
   /* QA 2026-04-26 BUG-041/047：12px caret 跟 muted color 太弱，user 看不出
    * 是 dropdown。bump 14 + 改 accent color，視覺重量出來，affordance 清楚 */
-  font-size: 14px; color: var(--color-accent); flex-shrink: 0; font-weight: 700;
+  font-size: var(--font-size-footnote); color: var(--color-accent); flex-shrink: 0; font-weight: 700;
 }
 .tp-global-map-meta {
   font-size: var(--font-size-caption2);
@@ -434,7 +434,7 @@ const SCOPED_STYLES = `
   background: var(--color-background);
   border: 1.5px solid var(--color-line-strong);
   display: grid; place-items: center;
-  font-size: 9px; font-weight: 700;
+  font-size: var(--font-size-eyebrow); font-weight: 700;
   color: var(--color-muted);
   flex-shrink: 0;
 }
@@ -522,7 +522,7 @@ const SCOPED_STYLES = `
   width: 28px; height: 28px;
   border: 0; border-radius: 50%;
   background: transparent; color: var(--color-muted);
-  font-size: 14px; cursor: pointer;
+  font-size: var(--font-size-footnote); cursor: pointer;
   z-index: 1;
 }
 .tp-global-map-mobile-poi-close:hover {

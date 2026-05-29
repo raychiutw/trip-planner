@@ -144,7 +144,7 @@ export const TRIP_DATE_PICKER_STYLES = `
 }
 
 .tp-date-popover .rdp-weekday {
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   font-weight: 600;
   color: var(--color-muted);
 }
