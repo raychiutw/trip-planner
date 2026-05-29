@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.46] - 2026-05-29
+
+**Revert + Drop — PR46：移除旅館 Day 關聯（整套）+ 還原 autosave-on-blur + edit mode 只剩刪除 button**
+
+User feedback：「保留 autosave 按鈕只保留刪除, 程式也要修改, 還有 移除旅館的關聯DAY 包含 table 都移除」。Reverse PR44 + follow-up 改動：
+
+1. **Migration 0075 DROP `trip_lodging_days` table + index** — 旅館不再關聯 day（純資訊頁面用途，不影響 timeline）
+2. Backend `_shared.ts` + `notes.ts` aggregator — 拔 junction batch fetch / `replaceLodgingDayIds` / `loadLodgingDayIds` / `extractDayIds` 函式 + audit `day_ids` payload + response echo
+3. `LodgingsSection.tsx`：拔 `dayIds: number[]` field、`TripContext.days` import、`useNavigate`、`handleNavigateDay`、multi-checkbox UI、read mode day chips、相關 CSS（`tp-notes-lodging-day-checkboxes` / `tp-notes-lodging-day-chk` / `tp-notes-lodging-day-empty`）
+4. **還原 autosave-on-blur** — 5 sections（Lodgings/Flights/Reservations/Pretrip/Emergency）拔 `pendingRef` stage+flush 模式 + `handleCompleteEdit`，改回 v2.33.108 blur 即單 field PATCH with `expectedVersion` OCC
+5. **拔「完成」button** — edit-actions 只剩刪除 button（`tp-btn-destructive`），移除 `tp-btn-primary 完成`、`onCloseEdit` prop、`*-close-edit-N` testid
+6. `TripNotesPage` `TripLodging` interface 拔 `dayIds`
+
+Test 改動：
+- 砍 `notes-aggregator-lodging-day-ids.test.ts`（PR45 junction regression test 不再適用）
+- 改 `migration-0073-trip-notes.test.ts` 既有「junction CASCADE」test → 「junction table 已 DROP + lodging row 獨立」test
+- 改 `notes-sections-coverage.test.tsx` Reservations「Edit blur stage only，完成 click → batch PATCH」→「blur → autosave PATCH 直接觸發」+ 新「完成 button 已移除」test
+- 改 `flights-section.test.tsx` 2 條 stage+flush test → 對應 autosave-on-blur test + 新「完成 button 已移除」test
+- 改 `trip-notes-edit-actions-text-buttons.test.ts` 「JSX 用 tp-btn-primary 完成」test → 「完成 button 已移除」regression test
+- 拔 mock data `dayIds: []` from `trip-notes-page.test.tsx` + e2e `trip-notes.spec.js` fixture
+- 新 `migration-0075-drop-lodging-day-junction.test.ts`（4 條 regression：table 不存在 / index 不存在 / trip_lodgings 仍存在 / SQL 只 DROP）
+
 ## [2.34.45] - 2026-05-29
 
 **Fix — PR45：trip-notes aggregator endpoint 漏 lodging.day_ids（PR44 prod regression hotfix）**

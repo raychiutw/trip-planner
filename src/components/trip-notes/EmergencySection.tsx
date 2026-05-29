@@ -6,7 +6,7 @@
  * Display: kind icon + name + AI 建議 chip + phone tel: button (large tap target)
  * Edit: 6 fields (name / relationship / phone / email / kind / ai_generated readonly)
  */
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -198,12 +198,11 @@ interface SortableRowProps {
   contact: TripEmergencyContact;
   isEditing: boolean;
   onEdit: () => void;
-  onCloseEdit: () => void;
   onSaveField: (field: keyof TripEmergencyContact, value: string) => void;
   onDelete: () => void;
 }
 
-function SortableEmergencyRow({ contact, isEditing, onEdit, onCloseEdit, onSaveField, onDelete }: SortableRowProps) {
+function SortableEmergencyRow({ contact, isEditing, onEdit, onSaveField, onDelete }: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: contact.id,
     disabled: isEditing,
@@ -269,9 +268,6 @@ function SortableEmergencyRow({ contact, isEditing, onEdit, onCloseEdit, onSaveF
         <div className="tp-notes-emergency-edit-actions">
           <button type="button" className="tp-btn tp-btn-destructive" onClick={onDelete} data-testid={`emergency-delete-${contact.id}`}>
             刪除
-          </button>
-          <button type="button" className="tp-btn tp-btn-primary" onClick={onCloseEdit} data-testid={`emergency-close-edit-${contact.id}`}>
-            完成
           </button>
         </div>
       </div>
@@ -343,38 +339,19 @@ export default function EmergencySection({ tripId, items, onChange }: EmergencyS
     }
   }, [tripId, items, onChange, busy]);
 
-  // v2.34.44 PR44 follow-up: stage + batch flush
-  const pendingRef = useRef<Map<number, Record<string, unknown>>>(new Map());
-
-  const handleSaveField = useCallback((contactId: number, field: keyof TripEmergencyContact, value: string) => {
+  // v2.34.46 PR46: 還原 autosave-on-blur — 單一 field PATCH with OCC
+  const handleSaveField = useCallback(async (contactId: number, field: keyof TripEmergencyContact, value: string) => {
     const contact = items.find((c) => c.id === contactId);
     if (!contact) return;
     if (contact[field] === value) return;
-    const map = pendingRef.current.get(contactId) ?? {};
-    map[field as string] = value;
-    pendingRef.current.set(contactId, map);
-  }, [items]);
-
-  const handleCompleteEdit = useCallback(async (contactId: number) => {
-    const pending = pendingRef.current.get(contactId);
-    setEditingId(null);
-    if (!pending || Object.keys(pending).length === 0) return;
-    const contact = items.find((c) => c.id === contactId);
-    if (!contact) return;
     setError(null);
     try {
-      const snakeBody: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(pending)) {
-        const sk = k.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
-        snakeBody[sk] = v;
-      }
-      snakeBody.expectedVersion = contact.version;
+      const snakeField = (field as string).replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
       const updated = await apiFetch<TripEmergencyContact>(`/trips/${tripId}/notes/emergency/${contactId}`, {
         method: 'PATCH',
-        body: JSON.stringify(snakeBody),
+        body: JSON.stringify({ [snakeField]: value, expectedVersion: contact.version }),
       });
       onChange(items.map((c) => (c.id === contactId ? updated : c)));
-      pendingRef.current.delete(contactId);
     } catch (err) {
       setError(err instanceof Error ? err.message : '儲存失敗');
     }
@@ -432,8 +409,7 @@ export default function EmergencySection({ tripId, items, onChange }: EmergencyS
                   contact={contact}
                   isEditing={editingId === contact.id}
                   onEdit={() => setEditingId(contact.id)}
-                  onCloseEdit={() => void handleCompleteEdit(contact.id)}
-                  onSaveField={(field, value) => handleSaveField(contact.id, field, value)}
+                  onSaveField={(field, value) => void handleSaveField(contact.id, field, value)}
                   onDelete={() => setPendingDeleteId(contact.id)}
                 />
               ))}

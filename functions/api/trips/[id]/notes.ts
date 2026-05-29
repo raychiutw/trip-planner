@@ -61,27 +61,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       .all(),
   ]);
 
-  const lodgingRows = (lodgings.results ?? []) as Array<Record<string, unknown> & { id: number }>;
-  let lodgingsWithDayIds: Array<Record<string, unknown>> = lodgingRows;
-  if (lodgingRows.length > 0) {
-    const lodgingIds = lodgingRows.map((r) => r.id);
-    const placeholders = lodgingIds.map(() => '?').join(', ');
-    const { results: junctionRows } = await env.DB
-      .prepare(`SELECT lodging_id, day_id FROM trip_lodging_days WHERE lodging_id IN (${placeholders})`)
-      .bind(...lodgingIds)
-      .all<{ lodging_id: number; day_id: number }>();
-    const byLodgingId = new Map<number, number[]>();
-    for (const j of junctionRows ?? []) {
-      const arr = byLodgingId.get(j.lodging_id) ?? [];
-      arr.push(j.day_id);
-      byLodgingId.set(j.lodging_id, arr);
-    }
-    lodgingsWithDayIds = lodgingRows.map((r) => ({ ...r, day_ids: byLodgingId.get(r.id) ?? [] }));
-  }
-
   return json({
     flights: flights.results ?? [],
-    lodgings: lodgingsWithDayIds,
+    lodgings: lodgings.results ?? [],
     reservations: reservations.results ?? [],
     pretripNotes: pretripNotes.results ?? [],
     emergencyContacts: emergencyContacts.results ?? [],
