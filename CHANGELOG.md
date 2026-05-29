@@ -3,6 +3,61 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.33] - 2026-05-29
+
+**Chore — PR33：24 個 dep minor/patch batch upgrade（6 majors held）**
+
+QA loop audit 發現 30 個 outdated npm packages。一次 batch `npm update` 升 24 個 minor/patch，6 個 major held 之後個別 PR 評估 breaking change。
+
+### Changed
+
+24 minor/patch upgrade（npm update 自動套用 ^semver 內版本）：
+
+| 套件 | 從 | 到 |
+|---|---|---|
+| @cloudflare/workers-types | 4.20260329.1 | 4.20260529.1 |
+| @playwright/test | 1.58.2 | 1.60.0 |
+| @sentry/react | 10.45.0 | 10.55.0 |
+| @sentry/vite-plugin | 5.1.1 | 5.3.0 |
+| @tailwindcss/vite + tailwindcss | 4.2.2 | 4.3.0 |
+| @types/google.maps | 3.64.0 | 3.64.1 |
+| @types/react | 19.2.14 | 19.2.15 |
+| @vitejs/plugin-react | 6.0.1 | 6.0.2 |
+| @vitest/runner + @vitest/snapshot + vitest | 4.1.0 | 4.1.7 |
+| axe-core | 4.11.3 | 4.11.4 |
+| date-fns | 4.2.1 | 4.3.0 |
+| miniflare | 4.20260521.0 | 4.20260526.0 |
+| nodemailer | 8.0.7 | 8.0.9 |
+| oidc-provider | 9.8.2 | 9.8.3 |
+| react + react-dom | 19.2.4 | 19.2.6 |
+| react-router-dom | 7.13.2 | 7.16.0 |
+| vite | 8.0.8 | 8.0.14 |
+| vite-plugin-pwa | 1.2.0 | 1.3.0 |
+| wrangler | 4.94.0 | 4.95.0 |
+
+### Held (major upgrades 需單獨 PR 評估)
+
+| 套件 | 現 | 最新 | 風險 |
+|---|---|---|---|
+| concurrently | 9 | 10 | dev tool, low risk |
+| dotenv | 16 | 17 | config loading, check `.dev.vars` |
+| jsdom | 26 | 29 | 3 major 落差！test env 變化大 |
+| marked | 17 | 18 | markdown rendering, ChatPage/HealthCheck reply |
+| react-day-picker | 9 | 10 | TripDatePicker / TripTimePicker 視覺改 |
+| typescript | 5 | 6 | 全 codebase 影響 |
+
+### Test verification
+
+- `npm test` 3003/3003 全綠
+- `npm run test:api` 843/843 全綠
+- `npx tsc --noEmit` 零錯誤
+- `npx tsc --noEmit -p tsconfig.functions.json` 零錯誤
+- npm audit: 0 vulnerabilities
+
+### Why
+
+維持 dep 新鮮度避免長期累積技術債。Minor/patch 通常 backward-compat 安全。Major 跳級 hold 防 hidden breaking change。
+
 ## [2.34.32] - 2026-05-29
 
 **Audit log — PR32：4 個 mutation endpoint 補 logAudit（trip mutation 覆蓋率收尾）**
