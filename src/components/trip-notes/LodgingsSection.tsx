@@ -130,9 +130,10 @@ interface SortableRowProps {
   onEdit: () => void;
   onSaveField: (field: keyof TripLodging, value: string) => void;
   onDelete: () => void;
+  onClose: () => void;
 }
 
-function SortableLodgingRow({ lodging, isEditing, onEdit, onSaveField, onDelete }: SortableRowProps) {
+function SortableLodgingRow({ lodging, isEditing, onEdit, onSaveField, onDelete, onClose }: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lodging.id,
     disabled: isEditing,
@@ -210,6 +211,9 @@ function SortableLodgingRow({ lodging, isEditing, onEdit, onSaveField, onDelete 
             />
           </div>
           <div className="tp-notes-lodging-edit-actions">
+            <button type="button" className="tp-btn tp-btn-ghost" onClick={onClose} data-testid={`lodging-close-${lodging.id}`}>
+              關閉
+            </button>
             <button type="button" className="tp-btn tp-btn-destructive" onClick={onDelete} data-testid={`lodging-delete-${lodging.id}`}>
               刪除
             </button>
@@ -366,6 +370,7 @@ export default function LodgingsSection({ tripId, items, onChange }: LodgingsSec
                   lodging={lodging}
                   isEditing={editingId === lodging.id}
                   onEdit={() => setEditingId(lodging.id)}
+                  onClose={() => setEditingId(null)}
                   onSaveField={(field, value) => void handleSaveField(lodging.id, field, value)}
                   onDelete={() => setPendingDeleteId(lodging.id)}
                 />
