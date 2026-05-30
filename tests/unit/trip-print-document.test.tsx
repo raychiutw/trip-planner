@@ -78,6 +78,14 @@ describe('TripPrintDocument', () => {
     expect(screen.queryByTestId('print-note-emergency')).toBeNull();
   });
 
+  it('renders each note as a bold title + a separate body (not one run-on line)', () => {
+    const { container } = render(<TripPrintDocument data={full} />);
+    expect(container.querySelector('.tp-print-note-t')).toBeTruthy();
+    expect(container.querySelector('.tp-print-note-b')).toBeTruthy();
+    expect(screen.getByText('證件')).toBeTruthy();      // pretrip title
+    expect(screen.getByText(/國際駕照/)).toBeTruthy();  // pretrip body
+  });
+
   it('shows the 尚無行程 placeholder when 0 days', () => {
     render(<TripPrintDocument data={{ ...full, days: [] }} />);
     expect(screen.getByTestId('print-empty-days')).toBeTruthy();
@@ -104,5 +112,18 @@ describe('print styles — responsive via container query (doc width, not viewpo
     expect(css).toMatch(/@container \(max-width:640px\)/);
     expect(css).not.toMatch(/@media screen and \(max-width:640px\)/);
     expect(css).toMatch(/\.tp-print-ngrid\{grid-template-columns:1fr;\}/); // notes 1-col when narrow
+  });
+
+  it('print chrome is fixed-light (no dark-mode token flip → 關閉 button readable)', () => {
+    const css = readFileSync(join(__dirname, '..', '..', 'src/lib/tripPrintStyles.ts'), 'utf8');
+    expect(css).toMatch(/\.tp-print-btn-ghost\{background:#fff;color:#1d1813/);
+    // toolbar chrome must not use dark-mode-adaptive tokens
+    expect(css).not.toMatch(/\.tp-print-btn-ghost\{background:#fff;color:var\(/);
+  });
+
+  it('note body preserves its own line breaks; mobile body spans full-width left', () => {
+    const css = readFileSync(join(__dirname, '..', '..', 'src/lib/tripPrintStyles.ts'), 'utf8');
+    expect(css).toMatch(/\.tp-print-note-b\{white-space:pre-line/);
+    expect(css).toMatch(/\.tp-print-alt,\.tp-print-note\{grid-column:1 \/ -1;\}/);
   });
 });

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#e6e3dd;font-family:'Inter','Noto Sans TC',system-ui,sans-serif;color:#1d1813;}
+  /* toolbar — always LIGHT (fixed colors), 關閉 readable in dark mode */
+  .tb{position:sticky;top:0;display:flex;align-items:center;gap:8px;background:#faf4ea;border-bottom:1px solid #eadfcf;padding:10px 16px;}
+  .tb .route{font-size:13px;font-weight:600;color:#6f5a47;margin-right:auto;}
+  .btn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;border-radius:8px;padding:8px 14px;border:1px solid transparent;min-height:40px;font-family:inherit;}
+  .btn-p{background:#d97848;color:#fff;}
+  .btn-g{background:#fff;color:#1d1813;border-color:#eadfcf;}
+
+  .sheet{background:#fff;width:794px;max-width:100%;margin:0 auto;padding:22px 18px;font-size:14px;line-height:1.55;container-type:inline-size;}
+  .day-hd{display:flex;align-items:baseline;gap:10px;border-bottom:1.5px solid #1d1813;padding-bottom:4px;margin:14px 0 4px;}
+  .day-no{font-size:15px;font-weight:700;} .day-date{font-size:12px;color:#5c5248;}
+  .star{color:#9a7b32;font-weight:600;white-space:nowrap;}
+  .entry{display:grid;grid-template-columns:80px 1fr 132px;gap:1px 10px;padding:7px 0;border-bottom:1px solid #efe9df;align-items:start;}
+  .t{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;}
+  .title{grid-column:2;font-weight:600;}
+  .alt{grid-column:2;color:#5c5248;font-size:12px;} .note{grid-column:2;color:#5c5248;font-size:12px;}
+  .mv{grid-column:3;grid-row:1;color:#5c5248;font-size:12px;text-align:right;white-space:nowrap;}
+  @container (max-width:640px){
+    .entry{grid-template-columns:80px 1fr;column-gap:8px;}
+    .t{grid-column:1;grid-row:1;} .title{grid-column:2;grid-row:1;}
+    /* 內文往左 — full-width single column */
+    .alt,.note{grid-column:1 / -1;}
+    .mv{grid-column:1 / -1;grid-row:auto;text-align:left;white-space:normal;}
+    .mv::before{content:"↓ ";}
+    .ngrid{grid-template-columns:1fr;}
+  }
+  .notes{margin-top:18px;border-top:2px solid #1d1813;padding-top:10px;}
+  .notes-h{font-size:14px;font-weight:700;letter-spacing:.06em;margin:0 0 8px;}
+  .ngrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;}
+  .nh{font-size:12px;font-weight:700;margin:6px 0 4px;}
+  /* note: title bold + body pre-line (keeps the content's line breaks) */
+  .note-item{margin:0 0 7px;}
+  .note-t{font-weight:600;color:#1d1813;font-size:12px;}
+  .note-b{white-space:pre-line;color:#5c5248;font-size:12px;line-height:1.55;}
+</style></head>
+<body>
+<div class="tb"><span class="route">列印預覽</span><button class="btn btn-p">🖨 列印</button><button class="btn btn-g">關閉</button></div>
+<div class="sheet">
+  <div class="day-hd"><span class="day-no">Day 6</span><span class="day-date">2026-07-07（二）牧志 · 瀨長島</span></div>
+  <div class="entry"><div class="t">07:30</div><div class="title">Naha Shintoshin Hotel <span class="star">★ 4.1</span></div><div class="note">Day 5~6 連住，今日還車，建議大件行李寄放飯店</div><div class="mv">開車 9 分 · 1.9km</div></div>
+  <div class="entry"><div class="t">09:07-10:37</div><div class="title">第一牧志公設市場 <span class="star">★ 4.1</span></div><div class="alt">備選：市場本通り 沖繩特產品店 · マキシ食料品店（牧志市場內）· ローソン 牧志公設市場前店</div><div class="note">1F 海鮮攤可殺價，2F 代煮料理費另計；建議 10 點開門就到比較從容。停車：市場無專用停車場。營業：08:00~22:00（依店家，1F 代煮 L.O. 19:45）</div><div class="mv">開車 32 分 · 13.9km</div></div>
+
+  <div class="notes">
+    <div class="notes-h">行程筆記</div>
+    <div class="ngrid">
+      <div>
+        <div class="nh">📌 行前須知</div>
+        <div class="note-item"><div class="note-t">證件與通訊</div><div class="note-b">- 護照（有效期 6 個月以上）
+- 台灣駕照正本＋日文譯本（監理所 NT00）
+- 信用卡（海外消費免手續費佳）
+- 日本 eSIM 或 WiFi 分享器
+- 飯店訂房確認信</div></div>
+        <div class="note-item"><div class="note-t">貨幣兌換與支付</div><div class="note-b">- 通用貨幣為日圓（JPY），建議出發前在台灣銀行換約 3-5 萬日圓現金
+- 大型商場接受 Visa / Mastercard / JCB
+- 傳統市場、屋台、小餐館仍以現金為主</div></div>
+      </div>
+      <div>
+        <div class="nh">🛏 住宿</div>
+        <div class="note-item"><div class="note-t">沖繩那霸美居飯店 Mercure</div><div class="note-b">7/2–7/3 · 3-3-19 Tsubogawa · 那霸</div></div>
+        <div class="note-item"><div class="note-t">BUZZ RESORT Chatan</div><div class="note-b">7/3–7/4（凌晨 01:04 入住）</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>
