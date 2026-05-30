@@ -54,6 +54,7 @@ const NOTE_SECTIONS = [
     key: 'flights',
     label: '航班',
     icon: 'plane',
+    unit: '段',
     row: (f: PrintFlight) => ({
       title: `${f.airline ?? ''} ${f.flightNo ?? ''}`.trim(),
       body: j(
@@ -67,6 +68,7 @@ const NOTE_SECTIONS = [
     key: 'lodgings',
     label: '住宿',
     icon: 'hotel',
+    unit: '間',
     row: (l: PrintLodging) => ({
       title: l.name ?? '',
       body: j([l.checkInAt, l.checkOutAt].filter(Boolean).join('–'), l.address, l.phone, l.bookingNo, l.note),
@@ -76,6 +78,7 @@ const NOTE_SECTIONS = [
     key: 'reservations',
     label: '預訂',
     icon: 'check-circle',
+    unit: '筆',
     row: (r: PrintReservation) => ({
       title: r.title ?? '',
       body: j(r.reservedAt, r.partySize ? `${r.partySize} 位` : '', r.reservationNo, r.phone, r.note),
@@ -85,12 +88,14 @@ const NOTE_SECTIONS = [
     key: 'pretrip',
     label: '行前須知',
     icon: 'document',
+    unit: '項',
     row: (p: PrintPretripNote) => ({ title: p.title ?? '', body: (p.content ?? '').trim() }),
   },
   {
     key: 'emergency',
     label: '緊急聯絡',
     icon: 'phone',
+    unit: '筆',
     row: (e: PrintEmergencyContact) => ({ title: e.name ?? '', body: j(e.relationship, e.phone, e.email) }),
   },
 ] as const;
@@ -159,7 +164,7 @@ export default function TripPrintDocument({ data }: { data: TripPrintData }) {
           <div className="tp-print-ngrid">
             {visibleNotes.map(({ s, rows }) => (
               <div className="tp-print-nsec" key={s.key} data-testid={`print-note-${s.key}`}>
-                <div className="tp-print-nh"><Icon name={s.icon} /> {s.label}</div>
+                <div className="tp-print-nh"><Icon name={s.icon} /> {s.label}<span className="tp-print-nh-cnt">{rows.length} {s.unit}</span></div>
                 {rows.map((row, i) => {
                   const { title, body } = (s.row as (r: unknown) => { title: string; body: string })(row);
                   if (!title && !body) return null;

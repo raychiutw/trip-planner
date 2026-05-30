@@ -47,14 +47,19 @@ export const PRINT_CSS = `
 .tp-print-mv{grid-column:3;grid-row:1;color:#5c5248;font-size:12px;white-space:nowrap;text-align:right;}
 .tp-print-hotel{display:flex;gap:8px;align-items:baseline;padding:7px 6px;margin-top:2px;font-size:12px;background:#faf6ee;color:#1d1813;}
 .tp-print-hk{font-weight:700;letter-spacing:.05em;white-space:nowrap;}
-.tp-print-notes{margin-top:22px;border-top:2px solid #1d1813;padding-top:12px;break-inside:avoid;}
+.tp-print-notes{margin-top:22px;border-top:2px solid #1d1813;padding-top:12px;}
 .tp-print-notes-h{font-size:14px;font-weight:700;letter-spacing:.08em;margin:0 0 8px;}
-.tp-print-ngrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 26px;}
-.tp-print-nsec{break-inside:avoid;page-break-inside:avoid;}
-.tp-print-nh{font-size:12px;font-weight:700;color:#1d1813;display:flex;align-items:center;gap:5px;margin:6px 0 2px;}
-.tp-print-nh svg{width:13px;height:13px;}
-.tp-print-note-item{margin:0 0 7px;break-inside:avoid;}
-.tp-print-note-t{font-weight:600;color:#1d1813;font-size:12px;}
+/* single-column chapter flow — each section reads as a distinct 章節 */
+.tp-print-ngrid{display:grid;grid-template-columns:1fr;}
+.tp-print-nsec{margin-bottom:4px;}
+/* section = chapter: prominent header + divider line + count badge */
+.tp-print-nh{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;letter-spacing:.03em;color:#1d1813;border-bottom:1.5px solid #1d1813;padding-bottom:4px;margin:14px 0 6px;break-inside:avoid;}
+.tp-print-nh svg{width:15px;height:15px;}
+.tp-print-nh-cnt{margin-left:auto;font-size:11px;font-weight:600;color:#8a7a68;letter-spacing:0;}
+/* block = note item separated by a hairline (last in a chapter has none) */
+.tp-print-note-item{padding:6px 0;border-bottom:1px solid #efe9df;break-inside:avoid;}
+.tp-print-nsec .tp-print-note-item:last-child{border-bottom:none;}
+.tp-print-note-t{font-weight:700;color:#1d1813;font-size:12.5px;margin-bottom:2px;}
 /* pre-line keeps the content's own line breaks (e.g. "- a\n- b" bullets) */
 .tp-print-note-b{white-space:pre-line;color:#5c5248;font-size:12px;line-height:1.55;}
 
@@ -72,7 +77,6 @@ export const PRINT_CSS = `
   .tp-print-alt,.tp-print-note{grid-column:1 / -1;}
   .tp-print-mv{grid-column:1 / -1;grid-row:auto;text-align:left;white-space:normal;}
   .tp-print-mv::before{content:"↓ ";}
-  .tp-print-ngrid{grid-template-columns:1fr;}
 }
 
 @media print {
