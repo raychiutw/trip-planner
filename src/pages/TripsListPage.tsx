@@ -26,6 +26,7 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useNewTrip } from '../contexts/NewTripContext';
+import ImportTripButton from '../components/trips/ImportTripButton';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
 import { EVENT } from '../lib/events';
@@ -942,17 +943,20 @@ export default function TripsListPage() {
         <TitleBar
           title="我的行程"
           actions={
-            <button
-              type="button"
-              className="tp-titlebar-action"
-              onClick={openNewTrip}
-              aria-label="新增行程"
-              title="新增行程"
-              data-testid="trips-list-new-trip-titlebar"
-            >
-              <Icon name="plus" />
-              <span className="tp-titlebar-action-label">新增行程</span>
-            </button>
+            <>
+              <ImportTripButton />
+              <button
+                type="button"
+                className="tp-titlebar-action"
+                onClick={openNewTrip}
+                aria-label="新增行程"
+                title="新增行程"
+                data-testid="trips-list-new-trip-titlebar"
+              >
+                <Icon name="plus" />
+                <span className="tp-titlebar-action-label">新增行程</span>
+              </button>
+            </>
           }
         />
         <div className="tp-trips-inner">
