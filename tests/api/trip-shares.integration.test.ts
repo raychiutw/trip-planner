@@ -299,3 +299,43 @@ describe('rotate guard (PR2 review fix)', () => {
     expect(rot.status).toBe(404); // revoked → cannot rotate
   });
 });
+
+describe('update — edit without new URL (PR-A)', () => {
+  it('edits sections/label/anon on an active link; same token, public GET reflects it', async () => {
+    const { id } = await seedTrip(db, { id: 'update-trip', owner, days: 1 });
+    await db.prepare("INSERT INTO trip_emergency_contacts (trip_id, name, phone) VALUES (?, 'Mom', '0900')").bind(id).run();
+    const created = (await (await createShareFor(id)).json()) as { id: number; token: string };
+
+    // before: emergency default-OFF → not in public payload, owner name shown
+    const before = (await (await callHandler(publicView as never, mockContext({ request: new Request(`https://x/api/share/${created.token}`), env, params: { token: created.token } }))).json()) as { meta: { sharedBy: string }; notes: { emergencyContacts: unknown[] } };
+    expect(before.notes.emergencyContacts).toEqual([]);
+    expect(before.meta.sharedBy).toBe('share-owner');
+
+    const upd = await callHandler(patchShare as never, mockContext({
+      request: jsonRequest(`https://x/api/trips/${id}/shares/${created.id}`, 'PATCH', { action: 'update', visibleSections: ['flights', 'lodgings', 'pretrip', 'emergency'], label: '給爸媽', anonymous: true }),
+      env, auth: mockAuth({ email: owner }), params: { id, shareId: String(created.id) },
+    }));
+    expect(upd.status).toBe(200);
+
+    // after: SAME token now exposes emergency + is anonymous
+    const after = (await (await callHandler(publicView as never, mockContext({ request: new Request(`https://x/api/share/${created.token}`), env, params: { token: created.token } }))).json()) as { meta: { sharedBy: string }; notes: { emergencyContacts: unknown[] } };
+    expect(after.notes.emergencyContacts.length).toBe(1);
+    expect(after.meta.sharedBy).toBe('');
+    // list reflects label + anonymous
+    const list = (await (await callHandler(listShares as never, mockContext({ request: new Request(`https://x/api/trips/${id}/shares`), env, auth: mockAuth({ email: owner }), params: { id } }))).json()) as { shares: { id: number; label: string; anonymous: number }[] };
+    const row = list.shares.find((s) => s.id === created.id);
+    expect(row?.label).toBe('給爸媽');
+    expect(row?.anonymous).toBe(1);
+  });
+
+  it('cannot update a revoked link (404)', async () => {
+    const { id } = await seedTrip(db, { id: 'update-revoked', owner, days: 1 });
+    const created = (await (await createShareFor(id)).json()) as { id: number };
+    await callHandler(patchShare as never, mockContext({ request: jsonRequest(`https://x/api/trips/${id}/shares/${created.id}`, 'PATCH', { action: 'revoke' }), env, auth: mockAuth({ email: owner }), params: { id, shareId: String(created.id) } }));
+    const upd = await callHandler(patchShare as never, mockContext({
+      request: jsonRequest(`https://x/api/trips/${id}/shares/${created.id}`, 'PATCH', { action: 'update', label: 'x' }),
+      env, auth: mockAuth({ email: owner }), params: { id, shareId: String(created.id) },
+    }));
+    expect(upd.status).toBe(404);
+  });
+});
