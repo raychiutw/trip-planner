@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.41.0] - 2026-05-31
+
+### Added
+- **分享面板 nice-to-haves（PR-A）** — 分享管理面板升級：
+  - **連結命名**（A1）：建立時可給連結取名（給爸媽 / 旅伴），卡片顯示名稱。
+  - **編輯連結**（A2）：使用中連結可「編輯」改公開區塊 / 期限 / 名稱 / 匿名 **而不必換網址**（同一連結即時生效；後端 PATCH `update`，僅作用於 active 連結，revoked/expired → 404）。
+  - **自訂到期日**（A3）：期限除了 永久/24時/7天/30天，新增「自訂」用 `TripDatePicker` 選日期。
+  - **已關閉連結區**（A4）：關閉的連結移到可收合的「已關閉的連結」區，保留瀏覽統計，可查看或刪除。
+  - **QR code + 原生分享**（B2）：新連結 banner 可顯示 QR（**本機產生**，token 不送任何第三方）+ 手機系統分享單（`navigator.share`）。
+
 ## [2.40.0] - 2026-05-31
 
 ### Added

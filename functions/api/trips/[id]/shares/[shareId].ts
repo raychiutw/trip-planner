@@ -1,19 +1,20 @@
 /**
- * /api/trips/:id/shares/:shareId — manage a single share link (v2.39.0 + v2.40.0 PR2).
- *   PATCH { action: 'revoke' }  → close the link (keeps row + view_count analytics).
- *   PATCH { action: 'rotate' }  → issue a NEW token (returns it ONCE); old URL 404s.
- *   DELETE                      → remove the link entirely.
+ * /api/trips/:id/shares/:shareId — manage a single share link (v2.39.0 + v2.40.x).
+ *   PATCH { action: 'revoke' }                          → close the link (keeps analytics).
+ *   PATCH { action: 'rotate' }                          → NEW token (returned ONCE); old URL 404s.
+ *   PATCH { action: 'update', visibleSections?, label?, → edit visible sections / label /
+ *           expiresAt?, anonymous? }                       expiry / anonymous WITHOUT a new URL.
+ *   DELETE                                              → remove the link entirely.
  *
- * (Per-link section/expiry config is set at CREATE; to change, rotate or create a new
- * link — matches the signed-off panel mockup.)
- *
- * IDOR defence (design S6): trip_shares.id is a GLOBAL autoincrement int, so every op
- * binds `AND trip_id = ?` + requires affected-rows = 1, else 404. Auth re-checked live.
+ * rotate + update only affect ACTIVE links (revoked_at IS NULL AND not expired) — a
+ * revoked link is never silently resurrected and an expired one can't be edited/rotated
+ * (create a fresh link). IDOR defence (S6): every op binds `AND trip_id = ?` + affected-
+ * rows = 1, else 404. Auth re-checked live.
  */
 import { requireAuth, hasWritePermission } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { json } from '../../../_utils';
-import { generateShareToken, hashToken } from '../../../_share';
+import { generateShareToken, hashToken, sanitizeVisibleSections, validateExpiresAt } from '../../../_share';
 import type { Env } from '../../../_types';
 
 async function requireTripWrite(context: Parameters<PagesFunction<Env>>[0], tripId: string) {
@@ -58,6 +59,39 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
         if (attempt >= 2 || !/UNIQUE/i.test(String(e))) throw e;
       }
     }
+  }
+
+  if (body.action === 'update') {
+    // Edit visible sections / label / expiry / anonymous WITHOUT issuing a new URL.
+    // Only ACTIVE links (consistent with rotate); column names are hardcoded literals
+    // (no injection), values bound + sanitised.
+    const now = Date.now();
+    const sets: string[] = [];
+    const binds: unknown[] = [];
+    if (Array.isArray(body.visibleSections)) {
+      sets.push('visible_sections = ?');
+      binds.push(JSON.stringify(sanitizeVisibleSections(body.visibleSections)));
+    }
+    if (typeof body.label === 'string') {
+      sets.push('label = ?');
+      binds.push(body.label.trim().slice(0, 80));
+    }
+    if ('expiresAt' in body) {
+      sets.push('expires_at = ?');
+      binds.push(validateExpiresAt(body.expiresAt)); // null clears (= never)
+    }
+    if (typeof body.anonymous === 'boolean') {
+      sets.push('anonymous = ?');
+      binds.push(body.anonymous ? 1 : 0);
+    }
+    if (sets.length === 0) throw new AppError('DATA_VALIDATION');
+    binds.push(shareId, id, now);
+    const res = await db
+      .prepare(`UPDATE trip_shares SET ${sets.join(', ')} WHERE id = ? AND trip_id = ? AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)`)
+      .bind(...binds)
+      .run();
+    if (!res.meta.changes) throw new AppError('DATA_NOT_FOUND'); // wrong trip / revoked / expired
+    return json({ ok: true, updated: true });
   }
 
   throw new AppError('DATA_VALIDATION');
