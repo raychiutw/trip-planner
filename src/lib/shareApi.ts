@@ -57,6 +57,14 @@ export async function revokeShare(tripId: string, shareId: number): Promise<void
   });
 }
 
+/** Edit an active link's visible sections / label / expiry / anonymous WITHOUT a new URL. */
+export async function updateShare(tripId: string, shareId: number, patch: ShareCreateOpts): Promise<void> {
+  await apiFetch(`/trips/${encodeURIComponent(tripId)}/shares/${shareId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action: 'update', ...patch }),
+  });
+}
+
 /** Rotate the token — returns a NEW one-time URL; the old link immediately 404s. */
 export async function rotateShare(tripId: string, shareId: number): Promise<{ token: string; url: string }> {
   return apiFetch<{ token: string; url: string }>(`/trips/${encodeURIComponent(tripId)}/shares/${shareId}`, {
