@@ -47,10 +47,14 @@ describe('POST /api/trips/import — endpoint', () => {
     expect(ENDPOINT).toContain("'imported'");
     expect(ENDPOINT).toMatch(/owner_user_id/);
   });
-  it('always CREATES pois (never find-or-create / mutates the shared catalog)', () => {
-    expect(ENDPOINT).toMatch(/INSERT INTO pois/);
-    expect(ENDPOINT).not.toMatch(/findOrCreatePoi/);
-    expect(ENDPOINT).not.toMatch(/UPDATE pois/);
+  it('find-or-creates pois by UNIQUE(name,type) and NEVER mutates an existing one', () => {
+    expect(ENDPOINT).toMatch(/async function resolvePoi/);
+    expect(ENDPOINT).toMatch(/SELECT id FROM pois WHERE name = \? AND type = \?/);
+    expect(ENDPOINT).toMatch(/INSERT OR IGNORE INTO pois/);
+    expect(ENDPOINT).not.toMatch(/UPDATE pois/); // never poison a shared catalog row
+  });
+  it('dedupes resolved poi_ids per entry (UNIQUE(entry_id, poi_id))', () => {
+    expect(ENDPOINT).toMatch(/seenPoi/);
   });
   it('rolls back (connect-root delete) on any failure', () => {
     expect(ENDPOINT).toMatch(/async function rollback/);
