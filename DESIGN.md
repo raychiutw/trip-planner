@@ -467,6 +467,20 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 
 **Stop Type Color exception**：emergency contacts kind icon 用 semantic 色（police/medical 用 destructive red、embassy 用 accent、hotel 用 success green）— 屬「semantic encoding 例外」（同 priority dot 邏輯）。
 
+### Trip Print Document (`tp-print-*`)
+
+Route `/trip/:tripId/print`（`TripPrintPage` + `TripPrintDocument`）。**資料驅動的列印文件**，取代舊 `usePrintMode`（在互動 DOM 掛 `body.print-mode` → 繼承收合）。
+
+Mockup sign-off：`docs/design-sessions/2026-05-30-trip-print-document.html`（Variant A「緊湊表格式」，2026-05-30）。設計文件：office-hours `ray-master-design-20260530-101432.md`。
+
+- **原則**：從 data render，零互動、零收合、全展開、文字優先 + 少量圖示。A4 寬、**多頁**（`break-inside: avoid` 包每日區塊 + 每個 notes 區塊，不是「一頁式」）。
+- **顏色**：列印文件本體**純黑白文字**（ink `#1d1813` / muted `#5c5248` / hairline `#cfc7ba`），accent **只**用在 on-screen 工具列（列印/關閉 CTA），不進文件 body。★ rating 用暖金 `#9a7b32`（list meta 既有慣例）。
+- **版面**：Header（行程名 `title || name` + 日期區間 + 目的地）；每日一個 compact table（時間 / 行程+★+備選+note / 交通右對齊）；hotel 列淺底；行程筆記 5 區塊 2-col grid（航班/住宿/預訂/行前須知/緊急聯絡，icon 用 plane/hotel/check-circle/document/phone）。
+- **Empty states**：0 天 → header + 「尚無行程」placeholder；空的 notes 區塊整段省略（不印空標題）；無 segment → 不印交通列。
+- **入口**：TripsListPage EmbeddedActionMenu「列印」→ navigate `/trip/:id/print`（`usePrintMode` 舊路徑 PR1 共存，soak 後再拔）。
+- **@media print**：隱藏工具列、`@page { size:A4; margin:14mm }`、文件去 shadow/padding。
+- **匯出同步**（PR2，未做）：PDF 改 render 此文件（離屏附著容器），不再吃 `#tripContent`。
+
 ## Modal Dialogs
 
 ### Principle
