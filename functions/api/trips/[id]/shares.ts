@@ -38,6 +38,8 @@ async function requireTripWrite(context: Parameters<PagesFunction<Env>>[0], trip
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
   const db = context.env.DB;
+  // Intentional: listing/managing share links is a WRITE-tier capability — a viewer
+  // collaborator (read-only) cannot see or manage links. Do NOT relax to hasPermission.
   await requireTripWrite(context, id);
 
   // Includes revoked-but-not-deleted rows so retained view_count analytics stay reachable.
@@ -85,7 +87,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         expiresAt,
       });
     } catch (e) {
-      if (attempt >= 2) throw e;
+      // Only the astronomically-rare UNIQUE(token_hash) collision is retriable;
+      // any other failure (FK gone, transient D1) must surface, not silently retry.
+      if (attempt >= 2 || !/UNIQUE/i.test(String(e))) throw e;
     }
   }
 };
