@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.42.0] - 2026-05-31
+
+### Added
+- **分享連結預覽卡（PR-B / B1）** — 把 `/s/:token` 貼到 LINE/Messenger/Slack 等，連結預覽現在顯示**該行程**的名稱 + 日期 + 目的地（不再是通用標題）。新 Pages Function `functions/s/[token].ts` 鏡射 `functions/trip/[[path]].ts`：取 SPA shell 用 HTMLRewriter 注入 og/twitter meta。只查永遠公開的欄位（不碰 owner PII / 筆記）；token 無效/已關閉/已過期或任何錯誤 → 回原始 shell（由 React 顯示「連結已失效」），永不讓頁面壞掉。
+
+### Security / Hardening (PR-C)
+- **clone 加 per-IP pre-gate**（C2）：複製端點除了 per-user（10/hr）再加 per-IP（30/hr），擋單一 IP 換帳號放大 D1 subrequest。
+- **過期分享連結每日清理**（C1）：新 cron workflow `share-cleanup.yml` 每日刪除過 `expires_at + 30 天 grace` 的 `trip_shares`（token hash 不無限長）。
+- **孤兒複製行程清理**（C3）：同 cron 清掉 `data_source='cloned'` 且無 owner permission 的孤兒行程（失敗 clone rollback 殘留），`NOT EXISTS` + 1 天 grace，FK cascade 清子表。
+- **分享卡片建立日期改 parseUtcDate**（C4）：卡片「建立於 M/D」改用 `parseUtcDate` 解 D1 naive UTC 再顯本地日，避免近午夜 off-by-TZ。
+
 ## [2.41.0] - 2026-05-31
 
 ### Added

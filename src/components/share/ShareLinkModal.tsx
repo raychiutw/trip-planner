@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Icon from '../shared/Icon';
 import { TripDatePicker } from '../TripDatePicker';
 import { shareQrDataUrl } from '../../lib/shareQr';
+import { parseUtcDate } from '../../lib/parseUtcDate';
 import {
   listShares,
   createShare,
@@ -64,6 +65,12 @@ function expiryInfo(expiresAt: number | null): { text: string; expired: boolean 
   return { text: expired ? `已於 ${md} 到期` : `${md} 到期`, expired };
 }
 const todayStr = () => new Date().toISOString().slice(0, 10);
+// D1 createdAt is a naive UTC datetime — parse as UTC (parseUtcDate) then show local M/D
+// so the date isn't off-by-TZ near midnight (v2.31.7 pitfall).
+function fmtCreated(iso: string | null | undefined): string {
+  const d = parseUtcDate(iso);
+  return d ? `${d.getMonth() + 1}/${d.getDate()}` : '';
+}
 const STYLE = `
 .tp-sharemodal-backdrop{position:fixed;inset:0;z-index:var(--z-modal,1000);background:rgba(42,31,24,.45);display:flex;align-items:flex-start;justify-content:center;padding:18px;overflow-y:auto;}
 .tp-sharemodal{background:#fffbf5;color:#1d1813;width:100%;max-width:460px;border-radius:14px;box-shadow:0 16px 48px rgba(42,31,24,.3);padding:20px;font-family:inherit;margin:auto;}
@@ -370,7 +377,7 @@ export default function ShareLinkModal({ tripId, open, onClose }: { tripId: stri
           return (
             <div className={`tp-sharemodal-card${isEditing ? ' editing' : ''}`} key={l.id} data-testid="share-link-row">
               <div className="tp-sharemodal-cardtop">
-                {l.label ? <span className="tp-sharemodal-cardname">{l.label}</span> : <span className="tp-sharemodal-cardmeta">建立於 {(l.createdAt ?? '').slice(5, 10).replace('-', '/')}</span>}
+                {l.label ? <span className="tp-sharemodal-cardname">{l.label}</span> : <span className="tp-sharemodal-cardmeta">建立於 {fmtCreated(l.createdAt)}</span>}
                 {l.anonymous === 1 && <span className="tp-sharemodal-badge anon">匿名</span>}
                 {exp.expired && <span className="tp-sharemodal-badge expired">已過期</span>}
                 <span className="tp-sharemodal-views">{l.viewCount} 次瀏覽</span>
@@ -450,7 +457,7 @@ export default function ShareLinkModal({ tripId, open, onClose }: { tripId: stri
               revoked.map((l) => (
                 <div className="tp-sharemodal-card revoked" key={l.id} data-testid="share-revoked-row">
                   <div className="tp-sharemodal-cardtop">
-                    <span className="tp-sharemodal-cardmeta">{l.label || `建立於 ${(l.createdAt ?? '').slice(5, 10).replace('-', '/')}`} · 已關閉</span>
+                    <span className="tp-sharemodal-cardmeta">{l.label || `建立於 ${fmtCreated(l.createdAt)}`} · 已關閉</span>
                     <span className="tp-sharemodal-views">{l.viewCount} 次瀏覽</span>
                   </div>
                   <div className="tp-sharemodal-acts">

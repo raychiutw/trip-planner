@@ -201,4 +201,7 @@ export const RATE_LIMITS = {
   // subrequests (resolvePoi loop + chunked inserts); cap repetition on top of the
   // absolute MAX_TRIPS_PER_USER. 10/hr is generous for humans, blocks loop abuse.
   CLONE_PER_USER: { maxAttempts: 10, windowMs: 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
+  // v2.42.0: clone per-IP pre-gate (defence-in-depth on top of per-user) — blocks a
+  // single IP cycling throwaway accounts to amplify clone subrequests. 30/hr/IP.
+  CLONE_PER_IP: { maxAttempts: 30, windowMs: 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
 } as const;
