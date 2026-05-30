@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.38.7] - 2026-05-30
+
+### Fixed
+- **D1 migration 部署 workflow 修復** — 自 2026-05-25 起每次 push 到 master 的「Deploy — D1 migrations」workflow 都失敗（Telegram 一直報錯）。Root cause：v2.33.89（#778）把 prod D1 binding 移到 `[[env.production.d1_databases]]` 修 prod 登入時，漏改 migration 指令 → `wrangler d1 migrations apply trip-planner-db --remote` 缺 `--env production` 找不到 binding。修法是補上 `--env production`。同時對帳 prod `d1_migrations` 追蹤表：0072–0075 的 schema 早已手動套用但未登記，補登記避免修好後 workflow 把這 4 個當 pending 重跑（0074 非冪等，會損毀 `trip_lodgings`）。
+
 ## [2.38.6] - 2026-05-30
 
 ### Changed
