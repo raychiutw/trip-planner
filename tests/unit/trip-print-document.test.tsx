@@ -84,6 +84,10 @@ describe('TripPrintDocument', () => {
     expect(container.querySelector('.tp-print-note-b')).toBeTruthy();
     expect(screen.getByText('證件')).toBeTruthy();      // pretrip title
     expect(screen.getByText(/國際駕照/)).toBeTruthy();  // pretrip body
+    // chapter header shows a count badge (e.g. "1 項" for pretrip)
+    const cnt = container.querySelector('.tp-print-nh-cnt');
+    expect(cnt).toBeTruthy();
+    expect(cnt!.textContent).toMatch(/\d+\s*(段|項|間|筆)/);
   });
 
   it('shows the 尚無行程 placeholder when 0 days', () => {
@@ -111,7 +115,15 @@ describe('print styles — responsive via container query (doc width, not viewpo
     expect(css).toMatch(/container-type:inline-size/);
     expect(css).toMatch(/@container \(max-width:640px\)/);
     expect(css).not.toMatch(/@media screen and \(max-width:640px\)/);
-    expect(css).toMatch(/\.tp-print-ngrid\{grid-template-columns:1fr;\}/); // notes 1-col when narrow
+    expect(css).toMatch(/\.tp-print-ngrid\{display:grid;grid-template-columns:1fr;\}/); // notes single-column chapter flow
+  });
+
+  it('notes are single-column chapters: divider header + count badge + block hairlines', () => {
+    const css = readFileSync(join(__dirname, '..', '..', 'src/lib/tripPrintStyles.ts'), 'utf8');
+    expect(css).toMatch(/\.tp-print-nh\{[^}]*border-bottom:1\.5px solid #1d1813/); // chapter divider
+    expect(css).toMatch(/\.tp-print-nh-cnt\{/); // count badge
+    expect(css).toMatch(/\.tp-print-note-item\{padding:6px 0;border-bottom:1px solid/); // block separator
+    expect(css).toMatch(/\.tp-print-note-item:last-child\{border-bottom:none;\}/);
   });
 
   it('print chrome is fixed-light (no dark-mode token flip → 關閉 button readable)', () => {

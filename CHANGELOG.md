@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.38.6] - 2026-05-30
+
+### Changed
+- **列印頁行程筆記章節化** — 5 個區塊（航班/住宿/預訂/行前須知/緊急聯絡）改成單欄「章節」呈現：每章節有明顯標題、數量（如「5 項」）與分隔線，章節內每一筆之間用細線分隔、標題加粗。長長的行前須知不再擠成一片，一眼看得出層次。
+
 ## [2.38.5] - 2026-05-30
 
 ### Fixed

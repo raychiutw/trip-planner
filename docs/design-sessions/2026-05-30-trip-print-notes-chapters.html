@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#e6e3dd;font-family:'Inter','Noto Sans TC',system-ui,sans-serif;color:#1d1813;}
+  .wrap{max-width:430px;margin:0 auto;padding:8px;}
+  .vlabel{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8a7a68;margin:18px 6px 6px;}
+  .sheet{background:#fff;padding:20px 18px;font-size:14px;line-height:1.55;border-radius:4px;}
+  .notes-h{font-size:14px;font-weight:700;letter-spacing:.06em;margin:0 0 10px;border-top:2px solid #1d1813;padding-top:8px;}
+
+  /* ===== Variant A: 單欄章節流 ===== */
+  .A .chapter{margin:14px 0 0;}
+  .A .ch-hd{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;letter-spacing:.03em;
+    border-bottom:1.5px solid #1d1813;padding-bottom:4px;margin-bottom:6px;}
+  .A .ch-hd svg{width:15px;height:15px;}
+  .A .ch-hd .cnt{margin-left:auto;font-size:11px;font-weight:600;color:#8a7a68;}
+  .A .block{padding:6px 0;border-bottom:1px solid #efe9df;}
+  .A .block:last-child{border-bottom:none;}
+  .A .b-t{font-weight:700;color:#1d1813;font-size:12.5px;margin-bottom:2px;}
+  .A .b-b{white-space:pre-line;color:#5c5248;font-size:12px;line-height:1.55;}
+
+  /* ===== Variant B: 雙欄強化（手機自動 1 欄）===== */
+  .B .ngrid{display:grid;grid-template-columns:1fr 1fr;gap:0 22px;container-type:inline-size;}
+  @container (max-width:560px){ .B .ngrid{grid-template-columns:1fr;} }
+  .B .chapter{break-inside:avoid;margin-bottom:8px;}
+  .B .ch-hd{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;
+    color:#b85c2e;letter-spacing:.04em;margin:8px 0 4px;}
+  .B .ch-hd svg{width:13px;height:13px;}
+  .B .block{padding:4px 0 4px 8px;border-left:2px solid #eadfcf;margin-bottom:5px;}
+  .B .b-t{font-weight:700;color:#1d1813;font-size:12px;}
+  .B .b-b{white-space:pre-line;color:#5c5248;font-size:12px;line-height:1.5;}
+</style></head>
+<body>
+<div class="wrap">
+
+  <div class="vlabel">Variant A — 單欄章節流（章節分隔線 + 區塊 hairline）</div>
+  <div class="sheet A">
+    <div class="notes-h">行程筆記</div>
+    <div class="chapter">
+      <div class="ch-hd"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg> 行前須知 <span class="cnt">5 項</span></div>
+      <div class="block"><div class="b-t">證件與通訊</div><div class="b-b">- 護照（有效期 6 個月以上）
+- 台灣駕照正本＋日文譯本（監理所 NT00）
+- 信用卡（海外消費免手續費佳）
+- 日本 eSIM 或 WiFi 分享器</div></div>
+      <div class="block"><div class="b-t">貨幣兌換與支付</div><div class="b-b">- 建議出發前換約 3-5 萬日圓現金
+- 大型商場接受 Visa / Mastercard / JCB
+- 傳統市場、屋台、小餐館仍以現金為主</div></div>
+      <div class="block"><div class="b-t">插頭與電壓</div><div class="b-b">- 日本插座 A 型，與台灣相容，免轉接頭
+- 電壓 100V / 60Hz</div></div>
+    </div>
+    <div class="chapter">
+      <div class="ch-hd"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18v-7h18v7h-2v-2H5v2zm2-9V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2z"/></svg> 住宿 <span class="cnt">3 間</span></div>
+      <div class="block"><div class="b-t">沖繩那霸美居飯店 Mercure</div><div class="b-b">7/2–7/3 · 3-3-19 Tsubogawa · 那霸</div></div>
+      <div class="block"><div class="b-t">BUZZ RESORT Chatan</div><div class="b-b">7/3–7/4（凌晨 01:04 入住）</div></div>
+    </div>
+  </div>
+
+  <div class="vlabel">Variant B — 雙欄、章節用 accent 色標 + 左側 tick（手機自動收 1 欄）</div>
+  <div class="sheet B">
+    <div class="notes-h">行程筆記</div>
+    <div class="ngrid">
+      <div class="chapter">
+        <div class="ch-hd"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg> 行前須知</div>
+        <div class="block"><div class="b-t">證件與通訊</div><div class="b-b">- 護照（有效期 6 個月以上）
+- 駕照正本＋日文譯本
+- 信用卡 · eSIM/WiFi</div></div>
+        <div class="block"><div class="b-t">貨幣兌換與支付</div><div class="b-b">- 換約 3-5 萬日圓現金
+- 商場收卡、市場收現金</div></div>
+        <div class="block"><div class="b-t">插頭與電壓</div><div class="b-b">- A 型插座，免轉接頭 · 100V</div></div>
+      </div>
+      <div class="chapter">
+        <div class="ch-hd"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18v-7h18v7h-2v-2H5v2zm2-9V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2z"/></svg> 住宿</div>
+        <div class="block"><div class="b-t">沖繩那霸美居飯店 Mercure</div><div class="b-b">7/2–7/3 · 那霸</div></div>
+        <div class="block"><div class="b-t">BUZZ RESORT Chatan</div><div class="b-b">7/3–7/4</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body></html>
