@@ -479,6 +479,7 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-trip-print-document.html`（V
 - **Empty states**：0 天 → header + 「尚無行程」placeholder；空的 notes 區塊整段省略（不印空標題）；無 segment → 不印交通列。
 - **入口**：TripsListPage EmbeddedActionMenu「列印」→ navigate `/trip/:id/print`（`usePrintMode` 舊路徑 PR1 共存，soak 後再拔）。
 - **@media print**：隱藏工具列、`@page { size:A4; margin:14mm }`、文件去 shadow/padding。
+- **RWD（v2.38.3）**：entry 不是 `<table>` 是 responsive div-grid — `≥640px` = 3 欄（時間/行程/交通），`@media screen and (max-width:640px)` 手機**直式堆疊**（時間+標題一行、備選/備註/交通↓ 在下），notes 2 欄 → 1 欄。`@media screen` 不影響實際列印/PDF（A4 寬 → 維持 3 欄表格）。Mockup：`docs/design-sessions/2026-05-30-trip-print-rwd.html`。
 
 ### Trip Export（v2.37.0 PR2）
 
