@@ -398,6 +398,15 @@ async function handleAuth(
     return context.next();
   }
 
+  // 公開讀取：GET /api/share/:token — 無登入分享頁（v2.39.0）。token 是不可猜 secret
+  // （CSPRNG ≥192-bit，DB 只存 SHA-256 hash），端點自管 per-IP rate-limit + default-deny
+  // 區塊過濾 + 統一 404（無 enumeration oracle）+ no-store/no-referrer/frame-DENY headers。
+  // 只 bypass GET：管理端點 GET/POST /api/trips/:id/shares 與 clone (POST) 仍要求 auth。
+  if (request.method === 'GET' && url.pathname.startsWith('/api/share/')) {
+    (context.data as Record<string, unknown>).auth = null;
+    return context.next();
+  }
+
   // V2 OAuth — sole auth path (CF Access blocks below are kept transitional during cutover).
   //
   // Order: try V2 session cookie first (browser users), then V2 Bearer token (service

@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.39.0] - 2026-05-30
+
+### Added
+- **無登入分享行程頁（PR1：公開檢視核心）** — 新增可分享的公開連結：行程擁有者（與共編者）在列印頁按「分享連結」建立一個**不可猜的**公開網址 `/s/:token`，對方**不用登入**就能用唯讀的列印文件版面看行程，並可列印／存 PDF。版面為簽核的「分享封面」（terracotta hero「由 X 分享給你」+ 操作列）。預設公開行程、航班、住宿、行前須知；**緊急聯絡與預訂預設不公開**。連結可隨時「關閉分享」立即失效。
+  - 安全（公開無登入端點）：token 用 CSPRNG（≥192-bit），DB 只存 SHA-256 hash（外洩不洩 token）；區塊過濾 **default-deny**（關閉的筆記區塊根本不查表，非前端隱藏）；找不到／已關閉／已過期一律回相同 404（無 enumeration oracle）；公開 payload 不含 owner email/user_id（只露 display_name）；per-IP rate-limit + `no-store`/`no-referrer`/`frame-DENY` headers；管理端點 IDOR 防護（每筆操作綁 `AND trip_id`）+ 每次 re-check 即時寫入權限。
+  - 重用：公開檢視重用 v2.36 `TripPrintDocument`（新增 `hideHeader`）+ 抽出共用 mapper `mapRawToPrintData`（含 `toTimelineEntry`，不在 server 重寫）；server 端 days 與授權檢視共用抽出的 `buildAllDays`（零 drift）。
+  - 後續：PR2 完整管理面板（多連結／逐區塊開關／期限／瀏覽數／重新產生）、PR3 訪客一鍵複製到自己帳號。
+
 ## [2.38.7] - 2026-05-30
 
 ### Fixed

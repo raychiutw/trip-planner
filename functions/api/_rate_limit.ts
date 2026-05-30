@@ -193,4 +193,8 @@ export const RATE_LIMITS = {
   ROUTE_PER_IP: { maxAttempts: 100, windowMs: 24 * 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
   // Google Places Text Search ~$32/1000 — 最嚴。auth'd user 不會打中（autocomplete 已有 1000/24h）。
   POI_SEARCH_PER_IP: { maxAttempts: 200, windowMs: 24 * 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
+  // v2.39.0: public share view GET /api/share/:token — anonymous, paid-quota +
+  // write-amplification (view_count) DoS guard. 200/24h/IP：正常 recipient 完全
+  // 打不中（不同 IP），但擋掉 single-IP 掃 token / 灌瀏覽數。
+  SHARE_VIEW_PER_IP: { maxAttempts: 200, windowMs: 24 * 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
 } as const;

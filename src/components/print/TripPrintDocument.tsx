@@ -110,7 +110,14 @@ const NOTE_ROWS: Record<NoteKey, (n: NotesMap) => unknown[]> = {
   emergency: (n) => n.emergencyContacts,
 };
 
-export default function TripPrintDocument({ data }: { data: TripPrintData }) {
+export default function TripPrintDocument({
+  data,
+  hideHeader = false,
+}: {
+  data: TripPrintData;
+  /** Public share view (Variant B) renders its own terracotta hero → skip the doc header. */
+  hideHeader?: boolean;
+}) {
   const name = tripDisplayName(data);
   const meta = [data.dateRange, data.destinations, data.days.length ? `${data.days.length} 天` : '']
     .filter(Boolean);
@@ -120,14 +127,16 @@ export default function TripPrintDocument({ data }: { data: TripPrintData }) {
 
   return (
     <article className="tp-print-doc" data-testid="trip-print-document">
-      <header className="tp-print-dh">
-        <div className="tp-print-name" data-testid="print-doc-name">{name}</div>
-        {meta.length > 0 && (
-          <div className="tp-print-meta">
-            {meta.map((m, i) => <span key={i}>{m}</span>)}
-          </div>
-        )}
-      </header>
+      {!hideHeader && (
+        <header className="tp-print-dh">
+          <div className="tp-print-name" data-testid="print-doc-name">{name}</div>
+          {meta.length > 0 && (
+            <div className="tp-print-meta">
+              {meta.map((m, i) => <span key={i}>{m}</span>)}
+            </div>
+          )}
+        </header>
+      )}
 
       {data.days.length === 0 ? (
         <div className="tp-print-empty" data-testid="print-empty-days">尚無行程</div>

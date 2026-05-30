@@ -92,3 +92,29 @@ export const PRINT_CSS = `
  * the on-screen shadow/margins. Strip them for the off-screen PDF render.
  */
 export const PRINT_PDF_DOC_CSS = `.tp-print-doc{box-shadow:none;margin:0;width:794px;max-width:none;}`;
+
+/**
+ * SHARE_CHROME_CSS — public share page (Variant B「分享封面」, signed off 2026-05-30).
+ * Reuses PRINT_CSS for the document sheet; adds the terracotta hero + sticky action
+ * bar. Fixed-light (the document is white paper) so it never flips in dark mode.
+ */
+export const SHARE_CHROME_CSS = `
+.tp-share-page{min-height:100vh;background:#e6e3dd;color:#1d1813;}
+.tp-share-hero{background:linear-gradient(135deg,#d97848,#f0935e);color:#fff;padding:26px 20px 20px;}
+.tp-share-eyebrow{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;opacity:.93;margin-bottom:8px;}
+.tp-share-eyebrow svg{width:15px;height:15px;}
+.tp-share-title{font-size:26px;font-weight:700;line-height:1.18;}
+.tp-share-meta{font-size:13px;opacity:.95;margin-top:8px;}
+.tp-share-actionbar{position:sticky;top:0;z-index:10;display:flex;gap:8px;
+  background:#faf4ea;border-bottom:1px solid #eadfcf;padding:9px 14px;}
+.tp-share-ghost{flex:0 0 auto;min-height:38px;width:44px;border-radius:8px;border:1px solid #eadfcf;
+  background:#fff;color:#1d1813;display:grid;place-items:center;cursor:pointer;font-family:inherit;}
+.tp-share-ghost svg{width:18px;height:18px;}
+.tp-share-copy{flex:1;min-height:38px;border-radius:8px;background:#d97848;color:#fff;border:none;
+  font-weight:600;font-size:14px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;}
+.tp-share-copy:hover{background:#b85c2e;}
+.tp-share-copy svg{width:16px;height:16px;}
+.tp-share-state{padding:72px 24px;text-align:center;color:#6f5a47;font-size:15px;line-height:1.6;}
+.tp-share-state-title{font-size:18px;font-weight:700;color:#1d1813;margin-bottom:8px;}
+@media print { .tp-share-hero,.tp-share-actionbar{display:none !important;} .tp-share-page{background:#fff;} }
+`;

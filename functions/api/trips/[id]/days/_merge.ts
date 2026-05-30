@@ -302,3 +302,61 @@ export function assembleDay(deps: AssembleDayDeps): Record<string, unknown> {
     timeline,
   };
 }
+
+/**
+ * Build the full `?all=1` days array: days + entries + segments + hotel/parking +
+ * entry POIs → assembleDay per day. Extracted so GET /trips/:id/days?all=1 AND the
+ * public share endpoint (GET /api/share/:token) render byte-identical timeline data
+ * from one orchestration (no drift between authed view and public share).
+ */
+export async function buildAllDays(
+  db: D1Database,
+  tripId: string,
+): Promise<Record<string, unknown>[]> {
+  const [daysResult, entriesResult, segmentsMap] = await Promise.all([
+    db.prepare('SELECT * FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC').bind(tripId).all(),
+    db
+      .prepare(
+        `SELECT e.* FROM trip_entries e
+         JOIN trip_days d ON e.day_id = d.id
+         WHERE d.trip_id = ?
+         ORDER BY e.day_id ASC, e.sort_order ASC`,
+      )
+      .bind(tripId)
+      .all(),
+    fetchTripSegmentsMap(db, tripId),
+  ]);
+
+  const dayRows = daysResult.results as Record<string, unknown>[];
+  const entryRows = entriesResult.results as Record<string, unknown>[];
+
+  const hotelPoiIds = [
+    ...new Set(
+      dayRows
+        .map((d) => d.hotel_poi_id as number | null)
+        .filter((v): v is number => v != null && v > 0),
+    ),
+  ];
+  const { poiMap, parkingMap } = await fetchHotelAndParking(db, hotelPoiIds);
+
+  const allEntryIds = entryRows.map((e) => e.id as number);
+  const entryPoisMap = await fetchEntryPoisByEntries(db, allEntryIds);
+
+  const entriesByDay = new Map<number, Record<string, unknown>[]>();
+  for (const e of entryRows) {
+    const dayId = e.day_id as number;
+    if (!entriesByDay.has(dayId)) entriesByDay.set(dayId, []);
+    entriesByDay.get(dayId)!.push(e);
+  }
+
+  return dayRows.map((day) =>
+    assembleDay({
+      dayRow: day,
+      entries: entriesByDay.get(day.id as number) ?? [],
+      poiMap,
+      parkingMap,
+      entryPoisMap,
+      segmentsMap,
+    }),
+  );
+}
