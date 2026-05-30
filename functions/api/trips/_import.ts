@@ -21,7 +21,9 @@ export const MAX_DESTINATIONS = 50;
 // Per-day caps multiply, so cap the TOTALS too — these bound the SQL statement
 // count regardless of how the per-day caps combine (defends D1 batch limits).
 export const MAX_TOTAL_ENTRIES = 1000;
-export const MAX_TOTAL_POIS = 3000;
+// POIs are find-or-created sequentially (1-2 D1 queries each), so cap lower to
+// stay within the Worker subrequest budget. A real trip is well under this.
+export const MAX_TOTAL_POIS = 400;
 
 const POI_TYPES = ['hotel', 'restaurant', 'shopping', 'parking', 'attraction', 'transport', 'other'] as const;
 const SEG_MODES = ['driving', 'walking', 'transit'] as const;
