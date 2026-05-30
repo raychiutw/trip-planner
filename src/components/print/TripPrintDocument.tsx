@@ -19,7 +19,7 @@ import {
 } from '../../lib/tripPrintData';
 
 const j = (...parts: (string | undefined | null | number)[]) =>
-  parts.map((p) => (p == null ? '' : String(p)).trim()).filter(Boolean).join('　');
+  parts.map((p) => (p == null ? '' : String(p)).trim()).filter(Boolean).join(' · ');
 
 function Rating({ value }: { value?: number | null }) {
   if (typeof value !== 'number') return null;
@@ -47,39 +47,51 @@ function EntryRow({ entry }: { entry: PrintEntry }) {
   );
 }
 
+// Each note renders a bold title + a separate body. `j` joins body parts with ·;
+// pretrip body keeps the content's own line breaks (white-space: pre-line in CSS).
 const NOTE_SECTIONS = [
   {
     key: 'flights',
     label: '航班',
     icon: 'plane',
-    line: (f: PrintFlight) => j(`${f.airline ?? ''} ${f.flightNo ?? ''}`.trim(),
-      [f.departAirport, f.departAt].filter(Boolean).join(' '),
-      (f.arriveAirport || f.arriveAt) ? `→ ${[f.arriveAirport, f.arriveAt].filter(Boolean).join(' ')}` : '',
-      f.note),
+    row: (f: PrintFlight) => ({
+      title: `${f.airline ?? ''} ${f.flightNo ?? ''}`.trim(),
+      body: j(
+        [f.departAirport, f.departAt].filter(Boolean).join(' '),
+        (f.arriveAirport || f.arriveAt) ? `→ ${[f.arriveAirport, f.arriveAt].filter(Boolean).join(' ')}` : '',
+        f.note,
+      ),
+    }),
   },
   {
     key: 'lodgings',
     label: '住宿',
     icon: 'hotel',
-    line: (l: PrintLodging) => j(l.name, [l.checkInAt, l.checkOutAt].filter(Boolean).join('–'), l.address, l.phone, l.bookingNo),
+    row: (l: PrintLodging) => ({
+      title: l.name ?? '',
+      body: j([l.checkInAt, l.checkOutAt].filter(Boolean).join('–'), l.address, l.phone, l.bookingNo, l.note),
+    }),
   },
   {
     key: 'reservations',
     label: '預訂',
     icon: 'check-circle',
-    line: (r: PrintReservation) => j(r.title, r.reservedAt, r.partySize ? `${r.partySize} 位` : '', r.reservationNo, r.phone, r.note),
+    row: (r: PrintReservation) => ({
+      title: r.title ?? '',
+      body: j(r.reservedAt, r.partySize ? `${r.partySize} 位` : '', r.reservationNo, r.phone, r.note),
+    }),
   },
   {
     key: 'pretrip',
     label: '行前須知',
     icon: 'document',
-    line: (p: PrintPretripNote) => j(p.title ? `${p.title}：${p.content ?? ''}` : (p.content ?? '')),
+    row: (p: PrintPretripNote) => ({ title: p.title ?? '', body: (p.content ?? '').trim() }),
   },
   {
     key: 'emergency',
     label: '緊急聯絡',
     icon: 'phone',
-    line: (e: PrintEmergencyContact) => j(e.name, e.relationship ? `（${e.relationship}）` : '', e.phone, e.email),
+    row: (e: PrintEmergencyContact) => ({ title: e.name ?? '', body: j(e.relationship, e.phone, e.email) }),
   },
 ] as const;
 
@@ -149,8 +161,14 @@ export default function TripPrintDocument({ data }: { data: TripPrintData }) {
               <div className="tp-print-nsec" key={s.key} data-testid={`print-note-${s.key}`}>
                 <div className="tp-print-nh"><Icon name={s.icon} /> {s.label}</div>
                 {rows.map((row, i) => {
-                  const text = (s.line as (r: unknown) => string)(row);
-                  return text ? <p key={i}>{text}</p> : null;
+                  const { title, body } = (s.row as (r: unknown) => { title: string; body: string })(row);
+                  if (!title && !body) return null;
+                  return (
+                    <div className="tp-print-note-item" key={i}>
+                      {title && <div className="tp-print-note-t">{title}</div>}
+                      {body && <div className="tp-print-note-b">{body}</div>}
+                    </div>
+                  );
                 })}
               </div>
             ))}

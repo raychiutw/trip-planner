@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.38.5] - 2026-05-30
+
+### Fixed
+- **列印頁手機細節**（深色模式截圖回報）：① 右上「關閉」按鈕在深色模式下看不見 → 列印預覽改用固定淺色（列印本來就是白紙），按鈕恢復清楚。② 景點的備選/備註/交通內文改成全寬靠左一欄，不再縮在時間欄下擠成一小塊。③ 行程筆記每筆分成「標題」與「內文」，行前須知那種「- 」清單會逐行斷落，不再黏成一大段。
+
 ## [2.38.4] - 2026-05-30
 
 ### Fixed

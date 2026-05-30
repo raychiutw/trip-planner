@@ -479,7 +479,8 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-trip-print-document.html`（V
 - **Empty states**：0 天 → header + 「尚無行程」placeholder；空的 notes 區塊整段省略（不印空標題）；無 segment → 不印交通列。
 - **入口**：TripsListPage EmbeddedActionMenu「列印」→ navigate `/trip/:id/print`（`usePrintMode` 舊路徑 PR1 共存，soak 後再拔）。
 - **@media print**：隱藏工具列、`@page { size:A4; margin:14mm }`、文件去 shadow/padding。
-- **RWD（v2.38.3）**：entry 不是 `<table>` 是 responsive div-grid — `≥640px` = 3 欄（時間/行程/交通），`@media screen and (max-width:640px)` 手機**直式堆疊**（時間+標題一行、備選/備註/交通↓ 在下），notes 2 欄 → 1 欄。`@media screen` 不影響實際列印/PDF（A4 寬 → 維持 3 欄表格）。Mockup：`docs/design-sessions/2026-05-30-trip-print-rwd.html`。
+- **RWD（v2.38.3）**：entry 不是 `<table>` 是 responsive div-grid — `≥640px` = 3 欄（時間/行程/交通），**container query** `@container (max-width:640px)`（依文件自身寬度，非 viewport → 手機產的 PDF 仍 A4 表格）手機**直式堆疊**，notes 2 欄 → 1 欄。Mockup：`docs/design-sessions/2026-05-30-trip-print-rwd.html`。
+- **手機 polish（v2.38.5）**：① 列印預覽 chrome 用**固定淺色**（非 dark-mode token）— 深色模式下「關閉」ghost button 不再白底淺字看不到（列印本就白紙，預覽固定淺色，同舊 usePrintMode 做法）。② 手機 entry 內文（備選/備註/交通）`grid-column:1/-1` **全寬往左一欄**，不縮排在時間欄下。③ 行程筆記每筆 = **粗體標題 + 獨立內文**（`.tp-print-note-t` / `.tp-print-note-b`），內文 `white-space:pre-line` 保留原本換行（行前須知「- 」項目逐行斷落，不再黏成一段）。Mockup：`docs/design-sessions/2026-05-30-trip-print-polish.html`。
 
 ### Trip Export（v2.37.0 PR2）
 

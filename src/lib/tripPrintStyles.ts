@@ -7,17 +7,20 @@
  * component-layer PDF renderer can share one source of truth.
  */
 export const PRINT_CSS = `
-.tp-print-page{min-height:100vh;background:#e6e3dd;color:var(--color-foreground);}
+/* The print preview is always LIGHT (the document is white paper) — use fixed
+   colors, not dark-mode tokens, so the chrome doesn't flip in dark mode (which
+   made the ghost 關閉 button white-on-light = invisible). */
+.tp-print-page{min-height:100vh;background:#e6e3dd;color:#1d1813;}
 .tp-print-toolbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:8px;
-  background:var(--color-secondary);border-bottom:1px solid var(--color-border);
+  background:#faf4ea;border-bottom:1px solid #eadfcf;
   padding:10px 16px;}
-.tp-print-toolbar .tp-print-route{font-size:13px;font-weight:600;color:var(--color-muted);margin-right:auto;}
+.tp-print-toolbar .tp-print-route{font-size:13px;font-weight:600;color:#6f5a47;margin-right:auto;}
 .tp-print-btn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;
   font-family:inherit;border-radius:8px;padding:8px 14px;border:1px solid transparent;cursor:pointer;min-height:40px;}
 .tp-print-btn svg{width:16px;height:16px;}
-.tp-print-btn-primary{background:var(--color-accent);color:var(--color-accent-foreground);}
-.tp-print-btn-ghost{background:#fff;color:var(--color-foreground);border-color:var(--color-border);}
-.tp-print-state{padding:64px 24px;text-align:center;color:var(--color-muted);font-size:15px;}
+.tp-print-btn-primary{background:#d97848;color:#fff;}
+.tp-print-btn-ghost{background:#fff;color:#1d1813;border-color:#eadfcf;}
+.tp-print-state{padding:64px 24px;text-align:center;color:#6f5a47;font-size:15px;}
 
 /* ===== the document sheet (Variant A) ===== */
 .tp-print-doc{background:#fff;width:794px;max-width:100%;margin:18px auto;
@@ -50,7 +53,10 @@ export const PRINT_CSS = `
 .tp-print-nsec{break-inside:avoid;page-break-inside:avoid;}
 .tp-print-nh{font-size:12px;font-weight:700;color:#1d1813;display:flex;align-items:center;gap:5px;margin:6px 0 2px;}
 .tp-print-nh svg{width:13px;height:13px;}
-.tp-print-nsec p{margin:0 0 2px;font-size:12px;color:#5c5248;line-height:1.5;}
+.tp-print-note-item{margin:0 0 7px;break-inside:avoid;}
+.tp-print-note-t{font-weight:600;color:#1d1813;font-size:12px;}
+/* pre-line keeps the content's own line breaks (e.g. "- a\n- b" bullets) */
+.tp-print-note-b{white-space:pre-line;color:#5c5248;font-size:12px;line-height:1.55;}
 
 /* ===== Narrow DOCUMENT (container query, not viewport) =====
    Keys off .tp-print-doc's own width, so it stacks when the *document* is narrow
@@ -61,8 +67,10 @@ export const PRINT_CSS = `
   .tp-print-entry{grid-template-columns:80px 1fr;column-gap:8px;row-gap:1px;padding:9px 0;}
   .tp-print-t{grid-column:1;grid-row:1;}
   .tp-print-title{grid-column:2;grid-row:1;}
-  .tp-print-alt,.tp-print-note{grid-column:2;}
-  .tp-print-mv{grid-column:2;grid-row:auto;text-align:left;white-space:normal;}
+  /* body content (備選/note/travel) goes FULL-WIDTH LEFT — single column, not
+     indented under the time gutter. */
+  .tp-print-alt,.tp-print-note{grid-column:1 / -1;}
+  .tp-print-mv{grid-column:1 / -1;grid-row:auto;text-align:left;white-space:normal;}
   .tp-print-mv::before{content:"↓ ";}
   .tp-print-ngrid{grid-template-columns:1fr;}
 }
