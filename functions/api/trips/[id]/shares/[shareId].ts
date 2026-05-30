@@ -39,16 +39,19 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   }
 
   if (body.action === 'rotate') {
-    // New token (returned once); only if the share belongs to THIS trip. UNIQUE retry.
+    // New token (returned once). Only ACTIVE links rotate — a revoked link must NOT be
+    // silently resurrected, and an expired link would mint a dead-on-arrival token; both
+    // 404 so the owner creates a fresh link instead. UNIQUE retry.
+    const now = Date.now();
     for (let attempt = 0; ; attempt++) {
       const token = generateShareToken();
       const tokenHash = await hashToken(token);
       try {
         const res = await db
-          .prepare('UPDATE trip_shares SET token_hash = ?, revoked_at = NULL WHERE id = ? AND trip_id = ?')
-          .bind(tokenHash, shareId, id)
+          .prepare('UPDATE trip_shares SET token_hash = ? WHERE id = ? AND trip_id = ? AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)')
+          .bind(tokenHash, shareId, id, now)
           .run();
-        if (!res.meta.changes) throw new AppError('DATA_NOT_FOUND');
+        if (!res.meta.changes) throw new AppError('DATA_NOT_FOUND'); // wrong trip / revoked / expired
         return json({ ok: true, token, url: `/s/${token}` });
       } catch (e) {
         if (e instanceof AppError) throw e;

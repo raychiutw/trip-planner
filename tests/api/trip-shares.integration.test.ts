@@ -16,7 +16,7 @@ import { onRequestPost as createShare, onRequestGet as listShares } from '../../
 import { onRequestPatch as patchShare, onRequestDelete as deleteShare } from '../../functions/api/trips/[id]/shares/[shareId]';
 import { onRequestGet as publicView } from '../../functions/api/share/[token]';
 import { onRequestPost as cloneShare } from '../../functions/api/share/[token]/clone';
-import { getDayId, seedEntry, seedPoi, userIdFor } from './helpers';
+import { getDayId, seedEntry, seedPoi, seedEntryAlternate, seedHotelForDay, userIdFor } from './helpers';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
@@ -233,5 +233,69 @@ describe('clone (PR3)', () => {
       env, auth: mockAuth({ email: 'cloner@test.com' }), params: { token: 'nopetokennopetoken12' },
     }));
     expect(res.status).toBe(404);
+  });
+});
+
+describe('clone — remap fidelity (PR3, multi-day + segment + hotel + alternates)', () => {
+  it('remaps days/entries/segments to NEW ids, copies hotel + entry POIs with contiguous sort_order', async () => {
+    const { id } = await seedTrip(db, { id: 'clone-rich', owner, days: 2 });
+    const d1 = await getDayId(db, id, 1);
+    const d2 = await getDayId(db, id, 2);
+    const poiA = await seedPoi(db, { name: '景點A', type: 'attraction' });
+    const poiB = await seedPoi(db, { name: '景點B-備選', type: 'attraction' });
+    const poiC = await seedPoi(db, { name: '景點C', type: 'restaurant' });
+    const hotelPoi = await seedPoi(db, { name: '飯店', type: 'hotel' });
+    const e1 = await seedEntry(db, d1, { sortOrder: 1, title: '景點A', poiId: poiA });
+    await seedEntryAlternate(db, { entryId: e1, poiId: poiB, sortOrder: 2 }); // e1 has master + 1 alternate
+    const e2 = await seedEntry(db, d2, { sortOrder: 1, title: '景點C', poiId: poiC });
+    await seedHotelForDay(db, d2, hotelPoi);
+    await db.prepare("INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, version) VALUES (?, ?, ?, 'driving', 15, 5000, 'google', 0)").bind(id, e1, e2).run();
+
+    const created = (await (await createShareFor(id)).json()) as { token: string };
+    const clonerEmail = 'rich-cloner@test.com';
+    await seedUser(db, clonerEmail);
+    const cloneRes = await callHandler(cloneShare as never, mockContext({
+      request: jsonRequest(`https://x/api/share/${created.token}/clone`, 'POST'),
+      env, auth: mockAuth({ email: clonerEmail }), params: { token: created.token },
+    }));
+    expect(cloneRes.status).toBe(201);
+    const { tripId: newId } = (await cloneRes.json()) as { tripId: string };
+
+    // 2 days copied
+    const days = await db.prepare('SELECT COUNT(*) AS c FROM trip_days WHERE trip_id = ?').bind(newId).first<{ c: number }>();
+    expect(days?.c).toBe(2);
+    // segment remapped: 1 segment whose from/to are entries belonging to the NEW trip
+    const segs = (await db.prepare('SELECT from_entry_id AS f, to_entry_id AS t FROM trip_segments WHERE trip_id = ?').bind(newId).all()).results as { f: number; t: number }[];
+    expect(segs.length).toBe(1);
+    const newEntryIds = ((await db.prepare('SELECT e.id FROM trip_entries e JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ?').bind(newId).all()).results as { id: number }[]).map((r) => r.id);
+    expect(newEntryIds).toContain(segs[0]!.f);
+    expect(newEntryIds).toContain(segs[0]!.t);
+    expect(segs[0]!.f).not.toBe(e1); // remapped, not the old id
+    // hotel copied onto one day
+    const hotelDays = await db.prepare('SELECT COUNT(*) AS c FROM trip_days WHERE trip_id = ? AND hotel_poi_id IS NOT NULL').bind(newId).first<{ c: number }>();
+    expect(hotelDays?.c).toBe(1);
+    // the 2-POI entry: sort_order contiguous 1,2 + entry_pois_version = 1
+    const grp = (await db.prepare('SELECT tep.entry_id AS eid, COUNT(*) AS c, GROUP_CONCAT(tep.sort_order) AS so FROM trip_entry_pois tep JOIN trip_entries e ON e.id = tep.entry_id JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ? GROUP BY tep.entry_id').bind(newId).all()).results as { eid: number; c: number; so: string }[];
+    const twoPoi = grp.find((g) => g.c === 2);
+    expect(twoPoi).toBeTruthy();
+    expect((twoPoi!.so ?? '').split(',').map(Number).sort((a, b) => a - b)).toEqual([1, 2]); // contiguous 1..N
+    const ver = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(twoPoi!.eid).first<{ v: number }>();
+    expect(ver?.v).toBe(1);
+  });
+});
+
+describe('rotate guard (PR2 review fix)', () => {
+  it('cannot rotate a revoked link (404, no silent resurrection)', async () => {
+    const { id } = await seedTrip(db, { id: 'rotate-guard', owner, days: 1 });
+    const created = (await (await createShareFor(id)).json()) as { id: number; token: string };
+    await callHandler(patchShare as never, mockContext({
+      request: jsonRequest(`https://x/api/trips/${id}/shares/${created.id}`, 'PATCH', { action: 'revoke' }),
+      env, auth: mockAuth({ email: owner }), params: { id, shareId: String(created.id) },
+    }));
+    const rot = await callHandler(patchShare as never, mockContext({
+      request: jsonRequest(`https://x/api/trips/${id}/shares/${created.id}`, 'PATCH', { action: 'rotate' }),
+      env, auth: mockAuth({ email: owner }), params: { id, shareId: String(created.id) },
+    }));
+    expect(rot.status).toBe(404); // revoked → cannot rotate
   });
 });

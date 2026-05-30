@@ -55,6 +55,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       headers: { 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfter ?? 3600) },
     });
   }
+  // Count the ATTEMPT up-front (await, not fire-and-forget) — a failing clone still burns
+  // hundreds of D1 subrequests, and concurrent requests serialize against a committed count.
+  await bumpRateLimit(db, bucket, RATE_LIMITS.CLONE_PER_USER);
   await assertTripCap(db, auth.userId);
 
   const src = share.trip_id;
@@ -176,7 +179,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
     await runChunked(db, tail);
 
-    context.waitUntil(bumpRateLimit(db, bucket, RATE_LIMITS.CLONE_PER_USER).then(() => undefined));
     return json({ ok: true, tripId, daysCreated: srcDays.length }, 201);
   } catch (err) {
     try {

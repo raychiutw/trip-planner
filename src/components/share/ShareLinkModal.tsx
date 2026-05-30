@@ -262,6 +262,7 @@ export default function ShareLinkModal({
                 key={p.k}
                 type="button"
                 className={expiryKey === p.k ? 'on' : ''}
+                aria-pressed={expiryKey === p.k}
                 onClick={() => setExpiryKey(p.k)}
                 data-testid={`share-expiry-${p.k}`}
               >
@@ -326,15 +327,19 @@ export default function ShareLinkModal({
                     <Icon name="clock" /> {exp.text}
                   </div>
                   <div className="tp-sharemodal-acts">
-                    <button
-                      type="button"
-                      className="tp-sharemodal-act rotate"
-                      disabled={busy}
-                      onClick={() => mutate(() => rotateShare(tripId, l.id), (r) => { const rr = r as { token: string; url: string }; setCreated({ token: rr.token, url: rr.url }); setCopied(false); })}
-                      data-testid={`share-rotate-${l.id}`}
-                    >
-                      <Icon name="refresh-cw" /> 重新產生
-                    </button>
+                    {/* rotate + 關閉 only on ACTIVE links — an expired link can't be rotated
+                        (would mint a dead-on-arrival token); create a fresh link instead. */}
+                    {active && (
+                      <button
+                        type="button"
+                        className="tp-sharemodal-act rotate"
+                        disabled={busy}
+                        onClick={() => mutate(() => rotateShare(tripId, l.id), (r) => { const rr = r as { token: string; url: string }; setCreated({ token: rr.token, url: rr.url }); setCopied(false); })}
+                        data-testid={`share-rotate-${l.id}`}
+                      >
+                        <Icon name="refresh-cw" /> 重新產生
+                      </button>
+                    )}
                     {active && (
                       <button
                         type="button"

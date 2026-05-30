@@ -111,7 +111,7 @@ export default function TripSharePage() {
             </button>
           </div>
           {cloneErr && (
-            <div className="tp-share-state" style={{ padding: '10px 16px', color: '#b3261e' }} role="alert">
+            <div className="tp-share-error" role="alert">
               複製失敗，請稍後再試。
             </div>
           )}
