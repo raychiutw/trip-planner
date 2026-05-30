@@ -12,7 +12,9 @@ import { useTrip } from '../hooks/useTrip';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
 import { TRIP_TIMEZONE, getLocalToday } from '../lib/constants';
-import { downloadTripFormat } from '../lib/tripExport';
+import { downloadTripJson } from '../lib/tripExport';
+import { renderTripPrintPdf } from '../components/print/renderTripPrintPdf';
+import { showToast } from '../lib/toastBus';
 import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '../lib/scrollSpy';
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
 import { TripIdContext } from '../contexts/TripIdContext';
@@ -181,7 +183,7 @@ export interface TripPageProps {
  * TripsListPage 的 embedded topbar ⋯ 漢堡選單透過此 handle 呼叫。 */
 export interface TripPageHandle {
   openSheet: (key: string) => void;
-  triggerDownload: (format: string) => void;
+  triggerDownload: (format: 'pdf' | 'json') => void;
   togglePrint: () => void;
   /** Section 3 (terracotta-add-stop-modal) E2E follow-up：embedded mode 也能
    *  trigger AddStopModal，TripsListPage 的 embedded TitleBar 開放此 entry。 */
@@ -369,10 +371,16 @@ function TripPageInner(
   refetchCurrentDayRef.current = refetchCurrentDay;
   refetchDayRef.current = refetchDay;
 
-  /** Direct download by format — delegates to tripExport module */
-  const handleDownloadFormat = useCallback(async (format: string) => {
+  /** Direct download by format — JSON via lib, PDF via the data-driven print doc. */
+  const handleDownloadFormat = useCallback(async (format: 'pdf' | 'json') => {
     if (!activeTripId) return;
-    await downloadTripFormat(format, { tripId: activeTripId, trip });
+    try {
+      if (format === 'json') await downloadTripJson({ tripId: activeTripId, trip });
+      else await renderTripPrintPdf({ tripId: activeTripId, trip });
+    } catch (err) {
+      console.error(`[handleDownloadFormat] ${format} 失敗:`, err);
+      showToast('下載失敗，請稍後再試', 'error', 3000);
+    }
   }, [activeTripId, trip]);
 
   /* --- Update document title --- */
@@ -622,7 +630,7 @@ function TripPageInner(
    * backup/emergency/appearance/trip-select)已整批移除 — 只剩 collab 走 sheet。 */
   useImperativeHandle(ref, () => ({
     openSheet: (key: string) => setActiveSheet(key),
-    triggerDownload: (format: string) => { void handleDownloadFormat(format); },
+    triggerDownload: (format: 'pdf' | 'json') => { void handleDownloadFormat(format); },
     togglePrint,
     openAddStop: () => {
       const tid = trip?.id ?? effectiveUrlTripId;

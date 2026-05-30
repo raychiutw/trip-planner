@@ -695,28 +695,10 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthChe
         type="button"
         role="menuitem"
         className="tp-embedded-menu-item"
-        onClick={runAndClose(() => tripPageRef.current?.triggerDownload('md'))}
-      >
-        <Icon name="doc" />
-        <span>Markdown</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-embedded-menu-item"
         onClick={runAndClose(() => tripPageRef.current?.triggerDownload('json'))}
       >
         <Icon name="code" />
         <span>JSON</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-embedded-menu-item"
-        onClick={runAndClose(() => tripPageRef.current?.triggerDownload('csv'))}
-      >
-        <Icon name="table" />
-        <span>CSV</span>
       </button>
     </div>
   ), document.body) : null;
