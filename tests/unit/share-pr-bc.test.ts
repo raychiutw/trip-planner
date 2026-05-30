@@ -27,6 +27,10 @@ describe('B1 — /s/:token OG meta injection', () => {
     expect(OG).toMatch(/SELECT name, title, countries FROM trips/);
     expect(OG).not.toMatch(/owner_user_id|email|trip_emergency|trip_reservations|trip_flights|trip_lodgings|trip_pretrip/);
   });
+  it('/s/* is in _routes.json include — else the Function never runs (CF serves static)', () => {
+    const routes = JSON.parse(read('public/_routes.json')) as { include: string[] };
+    expect(routes.include).toContain('/s/*');
+  });
 });
 
 describe('C2 — clone per-IP pre-gate', () => {

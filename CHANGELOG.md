@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.42.1] - 2026-05-31
+
+### Fixed
+- **分享連結預覽卡修正（PR-B prod 補丁）** — v2.42.0 的 OG Function 從沒被執行：`public/_routes.json` 的 `include` 只列 `/api/*` + `/trip/*`，CF Pages 把 `/s/:token` 當靜態 SPA fallback 直接吐 `index.html`，連結預覽永遠是通用標題。加 `/s/*` 進 include → Function 才會跑、注入該行程的 og:title。Prod 驗證（curl `/s/:token` 看 og:title 帶行程名）才抓到——source-grep 測試過了但功能是死的。補一條防回歸測試鎖 `_routes.json` include 含 `/s/*`。
+
 ## [2.42.0] - 2026-05-31
 
 ### Added
