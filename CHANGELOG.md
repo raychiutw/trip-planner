@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.38.0] - 2026-05-30
+
+### Added
+- **匯入行程 JSON** — 行程列表右上「匯入」按鈕，選一個之前匯出的 JSON 檔，就能把整趟行程（每天景點、交通、住宿、行程筆記）原封不動建成一個新行程。匯入永遠建立新行程，不會覆蓋既有資料。
+
 ## [2.37.0] - 2026-05-30
 
 ### Changed
