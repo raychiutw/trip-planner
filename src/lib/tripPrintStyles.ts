@@ -36,7 +36,7 @@ export const PRINT_CSS = `
 .tp-print-day-entries{font-size:13px;}
 /* responsive entry grid: ≥640px = 3 columns (time | activity | travel); the
    @media screen rule below stacks it on mobile. Print/PDF (A4 wide) stays 3-col. */
-.tp-print-entry{display:grid;grid-template-columns:54px 1fr 132px;gap:1px 10px;padding:7px 0;border-bottom:1px solid #efe9df;align-items:start;}
+.tp-print-entry{display:grid;grid-template-columns:80px 1fr 132px;gap:1px 10px;padding:7px 0;border-bottom:1px solid #efe9df;align-items:start;}
 .tp-print-t{font-variant-numeric:tabular-nums;font-weight:600;color:#1d1813;white-space:nowrap;}
 .tp-print-title{grid-column:2;font-weight:600;}
 .tp-print-alt{grid-column:2;color:#5c5248;font-size:12px;}
@@ -58,7 +58,7 @@ export const PRINT_CSS = `
    on a small device, nor the A4 print page. Stack: time + title on the head row,
    alternates/note/travel hang below; notes collapse to one column. */
 @container (max-width:640px){
-  .tp-print-entry{grid-template-columns:50px 1fr;column-gap:8px;row-gap:1px;padding:9px 0;}
+  .tp-print-entry{grid-template-columns:80px 1fr;column-gap:8px;row-gap:1px;padding:9px 0;}
   .tp-print-t{grid-column:1;grid-row:1;}
   .tp-print-title{grid-column:2;grid-row:1;}
   .tp-print-alt,.tp-print-note{grid-column:2;}

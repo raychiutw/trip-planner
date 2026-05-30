@@ -23,7 +23,7 @@
   .day-date{font-size:12px;color:#5c5248;}
 
   /* ===== entry: 3-col grid (wide) → stacked (mobile) ===== */
-  .entry{display:grid;grid-template-columns:54px 1fr 132px;gap:2px 10px;padding:8px 0;border-bottom:1px solid #efe9df;align-items:start;}
+  .entry{display:grid;grid-template-columns:80px 1fr 132px;gap:2px 10px;padding:8px 0;border-bottom:1px solid #efe9df;align-items:start;}
   .entry .t{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;}
   .entry .title{font-weight:600;grid-column:2;}
   .entry .alt{grid-column:2;color:#5c5248;font-size:12px;}
@@ -34,7 +34,7 @@
 
   @container (max-width:640px){
     /* stack: time+title on a head row, sub-lines (alt/note/travel) hang below */
-    .entry{grid-template-columns:50px 1fr;column-gap:8px;row-gap:1px;padding:9px 0;}
+    .entry{grid-template-columns:80px 1fr;column-gap:8px;row-gap:1px;padding:9px 0;}
     .entry .t{grid-column:1;grid-row:1;}
     .entry .title{grid-column:2;grid-row:1;}
     .entry .alt{grid-column:2;}
@@ -67,14 +67,14 @@
     <div class="day-hd"><span class="day-no">Day 1</span><span class="day-date">07/26（六）</span></div>
     <div class="entry"><div class="t">09:00</div><div class="title">那霸機場 <span class="star">★ 4.1</span></div><div class="mv">開車 12 分 · 2.1km</div></div>
     <div class="entry"><div class="t">10:30</div><div class="title">國際通 <span class="star">★ 4.3</span></div><div class="alt">備選：牧志公設市場 · 第一牧志</div><div class="mv">步行 8 分 · 0.6km</div></div>
-    <div class="entry"><div class="t">12:00</div><div class="title">午餐 — 暖暮拉麵 <span class="star">★ 4.5</span></div><div class="note">¥¥ · 排隊名店，建議避開正午</div><div class="mv">開車 15 分 · 6.4km</div></div>
+    <div class="entry"><div class="t">12:00-13:30</div><div class="title">午餐 — 暖暮拉麵 <span class="star">★ 4.5</span></div><div class="note">¥¥ · 排隊名店，建議避開正午</div><div class="mv">開車 15 分 · 6.4km</div></div>
     <div class="entry"><div class="t">14:30</div><div class="title">首里城公園 <span class="star">★ 4.4</span></div><div class="mv">—</div></div>
     <div class="hotel"><span class="hk">住宿</span><span>那霸東急 REI <span class="star">★ 4.2</span> · 停車 ¥1,000/泊 · 含早餐</span></div>
   </div>
 
   <div class="day">
     <div class="day-hd"><span class="day-no">Day 2</span><span class="day-date">07/27（日）</span></div>
-    <div class="entry"><div class="t">09:30</div><div class="title">美麗海水族館 <span class="star">★ 4.6</span></div><div class="note">門票已購 ×4</div><div class="mv">開車 95 分 · 78km</div></div>
+    <div class="entry"><div class="t">09:30-12:00</div><div class="title">美麗海水族館 <span class="star">★ 4.6</span></div><div class="note">門票已購 ×4</div><div class="mv">開車 95 分 · 78km</div></div>
     <div class="entry"><div class="t">13:00</div><div class="title">古宇利大橋 <span class="star">★ 4.5</span></div><div class="mv">開車 25 分 · 14km</div></div>
     <div class="entry"><div class="t">16:00</div><div class="title">美國村（北谷）<span class="star">★ 4.2</span></div><div class="alt">備選：永旺夢樂城</div><div class="mv">—</div></div>
     <div class="hotel"><span class="hk">住宿</span><span>美麗海 The Hotel <span class="star">★ 4.3</span> · 海景房</span></div>

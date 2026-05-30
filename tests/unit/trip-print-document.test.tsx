@@ -95,7 +95,9 @@ describe('TripPrintDocument', () => {
 describe('print styles — responsive via container query (doc width, not viewport)', () => {
   it('entry is a 3-col grid that stacks when the DOCUMENT is narrow', () => {
     const css = readFileSync(join(__dirname, '..', '..', 'src/lib/tripPrintStyles.ts'), 'utf8');
-    expect(css).toMatch(/\.tp-print-entry\{display:grid;grid-template-columns:54px 1fr 132px/);
+    // 80px time column fits "HH:MM-HH:MM" ranges (the <table> auto-expanded; a
+    // fixed grid column doesn't, so it must be wide enough — prod-verified).
+    expect(css).toMatch(/\.tp-print-entry\{display:grid;grid-template-columns:80px 1fr 132px/);
     // container query (NOT @media) so the 794px PDF render on a small device stays
     // 3-col while the on-screen ~390px doc stacks.
     expect(css).toMatch(/container-type:inline-size/);
