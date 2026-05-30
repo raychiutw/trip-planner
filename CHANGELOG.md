@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.35.0] - 2026-05-30
+
+**🎉 Milestone — 行程筆記（Trip Notes）功能完成**
+
+把跨工具的旅遊雜訊集中在一頁。每趟行程現在有一個獨立的「行程筆記」頁（`/trip/:id/notes`，從行程卡片 ⋯ 或聊天進入），用 5 個 section 收納行前要記的所有東西：
+
+- **航班** — 航空/航班/出發抵達機場 + 起飛抵達時間
+- **住宿** — 飯店/地址/入住退房/訂房編號/電話
+- **預訂** — 餐廳/活動/票券…類型 + 時間 + 預訂編號
+- **行前須知** — 貨幣/通訊/簽證…自由筆記（支援 markdown）
+- **緊急聯絡** — 駐外館處/警消/保險…聯絡人，電話可直接撥
+
+**AI 可代寫**「行前須知」與「緊急聯絡」（依目的地自動生成）。每個 section 支援新增 / 編輯 / 刪除 / 拖曳排序，編輯即時 autosave，欄位全用網站規範的客製化日期/時間/下拉選擇器（無原生瀏覽器 chrome），手機桌機一致。
+
+此版號標記 2.34.0–2.34.50 累積的行程筆記開發（PR1–PR50：5-table schema、CRUD UI、AI 生成、canonical input 對齊、編輯 UX、prod QA 修正）正式收斂為 2.35.0 minor release。沒有新程式碼變更，純里程碑版號。
+
 ## [2.34.50] - 2026-05-30
 
 **Fix — 行程筆記編輯加「關閉」button + 修手機左右滑動（prod QA follow-up）**
