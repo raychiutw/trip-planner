@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.39.1] - 2026-05-30
+
+### Added
+- **分享連結入口進主功能區** — 「分享連結」現在出現在行程一覽卡片的 ⋯ 選單（`TripCardMenu`）與行程頁右上角的 ⋯ 選單（`EmbeddedActionMenu`），點開即建立/管理公開分享連結（`ShareLinkModal`），不必先進列印頁。
+
+### Fixed
+- **桌機分享頁 hero 太寬** — 公開分享頁 `/s/:token` 的 terracotta hero 與操作列原本在桌機全寬延展，與置中的 794px 文件不對齊。改為 hero / 操作列 / 文件同寬置中（手機仍全寬），桌機再加圓角上緣 + 上邊距讀作一張完整卡片。
+
 ## [2.39.0] - 2026-05-30
 
 ### Added
