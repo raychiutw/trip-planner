@@ -488,6 +488,15 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-trip-print-document.html`（V
 - **JSON**：`lib/tripExport.ts` `downloadTripJson` → round-trip schema `{ schemaVersion:1, meta, days(每個 entry 加 entryPosition), notes(5 區塊), segments(positional fromEntryIdx/toEntryIdx) }`。**取代**舊 `{ meta, days, docs }`（breaking）。segments 用位置序號（entry id 是 auto-increment，匯入會 remap）。供 PR3 匯入消費。
 - **分層**：`lib`（tripExport / tripPrintStyles）是 leaf，不 import component；PDF render 因需 component 放 component 層；`TripPage.handleDownloadFormat` 分派 json→lib / pdf→component。
 
+### Trip Import（v2.38.0 PR3）
+
+`POST /api/trips/import` + 行程列表 TitleBar「匯入」button（`ImportTripButton`，upload icon）。讀 JSON 檔 → 建**新行程**（永不覆寫；owner = 當前 user；`data_source='imported'`）。
+
+- **安全邊界**（`functions/api/trips/_import.ts`，純函式）：body 是 untrusted JSON → 實際大小上限 512KB（讀 text 非信 Content-Length）→ `schemaVersion` gate → 拒 `__proto__`/`constructor`/`prototype`（含 non-enumerable + symbol key）→ 每陣列上限 + **總數上限**（entries ≤ 1000、pois ≤ 3000，防 D1 batch 爆量）→ 每個 CHECK enum（poi type / segment mode/source / reservation kind / emergency kind）coerce → POI sort_order 重編 1..N（防 UNIQUE 違反）→ segment (from,to) 去重 → 全程 allowlist 讀欄位（絕不 spread）。
+- **D1 orchestration**（`import.ts`）：D1 無 transaction + batch ~100 statement 上限 → **chunked sequential batch（≤50）** with `INSERT…RETURNING id`，逐 chunk track 新 id；任一步失敗 → connect-root rollback（按 trip_id + tracked entry/poi id 連根刪）。每人行程數上限 1000。
+- **POI 模型**：匯入一律**新建 pois**（不 find-or-create，天然「不碰既有 catalog」）；trip-specific override（reservation/note/description）寫 `trip_entry_pois`。segments 用 positional idx remap 回新 entry id。
+- **Round-trip**：PR2 匯出的 JSON 可原檔匯回成等價新行程。
+
 ## Modal Dialogs
 
 ### Principle
