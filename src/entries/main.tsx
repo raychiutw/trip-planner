@@ -146,6 +146,7 @@ const EditEntryPage = lazyWithRetry(() => import('../pages/EditEntryPage'));
 // v2.31.0: AI 健檢全頁 (severity-grouped findings, polling pending state)
 const TripHealthCheckPage = lazyWithRetry(() => import('../pages/TripHealthCheckPage'));
 const TripNotesPage = lazyWithRetry(() => import('../pages/TripNotesPage'));
+const TripPrintPage = lazyWithRetry(() => import('../pages/TripPrintPage'));
 
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
 
@@ -254,6 +255,8 @@ if (el) {
                 <Route path="health" element={<TripHealthCheckPage />} />
                 {/* v2.34.x 行程筆記 — 5 section accordion + AI gen pretrip/emergency */}
                 <Route path="notes" element={<TripNotesPage />} />
+                {/* v2.36.0 列印文件 — 資料驅動全展開文件（取代 usePrintMode 收合列印） */}
+                <Route path="print" element={<TripPrintPage />} />
                 {/* 2026-05-03 modal-to-fullpage migration: EditTripModal → /trip/:id/edit */}
                 <Route path="edit" element={<EditTripPage />} />
                 {/* 2026-05-03 modal-to-fullpage migration: EntryActionPopover → /stop/:eid/(copy|move) */}

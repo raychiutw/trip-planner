@@ -550,9 +550,10 @@ interface EmbeddedActionMenuProps {
   onCollab: () => void;
   onHealthCheck: () => void;
   onNotes?: () => void;
+  onPrint?: () => void;
 }
 
-function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck, onNotes }: EmbeddedActionMenuProps) {
+function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck, onNotes, onPrint }: EmbeddedActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -673,7 +674,8 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthChe
         type="button"
         role="menuitem"
         className="tp-embedded-menu-item"
-        onClick={runAndClose(() => tripPageRef.current?.togglePrint())}
+        onClick={runAndClose(() => (onPrint ? onPrint() : tripPageRef.current?.togglePrint()))}
+        data-testid={`trip-embedded-menu-print-${tripId}`}
       >
         <Icon name="printer" />
         <span>列印</span>
@@ -1264,6 +1266,7 @@ export default function TripsListPage() {
               onCollab={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/collab`)}
               onHealthCheck={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/health`)}
               onNotes={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/notes`)}
+              onPrint={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/print`)}
             />
           </>
         )}

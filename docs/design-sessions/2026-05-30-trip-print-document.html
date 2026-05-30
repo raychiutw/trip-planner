@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行程列印文件 — 3 variant 比較</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFFBF5; --secondary:#FAF4EA; --ink:#2A1F18; --muted:#6F5A47;
+    --border:#EADFCF; --accent:#D97848; --accent-deep:#B85C2E; --hair:#D8CBB6;
+    --doc-ink:#1d1813; --doc-muted:#5c5248; --doc-hair:#cfc7ba;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:#e6e3dd;
+    font-family:'Inter','Noto Sans TC',system-ui,sans-serif;
+    color:var(--ink); -webkit-font-smoothing:antialiased;
+  }
+  .board-head{max-width:900px;margin:0 auto;padding:28px 24px 8px;}
+  .board-head h1{font-size:20px;margin:0 0 6px;letter-spacing:.01em;}
+  .board-head p{font-size:14px;color:var(--muted);margin:0;line-height:1.6;}
+  .variant-wrap{max-width:900px;margin:0 auto;padding:18px 24px 40px;}
+  .variant-label{
+    display:flex;align-items:center;gap:10px;margin:34px 0 10px;
+  }
+  .variant-label .tag{
+    font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    background:var(--ink);color:#fff;padding:4px 9px;border-radius:5px;
+  }
+  .variant-label .desc{font-size:14px;color:var(--muted);}
+  /* on-screen toolbar mock — accent lives ONLY here (chrome/CTA), never in the printed sheet */
+  .toolbar{
+    display:flex;align-items:center;gap:8px;margin:0 0 10px;
+    background:var(--secondary);border:1px solid var(--border);border-radius:10px;padding:8px 12px;
+  }
+  .toolbar .ttl{font-size:13px;font-weight:600;color:var(--muted);margin-right:auto;}
+  .btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;
+    border-radius:8px;padding:7px 12px;border:1px solid transparent;cursor:default;font-family:inherit;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-ghost{background:#fff;color:var(--ink);border-color:var(--border);}
+  .btn svg{width:15px;height:15px;}
+  /* A4 sheet */
+  .sheet{
+    background:#fff;width:794px;max-width:100%;margin:0 auto;
+    box-shadow:0 6px 24px rgba(42,31,24,.16),0 1px 3px rgba(42,31,24,.1);
+    color:var(--doc-ink);padding:46px 52px;
+    font-size:14px;line-height:1.55;
+  }
+  .sheet + .sheet{margin-top:14px;}
+  /* doc header (shared shape, per-variant tuned) */
+  .dh{border-bottom:2px solid var(--doc-ink);padding-bottom:14px;margin-bottom:8px;}
+  .dh .name{font-size:25px;font-weight:700;letter-spacing:.01em;line-height:1.2;}
+  .dh .meta{font-size:13px;color:var(--doc-muted);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap;}
+  .dh .meta b{color:var(--doc-ink);font-weight:600;}
+  .star{color:#9a7b32;font-weight:600;white-space:nowrap;}
+  .ico{width:1em;height:1em;vertical-align:-.12em;display:inline-block;}
+  .muted{color:var(--doc-muted);}
+  .empty-ph{color:var(--doc-muted);font-style:normal;border:1px dashed var(--doc-hair);
+    border-radius:8px;padding:14px 16px;text-align:center;font-size:13px;margin-top:14px;}
+
+  /* ============ VARIANT A — 緊湊表格式 ============ */
+  .vA .day{margin-top:18px;}
+  .vA .day-hd{display:flex;align-items:baseline;gap:10px;border-bottom:1.5px solid var(--doc-ink);padding-bottom:4px;margin-bottom:2px;}
+  .vA .day-no{font-size:15px;font-weight:700;}
+  .vA .day-date{font-size:12px;color:var(--doc-muted);}
+  .vA table{width:100%;border-collapse:collapse;font-size:13px;}
+  .vA td{padding:7px 8px 7px 0;vertical-align:top;border-bottom:1px solid #efe9df;}
+  .vA td.t{width:52px;font-variant-numeric:tabular-nums;font-weight:600;color:var(--doc-ink);white-space:nowrap;}
+  .vA td.act .title{font-weight:600;}
+  .vA td.act .alt{color:var(--doc-muted);font-size:12px;margin-top:1px;}
+  .vA td.act .note{color:var(--doc-muted);font-size:12px;margin-top:2px;}
+  .vA td.mv{width:118px;color:var(--doc-muted);font-size:12px;white-space:nowrap;text-align:right;}
+  .vA .hotel-row td{border-bottom:none;padding-top:6px;color:var(--doc-ink);font-size:12.5px;background:#faf6ee;}
+  .vA .hotel-row .hk{font-weight:700;letter-spacing:.05em;}
+  /* notes — compact 2-col definition grid */
+  .vA .notes{margin-top:22px;border-top:2px solid var(--doc-ink);padding-top:12px;}
+  .vA .notes h2{font-size:14px;font-weight:700;letter-spacing:.08em;margin:0 0 8px;}
+  .vA .ngrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 26px;}
+  .vA .nsec{break-inside:avoid;}
+  .vA .nsec .nh{font-size:12px;font-weight:700;color:var(--doc-ink);display:flex;align-items:center;gap:5px;margin:6px 0 2px;}
+  .vA .nsec p{margin:0 0 2px;font-size:12.5px;color:var(--doc-muted);line-height:1.5;}
+
+  /* ============ VARIANT B — 寬鬆卡片式 ============ */
+  .vB .day{margin-top:26px;}
+  .vB .day-hd{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;}
+  .vB .day-hd .badge{font-size:12px;font-weight:700;letter-spacing:.1em;background:var(--doc-ink);color:#fff;padding:4px 10px;border-radius:6px;}
+  .vB .day-hd .d{font-size:14px;color:var(--doc-muted);}
+  .vB .entry{display:grid;grid-template-columns:58px 1fr;gap:14px;padding:11px 0;border-bottom:1px solid #efe9df;}
+  .vB .entry .time{font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;}
+  .vB .entry .body .title{font-size:15px;font-weight:600;}
+  .vB .entry .body .alt{font-size:13px;color:var(--doc-muted);margin-top:3px;}
+  .vB .entry .body .note{font-size:13px;color:var(--doc-muted);margin-top:4px;}
+  .vB .travel{display:grid;grid-template-columns:58px 1fr;gap:14px;}
+  .vB .travel .conn{color:var(--doc-muted);font-size:12.5px;padding:3px 0;display:flex;align-items:center;gap:6px;}
+  .vB .travel .conn::before{content:"";display:block;width:1px;height:16px;background:var(--doc-hair);margin-left:28px;}
+  .vB .hotel{margin-top:12px;border:1px solid var(--doc-hair);border-radius:10px;padding:11px 14px;background:#fdfbf7;display:flex;align-items:center;gap:10px;font-size:13px;}
+  .vB .hotel .hk{font-weight:700;letter-spacing:.04em;}
+  .vB .notes{margin-top:30px;}
+  .vB .notes h2{font-size:16px;font-weight:700;border-bottom:2px solid var(--doc-ink);padding-bottom:8px;margin:0 0 14px;}
+  .vB .nsec{break-inside:avoid;margin-bottom:14px;}
+  .vB .nsec .nh{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+  .vB .nsec p{margin:0 0 3px;font-size:13px;color:var(--doc-muted);line-height:1.6;}
+
+  /* ============ VARIANT C — 條列文字式 ============ */
+  .vC{font-size:14px;line-height:1.7;}
+  .vC .day{margin-top:22px;}
+  .vC .day-hd{font-size:15px;font-weight:700;border-bottom:1px solid var(--doc-hair);padding-bottom:3px;margin-bottom:6px;}
+  .vC .day-hd .d{font-weight:400;color:var(--doc-muted);font-size:13px;margin-left:8px;}
+  .vC .it{padding-left:58px;margin:0 0 3px;}
+  .vC .it .time{display:inline-block;width:58px;margin-left:-58px;font-variant-numeric:tabular-nums;font-weight:600;}
+  .vC .it .title{font-weight:600;}
+  .vC .sub{padding-left:58px;color:var(--doc-muted);font-size:12.5px;line-height:1.5;margin:0;}
+  .vC .sub.travel{color:var(--doc-muted);}
+  .vC .hotel-line{padding-left:58px;margin:5px 0 0;font-size:13px;}
+  .vC .hotel-line .lab{display:inline-block;width:58px;margin-left:-58px;font-weight:700;}
+  .vC .notes{margin-top:26px;border-top:1px solid var(--doc-hair);padding-top:12px;}
+  .vC .notes h2{font-size:15px;font-weight:700;letter-spacing:.04em;margin:0 0 10px;}
+  .vC .nsec{margin-bottom:9px;break-inside:avoid;}
+  .vC .nsec .nh{font-weight:700;font-size:13px;display:inline-block;}
+  .vC .nsec .nl{padding-left:78px;margin:0;font-size:13px;color:var(--doc-muted);}
+  .vC .nsec .nl .lab{display:inline-block;width:78px;margin-left:-78px;color:var(--doc-ink);font-weight:500;}
+</style>
+</head>
+<body>
+<div class="board-head">
+  <h1>行程列印文件 — 版面 3 選 1（density variant）</h1>
+  <p>同一份沖繩 5 天行程，三種密度處理。列印文件本體純黑白文字 + 少量圖示；上方工具列（accent 列印/PDF/匯出）是 on-screen chrome，不會印出來。挑一個或指出要 remix 的點。</p>
+</div>
+
+<!-- ============================= VARIANT A ============================= -->
+<div class="variant-wrap">
+  <div class="variant-label"><span class="tag">Variant A</span><span class="desc">緊湊表格式 — 一頁塞最多、適合長行程、表格對齊掃讀快</span></div>
+  <div class="toolbar">
+    <span class="ttl">/trip/:id/print</span>
+    <button class="btn btn-primary"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>列印</button>
+    <button class="btn btn-ghost">PDF</button>
+    <button class="btn btn-ghost">匯出 JSON</button>
+  </div>
+  <div class="sheet vA">
+    <div class="dh">
+      <div class="name">沖繩 5 天 4 夜</div>
+      <div class="meta"><span><b>2026/07/26 – 07/30</b></span><span>那霸 · 美麗海 · 北谷</span><span>5 天 · 12 個景點</span></div>
+    </div>
+
+    <div class="day">
+      <div class="day-hd"><span class="day-no">Day 1</span><span class="day-date">07/26（六）</span></div>
+      <table>
+        <tr><td class="t">09:00</td><td class="act"><div class="title">那霸機場 <span class="star">★ 4.1</span></div></td><td class="mv">交通 12 分 · 2.1km</td></tr>
+        <tr><td class="t">10:30</td><td class="act"><div class="title">國際通 <span class="star">★ 4.3</span></div><div class="alt">備選：牧志公設市場 · 第一牧志</div></td><td class="mv">步行 8 分 · 0.6km</td></tr>
+        <tr><td class="t">12:00</td><td class="act"><div class="title">午餐 — 暖暮拉麵 <span class="star">★ 4.5</span></div><div class="note">¥¥ · 排隊名店，建議避開正午</div></td><td class="mv">開車 15 分 · 6.4km</td></tr>
+        <tr><td class="t">14:30</td><td class="act"><div class="title">首里城公園 <span class="star">★ 4.4</span></div></td><td class="mv">—</td></tr>
+        <tr class="hotel-row"><td class="t"><span class="hk">住宿</span></td><td class="act">那霸東急 REI <span class="star">★ 4.2</span> · 停車 ¥1,000/泊 · 含早餐</td><td class="mv"></td></tr>
+      </table>
+    </div>
+
+    <div class="day">
+      <div class="day-hd"><span class="day-no">Day 2</span><span class="day-date">07/27（日）</span></div>
+      <table>
+        <tr><td class="t">09:30</td><td class="act"><div class="title">美麗海水族館 <span class="star">★ 4.6</span></div><div class="note">門票已購 ×4</div></td><td class="mv">開車 95 分 · 78km</td></tr>
+        <tr><td class="t">13:00</td><td class="act"><div class="title">古宇利大橋 <span class="star">★ 4.5</span></div></td><td class="mv">開車 25 分 · 14km</td></tr>
+        <tr><td class="t">16:00</td><td class="act"><div class="title">美國村（北谷）<span class="star">★ 4.2</span></div><div class="alt">備選：永旺夢樂城</div></td><td class="mv">—</td></tr>
+        <tr class="hotel-row"><td class="t"><span class="hk">住宿</span></td><td class="act">美麗海 The Hotel <span class="star">★ 4.3</span> · 海景房</td><td class="mv"></td></tr>
+      </table>
+    </div>
+
+    <div class="notes">
+      <h2>行程筆記</h2>
+      <div class="ngrid">
+        <div class="nsec"><div class="nh">✈ 航班</div><p>去 BR112　桃園 08:55 → 那霸 11:40</p><p>回 BR113　那霸 12:40 → 桃園 13:35</p></div>
+        <div class="nsec"><div class="nh">🛏 住宿</div><p>那霸東急 REI　7/26–7/28</p><p>美麗海 The Hotel　7/28–7/30</p></div>
+        <div class="nsec"><div class="nh">📋 預訂</div><p>水族館門票 ×4（已付）</p><p>OTS 租車　7/27 10:00 取車</p></div>
+        <div class="nsec"><div class="nh">📌 行前須知</div><p>國際駕照 + 台灣駕照正本</p><p>插座同台灣（A 型 100V）</p></div>
+        <div class="nsec"><div class="nh">🆘 緊急聯絡</div><p>台北駐日經濟文化辦事處　+81-3-3280-7811</p><p>OTS 租車緊急　0120-34-3732</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= VARIANT B ============================= -->
+<div class="variant-wrap">
+  <div class="variant-label"><span class="tag">Variant B</span><span class="desc">寬鬆卡片式 — 留白多、可讀性最好、時間軸感、適合短中行程</span></div>
+  <div class="toolbar">
+    <span class="ttl">/trip/:id/print</span>
+    <button class="btn btn-primary"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>列印</button>
+    <button class="btn btn-ghost">PDF</button>
+    <button class="btn btn-ghost">匯出 JSON</button>
+  </div>
+  <div class="sheet vB">
+    <div class="dh">
+      <div class="name">沖繩 5 天 4 夜</div>
+      <div class="meta"><span><b>2026/07/26 – 07/30</b></span><span>那霸 · 美麗海 · 北谷</span><span>5 天 · 12 個景點</span></div>
+    </div>
+
+    <div class="day">
+      <div class="day-hd"><span class="badge">DAY 1</span><span class="d">07/26（六）</span></div>
+      <div class="entry"><div class="time">09:00</div><div class="body"><div class="title">那霸機場 <span class="star">★ 4.1</span></div></div></div>
+      <div class="travel"><div></div><div class="conn">開車 → 12 分 · 2.1km</div></div>
+      <div class="entry"><div class="time">10:30</div><div class="body"><div class="title">國際通 <span class="star">★ 4.3</span></div><div class="alt">備選：牧志公設市場 · 第一牧志</div></div></div>
+      <div class="travel"><div></div><div class="conn">步行 → 8 分 · 0.6km</div></div>
+      <div class="entry"><div class="time">12:00</div><div class="body"><div class="title">午餐 — 暖暮拉麵 <span class="star">★ 4.5</span></div><div class="note">¥¥ · 排隊名店，建議避開正午</div></div></div>
+      <div class="hotel"><span class="hk">住宿</span><span>那霸東急 REI <span class="star">★ 4.2</span> · 停車 ¥1,000/泊 · 含早餐</span></div>
+    </div>
+
+    <div class="day">
+      <div class="day-hd"><span class="badge">DAY 2</span><span class="d">07/27（日）</span></div>
+      <div class="entry"><div class="time">09:30</div><div class="body"><div class="title">美麗海水族館 <span class="star">★ 4.6</span></div><div class="note">門票已購 ×4</div></div></div>
+      <div class="travel"><div></div><div class="conn">開車 → 95 分 · 78km</div></div>
+      <div class="entry"><div class="time">13:00</div><div class="body"><div class="title">古宇利大橋 <span class="star">★ 4.5</span></div></div></div>
+      <div class="hotel"><span class="hk">住宿</span><span>美麗海 The Hotel <span class="star">★ 4.3</span> · 海景房</span></div>
+    </div>
+
+    <div class="notes">
+      <h2>行程筆記</h2>
+      <div class="nsec"><div class="nh">✈ 航班</div><p>去程　BR112　桃園 08:55 → 那霸 11:40</p><p>回程　BR113　那霸 12:40 → 桃園 13:35</p></div>
+      <div class="nsec"><div class="nh">🛏 住宿</div><p>那霸東急 REI　7/26–7/28（2 晚）</p><p>美麗海 The Hotel　7/28–7/30（2 晚）</p></div>
+      <div class="nsec"><div class="nh">📋 預訂</div><p>美麗海水族館門票 ×4 — 已付款</p><p>OTS 租車 — 7/27 10:00 那霸營業所取車</p></div>
+      <div class="nsec"><div class="nh">📌 行前須知</div><p>攜帶：國際駕照 + 台灣駕照正本（缺一不可租車）</p><p>插座同台灣 A 型 100V，免轉接</p></div>
+      <div class="nsec"><div class="nh">🆘 緊急聯絡</div><p>台北駐日經濟文化辦事處　+81-3-3280-7811</p><p>OTS 租車 24h 緊急　0120-34-3732</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= VARIANT C ============================= -->
+<div class="variant-wrap">
+  <div class="variant-label"><span class="tag">Variant C</span><span class="desc">條列文字式 — 零框線、純排版層級、最像「打字行程單」、墨水最省</span></div>
+  <div class="toolbar">
+    <span class="ttl">/trip/:id/print</span>
+    <button class="btn btn-primary"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>列印</button>
+    <button class="btn btn-ghost">PDF</button>
+    <button class="btn btn-ghost">匯出 JSON</button>
+  </div>
+  <div class="sheet vC">
+    <div class="dh">
+      <div class="name">沖繩 5 天 4 夜</div>
+      <div class="meta"><span><b>2026/07/26 – 07/30</b></span><span>那霸 · 美麗海 · 北谷</span><span>5 天 · 12 個景點</span></div>
+    </div>
+
+    <div class="day">
+      <div class="day-hd">Day 1<span class="d">07/26（六）</span></div>
+      <p class="it"><span class="time">09:00</span><span class="title">那霸機場</span> <span class="star">★ 4.1</span></p>
+      <p class="sub travel">↓ 開車 12 分 · 2.1km</p>
+      <p class="it"><span class="time">10:30</span><span class="title">國際通</span> <span class="star">★ 4.3</span></p>
+      <p class="sub">備選：牧志公設市場 · 第一牧志公設市場</p>
+      <p class="sub travel">↓ 步行 8 分 · 0.6km</p>
+      <p class="it"><span class="time">12:00</span><span class="title">午餐 — 暖暮拉麵</span> <span class="star">★ 4.5</span></p>
+      <p class="sub">¥¥ · 排隊名店，建議避開正午</p>
+      <p class="hotel-line"><span class="lab">住宿</span>那霸東急 REI <span class="star">★ 4.2</span> · 停車 ¥1,000/泊 · 含早餐</p>
+    </div>
+
+    <div class="day">
+      <div class="day-hd">Day 2<span class="d">07/27（日）</span></div>
+      <p class="it"><span class="time">09:30</span><span class="title">美麗海水族館</span> <span class="star">★ 4.6</span></p>
+      <p class="sub">門票已購 ×4</p>
+      <p class="sub travel">↓ 開車 95 分 · 78km</p>
+      <p class="it"><span class="time">13:00</span><span class="title">古宇利大橋</span> <span class="star">★ 4.5</span></p>
+      <p class="hotel-line"><span class="lab">住宿</span>美麗海 The Hotel <span class="star">★ 4.3</span> · 海景房</p>
+    </div>
+
+    <div class="notes">
+      <h2>行程筆記</h2>
+      <div class="nsec"><span class="nh">✈ 航班</span>
+        <p class="nl"><span class="lab">去程</span>BR112　桃園 08:55 → 那霸 11:40</p>
+        <p class="nl"><span class="lab">回程</span>BR113　那霸 12:40 → 桃園 13:35</p>
+      </div>
+      <div class="nsec"><span class="nh">🛏 住宿</span>
+        <p class="nl"><span class="lab">7/26–28</span>那霸東急 REI</p>
+        <p class="nl"><span class="lab">7/28–30</span>美麗海 The Hotel</p>
+      </div>
+      <div class="nsec"><span class="nh">📋 預訂</span>
+        <p class="nl"><span class="lab">門票</span>美麗海水族館 ×4（已付）</p>
+        <p class="nl"><span class="lab">租車</span>OTS　7/27 10:00 那霸取車</p>
+      </div>
+      <div class="nsec"><span class="nh">📌 行前須知</span>
+        <p class="nl"><span class="lab">證件</span>國際駕照 + 台灣駕照正本</p>
+        <p class="nl"><span class="lab">電源</span>插座同台灣 A 型 100V</p>
+      </div>
+      <div class="nsec"><span class="nh">🆘 緊急聯絡</span>
+        <p class="nl"><span class="lab">辦事處</span>台北駐日　+81-3-3280-7811</p>
+        <p class="nl"><span class="lab">租車</span>OTS 24h　0120-34-3732</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
