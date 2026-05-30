@@ -211,9 +211,10 @@ interface SortableFlightRowProps {
   onEdit: () => void;
   onSaveField: (field: keyof TripFlight, value: string) => void;
   onDelete: () => void;
+  onClose: () => void;
 }
 
-function SortableFlightRow({ flight, isEditing, onEdit, onSaveField, onDelete }: SortableFlightRowProps) {
+function SortableFlightRow({ flight, isEditing, onEdit, onSaveField, onDelete, onClose }: SortableFlightRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: flight.id,
     disabled: isEditing,
@@ -294,6 +295,9 @@ function SortableFlightRow({ flight, isEditing, onEdit, onSaveField, onDelete }:
             />
           </div>
           <div className="tp-notes-flight-edit-actions">
+            <button type="button" className="tp-btn tp-btn-ghost" onClick={onClose} data-testid={`flight-close-${flight.id}`}>
+              關閉
+            </button>
             <button type="button" className="tp-btn tp-btn-destructive" onClick={onDelete} data-testid={`flight-delete-${flight.id}`}>
               刪除
             </button>
@@ -462,6 +466,7 @@ export default function FlightsSection({ tripId, items, onChange }: FlightsSecti
                   flight={flight}
                   isEditing={editingId === flight.id}
                   onEdit={() => setEditingId(flight.id)}
+                  onClose={() => setEditingId(null)}
                   onSaveField={(field, value) => void handleSaveField(flight.id, field, value)}
                   onDelete={() => setPendingDeleteId(flight.id)}
                 />

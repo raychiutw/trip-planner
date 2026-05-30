@@ -72,7 +72,10 @@ const SECTIONS: SectionMeta[] = [
 ];
 
 const SCOPED_STYLES = `
-.tp-notes-shell { display: grid; grid-template-rows: auto 1fr auto; min-height: 100%; background: var(--color-background); }
+/* minmax(0,1fr) column caps the implicit grid track at the container width —
+ * without it the auto column blows out to content max-content → page-body
+ * renders wider than the viewport → mobile horizontal scroll (QA 2026-05-30). */
+.tp-notes-shell { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; min-height: 100%; background: var(--color-background); }
 .tp-notes-page-body { padding: 16px; max-width: 720px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 @media (min-width: 768px) { .tp-notes-page-body { padding: 24px; max-width: 1040px; } }
 

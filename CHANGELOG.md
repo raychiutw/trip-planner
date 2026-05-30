@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.34.50] - 2026-05-30
+
+**Fix — 行程筆記編輯加「關閉」button + 修手機左右滑動（prod QA follow-up）**
+
+兩個 prod QA 回報：(1) 編輯一筆筆記（航班/住宿/預訂/行前須知/緊急聯絡）時只有「刪除」，沒有不刪除就退出編輯的方法；(2) 行程筆記頁在手機可以左右滑動（水平捲動）。
+
+- **加「關閉」button**：5 個 section 的編輯表單底部，刪除左側新增 ghost 樣式「關閉」button，點了收合回顯示模式（不刪資料，改動已 autosave）。
+- **修手機左右滑動**：`.tp-notes-shell` 是 CSS grid 但沒定義 column，隱式 `auto` column 撐到內容 max-content → page body 比視窗寬 → 手機可左右滑。加 `grid-template-columns: minmax(0, 1fr)` 把 column 上限鎖在視窗寬度。
+
+### Added
+- 行程筆記 5 section 編輯表單「關閉」button（ghost，收合編輯）。
+
+### Fixed
+- 行程筆記頁手機水平捲動（`.tp-notes-shell` grid column blowout）。
+
 ## [2.34.49] - 2026-05-30
 
 **Fix — 行程筆記 NoteDateTimeField 時間選擇器爆高（v2.34.48 prod QA follow-up）**

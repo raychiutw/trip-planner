@@ -56,6 +56,24 @@ describe('trip-notes inputs — canonical components (no native date/time/select
     }
   });
 
+  it('every section edit form has a 關閉 (close) button next to 刪除', () => {
+    // QA 2026-05-30: edit mode had no explicit exit (only delete). Added a
+    // ghost 關閉 button that collapses the row (onClose → setEditingId(null)).
+    for (const f of SECTIONS) {
+      const src = read(f);
+      expect(src, `${f} 關閉 button`).toMatch(/tp-btn-ghost[^>]*onClick=\{onClose\}[\s\S]*?關閉/);
+      expect(src, `${f} -close- testid`).toMatch(/-close-\$\{/);
+      expect(src, `${f} onClose prop wired to setEditingId\\(null\\)`).toMatch(/onClose=\{\(\) => setEditingId\(null\)\}/);
+    }
+  });
+
+  it('trip-notes shell caps the grid column (no mobile horizontal scroll)', () => {
+    // QA 2026-05-30: .tp-notes-shell grid had no columns → implicit auto column
+    // blew out to content max-content → page-body wider than viewport → swipe.
+    const page = readFileSync(join(__dirname, '..', '..', 'src/pages/TripNotesPage.tsx'), 'utf8');
+    expect(page).toMatch(/\.tp-notes-shell\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  });
+
   it('no section keeps the ad-hoc edit-grid input height CSS (relies on .tp-input-long)', () => {
     for (const f of SECTIONS) {
       // The old ad-hoc rule styled `.tp-notes-*-edit-grid input { padding: 8px 10px ... }`.
