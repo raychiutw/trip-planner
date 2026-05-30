@@ -3,12 +3,7 @@ import { logAudit } from '../../_audit';
 import { AppError } from '../../_errors';
 import { json, getAuth } from '../../_utils';
 import type { Env } from '../../_types';
-import {
-  assembleDay,
-  fetchEntryPoisByEntries,
-  fetchHotelAndParking,
-  fetchTripSegmentsMap,
-} from './days/_merge';
+import { buildAllDays } from './days/_merge';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const MS_PER_DAY = 86_400_000;
@@ -39,55 +34,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return json(results);
   }
 
-  // Batch 模式：4 queries 平行（days + entries + segments + entry_pois 由 helper 內部完成）
-  const [daysResult, entriesResult, segmentsMap] = await Promise.all([
-    db.prepare('SELECT * FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC').bind(id).all(),
-    db.prepare(`
-      SELECT e.* FROM trip_entries e
-      JOIN trip_days d ON e.day_id = d.id
-      WHERE d.trip_id = ?
-      ORDER BY e.day_id ASC, e.sort_order ASC
-    `).bind(id).all(),
-    fetchTripSegmentsMap(db, id),
-  ]);
-
-  const dayRows = daysResult.results as Record<string, unknown>[];
-  const entryRows = entriesResult.results as Record<string, unknown>[];
-
-  // Collect hotel_poi_id list (dedup, non-null) → fetch hotel + parking POI
-  const hotelPoiIds = [
-    ...new Set(
-      dayRows
-        .map((d) => d.hotel_poi_id as number | null)
-        .filter((v): v is number => v != null && v > 0),
-    ),
-  ];
-  const { poiMap, parkingMap } = await fetchHotelAndParking(db, hotelPoiIds);
-
-  // v2.27.0 multi-POI per entry：1 query fetch all entry_pois，分 map per entry
-  const allEntryIds = entryRows.map((e) => e.id as number);
-  const entryPoisMap = await fetchEntryPoisByEntries(db, allEntryIds);
-
-  const entriesByDay = new Map<number, Record<string, unknown>[]>();
-  for (const e of entryRows) {
-    const dayId = e.day_id as number;
-    if (!entriesByDay.has(dayId)) entriesByDay.set(dayId, []);
-    entriesByDay.get(dayId)!.push(e);
-  }
-
-  const days = dayRows.map((day) => {
-    const dayId = day.id as number;
-    return assembleDay({
-      dayRow: day,
-      entries: entriesByDay.get(dayId) ?? [],
-      poiMap,
-      parkingMap,
-      entryPoisMap,
-      segmentsMap,
-    });
-  });
-
-  return json(days);
+  // Batch 模式：完整 days 由 buildAllDays 組（與公開 share 端點共用同一 orchestration）。
+  return json(await buildAllDays(db, id));
 };
 
 /**

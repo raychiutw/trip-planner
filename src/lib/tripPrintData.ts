@@ -187,6 +187,26 @@ function mapNotes(raw: Raw | null): PrintNotes {
 }
 
 /**
+ * Pure mapper: raw {meta, days, notes} → TripPrintData. Shared by the authed print
+ * loader and the public share loader so both render byte-identical documents through
+ * one mapping path (the server-side share endpoint deliberately returns the SAME raw
+ * days?all=1 shape so this single mapper — incl. toTimelineEntry — is reused, never
+ * re-implemented in the Worker).
+ */
+export function mapRawToPrintData(meta: Raw, daysRaw: unknown, notesRaw: Raw | null): TripPrintData {
+  const days = arr(daysRaw).map(mapPrintDay);
+  const destArr = arr(meta.destinations).map((dd) => str(dd.name)).filter(Boolean) as string[];
+  return {
+    name: String(meta.name ?? ''),
+    title: str(meta.title) ?? null,
+    destinations: destArr.length > 0 ? destArr.join(' · ') : str(meta.countries),
+    dateRange: formatDateRange(days),
+    days,
+    notes: mapNotes(notesRaw),
+  };
+}
+
+/**
  * Load everything the print document needs in parallel:
  * trip meta + days (with timeline/travel/hotel) + 5-section trip notes.
  * Notes failure is non-fatal (older trips may 404) → empty notes.
@@ -198,14 +218,24 @@ export async function loadTripPrintData(tripId: string): Promise<TripPrintData> 
     apiFetch<Raw[]>(`/trips/${id}/days?all=1`),
     apiFetch<Raw>(`/trips/${id}/notes`).catch(() => null),
   ]);
-  const days = arr(daysRaw).map(mapPrintDay);
-  const destArr = arr(meta.destinations).map((dd) => str(dd.name)).filter(Boolean) as string[];
+  return mapRawToPrintData(meta, daysRaw, notesRaw);
+}
+
+export interface SharePrintData {
+  data: TripPrintData;
+  /** Owner display_name for the「由 X 分享」hero ('' when not set / anonymous). */
+  sharedBy: string;
+}
+
+/**
+ * Public share loader (no auth): one call to GET /api/share/:token returns the
+ * already section-filtered {meta, days, notes}. Maps via the shared mapper. apiFetch
+ * throws on 404 (invalid / revoked / expired token) — caller shows a not-found state.
+ */
+export async function loadSharePrintData(token: string): Promise<SharePrintData> {
+  const res = await apiFetch<{ meta: Raw; days: unknown; notes: Raw }>(`/share/${encodeURIComponent(token)}`);
   return {
-    name: String(meta.name ?? ''),
-    title: str(meta.title) ?? null,
-    destinations: destArr.length > 0 ? destArr.join(' · ') : str(meta.countries),
-    dateRange: formatDateRange(days),
-    days,
-    notes: mapNotes(notesRaw),
+    data: mapRawToPrintData(res.meta, res.days, res.notes),
+    sharedBy: str(res.meta?.sharedBy) ?? '',
   };
 }

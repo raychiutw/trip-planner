@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/shared/Icon';
 import TripPrintDocument from '../components/print/TripPrintDocument';
+import ShareLinkModal from '../components/share/ShareLinkModal';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { loadTripPrintData, type TripPrintData } from '../lib/tripPrintData';
 import { PRINT_CSS } from '../lib/tripPrintStyles';
@@ -22,6 +23,7 @@ export default function TripPrintPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<TripPrintData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     if (!tripId) return;
@@ -56,12 +58,23 @@ export default function TripPrintPage() {
         <button
           type="button"
           className="tp-print-btn tp-print-btn-ghost"
+          onClick={() => setShareOpen(true)}
+          disabled={!data}
+          data-testid="trip-print-share"
+        >
+          <Icon name="copy" /> 分享連結
+        </button>
+        <button
+          type="button"
+          className="tp-print-btn tp-print-btn-ghost"
           onClick={onClose}
           data-testid="trip-print-close"
         >
           關閉
         </button>
       </div>
+
+      {tripId && <ShareLinkModal tripId={tripId} open={shareOpen} onClose={() => setShareOpen(false)} />}
 
       {error ? (
         <div className="tp-print-state" data-testid="trip-print-error">{error}</div>
