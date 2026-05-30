@@ -8,6 +8,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import TripPrintDocument from '../../src/components/print/TripPrintDocument';
 import type { TripPrintData } from '../../src/lib/tripPrintData';
 
@@ -79,5 +81,26 @@ describe('TripPrintDocument', () => {
   it('shows the 尚無行程 placeholder when 0 days', () => {
     render(<TripPrintDocument data={{ ...full, days: [] }} />);
     expect(screen.getByTestId('print-empty-days')).toBeTruthy();
+  });
+
+  it('renders entries as a responsive div-grid, NOT a <table> (RWD)', () => {
+    const { container } = render(<TripPrintDocument data={full} />);
+    expect(container.querySelector('table')).toBeNull();
+    expect(container.querySelector('.tp-print-entry')).toBeTruthy();
+    // grid cells are divs, not td
+    expect(container.querySelector('.tp-print-entry')!.tagName).toBe('DIV');
+  });
+});
+
+describe('print styles — responsive via container query (doc width, not viewport)', () => {
+  it('entry is a 3-col grid that stacks when the DOCUMENT is narrow', () => {
+    const css = readFileSync(join(__dirname, '..', '..', 'src/lib/tripPrintStyles.ts'), 'utf8');
+    expect(css).toMatch(/\.tp-print-entry\{display:grid;grid-template-columns:54px 1fr 132px/);
+    // container query (NOT @media) so the 794px PDF render on a small device stays
+    // 3-col while the on-screen ~390px doc stacks.
+    expect(css).toMatch(/container-type:inline-size/);
+    expect(css).toMatch(/@container \(max-width:640px\)/);
+    expect(css).not.toMatch(/@media screen and \(max-width:640px\)/);
+    expect(css).toMatch(/\.tp-print-ngrid\{grid-template-columns:1fr;\}/); // notes 1-col when narrow
   });
 });

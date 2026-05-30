@@ -29,20 +29,21 @@ function Rating({ value }: { value?: number | null }) {
 function EntryRow({ entry }: { entry: PrintEntry }) {
   const alts = (entry.stopPois ?? []).filter((p) => p.sortOrder !== 1 && p.name);
   const travel = formatTravelLine(entry.travel);
+  // Responsive grid (not a <table>): ≥640px renders as 3 columns (time | activity
+  // | travel); <640px stacks via @media in tripPrintStyles. Actual print/PDF (A4
+  // width) keeps the 3-column layout.
   return (
-    <tr className="tp-print-entry">
-      <td className="tp-print-t">{entry.time || '—'}</td>
-      <td className="tp-print-act">
-        <div className="tp-print-title">
-          {entry.title} <Rating value={entry.rating} />
-        </div>
-        {alts.length > 0 && (
-          <div className="tp-print-alt">備選：{alts.map((p) => p.name).join(' · ')}</div>
-        )}
-        {entry.note && <div className="tp-print-note">{entry.note}</div>}
-      </td>
-      <td className="tp-print-mv">{travel || '—'}</td>
-    </tr>
+    <div className="tp-print-entry">
+      <div className="tp-print-t">{entry.time || '—'}</div>
+      <div className="tp-print-title">
+        {entry.title} <Rating value={entry.rating} />
+      </div>
+      {alts.length > 0 && (
+        <div className="tp-print-alt">備選：{alts.map((p) => p.name).join(' · ')}</div>
+      )}
+      {entry.note && <div className="tp-print-note">{entry.note}</div>}
+      <div className="tp-print-mv">{travel || '—'}</div>
+    </div>
   );
 }
 
@@ -122,23 +123,20 @@ export default function TripPrintDocument({ data }: { data: TripPrintData }) {
                 {[day.date, day.dayOfWeek ? `（${day.dayOfWeek}）` : '', day.label].filter(Boolean).join(' ')}
               </span>
             </div>
-            <table className="tp-print-table">
-              <tbody>
-                {day.timeline.map((entry, idx) => (
-                  <EntryRow key={idx} entry={entry} />
-                ))}
-                {day.hotel && (
-                  <tr className="tp-print-hotel-row">
-                    <td className="tp-print-t"><span className="tp-print-hk">住宿</span></td>
-                    <td className="tp-print-act">
-                      {day.hotel.name} <Rating value={day.hotel.rating} />
-                      {day.hotel.note ? ` · ${day.hotel.note}` : ''}
-                    </td>
-                    <td className="tp-print-mv" />
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            <div className="tp-print-day-entries">
+              {day.timeline.map((entry, idx) => (
+                <EntryRow key={idx} entry={entry} />
+              ))}
+              {day.hotel && (
+                <div className="tp-print-hotel">
+                  <span className="tp-print-hk">住宿</span>
+                  <span>
+                    {day.hotel.name} <Rating value={day.hotel.rating} />
+                    {day.hotel.note ? ` · ${day.hotel.note}` : ''}
+                  </span>
+                </div>
+              )}
+            </div>
           </section>
         ))
       )}
