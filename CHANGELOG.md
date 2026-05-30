@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.38.4] - 2026-05-30
+
+### Fixed
+- **列印頁手機時間欄** — 有起訖時間的景點（如 12:00-13:30）在手機堆疊版面時，時間會疊到標題上。加寬時間欄到容得下完整時間範圍，桌機/列印同步調整。
+
 ## [2.38.3] - 2026-05-30
 
 ### Fixed
