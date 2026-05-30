@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.35.1] - 2026-05-30
+
+### Changed
+- docs：CLAUDE.md naming history 補上行程筆記 2.34.47–2.35.0 里程碑記錄（開發文件，無功能變更）。
+
 ## [2.35.0] - 2026-05-30
 
 **🎉 Milestone — 行程筆記（Trip Notes）功能完成**
