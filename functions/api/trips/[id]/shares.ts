@@ -14,19 +14,10 @@ import {
   generateShareToken,
   hashToken,
   sanitizeVisibleSections,
+  validateExpiresAt,
   DEFAULT_SHARE_SECTIONS,
 } from '../../_share';
 import type { Env } from '../../_types';
-
-const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-
-/** Owner-supplied expires_at (epoch ms): must be a future time within 1 year, else null (= never). */
-function validateExpiresAt(input: unknown): number | null {
-  if (typeof input !== 'number' || !Number.isFinite(input)) return null;
-  const now = Date.now();
-  if (input <= now || input > now + ONE_YEAR_MS) return null;
-  return Math.floor(input);
-}
 
 async function requireTripWrite(context: Parameters<PagesFunction<Env>>[0], tripId: string) {
   const auth = requireAuth(context);
@@ -45,7 +36,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // Includes revoked-but-not-deleted rows so retained view_count analytics stay reachable.
   const { results } = await db
     .prepare(
-      `SELECT id, label, visible_sections, expires_at, view_count, created_by, created_at, revoked_at
+      `SELECT id, label, visible_sections, expires_at, view_count, anonymous, created_by, created_at, revoked_at
        FROM trip_shares WHERE trip_id = ? ORDER BY created_at DESC, id DESC`,
     )
     .bind(id)
@@ -64,6 +55,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   );
   const label = typeof body.label === 'string' ? body.label.trim().slice(0, 80) : '';
   const expiresAt = validateExpiresAt(body.expiresAt);
+  const anonymous = body.anonymous === true ? 1 : 0;
 
   // INSERT with UNIQUE(token_hash) collision retry (astronomically rare; defensive).
   for (let attempt = 0; ; attempt++) {
@@ -72,10 +64,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     try {
       const row = await db
         .prepare(
-          `INSERT INTO trip_shares (trip_id, token_hash, label, visible_sections, expires_at, created_by)
-           VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+          `INSERT INTO trip_shares (trip_id, token_hash, label, visible_sections, expires_at, anonymous, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
         )
-        .bind(id, tokenHash, label, JSON.stringify(visible), expiresAt, auth.userId ?? '')
+        .bind(id, tokenHash, label, JSON.stringify(visible), expiresAt, anonymous, auth.userId ?? '')
         .first<{ id: number }>();
       // raw token returned ONCE — only the hash is persisted.
       return json({
@@ -85,6 +77,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         label,
         visibleSections: visible,
         expiresAt,
+        anonymous,
       });
     } catch (e) {
       // Only the astronomically-rare UNIQUE(token_hash) collision is retriable;

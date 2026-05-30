@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<title>分享管理面板 — PR2 mockup</title>
+<style>
+  :root{--accent:#D97848;--accent-deep:#B85C2E;--accent-subtle:#FBEEE4;--accent-bg:#F7DFCB;--bg:#FFFBF5;--secondary:#FAF4EA;--muted:#6F5A47;--ink:#1d1813;--border:#eadfcf;}
+  *{box-sizing:border-box;margin:0;}
+  body{background:#e6e3dd;font-family:'Inter','Noto Sans TC',system-ui,sans-serif;color:var(--ink);padding:24px 14px 60px;}
+  .board{display:flex;gap:30px;justify-content:center;align-items:flex-start;flex-wrap:wrap;}
+  .col{width:440px;}
+  .vlabel{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8a7a68;margin:0 4px 10px;}
+  .vsub{display:block;font-weight:400;letter-spacing:0;text-transform:none;color:#a99;margin-top:3px;}
+
+  .panel{background:var(--bg);border-radius:14px;box-shadow:0 16px 48px rgba(42,31,24,.3);padding:20px;}
+  .head{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .head h2{font-size:18px;font-weight:700;margin-right:auto;}
+  .head .x{border:none;background:transparent;font-size:18px;color:var(--muted);cursor:pointer;}
+  .sub{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:16px;}
+
+  .section-label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin:14px 0 8px;}
+  /* create form */
+  .create-box{background:var(--secondary);border:1px solid var(--border);border-radius:12px;padding:14px;}
+  .pills{display:flex;flex-wrap:wrap;gap:7px;}
+  .pill{font-size:13px;font-weight:600;padding:6px 12px;border-radius:9999px;border:1px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+  .pill.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .pill .dot{width:14px;height:14px;}
+  .hint{font-size:11.5px;color:#8a7a68;margin-top:7px;line-height:1.5;}
+  .seg{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content;}
+  .seg button{font-size:13px;font-family:inherit;padding:7px 13px;border:none;background:#fff;color:var(--muted);cursor:pointer;border-right:1px solid var(--border);}
+  .seg button:last-child{border-right:none;}
+  .seg button.on{background:var(--accent-subtle);color:var(--accent-deep);font-weight:700;}
+  .anon{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);margin-top:14px;cursor:pointer;}
+  .anon input{width:17px;height:17px;accent-color:var(--accent);}
+  .create-btn{width:100%;margin-top:14px;min-height:42px;border:none;border-radius:9px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;}
+
+  /* new-link banner */
+  .newbox{background:var(--accent-subtle);border:1px solid var(--accent-bg);border-radius:10px;padding:12px;margin-top:14px;}
+  .newbox .lbl{font-size:12px;font-weight:600;color:var(--accent-deep);margin-bottom:8px;}
+  .urlrow{display:flex;gap:8px;}
+  .urlrow input{flex:1;min-width:0;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:#fff;}
+  .urlrow .copy{border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;font-size:13px;padding:0 13px;cursor:pointer;}
+
+  /* link cards */
+  .link-card{border:1px solid var(--border);border-radius:11px;padding:13px;margin-top:10px;background:#fff;}
+  .link-top{display:flex;align-items:center;gap:8px;font-size:13px;}
+  .link-meta{color:var(--muted);}
+  .views{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-weight:600;color:var(--ink);}
+  .views svg{width:14px;height:14px;}
+  .badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:9999px;background:var(--accent-subtle);color:var(--accent-deep);}
+  .badge.expired{background:#f0e9df;color:#8a7a68;}
+  .badge.anon{background:#ece6f5;color:#6b5b95;}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;}
+  .chip{font-size:11.5px;padding:3px 9px;border-radius:9999px;background:var(--secondary);color:var(--muted);border:1px solid var(--border);}
+  .expiry{font-size:11.5px;color:#8a7a68;margin-top:8px;}
+  .actions{display:flex;gap:8px;margin-top:11px;padding-top:11px;border-top:1px solid #f0e9df;}
+  .act{font-size:12.5px;font-family:inherit;padding:6px 11px;border-radius:7px;border:1px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
+  .act.rotate{color:var(--accent-deep);border-color:var(--accent-bg);}
+  .act.del{margin-left:auto;color:#b3261e;border-color:#f3d0cc;}
+  svg{width:14px;height:14px;}
+  .note{font-size:11.5px;color:#8a7a68;line-height:1.5;margin-top:14px;}
+</style></head>
+<body>
+<div class="board">
+  <div class="col">
+    <div class="vlabel">PR2 分享管理面板（手機 414px）<span class="vsub">建立表單（區塊 pills + 期限 segmented + 匿名）+ 連結卡片（瀏覽數/區塊 chips/重新產生/關閉/刪除）</span></div>
+    <div class="panel">
+      <div class="head"><h2>分享這個行程</h2><button class="x">✕</button></div>
+      <div class="sub">建立公開連結，對方不用登入就能看（唯讀）。可開多個連結，各自設定要公開哪些區塊與有效期限。</div>
+
+      <div class="create-box">
+        <div class="section-label" style="margin-top:0">要公開哪些區塊？</div>
+        <div class="pills">
+          <span class="pill on"><svg class="dot" viewBox="0 0 24 24" fill="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>航班</span>
+          <span class="pill on"><svg class="dot" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18v-7h18v7h-2v-2H5v2z"/></svg>住宿</span>
+          <span class="pill on">行前須知</span>
+          <span class="pill">預訂</span>
+          <span class="pill">緊急聯絡</span>
+        </div>
+        <div class="hint">行程本體（每日景點/交通）一律公開。緊急聯絡與預訂預設關閉（含電話、訂房編號）。點一下切換。</div>
+
+        <div class="section-label">有效期限</div>
+        <div class="seg">
+          <button class="on">永久</button><button>24 小時</button><button>7 天</button><button>30 天</button>
+        </div>
+
+        <label class="anon"><input type="checkbox"> 匿名分享（不顯示「由 Ray 分享」）</label>
+
+        <button class="create-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> 建立分享連結</button>
+      </div>
+
+      <div class="newbox">
+        <div class="lbl">新連結（只顯示這一次，請立即複製）</div>
+        <div class="urlrow"><input readonly value="https://trip-planner-dby.pages.dev/s/C2BA4Bd…"><button class="copy">複製</button></div>
+      </div>
+
+      <div class="section-label">使用中的連結（2）</div>
+
+      <div class="link-card">
+        <div class="link-top"><span class="link-meta">建立於 7/26</span><span class="badge anon">匿名</span><span class="views"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>23</span></div>
+        <div class="chips"><span class="chip">航班</span><span class="chip">住宿</span><span class="chip">行前須知</span></div>
+        <div class="expiry">⏳ 永久有效</div>
+        <div class="actions">
+          <button class="act rotate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>重新產生</button>
+          <button class="act">關閉</button>
+          <button class="act del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>刪除</button>
+        </div>
+      </div>
+
+      <div class="link-card">
+        <div class="link-top"><span class="link-meta">建立於 7/20</span><span class="badge expired">已過期</span><span class="views"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>108</span></div>
+        <div class="chips"><span class="chip">航班</span><span class="chip">住宿</span><span class="chip">預訂</span><span class="chip">行前須知</span><span class="chip">緊急聯絡</span></div>
+        <div class="expiry">⏳ 已於 7/27 到期</div>
+        <div class="actions">
+          <button class="act rotate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>重新產生</button>
+          <button class="act del" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>刪除</button>
+        </div>
+      </div>
+
+      <div class="note">基於安全，已建立連結的網址無法再次顯示（只存雜湊）。要新網址請按「重新產生」。「關閉」立即停用但保留瀏覽統計；「刪除」整筆移除。</div>
+    </div>
+  </div>
+</div>
+</body></html>

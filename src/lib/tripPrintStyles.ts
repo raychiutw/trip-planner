@@ -116,6 +116,7 @@ export const SHARE_CHROME_CSS = `
 .tp-share-copy svg{width:16px;height:16px;}
 .tp-share-state{padding:72px 24px;text-align:center;color:#6f5a47;font-size:15px;line-height:1.6;}
 .tp-share-state-title{font-size:18px;font-weight:700;color:#1d1813;margin-bottom:8px;}
+.tp-share-error{padding:10px 16px;text-align:center;color:#b3261e;font-size:14px;}
 /* Align hero + action bar to the document column (the sheet is 794px centered).
    On mobile (<794) these are full-width no-ops; on desktop they center to match
    the sheet instead of stretching full-bleed (hero「太寬」fix). doc margin-top:0

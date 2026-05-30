@@ -15,6 +15,8 @@ import { mockEnv, mockContext, mockAuth, seedUser, seedTrip, callHandler, jsonRe
 import { onRequestPost as createShare, onRequestGet as listShares } from '../../functions/api/trips/[id]/shares';
 import { onRequestPatch as patchShare, onRequestDelete as deleteShare } from '../../functions/api/trips/[id]/shares/[shareId]';
 import { onRequestGet as publicView } from '../../functions/api/share/[token]';
+import { onRequestPost as cloneShare } from '../../functions/api/share/[token]/clone';
+import { getDayId, seedEntry, seedPoi, seedEntryAlternate, seedHotelForDay, userIdFor } from './helpers';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
@@ -152,5 +154,148 @@ describe('viewer-role rejection (managing shares is write-tier)', () => {
       params: { id },
     }));
     expect(listAsViewer.status).toBe(403);
+  });
+});
+
+describe('anonymous share (PR2)', () => {
+  it('anonymous link → public payload sharedBy is empty (owner has a name)', async () => {
+    const { id } = await seedTrip(db, { id: 'anon-trip', owner, days: 1 });
+    // non-anon → sharedBy = owner display_name (seedTrip sets it to the email local-part)
+    const plain = (await (await createShareFor(id)).json()) as { token: string };
+    const p1 = (await (await callHandler(publicView as never, mockContext({
+      request: new Request(`https://x/api/share/${plain.token}`), env, params: { token: plain.token },
+    }))).json()) as { meta: { sharedBy: string } };
+    expect(p1.meta.sharedBy).toBe('share-owner');
+
+    const anon = (await (await callHandler(createShare as never, mockContext({
+      request: jsonRequest(`https://x/api/trips/${id}/shares`, 'POST', { anonymous: true }),
+      env, auth: mockAuth({ email: owner }), params: { id },
+    }))).json()) as { token: string };
+    const p2 = (await (await callHandler(publicView as never, mockContext({
+      request: new Request(`https://x/api/share/${anon.token}`), env, params: { token: anon.token },
+    }))).json()) as { meta: { sharedBy: string } };
+    expect(p2.meta.sharedBy).toBe('');
+  });
+});
+
+describe('rotate token (PR2)', () => {
+  it('rotate issues a new token; old 404s, new works', async () => {
+    const { id } = await seedTrip(db, { id: 'rotate-trip', owner, days: 1 });
+    const created = (await (await createShareFor(id)).json()) as { id: number; token: string };
+    const rot = await callHandler(patchShare as never, mockContext({
+      request: jsonRequest(`https://x/api/trips/${id}/shares/${created.id}`, 'PATCH', { action: 'rotate' }),
+      env, auth: mockAuth({ email: owner }), params: { id, shareId: String(created.id) },
+    }));
+    expect(rot.status).toBe(200);
+    const { token: newToken } = (await rot.json()) as { token: string };
+    expect(newToken).not.toBe(created.token);
+    expect((await callHandler(publicView as never, mockContext({
+      request: new Request(`https://x/api/share/${created.token}`), env, params: { token: created.token },
+    }))).status).toBe(404);
+    expect((await callHandler(publicView as never, mockContext({
+      request: new Request(`https://x/api/share/${newToken}`), env, params: { token: newToken },
+    }))).status).toBe(200);
+  });
+});
+
+describe('clone (PR3)', () => {
+  it('clones visible body + visible notes into the cloner account; hidden sections NOT copied', async () => {
+    const { id } = await seedTrip(db, { id: 'clone-src', owner, days: 1 });
+    const dayId = await getDayId(db, id, 1);
+    const poiId = await seedPoi(db, { name: '那霸機場', type: 'transport' });
+    await seedEntry(db, dayId, { title: '那霸機場', poiId });
+    await db.prepare("INSERT INTO trip_flights (trip_id, airline, flight_no) VALUES (?, 'BR', '112')").bind(id).run();
+    await db.prepare("INSERT INTO trip_emergency_contacts (trip_id, name, phone) VALUES (?, 'Mom', '0900')").bind(id).run();
+    const created = (await (await createShareFor(id)).json()) as { token: string }; // default: flights ON, emergency OFF
+
+    const clonerEmail = 'cloner@test.com';
+    await seedUser(db, clonerEmail);
+    const cloneRes = await callHandler(cloneShare as never, mockContext({
+      request: jsonRequest(`https://x/api/share/${created.token}/clone`, 'POST'),
+      env, auth: mockAuth({ email: clonerEmail }), params: { token: created.token },
+    }));
+    expect(cloneRes.status).toBe(201);
+    const { tripId: newId } = (await cloneRes.json()) as { tripId: string };
+
+    const ownerRow = await db.prepare('SELECT owner_user_id FROM trips WHERE id = ?').bind(newId).first<{ owner_user_id: string }>();
+    expect(ownerRow?.owner_user_id).toBe(userIdFor(clonerEmail));
+    const ents = await db.prepare('SELECT COUNT(*) AS c FROM trip_entries e JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ?').bind(newId).first<{ c: number }>();
+    expect(ents?.c).toBe(1);
+    const fl = await db.prepare('SELECT COUNT(*) AS c FROM trip_flights WHERE trip_id = ?').bind(newId).first<{ c: number }>();
+    expect(fl?.c).toBe(1); // flights default-ON → copied
+    const em = await db.prepare('SELECT COUNT(*) AS c FROM trip_emergency_contacts WHERE trip_id = ?').bind(newId).first<{ c: number }>();
+    expect(em?.c).toBe(0); // emergency default-OFF → NOT copied (default-deny holds through clone)
+  });
+
+  it('clone of unknown token → 404', async () => {
+    const res = await callHandler(cloneShare as never, mockContext({
+      request: jsonRequest('https://x/api/share/nope/clone', 'POST'),
+      env, auth: mockAuth({ email: 'cloner@test.com' }), params: { token: 'nopetokennopetoken12' },
+    }));
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('clone — remap fidelity (PR3, multi-day + segment + hotel + alternates)', () => {
+  it('remaps days/entries/segments to NEW ids, copies hotel + entry POIs with contiguous sort_order', async () => {
+    const { id } = await seedTrip(db, { id: 'clone-rich', owner, days: 2 });
+    const d1 = await getDayId(db, id, 1);
+    const d2 = await getDayId(db, id, 2);
+    const poiA = await seedPoi(db, { name: '景點A', type: 'attraction' });
+    const poiB = await seedPoi(db, { name: '景點B-備選', type: 'attraction' });
+    const poiC = await seedPoi(db, { name: '景點C', type: 'restaurant' });
+    const hotelPoi = await seedPoi(db, { name: '飯店', type: 'hotel' });
+    const e1 = await seedEntry(db, d1, { sortOrder: 1, title: '景點A', poiId: poiA });
+    await seedEntryAlternate(db, { entryId: e1, poiId: poiB, sortOrder: 2 }); // e1 has master + 1 alternate
+    const e2 = await seedEntry(db, d2, { sortOrder: 1, title: '景點C', poiId: poiC });
+    await seedHotelForDay(db, d2, hotelPoi);
+    await db.prepare("INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, version) VALUES (?, ?, ?, 'driving', 15, 5000, 'google', 0)").bind(id, e1, e2).run();
+
+    const created = (await (await createShareFor(id)).json()) as { token: string };
+    const clonerEmail = 'rich-cloner@test.com';
+    await seedUser(db, clonerEmail);
+    const cloneRes = await callHandler(cloneShare as never, mockContext({
+      request: jsonRequest(`https://x/api/share/${created.token}/clone`, 'POST'),
+      env, auth: mockAuth({ email: clonerEmail }), params: { token: created.token },
+    }));
+    expect(cloneRes.status).toBe(201);
+    const { tripId: newId } = (await cloneRes.json()) as { tripId: string };
+
+    // 2 days copied
+    const days = await db.prepare('SELECT COUNT(*) AS c FROM trip_days WHERE trip_id = ?').bind(newId).first<{ c: number }>();
+    expect(days?.c).toBe(2);
+    // segment remapped: 1 segment whose from/to are entries belonging to the NEW trip
+    const segs = (await db.prepare('SELECT from_entry_id AS f, to_entry_id AS t FROM trip_segments WHERE trip_id = ?').bind(newId).all()).results as { f: number; t: number }[];
+    expect(segs.length).toBe(1);
+    const newEntryIds = ((await db.prepare('SELECT e.id FROM trip_entries e JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ?').bind(newId).all()).results as { id: number }[]).map((r) => r.id);
+    expect(newEntryIds).toContain(segs[0]!.f);
+    expect(newEntryIds).toContain(segs[0]!.t);
+    expect(segs[0]!.f).not.toBe(e1); // remapped, not the old id
+    // hotel copied onto one day
+    const hotelDays = await db.prepare('SELECT COUNT(*) AS c FROM trip_days WHERE trip_id = ? AND hotel_poi_id IS NOT NULL').bind(newId).first<{ c: number }>();
+    expect(hotelDays?.c).toBe(1);
+    // the 2-POI entry: sort_order contiguous 1,2 + entry_pois_version = 1
+    const grp = (await db.prepare('SELECT tep.entry_id AS eid, COUNT(*) AS c, GROUP_CONCAT(tep.sort_order) AS so FROM trip_entry_pois tep JOIN trip_entries e ON e.id = tep.entry_id JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ? GROUP BY tep.entry_id').bind(newId).all()).results as { eid: number; c: number; so: string }[];
+    const twoPoi = grp.find((g) => g.c === 2);
+    expect(twoPoi).toBeTruthy();
+    expect((twoPoi!.so ?? '').split(',').map(Number).sort((a, b) => a - b)).toEqual([1, 2]); // contiguous 1..N
+    const ver = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(twoPoi!.eid).first<{ v: number }>();
+    expect(ver?.v).toBe(1);
+  });
+});
+
+describe('rotate guard (PR2 review fix)', () => {
+  it('cannot rotate a revoked link (404, no silent resurrection)', async () => {
+    const { id } = await seedTrip(db, { id: 'rotate-guard', owner, days: 1 });
+    const created = (await (await createShareFor(id)).json()) as { id: number; token: string };
+    await callHandler(patchShare as never, mockContext({
+      request: jsonRequest(`https://x/api/trips/${id}/shares/${created.id}`, 'PATCH', { action: 'revoke' }),
+      env, auth: mockAuth({ email: owner }), params: { id, shareId: String(created.id) },
+    }));
+    const rot = await callHandler(patchShare as never, mockContext({
+      request: jsonRequest(`https://x/api/trips/${id}/shares/${created.id}`, 'PATCH', { action: 'rotate' }),
+      env, auth: mockAuth({ email: owner }), params: { id, shareId: String(created.id) },
+    }));
+    expect(rot.status).toBe(404); // revoked → cannot rotate
   });
 });

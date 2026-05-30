@@ -17,6 +17,7 @@ import {
   hashToken,
   parseVisibleSections,
   sanitizeVisibleSections,
+  validateExpiresAt,
   resolveActiveShare,
   loadVisibleShareData,
   type ShareRow,
@@ -57,6 +58,7 @@ const baseShare: ShareRow = {
   created_by: 'u1',
   created_at: '2026-05-30 00:00:00',
   revoked_at: null,
+  anonymous: 0,
 };
 
 describe('share token', () => {
@@ -106,6 +108,35 @@ describe('visible_sections allowlist (default-deny)', () => {
     expect(DEFAULT_SHARE_SECTIONS).not.toContain('emergency');
     expect(DEFAULT_SHARE_SECTIONS).toContain('flights');
     expect(SHARE_SECTIONS).toHaveLength(5);
+  });
+});
+
+describe('validateExpiresAt (epoch-ms, bounded)', () => {
+  const now = 1_800_000_000_000;
+  it('accepts a future time within 1 year; floors it', () => {
+    expect(validateExpiresAt(now + 86_400_000, now)).toBe(now + 86_400_000);
+    expect(validateExpiresAt(now + 86_400_000.7, now)).toBe(now + 86_400_000); // floored
+  });
+  it('rejects past / now / >1yr / non-number → null (= never)', () => {
+    expect(validateExpiresAt(now - 1, now)).toBeNull();
+    expect(validateExpiresAt(now, now)).toBeNull();
+    expect(validateExpiresAt(now + 400 * 86_400_000, now)).toBeNull(); // beyond 1yr
+    expect(validateExpiresAt('soon', now)).toBeNull();
+    expect(validateExpiresAt(null, now)).toBeNull();
+    expect(validateExpiresAt(NaN, now)).toBeNull();
+  });
+});
+
+describe('anonymous share hides owner display_name', () => {
+  it('sharedBy is empty when the link is anonymous, even if the owner has a name', async () => {
+    const share: ShareRow = { ...baseShare, anonymous: 1 };
+    const { db } = mockDb({ first: () => ({ name: 'Okinawa', title: null, countries: null, shared_by: 'Ray' }) });
+    const payload = await loadVisibleShareData(db, share);
+    expect(payload.meta.sharedBy).toBe('');
+
+    const named: ShareRow = { ...baseShare, anonymous: 0 };
+    const r2 = mockDb({ first: () => ({ name: 'Okinawa', title: null, countries: null, shared_by: 'Ray' }) });
+    expect((await loadVisibleShareData(r2.db, named)).meta.sharedBy).toBe('Ray');
   });
 });
 
