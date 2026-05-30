@@ -81,6 +81,8 @@ export interface TripCardMenuProps {
   onHealthCheck: (tripId: string) => void;
   /** 用戶選「行程筆記」 — host 通常 navigate 到 `/trip/:id/notes`。 (v2.34.x) */
   onNotes?: (tripId: string) => void;
+  /** 用戶選「分享連結」 — host 開 ShareLinkModal 建立/管理公開分享連結。 (v2.39.0) */
+  onShare?: (tripId: string) => void;
   /** 用戶選「刪除」 — host 應該 confirm + DELETE + 從 list 移除。 */
   onDelete: (tripId: string) => void;
   /** 預設關掉 menu 後 host 不需要做事。 */
@@ -90,7 +92,7 @@ export interface TripCardMenuProps {
 const MENU_WIDTH = 160;
 const VIEWPORT_MARGIN = 8;
 
-export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, onNotes, onDelete, onClose }: TripCardMenuProps) {
+export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, onNotes, onShare, onDelete, onClose }: TripCardMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -180,6 +182,13 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
     close();
   }
 
+  function handleShare(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onShare?.(tripId);
+    close();
+  }
+
   function handleDelete(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -235,6 +244,18 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
         >
           <Icon name="file-text" />
           <span>行程筆記</span>
+        </button>
+      )}
+      {onShare && (
+        <button
+          type="button"
+          role="menuitem"
+          className="tp-card-menu-item"
+          onClick={handleShare}
+          data-testid={`trip-card-menu-share-${tripId}`}
+        >
+          <Icon name="copy" />
+          <span>分享連結</span>
         </button>
       )}
       <button

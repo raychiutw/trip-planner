@@ -35,6 +35,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import TripCardMenu from '../components/trip/TripCardMenu';
+import ShareLinkModal from '../components/share/ShareLinkModal';
 // v2.18.0:CollabSheet → CollabPage(獨立路由),InfoSheet wrapper 移除
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -552,9 +553,10 @@ interface EmbeddedActionMenuProps {
   onHealthCheck: () => void;
   onNotes?: () => void;
   onPrint?: () => void;
+  onShare?: () => void;
 }
 
-function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck, onNotes, onPrint }: EmbeddedActionMenuProps) {
+function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck, onNotes, onPrint, onShare }: EmbeddedActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -681,6 +683,18 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthChe
         <Icon name="printer" />
         <span>列印</span>
       </button>
+      {onShare && (
+        <button
+          type="button"
+          role="menuitem"
+          className="tp-embedded-menu-item"
+          onClick={runAndClose(onShare)}
+          data-testid={`trip-embedded-menu-share-${tripId}`}
+        >
+          <Icon name="copy" />
+          <span>分享連結</span>
+        </button>
+      )}
       <div className="tp-embedded-menu-divider" />
       <span className="tp-embedded-menu-section-label">下載格式</span>
       <button
@@ -728,6 +742,8 @@ export default function TripsListPage() {
   const { user } = useCurrentUser();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [searchParams, setSearchParams] = useSearchParams();
+  // v2.39.0: 分享連結 modal — 由 card ⋯ / 行程頁 ⋯ 的「分享連結」開啟。
+  const [shareTripId, setShareTripId] = useState<string | null>(null);
   const navigate = useNavigate();
   const selectedFromUrl = searchParams.get('selected');
   const { openModal: openNewTrip } = useNewTrip();
@@ -1139,6 +1155,7 @@ export default function TripsListPage() {
                       onEdit={handleMenuEdit}
                       onHealthCheck={handleMenuHealthCheck}
                       onNotes={(id) => navigate(`/trip/${encodeURIComponent(id)}/notes`)}
+                      onShare={(id) => setShareTripId(id)}
                       onDelete={handleMenuDelete}
                     />
                   </div>
@@ -1253,6 +1270,7 @@ export default function TripsListPage() {
               onHealthCheck={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/health`)}
               onNotes={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/notes`)}
               onPrint={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/print`)}
+              onShare={() => setShareTripId(effectiveSelectedId)}
             />
           </>
         )}
@@ -1272,6 +1290,9 @@ export default function TripsListPage() {
         sheetPortalId={showEmbeddedTrip ? 'trip-sheet-portal' : undefined}
         bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
+      {shareTripId && (
+        <ShareLinkModal tripId={shareTripId} open onClose={() => setShareTripId(null)} />
+      )}
     </>
   );
 }
