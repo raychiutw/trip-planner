@@ -12,15 +12,20 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/shared/Icon';
 import TripPrintDocument from '../components/print/TripPrintDocument';
 import { renderTripPrintPdf } from '../components/print/renderTripPrintPdf';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { cloneShare } from '../lib/shareApi';
 import { loadSharePrintData, tripDisplayName, type TripPrintData } from '../lib/tripPrintData';
 import { SHARE_CHROME_CSS, PRINT_CSS } from '../lib/tripPrintStyles';
 
 export default function TripSharePage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
   const [data, setData] = useState<TripPrintData | null>(null);
   const [sharedBy, setSharedBy] = useState('');
   const [status, setStatus] = useState<'loading' | 'ready' | 'notfound'>('loading');
+  const [cloning, setCloning] = useState(false);
+  const [cloneErr, setCloneErr] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -48,11 +53,24 @@ export default function TripSharePage() {
     void renderTripPrintPdf({ data, fileBase });
   }, [data]);
 
-  // PR1: the copy CTA drives the signup/login funnel; PR3 wires the actual one-click
-  // clone-to-account after auth (server-side copy of the visible payload).
-  const onCopy = useCallback(() => {
-    navigate(`/login?redirect_after=${encodeURIComponent(`/s/${token ?? ''}`)}`);
-  }, [navigate, token]);
+  // Logged in → clone the visible payload server-side into the caller's account, then
+  // open the new trip. Logged out → send to login (redirect back to keep the funnel).
+  const onCopy = useCallback(async () => {
+    if (!token) return;
+    if (!user) {
+      navigate(`/login?redirect_after=${encodeURIComponent(`/s/${token}`)}`);
+      return;
+    }
+    setCloning(true);
+    setCloneErr(false);
+    try {
+      const { tripId } = await cloneShare(token);
+      navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
+    } catch {
+      setCloning(false);
+      setCloneErr(true);
+    }
+  }, [navigate, token, user]);
 
   const name = data ? tripDisplayName(data) : '';
   const meta = data
@@ -88,10 +106,15 @@ export default function TripSharePage() {
             <button type="button" className="tp-share-ghost" onClick={onPdf} title="存成 PDF" data-testid="share-pdf">
               <Icon name="download" />
             </button>
-            <button type="button" className="tp-share-copy" onClick={onCopy} data-testid="share-copy">
-              <Icon name="copy" /> 複製到我的行程
+            <button type="button" className="tp-share-copy" onClick={onCopy} disabled={cloning} data-testid="share-copy">
+              <Icon name="copy" /> {cloning ? '複製中…' : '複製到我的行程'}
             </button>
           </div>
+          {cloneErr && (
+            <div className="tp-share-state" style={{ padding: '10px 16px', color: '#b3261e' }} role="alert">
+              複製失敗，請稍後再試。
+            </div>
+          )}
 
           <TripPrintDocument data={data} hideHeader />
         </>

@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.40.0] - 2026-05-31
+
+### Added
+- **分享平台完整管理面板（PR2）** — 分享 modal 升級為完整面板：建立連結時可用 pills **逐區塊開關**要公開哪些筆記（航班/住宿/預訂/行前須知/緊急聯絡，安全預設關預訂+緊急）、選**有效期限**（永久/24時/7天/30天）、勾**匿名分享**（不顯示擁有者名字）。使用中的連結以卡片列出**瀏覽數**、區塊 chips、匿名/已過期 badge，可**重新產生**（換新網址、舊的立即失效）、**關閉**、**刪除**。新增 migration 0077（`trip_shares.anonymous`）+ PATCH rotate/revoke endpoint。Mockup：`docs/design-sessions/2026-05-30-share-manage-panel.html`。
+- **訪客一鍵複製到我的行程（PR3）** — 公開分享頁的「複製到我的行程」現在會把行程**複製進你的帳號**（登入後一鍵；未登入先導去登入）。只複製該連結**可見的內容**（行程本體 + 已公開的筆記區塊；未公開的緊急聯絡/預訂等**不會**被複製），複製出的行程歸你所有（`data_source='cloned'`、私人）。後端抽出共用 `functions/api/trips/_tripWrite.ts`（`resolvePoi` find-or-create / chunked batch / connect-root rollback / trips cap），import 與 clone 共用零 drift；clone 加 per-user rate-limit（10/hr）。
+
+### Security
+- clone 走 default-deny：只複製 `parseVisibleSections` 允許的筆記區塊，私人區塊永不進入複本（integration test 鎖：emergency 預設關 → 複本 0 筆）。匿名連結公開 payload `sharedBy` 強制為空，仍不洩漏 owner email/user_id。share token rotate 換 hash、舊 URL 立即 404。clone endpoint 需 auth（middleware 只 bypass GET /api/share/*）。
+
 ## [2.39.1] - 2026-05-30
 
 ### Added

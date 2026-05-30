@@ -197,4 +197,8 @@ export const RATE_LIMITS = {
   // write-amplification (view_count) DoS guard. 200/24h/IP：正常 recipient 完全
   // 打不中（不同 IP），但擋掉 single-IP 掃 token / 灌瀏覽數。
   SHARE_VIEW_PER_IP: { maxAttempts: 200, windowMs: 24 * 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
+  // v2.40.0: clone-share per authenticated user — each clone runs hundreds of D1
+  // subrequests (resolvePoi loop + chunked inserts); cap repetition on top of the
+  // absolute MAX_TRIPS_PER_USER. 10/hr is generous for humans, blocks loop abuse.
+  CLONE_PER_USER: { maxAttempts: 10, windowMs: 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
 } as const;

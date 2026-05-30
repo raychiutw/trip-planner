@@ -15,6 +15,8 @@ import { mockEnv, mockContext, mockAuth, seedUser, seedTrip, callHandler, jsonRe
 import { onRequestPost as createShare, onRequestGet as listShares } from '../../functions/api/trips/[id]/shares';
 import { onRequestPatch as patchShare, onRequestDelete as deleteShare } from '../../functions/api/trips/[id]/shares/[shareId]';
 import { onRequestGet as publicView } from '../../functions/api/share/[token]';
+import { onRequestPost as cloneShare } from '../../functions/api/share/[token]/clone';
+import { getDayId, seedEntry, seedPoi, userIdFor } from './helpers';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
@@ -152,5 +154,84 @@ describe('viewer-role rejection (managing shares is write-tier)', () => {
       params: { id },
     }));
     expect(listAsViewer.status).toBe(403);
+  });
+});
+
+describe('anonymous share (PR2)', () => {
+  it('anonymous link → public payload sharedBy is empty (owner has a name)', async () => {
+    const { id } = await seedTrip(db, { id: 'anon-trip', owner, days: 1 });
+    // non-anon → sharedBy = owner display_name (seedTrip sets it to the email local-part)
+    const plain = (await (await createShareFor(id)).json()) as { token: string };
+    const p1 = (await (await callHandler(publicView as never, mockContext({
+      request: new Request(`https://x/api/share/${plain.token}`), env, params: { token: plain.token },
+    }))).json()) as { meta: { sharedBy: string } };
+    expect(p1.meta.sharedBy).toBe('share-owner');
+
+    const anon = (await (await callHandler(createShare as never, mockContext({
+      request: jsonRequest(`https://x/api/trips/${id}/shares`, 'POST', { anonymous: true }),
+      env, auth: mockAuth({ email: owner }), params: { id },
+    }))).json()) as { token: string };
+    const p2 = (await (await callHandler(publicView as never, mockContext({
+      request: new Request(`https://x/api/share/${anon.token}`), env, params: { token: anon.token },
+    }))).json()) as { meta: { sharedBy: string } };
+    expect(p2.meta.sharedBy).toBe('');
+  });
+});
+
+describe('rotate token (PR2)', () => {
+  it('rotate issues a new token; old 404s, new works', async () => {
+    const { id } = await seedTrip(db, { id: 'rotate-trip', owner, days: 1 });
+    const created = (await (await createShareFor(id)).json()) as { id: number; token: string };
+    const rot = await callHandler(patchShare as never, mockContext({
+      request: jsonRequest(`https://x/api/trips/${id}/shares/${created.id}`, 'PATCH', { action: 'rotate' }),
+      env, auth: mockAuth({ email: owner }), params: { id, shareId: String(created.id) },
+    }));
+    expect(rot.status).toBe(200);
+    const { token: newToken } = (await rot.json()) as { token: string };
+    expect(newToken).not.toBe(created.token);
+    expect((await callHandler(publicView as never, mockContext({
+      request: new Request(`https://x/api/share/${created.token}`), env, params: { token: created.token },
+    }))).status).toBe(404);
+    expect((await callHandler(publicView as never, mockContext({
+      request: new Request(`https://x/api/share/${newToken}`), env, params: { token: newToken },
+    }))).status).toBe(200);
+  });
+});
+
+describe('clone (PR3)', () => {
+  it('clones visible body + visible notes into the cloner account; hidden sections NOT copied', async () => {
+    const { id } = await seedTrip(db, { id: 'clone-src', owner, days: 1 });
+    const dayId = await getDayId(db, id, 1);
+    const poiId = await seedPoi(db, { name: '那霸機場', type: 'transport' });
+    await seedEntry(db, dayId, { title: '那霸機場', poiId });
+    await db.prepare("INSERT INTO trip_flights (trip_id, airline, flight_no) VALUES (?, 'BR', '112')").bind(id).run();
+    await db.prepare("INSERT INTO trip_emergency_contacts (trip_id, name, phone) VALUES (?, 'Mom', '0900')").bind(id).run();
+    const created = (await (await createShareFor(id)).json()) as { token: string }; // default: flights ON, emergency OFF
+
+    const clonerEmail = 'cloner@test.com';
+    await seedUser(db, clonerEmail);
+    const cloneRes = await callHandler(cloneShare as never, mockContext({
+      request: jsonRequest(`https://x/api/share/${created.token}/clone`, 'POST'),
+      env, auth: mockAuth({ email: clonerEmail }), params: { token: created.token },
+    }));
+    expect(cloneRes.status).toBe(201);
+    const { tripId: newId } = (await cloneRes.json()) as { tripId: string };
+
+    const ownerRow = await db.prepare('SELECT owner_user_id FROM trips WHERE id = ?').bind(newId).first<{ owner_user_id: string }>();
+    expect(ownerRow?.owner_user_id).toBe(userIdFor(clonerEmail));
+    const ents = await db.prepare('SELECT COUNT(*) AS c FROM trip_entries e JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ?').bind(newId).first<{ c: number }>();
+    expect(ents?.c).toBe(1);
+    const fl = await db.prepare('SELECT COUNT(*) AS c FROM trip_flights WHERE trip_id = ?').bind(newId).first<{ c: number }>();
+    expect(fl?.c).toBe(1); // flights default-ON → copied
+    const em = await db.prepare('SELECT COUNT(*) AS c FROM trip_emergency_contacts WHERE trip_id = ?').bind(newId).first<{ c: number }>();
+    expect(em?.c).toBe(0); // emergency default-OFF → NOT copied (default-deny holds through clone)
+  });
+
+  it('clone of unknown token → 404', async () => {
+    const res = await callHandler(cloneShare as never, mockContext({
+      request: jsonRequest('https://x/api/share/nope/clone', 'POST'),
+      env, auth: mockAuth({ email: 'cloner@test.com' }), params: { token: 'nopetokennopetoken12' },
+    }));
+    expect(res.status).toBe(404);
   });
 });

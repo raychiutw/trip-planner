@@ -20,52 +20,9 @@ import { requireAuth } from '../_auth';
 import { json } from '../_utils';
 import { AppError } from '../_errors';
 import { parseAndValidateImport, MAX_IMPORT_BYTES, type NImportNotes } from './_import';
-
-const TRIP_DOC_TYPES = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'];
-const BATCH_CHUNK = 50; // stay well under D1's ~100-statement-per-batch limit
-const MAX_TRIPS_PER_USER = 1000;
+import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, TRIP_DOC_TYPES } from './_tripWrite';
 
 type Stmt = D1PreparedStatement;
-
-/** Extract the RETURNING id; a missing id means the INSERT silently failed. */
-function reqId(r: D1Result): number {
-  const id = (r.results?.[0] as { id?: number } | undefined)?.id;
-  if (typeof id !== 'number' || id <= 0) throw new AppError('SYS_DB_ERROR', '匯入寫入失敗');
-  return id;
-}
-
-interface ResolvablePoi {
-  type: string; name: string; category: string | null; lat: number | null; lng: number | null;
-  hours: string | null; rating: number | null; price?: string | null; address: string | null; placeId: string | null;
-}
-
-/**
- * Find-or-create a POI by UNIQUE(name, type). pois enforces that index, so import
- * MUST reuse an existing row rather than INSERT a duplicate. Pre-existing pois are
- * returned AS-IS (never mutated — an attacker can't poison a shared catalog row);
- * only newly-created ids are tracked for rollback.
- */
-async function resolvePoi(db: D1Database, p: ResolvablePoi, createdPoiIds: number[]): Promise<number> {
-  const found = await db.prepare('SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1').bind(p.name, p.type).first<{ id: number }>();
-  if (found && typeof found.id === 'number') return found.id;
-  const ins = await db.prepare(
-    'INSERT OR IGNORE INTO pois (type, name, category, lat, lng, hours, rating, price, address, place_id, source) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id',
-  ).bind(p.type, p.name, p.category, p.lat, p.lng, p.hours, p.rating, p.price ?? null, p.address, p.placeId, 'imported').first<{ id: number }>();
-  if (ins && typeof ins.id === 'number') { createdPoiIds.push(ins.id); return ins.id; }
-  // Lost the INSERT-OR-IGNORE race (concurrent insert of same name+type) → re-fetch.
-  const ref = await db.prepare('SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1').bind(p.name, p.type).first<{ id: number }>();
-  if (!ref || typeof ref.id !== 'number') throw new AppError('SYS_DB_ERROR', 'POI 解析失敗');
-  return ref.id;
-}
-
-/** Run statements in chunked atomic batches; onResult fires per result as each
- *  chunk commits, so a later chunk's failure still leaves earlier ids tracked. */
-async function runChunked(db: D1Database, stmts: Stmt[], onResult?: (r: D1Result, idx: number) => void): Promise<void> {
-  for (let i = 0; i < stmts.length; i += BATCH_CHUNK) {
-    const res = await db.batch(stmts.slice(i, i + BATCH_CHUNK));
-    if (onResult) res.forEach((r, j) => onResult(r, i + j));
-  }
-}
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
@@ -91,11 +48,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
 
   // Cap trips-per-user (anti import-spam DoS).
-  const countRow = await db.prepare('SELECT COUNT(*) AS cnt FROM trips WHERE owner_user_id = ?')
-    .bind(auth.userId).first<{ cnt: number }>();
-  if ((countRow?.cnt ?? 0) >= MAX_TRIPS_PER_USER) {
-    throw new AppError('DATA_VALIDATION', `行程數已達上限（${MAX_TRIPS_PER_USER}）`);
-  }
+  await assertTripCap(db, auth.userId);
 
   const tripId = `imp-${crypto.randomUUID()}`;
   const now = new Date().toISOString();
@@ -177,7 +130,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return json({ ok: true, tripId, daysCreated: data.days.length }, 201);
   } catch (err) {
     try {
-      await rollback(db, tripId, createdEntryIds, createdPoiIds);
+      await rollbackTrip(db, tripId, createdEntryIds, createdPoiIds);
     } catch (rbErr) {
       // Rollback itself failed → orphaned rows may remain. Surface loudly.
       console.error('[import] ROLLBACK FAILED — possible orphaned data', { tripId, rbErr });
@@ -187,28 +140,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('SYS_DB_ERROR', '匯入失敗，請稍後重試');
   }
 };
-
-/** Best-effort connect-root cleanup of a partially-imported trip (chunked). */
-async function rollback(db: D1Database, tripId: string, entryIds: number[], poiIds: number[]): Promise<void> {
-  const stmts: Stmt[] = [];
-  for (let i = 0; i < entryIds.length; i += 100) {
-    const chunk = entryIds.slice(i, i + 100);
-    const ph = chunk.map(() => '?').join(',');
-    stmts.push(db.prepare(`DELETE FROM trip_entry_pois WHERE entry_id IN (${ph})`).bind(...chunk));
-    stmts.push(db.prepare(`DELETE FROM trip_entries WHERE id IN (${ph})`).bind(...chunk));
-  }
-  stmts.push(db.prepare('DELETE FROM trip_segments WHERE trip_id = ?').bind(tripId));
-  stmts.push(db.prepare('DELETE FROM trip_days WHERE trip_id = ?').bind(tripId));
-  for (const t of ['trip_flights', 'trip_lodgings', 'trip_reservations', 'trip_pretrip_notes', 'trip_emergency_contacts', 'trip_destinations', 'trip_docs', 'trip_permissions']) {
-    stmts.push(db.prepare(`DELETE FROM ${t} WHERE trip_id = ?`).bind(tripId));
-  }
-  for (let i = 0; i < poiIds.length; i += 100) {
-    const chunk = poiIds.slice(i, i + 100);
-    stmts.push(db.prepare(`DELETE FROM pois WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk));
-  }
-  stmts.push(db.prepare('DELETE FROM trips WHERE id = ?').bind(tripId));
-  await runChunked(db, stmts);
-}
 
 function noteStatements(db: D1Database, tripId: string, n: NImportNotes): Stmt[] {
   const out: Stmt[] = [];

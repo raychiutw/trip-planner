@@ -17,6 +17,9 @@ import { join } from 'node:path';
 import TripSharePage from '../../src/pages/TripSharePage';
 
 vi.mock('../../src/components/print/renderTripPrintPdf', () => ({ renderTripPrintPdf: vi.fn() }));
+// Public page reads useCurrentUser (no auth gate) — stub it so it doesn't consume the
+// fetch mock (the share payload Response would be double-read).
+vi.mock('../../src/hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ user: null, loading: false, error: null, reload: () => undefined }) }));
 
 /** Raw server payload shape (already camelCase — server json() deep-camels). */
 function sharePayload(sharedBy: string) {

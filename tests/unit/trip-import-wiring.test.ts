@@ -12,6 +12,8 @@ const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
 
 const ENDPOINT = read('functions/api/trips/import.ts');
 const VALIDATE = read('functions/api/trips/_import.ts');
+// v2.40.0 PR3: orchestration primitives extracted to _tripWrite (shared with clone).
+const TRIPWRITE = read('functions/api/trips/_tripWrite.ts');
 const BTN = read('src/components/trips/ImportTripButton.tsx');
 const LIST = read('src/pages/TripsListPage.tsx');
 
@@ -26,14 +28,15 @@ describe('POST /api/trips/import — endpoint', () => {
     expect(ENDPOINT).toMatch(/text\.length > MAX_IMPORT_BYTES/);
     expect(ENDPOINT).not.toMatch(/headers\.get\('Content-Length'\)/);
   });
-  it('caps trips-per-user (anti import-spam)', () => {
-    expect(ENDPOINT).toMatch(/MAX_TRIPS_PER_USER/);
-    expect(ENDPOINT).toMatch(/COUNT\(\*\)[\s\S]*owner_user_id/);
+  it('caps trips-per-user (anti import-spam) via shared _tripWrite', () => {
+    expect(ENDPOINT).toMatch(/assertTripCap\(/);
+    expect(TRIPWRITE).toMatch(/MAX_TRIPS_PER_USER/);
+    expect(TRIPWRITE).toMatch(/COUNT\(\*\)[\s\S]*owner_user_id/);
   });
-  it('chunks batches under D1 limit + RETURNING id throws on miss', () => {
-    expect(ENDPOINT).toMatch(/BATCH_CHUNK = 50/);
+  it('chunks batches under D1 limit + RETURNING id throws on miss (shared _tripWrite)', () => {
+    expect(TRIPWRITE).toMatch(/BATCH_CHUNK = 50/);
     expect(ENDPOINT).toMatch(/runChunked/);
-    expect(ENDPOINT).toMatch(/function reqId/);
+    expect(TRIPWRITE).toMatch(/function reqId/);
   });
   it('trip_entry_pois carries trip-specific overrides (round-trip fidelity)', () => {
     expect(ENDPOINT).toMatch(/INSERT INTO trip_entry_pois \(entry_id, poi_id, sort_order, description, note, reservation, reservation_url/);
@@ -47,19 +50,20 @@ describe('POST /api/trips/import — endpoint', () => {
     expect(ENDPOINT).toContain("'imported'");
     expect(ENDPOINT).toMatch(/owner_user_id/);
   });
-  it('find-or-creates pois by UNIQUE(name,type) and NEVER mutates an existing one', () => {
-    expect(ENDPOINT).toMatch(/async function resolvePoi/);
-    expect(ENDPOINT).toMatch(/SELECT id FROM pois WHERE name = \? AND type = \?/);
-    expect(ENDPOINT).toMatch(/INSERT OR IGNORE INTO pois/);
-    expect(ENDPOINT).not.toMatch(/UPDATE pois/); // never poison a shared catalog row
+  it('find-or-creates pois by UNIQUE(name,type) and NEVER mutates an existing one (shared _tripWrite)', () => {
+    expect(ENDPOINT).toMatch(/resolvePoi/); // imported + used
+    expect(TRIPWRITE).toMatch(/export async function resolvePoi/);
+    expect(TRIPWRITE).toMatch(/SELECT id FROM pois WHERE name = \? AND type = \?/);
+    expect(TRIPWRITE).toMatch(/INSERT OR IGNORE INTO pois/);
+    expect(TRIPWRITE).not.toMatch(/UPDATE pois/); // never poison a shared catalog row
   });
   it('dedupes resolved poi_ids per entry (UNIQUE(entry_id, poi_id))', () => {
     expect(ENDPOINT).toMatch(/seenPoi/);
   });
-  it('rolls back (connect-root delete) on any failure', () => {
-    expect(ENDPOINT).toMatch(/async function rollback/);
-    expect(ENDPOINT).toMatch(/await rollback\(/);
-    expect(ENDPOINT).toMatch(/DELETE FROM trips WHERE id = \?/);
+  it('rolls back (connect-root delete) on any failure (shared _tripWrite)', () => {
+    expect(ENDPOINT).toMatch(/await rollbackTrip\(/);
+    expect(TRIPWRITE).toMatch(/export async function rollbackTrip/);
+    expect(TRIPWRITE).toMatch(/DELETE FROM trips WHERE id = \?/);
   });
   it('remaps segments by positional index to new entry ids', () => {
     expect(ENDPOINT).toMatch(/posToEntryId/);
