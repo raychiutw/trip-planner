@@ -142,9 +142,10 @@ interface SortableRowProps {
   onEdit: () => void;
   onSaveField: (field: keyof TripPretripNote, value: string) => void;
   onDelete: () => void;
+  onClose: () => void;
 }
 
-function SortablePretripRow({ note, isEditing, onEdit, onSaveField, onDelete }: SortableRowProps) {
+function SortablePretripRow({ note, isEditing, onEdit, onSaveField, onDelete, onClose }: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: note.id,
     disabled: isEditing,
@@ -180,6 +181,9 @@ function SortablePretripRow({ note, isEditing, onEdit, onSaveField, onDelete }: 
             />
           </div>
           <div className="tp-notes-pretrip-edit-actions">
+            <button type="button" className="tp-btn tp-btn-ghost" onClick={onClose} data-testid={`pretrip-close-${note.id}`}>
+              關閉
+            </button>
             <button type="button" className="tp-btn tp-btn-destructive" onClick={onDelete} data-testid={`pretrip-delete-${note.id}`}>
               刪除
             </button>
@@ -307,6 +311,7 @@ export default function PretripSection({ tripId, items, onChange }: PretripSecti
                   note={note}
                   isEditing={editingId === note.id}
                   onEdit={() => setEditingId(note.id)}
+                  onClose={() => setEditingId(null)}
                   onSaveField={(field, value) => void handleSaveField(note.id, field, value)}
                   onDelete={() => setPendingDeleteId(note.id)}
                 />
