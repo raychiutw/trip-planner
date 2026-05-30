@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.38.3] - 2026-05-30
+
+### Fixed
+- **列印頁手機版面** — 列印文件的緊湊表格在手機上 3 欄硬擠、字太小。改成 responsive：手機自動把每個景點直式堆疊（時間+標題一行、備選/備註/交通在下方），桌機與實際列印/PDF（A4）維持原本表格版面。用 container query 依「文件本身寬度」切換，所以手機產生的 PDF 仍是正確的 A4 表格。
+
 ## [2.38.2] - 2026-05-30
 
 ### Changed
