@@ -26,3 +26,9 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Cross-Origin-Opener-Policy: same-origin
   Permissions-Policy: geolocation=(self), clipboard-write=(self), camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), midi=(), encrypted-media=(), fullscreen=(self)
+
+/s/*
+  # v2.39.0: 無登入分享頁 — token 在 URL path。more-specific 規則覆寫全域
+  # Referrer-Policy 為 no-referrer，確保未來若分享頁加任何 cross-origin 資源
+  # （如地圖）也不會把含 token 的 URL 經 Referer 外洩。API 端點同樣已設 no-referrer。
+  Referrer-Policy: no-referrer

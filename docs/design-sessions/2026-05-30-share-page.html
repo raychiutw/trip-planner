@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<title>無登入分享頁 — 3 variant</title>
+<style>
+  :root{
+    --accent:#D97848; --accent-deep:#B85C2E; --accent-subtle:#FBEEE4; --accent-bg:#F7DFCB;
+    --bg:#FFFBF5; --secondary:#FAF4EA; --muted:#6F5A47; --ink:#1d1813;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#e6e3dd;font-family:'Inter','Noto Sans TC',system-ui,sans-serif;color:var(--ink);padding:24px 16px 60px;}
+  .board{display:flex;gap:28px;justify-content:center;align-items:flex-start;flex-wrap:wrap;max-width:1340px;margin:0 auto;}
+  .col{width:392px;}
+  .vlabel{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8a7a68;margin:0 4px 10px;}
+  .vsub{font-size:12px;font-weight:400;letter-spacing:0;color:#a99;text-transform:none;display:block;margin-top:3px;}
+  /* phone frame */
+  .phone{width:392px;height:760px;overflow-y:auto;background:#e6e3dd;border-radius:26px;border:8px solid #2a2018;box-shadow:0 10px 36px rgba(42,31,24,.28);position:relative;}
+  .phone::-webkit-scrollbar{width:0;}
+
+  /* ===== shared print-document sheet (fixed-light, mirrors TripPrintDocument) ===== */
+  .sheet{background:#fff;margin:12px;padding:20px 18px;font-size:13px;line-height:1.55;color:var(--ink);border-radius:6px;}
+  .dh{border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:6px;}
+  .dh .name{font-size:20px;font-weight:700;line-height:1.2;}
+  .dh .meta{font-size:12px;color:#5c5248;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;}
+  .day{margin-top:16px;}
+  .day-hd{display:flex;align-items:baseline;gap:8px;border-bottom:1.5px solid var(--ink);padding-bottom:4px;margin-bottom:2px;}
+  .day-no{font-size:14px;font-weight:700;} .day-date{font-size:11px;color:#5c5248;}
+  .entry{display:grid;grid-template-columns:64px 1fr;gap:1px 8px;padding:8px 0;border-bottom:1px solid #efe9df;}
+  .t{font-weight:600;font-variant-numeric:tabular-nums;} .title{font-weight:600;}
+  .star{color:#9a7b32;font-weight:600;white-space:nowrap;}
+  .alt,.mv{grid-column:1 / -1;color:#5c5248;font-size:11.5px;} .mv::before{content:"↓ ";}
+  .hotel{display:flex;gap:8px;align-items:baseline;padding:7px 6px;margin-top:2px;font-size:11.5px;background:#faf6ee;}
+  .hk{font-weight:700;letter-spacing:.05em;white-space:nowrap;}
+  .notes{margin-top:20px;border-top:2px solid var(--ink);padding-top:10px;}
+  .notes-h{font-size:13px;font-weight:700;letter-spacing:.08em;margin:0 0 6px;}
+  .nh{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;border-bottom:1.5px solid var(--ink);padding-bottom:4px;margin:12px 0 6px;}
+  .nh .cnt{margin-left:auto;font-size:10.5px;font-weight:600;color:#8a7a68;}
+  .nitem{padding:5px 0;border-bottom:1px solid #efe9df;} .nitem:last-child{border-bottom:none;}
+  .n-t{font-weight:700;font-size:12px;margin-bottom:2px;} .n-b{white-space:pre-line;color:#5c5248;font-size:11.5px;line-height:1.5;}
+  .locked{padding:6px 0;color:#b3a695;font-size:11.5px;font-style:italic;display:flex;align-items:center;gap:5px;}
+  svg{width:14px;height:14px;vertical-align:middle;}
+
+  /* ===== Variant A — minimal top bar ===== */
+  .A .topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;background:#faf4ea;border-bottom:1px solid #eadfcf;padding:9px 12px;}
+  .A .by{font-size:12px;font-weight:600;color:var(--muted);margin-right:auto;display:flex;align-items:center;gap:6px;}
+  .A .by .dot{width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;}
+  .A .ic{width:34px;height:34px;border-radius:8px;border:1px solid #eadfcf;background:#fff;display:grid;place-items:center;color:var(--ink);}
+  .A .copy{height:34px;padding:0 12px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-weight:600;font-size:12.5px;font-family:inherit;display:flex;align-items:center;gap:5px;}
+
+  /* ===== Variant B — share hero cover ===== */
+  .B .hero{background:linear-gradient(135deg,#D97848,#F0935E);color:#fff;padding:22px 18px 18px;}
+  .B .hero .eyebrow{font-size:12px;font-weight:600;opacity:.92;display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+  .B .hero .htitle{font-size:24px;font-weight:700;line-height:1.18;}
+  .B .hero .hmeta{font-size:12.5px;opacity:.95;margin-top:8px;}
+  .B .actionbar{position:sticky;top:0;z-index:5;display:flex;gap:8px;background:#faf4ea;border-bottom:1px solid #eadfcf;padding:8px 12px;}
+  .B .actionbar .ghost{flex:0 0 auto;height:34px;width:34px;border-radius:8px;border:1px solid #eadfcf;background:#fff;display:grid;place-items:center;color:var(--ink);}
+  .B .actionbar .copy{flex:1;height:34px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-weight:600;font-size:13px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .B .sheet{margin-top:0;border-radius:0 0 6px 6px;}
+
+  /* ===== Variant C — conversion (floating CTA + footer) ===== */
+  .C .minibar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#faf4ea;border-bottom:1px solid #eadfcf;}
+  .C .minibar .by{font-size:12px;font-weight:600;color:var(--muted);margin-right:auto;display:flex;align-items:center;gap:6px;}
+  .C .minibar .dot{width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;}
+  .C .minibar .ic{width:32px;height:32px;border-radius:8px;border:1px solid #eadfcf;background:#fff;display:grid;place-items:center;color:var(--ink);}
+  .C .fab{position:sticky;bottom:14px;float:right;margin:0 14px 14px 0;clear:both;height:46px;padding:0 18px;border-radius:9999px;background:var(--accent);color:#fff;border:none;font-weight:700;font-size:14px;font-family:inherit;display:inline-flex;align-items:center;gap:7px;box-shadow:0 6px 18px rgba(184,92,46,.4);}
+  .C .footer{margin:0 12px 12px;padding:14px;background:var(--accent-subtle);border:1px solid var(--accent-bg);border-radius:8px;text-align:center;}
+  .C .footer .f-t{font-size:13px;font-weight:700;color:var(--accent-deep);}
+  .C .footer .f-b{font-size:11.5px;color:var(--muted);margin-top:3px;}
+</style></head>
+<body>
+<div class="board">
+
+  <!-- ============ VARIANT A ============ -->
+  <div class="col">
+    <div class="vlabel">Variant A — 極簡頂欄<span class="vsub">列印文件原樣 + 一條薄分享列。未公開區塊直接消失。</span></div>
+    <div class="phone A">
+      <div class="topbar">
+        <span class="by"><span class="dot">R</span>由 Ray 分享</span>
+        <div class="ic" title="列印"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg></div>
+        <div class="ic" title="PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M12 11v6M9 14l3 3 3-3"/></svg></div>
+        <button class="copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>複製</button>
+      </div>
+      <div class="sheet">
+        <div class="dh"><div class="name">沖繩五日</div><div class="meta"><span>2026-07-02 – 07-06</span><span>那霸 · 美麗海</span><span>5 天</span></div></div>
+        <div class="day"><div class="day-hd"><span class="day-no">Day 1</span><span class="day-date">07-02（四）</span></div>
+          <div class="entry"><div class="t">09:00</div><div class="title">那霸機場 <span class="star">★ 4.1</span></div><div class="mv">開車 · 12 分 · 2.1km</div></div>
+          <div class="entry"><div class="t">10:30</div><div class="title">國際通 <span class="star">★ 4.3</span></div><div class="alt">備選：牧志公設市場</div></div>
+          <div class="hotel"><span class="hk">住宿</span><span>沖繩那霸美居 <span class="star">★ 4.2</span> · 含早餐</span></div>
+        </div>
+        <div class="day"><div class="day-hd"><span class="day-no">Day 2</span><span class="day-date">07-03（五）</span></div>
+          <div class="entry"><div class="t">09:30</div><div class="title">美麗海水族館 <span class="star">★ 4.6</span></div><div class="mv">開車 · 95 分 · 88km</div></div>
+        </div>
+        <div class="notes"><div class="notes-h">行程筆記</div>
+          <div class="nh"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>航班<span class="cnt">1 段</span></div>
+          <div class="nitem"><div class="n-t">BR 112</div><div class="n-b">桃園 08:55 → 那霸 11:40</div></div>
+          <div class="nh"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18v-7h18v7h-2v-2H5v2zm2-9V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2z"/></svg>住宿<span class="cnt">1 間</span></div>
+          <div class="nitem"><div class="n-t">沖繩那霸美居飯店</div><div class="n-b">07-02 – 07-03 · 那霸市</div></div>
+          <div class="nh"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>行前須知<span class="cnt">2 項</span></div>
+          <div class="nitem"><div class="n-t">證件與通訊</div><div class="n-b">- 護照（效期 6 個月以上）
+- 台灣駕照 + 日文譯本
+- 日本 eSIM</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VARIANT B ============ -->
+  <div class="col">
+    <div class="vlabel">Variant B — 分享封面<span class="vsub">terracotta 漸層 hero「收到一份行程」感 + sticky 操作列。</span></div>
+    <div class="phone B">
+      <div class="hero">
+        <div class="eyebrow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2L12 16.6 5.7 21l2.3-7.2-6-4.4h7.6z"/></svg>由 Ray 分享給你</div>
+        <div class="htitle">沖繩五日</div>
+        <div class="hmeta">2026-07-02 – 07-06 · 那霸 · 美麗海 · 5 天</div>
+      </div>
+      <div class="actionbar">
+        <div class="ghost" title="列印"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg></div>
+        <div class="ghost" title="PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M12 11v6M9 14l3 3 3-3"/></svg></div>
+        <button class="copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>複製到我的行程</button>
+      </div>
+      <div class="sheet">
+        <div class="day" style="margin-top:4px"><div class="day-hd"><span class="day-no">Day 1</span><span class="day-date">07-02（四）</span></div>
+          <div class="entry"><div class="t">09:00</div><div class="title">那霸機場 <span class="star">★ 4.1</span></div><div class="mv">開車 · 12 分 · 2.1km</div></div>
+          <div class="entry"><div class="t">10:30</div><div class="title">國際通 <span class="star">★ 4.3</span></div><div class="alt">備選：牧志公設市場</div></div>
+          <div class="hotel"><span class="hk">住宿</span><span>沖繩那霸美居 <span class="star">★ 4.2</span> · 含早餐</span></div>
+        </div>
+        <div class="day"><div class="day-hd"><span class="day-no">Day 2</span><span class="day-date">07-03（五）</span></div>
+          <div class="entry"><div class="t">09:30</div><div class="title">美麗海水族館 <span class="star">★ 4.6</span></div><div class="mv">開車 · 95 分 · 88km</div></div>
+        </div>
+        <div class="notes"><div class="notes-h">行程筆記</div>
+          <div class="nh"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>航班<span class="cnt">1 段</span></div>
+          <div class="nitem"><div class="n-t">BR 112</div><div class="n-b">桃園 08:55 → 那霸 11:40</div></div>
+          <div class="nh"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>行前須知<span class="cnt">2 項</span></div>
+          <div class="nitem"><div class="n-t">證件與通訊</div><div class="n-b">- 護照（效期 6 個月以上）
+- 台灣駕照 + 日文譯本</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VARIANT C ============ -->
+  <div class="col">
+    <div class="vlabel">Variant C — 轉換導向<span class="vsub">浮動複製鈕 + 未公開區塊顯示鎖 + 底部 Tripline 導流。</span></div>
+    <div class="phone C">
+      <div class="minibar">
+        <span class="by"><span class="dot">R</span>由 Ray 分享</span>
+        <div class="ic" title="列印"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg></div>
+        <div class="ic" title="PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M12 11v6M9 14l3 3 3-3"/></svg></div>
+      </div>
+      <div class="sheet">
+        <div class="dh"><div class="name">沖繩五日</div><div class="meta"><span>2026-07-02 – 07-06</span><span>那霸 · 美麗海</span><span>5 天</span></div></div>
+        <div class="day"><div class="day-hd"><span class="day-no">Day 1</span><span class="day-date">07-02（四）</span></div>
+          <div class="entry"><div class="t">09:00</div><div class="title">那霸機場 <span class="star">★ 4.1</span></div><div class="mv">開車 · 12 分 · 2.1km</div></div>
+          <div class="entry"><div class="t">10:30</div><div class="title">國際通 <span class="star">★ 4.3</span></div><div class="alt">備選：牧志公設市場</div></div>
+          <div class="hotel"><span class="hk">住宿</span><span>沖繩那霸美居 <span class="star">★ 4.2</span></span></div>
+        </div>
+        <div class="notes"><div class="notes-h">行程筆記</div>
+          <div class="nh"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>航班<span class="cnt">1 段</span></div>
+          <div class="nitem"><div class="n-t">BR 112</div><div class="n-b">桃園 08:55 → 那霸 11:40</div></div>
+          <div class="locked"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>緊急聯絡 · 預訂 — 擁有者未公開</div>
+        </div>
+      </div>
+      <button class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>複製到我的行程</button>
+      <div class="footer"><div class="f-t">用 Tripline 規劃你自己的行程</div><div class="f-b">免費建立 · 地圖排程 · 一鍵分享 →</div></div>
+    </div>
+  </div>
+
+</div>
+</body></html>

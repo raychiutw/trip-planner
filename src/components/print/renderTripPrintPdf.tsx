@@ -12,7 +12,7 @@ import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import TripPrintDocument from './TripPrintDocument';
-import { loadTripPrintData } from '../../lib/tripPrintData';
+import { loadTripPrintData, type TripPrintData } from '../../lib/tripPrintData';
 import { PRINT_CSS, PRINT_PDF_DOC_CSS } from '../../lib/tripPrintStyles';
 import { tripFileBase } from '../../lib/tripExport';
 import type { Trip } from '../../types/trip';
@@ -24,12 +24,19 @@ const PDF_TIMEOUT_MS = 30000;
  *  concurrent runs can't accumulate <style data-trip-pdf> / container nodes. */
 let pdfInFlight = false;
 
-export async function renderTripPrintPdf(opts: { tripId: string; trip: Trip | null }): Promise<void> {
+export async function renderTripPrintPdf(opts: {
+  tripId?: string;
+  trip?: Trip | null;
+  /** Pre-loaded print data (public share page has no tripId / authed loader). */
+  data?: TripPrintData;
+  /** Filename base when no `trip` is available (share page). */
+  fileBase?: string;
+}): Promise<void> {
   if (pdfInFlight) return;
   pdfInFlight = true;
   const { tripId, trip } = opts;
   try {
-    const data = await loadTripPrintData(tripId);
+    const data = opts.data ?? (await loadTripPrintData(tripId!));
     const html2pdf = (await import('html2pdf.js')).default;
 
     // Off-screen attached container — html2canvas cannot measure a detached node.
@@ -56,7 +63,7 @@ export async function renderTripPrintPdf(opts: { tripId: string; trip: Trip | nu
       const pdfRun = (html2pdf as any)()
         .set({
           margin: [10, 10, 10, 10],
-          filename: `${tripFileBase(trip)}.pdf`,
+          filename: `${opts.fileBase ?? tripFileBase(trip ?? null)}.pdf`,
           image: { type: 'jpeg', quality: 0.92 },
           html2canvas: { scale: 2, useCORS: true, windowWidth: 794, windowHeight: container.scrollHeight || undefined },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },

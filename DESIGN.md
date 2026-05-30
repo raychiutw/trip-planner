@@ -483,6 +483,19 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-trip-print-document.html`（V
 - **手機 polish（v2.38.5）**：① 列印預覽 chrome 用**固定淺色**（非 dark-mode token）— 深色模式下「關閉」ghost button 不再白底淺字看不到（列印本就白紙，預覽固定淺色，同舊 usePrintMode 做法）。② 手機 entry 內文（備選/備註/交通）`grid-column:1/-1` **全寬往左一欄**，不縮排在時間欄下。③ 行程筆記每筆 = **粗體標題 + 獨立內文**（`.tp-print-note-t` / `.tp-print-note-b`），內文 `white-space:pre-line` 保留原本換行（行前須知「- 」項目逐行斷落，不再黏成一段）。Mockup：`docs/design-sessions/2026-05-30-trip-print-polish.html`。
 - **筆記章節化（v2.38.6）**：列印頁 5 區塊筆記改**單欄章節流**（`.tp-print-ngrid` 1 欄）— 每 section = 章節（icon + 標題 + 數量 badge `.tp-print-nh-cnt`「N 項/間/筆」+ `border-bottom` 分隔線），章節內每一筆 `.tp-print-note-item` 用 hairline 分隔（last-child 無線）、標題加粗。長 section（行前須知）一眼看得出層次。Mockup：`docs/design-sessions/2026-05-30-trip-print-notes-chapters.html`。
 
+### Trip Share Page (`tp-share-*`，v2.39.0)
+
+公開、**無登入**的分享檢視。Route `/s/:token`（`TripSharePage`，不呼叫 `useRequireAuth`）。重用 `TripPrintDocument`（`hideHeader`）渲染 server 端區塊過濾後的唯讀行程，外包一層分享 chrome。
+
+Mockup sign-off：`docs/design-sessions/2026-05-30-share-page.html`（Variant B「分享封面」，2026-05-30）。設計文件：office-hours `ray-master-design-20260530-191308.md`。
+
+- **版面（Variant B）**：terracotta 漸層 hero（`.tp-share-hero`）顯 eyebrow「由 {display_name} 分享給你」（無名 → 「有人分享了一份行程給你」）+ 行程名 + 日期/目的地 meta；sticky `.tp-share-actionbar`（列印 / 存 PDF ghost + 全寬「複製到我的行程」accent CTA）。hero 取代文件自身 header（`hideHeader`）。
+- **顏色**：chrome 固定淺色（hero terracotta，doc 白紙），不隨 dark mode 翻轉。CSS 在 `tripPrintStyles.ts` 的 `SHARE_CHROME_CSS`，文件本體重用 `PRINT_CSS`。
+- **未公開區塊**：整段消失（不顯鎖）。`@media print` 隱藏 hero + actionbar。
+- **入口（owner，PR1 最小）**：列印頁工具列「分享連結」→ `ShareLinkModal`（`tp-sharemodal-*`）建立連結 → 一次性顯示網址 + 複製 + 關閉分享。已建立連結的網址無法再次顯示（DB 只存 hash），要新網址須建新連結（PR2 加重新產生）。
+- **安全姿態**：見設計 §安全設計 S1-S12（token CSPRNG/hash、default-deny 過濾、統一 404、無 owner PII、IDOR 綁 trip_id、rate-limit、安全 headers）。
+- **後續**：PR2 完整管理面板（多連結/逐區塊 toggle/期限/瀏覽數/rotate）；PR3 訪客一鍵複製。
+
 ### Trip Export（v2.37.0 PR2）
 
 行程 ⋯ → 下載格式 **只剩 PDF + JSON**（CSV / Markdown v2.37.0 移除，不再使用）。
