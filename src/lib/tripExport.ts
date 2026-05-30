@@ -1,31 +1,14 @@
 /**
- * Trip export/download logic — JSON, Markdown, CSV, PDF formats.
- * Extracted from TripPage.tsx to reduce file size.
+ * Trip export — JSON (round-trip) format. PDF lives in the component layer
+ * (renderTripPrintPdf) because it renders a React component; this file is a leaf.
+ *
+ * v2.37.0 (PR2): CSV + Markdown export removed (unused). JSON export switched to
+ * a round-trip schema { schemaVersion, meta, days, notes, segments } consumed by
+ * the import feature (PR3) — segments are serialized by POSITIONAL entry index
+ * (entry id is auto-increment and changes on import).
  */
-
 import { apiFetch } from './apiClient';
-// v2.33.37 round 2: DOC_KEYS 從 lib/docKeys 取（之前 import hooks/useTrip 反向依賴）。
-import { DOC_KEYS } from './docKeys';
-// v2.33.54 round 10: import from lib/toastBus (was '../components/shared/Toast'
-// — broke lib→components reverse import, lib is leaf layer).
-import { showToast } from './toastBus';
 import type { Trip } from '../types/trip';
-
-/* ===== Internal raw types for API responses ===== */
-
-type RawDayEntry = {
-  time?: unknown; title?: unknown; description?: unknown; body?: unknown; note?: unknown;
-  googleRating?: unknown; rating?: unknown; maps?: unknown; source?: unknown;
-  travel?: unknown; travelType?: unknown; travelDesc?: unknown; travelMin?: unknown;
-  stopPois?: Record<string, unknown>[];
-  shopping?: Record<string, unknown>[];
-  [key: string]: unknown;
-};
-type RawDay = {
-  dayNum?: number; date?: string; dayOfWeek?: string; label?: string;
-  timeline?: RawDayEntry[];
-  [key: string]: unknown;
-};
 
 /* ===== Helpers ===== */
 
@@ -40,7 +23,7 @@ function downloadBlob(content: string, filename: string, type: string): void {
 /**
  * Sanitize a filename component: strip path separators, control chars, and
  * Windows-reserved characters. v2.33.36 security audit round 1 — `tripName`
- * came straight from user input (`a.download = "${tripName}-${date}.csv"`),
+ * came straight from user input (`a.download = "${tripName}-${date}.json"`),
  * which Safari historically interpreted as a path (download traversal).
  */
 function safeFileBase(raw: string): string {
@@ -49,255 +32,105 @@ function safeFileBase(raw: string): string {
   return stripped.slice(0, 80) || 'trip';
 }
 
-/**
- * CSV injection guard. v2.33.36 security audit round 1 — cells starting with
- * `=` / `+` / `-` / `@` / `\t` / `\r` are interpreted as formulas by Excel /
- * Google Sheets, leaking other cells via `=HYPERLINK("evil",A1)` etc. Prefix
- * with a single quote — the standard mitigation.
- */
-function csvSafe(cell: unknown): string {
-  const s = cell == null || cell === '' ? '' : String(cell);
-  return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+/** "{tripName}-{YYYY-MM-DD}" safe filename base, shared by JSON + PDF export. */
+export function tripFileBase(trip: Trip | null): string {
+  const tripName = trip?.name || 'trip';
+  const today = new Date().toISOString().slice(0, 10);
+  return safeFileBase(`${tripName}-${today}`);
 }
 
-const DOC_LABEL_MAP: Record<string, string> = {
-  flights: '航班資訊', checklist: '出發前確認清單',
-  backup: '備案', emergency: '緊急聯絡', suggestions: 'AI 解籤',
-};
-const DOC_EMOJI: Record<string, string> = {
-  flights: '✈️', checklist: '✅', backup: '🔄', emergency: '🚨', suggestions: '🔮',
+/* ===== Round-trip JSON schema (v1) ===== */
+
+export interface TripExportSegment {
+  /** Positional index of the from-entry in the flattened trip-wide entry list.
+   *  Always >= 0 in exported output — orphan segments (idx would be -1) are dropped
+   *  by buildTripExportJson, never serialized. */
+  fromEntryIdx: number;
+  toEntryIdx: number;
+  mode: string;
+  min: number | null;
+  distanceM: number | null;
+  source: string | null;
+}
+
+export interface TripExportV1 {
+  schemaVersion: 1;
+  meta: Record<string, unknown>;
+  /** Raw `?all=1` days; each timeline entry carries an added `entryPosition`. */
+  days: Array<Record<string, unknown>>;
+  /** 5-section trip notes (航班/住宿/預訂/行前須知/緊急聯絡). */
+  notes: Record<string, unknown>;
+  segments: TripExportSegment[];
+}
+
+const EMPTY_NOTES: Record<string, unknown> = {
+  flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
 };
 
-async function fetchAllData(tripId: string) {
-  const [meta, daysData, docResults] = await Promise.all([
-    apiFetch<Record<string, unknown>>(`/trips/${tripId}`),
-    apiFetch<RawDay[]>(`/trips/${tripId}/days?all=1`),
-    Promise.all(
-      DOC_KEYS.map(dtype =>
-        apiFetch<{ docType: string; content: string; updatedAt: string }>(`/trips/${tripId}/docs/${dtype}`)
-          .then(d => {
-            let parsed: unknown = d.content;
-            if (typeof parsed === 'string') {
-              try { parsed = JSON.parse(parsed); } catch { /* keep as string */ }
-            }
-            return { type: dtype, data: parsed };
-          })
-          .catch(() => ({ type: dtype, data: null })),
-      ),
-    ),
-  ]);
+const asArr = (v: unknown): Array<Record<string, unknown>> =>
+  Array.isArray(v) ? (v as Array<Record<string, unknown>>) : [];
 
-  const daySummaries = daysData.map(d => ({
-    dayNum: d.dayNum ?? 0,
-    date: d.date,
-    dayOfWeek: d.dayOfWeek,
-    label: d.label,
+/**
+ * Build the round-trip export object. PURE — unit-tested. Flattens entries in
+ * day order (then timeline order, as `?all=1` returns them) to assign a stable
+ * `entryPosition`, then re-keys every segment from auto-increment entry ids to
+ * those positions so import can remap to fresh ids. Orphan segments (referencing
+ * a missing entry) are dropped.
+ */
+export function buildTripExportJson(input: {
+  meta: Record<string, unknown>;
+  days: Array<Record<string, unknown>>;
+  segments: Array<Record<string, unknown>>;
+  notes: Record<string, unknown>;
+}): TripExportV1 {
+  const idToIdx = new Map<number, number>();
+  let pos = 0;
+  const days = input.days.map((d) => ({
+    ...d,
+    timeline: asArr(d.timeline).map((e) => {
+      const entryPosition = pos++;
+      if (typeof e.id === 'number') idToIdx.set(e.id, entryPosition);
+      return { ...e, entryPosition };
+    }),
   }));
-  const docsMap: Record<string, unknown> = {};
-  for (const doc of docResults) {
-    if (doc.data !== null) docsMap[doc.type] = doc.data;
-  }
 
-  return { meta, daySummaries, daysData, docsMap };
+  const segments: TripExportSegment[] = asArr(input.segments)
+    .map((s) => {
+      const from = typeof s.fromEntryId === 'number' ? idToIdx.get(s.fromEntryId) : undefined;
+      const to = typeof s.toEntryId === 'number' ? idToIdx.get(s.toEntryId) : undefined;
+      return {
+        fromEntryIdx: from ?? -1,
+        toEntryIdx: to ?? -1,
+        mode: typeof s.mode === 'string' ? s.mode : '',
+        min: typeof s.min === 'number' ? s.min : null,
+        distanceM: typeof s.distanceM === 'number' ? s.distanceM : null,
+        source: typeof s.source === 'string' ? s.source : null,
+      };
+    })
+    .filter((s) => s.fromEntryIdx >= 0 && s.toEntryIdx >= 0);
+
+  return { schemaVersion: 1, meta: input.meta, days, notes: input.notes ?? EMPTY_NOTES, segments };
+}
+
+async function fetchExportData(tripId: string) {
+  const id = encodeURIComponent(tripId);
+  // meta + days are the core structure — if either fails the export is meaningless,
+  // so they stay fatal (Promise.all rejects). segments + notes are secondary
+  // (a trip may legitimately have none / a 404), so they degrade to empty.
+  const [meta, days, segments, notes] = await Promise.all([
+    apiFetch<Record<string, unknown>>(`/trips/${id}`),
+    apiFetch<Array<Record<string, unknown>>>(`/trips/${id}/days?all=1`),
+    apiFetch<Array<Record<string, unknown>>>(`/trips/${id}/segments`).catch(() => []),
+    apiFetch<Record<string, unknown>>(`/trips/${id}/notes`).catch(() => EMPTY_NOTES),
+  ]);
+  return { meta, days: asArr(days), segments: asArr(segments), notes: notes ?? EMPTY_NOTES };
 }
 
 /* ===== Public API ===== */
 
-/**
- * Download the trip in the specified format (json | md | csv | pdf).
- */
-export async function downloadTripFormat(
-  format: string,
-  opts: { tripId: string; trip: Trip | null },
-): Promise<void> {
-  const { tripId, trip } = opts;
-  const tripName = trip?.name || 'trip';
-  const today = new Date().toISOString().slice(0, 10);
-  const fileBase = safeFileBase(`${tripName}-${today}`);
-
-  const s = (v: unknown) => (v != null && v !== '') ? String(v) : '';
-
-  try {
-    if (format === 'json') {
-      /* -- JSON: complete dump -- */
-      const { meta, daysData, docsMap } = await fetchAllData(tripId);
-      const output = { meta, days: daysData, docs: docsMap };
-      downloadBlob(JSON.stringify(output, null, 2), `${fileBase}.json`, 'application/json');
-
-    } else if (format === 'md') {
-      /* -- Markdown: human-readable complete -- */
-      const { meta, daysData, docsMap } = await fetchAllData(tripId);
-
-      let md = `# ${s(meta.name) || tripName}\n`;
-      if (meta.title) md += `${s(meta.title)}\n`;
-      md += '\n';
-
-      for (const day of daysData) {
-        // Day header
-        md += `## Day ${day.dayNum}`;
-        if (day.label) md += ` ${day.label}`;
-        if (day.date) {
-          md += ` — ${day.date}`;
-          if (day.dayOfWeek) md += `（${day.dayOfWeek}）`;
-        }
-        md += '\n\n';
-
-        // Timeline entries
-        const timeline = day.timeline ?? [];
-        for (let i = 0; i < timeline.length; i++) {
-          const e = timeline[i];
-          if (!e) continue;
-          md += `### ${i + 1} ${s(e.time)} ${s(e.title)}`;
-          if (e.googleRating) md += ` ★ ${e.googleRating}`;
-          md += '\n';
-
-          if (e.description) md += `${s(e.description)}\n`;
-          if (e.note) md += `\n${s(e.note)}\n`;
-          if (e.maps) md += `\n📍 Map: ${s(e.maps)}\n`;
-
-          // Travel
-          const travel = e.travel !== null && typeof e.travel === 'object' ? e.travel as Record<string, unknown> : null;
-          if (travel?.type || e.travelType) {
-            const tType = s(travel?.type ?? e.travelType);
-            const tDesc = s(travel?.desc ?? e.travelDesc);
-            const tMin = travel?.min ?? e.travelMin;
-            md += `🚗 → ${tType}`;
-            if (tDesc) md += ` ${tDesc}`;
-            if (tMin) md += `（${tMin} 分）`;
-            md += '\n';
-          }
-
-          // Stop POI choices
-          const stopPois = e.stopPois ?? [];
-          if (stopPois.length > 0) {
-            md += '\n#### 景點選擇\n';
-            md += '| 順序 | 名稱 | 類型 | 類別 | 評分 | 價格 | 營業時間 | 備註 |\n';
-            md += '|------|------|------|------|------|------|---------|------|\n';
-            for (const p of stopPois) {
-              md += `| ${s(p.sortOrder)} | ${s(p.name)} | ${s(p.type)} | ${s(p.category)} | ${s(p.googleRating ?? p.rating)} | ${s(p.price)} | ${s(p.hours)} | ${s(p.note)} |\n`;
-            }
-          }
-
-          // v2.29.0: shopping array removed — shopping POI 已合進 stopPois (filter by type)
-          const shoppingAlts = stopPois.filter((p) => p.type === 'shopping' && p.sortOrder !== 1);
-          if (shoppingAlts.length > 0) {
-            md += '\n#### 🛍 購物推薦\n';
-            md += '| 店名 | 類別 | 評分 | 營業時間 |\n';
-            md += '|------|------|------|---------|\n';
-            for (const sh of shoppingAlts) {
-              md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.googleRating ?? sh.rating)} | ${s(sh.hours)} |\n`;
-            }
-          }
-
-          md += '\n';
-        }
-        md += '---\n\n';
-      }
-
-      // Docs
-      for (const dtype of DOC_KEYS) {
-        const docData = docsMap[dtype];
-        if (!docData) continue;
-        md += `## ${DOC_EMOJI[dtype]} ${DOC_LABEL_MAP[dtype]}\n\n`;
-        md += typeof docData === 'string' ? docData : JSON.stringify(docData, null, 2);
-        md += '\n\n';
-      }
-
-      downloadBlob(md, `${fileBase}.md`, 'text/markdown');
-
-    } else if (format === 'csv') {
-      /* -- CSV: spreadsheet-friendly with expanded rows -- */
-      const { daysData, docsMap } = await fetchAllData(tripId);
-
-      /* CSV schema v2 (R19) — 17 columns; 住宿名 / 退房時間已移除、住宿 row 已拿掉。
-       * 住宿資訊改由 timeline[0] 的 check-out entry 承載，無需獨立欄位。 */
-      const headers = [
-        'Day', '日期', '星期', '時間', '地點', '評分', '說明', '備註',
-        '交通方式', '交通時間(分)', '景點名稱', '景點類型', '景點評分', '景點價格',
-        '購物店名', '購物類別', '購物必買',
-      ];
-      const rows: string[][] = [headers];
-
-      // v2.33.36: CSV injection guard — see csvSafe() doc above.
-      const csvCell = (v: unknown) => csvSafe(s(v));
-
-      for (const day of daysData) {
-        const dayNum = s(day.dayNum);
-        const dayDate = s(day.date);
-        const dayWeek = s(day.dayOfWeek);
-
-        // Timeline entries
-        const timeline = day.timeline ?? [];
-        for (const e of timeline) {
-          const travel = e.travel !== null && typeof e.travel === 'object' ? e.travel as Record<string, unknown> : null;
-          const travelType = csvCell(travel?.type ?? e.travelType);
-          const travelMin = csvCell(travel?.min ?? e.travelMin);
-
-          const baseRow = [
-            dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title),
-            csvCell(e.googleRating), csvCell(e.description), csvCell(e.note),
-            travelType, travelMin,
-          ];
-
-          // v2.29.0: shopping array removed — shopping POI 已合進 stopPois (filter by type)
-          const stopPois = e.stopPois ?? [];
-          const maxNested = Math.max(stopPois.length, 1);
-
-          for (let n = 0; n < maxNested; n++) {
-            const p = stopPois[n];
-            // For subsequent rows, repeat entry base columns
-            const row = n === 0 ? [...baseRow] : [dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title), '', '', '', '', ''];
-            // POI columns
-            row.push(p ? csvCell(p.name) : '', p ? csvCell(p.type) : '', p ? csvCell(p.googleRating ?? p.rating) : '', p ? csvCell(p.price) : '');
-            rows.push(row);
-          }
-        }
-      }
-
-      // Append docs as separate rows
-      for (const dtype of DOC_KEYS) {
-        const docData = docsMap[dtype];
-        if (!docData) continue;
-        const docStr = typeof docData === 'string' ? docData : JSON.stringify(docData);
-        const row = new Array(headers.length).fill('');
-        row[0] = '附錄';
-        row[3] = DOC_LABEL_MAP[dtype] || dtype;
-        row[6] = s(docStr);
-        rows.push(row);
-      }
-
-      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-      downloadBlob('\uFEFF' + csv, `${fileBase}.csv`, 'text/csv;charset=utf-8');
-
-    } else if (format === 'pdf') {
-      /* -- PDF: generate and download via html2pdf.js -- */
-      const html2pdf = (await import('html2pdf.js')).default;
-      document.body.classList.add('print-mode');
-      window.scrollTo(0, 0);
-      await new Promise(r => setTimeout(r, 500));
-      const el = document.getElementById('tripContent');
-      if (el) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (html2pdf as any)()
-          .set({
-            margin: [10, 10, 10, 10],
-            filename: `${fileBase}.pdf`,
-            image: { type: 'jpeg', quality: 0.92 },
-            html2canvas: { scale: 2, useCORS: true, scrollY: -window.scrollY, windowWidth: el.scrollWidth },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['css', 'legacy'] },
-          })
-          .from(el)
-          .save();
-      }
-      document.body.classList.remove('print-mode');
-    }
-  } catch (err) {
-    document.body.classList.remove('print-mode');
-    // v2.33.36 code review round 1: log the underlying error so users can
-    // attach console output to bug reports. Previously the empty `catch {}`
-    // hid the actual failure (network 500, html2pdf import error, etc).
-    console.error('[downloadTripFormat]', err);
-    showToast('下載失敗，請稍後再試', 'error', 3000);
-  }
+/** Download the trip as a round-trip JSON file. Throws on failure (caller toasts). */
+export async function downloadTripJson(opts: { tripId: string; trip: Trip | null }): Promise<void> {
+  const data = await fetchExportData(opts.tripId);
+  const output = buildTripExportJson(data);
+  downloadBlob(JSON.stringify(output, null, 2), `${tripFileBase(opts.trip)}.json`, 'application/json');
 }

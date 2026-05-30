@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.37.0] - 2026-05-30
+
+### Changed
+- **PDF 匯出改用列印文件** — 下載 PDF 現在輸出跟列印頁一樣的「全展開」文件（每天景點、交通、住宿、行程筆記一次到齊），不再因畫面收合而漏掉內容。
+- **JSON 匯出改為可重新匯入的格式** — JSON 檔現在包含完整行程 + 行程筆記 + 站間交通，之後可以整趟匯回（為即將推出的「匯入」功能鋪路）。
+
+### Removed
+- **移除 CSV 與 Markdown 下載** — 兩種格式已不再使用。下載格式只保留 PDF 與 JSON。
+
 ## [2.36.0] - 2026-05-30
 
 ### Added

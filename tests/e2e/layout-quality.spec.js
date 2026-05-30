@@ -32,8 +32,11 @@ test.describe('Layout quality gates', () => {
     const menu = page.getByTestId(`trip-embedded-menu-${TRIP_ID}`);
     await expect(menu).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: /共編設定/ })).toBeVisible();
+    // v2.37.0 PR2: download formats narrowed to PDF + JSON (CSV + Markdown removed).
     await expect(menu.getByRole('menuitem', { name: /^PDF$/ })).toBeVisible();
-    await expect(menu.getByRole('menuitem', { name: /Markdown/ })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: /^JSON$/ })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: /Markdown/ })).toHaveCount(0);
+    await expect(menu.getByRole('menuitem', { name: /^CSV$/ })).toHaveCount(0);
   });
 
   test('desktop trip detail exposes timeline reorder affordances', async ({ page }) => {

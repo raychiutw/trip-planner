@@ -479,7 +479,14 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-trip-print-document.html`（V
 - **Empty states**：0 天 → header + 「尚無行程」placeholder；空的 notes 區塊整段省略（不印空標題）；無 segment → 不印交通列。
 - **入口**：TripsListPage EmbeddedActionMenu「列印」→ navigate `/trip/:id/print`（`usePrintMode` 舊路徑 PR1 共存，soak 後再拔）。
 - **@media print**：隱藏工具列、`@page { size:A4; margin:14mm }`、文件去 shadow/padding。
-- **匯出同步**（PR2，未做）：PDF 改 render 此文件（離屏附著容器），不再吃 `#tripContent`。
+
+### Trip Export（v2.37.0 PR2）
+
+行程 ⋯ → 下載格式 **只剩 PDF + JSON**（CSV / Markdown v2.37.0 移除，不再使用）。
+
+- **PDF**：`renderTripPrintPdf`（component 層）把 `TripPrintDocument` render 進離屏附著容器（`position:absolute;left:-9999px;width:794px`）+ 注入 `PRINT_CSS`（`lib/tripPrintStyles.ts`）→ html2pdf。不再吃 `#tripContent`（舊版繼承收合）。`flushSync` 同步 commit 後才 snapshot。
+- **JSON**：`lib/tripExport.ts` `downloadTripJson` → round-trip schema `{ schemaVersion:1, meta, days(每個 entry 加 entryPosition), notes(5 區塊), segments(positional fromEntryIdx/toEntryIdx) }`。**取代**舊 `{ meta, days, docs }`（breaking）。segments 用位置序號（entry id 是 auto-increment，匯入會 remap）。供 PR3 匯入消費。
+- **分層**：`lib`（tripExport / tripPrintStyles）是 leaf，不 import component；PDF render 因需 component 放 component 層；`TripPage.handleDownloadFormat` 分派 json→lib / pdf→component。
 
 ## Modal Dialogs
 
