@@ -14,7 +14,7 @@ import { json } from '../../_utils';
 import { AppError } from '../../_errors';
 import { resolveActiveShare, parseVisibleSections, type ShareSection } from '../../_share';
 import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, TRIP_DOC_TYPES, type ResolvablePoi } from '../../trips/_tripWrite';
-import { checkRateLimit, bumpRateLimit, RATE_LIMITS } from '../../_rate_limit';
+import { checkRateLimit, bumpRateLimit, clientIp, RATE_LIMITS } from '../../_rate_limit';
 import type { Env } from '../../_types';
 
 type Stmt = D1PreparedStatement;
@@ -46,7 +46,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const share = await resolveActiveShare(db, token);
   if (!share) return notFound(); // unknown / revoked / expired — uniform 404
 
-  // Per-user clone rate limit + absolute trip cap.
+  // Rate limit: per-IP pre-gate (defence-in-depth) + per-user, then absolute trip cap.
+  // Count the ATTEMPT up-front (await, not fire-and-forget) — a failing clone still burns
+  // hundreds of D1 subrequests, and concurrent requests serialize against a committed count.
+  const ipBucket = `clone:ip:${clientIp(context.request)}`;
+  const ipRl = await checkRateLimit(db, ipBucket, RATE_LIMITS.CLONE_PER_IP);
+  if (!ipRl.ok) {
+    return new Response(JSON.stringify({ error: 'RATE_LIMIT' }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': String(ipRl.retryAfter ?? 3600) },
+    });
+  }
   const bucket = `clone:user:${auth.userId}`;
   const rl = await checkRateLimit(db, bucket, RATE_LIMITS.CLONE_PER_USER);
   if (!rl.ok) {
@@ -55,8 +65,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       headers: { 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfter ?? 3600) },
     });
   }
-  // Count the ATTEMPT up-front (await, not fire-and-forget) — a failing clone still burns
-  // hundreds of D1 subrequests, and concurrent requests serialize against a committed count.
+  await bumpRateLimit(db, ipBucket, RATE_LIMITS.CLONE_PER_IP);
   await bumpRateLimit(db, bucket, RATE_LIMITS.CLONE_PER_USER);
   await assertTripCap(db, auth.userId);
 

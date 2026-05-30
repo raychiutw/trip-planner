@@ -1,0 +1,63 @@
+name: Cleanup — share links
+
+# Daily cleanup for the public share platform (v2.42.0 C1 + C3):
+#   1. trip_shares past expiry + 30-day grace (token-hash material housekeeping).
+#   2. orphaned data_source='cloned' trips with no owner permission (failed clone
+#      rollback residue).
+# Same pattern as rate-limit-cleanup.yml / invitation-cleanup.yml: GitHub Actions
+# schedule + `wrangler d1 execute --remote --file` (Pages has no native cron). SQL in
+# files under scripts/ (CODEOWNERS-gated). Idempotent — re-run is a no-op.
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    # Daily at 03:17 UTC (off-peak, avoid top-of-hour congestion).
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: d1-share-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Delete expired shares + orphaned cloned trips
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Delete expired share links
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: npx wrangler d1 execute trip-planner-db --remote --file=scripts/cleanup-expired-shares.sql
+
+      - name: Delete orphaned cloned trips
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: npx wrangler d1 execute trip-planner-db --remote --file=scripts/cleanup-orphan-cloned-trips.sql
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          curl -sf -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\":\"${TELEGRAM_CHAT_ID}\",\"text\":\"🚨 share cleanup cron FAILED\\nRun: ${RUN_URL}\"}" \
+            || true
