@@ -1,17 +1,19 @@
 /**
- * /api/trips/:id/shares/:shareId — manage a single share link (v2.39.0).
- *   PATCH { action: 'revoke' } → close the link (keeps row + view_count analytics).
- *   DELETE                     → remove the link entirely.
+ * /api/trips/:id/shares/:shareId — manage a single share link (v2.39.0 + v2.40.0 PR2).
+ *   PATCH { action: 'revoke' }  → close the link (keeps row + view_count analytics).
+ *   PATCH { action: 'rotate' }  → issue a NEW token (returns it ONCE); old URL 404s.
+ *   DELETE                      → remove the link entirely.
  *
- * IDOR defence (design S6): trip_shares.id is a GLOBAL autoincrement int, so every
- * op binds `AND trip_id = ?` and requires affected-rows = 1, else 404 — a write-
- * permission check on :id alone is NOT enough (a co-editor of trip A must not touch
- * a share row belonging to trip B). Auth re-checked live (never trusts created_by).
- * PR2 expands PATCH to section/label/expiry edits + rotate.
+ * (Per-link section/expiry config is set at CREATE; to change, rotate or create a new
+ * link — matches the signed-off panel mockup.)
+ *
+ * IDOR defence (design S6): trip_shares.id is a GLOBAL autoincrement int, so every op
+ * binds `AND trip_id = ?` + requires affected-rows = 1, else 404. Auth re-checked live.
  */
 import { requireAuth, hasWritePermission } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { json } from '../../../_utils';
+import { generateShareToken, hashToken } from '../../../_share';
 import type { Env } from '../../../_types';
 
 async function requireTripWrite(context: Parameters<PagesFunction<Env>>[0], tripId: string) {
@@ -25,16 +27,40 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { id, shareId } = context.params as { id: string; shareId: string };
   const db = context.env.DB;
   await requireTripWrite(context, id);
-
   const body = (await context.request.json().catch(() => ({}))) as Record<string, unknown>;
-  if (body.action !== 'revoke') throw new AppError('DATA_VALIDATION');
 
-  const res = await db
-    .prepare("UPDATE trip_shares SET revoked_at = datetime('now') WHERE id = ? AND trip_id = ? AND revoked_at IS NULL")
-    .bind(shareId, id)
-    .run();
-  if (!res.meta.changes) throw new AppError('DATA_NOT_FOUND'); // wrong trip / already revoked / gone
-  return json({ ok: true, revoked: true });
+  if (body.action === 'revoke') {
+    const res = await db
+      .prepare("UPDATE trip_shares SET revoked_at = datetime('now') WHERE id = ? AND trip_id = ? AND revoked_at IS NULL")
+      .bind(shareId, id)
+      .run();
+    if (!res.meta.changes) throw new AppError('DATA_NOT_FOUND'); // wrong trip / already revoked / gone
+    return json({ ok: true, revoked: true });
+  }
+
+  if (body.action === 'rotate') {
+    // New token (returned once). Only ACTIVE links rotate — a revoked link must NOT be
+    // silently resurrected, and an expired link would mint a dead-on-arrival token; both
+    // 404 so the owner creates a fresh link instead. UNIQUE retry.
+    const now = Date.now();
+    for (let attempt = 0; ; attempt++) {
+      const token = generateShareToken();
+      const tokenHash = await hashToken(token);
+      try {
+        const res = await db
+          .prepare('UPDATE trip_shares SET token_hash = ? WHERE id = ? AND trip_id = ? AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)')
+          .bind(tokenHash, shareId, id, now)
+          .run();
+        if (!res.meta.changes) throw new AppError('DATA_NOT_FOUND'); // wrong trip / revoked / expired
+        return json({ ok: true, token, url: `/s/${token}` });
+      } catch (e) {
+        if (e instanceof AppError) throw e;
+        if (attempt >= 2 || !/UNIQUE/i.test(String(e))) throw e;
+      }
+    }
+  }
+
+  throw new AppError('DATA_VALIDATION');
 };
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {

@@ -68,6 +68,19 @@ export function sanitizeVisibleSections(input: unknown): ShareSection[] {
   return SHARE_SECTIONS.filter((s) => a.includes(s));
 }
 
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+
+/**
+ * Owner-supplied expires_at (epoch ms): must be a future time within 1 year, else
+ * null (= never). Bounds the horizon + rejects past/garbage. `nowMs` is injectable
+ * for deterministic tests (Date.now() is unavailable in some sandboxes).
+ */
+export function validateExpiresAt(input: unknown, nowMs: number = Date.now()): number | null {
+  if (typeof input !== 'number' || !Number.isFinite(input)) return null;
+  if (input <= nowMs || input > nowMs + ONE_YEAR_MS) return null;
+  return Math.floor(input);
+}
+
 export interface ShareRow {
   id: number;
   trip_id: string;
@@ -79,6 +92,7 @@ export interface ShareRow {
   created_by: string;
   created_at: string;
   revoked_at: string | null;
+  anonymous: number;
 }
 
 /** Public payload shape — mapped client-side by mapRawToPrintData. NO owner PII. */
@@ -119,7 +133,11 @@ export async function resolveActiveShare(db: D1Database, token: string): Promise
   return row;
 }
 
-async function buildShareMeta(db: D1Database, tripId: string): Promise<VisibleSharePayload['meta']> {
+async function buildShareMeta(
+  db: D1Database,
+  tripId: string,
+  anonymous: boolean,
+): Promise<VisibleSharePayload['meta']> {
   const [trip, dests] = await Promise.all([
     // Allowlist SELECT — only name/title/countries + owner display_name. The owner's
     // user_id / email are NEVER selected into the public payload (design S9).
@@ -140,7 +158,8 @@ async function buildShareMeta(db: D1Database, tripId: string): Promise<VisibleSh
     name: trip?.name ?? '',
     title: trip?.title ?? null,
     countries: trip?.countries ?? null,
-    sharedBy: trip?.shared_by ?? '',
+    // anonymous link → never expose the owner's name in the public payload.
+    sharedBy: anonymous ? '' : (trip?.shared_by ?? ''),
     destinations: (dests.results ?? []).map((d) => ({ name: d.name })),
   };
 }
@@ -184,7 +203,7 @@ async function buildVisibleNotes(
 export async function loadVisibleShareData(db: D1Database, share: ShareRow): Promise<VisibleSharePayload> {
   const visible = parseVisibleSections(share.visible_sections);
   const [meta, days, notes] = await Promise.all([
-    buildShareMeta(db, share.trip_id),
+    buildShareMeta(db, share.trip_id, share.anonymous === 1),
     buildAllDays(db, share.trip_id),
     buildVisibleNotes(db, share.trip_id, visible),
   ]);
