@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.38.2] - 2026-05-30
+
+### Changed
+- docs：CLAUDE.md naming history 補上行程列印/匯出/匯入 redesign（v2.36.0–2.38.1）里程碑記錄（開發文件，無功能變更）。
+
 ## [2.38.1] - 2026-05-30
 
 ### Fixed
