@@ -34,6 +34,30 @@ function reqId(r: D1Result): number {
   return id;
 }
 
+interface ResolvablePoi {
+  type: string; name: string; category: string | null; lat: number | null; lng: number | null;
+  hours: string | null; rating: number | null; price?: string | null; address: string | null; placeId: string | null;
+}
+
+/**
+ * Find-or-create a POI by UNIQUE(name, type). pois enforces that index, so import
+ * MUST reuse an existing row rather than INSERT a duplicate. Pre-existing pois are
+ * returned AS-IS (never mutated — an attacker can't poison a shared catalog row);
+ * only newly-created ids are tracked for rollback.
+ */
+async function resolvePoi(db: D1Database, p: ResolvablePoi, createdPoiIds: number[]): Promise<number> {
+  const found = await db.prepare('SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1').bind(p.name, p.type).first<{ id: number }>();
+  if (found && typeof found.id === 'number') return found.id;
+  const ins = await db.prepare(
+    'INSERT OR IGNORE INTO pois (type, name, category, lat, lng, hours, rating, price, address, place_id, source) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id',
+  ).bind(p.type, p.name, p.category, p.lat, p.lng, p.hours, p.rating, p.price ?? null, p.address, p.placeId, 'imported').first<{ id: number }>();
+  if (ins && typeof ins.id === 'number') { createdPoiIds.push(ins.id); return ins.id; }
+  // Lost the INSERT-OR-IGNORE race (concurrent insert of same name+type) → re-fetch.
+  const ref = await db.prepare('SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1').bind(p.name, p.type).first<{ id: number }>();
+  if (!ref || typeof ref.id !== 'number') throw new AppError('SYS_DB_ERROR', 'POI 解析失敗');
+  return ref.id;
+}
+
 /** Run statements in chunked atomic batches; onResult fires per result as each
  *  chunk commits, so a later chunk's failure still leaves earlier ids tracked. */
 async function runChunked(db: D1Database, stmts: Stmt[], onResult?: (r: D1Result, idx: number) => void): Promise<void> {
@@ -116,43 +140,31 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       posToEntryId.set(entryPositions[idx]!, id);
     });
 
-    // ---- Batch D: pois (stop POIs + hotels) RETURNING id ----
-    const poiStmts: Stmt[] = [];
-    const poiTargets: ({ kind: 'entry'; entryId: number; poi: { sortOrder: number; description: string | null; note: string | null; reservation: string | null; reservationUrl: string | null } } | { kind: 'hotel'; dayId: number })[] = [];
-    data.days.forEach((d, di) => {
+    // ---- POIs: find-or-create by UNIQUE(name, type) (pois enforces it), then
+    // link. Sequential (SELECT then INSERT OR IGNORE) — can't chain in a batch.
+    // Pre-existing pois are REUSED as-is (never mutated); only newly-created pois
+    // are tracked for rollback. ----
+    const E: Stmt[] = [];
+    for (let di = 0; di < data.days.length; di++) {
+      const d = data.days[di]!;
       for (const e of d.entries) {
         const entryId = posToEntryId.get(e.entryPosition);
         if (entryId === undefined) continue;
+        const seenPoi = new Set<number>();
+        let so = 1;
         for (const p of e.pois) {
-          poiStmts.push(db.prepare(
-            'INSERT INTO pois (type, name, category, lat, lng, hours, rating, address, place_id, source) VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING id',
-          ).bind(p.type, p.name, p.category, p.lat, p.lng, p.hours, p.rating, p.address, p.placeId, 'imported'));
-          poiTargets.push({ kind: 'entry', entryId, poi: { sortOrder: p.sortOrder, description: p.description, note: p.note, reservation: p.reservation, reservationUrl: p.reservationUrl } });
+          const poiId = await resolvePoi(db, p, createdPoiIds);
+          if (seenPoi.has(poiId)) continue; // UNIQUE(entry_id, poi_id) — skip dup-resolved POIs
+          seenPoi.add(poiId);
+          E.push(db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, description, note, reservation, reservation_url, added_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
+            .bind(entryId, poiId, so++, p.description, p.note, p.reservation, p.reservationUrl, now, now));
         }
       }
       if (d.hotel) {
-        const h = d.hotel;
-        poiStmts.push(db.prepare(
-          'INSERT INTO pois (type, name, category, lat, lng, hours, rating, address, place_id, note, source) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id',
-        ).bind('hotel', h.name, h.category, h.lat, h.lng, h.hours, h.rating, h.address, h.placeId, h.note, 'imported'));
-        poiTargets.push({ kind: 'hotel', dayId: dayIds[di]! });
+        const poiId = await resolvePoi(db, d.hotel, createdPoiIds);
+        E.push(db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(poiId, dayIds[di]!));
       }
-    });
-    const poiIds: number[] = [];
-    await runChunked(db, poiStmts, (r) => { const id = reqId(r); poiIds.push(id); createdPoiIds.push(id); });
-
-    // ---- Batch E: entry↔poi links (with trip-specific overrides) + hotel links + segments ----
-    const E: Stmt[] = [];
-    poiTargets.forEach((t, idx) => {
-      const poiId = poiIds[idx];
-      if (poiId === undefined) return;
-      if (t.kind === 'entry') {
-        E.push(db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, description, note, reservation, reservation_url, added_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
-          .bind(t.entryId, poiId, t.poi.sortOrder, t.poi.description, t.poi.note, t.poi.reservation, t.poi.reservationUrl, now, now));
-      } else {
-        E.push(db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(poiId, t.dayId));
-      }
-    });
+    }
     for (const s of data.segments) {
       const from = posToEntryId.get(s.fromEntryIdx);
       const to = posToEntryId.get(s.toEntryIdx);

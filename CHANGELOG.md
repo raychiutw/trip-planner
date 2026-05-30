@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.38.1] - 2026-05-30
+
+### Fixed
+- **匯入行程**：含景點的行程匯入失敗（prod 驗證發現）。景點資料表對「名稱 + 類型」有唯一索引，匯入時若該景點已存在就會撞索引整筆失敗。改為「找不到才新建、找到就沿用既有景點」（永不改動既有景點資料），並去除同一站重複指向同一景點的情形。
+
 ## [2.38.0] - 2026-05-30
 
 ### Added
