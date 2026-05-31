@@ -76,7 +76,7 @@
     "idb": "^8.0.3",
     "marked": "^17.0.4",
     "nodemailer": "^8.0.7",
-    "oidc-provider": "^9.8.2",
+    "oidc-provider": "^9.8.4",
     "qrcode": "^1.5.4",
     "react": "^19.2.4",
     "react-day-picker": "^10.0.1",
