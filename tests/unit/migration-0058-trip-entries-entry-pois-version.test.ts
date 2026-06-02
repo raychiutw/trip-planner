@@ -10,7 +10,8 @@
  * 1. ADD COLUMN schema (PRAGMA table_info)
  * 2. NOT NULL + DEFAULT 0 on INSERT — INSERT 不指定欄位 → 自動 0
  * 3. Monotonic 行為 — 每次 UPDATE = current + 1 不會 race backward
- * 4. Cross-mutation isolation — UPDATE trip_entries SET note=...  NOT 動 entry_pois_version
+ * 4. Cross-mutation isolation — UPDATE trip_entries 一般欄位（description）NOT 動 entry_pois_version
+ *    （migration 0078: trip_entries.note 已 DROP，原本用 note 改用 description）
  * 5. Upper bound sanity — 100k 仍正常運作
  *
  * **Note on ALTER backfill semantic**：round 8 adversarial 正確指出 createTestDb 在
@@ -85,10 +86,11 @@ describe('migration 0058 — trip_entries.entry_pois_version', () => {
     }
   });
 
-  it('Cross-mutation isolation — UPDATE note/title 不動 entry_pois_version', async () => {
+  it('Cross-mutation isolation — UPDATE 一般 entry 欄位（title/description）不動 entry_pois_version', async () => {
     // Round 5 architectural fix 的核心 invariant：non-multi-POI mutations 不該
     // invalidate OCC token。Raw SQL 模擬 PATCH /entries 的 buildUpdateClause behavior
     // — handler whitelist 排除 entry_pois_version，所以這條 UPDATE 永遠不會 bump 它。
+    // migration 0078: trip_entries.note 已 DROP，改用 description 當「一般欄位編輯」代表。
     const { id: tripId } = await seedTrip(db, { id: 'mig58-iso-trip' });
     const dayId = await getDayId(db, tripId, 1);
     const poiId = await seedPoi(db, { name: 'POI-Mig58-Iso' });
@@ -104,10 +106,10 @@ describe('migration 0058 — trip_entries.entry_pois_version', () => {
       .first<{ v: number }>();
     expect(before!.v).toBe(1);
 
-    // PATCH /entries note edit simulation — handler 只 SET note + updated_at，
-    // 不該影響 entry_pois_version。
+    // PATCH /entries 一般欄位編輯 simulation — handler 只 SET description + updated_at，
+    // 不該影響 entry_pois_version（per-POI 備註現已走獨立端點，更不會碰此 counter）。
     await db
-      .prepare("UPDATE trip_entries SET note = '更新備註', updated_at = datetime('now') WHERE id = ?")
+      .prepare("UPDATE trip_entries SET description = '更新描述', updated_at = datetime('now') WHERE id = ?")
       .bind(entryId)
       .run();
 

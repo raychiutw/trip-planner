@@ -81,7 +81,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .first<{ name: string | null; title: string | null; description: string | null; countries: string | null; lang: string | null }>(),
     db.prepare('SELECT name, lat, lng, day_quota, sub_areas FROM trip_destinations WHERE trip_id = ? ORDER BY dest_order ASC').bind(src).all(),
     db.prepare('SELECT id, day_num, date, day_of_week, label, title FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC').bind(src).all(),
-    db.prepare('SELECT e.id, e.day_id, e.sort_order, e.start_time, e.end_time, e.title, e.description, e.source, e.note FROM trip_entries e JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ? ORDER BY e.day_id ASC, e.sort_order ASC').bind(src).all(),
+    // migration 0078: trip_entries.note DROPPED — 不再 SELECT e.note（保留會在 DROP 後
+    // "no such column"）。per-POI 備註從 epR 的 tep.note 帶過去（見下方 trip_entry_pois copy）。
+    db.prepare('SELECT e.id, e.day_id, e.sort_order, e.start_time, e.end_time, e.title, e.description, e.source FROM trip_entries e JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ? ORDER BY e.day_id ASC, e.sort_order ASC').bind(src).all(),
     db.prepare('SELECT tep.entry_id, tep.sort_order, tep.description, tep.note, tep.reservation, tep.reservation_url, p.type, p.name, p.category, p.lat, p.lng, p.hours, p.rating, p.price, p.address, p.place_id FROM trip_entry_pois tep JOIN pois p ON p.id = tep.poi_id JOIN trip_entries e ON e.id = tep.entry_id JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ? ORDER BY tep.entry_id ASC, tep.sort_order ASC').bind(src).all(),
     db.prepare('SELECT td.id AS day_id, p.type, p.name, p.category, p.lat, p.lng, p.hours, p.rating, p.price, p.address, p.place_id FROM trip_days td JOIN pois p ON p.id = td.hotel_poi_id WHERE td.trip_id = ?').bind(src).all(),
     db.prepare('SELECT from_entry_id, to_entry_id, mode, min, distance_m, source FROM trip_segments WHERE trip_id = ?').bind(src).all(),
@@ -146,8 +148,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       srcEntries.map((e) => {
         const newDayId = dayIdMap.get(e.day_id as number);
         if (newDayId === undefined) throw new AppError('SYS_DB_ERROR', '複製寫入失敗（entry 缺 day 關聯）');
-        return db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, note, entry_pois_version) VALUES (?,?,?,?,?,?,?,?,?) RETURNING id')
-          .bind(newDayId, e.sort_order, e.start_time, e.end_time, e.title, e.description, e.source, e.note, (poiCountByEntry.get(e.id as number) ?? 0) > 0 ? 1 : 0);
+        // migration 0078: 不再 copy entry-level note；per-POI note 隨 trip_entry_pois copy（含 ep.note）。
+        return db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, entry_pois_version) VALUES (?,?,?,?,?,?,?,?) RETURNING id')
+          .bind(newDayId, e.sort_order, e.start_time, e.end_time, e.title, e.description, e.source, (poiCountByEntry.get(e.id as number) ?? 0) > 0 ? 1 : 0);
       }),
       (r, idx) => {
         const id = reqId(r, '複製寫入失敗');

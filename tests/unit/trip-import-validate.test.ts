@@ -137,3 +137,45 @@ describe('parseAndValidateImport — normalization', () => {
     expect(parseAndValidateImport({ schemaVersion: 1, meta: { name: 'x' }, days }).ok).toBe(false);
   });
 });
+
+describe('parseAndValidateImport — entry-level note → master POI note (migration 0078)', () => {
+  const oneEntry = (timeline: unknown[]) =>
+    ok(parseAndValidateImport({ schemaVersion: 1, meta: { name: 'x' }, days: [{ timeline }] }))
+      .days[0]!.entries[0]!;
+
+  it('folds an OLD-file entry-level note onto the master POI when master note is empty', () => {
+    const e = oneEntry([
+      { sortOrder: 1, title: '午餐', note: '整體備註', stopPois: [
+        { sortOrder: 1, name: 'a', type: 'restaurant' },
+        { sortOrder: 2, name: 'b', type: 'restaurant', note: '備案備註' },
+      ] },
+    ]);
+    expect(e.pois[0]!.note).toBe('整體備註'); // master gets entry note
+    expect(e.pois[1]!.note).toBe('備案備註'); // alternate untouched
+  });
+
+  it('keeps the master POI note (master-wins) when BOTH master note and entry-level note exist', () => {
+    // import 採 master-wins（對齊 import.ts orchestration `p.note ?? e.note` 與
+    // import-entry-note.integration 契約），非 migration D5 的換行串接。
+    const e = oneEntry([
+      { sortOrder: 1, title: '午餐', note: '整體備註不該贏', stopPois: [
+        { sortOrder: 1, name: 'a', type: 'restaurant', note: '正選備註' },
+      ] },
+    ]);
+    expect(e.pois[0]!.note).toBe('正選備註');
+  });
+
+  it('leaves the master POI note untouched when there is NO entry-level note', () => {
+    const e = oneEntry([
+      { sortOrder: 1, title: '午餐', stopPois: [
+        { sortOrder: 1, name: 'a', type: 'restaurant', note: '正選備註' },
+      ] },
+    ]);
+    expect(e.pois[0]!.note).toBe('正選備註');
+  });
+
+  it('drops an entry-level note with no POIs to attach to (no crash, empty pois)', () => {
+    const e = oneEntry([{ sortOrder: 1, title: '純佔位', note: '無處可掛', stopPois: [] }]);
+    expect(e.pois).toHaveLength(0);
+  });
+});

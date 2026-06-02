@@ -219,11 +219,13 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   // RETURNING id + 顯式 bind 到 trip_entry_pois，杜絕 FK 接錯 row 的 silent
   // corruption。Trade-off: trip_entries 已 commit 但 trip_entry_pois INSERT
   // 失敗 → entry orphan 無 master POI（user 可重新 attach；不算 data loss）。
+  // migration 0078: trip_entries.note DROPPED — entry-level note 不再寫 trip_entries。
+  // favorite.note 改寫進下方 master trip_entry_pois.note（sort_order=1）。
   stmts.push(
     db.prepare(
-      `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, note, entry_pois_version)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1) RETURNING id`,
-    ).bind(day.id, insertSortOrder, startTime, endTime, favorite.poi_name, null, 'fast-path', favorite.note),
+      `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, entry_pois_version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1) RETURNING id`,
+    ).bind(day.id, insertSortOrder, startTime, endTime, favorite.poi_name, null, 'fast-path'),
   );
 
   const batchResults = await db.batch<{ id: number }>(stmts);
@@ -234,13 +236,16 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   }
 
   // 顯式 bind entry id，不依賴 last_insert_rowid() cross-statement 隱含 state
+  // migration 0078: master(sort_order=1) 直接帶 favorite.note 進 per-POI note
+  // （此路徑是 6 建立路徑中唯一直接 INSERT master trip_entry_pois 卻沒帶 note 的，
+  //  若不補 note 欄位，收藏的備註會在 cutover 後 silently 遺失）。
   const nowIso = new Date().toISOString();
   await db
     .prepare(
-      `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-       VALUES (?, ?, 1, ?, ?)`,
+      `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at, note)
+       VALUES (?, ?, 1, ?, ?, ?)`,
     )
-    .bind(newEntryId, favorite.poi_id, nowIso, nowIso)
+    .bind(newEntryId, favorite.poi_id, nowIso, nowIso, favorite.note ?? null)
     .run();
 
   // Audit log — companion 走 system:companion sentinel + 攜 companionTripId 反查；

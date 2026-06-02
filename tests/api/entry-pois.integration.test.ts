@@ -25,6 +25,7 @@ import { onRequestPatch as masterPatch } from '../../functions/api/trips/[id]/en
 import { onRequestPost as alternatesPost } from '../../functions/api/trips/[id]/entries/[eid]/alternates';
 import { onRequestDelete as alternateDelete } from '../../functions/api/trips/[id]/entries/[eid]/alternates/[poiId]';
 import { onRequestPatch as reorderPatch } from '../../functions/api/trips/[id]/entries/[eid]/alternates/reorder';
+import { onRequestPatch as poiNotePatch } from '../../functions/api/trips/[id]/entries/[eid]/pois/[poiId]';
 // round 7 fix: route cross-mutation regression through real PATCH /entries handler
 // instead of raw SQL — if a future change adds entry_pois_version to ALLOWED_FIELDS
 // or to buildUpdateClause(), the raw-SQL test would silently pass while the real
@@ -1130,6 +1131,55 @@ describe('POST /api/trips/:id/days/:num/entries — syncEntryMaster', () => {
     expect(row!.poi_id).toBeGreaterThan(0);
     // v2.29.0: trip_entries.poi_id DROPPED — master 唯一來源是 trip_entry_pois sort_order=1。
   });
+
+  it('migration 0078: POST 帶 note → 寫進 master trip_entry_pois.note（非 trip_entries）', async () => {
+    const { onRequestPost: entriesPost } = await import(
+      '../../functions/api/trips/[id]/days/[num]/entries'
+    );
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/days/1/entries`,
+        'POST',
+        {
+          title: 'PostNoteEntry',
+          time: '15:00',
+          poi_type: 'restaurant',
+          note: '必點招牌拉麵',
+        },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, num: '1' },
+    });
+    const resp = await callHandler(entriesPost, ctx);
+    expect(resp.status).toBe(201);
+    const newEntry = (await resp.json()) as { id: number };
+    const master = await db
+      .prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(newEntry.id)
+      .first<{ note: string | null }>();
+    expect(master!.note).toBe('必點招牌拉麵');
+  });
+
+  it('migration 0078: POST 帶亂碼 note → 400 DATA_ENCODING', async () => {
+    const { onRequestPost: entriesPost } = await import(
+      '../../functions/api/trips/[id]/days/[num]/entries'
+    );
+    const ctx = mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/days/1/entries`,
+        'POST',
+        { title: 'PostGarbledNote', time: '16:00', poi_type: 'restaurant', note: '備註���亂碼' },
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, num: '1' },
+    });
+    const resp = await callHandler(entriesPost, ctx);
+    expect(resp.status).toBe(400);
+    const body = (await resp.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('DATA_ENCODING');
+  });
 });
 
 describe('POST /api/trips/:id/entries/:eid/copy — syncEntryMaster', () => {
@@ -1422,6 +1472,50 @@ describe('Round 5 — entry_pois_version isolated from unrelated entry edits (cr
   });
 });
 
+// migration 0078 — syncEntryMaster 可選 note 參數（給 entry-create 路徑把 entry-level note
+// 寫進新 master 的 per-POI note）。只作用於 INSERT(new master) 分支；既有呼叫端不傳 → 維持現狀。
+describe('migration 0078 — syncEntryMaster optional note 參數', () => {
+  it('INSERT 新 master 時帶 note → 寫進 trip_entry_pois.note', async () => {
+    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
+    const trip = await seedTrip(db, { id: 'm78-sync-note-insert' });
+    const dayId = await getDayId(db, trip.id, 1);
+    const poi = await db.prepare("INSERT INTO pois (name, type) VALUES ('M78-INS', 'attraction') RETURNING id").first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '10:00', 'M78-INS') RETURNING id").bind(dayId).first<{ id: number }>();
+
+    await syncEntryMaster(db, entry!.id, poi!.id, '整體備註注入 master');
+
+    const row = await db.prepare('SELECT note, sort_order FROM trip_entry_pois WHERE entry_id = ?').bind(entry!.id).first<{ note: string | null; sort_order: number }>();
+    expect(row!.sort_order).toBe(1);
+    expect(row!.note).toBe('整體備註注入 master');
+  });
+
+  it('不傳 note（既有呼叫端）→ master.note 維持 NULL（向後相容）', async () => {
+    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
+    const trip = await seedTrip(db, { id: 'm78-sync-note-omit' });
+    const dayId = await getDayId(db, trip.id, 1);
+    const poi = await db.prepare("INSERT INTO pois (name, type) VALUES ('M78-OMIT', 'attraction') RETURNING id").first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '10:00', 'M78-OMIT') RETURNING id").bind(dayId).first<{ id: number }>();
+
+    await syncEntryMaster(db, entry!.id, poi!.id);
+
+    const row = await db.prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1').bind(entry!.id).first<{ note: string | null }>();
+    expect(row!.note).toBeNull();
+  });
+
+  it('note 為 null 顯式傳入 → master.note NULL（不炸）', async () => {
+    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
+    const trip = await seedTrip(db, { id: 'm78-sync-note-null' });
+    const dayId = await getDayId(db, trip.id, 1);
+    const poi = await db.prepare("INSERT INTO pois (name, type) VALUES ('M78-NULL', 'attraction') RETURNING id").first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '10:00', 'M78-NULL') RETURNING id").bind(dayId).first<{ id: number }>();
+
+    await syncEntryMaster(db, entry!.id, poi!.id, null);
+
+    const row = await db.prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1').bind(entry!.id).first<{ note: string | null }>();
+    expect(row!.note).toBeNull();
+  });
+});
+
 // Round 9 — syncEntryMaster INSERT + naked UPDATE 各自 bump entry_pois_version 的 regression。
 // Round 7 修了這兩條 path 加 bump，但既有 syncEntryMaster test 只走 setMaster collision route。
 describe('Round 9 — syncEntryMaster INSERT/naked UPDATE bump entry_pois_version', () => {
@@ -1499,5 +1593,215 @@ describe('Round 4 — syncEntryMaster routes UNIQUE collision to setMaster (adv-
     expect(rows.results.length).toBe(2);
     expect(rows.results[0]).toMatchObject({ poi_id: altPoiIds[0], sort_order: 1 });
     expect(rows.results[1]!.poi_id).toBe(masterPoiId);
+  });
+});
+
+// =============================================================================
+// PATCH /api/trips/:id/entries/:eid/pois/:poiId — per-POI 備註（取代 entry-level note）
+// migration 0078 cutover：master(sort_order=1) 或 alternate(sort_order>1) 各自可編輯 note。
+// =============================================================================
+describe('PATCH /pois/:poiId — per-POI note', () => {
+  function noteCtx(opts: {
+    entryId: number;
+    poiId: number;
+    body: unknown;
+    email?: string;
+    tripId?: string;
+  }) {
+    const tripId = opts.tripId ?? TRIP_ID;
+    return mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${tripId}/entries/${opts.entryId}/pois/${opts.poiId}`,
+        'PATCH',
+        opts.body,
+      ),
+      env,
+      auth: opts.email === undefined ? undefined : mockAuth({ email: opts.email }),
+      params: { id: tripId, eid: String(opts.entryId), poiId: String(opts.poiId) },
+    });
+  }
+
+  async function readNote(entryId: number, poiId: number): Promise<string | null> {
+    const row = await db
+      .prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ?')
+      .bind(entryId, poiId)
+      .first<{ note: string | null }>();
+    return row ? row.note : null;
+  }
+
+  it('成功更新 master(sort_order=1) note → 200 + DB 寫入', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-Master' });
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: '必點山苦瓜炒麵' }, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(200);
+    const body = (await resp.json()) as { entryId: number; poiId: number; note: string };
+    expect(body.poiId).toBe(masterPoiId);
+    expect(body.note).toBe('必點山苦瓜炒麵');
+    expect(await readNote(entryId, masterPoiId)).toBe('必點山苦瓜炒麵');
+  });
+
+  it('成功更新 alternate(sort_order>1) note → 200', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({
+      poiName: 'PN-AltMaster',
+      altPoiNames: ['PN-Alt-1'],
+    });
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: altPoiIds[0]!, body: { note: '週三休息' }, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(200);
+    expect(await readNote(entryId, altPoiIds[0]!)).toBe('週三休息');
+  });
+
+  it('note 純空白 → 寫 null（清除）', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-Blank' });
+    // 先寫一個值
+    await db.prepare('UPDATE trip_entry_pois SET note = ? WHERE entry_id = ? AND poi_id = ?')
+      .bind('舊備註', entryId, masterPoiId).run();
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: '   ' }, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(200);
+    expect(await readNote(entryId, masterPoiId)).toBeNull();
+  });
+
+  it('note = null → 寫 null', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-Null' });
+    await db.prepare('UPDATE trip_entry_pois SET note = ? WHERE entry_id = ? AND poi_id = ?')
+      .bind('舊備註', entryId, masterPoiId).run();
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: null }, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(200);
+    expect(await readNote(entryId, masterPoiId)).toBeNull();
+  });
+
+  it('亂碼（U+FFFD）→ 400 DATA_ENCODING', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-Garbled' });
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: '備註���' }, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(400);
+    const body = (await resp.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('DATA_ENCODING');
+  });
+
+  it('note 超過 1000 字 → 400 DATA_VALIDATION', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-TooLong' });
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: 'あ'.repeat(1001) }, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(400);
+    const body = (await resp.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('DATA_VALIDATION');
+  });
+
+  it('缺 note 欄位 → 400 DATA_VALIDATION', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-MissingField' });
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: {}, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(400);
+    const body = (await resp.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('DATA_VALIDATION');
+  });
+
+  it('note 非 string|null（number）→ 400 DATA_VALIDATION', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-WrongType' });
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: 123 }, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(400);
+    const body = (await resp.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('DATA_VALIDATION');
+  });
+
+  it('poiId 不屬於該 entry → 404 DATA_NOT_FOUND', async () => {
+    const { entryId } = await seedEntryWithMaster({ poiName: 'PN-NotInEntry' });
+    const strayPoi = await seedPoi(db, { name: 'PN-Stray', type: 'attraction' });
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: strayPoi, body: { note: '不該成功' }, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(404);
+    const body = (await resp.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('DATA_NOT_FOUND');
+  });
+
+  it('未認證 → 401 AUTH_REQUIRED', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-NoAuth' });
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: 'x' } }), // email undefined → no auth
+    );
+    expect(resp.status).toBe(401);
+  });
+
+  it('無 write 權限（陌生人）→ 403 PERM_DENIED', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-Stranger' });
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: 'x' }, email: 'stranger@test.com' }),
+    );
+    expect(resp.status).toBe(403);
+    const body = (await resp.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('PERM_DENIED');
+  });
+
+  it('cross-trip：URL trip 與 entry 所屬 trip 不符 → 404 DATA_NOT_FOUND', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-CrossTrip' });
+    // 另開一個 trip，owner 同 USER_EMAIL（有 write 權限），但 entry 屬於 TRIP_ID。
+    const otherTrip = 'trip-ep-other-note';
+    await seedTrip(db, { id: otherTrip, owner: USER_EMAIL });
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: 'x' }, email: USER_EMAIL, tripId: otherTrip }),
+    );
+    expect(resp.status).toBe(404);
+    const body = (await resp.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('DATA_NOT_FOUND');
+  });
+
+  it('回歸：note 編輯不 bump entry_pois_version（LWW，不誤殺 swap token）', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-NoVersionBump' });
+    const before = await db
+      .prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+      .bind(entryId)
+      .first<{ v: number }>();
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: '不該 bump version' }, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(200);
+    const after = await db
+      .prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
+      .bind(entryId)
+      .first<{ v: number }>();
+    expect(after!.v).toBe(before!.v); // 不變
+  });
+
+  it('updated_at 被更新（trip_entry_pois.updated_at 推進）', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PN-UpdatedAt' });
+    // 先把 updated_at 設成過去值
+    await db.prepare("UPDATE trip_entry_pois SET updated_at = '2000-01-01T00:00:00.000Z' WHERE entry_id = ? AND poi_id = ?")
+      .bind(entryId, masterPoiId).run();
+    const resp = await callHandler(
+      poiNotePatch,
+      noteCtx({ entryId, poiId: masterPoiId, body: { note: 'x' }, email: USER_EMAIL }),
+    );
+    expect(resp.status).toBe(200);
+    const row = await db
+      .prepare('SELECT updated_at FROM trip_entry_pois WHERE entry_id = ? AND poi_id = ?')
+      .bind(entryId, masterPoiId)
+      .first<{ updated_at: string }>();
+    expect(row!.updated_at > '2000-01-01T00:00:00.000Z').toBe(true);
   });
 });

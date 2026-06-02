@@ -507,14 +507,25 @@ export async function reorderAlternates(
  * 場景下既有 entry 也會走 naked UPDATE path 而不 bump，讓 outstanding setMaster token
  * 誤判為 fresh（adversarial round 6 #1）。
  *
+ * migration 0078: 可選 `note` 參數 —— entry-create 路徑（POST /entries、PUT /days title-only）
+ * 把 entry-level 備註寫進「新建 master」的 per-POI note。**只作用於 INSERT(new master) 分支**：
+ *   - 既有呼叫端不傳 note（undefined）→ 行為完全不變（向後相容）。
+ *   - 顯式傳 null → master.note 寫 NULL。
+ *   - 傳字串 → master.note 寫該值。
+ * no-op / asAlternate(swap) / naked-UPDATE 分支「不」碰 note —— 那些是既有 master 的搬移/置換，
+ * note 應隨對應 POI 走，不該被 entry-create 的 note 蓋掉。
+ *
  * @param db D1
  * @param entryId 已存在的 trip_entries.id
  * @param poiId 對應的 pois.id (NOT NULL)
+ * @param note 可選；僅在新建 master（INSERT 分支）時寫入 master 的 trip_entry_pois.note。
+ *             undefined → 不寫（維持現狀）；null / 字串 → 寫該值。
  */
 export async function syncEntryMaster(
   db: D1Database,
   entryId: number,
   poiId: number,
+  note?: string | null,
 ): Promise<void> {
   const now = nowMs();
   // INSERT OR REPLACE on UNIQUE(entry_id, sort_order) 會 swap 既有 sort_order=1 row
@@ -536,13 +547,14 @@ export async function syncEntryMaster(
   if (!existing) {
     // round 7 fix: bump entry_pois_version atomically with the INSERT so outstanding
     // OCC tokens become stale on master creation.
+    // migration 0078: 帶 note 時一起寫進新 master 的 per-POI note（entry-create 路徑用）。
     await db.batch([
       db
         .prepare(
-          `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-           VALUES (?, ?, 1, ?, ?)`,
+          `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at, note)
+           VALUES (?, ?, 1, ?, ?, ?)`,
         )
-        .bind(entryId, poiId, now, now),
+        .bind(entryId, poiId, now, now, note ?? null),
       db
         .prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?')
         .bind(entryId),

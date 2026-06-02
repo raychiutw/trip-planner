@@ -344,6 +344,17 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const canExpand = entry.id != null;
   const entryIdNum = entry.id ?? null;
 
+  // v2.29.x per-POI note cutover：inline 快速編輯的 save target 從 entry-level
+  // `trip_entries.note`（已 DROP）改為 master stopPoi（sortOrder=1）的 per-POI note。
+  // master poiId 從 entry.stopPois 取 sortOrder===1 那筆的 poiId；缺 master 或
+  // master 無 poiId（如尚未存檔的搜尋結果）→ 無法定位 PATCH target → 停用編輯。
+  const masterPoiId = useMemo(() => {
+    const items = entry.stopPois ?? [];
+    const masterRow = items.find((p) => p.sortOrder === 1);
+    return masterRow?.poiId ?? null;
+  }, [entry.stopPois]);
+  const canEditNote = masterPoiId != null;
+
   const [editingNote, setEditingNote] = useState(false);
   const [draftNote, setDraftNote] = useState('');
   // v2.33.108: note save 走 useAutosave hook（state/error 由 hook 管）。
@@ -361,8 +372,11 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const noteAutosave = useAutosave<{ note: string }>({
     debounceMs: 800,
     save: async (body) => {
-      if (!tripId || entryIdNum == null) throw new Error('Missing tripId / entryId');
-      const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryIdNum}`, {
+      if (!tripId || entryIdNum == null || masterPoiId == null) {
+        throw new Error('Missing tripId / entryId / masterPoiId');
+      }
+      // v2.29.x：repoint 到 per-POI note 端點（master poiId）。LWW，不帶 version token。
+      const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryIdNum}/pois/${masterPoiId}`, {
         method: 'PATCH',
         credentials: 'same-origin',
         body: JSON.stringify(body),
@@ -389,6 +403,8 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
 
   const beginEditNote = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
+    // v2.29.x：無 master poiId → 無 PATCH target，停用 inline 編輯（no-op）。
+    if (!canEditNote) return;
     setDraftNote(entry.note ?? '');
     setEditingNote(true);
   };
@@ -660,14 +676,16 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                   </span>
                 </div>
               </>
-            ) : (
+            ) : canEditNote ? (
               <div
                 className={clsx('tp-rail-note-value', !hasNote && 'is-empty')}
                 onClick={beginEditNote}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  // role="button" 須同時支援 Enter 與 Space（WAI-ARIA），Space preventDefault
+                  // 防頁面捲動（adversarial H1，與 EditEntryPage PerPoiNoteRow 同源修正）。
+                  if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     beginEditNote(e);
                   }
@@ -676,6 +694,19 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               >
                 {hasNote ? entry.note : '+ 加備註'}
               </div>
+            ) : hasNote ? (
+              // v2.29.x：無 master poiId → 顯示 master note（read-only），不提供編輯 affordance。
+              // note 來源已是 master（mapDay 設定）。空 note + 無 master 時整段不渲染。
+              <div
+                className="tp-rail-note-value"
+                data-testid={`timeline-rail-note-value-${entry.id}`}
+              >
+                {entry.note}
+              </div>
+            ) : (
+              <p className="tp-rail-detail-desc tp-rail-detail-desc-master" style={{ margin: 0 }}>
+                尚無備註
+              </p>
             )}
           </div>
 

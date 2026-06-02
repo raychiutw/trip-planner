@@ -62,12 +62,12 @@ function companionAuth(overrides: Partial<AuthData> = {}): AuthData {
   };
 }
 
-async function seedFavorite(opts: { email: string; poiName?: string }): Promise<{ favId: number; userId: string; poiId: number }> {
+async function seedFavorite(opts: { email: string; poiName?: string; note?: string }): Promise<{ favId: number; userId: string; poiId: number }> {
   const userId = await seedUser(db, opts.email);
   const poiId = await seedPoi(db, { name: opts.poiName ?? `POI for ${opts.email}` });
   const favRow = await db
-    .prepare('INSERT INTO poi_favorites (user_id, poi_id) VALUES (?, ?) RETURNING id')
-    .bind(userId, poiId)
+    .prepare('INSERT INTO poi_favorites (user_id, poi_id, note) VALUES (?, ?, ?) RETURNING id')
+    .bind(userId, poiId, opts.note ?? null)
     .first<{ id: number }>();
   return { favId: favRow!.id, userId, poiId };
 }
@@ -103,6 +103,32 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.1 4 fields validation'
     });
     const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(201);
+  });
+
+  it('migration 0078: 收藏 note → master trip_entry_pois.note（不可 silently 遺失）', async () => {
+    const tripId = 'add-trip-9-1-note';
+    await seedAddTripFixture({ tripId, ownerEmail: '9-1-note@test.com' });
+    const { favId, poiId } = await seedFavorite({ email: '9-1-note@test.com', note: '收藏時記的備註' });
+
+    const ctx = mockContext({
+      request: buildAddToTripRequest({ tripId, dayNum: 1, startTime: '10:00', endTime: '11:00' }),
+      env,
+      auth: mockAuth({ email: '9-1-note@test.com' }),
+      params: { id: String(favId) },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(201);
+
+    const master = await db
+      .prepare(
+        `SELECT tep.note FROM trip_entry_pois tep
+         JOIN trip_entries e ON e.id = tep.entry_id
+         JOIN trip_days d ON d.id = e.day_id
+         WHERE d.trip_id = ? AND tep.poi_id = ? AND tep.sort_order = 1`,
+      )
+      .bind(tripId, poiId)
+      .first<{ note: string | null }>();
+    expect(master!.note).toBe('收藏時記的備註');
   });
 
   it('缺 tripId → 400', async () => {

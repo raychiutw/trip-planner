@@ -62,6 +62,8 @@ import { apiFetch, apiFetchRaw } from '../../src/lib/apiClient';
 // v2.26.0 ship 時 fixture 用 snake_case，跟 frontend code 同款，CI mask 掉
 // 真實 API 用 camelCase 的事實 → production 一上線就壞（time 空白 + POI 卡
 // 全消失），但測試從沒驗到。v2.26.3 補修 + 同步 fixture。
+// v2.34.0: entry-level note 已 DROP (migration 0078)。Entry.note 不再存在於
+// trip_entries；每個 POI 各自帶 note（trip_entry_pois.note）。fixture 移除 entry.note。
 const ENTRY = {
   id: 42,
   dayId: 7,
@@ -69,7 +71,6 @@ const ENTRY = {
   time: '12:00-13:30',
   startTime: '12:00',
   endTime: '13:30',
-  note: '老店',
   poiId: 100,
 };
 
@@ -93,7 +94,8 @@ const DAY_DATA_WITH_ALTS = {
       id: 42,
       title: '花織そば',
       poiType: 'restaurant',
-      master: { poiId: 100, name: '花織そば', type: 'restaurant' },
+      // v2.34.0 — master 與 alternate 各自帶 per-POI note（trip_entry_pois.note）。
+      master: { poiId: 100, name: '花織そば', type: 'restaurant', note: '正選備註：必點黑豚叉燒' },
       alternates: [
         // v2.28.0 — alternates surface restaurant fields (price/hours/reservation)
         {
@@ -107,6 +109,7 @@ const DAY_DATA_WITH_ALTS = {
           price: '$',
           reservation: '無需預約',
           reservationUrl: null,
+          note: '備選備註：赤湯辣味推薦',
         },
         {
           poiId: 202,
@@ -119,6 +122,8 @@ const DAY_DATA_WITH_ALTS = {
           price: null,
           reservation: '需電話預約',
           reservationUrl: 'https://example.com/r',
+          // 空 note → 顯示「+ 加備註」affordance
+          note: null,
         },
       ],
       entryPoisVersion: '2026-05-11T12:00:00',
@@ -231,14 +236,16 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
     expect(endTrigger?.textContent).toContain('13:30');
   });
 
-  it('備註 textarea 顯示既有值 + counter', async () => {
+  // v2.34.0: entry-level「備註」section（trip_entries.note）已移除，改 per-POI 備註。
+  it('不再渲染 entry-level「備註」section（migration 0078 DROP）', async () => {
+    setupAltsMocks();
     renderPage();
     await waitFor(() => {
-      expect(screen.queryByTestId('edit-entry-note')).toBeTruthy();
+      expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy();
     });
-    const note = screen.getByTestId('edit-entry-note') as HTMLTextAreaElement;
-    expect(note.value).toBe('老店');
-    expect(screen.getByTestId('edit-entry-note-counter').textContent).toBe('2 / 1000');
+    expect(screen.queryByTestId('edit-entry-note-section')).toBeNull();
+    expect(screen.queryByTestId('edit-entry-note')).toBeNull();
+    expect(screen.queryByTestId('edit-entry-note-counter')).toBeNull();
   });
 
   // v2.26.4 — V1 mockup sign-off：TitleBar inline trip name + POI 卡 swap button
@@ -384,28 +391,8 @@ describe('EditEntryPage — auto-save (v2.33.108)', () => {
     vi.useRealTimers();
   });
 
-  it('改備註 → debounce 後 PATCH /entries 含 note', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    renderPage();
-    await waitFor(() => {
-      expect(screen.queryByTestId('edit-entry-note')).toBeTruthy();
-    });
-    const note = screen.getByTestId('edit-entry-note') as HTMLTextAreaElement;
-    fireEvent.change(note, { target: { value: '更新的備註' } });
-    await vi.advanceTimersByTimeAsync(900);
-    await waitFor(() => {
-      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
-      const patchCall = calls.find((c: unknown[]) => {
-        const opts = c[1] as { method?: string };
-        return opts?.method === 'PATCH';
-      });
-      expect(patchCall).toBeTruthy();
-      const opts = patchCall![1] as { body: string };
-      const body = JSON.parse(opts.body);
-      expect(body.note).toBe('更新的備註');
-    });
-    vi.useRealTimers();
-  });
+  // v2.34.0: entry-level note autosave 已移除，改 per-POI note autosave。
+  // 見 describe('EditEntryPage — v2.34.0 per-POI 備註')。
 });
 
 describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-save 已 commit)', () => {
@@ -423,10 +410,10 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
   it('改值後返回 → 仍直接 navigate (auto-save 已寫，無需 confirm)', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.queryByTestId('edit-entry-note')).toBeTruthy();
+      expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
     });
-    const note = screen.getByTestId('edit-entry-note') as HTMLTextAreaElement;
-    fireEvent.change(note, { target: { value: 'dirty' } });
+    // v2.34.0: note textarea 已移除，改用時間 picker 製造 dirty 狀態。
+    pickTime('edit-entry-start-time', '11:30');
     fireEvent.click(screen.getByLabelText('返回行程'));
     expect(navigateSpy).toHaveBeenCalled();
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
@@ -803,5 +790,199 @@ describe('EditEntryPage — v2.28.1 跨區警告', () => {
       expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
     });
     expect(screen.queryByTestId('confirm-modal-warning')).toBeNull();
+  });
+});
+
+// =========================================================================
+// v2.34.0 — per-POI 備註（Variant B「點擊編輯備註行」）
+//
+// entry-level note 已 DROP；master + 每個 alternate 各掛一條 trip_entry_pois.note。
+// 顯示：有 note → 顯示文字（點擊就地展開 textarea）；空 → 「+ 加備註」affordance。
+// 編輯：textarea autosave (800ms debounce / onBlur flush / ⌘↩ 完成 / esc 關閉) →
+//   PATCH /trips/:id/entries/:eid/pois/:poiId { note }，LWW（不帶 entryPoisVersion）。
+// =========================================================================
+describe('EditEntryPage — v2.34.0 per-POI 備註', () => {
+  it('master 摘要卡顯示正選 note（read state）', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-read-100')).toBeTruthy();
+    });
+    expect(screen.getByTestId('edit-entry-poi-note-read-100').textContent)
+      .toContain('正選備註：必點黑豚叉燒');
+  });
+
+  it('有 note 的 alternate row 顯示該 note；空 note 的 row 顯示「+ 加備註」', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-read-201')).toBeTruthy();
+    });
+    // alt 201 有 note
+    expect(screen.getByTestId('edit-entry-poi-note-read-201').textContent)
+      .toContain('備選備註：赤湯辣味推薦');
+    // alt 202 空 note → 「+ 加備註」affordance
+    expect(screen.getByTestId('edit-entry-poi-note-read-202').textContent)
+      .toContain('+ 加備註');
+  });
+
+  it('點擊 master note read row → 就地展開 textarea（edit state）', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-read-100')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-100'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-input-100')).toBeTruthy();
+    });
+    const ta = screen.getByTestId('edit-entry-poi-note-input-100') as HTMLTextAreaElement;
+    expect(ta.value).toBe('正選備註：必點黑豚叉燒');
+  });
+
+  it('Space 鍵在 master note read row → 開啟編輯（role="button" a11y，需支援 Enter+Space）', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-read-100')).toBeTruthy();
+    });
+    fireEvent.keyDown(screen.getByTestId('edit-entry-poi-note-read-100'), { key: ' ' });
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-input-100')).toBeTruthy();
+    });
+  });
+
+  it('點擊空 note 的 alternate「+ 加備註」→ 展開空 textarea', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-read-202')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-202'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-input-202')).toBeTruthy();
+    });
+    expect((screen.getByTestId('edit-entry-poi-note-input-202') as HTMLTextAreaElement).value).toBe('');
+  });
+
+  it('編輯 master note → debounce 後 PATCH /entries/42/pois/100 with { note }，不帶 entryPoisVersion', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-read-100')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-100'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-input-100')).toBeTruthy();
+    });
+    const ta = screen.getByTestId('edit-entry-poi-note-input-100') as HTMLTextAreaElement;
+    fireEvent.change(ta, { target: { value: '改成新的正選備註' } });
+    await vi.advanceTimersByTimeAsync(900);
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const poiNoteCall = calls.find((c: unknown[]) => {
+        const url = String(c[0]);
+        const opts = c[1] as { method?: string } | undefined;
+        return url.includes('/entries/42/pois/100') && opts?.method === 'PATCH';
+      });
+      expect(poiNoteCall).toBeTruthy();
+      const body = JSON.parse((poiNoteCall![1] as { body: string }).body);
+      expect(body.note).toBe('改成新的正選備註');
+      // LWW — 不帶 OCC token
+      expect(body.entryPoisVersion).toBeUndefined();
+    });
+    vi.useRealTimers();
+  });
+
+  it('編輯 alternate note → debounce 後 PATCH /entries/42/pois/201 with { note }', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-read-201')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-201'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-input-201')).toBeTruthy();
+    });
+    const ta = screen.getByTestId('edit-entry-poi-note-input-201') as HTMLTextAreaElement;
+    fireEvent.change(ta, { target: { value: '備選改新備註' } });
+    await vi.advanceTimersByTimeAsync(900);
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const poiNoteCall = calls.find((c: unknown[]) => {
+        const url = String(c[0]);
+        const opts = c[1] as { method?: string } | undefined;
+        return url.includes('/entries/42/pois/201') && opts?.method === 'PATCH';
+      });
+      expect(poiNoteCall).toBeTruthy();
+      const body = JSON.parse((poiNoteCall![1] as { body: string }).body);
+      expect(body.note).toBe('備選改新備註');
+    });
+    vi.useRealTimers();
+  });
+
+  it('清空 note → PATCH body note 為空字串（端點轉 null 清除）', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-read-201')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-201'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-input-201')).toBeTruthy();
+    });
+    const ta = screen.getByTestId('edit-entry-poi-note-input-201') as HTMLTextAreaElement;
+    fireEvent.change(ta, { target: { value: '' } });
+    await vi.advanceTimersByTimeAsync(900);
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const poiNoteCall = calls.find((c: unknown[]) => {
+        const url = String(c[0]);
+        const opts = c[1] as { method?: string } | undefined;
+        return url.includes('/entries/42/pois/201') && opts?.method === 'PATCH';
+      });
+      expect(poiNoteCall).toBeTruthy();
+      const body = JSON.parse((poiNoteCall![1] as { body: string }).body);
+      expect(body.note).toBe('');
+    });
+    vi.useRealTimers();
+  });
+
+  it('點「完成」按鈕 → flush + 回 read state', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-read-100')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-100'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-done-100')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-done-100'));
+    await waitFor(() => {
+      // textarea 收起，回到 read row
+      expect(screen.queryByTestId('edit-entry-poi-note-input-100')).toBeNull();
+      expect(screen.queryByTestId('edit-entry-poi-note-read-100')).toBeTruthy();
+    });
+  });
+
+  it('textarea esc → flush + 關閉回 read state', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-read-201')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-201'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-input-201')).toBeTruthy();
+    });
+    const ta = screen.getByTestId('edit-entry-poi-note-input-201') as HTMLTextAreaElement;
+    fireEvent.keyDown(ta, { key: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-poi-note-input-201')).toBeNull();
+    });
   });
 });

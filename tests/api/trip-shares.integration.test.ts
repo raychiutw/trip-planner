@@ -282,6 +282,51 @@ describe('clone — remap fidelity (PR3, multi-day + segment + hotel + alternate
     const ver = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(twoPoi!.eid).first<{ v: number }>();
     expect(ver?.v).toBe(1);
   });
+
+  // migration 0078: trip_entries.note 已 DROP，備註改為 per-POI（trip_entry_pois.note）。
+  // clone 必須把來源每個正選/備選 POI 各自的 note 原樣帶到 clone 後的 trip_entry_pois，
+  // 且 INSERT trip_entries 不可再帶 entry-level note（否則 DROP 後 "no such column"）。
+  it('copies per-POI note onto cloned master + alternate trip_entry_pois (migration 0078)', async () => {
+    const { id } = await seedTrip(db, { id: 'clone-note', owner, days: 1 });
+    const d1 = await getDayId(db, id, 1);
+    const masterPoi = await seedPoi(db, { name: '正選餐廳', type: 'restaurant' });
+    const altPoi = await seedPoi(db, { name: '備選餐廳', type: 'restaurant' });
+    const e1 = await seedEntry(db, d1, { sortOrder: 1, title: '午餐', poiId: masterPoi });
+    await seedEntryAlternate(db, { entryId: e1, poiId: altPoi, sortOrder: 2 });
+    // 備註掛在 trip_entry_pois（per-POI），不在 trip_entries（已 DROP）。
+    await db.prepare('UPDATE trip_entry_pois SET note = ? WHERE entry_id = ? AND poi_id = ?')
+      .bind('必點山苦瓜炒麵', e1, masterPoi).run();
+    await db.prepare('UPDATE trip_entry_pois SET note = ? WHERE entry_id = ? AND poi_id = ?')
+      .bind('週三公休', e1, altPoi).run();
+
+    const created = (await (await createShareFor(id)).json()) as { token: string };
+    const clonerEmail = 'note-cloner@test.com';
+    await seedUser(db, clonerEmail);
+    const cloneRes = await callHandler(cloneShare as never, mockContext({
+      request: jsonRequest(`https://x/api/share/${created.token}/clone`, 'POST'),
+      env, auth: mockAuth({ email: clonerEmail }), params: { token: created.token },
+    }));
+    expect(cloneRes.status).toBe(201);
+    const { tripId: newId } = (await cloneRes.json()) as { tripId: string };
+
+    // clone 後正選（sort_order=1）與備選（sort_order=2）的 per-POI note 都原樣保留。
+    const noteRows = (await db.prepare(
+      `SELECT tep.sort_order AS so, tep.note AS note, p.name AS name
+         FROM trip_entry_pois tep
+         JOIN pois p ON p.id = tep.poi_id
+         JOIN trip_entries e ON e.id = tep.entry_id
+         JOIN trip_days d ON d.id = e.day_id
+        WHERE d.trip_id = ?
+        ORDER BY tep.sort_order ASC`,
+    ).bind(newId).all()).results as { so: number; note: string | null; name: string }[];
+    expect(noteRows.length).toBe(2);
+    const master = noteRows.find((r) => r.so === 1);
+    const alt = noteRows.find((r) => r.so === 2);
+    expect(master?.name).toBe('正選餐廳');
+    expect(master?.note).toBe('必點山苦瓜炒麵');
+    expect(alt?.name).toBe('備選餐廳');
+    expect(alt?.note).toBe('週三公休');
+  });
 });
 
 describe('rotate guard (PR2 review fix)', () => {

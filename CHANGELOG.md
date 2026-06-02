@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.43.0] - 2026-06-02
+
+### Changed
+- **備註改 per-POI（取代 entry-level 整體備註）** — 一個停留點可有 1 正選 + N 備選 POI，現在**每個正選/備選景點各自一條備註**（`trip_entry_pois.note`），取代原本整個停留點共用一條的 `trip_entries.note`。編輯景點頁（EditEntryPage）採已簽核 Variant B「點擊編輯備註行」：master 卡 + 每個 alternate row 各有可就地展開的備註欄（autosave、空 → 「+ 加備註」），底部整體備註 section 移除。行程每天景點（TimelineRail）顯示**正選的備註**，inline 快速編輯 repoint 到正選 POI（無 master 時停用編輯）。
+
+### Added
+- **新端點 `PATCH /api/trips/:id/entries/:eid/pois/:poiId`** — per-POI 備註 UPDATE，body `{ note }`（trim 後空字串 → 清除；上限 1000 字；亂碼偵測；LWW，刻意不 bump `entry_pois_version` 以免誤殺 swap OCC token）。權限 `requireAuth` + `hasWritePermission` + `verifyEntryBelongsToTrip` + 驗證 poi 確屬該 entry。
+
+### Migration
+- **0078**（方案 B，單一 PR 直接 DROP）：backfill 既有 `trip_entries.note` 併進對應 entry 的 master `trip_entry_pois.note`（master 空 → 用 entry note；皆非空 → 換行串接，避免資料遺失），再 `DROP COLUMN trip_entries.note`。6 個 entry 建立路徑（PUT /days、POST /entries、copy、share clone、import、poi-favorites add-to-trip）+ `PATCH/GET /entries` + `mapDay` + export/import + `rollback.ts` 白名單 + `daily-check.js` hygiene 全數 cutover。
+- **⚠️ Deploy 順序硬規則（不可顛倒）**：`merge → backend deploy（已 cutover）→ apply migration 0078`。先 DROP 會讓 in-flight 舊 backend「no such column: note」fail。
+
 ## [2.42.1] - 2026-05-31
 
 ### Fixed
