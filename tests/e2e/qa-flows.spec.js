@@ -220,11 +220,13 @@ test.describe('QA Flow 5 — 編輯行程 (v2.33.108 auto-save)', () => {
 });
 
 test.describe('QA Flow 6 — 編輯景點 (note inline, v2.33.108 auto-save)', () => {
-  test('TimelineRail 展開 entry → 編輯備註 → onBlur → PATCH /api/trips/:id/entries/:eid', async ({ page }) => {
+  test('TimelineRail 展開 entry → 編輯備註 → onBlur → PATCH /api/trips/:id/entries/:eid/pois/:poiId (v2.43.0 per-POI 備註)', async ({ page }) => {
     /** @type {string[]} */
     const patches = [];
     page.on('request', (req) => {
-      if (req.method() === 'PATCH' && /\/api\/trips\/[^/]+\/entries\/\d+$/.test(req.url())) {
+      // v2.43.0 備註 cutover：note 編輯改打 per-POI 端點 /entries/:eid/pois/:masterPoiId
+      // （不再是 entry-level /entries/:eid）。master poiId 取自 entry.stopPois sortOrder=1。
+      if (req.method() === 'PATCH' && /\/api\/trips\/[^/]+\/entries\/\d+\/pois\/\d+$/.test(req.url())) {
         patches.push(req.url());
       }
     });
@@ -243,7 +245,7 @@ test.describe('QA Flow 6 — 編輯景點 (note inline, v2.33.108 auto-save)', (
     await noteInput.blur(); // onBlur → flush autosave
 
     await expect.poll(() => patches.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
-    expect(patches[0]).toMatch(/\/api\/trips\/okinawa-trip-2026-Ray\/entries\/101$/);
+    expect(patches[0]).toMatch(/\/api\/trips\/okinawa-trip-2026-Ray\/entries\/101\/pois\/\d+$/);
   });
 });
 
