@@ -8,6 +8,7 @@ import { EVENT } from '../lib/events';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
+import { resolveTripId } from '../lib/resolveTripId';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
@@ -295,6 +296,9 @@ function TripPageInner(
     // Priority 3: localStorage
     let tripId: string | null = (effectiveUrlTripId && /^[\w-]+$/.test(effectiveUrlTripId)) ? effectiveUrlTripId : null;
     if (!tripId) tripId = getQueryTrip();
+    // 明確導航目標 = 來自 URL param / prop(?selected=) / 舊 ?trip=（非 localStorage pref）。
+    // 決定「比對不到 /api/trips 時是否信任此 tripId」（見 resolveTripId / v2.43.x fix）。
+    const isExplicitTarget = !!tripId && /^[\w-]+$/.test(tripId);
     if (!tripId || !/^[\w-]+$/.test(tripId)) {
       tripId = lsGet<string>(LS_KEY_TRIP_PREF);
     }
@@ -322,13 +326,17 @@ function TripPageInner(
           return;
         }
 
-        if (!match && !defaultTrip) {
+        // v2.43.x fix：明確導航目標（URL/prop/?trip=）即使不在 permission-filtered
+        // /api/trips（排除使用者自己的私人 clone, published=0）也信任它，不再 silently
+        // fallback 到第一個 published trip（QA 2026-06-02 prod bug：從列表點自己的私人
+        // clone 卻看到「別的 trip 的行程」）。存取權由下方 useTrip(activeTripId) 的實際
+        // fetch 驗證（403/404 → error state，而非 silently 顯示另一個 trip）。
+        const resolvedId = resolveTripId(tripId, isExplicitTarget, trips);
+
+        if (!resolvedId) {
           setResolveState({ status: 'unpublished' });
           return;
         }
-
-        // 優先用 URL/localStorage 比對到的行程，比對不到則用預設行程
-        const resolvedId = match ? match.tripId : defaultTrip!.tripId;
 
         lsSet(LS_KEY_TRIP_PREF, resolvedId);
         setResolveState({ status: 'resolved', tripId: resolvedId });
