@@ -42,6 +42,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **正確性 / 清理**：`reports` dedup 用 normalize 後的 url；`shares` / `shares/[shareId]` 補 RETURNING null guard；`recompute-travel` 把 `Date.now()` hoist 出迴圈；`notes/_shared` 重複 id 回 400（非 403）；`validate-redirect-uris` 認 IPv6 `::1` localhost；`normalize-address` 拔不可達 regex；`ConsentPage` 補 useEffect 依賴；`MapLinks` 補 `tp-map-link-inline` class；`cron-shared` 拆 Telegram 兩種失敗的 warn flag；`google-poi-initial-backfill` `EnrichResult` 型別對齊 camelCase。
 - _跳過_：`AlertPanel` 之外 2 條純 dead-code（`DaySection` 未用 prop、`maps/region` dead export + 其 test）revert 不做（cascade churn > 價值）；`docs/[type]` D1 batch>100 判 false-positive 不改。
 
+#### partial hardening（17 條 real-but-unreachable，做掉 13）
+防未來 refactor 的 1-行硬化：`TimelineRail` drag fallback id 用 positional index（null-id entry 不再碰撞）；`notes/_shared` 非 OCC UPDATE row 消失補 404；`days/:num` PUT 回 DB read-back 的 `dayVersion`（非本地猜值）；`oauth/userinfo` `created_at` 補 `Z`；`account/sessions` 改用 canonical `parseUtcDate`；`account/connected-apps` + `dev/apps` GET 的 `JSON.parse` 加 guard（壞 row degrade 不 500）；`invitations/accept` 補 `waitUntil`；`backfill-health-check-replies` 補 `TRIPID_RE` guard（shell injection）；`google-quota-monitor` fatal handler await alert；`trips` `nullableInt`→`nullableNum`（float 欄正名）；`ChatPage` `send` 補 `user` 依賴；`hkdf` cache key 用全 secret。_跳過 4 條_：`routes.ts` dead export（suggestion wrong-headed）、`PoiFavoritesPage` page-clamp（naive 修法會把使用者拉回第 1 頁）、`migrate-entries-to-pois`（已執行的一次性 script）、`invitation-token`（純 refactor）。
+
 ## [2.43.1] - 2026-06-02
 
 ### Fixed

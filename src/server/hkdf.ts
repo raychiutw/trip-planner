@@ -27,7 +27,7 @@ function bytesToBase64url(bytes: Uint8Array): string {
  * Deterministic — same (masterSecret, info) → same output. Cached in-isolate.
  */
 export async function deriveSubSecret(masterSecret: string, info: SubKeyName): Promise<string> {
-  const cacheKey = `${masterSecret.length}:${masterSecret.slice(0, 8)}:${info}`;
+  const cacheKey = `${masterSecret}:${info}`;
   const hit = cache.get(cacheKey);
   if (hit) return hit;
 

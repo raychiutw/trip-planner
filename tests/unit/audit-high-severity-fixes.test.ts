@@ -245,3 +245,29 @@ describe('audit fix source locks — batch 3', () => {
     expect(src).toMatch(/APP_DESCRIPTION_MAX/);
   });
 });
+
+// ---- Partial-tier hardening fixes ----
+describe('audit fix source locks — partial hardening', () => {
+  it('TimelineRail drag fallback id uses positional index (no null-id collision)', () => {
+    const src = read('src/components/trip/TimelineRail.tsx');
+    expect(src).toMatch(/findIndex\(\(ev, i\) => \(ev\.id \?\? `idx-\$\{i\}`\)/);
+    expect(src).not.toMatch(/findIndex\(\(ev\) => \(ev\.id \?\? `idx-\$\{ev\.id\}`\)/);
+  });
+
+  it('notes/_shared non-OCC UPDATE guards a vanished row with 404', () => {
+    expect(read('functions/api/trips/[id]/notes/_shared.ts')).toMatch(/if \(!row\) throw new AppError\('DATA_NOT_FOUND'\)/);
+  });
+
+  it('hkdf cache key uses the full secret (no truncated-prefix collision)', () => {
+    const src = read('src/server/hkdf.ts');
+    expect(src).toMatch(/const cacheKey = `\$\{masterSecret\}:\$\{info\}`/);
+  });
+
+  it('oauth userinfo normalizes created_at with a Z suffix', () => {
+    expect(read('functions/api/oauth/userinfo.ts')).toMatch(/created_at\.endsWith\('Z'\)/);
+  });
+
+  it('days PUT returns the DB-read-back dayVersion (not a local guess)', () => {
+    expect(read('functions/api/trips/[id]/days/[num].ts')).toMatch(/SELECT version FROM trip_days WHERE id = \?/);
+  });
+});

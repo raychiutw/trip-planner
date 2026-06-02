@@ -186,6 +186,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   );
 };
 
+/**
+ * Hardening: developer dashboard degrades gracefully if a stored
+ * redirect_uris / allowed_scopes JSON column is corrupt — one bad row falls
+ * back to [] instead of 500-ing the whole list.
+ */
+function safeParseArray(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return [];
+  }
+}
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const session = await requireSessionUser(context.request, context.env);
 
@@ -202,12 +216,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const apps = (result.results ?? []).map((row) => ({
     ...row,
-    redirect_uris: typeof row.redirect_uris === 'string'
-      ? JSON.parse(row.redirect_uris) as unknown
-      : row.redirect_uris,
-    allowed_scopes: typeof row.allowed_scopes === 'string'
-      ? JSON.parse(row.allowed_scopes) as unknown
-      : row.allowed_scopes,
+    redirect_uris: safeParseArray(row.redirect_uris),
+    allowed_scopes: safeParseArray(row.allowed_scopes),
   }));
 
   return rawJson({ apps });

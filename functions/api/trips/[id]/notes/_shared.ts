@@ -210,6 +210,8 @@ export async function updateNotesRow(
     throw err;
   }
 
+  if (!row) throw new AppError('DATA_NOT_FOUND');
+
   // PR26: audit log for update
   if (row) {
     const newFields = Object.fromEntries(update.fields.map((f) => [f, body[f]]));
