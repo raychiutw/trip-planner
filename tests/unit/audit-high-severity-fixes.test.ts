@@ -147,3 +147,49 @@ describe('audit fix source locks', () => {
     expect(read('functions/api/trips/[id]/entries/[eid].ts')).toMatch(/if \(err instanceof AppError\) throw err;/);
   });
 });
+
+// ---- Medium-tier audit fixes (v2.45.x) ----
+describe('audit fix source locks — medium tier', () => {
+  it('GlobalBottomNav nav patterns mirror DesktopSidebar (sub-routes + stop/map active)', () => {
+    const nav = read('src/components/shell/GlobalBottomNav.tsx');
+    const side = read('src/components/shell/DesktopSidebar.tsx');
+    // 行程 pattern excludes map + stop/map; map pattern covers both map routes
+    expect(nav).toContain('/^\\/trip\\/[^/]+(?:\\/?$|\\/(?!(?:map|stop\\/[^/]+\\/map)\\/?$).*)/');
+    expect(nav).toMatch(/stop\\\/\[\^\/\]\+\\\/map\\\/\?\$/); // MAP pattern now includes stop/:id/map
+    expect(side).toContain('/^\\/trip\\/[^/]+(?:\\/?$|\\/(?!(?:map|stop\\/[^/]+\\/map)\\/?$).*)/');
+  });
+
+  it('dev/apps PATCH app_name uses a typeof guard (no TypeError on JSON null)', () => {
+    expect(read('functions/api/dev/apps/[client_id].ts')).toMatch(/if \(typeof body\.app_name === 'string'\)/);
+  });
+
+  it('functions/trip OG title falls back title || name || 行程', () => {
+    expect(read('functions/trip/[[path]].ts')).toMatch(/trip\.title \|\| trip\.name \|\| '行程'/);
+  });
+
+  it('ShareLinkModal expiry pre-fill uses local date getters (not UTC toISOString)', () => {
+    const src = read('src/components/share/ShareLinkModal.tsx');
+    expect(src).toMatch(/customDate: l\.expiresAt == null \? '' : \(\(\) => \{ const d = new Date\(l\.expiresAt\)/);
+    expect(src).not.toMatch(/customDate: l\.expiresAt == null \? '' : new Date\(l\.expiresAt\)\.toISOString/);
+  });
+
+  it('daily-check normalizes D1 naive datetime to UTC before stuck-cutoff compare', () => {
+    expect(read('scripts/daily-check.js')).toMatch(/createdUtc = r\.created_at\.includes\('T'\)/);
+  });
+
+  it('requests notes dedup scopes the SELECT by ai_source', () => {
+    const src = read('functions/api/requests/[id]/index.ts');
+    expect(src).toMatch(/WHERE trip_id = \? AND ai_source = \?/);
+    expect(src).toMatch(/\.bind\(tripId, aiSource\)/);
+  });
+
+  it('entries/batch validates start_time/end_time against TIME_RE', () => {
+    const src = read('functions/api/trips/[id]/entries/batch.ts');
+    expect(src).toMatch(/import \{ TIME_RE \} from '\.\.\/\.\.\/\.\.\/_time'/);
+    expect(src).toMatch(/!TIME_RE\.test\(fields\[tf\] as string\)/);
+  });
+
+  it('import MAX_DESTINATIONS aligned to the PUT cap (30, no un-editable trips)', () => {
+    expect(read('functions/api/trips/_import.ts')).toMatch(/export const MAX_DESTINATIONS = 30;/);
+  });
+});

@@ -24,6 +24,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **`PATCH /entries/:eid` OCC catch 吞掉 AppError 變 503** — 補 canonical `if (err instanceof AppError) throw err;`（目前 unreachable，防未來 refactor）。
 - **`PUT /days/:num` RETURNING id fallback 0** — 補 phantom-id 守衛（目前 unreachable，防未來 refactor）。
 
+#### Medium 批次（同輪 verify 的 medium tier，8 條）
+- **手機底部導覽**：`GlobalBottomNav` 的「行程」tab 只在 `/trip/:id` 精確匹配 active → 所有子路由（編輯/筆記/健檢…）底部無 active tab。改用 `DesktopSidebar` 的 canonical pattern（含 `MAP_ACTIVE_PATTERNS` 補 `stop/:id/map`），手機與桌機一致。
+- **`PATCH /api/dev/apps/:client_id`** 送 `{app_name: null}` 會 `null.trim()` TypeError → 改 `typeof === 'string'` 守衛。
+- **分享頁 OG title** 對 destination-named 行程（`title=''`）顯示破標題 → `title || name || '行程'` fallback（對齊 `/s/[token]`）。
+- **`ShareLinkModal`** 到期日 pre-fill 用 UTC → 非 UTC 時區差一天，改 local date getters。
+- **`daily-check`** stuck-cutoff 把 D1 naive datetime 當 local 解析 → 補 UTC normalize。
+- **`requests/[id]` AI 筆記 dedup** SELECT 漏 `ai_source` 過濾 → lodging-tips 與 tips prompt 互相污染，補 `AND ai_source = ?`。
+- **`PATCH /entries/batch`** `start_time`/`end_time` 接受任意字串 → 補 `TIME_RE`（HH:MM）驗證。
+- **匯入目的地上限**：import 容許 50 但 PUT 編輯上限 30 → 匯入 31-50 個目的地的行程變不可編輯。`MAX_DESTINATIONS` 對齊為 30。
+
 ## [2.43.1] - 2026-06-02
 
 ### Fixed

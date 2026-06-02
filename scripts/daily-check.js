@@ -315,7 +315,10 @@ async function queryRequestErrors() {
   // processing > 15min 視為卡住（Claude CLI 執行途中掛掉）
   var stuckCutoff = Date.now() - 15 * 60 * 1000;
   var stuckProcessing = rows.filter(function(r) {
-    return r.status === 'processing' && new Date(r.created_at).getTime() < stuckCutoff;
+    // D1 naive datetime ('YYYY-MM-DD HH:MM:SS', no Z) must be read as UTC, else
+    // it parses as local time and skews the stuck-cutoff by the tz offset.
+    var createdUtc = r.created_at.includes('T') || r.created_at.endsWith('Z') ? r.created_at : r.created_at.replace(' ', 'T') + 'Z';
+    return r.status === 'processing' && new Date(createdUtc).getTime() < stuckCutoff;
   }).length;
 
   var status = rows.length > 0 ? 'warning' : 'ok';

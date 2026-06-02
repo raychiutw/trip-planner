@@ -17,7 +17,10 @@ export const MAX_ENTRIES_PER_DAY = 100;
 export const MAX_POIS_PER_ENTRY = 20;
 export const MAX_SEGMENTS = 3000;
 export const MAX_NOTES_PER_SECTION = 100;
-export const MAX_DESTINATIONS = 50;
+// Aligned with the PUT /trips/:id create/edit cap (30). A 50 cap here let an
+// import create a 31-50 destination trip that the edit endpoint then refused —
+// rendering it permanently un-editable.
+export const MAX_DESTINATIONS = 30;
 // Per-day caps multiply, so cap the TOTALS too — these bound the SQL statement
 // count regardless of how the per-day caps combine (defends D1 batch limits).
 export const MAX_TOTAL_ENTRIES = 1000;

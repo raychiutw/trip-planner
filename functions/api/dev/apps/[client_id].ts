@@ -110,7 +110,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const updates: string[] = [];
   const values: unknown[] = [];
 
-  if (body.app_name !== undefined) {
+  if (typeof body.app_name === 'string') {
     const name = body.app_name.trim();
     if (name.length < APP_NAME_MIN || name.length > APP_NAME_MAX) {
       throw new AppError('DATA_VALIDATION', `app_name 長度需 ${APP_NAME_MIN}-${APP_NAME_MAX} 字`);
