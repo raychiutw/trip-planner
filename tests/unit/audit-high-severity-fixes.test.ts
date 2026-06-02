@@ -193,3 +193,55 @@ describe('audit fix source locks — medium tier', () => {
     expect(read('functions/api/trips/_import.ts')).toMatch(/export const MAX_DESTINATIONS = 30;/);
   });
 });
+
+// ---- Medium+low audit fixes (batch 3) ----
+describe('audit fix source locks — batch 3', () => {
+  it('oauth google callback recovers from concurrent first-login UNIQUE race', () => {
+    expect(read('functions/api/oauth/callback/google.ts')).toMatch(/async function recoverIdentityRace\(/);
+  });
+
+  it('poi-favorites add-to-trip uses a null append sentinel (no gapped-sequence shift skip)', () => {
+    const src = read('functions/api/poi-favorites/[id]/add-to-trip.ts');
+    expect(src).toMatch(/let insertSortOrder: number \| null = null/);
+    expect(src).toMatch(/const finalSortOrder = insertSortOrder \?\? \(maxSortOrder \+ 1\)/);
+  });
+
+  it('segments PATCH increments version on the coords-missing branch + guards null SELECT', () => {
+    const src = read('functions/api/trips/[id]/segments/[sid].ts');
+    expect((src.match(/version = version \+ 1/g) || []).length).toBeGreaterThanOrEqual(4);
+    expect(src).toMatch(/if \(!updated\) throw new AppError\('DATA_NOT_FOUND'/);
+  });
+
+  it('_gcp_monitoring wraps both fetches with AbortController timeouts', () => {
+    const src = read('functions/api/_gcp_monitoring.ts');
+    expect((src.match(/new AbortController\(\)/g) || []).length).toBeGreaterThanOrEqual(2);
+    expect((src.match(/clearTimeout/g) || []).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('AlertPanel is-warning uses design tokens (dark-mode adaptive), not hardcoded rgb', () => {
+    const src = read('src/components/shared/AlertPanel.tsx');
+    expect(src).toMatch(/\.tp-alert-panel\.is-warning \{[\s\S]*var\(--color-warning-bg\)/);
+    expect(src).not.toMatch(/border-color: rgb\(244, 140, 6\)/);
+  });
+
+  it('backfill-poi-addresses exec uses direct argv (no sh -c shell injection)', () => {
+    const src = read('scripts/backfill-poi-addresses.ts');
+    expect(src).toMatch(/function exec\(argv: string\[\]\)/);
+    expect(src).not.toMatch(/Bun\.spawnSync\(\['sh', '-c'/);
+  });
+
+  it('docs PUT enforces a body byte cap', () => {
+    expect(read('functions/api/trips/[id]/docs/[type].ts')).toMatch(/\.length > MAX_DOCS_BYTES|rawText\.length >/);
+  });
+
+  it('days entries POST returns entry_pois_version=1 + validates sort_order', () => {
+    const src = read('functions/api/trips/[id]/days/[num]/entries.ts');
+    expect(src).toMatch(/Number\.isInteger/);
+  });
+
+  it('dev/apps validates homepage_url + caps app_description', () => {
+    const src = read('functions/api/dev/apps.ts');
+    expect(src).toMatch(/function validateHomepageUrl/);
+    expect(src).toMatch(/APP_DESCRIPTION_MAX/);
+  });
+});

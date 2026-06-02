@@ -149,7 +149,8 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       await db
         .prepare(
           `UPDATE trip_segments
-           SET mode = ?, computed_at = NULL, updated_at = ?
+           SET mode = ?, computed_at = NULL, updated_at = ?,
+               version = version + 1
            WHERE id = ?`,
         )
         .bind(mode, now, sid)
@@ -165,5 +166,6 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     )
     .bind(sid)
     .first();
+  if (!updated) throw new AppError('DATA_NOT_FOUND', 'segment 已不存在');
   return json(updated);
 };

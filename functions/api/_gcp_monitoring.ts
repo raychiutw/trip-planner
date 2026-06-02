@@ -101,11 +101,21 @@ async function getAccessToken(account: ServiceAccountKey): Promise<string | null
     grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
     assertion,
   });
-  const resp = await fetch(TOKEN_ENDPOINT, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10_000);
+  let resp: Response;
+  try {
+    resp = await fetch(TOKEN_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+      signal: ctrl.signal,
+    });
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
   if (!resp.ok) return null;
   const json = (await resp.json()) as { access_token?: string; expires_in?: number };
   if (!json.access_token) return null;
@@ -185,9 +195,19 @@ export async function fetchMapsQuotaFromCloudMonitoring(
   params.append('aggregation.groupByFields', 'metric.label."consumed_api"');
 
   const url = `${MONITORING_HOST}/v3/projects/${encodeURIComponent(projectId)}/timeSeries?${params}`;
-  const resp = await fetch(url, {
-    headers: { authorization: `Bearer ${accessToken}` },
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10_000);
+  let resp: Response;
+  try {
+    resp = await fetch(url, {
+      headers: { authorization: `Bearer ${accessToken}` },
+      signal: ctrl.signal,
+    });
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
   if (!resp.ok) {
     // 401 → token expired between cache check and call → invalidate + caller can retry
     if (resp.status === 401) {

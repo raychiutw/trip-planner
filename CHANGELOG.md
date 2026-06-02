@@ -34,6 +34,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **`PATCH /entries/batch`** `start_time`/`end_time` 接受任意字串 → 補 `TIME_RE`（HH:MM）驗證。
 - **匯入目的地上限**：import 容許 50 但 PUT 編輯上限 30 → 匯入 31-50 個目的地的行程變不可編輯。`MAX_DESTINATIONS` 對齊為 30。
 
+#### 其餘 medium + low（同輪 verify 的剩餘 confirmed-real，~32 條）
+- **安全**：`backfill-poi-addresses` 改 direct argv（拔 `sh -c` shell injection）；`dev/apps` POST 補 `homepage_url` https 驗證 + `app_description` 長度上限；`audit` 端點 `request_id` 補正整數驗證（NaN 不再進 D1）；`docs/[type]` PUT 補 body byte cap。
+- **race / OCC**：`oauth/callback/google` 首次登入並發 UNIQUE race 補 recovery；`trip_segments` PATCH「缺 coords / 無 API key」分支補 `version + 1`（OCC 一致）+ 最終 SELECT null guard；`_poi` batch re-fetch 補 `SYS_DB_ERROR` guard（取代裸 TypeError）。
+- **可靠性 / 韌性**：`_gcp_monitoring` 兩個 outbound fetch 補 10s AbortController timeout（admin quota endpoint 不再可能無限 stall）；`poi-favorites` add-to-trip sort_order 用 null append sentinel（gapped sequence 不再漏 shift）；`days/:num/entries` POST 回正確 `entry_pois_version` + 驗 `sort_order`。
+- **時區 / 顯示**：`FlightsSection` date-only 解析改 noon-anchor（非 UTC 時區不再差一天）；`poiHours` 24h 週排程格式 + 休息日 condense；`AlertPanel` is-warning 改 design token（dark mode 終於自適應；light mode 顏色微調）。
+- **正確性 / 清理**：`reports` dedup 用 normalize 後的 url；`shares` / `shares/[shareId]` 補 RETURNING null guard；`recompute-travel` 把 `Date.now()` hoist 出迴圈；`notes/_shared` 重複 id 回 400（非 403）；`validate-redirect-uris` 認 IPv6 `::1` localhost；`normalize-address` 拔不可達 regex；`ConsentPage` 補 useEffect 依賴；`MapLinks` 補 `tp-map-link-inline` class；`cron-shared` 拆 Telegram 兩種失敗的 warn flag；`google-poi-initial-backfill` `EnrichResult` 型別對齊 camelCase。
+- _跳過_：`AlertPanel` 之外 2 條純 dead-code（`DaySection` 未用 prop、`maps/region` dead export + 其 test）revert 不做（cascade churn > 價值）；`docs/[type]` D1 batch>100 判 false-positive 不改。
+
 ## [2.43.1] - 2026-06-02
 
 ### Fixed

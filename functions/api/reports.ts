@@ -53,7 +53,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   // 簡易 rate limit — 同 tripId + URL 30 秒內不可重複
-  const url = (body.url as string) || '';
+  const url = clampField(body.url) ?? '';
   const recent = await db.prepare(
     "SELECT 1 FROM error_reports WHERE trip_id = ? AND url = ? AND created_at > datetime('now', '-30 seconds')"
   ).bind(tripId, url).first();
@@ -65,7 +65,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     'INSERT INTO error_reports (trip_id, url, error_code, error_message, user_agent, context) VALUES (?, ?, ?, ?, ?, ?)'
   ).bind(
     tripId,
-    clampField(body.url),
+    url,
     clampField(body.errorCode),
     clampField(body.errorMessage),
     clampField(body.userAgent),

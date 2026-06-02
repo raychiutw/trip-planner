@@ -43,9 +43,9 @@ interface SearchResult {
 }
 
 interface EnrichResult {
-  poi_id: number;
+  poiId: number;
   status: 'active' | 'closed' | 'missing';
-  status_reason: string | null;
+  statusReason: string | null;
   rating: number | null;
 }
 

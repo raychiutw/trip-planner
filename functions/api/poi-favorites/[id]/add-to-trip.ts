@@ -189,8 +189,9 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   }
 
   // sort_order auto-calc：找 startTime 之後第一個 entry，將新 entry 排在它之前；
-  // 若沒有更晚 entry → append 到末尾。已有 entry 但時間範圍無法 parse 視為早於。
-  let insertSortOrder = (dayEntries?.length ?? 0); // default append
+  // 若沒有更晚 entry → append 到末尾（MAX(sort_order)+1，避免 gapped sequence 漏 shift）。
+  // 已有 entry 但時間範圍無法 parse 視為早於。
+  let insertSortOrder: number | null = null; // null = append sentinel
   for (const entry of dayEntries ?? []) {
     const range = entryRange(entry);
     if (!range) continue;
@@ -200,10 +201,12 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
       break;
     }
   }
+  const maxSortOrder = (dayEntries ?? []).reduce((m, e) => Math.max(m, e.sort_order), -1);
+  const finalSortOrder = insertSortOrder ?? (maxSortOrder + 1);
 
-  // Shift entries with sort_order >= insertSortOrder 往後讓位
+  // Shift entries with sort_order >= insertSortOrder 往後讓位（僅 insert-before，非 append）
   const stmts: D1PreparedStatement[] = [];
-  if (insertSortOrder < (dayEntries?.length ?? 0)) {
+  if (insertSortOrder !== null) {
     stmts.push(
       db
         .prepare('UPDATE trip_entries SET sort_order = sort_order + 1 WHERE day_id = ? AND sort_order >= ?')
@@ -225,7 +228,7 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     db.prepare(
       `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, entry_pois_version)
        VALUES (?, ?, ?, ?, ?, ?, ?, 1) RETURNING id`,
-    ).bind(day.id, insertSortOrder, startTime, endTime, favorite.poi_name, null, 'fast-path'),
+    ).bind(day.id, finalSortOrder, startTime, endTime, favorite.poi_name, null, 'fast-path'),
   );
 
   const batchResults = await db.batch<{ id: number }>(stmts);
@@ -275,7 +278,7 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     ok: true,
     entryId: newEntryId,
     dayId: day.id,
-    sortOrder: insertSortOrder,
+    sortOrder: finalSortOrder,
     startTime,
     endTime,
     note: 'trip_segments 將由背景 /recompute-travel 計算填入',

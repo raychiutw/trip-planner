@@ -275,7 +275,9 @@ export async function batchFindOrCreatePois(
       const reFetchResults = await db.batch(reFetchStmts);
       for (let i = 0; i < reFetchIndices.length; i++) {
         const rows = reFetchResults[i]!.results as { id: number }[];
-        uniqueItems[reFetchIndices[i]!]!.poiId = rows[0]!.id;
+        const refetched = rows[0];
+        if (!refetched) throw new AppError('SYS_DB_ERROR', 'POI lost after race-collision re-fetch');
+        uniqueItems[reFetchIndices[i]!]!.poiId = refetched.id;
       }
     }
   }

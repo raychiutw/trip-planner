@@ -49,6 +49,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const displayName = (trip.title || trip.name || '行程').trim();
   const ogTitle = `${displayName} — Tripline`;
   const ogDescription = trip.countries ? `${trip.countries} 行程` : '行程規劃';
+  const tripUrl = `${url.origin}/trip/${tripId}`;
+  const set = (content: string) => ({
+    element(el: { setAttribute(name: string, value: string): void }) {
+      el.setAttribute('content', content);
+    },
+  });
 
   const assetResponse = await context.env.ASSETS.fetch(
     new Request('https://placeholder/index.html'),
@@ -75,5 +81,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         el.setAttribute('content', 'Tripline');
       },
     })
+    .on('meta[property="og:url"]', set(tripUrl))
+    .on('meta[name="twitter:title"]', set(ogTitle))
+    .on('meta[name="twitter:description"]', set(ogDescription))
+    .on('meta[name="twitter:url"]', set(tripUrl))
     .transform(assetResponse);
 };

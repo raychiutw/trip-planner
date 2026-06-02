@@ -30,7 +30,7 @@ export function validateRedirectUris(uris: unknown): string[] {
     } catch {
       throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 不是合法 URL`);
     }
-    const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+    const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]';
     if (parsed.protocol !== 'https:' && !isLocalhost) {
       throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 必須是 HTTPS（localhost 例外）`);
     }
