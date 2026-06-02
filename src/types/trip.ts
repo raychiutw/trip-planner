@@ -80,11 +80,13 @@ export interface Shopping {
 /**
  * Timeline entry (activity / spot).
  * DB table: trip_entries
- * v2.29.0 (migration 0062) DB columns: id, day_id, sort_order, start_time, end_time,
- *             title, description, source, note, entry_pois_version, updated_at
+ * DB columns: id, day_id, sort_order, start_time, end_time,
+ *             title, description, source, entry_pois_version, updated_at
  * Notes:
  *   - travel object 由 trip_segments lookup 組裝（不再從 entry.travel_* cols）
  *   - master/alternates 由 trip_entry_pois lookup 組裝
+ *   - note 欄位已 DROP（migration 0078）；Entry.note 不再是 trip_entries 欄位，
+ *     由 mapDay 設為 master stopPoi（sortOrder=1）的 per-POI trip_entry_pois.note。
  */
 /**
  * Entry-bound POI (v2.27.0 multi-POI per entry)：
@@ -126,6 +128,11 @@ export interface Entry {
   title: string;
   description?: string | null;
   source?: string | null;
+  /**
+   * 「整體備註」。migration 0078 後不再是 trip_entries 欄位，由 mapDay 設為
+   * master stopPoi（sortOrder=1）的 per-POI note。編輯 save target 為
+   * PATCH /api/trips/:id/entries/:eid/pois/:poiId（per-POI），非 PATCH /entries。
+   */
   note?: string | null;
   /** Assembled from trip_segments by API handler (v2.29.0). */
   travel?: Travel | null;

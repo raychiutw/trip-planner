@@ -269,9 +269,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       // v2.29.0: trip_entries.{time, travel_*} DROPPED. body.travel.* 被 ignore；
       // travel info 改寫 trip_segments by /recompute-travel。
       const { startTime, endTime } = resolveEntryTimes(e as Record<string, unknown>);
+      // migration 0078: trip_entries.note DROPPED — INSERT 不再帶 note；entry-level 備註
+      // 改掛到該 entry 的 master trip_entry_pois.note（batch2 canonical-choices 路徑做
+      // coalesce、title-only 路徑透過 syncEntryMaster 傳入，見下方）。
       batch1.push(
-        db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, note) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id')
-          .bind(dayId, i, startTime, endTime, e.title ?? null, e.description ?? null, e.note ?? null),
+        db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description) VALUES (?, ?, ?, ?, ?, ?) RETURNING id')
+          .bind(dayId, i, startTime, endTime, e.title ?? null, e.description ?? null),
       );
     }
 
@@ -460,10 +463,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // Build batch2: (a) canonical entry POIs (trip_entry_pois), (b) hotel UPDATE + parking poi_relations (via tripPoiBuilders).
     // batch1 DELETE FROM trip_entries → ON DELETE CASCADE 清掉舊 trip_entry_pois。
     const batch2: D1PreparedStatement[] = [];
-    const entriesNeedingMaster: Array<{ entryId: number; poiId: number }> = [];
+    const entriesNeedingMaster: Array<{ entryId: number; poiId: number; note: string | null }> = [];
     const nowEntryPois = new Date().toISOString();
     for (let i = 0; i < timeline.length; i++) {
       const entryId = entryIds[i]!;
+      // migration 0078: timeline entry 的 entry-level note → 該 entry 的 master poi note。
+      const entryLevelNote = stringOrNull((timeline[i] as Record<string, unknown>).note);
       const explicitChoices = resolveEntryChoices(i);
       if (explicitChoices.length > 0) {
         // v2.29.0: trip_entries.poi_id DROPPED. Just bump entry_pois_version.
@@ -472,6 +477,10 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
             .bind(entryId),
         );
         for (const [idx, choice] of explicitChoices.entries()) {
+          // migration 0078: master（idx 0 → sort_order 1）的 note 若 choice 自己沒帶，
+          // 則 fallback 用 entry-level note（避免 entry note 在 canonical-choices 路徑遺失）。
+          // master choice 已有 per-POI note → 保留 choice note，不被 entry note 覆蓋。
+          const rowNote = idx === 0 ? (choice.note ?? entryLevelNote) : choice.note;
           batch2.push(
             db
               .prepare(
@@ -495,7 +504,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
                 nowEntryPois,
                 nowEntryPois,
                 choice.description,
-                choice.note,
+                rowNote,
                 choice.reservation,
                 choice.reservationUrl,
               ),
@@ -510,7 +519,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       if (typeof poiId !== 'number') continue;
       // v2.29.0: trip_entries.poi_id DROPPED. syncEntryMaster 寫 trip_entry_pois.sort_order=1
       // 並 bump entry_pois_version (見 _entry_pois.ts)。
-      entriesNeedingMaster.push({ entryId, poiId });
+      // migration 0078: entry-level note 一併傳入，寫進新 master 的 per-POI note。
+      entriesNeedingMaster.push({ entryId, poiId, note: entryLevelNote });
     }
     for (const builder of tripPoiBuilders) {
       batch2.push(...builder(poiIds));
@@ -519,8 +529,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     // Title-only entries use the shared helper to keep the master invariant aligned
     // with POST /entries and copy.ts.
+    // migration 0078: 把 entry-level note 透過 syncEntryMaster 寫進新 master 的 per-POI note。
     await Promise.all(
-      entriesNeedingMaster.map((p) => syncEntryMaster(db, p.entryId, p.poiId)),
+      entriesNeedingMaster.map((p) => syncEntryMaster(db, p.entryId, p.poiId, p.note)),
     );
 
     // round 5 fix: claim-once snapshot restore — for each new entry, find first unclaimed

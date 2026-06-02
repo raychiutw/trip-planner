@@ -41,6 +41,12 @@ describe('POST /api/trips/import — endpoint', () => {
   it('trip_entry_pois carries trip-specific overrides (round-trip fidelity)', () => {
     expect(ENDPOINT).toMatch(/INSERT INTO trip_entry_pois \(entry_id, poi_id, sort_order, description, note, reservation, reservation_url/);
   });
+  it('migration 0078: trip_entries INSERT 不再帶 note；entry-level note coalesce 到 master poi', () => {
+    // entry-level note column 已 DROP — INSERT INTO trip_entries 欄位清單不得含 note。
+    expect(ENDPOINT).not.toMatch(/INSERT INTO trip_entries[^)]*\bnote\b/);
+    // master(so===1) note fallback 到舊檔 e.note，保 round-trip 不遺失。
+    expect(ENDPOINT).toMatch(/so === 1 \? \(p\.note \?\? e\.note/);
+  });
   it('runs the pure validator and rejects on failure', () => {
     expect(ENDPOINT).toMatch(/parseAndValidateImport/);
     expect(ENDPOINT).toMatch(/if \(!result\.ok\) throw new AppError/);

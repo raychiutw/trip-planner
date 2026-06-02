@@ -105,7 +105,7 @@ interface RawEntry {
   endTime?: string | null;
   title?: string | null;
   description?: string | null;
-  note?: string | null;
+  // v2.x (migration 0078): entry-level note 已移除；note 來源改為 master stopPoi。
   source?: string | null;
   travel?: RawTravel | null;
   /** v2.27.0 multi-POI per entry — master (sort_order=1) JOIN pois。lat/lng 為新 SoT */
@@ -230,7 +230,9 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     displayTitle,
     title: raw.title ?? null,
     description: raw.description ?? null,
-    note: raw.note ?? null,
+    // v2.x (migration 0078): 「整體備註」來源從 entry-level trip_entries.note
+    // 改成 primary stopPoi（master, sortOrder=1）的 per-POI trip_entry_pois.note。
+    note: poi?.note ?? null,
     googleRating: effGoogleRating,
     source: raw.source ?? null,
     travel: travelData,

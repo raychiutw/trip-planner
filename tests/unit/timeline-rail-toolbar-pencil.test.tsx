@@ -32,12 +32,18 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+// v2.29.x per-POI note cutover：inline 快速編輯 repoint 到 master stopPoi
+// （sortOrder=1）的 per-POI note，缺 master 時停用。實務上 timeline entry 必有
+// master stopPoi（mapDay 由它取得 entry.note），fixture 補上以反映真實資料。
 const ENTRY: TimelineEntryData = {
   id: 42,
   time: '11:30-14:00',
   title: '沖縄美ら海水族館',
   description: '世界第二大水族館。',
   note: '提前買票。',
+  stopPois: [
+    { poiId: 9001, sortOrder: 1, name: '沖縄美ら海水族館', note: '提前買票。' },
+  ],
 };
 
 function renderRail() {

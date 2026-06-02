@@ -41,14 +41,30 @@ describe('alt-row mobile responsive layout', () => {
 
 describe('desktop layout 未影響', () => {
   it('media query 之外 .tp-edit-entry-alt-row 仍 display:flex (row direction default)', () => {
-    // 取 base rule（first occurrence）— 應仍是 flex + align-items:center
+    // 取 base rule（first occurrence）— 仍是 flex。
+    // v2.34.0: align-items 由 center 改 flex-start（per-POI 備註行掛在 meta 下方，
+    // actions 對齊頂端，對齊 mockup .ee-alt align-items flex-start）。
     const baseRule = SRC.match(/\.tp-edit-entry-alt-row \{[\s\S]*?\}/);
     expect(baseRule).toBeTruthy();
     expect(baseRule![0]).toMatch(/display: flex/);
-    expect(baseRule![0]).toMatch(/align-items: center/);
+    expect(baseRule![0]).toMatch(/align-items: flex-start/);
   });
 
   it('alt-actions base 維持 flex-shrink: 0 (desktop 不變)', () => {
     expect(SRC).toMatch(/\.tp-edit-entry-alt-actions \{ display: flex; gap: 4px; flex-shrink: 0; \}/);
+  });
+});
+
+describe('per-POI 備註 CSS 合規（v2.34.0 adversarial H2/M3）', () => {
+  it('read row cursor: pointer（role="button" 互動元素，非 text I-beam）', () => {
+    const rule = SRC.match(/\.tp-poi-note-read \{[\s\S]*?\}/);
+    expect(rule).toBeTruthy();
+    expect(rule![0]).toMatch(/cursor: pointer/);
+  });
+
+  it('note-bar flex-wrap: wrap（≤640px 窄欄「完成」+ kbd 提示不 horizontal overflow）', () => {
+    const rule = SRC.match(/\.tp-poi-note-bar \{[\s\S]*?\}/);
+    expect(rule).toBeTruthy();
+    expect(rule![0]).toMatch(/flex-wrap: wrap/);
   });
 });

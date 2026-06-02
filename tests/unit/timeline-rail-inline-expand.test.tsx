@@ -34,6 +34,11 @@ const USE_DRAG_DROP_SRC = fs.readFileSync(
   'utf8',
 );
 
+// v2.29.x per-POI note cutover：inline 快速編輯的 save target 從 entry-level
+// `trip_entries.note`（已 DROP）改為 master stopPoi（sortOrder=1）的 per-POI note。
+// 顯示仍讀 entry.note（mapDay 已把它設為 master note），但「可編輯」前提是
+// entry 有 master（stopPois 含 sortOrder===1 且具 poiId）。fixture 因此補上
+// 對應的 master stopPoi，poiId 即 PATCH /pois/:poiId 的 target。
 const ENTRY_A: TimelineEntryData = {
   id: 42,
   time: '11:30-14:00',
@@ -41,6 +46,14 @@ const ENTRY_A: TimelineEntryData = {
   description: '世界第二大水族館，鎮館之寶是黑潮之海。',
   note: '提前線上買票省 ¥120。',
   googleRating: 4.6,
+  stopPois: [
+    {
+      poiId: 9001,
+      sortOrder: 1,
+      name: '沖縄美ら海水族館',
+      note: '提前線上買票省 ¥120。',
+    },
+  ],
 };
 
 const ENTRY_B: TimelineEntryData = {
@@ -50,6 +63,14 @@ const ENTRY_B: TimelineEntryData = {
   description: '本島最長海上橋。',
   note: null,
   googleRating: 4.5,
+  stopPois: [
+    {
+      poiId: 9002,
+      sortOrder: 1,
+      name: '古宇利大橋',
+      note: null,
+    },
+  ],
 };
 
 function renderRail(events: TimelineEntryData[] = [ENTRY_A, ENTRY_B], tripId = 'okinawa-2026') {
@@ -178,7 +199,7 @@ describe('TimelineRail — click-to-edit note', () => {
     });
   });
 
-  it('Cmd+Enter saves, calls PATCH with new note', async () => {
+  it('Cmd+Enter saves, calls PATCH per-POI note endpoint (master poiId)', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
     vi.stubGlobal('fetch', fetchMock);
     renderRail();
@@ -189,7 +210,8 @@ describe('TimelineRail — click-to-edit note', () => {
     fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const [url, opts] = fetchMock.mock.calls[0]!;
-    expect(url).toBe('/api/trips/okinawa-2026/entries/42');
+    // v2.29.x cutover：repoint 到 master stopPoi（sortOrder=1, poiId=9001）的 per-POI note。
+    expect(url).toBe('/api/trips/okinawa-2026/entries/42/pois/9001');
     expect((opts as RequestInit).method).toBe('PATCH');
     expect(JSON.parse((opts as RequestInit).body as string)).toEqual({ note: '推薦 11:00 餵食秀' });
   });
@@ -228,6 +250,66 @@ describe('TimelineRail — click-to-edit note', () => {
     fireEvent.click(screen.getByTestId('timeline-rail-row-43'));
     const placeholder = screen.getByTestId('timeline-rail-note-value-43');
     expect(placeholder.textContent).toContain('加備註');
+  });
+});
+
+describe('TimelineRail — per-POI note repoint guards (v2.29.x cutover)', () => {
+  // 無 master（stopPois 完全沒有）→ 沒有 master poiId 可寫 → 停用 inline 編輯。
+  // 顯示的 note 來源是 entry.note（mapDay 設好），但不可點擊進編輯。
+  it('entry without any stopPois → note not editable (no textarea on click)', () => {
+    const noMaster: TimelineEntryData = {
+      id: 77,
+      time: '09:00-10:00',
+      title: '無 master 景點',
+      note: '這條 note 沒有對應的 master POI',
+      googleRating: 4.0,
+    };
+    renderRail([noMaster]);
+    fireEvent.click(screen.getByTestId('timeline-rail-row-77'));
+    // 仍顯示既有 note 文字（read-only）
+    const value = screen.getByTestId('timeline-rail-note-value-77');
+    expect(value.textContent).toContain('這條 note 沒有對應的 master POI');
+    // 但不是可點擊 button（沒有 role=button、點擊不展開 textarea）
+    expect(value.getAttribute('role')).not.toBe('button');
+    fireEvent.click(value);
+    expect(screen.queryByTestId('timeline-rail-note-input-77')).toBeNull();
+  });
+
+  // master 存在但沒有 poiId（例如尚未存檔的搜尋結果）→ 無法定位 PATCH target → 停用編輯。
+  it('master stopPoi without poiId → note not editable', () => {
+    const masterNoPoiId: TimelineEntryData = {
+      id: 78,
+      time: '11:00-12:00',
+      title: 'master 缺 poiId',
+      note: '備註內容',
+      stopPois: [{ poiId: null, sortOrder: 1, name: 'master 缺 poiId', note: '備註內容' }],
+    };
+    renderRail([masterNoPoiId]);
+    fireEvent.click(screen.getByTestId('timeline-rail-row-78'));
+    const value = screen.getByTestId('timeline-rail-note-value-78');
+    expect(value.getAttribute('role')).not.toBe('button');
+    fireEvent.click(value);
+    expect(screen.queryByTestId('timeline-rail-note-input-78')).toBeNull();
+  });
+
+  // 空 note 但無 master → 不顯示「+ 加備註」可編輯 affordance（純停用，不誘導點擊）。
+  it('empty note + no master → no editable「+ 加備註」affordance', () => {
+    const emptyNoMaster: TimelineEntryData = {
+      id: 79,
+      time: '13:00-14:00',
+      title: '空 note 無 master',
+      note: null,
+      googleRating: 4.0,
+    };
+    renderRail([emptyNoMaster]);
+    fireEvent.click(screen.getByTestId('timeline-rail-row-79'));
+    const value = screen.queryByTestId('timeline-rail-note-value-79');
+    // 無 master 且 note 空：不渲染可點擊的編輯 affordance
+    if (value) {
+      expect(value.getAttribute('role')).not.toBe('button');
+      fireEvent.click(value);
+    }
+    expect(screen.queryByTestId('timeline-rail-note-input-79')).toBeNull();
   });
 });
 

@@ -735,3 +735,108 @@ describe('PUT /api/trips/:id/days/:num — v2.30.x Day-level OCC (migration 0065
     expect(body.dayVersion).toBe(3);
   });
 });
+
+describe('PUT /api/trips/:id/days/:num — migration 0078 entry note → master poi note', () => {
+  it('title-only entry 帶 note → 寫進 master trip_entry_pois.note（非 trip_entries）', async () => {
+    const TRIP = 'trip-dn-note-titleonly';
+    await seedTrip(db, { id: TRIP, days: 1 });
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+        date: '2026-04-01',
+        dayOfWeek: '三',
+        label: 'D1',
+        timeline: [
+          { time: '09:00', title: '展望台', poi_type: 'attraction', note: '看夕陽最佳' },
+        ],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: TRIP, num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(200);
+    const dayId = await getDayId(db, TRIP, 1);
+    const entry = await db.prepare('SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1').bind(dayId).first<{ id: number }>();
+    const master = await db
+      .prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(entry!.id)
+      .first<{ note: string | null }>();
+    expect(master!.note).toBe('看夕陽最佳');
+  });
+
+  it('canonical-choices entry：entry-level note 但 master choice note 空 → master poi note = entry note', async () => {
+    const TRIP = 'trip-dn-note-choices';
+    await seedTrip(db, { id: TRIP, days: 1 });
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+        date: '2026-04-01',
+        dayOfWeek: '三',
+        label: 'D1',
+        timeline: [
+          {
+            time: '12:00',
+            title: '午餐',
+            note: '整體備註：靠海那側',
+            stopPois: [
+              { name: '海鮮丼A', type: 'restaurant' }, // master，無 per-POI note
+              { name: '定食B', type: 'restaurant', note: '備選B備註' },
+            ],
+          },
+        ],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: TRIP, num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(200);
+    const dayId = await getDayId(db, TRIP, 1);
+    const entry = await db.prepare('SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1').bind(dayId).first<{ id: number }>();
+    const master = await db
+      .prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(entry!.id)
+      .first<{ note: string | null }>();
+    expect(master!.note).toBe('整體備註：靠海那側');
+    // 備選 B 的 per-POI note 不受影響
+    const alt = await db
+      .prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 2')
+      .bind(entry!.id)
+      .first<{ note: string | null }>();
+    expect(alt!.note).toBe('備選B備註');
+  });
+
+  it('canonical-choices entry：master choice 已有 per-POI note → 不被 entry note 覆蓋（保留 master choice note）', async () => {
+    const TRIP = 'trip-dn-note-choices-keep';
+    await seedTrip(db, { id: TRIP, days: 1 });
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+        date: '2026-04-01',
+        dayOfWeek: '三',
+        label: 'D1',
+        timeline: [
+          {
+            time: '12:00',
+            title: '午餐',
+            note: '整體備註',
+            stopPois: [
+              { name: '海鮮丼A', type: 'restaurant', note: 'master自己的備註' },
+            ],
+          },
+        ],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: TRIP, num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(200);
+    const dayId = await getDayId(db, TRIP, 1);
+    const entry = await db.prepare('SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1').bind(dayId).first<{ id: number }>();
+    const master = await db
+      .prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(entry!.id)
+      .first<{ note: string | null }>();
+    // master choice note 優先；entry-level note 不覆蓋（避免雙重備註污染既有 per-POI note）
+    expect(master!.note).toBe('master自己的備註');
+  });
+});

@@ -143,12 +143,17 @@ function mapEntry(e: Raw): PrintEntry {
   const t = toTimelineEntry(e as unknown as Parameters<typeof toTimelineEntry>[0]);
   // TimelineEntryData.travel is TravelData | string | null (legacy string form).
   const tv = t.travel && typeof t.travel === 'object' ? t.travel : null;
+  // migration 0078：entry-level `trip_entries.note` 欄位已 DROP，列印頁 entry 備註
+  // 改取 master（primary stopPoi, sortOrder=1）的 per-POI note。明確從 stopPois 取
+  // master，避免未來重構讓 entry 備註誤抓 alternate（sortOrder>1）或殘留欄位。
+  const masterStop = (t.stopPois ?? []).find((p) => p.sortOrder === 1) ?? null;
+  const masterNote = masterStop?.note ?? null;
   return {
     time: t.time ?? undefined,
     title: t.displayTitle || t.title || '',
     rating: t.googleRating,
     description: t.description ?? undefined,
-    note: t.note ?? undefined,
+    note: masterNote ?? undefined,
     travel: tv ? { type: tv.type, min: tv.min, distanceM: tv.distanceM } : null,
     stopPois: (t.stopPois ?? []).map((p) => ({
       sortOrder: p.sortOrder ?? 1,

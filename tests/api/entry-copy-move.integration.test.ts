@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, getDayId, callHandler } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, seedPoi, getDayId, callHandler } from './helpers';
 import { onRequestPost as onRequestPostCopy } from '../../functions/api/trips/[id]/entries/[eid]/copy';
 import { onRequestPatch as onRequestPatchEntry } from '../../functions/api/trips/[id]/entries/[eid]';
 import type { Env } from '../../functions/api/_types';
@@ -17,6 +17,7 @@ let day1Id: number;
 let day2Id: number;
 let day3Id: number;
 let entryDay1Id: number;
+let masterPoiDay1Id: number;
 
 beforeAll(async () => {
   db = await createTestDb();
@@ -28,9 +29,14 @@ beforeAll(async () => {
   day2Id = await getDayId(db, 'trip-cm', 2);
   day3Id = await getDayId(db, 'trip-cm', 3);
   // v2.29.0: trip_entries.time DROPPED；用 start_time/end_time 直接 UPDATE。
-  entryDay1Id = await seedEntry(db, day1Id, { title: '美ら海水族館' });
-  await db.prepare('UPDATE trip_entries SET start_time = ?, end_time = ?, note = ? WHERE id = ?')
-    .bind('11:30', '14:00', 'mock note', entryDay1Id).run();
+  // migration 0078: trip_entries.note DROPPED — 備註改掛 master trip_entry_pois.note。
+  masterPoiDay1Id = await seedPoi(db, { name: '美ら海水族館', type: 'attraction' });
+  entryDay1Id = await seedEntry(db, day1Id, { title: '美ら海水族館', poiId: masterPoiDay1Id });
+  await db.prepare('UPDATE trip_entries SET start_time = ?, end_time = ? WHERE id = ?')
+    .bind('11:30', '14:00', entryDay1Id).run();
+  // master poi 的 per-POI note（copy 時應隨 trip_entry_pois 複製過去）
+  await db.prepare('UPDATE trip_entry_pois SET note = ? WHERE entry_id = ? AND sort_order = 1')
+    .bind('mock note', entryDay1Id).run();
 });
 
 afterAll(disposeMiniflare);
@@ -54,8 +60,14 @@ describe('POST /api/trips/:id/entries/:eid/copy — Item 2', () => {
     // v2.29.0: trip_entries.time DROPPED — 改驗 start_time / end_time
     expect(newRow.startTime).toBe('11:30');
     expect(newRow.endTime).toBe('14:00');
-    expect(newRow.note).toBe('mock note');
     expect(newRow.id).not.toBe(entryDay1Id);
+
+    // migration 0078: entry-level note 已 DROP；per-POI note 隨 master trip_entry_pois 複製。
+    const copiedMaster = await db
+      .prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(newRow.id)
+      .first<{ note: string | null }>();
+    expect(copiedMaster!.note).toBe('mock note');
 
     // 原 entry 仍存在（copy 不是 move）
     const orig = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(entryDay1Id).first();

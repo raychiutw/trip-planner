@@ -26,10 +26,17 @@ const RAW_DAYS = [
       {
         // NOTE: no `time`, no `title`, no `rating` on the entry itself — exactly
         // what `?all=1` returns. They must come from startTime/endTime + master POI.
+        // migration 0078: entry-level `note` 欄位已 DROP；備註改掛 per-POI（master
+        // sortOrder=1 / alternate sortOrder>1）。`note: '舊整體備註'` 模擬殘留的
+        // entry-level 欄位，列印頁不可再讀它。
         id: 10,
         startTime: '09:00',
         endTime: '10:00',
-        stopPois: [{ poiId: 1, sortOrder: 1, name: '那霸機場', type: 'transport', rating: 4.1 }],
+        note: '舊整體備註',
+        stopPois: [
+          { poiId: 1, sortOrder: 1, name: '那霸機場', type: 'transport', rating: 4.1, note: '國內線 2 樓集合' },
+          { poiId: 2, sortOrder: 2, name: '備選：豐見城', type: 'attraction', note: '週三休息' },
+        ],
         travel: { type: 'car', min: 12, distanceM: 2100 },
       },
     ],
@@ -61,6 +68,28 @@ describe('loadTripPrintData — real ?all=1 shape', () => {
   it('pulls rating from the master stop POI (not the entry)', async () => {
     const d = await loadTripPrintData('t1');
     expect(d.days[0]!.timeline[0]!.rating).toBe(4.1);
+  });
+
+  // migration 0078 cutover：entry-level note 欄位已 DROP，列印頁 entry 備註必須
+  // 取 master（primary stopPoi, sortOrder=1）的 per-POI note，且不可誤抓 alternate
+  // (sortOrder>1) 的 note，也不可讀殘留的 entry-level raw `note`。
+  it('sources the print entry note from the master stop POI (sortOrder=1)', async () => {
+    const d = await loadTripPrintData('t1');
+    expect(d.days[0]!.timeline[0]!.note).toBe('國內線 2 樓集合');
+  });
+
+  it('does NOT use the dropped entry-level note nor the alternate note', async () => {
+    const d = await loadTripPrintData('t1');
+    const entryNote = d.days[0]!.timeline[0]!.note;
+    expect(entryNote).not.toBe('舊整體備註');
+    expect(entryNote).not.toBe('週三休息');
+  });
+
+  it('keeps each stop POI alternate carrying its own per-POI note', async () => {
+    const d = await loadTripPrintData('t1');
+    const pois = d.days[0]!.timeline[0]!.stopPois ?? [];
+    expect(pois.find((p) => p.sortOrder === 1)?.note).toBe('國內線 2 樓集合');
+    expect(pois.find((p) => p.sortOrder === 2)?.note).toBe('週三休息');
   });
 
   it('keeps raw backend travel type (car) and formats it to 開車', async () => {
