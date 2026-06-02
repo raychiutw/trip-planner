@@ -114,13 +114,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   // INSERT new entry — copy 所有 source 欄位除了 id、day_id、sort_order、time/poi_id/travel_*
+  // migration 0078: trip_entries.note DROPPED — 不再 copy entry-level note。per-POI 備註
+  // 隨下方 trip_entry_pois batch（含 row.note）一起複製，master + 每個 alternate 的 note 保留。
   let newRow;
   try {
     newRow = await db
       .prepare(
         `INSERT INTO trip_entries
-          (day_id, sort_order, start_time, end_time, title, description, source, note, entry_pois_version)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (day_id, sort_order, start_time, end_time, title, description, source, entry_pois_version)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING *`,
       )
       .bind(
@@ -131,7 +133,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         source.title,
         source.description,
         source.source,
-        source.note,
         sourceStopPois.length > 0 ? 1 : 0,
       )
       .first() as Record<string, unknown> | null;

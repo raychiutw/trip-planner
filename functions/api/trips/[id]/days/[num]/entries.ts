@@ -94,8 +94,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // poi_id 改透過 trip_entry_pois 寫 master (sort_order=1，下方 helper)，不直接寫 col。
     const { startTime, endTime } = resolveEntryTimes(body);
 
+    // migration 0078: trip_entries.note DROPPED — INSERT 不再帶 note；entry-level 備註
+    // 改透過 syncEntryMaster 寫進新 master 的 per-POI note（下方）。
     row = await db
-      .prepare(`INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+      .prepare(`INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`)
       .bind(
         dayId, sortOrder,
         startTime,
@@ -103,7 +105,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         title,
         body.description ?? null,
         body.source ?? 'ai',
-        body.note ?? null,
       )
       .first();
   } catch (err) {
@@ -120,10 +121,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // v2.33.55 round 5d residual: syncEntryMaster 失敗 → compensating DELETE。
   // D1 不支援 BEGIN/COMMIT cross-statement transaction，只能 best-effort 補救。
   // 否則 entry exists 但無 master，下次 GET self-heal 之前 addAlternate 會 MISSING_MASTER。
+  // migration 0078: entry-level note → 新 master 的 per-POI note。trim 後空字串視為無備註。
+  const masterNote =
+    typeof body.note === 'string' && body.note.trim() !== '' ? body.note.trim() : null;
   const insertedEntryId = (row as { id?: unknown }).id;
   if (poiId != null && typeof insertedEntryId === 'number') {
     try {
-      await syncEntryMaster(db, insertedEntryId, poiId);
+      await syncEntryMaster(db, insertedEntryId, poiId, masterNote);
     } catch (err) {
       console.error('[entries POST] syncEntryMaster failed, compensating delete', { insertedEntryId, err });
       await db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(insertedEntryId).run();

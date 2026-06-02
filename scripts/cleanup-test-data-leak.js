@@ -59,7 +59,11 @@ async function main() {
       const timeline = day.timeline || day.entries || [];
 
       for (const entry of timeline) {
-        const text = (entry.title || '') + ' ' + (entry.note || '');
+        // migration 0078：entry-level note 欄位已 DROP，備註改掛 per-POI。
+        // `?all=1` 回 deepCamel'd stopPois（sortOrder），master 為 sortOrder===1。
+        const masterNote =
+          (entry.stopPois || []).find((p) => (p.sortOrder ?? p.sort_order) === 1)?.note || '';
+        const text = (entry.title || '') + ' ' + masterNote;
         if (text.indexOf(MARKER) >= 0) {
           totalLeaks++;
           console.log(

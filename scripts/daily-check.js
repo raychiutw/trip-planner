@@ -519,12 +519,18 @@ async function queryProdDataHygiene() {
   try {
     var likeClauses = PROD_DATA_TEST_MARKERS.map(function(marker) {
       // SQL injection-safe: marker 是 hardcoded constant，不接 user input
+      // migration 0078: trip_entries.note 已 DROP — 備註改 per-(entry, poi)
+      // trip_entry_pois.note。marker 掃描改讀 master（sort_order=1）的 per-POI note，
+      // 繼承原本「整體備註」的語意。
       var safe = marker.replace(/'/g, "''");
-      return "te.title LIKE '%" + safe + "%' OR te.note LIKE '%" + safe + "%'";
+      return "te.title LIKE '%" + safe + "%' OR tep.note LIKE '%" + safe + "%'";
     }).join(' OR ');
-    // trip_id / day_num 在 trip_days,需 JOIN(trip_entries 只有 day_id)
-    var sql = 'SELECT te.id, td.trip_id, td.day_num, te.title, te.note ' +
+    // trip_id / day_num 在 trip_days,需 JOIN(trip_entries 只有 day_id)。
+    // note 在 master trip_entry_pois row（sort_order=1）— LEFT JOIN 避免無 POI 的
+    // placeholder entry 因 note 掃描被整列濾掉（title marker 仍可命中）。
+    var sql = 'SELECT te.id, td.trip_id, td.day_num, te.title, tep.note AS note ' +
       'FROM trip_entries te JOIN trip_days td ON te.day_id = td.id ' +
+      'LEFT JOIN trip_entry_pois tep ON tep.entry_id = te.id AND tep.sort_order = 1 ' +
       'WHERE ' + likeClauses + ' LIMIT 50';
     var rows = await queryD1(sql);
     if (!rows || rows.length === 0) {

@@ -21,7 +21,11 @@ import { fetchEntryPoisByEntries } from '../days/_merge';
 // PATCH 不再 accept 這些 field（schema 已無對應 col）。
 // v2.33.108: `version` 不在 ALLOWED_FIELDS — autosave 透過 body.expectedVersion 做 OCC，
 // version 由 SQL CAS 自動 bump（SET version = version + 1）。
-const ALLOWED_FIELDS = ['day_id', 'sort_order', 'start_time', 'end_time', 'title', 'description', 'source', 'note'] as const;
+// migration 0078: trip_entries.note DROPPED — 備註改為 per-(entry, poi)，掛在
+// trip_entry_pois.note（正選 sort_order=1 / 備選 sort_order>1）。改走
+// PATCH /api/trips/:id/entries/:eid/pois/:poiId。此處不再 accept 'note'，帶 note
+// 會被 buildUpdateClause 的 whitelist 過濾掉（mass-assignment 防護）。
+const ALLOWED_FIELDS = ['day_id', 'sort_order', 'start_time', 'end_time', 'title', 'description', 'source'] as const;
 
 /**
  * GET /api/trips/:id/entries/:eid → single entry meta + canonical entry POIs.
@@ -29,6 +33,10 @@ const ALLOWED_FIELDS = ['day_id', 'sort_order', 'start_time', 'end_time', 'title
  * v2.19.13: EntryActionPage (move/copy) 載 entry 當前 day_id 用,本來在 prod
  * 沒這 handler 直接 405,move/copy flow broken。讀權限走 hasPermission (viewer
  * 也可看)。
+ *
+ * migration 0078: trip_entries.note DROPPED。SELECT * 自然不再帶 entry-level note；
+ * 「正選備註」改由 master.note（fetchEntryPoisByEntries surface 的 sort_order=1 row）提供，
+ * 每個 alternate 各自的 note 也在 alternates[].note / stop_pois[].note。
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id, eid: eidStr } = context.params as { id: string; eid: string };
@@ -96,7 +104,9 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   }
 
   // 亂碼偵測：寫入 DB 前檢查文字欄位
-  const textFields = ['title', 'description', 'note'];
+  // migration 0078: 'note' 移除 — entry-level note 已 DROP，per-POI note 的亂碼偵測
+  // 由 PATCH /entries/:eid/pois/:poiId 端點負責。
+  const textFields = ['title', 'description'];
   for (const f of textFields) {
     if (f in body && typeof body[f] === 'string' && detectGarbledText(body[f] as string)) {
       throw new AppError('DATA_ENCODING', `欄位 ${f} 包含疑似亂碼，請確認 encoding 為 UTF-8`);

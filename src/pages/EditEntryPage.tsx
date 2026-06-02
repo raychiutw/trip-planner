@@ -37,6 +37,7 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useAutosave } from '../hooks/useAutosave';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
@@ -59,7 +60,9 @@ const SCOPED_STYLES = `
 }
 
 .tp-edit-entry-poi {
-  display: flex; align-items: center; gap: 12px;
+  /* v2.34.0: align-items flex-start — meta 內含 per-POI 備註行（一行 read /
+     展開 textarea），對齊 mockup .ee-poi align-items flex-start。 */
+  display: flex; align-items: flex-start; gap: 12px;
   padding: 14px 16px;
   background: var(--color-secondary);
   border-radius: var(--radius-lg);
@@ -247,33 +250,108 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 
-.tp-edit-entry-note {
+/* v2.34.0 per-POI 備註（Variant B「點擊編輯備註行」）— 對齊 mockup
+   docs/design-sessions/2026-06-02-entry-poi-note.html + TimelineRail note 視覺語彙。
+   read row：有 note 顯文字 / 空 → 「+ 加備註」affordance；點擊就地展開 textarea。 */
+.tp-poi-note-read {
+  margin-top: 8px;
+  font-size: var(--font-size-footnote);
+  color: var(--color-foreground);
+  background: var(--color-background);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-sm);
+  /* 44px tap target：padding 撐到 ≥44px 高（硬規則）。 */
+  min-height: 44px;
+  padding: 10px 10px;
+  /* role="button" 互動元素 → pointer（非 text I-beam），與語意一致（adversarial H2）。 */
+  cursor: pointer;
+  display: flex; gap: 6px; align-items: flex-start;
+  text-align: left;
+  font-family: inherit;
+}
+.tp-poi-note-read:hover { border-color: var(--color-border); }
+.tp-poi-note-read:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.tp-poi-note-read.is-empty {
+  color: var(--color-muted);
+  font-style: italic;
+  cursor: pointer;
+}
+/* master 卡在 --color-secondary 底上 → 透明底 variant。 */
+.tp-poi-note-read.on-secondary { background: transparent; }
+.tp-poi-note-read.on-secondary:hover { border-color: var(--color-line-strong); }
+.tp-poi-note-icon {
+  color: var(--color-muted);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: inline-flex;
+}
+.tp-poi-note-icon .svg-icon { width: 13px; height: 13px; }
+.tp-poi-note-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.tp-poi-note-edit { margin-top: 8px; }
+.tp-poi-note-input {
   width: 100%;
   font: inherit;
-  font-size: var(--font-size-callout);
-  line-height: 1.55;
+  font-size: var(--font-size-footnote);
+  line-height: 1.5;
   background: var(--color-background);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
   resize: vertical;
-  min-height: 120px;
+  min-height: 62px;
   color: var(--color-foreground);
-  transition: all 120ms;
-}
-.tp-edit-entry-note:hover { border-color: var(--color-line-strong); }
-.tp-edit-entry-note:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
   outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
-.tp-edit-entry-note-toolbar {
-  display: flex; justify-content: space-between; align-items: center;
+.tp-poi-note-bar {
+  display: flex; align-items: center; gap: 8px;
+  /* ≤640px alternate 窄欄下「完成」+ kbd 提示需可換行，避免 horizontal overflow
+     （硬規則 ≤640px 不 overflow；對齊 TimelineRail .tp-rail-note-actions）（adversarial M3）。 */
+  flex-wrap: wrap;
   margin-top: 6px;
+}
+.tp-poi-note-done {
+  font: inherit;
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-muted);
+  padding: 0 16px;
+  cursor: pointer;
+  /* 44px tap target（硬規則）— mockup 34px bump 到 44px。 */
+  min-height: 44px;
+}
+.tp-poi-note-done:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.tp-poi-note-done:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.tp-poi-note-kbd {
   font-size: var(--font-size-caption);
   color: var(--color-muted);
+  margin-left: auto;
 }
-.tp-edit-entry-note-toolbar .markdown-hint { font-style: italic; }
+.tp-poi-note-kbd kbd {
+  background: var(--color-background);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border);
+  font-family: ui-monospace, monospace;
+  font-size: var(--font-size-caption);
+}
 
 .tp-edit-entry-error {
   margin-top: 12px;
@@ -335,7 +413,9 @@ const SCOPED_STYLES = `
   width: 12px; height: 12px;
 }
 .tp-edit-entry-alt-row {
-  display: flex; align-items: center; gap: 10px;
+  /* v2.34.0: align-items flex-start — meta 內含 per-POI 備註行；actions 對齊頂端
+     （對齊 mockup .ee-alt align-items flex-start）。mobile 已 flex-wrap。 */
+  display: flex; align-items: flex-start; gap: 10px;
   padding: 10px 12px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
@@ -519,6 +599,8 @@ interface AlternatePoi {
   price?: string | null;
   reservation?: string | null;
   reservationUrl?: string | null;
+  /** v2.34.0 — per-POI 備註（trip_entry_pois.note）。 */
+  note?: string | null;
   /** POI coords — feed cross-region warning when this row is set as master. */
   lat?: number | null;
   lng?: number | null;
@@ -530,6 +612,8 @@ interface MasterPoiSummary {
   poiId: number;
   name: string;
   type?: string | null;
+  /** v2.34.0 — per-POI 備註（trip_entry_pois.note）。 */
+  note?: string | null;
   /** Master coords — baseline for sibling-distance comparison（cross-region warning）。 */
   lat?: number | null;
   lng?: number | null;
@@ -548,6 +632,7 @@ interface EntryApi {
     poiId?: number;
     name?: string | null;
     type?: string | null;
+    note?: string | null;
     lat?: number | null;
     lng?: number | null;
   } | null;
@@ -567,7 +652,7 @@ interface DayApi {
     id?: number | null;
     title?: string | null;
     displayTitle?: string | null;
-    master?: { poiId?: number; name?: string | null; type?: string | null; lat?: number | null; lng?: number | null } | null;
+    master?: { poiId?: number; name?: string | null; type?: string | null; note?: string | null; lat?: number | null; lng?: number | null } | null;
     alternates?: EntryPoiPayload[];
     entryPoisVersion?: string | number | null;
   }>;
@@ -605,6 +690,7 @@ function mapAlternate(a: EntryPoiPayload): AlternatePoi {
     price: a.price ?? null,
     reservation: a.reservation ?? null,
     reservationUrl: a.reservationUrl ?? null,
+    note: a.note ?? null,
     lat: a.lat ?? null,
     lng: a.lng ?? null,
   };
@@ -625,6 +711,154 @@ function extractSiblingCoords(
     }
   }
   return out;
+}
+
+interface PerPoiNoteRowProps {
+  tripId: string;
+  entryId: number;
+  poiId: number;
+  /** 既有 per-POI 備註值（read state 顯示 / edit state 初始 textarea 值）。 */
+  initialNote?: string | null;
+  /**
+   * read row 是否在 master 卡（`--color-secondary` 底）上 → 透明底 variant。
+   * 對齊 mockup `.note-read.on-secondary`。
+   */
+  onSecondary?: boolean;
+}
+
+/**
+ * PerPoiNoteRow — v2.34.0 Variant B「點擊編輯備註行」。
+ *
+ * 每個 master / alternate POI 各掛一個獨立 instance（各自一個 useAutosave hook，
+ * 符合 Rules of Hooks — alternates 是動態陣列，hook 不能在 .map() 內呼叫）。
+ *
+ * read state（未編輯）：有 note → 顯示文字 + ✎ icon；空 → 「+ 加備註」affordance。
+ * edit state（點擊後）：textarea autosave + 「完成」button + ⌘↩ 完成 / esc 關閉，
+ *   沿用 TimelineRail 既有 inline note edit 視覺語彙。
+ *
+ * autosave：debounce 800ms / onBlur flush → PATCH /trips/:id/entries/:eid/pois/:poiId
+ *   body { note }。LWW（D4）— 刻意不帶 entryPoisVersion OCC token。清空 → note: ''
+ *   （端點 trim 成空字串 → 寫 null 清除）。失敗 → showToast。
+ */
+function PerPoiNoteRow({ tripId, entryId, poiId, initialNote, onSecondary }: PerPoiNoteRowProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(initialNote ?? '');
+
+  // initialNote 變更（如 master swap / refresh 帶新值）→ 非編輯中時 re-init draft，
+  // 讓 read row 顯示最新值。編輯中不覆寫避免吃掉 user 正在打的字。
+  useEffect(() => {
+    if (!editing) setDraft(initialNote ?? '');
+  }, [initialNote, editing]);
+
+  const noteAutosave = useAutosave<{ note: string }>({
+    debounceMs: 800,
+    save: async (body) => {
+      const res = await apiFetchRaw(
+        `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/pois/${poiId}`,
+        {
+          method: 'PATCH',
+          // LWW — 不帶 entryPoisVersion；端點刻意不收/不 bump OCC token。
+          body: JSON.stringify({ note: body.note ?? '' }),
+        },
+      );
+      if (!res.ok) throw await ApiError.fromResponse(res);
+      return await res.json() as Record<string, unknown>;
+    },
+  });
+
+  // autosave error → toast（對齊 TimelineRail；監聽 error state transition，
+  // 避免每 re-render 重複 toast）。
+  const lastErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (noteAutosave.state === 'error' && noteAutosave.error && noteAutosave.error !== lastErrorRef.current) {
+      lastErrorRef.current = noteAutosave.error;
+      showToast(`備註儲存失敗：${noteAutosave.error}`, 'error', 6000);
+    } else if (noteAutosave.state !== 'error') {
+      lastErrorRef.current = null;
+    }
+  }, [noteAutosave.state, noteAutosave.error]);
+
+  const beginEdit = useCallback(() => {
+    setDraft(initialNote ?? '');
+    setEditing(true);
+  }, [initialNote]);
+
+  const closeEdit = useCallback(async () => {
+    await noteAutosave.flush();
+    setEditing(false);
+  }, [noteAutosave]);
+
+  const handleChange = (value: string) => {
+    setDraft(value);
+    noteAutosave.patch({ note: value });
+  };
+
+  const handleBlur = () => {
+    void noteAutosave.flush();
+  };
+
+  const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      void closeEdit();
+    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      void closeEdit();
+    }
+  };
+
+  const hasNote = !!draft.trim();
+
+  if (editing) {
+    return (
+      <div className="tp-poi-note-edit">
+        <textarea
+          className="tp-poi-note-input"
+          value={draft}
+          onChange={(e) => handleChange(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKey}
+          autoFocus
+          maxLength={1000}
+          data-testid={`edit-entry-poi-note-input-${poiId}`}
+        />
+        <div className="tp-poi-note-bar">
+          <button
+            type="button"
+            className="tp-poi-note-done"
+            onClick={() => void closeEdit()}
+            data-testid={`edit-entry-poi-note-done-${poiId}`}
+          >
+            完成
+          </button>
+          <span className="tp-poi-note-kbd">
+            <kbd>⌘</kbd> + <kbd>↩</kbd> 完成 · <kbd>esc</kbd> 關閉
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`tp-poi-note-read${hasNote ? '' : ' is-empty'}${onSecondary ? ' on-secondary' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={beginEdit}
+      onKeyDown={(e) => {
+        // role="button" 必須同時支援 Enter 與 Space（WAI-ARIA），Space 需 preventDefault
+        // 防頁面捲動（adversarial H1）。
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          beginEdit();
+        }
+      }}
+      data-testid={`edit-entry-poi-note-read-${poiId}`}
+    >
+      <span className="tp-poi-note-icon" aria-hidden="true"><Icon name="pencil" /></span>
+      <span className="tp-poi-note-text">{hasNote ? draft : '+ 加備註'}</span>
+    </div>
+  );
 }
 
 export default function EditEntryPage() {
@@ -655,17 +889,18 @@ export default function EditEntryPage() {
   const [altError, setAltError] = useState<string | null>(null);
 
   // Form state
+  // v2.34.0: entry-level note 已移除（migration 0078 DROP）；改 per-POI 備註，
+  // 每個 master / alternate 各自編輯，autosave 打 PATCH /entries/:eid/pois/:poiId。
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [note, setNote] = useState('');
   const [mode, setMode] = useState<TripSegment['mode'] | null>(null);
   const [transitMin, setTransitMin] = useState<string>('');
 
   // Original values for dirty-check + discard-modal
   const originalRef = useRef<{
-    startTime: string; endTime: string; note: string;
+    startTime: string; endTime: string;
     mode: TripSegment['mode'] | null; transitMin: string;
-  }>({ startTime: '', endTime: '', note: '', mode: null, transitMin: '' });
+  }>({ startTime: '', endTime: '', mode: null, transitMin: '' });
 
   const [submitting, setSubmitting] = useState(false);
   // v2.33.139: 移除 `error` state — titleBar SaveStatus 已拔 (user feedback
@@ -697,6 +932,7 @@ export default function EditEntryPage() {
             poiId: data.master.poiId,
             name: data.master.name ?? data.title ?? '景點',
             type: data.master.type ?? null,
+            note: data.master.note ?? null,
             lat: data.master.lat ?? null,
             lng: data.master.lng ?? null,
           });
@@ -757,6 +993,7 @@ export default function EditEntryPage() {
               poiId: me.master.poiId,
               name: me.master.name ?? me.title ?? '景點',
               type: me.master.type ?? null,
+              note: me.master.note ?? null,
               lat: me.master.lat ?? null,
               lng: me.master.lng ?? null,
             });
@@ -797,12 +1034,10 @@ export default function EditEntryPage() {
     const initialEnd = entry.endTime ?? '';
     setStartTime(initialStart);
     setEndTime(initialEnd);
-    setNote(entry.note ?? '');
     originalRef.current = {
       ...originalRef.current,
       startTime: initialStart,
       endTime: initialEnd,
-      note: entry.note ?? '',
     };
   }, [entry]);
 
@@ -835,10 +1070,10 @@ export default function EditEntryPage() {
 
   const dirty = useMemo(() => {
     const o = originalRef.current;
-    const entryDirty = startTime !== o.startTime || endTime !== o.endTime || note !== o.note;
+    const entryDirty = startTime !== o.startTime || endTime !== o.endTime;
     const segmentDirty = mode !== o.mode || (mode === 'transit' && transitMin !== o.transitMin);
     return { entryDirty, segmentDirty, any: entryDirty || segmentDirty };
-  }, [startTime, endTime, note, mode, transitMin]);
+  }, [startTime, endTime, mode, transitMin]);
 
   const stayMinutes = useMemo(() => {
     if (!startTime || !endTime) return null;
@@ -871,7 +1106,7 @@ export default function EditEntryPage() {
       const body: Record<string, unknown> = {};
       if (startTime !== originalRef.current.startTime) body.start_time = startTime || null;
       if (endTime !== originalRef.current.endTime) body.end_time = endTime || null;
-      if (note !== originalRef.current.note) body.note = note;
+      // v2.34.0: note 移除 — entry-level note 已 DROP，PATCH /entries 不再帶 note。
       // v2.33.136 fix: race guard — dirty.entryDirty memo 跟 body 各自比 originalRef，
       // 但 originalRef 是 ref 不在 memo deps。若 dirty 計算後、handleSave 跑前外部
       // 路徑（entry refetch useEffect、prior save 成功 hook）把 originalRef 寫到
@@ -923,7 +1158,7 @@ export default function EditEntryPage() {
         // 從 saving → saved transit。
         originalRef.current = {
           ...originalRef.current,
-          startTime, endTime, note, mode, transitMin,
+          startTime, endTime, mode, transitMin,
         };
         setSubmitting(false);
         return;
@@ -943,7 +1178,7 @@ export default function EditEntryPage() {
     }
   }, [
     tripId, entry, entryId, submitting, validation, dirty,
-    startTime, endTime, note, mode, transitMin, segment,
+    startTime, endTime, mode, transitMin, segment,
   ]);
 
   // v2.33.108: auto-save 後不再需要 discard confirmation — handleCancel 直接 back，
@@ -960,7 +1195,7 @@ export default function EditEntryPage() {
       void handleSave();
     }, 800);
     return () => clearTimeout(timer);
-  }, [dirty.any, validation, submitting, startTime, endTime, note, mode, transitMin, handleSave]);
+  }, [dirty.any, validation, submitting, startTime, endTime, mode, transitMin, handleSave]);
 
   // v2.27.0 multi-POI handlers ----------------------------------------------
 
@@ -1000,6 +1235,7 @@ export default function EditEntryPage() {
           poiId: freshMasterPoiId,
           name: freshMasterName,
           type: me.master?.type ?? null,
+          note: me.master?.note ?? null,
           lat: me.master?.lat ?? null,
           lng: me.master?.lng ?? null,
         });
@@ -1227,6 +1463,17 @@ export default function EditEntryPage() {
                     <div className="tp-edit-entry-poi-sub">
                       {POI_TYPE_LABELS[(poiInfo.poiType ?? 'attraction') as PoiType] ?? '景點'}
                     </div>
+                    {/* v2.34.0 master per-POI 備註行（Variant B） */}
+                    {masterSummary && (
+                      <PerPoiNoteRow
+                        key={masterSummary.poiId}
+                        tripId={tripId!}
+                        entryId={entryId}
+                        poiId={masterSummary.poiId}
+                        initialNote={masterSummary.note}
+                        onSecondary
+                      />
+                    )}
                   </div>
                   <button
                     type="button"
@@ -1304,6 +1551,14 @@ export default function EditEntryPage() {
                               })()}
                             </div>
                           )}
+                          {/* v2.34.0 alternate per-POI 備註行（Variant B） */}
+                          <PerPoiNoteRow
+                            key={alt.poiId}
+                            tripId={tripId!}
+                            entryId={entryId}
+                            poiId={alt.poiId}
+                            initialNote={alt.note}
+                          />
                         </div>
                         <div className="tp-edit-entry-alt-actions">
                           <button
@@ -1469,25 +1724,9 @@ export default function EditEntryPage() {
                 </section>
               )}
 
-              {/* Note section */}
-              <section className="tp-edit-entry-section" data-testid="edit-entry-note-section">
-                <h2 className="tp-edit-entry-section-h">
-                  <Icon name="pencil" />
-                  <span>備註</span>
-                </h2>
-                <textarea
-                  className="tp-edit-entry-note"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="加備註… (例：必點山苦瓜炒麵，週三休息)"
-                  maxLength={1000}
-                  data-testid="edit-entry-note"
-                />
-                <div className="tp-edit-entry-note-toolbar">
-                  <span className="markdown-hint">支援 Markdown · ⌘+S 儲存</span>
-                  <span data-testid="edit-entry-note-counter">{note.length} / 1000</span>
-                </div>
-              </section>
+              {/* v2.34.0: entry-level「備註」section 移除 — 改 per-POI 備註，
+                  每個 master / alternate 各自掛一條 trip_entry_pois.note。
+                  master 備註行在 POI 摘要卡內，alternate 備註行在各 alt row 內。 */}
 
               {/* validation 仍走 inline error（form-level，user 知道哪個欄位錯）。
                   save error v2.33.136 改 toast — 對齊 mockup

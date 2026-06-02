@@ -80,9 +80,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const entryPositions: number[] = [];
     data.days.forEach((d, di) => {
       for (const e of d.entries) {
+        // migration 0078: trip_entries.note DROPPED — INSERT 不再帶 note。舊匯出檔的
+        // entry-level note 在下方 trip_entry_pois master row 做 coalesce 保留（p.note ?? e.note）。
         entryStmts.push(
-          db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, note, entry_pois_version) VALUES (?,?,?,?,?,?,?,?,?) RETURNING id')
-            .bind(dayIds[di], e.sortOrder, e.startTime, e.endTime, e.title, e.description, e.source, e.note, e.pois.length > 0 ? 1 : 0));
+          db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, entry_pois_version) VALUES (?,?,?,?,?,?,?,?) RETURNING id')
+            .bind(dayIds[di], e.sortOrder, e.startTime, e.endTime, e.title, e.description, e.source, e.pois.length > 0 ? 1 : 0));
         entryPositions.push(e.entryPosition);
       }
     });
@@ -109,8 +111,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           const poiId = await resolvePoi(db, p, createdPoiIds);
           if (seenPoi.has(poiId)) continue; // UNIQUE(entry_id, poi_id) — skip dup-resolved POIs
           seenPoi.add(poiId);
+          // migration 0078: master(so===1) 的 note 若 POI 自己沒帶，fallback 用舊檔 entry-level
+          // note（e.note），保 round-trip 不遺失；備選維持各自 p.note。
+          const poiNote = so === 1 ? (p.note ?? e.note ?? null) : p.note;
           E.push(db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, description, note, reservation, reservation_url, added_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
-            .bind(entryId, poiId, so++, p.description, p.note, p.reservation, p.reservationUrl, now, now));
+            .bind(entryId, poiId, so++, p.description, poiNote, p.reservation, p.reservationUrl, now, now));
         }
       }
       if (d.hotel) {

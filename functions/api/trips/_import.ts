@@ -179,13 +179,28 @@ function normEntry(raw: unknown, entryPosition: number): NImportEntry {
   // master poi name backfills an empty entry title (matches getStopDisplayTitle).
   const master = pois[0];
   const title = str(o.title, 300).trim() || (master ? master.name : '');
+
+  // migration 0078: entry-level note 已從 trip_entries DROP，round-trip 的「整體備註」
+  // 改掛 master（sort_order=1）POI 的 per-POI note。新匯出檔 entry 不再帶 top-level note；
+  // 但舊匯出檔仍可能帶 `entryNote` —— 為不遺失資料，fold 到 master POI。
+  // 合併語意：**master-wins**（master 自己有 note → 保留，不被 entry note 覆蓋；master 為空 →
+  // 繼承 entry note）。與 import.ts orchestration 的 `p.note ?? e.note` 一致（import 是建立全新
+  // 行程，非既有資料 backfill，故採 master 優先而非 migration D5 的換行串接）。備選（sort_order>1）
+  // 維持各自 note，entry note 不外洩。entry 完全沒有 POI → entry note 無處可掛而丟棄（罕見純佔位 entry）。
+  const entryNote = strOrNull(o.note, 4000);
+  if (entryNote && master) {
+    master.note = master.note ?? entryNote;
+  }
+
   return {
     sortOrder: intOrNull(o.sortOrder) ?? entryPosition,
     startTime: strOrNull(o.startTime, 20),
     endTime: strOrNull(o.endTime, 20),
     title,
     description: strOrNull(o.description, 4000),
-    note: strOrNull(o.note, 4000),
+    // 保留原始 entry-level note 供向後相容（import.ts orchestration 的 `p.note ?? e.note`
+    // fallback 仍引用此欄）；實際 master 已於上方 fold，故 orchestration fallback 不會重複寫入。
+    note: entryNote,
     source: str(o.source, 30) || 'imported',
     pois,
     entryPosition,

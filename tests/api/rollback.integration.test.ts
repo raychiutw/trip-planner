@@ -74,6 +74,37 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
     expect(entry).toBeNull();
   });
 
+  it('rollback update on DROPPED column (trip_entries.note) → 400 乾淨拒絕，不 500', async () => {
+    // migration 0078: trip_entries.note 已 DROP。針對 cutover 前產生的、diff 指向 note
+    // 的歷史 update audit，rollback 必須在 column whitelist 階段乾淨拒絕（400 DATA_VALIDATION
+    // 「Invalid column(s)」），而非通過 whitelist 後執行 `UPDATE trip_entries SET note=?`
+    // 撞 "no such column: note" 變成 opaque 500。對齊本 handler header 對 dropped-column
+    // rollback 的承諾（與既有 time/poi_id/travel_* cutover 一致）。
+    const dayId = await getDayId(db, 'trip-rb', 3);
+    const entryId = await seedEntry(db, dayId, { title: 'NoteRollback' });
+
+    await db.prepare(
+      "INSERT INTO audit_log (trip_id, table_name, record_id, action, changed_by, diff_json) VALUES (?, 'trip_entries', ?, 'update', 'user@test.com', ?)"
+    ).bind('trip-rb', entryId, JSON.stringify({ note: { old: '舊備註', new: '新備註' } })).run();
+
+    const auditRow = await db.prepare(
+      'SELECT id FROM audit_log WHERE trip_id = ? ORDER BY id DESC LIMIT 1'
+    ).bind('trip-rb').first<{ id: number }>();
+
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-rb/audit/${auditRow!.id}/rollback`, 'POST'),
+      env,
+      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      params: { id: 'trip-rb', aid: String(auditRow!.id) },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(400);
+    const bodyObj = await resp.json() as { error?: { code?: string; message?: string; detail?: string } };
+    expect(bodyObj.error?.code).toBe('DATA_VALIDATION');
+    // detail 帶具體欄位名（handler: `Invalid column(s) in diff: note`）
+    expect(bodyObj.error?.detail ?? '').toContain('note');
+  });
+
   it('非 admin → 403', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-rb/audit/1/rollback', 'POST'),

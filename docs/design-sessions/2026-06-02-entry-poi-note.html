@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EditEntryPage per-POI 備註 — 3 Variants</title>
+<style>
+  :root{
+    --color-accent:#D97848; --color-accent-subtle:#FBEEE4; --color-accent-bg:#F7DFCB;
+    --color-accent-deep:#B85C2E; --color-background:#FFFBF5; --color-secondary:#FAF4EA;
+    --color-tertiary:#F2EAD9; --color-hover:#F9EDE0; --color-foreground:#2A1F18;
+    --color-muted:#6F5A47; --color-accent-foreground:#FFF; --color-border:#EADFCF;
+    --color-line-strong:#C8B89F; --color-destructive:#C13515; --color-warning:#C88500;
+    --radius-xs:4px; --radius-sm:6px; --radius-md:8px; --radius-lg:12px; --radius-full:9999px;
+    --shadow-md:0 6px 16px rgba(42,31,24,.09);
+    --fs-eyebrow:.625rem; --fs-caption:.75rem; --fs-footnote:.875rem; --fs-subheadline:.9375rem;
+    --fs-body:1rem; --fs-callout:1rem; --fs-headline:1.0625rem;
+    --font:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font);background:var(--color-tertiary);color:var(--color-foreground);
+    line-height:1.5;font-size:var(--fs-body);-webkit-font-smoothing:antialiased;}
+  .page-head{max-width:1200px;margin:0 auto;padding:28px 20px 8px;}
+  .page-head h1{font-size:1.5rem;margin:0 0 6px;letter-spacing:-.01em;}
+  .page-head p{margin:0 0 4px;color:var(--color-muted);font-size:var(--fs-footnote);}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .legend .pill{font-size:var(--fs-caption);background:var(--color-secondary);border:1px solid var(--color-border);
+    border-radius:var(--radius-full);padding:4px 12px;color:var(--color-muted);}
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1200px;margin:0 auto;padding:18px 20px 60px;align-items:start;}
+  @media (max-width:980px){.board{grid-template-columns:1fr;}}
+  .variant{background:var(--color-background);border-radius:var(--radius-xl,16px);box-shadow:var(--shadow-md);overflow:hidden;}
+  .variant-head{padding:14px 18px;border-bottom:1px solid var(--color-border);background:var(--color-secondary);}
+  .variant-head .vtag{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-eyebrow);font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-deep);background:var(--color-accent-subtle);
+    padding:3px 8px;border-radius:var(--radius-full);}
+  .variant-head h2{font-size:var(--fs-headline);margin:8px 0 2px;}
+  .variant-head .desc{font-size:var(--fs-caption);color:var(--color-muted);line-height:1.45;}
+  .variant-head .rec{color:var(--color-accent-deep);font-weight:700;}
+  .vbody{padding:16px;}
+
+  /* ── shared EditEntryPage vocab ───────────────────────────── */
+  .ee-poi{display:flex;align-items:flex-start;gap:12px;padding:14px 14px;background:var(--color-secondary);
+    border-radius:var(--radius-lg);margin-bottom:10px;}
+  .ee-poi-icon{width:44px;height:44px;background:var(--color-accent);color:#fff;border-radius:var(--radius-md);
+    display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .ee-poi-icon svg{width:20px;height:20px;}
+  .ee-poi-meta{flex:1;min-width:0;}
+  .ee-poi-toprow{display:flex;align-items:flex-start;gap:8px;}
+  .ee-poi-name{font-weight:700;font-size:var(--fs-headline);}
+  .ee-poi-sub{color:var(--color-muted);font-size:var(--fs-footnote);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .ee-master-tag{font-size:var(--fs-eyebrow);font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--color-accent-deep);background:var(--color-accent-subtle);padding:2px 8px;border-radius:var(--radius-full);}
+  .ee-poi-action{width:44px;height:44px;flex-shrink:0;border-radius:var(--radius-md);background:var(--color-background);
+    border:1.5px solid var(--color-border);color:var(--color-foreground);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+  .ee-poi-action svg{width:20px;height:20px;}
+  .star{color:var(--color-warning);display:inline-flex;align-items:center;gap:2px;}
+  .star svg{width:12px;height:12px;}
+  .chips{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:6px;}
+  .chip{font-size:var(--fs-footnote);color:var(--color-muted);padding:2px 8px;border-radius:var(--radius-sm);
+    background:var(--color-background);border:1px solid var(--color-border);line-height:1.4;}
+
+  .sec-h{display:flex;align-items:center;gap:8px;margin:18px 0 10px;}
+  .sec-h .label{font-size:var(--fs-eyebrow);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--color-muted);}
+  .sec-h .count{display:inline-flex;align-items:center;gap:6px;background:var(--color-accent-subtle);color:var(--color-accent-deep);
+    padding:4px 10px;border-radius:var(--radius-full);font-size:var(--fs-footnote);font-weight:600;}
+  .sec-h .count .dot{width:6px;height:6px;border-radius:50%;background:var(--color-accent);}
+
+  .ee-alt{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--color-background);
+    border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:8px;}
+  .ee-alt-order{font-size:var(--fs-caption);color:var(--color-muted);font-weight:600;min-width:18px;padding-top:2px;font-variant-numeric:tabular-nums;}
+  .ee-alt-meta{flex:1;min-width:0;}
+  .ee-alt-name{font-weight:600;font-size:var(--fs-subheadline);}
+  .ee-alt-cat{font-size:var(--fs-caption);color:var(--color-muted);display:flex;gap:6px;align-items:center;}
+  .ee-alt-actions{display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:120px;}
+  .ee-alt-actions button{width:34px;height:34px;background:transparent;border:1px solid var(--color-border);
+    border-radius:var(--radius-sm);color:var(--color-muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+  .ee-alt-actions button svg{width:16px;height:16px;}
+  .ee-alt-actions button.set-master{width:auto;padding:0 10px;background:var(--color-accent-subtle);color:var(--color-accent-deep);
+    border-color:transparent;font-weight:600;font-size:var(--fs-caption);}
+
+  /* ── note treatments ─────────────────────────────────────── */
+  /* read line (B & C shown) */
+  .note-read{margin-top:8px;font-size:var(--fs-footnote);color:var(--color-foreground);background:var(--color-background);
+    border:1.5px solid transparent;border-radius:var(--radius-sm);padding:6px 8px;cursor:text;display:flex;gap:6px;align-items:flex-start;}
+  .note-read:hover{border-color:var(--color-border);}
+  .note-read .nicon{color:var(--color-muted);flex-shrink:0;margin-top:1px;}
+  .note-read .nicon svg{width:13px;height:13px;}
+  .note-read.empty{color:var(--color-muted);font-style:italic;cursor:pointer;}
+  .note-read.on-secondary{background:transparent;}
+  .note-read.on-secondary:hover{border-color:var(--color-line-strong);}
+
+  /* edit (textarea + toolbar) — TimelineRail vocab */
+  .note-edit{margin-top:8px;}
+  .note-edit textarea{width:100%;font:inherit;font-size:var(--fs-footnote);line-height:1.5;background:var(--color-background);
+    border:1.5px solid var(--color-accent);border-radius:var(--radius-sm);padding:8px 10px;resize:vertical;min-height:62px;
+    color:var(--color-foreground);outline:none;box-shadow:0 0 0 3px var(--color-accent-subtle);}
+  .note-edit .nbar{display:flex;align-items:center;gap:8px;margin-top:6px;}
+  .note-edit .ndone{font:inherit;font-size:var(--fs-caption);font-weight:700;border-radius:var(--radius-full);
+    border:1px solid var(--color-border);background:var(--color-background);color:var(--color-muted);padding:6px 14px;cursor:pointer;min-height:34px;}
+  .note-edit .nkbd{font-size:var(--fs-caption);color:var(--color-muted);margin-left:auto;}
+  .note-edit .nkbd kbd{background:var(--color-background);padding:1px 6px;border-radius:var(--radius-xs);
+    border:1px solid var(--color-border);font-family:ui-monospace,monospace;font-size:var(--fs-caption);}
+
+  /* always-visible (A) */
+  .note-always{margin-top:8px;}
+  .note-always > span{display:block;font-size:var(--fs-caption);color:var(--color-muted);font-weight:600;margin-bottom:4px;}
+  .note-always textarea{width:100%;font:inherit;font-size:var(--fs-footnote);line-height:1.5;background:var(--color-background);
+    border:1.5px solid var(--color-border);border-radius:var(--radius-sm);padding:8px 10px;resize:vertical;min-height:54px;
+    color:var(--color-foreground);outline:none;}
+  .note-always textarea::placeholder{color:var(--color-muted);font-style:italic;}
+
+  /* expandable toggle (C) */
+  .note-toggle{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:var(--fs-caption);font-weight:600;
+    color:var(--color-accent-deep);background:var(--color-accent-subtle);border:none;border-radius:var(--radius-full);
+    padding:5px 12px;cursor:pointer;}
+  .note-toggle svg{width:13px;height:13px;}
+  .note-badge{display:inline-block;min-width:7px;height:7px;border-radius:50%;background:var(--color-accent);}
+
+  .crossed{position:relative;}
+  .removed-band{margin:18px 0 6px;padding:10px 12px;border:1px dashed var(--color-line-strong);border-radius:var(--radius-md);
+    background:var(--color-tertiary);color:var(--color-muted);font-size:var(--fs-caption);}
+  .removed-band b{color:var(--color-destructive);}
+  .note-callout{margin:6px 0 14px;font-size:var(--fs-caption);color:var(--color-muted);line-height:1.5;
+    border-left:3px solid var(--color-accent);padding:4px 0 4px 10px;background:var(--color-accent-subtle);border-radius:0 var(--radius-sm) var(--radius-sm) 0;}
+  .pros{margin:14px 0 0;padding:12px 14px;background:var(--color-secondary);border-radius:var(--radius-md);font-size:var(--fs-caption);}
+  .pros .row{display:flex;gap:6px;margin-bottom:5px;line-height:1.45;}
+  .pros .row:last-child{margin-bottom:0;}
+  .pros .y{color:var(--color-accent-deep);font-weight:700;}
+  .pros .n{color:var(--color-destructive);font-weight:700;}
+</style>
+</head>
+<body>
+  <div class="page-head">
+    <h1>EditEntryPage — 每個正選/備選景點各自可編輯備註</h1>
+    <p>場景：一個午餐停留點，正選「暖暮拉麵 牧志店」+ 2 個備選候選餐廳。每個 POI 各自一條備註（<code>trip_entry_pois.note</code>），底部的「整體備註」section 移除。</p>
+    <p>3 個 variant 差在「per-POI 備註」怎麼呈現/編輯。其餘（時間 / 移動方式 / 危險區）不變，未畫出。</p>
+    <div class="legend">
+      <span class="pill">Terracotta tokens（真實 token 值）</span>
+      <span class="pill">44px tap target</span>
+      <span class="pill">無框線風格</span>
+      <span class="pill">≤980px 自動單欄堆疊</span>
+    </div>
+  </div>
+
+  <div class="board">
+
+    <!-- ───────────── Variant A ───────────── -->
+    <section class="variant">
+      <div class="variant-head">
+        <span class="vtag">Variant A</span>
+        <h2>常駐備註欄</h2>
+        <div class="desc">每個 POI 下方常駐一個備註欄，永遠可直接打字。最直接，但 N+1 個欄位讓頁面變高、空欄多時視覺噪音大。</div>
+      </div>
+      <div class="vbody">
+        <!-- master -->
+        <div class="ee-poi">
+          <span class="ee-poi-icon">🍜<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"></svg></span>
+          <div class="ee-poi-meta">
+            <div class="ee-poi-toprow">
+              <div style="flex:1;min-width:0">
+                <div class="ee-poi-name">暖暮拉麵 牧志店</div>
+                <div class="ee-poi-sub"><span class="ee-master-tag">正選</span><span>餐廳</span><span class="star">★ 4.4</span></div>
+              </div>
+              <button class="ee-poi-action" title="置換景點">⇄</button>
+            </div>
+            <div class="note-always">
+              <span>備註</span>
+              <textarea>必點黑豚叉燒，11:00 前到避開排隊</textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-h"><span class="label">備選</span><span class="count"><span class="dot"></span>2 個</span></div>
+
+        <div class="ee-alt">
+          <span class="ee-alt-order">2</span>
+          <div class="ee-alt-meta">
+            <div class="ee-alt-name">通堂拉麵 小祿本店</div>
+            <div class="ee-alt-cat">餐廳 <span class="star">★ 4.2</span></div>
+            <div class="note-always"><span>備註</span><textarea>赤湯辣味推薦；自駕有停車場</textarea></div>
+          </div>
+          <div class="ee-alt-actions"><button>↑</button><button>↓</button><button class="set-master">設為正選</button><button>✕</button></div>
+        </div>
+
+        <div class="ee-alt">
+          <span class="ee-alt-order">3</span>
+          <div class="ee-alt-meta">
+            <div class="ee-alt-name">琉球新麺 通堂</div>
+            <div class="ee-alt-cat">餐廳 <span class="star">★ 4.0</span></div>
+            <div class="note-always"><span>備註</span><textarea placeholder="加備註…（例：週三休息）"></textarea></div>
+          </div>
+          <div class="ee-alt-actions"><button>↑</button><button>↓</button><button class="set-master">設為正選</button><button>✕</button></div>
+        </div>
+
+        <div class="pros">
+          <div class="row"><span class="y">＋</span>所有備註一眼全見、零點擊即可編輯</div>
+          <div class="row"><span class="n">－</span>N+1 個 textarea → 頁面很高；空備註時一堆空框噪音</div>
+          <div class="row"><span class="n">－</span>與 TimelineRail 既有 click-to-edit note 模式不一致</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── Variant B (recommended) ───────────── -->
+    <section class="variant">
+      <div class="variant-head">
+        <span class="vtag">Variant B ★ 推薦</span>
+        <h2>點擊編輯備註行</h2>
+        <div class="desc"><span class="rec">沿用 TimelineRail 既有 note 模式</span>：備註以一行文字顯示（空 → 「+ 加備註」），點擊就地展開 textarea + autosave。緊湊、有備註才佔空間、跨頁一致。</div>
+      </div>
+      <div class="vbody">
+        <!-- master: note read state -->
+        <div class="ee-poi">
+          <span class="ee-poi-icon">🍜</span>
+          <div class="ee-poi-meta">
+            <div class="ee-poi-toprow">
+              <div style="flex:1;min-width:0">
+                <div class="ee-poi-name">暖暮拉麵 牧志店</div>
+                <div class="ee-poi-sub"><span class="ee-master-tag">正選</span><span>餐廳</span><span class="star">★ 4.4</span></div>
+              </div>
+              <button class="ee-poi-action" title="置換景點">⇄</button>
+            </div>
+            <div class="note-read on-secondary"><span class="nicon">✎</span><span>必點黑豚叉燒，11:00 前到避開排隊</span></div>
+          </div>
+        </div>
+
+        <div class="sec-h"><span class="label">備選</span><span class="count"><span class="dot"></span>2 個</span></div>
+
+        <!-- alt 1: editing state -->
+        <div class="ee-alt">
+          <span class="ee-alt-order">2</span>
+          <div class="ee-alt-meta">
+            <div class="ee-alt-name">通堂拉麵 小祿本店</div>
+            <div class="ee-alt-cat">餐廳 <span class="star">★ 4.2</span></div>
+            <div class="note-edit">
+              <textarea>赤湯辣味推薦；自駕有停車場</textarea>
+              <div class="nbar"><button class="ndone">完成</button><span class="nkbd"><kbd>⌘</kbd>+<kbd>↩</kbd> 完成 · <kbd>esc</kbd> 關閉</span></div>
+            </div>
+          </div>
+          <div class="ee-alt-actions"><button>↑</button><button>↓</button><button class="set-master">設為正選</button><button>✕</button></div>
+        </div>
+
+        <!-- alt 2: empty add affordance -->
+        <div class="ee-alt">
+          <span class="ee-alt-order">3</span>
+          <div class="ee-alt-meta">
+            <div class="ee-alt-name">琉球新麺 通堂</div>
+            <div class="ee-alt-cat">餐廳 <span class="star">★ 4.0</span></div>
+            <div class="note-read empty"><span class="nicon">✎</span><span>+ 加備註</span></div>
+          </div>
+          <div class="ee-alt-actions"><button>↑</button><button>↓</button><button class="set-master">設為正選</button><button>✕</button></div>
+        </div>
+
+        <div class="pros">
+          <div class="row"><span class="y">＋</span>有備註才顯示，空的只剩輕量「+ 加備註」→ 清爽</div>
+          <div class="row"><span class="y">＋</span>與 TimelineRail inline note 同模式（textarea + 完成 + ⌘↩），使用者無學習成本</div>
+          <div class="row"><span class="y">＋</span>備選多時也不爆高；備註內容仍一眼可見</div>
+          <div class="row"><span class="n">－</span>編輯需多一次點擊（但符合既有習慣）</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────── Variant C ───────────── -->
+    <section class="variant">
+      <div class="variant-head">
+        <span class="vtag">Variant C</span>
+        <h2>展開式備註鈕</h2>
+        <div class="desc">每個 POI 一顆「備註」chip（有內容時帶圓點），點擊展開編輯區、預設收合。列表最緊湊，但備註內容預設看不到 — 不利「比較候選的註記」。</div>
+      </div>
+      <div class="vbody">
+        <div class="ee-poi">
+          <span class="ee-poi-icon">🍜</span>
+          <div class="ee-poi-meta">
+            <div class="ee-poi-toprow">
+              <div style="flex:1;min-width:0">
+                <div class="ee-poi-name">暖暮拉麵 牧志店</div>
+                <div class="ee-poi-sub"><span class="ee-master-tag">正選</span><span>餐廳</span><span class="star">★ 4.4</span></div>
+              </div>
+              <button class="ee-poi-action" title="置換景點">⇄</button>
+            </div>
+            <!-- expanded -->
+            <div class="note-edit" style="margin-top:8px">
+              <textarea>必點黑豚叉燒，11:00 前到避開排隊</textarea>
+              <div class="nbar"><button class="ndone">完成</button><span class="nkbd"><kbd>⌘</kbd>+<kbd>↩</kbd> 完成</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-h"><span class="label">備選</span><span class="count"><span class="dot"></span>2 個</span></div>
+
+        <div class="ee-alt">
+          <span class="ee-alt-order">2</span>
+          <div class="ee-alt-meta">
+            <div class="ee-alt-name">通堂拉麵 小祿本店</div>
+            <div class="ee-alt-cat">餐廳 <span class="star">★ 4.2</span></div>
+            <button class="note-toggle"><span class="note-badge"></span>備註 ▾</button>
+          </div>
+          <div class="ee-alt-actions"><button>↑</button><button>↓</button><button class="set-master">設為正選</button><button>✕</button></div>
+        </div>
+
+        <div class="ee-alt">
+          <span class="ee-alt-order">3</span>
+          <div class="ee-alt-meta">
+            <div class="ee-alt-name">琉球新麺 通堂</div>
+            <div class="ee-alt-cat">餐廳 <span class="star">★ 4.0</span></div>
+            <button class="note-toggle">＋ 備註</button>
+          </div>
+          <div class="ee-alt-actions"><button>↑</button><button>↓</button><button class="set-master">設為正選</button><button>✕</button></div>
+        </div>
+
+        <div class="pros">
+          <div class="row"><span class="y">＋</span>列表最緊湊，備選再多也整齊</div>
+          <div class="row"><span class="n">－</span>備註預設隱藏 → 無法一眼比較各候選的註記（與需求初衷衝突）</div>
+          <div class="row"><span class="n">－</span>多一層展開互動；圓點 badge 才知道哪個有備註</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="page-head" style="padding-top:0">
+    <div class="removed-band">＊ 三案共通：頁面底部原本的 <b>「備註」整體 section（trip_entries.note）移除</b>；既有資料由 migration 0078 backfill 進「正選」的備註。</div>
+    <div class="note-callout">行程每天景點（TimelineRail）會顯示「正選」的備註，並保留 inline 快速編輯（沿用 Variant B 同款 click-to-edit，寫到正選 POI 的備註）。</div>
+  </div>
+</body>
+</html>

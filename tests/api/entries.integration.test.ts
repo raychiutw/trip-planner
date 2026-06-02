@@ -24,10 +24,11 @@ beforeAll(async () => {
 afterAll(disposeMiniflare);
 
 describe('GET /api/trips/:id/entries/:eid', () => {
-  it('回完整 entry shape（含 time/note/master/stopPois/entry_pois_version）→ 200', async () => {
+  it('回完整 entry shape（含 time/master/stopPois/entry_pois_version）→ 200', async () => {
     // v2.27.1 regression：v2.26.0 SELECT 只有 id/day_id/title，導致 EditEntryPage
-    // 初始 load 後 entry.startTime/endTime/note/master 全 undefined → input 空白。
+    // 初始 load 後 entry.startTime/endTime/master 全 undefined → input 空白。
     // Backend SELECT 改 SELECT * 一勞永逸；此 test 鎖住完整 shape 防 regression。
+    // migration 0078: entry-level note 已 DROP；「正選備註」改由 master.note 提供。
     const ctx = mockContext({
       request: new Request(`https://test.com/api/trips/trip-e/entries/${entryId}`, { method: 'GET' }),
       env,
@@ -43,8 +44,7 @@ describe('GET /api/trips/:id/entries/:eid', () => {
       title: string;
       startTime?: string | null;
       endTime?: string | null;
-      note?: string | null;
-      master?: { poiId: number; name: string } | null;
+      master?: { poiId: number; name: string; note?: string | null } | null;
       stopPois?: Array<{ poiId: number; sortOrder: number }>;
       alternates?: Array<{ poiId: number; sortOrder: number }>;
       entryPoisVersion?: number | string | null;
@@ -53,10 +53,11 @@ describe('GET /api/trips/:id/entries/:eid', () => {
     expect(Number(body.id)).toBe(Number(entryId));
     expect(Number(body.dayId)).toBeGreaterThan(0);
     expect(body.title).toBeTruthy();
-    // v2.29.0: trip_entries.{time, poi_id} DROPPED. start_time / end_time + note 必出現。
+    // v2.29.0: trip_entries.{time, poi_id} DROPPED. start_time / end_time 必出現。
     expect('startTime' in body).toBe(true);
     expect('endTime' in body).toBe(true);
-    expect('note' in body).toBe(true);
+    // migration 0078: entry-level note 已 DROP — 不再是 top-level 欄位。
+    expect('note' in body).toBe(false);
     expect('poiId' in body).toBe(false);
     expect('entryPoisVersion' in body).toBe(true);
     expect(body.master?.name).toBe('Original POI');
@@ -109,7 +110,6 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
         title: 'Updated',
-        note: 'some note',
       }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
@@ -117,9 +117,44 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
     });
     const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
-    const row = await db.prepare('SELECT title, note FROM trip_entries WHERE id = ?').bind(entryId).first();
+    const row = await db.prepare('SELECT title FROM trip_entries WHERE id = ?').bind(entryId).first();
     expect((row as Record<string, unknown>).title).toBe('Updated');
-    expect((row as Record<string, unknown>).note).toBe('some note');
+  });
+
+  it('migration 0078: PATCH 帶 note 連同合法欄位 → note 被 ALLOWED_FIELDS 過濾（不寫 trip_entries）', async () => {
+    // 備註已搬到 trip_entry_pois（per-POI），entry-level note 端點不再接受 note。
+    // 帶 note + 合法欄位（title）→ 200 但 note 被 whitelist 丟棄（trip_entries 已無此欄位）。
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
+        title: 'Updated-2',
+        note: '應被忽略',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-e', eid: String(entryId) },
+    });
+    const resp = await callHandler(onRequestPatch, ctx);
+    expect(resp.status).toBe(200);
+    const row = await db.prepare('SELECT title FROM trip_entries WHERE id = ?').bind(entryId).first<{ title: string }>();
+    expect(row!.title).toBe('Updated-2');
+    // trip_entries 已無 note 欄位 → PRAGMA 確認
+    const { results } = await db.prepare("PRAGMA table_info('trip_entries')").all<{ name: string }>();
+    expect(results.map((r) => r.name)).not.toContain('note');
+  });
+
+  it('migration 0078: PATCH 只帶 note（無其他合法欄位）→ 400 無有效欄位可更新', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
+        note: '只有 note',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-e', eid: String(entryId) },
+    });
+    const resp = await callHandler(onRequestPatch, ctx);
+    expect(resp.status).toBe(400);
+    const body = (await resp.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('DATA_VALIDATION');
   });
 
   it('缺 title → 400', async () => {
