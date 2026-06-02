@@ -30,8 +30,6 @@ export const TRIP_FORM_STYLES = `
   animation: tp-form-modal-fade 160ms var(--transition-timing-function-apple, ease-out);
 }
 @keyframes tp-form-modal-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes tp-new-modal-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes tp-edit-modal-fade { from { opacity: 0; } to { opacity: 1; } }
 
 .tp-new-modal,
 .tp-edit-modal {
@@ -70,32 +68,6 @@ export const TRIP_FORM_STYLES = `
 @media (min-width: 768px) {
   .tp-new-form,
   .tp-edit-form { padding: 28px 32px; padding-bottom: 0; }
-}
-
-/* ===== Close button (absolute, glass) ===== */
-.tp-new-form-close,
-.tp-edit-close {
-  position: absolute;
-  top: 12px; right: 12px;
-  z-index: 2;
-  width: var(--spacing-tap-min, 44px); height: var(--spacing-tap-min, 44px);
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(8px);
-  display: grid; place-items: center;
-  cursor: pointer;
-  font-size: 18px; color: var(--color-foreground);
-  box-shadow: var(--shadow-sm);
-}
-.tp-new-form-close:hover,
-.tp-edit-close:hover {
-  background: var(--color-background);
-  color: var(--color-accent-deep);
-}
-.tp-new-form-close:focus-visible,
-.tp-edit-close:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: 2px;
 }
 
 /* ===== Heading + sub ===== */

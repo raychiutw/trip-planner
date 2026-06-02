@@ -102,11 +102,9 @@ const HourlyWeather = memo(function HourlyWeather({
           const grid = gridRef.current;
           if (!grid) return;
           const now = new Date().getHours();
-          const nowBlock =
-            grid.querySelector<HTMLElement>('.hw-now') ||
-            grid.querySelector<HTMLElement>(
-              `[data-hour="${Math.max(6, Math.min(21, now))}"]`,
-            );
+          const nowBlock = grid.querySelector<HTMLElement>(
+            `[data-hour="${Math.max(6, Math.min(21, now))}"]`,
+          );
           if (nowBlock) {
             grid.scrollLeft = nowBlock.offsetLeft - grid.offsetLeft;
           }

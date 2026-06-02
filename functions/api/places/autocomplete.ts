@@ -78,8 +78,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Per-user daily cap (1000 / 24h). Every call bumps regardless of outcome —
   // even cached / cheap requests count toward the user budget to prevent
-  // drain attacks. userId can be null for service-token sessions; skip user
-  // key in that case (service tokens are already rate-limited at OAuth layer).
+  // drain attacks. This endpoint requires a user session (not a service token).
   if (!auth.userId) {
     throw new AppError('AUTH_REQUIRED', 'user session required for places autocomplete');
   }

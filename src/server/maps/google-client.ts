@@ -61,7 +61,7 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
  * 所有 exported function entry call 一次。
  */
 function requireApiKey(apiKey: string): void {
-  if (!apiKey || apiKey.length === 0) {
+  if (!apiKey) {
     throw new AppError('MAPS_CONFIG', 'GOOGLE_MAPS_API_KEY 未設定或為空');
   }
 }

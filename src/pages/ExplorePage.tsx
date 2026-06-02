@@ -15,7 +15,6 @@ import { apiFetch } from '../lib/apiClient';
 import { mapNominatimCategory, POI_TYPE_LABELS } from '../lib/poiCategory';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { useActiveTrip } from '../contexts/ActiveTripContext';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import InputModal from '../components/shared/InputModal';
@@ -417,21 +416,7 @@ export default function ExplorePage() {
   const [savedKeyRows, setSavedKeyRows] = useState<SavedKeyRow[]>([]);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   // Region selector + category subtab filter
-  // region 預設用 active trip's countries → 對應地區名
-  const { activeTripId } = useActiveTrip();
-  // ExplorePage 不再 fetch trips list (saved-toolbar 移到 PoiFavoritesPage)，但 active
-  // trip 的 region 仍從 ActiveTripContext 推導 — countries field 不在 context 裡，
-  // 所以這裡 default region 退回「全部地區」，等使用者在 region pill 自選。
-  const defaultRegion = useMemo(() => {
-    if (!activeTripId) return '全部地區';
-    return '全部地區';
-  }, [activeTripId]);
   const [region, setRegion] = useState<string>('全部地區');
-  // 第一次 trips/activeTripId resolve 後同步 default
-  useEffect(() => {
-    if (region === '全部地區' && defaultRegion !== '全部地區') setRegion(defaultRegion);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultRegion]);
   const [category, setCategory] = useState<string>('all');
 
   /* Region picker popover state (取代 window.prompt) */
@@ -461,14 +446,11 @@ export default function ExplorePage() {
   // Combined option list — POPULAR + active trip's region (if not in popular)
   const regionOptions = useMemo(() => {
     const list: string[] = [...POPULAR_REGIONS];
-    if (defaultRegion !== '全部地區' && !list.includes(defaultRegion)) {
-      list.splice(1, 0, defaultRegion);
-    }
     if (region !== '全部地區' && !list.includes(region)) {
       list.splice(1, 0, region);
     }
     return list;
-  }, [defaultRegion, region]);
+  }, [region]);
 
   /**
    * Mini-fetch /poi-favorites → favoriteKeySet (MF6) — 只為了 heart toggle disable

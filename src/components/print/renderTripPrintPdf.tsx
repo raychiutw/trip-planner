@@ -36,6 +36,7 @@ export async function renderTripPrintPdf(opts: {
   pdfInFlight = true;
   const { tripId, trip } = opts;
   try {
+    if (!opts.data && !tripId) throw new Error('renderTripPrintPdf: tripId required when data is not provided');
     const data = opts.data ?? (await loadTripPrintData(tripId!));
     const html2pdf = (await import('html2pdf.js')).default;
 

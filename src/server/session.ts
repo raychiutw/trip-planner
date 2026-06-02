@@ -177,7 +177,7 @@ export async function verifySessionToken(
   }
 
   if (payload.v !== SESSION_VERSION) return null;
-  if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) return null;
+  if (typeof payload.exp !== 'number' || !Number.isFinite(payload.exp) || payload.exp < Math.floor(Date.now() / 1000)) return null;
   if (typeof payload.uid !== 'string' || !payload.uid) return null;
 
   return payload;

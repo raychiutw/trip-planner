@@ -13,6 +13,7 @@
  *    are gated. The payload carries NO owner PII (no email/user_id).
  */
 import { buildAllDays } from './trips/[id]/days/_merge';
+import { generateOpaqueToken } from './_utils';
 
 /** Canonical note-section keys (match PrintNotes / mapNotes on the client). */
 export const SHARE_SECTIONS = ['flights', 'lodgings', 'reservations', 'pretrip', 'emergency'] as const;
@@ -30,17 +31,9 @@ export function isValidShareToken(token: string): boolean {
   return TOKEN_RE.test(token);
 }
 
-function base64Url(bytes: Uint8Array): string {
-  let bin = '';
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
 /** CSPRNG token (caller stores only its hash). */
 export function generateShareToken(): string {
-  const bytes = new Uint8Array(TOKEN_BYTES);
-  crypto.getRandomValues(bytes);
-  return base64Url(bytes);
+  return generateOpaqueToken(TOKEN_BYTES);
 }
 
 /** SHA-256 hex — the only token form that ever touches the DB. */

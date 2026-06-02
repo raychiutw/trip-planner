@@ -11,6 +11,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../shared/Icon';
 import { apiFetch } from '../../lib/apiClient';
+import { ApiError } from '../../lib/errors';
 import { showToast } from '../../lib/toastBus';
 
 const MAX_BYTES = 512 * 1024;
@@ -47,7 +48,7 @@ export default function ImportTripButton() {
       navigate(`/trips?selected=${encodeURIComponent(res.tripId)}`);
     } catch (err) {
       console.error('[ImportTripButton]', err);
-      const detail = (err as { detail?: string })?.detail;
+      const detail = err instanceof ApiError ? err.detail : undefined;
       showToast(detail || '匯入失敗，請稍後再試', 'error', 3000);
     } finally {
       setBusy(false);

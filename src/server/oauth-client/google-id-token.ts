@@ -85,12 +85,12 @@ export async function verifyGoogleIdToken(
   // 之前 callback/google.ts 雖讀 email_verified 但不 enforce — 攻擊者拿未 verified 的
   // Google 帳號（hostile domain workspace / federated mis-config）若 callback 未阻擋，
   // 可能 squat 既有 email。在 verifier 內擋。
-  const emailVerified = (claims as { email_verified?: unknown }).email_verified;
+  const emailVerified = claims.email_verified;
   if (emailVerified !== true) {
     throw new Error('Google id_token email_verified is not true');
   }
   // OIDC §3.1.3.7 step 8: if azp (authorized party) is present, MUST equal expectedAud。
-  const azp = (claims as { azp?: unknown }).azp;
+  const azp = claims['azp'];
   if (typeof azp === 'string' && azp !== expectedAud) {
     throw new Error(`Google id_token azp mismatch: got "${azp}"`);
   }

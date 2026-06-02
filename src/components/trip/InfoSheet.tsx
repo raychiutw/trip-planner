@@ -181,7 +181,7 @@ export default function InfoSheet({
       panel.removeEventListener('touchmove', onTouchMove);
       panel.removeEventListener('touchend', onTouchEnd);
     };
-  }, [open, handleClose, panelRef]);
+  }, [open, handleClose]);
 
   /* --- Stop propagation on panel click --- */
   const handlePanelClick = useCallback((e: React.MouseEvent) => {

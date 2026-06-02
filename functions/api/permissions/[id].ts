@@ -29,7 +29,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const record = await context.env.DB
     .prepare('SELECT * FROM trip_permissions WHERE id = ?')
     .bind(id)
-    .first<{ id: number; email: string; trip_id: string; role: string }>();
+    .first<{ id: number; trip_id: string; role: string }>();
 
   if (!record) {
     throw new AppError('DATA_NOT_FOUND', '找不到該權限記錄');
@@ -52,7 +52,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     action: 'delete',
     changedBy: auth.email,
     snapshot: JSON.stringify(record),
-    diffJson: JSON.stringify({ email: record.email, role: record.role }),
+    diffJson: JSON.stringify({ role: record.role }),
   });
 
   return json({ ok: true });
@@ -72,7 +72,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const record = await context.env.DB
     .prepare('SELECT * FROM trip_permissions WHERE id = ?')
     .bind(id)
-    .first<{ id: number; email: string; trip_id: string; role: string }>();
+    .first<{ id: number; trip_id: string; role: string }>();
 
   if (!record) {
     throw new AppError('DATA_NOT_FOUND', '找不到該權限記錄');

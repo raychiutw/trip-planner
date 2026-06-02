@@ -141,13 +141,11 @@ export async function updateNotesRow(
   const { env, params } = context;
   const auth = requireAuth(context);
   const tripId = params.id as string;
-  const rowId = parseIntParam((params.rowId ?? params.id) as string);
   // 注意：params.id 是 trip-id (string)，rowId 是 numeric — 從第二個 [rowId] segment
   // CF Pages 把 [rowId] 變 params.rowId。
   if (!params.rowId) throw new AppError('DATA_VALIDATION', 'rowId 缺失');
   const id = parseIntParam(params.rowId as string);
   if (!id) throw new AppError('DATA_VALIDATION', 'rowId 必須是正整數');
-  void rowId; // unused now
 
   if (!(await hasWritePermission(env.DB, auth, tripId, auth.isAdmin))) {
     throw new AppError('PERM_DENIED');

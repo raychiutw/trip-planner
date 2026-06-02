@@ -51,7 +51,7 @@ export default function EmptyState({
       <h2 className="empty-title">{title}</h2>
       {message && <p className="empty-message">{message}</p>}
       {showCta && (
-        ctaHref && !onCta ? (
+        ctaHref ? (
           <a className="empty-cta-btn" href={ctaHref} data-testid={ctaTestId}>
             {ctaLabel}
           </a>

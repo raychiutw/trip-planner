@@ -128,6 +128,6 @@ export class D1Adapter {
       .prepare('DELETE FROM oauth_models WHERE expires_at < ?')
       .bind(Date.now())
       .run();
-    return (result.meta?.changes as number | undefined) ?? 0;
+    return result.meta?.changes ?? 0;
   }
 }

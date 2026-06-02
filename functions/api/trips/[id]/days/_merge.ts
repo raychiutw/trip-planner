@@ -183,11 +183,8 @@ export async function fetchEntryPoisByEntries(
   }
 
   for (const r of poisQuery.results) {
-    let bucket = result.get(r.entry_id);
-    if (!bucket) {
-      bucket = { master: null, alternates: [], stopPois: [], version: '0' };
-      result.set(r.entry_id, bucket);
-    }
+    const bucket = result.get(r.entry_id);
+    if (!bucket) continue; // orphan trip_entry_pois row (FK inconsistency); skip
     const poiInfo: Record<string, unknown> = {
       poi_id: r.poi_id,
       sort_order: r.sort_order,

@@ -82,7 +82,6 @@ export function TripTimePicker({
           hourColRef={hourColRef}
           minuteColRef={minuteColRef}
           onChange={onChange}
-          value={value}
         />
       )}
     </Popover>
@@ -103,7 +102,6 @@ interface TimePickerBodyProps {
   hourColRef: React.RefObject<HTMLDivElement | null>;
   minuteColRef: React.RefObject<HTMLDivElement | null>;
   onChange: (value: string) => void;
-  value: string;
 }
 
 function TimePickerBody({

@@ -552,15 +552,7 @@ export default function TripNotesPage() {
                     onChange={(next) => setData({ ...data, emergencyContacts: next })}
                   />
                 </div>
-              ) : (
-                <div
-                  id={`trip-notes-body-${sec.key}`}
-                  className="tp-notes-section-body is-placeholder"
-                  data-testid={`trip-notes-section-body-${sec.key}`}
-                >
-                  {n === 0 ? '尚未填寫，加項即可。' : `已有 ${n} 項，待後續 PR 接 CRUD UI。`}
-                </div>
-              )}
+              ) : null}
             </div>
           );
         })}

@@ -71,6 +71,7 @@ interface RawTravel {
   type?: string | null;
   desc?: string | null;
   min?: number | null;
+  distanceM?: number | null;
 }
 
 /** Raw POI row joined through trip_entry_pois. */
@@ -178,7 +179,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
         min: travel.min ?? null,
         // v2.23.0 加 travel_distance_m col 時漏接到 mapDay → frontend
         // entry.travel.distanceM 永遠 undefined，TravelPill 顯示不出 km。
-        distanceM: (travel as { distanceM?: number | null }).distanceM ?? null,
+        distanceM: travel.distanceM ?? null,
         text: formatTravelText(travel),
       }
     : null;
