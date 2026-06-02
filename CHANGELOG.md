@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.43.1] - 2026-06-02
+
+### Fixed
+- **行程檢視顯示錯誤行程（私人 clone 導航 bug）** — 從行程列表點選自己的「私人複製行程」（`data_source='cloned'`、published=0）時，行程檢視（`/trips?selected=` sheet 或直接 `/trip/:id`）TitleBar 顯示正確標題，timeline 卻渲染「第一個 published 行程」的內容（標題對、行程錯）。根因：`TripPage` 解析要渲染哪個 trip 時用 permission-filtered `/api/trips`（排除使用者自己的私人 clone）比對，比對不到就 silently fallback 到 defaultTrip。修正：抽出純函式 `resolveTripId` — 明確導航目標（URL / `?selected=` / 舊 `?trip=`）即使不在 `/api/trips` 也信任它，存取權由 `useTrip` 的實際 fetch 驗證（403/404 → error state，絕不 silently 顯示另一個 trip）。QA 2026-06-02 prod 實測抓到。純前端邏輯修正，無 migration / 無 schema 變更。
+
 ## [2.43.0] - 2026-06-02
 
 ### Changed
