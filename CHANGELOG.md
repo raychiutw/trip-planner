@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.45.0] - 2026-06-03
+
+高嚴重度 bug 修復批次 — 承 v2.44.0 品質掃描，對 80 條 risky finding 中的 15 條 HIGH 做對抗式 verify（11 real / 2 partial / 1 disputed FP），逐條重讀實際程式碼 + schema/migrations 確認後修復。15 條 confirmed-real 全修，附 13 條 regression test。tsc 0 error，3217 測試全綠。
+
+### Security
+- **`PATCH /api/dev/apps/:client_id` 權限升級漏洞** — allowed_scopes 沒走 allowlist（POST 有擋、PATCH 漏），自助使用者可把自己的 app 設成 `['admin']`，再用 client_credentials 換到 admin-scoped token → 跨租戶讀寫任意行程。改 export `validateScopes` 並在 PATCH 沿用（非空守衛 + allowlist enforce）。
+- **`/api/route`、`/api/poi-search`、`/api/reports` rate limit 完全失效** — 三個公開端點 `await bumpRateLimit(...)` 後丟掉回傳值（該函式回 `{ok:false}` 不 throw），lock 後仍放行 → 未登入者可無限打付費 Google Routes / Places API（billing DoS）。改捕捉結果，`!ok` 時回 429 + `Retry-After`（對齊 autocomplete）。
+
+### Fixed
+- **共編 invitation accept 在 prod 100% 失敗** — `invitation-accept.ts` INSERT 仍列 migration 0047 已 DROP 的 `email` 欄 → D1 throw → 整個 batch 失敗（簽到時靜默吞掉）。改 `INSERT ... (trip_id, role, user_id)`。
+- **「移動景點到其他天」在 prod 100% 不動** — `EntryActionPage` 移動送 camelCase `dayId`，backend `ALLOWED_FIELDS` 要 snake_case `day_id`（camelCase 家族）。
+- **Google search cache 當天永不過期** — `maps/cache.ts` `expires_at` 存 ISO（`T`/`.SSSZ`），與 SQLite `datetime('now')` 做字串比較時恆大 → cache 命中過期列、cleanup 也掃不掉。改存 SQLite-native `YYYY-MM-DD HH:MM:SS`。
+- **所有 TS cron / api-server 的 Telegram 警報靜默不發** — `cron-shared.ts` 只讀 `TELEGRAM_BOT_TOKEN`，`.env.local` 只有 `TELEGRAM_BOT_HOME_TOKEN`。加 sibling fallback。
+- **admin rollback 撞無 `updated_at` 欄的表會 SQL error** — `update` rollback 無條件加 `updated_at = CURRENT_TIMESTAMP`，但 `trip_permissions` / `poi_relations` / `trip_requests` 無此欄。改由 `TABLE_COLUMNS`（檔案自有 schema allowlist）推導，drift-proof。
+- **admin `insert→delete` rollback 不檢查 DELETE 是否命中** — 補 `meta.changes === 0 → DATA_NOT_FOUND`，不再寫 phantom audit。
+- **daily-report email「行程修改統計」永遠「查詢失敗」** — `daily-report.js` 查不存在的 `requests` 表，改 `trip_requests`。
+- **Explore 存的 POI 沒存 `place_id`** — `findOrCreatePoi` / `batchFindOrCreatePois` INSERT + COALESCE + caller（find-or-create endpoint、ExplorePage）補 `place_id`，新 POI 可立即 enrich（不必等 30 天 backfill）。
+- **行程筆記 accordion `<button>` 內嵌互動 `<button>`（invalid HTML / a11y）** — 外層改 `<div role="button" tabIndex=0>` + Enter/Space 鍵盤處理 + `:focus-visible` ring。
+- **`PATCH /entries/:eid` OCC catch 吞掉 AppError 變 503** — 補 canonical `if (err instanceof AppError) throw err;`（目前 unreachable，防未來 refactor）。
+- **`PUT /days/:num` RETURNING id fallback 0** — 補 phantom-id 守衛（目前 unreachable，防未來 refactor）。
+
 ## [2.43.1] - 2026-06-02
 
 ### Fixed
