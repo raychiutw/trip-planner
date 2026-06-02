@@ -283,7 +283,13 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const entryIds: number[] = [];
     for (let i = 0; i < timeline.length; i++) {
       const rows = batch1Results[ENTRIES_START + i]!.results as { id: number }[];
-      entryIds.push(rows[0]?.id ?? 0);
+      const insertedId = rows[0]?.id;
+      if (typeof insertedId !== 'number' || insertedId <= 0) {
+        // Guard against a phantom entryId=0 silently flowing into batch2 /
+        // syncEntryMaster. Caught by the handler's try/catch → DATA_SAVE_FAILED.
+        throw new AppError('SYS_DB_ERROR', `trip_entries INSERT RETURNING id missing at index ${i}`);
+      }
+      entryIds.push(insertedId);
     }
 
     // Collect all POI data for batch find-or-create (eliminates N+1 sequential queries)

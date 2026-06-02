@@ -132,7 +132,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       throw new AppError('DATA_VALIDATION', `Invalid column(s) in diff: ${invalidDiffCols.join(', ')}`);
     }
 
-    const setClauses = [...revertFields.map(f => `${f} = ?`), 'updated_at = CURRENT_TIMESTAMP'].join(', ');
+    // Only bump updated_at on tables that actually have the column. poi_relations,
+    // trip_requests and trip_permissions have none — adding it would throw
+    // "no such column: updated_at" at prepare() time on an admin rollback.
+    // Derive from TABLE_COLUMNS (the file's own schema allowlist) so this can
+    // never drift out of sync with the column set above.
+    const withUpdatedAt = TABLE_COLUMNS[safeTable].includes('updated_at');
+    const setClauses = [
+      ...revertFields.map(f => `${f} = ?`),
+      ...(withUpdatedAt ? ['updated_at = CURRENT_TIMESTAMP'] : []),
+    ].join(', ');
     const values = [...revertFields.map(f => diff[f]?.old ?? null), record_id];
 
     const result = await db
@@ -161,7 +170,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const oldRow = await db.prepare(`SELECT * FROM ${safeTable} WHERE id = ?`).bind(record_id).first() as Record<string, unknown> | null;
 
-    await db.prepare(`DELETE FROM ${safeTable} WHERE id = ?`).bind(record_id).run();
+    const delResult = await db.prepare(`DELETE FROM ${safeTable} WHERE id = ?`).bind(record_id).run();
+    if (delResult.meta.changes === 0) {
+      // Nothing deleted → record already gone; don't write a phantom delete-audit.
+      throw new AppError('DATA_NOT_FOUND', '找不到要回滾的記錄（insert→delete）');
+    }
 
     await logAudit(db, {
       tripId: id,

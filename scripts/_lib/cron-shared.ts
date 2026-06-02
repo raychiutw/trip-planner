@@ -157,7 +157,7 @@ export function makeApiClient(env: CronEnv) {
 let _telegramEnvWarned = false;
 /** Telegram alert (best-effort). */
 export async function alertTelegram(msg: string): Promise<void> {
-  const tok = process.env.TELEGRAM_BOT_TOKEN || '';
+  const tok = process.env.TELEGRAM_BOT_HOME_TOKEN || process.env.TELEGRAM_BOT_TOKEN || '';
   const chat = process.env.TELEGRAM_CHAT_ID || '';
   if (!tok || !chat) {
     if (!_telegramEnvWarned) {

@@ -39,7 +39,7 @@ async function queryD1Requests() {
     "COUNT(*) as total, " +
     "SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) as open_count, " +
     "SUM(CASE WHEN status IN ('received','processing','completed') THEN 1 ELSE 0 END) as closed_count " +
-    "FROM requests WHERE created_at >= datetime('now', '-1 day')"
+    "FROM trip_requests WHERE created_at >= datetime('now', '-1 day')"
   );
   return rows[0];
 }

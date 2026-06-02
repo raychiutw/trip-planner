@@ -78,7 +78,7 @@ function generateClientSecret(): string {
  * Allowlist whitelist：admin / companion 必須 ops 手動 INSERT D1 才能擁有。
  */
 const ALLOWED_USER_SCOPES = new Set(['openid', 'profile', 'email', 'offline_access']);
-function validateScopes(scopes: unknown): string[] {
+export function validateScopes(scopes: unknown): string[] {
   if (!Array.isArray(scopes)) return DEFAULT_SCOPES;
   if (scopes.length === 0) return DEFAULT_SCOPES;
   const cleaned = scopes

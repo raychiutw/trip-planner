@@ -19,6 +19,7 @@ import { parseJsonBody, rawJson } from '../../_utils';
 import { requireSessionUser } from '../../_session';
 import { AppError } from '../../_errors';
 import { validateRedirectUris } from '../../../../src/server/oauth-server/validate-redirect-uris';
+import { validateScopes } from '../apps';
 import type { Env } from '../../_types';
 
 interface ClientAppRow {
@@ -135,15 +136,15 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     values.push(JSON.stringify(uris));
   }
   if (body.allowed_scopes !== undefined) {
+    // Non-empty guard FIRST (validateScopes would silently fall back to
+    // DEFAULT_SCOPES on []), then enforce the user-self-service allowlist —
+    // same gate as POST. Closes a privilege-escalation hole: PATCH previously
+    // accepted any string (e.g. 'admin'), letting an app owner mint an
+    // admin-scoped client_credentials token.
     if (!Array.isArray(body.allowed_scopes) || body.allowed_scopes.length === 0) {
       throw new AppError('DATA_VALIDATION', 'allowed_scopes 必須是非空陣列');
     }
-    const cleaned = body.allowed_scopes
-      .filter((s): s is string => typeof s === 'string' && s.length > 0)
-      .map((s) => s.trim());
-    if (cleaned.length === 0) {
-      throw new AppError('DATA_VALIDATION', 'allowed_scopes 必須包含有效字串');
-    }
+    const cleaned = validateScopes(body.allowed_scopes);
     updates.push('allowed_scopes = ?');
     values.push(JSON.stringify(cleaned));
   }

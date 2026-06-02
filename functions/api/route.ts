@@ -15,7 +15,7 @@
  *   - Google upstream timeout / 5xx / parse error → 502 MAPS_UPSTREAM_FAILED
  */
 
-import { AppError } from './_errors';
+import { AppError, buildRateLimitResponse } from './_errors';
 import { assertGoogleAvailable } from './_maps_lock';
 import { bumpRateLimit, clientIp, RATE_LIMITS } from './_rate_limit';
 import { computeRoute } from '../../src/server/maps/google-client';
@@ -79,7 +79,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // v2.33.42 security audit: per-IP rate limit — public anonymous endpoint
   // 直接打 Google Routes API ($5/1000)，無限制會被 attacker 拉爆 quota。
   const ip = clientIp(context.request);
-  await bumpRateLimit(context.env.DB, `route:ip:${ip}`, RATE_LIMITS.ROUTE_PER_IP);
+  const rl = await bumpRateLimit(context.env.DB, `route:ip:${ip}`, RATE_LIMITS.ROUTE_PER_IP);
+  if (!rl.ok) {
+    return buildRateLimitResponse(rl.retryAfter ?? 60, { error: { code: 'RATE_LIMITED', message: '請求過於頻繁，請稍後再試' } });
+  }
 
   const apiKey = context.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
