@@ -190,6 +190,16 @@ const SCOPED_STYLES = `
 
 function formatDateTime(iso: string): { time: string; date: string } {
   if (!iso) return { time: '--:--', date: '' };
+  // Date-only string: anchor at local noon so getDate()/getDay() don't shift
+  // across the midnight boundary in non-UTC timezones (new Date(iso) → UTC midnight).
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const dt = new Date(iso + 'T12:00');
+    if (Number.isNaN(dt.getTime())) return { time: '--:--', date: '' };
+    const m = dt.getMonth() + 1;
+    const d = dt.getDate();
+    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    return { time: '--:--', date: `${m}/${d} (${weekdays[dt.getDay()]})` };
+  }
   // Accept "YYYY-MM-DDTHH:MM" or just "HH:MM"
   const dt = new Date(iso);
   if (Number.isNaN(dt.getTime())) {

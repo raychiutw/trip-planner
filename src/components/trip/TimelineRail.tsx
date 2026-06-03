@@ -921,8 +921,8 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
   const handleDragEnd = useCallback(async (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    const oldIdx = orderedEvents.findIndex((ev) => (ev.id ?? `idx-${ev.id}`) === active.id);
-    const newIdx = orderedEvents.findIndex((ev) => (ev.id ?? `idx-${ev.id}`) === over.id);
+    const oldIdx = orderedEvents.findIndex((ev, i) => (ev.id ?? `idx-${i}`) === active.id);
+    const newIdx = orderedEvents.findIndex((ev, i) => (ev.id ?? `idx-${i}`) === over.id);
     if (oldIdx < 0 || newIdx < 0) return;
     const reordered = arrayMove(orderedEvents, oldIdx, newIdx);
     const newIds = reordered.map((ev) => ev.id).filter((id): id is number => id != null);

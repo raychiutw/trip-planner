@@ -163,7 +163,7 @@ export default function ConsentPage() {
       app_logo_url: null,
       homepage_url: null,
     });
-  }, [clientId]);
+  }, [clientId, redirectUri]);
 
   if (error) {
     return (

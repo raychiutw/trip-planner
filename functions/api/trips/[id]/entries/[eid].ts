@@ -190,6 +190,10 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
         .first();
     }
   } catch (err: unknown) {
+    // Re-throw our own AppErrors (e.g. STALE_ENTRY / DATA_NOT_FOUND raised inside
+    // the try) so they keep their intended status instead of being swallowed and
+    // remapped to 503. Canonical guard, mirrors notes/_shared.ts.
+    if (err instanceof AppError) throw err;
     // v2.33.43 security audit: re-classify constraint failures to 409 (was
     // silently swallowed as 503，UX 與 client retry 邏輯都受影響).
     const msg = err instanceof Error ? err.message : String(err);

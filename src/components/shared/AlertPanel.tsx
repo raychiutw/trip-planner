@@ -102,15 +102,15 @@ const SCOPED_STYLES = `
 
 /* Warning variant — amber border */
 .tp-alert-panel.is-warning {
-  background: rgba(244, 140, 6, 0.08);
-  border-color: rgb(244, 140, 6);
-  color: rgb(184, 100, 4);
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning);
+  color: color-mix(in srgb, var(--color-warning) 70%, black);
 }
 .tp-alert-panel.is-warning .tp-alert-panel-icon {
-  background: rgb(244, 140, 6);
+  background: var(--color-warning);
   color: var(--color-accent-foreground);
 }
-.tp-alert-panel.is-warning .tp-alert-panel-title { color: rgb(184, 100, 4); }
+.tp-alert-panel.is-warning .tp-alert-panel-title { color: color-mix(in srgb, var(--color-warning) 70%, black); }
 
 /* Info variant — accent (default) */
 .tp-alert-panel.is-info {

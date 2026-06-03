@@ -56,6 +56,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // sort_order：指定則用指定值，否則 append 到最後
   let sortOrder: number;
   if (typeof body.sort_order === 'number') {
+    if (!Number.isInteger(body.sort_order) || body.sort_order < 0) {
+      throw new AppError('DATA_VALIDATION', 'sort_order 必須為非負整數');
+    }
     sortOrder = body.sort_order;
   } else {
     const max = await db
@@ -97,7 +100,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // migration 0078: trip_entries.note DROPPED — INSERT 不再帶 note；entry-level 備註
     // 改透過 syncEntryMaster 寫進新 master 的 per-POI note（下方）。
     row = await db
-      .prepare(`INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+      .prepare(`INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, entry_pois_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1) RETURNING *`)
       .bind(
         dayId, sortOrder,
         startTime,

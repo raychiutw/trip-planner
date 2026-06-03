@@ -28,6 +28,7 @@ const VALID_CLIENT_TYPES = ['public', 'confidential'] as const;
 const DEFAULT_SCOPES = ['openid', 'profile', 'email'];
 const APP_NAME_MIN = 2;
 const APP_NAME_MAX = 80;
+const APP_DESCRIPTION_MAX = 500;
 
 interface CreateAppBody {
   app_name?: string;
@@ -78,7 +79,7 @@ function generateClientSecret(): string {
  * Allowlist whitelist：admin / companion 必須 ops 手動 INSERT D1 才能擁有。
  */
 const ALLOWED_USER_SCOPES = new Set(['openid', 'profile', 'email', 'offline_access']);
-function validateScopes(scopes: unknown): string[] {
+export function validateScopes(scopes: unknown): string[] {
   if (!Array.isArray(scopes)) return DEFAULT_SCOPES;
   if (scopes.length === 0) return DEFAULT_SCOPES;
   const cleaned = scopes
@@ -94,6 +95,28 @@ function validateScopes(scopes: unknown): string[] {
     }
   }
   return cleaned;
+}
+
+/**
+ * homepage_url 驗證：mirror validateRedirectUris 的 protocol policy —
+ * https only，localhost / 127.0.0.1 允許 http（dev compat）。
+ * 空值回 null（欄位可選）。
+ */
+export function validateHomepageUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new AppError('DATA_VALIDATION', 'homepage_url 必須是 https URL');
+  }
+  const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+  if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && isLocalhost)) {
+    throw new AppError('DATA_VALIDATION', 'homepage_url 必須是 https URL');
+  }
+  return trimmed;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -112,6 +135,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const redirectUris = validateRedirectUris(body.redirect_uris);
   const allowedScopes = validateScopes(body.allowed_scopes);
+
+  const appDescription = (body.app_description ?? '').trim();
+  if (appDescription.length > APP_DESCRIPTION_MAX) {
+    throw new AppError('DATA_VALIDATION', `app_description 不可超過 ${APP_DESCRIPTION_MAX} 字`);
+  }
+
+  const homepageUrl = validateHomepageUrl(body.homepage_url);
 
   const clientId = generateClientId();
   let clientSecret: string | null = null;
@@ -133,8 +163,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       clientSecretHash,
       clientType,
       appName,
-      body.app_description ?? null,
-      body.homepage_url ?? null,
+      appDescription || null,
+      homepageUrl,
       JSON.stringify(redirectUris),
       JSON.stringify(allowedScopes),
       session.uid,
@@ -156,6 +186,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   );
 };
 
+/**
+ * Hardening: developer dashboard degrades gracefully if a stored
+ * redirect_uris / allowed_scopes JSON column is corrupt — one bad row falls
+ * back to [] instead of 500-ing the whole list.
+ */
+function safeParseArray(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return [];
+  }
+}
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const session = await requireSessionUser(context.request, context.env);
 
@@ -172,12 +216,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const apps = (result.results ?? []).map((row) => ({
     ...row,
-    redirect_uris: typeof row.redirect_uris === 'string'
-      ? JSON.parse(row.redirect_uris) as unknown
-      : row.redirect_uris,
-    allowed_scopes: typeof row.allowed_scopes === 'string'
-      ? JSON.parse(row.allowed_scopes) as unknown
-      : row.allowed_scopes,
+    redirect_uris: safeParseArray(row.redirect_uris),
+    allowed_scopes: safeParseArray(row.allowed_scopes),
   }));
 
   return rawJson({ apps });

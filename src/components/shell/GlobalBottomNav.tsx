@@ -28,9 +28,12 @@ interface NavItem {
 
 // Section 5 (E4)：「地圖」 tab — `/map` exact + `/trip/:id/map` 也視為 active
 // （in-trip map view），但 `/manage/map-xxx` 不誤觸（純文字 prefix 不夠精確）
-const MAP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+\/map$/];
-// 「行程」 tab — /trips + /trip/:id 都 active，但 /trip/:id/map 視為地圖不算行程
-const TRIPS_ACTIVE_PATTERNS = [/^\/trip\/[^/]+$/];
+// Canonical patterns mirror DesktopSidebar:55-56 so mobile + desktop light the
+// same tab. MAP owns /trip/:id/map AND /trip/:id/stop/:id/map; 行程 owns /trip/:id
+// and every non-map sub-route (edit/notes/health/...).
+const MAP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+\/map\/?$/, /^\/trip\/[^/]+\/stop\/[^/]+\/map\/?$/];
+// 「行程」 tab — /trips + /trip/:id + 子路由 active，但 /trip/:id/map 與 stop/:id/map 算地圖
+const TRIPS_ACTIVE_PATTERNS = [/^\/trip\/[^/]+(?:\/?$|\/(?!(?:map|stop\/[^/]+\/map)\/?$).*)/];
 // poi-favorites-rename:「收藏」 tab — /favorites primary + /favorites/* 子路由 + /explore (secondary entry)
 const FAVORITES_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/favorites\//];
 

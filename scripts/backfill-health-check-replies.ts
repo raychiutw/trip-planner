@@ -29,6 +29,10 @@ interface RequestRow {
   reply: string | null;
 }
 
+// Mirror of functions/api/trips.ts TRIPID_RE — trip_id is interpolated into
+// shell-built SQL below, so reject anything outside the canonical id charset.
+const TRIPID_RE = /^[a-z0-9-]+$/;
+
 interface CliFlags {
   apply: boolean;
   dryRun: boolean;
@@ -140,6 +144,10 @@ function main(): void {
     const findings = parseFindings(row.reply);
     if (findings === null) {
       skipped.push({ id: row.id, reason: 'reply 不是 valid JSON array' });
+      continue;
+    }
+    if (!TRIPID_RE.test(row.trip_id)) {
+      skipped.push({ id: row.id, reason: `trip_id 不合法（${row.trip_id}）— 跳過` });
       continue;
     }
     const newReply = buildHealthCheckSummary(findings, row.trip_id);

@@ -86,10 +86,7 @@ function resolveAppleUrl(loc: MapLocation): string {
 }
 
 export const MapLinks = memo(function MapLinks({ location: loc, inline = false }: MapLinksProps) {
-  const chipCls = clsx(
-    'tp-map-link',
-    inline ? 'tp-map-link-inline' : 'tp-map-link-block',
-  );
+  const chipCls = clsx('tp-map-link', !inline && 'tp-map-link-block');
   const googleUrl = resolveGoogleUrl(loc);
   const appleUrl = resolveAppleUrl(loc);
   const naverUrl = escUrl(loc.naverQuery || '');

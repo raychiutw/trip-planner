@@ -63,7 +63,7 @@ if (!CF_TOKEN || !CF_ACCOUNT || !D1_DB) {
 }
 
 // v2.33.29: 改用 shared scripts/lib/d1-client (returns rows for SELECT).
-const { queryD1: execD1 } = require('./lib/d1-client');
+const { queryD1, execD1 } = require('./lib/d1-client');
 
 /** Generate base32 secret (matches /api/dev/apps tps_ format) */
 function generateClientSecret() {
@@ -104,7 +104,7 @@ async function hashPassword(plain) {
 
 (async function main() {
   // Look up admin user id
-  const userRows = await execD1('SELECT id FROM users WHERE email = ? LIMIT 1', [ADMIN_EMAIL]);
+  const userRows = await queryD1('SELECT id FROM users WHERE email = ? LIMIT 1', [ADMIN_EMAIL]);
   if (userRows.length === 0) {
     console.error(
       `Admin user not found in users table for email "${ADMIN_EMAIL}". ` +
@@ -115,7 +115,7 @@ async function hashPassword(plain) {
   const ownerUserId = userRows[0].id;
 
   // Check if client already exists
-  const existing = await execD1('SELECT client_id, status FROM client_apps WHERE client_id = ?', [
+  const existing = await queryD1('SELECT client_id, status FROM client_apps WHERE client_id = ?', [
     CLIENT_ID,
   ]);
   if (existing.length > 0) {

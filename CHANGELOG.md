@@ -3,6 +3,48 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.45.0] - 2026-06-03
+
+高嚴重度 bug 修復批次 — 承 v2.44.0 品質掃描，對 80 條 risky finding 中的 15 條 HIGH 做對抗式 verify（11 real / 2 partial / 1 disputed FP），逐條重讀實際程式碼 + schema/migrations 確認後修復。15 條 confirmed-real 全修，附 13 條 regression test。tsc 0 error，3217 測試全綠。
+
+### Security
+- **`PATCH /api/dev/apps/:client_id` 權限升級漏洞** — allowed_scopes 沒走 allowlist（POST 有擋、PATCH 漏），自助使用者可把自己的 app 設成 `['admin']`，再用 client_credentials 換到 admin-scoped token → 跨租戶讀寫任意行程。改 export `validateScopes` 並在 PATCH 沿用（非空守衛 + allowlist enforce）。
+- **`/api/route`、`/api/poi-search`、`/api/reports` rate limit 完全失效** — 三個公開端點 `await bumpRateLimit(...)` 後丟掉回傳值（該函式回 `{ok:false}` 不 throw），lock 後仍放行 → 未登入者可無限打付費 Google Routes / Places API（billing DoS）。改捕捉結果，`!ok` 時回 429 + `Retry-After`（對齊 autocomplete）。
+
+### Fixed
+- **共編 invitation accept 在 prod 100% 失敗** — `invitation-accept.ts` INSERT 仍列 migration 0047 已 DROP 的 `email` 欄 → D1 throw → 整個 batch 失敗（簽到時靜默吞掉）。改 `INSERT ... (trip_id, role, user_id)`。
+- **「移動景點到其他天」在 prod 100% 不動** — `EntryActionPage` 移動送 camelCase `dayId`，backend `ALLOWED_FIELDS` 要 snake_case `day_id`（camelCase 家族）。
+- **Google search cache 當天永不過期** — `maps/cache.ts` `expires_at` 存 ISO（`T`/`.SSSZ`），與 SQLite `datetime('now')` 做字串比較時恆大 → cache 命中過期列、cleanup 也掃不掉。改存 SQLite-native `YYYY-MM-DD HH:MM:SS`。
+- **所有 TS cron / api-server 的 Telegram 警報靜默不發** — `cron-shared.ts` 只讀 `TELEGRAM_BOT_TOKEN`，`.env.local` 只有 `TELEGRAM_BOT_HOME_TOKEN`。加 sibling fallback。
+- **admin rollback 撞無 `updated_at` 欄的表會 SQL error** — `update` rollback 無條件加 `updated_at = CURRENT_TIMESTAMP`，但 `trip_permissions` / `poi_relations` / `trip_requests` 無此欄。改由 `TABLE_COLUMNS`（檔案自有 schema allowlist）推導，drift-proof。
+- **admin `insert→delete` rollback 不檢查 DELETE 是否命中** — 補 `meta.changes === 0 → DATA_NOT_FOUND`，不再寫 phantom audit。
+- **daily-report email「行程修改統計」永遠「查詢失敗」** — `daily-report.js` 查不存在的 `requests` 表，改 `trip_requests`。
+- **Explore 存的 POI 沒存 `place_id`** — `findOrCreatePoi` / `batchFindOrCreatePois` INSERT + COALESCE + caller（find-or-create endpoint、ExplorePage）補 `place_id`，新 POI 可立即 enrich（不必等 30 天 backfill）。
+- **行程筆記 accordion `<button>` 內嵌互動 `<button>`（invalid HTML / a11y）** — 外層改 `<div role="button" tabIndex=0>` + Enter/Space 鍵盤處理 + `:focus-visible` ring。
+- **`PATCH /entries/:eid` OCC catch 吞掉 AppError 變 503** — 補 canonical `if (err instanceof AppError) throw err;`（目前 unreachable，防未來 refactor）。
+- **`PUT /days/:num` RETURNING id fallback 0** — 補 phantom-id 守衛（目前 unreachable，防未來 refactor）。
+
+#### Medium 批次（同輪 verify 的 medium tier，8 條）
+- **手機底部導覽**：`GlobalBottomNav` 的「行程」tab 只在 `/trip/:id` 精確匹配 active → 所有子路由（編輯/筆記/健檢…）底部無 active tab。改用 `DesktopSidebar` 的 canonical pattern（含 `MAP_ACTIVE_PATTERNS` 補 `stop/:id/map`），手機與桌機一致。
+- **`PATCH /api/dev/apps/:client_id`** 送 `{app_name: null}` 會 `null.trim()` TypeError → 改 `typeof === 'string'` 守衛。
+- **分享頁 OG title** 對 destination-named 行程（`title=''`）顯示破標題 → `title || name || '行程'` fallback（對齊 `/s/[token]`）。
+- **`ShareLinkModal`** 到期日 pre-fill 用 UTC → 非 UTC 時區差一天，改 local date getters。
+- **`daily-check`** stuck-cutoff 把 D1 naive datetime 當 local 解析 → 補 UTC normalize。
+- **`requests/[id]` AI 筆記 dedup** SELECT 漏 `ai_source` 過濾 → lodging-tips 與 tips prompt 互相污染，補 `AND ai_source = ?`。
+- **`PATCH /entries/batch`** `start_time`/`end_time` 接受任意字串 → 補 `TIME_RE`（HH:MM）驗證。
+- **匯入目的地上限**：import 容許 50 但 PUT 編輯上限 30 → 匯入 31-50 個目的地的行程變不可編輯。`MAX_DESTINATIONS` 對齊為 30。
+
+#### 其餘 medium + low（同輪 verify 的剩餘 confirmed-real，~32 條）
+- **安全**：`backfill-poi-addresses` 改 direct argv（拔 `sh -c` shell injection）；`dev/apps` POST 補 `homepage_url` https 驗證 + `app_description` 長度上限；`audit` 端點 `request_id` 補正整數驗證（NaN 不再進 D1）；`docs/[type]` PUT 補 body byte cap。
+- **race / OCC**：`oauth/callback/google` 首次登入並發 UNIQUE race 補 recovery；`trip_segments` PATCH「缺 coords / 無 API key」分支補 `version + 1`（OCC 一致）+ 最終 SELECT null guard；`_poi` batch re-fetch 補 `SYS_DB_ERROR` guard（取代裸 TypeError）。
+- **可靠性 / 韌性**：`_gcp_monitoring` 兩個 outbound fetch 補 10s AbortController timeout（admin quota endpoint 不再可能無限 stall）；`poi-favorites` add-to-trip sort_order 用 null append sentinel（gapped sequence 不再漏 shift）；`days/:num/entries` POST 回正確 `entry_pois_version` + 驗 `sort_order`。
+- **時區 / 顯示**：`FlightsSection` date-only 解析改 noon-anchor（非 UTC 時區不再差一天）；`poiHours` 24h 週排程格式 + 休息日 condense；`AlertPanel` is-warning 改 design token（dark mode 終於自適應；light mode 顏色微調）。
+- **正確性 / 清理**：`reports` dedup 用 normalize 後的 url；`shares` / `shares/[shareId]` 補 RETURNING null guard；`recompute-travel` 把 `Date.now()` hoist 出迴圈；`notes/_shared` 重複 id 回 400（非 403）；`validate-redirect-uris` 認 IPv6 `::1` localhost；`normalize-address` 拔不可達 regex；`ConsentPage` 補 useEffect 依賴；`MapLinks` 補 `tp-map-link-inline` class；`cron-shared` 拆 Telegram 兩種失敗的 warn flag；`google-poi-initial-backfill` `EnrichResult` 型別對齊 camelCase。
+- _跳過_：`AlertPanel` 之外 2 條純 dead-code（`DaySection` 未用 prop、`maps/region` dead export + 其 test）revert 不做（cascade churn > 價值）；`docs/[type]` D1 batch>100 判 false-positive 不改。
+
+#### partial hardening（17 條 real-but-unreachable，做掉 13）
+防未來 refactor 的 1-行硬化：`TimelineRail` drag fallback id 用 positional index（null-id entry 不再碰撞）；`notes/_shared` 非 OCC UPDATE row 消失補 404；`days/:num` PUT 回 DB read-back 的 `dayVersion`（非本地猜值）；`oauth/userinfo` `created_at` 補 `Z`；`account/sessions` 改用 canonical `parseUtcDate`；`account/connected-apps` + `dev/apps` GET 的 `JSON.parse` 加 guard（壞 row degrade 不 500）；`invitations/accept` 補 `waitUntil`；`backfill-health-check-replies` 補 `TRIPID_RE` guard（shell injection）；`google-quota-monitor` fatal handler await alert；`trips` `nullableInt`→`nullableNum`（float 欄正名）；`ChatPage` `send` 補 `user` 依賴；`hkdf` cache key 用全 secret。_跳過 4 條_：`routes.ts` dead export（suggestion wrong-headed）、`PoiFavoritesPage` page-clamp（naive 修法會把使用者拉回第 1 頁）、`migrate-entries-to-pois`（已執行的一次性 script）、`invitation-token`（純 refactor）。
+
 ## [2.43.1] - 2026-06-02
 
 ### Fixed

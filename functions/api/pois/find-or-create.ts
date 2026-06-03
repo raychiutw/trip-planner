@@ -34,6 +34,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     category: body.category ?? null,
     source: body.source ?? 'user-explore',
     country: body.country ?? null,
+    place_id: typeof body.place_id === 'string' ? body.place_id : null,
   };
 
   const poiId = await findOrCreatePoi(context.env.DB, data);

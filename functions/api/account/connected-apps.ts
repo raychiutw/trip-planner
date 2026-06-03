@@ -52,19 +52,27 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .bind(session.uid, Date.now())
     .all<ConnectedAppRow>();
 
-  const apps = (result.results ?? []).map((row) => {
-    const payload = JSON.parse(row.consent_payload) as ConsentPayloadShape;
-    return {
-      client_id: row.client_id,
-      app_name: row.app_name,
-      app_description: row.app_description,
-      app_logo_url: row.app_logo_url,
-      homepage_url: row.homepage_url,
-      status: row.status,
-      scopes: payload.scopes,
-      granted_at: payload.grantedAt,
-    };
-  });
+  const apps = (result.results ?? [])
+    .map((row) => {
+      let payload: ConsentPayloadShape;
+      try {
+        payload = JSON.parse(row.consent_payload) as ConsentPayloadShape;
+      } catch {
+        // Corrupt consent_payload — skip this row rather than 500 the whole list.
+        return null;
+      }
+      return {
+        client_id: row.client_id,
+        app_name: row.app_name,
+        app_description: row.app_description,
+        app_logo_url: row.app_logo_url,
+        homepage_url: row.homepage_url,
+        status: row.status,
+        scopes: payload.scopes,
+        granted_at: payload.grantedAt,
+      };
+    })
+    .filter(Boolean);
 
   return rawJson({ apps });
 };

@@ -113,9 +113,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   const msg = err instanceof Error ? err.message : String(err);
   console.error('FATAL:', msg);
-  alertTelegram(`🚨 google-quota-monitor FAILED: ${msg}`);
+  await alertTelegram(`🚨 google-quota-monitor FAILED: ${msg}`);
   process.exit(1);
 });

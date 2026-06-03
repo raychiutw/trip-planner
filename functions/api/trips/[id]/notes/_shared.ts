@@ -210,6 +210,8 @@ export async function updateNotesRow(
     throw err;
   }
 
+  if (!row) throw new AppError('DATA_NOT_FOUND');
+
   // PR26: audit log for update
   if (row) {
     const newFields = Object.fromEntries(update.fields.map((f) => [f, body[f]]));
@@ -301,6 +303,8 @@ export async function reorderNotesRows(
 
   // 一次 SELECT 確認所有 id 都屬於該 trip（防越權）
   const ids = items.map((it) => it.id!);
+  const idSet = new Set(ids);
+  if (idSet.size !== ids.length) throw new AppError('DATA_VALIDATION', 'items 不可包含重複 id');
   const placeholders = ids.map(() => '?').join(', ');
   const { results: existing } = await env.DB
     .prepare(`SELECT id FROM ${table} WHERE trip_id = ? AND id IN (${placeholders})`)

@@ -270,7 +270,7 @@ export default function ShareLinkModal({ tripId, open, onClose }: { tripId: stri
     setEdit({
       sections: new Set(parseSections(l.visibleSections)),
       expiryKey: l.expiresAt == null ? 'never' : 'custom',
-      customDate: l.expiresAt == null ? '' : new Date(l.expiresAt).toISOString().slice(0, 10),
+      customDate: l.expiresAt == null ? '' : (() => { const d = new Date(l.expiresAt); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(), // local date, not UTC (off-by-one in non-UTC tz)
       anon: l.anonymous === 1,
       label: l.label ?? '',
     });

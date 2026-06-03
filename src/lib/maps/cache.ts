@@ -64,7 +64,10 @@ export async function setCachedSearch(
   results: PlacesSearchTextResult[],
 ): Promise<void> {
   const key = await buildKey(query, region);
-  const expiresAt = new Date(Date.now() + TTL_HOURS * 3600_000).toISOString();
+  // SQLite-native 'YYYY-MM-DD HH:MM:SS' (not ISO) — the read/cleanup queries
+  // compare against datetime('now'); an ISO 'T'/'.SSSZ' string sorts lexically
+  // greater than the space-format, so ISO rows would never expire intra-day.
+  const expiresAt = new Date(Date.now() + TTL_HOURS * 3600_000).toISOString().replace('T', ' ').slice(0, 19);
   await db
     .prepare(
       `INSERT INTO pois_search_cache (query_hash, query_text, region, results_json, expires_at)

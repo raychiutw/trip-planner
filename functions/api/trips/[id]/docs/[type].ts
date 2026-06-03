@@ -1,10 +1,15 @@
 import { logAudit } from '../../../_audit';
 import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { json, parseJsonBody, getAuth } from '../../../_utils';
+import { json, getAuth } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 const VALID_TYPES = new Set(['flights', 'checklist', 'backup', 'suggestions', 'emergency']);
+
+// PUT body cap: doc content is attacker-controlled. Read the real body size
+// (never trust Content-Length), cap, then parse. 256KB fits 200 entries of
+// legitimate doc text with ample headroom. Mirrors trips/import.ts.
+const MAX_DOCS_BYTES = 256 * 1024;
 
 /** Safely extract a string from a value that might be an object with .text/.label property */
 function toStr(v: unknown): string {
@@ -67,12 +72,23 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
-  const body = await parseJsonBody<{
+  // Enforce the REAL body size (Content-Length is attacker-controllable / may be
+  // absent) — read the text, cap, then parse. Preserve the existing 400 contract.
+  const rawText = await context.request.text();
+  if (rawText.length > MAX_DOCS_BYTES) {
+    throw new AppError('DATA_VALIDATION', `文件內容過大（上限 ${Math.floor(MAX_DOCS_BYTES / 1024)}KB）`);
+  }
+  let body: {
     title?: string;
     entries?: { sort_order?: number; section?: string; title?: string; content?: string }[];
     // 向舊格式相容：如果 body 有 content 字串，自動轉換
     content?: string;
-  }>(context.request);
+  };
+  try {
+    body = JSON.parse(rawText);
+  } catch {
+    throw new AppError('DATA_VALIDATION', 'JSON 格式無效');
+  }
 
   let docTitle = body.title ?? '';
   let entries = body.entries ?? [];
