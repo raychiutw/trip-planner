@@ -379,9 +379,11 @@ async function applyNotesGenerationCompletion(
     const aiSource = PRETRIP_AI_SOURCES[docType];
     const existing = await db
       .prepare(
-        `SELECT LOWER(TRIM(title)) AS k FROM trip_pretrip_notes WHERE trip_id = ?`,
+        // Scope dedup to the same ai_source — lodging-tips and tips are distinct
+        // prompts; a trip-wide title set cross-contaminates them.
+        `SELECT LOWER(TRIM(title)) AS k FROM trip_pretrip_notes WHERE trip_id = ? AND ai_source = ?`,
       )
-      .bind(tripId)
+      .bind(tripId, aiSource)
       .all<{ k: string }>();
     const seen = new Set((existing.results ?? []).map((r) => r.k));
     const maxOrder = await db

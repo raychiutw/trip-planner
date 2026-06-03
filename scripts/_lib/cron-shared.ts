@@ -156,9 +156,10 @@ export function makeApiClient(env: CronEnv) {
 // v2.33.50 round 8b: warn once when env missing (silent no-op 是 daily-check
 // 本身要 surface 的故障模式)。模組級 flag 避免每次 alert spam stderr。
 let _telegramEnvWarned = false;
+let _telegramBadFormatWarned = false;
 /** Telegram alert (best-effort). */
 export async function alertTelegram(msg: string): Promise<void> {
-  const tok = process.env.TELEGRAM_BOT_TOKEN || '';
+  const tok = process.env.TELEGRAM_BOT_HOME_TOKEN || process.env.TELEGRAM_BOT_TOKEN || '';
   const chat = process.env.TELEGRAM_CHAT_ID || '';
   if (!tok || !chat) {
     if (!_telegramEnvWarned) {
@@ -170,8 +171,8 @@ export async function alertTelegram(msg: string): Promise<void> {
   // v2.33.50 round 8b LOW: validate token format defense in depth (同
   // send-telegram.sh v2.33.49 fix)。
   if (!/^[0-9]+:[A-Za-z0-9_-]+$/.test(tok)) {
-    if (!_telegramEnvWarned) {
-      _telegramEnvWarned = true;
+    if (!_telegramBadFormatWarned) {
+      _telegramBadFormatWarned = true;
       console.warn('[alertTelegram] TELEGRAM_BOT_TOKEN 格式不合法，alerts disabled');
     }
     return;

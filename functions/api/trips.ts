@@ -34,7 +34,7 @@ function str(val: unknown, fallback = ''): string {
 
 // nullableStr removed v2.31.36 — only used by self_drive_* fields which were dropped.
 
-function nullableInt(val: unknown): number | null {
+function nullableNum(val: unknown): number | null {
   if (typeof val === 'number' && Number.isFinite(val)) return val;
   return null;
 }
@@ -148,9 +148,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         id,
         idx + 1,
         d.name ?? '',
-        nullableInt(d.lat),
-        nullableInt(d.lng),
-        nullableInt(d.day_quota),
+        nullableNum(d.lat),
+        nullableNum(d.lng),
+        nullableNum(d.day_quota),
         Array.isArray(d.sub_areas) ? JSON.stringify(d.sub_areas) : null,
       ),
     );

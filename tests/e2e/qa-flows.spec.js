@@ -274,8 +274,11 @@ test.describe('QA Flow 7 — 移動景點 (cross-day)', () => {
 
     await expect.poll(() => patches.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
     const body = JSON.parse(patches[0].body || '{}');
-    // v2.21.0 P2 fix: EntryActionPage PATCH body 改 camelCase (was day_id)
-    expect(body.dayId).toBe(2);
+    // v2.45.0 fix: move PATCH body uses snake_case `day_id` to match the backend
+    // ALLOWED_FIELDS (functions/api/trips/[id]/entries/[eid].ts:28 + `'day_id' in body`).
+    // The prior `dayId` (camelCase) was never read by the backend → move was a no-op;
+    // this mock-API test asserted the broken shape and passed as a false green.
+    expect(body.day_id).toBe(2);
   });
 });
 

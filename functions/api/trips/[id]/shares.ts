@@ -69,9 +69,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         )
         .bind(id, tokenHash, label, JSON.stringify(visible), expiresAt, anonymous, auth.userId ?? '')
         .first<{ id: number }>();
+      if (!row?.id) throw new AppError('SYS_DB_ERROR', '建立分享連結失敗');
       // raw token returned ONCE — only the hash is persisted.
       return json({
-        id: row?.id,
+        id: row.id,
         token,
         url: `/s/${token}`,
         label,

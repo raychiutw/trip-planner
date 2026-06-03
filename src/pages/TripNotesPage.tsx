@@ -129,6 +129,7 @@ const SCOPED_STYLES = `
   color: inherit;
 }
 .tp-notes-section-head:hover { background: var(--color-tertiary); }
+.tp-notes-section-head:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 
 .tp-notes-section-icon {
   width: 36px; height: 36px;
@@ -415,10 +416,20 @@ export default function TripNotesPage() {
               className={`tp-notes-section${isOpen ? ' is-open' : ''}${isSuggested ? ' is-suggested' : ''}`}
               data-testid={`trip-notes-section-${sec.key}`}
             >
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 className="tp-notes-section-head"
                 onClick={() => toggleSection(sec.key)}
+                onKeyDown={(e) => {
+                  // Native-button parity: Enter/Space activate; preventDefault on
+                  // Space stops page scroll. The header can't be a <button> because
+                  // it contains interactive AI <button>s (invalid nested buttons).
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleSection(sec.key);
+                  }
+                }}
                 aria-expanded={isOpen}
                 aria-controls={`trip-notes-body-${sec.key}`}
                 data-testid={`trip-notes-section-head-${sec.key}`}
@@ -491,7 +502,7 @@ export default function TripNotesPage() {
                     <Icon name="chevron-down" />
                   </span>
                 </div>
-              </button>
+              </div>
               {sec.key === 'flights' && tripId ? (
                 <div
                   id={`trip-notes-body-${sec.key}`}

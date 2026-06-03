@@ -564,6 +564,7 @@ export default function ExplorePage() {
           address: poi.address ?? '',
           category: poi.category ?? '',
           source: 'user-explore',
+          place_id: poi.place_id,
         }),
       });
       await apiFetch('/poi-favorites', {

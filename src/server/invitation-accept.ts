@@ -67,10 +67,10 @@ export async function tryAcceptInvitation(
   await db.batch([
     db
       .prepare(
-        `INSERT OR IGNORE INTO trip_permissions (email, trip_id, role, user_id)
-         VALUES (?, ?, 'member', ?)`,
+        `INSERT OR IGNORE INTO trip_permissions (trip_id, role, user_id)
+         VALUES (?, 'member', ?)`,
       )
-      .bind(normalizeEmail(user.email), invitation.trip_id, user.id),
+      .bind(invitation.trip_id, user.id),
     db
       .prepare(
         `UPDATE trip_invitations SET accepted_at = ?, accepted_by = ?

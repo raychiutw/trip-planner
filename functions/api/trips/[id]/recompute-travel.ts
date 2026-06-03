@@ -133,6 +133,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
   }
 
+  const now = Date.now();
   for (const day of daysRes.results) {
     const list = entriesByDay.get(day.id) ?? [];
     for (let i = 1; i < list.length; i++) {
@@ -169,7 +170,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
         const minutes = Math.round(result.duration_seconds / 60);
         const distM = result.distance_meters;
-        const now = Date.now();
 
         if (existing) {
           segmentUpdates.push({ id: existing.id, mode: chosenMode, min: minutes, distM, now });

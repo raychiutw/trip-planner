@@ -22,8 +22,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const params: (string | number)[] = [id];
 
   if (requestId) {
+    const rid = Number(requestId);
+    if (!Number.isFinite(rid) || rid < 1) {
+      throw new AppError('DATA_VALIDATION', 'request_id must be a positive integer');
+    }
     sql += ' AND request_id = ?';
-    params.push(Number(requestId));
+    params.push(rid);
   }
 
   sql += ' ORDER BY created_at DESC LIMIT ?';

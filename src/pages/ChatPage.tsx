@@ -735,7 +735,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         ),
       );
     }
-  }, [activeTripId, inflightId]);
+  }, [activeTripId, inflightId, user]);
 
   function pickTrip(tripId: string) {
     // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)

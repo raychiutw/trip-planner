@@ -83,6 +83,9 @@ export interface FindOrCreatePoiData {
   country?: string | null;
   // Migration 0054 (v2.25.4): price 從 trip_pois 移到 pois master
   price?: string | null;
+  // v2.23.0: Google Places place_id — stored so POST /pois/:id/enrich works
+  // immediately (else the POI waits for the 30-day place_id backfill).
+  place_id?: string | null;
 }
 
 export interface FindOrCreatePoiPayload {
@@ -95,6 +98,7 @@ export interface FindOrCreatePoiPayload {
   address?: unknown;
   country?: unknown;
   source?: unknown;
+  place_id?: unknown;
 }
 
 export function normalizeFindOrCreatePoiPayload(raw: FindOrCreatePoiPayload): FindOrCreatePoiData {
@@ -112,13 +116,14 @@ export function normalizeFindOrCreatePoiPayload(raw: FindOrCreatePoiPayload): Fi
     address: normalizePoiAddress(normalizeOptionalString(raw.address, 'address')),
     country: normalizeOptionalString(raw.country, 'country'),
     source: normalizeOptionalString(raw.source, 'source') ?? 'google',
+    place_id: normalizeOptionalString(raw.place_id, 'place_id'),
   };
 }
 
 const COALESCE_FIELDS = [
   'description', 'lat', 'lng', 'rating',
   'category', 'hours', 'address', 'phone', 'email', 'website', 'country',
-  'price',
+  'price', 'place_id',
 ] as const;
 
 type CoalesceField = typeof COALESCE_FIELDS[number];
@@ -159,13 +164,14 @@ export async function findOrCreatePoi(
   // Migration 0045: dropped maps col (use mapsUrl helper).
   // Migration 0054: added price col.
   const result = await db.prepare(
-    'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+    'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price, place_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
   ).bind(
     data.type, data.name, data.description ?? null, data.hours ?? null,
     data.rating ?? null, data.category ?? null,
     data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
     data.address ?? null, data.phone ?? null, data.email ?? null,
     data.website ?? null, data.country ?? 'JP', data.price ?? null,
+    data.place_id ?? null,
   ).first<{ id: number }>();
 
   // INSERT OR IGNORE returns null if concurrent insert won the race
@@ -236,13 +242,14 @@ export async function batchFindOrCreatePois(
     const insertStmts = toInsert.map((idx) => {
       const data = uniqueItems[idx]!.data;
       return db.prepare(
-        'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+        'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price, place_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
       ).bind(
         data.type, data.name, data.description ?? null, data.hours ?? null,
         data.rating ?? null, data.category ?? null,
         data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
         data.address ?? null, data.phone ?? null, data.email ?? null,
         data.website ?? null, data.country ?? 'JP', data.price ?? null,
+        data.place_id ?? null,
       );
     });
     const insertResults = await db.batch(insertStmts);
@@ -268,7 +275,9 @@ export async function batchFindOrCreatePois(
       const reFetchResults = await db.batch(reFetchStmts);
       for (let i = 0; i < reFetchIndices.length; i++) {
         const rows = reFetchResults[i]!.results as { id: number }[];
-        uniqueItems[reFetchIndices[i]!]!.poiId = rows[0]!.id;
+        const refetched = rows[0];
+        if (!refetched) throw new AppError('SYS_DB_ERROR', 'POI lost after race-collision re-fetch');
+        uniqueItems[reFetchIndices[i]!]!.poiId = refetched.id;
       }
     }
   }
