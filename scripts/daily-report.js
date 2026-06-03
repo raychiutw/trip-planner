@@ -39,7 +39,7 @@ async function queryD1Requests() {
     "COUNT(*) as total, " +
     "SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) as open_count, " +
     "SUM(CASE WHEN status IN ('received','processing','completed') THEN 1 ELSE 0 END) as closed_count " +
-    "FROM requests WHERE created_at >= datetime('now', '-1 day')"
+    "FROM trip_requests WHERE created_at >= datetime('now', '-1 day')"
   );
   return rows[0];
 }
@@ -132,7 +132,7 @@ async function queryWebAnalytics() {
     'rumPageloadEventsAdaptiveGroups(limit: 1, filter: { ' +
     'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
     'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
-    'sum { visits } ' +
+    'sum { visits pageViews } ' +
     '} } } }';
   var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
     method: 'POST',
@@ -155,7 +155,7 @@ async function queryWebAnalytics() {
   // Core Web Vitals 在 rumWebVitalsEventsAdaptiveGroups，這裡先用 pageload 的 visits/pageViews
   return {
     visits: row.sum?.visits || 0,
-    pageViews: row.sum?.visits || 0,  // rumPageloadEvents 只有 visits，用 visits 代替 pageViews
+    pageViews: row.sum?.pageViews || 0,
     lcp: '—',
     cls: '—',
     inp: '—'

@@ -43,8 +43,7 @@ const WEEKEND_KEYS = ['六', '日'];
  * Condense 全週時段字串：
  *  - 7 天全相同 → 「08:00–17:30」
  *  - 平日同 + 週末同（兩組各自一致）→ 「週一–五 08:00–17:30 · 週末 09:00–18:00」
- *  - 其中有 1-2 天「休息」→ 「週一–六 08:00–17:30 · 週日休」
- *  - 無法壓縮 → 原字串
+ *  - 無法壓縮（含「休息」日的不規則週排程）→ 原字串（fallback）
  */
 export function condenseHours(raw: string | null | undefined): string {
   if (!raw) return '';
@@ -61,7 +60,9 @@ export function condenseHours(raw: string | null | undefined): string {
   // All 7 days identical?
   const uniqueValues = new Set(parsed.values());
   if (uniqueValues.size === 1) {
-    return [...uniqueValues][0]!;
+    const v = [...uniqueValues][0]!;
+    if (/^24\s*時間(?:営業)?$/.test(v)) return '24 小時';
+    return v;
   }
 
   // Weekday vs weekend split (平日 vs 週末)?

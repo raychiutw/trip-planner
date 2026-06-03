@@ -283,7 +283,13 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const entryIds: number[] = [];
     for (let i = 0; i < timeline.length; i++) {
       const rows = batch1Results[ENTRIES_START + i]!.results as { id: number }[];
-      entryIds.push(rows[0]?.id ?? 0);
+      const insertedId = rows[0]?.id;
+      if (typeof insertedId !== 'number' || insertedId <= 0) {
+        // Guard against a phantom entryId=0 silently flowing into batch2 /
+        // syncEntryMaster. Caught by the handler's try/catch → DATA_SAVE_FAILED.
+        throw new AppError('SYS_DB_ERROR', `trip_entries INSERT RETURNING id missing at index ${i}`);
+      }
+      entryIds.push(insertedId);
     }
 
     // Collect all POI data for batch find-or-create (eliminates N+1 sequential queries)
@@ -586,8 +592,15 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_SAVE_FAILED', '儲存失敗，請稍後再試');
   }
 
-  // v2.30.x (migration 0065)：surface new OCC token 給 client 下次 PUT 用
-  return json({ ok: true, dayVersion: currentDayVersion + 1 });
+  // v2.30.x (migration 0065)：surface new OCC token 給 client 下次 PUT 用。
+  // Re-fetch the stored version after the atomic increment in batch1 rather than
+  // returning the local guess (currentDayVersion + 1) — strictly more correct and
+  // matches the canonical D1 read-back pattern.
+  const stored = await db
+    .prepare('SELECT version FROM trip_days WHERE id = ?')
+    .bind(dayId)
+    .first<{ version: number }>();
+  return json({ ok: true, dayVersion: stored?.version ?? currentDayVersion + 1 });
 };
 
 // ---------------------------------------------------------------------------

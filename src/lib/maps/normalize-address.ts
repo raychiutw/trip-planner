@@ -23,7 +23,6 @@
 const ADMIN_SUFFIX_CHARS = '號号縣県市區区鎮鄉村里路街巷弄町丁';
 
 const DOUBLED_ADMIN_RE = new RegExp(`([${ADMIN_SUFFIX_CHARS}])\\1+`, 'g');
-const DOUBLED_COMMA_RE = /([,，])\s*\1+/g;
 const MULTI_WHITESPACE_RE = /\s{2,}/g;
 const COMMA_SPACE_COMMA_RE = /[,，]\s*[,，]/g;
 
@@ -36,11 +35,10 @@ export function normalizePoiAddress(raw: string | null | undefined): string | nu
   s = s.replace(DOUBLED_ADMIN_RE, '$1');
 
   // 2. doubled comma (含 separator + 全形) → single
-  // 兩 pattern：「,,」/「,, ,」/「，，」 各種組合都收斂為單個
+  // 「,,」/「,, ,」/「，，」 各種組合都收斂為單個
   while (COMMA_SPACE_COMMA_RE.test(s)) {
     s = s.replace(COMMA_SPACE_COMMA_RE, (m) => (m.includes('，') ? '，' : ','));
   }
-  s = s.replace(DOUBLED_COMMA_RE, '$1');
 
   // 3. multi-whitespace → single space
   s = s.replace(MULTI_WHITESPACE_RE, ' ');

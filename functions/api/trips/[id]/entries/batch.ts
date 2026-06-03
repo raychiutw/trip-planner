@@ -20,6 +20,7 @@
  */
 import { logAudit } from '../../../_audit';
 import { hasWritePermission, requireAuth } from '../../../_auth';
+import { TIME_RE } from '../../../_time';
 import { AppError } from '../../../_errors';
 import { json, parseJsonBody, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -72,6 +73,9 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     for (const tf of ['start_time', 'end_time'] as const) {
       if (tf in fields && fields[tf] != null && typeof fields[tf] !== 'string') {
         throw new AppError('DATA_VALIDATION', `updates[id=${id}].${tf} 必須是字串或 null`);
+      }
+      if (tf in fields && typeof fields[tf] === 'string' && fields[tf] !== '' && !TIME_RE.test(fields[tf] as string)) {
+        throw new AppError('DATA_VALIDATION', `updates[id=${id}].${tf} 必須符合 HH:MM 格式`);
       }
     }
     validated.push({ id, fields });

@@ -50,7 +50,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 1. Auth
   let session;
   try {
-    session = await requireSessionUser(context.request, context.env);
+    session = await requireSessionUser(context.request, context.env, context.waitUntil.bind(context));
   } catch (err) {
     if (err instanceof AppError && err.code === 'AUTH_REQUIRED') {
       return errorResponse('AUTH_REQUIRED', '請先登入', 401);

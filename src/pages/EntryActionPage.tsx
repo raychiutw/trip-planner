@@ -309,7 +309,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
     const method = action === 'copy' ? 'POST' : 'PATCH';
     const body = action === 'copy'
       ? JSON.stringify({ targetDayId: selectedDayId })
-      : JSON.stringify({ dayId: selectedDayId });
+      : JSON.stringify({ day_id: selectedDayId });
 
     try {
       const res = await apiFetchRaw(path, {

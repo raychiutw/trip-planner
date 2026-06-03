@@ -11,7 +11,7 @@
  *
  * Cache-Control: private, max-age=300 — 短 edge cache 因為 D1 cache 24h，edge 5min 即可。
  */
-import { AppError } from './_errors';
+import { AppError, buildRateLimitResponse } from './_errors';
 import { assertGoogleAvailable } from './_maps_lock';
 import { bumpRateLimit, clientIp, RATE_LIMITS } from './_rate_limit';
 import { searchPlaces, type PlacesSearchTextResult } from '../../src/server/maps/google-client';
@@ -53,7 +53,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // Google Places Text Search ($32/1000)，cache miss 唯一鎖。auth'd users 走
   // autocomplete 已有 1000/24h；本 endpoint 給 search box 用，200/24h/IP 夠。
   const ip = clientIp(context.request);
-  await bumpRateLimit(context.env.DB, `poi-search:ip:${ip}`, RATE_LIMITS.POI_SEARCH_PER_IP);
+  const rl = await bumpRateLimit(context.env.DB, `poi-search:ip:${ip}`, RATE_LIMITS.POI_SEARCH_PER_IP);
+  if (!rl.ok) {
+    return buildRateLimitResponse(rl.retryAfter ?? 60, { error: { code: 'RATE_LIMITED', message: '搜尋過於頻繁，請稍後再試' } });
+  }
 
   const apiKey = context.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {

@@ -48,7 +48,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       emailVerified: row.email_verified_at !== null,
       displayName: row.display_name,
       avatarUrl: row.avatar_url,
-      createdAt: row.created_at,
+      createdAt: row.created_at.endsWith('Z') ? row.created_at : row.created_at + 'Z',
     }),
     {
       headers: {

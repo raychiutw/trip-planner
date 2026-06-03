@@ -44,10 +44,10 @@ function parseFlags(argv: string[]): CliFlags {
   };
 }
 
-function exec(cmd: string): string {
-  const proc = Bun.spawnSync(['sh', '-c', cmd]);
+function exec(argv: string[]): string {
+  const proc = Bun.spawnSync(argv);
   if (!proc.success) {
-    throw new Error(`Command failed: ${cmd}\n${new TextDecoder().decode(proc.stderr)}`);
+    throw new Error(`Command failed: ${argv.join(' ')}\n${new TextDecoder().decode(proc.stderr)}`);
   }
   return new TextDecoder().decode(proc.stdout);
 }
@@ -62,7 +62,17 @@ function queryPois(flags: CliFlags): PoiRow[] {
   const wrangler = buildWranglerArgs(flags);
   // 撈所有有 address 的 row（normalize 是 pure function，過濾無 typo 在 JS 端做）
   const sql = "SELECT id, address FROM pois WHERE address IS NOT NULL AND address != '' ORDER BY id";
-  const out = exec(`bunx wrangler d1 execute trip-planner-db ${wrangler} --command="${sql}" --json`);
+  const out = exec([
+    'bunx',
+    'wrangler',
+    'd1',
+    'execute',
+    'trip-planner-db',
+    wrangler,
+    '--command',
+    sql,
+    '--json',
+  ]);
   // wrangler d1 --json: array with one element per statement, each has {results:[]}
   const parsed = JSON.parse(out) as Array<{ results: PoiRow[] }>;
   return parsed[0]?.results ?? [];
@@ -73,7 +83,7 @@ function updateAddress(flags: CliFlags, id: number, newAddress: string): void {
   // single-quote escape: SQLite SQL strings escape '' = single '
   const escaped = newAddress.replace(/'/g, "''");
   const sql = `UPDATE pois SET address = '${escaped}', updated_at = datetime('now') WHERE id = ${id}`;
-  exec(`bunx wrangler d1 execute trip-planner-db ${wrangler} --command="${sql}"`);
+  exec(['bunx', 'wrangler', 'd1', 'execute', 'trip-planner-db', wrangler, '--command', sql]);
 }
 
 function main(): void {

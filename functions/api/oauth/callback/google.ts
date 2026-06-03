@@ -45,6 +45,31 @@ function errorResponse(code: string, message: string, status = 400): Response {
   );
 }
 
+/**
+ * Recover from a concurrent first-time-login race: two requests for the same
+ * Google `sub` both miss the initial SELECT and race to INSERT auth_identities,
+ * one losing on the UNIQUE(provider, provider_user_id) constraint. On a
+ * UNIQUE/constraint error, re-run the identity lookup to adopt the winner's
+ * user_id (mirrors signup.ts's `includes('UNIQUE')` guard). Non-UNIQUE failures
+ * — and a UNIQUE error with no recoverable row — re-throw so genuine DB errors
+ * still surface as 500 rather than being masked.
+ */
+async function recoverIdentityRace(db: D1Database, sub: string, err: unknown): Promise<string> {
+  const msg = (err as Error)?.message ?? '';
+  const upper = msg.toUpperCase();
+  if (!upper.includes('UNIQUE') && !upper.includes('CONSTRAINT')) {
+    throw err;
+  }
+  const winner = await db
+    .prepare('SELECT user_id FROM auth_identities WHERE provider = ? AND provider_user_id = ?')
+    .bind('google', sub)
+    .first<{ user_id: string }>();
+  if (!winner) {
+    throw err;
+  }
+  return winner.user_id;
+}
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
   const code = url.searchParams.get('code');
@@ -157,26 +182,34 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         );
       }
       userId = existingUserByEmail.id;
-      await context.env.DB
-        .prepare(
-          'INSERT INTO auth_identities (user_id, provider, provider_user_id, last_used_at) VALUES (?, ?, ?, ?)',
-        )
-        .bind(userId, 'google', sub, now)
-        .run();
+      try {
+        await context.env.DB
+          .prepare(
+            'INSERT INTO auth_identities (user_id, provider, provider_user_id, last_used_at) VALUES (?, ?, ?, ?)',
+          )
+          .bind(userId, 'google', sub, now)
+          .run();
+      } catch (err) {
+        userId = await recoverIdentityRace(context.env.DB, sub, err);
+      }
     } else {
       userId = crypto.randomUUID();
-      await context.env.DB
-        .prepare(
-          'INSERT INTO users (id, email, email_verified_at, display_name, avatar_url) VALUES (?, ?, ?, ?, ?)',
-        )
-        .bind(userId, email, now, name ?? null, picture ?? null)
-        .run();
-      await context.env.DB
-        .prepare(
-          'INSERT INTO auth_identities (user_id, provider, provider_user_id, last_used_at) VALUES (?, ?, ?, ?)',
-        )
-        .bind(userId, 'google', sub, now)
-        .run();
+      try {
+        await context.env.DB
+          .prepare(
+            'INSERT INTO users (id, email, email_verified_at, display_name, avatar_url) VALUES (?, ?, ?, ?, ?)',
+          )
+          .bind(userId, email, now, name ?? null, picture ?? null)
+          .run();
+        await context.env.DB
+          .prepare(
+            'INSERT INTO auth_identities (user_id, provider, provider_user_id, last_used_at) VALUES (?, ?, ?, ?)',
+          )
+          .bind(userId, 'google', sub, now)
+          .run();
+      } catch (err) {
+        userId = await recoverIdentityRace(context.env.DB, sub, err);
+      }
     }
   }
 
