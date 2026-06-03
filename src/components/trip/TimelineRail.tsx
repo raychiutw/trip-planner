@@ -1037,7 +1037,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
         {orderedEvents.map((entry, i) => {
           const isPast = nowIndex >= 0 && i < nowIndex;
           const isNow = nowIndex >= 0 && i === nowIndex;
-          const isLast = i === events.length - 1;
+          const isLast = i === orderedEvents.length - 1;
           const expanded = entry.id != null && expandedId === entry.id;
           // v2.24.0 γ.1：lookup segment for (prev, curr) pair
           const prev = i > 0 ? orderedEvents[i - 1] : null;

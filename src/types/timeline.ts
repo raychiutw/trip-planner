@@ -22,9 +22,7 @@ export interface MapLocation {
 }
 
 /** Location with a display label (for `NavLinks` rendering). */
-export interface NavLocation extends MapLocation {
-  label?: string;
-}
+export interface NavLocation extends MapLocation {}
 
 /** Travel segment between two stops. */
 export interface TravelData {

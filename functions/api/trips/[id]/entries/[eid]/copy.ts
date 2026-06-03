@@ -75,7 +75,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // SELECT source entry（已驗證 belongsToTrip）
   const source = await db
-    .prepare('SELECT * FROM trip_entries WHERE id = ?')
+    .prepare('SELECT start_time, end_time, title, description, source FROM trip_entries WHERE id = ?')
     .bind(eid)
     .first() as Record<string, unknown> | null;
   if (!source) throw new AppError('DATA_NOT_FOUND');

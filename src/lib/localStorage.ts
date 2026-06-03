@@ -77,7 +77,7 @@ export function lsGet<T = unknown>(key: string): T | null {
  * Removes the entry stored under `tp-{key}`.
  */
 export function lsRemove(key: string): void {
-  localStorage.removeItem(LS_PREFIX + key);
+  try { localStorage.removeItem(LS_PREFIX + key); } catch { /* noop — locked profile / disabled storage */ }
 }
 
 /**

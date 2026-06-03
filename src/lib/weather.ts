@@ -246,20 +246,16 @@ export async function fetchWeatherForDay(
   const dayOffset = sample.hourly.time.indexOf(dayDate + 'T00:00');
   if (dayOffset < 0) return makeDefaultMg();
 
-  const mg: MergedHourly = { temps: [], rains: [], codes: [] };
+  const mg = makeDefaultMg();
   for (let h = 0; h < 24; h++) {
     const li = getLocIdx(weatherDay, h);
     const l = weatherDay.locations[li];
     const d = l ? results[l.lat + ',' + l.lon] : undefined;
     const idx = dayOffset + h;
     if (d && d.hourly && idx < d.hourly.temperature_2m.length) {
-      mg.temps.push(d.hourly.temperature_2m[idx] ?? 0);
-      mg.rains.push(d.hourly.precipitation_probability[idx] ?? 0);
-      mg.codes.push(d.hourly.weather_code[idx] ?? 0);
-    } else {
-      mg.temps.push(0);
-      mg.rains.push(0);
-      mg.codes.push(0);
+      mg.temps[h] = d.hourly.temperature_2m[idx] ?? 0;
+      mg.rains[h] = d.hourly.precipitation_probability[idx] ?? 0;
+      mg.codes[h] = d.hourly.weather_code[idx] ?? 0;
     }
   }
   return mg;

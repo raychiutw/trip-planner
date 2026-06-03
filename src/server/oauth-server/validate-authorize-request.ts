@@ -160,7 +160,7 @@ export function validateAuthorizeRequest(
     scopes: requestedScopes,
     state: req.state ?? null,
     codeChallenge: req.code_challenge ?? null,
-    codeChallengeMethod: req.code_challenge ? 'S256' : null,
+    codeChallengeMethod: 'S256',
     prompt: req.prompt ?? null,
   };
 }

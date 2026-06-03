@@ -100,7 +100,7 @@ if (r.googleMapsQuota && !r.googleMapsQuota.error && typeof r.googleMapsQuota.mt
 const okItems = [];
 if (r.schedulerErrors && r.schedulerErrors.details) {
   Object.keys(r.schedulerErrors.details).forEach((k) => {
-    if (r.schedulerErrors.details[k].count === 0) okItems.push(k);
+    if (r.schedulerErrors.details[k] && r.schedulerErrors.details[k].count === 0) okItems.push(k);
   });
 }
 if (okItems.length > 0) lines.push(`✅ OK: ${okItems.join(', ')}`);

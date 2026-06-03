@@ -3,9 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.46.0] - 2026-06-03
+
+全 repo `/simplify` + `/review` 品質掃描（multi-agent workflow audit）：核心 `src` + `functions` + `scripts` 共 365 檔逐組 dual-lens 審查 + 對抗式 verify，套用 36 條 verified-behavior-preserving 修正（39 檔，淨 -76 行）。無 migration / schema / API contract / CSS 變更；tsc 0 error，3204 測試全綠。
+
+### Changed
+- **去重共用 helper**：分享 token 產生改呼叫既有 `generateOpaqueToken`（`_share.ts`，byte-identical）；weather `fetchWeatherForDay` 改用 `makeDefaultMg()` 預填 24 筆零值取代手寫三陣列 + else push 0。
+- **拔除 dead code**：`_shared.ts` 寫入即 `void` 的 `rowId`；`_tripFormStyles.ts` 無 JSX 使用的 close-button CSS + 兩條未引用 `@keyframes`；`HourlyWeather` 永不命中的 `.hw-now` querySelector fallback；`ExplorePage` 恆回「全部地區」的 `defaultRegion` memo + 同步 effect（連帶移除未用的 `useActiveTrip`）；`TripNotesPage` 5 section 全覆蓋後不可達的 placeholder `else` 分支；`ChatPage` 兩條相同的 timestamp ternary 分支；`validate-authorize-request` PKCE 強制後恆為 `'S256'` 的死 ternary。
+- **移除多餘 type cast**：`oauth-d1-adapter` sweepExpired return；`google-id-token` 的 `email_verified` / `azp`（`JwtClaims` 已具型別）；`mapDay` 把 `distanceM` 宣告進 `RawTravel` 取代 inline cast。
+- **減少 re-render / 對齊既有寫法**：`NewTripContext` provider value `useMemo` 化；`ImportTripButton` catch 改用 `ApiError` type guard；`TimelineRail` `isLast` 改比對 `orderedEvents.length`；移除多餘 effect 依賴（`AddStopPage` 的 `tab`、`PoiFavoritesPage` 的 `favorites.length`、`InfoSheet` 的 `panelRef`）。
+- **收斂查詢/守衛**：`entries/[eid]/copy.ts` source `SELECT *` → 實際使用的 5 欄；`pois/[id]` 移除 zero-row DELETE 前的多餘 `if` 守衛；`days/_merge.ts` 孤兒 `trip_entry_pois` 改 skip（FK 已防）取代隱藏不一致的 fallback bucket；`cron-shared` 去重 `cachePath()`；`tripline-api-server` 移除死 default 參數。
+- **過時欄位/註解修正**：`permissions/[id]` 移除 migration 0047 已 DROP 的 `email`（audit diff bytes 不變）；`places/autocomplete` 與 `usePoiSearch`（`osm_id`→`place_id`）JSDoc/註解校正；`tripExport` `safeFileBase` 改 `export` 供呼叫端共用；`timeline.ts` `NavLocation` 移除與 `MapLocation` 重複的 `label`。
+
+### Fixed
+- **`session.ts` token `exp` 加 `Number.isFinite` 守衛** — `typeof NaN === 'number'` 且 `NaN < now` 為 false，原判斷會讓 `exp: NaN` 繞過過期檢查；收緊後僅接受有限數值（合法簽章 token 不受影響），純收緊 auth。
+- **`notes/[type]/generate.ts` `clearTimeout` 移入 `finally`** — fetch 錯誤路徑原本漏清 abort timer。
+- **`localStorage.lsRemove` 包 try/catch** — 對齊檔內其他 `ls*` 函式，locked-profile / 停用儲存不再丟例外。
+- **`build-daily-check-msg.js` okItems 迴圈補 `details[k]` null 守衛** — 對齊既有 issues 迴圈，避免空值 deref。
 ## [2.45.0] - 2026-06-03
 
-高嚴重度 bug 修復批次 — 承 v2.44.0 品質掃描，對 80 條 risky finding 中的 15 條 HIGH 做對抗式 verify（11 real / 2 partial / 1 disputed FP），逐條重讀實際程式碼 + schema/migrations 確認後修復。15 條 confirmed-real 全修，附 13 條 regression test。tsc 0 error，3217 測試全綠。
+高嚴重度 bug 修復批次 — 承同輪 audit 的品質掃描（見 v2.46.0），對 80 條 risky finding 中的 15 條 HIGH 做對抗式 verify（11 real / 2 partial / 1 disputed FP），逐條重讀實際程式碼 + schema/migrations 確認後修復。15 條 confirmed-real 全修，附 13 條 regression test。tsc 0 error，3217 測試全綠。
 
 ### Security
 - **`PATCH /api/dev/apps/:client_id` 權限升級漏洞** — allowed_scopes 沒走 allowlist（POST 有擋、PATCH 漏），自助使用者可把自己的 app 設成 `['admin']`，再用 client_credentials 換到 admin-scoped token → 跨租戶讀寫任意行程。改 export `validateScopes` 並在 PATCH 沿用（非空守衛 + allowlist enforce）。

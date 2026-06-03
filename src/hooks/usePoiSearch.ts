@@ -65,7 +65,7 @@ function isValidPoi(row: unknown): row is PoiSearchResult {
  *   - Cleanup on unmount + on `query`/`enabled`/`limit` change
  *   - `normalise` + `onError` 透過 ref 引用，callers 不必 useCallback 也不會
  *     觸發 effect re-run (PR #459 fix)。
- *   - Schema guard：drop rows missing osm_id/name/lat/lng，避免 malformed
+ *   - Schema guard：drop rows missing place_id/name/lat/lng，避免 malformed
  *     POI 進入 React state 造成 key collision / lat/lng undefined runtime crash
  */
 export function usePoiSearch({

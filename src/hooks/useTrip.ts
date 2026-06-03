@@ -114,7 +114,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
       fetchDay(dayNum).then((day) => {
         if (day) {
           setCurrentDay(day);
-          setAllDays((prev) => ({ ...prev, [dayNum]: day }));
         }
       });
     },

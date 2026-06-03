@@ -15,7 +15,6 @@ import { resolveActiveShare } from '../api/_share';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { token } = context.params as { token: string };
-  const url = new URL(context.request.url);
   const shell = await context.env.ASSETS.fetch(new Request('https://placeholder/index.html'));
 
   let ogTitle = '';
@@ -43,6 +42,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   if (!ogTitle) return shell; // invalid / revoked / expired / error → default OG
 
+  const url = new URL(context.request.url);
   const shareUrl = `${url.origin}/s/${token}`;
   const set = (content: string) => ({ element(el: { setAttribute(n: string, v: string): void }) { el.setAttribute('content', content); } });
   return new HTMLRewriter()
