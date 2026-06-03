@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.46.1] - 2026-06-03
+
+### Fixed
+- **編輯行程頁手機版橫向左右滑動** — `.tp-edit-page-shell` 原本是 block，缺 column 上限保險，被最寬子內容撐開時 page body 比 viewport 寬 → 手機橫滑。改 grid + `grid-template-columns: minmax(0, 1fr)` 鎖 column 上限（與 EditEntryPage v2.32.3 / TripNotesPage v2.34.50 同一 root-cause pattern，非 `overflow:hidden` 硬裁）。附 regression test 鎖。註：現有 prod（5 行程 × 360/375/390px）重現不出特定元兇，此為該類 bug 的 root-cause guard；若特定 nowrap 元素仍撐寬需另補其 `min-width:0`。
+
 ## [2.46.0] - 2026-06-03
 
 全 repo `/simplify` + `/review` 品質掃描（multi-agent workflow audit）：核心 `src` + `functions` + `scripts` 共 365 檔逐組 dual-lens 審查 + 對抗式 verify，套用 36 條 verified-behavior-preserving 修正（39 檔，淨 -76 行）。無 migration / schema / API contract / CSS 變更；tsc 0 error，3204 測試全綠。

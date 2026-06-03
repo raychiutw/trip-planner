@@ -130,6 +130,13 @@ interface TripApi {
  */
 const SCOPED_STYLES = `
 .tp-edit-page-shell {
+  /* grid + minmax(0,1fr) column caps the implicit track at the container width
+   * (same root-cause fix as TripNotesPage v2.34.50). Without it a wide child
+   * (long destination name, etc.) can size the shell to its content width →
+   * mobile horizontal scroll. minmax(0,...) forces children to the column width
+   * instead of letting them blow it out — not an overflow:hidden mask. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100%;
   background: var(--color-secondary);
   height: 100%;
