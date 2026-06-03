@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.47.0] - 2026-06-04
+
+### Changed
+- **Google Maps 用量監控改「免費額度 headroom」模型** — 2025/3 起 Maps 取消 $200 月抵免、改各 SKU 免費額度（Essentials 10K / Pro 5K / Enterprise 1K events/月，不共用池）。每日報告從「💰 MTD $X / $200」改為「🗺️ 免費額度: 最高 <SKU> N% (used/cap) · 真實付費 $」。任一 SKU ≥80% 示警、≥90% 紅燈，在跨入付費前預警。實測本專案全在免費額度內 → 真實月花費 $0（最高 Routes ~48%）。
+- **Cloud Monitoring 用量改按真實 `method` label 分組** — 刪除會錯算的 host→name 對照表（`GCP_API_TO_SERVICE` 把新版 Places API 全算成 place_details）。改 group by consumed_api `method`（SKU 計費維度），免費額度依 request field mask 對應 tier（Search/Details 含 rating/hours/phone → Enterprise 1K；Autocomplete/Routes/Dynamic Maps → Essentials 10K）。
+- **`google-quota-monitor` kill-switch 改 alert-only** — 不再自動鎖 Maps（自動鎖 = 整站 503 outage，不值得為免費額度邊緣的小錢）；接近上限只示警，要停由 admin 手動 `POST /api/admin/maps-lock`。
+
+### Fixed
+- **每日報告 Google 金額「忽高忽低」root cause（三層 bug）** — (1) `_gcp_monitoring.ts` 讀錯 env 變數名（`GCP_SERVICE_ACCOUNT_KEY_JSON` vs prod 與 `_types.ts` 實際的 `GOOGLE_CLOUD_SA_KEY` / `GOOGLE_CLOUD_PROJECT_ID`）→ 永遠 fallback 假數據；(2) MTD 用「今日 dailyCost × 當月日期」投射而非累加 → day-over-day 亂跳甚至變少（真實 MTD 不可能變少）；(3) D1-proxy fallback 用寫死假常數（directions=50 等 → 假底 $0.4433）。修：讀對 env 名、查真實 month-to-date counts、移除假數據 fallback。
+- **GCP 拿不到改顯示錯誤而非假數字** — `/api/admin/quota-estimate` 在 Cloud Monitoring 無法取得時回 502 `MAPS_UPSTREAM_FAILED`（對齊 `route.ts` / `poi-search.ts` 慣例），每日報告浮出「用量監控異常（GCP 無法取得）」而非靜默假金額（修舊的 `warning && !error` silent swallow）。
+
 ## [2.46.1] - 2026-06-03
 
 ### Fixed

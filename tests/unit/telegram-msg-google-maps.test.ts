@@ -1,11 +1,11 @@
 /**
- * build-daily-check-msg.js — Google Maps section render (v2.31.96)
+ * build-daily-check-msg.js — Google Maps free-tier headroom render (v2.46.x)
  *
- * 既有 Telegram message 缺 Google Maps MTD 花費。新 section render：
- *   - status === 'critical' → 🔴 + lock 提示
- *   - status === 'warning' (≥50% / <lock) → 🟡 + remaining
- *   - status === 'ok' (<50%) → 不放 issue，但仍在 metrics 區塊顯花費 (transparent)
- *   - error/skip (env missing) → 不阻斷其他 section
+ *   - status === 'critical' (≥critical% of a SKU free cap) → 🔴 + worst SKU + lock
+ *   - status === 'warning' (≥80%) → 🟡 + worst SKU
+ *   - status === 'warning' + error (GCP 拿不到) → 🟡 監控異常，NO fake number
+ *   - status === 'ok' (<80%) → 不放 issue，metrics 區塊顯 headroom + 真實付費 $（$0）
+ *   - skip (status ok + (skip) error) → 不阻斷、不示警
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
@@ -45,72 +45,100 @@ const BASE: Record<string, unknown> = {
 };
 
 describe('build-daily-check-msg.js — Google Maps section', () => {
-  it('renders 🔴 critical issue when MTD ≥ lock threshold', () => {
+  it('renders 🔴 critical when a SKU is about to exhaust its free cap', () => {
     const report = {
       ...BASE,
       googleMapsQuota: {
         status: 'critical',
-        dailyCost: 8,
-        mtdCost: 184,
-        budget: 200,
-        mtdPct: 92,
-        remainingUsd: 16,
+        maxPct: 95,
+        worst: {
+          method: 'google.maps.routing.v2.Routes.ComputeRoutes',
+          usage: 9500,
+          cap: 10000,
+          pct: 95,
+        },
+        overageCost: 0,
         isLocked: true,
       },
     };
     const out = runWithReport(report);
     expect(out).toContain('🔴');
     expect(out).toContain('Google Maps');
-    expect(out).toContain('184');
-    expect(out).toContain('92'); // mtdPct (rounded)
+    expect(out).toContain('ComputeRoutes'); // worst SKU short name
+    expect(out).toContain('95'); // pct
+    expect(out).toContain('9500'); // usage
   });
 
-  it('renders 🟡 warning when 50% ≤ MTD < lock', () => {
+  it('renders 🟡 warning when a SKU is ≥80% of free cap', () => {
     const report = {
       ...BASE,
       googleMapsQuota: {
         status: 'warning',
-        dailyCost: 4,
-        mtdCost: 120,
-        budget: 200,
-        mtdPct: 60,
-        remainingUsd: 80,
+        maxPct: 85,
+        worst: {
+          method: 'google.maps.places.v1.Places.SearchText',
+          usage: 8500,
+          cap: 10000,
+          pct: 85,
+        },
+        overageCost: 0,
         isLocked: false,
       },
     };
     const out = runWithReport(report);
     expect(out).toContain('🟡');
-    expect(out).toContain('Google Maps');
-    expect(out).toContain('120');
+    expect(out).toContain('SearchText');
+    expect(out).toContain('85');
   });
 
-  it('still shows ok-state cost line in metrics block (transparency)', () => {
+  it('ok-state metrics line shows headroom + real $0 (transparency)', () => {
     const report = {
       ...BASE,
       googleMapsQuota: {
         status: 'ok',
-        dailyCost: 1,
-        mtdCost: 19,
-        budget: 200,
-        mtdPct: 9.5,
-        remainingUsd: 181,
+        maxPct: 48.13,
+        worst: {
+          method: 'google.maps.routing.v2.Routes.ComputeRoutes',
+          usage: 4813,
+          cap: 10000,
+          pct: 48.13,
+        },
+        overageCost: 0,
         isLocked: false,
       },
     };
     const out = runWithReport(report);
-    // ok status: no 🔴 / 🟡 issue line, but metric block still surfaces 花費
-    expect(out).toMatch(/💰|Google Maps/);
-    expect(out).toContain('19');
+    expect(out).toContain('免費額度');
+    expect(out).toContain('ComputeRoutes');
+    expect(out).toContain('48');
+    expect(out).toContain('$0'); // real paid cost — within free tier
   });
 
-  it('does not throw when googleMapsQuota error/skip (graceful)', () => {
+  it('surfaces GCP-unavailable as a visible warning and shows NO fake number', () => {
+    const report = {
+      ...BASE,
+      googleMapsQuota: {
+        status: 'warning',
+        error: 'Google Cloud Monitoring 無法取得用量',
+      },
+    };
+    const out = runWithReport(report);
+    expect(out).toContain('Google Maps');
+    expect(out).toMatch(/監控異常|無法取得/);
+    // 不得顯示 headroom 數字行（沒資料就只報錯）
+    expect(out).not.toContain('免費額度: 最高');
+  });
+
+  it('does not surface local-dev skip (status ok + skip error) as an issue', () => {
     const report = {
       ...BASE,
       googleMapsQuota: {
         status: 'ok',
-        error: 'TRIPLINE_API_URL/TOKEN missing (skip)',
+        error: 'TRIPLINE_API_CLIENT_ID/SECRET missing (skip)',
       },
     };
+    const out = runWithReport(report);
+    expect(out).not.toContain('監控異常');
     expect(() => runWithReport(report)).not.toThrow();
   });
 
