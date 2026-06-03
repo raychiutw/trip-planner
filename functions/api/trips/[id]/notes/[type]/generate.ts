@@ -162,17 +162,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       try {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 8000);
-        const res = await fetch(env.TRIPLINE_API_URL + '/trigger?source=api', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${env.TRIPLINE_API_SECRET}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ requestId }),
-          signal: ctrl.signal,
-        });
-        clearTimeout(timer);
-        if (!res.ok) throw new Error(`Trigger responded ${res.status}`);
+        try {
+          const res = await fetch(env.TRIPLINE_API_URL + '/trigger?source=api', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${env.TRIPLINE_API_SECRET}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ requestId }),
+            signal: ctrl.signal,
+          });
+          if (!res.ok) throw new Error(`Trigger responded ${res.status}`);
+        } finally {
+          clearTimeout(timer);
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         await recordEmailEvent(env.DB, {

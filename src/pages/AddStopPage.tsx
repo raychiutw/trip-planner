@@ -750,7 +750,7 @@ export default function AddStopPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [auth.user, tripId, tab]);
+  }, [auth.user, tripId]);
 
   // POI search 由 usePoiSearch hook 處理 (見上方 hook call) — debounce + abort 內建
 

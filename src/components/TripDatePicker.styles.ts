@@ -194,9 +194,6 @@ export const TRIP_DATE_PICKER_STYLES = `
   .tp-date-popover {
     position: fixed;
     inset: auto 16px 16px;
-    left: 16px;
-    right: 16px;
-    top: auto;
   }
   .tp-date-popover .rdp-root {
     --rdp-day-height: 40px;

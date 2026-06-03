@@ -955,9 +955,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
                 >
                   {isAssistant
                     ? `Tripline AI · ${formatChatTime(m.createdAt)}`
-                    : isOtherUser
-                      ? `${senderDisplay} · ${formatChatTime(m.createdAt)}`
-                      : `${senderDisplay} · ${formatChatTime(m.createdAt)}`}
+                    : `${senderDisplay} · ${formatChatTime(m.createdAt)}`}
                 </time>
               )}
             </Fragment>

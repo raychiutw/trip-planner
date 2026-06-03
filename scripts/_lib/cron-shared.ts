@@ -73,8 +73,9 @@ function cachePath(): string {
 
 function readTokenCache(): string | null {
   try {
-    if (!existsSync(cachePath())) return null;
-    const parsed = JSON.parse(readFileSync(cachePath(), 'utf-8')) as {
+    const p = cachePath();
+    if (!existsSync(p)) return null;
+    const parsed = JSON.parse(readFileSync(p, 'utf-8')) as {
       access_token?: string; expires_at?: number;
     };
     if (

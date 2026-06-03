@@ -196,7 +196,7 @@ function hasActiveSession(skillCommand: string): string | null {
   return null;
 }
 
-async function spawnTmuxRequest(skillCommand: string = '/tp-request'): Promise<boolean> {
+async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
   // v2.33.49 round 8a: enforce allowlist at every entry point — defense in
   // depth (sessionPrefixForSkill also asserts but defensive double-gate).
   assertAllowedSkill(skillCommand);

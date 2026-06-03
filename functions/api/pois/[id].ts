@@ -98,9 +98,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     .bind(poiId)
     .first<{ c: number }>();
   const deletedJunctionCount = junctionBefore?.c ?? 0;
-  if (deletedJunctionCount > 0) {
-    await db.prepare('DELETE FROM trip_entry_pois WHERE poi_id = ?').bind(poiId).run();
-  }
+  await db.prepare('DELETE FROM trip_entry_pois WHERE poi_id = ?').bind(poiId).run();
 
   // 刪除 pois master
   await db.prepare('DELETE FROM pois WHERE id = ?').bind(poiId).run();

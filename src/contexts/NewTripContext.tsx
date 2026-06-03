@@ -13,7 +13,7 @@
  * modal，只提供 navigation hook。API 名稱 `openModal` 為相容性保留
  * （many callers 已用 `openModal`），實際語意是「開啟新增行程介面」。
  */
-import { createContext, useCallback, useContext, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface NewTripContextValue {
@@ -48,8 +48,10 @@ export function NewTripProvider({ children }: { children: ReactNode }) {
     navigate('/trips/new');
   }, [navigate]);
 
+  const value = useMemo<NewTripContextValue>(() => ({ openModal }), [openModal]);
+
   return (
-    <NewTripContext.Provider value={{ openModal }}>
+    <NewTripContext.Provider value={value}>
       {children}
     </NewTripContext.Provider>
   );

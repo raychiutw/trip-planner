@@ -26,7 +26,7 @@ function downloadBlob(content: string, filename: string, type: string): void {
  * came straight from user input (`a.download = "${tripName}-${date}.json"`),
  * which Safari historically interpreted as a path (download traversal).
  */
-function safeFileBase(raw: string): string {
+export function safeFileBase(raw: string): string {
   // eslint-disable-next-line no-control-regex
   const stripped = raw.replace(/[\\/\x00-\x1f<>:"|?*]/g, '_').trim();
   return stripped.slice(0, 80) || 'trip';

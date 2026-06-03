@@ -336,7 +336,7 @@ export default function PoiFavoritesPage() {
       counts.set(region, (counts.get(region) ?? 0) + 1);
     }
     return counts;
-  }, [favorites.length, regionByRow]);
+  }, [regionByRow]);
 
   const regionOptions = useMemo(() => {
     const keys = Array.from(regionCounts.keys()).filter((k) => k !== 'all');
