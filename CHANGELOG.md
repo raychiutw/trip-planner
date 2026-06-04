@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.50.2] - 2026-06-05
+
+### Fixed
+- **Google Maps 用量監控偶發 502** — daily-check 早上抓 `/api/admin/quota-estimate` 時，Google Cloud Monitoring 上游只要打嗝一次（token 剛好過期、或 GCP 回 5xx）就直接回 502，當天用量報告整段抓不到。現在伺服器端遇到這類暫時性失敗會自動重試一次（過期 token 會重新簽發），單次抖動不再讓整份報告失敗。
+- **行動版 Chrome 偶發 Service Worker 註冊錯誤上報** — 無痕模式、停用儲存空間或企業政策會讓瀏覽器拒絕註冊離線快取的 Service Worker，先前這個拒絕沒有被攔截，變成 Sentry 上的「Error: Rejected」雜訊（對使用者無實際影響，SW 只是離線增強）。現在改由 App 自行註冊並靜默吞下這類拒絕，不再誤報。
+
 ## [2.50.1] - 2026-06-04
 
 ### Fixed
