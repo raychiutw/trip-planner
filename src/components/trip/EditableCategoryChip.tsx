@@ -40,18 +40,21 @@ const SCOPED_STYLES = `
 .tp-cat-chip-pop {
   margin-top: 8px; background: var(--color-secondary);
   border-radius: var(--radius-md); padding: 10px;
+  /* 預設 .tp-cat-chip-wrap 是 inline-block → popover 會被壓成 min-content 窄條（手機上
+     4 格擠成 ~42px、又高又窄）。給舒適寬度：手機填滿可用寬（上限 288px）、小螢幕不橫向溢出，
+     讓 4×2 grid 的 tile 撐到舒適大小。 */
+  width: max-content;
+  min-width: min(288px, calc(100vw - 32px));
+  max-width: calc(100vw - 24px);
 }
 /* dropUp：在 bottom bar 等下方無空間處，picker 改 absolute 向上彈出，避免被 viewport 底切掉。
-   width:max-content + min-width 讓 4×2 grid 撐開，max-width 防小螢幕橫向溢出。 */
+   寬度沿用上方 base 規則。 */
 .tp-cat-chip-pop.is-up {
   position: absolute;
   left: 0;
   bottom: calc(100% + 8px);
   margin-top: 0;
   z-index: 60;
-  width: max-content;
-  min-width: 264px;
-  max-width: calc(100vw - 32px);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
 }
 `;

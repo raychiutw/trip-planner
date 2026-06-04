@@ -14,6 +14,7 @@ const EDIT_ENTRY = read('src/pages/EditEntryPage.tsx');
 const BACKEND = read('functions/api/trips/[id]/entries/[eid]/pois/[poiId].ts');
 const ADD_STOP = read('src/pages/AddStopPage.tsx');
 const CHANGE_POI = read('src/pages/ChangePoiPage.tsx');
+const CHIP = read('src/components/trip/EditableCategoryChip.tsx');
 
 describe('AddStopPage — search result per-result category override', () => {
   it('imports EditableCategoryChip', () => {
@@ -62,6 +63,13 @@ describe('EditEntryPage — editable category (master + alternates)', () => {
     // CATEGORY_ICON（8 類齊全）杜絕漂移。
     expect(EDIT_ENTRY).toMatch(/import \{[^}]*CATEGORY_ICON[^}]*\} from '\.\.\/components\/trip\/CategoryPicker'/);
     expect(EDIT_ENTRY).not.toMatch(/const POI_TYPE_ICON/);
+  });
+});
+
+describe('EditableCategoryChip popover — comfortable width on mobile (no shrink-wrapped 窄條)', () => {
+  it('base .tp-cat-chip-pop sets a viewport-aware min-width so the picker is not collapsed by the inline-block wrap', () => {
+    // inline-block wrap → 預設 popover 會被壓成 min-content 窄條（手機 ~42px tile，又高又窄）。
+    expect(CHIP).toMatch(/\.tp-cat-chip-pop\s*\{[^}]*min-width:\s*min\(288px, calc\(100vw - 32px\)\)/);
   });
 });
 
