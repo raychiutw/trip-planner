@@ -1,24 +1,27 @@
 /**
  * _gcp_monitoring.ts — Google Cloud Monitoring API client (Workers-compatible)
  *
- * 取代 `quota-estimate.ts` 原本的 D1 proxy 估算（local cache miss + api_logs
- * 推斷）為 ground-truth Maps Platform request count，透過 Cloud Monitoring
+ * Ground-truth Maps Platform request count，透過 Cloud Monitoring
  * `timeSeries.list` 抓 `serviceruntime.googleapis.com/api/request_count` 並
- * 依 `consumed_api` label 分組。
+ * 依 consumed_api `method` resource label 分組（billable SKU 維度）。
+ *（D1 proxy 估算與 host→name 對照表已移除。）
  *
  * Auth flow (service account):
- *   1. Parse `GCP_SERVICE_ACCOUNT_KEY_JSON` env (Google service-account JSON)
+ *   1. Parse `GOOGLE_CLOUD_SA_KEY` env (Google service-account JSON)
  *   2. Sign JWT (RS256) with scope=monitoring.read, aud=oauth2 token endpoint
  *   3. POST jwt-bearer grant → exchange for access_token (1h TTL)
  *   4. Cache access_token in-isolate (50min)
  *   5. GET monitoring.googleapis.com/v3/projects/:id/timeSeries with Bearer
  *
- * Graceful fallback：env 缺失 / parse fail / GCP 5xx / token expired retry fail
- * → 整個 function 回 null，caller 退到 D1 proxy。
+ * 查詢區間為 month-to-date（當月 1 號 → 現在），caller 直接得真實 MTD counts。
  *
- * Required env:
- *   - GCP_SERVICE_ACCOUNT_KEY_JSON: full service-account JSON 字串
- *   - GCP_PROJECT_ID: 目標 GCP project id（含 Maps Platform 計費）
+ * Failure：env 缺失 / parse fail / GCP 5xx / token expired retry fail → 回 null。
+ * caller (quota-estimate.ts) 收到 null 時回 502 MAPS_UPSTREAM_FAILED，不再投射 / 不用假常數
+ * （D1 proxy 估算已移除 — 寧可顯示錯誤也不顯示假金額）。
+ *
+ * Required env（名稱對齊 _types.ts Env 與 prod secret）:
+ *   - GOOGLE_CLOUD_SA_KEY: full service-account JSON 字串
+ *   - GOOGLE_CLOUD_PROJECT_ID: 目標 GCP project id（含 Maps Platform 計費）
  */
 import { signJwt, importPrivateKey } from '../../src/server/jwt';
 import type { JwtClaims } from '../../src/server/jwt';
@@ -46,13 +49,16 @@ interface AccessTokenCache {
 const TOKEN_CACHE = new Map<string, AccessTokenCache>();
 
 interface GcpMonitoringEnv {
-  GCP_SERVICE_ACCOUNT_KEY_JSON?: string;
-  GCP_PROJECT_ID?: string;
+  // NOTE: 名稱必須對齊 functions/api/_types.ts Env 與 prod secret
+  // (GOOGLE_CLOUD_SA_KEY / GOOGLE_CLOUD_PROJECT_ID)。曾因讀錯名
+  // (GCP_SERVICE_ACCOUNT_KEY_JSON) 導致永遠 fallback、金額全是假常數。
+  GOOGLE_CLOUD_SA_KEY?: string;
+  GOOGLE_CLOUD_PROJECT_ID?: string;
 }
 
 /**
  * Parse service account JSON env. Returns null on missing/invalid input —
- * caller falls back to D1 proxy.
+ * caller returns 502 MAPS_UPSTREAM_FAILED (no fake-data fallback).
  */
 function parseServiceAccount(rawJson: string | undefined): ServiceAccountKey | null {
   if (!rawJson || typeof rawJson !== 'string') return null;
@@ -127,21 +133,9 @@ async function getAccessToken(account: ServiceAccountKey): Promise<string | null
   return json.access_token;
 }
 
-/** Map GCP consumed_api label → quota-estimate service key. */
-const GCP_API_TO_SERVICE: Record<string, string> = {
-  'places-backend.googleapis.com': 'search_text',
-  'places.googleapis.com': 'place_details',
-  'directions.googleapis.com': 'directions',
-  'routes.googleapis.com': 'directions',
-  'maps-backend.googleapis.com': 'maps_js',
-  'geocoding-backend.googleapis.com': 'geocoding',
-  'geocoder.googleapis.com': 'geocoding',
-  'placeautocomplete.googleapis.com': 'autocomplete',
-};
-
 interface ServiceCount {
-  service: string;
-  count_24h: number;
+  method: string;
+  count: number; // month-to-date request count for this consumed_api method
 }
 
 interface TimeSeriesPoint {
@@ -149,8 +143,9 @@ interface TimeSeriesPoint {
 }
 
 interface TimeSeries {
-  resource?: { labels?: { service?: string } };
-  metric?: { labels?: { consumed_api?: string } };
+  // consumed_api resource labels — `method` is the billable SKU dimension
+  // (e.g. google.maps.places.v1.Places.SearchText). No host→name map needed.
+  resource?: { labels?: { service?: string; method?: string } };
   points?: TimeSeriesPoint[];
 }
 
@@ -159,22 +154,30 @@ interface TimeSeriesResponse {
 }
 
 /**
- * Query Cloud Monitoring for last-24h Maps Platform request counts, grouped
- * by consumed_api label. Returns null on any failure → caller fallback.
+ * Query Cloud Monitoring for month-to-date request counts grouped by the real
+ * consumed_api `method` resource label (verified live: e.g.
+ * google.maps.places.v1.Places.SearchText). No host→name mapping — caller prices
+ * per method. Returns null on any failure → caller returns 502.
  */
 export async function fetchMapsQuotaFromCloudMonitoring(
   env: GcpMonitoringEnv,
 ): Promise<ServiceCount[] | null> {
-  const account = parseServiceAccount(env.GCP_SERVICE_ACCOUNT_KEY_JSON);
+  const account = parseServiceAccount(env.GOOGLE_CLOUD_SA_KEY);
   if (!account) return null;
-  const projectId = env.GCP_PROJECT_ID ?? account.project_id;
+  const projectId = env.GOOGLE_CLOUD_PROJECT_ID ?? account.project_id;
   if (!projectId) return null;
 
   const accessToken = await getAccessToken(account);
   if (!accessToken) return null;
 
-  const endTime = new Date().toISOString();
-  const startTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Month-to-date window: 當月 1 號 00:00 UTC → 現在。Cloud Monitoring 以
+  // 86400s alignment 回多個每日 point，下方 sum 全部 point 即得 MTD 真值
+  // （單調遞增，不再用 dailyCost × dayOfMonth 投射）。
+  // 註：Google 免費額度實際以帳單時區（US Pacific）月初重置，此處用 UTC 月初，
+  // 月界 ±1 天內可能與 Google 帳單月略有偏差；百級用量下影響可忽略。
+  const now = new Date();
+  const endTime = now.toISOString();
+  const startTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 
   // Filter: serviceruntime API request_count + Maps Platform services only.
   // `resource.type="consumed_api"` 是 Maps Platform / serviceruntime 標準 resource type。
@@ -191,8 +194,11 @@ export async function fetchMapsQuotaFromCloudMonitoring(
     'aggregation.crossSeriesReducer': 'REDUCE_SUM',
     view: 'FULL',
   });
-  // groupByFields 是 repeated param — URLSearchParams 接受 .append 累加。
-  params.append('aggregation.groupByFields', 'metric.label."consumed_api"');
+  // group by the real consumed_api resource labels (service + method). `method`
+  // is the billable SKU dimension (SearchText / GetPlace / Autocomplete share one
+  // service but bill differently). groupByFields 是 repeated param。
+  params.append('aggregation.groupByFields', 'resource.label."service"');
+  params.append('aggregation.groupByFields', 'resource.label."method"');
 
   const url = `${MONITORING_HOST}/v3/projects/${encodeURIComponent(projectId)}/timeSeries?${params}`;
   const ctrl = new AbortController();
@@ -222,9 +228,8 @@ export async function fetchMapsQuotaFromCloudMonitoring(
   const counts = new Map<string, number>();
 
   for (const ts of series) {
-    const consumedApi = ts.metric?.labels?.consumed_api ?? ts.resource?.labels?.service ?? '';
-    const service = GCP_API_TO_SERVICE[consumedApi];
-    if (!service) continue; // 非 Maps Platform service，skip
+    const method = ts.resource?.labels?.method;
+    if (!method) continue; // 無 method label，skip
 
     let total = 0;
     for (const point of ts.points ?? []) {
@@ -233,10 +238,10 @@ export async function fetchMapsQuotaFromCloudMonitoring(
       if (typeof intVal === 'string') total += Number.parseInt(intVal, 10) || 0;
       else if (typeof doubleVal === 'number') total += Math.round(doubleVal);
     }
-    counts.set(service, (counts.get(service) ?? 0) + total);
+    counts.set(method, (counts.get(method) ?? 0) + total);
   }
 
-  return Array.from(counts.entries()).map(([service, count_24h]) => ({ service, count_24h }));
+  return Array.from(counts.entries()).map(([method, count]) => ({ method, count }));
 }
 
 /** Reset in-isolate token cache — for tests only. */
