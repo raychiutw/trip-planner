@@ -10,6 +10,11 @@ export type EditableCategoryChipProps = {
   autoValue?: PoiType | null;
   disabled?: boolean;
   testIdPrefix?: string;
+  /**
+   * 在 fixed/sticky bottom bar 等「下方無空間」處使用時設 true，picker 改向上彈出
+   * （absolute 定位，不被 viewport 底切掉）。預設 false（沿用 in-flow 向下展開）。
+   */
+  dropUp?: boolean;
 };
 
 const SCOPED_STYLES = `
@@ -35,6 +40,22 @@ const SCOPED_STYLES = `
 .tp-cat-chip-pop {
   margin-top: 8px; background: var(--color-secondary);
   border-radius: var(--radius-md); padding: 10px;
+  /* 預設 .tp-cat-chip-wrap 是 inline-block → popover 會被壓成 min-content 窄條（手機上
+     4 格擠成 ~42px、又高又窄）。給舒適寬度：手機填滿可用寬（上限 288px）、小螢幕不橫向溢出，
+     讓 4×2 grid 的 tile 撐到舒適大小。 */
+  width: max-content;
+  min-width: min(288px, calc(100vw - 32px));
+  max-width: calc(100vw - 24px);
+}
+/* dropUp：在 bottom bar 等下方無空間處，picker 改 absolute 向上彈出，避免被 viewport 底切掉。
+   寬度沿用上方 base 規則。 */
+.tp-cat-chip-pop.is-up {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  margin-top: 0;
+  z-index: 60;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
 }
 `;
 
@@ -49,6 +70,7 @@ export function EditableCategoryChip({
   autoValue,
   disabled = false,
   testIdPrefix = 'category-chip',
+  dropUp = false,
 }: EditableCategoryChipProps) {
   const [open, setOpen] = useState(false);
 
@@ -73,7 +95,7 @@ export function EditableCategoryChip({
         </span>
       </button>
       {open && (
-        <div className="tp-cat-chip-pop" data-testid={`${testIdPrefix}-pop`}>
+        <div className={`tp-cat-chip-pop${dropUp ? ' is-up' : ''}`} data-testid={`${testIdPrefix}-pop`}>
           <CategoryPicker
             value={value}
             autoValue={autoValue}
