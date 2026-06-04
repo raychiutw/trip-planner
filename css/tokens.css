@@ -226,6 +226,18 @@ button, input, select, textarea {
     font-family: inherit;
     font-size: inherit;
 }
+/* iOS Safari zooms the viewport when a focused text field has computed
+   font-size < 16px, which then makes the page wider than the viewport and
+   enables left/right scroll. Floor text inputs at 16px while preserving any
+   larger inherited size (1em = parent font-size). Buttons are excluded — they
+   don't trigger focus-zoom and may intentionally use smaller text. The
+   .tp-input-long (16px) / .tp-input-short input (22px) systems keep their
+   values via higher class specificity; only stray inherit-only inputs that
+   land under a <16px parent (footnote 14px / caption 12px / caption2 11px)
+   get floored. */
+input, select, textarea {
+    font-size: max(16px, 1em);
+}
 body.dark {
     /* Sidebar dark accent — 更深 cocoa surface（DESIGN.md H6 exception line 5126）。 */
     --color-sidebar-bg: #0F0B08;

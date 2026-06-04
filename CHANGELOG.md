@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.48.1] - 2026-06-04
+
+### Fixed
+- **iOS 手機點輸入框畫面放大、然後可左右橫滑** — `css/tokens.css` base 規則 `button, input, select, textarea { font-size: inherit }` 讓沒套 `.tp-input-long` / `.tp-input-short` 的 input 繼承父層字級；父層 <16px（footnote 14px / caption 12px / caption2 11px）時，iOS Safari 一聚焦就自動放大 viewport → 放大後頁面比 viewport 寬 → 可左右滑。改對 `input, select, textarea` 疊 `font-size: max(16px, 1em)`（≥16px 底線、保留較大的繼承字級），buttons 不含（不觸發放大）。`.tp-input-long`(16px) / `.tp-input-short input`(22px) 系統因 class 特異性更高不受影響。附 regression test 鎖。與 v2.46.1 EditTripPage minmax 橫滑修為不同 root cause（放大觸發 vs grid column 上限）。
+
 ## [2.48.0] - 2026-06-04
 
 ### Changed
