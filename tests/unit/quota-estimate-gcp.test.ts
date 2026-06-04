@@ -72,6 +72,30 @@ describe('_gcp_monitoring — env name + grouping (root-cause regression locks)'
   });
 });
 
+describe('_gcp_monitoring — transient retry (daily-check 502 root-cause lock)', () => {
+  // 2026-06-05 daily-check: /api/admin/quota-estimate 502×2 同一秒。根因 — 單次
+  // transient GCP 失敗（401 token race / 5xx）直接回 null → endpoint 502。原 401
+  // 分支 invalidate cache「caller can retry」但無 retry 存在。鎖住 retry loop。
+  it('wraps the monitoring fetch in a bounded retry loop', () => {
+    expect(GCP_SRC).toContain('MAX_ATTEMPTS');
+    expect(GCP_SRC).toMatch(/for \(let attempt = 1; attempt <= MAX_ATTEMPTS/);
+  });
+
+  it('retries once on transient upstream classes (401 token race or 5xx)', () => {
+    expect(GCP_SRC).toMatch(/resp\.status === 401 \|\| resp\.status >= 500/);
+  });
+
+  it('fetches a fresh token inside the loop so the 401 retry re-signs', () => {
+    // getAccessToken 必須在 retry loop 內呼叫（attempt 1 invalidate cache 後，
+    // attempt 2 才會 re-sign 新 token）。loop 前不可再有一次 getAccessToken。
+    const loopStart = GCP_SRC.indexOf('for (let attempt = 1; attempt <= MAX_ATTEMPTS');
+    expect(loopStart).toBeGreaterThan(-1);
+    expect(GCP_SRC.slice(loopStart)).toContain('await getAccessToken(account)');
+    // 整支只有 loop 內那一次 getAccessToken 呼叫
+    expect(GCP_SRC.match(/await getAccessToken\(account\)/g)).toHaveLength(1);
+  });
+});
+
 describe('quota-estimate endpoint — GCP-or-error (no synthetic fallback)', () => {
   beforeEach(() => vi.clearAllMocks());
 
