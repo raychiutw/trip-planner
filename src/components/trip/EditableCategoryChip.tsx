@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import Icon from '../shared/Icon';
 import { CategoryPicker, CATEGORY_ICON } from './CategoryPicker';
 import { POI_TYPE_LABELS, type PoiType } from '../../lib/poiCategory';
@@ -48,10 +48,11 @@ const SCOPED_STYLES = `
   max-width: calc(100vw - 24px);
 }
 /* dropUp：在 bottom bar 等下方無空間處，picker 改 absolute 向上彈出，避免被 viewport 底切掉。
-   寬度沿用上方 base 規則。 */
+   bottom-bar 的 chip 偏右（actions 在右、counter 在左把它推右）→ 用 right:0 把 picker 的右緣
+   對齊 chip 右緣、向左展開，避免 left:0 + 288px 寬度衝出右邊界（QA 實測溢出 129px）。寬度沿用 base。 */
 .tp-cat-chip-pop.is-up {
   position: absolute;
-  left: 0;
+  right: 0;
   bottom: calc(100% + 8px);
   margin-top: 0;
   z-index: 60;
@@ -73,6 +74,24 @@ export function EditableCategoryChip({
   dropUp = false,
 }: EditableCategoryChipProps) {
   const [open, setOpen] = useState(false);
+  const popRef = useRef<HTMLDivElement | null>(null);
+
+  // dropUp popover 用 right:0 對齊 chip 右緣，但 chip 在 bottom bar 的水平位置會隨 counter
+  // 文案長短在「靠右」與「置中」間漂移（短名 → 三項同列置中、長名 → actions 換行被推右）。
+  // 純 CSS 的 left/right 錨點都可能某一側溢出 → 開啟時量測一次、用 transform 夾回 viewport
+  // 內（左右各留 8px margin），任意 chip 位置都不切掉。
+  useLayoutEffect(() => {
+    const el = popRef.current;
+    if (!open || !dropUp || !el) return;
+    el.style.transform = 'translateX(0px)';
+    const r = el.getBoundingClientRect();
+    const margin = 8;
+    const vw = document.documentElement.clientWidth;
+    let dx = 0;
+    if (r.right > vw - margin) dx = vw - margin - r.right;
+    if (r.left + dx < margin) dx = margin - r.left;
+    if (dx !== 0) el.style.transform = `translateX(${Math.round(dx)}px)`;
+  }, [open, dropUp]);
 
   return (
     <span className="tp-cat-chip-wrap">
@@ -95,7 +114,7 @@ export function EditableCategoryChip({
         </span>
       </button>
       {open && (
-        <div className={`tp-cat-chip-pop${dropUp ? ' is-up' : ''}`} data-testid={`${testIdPrefix}-pop`}>
+        <div ref={popRef} className={`tp-cat-chip-pop${dropUp ? ' is-up' : ''}`} data-testid={`${testIdPrefix}-pop`}>
           <CategoryPicker
             value={value}
             autoValue={autoValue}
