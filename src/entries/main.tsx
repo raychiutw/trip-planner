@@ -19,15 +19,17 @@ if ('serviceWorker' in navigator) {
     sessionStorage.setItem(reloadKey, '1');
     window.location.reload();
   });
-  // SW load 失敗（iOS Chrome 偶發 TypeError/SecurityError）會讓 getRegistration 或
-  // reg.update() reject。沒 catch 會 bubble 成 unhandled rejection 進 Sentry。
-  // 真實 user 沒 functional impact（SW 是 enhancement），靜默吞 reject。
-  navigator.serviceWorker
-    .getRegistration()
-    .then((reg) => {
-      if (reg) return reg.update();
-    })
-    .catch(() => {});
+  // 自行 register（vite.config.ts injectRegister:false 已關掉 vite-plugin-pwa
+  // 自動注入的 registerSW.js）。register/update reject — Chrome Mobile 無痕、
+  // 儲存停用、企業政策、iOS Chrome 偶發 TypeError/SecurityError — 沒 catch 會
+  // bubble 成 unhandled rejection 進 Sentry（"Error: Rejected"）。真實 user 沒
+  // functional impact（SW 是 enhancement），靜默吞 reject。
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js', { scope: '/' })
+      .then((reg) => reg.update())
+      .catch(() => {});
+  });
 }
 
 import { createRoot } from 'react-dom/client';

@@ -167,9 +167,6 @@ export async function fetchMapsQuotaFromCloudMonitoring(
   const projectId = env.GOOGLE_CLOUD_PROJECT_ID ?? account.project_id;
   if (!projectId) return null;
 
-  const accessToken = await getAccessToken(account);
-  if (!accessToken) return null;
-
   // Month-to-date window: 當月 1 號 00:00 UTC → 現在。Cloud Monitoring 以
   // 86400s alignment 回多個每日 point，下方 sum 全部 point 即得 MTD 真值
   // （單調遞增，不再用 dailyCost × dayOfMonth 投射）。
@@ -201,29 +198,53 @@ export async function fetchMapsQuotaFromCloudMonitoring(
   params.append('aggregation.groupByFields', 'resource.label."method"');
 
   const url = `${MONITORING_HOST}/v3/projects/${encodeURIComponent(projectId)}/timeSeries?${params}`;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10_000);
-  let resp: Response;
-  try {
-    resp = await fetch(url, {
-      headers: { authorization: `Bearer ${accessToken}` },
-      signal: ctrl.signal,
-    });
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-  if (!resp.ok) {
-    // 401 → token expired between cache check and call → invalidate + caller can retry
-    if (resp.status === 401) {
-      const cacheKey = `${account.client_email}:${account.private_key_id}`;
-      TOKEN_CACHE.delete(cacheKey);
-    }
-    return null;
-  }
 
-  const data = (await resp.json()) as TimeSeriesResponse;
+  // Retry once on transient upstream failures so a single GCP hiccup doesn't
+  // surface as a 502 to the caller. Covered transient classes:
+  //   - token endpoint 5xx / network → getAccessToken returns null
+  //   - 401 token-expiry race (cache hit, but token died before this call) →
+  //     invalidate cache so the retry re-signs a fresh token
+  //   - monitoring API 5xx / network error
+  // Non-transient failures (4xx ≠ 401, parse) return null immediately — no point
+  // retrying. accessToken is fetched inside the loop so the retry picks up the
+  // invalidated cache. (Previously the 401 branch invalidated the cache "so
+  // caller can retry" but no retry existed → daily-check 502 every token race.)
+  const MAX_ATTEMPTS = 2;
+  let data: TimeSeriesResponse | null = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const accessToken = await getAccessToken(account);
+    if (!accessToken) {
+      if (attempt < MAX_ATTEMPTS) continue;
+      return null;
+    }
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10_000);
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        headers: { authorization: `Bearer ${accessToken}` },
+        signal: ctrl.signal,
+      });
+    } catch {
+      if (attempt < MAX_ATTEMPTS) continue;
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!resp.ok) {
+      // 401 → token expired between cache check and call → invalidate so the
+      // next attempt re-signs a fresh token.
+      if (resp.status === 401) {
+        TOKEN_CACHE.delete(`${account.client_email}:${account.private_key_id}`);
+      }
+      // Retry once on transient upstream classes (401 token race or 5xx).
+      if ((resp.status === 401 || resp.status >= 500) && attempt < MAX_ATTEMPTS) continue;
+      return null;
+    }
+    data = (await resp.json()) as TimeSeriesResponse;
+    break;
+  }
+  if (!data) return null;
   const series = data.timeSeries ?? [];
   const counts = new Map<string, number>();
 

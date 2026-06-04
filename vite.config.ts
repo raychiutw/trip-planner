@@ -34,6 +34,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // 不注入 vite-plugin-pwa 自動產生的 registerSW.js（它呼叫
+      // navigator.serviceWorker.register('/sw.js') 但沒 .catch → Chrome Mobile
+      // 無痕/儲存停用時 register reject 變 unhandled rejection 進 Sentry,
+      // "Error: Rejected" culprit /registerSW.js）。改由 src/entries/main.tsx
+      // 自行 register 並 .catch（SW 是 enhancement，reject 靜默吞）。
+      injectRegister: false,
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
