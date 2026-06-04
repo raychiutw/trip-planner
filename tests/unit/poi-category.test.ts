@@ -85,6 +85,19 @@ describe('Google Places primaryType → poi_type accuracy (add-stop auto-categor
     // 'spa' inside 'spanish' must NOT become activity; 'restaurant' wins
     expect(mapNominatimCategory('spanish_restaurant')).toBe('restaurant');
   });
+
+  it('food *_shop Google types → restaurant (not shopping despite the "shop" substring)', () => {
+    expect(mapNominatimCategory('ice_cream_shop')).toBe('restaurant');
+    expect(mapNominatimCategory('dessert_shop')).toBe('restaurant');
+    expect(mapNominatimCategory('donut_shop')).toBe('restaurant');
+    expect(mapNominatimCategory('bagel_shop')).toBe('restaurant');
+    expect(mapNominatimCategory('juice_shop')).toBe('restaurant');
+    // non-prepared-food retail stays shopping
+    expect(mapNominatimCategory('candy_store')).toBe('shopping');
+    expect(mapNominatimCategory('barber_shop')).toBe('shopping');
+    expect(mapNominatimCategory('gift_shop')).toBe('shopping');
+    expect(mapNominatimCategory('shoe_store')).toBe('shopping');
+  });
 });
 
 describe('mapNominatimCategory', () => {

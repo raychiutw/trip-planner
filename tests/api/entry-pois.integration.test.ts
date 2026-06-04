@@ -1805,3 +1805,114 @@ describe('PATCH /pois/:poiId — per-POI note', () => {
     expect(row!.updated_at > '2000-01-01T00:00:00.000Z').toBe(true);
   });
 });
+
+describe('PATCH /pois/:poiId — poi_type (change category via re-point)', () => {
+  function patchCtx(entryId: number, poiId: number, body: unknown) {
+    return mockContext({
+      request: jsonRequest(
+        `https://test.com/api/trips/${TRIP_ID}/entries/${entryId}/pois/${poiId}`,
+        'PATCH',
+        body,
+      ),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+      params: { id: TRIP_ID, eid: String(entryId), poiId: String(poiId) },
+    });
+  }
+  const masterRow = (entryId: number) =>
+    db
+      .prepare(
+        'SELECT p.id, p.type, p.name FROM trip_entry_pois tep JOIN pois p ON p.id = tep.poi_id WHERE tep.entry_id = ? AND tep.sort_order = 1',
+      )
+      .bind(entryId)
+      .first<{ id: number; type: string; name: string }>();
+
+  it('re-types the master POI: re-points the entry to a (name, new-type) row', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PT Master' });
+    const resp = await callHandler(poiNotePatch, patchCtx(entryId, masterPoiId, { poi_type: 'restaurant' }));
+    expect(resp.status).toBe(200);
+    const row = await masterRow(entryId);
+    expect(row!.type).toBe('restaurant');
+    expect(row!.name).toBe('PT Master');
+    expect(row!.id).not.toBe(masterPoiId); // re-pointed, not the old attraction row
+  });
+
+  it('collision: re-points to the EXISTING (name, target-type) row, never a duplicate', async () => {
+    const preId = await seedPoi(db, { name: 'PT Collide', type: 'restaurant' });
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PT Collide' });
+    const resp = await callHandler(poiNotePatch, patchCtx(entryId, masterPoiId, { poi_type: 'restaurant' }));
+    expect(resp.status).toBe(200);
+    expect((await masterRow(entryId))!.id).toBe(preId);
+    const cnt = await db
+      .prepare("SELECT count(*) AS n FROM pois WHERE name = 'PT Collide' AND type = 'restaurant'")
+      .first<{ n: number }>();
+    expect(cnt!.n).toBe(1);
+  });
+
+  it('rejects an invalid poi_type with 400', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PT Bad' });
+    const resp = await callHandler(poiNotePatch, patchCtx(entryId, masterPoiId, { note: 'x', poi_type: 'bogus' }));
+    expect(resp.status).toBe(400);
+  });
+
+  it('note-only PATCH still works (existing behavior preserved)', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PT NoteOnly' });
+    const resp = await callHandler(poiNotePatch, patchCtx(entryId, masterPoiId, { note: 'hello' }));
+    expect(resp.status).toBe(200);
+    const row = await db
+      .prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(entryId)
+      .first<{ note: string }>();
+    expect(row!.note).toBe('hello');
+  });
+
+  // 資料保真：re-point 建出全新 (name, newType) clone 時，要帶上來源 POI 的
+  // lifecycle 狀態（migration 0051 status / status_reason / status_checked_at），
+  // 否則對「永久歇業」的 POI 換分類會讓 clone 預設回 active、歇業警告消失。
+  it('preserves lifecycle status when re-pointing creates a new (name, type) clone', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PT Closed' });
+    await db
+      .prepare(
+        "UPDATE pois SET status = 'closed', status_reason = '永久歇業', status_checked_at = '2026-05-01T00:00:00.000Z' WHERE id = ?",
+      )
+      .bind(masterPoiId)
+      .run();
+
+    const resp = await callHandler(poiNotePatch, patchCtx(entryId, masterPoiId, { poi_type: 'restaurant' }));
+    expect(resp.status).toBe(200);
+
+    const row = await db
+      .prepare(
+        'SELECT p.id, p.status, p.status_reason, p.status_checked_at FROM trip_entry_pois tep JOIN pois p ON p.id = tep.poi_id WHERE tep.entry_id = ? AND tep.sort_order = 1',
+      )
+      .bind(entryId)
+      .first<{ id: number; status: string; status_reason: string | null; status_checked_at: string | null }>();
+    expect(row!.id).not.toBe(masterPoiId); // 確實是新 clone
+    expect(row!.status).toBe('closed'); // 不應被重設為 active
+    expect(row!.status_reason).toBe('永久歇業');
+    expect(row!.status_checked_at).toBe('2026-05-01T00:00:00.000Z');
+  });
+
+  // 反向保護：re-point 撞到既有同名同類 row（merge）時，**不可**用來源的
+  // 歇業狀態覆寫該既有 row 自己的 lifecycle（它是另一個真實地點、自有狀態）。
+  // 此測試同時鎖死「status 不得進 COALESCE_FIELDS」的設計決策。
+  it('merge case: re-pointing a closed POI onto an existing active row keeps that row active', async () => {
+    const preId = await seedPoi(db, { name: 'PT MergeActive', type: 'restaurant' });
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PT MergeActive' });
+    await db
+      .prepare("UPDATE pois SET status = 'closed', status_reason = '永久歇業' WHERE id = ?")
+      .bind(masterPoiId)
+      .run();
+
+    const resp = await callHandler(poiNotePatch, patchCtx(entryId, masterPoiId, { poi_type: 'restaurant' }));
+    expect(resp.status).toBe(200);
+    expect((await masterRow(entryId))!.id).toBe(preId);
+
+    const target = await db
+      .prepare('SELECT status, status_reason FROM pois WHERE id = ?')
+      .bind(preId)
+      .first<{ status: string; status_reason: string | null }>();
+    expect(target!.status).toBe('active'); // 既有 row 自己的 lifecycle 不被動到
+    expect(target!.status_reason).toBeNull();
+  });
+});
