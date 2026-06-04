@@ -59,6 +59,7 @@ import { usePoiSearch } from '../hooks/usePoiSearch';
 import { regionToApiParam } from '../lib/maps/region';
 // v2.31.94/98: 自訂 tab 用 shared <CustomPoiForm> component（同 ChangePoiPage）。
 import { CustomPoiForm } from '../components/trip/CustomPoiForm';
+import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
 import {
   selectDefaultCenter,
   isValidCoord as isValidCustomCoord,
@@ -442,6 +443,7 @@ const SCOPED_STYLES = `
   background: var(--color-success, #2E7D32);
 }
 .tp-add-stop-card-body { min-width: 0; padding: 10px 12px; }
+.tp-add-stop-card-cat { margin-top: 6px; }
 .tp-add-stop-card-name {
   font-weight: 700; font-size: var(--font-size-callout);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -682,6 +684,8 @@ export default function AddStopPage() {
   const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
   // 自訂 stop 無 Google 來源 → 預設 'attraction'，使用者用 CategoryPicker 可改。
   const [customCategory, setCustomCategory] = useState<PoiType>('attraction');
+  // 搜尋結果 per-result 分類覆寫（place_id → 使用者選的分類）。預設＝Google 自動推導。
+  const [searchCatOverride, setSearchCatOverride] = useState<Record<string, PoiType>>({});
   // v2.32.1 fix: 初值改 null 區分「未載入」與「載入後 0 個」
   const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
@@ -783,8 +787,19 @@ export default function AddStopPage() {
   function toggleSearch(id: string) {
     setSelectedSearch((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+        // 取消選取時清掉 per-result 分類覆寫，避免再次選取時殘留舊的手動選擇
+        // （重新選取應回到 auto-derived 預設）。
+        setSearchCatOverride((m) => {
+          if (!(id in m)) return m;
+          const cleaned = { ...m };
+          delete cleaned[id];
+          return cleaned;
+        });
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -849,7 +864,7 @@ export default function AddStopPage() {
           lat: r.lat,
           lng: r.lng,
           source: 'google',
-          poi_type: mapGooglePrimaryTypeToPoiType(r.category),
+          poi_type: searchCatOverride[r.place_id] ?? mapGooglePrimaryTypeToPoiType(r.category),
         }));
     } else if (tab === 'favorites') {
       const list = poiFavorites ?? [];
@@ -923,7 +938,7 @@ export default function AddStopPage() {
       setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, tripId, dayNum]);
+  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, searchCatOverride, tripId, dayNum]);
 
   if (!auth.user) return null;
   // v2.31.99: tripId 必填，但 dayNum 改成 optional — 沒帶 ?day=N 時 chip row
@@ -1179,6 +1194,25 @@ export default function AddStopPage() {
                                     )}
                                     <span>{poiMeta(r.address, r.category)}</span>
                                   </div>
+                                  {isSelected && (
+                                    <div
+                                      className="tp-add-stop-card-cat"
+                                      // preventDefault (not stopPropagation): the card's hidden
+                                      // checkbox toggles via LABEL ACTIVATION (a default action),
+                                      // so clicking the picker's gaps/padding would deselect the
+                                      // card. Only preventDefault cancels label activation.
+                                      onClick={(e) => e.preventDefault()}
+                                    >
+                                      <EditableCategoryChip
+                                        value={searchCatOverride[r.place_id] ?? mapGooglePrimaryTypeToPoiType(r.category)}
+                                        autoValue={mapGooglePrimaryTypeToPoiType(r.category)}
+                                        onChange={(t) =>
+                                          setSearchCatOverride((m) => ({ ...m, [r.place_id]: t }))
+                                        }
+                                        testIdPrefix={`add-stop-search-cat-${r.place_id}`}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               </label>
                             );

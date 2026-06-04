@@ -131,8 +131,11 @@ describe('audit fix source locks', () => {
 
   it('_poi find-or-create persists place_id (INSERT column + COALESCE backfill)', () => {
     const src = read('functions/api/_poi.ts');
-    expect((src.match(/country, price, place_id\)/g) || []).length).toBe(2); // both INSERTs
-    expect(src).toMatch(/'price', 'place_id',/); // COALESCE_FIELDS
+    // migration 0051: place_id 之後接 lifecycle 三欄（status/status_reason/status_checked_at），
+    // 兩個 INSERT（findOrCreatePoi + batchFindOrCreatePois）column tail 必須 parity。
+    expect((src.match(/country, price, place_id, status, status_reason, status_checked_at\)/g) || []).length).toBe(2);
+    expect(src).toMatch(/'price', 'place_id',/); // COALESCE_FIELDS（status 刻意不進 COALESCE）
+    expect(src).not.toMatch(/'place_id', 'status'/); // lifecycle 不得進 COALESCE_FIELDS
     expect(src).toMatch(/place_id\?: string \| null/);
     expect(read('functions/api/pois/find-or-create.ts')).toMatch(/place_id: typeof body\.place_id === 'string'/);
   });

@@ -24,8 +24,9 @@ const CATEGORY_ORDER: readonly PoiType[] = [
   'other',
 ];
 
-/** poi_type → Icon name, aligned with timelineUtils.deriveTypeMeta. */
-const CATEGORY_ICON: Record<PoiType, string> = {
+/** poi_type → Icon name, aligned with timelineUtils.deriveTypeMeta. Exported for reuse
+ *  by EditableCategoryChip so the chip icon matches the picker tile icon. */
+export const CATEGORY_ICON: Record<PoiType, string> = {
   hotel: 'hotel',
   restaurant: 'utensils',
   shopping: 'shopping',

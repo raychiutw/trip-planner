@@ -27,8 +27,8 @@ describe('add-entry paths forward poi_type (Google primaryType → whitelist)', 
     expect(ADD_STOP).toMatch(/poi_type\?:\s*(string|PoiType)/);
   });
 
-  it('AddStopPage search payload derives poi_type from r.category', () => {
-    expect(ADD_STOP).toMatch(/poi_type:\s*mapGooglePrimaryTypeToPoiType\(r\.category\)/);
+  it('AddStopPage search payload derives poi_type from r.category (per-result override falls back to it)', () => {
+    expect(ADD_STOP).toMatch(/poi_type:.*mapGooglePrimaryTypeToPoiType\(r\.category\)/);
   });
 
   it('AddStopPage favorites payload derives poi_type from r.poiType', () => {

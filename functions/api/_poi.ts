@@ -86,6 +86,14 @@ export interface FindOrCreatePoiData {
   // v2.23.0: Google Places place_id — stored so POST /pois/:id/enrich works
   // immediately (else the POI waits for the 30-day place_id backfill).
   place_id?: string | null;
+  // Migration 0051: lifecycle 欄位。一般「建新 POI」的 caller 不帶這些 → INSERT
+  // 用 column 預設（status='active'、其餘 NULL）。只有 re-point「換分類複製整筆」
+  // 時帶進來，讓 closed/missing 的真實地點換分類後仍保留歇業狀態（不被重設 active）。
+  // 刻意不進 COALESCE_FIELDS：撞既有同名同類 row（merge）時，那筆是另一個真實
+  // 地點、自有 lifecycle，不可被來源狀態覆寫。
+  status?: string | null;
+  status_reason?: string | null;
+  status_checked_at?: string | null;
 }
 
 export interface FindOrCreatePoiPayload {
@@ -163,8 +171,10 @@ export async function findOrCreatePoi(
   // Not found → INSERT (INSERT OR IGNORE for race-safety with UNIQUE index)
   // Migration 0045: dropped maps col (use mapsUrl helper).
   // Migration 0054: added price col.
+  // Migration 0051: status/status_reason/status_checked_at — re-point clone 帶入；
+  // 一般 caller 不帶 → 落回 column 預設（'active' / NULL / NULL）。
   const result = await db.prepare(
-    'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price, place_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+    'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price, place_id, status, status_reason, status_checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
   ).bind(
     data.type, data.name, data.description ?? null, data.hours ?? null,
     data.rating ?? null, data.category ?? null,
@@ -172,6 +182,7 @@ export async function findOrCreatePoi(
     data.address ?? null, data.phone ?? null, data.email ?? null,
     data.website ?? null, data.country ?? 'JP', data.price ?? null,
     data.place_id ?? null,
+    data.status ?? 'active', data.status_reason ?? null, data.status_checked_at ?? null,
   ).first<{ id: number }>();
 
   // INSERT OR IGNORE returns null if concurrent insert won the race
@@ -241,8 +252,9 @@ export async function batchFindOrCreatePois(
   if (toInsert.length > 0) {
     const insertStmts = toInsert.map((idx) => {
       const data = uniqueItems[idx]!.data;
+      // 與 findOrCreatePoi 的 INSERT 保持 column parity（migration 0051 lifecycle 三欄）。
       return db.prepare(
-        'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price, place_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+        'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price, place_id, status, status_reason, status_checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
       ).bind(
         data.type, data.name, data.description ?? null, data.hours ?? null,
         data.rating ?? null, data.category ?? null,
@@ -250,6 +262,7 @@ export async function batchFindOrCreatePois(
         data.address ?? null, data.phone ?? null, data.email ?? null,
         data.website ?? null, data.country ?? 'JP', data.price ?? null,
         data.place_id ?? null,
+        data.status ?? 'active', data.status_reason ?? null, data.status_checked_at ?? null,
       );
     });
     const insertResults = await db.batch(insertStmts);
