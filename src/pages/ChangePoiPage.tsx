@@ -36,6 +36,7 @@ import {
 import type { PoiFavorite } from '../types/api';
 // v2.31.98: 自訂 tab — 同 AddStopPage 共用 CustomPoiForm shared component。
 import { CustomPoiForm, type CustomPoiCoord } from '../components/trip/CustomPoiForm';
+import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
 import {
   selectDefaultCenter,
   type Coord as PickerCoord,
@@ -446,6 +447,18 @@ const SCOPED_STYLES = `
 .tp-change-poi-counter strong {
   color: var(--color-foreground);
 }
+/* v2.50.0: mode=new 搜尋結果分類 chip — bottom bar 獨立 flex item。
+   共用 .tp-page-bottom-bar（css/tokens.css）是 gap:12px、無 flex-wrap、space-between，
+   多一個 chip 在窄螢幕會擠/溢出 → 本頁 scoped override 加 flex-wrap（對齊 EditTripPage 作法），
+   讓 chip + 動作按鈕在窄螢幕換行。 */
+.tp-page-bottom-bar {
+  flex-wrap: wrap;
+}
+.tp-change-poi-cat {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+}
 .tp-change-poi-actions {
   display: flex;
   gap: 8px;
@@ -559,6 +572,10 @@ export default function ChangePoiPage() {
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [category, setCategory] = useState<ChangePoiCategory>('all');
   const [selected, setSelected] = useState<SelectedPoi | null>(null);
+  // v2.50.0: mode=new search 加景點時可當場覆寫 auto-derived 分類（單選模型 → 單一 state，
+  // 非 AddStopPage 的 Record）。null = 沿用 mapGooglePrimaryTypeToPoiType(selected.category)。
+  // 換選取 / 改搜尋 / 切 tab 都 reset null → 每次選取回到自動推導預設。
+  const [searchCatOverride, setSearchCatOverride] = useState<PoiType | null>(null);
   const [favorites, setFavorites] = useState<PoiFavorite[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -591,6 +608,7 @@ export default function ChangePoiPage() {
   const handleSearchInput = useCallback((event: FormEvent<HTMLInputElement>) => {
     setQuery(event.currentTarget.value);
     setSelected(null);
+    setSearchCatOverride(null);
   }, []);
 
   const buildSearchPoiBody = useCallback((poi: SelectedPoi) => ({
@@ -608,6 +626,7 @@ export default function ChangePoiPage() {
   const handleTabChange = useCallback((nextTab: Tab) => {
     if (nextTab === tab) return;
     setSelected(null);
+    setSearchCatOverride(null);
     const next = new URLSearchParams(searchParams);
     next.set('tab', nextTab);
     setSearchParams(next, { replace: true });
@@ -768,7 +787,8 @@ export default function ChangePoiPage() {
               lng: selected.lng,
               source: 'google',
               note: selected.address ?? undefined,
-              poi_type: mapGooglePrimaryTypeToPoiType(selected.category),
+              // v2.50.0: 使用者當場覆寫的分類優先，否則沿用 Google primaryType auto-derive。
+              poi_type: searchCatOverride ?? mapGooglePrimaryTypeToPoiType(selected.category),
             };
         const res = await apiFetchRaw(
           `/trips/${encodeURIComponent(tripId)}/days/${newDayNum}/entries`,
@@ -846,7 +866,7 @@ export default function ChangePoiPage() {
       setError(err instanceof Error ? err.message : '置換景點失敗');
       setSubmitting(false);
     }
-  }, [selected, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord, newDayNum]);
+  }, [selected, searchCatOverride, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord, newDayNum]);
 
   // v2.31.98: custom tab submit 啟動條件不同（要 title + coord，不要 selected）
   const submitDisabled = tab === 'custom'
@@ -1013,17 +1033,20 @@ export default function ChangePoiPage() {
                         key={result.place_id}
                         type="button"
                         className={`tp-change-poi-card ${isSelected ? 'is-selected' : ''}`}
-                        onClick={() => setSelected({
-                          source: 'search',
-                          name: result.name,
-                          lat: result.lat,
-                          lng: result.lng,
-                          address: result.address,
-                          type: mapNominatimCategory(result.category ?? ''),
-                          category: result.category,
-                          rating: result.rating ?? null,
-                          country: result.country ?? null,
-                        })}
+                        onClick={() => {
+                          setSelected({
+                            source: 'search',
+                            name: result.name,
+                            lat: result.lat,
+                            lng: result.lng,
+                            address: result.address,
+                            type: mapNominatimCategory(result.category ?? ''),
+                            category: result.category,
+                            rating: result.rating ?? null,
+                            country: result.country ?? null,
+                          });
+                          setSearchCatOverride(null);
+                        }}
                         aria-pressed={isSelected}
                         data-testid={`change-poi-search-item-${result.place_id}`}
                       >
@@ -1084,15 +1107,20 @@ export default function ChangePoiPage() {
                         key={favorite.id}
                         type="button"
                         className={`tp-change-poi-card ${isSelected ? 'is-selected' : ''}`}
-                        onClick={() => setSelected({
-                          source: 'favorite',
-                          poiId: favorite.poiId,
-                          name: favorite.poiName ?? '',
-                          lat: favorite.poiLat ?? 0,
-                          lng: favorite.poiLng ?? 0,
-                          address: favorite.poiAddress,
-                          type: favorite.poiType ?? null,
-                        })}
+                        onClick={() => {
+                          setSelected({
+                            source: 'favorite',
+                            poiId: favorite.poiId,
+                            name: favorite.poiName ?? '',
+                            lat: favorite.poiLat ?? 0,
+                            lng: favorite.poiLng ?? 0,
+                            address: favorite.poiAddress,
+                            type: favorite.poiType ?? null,
+                          });
+                          // 維持「每次換選取都 reset override」不變式（favorite 不讀 override，
+                          // 但保持狀態乾淨，避免回切搜尋時殘留）。
+                          setSearchCatOverride(null);
+                        }}
                         aria-pressed={isSelected}
                         data-testid={`change-poi-favorite-item-${favorite.id}`}
                       >
@@ -1160,6 +1188,23 @@ export default function ChangePoiPage() {
           )}
           {error && <span className="tp-change-poi-error" role="alert">{error}</span>}
         </span>
+        {/* v2.50.0: 新增景點（mode=new）選了搜尋結果 → 可當場改分類，預設帶 auto-derive。
+            獨立 flex item（bottom bar 加 .tp-page-bottom-bar flex-wrap override 讓窄螢幕可換行）。
+            chip 在 fixed bottom bar → dropUp 讓 picker 向上彈出（否則被 viewport 底切掉、下排
+            分類點不到）。key 綁選取身分 → 換選取時 remount、關掉殘留展開的 picker。
+            favorite 來源重用既有 POI（自帶 type）故不顯示。 */}
+        {mode === 'new' && selected?.source === 'search' && (
+          <span className="tp-change-poi-cat">
+            <EditableCategoryChip
+              key={`${selected.name}-${selected.lat}-${selected.lng}`}
+              value={searchCatOverride ?? mapGooglePrimaryTypeToPoiType(selected.category)}
+              autoValue={mapGooglePrimaryTypeToPoiType(selected.category)}
+              onChange={setSearchCatOverride}
+              dropUp
+              testIdPrefix="change-poi-cat"
+            />
+          </span>
+        )}
         <div className="tp-change-poi-actions">
           <button
             type="button"
@@ -1201,6 +1246,8 @@ export default function ChangePoiPage() {
     searchResults.length,
     searching,
     selected,
+    searchCatOverride,
+    mode,
     submitting,
     submitLabel,
     submitDisabled,
