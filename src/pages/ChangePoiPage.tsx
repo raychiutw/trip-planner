@@ -22,7 +22,7 @@ import { usePoiSearch } from '../hooks/usePoiSearch';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
 import { regionToApiParam } from '../lib/maps/region';
-import { mapNominatimCategory } from '../lib/poiCategory';
+import { mapGooglePrimaryTypeToPoiType, mapNominatimCategory, type PoiType } from '../lib/poiCategory';
 import {
   REGION_OPTIONS,
   CATEGORY_TABS,
@@ -572,6 +572,8 @@ export default function ChangePoiPage() {
   const [customTitle, setCustomTitle] = useState('');
   const [customCoord, setCustomCoord] = useState<CustomPoiCoord | null>(null);
   const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
+  // 自訂 stop 無 Google 來源 → 預設 'attraction'，使用者用 CategoryPicker 可改。
+  const [customCategory, setCustomCategory] = useState<PoiType>('attraction');
   const [customError, setCustomError] = useState<string | null>(null);
   // v2.32.1 fix: 初值改 null（"未載入"），與「載入後是 0 個 destinations」區分。
   // LocationPickerMap 只用 mount 時的 initialCenter，若 customDestinations 還是 null
@@ -694,7 +696,7 @@ export default function ChangePoiPage() {
       try {
         // v2.32.0: mode=new 走 POST /entries（建立新 entry + master），不需 OCC
         if (mode === 'new') {
-          const body = { title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom' };
+          const body = { title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', poi_type: customCategory };
           const res = await apiFetchRaw(
             `/trips/${encodeURIComponent(tripId)}/days/${newDayNum}/entries`,
             { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
@@ -714,7 +716,9 @@ export default function ChangePoiPage() {
           return;
         }
         const occ = entryPoisVersion != null ? { entryPoisVersion } : {};
-        const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', ...occ };
+        // /alternates + /poi-id find-or-create read body.type (snake_case poi_type is
+        // only for POST /entries). Forward the picked custom category here too.
+        const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', type: customCategory, ...occ };
         const endpoint = mode === 'alternate'
           ? `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates`
           : `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/poi-id`;
@@ -764,6 +768,7 @@ export default function ChangePoiPage() {
               lng: selected.lng,
               source: 'google',
               note: selected.address ?? undefined,
+              poi_type: mapGooglePrimaryTypeToPoiType(selected.category),
             };
         const res = await apiFetchRaw(
           `/trips/${encodeURIComponent(tripId)}/days/${newDayNum}/entries`,
@@ -1140,6 +1145,8 @@ export default function ChangePoiPage() {
             initialCenter={customInitialCenter}
             error={customError}
             testIdPrefix="change-poi-custom"
+            category={customCategory}
+            onCategoryChange={setCustomCategory}
           />
         )}
       </main>

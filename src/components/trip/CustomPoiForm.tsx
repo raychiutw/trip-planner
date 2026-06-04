@@ -15,10 +15,12 @@
  */
 import { useCallback, useState, type ReactNode } from 'react';
 import { LocationPickerMap } from './LocationPickerMap';
+import { CategoryPicker } from './CategoryPicker';
 import { usePlacesAutocomplete } from '../../hooks/usePlacesAutocomplete';
 import { useTypeaheadKeyboard } from '../../hooks/useTypeaheadKeyboard';
 import { apiFetchRaw } from '../../lib/apiClient';
 import { isValidCoord } from '../../lib/locationPicker';
+import type { PoiType } from '../../lib/poiCategory';
 
 export type CustomPoiCoord = { lat: number; lng: number };
 
@@ -40,6 +42,10 @@ type Props = {
   extraRows?: ReactNode;
   /** 三選一控制 testid namespace：'add-stop-custom' | 'change-poi-custom' | 'add-custom-stop' */
   testIdPrefix: string;
+  /** 類別 picker（自訂 stop 用）— 同時提供 category + onCategoryChange 才會 render。
+   *  自訂 stop 無 Google 來源，預設由父層帶（通常 'attraction'），使用者可改。 */
+  category?: PoiType;
+  onCategoryChange?: (next: PoiType) => void;
 };
 
 const SCOPED_STYLES = `
@@ -317,6 +323,8 @@ export function CustomPoiForm({
   error,
   extraRows,
   testIdPrefix,
+  category,
+  onCategoryChange,
 }: Props) {
   const [flyToSignal, setFlyToSignal] =
     useState<{ coord: CustomPoiCoord; zoom?: number } | null>(null);
@@ -426,6 +434,20 @@ export function CustomPoiForm({
             </div>
           </div>
         </div>
+
+        {category != null && onCategoryChange && (
+          <div className="tp-custom-poi-form-row is-full">
+            <div className="tp-custom-poi-form-field">
+              <label id={`${testIdPrefix}-category-label`}>類別</label>
+              <CategoryPicker
+                value={category}
+                onChange={onCategoryChange}
+                testIdPrefix={`${testIdPrefix}-category`}
+                ariaLabelledBy={`${testIdPrefix}-category-label`}
+              />
+            </div>
+          </div>
+        )}
 
         {extraRows}
       </div>

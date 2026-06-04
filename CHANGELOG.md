@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.47.0] - 2026-06-04
+
+新增景點自動分類 + 行程拖曳/觸控捲動修復（兩個獨立 bug，全程 TDD；含對抗式 review 後再修正 1 HIGH + 3 MED finding）。
+
+### Added
+- **新增景點自動對應類別** — 加入行程的各路徑（AddStopPage 搜尋/收藏、AddPoiFavoriteToTripPage direct、ChangePoiPage mode=new + 非 new 自訂）改用 `mapGooglePrimaryTypeToPoiType` 把 Google `primaryType` 對應成 whitelist `poi_type`（POST /entries）或 `type`（find-or-create）後送出，後端不再 fallback 'attraction'。cafe→餐廳、車站→交通、購物中心→購物、樂園/健身→活動。mapper 用 underscore token 邊界 `(?:^|_)x(?:_|$)` 正確處理 snake_case 複合 enum（`wine_bar`/`food_court`/`internet_cafe`），且不誤判 `barber_shop`/`spanish_restaurant`。同一 mapper（`mapNominatimCategory` 保留為 deprecated alias）順帶修正 Explore/收藏頁顯示 label。
+- **自訂景點類別選擇器** — `CategoryPicker`（8 類 icon grid，mockup 簽核 Variant C，role=radiogroup、tap≥44px、純 tokens），接進共用 `CustomPoiForm`，讓自訂 stop（無 Google 來源）可當場選/改類別；`aria-labelledby` 接可見「類別」label，可見/語意名稱一致。
+- **migration 0079 — backfill poi_type** — 把既有 type='attraction' 但 `category`（Google primaryType）對應到其它類別的 POI 重新分類。collision-safe（`NOT EXISTS` 防撞既有目標列 + `MIN(id) GROUP BY name` 防同句自撞，守 `UNIQUE(name,type)` migration 0018）；token-boundary LIKE（`ESCAPE '\'`）與前端 mapper 一致；idempotent、純 data UPDATE 無 schema 變更、無 rollback 需求。
+
+### Fixed
+- **行程景點拖曳與觸控捲動衝突** — TimelineRail 握把的無延遲 `PointerSensor`(8px) 在觸控時（pointer 事件）搶在 `TouchSensor`(200ms) 之前啟動拖曳，加上 `.tp-rail-grip` 的 `touch-action:none` 吃掉原生捲動 → 垂直滑動誤判成拖曳。改 `useDragDrop`：`includeTouch` 時用 `MouseSensor`（桌機即時 8px）＋ `TouchSensor`（觸控 200ms 長按）取代 `PointerSensor`，握把 `touch-action` 改 `pan-y`。桌機即時拖曳不變；觸控快速垂直滑動＝捲動、長按＝進入拖曳（業界標準 reorder 手勢）。stylus-only-pointer 觸控裝置 fallback 鍵盤排序（已註明的窄缺口）。
+
 ## [2.46.1] - 2026-06-03
 
 ### Fixed

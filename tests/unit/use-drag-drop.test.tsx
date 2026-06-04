@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { MouseSensor, PointerSensor, TouchSensor } from '@dnd-kit/core';
 import fs from 'node:fs';
 import path from 'node:path';
 import { useDragDrop } from '../../src/hooks/useDragDrop';
@@ -48,5 +49,53 @@ describe('Keyboard a11y contract (Section 5)', () => {
       'utf8',
     );
     expect(timelineSrc).toContain('accessibility={TP_DRAG_ACCESSIBILITY}');
+  });
+});
+
+describe('touch/mouse sensor separation (drag vs scroll conflict fix)', () => {
+  it('includeTouch routes mouse via MouseSensor + touch via delay TouchSensor — never PointerSensor (which hijacks touch scroll)', () => {
+    const { result } = renderHook(() =>
+      useDragDrop({ includeTouch: true, pointerActivationDistance: 8 }),
+    );
+    const sensorClasses = result.current.sensors.map((descriptor) => descriptor.sensor);
+    expect(sensorClasses).toContain(MouseSensor);
+    expect(sensorClasses).toContain(TouchSensor);
+    // PointerSensor receives touch via pointer events with NO delay and out-races the
+    // 200ms TouchSensor, turning a vertical scroll swipe into an accidental reorder.
+    // It must not drive the timeline when touch is enabled.
+    expect(sensorClasses).not.toContain(PointerSensor);
+  });
+
+  it('desktop mouse drag stays instant (distance), touch requires ~200ms press-and-hold', () => {
+    const { result } = renderHook(() =>
+      useDragDrop({ includeTouch: true, pointerActivationDistance: 8 }),
+    );
+    const mouse = result.current.sensors.find((descriptor) => descriptor.sensor === MouseSensor);
+    const touch = result.current.sensors.find((descriptor) => descriptor.sensor === TouchSensor);
+    expect(mouse?.options?.activationConstraint).toEqual({ distance: 8 });
+    expect(touch?.options?.activationConstraint).toMatchObject({ delay: 200, tolerance: 5 });
+  });
+
+  it('pointer-only contexts (includeTouch=false) keep PointerSensor for mouse + pen', () => {
+    const { result } = renderHook(() => useDragDrop());
+    const sensorClasses = result.current.sensors.map((descriptor) => descriptor.sensor);
+    expect(sensorClasses).toContain(PointerSensor);
+    expect(sensorClasses).not.toContain(TouchSensor);
+    expect(sensorClasses).not.toContain(MouseSensor);
+  });
+});
+
+describe('TimelineRail grip touch-action (drag vs scroll conflict fix)', () => {
+  const TIMELINE_RAIL_SRC = fs.readFileSync(
+    path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
+    'utf8',
+  );
+
+  it('grip no longer pins touch-action:none (which blocked native scroll → dead-zone)', () => {
+    expect(TIMELINE_RAIL_SRC).not.toContain('touch-action: none');
+  });
+
+  it('grip allows vertical pan so a quick swipe scrolls while a long-press still drags', () => {
+    expect(TIMELINE_RAIL_SRC).toContain('touch-action: pan-y');
   });
 });
