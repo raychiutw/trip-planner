@@ -27,7 +27,7 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
-import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
+import { POI_TYPE_LABELS, mapGooglePrimaryTypeToPoiType, type PoiType } from '../lib/poiCategory';
 import type { PoiFavorite } from '../types/api';
 
 interface TripBrief {
@@ -341,6 +341,7 @@ export default function AddPoiFavoriteToTripPage() {
             lng: favorite.poiLng,
             source: 'google',
             time,
+            poi_type: mapGooglePrimaryTypeToPoiType(favorite.poiType),
           }),
         });
         // recompute travel for this day (fire-and-forget；同 v2.23.1 AddStopPage pattern)
