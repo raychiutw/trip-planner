@@ -354,6 +354,10 @@ const SCOPED_STYLES = `
   font-family: ui-monospace, monospace;
   font-size: var(--font-size-caption);
 }
+/* 鍵盤捷徑提示只在有實體鍵盤的裝置顯示；觸控裝置（無 hover + 粗指標）沒有 ⌘/esc 鍵。 */
+@media (hover: none) and (pointer: coarse) {
+  .tp-poi-note-kbd { display: none; }
+}
 
 .tp-edit-entry-error {
   margin-top: 12px;

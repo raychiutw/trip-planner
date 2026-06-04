@@ -18,6 +18,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Fixed
 - **re-point 資料保真** — 換分類建新 clone 時帶上來源 POI 的 lifecycle（`status`／`status_reason`／`status_checked_at`，migration 0051），「永久歇業」的 POI 換分類後不再被重設為 active、歇業警告不再消失。
 - **EditEntryPage POI icon drift** — 移除本地 `POI_TYPE_ICON`（漏 `other` key → other 類顯示成 attraction pin），改用 canonical `CATEGORY_ICON`。
+- **備註編輯器鍵盤提示在手機誤顯** — inline 備註編輯器的 `⌘ + ↩ 完成 · esc 關閉` 桌機鍵盤捷徑提示，在觸控裝置（手機／平板，無 ⌘/esc 鍵）也顯示。改用 `@media (hover: none) and (pointer: coarse)` 在觸控裝置隱藏。同源兩處一起修：EditEntryPage `PerPoiNoteRow` + TimelineRail inline note edit。
 
 ## [2.48.0] - 2026-06-04
 
