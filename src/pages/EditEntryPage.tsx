@@ -35,6 +35,8 @@ import Icon from '../components/shared/Icon';
 import InlineError from '../components/shared/InlineError';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
+import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
+import { CATEGORY_ICON } from '../components/trip/CategoryPicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useAutosave } from '../hooks/useAutosave';
@@ -352,6 +354,10 @@ const SCOPED_STYLES = `
   font-family: ui-monospace, monospace;
   font-size: var(--font-size-caption);
 }
+/* 鍵盤捷徑提示只在有實體鍵盤的裝置顯示；觸控裝置（無 hover + 粗指標）沒有 ⌘/esc 鍵。 */
+@media (hover: none) and (pointer: coarse) {
+  .tp-poi-note-kbd { display: none; }
+}
 
 .tp-edit-entry-error {
   margin-top: 12px;
@@ -561,19 +567,12 @@ const SCOPED_STYLES = `
 `;
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-const POI_TYPE_ICON: Record<string, string> = {
-  hotel: 'hotel',
-  restaurant: 'utensils',
-  shopping: 'shopping',
-  attraction: 'location-pin',
-  transport: 'car',
-  parking: 'parking',
-  activity: 'sparkle',
-};
 // v2.33.28: dedupe — POI_TYPE_LABEL 用 canonical POI_TYPE_LABELS（poiCategory.ts），
+// POI icon 用 canonical CATEGORY_ICON（CategoryPicker.tsx，8 類齊全），
 // MODE_LABEL/ICON 用 canonical TRAVEL_MODE_LABEL/ICON（travelMode.ts）。
 // 移除本地 const 解 v2.31.23 一系列 drift bug 家族 root cause。
-// (hotel canonical = '飯店'，TimelineRail/EditEntry 之前 local 用 '住宿' 屬 drift。)
+// (hotel canonical = '飯店'，TimelineRail/EditEntry 之前 local 用 '住宿' 屬 drift；
+//  本地 POI_TYPE_ICON 之前漏 `other` key → other 類顯示成 attraction pin。)
 
 // v2.29.0: POI card display uses the canonical entry master.
 type TimelineEntryLike = {
@@ -909,6 +908,33 @@ export default function EditEntryPage() {
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   const { segmentMap } = useTripSegments(tripId);
+
+  /** 更改某個 POI（正選或備選）的分類。後端 PATCH 走 re-point，回傳新的 effective poiId。 */
+  const handleChangeCategory = useCallback(
+    async (poiId: number, isMaster: boolean, newType: PoiType) => {
+      if (!tripId) return;
+      try {
+        const res = await apiFetch<{ poiId: number; type: string }>(
+          `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/pois/${poiId}`,
+          { method: 'PATCH', body: JSON.stringify({ poi_type: newType }) },
+        );
+        const newPoiId = res.poiId;
+        if (isMaster) {
+          setMasterSummary((s) => (s ? { ...s, poiId: newPoiId, type: newType } : s));
+          setPoiInfo((p) => (p ? { ...p, poiType: newType } : p));
+        } else {
+          setAlternates((alts) =>
+            alts.map((a) => (a.poiId === poiId ? { ...a, poiId: newPoiId, type: newType } : a)),
+          );
+        }
+        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, entryId } }));
+        showToast('已更新分類', 'success');
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : '更新分類失敗', 'error');
+      }
+    },
+    [tripId, entryId],
+  );
 
   // Load entry
   useEffect(() => {
@@ -1456,12 +1482,20 @@ export default function EditEntryPage() {
               {poiInfo && (
                 <div className="tp-edit-entry-poi" data-testid="edit-entry-poi-summary">
                   <span className="tp-edit-entry-poi-icon">
-                    <Icon name={POI_TYPE_ICON[poiInfo.poiType ?? 'attraction'] ?? 'location-pin'} />
+                    <Icon name={CATEGORY_ICON[(poiInfo.poiType ?? 'attraction') as PoiType] ?? 'location-pin'} />
                   </span>
                   <div className="tp-edit-entry-poi-meta">
                     <div className="tp-edit-entry-poi-name">{poiInfo.name}</div>
                     <div className="tp-edit-entry-poi-sub">
-                      {POI_TYPE_LABELS[(poiInfo.poiType ?? 'attraction') as PoiType] ?? '景點'}
+                      {masterSummary ? (
+                        <EditableCategoryChip
+                          value={(poiInfo.poiType ?? 'attraction') as PoiType}
+                          onChange={(t) => handleChangeCategory(masterSummary.poiId, true, t)}
+                          testIdPrefix="edit-entry-master-cat"
+                        />
+                      ) : (
+                        POI_TYPE_LABELS[(poiInfo.poiType ?? 'attraction') as PoiType] ?? '景點'
+                      )}
                     </div>
                     {/* v2.34.0 master per-POI 備註行（Variant B） */}
                     {masterSummary && (
@@ -1517,16 +1551,18 @@ export default function EditEntryPage() {
                         <span className="tp-edit-entry-alt-order">{idx + 2}</span>
                         <div className="tp-edit-entry-alt-meta">
                           <div className="tp-edit-entry-alt-name">{alt.name}</div>
-                          {alt.type && (
-                            <div className="tp-edit-entry-alt-category">
-                              {POI_TYPE_LABELS[alt.type as PoiType] ?? alt.type}
-                              {alt.rating != null && (
-                                <span className="tp-edit-entry-alt-rating">
-                                  <Icon name="star" /> {alt.rating.toFixed(1)}
-                                </span>
-                              )}
-                            </div>
-                          )}
+                          <div className="tp-edit-entry-alt-category">
+                            <EditableCategoryChip
+                              value={(alt.type ?? 'attraction') as PoiType}
+                              onChange={(t) => handleChangeCategory(alt.poiId, false, t)}
+                              testIdPrefix={`edit-entry-alt-cat-${alt.poiId}`}
+                            />
+                            {alt.rating != null && (
+                              <span className="tp-edit-entry-alt-rating">
+                                <Icon name="star" /> {alt.rating.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
                           {/* v2.28.0 — restaurant inline info: price · hours · reservation */}
                           {(alt.price || alt.hours || alt.reservation) && (
                             <div className="tp-edit-entry-alt-extra" data-testid={`edit-entry-alt-extra-${alt.poiId}`}>

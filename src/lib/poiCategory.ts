@@ -68,7 +68,9 @@ export function mapGooglePrimaryTypeToPoiType(category: string | null | undefine
   if (/parking/.test(c)) return 'parking';
   if (/station|airport|transit|terminal|subway|railway|taxi_stand|bus_stop|transport/.test(c)) return 'transport';
   if (/amusement|theme_park|water_park|aquarium|fitness|night_?club|cinema|movie|theater|theatre|stadium|arena|bowling|karaoke|leisure|(?:^|_)(?:zoo|gym|spa|activity)(?:_|$)/.test(c)) return 'activity';
-  if (/restaurant|coffee|bakery|bistro|diner|eatery|izakaya|brunch|amenity|(?:^|_)(?:cafe|bar|food|pub)(?:_|$)/.test(c)) return 'restaurant';
+  // prepared-food *_shop (ice_cream_shop/dessert_shop/donut_shop…) must beat the generic
+  // 'shop' → shopping rule below; non-food retail (candy_store/gift_shop/barber_shop) stays shopping.
+  if (/restaurant|coffee|bakery|bistro|diner|eatery|izakaya|brunch|amenity|ice_cream|dessert|donut|doughnut|bagel|juice|acai|tea_house|(?:^|_)(?:cafe|bar|food|pub)(?:_|$)/.test(c)) return 'restaurant';
   if (/shop|store|mall|market|supermarket|retail|boutique|grocery/.test(c)) return 'shopping';
   if (/museum|gallery|temple|shrine|church|mosque|synagogue|worship|monument|landmark|tourist|historic|garden|castle|palace|memorial|park|attraction|sightseeing|scenic/.test(c)) return 'attraction';
 

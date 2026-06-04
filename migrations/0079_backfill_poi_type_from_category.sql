@@ -113,6 +113,11 @@ WHERE id IN (
       OR LOWER(p.category) LIKE '%bistro%' OR LOWER(p.category) LIKE '%diner%'
       OR LOWER(p.category) LIKE '%eatery%' OR LOWER(p.category) LIKE '%izakaya%'
       OR LOWER(p.category) LIKE '%brunch%'
+      -- prepared-food *_shop must beat the shopping bucket's '%shop%' (parity with the JS mapper).
+      OR LOWER(p.category) LIKE '%ice_cream%' OR LOWER(p.category) LIKE '%dessert%'
+      OR LOWER(p.category) LIKE '%donut%' OR LOWER(p.category) LIKE '%doughnut%'
+      OR LOWER(p.category) LIKE '%bagel%' OR LOWER(p.category) LIKE '%juice%'
+      OR LOWER(p.category) LIKE '%acai%' OR LOWER(p.category) LIKE '%tea_house%'
       -- 'bar' as a whole token only — '%bar%' would misfile 'barber_shop' as restaurant.
       OR LOWER(p.category) = 'bar' OR LOWER(p.category) LIKE 'bar\_%' ESCAPE '\'
       OR LOWER(p.category) LIKE '%\_bar' ESCAPE '\' OR LOWER(p.category) LIKE '%\_bar\_%' ESCAPE '\'

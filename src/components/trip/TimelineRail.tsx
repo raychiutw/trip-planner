@@ -148,6 +148,10 @@ const SCOPED_STYLES = `
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: var(--font-size-caption); border: 1px solid var(--color-border);
 }
+/* 鍵盤捷徑提示只在有實體鍵盤的裝置顯示；觸控裝置（無 hover + 粗指標）沒有 ⌘/esc 鍵。 */
+@media (hover: none) and (pointer: coarse) {
+  .tp-rail-note-kbd { display: none; }
+}
 .tp-rail-note-error {
   font-size: var(--font-size-footnote); color: var(--color-destructive);
   margin-top: 4px;
