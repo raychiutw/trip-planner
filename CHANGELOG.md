@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.50.0] - 2026-06-04
+
+### Added
+- **「新增景點」精靈搜尋流程也能當場改分類** — v2.49.0 的可編輯分類 chip 原本只在 AddStopPage（`/add-stop`，行程頁「＋加景點」）有；另一個入口「新增景點」精靈走 `/add-entry` → `ChangePoiPage(mode=new)`，過去只有自動分類、不能當場改。現補上：選了搜尋結果後，底部操作列出現可編輯分類 chip，預設帶 `mapGooglePrimaryTypeToPoiType` 自動推導，可改後再加入。兩條加景點路徑體驗一致。
+- **`EditableCategoryChip` 新增 `dropUp` prop** — 在 fixed/sticky bottom bar 等下方無空間處，picker 改向上彈出（absolute），避免被 viewport 底切掉、下排分類點不到。
+
+### Fixed
+- **對抗式 review 修復**（ChangePoiPage chip，prod QA 後 follow-up）：picker 在固定底部列向下彈出被切掉（→ `dropUp` 向上）、底部列無 `flex-wrap` 在窄螢幕溢出（→ scoped override）、切換選取時殘留展開的 picker（→ selection-scoped `key` remount）、選 favorite 未 reset 分類覆寫（→ 補 reset）。
+
 ## [2.49.0] - 2026-06-04
 
 ### Added
