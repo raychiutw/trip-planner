@@ -34,4 +34,15 @@ describe('EditableCategoryChip', () => {
     fireEvent.click(screen.getByTestId('ec-toggle'));
     expect(screen.getByTestId('ec-picker-restaurant').querySelector('.tp-category-tile-auto')).toBeTruthy();
   });
+
+  it('default popover opens downward (no is-up); dropUp opens it upward (is-up) — for fixed bottom bars', () => {
+    const { rerender } = render(
+      <EditableCategoryChip value="hotel" onChange={() => {}} testIdPrefix="ec" />,
+    );
+    fireEvent.click(screen.getByTestId('ec-toggle'));
+    expect(screen.getByTestId('ec-pop').classList.contains('is-up')).toBe(false);
+
+    rerender(<EditableCategoryChip value="hotel" onChange={() => {}} dropUp testIdPrefix="ec" />);
+    expect(screen.getByTestId('ec-pop').classList.contains('is-up')).toBe(true);
+  });
 });
