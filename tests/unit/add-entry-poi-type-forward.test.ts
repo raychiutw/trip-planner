@@ -40,8 +40,9 @@ describe('add-entry paths forward poi_type (Google primaryType → whitelist)', 
     expect(ADD_FAV).toMatch(/poi_type:\s*mapGooglePrimaryTypeToPoiType\(favorite\.poiType\)/);
   });
 
-  it('ChangePoiPage mode=new google branch forwards poi_type from selected.category', () => {
-    expect(CHANGE_POI).toMatch(/poi_type:\s*mapGooglePrimaryTypeToPoiType\(selected\.category\)/);
+  it('ChangePoiPage mode=new google branch forwards poi_type from selected.category (per-result override falls back to it)', () => {
+    // v2.50.0: mode=new search 加了 per-result 分類覆寫 → payload 變 searchCatOverride ?? auto。
+    expect(CHANGE_POI).toMatch(/poi_type:.*mapGooglePrimaryTypeToPoiType\(selected\.category\)/);
   });
 });
 

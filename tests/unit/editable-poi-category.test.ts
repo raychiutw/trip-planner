@@ -13,6 +13,8 @@ const read = (rel: string) => readFileSync(path.resolve(__dirname, '../../', rel
 const EDIT_ENTRY = read('src/pages/EditEntryPage.tsx');
 const BACKEND = read('functions/api/trips/[id]/entries/[eid]/pois/[poiId].ts');
 const ADD_STOP = read('src/pages/AddStopPage.tsx');
+const CHANGE_POI = read('src/pages/ChangePoiPage.tsx');
+const CHIP = read('src/components/trip/EditableCategoryChip.tsx');
 
 describe('AddStopPage — search result per-result category override', () => {
   it('imports EditableCategoryChip', () => {
@@ -61,6 +63,46 @@ describe('EditEntryPage — editable category (master + alternates)', () => {
     // CATEGORY_ICON（8 類齊全）杜絕漂移。
     expect(EDIT_ENTRY).toMatch(/import \{[^}]*CATEGORY_ICON[^}]*\} from '\.\.\/components\/trip\/CategoryPicker'/);
     expect(EDIT_ENTRY).not.toMatch(/const POI_TYPE_ICON/);
+  });
+});
+
+describe('EditableCategoryChip popover — comfortable width on mobile (no shrink-wrapped 窄條)', () => {
+  it('base .tp-cat-chip-pop sets a viewport-aware min-width so the picker is not collapsed by the inline-block wrap', () => {
+    // inline-block wrap → 預設 popover 會被壓成 min-content 窄條（手機 ~42px tile，又高又窄）。
+    expect(CHIP).toMatch(/\.tp-cat-chip-pop\s*\{[^}]*min-width:\s*min\(288px, calc\(100vw - 32px\)\)/);
+  });
+});
+
+describe('ChangePoiPage mode=new — search result editable category override', () => {
+  it('imports the reusable EditableCategoryChip', () => {
+    expect(CHANGE_POI).toMatch(/import \{ EditableCategoryChip \}/);
+  });
+
+  it('has a per-selection searchCatOverride state (single-select model)', () => {
+    expect(CHANGE_POI).toMatch(/const \[searchCatOverride, setSearchCatOverride\] = useState<PoiType \| null>\(null\)/);
+  });
+
+  it('renders the chip only for a selected search result in mode=new, defaulting to the auto-derived category', () => {
+    expect(CHANGE_POI).toMatch(/mode === 'new' && selected\?\.source === 'search'/);
+    expect(CHANGE_POI).toMatch(/autoValue=\{mapGooglePrimaryTypeToPoiType\(selected\.category\)\}/);
+  });
+
+  it('mode=new search payload sends the override when set, else the auto-derived poi_type', () => {
+    expect(CHANGE_POI).toMatch(/poi_type: searchCatOverride \?\? mapGooglePrimaryTypeToPoiType\(selected\.category\)/);
+  });
+
+  it('resets the override on deselect / new selection (fresh auto-derive per pick)', () => {
+    expect(CHANGE_POI).toMatch(/setSearchCatOverride\(null\)/);
+  });
+
+  it('chip uses dropUp + a selection-scoped key (fixed bottom bar: picker must open upward, remount per pick)', () => {
+    // picker 在 fixed bottom bar 下方無空間 → dropUp 向上彈出；key 綁選取身分 → 換選取 remount 關掉殘留 picker。
+    expect(CHANGE_POI).toMatch(/dropUp/);
+    expect(CHANGE_POI).toMatch(/key=\{`\$\{selected\.name\}-\$\{selected\.lat\}-\$\{selected\.lng\}`\}/);
+  });
+
+  it('scopes a flex-wrap override onto the shared bottom bar (3 non-shrinking items must wrap on mobile)', () => {
+    expect(CHANGE_POI).toMatch(/\.tp-page-bottom-bar\s*\{[^}]*flex-wrap:\s*wrap/);
   });
 });
 
