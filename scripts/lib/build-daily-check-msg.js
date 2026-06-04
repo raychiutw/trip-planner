@@ -22,6 +22,13 @@ const today = r.date.slice(5).replace('-', '/');
 const lines = [];
 const issues = [];
 
+// Google Maps 免費額度 headroom helpers（v2.46.x：取代 $ vs $200）
+const gmShort = (m) => String(m || '').split('.').pop();
+const gmWorst = (q) =>
+  q && q.worst
+    ? `${gmShort(q.worst.method)} ${(q.worst.pct || 0).toFixed(0)}% (${q.worst.usage}/${q.worst.cap})`
+    : 'n/a';
+
 if (r.apiErrors && r.apiErrors.total > 0) {
   const icon = r.apiErrors.status === 'critical' ? '🔴' : '⚠️';
   issues.push(`${icon} API errors: ${r.apiErrors.total} 筆`);
@@ -62,14 +69,16 @@ if (r.dataHygiene && r.dataHygiene.error) {
 } else if (r.dataHygiene && r.dataHygiene.total > 0) {
   issues.push(`⚠️ prod data hygiene: ${r.dataHygiene.total} 筆 test marker 殘留`);
 }
-// v2.31.96: Google Maps MTD 花費 — critical/warning 進 issue 列表
+// v2.46.x: Google Maps 免費額度 headroom — critical/warning 進 issue 列表
 if (r.googleMapsQuota && r.googleMapsQuota.status === 'critical') {
   const q = r.googleMapsQuota;
-  const lock = q.isLocked ? '（已自動鎖）' : '';
-  issues.push(`🔴 Google Maps MTD: $${(q.mtdCost || 0).toFixed(2)} / $${q.budget || 200} (${(q.mtdPct || 0).toFixed(1)}%)${lock}`);
-} else if (r.googleMapsQuota && r.googleMapsQuota.status === 'warning' && !r.googleMapsQuota.error) {
-  const q = r.googleMapsQuota;
-  issues.push(`🟡 Google Maps MTD: $${(q.mtdCost || 0).toFixed(2)} / $${q.budget || 200} (${(q.mtdPct || 0).toFixed(1)}%) — 剩 $${(q.remainingUsd || 0).toFixed(2)}`);
+  const lock = q.isLocked ? '（已鎖）' : '';
+  issues.push(`🔴 Google Maps 免費額度將用罄: ${gmWorst(q)}${lock}`);
+} else if (r.googleMapsQuota && r.googleMapsQuota.status === 'warning' && r.googleMapsQuota.error) {
+  // GCP 拿不到 → 顯示錯誤，不顯示假數字（取代舊的 silent swallow）
+  issues.push(`🟡 Google Maps 用量監控異常（GCP 無法取得）: ${r.googleMapsQuota.error}`);
+} else if (r.googleMapsQuota && r.googleMapsQuota.status === 'warning') {
+  issues.push(`🟡 Google Maps 免費額度接近上限: ${gmWorst(r.googleMapsQuota)}`);
 }
 
 if (issues.length === 0) {
@@ -91,11 +100,16 @@ if (r.web && ((r.web.visits || 0) + (r.web.pageViews || 0)) > 0) {
 if (r.npmAudit && !r.npmAudit.error && r.npmAudit.total === 0) {
   lines.push('📈 npm: 0 個漏洞');
 }
-// v2.31.96: Google Maps MTD 花費也放 metrics block（critical/warning 已上 issue list，但仍顯數字 = 透明）
-if (r.googleMapsQuota && !r.googleMapsQuota.error && typeof r.googleMapsQuota.mtdCost === 'number') {
+// v2.46.x: Google Maps 免費額度 headroom 放 metrics block（透明 — 含真實付費 $）
+if (r.googleMapsQuota && !r.googleMapsQuota.error && typeof r.googleMapsQuota.maxPct === 'number') {
   const q = r.googleMapsQuota;
-  const pct = (q.mtdPct || 0).toFixed(1);
-  lines.push(`💰 Google Maps MTD: $${q.mtdCost.toFixed(2)} / $${q.budget || 200} (${pct}%)`);
+  if (!q.worst) {
+    // 沒觀測到任何已知計費 method — 對總有流量的本專案可能是 GCP 設定問題，明說別當綠燈
+    lines.push('🗺️ Google Maps: 本月未觀測到計費用量（若預期有流量請查 GCP 設定）');
+  } else {
+    const cost = (q.overageCost || 0) > 0 ? ` · 付費 $${q.overageCost.toFixed(2)}` : ' · $0（免費額度內）';
+    lines.push(`🗺️ Google Maps 免費額度: 最高 ${gmWorst(q)}${cost}`);
+  }
 }
 const okItems = [];
 if (r.schedulerErrors && r.schedulerErrors.details) {
