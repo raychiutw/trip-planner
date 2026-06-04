@@ -35,19 +35,48 @@ export const POI_TYPE_LABELS: Record<PoiType, string> = {
   other: '其他',
 };
 
+const WHITELIST_SET: ReadonlySet<string> = new Set(POI_TYPE_WHITELIST);
+
 /**
- * Nominatim category（OSM `class`）→ Tripline poi_type whitelist。
- * Fallback 'attraction'（最常見）— 已知 raw values 對應到 hotel/restaurant
- * 等才映射，其它一律 attraction。
+ * Google Places `primaryType` (and legacy Nominatim OSM `class`) → Tripline
+ * poi_type whitelist。Fallback 'attraction'（最常見）。
+ *
+ * 三層判斷，先到先贏：
+ * 1. 已是 whitelist 值 → 原樣回傳（favorites 存的 poiType / 既有 pois.type）。
+ * 2. 關鍵字比對：較具體的場所類別（交通、休閒）排在通用類別之前，避免
+ *    `amusement_park` 被 `park` 誤判成 attraction。
+ * 3. 都不中 → 'attraction'。
+ *
+ * Patterns 同時涵蓋 Google `primaryType` enum 與 legacy Nominatim class
+ * (tourism / amenity / leisure)。後者對 Google 資料無害（那些 token 不會出現），
+ * 保留是為了向後相容既有測試與舊資料。
  */
-export function mapNominatimCategory(category: string | null | undefined): PoiType {
+export function mapGooglePrimaryTypeToPoiType(category: string | null | undefined): PoiType {
   if (!category) return 'attraction';
-  const c = category.toLowerCase();
-  if (c.includes('hotel') || c.includes('lodging') || c.includes('tourism')) return 'hotel';
-  if (c.includes('restaurant') || c.includes('food') || c.includes('amenity')) return 'restaurant';
-  if (c.includes('shop') || c.includes('mall') || c.includes('retail')) return 'shopping';
-  if (c.includes('parking')) return 'parking';
-  if (c.includes('transport') || c.includes('railway') || c.includes('airport')) return 'transport';
-  if (c.includes('activity') || c.includes('leisure')) return 'activity';
+  const c = category.toLowerCase().trim();
+  if (!c) return 'attraction';
+
+  // 1) 已是 whitelist 值 → passthrough
+  if (WHITELIST_SET.has(c)) return c as PoiType;
+
+  // 2) 關鍵字比對（順序敏感：具體者優先）。
+  //    短歧義 token（inn/zoo/gym/spa/cafe/bar/food/pub/activity）用「underscore
+  //    邊界」`(?:^|_)x(?:_|$)` 而非 `\b`：Google primaryType 是 snake_case，'_' 算
+  //    \w 字元，`\b` 永遠不會在 token↔底線交界 match（`\bbar\b` 抓不到 wine_bar）；
+  //    `(?:^|_)bar(?:_|$)` 能中 wine_bar / bar_and_grill，又不誤中 barber_shop。
+  if (/hotel|lodging|hostel|motel|guest_house|resort|tourism|(?:^|_)inn(?:_|$)/.test(c)) return 'hotel';
+  if (/parking/.test(c)) return 'parking';
+  if (/station|airport|transit|terminal|subway|railway|taxi_stand|bus_stop|transport/.test(c)) return 'transport';
+  if (/amusement|theme_park|water_park|aquarium|fitness|night_?club|cinema|movie|theater|theatre|stadium|arena|bowling|karaoke|leisure|(?:^|_)(?:zoo|gym|spa|activity)(?:_|$)/.test(c)) return 'activity';
+  if (/restaurant|coffee|bakery|bistro|diner|eatery|izakaya|brunch|amenity|(?:^|_)(?:cafe|bar|food|pub)(?:_|$)/.test(c)) return 'restaurant';
+  if (/shop|store|mall|market|supermarket|retail|boutique|grocery/.test(c)) return 'shopping';
+  if (/museum|gallery|temple|shrine|church|mosque|synagogue|worship|monument|landmark|tourist|historic|garden|castle|palace|memorial|park|attraction|sightseeing|scenic/.test(c)) return 'attraction';
+
   return 'attraction';
 }
+
+/**
+ * @deprecated 名稱誤導（餵進來的其實是 Google `primaryType`，不是 Nominatim）。
+ * 改用 {@link mapGooglePrimaryTypeToPoiType}。保留 alias 讓既有 caller 與測試解析。
+ */
+export const mapNominatimCategory = mapGooglePrimaryTypeToPoiType;

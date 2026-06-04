@@ -3,7 +3,7 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.47.0] - 2026-06-04
+## [2.48.0] - 2026-06-04
 
 ### Changed
 - **Google Maps 用量監控改「免費額度 headroom」模型** — 2025/3 起 Maps 取消 $200 月抵免、改各 SKU 免費額度（Essentials 10K / Pro 5K / Enterprise 1K events/月，不共用池）。每日報告從「💰 MTD $X / $200」改為「🗺️ 免費額度: 最高 <SKU> N% (used/cap) · 真實付費 $」。任一 SKU ≥80% 示警、≥90% 紅燈，在跨入付費前預警。實測本專案全在免費額度內 → 真實月花費 $0（最高 Routes ~48%）。
@@ -13,6 +13,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Fixed
 - **每日報告 Google 金額「忽高忽低」root cause（三層 bug）** — (1) `_gcp_monitoring.ts` 讀錯 env 變數名（`GCP_SERVICE_ACCOUNT_KEY_JSON` vs prod 與 `_types.ts` 實際的 `GOOGLE_CLOUD_SA_KEY` / `GOOGLE_CLOUD_PROJECT_ID`）→ 永遠 fallback 假數據；(2) MTD 用「今日 dailyCost × 當月日期」投射而非累加 → day-over-day 亂跳甚至變少（真實 MTD 不可能變少）；(3) D1-proxy fallback 用寫死假常數（directions=50 等 → 假底 $0.4433）。修：讀對 env 名、查真實 month-to-date counts、移除假數據 fallback。
 - **GCP 拿不到改顯示錯誤而非假數字** — `/api/admin/quota-estimate` 在 Cloud Monitoring 無法取得時回 502 `MAPS_UPSTREAM_FAILED`（對齊 `route.ts` / `poi-search.ts` 慣例），每日報告浮出「用量監控異常（GCP 無法取得）」而非靜默假金額（修舊的 `warning && !error` silent swallow）。
+
+## [2.47.0] - 2026-06-04
+
+新增景點自動分類 + 行程拖曳/觸控捲動修復（兩個獨立 bug，全程 TDD；含對抗式 review 後再修正 1 HIGH + 3 MED finding）。
+
+### Added
+- **新增景點自動對應類別** — 加入行程的各路徑（AddStopPage 搜尋/收藏、AddPoiFavoriteToTripPage direct、ChangePoiPage mode=new + 非 new 自訂）改用 `mapGooglePrimaryTypeToPoiType` 把 Google `primaryType` 對應成 whitelist `poi_type`（POST /entries）或 `type`（find-or-create）後送出，後端不再 fallback 'attraction'。cafe→餐廳、車站→交通、購物中心→購物、樂園/健身→活動。mapper 用 underscore token 邊界 `(?:^|_)x(?:_|$)` 正確處理 snake_case 複合 enum（`wine_bar`/`food_court`/`internet_cafe`），且不誤判 `barber_shop`/`spanish_restaurant`。同一 mapper（`mapNominatimCategory` 保留為 deprecated alias）順帶修正 Explore/收藏頁顯示 label。
+- **自訂景點類別選擇器** — `CategoryPicker`（8 類 icon grid，mockup 簽核 Variant C，role=radiogroup、tap≥44px、純 tokens），接進共用 `CustomPoiForm`，讓自訂 stop（無 Google 來源）可當場選/改類別；`aria-labelledby` 接可見「類別」label，可見/語意名稱一致。
+- **migration 0079 — backfill poi_type** — 把既有 type='attraction' 但 `category`（Google primaryType）對應到其它類別的 POI 重新分類。collision-safe（`NOT EXISTS` 防撞既有目標列 + `MIN(id) GROUP BY name` 防同句自撞，守 `UNIQUE(name,type)` migration 0018）；token-boundary LIKE（`ESCAPE '\'`）與前端 mapper 一致；idempotent、純 data UPDATE 無 schema 變更、無 rollback 需求。
+
+### Fixed
+- **行程景點拖曳與觸控捲動衝突** — TimelineRail 握把的無延遲 `PointerSensor`(8px) 在觸控時（pointer 事件）搶在 `TouchSensor`(200ms) 之前啟動拖曳，加上 `.tp-rail-grip` 的 `touch-action:none` 吃掉原生捲動 → 垂直滑動誤判成拖曳。改 `useDragDrop`：`includeTouch` 時用 `MouseSensor`（桌機即時 8px）＋ `TouchSensor`（觸控 200ms 長按）取代 `PointerSensor`，握把 `touch-action` 改 `pan-y`。桌機即時拖曳不變；觸控快速垂直滑動＝捲動、長按＝進入拖曳（業界標準 reorder 手勢）。stylus-only-pointer 觸控裝置 fallback 鍵盤排序（已註明的窄缺口）。
 
 ## [2.46.1] - 2026-06-03
 

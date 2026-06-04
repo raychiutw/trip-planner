@@ -251,7 +251,11 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   opacity: 0.4;
   border-radius: var(--radius-sm);
-  touch-action: none;
+  /* drag-vs-scroll: pan-y lets a quick vertical swipe on the grip scroll the
+   * timeline natively; the delay-based TouchSensor still claims a long-press for
+   * reorder. Suppressing touch gestures entirely would make the grip a scroll
+   * dead-zone (swipe neither scrolls nor drags). */
+  touch-action: pan-y;
   flex-shrink: 0;
   transition: color 120ms, opacity 160ms;
 }
@@ -896,8 +900,9 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
   // tap-switch dialog。Hook listen tp-segment-updated + tp-entry-updated 自動 re-fetch。
   const { segmentMap } = useTripSegments(tripId);
 
-  // PR-K dnd-kit sensors。pointer 8px activation distance 避免誤觸 (跟 click
-  // expand row 衝突)，keyboard 走 sortable coordinate getter。
+  // PR-K dnd-kit sensors。includeTouch 拆 mouse/touch：桌機 MouseSensor 8px 即時
+  // 拖曳（避免誤觸 click expand row），觸控走 TouchSensor 200ms 長按（快速垂直
+  // 滑動仍可捲動），keyboard 走 sortable coordinate getter。
   const { sensors } = useDragDrop({ includeTouch: true, pointerActivationDistance: 8, sortable: true });
 
   // 套 order override (drag 後 optimistic) 重排 events
