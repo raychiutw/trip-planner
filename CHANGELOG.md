@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.49.0] - 2026-06-04
+
+### Added
+- **可自己更改景點分類（poi_type），橫跨 3 介面** — 過去分類只能在「新增自訂景點」時選，既有／搜尋加入的景點沒地方改。
+  - **加入搜尋景點時**：AddStopPage 搜尋結果選取後顯示可編輯分類 chip，預設帶 Google `primaryType` 自動推導的分類（`mapGooglePrimaryTypeToPoiType`），可當場覆寫（per-result）。
+  - **編輯正選／備選**：EditEntryPage 的 master 正選 + 每個 alternate 備選分類，從唯讀 label 改為可編輯（重用 CategoryPicker Variant C 8 格 icon grid）。
+  - 新元件 `EditableCategoryChip`（icon + label + ✎）展開既有 CategoryPicker。
+
+### Changed
+- **後端 PATCH `/api/trips/:id/entries/:eid/pois/:poiId` 接受 optional `poi_type`** — whitelist 驗證後 collision-safe re-point：`findOrCreatePoi({name, type:newType})` 取「同名 + 新分類」master，改 `trip_entry_pois.poi_id` 指向，不 mutate 跨 entry 共用的 `pois.type`。撞既有同名同類 row 自動 dedup、永不建重複。
+- **`mapGooglePrimaryTypeToPoiType` 修正 prepared-food `*_shop`** — `ice_cream_shop`／`dessert_shop`／`donut_shop` 等改歸 restaurant（原因含 `shop` 子字串被誤判 shopping）；`barber_shop`／`gift_shop` 仍 → shopping。mapper + migration 0079 buckets 同步。
+
+### Fixed
+- **re-point 資料保真** — 換分類建新 clone 時帶上來源 POI 的 lifecycle（`status`／`status_reason`／`status_checked_at`，migration 0051），「永久歇業」的 POI 換分類後不再被重設為 active、歇業警告不再消失。
+- **EditEntryPage POI icon drift** — 移除本地 `POI_TYPE_ICON`（漏 `other` key → other 類顯示成 attraction pin），改用 canonical `CATEGORY_ICON`。
+
 ## [2.48.0] - 2026-06-04
 
 ### Changed
