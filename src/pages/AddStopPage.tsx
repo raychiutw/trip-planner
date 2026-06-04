@@ -35,6 +35,7 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
+import { mapGooglePrimaryTypeToPoiType, type PoiType } from '../lib/poiCategory';
 import {
   REGION_OPTIONS,
   CATEGORY_TABS,
@@ -679,6 +680,8 @@ export default function AddStopPage() {
   // v2.31.94: 自訂 tab 新增地址 typeahead + map pin 機制，確保 entry 一定有 lat/lng
   const [customCoord, setCustomCoord] = useState<CustomCoord | null>(null);
   const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
+  // 自訂 stop 無 Google 來源 → 預設 'attraction'，使用者用 CategoryPicker 可改。
+  const [customCategory, setCustomCategory] = useState<PoiType>('attraction');
   // v2.32.1 fix: 初值改 null 區分「未載入」與「載入後 0 個」
   const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
@@ -830,6 +833,9 @@ export default function AddStopPage() {
       lat?: number;
       lng?: number;
       source?: string;
+      // Auto-category: Google primaryType → whitelist poi_type，後端 entries.ts 只認
+      // 這個 snake_case key（缺則 fallback 'attraction'）。
+      poi_type?: string;
     };
 
     let payloads: Body[] = [];
@@ -843,6 +849,7 @@ export default function AddStopPage() {
           lat: r.lat,
           lng: r.lng,
           source: 'google',
+          poi_type: mapGooglePrimaryTypeToPoiType(r.category),
         }));
     } else if (tab === 'favorites') {
       const list = poiFavorites ?? [];
@@ -854,6 +861,7 @@ export default function AddStopPage() {
           lat: r.poiLat ?? undefined,
           lng: r.poiLng ?? undefined,
           source: 'favorite',
+          poi_type: mapGooglePrimaryTypeToPoiType(r.poiType),
         }));
     } else {
       const title = customTitle.trim();
@@ -874,6 +882,7 @@ export default function AddStopPage() {
         lat: customCoord.lat,
         lng: customCoord.lng,
         source: 'custom',
+        poi_type: customCategory,
       }];
     }
 
@@ -914,7 +923,7 @@ export default function AddStopPage() {
       setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, tripId, dayNum]);
+  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, tripId, dayNum]);
 
   if (!auth.user) return null;
   // v2.31.99: tripId 必填，但 dayNum 改成 optional — 沒帶 ?day=N 時 chip row
@@ -1271,6 +1280,8 @@ export default function AddStopPage() {
                     initialCenter={customInitialCenter}
                     error={customError}
                     testIdPrefix="add-stop-custom"
+                    category={customCategory}
+                    onCategoryChange={setCustomCategory}
                     extraRows={
                       <>
                         <div className="tp-custom-poi-form-row">

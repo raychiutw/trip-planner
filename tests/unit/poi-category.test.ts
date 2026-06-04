@@ -10,6 +10,83 @@
 import { describe, it, expect } from 'vitest';
 import { mapNominatimCategory, POI_TYPE_LABELS } from '../../src/lib/poiCategory';
 
+describe('Google Places primaryType → poi_type accuracy (add-stop auto-category fix)', () => {
+  it('food & drink → restaurant (cafe / bar / bakery / coffee_shop were mis-bucketed to attraction)', () => {
+    expect(mapNominatimCategory('restaurant')).toBe('restaurant');
+    expect(mapNominatimCategory('cafe')).toBe('restaurant');
+    expect(mapNominatimCategory('coffee_shop')).toBe('restaurant');
+    expect(mapNominatimCategory('bar')).toBe('restaurant');
+    expect(mapNominatimCategory('bakery')).toBe('restaurant');
+    expect(mapNominatimCategory('fast_food_restaurant')).toBe('restaurant');
+  });
+
+  it('lodging types → hotel', () => {
+    expect(mapNominatimCategory('lodging')).toBe('hotel');
+    expect(mapNominatimCategory('motel')).toBe('hotel');
+    expect(mapNominatimCategory('guest_house')).toBe('hotel');
+    expect(mapNominatimCategory('resort_hotel')).toBe('hotel');
+  });
+
+  it('retail → shopping (clothing_store / convenience_store / supermarket were mis-bucketed)', () => {
+    expect(mapNominatimCategory('shopping_mall')).toBe('shopping');
+    expect(mapNominatimCategory('clothing_store')).toBe('shopping');
+    expect(mapNominatimCategory('convenience_store')).toBe('shopping');
+    expect(mapNominatimCategory('supermarket')).toBe('shopping');
+  });
+
+  it('transit stations → transport (subway / train / bus_station were mis-bucketed)', () => {
+    expect(mapNominatimCategory('subway_station')).toBe('transport');
+    expect(mapNominatimCategory('train_station')).toBe('transport');
+    expect(mapNominatimCategory('bus_station')).toBe('transport');
+    expect(mapNominatimCategory('airport')).toBe('transport');
+  });
+
+  it('leisure venues → activity (amusement_park / zoo / gym / night_club were mis-bucketed)', () => {
+    expect(mapNominatimCategory('amusement_park')).toBe('activity');
+    expect(mapNominatimCategory('zoo')).toBe('activity');
+    expect(mapNominatimCategory('gym')).toBe('activity');
+    expect(mapNominatimCategory('night_club')).toBe('activity');
+  });
+
+  it('sightseeing stays attraction (tourist_attraction / museum / park)', () => {
+    expect(mapNominatimCategory('tourist_attraction')).toBe('attraction');
+    expect(mapNominatimCategory('museum')).toBe('attraction');
+    expect(mapNominatimCategory('park')).toBe('attraction');
+    expect(mapNominatimCategory('national_park')).toBe('attraction');
+  });
+
+  it('already-whitelisted value passes through (favorites poiType / stored poi.type)', () => {
+    expect(mapNominatimCategory('hotel')).toBe('hotel');
+    expect(mapNominatimCategory('restaurant')).toBe('restaurant');
+    expect(mapNominatimCategory('transport')).toBe('transport');
+    expect(mapNominatimCategory('other')).toBe('other');
+  });
+
+  it('"poi" sentinel + unknown → attraction fallback', () => {
+    expect(mapNominatimCategory('poi')).toBe('attraction');
+    expect(mapNominatimCategory('point_of_interest')).toBe('attraction');
+  });
+
+  it('case-insensitive on Google enums', () => {
+    expect(mapNominatimCategory('CAFE')).toBe('restaurant');
+    expect(mapNominatimCategory('Subway_Station')).toBe('transport');
+  });
+
+  it('matches snake_case COMPOUND food/drink enums (token-aware, not \\b which dies on "_")', () => {
+    expect(mapNominatimCategory('wine_bar')).toBe('restaurant');
+    expect(mapNominatimCategory('bar_and_grill')).toBe('restaurant');
+    expect(mapNominatimCategory('food_court')).toBe('restaurant');
+    expect(mapNominatimCategory('internet_cafe')).toBe('restaurant');
+  });
+
+  it('does NOT false-match a token buried inside an unrelated word', () => {
+    // 'bar' inside 'barber' must NOT become restaurant; 'shop' wins → shopping
+    expect(mapNominatimCategory('barber_shop')).toBe('shopping');
+    // 'spa' inside 'spanish' must NOT become activity; 'restaurant' wins
+    expect(mapNominatimCategory('spanish_restaurant')).toBe('restaurant');
+  });
+});
+
 describe('mapNominatimCategory', () => {
   it('null / undefined / empty string → "attraction" fallback', () => {
     expect(mapNominatimCategory(null)).toBe('attraction');
