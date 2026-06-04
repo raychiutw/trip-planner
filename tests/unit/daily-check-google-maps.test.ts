@@ -1,18 +1,21 @@
 /**
- * daily-check.js — Google Maps quota section (v2.31.96)
+ * daily-check.js — Google Maps free-tier headroom section
  *
- * 把 scripts/google-quota-monitor.ts 的 cost 計算邏輯抽到 lib/google-maps-quota.js
- * 共用，daily-check.js 新增 7th section 透過 `/api/admin/quota-estimate` +
- * `/api/admin/maps-settings` 算 MTD，threshold (≥lock_threshold_pct → critical;
- * ≥50% → warning; <50% → ok) 對齊 quota-monitor.ts hysteresis 設計。
+ * v2.46.x: 2025/3 起 Maps 取消 $200 月抵免，改每個 SKU 各自免費月額度。本專案
+ * 用量全在免費額度內 → 真實花費 $0。監控改「每個 SKU 用掉免費額度的 %」（headroom），
+ * 在跨入付費前預警。用量來自 GCP Cloud Monitoring per-method MTD counts。
+ *
+ * 已刪除：calcMtdCost（dailyCost × dayOfMonth 投射）、calcCost（$ MTD vs $200）。
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import * as quotaLib from '../../scripts/lib/google-maps-quota';
 import {
+  FREE_CAP,
   PRICE_PER_1K,
-  calcDailyCost,
-  calcMtdCost,
+  WARN_PCT,
+  calcHeadroom,
   classifyStatus,
 } from '../../scripts/lib/google-maps-quota';
 
@@ -26,84 +29,91 @@ const QUOTA_MONITOR_SRC = fs.readFileSync(
   'utf8',
 );
 
+const ROUTES = 'google.maps.routing.v2.Routes.ComputeRoutes';
+const SEARCH = 'google.maps.places.v1.Places.SearchText';
+
 describe('google-maps-quota helper (pure)', () => {
-  describe('PRICE_PER_1K', () => {
-    it('exports the 6 expected services', () => {
-      expect(Object.keys(PRICE_PER_1K).sort()).toEqual([
-        'autocomplete',
-        'directions',
-        'geocoding',
-        'maps_js',
-        'place_details',
-        'search_text',
-      ]);
+  describe('FREE_CAP / PRICE_PER_1K tables', () => {
+    it('caps and prices cover the same 6 method SKUs', () => {
+      expect(Object.keys(FREE_CAP).sort()).toEqual(Object.keys(PRICE_PER_1K).sort());
+      expect(Object.keys(FREE_CAP)).toContain(ROUTES);
+      expect(Object.keys(FREE_CAP)).toContain(SEARCH);
     });
 
-    it('matches quota-monitor.ts source values (single SoT, drift detection)', () => {
-      // Pulls per-service price lines from quota-monitor.ts and verifies the
-      // helper module mirrors them — if quota-monitor.ts changes prices the
-      // test fails until lib/google-maps-quota.js is updated to match.
-      const re = /(\w+):\s*([\d.]+),\s*\/\/\s*([^\n]+)/g;
-      const monitorPrices: Record<string, number> = {};
-      let m: RegExpExecArray | null;
-      while ((m = re.exec(QUOTA_MONITOR_SRC)) !== null) {
-        const [, key, value] = m;
-        if (key in PRICE_PER_1K) monitorPrices[key] = Number(value);
+    it('stays in sync with google-quota-monitor.ts SoT (drift detection)', () => {
+      // Both tables are duplicated in the orphan monitor; the source must
+      // contain each method key with the same cap & price value.
+      for (const [method, cap] of Object.entries(FREE_CAP)) {
+        expect(QUOTA_MONITOR_SRC, `cap drift: ${method}`).toContain(`'${method}': ${cap}`);
       }
-      expect(monitorPrices).toEqual(PRICE_PER_1K);
+      for (const [method, price] of Object.entries(PRICE_PER_1K)) {
+        expect(QUOTA_MONITOR_SRC, `price drift: ${method}`).toContain(`'${method}': ${price}`);
+      }
     });
   });
 
-  describe('calcDailyCost', () => {
-    it('sums per-service (count_24h / 1000) × price', () => {
-      const estimates = [
-        { service: 'search_text', count_24h: 1000 }, // $32
-        { service: 'place_details', count_24h: 100 }, // $1.70
-        { service: 'directions', count_24h: 500 }, // $2.50
-      ];
-      // 32 + 1.7 + 2.5 = 36.2
-      expect(calcDailyCost(estimates)).toBeCloseTo(36.2, 5);
+  describe('calcHeadroom', () => {
+    it('computes per-SKU % of free cap, identifies worst, $0 overage under cap', () => {
+      const h = calcHeadroom([
+        { method: ROUTES, count: 4813 }, // 48.13% of 10k
+        { method: SEARCH, count: 384 }, // 3.84% of 10k
+      ]);
+      expect(h.maxPct).toBeCloseTo(48.13, 2);
+      expect(h.worst.method).toBe(ROUTES);
+      expect(h.overageCostTotal).toBe(0); // all within free tier
     });
 
-    it('ignores unknown service (price=0 fallback)', () => {
-      const estimates = [
-        { service: 'search_text', count_24h: 1000 },
-        { service: 'unknown_service', count_24h: 10000 },
-      ];
-      expect(calcDailyCost(estimates)).toBeCloseTo(32, 5);
+    it('prices only the overage above the free cap', () => {
+      // SearchText is Enterprise tier → 1,000 free. 12,000 − 1,000 = 11,000 paid
+      // × $32/1k = $352.
+      const h = calcHeadroom([{ method: SEARCH, count: 12000 }]);
+      expect(h.maxPct).toBeCloseTo(1200, 5);
+      expect(h.overageCostTotal).toBeCloseTo(352, 5);
     });
 
-    it('returns 0 for empty list', () => {
-      expect(calcDailyCost([])).toBe(0);
+    it('ignores unknown method (no cap) for headroom', () => {
+      const h = calcHeadroom([{ method: 'billingbudgets.unknown', count: 999 }]);
+      expect(h.maxPct).toBe(0);
+      expect(h.worst).toBeNull();
+      expect(h.overageCostTotal).toBe(0);
+    });
+
+    it('returns zero state for empty list', () => {
+      const h = calcHeadroom([]);
+      expect(h.maxPct).toBe(0);
+      expect(h.overageCostTotal).toBe(0);
     });
   });
 
-  describe('calcMtdCost', () => {
-    it('multiplies daily cost by dayOfMonth', () => {
-      const estimates = [{ service: 'search_text', count_24h: 1000 }]; // $32/day
-      expect(calcMtdCost(estimates, 5)).toBeCloseTo(160, 5);
-      expect(calcMtdCost(estimates, 1)).toBeCloseTo(32, 5);
-      expect(calcMtdCost(estimates, 31)).toBeCloseTo(992, 5);
+  describe('removed obsolete cost functions (regression lock)', () => {
+    it('does NOT export calcMtdCost (projection) or calcCost ($ vs $200 budget)', () => {
+      const lib = quotaLib as Record<string, unknown>;
+      expect(lib.calcMtdCost).toBeUndefined();
+      expect(lib.calcCost).toBeUndefined();
+    });
+
+    it('exports the headroom API only', () => {
+      const names = Object.keys(quotaLib).filter((k) => k !== 'default').sort();
+      expect(names).toEqual(['FREE_CAP', 'PRICE_PER_1K', 'WARN_PCT', 'calcHeadroom', 'classifyStatus']);
     });
   });
 
-  describe('classifyStatus', () => {
-    it('critical when mtdPct ≥ lockThresholdPct', () => {
+  describe('classifyStatus (headroom % of free cap)', () => {
+    it('critical when maxPct ≥ critical threshold', () => {
       expect(classifyStatus(90, 90)).toBe('critical');
-      expect(classifyStatus(95, 90)).toBe('critical');
       expect(classifyStatus(100, 90)).toBe('critical');
     });
 
-    it('warning when 50 ≤ mtdPct < lockThresholdPct', () => {
-      expect(classifyStatus(50, 90)).toBe('warning');
-      expect(classifyStatus(70, 90)).toBe('warning');
+    it(`warning when ${WARN_PCT}% ≤ maxPct < critical`, () => {
+      expect(classifyStatus(WARN_PCT, 90)).toBe('warning');
+      expect(classifyStatus(85, 90)).toBe('warning');
       expect(classifyStatus(89.99, 90)).toBe('warning');
     });
 
-    it('ok when mtdPct < 50', () => {
+    it('ok when maxPct < warn threshold (e.g. Routes at 48%)', () => {
       expect(classifyStatus(0, 90)).toBe('ok');
-      expect(classifyStatus(49, 90)).toBe('ok');
-      expect(classifyStatus(49.99, 90)).toBe('ok');
+      expect(classifyStatus(48.13, 90)).toBe('ok');
+      expect(classifyStatus(WARN_PCT - 0.01, 90)).toBe('ok');
     });
   });
 });
@@ -121,8 +131,10 @@ describe('daily-check.js — Google Maps section wiring', () => {
     expect(DAILY_CHECK_SRC).toContain('/api/admin/quota-estimate');
   });
 
-  it('fetches /api/admin/maps-settings', () => {
-    expect(DAILY_CHECK_SRC).toContain('/api/admin/maps-settings');
+  it('computes free-tier headroom (no $ projection)', () => {
+    expect(DAILY_CHECK_SRC).toMatch(/calcHeadroom\(/);
+    expect(DAILY_CHECK_SRC).not.toMatch(/calcMtdCost\s*\(/);
+    expect(DAILY_CHECK_SRC).not.toMatch(/calcCost\s*\(/);
   });
 
   it('wires googleMapsQuota into Promise.allSettled (7th source)', () => {

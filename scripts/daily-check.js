@@ -585,22 +585,24 @@ async function queryGoogleMapsQuota() {
   try {
     var token = await googleMapsTokenHelper.getToken();
     var settings = await adminApiGet('/api/admin/maps-settings', token);
+    // quota-estimate 回 month-to-date 真實 per-method counts（GCP Cloud Monitoring）。
+    // GCP 拿不到 → endpoint 回 502 → adminApiGet throw → catch 顯示 error。
     var estimates = await adminApiGet('/api/admin/quota-estimate', token);
-    var dayOfMonth = new Date().getDate();
-    var dailyCost = googleMapsQuotaLib.calcDailyCost(estimates);
-    var mtdCost = googleMapsQuotaLib.calcMtdCost(estimates, dayOfMonth);
-    var mtdPct = settings.budget_usd > 0 ? (mtdCost / settings.budget_usd) * 100 : 0;
-    var status = googleMapsQuotaLib.classifyStatus(mtdPct, settings.lock_threshold_pct);
-    var remainingUsd = Math.max(0, settings.budget_usd - mtdCost);
+    // 2025/3 起 Maps 取消 $200 抵免、改每個 SKU 各自免費月額度 → 監控 headroom
+    //（用掉免費額度 %）而非 $ vs 預算。任一 SKU ≥ lock_threshold_pct → critical、
+    // ≥ WARN_PCT → warning，在跨入付費前預警。overageCost 是真實付費 $（現為 0）。
+    var headroom = googleMapsQuotaLib.calcHeadroom(estimates);
+    var criticalPct = settings.lock_threshold_pct || 90;
+    var status = googleMapsQuotaLib.classifyStatus(headroom.maxPct, criticalPct);
     return {
       status: status,
-      dailyCost: dailyCost,
-      mtdCost: mtdCost,
-      budget: settings.budget_usd,
-      mtdPct: mtdPct,
-      remainingUsd: remainingUsd,
+      maxPct: headroom.maxPct,
+      worst: headroom.worst,
+      overageCost: headroom.overageCostTotal,
+      criticalPct: criticalPct,
+      warnPct: googleMapsQuotaLib.WARN_PCT,
       isLocked: !!settings.is_locked,
-      services: estimates
+      services: headroom.items
     };
   } catch (err) {
     console.error('Google Maps quota check failed:', err.message);
