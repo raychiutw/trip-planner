@@ -39,7 +39,10 @@ WHERE id IN (
       LOWER(p.category) LIKE '%hotel%' OR LOWER(p.category) LIKE '%lodging%'
       OR LOWER(p.category) LIKE '%hostel%' OR LOWER(p.category) LIKE '%motel%'
       OR LOWER(p.category) LIKE '%guest_house%' OR LOWER(p.category) LIKE '%resort%'
-      OR LOWER(p.category) LIKE '%tourism%'
+      -- NOTE: legacy Nominatim tokens (tourism/amenity/leisure) are deliberately NOT
+      -- matched here. Google `primaryType` never emits them, but old manual rows do
+      -- (ambiguously) — e.g. an aquarium stored as category='tourism' would wrongly
+      -- become 'hotel'. The going-forward mapper keeps them only for test back-compat.
       -- 'inn' as a whole snake_case token (ESCAPE '\' → literal '_'; bare '_' is a LIKE wildcard).
       OR LOWER(p.category) = 'inn' OR LOWER(p.category) LIKE 'inn\_%' ESCAPE '\'
       OR LOWER(p.category) LIKE '%\_inn' ESCAPE '\' OR LOWER(p.category) LIKE '%\_inn\_%' ESCAPE '\'
@@ -92,7 +95,7 @@ WHERE id IN (
       OR LOWER(p.category) LIKE '%theater%' OR LOWER(p.category) LIKE '%theatre%'
       OR LOWER(p.category) LIKE '%stadium%' OR LOWER(p.category) LIKE '%arena%'
       OR LOWER(p.category) LIKE '%bowling%' OR LOWER(p.category) LIKE '%karaoke%'
-      OR LOWER(p.category) LIKE '%leisure%' OR LOWER(p.category) LIKE '%activity%'
+      OR LOWER(p.category) LIKE '%activity%'
     )
     AND NOT EXISTS (SELECT 1 FROM pois q WHERE q.name = p.name AND q.type = 'activity')
   GROUP BY p.name
@@ -113,7 +116,6 @@ WHERE id IN (
       -- 'bar' as a whole token only — '%bar%' would misfile 'barber_shop' as restaurant.
       OR LOWER(p.category) = 'bar' OR LOWER(p.category) LIKE 'bar\_%' ESCAPE '\'
       OR LOWER(p.category) LIKE '%\_bar' ESCAPE '\' OR LOWER(p.category) LIKE '%\_bar\_%' ESCAPE '\'
-      OR LOWER(p.category) LIKE '%amenity%'
     )
     AND NOT EXISTS (SELECT 1 FROM pois q WHERE q.name = p.name AND q.type = 'restaurant')
   GROUP BY p.name
