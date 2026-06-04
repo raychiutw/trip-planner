@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.50.1] - 2026-06-04
+
+### Fixed
+- **分類 picker 在「新增景點」精靈底部列水平溢出** — v2.50.0 的 `dropUp` picker 用 `left: 0` 從靠右的 chip 彈出，288px 寬度衝出右邊界（prod QA 實測溢出 129px），購物/停車/景點/其他 4 格被切掉點不到。改 `right: 0` + 開啟時 `useLayoutEffect` 量測並 `transform` 水平夾回 viewport（左右各 8px margin），任意 chip 位置（短名置中／長名靠右）8 格皆完整顯示。
+
 ## [2.50.0] - 2026-06-04
 
 ### Added
