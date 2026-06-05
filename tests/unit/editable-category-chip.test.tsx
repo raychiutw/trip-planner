@@ -45,4 +45,39 @@ describe('EditableCategoryChip', () => {
     rerender(<EditableCategoryChip value="hotel" onChange={() => {}} dropUp testIdPrefix="ec" />);
     expect(screen.getByTestId('ec-pop').classList.contains('is-up')).toBe(true);
   });
+
+  // v2.50.x desktop RWD: on ≥768px the popover goes absolute with a definite width so it can
+  // lay 8 categories in one row (auto-fit grid), floating instead of widening the inline-block
+  // wrap — widening the wrap would shove chip-row siblings (e.g. the alternate's star-rating)
+  // onto a new line. dropUp (fixed bottom-bar) chips must be EXCLUDED — they keep the .is-up
+  // absolute right:0 anchor — so the wrap is tagged .is-dropup and the rule is scoped :not(.is-dropup).
+  it('tags the wrap .is-dropup only in dropUp mode (so the desktop floating-popover rule skips bottom-bar chips)', () => {
+    const { container, rerender } = render(
+      <EditableCategoryChip value="hotel" onChange={() => {}} testIdPrefix="ec" />,
+    );
+    expect(container.querySelector('.tp-cat-chip-wrap')?.classList.contains('is-dropup')).toBe(false);
+
+    rerender(<EditableCategoryChip value="hotel" onChange={() => {}} dropUp testIdPrefix="ec" />);
+    expect(container.querySelector('.tp-cat-chip-wrap')?.classList.contains('is-dropup')).toBe(true);
+  });
+
+  // compact: overflow:hidden / narrow card (e.g. AddStopPage 搜尋卡 ~331px) keeps the mobile
+  // in-flow popover on desktop too. Without it the absolute float would be clipped to a sliver
+  // by the card's overflow:hidden — the P0 the adversarial review caught.
+  it('tags the wrap .is-compact only in compact mode (skip the desktop float that overflow:hidden would clip)', () => {
+    const { container, rerender } = render(
+      <EditableCategoryChip value="hotel" onChange={() => {}} testIdPrefix="ec" />,
+    );
+    expect(container.querySelector('.tp-cat-chip-wrap')?.classList.contains('is-compact')).toBe(false);
+
+    rerender(<EditableCategoryChip value="hotel" onChange={() => {}} compact testIdPrefix="ec" />);
+    expect(container.querySelector('.tp-cat-chip-wrap')?.classList.contains('is-compact')).toBe(true);
+  });
+
+  it('scopes the desktop floating-popover rule to :not(.is-dropup):not(.is-compact)', () => {
+    const { container } = render(<EditableCategoryChip value="hotel" onChange={() => {}} testIdPrefix="ec" />);
+    const css = container.querySelector('style')?.textContent ?? '';
+    expect(css).toMatch(/@media\s*\(min-width:\s*768px\)/);
+    expect(css).toMatch(/\.tp-cat-chip-wrap:not\(\.is-dropup\):not\(\.is-compact\)/);
+  });
 });

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Category Picker 桌機 RWD — 最終方案（含 compact 例外）</title>
+<!--
+  方案總結（v2.50.x，2026-06-05）：
+  1. CategoryPicker grid：repeat(4) → repeat(auto-fit, minmax(54px,1fr))。欄數由容器寬度決定。
+  2. EditableCategoryChip popover 桌機(≥768px)：absolute 浮層 + width min(512px,...)，一行排 8 個。
+     用 absolute（非撐寬 wrap）以免擠到 chip 旁兄弟（備選列星等）。
+  3. compact 例外：overflow:hidden / 窄卡片容器（AddStopPage 搜尋卡 ~331px）維持 in-flow 緊湊
+     popover，否則 absolute 浮層被祖先 overflow:hidden 裁成碎片（adversarial review 抓到的 P0）。
+  4. dropUp 例外：fixed bottom bar（ChangePoiPage 精靈）保留 .is-up 向上錨點。
+-->
+<style>
+:root{
+  --color-accent:#D97848; --color-accent-subtle:#FBEEE4; --color-accent-bg:#F7DFCB;
+  --color-accent-deep:#B85C2E; --color-background:#FFFBF5; --color-secondary:#FAF4EA;
+  --color-tertiary:#F2EAD9; --color-hover:#F9EDE0; --color-foreground:#2A1F18;
+  --color-muted:#6F5A47; --color-accent-foreground:#FFFFFF; --color-border:#EADFCF;
+  --color-success:#2E7D32;
+  --radius-md:8px; --radius-lg:12px; --radius-full:9999px;
+  --font-size-headline:1.0625rem; --font-size-callout:1rem; --font-size-footnote:0.875rem;
+  --font-size-caption:0.75rem; --font-size-caption2:0.6875rem;
+  --shadow-md:0 6px 16px rgba(42,31,24,0.09); --shadow-lg:0 10px 28px rgba(42,31,24,0.12);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--color-background);color:var(--color-foreground);
+  font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;padding:0 0 80px;}
+.svg-icon{display:inline-flex;vertical-align:middle;}
+.banner{background:var(--color-accent-deep);color:var(--color-background);padding:8px 24px;font-size:12px;font-weight:700;}
+.wrap{max-width:720px;margin:0 auto;padding:18px 24px;}
+.scene{font-size:11px;font-weight:700;color:var(--color-muted);margin:14px 0 6px;}
+.spacer{height:220px;}
+
+/* EditEntryPage */
+.tp-edit-entry-poi{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:var(--color-secondary);border-radius:var(--radius-lg);}
+.tp-edit-entry-poi-icon{width:44px;height:44px;background:var(--color-accent);color:var(--color-accent-foreground);border-radius:var(--radius-md);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tp-edit-entry-poi-icon .svg-icon{width:20px;height:20px;}
+.tp-edit-entry-poi-meta{flex:1;min-width:0;}
+.tp-edit-entry-poi-name{font-weight:700;font-size:var(--font-size-headline);}
+.tp-edit-entry-poi-sub{color:var(--color-muted);font-size:var(--font-size-footnote);margin-top:2px;}
+.tp-edit-entry-poi-note{margin-top:8px;color:var(--color-muted);font-size:var(--font-size-footnote);display:flex;align-items:center;gap:5px;}
+.tp-edit-entry-poi-action{width:44px;height:44px;flex-shrink:0;border-radius:var(--radius-md);background:var(--color-background);border:1.5px solid var(--color-border);color:var(--color-foreground);display:inline-flex;align-items:center;justify-content:center;}
+.tp-edit-entry-alt-row{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--color-secondary);border-radius:var(--radius-lg);}
+.tp-edit-entry-alt-order{font-weight:600;min-width:18px;color:var(--color-muted);font-size:var(--font-size-footnote);}
+.tp-edit-entry-alt-meta{flex:1;min-width:0;}
+.tp-edit-entry-alt-name{font-weight:600;font-size:var(--font-size-footnote);}
+.tp-edit-entry-alt-category{font-size:var(--font-size-caption);color:var(--color-muted);margin-top:4px;}
+.tp-edit-entry-alt-rating{margin-left:8px;color:var(--color-muted);}
+.tp-edit-entry-alt-rating .svg-icon{width:13px;height:13px;color:var(--color-accent);}
+.cpf-field{background:var(--color-secondary);border-radius:var(--radius-lg);padding:16px;}
+.cpf-field>label{display:block;font-size:var(--font-size-footnote);font-weight:600;margin-bottom:8px;}
+
+/* AddStopPage 搜尋卡（overflow:hidden + 窄） */
+.tp-add-stop-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.tp-add-stop-card{position:relative;display:block;border:1px solid var(--color-accent);border-radius:var(--radius-md);background:var(--color-background);overflow:hidden;}
+.tp-add-stop-card-photo{height:84px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#E8A06A,#D97848);}
+.tp-add-stop-card-photo .svg-icon{width:32px;height:32px;color:rgba(255,255,255,0.78);}
+.tp-add-stop-card-add{position:absolute;top:8px;right:8px;padding:5px 10px;border-radius:var(--radius-full);background:var(--color-success);color:#fff;font-size:var(--font-size-caption2);font-weight:700;box-shadow:var(--shadow-md);}
+.tp-add-stop-card-body{min-width:0;padding:10px 12px;}
+.tp-add-stop-card-cat{margin-top:6px;}
+.tp-add-stop-card-name{font-weight:700;font-size:var(--font-size-callout);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;}
+.tp-add-stop-card-meta{font-size:var(--font-size-caption2);color:var(--color-muted);}
+
+/* chip + popover + picker（逐行對齊 component） */
+.tp-cat-chip-wrap{position:relative;display:inline-block;}
+.tp-cat-chip{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:3px 9px 3px 8px;border:0;border-radius:var(--radius-full);background:var(--color-tertiary);color:var(--color-foreground);font:inherit;font-size:var(--font-size-caption);font-weight:600;cursor:pointer;}
+.tp-cat-chip.is-open{background:var(--color-accent-subtle);color:var(--color-accent-deep);box-shadow:inset 0 0 0 1.5px var(--color-accent);}
+.tp-cat-chip .svg-icon{width:14px;height:14px;}
+.tp-cat-chip-pencil{width:11px;height:11px;color:var(--color-muted);}
+.tp-cat-chip-pop{margin-top:8px;background:var(--color-secondary);border-radius:var(--radius-md);padding:10px;width:max-content;min-width:min(288px,calc(100vw - 32px));max-width:calc(100vw - 24px);}
+.tp-category-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(54px,1fr));gap:8px;}
+.tp-category-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:64px;padding:8px 4px;border:0;border-radius:var(--radius-md);background:var(--color-background);color:var(--color-muted);font:inherit;font-size:var(--font-size-caption);font-weight:600;cursor:pointer;}
+.tp-cat-chip-pop .tp-category-tile{background:var(--color-secondary);}
+.tp-category-tile .svg-icon{width:22px;height:22px;}
+.tp-category-tile.is-active{background:var(--color-accent-subtle);color:var(--color-accent-deep);box-shadow:inset 0 0 0 1.5px var(--color-accent);}
+@media(min-width:768px){
+  .tp-cat-chip-wrap:not(.is-dropup):not(.is-compact) .tp-cat-chip-pop:not(.is-up){
+    position:absolute;left:0;top:100%;margin-top:8px;z-index:60;
+    width:min(512px,calc(100vw - 32px));box-shadow:var(--shadow-lg);
+  }
+}
+</style>
+</head>
+<body>
+<div class="banner">最終方案（桌機 ≥768px）— popover 浮層一行 8 個；窄/overflow 卡用 compact 維持 in-flow</div>
+<div class="wrap">
+  <div class="scene">① 編輯景點 · 正選 master（popover 浮層 8 欄，蓋住下方屬正常 dropdown）</div>
+  <div id="master"></div>
+  <div class="spacer"></div>
+  <div class="scene">② 編輯景點 · 備選 alternate（popover 浮層 8 欄；星等★仍與 chip 同列）</div>
+  <div id="alt"></div>
+  <div class="spacer"></div>
+  <div class="scene">③ 自訂景點表單 · 類別欄（直接內嵌 auto-fit 8 欄）</div>
+  <div class="cpf-field" id="form"><label>類別</label></div>
+  <div class="scene" style="margin-top:18px">④ 新增景點搜尋卡（overflow:hidden ~331px）· compact 維持 in-flow 4 欄（不被卡片裁切）</div>
+  <div class="tp-add-stop-grid"><label class="tp-add-stop-card" id="addstop"></label><label class="tp-add-stop-card" style="opacity:.4"><div class="tp-add-stop-card-photo"></div><div class="tp-add-stop-card-body"><div class="tp-add-stop-card-name">（鄰卡）</div><div class="tp-add-stop-card-meta">★ 4.2 · 餐廳</div></div></label></div>
+</div>
+<script>
+const CATS=[
+  ['飯店','<path d="M3 7v10M3 11h13a4 4 0 0 1 4 4v2M3 11V8a1 1 0 0 1 1-1h6a3 3 0 0 1 3 3"/>'],
+  ['餐廳','<path d="M5 3v8a2 2 0 0 0 4 0V3M7 11v10M16 3c-1.5 0-3 2-3 5s1.5 4 3 4v9"/>'],
+  ['購物','<path d="M6 7h12l1 13H5L6 7ZM9 7a3 3 0 0 1 6 0"/>'],
+  ['停車','<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 17V8h4a2.5 2.5 0 0 1 0 5H9"/>'],
+  ['交通','<rect x="3" y="11" width="18" height="6" rx="1.5"/><path d="M5 11l2-5a2 2 0 0 1 1.9-1.4h6.2A2 2 0 0 1 19 6l2 5M7 17v2M17 17v2"/>'],
+  ['活動','<path d="M12 3l2 5 5 .5-4 3.5 1.5 5L12 19l-4.5 3 1.5-5-4-3.5 5-.5Z"/>'],
+  ['景點','<path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/>'],
+  ['其他','<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/>'],
+];
+function svg(i){return '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+i+'</svg>';}
+const PENCIL='<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>';
+const STAR='<path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8L3.5 9.2l5.9-.9Z"/>';
+function picker(){const d=document.createElement('div');d.className='tp-category-picker';CATS.forEach((c,i)=>{const b=document.createElement('button');b.type='button';b.className='tp-category-tile'+(i===4?' is-active':'');b.innerHTML=svg(c[1])+'<span>'+c[0]+'</span>';d.appendChild(b);});return d;}
+function chip(label,idx,cls){const w=document.createElement('span');w.className='tp-cat-chip-wrap'+(cls||'');w.innerHTML='<button class="tp-cat-chip is-open" type="button">'+svg(CATS[idx][1])+'<span>'+label+'</span><span class="tp-cat-chip-pencil">'+svg(PENCIL)+'</span></button>';const p=document.createElement('div');p.className='tp-cat-chip-pop';p.appendChild(picker());w.appendChild(p);return w;}
+// ① master
+(function(){const c=document.createElement('div');c.className='tp-edit-entry-poi';c.innerHTML='<span class="tp-edit-entry-poi-icon">'+svg(CATS[4][1])+'</span><div class="tp-edit-entry-poi-meta"><div class="tp-edit-entry-poi-name">タイムズカー 美栄橋駅前店</div><div class="tp-edit-entry-poi-sub" data-s></div><div class="tp-edit-entry-poi-note">'+svg(PENCIL)+' 測試</div></div><button class="tp-edit-entry-poi-action">'+svg('<path d="M7 7h11l-3-3M17 17H6l3 3"/>')+'</button>';c.querySelector('[data-s]').appendChild(chip('交通',4,''));document.getElementById('master').appendChild(c);})();
+// ② alt
+(function(){const a=document.createElement('div');a.className='tp-edit-entry-alt-row';a.innerHTML='<span class="tp-edit-entry-alt-order">2</span><div class="tp-edit-entry-alt-meta"><div class="tp-edit-entry-alt-name">オリオンビール 那覇店</div><div class="tp-edit-entry-alt-category" data-c></div></div>';const c=a.querySelector('[data-c]');c.appendChild(chip('餐廳',1,''));const r=document.createElement('span');r.className='tp-edit-entry-alt-rating';r.innerHTML=svg(STAR)+' 4.5';c.appendChild(r);document.getElementById('alt').appendChild(a);})();
+// ③ form
+document.getElementById('form').appendChild(picker());
+// ④ AddStopPage compact
+(function(){const el=document.getElementById('addstop');el.innerHTML='<div class="tp-add-stop-card-photo">'+svg(CATS[4][1])+'</div><span class="tp-add-stop-card-add">✓ 已選</span><div class="tp-add-stop-card-body"><div class="tp-add-stop-card-name">タイムズカー 美栄橋駅前店</div><div class="tp-add-stop-card-meta">★ 4.5 · 租車</div><div class="tp-add-stop-card-cat" data-c></div></div>';el.querySelector('[data-c]').appendChild(chip('交通',4,' is-compact'));})();
+</script>
+</body>
+</html>

@@ -40,11 +40,11 @@ export const CATEGORY_ICON: Record<PoiType, string> = {
 const SCOPED_STYLES = `
 .tp-category-picker {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* 欄數交給容器寬度決定（RWD）：寬版面（自訂表單 ~672px、桌機編輯卡片 ~532px）一行排滿
+     8 個分類，窄手機自動 reflow 成 4-5 欄。取代原本寫死的 repeat(4) — 桌機會把 4 欄各撐到
+     ~160px，icon 周圍大量留白而顯鬆散。tile 最小 54px 讓編輯卡片寬度也容得下一整排 8 個。 */
+  grid-template-columns: repeat(auto-fit, minmax(54px, 1fr));
   gap: 8px;
-}
-@media (max-width: 360px) {
-  .tp-category-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 .tp-category-tile {
   position: relative;
