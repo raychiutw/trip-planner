@@ -44,4 +44,15 @@ describe('CategoryPicker (Variant C icon grid — signed off 2026-06-04)', () =>
     render(<CategoryPicker value="attraction" onChange={() => {}} />);
     expect(screen.getByRole('radiogroup').getAttribute('aria-label')).toBe('景點類別');
   });
+
+  // v2.50.x desktop RWD: column count follows container width instead of a fixed 4
+  // (寬桌機容器原本把 4 欄撐到 ~160px，icon 周圍鬆散). auto-fit lets a wide form / popover
+  // lay all 8 tiles in one row, while a narrow phone reflows to 4-5.
+  it('uses a responsive auto-fit grid (no hard-coded 4-column track)', () => {
+    const { container } = render(<CategoryPicker value="attraction" onChange={() => {}} />);
+    const css = container.querySelector('style')?.textContent ?? '';
+    expect(css).toMatch(/grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(/);
+    // the old fixed 4-column track must be gone so it can never pin to 4 on desktop
+    expect(css).not.toMatch(/grid-template-columns:\s*repeat\(4,/);
+  });
 });

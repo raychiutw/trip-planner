@@ -15,6 +15,12 @@ export type EditableCategoryChipProps = {
    * （absolute 定位，不被 viewport 底切掉）。預設 false（沿用 in-flow 向下展開）。
    */
   dropUp?: boolean;
+  /**
+   * 在 overflow:hidden 或窄卡片容器（如 AddStopPage 搜尋結果卡）使用時設 true：popover 維持
+   * 手機式 in-flow 緊湊展開（撐高容器、不被 clip），不套桌機 absolute 寬浮層（≥768px 多欄）。
+   * 窄容器（<~400px）放不下寬浮層、且祖先的 overflow:hidden 會把 absolute 浮層裁成碎片，故維持 in-flow。
+   */
+  compact?: boolean;
 };
 
 const SCOPED_STYLES = `
@@ -56,7 +62,26 @@ const SCOPED_STYLES = `
   bottom: calc(100% + 8px);
   margin-top: 0;
   z-index: 60;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--shadow-lg);
+}
+/* 桌機（≥768px）：非 dropUp 的 popover 改 absolute 浮層向下彈出，並給 definite width，讓
+   CategoryPicker 的 auto-fit grid 把 8 個分類一行排開（版面寬度決定欄數）。
+   為何用 absolute 而非把 wrap 撐成 block：popover 若靠撐寬 inline-block wrap 來變寬，會把
+   chip 旁同列的兄弟元素（例如備選列 .tp-edit-entry-alt-category 裡的星等）擠到下一行。
+   absolute 脫離 in-flow，寬度自己定，不影響 chip 與兄弟的排版。手機維持 inline-block
+   + max-content/min 288 的 in-flow 緊湊浮層。兩種容器排除桌機浮層：dropUp（fixed bottom bar，
+   .is-dropup）保留 .is-up 的 absolute right:0 向上錨點；compact（窄/overflow:hidden 卡片，
+   .is-compact）維持 in-flow，否則 absolute 浮層會被祖先 overflow:hidden 裁成碎片。 */
+@media (min-width: 768px) {
+  .tp-cat-chip-wrap:not(.is-dropup):not(.is-compact) .tp-cat-chip-pop:not(.is-up) {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 8px;
+    z-index: 60;
+    width: min(512px, calc(100vw - 32px));
+    box-shadow: var(--shadow-lg);
+  }
 }
 `;
 
@@ -72,6 +97,7 @@ export function EditableCategoryChip({
   disabled = false,
   testIdPrefix = 'category-chip',
   dropUp = false,
+  compact = false,
 }: EditableCategoryChipProps) {
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement | null>(null);
@@ -94,7 +120,7 @@ export function EditableCategoryChip({
   }, [open, dropUp]);
 
   return (
-    <span className="tp-cat-chip-wrap">
+    <span className={`tp-cat-chip-wrap${dropUp ? ' is-dropup' : ''}${compact ? ' is-compact' : ''}`}>
       <style>{SCOPED_STYLES}</style>
       <button
         type="button"

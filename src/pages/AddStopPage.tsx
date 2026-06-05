@@ -1210,6 +1210,9 @@ export default function AddStopPage() {
                                           setSearchCatOverride((m) => ({ ...m, [r.place_id]: t }))
                                         }
                                         testIdPrefix={`add-stop-search-cat-${r.place_id}`}
+                                        // 搜尋卡 .tp-add-stop-card 是 overflow:hidden + ~331px 窄：compact
+                                        // 維持 in-flow 緊湊 popover，否則桌機 absolute 寬浮層會被卡片裁成碎片。
+                                        compact
                                       />
                                     </div>
                                   )}

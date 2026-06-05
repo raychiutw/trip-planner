@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.50.3] - 2026-06-05
+
+### Fixed
+- **桌機版分類 picker 攤開鬆散、一行卡死 4 欄** — `CategoryPicker` 的 grid 寫死 `repeat(4, minmax(0,1fr))`，不論版面多寬都鎖 4 欄，桌機把每欄撐到 ~160px、icon 周圍大量留白。改 `repeat(auto-fit, minmax(54px, 1fr))`，一行欄數由容器寬度決定：寬版面（自訂景點表單、編輯景點卡片）一排放滿 8 個分類，窄手機自動 reflow 成 4-5 欄。
+- **編輯景點 popover 桌機孤零零靠左、右側大片空白** — `EditableCategoryChip` popover 桌機（≥768px）改 absolute 浮層 + `min(512px, calc(100vw - 32px))` 寬度，8 個分類一行排開。用 absolute（而非撐寬 inline-block wrap）以免把 chip 同列的兄弟元素（如備選列星等）擠到下一行。
+- **新增景點搜尋卡桌機 popover 被裁成碎片** — 搜尋卡 `.tp-add-stop-card` 是 `overflow:hidden` + ~331px 窄，桌機 absolute 浮層會被卡片裁掉。新增 `compact` prop：這類窄／overflow 容器維持手機式 in-flow 緊湊 popover（撐高卡片、不被裁切），不套桌機寬浮層；`dropUp`（精靈底部列）同樣排除。
+
+### Changed
+- `EditableCategoryChip` popover 陰影硬編碼 `rgba(0, 0, 0, 0.22)` 改用 `var(--shadow-lg)` token，補上 dark mode／高對比模式的陰影適配。
+
 ## [2.50.1] - 2026-06-04
 
 ### Fixed
