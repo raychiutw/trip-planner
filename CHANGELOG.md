@@ -8,11 +8,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Changed
 - **三色系統第一階段：主色從 terracotta 改為柔褐 `#A97A4A`** — 參考 mamahoikuen.jp 暖柔三色，主色（CTA / active / link / 景點·餐廳 icon / chip / rating）全站從 `#D97848` 改 `#A97A4A`，整體更柔。同步對齊 email 品牌色、theme-color meta、地圖 marker、trip 封面漸層、info token。
 - **交通資訊改用第二色 sage 綠 `#A8BAAA`** — `TravelPill`（車程/步行）icon 改 sage，與主色形成冷暖分工。
+- **清除全站殘留 terracotta hardcode** — 分享 modal（`ShareLinkModal` pill/按鈕/tint 家族 `#d97848`/`#fbeee4`/`#b85c2e`/`#f7dfcb`）、列印樣式（`tripPrintStyles` 含封面漸層 `#f0935e`）、6 個 auth 頁背景光暈 `rgba(217,120,72,*)`、地圖 focused marker outer ring、cover-kr/cover-tw token 全部對齊柔褐 token 值（accent `#A97A4A`／deep `#8A6038`／bg `#E9DBC8`／subtle `#F4EDE3`）。
+
+### Fixed
+- **深色模式 info token 仍是舊 terracotta** — `body.dark` 的 `--color-info` 漏改，淺色已柔褐、深色卻還橘。對齊深色 accent `#CBA06E`。
+- **深色模式 accent e2e 斷言過時** — `tokens-layer.spec.ts` dark accent 仍斷言舊 `#E89968`，更新為 `#CBA06E`（CI 紅燈根因）。
 
 ### Added
 - **三色 token `--color-accent-2`(sage 綠) / `--color-accent-3`(玫瑰粉)** — light/dark 各 4 階，供逐步落地。完整 spec 見 `docs/design-sessions/2026-06-06-three-color-system.md`。
 
-> 三色系統遷移中：主色柔褐 + 交通 sage 已落地；第三色粉（收藏/備選）+ 其餘元素 + 完整 DESIGN.md 表格後續。
+> 三色系統遷移中：主色柔褐 + 交通 sage + 全站 hardcode 清除已落地；第三色粉（收藏/備選）+ 完整 DESIGN.md 表格後續。
 
 ## [2.50.3] - 2026-06-05
 

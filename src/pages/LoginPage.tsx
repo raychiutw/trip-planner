@@ -21,8 +21,8 @@ const SCOPED_STYLES = `
 .tp-login-shell {
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 20% 0%, rgba(217, 120, 72, 0.06), transparent 50%),
-    radial-gradient(circle at 80% 100%, rgba(217, 120, 72, 0.04), transparent 50%),
+    radial-gradient(circle at 20% 0%, rgba(169, 122, 74, 0.06), transparent 50%),
+    radial-gradient(circle at 80% 100%, rgba(169, 122, 74, 0.04), transparent 50%),
     var(--color-secondary);
   /* mobile fallback: single-column centered */
   display: flex; align-items: center; justify-content: center;
@@ -56,7 +56,7 @@ const SCOPED_STYLES = `
 
 .tp-login-brand-hero {
   display: none;
-  background: linear-gradient(135deg, var(--color-foreground) 0%, var(--color-accent-deep, #B85C2E) 100%);
+  background: linear-gradient(135deg, var(--color-foreground) 0%, var(--color-accent-deep, #8A6038) 100%);
   color: var(--color-background);
   padding: 56px 48px;
   position: relative;
@@ -82,7 +82,7 @@ const SCOPED_STYLES = `
   bottom: -80px; left: -80px;
   width: 300px; height: 300px;
   border-radius: 50%;
-  background: rgba(217, 120, 72, 0.18);
+  background: rgba(169, 122, 74, 0.18);
   pointer-events: none;
 }
 .tp-bs-eyebrow {

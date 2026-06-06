@@ -103,7 +103,7 @@ export function markerContent(style: MarkerStyle): HTMLDivElement {
   // overlap 時視覺凸度不夠 — CSS box-shadow 補強。
   const isFocused = typeof style.zIndex === 'number' && style.zIndex >= 1000;
   const shadow = isFocused
-    ? `0 0 0 1.5px ${style.fill}, 0 0 0 5px rgba(217, 120, 72, 0.35), 0 6px 16px rgba(42, 31, 24, 0.35)`
+    ? `0 0 0 1.5px ${style.fill}, 0 0 0 5px rgba(169, 122, 74, 0.35), 0 6px 16px rgba(42, 31, 24, 0.35)`
     : `0 0 0 1.5px ${style.fill}, 0 0 0 3px rgba(0, 0, 0, 0.18)`;
   div.style.cssText = `
     width: ${style.size}px;

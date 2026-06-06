@@ -55,7 +55,7 @@ test.describe('tokens.css Layer 驗證', () => {
       };
     });
 
-    expectColor(tokens.accent, '#E89968');
+    expectColor(tokens.accent, '#CBA06E');
     expectColor(tokens.background, '#1A140F');
     expectColor(tokens.foreground, '#F5EBDD');
   });
