@@ -76,7 +76,7 @@
 ## Color
 
 ### Approach
-**柔褐三色主題（2026-06 改版）** — 暖奶油底上三色分區：主色柔褐 `#A97A4A`（一般 POI：景點·餐廳·購物·住宿…、CTA、active、link、rating）+ 第二色 sage 綠 `#A8BAAA`（交通：travel pill / connector / 交通類 POI）+ 第三色玫瑰粉 `#E78C99`（活動、備選、收藏／愛心）。中性色維持暖奶油底。
+**柔褐三色主題（2026-06 改版，tone v2.53）** — 暖奶油底上三色分區：主色柔褐 `#A97A4A`（景點·購物·活動、CTA、active、link、rating）+ 第二色 sage 綠 `#A8BAAA`（住宿·交通·停車、travel pill / connector）+ 第三色玫瑰粉 `#E78C99`（用餐·咖啡、備選、收藏／愛心）。記憶法：玩/看/買=柔褐、住/移動=sage、吃=粉。中性色維持暖奶油底。
 
 行程表套色方式（canonical mockup：`design-sessions/2026-06-06-three-color-trip-theme.html`）：
 - **卡片依類型上同色系淡底**：POI 卡 `data-tone`（accent／sage／pink／neutral）→ 對應色 `-subtle` 底 + `-bg` 邊。
@@ -143,12 +143,13 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 | tone | 類型 | 色 |
 |------|------|----|
-| `accent`（柔褐） | 景點 attraction、用餐 restaurant、購物 shopping、咖啡、住宿 hotel | `--color-accent-*` |
-| `sage`（綠） | 交通 transport、移動/開車 drive、步行 walk、飛行 plane、停車 parking | `--color-accent-2-*` |
-| `pink`（粉） | 活動 activity、備選 alternate、收藏／愛心 | `--color-accent-3-*` |
-| `neutral` | 休息 rest、未分類 fallback 視情況歸 accent | `--color-line-strong` 中性描邊 |
+| `accent`（柔褐） | 景點 attraction、購物 shopping、活動 activity | `--color-accent-*` |
+| `sage`（綠） | 住宿 hotel、交通 transport、停車 parking、移動/開車 drive、步行 walk、飛行 plane | `--color-accent-2-*` |
+| `pink`（粉） | 用餐 restaurant、咖啡 café、備選 alternate、收藏／愛心 | `--color-accent-3-*` |
+| `neutral` | 休息 rest、未分類 fallback 歸 accent | `--color-line-strong` 中性描邊 |
 
-> 2026-06 改版前為「單一 柔褐 accent，只 sight/food 上色」；三色主題後改為依類型三分，仍維持「同類型同色、不交叉」的訊號清晰度。travel pill / connector 永遠 sage。
+> v2.53 tone 調整：用餐→粉、住宿→sage、活動→柔褐（café 跟用餐歸粉）。記憶法：**玩/看/買 = 柔褐、住/移動 = sage、吃 = 粉**。
+> **展開明細同色**：stop 點開的 `.tp-rail-detail`（景點說明/備註/actions 面板）背景 + 邊框繼承該 stop 的 `--tone-subtle/-bg`，與卡片同色系；neutral fallback secondary。travel pill / connector 永遠 sage。
 
 ### Data Visualization 例外
 
@@ -879,7 +880,7 @@ email → user_id 完整切換。
 
 ## Design Principles（開發時參考）
 1. **DESIGN.md + design-sessions 是單一來源** — `tokens.css` 是實作；若文件和程式衝突，先更新文件再實作。
-2. **柔褐三色 tone 分區** — 一般 POI/active/CTA 用柔褐主色；交通用 sage；活動/備選/收藏用粉。同類型同色、不交叉，避免七彩稀釋重點；中性類型維持 ink。
+2. **柔褐三色 tone 分區** — 玩/看/買（景點·購物·活動）+ active/CTA 用柔褐；住/移動（住宿·交通·停車）用 sage；吃（用餐·咖啡）+ 備選/收藏用粉。同類型同色、不交叉，避免七彩稀釋重點；中性類型維持 ink。展開明細與卡片同色。
 3. **Chrome 一致優先** — 聊天、行程、地圖、收藏、帳號的 sidebar / bottom nav / titlebar 行為要一致；desktop 帳號以 account chip 呈現，compact 帳號以 bottom-nav tab 呈現；地圖只例外在內容 full bleed。
 4. **內容寬度一致** — 一般頁面統一 `1040px` content max width；局部表單可在內部限寬，但外層節奏一致。
 5. **行程明細單一來源** — Desktop / compact 共用同一份內容樹與狀態來源，只讓 layout responsive。

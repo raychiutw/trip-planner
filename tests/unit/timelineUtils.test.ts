@@ -72,7 +72,7 @@ describe('deriveTypeMeta', () => {
 
   it('午餐 (description: restaurant) → utensils / 用餐 / accent:true', () => {
     const entry: TimelineEntryData = { title: '午餐', description: 'restaurant' };
-    expect(deriveTypeMeta(entry)).toEqual({ icon: 'utensils', label: '用餐', accent: true, tone: 'accent' });
+    expect(deriveTypeMeta(entry)).toEqual({ icon: 'utensils', label: '用餐', accent: true, tone: 'pink' });
   });
 
   it('步行市區 → walking / 散步 / accent:false', () => {
@@ -85,9 +85,17 @@ describe('deriveTypeMeta', () => {
     expect(deriveTypeMeta(entry)).toEqual({ icon: 'location-pin', label: '景點', accent: true, tone: 'accent' });
   });
 
-  // 柔褐三色主題（2026-06）：tone 三分驅動卡片同色系底 + ghost icon + 標籤色
-  it('活動 (poiType: activity) → sparkle / 活動 / tone:pink', () => {
-    expect(deriveTypeMeta({ title: 'X', poiType: 'activity' })).toEqual({ icon: 'sparkle', label: '活動', accent: true, tone: 'pink' });
+  // 柔褐三色主題 tone 對應（v2.53 調整：用餐→粉、住宿→sage、活動→柔褐）
+  it('活動 (poiType: activity) → sparkle / 活動 / tone:accent（柔褐）', () => {
+    expect(deriveTypeMeta({ title: 'X', poiType: 'activity' })).toEqual({ icon: 'sparkle', label: '活動', accent: true, tone: 'accent' });
+  });
+
+  it('用餐 (poiType: restaurant) → tone:pink（粉）', () => {
+    expect(deriveTypeMeta({ title: 'X', poiType: 'restaurant' }).tone).toBe('pink');
+  });
+
+  it('住宿 (poiType: hotel) → tone:sage（綠）', () => {
+    expect(deriveTypeMeta({ title: 'X', poiType: 'hotel' }).tone).toBe('sage');
   });
 
   it('交通 (poiType: transport) → car / 交通 / tone:sage', () => {
