@@ -76,7 +76,9 @@
 ## Color
 
 ### Approach
-**V2 Terracotta 單主題** — `#D97848` 是唯一 UI chrome accent。CTA、active state、link、sight/food icon 可用 terracotta；其餘介面元素用 warm neutrals，避免回到冷藍 Ocean 或多主題切換。
+**柔褐三色系統（2026-06 改版，逐步落地）** — 主色柔褐 `#A97A4A`（CTA、active state、link、景點·餐廳 icon、chip、rating）+ 第二色 sage 綠 `#A8BAAA`（交通資訊：travel pill / connector）+ 第三色玫瑰粉 `#E78C99`（收藏、備選、活動）。三色各司其職守重點，中性色維持暖奶油底。參考 mamahoikuen.jp 暖柔三色；完整色碼（4 階 × light/dark）+ 用途見 `design-sessions/2026-06-06-three-color-system.md`。
+
+> **遷移中**：tokens（主色 + accent-2 sage + accent-3 粉，light/dark）與 TravelPill 交通 sage 已落地；收藏/備選的粉、其餘元素逐步從單一 terracotta 套到三色。下方 Light/Dark Mode 表格仍為遷移前 terracotta 值，待全站套色完成後一併更新。
 
 ### Light Mode (Terracotta — Default)
 | Token | Hex | 用途 |

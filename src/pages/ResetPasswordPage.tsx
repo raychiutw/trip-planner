@@ -23,7 +23,7 @@ const SCOPED_STYLES = `
   display: flex; align-items: center; justify-content: center;
   min-height: 100dvh; padding: 48px 24px;
   background:
-    radial-gradient(circle at 20% 0%, rgba(217, 120, 72, 0.06), transparent 50%),
+    radial-gradient(circle at 20% 0%, rgba(169, 122, 74, 0.06), transparent 50%),
     var(--color-secondary);
 }
 ${AUTH_LAYOUT_STYLES}

@@ -5,7 +5,7 @@ import { lsSet, lsGet, LS_PREFIX } from '../../src/lib/localStorage';
  * Unit tests for useDarkMode hook logic — V2 Terracotta single-theme design system.
  *
  * v2.33.90: 改 OCEAN_COLORS 藍 → THEME_COLORS Terracotta 橘對齊
- * `src/hooks/useDarkMode.ts` THEME_COLORS = { light: '#D97848', dark: '#1A140F' }。
+ * `src/hooks/useDarkMode.ts` THEME_COLORS = { light: '#A97A4A', dark: '#1A140F' }。
  * 之前 test 使用本地 OCEAN_COLORS = { light: '#0077B6', dark: '#0D1B2A' } 是舊
  * Ocean palette 殘留，與 source 完全不一致（test 用自己的常數所以假性 green）。
  *
@@ -14,7 +14,7 @@ import { lsSet, lsGet, LS_PREFIX } from '../../src/lib/localStorage';
  */
 
 /** Terracotta theme colors (mirror of THEME_COLORS in useDarkMode.ts). */
-const THEME_COLORS = { light: '#D97848', dark: '#1A140F' };
+const THEME_COLORS = { light: '#A97A4A', dark: '#1A140F' };
 
 beforeEach(() => {
   localStorage.clear();
@@ -64,10 +64,10 @@ describe('meta theme-color 更新', () => {
     }
   }
 
-  it('淺色模式使用 Terracotta accent #D97848', () => {
+  it('淺色模式使用 Terracotta accent #A97A4A', () => {
     updateMeta(false);
     const meta = document.querySelector('meta[name="theme-color"]');
-    expect(meta.getAttribute('content')).toBe('#D97848');
+    expect(meta.getAttribute('content')).toBe('#A97A4A');
   });
 
   it('深色模式使用 Terracotta deep #1A140F', () => {

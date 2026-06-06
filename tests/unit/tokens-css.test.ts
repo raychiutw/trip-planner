@@ -35,8 +35,8 @@ describe('tokens.css', () => {
     expect(tokens).not.toContain('body.theme-night');
   });
 
-  it('uses V2 Terracotta accent + cream background as default @theme', () => {
-    expect(tokens).toMatch(/--color-accent:\s*#D97848/);
+  it('uses 柔褐 accent + cream background as default @theme', () => {
+    expect(tokens).toMatch(/--color-accent:\s*#A97A4A/);
     expect(tokens).toMatch(/--color-background:\s*#FFFBF5/);
     expect(tokens).toMatch(/--color-foreground:\s*#2A1F18/);
   });

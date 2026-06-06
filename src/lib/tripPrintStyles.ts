@@ -18,7 +18,7 @@ export const PRINT_CSS = `
 .tp-print-btn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;
   font-family:inherit;border-radius:8px;padding:8px 14px;border:1px solid transparent;cursor:pointer;min-height:40px;}
 .tp-print-btn svg{width:16px;height:16px;}
-.tp-print-btn-primary{background:#d97848;color:#fff;}
+.tp-print-btn-primary{background:#A97A4A;color:#fff;}
 .tp-print-btn-ghost{background:#fff;color:#1d1813;border-color:#eadfcf;}
 .tp-print-state{padding:64px 24px;text-align:center;color:#6f5a47;font-size:15px;}
 
@@ -100,7 +100,7 @@ export const PRINT_PDF_DOC_CSS = `.tp-print-doc{box-shadow:none;margin:0;width:7
  */
 export const SHARE_CHROME_CSS = `
 .tp-share-page{min-height:100vh;background:#e6e3dd;color:#1d1813;}
-.tp-share-hero{background:linear-gradient(135deg,#d97848,#f0935e);color:#fff;padding:26px 20px 20px;}
+.tp-share-hero{background:linear-gradient(135deg,#A97A4A,#C49A6E);color:#fff;padding:26px 20px 20px;}
 .tp-share-eyebrow{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;opacity:.93;margin-bottom:8px;}
 .tp-share-eyebrow svg{width:15px;height:15px;}
 .tp-share-title{font-size:26px;font-weight:700;line-height:1.18;}
@@ -110,9 +110,9 @@ export const SHARE_CHROME_CSS = `
 .tp-share-ghost{flex:0 0 auto;min-height:38px;width:44px;border-radius:8px;border:1px solid #eadfcf;
   background:#fff;color:#1d1813;display:grid;place-items:center;cursor:pointer;font-family:inherit;}
 .tp-share-ghost svg{width:18px;height:18px;}
-.tp-share-copy{flex:1;min-height:38px;border-radius:8px;background:#d97848;color:#fff;border:none;
+.tp-share-copy{flex:1;min-height:38px;border-radius:8px;background:#A97A4A;color:#fff;border:none;
   font-weight:600;font-size:14px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;}
-.tp-share-copy:hover{background:#b85c2e;}
+.tp-share-copy:hover{background:#8A6038;}
 .tp-share-copy svg{width:16px;height:16px;}
 .tp-share-state{padding:72px 24px;text-align:center;color:#6f5a47;font-size:15px;line-height:1.6;}
 .tp-share-state-title{font-size:18px;font-weight:700;color:#1d1813;margin-bottom:8px;}
