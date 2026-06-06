@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.53.1] - 2026-06-07
+
+### Fixed
+- **stop 展開明細沒套到 tone 同色（v2.53.0 漏修）** — 展開的 `.tp-rail-detail` 是 `.tp-rail-item` 的 **sibling**（非後代），拿不到繼承的 `--tone-*`，背景退回中性 secondary 奶油。改在 `.tp-rail-detail` 自帶 `data-tone={meta.tone}` + 把 `--tone-*` 變數定義同時套到 `.tp-rail-detail[data-tone]`，展開面板與卡片真正同色系。加 render 回歸測試鎖 detail 必帶 `data-tone`。
+
 ## [2.53.0] - 2026-06-07
 
 ### Changed
