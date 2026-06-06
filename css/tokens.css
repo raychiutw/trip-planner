@@ -700,9 +700,11 @@ body.dark {
     }
     /* 柔褐三色 tone（2026-06）：每 tone 設一組 --tone-* 供 card/icon/dot/label 取用；
        neutral 不設 → var() fallback 回原中性樣式。tier token 在此被引用 → Tailwind 不 tree-shake。 */
-    .tp-rail-item[data-tone="accent"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); --tone-bg: var(--color-accent-bg); }
-    .tp-rail-item[data-tone="sage"]   { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
-    .tp-rail-item[data-tone="pink"]   { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
+    /* --tone-* 同時套到 rail item 與展開明細 .tp-rail-detail（detail 是 item 的 sibling，
+       自帶 data-tone 才拿得到變數）*/
+    .tp-rail-item[data-tone="accent"], .tp-rail-detail[data-tone="accent"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); --tone-bg: var(--color-accent-bg); }
+    .tp-rail-item[data-tone="sage"], .tp-rail-detail[data-tone="sage"]   { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
+    .tp-rail-item[data-tone="pink"], .tp-rail-detail[data-tone="pink"]   { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
     /* 卡片同色系淡底（now 高亮 + neutral 不套）*/
     .tp-rail-item[data-tone="accent"]:not([data-now="true"]),
     .tp-rail-item[data-tone="sage"]:not([data-now="true"]),

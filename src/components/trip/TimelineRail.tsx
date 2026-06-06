@@ -611,7 +611,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       </div>
 
       {expanded && entry.id != null && (
-        <div className="tp-rail-detail" data-testid={`timeline-rail-detail-${entry.id}`}>
+        <div className="tp-rail-detail" data-tone={meta.tone} data-testid={`timeline-rail-detail-${entry.id}`}>
           {hasDescriptionSection && (
             <div
               className="tp-rail-detail-section"
