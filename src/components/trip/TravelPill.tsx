@@ -38,27 +38,29 @@ const SCOPED_STYLES = `
   gap: 10px;
   padding: 5px 14px;
   border-radius: var(--radius-full);
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
-  color: var(--color-muted);
+  /* 柔褐三色：交通 = sage 描邊式（透明底 + sage 邊 + sage 字，2026-06）*/
+  background: transparent;
+  border: 1.5px solid var(--color-accent-2);
+  color: var(--color-accent-2-deep);
   font-size: var(--font-size-footnote);
   width: fit-content;
   font-variant-numeric: tabular-nums;
 }
 .tp-travel-pill.is-interactive {
   cursor: pointer;
-  border: 0; /* 沿用 secondary 底色，hover 用 background 區分 */
+  border: 1.5px solid var(--color-accent-2); /* sage 描邊（取代填滿）*/
+  color: var(--color-accent-2-deep);
   font: inherit; font-size: var(--font-size-footnote);
   transition: background 120ms;
 }
-.tp-travel-pill.is-interactive:hover { background: var(--color-hover); }
+.tp-travel-pill.is-interactive:hover { background: var(--color-accent-2-subtle); }
 .tp-travel-pill.is-interactive:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 .tp-travel-pill-icon {
-  /* 三色：交通資訊用第二色 sage 綠（v2.51 三色系統試點）*/
-  color: var(--color-accent-2);
+  /* 柔褐三色：交通 sage（描邊式用較深 sage 維持對比，2026-06）*/
+  color: var(--color-accent-2-deep);
   display: inline-flex; align-items: center;
   flex-shrink: 0;
 }
@@ -67,7 +69,7 @@ const SCOPED_STYLES = `
   display: inline-flex; align-items: baseline; gap: 6px;
   white-space: nowrap;
 }
-.tp-travel-pill-min { font-weight: 700; color: var(--color-foreground); }
+.tp-travel-pill-min { font-weight: 700; color: var(--color-accent-2-deep); }
 .tp-travel-pill-sep { color: var(--color-muted); opacity: 0.5; }
 .tp-travel-pill-desc {
   color: var(--color-muted);
