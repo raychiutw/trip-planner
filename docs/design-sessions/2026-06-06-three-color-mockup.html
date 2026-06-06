@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三色系統 mockup（柔褐 + sage + 粉）</title>
+<!--
+  三色系統 design spec mockup（2026-06-06，探索保留未落地）。
+  來源參考：ままほいくえん mamahoikuen.jp。按右上鈕切 light/dark。
+  完整色碼與用途見 2026-06-06-three-color-system.md。
+-->
+<style>
+:root{
+  /* === LIGHT 三色 === */
+  --accent:#A97A4A; --accent-deep:#8A6038; --accent-subtle:#F4EDE3; --accent-bg:#E9DBC8;   /* 柔褐 主 */
+  --a2:#A8BAAA; --a2-deep:#7E9580; --a2-subtle:#ECF0ED; --a2-bg:#D4DDD5;                     /* sage 第二 */
+  --a3:#E78C99; --a3-deep:#C66B78; --a3-subtle:#FAF1F3; --a3-bg:#F2DBE0;                     /* 粉 第三 */
+  --bg:#FFFBF5; --secondary:#FAF4EA; --tertiary:#F2EAD9; --fg:#2A1F18; --muted:#6F5A47;
+  --border:#EADFCF; --line-strong:#C8B89F;
+  --radius-md:8px; --radius-lg:12px; --radius-full:9999px; --shadow:0 6px 16px rgba(42,31,24,0.09);
+}
+body.dark{
+  /* === DARK 三色 === */
+  --accent:#CBA06E; --accent-deep:#A97A4A; --accent-subtle:#33271A; --accent-bg:#44341F;
+  --a2:#8FBE9C; --a2-deep:#A4CBAF; --a2-subtle:#243A2C; --a2-bg:#2E3D30;
+  --a3:#E8A0AB; --a3-deep:#CC8590; --a3-subtle:#33232A; --a3-bg:#43303A;
+  --bg:#1C140F; --secondary:#26201A; --tertiary:#332A22; --fg:#F5EBDC; --muted:#B5A08A;
+  --border:#3A3127; --line-strong:#4A4035; --shadow:0 6px 16px rgba(0,0,0,0.42);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;}
+.toggle{position:fixed;top:10px;right:10px;z-index:10;padding:6px 12px;border-radius:var(--radius-full);background:var(--accent);color:#fff;border:0;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.phone{max-width:414px;margin:0 auto;}
+.tbar{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.tbar .ic{width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--accent);}
+.tbar .ic svg{width:20px;height:20px;}
+.tbar h1{flex:1;font-size:1rem;font-weight:700;margin:0;}
+.days{display:flex;gap:18px;padding:10px 16px;border-bottom:1px solid var(--border);overflow-x:auto;}
+.day{font-size:0.8125rem;font-weight:700;color:var(--muted);padding-bottom:6px;border-bottom:2px solid transparent;white-space:nowrap;}
+.day.on{color:var(--accent);border-bottom-color:var(--accent);}
+.day .d{font-size:0.625rem;letter-spacing:.08em;display:block;}
+.list{padding:16px;}
+.stop{background:var(--secondary);border-radius:var(--radius-lg);padding:14px;box-shadow:var(--shadow);}
+.stop-h{display:flex;align-items:center;gap:10px;}
+.stop-ic{width:38px;height:38px;border-radius:var(--radius-md);background:var(--accent-subtle);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.stop-ic svg{width:19px;height:19px;}
+.stop-t{flex:1;font-weight:700;font-size:1rem;min-width:0;}
+.chip{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:var(--radius-full);font-size:0.6875rem;font-weight:600;background:var(--accent-subtle);color:var(--accent-deep);}
+.chip svg{width:12px;height:12px;}
+.stop-d{font-size:0.8125rem;color:var(--muted);margin:8px 0 10px;line-height:1.5;}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:0.6875rem;}
+.b{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:var(--radius-full);font-weight:600;}
+.b svg{width:11px;height:11px;}
+.b-a2{background:var(--a2-bg);color:var(--a2-deep);}
+.b-acc{background:var(--accent-subtle);color:var(--accent-deep);}
+.lnk{color:var(--accent);font-weight:600;text-decoration:none;}
+.save{margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:var(--radius-full);font-size:0.75rem;font-weight:600;background:transparent;color:var(--a3-deep);border:1.5px solid var(--a3);}
+.save svg{width:13px;height:13px;}
+.tv{display:flex;align-items:center;gap:8px;padding:8px 16px 8px 30px;font-size:0.75rem;color:var(--a2-deep);font-weight:600;}
+.tv .ln{width:2px;height:18px;background:var(--a2);border-radius:2px;margin-left:7px;}
+.tv svg{width:14px;height:14px;}
+.alt-h{display:flex;align-items:center;gap:8px;padding:6px 16px;margin-top:6px;}
+.alt-dot{width:8px;height:8px;border-radius:50%;background:var(--a3);}
+.alt-h .t{font-size:0.8125rem;font-weight:700;}
+.alt-h .c{font-size:0.6875rem;color:var(--a3-deep);background:var(--a3-subtle);padding:1px 8px;border-radius:var(--radius-full);font-weight:700;}
+.cta{display:block;margin:14px 16px 0;padding:12px;border-radius:var(--radius-md);background:var(--accent);color:#fff;text-align:center;font-weight:700;font-size:0.9375rem;}
+.nav{display:flex;border-top:1px solid var(--border);}
+.nav a{flex:1;text-align:center;padding:8px 0 10px;font-size:0.625rem;color:var(--muted);text-decoration:none;}
+.nav a.on{color:var(--accent);}
+.nav a svg{width:20px;height:20px;display:block;margin:0 auto 2px;}
+</style>
+</head>
+<body>
+<button class="toggle" onclick="document.body.classList.toggle('dark');this.textContent=document.body.classList.contains('dark')?'☀ 淺色':'☾ 深色'">☾ 深色</button>
+<div class="phone">
+  <div class="tbar"><span class="ic">@back</span><h1>2026 沖繩五日自駕</h1><span class="ic">@menu</span></div>
+  <div class="days"><div class="day on">Day 1<span class="d">6/26</span></div><div class="day">Day 2<span class="d">6/27</span></div><div class="day">Day 3<span class="d">6/28</span></div><div class="day">Day 4<span class="d">6/29</span></div></div>
+  <div class="list" id="list"></div>
+  <a class="cta">＋ 加入景點</a>
+  <div class="nav"><a class="on">@trip<br>行程</a><a>@map<br>地圖</a><a>@heart<br>收藏</a><a>@user<br>我的</a></div>
+</div>
+<script>
+const I={
+ back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+ menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>',
+ pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+ food:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v8a2 2 0 0 0 4 0V3M7 11v10M16 3c-1.5 0-3 2-3 5s1.5 4 3 4v9"/></svg>',
+ car:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="6" rx="1.5"/><path d="M5 11l2-5a2 2 0 0 1 1.9-1.4h6.2A2 2 0 0 1 19 6l2 5"/></svg>',
+ walk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="1.6"/><path d="M9 21l2-6 3 2 1 4M11 15l-1-5 4 1 2 3"/></svg>',
+ heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.6-9.2-8.4C1.2 9.6 2.8 6 6.2 6c2 0 3 1.2 3.8 2.4C10.8 7.2 11.8 6 13.8 6c3.4 0 5 3.6 3.4 6.6C19 16.4 12 21 12 21Z"/></svg>',
+ star:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8L3.5 9.2l5.9-.9Z"/></svg>',
+ trip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>',
+ map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4L4 6v14l5-2 6 2 5-2V4l-5 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>',
+ user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>',
+};
+function tv(ic,txt){return '<div class="tv"><span class="ln"></span>'+I[ic]+txt+'</div>';}
+function stop(ic,title,chip,desc,badges){
+  return '<div class="stop"><div class="stop-h"><span class="stop-ic">'+I[ic]+'</span><span class="stop-t">'+title+'</span>'+
+    '<span class="chip">'+I[chip]+(chip==='pin'?'景點':'用餐')+'</span></div><div class="stop-d">'+desc+'</div>'+
+    '<div class="row"><a class="lnk">在地圖開啟</a>'+badges+'<button class="save">'+I.heart+'收藏</button></div></div>';
+}
+document.getElementById('list').innerHTML=
+  stop('pin','首里城公園','pin','琉球王國象徵，正殿朱紅與石牆，午後光線最佳。','<span class="b b-acc">'+I.star+'4.6</span>')+
+  tv('car','車程 25 分 · 12 km')+
+  stop('food','歩道園 那覇本店','food','沖繩麵與軟骨飯，在地老店，午餐尖峰需候位。','<span class="b b-a2">'+I.walk+'步行 8 分</span><span class="b b-acc">'+I.star+'4.3</span>')+
+  tv('walk','步行 12 分 · 國際通')+
+  stop('pin','牧志公設市場','pin','二樓食堂可代煮一樓海鮮，下午人潮較少。','<span class="b b-a2">'+I.car+'車程 6 分</span><span class="b b-acc">'+I.star+'4.5</span>')+
+  '<div class="alt-h"><span class="alt-dot"></span><span class="t">備選</span><span class="c">2 個</span></div>';
+document.body.innerHTML=document.body.innerHTML.replace(/@back/g,I.back).replace(/@menu/g,I.menu).replace(/@trip/g,I.trip).replace(/@map/g,I.map).replace(/@heart/g,I.heart).replace(/@user/g,I.user);
+</script>
+</body>
+</html>
