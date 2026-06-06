@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>行程表三色主題 — V1 remix（ghost icon + V3 描邊 pill）</title>
+<style>
+:root{
+  --cream:#FFFBF5; --tertiary:#F2EAD9; --ink:#2A1F18; --muted:#6F5A47; --border:#EADFCF; --line:#C8B89F;
+  --br:#A97A4A; --br-d:#8A6038; --br-s:#F4EDE3; --br-bg:#E9DBC8;
+  --sg:#A8BAAA; --sg-d:#7E9580; --sg-s:#ECF0ED; --sg-bg:#D4DDD5;
+  --pk:#E78C99; --pk-d:#C66B78; --pk-s:#FAF1F3; --pk-bg:#F2DBE0;
+}
+body.dark{
+  --cream:#1A140F; --tertiary:#2E2418; --ink:#F5EBDD; --muted:#B89E84; --border:#3D2D22; --line:#5A4634;
+  --br:#CBA06E; --br-d:#E0BC90; --br-s:#33271A; --br-bg:#44341F;
+  --sg:#8FBE9C; --sg-d:#A8D0B4; --sg-s:#243A2C; --sg-bg:#2E3D30;
+  --pk:#E8A0AB; --pk-d:#F0B8C0; --pk-s:#4A2A3A; --pk-bg:#6B3F52;
+}
+*{box-sizing:border-box;margin:0;}
+body{font-family:'Inter','Noto Sans TC',system-ui,sans-serif;background:#cfc4b2;color:var(--ink);padding:26px;transition:background .2s;}
+body.dark{background:#0d0a07;}
+.bar{display:flex;gap:12px;align-items:center;margin-bottom:18px;}
+.bar h1{font-size:15px;font-weight:800;color:#fff;}
+.bar button{font:inherit;font-size:13px;font-weight:700;padding:7px 16px;border-radius:999px;border:none;cursor:pointer;background:#fff;color:#2A1F18;}
+.wrap{display:flex;gap:22px;align-items:start;flex-wrap:wrap;}
+.phone{width:380px;background:var(--cream);border-radius:22px;padding:20px 18px 24px;box-shadow:0 14px 40px rgba(42,31,24,.22);transition:background .2s;}
+.note{font-size:12px;color:#fff;max-width:300px;line-height:1.6;}
+.note b{color:#ffe;}
+.day-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;color:var(--br);margin-bottom:5px;}
+.day-title{font-size:21px;font-weight:800;margin-bottom:2px;}
+.day-meta{font-size:12.5px;color:var(--muted);margin-bottom:18px;}
+
+/* V1 卡片淡色底 + 同色系階梯 ghost icon（卡片 -subtle → icon 底 -bg → glyph/描邊 -deep，同色相由淺到深）*/
+.row{display:flex;gap:12px;align-items:center;padding:11px 12px;border-radius:13px;margin-bottom:9px;border:1px solid transparent;}
+.ico{width:42px;height:42px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;font-size:18px;
+  background:transparent;border:1px solid var(--line);color:var(--ink);}
+.nm{font-size:15px;font-weight:700;line-height:1.3;}
+.sub{font-size:12.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums;}
+.sub .ty{font-weight:700;} .sub b{color:var(--ink);font-weight:600;}
+
+.t-sight{background:var(--br-s);border-color:var(--br-bg);}
+.t-sight .ico{background:var(--br-bg);border-color:var(--br-d);color:var(--br-d);} .t-sight .ty{color:var(--br-d);}
+.t-act{background:var(--pk-s);border-color:var(--pk-bg);}
+.t-act .ico{background:var(--pk-bg);border-color:var(--pk-d);color:var(--pk-d);} .t-act .ty{color:var(--pk-d);}
+.t-move{background:var(--sg-s);border-color:var(--sg-bg);}
+.t-move .ico{background:var(--sg-bg);border-color:var(--sg-d);color:var(--sg-d);} .t-move .ty{color:var(--sg-d);}
+
+/* V3 描邊 sage 車程 pill（透明底 + sage 邊 + sage 字）*/
+.tline{margin-left:22px;padding:6px 0 6px 20px;border-left:2px solid var(--sg-bg);}
+.pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:4px 13px;
+  border-radius:999px;font-variant-numeric:tabular-nums;background:transparent;border:1.5px solid var(--sg);color:var(--sg-d);}
+.pill b{color:var(--sg-d);font-weight:800;}
+
+/* 備選 粉卡 */
+.alt-h{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:800;margin:16px 0 9px;}
+.alt-dot{width:7px;height:7px;border-radius:50%;background:var(--pk);}
+.alt-n{font-size:11px;font-weight:700;padding:1px 9px;border-radius:999px;background:var(--pk-s);color:var(--pk-d);}
+.alt-card{background:var(--pk-s);border:1px solid var(--pk-bg);border-radius:11px;padding:11px 13px;margin-bottom:8px;}
+.alt-card .an{font-size:14px;font-weight:700;} .alt-card .as{font-size:12px;color:var(--muted);margin-top:2px;}
+.cta{margin-top:14px;width:100%;padding:13px;border-radius:12px;border:none;background:var(--br);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+</style></head>
+<body>
+<div class="bar"><h1>行程表三色主題 · V1 remix</h1><button onclick="document.body.classList.toggle('dark')">☾ 切換深色</button></div>
+<div class="wrap">
+  <div class="phone">
+    <div class="day-eyebrow">DAY 01 · 7/29（三）</div><div class="day-title">北谷</div><div class="day-meta">7 個停留點 · 33 km</div>
+    <div class="row t-sight"><div class="ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg></div><div><div class="nm">首里城公園</div><div class="sub"><span class="ty">景點</span> · 10:45 · ★ <b>4.6</b></div></div></div>
+    <div class="tline"><span class="pill"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="vertical-align:-2px"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg> 車程 <b>25</b> 分 · 12 km</span></div>
+    <div class="row t-act"><div class="ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg></div><div><div class="nm">青之洞窟浮潛</div><div class="sub"><span class="ty">活動</span> · 13:30 · ★ <b>4.8</b></div></div></div>
+    <div class="tline"><span class="pill"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="vertical-align:-2px"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7z"/></svg> 步行 <b>8</b> 分 · 國際通</span></div>
+    <div class="row t-sight"><div class="ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg></div><div><div class="nm">步道園 那霸本店</div><div class="sub"><span class="ty">用餐</span> · 18:00 · ★ <b>4.3</b></div></div></div>
+    <div class="tline"><span class="pill"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="vertical-align:-2px"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg> 車程 <b>6</b> 分</span></div>
+    <div class="row t-move"><div class="ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div><div><div class="nm">那霸機場</div><div class="sub"><span class="ty">交通</span> · 20:30 · 還車</div></div></div>
+    <div class="alt-h"><span class="alt-dot"></span>備選<span class="alt-n">2 個</span></div>
+    <div class="alt-card"><div class="an">瀨長島 Umikaji Terrace</div><div class="as">★ 4.3 · 海景商店街，黃昏看飛機</div></div>
+    <button class="cta">＋ 加入景點</button>
+  </div>
+  <div class="note">
+    <b>V1 暖底分區 remix：</b><br>
+    ✓ 卡片依類型上淡色底（景點柔褐／活動粉／交通sage）<br>
+    ✓ icon <b>同色系階梯</b>：卡片 -subtle → icon 底 -bg → glyph/描邊 -deep，同一色相由淺到深，icon 融入卡片<br>
+    ✓ icon glyph 用 app 真實 SVG（景點 location-pin / 活動 sparkle / 用餐 utensils / 交通·車程 car / 步行 walking）<br>
+    ✓ 車程 pill 用 <b>V3 描邊</b>：透明底 + sage 邊框 + sage 字<br>
+    ✓ 類型標籤（景點/活動/交通）同步上色<br>
+    ✓ 備選卡粉底（dark 用加強粉 #4A2A3A）、CTA 維持柔褐主色<br><br>
+    右上「切換深色」看 dark。三色靠卡片淡底分區，icon 仍輕、不洗版。
+  </div>
+</div>
+</body></html>
