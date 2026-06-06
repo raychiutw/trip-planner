@@ -4,7 +4,7 @@ import { lsSet, lsGet } from '../lib/localStorage';
 export type ColorMode = 'light' | 'auto' | 'dark';
 
 /** Theme color values (light / dark) — for <meta name="theme-color">. Mirrors V2 Terracotta `--color-accent`. */
-const THEME_COLORS = { light: '#D97848', dark: '#1A140F' } as const;
+const THEME_COLORS = { light: '#A97A4A', dark: '#1A140F' } as const;
 
 /** Resolve whether dark class should be applied for a given color mode. */
 function resolveDark(mode: ColorMode): boolean {

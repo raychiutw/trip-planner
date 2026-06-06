@@ -40,7 +40,7 @@ export const AUTH_LAYOUT_STYLES = `
 const HERO_STYLES = `
 .tp-auth-brand-hero {
   display: none;
-  background: linear-gradient(135deg, var(--color-foreground) 0%, var(--color-accent-deep, #B85C2E) 100%);
+  background: linear-gradient(135deg, var(--color-foreground) 0%, var(--color-accent-deep, #8A6038) 100%);
   color: var(--color-background);
   padding: 56px 48px;
   position: relative;
@@ -66,7 +66,7 @@ const HERO_STYLES = `
   bottom: -80px; left: -80px;
   width: 300px; height: 300px;
   border-radius: 50%;
-  background: rgba(217, 120, 72, 0.18);
+  background: rgba(169, 122, 74, 0.18);
   pointer-events: none;
 }
 .tp-bs-eyebrow {

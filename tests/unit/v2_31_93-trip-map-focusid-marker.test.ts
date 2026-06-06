@@ -54,8 +54,8 @@ describe('v2.31.93: TripMapRail focusId marker + 浮頂視覺', () => {
     expect(MAP_HELPERS).toMatch(/const\s+isFocused\s*=\s*typeof\s+style\.zIndex\s*===\s*'number'\s*&&\s*style\.zIndex\s*>=\s*1000/);
   });
 
-  it('markerContent focused 時用 accent outer ring (217,120,72,0.35) + 加深 drop shadow (42,31,24,0.35)', () => {
-    expect(MAP_HELPERS).toMatch(/rgba\(217,\s*120,\s*72,\s*0?\.35\)/);
+  it('markerContent focused 時用 accent outer ring (169,122,74,0.35) + 加深 drop shadow (42,31,24,0.35)', () => {
+    expect(MAP_HELPERS).toMatch(/rgba\(169,\s*122,\s*74,\s*0?\.35\)/);
     expect(MAP_HELPERS).toMatch(/rgba\(42,\s*31,\s*24,\s*0?\.35\)/);
   });
 

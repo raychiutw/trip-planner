@@ -4,7 +4,7 @@
  * 設計原則 (per V2 design doc Email section)：
  *   - Inline CSS（外部 CSS 在 email client 不可靠）
  *   - Table-based layout（max compatibility）
- *   - Terracotta brand color（#D97848）
+ *   - 柔褐 brand color（#A97A4A）
  *   - 簡單 HTML，不用 image / external font
  *   - 同時提供 plain text fallback（spam filter 友好）
  *
@@ -23,8 +23,8 @@ export interface EmailTemplate {
   text: string;
 }
 
-const BRAND_COLOR = '#D97848';
-const BRAND_DEEP = '#B85C2E';
+const BRAND_COLOR = '#A97A4A';
+const BRAND_DEEP = '#8A6038';
 const BG_COLOR = '#FFFBF5';
 const TEXT_COLOR = '#2A1F18';
 const MUTED_COLOR = '#6F5A47';

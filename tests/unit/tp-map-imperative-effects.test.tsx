@@ -158,7 +158,7 @@ describe('TpMap.markerStyle (color contract)', () => {
 
   it('focused marker uses accent color + larger size', () => {
     const style = markerStyle(pin(1, 1), true, false, '#FF6B35');
-    expect(style.fill).toBe('#D97848'); // ACCENT_COLOR
+    expect(style.fill).toBe('#A97A4A'); // ACCENT_COLOR
     expect(style.text).toBe('#FFFFFF'); // ACCENT_FG
     expect(style.size).toBeGreaterThan(28); // larger than idle 28 → focused 36
   });
