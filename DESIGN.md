@@ -149,7 +149,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 | `neutral` | 休息 rest、未分類 fallback 歸 accent | `--color-line-strong` 中性描邊 |
 
 > v2.53 tone 調整：用餐→粉、住宿→sage、活動→柔褐（café 跟用餐歸粉）。記憶法：**玩/看/買 = 柔褐、住/移動 = sage、吃 = 粉**。
-> **展開明細同色**：stop 點開的 `.tp-rail-detail`（景點說明/備註/actions 面板）背景 + 邊框繼承該 stop 的 `--tone-subtle/-bg`，與卡片同色系；neutral fallback secondary。travel pill / connector 永遠 sage。
+> **展開明細同色**：stop 點開的 `.tp-rail-detail`（景點說明/備註/actions 面板）**自帶 `data-tone`**（它是 `.tp-rail-item` 的 sibling、非後代，繼承不到 item 的 `--tone-*`），背景 + 邊框用該 tone 的 `--tone-subtle/-bg`，與卡片同色系；neutral fallback secondary。travel pill / connector 永遠 sage。
 
 ### Data Visualization 例外
 

@@ -104,6 +104,17 @@ describe('TimelineRail — inline expand', () => {
     expect(screen.getByTestId('timeline-rail-detail-42')).toBeTruthy();
   });
 
+  // v2.53.1 回歸防護：展開明細是 .tp-rail-item 的 sibling（非後代），拿不到繼承的
+  // --tone-*，必須自帶 data-tone 才能與卡片同色系。漏這個 attr → 面板退回中性奶油。
+  it('expanded detail carries data-tone（與卡片同色系）', () => {
+    renderRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    const detail = screen.getByTestId('timeline-rail-detail-42');
+    const tone = detail.getAttribute('data-tone');
+    expect(tone).toBeTruthy();
+    expect(['accent', 'sage', 'pink', 'neutral']).toContain(tone);
+  });
+
   it('expanded panel shows description + note text', () => {
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
