@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.53.0] - 2026-06-07
+
+### Changed
+- **三色 tone 對應調整** — 依使用回饋重新分配：**用餐 → 粉**（含咖啡 café）、**住宿 → sage 綠**、**活動 → 柔褐**。其餘不變（景點/購物 柔褐、交通/停車 sage、備選/收藏 粉）。記憶法：玩/看/買=柔褐、住/移動=sage、吃=粉。改 `deriveTypeMeta` 的 `tone`。
+- **stop 展開明細與卡片同色** — 點開 stop 的 `.tp-rail-detail`（景點說明/備註/actions 面板）背景 + 邊框改繼承該 stop 的 `--tone-subtle`/`-bg`（原 `--color-secondary` 中性奶油），展開區與卡片同色系一體；neutral 類型 fallback 回 secondary。
+- SoT 同步：`DESIGN.md`（Approach / Stop Type Color Convention 表 / Design Principles）+ canonical mockup。
+
 ## [2.52.0] - 2026-06-06
 
 ### Changed
