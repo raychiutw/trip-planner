@@ -698,9 +698,24 @@ body.dark {
         line-height: 1;
         z-index: 1;
     }
-    .tp-rail-item[data-accent="true"] .tp-rail-dot {
-        border-color: var(--color-accent);
-        color: var(--color-accent);
+    /* 柔褐三色 tone（2026-06）：每 tone 設一組 --tone-* 供 card/icon/dot/label 取用；
+       neutral 不設 → var() fallback 回原中性樣式。tier token 在此被引用 → Tailwind 不 tree-shake。 */
+    .tp-rail-item[data-tone="accent"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); --tone-bg: var(--color-accent-bg); }
+    .tp-rail-item[data-tone="sage"]   { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
+    .tp-rail-item[data-tone="pink"]   { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
+    /* 卡片同色系淡底（now 高亮 + neutral 不套）*/
+    .tp-rail-item[data-tone="accent"]:not([data-now="true"]),
+    .tp-rail-item[data-tone="sage"]:not([data-now="true"]),
+    .tp-rail-item[data-tone="pink"]:not([data-now="true"]) {
+        background: var(--tone-subtle);
+        border: 1px solid var(--tone-bg);
+    }
+    .tp-rail-item[data-tone="accent"]:hover,
+    .tp-rail-item[data-tone="sage"]:hover,
+    .tp-rail-item[data-tone="pink"]:hover { background: var(--tone-bg); }
+    .tp-rail-item[data-tone] .tp-rail-dot {
+        border-color: var(--tone, var(--color-line-strong, var(--color-border)));
+        color: var(--tone-deep, var(--color-muted));
     }
     .tp-rail-item[data-now="true"] .tp-rail-dot {
         background: var(--color-accent);
@@ -718,9 +733,10 @@ body.dark {
         color: var(--color-foreground); flex-shrink: 0;
     }
     .tp-rail-icon .svg-icon { width: 22px; height: 22px; }
-    .tp-rail-item[data-accent="true"] .tp-rail-icon {
-        border-color: var(--color-accent);
-        color: var(--color-accent);
+    .tp-rail-item[data-tone] .tp-rail-icon {
+        background: var(--tone-bg, var(--color-background));
+        border-color: var(--tone-deep, var(--color-line-strong, var(--color-border)));
+        color: var(--tone-deep, var(--color-foreground));
     }
 
     .tp-rail-content {
@@ -743,7 +759,7 @@ body.dark {
     .tp-rail-sub-type {
         font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
     }
-    .tp-rail-item[data-accent="true"] .tp-rail-sub-type { color: var(--color-accent); }
+    .tp-rail-item[data-tone] .tp-rail-sub-type { color: var(--tone-deep, var(--color-muted)); }
     .tp-rail-sub-sep { opacity: 0.5; }
     .tp-rail-sub-star { color: var(--color-warning, #C88500); }
     /* v2.30.12: time chip 取代既有 col-2 time（time col 移除後 inline 顯示） */
@@ -758,8 +774,8 @@ body.dark {
         transition: transform 0.2s var(--transition-timing-function-apple), color 0.15s;
         flex-shrink: 0;
     }
-    .tp-rail-item:hover .tp-rail-caret { color: var(--color-accent); }
-    .tp-rail-item[data-expanded="true"] .tp-rail-caret { transform: rotate(90deg); color: var(--color-accent); }
+    .tp-rail-item:hover .tp-rail-caret { color: var(--tone, var(--color-accent)); }
+    .tp-rail-item[data-expanded="true"] .tp-rail-caret { transform: rotate(90deg); color: var(--tone, var(--color-accent)); }
 
     .tp-rail-expand {
         grid-area: expand;
@@ -769,7 +785,7 @@ body.dark {
         border-left: 2px solid var(--color-border);
         font-size: 14px; line-height: 1.6;
     }
-    .tp-rail-item[data-accent="true"] .tp-rail-expand { border-left-color: var(--color-accent); }
+    .tp-rail-item[data-tone] .tp-rail-expand { border-left-color: var(--tone, var(--color-border)); }
     .tp-rail-expand p { margin: 0 0 6px; }
     .tp-rail-expand p:last-child { margin-bottom: 0; }
 
@@ -912,8 +928,8 @@ body.dark {
         /* 第三色 玫瑰粉 dark */
         --color-accent-3: #E8A0AB;
         --color-accent-3-deep: #F0B8C0;
-        --color-accent-3-subtle: #33232A;
-        --color-accent-3-bg: #43303A;
+        --color-accent-3-subtle: #4A2A3A;
+        --color-accent-3-bg: #6B3F52;
         --color-background: #1A140F;
         --color-secondary: #241B14;
         --color-tertiary: #2E2418;
