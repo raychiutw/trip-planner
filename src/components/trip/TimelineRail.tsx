@@ -54,8 +54,9 @@ const SCOPED_STYLES = `
    * mobile: item-pad(4) + grip(20) + gap(8) + dot/2(12) = 44px */
   margin: 4px 0 8px 56px;
   padding: 14px 16px;
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
+  /* 展開明細與卡片同色系（繼承 .tp-rail-item[data-tone] 的 --tone-*；neutral fallback secondary）*/
+  background: var(--tone-subtle, var(--color-secondary));
+  border: 1px solid var(--tone-bg, var(--color-border));
   border-radius: var(--radius-md);
   display: flex; flex-direction: column; gap: 12px;
   animation: tp-rail-detail-in 160ms var(--transition-timing-function-apple, ease-out);
