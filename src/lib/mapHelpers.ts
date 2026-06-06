@@ -13,7 +13,7 @@ import type { MapPin, Coord } from './mapTypes';
 
 /* ===== Marker styling ===== */
 
-const ACCENT_COLOR = '#D97848';
+const ACCENT_COLOR = '#A97A4A';
 const ACCENT_FG = '#FFFFFF';
 const IDLE_BG = '#FFFFFF';
 const IDLE_BORDER = '#C1C1C1';

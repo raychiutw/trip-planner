@@ -14,10 +14,20 @@ html { color-scheme: light dark; }
  * Data Visualization. */
 @theme {
     /* Colors — generate bg-*, text-*, border-* utilities */
-    --color-accent: #D97848;
-    --color-accent-subtle: #FBEEE4;
-    --color-accent-bg: #F7DFCB;
-    --color-accent-deep: #B85C2E;
+    --color-accent: #A97A4A;
+    --color-accent-subtle: #F4EDE3;
+    --color-accent-bg: #E9DBC8;
+    --color-accent-deep: #8A6038;
+    /* 第二色 sage 綠 — 交通資訊（travel connector / 車程·步行 badge）*/
+    --color-accent-2: #A8BAAA;
+    --color-accent-2-deep: #7E9580;
+    --color-accent-2-subtle: #ECF0ED;
+    --color-accent-2-bg: #D4DDD5;
+    /* 第三色 玫瑰粉 — 收藏 / 備選 / 活動 */
+    --color-accent-3: #E78C99;
+    --color-accent-3-deep: #C66B78;
+    --color-accent-3-subtle: #FAF1F3;
+    --color-accent-3-bg: #F2DBE0;
     --color-background: #FFFBF5;
     --color-secondary: #FAF4EA;
     --color-tertiary: #F2EAD9;
@@ -33,8 +43,8 @@ html { color-scheme: light dark; }
     --color-success-bg: rgba(6, 167, 125, 0.12);
     --color-warning: #F48C06;
     --color-warning-bg: rgba(244, 140, 6, 0.12);
-    --color-info: #D97848;
-    --color-info-bg: rgba(217, 120, 72, 0.12);
+    --color-info: #A97A4A;
+    --color-info-bg: rgba(169, 122, 74, 0.12);
     --color-disabled: #B8AC9B;
     --color-overlay: rgba(42, 31, 24, 0.35);
     --color-priority-high-bg: rgba(193, 53, 21, 0.12);
@@ -58,8 +68,8 @@ html { color-scheme: light dark; }
     /* Trip cover gradients — TripsListPage destination cards (jp/kr/tw/other).
      * 4 fixed combinations; preserves visual identity while removing hex
      * literals from component CSS (anti-slop hex hardcoding cleanup). */
-    --color-cover-jp-from: #D97848;        /* matches --color-accent */
-    --color-cover-jp-to: #F0935E;          /* lighter terracotta tint */
+    --color-cover-jp-from: #A97A4A;        /* matches --color-accent */
+    --color-cover-jp-to: #C49A6E;          /* lighter 柔褐 tint */
     --color-cover-kr-from: #B85C2E;        /* matches --color-accent-deep */
     --color-cover-kr-to: #EADFCF;          /* matches --color-border */
     --color-cover-tw-from: #C88500;        /* warm amber, JP-adjacent gold */
@@ -890,10 +900,20 @@ body.dark {
 /* ===== Dark mode override (Terracotta deep-cocoa) ===== */
 @layer base {
     body.dark {
-        --color-accent: #E89968;
-        --color-accent-subtle: #3A2A20;
-        --color-accent-bg: #4D372A;
-        --color-accent-deep: #FFB890;
+        --color-accent: #CBA06E;
+        --color-accent-subtle: #33271A;
+        --color-accent-bg: #44341F;
+        --color-accent-deep: #E0BC90;
+        /* 第二色 sage 綠 dark（明確版，深底調亮）*/
+        --color-accent-2: #8FBE9C;
+        --color-accent-2-deep: #A8D0B4;
+        --color-accent-2-subtle: #243A2C;
+        --color-accent-2-bg: #2E3D30;
+        /* 第三色 玫瑰粉 dark */
+        --color-accent-3: #E8A0AB;
+        --color-accent-3-deep: #F0B8C0;
+        --color-accent-3-subtle: #33232A;
+        --color-accent-3-bg: #43303A;
         --color-background: #1A140F;
         --color-secondary: #241B14;
         --color-tertiary: #2E2418;
@@ -929,8 +949,8 @@ body.dark {
         --color-disabled: #5A4634;
         /* Trip cover gradients — dark mode preserves the destination accent
          * while toning down luminance to fit deep-cocoa background. */
-        --color-cover-jp-from: #B85C2E;
-        --color-cover-jp-to: #D97848;
+        --color-cover-jp-from: #8A6038;
+        --color-cover-jp-to: #CBA06E;
         --color-cover-kr-from: #8A4520;
         --color-cover-kr-to: #5A4634;
         /* dark mode TW cover 不能用 light-mode 的 amber #9E6800 — 在深色 UI

@@ -46,7 +46,7 @@ describe('v2.31.84: marker label halo 2px + box-shadow drop shadow elevation', (
   it('focused (active) marker：halo + box-shadow 仍用 ACCENT fill', () => {
     const style = markerStyle(SAMPLE, true, false);
     const el = markerContent(style);
-    expect(style.fill).toBe('#D97848');
+    expect(style.fill).toBe('#A97A4A');
     expect(el.style.textShadow).toContain(style.fill);
     expect(el.style.boxShadow).toContain(style.fill);
     // v2.31.93：focused marker box-shadow 改用「outer accent ring + 加深 drop shadow」

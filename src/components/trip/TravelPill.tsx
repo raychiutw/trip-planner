@@ -57,7 +57,8 @@ const SCOPED_STYLES = `
   outline-offset: 2px;
 }
 .tp-travel-pill-icon {
-  color: var(--color-accent);
+  /* 三色：交通資訊用第二色 sage 綠（v2.51 三色系統試點）*/
+  color: var(--color-accent-2);
   display: inline-flex; align-items: center;
   flex-shrink: 0;
 }
