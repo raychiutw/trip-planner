@@ -114,32 +114,36 @@ export function parseEndMinutes(time?: string | null): number {
  * 不同來源同義對齊：poi.type 'attraction' → label '景點' icon 'location-pin'；
  * 文字 match 「美術館」也走 fallback location-pin/景點，最終視覺一致。
  */
-export function deriveTypeMeta(entry: TimelineEntryData): { icon: string; label: string; accent: boolean } {
+/** 三色 tone（柔褐三色主題，2026-06）：accent=柔褐(一般POI) / sage=交通 / pink=活動 / neutral=休息等。
+ *  驅動卡片同色系淡底 + ghost icon 階梯 + 類型標籤色（見 DESIGN.md Stop Type Color Convention）。
+ *  `accent` boolean 為 legacy 欄位（值維持不變，避免破壞既有斷言），新套色一律走 `tone`。 */
+export type StopTone = 'accent' | 'sage' | 'pink' | 'neutral';
+export function deriveTypeMeta(entry: TimelineEntryData): { icon: string; label: string; accent: boolean; tone: StopTone } {
   // 1. POI master type 優先（v2.x normalized）
   const poiType = (entry.poiType ?? '').toLowerCase();
-  if (poiType === 'hotel') return { icon: 'hotel', label: '住宿', accent: false };
-  if (poiType === 'restaurant') return { icon: 'utensils', label: '用餐', accent: true };
-  if (poiType === 'shopping') return { icon: 'shopping', label: '購物', accent: true };
-  if (poiType === 'attraction') return { icon: 'location-pin', label: '景點', accent: true };
+  if (poiType === 'hotel') return { icon: 'hotel', label: '住宿', accent: false, tone: 'accent' };
+  if (poiType === 'restaurant') return { icon: 'utensils', label: '用餐', accent: true, tone: 'accent' };
+  if (poiType === 'shopping') return { icon: 'shopping', label: '購物', accent: true, tone: 'accent' };
+  if (poiType === 'attraction') return { icon: 'location-pin', label: '景點', accent: true, tone: 'accent' };
   // v2.31.23: 對齊 POI_TYPE_LABELS canonical mapping（poiCategory.ts / TimelineRail
   // POI_TYPE_LABEL / EditEntryPage POI_TYPE_LABEL 都用「交通」）。「移動」保留給
   // line 154 text-based 「開車/drive」偵測，描述 segment 行為而非 POI 屬性。
-  if (poiType === 'transport') return { icon: 'car', label: '交通', accent: false };
-  if (poiType === 'parking') return { icon: 'parking', label: '停車', accent: false };
-  if (poiType === 'activity') return { icon: 'sparkle', label: '活動', accent: true };
+  if (poiType === 'transport') return { icon: 'car', label: '交通', accent: false, tone: 'sage' };
+  if (poiType === 'parking') return { icon: 'parking', label: '停車', accent: false, tone: 'sage' };
+  if (poiType === 'activity') return { icon: 'sparkle', label: '活動', accent: true, tone: 'pink' };
 
   // 2. Fallback：text keyword match
   const title = (entry.title ?? '').toLowerCase();
   const desc = (entry.description ?? '').toLowerCase();
   const travelType = (entry.travel && typeof entry.travel === 'object' ? entry.travel.type ?? '' : '').toLowerCase();
   const blob = `${title} ${desc} ${travelType}`;
-  if (/機場|flight|機票/.test(blob)) return { icon: 'plane', label: '飛行', accent: false };
-  if (/飯店|旅館|hotel|check[- ]?in|民宿/.test(blob)) return { icon: 'hotel', label: '住宿', accent: false };
-  if (/餐|食|restaurant|lunch|dinner|breakfast|用餐/.test(blob)) return { icon: 'utensils', label: '用餐', accent: true };
-  if (/咖啡|café|cafe|coffee/.test(blob)) return { icon: 'coffee', label: '咖啡', accent: true };
-  if (/購物|shopping|mall|market|道之驛/.test(blob)) return { icon: 'shopping', label: '購物', accent: true };
-  if (/開車|drive|car|自駕|租車/.test(blob)) return { icon: 'car', label: '移動', accent: false };
-  if (/步行|walk|散步/.test(blob)) return { icon: 'walking', label: '散步', accent: false };
-  if (/休息|rest|spa|泡湯/.test(blob)) return { icon: 'coffee', label: '休息', accent: false };
-  return { icon: 'location-pin', label: '景點', accent: true };
+  if (/機場|flight|機票/.test(blob)) return { icon: 'plane', label: '飛行', accent: false, tone: 'sage' };
+  if (/飯店|旅館|hotel|check[- ]?in|民宿/.test(blob)) return { icon: 'hotel', label: '住宿', accent: false, tone: 'accent' };
+  if (/餐|食|restaurant|lunch|dinner|breakfast|用餐/.test(blob)) return { icon: 'utensils', label: '用餐', accent: true, tone: 'accent' };
+  if (/咖啡|café|cafe|coffee/.test(blob)) return { icon: 'coffee', label: '咖啡', accent: true, tone: 'accent' };
+  if (/購物|shopping|mall|market|道之驛/.test(blob)) return { icon: 'shopping', label: '購物', accent: true, tone: 'accent' };
+  if (/開車|drive|car|自駕|租車/.test(blob)) return { icon: 'car', label: '移動', accent: false, tone: 'sage' };
+  if (/步行|walk|散步/.test(blob)) return { icon: 'walking', label: '散步', accent: false, tone: 'sage' };
+  if (/休息|rest|spa|泡湯/.test(blob)) return { icon: 'coffee', label: '休息', accent: false, tone: 'neutral' };
+  return { icon: 'location-pin', label: '景點', accent: true, tone: 'accent' };
 }

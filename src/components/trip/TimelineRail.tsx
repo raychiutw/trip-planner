@@ -163,13 +163,14 @@ const SCOPED_STYLES = `
 /* 備選景點 list — alternates only (v2.30.14)。master POI 已升格到 .tp-rail-poi-meta */
 .tp-rail-poi-list { display: flex; flex-direction: column; gap: 8px; }
 .tp-rail-poi-card {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
+  /* 備選 = 第三色粉（柔褐三色主題 2026-06）*/
+  background: var(--color-accent-3-subtle);
+  border: 1px solid var(--color-accent-3-bg);
   border-radius: var(--radius-md);
   padding: 12px 14px;
   transition: border-color 160ms var(--transition-timing-function-apple);
 }
-.tp-rail-poi-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border)); }
+.tp-rail-poi-card:hover { border-color: var(--color-accent-3); }
 .tp-rail-poi-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; row-gap: 4px; }
 .tp-rail-poi-name {
   font-size: var(--font-size-callout);
@@ -519,7 +520,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         className="tp-rail-item"
         data-now={isNow || undefined}
         data-past={isPast || undefined}
-        data-accent={meta.accent || undefined}
+        data-tone={meta.tone}
         data-last={isLast || undefined}
         data-expanded={expanded || undefined}
         data-scroll-anchor={entry.id != null ? `entry-${entry.id}` : undefined}

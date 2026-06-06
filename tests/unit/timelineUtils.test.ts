@@ -67,22 +67,35 @@ describe('formatDurationCompact', () => {
 describe('deriveTypeMeta', () => {
   it('機場接送 → plane / 飛行 / accent:false', () => {
     const entry: TimelineEntryData = { title: '機場接送' };
-    expect(deriveTypeMeta(entry)).toEqual({ icon: 'plane', label: '飛行', accent: false });
+    expect(deriveTypeMeta(entry)).toEqual({ icon: 'plane', label: '飛行', accent: false, tone: 'sage' });
   });
 
   it('午餐 (description: restaurant) → utensils / 用餐 / accent:true', () => {
     const entry: TimelineEntryData = { title: '午餐', description: 'restaurant' };
-    expect(deriveTypeMeta(entry)).toEqual({ icon: 'utensils', label: '用餐', accent: true });
+    expect(deriveTypeMeta(entry)).toEqual({ icon: 'utensils', label: '用餐', accent: true, tone: 'accent' });
   });
 
   it('步行市區 → walking / 散步 / accent:false', () => {
     const entry: TimelineEntryData = { title: '步行市區' };
-    expect(deriveTypeMeta(entry)).toEqual({ icon: 'walking', label: '散步', accent: false });
+    expect(deriveTypeMeta(entry)).toEqual({ icon: 'walking', label: '散步', accent: false, tone: 'sage' });
   });
 
   it('無特殊關鍵字 → location-pin / 景點 / accent:true', () => {
     const entry: TimelineEntryData = { title: '首里城' };
-    expect(deriveTypeMeta(entry)).toEqual({ icon: 'location-pin', label: '景點', accent: true });
+    expect(deriveTypeMeta(entry)).toEqual({ icon: 'location-pin', label: '景點', accent: true, tone: 'accent' });
+  });
+
+  // 柔褐三色主題（2026-06）：tone 三分驅動卡片同色系底 + ghost icon + 標籤色
+  it('活動 (poiType: activity) → sparkle / 活動 / tone:pink', () => {
+    expect(deriveTypeMeta({ title: 'X', poiType: 'activity' })).toEqual({ icon: 'sparkle', label: '活動', accent: true, tone: 'pink' });
+  });
+
+  it('交通 (poiType: transport) → car / 交通 / tone:sage', () => {
+    expect(deriveTypeMeta({ title: 'X', poiType: 'transport' })).toEqual({ icon: 'car', label: '交通', accent: false, tone: 'sage' });
+  });
+
+  it('景點 (poiType: attraction) → tone:accent（柔褐）', () => {
+    expect(deriveTypeMeta({ title: 'X', poiType: 'attraction' }).tone).toBe('accent');
   });
 
   // Regression guard：deriveTypeMeta 回傳的 icon name 必須存在於 Icon.tsx ICONS registry，
