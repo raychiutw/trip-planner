@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.52.0] - 2026-06-06
+
+### Changed
+- **柔褐三色行程表主題：時間軸卡片依類型分色，三色一眼可辨** — 解決 v2.51 三色「不明顯」（sage 只在小 icon、粉沒上、整頁幾乎全柔褐）。行程表時間軸卡片改依 POI 類型上**同色系淡底**：一般 POI（景點/餐廳/購物/住宿）柔褐、交通 sage 綠、活動／備選／收藏粉。`deriveTypeMeta` 新增 `tone`（accent/sage/pink/neutral）驅動 `.tp-rail-item[data-tone]`（取代 `data-accent`）：卡片 `-subtle` 底 + 同色系 ghost icon 階梯（icon 底 `-bg` → glyph/描邊 `-deep`，卡片→icon→glyph 同色相由淺到深）+ 類型標籤/dot/caret 同步上色；neutral 走 `var()` fallback 回原中性樣式。
+- **交通 travel pill 改 sage 描邊式** — 透明底 + 1.5px sage 邊 + sage `-deep` 字/icon（取代原填滿 secondary 底），交通段一眼可辨。
+- **備選景點卡改第三色粉底** — `.tp-rail-poi-card` 用 `--color-accent-3` 系。
+
+### Fixed
+- **深色模式粉色太暗讀不出** — `body.dark` 的 `--color-accent-3-subtle` `#33232A`→`#4A2A3A`、`-bg` `#43303A`→`#6B3F52`，深色活動/備選卡的粉與 sage 綠彩度相當。
+- **sage/粉 tier token 被 Tailwind tree-shake 掉** — `--color-accent-2-*` / `--color-accent-3-*` 的 `-deep/-subtle/-bg` 階層先前無人引用，Tailwind 4 `@theme` 不 emit（prod 取值為空）。新 `data-tone` 規則引用後正常 emit（build 確認）。
+
+> 設計 SoT 同步：`DESIGN.md`（Approach / Light·Dark 表 / Stop Type Color Convention / Stop Card / Travel Connector / Design Principles 全改三色）+ canonical mockup `docs/design-sessions/2026-06-06-three-color-trip-theme.html`。
+
 ## [2.51.0] - 2026-06-06
 
 ### Changed
