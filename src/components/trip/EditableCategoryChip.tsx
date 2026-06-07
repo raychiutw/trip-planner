@@ -2,6 +2,7 @@ import { useState, useRef, useLayoutEffect } from 'react';
 import Icon from '../shared/Icon';
 import { CategoryPicker, CATEGORY_ICON } from './CategoryPicker';
 import { POI_TYPE_LABELS, type PoiType } from '../../lib/poiCategory';
+import { poiTypeToTone } from '../../lib/timelineUtils';
 
 export type EditableCategoryChipProps = {
   value: PoiType;
@@ -25,24 +26,33 @@ export type EditableCategoryChipProps = {
 
 const SCOPED_STYLES = `
 .tp-cat-chip-wrap { position: relative; display: inline-block; }
+/* 三色：chip 依其分類 value 上 tone（與 CategoryPicker tile / 收藏卡同語言）。
+   顯式設 --tone-*（不靠繼承）—— chip 常被包進已設 --tone-* 的 tone 卡（如 EditEntryPage
+   POI 卡）內，靠繼承會拿到卡的 tone 而非 chip 自己 value 的。
+   tone 由「淡 tone 底（resting --tone-subtle）+ hover/open 加深到 --tone-bg」承載；字與 icon
+   一律 --color-foreground（~13:1）。**不**把 icon/字塗 --tone-deep（light mode deep 對 -subtle
+   sage 僅 2.81:1 < 3:1），也**不**用 --tone 當框（sage/粉 --tone 太淺、對 tinted 底 <2:1）。
+   focus 用 --color-accent outline（outset、對外圍 bg 取對比、全站慣例）。neutral 顯式回 accent。 */
+.tp-cat-chip[data-tone="accent"]  { --tone: var(--color-accent);   --tone-subtle: var(--color-accent-subtle);   --tone-bg: var(--color-accent-bg); }
+.tp-cat-chip[data-tone="sage"]    { --tone: var(--color-accent-2); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
+.tp-cat-chip[data-tone="pink"]    { --tone: var(--color-accent-3); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
+.tp-cat-chip[data-tone="neutral"] { --tone: var(--color-accent);   --tone-subtle: var(--color-accent-subtle);   --tone-bg: var(--color-accent-bg); }
 .tp-cat-chip {
   display: inline-flex; align-items: center; gap: 5px;
   min-height: 28px; padding: 3px 9px 3px 8px;
   border: 0; border-radius: var(--radius-full);
-  background: var(--color-tertiary); color: var(--color-foreground);
+  background: var(--tone-subtle, var(--color-tertiary)); color: var(--color-foreground);
   font: inherit; font-size: var(--font-size-caption); font-weight: 600;
   cursor: pointer; transition: background 150ms, color 150ms, box-shadow 150ms;
 }
-.tp-cat-chip:hover:not(:disabled) { background: var(--color-accent-bg); }
+.tp-cat-chip:hover:not(:disabled) { background: var(--tone-bg, var(--color-accent-bg)); }
 .tp-cat-chip:disabled { opacity: 0.6; cursor: default; }
-.tp-cat-chip.is-open {
-  background: var(--color-accent-subtle); color: var(--color-accent-deep);
-  box-shadow: inset 0 0 0 1.5px var(--color-accent);
-}
-.tp-cat-chip:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--color-accent); }
+/* open：底加深到 --tone-bg（比 resting --tone-subtle 深一階）+ 下方 picker 浮層 = 開啟態指示 */
+.tp-cat-chip.is-open { background: var(--tone-bg, var(--color-accent-subtle)); }
+.tp-cat-chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 .tp-cat-chip .svg-icon { width: 14px; height: 14px; }
 .tp-cat-chip .tp-cat-chip-pencil { width: 11px; height: 11px; color: var(--color-muted); }
-.tp-cat-chip.is-open .tp-cat-chip-pencil { color: var(--color-accent-deep); }
+.tp-cat-chip.is-open .tp-cat-chip-pencil { color: var(--color-foreground); }
 .tp-cat-chip-pop {
   margin-top: 8px; background: var(--color-secondary);
   border-radius: var(--radius-md); padding: 10px;
@@ -125,6 +135,7 @@ export function EditableCategoryChip({
       <button
         type="button"
         className={`tp-cat-chip${open ? ' is-open' : ''}`}
+        data-tone={poiTypeToTone(value)}
         onClick={() => {
           if (!disabled) setOpen((o) => !o);
         }}
