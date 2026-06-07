@@ -683,6 +683,7 @@ export default function GlobalMapPage() {
     }
     void load();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only 初始 trip 清單載入 + 初選；activeTripId 變動由下面 Step 2 effect（deps:[activeTripId]）處理，列入這裡會每次變動就重抓 trip 清單。
   }, []);
 
   // Step 2: when activeTripId changes, fetch its days + extract pins.
