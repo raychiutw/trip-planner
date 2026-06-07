@@ -1,5 +1,6 @@
 import Icon from '../shared/Icon';
 import { POI_TYPE_LABELS, type PoiType } from '../../lib/poiCategory';
+import { poiTypeToTone } from '../../lib/timelineUtils';
 
 export type CategoryPickerProps = {
   value: PoiType;
@@ -58,11 +59,20 @@ const SCOPED_STYLES = `
 }
 .tp-category-tile .svg-icon { width: 22px; height: 22px; }
 .tp-category-tile:hover { background: var(--color-hover); color: var(--color-foreground); }
+/* 三色：每個分類 tile 帶 data-tone，選中時 highlight 用該分類的 tone（picker = 色彩 legend）*/
+.tp-category-tile[data-tone="accent"]  { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); }
+.tp-category-tile[data-tone="sage"]    { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); }
+.tp-category-tile[data-tone="pink"]    { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); }
+/* neutral（other）顯式回 accent 柔褐 — 不靠「無規則→var() fallback」，否則若 tile 被包進
+   有設 --tone-* 的祖先（lightbox / rail-item）會繼承到祖先 tone 而非預期的 accent。*/
+.tp-category-tile[data-tone="neutral"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); }
 .tp-category-tile.is-active {
-  background: var(--color-accent-subtle); color: var(--color-accent-deep);
-  box-shadow: inset 0 0 0 1.5px var(--color-accent);
+  background: var(--tone-subtle, var(--color-accent-subtle)); color: var(--tone-deep, var(--color-accent-deep));
+  box-shadow: inset 0 0 0 1.5px var(--tone, var(--color-accent));
 }
-.tp-category-tile:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--color-accent); }
+/* focus 用 outline（獨立視覺層），不用 inset box-shadow — 否則會蓋掉 is-active 的 tone 選中框，
+   鍵盤 tab 到已選的餐廳/住宿 tile 時粉/sage 框會被換成 accent。outline 與選中框正交，兩者並存。*/
+.tp-category-tile:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 /* auto-derived default indicator dot */
 .tp-category-tile-auto {
   position: absolute; top: 5px; right: 6px;
@@ -106,6 +116,7 @@ export function CategoryPicker({
             onClick={() => onChange(type)}
             data-testid={`${testIdPrefix}-${type}`}
             data-active={active || undefined}
+            data-tone={poiTypeToTone(type)}
           >
             {isAuto && <span className="tp-category-tile-auto" aria-hidden="true" />}
             <Icon name={CATEGORY_ICON[type]} />

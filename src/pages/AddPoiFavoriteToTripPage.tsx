@@ -28,6 +28,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
 import { POI_TYPE_LABELS, mapGooglePrimaryTypeToPoiType, type PoiType } from '../lib/poiCategory';
+import { poiTypeToTone } from '../lib/timelineUtils';
 import type { PoiFavorite } from '../types/api';
 
 interface TripBrief {
@@ -67,18 +68,24 @@ const SCOPED_STYLES = `
   .tp-favorites-add-to-trip { padding: 12px; gap: 14px; }
 }
 
-/* POI summary block — accent-subtle bg + border-left accent (mockup B1) */
+/* POI summary block (mockup B1) — bg + border-left 依加收藏 POI 類型上 tone
+   （玩看買=柔褐、住移動=sage、吃=粉）；neutral/未匹配 fallback 回 accent 柔褐 */
+.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="accent"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); }
+.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="sage"]   { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); }
+.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="pink"]   { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); }
+/* neutral（other）顯式回 accent — 不靠 var() fallback，避免被有設 --tone-* 的祖先繼承汙染 */
+.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="neutral"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); }
 .tp-favorites-add-to-trip .tp-form-poi-summary {
   display: flex; flex-direction: column; gap: 4px;
   padding: 14px 16px;
-  background: var(--color-accent-subtle);
-  border-left: 3px solid var(--color-accent);
+  background: var(--tone-subtle, var(--color-accent-subtle));
+  border-left: 3px solid var(--tone, var(--color-accent));
   border-radius: var(--radius-md);
 }
 .tp-favorites-add-to-trip .tp-form-poi-summary-eyebrow {
   font-size: var(--font-size-eyebrow); font-weight: 700;
   letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--color-accent-deep);
+  color: var(--tone-deep, var(--color-accent-deep));
 }
 .tp-favorites-add-to-trip .tp-form-poi-summary-title {
   font-size: var(--font-size-callout); font-weight: 700;
@@ -420,7 +427,7 @@ export default function AddPoiFavoriteToTripPage() {
   } else if (trips.length === 0) {
     mainContent = (
       <div className="tp-favorites-add-to-trip">
-        <div className="tp-form-poi-summary">
+        <div className="tp-form-poi-summary" data-tone={poiTypeToTone(mapGooglePrimaryTypeToPoiType(favorite.poiType))}>
           <span className="tp-form-poi-summary-eyebrow">{poiEyebrow}</span>
           <span className="tp-form-poi-summary-title">{favorite.poiName ?? '景點'}</span>
           {favorite.poiAddress && (
@@ -440,7 +447,7 @@ export default function AddPoiFavoriteToTripPage() {
     const selectedDay = days?.find((d) => d.dayNum === dayNum);
     mainContent = (
       <div className="tp-favorites-add-to-trip">
-        <div className="tp-form-poi-summary">
+        <div className="tp-form-poi-summary" data-tone={poiTypeToTone(mapGooglePrimaryTypeToPoiType(favorite.poiType))}>
           <span className="tp-form-poi-summary-eyebrow">{poiEyebrow}</span>
           <span className="tp-form-poi-summary-title">{favorite.poiName ?? '景點'}</span>
           {favorite.poiAddress && (
