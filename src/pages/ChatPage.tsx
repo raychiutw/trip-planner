@@ -370,14 +370,12 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   margin: 0 0 3px 4px;
 }
+/* v2.54.9 依角色三色（mockup V1）：共編旅伴 avatar = pink（人/協作）。--color-accent-3-bg
+   底 + --color-foreground 字（對比安全、light/dark 皆過）。修掉原本與 AI avatar 撞色
+   （都 secondary）分不出真人/AI 的問題。 */
 .tp-chat-avatar.is-other-user {
-  background: var(--color-secondary);
+  background: var(--color-accent-3-bg);
   color: var(--color-foreground);
-  border: 1px solid var(--color-border);
-}
-[data-theme="dark"] .tp-chat-avatar.is-other-user {
-  background: var(--color-tertiary);
-  border-color: var(--color-border);
 }
 .tp-chat-msg-row .tp-chat-msg { max-width: 100%; }
 .tp-chat-avatar {
@@ -388,8 +386,10 @@ const SCOPED_STYLES = `
   background: var(--color-accent);
   color: var(--color-accent-foreground);
 }
-.tp-chat-avatar.is-ai { background: var(--color-foreground); color: var(--color-accent-foreground); }
-[data-theme="dark"] .tp-chat-avatar.is-ai { background: #0F0B08; }
+/* v2.54.9 依角色三色（mockup V1）：AI avatar = sage。用 --color-accent-2-bg 底 +
+   --color-foreground 字（隨 light/dark 翻轉、~7–12:1）；不用 vivid --color-accent-2
+   實心 —— dark mode 對 foreground 字僅 1.78:1（< WCAG）。 */
+.tp-chat-avatar.is-ai { background: var(--color-accent-2-bg); color: var(--color-foreground); }
 .tp-chat-day-divider {
   text-align: center;
   margin: 12px 0 4px;
