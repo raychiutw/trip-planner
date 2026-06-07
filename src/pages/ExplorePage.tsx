@@ -169,7 +169,8 @@ const SCOPED_STYLES = `
 }
 .explore-poi-card .explore-poi-heart:hover:not(:disabled) { background: rgba(0, 0, 0, 0.65); transform: scale(1.05); }
 .explore-poi-card .explore-poi-heart.is-saved {
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  /* 三色：已收藏愛心 = 第三色粉（收藏/愛心 = 粉）*/
+  background: var(--color-accent-3); color: var(--color-accent-foreground);
 }
 /* v2.31.43 saved 狀態 hover 顯「取消收藏」affordance — 紅化 + 維持 scale 提示可 click。 */
 .explore-poi-card .explore-poi-heart.is-saved:hover:not(:disabled) {
@@ -308,7 +309,7 @@ const SCOPED_STYLES = `
   color: var(--color-foreground); cursor: pointer; min-height: var(--spacing-tap-min);
 }
 .explore-poi-card .poi-actions button:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.explore-poi-card .poi-actions button.saved { background: var(--color-accent); color: var(--color-accent-foreground); border-color: var(--color-accent); }
+.explore-poi-card .poi-actions button.saved { background: var(--color-accent-3); color: var(--color-accent-foreground); border-color: var(--color-accent-3); }
 .explore-poi-card .poi-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .explore-poi-card .poi-usage-badge {

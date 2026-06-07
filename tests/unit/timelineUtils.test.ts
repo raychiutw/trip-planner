@@ -16,7 +16,7 @@ import path from 'path';
    v2.33.91: parseTimeRange 删（v2.29.0 trip_entries.time DROPPED 後死碼），改 parseEntryTime
    ============================================================ */
 
-import { formatDuration, formatDurationCompact, deriveTypeMeta } from '../../src/lib/timelineUtils';
+import { formatDuration, formatDurationCompact, deriveTypeMeta, poiTypeToTone } from '../../src/lib/timelineUtils';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
 
 describe('formatDuration', () => {
@@ -104,6 +104,21 @@ describe('deriveTypeMeta', () => {
 
   it('景點 (poiType: attraction) → tone:accent（柔褐）', () => {
     expect(deriveTypeMeta({ title: 'X', poiType: 'attraction' }).tone).toBe('accent');
+  });
+
+  // poiTypeToTone：給 ExplorePage / PoiFavoritesPage（PoiSearchResult/PoiFavoriteRow）用，
+  // 對應同 deriveTypeMeta。玩/看/買=accent、住/移動=sage、吃=pink。
+  it('poiTypeToTone：canonical type → tone', () => {
+    expect(poiTypeToTone('attraction')).toBe('accent');
+    expect(poiTypeToTone('shopping')).toBe('accent');
+    expect(poiTypeToTone('activity')).toBe('accent');
+    expect(poiTypeToTone('hotel')).toBe('sage');
+    expect(poiTypeToTone('transport')).toBe('sage');
+    expect(poiTypeToTone('parking')).toBe('sage');
+    expect(poiTypeToTone('restaurant')).toBe('pink');
+    expect(poiTypeToTone('other')).toBe('neutral');
+    expect(poiTypeToTone('')).toBe('neutral');
+    expect(poiTypeToTone(null)).toBe('neutral');
   });
 
   // Regression guard：deriveTypeMeta 回傳的 icon name 必須存在於 Icon.tsx ICONS registry，

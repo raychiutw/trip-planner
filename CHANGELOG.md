@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.0] - 2026-06-07
+
+### Added
+- **三色擴到收藏/探索/詳情** — 三色 tone 從行程表延伸到更多面：
+  - **StopLightbox 全螢幕景點詳情**依 stop 類型上 tone 色（header 淡底 + 類型標籤 + meta pill / 說明卡 / 地點卡背景 + icon），與時間軸卡片一致。
+  - **收藏頁 `.favorites-card`** 依 POI 類型上同色系淡底（新增共用 `poiTypeToTone(poiType)`，因收藏/探索頁用 `PoiFavoriteRow`/`PoiSearchResult` 非 `TimelineEntryData`）。
+  - **收藏/愛心 = 第三色粉**：探索頁 POI 卡的「♡ 已收藏」愛心鈕 + 「已加入收藏」按鈕 → `--color-accent-3`（粉），與卡片 tone 無關、永遠粉，呼應 spec「收藏/愛心 = 粉」。
+- `poiTypeToTone()` helper（timelineUtils）：canonical poiType → tone，與 `deriveTypeMeta` 一致。
+
+> 探索頁卡卡身的 tone tint 暫緩（該卡有裝飾性 cover 漸層，套 tone 會衝突，後續再處理）。
+
 ## [2.53.1] - 2026-06-07
 
 ### Fixed
