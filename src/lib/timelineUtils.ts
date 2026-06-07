@@ -147,3 +147,14 @@ export function deriveTypeMeta(entry: TimelineEntryData): { icon: string; label:
   if (/休息|rest|spa|泡湯/.test(blob)) return { icon: 'coffee', label: '休息', accent: false, tone: 'neutral' };
   return { icon: 'location-pin', label: '景點', accent: true, tone: 'accent' };
 }
+
+/** canonical poiType（hotel/restaurant/shopping/parking/attraction/transport/activity/other）→ 三色 tone。
+ *  給 ExplorePage / PoiFavoritesPage 的 POI 卡用（它們是 PoiSearchResult / PoiFavoriteRow，不是
+ *  TimelineEntryData，不能直接餵 deriveTypeMeta）。對應同 deriveTypeMeta：玩/看/買=accent、住/移動=sage、吃=pink。 */
+export function poiTypeToTone(poiType: string | null | undefined): StopTone {
+  const t = (poiType ?? '').toLowerCase();
+  if (t === 'restaurant' || t === 'cafe' || t === 'café' || t === 'coffee') return 'pink';
+  if (t === 'hotel' || t === 'transport' || t === 'parking') return 'sage';
+  if (t === 'attraction' || t === 'shopping' || t === 'activity') return 'accent';
+  return 'neutral';
+}

@@ -41,11 +41,16 @@ const SCOPED_STYLES = `
   grid-template-rows: auto 1fr;
   overflow: hidden;
 }
+/* 三色 tone：lightbox 依 stop 類型上對應色（與時間軸卡片一致）；neutral 不設 → var() fallback */
+.tp-lightbox[data-tone="accent"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); --tone-bg: var(--color-accent-bg); }
+.tp-lightbox[data-tone="sage"]   { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
+.tp-lightbox[data-tone="pink"]   { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
 
 .tp-lightbox-head {
   display: flex; align-items: center; gap: 12px;
   padding: 14px 20px;
-  border-bottom: 1px solid var(--color-border);
+  background: var(--tone-subtle, transparent);
+  border-bottom: 1px solid var(--tone-bg, var(--color-border));
 }
 .tp-lightbox-head .title { flex: 1; min-width: 0; }
 .tp-lightbox-head h2 {
@@ -54,7 +59,7 @@ const SCOPED_STYLES = `
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .tp-lightbox-head .sub {
-  font-size: var(--font-size-footnote); color: var(--color-muted); margin-top: 2px;
+  font-size: var(--font-size-footnote); color: var(--tone-deep, var(--color-muted)); margin-top: 2px; font-weight: 700;
 }
 .tp-lightbox-iconbtn {
   width: var(--spacing-tap-min); height: var(--spacing-tap-min);
@@ -63,7 +68,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-full);
   cursor: pointer; font-size: var(--font-size-headline); color: var(--color-muted);
 }
-.tp-lightbox-iconbtn:hover { background: var(--color-accent-subtle); color: var(--color-accent-deep); border-color: var(--color-accent-bg); }
+.tp-lightbox-iconbtn:hover { background: var(--tone-subtle, var(--color-accent-subtle)); color: var(--tone-deep, var(--color-accent-deep)); border-color: var(--tone-bg, var(--color-accent-bg)); }
 
 .tp-lightbox-body {
   display: grid;
@@ -151,7 +156,7 @@ const SCOPED_STYLES = `
 }
 .tp-lightbox-meta-pill {
   font-size: var(--font-size-footnote); font-weight: 600;
-  background: var(--color-secondary); color: var(--color-foreground);
+  background: var(--tone-subtle, var(--color-secondary)); color: var(--color-foreground);
   padding: 6px 12px; border-radius: var(--radius-full);
   display: inline-flex; align-items: center; gap: 6px;
 }
@@ -166,7 +171,7 @@ const SCOPED_STYLES = `
   margin: 0;
 }
 .tp-lightbox-section .desc-card {
-  background: var(--color-secondary); padding: 12px 14px;
+  background: var(--tone-subtle, var(--color-secondary)); padding: 12px 14px;
   border-radius: var(--radius-md);
   font-size: var(--font-size-body); line-height: 1.55;
 }
@@ -174,14 +179,14 @@ const SCOPED_STYLES = `
 .tp-lightbox-loc {
   display: flex; align-items: flex-start; gap: 10px;
   padding: 10px 12px;
-  background: var(--color-secondary);
+  background: var(--tone-subtle, var(--color-secondary));
   border-radius: var(--radius-md);
   text-decoration: none;
   color: var(--color-foreground);
   min-height: var(--spacing-tap-min);
 }
-.tp-lightbox-loc:hover { background: var(--color-accent-subtle); }
-.tp-lightbox-loc .ico { color: var(--color-accent); font-size: var(--font-size-body); margin-top: 2px; }
+.tp-lightbox-loc:hover { background: var(--tone-bg, var(--color-accent-subtle)); }
+.tp-lightbox-loc .ico { color: var(--tone-deep, var(--color-accent)); font-size: var(--font-size-body); margin-top: 2px; }
 .tp-lightbox-loc .text { flex: 1; min-width: 0; }
 .tp-lightbox-loc .name { font-size: var(--font-size-callout); font-weight: 700; }
 .tp-lightbox-loc .addr { font-size: var(--font-size-footnote); color: var(--color-muted); margin-top: 2px; }
@@ -244,6 +249,7 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
         aria-modal="true"
         aria-labelledby="stop-lightbox-title"
         onMouseDown={(e) => e.stopPropagation()}
+        data-tone={meta.tone}
         data-testid="stop-lightbox-content"
       >
         <div className="tp-lightbox-head">
