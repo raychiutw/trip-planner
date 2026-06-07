@@ -29,7 +29,10 @@ TABLES_JSON=$(npx wrangler d1 execute "$DB_NAME" --remote --json --command \
 ALL_TABLES=()
 while IFS= read -r line; do
   [ -n "$line" ] && ALL_TABLES+=("$line")
-done < <(printf '%s' "$TABLES_JSON" | python3 -c "import sys, json; d = json.load(sys.stdin); [print(r['name']) for r in d[0]['results']]")
+# wrangler 會在 --json stdout 前面印 warning（"Using CF_ACCOUNT_ID ... deprecated"、或帶
+# 中括號的 "▲ [WARNING]" tag），直接 json.load 會 JSONDecodeError。用 regex 抓 JSON 陣列開頭
+# `[` + 空白 + `{`（d1 --json 一律回 [{...}]），跳過前綴雜訊；連 `[WARNING]` 那種含 '[' 的也不會誤判。
+done < <(printf '%s' "$TABLES_JSON" | python3 -c "import sys, json, re; s = sys.stdin.read(); m = re.search(r'\[\s*\{', s); d = json.loads(s[m.start():]) if m else []; [print(r['name']) for r in (d[0]['results'] if d else [])]")
 
 if [ ${#ALL_TABLES[@]} -eq 0 ]; then
   echo "❌ 抓不到 user tables — 確認 wrangler 認證 + DB_NAME 正確"

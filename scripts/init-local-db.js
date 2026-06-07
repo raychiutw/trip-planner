@@ -18,6 +18,10 @@ const path = require('path');
 
 const RESET = process.argv.includes('--reset');
 const DB_NAME = 'trip-planner-db';
+// CF Pages 慣例：D1 binding 在 [[env.production.d1_databases]]（頂層只套 preview，prod 須
+// env.production，見 wrangler.toml）。所以本機 wrangler d1 指令要 --env production 才找得到
+// binding，否則 "Couldn't find a D1 DB with the name or binding 'trip-planner-db'"。
+const ENV_FLAG = '--env production';
 // 順序必須 FK-safe：父表在前，子表在後（test: tests/unit/init-local-db-table-order.test.ts）
 const TABLES = ['trips', 'pois', 'trip_days', 'trip_entries', 'poi_relations', 'trip_docs', 'trip_doc_entries', 'trip_requests', 'trip_permissions'];
 
@@ -36,7 +40,7 @@ if (RESET) {
 // Step 1: Run migrations
 console.log('Step 1/4: Running migrations...');
 try {
-  execSync(`npx wrangler d1 migrations apply ${DB_NAME} --local`, {
+  execSync(`npx wrangler d1 migrations apply ${DB_NAME} --local ${ENV_FLAG}`, {
     encoding: 'utf8',
     timeout: 30000,
     stdio: 'inherit',
@@ -93,7 +97,7 @@ for (const table of TABLES) {
   const tmpFile = path.join(__dirname, `_init_${table}_${Date.now()}.sql`);
   fs.writeFileSync(tmpFile, statements.join('\n'));
   try {
-    execSync(`npx wrangler d1 execute ${DB_NAME} --local --file "${tmpFile}"`, {
+    execSync(`npx wrangler d1 execute ${DB_NAME} --local ${ENV_FLAG} --file "${tmpFile}"`, {
       encoding: 'utf8',
       timeout: 60000,
       stdio: 'pipe',
@@ -112,7 +116,7 @@ const fixupSql = path.join(__dirname, 'fixup-local-users.sql');
 if (fs.existsSync(fixupSql)) {
   console.log('\nStep 2.5/4: V2 cutover compat fixup (users + trips.owner)...');
   try {
-    execSync(`npx wrangler d1 execute ${DB_NAME} --local --file "${fixupSql}"`, {
+    execSync(`npx wrangler d1 execute ${DB_NAME} --local ${ENV_FLAG} --file "${fixupSql}"`, {
       encoding: 'utf8',
       timeout: 30000,
       stdio: 'pipe',
@@ -128,10 +132,12 @@ console.log('\nStep 3/4: Verifying...');
 for (const table of TABLES) {
   try {
     const raw = execSync(
-      `npx wrangler d1 execute ${DB_NAME} --local --json --command "SELECT COUNT(*) as c FROM ${table}"`,
+      `npx wrangler d1 execute ${DB_NAME} --local ${ENV_FLAG} --json --command "SELECT COUNT(*) as c FROM ${table}"`,
       { encoding: 'utf8', timeout: 10000 },
     );
-    const count = JSON.parse(raw.slice(raw.indexOf('[')))[0]?.results?.[0]?.c ?? '?';
+    // 抓 JSON 陣列開頭 `[`+空白+`{`（跳過 wrangler 前綴 warning，含 `[WARNING]` 那種帶 '[' 的）
+    const m = raw.match(/\[\s*\{/);
+    const count = m ? (JSON.parse(raw.slice(m.index))[0]?.results?.[0]?.c ?? '?') : '?';
     console.log(`  ${table}: ${count} rows`);
   } catch {
     console.log(`  ${table}: ERROR`);

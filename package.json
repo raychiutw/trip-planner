@@ -1,9 +1,9 @@
 {
   "name": "tripline",
-  "version": "2.54.2",
+  "version": "2.54.3",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n vite,api -c cyan,green \"vite\" \"wrangler pages dev dist --local --port 8788\"",
+    "dev": "concurrently -n vite,api -c cyan,green \"vite\" \"wrangler pages dev dist --local --port 8788 --d1 DB\"",
     "dev:vite": "vite",
     "dev:staging": "concurrently -n vite,api -c cyan,yellow \"vite\" \"wrangler pages dev dist --env preview --port 8788\"",
     "dev:prod": "concurrently -n vite,api -c cyan,red \"vite\" \"wrangler pages dev dist --port 8788\"",

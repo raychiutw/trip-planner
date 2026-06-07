@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.3] - 2026-06-07
+
+### Fixed (本機 dev / stage 環境修復)
+調查「自訂 POI 分類 picker」prod bug 時發現本機 dev 環境多處壞掉、無法重現，連帶修好：
+- **`/api/oauth/userinfo` 認 mock auth** — 原本只用 `requireSessionUser`（讀 session cookie），忽略 `_middleware` 的 `context.data.auth`。本機 mock auth 無 session cookie → page-load 探測拿 401 → 前端登不進。改用 `getAuth(context)`，無才 fallback `requireSessionUser`（保留未登入 401）。注意：`_middleware` 對所有 `/api/oauth/*` 設 `auth=null`，**唯獨 DEV_MOCK_EMAIL path 在該 short-circuit 前 decorate**，所以這實際只對本機 mock 生效；prod（無 DEV_MOCK_EMAIL）auth 為 null、照舊走 `requireSessionUser` fallback。
+- **`dev:init` 加 `--env production`** — D1 binding 在 `[[env.production.d1_databases]]`，本機 `wrangler d1` 指令不加 `--env production` 會 "Couldn't find a D1 DB"。
+- **`npm run dev` 加 `--d1 DB`** — `wrangler pages dev` 不會自動注入 env.production binding → `env.DB` undefined → functions 500。`--d1 DB` 綁本機 D1（讀 init 同步的 `hash("DB")`；pages dev 不支援 `--env`）。
+- **`.dev.vars.example` 補 `ENVIRONMENT` + `ALLOW_DEV_MOCK`** — v2.33.100 SEC-6 fail-closed guard 要這兩個 + `DEV_MOCK_EMAIL` 三者齊全才允許 mock auth，原本沒文件化。
+- **`backup-prod-d1.sh` JSON parse robust** — wrangler 在 `--json` stdout 前印 deprecation warning → `json.load` JSONDecodeError。改從第一個 `[` 起 parse。
+
+> 純本機開發工具修復，無 production 行為改動（prod userinfo 仍走 `requireSessionUser` session-cookie 驗證，與原本相同）。
+
 ## [2.54.2] - 2026-06-07
 
 ### Added
