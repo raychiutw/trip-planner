@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.2] - 2026-06-07
+
+### Added
+- **三色擴到編輯/輸入表單** — tone 從「顯示卡」延伸到使用者輸入面：
+  - **分類選擇器 `CategoryPicker`**：8 格分類 tile 各帶 `data-tone={poiTypeToTone(type)}`，**選中態**用該分類自己的 tone（淡底 + `-deep` 字 + tone 描邊），取代原本一律柔褐。picker 等同三色 legend — 選「餐廳」亮粉、「住宿」亮 sage、「景點/購物」亮柔褐，一眼對得起時間軸卡的配色。
+  - **加入行程精靈的 POI 摘要框 `.tp-form-poi-summary`**（`AddPoiFavoriteToTripPage`）：依加收藏的 POI 類型上 tone（淡底 + border-left + eyebrow `-deep`），與該 POI 在收藏/時間軸的顏色一致。
+- 至此三色 tone 涵蓋顯示面（時間軸卡 / 展開明細 / StopLightbox / 收藏卡 / 探索卡）與編輯面（分類 picker / 加入行程摘要）。
+
+### Correctness
+- **Direct mode 摘要 tone 正規化** — 從探索頁 ➕ 進來的 `/add-to-trip?category=…` 帶的是 raw Google primaryType（如 `lodging`），直接餵 `poiTypeToTone` 會落 neutral（暖褐），跟探索卡的 sage 不一致。摘要 tone 改 `poiTypeToTone(mapGooglePrimaryTypeToPoiType(...))` 先正規化（與同檔送 API 的 poi_type 一致），達成「同一 POI 跨頁同色」。
+- **分類 picker 鍵盤 focus 不蓋選中色** — `:focus-visible` 改用 `outline`（原 inset box-shadow 會蓋掉 `.is-active` 的 tone 選中框，tab 到已選餐廳/住宿 tile 時粉/sage 框被換成 accent）。outline 與選中框正交，兩者並存。
+- **neutral 防繼承汙染** — picker tile 與摘要框的 `data-tone="neutral"` 顯式定義 `--tone: accent`，不靠「無規則→var() fallback」，避免被有設 `--tone-*` 的祖先繼承到非預期 tone。
+
 ## [2.54.1] - 2026-06-07
 
 ### Added
