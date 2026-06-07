@@ -183,10 +183,19 @@ const SCOPED_STYLES = `
   padding: 14px 16px 16px;
   gap: 6px;
 }
-.tp-trip-cover-jp { background-image: linear-gradient(135deg, var(--color-cover-jp-from) 0%, var(--color-cover-jp-to) 100%); }
-.tp-trip-cover-kr { background-image: linear-gradient(135deg, var(--color-cover-kr-from) 0%, var(--color-cover-kr-to) 100%); }
-.tp-trip-cover-tw { background-image: linear-gradient(135deg, var(--color-cover-tw-from) 0%, var(--color-cover-tw-to) 100%); }
-.tp-trip-cover-other { background-image: linear-gradient(135deg, var(--color-cover-other-from) 0%, var(--color-cover-other-to) 100%); }
+/* v2.54.8「依目的地三色切換」：行程卡依 destinationTone(countries) 整卡同色（mockup V3）。
+   日本=accent 柔褐／台灣=sage／韓國=pink／其餘 hash 輪替。cover 用 tone 漸層、卡身 tone 淡底、
+   hover/選取框與選取點都跟 tone。字一律 --color-foreground / --color-muted（不用 --t-deep
+   當字 —— light mode sage/粉 -deep 對 -subtle 對比 <4.5:1；色由 cover 漸層 + 卡底承載）。 */
+.tp-trip-card[data-tone="accent"] { --t: var(--color-accent);   --t-deep: var(--color-accent-deep);   --t-subtle: var(--color-accent-subtle);   --t-bg: var(--color-accent-bg); }
+.tp-trip-card[data-tone="sage"]   { --t: var(--color-accent-2); --t-deep: var(--color-accent-2-deep); --t-subtle: var(--color-accent-2-subtle); --t-bg: var(--color-accent-2-bg); }
+.tp-trip-card[data-tone="pink"]   { --t: var(--color-accent-3); --t-deep: var(--color-accent-3-deep); --t-subtle: var(--color-accent-3-subtle); --t-bg: var(--color-accent-3-bg); }
+.tp-trip-card[data-tone] { background: var(--t-subtle); border-color: var(--t-bg); }
+.tp-trip-card[data-tone] .tp-trip-card-cover { background-image: linear-gradient(135deg, var(--t) 0%, var(--t-deep) 100%); }
+.tp-trip-card[data-tone]:hover { border-color: var(--t); }
+.tp-trip-card[data-tone].is-active { border-color: var(--t); }
+.tp-trip-card[data-tone].is-active::before { background: var(--t); box-shadow: 0 0 0 3px var(--t-subtle); }
+.tp-trip-card[data-tone] .tp-trip-card-avatar { background: var(--t-bg); color: var(--color-foreground); }
 
 .tp-trip-card-eyebrow {
   font-size: var(--font-size-eyebrow);
@@ -487,12 +496,30 @@ interface TripInfo {
   archivedAt?: string | null;
 }
 
-function coverClass(countries: string | null | undefined): string {
+/**
+ * destinationTone — 行程卡「依目的地三色切換」(v2.54.8)。
+ *
+ * 三色當分類/wayfinding 用：每個目的地穩定對應一個 tone，行程一覽照去的地方分色。
+ * 常見國家**錨定**（日本=accent 柔褐、台灣=sage、韓國=pink，沿用 coverClass 的
+ * .includes + JP>KR>TW 優先序，讓最常見的目的地穩定好看）；其餘國家用 deterministic
+ * hash **輪替**這三色（不固定哪國哪色，但每國穩定一色、可擴到任何國家、不退化成全 neutral）。
+ * 空/未知 → accent（柔褐，主色預設）。
+ *
+ * 注意這是「分類用色」（粉在此 = 某目的地，非 POI 語意的吃/收藏）—— DESIGN.md 已記此例外。
+ */
+export type DestinationTone = 'accent' | 'sage' | 'pink';
+const DEST_TONE_CYCLE: readonly DestinationTone[] = ['accent', 'sage', 'pink'];
+export function destinationTone(countries: string | null | undefined): DestinationTone {
   const c = (countries ?? '').toUpperCase().trim();
-  if (c.includes('JP')) return 'tp-trip-cover-jp';
-  if (c.includes('KR')) return 'tp-trip-cover-kr';
-  if (c.includes('TW')) return 'tp-trip-cover-tw';
-  return 'tp-trip-cover-other';
+  if (c.includes('JP')) return 'accent';
+  if (c.includes('KR')) return 'pink';
+  if (c.includes('TW')) return 'sage';
+  if (!c) return 'accent';
+  // 未錨定國家：FNV-ish 32-bit hash → 三色之一，穩定且分布均勻。
+  let h = 0;
+  for (let i = 0; i < c.length; i++) h = (Math.imul(h, 31) + c.charCodeAt(i)) >>> 0;
+  // h % 3 ∈ {0,1,2} 永遠命中；?? 只為滿足 noUncheckedIndexedAccess，不會觸發。
+  return DEST_TONE_CYCLE[h % DEST_TONE_CYCLE.length] ?? 'accent';
 }
 
 function eyebrow(countries: string | null | undefined, dayCount: number | undefined): string {
@@ -1131,10 +1158,11 @@ export default function TripsListPage() {
                       type="button"
                       onClick={(e) => handleCardClick(t.tripId, e)}
                       className={`tp-trip-card ${isActive ? 'is-active' : ''}`}
+                      data-tone={destinationTone(t.countries)}
                       data-testid={`trips-list-card-${t.tripId}`}
                       aria-current={isActive ? 'true' : undefined}
                     >
-                      <div className={`tp-trip-card-cover ${coverClass(t.countries)}`} aria-hidden="true" />
+                      <div className="tp-trip-card-cover" aria-hidden="true" />
                       <div className="tp-trip-card-body">
                         <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.dayCount)}</div>
                         <h2 className="tp-trip-card-title">{t.title || t.name}</h2>

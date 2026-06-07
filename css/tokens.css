@@ -65,17 +65,8 @@ html { color-scheme: light dark; }
     --color-sidebar-fg-skel-secondary: rgba(255, 251, 245, 0.09); /* skel 次要 line */
     --color-sidebar-fg-skel-faint: rgba(255, 251, 245, 0.14);     /* skel 主要 line */
 
-    /* Trip cover gradients — TripsListPage destination cards (jp/kr/tw/other).
-     * 4 fixed combinations; preserves visual identity while removing hex
-     * literals from component CSS (anti-slop hex hardcoding cleanup). */
-    --color-cover-jp-from: #A97A4A;        /* matches --color-accent */
-    --color-cover-jp-to: #C49A6E;          /* lighter 柔褐 tint */
-    --color-cover-kr-from: #8A6038;        /* matches --color-accent-deep */
-    --color-cover-kr-to: #EADFCF;          /* matches --color-border */
-    --color-cover-tw-from: #C88500;        /* warm amber, JP-adjacent gold */
-    --color-cover-tw-to: #E9DBC8;          /* matches --color-accent-bg */
-    --color-cover-other-from: #6F5A47;     /* matches --color-muted */
-    --color-cover-other-to: #C8B89F;       /* matches --color-line-strong */
+    /* (v2.54.8: 移除 --color-cover-* 國家別 cover 漸層 token — TripsListPage 改「依目的地
+     * 三色」後 cover 用 --color-accent/-2/-3 漸層，這組 jp/kr/tw/other 已無人引用。) */
     --color-poi-card-tone-cool-from: #DCE7E0;
     --color-poi-card-tone-cool-to: #C8DCE0;
     --color-poi-card-tone-tp-from: #C7DBE5;
@@ -965,18 +956,7 @@ body.dark {
         --scrollbar-thumb-hover: #7A604A;
         --color-overlay: rgba(0,0,0,0.65);
         --color-disabled: #5A4634;
-        /* Trip cover gradients — dark mode preserves the destination accent
-         * while toning down luminance to fit deep-cocoa background. */
-        --color-cover-jp-from: #8A6038;
-        --color-cover-jp-to: #CBA06E;
-        --color-cover-kr-from: #8A4520;
-        --color-cover-kr-to: #5A4634;
-        /* dark mode TW cover 不能用 light-mode 的 amber #9E6800 — 在深色 UI
-         * 上會過度跳出，降到 deep amber-brown 跟 cover-other-from 接近。 */
-        --color-cover-tw-from: #5A4220;
-        --color-cover-tw-to: #4D372A;
-        --color-cover-other-from: #4D372A;
-        --color-cover-other-to: #6F5A47;
+        /* (v2.54.8: 移除 dark 的 --color-cover-* — 見 light @theme 同名說明。) */
         --color-poi-card-tone-cool-from: #20302C;
         --color-poi-card-tone-cool-to: #2E423E;
         --color-poi-card-tone-tp-from: #203342;
