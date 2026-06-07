@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行程一覽 — 依目的地三色切換</title>
+<style>
+:root{
+  --color-accent:#A97A4A; --color-accent-subtle:#F4EDE3; --color-accent-bg:#E9DBC8; --color-accent-deep:#8A6038;
+  --color-accent-2:#A8BAAA; --color-accent-2-deep:#7E9580; --color-accent-2-subtle:#ECF0ED; --color-accent-2-bg:#D4DDD5;
+  --color-accent-3:#E78C99; --color-accent-3-deep:#C66B78; --color-accent-3-subtle:#FAF1F3; --color-accent-3-bg:#F2DBE0;
+  --color-background:#FFFBF5; --color-secondary:#FAF4EA; --color-tertiary:#F2EAD9; --color-hover:#F9EDE0;
+  --color-foreground:#2A1F18; --color-muted:#6F5A47; --color-accent-foreground:#FFFFFF;
+  --color-border:#EADFCF; --color-line-strong:#C8B89F;
+  --radius-sm:6px; --radius-md:8px; --radius-lg:12px; --radius-full:9999px;
+  --shadow-sm:0 1px 2px rgba(42,31,24,.05); --shadow-md:0 6px 16px rgba(42,31,24,.09);
+  --fs-eyebrow:.625rem; --fs-body:1rem; --fs-caption:.75rem; --fs-caption2:.6875rem; --fs-footnote:.875rem;
+}
+body.dark{
+  --color-accent:#CBA06E; --color-accent-subtle:#33271A; --color-accent-bg:#44341F; --color-accent-deep:#E0BC90;
+  --color-accent-2:#8FBE9C; --color-accent-2-deep:#A8D0B4; --color-accent-2-subtle:#243A2C; --color-accent-2-bg:#2E3D30;
+  --color-accent-3:#E8A0AB; --color-accent-3-deep:#F0B8C0; --color-accent-3-subtle:#4A2A3A; --color-accent-3-bg:#6B3F52;
+  --color-background:#1A140F; --color-secondary:#241B14; --color-tertiary:#2E2418; --color-hover:#2E2418;
+  --color-foreground:#F5EBDD; --color-muted:#B89E84; --color-accent-foreground:#1A140F;
+  --color-border:#3D2D22; --color-line-strong:#5A4634;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--color-background);color:var(--color-foreground);
+  font-family:Inter,"Noto Sans TC","PingFang TC",system-ui,sans-serif;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s;}
+.page{max-width:1080px;margin:0 auto;padding:24px 24px 80px;}
+.doc-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px;}
+.doc-h{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:0;}
+.doc-sub{color:var(--color-muted);font-size:var(--fs-footnote);margin:2px 0 0;}
+.toggle{border:1px solid var(--color-border);background:var(--color-secondary);color:var(--color-foreground);
+  border-radius:var(--radius-full);padding:8px 16px;font:inherit;font-weight:600;font-size:var(--fs-footnote);cursor:pointer;}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin:16px 0 8px;font-size:var(--fs-footnote);color:var(--color-muted);}
+.legend b{color:var(--color-foreground);}
+.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px;}
+.variant{margin-top:36px;}
+.variant-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;}
+.variant-tag{font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--color-accent-foreground);background:var(--color-accent);padding:3px 8px;border-radius:var(--radius-sm);}
+.variant-name{font-size:1.05rem;font-weight:800;margin:0;}
+.variant-desc{color:var(--color-muted);font-size:var(--fs-footnote);margin:2px 0 16px;line-height:1.5;}
+
+.tp-trips-tabs{display:inline-flex;align-items:center;background:var(--color-secondary);
+  border-radius:var(--radius-full);padding:4px;max-width:100%;overflow-x:auto;margin-bottom:18px;}
+.tp-trips-tab{border:0;background:transparent;cursor:pointer;padding:6px 14px;border-radius:var(--radius-full);
+  font:inherit;font-size:var(--fs-footnote);font-weight:600;color:var(--color-muted);
+  display:inline-flex;align-items:center;gap:6px;min-height:36px;white-space:nowrap;}
+.tp-trips-tab-count{font-size:var(--fs-caption2);font-weight:700;padding:1px 6px;border-radius:var(--radius-full);background:var(--color-background);color:var(--color-muted);}
+.tp-trips-tab.is-active{background:var(--color-background);color:var(--color-accent);box-shadow:var(--shadow-sm);}
+.tp-trips-tab.is-active .tp-trips-tab-count{background:var(--color-accent-subtle);color:var(--color-accent);}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:16px;}
+.tp-trip-card-wrap{position:relative;}
+.tp-trip-card{background:var(--color-background);border:1px solid var(--color-border);border-radius:var(--radius-lg);
+  display:flex;flex-direction:column;min-height:180px;overflow:hidden;text-align:left;width:100%;
+  transition:border-color .12s,box-shadow .12s,transform .12s;cursor:pointer;}
+.tp-trip-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+.tp-trip-card-cover{height:88px;flex-shrink:0;}
+.tp-trip-card-body{display:flex;flex-direction:column;flex:1;padding:14px 16px 16px;gap:6px;}
+.tp-trip-card-eyebrow{font-size:var(--fs-eyebrow);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--color-muted);}
+.tp-trip-card-title{font-size:var(--fs-body);font-weight:700;letter-spacing:-.01em;line-height:1.35;color:var(--color-foreground);margin:0;}
+.tp-trip-card-meta{display:flex;align-items:center;gap:8px;font-size:var(--fs-caption);color:var(--color-muted);margin-top:auto;padding-top:8px;}
+.tp-trip-card-avatar{width:22px;height:22px;border-radius:50%;background:var(--color-accent-subtle);color:var(--color-accent-deep);display:grid;place-items:center;font-weight:700;font-size:var(--fs-caption2);flex-shrink:0;}
+.tp-trip-card-meta-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tp-trip-card-new{background:transparent;border:1.5px dashed var(--color-line-strong);border-radius:var(--radius-lg);
+  min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--color-accent);font-weight:700;cursor:pointer;}
+.tp-trip-card-new .ic{font-size:1.6rem;}
+
+/* ===== 依目的地設 --t（tone）三階 ===== */
+.dest-jp   {--t:var(--color-accent);   --t-deep:var(--color-accent-deep);   --t-subtle:var(--color-accent-subtle);   --t-bg:var(--color-accent-bg);}
+.dest-tw   {--t:var(--color-accent-2); --t-deep:var(--color-accent-2-deep); --t-subtle:var(--color-accent-2-subtle); --t-bg:var(--color-accent-2-bg);}
+.dest-kr   {--t:var(--color-accent-3); --t-deep:var(--color-accent-3-deep); --t-subtle:var(--color-accent-3-subtle); --t-bg:var(--color-accent-3-bg);}
+.dest-other{--t:var(--color-line-strong); --t-deep:var(--color-muted); --t-subtle:var(--color-secondary); --t-bg:var(--color-tertiary);}
+
+/* hover 邊框跟目的地 tone */
+.tp-trip-card:hover{border-color:var(--t,var(--color-accent));}
+
+/* ===== V1 輕：eyebrow + avatar 上目的地色（cover/body 不動）===== */
+.v1 .tp-trip-card-cover{background:var(--color-tertiary);}
+.v1 .tp-trip-card-eyebrow{color:var(--t-deep);}
+.v1 .tp-trip-card-avatar{background:var(--t-subtle);color:var(--t-deep);}
+
+/* ===== V2 中：左 3px 色條 + cover 細上緣色帶 + eyebrow/avatar 上色 ===== */
+.v2 .tp-trip-card{border-left:3px solid var(--t);}
+.v2 .tp-trip-card-cover{background:var(--color-tertiary);border-top:3px solid var(--t);}
+.v2 .tp-trip-card-eyebrow{color:var(--t-deep);}
+.v2 .tp-trip-card-avatar{background:var(--t-subtle);color:var(--t-deep);}
+
+/* ===== V3 重：整卡同色（cover gradient=目的地 tone + body subtle 底）===== */
+.v3 .tp-trip-card{background:var(--t-subtle);border-color:var(--t-bg);}
+.v3 .tp-trip-card-cover{background-image:linear-gradient(135deg,var(--t),var(--t-deep));}
+.v3 .tp-trip-card-eyebrow{color:var(--t-deep);}
+.v3 .tp-trip-card-avatar{background:var(--t-bg);color:var(--t-deep);}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="doc-top">
+    <div>
+      <h1 class="doc-h">行程一覽 — 依目的地三色切換</h1>
+      <p class="doc-sub">每個目的地一個 tone。預設：<b style="color:var(--color-accent-deep)">日本＝柔褐</b>・<b style="color:var(--color-accent-2-deep)">台灣＝sage</b>・<b style="color:var(--color-accent-3-deep)">韓國＝粉</b>・其他＝neutral。（對應可換）</p>
+    </div>
+    <button class="toggle" onclick="document.body.classList.toggle('dark')">◐ Light / Dark</button>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--color-accent)"></span><b>日本</b> 柔褐</span>
+    <span><span class="sw" style="background:var(--color-accent-2)"></span><b>台灣</b> sage</span>
+    <span><span class="sw" style="background:var(--color-accent-3)"></span><b>韓國</b> 粉</span>
+    <span><span class="sw" style="background:var(--color-line-strong)"></span><b>其他</b> neutral</span>
+  </div>
+
+  <section class="variant v1">
+    <div class="variant-head"><span class="variant-tag">V1</span><h2 class="variant-name">輕觸 — 只 eyebrow + avatar 上色</h2></div>
+    <p class="variant-desc">最克制。標題上方的「日本·5天」eyebrow 與 owner avatar 帶目的地色，cover 與卡身維持中性。三色在網格上微弱、不搶內容。</p>
+    <div class="tp-trips-tabs">
+      <button class="tp-trips-tab is-active">全部 <span class="tp-trips-tab-count">6</span></button>
+      <button class="tp-trips-tab">我的 <span class="tp-trips-tab-count">4</span></button>
+      <button class="tp-trips-tab">共編 <span class="tp-trips-tab-count">2</span></button>
+      <button class="tp-trips-tab">已歸檔 <span class="tp-trips-tab-count">0</span></button>
+    </div>
+    <div class="grid" id="grid-v1"></div>
+  </section>
+
+  <section class="variant v2">
+    <div class="variant-head"><span class="variant-tag">V2</span><h2 class="variant-name">色條 — 左邊 + cover 上緣帶色</h2></div>
+    <p class="variant-desc">卡左 3px 色條 + cover 頂 3px 色帶依目的地。掃視即知去哪、同目的地視覺成組；色帶細、卡片主體仍乾淨。平衡點。</p>
+    <div class="tp-trips-tabs">
+      <button class="tp-trips-tab is-active">全部 <span class="tp-trips-tab-count">6</span></button>
+      <button class="tp-trips-tab">我的 <span class="tp-trips-tab-count">4</span></button>
+      <button class="tp-trips-tab">共編 <span class="tp-trips-tab-count">2</span></button>
+      <button class="tp-trips-tab">已歸檔 <span class="tp-trips-tab-count">0</span></button>
+    </div>
+    <div class="grid" id="grid-v2"></div>
+  </section>
+
+  <section class="variant v3">
+    <div class="variant-head"><span class="variant-tag">V3</span><h2 class="variant-name">整卡同色 — cover gradient + 卡身淡底</h2></div>
+    <p class="variant-desc">cover 用目的地 tone 漸層 + 卡身同色淡底。「依目的地三色切換」最完整的表達 —— 一覽像按地點分色的看板；但整片淡底較多色，奶油底感被稀釋。</p>
+    <div class="tp-trips-tabs">
+      <button class="tp-trips-tab is-active">全部 <span class="tp-trips-tab-count">6</span></button>
+      <button class="tp-trips-tab">我的 <span class="tp-trips-tab-count">4</span></button>
+      <button class="tp-trips-tab">共編 <span class="tp-trips-tab-count">2</span></button>
+      <button class="tp-trips-tab">已歸檔 <span class="tp-trips-tab-count">0</span></button>
+    </div>
+    <div class="grid" id="grid-v3"></div>
+  </section>
+</div>
+
+<script>
+const TRIPS = [
+  {dest:'jp', eye:'日本 · 5 天', title:'2026 沖繩五日自駕遊行程表', owner:'由你建立', date:'7/29 – 8/2', initial:'R'},
+  {dest:'jp', eye:'日本 · 7 天', title:'2026 沖繩七日遊行程表', owner:'penyin', date:'7/2 – 7/8', initial:'P'},
+  {dest:'kr', eye:'韓國 · 4 天', title:'首爾購物美食小旅行', owner:'由你建立', date:'9/12 – 9/15', initial:'R'},
+  {dest:'tw', eye:'台灣 · 5 天', title:'台南', owner:'由你建立', date:'5/1 – 5/5', initial:'R'},
+  {dest:'jp', eye:'日本 · 8 天', title:'2027 圓夢之旅～滑雪藏王樹冰', owner:'penyin', date:'1/23 – 1/30', initial:'P'},
+  {dest:'other', eye:'泰國 · 5 天', title:'曼谷自由行', owner:'由你建立', date:'11/3 – 11/7', initial:'R'},
+];
+function card(t){
+  return `<div class="tp-trip-card-wrap"><div class="tp-trip-card dest-${t.dest}">
+    <div class="tp-trip-card-cover"></div>
+    <div class="tp-trip-card-body">
+      <div class="tp-trip-card-eyebrow">${t.eye}</div>
+      <h3 class="tp-trip-card-title">${t.title}</h3>
+      <div class="tp-trip-card-meta">
+        <span class="tp-trip-card-avatar">${t.initial}</span>
+        <span class="tp-trip-card-meta-text">${t.owner} · ${t.date}</span>
+      </div>
+    </div></div></div>`;
+}
+const newCard = `<button class="tp-trip-card-new"><span class="ic">＋</span><span>新增行程</span></button>`;
+['v1','v2','v3'].forEach(v=>{ document.getElementById('grid-'+v).innerHTML = TRIPS.map(card).join('') + newCard; });
+</script>
+</body>
+</html>
