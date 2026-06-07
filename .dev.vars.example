@@ -8,9 +8,16 @@
 # Get one free at https://account.mapbox.com/access-tokens/
 MAPBOX_TOKEN=pk.ey...your-token-here
 
-# Mock Auth — 本機開發 bypass Cloudflare Access
+# Mock Auth — 本機開發 bypass V2 OAuth 登入
 # 設定後，wrangler 的 middleware 會假裝此 email 已登入，讓 /manage/、/admin/、寫入 API 可用
 # 不設 → 本機打 /api/my-trips 會拿到 401，/manage 看到「無法存取」
+#
+# ⚠️ v2.33.100 SEC-6 fail-closed guard：DEV_MOCK_EMAIL 單獨設沒用，必須**同時**有
+#    ENVIRONMENT=development（或 preview）+ ALLOW_DEV_MOCK=1，三者缺一即 deny（避免 prod
+#    誤設 DEV_MOCK_EMAIL 變成 auth bypass）。少設 → /api/* 全 500「DEV_MOCK_EMAIL 不可在此環境啟用」。
+#    DEV_MOCK_EMAIL 對應的 email 必須在本機 users table（跑 npm run dev:init 會帶進來）。
+ENVIRONMENT=development
+ALLOW_DEV_MOCK=1
 ADMIN_EMAIL=your-email@example.com
 DEV_MOCK_EMAIL=your-email@example.com
 
