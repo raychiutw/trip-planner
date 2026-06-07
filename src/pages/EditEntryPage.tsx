@@ -42,6 +42,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useAutosave } from '../hooks/useAutosave';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
+import { poiTypeToTone } from '../lib/timelineUtils';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
@@ -61,19 +62,30 @@ const SCOPED_STYLES = `
   .tp-edit-entry { padding: 32px 24px 96px; }
 }
 
+/* 三色：master POI 卡依分類上 tone（與收藏卡 / 加入行程摘要同語言）。
+   icon badge：--tone-bg 底 + --color-foreground 字。不用「填滿 --tone + 白字」
+   （sage/粉太淺、白字對比不足），也不用 --tone-deep 字（light mode 下 deep 對 -bg
+   對比 <3:1，WCAG 非文字 fail）。--color-foreground 隨 light/dark 翻轉，對 --tone-bg
+   一律高對比（~10:1），tone 由 badge 底色承載。
+   neutral 顯式回 accent，不靠 var() fallback，避免被有設 --tone-* 的祖先繼承汙染。 */
+.tp-edit-entry-poi[data-tone="accent"]  { --tone: var(--color-accent);   --tone-deep: var(--color-accent-deep);   --tone-subtle: var(--color-accent-subtle);   --tone-bg: var(--color-accent-bg); }
+.tp-edit-entry-poi[data-tone="sage"]    { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
+.tp-edit-entry-poi[data-tone="pink"]    { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
+.tp-edit-entry-poi[data-tone="neutral"] { --tone: var(--color-accent);   --tone-deep: var(--color-accent-deep);   --tone-subtle: var(--color-accent-subtle);   --tone-bg: var(--color-accent-bg); }
 .tp-edit-entry-poi {
   /* v2.34.0: align-items flex-start — meta 內含 per-POI 備註行（一行 read /
      展開 textarea），對齊 mockup .ee-poi align-items flex-start。 */
   display: flex; align-items: flex-start; gap: 12px;
   padding: 14px 16px;
-  background: var(--color-secondary);
+  background: var(--tone-subtle, var(--color-secondary));
+  border-left: 3px solid var(--tone, var(--color-accent));
   border-radius: var(--radius-lg);
   margin-bottom: 28px;
 }
 .tp-edit-entry-poi-icon {
   width: 44px; height: 44px;
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
+  background: var(--tone-bg, var(--color-accent-bg));
+  color: var(--color-foreground);
   border-radius: var(--radius-md);
   display: inline-flex; align-items: center; justify-content: center;
   flex-shrink: 0;
@@ -1480,7 +1492,7 @@ export default function EditEntryPage() {
           ) : entry ? (
             <>
               {poiInfo && (
-                <div className="tp-edit-entry-poi" data-testid="edit-entry-poi-summary">
+                <div className="tp-edit-entry-poi" data-tone={poiTypeToTone(poiInfo.poiType)} data-testid="edit-entry-poi-summary">
                   <span className="tp-edit-entry-poi-icon">
                     <Icon name={CATEGORY_ICON[(poiInfo.poiType ?? 'attraction') as PoiType] ?? 'location-pin'} />
                   </span>

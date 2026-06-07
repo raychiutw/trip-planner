@@ -330,6 +330,8 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
     expect(poiCard.textContent).not.toContain('Old Stale Title');
     // type label：master.type='hotel' → '飯店' (v2.33.28 改 canonical POI_TYPE_LABELS)
     expect(poiCard.textContent).toContain('飯店');
+    // v2.54.6 三色：master POI 卡依 master.type 上 tone — hotel → sage（住/移動=sage）。
+    expect(poiCard.getAttribute('data-tone')).toBe('sage');
   });
 
   it('Day 1 第一個 entry（無 prev）→ mode section 不渲染', async () => {

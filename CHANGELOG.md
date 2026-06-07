@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.6] - 2026-06-07
+
+### Added
+- **三色擴到 EditEntryPage（編輯停留點頁）的 master POI 卡** — POI summary 卡（`.tp-edit-entry-poi`）依該 POI 的分類上 tone，與收藏卡 / 加入行程摘要 / 時間軸卡同視覺語言：
+  - 卡身 `--tone-subtle` 淡底 + `--tone` 左邊（3px）；icon badge `--tone-bg` 底 + `--color-foreground` 字（**不**用「填滿 `--tone` + 白字」—— sage/粉太淺、白字對比不足；也不用 `--tone-deep` 字 —— light mode 下 deep 對 `-bg` 對比 <3:1，WCAG 非文字 fail。`--color-foreground` 隨 light/dark 翻轉，對 `--tone-bg` 一律 ~10:1）。tone 由 badge 底色承載。
+  - tone 依 `poiTypeToTone(poiInfo.poiType)`，`poiType` = POI 的 `master.type`（與同頁 icon / 可編輯 category chip / label 同源）。改 category chip 時卡 tone 即時更新（餐廳→粉、住宿/交通→sage、景點/購物/活動→柔褐）。
+  - neutral 顯式回 accent，不靠 `var()` fallback，避免被有設 `--tone-*` 的祖先繼承汙染。
+  - 註：tone 依「POI 實際（可編輯）分類」而非時間軸的 entry travel-type overlay，與可編輯 chip 語意一致；未分類 POI（`master.type` null）顯 accent（同其 景點 預設）。
+
 ## [2.54.5] - 2026-06-07
 
 ### Tooling / Correctness（v2.54.4 的根因預防 follow-up）
