@@ -28,7 +28,7 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\""
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260531.1",
+    "@cloudflare/workers-types": "^4.20260607.1",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.2.2",
     "@testing-library/dom": "^10.4.1",
@@ -48,7 +48,7 @@
     "fake-indexeddb": "^6.2.5",
     "globals": "^17.6.0",
     "jsdom": "^26.0.0",
-    "miniflare": "^4.20260317.3",
+    "miniflare": "^4.20260603.0",
     "serve": "^14.2.5",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.2",
@@ -57,7 +57,7 @@
     "vite": "^8.0.0",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.1.7",
-    "wrangler": "^4.80.0"
+    "wrangler": "^4.98.0"
   },
   "_overrides_note": "v2.33.61 round 14: pin transitive deps to patch HIGH CVE per `npm audit` 2026-05-24. Re-audit + remove if upstream releases fix.",
   "overrides": {
