@@ -146,6 +146,57 @@ describe('AddPoiFavoriteToTripPage — 7-state matrix', () => {
   });
 });
 
+describe('AddPoiFavoriteToTripPage — summary tone (v2.54.2 三色)', () => {
+  // 摘要框 bg/border 依加收藏 POI 類型上 tone；data-tone 必須跟著 favorite.poiType 走，
+  // 不是寫死。用 empty-no-trip state（my-trips=[]）渲染，該 state 一定顯示摘要框。
+  function renderWithFavoriteType(poiType: string) {
+    apiFetchMock.mockImplementation((path) => {
+      if (path === '/poi-favorites') return Promise.resolve([{ ...SAMPLE_FAVORITE, poiType }]);
+      if (path === '/my-trips') return Promise.resolve([]);
+      return Promise.resolve({});
+    });
+    return renderPage();
+  }
+
+  it('吃（restaurant）→ 摘要框 data-tone="pink"', async () => {
+    renderWithFavoriteType('restaurant');
+    await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-empty')).toBeTruthy());
+    const summary = document.querySelector('.tp-form-poi-summary');
+    expect(summary?.getAttribute('data-tone')).toBe('pink');
+  });
+
+  it('住（hotel）→ 摘要框 data-tone="sage"（證明 tone 跟 poiType 走，非寫死）', async () => {
+    renderWithFavoriteType('hotel');
+    await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-empty')).toBeTruthy());
+    const summary = document.querySelector('.tp-form-poi-summary');
+    expect(summary?.getAttribute('data-tone')).toBe('sage');
+  });
+
+  // Direct mode（從 ExplorePage ➕ 進來）的 poiType 是 raw Google primaryType（如 lodging），
+  // 非 canonical。摘要 tone 必須先 mapGooglePrimaryTypeToPoiType 正規化才上色，否則 lodging
+  // 直接餵 poiTypeToTone 會落 neutral（warm），跟 ExplorePage 卡的 sage 不一致。
+  it('direct mode：raw category「lodging」正規化後 → data-tone="sage"', async () => {
+    apiFetchMock.mockImplementation((path) => {
+      if (path === '/my-trips') return Promise.resolve([]);
+      return Promise.resolve({});
+    });
+    render(
+      <MemoryRouter
+        initialEntries={[
+          '/add-to-trip?place_id=ChIJhotel&name=Hotel+X&lat=26.2&lng=127.6&category=lodging',
+        ]}
+      >
+        <Routes>
+          <Route path="/add-to-trip" element={<AddPoiFavoriteToTripPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-empty')).toBeTruthy());
+    const summary = document.querySelector('.tp-form-poi-summary');
+    expect(summary?.getAttribute('data-tone')).toBe('sage');
+  });
+});
+
 describe('AddPoiFavoriteToTripPage — trip-day skeleton (§12.4)', () => {
   it('trip 切換時 day select 顯示 .tp-skel skeleton + submit disabled', async () => {
     let resolveDays: ((value: { days: unknown[] }) => void) | null = null;

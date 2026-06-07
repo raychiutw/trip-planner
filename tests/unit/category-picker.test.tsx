@@ -55,4 +55,47 @@ describe('CategoryPicker (Variant C icon grid — signed off 2026-06-04)', () =>
     // the old fixed 4-column track must be gone so it can never pin to 4 on desktop
     expect(css).not.toMatch(/grid-template-columns:\s*repeat\(4,/);
   });
+
+  // v2.54.2 三色 legend: each tile carries its category's tone so the selected
+  // highlight matches the timeline card colour (玩/看/買=柔褐、住/移動=sage、吃=粉).
+  it('tags each tile with its category tone (picker = three-colour legend)', () => {
+    render(<CategoryPicker value="attraction" onChange={() => {}} testIdPrefix="cp" />);
+    // 吃 → pink
+    expect(screen.getByTestId('cp-restaurant').getAttribute('data-tone')).toBe('pink');
+    // 住 / 移動 → sage
+    expect(screen.getByTestId('cp-hotel').getAttribute('data-tone')).toBe('sage');
+    expect(screen.getByTestId('cp-transport').getAttribute('data-tone')).toBe('sage');
+    expect(screen.getByTestId('cp-parking').getAttribute('data-tone')).toBe('sage');
+    // 看 / 買 / 玩 → 柔褐 accent
+    expect(screen.getByTestId('cp-attraction').getAttribute('data-tone')).toBe('accent');
+    expect(screen.getByTestId('cp-shopping').getAttribute('data-tone')).toBe('accent');
+    expect(screen.getByTestId('cp-activity').getAttribute('data-tone')).toBe('accent');
+    // 其他 → neutral (falls back to accent highlight via var())
+    expect(screen.getByTestId('cp-other').getAttribute('data-tone')).toBe('neutral');
+  });
+
+  it('drives the active highlight from the tone vars (not hard-coded accent)', () => {
+    const { container } = render(<CategoryPicker value="restaurant" onChange={() => {}} />);
+    const css = container.querySelector('style')?.textContent ?? '';
+    // per-tone var definitions present (incl. explicit neutral so 'other' can't inherit
+    // a --tone-* from a themed ancestor — must resolve to accent, not leak)
+    expect(css).toMatch(/\.tp-category-tile\[data-tone="pink"\]/);
+    expect(css).toMatch(/\.tp-category-tile\[data-tone="sage"\]/);
+    expect(css).toMatch(/\.tp-category-tile\[data-tone="accent"\]/);
+    expect(css).toMatch(/\.tp-category-tile\[data-tone="neutral"\]\s*\{[^}]*--tone:\s*var\(--color-accent\)/);
+    // is-active consumes --tone-* with accent fallback
+    expect(css).toMatch(/\.tp-category-tile\.is-active\s*\{[^}]*var\(--tone-subtle,/);
+  });
+
+  // v2.54.2: focus must NOT clobber the selected tone border. focus-visible uses
+  // `outline` (orthogonal channel), so keyboard-focusing a selected pink/sage tile keeps
+  // its tone box-shadow border instead of having it overwritten by a hard accent ring.
+  it('focus ring uses outline, leaving the is-active tone box-shadow intact', () => {
+    const { container } = render(<CategoryPicker value="restaurant" onChange={() => {}} />);
+    const css = container.querySelector('style')?.textContent ?? '';
+    expect(css).toMatch(/\.tp-category-tile:focus-visible\s*\{[^}]*outline:\s*2px solid/);
+    // the old footgun: focus-visible must not set an inset box-shadow (would replace the
+    // is-active tone border on the keyboard path)
+    expect(css).not.toMatch(/\.tp-category-tile:focus-visible\s*\{[^}]*box-shadow:\s*inset/);
+  });
 });
