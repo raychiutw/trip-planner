@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.1] - 2026-06-07
+
+### Added
+- **探索頁 POI 卡卡身三色**（補 v2.54.0 暫緩項）— `.explore-poi-card` 依 POI 類型（`poiTypeToTone(mapNominatimCategory(poi.category))`）上同色系淡底 + 類型標籤 `--tone-deep` 上色。裝飾性 cover 8 色照片佔位維持不變（只動卡身，不與照片衝突）。至此所有「顯示卡」（時間軸卡 / 展開明細 / StopLightbox / 收藏卡 / 探索卡）三色到齊。
+
 ## [2.54.0] - 2026-06-07
 
 ### Added
