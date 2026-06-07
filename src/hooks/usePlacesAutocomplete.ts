@@ -175,6 +175,7 @@ export function usePlacesAutocomplete(
           });
       }, debounceMs);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ensureSessionToken 只讀寫 sessionTokenRef（ref，無 reactive 依賴）；列入會讓 setQuery 每 render 重建、破壞 debounce。
     [debounceMs, minLength, regionCode],
   );
 

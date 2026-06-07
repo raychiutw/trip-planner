@@ -189,6 +189,7 @@ export function useRoute(
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 刻意只依賴 from/to 的 lat/lng 原始值，不依賴物件參考：上游每 render 給新 from/to 物件，但座標沒變就不該重抓路線。
   }, [
     from?.lat,
     from?.lng,

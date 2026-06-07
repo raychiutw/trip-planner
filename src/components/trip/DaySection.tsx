@@ -124,7 +124,9 @@ const DaySection = React.memo(function DaySection({
     prevActiveRef.current = !!isActive;
   }, [isActive]);
 
-  const timeline = day?.timeline ?? [];
+  // useMemo 穩定 reference：`?? []` 每 render 造新陣列，會讓下面 4 個吃 timeline 的
+  // useMemo 依賴每 render 變動而永不命中（react-hooks/exhaustive-deps）。
+  const timeline = useMemo(() => day?.timeline ?? [], [day?.timeline]);
   const weatherDay = useMemo(() => buildWeatherDay(day?.label, timeline), [day?.label, timeline]);
   const dayDate = day?.date ?? daySummary?.date ?? undefined;
   const dayId = day?.id;

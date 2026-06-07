@@ -30,6 +30,11 @@ jobs:
       - name: TypeScript check (functions)
         run: npx tsc --noEmit -p tsconfig.functions.json
 
+      # v2.54.5: react-hooks/exhaustive-deps gate — repo 原本無 ESLint，hook 依賴漏列
+      # 無人擋（v2.54.4 customCategory 存錯 bug 即此類）。只跑 react-hooks 兩條規則。
+      - name: Lint (react-hooks)
+        run: npm run lint
+
       - name: Unit tests
         run: npm test
 

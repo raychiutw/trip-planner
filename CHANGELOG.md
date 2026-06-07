@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.5] - 2026-06-07
+
+### Tooling / Correctness（v2.54.4 的根因預防 follow-up）
+v2.54.4 的「自訂 POI 分類存錯」是 hook 依賴陣列漏列卻無人擋（repo 原本完全沒有 ESLint）。本版補上守門並清掉同類隱患：
+
+- **導入最小 ESLint（`eslint.config.mjs`）** — 只開 `react-hooks/rules-of-hooks` + `react-hooks/exhaustive-deps`（皆 error），**不**採用其他 style 規則或 react-hooks v7 的 React Compiler 系列，精準鎖定 hook 依賴 bug class、避免一次掃出無關 noise。加 `npm run lint` script + CI gate（`.github/workflows/ci.yml`，tsc 之後）。
+- **修掉全部 13 個既有 exhaustive-deps 違規**（10 處）：
+  - `ChangePoiPage`：**去掉包整個 render 的 `main` useMemo**（直接 return JSX），對齊本來就正確的 `AddStopPage`。這個「手維護 30 項 dep array」正是 v2.54.4 的 footgun，移除後「加 state 忘了改 dep」這類 bug 結構上不再可能。
+  - `DaySection`：`timeline` 用 `useMemo` 穩定 reference（`?? []` 每 render 造新陣列、讓 4 個下游 memo 永不命中）。
+  - `AddPoiFavoriteToTripPage`：`TIME_RE` regex 提到 module scope（原本在 render 內每次重建）。
+  - 補穩定依賴：`InfoSheet`（panelRef）、`ChatPage`（setActiveTripId）、`PoiFavoritesPage`（favorites.length）、`TripPage`（navigate + resolveState，受 initialScrollDone latch 保護）。
+  - 3 處刻意 `eslint-disable` 附理由：`usePlacesAutocomplete`（ensureSessionToken 只碰 ref，列入會破壞 debounce）、`useRoute`（刻意只依賴 from/to 的 lat/lng 原始值，避免物件參考變動就重抓）、`GlobalMapPage`（mount-only 初選，activeTripId 變動由另一個 effect 處理）。
+- 全為 behaviour-preserving（補的依賴皆穩定 / 冗餘 / 受 latch 保護）；vitest 386 檔 3333 測 + tsc + lint 全綠。
+
 ## [2.54.4] - 2026-06-07
 
 ### Fixed
