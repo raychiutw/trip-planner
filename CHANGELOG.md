@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.9] - 2026-06-08
+
+### Added
+- **AI聊天依角色三色（`ChatPage`）** — 非-POI 頁三色第 2 站。聊天 avatar 依「誰在說話」上 tone（mockup V1「輕觸」，只 avatar 上色、泡泡維持中性）：**你=柔褐**（實心，右側，沿用 base avatar）、**AI 助理=sage**（`.is-ai` → `--color-accent-2-bg`）、**共編旅伴=pink**（`.is-other-user` → `--color-accent-3-bg`）。
+  - **修掉現有問題**：原本 AI avatar（foreground 深底）與共編旅伴 avatar（secondary 灰底）意義上撞色、分不出哪句是 AI 哪句是真人；分色後一眼可辨。
+  - avatar 用 `--tone-bg` 底 + `--color-foreground` 字（contrast light/dark 皆過 ~7–12:1）；**不用 vivid `--color-accent-2/-3` 實心** —— dark mode 對 foreground 字僅 1.78:1（< WCAG），故用 `-bg` 階。移除不再需要的 `[data-theme=dark]` avatar 覆寫。
+  - TDD：`chat-avatar-role-tone.test.ts`（source-grep contract：is-ai=accent-2、is-other-user=accent-3、字=foreground、base=accent）。canonical mockup：`docs/design-sessions/2026-06-08-chat-tricolor-by-role.html`。
+
 ## [2.54.8] - 2026-06-07
 
 ### Added

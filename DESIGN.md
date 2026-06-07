@@ -163,6 +163,10 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - 視覺（mockup V3「整卡同色」）：cover 用 `--t → --t-deep` 漸層、卡身 `--t-subtle` 淡底、border/hover/選取框/選取點都跟 `--t`、avatar `--t-bg` 底。**字一律 `--color-foreground`/`--color-muted`**（不用 `--t-deep` 當字 —— light mode sage/粉 `-deep` 對 `-subtle` 對比 <4.5:1；色由 cover + 卡底承載）。canonical mockup：`design-sessions/2026-06-07-trips-list-by-destination.html`。
 - 取代了舊的 `--color-cover-*` 國家別 cover 漸層 token（jp/kr/tw/other，v2.54.8 移除）。
 
+**AI聊天 — 依角色三色（v2.54.9，`ChatPage`）**：聊天泡泡的 avatar 依「誰在說話」上 tone（mockup V1「輕觸」，只 avatar 上色、泡泡維持中性）：
+- **你=柔褐**（`.tp-chat-avatar` base = `--color-accent`，右側、實心）、**AI 助理=sage**（`.is-ai` = `--color-accent-2-bg`）、**共編旅伴=pink**（`.is-other-user` = `--color-accent-3-bg`）。修掉原本 AI 與旅伴 avatar 撞色（都 secondary/foreground）分不出真人/AI 的問題。
+- avatar 用 `--t-bg` 底 + `--color-foreground` 字（~7–12:1，light/dark 皆過）—— **不用 vivid `--color-accent-2/-3` 實心**（dark mode 對 foreground 字僅 1.78:1 fail）。canonical mockup：`design-sessions/2026-06-08-chat-tricolor-by-role.html`。
+
 ### Data Visualization 例外
 
 「柔褐三色 accent」原則有 **data visualization 例外**：地圖 polyline、chart series、時間軸 day separator 等 semantic encoding 可用 10 色 qualitative palette（Tailwind `{sky,teal,amber,rose,violet,lime,orange,cyan,fuchsia,emerald}-500`）。UI chrome（button、text、icon、active state）仍嚴守柔褐三色。
