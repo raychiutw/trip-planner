@@ -10,6 +10,16 @@ describe('EditableCategoryChip', () => {
     expect(screen.queryByTestId('ec-pop')).toBeNull();
   });
 
+  // v2.54.7 三色：chip 依其分類 value 上 data-tone（吃=粉、住/移動=sage、玩看買=柔褐）。
+  it('carries data-tone matching its category (restaurant→pink, hotel→sage, attraction→accent)', () => {
+    const { rerender } = render(<EditableCategoryChip value="restaurant" onChange={() => {}} testIdPrefix="ec" />);
+    expect(screen.getByTestId('ec-toggle').getAttribute('data-tone')).toBe('pink');
+    rerender(<EditableCategoryChip value="hotel" onChange={() => {}} testIdPrefix="ec" />);
+    expect(screen.getByTestId('ec-toggle').getAttribute('data-tone')).toBe('sage');
+    rerender(<EditableCategoryChip value="attraction" onChange={() => {}} testIdPrefix="ec" />);
+    expect(screen.getByTestId('ec-toggle').getAttribute('data-tone')).toBe('accent');
+  });
+
   it('opens the picker on click, calls onChange with the picked type, and closes', () => {
     const onChange = vi.fn();
     render(<EditableCategoryChip value="attraction" onChange={onChange} testIdPrefix="ec" />);
