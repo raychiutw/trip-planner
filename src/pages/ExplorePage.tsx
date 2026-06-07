@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/apiClient';
 import { mapNominatimCategory, POI_TYPE_LABELS } from '../lib/poiCategory';
+import { poiTypeToTone } from '../lib/timelineUtils';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import Icon from '../components/shared/Icon';
@@ -145,6 +146,11 @@ const SCOPED_STYLES = `
   width: 100%;
   background: var(--color-tertiary);
 }
+/* 三色：探索卡依 POI 類型上同色系淡底 + 類型標籤色（cover 8 色裝飾照片佔位維持不變）*/
+.explore-poi-card[data-tone="accent"] { --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); --tone-bg: var(--color-accent-bg); }
+.explore-poi-card[data-tone="sage"]   { --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
+.explore-poi-card[data-tone="pink"]   { --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
+.explore-poi-card[data-tone="accent"], .explore-poi-card[data-tone="sage"], .explore-poi-card[data-tone="pink"] { background: var(--tone-subtle); border-color: var(--tone-bg); }
 .explore-poi-cover[data-tone="1"] { background: linear-gradient(135deg, #f5cba7 0%, #d68160 100%); }
 .explore-poi-cover[data-tone="2"] { background: linear-gradient(135deg, #a3d9b1 0%, #5b9b6e 100%); }
 .explore-poi-cover[data-tone="3"] { background: linear-gradient(135deg, #b3c7e6 0%, #6b88b8 100%); }
@@ -210,7 +216,7 @@ const SCOPED_STYLES = `
 .explore-poi-card .explore-poi-rating-star { color: var(--color-priority-medium-dot, #f5a62c); }
 .explore-poi-card .poi-category {
   font-size: var(--font-size-eyebrow); font-weight: 700; letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--color-muted);
+  text-transform: uppercase; color: var(--tone-deep, var(--color-muted));
 }
 
 /* Section 4.9：region selector pill + subtabs (5 個 category chip) */
@@ -747,7 +753,7 @@ export default function ExplorePage() {
                       const placeIdHash = (poi.place_id || '').split('').reduce((s, c) => s + c.charCodeAt(0), 0);
                       const tone = (placeIdHash % 8) + 1;
                       return (
-                        <article className="explore-poi-card" key={poi.place_id}>
+                        <article className="explore-poi-card" key={poi.place_id} data-tone={poiTypeToTone(mapNominatimCategory(poi.category))}>
                           <div
                             className="explore-poi-cover"
                             data-tone={String(tone)}
