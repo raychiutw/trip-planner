@@ -150,7 +150,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 > v2.53 tone 調整：用餐→粉、住宿→sage、活動→柔褐（café 跟用餐歸粉）。記憶法：**玩/看/買 = 柔褐、住/移動 = sage、吃 = 粉**。
 > **展開明細同色**：stop 點開的 `.tp-rail-detail`（景點說明/備註/actions 面板）**自帶 `data-tone`**（它是 `.tp-rail-item` 的 sibling、非後代，繼承不到 item 的 `--tone-*`），背景 + 邊框用該 tone 的 `--tone-subtle/-bg`，與卡片同色系；neutral fallback secondary。travel pill / connector 永遠 sage。
-> **tone 套用範圍（v2.54）**：時間軸卡 `.tp-rail-item` + 展開明細 `.tp-rail-detail` + 全螢幕詳情 `.tp-lightbox`（head/pill/desc/loc 套 tone）+ 收藏頁卡 `.favorites-card`（`poiTypeToTone(poiType)` 驅動，因非 `TimelineEntryData`）。**收藏/愛心 affordance = 粉**：ExplorePage `.explore-poi-heart.is-saved` + `.poi-actions button.saved` → `--color-accent-3`（與卡片 tone 無關，永遠粉）。探索卡卡身 tone tint 暫緩（裝飾 cover 會衝突）。
+> **tone 套用範圍（v2.54）**：時間軸卡 `.tp-rail-item` + 展開明細 `.tp-rail-detail` + 全螢幕詳情 `.tp-lightbox`（head/pill/desc/loc 套 tone）+ 收藏頁卡 `.favorites-card`（`poiTypeToTone(poiType)` 驅動，因非 `TimelineEntryData`）。**收藏/愛心 affordance = 粉**：ExplorePage `.explore-poi-heart.is-saved` + `.poi-actions button.saved` → `--color-accent-3`（與卡片 tone 無關，永遠粉）。探索卡卡身（`.explore-poi-card`，v2.54.1）依 `poiTypeToTone` 上同色系淡底 + 類型標籤 tone 色；只動卡身，裝飾照片 cover（8 色 hash）不變。
 
 ### Data Visualization 例外
 
