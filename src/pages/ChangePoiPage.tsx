@@ -897,7 +897,12 @@ export default function ChangePoiPage() {
     </div>
   ), [category]);
 
-  const main = useMemo(() => (
+  // 刻意「不」memoize：直接組 JSX。曾用 useMemo + 手維護 30 項 dep array，但 v2.50.0 加
+  // customCategory 卻沒同步進 deps → memoized JSX 變 stale（picker 凍住 / 存錯分類，v2.54.4
+  // 修）。對齊 AddStopPage（render 非 memoized、所以同類 bug 從未發生）。整頁 re-render 時
+  // React 會 reconcile（LocationPickerMap 無 key、useGoogleMap 只 init 一次 → map 不 remount），
+  // 成本微小，換來「加 state 不必記得改 dep array」的正確性。move-state-add-bug 不再可能。
+  const main = (
     <div className="tp-change-poi-page-shell" data-testid="change-poi-page">
       <style>{SCOPED_STYLES}</style>
       <TitleBar title={pageTitle} back={goBack} />
@@ -1230,43 +1235,7 @@ export default function ChangePoiPage() {
         </div>
       </div>
     </div>
-  ), [
-    category,
-    categoryFilter,
-    error,
-    favorites,
-    filterSheetOpen,
-    filteredFavorites,
-    filteredSearchResults,
-    goBack,
-    handleSearchInput,
-    handleSubmit,
-    handleTabChange,
-    pageTitle,
-    query,
-    region,
-    regionMenuOpen,
-    searchResults.length,
-    searching,
-    selected,
-    searchCatOverride,
-    mode,
-    submitting,
-    submitLabel,
-    submitDisabled,
-    tab,
-    customTitle,
-    customCoord,
-    customHintConfirmed,
-    // customCategory + customDestinations render inside this memo (CategoryPicker
-    // value + the loading/form branch) but were never listed → memoized JSX went
-    // stale on category pick / destinations load. (customDestinations was only
-    // implicitly carried via customInitialCenter; list it explicitly.)
-    customCategory,
-    customDestinations,
-    customError,
-    customInitialCenter,
-  ]);
+  );
 
   return (
     <AppShell

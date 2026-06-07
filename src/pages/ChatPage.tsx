@@ -621,7 +621,9 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     }
     void load();
     return () => { cancelled = true; };
-  }, []);
+    // setActiveTripId 是 context setter（穩定）；effect 讀 activeTripIdRef.current
+    // 而非 activeTripId，故維持 mount-only 不需要把 activeTripId 列入。
+  }, [setActiveTripId]);
 
   // Close trip menu on outside click
   useEffect(() => {

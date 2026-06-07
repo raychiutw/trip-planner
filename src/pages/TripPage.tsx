@@ -565,7 +565,10 @@ function TripPageInner(
       if (rafId !== null) cancelAnimationFrame(rafId);
       if (timeoutId !== null) clearTimeout(timeoutId);
     };
-  }, [loading, dayNums, autoScrollDates, switchDay, localToday]);
+    // resolveState 是 discriminated union（tripId 只在 'resolved' variant），deps 不能
+    // 取 .tripId（render 時可能是 loading variant → TS error）；依賴整個 resolveState 物件，
+    // 變動由 initialScrollDone latch 擋住重跑。
+  }, [loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState]);
 
   /* --- scrollMarginTop dynamic alignment (#7) --- */
   useEffect(() => {

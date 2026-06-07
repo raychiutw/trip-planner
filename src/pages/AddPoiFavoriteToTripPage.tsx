@@ -50,6 +50,11 @@ interface DayBrief {
  *  「Hui Yun 的沖繩之旅」(name)，跨頁面 label 不一致。對齊 TripsListPage
  *  line 1088 / TripPickerPopover / ChatPage / MapPage / GlobalMapPage
  *  4 處同樣 `title || name || tripId` pattern。 */
+// 後端 TIME_RE 同 functions/api/_time.ts；前端 defense-in-depth，防 legacy browser 把
+// type=time 退回 text、autofill 注入非 HH:MM、或測試直接 setState 髒值。module-level 常數
+// （不在 render 內重建，否則 canSubmit 的 useMemo 依賴會每 render 變動）。
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 function tripDisplayName(t: TripBrief): string {
   return t.title?.trim() || t.name?.trim() || t.tripId;
 }
@@ -320,9 +325,6 @@ export default function AddPoiFavoriteToTripPage() {
     return () => { cancelled = true; };
   }, [tripId]);
 
-  // 後端 TIME_RE 同 functions/api/_time.ts；前端 defense-in-depth，
-  // 防 legacy browser 把 type=time 退回 text、autofill 注入非 HH:MM、或測試直接 setState 髒值。
-  const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
   const canSubmit = useMemo(() => {
     if (!favorite || !tripId || dayNum === '' || daysLoading || submitting) return false;
     if (startTime && !TIME_RE.test(startTime)) return false;
