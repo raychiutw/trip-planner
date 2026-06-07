@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.7] - 2026-06-07
+
+### Added
+- **三色擴到 `EditableCategoryChip`（可編輯分類 chip）** — 一次點亮多頁的分類 chip：此共用元件用於 `EditEntryPage`（master + 備選）、`ChangePoiPage`（mode=new 搜尋結果）、`AddStopPage`（搜尋結果）。chip 依其分類 `value` 上 tone（`poiTypeToTone(value)`）：
+  - 淡 tone 底（resting `--tone-subtle`）+ hover 深一階 `--tone-bg` + open/focus 的 `--tone` 框。
+  - **字與 icon 一律 `--color-foreground`（~13:1）**，不塗 `--tone-deep` —— light mode 下 deep 對 `--tone-subtle` sage 僅 2.81:1（< 3:1 非文字門檻）。tone 由 chip 底色 + 框承載。
+  - 顯式設 `--tone-*`（不靠繼承）—— chip 常被包進已設 `--tone-*` 的 tone 卡（如 EditEntryPage POI 卡）內，靠繼承會拿到卡的 tone 而非 chip 自己 `value` 的。neutral 顯式回 accent。
+- 至此非地圖的 POI/分類顯示與編輯面三色全到齊。
+
 ## [2.54.6] - 2026-06-07
 
 ### Added
