@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI聊天 — 三色分色（依角色）</title>
+<style>
+:root{
+  --color-accent:#A97A4A; --color-accent-subtle:#F4EDE3; --color-accent-bg:#E9DBC8; --color-accent-deep:#8A6038;
+  --color-accent-2:#A8BAAA; --color-accent-2-deep:#7E9580; --color-accent-2-subtle:#ECF0ED; --color-accent-2-bg:#D4DDD5;
+  --color-accent-3:#E78C99; --color-accent-3-deep:#C66B78; --color-accent-3-subtle:#FAF1F3; --color-accent-3-bg:#F2DBE0;
+  --color-background:#FFFBF5; --color-secondary:#FAF4EA; --color-tertiary:#F2EAD9; --color-hover:#F9EDE0;
+  --color-foreground:#2A1F18; --color-muted:#6F5A47; --color-accent-foreground:#FFFFFF;
+  --color-border:#EADFCF; --color-line-strong:#C8B89F;
+  --radius-xl:18px; --radius-full:9999px;
+  --fs-eyebrow:.625rem; --fs-footnote:.875rem; --fs-caption2:.6875rem;
+}
+body.dark{
+  --color-accent:#CBA06E; --color-accent-subtle:#33271A; --color-accent-bg:#44341F; --color-accent-deep:#E0BC90;
+  --color-accent-2:#8FBE9C; --color-accent-2-deep:#A8D0B4; --color-accent-2-subtle:#243A2C; --color-accent-2-bg:#2E3D30;
+  --color-accent-3:#E8A0AB; --color-accent-3-deep:#F0B8C0; --color-accent-3-subtle:#4A2A3A; --color-accent-3-bg:#6B3F52;
+  --color-background:#1A140F; --color-secondary:#241B14; --color-tertiary:#2E2418; --color-hover:#2E2418;
+  --color-foreground:#F5EBDD; --color-muted:#B89E84; --color-accent-foreground:#1A140F;
+  --color-border:#3D2D22; --color-line-strong:#5A4634;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--color-background);color:var(--color-foreground);
+  font-family:Inter,"Noto Sans TC","PingFang TC",system-ui,sans-serif;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s;}
+.page{max-width:1180px;margin:0 auto;padding:24px 24px 80px;}
+.doc-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px;}
+.doc-h{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:0;}
+.doc-sub{color:var(--color-muted);font-size:var(--fs-footnote);margin:2px 0 0;}
+.toggle{border:1px solid var(--color-border);background:var(--color-secondary);color:var(--color-foreground);
+  border-radius:var(--radius-full);padding:8px 16px;font:inherit;font-weight:600;font-size:var(--fs-footnote);cursor:pointer;}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 4px;font-size:var(--fs-footnote);color:var(--color-muted);}
+.legend b{color:var(--color-foreground);} .legend .sw{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-2px;margin-right:5px;}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:20px;}
+@media(max-width:980px){.cols{grid-template-columns:1fr;}}
+.variant{border:1px solid var(--color-border);border-radius:14px;overflow:hidden;background:var(--color-background);}
+.variant-head{padding:12px 16px;border-bottom:1px solid var(--color-border);background:var(--color-secondary);}
+.variant-tag{font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-foreground);background:var(--color-accent);padding:2px 7px;border-radius:5px;margin-right:8px;}
+.variant-name{font-weight:800;font-size:.95rem;}
+.variant-desc{color:var(--color-muted);font-size:var(--fs-caption2);margin-top:4px;line-height:1.5;}
+
+/* ===== chat body (faithful to ChatPage CSS) ===== */
+.tp-chat-body{display:flex;flex-direction:column;gap:10px;padding:18px 16px;min-height:520px;}
+.tp-chat-day-divider{text-align:center;margin:6px 0 2px;font-size:var(--fs-caption2);color:var(--color-muted);font-weight:600;letter-spacing:.06em;}
+.tp-chat-msg-row{display:flex;gap:8px;align-items:flex-end;}
+.tp-chat-msg-row.is-user{align-self:flex-end;max-width:88%;flex-direction:row-reverse;}
+.tp-chat-msg-row.is-assistant,.tp-chat-msg-row.is-other-user{align-self:flex-start;max-width:88%;}
+.tp-chat-msg-bubble-wrap{display:flex;flex-direction:column;min-width:0;}
+.tp-chat-msg-sender-name{font-size:var(--fs-eyebrow);font-weight:700;letter-spacing:.06em;color:var(--color-muted);margin:0 0 3px 4px;}
+.tp-chat-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-caption2);font-weight:700;flex-shrink:0;background:var(--color-accent);color:var(--color-accent-foreground);}
+.tp-chat-msg{padding:9px 13px;border-radius:var(--radius-xl);font-size:var(--fs-footnote);line-height:1.55;max-width:100%;}
+.tp-chat-msg-user{background:var(--color-accent);color:var(--color-accent-foreground);border-bottom-right-radius:4px;}
+.tp-chat-msg-assistant,.tp-chat-msg-other-user{background:var(--color-secondary);border:1px solid var(--color-border);color:var(--color-foreground);border-bottom-left-radius:4px;}
+.tp-chat-msg-time{font-size:var(--fs-caption2);color:var(--color-muted);margin-top:3px;padding:0 4px;font-weight:500;}
+.is-user .tp-chat-msg-time{align-self:flex-end;}
+
+/* ===================== V1 輕：只 avatar 依角色上色 ===================== */
+.v1 .av-ai{background:var(--color-accent-2);color:var(--color-foreground);}
+.v1 .av-mate{background:var(--color-accent-3);color:var(--color-foreground);}
+
+/* ===================== V2 中：avatar + bubble 淡底依角色 ===================== */
+.v2 .av-ai{background:var(--color-accent-2);color:var(--color-foreground);}
+.v2 .av-mate{background:var(--color-accent-3);color:var(--color-foreground);}
+.v2 .bub-ai{background:var(--color-accent-2-subtle);border-color:var(--color-accent-2-bg);}
+.v2 .bub-mate{background:var(--color-accent-3-subtle);border-color:var(--color-accent-3-bg);}
+
+/* ===================== V3 重：+ sender 名上色 + 左緣色條 ===================== */
+.v3 .av-ai{background:var(--color-accent-2);color:var(--color-foreground);}
+.v3 .av-mate{background:var(--color-accent-3);color:var(--color-foreground);}
+.v3 .bub-ai{background:var(--color-accent-2-subtle);border-color:var(--color-accent-2-bg);border-left:3px solid var(--color-accent-2);}
+.v3 .bub-mate{background:var(--color-accent-3-subtle);border-color:var(--color-accent-3-bg);border-left:3px solid var(--color-accent-3);}
+.v3 .name-ai{color:var(--color-accent-2-deep);}
+.v3 .name-mate{color:var(--color-accent-3-deep);}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="doc-top">
+    <div>
+      <h1 class="doc-h">AI聊天 — 三色分色（依角色）</h1>
+      <p class="doc-sub">色 = 誰在說話：<b style="color:var(--color-accent-deep)">你＝柔褐</b>（右、實心）・<b style="color:var(--color-accent-2-deep)">AI＝sage</b>（系統/助理）・<b style="color:var(--color-accent-3-deep)">旅伴＝粉</b>（人/協作）。修掉目前 AI 跟旅伴長一樣的問題。</p>
+    </div>
+    <button class="toggle" onclick="document.body.classList.toggle('dark')">◐ Light / Dark</button>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--color-accent)"></span><b>你</b></span>
+    <span><span class="sw" style="background:var(--color-accent-2)"></span><b>AI 助理</b></span>
+    <span><span class="sw" style="background:var(--color-accent-3)"></span><b>共編旅伴</b></span>
+  </div>
+  <div class="cols" id="cols"></div>
+</div>
+<script>
+const V = [
+  {tag:'V1', name:'輕觸 — 只 avatar 上色', desc:'bubble 維持中性，只有 AI / 旅伴的頭像帶角色色。最克制，一眼分得出誰是 AI 誰是人，但對話泡泡仍同色。'},
+  {tag:'V2', name:'淡底 — avatar + bubble 上色', desc:'AI 泡泡 sage 淡底、旅伴泡泡粉淡底、你的維持實心柔褐。角色一目了然、泡泡仍乾淨。平衡點。'},
+  {tag:'V3', name:'最強 — + 名字色 + 左緣條', desc:'再加 sender 名上色 + 泡泡左 3px 色條。角色分色最明顯；但左側泡泡較多裝飾。'},
+];
+function thread(v){
+  return `<div class="tp-chat-body">
+    <div class="tp-chat-day-divider">2026/07/02（週四）</div>
+
+    <div class="tp-chat-msg-row is-user">
+      <div class="tp-chat-msg-bubble-wrap"><div class="tp-chat-msg tp-chat-msg-user">幫我把第二天下午加一間咖啡廳</div><div class="tp-chat-msg-time">14:02</div></div>
+    </div>
+
+    <div class="tp-chat-msg-row is-assistant">
+      <div class="tp-chat-avatar av-ai is-ai">AI</div>
+      <div class="tp-chat-msg-bubble-wrap">
+        <div class="tp-chat-msg tp-chat-msg-assistant bub-ai">好的，我在第二天 15:30 加了『瀨長島 氾濫漢堡咖啡』。前往查看 →</div>
+        <div class="tp-chat-msg-time">14:02 · AI 助理</div>
+      </div>
+    </div>
+
+    <div class="tp-chat-msg-row is-other-user">
+      <div class="tp-chat-avatar av-mate">P</div>
+      <div class="tp-chat-msg-bubble-wrap">
+        <div class="tp-chat-msg-sender-name name-mate">penyin</div>
+        <div class="tp-chat-msg tp-chat-msg-other-user bub-mate">第三天我想改去美麗海水族館，可以嗎？</div>
+        <div class="tp-chat-msg-time" style="align-self:flex-start;margin-left:42px">14:10</div>
+      </div>
+    </div>
+
+    <div class="tp-chat-msg-row is-user">
+      <div class="tp-chat-msg-bubble-wrap"><div class="tp-chat-msg tp-chat-msg-user">好啊，幫我們改一下</div><div class="tp-chat-msg-time">14:11</div></div>
+    </div>
+
+    <div class="tp-chat-msg-row is-assistant">
+      <div class="tp-chat-avatar av-ai is-ai">AI</div>
+      <div class="tp-chat-msg-bubble-wrap">
+        <div class="tp-chat-msg tp-chat-msg-assistant bub-ai">已把第三天下午改成美麗海水族館，並重算了車程。有需要我順便找附近午餐嗎？</div>
+        <div class="tp-chat-msg-time">14:11 · AI 助理</div>
+      </div>
+    </div>
+  </div>`;
+}
+document.getElementById('cols').innerHTML = V.map(v=>`
+  <div class="variant ${v.tag.toLowerCase()}">
+    <div class="variant-head"><span class="variant-tag">${v.tag}</span><span class="variant-name">${v.name}</span><div class="variant-desc">${v.desc}</div></div>
+    ${thread(v)}
+  </div>`).join('');
+</script>
+</body>
+</html>
