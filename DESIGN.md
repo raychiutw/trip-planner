@@ -153,6 +153,16 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 > **tone 套用範圍（v2.54）**：時間軸卡 `.tp-rail-item` + 展開明細 `.tp-rail-detail` + 全螢幕詳情 `.tp-lightbox`（head/pill/desc/loc 套 tone）+ 收藏頁卡 `.favorites-card`（`poiTypeToTone(poiType)` 驅動，因非 `TimelineEntryData`）。**收藏/愛心 affordance = 粉**：ExplorePage `.explore-poi-heart.is-saved` + `.poi-actions button.saved` → `--color-accent-3`（與卡片 tone 無關，永遠粉）。探索卡卡身（`.explore-poi-card`，v2.54.1）依 `poiTypeToTone` 上同色系淡底 + 類型標籤 tone 色；只動卡身，裝飾照片 cover（8 色 hash）不變。
 > **編輯/輸入面（v2.54.2）**：分類選擇器 `CategoryPicker` 每格 tile 帶 `data-tone={poiTypeToTone(type)}`，**選中態**用該分類自己的 tone（picker = 三色 legend，選餐廳亮粉、住宿亮 sage、景點/購物亮柔褐）；加入行程精靈的 POI 摘要框 `.tp-form-poi-summary`（`AddPoiFavoriteToTripPage`）依加收藏 POI 類型上 tone。至此顯示面 + 編輯面皆涵蓋。
 
+### 非-POI 頁的分色（categorical / wayfinding 用色）
+
+三色除了上面的 POI 語意用法，也可在**沒有 POI 分類的頁**當「分類辨識」用 —— 每個分類維度穩定對應一個 tone，幫 wayfinding。**注意這是 categorical 用色：同一個 tone 在此的意義 ≠ POI 語意**（例：行程一覽的 `粉` = 某個目的地，不是「吃/收藏」）。這是刻意的 context-dependent 用色，與上面的「Day palette 多色只給地圖」同精神（categorical encoding 的受控例外），不是矛盾。
+
+**行程一覽 — 依目的地三色（v2.54.8，`TripsListPage`）**：行程卡依目的地上 tone，`destinationTone(countries)` 決定：
+- 錨定常見國家：**日本=accent 柔褐、台灣=sage、韓國=pink**（沿用 `coverClass` 舊邏輯的 `.includes` + JP>KR>TW 優先序）。
+- 其餘國家：deterministic hash → 三色輪替（每國穩定一色、可擴到任何國家、不退化成全 neutral；空/未知 → accent）。
+- 視覺（mockup V3「整卡同色」）：cover 用 `--t → --t-deep` 漸層、卡身 `--t-subtle` 淡底、border/hover/選取框/選取點都跟 `--t`、avatar `--t-bg` 底。**字一律 `--color-foreground`/`--color-muted`**（不用 `--t-deep` 當字 —— light mode sage/粉 `-deep` 對 `-subtle` 對比 <4.5:1；色由 cover + 卡底承載）。canonical mockup：`design-sessions/2026-06-07-trips-list-by-destination.html`。
+- 取代了舊的 `--color-cover-*` 國家別 cover 漸層 token（jp/kr/tw/other，v2.54.8 移除）。
+
 ### Data Visualization 例外
 
 「柔褐三色 accent」原則有 **data visualization 例外**：地圖 polyline、chart series、時間軸 day separator 等 semantic encoding 可用 10 色 qualitative palette（Tailwind `{sky,teal,amber,rose,violet,lime,orange,cyan,fuchsia,emerald}-500`）。UI chrome（button、text、icon、active state）仍嚴守柔褐三色。

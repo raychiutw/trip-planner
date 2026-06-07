@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.8] - 2026-06-07
+
+### Added
+- **行程一覽「依目的地三色切換」（`TripsListPage`）** — 三色從 POI 顯示/編輯面延伸到非-POI 頁的第一站。行程卡依目的地上 tone（mockup V3「整卡同色」，user sign-off）：cover 用 tone 漸層 + 卡身 `--tone-subtle` 淡底 + border/hover/選取框/選取點跟 tone。一覽照去的地方分色、同目的地視覺成組（5 個日本柔褐成組、台灣 sage 跳出）。
+  - `destinationTone(countries)`：常見國家**錨定**（日本=accent 柔褐、台灣=sage、韓國=pink，沿用舊 `coverClass` 的 `.includes` + JP>KR>TW 優先序），其餘國家 deterministic hash **輪替**三色（每國穩定一色、可擴到任何國家、不退化成全 neutral；空/未知 → accent）。
+  - 字一律 `--color-foreground`/`--color-muted`（不用 `--tone-deep` 當字 —— light mode sage/粉 deep 對 subtle 對比 <4.5:1；色由 cover + 卡底承載）。對比 light/dark 皆過 WCAG（title 10–14:1、meta 4.8–5.9:1、avatar 7.3–12:1）。
+  - 取代舊的 `--color-cover-*` 國家別 cover 漸層 token（jp/kr/tw/other，連 `coverClass` 一併移除 —— 改用三色系統後已 dead）。
+  - 註：這是三色的 **categorical / wayfinding 用法**（粉在此 = 某目的地，非 POI 語意的吃/收藏）；DESIGN.md「非-POI 頁的分色」章已記此 context-dependent 例外。canonical mockup：`docs/design-sessions/2026-06-07-trips-list-by-destination.html`。
+  - TDD：`trips-destination-tone.test.ts`（錨定 + hash 穩定性 + 分布 + 優先序 + 空值，6 cases）。
+
 ## [2.54.7] - 2026-06-07
 
 ### Added
