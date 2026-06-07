@@ -14,6 +14,7 @@
  * mode 才回 standard OIDC userinfo claims）
  */
 import { requireSessionUser } from '../_session';
+import { getAuth } from '../_utils';
 import { AppError } from '../_errors';
 import type { Env } from '../_types';
 
@@ -27,13 +28,20 @@ interface UserRow {
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const session = await requireSessionUser(context.request, context.env);
+  // Use the _middleware-decorated user when present. NOTE: _middleware forces
+  // context.data.auth = null for ALL /api/oauth/* EXCEPT the local DEV_MOCK_EMAIL path
+  // (which decorates auth *before* the oauth/* short-circuit). So in practice this only
+  // populates a user for local mock auth — which is the fix: userinfo used to re-read the
+  // session cookie via requireSessionUser, ignoring mock auth and 401-ing the frontend
+  // page-load probe in local dev. In prod (no DEV_MOCK_EMAIL) auth is null here, so we fall
+  // back to requireSessionUser exactly as before — prod behavior unchanged.
+  const uid = getAuth(context)?.userId ?? (await requireSessionUser(context.request, context.env)).uid;
 
   const row = await context.env.DB
     .prepare(
       'SELECT id, email, email_verified_at, display_name, avatar_url, created_at FROM users WHERE id = ?',
     )
-    .bind(session.uid)
+    .bind(uid)
     .first<UserRow>();
 
   if (!row) {

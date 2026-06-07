@@ -41,6 +41,9 @@ API 需要身份模擬。**用 `.dev.vars` 不是 `.env.local`** — wrangler pa
 # .dev.vars (放在 project root)
 # 本機 mock 認證用（V2 OAuth 之前是 Cloudflare Access；v2.32+ 改 session cookie，
 # DEV_MOCK_EMAIL 仍跳過 prod auth flow 給 dev 用）
+# 三者缺一 → SEC-6 fail-closed guard deny，/api/* 全 500（見 _middleware.ts:299-302）。
+ENVIRONMENT=development
+ALLOW_DEV_MOCK=1
 DEV_MOCK_EMAIL=you@example.com
 ```
 

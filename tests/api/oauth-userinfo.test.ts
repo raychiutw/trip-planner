@@ -20,12 +20,17 @@ function makeStmt(firstResult: unknown = null) {
   return stmt;
 }
 
-function makeContext(url: string, env: MockEnv, cookie?: string): Parameters<typeof onRequestGet>[0] {
+function makeContext(
+  url: string,
+  env: MockEnv,
+  cookie?: string,
+  data: Record<string, unknown> = {},
+): Parameters<typeof onRequestGet>[0] {
   return {
     request: new Request(url, { headers: cookie ? { Cookie: cookie } : undefined }),
     env: env as unknown as never,
     params: {} as unknown as never,
-    data: {} as unknown as never,
+    data: data as unknown as never,
     next: () => Promise.resolve(new Response()),
     waitUntil: () => undefined,
     passThroughOnException: () => undefined,
@@ -106,6 +111,45 @@ describe('GET /api/oauth/userinfo', () => {
     await expect(
       onRequestGet(makeContext('https://x.com/api/oauth/userinfo', env, `tripline_session=${token}`)),
     ).rejects.toMatchObject({ code: 'AUTH_INVALID' });
+  });
+
+  it('uses context.data.auth.userId from middleware (mock auth / no session cookie)', async () => {
+    // _middleware decorates context.data.auth for V2 session, bearer, AND DEV_MOCK_EMAIL.
+    // userinfo must honor it — local dev mock auth has no session cookie.
+    const stmt = makeStmt({
+      id: 'mock-user', email: 'mock@x.com',
+      email_verified_at: null, display_name: 'Mock', avatar_url: null,
+      created_at: '2026-04-25',
+    });
+    const prepare = vi.fn().mockReturnValue(stmt);
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare } };
+    // no cookie; auth supplied by middleware
+    const res = await onRequestGet(
+      makeContext('https://x.com/api/oauth/userinfo', env, undefined, { auth: { userId: 'mock-user' } }),
+    );
+    expect(res.status).toBe(200);
+    expect(stmt.bind).toHaveBeenCalledWith('mock-user');
+    const json = await res.json() as { id: string };
+    expect(json.id).toBe('mock-user');
+  });
+
+  it('falls back to session cookie when middleware left no auth (preserves 401)', async () => {
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: vi.fn() } };
+    // data.auth = null (unauthenticated middleware decoration) + no cookie → 401
+    await expect(
+      onRequestGet(makeContext('https://x.com/api/oauth/userinfo', env, undefined, { auth: null })),
+    ).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+  });
+
+  it('falls back when auth object present but userId null (service token / no user) — does not bind null', async () => {
+    // truthy auth with null userId (e.g. service-token decoration) → getAuth()?.userId is null
+    // → ?? falls through to requireSessionUser; no cookie → 401 (never binds null to the query)
+    const prepare = vi.fn();
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare } };
+    await expect(
+      onRequestGet(makeContext('https://x.com/api/oauth/userinfo', env, undefined, { auth: { userId: null } })),
+    ).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    expect(prepare).not.toHaveBeenCalled();
   });
 
   it('SQL filters by uid from session', async () => {
