@@ -866,7 +866,10 @@ export default function ChangePoiPage() {
       setError(err instanceof Error ? err.message : '置換景點失敗');
       setSubmitting(false);
     }
-  }, [selected, searchCatOverride, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord, newDayNum]);
+    // customCategory MUST be here: handleSubmit reads it for the custom-tab payload
+    // (poi_type / type). v2.50.0 added the state but never threaded it in → the
+    // callback closed over the initial 'attraction' → custom POIs always saved as 景點.
+  }, [selected, searchCatOverride, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord, customCategory, newDayNum]);
 
   // v2.31.98: custom tab submit 啟動條件不同（要 title + coord，不要 selected）
   const submitDisabled = tab === 'custom'
@@ -1255,6 +1258,12 @@ export default function ChangePoiPage() {
     customTitle,
     customCoord,
     customHintConfirmed,
+    // customCategory + customDestinations render inside this memo (CategoryPicker
+    // value + the loading/form branch) but were never listed → memoized JSX went
+    // stale on category pick / destinations load. (customDestinations was only
+    // implicitly carried via customInitialCenter; list it explicitly.)
+    customCategory,
+    customDestinations,
     customError,
     customInitialCenter,
   ]);

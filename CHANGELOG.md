@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.4] - 2026-06-07
+
+### Fixed
+- **自訂 POI 分類存錯（一律存成「景點」）** — `ChangePoiPage` 自訂 tab 用 `CategoryPicker` 選分類後，不論選哪個都被存成 `attraction`（景點）。Root cause：`customCategory` state 是 v2.50.0 才加的，但從沒被加進兩個既有的 dependency array：
+  - `handleSubmit` (`useCallback`) 的 deps 漏了 `customCategory` → callback 閉包卡在初始 `'attraction'`，送出 payload 的 `type` / `poi_type` 永遠是 `'attraction'`（**資料寫錯，使用者實際回報的 bug**）。
+  - `main` (`useMemo`) 包整個 render 的 deps 漏了 `customCategory`（與 `customDestinations`）→ memoized JSX 在點分類時不重算，picker 視覺停在初始選取（prod 觀察到的「點了不會動」）。
+  - 修法：把 `customCategory` 補進 `handleSubmit` deps、把 `customCategory` + `customDestinations` 補進 `main` deps（`customDestinations` 原本只靠 `customInitialCenter` 間接帶入，改顯式列出）。
+  - 新增 behavioural regression test（`change-poi-custom-category.test.tsx`）：render 真實頁面、依 title→coord→分類順序操作，斷言送出 payload 的 `type` 為所選分類。純 source-grep contract test 抓不到此 runtime bug。
+  - 旁證確認 `AddStopPage`（同樣用 `CustomPoiForm`）**無此 bug** — 它的 `handleConfirm` deps 已含 `customCategory`，且 render 非 memoized。此問題僅 `ChangePoiPage` 的 `main` useMemo + handleSubmit 漏列所獨有。
+
 ## [2.54.3] - 2026-06-07
 
 ### Fixed (本機 dev / stage 環境修復)
