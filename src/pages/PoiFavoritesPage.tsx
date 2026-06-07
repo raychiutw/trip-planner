@@ -29,6 +29,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import { POI_TYPE_LABELS, mapNominatimCategory } from '../lib/poiCategory';
+import { poiTypeToTone } from '../lib/timelineUtils';
 
 interface PoiFavoriteRow {
   id: number;
@@ -172,10 +173,18 @@ const SCOPED_STYLES = `
 .favorites-card.is-selected { border-color: var(--color-accent); background: var(--color-accent-subtle); }
 .favorites-card.is-deleting { opacity: 0.5; pointer-events: none; }
 
+/* 三色：收藏卡依 POI 類型上同色系淡底（玩/看/買=柔褐、住/移動=sage、吃=粉）*/
+.favorites-card[data-tone="accent"] { --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); --tone-bg: var(--color-accent-bg); }
+.favorites-card[data-tone="sage"]   { --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
+.favorites-card[data-tone="pink"]   { --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
+.favorites-card[data-tone="accent"]:not(.is-selected),
+.favorites-card[data-tone="sage"]:not(.is-selected),
+.favorites-card[data-tone="pink"]:not(.is-selected) { background: var(--tone-subtle); border-color: var(--tone-bg); }
+
 .favorites-card .poi-category {
   font-size: var(--font-size-eyebrow); font-weight: 700;
   letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--tone-deep, var(--color-muted));
 }
 .favorites-card .poi-name { font-size: var(--font-size-callout); font-weight: 700; color: var(--color-foreground); }
 .favorites-card .poi-address { font-size: var(--font-size-footnote); color: var(--color-muted); }
@@ -610,6 +619,7 @@ export default function PoiFavoritesPage() {
                       <article
                         className={`favorites-card ${isSelected ? 'is-selected' : ''} ${isDeleting ? 'is-deleting' : ''}`}
                         key={row.id}
+                        data-tone={poiTypeToTone(mapNominatimCategory(row.poiType))}
                         data-testid={`favorites-card-${row.id}`}
                         {...(isDeleting ? { 'aria-live': 'polite' } : {})}
                       >
