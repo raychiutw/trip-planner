@@ -6,6 +6,7 @@ import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
 import { resolveEntryTimes } from '../../../_time';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
 import { json, parseJsonBody, getAuth } from '../../../_utils';
+import { normalizeReservation } from '../../../_reservation';
 import type { Env } from '../../../_types';
 import {
   assembleDay,
@@ -370,7 +371,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         const choice: EntryPoiChoiceBuilder = {
           description: stringOrNull(item.description),
           note: stringOrNull(item.note),
-          reservation: stringOrNull(item.reservation),
+          // D 寫入防堵：被誤存成 JSON 的訂位狀態 → 人話文字（防 AI 生成路徑再污染 reservation）。
+          reservation: normalizeReservation(stringOrNull(item.reservation)),
           reservationUrl: stringOrNull(item.reservation_url ?? item.reservationUrl),
         };
 
