@@ -31,14 +31,16 @@ describe('v2.33.46 round 7a — SessionsPage logout CSRF fix', () => {
 });
 
 describe('v2.33.46 round 7a — EditEntryPage reservationUrl XSS guard', () => {
+  // v2.55：reservation 從唯讀 chip 改成 PerPoiNoteRow 可編 row，訂位連結移到 row 右側
+  // 外連 link（className tp-poi-note-link），escUrl + noopener 守護不變。
   it('reservationUrl 套 escUrl', () => {
     expect(EDIT_ENTRY_SRC).toMatch(/import\s+\{\s*escUrl\s*\}\s+from\s+['"][./]+lib\/sanitize['"]/);
-    expect(EDIT_ENTRY_SRC).toMatch(/escUrl\(alt\.reservationUrl\)/);
+    expect(EDIT_ENTRY_SRC).toMatch(/escUrl\(reservationUrl\)/);
   });
 
   it('reservation link 有 rel="noopener noreferrer" (不只 noreferrer)', () => {
     // 抓 reservation link 的 rel attribute
-    expect(EDIT_ENTRY_SRC).toMatch(/rel="noopener noreferrer"\s*\n\s*className="alt-extra-chip reservation/);
+    expect(EDIT_ENTRY_SRC).toMatch(/rel="noopener noreferrer"\s*\n\s*className="tp-poi-note-link"/);
   });
 });
 
