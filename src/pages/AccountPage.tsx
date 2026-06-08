@@ -173,6 +173,16 @@ const SCOPED_STYLES = `
   display: grid; place-items: center;
   flex-shrink: 0;
 }
+/* v2.54.10 依設定分區三色（mockup V1）：row icon chip 底用該分區的 --tone-bg、glyph 用
+   --color-foreground（~11–12:1，light/dark 皆安全；不用 vivid sage/粉 當 glyph/底色 —
+   太淺對比不足）。:not(.is-danger) 讓登出 row 的紅 icon（下方 .is-danger 覆寫）不被蓋。 */
+.tp-account-rows[data-tone="accent"] { --t-bg: var(--color-accent-bg); }
+.tp-account-rows[data-tone="sage"]   { --t-bg: var(--color-accent-2-bg); }
+.tp-account-rows[data-tone="pink"]   { --t-bg: var(--color-accent-3-bg); }
+.tp-account-rows[data-tone] .tp-account-row:not(.is-danger) .tp-account-row-icon {
+  background: var(--t-bg);
+  color: var(--color-foreground);
+}
 .tp-account-row-icon .svg-icon { width: 18px; height: 18px; }
 .tp-account-row-body {
   flex: 1; min-width: 0;
@@ -320,10 +330,14 @@ export default function AccountPage() {
   const displayName = user.displayName || user.email.split('@')[0] || user.email;
   const initial = displayName.charAt(0).toUpperCase();
 
-  const groups: { key: string; label: string; rows: SettingsRow[] }[] = [
+  // v2.54.10「依設定分區三色」(mockup V1)：每組設定一色，由 group.tone 驅動 row icon chip。
+  // 語意延伸：應用程式=accent 柔褐（你的偏好）、共編&整合=sage、帳號=pink（user 拍板，
+  // 與初版 mockup 的 sage↔pink 對調）。登出維持紅（.is-danger 覆寫，不混三色）。
+  const groups: { key: string; label: string; tone: 'accent' | 'sage' | 'pink'; rows: SettingsRow[] }[] = [
     {
       key: 'application',
       label: '應用程式',
+      tone: 'accent',
       rows: [
         { key: 'appearance', icon: 'palette', title: '外觀設定', helper: '主題色、深淺模式', to: '/account/appearance' },
         { key: 'notifications', icon: 'lightbulb', title: '通知設定', helper: '行程更新、旅伴邀請', to: '/account/notifications' },
@@ -332,6 +346,7 @@ export default function AccountPage() {
     {
       key: 'collab',
       label: '共編 & 整合',
+      tone: 'sage',
       rows: [
         { key: 'connected-apps', icon: 'device', title: '已連結的應用程式', helper: '管理透過 Tripline 登入的應用程式', to: '/settings/connected-apps' },
         { key: 'developer', icon: 'code', title: '開發者選項', helper: 'OAuth 應用程式註冊', to: '/developer/apps' },
@@ -340,6 +355,7 @@ export default function AccountPage() {
     {
       key: 'account',
       label: '帳號',
+      tone: 'pink',
       rows: [
         { key: 'sessions', icon: 'group', title: '已登入裝置', helper: '管理所有登入中的裝置', to: '/settings/sessions' },
         { key: 'logout', icon: 'x-mark', title: '登出', helper: '清除目前裝置的登入狀態', onClick: () => setShowLogoutModal(true), danger: true },
@@ -425,7 +441,7 @@ export default function AccountPage() {
         {groups.map((group) => (
           <section key={group.key} className="tp-account-group">
             <div className="tp-account-group-label" data-testid={`account-group-label-${group.key}`}>{group.label}</div>
-            <div className="tp-account-rows">
+            <div className="tp-account-rows" data-tone={group.tone} data-testid={`account-rows-${group.key}`}>
               {group.rows.map((row) => {
                 const className = `tp-account-row${row.danger ? ' is-danger' : ''}`;
                 const inner = (

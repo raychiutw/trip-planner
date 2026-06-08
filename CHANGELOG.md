@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.10] - 2026-06-08
+
+### Added
+- **帳號依設定分區三色（`AccountPage`）** — 非-POI 頁三色**收齊**（行程一覽/AI聊天之後第 3 站）。設定 hub 每個分區一色，由 `group.tone` 驅動 row icon chip（mockup V1「輕觸」，只 icon chip 上色）：**應用程式=柔褐**（你的偏好）、**共編 & 整合=sage**（連結 app/開發者）、**帳號=pink**（裝置/登出）、**登出=destructive 紅**（保留）。
+  - 語意延伸：分區剛好對上三色（協作/整合、系統/安全各有歸屬）；user 拍板 V1 + sage↔pink 對調（共編&整合 sage、帳號 pink）。
+  - icon chip = `.tp-account-rows[data-tone]` 帶 `--tone-bg` 底 + `--color-foreground` glyph（~11–12:1，light/dark 皆安全）；tone 規則 `:not(.is-danger)` 排除登出 row，紅 icon 不被蓋。
+  - TDD：`account-page.test.tsx` 加 render 斷言（application=accent、collab=sage、account=pink data-tone）。canonical mockup：`docs/design-sessions/2026-06-08-account-tricolor-by-group.html`。
+
 ## [2.54.9] - 2026-06-08
 
 ### Added

@@ -107,6 +107,15 @@ describe('AccountPage', () => {
     expect(matches.length).toBeGreaterThanOrEqual(2);
   });
 
+  // v2.54.10 依設定分區三色（mockup V1）：每組設定一色（user 拍板 sage↔pink 對調後）：
+  // 應用程式=accent 柔褐、共編&整合=sage、帳號=pink。登出維持紅（.is-danger 覆寫）。
+  it('group rows 依分區上 tone：應用程式=accent、共編&整合=sage、帳號=pink', () => {
+    renderPage();
+    expect(screen.getByTestId('account-rows-application').getAttribute('data-tone')).toBe('accent');
+    expect(screen.getByTestId('account-rows-collab').getAttribute('data-tone')).toBe('sage');
+    expect(screen.getByTestId('account-rows-account').getAttribute('data-tone')).toBe('pink');
+  });
+
   it('每個 settings row 有對應 testid', () => {
     renderPage();
     expect(screen.getByTestId('account-row-appearance')).toBeTruthy();
