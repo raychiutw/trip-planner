@@ -1,11 +1,13 @@
 /**
  * PATCH /api/trips/:id/entries/:eid/pois/:poiId — 編輯該 entry 下某個 POI。
  *
- * Body（note / poi_type 至少一個）:
+ * Body（note / poi_type / reservation 至少一個）:
  *   - note: string | null — per-POI 備註（migration 0078）。trim 後空字串 → NULL（清除）。
  *       長度上限 1000；亂碼 → 400 DATA_ENCODING；非 string|null → 400 DATA_VALIDATION。
  *   - poi_type: string — 改該 POI 的分類（whitelist：hotel/restaurant/shopping/parking/
  *       attraction/transport/activity/other）。
+ *   - reservation: string | null — per-POI 訂位資訊文字。trim 後空 → NULL；長度上限 500；
+ *       亂碼 → 400。寫入防堵（D）：被誤存成 JSON 的訂位狀態 → normalizeReservation 轉人話文字。
  *
  * ## poi_type re-point 模型（重要）
  *
@@ -28,10 +30,13 @@ import { AppError } from '../../../../../_errors';
 import { detectGarbledText } from '../../../../../_validate';
 import { json, parseJsonBody, parseIntParam } from '../../../../../_utils';
 import { findOrCreatePoi } from '../../../../../_poi';
+import { normalizeReservation } from '../../../../../_reservation';
 import type { Env } from '../../../../../_types';
 
 /** per-POI 備註長度上限（trim 後計），對齊既有文字欄位慣例。 */
 const NOTE_MAX_LEN = 1000;
+/** reservation 文字長度上限，對齊 import strOrNull(reservation, 500)。 */
+const RESERVATION_MAX_LEN = 500;
 /** poi_type 白名單，對齊 entries.ts ALLOWED_POI_TYPES 與 pois.type CHECK constraint。 */
 const ALLOWED_POI_TYPES = new Set([
   'hotel', 'restaurant', 'shopping', 'parking', 'attraction', 'transport', 'activity', 'other',
@@ -39,6 +44,7 @@ const ALLOWED_POI_TYPES = new Set([
 
 interface MasterRow {
   curNote: string | null;
+  curReservation: string | null;
   name: string;
   curType: string;
   description: string | null;
@@ -83,11 +89,12 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if (!canWrite) throw new AppError('PERM_DENIED');
   if (!belongsToTrip) throw new AppError('DATA_NOT_FOUND');
 
-  const body = await parseJsonBody<{ note?: unknown; poi_type?: unknown }>(context.request);
+  const body = await parseJsonBody<{ note?: unknown; poi_type?: unknown; reservation?: unknown }>(context.request);
   const hasNote = 'note' in body;
   const hasType = 'poi_type' in body;
-  if (!hasNote && !hasType) {
-    throw new AppError('DATA_VALIDATION', '缺少 note 或 poi_type 欄位');
+  const hasReservation = 'reservation' in body;
+  if (!hasNote && !hasType && !hasReservation) {
+    throw new AppError('DATA_VALIDATION', '缺少 note / poi_type / reservation 欄位');
   }
 
   // ── validate poi_type ──
@@ -117,10 +124,30 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     }
   }
 
+  // ── validate + 正規化 reservation（D 寫入防堵：被誤存的 JSON → 人話文字）──
+  let reservation: string | null = null;
+  if (hasReservation) {
+    if (body.reservation !== null && typeof body.reservation !== 'string') {
+      throw new AppError('DATA_VALIDATION', 'reservation 必須是字串或 null');
+    }
+    // normalizeReservation：JSON-shaped 訂位狀態 → 文字；純文字原樣（防 client/AI 寫 JSON 進此欄）。
+    const normalized = body.reservation === null ? null : normalizeReservation(body.reservation as string);
+    reservation = normalized === null ? null : normalized.trim();
+    if (reservation === '') reservation = null;
+    if (reservation !== null) {
+      if (reservation.length > RESERVATION_MAX_LEN) {
+        throw new AppError('DATA_VALIDATION', `reservation 不得超過 ${RESERVATION_MAX_LEN} 字`);
+      }
+      if (detectGarbledText(reservation)) {
+        throw new AppError('DATA_ENCODING', 'reservation 包含疑似亂碼，請確認 encoding 為 UTF-8');
+      }
+    }
+  }
+
   // ── 取現有 (entry, poi) junction + master 欄位（複製到新分類 row 用） ──
   const existing = await db
     .prepare(
-      `SELECT tep.note AS curNote, p.name, p.type AS curType, p.description, p.hours, p.rating,
+      `SELECT tep.note AS curNote, tep.reservation AS curReservation, p.name, p.type AS curType, p.description, p.hours, p.rating,
               p.category, p.lat, p.lng, p.source, p.address, p.phone, p.email, p.website,
               p.country, p.price, p.place_id, p.status, p.status_reason, p.status_checked_at
          FROM trip_entry_pois tep JOIN pois p ON p.id = tep.poi_id
@@ -184,6 +211,16 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     finalNote = note;
   }
 
+  // ── reservation 變更（同 effective row）──
+  let finalReservation = existing.curReservation;
+  if (hasReservation) {
+    await db
+      .prepare('UPDATE trip_entry_pois SET reservation = ?, updated_at = ? WHERE entry_id = ? AND poi_id = ?')
+      .bind(reservation, now, eid, effectivePoiId)
+      .run();
+    finalReservation = reservation;
+  }
+
   await logAudit(db, {
     tripId: id,
     tableName: 'trip_entry_pois',
@@ -191,10 +228,10 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     action: 'update',
     changedBy: auth.email,
     diffJson: computeDiff(
-      { poiId, type: existing.curType, note: existing.curNote },
-      { poiId: effectivePoiId, type: finalType, note: finalNote },
+      { poiId, type: existing.curType, note: existing.curNote, reservation: existing.curReservation },
+      { poiId: effectivePoiId, type: finalType, note: finalNote, reservation: finalReservation },
     ),
   });
 
-  return json({ entryId: eid, poiId: effectivePoiId, type: finalType, note: finalNote });
+  return json({ entryId: eid, poiId: effectivePoiId, type: finalType, note: finalNote, reservation: finalReservation });
 };

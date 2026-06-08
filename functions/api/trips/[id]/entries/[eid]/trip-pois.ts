@@ -11,6 +11,7 @@ import { logAudit } from '../../../../_audit';
 import { hasWritePermission, verifyEntryBelongsToTrip, requireAuth} from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { findOrCreatePoi } from '../../../../_poi';
+import { normalizeReservation } from '../../../../_reservation';
 import { json, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
@@ -93,7 +94,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           now,
           body.description ?? null,
           body.note ?? null,
-          body.reservation ?? null,
+          // D 寫入防堵：JSON-shaped 訂位狀態 → 人話文字（防再污染）。
+          // 非 string（client 送 object/array 繞過 TS）→ null，不讓 normalizeReservation crash（Codex #3）。
+          normalizeReservation(typeof body.reservation === 'string' ? body.reservation : null),
           body.reservation_url ?? null,
         ),
       db

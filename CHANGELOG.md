@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.0] - 2026-06-09
+
+### Fixed
+- **`trip_entry_pois.reservation` 欄位 JSON 污染根治** — reservation 型別是 `string`（文字註解），但 AI 生成路徑曾把結構化訂位狀態寫成 JSON（`{"available","method","url"/"phone","recommended"}`）塞進此欄，prod 43 筆污染、前端（`TimelineRail` / `EditEntryPage`）直接印 → 露出 raw `{...}`。
+  - **A 資料清理**（`scripts/normalize-reservation-json.ts`）：每筆 JSON 用 `reservationJsonToText` 萃取人話（`available:no`→「不需訂位」、`yes+website+url`→「建議網路預約：<url>」、`yes+phone`→「建議電話預約：<phone>」）**append 進該 POI 的 `note` 備註**（保留原 note），reservation 清空。url/phone 只在 JSON 內（`reservation_url` 欄位全空），救進 note 不遺失。**deploy 後執行**。
+  - **D 寫入防堵**：`days/[num].ts`（AI 生成）+ `trip-pois.ts`（加備選）+ `_import.ts`（匯入 attacker-controlled JSON）三路徑 reservation 寫入套 `normalizeReservation`，防再污染。
+
+### Added
+- **reservation per-POI 可編輯（`EditEntryPage`）** — 泛化 `PerPoiNoteRow` 支援 `field='reservation'`（複用 inline edit + autosave PATCH）；alternate 卡 reservation 從唯讀 chip 改成可點擊編輯 row（空值「+ 加訂位資訊」），訂位連結移到 row 右側外連 link（`escUrl` + `rel="noopener noreferrer"` 守護不變）。後端 `PATCH /trips/:id/entries/:eid/pois/:poiId` 加收 `reservation`（validate + JSON-shaped 正規化）。
+  - helper `functions/api/_reservation.ts`：`reservationJsonToText`（只認已知 `available:'yes'|'no'` shape，未知 JSON → null 防誤轉資料損毀）+ `normalizeReservation` + `isJsonShapedReservation`。TDD：`reservation-format`（含未知 shape）+ `reservation-write-guard` source-grep contract。Codex adversarial 1-3 修（helper 嚴格化 / import 防堵 / trip-pois 型別驗證）；#4 useAutosave in-flight 競態 = pre-existing（note 同 path、onBlur flush 兜底）→ follow-up。
+
 ## [2.54.11] - 2026-06-08
 
 ### Changed

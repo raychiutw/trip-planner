@@ -570,7 +570,7 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
 
   // v2.28.0 — restaurant inline info (price/hours/reservation) under type label
   describe('alternates row surface restaurant fields (v2.28.0)', () => {
-    it('alternate type=restaurant 含 price/hours → 渲染 chips', async () => {
+    it('alternate type=restaurant 含 price/hours chips + reservation 可編 row', async () => {
       setupAltsMocks();
       renderPage();
       await waitFor(() => {
@@ -579,20 +579,24 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       const extra = screen.getByTestId('edit-entry-alt-extra-201');
       expect(extra.textContent).toMatch(/\$/);          // price chip
       expect(extra.textContent).toMatch(/11:00-18:00/);  // hours chip
-      expect(extra.textContent).toMatch(/無需預約/);     // reservation chip
+      // v2.55：reservation 從唯讀 chip 改成 PerPoiNoteRow 可編 row（不再在 extra chip 排）。
+      const resvRow = screen.getByTestId('edit-entry-poi-reservation-read-201');
+      expect(resvRow.textContent).toContain('無需預約');
     });
 
-    it('reservationUrl 存在 → reservation chip 變 link', async () => {
+    it('reservationUrl 存在 → reservation row 右側顯外連 link（escUrl + noopener）', async () => {
       setupAltsMocks();
       renderPage();
+      // alt 202 無 price/hours → extra chip 排不 render；reservation row 一定 render。
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-entry-alt-extra-202')).toBeTruthy();
+        expect(screen.queryByTestId('edit-entry-poi-reservation-read-202')).toBeTruthy();
       });
-      const extra = screen.getByTestId('edit-entry-alt-extra-202');
-      const link = extra.querySelector('a.alt-extra-chip.reservation') as HTMLAnchorElement | null;
+      const resvRow = screen.getByTestId('edit-entry-poi-reservation-read-202');
+      expect(resvRow.textContent).toContain('需電話預約');
+      const link = resvRow.querySelector('a.tp-poi-note-link') as HTMLAnchorElement | null;
       expect(link).toBeTruthy();
       expect(link!.href).toBe('https://example.com/r');
-      expect(link!.textContent).toBe('需電話預約');
+      expect(link!.getAttribute('rel')).toBe('noopener noreferrer');
     });
 
     it('rating 存在 → 渲染 star + 數字', async () => {

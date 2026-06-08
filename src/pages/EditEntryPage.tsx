@@ -308,6 +308,22 @@ const SCOPED_STYLES = `
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+/* reservation row 訂位連結外連標記（read state 右側）。 */
+.tp-poi-note-link {
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: flex-start;
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent);
+  font-size: var(--font-size-body);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+.tp-poi-note-link:hover { background: var(--color-accent-bg); }
 
 .tp-poi-note-edit { margin-top: 8px; }
 .tp-poi-note-input {
@@ -728,8 +744,17 @@ interface PerPoiNoteRowProps {
   tripId: string;
   entryId: number;
   poiId: number;
-  /** 既有 per-POI 備註值（read state 顯示 / edit state 初始 textarea 值）。 */
+  /**
+   * 編輯哪個 per-POI 文字欄：'note'（備註，預設）或 'reservation'（訂位資訊）。
+   * 決定 PATCH body key、testid 前綴、toast / placeholder 文案。
+   */
+  field?: 'note' | 'reservation';
+  /** 既有欄位值（read state 顯示 / edit state 初始 textarea 值）。 */
   initialNote?: string | null;
+  /** read state 空值 placeholder（預設「+ 加備註」；reservation 用「+ 加訂位資訊」）。 */
+  placeholder?: string;
+  /** reservation 專用：訂位連結 → read state 右側外連 link（escUrl + noopener 防 XSS/tabnabbing）。 */
+  reservationUrl?: string | null;
   /**
    * read row 是否在 master 卡（`--color-secondary` 底）上 → 透明底 variant。
    * 對齊 mockup `.note-read.on-secondary`。
@@ -751,7 +776,9 @@ interface PerPoiNoteRowProps {
  *   body { note }。LWW（D4）— 刻意不帶 entryPoisVersion OCC token。清空 → note: ''
  *   （端點 trim 成空字串 → 寫 null 清除）。失敗 → showToast。
  */
-function PerPoiNoteRow({ tripId, entryId, poiId, initialNote, onSecondary }: PerPoiNoteRowProps) {
+function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, placeholder, reservationUrl, onSecondary }: PerPoiNoteRowProps) {
+  const fieldLabel = field === 'reservation' ? '訂位資訊' : '備註';
+  const emptyHint = placeholder ?? '+ 加備註';
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initialNote ?? '');
 
@@ -769,7 +796,7 @@ function PerPoiNoteRow({ tripId, entryId, poiId, initialNote, onSecondary }: Per
         {
           method: 'PATCH',
           // LWW — 不帶 entryPoisVersion；端點刻意不收/不 bump OCC token。
-          body: JSON.stringify({ note: body.note ?? '' }),
+          body: JSON.stringify({ [field]: body.note ?? '' }),
         },
       );
       if (!res.ok) throw await ApiError.fromResponse(res);
@@ -783,11 +810,11 @@ function PerPoiNoteRow({ tripId, entryId, poiId, initialNote, onSecondary }: Per
   useEffect(() => {
     if (noteAutosave.state === 'error' && noteAutosave.error && noteAutosave.error !== lastErrorRef.current) {
       lastErrorRef.current = noteAutosave.error;
-      showToast(`備註儲存失敗：${noteAutosave.error}`, 'error', 6000);
+      showToast(`${fieldLabel}儲存失敗：${noteAutosave.error}`, 'error', 6000);
     } else if (noteAutosave.state !== 'error') {
       lastErrorRef.current = null;
     }
-  }, [noteAutosave.state, noteAutosave.error]);
+  }, [noteAutosave.state, noteAutosave.error, fieldLabel]);
 
   const beginEdit = useCallback(() => {
     setDraft(initialNote ?? '');
@@ -830,15 +857,15 @@ function PerPoiNoteRow({ tripId, entryId, poiId, initialNote, onSecondary }: Per
           onBlur={handleBlur}
           onKeyDown={handleKey}
           autoFocus
-          maxLength={1000}
-          data-testid={`edit-entry-poi-note-input-${poiId}`}
+          maxLength={field === 'reservation' ? 500 : 1000}
+          data-testid={`edit-entry-poi-${field}-input-${poiId}`}
         />
         <div className="tp-poi-note-bar">
           <button
             type="button"
             className="tp-poi-note-done"
             onClick={() => void closeEdit()}
-            data-testid={`edit-entry-poi-note-done-${poiId}`}
+            data-testid={`edit-entry-poi-${field}-done-${poiId}`}
           >
             完成
           </button>
@@ -864,10 +891,23 @@ function PerPoiNoteRow({ tripId, entryId, poiId, initialNote, onSecondary }: Per
           beginEdit();
         }
       }}
-      data-testid={`edit-entry-poi-note-read-${poiId}`}
+      data-testid={`edit-entry-poi-${field}-read-${poiId}`}
     >
       <span className="tp-poi-note-icon" aria-hidden="true"><Icon name="pencil" /></span>
-      <span className="tp-poi-note-text">{hasNote ? draft : '+ 加備註'}</span>
+      <span className="tp-poi-note-text">{hasNote ? draft : emptyHint}</span>
+      {field === 'reservation' && reservationUrl && (
+        // v2.33.46 security：escUrl 防 javascript:/data: URI XSS + rel noopener 防 tabnabbing。
+        // stopPropagation 防點連結誤觸 read row 的 beginEdit。
+        <a
+          href={escUrl(reservationUrl)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="tp-poi-note-link"
+          onClick={(e) => e.stopPropagation()}
+          aria-label="開啟訂位連結"
+          data-testid={`edit-entry-poi-reservation-link-${poiId}`}
+        >↗</a>
+      )}
     </div>
   );
 }
@@ -1575,30 +1615,24 @@ export default function EditEntryPage() {
                               </span>
                             )}
                           </div>
-                          {/* v2.28.0 — restaurant inline info: price · hours · reservation */}
-                          {(alt.price || alt.hours || alt.reservation) && (
+                          {/* v2.28.0 — restaurant inline info: price · hours（reservation 改下方可編 row）*/}
+                          {(alt.price || alt.hours) && (
                             <div className="tp-edit-entry-alt-extra" data-testid={`edit-entry-alt-extra-${alt.poiId}`}>
                               {alt.price && <span className="alt-extra-chip price">{alt.price}</span>}
                               {alt.hours && <span className="alt-extra-chip hours">{alt.hours}</span>}
-                              {alt.reservation && (() => {
-                                // v2.33.46 round 7a security audit: 套 escUrl 防 javascript:/data: URI XSS
-                                // (co-editor 可寫 trip_pois.reservation_url) + 加 noopener 防 tabnabbing。
-                                const safeUrl = alt.reservationUrl ? escUrl(alt.reservationUrl) : '';
-                                return safeUrl ? (
-                                  <a
-                                    href={safeUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="alt-extra-chip reservation is-link"
-                                  >
-                                    {alt.reservation}
-                                  </a>
-                                ) : (
-                                  <span className="alt-extra-chip reservation">{alt.reservation}</span>
-                                );
-                              })()}
                             </div>
                           )}
+                          {/* per-POI 訂位資訊可編輯 row（取代舊唯讀 chip — reservation 不再露 JSON、可點擊編輯）*/}
+                          <PerPoiNoteRow
+                            key={`resv-${alt.poiId}`}
+                            tripId={tripId!}
+                            entryId={entryId}
+                            poiId={alt.poiId}
+                            field="reservation"
+                            initialNote={alt.reservation}
+                            placeholder="+ 加訂位資訊"
+                            reservationUrl={alt.reservationUrl}
+                          />
                           {/* v2.34.0 alternate per-POI 備註行（Variant B） */}
                           <PerPoiNoteRow
                             key={alt.poiId}
