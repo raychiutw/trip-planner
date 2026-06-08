@@ -75,6 +75,9 @@ export function useAutosave<T extends object>(
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isOnlineRef = useRef(true);
   const inFlightRef = useRef(false);
+  // 遞迴排程用：finally 內要 re-trigger performSave，但 performSave useCallback 定義時
+  // 自己尚未存在 → 透過 ref 取最新版（render body 同步更新）。
+  const performSaveRef = useRef<(() => Promise<void>) | null>(null);
 
   const clearDebounceTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -106,11 +109,15 @@ export function useAutosave<T extends object>(
     setError(null);
     clearSavedTimer();
 
+    // reschedule（finally）只在 save 成功後觸發；error 路徑保留 pending 等 manual retry，
+    // 不可自動重排（否則失敗的 save 會無限重試）。
+    let saveSucceeded = false;
     try {
       const result = await save(body, versionRef.current);
       const newVersion = typeof result.version === 'number' ? result.version : undefined;
       if (newVersion !== undefined) versionRef.current = newVersion;
       setHasPending(Object.keys(pendingPatchRef.current).length > 0);
+      saveSucceeded = true;
       setState('saved');
       savedTimerRef.current = setTimeout(() => {
         setState((prev) => (prev === 'saved' ? 'idle' : prev));
@@ -129,6 +136,7 @@ export function useAutosave<T extends object>(
           const retryVersion = typeof retryResult.version === 'number' ? retryResult.version : undefined;
           if (retryVersion !== undefined) versionRef.current = retryVersion;
           setHasPending(false);
+          saveSucceeded = true;
           setState('saved');
           savedTimerRef.current = setTimeout(() => {
             setState((prev) => (prev === 'saved' ? 'idle' : prev));
@@ -151,8 +159,24 @@ export function useAutosave<T extends object>(
       setError(err instanceof Error ? err.message : '儲存失敗');
     } finally {
       inFlightRef.current = false;
+      // save 期間 user 又 patch（pending 非空）→ 排下一輪 save，達成 line 95 的「下一輪會
+      // 接著 save」設計意圖。原本 line 98 in-flight return 後沒 reschedule → 慢請求下 in-flight
+      // 期間的最後一次編輯 silently 遺失（Codex #4）。timerRef===null 才排（active timer = user
+      // 還在打字、由它接管，避免重複）。
+      if (
+        saveSucceeded &&
+        Object.keys(pendingPatchRef.current).length > 0 &&
+        isOnlineRef.current &&
+        timerRef.current === null
+      ) {
+        timerRef.current = setTimeout(() => {
+          timerRef.current = null;
+          void performSaveRef.current?.();
+        }, debounceMs);
+      }
     }
-  }, [save, onStale, savedDisplayMs, clearSavedTimer]);
+  }, [save, onStale, savedDisplayMs, clearSavedTimer, debounceMs]);
+  performSaveRef.current = performSave;
 
   /** Schedule debounced save. */
   const patch = useCallback(
