@@ -146,19 +146,15 @@ const SCOPED_STYLES = `
   width: 100%;
   background: var(--color-tertiary);
 }
-/* 三色：探索卡依 POI 類型上同色系淡底 + 類型標籤色（cover 8 色裝飾照片佔位維持不變）*/
-.explore-poi-card[data-tone="accent"] { --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); --tone-bg: var(--color-accent-bg); }
-.explore-poi-card[data-tone="sage"]   { --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
-.explore-poi-card[data-tone="pink"]   { --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
-.explore-poi-card[data-tone="accent"], .explore-poi-card[data-tone="sage"], .explore-poi-card[data-tone="pink"] { background: var(--tone-subtle); border-color: var(--tone-bg); }
-.explore-poi-cover[data-tone="1"] { background: linear-gradient(135deg, #f5cba7 0%, #d68160 100%); }
-.explore-poi-cover[data-tone="2"] { background: linear-gradient(135deg, #a3d9b1 0%, #5b9b6e 100%); }
-.explore-poi-cover[data-tone="3"] { background: linear-gradient(135deg, #b3c7e6 0%, #6b88b8 100%); }
-.explore-poi-cover[data-tone="4"] { background: linear-gradient(135deg, #f5d088 0%, #c98b2c 100%); }
-.explore-poi-cover[data-tone="5"] { background: linear-gradient(135deg, #e3a3c4 0%, #b06a8e 100%); }
-.explore-poi-cover[data-tone="6"] { background: linear-gradient(135deg, #c8b5e3 0%, #8a73b8 100%); }
-.explore-poi-cover[data-tone="7"] { background: linear-gradient(135deg, #f0a59a 0%, #c95745 100%); }
-.explore-poi-cover[data-tone="8"] { background: linear-gradient(135deg, #b8e3d5 0%, #67a896 100%); }
+/* 三色：探索卡依 POI 類型上同色系淡底 + 類型標籤色 + cover 漸層（v2.54.11：cover 從舊的
+   8 色 hash 裝飾改成依 POI 類型三色，與行程一覽 cover 一致、整頁回歸木棕為主）。neutral 顯式
+   回 accent 柔褐。 */
+.explore-poi-card[data-tone="accent"]  { --tone: var(--color-accent);   --tone-deep: var(--color-accent-deep);   --tone-subtle: var(--color-accent-subtle);   --tone-bg: var(--color-accent-bg); }
+.explore-poi-card[data-tone="sage"]    { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
+.explore-poi-card[data-tone="pink"]    { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
+.explore-poi-card[data-tone="neutral"] { --tone: var(--color-accent);   --tone-deep: var(--color-accent-deep);   --tone-subtle: var(--color-accent-subtle);   --tone-bg: var(--color-accent-bg); }
+.explore-poi-card[data-tone] { background: var(--tone-subtle); border-color: var(--tone-bg); }
+.explore-poi-card[data-tone] .explore-poi-cover { background-image: linear-gradient(135deg, var(--tone) 0%, var(--tone-deep) 100%); }
 .explore-poi-card .explore-poi-heart {
   position: absolute;
   top: 8px; right: 8px;
@@ -749,14 +745,10 @@ export default function ExplorePage() {
                       const key = `${mapNominatimCategory(poi.category ?? '')}::${poi.name}`;
                       const isPoiFavorited = favoriteKeyMap.has(key);
                       const isSaving = savingIds.has(poi.place_id);
-                      // Stable tone 1-8 derived from place_id char-sum hash（v2.23.0：string id）。
-                      const placeIdHash = (poi.place_id || '').split('').reduce((s, c) => s + c.charCodeAt(0), 0);
-                      const tone = (placeIdHash % 8) + 1;
                       return (
                         <article className="explore-poi-card" key={poi.place_id} data-tone={poiTypeToTone(mapNominatimCategory(poi.category))}>
                           <div
                             className="explore-poi-cover"
-                            data-tone={String(tone)}
                             aria-hidden="true"
                           >
                             <button

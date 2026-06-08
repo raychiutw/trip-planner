@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.54.11] - 2026-06-08
+
+### Changed
+- **探索卡 cover 改依 POI 類型三色（`ExplorePage`）** — `/qa` 三色比例稽核發現探索是唯一不符「木棕為主」的頁：cover 用舊的 8 色 hash 裝飾漸層（5/8 是冷色 綠/藍/粉紫/紫/teal、by place_id hash），整頁 POI grid 像彩虹。改成依 POI 類型三色（`poiTypeToTone`）：cover 漸層 = 卡的 `--tone → --tone-deep`（景點/購物=柔褐、住/交通=sage、餐/咖啡=粉、neutral→accent），與行程一覽 cover 一致。探索回歸木棕主（量測：colored 中 sage 89%→brown 98%）。
+  - 移除舊 8 色 `.explore-poi-cover[data-tone=1..8]` 規則 + place_id char-sum hash 計算（dead）。收藏/愛心 heart 仍永遠粉、卡身淡底 + 類型標籤 tone 不變。
+  - 稽核結論：其餘頁（行程表/一覽/收藏/帳號）皆守住木棕主、sage>粉、綠粉不過重。TDD：`explore-cover-tone.test.ts`（source-grep contract）。
+
 ## [2.54.10] - 2026-06-08
 
 ### Added

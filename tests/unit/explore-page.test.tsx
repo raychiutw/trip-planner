@@ -163,7 +163,7 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     expect(getByTestId('explore-subtab-all').className).not.toContain('is-active');
   });
 
-  it('search results 渲染 cover photo (data-tone) + heart save button', async () => {
+  it('search results 渲染 cover（依 POI 類型三色 tone）+ heart save button', async () => {
     mockSearch([
       { place_id: 'p7', name: '美ら海水族館', address: '沖縄県', lat: 26.69, lng: 127.87, category: 'tourism' },
     ]);
@@ -173,9 +173,12 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     await waitFor(() => {
       expect(getByTestId('explore-save-btn-p7')).toBeTruthy();
     });
-    // cover element 含 data-tone (1-8)
+    // v2.54.11: cover 漸層改依卡的三色 tone（取代舊 8 色 hash 裝飾）。tone 在 card 上、
+    // cover 經 CSS（.explore-poi-card[data-tone] .explore-poi-cover）繼承，cover 本身不再帶 data-tone。
+    const card = container.querySelector('.explore-poi-card');
+    expect(card?.getAttribute('data-tone')).toMatch(/^(accent|sage|pink|neutral)$/);
     const cover = container.querySelector('.explore-poi-cover');
-    expect(cover?.getAttribute('data-tone')).toMatch(/^[1-8]$/);
+    expect(cover?.getAttribute('data-tone')).toBeNull();
     // heart button class 含 explore-poi-heart
     const heartBtn = getByTestId('explore-save-btn-p7');
     expect(heartBtn.className).toContain('explore-poi-heart');
