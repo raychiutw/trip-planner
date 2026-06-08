@@ -167,6 +167,11 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - **你=柔褐**（`.tp-chat-avatar` base = `--color-accent`，右側、實心）、**AI 助理=sage**（`.is-ai` = `--color-accent-2-bg`）、**共編旅伴=pink**（`.is-other-user` = `--color-accent-3-bg`）。修掉原本 AI 與旅伴 avatar 撞色（都 secondary/foreground）分不出真人/AI 的問題。
 - avatar 用 `--t-bg` 底 + `--color-foreground` 字（~7–12:1，light/dark 皆過）—— **不用 vivid `--color-accent-2/-3` 實心**（dark mode 對 foreground 字僅 1.78:1 fail）。canonical mockup：`design-sessions/2026-06-08-chat-tricolor-by-role.html`。
 
+**帳號 — 依設定分區三色（v2.54.10，`AccountPage`）**：設定 hub 每個分區一色，由 `group.tone` 驅動 row icon chip（mockup V1「輕觸」，只 icon chip 上色）：
+- **應用程式=accent 柔褐**（外觀/通知，你的偏好）、**共編 & 整合=sage**（連結 app/開發者）、**帳號=pink**（裝置/登出）。語意延伸（user 拍板，sage↔pink 與初版 mockup 對調）。**登出=destructive 紅**（`.is-danger` 覆寫、不混三色）。
+- icon chip = `.tp-account-rows[data-tone]` 帶 `--t-bg` 底 + `--color-foreground` glyph（~11–12:1）；tone 規則用 `:not(.is-danger)` 排除登出，讓紅 icon 不被蓋。canonical mockup：`design-sessions/2026-06-08-account-tricolor-by-group.html`。
+- **至此非-POI 頁三色收齊**：行程一覽（目的地）+ AI聊天（角色）+ 帳號（分區）。
+
 ### Data Visualization 例外
 
 「柔褐三色 accent」原則有 **data visualization 例外**：地圖 polyline、chart series、時間軸 day separator 等 semantic encoding 可用 10 色 qualitative palette（Tailwind `{sky,teal,amber,rose,violet,lime,orange,cyan,fuchsia,emerald}-500`）。UI chrome（button、text、icon、active state）仍嚴守柔褐三色。

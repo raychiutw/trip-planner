@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>帳號 — 三色分色（依設定分區）</title>
+<style>
+:root{
+  --color-accent:#A97A4A; --color-accent-subtle:#F4EDE3; --color-accent-bg:#E9DBC8; --color-accent-deep:#8A6038;
+  --color-accent-2:#A8BAAA; --color-accent-2-deep:#7E9580; --color-accent-2-subtle:#ECF0ED; --color-accent-2-bg:#D4DDD5;
+  --color-accent-3:#E78C99; --color-accent-3-deep:#C66B78; --color-accent-3-subtle:#FAF1F3; --color-accent-3-bg:#F2DBE0;
+  --color-background:#FFFBF5; --color-secondary:#FAF4EA; --color-tertiary:#F2EAD9; --color-hover:#F9EDE0;
+  --color-foreground:#2A1F18; --color-muted:#6F5A47; --color-accent-foreground:#FFFFFF;
+  --color-border:#EADFCF; --color-line-strong:#C8B89F;
+  --color-danger:#C13515; --color-danger-bg:#FDECEC;
+  --radius-md:8px; --radius-lg:12px; --radius-xl:18px;
+  --fs-eyebrow:.625rem; --fs-callout:.9375rem; --fs-caption2:.6875rem; --fs-title2:1.3rem; --fs-title3:1.1rem;
+}
+body.dark{
+  --color-accent:#CBA06E; --color-accent-subtle:#33271A; --color-accent-bg:#44341F; --color-accent-deep:#E0BC90;
+  --color-accent-2:#8FBE9C; --color-accent-2-deep:#A8D0B4; --color-accent-2-subtle:#243A2C; --color-accent-2-bg:#2E3D30;
+  --color-accent-3:#E8A0AB; --color-accent-3-deep:#F0B8C0; --color-accent-3-subtle:#4A2A3A; --color-accent-3-bg:#6B3F52;
+  --color-background:#1A140F; --color-secondary:#241B14; --color-tertiary:#2E2418; --color-hover:#2E2418;
+  --color-foreground:#F5EBDD; --color-muted:#B89E84; --color-accent-foreground:#1A140F;
+  --color-border:#3D2D22; --color-line-strong:#5A4634; --color-danger:#F08C76; --color-danger-bg:#3A1E18;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--color-background);color:var(--color-foreground);
+  font-family:Inter,"Noto Sans TC","PingFang TC",system-ui,sans-serif;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s;}
+.page{max-width:1180px;margin:0 auto;padding:24px 24px 80px;}
+.doc-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px;}
+.doc-h{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:0;}
+.doc-sub{color:var(--color-muted);font-size:.875rem;margin:2px 0 0;}
+.toggle{border:1px solid var(--color-border);background:var(--color-secondary);color:var(--color-foreground);border-radius:9999px;padding:8px 16px;font:inherit;font-weight:600;font-size:.875rem;cursor:pointer;}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 4px;font-size:.875rem;color:var(--color-muted);}
+.legend b{color:var(--color-foreground);} .legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px;}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:20px;}
+@media(max-width:980px){.cols{grid-template-columns:1fr;}}
+.variant{border:1px solid var(--color-border);border-radius:14px;overflow:hidden;}
+.variant-head{padding:12px 16px;border-bottom:1px solid var(--color-border);background:var(--color-secondary);}
+.variant-tag{font-size:var(--fs-eyebrow);font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-foreground);background:var(--color-accent);padding:2px 7px;border-radius:5px;margin-right:8px;}
+.variant-name{font-weight:800;font-size:.95rem;}
+.variant-desc{color:var(--color-muted);font-size:var(--fs-caption2);margin-top:4px;line-height:1.5;}
+
+/* === account structure (faithful) === */
+.acct{padding:16px;display:flex;flex-direction:column;gap:18px;}
+.tp-account-hero{background:var(--color-background);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:18px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;}
+.tp-account-hero-avatar{width:56px;height:56px;border-radius:50%;background:var(--color-accent);color:var(--color-accent-foreground);display:grid;place-items:center;font-size:1.3rem;font-weight:800;}
+.tp-account-hero-name{font-size:var(--fs-title2);font-weight:800;margin:0;}
+.tp-account-hero-email{font-size:.85rem;color:var(--color-muted);}
+.tp-account-hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;padding-top:14px;border-top:1px solid var(--color-border);}
+.tp-account-hero-stat{text-align:center;}
+.tp-account-hero-stat-value{font-size:var(--fs-title3);font-weight:800;display:block;}
+.tp-account-hero-stat-label{font-size:var(--fs-caption2);color:var(--color-muted);display:block;margin-top:2px;}
+.tp-account-group{display:flex;flex-direction:column;gap:8px;}
+.tp-account-group-label{font-size:var(--fs-eyebrow);font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--color-muted);padding:0 4px;}
+.tp-account-rows{background:var(--color-background);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;}
+.tp-account-row{display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--color-border);color:var(--color-foreground);cursor:pointer;}
+.tp-account-row:last-child{border-bottom:none;}
+.tp-account-row:hover{background:var(--color-hover);}
+.tp-account-row-icon{width:36px;height:36px;border-radius:var(--radius-md);background:var(--color-accent-subtle);color:var(--color-accent);display:grid;place-items:center;flex-shrink:0;}
+.tp-account-row-icon svg{width:18px;height:18px;}
+.tp-account-row-body{flex:1;min-width:0;}
+.tp-account-row-title{font-size:var(--fs-callout);font-weight:600;}
+.tp-account-row-helper{font-size:var(--fs-caption2);color:var(--color-muted);}
+.tp-account-row-chevron{color:var(--color-muted);}
+.tp-account-row.is-danger,.tp-account-row.is-danger .tp-account-row-title{color:var(--color-danger);}
+.tp-account-row.is-danger .tp-account-row-icon{background:var(--color-danger-bg);color:var(--color-danger);}
+
+/* === 依分區 tone：icon chip 底 --t-bg + glyph --color-foreground（對比安全）=== */
+.g-app  {--t:var(--color-accent);   --t-subtle:var(--color-accent-subtle);   --t-bg:var(--color-accent-bg);}
+.g-collab{--t:var(--color-accent-3); --t-subtle:var(--color-accent-3-subtle); --t-bg:var(--color-accent-3-bg);}
+.g-acct {--t:var(--color-accent-2); --t-subtle:var(--color-accent-2-subtle); --t-bg:var(--color-accent-2-bg);}
+
+/* V1 輕：只 icon chip 上分區色 */
+.v1 .g-app .tp-account-row-icon,.v1 .g-collab .tp-account-row-icon,.v1 .g-acct .tp-account-row-icon{background:var(--t-bg);color:var(--color-foreground);}
+.v1 .is-danger .tp-account-row-icon{background:var(--color-danger-bg);color:var(--color-danger);}
+
+/* V2 中：icon chip + 整組卡左 3px 色條 */
+.v2 .g-app .tp-account-row-icon,.v2 .g-collab .tp-account-row-icon,.v2 .g-acct .tp-account-row-icon{background:var(--t-bg);color:var(--color-foreground);}
+.v2 .is-danger .tp-account-row-icon{background:var(--color-danger-bg);color:var(--color-danger);}
+.v2 .tp-account-group .tp-account-rows{border-left:3px solid var(--t);}
+
+/* V3 重：icon chip + 整組卡 --t-subtle 淡底 + 左色條 */
+.v3 .g-app .tp-account-row-icon,.v3 .g-collab .tp-account-row-icon,.v3 .g-acct .tp-account-row-icon{background:var(--t-bg);color:var(--color-foreground);}
+.v3 .is-danger .tp-account-row-icon{background:var(--color-danger-bg);color:var(--color-danger);}
+.v3 .tp-account-group .tp-account-rows{background:var(--t-subtle);border-left:3px solid var(--t);}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="doc-top">
+    <div>
+      <h1 class="doc-h">帳號 — 三色分色（依設定分區）</h1>
+      <p class="doc-sub">語意延伸，每個設定分區一色：<b style="color:var(--color-accent-deep)">應用程式＝柔褐</b>（你的偏好）・<b style="color:var(--color-accent-3-deep)">共編&整合＝粉</b>（人/協作）・<b style="color:var(--color-accent-2-deep)">帳號=sage</b>（系統/安全）。登出維持紅。</p>
+    </div>
+    <button class="toggle" onclick="document.body.classList.toggle('dark')">◐ Light / Dark</button>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--color-accent)"></span><b>應用程式</b> 偏好</span>
+    <span><span class="sw" style="background:var(--color-accent-3)"></span><b>共編 & 整合</b> 人/協作</span>
+    <span><span class="sw" style="background:var(--color-accent-2)"></span><b>帳號</b> 系統/安全</span>
+    <span><span class="sw" style="background:var(--color-danger)"></span><b>危險</b> 登出/刪除</span>
+  </div>
+  <div class="cols" id="cols"></div>
+</div>
+<script>
+const IC={
+  palette:'<path fill="currentColor" d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10a2.5 2.5 0 0 0 2.5-2.5c0-.61-.23-1.2-.64-1.67a.528.528 0 0 1-.13-.33c0-.28.22-.5.5-.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>',
+  lightbulb:'<path fill="currentColor" d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>',
+  device:'<path fill="currentColor" d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/>',
+  code:'<path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>',
+  group:'<path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>',
+  x:'<path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>',
+};
+const chev='<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>';
+function row(g,ic,t,h,danger){return `<div class="tp-account-row ${danger?'is-danger':''}">
+  <div class="tp-account-row-icon"><svg viewBox="0 0 24 24">${IC[ic]}</svg></div>
+  <div class="tp-account-row-body"><div class="tp-account-row-title">${t}</div><div class="tp-account-row-helper">${h}</div></div>
+  <div class="tp-account-row-chevron">${danger?'':chev}</div></div>`;}
+const GROUPS=`
+  <div class="tp-account-group g-app"><div class="tp-account-group-label">應用程式</div><div class="tp-account-rows">
+    ${row('app','palette','外觀設定','主題色、深淺模式')}${row('app','lightbulb','通知設定','行程更新、旅伴邀請')}</div></div>
+  <div class="tp-account-group g-collab"><div class="tp-account-group-label">共編 & 整合</div><div class="tp-account-rows">
+    ${row('collab','device','已連結的應用程式','管理透過 Tripline 登入的應用程式')}${row('collab','code','開發者選項','OAuth 應用程式註冊')}</div></div>
+  <div class="tp-account-group g-acct"><div class="tp-account-group-label">帳號</div><div class="tp-account-rows">
+    ${row('acct','group','已登入裝置','管理所有登入中的裝置')}${row('acct','x','登出','清除目前裝置的登入狀態',true)}</div></div>`;
+const HERO=`<section class="tp-account-hero"><div class="tp-account-hero-avatar">R</div>
+  <div><div class="tp-account-hero-name">Ray</div><div class="tp-account-hero-email">lean.lean@gmail.com</div></div>
+  <div class="tp-account-hero-stats"><div class="tp-account-hero-stat"><span class="tp-account-hero-stat-value">6</span><span class="tp-account-hero-stat-label">個行程</span></div>
+  <div class="tp-account-hero-stat"><span class="tp-account-hero-stat-value">30</span><span class="tp-account-hero-stat-label">天旅程</span></div>
+  <div class="tp-account-hero-stat"><span class="tp-account-hero-stat-value">2</span><span class="tp-account-hero-stat-label">位旅伴</span></div></div></section>`;
+const V=[
+  {tag:'V1',name:'輕觸 — 只 icon chip 上色',desc:'每組設定的 icon 方塊帶分區色（柔褐/粉/sage），其餘維持中性。最克制，掃 icon 即知分區。'},
+  {tag:'V2',name:'色條 — icon + 整組左 3px 條',desc:'再加整組卡左邊色條。分區邊界更清楚、卡片內仍乾淨。平衡點。'},
+  {tag:'V3',name:'淡底 — icon + 整組 --t-subtle 底',desc:'整組卡上分區淡底 + 左色條。分區最明顯像設定分頁；但奶油底感被稀釋。'},
+];
+document.getElementById('cols').innerHTML=V.map(v=>`<div class="variant ${v.tag.toLowerCase()}">
+  <div class="variant-head"><span class="variant-tag">${v.tag}</span><span class="variant-name">${v.name}</span><div class="variant-desc">${v.desc}</div></div>
+  <div class="acct">${HERO}${GROUPS}</div></div>`).join('');
+</script>
+</body>
+</html>
