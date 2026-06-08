@@ -163,7 +163,7 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     expect(getByTestId('explore-subtab-all').className).not.toContain('is-active');
   });
 
-  it('search results 渲染 cover photo (data-tone) + heart save button', async () => {
+  it('search results 渲染 cover（依 POI 類型三色 tone）+ heart save button', async () => {
     mockSearch([
       { place_id: 'p7', name: '美ら海水族館', address: '沖縄県', lat: 26.69, lng: 127.87, category: 'tourism' },
     ]);
@@ -173,12 +173,41 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     await waitFor(() => {
       expect(getByTestId('explore-save-btn-p7')).toBeTruthy();
     });
-    // cover element 含 data-tone (1-8)
+    // v2.54.11: cover 漸層改依卡的三色 tone（取代舊 8 色 hash 裝飾）。tone 在 card 上、
+    // cover 經 CSS（.explore-poi-card[data-tone] .explore-poi-cover）繼承，cover 本身不再帶 data-tone。
+    const card = container.querySelector('.explore-poi-card');
+    expect(card?.getAttribute('data-tone')).toMatch(/^(accent|sage|pink|neutral)$/);
     const cover = container.querySelector('.explore-poi-cover');
-    expect(cover?.getAttribute('data-tone')).toMatch(/^[1-8]$/);
+    expect(cover?.getAttribute('data-tone')).toBeNull();
     // heart button class 含 explore-poi-heart
     const heartBtn = getByTestId('explore-save-btn-p7');
     expect(heartBtn.className).toContain('explore-poi-heart');
+    // v2.54.11 review F1：收藏/加入行程鈕不得巢在 aria-hidden 的裝飾 cover 內，
+    // 否則整組互動鈕被移出無障礙樹。按鈕應為 card 直屬。
+    expect(cover?.querySelector('button')).toBeNull();
+    expect(heartBtn.closest('.explore-poi-cover')).toBeNull();
+    expect(heartBtn.closest('.explore-poi-card')).not.toBeNull();
+  });
+
+  it('卡 data-tone 依 POI 類型映射（restaurant→粉 / museum→柔褐 / hotel→sage）', async () => {
+    // v2.54.11 review F3：行為證明 category → tone 綁定（非僅「四色之一」）。
+    mockSearch([
+      { place_id: 'r1', name: '拉麵店', address: 'X', lat: 1, lng: 1, category: 'restaurant' },
+      { place_id: 'm1', name: '博物館', address: 'X', lat: 1, lng: 1, category: 'museum' },
+      { place_id: 'h1', name: '飯店', address: 'X', lat: 1, lng: 1, category: 'hotel' },
+    ]);
+    const { getByTestId, container } = renderPage();
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: 'mix' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => {
+      expect(getByTestId('explore-save-btn-r1')).toBeTruthy();
+    });
+    const cards = Array.from(container.querySelectorAll('.explore-poi-card'));
+    const toneByName = (n: string) =>
+      cards.find((c) => c.querySelector('.poi-name')?.textContent === n)?.getAttribute('data-tone');
+    expect(toneByName('拉麵店')).toBe('pink'); // restaurant → 吃 → 粉
+    expect(toneByName('博物館')).toBe('accent'); // museum → 景點 → 柔褐
+    expect(toneByName('飯店')).toBe('sage'); // hotel → 住 → sage
   });
 
   it('rating meta line 顯示 ★ icon', async () => {
