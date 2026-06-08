@@ -49,6 +49,16 @@ describe('reservationJsonToText', () => {
     expect(reservationJsonToText('[1,2,3]')).toBeNull(); // array 非 object → null
   });
 
+  it('未知 / 不完整 shape → null（不誤轉成假訂位文字，防資料損毀，Codex #1）', () => {
+    expect(reservationJsonToText('{}')).toBeNull(); // 缺 available
+    expect(reservationJsonToText('{"available":"maybe"}')).toBeNull(); // available 非 yes/no
+    expect(reservationJsonToText('{"recommended":true}')).toBeNull(); // 缺 available
+    expect(reservationJsonToText('{"foo":"bar"}')).toBeNull(); // 不相關 JSON
+    // 非字串輸入（client 繞過 TS 送 object）→ null，不 crash（Codex #3 防禦）
+    expect(reservationJsonToText({ available: 'no' } as unknown as string)).toBeNull();
+    expect(reservationJsonToText(123 as unknown as string)).toBeNull();
+  });
+
   it('isJsonShapedReservation：JSON-shaped 才 true', () => {
     expect(isJsonShapedReservation('{"available":"no","recommended":false}')).toBe(true);
     expect(isJsonShapedReservation('官網預約')).toBe(false);

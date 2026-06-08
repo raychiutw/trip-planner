@@ -22,7 +22,7 @@
  *   available:"yes" 非 recommended                   → 「可…預約」
  */
 export function reservationJsonToText(raw: string | null | undefined): string | null {
-  if (!raw) return null;
+  if (typeof raw !== 'string') return null;
   const trimmed = raw.trim();
   if (trimmed[0] !== '{' && trimmed[0] !== '[') return null;
   let parsed: unknown;
@@ -34,6 +34,9 @@ export function reservationJsonToText(raw: string | null | undefined): string | 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
   const o = parsed as Record<string, unknown>;
 
+  // 只認「已知訂位狀態 shape」(available: 'yes'|'no')；其他 JSON（{}、別的結構、缺 available）
+  // → null，不誤轉成假訂位文字（否則 A script 會 append 假字串 + 清空 reservation = 資料損毀）。
+  if (o.available !== 'yes' && o.available !== 'no') return null;
   if (o.available === 'no') return '不需訂位';
 
   const recommended = o.recommended === true;

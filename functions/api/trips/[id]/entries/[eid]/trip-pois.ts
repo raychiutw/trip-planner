@@ -95,7 +95,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           body.description ?? null,
           body.note ?? null,
           // D 寫入防堵：JSON-shaped 訂位狀態 → 人話文字（防再污染）。
-          normalizeReservation((body.reservation as string | null | undefined) ?? null),
+          // 非 string（client 送 object/array 繞過 TS）→ null，不讓 normalizeReservation crash（Codex #3）。
+          normalizeReservation(typeof body.reservation === 'string' ? body.reservation : null),
           body.reservation_url ?? null,
         ),
       db

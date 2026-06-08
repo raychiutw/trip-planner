@@ -18,10 +18,16 @@ describe('reservation 寫入防堵 contract（D）', () => {
     expect(src).toMatch(/reservation:\s*normalizeReservation\(/);
   });
 
-  it('trip-pois.ts 加備選 INSERT：reservation 套 normalizeReservation', () => {
+  it('trip-pois.ts 加備選 INSERT：reservation 套 normalizeReservation（非 string → null，Codex #3）', () => {
     const src = read('functions/api/trips/[id]/entries/[eid]/trip-pois.ts');
     expect(src).toMatch(/import \{ normalizeReservation \} from ['"]\.\.\/\.\.\/\.\.\/\.\.\/_reservation['"]/);
-    expect(src).toMatch(/normalizeReservation\(\(body\.reservation/);
+    expect(src).toMatch(/normalizeReservation\(typeof body\.reservation === 'string'/);
+  });
+
+  it('_import.ts 匯入路徑（attacker-controlled JSON）：reservation 套 normalizeReservation（Codex #2）', () => {
+    const src = read('functions/api/trips/_import.ts');
+    expect(src).toMatch(/import \{ normalizeReservation \} from ['"]\.\.\/_reservation['"]/);
+    expect(src).toMatch(/reservation: normalizeReservation\(strOrNull\(raw\.reservation/);
   });
 });
 

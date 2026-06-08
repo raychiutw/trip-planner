@@ -10,6 +10,7 @@
  * Round-trip contract: consumes the v1 export from src/lib/tripExport.ts
  * (buildTripExportJson) — camelCase throughout (apiFetch deep-camels responses).
  */
+import { normalizeReservation } from '../_reservation';
 
 export const MAX_IMPORT_BYTES = 512 * 1024;
 export const MAX_DAYS = 366;
@@ -164,7 +165,8 @@ function normPoi(raw: unknown): NImportPoi | null {
     price: strOrNull(raw.price, 50),
     address: strOrNull(raw.address, 500),
     placeId: strOrNull(raw.placeId ?? raw.place_id, 200),
-    reservation: strOrNull(raw.reservation, 500),
+    // D 寫入防堵：匯入檔是 attacker-controlled JSON，被誤存成 JSON 的訂位狀態 → 人話文字。
+    reservation: normalizeReservation(strOrNull(raw.reservation, 500)),
     reservationUrl: strOrNull(raw.reservationUrl, 500),
     description: strOrNull(raw.description, 2000),
     note: strOrNull(raw.note, 2000),
