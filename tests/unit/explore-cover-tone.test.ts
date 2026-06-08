@@ -14,8 +14,11 @@ import path from 'node:path';
 const SRC = fs.readFileSync(path.resolve(__dirname, '../../src/pages/ExplorePage.tsx'), 'utf8');
 
 describe('ExplorePage cover 依 POI 類型三色（v2.54.11）', () => {
-  it('cover 漸層用卡的 --tone（取代 8 色 hash 裝飾）', () => {
-    expect(SRC).toMatch(/\.explore-poi-card\[data-tone\]\s+\.explore-poi-cover\s*\{[^}]*linear-gradient\([^}]*var\(--tone\)/);
+  it('cover 漸層用卡的 --tone → --tone-deep 兩個 stop（取代 8 色 hash 裝飾）', () => {
+    // 鎖兩個 stop：避免只驗第一個 var(--tone) 而第二 stop 寫錯仍綠燈（review F3）。
+    expect(SRC).toMatch(
+      /\.explore-poi-card\[data-tone\]\s+\.explore-poi-cover\s*\{[^}]*linear-gradient\([^}]*var\(--tone\)[^}]*var\(--tone-deep\)/,
+    );
   });
 
   it('移除舊的 8 色裝飾 cover 規則（.explore-poi-cover[data-tone="1..8"]）', () => {

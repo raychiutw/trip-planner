@@ -10,6 +10,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   - 移除舊 8 色 `.explore-poi-cover[data-tone=1..8]` 規則 + place_id char-sum hash 計算（dead）。收藏/愛心 heart 仍永遠粉、卡身淡底 + 類型標籤 tone 不變。
   - 稽核結論：其餘頁（行程表/一覽/收藏/帳號）皆守住木棕主、sage>粉、綠粉不過重。TDD：`explore-cover-tone.test.ts`（source-grep contract）。
 
+### Fixed
+- **探索卡 review follow-ups（`ExplorePage`，Codex adversarial）** — 隨 cover 三色一併修：
+  - **a11y（pre-existing）**：收藏 ❤ + 加入行程 ➕ 兩顆互動鈕原本巢在 `aria-hidden="true"` 的裝飾 cover `<div>` 內，整組被移出無障礙樹（螢幕報讀者無法操作）。改為移出成 card 直屬（card 是 `position:relative` 定位脈絡，視覺位置不變），cover 維持 aria-hidden 純裝飾。
+  - **對比（cover 三色衍生）**：cover 改三色後，已收藏的粉底 ❤ 疊在 food（粉）cover、柔褐底 ➕ 疊在 attraction（柔褐）cover 上會同色相溶、圓鈕邊界消失。兩顆實心鈕加 neutral 陰影（`box-shadow: 0 1px 4px rgba(0,0,0,.28)`）讓邊界在任何同色系 cover 上恆可辨（不靠淺 tone 當前景）。
+  - **測試強化**：cover 漸層 contract 加鎖第二 stop `--tone-deep`；新增行為測試證明 category → tone 綁定（restaurant→粉 / museum→柔褐 / hotel→sage）+ 鎖互動鈕不在 aria-hidden cover 內。
+
 ## [2.54.10] - 2026-06-08
 
 ### Added

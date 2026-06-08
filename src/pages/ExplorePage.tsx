@@ -139,7 +139,7 @@ const SCOPED_STYLES = `
   transform: translateY(-2px);
 }
 .explore-poi-card.is-selected { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
-/* Section 4.9：cover photo placeholder — 16:9 + 8-tone gradient by data-tone */
+/* Section 4.9：cover placeholder — 16:9 漸層（v2.54.11 起依 POI 類型三色，見上方 .explore-poi-card[data-tone] .explore-poi-cover）*/
 .explore-poi-cover {
   position: relative;
   aspect-ratio: 16/9;
@@ -168,6 +168,9 @@ const SCOPED_STYLES = `
   cursor: pointer;
   transition: background 120ms, color 120ms, transform 120ms;
   backdrop-filter: blur(8px);
+  /* v2.54.11: cover 改三色後，已收藏的粉底愛心會疊在 food（粉）cover 上同色相溶、
+     邊界消失。加 neutral 陰影讓圓鈕在任何同色系 cover 上都浮起、邊界恆可辨（不靠淺 tone 當前景）。*/
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
 }
 .explore-poi-card .explore-poi-heart:hover:not(:disabled) { background: rgba(0, 0, 0, 0.65); transform: scale(1.05); }
 .explore-poi-card .explore-poi-heart.is-saved {
@@ -193,6 +196,8 @@ const SCOPED_STYLES = `
   cursor: pointer;
   transition: background 120ms, transform 120ms;
   backdrop-filter: blur(8px);
+  /* v2.54.11: 同上 — 柔褐底加入鈕疊在 attraction（柔褐）cover 上同色相溶，加陰影浮起。*/
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
 }
 .explore-poi-card .explore-poi-add-to-trip:hover {
   filter: brightness(0.95);
@@ -747,43 +752,42 @@ export default function ExplorePage() {
                       const isSaving = savingIds.has(poi.place_id);
                       return (
                         <article className="explore-poi-card" key={poi.place_id} data-tone={poiTypeToTone(mapNominatimCategory(poi.category))}>
-                          <div
-                            className="explore-poi-cover"
-                            aria-hidden="true"
+                          {/* 裝飾 cover（純三色漸層、無語意）maintains aria-hidden。
+                              interactive 按鈕移到 card 直屬（card 是 position:relative 定位脈絡，
+                              位置不變）— 否則 aria-hidden 會把收藏/加入行程按鈕從 a11y tree 移除。 */}
+                          <div className="explore-poi-cover" aria-hidden="true" />
+                          <button
+                            type="button"
+                            className={`explore-poi-heart ${isPoiFavorited ? 'is-saved' : ''}`}
+                            onClick={() => !isSaving && handleToggleFavorite(poi, isPoiFavorited)}
+                            disabled={isSaving}
+                            aria-label={isPoiFavorited ? '已收藏 · 點擊取消' : '加入收藏'}
+                            title={isPoiFavorited ? '已收藏 · 點擊取消' : '加入收藏'}
+                            data-testid={`explore-save-btn-${poi.place_id}`}
                           >
-                            <button
-                              type="button"
-                              className={`explore-poi-heart ${isPoiFavorited ? 'is-saved' : ''}`}
-                              onClick={() => !isSaving && handleToggleFavorite(poi, isPoiFavorited)}
-                              disabled={isSaving}
-                              aria-label={isPoiFavorited ? '已收藏 · 點擊取消' : '加入收藏'}
-                              title={isPoiFavorited ? '已收藏 · 點擊取消' : '加入收藏'}
-                              data-testid={`explore-save-btn-${poi.place_id}`}
-                            >
-                              <Icon name="heart" />
-                            </button>
-                            {/* v2.23.8: ➕ 加入行程 — direct-mode AddPoiFavoriteToTripPage（不需先收藏） */}
-                            <button
-                              type="button"
-                              className="explore-poi-add-to-trip"
-                              onClick={() => {
-                                const params = new URLSearchParams({
-                                  place_id: poi.place_id,
-                                  name: poi.name,
-                                  lat: String(poi.lat),
-                                  lng: String(poi.lng),
-                                });
-                                if (poi.address) params.set('address', poi.address);
-                                if (poi.category) params.set('category', poi.category);
-                                navigate(`/add-to-trip?${params.toString()}`);
-                              }}
-                              aria-label="加入行程"
-                              title="加入行程"
-                              data-testid={`explore-add-to-trip-btn-${poi.place_id}`}
-                            >
-                              <Icon name="plus" />
-                            </button>
-                          </div>
+                            <Icon name="heart" />
+                          </button>
+                          {/* v2.23.8: ➕ 加入行程 — direct-mode AddPoiFavoriteToTripPage（不需先收藏） */}
+                          <button
+                            type="button"
+                            className="explore-poi-add-to-trip"
+                            onClick={() => {
+                              const params = new URLSearchParams({
+                                place_id: poi.place_id,
+                                name: poi.name,
+                                lat: String(poi.lat),
+                                lng: String(poi.lng),
+                              });
+                              if (poi.address) params.set('address', poi.address);
+                              if (poi.category) params.set('category', poi.category);
+                              navigate(`/add-to-trip?${params.toString()}`);
+                            }}
+                            aria-label="加入行程"
+                            title="加入行程"
+                            data-testid={`explore-add-to-trip-btn-${poi.place_id}`}
+                          >
+                            <Icon name="plus" />
+                          </button>
                           <div className="explore-poi-body">
                             {/* v2.31.20: poi.category 是 Google Places primary type
                               * (例 'ramen_restaurant')。直接 render 會顯 RAMEN_RESTAURANT

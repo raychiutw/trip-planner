@@ -182,6 +182,32 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     // heart button class 含 explore-poi-heart
     const heartBtn = getByTestId('explore-save-btn-p7');
     expect(heartBtn.className).toContain('explore-poi-heart');
+    // v2.54.11 review F1：收藏/加入行程鈕不得巢在 aria-hidden 的裝飾 cover 內，
+    // 否則整組互動鈕被移出無障礙樹。按鈕應為 card 直屬。
+    expect(cover?.querySelector('button')).toBeNull();
+    expect(heartBtn.closest('.explore-poi-cover')).toBeNull();
+    expect(heartBtn.closest('.explore-poi-card')).not.toBeNull();
+  });
+
+  it('卡 data-tone 依 POI 類型映射（restaurant→粉 / museum→柔褐 / hotel→sage）', async () => {
+    // v2.54.11 review F3：行為證明 category → tone 綁定（非僅「四色之一」）。
+    mockSearch([
+      { place_id: 'r1', name: '拉麵店', address: 'X', lat: 1, lng: 1, category: 'restaurant' },
+      { place_id: 'm1', name: '博物館', address: 'X', lat: 1, lng: 1, category: 'museum' },
+      { place_id: 'h1', name: '飯店', address: 'X', lat: 1, lng: 1, category: 'hotel' },
+    ]);
+    const { getByTestId, container } = renderPage();
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: 'mix' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => {
+      expect(getByTestId('explore-save-btn-r1')).toBeTruthy();
+    });
+    const cards = Array.from(container.querySelectorAll('.explore-poi-card'));
+    const toneByName = (n: string) =>
+      cards.find((c) => c.querySelector('.poi-name')?.textContent === n)?.getAttribute('data-tone');
+    expect(toneByName('拉麵店')).toBe('pink'); // restaurant → 吃 → 粉
+    expect(toneByName('博物館')).toBe('accent'); // museum → 景點 → 柔褐
+    expect(toneByName('飯店')).toBe('sage'); // hotel → 住 → sage
   });
 
   it('rating meta line 顯示 ★ icon', async () => {
