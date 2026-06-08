@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.1] - 2026-06-09
+
+### Fixed
+- **`useAutosave` in-flight 競態 — 不再遺失最後一次編輯**（reservation PR Codex follow-up）。`performSave` 在 save 進行中（`inFlightRef`）直接 return，但 save 完成後沒 reschedule 那批被 return 的 pending → 慢請求下「save 期間 user 又 patch」的最後編輯 silently 遺失（除非 onBlur flush 兜底）。影響全站 autosave（per-POI note / reservation 等）。
+  - 修：`performSave` finally 後，若 **save 成功** + pending 非空 + online + 無 active timer + **未 unmount** → 排下一輪 save（`performSaveRef` 解遞迴）。`saveSucceeded` flag 確保 error 路徑不自動重排（否則失敗的 save 無限重試）；`isMountedRef` 防卸載後 reschedule（Codex #2）。
+  - TDD：`use-autosave-inflight-race`（4）— in-flight 接著存第二批用新 version / 無 pending 不重排 / error 不重排 / unmount 不重排。
+  - Known follow-up：`STALE_ENTRY` 409 retry 路徑 in-flight 期間的 patch 仍可能被清空丟失（pre-existing、極罕見，完美修需重構 retry 多-await snapshot）。
+
 ## [2.55.0] - 2026-06-09
 
 ### Fixed
