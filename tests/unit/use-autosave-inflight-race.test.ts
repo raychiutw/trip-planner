@@ -81,4 +81,20 @@ describe('useAutosave — in-flight 競態（Codex #4）', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
     expect(save).toHaveBeenCalledTimes(1);
   });
+
+  it('unmount 後 in-flight save resolve → 不排新 reschedule timer（Codex #2）', async () => {
+    const d1 = deferred<Record<string, unknown>>();
+    const save = vi.fn<(b: Partial<{ note: string }>, v: number | undefined) => Promise<Record<string, unknown>>>()
+      .mockReturnValueOnce(d1.promise);
+    const { result, unmount } = renderHook(() => useAutosave<{ note: string }>({ debounceMs: 800, save }));
+
+    act(() => { result.current.patch({ note: 'A' }); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(800); }); // save in-flight
+    act(() => { result.current.patch({ note: 'B' }); }); // in-flight 期間 patch（pending 非空）
+    unmount(); // save 仍 in-flight → cleanup 設 isMountedRef=false
+
+    await act(async () => { d1.resolve({ version: 2 }); }); // finally 不該排新 timer
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(save).toHaveBeenCalledTimes(1); // 卸載後不 reschedule
+  });
 });

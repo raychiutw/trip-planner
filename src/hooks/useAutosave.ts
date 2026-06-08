@@ -78,6 +78,9 @@ export function useAutosave<T extends object>(
   // 遞迴排程用：finally 內要 re-trigger performSave，但 performSave useCallback 定義時
   // 自己尚未存在 → 透過 ref 取最新版（render body 同步更新）。
   const performSaveRef = useRef<(() => Promise<void>) | null>(null);
+  // unmount 後不再排 reschedule timer（save 可能在 unmount 後才 resolve，其 finally
+  // 不該在已卸載的 hook 上排新 timer / 再 save，Codex #2）。
+  const isMountedRef = useRef(true);
 
   const clearDebounceTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -165,6 +168,7 @@ export function useAutosave<T extends object>(
       // 還在打字、由它接管，避免重複）。
       if (
         saveSucceeded &&
+        isMountedRef.current &&
         Object.keys(pendingPatchRef.current).length > 0 &&
         isOnlineRef.current &&
         timerRef.current === null
@@ -240,6 +244,7 @@ export function useAutosave<T extends object>(
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
+      isMountedRef.current = false; // 阻止 in-flight save 的 finally 在卸載後排新 reschedule timer
       clearDebounceTimer();
       clearSavedTimer();
     };
