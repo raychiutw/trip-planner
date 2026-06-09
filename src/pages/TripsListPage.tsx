@@ -571,6 +571,10 @@ function cardMeta(trip: TripInfo): string {
 
 const MENU_WIDTH = 200;
 const VIEWPORT_MARGIN = 8;
+/** menu 高度估算（首次 open menuRef 尚未量到時用；~6 項 × 44 + divider + padding）。 */
+const ESTIMATED_MENU_HEIGHT = 300;
+/** 底部保留高度（GlobalBottomNav ~56 + iOS safe-area + margin）— 往下展開不可侵入這區，否則選單被遮。 */
+const BOTTOM_SAFE_AREA = 96;
 
 interface EmbeddedActionMenuProps {
   tripId: string;
@@ -599,10 +603,16 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthChe
       if (!btn) return;
       const r = btn.getBoundingClientRect();
       const vw = window.innerWidth;
+      const vh = window.innerHeight;
       let left = r.right - MENU_WIDTH;
       if (left < VIEWPORT_MARGIN) left = VIEWPORT_MARGIN;
       if (left + MENU_WIDTH > vw - VIEWPORT_MARGIN) left = vw - MENU_WIDTH - VIEWPORT_MARGIN;
-      setPos({ top: r.bottom + 6, left });
+      // dropUp：往下展開若會被底部（bottom nav + safe area）遮 → 改往上展開（trigger 上方）。
+      // 靠列表底部的卡片 menu 原本固定 r.bottom+6 往下、超出可視區被 nav 蓋住（QA 截圖）。
+      const menuH = menuRef.current?.offsetHeight || ESTIMATED_MENU_HEIGHT;
+      const below = r.bottom + 6;
+      const dropUp = below + menuH > vh - BOTTOM_SAFE_AREA && r.top - menuH - 6 >= VIEWPORT_MARGIN;
+      setPos({ top: dropUp ? r.top - menuH - 6 : below, left });
     }
     // rAF coalesce — scroll/resize 高頻 fire 時合併到單一 frame，避免 long
     // timeline scroll 時 getBoundingClientRect + setState 每 ms 跑造成 jank。
