@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.2] - 2026-06-09
+
+### Fixed
+- **行程卡 ⋮ 選單被遮（`TripsListPage`）** — `EmbeddedActionMenu` 固定 `r.bottom + 6` 往下展開，靠列表底部的卡片選單超出 viewport 底部、被 `GlobalBottomNav` + Safari 工具列蓋住（選單雖 `z-index: 9000` 在 nav 上層，但超出可視區的部分在螢幕外）。`recompute` 加 **dropUp**：下方放不下（`below + menuH > vh - BOTTOM_SAFE_AREA`）且上方夠 → 改往 trigger 上方展開。`position: fixed` → `r.top` viewport 座標一致。
+- **複製行程 title 加「-複製」（`share/[token]/clone.ts`）** — share clone 複製出的行程 `name`/`title` 原樣帶來源、與來源同名難分辨。改 `name` 後綴「-複製」、`title` 有值後綴「-複製」（空則 `null`）→ 顯示標題（`title || name`）一定帶「-複製」。
+
 ## [2.55.1] - 2026-06-09
 
 ### Fixed
