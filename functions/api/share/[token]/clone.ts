@@ -120,7 +120,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // ---- Batch A: trip + permissions + destinations + doc stubs + visible notes ----
     await runChunked(db, [
       db.prepare('INSERT INTO trips (id, name, owner_user_id, title, description, countries, published, data_source, lang) VALUES (?,?,?,?,?,?,?,?,?)')
-        .bind(tripId, trip.name ?? '未命名行程', auth.userId, trip.title, trip.description, trip.countries ?? 'JP', 0, 'cloned', trip.lang ?? 'zh-TW'),
+        // 複製出的行程在顯示標題（title || name）後綴「-複製」，便於與來源區分。
+        .bind(tripId, `${trip.name ?? '未命名行程'}-複製`, auth.userId, trip.title ? `${trip.title}-複製` : null, trip.description, trip.countries ?? 'JP', 0, 'cloned', trip.lang ?? 'zh-TW'),
       db.prepare('INSERT INTO trip_permissions (user_id, trip_id, role) VALUES (?,?,?)').bind(auth.userId, tripId, 'owner'),
       ...rows(destsR).map((d, i) => db.prepare('INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, sub_areas) VALUES (?,?,?,?,?,?,?)')
         .bind(tripId, i + 1, d.name, d.lat, d.lng, d.day_quota ?? 0, d.sub_areas ?? null)),
