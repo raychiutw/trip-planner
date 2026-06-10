@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef, type ReactNode } from 'react';
+import { Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef, type ReactNode } from 'react';
+import { lazyWithRetry } from '../lib/lazyWithRetry';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -27,7 +28,7 @@ import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import { extractPinsFromDay } from '../hooks/useMapData';
 /* F005: TripSheet 延遲載（內部 lazy load TripMapRail 以避免 Leaflet 進首頁 bundle）*/
-const TripSheet = lazy(() => import('../components/trip/TripSheet'));
+const TripSheet = lazyWithRetry(() => import('../components/trip/TripSheet'));
 // Migration 0045 (2026-05-02): trips.footer dropped. Footer.tsx component
 // deleted in same commit. FooterArt (decorative SVG, ThemeArt module, unrelated)
 // stays.
