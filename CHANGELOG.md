@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.3] - 2026-06-11
+
+### Fixed
+- **stale chunk 自癒涵蓋全部 lazy import（`lazyWithRetry`）** — Sentry「Failed to fetch dynamically imported module: `TripSheet`」。`lazyWithRetry`（deploy 後舊 chunk hash 失效時 retry + reload 自癒）原本只是 `main.tsx` 的 module-local function，route-level pages 都有保護，但 6 個 component 層裸 `lazy()`（`TripPage`→`TripSheet`、`TripSheet`→`TripMapRail`/`ChatPage`、`TripMapRail`/`MapPage`/`GlobalMapPage`→`TpMap`）沒有 fallback → 新 deploy 後舊 client 引用的舊 hash chunk 已不存在 → uncaught error 進 Sentry。
+  - 抽 `main.tsx` 的 `lazyWithRetry` 成共用 util `src/lib/lazyWithRetry.ts`，全部裸 `lazy` 改用之。邏輯不變（retry once → reload → reject），`sessionStorage` flag 由 `main.tsx` 既有清除邏輯沿用，不會無限 reload。
+  - `tests/unit/trip-map-rail-lazy.test.ts` source-pattern 斷言對齊 `lazyWithRetry`（由每日健康檢查 `/tp-daily-check` 自動修復產出）。
+
 ## [2.55.2] - 2026-06-09
 
 ### Fixed
