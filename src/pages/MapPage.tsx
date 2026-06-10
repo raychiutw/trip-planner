@@ -21,7 +21,8 @@
  *  └────────────────────────────────────────────┘
  */
 
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { lazyWithRetry } from '../lib/lazyWithRetry';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTripContext } from '../contexts/TripContext';
 import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hooks/useMapData';
@@ -39,7 +40,7 @@ import MapFabs from '../components/trip/MapFabs';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 
 
-const TpMap = lazy(() => import('../components/trip/TpMap'));
+const TpMap = lazyWithRetry(() => import('../components/trip/TpMap'));
 
 const SCOPED_STYLES = `
 .map-page-wrap {

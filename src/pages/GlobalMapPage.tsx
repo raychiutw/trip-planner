@@ -30,7 +30,8 @@
  * Empty state: 沒任何 trip → terracotta hero + 「+ 新增行程」按鈕走
  * useNewTrip().openModal。
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazyWithRetry } from '../lib/lazyWithRetry';
 
 import { Link, Navigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -49,7 +50,7 @@ import type { Day } from '../types/trip';
 
 // TpMap is heavy (leaflet bundle). Lazy-load so /map's first paint
 // (header + sheet skeleton) lands before the leaflet bundle finishes parsing.
-const TpMap = lazy(() => import('../components/trip/TpMap'));
+const TpMap = lazyWithRetry(() => import('../components/trip/TpMap'));
 
 interface MyTripRow { tripId: string; }
 interface TripSummary {

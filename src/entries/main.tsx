@@ -35,7 +35,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from '
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { NewTripProvider } from '../contexts/NewTripContext';
 import { ActiveTripProvider } from '../contexts/ActiveTripContext';
-import { lazy, Suspense, StrictMode } from 'react';
+import { Suspense, StrictMode } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ServerStatusBanner } from '../components/ServerStatusBanner';
 
@@ -52,43 +52,7 @@ function DarkModeInit() {
 }
 
 import '../../css/tokens.css';
-
-/**
- * Wrap dynamic import with retry + reload fallback.
- * After a deployment with new chunk hashes, users on the old version get
- * a "Failed to fetch dynamically imported module" error. This retries once,
- * then reloads to fetch fresh HTML with new chunk references.
- * sessionStorage key prevents infinite reload loops.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function lazyWithRetry<P = any>(
-  importFn: () => Promise<{ default: React.ComponentType<P> }>,
-) {
-  return lazy(() =>
-    importFn().catch(
-      () =>
-        new Promise<{ default: React.ComponentType<P> }>((resolve, reject) => {
-          // Retry once after a short delay
-          setTimeout(() => {
-            importFn()
-              .then(resolve)
-              .catch(() => {
-                const key = 'lazyWithRetry_reloaded';
-                if (!sessionStorage.getItem(key)) {
-                  sessionStorage.setItem(key, '1');
-                  window.location.reload();
-                  // Return a never-resolving promise while reload happens
-                  return;
-                }
-                // Already reloaded once — clear flag and surface the error
-                sessionStorage.removeItem(key);
-                reject(new Error('Failed to load module after retry and reload'));
-              });
-          }, 1500);
-        }),
-    ),
-  );
-}
+import { lazyWithRetry } from '../lib/lazyWithRetry';
 
 // AdminPage removed 2026-04-26 (PR-O) — admin 共編管理拆進每個 trip 的
 // OverflowMenu →「共編設定」 sheet (CollabSheet)，一般 user 也可管自己 owner

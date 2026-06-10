@@ -5,7 +5,8 @@
  * Default tab is `map` (matches B-P2 transitional behavior where sheet slot
  * held TripMapRail directly).
  */
-import { lazy, Suspense, useCallback, useMemo } from 'react';
+import { Suspense, useCallback, useMemo } from 'react';
+import { lazyWithRetry } from '../../lib/lazyWithRetry';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   parseSheetParam,
@@ -19,9 +20,9 @@ import TripSheetTabs from './TripSheetTabs';
 import Icon from '../shared/Icon';
 import type { MapPin } from '../../hooks/useMapData';
 
-const TripMapRail = lazy(() => import('./TripMapRail'));
+const TripMapRail = lazyWithRetry(() => import('./TripMapRail'));
 // v2.31.86：chat tab 從 placeholder「即將推出」改 embed ChatPage（embedded + lockTripId props）。
-const ChatPage = lazy(() => import('../../pages/ChatPage'));
+const ChatPage = lazyWithRetry(() => import('../../pages/ChatPage'));
 // Ideas tab retired — V2 cutover (migration 0046) 把備案合一進「我的收藏」。
 
 const DEFAULT_TAB: SheetTab = 'map';

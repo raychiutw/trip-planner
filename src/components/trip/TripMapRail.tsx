@@ -11,13 +11,14 @@
  * roads via Mapbox Directions) is delegated to TpMap so desktop rail + mobile
  * MapPage share the same polyline engine and font stack.
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazyWithRetry } from '../../lib/lazyWithRetry';
 import { useNavigate } from 'react-router-dom';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { EVENT } from '../../lib/events';
 import type { MapPin } from '../../hooks/useMapData';
 
-const TpMap = lazy(() => import('./TpMap'));
+const TpMap = lazyWithRetry(() => import('./TpMap'));
 
 /* ===== Singleton style injection ===== */
 function ensureStyle(): void {
