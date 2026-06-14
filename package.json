@@ -39,7 +39,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitest/runner": "^4.1.8",
     "@vitest/snapshot": "^4.1.8",
-    "axe-core": "^4.11.3",
+    "axe-core": "^4.12.1",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "dotenv": "^16.6.1",
