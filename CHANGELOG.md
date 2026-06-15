@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.4] - 2026-06-16
+
+### Security
+- **dompurify low-sev audit 修補（`overrides`）** — `npm audit` 回報 dompurify ≤3.4.8 兩個 low advisory：Trusted Types policy 在 `clearConfig()` 後殘留污染後續 `RETURN_TRUSTED_TYPE`（GHSA-vxr8-fq34-vvx9）、`SAFE_FOR_TEMPLATES` bypass 讓 template 運算式在 `<template>` 內存活（GHSA-gvmj-g25r-r7wr）。dompurify 為 transitive dep（`html2pdf.js`→`jspdf`，PDF 匯出用），實際解析版本 3.4.7。
+  - `package.json` overrides 釘 `dompurify: ^3.4.10`（上游 `^3.3.1` range 相容），解析升至 3.4.10 → `npm audit --omit=dev` 歸零。由每日健康檢查 `/tp-daily-check` 自動修復產出。
+
 ## [2.55.3] - 2026-06-11
 
 ### Fixed
