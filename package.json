@@ -1,6 +1,6 @@
 {
   "name": "tripline",
-  "version": "2.55.3",
+  "version": "2.55.4",
   "private": true,
   "scripts": {
     "dev": "concurrently -n vite,api -c cyan,green \"vite\" \"wrangler pages dev dist --local --port 8788 --d1 DB\"",
@@ -63,7 +63,8 @@
   "overrides": {
     "@babel/plugin-transform-modules-systemjs": "^7.29.4",
     "serialize-javascript": "^7.0.5",
-    "fast-uri": "^3.1.2"
+    "fast-uri": "^3.1.2",
+    "dompurify": "^3.4.10"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
