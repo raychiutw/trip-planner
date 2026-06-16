@@ -10,11 +10,11 @@
  *   place_id is always null in response (filter predicate).
  */
 
-import { requireAdmin } from '../_auth';
+import { requireScope } from '../_auth';
 import type { Env } from '../_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  requireAdmin(context);
+  requireScope(context, 'ops:poi');
   const url = new URL(context.request.url);
   const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '50', 10) || 50, 1), 500);
 

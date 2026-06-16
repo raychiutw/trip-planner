@@ -4,7 +4,7 @@
  * Round 15 finding: 8 個 `functions/api/admin/*.ts` endpoint 缺 unit-level
  * security guard 驗證。Miniflare port exhaustion 使 71 個 integration test
  * 無法穩定平行跑，改 source-grep 模式驗：
- *   1. 每個 admin endpoint 一定 import + 呼叫 requireAdmin
+ *   1. 每個 admin endpoint 一定 import + 呼叫 requireScope（Phase 1：移除全域 admin，改 ops scope）
  *   2. 狀態變動 endpoint 一定有 audit log（maps-lock / maps-unlock）
  *   3. 沒有 fall-through「無 auth 就 export」
  *
@@ -41,15 +41,15 @@ describe('Round 24 — admin endpoints inventory', () => {
   });
 });
 
-describe('Round 24 — admin endpoints require admin guard', () => {
+describe('Round 24 — admin endpoints require ops-scope guard', () => {
   for (const file of EXPECTED_ADMIN_ENDPOINTS) {
-    it(`${file} import + 呼叫 requireAdmin`, () => {
+    it(`${file} import + 呼叫 requireScope`, () => {
       const src = readFileSync(join(ADMIN_DIR, file), 'utf-8');
-      expect(src, `${file} 缺 requireAdmin import`).toMatch(/from\s+['"][^'"]*_auth['"]/);
-      expect(src, `${file} 缺 requireAdmin import name`).toMatch(/requireAdmin/);
+      expect(src, `${file} 缺 _auth import`).toMatch(/from\s+['"][^'"]*_auth['"]/);
+      expect(src, `${file} 缺 requireScope import name`).toMatch(/requireScope/);
       // 至少一次 call (不只是 import — 防 dead import)
-      const callMatches = src.match(/requireAdmin\s*\(/g);
-      expect(callMatches, `${file} requireAdmin import 但沒 call`).not.toBeNull();
+      const callMatches = src.match(/requireScope\s*\(/g);
+      expect(callMatches, `${file} requireScope import 但沒 call`).not.toBeNull();
       expect((callMatches || []).length).toBeGreaterThanOrEqual(1);
     });
   }

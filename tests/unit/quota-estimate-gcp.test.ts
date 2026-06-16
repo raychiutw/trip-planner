@@ -19,7 +19,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-vi.mock('../../functions/api/_auth', () => ({ requireAdmin: vi.fn() }));
+vi.mock('../../functions/api/_auth', () => ({ requireScope: vi.fn() }));
 vi.mock('../../functions/api/_gcp_monitoring', () => ({
   fetchMapsQuotaFromCloudMonitoring: vi.fn(),
 }));

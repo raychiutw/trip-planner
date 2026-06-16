@@ -23,11 +23,11 @@ beforeAll(async () => {
 afterAll(disposeMiniflare);
 
 describe('GET /api/trips/:id/audit', () => {
-  it('admin 取得 audit log', async () => {
+  it('owner 取得 audit log', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/trips/trip-audit/audit'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'user@test.com' }), // trip-audit owner（D4：audit 改 owner gate）
       params: { id: 'trip-audit' },
     });
     const resp = await callHandler(onRequestGet, ctx);
@@ -37,11 +37,11 @@ describe('GET /api/trips/:id/audit', () => {
     expect(data[0].action).toBe('update');
   });
 
-  it('非 admin → 403', async () => {
+  it('非 owner（無 trip 寫權限）→ 403', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/trips/trip-audit/audit'),
       env,
-      auth: mockAuth({ email: 'user@test.com' }),
+      auth: mockAuth({ email: 'stranger@test.com' }),
       params: { id: 'trip-audit' },
     });
     expect((await callHandler(onRequestGet, ctx)).status).toBe(403);

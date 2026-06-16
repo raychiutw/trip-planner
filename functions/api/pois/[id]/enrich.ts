@@ -18,7 +18,7 @@
  * Auth: 同 PATCH /pois/:id — admin OR trip owner（passing tripId for link check）。
  */
 
-import { hasWritePermission, verifyPoiBelongsToTrip, requireAuth} from '../../_auth';
+import { requireAuth, requirePoiWrite } from '../../_auth';
 import { logAudit } from '../../_audit';
 import { AppError } from '../../_errors';
 import { json, parseIntParam } from '../../_utils';
@@ -42,14 +42,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
   const tripId = url.searchParams.get('tripId');
 
-  if (!auth.isAdmin) {
-    if (!tripId) throw new AppError('DATA_VALIDATION', '非 admin 必須提供 tripId 參數');
-    if (!(await hasWritePermission(db, auth, tripId, false))) {
-      throw new AppError('PERM_DENIED');
-    }
-    const link = await verifyPoiBelongsToTrip(db, poiId, tripId);
-    if (!link) throw new AppError('PERM_DENIED', '此 POI 不屬於該行程');
-  }
+  // Phase 1（移除全域 admin / F1）：master POI enrich 授權集中於 requirePoiWrite。
+  await requirePoiWrite(db, auth, poiId, tripId);
 
   const apiKey = context.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) throw new AppError('MAPS_UPSTREAM_FAILED', 'GOOGLE_MAPS_API_KEY not configured');

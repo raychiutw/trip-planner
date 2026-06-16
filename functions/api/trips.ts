@@ -1,5 +1,5 @@
 import { logAudit } from './_audit';
-import { requireAuth } from './_auth';
+import { requireAuth, hasOpsScope } from './_auth';
 import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
 import type { Env } from './_types';
@@ -199,7 +199,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                     (SELECT COUNT(DISTINCT user_id) FROM trip_permissions p WHERE p.trip_id = t.id) AS member_count`;
 
   const fromJoin = `FROM trips t LEFT JOIN users u ON u.id = t.owner_user_id`;
-  const sql = showAll && auth?.isAdmin
+  // Phase 1（移除全域 admin）：跨-trip 全列表改 service-token ops:trips:read（daily-report 用）。
+  const sql = showAll && hasOpsScope(auth, 'ops:trips:read')
     ? `SELECT ${baseCols} ${fromJoin} ORDER BY t.name ASC`
     : `SELECT ${baseCols} ${fromJoin} WHERE t.published = 1 ORDER BY t.name ASC`;
 

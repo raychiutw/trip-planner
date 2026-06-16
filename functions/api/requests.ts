@@ -14,7 +14,7 @@
 
 import { logAudit, recordEmailEvent } from './_audit';
 import { alertAdminTelegram } from './_alert';
-import { hasPermission, hasWritePermission, requireAuth} from './_auth';
+import { hasPermission, hasWritePermission, requireAuth, hasOpsScope } from './_auth';
 import { AppError } from './_errors';
 import { json, parseJsonBody } from './_utils';
 import type { Env } from './_types';
@@ -33,8 +33,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const after = url.searchParams.get('after');
   const afterId = url.searchParams.get('afterId');
 
-  // admin/service token 可不帶 tripId 查詢所有 requests
-  if (!tripId && !auth.isAdmin) {
+  // service token 帶 ops:trips:read 可不帶 tripId 查詢所有 requests（Phase 1）
+  if (!tripId && !hasOpsScope(auth, 'ops:trips:read')) {
     throw new AppError('DATA_VALIDATION', '缺少 tripId 參數');
   }
 

@@ -7,13 +7,13 @@
  * Auth: admin only.
  * Response: { deleted: N }
  */
-import { requireAdmin } from '../_auth';
+import { requireScope } from '../_auth';
 import { cleanupExpiredCache } from '../../../src/lib/maps/cache';
 import { json } from '../_utils';
 import type { Env } from '../_types';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  requireAdmin(context);
+  requireScope(context, 'ops:cache');
   const deleted = await cleanupExpiredCache(context.env.DB);
   return json({ deleted });
 };

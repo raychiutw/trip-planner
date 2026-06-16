@@ -18,13 +18,13 @@
  * Error 502: MAPS_UPSTREAM_FAILED — GCP Cloud Monitoring 無法取得（不投射假數字）。
  */
 
-import { requireAdmin } from '../_auth';
+import { requireScope } from '../_auth';
 import { AppError } from '../_errors';
 import { fetchMapsQuotaFromCloudMonitoring } from '../_gcp_monitoring';
 import type { Env } from '../_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  requireAdmin(context);
+  requireScope(context, 'ops:maps');
 
   const counts = await fetchMapsQuotaFromCloudMonitoring(
     context.env as { GOOGLE_CLOUD_SA_KEY?: string; GOOGLE_CLOUD_PROJECT_ID?: string },

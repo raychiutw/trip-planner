@@ -6,7 +6,7 @@
  * Response: { "locked": true, "reason": string, "locked_at": ISO timestamp }
  */
 
-import { requireAdmin } from '../_auth';
+import { requireScope } from '../_auth';
 import { setLockState } from '../_maps_lock';
 import { logAudit } from '../_audit';
 import type { Env } from '../_types';
@@ -16,7 +16,7 @@ interface LockBody {
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = requireAdmin(context);
+  const auth = requireScope(context, 'ops:maps');
   const body = (await context.request.json().catch(() => ({}))) as LockBody;
   const reason = body.reason || 'manual lock by admin';
 

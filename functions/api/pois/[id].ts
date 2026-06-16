@@ -7,7 +7,7 @@
  */
 
 import { logAudit, computeDiff } from '../_audit';
-import { hasWritePermission, verifyPoiBelongsToTrip, requireAuth} from '../_auth';
+import { requireAuth, hasOpsScope, requirePoiWrite } from '../_auth';
 import { AppError } from '../_errors';
 import { json, parseJsonBody, buildUpdateClause, parseIntParam } from '../_utils';
 import type { Env } from '../_types';
@@ -42,14 +42,9 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const oldRow = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first();
   if (!oldRow) throw new AppError('DATA_NOT_FOUND', '找不到此 POI');
 
-  if (!auth.isAdmin) {
-    if (!tripId) throw new AppError('DATA_VALIDATION', '非 admin 必須提供 tripId');
-    if (!await hasWritePermission(db, auth, tripId, false)) {
-      throw new AppError('PERM_DENIED');
-    }
-    const link = await verifyPoiBelongsToTrip(db, poiId, tripId);
-    if (!link) throw new AppError('PERM_DENIED', '此 POI 不屬於該行程');
-  }
+  // Phase 1（移除全域 admin / F1）：master POI 寫入授權集中於 requirePoiWrite —
+  // service token ops:poi 直接放行（cron 維運），否則 user 走 owner + tripId 連結檢查。
+  await requirePoiWrite(db, auth, poiId, tripId);
 
   const update = buildUpdateClause(body, ALLOWED_FIELDS as unknown as string[]);
   if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
@@ -77,7 +72,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
  */
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
-  if (!auth.isAdmin) throw new AppError('PERM_DENIED', '僅 admin 可刪除 master POI');
+  if (!hasOpsScope(auth, 'ops:poi')) throw new AppError('PERM_DENIED', '僅 ops:poi 維運 token 可刪除 master POI');
 
   const poiId = parseIntParam(context.params.id as string);
   if (!poiId) throw new AppError('DATA_VALIDATION', 'POI ID 格式錯誤');
