@@ -1,6 +1,6 @@
 # Tripline
 
-Cloudflare Pages + D1 + React SPA + V2 OAuth. Admin: lean.lean@gmail.com.
+Cloudflare Pages + D1 + React SPA + V2 OAuth. 無全域 admin — owner/permissions + service-token ops scope 授權（admin 移除 v2.55.5-v2.55.7）。
 
 ## Pipeline
 
