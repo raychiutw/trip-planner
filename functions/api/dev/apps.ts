@@ -71,12 +71,13 @@ function generateClientSecret(): string {
 
 /**
  * v2.33.42 security audit: user-self-service registration MUST NOT include
- * `admin` / `companion` scope。之前接受 caller body 的任意 scope，雖然 status
+ * `companion` / `ops:*` scope。之前接受 caller body 的任意 scope，雖然 status
  * 初始為 `pending_review`，但 ops 一旦 flip 為 active 而沒 scrub scope，attacker
- * 拿 client_credentials grant 即得 admin-token (privilege escalation chain
- * via `_middleware.ts:371` isAdmin via scope)。
+ * 拿 client_credentials grant 即得維運身份（privilege escalation：companion 可
+ * PATCH /requests + 寫 companion 收藏；ops:* 過 requireScope 維運 gate）。
+ * Phase 3：舊 `admin` scope 已無作用（hasOpsScope 不再雙接受），但仍 block 以防混淆。
  *
- * Allowlist whitelist：admin / companion 必須 ops 手動 INSERT D1 才能擁有。
+ * Allowlist whitelist：companion / ops:* 必須 ops 手動 INSERT D1 才能擁有。
  */
 const ALLOWED_USER_SCOPES = new Set(['openid', 'profile', 'email', 'offline_access']);
 export function validateScopes(scopes: unknown): string[] {

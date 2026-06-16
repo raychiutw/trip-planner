@@ -63,7 +63,7 @@ export async function listNotesSection(
   const auth = requireAuth(context);
   const tripId = params.id as string;
 
-  if (!(await hasPermission(env.DB, auth, tripId, auth.isAdmin))) {
+  if (!(await hasPermission(env.DB, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
 
@@ -87,7 +87,7 @@ export async function createNotesRow(
   const auth = requireAuth(context);
   const tripId = params.id as string;
 
-  if (!(await hasWritePermission(env.DB, auth, tripId, auth.isAdmin))) {
+  if (!(await hasWritePermission(env.DB, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
 
@@ -147,7 +147,7 @@ export async function updateNotesRow(
   const id = parseIntParam(params.rowId as string);
   if (!id) throw new AppError('DATA_VALIDATION', 'rowId 必須是正整數');
 
-  if (!(await hasWritePermission(env.DB, auth, tripId, auth.isAdmin))) {
+  if (!(await hasWritePermission(env.DB, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
 
@@ -241,7 +241,7 @@ export async function deleteNotesRow(
   const id = parseIntParam(params.rowId as string);
   if (!id) throw new AppError('DATA_VALIDATION', 'rowId 必須是正整數');
 
-  if (!(await hasWritePermission(env.DB, auth, tripId, auth.isAdmin))) {
+  if (!(await hasWritePermission(env.DB, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
 
@@ -281,7 +281,7 @@ export async function reorderNotesRows(
   const auth = requireAuth(context);
   const tripId = params.id as string;
 
-  if (!(await hasWritePermission(env.DB, auth, tripId, auth.isAdmin))) {
+  if (!(await hasWritePermission(env.DB, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
 

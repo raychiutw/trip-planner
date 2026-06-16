@@ -6,7 +6,7 @@ import type { Env } from '../../_types';
 
 // GET /api/trips/:id/audit
 // Query params: limit (default 20), request_id (optional filter)
-// Only admin can access
+// Auth: per-trip owner/member（requireTripWrite；Phase 3 移除全域 admin）
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
   const { id } = context.params as { id: string };

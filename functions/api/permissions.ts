@@ -2,7 +2,7 @@
  * GET  /api/permissions?tripId=xxx  — 列出行程權限
  * POST /api/permissions { email, tripId, role? } — 新增權限 / 寄邀請
  *
- * V2-P7 PR-O: 從「admin only」放寬為「admin OR trip owner」。
+ * 授權：trip owner（Phase 3 移除全域 admin 後純 owner gate，見 ensureCanManageTripPerms）。
  * V2 共編分享信改寫（task 5/9, 2026-04-27）：拔 CF Access 死代碼（V2-P6 cutover 後
  * Access 已拆），改成兩條分支：
  *   - existing user (users.email match)：INSERT trip_permissions + 寄通知信「[Inviter]
@@ -28,13 +28,12 @@ import {
 } from '../../src/server/invitation-token';
 import type { Env } from './_types';
 
-/** 檢查 auth user 是否為該 trip 的 owner（admin 自動 pass）。 */
+/** 檢查 auth user 是否為該 trip 的 owner（Phase 3：admin 移除，純 owner gate）。 */
 export async function ensureCanManageTripPerms(
   context: { env: Env },
-  auth: { email: string; userId: string | null; isAdmin: boolean },
+  auth: { email: string; userId: string | null },
   tripId: string,
 ): Promise<void> {
-  if (auth.isAdmin) return;
   // V2 cutover phase 2: 純 owner_user_id check (owner email column dropped)
   if (!auth.userId) throw new AppError('PERM_ADMIN_ONLY', '需 V2 OAuth 登入');
   const owner = await context.env.DB
@@ -154,8 +153,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   // v2.18.0:接受 viewer role(read-only collaborator)
-  if (role !== 'member' && role !== 'viewer' && role !== 'admin') {
-    throw new AppError('DATA_VALIDATION', "role 必須為 'member' / 'viewer' / 'admin'");
+  // Phase 3（移除全域 admin）：協作者 role 僅 member / viewer；owner 於建立行程時設定，
+  // 不經邀請。migration 0080 已從 trip_permissions.role CHECK 移除 'admin'，此處同步拒絕。
+  if (role !== 'member' && role !== 'viewer') {
+    throw new AppError('DATA_VALIDATION', "role 必須為 'member' / 'viewer'");
   }
 
   await ensureCanManageTripPerms(context, auth, tripId);

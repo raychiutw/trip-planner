@@ -10,7 +10,6 @@ export interface Env {
   CF_ACCOUNT_ID: string;
   CF_ACCESS_APP_ID: string;
   CF_ACCESS_POLICY_ID: string;
-  ADMIN_EMAIL: string;
   ALLOWED_ORIGIN?: string;
   /** v2.33.62 round 14c: 'production' / 'preview' / 'development'。靠 wrangler.toml
    * [env.X.vars]。Used by isAllowedOrigin (preview origin gate) + middleware

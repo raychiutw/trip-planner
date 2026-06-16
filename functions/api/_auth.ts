@@ -16,37 +16,23 @@ export function requireAuth(context: { data: unknown }): AuthData {
 }
 
 /**
- * Admin-only gate. Returns AuthData or throws AUTH_REQUIRED / PERM_ADMIN_ONLY.
- */
-export function requireAdmin(context: { data: unknown }): AuthData {
-  const auth = requireAuth(context);
-  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
-  return auth;
-}
-
-/**
- * Service-token ops-scope check（移除全域 admin，Phase 1）。
+ * Service-token ops-scope check（移除全域 admin）。
  *
- * 取代 `auth.isAdmin` 作為「系統維運 / 跨-trip」端點的授權依據。只有
- * service token（client_credentials，user_id=null）帶指定 ops scope 才為真。
- *
- * 雙接受過渡：Phase 1 期間舊 `admin` scope 仍通配所有 ops scope，讓尚未
- * rotate 的 mac mini cron token 不中斷；Phase 2 rotate 完成後，Phase 3 移除
- * 下面 `|| scopes.includes('admin')` 那段。
- *
- * user-session 不帶 `scopes`（middleware 只對 service token attach，見
- * _middleware.ts），故 user 一律回 false — 無法靠自帶 scope 偽造維運權限。
+ * 「系統維運 / 跨-trip」端點的授權依據：只有 service token（client_credentials，
+ * user_id=null）帶指定 ops scope 才為真。user-session 不帶 `scopes`（middleware
+ * 只對 service token attach），故 user 一律回 false — 無法靠自帶 scope 偽造維運權限。
  */
 export function hasOpsScope(auth: AuthData | null, scope: string): boolean {
   if (!auth?.isServiceToken) return false;
   const scopes = auth.scopes;
   if (!scopes) return false;
-  return scopes.includes(scope) || scopes.includes('admin'); // ← Phase 3 移除 admin 雙接受
+  return scopes.includes(scope);
 }
 
 /**
- * Ops-only gate：service token 帶指定 ops scope 才放行，否則 PERM_DENIED。
- * 取代 requireAdmin 於 /api/admin/* 系統維運與跨-trip 端點。
+ * Scope gate：service token 帶指定 scope 才放行，否則 PERM_DENIED。
+ * 用於 /api/admin/* 系統維運與跨-trip 端點（ops:*），以及 companion 端點
+ * （PATCH /api/requests/:id — Claude CLI 回覆 chat）。
  */
 export function requireScope(context: { data: unknown }, scope: string): AuthData {
   const auth = requireAuth(context);
@@ -55,7 +41,7 @@ export function requireScope(context: { data: unknown }, scope: string): AuthDat
 }
 
 /**
- * Master POI 寫入授權（PATCH / enrich 共用，Phase 1 F1）。
+ * Master POI 寫入授權（PATCH / enrich 共用，F1）。
  * service token 帶 ops:poi → 放行（cron poi-refresh/backfill 維運，免 tripId）；
  * 否則 user 須提供 tripId + 對該 trip 有寫權限 + POI 確實屬於該 trip。
  */
@@ -67,7 +53,7 @@ export async function requirePoiWrite(
 ): Promise<void> {
   if (hasOpsScope(auth, 'ops:poi')) return;
   if (!tripId) throw new AppError('DATA_VALIDATION', '非維運 token 必須提供 tripId');
-  if (!(await hasWritePermission(db, auth, tripId, false))) throw new AppError('PERM_DENIED');
+  if (!(await hasWritePermission(db, auth, tripId))) throw new AppError('PERM_DENIED');
   if (!(await verifyPoiBelongsToTrip(db, poiId, tripId))) {
     throw new AppError('PERM_DENIED', '此 POI 不屬於該行程');
   }
@@ -75,24 +61,23 @@ export async function requirePoiWrite(
 
 /**
  * Per-trip 寫權限 gate（owner/member，排除 viewer）。audit / rollback 等
- * per-trip 特權操作共用（Phase 1 D4：取代 admin-only gate）。
+ * per-trip 特權操作共用（D4：取代舊 admin-only gate）。
  */
 export async function requireTripWrite(
   db: D1Database,
   auth: AuthData,
   tripId: string,
 ): Promise<void> {
-  if (!(await hasWritePermission(db, auth, tripId, false))) throw new AppError('PERM_DENIED');
+  if (!(await hasWritePermission(db, auth, tripId))) throw new AppError('PERM_DENIED');
 }
 
 /**
  * Returns true if the authenticated user has any permission row on the given trip
- * (read access). Admins and service tokens always pass. viewer / member / owner /
- * admin roles all return true — viewer is read-allowed.
+ * (read access). viewer / member / owner roles all return true — viewer is read-allowed.
+ * service tokens (no user_id) return false — 維運走 ops scope，不靠 trip membership。
  *
  * V2 cutover phase 2 (migration 0047): email column dropped from trip_permissions.
- * 純 user_id-based query。pre-V2 sessions / service tokens 沒 user_id → 直接 false（不
- * 是 trip member）。
+ * 純 user_id-based query。
  *
  * For write/destructive operations, use `hasWritePermission` instead.
  */
@@ -100,9 +85,7 @@ export async function hasPermission(
   db: D1Database,
   auth: AuthData,
   tripId: string,
-  isAdmin: boolean,
 ): Promise<boolean> {
-  if (isAdmin) return true;
   if (auth.isServiceToken) return false;
   if (!auth.userId) return false;
   const row = await db
@@ -117,11 +100,7 @@ export async function hasPermission(
  * Accepts a request if:
  *   - the trip is `published=1` (public-share row), OR
  *   - the caller is authenticated AND has a `trip_permissions` row (any role).
- *
- * 之前 `_middleware.ts:415` 對所有 `GET /api/trips/**` 直接 bypass auth，多個
- * GET handler 沒做 published / permission 檢查，導致 anonymous 知 tripId 即可
- * 讀 doc 航班 / hotel POI / 緊急聯絡。tripId 是 user-chosen lowercase slug
- * (`/^[a-z0-9-]+$/`)，極易猜（`tokyo-2026` 等）。
+ * service token (no user_id) → published-only（維運不讀個別 trip）。
  *
  * Throws `DATA_NOT_FOUND` 若 trip 不存在；throws `PERM_DENIED` 若需要 auth 卻無權。
  * 統一回 PERM_DENIED 而非 AUTH_REQUIRED 避免 enumerate published vs unpublished tripId。
@@ -131,10 +110,7 @@ export async function requireTripReadAccess(
   auth: AuthData | null,
   tripId: string,
 ): Promise<{ published: boolean; isMember: boolean }> {
-  // v2.33.94 simplify: 從 2 個 sequential SELECT 合成 1 LEFT JOIN
-  // 之前 `SELECT published` + `hasPermission`（再 SELECT trip_permissions）。
-  // Admin/service-token 仍走 hasPermission()（無 DB call）短路；
-  // 一般 V2 user 從 2 round-trip → 1。
+  // v2.33.94 simplify: 從 2 個 sequential SELECT 合成 1 LEFT JOIN。
   const userIdForJoin = auth?.userId ?? '__no_match__';
   const row = await db
     .prepare(
@@ -149,8 +125,6 @@ export async function requireTripReadAccess(
   const published = row.published === 1;
   if (published) return { published: true, isMember: false };
   if (!auth) throw new AppError('PERM_DENIED');
-  // Admin / service-token bypass — hasPermission() 邏輯不 DB-touch
-  if (auth.isAdmin) return { published: false, isMember: true };
   if (auth.isServiceToken) throw new AppError('PERM_DENIED');
   if (!auth.userId || row.perm_user_id === null) throw new AppError('PERM_DENIED');
   return { published: false, isMember: true };
@@ -159,20 +133,15 @@ export async function requireTripReadAccess(
 /**
  * Returns true if the authenticated user can write to the given trip.
  * viewer role is BLOCKED here per migration 0043 ("viewer = read-only collaborator").
- * Admins and service tokens always pass. owner / admin / member roles return true.
+ * owner / member roles return true. service tokens (no user_id) return false — 維運走 ops scope。
  *
  * V2 cutover phase 2: 純 user_id-based query (email column 已 dropped)。
- *
- * v2.18.0: introduced alongside the 3-tier role model so write paths gate viewer out
- * while read paths (`hasPermission`) keep viewer access.
  */
 export async function hasWritePermission(
   db: D1Database,
   auth: AuthData,
   tripId: string,
-  isAdmin: boolean,
 ): Promise<boolean> {
-  if (isAdmin) return true;
   if (auth.isServiceToken) return false;
   if (!auth.userId) return false;
   const row = await db

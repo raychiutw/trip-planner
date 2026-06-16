@@ -10,10 +10,10 @@
  * startTime 之後第一個 entry 之前；若沒有更晚 entry 則 append 到末尾）。
  * Conflict detection 邏輯保留：newStart < eEnd AND newEnd > eStart → 409 + conflictWith。
  *
- * Auth：
- *   - V2 user：必須是 favorite owner（OR admin bypass）+ 對 tripId 有 hasWritePermission
+ * Auth（Phase 3：無全域 admin bypass）：
+ *   - V2 user：必須是 favorite owner + 對 tripId 有 hasWritePermission
  *   - companion：requireFavoriteActor(action='add_to_trip')；ownership 用 resolved
- *     userId（submitter）比 favorite.user_id；admin scope 不 bypass。
+ *     userId（submitter）比 favorite.user_id。
  *
  * v2.29.0: travel_* DROPPED, trip_segments 由 /recompute-travel 在背景 fill。
  */
@@ -86,15 +86,10 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
 
   // v2.33.105 SEC-2: post-gate bucket — 用 RESOLVED actor，bucket key 與 POST
   // /api/poi-favorites 區隔（自己一池），避免互相吃 quota。
-  const rlBucket = pickFavoriteBucketForActor(
-    actor,
-    'poi-favorites-add-to-trip',
-    !actor.isCompanion && auth?.isAdmin === true,
-  );
-  if (rlBucket) {
-    const bump = await bumpRateLimit(context.env.DB, rlBucket, RATE_LIMITS.POI_FAVORITES_WRITE);
-    if (!bump.ok) return buildRateLimitResponse(bump.retryAfter ?? 60, { error: 'RATE_LIMITED' });
-  }
+  // Phase 3（移除全域 admin）：無 admin rate-limit 豁免。
+  const rlBucket = pickFavoriteBucketForActor(actor, 'poi-favorites-add-to-trip');
+  const bump = await bumpRateLimit(context.env.DB, rlBucket, RATE_LIMITS.POI_FAVORITES_WRITE);
+  if (!bump.ok) return buildRateLimitResponse(bump.retryAfter ?? 60, { error: 'RATE_LIMITED' });
 
   const db = context.env.DB;
 
@@ -126,7 +121,7 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
           .bind(actor.userId, tripId)
           .first()
           .then((row) => !!row)
-      : hasWritePermission(db, auth!, tripId, auth?.isAdmin ?? false),
+      : hasWritePermission(db, auth!, tripId),
     db
       .prepare('SELECT id FROM trip_days WHERE trip_id = ? AND day_num = ?')
       .bind(tripId, dayNum)
@@ -135,7 +130,7 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
 
   if (!favorite) throw new AppError('DATA_NOT_FOUND', '找不到該收藏');
 
-  assertFavoriteOwnership(actor, auth, favorite.user_id, '只能加入自己的收藏');
+  assertFavoriteOwnership(actor, favorite.user_id, '只能加入自己的收藏');
   if (!hasWrite) throw new AppError('PERM_DENIED');
   if (!day) throw new AppError('DATA_NOT_FOUND', `Day ${dayNum} 不存在`);
 

@@ -323,7 +323,6 @@ const SCOPED_STYLES = `
 
 const ROLE_BADGE_INFO: Record<CollabRole, { label: string; class: string }> = {
   owner:  { label: '擁有者',   class: 'tp-collab-badge-owner' },
-  admin:  { label: '管理員',   class: 'tp-collab-badge-owner' }, // 視為 owner 同等
   member: { label: '共編成員', class: 'tp-collab-badge-member' },
   viewer: { label: '檢視成員', class: 'tp-collab-badge-viewer' },
 };
@@ -525,7 +524,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
               // displayName 缺漏 fallback email[0]。
               const initialSource = (p.displayName?.trim() || p.email).charAt(0).toUpperCase();
               const initial = initialSource || '?';
-              const isOwnerLike = p.role === 'owner' || p.role === 'admin';
+              const isOwnerLike = p.role === 'owner';
               const badgeInfo = ROLE_BADGE_INFO[p.role];
               const editable = !isOwnerLike;
               const menuOpen = openMenuId === p.id;

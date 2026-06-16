@@ -34,15 +34,18 @@ describe('GET /api/my-trips', () => {
     expect(data.every(t => t.tripId === 'trip-my-1' || t.tripId === 'trip-my-2')).toBe(true);
   });
 
-  it('admin 看到所有行程', async () => {
+  it('非 owner 不再看到所有行程（Phase 3：無全域 admin bypass）', async () => {
+    // 舊行為：admin email 走 see-all 分支看到全部行程。
+    // Phase 3 移除 admin bypass 後，任何無 trip_permissions row 的 user 看到 0 筆。
     const ctx = mockContext({
       request: new Request('https://test.com/api/my-trips'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'admin@test.com' }),
     });
     const resp = await callHandler(onRequestGet, ctx);
+    expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
-    expect(data.length).toBeGreaterThanOrEqual(3);
+    expect(data.length).toBe(0);
   });
 
   it('未認證 → handler crash（middleware 已在前攔截）', async () => {

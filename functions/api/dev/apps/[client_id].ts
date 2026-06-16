@@ -139,8 +139,8 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     // Non-empty guard FIRST (validateScopes would silently fall back to
     // DEFAULT_SCOPES on []), then enforce the user-self-service allowlist —
     // same gate as POST. Closes a privilege-escalation hole: PATCH previously
-    // accepted any string (e.g. 'admin'), letting an app owner mint an
-    // admin-scoped client_credentials token.
+    // accepted any string (e.g. 'companion' / 'ops:*'), letting an app owner mint
+    // a maintenance-scoped client_credentials token. (Phase 3：舊 'admin' scope 已無作用)
     if (!Array.isArray(body.allowed_scopes) || body.allowed_scopes.length === 0) {
       throw new AppError('DATA_VALIDATION', 'allowed_scopes 必須是非空陣列');
     }

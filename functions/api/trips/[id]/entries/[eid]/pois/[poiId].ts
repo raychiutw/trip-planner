@@ -83,7 +83,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
 
   const [canWrite, belongsToTrip] = await Promise.all([
-    hasWritePermission(db, auth, id, auth.isAdmin),
+    hasWritePermission(db, auth, id),
     verifyEntryBelongsToTrip(db, eid, id),
   ]);
   if (!canWrite) throw new AppError('PERM_DENIED');

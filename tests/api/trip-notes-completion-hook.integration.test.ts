@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { callHandler, jsonRequest, mockAuth, mockContext, mockEnv, seedTrip, seedUser } from './helpers';
+import { callHandler, jsonRequest, mockContext, mockEnv, mockServiceAuth, seedTrip, seedUser } from './helpers';
 import { onRequestPatch } from '../../functions/api/requests/[id]/index';
 import type { Env } from '../../functions/api/_types';
 
@@ -21,13 +21,11 @@ let db: D1Database;
 let env: Env;
 const tripId = 'trip-hook-a';
 const ownerEmail = 'owner@hook.test';
-const adminEmail = 'admin@hook.test'; // for service-like PATCH
 
 beforeAll(async () => {
   db = await createTestDb();
-  env = mockEnv(db, { ADMIN_EMAIL: adminEmail });
+  env = mockEnv(db);
   await seedUser(db, ownerEmail);
-  await seedUser(db, adminEmail);
   await seedTrip(db, { id: tripId, owner: ownerEmail });
 });
 
@@ -45,11 +43,12 @@ async function createJobAndRequest(docType: 'lodging-tips' | 'tips' | 'emergency
   return { requestId: req!.id, jobId: job!.id };
 }
 
-async function callPatch(requestId: number, body: Record<string, unknown>, email = adminEmail) {
+async function callPatch(requestId: number, body: Record<string, unknown>) {
   const ctx = mockContext({
     request: jsonRequest(`https://test/api/requests/${requestId}`, 'PATCH', body),
     env,
-    auth: mockAuth({ email, isAdmin: true }),
+    // Phase 3：PATCH /requests/:id 由帶 companion scope 的 service token 執行（Claude CLI）
+    auth: mockServiceAuth(),
     params: { id: String(requestId) },
   });
   return callHandler(onRequestPatch, ctx);

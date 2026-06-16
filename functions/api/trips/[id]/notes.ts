@@ -33,7 +33,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
   const tripId = params.id as string;
 
-  if (!(await hasPermission(env.DB, auth, tripId, auth.isAdmin))) {
+  if (!(await hasPermission(env.DB, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
 

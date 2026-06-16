@@ -2,14 +2,14 @@
  * DELETE /api/permissions/:id — 移除權限
  * PATCH  /api/permissions/:id — 更新角色(member ↔ viewer)
  *
- * V2-P7 PR-O: 從「admin only」放寬為「admin OR trip owner」。
+ * 授權：trip owner（Phase 3 移除全域 admin 後純 owner gate，見 ensureCanManageTripPerms）。
  * V2 共編改寫(task 5/9, 2026-04-27):拔掉 CF Access policy 同步(V2-P6
  * cutover 後 Access 已拆,呼叫 CF API 是死代碼 + 任何呼叫都會 fail)。
  *
  * v2.18.0:加 PATCH endpoint 配合 CollabPage role chip dropdown。
  *   - body: { role: 'member' | 'viewer' }
- *   - owner / admin role 不可被改(只能 transfer ownership 走另外 endpoint)
- *   - 只能改成 member 或 viewer(防 client 偷送 'owner'/'admin' 升級攻擊)
+ *   - owner role 不可被改(只能 transfer ownership 走另外 endpoint)
+ *   - 只能改成 member 或 viewer(防 client 偷送 'owner' 升級攻擊)
  */
 
 import { ensureCanManageTripPerms } from '../permissions';
@@ -78,9 +78,9 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_NOT_FOUND', '找不到該權限記錄');
   }
 
-  // owner / admin 角色不可改 — 只能 member ↔ viewer 互換。
-  if (record.role === 'owner' || record.role === 'admin') {
-    throw new AppError('PERM_DENIED', '不可修改行程擁有者或管理員的角色');
+  // owner 角色不可改 — 只能 member ↔ viewer 互換（Phase 3：admin 角色已移除）。
+  if (record.role === 'owner') {
+    throw new AppError('PERM_DENIED', '不可修改行程擁有者的角色');
   }
 
   await ensureCanManageTripPerms(context, auth, record.trip_id);

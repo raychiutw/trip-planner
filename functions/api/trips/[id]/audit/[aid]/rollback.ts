@@ -45,7 +45,7 @@ interface AuditRow {
 }
 
 // POST /api/trips/:id/audit/:aid/rollback
-// Only admin can rollback
+// Auth: per-trip owner/member（requireTripWrite；Phase 3 移除全域 admin）
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
   const { id, aid } = context.params as { id: string; aid: string };

@@ -2,7 +2,7 @@
  * API Middleware — JWT 驗證 + Service Token 辨識
  *
  * 從 CF_Authorization cookie 解析 JWT 取得 email，
- * 或從 CF-Access-Client-Id header 辨識 Service Token（視為 admin）。
+ * 或從 V2 Bearer token 辨識 Service Token（Phase 3：維運身份靠 ops/companion scope，非 admin）。
  */
 
 import type { Env } from './_types';
@@ -303,7 +303,7 @@ async function handleAuth(
     }
     const email = env.DEV_MOCK_EMAIL.toLowerCase();
     // V2 cutover：解析 mock email → user_id 一次。DB miss 一律 fail-closed，
-    // 避免「userId null + isAdmin true」短路 hasPermission 變成 admin bypass。
+    // 避免 userId null 仍被當合法 session（授權純靠 trip_permissions user_id 比對）。
     const userRow = await env.DB
       .prepare('SELECT id FROM users WHERE email = ? LIMIT 1')
       .bind(email)
@@ -312,12 +312,10 @@ async function handleAuth(
     if (!userRow?.id) {
       return errorResponse(new AppError('AUTH_REQUIRED', `DEV_MOCK_EMAIL=${email} 沒對應 users row — 跑 scripts/fixup-local-users.sql 或 V2 OAuth signup`));
     }
+    // 移除全域 admin：人類 session 一律是 owner，維運走 service-token ops scope。
     (context.data as Record<string, unknown>).auth = {
       email,
       userId: userRow.id,
-      // Phase 1（移除全域 admin）：人類 session 不再憑 ADMIN_EMAIL 取得 admin，
-      // 一律降為 owner。維運走 service-token ops scope（hasOpsScope）。
-      isAdmin: false,
       isServiceToken: false,
     };
     return context.next();
@@ -426,13 +424,11 @@ async function handleAuth(
         .first<{ email: string }>();
       if (userRow?.email) userEmail = normalizeEmail(userRow.email);
     } catch {
-      // best-effort — DB miss leaves email empty, isAdmin will be false
+      // best-effort — DB miss leaves email empty; authz is keyed on userId, not email
     }
     (context.data as Record<string, unknown>).auth = {
       email: userEmail,
       userId: v2Session.uid,
-      // Phase 1（移除全域 admin）：人類 session 一律降為 owner，不憑 ADMIN_EMAIL。
-      isAdmin: false,
       isServiceToken: false,
     };
     return context.next();
@@ -440,7 +436,8 @@ async function handleAuth(
 
   // V2 service-to-service: Authorization: Bearer <access_token> issued via
   // /api/oauth/token grant_type=client_credentials. user_id is null on these tokens
-  // (no user — pure client). Admin scope marks the client as service-admin.
+  // (no user — pure client). Scopes (ops:* / companion) gate maintenance access
+  // via requireScope/hasOpsScope — Phase 3 removed the global-admin notion.
   const authHeader = request.headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const bearerToken = authHeader.slice(7).trim();
@@ -459,15 +456,11 @@ async function handleAuth(
           // user-bound bearer (authorization_code grant): look up email from users
           // service-bound bearer (client_credentials): user_id null, treat as service token
           let email = '';
-          let isAdmin = false;
           let isServiceToken = false;
           if (tokenRow.user_id === null) {
             isServiceToken = true;
-            isAdmin = safeScopes.includes('admin');
-            // v2.33.100 SEC-8: admin-scope service token 也用 service:${id} sentinel，
-            // 不再 inherit ADMIN_EMAIL。原本 admin token 寫 audit log 時 changed_by =
-            // ADMIN_EMAIL → forensic confusion（人類 admin 行為 vs token 攻擊難分）。
-            // 改：永遠 service:${id}；admin 權限靠 isAdmin flag gating 不靠 email。
+            // SEC-8: service token 用 service:${id} sentinel（不 inherit 任何 email）。
+            // 維運權限靠 ops scope（hasOpsScope/requireScope）gating，不靠 email/admin。
             email = `service:${safeClientId}`;
           } else {
             try {
@@ -477,8 +470,6 @@ async function handleAuth(
                 .first<{ email: string }>();
               if (userRow?.email) {
                 email = normalizeEmail(userRow.email);
-                // Phase 1（移除全域 admin）：user-bound bearer 也不再憑 ADMIN_EMAIL 取得 admin。
-                isAdmin = false;
               }
             } catch {
               /* best-effort */
@@ -493,7 +484,6 @@ async function handleAuth(
           (context.data as Record<string, unknown>).auth = {
             email,
             userId: tokenRow.user_id,
-            isAdmin,
             isServiceToken,
             scopes: safeScopes,
             clientId: safeClientId,

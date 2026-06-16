@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip , callHandler } from './helpers';
+import { mockEnv, mockAuth, mockServiceAuth, mockContext, jsonRequest, seedTrip , callHandler } from './helpers';
 import { onRequestGet, onRequestPost } from '../../functions/api/requests';
 import { onRequestPatch } from '../../functions/api/requests/[id]';
 import type { Env } from '../../functions/api/_types';
@@ -97,14 +97,14 @@ describe('GET /api/requests', () => {
 });
 
 describe('PATCH /api/requests/:id', () => {
-  it('admin 回覆請求 → 200', async () => {
+  it('service token（companion scope）回覆請求 → 200', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/requests/${requestId}`, 'PATCH', {
         reply: '已新增餐廳',
         status: 'completed',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true, isServiceToken: true }),
+      auth: mockServiceAuth(),
       params: { id: String(requestId) },
     });
     const resp = await callHandler(onRequestPatch, ctx);
@@ -126,7 +126,7 @@ describe('PATCH /api/requests/:id', () => {
         status: 'completed',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true, isServiceToken: true }),
+      auth: mockServiceAuth(),
       params: { id: String(row!.id) },
     });
     const resp = await callHandler(onRequestPatch, ctx);
@@ -134,7 +134,7 @@ describe('PATCH /api/requests/:id', () => {
     expect(data.reply).toBe('已處理您的請求。如有問題請直接聯繫行程主人。');
   });
 
-  it('非 admin → 403', async () => {
+  it('一般 user（無 companion scope）→ 403', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/requests/${requestId}`, 'PATCH', { status: 'completed' }),
       env,
@@ -162,7 +162,7 @@ describe('PATCH /api/requests/:id', () => {
       const ctx = mockContext({
         request: jsonRequest(`https://test.com/api/requests/${monoReqId}`, 'PATCH', { status: 'completed' }),
         env,
-        auth: mockAuth({ email: 'admin@test.com', isAdmin: true, isServiceToken: true }),
+        auth: mockServiceAuth(),
         params: { id: String(monoReqId) },
       });
       expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
@@ -172,7 +172,7 @@ describe('PATCH /api/requests/:id', () => {
       const ctx = mockContext({
         request: jsonRequest(`https://test.com/api/requests/${monoReqId}`, 'PATCH', { status: 'open' }),
         env,
-        auth: mockAuth({ email: 'admin@test.com', isAdmin: true, isServiceToken: true }),
+        auth: mockServiceAuth(),
         params: { id: String(monoReqId) },
       });
       const resp = await callHandler(onRequestPatch, ctx);
@@ -185,7 +185,7 @@ describe('PATCH /api/requests/:id', () => {
       const ctx = mockContext({
         request: jsonRequest(`https://test.com/api/requests/${monoReqId}`, 'PATCH', { status: 'processing' }),
         env,
-        auth: mockAuth({ email: 'admin@test.com', isAdmin: true, isServiceToken: true }),
+        auth: mockServiceAuth(),
         params: { id: String(monoReqId) },
       });
       expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
@@ -195,7 +195,7 @@ describe('PATCH /api/requests/:id', () => {
       const ctx = mockContext({
         request: jsonRequest(`https://test.com/api/requests/${monoReqId}`, 'PATCH', { status: 'failed' }),
         env,
-        auth: mockAuth({ email: 'admin@test.com', isAdmin: true, isServiceToken: true }),
+        auth: mockServiceAuth(),
         params: { id: String(monoReqId) },
       });
       expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
@@ -205,7 +205,7 @@ describe('PATCH /api/requests/:id', () => {
       const ctx = mockContext({
         request: jsonRequest(`https://test.com/api/requests/${monoReqId}`, 'PATCH', { status: 'invalid' }),
         env,
-        auth: mockAuth({ email: 'admin@test.com', isAdmin: true, isServiceToken: true }),
+        auth: mockServiceAuth(),
         params: { id: String(monoReqId) },
       });
       expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);

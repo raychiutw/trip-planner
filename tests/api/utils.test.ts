@@ -56,7 +56,7 @@ describe('buildUpdateClause', () => {
 
 describe('getAuth', () => {
   it('有 auth → 回傳', () => {
-    const auth = { email: 'a@b.com', isAdmin: false, isServiceToken: false };
+    const auth = { email: 'a@b.com', isServiceToken: false };
     expect(getAuth({ data: { auth } })).toEqual(auth);
   });
 

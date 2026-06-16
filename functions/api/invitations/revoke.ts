@@ -3,7 +3,7 @@
  *
  * Body: { tripId: string, email: string }
  *
- * Auth: owner / admin only（同 ensureCanManageTripPerms 規則）。
+ * Auth: trip owner only（同 ensureCanManageTripPerms 規則；Phase 3 移除全域 admin）。
  *
  * 為何 POST + body 而非 DELETE /:id：trip_invitations PK 是 token_hash（base64url
  * 32 bytes，URL 內醜且暴露 hash）。用 trip_id + invited_email 複合鍵在 URL 內也
