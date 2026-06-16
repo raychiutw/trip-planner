@@ -315,7 +315,9 @@ async function handleAuth(
     (context.data as Record<string, unknown>).auth = {
       email,
       userId: userRow.id,
-      isAdmin: email === (env.ADMIN_EMAIL || '').toLowerCase(),
+      // Phase 1（移除全域 admin）：人類 session 不再憑 ADMIN_EMAIL 取得 admin，
+      // 一律降為 owner。維運走 service-token ops scope（hasOpsScope）。
+      isAdmin: false,
       isServiceToken: false,
     };
     return context.next();
@@ -429,7 +431,8 @@ async function handleAuth(
     (context.data as Record<string, unknown>).auth = {
       email: userEmail,
       userId: v2Session.uid,
-      isAdmin: env.ADMIN_EMAIL ? userEmail === env.ADMIN_EMAIL.toLowerCase() : false,
+      // Phase 1（移除全域 admin）：人類 session 一律降為 owner，不憑 ADMIN_EMAIL。
+      isAdmin: false,
       isServiceToken: false,
     };
     return context.next();
@@ -474,7 +477,8 @@ async function handleAuth(
                 .first<{ email: string }>();
               if (userRow?.email) {
                 email = normalizeEmail(userRow.email);
-                isAdmin = env.ADMIN_EMAIL ? email === normalizeEmail(env.ADMIN_EMAIL) : false;
+                // Phase 1（移除全域 admin）：user-bound bearer 也不再憑 ADMIN_EMAIL 取得 admin。
+                isAdmin = false;
               }
             } catch {
               /* best-effort */

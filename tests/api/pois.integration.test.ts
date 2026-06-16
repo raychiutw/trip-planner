@@ -28,7 +28,7 @@ describe('PATCH /api/pois/:id', () => {
         address: '沖繩縣那霸市',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(poiId) },
     });
     const resp = await callHandler(onRequestPatch, ctx);
@@ -52,7 +52,7 @@ describe('PATCH /api/pois/:id', () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/pois/99999', 'PATCH', { name: 'x' }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: '99999' },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(404);
@@ -138,7 +138,7 @@ describe('PATCH /api/pois/:id — tripId 權限', () => {
         address: '那霸市前島 2-3-1',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(poiId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
@@ -153,7 +153,7 @@ describe('PATCH /api/pois/:id — price (migration 0054)', () => {
         price: '¥800~1200',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(restPoiId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
@@ -185,7 +185,7 @@ describe('DELETE /api/pois/:id — v2.27.0 trip_entry_pois cleanup', () => {
     const resp = await callHandler(onRequestDelete, mockContext({
       request: jsonRequest(`https://test.com/api/pois/${targetPoi}`, 'DELETE'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(targetPoi) },
     }));
     expect(resp.status).toBe(200);
@@ -220,7 +220,7 @@ describe('DELETE /api/pois/:id — v2.27.0 trip_entry_pois cleanup', () => {
     const resp = await callHandler(onRequestDelete, mockContext({
       request: jsonRequest(`https://test.com/api/pois/${altPoi}`, 'DELETE'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(altPoi) },
     }));
     expect(resp.status).toBe(200);

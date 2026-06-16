@@ -7,13 +7,13 @@
  * Response: { "locked": false, "unlocked_at": ISO timestamp, "previous_reason": string }
  */
 
-import { requireAdmin } from '../_auth';
+import { requireScope } from '../_auth';
 import { setLockState } from '../_maps_lock';
 import { logAudit } from '../_audit';
 import type { Env } from '../_types';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = requireAdmin(context);
+  const auth = requireScope(context, 'ops:maps');
 
   const { at, previousReason } = await setLockState(context.env.DB, false, {
     actor: auth.email,
