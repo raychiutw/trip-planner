@@ -25,7 +25,7 @@ describe('GET /api/permissions', () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/permissions?tripId=trip-perm'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'admin@test.com' }),
     });
     const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);

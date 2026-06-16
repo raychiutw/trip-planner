@@ -19,7 +19,7 @@ import type { Env } from '../../../_types';
 
 async function requireTripWrite(context: Parameters<PagesFunction<Env>>[0], tripId: string) {
   const auth = requireAuth(context);
-  const ok = await hasWritePermission(context.env.DB, auth, tripId, auth.isAdmin);
+  const ok = await hasWritePermission(context.env.DB, auth, tripId);
   if (!ok) throw new AppError('PERM_DENIED');
   return auth;
 }

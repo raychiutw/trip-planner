@@ -38,7 +38,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', '缺少 tripId 參數');
   }
 
-  if (tripId && !await hasPermission(env.DB, auth, tripId, auth.isAdmin)) {
+  if (tripId && !await hasPermission(env.DB, auth, tripId)) {
     throw new AppError('PERM_DENIED');
   }
 
@@ -122,7 +122,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   // mode is vestigial (migration 0048 phase 1 nullable; phase 2 will DROP COLUMN).
-  if (!await hasWritePermission(env.DB, auth, tripId, auth.isAdmin)) {
+  if (!await hasWritePermission(env.DB, auth, tripId)) {
     throw new AppError('PERM_DENIED');
   }
 

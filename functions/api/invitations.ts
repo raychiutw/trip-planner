@@ -4,7 +4,7 @@
  * 1. ?token=xxx  → 公開查詢（未登入也可），返回 invitation preview 給 InvitePage
  *    用。三種失敗 case 共用 410 GONE：INVITATION_INVALID / EXPIRED / ACCEPTED。
  *
- * 2. ?tripId=xxx → 需 auth，owner / admin 列出該 trip 所有 pending invitations
+ * 2. ?tripId=xxx → 需 auth，trip owner 列出該 trip 所有 pending invitations
  *    給 CollabSheet pending UI 用。回傳 [{ id, invitedEmail, expiresAt, daysRemaining }]，
  *    刻意不包含 token_hash（敏感資料）。
  *
@@ -39,7 +39,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const rawToken = (url.searchParams.get('token') ?? '').trim();
   const tripId = (url.searchParams.get('tripId') ?? '').trim();
 
-  // Branch 2: list pending invitations for a trip (owner / admin only)
+  // Branch 2: list pending invitations for a trip (trip owner only)
   if (tripId) {
     const auth = requireAuth(context);
     await ensureCanManageTripPerms(context, auth, tripId);

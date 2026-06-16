@@ -102,7 +102,7 @@ describe('middleware companion gate (§5.1)', () => {
     await insertAccessToken({
       token,
       clientId: TP_REQUEST_CLIENT_ID,
-      scopes: ['admin', 'companion'],
+      scopes: ['companion'],
       userId: null,
     });
     const requestId = await seedRequest();
@@ -169,7 +169,7 @@ describe('middleware companion gate (§5.1)', () => {
     await insertAccessToken({
       token,
       clientId: 'rogue-cli',
-      scopes: ['admin', 'companion'],
+      scopes: ['companion'],
       userId: null,
     });
     const requestId = await seedRequest();
@@ -204,7 +204,7 @@ describe('middleware companion gate (§5.1)', () => {
     await insertAccessToken({
       token,
       clientId: TP_REQUEST_CLIENT_ID,
-      scopes: ['admin', 'companion'],
+      scopes: ['companion'],
       userId: null,
     });
     const requestId = await seedRequest();

@@ -1,7 +1,7 @@
 /**
  * DELETE /api/poi-favorites/:id — 移除收藏
  *
- * 僅允許 owner（resolved userId 相符）或 admin 刪除；他人 → 403；不存在 → 404。
+ * 僅允許 owner（resolved userId 相符）刪除；他人 → 403；不存在 → 404。（Phase 3：無 admin bypass）
  *
  * Companion 分支（poi-favorites-rename §8）：
  *   - body { companionRequestId } + header X-Request-Scope: companion
@@ -45,7 +45,7 @@ export const onRequestDelete: PagesFunction<Env, 'id'> = async (context) => {
     .first<{ user_id: string | null }>();
   if (!row) throw new AppError('DATA_NOT_FOUND', '找不到該收藏');
 
-  assertFavoriteOwnership(actor, auth, row.user_id);
+  assertFavoriteOwnership(actor, row.user_id);
 
   await context.env.DB
     .prepare('DELETE FROM poi_favorites WHERE id = ?')

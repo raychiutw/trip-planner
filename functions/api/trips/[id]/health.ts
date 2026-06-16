@@ -3,7 +3,7 @@
  *
  * POI lifecycle health summary for a trip — drives `<TripHealthBanner>`.
  *
- * Auth: trip read permission (viewer / member / owner / admin).
+ * Auth: trip read permission (viewer / member / owner).
  *
  * Response shape (autoplan DX fix — locked contract):
  *   {
@@ -40,7 +40,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');
 
   const db = context.env.DB;
-  if (!(await hasPermission(db, auth, tripId, auth.isAdmin))) {
+  if (!(await hasPermission(db, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
 

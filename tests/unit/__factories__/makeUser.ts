@@ -6,7 +6,6 @@ import type { AuthData } from '../../../src/types/api';
 export interface MakeUserInput {
   email?: string;
   userId?: string | null;
-  isAdmin?: boolean;
   isServiceToken?: boolean;
   scopes?: string[];
   clientId?: string;
@@ -26,7 +25,6 @@ export function makeAuthData(input: MakeUserInput = {}): AuthData {
   return {
     email: user.email,
     userId: user.id,
-    isAdmin: input.isAdmin ?? false,
     isServiceToken: input.isServiceToken ?? false,
     scopes: input.scopes,
     clientId: input.clientId,

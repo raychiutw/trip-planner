@@ -1,9 +1,9 @@
 /**
  * PATCH /api/pois/:id — 修改 master POI (C2)
- * DELETE /api/pois/:id — 刪除 master POI（admin only，會先刪除所有關聯）
+ * DELETE /api/pois/:id — 刪除 master POI（ops:poi 維運 token only，會先刪除所有關聯）
  *
- * Admin: 可不帶 tripId（向下相容 tp-patch/tp-rebuild）
- * 非 Admin: 必須帶 tripId，檢查 hasPermission + POI 屬於該 trip
+ * ops:poi 維運 token: 可不帶 tripId（向下相容 tp-patch/tp-rebuild）
+ * 一般 user: 必須帶 tripId，檢查 hasWritePermission + POI 屬於該 trip（requirePoiWrite）
  */
 
 import { logAudit, computeDiff } from '../_audit';
@@ -68,7 +68,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
 /**
  * DELETE /api/pois/:id — 刪除 master POI + 所有 canonical/contextual 關聯
- * Admin only（Service Token 視為 admin）
+ * ops:poi 維運 scope only（Phase 3：移除全域 admin，維運走細粒度 ops scope）
  */
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);

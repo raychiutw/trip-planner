@@ -53,7 +53,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const changedBy = auth.email;
 
   const [hasPerm, belongsToTrip] = await Promise.all([
-    hasWritePermission(db, auth, id, auth.isAdmin),
+    hasWritePermission(db, auth, id),
     verifyEntryBelongsToTrip(db, eid, id),
   ]);
   if (!hasPerm) throw new AppError('PERM_DENIED');

@@ -15,7 +15,7 @@
  *   - business_status='CLOSED_TEMPORARILY' → status='active'（暫時性，不 banner 警告）
  *   - Place Details 404 → status='missing' + reason='Google Maps 查無資料'
  *
- * Auth: 同 PATCH /pois/:id — admin OR trip owner（passing tripId for link check）。
+ * Auth: 同 PATCH /pois/:id — ops:poi 維運 scope OR trip owner（requirePoiWrite；Phase 3 移除全域 admin）。
  */
 
 import { requireAuth, requirePoiWrite } from '../../_auth';

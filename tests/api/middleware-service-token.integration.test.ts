@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, seedTrip } from './helpers';
+import { mockEnv, mockAuth, mockServiceAuth, seedTrip } from './helpers';
 import { hasPermission, hasWritePermission } from '../../functions/api/_auth';
 
 let db: D1Database;
@@ -24,30 +24,24 @@ beforeAll(async () => {
 afterAll(disposeMiniflare);
 
 describe('service-token auth guards (MF7)', () => {
-  it('admin scope service token → hasPermission grants', async () => {
-    const auth = mockAuth({
-      email: 'admin@test.com',
-      userId: null as unknown as string,
-      isAdmin: true,
-      isServiceToken: true,
-      scopes: ['admin'],
+  it('service token → hasPermission denies（Phase 3：無 admin bypass，維運靠 ops scope 不靠 trip membership）', async () => {
+    const auth = mockServiceAuth({
+      email: 'service:svc-admin-1',
+      scopes: ['ops:trips:read'],
       clientId: 'svc-admin-1',
     });
-    expect(await hasPermission(db, auth, 'trip-svc', auth.isAdmin)).toBe(true);
-    expect(await hasWritePermission(db, auth, 'trip-svc', auth.isAdmin)).toBe(true);
+    expect(await hasPermission(db, auth, 'trip-svc')).toBe(false);
+    expect(await hasWritePermission(db, auth, 'trip-svc')).toBe(false);
   });
 
   it('non-admin scope service token → hasPermission denies (defense-in-depth)', async () => {
-    const auth = mockAuth({
+    const auth = mockServiceAuth({
       email: 'service:svc-readonly-1', // sentinel, not admin email
-      userId: null as unknown as string,
-      isAdmin: false,
-      isServiceToken: true,
       scopes: ['read'],
       clientId: 'svc-readonly-1',
     });
-    expect(await hasPermission(db, auth, 'trip-svc', auth.isAdmin)).toBe(false);
-    expect(await hasWritePermission(db, auth, 'trip-svc', auth.isAdmin)).toBe(false);
+    expect(await hasPermission(db, auth, 'trip-svc')).toBe(false);
+    expect(await hasWritePermission(db, auth, 'trip-svc')).toBe(false);
   });
 
   it('non-admin scope service token cannot escalate via forged userId on permission row', async () => {
@@ -61,24 +55,22 @@ describe('service-token auth guards (MF7)', () => {
       'INSERT OR IGNORE INTO trip_permissions (user_id, trip_id, role) VALUES (?, ?, ?)'
     ).bind(ghostUserId, 'trip-svc', 'member').run();
 
-    const auth = mockAuth({
+    const auth = mockServiceAuth({
       email: 'service:svc-ghost-1',
-      userId: ghostUserId,
-      isAdmin: false,
-      isServiceToken: true,
+      userId: ghostUserId, // forged — guard must still deny before SQL lookup
       scopes: ['read'],
       clientId: 'svc-ghost-1',
     });
-    expect(await hasPermission(db, auth, 'trip-svc', auth.isAdmin)).toBe(false);
-    expect(await hasWritePermission(db, auth, 'trip-svc', auth.isAdmin)).toBe(false);
+    expect(await hasPermission(db, auth, 'trip-svc')).toBe(false);
+    expect(await hasWritePermission(db, auth, 'trip-svc')).toBe(false);
   });
 
   it('user session (not service token) still gates by trip_permissions', async () => {
     const auth = mockAuth({ email: 'owner@test.com' });
-    expect(await hasPermission(db, auth, 'trip-svc', auth.isAdmin)).toBe(true);
+    expect(await hasPermission(db, auth, 'trip-svc')).toBe(true);
     const stranger = mockAuth({ email: 'stranger@test.com' });
     // stranger has no trip_permissions row even though seedUser may not have run yet
-    expect(await hasPermission(db, stranger, 'trip-svc', stranger.isAdmin)).toBe(false);
+    expect(await hasPermission(db, stranger, 'trip-svc')).toBe(false);
   });
 });
 

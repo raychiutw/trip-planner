@@ -60,7 +60,7 @@ function safeParseJson(raw: string): unknown {
  * DELETE /api/trips/:id — 刪除整個行程。
  *
  * V2-P7 PR-Q：trips 列表卡片 ... 菜單的「刪除」入口。權限：僅 trip owner
- * 或 admin（hasPermission 把 co-editor 也放行，不適用 destructive 操作）。
+ *（Phase 3 移除全域 admin；co-editor 雖能編輯，destructive 操作仍限 owner）。
  *
  * Cascade：trip_days / trip_entries / pois (via trip_pois) / trip_pois /
  * poi_relations / trip_docs / trip_doc_entries / trip_permissions / ideas /
@@ -78,12 +78,12 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     .first<Record<string, unknown>>();
   if (!existing) throw new AppError('DATA_NOT_FOUND');
 
-  // Strict ownership check：只 owner 或 admin 可刪。Co-editor (trip_permissions
-  // 列表上的) 雖然能編輯，但 destructive 操作必須 limit 到 owner。
+  // Strict ownership check：只 owner 可刪（Phase 3：移除全域 admin）。Co-editor
+  // (trip_permissions 列表上的) 雖然能編輯，但 destructive 操作必須 limit 到 owner。
   // V2 cutover phase 2: 純 owner_user_id check (owner email column dropped)
   const ownerUid = typeof existing.owner_user_id === 'string' ? existing.owner_user_id : null;
-  if (!auth.isAdmin && (!auth.userId || ownerUid !== auth.userId)) {
-    throw new AppError('PERM_DENIED', '僅行程擁有者或管理者可刪除');
+  if (!auth.userId || ownerUid !== auth.userId) {
+    throw new AppError('PERM_DENIED', '僅行程擁有者可刪除');
   }
 
   await db.prepare('DELETE FROM trips WHERE id = ?').bind(id).run();
@@ -146,7 +146,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   const db = context.env.DB;
   const [hasPerm, existing] = await Promise.all([
-    hasWritePermission(db, auth, id, auth.isAdmin),
+    hasWritePermission(db, auth, id),
     db.prepare('SELECT * FROM trips WHERE id = ?').bind(id).first() as Promise<Record<string, unknown> | null>,
   ]);
   if (!hasPerm) throw new AppError('PERM_DENIED');

@@ -4,7 +4,7 @@
  */
 
 import { logAudit, computeDiff } from '../../_audit';
-import { hasPermission, requireAuth} from '../../_auth';
+import { hasPermission, requireAuth, requireScope } from '../../_auth';
 import { AppError } from '../../_errors';
 import { sanitizeReply } from '../../_validate';
 import { json, parseJsonBody } from '../../_utils';
@@ -24,7 +24,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!row) throw new AppError('DATA_NOT_FOUND');
 
   const tripId = (row as Record<string, unknown>).trip_id as string;
-  if (!await hasPermission(env.DB, auth, tripId, auth.isAdmin)) {
+  if (!await hasPermission(env.DB, auth, tripId)) {
     throw new AppError('PERM_DENIED');
   }
 
@@ -33,13 +33,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
-  const auth = requireAuth(context);
+  // Phase 3（移除全域 admin）：只有帶 companion scope 的 service token 可 PATCH —
+  // Claude CLI 回覆 chat + 標記完成/失敗是 companion 身份的核心職能。最小權限：
+  // 純維運 token（如僅 ops:maps）無法誤觸發 chat 回覆 / health-check / notes hook。
+  const auth = requireScope(context, 'companion');
   const id = params.id as string;
-
-  // 僅 admin / service token 可 PATCH（Claude CLI 回覆用）
-  if (!auth.isAdmin) {
-    throw new AppError('PERM_ADMIN_ONLY');
-  }
 
   const body = await parseJsonBody<{ reply?: string; status?: string; processed_by?: string }>(context.request);
 
@@ -113,7 +111,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
   // AI 健檢 hook：v2.33.102 CR-8 confused-deputy fix — 之前單靠 `message.startsWith([AI 健檢])`
   // 認 health-check request。任何 user 在 chat 打 `[AI 健檢] ...` 都能觸發 hook，
-  // 讓 admin/service PATCH reply 後被誤 parse 成 findings → UPSERT trip_health_reports
+  // 讓 service token PATCH reply 後被誤 parse 成 findings → UPSERT trip_health_reports
   // 覆蓋（或產生）該 trip 的 report row。改用 trip_health_reports.request_id linkage
   // 當 authoritative signal（POST /trips/:id/health-check 唯一寫入點）。
   const newStatus = (result as Record<string, unknown>).status as string;
@@ -132,7 +130,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
     // v2.34.x 行程筆記 PR10: notes generation linkage hook
     // 對齊 CR-8 confused-deputy fix — SELECT linkage row 是 authoritative signal
-    // (POST /trips/:id/notes/:type/generate 唯一寫入點，admin/service 不會誤觸發)
+    // (POST /trips/:id/notes/:type/generate 唯一寫入點，service token 不會誤觸發)
     const notesJob = await env.DB
       .prepare('SELECT id, doc_type FROM trip_note_ai_jobs WHERE request_id = ? AND trip_id = ? LIMIT 1')
       .bind(Number(id), tripId)

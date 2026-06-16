@@ -36,7 +36,6 @@ export async function callHandler(
 export function mockEnv(db: D1Database, overrides: Partial<Env> = {}): Env {
   return {
     DB: db,
-    ADMIN_EMAIL: 'admin@test.com',
     CF_API_TOKEN: 'test-token',
     CF_ACCOUNT_ID: 'test-account',
     CF_ACCESS_APP_ID: 'test-app',
@@ -66,8 +65,22 @@ export function mockAuth(overrides: Partial<AuthData> = {}): AuthData {
   return {
     email,
     userId: overrides.userId ?? userIdFor(email),
-    isAdmin: false,
     isServiceToken: false,
+    ...overrides,
+  };
+}
+
+/**
+ * 建立 service-token mock auth（Phase 3：維運 / companion 身份，user_id=null）。
+ * 預設帶 companion scope — PATCH /api/requests/:id 的 gate（requireScope('companion')）
+ * 需要。維運 ops 端點測試覆寫 scopes（如 ['ops:maps']）。
+ */
+export function mockServiceAuth(overrides: Partial<AuthData> = {}): AuthData {
+  return {
+    email: overrides.email ?? 'service:cli-test',
+    userId: null,
+    isServiceToken: true,
+    scopes: overrides.scopes ?? ['companion'],
     ...overrides,
   };
 }

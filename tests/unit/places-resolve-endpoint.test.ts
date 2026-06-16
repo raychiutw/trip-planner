@@ -12,8 +12,7 @@ vi.mock('../../functions/api/_auth', () => ({
   requireAuth: vi.fn(() => ({
     email: 'x@y',
     userId: 'u-1',
-    isAdmin: false,
-    isServiceToken: false,
+        isServiceToken: false,
   })),
 }));
 vi.mock('../../functions/api/_maps_lock', () => ({

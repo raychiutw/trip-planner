@@ -14,10 +14,7 @@ const ALERT = readFileSync(
   join(__dirname, '../../functions/api/_alert.ts'),
   'utf8',
 );
-const TEST_ENDPOINT = readFileSync(
-  join(__dirname, '../../functions/api/admin/test-alert.ts'),
-  'utf8',
-);
+// Phase 3（移除全域 admin）：test-alert.ts 已刪除，相關 describe block 移除。
 
 describe('alertAdminTelegram 強化 log', () => {
   it('env 缺從 console.warn → console.error (wrangler tail default 顯示)', () => {
@@ -57,24 +54,3 @@ describe('alertAdminTelegram 強化 log', () => {
   });
 });
 
-describe('POST /api/admin/test-alert endpoint', () => {
-  it('export onRequestPost (CF Pages function shape)', () => {
-    expect(TEST_ENDPOINT).toMatch(/export const onRequestPost: PagesFunction<Env>/);
-  });
-
-  it('admin only (requireAuth + isAdmin gate)', () => {
-    expect(TEST_ENDPOINT).toMatch(/requireAuth\(context\)/);
-    expect(TEST_ENDPOINT).toMatch(/if \(!auth\.isAdmin\)/);
-    expect(TEST_ENDPOINT).toMatch(/throw new AppError\('PERM_DENIED', 'admin only'\)/);
-  });
-
-  it('回傳 diag 含 token prefix + chat tail（forensic 比對是否與 expected match）', () => {
-    expect(TEST_ENDPOINT).toMatch(/tokenPrefix: token \? token\.slice\(0, 10\) : null/);
-    expect(TEST_ENDPOINT).toMatch(/chatTail: chatId \? chatId\.slice\(-4\) : null/);
-  });
-
-  it('呼叫 alertAdminTelegram 訊息含 ISO timestamp + admin email（給 chat 端對比）', () => {
-    expect(TEST_ENDPOINT).toMatch(/await alertAdminTelegram\(/);
-    expect(TEST_ENDPOINT).toMatch(/test-alert from \/api\/admin\/test-alert at \$\{new Date\(\)\.toISOString\(\)\} by \$\{auth\.email\}/);
-  });
-});

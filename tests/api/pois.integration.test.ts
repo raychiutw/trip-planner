@@ -42,7 +42,7 @@ describe('PATCH /api/pois/:id', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/pois/${poiId}`, 'PATCH', { name: 'x' }),
       env,
-      auth: mockAuth({ email: 'user@test.com', isAdmin: false }),
+      auth: mockAuth({ email: 'user@test.com' }),
       params: { id: String(poiId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
@@ -81,7 +81,7 @@ describe('PATCH /api/pois/:id — tripId 權限', () => {
         lng: 127.7731,
       }),
       env,
-      auth: mockAuth({ email: tripOwner, isAdmin: false }),
+      auth: mockAuth({ email: tripOwner }),
       params: { id: String(poiId) },
     });
     const resp = await callHandler(onRequestPatch, ctx);
@@ -98,7 +98,7 @@ describe('PATCH /api/pois/:id — tripId 權限', () => {
         lat: 0,
       }),
       env,
-      auth: mockAuth({ email: 'stranger@test.com', isAdmin: false }),
+      auth: mockAuth({ email: 'stranger@test.com' }),
       params: { id: String(poiId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(403);
@@ -112,7 +112,7 @@ describe('PATCH /api/pois/:id — tripId 權限', () => {
         lat: 0,
       }),
       env,
-      auth: mockAuth({ email: tripOwner, isAdmin: false }),
+      auth: mockAuth({ email: tripOwner }),
       params: { id: String(otherPoiId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(403);
@@ -126,7 +126,7 @@ describe('PATCH /api/pois/:id — tripId 權限', () => {
         lat: 0,
       }),
       env,
-      auth: mockAuth({ email: tripOwner, isAdmin: false }),
+      auth: mockAuth({ email: tripOwner }),
       params: { id: String(poiId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);

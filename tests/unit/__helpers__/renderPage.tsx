@@ -10,7 +10,7 @@
  *
  *   const { getByText } = renderPage(<MyPage />, {
  *     route: '/trip/abc',
- *     authData: makeAuthData({ isAdmin: true }),
+ *     authData: makeAuthData({ email: 'owner@test.com' }),
  *   });
  *
  * Customize providers via `options.wrap` for special cases。

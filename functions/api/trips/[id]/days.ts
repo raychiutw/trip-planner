@@ -49,7 +49,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
  *
  * Empty trip (沒 days yet) → 直接 INSERT day_num=1, date=null (label 也空)。
  *
- * Auth: trip write permission（owner / admin / member; viewer 拒）。
+ * Auth: trip write permission（owner / member; viewer 拒）。
  *
  * Returns { day: { id, day_num, date, day_of_week, label, title } }.
  */
@@ -60,7 +60,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');
 
   const db = context.env.DB;
-  if (!(await hasWritePermission(db, auth, tripId, auth.isAdmin))) {
+  if (!(await hasWritePermission(db, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
 

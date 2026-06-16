@@ -8,7 +8,9 @@
  *
  * V2 cutover phase 2 (migration 0047): hasPermission/hasWritePermission 改用
  * 純 user_id-keyed query (email column dropped from trip_permissions).
- * 必須 pass AuthData object (含 userId)，string-only caller 因無 userId 直接 false。
+ * 必須 pass AuthData object (含 userId)；service token / null userId 直接 false。
+ *
+ * Phase 3（移除全域 admin）：isAdmin 參數移除，無 admin bypass。授權純 owner/member。
  */
 import { describe, it, expect, vi } from 'vitest';
 import { hasPermission, hasWritePermission } from '../../functions/api/_auth';
@@ -30,39 +32,32 @@ function makeDb(opts: { row: unknown; capturedSql?: { sql?: string } } = { row: 
 }
 
 function authOf(email: string, userId: string | null = `uid-${email}`): AuthData {
-  return { email, userId, isAdmin: false, isServiceToken: false };
+  return { email, userId, isServiceToken: false };
 }
 
 describe('hasWritePermission — viewer is read-only', () => {
-  it('admin always passes without DB query', async () => {
-    const { db, stmt } = makeDb();
-    const ok = await hasWritePermission(db, authOf('a@x.com'), 'trip-1', true);
-    expect(ok).toBe(true);
-    expect(stmt.first).not.toHaveBeenCalled();
-  });
-
   it("SQL excludes viewer role (role != 'viewer')", async () => {
     const captured: { sql?: string } = {};
     const { db } = makeDb({ row: null, capturedSql: captured });
-    await hasWritePermission(db, authOf('a@x.com'), 'trip-1', false);
+    await hasWritePermission(db, authOf('a@x.com'), 'trip-1');
     expect(captured.sql).toContain("role != 'viewer'");
   });
 
   it('returns false when DB returns null (viewer-only or no row)', async () => {
     const { db } = makeDb({ row: null });
-    const ok = await hasWritePermission(db, authOf('viewer@x.com'), 'trip-1', false);
+    const ok = await hasWritePermission(db, authOf('viewer@x.com'), 'trip-1');
     expect(ok).toBe(false);
   });
 
-  it('returns true when DB returns a row (member/admin/owner)', async () => {
+  it('returns true when DB returns a row (member/owner)', async () => {
     const { db } = makeDb({ row: { '1': 1 } });
-    const ok = await hasWritePermission(db, authOf('member@x.com'), 'trip-1', false);
+    const ok = await hasWritePermission(db, authOf('member@x.com'), 'trip-1');
     expect(ok).toBe(true);
   });
 
   it('binds userId for V2 cutover query', async () => {
     const { db, stmt } = makeDb({ row: { '1': 1 } });
-    await hasWritePermission(db, authOf('Mixed@Case.COM', 'uid-123'), 'trip-1', false);
+    await hasWritePermission(db, authOf('Mixed@Case.COM', 'uid-123'), 'trip-1');
     expect(stmt.bind).toHaveBeenCalledWith('uid-123', 'trip-1');
   });
 
@@ -70,11 +65,21 @@ describe('hasWritePermission — viewer is read-only', () => {
     const { db } = makeDb({ row: { '1': 1 } });
     const ok = await hasWritePermission(
       db,
-      { email: 'legacy@x.com', userId: null, isAdmin: false, isServiceToken: false },
+      { email: 'legacy@x.com', userId: null, isServiceToken: false },
       'trip-1',
-      false,
     );
     expect(ok).toBe(false);
+  });
+
+  it('service token → false without DB query (Phase 3：維運靠 ops scope，不靠 trip membership)', async () => {
+    const { db, stmt } = makeDb({ row: { '1': 1 } });
+    const ok = await hasWritePermission(
+      db,
+      { email: 'service:cli', userId: null, isServiceToken: true },
+      'trip-1',
+    );
+    expect(ok).toBe(false);
+    expect(stmt.first).not.toHaveBeenCalled();
   });
 });
 
@@ -82,13 +87,13 @@ describe('hasPermission — viewer can read', () => {
   it("SQL does NOT exclude viewer (read path)", async () => {
     const captured: { sql?: string } = {};
     const { db } = makeDb({ row: null, capturedSql: captured });
-    await hasPermission(db, authOf('viewer@x.com'), 'trip-1', false);
+    await hasPermission(db, authOf('viewer@x.com'), 'trip-1');
     expect(captured.sql).not.toContain("role != 'viewer'");
   });
 
   it('returns true for any role row (viewer included)', async () => {
     const { db } = makeDb({ row: { '1': 1 } });
-    const ok = await hasPermission(db, authOf('viewer@x.com'), 'trip-1', false);
+    const ok = await hasPermission(db, authOf('viewer@x.com'), 'trip-1');
     expect(ok).toBe(true);
   });
 });

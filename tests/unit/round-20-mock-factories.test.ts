@@ -93,11 +93,10 @@ describe('v2.33.70 — makeUser + makeAuthData', () => {
     expect(u.id).toBeDefined();
   });
 
-  it('makeAuthData 對齊 AuthData type (userId/isAdmin/isServiceToken)', () => {
-    const a = makeAuthData({ isAdmin: true });
+  it('makeAuthData 對齊 AuthData type (userId/isServiceToken)', () => {
+    const a = makeAuthData({});
     expect(a.email).toBeDefined();
     expect(a.userId).toBeDefined();
-    expect(a.isAdmin).toBe(true);
     expect(a.isServiceToken).toBe(false);
   });
 });

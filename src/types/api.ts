@@ -137,7 +137,6 @@ export interface AuthData {
   email: string;
   /** V2 user_id (TEXT uuid). null only for service-token / pre-V2 sessions. */
   userId: string | null;
-  isAdmin: boolean;
   isServiceToken: boolean;
   /** OAuth scopes from V2 Bearer token (client_credentials grant). Only present for service token. */
   scopes?: string[];
@@ -192,13 +191,12 @@ export interface Request {
  *
  * Special value: trip_id = '*' means access to all trips.
  *
- * Roles(v2.18.0):
+ * Roles(v2.18.0；Phase 3 移除全域 admin 後 admin 角色已淘汰):
  *   - owner:  trip 創建者,單一,不可改/刪
- *   - admin:  系統管理員(across all trips)
  *   - member: 共編成員,可檢視+編輯
  *   - viewer: 檢視成員,只可檢視(read-only collaborator)
  */
-export type CollabRole = 'owner' | 'admin' | 'member' | 'viewer';
+export type CollabRole = 'owner' | 'member' | 'viewer';
 
 export interface Permission {
   id: number;
