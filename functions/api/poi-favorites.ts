@@ -107,8 +107,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as { auth?: AuthData }).auth ?? null;
-
   // v2.33.105 SEC-2: pre-gate per-IP throttle 在 actor resolve 之前。寬鬆
   // 200/5min/IP，正常 user 不會打中；攻擊者 hammer 才會觸 lock。
   const preGate = await preGateFavoriteThrottle(context.env, context.request);
