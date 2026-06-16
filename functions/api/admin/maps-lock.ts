@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/maps-lock — Manually engage Google Maps kill switch.
  *
- * Auth: admin only (env.ADMIN_EMAIL).
+ * Auth: service-token ops:maps scope.
  * Body (optional): { "reason": "string" }
  * Response: { "locked": true, "reason": string, "locked_at": ISO timestamp }
  */

@@ -101,7 +101,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
   const docType = type as GenType;
 
-  if (!(await hasWritePermission(env.DB, auth, tripId, auth.isAdmin))) {
+  if (!(await hasWritePermission(env.DB, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
 

@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, callHandler } from './helpers';
+import { mockEnv, mockAuth, mockServiceAuth, mockContext, jsonRequest, seedTrip, seedEntry, callHandler } from './helpers';
 import { onRequestGet, onRequestPost } from '../../functions/api/trips/[id]/health-check';
 import { onRequestPatch } from '../../functions/api/requests/[id]';
 import type { Env } from '../../functions/api/_types';
@@ -175,7 +175,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
         { reply, status: 'completed', processed_by: 'job' },
       ),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockServiceAuth(),
       params: { id: String(reqId) },
     });
     const patchResp = await callHandler(onRequestPatch, patchCtx);
@@ -227,7 +227,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
         reply, status: 'completed', processed_by: 'job',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockServiceAuth(),
       params: { id: String(reqId) },
     }));
     expect(patchResp.status).toBe(200);
@@ -263,7 +263,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
         reply, status: 'completed', processed_by: 'job',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockServiceAuth(),
       params: { id: String(reqId) },
     }));
     expect(patchResp.status).toBe(200);
@@ -293,7 +293,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
         reply: 'Claude timeout', status: 'failed', processed_by: 'job',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockServiceAuth(),
       params: { id: String(reqId) },
     }));
     expect(patchResp.status).toBe(200);
@@ -319,7 +319,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
         reply: '好的我幫你加了', status: 'completed', processed_by: 'job',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockServiceAuth(),
       params: { id: String(chatRow.id) },
     }));
     expect(patchResp.status).toBe(200);
@@ -352,7 +352,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
         reply, status: 'completed', processed_by: 'job',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockServiceAuth(),
       params: { id: String(chatRow.id) },
     }));
     expect(patchResp.status).toBe(200);
@@ -393,7 +393,7 @@ describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
         reply, status: 'completed', processed_by: 'job',
       }),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockServiceAuth(),
       params: { id: String(reqId) },
     }));
 

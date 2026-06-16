@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.7] - 2026-06-16
+
+### Changed
+- **移除全域 admin → Phase 3：清除 admin 殘留 + per-trip `role='admin'` migration** — 收掉 Phase 1 的向後相容雙接受，全域 admin 概念從 code + schema 徹底消失。授權純 owner/permissions（user）+ service-token ops/companion scope（維運）。
+  - **`AuthData.isAdmin` 移除（57 檔）**：`src/types/api.ts` 去 `isAdmin` 欄位、`functions/api/_types.ts` 去 `Env.ADMIN_EMAIL`、`_middleware.ts` 三處 auth 物件不再帶 `isAdmin`。35 個 consumer handler 的 `hasPermission`/`hasWritePermission`/`requirePoiWrite` 第 4 個 `auth.isAdmin` 參數一併移除（gate 全部保留，純收緊）。
+  - **`hasOpsScope` 去雙接受**：移除 `|| scopes.includes('admin')` — 只帶舊 `admin` scope 的 token 不再被當維運身份（須重 provision 細粒度 ops scope）。`requireAdmin` 刪除。
+  - **`PATCH /api/requests/:id`（Claude CLI 回覆 chat + 健檢/筆記完成 hook）** → `requireScope(context, 'companion')`（原 admin-only）。companion 是 tp-request scheduler 的既有身份；純維運 token（如僅 `ops:maps`）不再能誤觸發 chat 回覆路徑。
+  - **migration 0080**：`trip_permissions.role` CHECK 去 `'admin'`（→ owner/member/viewer）。⚠️ prod 實測有 4 個 `role='admin'` row（歷史遺留），migration 先 `UPDATE admin→member`（保留讀寫權限，最接近語意）再 swap 收緊 CHECK。無 children FK，標準 swap。附 rollback。
+  - **前端對齊**：`CollabRole` type 去 `'admin'`、`CollabPanel` 移除 `ROLE_BADGE_INFO.admin` + `isOwnerLike` 的 admin 分支；`permissions.ts` POST 不再接受 `role:'admin'`（migration 後該值會違反 CHECK）。
+  - **刪 `functions/api/admin/test-alert.ts`**（admin-only forensic endpoint，隨全域 admin 移除）。
+  - **部署順序（強制）**：先 apply migration 0080 再 merge PR — 前端已移除 `ROLE_BADGE_INFO.admin`，若殘留 admin row 會 crash；migration-first 保證新前端只見遷移後資料。見 `docs/plans/2026-06-phase3-runbook.md`。
+  - 品質 gate：`/simplify`（4 agent）+ `/cso --diff`（security-auditor 逐點驗 OWASP A01 無回歸）+ `/review`（enum-completeness 抓出前端 `CollabRole` 半遷移 + `permissions.ts` migration-後 500）+ 對抗式 chaos 審查（migration failure mode）。tsc clean、unit 3372、api 983 全綠。
+
 ## [2.55.6] - 2026-06-16
 
 ### Changed

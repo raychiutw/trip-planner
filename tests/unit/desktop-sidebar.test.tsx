@@ -14,15 +14,11 @@ import DesktopSidebar from '../../src/components/shell/DesktopSidebar';
 function renderSidebar(opts: {
   path?: string;
   user?: { name: string; email: string } | null | undefined;
-  isAdmin?: boolean;
 } = {}) {
   const user = Object.prototype.hasOwnProperty.call(opts, 'user') ? opts.user : null;
   return render(
     <MemoryRouter initialEntries={[opts.path ?? '/trips']}>
-      <DesktopSidebar
-        user={user}
-        isAdmin={opts.isAdmin ?? false}
-      />
+      <DesktopSidebar user={user} />
     </MemoryRouter>,
   );
 }
@@ -91,8 +87,7 @@ describe('DesktopSidebar — active state', () => {
     const { container } = renderSidebar({
       path: '/trips',
       user: { name: 'Admin', email: 'admin@trip.io' },
-      isAdmin: true,
-    });
+          });
     const nav = container.querySelector('[aria-label="主要功能"]');
     expect(nav?.textContent).not.toContain('管理');
   });
@@ -100,8 +95,7 @@ describe('DesktopSidebar — active state', () => {
   it('non-admin user 不顯示「管理」nav item', () => {
     const { container } = renderSidebar({
       user: { name: 'Plain', email: 'plain@x.com' },
-      isAdmin: false,
-    });
+          });
     const nav = container.querySelector('[aria-label="主要功能"]');
     expect(nav?.textContent).not.toContain('管理');
   });

@@ -48,9 +48,8 @@ function companionAuth(overrides: Partial<AuthData> = {}): AuthData {
   return {
     email: 'service:tripline-internal-cli',
     userId: null,
-    isAdmin: true,
     isServiceToken: true,
-    scopes: ['admin', 'companion'],
+    scopes: ['companion'],
     clientId: TP_REQUEST_CLIENT_ID,
     ...overrides,
   };
@@ -134,19 +133,25 @@ describe('DELETE /api/poi-favorites/:id — §8.1 V2 user', () => {
     expect(resp.status).toBe(404);
   });
 
-  it('admin bypass ownership → 204', async () => {
-    const ownerId = await seedUser(db, 'admin-target@test.com');
-    const poiId = await seedPoi(db, { name: 'POI admin del' });
+  it('前 admin 不能刪他人收藏（Phase 3：無 admin bypass）→ 403', async () => {
+    // 舊行為：admin email 走 isAdmin bypass，可刪任何人收藏 → 204。
+    // Phase 3 移除 bypass 後，assertFavoriteOwnership 純比對 owner → 非 owner 一律 PERM_DENIED。
+    const ownerId = await seedUser(db, 'owner-target@test.com');
+    const poiId = await seedPoi(db, { name: 'POI exadmin del' });
     const favId = await seedPoiFavorite(ownerId, poiId);
 
     const ctx = mockContext({
       request: buildDeleteRequest(favId),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'exadmin@test.com' }),
       params: { id: String(favId) },
     });
     const resp = await callHandler(onRequestDelete, ctx);
-    expect(resp.status).toBe(204);
+    expect(resp.status).toBe(403);
+
+    // 收藏未被刪除
+    const still = await db.prepare('SELECT id FROM poi_favorites WHERE id = ?').bind(favId).first();
+    expect(still).not.toBeNull();
   });
 
   it('無 auth → 401', async () => {

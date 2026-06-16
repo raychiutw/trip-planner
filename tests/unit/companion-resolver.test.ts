@@ -87,9 +87,8 @@ function companionAuth(overrides: Partial<AuthData> = {}): AuthData {
   return {
     email: 'service:tripline-internal-cli',
     userId: null,
-    isAdmin: true,
     isServiceToken: true,
-    scopes: ['admin', 'companion'],
+    scopes: ['companion'],
     clientId: TP_REQUEST_CLIENT_ID,
     ...overrides,
   };

@@ -259,19 +259,17 @@ export async function preGateFavoriteThrottle(
  * 改：actor 解析完才呼叫此 picker，bucket 基於 verified identity。
  *
  * - Companion path: `${prefix}:companion:${actor.requestId}` — 跨 action 防 spam。
- * - V2 user path: `${prefix}:user:${actor.userId}` — admin 不 bypass 此 helper
- *   控制權，caller 自行判斷（保留既有 admin V2 user bypass 語意）。
- * - Admin V2 user (caller-determined): null。
+ * - V2 user path: `${prefix}:user:${actor.userId}`。
+ *
+ * Phase 3（移除全域 admin）：無 admin rate-limit 豁免，所有非-companion 寫入皆限流。
  */
 export function pickFavoriteBucketForActor(
   actor: FavoriteActor,
   prefix: string,
-  isAdminBypass: boolean,
-): string | null {
+): string {
   if (actor.isCompanion) {
     return `${prefix}:companion:${actor.requestId}`;
   }
-  if (isAdminBypass) return null;
   return `${prefix}:user:${actor.userId}`;
 }
 
@@ -279,18 +277,15 @@ export function pickFavoriteBucketForActor(
 /**
  * Ownership gate shared by DELETE / add-to-trip handlers.
  *
- * Companion path is strict: even when the service token carries admin scope it
- * cannot bypass `actor.userId === ownerUserId`. V2 user admin bypasses.
+ * Phase 3（移除全域 admin）：無 admin bypass，純 owner 檢查 — companion 與 V2 user
+ * 路徑皆要求 `actor.userId === ownerUserId`。
  */
 export function assertFavoriteOwnership(
   actor: FavoriteActor,
-  auth: AuthData | null,
   ownerUserId: string | null,
   detail?: string,
 ): void {
-  const ownByUid = ownerUserId === actor.userId;
-  const adminBypass = !actor.isCompanion && auth?.isAdmin === true;
-  if (!ownByUid && !adminBypass) {
+  if (ownerUserId !== actor.userId) {
     throw new AppError('PERM_DENIED', detail);
   }
 }

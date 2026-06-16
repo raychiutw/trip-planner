@@ -16,8 +16,8 @@
  *                          LEFT JOIN users 拿 owner email for display）
  *     - ownerDisplayName （u.display_name — trip card avatar initial / 顯示名）
  *     - ownerUserId      （t.owner_user_id — canonical owner id）
- *     - role             （p.role — 當前 user 在此 trip 的權限：owner/admin/member/viewer。
- *                          admin 分支因 isAdmin 看全部，role 反映該 permission row 實際值）
+ *     - role             （p.role — 當前 user 在此 trip 的權限：owner/member/viewer。
+ *                          Phase 3：移除全域 admin，純列出 user 有 permission row 的 trip）
  *     - countries        （t.countries — filter / 顯示）
  *     - startDate        （MIN(trip_days.date) — 行程起日）
  *     - endDate          （MAX(trip_days.date) — 行程迄日）
@@ -31,7 +31,7 @@ import type { Env } from './_types';
 
 // LEFT JOIN users u ON u.id = t.owner_user_id：V2 cutover (migration 0047) 後
 // trips.owner email column 已 drop，owner_user_id 為 canonical，需 JOIN users 拿
-// email / display_name 顯示。admin 與 user 兩分支共用此 SELECT_BASE，改一處即可。
+// email / display_name 顯示。（Phase 3 移除全域 admin 後僅 user 自己的行程查詢用此 SELECT_BASE）
 const SELECT_BASE = `
   SELECT DISTINCT
     p.trip_id AS tripId,
@@ -59,20 +59,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // INNER JOIN trips so orphan permission rows (trip deleted but permission left
   // behind) never leak into /trips landing or ManagePage trip selector.
   // V2 cutover phase 2: 純 user_id-keyed query (email column dropped, '*' wildcard 也走了)
-  let results;
-  if (auth.isAdmin) {
-    const { results: rows } = await env.DB
-      .prepare(`${SELECT_BASE} ORDER BY p.trip_id`)
-      .all();
-    results = rows;
-  } else {
-    if (!auth.userId) return json([]);
-    const { results: rows } = await env.DB
-      .prepare(`${SELECT_BASE} WHERE p.user_id = ? ORDER BY p.trip_id`)
-      .bind(auth.userId)
-      .all();
-    results = rows;
-  }
+  // Phase 3（移除全域 admin）：無 admin 看全部分支，純 owner/member 自己的 trip。
+  if (!auth.userId) return json([]);
+  const { results } = await env.DB
+    .prepare(`${SELECT_BASE} WHERE p.user_id = ? ORDER BY p.trip_id`)
+    .bind(auth.userId)
+    .all();
 
   return json(results);
 };

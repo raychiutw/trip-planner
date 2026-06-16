@@ -1,10 +1,10 @@
 /**
- * ops-scope-gate — Phase 1（移除全域 admin）授權回歸鎖
+ * ops-scope-gate — 移除全域 admin 授權回歸鎖（Phase 1 建立，Phase 3 收緊）
  *
  * 驗證：
  *  - hasOpsScope / requireScope：只有 service token 帶對應 ops scope 才過；
- *    user-session 即使自帶 scopes 也不過（無偽造路徑）；Phase 1 舊 admin scope
- *    雙接受。
+ *    user-session 即使自帶 scopes 也不過（無偽造路徑）；Phase 3 已移除舊 admin
+ *    scope 雙接受 — 只帶 admin scope 不再被當維運身份。
  *  - F1：master POI 寫入（PATCH/DELETE/enrich）改 ops:poi gate — service token
  *    帶 ops:poi 可不帶 tripId 直接改；無 ops:poi 的 token / 一般 user 走 owner 分支。
  *  - D4：audit 歷史改 per-trip owner gate（hasWritePermission）— owner 可看，
@@ -36,11 +36,13 @@ describe('hasOpsScope (Phase 1 ops-scope gate)', () => {
     expect(hasOpsScope(auth, 'ops:poi')).toBe(false);
   });
 
-  it('legacy admin scope 雙接受 → true for any ops (Phase 1 過渡)', () => {
+  it('legacy admin scope 不再雙接受 → false for all ops (Phase 3 已移除過渡)', () => {
+    // Phase 1 過渡期 admin scope 雙接受任何 ops；Phase 3 移除 `|| scopes.includes('admin')`，
+    // 舊 token 若只帶 admin scope 不再被當維運身份 — 必須重新 provision 細粒度 ops scope。
     const auth = svcToken(['admin']);
-    expect(hasOpsScope(auth, 'ops:maps')).toBe(true);
-    expect(hasOpsScope(auth, 'ops:poi')).toBe(true);
-    expect(hasOpsScope(auth, 'ops:trips:read')).toBe(true);
+    expect(hasOpsScope(auth, 'ops:maps')).toBe(false);
+    expect(hasOpsScope(auth, 'ops:poi')).toBe(false);
+    expect(hasOpsScope(auth, 'ops:trips:read')).toBe(false);
   });
 
   it('user session never passes even with scopes present (no forge)', () => {

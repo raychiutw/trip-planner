@@ -63,9 +63,8 @@ function companionAuth(overrides: Partial<AuthData> = {}): AuthData {
   return {
     email: 'service:tripline-internal-cli',
     userId: null,
-    isAdmin: true,
     isServiceToken: true,
-    scopes: ['admin', 'companion'],
+    scopes: ['companion'],
     clientId: TP_REQUEST_CLIENT_ID,
     ...overrides,
   };
@@ -197,21 +196,25 @@ describe('POST /api/poi-favorites — §6.1 V2 user', () => {
     expect(results[10]).toBe(429);
   });
 
-  it('admin bypass rate limit', async () => {
+  it('前 admin email 不再 bypass rate limit（Phase 3：無全域 admin）', async () => {
+    // 舊行為：admin email 走 auth.isAdmin bypass，無 429。
+    // Phase 3 移除 bypass 後，任何 user（含過去的 admin email）一律受 10/min 限制。
     const poiIds: number[] = [];
     for (let i = 0; i < 11; i++) {
-      poiIds.push(await seedPoi(db, { name: `Admin POI ${i}` }));
+      poiIds.push(await seedPoi(db, { name: `ExAdmin POI ${i}` }));
     }
+    const results: number[] = [];
     for (let i = 0; i < 11; i++) {
       const ctx = mockContext({
         request: buildPostRequest({ poiId: poiIds[i] }),
         env,
-        auth: v2Auth({ email: 'v2-admin@test.com', isAdmin: true }),
+        auth: v2Auth({ email: 'v2-exadmin@test.com' }),
       });
       const resp = await callHandler(onRequestPost, ctx);
-      // 不可有 429（admin bypass）
-      expect([201, 409]).toContain(resp.status);
+      results.push(resp.status);
     }
+    expect(results.slice(0, 10).every((s) => s === 201)).toBe(true);
+    expect(results[10]).toBe(429); // 第 11 筆被限流 — 無 admin bypass
   });
 });
 

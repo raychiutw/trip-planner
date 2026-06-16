@@ -3,7 +3,7 @@
  * POST /api/poi-favorites { poiId, note?, companionRequestId? } — 新增收藏
  *
  * Companion path: see functions/api/_companion.ts (requireFavoriteActor +
- * pickFavoriteBucketForActor). companion always rate-limited; V2 user admin bypasses.
+ * pickFavoriteBucketForActor). 所有寫入皆限流（Phase 3：無 admin 豁免）。
  *
  * v2.33.105 SEC-2: pre-gate per-IP throttle 在 actor resolve 之前；post-gate
  * bucket 用 resolved actor 而非 claimed body 防 bucket-spoof DoS。
@@ -107,8 +107,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as { auth?: AuthData }).auth ?? null;
-
   // v2.33.105 SEC-2: pre-gate per-IP throttle 在 actor resolve 之前。寬鬆
   // 200/5min/IP，正常 user 不會打中；攻擊者 hammer 才會觸 lock。
   const preGate = await preGateFavoriteThrottle(context.env, context.request);
@@ -128,16 +126,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const actor = await requireFavoriteActor(context, body, 'favorite_create');
 
   // v2.33.105 SEC-2: post-gate bucket 用 RESOLVED actor，而非 claimed body。
-  // V2 user admin bypass 由 caller 決定（保留既有語意）。
-  const bucket = pickFavoriteBucketForActor(
-    actor,
-    'poi-favorites-post',
-    !actor.isCompanion && auth?.isAdmin === true,
-  );
-  if (bucket) {
-    const bump = await bumpRateLimit(context.env.DB, bucket, RATE_LIMITS.POI_FAVORITES_WRITE);
-    if (!bump.ok) return buildRateLimitResponse(bump.retryAfter ?? 60, { error: 'RATE_LIMITED' });
-  }
+  // Phase 3（移除全域 admin）：無 admin rate-limit 豁免，所有寫入皆限流。
+  const bucket = pickFavoriteBucketForActor(actor, 'poi-favorites-post');
+  const bump = await bumpRateLimit(context.env.DB, bucket, RATE_LIMITS.POI_FAVORITES_WRITE);
+  if (!bump.ok) return buildRateLimitResponse(bump.retryAfter ?? 60, { error: 'RATE_LIMITED' });
 
   // INSERT poi_favorites — FK 失敗（POI 不存在）轉 404；UNIQUE 違反 → 409
   let row: Record<string, unknown> | null = null;

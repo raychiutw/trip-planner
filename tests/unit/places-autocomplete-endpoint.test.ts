@@ -10,8 +10,7 @@ vi.mock('../../functions/api/_auth', () => ({
   requireAuth: vi.fn(() => ({
     email: 'lean.lean@gmail.com',
     userId: 'u-1',
-    isAdmin: false,
-    isServiceToken: false,
+        isServiceToken: false,
   })),
 }));
 
