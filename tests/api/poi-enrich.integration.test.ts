@@ -109,7 +109,7 @@ describe('POST /api/pois/:id/enrich (T-1)', () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/pois/999999/enrich', 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', userId: 'admin-1', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: '999999' },
     });
     expect((await callHandler(onRequestPost, ctx)).status).toBe(404);
@@ -122,7 +122,7 @@ describe('POST /api/pois/:id/enrich (T-1)', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/pois/${poiId}/enrich`, 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', userId: 'admin-1', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(poiId) },
     });
     expect((await callHandler(onRequestPost, ctx)).status).toBe(400);
@@ -135,7 +135,7 @@ describe('POST /api/pois/:id/enrich (T-1)', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/pois/${poiId}/enrich`, 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', userId: 'admin-1', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(poiId) },
     });
     expect((await callHandler(onRequestPost, ctx)).status).toBe(502);
@@ -157,7 +157,7 @@ describe('POST /api/pois/:id/enrich (T-1)', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/pois/${poiId}/enrich`, 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', userId: 'admin-1', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(poiId) },
     });
     const resp = await callHandler(onRequestPost, ctx);
@@ -191,7 +191,7 @@ describe('POST /api/pois/:id/enrich (T-1)', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/pois/${poiId}/enrich`, 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', userId: 'admin-1', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(poiId) },
     });
     const resp = await callHandler(onRequestPost, ctx);
@@ -217,7 +217,7 @@ describe('POST /api/pois/:id/enrich (T-1)', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/pois/${poiId}/enrich`, 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', userId: 'admin-1', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(poiId) },
     });
     const resp = await callHandler(onRequestPost, ctx);
@@ -235,7 +235,7 @@ describe('POST /api/pois/:id/enrich (T-1)', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/pois/${poiId}/enrich`, 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', userId: 'admin-1', isAdmin: true }),
+      auth: mockAuth({ email: 'service:poi-cli', userId: null, isServiceToken: true, scopes: ['ops:poi'], clientId: 'poi-cli' }),
       params: { id: String(poiId) },
     });
     const resp = await callHandler(onRequestPost, ctx);

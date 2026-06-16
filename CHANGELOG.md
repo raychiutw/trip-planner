@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.5] - 2026-06-16
+
+### Changed
+- **移除全域 admin → 細粒度 ops scope（Phase 1，向後相容雙接受）** — 人類 session 不再憑 `ADMIN_EMAIL` 取得跨所有 trip 的 admin；改為 owner/permissions + service-token ops scope 授權。`_middleware.ts` 三處 user-session `isAdmin` 一律 `false`；新增 `requireScope`/`hasOpsScope`（`_auth.ts`）：只有 service token（client_credentials）帶對應 ops scope 才放行，user-session 不帶 `scopes` 無法偽造維運權限。
+  - 9 個 `/api/admin/*` 維運 endpoint `requireAdmin` → `requireScope('ops:maps'|'ops:poi'|'ops:cache')`。
+  - **master POI 寫入**（`PATCH`/`DELETE /api/pois/:id`、`POST /api/pois/:id/enrich`）→ `requirePoiWrite`（F1：cron poi-refresh/backfill 原靠 admin bypass 寫跨-trip master POI，ops scope 設計一度漏列 → 改 service-token `ops:poi`，否則 user 走 owner + tripId 連結檢查）。
+  - `GET /api/trips?all=1`、`/api/requests` 跨-trip 讀 → `ops:trips:read`。
+  - **audit / rollback**（`/api/trips/:id/audit`、`.../audit/:aid/rollback`）原 admin-only → owner gate（`requireTripWrite`，owner/member 可看/還原自己 trip）。
+  - Phase 1 雙接受：`hasOpsScope` 暫時通配舊 `admin` scope，讓尚未 rotate 的 mac mini cron token 不中斷；Phase 2 rotate token + cron scripts 切 ops scope，Phase 3 移除雙接受 + `AuthData.isAdmin`（40 檔）+ `ADMIN_EMAIL` + per-trip `role='admin'` migration。
+  - TDD：新增 `ops-scope-gate`（13）+ 對齊 `pois`/`poi-enrich`/`audit`/`rollback`/`admin-endpoints-guard`/`quota-estimate` 既有測試。plan：`docs/plans/2026-06-remove-global-admin.md`（過 /plan-eng-review + security-auditor outside voice，2 P1 已折入）。
+
 ## [2.55.4] - 2026-06-16
 
 ### Security

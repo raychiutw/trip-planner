@@ -1,6 +1,6 @@
 
 import { AppError } from '../../_errors';
-import { requireAuth } from '../../_auth';
+import { requireAuth, requireTripWrite } from '../../_auth';
 import { json } from '../../_utils';
 import type { Env } from '../../_types';
 
@@ -9,10 +9,10 @@ import type { Env } from '../../_types';
 // Only admin can access
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
-  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
-
   const { id } = context.params as { id: string };
   const db = context.env.DB;
+  // Phase 1（移除全域 admin / D4）：audit 歷史改 per-trip owner gate（owner/member 可看自己 trip）。
+  await requireTripWrite(db, auth, id);
 
   const url = new URL(context.request.url);
   const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') || '20'), 100));

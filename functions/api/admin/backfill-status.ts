@@ -18,11 +18,11 @@
  *   }
  */
 
-import { requireAdmin } from '../_auth';
+import { requireScope } from '../_auth';
 import type { Env } from '../_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  requireAdmin(context);
+  requireScope(context, 'ops:poi');
 
   const db = context.env.DB;
 

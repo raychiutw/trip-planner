@@ -25,6 +25,67 @@ export function requireAdmin(context: { data: unknown }): AuthData {
 }
 
 /**
+ * Service-token ops-scope check（移除全域 admin，Phase 1）。
+ *
+ * 取代 `auth.isAdmin` 作為「系統維運 / 跨-trip」端點的授權依據。只有
+ * service token（client_credentials，user_id=null）帶指定 ops scope 才為真。
+ *
+ * 雙接受過渡：Phase 1 期間舊 `admin` scope 仍通配所有 ops scope，讓尚未
+ * rotate 的 mac mini cron token 不中斷；Phase 2 rotate 完成後，Phase 3 移除
+ * 下面 `|| scopes.includes('admin')` 那段。
+ *
+ * user-session 不帶 `scopes`（middleware 只對 service token attach，見
+ * _middleware.ts），故 user 一律回 false — 無法靠自帶 scope 偽造維運權限。
+ */
+export function hasOpsScope(auth: AuthData | null, scope: string): boolean {
+  if (!auth?.isServiceToken) return false;
+  const scopes = auth.scopes;
+  if (!scopes) return false;
+  return scopes.includes(scope) || scopes.includes('admin'); // ← Phase 3 移除 admin 雙接受
+}
+
+/**
+ * Ops-only gate：service token 帶指定 ops scope 才放行，否則 PERM_DENIED。
+ * 取代 requireAdmin 於 /api/admin/* 系統維運與跨-trip 端點。
+ */
+export function requireScope(context: { data: unknown }, scope: string): AuthData {
+  const auth = requireAuth(context);
+  if (!hasOpsScope(auth, scope)) throw new AppError('PERM_DENIED');
+  return auth;
+}
+
+/**
+ * Master POI 寫入授權（PATCH / enrich 共用，Phase 1 F1）。
+ * service token 帶 ops:poi → 放行（cron poi-refresh/backfill 維運，免 tripId）；
+ * 否則 user 須提供 tripId + 對該 trip 有寫權限 + POI 確實屬於該 trip。
+ */
+export async function requirePoiWrite(
+  db: D1Database,
+  auth: AuthData,
+  poiId: number,
+  tripId: string | null | undefined,
+): Promise<void> {
+  if (hasOpsScope(auth, 'ops:poi')) return;
+  if (!tripId) throw new AppError('DATA_VALIDATION', '非維運 token 必須提供 tripId');
+  if (!(await hasWritePermission(db, auth, tripId, false))) throw new AppError('PERM_DENIED');
+  if (!(await verifyPoiBelongsToTrip(db, poiId, tripId))) {
+    throw new AppError('PERM_DENIED', '此 POI 不屬於該行程');
+  }
+}
+
+/**
+ * Per-trip 寫權限 gate（owner/member，排除 viewer）。audit / rollback 等
+ * per-trip 特權操作共用（Phase 1 D4：取代 admin-only gate）。
+ */
+export async function requireTripWrite(
+  db: D1Database,
+  auth: AuthData,
+  tripId: string,
+): Promise<void> {
+  if (!(await hasWritePermission(db, auth, tripId, false))) throw new AppError('PERM_DENIED');
+}
+
+/**
  * Returns true if the authenticated user has any permission row on the given trip
  * (read access). Admins and service tokens always pass. viewer / member / owner /
  * admin roles all return true — viewer is read-allowed.

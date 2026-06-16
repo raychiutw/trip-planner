@@ -38,7 +38,7 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-rb/audit/${auditRow!.id}/rollback`, 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'user@test.com' }), // trip-rb owner（D4：rollback 改 owner gate）
       params: { id: 'trip-rb', aid: String(auditRow!.id) },
     });
     const resp = await callHandler(onRequestPost, ctx);
@@ -64,7 +64,7 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-rb/audit/${auditRow!.id}/rollback`, 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'user@test.com' }), // trip-rb owner（D4：rollback 改 owner gate）
       params: { id: 'trip-rb', aid: String(auditRow!.id) },
     });
     const resp = await callHandler(onRequestPost, ctx);
@@ -94,7 +94,7 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-rb/audit/${auditRow!.id}/rollback`, 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'user@test.com' }), // trip-rb owner（D4：rollback 改 owner gate）
       params: { id: 'trip-rb', aid: String(auditRow!.id) },
     });
     const resp = await callHandler(onRequestPost, ctx);
@@ -105,11 +105,11 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
     expect(bodyObj.error?.detail ?? '').toContain('note');
   });
 
-  it('非 admin → 403', async () => {
+  it('非 owner（無 trip 寫權限）→ 403', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-rb/audit/1/rollback', 'POST'),
       env,
-      auth: mockAuth({ email: 'user@test.com', isAdmin: false }),
+      auth: mockAuth({ email: 'stranger@test.com' }),
       params: { id: 'trip-rb', aid: '1' },
     });
     expect((await callHandler(onRequestPost, ctx)).status).toBe(403);
@@ -128,7 +128,7 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-rb/audit/99999/rollback', 'POST'),
       env,
-      auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
+      auth: mockAuth({ email: 'user@test.com' }), // trip-rb owner（D4：rollback 改 owner gate）
       params: { id: 'trip-rb', aid: '99999' },
     });
     expect((await callHandler(onRequestPost, ctx)).status).toBe(404);
