@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.6] - 2026-06-16
+
+### Changed
+- **移除全域 admin → Phase 2：service token 切 ops scope + cron 維運修復（`scripts/`，不經 CF deploy）** — 配合 Phase 1（v2.55.5）的 ops scope gate，mac mini cron 的 service token 從籠統 `admin` scope 切細粒度 ops scope。
+  - **F2（security-auditor outside voice 標的 P1）**：`provision-admin-cli-client.js` `--rotate-secret` cascade-revoke 原打 `oauth_access_tokens`/`oauth_refresh_tokens`（**兩表不存在** → `execD1` 永遠 throw → catch 吞成 warning → 撤銷 silent no-op，舊 token 活到 1h expiry，rotate 動機若是 secret 外洩這 1h 就是攻擊窗口）。改打實際表 `oauth_models`（`name IN ('AccessToken','RefreshToken') AND json_extract(payload,'$.client_id')`，payload client key snake 確認自 `oauth/token.ts:101`）+ 移到 `client_apps` DELETE 之前 + hard-fail（撤銷失敗 abort，不留「client 沒了又沒新 secret」壞狀態）。
+  - **provision allowedScopes**：`["admin","trips:read","trips:write","companion"]` → `["ops:maps","ops:poi","ops:cache","ops:trips:read","companion"]`。
+  - **cron scope**：`get-tripline-token.js` / `cron-shared.ts` 移除硬寫 `'admin'` default → 不傳 scope，token endpoint 回 client allowed_scopes（`token.ts:239` finalScopes），rotate 前後**自動適配**（rotate 前 admin、rotate 後 ops，無需 code/rotate 同步）。
+  - **cron PATH 修（順手，既有 infra bug）**：`tripline-api-server.ts` 的 `auth-cleanup`（裸 `'node'`）+ `google-poi-refresh`（寫死 `/Users/ray/.bun/bin/bun` 已不存在，bun 移到 homebrew）spawn ENOENT 13+ 天沒在跑（stderr 2026-06-14/15）→ 加 `resolveBin` 偵測絕對路徑。
+  - rotate 運維（重發 token + 更新 `.env.local` secret + 重啟 launchd + 驗證）見 `docs/plans/2026-06-phase2-runbook.md`。
+
 ## [2.55.5] - 2026-06-16
 
 ### Changed

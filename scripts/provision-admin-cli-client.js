@@ -127,35 +127,25 @@ async function hashPassword(plain) {
       );
       process.exit(4);
     }
-    await execD1('DELETE FROM client_apps WHERE client_id = ?', [CLIENT_ID]);
-    console.error(`Existing client deleted (status was: ${existing[0].status}). Reissuing…`);
-    // v2.33.50 round 8b security: cascade-revoke live access_tokens — 之前 comment
-    // 說「需自己 wrangler delete」，但 incident response 時無人會記得，1h grace
-    // window 不可接受。--rotate-secret 預設就 cascade-revoke。
-    // --keep-tokens flag 給「graceful rollover」rare case opt-out。
+    // F2（Phase 2 / security-auditor）：先 cascade-revoke live tokens，再刪 client_apps。
+    // 舊版打 oauth_access_tokens / oauth_refresh_tokens — 兩表不存在，execD1 永遠 throw →
+    // catch 吞成 warning → 撤銷 silent no-op，舊 token 活到 1h expiry（若 rotate 動機是
+    // secret 外洩，這 1h 就是攻擊窗口）。token 實存 oauth_models（name='AccessToken'/
+    // 'RefreshToken'、payload.client_id snake，見 oauth/token.ts:101 + _middleware.ts:18）。
+    // 打對表 + hard-fail：execD1 失敗直接往上拋（main().catch exit 1），此時 client_apps
+    // 還沒刪、新 secret 沒發，舊狀態完整保留（不留「client 沒了又沒新 secret」壞狀態）。
     const keepTokens = process.argv.includes('--keep-tokens');
     if (keepTokens) {
       console.error('[--keep-tokens] live access tokens 保留至自然 expiry。請手動 revoke 視需求。');
     } else {
-      try {
-        const tokensRevoked = await execD1(
-          'DELETE FROM oauth_access_tokens WHERE client_id = ?',
-          [CLIENT_ID],
-        );
-        const refreshRevoked = await execD1(
-          'DELETE FROM oauth_refresh_tokens WHERE client_id = ?',
-          [CLIENT_ID],
-        );
-        console.error(
-          `Cascade revoked ${tokensRevoked} access_token(s) + ${refreshRevoked} refresh_token(s).`,
-        );
-      } catch (err) {
-        console.error(
-          `Warning: failed to cascade-revoke tokens (${(err && err.message) || err}). ` +
-            'New client issued but live tokens may persist 1h。請手動 wrangler delete。',
-        );
-      }
+      const revoked = await execD1(
+        "DELETE FROM oauth_models WHERE name IN ('AccessToken','RefreshToken') AND json_extract(payload, '$.client_id') = ?",
+        [CLIENT_ID],
+      );
+      console.error(`Cascade revoked ${revoked} live token row(s) for ${CLIENT_ID}.`);
     }
+    await execD1('DELETE FROM client_apps WHERE client_id = ?', [CLIENT_ID]);
+    console.error(`Existing client deleted (status was: ${existing[0].status}). Reissuing…`);
   }
 
   // Generate + hash + insert
@@ -163,10 +153,11 @@ async function hashPassword(plain) {
   const clientSecretHash = await hashPassword(clientSecret);
   // Empty redirect_uris — client_credentials grant doesn't redirect (RFC 6749 §4.4)
   const redirectUris = '[]';
-  // admin scope so middleware sets isAdmin=true
-  // companion scope (poi-favorites-rename change): tp-request scheduler 透過 X-Request-Scope: companion
-  // header + companion scope + clientId match 解析為 user_id 寫入 poi_favorites（specs/tp-companion-mapping/spec.md）
-  const allowedScopes = '["admin","trips:read","trips:write","companion"]';
+  // Phase 2（移除全域 admin）：細粒度 ops scope 取代籠統 admin。
+  // ops:maps/poi/cache/trips:read = 維運 endpoint scope（requireScope/hasOpsScope）；
+  // companion = tp-request scheduler 透過 X-Request-Scope: companion + clientId match
+  // 解析 user_id 寫 poi_favorites（specs/tp-companion-mapping/spec.md）。
+  const allowedScopes = '["ops:maps","ops:poi","ops:cache","ops:trips:read","companion"]';
 
   await execD1(
     `INSERT INTO client_apps

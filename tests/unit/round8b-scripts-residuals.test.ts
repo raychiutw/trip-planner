@@ -29,9 +29,13 @@ const D1_CLIENT_SRC = readFileSync(
 );
 
 describe('v2.33.50 round 8b — provision-admin-cli cascade revoke', () => {
-  it('--rotate-secret 預設 cascade revoke access + refresh tokens', () => {
-    expect(PROVISION_SRC).toContain('DELETE FROM oauth_access_tokens WHERE client_id = ?');
-    expect(PROVISION_SRC).toContain('DELETE FROM oauth_refresh_tokens WHERE client_id = ?');
+  it('--rotate-secret cascade revoke 打 oauth_models (F2: 對表 + client_id snake)', () => {
+    // F2（Phase 2）：token 存 oauth_models（name='AccessToken'/'RefreshToken'、payload.client_id），
+    // 非 oauth_access_tokens/oauth_refresh_tokens（兩表不存在 → 舊版 DELETE silent no-op）。
+    expect(PROVISION_SRC).toContain("DELETE FROM oauth_models WHERE name IN ('AccessToken','RefreshToken')");
+    expect(PROVISION_SRC).toContain("json_extract(payload, '$.client_id')");
+    expect(PROVISION_SRC).not.toContain('DELETE FROM oauth_access_tokens');
+    expect(PROVISION_SRC).not.toContain('DELETE FROM oauth_refresh_tokens');
   });
 
   it('--keep-tokens opt-out flag 存在 (rare graceful rollover)', () => {
@@ -39,8 +43,14 @@ describe('v2.33.50 round 8b — provision-admin-cli cascade revoke', () => {
     expect(PROVISION_SRC).toContain('keepTokens');
   });
 
-  it('failure path 拋 warning (但 client 仍 issued)', () => {
-    expect(PROVISION_SRC).toMatch(/failed to cascade-revoke tokens/);
+  it('F2: cascade-revoke 在 client_apps DELETE 前 + hard-fail (無 silent warning)', () => {
+    // F2（Phase 2）：撤銷失敗直接往上拋（main().catch exit 1），不再 try/catch 吞成 warning
+    // 後繼續發 secret；revoke 移到 client_apps DELETE 前，hard-fail 時舊狀態完整保留。
+    expect(PROVISION_SRC).not.toMatch(/failed to cascade-revoke tokens/);
+    const revokeIdx = PROVISION_SRC.indexOf('DELETE FROM oauth_models');
+    const clientDelIdx = PROVISION_SRC.indexOf('DELETE FROM client_apps WHERE client_id = ?');
+    expect(revokeIdx).toBeGreaterThan(0);
+    expect(clientDelIdx).toBeGreaterThan(revokeIdx);
   });
 });
 
