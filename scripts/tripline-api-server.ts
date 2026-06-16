@@ -148,6 +148,18 @@ const TMUX_BIN = (() => {
   return 'tmux'; // fallback — let spawnSync resolve via PATH
 })();
 
+// Phase 2 cron PATH 修：launchd PATH 不含 /opt/homebrew/bin，且 google-poi-refresh 舊
+// hardcode /Users/ray/.bun/bin/bun 已不存在（bun 移到 homebrew）、auth-cleanup 用裸 'node'
+// → 兩者 spawn ENOENT 沒在跑（api-server-stderr 2026-06-14/15）。仿 TMUX_BIN 偵測絕對路徑。
+const resolveBin = (candidates: string[], fallback: string): string => {
+  for (const p of candidates) {
+    try { if (require('fs').existsSync(p)) return p; } catch {}
+  }
+  return fallback;
+};
+const NODE_BIN = resolveBin(['/opt/homebrew/bin/node', '/usr/local/bin/node'], 'node');
+const BUN_BIN = resolveBin(['/opt/homebrew/bin/bun', '/Users/ray/.bun/bin/bun'], 'bun');
+
 async function cleanupOrphans(maxAgeMs: number): Promise<number> {
   try {
     // v2.33.110: format 用 `|` delimiter 而非 space — tmux session name 允許空格，
@@ -564,8 +576,8 @@ scheduleDaily(6, 10, '/tp-daily-check', 'daily-check');
 //
 // /tp-poi-enrich-monthly 仍維持 v2.31.4 移除狀態（batch enrich 已被 即時
 // POST /api/pois/:id/enrich + 30d refresh 取代）。
-scheduleDailyScript(4, 0, 'node', ['scripts/auth-cleanup.js'], 'auth-cleanup');
-scheduleDailyScript(4, 30, '/Users/ray/.bun/bin/bun', ['run', 'refresh:google'], 'google-poi-refresh');
+scheduleDailyScript(4, 0, NODE_BIN, ['scripts/auth-cleanup.js'], 'auth-cleanup');
+scheduleDailyScript(4, 30, BUN_BIN, ['run', 'refresh:google'], 'google-poi-refresh');
 // v2.33.131 G13: log retention sweep — scripts/logs/ 下 per-date files > 30d
 // 刪除 + 超大單檔 truncate 保留 tail 50%。PR4 exit code wrapper 自動接 alert。
 scheduleDailyScript(3, 30, 'zsh', ['scripts/log-rotate.sh'], 'log-rotate');

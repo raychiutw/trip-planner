@@ -91,14 +91,18 @@ async function fetchFresh() {
     );
   }
   const base = process.env.TRIPLINE_API_BASE || DEFAULT_BASE;
-  const scopes = process.env.TRIPLINE_API_SCOPES || 'admin';
 
+  // Phase 2（移除全域 admin）：不再硬寫 'admin' default。無 TRIPLINE_API_SCOPES → 不傳
+  // scope，token endpoint 回 client allowed_scopes（rotate 前 admin、rotate 後 ops scope，
+  // 自動適配，見 oauth/token.ts:239 finalScopes）。不能傳 undefined（URLSearchParams 會
+  // 序列化成字串 'undefined'）。
   const body = new URLSearchParams({
     grant_type: 'client_credentials',
     client_id: clientId,
     client_secret: clientSecret,
-    scope: scopes,
   });
+  const scopes = process.env.TRIPLINE_API_SCOPES;
+  if (scopes) body.set('scope', scopes);
 
   const res = await fetch(`${base}/api/oauth/token`, {
     method: 'POST',

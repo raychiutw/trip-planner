@@ -99,13 +99,15 @@ function writeTokenCache(token: string, expiresInSec: number): void {
   } catch { /* cache failure non-fatal */ }
 }
 
-async function mintToken(env: CronEnv, scopes = 'admin'): Promise<string> {
+async function mintToken(env: CronEnv, scopes?: string): Promise<string> {
+  // Phase 2（移除全域 admin）：不再硬寫 'admin' default。無 scope → token endpoint 回
+  // client allowed_scopes（rotate 後 = ops scope，自動適配，見 oauth/token.ts:239）。
   const body = new URLSearchParams({
     grant_type: 'client_credentials',
     client_id: env.clientId,
     client_secret: env.clientSecret,
-    scope: scopes,
   });
+  if (scopes) body.set('scope', scopes);
   const res = await fetch(`${env.apiUrl}/api/oauth/token`, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
