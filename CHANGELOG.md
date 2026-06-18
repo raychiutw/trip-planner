@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.8] - 2026-06-19
+
+### Security
+- **npm audit 修復 → 0 vulnerabilities**（daily-check 2026-06-19 觸發）
+  - **`nodemailer` `^8.0.10` → `^9.0.1`**（high）：修 message-level `raw` option 繞過 `disableFileAccess`/`disableUrlAccess` 導致任意檔案讀取 + full-response SSRF（GHSA-p6gq-j5cr-w38f）。本專案 mailer 僅傳標準 `to/from/subject/text/html`，未用 `raw`，實際無暴露；升級消除告警並對齊上游修補。`createTransport` SMTP 用法 9.x 完全相容。
+  - **transitive 修補**（`npm audit fix`）：`dompurify`(moderate)、`esbuild`/`vite`/`undici`/`ws`/`shell-quote`(build/dev tooling，不進 Cloudflare Pages runtime)。
+  - 驗證：3372 unit tests + `tsc --noEmit` + prod build 全綠。
+
 ## [2.55.7] - 2026-06-16
 
 ### Changed
