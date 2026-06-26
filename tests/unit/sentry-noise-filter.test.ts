@@ -62,6 +62,27 @@ describe('isNoiseEvent', () => {
     }))).toBe(true);
   });
 
+  it('drops SW register timeout AbortError (browser-side, 0 functional impact)', () => {
+    expect(isNoiseEvent(baseEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/' },
+      exception: {
+        values: [{
+          type: 'AbortError',
+          value: "Failed to register a ServiceWorker for scope ('https://trip-planner-dby.pages.dev/') with script ('https://trip-planner-dby.pages.dev/sw.js'): Timed out while trying to start the Service Worker.",
+        }],
+      },
+    }))).toBe(true);
+  });
+
+  it('keeps a real ServiceWorker error that is not the startup timeout', () => {
+    expect(isNoiseEvent(baseEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/' },
+      exception: {
+        values: [{ type: 'TypeError', value: 'sw.js precache failed: bad-precache-response' }],
+      },
+    }))).toBe(false);
+  });
+
   it('keeps real Chrome on production host', () => {
     expect(isNoiseEvent(baseEvent({
       request: {

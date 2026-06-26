@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.9] - 2026-06-27
+
+### Fixed
+- **Sentry 噪音過濾：Service Worker 註冊 timeout**（daily-check 2026-06-27 觸發）
+  - 慢速裝置上瀏覽器 `register('/sw.js')`（vite-plugin-pwa autoUpdate 自動注入）會 reject `AbortError: Timed out while trying to start the Service Worker`，冒泡成 unhandledrejection 進 Sentry（93 次 / 0 user functional impact）。
+  - SW 是純 enhancement（`navigateFallback: null`，只做 precache + runtime cache），啟動 timeout 對 user 零功能影響；`main.tsx` 早已對 `getRegistration`/`update` reject 靜默吞，但此 timeout 來自 auto-injected `register()` 無 catch 點。
+  - `isNoiseEvent` 新增 `SW_REGISTER_TIMEOUT_RE` matcher，在 `beforeSend` drop 此事件；只比對啟動 timeout 字串，真實 SW precache 錯誤仍上報。
+  - 驗證：3374 unit tests（含 2 新 noise-filter case）+ `tsc --noEmit` 全綠。
+
 ## [2.55.8] - 2026-06-19
 
 ### Security

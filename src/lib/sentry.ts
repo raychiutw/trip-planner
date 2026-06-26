@@ -5,6 +5,12 @@ import { init, browserTracingIntegration, type ErrorEvent as SentryErrorEvent, t
 
 const LOCALHOST_URL_RE = /\/\/(?:localhost|127\.0\.0\.1)(?::|\/|$)/i;
 const HEADLESS_UA_RE = /HeadlessChrome|Playwright|Lighthouse/i;
+// SW 是純 enhancement（vite-plugin-pwa autoUpdate，navigateFallback:null，只 precache
+// + runtime cache）。慢速裝置上瀏覽器 register('/sw.js') 會 reject AbortError
+// "Timed out while trying to start the Service Worker"，冒泡成 unhandledrejection 進
+// Sentry（93 次 / 0 user functional impact）。main.tsx 已對 getRegistration/update
+// reject 靜默吞；此 timeout 來自 auto-injected register()，無 catch 點，改在這裡 drop。
+const SW_REGISTER_TIMEOUT_RE = /Timed out while trying to start the Service Worker/i;
 
 // Drop events from Playwright / Lighthouse / local preview. They run against
 // `localhost` (or 127.0.0.1) with a HeadlessChrome user agent and spam the
@@ -19,6 +25,10 @@ export function isNoiseEvent(event: SentryErrorEvent): boolean {
   if (typeof ua === 'string' && HEADLESS_UA_RE.test(ua)) return true;
   const browserName = event.contexts?.browser?.name;
   if (typeof browserName === 'string' && HEADLESS_UA_RE.test(browserName)) return true;
+  const exceptionValues = event.exception?.values ?? [];
+  if (exceptionValues.some((v) => typeof v?.value === 'string' && SW_REGISTER_TIMEOUT_RE.test(v.value))) {
+    return true;
+  }
   return false;
 }
 
