@@ -74,6 +74,27 @@ describe('isNoiseEvent', () => {
     }))).toBe(true);
   });
 
+  it('drops SW register "Operation has been aborted" AbortError variant (same root cause)', () => {
+    expect(isNoiseEvent(baseEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/' },
+      exception: {
+        values: [{
+          type: 'AbortError',
+          value: "Failed to register a ServiceWorker for scope ('https://trip-planner-dby.pages.dev/') with script ('https://trip-planner-dby.pages.dev/sw.js'): Operation has been aborted",
+        }],
+      },
+    }))).toBe(true);
+  });
+
+  it('keeps a generic "Operation has been aborted" with no SW-register prefix (e.g. fetch abort)', () => {
+    expect(isNoiseEvent(baseEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/' },
+      exception: {
+        values: [{ type: 'AbortError', value: 'The user aborted a request: Operation has been aborted' }],
+      },
+    }))).toBe(false);
+  });
+
   it('keeps a real ServiceWorker error that is not the startup timeout', () => {
     expect(isNoiseEvent(baseEvent({
       request: { url: 'https://trip-planner-dby.pages.dev/' },

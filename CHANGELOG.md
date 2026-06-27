@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.11] - 2026-06-28
+
+### Fixed
+- **Sentry 噪音過濾：Service Worker 註冊 AbortError「Operation has been aborted」變體**（daily-check 2026-06-28 觸發）
+  - v2.55.9 的 `SW_REGISTER_TIMEOUT_RE` 只比對「Timed out while trying to start the Service Worker」，但同一 root cause（auto-injected `register('/sw.js')` reject，0 user functional impact）還有第二個 message 變體「Operation has been aborted」（Sentry issue `7578437046`）未被涵蓋，仍上報為 unhandledrejection。
+  - 改為 `SW_REGISTER_NOISE_RE`：要求 `Failed to register a ServiceWorker` 前綴 + 兩個已知 reject 訊息之一，兩變體一起 drop。前綴比對避免誤殺其他 `AbortError`（如 fetch abort 也叫「Operation has been aborted」）。
+  - 驗證：3376 unit tests（含 2 新 noise-filter case：drop 新變體 + keep 無 SW 前綴的 generic abort）+ `tsc --noEmit` 全綠。
+
 ## [2.55.9] - 2026-06-27
 
 ### Fixed
