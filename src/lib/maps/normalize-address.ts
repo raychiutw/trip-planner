@@ -15,7 +15,13 @@
  *
  * **不會 collapse 一般中文字（如「水水合甲烷」化學詞）— 只針對 admin/positional suffix
  * 白名單。**
+ *
+ * v2.55.x: 額外對台灣地址做簡轉繁（Google Places 對部分台灣 POI 的 address 回簡體，
+ * 如「屏东县琉球乡」，languageCode/regionCode 皆無效）。只對含「台灣/臺灣」的地址套用，
+ * 保護日本地址的簡日共用字形。見 `zh-tw-address.ts`。
  */
+
+import { toTraditionalTwAddress } from './zh-tw-address';
 
 // 連續會被視為 typo 的 admin / positional suffix char。
 // 中文：號 縣 市 區 鎮 鄉 村 里 路 街 巷 弄
@@ -29,7 +35,8 @@ const COMMA_SPACE_COMMA_RE = /[,，]\s*[,，]/g;
 export function normalizePoiAddress(raw: string | null | undefined): string | null {
   if (raw == null || typeof raw !== 'string') return null;
 
-  let s = raw;
+  // 0. 台灣地址簡轉繁（Google Places locale fix；非台灣地址原樣保留）
+  let s = toTraditionalTwAddress(raw);
 
   // 1. doubled admin suffix → single
   s = s.replace(DOUBLED_ADMIN_RE, '$1');
