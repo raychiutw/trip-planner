@@ -1201,16 +1201,23 @@ export default function EditEntryPage() {
       }
     }
 
-    if (dirty.segmentDirty && segment && mode) {
+    // v2.55.x: segment 存在 → PATCH 改既有；不存在 + prevEntry 已知 → POST 建立。
+    if (dirty.segmentDirty && mode && prevEntry) {
       const body: Record<string, unknown> = { mode };
       if (mode === 'transit') {
         body.min = parseInt(transitMin, 10);
       }
+      const req = segment
+        ? apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments/${segment.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(body),
+          })
+        : apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments`, {
+            method: 'POST',
+            body: JSON.stringify({ ...body, from_entry_id: prevEntry.id, to_entry_id: entryId }),
+          });
       requests.push(
-        apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments/${segment.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(body),
-        }).then(async (res) => ({ scope: 'segment', ok: res.ok, status: res.status, text: res.ok ? undefined : await res.text() })),
+        req.then(async (res) => ({ scope: 'segment', ok: res.ok, status: res.status, text: res.ok ? undefined : await res.text() })),
       );
     }
 
@@ -1256,7 +1263,7 @@ export default function EditEntryPage() {
     }
   }, [
     tripId, entry, entryId, submitting, validation, dirty,
-    startTime, endTime, mode, transitMin, segment,
+    startTime, endTime, mode, transitMin, segment, prevEntry,
   ]);
 
   // v2.33.108: auto-save 後不再需要 discard confirmation — handleCancel 直接 back，
@@ -1747,26 +1754,28 @@ export default function EditEntryPage() {
                     <Icon name="car" />
                     <span>從「{prevEntry.title}」移動</span>
                   </h2>
-                  {segment ? (
-                    <>
-                      <div className="tp-edit-entry-mode-segmented" role="radiogroup" aria-label="移動方式">
-                        {(['driving', 'walking', 'transit'] as const).map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            role="radio"
-                            aria-checked={mode === m}
-                            className={`tp-edit-entry-mode-btn ${mode === m ? 'is-selected' : ''}`}
-                            onClick={() => setMode(m)}
-                            data-testid={`edit-entry-mode-${m}`}
-                          >
-                            <Icon name={TRAVEL_MODE_ICON[m]} />
-                            <span className="tp-edit-entry-mode-lab">{TRAVEL_MODE_LABEL[m]}</span>
-                          </button>
-                        ))}
-                      </div>
-                      {mode !== 'transit' && (
-                        <div className="tp-edit-entry-mode-detail">
+                  {/* v2.55.x: segment 不存在時也顯示可編輯 control — user 選 mode 即建立
+                      segment（POST /segments），不必等 recompute travel。 */}
+                  <div className="tp-edit-entry-mode-segmented" role="radiogroup" aria-label="移動方式">
+                    {(['driving', 'walking', 'transit'] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        role="radio"
+                        aria-checked={mode === m}
+                        className={`tp-edit-entry-mode-btn ${mode === m ? 'is-selected' : ''}`}
+                        onClick={() => setMode(m)}
+                        data-testid={`edit-entry-mode-${m}`}
+                      >
+                        <Icon name={TRAVEL_MODE_ICON[m]} />
+                        <span className="tp-edit-entry-mode-lab">{TRAVEL_MODE_LABEL[m]}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {mode !== null && mode !== 'transit' && (
+                    <div className="tp-edit-entry-mode-detail">
+                      {segment ? (
+                        <>
                           <span>
                             {typeof segment.min === 'number' && segment.min > 0 ? (
                               <><strong>{segment.min} min</strong>{segment.distanceM ? ` · ${formatKm(segment.distanceM)}` : ''}</>
@@ -1777,30 +1786,35 @@ export default function EditEntryPage() {
                           <span style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-caption)' }}>
                             {segment.source === 'google' ? 'Google Routes 自動' : segment.source ?? '系統估算'}
                           </span>
-                        </div>
+                        </>
+                      ) : (
+                        <span style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-caption)' }}>
+                          儲存後以 Google Routes 估算車程
+                        </span>
                       )}
-                      {mode === 'transit' && (
-                        <div className="tp-edit-entry-transit">
-                          <label htmlFor="edit-entry-transit-min">分鐘</label>
-                          <input
-                            id="edit-entry-transit-min"
-                            className="tp-input-short"
-                            type="number"
-                            min="1"
-                            max="1440"
-                            value={transitMin}
-                            onChange={(e) => setTransitMin(e.target.value)}
-                            data-testid="edit-entry-transit-min"
-                          />
-                          <span className="tp-edit-entry-transit-unit">
-                            min · Japan Google Routes 沒 transit 資料，請手動填
-                          </span>
-                        </div>
-                      )}
-                    </>
-                  ) : (
+                    </div>
+                  )}
+                  {mode === 'transit' && (
+                    <div className="tp-edit-entry-transit">
+                      <label htmlFor="edit-entry-transit-min">分鐘</label>
+                      <input
+                        id="edit-entry-transit-min"
+                        className="tp-input-short"
+                        type="number"
+                        min="1"
+                        max="1440"
+                        value={transitMin}
+                        onChange={(e) => setTransitMin(e.target.value)}
+                        data-testid="edit-entry-transit-min"
+                      />
+                      <span className="tp-edit-entry-transit-unit">
+                        min · Japan Google Routes 沒 transit 資料，請手動填
+                      </span>
+                    </div>
+                  )}
+                  {mode === null && (
                     <p style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-footnote)', margin: 0 }}>
-                      尚未有移動段資料（recompute travel 後將出現）
+                      選擇移動方式，儲存後建立交通段（開車 / 步行走 Google Routes 估算）
                     </p>
                   )}
                 </section>

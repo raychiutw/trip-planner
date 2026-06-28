@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.12] - 2026-06-28
+
+### Added
+- **移動段不存在時可手動設移動方式**（user 截圖需求）
+  - EditEntryPage 編輯景點頁的「移動」區塊，當 segment 尚未建立（recompute travel 未跑）時，原本只顯示「尚未有移動段資料」placeholder、無法編輯。現改為直接顯示可編輯的 segmented control（開車 / 步行 / 大眾運輸），user 選擇即建立 segment，不必等 recompute。
+  - 新增 `POST /api/trips/:id/segments`：by-(from_entry, to_entry) upsert 建立 segment（trip_segments `UNIQUE(from_entry_id, to_entry_id)` → INSERT ON CONFLICT）。driving/walking 打 Google Routes 算 min/distance（source=google），transit 手填分鐘（source=manual）；缺座標/API 失敗 → stale（min=NULL）。含 requireAuth + hasWritePermission + IDOR 檢查（兩 entry 須屬該 trip）。
+  - 抽 `functions/api/trips/[id]/segments/_shared.ts`（`resolveSegmentTravel`）：PATCH /:sid 與 POST 共用「算 travel」邏輯（DRY）。並補 `assertGoogleAvailable` kill-switch guard，對齊 recompute-travel（MAPS_LOCKED quota lock 時不燒 Google Routes，順修 PATCH pre-existing bypass）。
+  - 驗證：unit + API tests 全綠（segments POST 13 case：driving/transit/upsert/stale/IDOR/401/403/min 邊界；EditEntryPage 4 case：no-segment 顯示 control / 選開車建立 / 選大眾運輸建立 / 不重複 POST）。adversarial + Codex cross-model review SHIP。
+
 ## [2.55.11] - 2026-06-28
 
 ### Fixed
