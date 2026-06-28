@@ -71,7 +71,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@googlemaps/js-api-loader": "^2.1.1",
     "@headlessui/react": "^2.2.10",
-    "@sentry/react": "^10.57.0",
+    "@sentry/react": "^10.62.0",
     "@sentry/vite-plugin": "^5.1.1",
     "@types/google.maps": "^3.64.0",
     "@types/qrcode": "^1.5.6",
