@@ -108,6 +108,80 @@ describe('v2.31.36 normalizePoiAddress', () => {
     });
   });
 
+  // ── 台灣地址簡轉繁（Google addressComponents locale fix）──
+  // Root cause: Google Places v1 對部分台灣 POI 的 address（formattedAddress +
+  // addressComponents）存簡體（如「屏东县琉球乡」），languageCode=zh-TW /
+  // zh-Hant-TW / regionCode=TW 皆無效（Google 端資料）。displayName（店名）繁體不受影響。
+  // 取證 2026-06-27：place_id ChIJHdrseQDlcTQRK06leVen9Uc（琉浪日嚐）enrich 反覆寫簡體。
+  describe('台灣地址簡轉繁', () => {
+    it('行政區簡體「屏东县琉球乡」→「屏東縣琉球鄉」(prod-found)', () => {
+      expect(normalizePoiAddress('929台灣屏东县琉球乡中福村福德路2號'))
+        .toBe('929台灣屏東縣琉球鄉中福村福德路2號');
+    });
+
+    it('多個簡體字「广东路华龙里」→ 繁體', () => {
+      expect(normalizePoiAddress('台灣高雄市广东路华龙里'))
+        .toBe('台灣高雄市廣東路華龍里');
+    });
+
+    it('「臺灣」前綴也判定為台灣地址', () => {
+      expect(normalizePoiAddress('臺灣宜兰县罗东镇'))
+        .toBe('臺灣宜蘭縣羅東鎮');
+    });
+
+    it('台灣繁體地址不變（已乾淨）', () => {
+      expect(normalizePoiAddress('台灣屏東縣琉球鄉本福村環島公路245號'))
+        .toBe('台灣屏東縣琉球鄉本福村環島公路245號');
+    });
+
+    it('「台北」的「台」不強轉「臺」（保留 Google 通用寫法）', () => {
+      expect(normalizePoiAddress('台灣台北市大安区忠孝东路'))
+        .toBe('台灣台北市大安區忠孝東路');
+    });
+
+    // 破音字非轉換鎖（fix 的安全基石：后/松 一簡對多繁，不在 S2T_TW）
+    it('「后里」的「后」不誤轉「後」（區→區 仍轉）', () => {
+      expect(normalizePoiAddress('台灣台中市后里区'))
+        .toBe('台灣台中市后里區');
+    });
+
+    it('「松山」的「松」不誤轉「鬆」（區→區 仍轉）', () => {
+      expect(normalizePoiAddress('台灣台北市松山区'))
+        .toBe('台灣台北市松山區');
+    });
+
+    // 全簡體「台湾」（湾 簡體）前綴也納入 anchor → country token + 行政區都轉
+    it('全簡體「台湾」前綴也轉換（湾→灣 + 行政區）', () => {
+      expect(normalizePoiAddress('台湾屏东县中正路'))
+        .toBe('台灣屏東縣中正路');
+    });
+
+    // ── 日本地址保護（NOT 台灣 → 不簡轉繁，保留日文新字體）──
+    it('日本地址「区」不轉「區」(無「台灣」前綴)', () => {
+      expect(normalizePoiAddress('日本沖縄県那覇市新宿区西新宿'))
+        .toBe('日本沖縄県那覇市新宿区西新宿');
+    });
+
+    it('日本「県」「町」「号」不被簡轉繁誤動', () => {
+      expect(normalizePoiAddress('日本沖縄県北谷町美浜2号'))
+        .toBe('日本沖縄県北谷町美浜2号');
+    });
+
+    // adversarial case：「台灣」當地名出現在他國地址中間（非開頭 country 前綴），
+    // anchor 防止誤轉其中的「区」等簡日共用字（substring 判定會 corruption）
+    it('含「台灣」substring 的日本地址不被誤轉（anchor 防 corruption）', () => {
+      expect(normalizePoiAddress('日本東京都新宿区台灣広場2号'))
+        .toBe('日本東京都新宿区台灣広場2号');
+    });
+
+    // Codex cross-model case：街道號（1-2 碼）開頭 +「台灣」地名，不可把街道號當郵遞區號。
+    // anchor 限定恰 3 或 5-6 碼台灣郵遞區號，排除此誤判。
+    it('街道號開頭+「台灣」地名不誤判（郵遞區號限 3/5-6 碼）', () => {
+      expect(normalizePoiAddress('2台灣広場区2号'))
+        .toBe('2台灣広場区2号');
+    });
+  });
+
   describe('null / empty / non-string', () => {
     it('null → null', () => {
       expect(normalizePoiAddress(null)).toBe(null);
