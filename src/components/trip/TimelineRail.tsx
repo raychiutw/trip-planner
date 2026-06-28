@@ -41,7 +41,7 @@ import { useNavigate } from 'react-router-dom';
 import MapLinks from './MapLinks';
 import TravelPill from './TravelPill';
 import type { StopPoiOptionData, TimelineEntryData } from './TimelineEvent';
-import { parseEntryTime, formatDurationCompact, deriveTypeMeta } from '../../lib/timelineUtils';
+import { parseEntryTime, formatDurationCompact, formatTimeRange, deriveTypeMeta } from '../../lib/timelineUtils';
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { useTripSegments } from '../../hooks/useTripSegments';
 import { getTimelineEntryDisplayTitle } from '../../lib/stopDisplay';
@@ -576,9 +576,9 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               const shortDesc = desc && desc.length <= 24 && !desc.includes('\n') ? desc : '';
               return (
                 <span className="tp-rail-sub">
-                  {parsed.start && (
+                  {(parsed.start || parsed.end) && (
                     <>
-                      <span className="tp-rail-sub-time">{parsed.start}</span>
+                      <span className="tp-rail-sub-time">{formatTimeRange(parsed.start, parsed.end)}</span>
                       <span className="tp-rail-sub-sep">·</span>
                     </>
                   )}

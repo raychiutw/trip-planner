@@ -16,8 +16,23 @@ import path from 'path';
    v2.33.91: parseTimeRange 删（v2.29.0 trip_entries.time DROPPED 後死碼），改 parseEntryTime
    ============================================================ */
 
-import { formatDuration, formatDurationCompact, deriveTypeMeta, poiTypeToTone } from '../../src/lib/timelineUtils';
+import { formatDuration, formatDurationCompact, formatTimeRange, deriveTypeMeta, poiTypeToTone } from '../../src/lib/timelineUtils';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
+
+describe('formatTimeRange', () => {
+  it('抵達 + 離開 → en-dash 區間', () => {
+    expect(formatTimeRange('09:00', '13:00')).toBe('09:00–13:00');
+  });
+  it('只有抵達 → 抵達', () => {
+    expect(formatTimeRange('09:00', '')).toBe('09:00');
+  });
+  it('只有離開 → 離開（罕見）', () => {
+    expect(formatTimeRange('', '13:00')).toBe('13:00');
+  });
+  it('皆空 → ""', () => {
+    expect(formatTimeRange('', '')).toBe('');
+  });
+});
 
 describe('formatDuration', () => {
   it('0 → ""', () => {
