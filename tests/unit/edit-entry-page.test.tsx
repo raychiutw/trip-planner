@@ -397,6 +397,89 @@ describe('EditEntryPage — auto-save (v2.33.108)', () => {
   // 見 describe('EditEntryPage — v2.34.0 per-POI 備註')。
 });
 
+// v2.55.x: segment 不存在時也能手動設移動方式（POST /segments 建立），不必等 recompute。
+describe('EditEntryPage — segment 不存在時手動建立 (v2.55.x)', () => {
+  it('no-segment（segmentMap empty）→ 移動區塊顯示可編輯 segmented control（非 placeholder）', async () => {
+    // beforeEach 已 mockSegmentMap.clear() → segment 不存在
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-mode-section')).toBeTruthy();
+    });
+    // control 三個 mode button 都顯示（之前 no-segment 只顯示「尚未有移動段資料」placeholder）
+    expect(screen.queryByTestId('edit-entry-mode-driving')).toBeTruthy();
+    expect(screen.queryByTestId('edit-entry-mode-walking')).toBeTruthy();
+    expect(screen.queryByTestId('edit-entry-mode-transit')).toBeTruthy();
+    expect(screen.queryByText(/尚未有移動段資料/)).toBeNull();
+  });
+
+  it('no-segment + 選開車 → debounce 後 POST /segments 建立（from=prev 41, to=current 42）', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-mode-driving')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-mode-driving'));
+    await vi.advanceTimersByTimeAsync(900);
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const postCall = calls.find((c: unknown[]) => {
+        const opts = c[1] as { method?: string };
+        return opts?.method === 'POST' && String(c[0]).endsWith('/segments');
+      });
+      expect(postCall).toBeTruthy();
+      const body = JSON.parse((postCall![1] as { body: string }).body);
+      expect(body.mode).toBe('driving');
+      expect(body.from_entry_id).toBe(41); // 首里城（prev entry）
+      expect(body.to_entry_id).toBe(42);   // 花織そば（current entry）
+    });
+    vi.useRealTimers();
+  });
+
+  it('no-segment + 選大眾運輸 + 填分鐘 → POST /segments 帶 mode=transit + min', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-mode-transit')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-mode-transit'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-transit-min')).toBeTruthy();
+    });
+    fireEvent.change(screen.getByTestId('edit-entry-transit-min'), { target: { value: '35' } });
+    await vi.advanceTimersByTimeAsync(900);
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const postCall = calls.find((c: unknown[]) => {
+        const opts = c[1] as { method?: string };
+        return opts?.method === 'POST' && String(c[0]).endsWith('/segments');
+      });
+      expect(postCall).toBeTruthy();
+      const body = JSON.parse((postCall![1] as { body: string }).body);
+      expect(body.mode).toBe('transit');
+      expect(body.min).toBe(35);
+    });
+    vi.useRealTimers();
+  });
+
+  it('選 driving 建立後不重複 POST（originalRef reset 防 re-save loop）', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-mode-driving')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-mode-driving'));
+    await vi.advanceTimersByTimeAsync(900);
+    // 第一次 POST 後再 advance 一個 debounce 窗，無新變化 → 不該有第二次 POST
+    await vi.advanceTimersByTimeAsync(900);
+    const postCalls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls.filter((c: unknown[]) => {
+      const opts = c[1] as { method?: string };
+      return opts?.method === 'POST' && String(c[0]).endsWith('/segments');
+    });
+    expect(postCalls.length).toBe(1);
+    vi.useRealTimers();
+  });
+});
+
 describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-save 已 commit)', () => {
   it('點返回 → 直接 navigate (無 ConfirmModal)', async () => {
     renderPage();
