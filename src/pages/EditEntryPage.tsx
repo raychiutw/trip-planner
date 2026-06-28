@@ -1263,7 +1263,7 @@ export default function EditEntryPage() {
     }
   }, [
     tripId, entry, entryId, submitting, validation, dirty,
-    startTime, endTime, mode, transitMin, segment,
+    startTime, endTime, mode, transitMin, segment, prevEntry,
   ]);
 
   // v2.33.108: auto-save 後不再需要 discard confirmation — handleCancel 直接 back，
