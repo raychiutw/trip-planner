@@ -3,7 +3,7 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.55.10] - 2026-06-27
+## [2.55.13] - 2026-06-28
 
 ### Fixed
 - **Google Places 台灣地址簡體 → 繁體**（/tp-rebuild enrich 觸發，trip-3rlt 小琉球）
@@ -12,6 +12,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   - 台灣判定 **anchor 到 country 前綴位置**（`/^\s*(\d{3}|\d{5,6})?\s*(台灣|臺灣|台湾)/`，限台灣郵遞區號長度），不用 substring — 避免含「台灣」當地名的他國地址（如日本「東京都新宿区台灣広場」）被誤轉其中的簡日共用字「区→區」（silent corruption，且 _poi / backfill 寫入路徑可達）。
   - 既有 `scripts/backfill-poi-addresses.ts` 因共同出口自動涵蓋簡轉繁 backfill；prod 現無簡體台灣 POI（dry-run 0 row）。
   - 驗證：3386 unit tests（含 5 新簡轉繁 / 日本保護 / 破音 / anchor case）+ `tsc --noEmit` 全綠。adversarial + Codex cross-model review 抓到並修正 anchor substring corruption 與破音字 invariant 違反。
+
+## [2.55.12] - 2026-06-28
+
+### Added
+- **移動段不存在時可手動設移動方式**（user 截圖需求）
+  - EditEntryPage 編輯景點頁的「移動」區塊，當 segment 尚未建立（recompute travel 未跑）時，原本只顯示「尚未有移動段資料」placeholder、無法編輯。現改為直接顯示可編輯的 segmented control（開車 / 步行 / 大眾運輸），user 選擇即建立 segment，不必等 recompute。
+  - 新增 `POST /api/trips/:id/segments`：by-(from_entry, to_entry) upsert 建立 segment（trip_segments `UNIQUE(from_entry_id, to_entry_id)` → INSERT ON CONFLICT）。driving/walking 打 Google Routes 算 min/distance（source=google），transit 手填分鐘（source=manual）；缺座標/API 失敗 → stale（min=NULL）。含 requireAuth + hasWritePermission + IDOR 檢查（兩 entry 須屬該 trip）。
+  - 抽 `functions/api/trips/[id]/segments/_shared.ts`（`resolveSegmentTravel`）：PATCH /:sid 與 POST 共用「算 travel」邏輯（DRY）。並補 `assertGoogleAvailable` kill-switch guard，對齊 recompute-travel（MAPS_LOCKED quota lock 時不燒 Google Routes，順修 PATCH pre-existing bypass）。
+  - 驗證：unit + API tests 全綠（segments POST 13 case：driving/transit/upsert/stale/IDOR/401/403/min 邊界；EditEntryPage 4 case：no-segment 顯示 control / 選開車建立 / 選大眾運輸建立 / 不重複 POST）。adversarial + Codex cross-model review SHIP。
+
+## [2.55.11] - 2026-06-28
+
+### Fixed
+- **Sentry 噪音過濾：Service Worker 註冊 AbortError「Operation has been aborted」變體**（daily-check 2026-06-28 觸發）
+  - v2.55.9 的 `SW_REGISTER_TIMEOUT_RE` 只比對「Timed out while trying to start the Service Worker」，但同一 root cause（auto-injected `register('/sw.js')` reject，0 user functional impact）還有第二個 message 變體「Operation has been aborted」（Sentry issue `7578437046`）未被涵蓋，仍上報為 unhandledrejection。
+  - 改為 `SW_REGISTER_NOISE_RE`：要求 `Failed to register a ServiceWorker` 前綴 + 兩個已知 reject 訊息之一，兩變體一起 drop。前綴比對避免誤殺其他 `AbortError`（如 fetch abort 也叫「Operation has been aborted」）。
+  - 驗證：3376 unit tests（含 2 新 noise-filter case：drop 新變體 + keep 無 SW 前綴的 generic abort）+ `tsc --noEmit` 全綠。
 
 ## [2.55.9] - 2026-06-27
 

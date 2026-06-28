@@ -209,9 +209,12 @@ describe('audit fix source locks — batch 3', () => {
     expect(src).toMatch(/const finalSortOrder = insertSortOrder \?\? \(maxSortOrder \+ 1\)/);
   });
 
-  it('segments PATCH increments version on the coords-missing branch + guards null SELECT', () => {
+  it('segments PATCH increments version on both UPDATE branches (ok + coords-missing) + guards null RETURNING', () => {
     const src = read('functions/api/trips/[id]/segments/[sid].ts');
-    expect((src.match(/version = version \+ 1/g) || []).length).toBeGreaterThanOrEqual(4);
+    // v2.55.x 重構：算 travel 抽到 segments/_shared.ts，PATCH 收斂為 2 個 UPDATE 分支
+    // （travel.ok / coords-missing fallback），兩者都帶 version = version + 1（含 audit
+    // 原本要 lock 的 coords-missing branch bump）。
+    expect((src.match(/version = version \+ 1/g) || []).length).toBeGreaterThanOrEqual(2);
     expect(src).toMatch(/if \(!updated\) throw new AppError\('DATA_NOT_FOUND'/);
   });
 
