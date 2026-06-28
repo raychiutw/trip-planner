@@ -131,6 +131,11 @@ async function queryApiErrors() {
   // v2.30.17：anonymous source 的 405 全 filter — Tripline OAuth 沒有 introspect
   // endpoint、poi-search 是 GET-only，相關 405 都是外部 scanner / bot 嘗試 RFC 7662
   // 或 API discovery，不是真實用戶 bug。
+  // v2.55.x：/api/route「Routes empty result」是 Google Routes 回報兩點間無可行駛
+  // 路線（如沖繩跨海跳島）。依 P11/T13 刻意 → 502 MAPS_UPSTREAM_FAILED（無 Haversine
+  // fallback），前端 useRoute 已優雅降級（隱藏 polyline）。屬預期地理狀況非 code bug，
+  // 不該每天觸發 critical。只精確比對此 error 字串 — 真正 upstream 故障（timeout/5xx/
+  // parse，error 字串不同）仍照常上報。
   var rows = await queryD1(
     "SELECT path, method, status, COUNT(*) as count, MAX(created_at) as lastOccurred " +
     "FROM api_logs " +
@@ -139,6 +144,7 @@ async function queryApiErrors() {
     "  AND status NOT IN (401, 403, 429) " +
     "  AND NOT (status = 404 AND path LIKE '/api/trips/%/docs/%') " +
     "  AND NOT (status = 405 AND source = 'anonymous') " +
+    "  AND NOT (status = 502 AND path = '/api/route' AND error = 'MAPS_UPSTREAM_FAILED: Routes empty result') " +
     "GROUP BY path, method, status " +
     "ORDER BY count DESC"
   );

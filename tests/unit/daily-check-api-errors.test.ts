@@ -23,6 +23,12 @@ describe('daily-check.js — API error filters', () => {
     expect(DAILY_CHECK_SRC).toContain("status = 404 AND path LIKE '/api/trips/%/docs/%'");
   });
 
+  it('does not escalate expected /api/route "no drivable route" 502 (P11/T13 design)', () => {
+    expect(DAILY_CHECK_SRC).toContain(
+      "status = 502 AND path = '/api/route' AND error = 'MAPS_UPSTREAM_FAILED: Routes empty result'",
+    );
+  });
+
   it('only escalates non-5xx client errors after a small volume threshold', () => {
     expect(DAILY_CHECK_SRC).toContain('CLIENT_ERROR_WARNING_THRESHOLD');
     expect(DAILY_CHECK_SRC).toContain('total >= CLIENT_ERROR_WARNING_THRESHOLD');
