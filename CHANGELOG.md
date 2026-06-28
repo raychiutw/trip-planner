@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.14] - 2026-06-28
+
+### Added
+- **每日行程時間軸顯示「離開時間」**（user 需求）
+  - 互動式 timeline（`TimelineRail`）每個景點 sub-line 原本只顯示**抵達時間**（例「09:00 · 景點 · 4 hr」）。離開時間（`endTime`）資料早存於 `trip_entries.end_time`、EditEntryPage 可編、且已用來算停留時數，只是 timeline 沒把絕對值顯示出來。現改顯示**抵達–離開區間**（例「09:00–13:00 · 景點 · 4 hr · ★4.6」，格式 B：區間 + 停留時數並存）。
+  - 新增 `timelineUtils.formatTimeRange(start, end)`：en-dash「–」分隔，只有抵達 → 單一時間，只有離開（罕見）→ 離開時間，皆空 → ""。
+  - 列印行程表（`mapDay` composedTime）早已是 `start-end` 合成，本次只改互動 timeline。
+  - SoT 同步：mockup `tp-stop-v-time` 加區間（grid time col 60→88px 容納）+ DESIGN.md 新增「時間軸時間顯示」規範。
+  - 驗證：56 timelineUtils tests（含 4 新 formatTimeRange case）+ 3396 unit + tsc + lint 全綠。
+
 ## [2.55.13] - 2026-06-28
 
 ### Fixed
