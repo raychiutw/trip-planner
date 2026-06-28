@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.15] - 2026-06-29
+
+### Fixed
+- **daily-check 不再把 `/api/route` 預期 502 當 critical 噪音**（daily-check Phase B）
+  - `/api/route` 回 `MAPS_UPSTREAM_FAILED: Routes empty result` 是 Google Routes API 回報兩點間**無可行駛路線**（如沖繩跨海跳島），依 P11/T13 刻意 → 502（無 Haversine fallback）。前端 `useRoute` 對 502 已優雅降級（隱藏 polyline，無全頁錯誤），Sentry 0 users。屬預期地理狀況非 code bug，卻每天觸發 daily-check critical alert。
+  - 在 `scripts/daily-check.js` 的 `queryApiErrors` 加入精確過濾（`status = 502 AND path = '/api/route' AND error = 'MAPS_UPSTREAM_FAILED: Routes empty result'`），與既有 401/403/429、docs 404、anonymous 405 過濾一致。**只比對此 error 字串** — 真正 upstream 故障（timeout/5xx/parse，error 字串不同）仍照常上報 critical。
+  - `daily-check-api-errors.test.ts` 加 source-grep 鎖測，防 filter 被誤刪。
+
 ## [2.55.14] - 2026-06-28
 
 ### Added
