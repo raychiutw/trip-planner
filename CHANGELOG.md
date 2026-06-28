@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.13] - 2026-06-28
+
+### Fixed
+- **Google Places 台灣地址簡體 → 繁體**（/tp-rebuild enrich 觸發，trip-3rlt 小琉球）
+  - Google Places API v1 對部分台灣 POI 的 address（`formattedAddress` 與 `addressComponents` 兩者）回**簡體中文**（如「929台灣屏东县琉球乡」），實測 `languageCode=zh-TW` / `zh-Hant-TW` / `regionCode=TW` 皆無法改變（Google 端地址資料 locale，非請求參數問題）；`displayName`（店名）不受影響。enrich 會反覆把 `pois.address` 覆寫成簡體。
+  - 新增 `src/lib/maps/zh-tw-address.ts`：台灣地址簡轉繁（`S2T_TW` 僅收**無破音歧義字**，排除 后/松/台/叶/庄/机/宁/万 等一簡對多繁），接在共同出口 `normalizePoiAddress` → poi-search（`searchPlaces`）+ `getPlaceDetails` + enrich 一併修正。
+  - 台灣判定 **anchor 到 country 前綴位置**（`/^\s*(\d{3}|\d{5,6})?\s*(台灣|臺灣|台湾)/`，限台灣郵遞區號長度），不用 substring — 避免含「台灣」當地名的他國地址（如日本「東京都新宿区台灣広場」）被誤轉其中的簡日共用字「区→區」（silent corruption，且 _poi / backfill 寫入路徑可達）。
+  - 既有 `scripts/backfill-poi-addresses.ts` 因共同出口自動涵蓋簡轉繁 backfill；prod 現無簡體台灣 POI（dry-run 0 row）。
+  - 驗證：3386 unit tests（含 5 新簡轉繁 / 日本保護 / 破音 / anchor case）+ `tsc --noEmit` 全綠。adversarial + Codex cross-model review 抓到並修正 anchor substring corruption 與破音字 invariant 違反。
+
 ## [2.55.12] - 2026-06-28
 
 ### Added
