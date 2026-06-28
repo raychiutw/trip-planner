@@ -78,6 +78,18 @@ export function formatDurationCompact(mins: number): string {
 }
 
 /**
+ * 格式化抵達–離開時間區間（timeline sub-line 用）。en-dash「–」分隔，對齊區間排版慣例。
+ *   "09:00", "13:00" → "09:00–13:00"（抵達 + 離開）
+ *   "09:00", ""      → "09:00"（只抵達）
+ *   "", "13:00"      → "13:00"（只離開，罕見）
+ *   "", ""           → ""
+ */
+export function formatTimeRange(start: string, end: string): string {
+  if (start && end) return `${start}–${end}`;
+  return start || end || '';
+}
+
+/**
  * 解析時間字串的起始分鐘數（since midnight）。
  * "09:30-11:00" → 570；無 / null / malformed → -1。
  */
