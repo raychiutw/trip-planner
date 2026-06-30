@@ -183,6 +183,51 @@ describe('GET /api/oauth/authorize', () => {
     expect(loc).toMatch(/^https:\/\/partner\.com\/cb\?code=[A-Za-z0-9_-]+&state=csrf-xyz$/);
   });
 
+  it('logged in + has Consent preserves redirect_uri query params when appending code/state', async () => {
+    const redirectUri = 'https://partner.com/cb?foo=bar';
+    const clientWithQueryRedirect = {
+      ...ACTIVE_CLIENT,
+      redirect_uris: JSON.stringify([redirectUri]),
+    };
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(clientWithQueryRedirect);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            user_id: 'user-1',
+            client_id: 'partner-x',
+            scopes: ['openid', 'profile', 'email'],
+            grantedAt: Date.now() - 1000,
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
+      if (sql.includes('INSERT OR REPLACE INTO oauth_models')) return makeStmt();
+      return makeStmt();
+    });
+    const token = await signSessionToken('user-1', SECRET);
+    const env: MockEnv = {
+      SESSION_SECRET: SECRET,
+      DB: { prepare: dbPrepare },
+    };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'openid profile',
+      state: 'csrf-query',
+      code_challenge: 'test-pkce-challenge',
+      code_challenge_method: 'S256',
+    }), env, `tripline_session=${token}`));
+
+    expect(res.status).toBe(302);
+    const loc = new URL(res.headers.get('Location') ?? '');
+    expect(loc.origin + loc.pathname).toBe('https://partner.com/cb');
+    expect(loc.searchParams.get('foo')).toBe('bar');
+    expect(loc.searchParams.get('code')).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(loc.searchParams.get('state')).toBe('csrf-query');
+  });
+
   it('Consent insufficient (missing requested scope) → 302 /oauth/consent', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM client_apps')) return makeStmt(ACTIVE_CLIENT);

@@ -164,11 +164,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   };
   const body = await parseJsonBody<DayBody>(context.request);
 
-  // v2.30.x (migration 0065)：Day-level OCC check — body 帶 expectedDayVersion 才驗
-  if (body.expectedDayVersion !== undefined && body.expectedDayVersion !== currentDayVersion) {
-    throw new AppError('STALE_ENTRY');
-  }
-
   const validation = validateDayBody(body);
   if (!validation.ok) throw new AppError('DATA_VALIDATION', validation.error);
 
@@ -251,16 +246,28 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   }
 
   try {
-    // Batch 1: delete old entries, update day, insert new entries
+    const expectedDayVersion = body.expectedDayVersion;
+    if (expectedDayVersion !== undefined && typeof expectedDayVersion !== 'number') {
+      throw new AppError('STALE_ENTRY');
+    }
+    const updatedDay = expectedDayVersion === undefined
+      ? await db
+        .prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ?, version = version + 1 WHERE id = ? RETURNING version')
+        .bind(body.date!, body.dayOfWeek!, body.label!, dayId)
+        .first<{ version: number }>()
+      : await db
+        .prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ?, version = version + 1 WHERE id = ? AND version = ? RETURNING version')
+        .bind(body.date!, body.dayOfWeek!, body.label!, dayId, expectedDayVersion)
+        .first<{ version: number }>();
+    if (!updatedDay) throw new AppError('STALE_ENTRY');
+
+    // Batch 1: delete old entries, insert new entries
     // v2.29.0: trip_pois DROPPED, no DELETE FROM trip_pois needed. ON DELETE CASCADE
     // on trip_entries clears trip_entry_pois automatically.
     const batch1: D1PreparedStatement[] = [];
 
     batch1.push(
       db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(dayId),
-      // v2.30.x (migration 0065)：bump version 同 batch atomic，下次 PUT 用此 version 對齊 OCC
-      db.prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ?, version = version + 1 WHERE id = ?')
-        .bind(body.date!, body.dayOfWeek!, body.label!, dayId),
     );
 
     const timeline = Array.isArray(body.timeline) ? body.timeline : [];

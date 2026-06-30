@@ -38,6 +38,15 @@ import type { Env } from '../_types';
 
 const CODE_TTL_SEC = 10 * 60; // RFC 6749 §4.1.2 recommends short
 
+function redirectWithParams(redirectUri: string, params: URLSearchParams): Response {
+  const redirectUrl = new URL(redirectUri);
+  for (const [key, value] of params) redirectUrl.searchParams.set(key, value);
+  return new Response(null, {
+    status: 302,
+    headers: { Location: redirectUrl.toString() },
+  });
+}
+
 function redirectError(
   redirectUri: string,
   errorCode: string,
@@ -46,10 +55,7 @@ function redirectError(
 ): Response {
   const params = new URLSearchParams({ error: errorCode, error_description: errorDescription });
   if (state) params.set('state', state);
-  return new Response(null, {
-    status: 302,
-    headers: { Location: `${redirectUri}?${params.toString()}` },
-  });
+  return redirectWithParams(redirectUri, params);
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -158,8 +164,5 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // Redirect back to client with code + state
   const redirectParams = new URLSearchParams({ code });
   if (result.state) redirectParams.set('state', result.state);
-  return new Response(null, {
-    status: 302,
-    headers: { Location: `${result.redirectUri}?${redirectParams.toString()}` },
-  });
+  return redirectWithParams(result.redirectUri, redirectParams);
 };
