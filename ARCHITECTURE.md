@@ -379,7 +379,7 @@ tests/
 
 6. **Google Maps Platform 全套切換（v2.23.0 起）** — OSM Nominatim + Mapbox + ORS + Leaflet + Haversine 全部 ripped out，no fallback。Search/Routes/Maps 統一 Google → 商業級資料品質 + license 一致 + Google `place_id` 變 canonical ID。代價：付費 + 配額管理。對應：`app_settings` 90/50 hysteresis kill switch + `/admin/maps-*` 8 endpoint + mac mini `google-quota-monitor` cron + `<TripHealthBanner>` 預警。Runbook 見 `docs/runbooks/v2.33-migration-deploy-order.md`。
 
-7. **OCC（optimistic concurrency control）只用在 multi-POI per entry** — `trip_entries.entry_pois_version` integer counter（v2.27.0）保護 master/alternates concurrent edit。其他表暫不導入，避免 `IF version=X` 寫法蔓延。Token 衝突 → 409 STALE_ENTRY，frontend refetch 後 retry。
+7. **OCC（optimistic concurrency control）只放在多人編輯熱點** — `trip_entries.entry_pois_version` integer counter（v2.27.0）保護 master/alternates concurrent edit；`trip_days.version`（v2.30.x）保護整天 timeline save。兩者都用 atomic `WHERE version = ?` update，衝突 → 409 STALE_ENTRY，frontend refetch 後 retry。其他表暫不導入，避免 `IF version=X` 寫法蔓延。
 
 ---
 
