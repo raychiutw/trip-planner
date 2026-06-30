@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.16] - 2026-07-01
+
+### Fixed
+- **Code review correctness/security fixes**
+  - Made day-level optimistic locking atomic by updating `trip_days` with a version predicate before deleting and recreating entries, so concurrent stale saves return `STALE_ENTRY` instead of overwriting.
+  - Honored atomic OAuth token rate-limit bump failures for both IP and client buckets, stopping with 429 before client lookup or token exchange work continues.
+  - Preserved query strings on registered OAuth `redirect_uri` callbacks when appending `code`, `state`, or error parameters.
+  - Populated the global map picker from `/my-trips` metadata directly, keeping private user trips selectable without depending on `/api/trips?all=1`.
+  - Added regression coverage for the stale day-save race, concurrent rate-limit locks, query-bearing OAuth callbacks, and private-trip map picker data source.
+
 ## [2.55.15] - 2026-06-29
 
 ### Fixed
