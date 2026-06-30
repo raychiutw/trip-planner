@@ -708,6 +708,62 @@ describe('PUT /api/trips/:id/days/:num — v2.30.x Day-level OCC (migration 0065
     expect(row!.version).toBe(1);
   });
 
+  it('PUT 帶 expectedDayVersion 但 preflight 後被別人先存 → 409 STALE_ENTRY 且不覆寫', async () => {
+    const TRIP = 'trip-dn-occ-race';
+    await seedTrip(db, { id: TRIP, days: 1 });
+    const dayId = await getDayId(db, TRIP, 1);
+    let raced = false;
+    const racingDb = {
+      prepare(sql: string) {
+        const stmt = db.prepare(sql);
+        if (sql.includes('SELECT id, version FROM trip_days')) {
+          return {
+            bind(...args: unknown[]) {
+              const bound = stmt.bind(...args);
+              return {
+                async first<T>() {
+                  const row = await bound.first<T>();
+                  if (!raced && row) {
+                    raced = true;
+                    await db
+                      .prepare('UPDATE trip_days SET label = ?, version = version + 1 WHERE id = ?')
+                      .bind('Other', dayId)
+                      .run();
+                  }
+                  return row;
+                },
+              };
+            },
+          };
+        }
+        return stmt;
+      },
+      batch(stmts: D1PreparedStatement[]) {
+        return db.batch(stmts);
+      },
+    } as unknown as D1Database;
+
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+        date: '2026-04-02', dayOfWeek: '四', label: 'Stale', timeline: [],
+        expectedDayVersion: 0,
+      }),
+      env: mockEnv(racingDb),
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: TRIP, num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(409);
+    const body = await resp.json() as { error?: { code?: string } };
+    expect(body.error?.code).toBe('STALE_ENTRY');
+
+    const row = await db
+      .prepare('SELECT label, version FROM trip_days WHERE id = ?')
+      .bind(dayId)
+      .first<{ label: string; version: number }>();
+    expect(row).toEqual({ label: 'Other', version: 1 });
+  });
+
   it('未帶 expectedDayVersion → backwards-compat 略過 OCC check（既有 client 不破）', async () => {
     const TRIP = 'trip-dn-occ-skip';
     await seedTrip(db, { id: TRIP, days: 1 });

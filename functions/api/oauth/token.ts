@@ -171,7 +171,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       error_description: 'Too many token requests from this IP',
     });
   }
-  await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.OAUTH_TOKEN_PER_IP);
+  const ipBump = await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.OAUTH_TOKEN_PER_IP);
+  if (!ipBump.ok) {
+    return buildRateLimitResponse(ipBump.retryAfter ?? 60, {
+      error: 'rate_limited',
+      error_description: 'Too many token requests from this IP',
+    });
+  }
 
   // v2.33.101 CR-9: 先 SELECT client_apps 確認 client_id 存在再 rate-limit bump。
   // 之前 unbounded write amplification — attacker POST 任意 client_id 字串都會
@@ -200,7 +206,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       error_description: 'Too many token requests for this client',
     });
   }
-  await bumpRateLimit(context.env.DB, tokenKey, RATE_LIMITS.OAUTH_TOKEN);
+  const tokenBump = await bumpRateLimit(context.env.DB, tokenKey, RATE_LIMITS.OAUTH_TOKEN);
+  if (!tokenBump.ok) {
+    return buildRateLimitResponse(tokenBump.retryAfter ?? 60, {
+      error: 'rate_limited',
+      error_description: 'Too many token requests for this client',
+    });
+  }
 
   // Confidential client: verify client_secret (both grant types)
   if (client.client_type === 'confidential') {

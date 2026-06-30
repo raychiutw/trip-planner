@@ -52,16 +52,16 @@ import type { Day } from '../types/trip';
 // (header + sheet skeleton) lands before the leaflet bundle finishes parsing.
 const TpMap = lazyWithRetry(() => import('../components/trip/TpMap'));
 
-interface MyTripRow { tripId: string; }
 interface TripSummary {
   tripId: string;
   name?: string;
   title?: string | null;
   countries?: string | null;
-  day_count?: number;
-  start_date?: string | null;
-  end_date?: string | null;
+  totalDays?: number;
+  startDate?: string | null;
+  endDate?: string | null;
 }
+type MyTripRow = TripSummary;
 
 interface ResolvedTrip {
   tripId: string;
@@ -656,30 +656,23 @@ export default function GlobalMapPage() {
     let cancelled = false;
     async function load() {
       try {
-        const [myRes, allRes] = await Promise.allSettled([
-          apiFetch<MyTripRow[]>('/my-trips'),
-          apiFetch<TripSummary[]>('/trips?all=1'),
-        ]);
+        const myJson = await apiFetch<MyTripRow[]>('/my-trips');
         if (cancelled) return;
-        if (myRes.status === 'rejected') {
-          const err = myRes.reason;
-          if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return;
-          setError('無法載入行程清單。');
-          return;
-        }
-        const myJson = myRes.value;
-        const allJson = allRes.status === 'fulfilled' ? allRes.value : [];
-        const mine = new Set(myJson.map((r) => r.tripId));
-        const myTrips = allJson.filter((t) => mine.has(t.tripId));
-        setTrips(myTrips);
-        if (myTrips.length === 0) return;
+        setTrips(myJson);
+        if (myJson.length === 0) return;
         // Section 5 (E4)：優先用 ActiveTripContext (cross-page persisted)，
         // fallback 第一個可見 trip
         const pref = activeTripId;
-        const initial = pref && myTrips.some((t) => t.tripId === pref) ? pref : myTrips[0]!.tripId;
+        const initial = pref && myJson.some((t) => t.tripId === pref) ? pref : myJson[0]!.tripId;
         setActiveTripId(initial);
-      } catch {
-        if (!cancelled) setError('網路連線失敗，請稍後再試。');
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof ApiError) {
+          if (err.status === 401 || err.status === 403) return;
+          setError('無法載入行程清單。');
+          return;
+        }
+        setError('網路連線失敗，請稍後再試。');
       }
     }
     void load();
@@ -895,8 +888,8 @@ export default function GlobalMapPage() {
                       <span className="row-title">{t.title || t.name || t.tripId}</span>
                       <span className="row-meta">
                         {trimCountry(t.countries) || '—'}
-                        {dateRange(t.start_date, t.end_date) ? ` · ${dateRange(t.start_date, t.end_date)}` : ''}
-                        {typeof t.day_count === 'number' && t.day_count > 0 ? ` · ${t.day_count} days` : ''}
+                        {dateRange(t.startDate, t.endDate) ? ` · ${dateRange(t.startDate, t.endDate)}` : ''}
+                        {typeof t.totalDays === 'number' && t.totalDays > 0 ? ` · ${t.totalDays} days` : ''}
                       </span>
                     </button>
                   ))}

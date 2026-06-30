@@ -27,4 +27,11 @@ describe('GlobalMapPage v2.33.115 empty-state hide right sheet (regression)', ()
   it('hasNoTrips 仍從 trips.length === 0 derive（fix 沒順手改 truthy guard）', () => {
     expect(SRC).toMatch(/const hasNoTrips = trips !== null && trips\.length === 0/);
   });
+
+  it('map picker uses /my-trips metadata instead of filtering /trips?all=1', () => {
+    expect(SRC).toMatch(/apiFetch<MyTripRow\[]>\('\/my-trips'\)/);
+    expect(SRC).not.toContain("apiFetch<TripSummary[]>('/trips?all=1')");
+    expect(SRC).toMatch(/setTrips\(myJson\)/);
+    expect(SRC).toMatch(/t\.totalDays/);
+  });
 });

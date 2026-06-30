@@ -618,6 +618,52 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
     expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
   });
 
+  it('429 when per-IP bump detects a concurrent rate-limit lock before client lookup', async () => {
+    const lockedUntil = Date.now() + 30_000;
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
+      if (sql.includes('INSERT INTO rate_limit_buckets')) {
+        return makeStmt({ count: 51, window_start: Date.now(), locked_until: lockedUntil });
+      }
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c', redirect_uri: 'r',
+    }, env));
+    expect(res.status).toBe(429);
+    expect((await res.json() as { error: string }).error).toBe('rate_limited');
+    expect(dbPrepare.mock.calls.some((c) => String(c[0]).includes('FROM client_apps'))).toBe(false);
+  });
+
+  it('429 when per-client bump detects a concurrent rate-limit lock before token exchange', async () => {
+    let bumpCalls = 0;
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
+      if (sql.includes('INSERT INTO rate_limit_buckets')) {
+        bumpCalls++;
+        return bumpCalls === 1
+          ? makeStmt({ count: 1, window_start: Date.now(), locked_until: null })
+          : makeStmt({ count: 101, window_start: Date.now(), locked_until: Date.now() + 30_000 });
+      }
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) return makeStmt(null);
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c', redirect_uri: 'r',
+    }, env));
+    expect(res.status).toBe(429);
+    expect((await res.json() as { error: string }).error).toBe('rate_limited');
+    expect(dbPrepare.mock.calls.some((c) => String(c[0]).includes('SELECT payload, expires_at FROM oauth_models'))).toBe(false);
+  });
+
   it('不 bump per-client oauth-token bucket 當 client_id 未知 (v2.33.101 CR-9: prevent DB write DoS amp)', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
