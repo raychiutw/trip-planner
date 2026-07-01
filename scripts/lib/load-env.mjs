@@ -25,7 +25,7 @@ if (!fs.existsSync(envPath)) {
   process.exit(1);
 }
 
-const result = dotenv.config({ path: envPath, processEnv: {} });
+const result = dotenv.config({ path: envPath, processEnv: {}, quiet: true });
 if (result.error) {
   process.stderr.write(`load-env.mjs: dotenv parse 失敗: ${result.error.message}\n`);
   process.exit(1);
