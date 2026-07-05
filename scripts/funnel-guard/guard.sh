@@ -52,17 +52,22 @@ log() {
 }
 
 # 偵測 funnel :443 是否正確路由到 Caddy :8080。
-# 三個 layer 都過才算 healthy（v2.33.134 起加 public-side probe）：
+# 三個 layer 都過才算 healthy：
 #   L1 local: `tailscale serve status --json` AllowFunnel + Proxy 正確
-#   L2 DNS:   public resolver (1.1.1.1) 能 resolve funnel hostname
-#   L3 reach: HTTPS GET funnel root 回非 0 (TLS handshake + 任何 HTTP response 都行)
+#   L2 DNS:   authoritative NS (dnsimple) 有 funnel hostname 的 A record
+#   L3 reach: 用 authoritative IP direct HTTPS reach（TLS + 任何 HTTP response 都算通）
 #
-# v2.33.123 原本只檢 L1，2026-05-27 incident：Tailscale 控制平面 funnel state
-# 仍 on，但 public DNS NXDOMAIN → CF Worker 530 + forgot-password 信沒送。L2 加
-# 後可立即偵測 + heal 重註冊。
+# v2.33.123 原本只檢 L1，2026-05-27 incident：控制平面 funnel state on 但 public
+# DNS NXDOMAIN → CF Worker 530 + forgot-password 信沒送。加 L2/L3 偵測。
 #
-# L3 是 belt-and-suspenders — 即使 DNS resolve 也可能 funnel relay 故障 (DERP
-# 路徑壞)。HTTPS curl 走全 path 端到端驗。
+# 2026-07-05 incident 修正：L2/L3 原本查 recursive resolver (1.1.1.1/8.8.8.8)，但大型
+# recursive 對 *.ts.net funnel hostname 反覆 NXDOMAIN — Tailscale 週期性 re-publish
+# record 造成極短消失 window → resolver negative-cache 300s（Cloudflare/Google 尤甚，
+# Quad9 較穩）。這不代表 funnel drift，卻觸發 heal 的 `serve reset`，reset 瞬間 funnel
+# 真的 off → 再製造 negative-cache → self-perpetuating flapping + Telegram noise。
+# 改查 authoritative NS（= 控制平面實際發布的真相，不受 recursive cache 污染）：
+#   真 drift（控制平面沒發布）→ authoritative 也 NXDOMAIN → 仍偵測到 → heal（正確）
+#   假 drift（authoritative 有、只是 recursive cache）→ 判 healthy → 不 heal（正確）
 
 # Local control-plane state
 is_funnel_local_healthy() {
@@ -88,17 +93,26 @@ funnel_hostname() {
     | sed 's/:443$//' | head -1
 }
 
-# Multi-resolver fallback：1.1.1.1 / 8.8.8.8 / 9.9.9.9 試到 first 回 IP。
-# 2026-05-27 實測 1.1.1.1 對 *.tail2750c0.ts.net 永久 NXDOMAIN 但 8.8.8.8 OK
-# (TS DNS upstream 跟 Cloudflare DNS 不對盤 — 也是 CF Worker forgot-password
-# 530 的 root cause；CF Worker 也走 Cloudflare 自家 DNS)。
-# echoes resolved IP to stdout（caller 用），失敗 echo empty + 非 0 exit。
-PUBLIC_RESOLVERS=(1.1.1.1 8.8.8.8 9.9.9.9 208.67.222.222)
-funnel_resolve_public() {
+# Authoritative resolve：直接問 ts.net 的 authoritative NS (dnsimple)，繞過 recursive
+# resolver 的 negative-cache 污染（2026-07-05 incident，見上方 note）。動態取 NS
+# delegation 走系統 resolver — 但 NS record 穩定少變（不像 funnel A record 頻繁
+# re-publish），故本 incident 的 negative-cache 不影響 NS 查詢；只有 A record 必須
+# 走 authoritative。dig 取不到 NS 時 fallback 到已知 dnsimple NS。grep 過濾純 IPv4
+# 行（排除 CNAME/雜訊）。echoes first resolved IP；失敗 echo empty + 非 0 exit。
+# ponytail: any-one-NS-has-record 即算發布 — dnsimple anycast edge 偶有 serial 落後但
+# 只要一個 edge 有 record 就代表控制平面已發布，不因單一 stale edge 誤判 drift。
+FALLBACK_NS=(ns1.dnsimple.com ns2.dnsimple-edge.net ns3.dnsimple.com ns4.dnsimple-edge.org)
+funnel_resolve_authoritative() {
   local host="$1" ip ns
   [ -z "$host" ] && return 1
-  for ns in "${PUBLIC_RESOLVERS[@]}"; do
-    ip=$(dig +short +time=3 +tries=1 "$host" @"$ns" 2>/dev/null | head -1)
+  local -a nslist
+  # grep 只留合法 NS hostname 行（結尾點）— dig 連線層失敗會把 `;; ...` 診斷印到
+  # stdout（非 stderr），不過濾會污染 nslist 導致 fallback 失效。
+  nslist=(${(f)"$(dig +short +time=3 +tries=1 NS ts.net 2>/dev/null | grep -E '^[A-Za-z0-9._-]+\.$')"})
+  [ ${#nslist[@]} -eq 0 ] && nslist=("${FALLBACK_NS[@]}")
+  for ns in "${nslist[@]}"; do
+    [ -z "$ns" ] && continue
+    ip=$(dig +short +time=3 +tries=1 A "$host" @"$ns" 2>/dev/null | grep -E '^[0-9]+\.[0-9.]+$' | head -1)
     if [ -n "$ip" ]; then
       printf '%s' "$ip"
       return 0
@@ -107,21 +121,24 @@ funnel_resolve_public() {
   return 1
 }
 
-is_funnel_public_dns_ok() {
+# L2：authoritative NS 是否有 funnel hostname 的 A record（= 控制平面已對外發布）
+is_funnel_dns_published() {
   local host="$1"
-  funnel_resolve_public "$host" >/dev/null
+  funnel_resolve_authoritative "$host" >/dev/null
 }
 
-# End-to-end HTTPS reach via public funnel — 任何 HTTP response (含 4xx) 都算 reachable，
-# 只有 curl 本身 exit 非 0 (DNS / TCP / TLS fail) 才視 unhealthy。--resolve 避過
-# 本機 MagicDNS，強制走 public IP。10s timeout 涵蓋 DERP relay cold path。
-is_funnel_public_reach_ok() {
+# L3：用 authoritative IP direct HTTPS reach — 收到任何真 HTTP response (1xx-5xx，含
+# 4xx) 都算 reachable。curl transport fail (TCP refused / TLS / timeout) 時
+# %{http_code}=000，必須排除，否則 dead ingress 會被誤判 healthy → 不 heal（codex
+# 2026-07-05 抓到的既有 bug）。--resolve 強制走該 IP，避過本機 MagicDNS 與 recursive
+# 污染。10s timeout 涵蓋 DERP relay cold path。
+is_funnel_reach_ok() {
   local host="$1" ip http_code
   [ -z "$host" ] && return 1
-  ip=$(funnel_resolve_public "$host") || return 1
+  ip=$(funnel_resolve_authoritative "$host") || return 1
   http_code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 \
     --resolve "${host}:443:${ip}" "https://${host}/" 2>/dev/null)
-  [[ "$http_code" =~ ^[0-9]{3}$ ]]
+  [[ "$http_code" =~ ^[1-5][0-9]{2}$ ]]
 }
 
 is_funnel_healthy() {
@@ -132,12 +149,12 @@ is_funnel_healthy() {
     log "L1 通過但無 funnel hostname (異常)"
     return 1
   fi
-  if ! is_funnel_public_dns_ok "$host"; then
-    log "L2 public DNS resolve 失敗 ($host @1.1.1.1)"
+  if ! is_funnel_dns_published "$host"; then
+    log "L2 authoritative DNS 無 record ($host — 控制平面未發布，真 drift)"
     return 1
   fi
-  if ! is_funnel_public_reach_ok "$host"; then
-    log "L3 HTTPS reach 失敗 ($host — curl 走 public IP 失敗)"
+  if ! is_funnel_reach_ok "$host"; then
+    log "L3 HTTPS reach 失敗 ($host — 走 authoritative IP direct)"
     return 1
   fi
   return 0
@@ -190,4 +207,8 @@ main() {
   fi
 }
 
-main "$@"
+# GUARD_SOURCE_ONLY=1 → 只載入函式不跑 main（供 test harness / 手動驗證 source，
+# 避免觸發 heal 的 serve reset 與 Telegram alert）
+if [ "${GUARD_SOURCE_ONLY:-}" != "1" ]; then
+  main "$@"
+fi
