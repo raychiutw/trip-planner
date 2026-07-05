@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.17] - 2026-07-05
+
+### Fixed
+- **funnel-guard 健康判定改用 authoritative DNS，根治 recursive resolver 誤報 flapping**（`scripts/funnel-guard/`）
+  - 2026-07-05 incident：funnel-guard（mac mini launchd，每 120s）原本用 recursive resolver（1.1.1.1/8.8.8.8）驗證 funnel `:443` 是否對外可達。但大型 recursive 對 `*.ts.net` funnel hostname 反覆 NXDOMAIN — Tailscale 週期性 re-publish record 造成極短消失 window → resolver negative-cache 300s（Cloudflare/Google 尤甚，Quad9 較穩）。這不代表 funnel drift，卻觸發 heal 的 `serve reset`，reset 瞬間 funnel 真的 off → 再製造 negative-cache → self-perpetuating flapping + Telegram 噪音。funnel 服務本身（本機 serve state + authoritative DNS + ingress HTTPS/TLS）全程健康。
+  - L2/L3 健康判定改查 **authoritative NS（dnsimple）的 A record + 用該 IP direct HTTPS reach**，不再依賴 recursive resolver。真 drift（控制平面沒發布 → authoritative 也 NXDOMAIN）仍偵測得到 → heal；假 drift（authoritative 有、只是 recursive cache）→ 判 healthy 不 heal。NS delegation 走系統 resolver 可接受（NS record 穩定少變，不像 funnel A record 頻繁 re-publish）。
+  - 順修 codex adversarial 抓到的**既有 L3 bug**：`curl` transport fail（TCP refused / TLS / timeout）時 `%{http_code}=000`，被 `^[0-9]{3}$` 誤判 reachable → dead ingress 判 healthy 不 heal。改 `^[1-5][0-9]{2}$` 排除 000。
+  - 新增 `scripts/funnel-guard/test-guard.sh` 本機 self-check（syntax + authoritative resolve + 真 drift 偵測 + 000 false-healthy 防護）+ `guard.sh` 加 `GUARD_SOURCE_ONLY` 測試 hook + README 三層健康檢查/偵錯同步。
+  - 純 mac mini 本機 launchd ops script，不影響 CF Pages app（VERSION bump 觸發的 redeploy 為 no-op）。
+
 ## [2.55.15] - 2026-06-29
 
 ### Fixed

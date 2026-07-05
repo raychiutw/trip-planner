@@ -10,15 +10,19 @@ macOS update / GUI app / 第三方 brew 反覆把 funnel `:443` 改成 `serve` (
 
 ## 行為
 
-每 120 秒（launchd `StartInterval`）：
+每 120 秒（launchd `StartInterval`）跑三層健康檢查，全過才算 healthy：
 
-1. `tailscale serve status --json` 偵測：
+1. **L1 local** — `tailscale serve status --json`：
    - `AllowFunnel[*:443] == true`（區別 funnel vs serve）
    - `Web[*:443].Handlers["/"].Proxy == "http://127.0.0.1:8080"`
-2. 兩個條件不齊 → 跑 `tailscale serve reset` + `tailscale funnel --bg --https=443 http://127.0.0.1:8080`
-3. 重設後再驗一次：
-   - 成功 → Telegram 通知「已自動 reset」
-   - 失敗 → Telegram 通知「heal 後仍 unhealthy，請手動檢查」
+2. **L2 DNS** — authoritative NS（dnsimple）有 funnel hostname 的 A record（= 控制平面已對外發布）
+3. **L3 reach** — 用 authoritative IP direct HTTPS reach（TLS + 任何 HTTP response 都算通）
+
+任一層不過 → `tailscale serve reset` + `tailscale funnel --bg --https=443 http://127.0.0.1:8080`，重設後再驗：
+- 成功 → Telegram 通知「已自動 reset」
+- 失敗 → Telegram 通知「heal 後仍 unhealthy，請手動檢查」
+
+> **L2/L3 查 authoritative 而非 recursive resolver**（2026-07-05 incident）：大型 recursive（1.1.1.1/8.8.8.8）對 `*.ts.net` funnel hostname 反覆 NXDOMAIN — Tailscale 週期 re-publish record 造成極短消失 window → resolver negative-cache 300s。這不代表 funnel drift，卻會誤判 → 誤 heal（`serve reset` 瞬間 funnel 真的 off，再製造 negative-cache）→ self-perpetuating flapping。authoritative NS 是控制平面實際發布的真相，不受 recursive cache 污染。詳見 `guard.sh` 頂部 note。
 
 ## 安裝
 
@@ -44,6 +48,9 @@ tail -f scripts/logs/funnel-guard/stdout.log
 
 # 手動觸發一次跑（不等 120s）
 launchctl kickstart -k gui/$(id -u)/com.tripline.funnel-guard
+
+# 邏輯 self-check（syntax + authoritative resolve + 真 drift 偵測，本機跑非 CI）
+zsh scripts/funnel-guard/test-guard.sh
 ```
 
 ## 測試 drift 復原
@@ -107,7 +114,8 @@ rm ~/Library/LaunchAgents/com.tripline.funnel-guard.plist
 |---|---|
 | Telegram 沒收到 | `.env.local` 內 `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` 是否設了，`bash scripts/lib/send-telegram.sh "test"` 手動測試 |
 | log 完全沒寫 | `scripts/logs/funnel-guard/` 目錄是否存在、權限是否 user 可寫 |
-| `is_funnel_healthy` 永遠 false | `tailscale serve status --json` 出來的 hostname `:443` key 結尾是否符合 `endswith(":443")`；jq 是否在 PATH |
+| `is_funnel_healthy` false（L1）| `tailscale serve status --json` hostname `:443` key 結尾是否符合 `endswith(":443")`；jq 是否在 PATH |
+| `is_funnel_healthy` false（L2/L3）| `dig +short NS ts.net` 是否回 NS；`dig +short A <funnel-host> @ns1.dnsimple.com` 有無 record（無 → 真 drift，該 heal）；有 record 但仍 false → L3 reach 問題（DERP relay / ingress `:8080`）。**不要看 recursive resolver（1.1.1.1）—— 對 funnel hostname 天生 flaky，非判斷依據** |
 | `heal_funnel` exit 非 0 | tailscaled 是否 running（`tailscale status`）；user 是否 logged in |
 | 重複 alert 太多 | 看 log heal 次數 — 若 1 小時 > 10 次表示有外部 process 一直改 serve；查 `~/Library/Logs/` 找元兇 |
 | log 過大 | `scripts/logs/funnel-guard/stdout.log` 不自動 rotate，~720 行/天 × ~50 bytes ≈ 13MB/年；過大可手動 `: > scripts/logs/funnel-guard/stdout.log` 截斷 |
