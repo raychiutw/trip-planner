@@ -15,6 +15,7 @@ import TimelineRail from '../../src/components/trip/TimelineRail';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
 import { TripIdContext } from '../../src/contexts/TripIdContext';
 import type { TripSegment } from '../../src/hooks/useTripSegments';
+import { __resetTravelRecomputeState } from '../../src/lib/travelRecompute';
 
 const useTripSegmentsMock = vi.fn();
 vi.mock('../../src/hooks/useTripSegments', () => ({
@@ -30,6 +31,9 @@ vi.mock('../../src/lib/apiClient', () => ({
 beforeEach(() => {
   useTripSegmentsMock.mockReset();
   apiFetchRawMock.mockReset();
+  // 本檔用真 travelRecompute helper（只 mock apiClient）— 清 module-level
+  // single-flight / attempted state，避免跨測試 order-dependence
+  __resetTravelRecomputeState();
 });
 
 function entry(id: number, title: string): TimelineEntryData {

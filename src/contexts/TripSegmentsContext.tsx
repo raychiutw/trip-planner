@@ -17,6 +17,8 @@ export interface TripSegmentsContextValue {
   segments: TripSegment[];
   segmentMap: Map<string, TripSegment>;
   loading: boolean;
+  /** 首次 fetch 是否已 settle — self-healing 補算必須等 ready 才能判斷缺 pair。 */
+  ready: boolean;
 }
 
 export const TripSegmentsContext = createContext<TripSegmentsContextValue | null>(null);

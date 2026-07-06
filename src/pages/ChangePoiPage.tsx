@@ -20,6 +20,7 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { requestTravelRecompute } from '../lib/travelRecompute';
 import { EVENT } from '../lib/events';
 import { regionToApiParam } from '../lib/maps/region';
 import { mapGooglePrimaryTypeToPoiType, mapNominatimCategory, type PoiType } from '../lib/poiCategory';
@@ -725,7 +726,7 @@ export default function ChangePoiPage() {
             throw new Error(`新增景點失敗 (${res.status}): ${text.slice(0, 200)}`);
           }
           const created = (await res.json()) as { id?: number };
-          void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, { method: 'POST' }).catch(() => undefined);
+          void requestTravelRecompute(tripId).catch(() => undefined);
           window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
           if (created.id) {
             navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
@@ -756,7 +757,7 @@ export default function ChangePoiPage() {
           throw new Error(`${mode === 'alternate' ? '加備選' : '置換'}失敗 (${res.status}): ${text.slice(0, 200)}`);
         }
         if (mode === 'master') {
-          void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, { method: 'POST' }).catch(() => undefined);
+          void requestTravelRecompute(tripId).catch(() => undefined);
         }
         window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
         navigate(
@@ -799,7 +800,7 @@ export default function ChangePoiPage() {
           throw new Error(`新增景點失敗 (${res.status}): ${text.slice(0, 200)}`);
         }
         const created = (await res.json()) as { id?: number };
-        void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, { method: 'POST' }).catch(() => undefined);
+        void requestTravelRecompute(tripId).catch(() => undefined);
         window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
         if (created.id) {
           navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
@@ -857,9 +858,7 @@ export default function ChangePoiPage() {
         throw new Error(`PUT 失敗 (${res.status}): ${text.slice(0, 200)}`);
       }
       // fire-and-forget recompute current day（user 換 POI 後 distance/min 應更新）
-      void apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel`, {
-        method: 'POST',
-      }).catch(() => undefined);
+      void requestTravelRecompute(tripId).catch(() => undefined);
       window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
       navigate(`/trips?selected=${encodeURIComponent(tripId)}`, { replace: true });
     } catch (err) {
