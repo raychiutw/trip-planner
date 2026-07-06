@@ -25,13 +25,11 @@ if (!fs.existsSync(envPath)) {
   process.exit(1);
 }
 
-const result = dotenv.config({ path: envPath, processEnv: {} });
-if (result.error) {
-  process.stderr.write(`load-env.mjs: dotenv parse 失敗: ${result.error.message}\n`);
-  process.exit(1);
-}
-
-const parsed = result.parsed ?? {};
+// 用 dotenv.parse（純函數）而非 config()：config() 會注入 process.env，且 v17+
+// 把「injected env … { override: true }」tip 印到 stdout，污染本 loader「stdout 只
+// 有 export 行」的契約 → eval 進 zsh 時 `parse error near '}'`。parse() 無 side
+// effect、不碰 stdout，與 dotenv 版本無關。
+const parsed = dotenv.parse(fs.readFileSync(envPath, 'utf8'));
 
 function ansiCQuote(value) {
   return `$'${String(value)
