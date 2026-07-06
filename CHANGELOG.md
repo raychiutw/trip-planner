@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.18] - 2026-07-06
+
+### Fixed
+- **load-env.mjs 改用 `dotenv.parse()` 根治 stdout 污染**（`scripts/lib/load-env.mjs`，scheduler env loader）
+  - dotenv v17 的 `config()` 會把「injected env … `{ override: true }`」提示印到 **stdout**（v16 無此行為）。本 loader 契約是「stdout 只有 `export KEY=$'…'` 行、供 scheduler-common 用 `eval` 注入 env」，被那行提示污染後 `eval` 進 zsh 觸發 `parse error near '}'`，整個 env 載入失敗。本地 `node_modules` drift 到 dotenv 17（upgrade branch 的 `npm install` 遺留），CI 用 `npm ci` 照 lock 裝 v16 不受影響 → 本地 7/9 test 紅、CI 綠。
+  - 改用 `dotenv.parse(fs.readFileSync(path))`（純函數）取代 `config()`：不注入 `process.env`、不碰 stdout、與 dotenv 版本無關。同時移除死碼 `result.error` 分支（`config` 的 error 只在檔案 IO 失敗觸發，已被前面 `existsSync` 擋；殘餘 EACCES 由 `readFileSync` throw 承接，exit≠0 行為等價）。
+  - 安全面 net-positive：移除 stdout tip（原本洩漏 env 檔路徑）+ 不再注入 `process.env`（secrets 不會意外進 child process env）。9 個 load-env unit test 從 7-fail 轉全綠，全量 3399 test 綠。
+  - 純 mac mini 本機 scheduler ops loader，不影響 CF Pages app（VERSION bump 觸發的 redeploy 為 no-op）。
+
 ## [2.55.17] - 2026-07-05
 
 ### Fixed

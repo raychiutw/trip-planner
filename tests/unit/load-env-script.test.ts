@@ -8,7 +8,7 @@
  * 連 LOG_FILE 都還沒建就死掉，沒有 telegram 也沒有 log（觀察到 2026-05-11 06:13
  * 的 .context/daily-check-stderr.log 即此症狀）。
  *
- * 新 loader 用 dotenv@16 parse（已支援 multi-line single-quote），輸出 bash
+ * 新 loader 用 dotenv.parse()（純函數、已支援 multi-line single-quote、不碰 stdout），輸出 bash
  * ANSI-C `$'...'` quoting 的 `export KEY=$'…'` lines；scheduler-common.sh 用
  * `eval "$(node load-env.mjs path)"` 就能正確 inject env。
  */
