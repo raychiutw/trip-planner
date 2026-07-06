@@ -39,6 +39,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { requestTravelRecompute } from '../lib/travelRecompute';
 import { dayColor } from '../lib/dayPalette';
 import { EVENT } from '../lib/events';
 import {
@@ -325,6 +326,17 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
           if (data?.error?.message) message = data.error.message;
         } catch { /* not JSON */ }
         throw new Error(message);
+      }
+      // 2026-07-06 車程重算缺口：move 影響來源日 + 目標日兩天的相鄰 pair，
+      // copy 影響目標日 → 補顯式 day-scoped recompute（fire-and-forget，失敗
+      // 靜默 — self-healing 與 TravelPill ⚠ 是 fallback）。
+      const targetDayNum = days.find((d) => d.dayId === selectedDayId)?.dayNum ?? null;
+      const sourceDayNum = action === 'move'
+        ? (days.find((d) => d.dayId === currentDayId)?.dayNum ?? null)
+        : null;
+      void requestTravelRecompute(tripId, targetDayNum).catch(() => undefined);
+      if (sourceDayNum != null && sourceDayNum !== targetDayNum) {
+        void requestTravelRecompute(tripId, sourceDayNum).catch(() => undefined);
       }
       window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
         detail: { tripId, entryId: entryIdNum },

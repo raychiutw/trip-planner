@@ -34,6 +34,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { requestTravelRecompute } from '../lib/travelRecompute';
 import { EVENT } from '../lib/events';
 import { mapGooglePrimaryTypeToPoiType, type PoiType } from '../lib/poiCategory';
 import {
@@ -925,10 +926,8 @@ export default function AddStopPage() {
       // Fire-and-forget recompute-travel for this day so newly added entries
       // get travel_distance_m / travel_min populated. Non-blocking — UI returns
       // to trip view immediately; travel pills update after server done.
-      apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel?day=${dayNum}`, {
-        method: 'POST',
-        credentials: 'same-origin',
-      }).catch(() => undefined);
+      void requestTravelRecompute(tripId, Number.isFinite(Number(dayNum)) ? Number(dayNum) : null)
+        .catch(() => undefined);
       window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, dayNum } }));
       showToast(`已加入 ${payloads.length} 個景點`, 'success');
       handleBack();

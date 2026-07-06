@@ -26,6 +26,7 @@ import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
+import { requestTravelRecompute } from '../lib/travelRecompute';
 import { ApiError } from '../lib/errors';
 import { POI_TYPE_LABELS, mapGooglePrimaryTypeToPoiType, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
@@ -354,9 +355,8 @@ export default function AddPoiFavoriteToTripPage() {
           }),
         });
         // recompute travel for this day (fire-and-forget；同 v2.23.1 AddStopPage pattern)
-        void apiFetch(`/trips/${encodeURIComponent(tripId)}/recompute-travel?day=${dayNum}`, {
-          method: 'POST',
-        }).catch(() => undefined);
+        void requestTravelRecompute(tripId, Number.isFinite(Number(dayNum)) ? Number(dayNum) : null)
+          .catch(() => undefined);
       } else {
         await apiFetch(`/poi-favorites/${favoriteId}/add-to-trip`, {
           method: 'POST',
