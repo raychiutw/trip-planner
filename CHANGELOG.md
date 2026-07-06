@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.19] - 2026-07-06
+
+### Fixed
+- **車程重算補齊 — 刪除/搬日/複製後車程自動更新，任何來源的缺口 self-healing**（user 回報：刪除景點沒重算、移動沒重算、新增有時候也沒有）
+  - 重盤發現：車程 invalidation 散彈式分佈在各頁「自己記得打」`/recompute-travel` — 新增/換 POI/拖曳排序有打；**刪除（TimelineRail + EditEntryPage）、搬日/複製（EntryActionPage）、後端直寫（AI chat / import / share clone / tp-\* CLI）全漏**。刪除後 FK cascade 移除舊 pair，新相鄰 pair 缺 row 沒人算，TravelPill 連 ⚠ 手動重算鈕都不 render，user 無從補救。
+  - **兩層修法**：(1) **self-healing** — TimelineRail render 偵測「相鄰 pair 缺 segment 或 `computed_at=NULL`」→ 自動 day-scoped recompute，任何來源（含後端直寫）的缺口都補得到；(2) **顯式觸發** — 刪除 ×2、move（來源+目標日）、copy（目標日）補打，即時不等 render。
+  - 防護集中在新 `src/lib/travelRecompute.ts` single-flight helper（全部 11 個觸發點統一走它）：同 scope 併發共用 promise、auto 以 **gap-signature 防重**（同缺口只試一次、缺口變化天然 re-arm，unhealable 缺座標 pair 不被無關 mutation 反覆白燒）、缺座標 pair 不觸發（backend 也算不出）、drag optimistic order 未 commit 前不誤判、唯讀 viewer 403 → 該 trip auto 全停、`ready` gate 防首次載入空 map 誤判、auto 的 day 解析失敗 skip 不放大成全 trip（47-pair 貼 CF 50 subrequest 上限）。
+  - **缺 row pair 補 ⚠ affordance**：TravelPill 新增 missing 狀態復用既有「車程未更新」stale chip — 手動重算永遠有入口。拖曳排序的顯式 recompute 同時 day-scope 化（原全 trip，5 天 trip 燒 5x Google quota）。
+  - 雷（review 抓到已修）：EntryActionPage `days` state nullable → `dayNumFromId` 簽名放寬（本地 tsc 被 TS5101 config error 短路成假綠，CI 才會紅）；`useTripSegments.ready` 只在 fetch 成功 set（transient read 失敗不引發 write-side recompute）。
+  - +30 unit tests（helper single-flight/signature/403 語意、TimelineRail self-healing、hook ready、EntryActionPage move/copy scope），全量 3432 綠。future direction 記於 PR：後端 mutation 層 mark-stale（setMaster 模式推廣到 delete/move/copy + 佔位 row）可再下沉一層。
+
 ## [2.55.18] - 2026-07-06
 
 ### Fixed

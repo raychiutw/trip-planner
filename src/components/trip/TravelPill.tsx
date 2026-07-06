@@ -173,6 +173,13 @@ export interface TravelPillProps {
    * 在 γ.1 PR）。
    */
   segment?: TravelPillSegment;
+  /**
+   * 2026-07-06 車程重算缺口：pair 完全沒有 segment row（刪除/搬日後的新
+   * adjacency、缺座標 pair）。視同 stale — 顯示 ⚠「車程未更新」chip 給 user
+   * 手動重算的 affordance，但不 render interactive pill 本體（無 segment.id
+   * 可開 TravelPillDialog）。
+   */
+  missing?: boolean;
   tripId?: string;
   /** 顯示在 dialog title 旁的 from→to entry 名稱（optional） */
   fromName?: string | null;
@@ -205,6 +212,7 @@ export default function TravelPill({
   min,
   distanceM,
   segment,
+  missing,
   tripId,
   fromName,
   toName,
@@ -214,8 +222,9 @@ export default function TravelPill({
 
   // v2.29.1 stale 偵測：純看 segment.computedAt — backend mark stale 時設 NULL，
   // user 觸發 recompute 後寫回 epoch ms。stale 時不顯示舊 min/distance，只渲染
-  // 「車程未更新 重新計算」chip。
-  const isStale = segment != null && segment.computedAt == null;
+  // 「車程未更新 重新計算」chip。2026-07-06：missing（pair 無 row）視同 stale，
+  // 同一 ⚠ affordance。
+  const isStale = missing === true || (segment != null && segment.computedAt == null);
 
   // 若 segment 提供，優先用 segment.mode/min/distanceM 顯示（v2.24.0 SoT）
   const effectiveType = segment?.mode ?? type ?? null;

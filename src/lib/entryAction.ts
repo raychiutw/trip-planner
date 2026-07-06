@@ -22,6 +22,19 @@ export interface EntryActionConfirmPayload {
 }
 
 /**
+ * dayId → dayNum lookup（2026-07-06 車程重算：day-scoped recompute 的 scope
+ * 解析，TimelineRail ×3 與 EntryActionPage ×2 共用）。找不到 → null（caller
+ * fallback 全 trip recompute）。
+ */
+export function dayNumFromId(
+  days: DayOption[] | null | undefined,
+  dayId: number | null | undefined,
+): number | null {
+  if (dayId == null || days == null) return null;
+  return days.find((d) => d.dayId === dayId)?.dayNum ?? null;
+}
+
+/**
  * Caller 餵 label 格式為「YYYY-MM-DD（週）」(TripPage.tsx dayOptions，
  * 經 mapDay.parseLocalDate 確保 zero-padded `\d{2}-\d{2}` 形態)。
  * 行動裝置 picker 內擠不下，shorten 為「M/D（週）」。Fallback 原 label 若 parse 失敗

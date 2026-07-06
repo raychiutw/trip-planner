@@ -19,6 +19,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { requestTravelRecompute } from '../lib/travelRecompute';
 import { EVENT } from '../lib/events';
 import { formatDateLabel } from '../lib/mapDay';
 import AppShell from '../components/shell/AppShell';
@@ -412,10 +413,7 @@ export default function AddCustomStopPage() {
       );
       if (!res.ok) throw new Error(`儲存失敗 (${res.status})`);
 
-      apiFetchRaw(
-        `/trips/${encodeURIComponent(tripId)}/recompute-travel?day=${dayNum}`,
-        { method: 'POST', credentials: 'same-origin' },
-      ).catch(() => undefined);
+      void requestTravelRecompute(tripId, dayNum).catch(() => undefined);
 
       window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, dayNum } }));
       showToast('已加入自訂景點', 'success');

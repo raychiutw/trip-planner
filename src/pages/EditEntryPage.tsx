@@ -45,6 +45,7 @@ import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { requestTravelRecompute } from '../lib/travelRecompute';
 import { ApiError } from '../lib/errors';
 import { escUrl } from '../lib/sanitize';
 import { EVENT } from '../lib/events';
@@ -1041,6 +1042,10 @@ export default function EditEntryPage() {
     return () => { cancelled = true; };
   }, [tripId]);
 
+  // 2026-07-06 車程重算：entry 所在 dayNum（下方 effect 解析後存入），刪除時
+  // 做 day-scoped recompute；未解析到 → null → 全 trip recompute fallback。
+  const entryDayNumRef = useRef<number | null>(null);
+
   // Once entry is loaded, fetch the day for prev-entry context + POI meta
   useEffect(() => {
     if (!entry || !tripId) return;
@@ -1052,6 +1057,8 @@ export default function EditEntryPage() {
         if (cancelled) return;
         const day = days.find((d) => d.id === entry.dayId);
         if (!day) return;
+        // 2026-07-06 車程重算：存 dayNum 給 handleDeleteStop 做 day-scoped recompute
+        entryDayNumRef.current = day.dayNum;
         const dayData = await apiFetch<DayApi>(
           `/trips/${encodeURIComponent(tripId)}/days/${day.dayNum}`,
         );
@@ -1479,6 +1486,9 @@ export default function EditEntryPage() {
         const text = await res.text();
         throw new Error(`刪除停留點失敗 (${res.status})${text ? `: ${text.slice(0, 120)}` : ''}`);
       }
+      // 2026-07-06 車程重算缺口：刪除後新相鄰 pair 缺 segment row → 補顯式
+      // recompute（fire-and-forget；self-healing 與 TravelPill ⚠ 是 fallback）。
+      void requestTravelRecompute(tripId, entryDayNumRef.current).catch(() => undefined);
       setShowDeleteStopConfirm(false);
       navigate(goBackHref);
     } catch (err) {

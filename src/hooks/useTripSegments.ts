@@ -38,6 +38,10 @@ export function useTripSegments(tripId: string | null | undefined) {
 
   const [segments, setSegments] = useState<TripSegment[]>([]);
   const [loading, setLoading] = useState(false);
+  // 2026-07-06 self-healing：首次 fetch settle 前 segments=[] 不代表「真的沒
+  // segment」。TimelineRail 自動補算必須等 ready，否則初次 render 空 map 會
+  // 誤判全天缺 pair → 白燒一輪 Google recompute。
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (fromCtx) return; // 由 provider 負責 fetch + lifecycle
@@ -45,6 +49,8 @@ export function useTripSegments(tripId: string | null | undefined) {
       setSegments([]);
       return;
     }
+    // tripId 切換 → 舊 map 不能拿來判斷新 trip 的缺 pair，先降 ready
+    setReady(false);
     let cancelled = false;
     let inFlight = false;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -57,6 +63,10 @@ export function useTripSegments(tripId: string | null | undefined) {
         const data = await apiFetch<TripSegment[]>(`/trips/${encodeURIComponent(tripId)}/segments`);
         if (cancelled) return;
         setSegments(Array.isArray(data) ? data : []);
+        // ready 只在「成功」set：fetch 失敗的空 map ≠ 真的沒 segment，
+        // 不能餵給 self-healing 當缺 pair 證據（transient read 失敗不該
+        // 引發 write-side recompute — codex review P2）。
+        setReady(true);
       } catch {
         if (cancelled) return;
         // 留 empty — caller graceful degrade
@@ -100,7 +110,7 @@ export function useTripSegments(tripId: string | null | undefined) {
   }, [segments]);
 
   if (fromCtx) {
-    return { segments: fromCtx.segments, segmentMap: fromCtx.segmentMap, loading: fromCtx.loading };
+    return { segments: fromCtx.segments, segmentMap: fromCtx.segmentMap, loading: fromCtx.loading, ready: fromCtx.ready };
   }
-  return { segments, segmentMap, loading };
+  return { segments, segmentMap, loading, ready };
 }
