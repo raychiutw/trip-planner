@@ -41,8 +41,18 @@ const inflight = new Map<string, Promise<RecomputeTravelResult>>();
 const autoAttempted = new Set<string>();
 let listenerRegistered = false;
 
-function scopeKey(tripId: string, dayNum?: number | null): string {
+function scopeKey(tripId: string, dayNum: number | null): string {
   return `${tripId}|${dayNum ?? 'all'}`;
+}
+
+/**
+ * day scope normalize — 唯一 choke point。route param（string）與 state
+ * （number）都收；無效/缺 → null = 全 trip scope。
+ */
+function normalizeDayNum(dayNum: number | string | null | undefined): number | null {
+  if (dayNum == null || dayNum === '') return null;
+  const n = Number(dayNum);
+  return Number.isFinite(n) ? n : null;
 }
 
 /** entryUpdated = 行程有新 mutation → 該 trip 的 auto 嘗試權重置。 */
@@ -71,11 +81,12 @@ export function __resetTravelRecomputeState(): void {
  */
 export function requestTravelRecompute(
   tripId: string,
-  dayNum?: number | null,
+  dayNum?: number | string | null,
   opts?: { auto?: boolean },
 ): Promise<RecomputeTravelResult | null> {
   ensureResetListener();
-  const key = scopeKey(tripId, dayNum);
+  const day = normalizeDayNum(dayNum);
+  const key = scopeKey(tripId, day);
   const auto = opts?.auto === true;
 
   if (auto) {
@@ -90,7 +101,7 @@ export function requestTravelRecompute(
   const existing = inflight.get(key);
   if (existing) return existing;
 
-  const query = typeof dayNum === 'number' ? `?day=${dayNum}` : '';
+  const query = day != null ? `?day=${day}` : '';
   const p = (async (): Promise<RecomputeTravelResult> => {
     const res = await apiFetchRaw(
       `/trips/${encodeURIComponent(tripId)}/recompute-travel${query}`,

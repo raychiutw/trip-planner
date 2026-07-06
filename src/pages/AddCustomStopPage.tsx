@@ -413,8 +413,7 @@ export default function AddCustomStopPage() {
       );
       if (!res.ok) throw new Error(`儲存失敗 (${res.status})`);
 
-      void requestTravelRecompute(tripId, Number.isFinite(Number(dayNum)) ? Number(dayNum) : null)
-        .catch(() => undefined);
+      void requestTravelRecompute(tripId, dayNum).catch(() => undefined);
 
       window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, dayNum } }));
       showToast('已加入自訂景點', 'success');

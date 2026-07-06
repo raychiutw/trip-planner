@@ -44,6 +44,7 @@ import { dayColor } from '../lib/dayPalette';
 import { EVENT } from '../lib/events';
 import {
   ENTRY_ACTION_TIME_SLOTS,
+  dayNumFromId,
   shortenDateLabel,
   type DayOption,
 } from '../lib/entryAction';
@@ -330,10 +331,8 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
       // 2026-07-06 車程重算缺口：move 影響來源日 + 目標日兩天的相鄰 pair，
       // copy 影響目標日 → 補顯式 day-scoped recompute（fire-and-forget，失敗
       // 靜默 — self-healing 與 TravelPill ⚠ 是 fallback）。
-      const targetDayNum = days.find((d) => d.dayId === selectedDayId)?.dayNum ?? null;
-      const sourceDayNum = action === 'move'
-        ? (days.find((d) => d.dayId === currentDayId)?.dayNum ?? null)
-        : null;
+      const targetDayNum = dayNumFromId(days, selectedDayId);
+      const sourceDayNum = action === 'move' ? dayNumFromId(days, currentDayId) : null;
       void requestTravelRecompute(tripId, targetDayNum).catch(() => undefined);
       if (sourceDayNum != null && sourceDayNum !== targetDayNum) {
         void requestTravelRecompute(tripId, sourceDayNum).catch(() => undefined);

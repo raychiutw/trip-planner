@@ -43,6 +43,7 @@ import MapLinks from './MapLinks';
 import TravelPill from './TravelPill';
 import type { StopPoiOptionData, TimelineEntryData } from './TimelineEvent';
 import { parseEntryTime, formatDurationCompact, formatTimeRange, deriveTypeMeta } from '../../lib/timelineUtils';
+import { dayNumFromId } from '../../lib/entryAction';
 import { useDragDrop } from '../../hooks/useDragDrop';
 import { useTripSegments } from '../../hooks/useTripSegments';
 import { getTimelineEntryDisplayTitle } from '../../lib/stopDisplay';
@@ -462,8 +463,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       // 2026-07-06 車程重算缺口：刪除後 FK cascade 移除舊 pair，新相鄰 pair
       // 缺 row 沒人算 → 補顯式 day-scoped recompute（fire-and-forget，失敗
       // 靜默 — self-healing 與 TravelPill ⚠ 是 fallback）。
-      const dayNum = dayId != null ? allDays.find((d) => d.dayId === dayId)?.dayNum : null;
-      void requestTravelRecompute(tripId, typeof dayNum === 'number' ? dayNum : null)
+      void requestTravelRecompute(tripId, dayNumFromId(allDays, dayId))
         .catch(() => undefined);
       window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
         detail: { tripId, entryId: entryIdNum },
@@ -953,8 +953,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
       if (!seg || seg.computedAt == null) { needsRecompute = true; break; }
     }
     if (!needsRecompute) return;
-    const dayNum = dayId != null ? allDays.find((d) => d.dayId === dayId)?.dayNum : null;
-    void requestTravelRecompute(tripId, typeof dayNum === 'number' ? dayNum : null, { auto: true });
+    void requestTravelRecompute(tripId, dayNumFromId(allDays, dayId), { auto: true });
   }, [tripId, segmentsReady, segmentMap, orderedEvents, dayId, allDays]);
 
   const handleDragEnd = useCallback(async (e: DragEndEvent) => {
@@ -1001,9 +1000,8 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
   const recomputePendingRef = useRef(false);
   const handleRecomputeTravel = useCallback(() => {
     if (!tripId || recomputePendingRef.current) return;
-    const dayNum = dayId != null ? allDays.find((d) => d.dayId === dayId)?.dayNum : null;
     recomputePendingRef.current = true;
-    requestTravelRecompute(tripId, typeof dayNum === 'number' ? dayNum : null)
+    requestTravelRecompute(tripId, dayNumFromId(allDays, dayId))
       .then((data) => {
         // v2.30.12: 解析 response 給 user 精確 feedback。避免「重新計算」按了
         // 卻 0 段被算（座標缺、kill switch）變沉默成功 toast。

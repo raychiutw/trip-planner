@@ -355,8 +355,7 @@ export default function AddPoiFavoriteToTripPage() {
           }),
         });
         // recompute travel for this day (fire-and-forget；同 v2.23.1 AddStopPage pattern)
-        void requestTravelRecompute(tripId, Number.isFinite(Number(dayNum)) ? Number(dayNum) : null)
-          .catch(() => undefined);
+        void requestTravelRecompute(tripId, dayNum).catch(() => undefined);
       } else {
         await apiFetch(`/poi-favorites/${favoriteId}/add-to-trip`, {
           method: 'POST',

@@ -81,6 +81,20 @@ describe('requestTravelRecompute — single-flight + scope', () => {
     );
   });
 
+  it('day 收 string（route param）→ normalize 成 ?day=N；無效 string → 全 trip', async () => {
+    apiFetchRawMock.mockResolvedValue(okResponse());
+    await requestTravelRecompute('t1', '5');
+    expect(apiFetchRawMock).toHaveBeenLastCalledWith(
+      '/trips/t1/recompute-travel?day=5',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    await requestTravelRecompute('t2', 'abc');
+    expect(apiFetchRawMock).toHaveBeenLastCalledWith(
+      '/trips/t2/recompute-travel',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
   it('settle 後同 scope 再打 → 新的 API call（in-flight 已清）', async () => {
     apiFetchRawMock.mockResolvedValue(okResponse());
     await requestTravelRecompute('t1', 1);

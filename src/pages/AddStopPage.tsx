@@ -926,8 +926,7 @@ export default function AddStopPage() {
       // Fire-and-forget recompute-travel for this day so newly added entries
       // get travel_distance_m / travel_min populated. Non-blocking — UI returns
       // to trip view immediately; travel pills update after server done.
-      void requestTravelRecompute(tripId, Number.isFinite(Number(dayNum)) ? Number(dayNum) : null)
-        .catch(() => undefined);
+      void requestTravelRecompute(tripId, dayNum).catch(() => undefined);
       window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, dayNum } }));
       showToast(`已加入 ${payloads.length} 個景點`, 'success');
       handleBack();
