@@ -27,10 +27,10 @@ export interface EntryActionConfirmPayload {
  * fallback 全 trip recompute）。
  */
 export function dayNumFromId(
-  days: DayOption[],
+  days: DayOption[] | null | undefined,
   dayId: number | null | undefined,
 ): number | null {
-  if (dayId == null) return null;
+  if (dayId == null || days == null) return null;
   return days.find((d) => d.dayId === dayId)?.dayNum ?? null;
 }
 

@@ -31,7 +31,7 @@ vi.mock('../../src/lib/travelRecompute', () => ({
   requestTravelRecompute: (
     tripId: string,
     dayNum?: number | null,
-    opts?: { auto?: boolean },
+    opts?: { auto?: boolean; signature?: string },
   ) => recomputeMock(tripId, dayNum, opts),
 }));
 
@@ -41,7 +41,16 @@ beforeEach(() => {
 });
 
 function entry(id: number, title: string, time = '09:00-10:00'): TimelineEntryData {
-  return { id, time, title, description: null, note: null, googleRating: null };
+  // masterLat/masterLng：self-healing 只對「兩端都有座標」的 pair 觸發
+  // （缺座標 pair backend 也算不出來，觸發只會白燒）
+  return {
+    id, time, title, description: null, note: null, googleRating: null,
+    masterLat: 26.2 + id * 0.01, masterLng: 127.68 + id * 0.01,
+  };
+}
+
+function entryNoCoord(id: number, title: string): TimelineEntryData {
+  return { id, time: '09:00-10:00', title, description: null, note: null, googleRating: null, masterLat: null, masterLng: null };
 }
 
 function seg(from: number, to: number, computedAt: number | null = 1) {
@@ -72,13 +81,13 @@ function renderRail(
 }
 
 describe('TimelineRail self-healing 車程補算', () => {
-  it('ready + 相鄰 pair 缺 segment → auto day-scoped recompute', () => {
+  it('ready + 相鄰 pair 缺 segment → auto day-scoped recompute 帶 gap signature', () => {
     useTripSegmentsMock.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
     expect(recomputeMock).toHaveBeenCalledTimes(1);
-    expect(recomputeMock).toHaveBeenCalledWith('t1', 3, { auto: true });
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 3, { auto: true, signature: '1-2' });
   });
 
   it('ready + segment 在但 computed_at=NULL（換 POI mark stale）→ auto recompute', () => {
@@ -115,11 +124,56 @@ describe('TimelineRail self-healing 車程補算', () => {
     expect(recomputeMock).not.toHaveBeenCalled();
   });
 
-  it('dayId 對不到 allDays（無 dayNum）→ fallback 全 trip scope（dayNum=null）', () => {
+  it('dayId 對不到 allDays（無 dayNum）→ auto 不打（不能放大成全 trip recompute）', () => {
     useTripSegmentsMock.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     renderRail([entry(1, '那霸機場'), entry(2, '美麗海')], { dayId: 999 });
-    expect(recomputeMock).toHaveBeenCalledWith('t1', null, { auto: true });
+    expect(recomputeMock).not.toHaveBeenCalled();
+  });
+
+  it('缺座標 pair 不觸發 auto（backend 也算不出，白燒全日 quota）— 但 ⚠ affordance 仍在', () => {
+    useTripSegmentsMock.mockReturnValue({
+      segments: [], segmentMap: new Map(), loading: false, ready: true,
+    });
+    const { getAllByTestId } = renderRail([entryNoCoord(1, '手動地點'), entryNoCoord(2, '另一手動地點')]);
+    expect(recomputeMock).not.toHaveBeenCalled();
+    // recovery affordance 不因 auto skip 而消失
+    expect(getAllByTestId('travel-pill-stale')).toHaveLength(1);
+  });
+
+  it('混合：有座標 pair 缺 segment + 缺座標 pair → 只以有座標缺口當 signature', () => {
+    useTripSegmentsMock.mockReturnValue({
+      segments: [], segmentMap: new Map(), loading: false, ready: true,
+    });
+    renderRail([entry(1, 'A'), entry(2, 'B'), entryNoCoord(3, 'C')]);
+    expect(recomputeMock).toHaveBeenCalledTimes(1);
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 3, { auto: true, signature: '1-2' });
+  });
+
+  it('無 tripId → 不打', () => {
+    useTripSegmentsMock.mockReturnValue({
+      segments: [], segmentMap: new Map(), loading: false, ready: true,
+    });
+    renderRail([entry(1, '那霸機場'), entry(2, '美麗海')], { tripId: null });
+    expect(recomputeMock).not.toHaveBeenCalled();
+  });
+
+  it('缺 pair 且無 legacy travel → 仍 render TravelPill ⚠（recovery affordance 不消失）', () => {
+    useTripSegmentsMock.mockReturnValue({
+      segments: [], segmentMap: new Map(), loading: false, ready: true,
+    });
+    const { getAllByTestId } = renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
+    // missing pair → TravelPill 以 stale 形式 render（⚠ 車程未更新 + 重新計算鈕）
+    expect(getAllByTestId('travel-pill-stale')).toHaveLength(1);
+    expect(getAllByTestId('travel-pill-recompute')).toHaveLength(1);
+  });
+
+  it('segments 未 ready → 不 render missing ⚠（載入期不閃）', () => {
+    useTripSegmentsMock.mockReturnValue({
+      segments: [], segmentMap: new Map(), loading: true, ready: false,
+    });
+    const { queryByTestId } = renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
+    expect(queryByTestId('travel-pill-stale')).toBeNull();
   });
 });

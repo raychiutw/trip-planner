@@ -4,12 +4,13 @@
  *
  * 驗證：
  *   - single-flight：同 scope 併發 → 只打一次 API，共用同一 promise
- *   - day scope → ?day=N query；無 day → 無 query
+ *   - day scope → ?day=N query；無 day / 無效 / <1 → 無 query（全 trip）
  *   - 成功 dispatch tp-segment-updated（觸發 useTripSegments refetch 閉環）
  *   - explicit 失敗 reject（caller 自己 toast）
- *   - auto 模式：每 scope 只自動嘗試一次；entryUpdated（= 新 mutation）重置
- *   - auto 模式：all-scope in-flight 涵蓋 day scope → 跳過不重打
- *   - auto 失敗 resolve null 不 reject（唯讀 403 / MAPS_LOCKED 靜默）
+ *   - auto 模式：gap signature 防重 — 同 signature 只試一次、signature 變化
+ *     re-arm、unhealable gap 不受無關 mutation 影響
+ *   - auto 模式：in-flight（同 key 或 all-scope）→ 記 signature 後跳過
+ *   - auto 失敗 resolve null 不 reject；403 → 該 trip auto 全停（唯讀 viewer）
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
@@ -95,6 +96,18 @@ describe('requestTravelRecompute — single-flight + scope', () => {
     );
   });
 
+  it("空字串 / 0 / 負數 day → 全 trip（後端 day 驗證要求 ≥1，?day=0 只會 400）", async () => {
+    apiFetchRawMock.mockResolvedValue(okResponse());
+    for (const bad of ['', 0, -1] as const) {
+      apiFetchRawMock.mockClear();
+      await requestTravelRecompute('t1', bad);
+      expect(apiFetchRawMock).toHaveBeenLastCalledWith(
+        '/trips/t1/recompute-travel',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    }
+  });
+
   it('settle 後同 scope 再打 → 新的 API call（in-flight 已清）', async () => {
     apiFetchRawMock.mockResolvedValue(okResponse());
     await requestTravelRecompute('t1', 1);
@@ -121,54 +134,98 @@ describe('requestTravelRecompute — single-flight + scope', () => {
   });
 });
 
-describe('requestTravelRecompute — auto 模式防護', () => {
-  it('同 scope 第二次 auto → null 不打 API；entryUpdated 後重新可打', async () => {
+describe('requestTravelRecompute — auto 模式防護（gap signature）', () => {
+  it('同 signature 第二次 auto → null 不打 API；signature 變化 → re-arm', async () => {
     apiFetchRawMock.mockResolvedValue(okResponse());
 
-    const r1 = await requestTravelRecompute('t1', 1, { auto: true });
+    const r1 = await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
     expect(r1?.pairsComputed).toBe(1);
     expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
 
-    const r2 = await requestTravelRecompute('t1', 1, { auto: true });
+    const r2 = await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
     expect(r2).toBeNull();
     expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
 
-    // 新 mutation → 重置該 trip 的 auto 嘗試權
-    window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId: 't1' } }));
-    const r3 = await requestTravelRecompute('t1', 1, { auto: true });
+    // adjacency 真的變了（新 mutation 產生不同缺口）→ signature 不同 → re-arm
+    const r3 = await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2,2-3' });
     expect(r3?.pairsComputed).toBe(1);
     expect(apiFetchRawMock).toHaveBeenCalledTimes(2);
   });
 
-  it('別的 trip 的 entryUpdated 不重置本 trip 的 auto 嘗試權', async () => {
+  it('unhealable gap（signature 不變）不受無關 mutation 影響 — entryUpdated 不 re-arm', async () => {
     apiFetchRawMock.mockResolvedValue(okResponse());
-    await requestTravelRecompute('t1', 1, { auto: true });
-    window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId: 'OTHER' } }));
-    const r = await requestTravelRecompute('t1', 1, { auto: true });
+    await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
+    // 改 note 等無關 mutation 會 dispatch entryUpdated — signature 防重不受影響
+    window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId: 't1' } }));
+    const r = await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
     expect(r).toBeNull();
     expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
   });
 
-  it('all-scope in-flight 時 day-scoped auto 跳過（不重複燒 quota）', async () => {
+  it('all-scope in-flight 時 day-scoped auto 跳過且記 signature（in-flight 即本次嘗試）', async () => {
     const d = deferred();
     apiFetchRawMock.mockReturnValue(d.promise as Promise<unknown>);
 
     const pAll = requestTravelRecompute('t1'); // explicit all-trip in-flight
-    const rAuto = await requestTravelRecompute('t1', 2, { auto: true });
+    const rAuto = await requestTravelRecompute('t1', 2, { auto: true, signature: '9-10' });
     expect(rAuto).toBeNull();
     expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
 
     d.resolve(okResponse());
     await pAll;
+
+    // settle 後同 signature 再 auto → 已記 attempted → 不重打（perf review：
+    // 防 refetch race 的一次性 duplicate）
+    const rAgain = await requestTravelRecompute('t1', 2, { auto: true, signature: '9-10' });
+    expect(rAgain).toBeNull();
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
   });
 
-  it('auto 失敗 → resolve null 不 reject（403 唯讀 / MAPS_LOCKED 靜默停）', async () => {
-    apiFetchRawMock.mockResolvedValue(failResponse(403));
-    const r = await requestTravelRecompute('t1', 1, { auto: true });
+  it('同 key explicit in-flight 時 auto 跳過 → auto 永不拿到會 reject 的 raw promise', async () => {
+    const d = deferred();
+    apiFetchRawMock.mockReturnValue(d.promise as Promise<unknown>);
+
+    const pExplicit = requestTravelRecompute('t1', 3); // 同 day-scope explicit in-flight
+    const rAuto = await requestTravelRecompute('t1', 3, { auto: true, signature: '5-6' });
+    expect(rAuto).toBeNull();
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
+
+    // explicit 那發失敗 → 只有 explicit caller reject，auto 已 settle 為 null
+    d.resolve(failResponse(500));
+    await expect(pExplicit).rejects.toThrow('recompute-travel 500');
+  });
+
+  it('auto 失敗 → resolve null 不 reject；同 signature 不重試', async () => {
+    apiFetchRawMock.mockResolvedValue(failResponse(500));
+    const r = await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
     expect(r).toBeNull();
-    // 失敗後 attempted 保留 → 不重試
-    const r2 = await requestTravelRecompute('t1', 1, { auto: true });
+    const r2 = await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
     expect(r2).toBeNull();
     expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('auto 收 403（唯讀 viewer）→ 該 trip auto 全停，連不同 scope/signature 都不再打', async () => {
+    apiFetchRawMock.mockResolvedValue(failResponse(403));
+    const r = await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
+    expect(r).toBeNull();
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
+
+    // 不同 day、不同 signature — 一樣 skip（no-write trip）
+    const r2 = await requestTravelRecompute('t1', 2, { auto: true, signature: '7-8' });
+    expect(r2).toBeNull();
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
+
+    // 別的 trip 不受影響
+    apiFetchRawMock.mockResolvedValue(okResponse());
+    const r3 = await requestTravelRecompute('t2', 1, { auto: true, signature: '1-2' });
+    expect(r3?.pairsComputed).toBe(1);
+  });
+
+  it('403 只停 auto — explicit（手動 ⚠）不受 noWrite flag 影響', async () => {
+    apiFetchRawMock.mockResolvedValue(failResponse(403));
+    await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
+    // 手動重算仍會打（reject 給 caller toast）
+    await expect(requestTravelRecompute('t1', 1)).rejects.toThrow('recompute-travel 403');
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(2);
   });
 });

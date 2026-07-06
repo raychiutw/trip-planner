@@ -938,23 +938,39 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
 
   // 2026-07-06 self-healing 車程補算：刪除/搬日/複製/後端直寫（AI chat、import、
   // share clone、tp-* CLI）後，新相鄰 pair 缺 segment row（FK cascade 只刪舊
-  // pair，新 pair 無人算）或換 POI 後 computed_at=NULL。render 時偵測任一缺口
-  // → 自動 day-scoped recompute。防護都在 helper：每 mutation 每 scope 只自動
-  // 試一次、in-flight dedup、唯讀 403 / MAPS_LOCKED / 缺座標靜默停（fallback
-  // 是 TravelPill ⚠ 手動鈕）。segmentsReady gate 防首次 render 空 map 誤判。
+  // pair，新 pair 無人算）或換 POI 後 computed_at=NULL。render 時偵測缺口 →
+  // 自動 day-scoped recompute，以缺口清單當 signature 防重（同缺口只試一次，
+  // unhealable 缺座標 pair 不會被無關 mutation 反覆 re-arm）。其餘防護在
+  // helper：in-flight dedup、唯讀 403 → 該 trip auto 停用、失敗靜默（fallback
+  // 是 TravelPill ⚠ 手動鈕）。segmentsReady gate 防首次 render 空 map 誤判；
+  // orderOverride gate 防 drag optimistic order 在 PATCH commit 前誤判新
+  // adjacency 白燒一輪（perf review CRITICAL）。
   useEffect(() => {
-    if (!tripId || !segmentsReady) return;
-    let needsRecompute = false;
+    if (!tripId || !segmentsReady || orderOverride != null) return;
+    // auto 只在 day scope 明確時打 — 解析不到 dayNum 不能放大成全 trip
+    // recompute（47-pair trip ≈ 52 subrequests 貼 CF 50 上限，自動路徑
+    // fail-open 方向錯誤；explicit 手動 ⚠ 才保留全 trip fallback）。
+    const dayNum = dayNumFromId(allDays, dayId);
+    if (dayNum == null) return;
+    const gaps: string[] = [];
     for (let i = 1; i < orderedEvents.length; i++) {
-      const prevId = orderedEvents[i - 1]?.id;
-      const currId = orderedEvents[i]?.id;
-      if (prevId == null || currId == null) continue;
-      const seg = segmentMap.get(`${prevId}-${currId}`);
-      if (!seg || seg.computedAt == null) { needsRecompute = true; break; }
+      const prev = orderedEvents[i - 1];
+      const curr = orderedEvents[i];
+      if (prev?.id == null || curr?.id == null) continue;
+      // 缺座標 pair 不進 gaps：backend recompute 對它無能為力（skip 不寫
+      // row），觸發只會白燒該日全部 pair 的 Google 重算。user 補座標後
+      // entry 資料變 → masterLat 有值 → 進 gaps → 自動補算，閉環成立。
+      if (prev.masterLat == null || prev.masterLng == null
+        || curr.masterLat == null || curr.masterLng == null) continue;
+      const seg = segmentMap.get(`${prev.id}-${curr.id}`);
+      if (!seg || seg.computedAt == null) gaps.push(`${prev.id}-${curr.id}`);
     }
-    if (!needsRecompute) return;
-    void requestTravelRecompute(tripId, dayNumFromId(allDays, dayId), { auto: true });
-  }, [tripId, segmentsReady, segmentMap, orderedEvents, dayId, allDays]);
+    if (gaps.length === 0) return;
+    void requestTravelRecompute(tripId, dayNum, {
+      auto: true,
+      signature: gaps.join(','),
+    });
+  }, [tripId, segmentsReady, orderOverride, segmentMap, orderedEvents, dayId, allDays]);
 
   const handleDragEnd = useCallback(async (e: DragEndEvent) => {
     const { active, over } = e;
@@ -981,7 +997,9 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
       // 走 fire-and-forget：travel 顯示是 secondary，重算失敗（API 503/no ORS key）
       // 不阻塞 UI 但 toast 提示 user 重排已存、travel 數字未更新，避免誤以為
       // reorder 沒生效（travel 是 user reorder 的視覺信號）。
-      requestTravelRecompute(tripId)
+      // 2026-07-06 perf review：rail 內拖曳只改本日 adjacency（segment pair 嚴格
+      // 同日），day-scope 化省掉其他天的 Google 重算；dayNum 解析不到才退全 trip。
+      requestTravelRecompute(tripId, dayNumFromId(allDays, dayId))
         .catch(() => {
           showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
         });
@@ -991,7 +1009,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
     } catch {
       setOrderOverride(null);
     }
-  }, [orderedEvents, tripId]);
+  }, [orderedEvents, tripId, allDays, dayId]);
 
   // Recompute travel on demand（TravelPill ⚠「重新計算」trigger）。
   // fire-and-forget 對齊 drag-reorder 路徑；完成 dispatch tp-entry-updated 觸發 refetch。
@@ -1071,9 +1089,15 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
           const segment = (prev?.id != null && entry.id != null)
             ? segmentMap.get(`${prev.id}-${entry.id}`)
             : undefined;
+          // 2026-07-06 車程重算缺口：pair 兩端都是真 entry 卻無 segment row 也無
+          // legacy travel（刪除/搬日後的新 adjacency、或缺座標 pair 永遠算不出）
+          // → 不能整顆 pill 消失（user 連 ⚠ 重算鈕都沒有，無從補救 — codex
+          // review P1）。segments ready 後才判 missing，避免載入期閃 ⚠。
+          const pairMissing = segmentsReady && !segment && !travelObj
+            && prev?.id != null && entry.id != null;
           return (
             <div key={entry.id ?? i} className="tp-rail-row-wrap">
-              {i > 0 && (travelObj || segment) && (
+              {i > 0 && (travelObj || segment || pairMissing) && (
                 <TravelPill
                   type={travelObj?.type ?? null}
                   desc={travelObj?.desc ?? null}
@@ -1086,6 +1110,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
                     distanceM: segment.distanceM,
                     computedAt: segment.computedAt,
                   } : undefined}
+                  missing={pairMissing || undefined}
                   tripId={tripId}
                   fromName={prev ? getTimelineEntryDisplayTitle(prev) : null}
                   toName={getTimelineEntryDisplayTitle(entry)}

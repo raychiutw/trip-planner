@@ -63,15 +63,16 @@ export function useTripSegments(tripId: string | null | undefined) {
         const data = await apiFetch<TripSegment[]>(`/trips/${encodeURIComponent(tripId)}/segments`);
         if (cancelled) return;
         setSegments(Array.isArray(data) ? data : []);
+        // ready 只在「成功」set：fetch 失敗的空 map ≠ 真的沒 segment，
+        // 不能餵給 self-healing 當缺 pair 證據（transient read 失敗不該
+        // 引發 write-side recompute — codex review P2）。
+        setReady(true);
       } catch {
         if (cancelled) return;
         // 留 empty — caller graceful degrade
       } finally {
         inFlight = false;
-        if (!cancelled) {
-          setLoading(false);
-          setReady(true);
-        }
+        if (!cancelled) setLoading(false);
       }
     };
 
