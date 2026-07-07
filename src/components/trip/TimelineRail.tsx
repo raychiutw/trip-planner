@@ -31,6 +31,7 @@ import { EVENT } from '../../lib/events';
 import { POI_TYPE_LABELS, type PoiType } from '../../lib/poiCategory';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import Icon from '../shared/Icon';
+import ConfirmModal from '../shared/ConfirmModal';
 import { showToast } from '../shared/Toast';
 import { useAutosave } from '../../hooks/useAutosave';
 import { ApiError } from '../../lib/errors';
@@ -820,84 +821,23 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         onClose={() => setLightboxOpen(false)}
       />
 
-      {/* Section 4.5 (terracotta-ui-parity-polish): destructive ConfirmModal
-       * 取代 window.confirm。Sentry-friendly。 */}
-      {showDeleteConfirm && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'rgba(20, 14, 9, 0.42)',
-            display: 'grid', placeItems: 'center', padding: 20,
-          }}
-          role="presentation"
-          onClick={() => !deleting && setShowDeleteConfirm(false)}
-        >
-          <div
-            role="alertdialog"
-            aria-modal="true"
-            aria-label="確認刪除景點"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: 'min(420px, 100%)',
-              borderRadius: 'var(--radius-xl)',
-              background: 'var(--color-background)',
-              color: 'var(--color-foreground)',
-              boxShadow: 'var(--shadow-lg)',
-              border: '1px solid var(--color-border)',
-              padding: 18,
-            }}
-            data-testid={`timeline-rail-delete-modal-${entry.id}`}
-          >
-            <h3 style={{ margin: 0, fontSize: 'var(--font-size-title3)', fontWeight: 800 }}>
-              確認刪除？
-            </h3>
-            <p style={{ margin: '10px 0 16px', fontSize: 'var(--font-size-callout)', color: 'var(--color-muted)' }}>
-              「{entryDisplayTitle}」將從行程中移除。此操作無法復原。
-            </p>
-            {deleteError && (
-              <p style={{ fontSize: 'var(--font-size-footnote)', color: 'var(--color-destructive)', margin: '0 0 8px' }}>
-                {deleteError}
-              </p>
-            )}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={() => void handleDeleteConfirm()}
-                data-testid={`timeline-rail-delete-confirm-${entry.id}`}
-                style={{
-                  flex: 1, minWidth: 112, minHeight: 'var(--spacing-tap-min)',
-                  borderRadius: 'var(--radius-full)',
-                  background: 'var(--color-priority-high-dot)',
-                  borderColor: 'var(--color-priority-high-dot)',
-                  color: '#fff',
-                  font: 'inherit', fontWeight: 800, fontSize: 'var(--font-size-footnote)',
-                  cursor: 'pointer', border: '1px solid',
-                }}
-              >
-                {deleting ? '刪除中…' : '確認刪除'}
-              </button>
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={() => setShowDeleteConfirm(false)}
-                data-testid={`timeline-rail-delete-cancel-${entry.id}`}
-                style={{
-                  flex: 1, minWidth: 112, minHeight: 'var(--spacing-tap-min)',
-                  borderRadius: 'var(--radius-full)',
-                  background: 'var(--color-secondary)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-foreground)',
-                  font: 'inherit', fontWeight: 800, fontSize: 'var(--font-size-footnote)',
-                  cursor: 'pointer',
-                }}
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 2026-07-07 stacking-context bug fix：原 inline modal（fixed inset:0
+       * z:1000）在 desktop 2-col 下被祖先 transform/contain 困在左欄 stacking
+       * context — backdrop 蓋不到右側 sticky 地圖、dialog 被地圖 panel 切掉。
+       * 改用 shared ConfirmModal（createPortal 到 body + --z-modal 9000），
+       * 與全站其他刪除 confirm（trip-notes / favorites / trips-list）同 pattern。 */}
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title="確認刪除？"
+        message={`「${entryDisplayTitle}」將從行程中移除。此操作無法復原。`}
+        warning={deleteError ?? undefined}
+        confirmLabel="確認刪除"
+        busy={deleting}
+        onConfirm={() => void handleDeleteConfirm()}
+        // deleting 中不可關（Escape/backdrop 也擋）— DELETE 失敗的 error 要留在
+        // modal 裡顯示（對齊原 inline 版 !deleting guard；codex review P1）
+        onCancel={() => { if (!deleting) setShowDeleteConfirm(false); }}
+      />
     </>
   );
 });
