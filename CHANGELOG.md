@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.26] - 2026-07-07
+
+### Added
+- **自訂景點頁可切換加入哪天**（user 要求：新增景點要可以選天）
+  - 盤點：搜尋加入（AddStopPage v2.31.99）與收藏加入（AddPoiFavoriteToTripPage）已有選天；**自訂景點（AddCustomStopPage）URL `?day` 鎖死不可切**是唯一缺口。
+  - 補同款 day picker chips（DAY NN + 日期）：切天走 URL replaceState，currentDay 與地圖 pre-fill 跟著重算；a11y tablist + source-grep 鎖測。
+
 ## [2.55.25] - 2026-07-07
 
 ### Changed
