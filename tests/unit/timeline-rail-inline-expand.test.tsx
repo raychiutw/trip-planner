@@ -431,3 +431,21 @@ describe('TimelineRail — cross-day drag capability', () => {
     expect(TIMELINE_RAIL_SRC).toContain('sort_order');
   });
 });
+
+describe('2026-07-07 detail 同寬 + iOS 展開（source-grep 鎖）', () => {
+  const SRC = fs.readFileSync(
+    path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
+    'utf8',
+  );
+  it('detail 與 header 卡同寬 — 不可退回 56/44px 左縮排（terracotta mockup 本為同寬）', () => {
+    expect(SRC).toMatch(/\.tp-rail-detail \{[\s\S]{0,400}margin: 4px 0 8px;/);
+    expect(SRC).not.toMatch(/margin: 4px 0 8px 56px/);
+    expect(SRC).not.toMatch(/margin: 4px 0 8px 44px/);
+  });
+  it('iOS 式高度展開：interpolate-size + @starting-style + apple bezier', () => {
+    expect(SRC).toContain('interpolate-size: allow-keywords');
+    expect(SRC).toContain('@starting-style');
+    expect(SRC).toMatch(/transition:[\s\S]{0,80}height 320ms var\(--transition-timing-function-apple/);
+    expect(SRC).toContain('@media (prefers-reduced-motion: reduce)');
+  });
+});
