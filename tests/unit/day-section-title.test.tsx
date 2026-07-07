@@ -10,6 +10,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { DndContext } from '@dnd-kit/core';
 import DaySection from '../../src/components/trip/DaySection';
 import type { Day, DaySummary } from '../../src/types/trip';
 
@@ -34,13 +35,13 @@ function makeSummary(overrides: Partial<DaySummary> = {}): DaySummary {
 describe('DaySection day title fallback', () => {
   it('day.title 存在 → 顯示 title', () => {
     render(
-      <DaySection
+      <DndContext><DaySection
         dayNum={3}
         day={makeDay({ title: '美瑛拼布之路' })}
         daySummary={makeSummary({ label: '美瑛' })}
         tripStart="2026-04-26"
         tripEnd="2026-04-30"
-      />,
+      /></DndContext>,
     );
     const heroTitle = document.querySelector('.tp-hero-title');
     expect(heroTitle?.textContent).toBe('美瑛拼布之路');
@@ -48,13 +49,13 @@ describe('DaySection day title fallback', () => {
 
   it('無 title 但有 area label → 顯示 label', () => {
     render(
-      <DaySection
+      <DndContext><DaySection
         dayNum={3}
         day={makeDay({ title: null })}
         daySummary={makeSummary({ label: '那霸' })}
         tripStart="2026-04-26"
         tripEnd="2026-04-30"
-      />,
+      /></DndContext>,
     );
     const heroTitle = document.querySelector('.tp-hero-title');
     expect(heroTitle?.textContent).toBe('那霸');
@@ -62,13 +63,13 @@ describe('DaySection day title fallback', () => {
 
   it('title + label 都無 → fallback「Day N」', () => {
     render(
-      <DaySection
+      <DndContext><DaySection
         dayNum={3}
         day={makeDay()}
         daySummary={makeSummary()}
         tripStart="2026-04-26"
         tripEnd="2026-04-30"
-      />,
+      /></DndContext>,
     );
     const heroTitle = document.querySelector('.tp-hero-title');
     expect(heroTitle?.textContent).toBe('Day 3');
@@ -76,13 +77,13 @@ describe('DaySection day title fallback', () => {
 
   it('title === area → area chip 不重複渲染', () => {
     render(
-      <DaySection
+      <DndContext><DaySection
         dayNum={3}
         day={makeDay({ title: '美瑛' })}
         daySummary={makeSummary({ label: '美瑛' })}
         tripStart="2026-04-26"
         tripEnd="2026-04-30"
-      />,
+      /></DndContext>,
     );
     const chips = document.querySelectorAll('.tp-hero-chip-muted');
     expect(chips.length).toBe(0);
@@ -90,13 +91,13 @@ describe('DaySection day title fallback', () => {
 
   it('title !== area → area chip 仍渲染', () => {
     render(
-      <DaySection
+      <DndContext><DaySection
         dayNum={3}
         day={makeDay({ title: '美瑛拼布之路' })}
         daySummary={makeSummary({ label: '美瑛' })}
         tripStart="2026-04-26"
         tripEnd="2026-04-30"
-      />,
+      /></DndContext>,
     );
     const chip = document.querySelector('.tp-hero-chip-muted');
     expect(chip?.textContent).toBe('美瑛');
@@ -104,13 +105,13 @@ describe('DaySection day title fallback', () => {
 
   it('day.title 是空白字串 → 視為無 title 走 fallback', () => {
     render(
-      <DaySection
+      <DndContext><DaySection
         dayNum={3}
         day={makeDay({ title: '   ' })}
         daySummary={makeSummary({ label: '那霸' })}
         tripStart="2026-04-26"
         tripEnd="2026-04-30"
-      />,
+      /></DndContext>,
     );
     const heroTitle = document.querySelector('.tp-hero-title');
     expect(heroTitle?.textContent).toBe('那霸');

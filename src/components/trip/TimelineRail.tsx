@@ -15,7 +15,7 @@
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import {
-  DndContext,
+  DndContext, useDndMonitor, useDroppable,
   closestCenter, type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -303,6 +303,28 @@ const SCOPED_STYLES = `
 }
 .tp-rail-grip:active { cursor: grabbing; }
 .tp-rail-grip .svg-icon { width: 16px; height: 16px; }
+
+/* 2026-07-07 跨天拖拉：拖曳懸停本日 rail 時淡高亮（drop-target 回饋）。
+ * neutral 陰影 + 淡底，不用 tone 框（三色系統雷：tone 太淺別當框）。 */
+.tp-rail-body.is-drop-target {
+  background: var(--color-secondary);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 2px var(--color-border);
+  transition: background 120ms ease-out;
+}
+/* 空日 drop 槽：dashed 空槽提示可拖入（僅 dndManaged 空日 render 時出現）。 */
+.tp-rail-body.is-empty-day {
+  min-height: 56px;
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+}
+.tp-rail-body.is-empty-day::after {
+  content: '拖曳景點到這裡';
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+}
 `;
 
 interface TimelineRailProps {
@@ -312,6 +334,17 @@ interface TimelineRailProps {
   /** v2.10 Wave 1: trip_days.id for current day — passed to RailRow for copy/move
    *  popover currentDayId + copy POST default sortOrder. Optional for tests. */
   dayId?: number | null;
+  /** 2026-07-07 跨天拖拉：true = 由外層（TripPage）統一 DndContext 管理 —
+   *  rail 不自建 context，同日 reorder 改經 useDndMonitor 接（active/over 都
+   *  屬本 rail 才處理），跨天 drop 由 TripPage onDragEnd 處理。
+   *  預設 false（EditEntryPage 等獨立頁維持自建 context 原行為）。 */
+  dndManaged?: boolean;
+}
+
+/** dndManaged 模式的事件橋 — useDndMonitor 是 hook 不能條件呼叫，抽小元件條件 render。 */
+function DndMonitorBridge({ onDragEnd }: { onDragEnd: (e: DragEndEvent) => void }) {
+  useDndMonitor({ onDragEnd });
+  return null;
 }
 
 interface RailRowProps {
@@ -374,7 +407,9 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   // (避免拖到還沒儲存的 row)。drag handle 用 grip icon button (only-source)
   // 避免跟 row click 衝突 toggle expand。
   const sortableId = entry.id ?? `idx-${index}`;
-  const sortable = useSortable({ id: sortableId, disabled: entry.id == null });
+  // 2026-07-07 跨天拖拉：data 帶 dayId — TripPage 層 DndContext 據此分流
+  // 同日（rail monitor reorder）vs 跨天（TripPage move）。
+  const sortable = useSortable({ id: sortableId, disabled: entry.id == null, data: { dayId } });
   const sortableStyle: React.CSSProperties = {
     transform: CSS.Transform.toString(sortable.transform),
     transition: sortable.transition,
@@ -869,7 +904,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   );
 });
 
-const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }: TimelineRailProps) {
+const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, dndManaged = false }: TimelineRailProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   // PR-K：local order override — drag-end 後立即套用 optimistic order，等
   // backend PATCH 完成 + tp-entry-updated 觸發 refetch 再用 fresh data 覆蓋。
@@ -942,6 +977,13 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
   const handleDragEnd = useCallback(async (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
+    // dndManaged：monitor 收到整個 TripPage context 的事件 — 只處理「active
+    // 與 over 都屬本 rail」的同日 reorder；跨天 drop 由 TripPage onDragEnd 接。
+    if (dndManaged) {
+      const activeDay = (active.data.current as { dayId?: number | null } | undefined)?.dayId;
+      const overDay = (over.data?.current as { dayId?: number | null } | undefined)?.dayId;
+      if (dayId == null || activeDay !== dayId || overDay !== dayId) return;
+    }
     const oldIdx = orderedEvents.findIndex((ev, i) => (ev.id ?? `idx-${i}`) === active.id);
     const newIdx = orderedEvents.findIndex((ev, i) => (ev.id ?? `idx-${i}`) === over.id);
     if (oldIdx < 0 || newIdx < 0) return;
@@ -976,7 +1018,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
     } catch {
       setOrderOverride(null);
     }
-  }, [orderedEvents, tripId, allDays, dayId]);
+  }, [orderedEvents, tripId, allDays, dayId, dndManaged]);
 
   // Recompute travel on demand（TravelPill ⚠「重新計算」trigger）。
   // fire-and-forget 對齊 drag-reorder 路徑；完成 dispatch tp-entry-updated 觸發 refetch。
@@ -1017,7 +1059,19 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
       });
   }, [tripId, dayId, allDays]);
 
-  if (!events || events.length === 0) return null;
+  // 2026-07-07 跨天拖拉：rail body 掛 droppable — 拖到空日（無 item 可 over）
+  // 或 rail 空白處也能 drop（data 帶 dayId 給 TripPage 判目標日，插末尾）。
+  // isOver 淡高亮當 drop-target 回饋。非 managed / 無 dayId 時 disabled。
+  // Hook 必須在 early-return 之前（rules-of-hooks）。
+  const { setNodeRef: setRailBodyRef, isOver: isRailDropOver } = useDroppable({
+    id: `tp-rail-day-${dayId ?? 'na'}`,
+    data: { dayId, railContainer: true },
+    disabled: !dndManaged || dayId == null,
+  });
+
+  // 2026-07-07 跨天拖拉：dndManaged 空日放行 — render header + 空 drop 槽
+  // （droppable body），讓「拖到還沒排的天」成立。獨立頁維持 null。
+  if ((!events || events.length === 0) && !dndManaged) return null;
 
   const firstTime = orderedEvents[0] ? parseEntryTime(orderedEvents[0]).start : '';
   const lastTime = orderedEvents[orderedEvents.length - 1]
@@ -1036,9 +1090,17 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
           {orderedEvents.length} 個停留點{firstTime && lastTime ? ` · ${firstTime}–${lastTime}` : ''}
         </span>
       </div>
-      <DndContext sensors={sensors} accessibility={TP_DRAG_ACCESSIBILITY} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      {/* 2026-07-07 跨天拖拉雙模：dndManaged = TripPage 統一 DndContext（跨 rail
+        * 拖拉 + autoScroll 捲動換天），rail 只掛 monitor 接同日 reorder；
+        * 否則（獨立頁）自建 context 維持原行為。嵌套 DndContext 會搶事件，
+        * 兩模式互斥。 */}
+      <RailDndScope
+        managed={dndManaged}
+        sensors={sensors}
+        onDragEnd={handleDragEnd}
+      >
         <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
-      <div className="tp-rail-body">
+      <div ref={setRailBodyRef} className={clsx('tp-rail-body', { 'is-drop-target': isRailDropOver, 'is-empty-day': orderedEvents.length === 0 })}>
         {/* v2.33.60 round 14: 拔 <div.tp-rail-line> orphan — CSS 已 display:none，DOM 也清掉 */}
         {orderedEvents.map((entry, i) => {
           const isPast = nowIndex >= 0 && i < nowIndex;
@@ -1102,9 +1164,31 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
         })}
       </div>
         </SortableContext>
-      </DndContext>
+      </RailDndScope>
     </div>
   );
 });
+
+/** 雙模 DnD wrapper — managed 時不建 context（外層 TripPage 提供），掛 monitor 橋。 */
+function RailDndScope({ managed, sensors, onDragEnd, children }: {
+  managed: boolean;
+  sensors: ReturnType<typeof useDragDrop>['sensors'];
+  onDragEnd: (e: DragEndEvent) => void;
+  children: React.ReactNode;
+}) {
+  if (managed) {
+    return (
+      <>
+        <DndMonitorBridge onDragEnd={onDragEnd} />
+        {children}
+      </>
+    );
+  }
+  return (
+    <DndContext sensors={sensors} accessibility={TP_DRAG_ACCESSIBILITY} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      {children}
+    </DndContext>
+  );
+}
 
 export default TimelineRail;

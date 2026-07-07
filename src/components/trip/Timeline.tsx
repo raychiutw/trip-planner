@@ -15,9 +15,11 @@ interface TimelineProps {
    *  popover (currentDayId) + PATCH/POST endpoints (target_day_id resolves
    *  via TripDaysContext day picker). */
   dayId?: number | null;
+  /** 2026-07-07 跨天拖拉：透傳 TimelineRail — TripPage 統一 DndContext 時 true。 */
+  dndManaged?: boolean;
 }
 
-export default function Timeline({ events, dayDate, localToday, dayId }: TimelineProps) {
+export default function Timeline({ events, dayDate, localToday, dayId, dndManaged }: TimelineProps) {
   const isToday = useMemo(() => {
     const today = localToday ?? new Date().toISOString().split('T')[0];
     return dayDate === today;
@@ -42,7 +44,8 @@ export default function Timeline({ events, dayDate, localToday, dayId }: Timelin
     return -1;
   }, [isToday, events]);
 
-  if (!events || events.length === 0) return null;
+  // 2026-07-07 跨天拖拉：dndManaged 空日放行 — rail render 空 drop 槽
+  if ((!events || events.length === 0) && !dndManaged) return null;
 
-  return <TimelineRail events={events} nowIndex={nowIndex} dayId={dayId} />;
+  return <TimelineRail events={events} nowIndex={nowIndex} dayId={dayId} dndManaged={dndManaged} />;
 }
