@@ -103,7 +103,7 @@ describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     fireEvent.click(screen.getByTestId('timeline-rail-delete-42'));
     // ConfirmModal open
-    expect(screen.queryByTestId('timeline-rail-delete-modal-42')).toBeTruthy();
+    expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
     // 還沒 confirm → fetch 不該被打
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
@@ -115,8 +115,8 @@ describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     fireEvent.click(screen.getByTestId('timeline-rail-delete-42'));
-    fireEvent.click(screen.getByTestId('timeline-rail-delete-cancel-42'));
-    expect(screen.queryByTestId('timeline-rail-delete-modal-42')).toBeNull();
+    fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
+    expect(screen.queryByTestId('confirm-modal')).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
