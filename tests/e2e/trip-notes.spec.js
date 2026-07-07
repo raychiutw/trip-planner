@@ -5,7 +5,7 @@
  * Verify:
  *   - /trip/:id/notes renders 5 sections with TitleBar + trip name
  *   - Each section has correct meta count
- *   - AI button present on pretrip + emergency only
+ *   - AI button present on expanded pretrip + emergency only
  *   - Click section head → expand/collapse
  *   - Empty trip → empty hero with 5 dot progress
  */
@@ -13,6 +13,15 @@ import { test, expect } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
 
 const TRIP_ID = 'okinawa-trip-2026-Ray';
+
+async function ensureSectionOpen(page, key) {
+  const head = page.getByTestId(`trip-notes-section-head-${key}`);
+  await expect(head).toBeVisible();
+  if ((await head.getAttribute('aria-expanded')) !== 'true') {
+    await head.click();
+    await expect(head).toHaveAttribute('aria-expanded', 'true');
+  }
+}
 
 const NOTES_FIXTURE = {
   flights: [
@@ -67,9 +76,11 @@ test.describe('TripNotesPage E2E happy path', () => {
     await expect(page.getByTestId('trip-notes-section-emergency')).toContainText('2 個聯絡人');
   });
 
-  test('AI button 只在 pretrip + emergency', async ({ page }) => {
+  test('AI button 只在展開的 pretrip + emergency', async ({ page }) => {
     await page.goto(`/trip/${TRIP_ID}/notes`);
     await expect(page.getByTestId('trip-notes-page')).toBeVisible({ timeout: 10000 });
+    await ensureSectionOpen(page, 'pretrip');
+    await ensureSectionOpen(page, 'emergency');
     await expect(page.getByTestId('trip-notes-ai-btn-pretrip')).toBeVisible();
     await expect(page.getByTestId('trip-notes-ai-btn-emergency')).toBeVisible();
     await expect(page.getByTestId('trip-notes-ai-btn-flights')).not.toBeVisible();
