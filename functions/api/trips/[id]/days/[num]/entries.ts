@@ -41,7 +41,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!validation.ok) throw new AppError('DATA_VALIDATION', validation.error);
 
   // 亂碼偵測
-  for (const f of ['title', 'description', 'note']) {
+  for (const f of ['name', 'description', 'note']) {
     if (f in body && typeof body[f] === 'string' && detectGarbledText(body[f] as string)) {
       throw new AppError('DATA_ENCODING', `欄位 ${f} 包含疑似亂碼，請確認 encoding 為 UTF-8`);
     }
@@ -68,9 +68,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     sortOrder = (max?.max_sort ?? -1) + 1;
   }
 
-  // Phase 2：title 必須為非空白字串（validateEntryBody 只檢 falsiness，空白字串通過）
-  const title = typeof body.title === 'string' ? body.title.trim() : '';
-  if (!title) throw new AppError('DATA_VALIDATION', 'title 不可為空白');
+  // Phase 2：name 必須為非空白字串（validateEntryBody 只檢 falsiness，空白字串通過）
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  if (!name) throw new AppError('DATA_VALIDATION', 'name 不可為空白');
 
   // Phase 2：entry 對應的 pois master（find-or-create），再回填 poi_id
   // 包在 try/catch 內統一 error path；POI 建成後若 INSERT 失敗，orphan POI
@@ -80,7 +80,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   let poiId: number | null = null;
   try {
     poiId = await findOrCreatePoi(db, {
-      name: title,
+      name,
       type: (body.poi_type as string) || 'attraction',
       description: (body.description as string | undefined) ?? null,
       lat: (body.lat as number | undefined) ?? null,
@@ -100,12 +100,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // migration 0078: trip_entries.note DROPPED — INSERT 不再帶 note；entry-level 備註
     // 改透過 syncEntryMaster 寫進新 master 的 per-POI note（下方）。
     row = await db
-      .prepare(`INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, entry_pois_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1) RETURNING *`)
+      .prepare(`INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, description, source, entry_pois_version) VALUES (?, ?, ?, ?, ?, ?, 1) RETURNING *`)
       .bind(
         dayId, sortOrder,
         startTime,
         endTime,
-        title,
         body.description ?? null,
         body.source ?? 'ai',
       )
@@ -144,7 +143,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     recordId: (row as Record<string, unknown>).id as number,
     action: 'insert',
     changedBy,
-    diffJson: JSON.stringify({ day_num: dayNum, title: body.title, sort_order: sortOrder }),
+    diffJson: JSON.stringify({ day_num: dayNum, poiName: name, sort_order: sortOrder }),
   });
 
   return json(row, 201);

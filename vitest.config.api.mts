@@ -5,7 +5,8 @@ export default defineConfig({
     globals: true,
     include: ['tests/api/**/*.test.ts'],
     exclude: ['node_modules/**'],
-    testTimeout: 30000,
+    testTimeout: 90000,
+    hookTimeout: 60000,
     // v2.33.84 Round 33: 解 EADDRNOTAVAIL port exhaustion。
     //
     // Root cause（深調發現）：

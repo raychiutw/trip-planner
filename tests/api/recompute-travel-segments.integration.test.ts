@@ -51,9 +51,9 @@ async function setupTripWithEntries(tripId: string) {
   const poiC = await seedPoi(db, { name: 'C' });
   await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(26.196, 127.6458, poiC).run(); // 那霸機場（~17km）
   // v2.29.0: seedEntry({poiId}) 已自動 INSERT trip_entry_pois sort_order=1。
-  const e1 = await seedEntry(db, day1, { sortOrder: 1, title: 'A', poiId: poiA });
-  const e2 = await seedEntry(db, day1, { sortOrder: 2, title: 'B', poiId: poiB });
-  const e3 = await seedEntry(db, day1, { sortOrder: 3, title: 'C', poiId: poiC });
+  const e1 = await seedEntry(db, day1, { sortOrder: 1, poiId: poiA });
+  const e2 = await seedEntry(db, day1, { sortOrder: 2, poiId: poiB });
+  const e3 = await seedEntry(db, day1, { sortOrder: 3, poiId: poiC });
   return { e1, e2, e3 };
 }
 
@@ -216,8 +216,8 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
       // 不更新 lat/lng → 預設 null
       const poiB = await seedPoi(db, { name: 'NoCoordB' });
       await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(26.0, 127.0, poiB).run();
-      await seedEntry(db, day1, { sortOrder: 1, title: 'A', poiId: poiA });
-      await seedEntry(db, day1, { sortOrder: 2, title: 'B', poiId: poiB });
+      await seedEntry(db, day1, { sortOrder: 1, poiId: poiA });
+      await seedEntry(db, day1, { sortOrder: 2, poiId: poiB });
 
       const ctx = mockContext({
         request: jsonRequest('https://test.com/api/trips/trip-rec-nocoord/recompute-travel?day=all', 'POST'),

@@ -47,19 +47,26 @@ async function runImport(payload: unknown): Promise<string> {
   return body.tripId!;
 }
 
-/** 取某 entry（依 title 找）的 trip_entry_pois rows（poi 名稱 + note + sort_order）。 */
-async function entryPoiNotes(tripId: string, entryTitle: string) {
+/** 取某 entry（依正選 POI 名稱找）的 trip_entry_pois rows（poi 名稱 + note + sort_order）。 */
+async function entryPoiNotesByMasterName(tripId: string, masterPoiName: string) {
   const rows = await db
     .prepare(
-      `SELECT p.name AS poi_name, tep.note AS note, tep.sort_order AS sort_order
+      `WITH target_entry AS (
+         SELECT tep.entry_id
+         FROM trip_entry_pois tep
+         JOIN trip_entries te ON te.id = tep.entry_id
+         JOIN trip_days td ON td.id = te.day_id
+         JOIN pois p ON p.id = tep.poi_id
+         WHERE td.trip_id = ? AND tep.sort_order = 1 AND p.name = ?
+         LIMIT 1
+       )
+       SELECT p.name AS poi_name, tep.note AS note, tep.sort_order AS sort_order
        FROM trip_entry_pois tep
-       JOIN trip_entries te ON te.id = tep.entry_id
-       JOIN trip_days td ON td.id = te.day_id
+       JOIN target_entry target ON target.entry_id = tep.entry_id
        JOIN pois p ON p.id = tep.poi_id
-       WHERE td.trip_id = ? AND te.title = ?
        ORDER BY tep.sort_order ASC`,
     )
-    .bind(tripId, entryTitle)
+    .bind(tripId, masterPoiName)
     .all<{ poi_name: string; note: string | null; sort_order: number }>();
   return rows.results;
 }
@@ -81,13 +88,12 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
       payloadWith('inherit', [
         {
           sortOrder: 1,
-          title: '午餐 inherit',
           note: '整體備註：記得帶現金',
           stopPois: [{ sortOrder: 1, name: '暖暮拉麵 inherit', type: 'restaurant' }],
         },
       ]),
     );
-    const rows = await entryPoiNotes(tripId, '午餐 inherit');
+    const rows = await entryPoiNotesByMasterName(tripId, '暖暮拉麵 inherit');
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ sort_order: 1, note: '整體備註：記得帶現金' });
   });
@@ -97,7 +103,6 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
       payloadWith('master-wins', [
         {
           sortOrder: 1,
-          title: '午餐 master-wins',
           note: '整體備註不該贏',
           stopPois: [
             { sortOrder: 1, name: '暖暮拉麵 master-wins', type: 'restaurant', note: '必點山苦瓜炒麵' },
@@ -105,7 +110,7 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
         },
       ]),
     );
-    const rows = await entryPoiNotes(tripId, '午餐 master-wins');
+    const rows = await entryPoiNotesByMasterName(tripId, '暖暮拉麵 master-wins');
     expect(rows).toHaveLength(1);
     expect(rows[0]!.note).toBe('必點山苦瓜炒麵');
   });
@@ -115,7 +120,6 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
       payloadWith('alts', [
         {
           sortOrder: 1,
-          title: '晚餐',
           note: '只該落在正選',
           stopPois: [
             { sortOrder: 1, name: '正選餐廳 alts', type: 'restaurant' },
@@ -125,7 +129,7 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
         },
       ]),
     );
-    const rows = await entryPoiNotes(tripId, '晚餐');
+    const rows = await entryPoiNotesByMasterName(tripId, '正選餐廳 alts');
     expect(rows).toHaveLength(3);
     // 正選（sort_order=1）繼承 entry-level note
     expect(rows.find((r) => r.sort_order === 1)!.note).toBe('只該落在正選');
@@ -139,19 +143,28 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
     // master poi 是唯一掛載點；無 POI 的 placeholder entry 其 entry-level note 丟棄（design 接受）。
     const tripId = await runImport(
       payloadWith('no-poi', [
-        { sortOrder: 1, title: '自由活動', note: '無 POI 的備註', stopPois: [] },
+        { sortOrder: 1, note: '無 POI 的備註', stopPois: [] },
       ]),
     );
-    const rows = await entryPoiNotes(tripId, '自由活動');
-    expect(rows).toHaveLength(0); // 無 trip_entry_pois row
+    const rows = await db
+      .prepare(
+        `SELECT tep.entry_id
+         FROM trip_entry_pois tep
+         JOIN trip_entries te ON te.id = tep.entry_id
+         JOIN trip_days td ON td.id = te.day_id
+         WHERE td.trip_id = ?`,
+      )
+      .bind(tripId)
+      .all<{ entry_id: number }>();
+    expect(rows.results).toHaveLength(0); // 無 trip_entry_pois row
     // entry 本身仍建立成功
     const entry = await db
       .prepare(
         `SELECT te.id AS id FROM trip_entries te
          JOIN trip_days td ON td.id = te.day_id
-         WHERE td.trip_id = ? AND te.title = ?`,
+         WHERE td.trip_id = ? AND td.day_num = 1 AND te.sort_order = 1`,
       )
-      .bind(tripId, '自由活動')
+      .bind(tripId)
       .first<{ id: number }>();
     expect(entry?.id).toBeGreaterThan(0);
   });
@@ -161,7 +174,6 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
       payloadWith('schema', [
         {
           sortOrder: 1,
-          title: '早餐',
           note: 'x',
           stopPois: [{ sortOrder: 1, name: '早餐店 schema', type: 'restaurant' }],
         },
@@ -172,7 +184,7 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
     const colNames = cols.results.map((c) => c.name);
     expect(colNames).not.toContain('note');
     // import 仍成功且正選 note 落地，間接證明 INSERT INTO trip_entries 沒帶 note。
-    const rows = await entryPoiNotes(tripId, '早餐');
+    const rows = await entryPoiNotesByMasterName(tripId, '早餐店 schema');
     expect(rows).toHaveLength(1);
     expect(rows[0]!.note).toBe('x');
   });

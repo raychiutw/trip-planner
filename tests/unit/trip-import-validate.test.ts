@@ -3,7 +3,7 @@
  * The import body is attacker-controlled: schemaVersion gate, dangerous-key
  * rejection, array caps, enum coercion (to satisfy D1 CHECK constraints),
  * entryPosition flatten order, segment idx-range filtering, camelCase→snake_case
- * notes, empty-title backfill from the master POI.
+ * notes, primary POI preservation.
  */
 import { describe, it, expect } from 'vitest';
 import { parseAndValidateImport, hasDangerousKey, MAX_DAYS } from '../../functions/api/trips/_import';
@@ -67,10 +67,10 @@ describe('parseAndValidateImport — normalization', () => {
     const positions = d.days.flatMap((day) => day.entries.map((e) => e.entryPosition));
     expect(positions).toEqual([0, 1, 2]);
   });
-  it('backfills empty entry title from the master POI name', () => {
+  it('keeps display names on primary POIs, not entry rows', () => {
     const d = ok(parseAndValidateImport(valid));
-    expect(d.days[0]!.entries[0]!.title).toBe('那霸機場'); // entry title was ''
-    expect(d.days[0]!.entries[1]!.title).toBe('午餐');     // explicit title kept
+    expect(d.days[0]!.entries[0]!.pois[0]!.name).toBe('那霸機場');
+    expect(d.days[0]!.entries[1]!.pois).toHaveLength(0);
   });
   it('keeps valid segments in idx range, mapped + coerced', () => {
     const d = ok(parseAndValidateImport(valid));

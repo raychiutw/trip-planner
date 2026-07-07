@@ -27,11 +27,10 @@ beforeAll(async () => {
   ).bind(d1EntryPoiId).run();
 
   const d1EntryId = await seedEntry(db, d1Id, {
-    title: 'Day1 Entry',
     sortOrder: 0,
     poiId: d1EntryPoiId,
   });
-  const d2EntryId = await seedEntry(db, d2Id, { title: 'Day2 Entry', sortOrder: 0 });
+  const d2EntryId = await seedEntry(db, d2Id, { sortOrder: 0 });
 
   // Day1 restaurant POI (作為 alternate)
   const d1RestId = await seedPoi(db, { type: 'restaurant', name: 'Day1 Restaurant' });
@@ -64,8 +63,8 @@ beforeAll(async () => {
   // Trip C: travel segment 測試專用 trip（day1 兩 entries 之間有 segment）
   await seedTrip(db, { id: 'trip-travel', days: 2 });
   const travelD1Id = await getDayId(db, 'trip-travel', 1);
-  const travelE1 = await seedEntry(db, travelD1Id, { title: 'Trip-Travel D1 E1', sortOrder: 0 });
-  const travelE2 = await seedEntry(db, travelD1Id, { title: 'Trip-Travel D1 E2', sortOrder: 1 });
+  const travelE1 = await seedEntry(db, travelD1Id, { sortOrder: 0 });
+  const travelE2 = await seedEntry(db, travelD1Id, { sortOrder: 1 });
   await db.prepare(
     `INSERT INTO trip_segments
      (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)

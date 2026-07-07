@@ -145,7 +145,10 @@ export function deriveTypeMeta(entry: TimelineEntryData): { icon: string; label:
   if (poiType === 'activity') return { icon: 'sparkle', label: '活動', accent: true, tone: 'accent' };
 
   // 2. Fallback：text keyword match
-  const title = (entry.title ?? '').toLowerCase();
+  const primaryPoiName = entry.stopPois?.find((p) => p.sortOrder === 1)?.name
+    ?? entry.stopPois?.[0]?.name
+    ?? '';
+  const title = (entry.displayTitle ?? primaryPoiName).toLowerCase();
   const desc = (entry.description ?? '').toLowerCase();
   const travelType = (entry.travel && typeof entry.travel === 'object' ? entry.travel.type ?? '' : '').toLowerCase();
   const blob = `${title} ${desc} ${travelType}`;

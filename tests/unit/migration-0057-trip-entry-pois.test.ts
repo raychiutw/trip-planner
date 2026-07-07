@@ -66,7 +66,7 @@ describe('migration 0057 — trip_entry_pois', () => {
     it('(b) trip_entry_pois.poi_id 不在 pois → FK enforce 阻擋或 smoke detect', async () => {
       const { id: tripId } = await seedTrip(db, { id: 'smoke-b-trip' });
       const dayId = await getDayId(db, tripId, 1);
-      const entryId = await seedEntry(db, dayId, { title: 'Entry B' });
+      const entryId = await seedEntry(db, dayId);
       const fakePoiId = 9999999;
 
       let inserted = false;
@@ -100,7 +100,7 @@ describe('migration 0057 — trip_entry_pois', () => {
       const { id: tripId } = await seedTrip(db, { id: 'smoke-c-trip' });
       const dayId = await getDayId(db, tripId, 1);
       const poiId = await seedPoi(db, { name: 'POI-Smoke-C' });
-      const entryId = await seedEntry(db, dayId, { title: 'Entry C' });
+      const entryId = await seedEntry(db, dayId);
 
       await db
         .prepare(
@@ -137,7 +137,7 @@ describe('migration 0057 — trip_entry_pois', () => {
       const { id: tripId } = await seedTrip(db, { id: 'smoke-d-trip' });
       const dayId = await getDayId(db, tripId, 1);
       const poiId = await seedPoi(db, { name: 'POI-Smoke-D' });
-      const entryId = await seedEntry(db, dayId, { title: 'Entry D' });
+      const entryId = await seedEntry(db, dayId);
       await db
         .prepare(
           'INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)',
@@ -160,7 +160,7 @@ describe('migration 0057 — trip_entry_pois', () => {
       const { id: tripId } = await seedTrip(db, { id: 'smoke-e-trip' });
       const dayId = await getDayId(db, tripId, 1);
       const poiId = await seedPoi(db, { name: 'POI-Smoke-E' });
-      const entryId = await seedEntry(db, dayId, { title: 'Entry E' });
+      const entryId = await seedEntry(db, dayId);
 
       let checkBlocked = false;
       try {
@@ -189,7 +189,7 @@ describe('migration 0057 — trip_entry_pois', () => {
       const dayId = await getDayId(db, tripId, 1);
       const p1 = await seedPoi(db, { name: 'POI-Unique-SO-A' });
       const p2 = await seedPoi(db, { name: 'POI-Unique-SO-B' });
-      const entryId = await seedEntry(db, dayId, { title: 'Entry UA' });
+      const entryId = await seedEntry(db, dayId);
 
       await db
         .prepare(
@@ -217,7 +217,7 @@ describe('migration 0057 — trip_entry_pois', () => {
       const dayId = await getDayId(db, tripId, 1);
       const p1 = await seedPoi(db, { name: 'CASC-M' });
       const p2 = await seedPoi(db, { name: 'CASC-A' });
-      const entryId = await seedEntry(db, dayId, { title: 'Entry CASC' });
+      const entryId = await seedEntry(db, dayId);
 
       await db.batch([
         db

@@ -115,7 +115,7 @@ describe('toTimelineEntry — stopPois 作為 canonical POI', () => {
         },
       ],
     });
-    expect(entry.title).toBe('午餐');
+    expect(entry.title).toBeNull();
     expect(entry.displayTitle).toBe('第一順位拉麵');
     expect(entry.poiType).toBe('restaurant');
     expect(entry.googleRating).toBe(4.6);

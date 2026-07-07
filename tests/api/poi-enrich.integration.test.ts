@@ -41,8 +41,8 @@ async function seedPoiWithPlaceId(name: string, placeId: string | null): Promise
     .bind('trip-enrich').first<{ id: number }>();
   if (day) {
     const entry = await db.prepare(
-      'INSERT INTO trip_entries (day_id, title, sort_order) VALUES (?, ?, ?) RETURNING id'
-    ).bind(day.id, name, 1000 + id).first<{ id: number }>();
+      'INSERT INTO trip_entries (day_id, sort_order) VALUES (?, ?) RETURNING id'
+    ).bind(day.id, 1000 + id).first<{ id: number }>();
     if (entry) {
       await db.prepare(
         'INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)'

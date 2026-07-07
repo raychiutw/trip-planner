@@ -20,7 +20,7 @@ const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
   // migration 0078: note DROPPED — 備註改 per-(entry, poi) trip_entry_pois.note。
   // 指向 note 的歷史 update/delete audit rollback 會在 whitelist 階段乾淨拒絕
   // （400 DATA_VALIDATION「Invalid column(s)」），不再通過後撞 "no such column: note"。
-  trip_entries:     ['id', 'day_id', 'sort_order', 'start_time', 'end_time', 'title', 'description', 'source', 'entry_pois_version', 'updated_at'],
+  trip_entries:     ['id', 'day_id', 'sort_order', 'start_time', 'end_time', 'description', 'source', 'entry_pois_version', 'updated_at'],
   pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'lat', 'lng', 'country', 'source', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at', 'price', 'photos', 'created_at', 'updated_at'],
   poi_relations:    ['id', 'poi_id', 'related_poi_id', 'relation_type', 'note'],
   trip_docs:     ['id', 'trip_id', 'doc_type', 'title', 'updated_at'],

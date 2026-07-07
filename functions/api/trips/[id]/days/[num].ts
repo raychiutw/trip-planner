@@ -176,6 +176,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const timelineEntries = Array.isArray(body.timeline) ? body.timeline : [];
   for (let i = 0; i < timelineEntries.length; i++) {
     const e = timelineEntries[i]!;
+    if ('title' in e) {
+      throw new AppError('DATA_VALIDATION', `timeline[${i}].title 已移除，請使用 name 或 stopPois`);
+    }
     if ('restaurants' in e) {
       throw new AppError('DATA_VALIDATION', `timeline[${i}].restaurants 已移除，請使用 stopPois`);
     }
@@ -185,7 +188,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     if ('poi' in e) {
       throw new AppError('DATA_VALIDATION', `timeline[${i}].poi 已移除，請使用 master 或 stopPois`);
     }
-    for (const f of ['title', 'description', 'note'] as const) {
+    for (const f of ['name', 'description', 'note'] as const) {
       const val = e[f as keyof typeof e];
       if (typeof val === 'string' && detectGarbledText(val)) {
         throw new AppError('DATA_ENCODING', `timeline[${i}].${f} 包含疑似亂碼`);
@@ -272,10 +275,10 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       const { startTime, endTime } = resolveEntryTimes(e as Record<string, unknown>);
       // migration 0078: trip_entries.note DROPPED — INSERT 不再帶 note；entry-level 備註
       // 改掛到該 entry 的 master trip_entry_pois.note（batch2 canonical-choices 路徑做
-      // coalesce、title-only 路徑透過 syncEntryMaster 傳入，見下方）。
+      // coalesce、name fallback 路徑透過 syncEntryMaster 傳入，見下方）。
       batch1.push(
-        db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description) VALUES (?, ?, ?, ?, ?, ?) RETURNING id')
-          .bind(dayId, i, startTime, endTime, e.title ?? null, e.description ?? null),
+        db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, description) VALUES (?, ?, ?, ?, ?) RETURNING id')
+          .bind(dayId, i, startTime, endTime, e.description ?? null),
       );
     }
 
@@ -345,12 +348,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     for (let i = 0; i < timeline.length; i++) {
       const e = timeline[i] as Record<string, unknown>;
       if (canonicalChoiceInputs(timeline[i]!).length > 0) continue;
-      const title = typeof e.title === 'string' ? e.title.trim() : '';
-      if (!title) continue;
+      const name = typeof e.name === 'string' ? e.name.trim() : '';
+      if (!name) continue;
       const rawType = typeof e.poi_type === 'string' ? e.poi_type : 'attraction';
       entryPoiIdx[i] = poiItems.length;
       poiItems.push({
-        name: title,
+        name,
         type: rawType,
         description: (e.description as string | undefined) ?? null,
         lat: (e.lat as number | undefined) ?? null,
@@ -535,7 +538,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
     if (batch2.length > 0) await db.batch(batch2);
 
-    // Title-only entries use the shared helper to keep the master invariant aligned
+    // Name-only entries use the shared helper to keep the master invariant aligned
     // with POST /entries and copy.ts.
     // migration 0078: 把 entry-level note 透過 syncEntryMaster 寫進新 master 的 per-POI note。
     await Promise.all(

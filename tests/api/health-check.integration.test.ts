@@ -27,7 +27,7 @@ async function seedOneEntry(tripId: string) {
     .bind(tripId)
     .first<{ id: number }>();
   if (!dayRow) throw new Error(`seedOneEntry: no trip_days for ${tripId}`);
-  await seedEntry(db, dayRow.id, { title: 'guard-fixture' });
+  await seedEntry(db, dayRow.id);
 }
 
 beforeAll(async () => {

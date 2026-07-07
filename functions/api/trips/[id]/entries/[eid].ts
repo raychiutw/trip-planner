@@ -3,7 +3,7 @@ import { hasWritePermission, verifyEntryBelongsToTrip, requireAuth, requireTripR
 import { AppError } from '../../../_errors';
 import { getAuth } from '../../../_utils';
 import { TIME_RE, parseTime } from '../../../_time';
-import { validateEntryBody, detectGarbledText } from '../../../_validate';
+import { detectGarbledText } from '../../../_validate';
 import { json, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 import { fetchEntryPoisByEntries } from '../days/_merge';
@@ -25,7 +25,8 @@ import { fetchEntryPoisByEntries } from '../days/_merge';
 // trip_entry_pois.note（正選 sort_order=1 / 備選 sort_order>1）。改走
 // PATCH /api/trips/:id/entries/:eid/pois/:poiId。此處不再 accept 'note'，帶 note
 // 會被 buildUpdateClause 的 whitelist 過濾掉（mass-assignment 防護）。
-const ALLOWED_FIELDS = ['day_id', 'sort_order', 'start_time', 'end_time', 'title', 'description', 'source'] as const;
+// Legacy entry title is no longer writable; display is primary POI name.
+const ALLOWED_FIELDS = ['day_id', 'sort_order', 'start_time', 'end_time', 'description', 'source'] as const;
 
 /**
  * GET /api/trips/:id/entries/:eid → single entry meta + canonical entry POIs.
@@ -97,16 +98,10 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
   const body = await parseJsonBody<Record<string, unknown>>(context.request);
 
-  // 驗證必填欄位（title 若包含在更新欄位中則不得為空）
-  if ('title' in body) {
-    const validation = validateEntryBody(body);
-    if (!validation.ok) throw new AppError('DATA_VALIDATION', validation.error);
-  }
-
   // 亂碼偵測：寫入 DB 前檢查文字欄位
   // migration 0078: 'note' 移除 — entry-level note 已 DROP，per-POI note 的亂碼偵測
   // 由 PATCH /entries/:eid/pois/:poiId 端點負責。
-  const textFields = ['title', 'description'];
+  const textFields = ['description'];
   for (const f of textFields) {
     if (f in body && typeof body[f] === 'string' && detectGarbledText(body[f] as string)) {
       throw new AppError('DATA_ENCODING', `欄位 ${f} 包含疑似亂碼，請確認 encoding 為 UTF-8`);

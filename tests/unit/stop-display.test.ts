@@ -28,10 +28,25 @@ describe('stopDisplay', () => {
     })).toBe('きしもと食堂');
   });
 
+  it('does not fall back to stale entry title when no POI name exists', () => {
+    expect(getStopDisplayTitle({
+      title: '東南植物樂園',
+      poiName: null,
+      poiType: 'restaurant',
+    })).toBeNull();
+  });
+
   it('prefers explicit displayTitle in timeline labels', () => {
     expect(getTimelineEntryDisplayTitle({
       title: '午餐',
       displayTitle: '敘敘苑 沖繩浦添PARCO CITY店',
     })).toBe('敘敘苑 沖繩浦添PARCO CITY店');
+  });
+
+  it('does not fall back to raw entry title in timeline labels', () => {
+    expect(getTimelineEntryDisplayTitle({
+      title: '東南植物樂園',
+      displayTitle: null,
+    })).toBe('（未選擇景點）');
   });
 });

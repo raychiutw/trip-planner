@@ -31,7 +31,7 @@ beforeAll(async () => {
   // v2.29.0: trip_entries.time DROPPED；用 start_time/end_time 直接 UPDATE。
   // migration 0078: trip_entries.note DROPPED — 備註改掛 master trip_entry_pois.note。
   masterPoiDay1Id = await seedPoi(db, { name: '美ら海水族館', type: 'attraction' });
-  entryDay1Id = await seedEntry(db, day1Id, { title: '美ら海水族館', poiId: masterPoiDay1Id });
+  entryDay1Id = await seedEntry(db, day1Id, { poiId: masterPoiDay1Id });
   await db.prepare('UPDATE trip_entries SET start_time = ?, end_time = ? WHERE id = ?')
     .bind('11:30', '14:00', entryDay1Id).run();
   // master poi 的 per-POI note（copy 時應隨 trip_entry_pois 複製過去）
@@ -56,7 +56,7 @@ describe('POST /api/trips/:id/entries/:eid/copy — Item 2', () => {
     const newRow = await resp.json() as Record<string, unknown>;
     // json() helper deep-camels keys: day_id → dayId, sort_order → sortOrder
     expect(newRow.dayId).toBe(day2Id);
-    expect(newRow.title).toBe('美ら海水族館');
+    expect(Object.prototype.hasOwnProperty.call(newRow, 'title')).toBe(false);
     // v2.29.0: trip_entries.time DROPPED — 改驗 start_time / end_time
     expect(newRow.startTime).toBe('11:30');
     expect(newRow.endTime).toBe('14:00');
@@ -130,7 +130,7 @@ describe('POST /api/trips/:id/entries/:eid/copy — Item 2', () => {
 
   it('sortOrder 不指定 → 自動追加到目標 day 末尾', async () => {
     // 在 day3 已有一筆 entry
-    const existingEid = await seedEntry(db, day3Id, { title: 'first', sortOrder: 0 });
+    const existingEid = await seedEntry(db, day3Id, { sortOrder: 0 });
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-cm/entries/${entryDay1Id}/copy`, 'POST', {
         targetDayId: day3Id,
@@ -151,7 +151,7 @@ describe('POST /api/trips/:id/entries/:eid/copy — Item 2', () => {
 describe('PATCH /api/trips/:id/entries/:eid — Item 3 move 跨天 via day_id', () => {
   let movableEid: number;
   beforeAll(async () => {
-    movableEid = await seedEntry(db, day1Id, { title: 'movable' });
+    movableEid = await seedEntry(db, day1Id);
   });
 
   it('PATCH day_id → entry 搬到目標 day → 200', async () => {

@@ -76,8 +76,9 @@ export interface TimelineEntryData {
   startTime?: string | null;
   /** 離開時間 "HH:MM"。schema source。 */
   endTime?: string | null;
-  /** Display title used by list/map UI. Keeps raw `title` intact for edit/export semantics. */
+  /** Display label used by list/map UI. Derived from the primary POI name only. */
   displayTitle?: string | null;
+  /** Legacy raw entry title. Do not use for display. */
   title?: string | null;
   description?: string | null;
   note?: string | null;

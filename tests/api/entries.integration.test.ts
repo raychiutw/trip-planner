@@ -18,7 +18,7 @@ beforeAll(async () => {
   const dayId = await getDayId(db, 'trip-e', 1);
   const poiId = await seedPoi(db, { name: 'Original POI', type: 'attraction' });
   // v2.29.0: seedEntry poiId 已自動 INSERT trip_entry_pois sort_order=1（backward-compat）
-  entryId = await seedEntry(db, dayId, { title: 'Original', poiId });
+  entryId = await seedEntry(db, dayId, { poiId });
 });
 
 afterAll(disposeMiniflare);
@@ -41,7 +41,6 @@ describe('GET /api/trips/:id/entries/:eid', () => {
     const body = await resp.json() as {
       id: number | bigint;
       dayId: number | bigint;
-      title: string;
       startTime?: string | null;
       endTime?: string | null;
       master?: { poiId: number; name: string; note?: string | null } | null;
@@ -52,7 +51,7 @@ describe('GET /api/trips/:id/entries/:eid', () => {
     };
     expect(Number(body.id)).toBe(Number(entryId));
     expect(Number(body.dayId)).toBeGreaterThan(0);
-    expect(body.title).toBeTruthy();
+    expect(Object.prototype.hasOwnProperty.call(body as Record<string, unknown>, 'title')).toBe(false);
     // v2.29.0: trip_entries.{time, poi_id} DROPPED. start_time / end_time 必出現。
     expect('startTime' in body).toBe(true);
     expect('endTime' in body).toBe(true);
@@ -74,7 +73,7 @@ describe('GET /api/trips/:id/entries/:eid', () => {
     // 非 published trip 才 403 PERM_DENIED。建獨立 trip 避免污染其他 test。
     await seedTrip(db, { id: 'trip-e-private', published: 0 });
     const privDayId = await getDayId(db, 'trip-e-private', 1);
-    const privEntryId = await seedEntry(db, privDayId, { title: 'Private' });
+    const privEntryId = await seedEntry(db, privDayId);
     const ctx = mockContext({
       request: new Request(`https://test.com/api/trips/trip-e-private/entries/${privEntryId}`, { method: 'GET' }),
       env,
@@ -106,7 +105,7 @@ describe('GET /api/trips/:id/entries/:eid', () => {
 });
 
 describe('PATCH /api/trips/:id/entries/:eid', () => {
-  it('更新 entry → 200', async () => {
+  it('PATCH legacy title request → 400（entry display name no longer writable here）', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
         title: 'Updated',
@@ -116,17 +115,17 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
       params: { id: 'trip-e', eid: String(entryId) },
     });
     const resp = await callHandler(onRequestPatch, ctx);
-    expect(resp.status).toBe(200);
-    const row = await db.prepare('SELECT title FROM trip_entries WHERE id = ?').bind(entryId).first();
-    expect((row as Record<string, unknown>).title).toBe('Updated');
+    expect(resp.status).toBe(400);
+    const { results } = await db.prepare("PRAGMA table_info('trip_entries')").all<{ name: string }>();
+    expect(results.map((r) => r.name)).not.toContain('title');
   });
 
   it('migration 0078: PATCH 帶 note 連同合法欄位 → note 被 ALLOWED_FIELDS 過濾（不寫 trip_entries）', async () => {
     // 備註已搬到 trip_entry_pois（per-POI），entry-level note 端點不再接受 note。
-    // 帶 note + 合法欄位（title）→ 200 但 note 被 whitelist 丟棄（trip_entries 已無此欄位）。
+    // 帶 note + 合法欄位（description）→ 200 但 note 被 whitelist 丟棄（trip_entries 已無此欄位）。
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        title: 'Updated-2',
+        description: 'Updated description',
         note: '應被忽略',
       }),
       env,
@@ -135,8 +134,8 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
     });
     const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
-    const row = await db.prepare('SELECT title FROM trip_entries WHERE id = ?').bind(entryId).first<{ title: string }>();
-    expect(row!.title).toBe('Updated-2');
+    const row = await db.prepare('SELECT description FROM trip_entries WHERE id = ?').bind(entryId).first<{ description: string }>();
+    expect(row!.description).toBe('Updated description');
     // trip_entries 已無 note 欄位 → PRAGMA 確認
     const { results } = await db.prepare("PRAGMA table_info('trip_entries')").all<{ name: string }>();
     expect(results.map((r) => r.name)).not.toContain('note');
@@ -293,7 +292,7 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
 describe('DELETE /api/trips/:id/entries/:eid', () => {
   it('刪除 entry → 200', async () => {
     const dayId = await getDayId(db, 'trip-e', 2);
-    const eid = await seedEntry(db, dayId, { title: 'ToDelete' });
+    const eid = await seedEntry(db, dayId);
     const ctx = mockContext({
       request: new Request(`https://test.com/api/trips/trip-e/entries/${eid}`, { method: 'DELETE', headers: { Origin: 'https://trip-planner-dby.pages.dev' } }),
       env,

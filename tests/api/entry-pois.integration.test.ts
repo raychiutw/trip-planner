@@ -54,7 +54,7 @@ async function seedEntryWithMaster(opts: {
 }): Promise<{ entryId: number; masterPoiId: number; altPoiIds: number[] }> {
   const dayId = await getDayId(db, TRIP_ID, 1);
   const masterPoiId = await seedPoi(db, { name: opts.poiName, type: 'attraction' });
-  const entryId = await seedEntry(db, dayId, { title: opts.poiName, poiId: masterPoiId });
+  const entryId = await seedEntry(db, dayId, { poiId: masterPoiId });
 
   const altPoiIds: number[] = [];
   if (opts.altPoiNames) {
@@ -320,7 +320,7 @@ describe('POST /alternates — add', () => {
 
   it('entry 無 master → 400 MISSING_MASTER', async () => {
     const dayId = await getDayId(db, TRIP_ID, 1);
-    const entryId = await seedEntry(db, dayId, { title: 'No-Master-Entry' });
+    const entryId = await seedEntry(db, dayId);
     const altPoiId = await seedPoi(db, { name: 'Lonely-Alt', type: 'restaurant' });
 
     const ctx = mockContext({
@@ -944,7 +944,7 @@ describe('GET /api/trips/:id/days/:num — multi-POI surface', () => {
       .prepare("INSERT INTO pois (name, type) VALUES ('Order Two Soba', 'restaurant') RETURNING id")
       .first<{ id: number }>();
     // 不傳 poiId 給 seedEntry 以避免 auto-INSERT trip_entry_pois 跟下方 explicit INSERT 衝突。
-    const entryId = await seedEntry(db, dayId, { title: '午餐' });
+    const entryId = await seedEntry(db, dayId);
     await db.batch([
       db
         .prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)')
@@ -1002,7 +1002,7 @@ describe('v2.28.0 — alternates 含 restaurant 欄位 (price/hours/reservation)
     const dayId = await getDayId(db, TRIP_ID, 1);
     // v2.29.0: trip_entries.{time, poi_id} DROPPED. 用 start_time + trip_entry_pois 寫 master。
     const entry = await db.prepare(
-      "INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 99, '18:00', 'R-Entry') RETURNING id"
+      "INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 99, '18:00') RETURNING id"
     ).bind(dayId).first<{ id: number }>();
 
     await db.batch([
@@ -1067,7 +1067,7 @@ describe('v2.28.0 — alternates 含 restaurant 欄位 (price/hours/reservation)
     ).first<{ id: number }>();
     const dayId = await getDayId(db, TRIP_ID, 1);
     const entry = await db.prepare(
-      "INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 100, '09:00', 'R-Attr-Entry') RETURNING id"
+      "INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 100, '09:00') RETURNING id"
     ).bind(dayId).first<{ id: number }>();
     await db.batch([
       db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, masterPoi!.id),
@@ -1103,7 +1103,7 @@ describe('POST /api/trips/:id/days/:num/entries — syncEntryMaster', () => {
         `https://test.com/api/trips/${TRIP_ID}/days/1/entries`,
         'POST',
         {
-          title: 'SyncMasterEntry-1',
+          name: 'SyncMasterEntry-1',
           time: '14:00',
           poi_type: 'attraction',
           rating: 4.0,
@@ -1141,7 +1141,7 @@ describe('POST /api/trips/:id/days/:num/entries — syncEntryMaster', () => {
         `https://test.com/api/trips/${TRIP_ID}/days/1/entries`,
         'POST',
         {
-          title: 'PostNoteEntry',
+          name: 'PostNoteEntry',
           time: '15:00',
           poi_type: 'restaurant',
           note: '必點招牌拉麵',
@@ -1169,7 +1169,7 @@ describe('POST /api/trips/:id/days/:num/entries — syncEntryMaster', () => {
       request: jsonRequest(
         `https://test.com/api/trips/${TRIP_ID}/days/1/entries`,
         'POST',
-        { title: 'PostGarbledNote', time: '16:00', poi_type: 'restaurant', note: '備註���亂碼' },
+        { name: 'PostGarbledNote', time: '16:00', poi_type: 'restaurant', note: '備註���亂碼' },
       ),
       env,
       auth: mockAuth({ email: USER_EMAIL }),
@@ -1228,8 +1228,8 @@ describe('Segment recompute trigger', () => {
     const p2 = await seedPoi(db, { name: 'Seg-P2', type: 'attraction' });
     const altP = await seedPoi(db, { name: 'Seg-Alt', type: 'attraction' });
     // v2.29.0: seedEntry({poiId}) 自動 INSERT trip_entry_pois sort_order=1，不必再 explicit INSERT master。
-    const e1 = await seedEntry(db, dayId, { title: 'Seg-E1', poiId: p1 });
-    const e2 = await seedEntry(db, dayId, { title: 'Seg-E2', poiId: p2, sortOrder: 2 });
+    const e1 = await seedEntry(db, dayId, { poiId: p1 });
+    const e2 = await seedEntry(db, dayId, { poiId: p2, sortOrder: 2 });
     await db.batch([
       db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(e2, altP),
       db
@@ -1480,7 +1480,7 @@ describe('migration 0078 — syncEntryMaster optional note 參數', () => {
     const trip = await seedTrip(db, { id: 'm78-sync-note-insert' });
     const dayId = await getDayId(db, trip.id, 1);
     const poi = await db.prepare("INSERT INTO pois (name, type) VALUES ('M78-INS', 'attraction') RETURNING id").first<{ id: number }>();
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '10:00', 'M78-INS') RETURNING id").bind(dayId).first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '10:00') RETURNING id").bind(dayId).first<{ id: number }>();
 
     await syncEntryMaster(db, entry!.id, poi!.id, '整體備註注入 master');
 
@@ -1494,7 +1494,7 @@ describe('migration 0078 — syncEntryMaster optional note 參數', () => {
     const trip = await seedTrip(db, { id: 'm78-sync-note-omit' });
     const dayId = await getDayId(db, trip.id, 1);
     const poi = await db.prepare("INSERT INTO pois (name, type) VALUES ('M78-OMIT', 'attraction') RETURNING id").first<{ id: number }>();
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '10:00', 'M78-OMIT') RETURNING id").bind(dayId).first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '10:00') RETURNING id").bind(dayId).first<{ id: number }>();
 
     await syncEntryMaster(db, entry!.id, poi!.id);
 
@@ -1507,7 +1507,7 @@ describe('migration 0078 — syncEntryMaster optional note 參數', () => {
     const trip = await seedTrip(db, { id: 'm78-sync-note-null' });
     const dayId = await getDayId(db, trip.id, 1);
     const poi = await db.prepare("INSERT INTO pois (name, type) VALUES ('M78-NULL', 'attraction') RETURNING id").first<{ id: number }>();
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '10:00', 'M78-NULL') RETURNING id").bind(dayId).first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '10:00') RETURNING id").bind(dayId).first<{ id: number }>();
 
     await syncEntryMaster(db, entry!.id, poi!.id, null);
 
@@ -1526,7 +1526,7 @@ describe('Round 9 — syncEntryMaster INSERT/naked UPDATE bump entry_pois_versio
     const poi = await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-INS-POI', 'attraction') RETURNING id").first<{ id: number }>();
     // 故意建 entry 後不 INSERT trip_entry_pois，模擬 entry-create 中間狀態
     // v2.29.0: trip_entries.{time, poi_id} DROPPED. 用 start_time 寫 schedule。
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '10:00', 'R9-INS') RETURNING id").bind(dayId).first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '10:00') RETURNING id").bind(dayId).first<{ id: number }>();
     const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry!.id).first<{ v: number }>();
 
     await syncEntryMaster(db, entry!.id, poi!.id);
@@ -1545,7 +1545,7 @@ describe('Round 9 — syncEntryMaster INSERT/naked UPDATE bump entry_pois_versio
     const poiOld = await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-OldMaster', 'attraction') RETURNING id").first<{ id: number }>();
     const poiNew = await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-NewMaster', 'attraction') RETURNING id").first<{ id: number }>();
     // v2.29.0: trip_entries.{time, poi_id} DROPPED. 用 start_time + trip_entry_pois 寫 master。
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '11:00', 'R9-UPD') RETURNING id").bind(dayId).first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '11:00') RETURNING id").bind(dayId).first<{ id: number }>();
     await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, poiOld!.id).run();
     const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry!.id).first<{ v: number }>();
 
@@ -1563,7 +1563,7 @@ describe('Round 9 — syncEntryMaster INSERT/naked UPDATE bump entry_pois_versio
     const dayId = await getDayId(db, trip.id, 1);
     const poi = await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-NoOp', 'attraction') RETURNING id").first<{ id: number }>();
     // v2.29.0: trip_entries.{time, poi_id} DROPPED. 用 start_time + trip_entry_pois 寫 master。
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '12:00', 'R9-NoOp') RETURNING id").bind(dayId).first<{ id: number }>();
+    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '12:00') RETURNING id").bind(dayId).first<{ id: number }>();
     await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, poi!.id).run();
     const v0 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry!.id).first<{ v: number }>();
 

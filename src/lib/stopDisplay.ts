@@ -23,11 +23,10 @@ export function isGenericMealStopTitle(title?: string | null): boolean {
 }
 
 export function getStopDisplayTitle(input: StopDisplayInput): string | null {
-  const title = clean(input.title);
   const poiName = clean(input.poiName);
-  return poiName ?? title;
+  return poiName;
 }
 
 export function getTimelineEntryDisplayTitle(entry: TimelineDisplayInput): string {
-  return clean(entry.displayTitle) ?? clean(entry.title) ?? '（無標題）';
+  return clean(entry.displayTitle) ?? '（未選擇景點）';
 }

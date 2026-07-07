@@ -7,31 +7,37 @@ import { validateEntryBody } from '../../functions/api/_validate';
  */
 
 describe('validateEntryBody — 必填欄位缺失', () => {
-  it('缺 title → 400', () => {
+  it('缺 name → 400', () => {
     const result = validateEntryBody({});
     expect(result.ok).toBe(false);
     expect(result.status).toBe(400);
-    expect(result.error).toContain('title');
+    expect(result.error).toContain('name');
   });
 
-  it('title 為空字串 → 400', () => {
-    const result = validateEntryBody({ title: '' });
+  it('name 為空字串 → 400', () => {
+    const result = validateEntryBody({ name: '' });
     expect(result.ok).toBe(false);
     expect(result.status).toBe(400);
-    expect(result.error).toContain('title');
+    expect(result.error).toContain('name');
   });
 
-  it('title 為 null → 400', () => {
-    const result = validateEntryBody({ title: null as unknown as string });
+  it('name 為 null → 400', () => {
+    const result = validateEntryBody({ name: null as unknown as string });
     expect(result.ok).toBe(false);
     expect(result.status).toBe(400);
-    expect(result.error).toContain('title');
+    expect(result.error).toContain('name');
+  });
+
+  it('舊 title 不再通過驗證', () => {
+    const result = validateEntryBody({ title: '首里城' });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('name');
   });
 });
 
 describe('validateEntryBody — 必填欄位完整', () => {
-  it('提供 title → 通過驗證', () => {
-    const result = validateEntryBody({ title: '首里城' });
+  it('提供 name → 通過驗證', () => {
+    const result = validateEntryBody({ name: '首里城' });
     expect(result.ok).toBe(true);
     expect(result.status).toBe(200);
     expect(result.error).toBeUndefined();
@@ -39,7 +45,7 @@ describe('validateEntryBody — 必填欄位完整', () => {
 
   it('含額外欄位也通過驗證', () => {
     const result = validateEntryBody({
-      title: '美麗海水族館',
+      name: '美麗海水族館',
       time: '10:00',
       description: '世界第二大的水族館',
       googleRating: 4.5,
@@ -53,6 +59,6 @@ describe('validateEntryBody — 錯誤訊息格式', () => {
   it('錯誤訊息包含 "必填欄位缺失"', () => {
     const result = validateEntryBody({});
     expect(result.ok).toBe(false);
-    expect(result.error).toBe('必填欄位缺失: title');
+    expect(result.error).toBe('必填欄位缺失: name');
   });
 });

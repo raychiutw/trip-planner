@@ -507,7 +507,7 @@ export async function reorderAlternates(
  * 場景下既有 entry 也會走 naked UPDATE path 而不 bump，讓 outstanding setMaster token
  * 誤判為 fresh（adversarial round 6 #1）。
  *
- * migration 0078: 可選 `note` 參數 —— entry-create 路徑（POST /entries、PUT /days title-only）
+ * migration 0078: 可選 `note` 參數 —— entry-create 路徑（POST /entries、PUT /days name fallback）
  * 把 entry-level 備註寫進「新建 master」的 per-POI note。**只作用於 INSERT(new master) 分支**：
  *   - 既有呼叫端不傳 note（undefined）→ 行為完全不變（向後相容）。
  *   - 顯式傳 null → master.note 寫 NULL。
