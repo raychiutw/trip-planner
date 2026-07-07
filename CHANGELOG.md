@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.32] - 2026-07-08
+
+### Fixed
+- **手機拖拉景點「拖不動」修正**（真機 iPhone 實測抓到主因，非功能壞掉）
+  - 時間軸拖拉握把（≣）在觸控裝置原本 `opacity: 0.4` 且靠 `:hover` 才變亮 → 手機無 hover，握把永遠淡；又只有 24px（< 44px HIG）；加上要長按 200ms 才進拖拉，三者疊在一起讓 user 在手機上找不到／按不到把手。跨天拖拉與同日排序機制本身正常（PATCH + DB 都驗過）。
+  - `@media (hover: none)`：握把常駐 `opacity: 1`；`::before` inset hit-slop 把觸控目標撐到 44px（視覺 icon 仍 24px、不動 grid）。
+  - 長按門檻 200→150ms（5px tolerance 不變，仍擋捲動誤觸）；長按／拖曳中握把變 accent + `scale(1.18)`，給「已抓住」即時視覺回饋。
+  - `DESIGN.md`（drag handle a11y 例外）+ `terracotta-preview-v2.html` mockup 同步。
+
 ## [2.55.31] - 2026-07-08
 
 ### Added
