@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.29] - 2026-07-07
+
+### Fixed
+- **tp-request 大請求做不完 + session 無法驗屍**（request #237「調整每天午晚餐餐廳」兩次處理 session 死掉、user 等不到回應）
+  - **Root cause**：`ORPHAN_MAX_AGE_MS=30min` 誤殺還在工作的大 request session（多天多景點搜尋 >30min）→ 反覆重做永遠做不完。30min 原為配合 token TTL(1h) 的保守值。
+  - 修：orphan 上限 30→**90 分鐘**；SKILL.md 加「長工作每 ~40 分鐘重取 token」續命指引（skill 本就自跑 get-tripline-token，TTL 不再是壽命上限）+ 90 分鐘做不完應分批 reply 進度。
+  - **可觀測性**：spawn 後 `tmux pipe-pane` 把 session 輸出寫進 `scripts/logs/<skill>/<session>.log` — 兩次驗屍都因 tmux buffer 即逝失敗，之後 orphan/crash 有屍可驗。
+  - 純 mac mini ops（api-server 需重啟生效），不影響 CF Pages app。
+
 ## [2.55.28] - 2026-07-07
 
 ### Fixed

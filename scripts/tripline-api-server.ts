@@ -87,10 +87,16 @@ const tokenHelper = require(TOKEN_HELPER) as {
 // v2.30.7: 改用 ephemeral tmux session 跑 claude（非 -p）。每個 /trigger 開
 // 一個 session（v2.33.27 起 per-skill 命名 `tripline-{slug}-<timestamp>-<pid>`，
 // 例 `tripline-tp-request-...` / `tripline-tp-daily-check-...`），skill 處理完
-// 所有 request 後自殺（SKILL.md 結尾 tmux kill-session）。Orphan > 30min 由
-// cleanupOrphans 強取回收，token TTL (1h) 之內保證 cleanup。
-
-const ORPHAN_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+// 所有 request 後自殺（SKILL.md 結尾 tmux kill-session）。Orphan 由
+// cleanupOrphans 強制回收。
+//
+// 2026-07-07 request #237 incident：30min 上限會**誤殺還在工作的大 request
+// session**（5 天×午晚餐×高評價餐廳搜尋 >30min）→ 反覆重做永遠做不完。
+// 原 30min 是配合 token TTL (1h) 的保守值 — 現 SKILL.md 已加「長工作每
+// ~40min 重取 token」指引（skill 本就自跑 get-tripline-token），TTL 不再是
+// session 壽命上限。90min 平衡「大 request 完成窗」vs「真卡死 block 後續
+// cron」（cron 10min 一輪，卡死最多 block 9 輪）。
+const ORPHAN_MAX_AGE_MS = 90 * 60 * 1000; // 90 minutes
 // v2.33.110: cleanupOrphans / hasActiveSession 的 prefix 從 allowlist derive，
 // 不再 hardcode。原本 SESSION_PREFIX = 'tripline-request-' 僅 match legacy（v2.33.26 前）
 // → v2.33.27 per-skill rename 後 orphan `tripline-tp-*-*` 完全不被清 → hasActiveSession
@@ -263,6 +269,21 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
     logError(`tmux send-keys failed: ${send.stderr || ''}`);
     spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
     return false;
+  }
+
+  // 2026-07-07 可觀測性：session 輸出 pipe 到持久 log — request #237 兩次
+  // session 死掉（orphan 清除 / 中途結束）都因 tmux buffer 即逝無從驗屍。
+  // pipe-pane 失敗不阻擋 spawn（best-effort）。
+  try {
+    const skillSlug = skillCommand.replace(/^\//, '').replace(/[^a-zA-Z0-9-]/g, '-');
+    const sessionLogDir = join(PROJECT_DIR, 'scripts', 'logs', skillSlug);
+    mkdirSync(sessionLogDir, { recursive: true });
+    const pipe = spawnSync(TMUX_BIN, [
+      'pipe-pane', '-t', sessionName, '-o', `cat >> '${join(sessionLogDir, `${sessionName}.log`)}'`,
+    ], { encoding: 'utf-8' });
+    if (pipe.status !== 0) logError(`tmux pipe-pane failed (non-blocking): ${pipe.stderr || ''}`);
+  } catch (err) {
+    logError(`session log pipe setup failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
   }
 
   log(`Spawned tmux session: ${sessionName} (skill=${skillCommand}, fire-and-forget; skill self-destructs at end)`);
