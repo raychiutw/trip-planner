@@ -25,6 +25,7 @@ import { apiFetchRaw } from '../../lib/apiClient';
 import { ApiError } from '../../lib/errors';
 import { EVENT } from '../../lib/events';
 import { useAutosave } from '../../hooks/useAutosave';
+import { formatDistance } from '../../lib/timelineUtils';
 import type { TravelMode } from '../../lib/travelMode';
 
 // v2.33.91: 移除本地 type 宣告，從 lib/travelMode canonical 來源 import + 為 backward-compat
@@ -195,9 +196,9 @@ const MODE_DEFINITIONS: Array<{ mode: TravelMode; label: string; iconName: strin
     iconName: 'car',
     describe: ({ distanceM, currentMin, isSelected }) => {
       if (isSelected && currentMin && currentMin > 0) {
-        return `${currentMin} min${distanceM ? ` · ${formatKm(distanceM)}` : ''} · Google Routes`;
+        return `${currentMin} min${distanceM ? ` · ${formatDistance(distanceM)}` : ''} · Google Routes`;
       }
-      return distanceM ? `距離 ${formatKm(distanceM)}` : '系統估算';
+      return distanceM ? `距離 ${formatDistance(distanceM)}` : '系統估算';
     },
   },
   {
@@ -206,11 +207,11 @@ const MODE_DEFINITIONS: Array<{ mode: TravelMode; label: string; iconName: strin
     iconName: 'walking',
     describe: ({ distanceM, currentMin, isSelected }) => {
       if (isSelected && currentMin && currentMin > 0) {
-        return `${currentMin} min${distanceM ? ` · ${formatKm(distanceM)}` : ''} · Google Routes`;
+        return `${currentMin} min${distanceM ? ` · ${formatDistance(distanceM)}` : ''} · Google Routes`;
       }
       if (distanceM && distanceM > 0) {
         const estMin = Math.round((distanceM / 1000) * 12); // ~5km/h
-        return `距離 ${formatKm(distanceM)} · 估 ${estMin} min`;
+        return `距離 ${formatDistance(distanceM)} · 估 ${estMin} min`;
       }
       return '系統估算';
     },
@@ -227,11 +228,6 @@ const MODE_DEFINITIONS: Array<{ mode: TravelMode; label: string; iconName: strin
     },
   },
 ];
-
-function formatKm(m: number): string {
-  if (m >= 1000) return `${(m / 1000).toFixed(1)} km`;
-  return `${Math.round(m / 50) * 50} m`;
-}
 
 interface SegmentPatchBody {
   mode: TravelMode;
@@ -379,7 +375,7 @@ export default function TravelPillDialog({
             <p className="tp-travel-dialog-meta">
               {fromName && toName ? `${fromName} → ${toName}` : ''}
               {(fromName || toName) && typeof distanceM === 'number' && distanceM > 0 ? ' · ' : ''}
-              {typeof distanceM === 'number' && distanceM > 0 ? formatKm(distanceM) : ''}
+              {typeof distanceM === 'number' && distanceM > 0 ? formatDistance(distanceM) : ''}
             </p>
           )}
           <div className="tp-travel-mode-list">

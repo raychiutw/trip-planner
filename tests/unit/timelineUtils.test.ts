@@ -16,7 +16,7 @@ import path from 'path';
    v2.33.91: parseTimeRange 删（v2.29.0 trip_entries.time DROPPED 後死碼），改 parseEntryTime
    ============================================================ */
 
-import { formatDuration, formatDurationCompact, formatTimeRange, deriveTypeMeta, poiTypeToTone } from '../../src/lib/timelineUtils';
+import { formatDuration, formatDurationCompact, formatTimeRange, formatDistance, deriveTypeMeta, poiTypeToTone } from '../../src/lib/timelineUtils';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
 
 describe('formatTimeRange', () => {
@@ -77,6 +77,22 @@ describe('formatDurationCompact', () => {
   it('60 → "1 hr"', () => { expect(formatDurationCompact(60)).toBe('1 hr'); });
   it('90 → "1.5 hr"', () => { expect(formatDurationCompact(90)).toBe('1.5 hr'); });
   it('240 → "4 hr"', () => { expect(formatDurationCompact(240)).toBe('4 hr'); });
+});
+
+describe('formatDistance', () => {
+  // ≥10 km → 整數（regression：30000 曾在景點明細/dialog 顯「30.0 km」與 timeline drift）
+  it('30000 → "30 km"（整數，不帶小數）', () => { expect(formatDistance(30000)).toBe('30 km'); });
+  it('10000 → "10 km"（≥10km 邊界）', () => { expect(formatDistance(10000)).toBe('10 km'); });
+  it('12500 → "13 km"（四捨五入到整 km）', () => { expect(formatDistance(12500)).toBe('13 km'); });
+  // 1–10 km → 1 位小數，整 km 去尾 0
+  it('5300 → "5.3 km"', () => { expect(formatDistance(5300)).toBe('5.3 km'); });
+  it('1500 → "1.5 km"', () => { expect(formatDistance(1500)).toBe('1.5 km'); });
+  it('2000 → "2 km"（整 km 去尾 0）', () => { expect(formatDistance(2000)).toBe('2 km'); });
+  it('1000 → "1 km"（≥1km 邊界）', () => { expect(formatDistance(1000)).toBe('1 km'); });
+  // <1 km → 最近 50m
+  it('350 → "350 m"', () => { expect(formatDistance(350)).toBe('350 m'); });
+  it('340 → "350 m"（round to 50）', () => { expect(formatDistance(340)).toBe('350 m'); });
+  it('999 → "1000 m"（<1km 上緣 round）', () => { expect(formatDistance(999)).toBe('1000 m'); });
 });
 
 describe('deriveTypeMeta', () => {

@@ -42,7 +42,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useAutosave } from '../hooks/useAutosave';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
-import { poiTypeToTone } from '../lib/timelineUtils';
+import { poiTypeToTone, formatDistance } from '../lib/timelineUtils';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { requestTravelRecompute } from '../lib/travelRecompute';
@@ -697,11 +697,6 @@ function durationMinutes(start: string, end: string): number | null {
   return diff > 0 ? diff : null;
 }
 
-function formatKm(m: number | null): string | null {
-  if (typeof m !== 'number' || m <= 0) return null;
-  if (m >= 1000) return `${(m / 1000).toFixed(1)} km`;
-  return `${Math.round(m / 50) * 50} m`;
-}
 
 // Restaurant / coord fields shared between init useEffect and refreshEntryPois —
 // 抽 helper 避免 drift（v2.28.0 ship 時 refresh path 漏抄 restaurant fields → swap 後 chips 消失）。
@@ -1174,8 +1169,7 @@ export default function EditEntryPage() {
     if (!center) return null;
     const d = haversineMeters({ lat, lng }, center);
     if (d <= CROSS_REGION_THRESHOLD_M) return null;
-    const km = d >= 100_000 ? Math.round(d / 1000) : Number((d / 1000).toFixed(1));
-    return `新正選距離本日其他點約 ${km} km，可能跨區，前後車程會誤算。確定要設為正選？`;
+    return `新正選距離本日其他點約 ${formatDistance(d)}，可能跨區，前後車程會誤算。確定要設為正選？`;
   }, [altSwapConfirm, siblingMasterCoords]);
 
   const handleSave = useCallback(async () => {
@@ -1786,7 +1780,7 @@ export default function EditEntryPage() {
                         <>
                           <span>
                             {typeof segment.min === 'number' && segment.min > 0 ? (
-                              <><strong>{segment.min} min</strong>{segment.distanceM ? ` · ${formatKm(segment.distanceM)}` : ''}</>
+                              <><strong>{segment.min} min</strong>{segment.distanceM ? ` · ${formatDistance(segment.distanceM)}` : ''}</>
                             ) : (
                               '系統估算'
                             )}

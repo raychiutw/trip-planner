@@ -78,6 +78,25 @@ export function formatDurationCompact(mins: number): string {
 }
 
 /**
+ * 車程距離 meters → human label。timeline TravelPill / 景點明細車程 / 車程 dialog
+ * 三處單一 SoT（曾各自 copy → drift：30000m 有的顯「30.0 km」有的「30 km」）。
+ *   ≥10 km → "X km"（整數，整 km 不帶小數）
+ *   ≥1 km  → "X.X km"（短距離保留 1 位小數區分 1.5 vs 2.0；整 km 去尾 0）
+ *   <1 km  → "Y00 m"（rounded to 50m）
+ * 對應 mockup .tp-detail-travel 顯示風格："4.2 km" / "30 km" / "350 m"。
+ */
+export function formatDistance(m: number): string {
+  if (m >= 10000) return `${Math.round(m / 1000)} km`;
+  if (m >= 1000) {
+    const km = m / 1000;
+    const display = Number.isInteger(km) ? String(km) : km.toFixed(1).replace(/\.0$/, '');
+    return `${display} km`;
+  }
+  const rounded = Math.round(m / 50) * 50;
+  return `${rounded} m`;
+}
+
+/**
  * 格式化抵達–離開時間區間（timeline sub-line 用）。en-dash「–」分隔，對齊區間排版慣例。
  *   "09:00", "13:00" → "09:00–13:00"（抵達 + 離開）
  *   "09:00", ""      → "09:00"（只抵達）

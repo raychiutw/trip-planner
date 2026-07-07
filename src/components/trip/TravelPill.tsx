@@ -22,6 +22,7 @@ import { useState } from 'react';
 import Icon from '../shared/Icon';
 import TravelPillDialog, { type TravelMode } from './TravelPillDialog';
 import { TRAVEL_MODE_LABEL } from '../../lib/travelMode';
+import { formatDistance } from '../../lib/timelineUtils';
 
 const SCOPED_STYLES = `
 .tp-travel-pill-wrap {
@@ -186,24 +187,6 @@ export interface TravelPillProps {
   toName?: string | null;
   /** ⚠ button 點擊 callback（caller 呼叫 recompute-travel endpoint） */
   onRecompute?: () => void;
-}
-
-/**
- * Format distance in meters → human label.
- *  ≥10 km → "X km"（整數，整 km 不帶小數）
- *  ≥1 km → "X.X km"（短距離保留 1 位小數區分 1.5 vs 2.0）
- *  <1 km → "Y00 m"（rounded to 50m）
- * 對應 mockup .tp-detail-travel:6258 顯示風格："4.2 km" / "30 km" / "5.4 km"。
- */
-function formatDistance(m: number): string {
-  if (m >= 10000) return `${Math.round(m / 1000)} km`;
-  if (m >= 1000) {
-    const km = m / 1000;
-    const display = Number.isInteger(km) ? String(km) : km.toFixed(1).replace(/\.0$/, '');
-    return `${display} km`;
-  }
-  const rounded = Math.round(m / 50) * 50;
-  return `${rounded} m`;
 }
 
 export default function TravelPill({
