@@ -1,8 +1,8 @@
 /**
  * v2.31.91：chat bubble 內 markdown link 改用 site terracotta 風格
- * （user feedback：「健檢報告連結 樣式不符合網站風格」— browser 預設藍/紫 underline）。
+ * （user feedback：「報告連結 樣式不符合網站風格」— browser 預設藍/紫 underline）。
  *
- * AI 健檢 reply 含 markdown `[前往健檢報告](/trip/:id/health)` link，MarkdownText
+ * AI reply 含 markdown `[前往行程筆記](/trip/:id/notes)` link，MarkdownText
  * 渲染 <a>，現在套 site accent color + subtle underline 對齊 terracotta UX。
  */
 import { describe, it, expect } from 'vitest';

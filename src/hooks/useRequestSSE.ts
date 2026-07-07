@@ -35,8 +35,8 @@ const SAFETY_NET_POLL_INTERVAL_MS = 30_000;
 // v2.33.31 (simplify PR-4): tick at minute boundary, not every second.
 // UI consumers (ChatPage:944-946) only read elapsedMs in 1-minute buckets
 // (`>= 3 * 60 * 1000` threshold + `Math.floor(elapsedMs / 60_000)` display),
-// so per-second setState forced ChatPage to re-render up to 900× per AI-health-check
-// wait (5-15 min). Tick once per minute via setInterval keeps the value fresh
+// so per-second setState forced ChatPage to re-render up to 900× per long AI
+// request wait (5-15 min). Tick once per minute via setInterval keeps the value fresh
 // enough for the 3-minute threshold without burning React renders.
 const ELAPSED_TICK_MS = 60_000;
 
@@ -142,7 +142,7 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
       }
     };
     // v2.33.39 round 4: 立即 fire 一次，原本只 schedule 30s 後第一次 poll，
-    // AI 健檢可能 7s 內 SSE silent-fail 就完成（user 等 30s 才看到結果）。
+    // 長 AI 請求（如行程筆記）可能 7s 內 SSE silent-fail 就完成（user 等 30s 才看到結果）。
     void pollOnce();
     pollTimerRef.current = setInterval(() => { void pollOnce(); }, SAFETY_NET_POLL_INTERVAL_MS);
 

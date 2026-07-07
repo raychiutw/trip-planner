@@ -6,7 +6,7 @@
  * type 限 'lodging-tips' / 'tips' / 'emergency'（對齊 design doc Premise 6 +
  * trip_note_ai_jobs.doc_type CHECK enum）。
  *
- * Flow（對齊 v2.33.102 CR-7 health-check pattern）：
+ * Flow（trip_requests + linkage job pattern）：
  *   1. INSERT trip_requests (message = '[行程筆記-{type}] ...' AI prompt) RETURNING id
  *   2. INSERT trip_note_ai_jobs (request_id, trip_id, doc_type, status='pending')
  *      → linkage row 對齊 CR-8 confused-deputy fix

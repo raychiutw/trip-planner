@@ -1,7 +1,7 @@
 /**
  * v2.33.6 feat — TripPage 右上「⋯」EmbeddedActionMenu 加「編輯行程」入口。
  *
- * 既有 menu: 共編設定 / AI 健檢 / 列印 / 下載格式
+ * 既有 menu: 共編設定 / 列印 / 下載格式
  * 新增: 編輯行程（放在最前，呼應 trip card menu 順序）
  */
 import { describe, it, expect } from 'vitest';

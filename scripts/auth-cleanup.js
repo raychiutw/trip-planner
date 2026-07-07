@@ -38,7 +38,6 @@ if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CF_ACCOUNT_ID || !process.
     companion_request_actions: 0,
     error_reports: 0,
     // v2.33.61 round 14b
-    trip_health_reports: 0,
     api_logs: 0,
   };
 
@@ -84,14 +83,7 @@ if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CF_ACCOUNT_ID || !process.
     "DELETE FROM error_reports WHERE created_at < datetime('now', '-90 days')"
   );
 
-  // 8. trip_health_reports — v2.33.61: findings_json 含 trip 自由文 (emergency
-  //    contact / address / 醫療資訊等 PII)。30 天 stale = user 沒 re-trigger 健檢，
-  //    舊 finding 無人讀，刪掉。trip_id PK upsert 模式 — 沒 cron 跑就無限保留。
-  report.trip_health_reports = await execD1(
-    "DELETE FROM trip_health_reports WHERE completed_at IS NOT NULL AND completed_at < datetime('now', '-30 days')"
-  );
-
-  // 9. api_logs — v2.33.61: 之前在 daily-report.js 跑 (mac mini 單點故障，
+  // 8. api_logs — v2.33.61: 之前在 daily-report.js 跑 (mac mini 單點故障，
   //    機器 offline > 30d 表會無限長)。挪到本 cron (CF Pages 30 min 觸發更可靠)。
   //    60 天保留與 daily-report 原 policy 一致。
   report.api_logs = await execD1(

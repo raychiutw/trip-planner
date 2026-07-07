@@ -77,8 +77,6 @@ export interface TripCardMenuProps {
   onCollab: (tripId: string) => void;
   /** 用戶選「編輯」 — host 開 EditTripModal 預填現有 trip 值。 */
   onEdit: (tripId: string) => void;
-  /** 用戶選「AI 健檢」 — host 通常 navigate 到 `/trip/:id/health`。 */
-  onHealthCheck: (tripId: string) => void;
   /** 用戶選「行程筆記」 — host 通常 navigate 到 `/trip/:id/notes`。 (v2.34.x) */
   onNotes?: (tripId: string) => void;
   /** 用戶選「分享連結」 — host 開 ShareLinkModal 建立/管理公開分享連結。 (v2.39.0) */
@@ -92,7 +90,7 @@ export interface TripCardMenuProps {
 const MENU_WIDTH = 160;
 const VIEWPORT_MARGIN = 8;
 
-export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, onNotes, onShare, onDelete, onClose }: TripCardMenuProps) {
+export default function TripCardMenu({ tripId, onCollab, onEdit, onNotes, onShare, onDelete, onClose }: TripCardMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -168,13 +166,6 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
     close();
   }
 
-  function handleHealthCheck(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    onHealthCheck(tripId);
-    close();
-  }
-
   function handleNotes(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -223,16 +214,6 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
       >
         <Icon name="group" />
         <span>共編設定</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-card-menu-item"
-        onClick={handleHealthCheck}
-        data-testid={`trip-card-menu-health-${tripId}`}
-      >
-        <Icon name="sparkle" />
-        <span>AI 健檢</span>
       </button>
       {onNotes && (
         <button

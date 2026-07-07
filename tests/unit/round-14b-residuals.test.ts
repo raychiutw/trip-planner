@@ -3,7 +3,7 @@
  *
  * Source-grep:
  *   1. package.json overrides pin 3 HIGH CVE
- *   2. auth-cleanup.js +2 retention sweep (trip_health_reports + api_logs)
+ *   2. auth-cleanup.js api_logs retention sweep
  *   3. daily-report.js api_logs sweep moved away
  *   4. .tp-rail-line CSS rule removed
  */
@@ -36,18 +36,12 @@ describe('v2.33.61 #1 — npm overrides pin 3 HIGH CVE', () => {
   });
 });
 
-describe('v2.33.61 #2 — auth-cleanup.js +2 retention sweep', () => {
-  it('trip_health_reports 30 天 sweep (completed_at)', () => {
-    expect(AUTH_CLEANUP).toMatch(/trip_health_reports WHERE completed_at IS NOT NULL/);
-    expect(AUTH_CLEANUP).toMatch(/completed_at < datetime\('now', '-30 days'\)/);
-  });
-
+describe('v2.33.61 #2 — auth-cleanup.js api_logs retention sweep', () => {
   it('api_logs 60 天 sweep (從 daily-report 挪過來)', () => {
     expect(AUTH_CLEANUP).toMatch(/api_logs WHERE created_at < datetime\('now', '-60 days'\)/);
   });
 
-  it('report 結構含新增兩欄', () => {
-    expect(AUTH_CLEANUP).toContain('trip_health_reports: 0');
+  it('report 結構含 api_logs 欄', () => {
     expect(AUTH_CLEANUP).toContain('api_logs: 0');
   });
 });

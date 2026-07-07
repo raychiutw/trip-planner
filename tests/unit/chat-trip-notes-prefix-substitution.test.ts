@@ -5,7 +5,7 @@
  *
  * Bug 取證：prod /chat 顯示「Schema: ```json [{ "title": "string", ... }]」
  * 等內部 prompt template — trip_requests.message 是整個 AI prompt，沒被 chat
- * UI substitute 過。對齊 v2.31.27 `[AI 健檢]` substitution pattern。
+ * UI substitute 過。沿用 v2.31.27 起的 prefix substitution pattern。
  *
  * Pure-text grep on source。
  */
@@ -43,7 +43,7 @@ describe('v2.34.38 ChatPage trip-notes AI prefix substitution', () => {
     expect(SRC).toMatch(/已觸發 AI 行程筆記生成（緊急聯絡）/);
   });
 
-  it('AI 健檢 prefix 仍存在（regression — 不能因新 substitution 拔了舊邏輯）', () => {
+  it('[AI 健檢] 前綴替換保留（功能已移除，但歷史 chat 列仍需替換 raw health prompt）', () => {
     expect(SRC).toMatch(/row\.message\.startsWith\('\[AI 健檢\]'\)/);
     expect(SRC).toMatch(/已觸發 AI 行程健檢/);
   });

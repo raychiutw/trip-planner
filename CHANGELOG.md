@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.33] - 2026-07-08
+
+### Removed
+- **AI 健檢功能整包移除**（user 回報健檢報「時程不對」、不知資料來源；行程表本身正確）
+  - 健檢報告是 Claude 讀行程後產的自由文字「快照」，改行程後不會自動更新（對不上）、且會誤報時程；決定完全移除功能。
+  - 移除：`TripHealthCheckPage`（`/trip/:id/health` 全頁）、`GET /api/trips/:id/health-check` endpoint、TripsListPage 卡片 ⋯ + TripPage ⋯ 的「AI 健檢」menu 入口、`requests` 完成 hook 的 health 分支、`TRIP_EMPTY` error code、backfill script、10 個 health 專屬測試。DESIGN.md / README 同步移除該節。
+  - **保留**：`GET /api/trips/:id/health`（POI 永久歇業 banner `<TripHealthBanner>`，不同子系統）；完成 hook 的 notes/chat 分支（`rewriteRequestReply` 共用）；ChatPage `[AI 健檢]` 前綴替換（歷史 chat 列仍需，否則顯 raw prompt）。
+  - **`trip_health_reports` DROP 分階段**：本 PR 只移除 code；DROP migration 留待部署確認後的 follow-up（deploy.yml 自動 apply migration 會與 CF Pages 部署 race，舊 code 打已刪表會 500 卡 chat/notes 共用完成 hook）。
+
+### Fixed
+- **景點明細車程數字格式對齊行程表**（user 回報景點明細顯示的 Google route 車程很怪）
+  - EditEntryPage「從上一站移動」與車程 dialog 的距離格式與 timeline TravelPill **drift**：≥10km 時 timeline 顯「30 km」但景點明細顯「30.0 km」。
+  - 三份重複 formatter（TravelPill / TravelPillDialog / EditEntryPage `formatKm`）整併成單一 SoT `formatDistance`（`src/lib/timelineUtils.ts`）+ 修 crossRegionWarning 第 4 份 inline formatter。+11 unit tests 鎖格式，永久消除 drift。
+
 ## [2.55.31] - 2026-07-08
 
 ### Added

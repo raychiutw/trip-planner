@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 /**
- * v2.31.26 fix #127: sanitizeHtml 允許 SPA 相對路徑 href（例 `/trip/:id/health`）
+ * v2.31.26 fix #127: sanitizeHtml 允許 SPA 相對路徑 href（例 `/trip/:id/notes`）
  * 但拒絕 protocol-relative `//evil.com`。
  *
- * Bug 取證（prod QA）：v2.31.18 backend AI 健檢 reply 寫
- *   `AI 健檢完成 — 發現 8 個 finding...\n\n[前往健檢報告 →](/trip/:id/health)`
- * markdown 渲染後 `<a href="/trip/:id/health">前往健檢報告 →</a>`，
+ * Bug 取證（prod QA）：backend AI reply 寫
+ *   `AI 生成完成 ...\n\n[前往行程筆記 →](/trip/:id/notes)`
+ * markdown 渲染後 `<a href="/trip/:id/notes">前往行程筆記 →</a>`，
  * 但 sanitize line 44 allowed regex 只接受 `https:|tel:|mailto:|#`，相對路徑被
- * strip → 最終 `<a>前往健檢報告 →</a>` 無 href = 不能 click。
+ * strip → 最終 `<a>前往行程筆記 →</a>` 無 href = 不能 click。
  *
  * Fix：allowed regex 加 `|\/(?!\/)` — 允許 `/path` 拒絕 `//host`。
  */
@@ -16,8 +16,8 @@ import { sanitizeHtml } from '../../src/lib/sanitize';
 
 describe('v2.31.26 sanitizeHtml href 允許相對路徑', () => {
   it('SPA 相對路徑保留 href', () => {
-    const out = sanitizeHtml('<a href="/trip/abc/health">前往健檢報告</a>');
-    expect(out).toMatch(/href="\/trip\/abc\/health"/);
+    const out = sanitizeHtml('<a href="/trip/abc/notes">前往行程筆記</a>');
+    expect(out).toMatch(/href="\/trip\/abc\/notes"/);
   });
 
   it('絕對路徑帶 query / hash 仍保留', () => {

@@ -45,7 +45,6 @@
 - 🎨 **V2 Terracotta 設計系統** — `#D97848` accent + `#FFFBF5` cream bg + `#2A1F18` warm-dark fg，5 個 auth page 桌機版 split-screen（左 form card、右 brand hero gradient pane）
 - 🗺️ **`/trips` landing** — country-keyed peach-gradient trip cards（JP / KR / TW / 其他），點進去 → trip detail
 - 🗺️ **POI Master + Entry junction** — `pois` 是 master (AI 維護)，`trip_entry_pois` junction (v2.27.0) 可一 entry 掛多 POI (master sort_order=1 + alternates)。v2.29.0 起 `trip_pois` 已 drop，metadata 改 master / junction 兩處
-- 🤖 **AI 健檢** — `/trip/:id/health` 全頁 (v2.31.0)，severity-grouped findings + action_target deep-link 跳轉
 - 📨 **OAuth invitation** — invitation token HMAC stored，30 天 / 7 天 retention auto sweep (v2.33.61)
 
 ### 帳號與認證（v2.4.0+）

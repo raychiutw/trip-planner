@@ -581,13 +581,12 @@ interface EmbeddedActionMenuProps {
   tripPageRef: React.RefObject<TripPageHandle | null>;
   onEdit: () => void;
   onCollab: () => void;
-  onHealthCheck: () => void;
   onNotes?: () => void;
   onPrint?: () => void;
   onShare?: () => void;
 }
 
-function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck, onNotes, onPrint, onShare }: EmbeddedActionMenuProps) {
+function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onNotes, onPrint, onShare }: EmbeddedActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -686,16 +685,6 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthChe
       >
         <Icon name="group" />
         <span>共編設定</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-embedded-menu-item"
-        onClick={runAndClose(onHealthCheck)}
-        data-testid={`trip-embedded-menu-health-${tripId}`}
-      >
-        <Icon name="sparkle" />
-        <span>AI 健檢</span>
       </button>
       {onNotes && (
         <button
@@ -921,11 +910,6 @@ export default function TripsListPage() {
 
   const handleMenuEdit = useCallback(
     (tripId: string) => { navigate(`/trip/${encodeURIComponent(tripId)}/edit`); },
-    [navigate],
-  );
-
-  const handleMenuHealthCheck = useCallback(
-    (tripId: string) => { navigate(`/trip/${encodeURIComponent(tripId)}/health`); },
     [navigate],
   );
 
@@ -1191,7 +1175,6 @@ export default function TripsListPage() {
                       tripId={t.tripId}
                       onCollab={handleMenuCollab}
                       onEdit={handleMenuEdit}
-                      onHealthCheck={handleMenuHealthCheck}
                       onNotes={(id) => navigate(`/trip/${encodeURIComponent(id)}/notes`)}
                       onShare={(id) => setShareTripId(id)}
                       onDelete={handleMenuDelete}
@@ -1305,7 +1288,6 @@ export default function TripsListPage() {
               tripPageRef={tripPageRef}
               onEdit={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/edit`)}
               onCollab={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/collab`)}
-              onHealthCheck={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/health`)}
               onNotes={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/notes`)}
               onPrint={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/print`)}
               onShare={() => setShareTripId(effectiveSelectedId)}

@@ -1,7 +1,7 @@
 /**
  * parseUtcDate — D1 naive datetime → UTC parse 修正
  *
- * v2.31.6 QA 抓到 TripHealthCheckPage `formatTimestamp` 顯示「8 小時前完成」
+ * v2.31.6 QA 抓到 AI 完成時間戳 `formatTimestamp` 顯示「8 小時前完成」
  * 實際 7 分鐘前的 bug。Root cause: `new Date("2026-05-16 13:39:29")` 沒 Z 後綴
  * 被 Chrome 當 local 解析。本 helper 把 D1 format 正規化為 UTC。
  */

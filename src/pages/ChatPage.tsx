@@ -162,11 +162,12 @@ function rowToMessages(row: RawRequestRow): ChatMessage[] {
   const userTs = row.createdAt ?? row.updatedAt ?? null;
   const assistantTs = row.updatedAt ?? row.createdAt ?? null;
   if (row.message) {
-    // v2.31.27 fix #128: AI 健檢 message 是整個 HEALTH_CHECK_MESSAGE system
-    // prompt (含 5 維度 + JSON schema + 範例)，user 看一大坨雜訊。改顯短摘要。
-    // 完整 prompt 仍存 trip_requests.message → api-server 拿到完整 text 送 Claude。
-    // v2.34.38 prod audit fix: trip-notes feature 3 個新 AI prefix 也是 long system
-    //   prompt（JSON schema + 5-8 維度），同樣 raw 顯示 → 套同 pattern substitution。
+    // v2.34.38 prod audit fix: trip-notes feature 的 AI prefix 是 long system
+    //   prompt（JSON schema + 5-8 維度），raw 顯示 user 看一大坨雜訊 → 套 pattern
+    //   substitution 改顯短摘要。完整 prompt 仍存 trip_requests.message → api-server
+    //   拿到完整 text 送 Claude。
+    // [AI 健檢] 功能已移除，但舊 trip_requests 列保留為 chat 歷史 → 保留此前綴替換，
+    //   否則歷史列會 render 整包 raw health prompt（含 schema）給 user。
     const displayText = row.message.startsWith('[AI 健檢]')
       ? '已觸發 AI 行程健檢'
       : row.message.startsWith('[行程筆記-lodging-tips]')
@@ -326,7 +327,7 @@ const SCOPED_STYLES = `
 /* v2.31.91：markdown link 對齊 site terracotta 風格（取代 browser 預設藍/紫 underline）。
  * Assistant bubble: terracotta accent text + subtle underline，hover 變淺。
  * User bubble (accent bg): 文字用 accent-foreground (white)，underline 用 rgba(255,255,255,.5)。
- * AI 健檢 reply 內「前往健檢報告 →」link 是主要 trigger。 */
+ * 行程筆記 / chat reply 內的 markdown link 是主要 trigger。 */
 .tp-chat-msg a {
   color: var(--color-accent-deep, var(--color-accent));
   text-decoration: underline;
@@ -971,7 +972,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         )}
         {inflightId && elapsedMs >= 3 * 60 * 1000 && errorReason !== 'auth_expired' && (
           <div className="tp-chat-msg tp-chat-msg-assistant is-pending" role="status" aria-live="polite">
-            AI 還在處理（已等候 {Math.floor(elapsedMs / 60_000)} 分鐘）— 較大的請求例如 AI 健檢可能需要 5–15 分鐘。
+            AI 還在處理（已等候 {Math.floor(elapsedMs / 60_000)} 分鐘）— 較大的請求例如行程筆記生成可能需要 5–15 分鐘。
           </div>
         )}
         {sseError && inflightId && errorReason !== 'auth_expired' && errorReason !== 'sse_failed' && (

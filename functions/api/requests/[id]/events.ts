@@ -4,7 +4,7 @@
  * - 每 10 秒 poll D1 狀態
  * - 每 25 秒 keepalive ping
  * - status=completed/failed 時關閉
- * - 最長 30 分鐘（v2.31.6：原 10 min 對 AI 健檢 / 行程審查不夠長，request #187 曾跑 1h19m）
+ * - 最長 30 分鐘（v2.31.6：原 10 min 對長 AI 請求（行程筆記等）不夠長，request #187 曾跑 1h19m）
  *
  * 注意：client 端 `useRequestSSE` 改成 polling-always-on，SSE 只是 latency
  * optimization；即使這裡 timeout 也不會 silent 卡死 — polling 30s 兜底。

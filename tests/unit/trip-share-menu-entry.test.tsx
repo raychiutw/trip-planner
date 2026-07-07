@@ -19,7 +19,6 @@ const baseProps = {
   tripId: 'trip-1',
   onCollab: vi.fn(),
   onEdit: vi.fn(),
-  onHealthCheck: vi.fn(),
   onDelete: vi.fn(),
 };
 

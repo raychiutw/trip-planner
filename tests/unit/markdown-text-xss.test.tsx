@@ -44,9 +44,9 @@ describe('MarkdownText — XSS pipeline (markdown → sanitize → DOM)', () => 
 
   it('keeps SPA relative `/path` href (v2.31.26 regression)', () => {
     const { container } = render(
-      <MarkdownText text={'[前往健檢報告](/trip/abc/health)'} />,
+      <MarkdownText text={'[前往行程筆記](/trip/abc/notes)'} />,
     );
-    expect(container.innerHTML).toMatch(/href="\/trip\/abc\/health"/);
+    expect(container.innerHTML).toMatch(/href="\/trip\/abc\/notes"/);
   });
 
   it('blocks protocol-relative `//evil` (regression)', () => {

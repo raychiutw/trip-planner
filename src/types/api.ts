@@ -46,8 +46,6 @@ export const ErrorCode = {
   POI_NOT_ALTERNATE: 'POI_NOT_ALTERNATE',
   MISSING_MASTER: 'MISSING_MASTER',
   INVALID_ORDER: 'INVALID_ORDER',
-  // AI 健檢 guard (v2.31.58)
-  TRIP_EMPTY: 'TRIP_EMPTY',
   // Trip invitations lifecycle（被邀請者點 link 收到的 410 GONE）
   INVITATION_TOKEN_MISSING: 'INVITATION_TOKEN_MISSING',
   INVITATION_INVALID: 'INVITATION_INVALID',
@@ -98,7 +96,6 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   POI_NOT_ALTERNATE: '此景點不是這個停留點的備選',
   MISSING_MASTER: '每個停留點必須有一個正選景點',
   INVALID_ORDER: '備選排序格式不正確',
-  TRIP_EMPTY: '此行程尚無景點，請先加入景點再執行健檢',
   INVITATION_TOKEN_MISSING: '邀請連結缺少 token 參數',
   INVITATION_INVALID: '邀請連結無效，請聯絡邀請者重寄',
   INVITATION_ACCEPTED: '此邀請已接受過，請直接登入',

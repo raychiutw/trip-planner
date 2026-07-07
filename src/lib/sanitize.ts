@@ -53,9 +53,9 @@ export function sanitizeHtml(html: string): string {
       }
       if (URI_ATTRS.has(lowerName)) {
         const val = (attr.value || '').trim().toLowerCase();
-        // v2.31.26 fix #127: 加 `/(?!\/)` 允許 SPA 相對路徑（例 `/trip/:id/health`），
+        // v2.31.26 fix #127: 加 `/(?!\/)` 允許 SPA 相對路徑（例 `/trip/:id/notes`），
         // 但拒絕 protocol-relative URL `//evil.com`（會打到不同 host）。
-        // 之前 backend AI 健檢 reply 寫 markdown link 但 href 被 strip → `<a>` 無法 click。
+        // 之前 backend AI reply 寫 markdown link 但 href 被 strip → `<a>` 無法 click。
         if (val && !/^(https?:|tel:|mailto:|#|\/(?!\/))/.test(val)) {
           el.removeAttribute(name);
         }

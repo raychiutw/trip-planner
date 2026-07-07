@@ -436,48 +436,6 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - Stop 之間的交通段（travel pill）：**sage 描邊式** — 透明底 + 1.5px sage 邊框 + sage `-deep` 文字/icon（取代填滿）。
 - 縮排 34px（對齊 stop 內 icon box 左緣）。
 
-### AI Health Check Page (`tp-ai-health-*`)
-
-行程 AI 健檢全頁。Route `/trip/:tripId/health`。入口：TripsListPage 卡片 ⋯ menu「AI 健檢」+ TripPage ⋯ menu「AI 健檢」。
-
-**命名注意**：避開 v2.23.0 既有 `<TripHealthBanner>` 與 `.tp-trip-health-banner-*`（POI lifecycle health：closed / missing）。AI 健檢 component 用 `tp-ai-health-*` 前綴與專屬 testid `ai-health-*`，**禁** 重用 `tp-trip-health-*` 或 `<TripHealthBanner>` 容器。
-
-**4 個 state**（依 `trip_health_reports.status`）+ overlay re-generating：
-
-| State | UI |
-|-------|----|
-| empty (`report === null`) | `tp-ai-health-empty` block + sparkle bubble + 「開始健檢」CTA |
-| pending (無舊 findings) | `tp-ai-health-loading` pulse animation + 「健檢進行中…」 / button 「健檢進行中…」disabled |
-| completed (有 findings) | severity-grouped findings（高/中/低）+ 「重新生成」button |
-| completed (`findings.length===0`) | success bubble + 「看起來沒有問題」 |
-| failed | `tp-ai-health-failed` destructive panel + errorMessage + 「重新生成」button |
-| re-generating (pending + 舊 findings) | 舊 results `opacity: 0.55` dim + 「準備中…」pulse banner + button 「再重新生成」disabled |
-
-**Severity 顏色**：用既有 `--color-priority-{high,medium,low}-{bg,dot}` token（不用 柔褐 — accent 仍保留給 chrome / CTA / sight-food icon）。每張 finding card 左側 6px bar + bg = priority 半透明色 + foreground = priority dot。Count chip 同色系。
-
-**Finding action**：若 `action_target.day` 存在 → 「前往 Day N」accent-filled button，click → navigate `/trip/:id?day=N`。
-
-**Polling**：pending state 每 3000ms `GET /api/trips/:id/health-check` 直到 status 變 completed/failed。`pollRef` 持 timeout id 避免 effect 重渲漏清。`prefers-reduced-motion` → pulse animation 停。
-
-**Title bar action**（v2.33.110+）：主 CTA `<TitleBarPrimaryAction icon="sparkle">` 放 TitleBar `actions` slot，依 state 改 label：開始健檢 / 重新生成 / 再重新生成 / 健檢進行中⋯ / 送出中⋯。「回行程」由 TitleBar 左上 `←` 取代（`backLabel="回行程"`），不再重複 button。`entryCount===0` 時 title bar action `disabled` + 頁面顯示 `.tp-ai-health-notice` banner 補語意。
-
-**Mockup**：`/tmp/TripAIHealth-variants.html` Variant C (sign-off 2026-05-16) — sticky bar 版本，v2.33.110 拔掉 sticky bar 改 title bar action。
-
-**Finding card 結構（v2.31.1 Phase 2 extended）**
-
-```
-┌─ severity bar (6px column)
-│  ├─ head-row: title + dimension chip（「時間」「移動」「餐飲」「景點」「住宿」）
-│  ├─ desc: 具體描述（≤120 字）
-│  ├─ suggestion block: 「建議」label + 建議文字（accent-subtle bg、accent-deep text、accent eyebrow label）
-│  └─ actions: 「前往景點」（有 entry_id）優先於「前往 Day N」（只有 day）
-└─
-```
-
-- **Dimension chip** (`.dimension-chip`)：tertiary bg + muted text + caption2 + 中文 label，緊接 title 旁邊
-- **Suggestion block** (`.suggestion`)：accent-subtle bg + accent-deep text + caption2 eyebrow「建議」label，不用 emoji（DESIGN.md 第 10 條無裝飾原則）
-- **Navigation hierarchy**：`action_target.entry_id` 帶 → 直接 navigate `/trip/:id/stop/:eid/edit`（更具體）；只有 `day` → navigate `/trip/:id?day=N`
-
 ### Trip Notes Page (`tp-notes-*`)
 
 行程筆記全頁（v2.34.x）。Route `/trip/:tripId/notes`。5 section accordion（航班 / 住宿 / 預訂 / 行前須知 / 緊急聯絡）+ 3 AI generation prompt (lodging-tips / general-tips / emergency) 寫進 行前須知 + 緊急聯絡 兩 section。

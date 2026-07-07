@@ -30,7 +30,7 @@ interface NavItem {
 // （in-trip map view），但 `/manage/map-xxx` 不誤觸（純文字 prefix 不夠精確）
 // Canonical patterns mirror DesktopSidebar:55-56 so mobile + desktop light the
 // same tab. MAP owns /trip/:id/map AND /trip/:id/stop/:id/map; 行程 owns /trip/:id
-// and every non-map sub-route (edit/notes/health/...).
+// and every non-map sub-route (edit/notes/...).
 const MAP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+\/map\/?$/, /^\/trip\/[^/]+\/stop\/[^/]+\/map\/?$/];
 // 「行程」 tab — /trips + /trip/:id + 子路由 active，但 /trip/:id/map 與 stop/:id/map 算地圖
 const TRIPS_ACTIVE_PATTERNS = [/^\/trip\/[^/]+(?:\/?$|\/(?!(?:map|stop\/[^/]+\/map)\/?$).*)/];

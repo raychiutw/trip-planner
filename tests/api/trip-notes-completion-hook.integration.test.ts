@@ -5,7 +5,7 @@
  *   - PATCH /requests/:id status=completed + linkage exists → INSERT rows in target table
  *   - PATCH status=failed → UPDATE trip_note_ai_jobs.status=failed + error_message
  *   - Dedup: existing title/name skipped
- *   - PATCH /requests/:id without notes linkage → no side effect (health-check / chat still works)
+ *   - PATCH /requests/:id without notes linkage → no side effect (chat still works)
  *   - lodging-tips → ai_source='lodging-tips' in trip_pretrip_notes
  *   - tips → ai_source='general-tips' (different from lodging-tips!)
  *   - emergency → trip_emergency_contacts with kind narrowed

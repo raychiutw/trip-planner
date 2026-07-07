@@ -45,28 +45,3 @@ describe('sentry.ts global listeners', () => {
     expect(SENTRY).toMatch(/void import\(['"]@sentry\/react['"]\)\.then/);
   });
 });
-
-describe('health-check GET findings_json silent fail fix (v2.33.125 PR2)', () => {
-  const HC = readFileSync(
-    join(__dirname, '../../functions/api/trips/[id]/health-check.ts'),
-    'utf8',
-  );
-
-  it('catch 不再 swallow — console.error 含 tripId / requestId / error', () => {
-    expect(HC).toMatch(/console\.error\('\[health-check GET\] findings_json JSON\.parse failed'/);
-    expect(HC).toMatch(/tripId,/);
-    expect(HC).toMatch(/reportRequestId,/);
-    expect(HC).toMatch(/rawPreview: rawFindings\.slice\(0, 120\)/);
-  });
-
-  it('alertAdminTelegram 1 次 admin Telegram + 含 trip/request/preview context', () => {
-    expect(HC).toMatch(/void alertAdminTelegram\(\s*context\.env,/);
-    expect(HC).toMatch(/🚨 AI 健檢 findings_json 壞 row/);
-    expect(HC).toMatch(/trip=\$\{tripId\} request=\$\{reportRequestId\}/);
-  });
-
-  it('findings 仍 fallback 0 項（避免整頁卡死）', () => {
-    // findings 預設 [] 仍存在
-    expect(HC).toMatch(/let findings: unknown\[\] = \[\];/);
-  });
-});

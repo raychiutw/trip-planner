@@ -28,7 +28,6 @@ describe('TripCardMenu — onNotes prop (PR14)', () => {
     tripId: 'trip-1',
     onCollab: vi.fn(),
     onEdit: vi.fn(),
-    onHealthCheck: vi.fn(),
     onDelete: vi.fn(),
   };
 
@@ -55,15 +54,14 @@ describe('TripCardMenu — onNotes prop (PR14)', () => {
     expect(onNotes).toHaveBeenCalledWith('trip-1');
   });
 
-  it('menu items order: 編輯 / 共編 / AI 健檢 / 行程筆記 / 刪除', () => {
+  it('menu items order: 編輯 / 共編 / 行程筆記 / 刪除', () => {
     const onNotes = vi.fn();
     render(<TripCardMenu {...baseProps} onNotes={onNotes} />);
     openMenu();
     const menuItems = screen.getAllByRole('menuitem');
     const labels = menuItems.map((el) => el.textContent ?? '');
     expect(labels.findIndex((l) => l.includes('編輯行程'))).toBeLessThan(labels.findIndex((l) => l.includes('共編設定')));
-    expect(labels.findIndex((l) => l.includes('共編設定'))).toBeLessThan(labels.findIndex((l) => l.includes('AI 健檢')));
-    expect(labels.findIndex((l) => l.includes('AI 健檢'))).toBeLessThan(labels.findIndex((l) => l.includes('行程筆記')));
+    expect(labels.findIndex((l) => l.includes('共編設定'))).toBeLessThan(labels.findIndex((l) => l.includes('行程筆記')));
     expect(labels.findIndex((l) => l.includes('行程筆記'))).toBeLessThan(labels.findIndex((l) => l.includes('刪除行程')));
   });
 });
