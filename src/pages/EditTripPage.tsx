@@ -1137,6 +1137,44 @@ export default function EditTripPage() {
                 <div className="tp-edit-loading" data-testid="edit-trip-loading">載入中⋯</div>
               ) : (
                 <>
+                  {/* Title (with region change hint) — 2026-07-07 user 要求移到最上
+                    * （原在天數 section 後）。mockup v2/v3 已同步。 */}
+                  <div className="tp-edit-row">
+                    <label htmlFor="edit-trip-title-input">行程名稱（選填）</label>
+                    <input
+                      id="edit-trip-title-input"
+                      type="text"
+                      value={title}
+                      onChange={(e) => { setTitle(e.target.value); setTitleHintHidden(true); }}
+                      placeholder={suggestedTitle || '由「年份+目的地」自動命名'}
+                      data-testid="edit-trip-title-input"
+                    />
+                    {showTitleHint && suggestedTitle && (
+                      <div className="tp-edit-title-hint" role="alert" data-testid="edit-trip-title-hint">
+                        <span className="tp-edit-title-hint-text">
+                          目的地已變更，要更新名稱為「<strong>{suggestedTitle}</strong>」？
+                        </span>
+                        <button
+                          type="button"
+                          className="tp-edit-title-hint-btn"
+                          onClick={applyTitleSuggestion}
+                          data-testid="edit-trip-title-hint-apply"
+                        >
+                          套用
+                        </button>
+                        <button
+                          type="button"
+                          className="tp-edit-title-hint-dismiss"
+                          onClick={dismissTitleHint}
+                          aria-label="忽略提示"
+                          data-testid="edit-trip-title-hint-dismiss"
+                        >
+                          <Icon name="x-mark" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Destinations */}
                   <div className="tp-edit-row">
                     <label>目的地</label>
@@ -1321,43 +1359,6 @@ export default function EditTripPage() {
                           <span>加一天</span>
                         </button>
                       </>
-                    )}
-                  </div>
-
-                  {/* Title (with region change hint) */}
-                  <div className="tp-edit-row">
-                    <label htmlFor="edit-trip-title-input">行程名稱（選填）</label>
-                    <input
-                      id="edit-trip-title-input"
-                      type="text"
-                      value={title}
-                      onChange={(e) => { setTitle(e.target.value); setTitleHintHidden(true); }}
-                      placeholder={suggestedTitle || '由「年份+目的地」自動命名'}
-                      data-testid="edit-trip-title-input"
-                    />
-                    {showTitleHint && suggestedTitle && (
-                      <div className="tp-edit-title-hint" role="alert" data-testid="edit-trip-title-hint">
-                        <span className="tp-edit-title-hint-text">
-                          目的地已變更，要更新名稱為「<strong>{suggestedTitle}</strong>」？
-                        </span>
-                        <button
-                          type="button"
-                          className="tp-edit-title-hint-btn"
-                          onClick={applyTitleSuggestion}
-                          data-testid="edit-trip-title-hint-apply"
-                        >
-                          套用
-                        </button>
-                        <button
-                          type="button"
-                          className="tp-edit-title-hint-dismiss"
-                          onClick={dismissTitleHint}
-                          aria-label="忽略提示"
-                          data-testid="edit-trip-title-hint-dismiss"
-                        >
-                          <Icon name="x-mark" />
-                        </button>
-                      </div>
                     )}
                   </div>
 
