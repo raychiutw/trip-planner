@@ -106,27 +106,40 @@ export default defineConfig({
   root: '.',
   build: {
     outDir: 'dist',
+    // Expected largest async chunk: PDF export. It is only loaded after the user
+    // clicks export, and the html2pdf source alias below keeps it split away
+    // from the initial route bundles. Keep the limit narrow enough to catch
+    // future PDF growth while avoiding the old 500 kB false alarm.
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       input: resolve(__dirname, 'index.html'),
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/') || id.includes('node_modules/react-router')) return 'vendor';
-          if (id.includes('node_modules/@sentry')) return 'sentry';
+          const moduleId = id.replace(/\\/g, '/');
+          if (moduleId.includes('node_modules/react-dom') || moduleId.includes('node_modules/react/') || moduleId.includes('node_modules/react-router')) return 'vendor';
+          if (moduleId.includes('node_modules/@sentry')) return 'sentry';
           // v2.33.60 round 14: heavy deps 各自 chunk，避免 lazy-route load 拖整 sibling
-          if (id.includes('node_modules/@googlemaps/')) return 'gmaps';
-          if (id.includes('node_modules/@headlessui/')) return 'headlessui';
-          if (id.includes('node_modules/@dnd-kit/')) return 'dndkit';
-          if (id.includes('node_modules/react-day-picker') || id.includes('node_modules/date-fns/')) return 'datepicker';
-          if (id.includes('node_modules/marked/')) return 'marked';
-          if (id.includes('node_modules/html2pdf') || id.includes('node_modules/jspdf') || id.includes('node_modules/html2canvas')) return 'pdf';
+          if (moduleId.includes('node_modules/@googlemaps/')) return 'gmaps';
+          if (moduleId.includes('node_modules/@headlessui/')) return 'headlessui';
+          if (moduleId.includes('node_modules/@dnd-kit/')) return 'dndkit';
+          if (moduleId.includes('node_modules/react-day-picker') || moduleId.includes('node_modules/date-fns/')) return 'datepicker';
+          if (moduleId.includes('node_modules/marked/')) return 'marked';
+          if (moduleId.includes('node_modules/html2pdf.js/src/')) return 'pdf';
+          if (moduleId.includes('node_modules/jspdf/')) return 'pdf-jspdf';
+          if (moduleId.includes('node_modules/html2canvas/')) return 'pdf-html2canvas';
+          if (moduleId.includes('node_modules/dompurify/')) return 'pdf-dompurify';
         },
       },
     },
   },
   resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
-    },
+    alias: [
+      { find: '@', replacement: resolve(__dirname, 'src') },
+      // The package default points at a pre-bundled UMD build, which forces the
+      // whole PDF exporter into one async chunk. Use the source entry so Rollup
+      // can split html2canvas / jsPDF / DOMPurify into their own lazy chunks.
+      { find: 'html2pdf.js', replacement: resolve(__dirname, 'node_modules/html2pdf.js/src/index.js') },
+    ],
   },
   // v2.33.60 round 14: 拔 optimizeDeps['leaflet'] — v2.23.0 已切 Google Maps，
   // leaflet 不在 package.json，留著會 trigger Vite dev startup warning。

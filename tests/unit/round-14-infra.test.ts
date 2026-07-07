@@ -78,7 +78,16 @@ describe('v2.33.60 #3 — vite.config', () => {
     expect(VITE_CONFIG).toContain("return 'headlessui'");
     expect(VITE_CONFIG).toContain("return 'dndkit'");
     expect(VITE_CONFIG).toContain("return 'pdf'");
+    expect(VITE_CONFIG).toContain("return 'pdf-jspdf'");
+    expect(VITE_CONFIG).toContain("return 'pdf-html2canvas'");
+    expect(VITE_CONFIG).toContain("return 'pdf-dompurify'");
     expect(VITE_CONFIG).toContain("return 'marked'");
+  });
+
+  it('PDF export 使用 source alias + explicit async chunk warning budget', () => {
+    expect(VITE_CONFIG).toContain("find: 'html2pdf.js'");
+    expect(VITE_CONFIG).toContain('node_modules/html2pdf.js/src/index.js');
+    expect(VITE_CONFIG).toMatch(/chunkSizeWarningLimit:\s*700/);
   });
 });
 
