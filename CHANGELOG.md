@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.24] - 2026-07-07
+
+### Changed
+- **編輯行程頁：行程名稱欄位移到最上方**（user 要求；原順序 目的地→天數→名稱 改為 名稱→目的地→天數）
+  - 純區塊搬移零行為變更（title hint 邏輯/state 不動）；mockup v2-counter-mobile + v3-desktop-twopane 同 PR 同步同順序；加 source-grep 順序鎖測。
+
 ## [2.55.23] - 2026-07-07
 
 ### Fixed

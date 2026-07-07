@@ -50,3 +50,13 @@ describe('v2.31.13 EditTripPage destinations load', () => {
     expect(SRC).toMatch(/day_quota:\s*d\.dayQuota/);
   });
 });
+
+describe('2026-07-07 欄位順序：行程名稱移到最上（user 要求）', () => {
+  it('行程名稱區塊在目的地區塊之前（mockup v2/v3 已同步同順序）', () => {
+    const titleIdx = SRC.indexOf('htmlFor="edit-trip-title-input"');
+    const destIdx = SRC.indexOf('{/* Destinations */}');
+    expect(titleIdx).toBeGreaterThan(-1);
+    expect(destIdx).toBeGreaterThan(-1);
+    expect(titleIdx).toBeLessThan(destIdx);
+  });
+});
