@@ -296,10 +296,10 @@ test.describe('QA Flow 8 — 刪除景點', () => {
     await page.getByTestId('timeline-rail-row-101').click();
     await page.getByTestId('timeline-rail-delete-101').click();
 
-    // TimelineRail 用自己的 inline modal (不是 ConfirmModal 組件)
-    const modal = page.getByTestId('timeline-rail-delete-modal-101');
+    // v2.55.x: TimelineRail 刪除改用 shared ConfirmModal（portal + --z-modal，修 2-col 遮罩被地圖蓋）
+    const modal = page.getByTestId('confirm-modal');
     await expect(modal).toBeVisible();
-    await page.getByTestId('timeline-rail-delete-confirm-101').click();
+    await page.getByTestId('confirm-modal-confirm').click();
 
     await expect.poll(() => deletes.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
     expect(deletes[0]).toMatch(/\/api\/trips\/okinawa-trip-2026-Ray\/entries\/101$/);

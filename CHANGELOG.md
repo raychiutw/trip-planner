@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.23] - 2026-07-07
+
+### Fixed
+- **刪除景點確認框在 desktop 2-col 被地圖蓋住、遮罩蓋不到地圖**（user 截圖回報）
+  - TimelineRail 的刪除 confirm 是唯一 inline 手寫 modal（`fixed inset:0 z:1000`）— desktop 2-col 下被祖先 transform/contain 困在左欄 stacking context：backdrop 只暗左欄、dialog 右半被 sticky 地圖 panel 切掉（取消鈕被吃）。
+  - 改用 shared `ConfirmModal`（`createPortal` 到 body + `--z-modal` 9000），與全站其他刪除 confirm（trip-notes / favorites / trips-list / edit-trip）同 pattern；淨刪 82 行 inline 實作。順修 busy 語意：deleting 中 Escape/backdrop 不可關（對齊原 `!deleting` guard，DELETE 失敗 error 留在 modal 顯示 — codex review）。
+  - testid 同步（`timeline-rail-delete-modal/confirm/cancel-*` → `confirm-modal(-confirm/-cancel)`），unit + e2e 全 grep 清乾淨。
+
 ## [2.55.22] - 2026-07-07
 
 ### Fixed
