@@ -132,16 +132,30 @@ is_funnel_dns_published() {
 # %{http_code}=000，必須排除，否則 dead ingress 會被誤判 healthy → 不 heal（codex
 # 2026-07-05 抓到的既有 bug）。--resolve 強制走該 IP，避過本機 MagicDNS 與 recursive
 # 污染。10s timeout 涵蓋 DERP relay cold path。
+# 失敗細節存 REACH_DETAIL（ip / curl exit / http_code）供 caller log — 2026-07-07
+# 型態 D 事後只有「reach 失敗」四個字，診斷靠猜。
 is_funnel_reach_ok() {
-  local host="$1" ip http_code
+  local host="$1" ip http_code curl_exit
   [ -z "$host" ] && return 1
-  ip=$(funnel_resolve_authoritative "$host") || return 1
+  ip=$(funnel_resolve_authoritative "$host") || { REACH_DETAIL="authoritative resolve failed"; return 1; }
   http_code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 \
     --resolve "${host}:443:${ip}" "https://${host}/" 2>/dev/null)
+  curl_exit=$?
+  REACH_DETAIL="ip=${ip} curl_exit=${curl_exit} http_code=${http_code:-none}"
   [[ "$http_code" =~ ^[1-5][0-9]{2}$ ]]
 }
 
+# L3 短暫 blip 重試間隔（秒）。2026-07-07 型態 D incident：Tailscale edge 33 秒
+# 瞬斷（L1 serve state 與 L2 authoritative DNS 全程正常，只 L3 direct reach 失敗
+# 後自癒），舊邏輯單次 fail 立刻 heal — 3 輪無效 serve reset（reset 瞬間 funnel
+# 真 off 反而小幅加重）+ heal_failed Telegram 噪音。test-guard.sh 覆寫成 0 加速。
+L3_RETRY_INTERVAL="${L3_RETRY_INTERVAL:-15}"
+
+# $1 = L3 最大嘗試次數（預設 3）。heal 後重驗傳 1 — heal 剛做完只需驗「有沒有
+# 生效」，再跑完整 retry 會把 sustained-outage 的 heal_failed 警報延到 ~125s，
+# 超過 launchd 120s interval（codex review P1）。
 is_funnel_healthy() {
+  local max_attempts="${1:-3}"
   is_funnel_local_healthy || { log "L1 local control-plane state 不對"; return 1; }
   local host
   host=$(funnel_hostname)
@@ -153,11 +167,19 @@ is_funnel_healthy() {
     log "L2 authoritative DNS 無 record ($host — 控制平面未發布，真 drift)"
     return 1
   fi
-  if ! is_funnel_reach_ok "$host"; then
-    log "L3 HTTPS reach 失敗 ($host — 走 authoritative IP direct)"
-    return 1
-  fi
-  return 0
+  # L3 blip 容忍（型態 D）：L1/L2 綠時 L3 fail 先重試確認持續（間隔
+  # L3_RETRY_INTERVAL，共跨 ~30s）才判 unhealthy。edge 瞬斷自癒 → 0 heal
+  # 0 噪音；型態 B（持續 TLS stall）全 fail → 照樣 heal。
+  local attempt
+  for (( attempt=1; attempt<=max_attempts; attempt++ )); do
+    if is_funnel_reach_ok "$host"; then
+      [ "$attempt" -gt 1 ] && log "L3 重試第 $attempt 次通過 — 短暫 blip 自癒，不 heal"
+      return 0
+    fi
+    log "L3 HTTPS reach 失敗 ($host — ${REACH_DETAIL:-no detail}, attempt $attempt/$max_attempts)"
+    [ "$attempt" -lt "$max_attempts" ] && sleep "$L3_RETRY_INTERVAL"
+  done
+  return 1
 }
 
 # 重設 funnel：先 reset 既有 serve/funnel state（避免殘留 conflict）→ 重新註冊
@@ -185,7 +207,9 @@ main() {
   if heal_funnel; then
     # 5s 等 tailscaled converge + DERP relay reconnect
     sleep 5
-    if is_funnel_healthy; then
+    # 單次驗（不 retry）：只驗 heal 有沒有生效，避免 sustained outage 的
+    # heal_failed 警報被 retry 窗拖過 launchd 120s interval
+    if is_funnel_healthy 1; then
       log "heal 成功"
       throttled_alert "funnel-guard" "healed" \
         "🛡️ Tripline funnel-guard：偵測 :443 drift → 已自動 reset + 重設 funnel → http://127.0.0.1:8080" \
