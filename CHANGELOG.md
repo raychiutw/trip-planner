@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.27] - 2026-07-07
+
+### Added
+- **行程景點拖拉可跨天**（user 要求；行程頁是連續捲動流，拖到視窗邊緣自動捲動到別天放下）
+  - TripPage 統一 `DndContext`（原本每天的 rail 各自一個 context 只能同日排序）：dnd-kit 內建 autoScroll = 拖曳中頂/底邊緣自動捲頁跨天。
+  - TimelineRail 雙模：`dndManaged` 下不自建 context，同日 reorder 改經 `useDndMonitor` 接（active/over 同日才處理，原 optimistic 邏輯不動）；跨天 drop 由 TripPage 處理 — `buildCrossDayMoves` 算 batch PATCH（`day_id` + 目標日插入位重排，來源日留 gap 不重排），成功後兩天顯式車程重算 + 各自 refetch + toast。獨立頁（EditEntryPage 等）維持自建 context 原行為。
+  - **空日可拖入**：空日 render dashed 空槽「拖曳景點到這裡」（原本空日連 rail 都不 render — codex review P1）。
+  - **collision 策略 `railItemsFirstCollision`**：sortable items 永遠優先於 rail container，修 codex P1 兩案 — 同日拖到 rail 空白 regress 成 no-op、單 item 天 tie 時插位變 append；空日（無 items）自然 fallback container。
+  - 鍵盤 a11y：同日 keyboard reorder 照舊；跨天鍵盤操作走既有「移動到其他天」功能（⇅ 選天頁）。
+  - +14 tests（buildCrossDayMoves ×6、collision ×3、雙模/空日 render ×3、DaySection harness 對齊 ×2 檔），全量 3464 綠。
+
 ## [2.55.26] - 2026-07-07
 
 ### Added
