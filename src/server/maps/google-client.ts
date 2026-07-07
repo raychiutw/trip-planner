@@ -292,6 +292,8 @@ export interface PlaceDetailsResult {
   /** Open hours weekday descriptions, e.g. ["週一: 11:00 – 22:00", ...] */
   weekday_descriptions?: string[];
   phone?: string;
+  /** Google 價位等級 enum（PRICE_LEVEL_INEXPENSIVE…VERY_EXPENSIVE），無則 undefined。 */
+  price_level?: string;
 }
 
 const PLACE_DETAILS_FIELD_MASK = [
@@ -303,6 +305,9 @@ const PLACE_DETAILS_FIELD_MASK = [
   'businessStatus',
   'regularOpeningHours.weekdayDescriptions',
   'internationalPhoneNumber',
+  // priceLevel 與 rating/openingHours 同屬 Enterprise SKU — 這個 call 本就
+  // Enterprise，加此欄不升 tier（無額外費用）。
+  'priceLevel',
 ].join(',');
 
 /**
@@ -352,6 +357,7 @@ export async function getPlaceDetails(
     businessStatus?: string;
     regularOpeningHours?: { weekdayDescriptions?: string[] };
     internationalPhoneNumber?: string;
+    priceLevel?: string;
   } | null;
 
   if (!json?.id || !json.location || !json.displayName?.text) {
@@ -369,6 +375,7 @@ export async function getPlaceDetails(
     business_status: (json.businessStatus as GoogleBusinessStatus | undefined) || 'OPERATIONAL',
     weekday_descriptions: json.regularOpeningHours?.weekdayDescriptions,
     phone: json.internationalPhoneNumber,
+    price_level: json.priceLevel,
   };
 }
 
