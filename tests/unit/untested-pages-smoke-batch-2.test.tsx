@@ -55,7 +55,7 @@ describe('Round 23 — NewTripPage smoke', () => {
     const { container } = wrap(<NewTripPage />, '/trips/new');
     expect(container).toBeTruthy();
     expect(container.textContent ?? '').toMatch(/新增行程|建立|目的地|新行程/);
-  });
+  }, 15_000);
 });
 
 describe('Round 23 — EditTripPage smoke', () => {

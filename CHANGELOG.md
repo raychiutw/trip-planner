@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.21] - 2026-07-07
+
+### Fixed
+- **行程頁日期 tabs / 刪除確認 modal 視覺修正**（user 截圖回報）
+  - 移除 `.tp-map-day-tabs` 右側 `mask-image` fade；最後一個 active date tab 不再被漸層切掉。保留水平 scroll 與隱藏 scrollbar 行為。
+  - `ConfirmModal` backdrop 改用 `--z-modal`（9000）而非寫死 1100，刪除確認 dialog 現在能壓過地圖、日期 tabs 與 sticky header。
+  - 補 `ConfirmModal` z-index regression test，並把 day tabs 測試改成鎖定「可 scroll、無 mask fade」的新 contract。
+- **Windows 本機 test red 一併修復**
+  - `load-env-script` 測試在 Windows 避免選到 WSL launcher `bash.exe`；改為優先找 Git Bash 並 probe ANSI-C `$'...'` export 行為，保留 macOS production zsh 優先。
+  - Vitest 在 Windows cap `maxWorkers=4`，避免 jsdom heavy mount full suite 併發過高造成 timeout；`NewTripPage` smoke 補明確 15s timeout。
+
 ## [2.55.20] - 2026-07-07
 
 ### Fixed

@@ -20,15 +20,51 @@ import os from 'node:os';
 
 const SCRIPT = path.resolve(__dirname, '../../scripts/lib/load-env.mjs');
 
-// 偵測 shell — 優先用 zsh（macOS production scheduler 用的 shell；CI Ubuntu 通常沒裝）
-// fallback bash — 兩者對 `$'…'` ANSI-C quoting + `set -e + command-not-found` 行為一致
-const SHELL: 'zsh' | 'bash' = (() => {
-  try {
-    const probe = spawnSync('zsh', ['-c', 'true']);
-    return probe.status === 0 ? 'zsh' : 'bash';
-  } catch {
-    return 'bash';
+type TestShell = {
+  command: string;
+  label: string;
+};
+
+function uniqueShells(candidates: TestShell[]): TestShell[] {
+  const seen = new Set<string>();
+  return candidates.filter(candidate => {
+    const key = candidate.command.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function supportsLoaderEval(command: string): boolean {
+  const probe = spawnSync(command, ['-c', `set -e\nexport FOO=$'bar'\ntest "$FOO" = bar\n`], { encoding: 'utf8' });
+  return probe.status === 0;
+}
+
+// 偵測 shell — macOS production scheduler 優先 zsh；Windows 優先 Git Bash。
+// Windows PATH 上的 bash 可能是 WSL launcher（C:\Windows\System32\bash.exe），
+// 它可執行 `-c`，但從 Node spawnSync 傳入 ANSI-C `$'…'` export 時會讓值變空。
+const SHELL: TestShell = (() => {
+  const gitBashCandidates =
+    process.platform === 'win32'
+      ? [
+          process.env.ProgramFiles ? path.join(process.env.ProgramFiles, 'Git/bin/bash.exe') : '',
+          process.env['ProgramFiles(x86)'] ? path.join(process.env['ProgramFiles(x86)'], 'Git/bin/bash.exe') : '',
+          process.env.LocalAppData ? path.join(process.env.LocalAppData, 'Programs/Git/bin/bash.exe') : '',
+          'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+        ]
+          .filter(Boolean)
+          .map(command => ({ command, label: `Git Bash (${command})` }))
+      : [];
+
+  const candidates = uniqueShells([
+    ...(process.platform === 'win32' ? gitBashCandidates : [{ command: 'zsh', label: 'zsh' }]),
+    { command: 'bash', label: 'bash' },
+  ]);
+  const shell = candidates.find(candidate => supportsLoaderEval(candidate.command));
+  if (!shell) {
+    throw new Error('load-env.mjs tests require zsh or bash with ANSI-C export support');
   }
+  return shell;
 })();
 
 function runLoader(envContent: string): { code: number; stdout: string; stderr: string } {
@@ -48,9 +84,9 @@ function evalAndDump(loaderOutput: string, varNames: string[]): Record<string, s
   // 否則 stdout split-by-newline 會把 base64 後半段當沒 `=` 的行 skip 掉
   const dumpCmd = varNames.map(n => `echo "${n}=$(printf %s "$${n}" | base64 | tr -d '\\n')"`).join('\n');
   const script = `set -e\n${loaderOutput}\n${dumpCmd}\n`;
-  const result = spawnSync(SHELL, ['-c', script], { encoding: 'utf8' });
+  const result = spawnSync(SHELL.command, ['-c', script], { encoding: 'utf8' });
   if (result.status !== 0) {
-    throw new Error(`bash eval failed (code=${result.status}): ${result.stderr}\n--- loader output ---\n${loaderOutput}`);
+    throw new Error(`${SHELL.label} eval failed (code=${result.status}): ${result.stderr}\n--- loader output ---\n${loaderOutput}`);
   }
   const out: Record<string, string> = {};
   for (const line of result.stdout.split('\n')) {
@@ -147,8 +183,8 @@ describe('load-env.mjs — scheduler env loader', () => {
     expect(result.stderr).toMatch(/BAD\.KEY|HAS-DASH/);
 
     // 確認單獨 eval stdout 在 production shell（zsh/bash）`set -e` 下不會炸
-    const evalCheck = spawnSync(SHELL, ['-c', `set -eo pipefail\n${result.stdout}\necho OK_KEY=$OK_KEY\necho AFTER=$AFTER\n`], { encoding: 'utf8' });
-    expect(evalCheck.status, `${SHELL} eval 失敗 stderr: ${evalCheck.stderr}`).toBe(0);
+    const evalCheck = spawnSync(SHELL.command, ['-c', `set -eo pipefail\n${result.stdout}\necho OK_KEY=$OK_KEY\necho AFTER=$AFTER\n`], { encoding: 'utf8' });
+    expect(evalCheck.status, `${SHELL.label} eval 失敗 stderr: ${evalCheck.stderr}`).toBe(0);
     expect(evalCheck.stdout).toContain('OK_KEY=alpha');
     expect(evalCheck.stdout).toContain('AFTER=zulu');
   });

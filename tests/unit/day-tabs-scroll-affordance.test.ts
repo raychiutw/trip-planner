@@ -1,12 +1,11 @@
 /**
- * v2.32.5 fix — `.tp-map-day-tabs` 水平 scroll 缺 affordance regression。
+ * `.tp-map-day-tabs` 水平 scroll regression.
  *
  * Bug context：7-day trip 在 mobile viewport (≤390px) day 6/7 chips 超出
- * viewport，無 scrollbar (`scrollbar-width: none`) 也無 chevron icon → user
- * 看不到「往右還有 chips」hint，常以為 trip 只有 5 天。
+ * viewport；tab strip 需要可水平 scroll。
  *
- * Fix：右側 24px linear-gradient mask-image fade，提示 horizontal scroll
- * 可繼續。
+ * Current contract：保留 overflow-x scrolling，但不要用 mask-image fade。
+ * 右緣 mask 會讓最後一個 active tab 被漸層切掉，像 UI 污點。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -17,20 +16,14 @@ const TOKENS_CSS = readFileSync(
   'utf8',
 );
 
-describe('tokens.css — .tp-map-day-tabs scroll affordance', () => {
-  it('mask-image 右側 fade linear-gradient 已加', () => {
-    expect(TOKENS_CSS).toMatch(
-      /\.tp-map-day-tabs\s*\{[\s\S]{0,800}mask-image:\s*linear-gradient\(to right,\s*#000\s+calc\(100% - 24px\),\s*transparent 100%\)/,
-    );
+describe('tokens.css — .tp-map-day-tabs horizontal scroll', () => {
+  it('不使用 mask-image fade，避免 active tab 右緣被漸層切掉', () => {
+    const dayTabsRule = TOKENS_CSS.match(/\.tp-map-day-tabs\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(dayTabsRule).not.toMatch(/mask-image\s*:/);
+    expect(dayTabsRule).not.toMatch(/-webkit-mask-image\s*:/);
   });
 
-  it('-webkit-mask-image vendor prefix 也加（Safari/iOS）', () => {
-    expect(TOKENS_CSS).toMatch(
-      /\.tp-map-day-tabs\s*\{[\s\S]{0,800}-webkit-mask-image:\s*linear-gradient\(to right,\s*#000\s+calc\(100% - 24px\),\s*transparent 100%\)/,
-    );
-  });
-
-  it('原本 overflow-x: auto + scrollbar-width: none 保留', () => {
+  it('overflow-x: auto + scrollbar-width: none 保留', () => {
     expect(TOKENS_CSS).toMatch(/\.tp-map-day-tabs\s*\{[\s\S]{0,400}overflow-x:\s*auto/);
     expect(TOKENS_CSS).toMatch(/\.tp-map-day-tabs\s*\{[\s\S]{0,400}scrollbar-width:\s*none/);
   });
