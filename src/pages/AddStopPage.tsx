@@ -35,6 +35,7 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { requestTravelRecompute } from '../lib/travelRecompute';
+import { buildPoiNote } from '../lib/poiNote';
 import { EVENT } from '../lib/events';
 import { mapGooglePrimaryTypeToPoiType, type PoiType } from '../lib/poiCategory';
 import {
@@ -854,34 +855,9 @@ export default function AddStopPage() {
       poi_type?: string;
     };
 
-    let payloads: Body[] = [];
-
-    if (tab === 'search') {
-      payloads = searchResults
-        .filter((r) => selectedSearch.has(r.place_id))
-        .map((r) => ({
-          name: r.name,
-          note: r.address || undefined,
-          lat: r.lat,
-          lng: r.lng,
-          source: 'google',
-          poi_type: searchCatOverride[r.place_id] ?? mapGooglePrimaryTypeToPoiType(r.category),
-        }));
-    } else if (tab === 'favorites') {
-      const list = poiFavorites ?? [];
-      payloads = list
-        .filter((r) => selectedSaved.has(r.id))
-        .map((r) => ({
-          name: r.poiName,
-          note: r.poiAddress ?? undefined,
-          lat: r.poiLat ?? undefined,
-          lng: r.poiLng ?? undefined,
-          source: 'favorite',
-          poi_type: mapGooglePrimaryTypeToPoiType(r.poiType),
-        }));
-    } else {
-      const title = customTitle.trim();
-      if (!title) {
+    // custom-tab 前置驗證（early return，尚未 flip submitting）
+    if (tab === 'custom') {
+      if (!customTitle.trim()) {
         setCustomError('請輸入標題');
         return;
       }
@@ -890,22 +866,67 @@ export default function AddStopPage() {
         setCustomError('請先在地圖上選擇位置');
         return;
       }
-      const note = [customDuration && `${customDuration} 分`, customNote].filter(Boolean).join(' · ') || undefined;
-      payloads = [{
-        name: title,
-        time: customTime || undefined,
-        note,
-        lat: customCoord.lat,
-        lng: customCoord.lng,
-        source: 'custom',
-        poi_type: customCategory,
-      }];
     }
-
-    if (payloads.length === 0) return;
 
     setSubmitting(true);
     try {
+      let payloads: Body[] = [];
+
+      if (tab === 'search') {
+        const selected = searchResults.filter((r) => selectedSearch.has(r.place_id));
+        // 2026-07-08：加 Google 景點時抓 Place Details，把營業時間 + 價位寫進備註
+        // （訂位 Google 無此欄位 → 留白由 user 在編輯景點頁補）。graceful：resolve
+        // 失敗（rate limit / 404 / kill switch）不 enrich，buildPoiNote fallback 地址。
+        const detailById = new Map<string, { hours?: string | null; priceLevel?: string | null }>();
+        await Promise.all(selected.map(async (r) => {
+          try {
+            const d = await apiFetch<{ hours?: string | null; priceLevel?: string | null }>(
+              `/places/resolve?placeId=${encodeURIComponent(r.place_id)}`,
+            );
+            detailById.set(r.place_id, { hours: d.hours, priceLevel: d.priceLevel });
+          } catch {
+            // 無 enrich → note fallback 地址
+          }
+        }));
+        payloads = selected.map((r) => {
+          const d = detailById.get(r.place_id);
+          return {
+            name: r.name,
+            note: buildPoiNote({ hoursRaw: d?.hours, priceLevel: d?.priceLevel, address: r.address }),
+            lat: r.lat,
+            lng: r.lng,
+            source: 'google',
+            poi_type: searchCatOverride[r.place_id] ?? mapGooglePrimaryTypeToPoiType(r.category),
+          };
+        });
+      } else if (tab === 'favorites') {
+        const list = poiFavorites ?? [];
+        payloads = list
+          .filter((r) => selectedSaved.has(r.id))
+          .map((r) => ({
+            name: r.poiName,
+            note: r.poiAddress ?? undefined,
+            lat: r.poiLat ?? undefined,
+            lng: r.poiLng ?? undefined,
+            source: 'favorite',
+            poi_type: mapGooglePrimaryTypeToPoiType(r.poiType),
+          }));
+      } else {
+        if (!customCoord) return; // 已前置驗證，此處供 TS 收斂
+        const note = [customDuration && `${customDuration} 分`, customNote].filter(Boolean).join(' · ') || undefined;
+        payloads = [{
+          name: customTitle.trim(),
+          time: customTime || undefined,
+          note,
+          lat: customCoord.lat,
+          lng: customCoord.lng,
+          source: 'custom',
+          poi_type: customCategory,
+        }];
+      }
+
+      if (payloads.length === 0) return;
+
       const results = await Promise.allSettled(
         payloads.map((body) =>
           apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`, {

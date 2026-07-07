@@ -6,7 +6,9 @@
  * billing semantics — caller should rotate the sessionToken on the frontend
  * once this returns.
  *
- * Response: { placeId, lat, lng, name, address }
+ * Response: { placeId, lat, lng, name, address, hours, priceLevel }
+ *   - hours: raw weekday descriptions（\n 分隔），前端 condenseHours 壓縮
+ *   - priceLevel: Google 價位 enum，前端映射 ¥ 符號；無則 null
  *
  * Failures:
  *   - missing placeId → 400 DATA_VALIDATION
@@ -91,5 +93,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     lng: details.lng,
     name: details.name,
     address: details.address,
+    // 2026-07-08 加景點帶入備註：營業時間（raw weekday 行，前端 condenseHours）
+    // + 價位 enum（前端映射 ¥ 符號）。訂位 Google 無此欄位 → 不回。
+    hours: details.weekday_descriptions?.join('\n') ?? null,
+    priceLevel: details.price_level ?? null,
   });
 };

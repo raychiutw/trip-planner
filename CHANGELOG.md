@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.31] - 2026-07-08
+
+### Added
+- **加 Google 景點時，自動把營業時間 + 價位帶進備註**（user 回報「消費金額／訂位／營業時間目前都沒有」）
+  - 加景點（搜尋分頁）確認時，對每個選取的 POI 打一次 Place Details（`/api/places/resolve`），把**營業時間**（`condenseHours` 壓縮）+ **價位**（Google `priceLevel` → ￥/￥￥/￥￥￥ 符號）寫進備註，取代原本只放地址。
+  - **訂位資訊**：Google Places 無此欄位，抓不到 → 留白，由 user 在「編輯景點」頁自行補。
+  - graceful：resolve 失敗（rate limit / 404 / kill switch）該 POI 不 enrich、備註 fallback 地址，不影響其他 POI 與整批加入。
+  - `getPlaceDetails` field mask 加 `priceLevel`（與 rating/openingHours 同 Enterprise SKU，不升 tier 無額外費用）；`/places/resolve` 回傳擴充 `hours` + `priceLevel`。新增 `buildPoiNote` 純函數 + 7 unit tests。
+
 ## [2.55.30] - 2026-07-07
 
 ### Fixed
@@ -13211,7 +13220,7 @@ verify gate: tsc clean / 1029 tests pass.
 
 ## [2.6.1] - 2026-04-26
 
-**Mindtrip-parity DX：新增行程升級成 destination-first + 加景點 affordance + chat markdown 防呆**。/devex-review 發現我們 NewTripModal 比 mindtrip 弱（只給名稱+兩顆日期 vs 對方 destination + flexible/select dates + preferences），DaySection 沒有「加景點」入口（必須記得有 chat 模式），chat 渲染遇到 reply 含字面 `\n` 或單顆 tilde（價格範圍 `¥100~300`）就破版。這版補齊三個。Sidebar 同步拿掉 destructive 的「登出」link，改走 /settings/sessions device row revoke。
+**Mindtrip-parity DX：新增行程升級成 destination-first + 加景點 affordance + chat markdown 防呆**。/devex-review 發現我們 NewTripModal 比 mindtrip 弱（只給名稱+兩顆日期 vs 對方 destination + flexible/select dates + preferences），DaySection 沒有「加景點」入口（必須記得有 chat 模式），chat 渲染遇到 reply 含字面 `\n` 或單顆 tilde（價格範圍 `￥100~300`）就破版。這版補齊三個。Sidebar 同步拿掉 destructive 的「登出」link，改走 /settings/sessions device row revoke。
 
 ### Added
 - **NewTripModal destination-first** — 從「行程名稱 + 出發/回程」改成「目的地 + 日期模式 + 偏好」。目的地是主欄位（placeholder「沖繩・京都・首爾・台南...」），日期改 segmented control「選日期 / 彈性日期」，彈性模式自動填今天 + 5 天佔位。新增「想做什麼？（選填）」textarea 寫進 trip.description。Country 自動偵測（沖繩/京都→JP、首爾→KR、台北→TW、曼谷→TH）。
@@ -13223,7 +13232,7 @@ verify gate: tsc clean / 1029 tests pass.
 - **NewTripModal segmented control 守 44px tap target** — terracotta-preview 的 `.nav-tabs` 用 36px 是 mockup 簡化，實作守住 Apple HIG 最小觸控目標確保手機不誤點。
 
 ### Fixed
-- **Chat markdown 渲染遇字面 `\n` 跟單顆 tilde 破版** — `renderMarkdown` 加 defensive normalize：`\\n`（雙重 JSON encode 進來的字面 backslash-n）→ 真換行；單顆 `~`（如 `Day 3~4`、`¥100~300`、`¥3,000~`）escape 成 `\~` 避免 GFM strikethrough 把整段文字吃掉。雙顆 `~~text~~` 仍保留 strikethrough 行為。
+- **Chat markdown 渲染遇字面 `\n` 跟單顆 tilde 破版** — `renderMarkdown` 加 defensive normalize：`\\n`（雙重 JSON encode 進來的字面 backslash-n）→ 真換行；單顆 `~`（如 `Day 3~4`、`￥100~300`、`￥3,000~`）escape 成 `\~` 避免 GFM strikethrough 把整段文字吃掉。雙顆 `~~text~~` 仍保留 strikethrough 行為。
 
 ## [2.6.0] - 2026-04-26
 
