@@ -10,6 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { DndContext } from '@dnd-kit/core';
 import DaySection from '../../src/components/trip/DaySection';
 import type { Day, DaySummary } from '../../src/types/trip';
 
@@ -30,14 +31,14 @@ const mockDaySummary: DaySummary = {
 function renderDay() {
   return render(
     <MemoryRouter initialEntries={['/trip/test-trip']}>
-      <DaySection
+      <DndContext><DaySection
         dayNum={1}
         day={mockDay}
         daySummary={mockDaySummary}
         tripStart="2026-07-27"
         tripEnd="2026-07-30"
         isActive={false}
-      />
+      /></DndContext>
     </MemoryRouter>,
   );
 }

@@ -2,9 +2,14 @@ import { Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperat
 import { lazyWithRetry } from '../lib/lazyWithRetry';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
-import { apiFetch } from '../lib/apiClient';
+import { useDragDrop } from '../hooks/useDragDrop';
+import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
+import { buildCrossDayMoves, railItemsFirstCollision } from '../lib/crossDayMove';
+import { requestTravelRecompute } from '../lib/travelRecompute';
+import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
@@ -443,6 +448,47 @@ function TripPageInner(
     [days],
   );
 
+  /* --- 2026-07-07 跨天拖拉：TripPage 統一 DndContext ---
+   * 全部 DaySection 的 rails 共用一個 context（dndManaged rail 不自建），
+   * dnd-kit 內建 autoScroll = 拖到視窗邊緣自動捲動（捲動流換天的核心體驗）。
+   * 同日 reorder 由各 rail 的 useDndMonitor 自己接（active/over 同 day）；
+   * 這裡只處理跨天 drop：batch PATCH（day_id + 目標日 sort_order 重排）→
+   * 兩天顯式 recompute + 各 dispatch entryUpdated（帶 dayNum → refetchDay）。 */
+  const { sensors: crossDaySensors } = useDragDrop({ includeTouch: true, pointerActivationDistance: 8, sortable: true });
+  const handleCrossDayDragEnd = useCallback(async (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || typeof active.id !== 'number' || !activeTripId) return;
+    const activeDayId = (active.data.current as { dayId?: number | null } | undefined)?.dayId;
+    const overData = over.data?.current as { dayId?: number | null; railContainer?: boolean } | undefined;
+    const targetDayId = overData?.dayId;
+    // 同日（rail monitor 處理）或 data 缺 → 不動
+    if (activeDayId == null || targetDayId == null || activeDayId === targetDayId) return;
+    const targetOpt = dayOptions.find((d) => d.dayId === targetDayId);
+    const sourceOpt = dayOptions.find((d) => d.dayId === activeDayId);
+    if (!targetOpt) return;
+    const targetIds = (allDays[targetOpt.dayNum]?.timeline ?? [])
+      .map((t) => (t as { id?: number | null }).id)
+      .filter((id): id is number => typeof id === 'number');
+    const overEntryId = overData?.railContainer ? null : (typeof over.id === 'number' ? over.id : null);
+    const updates = buildCrossDayMoves(active.id, targetDayId, targetIds, overEntryId);
+    try {
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(activeTripId)}/entries/batch`, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        body: JSON.stringify({ updates }),
+      });
+      if (!res.ok) throw new Error(`batch ${res.status}`);
+      void requestTravelRecompute(activeTripId, targetOpt.dayNum).catch(() => undefined);
+      if (sourceOpt) void requestTravelRecompute(activeTripId, sourceOpt.dayNum).catch(() => undefined);
+      // 兩天各發一次（detail.dayNum → refetchDay 精準 invalidate 該天 cache）
+      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId: activeTripId, dayNum: targetOpt.dayNum } }));
+      if (sourceOpt) window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId: activeTripId, dayNum: sourceOpt.dayNum } }));
+      showToast(`已移到 Day ${String(targetOpt.dayNum).padStart(2, '0')}`, 'success');
+    } catch {
+      showToast('跨天移動失敗，請稍後再試', 'error');
+    }
+  }, [activeTripId, dayOptions, allDays]);
+
   /* --- Pins for TripMapRail (hoisted out of JSX IIFE for AppShell sheet slot) --- */
   const mapRailData = useMemo(() => {
     type Pin = ReturnType<typeof extractPinsFromDay>['pins'][number];
@@ -745,20 +791,29 @@ function TripPageInner(
 
         {!loading && trip && (
           <div className="trip-content" id="tripContent">
-            {dayNums.map((dayNum) => (
-              <DaySection
-                key={dayNum}
-                dayNum={dayNum}
-                day={allDays[dayNum]}
-                daySummary={daySummaryMap.get(dayNum)}
-                tripStart={tripStart}
-                tripEnd={tripEnd}
-                themeArt={themeArt}
-                localToday={localToday}
-                isActive={dayNum === currentDayNum}
-                timezone={weatherTimezone}
-              />
-            ))}
+            {/* 2026-07-07 跨天拖拉：統一 DndContext（autoScroll 內建 — 拖到
+              * 視窗邊緣自動捲動跨天）。rails 走 dndManaged 模式。 */}
+            <DndContext
+              sensors={crossDaySensors}
+              accessibility={TP_DRAG_ACCESSIBILITY}
+              collisionDetection={(args) => railItemsFirstCollision(closestCenter, args)}
+              onDragEnd={(e) => void handleCrossDayDragEnd(e)}
+            >
+              {dayNums.map((dayNum) => (
+                <DaySection
+                  key={dayNum}
+                  dayNum={dayNum}
+                  day={allDays[dayNum]}
+                  daySummary={daySummaryMap.get(dayNum)}
+                  tripStart={tripStart}
+                  tripEnd={tripEnd}
+                  themeArt={themeArt}
+                  localToday={localToday}
+                  isActive={dayNum === currentDayNum}
+                  timezone={weatherTimezone}
+                />
+              ))}
+            </DndContext>
             {/* Embedded mode (TripsListPage sheet) hides decorative footer art —
               * sheet is a narrow column, art would waste vertical space.
               * Standalone /trip/:id keeps it. Migration 0045 dropped trips.footer

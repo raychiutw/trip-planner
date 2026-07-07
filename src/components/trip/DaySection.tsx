@@ -203,9 +203,9 @@ const DaySection = React.memo(function DaySection({
               />
             )}
 
-            {timeline.length > 0 && (
-              <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} dayId={dayId ?? null} />
-            )}
+            {/* 2026-07-07 跨天拖拉：空日也 render（dndManaged 下 rail 顯示
+              * 空 drop 槽）— 拖到還沒排的天是跨天最常見場景（codex review P1）。 */}
+            <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} dayId={dayId ?? null} dndManaged />
           </>
         )}
       </div>
