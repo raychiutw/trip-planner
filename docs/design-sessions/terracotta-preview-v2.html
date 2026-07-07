@@ -1964,6 +1964,12 @@
     opacity: 1;
     color: var(--tp-accent);
   }
+  /* 2026-07-08 觸控修正：coarse pointer 無 hover，把手常駐可見 + 44px hit-slop
+   * （視覺仍 24px，不動 grid）。對齊 code .tp-rail-grip @media (hover: none)。 */
+  @media (hover: none) {
+    .tp-detail-grip { opacity: 1; position: relative; }
+    .tp-detail-grip::before { content: ''; position: absolute; inset: -10px; }
+  }
 
   .tp-detail-time {
     font-size: 14px;

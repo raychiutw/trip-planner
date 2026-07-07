@@ -454,7 +454,9 @@ function TripPageInner(
    * 同日 reorder 由各 rail 的 useDndMonitor 自己接（active/over 同 day）；
    * 這裡只處理跨天 drop：batch PATCH（day_id + 目標日 sort_order 重排）→
    * 兩天顯式 recompute + 各 dispatch entryUpdated（帶 dayNum → refetchDay）。 */
-  const { sensors: crossDaySensors } = useDragDrop({ includeTouch: true, pointerActivationDistance: 8, sortable: true });
+  // 2026-07-08 觸控可用性：長按門檻 200→150ms，手機拖拉更跟手（仍 >accidental；
+  // 5px tolerance 擋捲動誤觸不變）。搭配 grip 常駐可見 + 44px hit-slop（TimelineRail）。
+  const { sensors: crossDaySensors } = useDragDrop({ includeTouch: true, pointerActivationDistance: 8, touchActivationDelay: 150, sortable: true });
   const handleCrossDayDragEnd = useCallback(async (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || typeof active.id !== 'number' || !activeTripId) return;

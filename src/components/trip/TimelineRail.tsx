@@ -275,10 +275,14 @@ const SCOPED_STYLES = `
   display: inline-flex; gap: 4px;
 }
 
-/* 2026-05-01 mockup S12 Variant A 對齊 — grip 在 row grid col 1，永遠淡顯
- * (opacity 0.4) 而非 hover-only 隱形，hover 才變 accent。提升 discoverability
- * 同時不喧賓奪主。觸控裝置同樣 0.4，避免「找不到拖拉把手」。 */
+/* 2026-05-01 mockup S12 Variant A 對齊 — grip 在 row grid col 1，desktop 永遠淡顯
+ * (opacity 0.4) 而非 hover-only 隱形，hover 才變 accent：提升 discoverability
+ * 同時不喧賓奪主。
+ * 2026-07-08 觸控修正：coarse pointer 無 hover → 0.4 永遠淡，手機找不到把手（真機
+ * 實測 user 拖不動主因）。@media (hover: none) 下改常駐可見 + 44px hit-slop
+ * （::before 撐大點擊區，視覺仍 24px 不動 grid），對齊 grip 原本「touch 也要找得到」意圖。 */
 .tp-rail-grip {
+  position: relative;              /* 觸控 hit-slop ::before 的定位錨 */
   grid-column: 1;
   border: 0; background: transparent;
   display: inline-flex; align-items: center; justify-content: center;
@@ -293,7 +297,7 @@ const SCOPED_STYLES = `
    * dead-zone (swipe neither scrolls nor drags). */
   touch-action: pan-y;
   flex-shrink: 0;
-  transition: color 120ms, opacity 160ms;
+  transition: color 120ms, opacity 160ms, transform 120ms;
 }
 .tp-rail-row-wrap:hover .tp-rail-grip,
 .tp-rail-grip:hover,
@@ -301,7 +305,23 @@ const SCOPED_STYLES = `
   opacity: 1;
   color: var(--color-accent);
 }
-.tp-rail-grip:active { cursor: grabbing; }
+/* 觸控裝置（無 hover）：把手常駐可見 + 44px 觸控目標（視覺 icon 仍 24px）。 */
+@media (hover: none) {
+  .tp-rail-grip { opacity: 1; }
+  .tp-rail-grip::before {
+    content: '';
+    position: absolute;
+    inset: -10px;                  /* 24 + 10*2 = 44px（HIG 觸控目標） */
+  }
+}
+/* 抓取回饋：長按啟動 / 拖曳中，grip 變 accent + 放大，給「已抓住」即時視覺回饋。 */
+.tp-rail-grip:active,
+.tp-rail-item[data-dragging] .tp-rail-grip {
+  cursor: grabbing;
+  opacity: 1;
+  color: var(--color-accent);
+  transform: scale(1.18);
+}
 .tp-rail-grip .svg-icon { width: 16px; height: 16px; }
 
 /* 2026-07-07 跨天拖拉：拖曳懸停本日 rail 時淡高亮（drop-target 回饋）。
@@ -593,6 +613,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         data-past={isPast || undefined}
         data-tone={meta.tone}
         data-last={isLast || undefined}
+        data-dragging={sortable.isDragging || undefined}
         data-expanded={expanded || undefined}
         data-scroll-anchor={entry.id != null ? `entry-${entry.id}` : undefined}
       >
