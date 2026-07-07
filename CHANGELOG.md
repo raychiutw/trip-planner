@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.28] - 2026-07-07
+
+### Fixed
+- **每日累積距離改吃車程即時值**（user 回報「累積距離有問題，應該動態抓」— 正確）
+  - 原本 sum `entry.travel.distanceM`（day fetch 當下 snapshot）：車程重算完成後 TravelPill 走 segmentMap 立即更新，累積 km 卻停在舊 snapshot；刪除/搬移後 self-healing 補算的段完全沒被加總。
+  - `getTotalKm` 改對齊 TravelPill v2.31.8 pattern：相鄰 pair 查 **segmentMap 即時值優先**（`segmentUpdated` 自動 refetch → 重算完 km 立即同步）、stale 段（`computed_at=NULL`）不計舊值、缺 row fallback snapshot。TripSegmentsContext 共用 fetch 零額外請求。+5 unit tests。
+
 ## [2.55.27] - 2026-07-07
 
 ### Added
