@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.30] - 2026-07-07
+
+### Fixed
+- **每日里程再修：末站幻影段不計入**（承 v2.55.28，user 回報里程仍不對）
+  - v2.55.28 已改吃 segment 即時值，但 `getTotalKm` 仍**逐 entry** 累加 → 末站也算了 `entry.travel`（「離開當日」的殘留 snapshot，畫面上沒有對應 TravelPill）。實測沖繩 Day2 顯示 87km，實際 pill 加總只有 62km（末站 entry 帶幻影 25.5km — 換日/刪站的殘留段）。
+  - `getTotalKm` 改成只累加**相鄰 pair**（i=1..n-1），末站不帶「前往下一站」段 → 每日里程 = 當日所有 TravelPill 距離之和，一一對齊。實測 Day2 87→62、Day1 31→30，其餘天不變。
+  - 順修 review 抓到的反向落差：fresh transit 段（`computed_at` 有值但 `distanceM=null`，因不打 API）pill 走 `segment?.distanceM ?? distanceM` 顯示 snapshot，原本 `getTotalKm` 一律 `continue` → hero 少算而 pill 有顯示。改成缺距離時 fallback `prev.travel`，與 pill 完全一致。+3 regression tests。
+
 ## [2.55.29] - 2026-07-07
 
 ### Fixed

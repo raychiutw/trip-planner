@@ -77,13 +77,19 @@ function getTimelineBounds(timeline: unknown[]): { start: string | null; end: st
 /**
  * 每日累積距離 → km（rounded）。null = 無任何資料。
  *
- * 2026-07-07 user 回報「累積距離有問題」：原本 sum `entry.travel.distanceM` —
- * 那是 day fetch 當下的 snapshot（backend _merge 從 trip_segments lookup）。
- * 車程重算（self-healing / 顯式）完成後 segments refetch 了（TravelPill 立即
- * 顯示新值），day snapshot 卻要等 refetchDay — 累積 km 顯示舊值/漏段。
- * 改對齊 TravelPill 的 v2.31.8 pattern：**相鄰 pair 查 segmentMap 即時值優先**
- * （computed_at=NULL 的 stale 段不計 — 跟 pill 不顯示舊數字一致），缺 row 才
- * fallback prev.travel（離開 prev = 抵達 curr 的段）snapshot。
+ * 定義：**當日所有 TravelPill 顯示距離之和**。pill 只出現在相鄰兩站「之間」
+ * （TimelineRail 只在 i>0 render），距離來源對齊 pill 的
+ * `segment?.distanceM ?? distanceM`：fresh segment 有距離用即時值；fresh 但無
+ * 距離（transit 不打 API → distanceM=null）或缺 segment row 時 fallback
+ * prev.travel（離開 prev = 抵達 curr, v2.31.8 語意）；segment computed_at=NULL
+ * （換 POI 等重算）的 stale 段 pill 不顯示 → 也不計、不 fallback。
+ *
+ * 2026-07-07 user 回報「累積距離有問題」：
+ *  (1) 原本 sum `entry.travel.distanceM`（day fetch snapshot）— 車程重算後
+ *      segments 立即 refetch 但 snapshot 停在舊值/漏段 → 改吃 segmentMap 即時值。
+ *  (2) 但仍逐 entry 累加，**末站也算了 `entry.travel`**（離開當日的殘留段，
+ *      無對應 pill）→ Day2 多算幻影 25.5km。改成只累加相鄰 pair（i=1..n-1），
+ *      末站不帶「前往下一站」段，與 pill 顯示一一對齊。
  */
 export function getTotalKm(
   timeline: unknown[],
@@ -91,26 +97,27 @@ export function getTotalKm(
 ): number | null {
   let totalM = 0;
   let hasAny = false;
-  for (let i = 0; i < timeline.length; i++) {
-    const e = timeline[i];
-    if (typeof e !== 'object' || e === null) continue;
-    const id = (e as { id?: number | null }).id;
-    const nextRaw = i + 1 < timeline.length ? timeline[i + 1] : null;
-    const nextId = nextRaw && typeof nextRaw === 'object' ? (nextRaw as { id?: number | null }).id : null;
+  for (let i = 1; i < timeline.length; i++) {
+    const prev = timeline[i - 1];
+    const curr = timeline[i];
+    if (typeof prev !== 'object' || prev === null || typeof curr !== 'object' || curr === null) continue;
+    const prevId = (prev as { id?: number | null }).id;
+    const currId = (curr as { id?: number | null }).id;
 
-    // 即時值：本 entry → 下一 entry 的 segment（recompute 後自動 fresh）
-    const seg = id != null && nextId != null ? segmentMap.get(`${id}-${nextId}`) : undefined;
-    if (seg) {
-      // stale（computed_at=NULL，換 POI 後等重算）不計舊值 — 對齊 pill 行為
-      if (seg.computedAt != null && typeof seg.distanceM === 'number' && Number.isFinite(seg.distanceM)) {
-        totalM += seg.distanceM;
-        hasAny = true;
-      }
+    // 即時值：prev → curr 的 segment（recompute 後自動 fresh）
+    const seg = prevId != null && currId != null ? segmentMap.get(`${prevId}-${currId}`) : undefined;
+    // stale（computed_at=NULL，換 POI 後等重算）：pill 不顯示距離 → 不計、不 fallback
+    if (seg && seg.computedAt == null) continue;
+    // fresh + 有距離：用即時值（driving/walking 走 Google Routes）
+    if (seg && typeof seg.distanceM === 'number' && Number.isFinite(seg.distanceM)) {
+      totalM += seg.distanceM;
+      hasAny = true;
       continue;
     }
-    // fallback：segments 未載入 / pair 缺 row → day snapshot（travel 掛在
-    // prev 上 = 離開本 entry 的段，v2.31.8 語意）
-    const travel = (e as { travel?: { distanceM?: number | null } }).travel;
+    // fresh transit（distanceM=null，不打 API）或缺 segment row → fallback
+    // prev.travel snapshot（離開 prev = 抵達 curr, v2.31.8）。對齊 pill 的
+    // `segment?.distanceM ?? distanceM`：fresh 段缺距離時 pill 仍顯示 snapshot。
+    const travel = (prev as { travel?: { distanceM?: number | null } }).travel;
     const d = travel?.distanceM;
     if (typeof d === 'number' && Number.isFinite(d)) {
       totalM += d;
