@@ -75,7 +75,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // SELECT source entry（已驗證 belongsToTrip）
   const source = await db
-    .prepare('SELECT start_time, end_time, title, description, source FROM trip_entries WHERE id = ?')
+    .prepare('SELECT start_time, end_time, description, source FROM trip_entries WHERE id = ?')
     .bind(eid)
     .first() as Record<string, unknown> | null;
   if (!source) throw new AppError('DATA_NOT_FOUND');
@@ -121,8 +121,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     newRow = await db
       .prepare(
         `INSERT INTO trip_entries
-          (day_id, sort_order, start_time, end_time, title, description, source, entry_pois_version)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          (day_id, sort_order, start_time, end_time, description, source, entry_pois_version)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          RETURNING *`,
       )
       .bind(
@@ -130,7 +130,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         sortOrder,
         copyStartTime,
         copyEndTime,
-        source.title,
         source.description,
         source.source,
         sourceStopPois.length > 0 ? 1 : 0,

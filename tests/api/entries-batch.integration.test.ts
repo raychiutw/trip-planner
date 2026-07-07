@@ -30,11 +30,11 @@ describe('PATCH /api/trips/:id/entries/batch', () => {
   it('一次更新 5 entries 的 sort_order → 200，順序與 day_id 持久化', async () => {
     const dayId = await getDayId(db, 'trip-batch', 1);
     const ids = await Promise.all([
-      seedEntry(db, dayId, { title: 'A', sortOrder: 0 }),
-      seedEntry(db, dayId, { title: 'B', sortOrder: 1 }),
-      seedEntry(db, dayId, { title: 'C', sortOrder: 2 }),
-      seedEntry(db, dayId, { title: 'D', sortOrder: 3 }),
-      seedEntry(db, dayId, { title: 'E', sortOrder: 4 }),
+      seedEntry(db, dayId, { sortOrder: 0 }),
+      seedEntry(db, dayId, { sortOrder: 1 }),
+      seedEntry(db, dayId, { sortOrder: 2 }),
+      seedEntry(db, dayId, { sortOrder: 3 }),
+      seedEntry(db, dayId, { sortOrder: 4 }),
     ]);
     // 模擬 drag E 到頭：reorder 為 E A B C D
     const reordered = [ids[4], ids[0], ids[1], ids[2], ids[3]];
@@ -56,7 +56,7 @@ describe('PATCH /api/trips/:id/entries/batch', () => {
   it('Cross-day move：同次 batch 更新 day_id + sort_order', async () => {
     const day1 = await getDayId(db, 'trip-batch', 2);
     const day2 = await getDayId(db, 'trip-batch', 3);
-    const eid = await seedEntry(db, day1, { title: 'Movable', sortOrder: 0 });
+    const eid = await seedEntry(db, day1, { sortOrder: 0 });
     const updates = [{ id: eid, day_id: day2, sort_order: 99 }];
 
     const ctx = mockContext({
@@ -95,8 +95,8 @@ describe('PATCH /api/trips/:id/entries/batch', () => {
   it('updates 內有不屬於該 trip 的 entry → 404 atomically，原 entry 不被改', async () => {
     const dayId = await getDayId(db, 'trip-batch', 1);
     const otherDayId = await getDayId(db, 'trip-other', 1);
-    const myEntry = await seedEntry(db, dayId, { title: 'Mine', sortOrder: 50 });
-    const otherEntry = await seedEntry(db, otherDayId, { title: 'NotMine', sortOrder: 50 });
+    const myEntry = await seedEntry(db, dayId, { sortOrder: 50 });
+    const otherEntry = await seedEntry(db, otherDayId, { sortOrder: 50 });
 
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-batch/entries/batch', 'PATCH', {
@@ -118,7 +118,7 @@ describe('PATCH /api/trips/:id/entries/batch', () => {
   it('day_id 屬於別 trip → 403', async () => {
     const dayId = await getDayId(db, 'trip-batch', 1);
     const otherDayId = await getDayId(db, 'trip-other', 1);
-    const eid = await seedEntry(db, dayId, { title: 'X', sortOrder: 60 });
+    const eid = await seedEntry(db, dayId, { sortOrder: 60 });
 
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-batch/entries/batch', 'PATCH', {
@@ -159,8 +159,8 @@ describe('PATCH /api/trips/:id/entries/batch', () => {
   describe('sort_order UNIQUE invariant (T-10)', () => {
     it('同 day_id + 同 sort_order 在同 batch 重複 → 400 atomic（無一被改）', async () => {
       const dayId = await getDayId(db, 'trip-batch', 1);
-      const e1 = await seedEntry(db, dayId, { title: 'A', sortOrder: 1000 });
-      const e2 = await seedEntry(db, dayId, { title: 'B', sortOrder: 1001 });
+      const e1 = await seedEntry(db, dayId, { sortOrder: 1000 });
+      const e2 = await seedEntry(db, dayId, { sortOrder: 1001 });
 
       const ctx = mockContext({
         request: jsonRequest('https://test.com/api/trips/trip-batch/entries/batch', 'PATCH', {
@@ -188,8 +188,8 @@ describe('PATCH /api/trips/:id/entries/batch', () => {
     it('不同 day_id 同 sort_order 允許（key 含 day_id）', async () => {
       const day1 = await getDayId(db, 'trip-batch', 1);
       const day2 = await getDayId(db, 'trip-batch', 2);
-      const e1 = await seedEntry(db, day1, { title: 'D1A', sortOrder: 3000 });
-      const e2 = await seedEntry(db, day2, { title: 'D2A', sortOrder: 3001 });
+      const e1 = await seedEntry(db, day1, { sortOrder: 3000 });
+      const e2 = await seedEntry(db, day2, { sortOrder: 3001 });
 
       const ctx = mockContext({
         request: jsonRequest('https://test.com/api/trips/trip-batch/entries/batch', 'PATCH', {

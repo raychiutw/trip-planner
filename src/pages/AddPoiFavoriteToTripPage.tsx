@@ -345,7 +345,7 @@ export default function AddPoiFavoriteToTripPage() {
         await apiFetch(`/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`, {
           method: 'POST',
           body: JSON.stringify({
-            title: favorite.poiName,
+            name: favorite.poiName,
             note: favorite.poiAddress || undefined,
             lat: favorite.poiLat,
             lng: favorite.poiLng,

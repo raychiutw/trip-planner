@@ -6,6 +6,7 @@
 interface ValidateEntry {
   startTime?: string | null;
   endTime?: string | null;
+  displayTitle?: string | null;
   title?: string | null;
   stopPois?: Array<{ name?: string | null; hours?: string | null }>;
 }
@@ -36,7 +37,7 @@ export function validateDay(timeline: ValidateEntry[]): string[] {
     if (!composedTime) return;
     const entryTime = entry.startTime ?? '';
     const entryHour = parseHour(composedTime);
-    const title = entry.title || '';
+    const title = entry.displayTitle || entry.stopPois?.[0]?.name || '';
 
     // v2.29.0: shopping array removed — shopping POI 已合進 stopPois (filter by type)
     entry.stopPois?.forEach((p) => {

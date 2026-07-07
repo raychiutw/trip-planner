@@ -1334,12 +1334,6 @@ body.dark {
   overflow-x: auto;
   padding: 0 12px;
   scrollbar-width: none;
-  /* v2.32.5: 右側 24px fade gradient mask 提示「內容可往右 scroll」
-   * （7-day trip 上 day 6/7 chips 超出 mobile viewport 沒 scrollbar 沒 chevron
-   * → user 不知可 swipe）。trade-off：scroll 到末尾時最後 chip 會略 fade，
-   * acceptable visual sacrifice for clearer scroll affordance。 */
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
-          mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
 }
 .tp-map-day-tabs::-webkit-scrollbar { display: none; }
 .tp-map-day-tab {

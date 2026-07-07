@@ -18,9 +18,9 @@ beforeAll(async () => {
   // 401/403 cases require non-published trip。
   await seedTrip(db, { id: 'trip-seg-get', published: 0 });
   const day1 = await getDayId(db, 'trip-seg-get', 1);
-  entry1 = await seedEntry(db, day1, { sortOrder: 1, title: 'A' });
-  entry2 = await seedEntry(db, day1, { sortOrder: 2, title: 'B' });
-  entry3 = await seedEntry(db, day1, { sortOrder: 3, title: 'C' });
+  entry1 = await seedEntry(db, day1, { sortOrder: 1 });
+  entry2 = await seedEntry(db, day1, { sortOrder: 2 });
+  entry3 = await seedEntry(db, day1, { sortOrder: 3 });
 
   const now = Date.now();
   await db.prepare(

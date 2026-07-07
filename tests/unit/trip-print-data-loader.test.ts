@@ -3,7 +3,7 @@
  *
  * Code-review 2026-05-30 caught that the print loader was mapping assumed entry
  * fields (`time`/`title`/`rating` columns) that don't exist post-v2.29.0: time is
- * composed from startTime/endTime, title is `poiName ?? title`, rating lives on
+ * composed from startTime/endTime, title is the primary POI name, rating lives on
  * the master stop POI, and travel.type arrives as `car`/`walk` (not driving/walking).
  * This test feeds that exact shape (no time/title/rating on the entry) so the
  * canonical `toTimelineEntry` mapping is verified end-to-end.

@@ -606,10 +606,9 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 // v2.29.0: POI card display uses the canonical entry master.
 type TimelineEntryLike = {
   master?: { name?: string | null; type?: string | null } | null;
-  title?: string | null;
 };
-function poiNameFrom(me: TimelineEntryLike | null | undefined, placeholderTitle?: string | null): string {
-  return me?.master?.name ?? me?.title ?? placeholderTitle ?? '景點';
+function poiNameFrom(me: TimelineEntryLike | null | undefined): string {
+  return me?.master?.name ?? '景點';
 }
 function poiTypeFrom(me: TimelineEntryLike | null | undefined): string | null {
   return me?.master?.type ?? null;
@@ -1004,12 +1003,12 @@ export default function EditEntryPage() {
         setEntry(data);
         if (data.master?.poiId != null) {
           setPoiInfo({
-            name: data.master.name ?? data.title ?? '景點',
+            name: data.master.name ?? '景點',
             poiType: data.master.type ?? null,
           });
           setMasterSummary({
             poiId: data.master.poiId,
-            name: data.master.name ?? data.title ?? '景點',
+            name: data.master.name ?? '景點',
             type: data.master.type ?? null,
             note: data.master.note ?? null,
             lat: data.master.lat ?? null,
@@ -1069,14 +1068,14 @@ export default function EditEntryPage() {
         if (me) {
           // v2.29.0: canonical master comes from trip_entry_pois.
           setPoiInfo({
-            name: poiNameFrom(me, entry.title),
+            name: poiNameFrom(me),
             poiType: poiTypeFrom(me),
           });
           // v2.27.0 multi-POI: master + alternates 從 day fetch 帶出
           if (me.master?.poiId != null) {
             setMasterSummary({
               poiId: me.master.poiId,
-              name: me.master.name ?? me.title ?? '景點',
+              name: me.master.name ?? '景點',
               type: me.master.type ?? null,
               note: me.master.note ?? null,
               lat: me.master.lat ?? null,
@@ -1093,14 +1092,13 @@ export default function EditEntryPage() {
         setSiblingMasterCoords(extractSiblingCoords(timeline, entryId));
         const prev = idx > 0 ? timeline[idx - 1] : null;
         if (prev?.id != null) {
-          // v2.31.29: 與 TimelineRail 對齊 — mapDay.ts 計算 displayTitle = poiName ?? title，
+          // v2.31.29: 與 TimelineRail 對齊 — mapDay.ts 計算 displayTitle from primary POI，
           // 但 backend GET /days/:dayNum 不回此欄位（mapDay 是 frontend-only DaySection.tsx
           // 內呼叫）。直接從 master.name 重算。例如 entry.title="抵達那霸機場" 但 POI
           // name="那霸機場" 時，TimelineRail 顯「那霸機場」，header 也應顯「那霸機場」。
           const derivedTitle = getStopDisplayTitle({
-            title: prev.title ?? null,
             poiName: prev.master?.name ?? null,
-          }) ?? prev.title ?? '';
+          }) ?? '（未選擇景點）';
           setPrevEntry({ id: prev.id, title: derivedTitle });
         }
       } catch {

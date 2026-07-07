@@ -136,8 +136,8 @@ const EMPTY_NOTES: PrintNotes = {
  * Map one raw `?all=1` timeline entry → PrintEntry via the canonical
  * `toTimelineEntry` mapper (so time/title/rating/travel match exactly what the
  * interactive timeline shows): time is composed from startTime/endTime (the
- * `time` column was dropped in v2.29.0), title is `poiName ?? title`, and rating
- * lives on the master stop POI — none of which are direct entry columns.
+ * `time` column was dropped in v2.29.0), title is the primary POI name, and
+ * rating lives on the master stop POI — none of which are direct entry columns.
  */
 function mapEntry(e: Raw): PrintEntry {
   const t = toTimelineEntry(e as unknown as Parameters<typeof toTimelineEntry>[0]);
@@ -150,7 +150,7 @@ function mapEntry(e: Raw): PrintEntry {
   const masterNote = masterStop?.note ?? null;
   return {
     time: t.time ?? undefined,
-    title: t.displayTitle || t.title || '',
+    title: t.displayTitle || '',
     rating: t.googleRating,
     description: t.description ?? undefined,
     note: masterNote ?? undefined,

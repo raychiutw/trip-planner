@@ -203,7 +203,7 @@ describe('clone (PR3)', () => {
     const { id } = await seedTrip(db, { id: 'clone-src', owner, days: 1 });
     const dayId = await getDayId(db, id, 1);
     const poiId = await seedPoi(db, { name: '那霸機場', type: 'transport' });
-    await seedEntry(db, dayId, { title: '那霸機場', poiId });
+    await seedEntry(db, dayId, { poiId });
     await db.prepare("INSERT INTO trip_flights (trip_id, airline, flight_no) VALUES (?, 'BR', '112')").bind(id).run();
     await db.prepare("INSERT INTO trip_emergency_contacts (trip_id, name, phone) VALUES (?, 'Mom', '0900')").bind(id).run();
     const created = (await (await createShareFor(id)).json()) as { token: string }; // default: flights ON, emergency OFF
@@ -245,9 +245,9 @@ describe('clone — remap fidelity (PR3, multi-day + segment + hotel + alternate
     const poiB = await seedPoi(db, { name: '景點B-備選', type: 'attraction' });
     const poiC = await seedPoi(db, { name: '景點C', type: 'restaurant' });
     const hotelPoi = await seedPoi(db, { name: '飯店', type: 'hotel' });
-    const e1 = await seedEntry(db, d1, { sortOrder: 1, title: '景點A', poiId: poiA });
+    const e1 = await seedEntry(db, d1, { sortOrder: 1, poiId: poiA });
     await seedEntryAlternate(db, { entryId: e1, poiId: poiB, sortOrder: 2 }); // e1 has master + 1 alternate
-    const e2 = await seedEntry(db, d2, { sortOrder: 1, title: '景點C', poiId: poiC });
+    const e2 = await seedEntry(db, d2, { sortOrder: 1, poiId: poiC });
     await seedHotelForDay(db, d2, hotelPoi);
     await db.prepare("INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, version) VALUES (?, ?, ?, 'driving', 15, 5000, 'google', 0)").bind(id, e1, e2).run();
 
@@ -291,7 +291,7 @@ describe('clone — remap fidelity (PR3, multi-day + segment + hotel + alternate
     const d1 = await getDayId(db, id, 1);
     const masterPoi = await seedPoi(db, { name: '正選餐廳', type: 'restaurant' });
     const altPoi = await seedPoi(db, { name: '備選餐廳', type: 'restaurant' });
-    const e1 = await seedEntry(db, d1, { sortOrder: 1, title: '午餐', poiId: masterPoi });
+    const e1 = await seedEntry(db, d1, { sortOrder: 1, poiId: masterPoi });
     await seedEntryAlternate(db, { entryId: e1, poiId: altPoi, sortOrder: 2 });
     // 備註掛在 trip_entry_pois（per-POI），不在 trip_entries（已 DROP）。
     await db.prepare('UPDATE trip_entry_pois SET note = ? WHERE entry_id = ? AND poi_id = ?')

@@ -17,7 +17,7 @@ import { createPortal } from 'react-dom';
 const SCOPED_STYLES = `
 .tp-confirm-backdrop {
   position: fixed; inset: 0;
-  z-index: 1100;
+  z-index: var(--z-modal, 9000);
   background: rgba(20, 14, 9, 0.42);
   display: grid; place-items: center;
   padding: 20px;

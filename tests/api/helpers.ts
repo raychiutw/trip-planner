@@ -174,18 +174,16 @@ export async function seedTrip(db: D1Database, opts: {
  */
 export async function seedEntry(db: D1Database, dayId: number, opts: {
   sortOrder?: number;
-  title?: string;
   /** @deprecated v2.29.0 — pass through trip_entry_pois INSERT instead */
   poiId?: number | null;
 } = {}) {
   const result = await db.prepare(
-    `INSERT INTO trip_entries (day_id, sort_order, start_time, title)
-     VALUES (?, ?, ?, ?) RETURNING id`,
+    `INSERT INTO trip_entries (day_id, sort_order, start_time)
+     VALUES (?, ?, ?) RETURNING id`,
   ).bind(
     dayId,
     opts.sortOrder ?? 1,
     '10:00',
-    opts.title || 'Test Entry',
   ).first<{ id: number }>();
   const entryId = result!.id;
   // Backward-compat: poiId opt → INSERT trip_entry_pois.sort_order=1 (master)

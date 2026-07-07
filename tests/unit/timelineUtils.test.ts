@@ -81,22 +81,22 @@ describe('formatDurationCompact', () => {
 
 describe('deriveTypeMeta', () => {
   it('機場接送 → plane / 飛行 / accent:false', () => {
-    const entry: TimelineEntryData = { title: '機場接送' };
+    const entry: TimelineEntryData = { displayTitle: '機場接送' };
     expect(deriveTypeMeta(entry)).toEqual({ icon: 'plane', label: '飛行', accent: false, tone: 'sage' });
   });
 
   it('午餐 (description: restaurant) → utensils / 用餐 / accent:true', () => {
-    const entry: TimelineEntryData = { title: '午餐', description: 'restaurant' };
+    const entry: TimelineEntryData = { displayTitle: '午餐', description: 'restaurant' };
     expect(deriveTypeMeta(entry)).toEqual({ icon: 'utensils', label: '用餐', accent: true, tone: 'pink' });
   });
 
   it('步行市區 → walking / 散步 / accent:false', () => {
-    const entry: TimelineEntryData = { title: '步行市區' };
+    const entry: TimelineEntryData = { displayTitle: '步行市區' };
     expect(deriveTypeMeta(entry)).toEqual({ icon: 'walking', label: '散步', accent: false, tone: 'sage' });
   });
 
   it('無特殊關鍵字 → location-pin / 景點 / accent:true', () => {
-    const entry: TimelineEntryData = { title: '首里城' };
+    const entry: TimelineEntryData = { displayTitle: '首里城' };
     expect(deriveTypeMeta(entry)).toEqual({ icon: 'location-pin', label: '景點', accent: true, tone: 'accent' });
   });
 
@@ -147,21 +147,21 @@ describe('deriveTypeMeta', () => {
     for (const m of iconSrc.matchAll(/'([\w-]+)':\s*'<path/g)) registered.add(m[1]!);
 
     const cases: TimelineEntryData[] = [
-      { title: '機場接送' },
-      { title: '飯店' },
-      { title: '午餐 restaurant' },
-      { title: 'cafe 咖啡' },
-      { title: 'shopping 購物' },
-      { title: '開車自駕' },
-      { title: '步行市區' },
-      { title: 'spa 泡湯' },
+      { displayTitle: '機場接送' },
+      { displayTitle: '飯店' },
+      { displayTitle: '午餐 restaurant' },
+      { displayTitle: 'cafe 咖啡' },
+      { displayTitle: 'shopping 購物' },
+      { displayTitle: '開車自駕' },
+      { displayTitle: '步行市區' },
+      { displayTitle: 'spa 泡湯' },
       { title: '東京迪士尼樂園', travel: { type: 'walking' } },
-      { title: '首里城' },
+      { displayTitle: '首里城' },
     ];
     const missing: string[] = [];
     for (const c of cases) {
       const { icon } = deriveTypeMeta(c);
-      if (!registered.has(icon)) missing.push(`${c.title}→${icon}`);
+      if (!registered.has(icon)) missing.push(`${c.displayTitle ?? c.title ?? 'entry'}→${icon}`);
     }
     expect(missing).toEqual([]);
   });

@@ -55,7 +55,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
         timeline: [
           {
             time: '09:00',
-            title: '首里城',
+            name: '首里城',
             description: '世界遺產',
             stopPois: [
               { name: 'すし三昧', type: 'restaurant' },
@@ -63,7 +63,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
           },
           {
             time: '12:00',
-            title: '國際通',
+            name: '國際通',
             travel: { type: 'car', desc: '車程', min: 20 },
           },
         ],
@@ -85,7 +85,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
       'SELECT * FROM trip_entries WHERE day_id = ? ORDER BY sort_order'
     ).bind(dayId).all();
     expect(entries.results).toHaveLength(2);
-    expect((entries.results[0] as Record<string, unknown>).title).toBe('首里城');
+    expect(Object.prototype.hasOwnProperty.call(entries.results[0] as Record<string, unknown>, 'title')).toBe(false);
     const restaurantPoi = await db
       .prepare("SELECT id FROM pois WHERE name = 'すし三昧' AND type = 'restaurant'")
       .first<{ id: number }>();
@@ -133,7 +133,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
         timeline: [
           {
             time: '12:00',
-            title: '午餐',
+            name: '午餐',
             restaurants: [],
           },
         ],
@@ -146,6 +146,24 @@ describe('PUT /api/trips/:id/days/:num', () => {
     expect(resp.status).toBe(400);
     const data = await resp.json() as { error?: { detail?: string } };
     expect(data.error?.detail ?? '').toContain('restaurants 已移除');
+  });
+
+  it('timeline entry 舊 title 欄位 → 400，避免回到 entry title fallback', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {
+        date: '2026-04-01',
+        dayOfWeek: '三',
+        label: 'Day 1',
+        timeline: [{ time: '12:00', title: '午餐' }],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-dn', num: '1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(400);
+    const data = await resp.json() as { error?: { detail?: string } };
+    expect(data.error?.detail ?? '').toContain('title 已移除');
   });
 
   it('未認證 → 401', async () => {
@@ -175,7 +193,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-dn/days/2', 'PUT', {
         date: '2026-04-02', dayOfWeek: '四', label: 'Day 2',
-        timeline: [{ time: '10:00', title: 'test\uFFFDgarbled' }],
+        timeline: [{ time: '10:00', name: 'test\uFFFDgarbled' }],
       }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
@@ -192,14 +210,14 @@ describe('PUT /api/trips/:id/days/:num', () => {
         timeline: [
           {
             time: '09:00',
-            title: '那覇空港',
+            name: '那覇空港',
             poi_type: 'transport',
             // Migration 0045: maps dropped, google_rating renamed to rating.
             rating: 4.2,
           },
           {
             time: '12:00',
-            title: '首里城',
+            name: '首里城',
             maps: 'https://www.google.com/maps/search/首里城',
           },
         ],
@@ -212,8 +230,8 @@ describe('PUT /api/trips/:id/days/:num', () => {
 
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entries = await db.prepare(
-      'SELECT id, title FROM trip_entries WHERE day_id = ? ORDER BY sort_order',
-    ).bind(dayId).all<{ id: number; title: string }>();
+      'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order',
+    ).bind(dayId).all<{ id: number }>();
     expect(entries.results).toHaveLength(2);
     // v2.29.0: trip_entries.poi_id DROPPED. master POI 改查 trip_entry_pois.sort_order=1。
     for (const e of entries.results) {
@@ -245,9 +263,10 @@ describe('PUT /api/trips/:id/days/:num', () => {
     });
     const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
-    const data = await resp.json() as { timeline: Array<{ title: string; master: { type: string } | null; stopPois?: Array<{ type: string; sortOrder: number }> }> };
-    const transportEntry = data.timeline.find((e) => e.title === '那覇空港');
+    const data = await resp.json() as { timeline: Array<{ master: { name: string; type: string } | null; stopPois?: Array<{ type: string; sortOrder: number }> }> };
+    const transportEntry = data.timeline.find((e) => e.master?.name === '那覇空港');
     expect(transportEntry).toBeDefined();
+    expect(Object.prototype.hasOwnProperty.call(transportEntry as Record<string, unknown>, 'title')).toBe(false);
     expect(transportEntry!.master).not.toBeNull();
     expect(transportEntry!.master!.type).toBe('transport');
     expect(transportEntry!.stopPois?.[0]).toMatchObject({ type: 'transport', sortOrder: 1 });
@@ -257,7 +276,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
   it('Phase 2: POST /entries 建立 POI 並掛上 master (trip_entry_pois sort_order=1)', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-dn/days/2/entries', 'POST', {
-        title: '美麗海水族館',
+        name: '美麗海水族館',
         time: '10:00',
         poi_type: 'attraction',
         // Migration 0045: maps dropped, google_rating renamed to rating.
@@ -269,8 +288,9 @@ describe('PUT /api/trips/:id/days/:num', () => {
     });
     const resp = await callHandler(onRequestPostEntry, ctx);
     expect(resp.status).toBe(201);
-    const row = await resp.json() as { id: number; title: string };
+    const row = await resp.json() as { id: number };
     expect(row.id).toBeGreaterThan(0);
+    expect(Object.prototype.hasOwnProperty.call(row as Record<string, unknown>, 'title')).toBe(false);
 
     // v2.29.0: trip_entries.poi_id DROPPED. 從 trip_entry_pois 查 master。
     const master = await db.prepare(
@@ -317,7 +337,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-dn/days/2', 'PUT', {
         date: '2026-04-02', dayOfWeek: '四', label: 'Day 2',
-        timeline: [{ time: '10:00', title: 'bad type', poi_type: 'invalid_type' }],
+        timeline: [{ time: '10:00', name: 'bad type', poi_type: 'invalid_type' }],
       }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
@@ -480,7 +500,7 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
       .prepare("INSERT INTO pois (name, type) VALUES ('Alt-B', 'attraction') RETURNING id")
       .first<{ id: number }>();
     const entry = await db
-      .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '10:00', 'Master-X') RETURNING id")
+      .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '10:00') RETURNING id")
       .bind(dayId)
       .first<{ id: number }>();
     await db.batch([
@@ -503,7 +523,7 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
         dayOfWeek: '二',
         label: 'Updated',
         timeline: [
-          { time: '11:00', title: 'Master-X', poi_type: 'attraction' },
+          { time: '11:00', name: 'Master-X', poi_type: 'attraction' },
         ],
       }),
       env,
@@ -557,11 +577,11 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
       .first<{ id: number }>();
 
     const entry1 = await db
-      .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 1, '08:00', 'Matsuya') RETURNING id")
+      .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '08:00') RETURNING id")
       .bind(dayId)
       .first<{ id: number }>();
     const entry2 = await db
-      .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title) VALUES (?, 2, '18:00', 'Matsuya') RETURNING id")
+      .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 2, '18:00') RETURNING id")
       .bind(dayId)
       .first<{ id: number }>();
     await db.batch([
@@ -580,8 +600,8 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
         dayOfWeek: '二',
         label: 'Updated',
         timeline: [
-          { time: '08:30', title: 'Matsuya', poi_type: 'restaurant' },
-          { time: '19:00', title: 'Matsuya', poi_type: 'restaurant' },
+          { time: '08:30', name: 'Matsuya', poi_type: 'restaurant' },
+          { time: '19:00', name: 'Matsuya', poi_type: 'restaurant' },
         ],
       }),
       env,
@@ -737,7 +757,7 @@ describe('PUT /api/trips/:id/days/:num — v2.30.x Day-level OCC (migration 0065
 });
 
 describe('PUT /api/trips/:id/days/:num — migration 0078 entry note → master poi note', () => {
-  it('title-only entry 帶 note → 寫進 master trip_entry_pois.note（非 trip_entries）', async () => {
+  it('name request 帶 note → 寫進 master trip_entry_pois.note（非 trip_entries）', async () => {
     const TRIP = 'trip-dn-note-titleonly';
     await seedTrip(db, { id: TRIP, days: 1 });
     const ctx = mockContext({
@@ -746,7 +766,7 @@ describe('PUT /api/trips/:id/days/:num — migration 0078 entry note → master 
         dayOfWeek: '三',
         label: 'D1',
         timeline: [
-          { time: '09:00', title: '展望台', poi_type: 'attraction', note: '看夕陽最佳' },
+          { time: '09:00', name: '展望台', poi_type: 'attraction', note: '看夕陽最佳' },
         ],
       }),
       env,
@@ -775,7 +795,7 @@ describe('PUT /api/trips/:id/days/:num — migration 0078 entry note → master 
         timeline: [
           {
             time: '12:00',
-            title: '午餐',
+            name: '午餐',
             note: '整體備註：靠海那側',
             stopPois: [
               { name: '海鮮丼A', type: 'restaurant' }, // master，無 per-POI note
@@ -816,7 +836,7 @@ describe('PUT /api/trips/:id/days/:num — migration 0078 entry note → master 
         timeline: [
           {
             time: '12:00',
-            title: '午餐',
+            name: '午餐',
             note: '整體備註',
             stopPois: [
               { name: '海鮮丼A', type: 'restaurant', note: 'master自己的備註' },

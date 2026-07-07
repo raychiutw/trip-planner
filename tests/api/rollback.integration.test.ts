@@ -21,15 +21,15 @@ afterAll(disposeMiniflare);
 describe('POST /api/trips/:id/audit/:aid/rollback', () => {
   it('rollback update → 還原舊值', async () => {
     const dayId = await getDayId(db, 'trip-rb', 1);
-    const entryId = await seedEntry(db, dayId, { title: 'Original' });
+    const entryId = await seedEntry(db, dayId);
 
-    // 模擬 update audit log（title 從 Original → Changed）
+    // 模擬 update audit log（description 從 Original → Changed）
     await db.prepare(
       "INSERT INTO audit_log (trip_id, table_name, record_id, action, changed_by, diff_json) VALUES (?, 'trip_entries', ?, 'update', 'user@test.com', ?)"
-    ).bind('trip-rb', entryId, JSON.stringify({ title: { old: 'Original', new: 'Changed' } })).run();
+    ).bind('trip-rb', entryId, JSON.stringify({ description: { old: 'Original', new: 'Changed' } })).run();
 
-    // 先改掉 title
-    await db.prepare('UPDATE trip_entries SET title = ? WHERE id = ?').bind('Changed', entryId).run();
+    // 先改掉 description
+    await db.prepare('UPDATE trip_entries SET description = ? WHERE id = ?').bind('Changed', entryId).run();
 
     const auditRow = await db.prepare(
       'SELECT id FROM audit_log WHERE trip_id = ? ORDER BY id DESC LIMIT 1'
@@ -45,13 +45,13 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
     expect(resp.status).toBe(200);
 
     // 驗證已還原
-    const entry = await db.prepare('SELECT title FROM trip_entries WHERE id = ?').bind(entryId).first();
-    expect((entry as Record<string, unknown>).title).toBe('Original');
+    const entry = await db.prepare('SELECT description FROM trip_entries WHERE id = ?').bind(entryId).first();
+    expect((entry as Record<string, unknown>).description).toBe('Original');
   });
 
   it('rollback insert → 刪除記錄', async () => {
     const dayId = await getDayId(db, 'trip-rb', 2);
-    const entryId = await seedEntry(db, dayId, { title: 'ToRollback' });
+    const entryId = await seedEntry(db, dayId);
 
     await db.prepare(
       "INSERT INTO audit_log (trip_id, table_name, record_id, action, changed_by) VALUES (?, 'trip_entries', ?, 'insert', 'user@test.com')"
@@ -81,7 +81,7 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
     // 撞 "no such column: note" 變成 opaque 500。對齊本 handler header 對 dropped-column
     // rollback 的承諾（與既有 time/poi_id/travel_* cutover 一致）。
     const dayId = await getDayId(db, 'trip-rb', 3);
-    const entryId = await seedEntry(db, dayId, { title: 'NoteRollback' });
+    const entryId = await seedEntry(db, dayId);
 
     await db.prepare(
       "INSERT INTO audit_log (trip_id, table_name, record_id, action, changed_by, diff_json) VALUES (?, 'trip_entries', ?, 'update', 'user@test.com', ?)"

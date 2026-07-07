@@ -38,7 +38,7 @@ describe('GET /api/trips/:id/health', () => {
     ]);
 
     // v2.29.0: seedEntry 不帶 poiId — 直接 INSERT 兩 trip_entry_pois rows。
-    const entryId = await seedEntry(db, dayId, { title: 'Health Entry' });
+    const entryId = await seedEntry(db, dayId);
     await db.batch([
       db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entryId, closedMasterPoi),
       db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(entryId, missingAltPoi),

@@ -198,7 +198,6 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     .filter((p): p is StopPoiOptionData => p !== null)
     .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
   const displayTitle = getStopDisplayTitle({
-    title: raw.title ?? null,
     poiName: poi?.name ?? null,
     poiType: poi?.type ?? null,
   });
@@ -206,7 +205,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   const locations: NavLocation[] = [];
   if (effMaps) {
     locations.push({
-      name: displayTitle || raw.title || undefined,
+      name: displayTitle || undefined,
       googleQuery: effMaps || undefined,
     });
   }
@@ -229,7 +228,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     startTime: raw.startTime ?? null,
     endTime: raw.endTime ?? null,
     displayTitle,
-    title: raw.title ?? null,
+    title: null,
     description: raw.description ?? null,
     // v2.x (migration 0078): 「整體備註」來源從 entry-level trip_entries.note
     // 改成 primary stopPoi（master, sortOrder=1）的 per-POI trip_entry_pois.note。

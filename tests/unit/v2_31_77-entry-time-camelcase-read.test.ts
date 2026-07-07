@@ -65,8 +65,8 @@ describe('v2.31.77: entry time read uses camelCase (startTime / endTime)', () =>
   describe('buildWeatherDay accepts camelCase input', () => {
     it('parses startTime hour for weather time slot', () => {
       const day = buildWeatherDay('2026-05-18', [
-        { startTime: '09:00', title: '景點 A', location: { lat: 26.21, lng: 127.72 } },
-        { startTime: '15:00', title: '景點 B', location: { lat: 26.50, lng: 127.99 } },
+        { startTime: '09:00', displayTitle: '景點 A', location: { lat: 26.21, lng: 127.72 } },
+        { startTime: '15:00', displayTitle: '景點 B', location: { lat: 26.50, lng: 127.99 } },
       ]);
       expect(day).not.toBeNull();
       expect(day!.locations).toHaveLength(2);

@@ -396,7 +396,7 @@ export default function AddCustomStopPage() {
     try {
       const noteParts = [duration && `${duration} 分`, note.trim()].filter(Boolean);
       const body = {
-        title: title.trim(),
+        name: title.trim(),
         time: startTime || undefined,
         note: noteParts.length > 0 ? noteParts.join(' · ') : undefined,
         lat: pickedCoord.lat,

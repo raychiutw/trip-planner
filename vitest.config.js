@@ -32,6 +32,10 @@ export default defineConfig({
     // 防 global.fetch / vi.spyOn 等 cross-test leak。
     clearMocks: true,
     restoreMocks: true,
+    // Windows + jsdom tests can over-saturate process startup and hit Vitest's
+    // per-test timeout even when each file passes alone. Keep Linux/macOS CI at
+    // default parallelism, but cap local Windows workers for deterministic runs.
+    ...(process.platform === 'win32' ? { maxWorkers: 4 } : {}),
     exclude: ['tests/e2e/**', 'tests/api/**', 'node_modules/**', 'server/node_modules/**', '.claude/**', '.agents/**', '.codex/**'],
     projects: [
       {
