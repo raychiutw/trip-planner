@@ -52,20 +52,47 @@ import { condenseHours } from '../../lib/poiHours';
 
 const SCOPED_STYLES = `
 .tp-rail-detail {
-  /* v2.30.12: time col 移除後 dot 中心從 110px → 56px (desktop) / 92px → 44px (mobile)
-   * 對齊新 dot center: item-pad(8) + grip(24) + gap(12) + dot/2(12) = 56px desktop
-   * mobile: item-pad(4) + grip(20) + gap(8) + dot/2(12) = 44px */
-  margin: 4px 0 8px 56px;
+  /* 2026-07-07 user 要求：展開明細與 header 卡同寬（原 margin-left 56/44px
+   * 對齊 dot 縮排 — v2.30.12 註解保留於 git history）。 */
+  margin: 4px 0 8px;
   padding: 14px 16px;
   /* 展開明細與卡片同色系（繼承 .tp-rail-item[data-tone] 的 --tone-*；neutral fallback secondary）*/
   background: var(--tone-subtle, var(--color-secondary));
   border: 1px solid var(--tone-bg, var(--color-border));
   border-radius: var(--radius-md);
   display: flex; flex-direction: column; gap: 12px;
+  /* iOS 式展開（2026-07-07）：interpolate-size 讓 height:auto 可 transition，
+   * 搭 @starting-style 從 0 高平滑長開（Apple bezier）。不支援的瀏覽器
+   * height/overflow 宣告無害，動畫 fallback 到下方 keyframes fade。
+   * 收合維持條件 unmount（立即消失）— 測試與 a11y 語意不變。 */
+  interpolate-size: allow-keywords;
+  height: auto;
+  overflow: hidden;
+  transition:
+    height 320ms var(--transition-timing-function-apple, ease-out),
+    margin 320ms var(--transition-timing-function-apple, ease-out),
+    padding 320ms var(--transition-timing-function-apple, ease-out),
+    opacity 240ms ease-out;
   animation: tp-rail-detail-in 160ms var(--transition-timing-function-apple, ease-out);
 }
+@starting-style {
+  .tp-rail-detail {
+    height: 0;
+    margin-top: 0; margin-bottom: 0;
+    padding-top: 0; padding-bottom: 0;
+    opacity: 0;
+  }
+}
+/* 支援 interpolate-size 的瀏覽器走高度 transition，關掉舊 fade keyframes
+ * 避免 opacity 被 animation 蓋過 transition（兩者疊跑不協調）。 */
+@supports (interpolate-size: allow-keywords) {
+  .tp-rail-detail { animation: none; }
+}
 @media (max-width: 760px) {
-  .tp-rail-detail { margin: 4px 0 8px 44px; padding: 12px; }
+  .tp-rail-detail { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-rail-detail { transition: none; animation: none; }
 }
 @keyframes tp-rail-detail-in {
   from { opacity: 0; transform: translateY(-4px); }

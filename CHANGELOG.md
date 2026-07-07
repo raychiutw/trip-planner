@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.25] - 2026-07-07
+
+### Changed
+- **行程景點展開明細與卡片同寬 + iOS 式展開動畫**（user 要求）
+  - 同寬：`.tp-rail-detail` 移除 56px（desktop）/ 44px（mobile）左縮排 — terracotta mockup 的 `.tp-stop-v-detail` 本為卡內同寬設計，原縮排是 code deviation，本次回歸 SoT。
+  - iOS 式展開：`interpolate-size: allow-keywords` + `@starting-style` 讓 height:auto 從 0 平滑長開（320ms Apple bezier `cubic-bezier(0.2,0.8,0.2,1)`，height/margin/padding/opacity 同步)。`@supports` 分流：支援的瀏覽器關掉舊 fade keyframes 防疊跑，不支援者 fallback 原 160ms fade；`prefers-reduced-motion` 全關。收合維持條件 unmount（測試與 a11y 語意不變）。
+  - source-grep 鎖測：同寬不可退回縮排、interpolate-size/@starting-style/apple bezier/reduced-motion 必在。
+
 ## [2.55.24] - 2026-07-07
 
 ### Changed
