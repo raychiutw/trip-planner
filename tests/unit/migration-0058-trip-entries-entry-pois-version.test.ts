@@ -57,7 +57,7 @@ describe('migration 0058 — trip_entries.entry_pois_version', () => {
     const { id: tripId } = await seedTrip(db, { id: 'mig58-default-trip' });
     const dayId = await getDayId(db, tripId, 1);
     const poiId = await seedPoi(db, { name: 'POI-Mig58-Default' });
-    const entryId = await seedEntry(db, dayId, { title: 'fresh entry', poiId });
+    const entryId = await seedEntry(db, dayId, { poiId });
 
     const row = await db
       .prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?')
@@ -71,7 +71,7 @@ describe('migration 0058 — trip_entries.entry_pois_version', () => {
     const { id: tripId } = await seedTrip(db, { id: 'mig58-mono-trip' });
     const dayId = await getDayId(db, tripId, 1);
     const poiId = await seedPoi(db, { name: 'POI-Mig58-Mono' });
-    const entryId = await seedEntry(db, dayId, { title: 'mono entry', poiId });
+    const entryId = await seedEntry(db, dayId, { poiId });
 
     for (let i = 1; i <= 5; i++) {
       await db
@@ -94,7 +94,7 @@ describe('migration 0058 — trip_entries.entry_pois_version', () => {
     const { id: tripId } = await seedTrip(db, { id: 'mig58-iso-trip' });
     const dayId = await getDayId(db, tripId, 1);
     const poiId = await seedPoi(db, { name: 'POI-Mig58-Iso' });
-    const entryId = await seedEntry(db, dayId, { title: 'iso entry', poiId });
+    const entryId = await seedEntry(db, dayId, { poiId });
 
     await db
       .prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?')
@@ -126,7 +126,7 @@ describe('migration 0058 — trip_entries.entry_pois_version', () => {
     const { id: tripId } = await seedTrip(db, { id: 'mig58-big-trip' });
     const dayId = await getDayId(db, tripId, 1);
     const poiId = await seedPoi(db, { name: 'POI-Mig58-Big' });
-    const entryId = await seedEntry(db, dayId, { title: 'big entry', poiId });
+    const entryId = await seedEntry(db, dayId, { poiId });
 
     await db
       .prepare('UPDATE trip_entries SET entry_pois_version = 100000 WHERE id = ?')

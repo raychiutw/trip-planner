@@ -173,7 +173,7 @@ describe('DELETE /api/pois/:id — v2.27.0 trip_entry_pois cleanup', () => {
     const dayId = await getDayId(db, TRIP, 1);
     const targetPoi = await seedPoi(db, { name: 'AdmDel-Master', type: 'attraction' });
     // v2.29.0: seedEntry({poiId}) 已自動 INSERT trip_entry_pois sort_order=1。
-    const entryId = await seedEntry(db, dayId, { title: 'AdmDel-Entry', poiId: targetPoi });
+    const entryId = await seedEntry(db, dayId, { poiId: targetPoi });
 
     // Pre-condition: junction row exists
     const before = await db
@@ -211,7 +211,7 @@ describe('DELETE /api/pois/:id — v2.27.0 trip_entry_pois cleanup', () => {
     const masterPoi = await seedPoi(db, { name: 'AdmDel-Alt-M', type: 'attraction' });
     const altPoi = await seedPoi(db, { name: 'AdmDel-Alt-A', type: 'attraction' });
     // v2.29.0: seedEntry({poiId}) 已自動 INSERT master sort_order=1，只補 alternate。
-    const entryId = await seedEntry(db, dayId, { title: 'AdmDel-Alt-Entry', poiId: masterPoi });
+    const entryId = await seedEntry(db, dayId, { poiId: masterPoi });
     await db
       .prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)')
       .bind(entryId, altPoi)

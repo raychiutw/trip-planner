@@ -91,7 +91,7 @@ describe('POST /api/trips/:id/entries/:eid/trip-pois — PR39', () => {
 
   beforeAll(async () => {
     dayId = await getDayId(db, tripId, 1);
-    entryId = await seedEntry(db, dayId, { sortOrder: 1, title: 'PR39 entry' });
+    entryId = await seedEntry(db, dayId, { sortOrder: 1 });
   });
 
   async function callAddPoi(body: Record<string, unknown>, eidOverride: string | number = entryId, email = ownerEmail) {

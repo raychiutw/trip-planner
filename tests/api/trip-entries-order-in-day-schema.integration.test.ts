@@ -33,7 +33,7 @@ describe('migration 0030 — trip_entries.order_in_day', () => {
 
   it('新增 entry 不傳 order_in_day 自動為 0', async () => {
     const dayId = await getDayId(db, 'order-trip', 1);
-    const entryId = await seedEntry(db, dayId, { title: 'Default Order Entry' });
+    const entryId = await seedEntry(db, dayId);
     const row = await db.prepare(
       'SELECT order_in_day FROM trip_entries WHERE id = ?'
     ).bind(entryId).first<{ order_in_day: number }>();
@@ -43,13 +43,13 @@ describe('migration 0030 — trip_entries.order_in_day', () => {
   it('手動設 order_in_day 可成功 INSERT / 讀回', async () => {
     const dayId = await getDayId(db, 'order-trip', 2);
     // v2.29.0: trip_entries.time DROPPED, 改用 start_time。
-    await db.prepare(
-      `INSERT INTO trip_entries (day_id, sort_order, start_time, title, order_in_day)
-       VALUES (?, ?, ?, ?, ?)`
-    ).bind(dayId, 1, '10:00', 'Ordered Entry', 5).run();
+    const inserted = await db.prepare(
+      `INSERT INTO trip_entries (day_id, sort_order, start_time, order_in_day)
+       VALUES (?, ?, ?, ?) RETURNING id`
+    ).bind(dayId, 1, '10:00', 5).first<{ id: number }>();
     const row = await db.prepare(
-      'SELECT order_in_day FROM trip_entries WHERE title = ?'
-    ).bind('Ordered Entry').first<{ order_in_day: number }>();
+      'SELECT order_in_day FROM trip_entries WHERE id = ?'
+    ).bind(inserted!.id).first<{ order_in_day: number }>();
     expect(row!.order_in_day).toBe(5);
   });
 

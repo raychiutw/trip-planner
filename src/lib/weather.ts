@@ -84,7 +84,11 @@ export function getLocIdx(day: WeatherDay, h: number): number {
  */
 export function buildWeatherDay(
   dayLabel: string | null | undefined,
-  timeline: Array<{ startTime?: string | null; title: string; location?: { lat?: number; lng?: number } | null }>,
+  timeline: Array<{
+    startTime?: string | null;
+    displayTitle?: string | null;
+    location?: { lat?: number; lng?: number } | null;
+  }>,
 ): WeatherDay | null {
   if (!timeline || timeline.length === 0) return null;
 
@@ -108,7 +112,7 @@ export function buildWeatherDay(
       if (match) start = parseInt(match[1] ?? '0', 10);
     }
 
-    locations.push({ name: entry.title, lat, lon: lng, start });
+    locations.push({ name: entry.displayTitle?.trim() || '', lat, lon: lng, start });
     lastLat = lat;
     lastLon = lng;
   }

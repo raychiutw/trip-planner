@@ -44,7 +44,7 @@ export function validateDayBody(body: DayBody): ValidationResult {
 }
 
 export interface EntryBody {
-  title?: string | null;
+  name?: string | null;
   lat?: number | null;
   lng?: number | null;
   source?: string | null;
@@ -87,11 +87,11 @@ function isValidCoord(value: unknown, kind: 'lat' | 'lng'): boolean {
  * - 任一存在 → 兩個都必填（XOR 拒絕）
  * - 必為 finite number（非 NaN / Infinity / string）
  * - lat ∈ [-90, 90], lng ∈ [-180, 180]
- * - 既有純 title 路徑（無 lat/lng）不受影響
+ * - 既有純 name 路徑（無 lat/lng）不受影響
  */
 export function validateEntryBody(body: EntryBody): ValidationResult {
-  if (!body.title) {
-    return { ok: false, status: 400, error: '必填欄位缺失: title' };
+  if (!body.name) {
+    return { ok: false, status: 400, error: '必填欄位缺失: name' };
   }
 
   const hasLat = coordPresent(body.lat);
@@ -159,4 +159,3 @@ export function sanitizeReply(reply: string): string {
   }
   return reply;
 }
-

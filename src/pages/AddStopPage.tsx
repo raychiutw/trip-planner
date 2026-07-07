@@ -843,7 +843,7 @@ export default function AddStopPage() {
     setSubmitError(null);
 
     type Body = {
-      title: string;
+      name: string;
       time?: string;
       note?: string;
       lat?: number;
@@ -860,7 +860,7 @@ export default function AddStopPage() {
       payloads = searchResults
         .filter((r) => selectedSearch.has(r.place_id))
         .map((r) => ({
-          title: r.name,
+          name: r.name,
           note: r.address || undefined,
           lat: r.lat,
           lng: r.lng,
@@ -872,7 +872,7 @@ export default function AddStopPage() {
       payloads = list
         .filter((r) => selectedSaved.has(r.id))
         .map((r) => ({
-          title: r.poiName,
+          name: r.poiName,
           note: r.poiAddress ?? undefined,
           lat: r.poiLat ?? undefined,
           lng: r.poiLng ?? undefined,
@@ -892,7 +892,7 @@ export default function AddStopPage() {
       }
       const note = [customDuration && `${customDuration} 分`, customNote].filter(Boolean).join(' · ') || undefined;
       payloads = [{
-        title,
+        name: title,
         time: customTime || undefined,
         note,
         lat: customCoord.lat,

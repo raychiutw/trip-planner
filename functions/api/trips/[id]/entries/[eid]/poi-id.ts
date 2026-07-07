@@ -8,7 +8,7 @@
  * Body 兩種 mode（v2.23.8）：
  *   1. { poiId: number } — 直接置換成既有 POI
  *   2. { name: string, lat: number, lng: number, source?: string } — 從 search 結果
- *      新建 POI（find-or-create by lat/lng）並重掛。entry.title 也同步更新為 name。
+ *      新建 POI（find-or-create by lat/lng）並重掛。顯示名稱永遠取 master POI name。
  *
  * round 7 fix + round 9 cleanup: 接受可選 OCC token `entryPoisVersion` 對齊其他
  * multi-POI endpoints（PATCH /master / POST,DELETE /alternates / PATCH /alternates/reorder
@@ -63,7 +63,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   // Resolve mode：existing POI vs find-or-create mode (new from search)
   let newPoiId: number | null;
-  let newTitle: string | null = null;
   if ('poiId' in body) {
     newPoiId = body.poiId as number;
     if (typeof newPoiId !== 'number' || !Number.isInteger(newPoiId) || newPoiId <= 0) {
@@ -75,7 +74,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // find-or-create from search payload
     const poiData = normalizeFindOrCreatePoiPayload(body);
     newPoiId = await findOrCreatePoi(db, poiData);
-    newTitle = poiData.name;
   } else {
     throw new AppError('DATA_VALIDATION', '須提供 poiId 或 { name, lat, lng }');
   }
@@ -88,10 +86,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   // round 7 fix: pass OCC token through to setMaster (adversarial #2 — was bypassed).
   await setMaster(db, entryId, newPoiId, entryPoisVersion);
-  if (newTitle !== null) {
-    await db.prepare('UPDATE trip_entries SET title = ? WHERE id = ?')
-      .bind(newTitle, entryId).run();
-  }
 
   await logAudit(db, {
     tripId: id,

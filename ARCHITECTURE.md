@@ -199,6 +199,8 @@ trip_days.hotel_poi_id  hotel 改 FK 而非舊 trip_pois context='hotel'
 poi_relations      多對多 (例「景點附近餐廳」)
 ```
 
+Entry 顯示名稱以 `trip_entry_pois.sort_order=1 -> pois.name` 為 canonical source；`trip_entries.title` 已於 v2.55.22 / migration 0081 DROP。
+
 **已 DROP** (v2.29.x migration 0061-0063):
 - `trip_pois` 整表 — 之前 COALESCE pattern (trip_pois overrides pois) 已過時
 - `saved_pois` → 改名 `poi_favorites` (v2.22.0 migration 0050)
@@ -389,6 +391,7 @@ tests/
 
 | Version | Migration | 變更 |
 |---------|-----------|------|
+| **v2.55.22** | 0081 | `trip_entries.title` DROPPED — entry 顯示名稱 hard cutover 到 primary POI name（`trip_entry_pois.sort_order=1 -> pois.name`）。POST entry contract 改用 `name`，舊 `title` payload 直接 400；clone/import/copy/rollback/health-check/favorite add-to-trip 全移除 title 讀寫。 |
 | **v2.30.0** | 0064 | `trip_segments.mode_source` DROPPED — 移除「上鎖」概念。PATCH /segments/:sid contract 重寫：`mode='transit'` 必填 min（`source='manual'`，不打 Routes），`mode='driving'`/`'walking'` 一律 Google Routes 重算（ignore `body.min`, `source='google'`）。recompute-travel skip 條件 `mode_source='user'` → `mode='transit'`；response field `pairsSkippedUser` → `pairsSkippedTransit`。Frontend 移除 🔒 icon、isLocked 變數、「已手動覆寫」title indicator、EditEntryPage「重設為自動」button。 |
 | **v2.29.x** | 0061-0063 | `trip_pois` 整表 rip-out（v2.29.0 / migration 0061+0062）：所有 alternates/master/hotel/shopping/restaurant 統一進 `trip_entry_pois` + `trip_days.hotel_poi_id` + `poi_relations`。`DROP TABLE saved_pois`（v2.29.1 / migration 0063，poi-favorites-rename Phase 2 — 10 天 soak 後）。Stale-travel ⚠ 偵測改用 `segment.computed_at IS NULL` signal（v2.29.2，拔 Haversine vs distance divergence 邏輯）；daily-check `queryRequestErrors` 移除 stale SELECT `trip_requests.mode`（v2.29.3）。 |
 | **v2.22.0** | 0050 | `saved_pois` table → `poi_favorites`；route `/saved` → `/favorites`；API `/api/saved-pois` → `/api/poi-favorites`；`SavedPoisPage` → `PoiFavoritesPage`；`AddSavedPoiToTripPage` → `AddPoiFavoriteToTripPage`；CSS class `tp-saved-*` → `tp-favorites-*`。AddPoiFavoriteToTripPage 改 4-field 純時間驅動（廢 position + anchorEntryId）。Cross-skill auth header `CF-Access-*` → `Authorization: Bearer $TRIPLINE_API_TOKEN`。companion gate（middleware + `_companion.ts` requireFavoriteActor）+ `companion_request_actions` UNIQUE table 防 quota abuse + audit_log `companion_failure_reason` field。 |

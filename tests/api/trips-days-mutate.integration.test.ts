@@ -191,8 +191,8 @@ describe('DELETE /api/trips/:id/days/:num — middle day cascade (v2.33.1: prese
   it('刪除中間天，cascade entries + 後續 day_num 上移；dates 保留（會留 gap）', async () => {
     await seedTrip(db, { id: 'del-mid', days: 5 });
     const d3Id = await getDayId(db, 'del-mid', 3);
-    await seedEntry(db, d3Id, { title: 'mid-e1', sortOrder: 0 });
-    await seedEntry(db, d3Id, { title: 'mid-e2', sortOrder: 1 });
+    await seedEntry(db, d3Id, { sortOrder: 0 });
+    await seedEntry(db, d3Id, { sortOrder: 1 });
 
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/del-mid/days/3', 'DELETE'),

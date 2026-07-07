@@ -85,7 +85,9 @@ async function seedEntryRow(db: D1Database, tripId: string, note: string | null)
     .bind(tripId)
     .first<{ id: number }>();
   const entry = await db
-    .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title, note) VALUES (?, 1, '10:00', 'E', ?) RETURNING id")
+    // This fresh DB intentionally stops before migration 0081, where the legacy
+    // NOT NULL title column still exists. Current runtime/tests do not write it.
+    .prepare("INSERT INTO trip_entries (day_id, sort_order, start_time, title, note) VALUES (?, 1, '10:00', 'legacy', ?) RETURNING id")
     .bind(day!.id, note)
     .first<{ id: number }>();
   return entry!.id;

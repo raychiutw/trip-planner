@@ -49,20 +49,24 @@ describe('validateDayBody', () => {
 });
 
 describe('validateEntryBody', () => {
-  it('通過：有 title', () => {
-    expect(validateEntryBody({ title: 'Visit Shrine' })).toEqual({ ok: true, status: 200 });
+  it('通過：有 name', () => {
+    expect(validateEntryBody({ name: 'Visit Shrine' })).toEqual({ ok: true, status: 200 });
   });
 
-  it('失敗：缺 title', () => {
+  it('失敗：缺 name', () => {
     expect(validateEntryBody({}).ok).toBe(false);
   });
 
-  it('失敗：title 為 null', () => {
-    expect(validateEntryBody({ title: null }).ok).toBe(false);
+  it('失敗：name 為 null', () => {
+    expect(validateEntryBody({ name: null }).ok).toBe(false);
   });
 
-  it('失敗：title 為空字串', () => {
-    expect(validateEntryBody({ title: '' }).ok).toBe(false);
+  it('失敗：name 為空字串', () => {
+    expect(validateEntryBody({ name: '' }).ok).toBe(false);
+  });
+
+  it('失敗：舊 title 不再視為有效 name', () => {
+    expect(validateEntryBody({ title: 'Visit Shrine' }).ok).toBe(false);
   });
 });
 

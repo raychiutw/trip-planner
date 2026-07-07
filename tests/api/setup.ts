@@ -39,8 +39,24 @@ interface GlobalCache {
   __tp_mf?: Miniflare;
   __tp_db?: D1Database;
   __tp_migrated?: boolean;
+  __tp_migrationPromise?: Promise<void>;
 }
 const _cache = globalThis as unknown as GlobalCache;
+
+async function hasMigratedSchema(db: D1Database): Promise<boolean> {
+  try {
+    const table = await db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'trip_entries'")
+      .first<{ name: string }>();
+    if (!table) return false;
+
+    const info = await db.prepare('PRAGMA table_info(trip_entries)').all<{ name: string }>();
+    const columnNames = new Set((info.results ?? []).map((col) => col.name));
+    return columnNames.has('id') && !columnNames.has('title');
+  } catch {
+    return false;
+  }
+}
 
 /**
  * 取得共用 D1 database（lazy init + migration 只跑一次）
@@ -50,19 +66,33 @@ export async function createTestDb(): Promise<D1Database> {
     _cache.__tp_mf = new Miniflare({
       modules: true,
       script: 'export default { fetch() { return new Response("ok"); } }',
-      d1Databases: ['DB'],
+      // Vitest's forks pool can re-evaluate this module in separate workers.
+      // Give each process an isolated in-memory D1 id so migrations never race
+      // against a DB created by another worker.
+      d1Databases: { DB: `tripline-test-${process.pid}` },
+      d1Persist: false,
     });
   }
   if (!_cache.__tp_db) {
     _cache.__tp_db = await _cache.__tp_mf.getD1Database('DB');
   }
   if (!_cache.__tp_migrated) {
-    for (const fileSql of getMigrationFiles()) {
-      for (const stmt of extractStatements(fileSql)) {
-        await _cache.__tp_db.prepare(stmt).run();
-      }
+    if (await hasMigratedSchema(_cache.__tp_db)) {
+      _cache.__tp_migrated = true;
+    } else {
+      _cache.__tp_migrationPromise ??= (async () => {
+        for (const fileSql of getMigrationFiles()) {
+          for (const stmt of extractStatements(fileSql)) {
+            await _cache.__tp_db!.prepare(stmt).run();
+          }
+        }
+        _cache.__tp_migrated = true;
+      })().catch((err) => {
+        _cache.__tp_migrationPromise = undefined;
+        throw err;
+      });
+      await _cache.__tp_migrationPromise;
     }
-    _cache.__tp_migrated = true;
   }
   return _cache.__tp_db;
 }

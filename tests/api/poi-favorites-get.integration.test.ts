@@ -136,8 +136,8 @@ describe('GET /api/poi-favorites — §7.1 V2 user / anonymous', () => {
     // v2.29.0: trip_entries.poi_id DROPPED. master 走 trip_entry_pois sort_order=1。
     const entry = await db
       .prepare(
-        `INSERT INTO trip_entries (day_id, sort_order, title)
-         VALUES (?, 0, 'Private usage') RETURNING id`,
+        `INSERT INTO trip_entries (day_id, sort_order)
+         VALUES (?, 0) RETURNING id`,
       )
       .bind(dayRow!.id)
       .first<{ id: number }>();

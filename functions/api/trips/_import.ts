@@ -59,7 +59,6 @@ export interface NImportEntry {
   sortOrder: number;
   startTime: string | null;
   endTime: string | null;
-  title: string;
   description: string | null;
   note: string | null;
   source: string;
@@ -181,9 +180,7 @@ function normEntry(raw: unknown, entryPosition: number): NImportEntry {
   // duplicate / gappy sort_order in an untrusted payload.
   rawPois.sort((a, b) => a.sortOrder - b.sortOrder);
   const pois = rawPois.map((p, i) => ({ ...p, sortOrder: i + 1 }));
-  // master poi name backfills an empty entry title (matches getStopDisplayTitle).
   const master = pois[0];
-  const title = str(o.title, 300).trim() || (master ? master.name : '');
 
   // migration 0078: entry-level note 已從 trip_entries DROP，round-trip 的「整體備註」
   // 改掛 master（sort_order=1）POI 的 per-POI note。新匯出檔 entry 不再帶 top-level note；
@@ -201,7 +198,6 @@ function normEntry(raw: unknown, entryPosition: number): NImportEntry {
     sortOrder: intOrNull(o.sortOrder) ?? entryPosition,
     startTime: strOrNull(o.startTime, 20),
     endTime: strOrNull(o.endTime, 20),
-    title,
     description: strOrNull(o.description, 4000),
     // 保留原始 entry-level note 供向後相容（import.ts orchestration 的 `p.note ?? e.note`
     // fallback 仍引用此欄）；實際 master 已於上方 fold，故 orchestration fallback 不會重複寫入。

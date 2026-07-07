@@ -716,7 +716,7 @@ export default function ChangePoiPage() {
       try {
         // v2.32.0: mode=new 走 POST /entries（建立新 entry + master），不需 OCC
         if (mode === 'new') {
-          const body = { title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', poi_type: customCategory };
+        const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', poi_type: customCategory };
           const res = await apiFetchRaw(
             `/trips/${encodeURIComponent(tripId)}/days/${newDayNum}/entries`,
             { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
@@ -781,9 +781,9 @@ export default function ChangePoiPage() {
       if (mode === 'new') {
         const fromFav = selected.source === 'favorite' && selected.poiId;
         const body = fromFav
-          ? { title: selected.name, poiId: selected.poiId, source: 'favorite' }
+          ? { name: selected.name, poiId: selected.poiId, source: 'favorite' }
           : {
-              title: selected.name,
+              name: selected.name,
               lat: selected.lat,
               lng: selected.lng,
               source: 'google',

@@ -83,8 +83,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         // migration 0078: trip_entries.note DROPPED — INSERT 不再帶 note。舊匯出檔的
         // entry-level note 在下方 trip_entry_pois master row 做 coalesce 保留（p.note ?? e.note）。
         entryStmts.push(
-          db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, entry_pois_version) VALUES (?,?,?,?,?,?,?,?) RETURNING id')
-            .bind(dayIds[di], e.sortOrder, e.startTime, e.endTime, e.title, e.description, e.source, e.pois.length > 0 ? 1 : 0));
+          db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, description, source, entry_pois_version) VALUES (?,?,?,?,?,?,?) RETURNING id')
+            .bind(dayIds[di], e.sortOrder, e.startTime, e.endTime, e.description, e.source, e.pois.length > 0 ? 1 : 0));
         entryPositions.push(e.entryPosition);
       }
     });

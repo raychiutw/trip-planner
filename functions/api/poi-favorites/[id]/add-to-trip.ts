@@ -145,14 +145,21 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   const newStartMin = hhmmToMin(startTime);
   const newEndMin = hhmmToMin(endTime);
   const { results: dayEntries } = await db
-    .prepare('SELECT id, start_time, end_time, title, sort_order FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC')
+    .prepare(`
+      SELECT e.id, e.start_time, e.end_time, e.sort_order, p.name AS display_title
+      FROM trip_entries e
+      LEFT JOIN trip_entry_pois tep ON tep.entry_id = e.id AND tep.sort_order = 1
+      LEFT JOIN pois p ON p.id = tep.poi_id
+      WHERE e.day_id = ?
+      ORDER BY e.sort_order ASC
+    `)
     .bind(day.id)
     .all<{
       id: number;
       start_time: string | null;
       end_time: string | null;
-      title: string;
       sort_order: number;
+      display_title: string | null;
     }>();
 
   /** 取得 entry 的 [startMin, endMin]：純看 start_time/end_time。 */
@@ -176,7 +183,7 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
           time: entry.start_time && entry.end_time
             ? `${entry.start_time}-${entry.end_time}`
             : (entry.start_time ?? null),
-          title: entry.title,
+          title: entry.display_title ?? '（未選擇景點）',
           dayNum,
         },
       }, 409);
@@ -221,9 +228,9 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   // favorite.note 改寫進下方 master trip_entry_pois.note（sort_order=1）。
   stmts.push(
     db.prepare(
-      `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title, description, source, entry_pois_version)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1) RETURNING id`,
-    ).bind(day.id, finalSortOrder, startTime, endTime, favorite.poi_name, null, 'fast-path'),
+      `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, description, source, entry_pois_version)
+       VALUES (?, ?, ?, ?, ?, ?, 1) RETURNING id`,
+    ).bind(day.id, finalSortOrder, startTime, endTime, null, 'fast-path'),
   );
 
   const batchResults = await db.batch<{ id: number }>(stmts);

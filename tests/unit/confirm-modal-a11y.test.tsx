@@ -48,6 +48,22 @@ describe('ConfirmModal — a11y + interaction', () => {
     expect(document.activeElement).toBe(confirmBtn);
   });
 
+  it('backdrop 使用全域 modal z-index token，壓過地圖與 sticky chrome', () => {
+    render(
+      <ConfirmModal
+        open={true}
+        title="刪除行程"
+        message="此動作無法復原"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    const styleText = Array.from(document.querySelectorAll('style'))
+      .map((style) => style.textContent ?? '')
+      .join('\n');
+    expect(styleText).toContain('z-index: var(--z-modal, 9000)');
+  });
+
   it('Escape 觸發 onCancel', () => {
     const onCancel = vi.fn();
     render(

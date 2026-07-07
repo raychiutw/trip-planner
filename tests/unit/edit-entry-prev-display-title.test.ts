@@ -1,7 +1,7 @@
 // @vitest-environment node
 /**
  * v2.31.28 fix #129 + v2.31.29 fix #130: EditEntryPage 「從「{prev}」移動」
- * header 用 master.name 優先 fallback prev.title — 與 TimelineRail 對齊。
+ * header 用 master.name — 與 TimelineRail 對齊。
  *
  * Bug 取證（prod QA）：trip /trip/.../stop/420/edit 的 mode section header 顯示
  * 「從「抵達那霸機場」移動」，但 TripPage TimelineRail 同一 entry 顯示「那霸機場」
@@ -13,8 +13,8 @@
  * 在 DaySection.tsx 才呼叫 — 直接 fetch 的 prev 物件沒 displayTitle 欄位 → fallback
  * 仍取 prev.title。
  *
- * v2.31.29 真正 fix：用 getStopDisplayTitle({title, poiName: prev.master?.name})
- * — 與 mapDay.ts 內部計算同一規則（master.name ?? title）。
+ * v2.31.29 真正 fix：用 getStopDisplayTitle({poiName: prev.master?.name})
+ * — 與 mapDay.ts 內部計算同一規則（primary POI name only）。
  *
  * Pure-text grep on source。
  */
@@ -43,10 +43,8 @@ describe('v2.31.29 EditEntryPage prevEntry displayTitle from master.name', () =>
     expect(SRC).toMatch(/從「\{prevEntry\.title\}」移動/);
   });
 
-  it('保留 fallback 到 prev.title（master.name 缺漏時）', () => {
-    // getStopDisplayTitle 已內建 fallback：poiName ?? title。
-    // 加上 outer ?? prev.title 雙保險或省略皆可，但至少有一個能 trip-up
-    // 當 master 為 null 時不爆。
-    expect(SRC).toMatch(/title:\s*prev\.title/);
+  it('不 fallback 到 prev.title（master.name 缺漏時顯示未選擇）', () => {
+    expect(SRC).not.toMatch(/\?\?\s*prev\.title/);
+    expect(SRC).toMatch(/derivedTitle[\s\S]{0,120}（未選擇景點）/);
   });
 });

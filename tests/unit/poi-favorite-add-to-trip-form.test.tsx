@@ -206,7 +206,8 @@ describe('AddPoiFavoriteToTripPage — direct mode（無 favoriteId）', () => {
       expect(body.time).toBe('14:00-15:30');
       expect(body).not.toHaveProperty('startTime');
       expect(body).not.toHaveProperty('endTime');
-      expect(body.title).toBe('Uniqlo Ginza');
+      expect(body.name).toBe('Uniqlo Ginza');
+      expect(body).not.toHaveProperty('title');
       expect(body.source).toBe('google');
     });
   });

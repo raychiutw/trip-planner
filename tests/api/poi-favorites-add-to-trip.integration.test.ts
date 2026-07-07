@@ -252,9 +252,9 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.4 sort_order auto-calc
       .first<{ id: number }>();
     await db
       .prepare(
-        `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time) VALUES (?, ?, ?, ?)`,
       )
-      .bind(day1!.id, 0, '11:00', '12:00', 'existing entry')
+      .bind(day1!.id, 0, '11:00', '12:00')
       .run();
 
     const ctx = mockContext({
@@ -284,11 +284,16 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.5 conflict 409', () =>
       .bind(tripId)
       .first<{ id: number }>();
     // v2.29.0: trip_entries.time DROPPED, 改寫 start_time/end_time。
-    await db
+    const existingEntry = await db
       .prepare(
-        `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, title) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time) VALUES (?, ?, ?, ?) RETURNING id`,
       )
-      .bind(day1!.id, 0, '12:00', '14:00', 'lunch')
+      .bind(day1!.id, 0, '12:00', '14:00')
+      .first<{ id: number }>();
+    const existingPoiId = await seedPoi(db, { name: 'Lunch POI', type: 'restaurant' });
+    await db
+      .prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)')
+      .bind(existingEntry!.id, existingPoiId)
       .run();
 
     const ctx = mockContext({
@@ -302,7 +307,7 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.5 conflict 409', () =>
     const data = await resp.json() as { conflictWith?: { time: string; title: string } };
     expect(data.conflictWith).toBeDefined();
     expect(data.conflictWith!.time).toBe('12:00-14:00');
-    expect(data.conflictWith!.title).toBe('lunch');
+    expect(data.conflictWith!.title).toBe('Lunch POI');
   });
 });
 
@@ -329,9 +334,9 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.6 V2 user happy path',
       .bind(tripId)
       .first<{ id: number }>();
     const entries = await db
-      .prepare('SELECT id, start_time, end_time, title FROM trip_entries WHERE day_id = ?')
+      .prepare('SELECT id, start_time, end_time FROM trip_entries WHERE day_id = ?')
       .bind(day2!.id)
-      .all<{ id: number; start_time: string; end_time: string; title: string }>();
+      .all<{ id: number; start_time: string; end_time: string }>();
     expect(entries.results).toHaveLength(1);
     expect(entries.results[0]!.start_time).toBe('09:00');
     expect(entries.results[0]!.end_time).toBe('10:30');

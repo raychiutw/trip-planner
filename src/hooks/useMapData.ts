@@ -86,10 +86,9 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
       ?? entry.stopPois?.[0]
       ?? null;
     const displayTitle = getStopDisplayTitle({
-      title: entry.title,
       poiName: primaryStopPoi?.name ?? null,
       poiType: primaryStopPoi?.type ?? null,
-    }) ?? entry.title;
+    }) ?? '（未選擇景點）';
     let coords: { lat: number; lng: number } | null = null;
     if (primaryStopPoi && isValidCoords(primaryStopPoi)) {
       coords = { lat: primaryStopPoi.lat as number, lng: primaryStopPoi.lng as number };
