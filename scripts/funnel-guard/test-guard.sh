@@ -59,5 +59,40 @@ else
   skip "no funnel hostname — 跳過 L3 000 驗證"
 fi
 
+echo "[6] L3 blip 容忍（2026-07-07 型態 D）— fail→pass 判 healthy；持續 fail 仍 unhealthy"
+# 全 mock：只驗 is_funnel_healthy 的 L3 retry 分支，不碰網路/真 funnel
+L3_RETRY_INTERVAL=0
+is_funnel_local_healthy() { return 0; }
+funnel_hostname() { printf 'mock-host.ts.net'; }
+is_funnel_dns_published() { return 0; }
+_reach_calls=0
+is_funnel_reach_ok() { _reach_calls=$((_reach_calls+1)); [ "$_reach_calls" -ge 2 ]; }
+if is_funnel_healthy >/dev/null 2>&1; then
+  ok "blip（首次 fail、重試 pass）→ healthy，不觸發 heal"
+else
+  bad "blip 被判 unhealthy — 短暫 edge 瞬斷仍會白 heal + 發噪音"
+fi
+_reach_calls=0
+is_funnel_reach_ok() { _reach_calls=$((_reach_calls+1)); return 1; }
+if is_funnel_healthy >/dev/null 2>&1; then
+  bad "持續 fail 判 healthy — 型態 B（TLS stall）會漏 heal"
+else
+  if [ "$_reach_calls" -eq 3 ]; then
+    ok "持續 fail → unhealthy 且恰好 3 次 probe（型態 B heal 照舊、retry 預算正確）"
+  else
+    bad "持續 fail probe 次數 $_reach_calls ≠ 3 — retry 預算跑偏"
+  fi
+fi
+_reach_calls=0
+if is_funnel_healthy 1 >/dev/null 2>&1; then
+  bad "單次模式（heal 後重驗）判 healthy — mock 應 fail"
+else
+  if [ "$_reach_calls" -eq 1 ]; then
+    ok "is_funnel_healthy 1 恰好 1 次 probe（heal 後重驗不 double retry 窗）"
+  else
+    bad "單次模式 probe 次數 $_reach_calls ≠ 1"
+  fi
+fi
+
 echo
 [ $fail -eq 0 ] && { echo "PASS"; exit 0; } || { echo "FAIL"; exit 1; }

@@ -72,9 +72,13 @@ describe('authoritative NS resolve (2026-07-05 recursive-negative-cache incident
 
 describe('L3 HTTPS reach probe — curl 000 false-healthy guard', () => {
   it('curl --resolve 用 authoritative IP（避過本機 MagicDNS + recursive 污染）', () => {
-    expect(GUARD).toContain('ip=$(funnel_resolve_authoritative "$host") || return 1');
+    expect(GUARD).toContain('ip=$(funnel_resolve_authoritative "$host") || { REACH_DETAIL="authoritative resolve failed"; return 1; }');
     expect(GUARD).toContain('curl -sS -o /dev/null -w "%{http_code}" --max-time 10');
     expect(GUARD).toContain('--resolve "${host}:443:${ip}" "https://${host}/"');
+  });
+
+  it('reach 失敗存 REACH_DETAIL 診斷（ip / curl exit / http_code）— 型態 D 事後不用猜', () => {
+    expect(GUARD).toContain('REACH_DETAIL="ip=${ip} curl_exit=${curl_exit} http_code=${http_code:-none}"');
   });
 
   it('只認真 HTTP response (1xx-5xx) — 排除 curl transport-fail 000（dead ingress 不誤判 healthy）', () => {
@@ -91,5 +95,25 @@ describe('L3 HTTPS reach probe — curl 000 false-healthy guard', () => {
 describe('real-drift detection preserved', () => {
   it('authoritative 也無 record → L2 判「控制平面未發布，真 drift」→ 仍 heal', () => {
     expect(GUARD).toContain('控制平面未發布，真 drift');
+  });
+});
+
+describe('L3 blip 容忍（2026-07-07 型態 D：edge 33s 瞬斷誤 heal ×3 + 噪音）', () => {
+  it('L3 fail 重試確認（max_attempts 預設 3 + 間隔）才判 unhealthy — 不可退回單次即 heal', () => {
+    expect(GUARD).toContain('local max_attempts="${1:-3}"');
+    expect(GUARD).toMatch(/for \(\( attempt=1; attempt<=max_attempts; attempt\+\+ \)\)/);
+    expect(GUARD).toContain('sleep "$L3_RETRY_INTERVAL"');
+  });
+
+  it('L3_RETRY_INTERVAL 環境變數可覆寫（test-guard.sh 設 0 加速），預設 15s', () => {
+    expect(GUARD).toContain('L3_RETRY_INTERVAL="${L3_RETRY_INTERVAL:-15}"');
+  });
+
+  it('heal 後重驗單次（is_funnel_healthy 1）— retry 窗不可 double，sustained outage 警報不能拖過 120s interval', () => {
+    expect(GUARD).toContain('if is_funnel_healthy 1; then');
+  });
+
+  it('重試通過 → 明確 log blip 自癒不 heal（可觀測性）', () => {
+    expect(GUARD).toContain('短暫 blip 自癒，不 heal');
   });
 });
