@@ -4,9 +4,15 @@
  */
 import '@testing-library/jest-dom';
 
-// Node.js 25 內建 localStorage 但缺少 .clear()/.key()/.length — jsdom 也無法正確覆蓋
-// 用完整的 Map-backed polyfill 替代
-if (typeof globalThis.localStorage !== 'undefined' && typeof globalThis.localStorage.clear !== 'function') {
+// Node.js 25 內建 localStorage accessor；讀取它會噴 `--localstorage-file`
+// warning。用 descriptor 偵測後直接覆蓋，避免觸發 getter。
+const localStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+if (
+  !localStorageDescriptor ||
+  typeof localStorageDescriptor.get === 'function' ||
+  !localStorageDescriptor.value ||
+  typeof localStorageDescriptor.value.clear !== 'function'
+) {
   const store = new Map();
   const ls = {
     getItem: (k) => store.has(k) ? store.get(k) : null,
@@ -17,6 +23,9 @@ if (typeof globalThis.localStorage !== 'undefined' && typeof globalThis.localSto
     get length() { return store.size; },
   };
   Object.defineProperty(globalThis, 'localStorage', { value: ls, writable: true, configurable: true });
+  if (typeof globalThis.window !== 'undefined') {
+    Object.defineProperty(globalThis.window, 'localStorage', { value: ls, writable: true, configurable: true });
+  }
 }
 
 // jsdom 不提供 ResizeObserver — @headlessui Listbox 內部 element-movement
