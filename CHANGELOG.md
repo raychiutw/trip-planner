@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.20] - 2026-07-07
+
+### Fixed
+- **funnel-guard L3 短暫 blip 容忍 — edge 瞬斷不再誤 heal + 誤警報（型態 D）**（`scripts/funnel-guard/`）
+  - 2026-07-07 08:21 incident：Tailscale edge 33 秒瞬斷（L1 本機 serve state 與 L2 authoritative DNS 全程正常，只 L3 direct HTTPS reach 失敗後自癒），舊邏輯單次 L3 fail 立刻 heal → 3 輪無效 `serve reset`（reset 瞬間 funnel 真 off 反而小幅加重）+ heal_failed Telegram 噪音。
+  - `is_funnel_healthy` 的 L3 分支改**重試確認**：fail 後間隔 `L3_RETRY_INTERVAL`（預設 15s）重驗，3 次全 fail 才判 unhealthy。瞬斷自癒 → 0 heal 0 噪音；型態 B（持續 TLS stall）→ heal 照舊（偵測延遲 +30s 可接受）。heal 後重驗改單次（`is_funnel_healthy 1`）— 不 double retry 窗，sustained outage 的 heal_failed 警報不被拖過 launchd 120s interval（codex review P1）。
+  - `is_funnel_reach_ok` 失敗細節存 `REACH_DETAIL`（ip / curl exit / http_code）進 log — 本次事後只有「reach 失敗」四個字，診斷靠猜。
+  - test-guard.sh 補 [6] 型態 D 不變量（blip fail→pass 判 healthy 不 heal、持續 fail 恰 3 次 probe、單次模式恰 1 次）+ vitest 鎖測同步（+4 條）。
+  - 純 mac mini 本機 launchd ops script，不影響 CF Pages app（redeploy no-op）。
+
 ## [2.55.19] - 2026-07-06
 
 ### Fixed
