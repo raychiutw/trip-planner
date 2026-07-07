@@ -14,6 +14,8 @@ import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
 import Icon from '../shared/Icon';
 import { toTimelineEntry } from '../../lib/mapDay';
+import { useTripId } from '../../contexts/TripIdContext';
+import { useTripSegments, type TripSegment } from '../../hooks/useTripSegments';
 import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
 import type { Day, DaySummary } from '../../types/trip';
@@ -72,12 +74,42 @@ function getTimelineBounds(timeline: unknown[]): { start: string | null; end: st
   };
 }
 
-/** Sum entry.travel.distanceM across timeline → kilometers (rounded). null if no data. */
-function getTotalKm(timeline: unknown[]): number | null {
+/**
+ * 每日累積距離 → km（rounded）。null = 無任何資料。
+ *
+ * 2026-07-07 user 回報「累積距離有問題」：原本 sum `entry.travel.distanceM` —
+ * 那是 day fetch 當下的 snapshot（backend _merge 從 trip_segments lookup）。
+ * 車程重算（self-healing / 顯式）完成後 segments refetch 了（TravelPill 立即
+ * 顯示新值），day snapshot 卻要等 refetchDay — 累積 km 顯示舊值/漏段。
+ * 改對齊 TravelPill 的 v2.31.8 pattern：**相鄰 pair 查 segmentMap 即時值優先**
+ * （computed_at=NULL 的 stale 段不計 — 跟 pill 不顯示舊數字一致），缺 row 才
+ * fallback prev.travel（離開 prev = 抵達 curr 的段）snapshot。
+ */
+export function getTotalKm(
+  timeline: unknown[],
+  segmentMap: Map<string, TripSegment>,
+): number | null {
   let totalM = 0;
   let hasAny = false;
-  for (const e of timeline) {
+  for (let i = 0; i < timeline.length; i++) {
+    const e = timeline[i];
     if (typeof e !== 'object' || e === null) continue;
+    const id = (e as { id?: number | null }).id;
+    const nextRaw = i + 1 < timeline.length ? timeline[i + 1] : null;
+    const nextId = nextRaw && typeof nextRaw === 'object' ? (nextRaw as { id?: number | null }).id : null;
+
+    // 即時值：本 entry → 下一 entry 的 segment（recompute 後自動 fresh）
+    const seg = id != null && nextId != null ? segmentMap.get(`${id}-${nextId}`) : undefined;
+    if (seg) {
+      // stale（computed_at=NULL，換 POI 後等重算）不計舊值 — 對齊 pill 行為
+      if (seg.computedAt != null && typeof seg.distanceM === 'number' && Number.isFinite(seg.distanceM)) {
+        totalM += seg.distanceM;
+        hasAny = true;
+      }
+      continue;
+    }
+    // fallback：segments 未載入 / pair 缺 row → day snapshot（travel 掛在
+    // prev 上 = 離開本 entry 的段，v2.31.8 語意）
     const travel = (e as { travel?: { distanceM?: number | null } }).travel;
     const d = travel?.distanceM;
     if (typeof d === 'number' && Number.isFinite(d)) {
@@ -133,7 +165,11 @@ const DaySection = React.memo(function DaySection({
 
   const warnings = useMemo(() => validateDay(timeline), [timeline]);
   const bounds = useMemo(() => getTimelineBounds(timeline), [timeline]);
-  const totalKm = useMemo(() => getTotalKm(timeline), [timeline]);
+  // 2026-07-07：累積距離改吃 segments 即時值（TripPage provider 共用 fetch，
+  // segmentUpdated 自動 refetch → 車程重算完 km 立即同步）
+  const tripIdForSegments = useTripId();
+  const { segmentMap } = useTripSegments(tripIdForSegments);
+  const totalKm = useMemo(() => getTotalKm(timeline, segmentMap), [timeline, segmentMap]);
   const totalHours = useMemo(() => getTotalHours(bounds.start, bounds.end), [bounds.start, bounds.end]);
   const heroSub = useMemo(() => {
     const parts: string[] = [];
