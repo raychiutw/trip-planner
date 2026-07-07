@@ -62,6 +62,16 @@ TRIPLINE_API_TOKEN=$(node scripts/lib/get-tripline-token.js)
         "https://trip-planner-dby.pages.dev/api/requests?status=processing"
    ```
    若無結果，也依序查 `status=open` 和 `status=received`（向下相容）
+
+   **⏱ 長工作 token 續命（2026-07-07 request #237 教訓）**：token TTL 只有 1 小時。
+   大 request（多天多景點的搜尋/替換，如「調整每天午晚餐餐廳」）處理可能超過
+   40 分鐘 — **每處理完 2-3 天（或感覺已工作 ~40 分鐘）就重新執行**：
+   ```bash
+   TRIPLINE_API_TOKEN=$(node scripts/lib/get-tripline-token.js)
+   ```
+   否則 token 過期後所有 API 寫入 401，工作白做。orphan 上限已放寬到 90 分鐘
+   （api-server ORPHAN_MAX_AGE_MS），90 分鐘內做不完的 request 應分批：先完成
+   部分並 PATCH reply 說明進度（status 保持 processing），下一輪 session 接續。
 2. 無待處理請求 → 回報「沒有待處理的請求」**並跳到文末 Self-destruct 步驟**（仍須砍 tmux session，否則 cron 下一輪 spawn 會被 active session 擋下，浪費 30 分鐘）
 3. 依序處理每個請求：
 
