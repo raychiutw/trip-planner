@@ -85,6 +85,46 @@ const SCOPED_STYLES = `
     color: var(--color-muted);
   }
   .tp-custom-stop-day-meta strong { color: var(--color-foreground); font-weight: 600; }
+  /* 2026-07-07 day picker chips — 對齊 AddStopPage v2.31.99 同款（user 要求
+   * 新增景點可選加入哪天；本頁原本 URL ?day 鎖死不可切）。 */
+  .tp-add-stop-daypicker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 20px 0;
+  }
+  .tp-add-stop-daypicker-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 14px;
+    min-height: 48px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-background);
+    font: inherit;
+    color: var(--color-foreground);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .tp-add-stop-daypicker-chip:hover { background: var(--color-hover); }
+  .tp-add-stop-daypicker-chip.is-active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
+  .tp-add-stop-daypicker-chip-num {
+    font-size: var(--font-size-caption);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .tp-add-stop-daypicker-chip-date {
+    font-size: var(--font-size-caption2);
+    opacity: 0.85;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
   .tp-custom-stop-form { display: flex; flex-direction: column; }
   .tp-custom-stop-field {
     padding: 16px 20px;
@@ -280,11 +320,22 @@ export default function AddCustomStopPage() {
   const auth = useRequireAuth();
   const params = useParams<{ tripId: string }>();
   const tripId = params.tripId;
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const dayNum = Number(searchParams.get('day'));
   const handleBack = useNavigateBack(tripId ? `/trip/${encodeURIComponent(tripId)}` : '/trips');
 
+  // 2026-07-07: chips 切天 → URL replaceState（對齊 AddStopPage handlePickDay）。
+  // dayNum 變 → days-fetch effect 重算 currentDay + map pre-fill 跟著走。
+  const handlePickDay = useCallback((next: number) => {
+    if (next === dayNum) return;
+    const sp = new URLSearchParams(searchParams);
+    sp.set('day', String(next));
+    setSearchParams(sp, { replace: true });
+  }, [dayNum, searchParams, setSearchParams]);
+
   const [currentDay, setCurrentDay] = useState<DayApiRow | null>(null);
+  // 2026-07-07 day picker：全 days 列表（chips 切天用）。null = 未載入不 render 列。
+  const [allDays, setAllDays] = useState<DayApiRow[] | null>(null);
   // v2.32.1 fix: 初值 null 區分「未載入」與「載入後 0 個」，避免 LocationPickerMap
   // 用 Tokyo fallback initialCenter mount 後被鎖死。
   const [destinations, setDestinations] = useState<TripDestApi[] | null>(null);
@@ -302,6 +353,7 @@ export default function AddCustomStopPage() {
         ]);
         if (cancelled) return;
         setCurrentDay(days.find((d) => d.dayNum === dayNum) ?? null);
+        setAllDays(days);
         setDestinations(tripBody?.destinations ?? []);
       } catch {
         // v2.32.1: network fail → 標 [] 讓 fallback chain 走 Tokyo（最後安全網），
@@ -466,6 +518,35 @@ export default function AddCustomStopPage() {
             <style>{SCOPED_STYLES}</style>
             <TitleBar title="自訂景點" back={handleBack} backLabel="返回" actions={titleBarActions} />
             <div className="tp-custom-stop-day-meta">{dayLabel}</div>
+
+            {/* 2026-07-07 day picker chips — 可切換加入哪天（對齊 AddStopPage）。 */}
+            {allDays && allDays.length > 0 && (
+              <div
+                className="tp-add-stop-daypicker"
+                role="tablist"
+                aria-label="選擇加入哪天"
+                data-testid="add-custom-stop-daypicker"
+              >
+                {allDays.map((d) => {
+                  const isActive = d.dayNum === dayNum;
+                  const mmdd = (d.date ?? '').slice(5).replace('-', '/');
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      className={`tp-add-stop-daypicker-chip ${isActive ? 'is-active' : ''}`}
+                      onClick={() => handlePickDay(d.dayNum)}
+                      data-testid={`add-custom-stop-daypicker-chip-${d.dayNum}`}
+                    >
+                      <span className="tp-add-stop-daypicker-chip-num">DAY {String(d.dayNum).padStart(2, '0')}</span>
+                      {mmdd && <span className="tp-add-stop-daypicker-chip-date">{mmdd}{d.dayOfWeek ? `（${d.dayOfWeek}）` : ''}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {submitError && (
               <div className="tp-custom-stop-error" data-testid="add-custom-stop-error">
