@@ -3,10 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.55.36] - 2026-07-09
+## [2.55.37] - 2026-07-09
 
 ### Added
 - **Flutter mobile OAuth client + account notification preferences API** — 新增 official `tripline-mobile` public PKCE client migration（loopback redirect、`offline_access` scope、可重跑 upsert），讓 Flutter app 不再卡在 backend client provisioning；新增 `/api/account/notifications` GET/PATCH，以 session auth 管理使用者通知偏好（行程更新、邀請、系統通知），預設全開、PATCH 僅接受 boolean 欄位、missing migration 時回穩定 DB error。+ migration/unit/API tests。
+
+## [2.55.36] - 2026-07-09
+
+### Fixed
+- **交通方式對話框的遮罩蓋過 sticky header**（user 回報「遮罩不夠高」）— `.tp-travel-overlay` 是 `position: fixed; inset: 0; z-index: --z-modal(9000)`，本該蓋全螢幕，但 `TravelPillDialog` 原本 inline render 在 timeline 欄內 → day-section 動畫的 transformed ancestor 成為 `fixed` 的 containing block，遮罩被困在該欄、z-index 也升不過 sticky header（標題列 + DAY tabs，`--z-sticky-nav` 200），標題列/日期分頁露在遮罩之上。改 `createPortal` 到 `document.body`（與 `ConfirmModal` / `StopLightbox` 等 shared modal 同 idiom）逃出 transformed ancestor，遮罩才蓋得過 header；加 `typeof document` 守衛（非 DOM 環境 degrade 不硬 crash）。
 
 ## [2.55.35] - 2026-07-08
 
