@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.35] - 2026-07-08
+
+### Fixed
+- **POI 中文自訂分類不再被誤顯成「景點」**（承 v2.55.34，okinawa-trip 真實資料抓到）— `pois.category` 真實資料同時有英文 Google `primaryType`（`fast_food_restaurant`）與 curated 中文 label（`拉麵`/`浮潛`/`當地特色`/`沖繩麵`，AI/人工塞）。v2.55.34 的 `poiCategoryLabel()` 一律過英文 keyword matcher，讀不懂中文 → 全歸 attraction → 把「拉麵」誤顯成「景點」。改為只放行「有 CJK/假名且無 ASCII 拉丁字母」的 curated label 原樣顯示，其餘（英文 primaryType、混合字串、數字/emoji/全形拉丁）一律過 whitelist 映射成乾淨中文 label：保證任何 ASCII 英文都不外露（含「拉麵 ramen」混合），非 curated 雜訊也收斂成景點而非原樣噴出。寫入路徑（`pois.type` CHECK 映射）不動。
+
 ## [2.55.34] - 2026-07-08
 
 ### Fixed
