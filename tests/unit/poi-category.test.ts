@@ -100,7 +100,7 @@ describe('Google Places primaryType → poi_type accuracy (add-stop auto-categor
   });
 });
 
-describe('poiCategoryLabel — 顯示用中文 label（英文 Google primaryType 不外露）', () => {
+describe('poiCategoryLabel — 顯示用中文 label（含拉丁字母才映射；純中文原樣顯示）', () => {
   it('空 / null / undefined / 全空白 → null（caller fallback 到 poi.type label）', () => {
     expect(poiCategoryLabel(null)).toBeNull();
     expect(poiCategoryLabel(undefined)).toBeNull();
@@ -108,19 +108,40 @@ describe('poiCategoryLabel — 顯示用中文 label（英文 Google primaryType
     expect(poiCategoryLabel('   ')).toBeNull();
   });
 
-  it('英文 Google primaryType → 8 類中文 label（不露英文）', () => {
+  it('英文 Google primaryType（含拉丁字母）→ 8 類中文 label（不露英文）', () => {
     expect(poiCategoryLabel('tourist_attraction')).toBe('景點');
     expect(poiCategoryLabel('cafe')).toBe('餐廳');
     expect(poiCategoryLabel('lodging')).toBe('飯店');
     expect(poiCategoryLabel('shopping_mall')).toBe('購物');
     expect(poiCategoryLabel('subway_station')).toBe('交通');
+    expect(poiCategoryLabel('fast_food_restaurant')).toBe('餐廳'); // 真實資料：A&W
   });
 
-  it('一律回中文 label、不外露英文（混合字串也回 label 非原字串）', () => {
-    // 混合「restaurant 餐廳」含 keyword → 回 label 餐廳（不漏嵌入的英文）
+  it('純中文 curated label（無拉丁字母）→ 原樣顯示，不強行過英文 matcher', () => {
+    // okinawa-trip-2026-Ray 真實 pois.category：英文 keyword matcher 讀不懂中文，
+    // 過映射會全歸 attraction → 誤顯「景點」（拉麵/浮潛不是景點）。純非拉丁 = 已是
+    // 顯示字串，原樣回傳。
+    expect(poiCategoryLabel('拉麵')).toBe('拉麵');
+    expect(poiCategoryLabel('浮潛')).toBe('浮潛');
+    expect(poiCategoryLabel('當地特色')).toBe('當地特色');
+    expect(poiCategoryLabel('沖繩麵')).toBe('沖繩麵');
+    expect(poiCategoryLabel('居酒屋')).toBe('居酒屋');
+  });
+
+  it('含 ASCII 拉丁字母的混合字串 → 走映射，不外露嵌入英文', () => {
     expect(poiCategoryLabel('restaurant 餐廳')).toBe('餐廳');
-    // 無法對應（含未知中文）→ 景點 fallback，與 ExplorePage 一致
-    expect(poiCategoryLabel('居酒屋')).toBe('景點');
+    expect(poiCategoryLabel('izakaya 居酒屋')).toBe('餐廳'); // izakaya keyword → 餐廳，英文不外露
+    expect(poiCategoryLabel('拉麵 ramen')).not.toContain('ramen'); // 混合有 CJK 也不能漏 ASCII
+    expect(poiCategoryLabel('拉麵 ramen')).toBe('景點'); // 映射（ramen 非 keyword → attraction），不 passthrough leak
+  });
+
+  it('非 curated 雜訊（數字/符號/emoji/全形拉丁）→ 映射成乾淨 label，不原樣噴出', () => {
+    // Codex review: 「無 ASCII 字母」的放行太寬。收緊為「有 CJK 且無 ASCII」，其餘映射。
+    for (const junk of ['123', '!!!', '🍜', 'ＲＡＭＥＮ']) {
+      expect(poiCategoryLabel(junk)).toBe('景點'); // 非 CJK curated → 走 whitelist → 乾淨中文
+      expect(/[a-zA-Z]/.test(poiCategoryLabel(junk) ?? '')).toBe(false);
+    }
+    expect(poiCategoryLabel('すし')).toBe('すし'); // 純假名 = curated → 原樣
   });
 
   it('whitelist 值 → 對應中文 label', () => {
