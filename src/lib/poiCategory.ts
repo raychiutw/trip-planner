@@ -78,17 +78,23 @@ export function mapGooglePrimaryTypeToPoiType(category: string | null | undefine
 }
 
 /**
- * POI 分類顯示 label（zh-TW）。DB `pois.category` 存的是 Google Places
- * `primaryType`（英文 snake_case，如 tourist_attraction / cafe），直接顯示會露
- * 英文（TimelineRail 備選卡、poiMeta address 缺省時曾如此）。原則：
+ * POI 分類顯示 label（zh-TW）。DB `pois.category` 存的可能是 Google Places
+ * `primaryType`（英文 snake_case，如 tourist_attraction / cafe）**或**已經 curated
+ * 的中文 label（拉麵 / 浮潛 / 當地特色 / 沖繩麵，AI/人工塞的）。原則：
  *   - 空 → null（caller 自行 fallback，如 poi.type 的 label）
- *   - 其餘 → 一律經 whitelist 映射成 8 類中文 label（回 label 而非原字串 → 混合
- *     字串也不外露英文；與 ExplorePage `POI_TYPE_LABELS[mapNominatimCategory()]`
- *     全站一致，不另立更細 taxonomy）
+ *   - 純 CJK curated label（含漢字/假名且無 ASCII 拉丁字母，如 拉麵/浮潛）→ 原樣
+ *     回傳。英文 keyword matcher 讀不懂中文，硬過會全歸 attraction → 把「拉麵/浮潛」
+ *     誤顯成「景點」(okinawa-trip real data)。
+ *   - 其餘（英文 primaryType、混合字串、數字/emoji/全形拉丁）→ 經 whitelist 映射成
+ *     8 類中文 label。保證任何 ASCII 英文都不外露（含「拉麵 ramen」這種混合），
+ *     非 curated 雜訊也收斂成乾淨 label 而非原樣噴出。
  */
 export function poiCategoryLabel(category: string | null | undefined): string | null {
   const c = category?.trim();
   if (!c) return null;
+  // ponytail: 只放行「有 CJK/假名 且無 ASCII 拉丁」的 curated label；其餘一律映射（英文不外露）
+  // ぀-ヿ = 平假名+片假名, 一-鿿 = CJK 漢字
+  if (/[぀-ヿ一-鿿]/.test(c) && !/[a-zA-Z]/.test(c)) return c;
   return POI_TYPE_LABELS[mapGooglePrimaryTypeToPoiType(c)];
 }
 
