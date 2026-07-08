@@ -25,6 +25,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { readTripView } from '../lib/tripViewState';
 import { useNewTrip } from '../contexts/NewTripContext';
 import ImportTripButton from '../components/trips/ImportTripButton';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
@@ -900,6 +901,28 @@ export default function TripsListPage() {
     }
     return visibleTrips[0]?.tripId ?? null;
   }, [selectedFromUrl, visibleTrips]);
+
+  // v2.55.x：進 /trips 沒帶 ?selected 時，還原「上次檢視」的行程 + 天（Q1「記住上次行程+位置」）。
+  // 來源用 tripViewState（TripPage 實際檢視時才寫）而非 activeTripId —— 兩者語意不同：tripView
+  // 是「上次看的行程」、activeTripId 是「目前選定行程」(chat 目標，選卡片即設)，可各自不同；還原
+  // 要回到上次「看」的地方，且只在真的看過某行程後才自動開（不因曾點過卡片就每次彈進行程）。
+  // 等 trips 載入後只跑一次（ref guard）；已帶 ?selected 則不覆蓋；關掉行程後同一 mount 不再彈回。
+  // 只在桌機還原：bug 1 是「點選左側行程」語意，桌機 /trips 是清單+右側嵌入行程，還原只是填右側、
+  // 左側清單仍在；手機 /trips 是「清單 XOR 全螢幕行程」，還原會把 Trips 分頁整個吞進上次行程 →
+  // 清單難以觸及，故手機不自動還原。用 visibleTrips 驗證（非 myTrips）：只還原「當前可見」的行程，
+  // 否則 effectiveSelectedId 會 fallback 到 visibleTrips[0]，URL/day-hash 套到錯行程（如已封存被濾掉）。
+  const didRestoreViewRef = useRef(false);
+  useEffect(() => {
+    if (didRestoreViewRef.current) return;
+    if (!isDesktop) return; // 手機不自動還原（見上）；resize 到桌機再跑
+    if (selectedFromUrl) { didRestoreViewRef.current = true; return; }
+    if (myTrips.length === 0) return; // 等 trips 載入才判斷
+    didRestoreViewRef.current = true;
+    const last = readTripView();
+    if (!last || !visibleTrips.some((t) => t.tripId === last.tripId)) return;
+    const hash = last.dayNum > 0 ? `#day${last.dayNum}` : '';
+    navigate(`/trips?selected=${encodeURIComponent(last.tripId)}${hash}`, { replace: true });
+  }, [myTrips, visibleTrips, selectedFromUrl, navigate, isDesktop]);
 
   // Card click 同步寫 ActiveTripContext — 不能等 embedded TripPage mount 才設，
   // 否則 user 點完立刻切 bottom-nav 到 /chat，ChatPage 拿舊 activeTripId 會把

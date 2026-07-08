@@ -75,6 +75,10 @@ export function useAutosave<T extends object>(
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isOnlineRef = useRef(true);
   const inFlightRef = useRef(false);
+  // 當前 in-flight save 的 promise（finally 內 resolve）。flush() 撞 in-flight 時 await 它，
+  // 讓 flush 成為真正 barrier — caller（如 EditEntryPage goBackFocused）await flush 後 PATCH
+  // 已 commit，返回時 days GET 才讀得到新值（v2.55.x 桌機備註 stale-on-return 決定性修復）。
+  const inFlightPromiseRef = useRef<Promise<void> | null>(null);
   // 遞迴排程用：finally 內要 re-trigger performSave，但 performSave useCallback 定義時
   // 自己尚未存在 → 透過 ref 取最新版（render body 同步更新）。
   const performSaveRef = useRef<(() => Promise<void>) | null>(null);
@@ -108,6 +112,8 @@ export function useAutosave<T extends object>(
     }
     pendingPatchRef.current = {};
     inFlightRef.current = true;
+    let resolveInFlight!: () => void;
+    inFlightPromiseRef.current = new Promise<void>((r) => { resolveInFlight = r; });
     setState('saving');
     setError(null);
     clearSavedTimer();
@@ -162,6 +168,8 @@ export function useAutosave<T extends object>(
       setError(err instanceof Error ? err.message : '儲存失敗');
     } finally {
       inFlightRef.current = false;
+      resolveInFlight();               // 解除 flush() 的 barrier await
+      inFlightPromiseRef.current = null;
       // save 期間 user 又 patch（pending 非空）→ 排下一輪 save，達成 line 95 的「下一輪會
       // 接著 save」設計意圖。原本 line 98 in-flight return 後沒 reschedule → 慢請求下 in-flight
       // 期間的最後一次編輯 silently 遺失（Codex #4）。timerRef===null 才排（active timer = user
@@ -201,6 +209,9 @@ export function useAutosave<T extends object>(
   const flush = useCallback(async (): Promise<void> => {
     clearDebounceTimer();
     await performSave();
+    // performSave 撞 in-flight（onBlur 已先觸發 save）會即刻 return；補 await 那個 in-flight
+    // save，讓 flush 成為真正 barrier（見 inFlightPromiseRef 註解）。
+    if (inFlightPromiseRef.current) await inFlightPromiseRef.current;
   }, [clearDebounceTimer, performSave]);
 
   /** Discard pending updates. */

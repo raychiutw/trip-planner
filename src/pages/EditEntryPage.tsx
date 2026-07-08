@@ -37,7 +37,6 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
 import { CATEGORY_ICON } from '../components/trip/CategoryPicker';
-import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useAutosave } from '../hooks/useAutosave';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
@@ -760,6 +759,8 @@ interface PerPoiNoteRowProps {
    * 對齊 mockup `.note-read.on-secondary`。
    */
   onSecondary?: boolean;
+  /** 把本行 autosave 的 flush 註冊給父頁（EditEntryPage）→ 回前頁前統一 await（v2.55.x stale-race 修）。 */
+  registerFlush?: (flush: () => Promise<void>) => () => void;
 }
 
 /**
@@ -776,7 +777,7 @@ interface PerPoiNoteRowProps {
  *   body { note }。LWW（D4）— 刻意不帶 entryPoisVersion OCC token。清空 → note: ''
  *   （端點 trim 成空字串 → 寫 null 清除）。失敗 → showToast。
  */
-function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, placeholder, reservationUrl, onSecondary }: PerPoiNoteRowProps) {
+function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, placeholder, reservationUrl, onSecondary, registerFlush }: PerPoiNoteRowProps) {
   const fieldLabel = field === 'reservation' ? '訂位資訊' : '備註';
   const emptyHint = placeholder ?? '+ 加備註';
   const [editing, setEditing] = useState(false);
@@ -803,6 +804,12 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
       return await res.json() as Record<string, unknown>;
     },
   });
+
+  // v2.55.x：把本行 autosave 的 flush 註冊給 EditEntryPage — 回前頁前統一 await 沖出 pending
+  // 備註 PATCH，避免返回時 days GET 搶先讀到未 commit 的舊值（stale race，見 goBackFocused）。
+  const flushRef = useRef(noteAutosave.flush);
+  flushRef.current = noteAutosave.flush;
+  useEffect(() => registerFlush?.(() => flushRef.current()), [registerFlush]);
 
   // autosave error → toast（對齊 TimelineRail；監聽 error state transition，
   // 避免每 re-render 重複 toast）。
@@ -917,7 +924,6 @@ export default function EditEntryPage() {
   const entryId = Number(entryIdParam);
   const navigate = useNavigate();
   const goBackHref = tripId ? `/trips?selected=${encodeURIComponent(tripId)}` : '/trips';
-  const goBack = useNavigateBack(goBackHref);
   const { user } = useCurrentUser();
 
   const [entry, setEntry] = useState<EntryApi | null>(null);
@@ -1271,11 +1277,39 @@ export default function EditEntryPage() {
     startTime, endTime, mode, transitMin, segment, prevEntry,
   ]);
 
+  // v2.55.x：per-POI 備註 autosave 的 flush 註冊表。回前頁前先 await 沖出 pending 備註 PATCH，
+  // 確保返回時重新 fetch 的 days 讀到已 commit 的新值（否則 debounce PATCH 未 commit 就被返回的
+  // GET 搶先讀到舊值 = 「改備註返回沒生效、F5 才對」的 stale race）。
+  const noteFlushersRef = useRef<Set<() => Promise<void>>>(new Set());
+  const registerNoteFlush = useCallback((flush: () => Promise<void>) => {
+    noteFlushersRef.current.add(flush);
+    return () => { noteFlushersRef.current.delete(flush); };
+  }, []);
+
+  // 回前頁：先 flush 備註，再帶 ?focus=<entryId>&focusDay=<dayNum> → TripPage 切到該天、
+  // TimelineRail 掛載即展開該景點（回到「當下景點展開」）。
+  const goBackFocused = useCallback(async () => {
+    // flush 每行的 pending 備註 PATCH，但加 1.2s 上限 — 離線/慢網時 useAutosave 會保留 patch
+    // 等重連，flush 可能不 resolve；不能讓返回鍵卡住。
+    const capped = (p: Promise<unknown>) => {
+      let t: ReturnType<typeof setTimeout>;
+      return Promise.race([
+        p,
+        new Promise<void>((resolve) => { t = setTimeout(resolve, 1200); }),
+      ]).finally(() => clearTimeout(t));
+    };
+    await Promise.all([...noteFlushersRef.current].map((f) => capped(f().catch(() => undefined))));
+    if (!tripId) { navigate('/trips'); return; }
+    const day = entryDayNumRef.current;
+    const dayQuery = typeof day === 'number' ? `&focusDay=${day}` : '';
+    navigate(`/trips?selected=${encodeURIComponent(tripId)}&focus=${entryId}${dayQuery}`);
+  }, [tripId, entryId, navigate]);
+
   // v2.33.108: auto-save 後不再需要 discard confirmation — handleCancel 直接 back，
   // pending patch 由 handleSave debounce 內 flush（user 等 800ms 後 navigate）。
   const handleCancel = useCallback(() => {
-    goBack();
-  }, [goBack]);
+    void goBackFocused();
+  }, [goBackFocused]);
 
   // v2.33.108: debounce auto-save effect — dirty+valid+!submitting 800ms 後 fire handleSave。
   // 取代「儲存」button reassurance（user 改完 800ms 自動 PATCH，SaveStatus 顯示進度）。
@@ -1573,6 +1607,7 @@ export default function EditEntryPage() {
                         poiId={masterSummary.poiId}
                         initialNote={masterSummary.note}
                         onSecondary
+                        registerFlush={registerNoteFlush}
                       />
                     )}
                   </div>
@@ -1647,6 +1682,7 @@ export default function EditEntryPage() {
                             initialNote={alt.reservation}
                             placeholder="+ 加訂位資訊"
                             reservationUrl={alt.reservationUrl}
+                            registerFlush={registerNoteFlush}
                           />
                           {/* v2.34.0 alternate per-POI 備註行（Variant B） */}
                           <PerPoiNoteRow
@@ -1655,6 +1691,7 @@ export default function EditEntryPage() {
                             entryId={entryId}
                             poiId={alt.poiId}
                             initialNote={alt.note}
+                            registerFlush={registerNoteFlush}
                           />
                         </div>
                         <div className="tp-edit-entry-alt-actions">
@@ -1867,7 +1904,7 @@ export default function EditEntryPage() {
         message="未儲存的變更會遺失。"
         confirmLabel="丟棄變更"
         cancelLabel="繼續編輯"
-        onConfirm={() => { setShowDiscardModal(false); goBack(); }}
+        onConfirm={() => { setShowDiscardModal(false); void goBackFocused(); }}
         onCancel={() => setShowDiscardModal(false)}
       />
 

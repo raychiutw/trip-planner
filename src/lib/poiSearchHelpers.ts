@@ -12,7 +12,7 @@
 import type { PoiSearchResult } from '../types/poi';
 // v2.33.38 round 3: 引 POI_TYPE_LABELS 避免 poiMeta '景點' fallback 硬寫字串
 // (PR-1 統一後若 attraction label 改名，這裡會 drift)。
-import { POI_TYPE_LABELS } from './poiCategory';
+import { POI_TYPE_LABELS, poiCategoryLabel } from './poiCategory';
 
 export type PoiCardTone = 'warm' | 'cool' | 'blue' | 'amber';
 
@@ -54,7 +54,8 @@ export function poiTone(category: string | null | undefined, index: number): Poi
 
 export function poiMeta(address: string | null | undefined, category: string | null | undefined): string {
   const primary = (address ?? '').split(',')[0]?.trim();
-  return primary || category || POI_TYPE_LABELS.attraction;
+  // category 是 Google primaryType（英文）— 映射成中文再顯示，address 缺省時不露英文。
+  return primary || poiCategoryLabel(category) || POI_TYPE_LABELS.attraction;
 }
 
 /**

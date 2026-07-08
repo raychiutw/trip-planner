@@ -27,17 +27,21 @@ vi.mock('../../src/hooks/useTripSegments', () => ({
 }));
 
 const recomputeMock = vi.fn(() => Promise.resolve(null));
+const autoStatusMock = vi.fn(() => 'active' as 'active' | 'blocked' | 'failed');
 vi.mock('../../src/lib/travelRecompute', () => ({
   requestTravelRecompute: (
     tripId: string,
     dayNum?: number | null,
     opts?: { auto?: boolean; signature?: string },
   ) => recomputeMock(tripId, dayNum, opts),
+  getAutoRecomputeStatus: () => autoStatusMock(),
 }));
 
 beforeEach(() => {
   useTripSegmentsMock.mockReset();
   recomputeMock.mockClear();
+  autoStatusMock.mockReset();
+  autoStatusMock.mockReturnValue('active');
 });
 
 function entry(id: number, title: string, time = '09:00-10:00'): TimelineEntryData {
@@ -132,14 +136,16 @@ describe('TimelineRail self-healing 車程補算', () => {
     expect(recomputeMock).not.toHaveBeenCalled();
   });
 
-  it('缺座標 pair 不觸發 auto（backend 也算不出，白燒全日 quota）— 但 ⚠ affordance 仍在', () => {
+  it('缺座標 pair 不觸發 auto（backend 也算不出，白燒全日 quota）— chip 顯「缺座標」誠實訊息', () => {
     useTripSegmentsMock.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     const { getAllByTestId } = renderRail([entryNoCoord(1, '手動地點'), entryNoCoord(2, '另一手動地點')]);
     expect(recomputeMock).not.toHaveBeenCalled();
-    // recovery affordance 不因 auto skip 而消失
-    expect(getAllByTestId('travel-pill-stale')).toHaveLength(1);
+    // auto skip 但 chip 不消失，且誠實顯示缺座標（不假稱「重新計算中」）
+    const chips = getAllByTestId('travel-pill-stale');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].textContent ?? '').toContain('缺座標');
   });
 
   it('混合：有座標 pair 缺 segment + 缺座標 pair → 只以有座標缺口當 signature', () => {
@@ -159,14 +165,27 @@ describe('TimelineRail self-healing 車程補算', () => {
     expect(recomputeMock).not.toHaveBeenCalled();
   });
 
-  it('缺 pair 且無 legacy travel → 仍 render TravelPill ⚠（recovery affordance 不消失）', () => {
+  it('有座標的缺 pair（可自動補算）→ render「車程重新計算中」chip（load-bearing 狀態不消失）', () => {
     useTripSegmentsMock.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     const { getAllByTestId } = renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
-    // missing pair → TravelPill 以 stale 形式 render（⚠ 車程未更新 + 重新計算鈕）
-    expect(getAllByTestId('travel-pill-stale')).toHaveLength(1);
-    expect(getAllByTestId('travel-pill-recompute')).toHaveLength(1);
+    // 有座標 missing pair → self-healing 會自動補算 → 顯「車程重新計算中」（無手動鈕）
+    const chips = getAllByTestId('travel-pill-stale');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].textContent ?? '').toContain('重新計算中');
+  });
+
+  it('唯讀 viewer / 持續失敗（getAutoRecomputeStatus=blocked）→ chip 顯「車程待更新」不假稱計算中', () => {
+    autoStatusMock.mockReturnValue('blocked');
+    useTripSegmentsMock.mockReturnValue({
+      segments: [], segmentMap: new Map(), loading: false, ready: true,
+    });
+    const { getAllByTestId } = renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
+    const chips = getAllByTestId('travel-pill-stale');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].textContent ?? '').toContain('車程待更新');
+    expect(chips[0].textContent ?? '').not.toContain('重新計算中');
   });
 
   it('segments 未 ready → 不 render missing ⚠（載入期不閃）', () => {

@@ -23,6 +23,10 @@ export const EVENT = {
    *  時觸發，TripMapRail listen 後 panTo + zoom 到該 entry pin。跨檔互動避免
    *  TimelineRail 直接 import map ref。 */
   entryFocused: 'tp-entry-focused',
+  /** dispatch detail: `{ tripId }` — auto 車程重算終端失敗（403 唯讀 viewer /
+   *  持續 API 錯，本 signature 不再重試）。TimelineRail 監聽 → re-render 讓
+   *  TravelPill 由「重新計算中」改顯「待更新」。 */
+  segmentRecomputeFailed: 'tp-segment-recompute-failed',
 } as const;
 
 export type EventName = typeof EVENT[keyof typeof EVENT];

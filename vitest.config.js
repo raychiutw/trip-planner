@@ -20,6 +20,7 @@ const TS_DOM_FILES = [
   'tests/unit/api-error.test.ts',
   'tests/unit/error-placeholder.test.ts',
   'tests/unit/local-storage-shape.test.ts',
+  'tests/unit/trip-view-state.test.ts',
   'tests/unit/sanitize-uri-attrs.test.ts',
   'tests/unit/scroll-spy.test.ts',
   'tests/unit/v2_31_79-marker-label-text-outline.test.ts',

@@ -95,8 +95,8 @@ export interface TimelineEntryData {
    *  pois.type ∈ hotel|restaurant|shopping|parking|attraction|transport|activity|other */
   poiType?: string | null;
   /**
-   * POI master coords — TimelineRail 用來算 Haversine(prev, curr) 與
-   * `travel.distanceM` 比對，divergence > 20% 顯 ⚠「車程未更新」。
+   * POI master coords — TimelineRail self-healing 用來判斷哪些相鄰 pair 可
+   * 自動補算車程（兩端都有座標才觸發 requestTravelRecompute）。
    */
   masterLat?: number | null;
   masterLng?: number | null;

@@ -12,6 +12,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { NewTripProvider } from '../../src/contexts/NewTripContext';
+import { writeTripView } from '../../src/lib/tripViewState';
 
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({
@@ -235,5 +236,37 @@ describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () 
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-owner-okinawa')).toBeTruthy());
     expect(screen.getByTestId('trips-list-card-owner-okinawa').textContent).toContain('由你建立');
     expect(screen.getByTestId('trips-list-card-owner-seoul').textContent).toContain('friend');
+  });
+});
+
+describe('TripsListPage — 進 /trips 還原上次檢視（v2.55.x bug 1）', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('桌機 + 無 ?selected + 有上次檢視紀錄 → 自動開回該行程（嵌入 TripPage）', async () => {
+    mockMatchMedia(true);
+    writeTripView({ tripId: 'okinawa', dayNum: 2 });
+    vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], SAMPLE));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByTestId('embedded-trip-page')).toBeTruthy());
+    expect(screen.getByTestId('embedded-trip-page').getAttribute('data-trip-id')).toBe('okinawa');
+  });
+
+  it('手機 + 有上次檢視紀錄 → 不自動還原（Trips 分頁顯示清單）', async () => {
+    mockMatchMedia(false);
+    writeTripView({ tripId: 'okinawa', dayNum: 2 });
+    vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], SAMPLE));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeTruthy());
+    expect(screen.queryByTestId('embedded-trip-page')).toBeNull();
+  });
+
+  it('桌機 + 上次檢視的行程已不在清單 → 不還原（顯示清單）', async () => {
+    mockMatchMedia(true);
+    writeTripView({ tripId: 'deleted-trip', dayNum: 1 });
+    vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }], SAMPLE));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeTruthy());
+    expect(screen.queryByTestId('embedded-trip-page')).toBeNull();
   });
 });
