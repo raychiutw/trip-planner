@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.33] - 2026-07-08
+
+### Fixed
+- **AI 健檢的距離/時間改吃行程表記錄值（trip_segments），不再自行估算**（user 回報「AI 健檢說的時程不對、行程看不到、距離與時間不正確」）
+  - 根因：健檢 prompt 只給靜態指示、**沒給任何實際數字** → Claude 憑地理位置瞎估移動時間/距離 → 報出錯誤的 `timing`/`distance` 問題。行程表本身正確，錯的是健檢的估算來源。
+  - `POST /api/trips/:id/health-check` 現在把 `trip_segments` 記錄的每段移動時間/距離（Google 實測值）+ master POI 名稱查出來、格式化嵌進 prompt，並下鐵則「距離時間一律以此區塊為準，嚴禁自行估算；標『未記錄』的段不得據此報問題」。
+  - **transit 段修正**：`min` 有值、`distance_m=NULL` 是大眾運輸的合法狀態（days API 照樣顯示 `travel.min`），以往會被誤判「未記錄」而叫 Claude 別報 → 改成 time/distance 分開判斷，只有 `min` 缺才算沒記錄時間。
+  - **POI 名稱淨化**（LLM01）：user/Google 可控名稱壓成單行 + 截 60 字，防止換行/假記錄行偽造健檢報告。
+  - **dedup**：`ROW_NUMBER` 每 from_entry 只留最新一段（`updated_at DESC`），排除 entry reorder 後殘留、timeline 看不到的 stale 幽靈段（對齊 days API `Map<from_entry_id>` 每站一段模型）。
+  - formatter 改用共用 `TRAVEL_MODE_LABEL`（對齊 `trip_segments.mode`，去 drift）；+5 integration tests（注入區塊 / 無段 / transit / 名稱淨化 / dedup）。
+
 ## [2.55.31] - 2026-07-08
 
 ### Added

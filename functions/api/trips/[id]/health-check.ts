@@ -22,6 +22,7 @@ import { AppError } from '../../_errors';
 import { json } from '../../_utils';
 import { recordEmailEvent } from '../../_audit';
 import { alertAdminTelegram } from '../../_alert';
+import { TRAVEL_MODE_LABEL, type TravelMode } from '../../../../src/lib/travelMode';
 import type { Env } from '../../_types';
 
 // 識別 health-check request — 寫 trip_requests.message 時固定 prefix，
@@ -37,6 +38,9 @@ const HEALTH_CHECK_MESSAGE = `${HEALTH_CHECK_PREFIX} 請以資深旅遊規劃師
 3. \`meals\` — 餐飲：缺午晚餐／用餐間隔過長／餐廳營業時間衝突
 4. \`sights\` — 景點：漏掉必排／必看景點落空／同類景點重複
 5. \`hotel\` — 住宿：飯店未連線 polyline／跨日不合理／rating 偏低
+
+**⚠️ 距離與移動時間鐵則（timing／distance 兩維度必讀）**：
+所有移動時間與距離，一律以本訊息**末端「行程表記錄的移動時間／距離」區塊**為準——那是系統實際記錄值（Google 實測或手填），等同你呼叫 \`GET /api/trips/:id/days/:num\` 時每個 entry 的 \`travel.min\`／\`travel.distance_m\`。**嚴禁**自行以地理位置、直線距離或常識估算移動時間/距離。若某段標「移動時間未記錄」，代表尚無記錄值，**不得**據此判斷過密／過長／衝突，至多提示「該段移動資料尚未計算」。
 
 **嚴重程度**：
 - \`high\` = 影響行程能否成行（時間軸物理上不可行、必排景點時間衝突）
@@ -70,6 +74,54 @@ Schema：
 \`\`\`
 
 若行程無問題，回 \`[]\`。`;
+
+interface SegmentRecordRow {
+  day_num: number;
+  from_name: string | null;
+  to_name: string | null;
+  from_id: number;
+  to_id: number;
+  mode: string;
+  min: number | null;
+  distance_m: number | null;
+}
+
+/**
+ * 把 trip_segments 記錄的每段移動格式化成 prompt 區塊，作為健檢 timing/distance 的
+ * 唯一權威來源——直接把系統實際記錄值擺進 prompt，Claude 不需（也不得）自行估算。
+ * - time/distance 分開判斷：transit 段是 min 有值、distance_m=NULL 的合法狀態（days API
+ *   照樣顯示 travel.min）→ 不可整段當「未記錄」；只有 min 缺才算沒有記錄時間。
+ * - POI 名稱是 user/Google 可控，未淨化直接進權威 block 會被塞換行或假記錄行偽造
+ *   findings（LLM01）→ 壓成單行 + 截 60 字。名稱取 master POI（sort_order=1 → pois.name），
+ *   缺則 fallback entry id。
+ */
+export function formatSegmentRecords(rows: SegmentRecordRow[]): string {
+  if (rows.length === 0) {
+    return '（此行程尚無任何移動記錄；不得報任何距離／時間問題，至多提示「移動資料尚未計算」。）';
+  }
+  const cleanName = (s: string | null, fallback: string) =>
+    (s ? s.replace(/\s+/g, ' ').trim().slice(0, 60) : '') || fallback;
+  const lines: string[] = [];
+  let day = -1;
+  for (const r of rows) {
+    if (r.day_num !== day) {
+      day = r.day_num;
+      lines.push(`Day ${r.day_num}`);
+    }
+    const from = cleanName(r.from_name, `景點#${r.from_id}`);
+    const to = cleanName(r.to_name, `景點#${r.to_id}`);
+    let travel: string;
+    if (r.min == null) {
+      travel = '移動時間未記錄（不得據此報時程/距離問題）';
+    } else {
+      const label = TRAVEL_MODE_LABEL[r.mode as TravelMode] ?? '開車';
+      const dist = r.distance_m == null ? '' : ` · ${(r.distance_m / 1000).toFixed(1)} 公里`;
+      travel = `${label} ${r.min} 分鐘${dist}`;
+    }
+    lines.push(`  ${from} → ${to}：${travel}`);
+  }
+  return lines.join('\n');
+}
 
 // GET — 取最新 report
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -183,12 +235,53 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }, 200);
   }
 
+  // v2.55.x: 把 trip_segments 記錄的移動時間/距離嵌進 prompt，作為 timing/distance
+  // 的唯一權威來源。之前 prompt 只給靜態指示、沒給實際數字 → Claude 憑地理位置瞎估 →
+  // 報出錯誤的時程/距離問題（user 回報）。
+  // 不變式：min/distance_m 直接讀 trip_segments 原欄位，與 days API 的 travel.min/
+  // distance_m 同源（_merge.ts 亦原樣 copy）→「等同 days API」由構造保證；master POI
+  // 解析（sort_order=1 → pois.name）對齊 _merge.ts，若該慣例改動需同步。
+  // ROW_NUMBER 每 from_entry 只留最新一段（updated_at DESC）：對齊 days API 的
+  // Map<from_entry_id> 每站一段模型，並排除 reorder 後未清的 stale 非相鄰段（recompute
+  // 只 upsert 相鄰對、不刪舊段），否則會把 timeline 看不到的幽靈段餵給 Claude 審查。
+  const segRes = await env.DB
+    .prepare(
+      `WITH ranked AS (
+         SELECT s.from_entry_id, s.to_entry_id, s.mode, s.min, s.distance_m,
+                ROW_NUMBER() OVER (
+                  PARTITION BY s.from_entry_id ORDER BY s.updated_at DESC, s.id DESC
+                ) AS rn
+         FROM trip_segments s
+         WHERE s.trip_id = ?
+       )
+       SELECT fd.day_num AS day_num,
+              fp.name AS from_name, tp.name AS to_name,
+              r.from_entry_id AS from_id, r.to_entry_id AS to_id,
+              r.mode AS mode, r.min AS min, r.distance_m AS distance_m
+       FROM ranked r
+       JOIN trip_entries fe ON fe.id = r.from_entry_id
+       JOIN trip_days fd ON fd.id = fe.day_id
+       LEFT JOIN trip_entry_pois ftep ON ftep.entry_id = r.from_entry_id AND ftep.sort_order = 1
+       LEFT JOIN pois fp ON fp.id = ftep.poi_id
+       LEFT JOIN trip_entry_pois ttep ON ttep.entry_id = r.to_entry_id AND ttep.sort_order = 1
+       LEFT JOIN pois tp ON tp.id = ttep.poi_id
+       WHERE r.rn = 1
+       ORDER BY fd.day_num ASC, fe.sort_order ASC`,
+    )
+    .bind(tripId)
+    .all<SegmentRecordRow>();
+
+  const message = `${HEALTH_CHECK_MESSAGE}
+
+【行程表記錄的移動時間／距離（唯一權威來源，timing/distance 一律以此為準）】
+${formatSegmentRecords(segRes.results ?? [])}`;
+
   // 1. INSERT trip_requests — chat trail 先建立拿 id，下一步直接寫進 report
   const reqRow = await env.DB
     .prepare(
       'INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id',
     )
-    .bind(tripId, HEALTH_CHECK_MESSAGE, auth.email)
+    .bind(tripId, message, auth.email)
     .first<{ id: number }>();
 
   if (!reqRow) {
