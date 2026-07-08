@@ -22,7 +22,10 @@
  *   signature 永遠相同 → 永不重打，不受無關 mutation（改 note 等）影響
  *   （codex review P1 / perf CRIT-2）。失敗 resolve null 不 reject、不 toast；
  *   收到 403（唯讀 viewer）→ 該 trip 的 auto 整個停用（codex review P2）。
- *   恢復路徑：TravelPill ⚠ 手動鈕（explicit 模式，不受 signature 限制）。
+ *   恢復路徑（v2.55.x TravelPill 手動鈕移除後）：page reload 清 module-level
+ *   狀態、或真實 mutation 改變 gap signature → auto 天然 re-arm；缺座標 pair
+ *   需 user 補座標後 gap 才成立（TravelPill 顯「缺座標」提示）。唯讀 viewer
+ *   本就不可寫，無恢復路徑（改顯中性 chip、不再紅字警示）。
  *
  * ## Scope key
  *

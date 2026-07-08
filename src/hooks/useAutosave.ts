@@ -211,8 +211,6 @@ export function useAutosave<T extends object>(
     await performSave();
     // performSave 撞 in-flight（onBlur 已先觸發 save）會即刻 return；補 await 那個 in-flight
     // save，讓 flush 成為真正 barrier（見 inFlightPromiseRef 註解）。
-    // performSave 撞 in-flight（onBlur 已先觸發 save）會即刻 return；補 await 那個 in-flight
-    // save，讓 flush 成為真正 barrier（見 inFlightPromiseRef 註解）。
     if (inFlightPromiseRef.current) await inFlightPromiseRef.current;
   }, [clearDebounceTimer, performSave]);
 

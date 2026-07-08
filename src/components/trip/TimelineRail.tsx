@@ -1027,45 +1027,6 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
     }
   }, [orderedEvents, tripId, allDays, dayId, dndManaged]);
 
-  // Recompute travel on demand（TravelPill ⚠「重新計算」trigger）。
-  // fire-and-forget 對齊 drag-reorder 路徑；完成 dispatch tp-entry-updated 觸發 refetch。
-  // In-flight guard：endpoint 不帶 day param 會跑全 trip；用 ref 同步檢查防快點 N× burn quota。
-  // ?day=N scope：dayId → useTripDays() 找對應 dayNum，避免重算其他天 segments。
-  const recomputePendingRef = useRef(false);
-  const handleRecomputeTravel = useCallback(() => {
-    if (!tripId || recomputePendingRef.current) return;
-    recomputePendingRef.current = true;
-    requestTravelRecompute(tripId, dayNumFromId(allDays, dayId))
-      .then((data) => {
-        // v2.30.12: 解析 response 給 user 精確 feedback。避免「重新計算」按了
-        // 卻 0 段被算（座標缺、kill switch）變沉默成功 toast。
-        const computed = data?.pairsComputed ?? 0;
-        const missing = data?.pairsSkippedMissingCoords ?? 0;
-        const errs = (data?.errorsDetail ?? []).length;
-        if (computed === 0 && missing > 0) {
-          showToast(`${missing} 段缺少景點座標無法計算，請補上經緯度`, 'info');
-        } else if (computed === 0 && errs > 0) {
-          showToast(`${errs} 段重算失敗（Google Routes API）`, 'info');
-        } else if (computed === 0) {
-          showToast('沒有可重算的車程', 'info');
-        } else if (errs > 0 || missing > 0) {
-          const skipped = missing + errs;
-          showToast(`重算 ${computed} 段，${skipped} 段跳過`, 'info');
-        } else {
-          showToast(`已重新計算 ${computed} 段車程`, 'info');
-        }
-        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
-          detail: { tripId, travelRecomputeRequested: true },
-        }));
-      })
-      .catch(() => {
-        showToast('車程重新計算失敗，請稍後再試', 'info');
-      })
-      .finally(() => {
-        recomputePendingRef.current = false;
-      });
-  }, [tripId, dayId, allDays]);
-
   // 2026-07-07 跨天拖拉：rail body 掛 droppable — 拖到空日（無 item 可 over）
   // 或 rail 空白處也能 drop（data 帶 dayId 給 TripPage 判目標日，插末尾）。
   // isOver 淡高亮當 drop-target 回饋。非 managed / 無 dayId 時 disabled。
@@ -1131,6 +1092,11 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
           // review P1）。segments ready 後才判 missing，避免載入期閃 ⚠。
           const pairMissing = segmentsReady && !segment && !travelObj
             && prev?.id != null && entry.id != null;
+          // 缺座標 pair：self-healing 排除（見上方 gaps 條件），無法自動補算 → chip
+          // 顯「缺座標」誠實訊息，而非假稱「重新計算中」（adversarial review P1）。
+          const pairMissingCoords = pairMissing
+            && (prev?.masterLat == null || prev?.masterLng == null
+              || entry.masterLat == null || entry.masterLng == null);
           return (
             <div key={entry.id ?? i} className="tp-rail-row-wrap">
               {i > 0 && (travelObj || segment || pairMissing) && (
@@ -1147,10 +1113,10 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
                     computedAt: segment.computedAt,
                   } : undefined}
                   missing={pairMissing || undefined}
+                  missingCoords={pairMissingCoords || undefined}
                   tripId={tripId}
                   fromName={prev ? getTimelineEntryDisplayTitle(prev) : null}
                   toName={getTimelineEntryDisplayTitle(entry)}
-                  onRecompute={handleRecomputeTravel}
                 />
               )}
               <RailRow
