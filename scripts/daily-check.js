@@ -532,12 +532,14 @@ async function queryProdDataHygiene() {
       // trip_entry_pois.note。marker 掃描改讀 master（sort_order=1）的 per-POI note，
       // 繼承原本「整體備註」的語意。
       var safe = marker.replace(/'/g, "''");
-      return "te.title LIKE '%" + safe + "%' OR tep.note LIKE '%" + safe + "%'";
+      return "te.description LIKE '%" + safe + "%' OR tep.note LIKE '%" + safe + "%'";
     }).join(' OR ');
     // trip_id / day_num 在 trip_days,需 JOIN(trip_entries 只有 day_id)。
+    // trip_entries 無 title 欄，entry 層自由文字在 description（migration 0078 後
+    // note 已移到 per-POI）；掃 description + master POI note。
     // note 在 master trip_entry_pois row（sort_order=1）— LEFT JOIN 避免無 POI 的
-    // placeholder entry 因 note 掃描被整列濾掉（title marker 仍可命中）。
-    var sql = 'SELECT te.id, td.trip_id, td.day_num, te.title, tep.note AS note ' +
+    // placeholder entry 因 note 掃描被整列濾掉（description marker 仍可命中）。
+    var sql = 'SELECT te.id, td.trip_id, td.day_num, te.description AS title, tep.note AS note ' +
       'FROM trip_entries te JOIN trip_days td ON te.day_id = td.id ' +
       'LEFT JOIN trip_entry_pois tep ON tep.entry_id = te.id AND tep.sort_order = 1 ' +
       'WHERE ' + likeClauses + ' LIMIT 50';

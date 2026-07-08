@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.38] - 2026-07-09
+
+### Fixed
+- **daily-check prod data hygiene 掃描不再因 `no such column: te.title` 整段失敗** — `queryProdDataHygiene` 掃 test-marker leak 時 SELECT/LIKE 都引用 `te.title`，但 `trip_entries` 無 `title` 欄（entry 層自由文字在 `description`，migration 0078 後備註移到 per-POI），每日健檢的 dataHygiene 都回 warning + `SQLITE_ERROR`、掃描等於沒跑。改讀 `te.description`（`AS title` 保下游輸出不變）。同類「掃到不存在欄位」的 note cutover guard 只擋 `te.note` 沒擋 `te.title`，補一條 source-grep 斷言防復發。
+
 ## [2.55.37] - 2026-07-09
 
 ### Added

@@ -22,6 +22,11 @@ describe('queryProdDataHygiene — migration 0078 note cutover', () => {
     expect(SRC).not.toMatch(/te\.note/);
   });
 
+  it('不再 reference 不存在的 te.title（trip_entries 只有 description）', () => {
+    // 同類 "no such column" bug：entry 層自由文字在 description，非 title。
+    expect(SRC).not.toMatch(/te\.title/);
+  });
+
   it('marker 掃描改讀 trip_entry_pois 的 note（per-POI 備註）', () => {
     // JOIN trip_entry_pois 並用其 note 欄位做 LIKE 掃描
     expect(SRC).toMatch(/JOIN trip_entry_pois/);
