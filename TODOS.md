@@ -13,7 +13,11 @@
 
 ## Active
 
-（無）
+### trip_segments — recompute 不清 stale 非相鄰段（reorder 後幽靈車程）
+
+**Priority:** P2 · **Component:** recompute-travel / trip_segments
+
+`recompute-travel.ts` 只 upsert 逐日相鄰對（ON CONFLICT），**從不 DELETE** 當前相鄰集以外的舊段。entry reorder 後同一 `from_entry_id` 會殘留舊 `from→to` 段（FK cascade 只在 entry **刪除**時清，reorder 不觸發）。影響：days API `fetchTripSegmentsMap` 每站任取一段（無 ORDER BY）→ timeline 可能顯示 reorder 前的舊車程。v2.55.33 AI 健檢已用 `ROW_NUMBER` 取最新規避，但 timeline 本身未修。修法：recompute 收尾 DELETE 該 trip 當前相鄰集以外的 segments（或 reorder 入口觸發清理）。Codex adversarial（2026-07-08）發現。
 
 ---
 
