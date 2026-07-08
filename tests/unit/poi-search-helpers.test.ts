@@ -109,8 +109,8 @@ describe('poiMeta', () => {
     expect(poiMeta('', 'restaurant')).toBe('餐廳');
     expect(poiMeta(null, 'hotel')).toBe('飯店');
     expect(poiMeta('', 'tourist_attraction')).toBe('景點');
-    // 已是中文的自訂分類 → 原樣顯示
-    expect(poiMeta('', '居酒屋')).toBe('居酒屋');
+    // 無法對應的輸入 → 景點 fallback，不外露原始字串
+    expect(poiMeta('', 'unknown_type')).toBe('景點');
   });
 
   it('falls back to "景點" when both empty', () => {

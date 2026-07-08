@@ -279,4 +279,31 @@ describe('getAutoRecomputeStatus — 重算狀態回報（唯讀 viewer / 持續
     __resetTravelRecomputeState();
     expect(getAutoRecomputeStatus('t1', 1)).toBe('active');
   });
+
+  it('failed scope re-arm（新 signature）in-flight 期間 → active，不停在 failed（codex P2）', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(failResponse(500));
+    await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('failed');
+    // 新 signature re-arm，用 deferred 卡住 in-flight — 開跑即清 failed
+    const d = deferred();
+    apiFetchRawMock.mockReturnValueOnce(d.promise as Promise<unknown>);
+    const p = requestTravelRecompute('t1', 1, { auto: true, signature: '1-2,2-3' });
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('active');
+    d.resolve(okResponse());
+    await p;
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('active');
+  });
+
+  it('auto 讓給 in-flight explicit，該 explicit 失敗 → 標 failed（不停在重新計算中；codex P1）', async () => {
+    const d = deferred();
+    apiFetchRawMock.mockReturnValueOnce(d.promise as Promise<unknown>);
+    const pExplicit = requestTravelRecompute('t1', 3); // explicit in-flight
+    const rAuto = await requestTravelRecompute('t1', 3, { auto: true, signature: '5-6' });
+    expect(rAuto).toBeNull();
+    expect(getAutoRecomputeStatus('t1', 3)).toBe('active'); // explicit 還在跑
+    d.resolve(failResponse(500));
+    await expect(pExplicit).rejects.toThrow('recompute-travel 500');
+    await Promise.resolve(); // flush observer microtask
+    expect(getAutoRecomputeStatus('t1', 3)).toBe('failed');
+  });
 });

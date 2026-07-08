@@ -116,9 +116,11 @@ describe('poiCategoryLabel — 顯示用中文 label（英文 Google primaryType
     expect(poiCategoryLabel('subway_station')).toBe('交通');
   });
 
-  it('已是中文（自訂分類）→ 原樣顯示，不硬塞成 8 類', () => {
-    expect(poiCategoryLabel('居酒屋')).toBe('居酒屋');
-    expect(poiCategoryLabel('神社')).toBe('神社');
+  it('一律回中文 label、不外露英文（混合字串也回 label 非原字串）', () => {
+    // 混合「restaurant 餐廳」含 keyword → 回 label 餐廳（不漏嵌入的英文）
+    expect(poiCategoryLabel('restaurant 餐廳')).toBe('餐廳');
+    // 無法對應（含未知中文）→ 景點 fallback，與 ExplorePage 一致
+    expect(poiCategoryLabel('居酒屋')).toBe('景點');
   });
 
   it('whitelist 值 → 對應中文 label', () => {

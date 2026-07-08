@@ -121,6 +121,14 @@ export function requestTravelRecompute(
     // in-flight（同 key 或 all-scope）即本缺口的嘗試 — 記 signature 後跳過
     if (inflight.has(key) || inflight.has(scopeKey(tripId, null))) {
       autoAttemptedSig.set(key, signature);
+      // 本 auto 讓給 in-flight 的那發（可能是 explicit reorder recompute）。若那發
+      // 失敗，本缺口沒補到、signature 已記→不會自己重試 → 標本 day-scope failed
+      // + 通知，chip 才會由「重新計算中」轉「待更新」（否則永遠停在計算中；codex P1）。
+      const pending = inflight.get(key) ?? inflight.get(scopeKey(tripId, null));
+      pending?.then(undefined, () => {
+        autoFailedScopes.add(key);
+        window.dispatchEvent(new CustomEvent(EVENT.segmentRecomputeFailed, { detail: { tripId } }));
+      });
       return Promise.resolve(null);
     }
     autoAttemptedSig.set(key, signature);
@@ -128,6 +136,11 @@ export function requestTravelRecompute(
 
   const existing = inflight.get(key);
   if (existing) return existing;
+
+  // 新的一發要打了 → 樂觀清掉舊 failed：re-armed 重試（含 explicit 成功）期間 chip
+  // 顯「重新計算中」而非停在「待更新」（codex P2 / adversarial #1）。真的又失敗會在
+  // error handler 重新標 failed。
+  autoFailedScopes.delete(key);
 
   const query = day != null ? `?day=${day}` : '';
   const p = (async (): Promise<RecomputeTravelResult> => {
@@ -149,11 +162,7 @@ export function requestTravelRecompute(
   if (auto) {
     // auto 失敗靜默（唯讀 403 / MAPS_LOCKED / 網路錯都不該吵 user）
     return p.then(
-      (data) => {
-        cleanup();
-        autoFailedScopes.delete(key); // 曾失敗的 scope 這次成功 → 清 failed（signature 變化後恢復）
-        return data;
-      },
+      (data) => { cleanup(); return data; }, // failed 已在 request 開始時清（見上）
       (err) => {
         cleanup();
         const status = (err as { status?: number } | null)?.status;
