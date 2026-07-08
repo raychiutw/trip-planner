@@ -19,6 +19,7 @@
  * 對齊 docs/design-sessions/2026-05-07-travel-pill-tap-switch.html。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
 import { apiFetchRaw } from '../../lib/apiClient';
@@ -358,7 +359,12 @@ export default function TravelPillDialog({
     if (e.target === e.currentTarget) handleClose();
   };
 
-  return (
+  if (typeof document === 'undefined') return null; // 非 DOM 環境 → 與 ConfirmModal 等 shared modal 同樣 degrade，不硬 crash
+  // createPortal 到 body：overlay 是 fixed inset:0 z=--z-modal(9000)，但 dialog 掛在
+  // timeline 欄的 stacking context 內（day-section 動畫的 containing block 會困住 fixed），
+  // 不 portal 出去遮罩就蓋不過 sticky header（標題列 + DAY tabs）。與 ConfirmModal /
+  // StopLightbox 等 shared modal 同 idiom。
+  return createPortal(
     <>
       <style>{SCOPED_STYLES}</style>
       <div
@@ -452,6 +458,7 @@ export default function TravelPillDialog({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
