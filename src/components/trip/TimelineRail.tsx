@@ -905,7 +905,14 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
 });
 
 const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, dndManaged = false }: TimelineRailProps) {
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  // v2.55.x: 從 EditEntryPage 回前頁（或從地圖跳景點）帶 ?focus=<entryId> 時，該景點所在
+  // 的 rail 掛載即展開它 —— 回到「當下景點展開」。只認得屬於本 rail 的 entry，避免每一天的
+  // rail 都去吃同一個 focus（expandedId 對不到的 rail 設 null 無害）。
+  const [expandedId, setExpandedId] = useState<number | null>(() => {
+    const focus = new URLSearchParams(window.location.search).get('focus');
+    const focusId = focus ? Number(focus) : NaN;
+    return Number.isFinite(focusId) && events.some((e) => e.id === focusId) ? focusId : null;
+  });
   // PR-K：local order override — drag-end 後立即套用 optimistic order，等
   // backend PATCH 完成 + tp-entry-updated 觸發 refetch 再用 fresh data 覆蓋。
   const [orderOverride, setOrderOverride] = useState<number[] | null>(null);

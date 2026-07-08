@@ -36,8 +36,13 @@ describe('TripPage — ?focus= URL param wiring (v2.31.93)', () => {
   });
 
   it('focusParam 路徑 early return — 不再走 hash / autoScroll fallback', () => {
-    // pattern: if (focusParam) { ... return; }
-    expect(SRC).toMatch(/if \(focusParam\)[\s\S]{0,500}return;/);
+    // pattern: if (focusParam) { ... return; }（v2.55.x 加 focusDay→switchDay 後區塊變長）
+    expect(SRC).toMatch(/if \(focusParam\)[\s\S]{0,900}return;/);
+  });
+
+  it('focusDay param → switchDay 切到該景點所在天（v2.55.x 回前頁還原展開）', () => {
+    expect(SRC).toMatch(/get\(['"]focusDay['"]\)/);
+    expect(SRC).toMatch(/dayNums\.includes\(focusDay\)[\s\S]{0,40}switchDay\(focusDay\)/);
   });
 
   it('包在 requestAnimationFrame — DOM 還沒 commit 不打 selector', () => {

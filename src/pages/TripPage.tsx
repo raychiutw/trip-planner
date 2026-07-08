@@ -10,6 +10,7 @@ import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { buildCrossDayMoves, railItemsFirstCollision } from '../lib/crossDayMove';
 import { requestTravelRecompute } from '../lib/travelRecompute';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { writeTripView } from '../lib/tripViewState';
 import { EVENT } from '../lib/events';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
@@ -386,6 +387,15 @@ function TripPageInner(
   refetchCurrentDayRef.current = refetchCurrentDay;
   refetchDayRef.current = refetchDay;
 
+  // v2.55.x：記住最後檢視的行程 + 天，供下次進 /trips 沒帶 ?selected 時還原（Q1）。
+  // debounce 500ms：捲動 scroll-spy 會連續改 currentDayNum（跨天界），避免每次跨界都同步
+  // localStorage.setItem 落在 scroll hot-path；只寫「停下來安定的那天」。
+  useEffect(() => {
+    if (!activeTripId || currentDayNum <= 0) return;
+    const id = setTimeout(() => writeTripView({ tripId: activeTripId, dayNum: currentDayNum }), 500);
+    return () => clearTimeout(id);
+  }, [activeTripId, currentDayNum]);
+
   /** Direct download by format — JSON via lib, PDF via the data-driven print doc. */
   const handleDownloadFormat = useCallback(async (format: 'pdf' | 'json') => {
     if (!activeTripId) return;
@@ -558,8 +568,15 @@ function TripPageInner(
     // 已處理 location.state.scrollAnchor，但 GlobalMapPage Link 同時放 query
     // 跟 state，兩條路任一條 work 都行。這裡 query 那條是 fallback —
     // 例如 user 直接貼 URL 沒有 history state。
-    const focusParam = new URLSearchParams(window.location.search).get('focus');
+    const focusSearch = new URLSearchParams(window.location.search);
+    const focusParam = focusSearch.get('focus');
     if (focusParam) {
+      // v2.55.x：回前頁還原「當下景點展開」— 先切到該景點所在天（rail 才會 render，
+      // TimelineRail 依同一個 ?focus= 展開它），再 scroll 到它。focusDay 由 EditEntryPage
+      // goBack 帶入（entry.dayId → dayNum）；無 focusDay 時維持原本只 scroll 行為。
+      const focusDayParam = focusSearch.get('focusDay');
+      const focusDay = focusDayParam ? parseInt(focusDayParam, 10) : NaN;
+      if (Number.isFinite(focusDay) && dayNums.includes(focusDay)) switchDay(focusDay);
       requestAnimationFrame(() => {
         const sel = `[data-scroll-anchor="entry-${CSS.escape(focusParam)}"]`;
         const el = document.querySelector<HTMLElement>(sel);

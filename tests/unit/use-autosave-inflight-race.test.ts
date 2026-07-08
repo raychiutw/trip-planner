@@ -97,4 +97,29 @@ describe('useAutosave — in-flight 競態（Codex #4）', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     expect(save).toHaveBeenCalledTimes(1); // 卸載後不 reschedule
   });
+
+  it('flush() 撞 in-flight save → await 到 save resolve 才完成（barrier，桌機備註 stale-on-return 修）', async () => {
+    const d1 = deferred<Record<string, unknown>>();
+    const save = vi.fn<(b: Partial<{ note: string }>, v: number | undefined) => Promise<Record<string, unknown>>>()
+      .mockReturnValueOnce(d1.promise);
+    const { result } = renderHook(() => useAutosave<{ note: string }>({ debounceMs: 800, save }));
+
+    // patch → debounce fire → save in-flight（模擬 onBlur 已先觸發 PATCH，尚未 resolve）
+    act(() => { result.current.patch({ note: 'A' }); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(800); });
+    expect(save).toHaveBeenCalledTimes(1);
+
+    // flush()：pending 已空但 save 仍 in-flight → 必須 await 到 save resolve 才 resolve（barrier）。
+    // 修復前 flush 撞空 body 即刻 return → flushed 會提早 true（此測試會紅）。
+    let flushed = false;
+    await act(async () => {
+      const p = result.current.flush().then(() => { flushed = true; });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(flushed).toBe(false); // save 未 resolve → flush 卡在 barrier
+      d1.resolve({ version: 2 });
+      await p;
+    });
+    expect(flushed).toBe(true); // save resolve 後 flush 才放行
+  });
 });
