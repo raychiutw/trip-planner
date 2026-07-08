@@ -57,6 +57,14 @@ export function usePullToRefresh(
     if (!el) return;
 
     function handleTouchStart(e: TouchEvent) {
+      // v2.55.x: touch 起點落在可編輯欄位內 → 不當下拉刷新。手機聚焦 textarea/input
+      // 後捲動或手指微移常在 scrollTop=0 被誤判成 pull-to-refresh → onRefresh()=reload，
+      // 把正在編輯的備註沖掉（景點備註 textarea + 行程筆記頁輸入皆在此 scroller 內）。
+      const target = e.target as Element | null;
+      if (target?.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) {
+        startYRef.current = null;
+        return;
+      }
       if (!el || el.scrollTop > 0 || refreshingRef.current) {
         startYRef.current = null;
         return;

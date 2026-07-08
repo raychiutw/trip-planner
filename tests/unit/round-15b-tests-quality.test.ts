@@ -62,14 +62,12 @@ describe('v2.33.65 #3 — fake timer afterEach restore (3 files)', () => {
   });
 });
 
-describe('v2.33.65 #4 — setTimeout(0) → waitFor (timeline-rail-stale-travel)', () => {
+describe('v2.33.65 #4 — setTimeout(0) anti-pattern guard (timeline-rail-stale-travel)', () => {
+  // v2.55.x 車程 pill 改被動 status chip 後，本檔手動重算 button 的 async 測試已移除，
+  // chip 渲染純同步 → 不再需要 waitFor；原「改用 waitFor」正向斷言隨 async 測試一併退場，
+  // 保留「不得重現 setTimeout(0) microtask-flush」防呆（仍是有效 regression guard）。
   it('拔掉 setTimeout(r, 0) anti-pattern', () => {
     expect(TIMELINE_RAIL_TEST).not.toMatch(/new Promise\(\(r\) => setTimeout\(r, 0\)\)/);
-  });
-
-  it('改用 waitFor', () => {
-    expect(TIMELINE_RAIL_TEST).toMatch(/import.*waitFor.*from '@testing-library\/react'/);
-    expect(TIMELINE_RAIL_TEST).toMatch(/await waitFor\(\(\)/);
   });
 });
 

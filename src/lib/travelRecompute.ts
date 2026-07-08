@@ -22,7 +22,17 @@
  *   signature 永遠相同 → 永不重打，不受無關 mutation（改 note 等）影響
  *   （codex review P1 / perf CRIT-2）。失敗 resolve null 不 reject、不 toast；
  *   收到 403（唯讀 viewer）→ 該 trip 的 auto 整個停用（codex review P2）。
- *   恢復路徑：TravelPill ⚠ 手動鈕（explicit 模式，不受 signature 限制）。
+ *   恢復路徑（v2.55.x TravelPill 手動鈕移除後）：page reload 清 module-level
+ *   狀態、或真實 mutation 改變 gap signature → auto 天然 re-arm；缺座標 pair
+ *   需 user 補座標後 gap 才成立（TravelPill 顯「缺座標」提示）。唯讀 viewer
+ *   本就不可寫，無恢復路徑（改顯中性 chip、不再紅字警示）。
+ *
+ * ## 重算狀態回報（2026-07-08）
+ *
+ * 終端失敗（403 唯讀 / 持續 API 錯）除了停用 auto，另 dispatch
+ * segmentRecomputeFailed + 記 blocked/failed；getAutoRecomputeStatus() 讓
+ * TravelPill 由樂觀「重新計算中」改顯誠實「待更新」——不對不會自己好的 pair
+ * 假稱系統正在算（唯讀 viewer / 持續失敗的殘留誤導修正）。
  *
  * ## Scope key
  *
@@ -46,6 +56,8 @@ const inflight = new Map<string, Promise<RecomputeTravelResult>>();
 const autoAttemptedSig = new Map<string, string>();
 /** auto 收過 403 的 trip（唯讀 viewer）— 後續 auto 全 skip，不再浪費請求。 */
 const autoNoWriteTrips = new Set<string>();
+/** auto 終端失敗（非 403）的 scopeKey — status 回報 'failed'，chip 顯「待更新」不假稱計算中。 */
+const autoFailedScopes = new Set<string>();
 
 function scopeKey(tripId: string, dayNum: number | null): string {
   return `${tripId}|${dayNum ?? 'all'}`;
@@ -67,6 +79,25 @@ export function __resetTravelRecomputeState(): void {
   inflight.clear();
   autoAttemptedSig.clear();
   autoNoWriteTrips.clear();
+  autoFailedScopes.clear();
+}
+
+export type AutoRecomputeStatus = 'active' | 'blocked' | 'failed';
+
+/**
+ * 查某 scope 的 auto 重算狀態，給 TravelPill 選文案（只在 stale pair 才問）：
+ *   - 'blocked'：唯讀 viewer（收過 403）— auto 全停，不會自動補算
+ *   - 'failed' ：持續 API 失敗（非 403）— 本 scope 終端失敗、同 signature 不重試
+ *   - 'active' ：進行中 / 尚未嘗試 / 會嘗試 → 樂觀顯「重新計算中」
+ * blocked/failed 都代表「不會自己好」→ chip 改顯「待更新」而非假稱「重新計算中」。
+ */
+export function getAutoRecomputeStatus(
+  tripId: string,
+  dayNum?: number | string | null,
+): AutoRecomputeStatus {
+  if (autoNoWriteTrips.has(tripId)) return 'blocked';
+  if (autoFailedScopes.has(scopeKey(tripId, normalizeDayNum(dayNum)))) return 'failed';
+  return 'active';
 }
 
 /**
@@ -90,6 +121,14 @@ export function requestTravelRecompute(
     // in-flight（同 key 或 all-scope）即本缺口的嘗試 — 記 signature 後跳過
     if (inflight.has(key) || inflight.has(scopeKey(tripId, null))) {
       autoAttemptedSig.set(key, signature);
+      // 本 auto 讓給 in-flight 的那發（可能是 explicit reorder recompute）。若那發
+      // 失敗，本缺口沒補到、signature 已記→不會自己重試 → 標本 day-scope failed
+      // + 通知，chip 才會由「重新計算中」轉「待更新」（否則永遠停在計算中；codex P1）。
+      const pending = inflight.get(key) ?? inflight.get(scopeKey(tripId, null));
+      pending?.then(undefined, () => {
+        autoFailedScopes.add(key);
+        window.dispatchEvent(new CustomEvent(EVENT.segmentRecomputeFailed, { detail: { tripId } }));
+      });
       return Promise.resolve(null);
     }
     autoAttemptedSig.set(key, signature);
@@ -97,6 +136,11 @@ export function requestTravelRecompute(
 
   const existing = inflight.get(key);
   if (existing) return existing;
+
+  // 新的一發要打了 → 樂觀清掉舊 failed：re-armed 重試（含 explicit 成功）期間 chip
+  // 顯「重新計算中」而非停在「待更新」（codex P2 / adversarial #1）。真的又失敗會在
+  // error handler 重新標 failed。
+  autoFailedScopes.delete(key);
 
   const query = day != null ? `?day=${day}` : '';
   const p = (async (): Promise<RecomputeTravelResult> => {
@@ -118,12 +162,17 @@ export function requestTravelRecompute(
   if (auto) {
     // auto 失敗靜默（唯讀 403 / MAPS_LOCKED / 網路錯都不該吵 user）
     return p.then(
-      (data) => { cleanup(); return data; },
+      (data) => { cleanup(); return data; }, // failed 已在 request 開始時清（見上）
       (err) => {
         cleanup();
-        if ((err as { status?: number } | null)?.status === 403) {
-          autoNoWriteTrips.add(tripId);
+        const status = (err as { status?: number } | null)?.status;
+        if (status === 403) {
+          autoNoWriteTrips.add(tripId); // 唯讀 viewer → 該 trip auto 全停
+        } else {
+          autoFailedScopes.add(key); // 持續 API 錯 → 本 scope 標 failed（不再重試同 signature）
         }
+        // 終端失敗通知：TimelineRail re-render 讓 TravelPill 由「重新計算中」改「待更新」。
+        window.dispatchEvent(new CustomEvent(EVENT.segmentRecomputeFailed, { detail: { tripId } }));
         // 監控可見性：auto 靜默但至少留 console 痕跡（signature 防重保證
         // 同 gap 只 log 一次，不會 spam）。systemic 壞掉（key rotation、
         // routes regression）才有跡可循。

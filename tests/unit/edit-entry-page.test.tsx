@@ -30,9 +30,8 @@ vi.mock('../../src/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({ user: { email: 'user@test.com' }, loading: false }),
 }));
 
-vi.mock('../../src/hooks/useNavigateBack', () => ({
-  useNavigateBack: (_fallback: string) => () => navigateSpy('back'),
-}));
+// v2.55.x：EditEntryPage 已改用 goBackFocused（await flush 備註 → navigate 帶 ?focus=），
+// 不再 import useNavigateBack；原本的 mock 已無對應 import，移除。
 
 vi.mock('../../src/components/shell/AppShell', () => ({
   default: ({ main }: { main: React.ReactNode }) => <>{main}</>,
@@ -488,7 +487,9 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     });
     const back = screen.getByLabelText('返回行程');
     fireEvent.click(back);
-    expect(navigateSpy).toHaveBeenCalled();
+    // v2.55.x：goBackFocused 先 await flush 備註再 navigate（async）→ 帶 ?focus=<entryId>
+    // 讓 TripPage 回前頁還原「當下景點展開」。仍無 ConfirmModal。
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith(expect.stringContaining('focus=42')));
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
   });
 
@@ -500,8 +501,42 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     // v2.34.0: note textarea 已移除，改用時間 picker 製造 dirty 狀態。
     pickTime('edit-entry-start-time', '11:30');
     fireEvent.click(screen.getByLabelText('返回行程'));
-    expect(navigateSpy).toHaveBeenCalled();
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalled());
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
+  });
+
+  it('編輯 per-POI 備註 → blur 啟動 PATCH → 點返回：navigate 等 PATCH resolve 才發生（stale-race barrier）', async () => {
+    // 備註 PATCH 用可控閘門：resolve 前 hang。blur 先啟動 in-flight PATCH，返回時 goBackFocused
+    // 的 flush 撞 in-flight → useAutosave flush barrier 必須 await 它，navigate 才不會搶在 commit 前。
+    let resolvePatch!: () => void;
+    const patchGate = new Promise<void>((r) => { resolvePatch = r; });
+    setupAltsMocks(); // 先設 alts（含 apiFetchRaw resolved 預設）
+    // 再覆蓋 apiFetchRaw：備註 PATCH 走可控閘門，其餘照常 resolved
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      const okResp = { ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) };
+      if (url.includes('/pois/100')) return patchGate.then(() => okResp);
+      return Promise.resolve(okResp);
+    });
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy());
+
+    // master 備註（poiId=100）：開編輯 → 打字 → blur（模擬點按鈕前 textarea 先失焦 → 送出 PATCH）
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-100'));
+    fireEvent.change(screen.getByTestId('edit-entry-poi-note-input-100'), { target: { value: '新備註內容' } });
+    fireEvent.blur(screen.getByTestId('edit-entry-poi-note-input-100'));
+    fireEvent.click(screen.getByLabelText('返回行程'));
+
+    // barrier：PATCH 未 resolve → navigate 不該發生（修復前 flush 撞空 body 即 return → 這裡會紅）
+    await new Promise((r) => setTimeout(r, 0));
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+    // PATCH commit → flush 放行 → navigate 帶 ?focus=42
+    resolvePatch();
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith(expect.stringContaining('focus=42')));
+    const patchCall = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls.find(
+      (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('/pois/100'),
+    );
+    expect(JSON.parse((patchCall![1] as { body: string }).body).note).toBe('新備註內容');
   });
 });
 

@@ -81,30 +81,16 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-eyebrow); line-height: 1;
   margin-left: 2px;
 }
-/* Stale-travel ⚠ indicator + recompute button — sibling of pill (not nested, avoid button-in-button) */
+/* 車程重算中 status chip — 中性柔 sage 底（移動色系），非警示；self-healing 自動補算，無手動鈕 */
 .tp-travel-pill-stale {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  background: var(--color-priority-high-bg);
-  color: var(--color-priority-high-dot);
+  background: var(--color-accent-2-subtle);
+  color: var(--color-muted);
   font-size: var(--font-size-caption);
   font-weight: 600;
 }
-.tp-travel-pill-recompute {
-  appearance: none; background: none; border: 0; padding: 2px 6px;
-  margin-left: 2px;
-  color: var(--color-priority-high-dot);
-  font: inherit; font-size: var(--font-size-caption);
-  font-weight: 700;
-  cursor: pointer;
-  border-radius: var(--radius-full);
-  text-decoration: underline;
-  min-height: var(--spacing-tap-min);
-  display: inline-flex; align-items: center;
-}
-.tp-travel-pill-recompute:hover { background: var(--color-priority-high-bg); filter: brightness(0.95); }
-.tp-travel-pill-recompute:focus-visible { outline: 2px solid var(--color-priority-high-dot); outline-offset: 2px; }
 @media (max-width: 760px) {
   /* v2.30.12: mobile dot 中心 56→44px (page padding 16 + grip 20 + gap 8 + dot/2 12 — 對齊 .tp-rail-detail mobile margin-left). */
   .tp-travel-pill-wrap { margin: 6px 0 6px 44px; }
@@ -175,17 +161,28 @@ export interface TravelPillProps {
   segment?: TravelPillSegment;
   /**
    * 2026-07-06 車程重算缺口：pair 完全沒有 segment row（刪除/搬日後的新
-   * adjacency、缺座標 pair）。視同 stale — 顯示 ⚠「車程未更新」chip 給 user
-   * 手動重算的 affordance，但不 render interactive pill 本體（無 segment.id
-   * 可開 TravelPillDialog）。
+   * adjacency、缺座標 pair）。視同 stale — 顯示 status chip，但不 render
+   * interactive pill 本體（無 segment.id 可開 TravelPillDialog）。缺座標子集
+   * 見 missingCoords。
    */
   missing?: boolean;
+  /**
+   * missing 的子集：pair 缺 segment row 且至少一端無座標 → self-healing 排除
+   * （TimelineRail gaps 條件）、無法自動補算。true 時 chip 顯「缺座標」誠實訊息，
+   * 而非假稱「重新計算中」（否則 stuck-on-coords pair 永久誤導；adversarial P1）。
+   */
+  missingCoords?: boolean;
+  /**
+   * 重算已終端停滯：唯讀 viewer（403 → auto 全停）或持續 API 失敗（本 scope 不再
+   * 重試）。true 時 chip 由樂觀「車程重新計算中」改顯誠實「車程待更新」——不對不會
+   * 自己好的 pair 假稱系統正在算（否則 viewer / 持續失敗永久誤導）。TimelineRail
+   * 由 getAutoRecomputeStatus 判斷傳入。
+   */
+  recomputeStalled?: boolean;
   tripId?: string;
   /** 顯示在 dialog title 旁的 from→to entry 名稱（optional） */
   fromName?: string | null;
   toName?: string | null;
-  /** ⚠ button 點擊 callback（caller 呼叫 recompute-travel endpoint） */
-  onRecompute?: () => void;
 }
 
 /**
@@ -213,17 +210,21 @@ export default function TravelPill({
   distanceM,
   segment,
   missing,
+  missingCoords,
+  recomputeStalled,
   tripId,
   fromName,
   toName,
-  onRecompute,
 }: TravelPillProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // v2.29.1 stale 偵測：純看 segment.computedAt — backend mark stale 時設 NULL，
-  // user 觸發 recompute 後寫回 epoch ms。stale 時不顯示舊 min/distance，只渲染
-  // 「車程未更新 重新計算」chip。2026-07-06：missing（pair 無 row）視同 stale，
-  // 同一 ⚠ affordance。
+  // self-healing recompute 完成後寫回 epoch ms。stale 時不顯示舊 min/distance，只渲染
+  // status chip：可自動補算者（computedAt=NULL、或有座標的 missing pair）→「車程重新
+  // 計算中」（TimelineRail render 時自動觸發 requestTravelRecompute → helper dispatch
+  // segmentUpdated → useTripSegments refetch → pill 自動消失，無需手動鈕）；missingCoords
+  // （缺座標、self-healing 排除）→「缺座標」誠實訊息，不假稱計算中。2026-07-06：missing
+  // （pair 無 row）視同 stale。
   const isStale = missing === true || (segment != null && segment.computedAt == null);
 
   // 若 segment 提供，優先用 segment.mode/min/distanceM 顯示（v2.24.0 SoT）
@@ -262,25 +263,23 @@ export default function TravelPill({
     </>
   );
 
+  // stale chip 文案三態（優先序 missingCoords > recomputeStalled > active）：
+  //   缺座標   → 無法算，需 user 補座標
+  //   停滯     → 唯讀 viewer / 持續失敗，不會自己好 → 誠實「待更新」不假稱計算中
+  //   進行中   → 樂觀「重新計算中」（self-healing 自動補算 + refetch 後 chip 自消）
+  const staleText = missingCoords ? '缺座標，無法計算車程'
+    : recomputeStalled ? '車程待更新'
+      : '車程重新計算中';
+  const staleAria = missingCoords ? '缺少景點座標，無法計算車程'
+    : recomputeStalled ? '車程待更新'
+      : '車程重新計算中，系統自動更新';
   const staleChip = isStale ? (
     <span
       className="tp-travel-pill-stale"
-      aria-label="車程未更新 — Google Routes 尚未重新計算"
+      aria-label={staleAria}
       data-testid="travel-pill-stale"
     >
-      <span aria-hidden="true">⚠</span>
-      <span>車程未更新</span>
-      {onRecompute && (
-        <button
-          type="button"
-          className="tp-travel-pill-recompute"
-          onClick={onRecompute}
-          data-testid="travel-pill-recompute"
-          aria-label="重新計算車程"
-        >
-          重新計算
-        </button>
-      )}
+      {staleText}
     </span>
   ) : null;
 

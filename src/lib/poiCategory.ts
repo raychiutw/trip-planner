@@ -78,6 +78,21 @@ export function mapGooglePrimaryTypeToPoiType(category: string | null | undefine
 }
 
 /**
+ * POI 分類顯示 label（zh-TW）。DB `pois.category` 存的是 Google Places
+ * `primaryType`（英文 snake_case，如 tourist_attraction / cafe），直接顯示會露
+ * 英文（TimelineRail 備選卡、poiMeta address 缺省時曾如此）。原則：
+ *   - 空 → null（caller 自行 fallback，如 poi.type 的 label）
+ *   - 其餘 → 一律經 whitelist 映射成 8 類中文 label（回 label 而非原字串 → 混合
+ *     字串也不外露英文；與 ExplorePage `POI_TYPE_LABELS[mapNominatimCategory()]`
+ *     全站一致，不另立更細 taxonomy）
+ */
+export function poiCategoryLabel(category: string | null | undefined): string | null {
+  const c = category?.trim();
+  if (!c) return null;
+  return POI_TYPE_LABELS[mapGooglePrimaryTypeToPoiType(c)];
+}
+
+/**
  * @deprecated 名稱誤導（餵進來的其實是 Google `primaryType`，不是 Nominatim）。
  * 改用 {@link mapGooglePrimaryTypeToPoiType}。保留 alias 讓既有 caller 與測試解析。
  */

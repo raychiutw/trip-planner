@@ -449,3 +449,24 @@ describe('2026-07-07 detail 同寬 + iOS 展開（source-grep 鎖）', () => {
     expect(SRC).toContain('@media (prefers-reduced-motion: reduce)');
   });
 });
+
+// v2.55.x：回前頁（EditEntryPage goBack 帶 ?focus=<entryId>）時，該景點所在 rail 掛載即展開它。
+// expandedId lazy-init 讀 window.location.search，故各測試後需還原 location 避免洩漏到別的測試。
+describe('TimelineRail — ?focus= mount 展開（v2.55.x 回前頁還原當下景點）', () => {
+  afterEach(() => window.history.replaceState({}, '', '/'));
+
+  it('?focus=<本 rail 成員 id> → 該景點掛載即展開，其他維持收合', () => {
+    window.history.replaceState({}, '', '/?focus=42');
+    renderRail();
+    expect(screen.getByTestId('timeline-rail-row-42').getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByTestId('timeline-rail-detail-42')).toBeTruthy();
+    expect(screen.getByTestId('timeline-rail-row-43').getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('?focus=<非本 rail 成員 id> → 無 row 展開（events.some 守衛，不吃別天的 focus）', () => {
+    window.history.replaceState({}, '', '/?focus=999');
+    renderRail();
+    expect(screen.getByTestId('timeline-rail-row-42').getAttribute('aria-expanded')).toBe('false');
+    expect(screen.getByTestId('timeline-rail-row-43').getAttribute('aria-expanded')).toBe('false');
+  });
+});
