@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.37] - 2026-07-09
+
+### Added
+- **Flutter mobile OAuth client + account notification preferences API** — 新增 official `tripline-mobile` public PKCE client migration（loopback redirect、`offline_access` scope、可重跑 upsert），讓 Flutter app 不再卡在 backend client provisioning；新增 `/api/account/notifications` GET/PATCH，以 session auth 管理使用者通知偏好（行程更新、邀請、系統通知），預設全開、PATCH 僅接受 boolean 欄位、missing migration 時回穩定 DB error。+ migration/unit/API tests。
+
 ## [2.55.36] - 2026-07-09
 
 ### Fixed
