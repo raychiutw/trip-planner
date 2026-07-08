@@ -172,6 +172,13 @@ export interface TravelPillProps {
    * 而非假稱「重新計算中」（否則 stuck-on-coords pair 永久誤導；adversarial P1）。
    */
   missingCoords?: boolean;
+  /**
+   * 重算已終端停滯：唯讀 viewer（403 → auto 全停）或持續 API 失敗（本 scope 不再
+   * 重試）。true 時 chip 由樂觀「車程重新計算中」改顯誠實「車程待更新」——不對不會
+   * 自己好的 pair 假稱系統正在算（否則 viewer / 持續失敗永久誤導）。TimelineRail
+   * 由 getAutoRecomputeStatus 判斷傳入。
+   */
+  recomputeStalled?: boolean;
   tripId?: string;
   /** 顯示在 dialog title 旁的 from→to entry 名稱（optional） */
   fromName?: string | null;
@@ -204,6 +211,7 @@ export default function TravelPill({
   segment,
   missing,
   missingCoords,
+  recomputeStalled,
   tripId,
   fromName,
   toName,
@@ -255,13 +263,23 @@ export default function TravelPill({
     </>
   );
 
+  // stale chip 文案三態（優先序 missingCoords > recomputeStalled > active）：
+  //   缺座標   → 無法算，需 user 補座標
+  //   停滯     → 唯讀 viewer / 持續失敗，不會自己好 → 誠實「待更新」不假稱計算中
+  //   進行中   → 樂觀「重新計算中」（self-healing 自動補算 + refetch 後 chip 自消）
+  const staleText = missingCoords ? '缺座標，無法計算車程'
+    : recomputeStalled ? '車程待更新'
+      : '車程重新計算中';
+  const staleAria = missingCoords ? '缺少景點座標，無法計算車程'
+    : recomputeStalled ? '車程待更新'
+      : '車程重新計算中，系統自動更新';
   const staleChip = isStale ? (
     <span
       className="tp-travel-pill-stale"
-      aria-label={missingCoords ? '缺少景點座標，無法計算車程' : '車程重新計算中，系統自動更新'}
+      aria-label={staleAria}
       data-testid="travel-pill-stale"
     >
-      {missingCoords ? '缺座標，無法計算車程' : '車程重新計算中'}
+      {staleText}
     </span>
   ) : null;
 

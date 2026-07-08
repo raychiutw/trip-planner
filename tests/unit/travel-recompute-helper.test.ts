@@ -15,6 +15,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   requestTravelRecompute,
+  getAutoRecomputeStatus,
   __resetTravelRecomputeState,
 } from '../../src/lib/travelRecompute';
 import { EVENT } from '../../src/lib/events';
@@ -227,5 +228,55 @@ describe('requestTravelRecompute — auto 模式防護（gap signature）', () =
     // 手動重算仍會打（reject 給 caller toast）
     await expect(requestTravelRecompute('t1', 1)).rejects.toThrow('recompute-travel 403');
     expect(apiFetchRawMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('getAutoRecomputeStatus — 重算狀態回報（唯讀 viewer / 持續失敗殘留修正）', () => {
+  it('尚未嘗試 / 成功後 → active（成功不留 failed）', async () => {
+    apiFetchRawMock.mockResolvedValue(okResponse());
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('active');
+    await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('active');
+  });
+
+  it('auto 收 403（唯讀 viewer）→ blocked，跨 day / all-scope 一致', async () => {
+    apiFetchRawMock.mockResolvedValue(failResponse(403));
+    await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('blocked');
+    expect(getAutoRecomputeStatus('t1', 2)).toBe('blocked');
+    expect(getAutoRecomputeStatus('t1')).toBe('blocked');
+  });
+
+  it('auto 持續失敗（非 403）→ 該 scope failed，其他 scope 仍 active', async () => {
+    apiFetchRawMock.mockResolvedValue(failResponse(500));
+    await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('failed');
+    expect(getAutoRecomputeStatus('t1', 2)).toBe('active');
+  });
+
+  it('failed scope 後續成功（signature 變 re-arm）→ 回 active（恢復）', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(failResponse(500));
+    await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('failed');
+    apiFetchRawMock.mockResolvedValue(okResponse());
+    await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2,2-3' });
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('active');
+  });
+
+  it('終端失敗 dispatch segmentRecomputeFailed（TimelineRail re-render 依據）', async () => {
+    apiFetchRawMock.mockResolvedValue(failResponse(500));
+    const spy = vi.fn();
+    window.addEventListener(EVENT.segmentRecomputeFailed, spy);
+    await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
+    window.removeEventListener(EVENT.segmentRecomputeFailed, spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('__reset 清 blocked/failed 狀態', async () => {
+    apiFetchRawMock.mockResolvedValue(failResponse(403));
+    await requestTravelRecompute('t1', 1, { auto: true, signature: '1-2' });
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('blocked');
+    __resetTravelRecomputeState();
+    expect(getAutoRecomputeStatus('t1', 1)).toBe('active');
   });
 });

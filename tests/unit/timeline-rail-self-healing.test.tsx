@@ -27,17 +27,21 @@ vi.mock('../../src/hooks/useTripSegments', () => ({
 }));
 
 const recomputeMock = vi.fn(() => Promise.resolve(null));
+const autoStatusMock = vi.fn(() => 'active' as 'active' | 'blocked' | 'failed');
 vi.mock('../../src/lib/travelRecompute', () => ({
   requestTravelRecompute: (
     tripId: string,
     dayNum?: number | null,
     opts?: { auto?: boolean; signature?: string },
   ) => recomputeMock(tripId, dayNum, opts),
+  getAutoRecomputeStatus: () => autoStatusMock(),
 }));
 
 beforeEach(() => {
   useTripSegmentsMock.mockReset();
   recomputeMock.mockClear();
+  autoStatusMock.mockReset();
+  autoStatusMock.mockReturnValue('active');
 });
 
 function entry(id: number, title: string, time = '09:00-10:00'): TimelineEntryData {
@@ -170,6 +174,18 @@ describe('TimelineRail self-healing 車程補算', () => {
     const chips = getAllByTestId('travel-pill-stale');
     expect(chips).toHaveLength(1);
     expect(chips[0].textContent ?? '').toContain('重新計算中');
+  });
+
+  it('唯讀 viewer / 持續失敗（getAutoRecomputeStatus=blocked）→ chip 顯「車程待更新」不假稱計算中', () => {
+    autoStatusMock.mockReturnValue('blocked');
+    useTripSegmentsMock.mockReturnValue({
+      segments: [], segmentMap: new Map(), loading: false, ready: true,
+    });
+    const { getAllByTestId } = renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
+    const chips = getAllByTestId('travel-pill-stale');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].textContent ?? '').toContain('車程待更新');
+    expect(chips[0].textContent ?? '').not.toContain('重新計算中');
   });
 
   it('segments 未 ready → 不 render missing ⚠（載入期不閃）', () => {

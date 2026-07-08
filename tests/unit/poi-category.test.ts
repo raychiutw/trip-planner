@@ -8,7 +8,7 @@
  * 直接 unit-test 不靠 source-grep。
  */
 import { describe, it, expect } from 'vitest';
-import { mapNominatimCategory, POI_TYPE_LABELS } from '../../src/lib/poiCategory';
+import { mapNominatimCategory, poiCategoryLabel, POI_TYPE_LABELS } from '../../src/lib/poiCategory';
 
 describe('Google Places primaryType → poi_type accuracy (add-stop auto-category fix)', () => {
   it('food & drink → restaurant (cafe / bar / bakery / coffee_shop were mis-bucketed to attraction)', () => {
@@ -97,6 +97,33 @@ describe('Google Places primaryType → poi_type accuracy (add-stop auto-categor
     expect(mapNominatimCategory('barber_shop')).toBe('shopping');
     expect(mapNominatimCategory('gift_shop')).toBe('shopping');
     expect(mapNominatimCategory('shoe_store')).toBe('shopping');
+  });
+});
+
+describe('poiCategoryLabel — 顯示用中文 label（英文 Google primaryType 不外露）', () => {
+  it('空 / null / undefined / 全空白 → null（caller fallback 到 poi.type label）', () => {
+    expect(poiCategoryLabel(null)).toBeNull();
+    expect(poiCategoryLabel(undefined)).toBeNull();
+    expect(poiCategoryLabel('')).toBeNull();
+    expect(poiCategoryLabel('   ')).toBeNull();
+  });
+
+  it('英文 Google primaryType → 8 類中文 label（不露英文）', () => {
+    expect(poiCategoryLabel('tourist_attraction')).toBe('景點');
+    expect(poiCategoryLabel('cafe')).toBe('餐廳');
+    expect(poiCategoryLabel('lodging')).toBe('飯店');
+    expect(poiCategoryLabel('shopping_mall')).toBe('購物');
+    expect(poiCategoryLabel('subway_station')).toBe('交通');
+  });
+
+  it('已是中文（自訂分類）→ 原樣顯示，不硬塞成 8 類', () => {
+    expect(poiCategoryLabel('居酒屋')).toBe('居酒屋');
+    expect(poiCategoryLabel('神社')).toBe('神社');
+  });
+
+  it('whitelist 值 → 對應中文 label', () => {
+    expect(poiCategoryLabel('restaurant')).toBe('餐廳');
+    expect(poiCategoryLabel('other')).toBe('其他');
   });
 });
 

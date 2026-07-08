@@ -71,6 +71,21 @@ describe('TravelPill — v2.29.2 stale-travel status chip (computed_at signal)',
     expect(stale.textContent ?? '').not.toContain('重新計算中');
   });
 
+  it('recomputeStalled（唯讀 viewer / 持續失敗）→ chip 顯「車程待更新」不假稱計算中', () => {
+    render(<TravelPill segment={seg({ computedAt: null })} tripId="t1" recomputeStalled />);
+    const stale = screen.getByTestId('travel-pill-stale');
+    expect(stale.textContent ?? '').toContain('車程待更新');
+    expect(stale.textContent ?? '').not.toContain('重新計算中');
+    expect(stale.getAttribute('aria-label') ?? '').toContain('待更新');
+  });
+
+  it('missingCoords 優先於 recomputeStalled（缺座標仍顯缺座標）', () => {
+    render(<TravelPill missing missingCoords recomputeStalled tripId="t1" />);
+    const stale = screen.getByTestId('travel-pill-stale');
+    expect(stale.textContent ?? '').toContain('缺座標');
+    expect(stale.textContent ?? '').not.toContain('待更新');
+  });
+
   it('legacy travel_* + segment（computedAt=null）→ stale 蓋過 legacy display', () => {
     // 即使 caller 還傳 v2.23 legacy travel_* fields，segment SoT 的 stale signal 仍主宰渲染
     render(

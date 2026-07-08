@@ -105,9 +105,12 @@ describe('poiMeta', () => {
     expect(poiMeta('東京都新宿區 1-2-3, 日本', 'restaurant')).toBe('東京都新宿區 1-2-3');
   });
 
-  it('falls back to category when address empty', () => {
-    expect(poiMeta('', 'restaurant')).toBe('restaurant');
-    expect(poiMeta(null, 'hotel')).toBe('hotel');
+  it('address 缺省時 fallback 分類 — Google primaryType（英文）映射成中文，不露英文', () => {
+    expect(poiMeta('', 'restaurant')).toBe('餐廳');
+    expect(poiMeta(null, 'hotel')).toBe('飯店');
+    expect(poiMeta('', 'tourist_attraction')).toBe('景點');
+    // 已是中文的自訂分類 → 原樣顯示
+    expect(poiMeta('', '居酒屋')).toBe('居酒屋');
   });
 
   it('falls back to "景點" when both empty', () => {

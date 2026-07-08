@@ -21,6 +21,7 @@ vi.mock('../../src/hooks/useTripSegments', () => ({
 }));
 vi.mock('../../src/lib/travelRecompute', () => ({
   requestTravelRecompute: vi.fn(() => Promise.resolve(null)),
+  getAutoRecomputeStatus: () => 'active',
 }));
 
 beforeEach(() => {

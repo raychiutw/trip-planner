@@ -13,6 +13,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 - **車程「未更新」提示改為被動中性訊息、去紅字**（車程自 2026-07-06 self-healing 起已自動補算）— `TravelPill` stale chip 由紅字 ⚠「車程未更新」+ 手動「重新計算」鈕，改成柔 sage 底「車程重新計算中」status chip。手動鈕已冗餘（trigger 由 `TimelineRail` render 時自動觸發 `requestTravelRecompute`、refresh 由 helper 的 `segmentUpdated` 事件 → `useTripSegments` refetch 涵蓋），連同 `onRecompute` prop 一併移除。缺座標、self-healing 排除的 pair 則誠實顯示「缺座標，無法計算車程」，不假稱計算中。
+- **車程重算狀態誠實化：唯讀 viewer / 持續 API 失敗改顯「車程待更新」**（承上，補「重新計算中」對不會自己好的情況的殘留誤導）— `travelRecompute` 記 auto 終端狀態（403 唯讀 → `blocked`、非 403 持續錯 → `failed`）+ dispatch `segmentRecomputeFailed` 事件，`getAutoRecomputeStatus()` 回報給 `TravelPill`。`TimelineRail` 監聽事件 re-render、依 day-scope 狀態傳 `recomputeStalled`：只有真的會自動補算的 pair 才顯「車程重新計算中」，停滯（唯讀 / 持續失敗）的顯「車程待更新」，不假稱系統正在算。
+- **POI 分類不再露英文**（user 回報「有些英文分類」）— `pois.category` 存的是 Google `primaryType`（英文 snake_case，如 `tourist_attraction`），`TimelineRail` 備選卡與 `poiMeta`（搜尋結果 address 缺省時）曾直接顯示 → 新增 `poiCategoryLabel()` 映射成全站一致的 8 類中文 label（已是中文的自訂分類原樣顯示），與 `ExplorePage` 對齊。
 
 ## [2.55.33] - 2026-07-08
 

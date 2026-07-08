@@ -26,9 +26,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
 import { apiFetchRaw } from '../../lib/apiClient';
-import { requestTravelRecompute } from '../../lib/travelRecompute';
+import { requestTravelRecompute, getAutoRecomputeStatus } from '../../lib/travelRecompute';
 import { EVENT } from '../../lib/events';
-import { POI_TYPE_LABELS, type PoiType } from '../../lib/poiCategory';
+import { POI_TYPE_LABELS, poiCategoryLabel, type PoiType } from '../../lib/poiCategory';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import Icon from '../shared/Icon';
 import ConfirmModal from '../shared/ConfirmModal';
@@ -371,7 +371,10 @@ const StopPoiChoiceCard = memo(function StopPoiChoiceCard({ poi }: { poi: StopPo
   const hoursStr = condenseHours(poi.hours);
   if (hoursStr) metaParts.push(hoursStr);
   if (poi.reservation) metaParts.push(poi.reservation);
-  const typeLabel = poi.category || (poi.type ? POI_TYPE_LABELS[poi.type as PoiType] ?? poi.type : null);
+  // poi.category 是 Google primaryType（英文）— 經 poiCategoryLabel 映射成中文，
+  // 不再直接露英文（沖繩備選卡的「tourist_attraction」等）；空則 fallback poi.type。
+  const typeLabel = poiCategoryLabel(poi.category)
+    ?? (poi.type ? POI_TYPE_LABELS[poi.type as PoiType] ?? poi.type : null);
 
   // v2.30.14：StopPoiChoiceCard 只渲染備選 (alternate)，「正選」已升格到景點說明。
   // v2.33.93 simplify: onClick stopPropagation 從 wrapper <div> 搬上 <article>，
@@ -981,6 +984,25 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
     });
   }, [tripId, segmentsReady, orderOverride, segmentMap, orderedEvents, dayId, allDays]);
 
+  // 2026-07-08 車程重算狀態：auto 終端失敗（403 唯讀 viewer / 持續 API 錯）時
+  // helper dispatch segmentRecomputeFailed — 監聽後 re-render，讓 TravelPill 由樂觀
+  // 「重新計算中」改顯誠實「待更新」（stale pair 不會自己好，別假稱系統在算）。
+  const [, bumpRecomputeStatus] = useState(0);
+  useEffect(() => {
+    if (!tripId) return;
+    const onFailed = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { tripId?: string } | null;
+      if (detail?.tripId && detail.tripId !== tripId) return;
+      bumpRecomputeStatus((n) => n + 1);
+    };
+    window.addEventListener(EVENT.segmentRecomputeFailed, onFailed);
+    return () => window.removeEventListener(EVENT.segmentRecomputeFailed, onFailed);
+  }, [tripId]);
+  // day-scope 級（全 rail 共用）：blocked=唯讀 viewer / failed=本日持續失敗 → 停滯。
+  // 每 render 重讀（bumpRecomputeStatus / segments refetch 觸發的 re-render 會刷新）。
+  const recomputeStalled = tripId != null
+    && getAutoRecomputeStatus(tripId, dayNumFromId(allDays, dayId)) !== 'active';
+
   const handleDragEnd = useCallback(async (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
@@ -1114,6 +1136,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
                   } : undefined}
                   missing={pairMissing || undefined}
                   missingCoords={pairMissingCoords || undefined}
+                  recomputeStalled={recomputeStalled || undefined}
                   tripId={tripId}
                   fromName={prev ? getTimelineEntryDisplayTitle(prev) : null}
                   toName={getTimelineEntryDisplayTitle(entry)}
