@@ -12,11 +12,9 @@ import clsx from 'clsx';
 import DaySkeleton from './DaySkeleton';
 import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
-import Icon from '../shared/Icon';
 import { toTimelineEntry } from '../../lib/mapDay';
 import { useTripId } from '../../contexts/TripIdContext';
 import { useTripSegments, type TripSegment } from '../../hooks/useTripSegments';
-import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
 import type { Day, DaySummary } from '../../types/trip';
 
@@ -170,7 +168,6 @@ const DaySection = React.memo(function DaySection({
   const dayDate = day?.date ?? daySummary?.date ?? undefined;
   const dayId = day?.id;
 
-  const warnings = useMemo(() => validateDay(timeline), [timeline]);
   const bounds = useMemo(() => getTimelineBounds(timeline), [timeline]);
   // 2026-07-07：累積距離改吃 segments 即時值（TripPage provider 共用 fetch，
   // segmentUpdated 自動 refetch → 車程重算完 km 立即同步）
@@ -228,13 +225,6 @@ const DaySection = React.memo(function DaySection({
           <DaySkeleton />
         ) : (
           <>
-            {warnings.length > 0 && (
-              <div className="py-3 px-4 my-2 rounded-sm text-callout" style={{ background: 'rgba(244, 140, 6, 0.08)', color: 'var(--color-warning)', borderLeft: '3px solid var(--color-warning)' }}>
-                <strong><Icon name="warning" /> 注意事項：</strong>
-                <ul className="mt-1 ml-4">{warnings.map((w) => <li key={w}>{w}</li>)}</ul>
-              </div>
-            )}
-
             {weatherDay && dayDate && dayId && (
               <HourlyWeather
                 dayId={dayId}
