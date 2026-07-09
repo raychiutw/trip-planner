@@ -410,6 +410,7 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - `/trips/new` — 建新行程
 - `/trip/:id/edit` — 編輯行程
 - `/trip/:id/add-stop?day=N` — 加景點
+- `/trip/:id/stop/:eid/edit` — 編輯景點
 - `/trip/:id/stop/:eid/(copy|move)` — 複製/移動景點到其他日
 - `/developer/apps/new` — 建 OAuth client
 
@@ -425,6 +426,11 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - Modal backdrop / portal 浮層
 - 大型 split hero / 形象圖
 - Loading 蓋住 page (改用 `<PageErrorState>` 或 inline skeleton)
+
+**EditEntryPage（編輯景點）欄位順序（v2.55.x）**
+- 由上而下：**起訖時間**（最上）→ POI 正選卡（分類 / per-POI 備註 / 置換）→ 備選清單 → **說明**（全寬 textarea）→ 從上一站移動方式 → 刪除停留點（danger）。
+- 起訖時間 `TripTimePicker` 開 `clearable`：popover 底部「清除時間」把值設回空 → `start_time`/`end_time` 寫 `null`。空值合法（未定時段的停留點），validation 只在非空時檢查格式與先後。
+- **說明** = entry-level 自由文字（`trip_entries.description`，AI 規劃時生成，例「放好行李休息一下，準備晚餐出門」）。autosave PATCH `/entries/:eid { description }`；純空白 → `null` 清除。與 per-POI 備註（`trip_entry_pois.note`）分屬不同層級、並存不重疊。
 
 ### Stop Card
 - 4-col grid：`68px time | 48px icon box | content | actions`，compact 可收斂到 3-col。
