@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.39] - 2026-07-09
+
+### Fixed
+- **recompute-travel 清掉 entry reorder 後的 stale `trip_segments` 幽靈車程**
+  - 根因：`POST /api/trips/:id/recompute-travel` 只 upsert 目前逐日相鄰 pair，從不刪已不相鄰的舊段。entry reorder / cross-day move 後，舊 `from_entry_id → to_entry_id` row 仍留在 `trip_segments`；days API 以 `from_entry_id` 建 map 時可能讀到舊段，timeline 顯示 reorder 前的車程。
+  - 修法：recompute 現在收集本次 day scope 的 entry set 與目前相鄰 pair set，batch 寫入時同步刪除 scope 內「已不相鄰」的舊 segments。`?day=N` 只清該日相關 entry，不碰其他天有效段。
+  - response / audit diff 新增 `segmentsPruned`，方便確認本次清掉幾筆幽靈段。新增 integration regression：重排 `A,B,C → B,A,C` 後，舊 `A→B`、`B→C` 被刪，day2 segment 保留。
+
 ## [2.55.38] - 2026-07-09
 
 ### Fixed

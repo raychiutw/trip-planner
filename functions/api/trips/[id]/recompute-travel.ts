@@ -106,6 +106,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 收集 batch statements 最後一次 db.batch 寫入（單一 subrequest）
   const segmentInserts: Array<{ tripId: string; from: number; to: number; mode: string; min: number; distM: number; now: number }> = [];
   const segmentUpdates: Array<{ id: number; mode: string; min: number; distM: number; now: number }> = [];
+  const scopedEntryIds = new Set<number>();
+  const currentPairKeys = new Set<string>();
   // v2.29.0: trip_entries.travel_* DROPPED. trip_segments 為唯一 source.
 
   // v2.33.32 (simplify PR-5): batch all-days entries lookup into 1 query (was N
@@ -136,16 +138,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const now = Date.now();
   for (const day of daysRes.results) {
     const list = entriesByDay.get(day.id) ?? [];
+    for (const entry of list) scopedEntryIds.add(entry.id);
     for (let i = 1; i < list.length; i++) {
       const prev = list[i - 1];
       const curr = list[i];
       if (!prev || !curr) continue;
+      const pairKey = `${prev.id}-${curr.id}`;
+      currentPairKeys.add(pairKey);
       if (prev.lat == null || prev.lng == null || curr.lat == null || curr.lng == null) {
         pairsSkippedMissingCoords++;
         continue;
       }
 
-      const existing = existingMap.get(`${prev.id}-${curr.id}`);
+      const existing = existingMap.get(pairKey);
       if (existing && existing.mode === 'transit') {
         // transit = user 手填 min（Japan Routes 無 transit 資料），recompute 不覆寫
         pairsSkippedTransit++;
@@ -190,9 +195,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
   }
 
+  const staleSegmentDeletes = existingRes.results
+    .filter((s) =>
+      (scopedEntryIds.has(s.from_entry_id) || scopedEntryIds.has(s.to_entry_id)) &&
+      !currentPairKeys.has(`${s.from_entry_id}-${s.to_entry_id}`),
+    )
+    .map((s) => s.id);
+
   // 單一 db.batch 寫入所有 upserts（1 subrequest 不論 statement 數）
-  if (segmentInserts.length > 0 || segmentUpdates.length > 0) {
+  if (segmentInserts.length > 0 || segmentUpdates.length > 0 || staleSegmentDeletes.length > 0) {
     const stmts = [
+      // entry reorder / move 後，舊 from→to 不會被 FK cascade 清掉。只刪本次
+      // day scope 內「已不相鄰」的段；day=N 不會碰其他天的有效 segments。
+      ...staleSegmentDeletes.map((id) => db.prepare(
+        'DELETE FROM trip_segments WHERE id = ?',
+      ).bind(id)),
       // INSERT 用 ON CONFLICT 防 TOCTOU race：preload 後若另一支 concurrent
       // recompute 已 INSERT 同 (from,to) pair，本 batch 不會炸 UNIQUE → atomic
       // rollback；改成 upsert。WHERE mode != 'transit' 防 race：preload→write
@@ -235,6 +252,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       pairsComputed,
       pairsSkippedTransit,
       pairsSkippedMissingCoords,
+      segmentsPruned: staleSegmentDeletes.length,
       sourceBreakdown,
       modeBreakdown,
     }),
@@ -247,6 +265,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     pairsComputed,
     pairsSkippedTransit,
     pairsSkippedMissingCoords,
+    segmentsPruned: staleSegmentDeletes.length,
     sourceBreakdown,
     modeBreakdown,
     errorsDetail,
