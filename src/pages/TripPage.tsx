@@ -9,6 +9,7 @@ import { useDragDrop } from '../hooks/useDragDrop';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { buildCrossDayMoves, railItemsFirstCollision } from '../lib/crossDayMove';
 import { requestTravelRecompute } from '../lib/travelRecompute';
+import { restoreDragScroll, rememberScroll, recallScroll, restoreScrollTo } from '../lib/preserveScroll';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { writeTripView } from '../lib/tripViewState';
 import { EVENT } from '../lib/events';
@@ -370,6 +371,22 @@ function TripPageInner(
     if (activeTripId) setActiveTrip(activeTripId);
   }, [activeTripId, setActiveTrip]);
 
+  // 持續記住 .app-shell-main 捲動位置（rAF-throttled），供編輯 / 新增景點 / 子頁返回
+  // 時還原（不移動頁面）。不能等 unmount 才讀 — 屆時 timeline 已被移除、scrollTop 被
+  // clamp 成 0。scroll listener 只在真的捲動時 fire，fresh mount 停在 0 不會誤存。
+  useEffect(() => {
+    if (!activeTripId) return;
+    const el = document.querySelector<HTMLElement>('.app-shell-main');
+    if (!el) return;
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; rememberScroll(activeTripId); });
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => { el.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, [activeTripId]);
+
   const { trip, days, currentDayNum, switchDay, refetchCurrentDay, refetchDay, allDays, loading, error } =
     useTrip(activeTripId);
 
@@ -466,6 +483,9 @@ function TripPageInner(
    * 兩天顯式 recompute + 各 dispatch entryUpdated（帶 dayNum → refetchDay）。 */
   const { sensors: crossDaySensors } = useDragDrop({ includeTouch: true, pointerActivationDistance: 8, sortable: true });
   const handleCrossDayDragEnd = useCallback(async (e: DragEndEvent) => {
+    // 拖完還原到「開始拖前」的 scrollTop（capturedTop 由 rail 的 onDragStart 記下），
+    // 抵消 autoScroll + drop 後 focus 亂捲，頁面不移動。idempotent（用完即清）。
+    restoreDragScroll();
     const { active, over } = e;
     if (!over || typeof active.id !== 'number' || !activeTripId) return;
     const activeDayId = (active.data.current as { dayId?: number | null } | undefined)?.dayId;
@@ -554,6 +574,20 @@ function TripPageInner(
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
+    // 從編輯 / 新增景點 / 子頁「返回」→ 還原捲動位置，不移動頁面（見 preserveScroll）。
+    // module-map 有值 = 本 session 在 SPA 內導航返回；冷開 / reload 沒值 → 落到下面
+    // 的 ?focus / hash / auto-locate 預設行為。?focus 的 entry 展開由 TimelineRail
+    // 自行讀 ?focus= 處理，這裡只負責「不捲走」。
+    const savedTop = activeTripId ? recallScroll(activeTripId) : undefined;
+    if (savedTop != null) {
+      const returnParams = new URLSearchParams(window.location.search);
+      const fDay = parseInt(returnParams.get('focusDay') ?? '', 10);
+      if (Number.isFinite(fDay) && dayNums.includes(fDay)) switchDay(fDay);
+      // per-day timeline async 載入，內容未滿高度 → bounded retry 直到站得住。
+      restoreScrollTo(savedTop);
+      return;
+    }
+
     // PR-Q 2026-04-26：?sheet=<key> URL param — 從 /trips card kebab 過來。
     // v2.17.17：v2.17.16/17 cleanup 後其餘 sheet keys 已移除，只剩 collab。
     // v2.18.0：collab 升格獨立頁面 /trip/:id/collab，?sheet=collab redirect
@@ -580,7 +614,8 @@ function TripPageInner(
       requestAnimationFrame(() => {
         const sel = `[data-scroll-anchor="entry-${CSS.escape(focusParam)}"]`;
         const el = document.querySelector<HTMLElement>(sel);
-        if (el) el.scrollIntoView({ block: 'center', behavior: 'auto' });
+        // block:'nearest' — 已在視野就不捲（不移動頁面），離屏才最小捲入。
+        if (el) el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
       });
       return;
     }
@@ -633,7 +668,7 @@ function TripPageInner(
     // resolveState 是 discriminated union（tripId 只在 'resolved' variant），deps 不能
     // 取 .tripId（render 時可能是 loading variant → TS error）；依賴整個 resolveState 物件，
     // 變動由 initialScrollDone latch 擋住重跑。
-  }, [loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState]);
+  }, [loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState, activeTripId]);
 
   /* --- scrollMarginTop dynamic alignment (#7) --- */
   useEffect(() => {
@@ -815,6 +850,7 @@ function TripPageInner(
               accessibility={TP_DRAG_ACCESSIBILITY}
               collisionDetection={(args) => railItemsFirstCollision(closestCenter, args)}
               onDragEnd={(e) => void handleCrossDayDragEnd(e)}
+              onDragCancel={restoreDragScroll}
             >
               {dayNums.map((dayNum) => (
                 <DaySection
