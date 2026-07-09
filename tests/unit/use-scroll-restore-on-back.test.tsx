@@ -44,7 +44,8 @@ describe('useScrollRestoreOnBack', () => {
     );
 
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'auto' });
+    // v2.55.44：block:'nearest'（原 'center'）— 已在視野的 anchor 不被硬拉到中央 → 返回不移動頁面
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'auto' });
   });
 
   it('does nothing when state has no scrollAnchor', () => {

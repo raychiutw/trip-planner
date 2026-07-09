@@ -27,6 +27,7 @@ import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
 import { apiFetchRaw } from '../../lib/apiClient';
 import { requestTravelRecompute, getAutoRecomputeStatus } from '../../lib/travelRecompute';
+import { captureDragScroll, restoreDragScroll } from '../../lib/preserveScroll';
 import { EVENT } from '../../lib/events';
 import { POI_TYPE_LABELS, poiCategoryLabel, type PoiType } from '../../lib/poiCategory';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
@@ -342,8 +343,10 @@ interface TimelineRailProps {
 }
 
 /** dndManaged 模式的事件橋 — useDndMonitor 是 hook 不能條件呼叫，抽小元件條件 render。 */
-function DndMonitorBridge({ onDragEnd }: { onDragEnd: (e: DragEndEvent) => void }) {
-  useDndMonitor({ onDragEnd });
+function DndMonitorBridge({ onDragStart, onDragEnd }: { onDragStart: () => void; onDragEnd: (e: DragEndEvent) => void }) {
+  // onDragCancel（Escape / 鍵盤取消）走獨立事件、不觸發 onDragEnd → 也還原捲動，
+  // 否則取消時 autoScroll 位移留著、頁面停在錯位。
+  useDndMonitor({ onDragStart, onDragEnd, onDragCancel: restoreDragScroll });
   return null;
 }
 
@@ -1005,6 +1008,9 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
 
   const handleDragEnd = useCallback(async (e: DragEndEvent) => {
     const { active, over } = e;
+    // 拖完還原到「開始拖前」的 scrollTop（抵消拖曳中 dnd-kit autoScroll + drop 後
+    // focus 亂捲），頁面不移動。idempotent：capturedTop 用完即清。
+    restoreDragScroll();
     if (!over || active.id === over.id) return;
     // dndManaged：monitor 收到整個 TripPage context 的事件 — 只處理「active
     // 與 over 都屬本 rail」的同日 reorder；跨天 drop 由 TripPage onDragEnd 接。
@@ -1087,6 +1093,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
       <RailDndScope
         managed={dndManaged}
         sensors={sensors}
+        onDragStart={captureDragScroll}
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
@@ -1166,22 +1173,23 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
 });
 
 /** 雙模 DnD wrapper — managed 時不建 context（外層 TripPage 提供），掛 monitor 橋。 */
-function RailDndScope({ managed, sensors, onDragEnd, children }: {
+function RailDndScope({ managed, sensors, onDragStart, onDragEnd, children }: {
   managed: boolean;
   sensors: ReturnType<typeof useDragDrop>['sensors'];
+  onDragStart: () => void;
   onDragEnd: (e: DragEndEvent) => void;
   children: React.ReactNode;
 }) {
   if (managed) {
     return (
       <>
-        <DndMonitorBridge onDragEnd={onDragEnd} />
+        <DndMonitorBridge onDragStart={onDragStart} onDragEnd={onDragEnd} />
         {children}
       </>
     );
   }
   return (
-    <DndContext sensors={sensors} accessibility={TP_DRAG_ACCESSIBILITY} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} accessibility={TP_DRAG_ACCESSIBILITY} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={restoreDragScroll}>
       {children}
     </DndContext>
   );

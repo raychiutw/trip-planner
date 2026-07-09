@@ -31,8 +31,10 @@ describe('TripPage — ?focus= URL param wiring (v2.31.93)', () => {
     expect(SRC).toMatch(/CSS\.escape\(focusParam\)/);
   });
 
-  it('scrollIntoView block:center 對齊行為', () => {
-    expect(SRC).toMatch(/scrollIntoView\(\{\s*block:\s*['"]center['"]/);
+  it('scrollIntoView block:nearest — ?focus fallback 已在視野就不捲（不移動頁面）', () => {
+    // v2.55.44：center 會把已可見的 entry 硬拉到螢幕中央（= user 回報「跳到不相關位置」）；
+    // nearest 只在離屏時最小捲入。正常返回走 scroll-memory 精準還原，這是 mem 空時的 fallback。
+    expect(SRC).toMatch(/scrollIntoView\(\{\s*block:\s*['"]nearest['"]/);
   });
 
   it('focusParam 路徑 early return — 不再走 hash / autoScroll fallback', () => {

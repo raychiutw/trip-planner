@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.44] - 2026-07-10
+
+### Fixed
+- **行程頁景點變更不再讓頁面「跳到不相關位置」——拖動排序 / 編輯 / 新增 / 跨天拖曳後留在原位**
+  - 根因（拖曳）：dnd-kit 內建 autoScroll 在拖曳過程中會捲動主容器 `.app-shell-main` 去追被拖項（近容器邊緣時觸發，同日小幅 reorder 也常誤觸），drop 後 dnd-kit 又用無 `preventScroll` 的 `.focus()` 把項目 scrollIntoView 回來 → 拖完頁面停在別處。
+  - 根因（編輯/新增）：各頁自建 `<AppShell>`（無持久 layout route），編輯/新增子頁返回 = TripPage 全新 mount、`.app-shell-main` scrollTop 歸零；既有 `?focus=<entryId>` 的 `scrollIntoView({ block:'center' })` 又把（本已在視野的）entry 硬拉到螢幕中央 → 視覺上「跳走」。
+  - 修法：新增 `src/lib/preserveScroll.ts`。拖曳：onDragStart `captureDragScroll()` 記下開始前 scrollTop、onDragEnd double-rAF `restoreDragScroll()` 還原（抵消 autoScroll + focus-scroll）。導航：TripPage 掛 scroll listener 持續 `rememberScroll(tripId)`（不能等 unmount 才讀 — 屆時 timeline 已移除、scrollTop 被 clamp 成 0），返回 mount 時 `restoreScrollTo` bounded-retry 精準還原（等 async timeline 長高才站得住）。`?focus` fallback 的 `block` 由 `center` → `nearest`（已在視野就不硬捲）。
+  - 走 module-level Map（跨 SPA mount 存活、整頁 reload 才清）→ 冷開 / 首訪不受影響，仍走預設 auto-locate。
+  - 實測（真瀏覽器 390×844）：同日 reorder / 跨天拖曳 / 編輯往返 / 新增往返 四情境 scroll delta 皆 0。
+
 ## [2.55.43] - 2026-07-09
 
 ### Fixed

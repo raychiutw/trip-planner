@@ -37,7 +37,8 @@ export function useScrollRestoreOnBack(): void {
     const raf = requestAnimationFrame(() => {
       const el = document.querySelector<HTMLElement>(`[data-scroll-anchor="${CSS.escape(anchor)}"]`);
       if (!el) return;
-      el.scrollIntoView({ block: 'center', behavior: 'auto' });
+      // block:'nearest' — 已在視野就不捲（不移動頁面），離屏才最小捲入。
+      el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
       // Clear state so refresh / forward nav doesn't re-scroll.
       // replace:true to avoid a new history entry.
       const { scrollAnchor: _unused, ...rest } = state ?? {};
