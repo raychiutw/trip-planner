@@ -70,7 +70,7 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 | 新增 entry | `POST /api/trips/{tripId}/days/{dayNum}/entries` | 必填 `title`；選填 `sort_order`（省略則 append 到最後）、`time`、`description`、`maps` 等。回 201。**之後須 recompute（見 §4）** |
 | 修改單一 entry | `PATCH /api/trips/{tripId}/entries/{eid}` | 只改非結構欄位（`title` / `time` / `description` / `note` / `location` / `maps` 等）。**禁止寫 `travel_type` / `travel_desc` / `travel_min`** — segments 由 recompute-travel 自動計算 |
 | 刪除單一 entry | `DELETE /api/trips/{tripId}/entries/{eid}` | **tp-request 禁止此操作**。刪除後須 recompute（見 §4） |
-| 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。entry 內可含 `travel: {type, desc, min}` 巢狀（v2.24.0 backwards-compat dual-write，Phase ε 後忽略）。建議省略 → 之後 recompute 一次。**tp-request 禁止此操作** |
+| 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。entry 內不要手填 `travel`；segments 由之後 recompute 產生。**tp-request 禁止此操作** |
 | 新增 POI | `POST /api/trips/{tripId}/entries/{eid}/trip-pois` | 必填 `name` + `type`；選填 `context`（'timeline' / 'shopping'，預設 timeline） |
 | 修改/刪除 POI | `PATCH/DELETE /api/trips/{tripId}/trip-pois/{tpid}` | sort_order=0（首選）餐廳變動時須 recompute（見 §4） |
 | 重算 travel | `POST /api/trips/{tripId}/recompute-travel?day=N\|all` | 結構動完後**呼叫此端點**取代手動計算。1km gate + Google Routes + 寫 `trip_segments`。即使 `day=N`，也會 trip-wide prune 非現行相鄰對的幽靈段；Routes compute 仍只跑 scoped day |

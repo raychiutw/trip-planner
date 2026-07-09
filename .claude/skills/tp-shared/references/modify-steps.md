@@ -70,7 +70,7 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 | 新增 entry | `POST /api/trips/{tripId}/days/{dayNum}/entries` | 必填 `title`；選填 `sort_order`（省略則 append 到最後）、`time`、`description`、`maps` 等。回 201。**之後須 recompute（見 §4）** |
 | 修改單一 entry | `PATCH /api/trips/{tripId}/entries/{eid}` | 只改非結構欄位（`title` / `time` / `description` / `note` / `location` / `maps` 等）。**禁止寫 `travel_type` / `travel_desc` / `travel_min`** — segments 由 recompute-travel 自動計算 |
 | 刪除單一 entry | `DELETE /api/trips/{tripId}/entries/{eid}` | **tp-request 禁止此操作**。刪除後須 recompute（見 §4） |
-| 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。entry 內可含 `travel: {type, desc, min}` 巢狀（v2.24.0 backwards-compat dual-write，Phase ε 後忽略）。建議省略 → 之後 recompute 一次。**tp-request 禁止此操作** |
+| 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。entry 內不要手填 `travel`；segments 由之後 recompute 產生。**tp-request 禁止此操作** |
 | 新增 alternate POI | `POST /api/trips/{tripId}/entries/{eid}/alternates` 或 `/trip-pois`（legacy alias）| body 帶 `{ poiId }`（既有 POI）或 `{ name, lat, lng, type?, ... }`（find-or-create）；寫 `trip_entry_pois` as alternate (sort_order = max+1)。**`context` 欄位 v2.29.0 已不存在** |
 | 變更 master POI | `PATCH /api/trips/{tripId}/entries/{eid}/master` body `{ poiId, entryPoisVersion? }` | swap master ↔ alternate；master 變動 segments 自動失效，須 recompute（見 §4）|
 | Search-driven master swap | `PUT /api/trips/{tripId}/entries/{eid}/poi-id` body `{ name, lat, lng, ... }` 或 `{ poiId }` | find-or-create POI 後設為 master |

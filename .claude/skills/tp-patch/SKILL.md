@@ -80,8 +80,9 @@ POI 欄位規格見 `tp-shared/references.md`（v2.29.0 後：`pois` master vs `
 
 10. **travel 重算**（location 補齊後，v2.24.0+）：
     - 呼叫 `POST /api/trips/{tripId}/recompute-travel?day=all` 一次
-    - Backend 自動跑 1km gate Haversine + Google Routes，寫 trip_segments
-    - `mode_source='user'` 既有 segment 不覆寫
+    - Backend 自動跑 1km gate Haversine + Google Routes，寫 `trip_segments`
+    - `mode='transit'` 既有 segment 不覆寫（user 手填分鐘保留）
+    - recompute 會 trip-wide prune 不再相鄰的幽靈段
     - **不再手動算或 PATCH `travel_type/desc/min`** — segments 為 SoT
     - 規則詳見 tp-shared/references.md §4「travel 重算」
 11. 輸出結果報告：補齊數 / 失敗數 / 仍缺漏數 / segments 重算 pair 數（從 recompute response 取）

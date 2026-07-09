@@ -51,7 +51,7 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
     - Day N（N ≥ 2）首 entry 應指向 Day N-1 `day.hotel` 同 POI，`title` 含 check-out 語意；不合則**在 timeline 頂端插入** leading entry（time 優先用 Day N-1 `hotel.checkout`，無則 `"07:00"`），不複製 `hotel.infoBoxes`；若 Day N-1 `hotel.breakfast.included === true`，description inject `"🍳 早餐：{breakfast.note || '飯店自助'}"`
     - 若 Day N 目前的 `timeline[0]` 已是早餐或景點，保留原 entry（往後順延），新插入的 check-out entry 放 index 0
     - 插入後立即在最後 step 6 一併 recompute
-6. **travel 重算（鐵律，v2.24.0+）**：所有結構修正完成後，呼叫 `POST /api/trips/{tripId}/recompute-travel?day=all` 一次。Backend 跑 1km gate Haversine（≤1km walking、>1km driving）+ Google Routes API + 寫 trip_segments。`mode_source='user'` 既有 segment 不覆寫。**不再手動 PATCH `travel_type/desc/min`** — segments 為 SoT。規則見 tp-shared/references.md §4
+6. **travel 重算（鐵律，v2.24.0+）**：所有結構修正完成後，呼叫 `POST /api/trips/{tripId}/recompute-travel?day=all` 一次。Backend 跑 1km gate Haversine（≤1km walking、>1km driving）+ Google Routes API + 寫 `trip_segments`；`mode='transit'` 既有 segment 不覆寫；同時 trip-wide prune 不再相鄰的幽靈段。**不再手動 PATCH `travel_type/desc/min`** — segments 為 SoT。規則見 tp-shared/references.md §4
 7. **Doc 連動（鐵律）**：檢視所有 5 種 doc（checklist/backup/suggestions/flights/emergency），更新與修正內容不一致的部分（規則見 tp-shared/references.md「Doc 連動規則」）
 8. **tp-check（after-fix）**：執行完整模式 report，確認修正結果
 9. 不自動 commit（資料已直接寫入 D1 database）
