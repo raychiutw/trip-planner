@@ -1126,16 +1126,20 @@ describe('EditEntryPage — entry.description 說明欄（v2.55.x）', () => {
       .toBe('放好行李休息一下，準備晚餐出門');
   });
 
-  it('起訖時間 section DOM 順序在 POI 卡之前（移到最上方）', async () => {
+  it('欄位順序：起訖時間 → 說明 → POI 卡', async () => {
     renderPage();
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-time-section')).toBeTruthy();
+      expect(screen.queryByTestId('edit-entry-description-section')).toBeTruthy();
       expect(screen.queryByTestId('edit-entry-poi-summary')).toBeTruthy();
     });
-    const timeSection = screen.getByTestId('edit-entry-time-section');
-    const poiCard = screen.getByTestId('edit-entry-poi-summary');
-    // time 在 poi 之前 → compareDocumentPosition(poi) 帶 FOLLOWING bit。
-    expect(timeSection.compareDocumentPosition(poiCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const time = screen.getByTestId('edit-entry-time-section');
+    const desc = screen.getByTestId('edit-entry-description-section');
+    const poi = screen.getByTestId('edit-entry-poi-summary');
+    const FOLLOWING = Node.DOCUMENT_POSITION_FOLLOWING;
+    // time 在 desc 之前、desc 在 poi 之前（說明緊接時間下方）。
+    expect(time.compareDocumentPosition(desc) & FOLLOWING).toBeTruthy();
+    expect(desc.compareDocumentPosition(poi) & FOLLOWING).toBeTruthy();
   });
 
   it('改說明 → debounce 後 PATCH /entries/42 含 description', async () => {

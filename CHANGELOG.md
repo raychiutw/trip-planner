@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.42] - 2026-07-09
+
+### Changed
+- **編輯景點頁「說明」欄移到起訖時間正下方** — 由原本在 POI 卡 / 備選之後改為緊接時間 section 下方（user request）。新欄位順序：起訖時間 → 說明 → POI 正選卡 → 備選 → 移動方式 → 刪除。DESIGN.md 同步；DOM 順序測試改鎖 time → desc → poi。
+
 ## [2.55.41] - 2026-07-09
 
 ### Added
