@@ -5,7 +5,7 @@
  *
  * 從 v2.29.0 (`trip_entries.time` DROP COLUMN) 起，6 個 frontend 模組的 read
  * path 一直用 snake_case → 永遠 undefined → 各種 silent 失效（TimelineRail
- * row 不顯時間、validateDay 警告永不觸發、buildWeatherDay 預設 0 點、
+ * row 不顯時間、buildWeatherDay 預設 0 點、
  * parseEntryTimeRange 全 null）。本 test 鎖此修正後的 invariant。
  *
  * 寫操作（PATCH /trip-entries body）保留 snake_case — backend ALLOWED_FIELDS
@@ -16,7 +16,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseEntryTime } from '../../src/lib/timelineUtils';
 import { parseEntryTimeRange } from '../../src/lib/drag-strategy';
-import { validateDay } from '../../src/lib/validateDay';
 import { buildWeatherDay } from '../../src/lib/weather';
 
 describe('v2.31.77: entry time read uses camelCase (startTime / endTime)', () => {
@@ -47,21 +46,6 @@ describe('v2.31.77: entry time read uses camelCase (startTime / endTime)', () =>
     });
   });
 
-  describe('validateDay accepts camelCase input', () => {
-    it('warns when entry startTime is earlier than POI hours', () => {
-      const warnings = validateDay([
-        {
-          startTime: '08:00',
-          endTime: '09:00',
-          title: '早餐店',
-          stopPois: [{ name: '某早餐店', hours: '09:00–14:00' }],
-        },
-      ]);
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toMatch(/可能早於/);
-    });
-  });
-
   describe('buildWeatherDay accepts camelCase input', () => {
     it('parses startTime hour for weather time slot', () => {
       const day = buildWeatherDay('2026-05-18', [
@@ -78,7 +62,6 @@ describe('v2.31.77: entry time read uses camelCase (startTime / endTime)', () =>
   describe('source-grep: no .start_time / .end_time READS in src/ (writes excluded)', () => {
     const SRC_READ_FILES = [
       '../../src/lib/timelineUtils.ts',
-      '../../src/lib/validateDay.ts',
       '../../src/lib/weather.ts',
       '../../src/lib/drag-strategy.ts',
       '../../src/lib/mapDay.ts',

@@ -141,21 +141,3 @@ describe('InfoSheet — sheet 邊緣清晰度', () => {
     expect(infoSheetContent).toMatch(/color-mix\(in srgb,\s*var\(--color-secondary\)\s*94%/);
   });
 });
-
-// ——— Review follow-up Item 8: 注意事項 warning amber ———
-const daySectionPath = resolve(ROOT, 'src/components/trip/DaySection.tsx');
-const daySection = readFileSync(daySectionPath, 'utf-8');
-
-describe('注意事項卡 — warning amber', () => {
-  it('DaySection 警告區塊 className 不含 bg-destructive-bg', () => {
-    // 搜尋 warnings.length > 0 後的 className
-    const warningSection = daySection.match(/warnings\.length > 0[\s\S]{0,400}/)?.[0] ?? '';
-    expect(warningSection).not.toContain('bg-destructive-bg');
-    expect(warningSection).not.toContain('text-destructive');
-  });
-
-  it('DaySection 警告區塊 使用 warning 色調 className', () => {
-    const warningSection = daySection.match(/warnings\.length > 0[\s\S]{0,400}/)?.[0] ?? '';
-    expect(warningSection).toMatch(/warning/);
-  });
-});

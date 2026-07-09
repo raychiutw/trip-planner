@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.40] - 2026-07-09
+
+### Removed
+- **移除每日行程「注意事項」營業時間警示區塊** — DaySection 頂端「⚠️ 注意事項：」清單原由 `validateDay(timeline)` 前端即時比對停留 `startTime` vs POI `hours` 產生（例「東橫inn 那霸國際通美榮橋站（08:30）可能早於 營業時間」）。此警示為純前端計算、**無任何 DB 欄位**（entry 層 `trip_entries.note` 早於 migration 0078 移除），故無 schema / migration 變更。連同 `src/lib/validateDay.ts` 與對應單元測試（v2_31_77 camelCase read 的 validateDay 段、pr2-tokens 的注意事項 warning amber 段）一併刪除。
+
 ## [2.55.39] - 2026-07-09
 
 ### Fixed
