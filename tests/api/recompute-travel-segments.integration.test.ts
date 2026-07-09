@@ -144,6 +144,60 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
     expect(seg!.distance_m).toBeLessThan(1000);
   });
 
+  it('entry reorder 後清掉同日非相鄰 stale segments，只留下目前 pair', async () => {
+    const { e1, e2, e3 } = await setupTripWithEntries('trip-rec-prune');
+    const day2 = await getDayId(db, 'trip-rec-prune', 2);
+    const otherPoiA = await seedPoi(db, { name: 'OtherA' });
+    await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(26.3, 127.7, otherPoiA).run();
+    const otherPoiB = await seedPoi(db, { name: 'OtherB' });
+    await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(26.31, 127.71, otherPoiB).run();
+    const otherE1 = await seedEntry(db, day2, { sortOrder: 1, poiId: otherPoiA });
+    const otherE2 = await seedEntry(db, day2, { sortOrder: 2, poiId: otherPoiB });
+
+    const now = Date.now();
+    await db.batch([
+      db.prepare(
+        `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, 'driving', 11, 1100, 'google', ?, ?)`,
+      ).bind('trip-rec-prune', e1, e2, now - 1000, now - 1000),
+      db.prepare(
+        `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, 'driving', 22, 2200, 'google', ?, ?)`,
+      ).bind('trip-rec-prune', e2, e3, now - 1000, now - 1000),
+      db.prepare(
+        `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, 'driving', 33, 3300, 'google', ?, ?)`,
+      ).bind('trip-rec-prune', otherE1, otherE2, now - 1000, now - 1000),
+    ]);
+
+    // Reorder day 1 from A,B,C to B,A,C. Old A->B and B->C are no longer adjacent.
+    await db.batch([
+      db.prepare('UPDATE trip_entries SET sort_order = 1 WHERE id = ?').bind(e2),
+      db.prepare('UPDATE trip_entries SET sort_order = 2 WHERE id = ?').bind(e1),
+      db.prepare('UPDATE trip_entries SET sort_order = 3 WHERE id = ?').bind(e3),
+    ]);
+
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-rec-prune/recompute-travel?day=1', 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-rec-prune' },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(200);
+    const body = await resp.json() as { segmentsPruned: number };
+    expect(body.segmentsPruned).toBe(2);
+
+    const segs = await db.prepare(
+      'SELECT from_entry_id, to_entry_id FROM trip_segments WHERE trip_id = ? ORDER BY from_entry_id, to_entry_id',
+    ).bind('trip-rec-prune').all<{ from_entry_id: number; to_entry_id: number }>();
+    expect(segs.results).toEqual([
+      { from_entry_id: e1, to_entry_id: e3 },
+      { from_entry_id: e2, to_entry_id: e1 },
+      { from_entry_id: otherE1, to_entry_id: otherE2 },
+    ]);
+  });
+
   // v2.29.0: 「dual-write trip_entries.travel_*」test removed — trip_entries.travel_* DROPPED。
   // travel 物件單一 source 改為 trip_segments（測在 days/days-num tests 涵蓋）。
 
