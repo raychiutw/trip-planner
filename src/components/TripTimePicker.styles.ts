@@ -148,4 +148,34 @@ export const TRIP_TIME_PICKER_STYLES = `
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* clearable：popover 底部「清除時間」按鈕（把值設回空字串）。 */
+.tp-time-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: center;
+}
+.tp-time-clear {
+  min-height: var(--spacing-tap-min, 44px);
+  padding: 0 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-background);
+  color: var(--color-muted);
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition-duration-fast), color var(--transition-duration-fast);
+}
+.tp-time-clear:hover {
+  border-color: var(--color-destructive);
+  color: var(--color-destructive);
+}
+.tp-time-clear:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
 `;

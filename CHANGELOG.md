@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.41] - 2026-07-09
+
+### Added
+- **編輯景點頁可編輯「說明」欄（`entry.description` 活動說明）** — 停留點的 entry-level 自由文字（`trip_entries.description`，AI 規劃時生成，例「放好行李休息一下，準備晚餐出門」）先前有顯示卻無編輯入口。EditEntryPage 新增「說明」section（全寬 textarea，autosave PATCH `/entries/:eid { description }`，純空白 → null 清除）。後端 `ALLOWED_FIELDS` + `textFields` 早已含 `description`，寫入路徑無需改。
+
+### Changed
+- **編輯景點頁「起訖時間」移到最上方** — 時間 section 由原本在 POI 卡下方改置於頁面最頂（user request），下接 POI 正選卡 → 備選 → 說明 → 移動方式。
+- **起訖時間可設空值** — `TripTimePicker` 新增 opt-in `clearable` prop，popover 底部「清除時間」按鈕把值設回空 → `start_time`/`end_time` 寫 `null`（未定時段的停留點）。僅 EditEntryPage 啟用，其餘 4 處 picker 用法不受影響。DESIGN.md「Form Pages」同步記錄新欄位順序。
+
 ## [2.55.40] - 2026-07-09
 
 ### Removed

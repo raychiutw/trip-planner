@@ -21,6 +21,8 @@ export interface TripTimePickerProps {
   ariaLabel?: string;
   disabled?: boolean;
   required?: boolean;
+  /** popover 內顯示「清除時間」按鈕，把值重設為空字串（""）。預設 false。 */
+  clearable?: boolean;
   className?: string;
   id?: string;
 }
@@ -45,6 +47,7 @@ export function TripTimePicker({
   ariaLabel,
   disabled = false,
   required = false,
+  clearable = false,
   className,
   id,
 }: TripTimePickerProps) {
@@ -82,6 +85,7 @@ export function TripTimePicker({
           hourColRef={hourColRef}
           minuteColRef={minuteColRef}
           onChange={onChange}
+          clearable={clearable}
         />
       )}
     </Popover>
@@ -102,6 +106,7 @@ interface TimePickerBodyProps {
   hourColRef: React.RefObject<HTMLDivElement | null>;
   minuteColRef: React.RefObject<HTMLDivElement | null>;
   onChange: (value: string) => void;
+  clearable: boolean;
 }
 
 function TimePickerBody({
@@ -118,6 +123,7 @@ function TimePickerBody({
   hourColRef,
   minuteColRef,
   onChange,
+  clearable,
 }: TimePickerBodyProps) {
   // Scroll selected items into center when popover opens.
   // headlessui PopoverPanel renders via portal — refs ready after open=true commit
@@ -216,6 +222,18 @@ function TimePickerBody({
             </div>
           </div>
         </div>
+        {clearable && !isPlaceholder && (
+          <div className="tp-time-footer">
+            <button
+              type="button"
+              className="tp-time-clear"
+              onClick={() => { onChange(''); close(); }}
+              data-testid="tp-time-clear"
+            >
+              清除時間
+            </button>
+          </div>
+        )}
       </PopoverPanel>
     </>
   );
