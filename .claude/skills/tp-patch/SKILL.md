@@ -1,6 +1,6 @@
 ---
 name: tp-patch
-description: 批量補齊 POI 欄位時使用 — 跨行程填入 google_rating、maps、address、phone、hours、location（補齊、批次更新、缺 phone、缺 rating）。單一行程內容修改用 /tp-edit。
+description: 批量補齊 POI 欄位時使用 — 跨行程填入 rating、address、phone、hours、location（補齊、批次更新、缺 phone、缺 rating）。單一行程內容修改用 /tp-edit。
 user-invocable: true
 ---
 
@@ -63,7 +63,7 @@ POI 欄位規格見 `tp-shared/references.md`（v2.29.0 後：`pois` master vs `
 
 ### Phase 3：寫入
 
-8. **POI 欄位**（google_rating/maps/address/phone/hours/lat/lng）：
+8. **POI 欄位**（rating/address/phone/hours/lat/lng）：
    用 `PATCH /pois/:id` 更新 master POI
 
 9. **location 座標**：
@@ -80,8 +80,9 @@ POI 欄位規格見 `tp-shared/references.md`（v2.29.0 後：`pois` master vs `
 
 10. **travel 重算**（location 補齊後，v2.24.0+）：
     - 呼叫 `POST /api/trips/{tripId}/recompute-travel?day=all` 一次
-    - Backend 自動跑 1km gate Haversine + Google Routes，寫 trip_segments
-    - `mode_source='user'` 既有 segment 不覆寫
+    - Backend 自動跑 1km gate Haversine + Google Routes，寫 `trip_segments`
+    - `mode='transit'` 既有 segment 不覆寫（user 手填分鐘保留）
+    - recompute 會 trip-wide prune 不再相鄰的幽靈段
     - **不再手動算或 PATCH `travel_type/desc/min`** — segments 為 SoT
     - 規則詳見 tp-shared/references.md §4「travel 重算」
 11. 輸出結果報告：補齊數 / 失敗數 / 仍缺漏數 / segments 重算 pair 數（從 recompute response 取）
@@ -90,8 +91,8 @@ POI 欄位規格見 `tp-shared/references.md`（v2.29.0 後：`pois` master vs `
 ## 範例
 
 ```bash
-# 為所有飯店補上 google_rating
-/tp-patch --target hotel --field google_rating
+# 為所有飯店補上 rating
+/tp-patch --target hotel --field rating
 
 # 只看缺漏報告不修改
 /tp-patch --target all --field all --dry-run

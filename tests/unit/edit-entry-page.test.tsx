@@ -1,10 +1,10 @@
 /**
- * EditEntryPage — v2.26.0 fullpage entry edit (起訖時間 + 從上一站移動方式 + 備註)
+ * EditEntryPage — fullpage entry edit (起訖時間 + 說明 + POI + 從上一站移動方式)
  *
  * Mockup: docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html
  *
  * 驗：
- *   - Initial render：時間 input / mode segmented / 備註 textarea 都呈現 entry 既有值
+ *   - Initial render：時間 picker / 說明 textarea / POI 卡 / mode segmented 都呈現 entry 既有值
  *   - 時間驗證：start_time >= end_time / 格式錯誤 → validation error 顯示 + 儲存 disabled
  *   - Dirty-check：未變更 → 儲存 disabled；改任一 field → 啟用
  *   - 儲存：dirty.entry → PATCH entries / dirty.segment → PATCH segments（並行）

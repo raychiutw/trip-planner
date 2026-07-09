@@ -16,14 +16,14 @@
 > ⚠️ **v2.24.0 起 trip_segments 是 SoT**：travel 寫入 `trip_segments` table（每對 from→to entry 一筆 row）。
 > Skill 只需做結構修改（POST/PATCH/PUT/DELETE entry），**不再手動計算 travel** — 改呼叫
 > `POST /api/trips/:id/recompute-travel?day=N` 讓 backend 跑 1km gate（≤1km walking、>1km driving）
-> + Google Routes API + 寫 segments + dual-write trip_entries.travel_* legacy（Phase ε 將 DROP）。
+> + Google Routes API + 寫 `trip_segments`；`trip_entries.travel_*` legacy 已移除，不 dual-write。
 
 **規則：**
 - 第一個 entry 通常有 travel（從出發地到第一個景點）
 - 最後一個 entry 的 travel 為 null（已到終點）
 - 同地點連續 entry（如農場內的早餐→體驗→退房）travel 為 null（≤1km gate 自動判定）
-- 插入/移除/移動 entry 時，**必須在最後呼叫 `POST /recompute-travel`** 讓 backend 重算
-- `mode_source='user'` 既有 segment **不會**被 recompute 覆寫（user manual override 永久保留）
+- 插入/移除/移動 entry 時，**必須在最後呼叫 `POST /recompute-travel`** 讓 backend 重算，並 trip-wide 清掉不再相鄰的幽靈段
+- `mode='transit'` 既有 segment **不會**被 recompute 覆寫（user 手填分鐘保留）
 
 ## 行程修改共用步驟
 
@@ -70,7 +70,7 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 | 新增 entry | `POST /api/trips/{tripId}/days/{dayNum}/entries` | 必填 `title`；選填 `sort_order`（省略則 append 到最後）、`time`、`description`、`maps` 等。回 201。**之後須 recompute（見 §4）** |
 | 修改單一 entry | `PATCH /api/trips/{tripId}/entries/{eid}` | 只改非結構欄位（`title` / `time` / `description` / `note` / `location` / `maps` 等）。**禁止寫 `travel_type` / `travel_desc` / `travel_min`** — segments 由 recompute-travel 自動計算 |
 | 刪除單一 entry | `DELETE /api/trips/{tripId}/entries/{eid}` | **tp-request 禁止此操作**。刪除後須 recompute（見 §4） |
-| 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。entry 內可含 `travel: {type, desc, min}` 巢狀（v2.24.0 backwards-compat dual-write，Phase ε 後忽略）。建議省略 → 之後 recompute 一次。**tp-request 禁止此操作** |
+| 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。entry 內不要手填 `travel`；segments 由之後 recompute 產生。**tp-request 禁止此操作** |
 | 新增 alternate POI | `POST /api/trips/{tripId}/entries/{eid}/alternates` 或 `/trip-pois`（legacy alias）| body 帶 `{ poiId }`（既有 POI）或 `{ name, lat, lng, type?, ... }`（find-or-create）；寫 `trip_entry_pois` as alternate (sort_order = max+1)。**`context` 欄位 v2.29.0 已不存在** |
 | 變更 master POI | `PATCH /api/trips/{tripId}/entries/{eid}/master` body `{ poiId, entryPoisVersion? }` | swap master ↔ alternate；master 變動 segments 自動失效，須 recompute（見 §4）|
 | Search-driven master swap | `PUT /api/trips/{tripId}/entries/{eid}/poi-id` body `{ name, lat, lng, ... }` 或 `{ poiId }` | find-or-create POI 後設為 master |
@@ -78,8 +78,8 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 | 重排 alternates | `PATCH /api/trips/{tripId}/entries/{eid}/alternates/reorder` body `{ order: [poiId,...], entryPoisVersion? }` | 純改 sort_order > 1 順序 |
 | 飯店設定 | `PUT /api/trips/{tripId}/days/{num}` body `hotel: {...}` | findOrCreatePoi 後寫 `trip_days.hotel_poi_id` |
 | 修改 pois master 客觀欄位 | `PATCH /api/pois/{poiId}` 或 `POST /api/pois/{poiId}/enrich` | hours / price / rating / address / phone 等客觀屬性；enrich 自動補 Google Place Details |
-| 重算 travel | `POST /api/trips/{tripId}/recompute-travel?day=N\|all` | v2.24.0 結構動完後**呼叫此端點**取代手動計算。1km gate + Google Routes + 寫 segments。`mode_source='user'` 既有 segment 不覆寫 |
-| 手動覆寫 segment | `PATCH /api/trips/{tripId}/segments/{sid}` | 罕用（通常 user 從 UI TravelPill dialog 觸發）。body: `{mode: 'driving' \| 'walking' \| 'transit', min?: 0-1440}`（transit 必填 min）。寫後 `mode_source='user'` |
+| 重算 travel | `POST /api/trips/{tripId}/recompute-travel?day=N\|all` | 結構動完後**呼叫此端點**取代手動計算。1km gate + Google Routes + 寫 `trip_segments`。即使 `day=N`，也會 trip-wide prune 非現行相鄰對的幽靈段；Routes compute 仍只跑 scoped day |
+| 手動覆寫 segment | `PATCH /api/trips/{tripId}/segments/{sid}` | 罕用（通常 user 從 UI TravelPill dialog 觸發）。body: `{mode: 'driving' \| 'walking' \| 'transit', min?: 0-1440}`（transit 必填 min）。`mode='transit'` 表示手填分鐘，後續 recompute 不覆寫 |
 | 更新 doc | `PUT /api/trips/{tripId}/docs/{type}` | doc 結構見 `references/doc-spec.md` |
 
 ### 4. Doc 連動 + travel 重算
@@ -95,10 +95,11 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
   - `≤1km` Haversine → `walking` mode + 1 Google Routes WALK call
   - `>1km` → `driving` mode + 1 Google Routes DRIVE call
   - 永遠 1 API call/pair（不打 transit — Japan 無資料；user 需手動透過 segments PATCH 設 transit）
-  - `mode_source='user'` 既有 segment **不覆寫**（user override 永久保留）
-  - 寫 trip_segments + dual-write trip_entries.travel_* legacy（Phase ε 後 DROP）
+  - `mode='transit'` 既有 segment **不覆寫**（user 手填分鐘保留）
+  - 寫 `trip_segments`；`trip_entries.travel_*` legacy 已移除，不 dual-write
+  - 每次 recompute 都 trip-wide prune 非現行相鄰對的 stale/orphan segments（`?day=N` 也會清其他天的幽靈段），但 Routes compute 只跑 scoped day
 
-  **subrequest budget**：CF Pages Free 50/invocation。整 trip recompute 上限約 47 pair（HuiYun 沖繩 7 天）。day-scoped recompute 永遠安全。
+  **subrequest budget**：CF Pages Free 50/invocation。整 trip recompute 上限約 47 pair（HuiYun 沖繩 7 天）。day-scoped recompute 仍只算當日 Routes；trip-wide prune 只多用既有 1 次 all-entries 查詢。
 
   **不再手動計算**：v2.23 前 skill 用 Haversine + ~30km/h 在 client 算後 PATCH `travel_type/desc/min` — v2.24.0 後**禁止**。
 

@@ -169,7 +169,7 @@
     {
       "id": "T24",
       "type": "should_trigger",
-      "query": "/tp-patch --target hotel --field google_rating",
+      "query": "/tp-patch --target hotel --field rating",
       "expected_skill": "tp-patch",
       "lang": "en"
     },

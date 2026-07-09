@@ -30,7 +30,7 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
    curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
    ```
 2. **tp-check（before-fix）**：執行完整模式 report，顯示修正前的品質狀態
-3. 逐項檢查 R0-R18 品質規則，修正不合格的資料。搜尋 POI 資料時若符合「歇業/不存在」條件（見 tp-shared/references.md），直接刪除 trip_pois
+3. 逐項檢查 R0-R18 品質規則，修正不合格的資料。搜尋 POI 資料時若符合「歇業/不存在」條件（見 tp-shared/references.md §5），依新流程清理（`DELETE /entries/:eid/alternates/:poiId` 或 swap master，必要時 admin `DELETE /api/pois/:id`）
 
    **days meta 缺漏修復**（必先於其他修復執行）：
    - 檢查每天的 `date`、`day_of_week`（GET 回傳 snake_case）、`label` 是否為 null 或空字串
@@ -41,7 +41,8 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 4. 依修改類型選擇對應 API 寫回：
    - **修改單一 entry**：PATCH `/api/trips/{tripId}/entries/{eid}`
    - **覆寫整天**（結構性問題）：PUT `/api/trips/{tripId}/days/{N}`
-   - **修改 POI（餐廳/購物）**：PATCH `/api/trips/{tripId}/trip-pois/{tpid}`
+   - **修改 POI master 客觀欄位（hours/price/rating/address/phone）**：`PATCH /api/pois/{poiId}` 或 `POST /api/pois/{poiId}/enrich`（首選）。**v2.29.0 後 `PATCH /trip-pois/:tpid` endpoint 已不存在 — `trip_pois` 整表 DROPPED**
+   - **修改 entry × POI 結構（master swap、加 alternate、刪 alternate、重排）**：見 tp-shared/references/modify-steps.md §3 — `PATCH /entries/:eid/master` / `POST /entries/:eid/alternates` / `DELETE alternates/:poiId` / `PATCH alternates/reorder`
    - **更新 doc**（checklist/backup/suggestions）：PUT `/api/trips/{tripId}/docs/{type}`（doc 結構規格見 tp-shared/references.md「Doc 結構規格」）
 
    所有寫入操作須帶認證 headers（呼叫格式見 tp-shared/references.md）。
@@ -51,7 +52,7 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
     - Day N（N ≥ 2）首 entry 應指向 Day N-1 `day.hotel` 同 POI，`title` 含 check-out 語意；不合則**在 timeline 頂端插入** leading entry（time 優先用 Day N-1 `hotel.checkout`，無則 `"07:00"`），不複製 `hotel.infoBoxes`；若 Day N-1 `hotel.breakfast.included === true`，description inject `"🍳 早餐：{breakfast.note || '飯店自助'}"`
     - 若 Day N 目前的 `timeline[0]` 已是早餐或景點，保留原 entry（往後順延），新插入的 check-out entry 放 index 0
     - 插入後立即在最後 step 6 一併 recompute
-6. **travel 重算（鐵律，v2.24.0+）**：所有結構修正完成後，呼叫 `POST /api/trips/{tripId}/recompute-travel?day=all` 一次。Backend 跑 1km gate Haversine（≤1km walking、>1km driving）+ Google Routes API + 寫 trip_segments。`mode_source='user'` 既有 segment 不覆寫。**不再手動 PATCH `travel_type/desc/min`** — segments 為 SoT。規則見 tp-shared/references.md §4
+6. **travel 重算（鐵律，v2.24.0+）**：所有結構修正完成後，呼叫 `POST /api/trips/{tripId}/recompute-travel?day=all` 一次。Backend 跑 1km gate Haversine（≤1km walking、>1km driving）+ Google Routes API + 寫 `trip_segments`；`mode='transit'` 既有 segment 不覆寫；同時 trip-wide prune 不再相鄰的幽靈段。**不再手動 PATCH `travel_type/desc/min`** — segments 為 SoT。規則見 tp-shared/references.md §4
 7. **Doc 連動（鐵律）**：檢視所有 5 種 doc（checklist/backup/suggestions/flights/emergency），更新與修正內容不一致的部分（規則見 tp-shared/references.md「Doc 連動規則」）
 8. **tp-check（after-fix）**：執行完整模式 report，確認修正結果
 9. 不自動 commit（資料已直接寫入 D1 database）
