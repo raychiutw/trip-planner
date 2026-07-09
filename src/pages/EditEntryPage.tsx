@@ -182,6 +182,30 @@ const SCOPED_STYLES = `
 }
 .tp-edit-entry-duration .svg-icon { width: 12px; height: 12px; }
 
+/* v2.55.x entry.description 編輯 textarea（活動說明）。對齊 tp-poi-note-input
+   視覺語彙，但 entry-level 全寬 block（非 per-POI inline）。 */
+.tp-edit-entry-desc-input {
+  width: 100%;
+  font: inherit;
+  font-size: var(--font-size-body);
+  line-height: 1.6;
+  color: var(--color-foreground);
+  background: var(--color-background);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  resize: vertical;
+  min-height: 88px;
+  outline: none;
+  transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
+}
+.tp-edit-entry-desc-input:hover { border-color: var(--color-accent); }
+.tp-edit-entry-desc-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+.tp-edit-entry-desc-input::placeholder { color: var(--color-muted); }
+
 /* Mode segmented */
 .tp-edit-entry-mode-segmented {
   display: grid;
@@ -653,6 +677,7 @@ interface EntryApi {
   time?: string | null;
   startTime?: string | null;
   endTime?: string | null;
+  description?: string | null;
   note?: string | null;
   master?: {
     poiId?: number;
@@ -950,14 +975,15 @@ export default function EditEntryPage() {
   // 每個 master / alternate 各自編輯，autosave 打 PATCH /entries/:eid/pois/:poiId。
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [description, setDescription] = useState('');
   const [mode, setMode] = useState<TripSegment['mode'] | null>(null);
   const [transitMin, setTransitMin] = useState<string>('');
 
   // Original values for dirty-check + discard-modal
   const originalRef = useRef<{
-    startTime: string; endTime: string;
+    startTime: string; endTime: string; description: string;
     mode: TripSegment['mode'] | null; transitMin: string;
-  }>({ startTime: '', endTime: '', mode: null, transitMin: '' });
+  }>({ startTime: '', endTime: '', description: '', mode: null, transitMin: '' });
 
   const [submitting, setSubmitting] = useState(false);
   // v2.33.139: 移除 `error` state — titleBar SaveStatus 已拔 (user feedback
@@ -1121,12 +1147,15 @@ export default function EditEntryPage() {
     if (!entry) return;
     const initialStart = entry.startTime ?? '';
     const initialEnd = entry.endTime ?? '';
+    const initialDescription = entry.description ?? '';
     setStartTime(initialStart);
     setEndTime(initialEnd);
+    setDescription(initialDescription);
     originalRef.current = {
       ...originalRef.current,
       startTime: initialStart,
       endTime: initialEnd,
+      description: initialDescription,
     };
   }, [entry]);
 
@@ -1159,10 +1188,10 @@ export default function EditEntryPage() {
 
   const dirty = useMemo(() => {
     const o = originalRef.current;
-    const entryDirty = startTime !== o.startTime || endTime !== o.endTime;
+    const entryDirty = startTime !== o.startTime || endTime !== o.endTime || description !== o.description;
     const segmentDirty = mode !== o.mode || (mode === 'transit' && transitMin !== o.transitMin);
     return { entryDirty, segmentDirty, any: entryDirty || segmentDirty };
-  }, [startTime, endTime, mode, transitMin]);
+  }, [startTime, endTime, description, mode, transitMin]);
 
   const stayMinutes = useMemo(() => {
     if (!startTime || !endTime) return null;
@@ -1195,6 +1224,8 @@ export default function EditEntryPage() {
       const body: Record<string, unknown> = {};
       if (startTime !== originalRef.current.startTime) body.start_time = startTime || null;
       if (endTime !== originalRef.current.endTime) body.end_time = endTime || null;
+      // v2.55.x: entry.description（活動說明）可編輯。空/純空白 → null 清除。
+      if (description !== originalRef.current.description) body.description = description.trim() ? description : null;
       // v2.34.0: note 移除 — entry-level note 已 DROP，PATCH /entries 不再帶 note。
       // v2.33.136 fix: race guard — dirty.entryDirty memo 跟 body 各自比 originalRef，
       // 但 originalRef 是 ref 不在 memo deps。若 dirty 計算後、handleSave 跑前外部
@@ -1254,7 +1285,7 @@ export default function EditEntryPage() {
         // 從 saving → saved transit。
         originalRef.current = {
           ...originalRef.current,
-          startTime, endTime, mode, transitMin,
+          startTime, endTime, description, mode, transitMin,
         };
         setSubmitting(false);
         return;
@@ -1274,7 +1305,7 @@ export default function EditEntryPage() {
     }
   }, [
     tripId, entry, entryId, submitting, validation, dirty,
-    startTime, endTime, mode, transitMin, segment, prevEntry,
+    startTime, endTime, description, mode, transitMin, segment, prevEntry,
   ]);
 
   // v2.55.x：per-POI 備註 autosave 的 flush 註冊表。回前頁前先 await 沖出 pending 備註 PATCH，
@@ -1319,7 +1350,7 @@ export default function EditEntryPage() {
       void handleSave();
     }, 800);
     return () => clearTimeout(timer);
-  }, [dirty.any, validation, submitting, startTime, endTime, mode, transitMin, handleSave]);
+  }, [dirty.any, validation, submitting, startTime, endTime, description, mode, transitMin, handleSave]);
 
   // v2.27.0 multi-POI handlers ----------------------------------------------
 
@@ -1580,6 +1611,48 @@ export default function EditEntryPage() {
             <InlineError message={loadError} />
           ) : entry ? (
             <>
+              {/* Time section — v2.55.x 移到最上方（user request）。
+                  clearable：TripTimePicker popover 顯示「清除時間」→ 可設空值。 */}
+              <section className="tp-edit-entry-section" data-testid="edit-entry-time-section">
+                <h2 className="tp-edit-entry-section-h">
+                  <Icon name="clock" />
+                  <span>時間</span>
+                </h2>
+                <div className="tp-edit-entry-time-row">
+                  <div className="tp-edit-entry-time-card">
+                    <span>抵達</span>
+                    <div data-testid="edit-entry-start-time">
+                      <TripTimePicker
+                        value={startTime}
+                        onChange={setStartTime}
+                        ariaLabel="抵達時間"
+                        clearable
+                      />
+                    </div>
+                  </div>
+                  <span className="tp-edit-entry-time-arrow" aria-hidden="true">
+                    <Icon name="arrow-right" />
+                  </span>
+                  <div className="tp-edit-entry-time-card">
+                    <span>離開</span>
+                    <div data-testid="edit-entry-end-time">
+                      <TripTimePicker
+                        value={endTime}
+                        onChange={setEndTime}
+                        ariaLabel="離開時間"
+                        clearable
+                      />
+                    </div>
+                  </div>
+                </div>
+                {stayMinutes != null && (
+                  <div className="tp-edit-entry-duration" data-testid="edit-entry-duration">
+                    <Icon name="clock" />
+                    停留 {stayMinutes} 分鐘
+                  </div>
+                )}
+              </section>
+
               {poiInfo && (
                 <div className="tp-edit-entry-poi" data-tone={poiTypeToTone(poiInfo.poiType)} data-testid="edit-entry-poi-summary">
                   <span className="tp-edit-entry-poi-icon">
@@ -1753,43 +1826,24 @@ export default function EditEntryPage() {
                 </section>
               )}
 
-              {/* Time section */}
-              <section className="tp-edit-entry-section" data-testid="edit-entry-time-section">
+              {/* Description section — v2.55.x entry.description（活動說明）可編輯欄。
+                  entry-level 自由文字（trip_entries.description，AI 規劃時生成，例
+                  「放好行李休息一下，準備晚餐出門」）。後端 PATCH ALLOWED_FIELDS +
+                  textFields 已含 description，寫入無需改後端；空/純空白 → null 清除。 */}
+              <section className="tp-edit-entry-section" data-testid="edit-entry-description-section">
                 <h2 className="tp-edit-entry-section-h">
-                  <Icon name="clock" />
-                  <span>時間</span>
+                  <Icon name="file-text" />
+                  <span>說明</span>
                 </h2>
-                <div className="tp-edit-entry-time-row">
-                  <div className="tp-edit-entry-time-card">
-                    <span>抵達</span>
-                    <div data-testid="edit-entry-start-time">
-                      <TripTimePicker
-                        value={startTime}
-                        onChange={setStartTime}
-                        ariaLabel="抵達時間"
-                      />
-                    </div>
-                  </div>
-                  <span className="tp-edit-entry-time-arrow" aria-hidden="true">
-                    <Icon name="arrow-right" />
-                  </span>
-                  <div className="tp-edit-entry-time-card">
-                    <span>離開</span>
-                    <div data-testid="edit-entry-end-time">
-                      <TripTimePicker
-                        value={endTime}
-                        onChange={setEndTime}
-                        ariaLabel="離開時間"
-                      />
-                    </div>
-                  </div>
-                </div>
-                {stayMinutes != null && (
-                  <div className="tp-edit-entry-duration" data-testid="edit-entry-duration">
-                    <Icon name="clock" />
-                    停留 {stayMinutes} 分鐘
-                  </div>
-                )}
+                <textarea
+                  className="tp-edit-entry-desc-input"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="這個停留點的活動說明（例：放好行李休息一下，準備晚餐出門）"
+                  maxLength={2000}
+                  rows={3}
+                  data-testid="edit-entry-description-input"
+                />
               </section>
 
               {/* Mode section — 只有當有 prev entry + 有 segment 才顯示 */}

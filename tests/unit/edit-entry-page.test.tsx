@@ -70,6 +70,8 @@ const ENTRY = {
   time: '12:00-13:30',
   startTime: '12:00',
   endTime: '13:30',
+  // v2.55.x: entry.description（活動說明，trip_entries.description）可編輯。
+  description: '放好行李休息一下，準備晚餐出門',
   poiId: 100,
 };
 
@@ -1108,5 +1110,92 @@ describe('EditEntryPage — v2.34.0 per-POI 備註', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-poi-note-input-201')).toBeNull();
     });
+  });
+});
+
+// =========================================================================
+// v2.55.x — entry.description 說明欄 + 起訖時間移到最上方 + 時間可清空
+// =========================================================================
+describe('EditEntryPage — entry.description 說明欄（v2.55.x）', () => {
+  it('載入 entry → 說明 textarea 顯示 entry.description', async () => {
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-description-input')).toBeTruthy();
+    });
+    expect((screen.getByTestId('edit-entry-description-input') as HTMLTextAreaElement).value)
+      .toBe('放好行李休息一下，準備晚餐出門');
+  });
+
+  it('起訖時間 section DOM 順序在 POI 卡之前（移到最上方）', async () => {
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-time-section')).toBeTruthy();
+      expect(screen.queryByTestId('edit-entry-poi-summary')).toBeTruthy();
+    });
+    const timeSection = screen.getByTestId('edit-entry-time-section');
+    const poiCard = screen.getByTestId('edit-entry-poi-summary');
+    // time 在 poi 之前 → compareDocumentPosition(poi) 帶 FOLLOWING bit。
+    expect(timeSection.compareDocumentPosition(poiCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('改說明 → debounce 後 PATCH /entries/42 含 description', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-description-input')).toBeTruthy();
+    });
+    fireEvent.change(screen.getByTestId('edit-entry-description-input'), { target: { value: '改成新的活動說明' } });
+    await vi.advanceTimersByTimeAsync(900);
+    await waitFor(() => {
+      const patchCall = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls.find((c: unknown[]) => {
+        const opts = c[1] as { method?: string } | undefined;
+        return String(c[0]).includes('/entries/42') && opts?.method === 'PATCH';
+      });
+      expect(patchCall).toBeTruthy();
+      expect(JSON.parse((patchCall![1] as { body: string }).body).description).toBe('改成新的活動說明');
+    });
+    vi.useRealTimers();
+  });
+
+  it('清空說明（純空白）→ PATCH body.description 為 null', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-description-input')).toBeTruthy();
+    });
+    fireEvent.change(screen.getByTestId('edit-entry-description-input'), { target: { value: '   ' } });
+    await vi.advanceTimersByTimeAsync(900);
+    await waitFor(() => {
+      const patchCall = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls.find((c: unknown[]) => {
+        const opts = c[1] as { method?: string } | undefined;
+        return String(c[0]).includes('/entries/42') && opts?.method === 'PATCH';
+      });
+      expect(patchCall).toBeTruthy();
+      expect(JSON.parse((patchCall![1] as { body: string }).body).description).toBeNull();
+    });
+    vi.useRealTimers();
+  });
+
+  it('時間 picker clearable → popover 顯「清除時間」→ 點擊後 PATCH start_time null', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-start-time').querySelector('button')!);
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="tp-time-clear"]')).toBeTruthy();
+    });
+    fireEvent.click(document.querySelector('[data-testid="tp-time-clear"]') as HTMLElement);
+    await vi.advanceTimersByTimeAsync(900);
+    await waitFor(() => {
+      const patchCall = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls.find((c: unknown[]) => {
+        const opts = c[1] as { method?: string } | undefined;
+        return String(c[0]).includes('/entries/42') && opts?.method === 'PATCH';
+      });
+      expect(patchCall).toBeTruthy();
+      expect(JSON.parse((patchCall![1] as { body: string }).body).start_time).toBeNull();
+    });
+    vi.useRealTimers();
   });
 });
