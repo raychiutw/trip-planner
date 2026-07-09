@@ -1653,6 +1653,26 @@ export default function EditEntryPage() {
                 )}
               </section>
 
+              {/* Description section — v2.55.x entry.description（活動說明）可編輯欄，緊接
+                  起訖時間下方（user request）。entry-level 自由文字（trip_entries.description，
+                  AI 規劃時生成，例「放好行李休息一下，準備晚餐出門」）。後端 PATCH
+                  ALLOWED_FIELDS + textFields 已含 description，寫入無需改後端；空/純空白 → null 清除。 */}
+              <section className="tp-edit-entry-section" data-testid="edit-entry-description-section">
+                <h2 className="tp-edit-entry-section-h">
+                  <Icon name="file-text" />
+                  <span>說明</span>
+                </h2>
+                <textarea
+                  className="tp-edit-entry-desc-input"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="這個停留點的活動說明（例：放好行李休息一下，準備晚餐出門）"
+                  maxLength={2000}
+                  rows={3}
+                  data-testid="edit-entry-description-input"
+                />
+              </section>
+
               {poiInfo && (
                 <div className="tp-edit-entry-poi" data-tone={poiTypeToTone(poiInfo.poiType)} data-testid="edit-entry-poi-summary">
                   <span className="tp-edit-entry-poi-icon">
@@ -1825,26 +1845,6 @@ export default function EditEntryPage() {
                   </div>
                 </section>
               )}
-
-              {/* Description section — v2.55.x entry.description（活動說明）可編輯欄。
-                  entry-level 自由文字（trip_entries.description，AI 規劃時生成，例
-                  「放好行李休息一下，準備晚餐出門」）。後端 PATCH ALLOWED_FIELDS +
-                  textFields 已含 description，寫入無需改後端；空/純空白 → null 清除。 */}
-              <section className="tp-edit-entry-section" data-testid="edit-entry-description-section">
-                <h2 className="tp-edit-entry-section-h">
-                  <Icon name="file-text" />
-                  <span>說明</span>
-                </h2>
-                <textarea
-                  className="tp-edit-entry-desc-input"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="這個停留點的活動說明（例：放好行李休息一下，準備晚餐出門）"
-                  maxLength={2000}
-                  rows={3}
-                  data-testid="edit-entry-description-input"
-                />
-              </section>
 
               {/* Mode section — 只有當有 prev entry + 有 segment 才顯示 */}
               {prevEntry && (
