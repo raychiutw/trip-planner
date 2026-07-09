@@ -30,7 +30,7 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
    curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
    ```
 2. **tp-check（before-fix）**：執行完整模式 report，顯示修正前的品質狀態
-3. 逐項檢查 R0-R18 品質規則，修正不合格的資料。搜尋 POI 資料時若符合「歇業/不存在」條件（見 tp-shared/references.md），直接刪除 trip_pois
+3. 逐項檢查 R0-R18 品質規則，修正不合格的資料。搜尋 POI 資料時若符合「歇業/不存在」條件（見 tp-shared/references.md §5），依新流程清理（`DELETE /entries/:eid/alternates/:poiId` 或 swap master，必要時 admin `DELETE /api/pois/:id`）
 
    **days meta 缺漏修復**（必先於其他修復執行）：
    - 檢查每天的 `date`、`day_of_week`（GET 回傳 snake_case）、`label` 是否為 null 或空字串
@@ -41,7 +41,8 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 4. 依修改類型選擇對應 API 寫回：
    - **修改單一 entry**：PATCH `/api/trips/{tripId}/entries/{eid}`
    - **覆寫整天**（結構性問題）：PUT `/api/trips/{tripId}/days/{N}`
-   - **修改 POI（餐廳/購物）**：PATCH `/api/trips/{tripId}/trip-pois/{tpid}`
+   - **修改 POI master 客觀欄位（hours/price/rating/address/phone）**：`PATCH /api/pois/{poiId}` 或 `POST /api/pois/{poiId}/enrich`（首選）。**v2.29.0 後 `PATCH /trip-pois/:tpid` endpoint 已不存在 — `trip_pois` 整表 DROPPED**
+   - **修改 entry × POI 結構（master swap、加 alternate、刪 alternate、重排）**：見 tp-shared/references/modify-steps.md §3 — `PATCH /entries/:eid/master` / `POST /entries/:eid/alternates` / `DELETE alternates/:poiId` / `PATCH alternates/reorder`
    - **更新 doc**（checklist/backup/suggestions）：PUT `/api/trips/{tripId}/docs/{type}`（doc 結構規格見 tp-shared/references.md「Doc 結構規格」）
 
    所有寫入操作須帶認證 headers（呼叫格式見 tp-shared/references.md）。

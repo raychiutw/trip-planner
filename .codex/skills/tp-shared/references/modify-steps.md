@@ -71,8 +71,13 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 | 修改單一 entry | `PATCH /api/trips/{tripId}/entries/{eid}` | 只改非結構欄位（`title` / `time` / `description` / `note` / `location` / `maps` 等）。**禁止寫 `travel_type` / `travel_desc` / `travel_min`** — segments 由 recompute-travel 自動計算 |
 | 刪除單一 entry | `DELETE /api/trips/{tripId}/entries/{eid}` | **tp-request 禁止此操作**。刪除後須 recompute（見 §4） |
 | 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。entry 內不要手填 `travel`；segments 由之後 recompute 產生。**tp-request 禁止此操作** |
-| 新增 POI | `POST /api/trips/{tripId}/entries/{eid}/trip-pois` | 必填 `name` + `type`；選填 `context`（'timeline' / 'shopping'，預設 timeline） |
-| 修改/刪除 POI | `PATCH/DELETE /api/trips/{tripId}/trip-pois/{tpid}` | sort_order=0（首選）餐廳變動時須 recompute（見 §4） |
+| 新增 alternate POI | `POST /api/trips/{tripId}/entries/{eid}/alternates` 或 `/trip-pois`（legacy alias）| body 帶 `{ poiId }`（既有 POI）或 `{ name, lat, lng, type?, ... }`（find-or-create）；寫 `trip_entry_pois` as alternate (sort_order = max+1)。**`context` 欄位 v2.29.0 已不存在** |
+| 變更 master POI | `PATCH /api/trips/{tripId}/entries/{eid}/master` body `{ poiId, entryPoisVersion? }` | swap master ↔ alternate；master 變動 segments 自動失效，須 recompute（見 §4）|
+| Search-driven master swap | `PUT /api/trips/{tripId}/entries/{eid}/poi-id` body `{ name, lat, lng, ... }` 或 `{ poiId }` | find-or-create POI 後設為 master |
+| 刪除 entry alternate POI | `DELETE /api/trips/{tripId}/entries/{eid}/alternates/{poiId}?entryPoisVersion=N` | 不能刪 master（刪 entry 整筆走 `DELETE /entries/:eid`）|
+| 重排 alternates | `PATCH /api/trips/{tripId}/entries/{eid}/alternates/reorder` body `{ order: [poiId,...], entryPoisVersion? }` | 純改 sort_order > 1 順序 |
+| 飯店設定 | `PUT /api/trips/{tripId}/days/{num}` body `hotel: {...}` | findOrCreatePoi 後寫 `trip_days.hotel_poi_id` |
+| 修改 pois master 客觀欄位 | `PATCH /api/pois/{poiId}` 或 `POST /api/pois/{poiId}/enrich` | hours / price / rating / address / phone 等客觀屬性；enrich 自動補 Google Place Details |
 | 重算 travel | `POST /api/trips/{tripId}/recompute-travel?day=N\|all` | 結構動完後**呼叫此端點**取代手動計算。1km gate + Google Routes + 寫 `trip_segments`。即使 `day=N`，也會 trip-wide prune 非現行相鄰對的幽靈段；Routes compute 仍只跑 scoped day |
 | 手動覆寫 segment | `PATCH /api/trips/{tripId}/segments/{sid}` | 罕用（通常 user 從 UI TravelPill dialog 觸發）。body: `{mode: 'driving' \| 'walking' \| 'transit', min?: 0-1440}`（transit 必填 min）。`mode='transit'` 表示手填分鐘，後續 recompute 不覆寫 |
 | 更新 doc | `PUT /api/trips/{tripId}/docs/{type}` | doc 結構見 `references/doc-spec.md` |
@@ -113,13 +118,14 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 - **tp-create（新增行程）**：不新增該 POI，改用 Google Maps 上可查到的替代店家
 - **tp-edit / tp-request（修改行程）**：不新增該 POI，回報無效原因，建議替代
 - **tp-request（旅伴觸發）**：
-  1. 用 `DELETE /api/trips/{tripId}/trip-pois/{tpid}` 刪除該 POI 的 trip_pois 關聯
+  1. 用 `DELETE /api/trips/{tripId}/entries/{eid}/alternates/{poiId}` 刪除 entry-level 關聯（master 不能直接刪；若 POI 為 master，需先 swap 到 alternate 再刪，或整 entry `DELETE /entries/:eid`）
   2. **不可刪 pois master**（旅伴無此權限）
   3. 在回覆中告知旅伴該 POI 已移除及原因
 - **tp-patch / tp-rebuild / admin 指示（歇業偵測或 admin 要求）**：
-  1. 用 `DELETE /api/trips/{tripId}/trip-pois/{tpid}` 刪除該 POI 的所有 trip_pois 關聯
-  2. 用 `DELETE /api/pois/{poi_id}` 刪除 pois master（Google Maps 不存在/歇業，或 admin 明確要求時）
-  3. 在結果報告中列出已移除的 POI 及判定原因
+  1. 找出所有引用：`SELECT entry_id, sort_order FROM trip_entry_pois WHERE poi_id={poiId}` + `SELECT id FROM trip_days WHERE hotel_poi_id={poiId}`
+  2. 對 entry references 用 `DELETE /api/trips/{tripId}/entries/{eid}/alternates/{poiId}`；對 master references 先 `PATCH /master` swap 到另一個 alternate（如無則整 entry 刪）；對 hotel references 用 `PUT /days/{num}` 換 `hotel`
+  3. 完成後 `DELETE /api/pois/{poi_id}` 刪除 pois master（ON DELETE RESTRICT — 還有引用會 fail；admin only）
+  4. 在結果報告中列出已移除的 POI 及判定原因
 
 ### 6. 驗證
 

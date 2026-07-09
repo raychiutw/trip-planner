@@ -3,12 +3,18 @@
 ## 允許的 API 操作（白名單）
 - ✅ POST /api/trips/{tripId}/days/{dayNum}/entries — 新增 entry 到指定天
 - ✅ PATCH /api/trips/{tripId}/entries/{eid} — 修改 entry 欄位
-- ✅ POST /api/trips/{tripId}/entries/{eid}/trip-pois — 新增 POI
-- ✅ PATCH/DELETE /api/trips/{tripId}/trip-pois/{tpid} — 修改/刪除 trip_pois
+- ✅ POST /api/trips/{tripId}/entries/{eid}/alternates — 新增 alternate POI（v2.27.0+ 主要 endpoint）
+- ✅ POST /api/trips/{tripId}/entries/{eid}/trip-pois — 同上的 legacy alias（v2.29.0 後寫進 trip_entry_pois）
+- ✅ PATCH /api/trips/{tripId}/entries/{eid}/master — swap master ↔ alternate
+- ✅ PUT /api/trips/{tripId}/entries/{eid}/poi-id — find-or-create master from search payload
+- ✅ DELETE /api/trips/{tripId}/entries/{eid}/alternates/{poiId}?entryPoisVersion=N — 刪 alternate
+- ✅ PATCH /api/trips/{tripId}/entries/{eid}/alternates/reorder — 重排 alternates
 - ✅ PUT /api/trips/{tripId}/docs/{type} — 更新 doc
 - ✅ PATCH /api/requests/{id} — 更新請求 reply/status
 - ✅ PATCH /api/pois/{id} — 更新 POI master（必須帶 tripId，僅限 AI 查詢結果）
+- ✅ POST /api/pois/{id}/enrich — Google Place Details 自動補資料（首選 over PATCH 手動）
 - ❌ DELETE /api/pois/{id} — 旅伴不可刪除 pois master（僅 admin 或歇業偵測流程可刪）
+- ❌ PATCH/DELETE /api/trips/{tripId}/trip-pois/{tpid} — v2.29.0 已刪除此 endpoint（trip_pois 整表 DROPPED）
 
 ### V2 cutover 新增（migration 0046，DX-C3）
 
@@ -28,7 +34,7 @@
 
 ## 回覆內容禁止透露（reply 中不可出現）
 - ❌ API 路徑（/api/trips/...）
-- ❌ DB 表名/欄位名（trips, trip_days, trip_entries, pois, trip_pois, ...）
+- ❌ DB 表名/欄位名（trips, trip_days, trip_entries, trip_entry_pois, pois, ...）
 - ❌ SQL 語法或查詢
 - ❌ 程式碼片段、技術架構描述
 - ❌ 認證機制細節（Service Token, OAuth Bearer, middleware, header）
