@@ -111,7 +111,7 @@ user-invocable: true
 
    > ⚠️ **新建行程一律用新格式**（`entries` 陣列），不用舊格式（`content: JSON字串`）。完整規格見 tp-shared/references.md「Doc 結構規格」。
 
-8b. **Travel 重算（鐵律，v2.24.0+）**：所有天 PUT 完成 + 所有 entry location 補完後，呼叫 `POST /api/trips/{tripId}/recompute-travel?day=all` 一次。Backend 跑 1km gate Haversine + Google Routes API + 寫 trip_segments。PUT body 內若已含 `travel: {...}` 巢狀欄位（backwards-compat dual-write），recompute 完成後 segments table 為 SoT。
+8b. **Travel 重算（鐵律，v2.24.0+）**：所有天 PUT 完成 + 所有 entry location 補完後，呼叫 `POST /api/trips/{tripId}/recompute-travel?day=all` 一次。Backend 跑 1km gate Haversine + Google Routes API + 寫 `trip_segments`；`mode='transit'` 既有 segment 不覆寫；同時 trip-wide prune 不再相鄰的幽靈段。不要在 PUT body 手填 `travel` 巢狀欄位，segments table 是 SoT。
 
 ### Phase 2：Google 評分充填（browse-first）
 

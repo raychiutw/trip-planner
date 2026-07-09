@@ -36,7 +36,7 @@ pois 表欄位（id, type, name, description, note, address, phone, email, websi
 | 欄位 | 寫入路徑 | 說明 |
 |------|---------|------|
 | description | POST /entries/:eid/trip-pois \| POST /alternates | entry-level POI 描述（覆蓋 pois.description）|
-| note | 同上 | entry-level note |
+| note | 同上 | 該 entry 上此 POI 的 per-POI 備註（`trip_entry_pois.note`） |
 | reservation | 同上 | 餐廳預訂號 / 連結 |
 | reservation_url | 同上 | 預訂頁面 URL |
 | sort_order | 自動 assign（max + 1 = alternate）| 1 = master，> 1 = alternate；改 master 走 `PATCH /entries/:eid/master`、重排走 `PATCH /entries/:eid/alternates/reorder` |

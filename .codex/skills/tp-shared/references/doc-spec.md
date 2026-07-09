@@ -7,7 +7,7 @@
 | 欄位 | 支援 | 說明 |
 |------|:---:|------|
 | `entry.description` | ✅ | 景點描述 |
-| `entry.note` | ✅ | 備註 |
+| `entry.note` | ✅ | master POI 備註（來源是 `trip_entry_pois.note`，不是已 DROP 的 `trip_entries.note`） |
 | `restaurant.description` | ✅ | 餐廳描述 |
 | `entry.title` | ❌ | 純文字 |
 | `restaurant.name` | ❌ | 純文字 |
@@ -43,7 +43,7 @@ API 回傳 `{ doc_type, title, updated_at, entries: [{id, sort_order, section, t
 
 ### Doc 連動規則（鐵律）
 
-> ⚠️ **每次異動 trip 相關資料（trip_days / trip_entries / trip_pois），必須重新檢視該行程所有 doc type 並更新不一致的內容。**
+> ⚠️ **每次異動 trip 相關資料（trip_days / trip_entries / trip_entry_pois / hotel_poi_id），必須重新檢視該行程所有 doc type 並更新不一致的內容。**
 
 這不是「若影響到就更新」的條件式判斷，而是**強制連動**：行程資料變了，doc 必須跟著校準。
 

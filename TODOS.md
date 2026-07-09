@@ -22,9 +22,9 @@
 ### trip_segments — recompute 不清 stale 非相鄰段（reorder 後幽靈車程）
 
 **Priority:** P2 · **Component:** recompute-travel / trip_segments
-**Completed:** v2.55.39 (2026-07-09)
+**Completed:** v2.55.43 (2026-07-09)
 
-`recompute-travel.ts` 只 upsert 逐日相鄰對（ON CONFLICT），**從不 DELETE** 當前相鄰集以外的舊段。entry reorder 後同一 `from_entry_id` 會殘留舊 `from→to` 段（FK cascade 只在 entry **刪除**時清，reorder 不觸發）。影響：days API `fetchTripSegmentsMap` 每站任取一段（無 ORDER BY）→ timeline 可能顯示 reorder 前的舊車程。v2.55.39 修正：recompute 收集本次 day scope 的 entry set 與目前相鄰 pair set，batch 寫入時刪除 scope 內已不相鄰的 stale segments；`?day=N` 不碰其他天有效段。新增 integration regression 覆蓋 `A,B,C → B,A,C` reorder 並保留 day2 segment。
+`recompute-travel.ts` 只 upsert 逐日相鄰對（ON CONFLICT），**從不 DELETE** 當前相鄰集以外的舊段。entry reorder 後同一 `from_entry_id` 會殘留舊 `from→to` 段（FK cascade 只在 entry **刪除**時清，reorder 不觸發）。影響：days API `fetchTripSegmentsMap` 每站任取一段（無 ORDER BY）→ timeline 可能顯示 reorder 前的舊車程。v2.55.39 先補 day-scoped stale prune；v2.55.43 補完整為 trip-wide prune：每次 recompute（含 `?day=N`、刪景點觸發、self-heal）都載入全 trip 現行相鄰 pair 白名單，刪除任何不在白名單的幽靈段；Routes compute 仍只跑 scoped day，subrequest 數不放大。integration regression 覆蓋同日 reorder、`day=1` 清 `day=2` orphan，以及非 scoped day 有效段不被誤清。
 
 ### Funnel-guard launchd 護衛（自動偵測 funnel :443 drift + auto-heal）
 

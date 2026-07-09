@@ -1,5 +1,5 @@
 /**
- * EditEntryPage — v2.26.0 全頁編輯 entry（時間 + 從上一站移動方式 + 備註）。
+ * EditEntryPage — 全頁編輯 entry（起訖時間 + 說明 + POI + 從上一站移動方式）。
  *
  * Route: `/trip/:tripId/stop/:entryId/edit`
  * 對應 mockup: `docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html`
@@ -9,16 +9,17 @@
  *     sidebar: DesktopSidebarConnected
  *     main:
  *       TitleBar(編輯景點)  ← 左 ← back / 右「儲存」TitleBarPrimaryAction
- *       content: 三 sections
- *         1. 時間 — startTime / endTime "HH:MM" inputs + 停留分鐘 chip
- *         2. 從上一站移動 — segmented control (driving/walking/transit) + lock + transit min
- *         3. 備註 — textarea (Markdown supported)
+ *       content: sections
+ *         1. 起訖時間 — startTime / endTime picker（可清空）+ 停留分鐘 chip
+ *         2. 說明 — entry.description textarea
+ *         3. POI 正選卡 + 備選清單 — 含 per-POI 備註
+ *         4. 從上一站移動 — segmented control (driving/walking/transit) + transit min
  *     bottomNav: GlobalBottomNav
  *
  * 進入路徑：TimelineRail expanded toolbar pencil icon → navigate.
  *
  * 儲存策略（並行 PATCH）：
- *   - dirty.entry → PATCH /trips/:id/entries/:eid { start_time, end_time, note }
+ *   - dirty.entry → PATCH /trips/:id/entries/:eid { start_time, end_time, description }
  *   - dirty.segment → PATCH /trips/:id/segments/:sid { mode, min }
  *   - 兩者皆失敗 → 整體 error；單邊失敗 → 顯示警示但保留 dirty 值。
  *
