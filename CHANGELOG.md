@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.43] - 2026-07-09
+
+### Fixed
+- **recompute-travel 幽靈車程清理改為 trip-wide — 每次觸發都清全 trip 孤兒段**
+  - 根因：v2.55.39 的 stale-segment prune 只清「本次 recompute day scope 內」的段（`scopedEntryIds` guard）。`day=N` recompute 碰不到其他天殘留的幽靈段：某天 reorder 後，若之後只對別天觸發 recompute，該天的舊 `from→to` 非相鄰段永遠留著（琉球行程 Day 1 尾端「往那霸機場 40 分」即此類殘留）。
+  - 修法：改載入「整個 trip」的 entries（`WHERE d.trip_id = ?` JOIN，取代 `day_id IN (...)`）建 `allTripPairKeys`（全 trip 現行相鄰對白名單）；prune 現在刪掉**任何**不在白名單的 segment，不再受 day scope 限制。Routes 仍只 compute scoped day → **subrequest 數不變**（仍 1 次 entries query）。
+  - 效果：每個 recompute 觸發點（reorder / move / add / **刪景點** / self-heal，共約 13 處）都會 trip-wide 清幽靈；刪景點的 day-scoped recompute 也連帶清全 trip 孤兒。快取（`trip_segments`）保留不變。
+  - 保留 v2.55.39 的同日 prune regression；新增 integration：只 recompute `day=1` 也清掉 `day=2` 的反向 orphan 段。
+
 ## [2.55.42] - 2026-07-09
 
 ### Changed
