@@ -4,6 +4,7 @@ import { AppError } from '../../../../_errors';
 import { findOrCreatePoi } from '../../../../_poi';
 import { syncEntryMaster } from '../../../../_entry_pois';
 import { resolveEntryTimes } from '../../../../_time';
+import { resortDayByArrival } from '../../../../_entry_sort';
 import { validateEntryBody, detectGarbledText } from '../../../../_validate';
 import { json, parseJsonBody } from '../../../../_utils';
 import type { Env } from '../../../../_types';
@@ -145,6 +146,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     changedBy,
     diffJson: JSON.stringify({ day_num: dayNum, poiName: name, sort_order: sortOrder }),
   });
+
+  // 新增後依抵達時間重排當日：帶 start_time 的新景點會移到正確時序位置；無時間則殿後
+  // （no-op）。AI 逐筆批建本就依序 → no-op 不寫入。travel 重算由前端流程觸發。
+  // best-effort：entry 已 INSERT commit，重排失敗不可讓成功的建立回報 500（否則 client
+  // 重試 → 重複 entry）；resort 自癒。
+  try {
+    await resortDayByArrival(db, dayId);
+  } catch (err) {
+    console.error('[entries POST] resortDayByArrival failed (non-fatal)', err);
+  }
 
   return json(row, 201);
 };

@@ -24,6 +24,7 @@ import { detectGarbledText } from '../../_validate';
 import { json, parseIntParam, parseJsonBody } from '../../_utils';
 // v2.26.0: TIME_RE canonical 在 _time.ts（migration 0056 後 entry-time helpers 統一住處）。
 import { TIME_RE } from '../../_time';
+import { resortDayByArrival } from '../../_entry_sort';
 import {
   assertFavoriteOwnership,
   pickFavoriteBucketForActor,
@@ -252,6 +253,16 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     )
     .bind(newEntryId, favorite.poi_id, nowIso, nowIso, favorite.note ?? null)
     .run();
+
+  // 新增後依抵達時間重排整日：本端點雖已依 startTime 插入正確位置，resort 進一步把
+  // 整日 sort_order 正規化為時序（若他 entry 手排亂序也一併拉正）；已時序 → no-op。
+  // best-effort：entry 已 commit，重排失敗不可讓成功的加入回報 500（否則 client 重試 →
+  // 重複 entry）；resort 自癒。
+  try {
+    await resortDayByArrival(db, day.id);
+  } catch (err) {
+    console.error('[add-to-trip] resortDayByArrival failed (non-fatal)', err);
+  }
 
   // Audit log — companion 走 system:companion sentinel + 攜 companionTripId 反查；
   // V2 user 走實際 tripId + auth.email。fire-and-forget 不阻塞 response。
