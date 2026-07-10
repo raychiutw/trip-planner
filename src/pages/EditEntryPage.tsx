@@ -1246,7 +1246,10 @@ export default function EditEntryPage() {
 
     // v2.55.x: segment 存在 → PATCH 改既有；不存在 + prevEntry 已知 → POST 建立。
     if (dirty.segmentDirty && mode && prevEntry) {
-      const body: Record<string, unknown> = { mode };
+      // v2.55.45: 3-mode 編輯器代表 generic 交通（driving/walking/大眾運輸），無 submode
+      // 概念。顯式送 submode:null 清除任何 pill 設過的細分方式，否則後端 preserve-on-omit
+      // 會保留舊 submode 並因帶 min 而鎖成 manual → 使用者選「大眾運輸」卻得到鎖定的單軌。
+      const body: Record<string, unknown> = { mode, submode: null };
       if (mode === 'transit') {
         body.min = parseInt(transitMin, 10);
       }

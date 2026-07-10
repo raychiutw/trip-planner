@@ -298,6 +298,99 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
     expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
   });
 
+  // v2.55.45 — 自動 transit 方式（monorail/bus）現會被 recompute（舊碼跳過全部 transit）
+  describe('transit submode auto-recompute (v2.55.45)', () => {
+    // 那覇空港(cumKm 0) → 県庁前(6.0) → 首里(12.9)：貼 Yui 站座標。
+    async function seed3AtYui(tripId: string) {
+      await seedTrip(db, { id: tripId });
+      const day1 = await getDayId(db, tripId, 1);
+      const suffix = Math.random().toString(36).slice(2, 8);
+      const mk = async (lat: number, lng: number, tag: string) => {
+        const id = await seedPoi(db, { name: `${tag}-${suffix}` });
+        await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(lat, lng, id).run();
+        return id;
+      };
+      const pA = await mk(26.206515, 127.652214, 'yA'); // 那覇空港
+      const pB = await mk(26.214446, 127.679343, 'yB'); // 県庁前
+      const pC = await mk(26.219191, 127.725492, 'yC'); // 首里
+      const e1 = await seedEntry(db, day1, { sortOrder: 1, poiId: pA });
+      const e2 = await seedEntry(db, day1, { sortOrder: 2, poiId: pB });
+      const e3 = await seedEntry(db, day1, { sortOrder: 3, poiId: pC });
+      return { e1, e2, e3 };
+    }
+    const recompute = (tripId: string) =>
+      callHandler(onRequestPost, mockContext({
+        request: jsonRequest(`https://test.com/api/trips/${tripId}/recompute-travel?day=all`, 'POST'),
+        env, auth: mockAuth({ email: 'user@test.com' }), params: { id: tripId },
+      }));
+
+    it('G1 既有 monorail（非 manual）→ 被重算，寫 source=haversine + Yui 值（此前跳過）', async () => {
+      const { e1, e2 } = await seed3AtYui('trip-rec-mono');
+      // 只留 e1→e2 一對：把 e3 移到別的 sort 讓 e2→e3 不相鄰（避免多算）— 簡化：直接刪 e3 段前置
+      const now = Date.now();
+      await db.prepare(
+        `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, 'transit', 'monorail', 99, 111, 'haversine', NULL, ?)`,
+      ).bind('trip-rec-mono', e1, e2, now).run();
+      expect((await recompute('trip-rec-mono')).status).toBe(200);
+      const seg = await db.prepare(
+        'SELECT submode, "min", distance_m, source, computed_at FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?',
+      ).bind(e1, e2).first<{ submode: string; min: number; distance_m: number; source: string; computed_at: number | null }>();
+      expect(seg!.submode).toBe('monorail');
+      expect(seg!.source).toBe('haversine');
+      expect(seg!.min).toBe(15);        // 舊值 99 被重算成 Yui 那覇空港↔県庁前 = 15
+      expect(seg!.distance_m).toBe(6000);
+      expect(seg!.computed_at).not.toBeNull(); // 不再 stale
+    });
+
+    it('G2 既有 bus（非 manual）→ 走 Google DRIVE 代理重算，source=google', async () => {
+      const { e1, e2 } = await seed3AtYui('trip-rec-bus');
+      const now = Date.now();
+      await db.prepare(
+        `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, 'transit', 'bus', 5, 500, 'google', NULL, ?)`,
+      ).bind('trip-rec-bus', e1, e2, now).run();
+      expect((await recompute('trip-rec-bus')).status).toBe(200);
+      const seg = await db.prepare(
+        'SELECT submode, source, "min", computed_at FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?',
+      ).bind(e1, e2).first<{ submode: string; source: string; min: number; computed_at: number | null }>();
+      expect(seg!.submode).toBe('bus');
+      expect(seg!.source).toBe('google');
+      expect(seg!.min).toBeGreaterThan(0);
+      expect(seg!.computed_at).not.toBeNull();
+    });
+
+    it('G4 核心：同 recompute 中 manual transit 跳過、非 manual monorail 重算（source IS NOT manual 泛化）', async () => {
+      const { e1, e2, e3 } = await seed3AtYui('trip-rec-mixed');
+      const now = Date.now();
+      await db.batch([
+        // e1→e2：monorail 非 manual → 應被重算
+        db.prepare(
+          `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at)
+           VALUES (?, ?, ?, 'transit', 'monorail', 88, 88, 'haversine', NULL, ?)`,
+        ).bind('trip-rec-mixed', e1, e2, now),
+        // e2→e3：手填鎖定（source=manual）→ 必跳過
+        db.prepare(
+          `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at)
+           VALUES (?, ?, ?, 'transit', 'metro', 77, NULL, 'manual', ?, ?)`,
+        ).bind('trip-rec-mixed', e2, e3, now, now),
+      ]);
+      const resp = await recompute('trip-rec-mixed');
+      expect(resp.status).toBe(200);
+      const body = await resp.json() as { pairsSkippedTransit: number };
+      expect(body.pairsSkippedTransit).toBe(1); // 只有 manual 那段被跳
+
+      const mono = await db.prepare('SELECT "min", source FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
+        .bind(e1, e2).first<{ min: number; source: string }>();
+      expect(mono!.min).toBe(15);        // monorail 被重算（88 → 15）
+      expect(mono!.source).toBe('haversine');
+
+      const manual = await db.prepare('SELECT "min", source, submode FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
+        .bind(e2, e3).first<{ min: number; source: string; submode: string }>();
+      expect(manual).toMatchObject({ min: 77, source: 'manual', submode: 'metro' }); // 鎖定值原封不動
+    });
+  });
+
   // v2.33.106 T-4: failure paths — 補既有 happy path 缺乏的 negative tests
   describe('failure paths (T-4)', () => {
     it('無寫權限 user → 403', async () => {

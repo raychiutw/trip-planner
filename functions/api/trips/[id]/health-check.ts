@@ -40,7 +40,7 @@ const HEALTH_CHECK_MESSAGE = `${HEALTH_CHECK_PREFIX} 請以資深旅遊規劃師
 5. \`hotel\` — 住宿：飯店未連線 polyline／跨日不合理／rating 偏低
 
 **⚠️ 距離與移動時間鐵則（timing／distance 兩維度必讀）**：
-所有移動時間與距離，一律以本訊息**末端「行程表記錄的移動時間／距離」區塊**為準——那是系統實際記錄值（Google 實測或手填），等同你呼叫 \`GET /api/trips/:id/days/:num\` 時每個 entry 的 \`travel.min\`／\`travel.distance_m\`。**嚴禁**自行以地理位置、直線距離或常識估算移動時間/距離。若某段標「移動時間未記錄」，代表尚無記錄值，**不得**據此判斷過密／過長／衝突，至多提示「該段移動資料尚未計算」。
+所有移動時間與距離，一律以本訊息**末端「行程表記錄的移動時間／距離」區塊**為準——那是系統實際記錄值（Google 實測或手填），等同你呼叫 \`GET /api/trips/:id/days/:num\` 時每個 entry 的 \`travel.min\`／\`travel.distance_m\`。**嚴禁**自行以地理位置、直線距離或常識估算移動時間/距離。若某段標「移動時間未記錄」，代表尚無記錄值，**不得**據此判斷過密／過長／衝突，至多提示「該段移動資料尚未計算」。標為「大眾運輸」的段，其記錄時間可能係以駕車路線估算（日本無大眾運輸實時資料），實際搭乘可能更久；評估此類段的接續是否過緊時請保守看待，但仍不得自行改算數值。
 
 **嚴重程度**：
 - \`high\` = 影響行程能否成行（時間軸物理上不可行、必排景點時間衝突）
@@ -114,6 +114,10 @@ export function formatSegmentRecords(rows: SegmentRecordRow[]): string {
     if (r.min == null) {
       travel = '移動時間未記錄（不得據此報時程/距離問題）';
     } else {
+      // 只用 3-mode 白名單 label（大眾運輸含 monorail/bus/metro…全塌成通用）。
+      // ⚠ 不變式：若日後要餵 submode 提升 AI 準確度，submode 是使用者自由文字 →
+      // 必經 cleanName()（同 from/to 名稱）壓單行+截長再內插，否則 free-text 進「權威
+      // block」= LLM01 注入面（security review）。切勿直接 travelMethodLabel(mode, submode)。
       const label = TRAVEL_MODE_LABEL[r.mode as TravelMode] ?? '開車';
       const dist = r.distance_m == null ? '' : ` · ${(r.distance_m / 1000).toFixed(1)} 公里`;
       travel = `${label} ${r.min} 分鐘${dist}`;

@@ -1,22 +1,21 @@
 /**
- * TravelPillDialog — v2.24.0 segment travel mode picker.
+ * TravelPillDialog — segment travel 方式 picker（v2.55.45 多方式擴充）。
  *
- * v2.33.108: 移除「儲存 / 取消」button — 改 auto-save。
- *   - mode option click → 立即 patch (driving/walking 不需 min；transit 需 min 並
- *     等 valid input 後 patch)
- *   - transit min input → onBlur flush 立即 patch
- *   - footer 顯示 SaveStatus（pending/saving/saved/error/offline）+ 「關閉」button
+ * v2.24.0 起點：3 mode（駕車/步行/大眾運輸）。v2.55.45 擴成 8 方式晶片格：
+ *   駕車 · 步行 · 單軌 · 公車 · 地鐵 · 火車 · 高鐵 · 其他（自由輸入方式名）。
+ * 方式定義集中於 lib/travelMode.ts（TRAVEL_METHODS），與後端 submode 對齊。
  *
- * Mobile (<760px)：bottom sheet 由下滑出。Desktop：popover 樣式 360px。
+ * 計算策略（後端 segments/_shared.ts 分派）：
+ *   - 自動算：駕車/步行（Google WALK/DRIVE）、單軌（本地 Yui 估）、公車（Google DRIVE）。
+ *   - 純手填：地鐵/火車/高鐵、其他。距離一律自動（駕車/步行/公車＝Google、其餘＝直線）。
  *
- * Backend (v2.30.0)：
- *   - driving / walking → backend 一律打 Google Routes 重算（ignore body.min）
- *   - transit → user 手填分鐘（1–1440），backend save 為 source='manual'
+ * 覆寫 / 恢復自動：
+ *   - 自動方式手填分鐘 → 後端存 source='manual'（鎖定），recompute 不再覆寫。
+ *   - 「恢復自動計算」= 送不帶 min 的 PATCH（min:undefined，JSON.stringify 丟棄）→ 後端重算。
+ *   - source==='manual' 且選中原方式且該方式可自動 → 顯示 🔒 + 恢復鈕。
  *
- * OCC (v2.33.108)：currentVersion prop → autosave hook 帶 expectedVersion；
- * concurrent edit race 時 backend 回 409 STALE_ENTRY → hook 自動 refresh + retry。
- *
- * 對齊 docs/design-sessions/2026-05-07-travel-pill-tap-switch.html。
+ * v2.33.108: auto-save（無「儲存」button）。切晶片/改分鐘即 PATCH。OCC via currentVersion。
+ * Mobile (<760px)：bottom sheet。Desktop：popover 360px。createPortal 到 body（遮罩蓋 sticky header）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -26,10 +25,15 @@ import { apiFetchRaw } from '../../lib/apiClient';
 import { ApiError } from '../../lib/errors';
 import { EVENT } from '../../lib/events';
 import { useAutosave } from '../../hooks/useAutosave';
-import type { TravelMode } from '../../lib/travelMode';
+import {
+  type TravelMode,
+  type TravelMethod,
+  TRAVEL_METHODS,
+  MAX_SEGMENT_MIN_CLIENT,
+  travelMethodKey,
+} from '../../lib/travelMode';
 
-// v2.33.91: 移除本地 type 宣告，從 lib/travelMode canonical 來源 import + 為 backward-compat
-// 透過 `export type` re-export（之前 TravelPill.tsx 等檔案經 `from './TravelPillDialog'` import）。
+// v2.33.91: re-export for backward-compat import chains.
 export type { TravelMode };
 
 const SCOPED_STYLES = `
@@ -39,9 +43,7 @@ const SCOPED_STYLES = `
   display: flex; align-items: flex-end; justify-content: center;
   z-index: var(--z-modal, 110);
 }
-@media (min-width: 760px) {
-  .tp-travel-overlay { align-items: center; }
-}
+@media (min-width: 760px) { .tp-travel-overlay { align-items: center; } }
 .tp-travel-dialog {
   background: var(--color-background);
   width: 100%;
@@ -64,107 +66,78 @@ const SCOPED_STYLES = `
   margin: 0 auto 12px;
 }
 @media (min-width: 760px) { .tp-travel-dialog-handle { display: none; } }
-.tp-travel-dialog-title {
-  font-size: var(--font-size-headline);
-  font-weight: 700;
-  margin: 0 0 4px;
-}
-.tp-travel-dialog-meta {
-  font-size: var(--font-size-footnote);
-  color: var(--color-muted);
-  margin: 0 0 16px;
-}
-.tp-travel-mode-list {
-  display: flex; flex-direction: column; gap: 8px;
-}
-.tp-travel-mode-option {
-  display: flex; align-items: center; gap: 12px;
+.tp-travel-dialog-title { font-size: var(--font-size-headline); font-weight: 700; margin: 0 0 4px; }
+.tp-travel-dialog-meta { font-size: var(--font-size-footnote); color: var(--color-muted); margin: 0 0 14px; }
+
+/* 方式晶片格 */
+.tp-travel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tp-travel-chip {
+  display: flex; align-items: center; gap: 8px;
   min-height: var(--spacing-tap-min, 44px);
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
+  padding: 10px 12px;
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   background: var(--color-background);
   font: inherit; font-size: var(--font-size-body);
   color: var(--color-foreground);
   cursor: pointer; text-align: left; width: 100%;
 }
-.tp-travel-mode-option:hover { background: var(--color-hover); }
-.tp-travel-mode-option.is-selected {
+.tp-travel-chip:hover { background: var(--color-hover); }
+.tp-travel-chip.is-selected {
   background: var(--color-accent-subtle);
   border-color: var(--color-accent);
   color: var(--color-accent-deep);
 }
-.tp-travel-mode-option-icon {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--color-secondary);
-  color: var(--color-accent);
-  flex-shrink: 0;
-}
-.tp-travel-mode-option.is-selected .tp-travel-mode-option-icon {
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-}
-.tp-travel-mode-option-icon .svg-icon { width: 18px; height: 18px; }
-.tp-travel-mode-option-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.tp-travel-mode-option-label { font-weight: 600; }
-.tp-travel-mode-option-meta {
-  font-size: var(--font-size-footnote);
-  color: var(--color-muted);
-}
-.tp-travel-mode-option.is-selected .tp-travel-mode-option-meta { color: var(--color-accent-deep); }
-.tp-travel-mode-option-check {
-  color: var(--color-accent);
-  flex-shrink: 0;
-}
-.tp-travel-mode-option-check .svg-icon { width: 18px; height: 18px; }
-.tp-travel-transit-input {
-  margin-top: 8px;
-  padding: 12px 14px;
+.tp-travel-chip-icon { display: inline-flex; align-items: center; color: var(--color-accent); flex-shrink: 0; }
+.tp-travel-chip.is-selected .tp-travel-chip-icon { color: var(--color-accent-deep); }
+.tp-travel-chip-icon .svg-icon { width: 18px; height: 18px; }
+.tp-travel-chip-label { font-weight: 600; }
+.tp-travel-chip-tag { margin-left: auto; font-size: var(--font-size-caption); color: var(--color-muted); }
+.tp-travel-chip.is-selected .tp-travel-chip-tag { color: var(--color-accent-deep); }
+
+/* detail / input 區 */
+.tp-travel-detail {
+  margin-top: 10px; padding: 12px 14px;
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-md);
   background: var(--color-accent-subtle);
   display: flex; flex-direction: column; gap: 8px;
 }
-.tp-travel-transit-input-label {
-  font-size: var(--font-size-footnote);
-  color: var(--color-accent-deep);
-  font-weight: 600;
-}
-.tp-travel-transit-input input {
+.tp-travel-field { display: flex; flex-direction: column; gap: 4px; }
+.tp-travel-field-label { font-size: var(--font-size-footnote); color: var(--color-accent-deep); font-weight: 600; }
+.tp-travel-detail input {
   font: inherit; font-size: var(--font-size-body);
   padding: 8px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   width: 100%;
+  background: var(--color-background); color: var(--color-foreground);
+}
+.tp-travel-detail input:focus { outline: none; border-color: var(--color-accent); }
+.tp-travel-hint { font-size: var(--font-size-caption); color: var(--color-muted); }
+.tp-travel-compute { font-size: var(--font-size-footnote); color: var(--color-foreground); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tp-travel-compute-val { font-weight: 700; }
+.tp-travel-lock { color: var(--color-accent-deep); font-size: var(--font-size-caption); font-weight: 600; display: inline-flex; align-items: center; gap: 2px; }
+.tp-travel-revert {
+  align-self: flex-start;
+  min-height: 36px; padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-accent);
   background: var(--color-background);
-  color: var(--color-foreground);
+  color: var(--color-accent-deep);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
 }
-.tp-travel-transit-input input:focus {
-  outline: none;
-  border-color: var(--color-accent);
-}
-.tp-travel-transit-input-hint {
-  font-size: var(--font-size-caption);
-  color: var(--color-muted);
-}
-/* v2.33.108: footer 只剩「關閉」button + SaveStatus inline。auto-save 後不需 cancel/save 二選一。 */
-.tp-travel-dialog-footer {
-  display: flex; gap: 8px;
-  margin-top: 16px;
-  align-items: center;
-  justify-content: space-between;
-}
+.tp-travel-revert:hover { background: var(--color-hover); }
+.tp-travel-revert .svg-icon { width: 14px; height: 14px; }
+
+.tp-travel-dialog-footer { display: flex; margin-top: 16px; justify-content: flex-end; }
 .tp-travel-dialog-btn {
   min-height: var(--spacing-tap-min, 44px);
-  padding: 10px 20px;
-  border-radius: var(--radius-full);
+  padding: 10px 20px; border-radius: var(--radius-full);
   font: inherit; font-size: var(--font-size-body); font-weight: 600;
-  cursor: pointer;
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  color: var(--color-foreground);
+  cursor: pointer; border: 1px solid var(--color-border);
+  background: var(--color-background); color: var(--color-foreground);
 }
 .tp-travel-dialog-btn:hover { background: var(--color-hover); }
 `;
@@ -172,78 +145,38 @@ const SCOPED_STYLES = `
 export interface TravelPillDialogProps {
   tripId: string;
   segmentId: number;
-  /** 當前 mode（從 segments endpoint 來） */
   currentMode: TravelMode;
-  /** 當前 min（顯示在現選 mode option 描述） */
+  /** v2.55.45: 目前 submode（monorail/bus/metro/train/hsr/自由文字/null）。 */
+  currentSubmode?: string | null;
   currentMin?: number | null;
-  /** v2.33.108: 當前 OCC version；undefined → skip OCC check（向後相容）。 */
+  /** v2.55.45: 'manual' = 手填/手動覆寫鎖定；其餘（google/haversine）= 自動。 */
+  currentSource?: string | null;
   currentVersion?: number;
-  /** 距離 m，用於 walking 估算與顯示 */
   distanceM?: number | null;
-  /** 顯示 from→to entry 名稱（純展示，optional） */
   fromName?: string | null;
   toName?: string | null;
-  /** 關閉 callback */
   onClose: () => void;
-  /** Save 完成後 callback（傳更新後的 segment row） */
   onSaved?: (updated: { mode: TravelMode; min: number | null }) => void;
 }
 
-const MODE_DEFINITIONS: Array<{ mode: TravelMode; label: string; iconName: string; describe: (props: { distanceM?: number | null; currentMin?: number | null; isSelected: boolean }) => string }> = [
-  {
-    mode: 'driving',
-    label: '駕車',
-    iconName: 'car',
-    describe: ({ distanceM, currentMin, isSelected }) => {
-      if (isSelected && currentMin && currentMin > 0) {
-        return `${currentMin} min${distanceM ? ` · ${formatKm(distanceM)}` : ''} · Google Routes`;
-      }
-      return distanceM ? `距離 ${formatKm(distanceM)}` : '系統估算';
-    },
-  },
-  {
-    mode: 'walking',
-    label: '步行',
-    iconName: 'walking',
-    describe: ({ distanceM, currentMin, isSelected }) => {
-      if (isSelected && currentMin && currentMin > 0) {
-        return `${currentMin} min${distanceM ? ` · ${formatKm(distanceM)}` : ''} · Google Routes`;
-      }
-      if (distanceM && distanceM > 0) {
-        const estMin = Math.round((distanceM / 1000) * 12); // ~5km/h
-        return `距離 ${formatKm(distanceM)} · 估 ${estMin} min`;
-      }
-      return '系統估算';
-    },
-  },
-  {
-    mode: 'transit',
-    label: '大眾運輸',
-    iconName: 'bus',
-    describe: ({ currentMin, isSelected }) => {
-      if (isSelected && currentMin && currentMin > 0) {
-        return `${currentMin} 分鐘 · 已手動填寫`;
-      }
-      return '手動填寫分鐘（Google API 沒日本資料）';
-    },
-  },
-];
+interface SegmentPatchBody {
+  mode: TravelMode;
+  submode?: string | null;
+  min?: number;
+}
 
 function formatKm(m: number): string {
   if (m >= 1000) return `${(m / 1000).toFixed(1)} km`;
   return `${Math.round(m / 50) * 50} m`;
 }
 
-interface SegmentPatchBody {
-  mode: TravelMode;
-  min?: number;
-}
-
 export default function TravelPillDialog({
   tripId,
   segmentId,
   currentMode,
+  currentSubmode,
   currentMin,
+  currentSource,
   currentVersion,
   distanceM,
   fromName,
@@ -251,28 +184,37 @@ export default function TravelPillDialog({
   onClose,
   onSaved,
 }: TravelPillDialogProps) {
-  const [selectedMode, setSelectedMode] = useState<TravelMode>(currentMode);
-  const [transitMin, setTransitMin] = useState<string>(
-    currentMode === 'transit' && typeof currentMin === 'number' ? String(currentMin) : '',
+  const initialKey = useMemo(() => travelMethodKey(currentMode, currentSubmode), [currentMode, currentSubmode]);
+
+  const [selectedKey, setSelectedKey] = useState(initialKey);
+  const [otherName, setOtherName] = useState(
+    initialKey === 'other' && typeof currentSubmode === 'string' ? currentSubmode : '',
   );
+  // 手填方式 or 已覆寫的自動方式 → 預填分鐘；自動未覆寫 → 空（override 選填）。lazy init 算一次。
+  const [minInput, setMinInput] = useState(() => {
+    const method = TRAVEL_METHODS.find((m) => m.key === initialKey) ?? TRAVEL_METHODS[0]!;
+    const locked = currentSource === 'manual' || !method.auto;
+    return locked && typeof currentMin === 'number' ? String(currentMin) : '';
+  });
+
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const titleId = `tp-travel-dialog-title-${segmentId}`;
 
-  const transitMinNumber = useMemo(() => {
-    const n = parseInt(transitMin, 10);
-    return Number.isFinite(n) ? n : NaN;
-  }, [transitMin]);
+  const selectedMethod: TravelMethod = useMemo(
+    () => TRAVEL_METHODS.find((m) => m.key === selectedKey) ?? TRAVEL_METHODS[0]!,
+    [selectedKey],
+  );
 
-  const isTransitMinValid =
-    selectedMode !== 'transit' ||
-    (Number.isFinite(transitMinNumber) && transitMinNumber >= 1 && transitMinNumber <= 1440);
+  const minNumber = parseInt(minInput, 10);
+  const minValid = Number.isFinite(minNumber) && minNumber >= 1 && minNumber <= MAX_SEGMENT_MIN_CLIENT;
+  // 選中原方式 + 該方式可自動 + 目前鎖定 → 已手動覆寫（顯示 🔒 + 恢復鈕）。
+  const isOverridden = selectedMethod.auto && selectedKey === initialKey && currentSource === 'manual';
 
-  // v2.33.108: auto-save hook 取代 handleSubmit
   const autosave = useAutosave<SegmentPatchBody>({
     initialVersion: currentVersion,
     debounceMs: 600,
     save: async (body, expectedVersion) => {
-      const payload: SegmentPatchBody & { expectedVersion?: number } = { ...body } as SegmentPatchBody & { expectedVersion?: number };
+      const payload: Partial<SegmentPatchBody> & { expectedVersion?: number } = { ...body };
       if (typeof expectedVersion === 'number') payload.expectedVersion = expectedVersion;
       const res = await apiFetchRaw(
         `/trips/${encodeURIComponent(tripId)}/segments/${segmentId}`,
@@ -288,7 +230,6 @@ export default function TravelPillDialog({
       return updated as Record<string, unknown>;
     },
     onStale: async () => {
-      // GET segments 拿最新 version (segments index endpoint 已加 version)
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments`);
       if (!res.ok) throw new Error('Failed to refresh segments');
       const list = await res.json() as Array<{ id: number; version: number }>;
@@ -298,47 +239,49 @@ export default function TravelPillDialog({
     },
   });
 
-  // v2.33.108: mode click → 立即觸發 PATCH (debounce 短)
-  const handleSelectMode = useCallback((mode: TravelMode) => {
-    setSelectedMode(mode);
-    if (mode !== 'transit') {
-      autosave.patch({ mode });
-      // 非 transit 立即 flush — 不等 debounce
-      void autosave.flush();
-    } else if (isTransitMinValid && Number.isFinite(transitMinNumber)) {
-      autosave.patch({ mode, min: transitMinNumber });
-      void autosave.flush();
+  // 送出：min:undefined → 自動（JSON.stringify 丟棄 undefined key）；有 min → 手填/覆寫鎖定。
+  const submit = useCallback((mode: TravelMode, submode: string | null, min: number | undefined) => {
+    autosave.patch({ mode, submode, min });
+    void autosave.flush();
+  }, [autosave]);
+
+  // 手填 commit（min input / 方式名 input 的 onBlur 共用）：組 submode（其他＝自由文字名）
+  // + min 送出；自動方式帶 min 即手動覆寫鎖定。無效 min / 其他缺方式名 → 不送。
+  const commitManual = useCallback((method: TravelMethod) => {
+    if (!minValid) return;
+    const submode = method.freeText ? otherName.trim() : method.submode;
+    if (method.freeText && !submode) return; // 其他需先填方式名
+    submit(method.mode, submode, minNumber);
+  }, [minValid, otherName, minNumber, submit]);
+
+  const handleSelectMethod = useCallback((method: TravelMethod) => {
+    setSelectedKey(method.key);
+    // 選回原本已覆寫的自動方式 → 還原覆寫值顯示、保留鎖定（不自動重算）。
+    if (method.auto && method.key === initialKey && currentSource === 'manual') {
+      setMinInput(typeof currentMin === 'number' ? String(currentMin) : '');
+      return;
     }
-    // transit 模式但 min 未 valid → 等 user 填完 onBlur 再觸發
-  }, [autosave, isTransitMinValid, transitMinNumber]);
+    // 切方式一律清空 min 輸入，避免半打的分鐘被當新方式的覆寫套用（stale leak）。
+    setMinInput('');
+    if (method.auto) submit(method.mode, method.submode, undefined); // 自動算（不帶 min）
+    // 手填方式：等使用者輸入 min 後 onBlur commit，不在選擇當下帶 stale 值。
+  }, [initialKey, currentSource, currentMin, submit]);
 
-  // v2.33.108: transit min input → onChange 寫 state，onBlur 觸發 PATCH
-  const handleTransitMinChange = useCallback((value: string) => {
-    setTransitMin(value);
-  }, []);
+  const handleRevert = useCallback(() => {
+    setMinInput('');
+    submit(selectedMethod.mode, selectedMethod.submode, undefined);
+  }, [selectedMethod, submit]);
 
-  const handleTransitMinBlur = useCallback(() => {
-    if (selectedMode === 'transit' && isTransitMinValid && Number.isFinite(transitMinNumber)) {
-      autosave.patch({ mode: 'transit', min: transitMinNumber });
-      void autosave.flush();
-    }
-  }, [autosave, selectedMode, isTransitMinValid, transitMinNumber]);
-
-  // 關閉前 flush 任何 pending patch — 防 user 改了 transit min 後直接 close
   const handleClose = useCallback(() => {
     void autosave.flush().finally(onClose);
   }, [autosave, onClose]);
 
-  // ESC 關閉
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose();
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [handleClose]);
 
-  // v2.33.143: autosave error 走 toast（拔 SaveStatus 後唯一錯誤 surface）
   const lastErrorRef = useRef<string | null>(null);
   useEffect(() => {
     if (autosave.state === 'error' && autosave.error && autosave.error !== lastErrorRef.current) {
@@ -349,9 +292,8 @@ export default function TravelPillDialog({
     }
   }, [autosave.state, autosave.error]);
 
-  // 自動聚焦第一個 option（mount 後）
   useEffect(() => {
-    const first = overlayRef.current?.querySelector<HTMLButtonElement>('.tp-travel-mode-option');
+    const first = overlayRef.current?.querySelector<HTMLButtonElement>('.tp-travel-chip');
     first?.focus();
   }, []);
 
@@ -359,11 +301,11 @@ export default function TravelPillDialog({
     if (e.target === e.currentTarget) handleClose();
   };
 
-  if (typeof document === 'undefined') return null; // 非 DOM 環境 → 與 ConfirmModal 等 shared modal 同樣 degrade，不硬 crash
-  // createPortal 到 body：overlay 是 fixed inset:0 z=--z-modal(9000)，但 dialog 掛在
-  // timeline 欄的 stacking context 內（day-section 動畫的 containing block 會困住 fixed），
-  // 不 portal 出去遮罩就蓋不過 sticky header（標題列 + DAY tabs）。與 ConfirmModal /
-  // StopLightbox 等 shared modal 同 idiom。
+  if (typeof document === 'undefined') return null;
+
+  const hasDist = typeof distanceM === 'number' && distanceM > 0;
+  const m = selectedMethod;
+
   return createPortal(
     <>
       <style>{SCOPED_STYLES}</style>
@@ -378,74 +320,97 @@ export default function TravelPillDialog({
       >
         <div className="tp-travel-dialog">
           <div className="tp-travel-dialog-handle" />
-          <h3 id={titleId} className="tp-travel-dialog-title">
-            交通方式
-          </h3>
-          {(fromName || toName || distanceM) && (
+          <h3 id={titleId} className="tp-travel-dialog-title">交通方式</h3>
+          {(fromName || toName || hasDist) && (
             <p className="tp-travel-dialog-meta">
               {fromName && toName ? `${fromName} → ${toName}` : ''}
-              {(fromName || toName) && typeof distanceM === 'number' && distanceM > 0 ? ' · ' : ''}
-              {typeof distanceM === 'number' && distanceM > 0 ? formatKm(distanceM) : ''}
+              {(fromName || toName) && hasDist ? ' · ' : ''}
+              {hasDist ? formatKm(distanceM!) : ''}
             </p>
           )}
-          <div className="tp-travel-mode-list">
-            {MODE_DEFINITIONS.map((def) => {
-              const isSelected = selectedMode === def.mode;
+
+          <div className="tp-travel-grid">
+            {TRAVEL_METHODS.map((method) => {
+              const isSelected = selectedKey === method.key;
               return (
                 <button
-                  key={def.mode}
+                  key={method.key}
                   type="button"
-                  className={`tp-travel-mode-option ${isSelected ? 'is-selected' : ''}`}
-                  onClick={() => handleSelectMode(def.mode)}
+                  className={`tp-travel-chip ${isSelected ? 'is-selected' : ''}`}
+                  onClick={() => handleSelectMethod(method)}
                   aria-pressed={isSelected}
-                  data-testid={`travel-mode-option-${def.mode}`}
+                  data-testid={`travel-method-${method.key}`}
                 >
-                  <span className="tp-travel-mode-option-icon" aria-hidden="true">
-                    <Icon name={def.iconName} />
+                  <span className="tp-travel-chip-icon" aria-hidden="true">
+                    <Icon name={method.iconName} />
                   </span>
-                  <span className="tp-travel-mode-option-body">
-                    <span className="tp-travel-mode-option-label">{def.label}</span>
-                    <span className="tp-travel-mode-option-meta">
-                      {def.describe({
-                        distanceM,
-                        currentMin: isSelected && def.mode === currentMode ? currentMin : null,
-                        isSelected: isSelected && def.mode === currentMode,
-                      })}
-                    </span>
-                  </span>
-                  {isSelected && (
-                    <span className="tp-travel-mode-option-check" aria-hidden="true">
-                      <Icon name="check" />
-                    </span>
-                  )}
+                  <span className="tp-travel-chip-label">{method.label}</span>
+                  {isSelected && method.auto && <span className="tp-travel-chip-tag">自動</span>}
                 </button>
               );
             })}
           </div>
 
-          {selectedMode === 'transit' && (
-            <div className="tp-travel-transit-input">
-              <label className="tp-travel-transit-input-label" htmlFor={`tp-transit-min-${segmentId}`}>
-                需要多少分鐘？
+          <div className="tp-travel-detail">
+            {/* 自動方式：計算明細 + 鎖定/恢復 */}
+            {m.auto && (
+              <div className="tp-travel-compute">
+                {typeof currentMin === 'number' && currentMin > 0
+                  ? <><span className="tp-travel-compute-val">{currentMin} 分鐘</span>{hasDist ? ` · ${formatKm(distanceM!)}` : ''}</>
+                  : <span className="tp-travel-hint">選此方式即自動計算</span>}
+                {isOverridden
+                  ? <span className="tp-travel-lock"><Icon name="warning" /> 已手動覆寫</span>
+                  : (typeof currentMin === 'number' && currentMin > 0 ? <span className="tp-travel-hint">· 自動</span> : null)}
+              </div>
+            )}
+            {m.auto && isOverridden && (
+              <button type="button" className="tp-travel-revert" onClick={handleRevert} data-testid="travel-revert">
+                <Icon name="refresh-cw" /> 恢復自動計算
+              </button>
+            )}
+
+            {/* 其他：自由輸入方式名 */}
+            {m.freeText && (
+              <div className="tp-travel-field">
+                <label className="tp-travel-field-label" htmlFor={`tp-other-name-${segmentId}`}>交通方式名稱</label>
+                <input
+                  id={`tp-other-name-${segmentId}`}
+                  type="text"
+                  maxLength={20}
+                  value={otherName}
+                  onChange={(e) => setOtherName(e.target.value)}
+                  onBlur={() => commitManual(selectedMethod)}
+                  placeholder="例：水上巴士、纜車…"
+                  data-testid="travel-other-name"
+                />
+              </div>
+            )}
+
+            {/* 分鐘：手填方式＝必填、自動方式＝覆寫（選填） */}
+            <div className="tp-travel-field">
+              <label className="tp-travel-field-label" htmlFor={`tp-min-${segmentId}`}>
+                {m.auto ? '手動覆寫分鐘（選填）' : '需要多少分鐘？'}
               </label>
               <input
-                id={`tp-transit-min-${segmentId}`}
+                id={`tp-min-${segmentId}`}
                 className="tp-input-short"
                 type="number"
                 inputMode="numeric"
                 min={1}
-                max={1440}
-                value={transitMin}
-                onChange={(e) => handleTransitMinChange(e.target.value)}
-                onBlur={handleTransitMinBlur}
-                autoFocus
-                data-testid="travel-transit-min-input"
+                max={MAX_SEGMENT_MIN_CLIENT}
+                value={minInput}
+                onChange={(e) => setMinInput(e.target.value)}
+                onBlur={() => commitManual(selectedMethod)}
+                placeholder={m.auto ? '留空＝維持自動' : ''}
+                data-testid="travel-min-input"
               />
-              <span className="tp-travel-transit-input-hint">範圍 1–1440 分鐘（24 小時內）</span>
+              <span className="tp-travel-hint">
+                {m.auto ? '填了就鎖定手動值、停自動' : `範圍 1–${MAX_SEGMENT_MIN_CLIENT} 分鐘`}
+                {!m.auto && hasDist ? ` · 距離 ${formatKm(distanceM!)}（自動）` : ''}
+              </span>
             </div>
-          )}
+          </div>
 
-          {/* v2.33.143: SaveStatus 拔除 — silent auto-save，失敗走 toast (上方 useEffect)。 */}
           <div className="tp-travel-dialog-footer">
             <button
               type="button"
