@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.48] - 2026-07-10
+
+### Changed
+- **timeline「同一地點／免交通」marker 與交通膠囊視覺一致** — 原本收合 marker 是裸的圖釘＋淡字（無容器），與上下方有框的交通膠囊並排像兩個不同組件。改為採交通膠囊同一膠囊形狀（`--radius-full` + 同 padding），但用中性 `--color-line-strong` 描邊 + `--color-muted` 字（刻意不用 sage：sage 代表「有移動」，免交通要 recede）。此中性膠囊與對話框「同一地點」選項同語言 → timeline↔對話框↔編輯頁三面一致；膠囊化後觸控目標也變大。純 CSS，無資料/邏輯變更。
+
 ## [2.55.47] - 2026-07-10
 
 ### Fixed

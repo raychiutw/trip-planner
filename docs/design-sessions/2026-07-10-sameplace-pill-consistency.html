@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>同一地點 marker 一致性 — v2.55.48 mockup</title>
+<style>
+  :root{
+    --bg:#FFFBF5; --fg:#2A1F18; --muted:#6F5A47;
+    --sage:#A8BAAA; --sage-deep:#7E9580; --sage-subtle:#ECF0ED;
+    --border:#EADFCF; --line-strong:#C8B89F; --hover:#F9EDE0;
+    --accent:#A97A4A; --terra-subtle:#F3E7DA;
+    --radius-full:9999px; --radius-md:12px; --radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,"PingFang TC",system-ui,sans-serif;
+    background:var(--bg); color:var(--fg); line-height:1.5;
+    padding:32px 20px 64px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{font-size:22px;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:8px}
+  .note{background:var(--terra-subtle);border-radius:var(--radius-md);padding:12px 16px;font-size:13px;color:var(--muted);margin:16px 0 28px;line-height:1.65}
+  .note b{color:var(--fg)}
+
+  /* at-a-glance strip */
+  .glance{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;padding:20px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:36px}
+  .glance-item{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+  .glance-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted)}
+  .glance-rec{color:var(--accent)}
+
+  h2{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin:0 0 4px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  @media(max-width:840px){.grid{grid-template-columns:1fr}}
+  .card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:18px 18px 22px;position:relative}
+  .card.rec{border-color:var(--sage-deep);box-shadow:0 0 0 1px var(--sage-deep)}
+  .badge{position:absolute;top:14px;right:14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#fff;background:var(--accent);padding:3px 8px;border-radius:var(--radius-full)}
+  .card-title{font-size:15px;font-weight:800;margin-bottom:2px}
+  .card-desc{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.55;min-height:34px}
+
+  /* ---- faithful timeline snippet (matches prod) ---- */
+  .tl{position:relative}
+  /* travel pill = exact prod CSS (.tp-travel-pill, sage 描邊) */
+  .pill-wrap{margin:6px 0 6px 52px}
+  .pill{display:inline-flex;align-items:center;gap:10px;padding:5px 14px;border-radius:var(--radius-full);
+    background:transparent;border:1.5px solid var(--sage);color:var(--sage-deep);font-size:14px;width:fit-content;font-variant-numeric:tabular-nums}
+  .pill svg{width:14px;height:14px}
+  .pill .m{font-weight:700}
+  .pill .sep{color:var(--muted);opacity:.5}
+  .pill .chev{color:var(--muted);opacity:.6;font-size:10px;margin-left:2px}
+
+  /* stop row */
+  .stop{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-md);margin:2px 0}
+  .stop.transit{background:var(--sage-subtle)}
+  .stop.poi{background:var(--terra-subtle)}
+  .num{width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-full);border:1.5px solid var(--line-strong);
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);background:var(--bg)}
+  .ibox{width:44px;height:44px;flex-shrink:0;border-radius:10px;border:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center}
+  .stop.transit .ibox{color:var(--sage-deep)} .stop.poi .ibox{color:var(--accent)}
+  .ibox svg{width:20px;height:20px}
+  .s-body .nm{font-size:15px;font-weight:700;line-height:1.3}
+  .s-body .meta{font-size:12px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:5px}
+  .s-body .meta b{color:var(--fg)}
+  .star{color:var(--accent);display:inline-flex} .star svg{width:11px;height:11px}
+
+  /* ---- same-place marker treatments ---- */
+  .sp{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+  .sp svg{width:13px;height:13px;opacity:.7}
+  .sp-wrap{margin:6px 0 6px 52px}
+  /* current (v2.55.46) — naked muted */
+  .sp.cur{padding:3px 4px;font-size:11px;font-weight:600;letter-spacing:.02em}
+  /* V1 outline pill — neutral line-strong 描邊，同 pill 形狀 */
+  .sp.v1{padding:5px 14px;border-radius:var(--radius-full);border:1.5px solid var(--line-strong);background:transparent;font-size:12px;font-weight:600}
+  /* V2 dashed pill — 虛線=「無移動/斷點」語意 */
+  .sp.v2{padding:5px 14px;border-radius:var(--radius-full);border:1.5px dashed var(--line-strong);background:transparent;font-size:12px;font-weight:600}
+  /* V3 soft fill — 暖中性底(=對話框 sameplace 選項底)，無框 */
+  .sp.v3{padding:5px 14px;border-radius:var(--radius-full);border:none;background:var(--hover);font-size:12px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>「同一地點」marker 與交通膠囊一致性</h1>
+  <div class="sub">v2.55.48 follow-up · 對照 prod 截圖（那覇機場 → 牛排屋88 → 那覇機場）</div>
+  <div class="note">
+    <b>問題</b>：目前「同一地點」是裸的圖釘+淡字，交通方式是有框圓角膠囊 → 並排像兩個不同組件。<br>
+    <b>一致化原則</b>：同一地點採 <b>膠囊形狀</b>（對齊交通膠囊），但用 <b>中性 muted tone</b>（非 sage）保留「免交通要 recede」的原意 —— sage 代表有移動。<br>
+    <b>依據</b>：對話框裡的「同一地點」選項<b>已經</b>用中性 <code>--color-line-strong</code> 邊 + muted，V1 讓 timeline marker 對齊同一語言（timeline↔對話框↔編輯頁三面一致）。
+  </div>
+
+  <h2 style="margin-bottom:12px">四種處理・並排</h2>
+  <div class="glance">
+    <div class="glance-item"><span class="glance-lbl">交通膠囊（不變·對照）</span>
+      <span class="pill"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c-4 0-8 .5-8 4v9.5C4 17.4 5.6 19 7.5 19L6 20.5v.5h2.2l2-2H14l2 2h2v-.5L16.5 19c1.9 0 3.5-1.6 3.5-3.5V6c0-3.5-3.6-4-8-4zM7.5 17c-.8 0-1.5-.7-1.5-1.5S6.7 14 7.5 14 9 14.7 9 15.5 8.3 17 7.5 17zM11 10H6V6h5v4zm2 0V6h5v4h-5zm3.5 7c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5z"/></svg><span class="m">單軌</span><span class="sep">·</span><span class="m">29 min</span><span class="sep">·</span><span class="m">7.7 km</span><span class="chev">▾</span></span>
+    </div>
+    <div class="glance-item"><span class="glance-lbl">現況 v2.55.46</span>
+      <span class="sp cur"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg><span>同一地點</span></span>
+    </div>
+    <div class="glance-item"><span class="glance-lbl glance-rec">V1 中性描邊 ★</span>
+      <span class="sp v1"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg><span>同一地點</span></span>
+    </div>
+    <div class="glance-item"><span class="glance-lbl">V2 虛線</span>
+      <span class="sp v2"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg><span>同一地點</span></span>
+    </div>
+    <div class="glance-item"><span class="glance-lbl">V3 暖中性底</span>
+      <span class="sp v3"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg><span>同一地點</span></span>
+    </div>
+  </div>
+
+  <h2 style="margin-bottom:12px">情境中比較（各含真實交通膠囊）</h2>
+  <div class="grid">
+    <!-- CURRENT -->
+    <div class="card">
+      <div class="card-title">現況 v2.55.46</div>
+      <div class="card-desc">裸圖釘+淡字。最 recede，但與上方交通膠囊像兩個世界。</div>
+      <div class="tl" data-v="cur"></div>
+    </div>
+    <!-- V1 -->
+    <div class="card rec">
+      <span class="badge">推薦</span>
+      <div class="card-title">V1 · 中性描邊膠囊</div>
+      <div class="card-desc">同膠囊形狀 + line-strong 中性邊。對齊交通膠囊形狀 & 對話框選項 tone，最一致。</div>
+      <div class="tl" data-v="v1"></div>
+    </div>
+    <!-- V2 -->
+    <div class="card">
+      <div class="card-title">V2 · 虛線膠囊</div>
+      <div class="card-desc">虛線邊暗示「無移動/斷點」，語意更明確；但虛線比實線略搶眼、密度高。</div>
+      <div class="tl" data-v="v2"></div>
+    </div>
+    <!-- V3 -->
+    <div class="card">
+      <div class="card-title">V3 · 暖中性底膠囊</div>
+      <div class="card-desc">無框、暖中性填底（=對話框 sameplace 選項底色）。最柔，但實心底在淺底上邊界較弱。</div>
+      <div class="tl" data-v="v3"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PIN='<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg>';
+  const CAR='<svg viewBox="0 0 24 24"><path fill="currentColor" d="M18.9 6C18.7 5.4 18.2 5 17.5 5h-11c-.7 0-1.2.4-1.4 1L3 12v8c0 .6.5 1 1 1h1c.6 0 1-.5 1-1v-1h12v1c0 .6.5 1 1 1h1c.6 0 1-.5 1-1v-8l-2.1-6zM6.5 16c-.8 0-1.5-.7-1.5-1.5S5.7 13 6.5 13 8 13.7 8 14.5 7.3 16 6.5 16zm11 0c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>';
+  const MONO='<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c-4 0-8 .5-8 4v9.5C4 17.4 5.6 19 7.5 19L6 20.5v.5h2.2l2-2H14l2 2h2v-.5L16.5 19c1.9 0 3.5-1.6 3.5-3.5V6c0-3.5-3.6-4-8-4zM7.5 17c-.8 0-1.5-.7-1.5-1.5S6.7 14 7.5 14 9 14.7 9 15.5 8.3 17 7.5 17zM11 10H6V6h5v4zm2 0V6h5v4h-5zm3.5 7c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5z"/></svg>';
+  const STAR='<span class="star"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 17.3 18.2 21l-1.6-7 5.4-4.7-7.2-.6L12 2 9.2 8.6 2 9.2l5.5 4.8L5.8 21z"/></svg></span>';
+  const pill=`<div class="pill-wrap"><span class="pill">${MONO}<span class="m">單軌</span><span class="sep">·</span><span class="m">29 min</span><span class="sep">·</span><span class="m">7.7 km</span><span class="chev">▾</span></span></div>`;
+  function stop(n,icon,cls,name,time,type){return `<div class="stop ${cls}"><div class="num">${n}</div><div class="ibox">${icon}</div><div class="s-body"><div class="nm">${name}</div><div class="meta"><b>${time}</b><span>·</span>${type}<span>·</span>${STAR}4.1</div></div></div>`;}
+  function sp(v){return `<div class="sp-wrap"><span class="sp ${v}">${PIN}<span>同一地點</span></span></div>`;}
+  document.querySelectorAll('.tl').forEach(el=>{
+    const v=el.dataset.v;
+    el.innerHTML = pill
+      + stop('6',CAR,'transit','那覇機場','17:15','交通')
+      + sp(v)
+      + stop('7',PIN,'poi','牛排屋88 那覇機場店','18:00','景點')
+      + sp(v)
+      + stop('8',PIN,'poi','那覇機場','20:55','景點');
+  });
+</script>
+</body>
+</html>
