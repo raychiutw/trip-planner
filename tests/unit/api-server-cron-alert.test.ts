@@ -15,7 +15,8 @@ const SRC = readFileSync(
 
 describe('G3: fireScheduleScript exit code wrapper (detached spawn)', () => {
   it('import throttledAlert from cron-shared', () => {
-    expect(SRC).toMatch(/import \{ throttledAlert \} from '\.\/_lib\/cron-shared'/);
+    // 容許同行 co-import（v2.55.52 起加了 sleep）— 意圖只鎖 throttledAlert 來自 cron-shared。
+    expect(SRC).toMatch(/import \{[^}]*\bthrottledAlert\b[^}]*\} from '\.\/_lib\/cron-shared'/);
   });
 
   it("child.on('exit') 必存在（之前完全沒檢查 exit code）", () => {
