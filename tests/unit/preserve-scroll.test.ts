@@ -87,12 +87,19 @@ describe('preserveScroll — 跨導航捲動記憶', () => {
     let connected = true;
     let sets = 0;
     const clientHeight = 800;
+    const listeners: Record<string, Array<{ cb: () => void; once: boolean }>> = {};
     const el = {
       get isConnected() { return connected; },
       get clientHeight() { return clientHeight; },
       get scrollHeight() { return scrollHeight; },
       get scrollTop() { return top; },
       set scrollTop(v: number) { top = Math.max(0, Math.min(v, scrollHeight - clientHeight)); sets += 1; },
+      addEventListener(type: string, cb: () => void, opts?: { once?: boolean }) {
+        (listeners[type] ??= []).push({ cb, once: !!opts?.once });
+      },
+      removeEventListener(type: string, cb: () => void) {
+        listeners[type] = (listeners[type] ?? []).filter((e) => e.cb !== cb);
+      },
     };
     const rafCbs: FrameRequestCallback[] = [];
     vi.stubGlobal('document', { querySelector: () => el, scrollingElement: null, documentElement: el });
@@ -102,6 +109,18 @@ describe('preserveScroll — 跨導航捲動記憶', () => {
       sets: () => sets,
       pending: () => rafCbs.length,
       detach: () => { connected = false; },
+      // 模擬 user 原生捲動：瀏覽器直接改 scrollTop，不走我們的 setter（不計入 sets）
+      userScroll: (v: number) => { top = Math.max(0, Math.min(v, scrollHeight - clientHeight)); },
+      // 觸發已註冊的事件（wheel / touchstart）；忠實模擬 once:true → fire 後自動移除,
+      // 讓 listenerCount 能抓到「拿掉顯式 cleanup、只靠 once」會漏掉未觸發的兄弟 listener
+      fire: (type: string) => {
+        (listeners[type] ?? []).slice().forEach((e) => {
+          e.cb();
+          if (e.once) listeners[type] = (listeners[type] ?? []).filter((x) => x !== e);
+        });
+      },
+      // 已註冊的 listener 數（驗 cleanup 有沒有拆乾淨）
+      listenerCount: () => Object.values(listeners).reduce((n, arr) => n + arr.length, 0),
       // 設定新內容高度後跑一幀
       step: (h: number) => { scrollHeight = h; rafCbs.splice(0).forEach((cb) => cb(0)); },
     };
@@ -138,5 +157,42 @@ describe('preserveScroll — 跨導航捲動記憶', () => {
     s.step(2913);             // 內容就算長高也不該再寫
     expect(s.sets()).toBe(before);
     expect(s.pending()).toBe(0);
+  });
+
+  // 主 bug：返回行程頁還原途中往上捲 → 每幀被拉回 savedTop（「位置被拉回去」）。
+  it('還原途中 user 手動捲動（wheel）→ 立即讓位，不再把位置拉回 top', () => {
+    const s = clampEl();
+    restoreScrollTo(2113);
+    s.step(1300);             // 內容長高中，還原到 500、續試
+    expect(s.getTop()).toBe(500);
+    const before = s.sets();
+    s.fire('wheel');          // user 往上捲的意圖
+    s.userScroll(120);        // user 實際捲到 120（原生，不走 setter）
+    s.step(2913);             // 內容續長高：讓位後這幀不該再寫
+    expect(s.getTop()).toBe(120);     // 沒被拉回 2113
+    expect(s.sets()).toBe(before);    // tick 沒再寫 scrollTop
+    expect(s.pending()).toBe(0);      // loop 已停
+    expect(s.listenerCount()).toBe(0); // abort 後 listener 拆乾淨
+  });
+
+  it('touchstart 同樣讓位（mobile 手指捲動）', () => {
+    const s = clampEl();
+    restoreScrollTo(2113);
+    s.step(1300);
+    const before = s.sets();
+    s.fire('touchstart');
+    s.step(2913);
+    expect(s.sets()).toBe(before);
+    expect(s.pending()).toBe(0);
+  });
+
+  it('還原正常完成後 listener 也拆乾淨（無洩漏）', () => {
+    const s = clampEl();
+    restoreScrollTo(2113);
+    s.step(1300);             // 500
+    s.step(2100);             // 1300
+    s.step(2913);             // 到位 2113 → 停
+    expect(s.getTop()).toBe(2113);
+    expect(s.listenerCount()).toBe(0);
   });
 });

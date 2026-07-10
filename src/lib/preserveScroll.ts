@@ -77,8 +77,20 @@ export function restoreScrollTo(top: number, maxFrames = 45): void {
   if (!el) return;
   let frames = 0;
   let prevHeight = -1;
+  // User 一動 wheel / 手指 → 立即讓位：還原途中往上捲若每幀被拉回 savedTop，會變成
+  // 「怎麼捲都被扯回去」（往上捲卡住）。內容還在 async 長高時 reached 一直是 false，
+  // 光靠既有停止條件擋不掉這段搶捲動，故偵測 user 捲動意圖就中止。
+  let aborted = false;
+  const abort = () => { aborted = true; };
+  const cleanup = () => {
+    el.removeEventListener('wheel', abort);
+    el.removeEventListener('touchstart', abort);
+  };
+  el.addEventListener('wheel', abort, { passive: true, once: true });
+  el.addEventListener('touchstart', abort, { passive: true, once: true });
   const tick = () => {
-    if (!el.isConnected) return; // 這個 shell 已被拆掉（又導航走）→ 停，別碰新頁
+    // shell 已被拆掉（又導航走）或 user 已接手捲動 → 停，別碰
+    if (aborted || !el.isConnected) { cleanup(); return; }
     el.scrollTop = top;
     frames += 1;
     const reached = el.scrollTop >= top - 1;
@@ -87,6 +99,7 @@ export function restoreScrollTo(top: number, maxFrames = 45): void {
     // 續試條件：沒到位 + 內容仍長高 + 沒用完預算。內容長完仍搆不到 top（e.g. 編輯時
     // 刪了景點、當天變短）→ grew 轉 false 就停，不跟 user 搶捲動（原本會硬撐滿 45 幀）。
     if (!reached && grew && frames < maxFrames) requestAnimationFrame(tick);
+    else cleanup();
   };
   requestAnimationFrame(tick);
 }
