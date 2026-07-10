@@ -2,7 +2,7 @@
  * DaySection — memoised per-day renderer (Terracotta design).
  *
  * Renders:
- *  - Terracotta hero card (Day eyebrow + 看地圖 chip + title + date + stats)
+ *  - Terracotta hero card (DAY NN eyebrow + 日期 headline + stats)
  *  - Weather card (HourlyWeather)
  *  - Timeline stop cards
  */
@@ -193,10 +193,9 @@ const DaySection = React.memo(function DaySection({
   const dateLabel = daySummary?.date
     ? `${daySummary.date}${daySummary.dayOfWeek ? `（${daySummary.dayOfWeek}）` : ''}`
     : '';
-  const area = daySummary?.label || '';
-  // Section 4.3 (terracotta-mockup-parity-v2)：3-tier fallback chain — user-defined
-  // title (trip_days.title) → 區域 label (trip_days.label, 例「美瑛」) →「Day N」。
-  const dayTitle = day?.title?.trim() || area || `Day ${dayNum}`;
+  // v2.55.49: 每日 custom title（trip_days.title）移除 — 編輯 UI 從未實作、使用者不需要。
+  // header 改以日期為主標：DAY N eyebrow + 日期 headline。區域 label 不再顯示於 header。
+  const dayHeadline = dateLabel || `Day ${dayNum}`;
 
   return (
     <section className="tp-day day-section" data-day={dayNum}>
@@ -205,14 +204,10 @@ const DaySection = React.memo(function DaySection({
       <div className="tp-hero" id={`day${dayNum}`}>
         <div className="tp-hero-chips">
           <div className="tp-hero-chips-left">
-            <span className="tp-hero-chip">
-              {eyebrow}
-              {dateLabel && ` · ${dateLabel}`}
-            </span>
-            {area && area !== dayTitle && <span className="tp-hero-chip-muted">{area}</span>}
+            <span className="tp-hero-chip">{eyebrow}</span>
           </div>
         </div>
-        <h2 className="tp-hero-title">{dayTitle}</h2>
+        <h2 className="tp-hero-title">{dayHeadline}</h2>
         {heroSub && <div className="tp-hero-sub">{heroSub}</div>}
       </div>
 
