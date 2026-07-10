@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.50] - 2026-07-10
+
+### Removed
+- **`trip_days.title` 欄位 DROP（每日 custom title 下線 Phase 2/2）** — migration 0085 `ALTER TABLE trip_days DROP COLUMN title`。Phase 1（v2.55.49）已移除全部程式碼引用並上線，現行 prod code 不再 SELECT/INSERT title → DROP 安全。純 DROP 無 backfill（dead 欄位、資料丟棄）。rollback 僅還原欄位結構（資料無法復原）。deploy-order：本 migration 必在 Phase 1 上線後才套（days summary SELECT 原明列 title，早套會讓舊 code no-such-column）。
+
 ## [2.55.49] - 2026-07-10
 
 ### Removed
