@@ -447,3 +447,72 @@ describe('PATCH /api/trips/:id/segments/:sid — transit submode dispatch (v2.55
     expect(u!.source).toBe('manual');
   });
 });
+
+describe('PATCH /api/trips/:id/segments/:sid — 同一地點/免交通 (v2.55.46)', () => {
+  let segId: number;
+  const NAHA = { lat: 26.206515, lng: 127.652214 };
+  const KENCHO = { lat: 26.214446, lng: 127.679343 };
+
+  async function seedSeg(seg: { mode: string; min: number | null; source: string | null; noTravel?: number | null }): Promise<number> {
+    const day1 = await getDayId(db, 'trip-sp', 1);
+    const suffix = Math.random().toString(36).slice(2, 8);
+    const mk = async (pt: { lat: number; lng: number }, tag: string) => {
+      const id = await seedPoi(db, { name: `sp-${tag}-${suffix}` });
+      await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(pt.lat, pt.lng, id).run();
+      return id;
+    };
+    const e1 = await seedEntry(db, day1, { sortOrder: 1, poiId: await mk(NAHA, 'A') });
+    const e2 = await seedEntry(db, day1, { sortOrder: 2, poiId: await mk(KENCHO, 'B') });
+    const now = Date.now();
+    const r = await db.prepare(
+      `INSERT INTO trip_segments
+       (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at, no_travel)
+       VALUES (?, ?, ?, ?, NULL, ?, 9400, ?, ?, ?, ?) RETURNING id`,
+    ).bind('trip-sp', e1, e2, seg.mode, seg.min, seg.source, now, now, seg.noTravel ?? null).first<{ id: number }>();
+    return r!.id;
+  }
+
+  const patch = (body: Record<string, unknown>) =>
+    callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-sp/segments/${segId}`, 'PATCH', body),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-sp', sid: String(segId) },
+    }));
+
+  const readSeg = () => db.prepare('SELECT mode, submode, "min", source, distance_m, computed_at, no_travel FROM trip_segments WHERE id = ?')
+    .bind(segId).first<{ mode: string; submode: string | null; min: number | null; source: string | null; distance_m: number | null; computed_at: number | null; no_travel: number | null }>();
+
+  beforeEach(async () => {
+    await db.prepare('DELETE FROM trip_segments WHERE trip_id LIKE ?').bind('trip-sp%').run();
+    env = mockEnv(db, { GOOGLE_MAPS_API_KEY: 'test-google-key' });
+    await seedTrip(db, { id: 'trip-sp' });
+  });
+
+  it('N1 標記免交通：driving 段 PATCH {noTravel:true} → no_travel=1、min/dist NULL、source=manual、computed_at 有值、mode 保留', async () => {
+    segId = await seedSeg({ mode: 'driving', min: 21, source: 'google' });
+    const res = await patch({ noTravel: true });
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.noTravel).toBe(1); // 回應 snake→camel
+    const u = await readSeg();
+    expect(u!.no_travel).toBe(1);
+    expect(u!.min).toBeNull();
+    expect(u!.distance_m).toBeNull();
+    expect(u!.source).toBeNull();            // source 不設 manual — no_travel=1 自足當 recompute skip 訊號
+    expect(u!.computed_at).not.toBeNull();   // 防前端 stale chip
+    expect(u!.mode).toBe('driving');          // mode 有 NOT NULL CHECK → 不動、保留
+  });
+
+  it('N2 恢復交通：先免交通、再 PATCH {mode:driving} → no_travel 清成 NULL', async () => {
+    segId = await seedSeg({ mode: 'driving', min: null, source: 'manual', noTravel: 1 });
+    expect((await patch({ mode: 'driving' })).status).toBe(200);
+    expect((await readSeg())!.no_travel).toBeNull();
+  });
+
+  it('N3 免交通不需 mode：PATCH {noTravel:true} 不帶 mode → 200（繞過 mode 驗證）', async () => {
+    segId = await seedSeg({ mode: 'walking', min: 8, source: 'google' });
+    expect((await patch({ noTravel: true })).status).toBe(200);
+    expect((await readSeg())!.no_travel).toBe(1);
+  });
+});

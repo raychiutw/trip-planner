@@ -1142,7 +1142,9 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
                     min: segment.min,
                     distanceM: segment.distanceM,
                     computedAt: segment.computedAt,
+                    noTravel: segment.noTravel,
                   } : undefined}
+                  sameplace={travelObj?.sameplace || undefined}
                   missing={pairMissing || undefined}
                   missingCoords={pairMissingCoords || undefined}
                   recomputeStalled={recomputeStalled || undefined}

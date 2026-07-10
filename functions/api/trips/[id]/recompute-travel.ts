@@ -64,6 +64,8 @@ interface ExistingSegment {
   mode: string;
   submode: string | null;
   source: string | null;
+  /** v2.55.46: 1 = 同一地點/免交通 → recompute 跳過不覆寫（同 source='manual' lock）。 */
+  no_travel: number | null;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -103,7 +105,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Pre-load 既有 segments（單一 SELECT 省 N 次 per-pair query）
   const existingRes = await db
-    .prepare('SELECT id, from_entry_id, to_entry_id, mode, submode, source FROM trip_segments WHERE trip_id = ?')
+    .prepare('SELECT id, from_entry_id, to_entry_id, mode, submode, source, no_travel FROM trip_segments WHERE trip_id = ?')
     .bind(tripId)
     .all<ExistingSegment>();
   const existingMap = new Map<string, ExistingSegment>();
@@ -177,8 +179,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
 
       const existing = existingMap.get(pairKey);
-      // 使用者鎖定值（手填 / 手動覆寫）→ 一律不覆寫（source='manual' 為鎖定旗標）。
-      if (existing && existing.source === 'manual') {
+      // 一律不覆寫：使用者手填/覆寫鎖定（source='manual'）或標記「同一地點/免交通」（no_travel=1）。
+      // 兩個訊號都 load-bearing 非冗餘：no_travel 段 source 不設 'manual'（POST/PATCH 存 NULL），
+      // 且 import 可產生 no_travel=1 + 非 manual source → no_travel===1 是此類段唯一的 skip 訊號。
+      if (existing && (existing.source === 'manual' || existing.no_travel === 1)) {
         pairsSkippedTransit++;
         continue;
       }
@@ -299,14 +303,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
            source = 'google',
            computed_at = excluded.computed_at,
            updated_at = excluded.updated_at
-         WHERE trip_segments.source IS NOT 'manual'`,
+         WHERE trip_segments.source IS NOT 'manual' AND trip_segments.no_travel IS NOT 1`,
       ).bind(s.tripId, s.from, s.to, s.mode, s.min, s.distM, s.now, s.now)),
       // driving/walking UPDATE guard source IS NOT 'manual'（同上，保護使用者鎖定值）。
       ...segmentUpdates.map((s) => db.prepare(
         `UPDATE trip_segments
          SET mode = ?, submode = NULL, min = ?, distance_m = ?,
              source = 'google', computed_at = ?, updated_at = ?
-         WHERE id = ? AND source IS NOT 'manual'`,
+         WHERE id = ? AND source IS NOT 'manual' AND no_travel IS NOT 1`,
       ).bind(s.mode, s.min, s.distM, s.now, s.now, s.id)),
       // v2.55.45: transit 自動方式（monorail/bus）重算 — 帶 submode + 各自 source
       // （monorail=haversine、bus=google）。guard 同 source IS NOT 'manual'。
@@ -314,7 +318,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         `UPDATE trip_segments
          SET mode = 'transit', submode = ?, min = ?, distance_m = ?,
              source = ?, computed_at = ?, updated_at = ?
-         WHERE id = ? AND source IS NOT 'manual'`,
+         WHERE id = ? AND source IS NOT 'manual' AND no_travel IS NOT 1`,
       ).bind(s.submode, s.min, s.distM, s.source, s.now, s.now, s.id)),
     ];
     await db.batch(stmts);

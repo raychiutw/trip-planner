@@ -1261,6 +1261,55 @@ describe('Segment recompute trigger', () => {
     expect(seg!.computed_at).toBeNull();
     expect(seg!.updated_at).toBeGreaterThan(0);
   });
+
+  // v2.55.46 Finding D: 端點 POI 真的換掉 → 「同一地點/免交通」前提失效 → 清 no_travel 讓它重算。
+  it('master swap → 相鄰 no_travel 段清成 NULL（端點變了，同一地點前提失效）', async () => {
+    const dayId = await getDayId(db, TRIP_ID, 1);
+    const p1 = await seedPoi(db, { name: 'NT-P1', type: 'attraction' });
+    const p2 = await seedPoi(db, { name: 'NT-P2', type: 'attraction' });
+    const altP = await seedPoi(db, { name: 'NT-Alt', type: 'attraction' });
+    const e1 = await seedEntry(db, dayId, { poiId: p1 });
+    const e2 = await seedEntry(db, dayId, { poiId: p2, sortOrder: 2 });
+    await db.batch([
+      db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(e2, altP),
+      // 同一地點段：no_travel=1、min/source NULL（POST/PATCH 不變式）
+      db.prepare("INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, no_travel) VALUES (?, ?, ?, 'walking', 1)").bind(TRIP_ID, e1, e2),
+    ]);
+    const resp = await callHandler(masterPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${e2}/master`, 'PATCH', { poiId: altP }),
+      env, auth: mockAuth({ email: USER_EMAIL }), params: { id: TRIP_ID, eid: String(e2) },
+    }));
+    expect(resp.status).toBe(200);
+    const seg = await db
+      .prepare('SELECT no_travel, computed_at FROM trip_segments WHERE from_entry_id = ? AND to_entry_id = ?')
+      .bind(e1, e2)
+      .first<{ no_travel: number | null; computed_at: string | null }>();
+    expect(seg!.no_travel).toBeNull();   // 端點換了 → 清 no_travel，recompute 可重算
+    expect(seg!.computed_at).toBeNull();
+  });
+
+  it('no-op setMaster（poiId 沒變）→ no_travel 保留（同一地點前提仍成立）', async () => {
+    const dayId = await getDayId(db, TRIP_ID, 1);
+    const p1 = await seedPoi(db, { name: 'NT2-P1', type: 'attraction' });
+    const p2 = await seedPoi(db, { name: 'NT2-P2', type: 'attraction' });
+    const e1 = await seedEntry(db, dayId, { poiId: p1 });
+    const e2 = await seedEntry(db, dayId, { poiId: p2, sortOrder: 2 });
+    await db
+      .prepare("INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, no_travel) VALUES (?, ?, ?, 'walking', 1)")
+      .bind(TRIP_ID, e1, e2)
+      .run();
+    // setMaster 帶「現有 master」→ 走 no-op drift-repair 路徑（POI 未變）
+    const resp = await callHandler(masterPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${TRIP_ID}/entries/${e2}/master`, 'PATCH', { poiId: p2 }),
+      env, auth: mockAuth({ email: USER_EMAIL }), params: { id: TRIP_ID, eid: String(e2) },
+    }));
+    expect(resp.status).toBe(200);
+    const seg = await db
+      .prepare('SELECT no_travel FROM trip_segments WHERE from_entry_id = ? AND to_entry_id = ?')
+      .bind(e1, e2)
+      .first<{ no_travel: number | null }>();
+    expect(seg!.no_travel).toBe(1);   // POI 沒變 → 同一地點標記保留
+  });
 });
 
 // ============================================================================

@@ -127,8 +127,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       const from = posToEntryId.get(s.fromEntryIdx);
       const to = posToEntryId.get(s.toEntryIdx);
       if (from === undefined || to === undefined) continue;
-      E.push(db.prepare('INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, version) VALUES (?,?,?,?,?,?,?,?,?,0)')
-        .bind(tripId, from, to, s.mode, s.submode, s.min, s.distanceM, s.source, s.source === 'google' ? Date.now() : null));
+      E.push(db.prepare('INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, version, no_travel) VALUES (?,?,?,?,?,?,?,?,?,0,?)')
+        .bind(tripId, from, to, s.mode, s.submode, s.min, s.distanceM, s.source, s.source === 'google' ? Date.now() : null, s.noTravel ?? null));
     }
     await runChunked(db, E);
 

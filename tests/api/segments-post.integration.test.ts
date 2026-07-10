@@ -203,4 +203,19 @@ describe('POST /api/trips/:id/segments', () => {
     });
     expect((await callHandler(onRequestPost, ctx)).status).toBe(403);
   });
+
+  it('N-POST 同一地點/免交通：POST {noTravel:true}（不帶 mode）→ 201 + no_travel=1 + min/dist/source NULL', async () => {
+    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, noTravel: true }));
+    expect(resp.status).toBe(201);
+    const body = await resp.json() as Record<string, unknown>;
+    expect(body.noTravel).toBe(1);
+    const row = await db
+      .prepare('SELECT no_travel, "min", distance_m, source FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
+      .bind(e1, e2)
+      .first<{ no_travel: number | null; min: number | null; distance_m: number | null; source: string | null }>();
+    expect(row!.no_travel).toBe(1);
+    expect(row!.min).toBeNull();
+    expect(row!.distance_m).toBeNull();
+    expect(row!.source).toBeNull(); // no_travel=1 自足當 skip 訊號，source 不 overload 成 manual
+  });
 });

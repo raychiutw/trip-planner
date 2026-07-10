@@ -92,7 +92,24 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-caption);
   font-weight: 600;
 }
+/* v2.55.46 同一地點/免交通 marker — 中性 muted、刻意不用 sage（sage=有移動；免交通要 recede）。 */
+.tp-travel-sameplace {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 6px 0 6px 56px;
+  padding: 3px 4px;
+  background: transparent; border: none;
+  color: var(--color-muted);
+  font: inherit; font-size: var(--font-size-caption2);
+  font-weight: 600; letter-spacing: 0.02em;
+}
+.tp-travel-sameplace .svg-icon { width: 13px; height: 13px; opacity: 0.7; }
+.tp-travel-sameplace.is-interactive { cursor: pointer; transition: color 120ms; }
+.tp-travel-sameplace.is-interactive:hover { color: var(--color-foreground); }
+.tp-travel-sameplace.is-interactive:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-sm);
+}
 @media (max-width: 760px) {
+  .tp-travel-sameplace { margin-left: 44px; }
   /* v2.30.12: mobile dot 中心 56→44px (page padding 16 + grip 20 + gap 8 + dot/2 12 — 對齊 .tp-rail-detail mobile margin-left). */
   .tp-travel-pill-wrap { margin: 6px 0 6px 44px; }
   .tp-travel-pill {
@@ -150,6 +167,8 @@ export interface TravelPillSegment {
    * 數字 = 算過的 epoch ms。
    */
   computedAt: number | null;
+  /** v2.55.46: 1 = 同一地點/免交通 → 收合成「同一地點」marker 取代 pill。 */
+  noTravel: number | null;
 }
 
 export interface TravelPillProps {
@@ -185,6 +204,13 @@ export interface TravelPillProps {
    */
   recomputeStalled?: boolean;
   tripId?: string;
+  /**
+   * v2.55.46:「同一地點」訊號，來自 day payload 的 travel.sameplace（mapDay）。與 segment.noTravel
+   * 並存的原因是 fetch-ordering：TimelineRail 的 day payload 常先到、useTripSegments hook 尚未 settle
+   * → 這段窗口用 sameplace prop 就能收合，不會先閃一下壞掉的 pill。任一為真 → 收合成「同一地點」。
+   * （列印/分享面不經 TravelPill，走 tripPrintData.formatTravelLine。）
+   */
+  sameplace?: boolean;
   /** 顯示在 dialog title 旁的 from→to entry 名稱（optional） */
   fromName?: string | null;
   toName?: string | null;
@@ -218,10 +244,59 @@ export default function TravelPill({
   missingCoords,
   recomputeStalled,
   tripId,
+  sameplace,
   fromName,
   toName,
 }: TravelPillProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // v2.55.46: 同一地點/免交通 dialog（互動 timeline 用 segment.noTravel，唯讀面用 sameplace prop）。
+  const dialogEl = dialogOpen && segment && tripId ? (
+    <TravelPillDialog
+      tripId={tripId}
+      segmentId={segment.id}
+      currentMode={segment.mode}
+      currentSubmode={segment.submode}
+      currentMin={segment.min}
+      currentSource={segment.source}
+      currentNoTravel={segment.noTravel}
+      distanceM={segment.distanceM}
+      fromName={fromName}
+      toName={toName}
+      onClose={() => setDialogOpen(false)}
+    />
+  ) : null;
+
+  // 同一地點/免交通 → 收合成 muted marker（取代 pill、跳過 stale/空值邏輯）。
+  // 互動（segment+tripId）→ button 開 dialog 改回交通方式；否則靜態渲染。
+  if (segment?.noTravel === 1 || sameplace === true) {
+    const spInteractive = !!segment && !!tripId;
+    const spInner = (
+      <>
+        <Icon name="location-pin" />
+        <span>同一地點</span>
+      </>
+    );
+    return (
+      <>
+        <style>{SCOPED_STYLES}</style>
+        {spInteractive ? (
+          <button
+            type="button"
+            className="tp-travel-sameplace is-interactive"
+            onClick={() => setDialogOpen(true)}
+            aria-label="同一地點・免交通（點擊變更）"
+            data-testid="travel-sameplace"
+          >
+            {spInner}
+          </button>
+        ) : (
+          <span className="tp-travel-sameplace" data-testid="travel-sameplace">{spInner}</span>
+        )}
+        {dialogEl}
+      </>
+    );
+  }
 
   // v2.29.1 stale 偵測：純看 segment.computedAt — backend mark stale 時設 NULL，
   // self-healing recompute 完成後寫回 epoch ms。stale 時不顯示舊 min/distance，只渲染
@@ -321,20 +396,7 @@ export default function TravelPill({
         )}
         {staleChip}
       </span>
-      {dialogOpen && segment && tripId && (
-        <TravelPillDialog
-          tripId={tripId}
-          segmentId={segment.id}
-          currentMode={segment.mode}
-          currentSubmode={segment.submode}
-          currentMin={segment.min}
-          currentSource={segment.source}
-          distanceM={segment.distanceM}
-          fromName={fromName}
-          toName={toName}
-          onClose={() => setDialogOpen(false)}
-        />
-      )}
+      {dialogEl}
     </>
   );
 }

@@ -35,6 +35,8 @@ export interface TravelData {
   min?: number | null;
   /** Driving distance in meters (Google Routes API). NULL for legacy entries. */
   distanceM?: number | null;
+  /** v2.55.46: true = 同一地點/免交通 → 收合成「同一地點」marker（唯讀/列印面用）。 */
+  sameplace?: boolean;
   /** Legacy alias kept for backwards compat — map source still emits `text`. */
   text?: string | null;
 }

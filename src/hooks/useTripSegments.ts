@@ -30,6 +30,8 @@ export interface TripSegment {
   source: string | null;
   computedAt: number | null;
   updatedAt: number | null;
+  /** v2.55.46: 1 = 同一地點/免交通（收合此段）；null = 正常交通段。 */
+  noTravel: number | null;
 }
 
 export function useTripSegments(tripId: string | null | undefined) {

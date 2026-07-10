@@ -26,6 +26,8 @@ type SegmentRow = {
   source: string | null;
   computed_at: number | null;
   updated_at: number | null;
+  /** v2.55.46: 1 = 同一地點/免交通 → travel 吐 sameplace marker、收合此段。 */
+  no_travel: number | null;
 };
 
 /**
@@ -39,7 +41,7 @@ export async function fetchTripSegmentsMap(
   const map = new Map<number, SegmentRow>();
   const { results } = await db
     .prepare(
-      `SELECT from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at
+      `SELECT from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at, no_travel
        FROM trip_segments WHERE trip_id = ?`,
     )
     .bind(tripId)
@@ -266,12 +268,17 @@ export function assembleDay(deps: AssembleDayDeps): Record<string, unknown> {
     // Pre-cutover: travel 從 entry.travel_* cols 取。Phase 2 完成後改 segments 為唯一 source。
     // Frontend 仍 expect { type, desc, min, distance_m, source } shape。
     const segment = segmentsMap.get(eid);
+    const isSamePlace = segment != null && segment.no_travel === 1;
     const travel = segment
       ? {
-          type: segment.mode === 'driving' ? 'car' : segment.mode === 'walking' ? 'walk' : segment.mode,
+          // v2.55.46: 同一地點/免交通 → type=null（不吐假 mode；否則 travel blob 會同時帶
+          // type:'walk' + sameplace:true 矛盾，未來若有 consumer 沒先判 sameplace 會誤顯步行）。
+          type: isSamePlace ? null : (segment.mode === 'driving' ? 'car' : segment.mode === 'walking' ? 'walk' : segment.mode),
           // v2.55.45: submode surface 到 read path（days?all / 分享列印），讓唯讀/列印面
           // 也能顯示單軌/公車等具體方式而非 generic「大眾運輸」。非 transit → null。
           submode: segment.mode === 'transit' ? segment.submode : null,
+          // v2.55.46: 同一地點/免交通 → 讓唯讀/列印/分享面收合成「同一地點」而非顯示車程。
+          sameplace: isSamePlace,
           desc: null as string | null,
           min: segment.min,
           distance_m: segment.distance_m,

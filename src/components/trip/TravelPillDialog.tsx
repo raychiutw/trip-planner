@@ -140,6 +140,31 @@ const SCOPED_STYLES = `
   background: var(--color-background); color: var(--color-foreground);
 }
 .tp-travel-dialog-btn:hover { background: var(--color-hover); }
+
+/* v2.55.46 同一地點/免交通 — 中性整列，與交通方式晶片視覺區隔（非柔褐/ sage 選取態）。 */
+.tp-travel-sameplace-sep {
+  display: flex; align-items: center; gap: 10px;
+  margin: 13px 2px 0; color: var(--color-muted); font-size: var(--font-size-caption);
+}
+.tp-travel-sameplace-sep::before, .tp-travel-sameplace-sep::after {
+  content: ""; height: 1px; flex: 1; background: var(--color-border);
+}
+.tp-travel-sameplace-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  margin-top: 10px; padding: 11px 12px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-background);
+  font: inherit; text-align: left; cursor: pointer; color: var(--color-foreground);
+  min-height: var(--spacing-tap-min, 44px);
+}
+.tp-travel-sameplace-row:hover { background: var(--color-hover); }
+.tp-travel-sameplace-row.is-selected { background: var(--color-hover); border-color: var(--color-line-strong); }
+.tp-travel-sameplace-row > .svg-icon { width: 18px; height: 18px; color: var(--color-muted); flex-shrink: 0; }
+.tp-travel-sameplace-row-txt b { font-size: var(--font-size-body); font-weight: 700; display: block; }
+.tp-travel-sameplace-row-txt span { font-size: var(--font-size-caption); color: var(--color-muted); }
+.tp-travel-sameplace-row-check { margin-left: auto; color: var(--color-foreground); display: inline-flex; }
+.tp-travel-sameplace-row-check .svg-icon { width: 18px; height: 18px; }
+.tp-travel-sameplace-hint { margin: 12px 2px 0; font-size: var(--font-size-footnote); color: var(--color-muted); }
 `;
 
 export interface TravelPillDialogProps {
@@ -151,6 +176,8 @@ export interface TravelPillDialogProps {
   currentMin?: number | null;
   /** v2.55.45: 'manual' = 手填/手動覆寫鎖定；其餘（google/haversine）= 自動。 */
   currentSource?: string | null;
+  /** v2.55.46: 1 = 目前標記為「同一地點/免交通」。 */
+  currentNoTravel?: number | null;
   currentVersion?: number;
   distanceM?: number | null;
   fromName?: string | null;
@@ -163,7 +190,12 @@ interface SegmentPatchBody {
   mode: TravelMode;
   submode?: string | null;
   min?: number;
+  /** v2.55.46: true = 標記同一地點/免交通（後端繞過 mode/min、收合此段）。 */
+  noTravel?: boolean;
 }
+
+/** selectedKey 的特殊值（非 TRAVEL_METHODS key）：標記「同一地點/免交通」。 */
+const SAMEPLACE_KEY = 'sameplace';
 
 function formatKm(m: number): string {
   if (m >= 1000) return `${(m / 1000).toFixed(1)} km`;
@@ -177,6 +209,7 @@ export default function TravelPillDialog({
   currentSubmode,
   currentMin,
   currentSource,
+  currentNoTravel,
   currentVersion,
   distanceM,
   fromName,
@@ -184,7 +217,10 @@ export default function TravelPillDialog({
   onClose,
   onSaved,
 }: TravelPillDialogProps) {
-  const initialKey = useMemo(() => travelMethodKey(currentMode, currentSubmode), [currentMode, currentSubmode]);
+  const initialKey = useMemo(
+    () => (currentNoTravel === 1 ? SAMEPLACE_KEY : travelMethodKey(currentMode, currentSubmode)),
+    [currentNoTravel, currentMode, currentSubmode],
+  );
 
   const [selectedKey, setSelectedKey] = useState(initialKey);
   const [otherName, setOtherName] = useState(
@@ -204,6 +240,7 @@ export default function TravelPillDialog({
     () => TRAVEL_METHODS.find((m) => m.key === selectedKey) ?? TRAVEL_METHODS[0]!,
     [selectedKey],
   );
+  const isSamePlaceSelected = selectedKey === SAMEPLACE_KEY;
 
   const minNumber = parseInt(minInput, 10);
   const minValid = Number.isFinite(minNumber) && minNumber >= 1 && minNumber <= MAX_SEGMENT_MIN_CLIENT;
@@ -244,6 +281,15 @@ export default function TravelPillDialog({
     autosave.patch({ mode, submode, min });
     void autosave.flush();
   }, [autosave]);
+
+  // v2.55.46: 標記「同一地點/免交通」— 送 noTravel:true（後端繞過 mode/min、no_travel=1、收合）。
+  // 送 currentMode 只為滿足 body type；後端 noTravel 分支忽略 mode/submode/min。選任一方式即清旗標。
+  const submitNoTravel = useCallback(() => {
+    setSelectedKey(SAMEPLACE_KEY);
+    setMinInput('');
+    autosave.patch({ mode: currentMode, submode: null, min: undefined, noTravel: true });
+    void autosave.flush();
+  }, [autosave, currentMode]);
 
   // 手填 commit（min input / 方式名 input 的 onBlur 共用）：組 submode（其他＝自由文字名）
   // + min 送出；自動方式帶 min 即手動覆寫鎖定。無效 min / 其他缺方式名 → 不送。
@@ -351,6 +397,30 @@ export default function TravelPillDialog({
             })}
           </div>
 
+          {/* v2.55.46 同一地點/免交通 — 非交通方式，故在方式格下方獨立整列（中性色，非晶片態）。 */}
+          <div className="tp-travel-sameplace-sep">或</div>
+          <button
+            type="button"
+            className={`tp-travel-sameplace-row ${isSamePlaceSelected ? 'is-selected' : ''}`}
+            onClick={submitNoTravel}
+            aria-pressed={isSamePlaceSelected}
+            data-testid="travel-method-sameplace"
+          >
+            <Icon name="location-pin" />
+            <span className="tp-travel-sameplace-row-txt">
+              <b>同一地點・免交通</b>
+              <span>此段不顯示交通時間</span>
+            </span>
+            {isSamePlaceSelected && (
+              <span className="tp-travel-sameplace-row-check" aria-hidden="true"><Icon name="check" /></span>
+            )}
+          </button>
+
+          {isSamePlaceSelected ? (
+            <p className="tp-travel-sameplace-hint" data-testid="travel-sameplace-hint">
+              兩地視為同一處，不計交通時間。選上方任一方式即可恢復。
+            </p>
+          ) : (
           <div className="tp-travel-detail">
             {/* 自動方式：計算明細 + 鎖定/恢復 */}
             {m.auto && (
@@ -410,6 +480,7 @@ export default function TravelPillDialog({
               </span>
             </div>
           </div>
+          )}
 
           <div className="tp-travel-dialog-footer">
             <button

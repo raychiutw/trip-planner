@@ -253,11 +253,15 @@ export async function setMaster(
   // convention) instead of strftime('%s') seconds — mixing scales made the
   // "bumped updated_at" signal move backward when this UPDATE ran right after
   // a recompute, breaking refetch detection.
+  // v2.55.46: master POI 真的換掉（swap path，非上面的 no-op drift-repair）→ 端點變了，
+  // 「同一地點/免交通」前提失效 → 一併清 no_travel=NULL，讓 recompute 重新計算此段
+  // （否則 recompute 見 no_travel=1 永久跳過、繼續顯示對已不同地點的「同一地點」）。
+  // 取捨：若只是重選「同機場另一航廈」這種仍同地點的 POI，會被重算成短程開車 → 需再標一次。
   const segUpdatedAt = Date.now();
   statements.push(
     db
       .prepare(
-        `UPDATE trip_segments SET computed_at = NULL, updated_at = ?
+        `UPDATE trip_segments SET computed_at = NULL, no_travel = NULL, updated_at = ?
          WHERE from_entry_id = ? OR to_entry_id = ?`,
       )
       .bind(segUpdatedAt, entryId, entryId),
