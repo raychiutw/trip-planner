@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.55] - 2026-07-11
+
+### Fixed
+- **Sentry 效能事件漏過濾合成流量（daily-check 誤報「Large Render Blocking Asset」）** — `src/lib/sentry.ts` 的 `beforeSend` 只過濾 error events 的 HeadlessChrome/localhost 噪音，但 pageload/performance transaction events 走的是 `beforeSendTransaction` hook（原本未設）。我們自己的合成監控（browse / canary / route-health HeadlessChrome）打的 `/signup` 等 pageload transaction 全數灌進 Sentry，累積成 issue 7578052505「Large Render Blocking Asset」（17 events 中 16 為 HeadlessChrome、0 真實 user 受影響；render-blocking asset 實為 220KB 的 react/react-dom/react-router 核心 vendor bundle，首屏必要無法 code-split）。修法：加 `beforeSendTransaction` 複用同一組 `isNoiseEvent` 判斷（型別放寬為基底 `Event`；transaction 無 `exception` → SW-noise 分支自然 no-op，只走 url/UA/browser.name 環境檢查）。真實使用者不會 match localhost 或 headless UA，不影響正常效能監控。
+
 ## [2.55.54] - 2026-07-11
 
 ### Added

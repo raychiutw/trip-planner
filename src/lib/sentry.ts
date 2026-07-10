@@ -1,4 +1,10 @@
-import { init, browserTracingIntegration, type ErrorEvent as SentryErrorEvent, type EventHint } from '@sentry/react';
+import {
+  init,
+  browserTracingIntegration,
+  type ErrorEvent as SentryErrorEvent,
+  type Event as SentryEvent,
+  type EventHint,
+} from '@sentry/react';
 
 // VITE_SENTRY_DSN is set via Cloudflare Pages environment variable.
 // CSP connect-src in all HTML files includes https://*.ingest.us.sentry.io.
@@ -21,7 +27,14 @@ const SW_REGISTER_NOISE_RE =
 // react-day-picker hooks mismatch under prod-mode minification) that never
 // surface for real users on trip-planner-dby.pages.dev. Real Chrome on the
 // live host stays untouched.
-export function isNoiseEvent(event: SentryErrorEvent): boolean {
+//
+// Accepts both error and transaction events (base SentryEvent): our synthetic
+// monitoring (browse / canary / route-health HeadlessChrome) also emits pageload
+// transactions, which pile up into false "Large Render Blocking Asset"
+// performance issues (16/17 events were HeadlessChrome). Transaction events carry
+// no `exception`, so the SW-noise branch simply no-ops for them — only the
+// localhost/UA/browser.name environment checks apply there.
+export function isNoiseEvent(event: SentryEvent): boolean {
   const url = event.request?.url ?? '';
   if (url && LOCALHOST_URL_RE.test(url)) return true;
   const ua = event.request?.headers?.['User-Agent'] ?? '';
@@ -59,6 +72,14 @@ export function initSentry(): void {
     tracesSampleRate: 0.1,
     // Session Replay is intentionally disabled to conserve free quota.
     beforeSend(event: SentryErrorEvent, _hint: EventHint) {
+      return isNoiseEvent(event) ? null : event;
+    },
+    // Same noise filter for performance/transaction events — without this,
+    // HeadlessChrome pageloads accumulate into false "Large Render Blocking
+    // Asset" issues (the vendor bundle is React core, unavoidable at first paint).
+    // `event` is contextually typed as TransactionEvent; isNoiseEvent takes the
+    // base Event supertype, so `return event` stays a TransactionEvent.
+    beforeSendTransaction(event, _hint: EventHint) {
       return isNoiseEvent(event) ? null : event;
     },
   });
