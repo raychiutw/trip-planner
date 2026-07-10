@@ -72,7 +72,7 @@ export interface NImportHotel {
   address: string | null; placeId: string | null; note: string | null;
 }
 export interface NImportDay {
-  dayNum: number; date: string; dayOfWeek: string; label: string; title: string | null;
+  dayNum: number; date: string; dayOfWeek: string; label: string;
   entries: NImportEntry[];
   hotel: NImportHotel | null;
 }
@@ -286,7 +286,6 @@ export function parseAndValidateImport(raw: unknown): ImportResult {
       date: str(d.date, 20),
       dayOfWeek: str(d.dayOfWeek, 20),
       label: str(d.label, 200),
-      title: strOrNull(d.title, 200),
       entries,
       hotel: normHotel(d.hotel),
     });

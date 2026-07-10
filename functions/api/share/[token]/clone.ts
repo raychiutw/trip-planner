@@ -80,7 +80,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     db.prepare('SELECT name, title, description, countries, lang FROM trips WHERE id = ?').bind(src)
       .first<{ name: string | null; title: string | null; description: string | null; countries: string | null; lang: string | null }>(),
     db.prepare('SELECT name, lat, lng, day_quota, sub_areas FROM trip_destinations WHERE trip_id = ? ORDER BY dest_order ASC').bind(src).all(),
-    db.prepare('SELECT id, day_num, date, day_of_week, label, title FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC').bind(src).all(),
+    db.prepare('SELECT id, day_num, date, day_of_week, label FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC').bind(src).all(),
     // migration 0078: trip_entries.note DROPPED — 不再 SELECT e.note（保留會在 DROP 後
     // "no such column"）。per-POI 備註從 epR 的 tep.note 帶過去（見下方 trip_entry_pois copy）。
     db.prepare('SELECT e.id, e.day_id, e.sort_order, e.start_time, e.end_time, e.description, e.source FROM trip_entries e JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ? ORDER BY e.day_id ASC, e.sort_order ASC').bind(src).all(),
@@ -134,8 +134,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const dayIdMap = new Map<number, number>();
     await runChunked(
       db,
-      srcDays.map((d) => db.prepare('INSERT INTO trip_days (trip_id, day_num, date, day_of_week, label, title) VALUES (?,?,?,?,?,?) RETURNING id')
-        .bind(tripId, d.day_num, d.date, d.day_of_week, d.label, d.title)),
+      srcDays.map((d) => db.prepare('INSERT INTO trip_days (trip_id, day_num, date, day_of_week, label) VALUES (?,?,?,?,?) RETURNING id')
+        .bind(tripId, d.day_num, d.date, d.day_of_week, d.label)),
       (r, idx) => dayIdMap.set(srcDays[idx]!.id as number, reqId(r, '複製寫入失敗')),
     );
 

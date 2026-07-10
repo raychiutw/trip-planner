@@ -10,10 +10,10 @@ const MS_PER_DAY = 86_400_000;
 
 /**
  * GET /api/trips/:id/days
- * - 預設：回傳 days summary list（id, day_num, date, day_of_week, label, title）
+ * - 預設：回傳 days summary list（id, day_num, date, day_of_week, label）
  * - `?all=1`：回傳完整 days 陣列（含 hotel + timeline + POI），解決前端 N+1
  *
- * Section 4.3 (terracotta-mockup-parity-v2)：summary 加 `title` 欄。
+ * v2.55.49：每日 custom title（trip_days.title）移除 — 欄位停用，Phase 2 才 DROP COLUMN。
  *
  * v2.29.0: trip_pois 整表 drop。Hotel ← trip_days.hotel_poi_id，entry POIs ← trip_entry_pois，
  * travel ← trip_segments。Parking ← poi_relations(relation_type='parking')。
@@ -28,7 +28,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   if (!all) {
     const { results } = await db
-      .prepare('SELECT id, day_num, date, day_of_week, label, title FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC')
+      .prepare('SELECT id, day_num, date, day_of_week, label FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC')
       .bind(id)
       .all();
     return json(results);
@@ -51,7 +51,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
  *
  * Auth: trip write permission（owner / member; viewer 拒）。
  *
- * Returns { day: { id, day_num, date, day_of_week, label, title } }.
+ * Returns { day: { id, day_num, date, day_of_week, label } }.
  */
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
@@ -180,7 +180,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       date: newDate,
       day_of_week: dayOfWeek,
       label: '',
-      title: null,
     },
   });
 };

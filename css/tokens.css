@@ -592,11 +592,6 @@ body.dark {
         content: "·"; margin: 0 2px 0 6px; opacity: 0.4;
     }
     .tp-hero-chip:last-child::after { content: none; }
-    .tp-hero-chip-muted {
-        padding: 0;
-        font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit;
-        color: color-mix(in srgb, var(--color-accent-foreground) 82%, transparent);
-    }
     .tp-hero-title {
         /* mockup .tp-detail-hero-title:1840 — desktop 28px, mobile 24px */
         font-size: 24px; font-weight: 700; margin: 0 0 6px;
@@ -901,7 +896,7 @@ body.dark {
     /* Print mode */
     body.print-mode .tp-hero { background: var(--color-background) !important; color: var(--color-foreground) !important; border: 1px solid var(--color-border); }
     body.print-mode .tp-hero-title { color: var(--color-foreground); }
-    body.print-mode .tp-hero-chip, body.print-mode .tp-hero-chip-muted { border-color: var(--color-border); color: var(--color-muted); }
+    body.print-mode .tp-hero-chip { border-color: var(--color-border); color: var(--color-muted); }
 }
 
 /* .map-highlight + @keyframes map-highlight-pulse 已 orphan 整批刪除 (git blame for date). */
