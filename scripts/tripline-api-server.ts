@@ -16,7 +16,8 @@ import { join } from 'path';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { makeMailHandler } from './lib/mailer-handler';
 import { computeNextDailyFire } from './lib/schedule-daily';
-import { throttledAlert } from './_lib/cron-shared';
+import { waitForRepl, submitSkillCommand, type TmuxDeps } from './lib/tmux-pane';
+import { throttledAlert, sleep } from './_lib/cron-shared';
 
 // --- Load .env.local ---
 // v2.33.51 round 8c: 統一 parser — 之前 inline 邏輯不 strip 外 quote，跟
@@ -214,6 +215,16 @@ function hasActiveSession(skillCommand: string): string | null {
   return null;
 }
 
+// v2.55.52: tmux 副作用注入 ./lib/tmux-pane 的 orchestration（waitForRepl /
+// submitSkillCommand），讓 incident 修正邏輯可 behavioral test。capture 失敗回 ''
+// → readiness / submit poll 自然重試；sendKeys 吞 status（效果由後續 capture 驗證）。
+const tmuxDeps: TmuxDeps = {
+  capture: (s) => spawnSync(TMUX_BIN, ['capture-pane', '-t', s, '-p'], { encoding: 'utf-8' }).stdout || '',
+  sendKeys: (s, keys) => { spawnSync(TMUX_BIN, ['send-keys', '-t', s, keys], { encoding: 'utf-8' }); },
+  sleep,
+  log,
+};
+
 async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
   // v2.33.49 round 8a: enforce allowlist at every entry point — defense in
   // depth (sessionPrefixForSkill also asserts but defensive double-gate).
@@ -259,14 +270,16 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
     return false;
   }
 
-  // 等 claude REPL 啟動（plugin sync / CLAUDE.md load）。2.5s 是經驗值；起太早
-  // send-keys 可能輸入丟失。
-  await new Promise(r => setTimeout(r, 2500));
+  // v2.55.52: 等 REPL 就緒（取代硬編碼 2.5s；boot 變慢會丟失早送的 skill command）。
+  if (!(await waitForRepl(tmuxDeps, sessionName))) {
+    logError(`claude REPL 未在時限內就緒，kill session: ${sessionName}`);
+    spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
+    return false;
+  }
 
-  // 送 skill command 給 claude（預設 /tp-request；v2.31.3 起支援多 skill 排程）
-  const send = spawnSync(TMUX_BIN, ['send-keys', '-t', sessionName, skillCommand, 'Enter'], { encoding: 'utf-8' });
-  if (send.status !== 0) {
-    logError(`tmux send-keys failed: ${send.stderr || ''}`);
+  // 送 skill command（type → poll 落地 → 單獨 Enter → poll 提交，防 slash autocomplete 吞 Enter）
+  if (!(await submitSkillCommand(tmuxDeps, sessionName, skillCommand))) {
+    logError(`skill command 未能提交，kill session: ${sessionName}`);
     spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
     return false;
   }
