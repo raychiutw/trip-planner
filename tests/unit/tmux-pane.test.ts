@@ -89,14 +89,22 @@ describe('readPromptState — 最後 prompt 行三態判讀', () => {
   });
 });
 
-describe('waitForRepl — poll 到狀態列渲染才算就緒', () => {
-  it('marker 於第 2 次 poll 出現 → true', async () => {
-    const { deps } = makeDeps([PANE_BOOTING, PANE_PENDING /* 含 marker */]);
+describe('waitForRepl — 就緒訊號（狀態列 或 input prompt 任一）', () => {
+  it('狀態列 marker 於第 2 次 poll 出現 → true', async () => {
+    const { deps } = makeDeps([PANE_BOOTING, PANE_PENDING /* 含 marker + ❯ */]);
     expect(await waitForRepl(deps, 's')).toBe(true);
   });
 
-  it('marker 一直不出現（20 次）→ false', async () => {
-    const { deps } = makeDeps([PANE_BOOTING]);
+  it('v2.55.53：input prompt ❯ 先出現（狀態列還沒渲染）→ true（cold boot 提早偵測）', async () => {
+    // cold boot：MCP auth 檢查延後狀態列，但 input prompt 已可收輸入
+    const promptOnly = '───── tripline-tp-request-1 ──\n❯\n─────\n  trip-planner | master';
+    expect(promptOnly.includes('bypass permissions')).toBe(false); // 證明無狀態列 marker
+    const { deps } = makeDeps([PANE_BOOTING, promptOnly]);
+    expect(await waitForRepl(deps, 's')).toBe(true);
+  });
+
+  it('狀態列與 ❯ 都不出現（純 boot 畫面）→ false', async () => {
+    const { deps } = makeDeps([PANE_BOOTING]); // 無 marker、無 ❯
     expect(await waitForRepl(deps, 's')).toBe(false);
   });
 
