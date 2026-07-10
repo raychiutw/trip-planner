@@ -36,7 +36,6 @@
 
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 const { execSync } = require('child_process');
 
 // Load .env.local if present
@@ -64,43 +63,9 @@ if (!CF_TOKEN || !CF_ACCOUNT || !D1_DB) {
 
 // v2.33.29: 改用 shared scripts/lib/d1-client (returns rows for SELECT).
 const { queryD1, execD1 } = require('./lib/d1-client');
-
-/** Generate base32 secret (matches /api/dev/apps tps_ format) */
-function generateClientSecret() {
-  const bytes = crypto.randomBytes(32);
-  const alphabet = 'abcdefghijklmnopqrstuvwxyz234567';
-  let bits = 0;
-  let value = 0;
-  let result = '';
-  for (let i = 0; i < bytes.length; i++) {
-    value = (value << 8) | bytes[i];
-    bits += 8;
-    while (bits >= 5) {
-      result += alphabet[(value >>> (bits - 5)) & 31];
-      bits -= 5;
-    }
-  }
-  if (bits > 0) result += alphabet[(value << (5 - bits)) & 31];
-  return `tps_${result}`;
-}
-
-/**
- * PBKDF2-SHA256 — matches src/server/password.ts ITERATIONS (currently 100,000;
- * sized for CF Workers Free 10ms CPU budget — see password.ts comment for the
- * "bump back to 600k after Workers Paid plan" upgrade path).
- *
- * MUST stay in sync with `ITERATIONS` in src/server/password.ts. If they
- * diverge, verifyPassword on prod will read iter from the stored hash and
- * run that many iterations — exceeding CPU budget when iter > current ceiling.
- */
-async function hashPassword(plain) {
-  const salt = crypto.randomBytes(16);
-  const iter = 100_000;
-  const hash = crypto.pbkdf2Sync(plain, salt, iter, 32, 'sha256');
-  const b64u = (buf) =>
-    buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `pbkdf2$${iter}$${b64u(salt)}$${b64u(hash)}`;
-}
+// v2.55.54: secret gen + PBKDF2 hash 抽到 shared scripts/lib/oauth-provision（消除與
+// provision-tp-request-client.js 的重複；PBKDF2 iter 對齊 src/server/password.ts）。
+const { generateClientSecret, hashPassword } = require('./lib/oauth-provision');
 
 (async function main() {
   // Look up admin user id
