@@ -58,10 +58,11 @@ describe('G8: fireSchedule processLoop unhandled → throttledAlert', () => {
 });
 
 describe('regression：dedup key 命名一致', () => {
-  it('throttledAlert key 都用 cron-/script-spawn-/script-exit-/script-setup- prefix', () => {
+  it('throttledAlert key 都用 cron-/script-spawn-/script-exit-/script-setup-/usertoken- prefix', () => {
+    // v2.55.54 起加了 usertoken-${kind}（user token 換發失敗 alert）— 併入允許前綴集。
     const keys = Array.from(SRC.matchAll(/throttledAlert\(\s*`([^`]+)`/g)).map((m) => m[1]);
     for (const k of keys) {
-      expect(k).toMatch(/^(cron|script-(spawn|exit|setup))-/);
+      expect(k).toMatch(/^(cron|script-(spawn|exit|setup)|usertoken)-/);
     }
   });
 });
