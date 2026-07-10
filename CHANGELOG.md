@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.53] - 2026-07-11
+
+### Fixed
+- **tp-request cold boot 首次 spawn 失敗（v2.55.52 follow-up）** — v2.55.52 的 `waitForRepl` readiness poll 上限 16s 對 warm boot（~2s）夠，但**冷開機**（長閒置後首次 claude spawn、plugin/MCP 首載）實測 >16s → timeout → kill session → 長閒置後第一筆 tp-request 失敗一次（約 10min 後 cron 暖開機自癒）。實測對照：kickstart 後首次 spawn 16s timeout 失敗、6 分鐘後暖開機 ~2s 成功。修法：(1) `waitForRepl` 上限 16s→90s（warm 一看到就緒訊號就回、不受影響；dead session 仍靠連續空 pane ~4s 早 bail）；(2) 就緒訊號放寬為「狀態列(bypass permissions) 或 input prompt(❯) 任一」— cold boot 下 MCP auth 檢查延後狀態列渲染，但 input prompt 先出現即代表可收輸入 → 提早偵測、不必空等狀態列。
+
 ## [2.55.52] - 2026-07-11
 
 ### Fixed
