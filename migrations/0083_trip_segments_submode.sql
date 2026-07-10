@@ -1,0 +1,24 @@
+-- Migration 0083: trip_segments.submode — 交通「方式」細分（單軌自動算 / 其他自由輸入）
+--
+-- ## Background
+--
+-- mode 只有 driving / walking / transit 三個 canonical（0053 CHECK 約束）。使用者要
+-- 能把一段 transit 標成具體方式：沖繩單軌（後端自動算），或自由輸入的其他方式
+-- （公車 / 地鐵 / 火車 / …，手填時間）。mode 維持 'transit' 不動（不碰 CHECK、不
+-- rebuild table），細分存進新的 nullable submode 欄位：
+--   - submode = 'monorail'  → 沖繩 Yui 單軌，backend 自動算 walk+rail+walk。
+--   - submode = <自由文字>   → 「其他」使用者輸入的方式名（直接當顯示 label），時間手填。
+--   - submode = NULL         → 未細分 transit（大眾運輸）/ driving / walking。
+--
+-- ## Deploy 順序（column add，安全）
+--
+-- 先 apply 本 migration（加 nullable 欄，既有 row 自動 NULL、舊 code 不讀不受影響），
+-- 再 merge 讀寫 submode 的 backend / frontend PR。ADD COLUMN nullable 無 rebuild、
+-- 無 DROP → 不涉 deploy migration DROP-order race（對齊 0072 version 欄先例）。
+--
+-- ## Rollback
+--
+-- SQLite 3.35+（D1）支援 `ALTER TABLE trip_segments DROP COLUMN submode;`。
+-- nullable 欄、無 index / 無 FK 依賴，drop 安全。
+
+ALTER TABLE trip_segments ADD COLUMN submode TEXT;
