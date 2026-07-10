@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.49] - 2026-07-10
+
+### Removed
+- **每日 custom title（`trip_days.title`）下線 — day header 改以日期為主標** — 此欄位的編輯 UI 從未實作（使用者無法修改），保留只造成困惑。移除所有程式碼引用：days summary / buildAllDays payload、import / clone 寫入、audit rollback allowlist、前端 `Day`/`DaySummary` 型別 + `useTrip` 正規化、`DaySection` hero。header 由「custom title（title→區域 label→Day N）+ 區域 chip」改為「`DAY NN` eyebrow + 日期 headline（`2026-07-30（四）`，無日期則 `Day N`）」；區域 label 不再顯示於 header。孤兒 `.tp-hero-chip-muted` CSS 一併移除。
+  - **部署分兩階段（deploy-order 安全）**：本次 Phase 1 只移除程式碼、`trip_days.title` 欄位留著休眠（days summary SELECT 原本明列 `title`，同一次 DROP 會讓部署窗口內舊 code `no such column`）。Phase 2（v2.55.50）確認 Phase 1 上線後才 `DROP COLUMN`。列印/分享面與 hero art（吃 entry 名）本就不用 day title，不受影響。
+
 ## [2.55.48] - 2026-07-10
 
 ### Changed

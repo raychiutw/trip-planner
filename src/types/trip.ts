@@ -223,9 +223,6 @@ export interface Day {
   date?: string | null;
   dayOfWeek?: string | null;
   label?: string | null;
-  /** Section 4.3 (terracotta-mockup-parity-v2)：user-defined day title (e.g.「Day 3 · 美瑛拼布之路」)
-   *  從 trip_days.title 來，nullable。fallback chain: title || label || `Day N` */
-  title?: string | null;
   updatedAt?: string;
   hotel: Hotel | null;
   timeline: Entry[];
@@ -241,8 +238,6 @@ export interface DaySummary {
   date?: string | null;
   dayOfWeek?: string | null;
   label?: string | null;
-  /** Section 4.3：user-defined day title (mirrors Day.title) */
-  title?: string | null;
 }
 
 

@@ -71,8 +71,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // ---- Batch B: days RETURNING id ----
     const dayIds: number[] = [];
     await runChunked(db, data.days.map((d, i) =>
-      db.prepare('INSERT INTO trip_days (trip_id, day_num, date, day_of_week, label, title) VALUES (?,?,?,?,?,?) RETURNING id')
-        .bind(tripId, d.dayNum || i + 1, d.date, d.dayOfWeek, d.label, d.title)),
+      db.prepare('INSERT INTO trip_days (trip_id, day_num, date, day_of_week, label) VALUES (?,?,?,?,?) RETURNING id')
+        .bind(tripId, d.dayNum || i + 1, d.date, d.dayOfWeek, d.label)),
       (r) => dayIds.push(reqId(r)));
 
     // ---- Batch C: entries RETURNING id; build entryPosition → new id ----

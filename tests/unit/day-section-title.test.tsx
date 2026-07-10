@@ -1,119 +1,77 @@
 /**
- * DaySection day title fallback — Section 4.3 (terracotta-mockup-parity-v2)
+ * DaySection day header（v2.55.49）— 每日 custom title（trip_days.title）移除後，
+ * hero 改以「日期為主標」：
+ *   - eyebrow chip 顯示「DAY NN」（補零）
+ *   - hero <h2> 顯示日期「YYYY-MM-DD（週）」，無 date 時 fallback「Day N」
+ *   - custom title 與區域 chip（.tp-hero-chip-muted）皆已移除
  *
- * 驗 hero <h2> 顯示優先順序：
- *   1. day.title (user 命名)
- *   2. daySummary.label (區域名)
- *   3. `Day N` fallback
- *
- * 同 area chip：title === area 時不重複顯示 chip-muted。
+ * （原本測 title || label || Day N 的 fallback chain + area chip，功能已下線。）
  */
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import DaySection from '../../src/components/trip/DaySection';
 import type { Day, DaySummary } from '../../src/types/trip';
 
 function makeDay(overrides: Partial<Day> = {}): Day {
-  return {
-    id: 1,
-    dayNum: 3,
-    timeline: [],
-    hotel: null,
-    ...overrides,
-  };
+  return { id: 1, dayNum: 3, timeline: [], hotel: null, ...overrides };
 }
-
 function makeSummary(overrides: Partial<DaySummary> = {}): DaySummary {
-  return {
-    id: 1,
-    dayNum: 3,
-    ...overrides,
-  };
+  return { id: 1, dayNum: 3, ...overrides };
 }
 
-describe('DaySection day title fallback', () => {
-  it('day.title 存在 → 顯示 title', () => {
-    render(
-      <DndContext><DaySection
+const dnd = (ui: React.ReactElement) => render(<DndContext>{ui}</DndContext>);
+
+describe('DaySection day header（v2.55.49 — 日期為主標）', () => {
+  it('有 date → hero <h2> 顯示日期（含星期）', () => {
+    dnd(
+      <DaySection
         dayNum={3}
-        day={makeDay({ title: '美瑛拼布之路' })}
-        daySummary={makeSummary({ label: '美瑛' })}
-        tripStart="2026-04-26"
-        tripEnd="2026-04-30"
-      /></DndContext>,
+        day={makeDay()}
+        daySummary={makeSummary({ date: '2026-07-30', dayOfWeek: '四' })}
+        tripStart="2026-07-26"
+        tripEnd="2026-07-31"
+      />,
     );
-    const heroTitle = document.querySelector('.tp-hero-title');
-    expect(heroTitle?.textContent).toBe('美瑛拼布之路');
+    expect(document.querySelector('.tp-hero-title')?.textContent).toBe('2026-07-30（四）');
   });
 
-  it('無 title 但有 area label → 顯示 label', () => {
-    render(
-      <DndContext><DaySection
-        dayNum={3}
-        day={makeDay({ title: null })}
-        daySummary={makeSummary({ label: '那霸' })}
-        tripStart="2026-04-26"
-        tripEnd="2026-04-30"
-      /></DndContext>,
-    );
-    const heroTitle = document.querySelector('.tp-hero-title');
-    expect(heroTitle?.textContent).toBe('那霸');
-  });
-
-  it('title + label 都無 → fallback「Day N」', () => {
-    render(
-      <DndContext><DaySection
+  it('無 date → hero <h2> fallback「Day N」', () => {
+    dnd(
+      <DaySection
         dayNum={3}
         day={makeDay()}
         daySummary={makeSummary()}
-        tripStart="2026-04-26"
-        tripEnd="2026-04-30"
-      /></DndContext>,
+        tripStart="2026-07-26"
+        tripEnd="2026-07-31"
+      />,
     );
-    const heroTitle = document.querySelector('.tp-hero-title');
-    expect(heroTitle?.textContent).toBe('Day 3');
+    expect(document.querySelector('.tp-hero-title')?.textContent).toBe('Day 3');
   });
 
-  it('title === area → area chip 不重複渲染', () => {
-    render(
-      <DndContext><DaySection
+  it('eyebrow chip 顯示「DAY 03」（補零、不再含日期）', () => {
+    dnd(
+      <DaySection
         dayNum={3}
-        day={makeDay({ title: '美瑛' })}
-        daySummary={makeSummary({ label: '美瑛' })}
-        tripStart="2026-04-26"
-        tripEnd="2026-04-30"
-      /></DndContext>,
+        day={makeDay()}
+        daySummary={makeSummary({ date: '2026-07-30', dayOfWeek: '四' })}
+        tripStart="2026-07-26"
+        tripEnd="2026-07-31"
+      />,
     );
-    const chips = document.querySelectorAll('.tp-hero-chip-muted');
-    expect(chips.length).toBe(0);
+    expect(document.querySelector('.tp-hero-chip')?.textContent).toBe('DAY 03');
   });
 
-  it('title !== area → area chip 仍渲染', () => {
-    render(
-      <DndContext><DaySection
+  it('custom title 移除後：無區域 chip（.tp-hero-chip-muted）', () => {
+    dnd(
+      <DaySection
         dayNum={3}
-        day={makeDay({ title: '美瑛拼布之路' })}
-        daySummary={makeSummary({ label: '美瑛' })}
-        tripStart="2026-04-26"
-        tripEnd="2026-04-30"
-      /></DndContext>,
+        day={makeDay()}
+        daySummary={makeSummary({ label: '美瑛', date: '2026-07-30', dayOfWeek: '四' })}
+        tripStart="2026-07-26"
+        tripEnd="2026-07-31"
+      />,
     );
-    const chip = document.querySelector('.tp-hero-chip-muted');
-    expect(chip?.textContent).toBe('美瑛');
-  });
-
-  it('day.title 是空白字串 → 視為無 title 走 fallback', () => {
-    render(
-      <DndContext><DaySection
-        dayNum={3}
-        day={makeDay({ title: '   ' })}
-        daySummary={makeSummary({ label: '那霸' })}
-        tripStart="2026-04-26"
-        tripEnd="2026-04-30"
-      /></DndContext>,
-    );
-    const heroTitle = document.querySelector('.tp-hero-title');
-    expect(heroTitle?.textContent).toBe('那霸');
+    expect(document.querySelectorAll('.tp-hero-chip-muted').length).toBe(0);
   });
 });

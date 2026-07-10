@@ -302,8 +302,6 @@ export function assembleDay(deps: AssembleDayDeps): Record<string, unknown> {
     date: dayRow.date,
     day_of_week: dayRow.day_of_week,
     label: dayRow.label,
-    /** Section 4.3 (terracotta-mockup-parity-v2)：surface trip_days.title to client. */
-    title: (dayRow as { title?: unknown }).title ?? null,
     /** v2.30.x (migration 0065)：Day-level OCC token. PUT /days/:num 帶 expectedDayVersion 比對。 */
     version: (dayRow as { version?: unknown }).version ?? 0,
     hotel,
