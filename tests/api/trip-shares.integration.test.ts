@@ -309,6 +309,31 @@ describe('clone — remap fidelity (PR3, multi-day + segment + hotel + alternate
     expect(seg).toMatchObject({ mode: 'transit', submode: 'monorail', source: 'haversine' });
   });
 
+  // v2.55.46：clone 必須帶 no_travel（同一地點/免交通），否則複製出去的行程收合段掉回車程。
+  it('carries no_travel (同一地點) through clone (v2.55.46)', async () => {
+    const { id } = await seedTrip(db, { id: 'clone-notravel', owner, days: 1 });
+    const d1 = await getDayId(db, id, 1);
+    const pA = await seedPoi(db, { name: '同地A', type: 'attraction' });
+    const pB = await seedPoi(db, { name: '同地B', type: 'attraction' });
+    const e1 = await seedEntry(db, d1, { sortOrder: 1, poiId: pA });
+    const e2 = await seedEntry(db, d1, { sortOrder: 2, poiId: pB });
+    await db.prepare("INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, version, no_travel) VALUES (?, ?, ?, 'walking', NULL, NULL, NULL, 'manual', 0, 1)").bind(id, e1, e2).run();
+
+    const created = (await (await createShareFor(id)).json()) as { token: string };
+    const clonerEmail = 'notravel-cloner@test.com';
+    await seedUser(db, clonerEmail);
+    const cloneRes = await callHandler(cloneShare as never, mockContext({
+      request: jsonRequest(`https://x/api/share/${created.token}/clone`, 'POST'),
+      env, auth: mockAuth({ email: clonerEmail }), params: { token: created.token },
+    }));
+    expect(cloneRes.status).toBe(201);
+    const { tripId: newId } = (await cloneRes.json()) as { tripId: string };
+
+    const seg = await db.prepare('SELECT no_travel FROM trip_segments WHERE trip_id = ?')
+      .bind(newId).first<{ no_travel: number | null }>();
+    expect(seg!.no_travel).toBe(1);
+  });
+
   // migration 0078: trip_entries.note 已 DROP，備註改為 per-POI（trip_entry_pois.note）。
   // clone 必須把來源每個正選/備選 POI 各自的 note 原樣帶到 clone 後的 trip_entry_pois，
   // 且 INSERT trip_entries 不可再帶 entry-level note（否則 DROP 後 "no such column"）。

@@ -53,6 +53,8 @@ export interface TripExportSegment {
   min: number | null;
   distanceM: number | null;
   source: string | null;
+  /** v2.55.46 同一地點/免交通（1/null）。round-trip 保留。 */
+  noTravel: number | null;
 }
 
 export interface TripExportV1 {
@@ -108,6 +110,7 @@ export function buildTripExportJson(input: {
         min: typeof s.min === 'number' ? s.min : null,
         distanceM: typeof s.distanceM === 'number' ? s.distanceM : null,
         source: typeof s.source === 'string' ? s.source : null,
+        noTravel: s.noTravel === 1 ? 1 : null,
       };
     })
     .filter((s) => s.fromEntryIdx >= 0 && s.toEntryIdx >= 0);

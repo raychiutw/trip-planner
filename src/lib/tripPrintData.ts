@@ -18,6 +18,8 @@ export interface PrintTravel {
   type?: string | null;
   /** transit 細分方式（monorail/bus/…或「其他」自由文字）；用於顯示具體方式 label。 */
   submode?: string | null;
+  /** v2.55.46: true = 同一地點/免交通 → 顯示「同一地點」而非車程。 */
+  sameplace?: boolean;
   min?: number | null;
   distanceM?: number | null;
   desc?: string | null;
@@ -104,6 +106,8 @@ const TRAVEL_MODE_LABEL: Record<string, string> = {
 /** "開車 · 12 分 · 2.1km" — empty string when there is no travel to print. */
 export function formatTravelLine(travel: PrintTravel | null | undefined): string {
   if (!travel) return '';
+  // v2.55.46: 同一地點/免交通 → 列印/分享面收合成「同一地點」，不顯示車程。
+  if (travel.sameplace) return '同一地點';
   const rawType = (travel.type ?? '').trim();
   const hasMin = typeof travel.min === 'number' && travel.min > 0;
   const hasDist = typeof travel.distanceM === 'number' && travel.distanceM > 0;
@@ -160,7 +164,7 @@ function mapEntry(e: Raw): PrintEntry {
     rating: t.googleRating,
     description: t.description ?? undefined,
     note: masterNote ?? undefined,
-    travel: tv ? { type: tv.type, submode: tv.submode, min: tv.min, distanceM: tv.distanceM } : null,
+    travel: tv ? { type: tv.type, submode: tv.submode, sameplace: tv.sameplace, min: tv.min, distanceM: tv.distanceM } : null,
     stopPois: (t.stopPois ?? []).map((p) => ({
       sortOrder: p.sortOrder ?? 1,
       name: p.name ?? '',

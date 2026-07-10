@@ -80,7 +80,7 @@ export interface NImportDest {
   name: string; lat: number | null; lng: number | null; dayQuota: number | null; subAreas: string[] | null;
 }
 export interface NImportSegment {
-  fromEntryIdx: number; toEntryIdx: number; mode: string; submode: string | null; min: number | null; distanceM: number | null; source: string | null;
+  fromEntryIdx: number; toEntryIdx: number; mode: string; submode: string | null; min: number | null; distanceM: number | null; source: string | null; noTravel: number | null;
 }
 export interface NImportNotes {
   flights: Record<string, string | number>[];
@@ -313,14 +313,18 @@ export function parseAndValidateImport(raw: unknown): ImportResult {
   // already filters orphans, but the payload is untrusted).
   const segments: NImportSegment[] = arr(raw.segments).map((s) => {
     const o = isObj(s) ? s : {};
+    const noTravel = o.noTravel === 1 || o.noTravel === true ? 1 : null;
     return {
       fromEntryIdx: intOrNull(o.fromEntryIdx) ?? -1,
       toEntryIdx: intOrNull(o.toEntryIdx) ?? -1,
       mode: oneOf(o.mode, SEG_MODES, 'driving'),
       submode: cleanSubmode(o.submode, oneOf(o.mode, SEG_MODES, 'driving')),
-      min: segMinOrNull(o.min),
-      distanceM: intOrNull(o.distanceM),
-      source: oneOfOrNull(o.source, SEG_SOURCES),
+      // no_travel=1 ⟹ min/dist/source 一律 NULL（同 POST/PATCH 不變式）。untrusted payload
+      // 可能帶 noTravel=1 又塞 min/source=manual → recompute 永久跳過 + 髒值餵健檢，此處清乾淨。
+      min: noTravel ? null : segMinOrNull(o.min),
+      distanceM: noTravel ? null : intOrNull(o.distanceM),
+      source: noTravel ? null : oneOfOrNull(o.source, SEG_SOURCES),
+      noTravel,
     };
   }).filter((s) =>
     s.fromEntryIdx >= 0 && s.fromEntryIdx < totalEntries &&

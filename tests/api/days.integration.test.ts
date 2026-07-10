@@ -198,6 +198,7 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     expect(travel).toEqual({
       type: 'car',
       submode: null, // v2.55.45 (A1)：travel 物件帶 submode；driving → null
+      sameplace: false, // v2.55.46：travel 物件帶 sameplace；正常段 → false
       desc: null,
       min: 30,
       distanceM: null,
@@ -226,6 +227,28 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     const d2Timeline = data[1].timeline as Array<Record<string, unknown>>;
     const travel = d2Timeline[0].travel as Record<string, unknown>;
     expect(travel).toMatchObject({ type: 'transit', submode: 'monorail', min: 15 });
+  });
+
+  it('v2.55.46：no_travel 段的 sameplace surface 到 days?all=1（分享/列印收合「同一地點」）', async () => {
+    // 獨立 trip（beforeAll 持久狀態 → 不共用 trip-travel 的 d2，避免 entry 順序撞測）。
+    await seedTrip(db, { id: 'trip-sp-days', days: 1 });
+    const d1 = await getDayId(db, 'trip-sp-days', 1);
+    const m1 = await seedEntry(db, d1, { sortOrder: 0 });
+    const m2 = await seedEntry(db, d1, { sortOrder: 1 });
+    await db.prepare(
+      `INSERT INTO trip_segments
+       (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at, no_travel)
+       VALUES (?, ?, ?, 'walking', NULL, NULL, NULL, 'manual', ?, ?, 1)`,
+    ).bind('trip-sp-days', m1, m2, Date.now(), Date.now()).run();
+
+    const resp = await callHandler(onRequestGet, mockContext({
+      request: new Request('https://test.com/api/trips/trip-sp-days/days?all=1'),
+      env, params: { id: 'trip-sp-days' },
+    }));
+    const data = await resp.json() as Array<Record<string, unknown>>;
+    const timeline = data[0].timeline as Array<Record<string, unknown>>;
+    const travel = timeline[0].travel as Record<string, unknown>; // m1（from_entry）帶 m1→m2 段
+    expect(travel).toMatchObject({ sameplace: true });
   });
 
   it('Phase 3：entry.master 取 canonical POI master（取代舊 entry.location JSON）', async () => {

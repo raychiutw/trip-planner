@@ -22,13 +22,15 @@ import { hasWritePermission, requireAuth} from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { json, parseJsonBody, parseIntParam } from '../../../_utils';
 import type { Env } from '../../../_types';
-import { isSegmentMode, isValidMin, resolveSegmentTravel, sanitizeSubmode } from './_shared';
+import { isSegmentMode, isValidMin, resolveSegmentTravel, sanitizeSubmode, SEGMENT_RETURNING_COLS } from './_shared';
 
 interface PatchBody {
   mode?: string;
   min?: number;
   /** v2.55.45: 交通方式細分（monorail/bus/metro/train/hsr/自由文字）；只在 transit 有意義。 */
   submode?: string | null;
+  /** v2.55.46: true = 標記「同一地點/免交通」（繞過 mode/min，收合此段）。 */
+  noTravel?: boolean;
   /** v2.33.108: OCC token — autosave 帶；不符回 409 STALE_ENTRY。omit → backward compat。 */
   expectedVersion?: number;
 }
@@ -67,6 +69,26 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     }
   }
 
+  // v2.55.46: 同一地點/免交通 — 使用者把一段連續同地停靠標記為「無交通」（如同一機場內兩
+  // 停靠點：那覇機場 → 牛排屋88 機場店）。繞過 resolveSegmentTravel（無需 mode/min）：
+  //   no_travel=1（recompute 的 skip 訊號、read path 的 sameplace 訊號）、min/dist/source=NULL、
+  //   computed_at=now（防前端 stale chip）。保留現有 mode/submode（mode 有 NOT NULL CHECK，不動）。
+  //   注意：source 不設 'manual' — no_travel=1 自足當 skip 訊號，不 overload source 的「手動鎖定值」語意。
+  if (body.noTravel === true) {
+    const now = Date.now();
+    const marked = await db
+      .prepare(
+        `UPDATE trip_segments
+         SET no_travel = 1, min = NULL, distance_m = NULL, source = NULL,
+             computed_at = ?, updated_at = ?, version = version + 1
+         WHERE id = ? RETURNING ${SEGMENT_RETURNING_COLS}`,
+      )
+      .bind(now, now, sid)
+      .first();
+    if (!marked) throw new AppError('DATA_NOT_FOUND', 'segment 已不存在');
+    return json(marked);
+  }
+
   if (!isSegmentMode(body.mode)) {
     throw new AppError('DATA_VALIDATION', 'mode 必須為 driving / walking / transit');
   }
@@ -85,18 +107,16 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const now = Date.now();
   const travel = await resolveSegmentTravel(context.env, db, seg.from_entry_id, seg.to_entry_id, mode, submode, body.min, now);
 
-  // RETURNING 一次回更新後 row（省 SELECT-back round-trip）。欄位名固定常數，非 user input。
-  const RETURNING_COLS =
-    'id, trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at, version';
+  // 選了真實交通方式 → no_travel=NULL 清「同一地點」旗標（un-mark），恢復正常交通段。
   let updated;
   if (travel.ok) {
     updated = await db
       .prepare(
         `UPDATE trip_segments
          SET mode = ?, submode = ?, min = ?, distance_m = ?,
-             source = ?, computed_at = ?, updated_at = ?,
+             source = ?, computed_at = ?, updated_at = ?, no_travel = NULL,
              version = version + 1
-         WHERE id = ? RETURNING ${RETURNING_COLS}`,
+         WHERE id = ? RETURNING ${SEGMENT_RETURNING_COLS}`,
       )
       .bind(mode, travel.submode, travel.min, travel.distanceM, travel.source, travel.computedAt, now, sid)
       .first();
@@ -109,9 +129,9 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     updated = await db
       .prepare(
         `UPDATE trip_segments
-         SET mode = ?, submode = ?, source = NULL, computed_at = NULL, updated_at = ?,
+         SET mode = ?, submode = ?, source = NULL, computed_at = NULL, updated_at = ?, no_travel = NULL,
              version = version + 1
-         WHERE id = ? RETURNING ${RETURNING_COLS}`,
+         WHERE id = ? RETURNING ${SEGMENT_RETURNING_COLS}`,
       )
       .bind(mode, submode, now, sid)
       .first();

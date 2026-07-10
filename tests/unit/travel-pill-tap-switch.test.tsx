@@ -65,6 +65,7 @@ describe('TravelPill — interactive auto-save (v2.55.45 多方式)', () => {
     min: 11,
     distanceM: 5300,
     computedAt: 1700000000000,
+    noTravel: null,
   };
 
   it('segment + tripId → render 為 button + ▾ affordance', () => {
@@ -250,5 +251,33 @@ describe('TravelPill — interactive auto-save (v2.55.45 多方式)', () => {
     });
     expect(screen.getByTestId('travel-pill-dialog')).toBeInTheDocument();
     window.removeEventListener('tp-segment-updated', onUpdated);
+  });
+
+  // v2.55.46 同一地點/免交通
+  it('N-render：segment.noTravel=1 → 收合成「同一地點」marker（非 pill）', () => {
+    render(<TravelPill segment={{ ...baseSegment, noTravel: 1 }} tripId="trip-1" />);
+    const sp = screen.getByTestId('travel-sameplace');
+    expect(sp.tagName).toBe('BUTTON'); // 互動：可 tap 開 dialog 改回
+    expect(sp.textContent).toContain('同一地點');
+    expect(screen.queryByTestId('travel-pill')).not.toBeInTheDocument(); // 不再顯示交通 pill
+  });
+
+  it('N-mark：dialog 點「同一地點・免交通」列 → PATCH 帶 noTravel:true', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ mode: 'driving', min: null, noTravel: 1 }), { status: 200 }));
+    render(<TravelPill segment={baseSegment} tripId="trip-1" />);
+    fireEvent.click(screen.getByTestId('travel-pill'));
+    fireEvent.click(screen.getByTestId('travel-method-sameplace'));
+    await waitFor(() => {
+      expect(findSegmentPatchBody()).toMatchObject({ noTravel: true });
+    });
+  });
+
+  it('N-dialog-state：noTravel 段開 dialog → 同一地點列 aria-pressed=true + hint 顯示', () => {
+    render(<TravelPill segment={{ ...baseSegment, noTravel: 1 }} tripId="trip-1" />);
+    fireEvent.click(screen.getByTestId('travel-sameplace'));
+    expect(screen.getByTestId('travel-method-sameplace')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('travel-sameplace-hint')).toBeInTheDocument();
+    // 交通方式 detail 區被 sameplace hint 取代 → 無 min input
+    expect(screen.queryByTestId('travel-min-input')).not.toBeInTheDocument();
   });
 });

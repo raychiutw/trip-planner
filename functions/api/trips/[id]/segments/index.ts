@@ -14,7 +14,7 @@ import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../..
 import { AppError } from '../../../_errors';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
-import { isSegmentMode, isValidMin, resolveSegmentTravel, sanitizeSubmode } from './_shared';
+import { isSegmentMode, isValidMin, resolveSegmentTravel, sanitizeSubmode, SEGMENT_RETURNING_COLS } from './_shared';
 
 interface SegmentRow {
   id: number;
@@ -29,6 +29,8 @@ interface SegmentRow {
   computed_at: number | null;
   updated_at: number | null;
   version: number;
+  /** v2.55.46: 1 = 同一地點/免交通（收合此段）；NULL = 正常交通段。 */
+  no_travel: number | null;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -45,7 +47,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .prepare(
       `SELECT s.id, s.trip_id, s.from_entry_id, s.to_entry_id,
               s.mode, s.submode, s.min, s.distance_m, s.source,
-              s.computed_at, s.updated_at, s.version
+              s.computed_at, s.updated_at, s.version, s.no_travel
        FROM trip_segments s
        JOIN trip_entries fe ON fe.id = s.from_entry_id
        JOIN trip_days fd ON fd.id = fe.day_id
@@ -65,6 +67,8 @@ interface CreateSegmentBody {
   min?: number;
   /** v2.55.45: 交通方式細分（monorail/bus/metro/train/hsr/自由文字）；只在 transit 有意義。 */
   submode?: string | null;
+  /** v2.55.46: true = 建立「同一地點/免交通」段（繞過 mode/min）。 */
+  noTravel?: boolean;
 }
 
 /**
@@ -105,16 +109,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', 'from / to entry 不可相同');
   }
 
-  if (!isSegmentMode(body.mode)) {
-    throw new AppError('DATA_VALIDATION', 'mode 必須為 driving / walking / transit');
-  }
-  const mode = body.mode;
-  const submode = sanitizeSubmode(body.submode, mode);
-
-  // v2.55.45: min 有帶就必須合法；不帶 = 自動算。純手填方式缺 min 由 resolveSegmentTravel throw。
-  if (body.min !== undefined && !isValidMin(body.min)) {
-    throw new AppError('DATA_VALIDATION', 'min 須為 1–1440 分鐘');
-  }
+  const isNoTravel = body.noTravel === true;
 
   // 防 IDOR：兩個 entry 都必須屬於該 trip
   const owned = await db
@@ -131,6 +126,40 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   const now = Date.now();
+
+  // v2.55.46: 同一地點/免交通 — 建立收合段。no_travel=1 自足當 recompute skip 訊號（source 不設
+  // 'manual'，不 overload 其「手動鎖定值」語意；min/dist/source=NULL）。noTravel 不需 mode/min，故
+  // early-return 在方式驗證之前。既有 pair 重送 → DO UPDATE 標記（保留現有 mode/submode，不強制 'walking'）。
+  if (isNoTravel) {
+    const created = await db
+      .prepare(
+        `INSERT INTO trip_segments
+           (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at, no_travel)
+         VALUES (?, ?, ?, 'walking', NULL, NULL, NULL, NULL, ?, ?, 1)
+         ON CONFLICT (from_entry_id, to_entry_id) DO UPDATE SET
+           no_travel = 1, min = NULL, distance_m = NULL, source = NULL,
+           computed_at = excluded.computed_at, updated_at = excluded.updated_at,
+           version = trip_segments.version + 1
+         RETURNING ${SEGMENT_RETURNING_COLS}`,
+      )
+      .bind(tripId, fromEntryId, toEntryId, now, now)
+      .first();
+    if (!created) throw new AppError('DATA_SAVE_FAILED', '建立 segment 失敗');
+    return json(created, 201);
+  }
+
+  // 正常交通段：noTravel 已 early-return，此後驗證無 noTravel 意識。
+  if (!isSegmentMode(body.mode)) {
+    throw new AppError('DATA_VALIDATION', 'mode 必須為 driving / walking / transit');
+  }
+  const mode = body.mode;
+  const submode = sanitizeSubmode(body.submode, mode);
+
+  // v2.55.45: min 有帶就必須合法；不帶 = 自動算。純手填方式缺 min 由 resolveSegmentTravel throw。
+  if (body.min !== undefined && !isValidMin(body.min)) {
+    throw new AppError('DATA_VALIDATION', 'min 須為 1–1440 分鐘');
+  }
+
   const travel = await resolveSegmentTravel(context.env, db, fromEntryId, toEntryId, mode, submode, body.min, now);
 
   const min = travel.ok ? travel.min : null;
@@ -157,9 +186,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
          source = excluded.source,
          computed_at = excluded.computed_at,
          updated_at = excluded.updated_at,
+         no_travel = NULL,
          version = trip_segments.version + 1
-       RETURNING id, trip_id, from_entry_id, to_entry_id, mode, submode,
-                 min, distance_m, source, computed_at, updated_at, version`,
+       RETURNING ${SEGMENT_RETURNING_COLS}`,
     )
     .bind(tripId, fromEntryId, toEntryId, mode, subToStore, min, distanceM, source, computedAt, now)
     .first();
