@@ -44,6 +44,18 @@ describe('formatTravelLine', () => {
   it('passes through an unknown free-text mode', () => {
     expect(formatTravelLine({ type: '渡輪', min: 45 })).toBe('渡輪 · 45 分');
   });
+  // v2.55.45 (A1)：分享/列印面依 submode 顯示具體方式，而非 generic「大眾運輸」。
+  it('transit + submode → 具體方式 label（單軌/公車/地鐵…），與 picker 一致', () => {
+    expect(formatTravelLine({ type: 'transit', submode: 'monorail', min: 15, distanceM: 6000 })).toBe('單軌 · 15 分 · 6.0km');
+    expect(formatTravelLine({ type: 'transit', submode: 'bus', min: 18 })).toBe('公車 · 18 分');
+    expect(formatTravelLine({ type: 'transit', submode: 'metro', min: 30 })).toBe('地鐵 · 30 分');
+  });
+  it('transit + 其他自由文字 submode → passthrough 使用者輸入的方式名', () => {
+    expect(formatTravelLine({ type: 'transit', submode: '水上巴士', min: 25 })).toBe('水上巴士 · 25 分');
+  });
+  it('transit 無 submode（legacy/未細分）→ 回退大眾運輸', () => {
+    expect(formatTravelLine({ type: 'transit', submode: null, min: 30 })).toBe('大眾運輸 · 30 分');
+  });
 });
 
 describe('formatDateRange', () => {

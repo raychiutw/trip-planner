@@ -77,6 +77,20 @@ describe('parseAndValidateImport — normalization', () => {
     expect(d.segments).toHaveLength(2);
     expect(d.segments[0]).toMatchObject({ fromEntryIdx: 0, toEntryIdx: 1, mode: 'driving' });
   });
+  it('v2.55.45：submode transit 保留、控制/雙向字元剝除、非-transit 強制 null', () => {
+    // 危險字元用 fromCodePoint 明確建構（避免 source 塞不可見字元）：RTL override + ZWSP。
+    const dirty = '水上' + String.fromCodePoint(0x202e) + '巴士' + String.fromCodePoint(0x200b);
+    const withSub = { ...valid, segments: [
+      { fromEntryIdx: 0, toEntryIdx: 1, mode: 'transit', submode: 'monorail' },  // 保留
+      { fromEntryIdx: 1, toEntryIdx: 2, mode: 'transit', submode: dirty },       // 剝 bidi+零寬
+    ] };
+    const d = ok(parseAndValidateImport(withSub));
+    expect(d.segments[0]).toMatchObject({ mode: 'transit', submode: 'monorail' });
+    expect(d.segments[1]!.submode).toBe('水上巴士'); // 危險字元已剝
+    // 非-transit（driving）即使帶 submode 也強制 null
+    const driving = { ...valid, segments: [{ fromEntryIdx: 0, toEntryIdx: 1, mode: 'driving', submode: 'monorail' }] };
+    expect(ok(parseAndValidateImport(driving)).segments[0]!.submode).toBeNull();
+  });
   it('drops out-of-range / self-loop segments', () => {
     const bad = { ...valid, segments: [
       { fromEntryIdx: 0, toEntryIdx: 99, mode: 'driving' }, // to out of range

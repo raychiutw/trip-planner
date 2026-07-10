@@ -10,11 +10,14 @@
  */
 import { apiFetch } from './apiClient';
 import { toTimelineEntry } from './mapDay';
+import { travelMethodLabel } from './travelMode';
 
 /* ===== Data model (camelCase — apiFetch deep-camels API responses) ===== */
 
 export interface PrintTravel {
   type?: string | null;
+  /** transit 細分方式（monorail/bus/…或「其他」自由文字）；用於顯示具體方式 label。 */
+  submode?: string | null;
   min?: number | null;
   distanceM?: number | null;
   desc?: string | null;
@@ -106,7 +109,10 @@ export function formatTravelLine(travel: PrintTravel | null | undefined): string
   const hasDist = typeof travel.distanceM === 'number' && travel.distanceM > 0;
   if (!rawType && !hasMin && !hasDist) return '';
   const parts: string[] = [];
-  if (rawType) parts.push(TRAVEL_MODE_LABEL[rawType] ?? rawType);
+  // v2.55.45: transit 帶 submode → 用 travelMethodLabel（SSoT，含單軌/公車/地鐵/火車/
+  // 高鐵 + 其他自由文字 passthrough），與 picker 一致；否則回退 3-mode label。
+  if (travel.submode) parts.push(travelMethodLabel('transit', travel.submode));
+  else if (rawType) parts.push(TRAVEL_MODE_LABEL[rawType] ?? rawType);
   if (hasMin) parts.push(`${travel.min} 分`);
   if (hasDist) parts.push(`${(travel.distanceM! / 1000).toFixed(1)}km`);
   return parts.join(' · ');
@@ -154,7 +160,7 @@ function mapEntry(e: Raw): PrintEntry {
     rating: t.googleRating,
     description: t.description ?? undefined,
     note: masterNote ?? undefined,
-    travel: tv ? { type: tv.type, min: tv.min, distanceM: tv.distanceM } : null,
+    travel: tv ? { type: tv.type, submode: tv.submode, min: tv.min, distanceM: tv.distanceM } : null,
     stopPois: (t.stopPois ?? []).map((p) => ({
       sortOrder: p.sortOrder ?? 1,
       name: p.name ?? '',

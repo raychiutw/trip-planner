@@ -21,7 +21,7 @@
 import { useState } from 'react';
 import Icon from '../shared/Icon';
 import TravelPillDialog, { type TravelMode } from './TravelPillDialog';
-import { TRAVEL_MODE_LABEL } from '../../lib/travelMode';
+import { TRAVEL_MODE_LABEL, travelMethodIcon, travelMethodLabel } from '../../lib/travelMode';
 
 const SCOPED_STYLES = `
 .tp-travel-pill-wrap {
@@ -69,7 +69,8 @@ const SCOPED_STYLES = `
   display: inline-flex; align-items: baseline; gap: 6px;
   white-space: nowrap;
 }
-.tp-travel-pill-min { font-weight: 700; color: var(--color-accent-2-deep); }
+/* v2.55.45 方式 label 與 min 同樣式（單軌/地鐵/火車/高鐵共用 train icon → 文字 label 區分）。 */
+.tp-travel-pill-min, .tp-travel-pill-method { font-weight: 700; color: var(--color-accent-2-deep); }
 .tp-travel-pill-sep { color: var(--color-muted); opacity: 0.5; }
 .tp-travel-pill-desc {
   color: var(--color-muted);
@@ -135,6 +136,10 @@ const MODE_LABEL: Record<string, string> = {
 export interface TravelPillSegment {
   id: number;
   mode: TravelMode;
+  /** v2.55.45 交通方式細分（monorail/bus/metro/train/hsr/自由文字/null）。driving/walking 恆 null。 */
+  submode: string | null;
+  /** v2.55.45 'manual' = 手填/手動覆寫鎖定；google/haversine = 自動算。picker 判斷是否顯示 🔒/恢復鈕。 */
+  source: string | null;
   /** segment.min（driving/walking 是 Google Routes 算的；transit 是 user 手填值）*/
   min: number | null;
   /** segment.distance_m（Google Routes 回傳；transit 因不打 API 為 null）*/
@@ -238,7 +243,17 @@ export default function TravelPill({
   // Stale render path：即使沒有 min/dist 也要露出 ⚠ chip 讓 user 觸發 recompute。
   if (!hasMin && !hasDist && !hasDesc && !isStale) return null;
 
-  const iconName = TYPE_ICON_MAP[(effectiveType ?? '').toLowerCase()] ?? 'car';
+  // v2.55.45: segment 有 submode → 方式細分決定 icon（單軌/地鐵/火車/高鐵→train、公車→bus）；
+  // legacy（無 segment）走 entry.travel.type alias map。
+  const iconName = segment
+    ? travelMethodIcon(segment.mode, segment.submode)
+    : (TYPE_ICON_MAP[(effectiveType ?? '').toLowerCase()] ?? 'car');
+  // a11y：segment 一律用方式全名（含 driving/walking）；legacy 用 MODE_LABEL alias。
+  const a11yMethod = segment
+    ? travelMethodLabel(segment.mode, segment.submode)
+    : (MODE_LABEL[(effectiveType ?? '').toLowerCase()] ?? effectiveType ?? '');
+  // transit 才在 pill 顯示方式 label（train-family 同 icon 需文字區分；driving/walking icon 已足夠）。
+  const methodLabel = segment && segment.mode === 'transit' && segment.submode ? a11yMethod : null;
   const isInteractive = !!segment && !!tripId;
 
   // Pill 內部內容 — 必須只含 non-interactive elements（pill 本身可能 wrap 成 <button>，
@@ -250,11 +265,13 @@ export default function TravelPill({
         <Icon name={iconName} />
       </span>
       <span className="tp-travel-pill-meta">
-        {/* mockup .tp-detail-travel:6254-6258 順序：min → sep → distance（與 v2.23.0 之前的 dist 先 → min 後相反）。 */}
+        {/* v2.55.45 方式 label（transit 細分）→ mockup .tp-detail-travel:6254-6258 順序：min → sep → distance。 */}
+        {methodLabel && <span className="tp-travel-pill-method">{methodLabel}</span>}
+        {hasMin && methodLabel && <span className="tp-travel-pill-sep">·</span>}
         {hasMin && <span className="tp-travel-pill-min">{effectiveMin} min</span>}
-        {hasDist && hasMin && <span className="tp-travel-pill-sep">·</span>}
+        {hasDist && (hasMin || methodLabel) && <span className="tp-travel-pill-sep">·</span>}
         {hasDist && <span className="tp-travel-pill-min">{formatDistance(effectiveDist!)}</span>}
-        {(hasDist || hasMin) && hasDesc && <span className="tp-travel-pill-sep">·</span>}
+        {(hasDist || hasMin || methodLabel) && hasDesc && <span className="tp-travel-pill-sep">·</span>}
         {hasDesc && <span className="tp-travel-pill-desc">{desc}</span>}
       </span>
       {isInteractive && (
@@ -292,7 +309,7 @@ export default function TravelPill({
             type="button"
             className="tp-travel-pill is-interactive"
             onClick={() => setDialogOpen(true)}
-            aria-label={`交通方式 ${MODE_LABEL[(effectiveType ?? '').toLowerCase()] ?? effectiveType ?? ''}${hasMin ? ` ${effectiveMin} 分鐘` : ''}（點擊變更）`}
+            aria-label={`交通方式 ${a11yMethod}${hasMin ? ` ${effectiveMin} 分鐘` : ''}（點擊變更）`}
             data-testid="travel-pill"
           >
             {inner}
@@ -309,7 +326,9 @@ export default function TravelPill({
           tripId={tripId}
           segmentId={segment.id}
           currentMode={segment.mode}
+          currentSubmode={segment.submode}
           currentMin={segment.min}
+          currentSource={segment.source}
           distanceM={segment.distanceM}
           fromName={fromName}
           toName={toName}

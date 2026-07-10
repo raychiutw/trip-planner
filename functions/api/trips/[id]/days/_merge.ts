@@ -20,6 +20,7 @@ type SegmentRow = {
   from_entry_id: number;
   to_entry_id: number;
   mode: string;
+  submode: string | null;
   min: number | null;
   distance_m: number | null;
   source: string | null;
@@ -38,7 +39,7 @@ export async function fetchTripSegmentsMap(
   const map = new Map<number, SegmentRow>();
   const { results } = await db
     .prepare(
-      `SELECT from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at
+      `SELECT from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at
        FROM trip_segments WHERE trip_id = ?`,
     )
     .bind(tripId)
@@ -268,6 +269,9 @@ export function assembleDay(deps: AssembleDayDeps): Record<string, unknown> {
     const travel = segment
       ? {
           type: segment.mode === 'driving' ? 'car' : segment.mode === 'walking' ? 'walk' : segment.mode,
+          // v2.55.45: submode surface 到 read path（days?all / 分享列印），讓唯讀/列印面
+          // 也能顯示單軌/公車等具體方式而非 generic「大眾運輸」。非 transit → null。
+          submode: segment.mode === 'transit' ? segment.submode : null,
           desc: null as string | null,
           min: segment.min,
           distance_m: segment.distance_m,

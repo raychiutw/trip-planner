@@ -46,8 +46,21 @@ describe('buildTripExportJson — round-trip schema', () => {
   it('re-keys segments to positional fromEntryIdx/toEntryIdx', () => {
     const out = buildTripExportJson(input);
     expect(out.segments).toEqual([
-      { fromEntryIdx: 0, toEntryIdx: 1, mode: 'driving', min: 12, distanceM: 2100, source: 'google' },
-      { fromEntryIdx: 1, toEntryIdx: 2, mode: 'walking', min: 8, distanceM: null, source: null },
+      { fromEntryIdx: 0, toEntryIdx: 1, mode: 'driving', submode: null, min: 12, distanceM: 2100, source: 'google' },
+      { fromEntryIdx: 1, toEntryIdx: 2, mode: 'walking', submode: null, min: 8, distanceM: null, source: null },
+    ]);
+  });
+
+  it('carries submode on transit segments (v2.55.45 round-trip)', () => {
+    const withSubmode = {
+      ...input,
+      segments: [
+        { id: 1, fromEntryId: 10, toEntryId: 11, mode: 'transit', submode: 'monorail', min: 15, distanceM: 6000, source: 'haversine' },
+      ],
+    };
+    const out = buildTripExportJson(withSubmode);
+    expect(out.segments).toEqual([
+      { fromEntryIdx: 0, toEntryIdx: 1, mode: 'transit', submode: 'monorail', min: 15, distanceM: 6000, source: 'haversine' },
     ]);
   });
 

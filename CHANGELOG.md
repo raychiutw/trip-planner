@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.45] - 2026-07-10
+
+### Added
+- **交通方式從 3 種擴充為 8 種細分方式（單軌 / 公車 / 地鐵 / 火車 / 高鐵 / 其他）** — TravelPill 點選對話框由駕車/步行/大眾運輸 3 選項，改為 8 晶片 2 欄網格。`mode` 維持 driving/walking/transit 三個 canonical（不動 CHECK 約束），細分存進新的 nullable `submode` 欄（migration 0083，additive）。
+  - **單軌**：沖繩 Yui 單軌自動計算（`src/lib/yuiRail.ts` 19 站靜態表，walk→最近站 + 站間 + walk→目的地，0 次 API、直線 Haversine 估走路）。日本 Google Routes 無 transit 資料故用本地表。
+  - **公車**：走 Google DRIVE 代理自動算（同駕車速度模型）。
+  - **地鐵 / 火車 / 高鐵 / 其他**：手填分鐘，距離自動直線 Haversine。「其他」為自由輸入方式名（直接當顯示 label）。
+  - **自動方式可手動覆寫**：對駕車/步行/單軌/公車手填分鐘 → 鎖定該值（🔒 source='manual'、距離改直線）＋出現「恢復自動計算」按鈕 → 點下重送不帶 min → 後端回自動算。
+  - `recompute-travel` 重算現涵蓋自動 transit 方式（monorail 本地表 / bus DRIVE），guard 由 `mode != transit` 泛化為 `source IS NOT 'manual'`（手填鎖定不覆寫、自動方式會刷新）。CF 50-subrequest：單軌 0 API、公車每對 1 次 DRIVE，day-scope recompute 不爆量。
+- **分享 / 列印的唯讀行程顯示具體交通方式** — `days?all=1` 與分享列印 read path 帶 `submode`，「單軌」段不再掉回 generic「大眾運輸」。
+
+### Fixed
+- **舊 3-mode 編輯器改交通不再把細分方式誤鎖成單軌** — EditEntryPage 的「大眾運輸」編輯器顯式送 `submode:null` 清除細分，否則後端 preserve-on-omit 保留舊 submode 並因帶 min 鎖成 manual → 使用者選 generic 卻得到鎖定的「單軌」標籤（adversarial review 發現的靜默資料損毀）。
+- **AI 健檢提示大眾運輸時間可能為駕車估算** — 公車時間係 Google DRIVE 代理（日本無 transit 實時資料），健檢 prompt 標註此類段接續評估請保守，避免 AI 把樂觀估值當實測真值。
+- **匯入的 segment min 對齊互動端 1–1440 上下界** — 越界值降為 null（不進健檢「權威來源」區塊）。
+
+### Security
+- submode（攻擊者可控自由文字）sanitize 補齊方向標記 LRM/RLM/ALM 剝除（API `sanitizeSubmode` + import `cleanSubmode` 兩條寫入邊界，sanitize-parity 契約有測鎖）。
+
 ## [2.55.44] - 2026-07-10
 
 ### Fixed

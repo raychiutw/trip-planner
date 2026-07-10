@@ -3,8 +3,14 @@
  *
  * v2.24.0 trip-segments：
  *   - 1km gate（Haversine 本地算）：≤1km → walking + WALK API；>1km → driving + DRIVE API
- *   - 永遠 1 Google Routes call/pair（不打 TRANSIT — Japan 無資料）
+ *   - driving/walking 永遠 1 Google Routes call/pair（不打 Google TRANSIT — Japan 無資料）
  *   - 寫 trip_segments（first-class，v2.29.0 為唯一 source，entry.travel_* 已 DROPPED）
+ *
+ * v2.55.45（交通方式 submode 自動算）：
+ *   - transit + submode='monorail'（沖繩單軌）→ 本地 Yui 估重算（walk+單軌+walk，0 API）。
+ *   - transit + submode='bus'（公車）→ 同駕車走 Google DRIVE 重算。
+ *   - source='manual'（手填 / 手動覆寫鎖定）→ 一律跳過不覆寫（取代舊 mode!='transit' 判斷）。
+ *   - 其他 transit submode（metro/train/hsr/自由文字，皆 source='manual'）→ 跳過。
  *
  * v2.30.0（mode_source DROPPED）：
  *   - mode='transit' 既有 segment 不覆寫（user 手填 min，recompute 不能蓋）
@@ -33,6 +39,7 @@ import { json } from '../../_utils';
 import { assertGoogleAvailable } from '../../_maps_lock';
 import { computeRoute } from '../../../../src/server/maps/google-client';
 import { haversineMeters } from '../../../../src/lib/geo';
+import { computeYuiTravel } from '../../../../src/lib/yuiRail';
 import type { Env } from '../../_types';
 
 const WALK_GATE_M = 1000;
@@ -55,6 +62,8 @@ interface ExistingSegment {
   from_entry_id: number;
   to_entry_id: number;
   mode: string;
+  submode: string | null;
+  source: string | null;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -94,7 +103,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Pre-load 既有 segments（單一 SELECT 省 N 次 per-pair query）
   const existingRes = await db
-    .prepare('SELECT id, from_entry_id, to_entry_id, mode FROM trip_segments WHERE trip_id = ?')
+    .prepare('SELECT id, from_entry_id, to_entry_id, mode, submode, source FROM trip_segments WHERE trip_id = ?')
     .bind(tripId)
     .all<ExistingSegment>();
   const existingMap = new Map<string, ExistingSegment>();
@@ -112,6 +121,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 收集 batch statements 最後一次 db.batch 寫入（單一 subrequest）
   const segmentInserts: Array<{ tripId: string; from: number; to: number; mode: string; min: number; distM: number; now: number }> = [];
   const segmentUpdates: Array<{ id: number; mode: string; min: number; distM: number; now: number }> = [];
+  // v2.55.45: transit 自動方式（monorail/bus）的重算寫入（帶 submode + source，走獨立 UPDATE）。
+  const transitUpdates: Array<{ id: number; submode: string; min: number; distM: number | null; source: string; now: number }> = [];
   // v2.29.0: trip_entries.travel_* DROPPED. trip_segments 為唯一 source.
 
   // v2.55.43: 載入「整個 trip」的 entries（不論 day filter）建 allTripPairKeys。
@@ -166,8 +177,53 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
 
       const existing = existingMap.get(pairKey);
+      // 使用者鎖定值（手填 / 手動覆寫）→ 一律不覆寫（source='manual' 為鎖定旗標）。
+      if (existing && existing.source === 'manual') {
+        pairsSkippedTransit++;
+        continue;
+      }
+      // 自動算的 transit 方式：monorail（本地 Yui 估、0 API）/ bus（同駕車走 DRIVE）。
+      // NOTE：此 submode→策略 dispatch 與 segments/_shared.ts resolveSegmentTravel 概念重複，
+      // 但刻意 inline —— batch 情境已握有 prev/curr in-memory 座標，避免 per-pair 走 _shared 的
+      // 座標 DB 查詢（會爆 CF 50 subrequest 預算）。新增自動 submode 時兩處都要改。
       if (existing && existing.mode === 'transit') {
-        // transit = user 手填 min（Japan Routes 無 transit 資料），recompute 不覆寫
+        if (existing.submode === 'monorail') {
+          const yui = computeYuiTravel({ lat: prev.lat, lng: prev.lng }, { lat: curr.lat, lng: curr.lng });
+          if (yui.ok) {
+            transitUpdates.push({ id: existing.id, submode: 'monorail', min: yui.min, distM: yui.distanceM, source: 'haversine', now });
+            sourceBreakdown['haversine'] = (sourceBreakdown['haversine'] ?? 0) + 1;
+            modeBreakdown['transit'] = (modeBreakdown['transit'] ?? 0) + 1;
+            pairsComputed++;
+          } else {
+            // 景點移動後兩端離站太遠 / 同站 → 無法重算，保留舊值不覆寫。
+            pairsSkippedTransit++;
+          }
+          continue;
+        }
+        if (existing.submode === 'bus') {
+          try {
+            const result = await computeRoute(apiKey, { lat: prev.lat, lng: prev.lng }, { lat: curr.lat, lng: curr.lng }, 'DRIVE');
+            transitUpdates.push({
+              id: existing.id,
+              submode: 'bus',
+              min: Math.round(result.duration_seconds / 60),
+              distM: result.distance_meters,
+              source: 'google',
+              now,
+            });
+            sourceBreakdown['google'] = (sourceBreakdown['google'] ?? 0) + 1;
+            modeBreakdown['transit'] = (modeBreakdown['transit'] ?? 0) + 1;
+            pairsComputed++;
+          } catch (err) {
+            sourceBreakdown['error'] = (sourceBreakdown['error'] ?? 0) + 1;
+            const detail = err instanceof AppError ? (err.detail ?? err.message) : (err instanceof Error ? err.message : String(err));
+            errorsDetail.push({ entryId: curr.id, message: detail.slice(0, 200) });
+            if (err instanceof AppError && err.code === 'MAPS_LOCKED') throw err;
+          }
+          continue;
+        }
+        // 其他 transit submode（metro/train/hsr/自由文字）本應 source='manual'（上面已跳）；
+        // 防禦性跳過不覆寫。
         pairsSkippedTransit++;
         continue;
       }
@@ -215,7 +271,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .map((s) => s.id);
 
   // 單一 db.batch 寫入所有 upserts（1 subrequest 不論 statement 數）
-  if (segmentInserts.length > 0 || segmentUpdates.length > 0 || staleSegmentDeletes.length > 0) {
+  if (segmentInserts.length > 0 || segmentUpdates.length > 0 || transitUpdates.length > 0 || staleSegmentDeletes.length > 0) {
     const stmts = [
       // entry reorder / move / 刪景點後，舊 from→to 兩端 entry 都還在（非 FK cascade
       // 能清），只是不再相鄰。每次 recompute 都 trip-wide 清掉所有「不是任何一天現行
@@ -225,29 +281,41 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       ).bind(id)),
       // INSERT 用 ON CONFLICT 防 TOCTOU race：preload 後若另一支 concurrent
       // recompute 已 INSERT 同 (from,to) pair，本 batch 不會炸 UNIQUE → atomic
-      // rollback；改成 upsert。WHERE mode != 'transit' 防 race：preload→write
-      // 之間若 user PATCH 改成 transit（手填 min），DO UPDATE 不蓋。
+      // rollback；改成 upsert。WHERE source IS NOT 'manual' 防 race（v2.55.45 泛化自
+      // 舊 mode!='transit'）：preload→write 之間若 user 手填/手動覆寫鎖定則不蓋。
+      // IS NOT 為 null-safe（source 可 NULL；`NULL != 'manual'` 會是 NULL 而非 true）。
+      // driving/walking 一律 submode=NULL（不變式：submode 非 null ⟺ mode=transit）。
+      // 顯式清 submode 防 TOCTOU race：若 ON CONFLICT 撞到已是 monorail 的 row，
+      // 不留下 mode=driving + submode=monorail 的髒資料。
       ...segmentInserts.map((s) => db.prepare(
         `INSERT INTO trip_segments
-         (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'google', ?, ?)
+         (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, ?, NULL, ?, ?, 'google', ?, ?)
          ON CONFLICT (from_entry_id, to_entry_id) DO UPDATE SET
            mode = excluded.mode,
+           submode = NULL,
            min = excluded.min,
            distance_m = excluded.distance_m,
            source = 'google',
            computed_at = excluded.computed_at,
            updated_at = excluded.updated_at
-         WHERE trip_segments.mode != 'transit'`,
+         WHERE trip_segments.source IS NOT 'manual'`,
       ).bind(s.tripId, s.from, s.to, s.mode, s.min, s.distM, s.now, s.now)),
-      // UPDATE 加 mode != 'transit' guard：preload→write 之間若 user PATCH 改 transit，
-      // 本 UPDATE 因 WHERE 不成立 → 0 rows affected (correct)。
+      // driving/walking UPDATE guard source IS NOT 'manual'（同上，保護使用者鎖定值）。
       ...segmentUpdates.map((s) => db.prepare(
         `UPDATE trip_segments
-         SET mode = ?, min = ?, distance_m = ?,
+         SET mode = ?, submode = NULL, min = ?, distance_m = ?,
              source = 'google', computed_at = ?, updated_at = ?
-         WHERE id = ? AND mode != 'transit'`,
+         WHERE id = ? AND source IS NOT 'manual'`,
       ).bind(s.mode, s.min, s.distM, s.now, s.now, s.id)),
+      // v2.55.45: transit 自動方式（monorail/bus）重算 — 帶 submode + 各自 source
+      // （monorail=haversine、bus=google）。guard 同 source IS NOT 'manual'。
+      ...transitUpdates.map((s) => db.prepare(
+        `UPDATE trip_segments
+         SET mode = 'transit', submode = ?, min = ?, distance_m = ?,
+             source = ?, computed_at = ?, updated_at = ?
+         WHERE id = ? AND source IS NOT 'manual'`,
+      ).bind(s.submode, s.min, s.distM, s.source, s.now, s.now, s.id)),
     ];
     await db.batch(stmts);
   }

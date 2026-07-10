@@ -197,12 +197,35 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     const travel = d1Timeline[0].travel as Record<string, unknown> | null;
     expect(travel).toEqual({
       type: 'car',
+      submode: null, // v2.55.45 (A1)：travel 物件帶 submode；driving → null
       desc: null,
       min: 30,
       distanceM: null,
       source: null,
     });
     expect(d1Timeline[1].travel).toBeNull();
+  });
+
+  it('v2.55.45 (A1)：transit 段的 submode surface 到 days?all=1（分享/列印面能顯具體方式）', async () => {
+    // day2 seed 一段 transit monorail → assembled travel 必帶 submode，否則唯讀/列印面
+    // 掉回 generic「大眾運輸」（A1 完整性）。
+    const d2 = await getDayId(db, 'trip-travel', 2);
+    const m1 = await seedEntry(db, d2, { sortOrder: 0 });
+    const m2 = await seedEntry(db, d2, { sortOrder: 1 });
+    await db.prepare(
+      `INSERT INTO trip_segments
+       (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at)
+       VALUES (?, ?, ?, 'transit', 'monorail', 15, 6000, 'haversine', ?, ?)`,
+    ).bind('trip-travel', m1, m2, Date.now(), Date.now()).run();
+
+    const resp = await callHandler(onRequestGet, mockContext({
+      request: new Request('https://test.com/api/trips/trip-travel/days?all=1'),
+      env, params: { id: 'trip-travel' },
+    }));
+    const data = await resp.json() as Array<Record<string, unknown>>;
+    const d2Timeline = data[1].timeline as Array<Record<string, unknown>>;
+    const travel = d2Timeline[0].travel as Record<string, unknown>;
+    expect(travel).toMatchObject({ type: 'transit', submode: 'monorail', min: 15 });
   });
 
   it('Phase 3：entry.master 取 canonical POI master（取代舊 entry.location JSON）', async () => {

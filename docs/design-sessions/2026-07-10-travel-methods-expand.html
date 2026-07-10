@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>v2.55.45 交通方式擴充（單軌/公車/地鐵/火車/高鐵/其他）· mockup</title>
+<style>
+  :root {
+    --color-accent: #D97848;
+    --color-accent-deep: #B85C2E;
+    --color-accent-subtle: #FBEEE4;
+    --color-accent-foreground: #FFFFFF;
+    --color-background: #FFFBF5;
+    --color-secondary: #FAF4EA;
+    --color-hover: #F9EDE0;
+    --color-foreground: #2A1F18;
+    --color-muted: #6F5A47;
+    --color-border: #EADFCF;
+    --color-line-strong: #C8B89F;
+    --color-overlay: rgba(42, 31, 24, 0.35);
+    --font-size-body: 1rem;
+    --font-size-footnote: 0.875rem;
+    --font-size-caption: 0.75rem;
+    --font-size-headline: 1.0625rem;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-full: 9999px;
+    --spacing-tap-min: 44px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+    color: var(--color-foreground); background: #F3ECE0;
+    margin: 0; padding: 32px;
+  }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.05rem; margin: 28px 0 10px; color: var(--color-accent-deep); }
+  .meta { font-size: var(--font-size-footnote); color: var(--color-muted); margin: 0 0 8px; }
+  .row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .frame-label { font-size: var(--font-size-caption); color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; font-weight: 600; }
+
+  .sheet {
+    width: 360px; background: var(--color-background);
+    border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-lg);
+    padding: 8px 16px 20px; box-shadow: 0 16px 48px rgba(42,31,24,0.22);
+    border: 1px solid var(--color-border);
+  }
+  .sheet.desktop { width: 360px; border-radius: var(--radius-md); padding: 20px; }
+  .handle { width: 36px; height: 4px; background: var(--color-line-strong); border-radius: 9999px; margin: 0 auto 12px; }
+  .desktop .handle { display: none; }
+  .title { font-size: var(--font-size-headline); font-weight: 700; margin: 0 0 2px; }
+  .sub { font-size: var(--font-size-footnote); color: var(--color-muted); margin: 0 0 14px; }
+
+  /* chip grid */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .chip {
+    display: flex; align-items: center; gap: 8px;
+    min-height: var(--spacing-tap-min); padding: 10px 12px;
+    border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    background: var(--color-background); cursor: pointer; font-size: var(--font-size-body);
+  }
+  .chip .emo { font-size: 1.15rem; line-height: 1; }
+  .chip .lbl { font-weight: 600; }
+  .chip .tag { margin-left: auto; font-size: var(--font-size-caption); color: var(--color-muted); }
+  .chip:hover { background: var(--color-hover); }
+  .chip.sel { background: var(--color-accent-subtle); border-color: var(--color-accent); color: var(--color-accent-deep); }
+  .chip.sel .tag { color: var(--color-accent-deep); }
+
+  /* detail / input area */
+  .detail {
+    margin-top: 10px; padding: 12px 14px;
+    border: 1px solid var(--color-accent); border-radius: var(--radius-md);
+    background: var(--color-accent-subtle);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .detail .dl { font-size: var(--font-size-footnote); color: var(--color-accent-deep); font-weight: 600; }
+  .detail .hint { font-size: var(--font-size-caption); color: var(--color-muted); }
+  .detail input {
+    font: inherit; font-size: var(--font-size-body); padding: 8px 12px;
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+    width: 100%; background: var(--color-background); color: var(--color-foreground);
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .compute-line { font-size: var(--font-size-footnote); color: var(--color-foreground); display: flex; align-items: center; gap: 6px; }
+  .compute-line .val { font-weight: 700; }
+  .lock { color: var(--color-accent-deep); font-size: var(--font-size-caption); }
+  .revert {
+    align-self: flex-start; margin-top: 2px;
+    min-height: 36px; padding: 6px 14px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-accent); background: var(--color-background);
+    color: var(--color-accent-deep); font: inherit; font-size: var(--font-size-footnote);
+    font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .revert:hover { background: var(--color-hover); }
+
+  .footer { display: flex; justify-content: flex-end; margin-top: 16px; }
+  .close-btn {
+    min-height: var(--spacing-tap-min); padding: 10px 20px; border-radius: var(--radius-full);
+    border: 1px solid var(--color-border); background: var(--color-background);
+    color: var(--color-foreground); font: inherit; font-weight: 600; cursor: pointer;
+  }
+
+  /* collapsed pill preview */
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px;
+    border-radius: 9999px; background: var(--color-secondary); border: 1px solid var(--color-border);
+    color: var(--color-muted); font-size: var(--font-size-footnote);
+  }
+  .pill .emo { font-size: 0.95rem; }
+  .pill .m { font-weight: 700; color: var(--color-foreground); }
+  .note { font-size: var(--font-size-caption); color: var(--color-muted); max-width: 360px; margin: 8px 0 0; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <h1>交通方式擴充 · v2.55.45</h1>
+  <p class="meta">TravelPillDialog：3 種 → 8 種方式（晶片格）。單軌/公車自動算、地鐵/火車/高鐵/其他手填、其他可自由輸入方式名；自動算的可手填覆寫 + 一鍵恢復自動。對齊 2026-05-07 tap-switch dialog 的 token 與 bottom-sheet 樣式。</p>
+
+  <div class="row">
+    <!-- STATE 1: 其他 selected, free-text -->
+    <div>
+      <div class="frame-label">Mobile · 「其他」自由輸入</div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="title">交通方式</div>
+        <div class="sub">那覇機場 → 首里城 · 3.2 km</div>
+        <div class="grid">
+          <div class="chip"><span class="emo">🚗</span><span class="lbl">駕車</span></div>
+          <div class="chip"><span class="emo">🚶</span><span class="lbl">步行</span></div>
+          <div class="chip"><span class="emo">🚝</span><span class="lbl">單軌</span></div>
+          <div class="chip"><span class="emo">🚌</span><span class="lbl">公車</span></div>
+          <div class="chip"><span class="emo">🚇</span><span class="lbl">地鐵</span></div>
+          <div class="chip"><span class="emo">🚆</span><span class="lbl">火車</span></div>
+          <div class="chip"><span class="emo">🚄</span><span class="lbl">高鐵</span></div>
+          <div class="chip sel"><span class="emo">✏️</span><span class="lbl">其他</span></div>
+        </div>
+        <div class="detail">
+          <div class="field">
+            <span class="dl">交通方式名稱</span>
+            <input value="水上巴士" placeholder="例：水上巴士、纜車…" />
+          </div>
+          <div class="field">
+            <span class="dl">需要多少分鐘？</span>
+            <input value="25" type="number" />
+            <span class="hint">範圍 1–1440 分鐘</span>
+          </div>
+          <div class="compute-line">距離 <span class="val">3.2 km</span> · 自動（直線）</div>
+        </div>
+        <div class="footer"><button class="close-btn">關閉</button></div>
+      </div>
+      <p class="note">「其他」＝方式名 + 分鐘皆手填，距離自動算（直線）。涵蓋任何城市未列的方式。</p>
+    </div>
+
+    <!-- STATE 2: 單軌 auto, then overridden -->
+    <div>
+      <div class="frame-label">Mobile · 單軌自動算 → 手動覆寫</div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="title">交通方式</div>
+        <div class="sub">那覇機場 → 県庁前 · 6.0 km</div>
+        <div class="grid">
+          <div class="chip"><span class="emo">🚗</span><span class="lbl">駕車</span></div>
+          <div class="chip"><span class="emo">🚶</span><span class="lbl">步行</span></div>
+          <div class="chip sel"><span class="emo">🚝</span><span class="lbl">單軌</span></div>
+          <div class="chip"><span class="emo">🚌</span><span class="lbl">公車</span></div>
+          <div class="chip"><span class="emo">🚇</span><span class="lbl">地鐵</span></div>
+          <div class="chip"><span class="emo">🚆</span><span class="lbl">火車</span></div>
+          <div class="chip"><span class="emo">🚄</span><span class="lbl">高鐵</span></div>
+          <div class="chip"><span class="emo">✏️</span><span class="lbl">其他</span></div>
+        </div>
+        <div class="detail">
+          <div class="compute-line"><span class="val">20 分鐘</span> · 6.0 km <span class="lock">🔒 已手動覆寫</span></div>
+          <div class="field">
+            <span class="dl">分鐘（手動）</span>
+            <input value="20" type="number" />
+          </div>
+          <button class="revert">↻ 恢復自動計算</button>
+          <span class="hint">恢復後：走路 + 單軌 + 走路 自動估（此段約 15 分鐘），景點變動會自動重算。</span>
+        </div>
+        <div class="footer"><button class="close-btn">關閉</button></div>
+      </div>
+      <p class="note">單軌預設自動（走路+單軌+走路，估 15 分）。手填分鐘 → 鎖定、停自動；「恢復自動計算」清鎖定、重新自動算。公車同此模式（走 Google 道路）。</p>
+    </div>
+
+    <!-- STATE 3: desktop, 單軌 auto (not overridden) -->
+    <div>
+      <div class="frame-label">Desktop popover · 單軌自動（未覆寫）</div>
+      <div class="sheet desktop">
+        <div class="title">交通方式</div>
+        <div class="sub">那覇機場 → 県庁前 · 6.0 km</div>
+        <div class="grid">
+          <div class="chip"><span class="emo">🚗</span><span class="lbl">駕車</span></div>
+          <div class="chip"><span class="emo">🚶</span><span class="lbl">步行</span></div>
+          <div class="chip sel"><span class="emo">🚝</span><span class="lbl">單軌</span><span class="tag">自動</span></div>
+          <div class="chip"><span class="emo">🚌</span><span class="lbl">公車</span></div>
+          <div class="chip"><span class="emo">🚇</span><span class="lbl">地鐵</span></div>
+          <div class="chip"><span class="emo">🚆</span><span class="lbl">火車</span></div>
+          <div class="chip"><span class="emo">🚄</span><span class="lbl">高鐵</span></div>
+          <div class="chip"><span class="emo">✏️</span><span class="lbl">其他</span></div>
+        </div>
+        <div class="detail">
+          <div class="compute-line"><span class="val">15 分鐘</span> · 6.0 km · 自動估</div>
+          <span class="hint">走路 1 + 單軌 13 + 走路 1。可直接在下方手填覆寫。</span>
+          <div class="field">
+            <span class="dl">手動覆寫分鐘（選填）</span>
+            <input placeholder="留空＝維持自動" type="number" />
+          </div>
+        </div>
+        <div class="footer"><button class="close-btn">關閉</button></div>
+      </div>
+      <p class="note">收合後 pill：<span class="pill"><span class="emo">🚝</span><span class="m">15</span> 分 · 單軌</span>　手動覆寫時多顯示 🔒。</p>
+    </div>
+  </div>
+
+  <h2>互動摘要</h2>
+  <p class="note" style="max-width:720px;">
+    1. 點方式晶片切換。駕車/步行/單軌/公車＝自動算（單軌走本地估、其餘走 Google）；地鐵/火車/高鐵＝手填分鐘；其他＝自由輸入方式名＋分鐘。<br>
+    2. 任何自動方式在 detail 區手填分鐘 → 鎖定（🔒）、停自動；出現「↻ 恢復自動計算」。手填方式無此鈕（本就手動）。<br>
+    3. 距離一律自動：駕車/步行/公車＝Google 道路；單軌＝走路+軌道估；地鐵/火車/高鐵/其他＝直線。<br>
+    4. auto-save（同現況）：切晶片/改分鐘即存，無「儲存」鈕。
+  </p>
+</body>
+</html>
