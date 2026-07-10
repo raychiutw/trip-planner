@@ -11,12 +11,17 @@
  * user-agent / browser.name match HeadlessChrome|Playwright|Lighthouse → drop。
  */
 import { describe, it, expect } from 'vitest';
-import type { ErrorEvent } from '@sentry/react';
+import type { ErrorEvent, Event as SentryEvent } from '@sentry/react';
 import { isNoiseEvent } from '../../src/lib/sentry';
 
 const baseEvent = (overrides: Partial<ErrorEvent>): ErrorEvent => ({
   ...overrides,
 }) as ErrorEvent;
+
+const txEvent = (overrides: Partial<SentryEvent>): SentryEvent => ({
+  type: 'transaction',
+  ...overrides,
+}) as SentryEvent;
 
 describe('isNoiseEvent', () => {
   it('drops localhost:3000 URL', () => {
@@ -121,6 +126,30 @@ describe('isNoiseEvent', () => {
   it('keeps event whose URL only mentions localhost in path (not host)', () => {
     expect(isNoiseEvent(baseEvent({
       request: { url: 'https://trip-planner-dby.pages.dev/docs/setup#localhost' },
+    }))).toBe(false);
+  });
+
+  // beforeSendTransaction reuses isNoiseEvent. Transaction events carry the same
+  // request/browser context but no `exception` — verify env checks still apply
+  // and the SW-noise branch no-ops safely (issue 7578052505: /signup pageload
+  // "Large Render Blocking Asset", 16/17 events HeadlessChrome synthetic traffic).
+  it('drops a HeadlessChrome pageload transaction (browser.name)', () => {
+    expect(isNoiseEvent(txEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/signup' },
+      contexts: { browser: { name: 'HeadlessChrome' } },
+    }))).toBe(true);
+  });
+
+  it('drops a localhost pageload transaction', () => {
+    expect(isNoiseEvent(txEvent({
+      request: { url: 'http://localhost:5173/signup' },
+    }))).toBe(true);
+  });
+
+  it('keeps a real Chrome pageload transaction on production host', () => {
+    expect(isNoiseEvent(txEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/signup' },
+      contexts: { browser: { name: 'Chrome' } },
     }))).toBe(false);
   });
 });
