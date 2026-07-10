@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.51] - 2026-07-10
+
+### Added
+- **timeline 就地改起訖時間 + 備選一鍵升正選 + 依抵達時間重排** — 三合一 timeline 互動增強（mockup `docs/design-sessions/2026-07-10-entry-inline-time-promote.html`）：
+  - **起訖時間 chip**：卡片 sub-line 的時間從唯讀改為可點膠囊（pencil；無時間顯示「設定時間」）。點擊 → portal 浮出小 popup（逃離 `.tp-rail-content` overflow 裁切，`position:fixed` 依 chip rect 定位），內含**共用 `TripTimePicker`** 的抵達／離開兩欄。改時間免進全編輯頁、收合狀態亦可改。**存檔於關閉時**（完成／outside-click）diff draft 與原值、只送有變欄位、一次 PATCH `/entries/:eid { start_time?, end_time? }`（起訖同批 → 後端只重排一次、不每 pick 一發）。
+  - **備選升正選**：展開明細的備選景點卡加「設為正選」鈕 → PATCH `/entries/:eid/master { poiId }`，後端 swap master／alternate sort_order + mark segments stale（LWW；跨區距離提醒仍走全編輯頁）。
+  - **依抵達時間重排（後端 `functions/api/_entry_sort.ts::resortDayByArrival`）**：互動改時間（inline 或全編輯頁 PATCH `/entries/:eid`）或互動新增景點（POST `/days/:num/entries`、POST `/poi-favorites/:id/add-to-trip`）後，後端以單一原子 SQL（`ROW_NUMBER` 依 `start_time` 升冪、無時間殿後、同時間 stable、`WHERE sort_order<>rank` 無寫入放大、race-free）重排當日 `sort_order`。手動拖曳（走 `/entries/batch` 顯式 sort_order）與 bulk 建立（import／clone／copy）**不觸發**。重排後前端 dispatch `entryUpdated` + `requestTravelRecompute` 重算車程。
+  - **a11y**：為容納 sub-line 內可 focus 的時間 chip button，`.tp-rail-head` 改回無語意 `div`（滑鼠整列點展），toggle 語意 + `aria-expanded` + 鍵盤 focus 移到獨立 caret `<button>`（role=button 於 head 會依 WAI-ARIA 令子孫 presentational → 吞掉 chip）。
+
 ## [2.55.50] - 2026-07-10
 
 ### Removed
