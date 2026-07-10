@@ -27,6 +27,8 @@ export interface NavLocation extends MapLocation {}
 /** Travel segment between two stops. */
 export interface TravelData {
   type?: string | null;
+  /** transit 細分方式（monorail/bus/metro/…或「其他」自由文字）；非 transit → null。 */
+  submode?: string | null;
   /** Free-form description (e.g.「沿縣道 58 號北上」). API surface as `desc`. */
   desc?: string | null;
   /** Travel duration in minutes. */

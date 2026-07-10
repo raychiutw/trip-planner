@@ -117,8 +117,9 @@ function str(v: unknown, max = 2000): string {
 /**
  * 淨化匯入的交通方式細分（submode，非 transit → null）。攻擊者控制 JSON → 去
  * 控制/雙向/零寬字元 + 20 字上限，行為對齊 segments/_shared.ts 的 sanitizeSubmode
- * （安全邊界刻意自含、不 import API 層；兩處須同步維護）。
+ * （安全邊界刻意自含、不 import API 層；兩處須同步維護，sanitize-parity 契約有測鎖）。
  */
+const IMPORT_MAX_SUBMODE_LEN = 20; // 對齊 segments/_shared.ts MAX_SUBMODE_LEN（自含，不 import）
 function cleanSubmode(v: unknown, mode: string): string | null {
   if (mode !== 'transit' || typeof v !== 'string') return null;
   let out = '';
@@ -129,10 +130,11 @@ function cleanSubmode(v: unknown, mode: string): string | null {
     if (c === 0x200b || c === 0x200c || c === 0x200d || c === 0xfeff || c === 0x2060) continue; // 零寬
     if (c >= 0x202a && c <= 0x202e) continue;           // bidi embedding/override
     if (c >= 0x2066 && c <= 0x2069) continue;           // bidi isolates
+    if (c === 0x200e || c === 0x200f || c === 0x061c) continue; // 方向標記 LRM/RLM/ALM
     if (c === 0x2028 || c === 0x2029) continue;         // line/para sep
     out += ch;
   }
-  const s = [...out.trim()].slice(0, 20).join('');
+  const s = [...out.trim()].slice(0, IMPORT_MAX_SUBMODE_LEN).join('');
   return s.length > 0 ? s : null;
 }
 function strOrNull(v: unknown, max = 2000): string | null {
@@ -144,6 +146,12 @@ function numOrNull(v: unknown): number | null {
 }
 function intOrNull(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? Math.trunc(v) : null;
+}
+// v2.55.45: segment min 對齊互動端 isValidMin（1–1440）。攻擊者/髒匯入的超界值（如
+// 2e9）會流進健檢「權威 block」當數字，故越界一律降為 null（視為未記錄），不整批 reject。
+function segMinOrNull(v: unknown): number | null {
+  const n = intOrNull(v);
+  return n != null && n >= 1 && n <= 1440 ? n : null;
 }
 const oneOf = <T extends string>(v: unknown, allowed: readonly T[], fallback: T): T =>
   (typeof v === 'string' && (allowed as readonly string[]).includes(v) ? (v as T) : fallback);
@@ -310,7 +318,7 @@ export function parseAndValidateImport(raw: unknown): ImportResult {
       toEntryIdx: intOrNull(o.toEntryIdx) ?? -1,
       mode: oneOf(o.mode, SEG_MODES, 'driving'),
       submode: cleanSubmode(o.submode, oneOf(o.mode, SEG_MODES, 'driving')),
-      min: intOrNull(o.min),
+      min: segMinOrNull(o.min),
       distanceM: intOrNull(o.distanceM),
       source: oneOfOrNull(o.source, SEG_SOURCES),
     };

@@ -132,6 +132,39 @@ describe('TravelPill — interactive auto-save (v2.55.45 多方式)', () => {
     });
   });
 
+  it('其他（自由文字）+ 方式名 + min + onBlur → PATCH transit + submode=方式名 + min (G16)', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, version: 1 }), { status: 200 }));
+    render(<TravelPill segment={baseSegment} tripId="trip-1" />);
+    fireEvent.click(screen.getByTestId('travel-pill'));
+    fireEvent.click(screen.getByTestId('travel-method-other'));
+    fireEvent.change(screen.getByTestId('travel-other-name'), { target: { value: '水上巴士' } });
+    const input = screen.getByTestId('travel-min-input');
+    fireEvent.change(input, { target: { value: '25' } });
+    fireEvent.blur(input);
+    await waitFor(() => {
+      const call = apiFetchRawMock.mock.calls.find((c) => {
+        if (!c[1]) return false;
+        const body = JSON.parse((c[1] as RequestInit).body as string);
+        return body.mode === 'transit' && body.submode === '水上巴士' && body.min === 25;
+      });
+      expect(call).toBeTruthy();
+    });
+  });
+
+  it('其他 方式名留空 + 填 min + onBlur → 不 PATCH（freeText && !submode guard, G16）', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, version: 1 }), { status: 200 }));
+    render(<TravelPill segment={baseSegment} tripId="trip-1" />);
+    fireEvent.click(screen.getByTestId('travel-pill'));
+    fireEvent.click(screen.getByTestId('travel-method-other'));
+    // 方式名留空、只填 min → commitManual 早退，不送 segment PATCH
+    const input = screen.getByTestId('travel-min-input');
+    fireEvent.change(input, { target: { value: '25' } });
+    fireEvent.blur(input);
+    // 等一拍確保沒有非同步 PATCH 漏發
+    await new Promise((r) => setTimeout(r, 20));
+    expect(findSegmentPatchBody()).toBeUndefined();
+  });
+
   it('已覆寫的單軌（source=manual）→ 顯恢復鈕，click → PATCH 不帶 min（回自動）', async () => {
     apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, mode: 'transit', submode: 'monorail', version: 2 }), { status: 200 }));
     const overriddenMonorail = {

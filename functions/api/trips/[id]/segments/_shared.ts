@@ -58,6 +58,7 @@ export function sanitizeSubmode(raw: unknown, mode: SegmentMode): string | null 
     if (c === 0x200b || c === 0x200c || c === 0x200d || c === 0xfeff || c === 0x2060) continue; // 零寬
     if (c >= 0x202a && c <= 0x202e) continue;           // bidi embedding/override
     if (c >= 0x2066 && c <= 0x2069) continue;           // bidi isolates
+    if (c === 0x200e || c === 0x200f || c === 0x061c) continue; // 方向標記 LRM/RLM/ALM
     if (c === 0x2028 || c === 0x2029) continue;         // line/para separator
     cleaned += ch;
   }

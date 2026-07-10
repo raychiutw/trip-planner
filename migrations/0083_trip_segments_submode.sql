@@ -10,11 +10,14 @@
 --   - submode = <自由文字>   → 「其他」使用者輸入的方式名（直接當顯示 label），時間手填。
 --   - submode = NULL         → 未細分 transit（大眾運輸）/ driving / walking。
 --
--- ## Deploy 順序（column add，安全）
+-- ## Deploy 順序（migration-first，強制）
 --
--- 先 apply 本 migration（加 nullable 欄，既有 row 自動 NULL、舊 code 不讀不受影響），
--- 再 merge 讀寫 submode 的 backend / frontend PR。ADD COLUMN nullable 無 rebuild、
--- 無 DROP → 不涉 deploy migration DROP-order race（對齊 0072 version 欄先例）。
+-- 必須先 apply 本 migration，再 merge / auto-deploy 讀寫 submode 的 backend PR。
+-- 這不是「best-practice」而是 load-bearing：新 code 在 clone.ts / recompute-travel.ts /
+-- segments/[sid].ts / segments/index.ts 以 explicit SELECT 硬引用 submode 欄，若 code 先
+-- 部署，整個 pre-migration 視窗會 `no such column: submode` 硬崩（非 30-90s race）。
+-- 反向安全：加 nullable 欄後既有 row 自動 NULL；舊 code 無 SELECT *、explicit 欄列不受
+-- 加欄影響、INSERT 省略 submode → 預設 NULL，故舊 code 不受本 migration 影響。
 --
 -- ## Rollback
 --

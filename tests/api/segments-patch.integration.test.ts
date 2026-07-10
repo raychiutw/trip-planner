@@ -323,3 +323,127 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     expect(updated!.computed_at).toBeNull();  // stale，待自癒
   });
 });
+
+// v2.55.45 — transit submode 自動/手動方式 dispatch（單軌本地表 / 公車 Google DRIVE 代理）
+describe('PATCH /api/trips/:id/segments/:sid — transit submode dispatch (v2.55.45)', () => {
+  let smSegId: number;
+
+  // 那覇空港 / 県庁前 = Yui 站座標（cumKm 0 / 6.0）；far = 離全線 >1200m。
+  const NAHA = { lat: 26.206515, lng: 127.652214 };
+  const KENCHO = { lat: 26.214446, lng: 127.679343 };
+  const FAR = { lat: 26.5, lng: 128.0 };
+
+  // seed 一段 transit segment（可帶 submode/source），兩端 POI 給定座標。
+  async function seedTransitSeg(
+    a: { lat: number; lng: number } | null,
+    b: { lat: number; lng: number } | null,
+    seg: { submode: string | null; min: number | null; source: string | null },
+  ): Promise<number> {
+    const day1 = await getDayId(db, 'trip-segm', 1);
+    const suffix = Math.random().toString(36).slice(2, 8);
+    const mk = async (pt: { lat: number; lng: number } | null, tag: string) => {
+      const id = await seedPoi(db, { name: `segm-${tag}-${suffix}` });
+      if (pt) await db.prepare('UPDATE pois SET lat=?, lng=? WHERE id=?').bind(pt.lat, pt.lng, id).run();
+      else await db.prepare('UPDATE pois SET lat=NULL, lng=NULL WHERE id=?').bind(id).run();
+      return id;
+    };
+    const poiA = await mk(a, 'A');
+    const poiB = await mk(b, 'B');
+    const e1 = await seedEntry(db, day1, { sortOrder: 1, poiId: poiA });
+    const e2 = await seedEntry(db, day1, { sortOrder: 2, poiId: poiB });
+    const now = Date.now();
+    const r = await db.prepare(
+      `INSERT INTO trip_segments
+       (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at)
+       VALUES (?, ?, ?, 'transit', ?, ?, NULL, ?, ?, ?) RETURNING id`,
+    ).bind('trip-segm', e1, e2, seg.submode, seg.min, seg.source, now, now).first<{ id: number }>();
+    return r!.id;
+  }
+
+  const patch = (body: Record<string, unknown>) =>
+    callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-segm/segments/${smSegId}`, 'PATCH', body),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-segm', sid: String(smSegId) },
+    }));
+
+  const readSeg = () => db.prepare('SELECT mode, submode, "min", source, distance_m, computed_at FROM trip_segments WHERE id = ?')
+    .bind(smSegId).first<{ mode: string; submode: string | null; min: number | null; source: string | null; distance_m: number | null; computed_at: number | null }>();
+
+  beforeEach(async () => {
+    await db.prepare('DELETE FROM trip_segments WHERE trip_id LIKE ?').bind('trip-segm%').run();
+    env = mockEnv(db, { GOOGLE_MAPS_API_KEY: 'test-google-key' });
+    await seedTrip(db, { id: 'trip-segm' });
+  });
+
+  it('G5 單軌自動：POI 貼近 Yui 站、不帶 min → computeMonorail → source=haversine、submode=monorail、min=15、dist=6000', async () => {
+    smSegId = await seedTransitSeg(NAHA, KENCHO, { submode: 'monorail', min: null, source: null });
+    expect((await patch({ mode: 'transit', submode: 'monorail' })).status).toBe(200);
+    const u = await readSeg();
+    expect(u!.source).toBe('haversine');
+    expect(u!.submode).toBe('monorail');
+    expect(u!.min).toBe(15);        // walk(1)+rail(13)+walk(1)，那覇空港↔県庁前 cumKm 0↔6
+    expect(u!.distance_m).toBe(6000); // railMeters(6.0km)
+  });
+
+  it('G6a 單軌 too_far：兩端離全線 >1200m → 400', async () => {
+    smSegId = await seedTransitSeg(FAR, { lat: 26.6, lng: 128.1 }, { submode: 'monorail', min: null, source: null });
+    expect((await patch({ mode: 'transit', submode: 'monorail' })).status).toBe(400);
+  });
+
+  it('G6b 單軌 same_station：兩端最近站相同 → 400（建議步行）', async () => {
+    smSegId = await seedTransitSeg(NAHA, { lat: 26.2069, lng: 127.6525 }, { submode: 'monorail', min: null, source: null });
+    expect((await patch({ mode: 'transit', submode: 'monorail' })).status).toBe(400);
+  });
+
+  it('G7 單軌缺座標 → soft-fail（保留舊 min、source=NULL、computed_at=NULL，可自癒非 400）', async () => {
+    smSegId = await seedTransitSeg(null, null, { submode: 'monorail', min: 15, source: 'haversine' });
+    expect((await patch({ mode: 'transit', submode: 'monorail' })).status).toBe(200);
+    const u = await readSeg();
+    expect(u!.min).toBe(15);          // 保留舊值
+    expect(u!.source).toBeNull();      // 軟失敗清 source → recompute 可自癒
+    expect(u!.computed_at).toBeNull();
+  });
+
+  it('G8 公車自動：不帶 min → computeGoogle DRIVE 代理 → source=google、submode=bus、min/dist>0', async () => {
+    smSegId = await seedTransitSeg(NAHA, KENCHO, { submode: 'bus', min: null, source: null });
+    expect((await patch({ mode: 'transit', submode: 'bus' })).status).toBe(200);
+    const u = await readSeg();
+    expect(u!.source).toBe('google');
+    expect(u!.submode).toBe('bus');
+    expect(u!.min).toBeGreaterThan(0);
+    expect(u!.distance_m).toBeGreaterThan(0);
+  });
+
+  it('G10 手填地鐵：submode=metro + min=30 → source=manual、submode=metro 保留、距離直線 Haversine>0', async () => {
+    smSegId = await seedTransitSeg(NAHA, KENCHO, { submode: null, min: null, source: null });
+    expect((await patch({ mode: 'transit', submode: 'metro', min: 30 })).status).toBe(200);
+    const u = await readSeg();
+    expect(u!.source).toBe('manual');
+    expect(u!.submode).toBe('metro');
+    expect(u!.min).toBe(30);
+    expect(u!.distance_m).toBeGreaterThan(0);
+  });
+
+  it('G9a preserve-on-omit：段現為 monorail，PATCH {min} 省略 submode → 保留 monorail、鎖 manual', async () => {
+    // pill 改其他欄位 / EditEntryPage 非交通編輯不動 submode → 省略 = 保留現值。
+    smSegId = await seedTransitSeg(NAHA, KENCHO, { submode: 'monorail', min: 15, source: 'haversine' });
+    expect((await patch({ mode: 'transit', min: 20 })).status).toBe(200);
+    const u = await readSeg();
+    expect(u!.submode).toBe('monorail'); // 保留
+    expect(u!.min).toBe(20);
+    expect(u!.source).toBe('manual');    // 帶 min → 鎖定
+  });
+
+  it('G9b clear-on-null (F1)：EditEntryPage 3-mode 編輯器送 submode:null → 清成 generic transit（不再鎖成單軌）', async () => {
+    // F1 回歸：舊 3-mode 編輯器選「大眾運輸」填分鐘，顯式送 submode:null → 清除細分，
+    // 否則 preserve-on-omit 會保留 monorail 並鎖 manual = 選 generic 卻得鎖定的單軌。
+    smSegId = await seedTransitSeg(NAHA, KENCHO, { submode: 'monorail', min: 15, source: 'haversine' });
+    expect((await patch({ mode: 'transit', submode: null, min: 20 })).status).toBe(200);
+    const u = await readSeg();
+    expect(u!.submode).toBeNull();       // 清除 → generic 大眾運輸
+    expect(u!.min).toBe(20);
+    expect(u!.source).toBe('manual');
+  });
+});

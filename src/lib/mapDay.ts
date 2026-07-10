@@ -69,6 +69,7 @@ export function formatDateLabel(date: string | null | undefined): string {
 /** Raw travel object nested in a timeline entry. */
 interface RawTravel {
   type?: string | null;
+  submode?: string | null;
   desc?: string | null;
   min?: number | null;
   distanceM?: number | null;
@@ -175,6 +176,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   const travelData: TravelData | null = travel
     ? {
         type: travel.type || '',
+        submode: travel.submode ?? null,
         desc: travel.desc ?? null,
         min: travel.min ?? null,
         // v2.23.0 加 travel_distance_m col 時漏接到 mapDay → frontend

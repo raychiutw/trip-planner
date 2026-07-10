@@ -134,6 +134,24 @@ describe('POST /api/trips/:id/segments', () => {
     expect(row!.computed_at).toBeNull();
   });
 
+  it('G8 transit + submode=bus（自動、不帶 min）→ 201 + source=google（Google DRIVE 代理）+ submode=bus', async () => {
+    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', submode: 'bus' }));
+    expect(resp.status).toBe(201);
+    const row = await db.prepare('SELECT mode, submode, source, min FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
+      .bind(e1, e2).first<{ mode: string; submode: string; source: string; min: number }>();
+    expect(row).toMatchObject({ mode: 'transit', submode: 'bus', source: 'google' });
+    expect(row!.min).toBeGreaterThan(0);
+  });
+
+  it('G10 transit + submode=metro + min=30（手填）→ 201 + source=manual + submode=metro + 距離直線 Haversine', async () => {
+    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', submode: 'metro', min: 30 }));
+    expect(resp.status).toBe(201);
+    const row = await db.prepare('SELECT mode, submode, source, min, distance_m FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
+      .bind(e1, e2).first<{ mode: string; submode: string; source: string; min: number; distance_m: number | null }>();
+    expect(row).toMatchObject({ mode: 'transit', submode: 'metro', source: 'manual', min: 30 });
+    expect(row!.distance_m).toBeGreaterThan(0);
+  });
+
   it('transit 無 min → 400', async () => {
     expect((await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit' }))).status).toBe(400);
   });
