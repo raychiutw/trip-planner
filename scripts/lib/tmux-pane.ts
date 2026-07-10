@@ -44,17 +44,27 @@ export interface TmuxDeps {
   log: (msg: string) => void;
 }
 
+// v2.55.53：cold boot（長閒置後首次 claude spawn，plugin/MCP 首載）實測 >16s；warm ~2s。
+// 上限放寬到 ~90s 涵蓋 cold boot（warm 一看到就緒訊號就回、不受影響）。已死 session 靠連續
+// 空 pane 早 bail、不會空燒滿 90s。
+const REPL_READY_TIMEOUT_MS = 90_000;
+const REPL_POLL_INTERVAL_MS = 800;
+
 /**
- * 等 claude REPL 就緒（狀態列渲染 = 可安全收 send-keys）。v2.55.52：取代原本硬編碼
- * 2.5s 固定等待 — 新版 TUI 開機變慢（MCP auth 檢查 + plugin sync）常超過 2.5s → 早送的
- * command 輸入丟失。上限 ~16s；session 已死（連續多次 capture 撈到空）提早 bail 不空燒。
+ * 等 claude REPL 就緒（可安全收 send-keys）。v2.55.52：取代原本硬編碼 2.5s 固定等待 —
+ * 新版 TUI 開機變慢（MCP auth 檢查 + plugin sync）常超過 2.5s → 早送的 command 輸入丟失。
+ * v2.55.53：(1) 上限 16s→90s（cold boot 首載超過 16s，warm 不受影響）；(2) 就緒訊號放寬為
+ * 「狀態列(bypass permissions) 或 input prompt(❯) 任一」— cold boot 下 MCP auth 檢查會延後
+ * 狀態列渲染，但 input prompt 先出現即代表可收輸入 → 提早偵測、不必空等到狀態列。
+ * session 已死（連續多次 capture 撈到空）提早 bail 不空燒。
  */
 export async function waitForRepl(deps: TmuxDeps, sessionName: string): Promise<boolean> {
   let blank = 0;
-  for (let i = 0; i < 20; i++) {
-    await deps.sleep(800);
+  const maxPolls = Math.ceil(REPL_READY_TIMEOUT_MS / REPL_POLL_INTERVAL_MS);
+  for (let i = 0; i < maxPolls; i++) {
+    await deps.sleep(REPL_POLL_INTERVAL_MS);
     const pane = deps.capture(sessionName);
-    if (pane.includes(REPL_READY_MARKER)) return true;
+    if (pane.includes(REPL_READY_MARKER) || pane.includes(PROMPT_CHAR)) return true;
     // 全空 = session 可能已死（new-session 成功但 claude 立刻退出）；連 5 次（~4s）就放棄。
     blank = pane === '' ? blank + 1 : 0;
     if (blank >= 5) {
