@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.47] - 2026-07-10
+
+### Fixed
+- **桌機從編輯頁返回行程後、往上捲動被拉回原位** — 返回時的捲動位置還原（`restoreScrollTo`）每一個 animation frame 都重設 `scrollTop`，直到非同步內容長回原高度為止（約 0.75 秒），期間完全不讓位給使用者的手動捲動 → 使用者一往上捲就被硬拉回去。修法：還原迴圈偵測到使用者 `wheel` / `touchstart` 立即中止（`{ once: true }` 被動監聽），把捲動主導權交還使用者；正常返回情境不受影響（內容長回即結束、監聽清乾淨）。
+
 ## [2.55.46] - 2026-07-10
 
 ### Added
