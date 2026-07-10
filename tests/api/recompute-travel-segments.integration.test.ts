@@ -389,6 +389,24 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
         .bind(e2, e3).first<{ min: number; source: string; submode: string }>();
       expect(manual).toMatchObject({ min: 77, source: 'manual', submode: 'metro' }); // 鎖定值原封不動
     });
+
+    it('N4 同一地點/免交通：no_travel=1 段 → recompute 跳過不覆寫（min/dist 維持 NULL）', async () => {
+      const { e1, e2 } = await seed3AtYui('trip-rec-sp');
+      const now = Date.now();
+      // 刻意 source=NULL（非 manual）：專門驗 `|| no_travel===1` guard clause 獨立生效，
+      // 而非靠 source='manual'。若 guard 沒判 no_travel，這段會被 gate 算成 driving（min>0）。
+      await db.prepare(
+        `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at, no_travel)
+         VALUES (?, ?, ?, 'walking', NULL, NULL, NULL, NULL, ?, ?, 1)`,
+      ).bind('trip-rec-sp', e1, e2, now, now).run();
+      expect((await recompute('trip-rec-sp')).status).toBe(200);
+      const seg = await db.prepare(
+        'SELECT "min", distance_m, no_travel FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?',
+      ).bind(e1, e2).first<{ min: number | null; distance_m: number | null; no_travel: number | null }>();
+      expect(seg!.no_travel).toBe(1);   // 旗標保留
+      expect(seg!.min).toBeNull();       // 未被 Yui/Google 重算覆寫
+      expect(seg!.distance_m).toBeNull();
+    });
   });
 
   // v2.33.106 T-4: failure paths — 補既有 happy path 缺乏的 negative tests

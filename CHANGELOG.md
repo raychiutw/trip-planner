@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.46] - 2026-07-10
+
+### Added
+- **交通段可標記「同一地點・免交通」→ timeline 收合成「同一地點」** — 使用者可把一段連續同地停靠（如同一機場內兩停靠點：那覇機場 → 牛排屋88 機場店）手動標記為免交通，不再顯示自動算出的荒謬車程（兩點直線略過 1km walk/drive gate → 被算成開車 9.4 km／21 分）。收合 marker 用中性 muted（刻意不用 sage — sage 代表「有移動」，免交通要 recede）。
+  - **兩個標記入口**（共用同一後端 flag + 同一 marker）：對話框（TravelPill 8-方式格下方獨立整列「同一地點・免交通」，非第 9 個晶片）＋編輯頁（EditEntryPage 交通段區塊 toggle switch + 恢復）。
+  - 資料：`trip_segments.no_travel`（additive nullable，migration 0084）。`recompute` 見 `no_travel=1` 跳過不覆寫（同 manual-lock）；read path（days/_merge、segments GET）吐 `sameplace` marker；列印/分享面顯「同一地點」。clone / import-export 保留旗標。
+
 ## [2.55.45] - 2026-07-10
 
 ### Added

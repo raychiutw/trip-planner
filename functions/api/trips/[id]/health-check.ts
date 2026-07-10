@@ -84,6 +84,8 @@ interface SegmentRecordRow {
   mode: string;
   min: number | null;
   distance_m: number | null;
+  /** v2.55.46: 1 = 同一地點/免交通（刻意無移動，非「未記錄」）。 */
+  no_travel: number | null;
 }
 
 /**
@@ -111,7 +113,11 @@ export function formatSegmentRecords(rows: SegmentRecordRow[]): string {
     const from = cleanName(r.from_name, `景點#${r.from_id}`);
     const to = cleanName(r.to_name, `景點#${r.to_id}`);
     let travel: string;
-    if (r.min == null) {
+    if (r.no_travel === 1) {
+      // v2.55.46: 使用者刻意標記「同一地點/免交通」→ 非缺資料。明確告知 Claude 是刻意
+      // 無移動（否則 min=NULL 會落入下方「未記錄」分支、把刻意行為誤報成缺值）。
+      travel = '同一地點（免交通，刻意無移動；不得據此報時程/距離問題）';
+    } else if (r.min == null) {
       travel = '移動時間未記錄（不得據此報時程/距離問題）';
     } else {
       // 只用 3-mode 白名單 label（大眾運輸含 monorail/bus/metro…全塌成通用）。
@@ -251,7 +257,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const segRes = await env.DB
     .prepare(
       `WITH ranked AS (
-         SELECT s.from_entry_id, s.to_entry_id, s.mode, s.min, s.distance_m,
+         SELECT s.from_entry_id, s.to_entry_id, s.mode, s.min, s.distance_m, s.no_travel,
                 ROW_NUMBER() OVER (
                   PARTITION BY s.from_entry_id ORDER BY s.updated_at DESC, s.id DESC
                 ) AS rn
@@ -261,7 +267,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
        SELECT fd.day_num AS day_num,
               fp.name AS from_name, tp.name AS to_name,
               r.from_entry_id AS from_id, r.to_entry_id AS to_id,
-              r.mode AS mode, r.min AS min, r.distance_m AS distance_m
+              r.mode AS mode, r.min AS min, r.distance_m AS distance_m, r.no_travel AS no_travel
        FROM ranked r
        JOIN trip_entries fe ON fe.id = r.from_entry_id
        JOIN trip_days fd ON fd.id = fe.day_id

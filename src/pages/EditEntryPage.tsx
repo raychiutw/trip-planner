@@ -242,6 +242,30 @@ const SCOPED_STYLES = `
 .tp-edit-entry-mode-lab { font-size: var(--font-size-footnote); font-weight: 600; }
 .tp-edit-entry-mode-btn.is-selected .tp-edit-entry-mode-lab { font-weight: 700; }
 
+/* v2.55.46 同一地點/免交通 toggle（V3）— 中性 row + switch；on 用柔褐 accent（=active 慣例）。 */
+.tp-edit-entry-sameplace {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 12px 14px; margin-bottom: 10px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-background); font: inherit; text-align: left; cursor: pointer;
+  color: var(--color-foreground); min-height: var(--spacing-tap-min, 44px);
+}
+.tp-edit-entry-sameplace:hover { background: var(--color-hover); }
+.tp-edit-entry-sameplace.is-on { border-color: var(--color-line-strong); }
+.tp-edit-entry-sameplace-txt b { font-size: var(--font-size-body); font-weight: 700; display: block; }
+.tp-edit-entry-sameplace-txt span { font-size: var(--font-size-caption); color: var(--color-muted); }
+.tp-edit-entry-switch {
+  margin-left: auto; flex-shrink: 0; width: 46px; height: 27px; border-radius: var(--radius-full);
+  background: var(--color-line-strong); position: relative; transition: background 140ms;
+}
+.tp-edit-entry-switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(42, 31, 24, 0.25); transition: left 140ms;
+}
+.tp-edit-entry-sameplace.is-on .tp-edit-entry-switch { background: var(--color-accent); }
+.tp-edit-entry-sameplace.is-on .tp-edit-entry-switch::after { left: 22px; }
+.tp-edit-entry-mode-segmented.is-disabled { opacity: 0.45; pointer-events: none; }
+
 .tp-edit-entry-mode-detail {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; flex-wrap: wrap;
@@ -979,12 +1003,14 @@ export default function EditEntryPage() {
   const [description, setDescription] = useState('');
   const [mode, setMode] = useState<TripSegment['mode'] | null>(null);
   const [transitMin, setTransitMin] = useState<string>('');
+  // v2.55.46: 同一地點/免交通 toggle（V3 入口）。true → 此段收合、不計交通。
+  const [noTravel, setNoTravel] = useState(false);
 
   // Original values for dirty-check + discard-modal
   const originalRef = useRef<{
     startTime: string; endTime: string; description: string;
-    mode: TripSegment['mode'] | null; transitMin: string;
-  }>({ startTime: '', endTime: '', description: '', mode: null, transitMin: '' });
+    mode: TripSegment['mode'] | null; transitMin: string; noTravel: boolean;
+  }>({ startTime: '', endTime: '', description: '', mode: null, transitMin: '', noTravel: false });
 
   const [submitting, setSubmitting] = useState(false);
   // v2.33.139: 移除 `error` state — titleBar SaveStatus 已拔 (user feedback
@@ -1169,10 +1195,12 @@ export default function EditEntryPage() {
     if (!segment) return;
     setMode(segment.mode);
     setTransitMin(segment.mode === 'transit' && typeof segment.min === 'number' ? String(segment.min) : '');
+    setNoTravel(segment.noTravel === 1);
     originalRef.current = {
       ...originalRef.current,
       mode: segment.mode,
       transitMin: segment.mode === 'transit' && typeof segment.min === 'number' ? String(segment.min) : '',
+      noTravel: segment.noTravel === 1,
     };
   }, [segment]);
 
@@ -1190,9 +1218,9 @@ export default function EditEntryPage() {
   const dirty = useMemo(() => {
     const o = originalRef.current;
     const entryDirty = startTime !== o.startTime || endTime !== o.endTime || description !== o.description;
-    const segmentDirty = mode !== o.mode || (mode === 'transit' && transitMin !== o.transitMin);
+    const segmentDirty = noTravel !== o.noTravel || mode !== o.mode || (mode === 'transit' && transitMin !== o.transitMin);
     return { entryDirty, segmentDirty, any: entryDirty || segmentDirty };
-  }, [startTime, endTime, description, mode, transitMin]);
+  }, [startTime, endTime, description, mode, transitMin, noTravel]);
 
   const stayMinutes = useMemo(() => {
     if (!startTime || !endTime) return null;
@@ -1245,12 +1273,13 @@ export default function EditEntryPage() {
     }
 
     // v2.55.x: segment 存在 → PATCH 改既有；不存在 + prevEntry 已知 → POST 建立。
-    if (dirty.segmentDirty && mode && prevEntry) {
-      // v2.55.45: 3-mode 編輯器代表 generic 交通（driving/walking/大眾運輸），無 submode
-      // 概念。顯式送 submode:null 清除任何 pill 設過的細分方式，否則後端 preserve-on-omit
-      // 會保留舊 submode 並因帶 min 而鎖成 manual → 使用者選「大眾運輸」卻得到鎖定的單軌。
-      const body: Record<string, unknown> = { mode, submode: null };
-      if (mode === 'transit') {
+    if (dirty.segmentDirty && prevEntry && (mode || noTravel)) {
+      // v2.55.46: 同一地點/免交通 → 送 noTravel:true（後端繞過 mode/min、收合此段）。
+      // 否則 v2.55.45: 3-mode 編輯器代表 generic 交通，顯式送 submode:null 清除 pill 設過的
+      // 細分方式，避免後端 preserve-on-omit 保留舊 submode + 帶 min 鎖成 manual（選大眾運輸
+      // 卻得鎖定單軌）。
+      const body: Record<string, unknown> = noTravel ? { noTravel: true } : { mode, submode: null };
+      if (!noTravel && mode === 'transit') {
         body.min = parseInt(transitMin, 10);
       }
       const req = segment
@@ -1289,7 +1318,7 @@ export default function EditEntryPage() {
         // 從 saving → saved transit。
         originalRef.current = {
           ...originalRef.current,
-          startTime, endTime, description, mode, transitMin,
+          startTime, endTime, description, mode, transitMin, noTravel,
         };
         setSubmitting(false);
         return;
@@ -1309,7 +1338,7 @@ export default function EditEntryPage() {
     }
   }, [
     tripId, entry, entryId, submitting, validation, dirty,
-    startTime, endTime, description, mode, transitMin, segment, prevEntry,
+    startTime, endTime, description, mode, transitMin, noTravel, segment, prevEntry,
   ]);
 
   // v2.55.x：per-POI 備註 autosave 的 flush 註冊表。回前頁前先 await 沖出 pending 備註 PATCH，
@@ -1857,9 +1886,24 @@ export default function EditEntryPage() {
                     <Icon name="car" />
                     <span>從「{prevEntry.title}」移動</span>
                   </h2>
+                  {/* v2.55.46 同一地點/免交通 toggle（V3 入口）— 開啟即收合此段、不計交通。 */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={noTravel}
+                    className={`tp-edit-entry-sameplace ${noTravel ? 'is-on' : ''}`}
+                    onClick={() => setNoTravel((v) => !v)}
+                    data-testid="edit-entry-sameplace-toggle"
+                  >
+                    <span className="tp-edit-entry-sameplace-txt">
+                      <b>同一地點・免交通</b>
+                      <span>兩地視為同一處，不計交通時間</span>
+                    </span>
+                    <span className="tp-edit-entry-switch" aria-hidden="true" />
+                  </button>
                   {/* v2.55.x: segment 不存在時也顯示可編輯 control — user 選 mode 即建立
-                      segment（POST /segments），不必等 recompute travel。 */}
-                  <div className="tp-edit-entry-mode-segmented" role="radiogroup" aria-label="移動方式">
+                      segment（POST /segments），不必等 recompute travel。免交通開啟時 dim。 */}
+                  <div className={`tp-edit-entry-mode-segmented ${noTravel ? 'is-disabled' : ''}`} role="radiogroup" aria-label="移動方式">
                     {(['driving', 'walking', 'transit'] as const).map((m) => (
                       <button
                         key={m}
@@ -1867,7 +1911,7 @@ export default function EditEntryPage() {
                         role="radio"
                         aria-checked={mode === m}
                         className={`tp-edit-entry-mode-btn ${mode === m ? 'is-selected' : ''}`}
-                        onClick={() => setMode(m)}
+                        onClick={() => { setMode(m); setNoTravel(false); }}
                         data-testid={`edit-entry-mode-${m}`}
                       >
                         <Icon name={TRAVEL_MODE_ICON[m]} />
@@ -1875,7 +1919,7 @@ export default function EditEntryPage() {
                       </button>
                     ))}
                   </div>
-                  {mode !== null && mode !== 'transit' && (
+                  {!noTravel && mode !== null && mode !== 'transit' && (
                     <div className="tp-edit-entry-mode-detail">
                       {segment ? (
                         <>
@@ -1897,7 +1941,7 @@ export default function EditEntryPage() {
                       )}
                     </div>
                   )}
-                  {mode === 'transit' && (
+                  {!noTravel && mode === 'transit' && (
                     <div className="tp-edit-entry-transit">
                       <label htmlFor="edit-entry-transit-min">分鐘</label>
                       <input
@@ -1915,9 +1959,14 @@ export default function EditEntryPage() {
                       </span>
                     </div>
                   )}
-                  {mode === null && (
+                  {!noTravel && mode === null && (
                     <p style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-footnote)', margin: 0 }}>
                       選擇移動方式，儲存後建立交通段（開車 / 步行走 Google Routes 估算）
+                    </p>
+                  )}
+                  {noTravel && (
+                    <p style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-footnote)', margin: 0 }}>
+                      此段標記為同一地點，儲存後 timeline 收合、不顯示交通時間。關閉開關即恢復。
                     </p>
                   )}
                 </section>

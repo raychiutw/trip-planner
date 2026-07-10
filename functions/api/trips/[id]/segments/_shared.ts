@@ -36,6 +36,9 @@ export type SegmentMode = (typeof VALID_SEGMENT_MODES)[number];
 export const MAX_SEGMENT_MIN = 1440;
 /** submode 最長字數（自由輸入方式名會被當 label 顯示 → 限長 + 去控制字元）。 */
 export const MAX_SUBMODE_LEN = 20;
+/** PATCH/POST 回傳的 segment row 欄位（固定常數、非 user input）。加欄時只改這一處。 */
+export const SEGMENT_RETURNING_COLS =
+  'id, trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at, version, no_travel';
 
 export function isSegmentMode(v: unknown): v is SegmentMode {
   return typeof v === 'string' && (VALID_SEGMENT_MODES as readonly string[]).includes(v);

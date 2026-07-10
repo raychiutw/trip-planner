@@ -91,6 +91,19 @@ describe('parseAndValidateImport — normalization', () => {
     const driving = { ...valid, segments: [{ fromEntryIdx: 0, toEntryIdx: 1, mode: 'driving', submode: 'monorail' }] };
     expect(ok(parseAndValidateImport(driving)).segments[0]!.submode).toBeNull();
   });
+  it('noTravel=1 強制清 min/dist/source（不變式：untrusted payload 帶髒值也擋掉）', () => {
+    // v2.55.46：POST/PATCH 都保證 no_travel=1 ⟹ min/dist/source NULL；import 邊界同樣強制，
+    // 否則髒 row（no_travel=1 + min=500）會被 recompute 永久跳過又餵給健檢。
+    const dirty = { ...valid, segments: [
+      { fromEntryIdx: 0, toEntryIdx: 1, mode: 'driving', min: 500, distanceM: 9400, source: 'manual', noTravel: 1 },
+      { fromEntryIdx: 1, toEntryIdx: 2, mode: 'walking', min: 8, distanceM: 100, source: 'google', noTravel: true },
+    ] };
+    const d = ok(parseAndValidateImport(dirty));
+    expect(d.segments[0]).toMatchObject({ noTravel: 1, min: null, distanceM: null, source: null });
+    expect(d.segments[1]).toMatchObject({ noTravel: 1, min: null, distanceM: null, source: null });
+    // 正常段（無 noTravel）不受影響
+    expect(ok(parseAndValidateImport(valid)).segments[0]).toMatchObject({ noTravel: null, min: 12, source: 'google' });
+  });
   it('drops out-of-range / self-loop segments', () => {
     const bad = { ...valid, segments: [
       { fromEntryIdx: 0, toEntryIdx: 99, mode: 'driving' }, // to out of range
