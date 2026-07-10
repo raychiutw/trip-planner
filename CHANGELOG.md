@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.52] - 2026-07-11
+
+### Fixed
+- **tp-request 佇列處理卡死（spawner 送指令沒提交）** — api-server（`scripts/tripline-api-server.ts`）用 detached tmux 起 claude REPL 跑 `/tp-request` 排空佇列，原本等固定 2.5s 後 `tmux send-keys '/tp-request' Enter` 一次送出。新版 Claude Code TUI 開機變慢（MCP auth 檢查 + plugin sync 常超過 2.5s）且 slash-command autocomplete 選單會攔截同 burst 送出的 Enter → 指令打進 input 但從沒提交（`$0.000` stuck session），`hasActiveSession` 把它當 active → blocking 後續所有 spawn 約 40 分鐘、使用者請求佇列不處理。
+  - **修法**：（1）`waitForRepl` poll `capture-pane` 直到狀態列渲染（取代硬編碼 2.5s；session 已死時連續空 pane 提早 bail 不空燒 16s）。（2）`submitSkillCommand` 把 type 與 Enter 拆開：type 指令 → poll 確認落地 → 單獨送 Enter → poll 確認提交，未提交就重送（上限 3 次）。（3）`readPromptState` 三態判讀（`pending`/`submitted`/`unknown`）取「最後一個 prompt 行」（避免提交後 echo 進 transcript 的指令被整 pane grep false-positive），宣告提交成功一律要求正向 `submitted`（input 清空）訊號 — 撕裂殘幀（`unknown`）絕不當成功，杜絕「看不到 prompt 就以為提交」的 stuck-session 回歸。（4）readiness 或提交失敗一律 `kill-session`，消除 stuck-session-marked-active 的阻塞 blast radius。
+  - **可測性**：pane 判讀 + orchestration 抽到 `scripts/lib/tmux-pane.ts`，用依賴注入（capture/sendKeys/sleep/log）餵腳本化 pane 序列做真行為測試（`tests/unit/tmux-pane.test.ts`）；server 端 wiring 用 source-grep 鎖不被誤改回一行合併 send-keys（`tests/unit/api-server-spawn-submit.test.ts`）。純 dev-ops script 修正，無 schema/API/前端變更、非 CF 部署（merge 後 kickstart launchd api-server 載新碼）。
+
 ## [2.55.51] - 2026-07-10
 
 ### Added
