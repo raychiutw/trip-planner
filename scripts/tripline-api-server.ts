@@ -84,6 +84,47 @@ const tokenHelper = require(TOKEN_HELPER) as {
   invalidateCache: () => void;
 };
 
+// v2.55.54: 可選用 USER 身份 token 讓 tp-request 寫入行程內容（service token user_id=null →
+// hasWritePermission 一律 false，改不了 entry/備選）。TP_REQUEST_USER_TOKEN=1 且 skill 為
+// /tp-request 才啟用（其他 skill 是 ops 讀取，續用 service token）。預設 OFF → merge 進
+// master 是 inert 的；Ray seed refresh token（scripts/seed-user-refresh-token.mjs）+ 開 flag
+// 才生效。取得失敗 fallback 回 service token（read-only）不 crash spawn，並 alert 提示 re-seed。
+const USER_TOKEN_HELPER = join(PROJECT_DIR, 'scripts', 'lib', 'get-tripline-user-token.js');
+const userTokenHelper = require(USER_TOKEN_HELPER) as {
+  getUserToken: () => Promise<string>;
+};
+
+function userTokenEnabled(skillCommand: string): boolean {
+  const flag = process.env.TP_REQUEST_USER_TOKEN;
+  return (flag === '1' || flag === 'true') && skillCommand.trim() === '/tp-request';
+}
+
+/** Acquire the Bearer token to inject. Prefers a user-identity token for /tp-request
+ *  when enabled; on any user-token failure, alerts + degrades to the read-only service
+ *  token rather than aborting the spawn. Returns null only if the service token also fails. */
+async function acquireToken(skillCommand: string): Promise<string | null> {
+  if (userTokenEnabled(skillCommand)) {
+    try {
+      return await userTokenHelper.getUserToken();
+    } catch (err) {
+      const e = err as { kind?: string; message?: string };
+      logError(`user token 取得失敗（fallback service token，read-only）：[${e.kind ?? '?'}] ${e.message ?? err}`);
+      void throttledAlert(
+        `usertoken-${e.kind ?? 'unknown'}`,
+        'failed',
+        `tp-request user token 失效（${e.kind ?? '?'}）→ 暫用 read-only service token（寫不了行程）。修復：重跑 scripts/seed-user-refresh-token.mjs`,
+      );
+      // fall through to service token
+    }
+  }
+  try {
+    return await tokenHelper.getToken();
+  } catch (err) {
+    logError(`Token mint 失敗，tmux 不啟動：${(err as Error).message}`);
+    return null;
+  }
+}
+
 // --- tmux session management ---
 // v2.30.7: 改用 ephemeral tmux session 跑 claude（非 -p）。每個 /trigger 開
 // 一個 session（v2.33.27 起 per-skill 命名 `tripline-{slug}-<timestamp>-<pid>`，
@@ -233,12 +274,10 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
   // 寫入 prod API（含 §6/§7/§8/§9 poi-favorites 4 條 path）。.env.local 只有
   // TRIPLINE_API_CLIENT_ID/SECRET，沒 TOKEN — 必須 mint 後 inject 到 tmux session
   // env，否則 skill 內 curl header 是 `Bearer ` (empty) → middleware 401。
-  let token = '';
-  try {
-    token = await tokenHelper.getToken();
-  } catch (err) {
-    logError(`Token mint 失敗，tmux 不啟動：${(err as Error).message}`);
-    return false;
+  // v2.55.54: /tp-request 啟用時取 user token（可寫行程）；否則 / 失敗 → service token。
+  const token = await acquireToken(skillCommand);
+  if (token === null) {
+    return false; // acquireToken 已 logError（service token 也失敗）
   }
 
   // v2.33.27: session name 含 skill slug，讓 hasActiveSession 區分。
@@ -292,7 +331,11 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
     const sessionLogDir = join(PROJECT_DIR, 'scripts', 'logs', skillSlug);
     mkdirSync(sessionLogDir, { recursive: true });
     const pipe = spawnSync(TMUX_BIN, [
-      'pipe-pane', '-t', sessionName, '-o', `cat >> '${join(sessionLogDir, `${sessionName}.log`)}'`,
+      // v2.55.54: sed-scrub `Bearer <token>` before the sink — a user access token
+      // is owner-write; keep it out of the ~30d-retained plaintext session log even
+      // if the REPL ever echoes the Authorization header.
+      'pipe-pane', '-t', sessionName, '-o',
+      `sed -E 's#[Bb]earer [A-Za-z0-9._~+/=-]+#Bearer <redacted>#g' >> '${join(sessionLogDir, `${sessionName}.log`)}'`,
     ], { encoding: 'utf-8' });
     if (pipe.status !== 0) logError(`tmux pipe-pane failed (non-blocking): ${pipe.stderr || ''}`);
   } catch (err) {

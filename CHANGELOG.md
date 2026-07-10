@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.54] - 2026-07-11
+
+### Added
+- **tp-request 可用 user 身份寫入行程（refresh-token rotation）** — 原本 api-server 注入 `client_credentials` service token（`user_id=null` → `hasWritePermission` 一律 false → AI 改不了 entry/備選，只能唯讀前置）。新增以 **user OAuth token** 跑 tp-request 的路徑：`scripts/lib/get-tripline-user-token.js` 用 refresh-token grant 換發 user access_token（帶 `user_id` → 通過 `hasWritePermission`）。安全設計：(1) refresh 集中在 api-server 單一 process、只把 1h access_token 注入 ephemeral tmux session，session 永不碰 refresh token；(2) access_token 快取 1h、rotation 只在 cache miss（~1 次/小時，非每次 spawn，縮 crash 窗）；(3) 換發後**先 atomic 持久化新 refresh_token（temp+fsync+rename, 0600）再回傳 access_token**，防 crash-after-consume 觸發 OAuth family cascade-revoke；(4) in-process single-flight + advisory lockfile 防並發雙換發；(5) `invalid_grant`（family revoked / 30d 過期）→ 清 state + `throttledAlert` 提示重 seed。**kill-switch `TP_REQUEST_USER_TOKEN` 預設 OFF** → 合併進 master 為 inert；須 provision client（`scripts/provision-tp-request-client.js`）+ seed refresh token（`scripts/seed-user-refresh-token.mjs`，一次性 authorization_code + PKCE 互動登入）+ 開 flag 才生效。失敗 fallback 回 service token（read-only）不 crash spawn。僅 `/tp-request` 用 user token，其他 ops skill 續用 service token。
+
 ## [2.55.53] - 2026-07-11
 
 ### Fixed
