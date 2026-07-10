@@ -92,21 +92,25 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-caption);
   font-weight: 600;
 }
-/* v2.55.46 同一地點/免交通 marker — 中性 muted、刻意不用 sage（sage=有移動；免交通要 recede）。 */
+/* v2.55.48 同一地點/免交通 marker — 中性描邊膠囊：形狀對齊交通膠囊（.tp-travel-pill 同
+   radius-full + padding），tone 用中性 line-strong 邊 + muted 字（刻意不用 sage：sage=有
+   移動、免交通要 recede），亦對齊 TravelPillDialog 同一地點選項的中性態 → timeline↔對話
+   框↔編輯頁三面一致。字級 caption（比交通膠囊 footnote 略小）維持 recede。 */
 .tp-travel-sameplace {
   display: inline-flex; align-items: center; gap: 6px;
   margin: 6px 0 6px 56px;
-  padding: 3px 4px;
-  background: transparent; border: none;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  background: transparent; border: 1.5px solid var(--color-line-strong);
   color: var(--color-muted);
-  font: inherit; font-size: var(--font-size-caption2);
+  font: inherit; font-size: var(--font-size-caption);
   font-weight: 600; letter-spacing: 0.02em;
 }
 .tp-travel-sameplace .svg-icon { width: 13px; height: 13px; opacity: 0.7; }
-.tp-travel-sameplace.is-interactive { cursor: pointer; transition: color 120ms; }
-.tp-travel-sameplace.is-interactive:hover { color: var(--color-foreground); }
+.tp-travel-sameplace.is-interactive { cursor: pointer; transition: background 120ms, color 120ms; }
+.tp-travel-sameplace.is-interactive:hover { background: var(--color-hover); color: var(--color-foreground); }
 .tp-travel-sameplace.is-interactive:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-sm);
+  outline: 2px solid var(--color-accent); outline-offset: 2px;
 }
 @media (max-width: 760px) {
   .tp-travel-sameplace { margin-left: 44px; }

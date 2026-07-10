@@ -444,13 +444,13 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 
 #### 同一地點 / 免交通 state（v2.55.46）
 - 使用者可把一段連續同地停靠（如同一機場內兩停靠點：那覇機場 → 牛排屋88 機場店）手動標記為「免交通」→ travel pill **收合成「同一地點」marker**，不顯示自動算出的荒謬車程（直線略過 1km walk/drive gate → 被算成開車 9.4 km／21 分）。
-- **收合 marker 用中性 `--color-muted`，刻意不用 sage** — sage 代表「有移動」；免交通是「無移動」要 recede。`location-pin` icon（13px、opacity 0.7）+ caption2（11px）「同一地點」。互動 timeline 上是 button（tap 開對話框改回交通方式）。
+- **收合 marker = 中性描邊膠囊（v2.55.48）** — 形狀對齊交通膠囊（`.tp-travel-pill` 同 `--radius-full` + `padding:5px 14px`），但 tone 用中性 `--color-line-strong` 邊 + `--color-muted` 字，**刻意不用 sage**（sage 代表「有移動」；免交通是「無移動」要 recede）。`location-pin` icon（13px、opacity 0.7）+ caption（12px）「同一地點」。互動 timeline 上是 button（tap 開對話框改回交通方式；hover = `--color-hover` 暖中性底）。此中性膠囊與對話框同一地點選項（下方 `--color-line-strong` 邊）同語言 → timeline↔對話框↔編輯頁三面一致。〔v2.55.46 初版為裸 muted 圖釘（無膠囊容器），與交通膠囊並排視覺不一致，v2.55.48 改膠囊化。〕
 - **兩個標記入口**（共用同一後端 flag + 同一 marker）：
   - **對話框（V1）**：TravelPill 8-方式晶片格下方，分隔線「或」後一整列「同一地點・免交通」。**非第 9 個晶片**（它不是交通方式）→ 中性選取態（暖中性底 + `--color-line-strong` 邊），與柔褐/ sage 晶片區隔。
   - **編輯頁（V3）**：EditEntryPage 交通段區塊一個 toggle switch（on = 柔褐 accent，active 慣例）+ 說明；on 時 dim 掉 3-mode segmented control。
 - 資料：`trip_segments.no_travel`（additive nullable，migration 0084）。`1` = 免交通、`NULL` = 正常段。recompute 見 `no_travel=1` 跳過不覆寫（同 manual-lock）；read path（days/_merge、segments GET）吐 `sameplace` marker。列印/分享面（tripPrintData）顯「同一地點」。AI 健檢餵「同一地點（免交通，刻意無移動）」給 Claude，非「移動時間未記錄」。import 邊界強制 `no_travel=1 ⟹ min/dist/source NULL`。
 - **端點失效**：換掉某停靠點的 master POI（真正 swap，非 no-op drift-repair）→ 相鄰段 `no_travel` 一併清 `NULL` → recompute 重算（「同一地點」前提隨端點改變而失效）。取捨：若只是重選「同機場另一航廈」這種仍同地點的 POI，會被重算成短程開車，需再標一次免交通。
-- Mockup：`docs/design-sessions/2026-07-10-same-place-no-travel.html`（sign-off 2026-07-10，V1+V3 雙入口）。
+- Mockup：`docs/design-sessions/2026-07-10-same-place-no-travel.html`（sign-off 2026-07-10，V1+V3 雙入口）；marker 膠囊化 `docs/design-sessions/2026-07-10-sameplace-pill-consistency.html`（sign-off 2026-07-10，選 V1 中性描邊膠囊）。
 
 ### AI Health Check Page (`tp-ai-health-*`)
 
