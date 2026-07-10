@@ -1137,6 +1137,8 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
                   segment={segment ? {
                     id: segment.id,
                     mode: segment.mode,
+                    submode: segment.submode,
+                    source: segment.source,
                     min: segment.min,
                     distanceM: segment.distanceM,
                     computedAt: segment.computedAt,

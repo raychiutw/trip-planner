@@ -23,6 +23,8 @@ export interface TripSegment {
   fromEntryId: number;
   toEntryId: number;
   mode: 'driving' | 'walking' | 'transit';
+  /** v2.55.45 交通方式細分（monorail/bus/metro/train/hsr/自由文字/null）。driving/walking 恆 null。 */
+  submode: string | null;
   min: number | null;
   distanceM: number | null;
   source: string | null;

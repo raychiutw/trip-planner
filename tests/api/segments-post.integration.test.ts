@@ -93,17 +93,19 @@ describe('POST /api/trips/:id/segments', () => {
     expect(row!.distance_m).toBeGreaterThan(0);
   });
 
-  it('transit + min=25 → 201 + source=manual + distance_m=NULL', async () => {
+  it('transit + min=25（無 submode=其他）→ 201 + source=manual + submode=NULL + distance_m=Haversine 直線', async () => {
+    // v2.55.45：手填方式（其他/metro/train/hsr）距離自動算直線 Haversine（非 NULL）。
     const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', min: 25 }));
     expect(resp.status).toBe(201);
     const row = await db
-      .prepare('SELECT mode, min, source, distance_m FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
+      .prepare('SELECT mode, submode, min, source, distance_m FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
       .bind(e1, e2)
-      .first<{ mode: string; min: number; source: string; distance_m: number | null }>();
+      .first<{ mode: string; submode: string | null; min: number; source: string; distance_m: number | null }>();
     expect(row!.mode).toBe('transit');
+    expect(row!.submode).toBeNull();
     expect(row!.min).toBe(25);
     expect(row!.source).toBe('manual');
-    expect(row!.distance_m).toBeNull();
+    expect(row!.distance_m).toBeGreaterThan(0);
   });
 
   it('同 pair 重送 → upsert（改 mode，不建第二筆）', async () => {

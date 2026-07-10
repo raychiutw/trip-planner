@@ -22,11 +22,13 @@ import { hasWritePermission, requireAuth} from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { json, parseJsonBody, parseIntParam } from '../../../_utils';
 import type { Env } from '../../../_types';
-import { isSegmentMode, MAX_SEGMENT_MIN, resolveSegmentTravel } from './_shared';
+import { isSegmentMode, isValidMin, resolveSegmentTravel, sanitizeSubmode } from './_shared';
 
 interface PatchBody {
   mode?: string;
   min?: number;
+  /** v2.55.45: 交通方式細分（monorail/bus/metro/train/hsr/自由文字）；只在 transit 有意義。 */
+  submode?: string | null;
   /** v2.33.108: OCC token — autosave 帶；不符回 409 STALE_ENTRY。omit → backward compat。 */
   expectedVersion?: number;
 }
@@ -46,11 +48,11 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
-  // 驗 segment 屬於該 trip（防 IDOR）+ 取 from/to entry + version for OCC
+  // 驗 segment 屬於該 trip（防 IDOR）+ 取 from/to entry + submode（PATCH 保留用）+ version for OCC
   const seg = await db
-    .prepare('SELECT id, trip_id, from_entry_id, to_entry_id, version FROM trip_segments WHERE id = ?')
+    .prepare('SELECT id, trip_id, from_entry_id, to_entry_id, submode, version FROM trip_segments WHERE id = ?')
     .bind(sid)
-    .first<{ id: number; trip_id: string; from_entry_id: number; to_entry_id: number; version: number }>();
+    .first<{ id: number; trip_id: string; from_entry_id: number; to_entry_id: number; submode: string | null; version: number }>();
   if (!seg || seg.trip_id !== tripId) {
     throw new AppError('DATA_NOT_FOUND', '找不到此 segment');
   }
@@ -69,40 +71,49 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', 'mode 必須為 driving / walking / transit');
   }
   const mode = body.mode;
+  // PATCH 語意：省略 submode = 保留現值（非清除）。保護不帶 submode 的 caller
+  // （EditEntryPage 3-mode 編輯器只送 {mode, min}）不把 pill 設好的 monorail/bus
+  // 洗成 null。顯式帶值才覆寫；mode 非 transit 由 sanitizeSubmode 強制 null。
+  const submode = sanitizeSubmode(body.submode === undefined ? seg.submode : body.submode, mode);
 
-  if (mode === 'transit' && (typeof body.min !== 'number' || !Number.isFinite(body.min) || body.min < 1 || body.min > MAX_SEGMENT_MIN)) {
-    throw new AppError('DATA_VALIDATION', 'transit mode 須提供 min（1–1440 分鐘）');
+  // v2.55.45: min 有帶就必須合法（1–1440）；不帶 = 走自動算（driving/walking/monorail/bus）。
+  // 純手填方式（metro/train/hsr/自由文字/大眾運輸）缺 min 由 resolveSegmentTravel throw 400。
+  if (body.min !== undefined && !isValidMin(body.min)) {
+    throw new AppError('DATA_VALIDATION', 'min 須為 1–1440 分鐘');
   }
 
   const now = Date.now();
-  const travel = await resolveSegmentTravel(context.env, db, seg.from_entry_id, seg.to_entry_id, mode, body.min, now);
+  const travel = await resolveSegmentTravel(context.env, db, seg.from_entry_id, seg.to_entry_id, mode, submode, body.min, now);
 
   // RETURNING 一次回更新後 row（省 SELECT-back round-trip）。欄位名固定常數，非 user input。
   const RETURNING_COLS =
-    'id, trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at, version';
+    'id, trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at, version';
   let updated;
   if (travel.ok) {
     updated = await db
       .prepare(
         `UPDATE trip_segments
-         SET mode = ?, min = ?, distance_m = ?,
+         SET mode = ?, submode = ?, min = ?, distance_m = ?,
              source = ?, computed_at = ?, updated_at = ?,
              version = version + 1
          WHERE id = ? RETURNING ${RETURNING_COLS}`,
       )
-      .bind(mode, travel.min, travel.distanceM, travel.source, travel.computedAt, now, sid)
+      .bind(mode, travel.submode, travel.min, travel.distanceM, travel.source, travel.computedAt, now, sid)
       .first();
   } else {
-    // driving / walking 算失敗（缺 coords / API key / Routes error）→ 只改 mode 保留舊
+    // 軟失敗（缺 coords / API key / Routes error / quota lock）→ 改 mode + submode，保留舊
     // min/distance，computed_at=NULL 標 stale（不阻擋切換）。
+    // source=NULL：軟失敗只發生在「自動」嘗試（手填路徑必 ok:true 或 throw），故清掉舊的
+    // 'manual' 鎖定，否則 recompute 的 `source IS NOT 'manual'` guard 會永遠跳過 → 不自癒
+    // + 前端假顯 🔒/恢復鈕（correctness review Finding 1）。對齊 POST 的 travel.ok?…:null。
     updated = await db
       .prepare(
         `UPDATE trip_segments
-         SET mode = ?, computed_at = NULL, updated_at = ?,
+         SET mode = ?, submode = ?, source = NULL, computed_at = NULL, updated_at = ?,
              version = version + 1
          WHERE id = ? RETURNING ${RETURNING_COLS}`,
       )
-      .bind(mode, now, sid)
+      .bind(mode, submode, now, sid)
       .first();
   }
   if (!updated) throw new AppError('DATA_NOT_FOUND', 'segment 已不存在');

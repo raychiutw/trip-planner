@@ -114,6 +114,10 @@ export function formatSegmentRecords(rows: SegmentRecordRow[]): string {
     if (r.min == null) {
       travel = '移動時間未記錄（不得據此報時程/距離問題）';
     } else {
+      // 只用 3-mode 白名單 label（大眾運輸含 monorail/bus/metro…全塌成通用）。
+      // ⚠ 不變式：若日後要餵 submode 提升 AI 準確度，submode 是使用者自由文字 →
+      // 必經 cleanName()（同 from/to 名稱）壓單行+截長再內插，否則 free-text 進「權威
+      // block」= LLM01 注入面（security review）。切勿直接 travelMethodLabel(mode, submode)。
       const label = TRAVEL_MODE_LABEL[r.mode as TravelMode] ?? '開車';
       const dist = r.distance_m == null ? '' : ` · ${(r.distance_m / 1000).toFixed(1)} 公里`;
       travel = `${label} ${r.min} 分鐘${dist}`;

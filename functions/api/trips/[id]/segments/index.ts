@@ -14,7 +14,7 @@ import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../..
 import { AppError } from '../../../_errors';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
-import { isSegmentMode, MAX_SEGMENT_MIN, resolveSegmentTravel } from './_shared';
+import { isSegmentMode, isValidMin, resolveSegmentTravel, sanitizeSubmode } from './_shared';
 
 interface SegmentRow {
   id: number;
@@ -22,6 +22,7 @@ interface SegmentRow {
   from_entry_id: number;
   to_entry_id: number;
   mode: string;
+  submode: string | null;
   min: number | null;
   distance_m: number | null;
   source: string | null;
@@ -43,7 +44,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const res = await db
     .prepare(
       `SELECT s.id, s.trip_id, s.from_entry_id, s.to_entry_id,
-              s.mode, s.min, s.distance_m, s.source,
+              s.mode, s.submode, s.min, s.distance_m, s.source,
               s.computed_at, s.updated_at, s.version
        FROM trip_segments s
        JOIN trip_entries fe ON fe.id = s.from_entry_id
@@ -62,6 +63,8 @@ interface CreateSegmentBody {
   to_entry_id?: number;
   mode?: string;
   min?: number;
+  /** v2.55.45: 交通方式細分（monorail/bus/metro/train/hsr/自由文字）；只在 transit 有意義。 */
+  submode?: string | null;
 }
 
 /**
@@ -106,9 +109,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', 'mode 必須為 driving / walking / transit');
   }
   const mode = body.mode;
+  const submode = sanitizeSubmode(body.submode, mode);
 
-  if (mode === 'transit' && (typeof body.min !== 'number' || !Number.isFinite(body.min) || body.min < 1 || body.min > MAX_SEGMENT_MIN)) {
-    throw new AppError('DATA_VALIDATION', 'transit mode 須提供 min（1–1440 分鐘）');
+  // v2.55.45: min 有帶就必須合法；不帶 = 自動算。純手填方式缺 min 由 resolveSegmentTravel throw。
+  if (body.min !== undefined && !isValidMin(body.min)) {
+    throw new AppError('DATA_VALIDATION', 'min 須為 1–1440 分鐘');
   }
 
   // 防 IDOR：兩個 entry 都必須屬於該 trip
@@ -126,12 +131,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   const now = Date.now();
-  const travel = await resolveSegmentTravel(context.env, db, fromEntryId, toEntryId, mode, body.min, now);
+  const travel = await resolveSegmentTravel(context.env, db, fromEntryId, toEntryId, mode, submode, body.min, now);
 
   const min = travel.ok ? travel.min : null;
   const distanceM = travel.ok ? travel.distanceM : null;
   const source = travel.ok ? travel.source : null;
   const computedAt = travel.ok ? travel.computedAt : null;
+  const subToStore = travel.ok ? travel.submode : submode;
 
   // INSERT ON CONFLICT(from_entry_id, to_entry_id) → upsert（同 pair 重設 mode），RETURNING
   // 一次回 row（省 SELECT-back round-trip）。
@@ -141,20 +147,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const created = await db
     .prepare(
       `INSERT INTO trip_segments
-         (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (from_entry_id, to_entry_id) DO UPDATE SET
          mode = excluded.mode,
+         submode = excluded.submode,
          min = excluded.min,
          distance_m = excluded.distance_m,
          source = excluded.source,
          computed_at = excluded.computed_at,
          updated_at = excluded.updated_at,
          version = trip_segments.version + 1
-       RETURNING id, trip_id, from_entry_id, to_entry_id, mode,
+       RETURNING id, trip_id, from_entry_id, to_entry_id, mode, submode,
                  min, distance_m, source, computed_at, updated_at, version`,
     )
-    .bind(tripId, fromEntryId, toEntryId, mode, min, distanceM, source, computedAt, now)
+    .bind(tripId, fromEntryId, toEntryId, mode, subToStore, min, distanceM, source, computedAt, now)
     .first();
   if (!created) throw new AppError('DATA_SAVE_FAILED', '建立 segment 失敗');
   return json(created, 201);

@@ -86,7 +86,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     db.prepare('SELECT e.id, e.day_id, e.sort_order, e.start_time, e.end_time, e.description, e.source FROM trip_entries e JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ? ORDER BY e.day_id ASC, e.sort_order ASC').bind(src).all(),
     db.prepare('SELECT tep.entry_id, tep.sort_order, tep.description, tep.note, tep.reservation, tep.reservation_url, p.type, p.name, p.category, p.lat, p.lng, p.hours, p.rating, p.price, p.address, p.place_id FROM trip_entry_pois tep JOIN pois p ON p.id = tep.poi_id JOIN trip_entries e ON e.id = tep.entry_id JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ? ORDER BY tep.entry_id ASC, tep.sort_order ASC').bind(src).all(),
     db.prepare('SELECT td.id AS day_id, p.type, p.name, p.category, p.lat, p.lng, p.hours, p.rating, p.price, p.address, p.place_id FROM trip_days td JOIN pois p ON p.id = td.hotel_poi_id WHERE td.trip_id = ?').bind(src).all(),
-    db.prepare('SELECT from_entry_id, to_entry_id, mode, min, distance_m, source FROM trip_segments WHERE trip_id = ?').bind(src).all(),
+    db.prepare('SELECT from_entry_id, to_entry_id, mode, submode, min, distance_m, source FROM trip_segments WHERE trip_id = ?').bind(src).all(),
     noteRead('trip_flights', wants('flights')),
     noteRead('trip_lodgings', wants('lodgings')),
     noteRead('trip_reservations', wants('reservations')),
@@ -187,8 +187,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       const from = entryIdMap.get(s.from_entry_id as number);
       const to = entryIdMap.get(s.to_entry_id as number);
       if (from === undefined || to === undefined) continue;
-      tail.push(db.prepare('INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, version) VALUES (?,?,?,?,?,?,?,?,0)')
-        .bind(tripId, from, to, s.mode, s.min, s.distance_m, s.source, s.source === 'google' ? Date.now() : null));
+      tail.push(db.prepare('INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, version) VALUES (?,?,?,?,?,?,?,?,?,0)')
+        .bind(tripId, from, to, s.mode, s.submode ?? null, s.min, s.distance_m, s.source, s.source === 'google' ? Date.now() : null));
     }
     await runChunked(db, tail);
 

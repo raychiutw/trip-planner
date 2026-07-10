@@ -80,7 +80,7 @@ export interface NImportDest {
   name: string; lat: number | null; lng: number | null; dayQuota: number | null; subAreas: string[] | null;
 }
 export interface NImportSegment {
-  fromEntryIdx: number; toEntryIdx: number; mode: string; min: number | null; distanceM: number | null; source: string | null;
+  fromEntryIdx: number; toEntryIdx: number; mode: string; submode: string | null; min: number | null; distanceM: number | null; source: string | null;
 }
 export interface NImportNotes {
   flights: Record<string, string | number>[];
@@ -113,6 +113,27 @@ const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 function str(v: unknown, max = 2000): string {
   if (v == null) return '';
   return String(v).slice(0, max);
+}
+/**
+ * 淨化匯入的交通方式細分（submode，非 transit → null）。攻擊者控制 JSON → 去
+ * 控制/雙向/零寬字元 + 20 字上限，行為對齊 segments/_shared.ts 的 sanitizeSubmode
+ * （安全邊界刻意自含、不 import API 層；兩處須同步維護）。
+ */
+function cleanSubmode(v: unknown, mode: string): string | null {
+  if (mode !== 'transit' || typeof v !== 'string') return null;
+  let out = '';
+  for (const ch of v) {
+    const c = ch.codePointAt(0) ?? 0;
+    if (c < 0x20 || c === 0x7f) continue;               // C0 + DEL
+    if (c >= 0x80 && c <= 0x9f) continue;               // C1
+    if (c === 0x200b || c === 0x200c || c === 0x200d || c === 0xfeff || c === 0x2060) continue; // 零寬
+    if (c >= 0x202a && c <= 0x202e) continue;           // bidi embedding/override
+    if (c >= 0x2066 && c <= 0x2069) continue;           // bidi isolates
+    if (c === 0x2028 || c === 0x2029) continue;         // line/para sep
+    out += ch;
+  }
+  const s = [...out.trim()].slice(0, 20).join('');
+  return s.length > 0 ? s : null;
 }
 function strOrNull(v: unknown, max = 2000): string | null {
   if (v == null || v === '') return null;
@@ -288,6 +309,7 @@ export function parseAndValidateImport(raw: unknown): ImportResult {
       fromEntryIdx: intOrNull(o.fromEntryIdx) ?? -1,
       toEntryIdx: intOrNull(o.toEntryIdx) ?? -1,
       mode: oneOf(o.mode, SEG_MODES, 'driving'),
+      submode: cleanSubmode(o.submode, oneOf(o.mode, SEG_MODES, 'driving')),
       min: intOrNull(o.min),
       distanceM: intOrNull(o.distanceM),
       source: oneOfOrNull(o.source, SEG_SOURCES),

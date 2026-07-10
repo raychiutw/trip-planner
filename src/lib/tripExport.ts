@@ -48,6 +48,8 @@ export interface TripExportSegment {
   fromEntryIdx: number;
   toEntryIdx: number;
   mode: string;
+  /** v2.55.45 交通方式細分（monorail/bus/metro/train/hsr/自由文字/null）。round-trip 保留。 */
+  submode: string | null;
   min: number | null;
   distanceM: number | null;
   source: string | null;
@@ -102,6 +104,7 @@ export function buildTripExportJson(input: {
         fromEntryIdx: from ?? -1,
         toEntryIdx: to ?? -1,
         mode: typeof s.mode === 'string' ? s.mode : '',
+        submode: typeof s.submode === 'string' ? s.submode : null,
         min: typeof s.min === 'number' ? s.min : null,
         distanceM: typeof s.distanceM === 'number' ? s.distanceM : null,
         source: typeof s.source === 'string' ? s.source : null,

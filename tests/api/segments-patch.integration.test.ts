@@ -1,9 +1,13 @@
 /**
  * Integration test — PATCH /api/trips/:id/segments/:sid
  *
- * v2.30.0：mode_source DROPPED。新 contract：
+ * v2.30.0：mode_source DROPPED。contract：
  *   - mode='transit' → 必填 min（Japan Routes 無 transit 資料），source='manual'，不打 API
- *   - mode='driving' / 'walking' → 一律 Google Routes 重算，ignore body.min, source='google'
+ *   - mode='driving' / 'walking' 不帶 min → 一律 Google Routes 重算，source='google'
+ *
+ * v2.55.45：交通方式細分 submode + 自動方式可手動覆寫。
+ *   - 自動方式（driving/walking/monorail/bus）帶 body.min → 手動覆寫鎖定（source='manual'、
+ *     保留 body.min、距離改直線）；不帶 min → 恢復自動算。submode 省略 = 保留現值。
  *
  * v2.26.2 regression：mode 從 driving 切 walking（或反向）→ backend 必須自動
  * call Google Routes 重算 min（不能保留舊 mode 的時間）。
@@ -87,7 +91,9 @@ describe('PATCH /api/trips/:id/segments/:sid', () => {
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
   });
 
-  it('mode=transit + min=30 → 200 + source=manual + distance_m=NULL', async () => {
+  it('mode=transit + min=30（無 submode=其他、此 fixture 無座標）→ 200 + source=manual + distance_m=NULL', async () => {
+    // v2.55.45：手填方式距離自動算直線 Haversine，但此 fixture 的 entry 無 POI 座標
+    // → Haversine 無法算 → distance_m 保持 NULL（有座標的情況見 segments-post 測試）。
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'transit', min: 30 }),
       env,
@@ -211,9 +217,32 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     expect(updated!.min).toBeLessThanOrEqual(25);
   });
 
-  it('v2.30.0：mode=walking 帶 body.min → backend 忽略 body.min 強制 Google 重算', async () => {
+  it('v2.55.45：mode=walking 帶 body.min → 手動覆寫鎖定（source=manual、保留 body.min、不再自動算）', async () => {
+    // v2.30.0 舊契約是「driving/walking 忽略 body.min 強制 Google 重算」；v2.55.45 起
+    // 自動方式（駕車/步行/單軌/公車）可手填覆寫 → 鎖定該值、source='manual'、距離改直線。
+    // 「恢復自動計算」= 前端重送不帶 min（見下一 test）。
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'walking', min: 42 }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-segr', sid: String(segIdR) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    const updated = await db.prepare('SELECT mode, "min", source, distance_m FROM trip_segments WHERE id = ?')
+      .bind(segIdR).first<{ mode: string; min: number; source: string; distance_m: number | null }>();
+    expect(updated!.mode).toBe('walking');
+    expect(updated!.min).toBe(42);            // body.min 保留（手動覆寫）
+    expect(updated!.source).toBe('manual');    // 鎖定，非 google
+    expect(updated!.distance_m).toBeGreaterThan(0); // 距離改直線 Haversine（fixture 有座標）
+  });
+
+  it('v2.55.45：覆寫後重送不帶 min → 恢復自動計算（source 回 google、min 重算）', async () => {
+    // 先手填覆寫成 manual/42
+    await db.prepare('UPDATE trip_segments SET mode=?, "min"=?, source=? WHERE id=?')
+      .bind('walking', 42, 'manual', segIdR).run();
+    // 重送不帶 min → 回自動 Google 重算
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'walking' }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-segr', sid: String(segIdR) },
@@ -222,10 +251,9 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     const updated = await db.prepare('SELECT mode, "min", source FROM trip_segments WHERE id = ?')
       .bind(segIdR).first<{ mode: string; min: number; source: string }>();
     expect(updated!.mode).toBe('walking');
-    // 9.3km / 5km/h ≈ 111 min；body.min=42 應被 ignore
-    expect(updated!.min).toBeGreaterThanOrEqual(90);
+    expect(updated!.source).toBe('google');    // 恢復自動
+    expect(updated!.min).toBeGreaterThanOrEqual(90); // 9.3km/5km/h ≈ 111，非保留的 42
     expect(updated!.min).toBeLessThanOrEqual(130);
-    expect(updated!.source).toBe('google');
   });
 
   it('entries 缺 coords → 保留舊 min（不能 call Google，fallback）', async () => {
@@ -266,5 +294,32 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
       .bind(segIdR).first<{ mode: string; min: number }>();
     expect(updated!.mode).toBe('walking');
     expect(updated!.min).toBe(18); // 保留原 driving 時間（fallback）
+  });
+
+  it('v2.55.45：source=manual 段切 auto 遇 soft-fail（缺座標）→ source 重置 NULL（可自癒，非永久鎖定）', async () => {
+    // correctness review Finding 1：soft-fail 分支若不清 source，manual 段切 auto 撞 quota/缺座標
+    // 會永遠停在 source='manual' → recompute 的 `source IS NOT 'manual'` guard 永久跳過 → 不自癒。
+    await db.prepare('UPDATE trip_segments SET mode=?, source=?, "min"=? WHERE id=?')
+      .bind('driving', 'manual', 50, segIdR).run();
+    // 清兩端座標 → 切 walking 時 computeGoogle ok:false（soft-fail）
+    for (const col of ['from_entry_id', 'to_entry_id']) {
+      await db.prepare(
+        `UPDATE pois SET lat=NULL, lng=NULL WHERE id IN (
+           SELECT tep.poi_id FROM trip_entry_pois tep
+           WHERE tep.sort_order = 1 AND tep.entry_id IN (SELECT ${col} FROM trip_segments WHERE id = ?))`,
+      ).bind(segIdR).run();
+    }
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'walking' }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-segr', sid: String(segIdR) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    const updated = await db.prepare('SELECT mode, source, computed_at FROM trip_segments WHERE id = ?')
+      .bind(segIdR).first<{ mode: string; source: string | null; computed_at: number | null }>();
+    expect(updated!.mode).toBe('walking');
+    expect(updated!.source).toBeNull();      // 關鍵：不再是 'manual' → recompute 可自癒
+    expect(updated!.computed_at).toBeNull();  // stale，待自癒
   });
 });
