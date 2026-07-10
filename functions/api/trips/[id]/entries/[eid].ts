@@ -7,6 +7,7 @@ import { detectGarbledText } from '../../../_validate';
 import { json, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 import { fetchEntryPoisByEntries } from '../days/_merge';
+import { resortDayByArrival } from '../../../_entry_sort';
 
 // Phase 3：移除 location / maps / rating — 這些欄位已 DROP，POI master JOIN 取代。
 // v2.30.15: mapcode 也已 DROP (migration 0066) — Google/Apple Map link 涵蓋導航需求。
@@ -213,6 +214,22 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     diffJson: computeDiff(oldRow, newFields),
   });
 
+  // 依抵達時間重排：改了 start_time 且未顯式指定 sort_order → 重排當日 entries
+  // （手動拖曳走 batch 端點顯式 sort_order，不進這裡；inline 與全頁改時間都覆蓋）。
+  // travel 重算由前端 dispatch entryUpdated + requestTravelRecompute 觸發。
+  // best-effort：entry UPDATE 已 commit（D1 逐語句 auto-commit），重排失敗不可讓主寫入
+  // 回報 500（否則前端誤報「時間儲存失敗」且跳過 recompute，但時間其實已存）；resort
+  // 自癒、下次改時間會補正。
+  if ('start_time' in body && !('sort_order' in body)) {
+    try {
+      await resortDayByArrival(db, Number((row as { day_id?: unknown }).day_id));
+    } catch (err) {
+      console.error('[entries PATCH] resortDayByArrival failed (non-fatal)', err);
+    }
+  }
+
+  // 注意：回傳的 row 帶「重排前」的 sort_order（stale）；不影響 client——前端一律 refetch
+  // 當日、不採用此 sort_order。省一次 re-read。
   return json(row);
 };
 

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>景點詳情卡 — 就地改時間 + 備選升正選（3 variants）</title>
+<style>
+  :root {
+    --color-accent: #A97A4A; --color-accent-subtle: #F4EDE3; --color-accent-bg: #E9DBC8; --color-accent-deep: #8A6038;
+    --color-accent-2: #A8BAAA; --color-accent-2-deep: #7E9580; --color-accent-2-subtle: #ECF0ED; --color-accent-2-bg: #D4DDD5;
+    --color-accent-3: #E78C99; --color-accent-3-deep: #C66B78; --color-accent-3-subtle: #FAF1F3; --color-accent-3-bg: #F2DBE0;
+    --color-background: #FFFBF5; --color-secondary: #FAF4EA; --color-tertiary: #F3E9DA; --color-hover: #F9EDE0;
+    --color-foreground: #2A1F18; --color-muted: #6F5A47; --color-border: #EADFCF; --color-line-strong: #C8B89F;
+    --radius-sm: 8px; --radius-md: 10px; --radius-lg: 14px; --radius-full: 999px;
+    --fs-body: 16px; --fs-callout: 15px; --fs-caption: 13px; --fs-footnote: 13.5px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 24px 64px;
+    font-family: "Inter", "Noto Sans TC", -apple-system, "PingFang TC", sans-serif;
+    background: #EFE6D6; color: var(--color-foreground); line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page-title { max-width: 1180px; margin: 0 auto 8px; font-size: 22px; font-weight: 800; }
+  .page-sub { max-width: 1180px; margin: 0 auto 28px; color: var(--color-muted); font-size: 14px; }
+  .grid { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; align-items: start; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; max-width: 400px; } }
+
+  .variant { }
+  .variant-head { margin: 0 0 4px; font-size: 15px; font-weight: 800; color: var(--color-accent-deep); }
+  .variant-tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--color-accent-2-deep); background: var(--color-accent-2-bg); border-radius: var(--radius-full); padding: 2px 9px; margin-left: 6px; vertical-align: middle; }
+  .variant-desc { margin: 0 0 14px; font-size: 12.5px; color: var(--color-muted); min-height: 52px; }
+
+  /* ── timeline detail card（忠實模擬 TimelineRail）── */
+  .card { background: var(--color-background); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+    overflow: hidden; box-shadow: 0 2px 10px rgba(80,55,30,.06); }
+  .head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--color-secondary); }
+  .dot { width: 22px; height: 22px; border-radius: var(--radius-full); background: var(--color-accent); color: #fff;
+    font-size: 12px; font-weight: 700; display: grid; place-items: center; flex: none; }
+  .head-icon { width: 26px; height: 26px; border-radius: var(--radius-full); background: var(--color-accent-3-bg); color: var(--color-accent-3-deep);
+    display: grid; place-items: center; flex: none; }
+  .head-content { flex: 1; min-width: 0; }
+  .head-name { font-size: var(--fs-callout); font-weight: 700; }
+  .head-sub { font-size: var(--fs-caption); color: var(--color-muted); font-variant-numeric: tabular-nums; margin-top: 1px; }
+  .head-sub .sep { margin: 0 5px; opacity: .5; }
+  .caret { color: var(--color-line-strong); font-size: 18px; }
+
+  .detail { padding: 4px 16px 14px; }
+  .section { padding: 12px 0; border-top: 1px solid var(--color-border); }
+  .section:first-child { border-top: none; }
+  .section h4 { margin: 0 0 8px; font-size: 12px; font-weight: 800; letter-spacing: .05em; color: var(--color-muted); text-transform: uppercase; }
+  .meta { font-size: var(--fs-caption); color: var(--color-muted); }
+  .meta .star { color: var(--color-accent); font-weight: 700; }
+  .maps { display: inline-flex; gap: 8px; margin-top: 6px; }
+  .map-link { font-size: 12px; color: var(--color-accent-deep); background: var(--color-accent-subtle); border-radius: var(--radius-full); padding: 3px 10px; text-decoration: none; }
+  .note-val { font-size: var(--fs-footnote); color: var(--color-muted); padding: 8px 10px; border: 1px dashed var(--color-line-strong); border-radius: var(--radius-sm); }
+
+  /* 備選卡 */
+  .poi-card { background: var(--color-accent-3-subtle); border: 1px solid var(--color-accent-3-bg); border-radius: var(--radius-md); padding: 12px 14px; }
+  .poi-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .poi-name { font-size: var(--fs-callout); font-weight: 700; }
+  .poi-type { font-size: var(--fs-caption); color: var(--color-muted); background: var(--color-tertiary); border-radius: var(--radius-full); padding: 2px 8px; }
+  .poi-meta { font-size: var(--fs-caption); color: var(--color-muted); margin-top: 4px; }
+
+  /* 設為正選 按鈕（沿用 EditEntryPage .set-master：terracotta tonal）*/
+  .poi-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .btn-set-master { min-width: 76px; padding: 6px 14px; border: none; border-radius: var(--radius-full);
+    background: var(--color-accent-subtle); color: var(--color-accent-deep); font-weight: 600; font-size: var(--fs-caption);
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-set-master:hover { background: var(--color-accent-bg); }
+  .btn-set-master svg { width: 15px; height: 15px; }
+  .btn-icon-swap { width: 34px; height: 34px; border: 1px solid var(--color-accent-3-bg); border-radius: var(--radius-full);
+    background: var(--color-background); color: var(--color-accent-3-deep); cursor: pointer; display: grid; place-items: center; }
+  .btn-icon-swap svg { width: 16px; height: 16px; }
+
+  /* action bar */
+  .actions { display: flex; gap: 8px; padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--color-border); }
+  .act { width: 36px; height: 36px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-background);
+    color: var(--color-muted); display: grid; place-items: center; }
+  .act svg { width: 17px; height: 17px; }
+  .act.spacer { flex: 1; border: none; background: none; }
+
+  /* ── 時間控制 variants ── */
+  /* V1 常駐兩 picker */
+  .time-grid { display: flex; gap: 10px; }
+  .time-field { flex: 1; }
+  .time-field label { display: block; font-size: 11px; font-weight: 700; color: var(--color-muted); margin-bottom: 4px; }
+  .time-trigger { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; height: 44px;
+    border: 1.5px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-secondary);
+    font-size: 20px; font-weight: 700; color: var(--color-foreground); font-variant-numeric: tabular-nums; cursor: pointer; }
+  .time-trigger .chev { width: 16px; height: 16px; color: var(--color-muted); }
+  .time-trigger.active { border-color: var(--color-accent); background: var(--color-background); box-shadow: 0 0 0 3px var(--color-accent-subtle); }
+
+  /* V2 header chip */
+  .head-time-chip { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums;
+    background: var(--color-accent-subtle); color: var(--color-accent-deep); font-weight: 700; border-radius: var(--radius-full);
+    padding: 1px 9px; border: 1px solid transparent; cursor: pointer; }
+  .head-time-chip:hover { border-color: var(--color-accent-bg); }
+  .head-time-chip svg { width: 12px; height: 12px; opacity: .8; }
+
+  /* popover 示意 */
+  .popover { margin-top: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-background);
+    box-shadow: 0 8px 24px rgba(80,55,30,.14); padding: 10px; display: flex; gap: 8px; }
+  .pop-col { flex: 1; text-align: center; }
+  .pop-col-label { font-size: 11px; color: var(--color-muted); font-weight: 700; margin-bottom: 4px; }
+  .pop-list { border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden; }
+  .pop-cell { padding: 6px 0; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .pop-cell.sel { background: var(--color-accent); color: #fff; font-weight: 700; }
+  .pop-dash { align-self: center; color: var(--color-muted); font-weight: 700; }
+
+  /* V3 compact pill */
+  .time-pill { display: inline-flex; align-items: center; gap: 8px; background: var(--color-secondary); border: 1px solid var(--color-border);
+    border-radius: var(--radius-full); padding: 6px 8px 6px 14px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
+  .time-pill .edit-ic { width: 28px; height: 28px; border-radius: var(--radius-full); background: var(--color-accent-subtle);
+    color: var(--color-accent-deep); display: grid; place-items: center; }
+  .time-pill .edit-ic svg { width: 14px; height: 14px; }
+  .clock { width: 15px; height: 15px; color: var(--color-accent); }
+
+  .highlight { box-shadow: 0 0 0 2px var(--color-accent-2); border-radius: var(--radius-md); }
+  .callout { font-size: 11.5px; color: var(--color-accent-2-deep); background: var(--color-accent-2-subtle);
+    border-radius: var(--radius-sm); padding: 6px 10px; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div class="page-title">景點詳情卡 — 就地改起訖時間 + 備選一鍵升正選</div>
+  <div class="page-sub">既有後端全現成（<code>PATCH /entries/:eid</code> 改時間、<code>PATCH /entries/:eid/master</code> swap 正選）。以下 3 個 variant 只差「時間編輯」互動方式；「設為正選」按鈕跨 variant 一致（V3 除外，試 icon 版）。sage 外框 = 本次新增的控制。</div>
+
+  <div class="grid">
+
+    <!-- V1 -->
+    <section class="variant">
+      <h3 class="variant-head">V1　詳情內「時間」區塊<span class="variant-tag">inline 常駐 · 推薦</span></h3>
+      <p class="variant-desc">展開詳情最上方固定一個「時間」段，抵達／離開兩個 TripTimePicker 常駐可見（同 EditEntryPage）。點任一 → 開時/分兩欄 popover。所見即可改，零學習成本。</p>
+      <div class="card">
+        <div class="head">
+          <span class="dot">3</span>
+          <span class="head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2v20M6 6h11l-2 4 2 4H6"/></svg></span>
+          <span class="head-content"><div class="head-name">糸滿魚市場</div><div class="head-sub">13:00–14:00<span class="sep">·</span>購物<span class="sep">·</span>1 小時<span class="sep">·</span><span style="color:var(--color-accent)">★</span> 4.1</div></span>
+          <span class="caret">›</span>
+        </div>
+        <div class="detail">
+          <div class="section highlight" style="background:var(--color-accent-2-subtle); margin: 4px -8px 0; padding-left: 8px; padding-right: 8px; border-radius: var(--radius-md);">
+            <h4>時間</h4>
+            <div class="time-grid">
+              <div class="time-field"><label>抵達</label><div class="time-trigger active">13:00<svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l5 5 5-5"/></svg></div></div>
+              <div class="time-field"><label>離開</label><div class="time-trigger">14:00<svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l5 5 5-5"/></svg></div></div>
+            </div>
+            <div class="popover" style="max-width:220px">
+              <div class="pop-col"><div class="pop-col-label">時</div><div class="pop-list"><div class="pop-cell">12</div><div class="pop-cell sel">13</div><div class="pop-cell">14</div></div></div>
+              <div class="pop-col"><div class="pop-col-label">分</div><div class="pop-list"><div class="pop-cell sel">00</div><div class="pop-cell">05</div><div class="pop-cell">10</div></div></div>
+            </div>
+          </div>
+          <div class="section"><h4>景點說明</h4><div class="meta"><span class="star">★ 4.1</span></div><div class="maps"><span class="map-link">Google 地圖</span><span class="map-link">Apple 地圖</span></div></div>
+          <div class="section"><h4>備選景點</h4>
+            <div class="poi-card">
+              <div class="poi-head"><span class="poi-name">泊港漁市場</span><span class="poi-type">市場</span></div>
+              <div class="poi-meta">★ 4.0 · 那覇市</div>
+              <div class="poi-actions">
+                <button class="btn-set-master"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4-4 4M21 7H7M7 21l-4-4 4-4M3 17h14"/></svg>設為正選</button>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span>
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></span>
+            <span class="act spacer"></span>
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></span>
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></span>
+          </div>
+        </div>
+      </div>
+      <div class="callout">✓ 無 header 改動風險　✓ 與全編輯頁同視覺　✗ 詳情多一段固定高度</div>
+    </section>
+
+    <!-- V2 -->
+    <section class="variant">
+      <h3 class="variant-head">V2　Header 時間 chip → popover<span class="variant-tag">最「直接」</span></h3>
+      <p class="variant-desc">header 的「13:00–14:00」變成可點膠囊，直接點它 → 就地跳出時/分 popover（起訖同一面板）。最貼近「直接調整」字面。需把時間從 row-toggle 拆成獨立 tap 目標。</p>
+      <div class="card">
+        <div class="head">
+          <span class="dot">3</span>
+          <span class="head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2v20M6 6h11l-2 4 2 4H6"/></svg></span>
+          <span class="head-content"><div class="head-name">糸滿魚市場</div>
+            <div class="head-sub"><span class="head-time-chip highlight">13:00–14:00<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></span><span class="sep">·</span>購物<span class="sep">·</span><span style="color:var(--color-accent)">★</span> 4.1</div></span>
+          <span class="caret">›</span>
+        </div>
+        <div class="detail">
+          <div class="popover" style="margin: 2px 0 0; max-width: 260px">
+            <div class="pop-col"><div class="pop-col-label">起 · 時</div><div class="pop-list"><div class="pop-cell sel">13</div><div class="pop-cell">14</div></div></div>
+            <div class="pop-col"><div class="pop-col-label">起 · 分</div><div class="pop-list"><div class="pop-cell sel">00</div><div class="pop-cell">30</div></div></div>
+            <span class="pop-dash">–</span>
+            <div class="pop-col"><div class="pop-col-label">迄 · 時</div><div class="pop-list"><div class="pop-cell">13</div><div class="pop-cell sel">14</div></div></div>
+            <div class="pop-col"><div class="pop-col-label">迄 · 分</div><div class="pop-list"><div class="pop-cell sel">00</div><div class="pop-cell">30</div></div></div>
+          </div>
+          <div class="section" style="border-top:none"><h4>景點說明</h4><div class="meta"><span class="star">★ 4.1</span></div><div class="maps"><span class="map-link">Google 地圖</span><span class="map-link">Apple 地圖</span></div></div>
+          <div class="section"><h4>備選景點</h4>
+            <div class="poi-card">
+              <div class="poi-head"><span class="poi-name">泊港漁市場</span><span class="poi-type">市場</span></div>
+              <div class="poi-meta">★ 4.0 · 那覇市</div>
+              <div class="poi-actions">
+                <button class="btn-set-master"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4-4 4M21 7H7M7 21l-4-4 4-4M3 17h14"/></svg>設為正選</button>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span>
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></span>
+            <span class="act spacer"></span>
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></span>
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></span>
+          </div>
+        </div>
+      </div>
+      <div class="callout">✓ 最少視覺增量　✓ 收合狀態也能改　✗ row-toggle 需拆出獨立 tap 目標（巢狀 button 風險）</div>
+    </section>
+
+    <!-- V3 -->
+    <section class="variant">
+      <h3 class="variant-head">V3　詳情頂 compact pill → tap 展開<span class="variant-tag">漸進揭露</span></h3>
+      <p class="variant-desc">詳情最上一顆精簡時間膠囊（帶編輯 icon），預設收合；tap → 就地展開兩個 picker + 完成鈕。省空間。備選改用 icon 交換鈕（⇄）試緊湊版。</p>
+      <div class="card">
+        <div class="head">
+          <span class="dot">3</span>
+          <span class="head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2v20M6 6h11l-2 4 2 4H6"/></svg></span>
+          <span class="head-content"><div class="head-name">糸滿魚市場</div><div class="head-sub">13:00–14:00<span class="sep">·</span>購物<span class="sep">·</span>1 小時<span class="sep">·</span><span style="color:var(--color-accent)">★</span> 4.1</div></span>
+          <span class="caret">›</span>
+        </div>
+        <div class="detail">
+          <div class="section highlight" style="border-top:none; background:var(--color-accent-2-subtle); margin: 4px -8px 0; padding: 12px 8px; border-radius: var(--radius-md);">
+            <span class="time-pill"><svg class="clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>13:00 – 14:00<span class="edit-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></span></span>
+          </div>
+          <div class="section"><h4>景點說明</h4><div class="meta"><span class="star">★ 4.1</span></div><div class="maps"><span class="map-link">Google 地圖</span><span class="map-link">Apple 地圖</span></div></div>
+          <div class="section"><h4>備選景點</h4>
+            <div class="poi-card">
+              <div class="poi-head"><span class="poi-name">泊港漁市場</span><span class="poi-type">市場</span>
+                <span style="flex:1"></span>
+                <button class="btn-icon-swap" title="設為正選"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4-4 4M21 7H7M7 21l-4-4 4-4M3 17h14"/></svg></button>
+              </div>
+              <div class="poi-meta">★ 4.0 · 那覇市 · <span style="color:var(--color-accent-3-deep); font-weight:600">↑ 設為正選</span></div>
+            </div>
+          </div>
+          <div class="actions">
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span>
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></span>
+            <span class="act spacer"></span>
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></span>
+            <span class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></span>
+          </div>
+        </div>
+      </div>
+      <div class="callout">✓ 最省空間　✓ 詳情不變高　✗ 多一次 tap 才露 picker　✗ icon 交換鈕語意較弱</div>
+    </section>
+
+  </div>
+</body>
+</html>

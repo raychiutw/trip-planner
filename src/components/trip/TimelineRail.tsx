@@ -12,7 +12,8 @@
  * reachable via list click.
  */
 
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import {
   DndContext, useDndMonitor, useDroppable,
@@ -43,6 +44,7 @@ import StopLightbox from './StopLightbox';
 import { useNavigate } from 'react-router-dom';
 import MapLinks from './MapLinks';
 import TravelPill from './TravelPill';
+import { TripTimePicker } from '../TripTimePicker';
 import type { StopPoiOptionData, TimelineEntryData } from './TimelineEvent';
 import { parseEntryTime, formatDurationCompact, formatTimeRange, deriveTypeMeta } from '../../lib/timelineUtils';
 import { dayNumFromId } from '../../lib/entryAction';
@@ -189,8 +191,11 @@ const SCOPED_STYLES = `
   margin-top: 4px;
 }
 
-.tp-rail-head[aria-expanded="true"] .tp-rail-caret { transform: rotate(90deg); color: var(--color-accent-deep); }
-.tp-rail-caret { transition: transform 120ms; display: inline-block; }
+/* caret 現為獨立 toggle button（無障礙 toggle）；rotate 由 tokens.css
+   .tp-rail-item[data-expanded] 處理，這裡只補 button reset + focus/disabled。 */
+.tp-rail-caret { transition: transform 120ms; display: inline-block; background: none; border: none; padding: 0; margin: 0; font: inherit; line-height: 1; color: var(--color-muted); cursor: pointer; }
+.tp-rail-caret:disabled { cursor: default; opacity: 0.4; }
+.tp-rail-caret:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-sm); }
 
 /* 備選景點 list — alternates only (v2.30.14)。master POI 已升格到 .tp-rail-poi-meta */
 .tp-rail-poi-list { display: flex; flex-direction: column; gap: 8px; }
@@ -239,6 +244,61 @@ const SCOPED_STYLES = `
   margin-top: 4px;
   line-height: 1.55;
 }
+
+/* 設為正選 按鈕（沿用 EditEntryPage .set-master：terracotta tonal，粉底備選卡上仍清晰）。 */
+.tp-rail-poi-actions { display: flex; gap: 8px; margin-top: 10px; }
+.tp-rail-set-master {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 32px; padding: 0 14px;
+  border: none; border-radius: var(--radius-full);
+  background: var(--color-accent-subtle); color: var(--color-accent-deep);
+  font: inherit; font-size: var(--font-size-caption); font-weight: 600;
+  cursor: pointer;
+}
+.tp-rail-set-master:hover:not(:disabled) { background: var(--color-accent-bg); }
+.tp-rail-set-master:disabled { opacity: 0.5; cursor: default; }
+.tp-rail-set-master .svg-icon { width: 15px; height: 15px; }
+.tp-rail-set-master:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* 起訖時間 chip（V2）：header sub-line 內可點膠囊，terracotta tonal + pencil；空值虛線提示。 */
+.tp-rail-time-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 8px;
+  border: 1px solid transparent; border-radius: var(--radius-full);
+  background: var(--color-accent-subtle); color: var(--color-accent-deep);
+  font: inherit; font-size: var(--font-size-caption2); font-weight: 700;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+  cursor: pointer; line-height: 1.4;
+}
+.tp-rail-time-chip:hover:not(:disabled) { border-color: var(--color-accent-bg); background: var(--color-accent-bg); }
+.tp-rail-time-chip[aria-expanded="true"] { border-color: var(--color-accent); }
+.tp-rail-time-chip.is-empty {
+  background: transparent; color: var(--color-muted);
+  border-color: var(--color-line-strong); border-style: dashed; font-weight: 600;
+}
+.tp-rail-time-chip:disabled { opacity: 0.55; cursor: default; }
+.tp-rail-time-chip .svg-icon { width: 11px; height: 11px; opacity: 0.75; }
+.tp-rail-time-chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* 起訖時間 popup（portal 到 body，逃離 header .tp-rail-content overflow:hidden 裁切）。
+   z 低於內層 TripTimePicker 的 .tp-time-popover(1100)，高於 sticky-nav(200)。 */
+.tp-rail-time-pop {
+  position: fixed; z-index: 1000;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px; min-width: 208px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgba(42, 31, 24, 0.18);
+}
+.tp-rail-time-pop-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tp-rail-time-pop-label { font-size: var(--font-size-caption); font-weight: 700; color: var(--color-muted); }
+.tp-rail-time-pop-done {
+  align-self: flex-end; min-height: 36px; padding: 0 18px;
+  border: none; border-radius: var(--radius-full);
+  background: var(--color-accent); color: var(--color-accent-foreground);
+  font: inherit; font-size: var(--font-size-caption); font-weight: 700; cursor: pointer;
+}
+.tp-rail-time-pop-done:hover { background: var(--color-accent-deep); }
 
 /* 2026-04-29 mockup parity:expanded toolbar 從 body 上方移到底部(mockup S12
  * Variant A 規範)。margin-top + padding-top + border-top 視覺分隔 body 內容。
@@ -367,7 +427,17 @@ interface RailRowProps {
 // v2.33.45 round 6b: wrap memo — 之前 alternate POI 列表每筆 row 都會在
 // RailRow re-render 時跟著 re-render，trips 含 hotel + ~10 alternates 時
 // 浪費 render。poi prop 來自 entry.stopPois.filter(sort_order>1)，引用穩定。
-const StopPoiChoiceCard = memo(function StopPoiChoiceCard({ poi }: { poi: StopPoiOptionData }) {
+interface StopPoiChoiceCardProps {
+  poi: StopPoiOptionData;
+  tripId: string | null;
+  entryId: number | null;
+  dayNum: number | null;
+}
+
+const StopPoiChoiceCard = memo(function StopPoiChoiceCard({
+  poi, tripId, entryId, dayNum,
+}: StopPoiChoiceCardProps) {
+  const [promoting, setPromoting] = useState(false);
   const metaParts: string[] = [];
   if (typeof poi.rating === 'number') metaParts.push(`★ ${poi.rating.toFixed(1)}`);
   if (poi.price) metaParts.push(poi.price);
@@ -378,6 +448,41 @@ const StopPoiChoiceCard = memo(function StopPoiChoiceCard({ poi }: { poi: StopPo
   // 不再直接露英文（沖繩備選卡的「tourist_attraction」等）；空則 fallback poi.type。
   const typeLabel = poiCategoryLabel(poi.category)
     ?? (poi.type ? POI_TYPE_LABELS[poi.type as PoiType] ?? poi.type : null);
+
+  // 設為正選：把此備選 swap 成 entry 的 master POI（後端 PATCH /entries/:eid/master 做
+  // swap sort_order + OCC + 同 TX mark segments stale）。promote 改變 entry 座標 → 觸發
+  // travel 重算。poiId 缺（未存檔搜尋結果）→ 無 PATCH target，停用。跨區距離提醒留在
+  // 全編輯頁；inline 走輕量快速 path，重算後 TravelPill 會顯示真實距離。
+  // OCC：timeline 資料不帶 entry_pois_version，故 inline promote 走 LWW（同 inline 備註）；
+  // 需嚴格防丟更新時走全編輯頁（帶 version）。
+  const canPromote = poi.poiId != null && tripId != null && entryId != null;
+  const handleSetMaster = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canPromote || promoting) return;
+    setPromoting(true);
+    try {
+      const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryId}/master`, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        body: JSON.stringify({ poiId: poi.poiId }),
+      });
+      if (!res.ok) {
+        // LWW（未帶 version）→ 不會 STALE 409；失敗一律 toast + refetch resync。
+        showToast('設為正選失敗', 'error', 5000);
+        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, entryId } }));
+        return;
+      }
+      requestTravelRecompute(tripId, dayNum).catch(() => undefined);
+      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
+        detail: { tripId, entryId, travelRecomputeRequested: true },
+      }));
+      showToast(`已將「${poi.name}」設為正選`, 'success', 3000);
+    } catch {
+      showToast('設為正選失敗', 'error', 5000);
+    } finally {
+      setPromoting(false);
+    }
+  };
 
   // v2.30.14：StopPoiChoiceCard 只渲染備選 (alternate)，「正選」已升格到景點說明。
   // v2.33.93 simplify: onClick stopPropagation 從 wrapper <div> 搬上 <article>，
@@ -398,9 +503,177 @@ const StopPoiChoiceCard = memo(function StopPoiChoiceCard({ poi }: { poi: StopPo
       {poi.note && (
         <MarkdownText text={poi.note} as="div" className="tp-rail-poi-note" inline />
       )}
+      {canPromote && (
+        <div className="tp-rail-poi-actions">
+          <button
+            type="button"
+            className="tp-rail-set-master"
+            onClick={handleSetMaster}
+            disabled={promoting}
+            data-testid={`timeline-rail-set-master-${entryId}-${poi.poiId}`}
+          >
+            <Icon name="swap-horizontal" />
+            設為正選
+          </button>
+        </div>
+      )}
     </article>
   );
 });
+
+/**
+ * EntryTimeChip — timeline 展開列 header 內「起訖時間」可點 chip（V2）。點 chip → portal
+ * 浮出共用 TripTimePicker（抵達 / 離開），就地改時間，不必進全編輯頁、不必展開列。
+ *
+ * 為何 portal：header 的 .tp-rail-content 是 overflow:hidden，inline 浮層會被裁切；portal
+ * 到 document.body 逃離裁切，用 chip rect 定位（fixed）。outside-click 排除內層
+ * TripTimePicker 的 .tp-time-popover portal，避免點時/分格誤關本 popup。
+ *
+ * 存檔：PATCH /trips/:id/entries/:eid { start_time | end_time }。後端會依抵達時間重排當日
+ * （resortDayByArrival）；前端 dispatch entryUpdated + requestTravelRecompute 觸發重算與
+ * refetch。LWW（同 inline 備註）— 不帶 OCC token。
+ */
+function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
+  tripId: string | null;
+  entryId: number | null;
+  dayNum: number | null;
+  start: string | null;
+  end: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [startDraft, setStartDraft] = useState(start ?? '');
+  const [endDraft, setEndDraft] = useState(end ?? '');
+  const chipRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+
+  // popup 關閉時，隨 entry 最新值 seed draft（refetch / master swap 帶新時間）；開啟中
+  // 不動，保住使用者進行中的編輯。
+  useEffect(() => {
+    if (!open) { setStartDraft(start ?? ''); setEndDraft(end ?? ''); }
+  }, [start, end, open]);
+
+  // 定位：chip 正下方；open 期間隨 scroll / resize 重算（fixed viewport 座標）。存檔改在
+  // 關閉時（見下），open 期間不觸發重排，故 popup 不會邊編邊跳位、deps 只需 [open]。
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = chipRef.current?.getBoundingClientRect();
+      if (r) setPos({ top: r.bottom + 6, left: r.left });
+    };
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open]);
+
+  // 開啟時把焦點移入 popup（容器 tabIndex=-1）：否則鍵盤使用者停在 chip、要 tab 過整頁才到
+  // picker（popup portal 到 body、位於 DOM 末端）。pos 已於上方 layout effect 同步設好 → 此 passive
+  // effect 執行時 portal 已掛載，popRef.current 可用。
+  useEffect(() => {
+    if (open) popRef.current?.focus();
+  }, [open]);
+
+  // 存檔：關閉 popup 時把 draft 與原值 diff，只送有變的欄位、一次 PATCH（起訖同批 → 後端
+  // effective-merge 驗證先後、只觸發一次重排/重算；避免每 pick 一發 + LWW 亂序 race）。
+  const flushSave = useCallback(async () => {
+    if (!tripId || entryId == null) return;
+    const nextStart = startDraft === '' ? null : startDraft;
+    const nextEnd = endDraft === '' ? null : endDraft;
+    const body: Record<string, string | null> = {};
+    if (nextStart !== (start || null)) body.start_time = nextStart;
+    if (nextEnd !== (end || null)) body.end_time = nextEnd;
+    if (Object.keys(body).length === 0) return; // 無變動 → 不打
+    try {
+      const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryId}`, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        // 400 = 起訖倒置（後端 effective merge 驗證）；其餘一律失敗。draft 隨關閉後 re-seed 回原值。
+        showToast(res.status === 400 ? '抵達時間需早於離開時間' : '時間儲存失敗', 'error', 5000);
+        return;
+      }
+      // 後端已依抵達時間重排當日 → 重算車程 + refetch（順序可能變）。
+      requestTravelRecompute(tripId, dayNum).catch(() =>
+        showToast('時間已儲存，車程更新失敗，重新整理後再試', 'info', 5000));
+      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
+        detail: { tripId, entryId, dayNum, travelRecomputeRequested: true },
+      }));
+    } catch {
+      showToast('時間儲存失敗', 'error', 5000);
+    }
+  }, [tripId, entryId, dayNum, startDraft, endDraft, start, end]);
+
+  const closeAndSave = useCallback(() => {
+    setOpen(false);
+    void flushSave();
+  }, [flushSave]);
+
+  // outside-click 關閉並存檔：排除本 popup、chip、以及內層 TripTimePicker 的 .tp-time-popover portal。
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('.tp-rail-time-pop, .tp-time-popover') || (t && chipRef.current?.contains(t))) return;
+      closeAndSave();
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open, closeAndSave]);
+
+  const hasTime = !!(start || end);
+  const disabled = entryId == null || tripId == null;
+
+  return (
+    <>
+      <button
+        ref={chipRef}
+        type="button"
+        className={clsx('tp-rail-time-chip', !hasTime && 'is-empty')}
+        onClick={(e) => { e.stopPropagation(); if (disabled) return; if (open) closeAndSave(); else setOpen(true); }}
+        disabled={disabled}
+        aria-expanded={open}
+        aria-label="編輯起訖時間"
+        data-testid={entryId != null ? `timeline-rail-time-chip-${entryId}` : undefined}
+      >
+        <span>{hasTime ? formatTimeRange(start ?? '', end ?? '') : '設定時間'}</span>
+        <Icon name="pencil" />
+      </button>
+      {open && pos && createPortal(
+        <div
+          ref={popRef}
+          className="tp-rail-time-pop"
+          style={{ top: pos.top, left: pos.left }}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            // Escape 關閉並存檔、焦點歸還 chip（鍵盤流程收尾；chip 常駐掛載，resort 後 React 復用同節點）。
+            if (e.key === 'Escape') { e.stopPropagation(); closeAndSave(); chipRef.current?.focus(); }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="起訖時間"
+          tabIndex={-1}
+        >
+          <div className="tp-rail-time-pop-row">
+            <span className="tp-rail-time-pop-label">抵達</span>
+            <TripTimePicker value={startDraft} onChange={setStartDraft} clearable ariaLabel="抵達時間" />
+          </div>
+          <div className="tp-rail-time-pop-row">
+            <span className="tp-rail-time-pop-label">離開</span>
+            <TripTimePicker value={endDraft} onChange={setEndDraft} clearable ariaLabel="離開時間" />
+          </div>
+          <button type="button" className="tp-rail-time-pop-done" onClick={closeAndSave}>完成</button>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
 
 const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId }: RailRowProps) {
   const tripId = useTripId();
@@ -589,6 +862,24 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const hasDescriptionSection =
     !!entryDesc || !!masterDesc || masterMeta.length > 0 || !!mapLocation;
 
+  // 當日 day number（餵給 EntryTimeChip / 備選卡做 travel 重算的 dayNum）— hoist 一次，
+  // 不在 render / alternates.map 內重複 O(days) 掃描。
+  const dayNum = dayNumFromId(allDays, dayId);
+
+  // row 展開 toggle：head 是 div（onClick，滑鼠整列可點）與獨立 caret <button>（鍵盤/SR
+  // toggle）共用此 handler；chip 等子互動元素自行 stopPropagation。
+  const handleHeadActivate = () => {
+    if (!canExpand) return;
+    // v2.31.81 #5：row click → dispatch entryFocused 讓 TripMapRail pan 到該 pin。
+    // v2.31.87 #5+#6：isExpanding = !expanded（點後 next state）→ flyTo zoom 15 / 11。
+    if (entry.id != null) {
+      window.dispatchEvent(new CustomEvent(EVENT.entryFocused, {
+        detail: { entryId: entry.id, isExpanding: !expanded },
+      }));
+    }
+    onToggle();
+  };
+
   return (
     <>
       <div
@@ -616,24 +907,13 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
           <Icon name="grip" />
         </button>
         <span className="tp-rail-dot" aria-hidden="true">{index + 1}</span>
-        <button
-          type="button"
+        {/* head 是 div（非 button / 非 role="button"）— sub-line 內含可互動的時間 chip，
+            role="button" 的子孫是 presentational（WAI-ARIA），會讓 AT 吞掉 chip。故 row-click
+            展開走 div onClick（滑鼠便利，保留 mockup 整列可點），無障礙 toggle 走下方獨立的
+            caret <button>（鍵盤 focus + SR），chip 亦是可 focus 的 sibling button 正常曝露。 */}
+        <div
           className="tp-rail-head"
-          onClick={() => {
-            // v2.31.81 #5：row click → dispatch entryFocused 讓 TripMapRail pan 到該 pin。
-            // v2.31.87 #5+#6：detail 加 isExpanding（! expanded = 點後 next state）
-            //   isExpanding=true (展開) → TripMapRail flyTo zoom 15
-            //   isExpanding=false (收合) → flyTo zoom 11（trip overview level）
-            if (entry.id != null) {
-              window.dispatchEvent(new CustomEvent(EVENT.entryFocused, {
-                detail: { entryId: entry.id, isExpanding: !expanded },
-              }));
-            }
-            onToggle();
-          }}
-          disabled={!canExpand}
-          aria-expanded={canExpand ? expanded : undefined}
-          aria-label={`${expanded ? '收合' : '展開'}景點：${entryDisplayTitle}`}
+          onClick={handleHeadActivate}
           data-testid={entry.id != null ? `timeline-rail-row-${entry.id}` : undefined}
         >
           <span className="tp-rail-icon" aria-hidden="true">
@@ -652,9 +932,15 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               const shortDesc = desc && desc.length <= 24 && !desc.includes('\n') ? desc : '';
               return (
                 <span className="tp-rail-sub">
-                  {(parsed.start || parsed.end) && (
+                  {entryIdNum != null && (
                     <>
-                      <span className="tp-rail-sub-time">{formatTimeRange(parsed.start, parsed.end)}</span>
+                      <EntryTimeChip
+                        tripId={tripId ?? null}
+                        entryId={entryIdNum}
+                        dayNum={dayNum}
+                        start={parsed.start}
+                        end={parsed.end}
+                      />
                       <span className="tp-rail-sub-sep">·</span>
                     </>
                   )}
@@ -682,8 +968,18 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               );
             })()}
           </span>
-          <span className="tp-rail-caret" aria-hidden="true">›</span>
-        </button>
+          <button
+            type="button"
+            className="tp-rail-caret"
+            onClick={(e) => { e.stopPropagation(); handleHeadActivate(); }}
+            disabled={!canExpand}
+            aria-expanded={canExpand ? expanded : undefined}
+            aria-label={`${expanded ? '收合' : '展開'}景點：${entryDisplayTitle}`}
+            data-testid={entry.id != null ? `timeline-rail-toggle-${entry.id}` : undefined}
+          >
+            <span aria-hidden="true">›</span>
+          </button>
+        </div>
       </div>
 
       {expanded && entry.id != null && (
@@ -804,7 +1100,13 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 data-testid={`timeline-rail-alternates-${entry.id}`}
               >
                 {alternates.map((poi, i) => (
-                  <StopPoiChoiceCard key={`${poi.poiId ?? poi.name}-${i}`} poi={poi} />
+                  <StopPoiChoiceCard
+                    key={`${poi.poiId ?? poi.name}-${i}`}
+                    poi={poi}
+                    tripId={tripId ?? null}
+                    entryId={entryIdNum}
+                    dayNum={dayNum}
+                  />
                 ))}
               </div>
             </div>
