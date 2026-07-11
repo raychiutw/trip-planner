@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.58] - 2026-07-11
+
+### Docs
+- **`scripts/tp-request-contained/README.md` 改為繁體中文** — 這份是 Ray 做 tp-request containment activation 前置 (0a)/(0b) 時會照著跑的操作指南，翻成繁中方便照做。內容不變（兩層防線說明、`deny` load-bearing 警告、(0a) 建 tp-agent user + sudoers + 權限、(0b) pre-activation 冒煙測試、已知 follow-up）。
+
 ## [2.55.57] - 2026-07-11
 
 ### Security
