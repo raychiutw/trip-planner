@@ -18,7 +18,7 @@
  * v2.29.0: travel_* DROPPED, trip_segments 由 /recompute-travel 在背景 fill。
  */
 import { logAudit } from '../../_audit';
-import { hasWritePermission } from '../../_auth';
+import { assertNotTripRestricted, hasWritePermission } from '../../_auth';
 import { AppError, buildRateLimitResponse } from '../../_errors';
 import { detectGarbledText } from '../../_validate';
 import { json, parseIntParam, parseJsonBody } from '../../_utils';
@@ -53,6 +53,9 @@ function hhmmToMin(t: string): number {
 
 export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   const auth = (context.data as { auth?: AuthData }).auth ?? null;
+  // restrict_trip token 不可經收藏 fast-path 把 owner 跨 trip 收藏（含私人 note）加進 trip
+  // — hasWritePermission 只擋跨 trip 寫、不擋讀 owner 收藏。containment（security-auditor HIGH）。
+  if (auth) assertNotTripRestricted(auth);
   const favoriteId = parseIntParam(context.params.id as string);
   if (!favoriteId) throw new AppError('DATA_VALIDATION', 'favoriteId 須為正整數');
 

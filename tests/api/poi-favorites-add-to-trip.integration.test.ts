@@ -40,6 +40,19 @@ beforeAll(async () => {
 
 afterAll(disposeMiniflare);
 
+describe('POST /api/poi-favorites/:id/add-to-trip — restrict_trip containment（回歸；security-auditor HIGH）', () => {
+  it('受限 token 經收藏 fast-path 加入 trip → 403（即使 tripId===restrictTrip：仍讀 owner 收藏含私 note）', async () => {
+    const ctx = mockContext({
+      request: buildAddToTripRequest({ tripId: 'some-trip', dayNum: 1, startTime: '10:00', endTime: '11:00' }),
+      env,
+      auth: mockAuth({ email: 'restrict-att@test.com', restrictTrip: 'some-trip' }),
+      params: { id: '1' },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(403);
+  });
+});
+
 beforeEach(async () => {
   await db.prepare("DELETE FROM companion_request_actions").run();
   await db.prepare("DELETE FROM audit_log WHERE trip_id = 'system:companion'").run();

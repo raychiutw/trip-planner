@@ -13,6 +13,7 @@ import { buildRateLimitResponse } from './_errors';
 import { logAudit } from './_audit';
 import { json, parseJsonBody } from './_utils';
 import { bumpRateLimit, RATE_LIMITS } from './_rate_limit';
+import { assertNotTripRestricted } from './_auth';
 import {
   pickFavoriteBucketForActor,
   preGateFavoriteThrottle,
@@ -28,6 +29,10 @@ interface PoiFavoritePostBody {
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const auth = (context.data as { auth?: AuthData }).auth ?? null;
+  // restrict_trip token 不可碰跨 trip 的 user 收藏（favorites 是 user-scoped，非單 trip）
+  // — security-auditor HIGH：v2.55.56 downscoped token 的 user_id=owner，此 user-path
+  //   會列舉 owner 全跨 trip 收藏。containment。
+  if (auth) assertNotTripRestricted(auth);
 
   // poi-favorites-rename §7：companion 模式從 ?companionRequestId=N query string 取
   // requestId、走 requireFavoriteActor 三 gate；gate 失敗 → 401。
@@ -107,6 +112,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
+  // restrict_trip token 不可寫跨 trip 的 user 收藏（favorites user-scoped）— containment。
+  const auth = (context.data as { auth?: AuthData }).auth ?? null;
+  if (auth) assertNotTripRestricted(auth);
+
   // v2.33.105 SEC-2: pre-gate per-IP throttle 在 actor resolve 之前。寬鬆
   // 200/5min/IP，正常 user 不會打中；攻擊者 hammer 才會觸 lock。
   const preGate = await preGateFavoriteThrottle(context.env, context.request);
