@@ -142,6 +142,14 @@ export interface AuthData {
   scopes?: string[];
   /** OAuth client_id from V2 Bearer token. Only present for service token. */
   clientId?: string;
+  /**
+   * Trip-scoped token restriction (v2.55.56, tp-request downscope). When set, the
+   * token may ONLY read/write this one trip — hasWritePermission / requireTripReadAccess
+   * deny any other tripId. Issued by /api/oauth/downscope so the automated tp-request
+   * agent, even if prompt-injected, physically cannot touch trips other than the one
+   * its current request belongs to. Undefined for normal (unrestricted) tokens.
+   */
+  restrictTrip?: string;
 }
 
 // ---------------------------------------------------------------------------

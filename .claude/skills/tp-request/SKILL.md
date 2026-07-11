@@ -56,18 +56,30 @@ TRIPLINE_API_TOKEN=$(node scripts/lib/get-tripline-token.js)
 
 ## 步驟
 
+> **🔒 Trip-scoped 模式（`$TRIPLINE_RESTRICT_TRIP` 有值時，v2.55.56）**
+> api-server 已把 `$TRIPLINE_API_TOKEN` 換成「只能讀寫這一個 trip」的受限 user token
+> （confused-deputy 防護：即使請求內文含惡意注入，此 token 打 API 時 server 端 gate 會
+> 擋掉對其他 trip 的讀寫）。此模式下：
+> - **只處理 `trip_id === $TRIPLINE_RESTRICT_TRIP` 的請求**；查詢一律帶 `&tripId=$TRIPLINE_RESTRICT_TRIP`。其他 trip 的請求留給下一輪 cron（會各自 scope）。
+> - **不要 re-mint token**：受限 token TTL 有 2 小時（涵蓋整個 90 分鐘 session 上限），
+>   且 `get-tripline-token.js` 產的是 service token（改不了行程內容）會蓋掉受限 token —
+>   **RESTRICT_TRIP 模式下絕不執行續命指令**。
+
 1. **查詢待處理請求**（processing、open、或 received）：
    ```bash
+   # 一般模式（service token）：
    curl -s -H "Authorization: Bearer $TRIPLINE_API_TOKEN" \
         "https://trip-planner-dby.pages.dev/api/requests?status=processing"
+   # Trip-scoped 模式（$TRIPLINE_RESTRICT_TRIP 有值）→ 必帶 tripId：
+   #   ...?status=processing&tripId=$TRIPLINE_RESTRICT_TRIP
    ```
-   若無結果，也依序查 `status=open` 和 `status=received`（向下相容）
+   若無結果，也依序查 `status=open` 和 `status=received`（向下相容；RESTRICT_TRIP 模式一樣帶 `&tripId=`）
 
-   **⏱ 長工作 token 續命（2026-07-07 request #237 教訓）**：token TTL 只有 1 小時。
-   大 request（多天多景點的搜尋/替換，如「調整每天午晚餐餐廳」）處理可能超過
-   40 分鐘 — **每處理完 2-3 天（或感覺已工作 ~40 分鐘）就重新執行**：
+   **⏱ 長工作 token 續命（2026-07-07 request #237 教訓；僅「一般模式」適用）**：一般模式的
+   service token TTL 只有 1 小時。大 request（多天多景點的搜尋/替換，如「調整每天午晚餐餐廳」）
+   處理可能超過 40 分鐘 — **每處理完 2-3 天（或感覺已工作 ~40 分鐘）就重新執行**：
    ```bash
-   TRIPLINE_API_TOKEN=$(node scripts/lib/get-tripline-token.js)
+   TRIPLINE_API_TOKEN=$(node scripts/lib/get-tripline-token.js)   # ⚠️ RESTRICT_TRIP 模式下禁用（見上方）
    ```
    否則 token 過期後所有 API 寫入 401，工作白做。orphan 上限已放寬到 90 分鐘
    （api-server ORPHAN_MAX_AGE_MS），90 分鐘內做不完的 request 應分批：先完成

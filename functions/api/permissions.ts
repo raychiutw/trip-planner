@@ -15,9 +15,10 @@
  */
 
 import { logAudit, recordEmailEvent } from './_audit';
-import { requireAuth } from './_auth';
+import { requireAuth, assertNotTripRestricted } from './_auth';
 import { alertAdminTelegram } from './_alert';
 import { AppError } from './_errors';
+import type { AuthData } from '../../src/types/api';
 import { json, parseJsonBody, getPublicOrigin } from './_utils';
 import { sendEmail, EmailError } from '../../src/server/email';
 import { tripInvitation } from '../../src/server/email-templates';
@@ -31,9 +32,12 @@ import type { Env } from './_types';
 /** 檢查 auth user 是否為該 trip 的 owner（Phase 3：admin 移除，純 owner gate）。 */
 export async function ensureCanManageTripPerms(
   context: { env: Env },
-  auth: { email: string; userId: string | null },
+  auth: AuthData,
   tripId: string,
 ): Promise<void> {
+  // v2.55.56: 受限 token（tp-request downscope）一律不可管理共編 — 邀請成員是持久性
+  // 提權，就算對自己那個 trip 也不該讓被注入的自動化 agent 碰。
+  assertNotTripRestricted(auth);
   // V2 cutover phase 2: 純 owner_user_id check (owner email column dropped)
   if (!auth.userId) throw new AppError('PERM_ADMIN_ONLY', '需 V2 OAuth 登入');
   const owner = await context.env.DB

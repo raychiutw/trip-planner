@@ -1,5 +1,5 @@
 import { logAudit, computeDiff } from '../_audit';
-import { hasWritePermission, requireAuth, requireTripReadAccess } from '../_auth';
+import { assertNotTripRestricted, hasWritePermission, requireAuth, requireTripReadAccess } from '../_auth';
 import { AppError } from '../_errors';
 import { json, parseJsonBody, buildUpdateClause, getAuth } from '../_utils';
 import type { Env } from '../_types';
@@ -68,6 +68,8 @@ function safeParseJson(raw: string): unknown {
  */
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
+  // v2.55.56: 受限 token 不可刪任何 trip（含自己那個）— destructive，超出內容編輯 agent 的職權。
+  assertNotTripRestricted(auth);
 
   const { id } = context.params as { id: string };
   const db = context.env.DB;
