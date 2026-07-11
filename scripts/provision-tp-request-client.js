@@ -11,12 +11,10 @@
  * Required env (same as provision-admin-cli-client.js — Ray已有):
  *   CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID, D1_DATABASE_ID
  *
- * After running: save the printed CLIENT_ID/SECRET to .env.local as
- * TRIPLINE_TP_REQUEST_CLIENT_ID / _SECRET, then run
- * scripts/seed-user-refresh-token.mjs to seed the refresh token.
- *
- * The redirect_uri here MUST match scripts/seed-user-refresh-token.mjs
- * (http://127.0.0.1:{TRIPLINE_SEED_REDIRECT_PORT|8899}/callback).
+ * After running: the client_apps row is registered (for connected-apps display +
+ * client existence). Under Option E the api-server authenticates mint-restricted with
+ * TRIPLINE_API_SECRET, NOT this client secret; owners authorize the AI in-app via the
+ * build-trip consent card (POST /api/account/ai-authorization) — no refresh-token seed.
  */
 const path = require('path');
 require('./lib/load-env').loadEnvLocal();
@@ -86,10 +84,8 @@ if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CF_ACCOUNT_ID || !process.
   console.log(`TRIPLINE_TP_REQUEST_CLIENT_ID=${CLIENT_ID}`);
   console.log(`TRIPLINE_TP_REQUEST_CLIENT_SECRET=${clientSecret}`);
   console.log('');
-  console.log('1. Save both to .env.local NOW (secret NOT recoverable — DB stores only the hash).');
-  console.log(`2. redirect_uri registered: ${JSON.parse(REDIRECT_URIS)[0]}`);
-  console.log('3. Seed the refresh token:  node scripts/seed-user-refresh-token.mjs');
-  console.log('4. Enable:  set TP_REQUEST_USER_TOKEN=1 in the api-server env, then kickstart.');
+  console.log('1. Client registered (Option E: api-server uses TRIPLINE_API_SECRET/mint-restricted, not this secret).');
+  console.log('2. Owners authorize the AI in-app via the build-trip consent card — no refresh-token seed.');
   process.exit(0);
 })().catch((err) => {
   console.error(err.message || err);
