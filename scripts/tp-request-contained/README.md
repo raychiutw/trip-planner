@@ -17,51 +17,58 @@ contained session **絕不可**帶 `--dangerously-skip-permissions` / `bypassPer
 
 `containmentReady()` 在 spawn 時還會跑一次 **negative self-probe**：如果 `tp-agent` **讀得到** `.env.local` 或 `~ray/.tripline`，就 fail-closed（避免 (0a) 的 chmod 沒設好卻默默上線一個有洞的隔離）。
 
+**額外一層（實測發現）**：contained session 用 disposable `CLAUDE_CONFIG_DIR`，所以 repo 的 `.claude/settings.local.json`（有多條 `Bash(...)` allow）會因 **workspace untrusted** 被 Claude Code **整批忽略**（`Ignoring N permissions.allow entries ... this workspace has not been trusted`）。等於連「cwd=repo 吃到專案 allow」那條殘留路徑也堵掉了 —— 別去互動式信任這個 workspace。
+
+**認證**：contained 是非登入 user、沒 login keychain，訂閱 `/login` 存不了 token。改用 `claude setup-token` 產的一年期 **`CLAUDE_CODE_OAUTH_TOKEN`**（precedence 高於 `/login`），由 api-server 從 `.env.local` 讀出、寫進 0600 檔、經 sh wrapper 注入 contained claude 的 env（不上 argv）。見 (0a) 步驟 4。
+
 ## (0a) 只有 Ray 能做的前置 —— 我做不了（需要 root）
 
 開 `TP_REQUEST_USER_TOKEN=1` 之前先做：
 
 ```bash
-# 1. 建 agent user（無登入 shell、非 admin）
+# 1. 建 agent user（無登入 shell、非 admin）+ 家目錄
 sudo sysadminctl -addUser tp-agent -fullName "Tripline Agent" -home /Users/tp-agent
 sudo dscl . -create /Users/tp-agent UserShell /usr/bin/false
+# ⚠️ sysadminctl 不會真的建家目錄 → 手動建（claude 要寫 config，沒有它會 No such file）
+sudo mkdir -p /Users/tp-agent && sudo chown tp-agent:staff /Users/tp-agent && sudo chmod 700 /Users/tp-agent
 
-# 2. 讓 api-server（user: ray）可以「免密碼、非互動」sudo 成 tp-agent
-#    visudo → 加一行：  ray ALL=(tp-agent) NOPASSWD: ALL
+# 2. 讓 api-server（user: ray）免密碼、非互動 sudo 成 tp-agent
+#    ⚠️ 放 /etc/sudoers.d/ —— visudo 加在主檔可能被後面的 %admin 規則蓋掉、NOPASSWD 失效
+echo 'ray ALL=(tp-agent) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/tp-agent >/dev/null
+sudo chmod 440 /etc/sudoers.d/tp-agent && sudo visudo -cf /etc/sudoers.d/tp-agent   # 驗語法
 
-# 3. 給 tp-agent 讀 repo 的權限（skill 檔 + MCP server），但不能寫；
-#    憑證務必「不可」被 other 讀到
+# 3. tp-agent 可讀 repo（skill + MCP server）但不可寫；憑證不可被 other 讀
 sudo chmod -R o+rX /Users/ray/Projects/trip-planner
 chmod 600 /Users/ray/Projects/trip-planner/.env.local
-# ~/.tripline 由 seed-user-refresh-token.mjs（步驟 2）建立；這裡先 mkdir 並鎖成 700，
-# 之後 seed 寫進來的 token 一落地就是隔離的（別在它還不存在時 chmod，會報 No such file）。
+# ~/.tripline 由 seed（activation 步驟 2）建立；先 mkdir 鎖 700，token 一落地即隔離
 mkdir -p /Users/ray/.tripline && chmod 700 /Users/ray/.tripline
 
-# 4. 驗證
-sudo -n -u tp-agent true && echo "sudo OK"
-sudo -n -u tp-agent test -r /Users/ray/Projects/trip-planner/scripts/tp-request-mcp-server.js && echo "repo 讀取 OK"
-sudo -n -u tp-agent test -r /Users/ray/.env.local && echo "外洩：tp-agent 讀得到 .env.local" || echo "憑證隔離 OK"
+# 4. claude 認證（訂閱、不碰 Keychain —— tp-agent 是非登入 user 沒 login keychain）
+#    以「你自己」跑 setup-token（你的 keychain 正常）→ 產一年期 OAuth token（會印出來）
+claude setup-token
+#    把那串貼進 .env.local（tp-agent 讀不到；api-server 讀後注入 contained session）：
+#      CLAUDE_CODE_OAUTH_TOKEN=<貼在這>
+#    到期前（約一年）重跑 setup-token 換新
+
+# 5. 驗證（先確認 sudo 通，test 的 exit code 才反映「真的讀不讀得到」）
+sudo -n -u tp-agent true && echo "① sudo OK"
+sudo -n -u tp-agent test -r /Users/ray/Projects/trip-planner/scripts/tp-request-mcp-server.js && echo "② repo 讀取 OK"
+sudo -n -u tp-agent test -r /Users/ray/Projects/trip-planner/.env.local && echo "③ ⚠️外洩" || echo "③ .env.local 隔離 OK"
+sudo -n -u tp-agent test -r /Users/ray/.tripline && echo "④ ⚠️外洩" || echo "④ ~/.tripline 隔離 OK"
+grep -q '^CLAUDE_CODE_OAUTH_TOKEN=' /Users/ray/Projects/trip-planner/.env.local && echo "⑤ OAuth token OK" || echo "⑤ ⚠️缺 OAuth token"
 ```
 
 在這步做完之前，api-server 一律 **fail-closed**：帶 restrict_trip 的請求會降級成 read-only service token 的 session（改不了行程內容，但仍有 ops scope）並發 alert —— **絕不會**把可寫 token 跑在未隔離的 session 裡。
 
-## (0b) 開 flag 前必跑一次的冒煙測試
+## (0b) 開 flag 前的 live 驗證（我來跑，非 `-p`）
 
-能力鎖（dontAsk + deny）與 headless 跑 skill 這兩件事，CI 測不到（CI 上沒有 tp-agent）。開 flag 前先在本機 live 驗一次：
+能力鎖（dontAsk + deny）與 REPL 跑 skill + MCP handshake，CI 測不到（沒有 tp-agent）。(0a) ⑤ 全過後告訴我，我用**真實 contained 機制**（互動 tmux REPL，跟 prod 一樣，**不用 `-p`**）跑一次 dry-run，看 `scripts/logs/tp-request/<session>.log` 確認：
 
-```bash
-SDIR=$(mktemp -d)
-# a) 被 deny 的 built-in 必須被拒（證明 deny 有生效）：
-sudo -n -u tp-agent env -i PATH=/usr/bin:/bin HOME=/Users/tp-agent \
-  CLAUDE_CONFIG_DIR="$SDIR" /Users/ray/.local/bin/claude -p 'Run: cat /Users/ray/Projects/trip-planner/.env.local' \
-  --permission-mode dontAsk --settings /Users/ray/Projects/trip-planner/scripts/tp-request-contained/settings.json \
-  --strict-mcp-config 2>&1 | grep -qi 'denied\|not allowed\|cannot' && echo "BASH 被拒 ✓" || echo "外洩 —— 不要 activate"
-# b) skill 必須真的透過 -p headless 跑起來、且 MCP handshake 成功
-#    （protocolVersion 2024-11-05）。拿一個丟棄用的 request 做 dry-run，
-#    確認它只讀寫那一個 trip。若 -p 沒觸發 skill，先修好再開 flag。
-```
+- claude 用 `CLAUDE_CODE_OAUTH_TOKEN` 認證成功、REPL 起得來；
+- 叫它讀憑證（`cat .env.local` 之類）→ **被 deny 擋掉**、拿不到內容；
+- 只用得到 `mcp__tripline__*` 工具，且只碰那一個 restrict trip。
 
-兩項都過才開 `TP_REQUEST_USER_TOKEN=1`。
+三項都過，才開 `TP_REQUEST_USER_TOKEN=1`。
 
 ## 已知 follow-up（不擋 merge；flag 目前 OFF）
 
