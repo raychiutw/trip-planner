@@ -16,7 +16,7 @@
  * Design: ~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260530-101432.md (PR3)
  */
 import type { Env } from '../_types';
-import { requireAuth } from '../_auth';
+import { requireAuth, assertNotTripRestricted } from '../_auth';
 import { json } from '../_utils';
 import { AppError } from '../_errors';
 import { parseAndValidateImport, MAX_IMPORT_BYTES, type NImportNotes } from './_import';
@@ -26,6 +26,8 @@ type Stmt = D1PreparedStatement;
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
+  // v2.55.56: 受限 token 只做單一 trip 內容編輯 — 不可匯入（建立新 trip）。
+  assertNotTripRestricted(auth);
   if (!auth.userId) throw new AppError('AUTH_REQUIRED', '需 V2 OAuth 登入才能匯入行程');
 
   // Enforce the REAL body size (Content-Length is attacker-controllable / may be

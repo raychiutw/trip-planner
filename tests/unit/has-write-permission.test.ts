@@ -13,7 +13,7 @@
  * Phase 3（移除全域 admin）：isAdmin 參數移除，無 admin bypass。授權純 owner/member。
  */
 import { describe, it, expect, vi } from 'vitest';
-import { hasPermission, hasWritePermission } from '../../functions/api/_auth';
+import { assertNotTripRestricted, hasPermission, hasWritePermission, requireTripReadAccess } from '../../functions/api/_auth';
 import type { AuthData } from '../../src/types/api';
 
 function makeDb(opts: { row: unknown; capturedSql?: { sql?: string } } = { row: null }) {
@@ -80,6 +80,67 @@ describe('hasWritePermission — viewer is read-only', () => {
     );
     expect(ok).toBe(false);
     expect(stmt.first).not.toHaveBeenCalled();
+  });
+});
+
+describe('restrictTrip — trip-scoped token (v2.55.56 confused-deputy)', () => {
+  it('hasWritePermission: restrictTrip 相符 → 正常查 DB 放行', async () => {
+    const { db, stmt } = makeDb({ row: { '1': 1 } });
+    const auth: AuthData = { ...authOf('agent@x.com', 'uid-1'), restrictTrip: 'trip-1' };
+    const ok = await hasWritePermission(db, auth, 'trip-1');
+    expect(ok).toBe(true);
+    expect(stmt.first).toHaveBeenCalled();
+  });
+
+  it('hasWritePermission: restrictTrip 不符 → false，且短路不查 DB', async () => {
+    const { db, stmt } = makeDb({ row: { '1': 1 } });
+    const auth: AuthData = { ...authOf('agent@x.com', 'uid-1'), restrictTrip: 'trip-1' };
+    const ok = await hasWritePermission(db, auth, 'trip-OTHER');
+    expect(ok).toBe(false);
+    expect(stmt.first).not.toHaveBeenCalled();
+  });
+
+  it('requireTripReadAccess: restrictTrip 不符 → PERM_DENIED（連 published trip 也擋）', async () => {
+    // 受限 token 即使對 published trip 也不能讀 — restrictTrip 檢查在 published 短路之前
+    const { db } = makeDb({ row: { published: 1, perm_user_id: null } });
+    const auth: AuthData = { ...authOf('agent@x.com', 'uid-1'), restrictTrip: 'trip-1' };
+    await expect(requireTripReadAccess(db, auth, 'trip-OTHER')).rejects.toMatchObject({ code: 'PERM_DENIED' });
+  });
+
+  it('requireTripReadAccess: restrictTrip 相符 → 正常放行', async () => {
+    const { db } = makeDb({ row: { published: 0, perm_user_id: 'uid-1' } });
+    const auth: AuthData = { ...authOf('agent@x.com', 'uid-1'), restrictTrip: 'trip-1' };
+    const result = await requireTripReadAccess(db, auth, 'trip-1');
+    expect(result).toMatchObject({ isMember: true });
+  });
+
+  it('undefined restrictTrip（一般 token）→ 不受限，正常查', async () => {
+    const { db, stmt } = makeDb({ row: { '1': 1 } });
+    const ok = await hasWritePermission(db, authOf('owner@x.com', 'uid-1'), 'trip-any');
+    expect(ok).toBe(true);
+    expect(stmt.first).toHaveBeenCalled();
+  });
+});
+
+describe('assertNotTripRestricted — owner-level ops 拒受限 token (v2.55.56)', () => {
+  it('restrictTrip 有值 → 一律 throw PERM_DENIED（連自己那個 trip 也不放行）', () => {
+    const auth: AuthData = { ...authOf('agent@x.com', 'uid-1'), restrictTrip: 'trip-1' };
+    // 就算目標就是 restrict 的那個 trip，owner 層級操作仍拒（防持久性提權）
+    expect(() => assertNotTripRestricted(auth)).toThrow();
+    try {
+      assertNotTripRestricted(auth);
+    } catch (e) {
+      expect((e as { code?: string }).code).toBe('PERM_DENIED');
+    }
+  });
+
+  it('undefined restrictTrip（一般 token）→ no-op 不 throw', () => {
+    expect(() => assertNotTripRestricted(authOf('owner@x.com', 'uid-1'))).not.toThrow();
+  });
+
+  it('service token（無 restrictTrip）→ no-op（維運 / companion 不受影響）', () => {
+    const svc: AuthData = { email: 'service:cli', userId: null, isServiceToken: true };
+    expect(() => assertNotTripRestricted(svc)).not.toThrow();
   });
 });
 

@@ -16,6 +16,21 @@ export function requireAuth(context: { data: unknown }): AuthData {
 }
 
 /**
+ * v2.55.56: reject a trip-scoped (tp-request downscope) token outright. Owner-level ops —
+ * member management, trip creation/deletion — are outside a content-editing agent's remit
+ * EVEN on its own trip: inviting a member or deleting the trip is persistent/destructive
+ * escalation a prompt-injected agent must never reach. The per-trip content gates
+ * (hasWritePermission / requireTripReadAccess / hasPermission) scope-match restrict_trip;
+ * these owner gates don't route through them, so they call this guard directly. Unrestricted
+ * tokens: no-op.
+ */
+export function assertNotTripRestricted(auth: AuthData): void {
+  if (auth.restrictTrip !== undefined) {
+    throw new AppError('PERM_DENIED', '受限 token 不可執行擁有者層級操作');
+  }
+}
+
+/**
  * Service-token ops-scope check（移除全域 admin）。
  *
  * 「系統維運 / 跨-trip」端點的授權依據：只有 service token（client_credentials，
@@ -88,6 +103,10 @@ export async function hasPermission(
 ): Promise<boolean> {
   if (auth.isServiceToken) return false;
   if (!auth.userId) return false;
+  // v2.55.56: trip-scoped token (tp-request downscope) may only read its one trip —
+  // completes the chokepoint set (hasWritePermission / requireTripReadAccess) so a
+  // prompt-injected agent can't even read other trips' requests.
+  if (auth.restrictTrip !== undefined && auth.restrictTrip !== tripId) return false;
   const row = await db
     .prepare('SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ?')
     .bind(auth.userId, tripId)
@@ -122,6 +141,12 @@ export async function requireTripReadAccess(
     .bind(userIdForJoin, tripId)
     .first<{ published: number | null; perm_user_id: string | null }>();
   if (!row) throw new AppError('DATA_NOT_FOUND');
+  // v2.55.56: a trip-scoped token (tp-request downscope) may only touch its one
+  // trip — deny any other tripId, BEFORE the published short-circuit so a restricted
+  // agent can't even read other public trips.
+  if (auth?.restrictTrip !== undefined && auth.restrictTrip !== tripId) {
+    throw new AppError('PERM_DENIED');
+  }
   const published = row.published === 1;
   if (published) return { published: true, isMember: false };
   if (!auth) throw new AppError('PERM_DENIED');
@@ -144,6 +169,10 @@ export async function hasWritePermission(
 ): Promise<boolean> {
   if (auth.isServiceToken) return false;
   if (!auth.userId) return false;
+  // v2.55.56: trip-scoped token (tp-request downscope) may only write its one trip —
+  // denies cross-trip writes at the API (confused deputy). Defense-in-depth, NOT a
+  // containment boundary against a shell agent that can re-mint — see oauth/downscope.ts.
+  if (auth.restrictTrip !== undefined && auth.restrictTrip !== tripId) return false;
   const row = await db
     .prepare("SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ? AND role != 'viewer'")
     .bind(auth.userId, tripId)

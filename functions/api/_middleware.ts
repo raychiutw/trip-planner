@@ -20,6 +20,8 @@ interface AccessTokenPayload extends AdapterPayload {
   user_id: string | null;
   scopes: string[];
   grantId: string;
+  /** v2.55.56: set by /api/oauth/downscope — token may only touch this one trip. */
+  restrict_trip?: string;
 }
 
 function getCookie(request: Request, name: string): string | null {
@@ -359,7 +361,11 @@ async function handleAuth(
   // 不該攔截，否則 external client + browser OAuth flow 都被 401。
   // 包含：.well-known/openid-configuration / authorize / token / revoke / par
   // 等所有 OAuth endpoints。(2026-05-03 V2 Day 0 spike endpoint 已退役。)
-  if (url.pathname.startsWith('/api/oauth/')) {
+  //
+  // 例外 /api/oauth/downscope（v2.55.56）：它需要用 caller 的 user Bearer 換發受限
+  // token，必須走下方 Bearer 解析把 auth attach 上（不能被 null 掉，否則 requireAuth
+  // 一律 AUTH_REQUIRED → 端點永遠 401）。CSRF 對它已在 checkCsrf 跳過（同 consent 例外）。
+  if (url.pathname.startsWith('/api/oauth/') && url.pathname !== '/api/oauth/downscope') {
     (context.data as Record<string, unknown>).auth = null;
     return context.next();
   }
@@ -487,6 +493,8 @@ async function handleAuth(
             isServiceToken,
             scopes: safeScopes,
             clientId: safeClientId,
+            // v2.55.56: trip-scoped downscope restriction — enforced in _auth.ts.
+            restrictTrip: typeof tokenRow.restrict_trip === 'string' ? tokenRow.restrict_trip : undefined,
           };
           return context.next();
         }

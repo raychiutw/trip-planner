@@ -134,11 +134,30 @@ describe('PATCH /api/requests/:id', () => {
     expect(data.reply).toBe('已處理您的請求。如有問題請直接聯繫行程主人。');
   });
 
-  it('一般 user（無 companion scope）→ 403', async () => {
+  // v2.55.56: PATCH gate 放寬成 companion service token OR 對該 trip 有寫權的 user
+  // （restrict_trip-scoped tp-request agent 回覆自己 trip 的請求；status/reply 也吃 trip scope）。
+  it('trip owner（有寫權 user，無 companion scope）回覆自己 trip 的請求 → 200', async () => {
+    // seedTrip 給 user@test.com owner role → hasWritePermission(trip-req) 為真
+    await db.prepare(
+      'INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?)'
+    ).bind('trip-req', 'owner 回覆測試', 'user@test.com').run();
+    const row = await db.prepare(
+      'SELECT id FROM trip_requests WHERE message = ? ORDER BY id DESC LIMIT 1'
+    ).bind('owner 回覆測試').first<{ id: number }>();
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${row!.id}`, 'PATCH', { reply: '好的，已處理' }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: String(row!.id) },
+    });
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+  });
+
+  it('無寫權 user（非 companion、非該 trip 成員）→ 403', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/requests/${requestId}`, 'PATCH', { status: 'completed' }),
       env,
-      auth: mockAuth({ email: 'user@test.com' }),
+      auth: mockAuth({ email: 'stranger@test.com' }),
       params: { id: String(requestId) },
     });
     expect((await callHandler(onRequestPatch, ctx)).status).toBe(403);

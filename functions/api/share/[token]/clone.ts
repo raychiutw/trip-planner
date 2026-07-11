@@ -9,7 +9,7 @@
  * — never mutates the shared catalog. per-user rate limit + trips cap; connect-root
  * rollback on any failure.
  */
-import { requireAuth } from '../../_auth';
+import { requireAuth, assertNotTripRestricted } from '../../_auth';
 import { json } from '../../_utils';
 import { AppError } from '../../_errors';
 import { resolveActiveShare, parseVisibleSections, type ShareSection } from '../../_share';
@@ -39,6 +39,8 @@ function notFound(): Response {
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
+  // v2.55.56: 受限 token 只做單一 trip 內容編輯 — 不可 clone（建立新 trip）。
+  assertNotTripRestricted(auth);
   if (!auth.userId) throw new AppError('AUTH_REQUIRED', '需登入才能複製行程');
   const { token } = context.params as { token: string };
   const db = context.env.DB;

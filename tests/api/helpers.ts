@@ -72,8 +72,8 @@ export function mockAuth(overrides: Partial<AuthData> = {}): AuthData {
 
 /**
  * 建立 service-token mock auth（Phase 3：維運 / companion 身份，user_id=null）。
- * 預設帶 companion scope — PATCH /api/requests/:id 的 gate（requireScope('companion')）
- * 需要。維運 ops 端點測試覆寫 scopes（如 ['ops:maps']）。
+ * 預設帶 companion scope — PATCH /api/requests/:id 的 gate（companion service token
+ * 或對該 trip 有寫權的 user，v2.55.56）需要。維運 ops 端點測試覆寫 scopes（如 ['ops:maps']）。
  */
 export function mockServiceAuth(overrides: Partial<AuthData> = {}): AuthData {
   return {

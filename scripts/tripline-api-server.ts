@@ -48,6 +48,8 @@ const API_SECRET = process.env.TRIPLINE_API_SECRET || '';
 const PROJECT_DIR = process.env.PROJECT_DIR || join(import.meta.dir, '..');
 const LOG_DIR = join(PROJECT_DIR, 'scripts', 'logs', 'api-server');
 const TOKEN_HELPER = join(PROJECT_DIR, 'scripts', 'lib', 'get-tripline-token.js');
+// v2.55.56: prod API base — peek pending requests + downscope the user token to one trip.
+const API_BASE = process.env.TRIPLINE_API_BASE || 'https://trip-planner-dby.pages.dev';
 
 // --- Mailer config (Gmail SMTP) ---
 const GMAIL_USER = process.env.GMAIL_USERNAME || '';
@@ -99,16 +101,75 @@ function userTokenEnabled(skillCommand: string): boolean {
   return (flag === '1' || flag === 'true') && skillCommand.trim() === '/tp-request';
 }
 
-/** Acquire the Bearer token to inject. Prefers a user-identity token for /tp-request
- *  when enabled; on any user-token failure, alerts + degrades to the read-only service
- *  token rather than aborting the spawn. Returns null only if the service token also fails. */
-async function acquireToken(skillCommand: string): Promise<string | null> {
+/** The Bearer to inject + the trip it may touch. restrictTrip is set only for a
+ *  trip-scoped user token; undefined for the unrestricted read-only service token. */
+interface AcquiredToken {
+  token: string;
+  restrictTrip?: string;
+}
+
+/** v2.55.56: peek the oldest pending request's trip so the injected user token can be
+ *  downscoped to ONLY that trip (confused-deputy mitigation — an injected agent then
+ *  physically can't write other trips). Uses the service token (ops:trips:read — same
+ *  read the skill does to drain), priority mirrors the skill: processing → open →
+ *  received, oldest-first. null = nothing pending to scope. */
+async function peekPendingTripId(): Promise<string | null> {
+  const svcToken = await tokenHelper.getToken();
+  for (const status of ['processing', 'open', 'received'] as const) {
+    try {
+      const res = await fetch(`${API_BASE}/api/requests?status=${status}&sort=asc&limit=1`, {
+        headers: { Authorization: `Bearer ${svcToken}` },
+      });
+      if (!res.ok) continue;
+      const data = (await res.json()) as { items?: Array<{ trip_id?: unknown }> };
+      const tripId = data.items?.[0]?.trip_id;
+      if (typeof tripId === 'string' && tripId) return tripId;
+    } catch {
+      /* best-effort — try next status */
+    }
+  }
+  return null;
+}
+
+/** v2.55.56: exchange the full user token for one restricted to `tripId` via
+ *  POST /api/oauth/downscope (server re-verifies write perm + stamps restrict_trip). */
+async function downscopeToken(userToken: string, tripId: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/api/oauth/downscope`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${userToken}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ trip_id: tripId }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw Object.assign(new Error(`downscope ${res.status}: ${detail.slice(0, 120)}`), { kind: 'DOWNSCOPE_FAILED' });
+  }
+  const data = (await res.json()) as { access_token?: unknown };
+  if (typeof data.access_token !== 'string' || !data.access_token) {
+    throw Object.assign(new Error('downscope response missing access_token'), { kind: 'DOWNSCOPE_FAILED' });
+  }
+  return data.access_token;
+}
+
+/** Acquire the Bearer to inject. For /tp-request when enabled: peek the pending trip →
+ *  mint the user token → downscope it to that one trip. On any failure, alerts + degrades
+ *  to the read-only service token rather than aborting. Returns null only if the service
+ *  token also fails. */
+async function acquireToken(skillCommand: string): Promise<AcquiredToken | null> {
   if (userTokenEnabled(skillCommand)) {
     try {
-      return await userTokenHelper.getUserToken();
+      // Only mint a user token bound to the ONE trip whose request we're about to
+      // process — a prompt-injected agent then can't reach any other trip.
+      const tripId = await peekPendingTripId();
+      if (tripId) {
+        const userToken = await userTokenHelper.getUserToken();
+        const restricted = await downscopeToken(userToken, tripId);
+        log(`user token downscoped to trip ${tripId}`);
+        return { token: restricted, restrictTrip: tripId };
+      }
+      log('無 pending request 可 scope；改用 service token spawn');
     } catch (err) {
       const e = err as { kind?: string; message?: string };
-      logError(`user token 取得失敗（fallback service token，read-only）：[${e.kind ?? '?'}] ${e.message ?? err}`);
+      logError(`user token 取得/downscope 失敗（fallback service token，read-only）：[${e.kind ?? '?'}] ${e.message ?? err}`);
       void throttledAlert(
         `usertoken-${e.kind ?? 'unknown'}`,
         'failed',
@@ -118,7 +179,7 @@ async function acquireToken(skillCommand: string): Promise<string | null> {
     }
   }
   try {
-    return await tokenHelper.getToken();
+    return { token: await tokenHelper.getToken() };
   } catch (err) {
     logError(`Token mint 失敗，tmux 不啟動：${(err as Error).message}`);
     return null;
@@ -266,6 +327,13 @@ const tmuxDeps: TmuxDeps = {
   log,
 };
 
+/** POSIX shell single-quote escape for values injected into the inline `tmux new-session`
+ *  env prefix. Security-sensitive (shell injection) — one definition so both the token and
+ *  the restrict-trip value can't drift apart. */
+function shSingleQuote(s: string): string {
+  return s.replace(/'/g, `'\\''`);
+}
+
 async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
   // v2.33.49 round 8a: enforce allowlist at every entry point — defense in
   // depth (sessionPrefixForSkill also asserts but defensive double-gate).
@@ -275,10 +343,11 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
   // TRIPLINE_API_CLIENT_ID/SECRET，沒 TOKEN — 必須 mint 後 inject 到 tmux session
   // env，否則 skill 內 curl header 是 `Bearer ` (empty) → middleware 401。
   // v2.55.54: /tp-request 啟用時取 user token（可寫行程）；否則 / 失敗 → service token。
-  const token = await acquireToken(skillCommand);
-  if (token === null) {
+  const acquired = await acquireToken(skillCommand);
+  if (acquired === null) {
     return false; // acquireToken 已 logError（service token 也失敗）
   }
+  const token = acquired.token;
 
   // v2.33.27: session name 含 skill slug，讓 hasActiveSession 區分。
   // 例：'tripline-tp-request-1779...' vs 'tripline-tp-daily-check-1779...'
@@ -286,7 +355,13 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
   const claudePath = '/Users/ray/.local/bin/claude';
 
   // shell-escape token for the inline env assignment（避免 token 包含特殊字元）
-  const escapedToken = token.replace(/'/g, `'\\''`);
+  const escapedToken = shSingleQuote(token);
+  // v2.55.56: pass the restricted trip so the skill only drains THAT trip's requests
+  // (the token can't write others anyway; this keeps it from 403-failing them). Empty
+  // for the service-token fallback — skill drains normally.
+  const restrictTripEnv = acquired.restrictTrip
+    ? `TRIPLINE_RESTRICT_TRIP='${shSingleQuote(acquired.restrictTrip)}' `
+    : '';
 
   // Detached tmux session — claude 跑 interactive REPL（無 -p）。透過 env var 把
   // TRIPLINE_API_TOKEN + session name 傳給 skill；skill 結尾用 TRIPLINE_TMUX_SESSION
@@ -302,7 +377,7 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
     .join(':');
   const create = spawnSync(TMUX_BIN, [
     'new-session', '-d', '-s', sessionName, '-c', PROJECT_DIR,
-    `TRIPLINE_API_TOKEN='${escapedToken}' TRIPLINE_TMUX_SESSION='${sessionName}' TMUX_BIN='${TMUX_BIN}' PATH='${augmentedPath}' ${claudePath} --dangerously-skip-permissions --name '${sessionName}'`
+    `TRIPLINE_API_TOKEN='${escapedToken}' ${restrictTripEnv}TRIPLINE_TMUX_SESSION='${sessionName}' TMUX_BIN='${TMUX_BIN}' PATH='${augmentedPath}' ${claudePath} --dangerously-skip-permissions --name '${sessionName}'`
   ], { encoding: 'utf-8' });
   if (create.status !== 0) {
     logError(`tmux new-session failed (status=${create.status}): ${create.stderr || ''}`);
