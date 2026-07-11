@@ -92,15 +92,10 @@ const tokenHelper = require(TOKEN_HELPER) as {
   invalidateCache: () => void;
 };
 
-// v2.55.54: 可選用 USER 身份 token 讓 tp-request 寫入行程內容（service token user_id=null →
-// hasWritePermission 一律 false，改不了 entry/備選）。TP_REQUEST_USER_TOKEN=1 且 skill 為
-// /tp-request 才啟用（其他 skill 是 ops 讀取，續用 service token）。預設 OFF → merge 進
-// master 是 inert 的；Ray seed refresh token（scripts/seed-user-refresh-token.mjs）+ 開 flag
-// 才生效。取得失敗 fallback 回 service token（read-only）不 crash spawn，並 alert 提示 re-seed。
-const USER_TOKEN_HELPER = join(PROJECT_DIR, 'scripts', 'lib', 'get-tripline-user-token.js');
-const userTokenHelper = require(USER_TOKEN_HELPER) as {
-  getUserToken: () => Promise<string>;
-};
+// v2.55.62 (Option E): tp-request 用 owner 身份寫入，改由 OAuth server 直接從既有 Consent
+// 簽發受限 token（POST /api/oauth/mint-restricted）；api-server 不再存/rotate refresh token
+// （退役 get-tripline-user-token + tp-request CLIENT_SECRET，Mac 只剩 API_SECRET）。
+// TP_REQUEST_USER_TOKEN=1 且 skill 為 /tp-request 才啟用；mint 失敗 → 不 spawn（見 acquireToken）。
 
 function userTokenEnabled(skillCommand: string): boolean {
   const flag = process.env.TP_REQUEST_USER_TOKEN;
@@ -114,12 +109,12 @@ interface AcquiredToken {
   restrictTrip?: string;
 }
 
-/** v2.55.56: peek the oldest pending request's trip so the injected user token can be
- *  downscoped to ONLY that trip (confused-deputy mitigation — an injected agent then
+/** Option E: peek the oldest pending request's id + trip so we can mint an owner-identity
+ *  token bound to that ONE trip (confused-deputy mitigation — an injected agent then
  *  physically can't write other trips). Uses the service token (ops:trips:read — same
- *  read the skill does to drain), priority mirrors the skill: processing → open →
- *  received, oldest-first. null = nothing pending to scope. */
-async function peekPendingTripId(): Promise<string | null> {
+ *  read the skill does to drain), priority mirrors the skill: processing → open,
+ *  oldest-first. null = nothing pending. */
+async function peekPendingRequest(): Promise<{ requestId: string; tripId: string } | null> {
   const svcToken = await tokenHelper.getToken();
   for (const status of ['processing', 'open'] as const) {
     try {
@@ -127,9 +122,14 @@ async function peekPendingTripId(): Promise<string | null> {
         headers: { Authorization: `Bearer ${svcToken}` },
       });
       if (!res.ok) continue;
-      const data = (await res.json()) as { items?: Array<{ trip_id?: unknown }> };
-      const tripId = data.items?.[0]?.trip_id;
-      if (typeof tripId === 'string' && tripId) return tripId;
+      // /api/requests 走 json() → deepCamel，回傳是 camelCase（tripId，非 trip_id）。
+      // 讀 trip_id 會永遠 undefined → 永不 mint（DOA）。id 無底線不受轉換影響。
+      const data = (await res.json()) as { items?: Array<{ id?: unknown; tripId?: unknown }> };
+      const item = data.items?.[0];
+      const rawId = item?.id;
+      const tripId = item?.tripId;
+      const requestId = typeof rawId === 'number' ? String(rawId) : typeof rawId === 'string' ? rawId : '';
+      if (requestId && typeof tripId === 'string' && tripId) return { requestId, tripId };
     } catch {
       /* best-effort — try next status */
     }
@@ -137,51 +137,53 @@ async function peekPendingTripId(): Promise<string | null> {
   return null;
 }
 
-/** v2.55.56: exchange the full user token for one restricted to `tripId` via
- *  POST /api/oauth/downscope (server re-verifies write perm + stamps restrict_trip). */
-async function downscopeToken(userToken: string, tripId: string): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/oauth/downscope`, {
+/** Option E: mint an owner-identity token restricted to the request's trip. The OAuth
+ *  server derives trip+owner from `request_id` and signs from the owner's existing Consent
+ *  — no refresh token, no owner Bearer, nothing long-lived on this machine. Authed with the
+ *  CF↔api-server API_SECRET (a user token cannot forge it). */
+async function mintRestricted(requestId: string): Promise<{ token: string; tripId: string }> {
+  const res = await fetch(`${API_BASE}/api/oauth/mint-restricted`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${userToken}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ trip_id: tripId }),
+    headers: { Authorization: `Bearer ${API_SECRET}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ request_id: requestId }),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
-    throw Object.assign(new Error(`downscope ${res.status}: ${detail.slice(0, 120)}`), { kind: 'DOWNSCOPE_FAILED' });
+    throw Object.assign(new Error(`mint-restricted ${res.status}: ${detail.slice(0, 120)}`), { kind: 'MINT_FAILED' });
   }
-  const data = (await res.json()) as { access_token?: unknown };
-  if (typeof data.access_token !== 'string' || !data.access_token) {
-    throw Object.assign(new Error('downscope response missing access_token'), { kind: 'DOWNSCOPE_FAILED' });
+  const data = (await res.json()) as { access_token?: unknown; restrict_trip?: unknown };
+  if (typeof data.access_token !== 'string' || !data.access_token || typeof data.restrict_trip !== 'string' || !data.restrict_trip) {
+    throw Object.assign(new Error('mint-restricted response missing access_token/restrict_trip'), { kind: 'MINT_FAILED' });
   }
-  return data.access_token;
+  return { token: data.access_token, tripId: data.restrict_trip };
 }
 
-/** Acquire the Bearer to inject. For /tp-request when enabled: peek the pending trip →
- *  mint the user token → downscope it to that one trip. On any failure, alerts + degrades
- *  to the read-only service token rather than aborting. Returns null only if the service
- *  token also fails. */
+/** Acquire the Bearer to inject. For /tp-request when enabled (Option E): peek the pending
+ *  request → mint an owner-identity token restricted to that ONE trip. **On any failure we
+ *  return null (do NOT spawn)** — falling back to a service token would run a
+ *  `--dangerously-skip-permissions` session over untrusted `trip_requests.message`, letting
+ *  a prompt-injected agent read Mac secrets. Non-/tp-request skills are trusted → read-only
+ *  service token. */
 async function acquireToken(skillCommand: string): Promise<AcquiredToken | null> {
   if (userTokenEnabled(skillCommand)) {
     try {
-      // Only mint a user token bound to the ONE trip whose request we're about to
-      // process — a prompt-injected agent then can't reach any other trip.
-      const tripId = await peekPendingTripId();
-      if (tripId) {
-        const userToken = await userTokenHelper.getUserToken();
-        const restricted = await downscopeToken(userToken, tripId);
-        log(`user token downscoped to trip ${tripId}`);
-        return { token: restricted, restrictTrip: tripId };
+      const pending = await peekPendingRequest();
+      if (!pending) {
+        log('無 pending request → 不 spawn /tp-request（Option E：只在有可處理請求時起 contained session）');
+        return null;
       }
-      log('無 pending request 可 scope；改用 service token spawn');
+      const { token, tripId } = await mintRestricted(pending.requestId);
+      log(`minted owner-restricted token for request ${pending.requestId} (trip ${tripId})`);
+      return { token, restrictTrip: tripId };
     } catch (err) {
       const e = err as { kind?: string; message?: string };
-      logError(`user token 取得/downscope 失敗（fallback service token，read-only）：[${e.kind ?? '?'}] ${e.message ?? err}`);
+      logError(`mint-restricted 失敗（/tp-request 不 spawn，避免未-contained session 外洩）：[${e.kind ?? '?'}] ${e.message ?? err}`);
       void throttledAlert(
-        `usertoken-${e.kind ?? 'unknown'}`,
+        `mint-${e.kind ?? 'unknown'}`,
         'failed',
-        `tp-request user token 失效（${e.kind ?? '?'}）→ 暫用 read-only service token（寫不了行程）。修復：重跑 scripts/seed-user-refresh-token.mjs`,
+        `tp-request mint-restricted 失效（${e.kind ?? '?'}）→ 不 spawn。查 /api/oauth/mint-restricted 或 owner Consent。`,
       );
-      // fall through to service token
+      return null; // 關鍵：不 fallback service token（不起未-contained session 處理不可信輸入）
     }
   }
   try {
@@ -552,35 +554,32 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
   // A restrict_trip token is WRITE-capable; it must NEVER run in an un-contained
   // session — a prompt-injected agent could read creds → re-mint an unrestricted
   // token. Infra ready → contained spawn (dontAsk + MCP-only + tp-agent). Not ready
-  // → FAIL CLOSED: degrade to a read-only service token (can't write trips) and use
-  // the normal spawn below. Never the write token un-contained.
-  let token = acquired.token;
-  let restrictTrip = acquired.restrictTrip;
+  // → FAIL CLOSED: do NOT spawn (no service-token degrade — see the inline note at the
+  // gate below). NOTE: the un-contained tmux path below is still reached by service-token
+  // skills (/tp-daily-check) AND flag-OFF /tp-request (untrusted input) — the latter is a
+  // pre-existing hardening gap, tracked for activation (not this PR; see PR body).
+  const token = acquired.token;
+  const restrictTrip = acquired.restrictTrip;
   if (restrictTrip) {
     if (containmentReady()) {
       return await spawnContainedSession(sessionName, skillCommand, token, restrictTrip);
     }
-    logError('containment infra 未就緒（tp-agent/sudo/settings/self-probe）→ 拒絕以受限寫入 token 跑未隔離 session；降級 service token（寫不了行程，仍具 ops 讀取）');
+    // Option E / Codex outside-voice: NEVER run /tp-request (untrusted `trip_requests.message`)
+    // in an un-contained session. Even a trip-restricted WRITE token can't stop a
+    // prompt-injected agent in a `--dangerously-skip-permissions` shell from reading Mac
+    // secrets. Fail closed → do NOT spawn (no service-token degrade).
+    logError('containment infra 未就緒（tp-agent/sudo/settings/self-probe）→ /tp-request 不 spawn（拒絕未隔離 session 處理不可信輸入）');
     void throttledAlert('containment-not-ready', 'failed',
-      'tp-request 受限寫入 token 需隔離但 (0a) 未就緒 → 暫用 service token（改不了行程內容，但仍有 ops scope）。設定見 scripts/tp-request-contained/README.md');
-    try {
-      token = await tokenHelper.getToken();
-      restrictTrip = undefined;
-    } catch (err) {
-      logError(`降級 service token 也失敗，不 spawn：${(err as Error).message}`);
-      return false;
-    }
+      'tp-request 需隔離但 containment (0a) 未就緒 → 不 spawn。設定見 scripts/tp-request-contained/README.md');
+    return false;
   }
 
   const claudePath = CLAUDE_BIN;
 
   // shell-escape token for the inline env assignment（避免 token 包含特殊字元）
   const escapedToken = shSingleQuote(token);
-  // v2.55.56: pass the restricted trip so the skill only drains THAT trip's requests.
-  // (Only the service-token path reaches here now — restrict tokens went contained above.)
-  const restrictTripEnv = restrictTrip
-    ? `TRIPLINE_RESTRICT_TRIP='${shSingleQuote(restrictTrip)}' `
-    : '';
+  // 只有 service-token skills（/tp-daily-check，及 flag-OFF /tp-request）走到這；restrict
+  // token 一律在上方 containment gate return，不會落到未-contained tmux。故無 TRIPLINE_RESTRICT_TRIP。
 
   // Detached tmux session — claude 跑 interactive REPL（無 -p）。透過 env var 把
   // TRIPLINE_API_TOKEN + session name 傳給 skill；skill 結尾用 TRIPLINE_TMUX_SESSION
@@ -596,7 +595,7 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
     .join(':');
   const create = spawnSync(TMUX_BIN, [
     'new-session', '-d', '-s', sessionName, '-c', PROJECT_DIR,
-    `TRIPLINE_API_TOKEN='${escapedToken}' ${restrictTripEnv}TRIPLINE_TMUX_SESSION='${sessionName}' TMUX_BIN='${TMUX_BIN}' PATH='${augmentedPath}' ${claudePath} --dangerously-skip-permissions --name '${sessionName}'`
+    `TRIPLINE_API_TOKEN='${escapedToken}' TRIPLINE_TMUX_SESSION='${sessionName}' TMUX_BIN='${TMUX_BIN}' PATH='${augmentedPath}' ${claudePath} --dangerously-skip-permissions --name '${sessionName}'`
   ], { encoding: 'utf-8' });
   if (create.status !== 0) {
     logError(`tmux new-session failed (status=${create.status}): ${create.stderr || ''}`);

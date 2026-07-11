@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.62] - 2026-07-11
+
+### Security
+- **tp-request 改用 Option E：OAuth server 直接從既有 Consent 簽發 owner 受限 token，退役 refresh-token vault** — 讓 contained agent 用「trip owner 身份」寫 owner 自己的行程。與其在 api-server 端存/rotate 每位 owner 的 refresh token（自家 OAuth server 對自己跑 OAuth、把長效憑證落在 Ray 的 Mac），不如讓**發證方（OAuth server）**由 `request_id` 推 trip/owner、查 owner 對 tp-request client 的既有 Consent，再以 owner 身份直接簽發「只能寫單一 trip」的 access token（無 refresh）。**owner 從不需在場、refresh token 從不存在 / 不落 api-server 機器**（Mac 只剩 CF↔api-server 的 `API_SECRET`）。功能仍 **inert**（`TP_REQUEST_USER_TOKEN` 預設 OFF）。
+  - **新端點 `POST /api/oauth/mint-restricted`** — 授權只收 `TRIPLINE_API_SECRET`（infra secret、常數時間比對、fail-closed；user token 無法偽造），不走 `requireAuth`。綁 `request_id`（須 `open`/`processing`）→ 拿到 secret 者也只能為現有 pending 請求 mint 單-trip token，非任意 trip / 非 refresh。簽發 payload：`user_id=owner`、`client_id=tripline-tp-request`、`scopes=[]`、`restrict_trip=trip`，2h TTL。鏡射 `downscope.ts` 的 issuance；revocation 沿用既有 connected-app disconnect（依 user+client 刪 Consent + 所有 AccessToken）。
+  - **修好 DOA bug（feature 之前根本跑不起來）** — api-server 的 `peekPendingRequest` 讀 `item.trip_id`，但 `/api/requests` 經 `json()`→`deepCamel` 回的是 camelCase `tripId` → `trip_id` 永遠 `undefined` → 永不 mint、永不 spawn。flag OFF 時沒被發現，Option E 讓它變 load-bearing。改讀 `item.tripId`（`id` 無底線不受轉換影響）。加行為契約測試鎖住「peek 讀的欄名 = API emit 的欄名」，防同類回歸。
+  - **堵住未-contained fallback 外洩洞** — 舊碼 mint/downscope 失敗或 containment 未就緒時會**降級 service token 跑未隔離 `--dangerously-skip-permissions` session** 處理 untrusted `trip_requests.message`（prompt-injection 可讀 Mac 憑證重 mint 無限制 token）。改為 **fail-closed：mint 失敗 → 不 spawn；containment 未就緒 → 不 spawn**（絕不降級 service token）。連帶移除因此變成死碼的 `restrictTripEnv`（restrict token 一律走 contained 路徑、不落未-contained tmux）。
+  - **audit trail** — `mint-restricted` 簽發 owner 身份 token（owner 不在場）是最敏感動作，補上 `recordAuthEvent`（success + 無 Consent deny，同 downscope）；middleware 只記 ≥400，200 mint 原本各處全不可見，`API_SECRET` 若外洩靠這條追。
+  - 2-agent 對抗性審查（security-auditor + code-reviewer）過、blocker/should-fix findings 全修；unit 3676 全綠 + functions typecheck + api-server bun build 過。
+  - **明列 defer（非本 PR）**：① **P1 flag-OFF 路徑** — flag OFF 時 `/tp-request` 仍走未-contained service-token spawn（pre-existing；flag ON 時此路徑已不可達）。盲修會停掉 prod AI 聊天 pipeline（10-min cron + CF trigger 都在此路徑跑），且與 containment 就緒度耦合 → 併 activation 一起硬化（activation 應原子化：containment + Consent + flag 同時上，別留 Consent-first-flag-later 窗口）。② **vault 檔案退役** — `get-tripline-user-token.js` / `seed-user-refresh-token.mjs` 目前仍是 Phase-0 建立 Ray Consent 的機制（seed 的 authorize flow），且互相 `require` 耦合；待 Phase-2 build-trip consent UX 就緒再一起退。
+
 ## [2.55.61] - 2026-07-11
 
 ### Fixed
