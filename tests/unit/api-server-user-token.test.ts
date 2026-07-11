@@ -52,9 +52,9 @@ describe('失敗 fallback 不 crash', () => {
 });
 
 describe('v2.55.56 trip-scope（confused-deputy 緩解）', () => {
-  it('peek 最舊 pending trip（processing→open→received 優先序）用 service token 讀', () => {
+  it('peek 最舊 pending trip（processing→open 優先序）用 service token 讀', () => {
     expect(SRC).toMatch(/async function peekPendingTripId/);
-    expect(SRC).toMatch(/\['processing', 'open', 'received'\]/);
+    expect(SRC).toMatch(/\['processing', 'open'\]/);
     // peek 用 service token（ops:trips:read），非 user token
     expect(SRC).toMatch(/const svcToken = await tokenHelper\.getToken\(\)/);
     expect(SRC).toMatch(/\/api\/requests\?status=/);
@@ -73,10 +73,20 @@ describe('v2.55.56 trip-scope（confused-deputy 緩解）', () => {
     expect(SRC).toMatch(/return \{ token: restricted, restrictTrip: tripId \}/);
   });
 
-  it('注入 TRIPLINE_RESTRICT_TRIP 進 tmux env（restricted token 才有）', () => {
-    // shell-escape 走共用 shSingleQuote helper（與 token 同一份，防漂移）
-    expect(SRC).toMatch(/TRIPLINE_RESTRICT_TRIP='\$\{shSingleQuote\(acquired\.restrictTrip\)\}/);
-    // service token fallback 無 restrictTrip → 空字串不注入
-    expect(SRC).toMatch(/acquired\.restrictTrip\s*\n?\s*\?/);
+  it('restrict token 走 containment 路徑（非 un-contained tmux env）', () => {
+    // 本 PR：restrict_trip 是 write-capable → 必走 contained spawn，不再注入
+    // un-contained tmux shell env。restrictTrip truthy → containmentReady() gate。
+    expect(SRC).toMatch(/if \(restrictTrip\) \{/);
+    expect(SRC).toMatch(/if \(containmentReady\(\)\) \{/);
+    expect(SRC).toMatch(/return spawnContainedSession\(sessionName, skillCommand, token, restrictTrip\)/);
+    // restrict trip 進 MCP-config env（非 tmux shell env）— 走 buildMcpConfig
+    expect(SRC).toMatch(/buildMcpConfig\(\{[^}]*token, restrictTrip \}\)/);
+  });
+
+  it('containment 未就緒 → fail-closed 降級 read-only service token（絕不 un-contained 跑 write token）', () => {
+    // 拒絕以受限寫入 token 跑未隔離 session；改用 service token（寫不了行程）
+    expect(SRC).toMatch(/token = await tokenHelper\.getToken\(\)/);
+    expect(SRC).toMatch(/restrictTrip = undefined/);
+    expect(SRC).toMatch(/throttledAlert\('containment-not-ready'/);
   });
 });

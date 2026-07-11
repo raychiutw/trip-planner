@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "disableBypassPermissionsMode": "disable",
+    "allow": ["mcp__tripline__*"],
+    "deny": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Agent",
+      "Task",
+      "NotebookEdit"
+    ]
+  }
+}

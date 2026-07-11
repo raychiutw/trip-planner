@@ -118,6 +118,21 @@ describe('GET /api/poi-favorites — §7.1 V2 user / anonymous', () => {
     expect(data).toEqual([]);
   });
 
+  it('受限 token（restrict_trip）→ 403，不可列舉 owner 跨 trip 收藏（containment 回歸；security-auditor HIGH）', async () => {
+    // v2.55.56 downscoped token user_id=owner；未擋則此 user-path 會列舉 owner 全跨 trip 收藏。
+    const userId = await seedUser(db, 'restrict-get@test.com');
+    const poiR = await seedPoi(db, { name: 'restrict GET POI' });
+    await db.prepare('INSERT INTO poi_favorites (user_id, poi_id) VALUES (?, ?)').bind(userId, poiR).run();
+
+    const ctx = mockContext({
+      request: new Request('https://test.com/api/poi-favorites'),
+      env,
+      auth: mockAuth({ email: 'restrict-get@test.com', restrictTrip: 'some-trip' }),
+    });
+    const resp = await callHandler(onRequestGet, ctx);
+    expect(resp.status).toBe(403);
+  });
+
   it('cross-user data leak 防護：A 不能看到 B 私 trip 中收藏 POI 的 usages', async () => {
     const userA = await seedUser(db, 'leak-user-a@test.com');
     const userB = await seedUser(db, 'leak-user-b@test.com');

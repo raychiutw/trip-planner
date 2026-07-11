@@ -43,6 +43,18 @@ beforeAll(async () => {
 
 afterAll(disposeMiniflare);
 
+describe('POST /api/poi-favorites — restrict_trip containment（回歸；security-auditor HIGH）', () => {
+  it('受限 token 寫收藏 → 403（favorites user-scoped，restrict token 不可碰）', async () => {
+    const ctx = mockContext({
+      request: buildPostRequest({ poiId: 1, note: 'restrict' }),
+      env,
+      auth: mockAuth({ email: 'restrict-post@test.com', restrictTrip: 'some-trip' }),
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(403);
+  });
+});
+
 beforeEach(async () => {
   await db.prepare("DELETE FROM companion_request_actions").run();
   await db.prepare("DELETE FROM audit_log WHERE trip_id = 'system:companion'").run();
