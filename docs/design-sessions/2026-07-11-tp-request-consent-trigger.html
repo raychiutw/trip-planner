@@ -1,0 +1,199 @@
+<style>
+  :root{
+    --accent:#A97A4A; --accent-subtle:#F4EDE3; --accent-bg:#E9DBC8; --accent-deep:#8A6038;
+    --sage:#A8BAAA; --sage-subtle:#ECF0ED; --sage-deep:#7E9580;
+    --fg:#2C2622; --muted:#7C736B; --faint:#A89E95;
+    --surface:#FFFFFF; --page:#FBF8F3; --line:#EFE8DD;
+    --radius:16px; --radius-sm:10px; --radius-pill:999px;
+    --shadow:0 1px 2px rgba(44,38,34,.05),0 8px 24px rgba(44,38,34,.06);
+    --font:'Inter','Noto Sans TC',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--page);color:var(--fg);line-height:1.55;-webkit-font-smoothing:antialiased;padding:32px 20px 80px}
+  .wrap{max-width:1120px;margin:0 auto}
+  .lead{max-width:760px;margin:0 auto 8px}
+  .lead h1{font-size:26px;font-weight:700;letter-spacing:-.01em}
+  .lead p{color:var(--muted);font-size:16px;margin-top:8px}
+  .lead .ctx{margin-top:14px;background:var(--sage-subtle);color:var(--sage-deep);border-radius:var(--radius-sm);padding:10px 14px;font-size:14px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:34px;align-items:start}
+  @media(max-width:980px){.grid{grid-template-columns:1fr;max-width:420px;margin-inline:auto}}
+  .col > h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-deep);margin-bottom:4px}
+  .col > .sub{font-size:13px;color:var(--muted);margin-bottom:14px;min-height:34px}
+
+  /* phone frame */
+  .phone{background:var(--surface);border-radius:26px;box-shadow:var(--shadow);overflow:hidden}
+  .status{height:34px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--faint);background:var(--surface)}
+  .screen{padding:18px 16px 22px}
+  .titlebar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .titlebar .x{width:30px;height:30px;border-radius:var(--radius-pill);background:var(--accent-subtle);display:flex;align-items:center;justify-content:center;color:var(--accent-deep)}
+  .titlebar h3{font-size:17px;font-weight:700}
+
+  /* form field stubs */
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+  .field .inp{height:44px;border-radius:var(--radius-sm);background:var(--page);display:flex;align-items:center;padding:0 12px;color:var(--faint);font-size:14px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{height:30px;padding:0 12px;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent-deep);font-size:13px;font-weight:600;display:flex;align-items:center}
+
+  /* the consent trigger card (V1 inline + V3 shares) */
+  .ai-card{border-radius:var(--radius);padding:16px;background:var(--accent-subtle);position:relative}
+  .ai-card .row{display:flex;gap:12px;align-items:flex-start}
+  .ai-badge{flex:none;width:38px;height:38px;border-radius:12px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center}
+  .ai-card h4{font-size:15px;font-weight:700}
+  .ai-card p{font-size:13px;color:var(--muted);margin-top:3px}
+  .ai-card .why{font-size:12px;color:var(--faint);margin-top:8px;display:flex;gap:6px;align-items:center}
+
+  .btn{height:44px;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:active{background:var(--accent-deep)}
+  .btn-ghost{background:transparent;color:var(--muted)}
+  .btn-block{margin-top:14px}
+  .btn-sage{background:var(--sage);color:#254032}
+
+  .state-on{display:flex;align-items:center;gap:8px;background:var(--sage-subtle);color:var(--sage-deep);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;font-weight:600;margin-top:12px}
+  .create-bar{margin-top:18px}
+
+  /* V2 dialog */
+  .scrim{background:rgba(44,38,34,.32);border-radius:0;padding:20px 14px;min-height:120px;display:flex;align-items:flex-end;justify-content:center}
+  .sheet{background:var(--surface);border-radius:20px;box-shadow:var(--shadow);padding:20px 18px;width:100%}
+  .sheet .grip{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 14px}
+  .dimmed .screen{filter:blur(1px);opacity:.5}
+
+  /* V3 fullpage post-create */
+  .hero{background:linear-gradient(160deg,var(--accent-subtle),var(--sage-subtle));border-radius:var(--radius);padding:20px;text-align:center}
+  .hero .big{width:52px;height:52px;border-radius:16px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;margin:2px auto 12px}
+  .hero h4{font-size:18px;font-weight:700}
+  .hero p{font-size:13px;color:var(--muted);margin-top:6px}
+  .steplist{text-align:left;margin:16px 0;display:flex;flex-direction:column;gap:9px}
+  .steprow{display:flex;gap:9px;align-items:center;font-size:13px;color:var(--fg)}
+  .steprow .n{flex:none;width:22px;height:22px;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent-deep);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+  /* consent destination screen */
+  .consent-strip{margin-top:40px;max-width:460px;margin-inline:auto}
+  .consent-strip > h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-deep);margin-bottom:4px;text-align:center}
+  .consent-strip > .sub{font-size:13px;color:var(--muted);margin-bottom:14px;text-align:center}
+  .consent{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 22px;text-align:center}
+  .consent .appicon{width:46px;height:46px;border-radius:14px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+  .consent h3{font-size:18px;font-weight:700}
+  .consent h3 b{color:var(--accent-deep)}
+  .scope{display:flex;gap:9px;align-items:center;text-align:left;background:var(--page);border-radius:var(--radius-sm);padding:11px 12px;margin-top:14px;font-size:13px}
+  .scope svg{flex:none;color:var(--sage-deep)}
+  .scope b{font-weight:600}
+  .consent-actions{display:flex;gap:10px;margin-top:18px}
+  .consent-note{font-size:12px;color:var(--faint);margin-top:14px}
+
+  .callouts{max-width:760px;margin:44px auto 0;background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px}
+  .callouts h2{font-size:14px;font-weight:700;margin-bottom:12px}
+  .callouts .q{display:flex;gap:10px;font-size:13px;color:var(--muted);margin-bottom:9px}
+  .callouts .q b{color:var(--fg);font-weight:600}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent-deep);vertical-align:middle;margin-left:6px}
+  .tag.rec{background:var(--sage);color:#254032}
+</style>
+
+<div class="wrap">
+  <div class="lead">
+    <h1>tp-request 授權入口 — 建行程時同意 AI 幫你寫</h1>
+    <p>要讓 AI 以你的身分寫這趟行程（Option E contained pipeline），owner 需授權一次 <b>tripline-tp-request</b>，建立 durable Consent。之後 AI 聊天請求才會被處理；目前只有你有授權。</p>
+    <div class="ctx">你的方向：「開啟新 trip 就要完成這些流程」→ 授權入口放在<b>建立行程流程</b>裡。以下 3 個 variant 跨 form factor（inline / dialog / fullpage），都導到同一個既有 ConsentPage（下方）。</div>
+  </div>
+
+  <div class="grid">
+    <!-- V1 inline -->
+    <div class="col">
+      <h2>V1 · Inline step</h2>
+      <div class="sub">建立表單內一張 AI 協助卡，就地授權（不離開頁面、不打斷）。</div>
+      <div class="phone">
+        <div class="status">建立新行程</div>
+        <div class="screen">
+          <div class="field"><label>目的地</label><div class="chips"><span class="chip">沖繩 那覇</span><span class="chip">+ 加地點</span></div></div>
+          <div class="field"><label>日期</label><div class="inp">7/26 – 8/1 · 6 晚</div></div>
+          <div class="field"><label>偏好（想吃什麼、想玩什麼）</label><div class="inp">海景、拉麵、親子…</div></div>
+
+          <div class="ai-card">
+            <div class="row">
+              <div class="ai-badge"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 4.6L18.5 8l-4.6 1.9L12 14l-1.9-4.1L5.5 8l4.6-1.4L12 2z"/><circle cx="18" cy="17" r="2.4"/></svg></div>
+              <div>
+                <h4>讓 AI 幫你把行程填滿</h4>
+                <p>授權一次，AI 就能以你的身分安排景點、餐廳、交通。</p>
+              </div>
+            </div>
+            <div class="state-on"><svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.7-9.3a1 1 0 00-1.4-1.4L9 10.6 7.7 9.3a1 1 0 10-1.4 1.4l2 2a1 1 0 001.4 0l4-4z"/></svg>已授權 · 可隨時在「已連結應用」撤銷</div>
+            <div class="why"><svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"/></svg>未授權時此卡顯示「授權 AI」鈕 → 就地開授權</div>
+          </div>
+
+          <div class="create-bar"><button class="btn btn-primary">建立行程</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- V2 dialog -->
+    <div class="col">
+      <h2>V2 · Dialog on submit</h2>
+      <div class="sub">按「建立行程」後，若還沒授權才跳 bottom-sheet 說明 + 授權，然後續建。</div>
+      <div class="phone dimmed">
+        <div class="status">建立新行程</div>
+        <div class="screen">
+          <div class="field"><label>目的地</label><div class="chips"><span class="chip">沖繩 那覇</span></div></div>
+          <div class="field"><label>日期</label><div class="inp">7/26 – 8/1 · 6 晚</div></div>
+        </div>
+        <div class="scrim">
+          <div class="sheet">
+            <div class="grip"></div>
+            <div class="row" style="display:flex;gap:12px;align-items:flex-start">
+              <div class="ai-badge"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 4.6L18.5 8l-4.6 1.9L12 14l-1.9-4.1L5.5 8l4.6-1.4L12 2z"/><circle cx="18" cy="17" r="2.4"/></svg></div>
+              <div><h4 style="font-size:16px;font-weight:700">讓 AI 幫你安排這趟？</h4>
+              <p style="font-size:13px;color:var(--muted);margin-top:4px">授權一次 tripline，AI 就能以你的身分寫景點、餐廳、交通。不授權也能自己手動建。</p></div>
+            </div>
+            <button class="btn btn-primary btn-block">授權並建立行程</button>
+            <button class="btn btn-ghost" style="margin-top:6px">先自己建，稍後再授權</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- V3 fullpage -->
+    <div class="col">
+      <h2>V3 · Fullpage post-create</h2>
+      <div class="sub">先建好行程（不擋），再進一個專屬授權頁；跳過也能用手動。</div>
+      <div class="phone">
+        <div class="status">行程已建立 ✓</div>
+        <div class="screen">
+          <div class="hero">
+            <div class="big"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 4.6L18.5 8l-4.6 1.9L12 14l-1.9-4.1L5.5 8l4.6-1.4L12 2z"/><circle cx="18" cy="17" r="2.4"/></svg></div>
+            <h4>要 AI 幫你把「沖繩」填滿嗎？</h4>
+            <p>授權一次，接下來在聊天裡叫 AI 排行程，它就能以你的身分直接寫進去。</p>
+          </div>
+          <div class="steplist">
+            <div class="steprow"><span class="n">1</span>授權 tripline 存取你的帳號</div>
+            <div class="steprow"><span class="n">2</span>在聊天說「幫我排 6 天」</div>
+            <div class="steprow"><span class="n">3</span>AI 直接寫好景點·餐廳·交通</div>
+          </div>
+          <button class="btn btn-primary">授權 AI 協助</button>
+          <button class="btn btn-ghost" style="margin-top:6px">略過，先自己排</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- shared destination: existing ConsentPage -->
+  <div class="consent-strip">
+    <h2>↓ 三者共用的授權目的地（既有 ConsentPage，重用）</h2>
+    <div class="sub">缺口：`/api/oauth/client-info` 尚未做 → 目前顯示「未知應用程式」。Phase 2 要補這支端點才會顯示 app 名稱/logo。</div>
+    <div class="consent">
+      <div class="appicon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 4.6L18.5 8l-4.6 1.9L12 14l-1.9-4.1L5.5 8l4.6-1.4L12 2z"/><circle cx="18" cy="17" r="2.4"/></svg></div>
+      <h3><b>Tripline 行程助理</b><br>想要存取您的帳號</h3>
+      <div class="scope"><svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.7-9.3a1 1 0 00-1.4-1.4L9 10.6 7.7 9.3a1 1 0 10-1.4 1.4l2 2a1 1 0 001.4 0l4-4z"/></svg><span><b>openid</b> — 確認你的身分</span></div>
+      <div class="scope"><svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.7-9.3a1 1 0 00-1.4-1.4L9 10.6 7.7 9.3a1 1 0 10-1.4 1.4l2 2a1 1 0 001.4 0l4-4z"/></svg><span><b>profile</b> — 讀取基本資料</span></div>
+      <div class="consent-actions"><button class="btn btn-ghost" style="flex:1;background:var(--page)">拒絕</button><button class="btn btn-primary" style="flex:1">同意</button></div>
+      <p class="consent-note">您可隨時在「帳號設定 → 已連結應用」撤銷授權。</p>
+    </div>
+  </div>
+
+  <div class="callouts">
+    <h2>要你拍板的設計問題</h2>
+    <div class="q"><span>Q1</span><span><b>哪個 variant？</b> V1 inline（最不打斷、授權和建行程同屏）<span class="tag rec">建議</span> ／ V2 dialog（授權感最強、submit 才問）／ V3 fullpage（不擋建立、事後邀請，跳過率可能高）。</span></div>
+    <div class="q"><span>Q2</span><span><b>授權是必要還是選用？</b> 建議<b>選用</b>——不授權仍可手動建行程，只是 AI 寫不了（fail-closed）。避免把授權變成建行程的硬門檻。</span></div>
+    <div class="q"><span>Q3</span><span><b>文案語氣</b>：現用「讓 AI 幫你把行程填滿 / 以你的身分寫」。要更輕（「AI 協助」）還是更明確講清楚是「代你寫入」？</span></div>
+    <div class="q"><span>Q4</span><span>ConsentPage 的 app 名稱要顯示什麼？建議 <b>app_name = 「Tripline 行程助理」</b>、desc 說明「代你把 AI 聊天的安排寫進行程」。（要補 `/api/oauth/client-info`。）</span></div>
+  </div>
+</div>
