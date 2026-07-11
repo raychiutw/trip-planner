@@ -95,7 +95,7 @@ describe('maps/cache setCachedSearch writes SQLite-native expires_at', () => {
 describe('audit fix source locks', () => {
   it('dev/apps PATCH routes allowed_scopes through validateScopes (privilege-escalation fix)', () => {
     const src = read('functions/api/dev/apps/[client_id].ts');
-    expect(src).toMatch(/import \{ validateScopes \} from '\.\.\/apps'/);
+    expect(src).toMatch(/import \{[^}]*\bvalidateScopes\b[^}]*\} from '\.\.\/apps'/);
     expect(src).toMatch(/const cleaned = validateScopes\(body\.allowed_scopes\)/);
     expect(read('functions/api/dev/apps.ts')).toMatch(/export function validateScopes/);
   });
