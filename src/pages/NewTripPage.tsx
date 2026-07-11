@@ -51,6 +51,7 @@ import ToastContainer from '../components/shared/Toast';
 import { TripDatePicker } from '../components/TripDatePicker';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { TRIP_FORM_STYLES } from '../components/trip/_tripFormStyles';
+import AiAuthorizeCard from '../components/AiAuthorizeCard';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import type { PoiSearchResult } from '../types/poi';
 
@@ -880,6 +881,10 @@ export default function NewTripPage() {
                   maxLength={2000}
                   data-testid="new-trip-preferences-input"
                 />
+              </div>
+
+              <div className="tp-new-form-row tp-new-form-row-spaced" data-testid="new-trip-ai-authorize-row">
+                <AiAuthorizeCard />
               </div>
 
               {/* v2.23.8 self-drive section — 全可選；toggle 開啟才顯示 4 個欄位 */}
