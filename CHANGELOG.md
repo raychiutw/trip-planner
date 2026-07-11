@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.65] - 2026-07-11
+
+### Added
+- **`GET /api/oauth/client-info` — consent 畫面真實 app 品牌** — ConsentPage 先前顯 placeholder「未知應用程式 (client_id=...)」（v2.33.46 起的 security TODO，因 backend 端點未上線）。新增 public 端點從 `client_apps` 回已註冊 **active** client 的公開品牌（`app_name`/`app_description`/`app_logo_url`/`homepage_url`），ConsentPage 改 fetch 之。只 SELECT 4 個公開欄位（絕不回 `client_secret_hash`）、`status='active'` 過濾、未知/停用一律 404（比 `/oauth/authorize` 更緊的 existence oracle）。`rawJson` 保 snake_case（`json` 的 deepCamel 會把 `app_name→appName` 弄壞 ConsentPage 的 `ClientAppInfo`）。未知/停用 client（404）→ ConsentPage 保留原「未知應用程式」保底警告，防 attacker 構造 `client_id` 被當可信 app 名反射。是 Phase-2 build-trip consent UX 的變體無關前置（consent 畫面兩種授權機制都要顯 app 名）。
+
+### Security
+- **加固（adversarial review：code-reviewer + security-auditor，verdict = SHIP，0 crit/high/med）**：
+  - ConsentPage 補 2 個 fetch-stub component test — spoofing 保底的實際 enforcement 點在 browser（`res.ok ? json : null` → `未知應用程式` fallback），backend test 測不到；防有人改成無條件 `.json()` 使 404 error body 讓 `app_name=undefined`、警告靜默消失（22 test 全綠卻洞開）。
+  - `dev/apps` PATCH 補 `validateHomepageUrl` 驗 `app_logo_url` + `homepage_url`（https-only，reject `javascript:`/`data:`）—— 這兩欄現經 client-info 公開，先在寫入端擋掉未來 render 成 `<img src>`/`<a href>` 的 XSS/open-redirect。
+  - ConsentPage effect 補 `setError(null)` reset（deps invalid→valid 不卡 error latch）+ logo/homepage sanitize TODO。
+  - Defer（有意識，非遺漏）：per-IP rate-limit（兩 reviewer 皆認 unwarranted：單一 indexed PK lookup、existence oracle 已存於 authorize、且會 write-per-read）、`Cache-Control`（會讓剛 suspend 的 client 之 trusted 品牌 stale ≤5min）、verified-publisher badge（UX/mockup 範疇，bounded by ops review）。
+
 ## [2.55.64] - 2026-07-11
 
 ### Security

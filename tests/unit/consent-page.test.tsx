@@ -1,8 +1,8 @@
 /**
  * ConsentPage unit test — V2-P5 starter
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ConsentPage from '../../src/pages/ConsentPage';
 
@@ -12,6 +12,13 @@ beforeEach(() => {
     value: { ...window.location, href: 'about:blank' },
     writable: true,
   });
+  // 預設 client-info fetch 失敗 → 走「未知應用程式」保底（確定性，不靠 undici 對 relative
+  // URL 的 reject 行為）。需要成功/404 的 test 自行 override。
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network in unit env')));
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 function renderWithParams(query: string) {
@@ -82,5 +89,39 @@ describe('ConsentPage', () => {
     renderWithParams('client_id=p&scope=&redirect_uri=https://x.com&state=');
     await waitFor(() => screen.getByTestId('consent-scopes'));
     expect(screen.getByTestId('consent-scopes').textContent).toContain('無 scope 請求');
+  });
+
+  // --- client-info fetch wiring：spoofing 防護的實際 enforcement 點（backend test 測不到） ---
+  it('client-info 回 active app → 顯示後端 app_name（信任樣式），不顯示未知警告', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          app_name: '真實旅遊 App',
+          app_description: 'desc',
+          app_logo_url: null,
+          homepage_url: null,
+        }),
+      }),
+    );
+    renderWithParams('client_id=partner-x&scope=openid&redirect_uri=https://x.com/cb&state=s');
+    await waitFor(() => expect(screen.getByText('真實旅遊 App')).toBeTruthy());
+    // 渲染在信任的 .tp-consent-app-name 樣式，且不再顯示「未知應用程式」保底警告。
+    expect(screen.getByText('真實旅遊 App').className).toContain('tp-consent-app-name');
+    expect(screen.queryByText(/未知應用程式/)).toBeNull();
+  });
+
+  it('client-info 404（未註冊/停用）→ 保留「未知應用程式」警告，不把 client_id 當可信名稱', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({ error: { code: 'DATA_NOT_FOUND' } }) }),
+    );
+    // attacker 構造 client_id 想被顯示成官方 app 名
+    renderWithParams('client_id=Tripline%20%E5%AE%98%E6%96%B9%E7%99%BB%E5%85%A5&scope=openid&redirect_uri=https://x.com/cb&state=s');
+    await waitFor(() => expect(screen.getByText(/未知應用程式/)).toBeTruthy());
+    // 關鍵回歸鎖：若有人把 `res.ok ? … : null` 改成無條件 `.json()`，404 的 error body 會讓
+    // app_name=undefined、警告消失 → 此 assert 會紅。
+    expect(screen.getByText(/未知應用程式/).textContent).toContain('Tripline 官方登入');
   });
 });
