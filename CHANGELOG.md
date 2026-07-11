@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.64] - 2026-07-11
+
+### Security
+- **P1 hardening：`/tp-request` 永不落未-contained session（含 flag OFF）** — security-auditor 對 v2.55.62 標的 P1（pre-existing）。`/tp-request` 處理 untrusted `trip_requests.message`，必須永遠 contained。flag ON 時 `acquireToken` 已在 mint 路徑先 return（contained 或 null），不會走到未-contained tmux；但 flag OFF 時會拿 service token（無 restrictTrip）fallthrough 到 `--dangerously-skip-permissions` spawn（= 洞）。本版在 `spawnTmuxRequest` 未-contained tmux spawn 前加 guard：`skillCommand === '/tp-request'` 一律 `return false`（發 `tp-request-uncontained-refused` alert）。只有 trusted service-token skill（`/tp-daily-check`）能走未-contained 路徑。**flag 現為 ON → 此路徑不被觸發，純 defense-in-depth；下次 api-server restart 生效。** source-grep guard test 鎖住「guard 在未-contained spawn 指令之前」。
+
 ## [2.55.63] - 2026-07-11
 
 ### Security
