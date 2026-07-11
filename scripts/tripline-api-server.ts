@@ -11,12 +11,18 @@
  */
 
 import { spawnSync } from 'child_process';
-import { appendFileSync, mkdirSync, readFileSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { makeMailHandler } from './lib/mailer-handler';
 import { computeNextDailyFire } from './lib/schedule-daily';
 import { waitForRepl, submitSkillCommand, type TmuxDeps } from './lib/tmux-pane';
+import {
+  TP_AGENT_USER,
+  shSingleQuote,
+  buildContainedShellCommand,
+  buildMcpConfig,
+} from './lib/contained-spawn';
 import { throttledAlert, sleep } from './_lib/cron-shared';
 
 // --- Load .env.local ---
@@ -268,6 +274,20 @@ const resolveBin = (candidates: string[], fallback: string): string => {
 };
 const NODE_BIN = resolveBin(['/opt/homebrew/bin/node', '/usr/local/bin/node'], 'node');
 const BUN_BIN = resolveBin(['/opt/homebrew/bin/bun', '/Users/ray/.bun/bin/bun'], 'bun');
+const CLAUDE_BIN = '/Users/ray/.local/bin/claude';
+
+// --- tp-request containment (activation precondition 0) ---
+// When /tp-request runs with a restrict_trip *user* token (write-capable), the
+// session is doubly-contained: layer B = Claude Code dontAsk + only mcp__tripline__*
+// (scripts/tp-request-contained/settings.json); layer A = separate unix user
+// `tp-agent` + scrubbed env. See scripts/tp-request-contained/README.md, incl. the
+// Ray-manual (0a) precondition. Until (0a) is done, containmentReady() is false and
+// a restrict-token request FAILS CLOSED to a read-only service token (never runs the
+// write-capable token un-contained).
+// TP_AGENT_USER / CONTAINED_PATH / shSingleQuote / build* → ./lib/contained-spawn (pure, tested)
+const CONTAINED_SETTINGS_PATH = join(PROJECT_DIR, 'scripts', 'tp-request-contained', 'settings.json');
+const MCP_SERVER_PATH = join(PROJECT_DIR, 'scripts', 'tp-request-mcp-server.js');
+const CONTAINED_BASE_DIR = `/Users/${TP_AGENT_USER}/.tripline-contained`;
 
 async function cleanupOrphans(maxAgeMs: number): Promise<number> {
   try {
@@ -327,11 +347,97 @@ const tmuxDeps: TmuxDeps = {
   log,
 };
 
-/** POSIX shell single-quote escape for values injected into the inline `tmux new-session`
- *  env prefix. Security-sensitive (shell injection) — one definition so both the token and
- *  the restrict-trip value can't drift apart. */
-function shSingleQuote(s: string): string {
-  return s.replace(/'/g, `'\\''`);
+// --- tp-request containment helpers ---
+
+/** Run a command AS the tp-agent user (non-interactive sudo; needs (0a) NOPASSWD). */
+function runAsAgent(args: string[], input?: string) {
+  return spawnSync('sudo', ['-n', '-u', TP_AGENT_USER, ...args], { encoding: 'utf-8', input });
+}
+
+/** Is the containment infra ready to run a write-capable token safely?
+ *  Requires the settings + MCP server files AND a working passwordless sudo to
+ *  tp-agent ((0a)). False → caller must fail closed (never run the restrict token
+ *  un-contained). */
+function containmentReady(): boolean {
+  try {
+    if (!existsSync(CONTAINED_SETTINGS_PATH) || !existsSync(MCP_SERVER_PATH)) return false;
+    return runAsAgent(['true']).status === 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Spawn a contained /tp-request session. Returns false (fail-closed) on any setup
+ *  failure so the caller degrades to a read-only service-token spawn. */
+function spawnContainedSession(
+  sessionName: string,
+  skillCommand: string,
+  token: string,
+  restrictTrip: string,
+): boolean {
+  const sessionDir = `${CONTAINED_BASE_DIR}/${sessionName}`;
+  const mcpConfigPath = `${sessionDir}/mcp-config.json`;
+
+  // 1. per-session dirs, created AS tp-agent, 0700.
+  for (const d of [sessionDir, `${sessionDir}/config`, `${sessionDir}/tmp`]) {
+    const mk = runAsAgent(['mkdir', '-p', '-m', '700', d]);
+    if (mk.status !== 0) {
+      logError(`contained: mkdir ${d} 失敗（fail-closed）：${mk.stderr || mk.status}`);
+      return false;
+    }
+  }
+
+  // 2. mcp-config with the restrict token + trip, written AS tp-agent, mode 0600.
+  //    Content via stdin (not argv) so the token never lands in `ps`.
+  const mcpConfig = buildMcpConfig({ nodeBin: NODE_BIN, mcpServerPath: MCP_SERVER_PATH, token, restrictTrip });
+  const WRITER =
+    "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>require('fs').writeFileSync(process.argv[1],d,{mode:0o600}))";
+  const w = runAsAgent([NODE_BIN, '-e', WRITER, mcpConfigPath], mcpConfig);
+  if (w.status !== 0) {
+    logError(`contained: 寫 mcp-config 失敗（fail-closed）：${w.stderr || w.status}`);
+    return false;
+  }
+
+  // 3. detached tmux session. claude -p runs the skill headless and EXITS → the
+  //    session ends on its own (no self-destruct, no orphan). Token is not on the
+  //    command line.
+  const shellCmd = buildContainedShellCommand({
+    claudeBin: CLAUDE_BIN,
+    skillCommand,
+    sessionName,
+    sessionDir,
+    settingsPath: CONTAINED_SETTINGS_PATH,
+    mcpConfigPath,
+  });
+  const create = spawnSync(TMUX_BIN, ['new-session', '-d', '-s', sessionName, '-c', PROJECT_DIR, shellCmd], {
+    encoding: 'utf-8',
+  });
+  if (create.status !== 0) {
+    logError(`contained: tmux new-session 失敗（fail-closed）：${create.stderr || create.status}`);
+    return false;
+  }
+  attachSessionLog(sessionName, skillCommand);
+  log(`Spawned CONTAINED tmux session: ${sessionName} (trip=${restrictTrip}, dontAsk+MCP-only, headless -p)`);
+  // ponytail: per-session dir (0600 mcp-config w/ restrict token) is left on disk.
+  // Low risk — token TTL 2h, dir is tp-agent 0700. Add an age-based sweep in
+  // cleanupOrphans if they accumulate.
+  return true;
+}
+
+/** best-effort: pipe session output to a scrubbed persistent log (shared by both paths). */
+function attachSessionLog(sessionName: string, skillCommand: string): void {
+  try {
+    const skillSlug = skillCommand.replace(/^\//, '').replace(/[^a-zA-Z0-9-]/g, '-');
+    const sessionLogDir = join(PROJECT_DIR, 'scripts', 'logs', skillSlug);
+    mkdirSync(sessionLogDir, { recursive: true });
+    const pipe = spawnSync(TMUX_BIN, [
+      'pipe-pane', '-t', sessionName, '-o',
+      `sed -E 's#[Bb]earer [A-Za-z0-9._~+/=-]+#Bearer <redacted>#g' >> '${join(sessionLogDir, `${sessionName}.log`)}'`,
+    ], { encoding: 'utf-8' });
+    if (pipe.status !== 0) logError(`tmux pipe-pane failed (non-blocking): ${pipe.stderr || ''}`);
+  } catch (err) {
+    logError(`session log pipe setup failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
@@ -347,20 +453,42 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
   if (acquired === null) {
     return false; // acquireToken 已 logError（service token 也失敗）
   }
-  const token = acquired.token;
-
   // v2.33.27: session name 含 skill slug，讓 hasActiveSession 區分。
   // 例：'tripline-tp-request-1779...' vs 'tripline-tp-daily-check-1779...'
   const sessionName = `${sessionPrefixForSkill(skillCommand)}${Date.now()}-${process.pid}`;
-  const claudePath = '/Users/ray/.local/bin/claude';
+
+  // --- containment gate (activation precondition 0) ---
+  // A restrict_trip token is WRITE-capable; it must NEVER run in an un-contained
+  // session — a prompt-injected agent could read creds → re-mint an unrestricted
+  // token. Infra ready → contained spawn (dontAsk + MCP-only + tp-agent). Not ready
+  // → FAIL CLOSED: degrade to a read-only service token (can't write trips) and use
+  // the normal spawn below. Never the write token un-contained.
+  let token = acquired.token;
+  let restrictTrip = acquired.restrictTrip;
+  if (restrictTrip) {
+    if (containmentReady()) {
+      return spawnContainedSession(sessionName, skillCommand, token, restrictTrip);
+    }
+    logError('containment infra 未就緒（tp-agent/sudo/settings）→ 拒絕以受限寫入 token 跑未隔離 session；降級 read-only service token');
+    void throttledAlert('containment-not-ready', 'failed',
+      'tp-request 受限寫入 token 需隔離但 (0a) 未就緒 → 暫用 read-only service token（寫不了行程）。設定見 scripts/tp-request-contained/README.md');
+    try {
+      token = await tokenHelper.getToken();
+      restrictTrip = undefined;
+    } catch (err) {
+      logError(`降級 service token 也失敗，不 spawn：${(err as Error).message}`);
+      return false;
+    }
+  }
+
+  const claudePath = CLAUDE_BIN;
 
   // shell-escape token for the inline env assignment（避免 token 包含特殊字元）
   const escapedToken = shSingleQuote(token);
-  // v2.55.56: pass the restricted trip so the skill only drains THAT trip's requests
-  // (the token can't write others anyway; this keeps it from 403-failing them). Empty
-  // for the service-token fallback — skill drains normally.
-  const restrictTripEnv = acquired.restrictTrip
-    ? `TRIPLINE_RESTRICT_TRIP='${shSingleQuote(acquired.restrictTrip)}' `
+  // v2.55.56: pass the restricted trip so the skill only drains THAT trip's requests.
+  // (Only the service-token path reaches here now — restrict tokens went contained above.)
+  const restrictTripEnv = restrictTrip
+    ? `TRIPLINE_RESTRICT_TRIP='${shSingleQuote(restrictTrip)}' `
     : '';
 
   // Detached tmux session — claude 跑 interactive REPL（無 -p）。透過 env var 把
@@ -398,24 +526,8 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
     return false;
   }
 
-  // 2026-07-07 可觀測性：session 輸出 pipe 到持久 log — request #237 兩次
-  // session 死掉（orphan 清除 / 中途結束）都因 tmux buffer 即逝無從驗屍。
-  // pipe-pane 失敗不阻擋 spawn（best-effort）。
-  try {
-    const skillSlug = skillCommand.replace(/^\//, '').replace(/[^a-zA-Z0-9-]/g, '-');
-    const sessionLogDir = join(PROJECT_DIR, 'scripts', 'logs', skillSlug);
-    mkdirSync(sessionLogDir, { recursive: true });
-    const pipe = spawnSync(TMUX_BIN, [
-      // v2.55.54: sed-scrub `Bearer <token>` before the sink — a user access token
-      // is owner-write; keep it out of the ~30d-retained plaintext session log even
-      // if the REPL ever echoes the Authorization header.
-      'pipe-pane', '-t', sessionName, '-o',
-      `sed -E 's#[Bb]earer [A-Za-z0-9._~+/=-]+#Bearer <redacted>#g' >> '${join(sessionLogDir, `${sessionName}.log`)}'`,
-    ], { encoding: 'utf-8' });
-    if (pipe.status !== 0) logError(`tmux pipe-pane failed (non-blocking): ${pipe.stderr || ''}`);
-  } catch (err) {
-    logError(`session log pipe setup failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
-  }
+  // 2026-07-07 可觀測性：session 輸出 pipe 到持久 log（scrub Bearer token）。
+  attachSessionLog(sessionName, skillCommand);
 
   log(`Spawned tmux session: ${sessionName} (skill=${skillCommand}, fire-and-forget; skill self-destructs at end)`);
   return true;
