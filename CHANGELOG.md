@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.67] - 2026-07-12
+
+### Removed
+- **退役 tp-request refresh-token vault 檔案（Option E 收尾）** — Option E（mint-restricted 從 Consent 直簽 owner token）+ V1 就地授權卡（v2.55.66）上線後，refresh-token vault 已無 live caller。刪 `scripts/lib/get-tripline-user-token.js`（refresh rotation / fileStore）+ `scripts/seed-user-refresh-token.mjs`（一次性 authorize seed）+ `tests/unit/get-tripline-user-token.test.ts`；清 `provision-tp-request-client.js` 的 seed 指引（改述：client 註冊後 owner 走 build-trip consent card 授權，api-server 用 `TRIPLINE_API_SECRET`/mint-restricted 非 client secret）。api-server 不 import 這些檔（Option E 走 mint-restricted），`api-server-user-token` source-grep guard + `bun build` 驗無殘留依賴；TODOS 對應項移除。新 owner 建 Consent 改走就地卡（`POST /api/account/ai-authorization`），既有 Consent（含 Ray）為 durable DB row 不受影響。
+
 ## [2.55.66] - 2026-07-12
 
 ### Added
