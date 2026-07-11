@@ -23,23 +23,28 @@ export function shSingleQuote(s: string): string {
 }
 
 /**
- * Build the inline shell command for a contained tmux session.
+ * Build the inline shell command for a contained tmux session. INTERACTIVE REPL
+ * (no `-p` — headless print mode was deliberately abandoned in v2.30.7 for cold-boot
+ * reliability); the skill command is submitted via tmux send-keys once the REPL is
+ * ready, exactly like the non-contained spawn.
  *
  * Security invariants (unit-tested):
  *   - runs as tp-agent via `sudo -n -u tp-agent` (layer A: FS isolation)
  *   - `env -i` scrubs the environment (no inherited CLIENT_SECRET / refresh token)
- *   - `--permission-mode dontAsk` + `--settings` = layer B capability lockdown
- *   - NO `--dangerously-skip-permissions` / bypassPermissions (would void the allowlist)
- *   - the restrict token is NOT here (it lives only in the 0600 mcp-config file),
- *     so it never lands in `ps` output or the tmux session name
+ *   - `--permission-mode dontAsk` + `--settings` + `--strict-mcp-config` = layer B lockdown
+ *   - NO `-p`, NO `--dangerously-skip-permissions` / bypassPermissions
+ *   - neither the restrict API token NOR CLAUDE_CODE_OAUTH_TOKEN is on the command line:
+ *     the API token lives in the 0600 mcp-config file; the OAuth subscription token
+ *     (from `claude setup-token`) is read from a 0600 file into the env by an sh wrapper
+ *     (`$(cat "$1")`) — so neither ever lands in `ps` / the tmux session name.
  */
 export function buildContainedShellCommand(o: {
   claudeBin: string;
-  skillCommand: string;
   sessionName: string;
   sessionDir: string;
   settingsPath: string;
   mcpConfigPath: string;
+  tokenFilePath: string;
 }): string {
   const q = shSingleQuote;
   const env = [
@@ -49,15 +54,17 @@ export function buildContainedShellCommand(o: {
     `CLAUDE_CONFIG_DIR='${q(`${o.sessionDir}/config`)}'`,
     `LANG='en_US.UTF-8'`,
   ].join(' ');
+  // sh wrapper: read the OAuth token out of a 0600 file into CLAUDE_CODE_OAUTH_TOKEN,
+  // then exec claude INTERACTIVELY. Positional args ($1..$5) keep every value — incl.
+  // the token FILE path — off claude's own argv. `exec` replaces sh so the tmux pane's
+  // foreground process is claude itself.
+  const inner =
+    'CLAUDE_CODE_OAUTH_TOKEN=$(cat "$1") exec "$2" --permission-mode dontAsk ' +
+    '--settings "$3" --mcp-config "$4" --strict-mcp-config --name "$5"';
   return (
-    `sudo -n -u ${TP_AGENT_USER} env -i ${env} ` +
-    `'${q(o.claudeBin)}' -p '${q(o.skillCommand)}' ` +
-    `--permission-mode dontAsk ` +
-    `--settings '${q(o.settingsPath)}' ` +
-    // --strict-mcp-config: use ONLY this --mcp-config; ignore project .mcp.json /
-    // CLAUDE_CONFIG_DIR servers, so tripline is provably the entire tool surface.
-    `--mcp-config '${q(o.mcpConfigPath)}' --strict-mcp-config ` +
-    `--name '${q(o.sessionName)}'`
+    `sudo -n -u ${TP_AGENT_USER} env -i ${env} /bin/sh -c '${inner}' tp-contained ` +
+    `'${q(o.tokenFilePath)}' '${q(o.claudeBin)}' '${q(o.settingsPath)}' ` +
+    `'${q(o.mcpConfigPath)}' '${q(o.sessionName)}'`
   );
 }
 

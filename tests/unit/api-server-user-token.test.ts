@@ -78,7 +78,7 @@ describe('v2.55.56 trip-scope（confused-deputy 緩解）', () => {
     // un-contained tmux shell env。restrictTrip truthy → containmentReady() gate。
     expect(SRC).toMatch(/if \(restrictTrip\) \{/);
     expect(SRC).toMatch(/if \(containmentReady\(\)\) \{/);
-    expect(SRC).toMatch(/return spawnContainedSession\(sessionName, skillCommand, token, restrictTrip\)/);
+    expect(SRC).toMatch(/return await spawnContainedSession\(sessionName, skillCommand, token, restrictTrip\)/);
     // restrict trip 進 MCP-config env（非 tmux shell env）— 走 buildMcpConfig
     expect(SRC).toMatch(/buildMcpConfig\(\{[^}]*token, restrictTrip \}\)/);
   });

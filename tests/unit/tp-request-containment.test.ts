@@ -14,11 +14,11 @@ import {
 
 const BASE = {
   claudeBin: '/Users/ray/.local/bin/claude',
-  skillCommand: '/tp-request',
   sessionName: 'tripline-tp-request-123-456',
   sessionDir: '/Users/tp-agent/.tripline-contained/tripline-tp-request-123-456',
   settingsPath: '/repo/scripts/tp-request-contained/settings.json',
   mcpConfigPath: '/Users/tp-agent/.tripline-contained/tripline-tp-request-123-456/mcp-config.json',
+  tokenFilePath: '/Users/tp-agent/.tripline-contained/tripline-tp-request-123-456/oauth-token',
 };
 const TOKEN = 'restrict-tok-SECRET-abc123';
 
@@ -44,11 +44,19 @@ describe('buildContainedShellCommand — layer B (capability lockdown)', () => {
   it('uses dontAsk + isolated --settings + --mcp-config + --strict-mcp-config', () => {
     const cmd = buildContainedShellCommand(BASE);
     expect(cmd).toContain('--permission-mode dontAsk');
-    expect(cmd).toContain(`--settings '${BASE.settingsPath}'`);
-    expect(cmd).toContain(`--mcp-config '${BASE.mcpConfigPath}'`);
-    // ignore any project .mcp.json — tripline is provably the whole tool surface
-    expect(cmd).toContain('--strict-mcp-config');
-    expect(cmd).toContain("-p '/tp-request'");
+    // flags live in the sh wrapper; the actual paths are positional args ($3/$4)
+    expect(cmd).toContain('--settings "$3"');
+    expect(cmd).toContain('--mcp-config "$4"');
+    expect(cmd).toContain('--strict-mcp-config'); // tripline is provably the whole tool surface
+    expect(cmd).toContain(`'${BASE.settingsPath}'`);
+    expect(cmd).toContain(`'${BASE.mcpConfigPath}'`);
+  });
+
+  it('is INTERACTIVE — no -p (headless print mode was abandoned in v2.30.7); skill goes via the REPL', () => {
+    const cmd = buildContainedShellCommand(BASE);
+    expect(cmd).not.toContain(' -p '); // not headless; skill submitted via send-keys later
+    expect(cmd).toContain('/bin/sh -c'); // launched through the OAuth sh wrapper
+    expect(cmd).toContain('--name "$5"'); // interactive claude with a display name
   });
 
   it('NEVER passes --dangerously-skip-permissions / bypassPermissions (would void the allowlist)', () => {
@@ -58,12 +66,17 @@ describe('buildContainedShellCommand — layer B (capability lockdown)', () => {
   });
 });
 
-describe('buildContainedShellCommand — token never on the command line', () => {
-  it('the restrict token does not appear in the shell command (only in the mcp-config file)', () => {
-    // token is not even an input to the builder — prove it can't leak into `ps`
+describe('buildContainedShellCommand — neither token on the command line', () => {
+  it('restrict API token + OAuth token absent from argv; only their 0600 FILE paths appear', () => {
     const cmd = buildContainedShellCommand(BASE);
+    // restrict API token: not even an input to the builder (lives in the mcp-config file)
     expect(cmd).not.toContain(TOKEN);
     expect(cmd).not.toMatch(/TRIPLINE_API_TOKEN/);
+    // OAuth token: read from the 0600 file into the env by the sh wrapper — never argv
+    expect(cmd).toContain('CLAUDE_CODE_OAUTH_TOKEN=$(cat "$1")');
+    expect(cmd).toContain(`'${BASE.tokenFilePath}'`);
+    // its value is never inlined as an env assignment on the command
+    expect(cmd).not.toMatch(/CLAUDE_CODE_OAUTH_TOKEN=[A-Za-z0-9]/);
   });
 });
 

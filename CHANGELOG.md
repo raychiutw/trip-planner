@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.59] - 2026-07-11
+
+### Fixed
+- **tp-request contained session：改回 tmux 互動 REPL（不用 `-p`）+ 補上認證** — v2.55.57 的 contained spawn 用 `claude -p`，但 v2.30.7 已刻意從 `-p` 遷到 tmux 互動 REPL（cold-boot / lifecycle 穩定性），本版改回一致。連帶（activation dry-run 實測抓到的）：
+  - **認證** — contained 是非登入 unix user、沒 login keychain，訂閱 `/login` 的 token 存不進去（macOS 跳「找不到鑰匙圈」）。改用 `claude setup-token` 產的一年期 **`CLAUDE_CODE_OAUTH_TOKEN`**（沿用訂閱、非 API key），api-server 從 `.env.local` 讀出 → 寫進 0600 檔 → 經 sh wrapper（`$(cat …)`）注入 contained claude 的 env，**不上 argv**（不進 `ps`）。`containmentReady()` 缺此 token 即 fail-closed。
+  - **session 收尾（reaper）** — 互動 REPL 不會自己結束，而 contained agent 沒 Bash、也砍不了 ray 的跨-user tmux session。改由 api-server 收尾：送出 skill 後 async poll 該 restrict trip 的 request 狀態，drain 完（agent 用 MCP `updateRequest` 收尾）或到 orphan cap（90 分）就 `tmux kill-session`；持有現有「一次一隻 tp-request」lock、不卡 event loop、不動 cron。
+  - **`--strict-mcp-config`** — 確保只吃注入的 tripline MCP config、忽略專案 `.mcp.json`。
+  - **實測發現（額外一層防護）** — disposable `CLAUDE_CONFIG_DIR` 讓 workspace **untrusted**，Claude Code 因此**整批忽略**repo `.claude/settings.local.json` 的 `Bash(...)` allow（`Ignoring N ... this workspace has not been trusted`）—— 把「cwd=repo 吃到專案 allow」殘留路徑也堵掉。
+  - README `(0a)` 補齊 activation 前置：建 tp-agent **家目錄**（`sysadminctl` 不建）、sudoers **改放 `/etc/sudoers.d/`**（避免被主檔 `%admin` 規則蓋掉 NOPASSWD 失效）、`claude setup-token` 認證步驟、修正 verify 路徑；`(0b)` live 驗證改走真實 REPL（非 `-p`）。**功能仍 inert**（`TP_REQUEST_USER_TOKEN` OFF），activation 待 Ray。
+
 ## [2.55.58] - 2026-07-11
 
 ### Docs

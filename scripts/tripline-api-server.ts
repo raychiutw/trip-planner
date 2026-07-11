@@ -360,6 +360,13 @@ function runAsAgent(args: string[], input?: string) {
  *  un-contained). */
 function containmentReady(): boolean {
   try {
+    // Contained claude runs as a non-login user with NO keychain, so subscription
+    // OAuth (/login) can't persist. It authenticates via CLAUDE_CODE_OAUTH_TOKEN
+    // (from `claude setup-token`, put in .env.local). Missing → can't run → fail closed.
+    if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+      logError('containment: 缺 CLAUDE_CODE_OAUTH_TOKEN（跑 `claude setup-token` 貼進 .env.local）— fail-closed');
+      return false;
+    }
     if (!existsSync(CONTAINED_SETTINGS_PATH) || !existsSync(MCP_SERVER_PATH)) return false;
     if (runAsAgent(['true']).status !== 0) return false;
     // NEGATIVE self-probe: tp-agent must NOT be able to read ray's creds. Catches a
@@ -377,16 +384,41 @@ function containmentReady(): boolean {
   }
 }
 
-/** Spawn a contained /tp-request session. Returns false (fail-closed) on any setup
- *  failure so the caller degrades to a read-only service-token spawn. */
-function spawnContainedSession(
+/** Reaper signal: does the restrict trip still have a pending (processing/open) request?
+ *  Uses the service token (same read the skill drains with). Errs toward "yes" (keep the
+ *  session alive) on transient failure — the orphan cap + cleanupOrphans are the backstop. */
+async function tripHasPending(tripId: string): Promise<boolean> {
+  try {
+    const svc = await tokenHelper.getToken();
+    for (const status of ['processing', 'open'] as const) {
+      const res = await fetch(
+        `${API_BASE}/api/requests?status=${status}&tripId=${encodeURIComponent(tripId)}&limit=1`,
+        { headers: { Authorization: `Bearer ${svc}` } },
+      );
+      if (!res.ok) return true;
+      const data = (await res.json()) as { items?: unknown[] };
+      if ((data.items?.length ?? 0) > 0) return true;
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/** Spawn a contained /tp-request session (interactive REPL — NOT -p). Returns false
+ *  (fail-closed) on any setup failure so the caller degrades to a service-token spawn.
+ *  Blocks (async) for the session's lifetime: it drives the REPL then REAPS the session
+ *  when the trip's requests are drained (the contained agent has no Bash to self-destruct,
+ *  and can't kill ray's cross-user tmux session). */
+async function spawnContainedSession(
   sessionName: string,
   skillCommand: string,
   token: string,
   restrictTrip: string,
-): boolean {
+): Promise<boolean> {
   const sessionDir = `${CONTAINED_BASE_DIR}/${sessionName}`;
   const mcpConfigPath = `${sessionDir}/mcp-config.json`;
+  const tokenFilePath = `${sessionDir}/oauth-token`;
 
   // 1. per-session dirs, created AS tp-agent, 0700.
   for (const d of [sessionDir, `${sessionDir}/config`, `${sessionDir}/tmp`]) {
@@ -397,27 +429,29 @@ function spawnContainedSession(
     }
   }
 
-  // 2. mcp-config with the restrict token + trip, written AS tp-agent, mode 0600.
-  //    Content via stdin (not argv) so the token never lands in `ps`.
-  const mcpConfig = buildMcpConfig({ nodeBin: NODE_BIN, mcpServerPath: MCP_SERVER_PATH, token, restrictTrip });
+  // 2. write 0600 files AS tp-agent via stdin (never argv, so neither token hits `ps`):
+  //    the mcp-config (restrict API token + trip) and the CLAUDE_CODE_OAUTH_TOKEN.
   const WRITER =
     "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>require('fs').writeFileSync(process.argv[1],d,{mode:0o600}))";
-  const w = runAsAgent([NODE_BIN, '-e', WRITER, mcpConfigPath], mcpConfig);
-  if (w.status !== 0) {
-    logError(`contained: 寫 mcp-config 失敗（fail-closed）：${w.stderr || w.status}`);
-    return false;
+  const mcpConfig = buildMcpConfig({ nodeBin: NODE_BIN, mcpServerPath: MCP_SERVER_PATH, token, restrictTrip });
+  const files: Array<[string, string, string]> = [
+    [mcpConfigPath, mcpConfig, 'mcp-config'],
+    [tokenFilePath, process.env.CLAUDE_CODE_OAUTH_TOKEN || '', 'oauth-token'],
+  ];
+  for (const [path, content, label] of files) {
+    const w = runAsAgent([NODE_BIN, '-e', WRITER, path], content);
+    if (w.status !== 0) {
+      logError(`contained: 寫 ${label} 失敗（fail-closed）：${w.stderr || w.status}`);
+      return false;
+    }
   }
 
-  // 3. detached tmux session. claude -p runs the skill headless and EXITS → the
-  //    session ends on its own (no self-destruct, no orphan). Token is not on the
-  //    command line.
+  // 3. detached tmux session running claude INTERACTIVELY. CWD stays PROJECT_DIR for
+  //    skill discovery; the disposable CLAUDE_CONFIG_DIR keeps the workspace UNTRUSTED,
+  //    so the repo's .claude/settings.local.json allow-entries are ignored (verified).
   const shellCmd = buildContainedShellCommand({
-    claudeBin: CLAUDE_BIN,
-    skillCommand,
-    sessionName,
-    sessionDir,
-    settingsPath: CONTAINED_SETTINGS_PATH,
-    mcpConfigPath,
+    claudeBin: CLAUDE_BIN, sessionName, sessionDir,
+    settingsPath: CONTAINED_SETTINGS_PATH, mcpConfigPath, tokenFilePath,
   });
   const create = spawnSync(TMUX_BIN, ['new-session', '-d', '-s', sessionName, '-c', PROJECT_DIR, shellCmd], {
     encoding: 'utf-8',
@@ -427,10 +461,37 @@ function spawnContainedSession(
     return false;
   }
   attachSessionLog(sessionName, skillCommand);
-  log(`Spawned CONTAINED tmux session: ${sessionName} (trip=${restrictTrip}, dontAsk+MCP-only, headless -p)`);
-  // ponytail: per-session dir (0600 mcp-config w/ restrict token) is left on disk.
-  // Low risk — token TTL 2h, dir is tp-agent 0700. Add an age-based sweep in
-  // cleanupOrphans if they accumulate.
+
+  // 4. drive the REPL exactly like the non-contained path.
+  if (!(await waitForRepl(tmuxDeps, sessionName))) {
+    logError(`contained: REPL 未就緒，kill: ${sessionName}`);
+    spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
+    return false;
+  }
+  if (!(await submitSkillCommand(tmuxDeps, sessionName, skillCommand))) {
+    logError(`contained: skill 未提交，kill: ${sessionName}`);
+    spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
+    return false;
+  }
+  log(`Spawned CONTAINED session ${sessionName} (trip=${restrictTrip}, dontAsk+MCP-only+tp-agent, interactive REPL)`);
+
+  // 5. REAPER — poll the trip's request status; kill when drained or at the orphan cap.
+  const deadline = Date.now() + ORPHAN_MAX_AGE_MS;
+  while (Date.now() < deadline) {
+    await sleep(15_000);
+    // session died on its own (claude crashed/exited) → stop polling
+    if (spawnSync(TMUX_BIN, ['has-session', '-t', sessionName], { encoding: 'utf-8' }).status !== 0) {
+      log(`contained: session ${sessionName} 已自行結束`);
+      break;
+    }
+    if (!(await tripHasPending(restrictTrip))) {
+      log(`contained: trip ${restrictTrip} 無待處理 → 收尾 ${sessionName}`);
+      break;
+    }
+  }
+  spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
+  // ponytail: per-session dir (0600 mcp-config + oauth-token) left on disk; both are
+  // tp-agent 0700/0600 + short-lived. Add an age-based sweep in cleanupOrphans if needed.
   return true;
 }
 
@@ -477,7 +538,7 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
   let restrictTrip = acquired.restrictTrip;
   if (restrictTrip) {
     if (containmentReady()) {
-      return spawnContainedSession(sessionName, skillCommand, token, restrictTrip);
+      return await spawnContainedSession(sessionName, skillCommand, token, restrictTrip);
     }
     logError('containment infra 未就緒（tp-agent/sudo/settings/self-probe）→ 拒絕以受限寫入 token 跑未隔離 session；降級 service token（寫不了行程，仍具 ops 讀取）');
     void throttledAlert('containment-not-ready', 'failed',
