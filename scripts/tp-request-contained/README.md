@@ -32,7 +32,10 @@ sudo dscl . -create /Users/tp-agent UserShell /usr/bin/false
 # 3. 給 tp-agent 讀 repo 的權限（skill 檔 + MCP server），但不能寫；
 #    憑證務必「不可」被 other 讀到
 sudo chmod -R o+rX /Users/ray/Projects/trip-planner
-chmod 700 /Users/ray/.tripline ; chmod 600 /Users/ray/Projects/trip-planner/.env.local
+chmod 600 /Users/ray/Projects/trip-planner/.env.local
+# ~/.tripline 由 seed-user-refresh-token.mjs（步驟 2）建立；這裡先 mkdir 並鎖成 700，
+# 之後 seed 寫進來的 token 一落地就是隔離的（別在它還不存在時 chmod，會報 No such file）。
+mkdir -p /Users/ray/.tripline && chmod 700 /Users/ray/.tripline
 
 # 4. 驗證
 sudo -n -u tp-agent true && echo "sudo OK"
