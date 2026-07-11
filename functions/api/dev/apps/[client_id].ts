@@ -19,7 +19,7 @@ import { parseJsonBody, rawJson } from '../../_utils';
 import { requireSessionUser } from '../../_session';
 import { AppError } from '../../_errors';
 import { validateRedirectUris } from '../../../../src/server/oauth-server/validate-redirect-uris';
-import { validateScopes } from '../apps';
+import { validateScopes, validateHomepageUrl } from '../apps';
 import type { Env } from '../../_types';
 
 interface ClientAppRow {
@@ -123,12 +123,14 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     values.push(body.app_description);
   }
   if (body.app_logo_url !== undefined) {
+    // https-only（reject javascript:/data:/http）—— 這些欄位經 /api/oauth/client-info 公開，
+    // 未來若被 render 成 <img src>/<a href> 即成 XSS/open-redirect；在寫入端擋掉。
     updates.push('app_logo_url = ?');
-    values.push(body.app_logo_url);
+    values.push(validateHomepageUrl(body.app_logo_url));
   }
   if (body.homepage_url !== undefined) {
     updates.push('homepage_url = ?');
-    values.push(body.homepage_url);
+    values.push(validateHomepageUrl(body.homepage_url));
   }
   if (body.redirect_uris !== undefined) {
     const uris = validateRedirectUris(body.redirect_uris);

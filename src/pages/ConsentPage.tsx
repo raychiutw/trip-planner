@@ -122,6 +122,8 @@ function isPlausibleRedirectUri(uri: string): boolean {
 interface ClientAppInfo {
   app_name: string;
   app_description: string | null;
+  // 目前只 render app_name。這兩個來自已註冊 app、屬 attacker-influenced 值：
+  // TODO 未來若顯示 <img src={app_logo_url}> / <a href={homepage_url}> 必先過 escUrl（見 EditEntryPage）。
   app_logo_url: string | null;
   homepage_url: string | null;
 }
@@ -141,6 +143,8 @@ export default function ConsentPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // deps 若 invalid→valid 轉換，清掉上一輪 latch 的 error（否則 `if (error) return` 卡住）。
+    setError(null);
     if (!clientId) {
       // v2.31.58 zh-TW fix：原本英文「Missing client_id」 — user 看不懂、不一致。
       setError('授權連結缺少必要參數 client_id，請從應用商家提供的連結重新進入。');
@@ -152,17 +156,29 @@ export default function ConsentPage() {
       setError('授權連結的 redirect_uri 不合法（必須 https:// 或 http://）。請聯繫應用程式提供者。');
       return;
     }
-    // V2-P5 next slice: fetch /api/oauth/client-info?client_id=... → app_name + logo + description
-    // v2.33.46 round 7a security audit: 之前 placeholder mock 直接把 URL ?client_id=
-    // 當 app_name 顯，attacker 可構 `?client_id=Tripline%20Official%20Login` 騙
-    // user click Allow。改顯「未知應用程式 (client_id=...)」並補警告，直到
-    // backend /api/oauth/client-info endpoint 上線。
-    setClientInfo({
+    // 未驗證保底：backend 查不到 / 非 active client（404）時顯此警告，避免把 URL ?client_id=
+    // 原文當可信 app_name 顯——attacker 可構 `?client_id=Tripline%20官方登入` 騙 user click
+    // Allow（v2.33.46 audit）。
+    const unverified: ClientAppInfo = {
       app_name: `未知應用程式 (client_id=${clientId})`,
       app_description: '此應用程式的詳細資訊尚未經過 Tripline 驗證。',
       app_logo_url: null,
       homepage_url: null,
-    });
+    };
+    // Phase 2：從 /api/oauth/client-info 取已註冊 active client 的公開品牌（app_name/logo/…）。
+    // 非 2xx（未知/停用 client）→ 保留 unverified 保底顯示。
+    let cancelled = false;
+    fetch(`/api/oauth/client-info?client_id=${encodeURIComponent(clientId)}`)
+      .then((res) => (res.ok ? (res.json() as Promise<ClientAppInfo>) : null))
+      .then((info) => {
+        if (!cancelled) setClientInfo(info ?? unverified);
+      })
+      .catch(() => {
+        if (!cancelled) setClientInfo(unverified);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [clientId, redirectUri]);
 
   if (error) {
