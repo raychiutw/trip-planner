@@ -1,94 +1,67 @@
-# tp-request contained-session assets
+# tp-request contained-session 資產
 
-Activation precondition (0) for `TP_REQUEST_USER_TOKEN=1`. When api-server
-spawns `/tp-request` with a **restrict_trip user token** (write-capable), it runs
-Claude Code in a doubly-contained session so a prompt-injected agent can neither
-escalate (read creds → re-mint an unrestricted token) nor exfiltrate.
+開啟 `TP_REQUEST_USER_TOKEN=1` 的 activation 前置 (0)。當 api-server 用**restrict_trip user token**（可寫行程）spawn `/tp-request` 時，會把 Claude Code 跑在雙層隔離的 session 裡，讓被 prompt injection 的 agent 既無法提權（讀憑證 → 重 mint 一個無限制 token），也無法外洩。
 
-## Two independent layers
+## 兩層獨立防線
 
-- **Layer B (capability)** — `settings.json` here: `--permission-mode dontAsk`
-  + only `mcp__tripline__*` allowed + every built-in tool denied. The agent's
-  ENTIRE capability surface is the tripline MCP server (`scripts/tp-request-mcp-server.js`).
-- **Layer A (OS)** — spawned as the separate unix user **`tp-agent`** with a
-  scrubbed env (`env -i`), disposable `HOME` / `TMPDIR` / `CLAUDE_CONFIG_DIR`.
-  Filesystem permissions stop `tp-agent` reading `~ray/.tripline/*` or `.env.local`;
-  env-scrub stops it inheriting `TRIPLINE_API_CLIENT_SECRET` etc.
+- **Layer B（能力層）** — 本目錄的 `settings.json`：`--permission-mode dontAsk` + 只允許 `mcp__tripline__*` + 停用所有 built-in tool。agent 的**全部**能力面就是 tripline MCP server（`scripts/tp-request-mcp-server.js`）。
+- **Layer A（OS 層）** — 以獨立 unix user **`tp-agent`** spawn，env 洗過（`env -i`），HOME / TMPDIR / CLAUDE_CONFIG_DIR 都是用完即丟。檔案系統權限擋住 `tp-agent` 讀 `~ray/.tripline/*` 或 `.env.local`；env-scrub 擋住它繼承 `TRIPLINE_API_CLIENT_SECRET` 等。
 
-Single-layer failure is still contained by the other.
+單層失效，另一層仍守得住。
 
-## ⚠️ `deny` is load-bearing — do not trim it
+## ⚠️ `deny` 是 LOAD-BEARING —— 不要精簡它
 
-`dontAsk` does NOT auto-deny read-only tools. Read-only Bash (`cat .env.local`),
-the `Read` tool, `Grep`, etc. run **without a prompt** in every mode unless
-explicitly denied. The `deny` list is what actually blocks credential reads.
-Removing `Bash`/`Read`/`Grep`/`Glob` re-opens the file-read vector. Keep
-`Agent`/`Task` denied too (sub-agent spawn would bypass the allowlist).
+`dontAsk` **不會**自動拒絕 read-only tool。read-only 的 Bash（`cat .env.local`）、`Read` tool、`Grep` 等在任何 mode 下都會**不經詢問直接執行**，除非明確 deny。`deny` 清單才是真正擋住讀憑證的那道牆。拿掉 `Bash`／`Read`／`Grep`／`Glob` 就等於重開檔案讀取這條路。`Agent`／`Task` 也要一起 deny（spawn 子 agent 會繞過白名單）。
 
-Do NOT pass `--dangerously-skip-permissions` / `bypassPermissions` to a contained
-session — it voids the whole allowlist.
+contained session **絕不可**帶 `--dangerously-skip-permissions` / `bypassPermissions` —— 那會讓整個白名單失效。
 
-## (0a) Ray-manual precondition — I can't do this (needs root)
+`containmentReady()` 在 spawn 時還會跑一次 **negative self-probe**：如果 `tp-agent` **讀得到** `.env.local` 或 `~ray/.tripline`，就 fail-closed（避免 (0a) 的 chmod 沒設好卻默默上線一個有洞的隔離）。
 
-Before flipping `TP_REQUEST_USER_TOKEN=1`:
+## (0a) 只有 Ray 能做的前置 —— 我做不了（需要 root）
+
+開 `TP_REQUEST_USER_TOKEN=1` 之前先做：
 
 ```bash
-# 1. create the agent user (no login shell, no admin)
+# 1. 建 agent user（無登入 shell、非 admin）
 sudo sysadminctl -addUser tp-agent -fullName "Tripline Agent" -home /Users/tp-agent
 sudo dscl . -create /Users/tp-agent UserShell /usr/bin/false
 
-# 2. let api-server (user: ray) sudo to tp-agent WITHOUT password, non-interactive
-#    visudo → add:  ray ALL=(tp-agent) NOPASSWD: ALL
+# 2. 讓 api-server（user: ray）可以「免密碼、非互動」sudo 成 tp-agent
+#    visudo → 加一行：  ray ALL=(tp-agent) NOPASSWD: ALL
 
-# 3. repo read access for tp-agent (skill files + MCP server), NO write
+# 3. 給 tp-agent 讀 repo 的權限（skill 檔 + MCP server），但不能寫；
+#    憑證務必「不可」被 other 讀到
 sudo chmod -R o+rX /Users/ray/Projects/trip-planner
-#    ensure creds are NOT o-readable:
 chmod 700 /Users/ray/.tripline ; chmod 600 /Users/ray/Projects/trip-planner/.env.local
 
-# 4. verify
+# 4. 驗證
 sudo -n -u tp-agent true && echo "sudo OK"
-sudo -n -u tp-agent test -r /Users/ray/Projects/trip-planner/scripts/tp-request-mcp-server.js && echo "repo read OK"
-sudo -n -u tp-agent test -r /Users/ray/.env.local && echo "LEAK: tp-agent can read .env.local" || echo "creds isolated OK"
+sudo -n -u tp-agent test -r /Users/ray/Projects/trip-planner/scripts/tp-request-mcp-server.js && echo "repo 讀取 OK"
+sudo -n -u tp-agent test -r /Users/ray/.env.local && echo "外洩：tp-agent 讀得到 .env.local" || echo "憑證隔離 OK"
 ```
 
-`containmentReady()` also runs a **negative self-probe** at spawn time: if
-`tp-agent` CAN read `.env.local` or `~ray/.tripline`, it fails closed (a botched
-step-3 chmod won't silently ship porous isolation).
+在這步做完之前，api-server 一律 **fail-closed**：帶 restrict_trip 的請求會降級成 read-only service token 的 session（改不了行程內容，但仍有 ops scope）並發 alert —— **絕不會**把可寫 token 跑在未隔離的 session 裡。
 
-Until (0a) is done, api-server is **fail-closed**: a restrict-token request
-degrades to a service-token session (can't write trip content, though it still
-holds ops scopes) and alerts — it never runs the write-capable token in an
-un-contained session.
+## (0b) 開 flag 前必跑一次的冒煙測試
 
-## (0b) REQUIRED pre-activation smoke test — run once before `TP_REQUEST_USER_TOKEN=1`
-
-The capability lockdown (dontAsk + deny) and the headless skill invocation are
-not e2e-tested in CI (no tp-agent there). Verify them live once:
+能力鎖（dontAsk + deny）與 headless 跑 skill 這兩件事，CI 測不到（CI 上沒有 tp-agent）。開 flag 前先在本機 live 驗一次：
 
 ```bash
 SDIR=$(mktemp -d)
-# a) a denied built-in must be refused (proves deny is load-bearing):
+# a) 被 deny 的 built-in 必須被拒（證明 deny 有生效）：
 sudo -n -u tp-agent env -i PATH=/usr/bin:/bin HOME=/Users/tp-agent \
   CLAUDE_CONFIG_DIR="$SDIR" /Users/ray/.local/bin/claude -p 'Run: cat /Users/ray/Projects/trip-planner/.env.local' \
   --permission-mode dontAsk --settings /Users/ray/Projects/trip-planner/scripts/tp-request-contained/settings.json \
-  --strict-mcp-config 2>&1 | grep -qi 'denied\|not allowed\|cannot' && echo "BASH DENIED ✓" || echo "LEAK — do not activate"
-# b) the skill must actually run headless via -p and the MCP handshake must succeed
-#    (protocolVersion 2024-11-05). Do a dry-run against a throwaway request and
-#    confirm it reads/writes only that trip. If -p doesn't invoke the skill, fix
-#    before flipping the flag.
+  --strict-mcp-config 2>&1 | grep -qi 'denied\|not allowed\|cannot' && echo "BASH 被拒 ✓" || echo "外洩 —— 不要 activate"
+# b) skill 必須真的透過 -p headless 跑起來、且 MCP handshake 成功
+#    （protocolVersion 2024-11-05）。拿一個丟棄用的 request 做 dry-run，
+#    確認它只讀寫那一個 trip。若 -p 沒觸發 skill，先修好再開 flag。
 ```
 
-Only flip `TP_REQUEST_USER_TOKEN=1` after both pass.
+兩項都過才開 `TP_REQUEST_USER_TOKEN=1`。
 
-## Known follow-ups (not blocking merge; flag is OFF)
+## 已知 follow-up（不擋 merge；flag 目前 OFF）
 
-- **Per-session Google-API budget** — `recomputeTravel` / `enrichPoi` / `poiSearch`
-  drive metered Google APIs with no per-session cap; an injected message could burn
-  quota within the 90-min session. Add a `bumpRateLimit` budget keyed on the request.
-- **Degrade path token on argv** — the service-token fallback still interpolates the
-  token on the tmux command line (pre-existing baseline, visible in `ps`). Move it to
-  stdin like the contained path.
-- **cwd = repo** — the contained session's cwd is the repo, so Claude discovers the
-  project `.claude/settings*.json`. The bare-tool `deny` (which removes the tool
-  entirely) + `--strict-mcp-config` neutralise today's allows; the smoke test (0b)
-  verifies it. Residual risk is only a FUTURE built-in tool not in the deny list.
+- **per-session Google-API 額度** —— `recomputeTravel` / `enrichPoi` / `poiSearch` 會打有計費的 Google API，目前沒有 per-session 上限；被注入的 message 可能在 90 分鐘 session 內燒額度。之後用 `bumpRateLimit` 加一個以 request 為 key 的額度。
+- **降級路徑 token 上 argv** —— service token fallback 仍把 token 直接插在 tmux 指令列（既有行為、`ps` 看得到）。之後比照 contained 路徑改走 stdin。
+- **contained cwd = repo** —— session 的 cwd 是 repo，Claude 會讀到專案的 `.claude/settings*.json`。裸 tool 的 `deny`（會把整個 tool 從 context 移除）+ `--strict-mcp-config` 已中和目前的 allow；(0b) 冒煙測試會驗證。殘留風險只剩「未來新增、不在 deny 清單裡的 built-in tool」。
