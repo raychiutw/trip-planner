@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.66] - 2026-07-12
+
+### Added
+- **V1 就地 AI 授權卡 — 每位 owner 都能授權 AI 幫排行程（Phase 2）** — 先前只有 Ray 有 tp-request Consent → 其他 owner fail-closed 用不了 AI 排程。新增 NewTripPage 建立行程表單內的就地授權卡（`AiAuthorizeCard`）：mount GET 狀態、未授權顯「授權 AI」鈕、已授權顯綠色確認、讀狀態失敗 fail-open 當未授權不卡流程。授權走 **Approach B 直接 session grant**（`POST /api/account/ai-authorization` upsert Consent `${uid}:tripline-tp-request`），非 OAuth redirect dance —— 機器 client 不開 web redirect_uri、不簽沒人消費的 auth code。撤銷復用既有「帳號設定 → 已連結應用」（`DELETE connected-apps/tripline-tp-request`）。使用者 sign-off V1 就地卡片（mockup `docs/design-sessions/2026-07-11-tp-request-consent-trigger.html`，DESIGN.md 同步）；瀏覽器實測（localhost dev）卡片視覺對齊 mockup、token 值正確。
+
+### Security
+- **端點授權設計（adversarial review：code-reviewer APPROVE + security-auditor SHIP，0 crit/high/med）**：
+  - 身份 server-authoritative —— Consent key 只由 signed session 的 `uid` 推導，POST **完全不讀 request body**（惡意 client_id/user_id 無法提權/冒名，測試鎖）；client 固定 `tripline-tp-request`（無外部 client_id 參數 → 無「授權任意 client」面）。
+  - CSRF 由 middleware Origin allowlist + session cookie SameSite=Lax 把關（`/api/account/*` 不在 OAuth bypass）。
+  - 撤銷 atomic cascade（Consent + AccessToken/RefreshToken 同 `DB.batch` 刪），live minted owner token 立即失效。
+  - grant + mint（成功/拒絕）皆 `recordAuthEvent` 留 audit（含 `via=ai-authorization` 區分）。
+  - authz-drift 警語：Consent `scopes` 對 tp-request 不具授權效力（mint-restricted 只查 Consent 存在、真正能力 = owner user_id + restrict_trip gate）。
+  - 全鏈驗證：request 建立端 `requests.ts` 已 gate `hasWritePermission(requester, tripId)` → 非授權寫者無法 enqueue 他人 trip 的 AI 請求；owner 須自己有 Consent 才 mint。
+- Defer（有意識）：Consent 1yr TTL（對齊既有 consent.ts 慣例、可撤銷、每次 mint 僅 2h+單 trip）；`upsertConsent` 三處 payload shape 抽共用 helper（現三份一致 + 端點測試鎖 shape）。
+
 ## [2.55.65] - 2026-07-11
 
 ### Added

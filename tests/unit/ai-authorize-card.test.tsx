@@ -46,6 +46,32 @@ describe('AiAuthorizeCard', () => {
     expect(mockApiFetch).toHaveBeenCalledWith('/account/ai-authorization', { method: 'POST' });
   });
 
+  it('初始載入中（GET 未 resolve）→ 只顯 header，無鈕無確認', () => {
+    mockApiFetch.mockImplementation(() => new Promise(() => {})); // 永不 resolve
+    render(<AiAuthorizeCard />);
+    expect(screen.getByText('讓 AI 幫你把行程填滿')).toBeTruthy();
+    expect(screen.queryByTestId('ai-authorize-btn')).toBeNull();
+    expect(screen.queryByTestId('ai-authorize-on')).toBeNull();
+  });
+
+  it('POST in-flight → 鈕 disabled + 顯「授權中⋯」', async () => {
+    let resolvePost: (v: { authorized: boolean }) => void = () => {};
+    mockApiFetch.mockImplementation((_p: string, opts?: { method?: string }) =>
+      opts?.method === 'POST'
+        ? new Promise<{ authorized: boolean }>((res) => {
+            resolvePost = res;
+          })
+        : Promise.resolve({ authorized: false }),
+    );
+    render(<AiAuthorizeCard />);
+    await waitFor(() => screen.getByTestId('ai-authorize-btn'));
+    fireEvent.click(screen.getByTestId('ai-authorize-btn'));
+    await waitFor(() => expect((screen.getByTestId('ai-authorize-btn') as HTMLButtonElement).disabled).toBe(true));
+    expect(screen.getByTestId('ai-authorize-btn').textContent).toContain('授權中');
+    resolvePost({ authorized: true });
+    await waitFor(() => expect(screen.getByTestId('ai-authorize-on')).toBeTruthy());
+  });
+
   it('讀狀態失敗 → 當未授權（顯鈕，不卡流程）', async () => {
     mockApiFetch.mockRejectedValue(new Error('401'));
     render(<AiAuthorizeCard />);

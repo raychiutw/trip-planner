@@ -9,7 +9,7 @@
  * 狀態：載入中（null，只顯 header）→ 未授權（顯「授權 AI」鈕）→ 已授權（顯綠色確認）。
  * 讀取失敗當未授權處理（顯授權鈕、不卡建立流程）。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/apiClient';
 
 // 對應 mockup V1 的 .ai-card；mockup 的 --accent/--sage/--radius 映射到 tokens.css 真值：
@@ -42,6 +42,11 @@ export default function AiAuthorizeCard() {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 使用者按授權後可能離開表單（送出/取消 NewTripPage）→ POST 未 resolve 前卸載；guard 掉 late setState。
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,11 +68,11 @@ export default function AiAuthorizeCard() {
     setError(null);
     try {
       const r = await apiFetch<{ authorized: boolean }>('/account/ai-authorization', { method: 'POST' });
-      setAuthorized(r.authorized);
+      if (mountedRef.current) setAuthorized(r.authorized);
     } catch {
-      setError('授權失敗，請稍後再試。');
+      if (mountedRef.current) setError('授權失敗，請稍後再試。');
     } finally {
-      setBusy(false);
+      if (mountedRef.current) setBusy(false);
     }
   }
 

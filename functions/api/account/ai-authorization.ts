@@ -11,7 +11,8 @@
  * POST → 建立/更新 Consent（idempotent upsert），{ authorized: true }
  *
  * Auth: session（requireSessionUser）。**只授權固定的自家 AI client**（不吃外部 client_id 參數）
- *   → 無「授權任意 client」提權面。POST 的 CSRF 由 middleware checkCsrf 把關（SPA 帶 token）。
+ *   → 無「授權任意 client」提權面。POST 的 CSRF 由 middleware checkCsrf 把關（Origin header
+ *   allowlist + session cookie SameSite=Lax；無 double-submit token）。
  */
 import { requireSessionUser } from '../_session';
 import { rawJson } from '../_utils';
@@ -23,7 +24,10 @@ import type { Env } from '../_types';
 const TP_REQUEST_CLIENT_ID = 'tripline-tp-request';
 // 1yr（同 consent.ts）；user 可隨時於帳號設定撤銷。
 const CONSENT_TTL_SEC = 365 * 24 * 60 * 60;
-// 對齊 provision-tp-request-client 的 allowed_scopes。mint-restricted 只查 Consent 是否存在、不看 scopes。
+// ⚠️ scopes 對 tp-request 不具授權效力（authz-drift 警語）：mint-restricted 只查 Consent 是否
+// 存在、不讀 scopes（見 mint-restricted.ts 內註解），真正能力 = owner user_id + restrict_trip
+// gate（單一 trip 寫入）。這裡存 openid/profile 純為對齊 client 註冊的 allowed_scopes +
+// connected-apps 顯示；未來若要用 scopes 收斂 tp-request 能力，須改 mint-restricted 而非只改這裡。
 const CONSENT_SCOPES = ['openid', 'profile'];
 
 const consentKey = (uid: string) => `${uid}:${TP_REQUEST_CLIENT_ID}`;

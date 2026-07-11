@@ -75,6 +75,12 @@ describe('GET /api/account/ai-authorization', () => {
     const res = await onRequestGet(ctx());
     expect(await res.json()).toEqual({ authorized: false });
   });
+
+  it('未登入（requireSessionUser throw）→ 不查 Consent', async () => {
+    mockRequireSession.mockRejectedValue(Object.assign(new Error('no session'), { code: 'AUTH_REQUIRED' }));
+    await expect(onRequestGet(ctx())).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    expect(mockFind).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /api/account/ai-authorization', () => {
@@ -93,5 +99,22 @@ describe('POST /api/account/ai-authorization', () => {
     mockRequireSession.mockRejectedValue(Object.assign(new Error('no session'), { code: 'AUTH_REQUIRED' }));
     await expect(onRequestPost(ctx())).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
     expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  // 頭號安全不變式：body 完全不被讀 → 惡意 client_id/user_id 無法提權/冒名。
+  it('惡意 body（client_id/user_id）被忽略 → 仍用 session uid + 固定 client', async () => {
+    const hostileCtx = {
+      request: new Request('https://x.pages.dev/api/account/ai-authorization', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ client_id: 'attacker-client', user_id: 'victim-user' }),
+      }),
+      env: { DB: makeDb() },
+    } as unknown as Parameters<typeof onRequestPost>[0];
+    const res = await onRequestPost(hostileCtx);
+    expect(await res.json()).toEqual({ authorized: true });
+    const [key, payload] = mockUpsert.mock.calls[0] as [string, Record<string, unknown>];
+    expect(key).toBe('user-1:tripline-tp-request'); // 不是 victim-user / attacker-client
+    expect(payload).toMatchObject({ user_id: 'user-1', client_id: 'tripline-tp-request' });
   });
 });
