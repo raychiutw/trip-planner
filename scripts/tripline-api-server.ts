@@ -434,9 +434,21 @@ async function spawnContainedSession(
   const WRITER =
     "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>require('fs').writeFileSync(process.argv[1],d,{mode:0o600}))";
   const mcpConfig = buildMcpConfig({ nodeBin: NODE_BIN, mcpServerPath: MCP_SERVER_PATH, token, restrictTrip });
+  // Pre-seed claude config so the INTERACTIVE REPL launches straight to the prompt for an
+  // unattended service account: skip first-run onboarding (hasCompletedOnboarding) AND
+  // pre-trust the (empty, allow-free) session dir (hasTrustDialogAccepted) so no
+  // workspace-trust dialog blocks it. cwd is the session dir (see buildContainedShellCommand's
+  // `cd "$1"`), which has no settings.local.json → trusting it grants nothing; the repo's
+  // allow-entries are never in play. Verified live in the activation (0b) dry-run.
+  const claudeJson = JSON.stringify({
+    hasCompletedOnboarding: true,
+    theme: 'dark',
+    projects: { [sessionDir]: { hasTrustDialogAccepted: true } },
+  });
   const files: Array<[string, string, string]> = [
     [mcpConfigPath, mcpConfig, 'mcp-config'],
     [tokenFilePath, process.env.CLAUDE_CODE_OAUTH_TOKEN || '', 'oauth-token'],
+    [`${sessionDir}/config/.claude.json`, claudeJson, 'claude-json'],
   ];
   for (const [path, content, label] of files) {
     const w = runAsAgent([NODE_BIN, '-e', WRITER, path], content);
@@ -444,6 +456,14 @@ async function spawnContainedSession(
       logError(`contained: 寫 ${label} 失敗（fail-closed）：${w.stderr || w.status}`);
       return false;
     }
+  }
+
+  // skill discovery: symlink the repo's skills into the disposable config dir (user-skill
+  // scope) so `/tp-request` resolves WITHOUT making the repo the workspace/cwd.
+  const skillsLink = runAsAgent(['ln', '-sfn', join(PROJECT_DIR, '.claude', 'skills'), `${sessionDir}/config/skills`]);
+  if (skillsLink.status !== 0) {
+    logError(`contained: skills symlink 失敗（fail-closed）：${skillsLink.stderr || skillsLink.status}`);
+    return false;
   }
 
   // 3. detached tmux session running claude INTERACTIVELY. CWD stays PROJECT_DIR for
