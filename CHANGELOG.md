@@ -3,7 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.55.55] - 2026-07-11
+## [2.55.56] - 2026-07-11
+
+### Security
+- **tp-request 受限 trip-scoped token（confused-deputy 緩解）** — v2.55.54 開了「tp-request 用 owner user token 寫入行程」的路徑，但 owner token 能寫**所有** trip，而 `trip_requests.message` 是任何 trip member 都能寫的 untrusted 輸入 → 被 prompt injection 誘導的 agent 可改/刪其他 trip（confused deputy）。本版加 server 端 scope 強制：
+  - **新端點 `POST /api/oauth/downscope`**：可信的 api-server 用 owner user Bearer 換發「只能碰單一 trip」的 access token（payload 帶 `restrict_trip`、2h TTL、無 refresh token；server 端 re-verify `hasWritePermission`；拒 service token、拒已受限 token 再換發防自我提權）。
+  - **api-server**（`tripline-api-server.ts`）：`peekPendingTripId` 用 service token 讀最舊 pending request 的 trip（processing→open→received 優先序）→ `downscopeToken` 換發 → 注入受限 token + `TRIPLINE_RESTRICT_TRIP` env 進 ephemeral session（一次一 trip；trip 選擇由可信 server 決定，非 untrusted skill）；失敗 fallback service token read-only。
+  - **chokepoint 強制**（`_auth.ts`）：內容讀寫 gate（`hasWritePermission` / `requireTripReadAccess` / `hasPermission`）scope-match `restrict_trip`，不符 → 擋（`requireTripReadAccess` 在 published 短路前檢查，受限 token 連公開 trip 也讀不了）；新 `assertNotTripRestricted(auth)` 對受限 token **整批拒** owner 層級操作 — 改成員（`ensureCanManageTripPerms` 涵蓋 permissions + invitations 6 端點）、刪 trip（`DELETE /api/trips/:id`）、建 trip（`POST /api/trips` / import / share clone）— 連自己那個 trip 也拒（邀請成員=持久性提權，超出內容編輯 agent 職權）。`my-trips` 受限時只回該 trip（不洩漏 owner 其他 trip metadata）。
+  - **PATCH `/api/requests/:id` gate 放寬** 成 `companion service token 或 對該 trip 有寫權的 user`，受限 token 只能回覆自己 trip 的請求（比舊 companion-only 更緊，且 status/reply 也吃 trip scope）。
+  - **修 ship-blocker**：`_middleware.ts` 對**所有** `/api/oauth/*` 在 Bearer 解析前 auth-null 短路，downscope 靠 `requireAuth` 讀 auth 會**永遠 401**（整條 user-token 寫入路徑在 prod 是死的）→ 把 `/api/oauth/downscope` 從該短路排除（同 checkCsrf 對 consent 的例外）；補走真 `_middleware.onRequest` 的整合測試（mock requireAuth 的測試結構上抓不到此斷裂）。
+  - **⚠️ 定位**：這是 **API 層 defense-in-depth，不是對 shell-capable agent 的 containment 邊界** — session 有完整 shell + 檔案系統存取，能讀 `~/.tripline` state / `.env.local` 憑證重新 mint 一個完整無限制 token 繞過 scope。真正 containment 要 OS sandbox / broker process（session 不得讀到更寬憑證），列為開 `TP_REQUEST_USER_TOKEN` flag 前的硬前提。**功能維持 inert**（同 kill-switch 預設 OFF）。
 
 ### Fixed
 - **Sentry 效能事件漏過濾合成流量（daily-check 誤報「Large Render Blocking Asset」）** — `src/lib/sentry.ts` 的 `beforeSend` 只過濾 error events 的 HeadlessChrome/localhost 噪音，但 pageload/performance transaction events 走的是 `beforeSendTransaction` hook（原本未設）。我們自己的合成監控（browse / canary / route-health HeadlessChrome）打的 `/signup` 等 pageload transaction 全數灌進 Sentry，累積成 issue 7578052505「Large Render Blocking Asset」（17 events 中 16 為 HeadlessChrome、0 真實 user 受影響；render-blocking asset 實為 220KB 的 react/react-dom/react-router 核心 vendor bundle，首屏必要無法 code-split）。修法：加 `beforeSendTransaction` 複用同一組 `isNoiseEvent` 判斷（型別放寬為基底 `Event`；transaction 無 `exception` → SW-noise 分支自然 no-op，只走 url/UA/browser.name 環境檢查）。真實使用者不會 match localhost 或 headless UA，不影響正常效能監控。
