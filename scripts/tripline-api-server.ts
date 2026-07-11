@@ -555,9 +555,9 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
   // session — a prompt-injected agent could read creds → re-mint an unrestricted
   // token. Infra ready → contained spawn (dontAsk + MCP-only + tp-agent). Not ready
   // → FAIL CLOSED: do NOT spawn (no service-token degrade — see the inline note at the
-  // gate below). NOTE: the un-contained tmux path below is still reached by service-token
-  // skills (/tp-daily-check) AND flag-OFF /tp-request (untrusted input) — the latter is a
-  // pre-existing hardening gap, tracked for activation (not this PR; see PR body).
+  // gate below). The un-contained tmux path below is reached ONLY by trusted service-token
+  // skills (/tp-daily-check); flag-OFF /tp-request is refused by the P1 guard just after
+  // this block, so untrusted `trip_requests.message` never runs un-contained.
   const token = acquired.token;
   const restrictTrip = acquired.restrictTrip;
   if (restrictTrip) {
@@ -574,12 +574,25 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
     return false;
   }
 
+  // --- P1 hardening (v2.55.64): /tp-request must NEVER reach the un-contained tmux path ---
+  // /tp-request processes untrusted `trip_requests.message` and must always be contained,
+  // regardless of TP_REQUEST_USER_TOKEN. flag ON → acquireToken already returned above
+  // (mint → restrictTrip → contained gate, or null → no spawn). Reaching here means a
+  // service token with no restrictTrip — i.e. flag OFF /tp-request (the pre-existing hole).
+  // Refuse it. Only trusted service-token skills (/tp-daily-check) may use the path below.
+  if (skillCommand === '/tp-request') {
+    logError('/tp-request 走到未-contained 路徑（flag OFF？無 restrict token）→ 拒絕 spawn（不可信輸入不進未隔離 session）');
+    void throttledAlert('tp-request-uncontained-refused', 'failed',
+      '/tp-request 落到未-contained 路徑 → 不 spawn。要跑請開 TP_REQUEST_USER_TOKEN=1 走 Option E contained 路徑。');
+    return false;
+  }
+
   const claudePath = CLAUDE_BIN;
 
   // shell-escape token for the inline env assignment（避免 token 包含特殊字元）
   const escapedToken = shSingleQuote(token);
-  // 只有 service-token skills（/tp-daily-check，及 flag-OFF /tp-request）走到這；restrict
-  // token 一律在上方 containment gate return，不會落到未-contained tmux。故無 TRIPLINE_RESTRICT_TRIP。
+  // 只有 trusted service-token skill（/tp-daily-check）走到這；/tp-request 已被上方 P1 guard
+  // 擋掉、restrict token 一律在 containment gate return，都不會落到未-contained tmux。故無 TRIPLINE_RESTRICT_TRIP。
 
   // Detached tmux session — claude 跑 interactive REPL（無 -p）。透過 env var 把
   // TRIPLINE_API_TOKEN + session name 傳給 skill；skill 結尾用 TRIPLINE_TMUX_SESSION

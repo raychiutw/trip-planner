@@ -113,4 +113,17 @@ describe('containment gate（confused-deputy + 不可信輸入隔離）', () => 
     // containment-not-ready 區塊末端 return false
     expect(SRC).toMatch(/不 spawn（拒絕未隔離 session 處理不可信輸入）[\s\S]*?return false;/);
   });
+
+  it('P1 hardening：/tp-request 落到未-contained tmux 路徑一律拒 spawn（含 flag OFF）', () => {
+    // 未-contained tmux spawn 前必有 skillCommand==='/tp-request' → return false 的 guard；
+    // 只有 trusted service-token skill（/tp-daily-check）能走未-contained 路徑。
+    expect(SRC).toMatch(/P1 hardening[\s\S]*?skillCommand === '\/tp-request'[\s\S]*?return false;/);
+    expect(SRC).toMatch(/tp-request-uncontained-refused/);
+    // guard 必在 un-contained tmux spawn 指令之前（--dangerously-skip-permissions 只在未-contained
+    // 指令出現；lastIndexOf 取實際 spawn 那行、非上方註解提及）
+    const guardIdx = SRC.indexOf("if (skillCommand === '/tp-request') {");
+    const uncontainedSpawnIdx = SRC.lastIndexOf('--dangerously-skip-permissions');
+    expect(guardIdx).toBeGreaterThan(0);
+    expect(uncontainedSpawnIdx).toBeGreaterThan(guardIdx);
+  });
 });
