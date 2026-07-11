@@ -437,6 +437,14 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - 起訖時間 `TripTimePicker` 開 `clearable`：popover 底部「清除時間」把值設回空 → `start_time`/`end_time` 寫 `null`。空值合法（未定時段的停留點），validation 只在非空時檢查格式與先後。
 - **說明** = entry-level 自由文字（`trip_entries.description`，AI 規劃時生成，例「放好行李休息一下，準備晚餐出門」）。autosave PATCH `/entries/:eid { description }`；純空白 → `null` 清除。與 per-POI 備註（`trip_entry_pois.note`）分屬不同層級、並存不重疊。
 
+### AI Authorize Card（`tp-ai-card`，v2.55.66）
+- NewTripPage 建立行程表單內的就地 AI 授權卡（Phase 2 V1）：讓 owner 授權 Tripline AI（`tripline-tp-request`）以自己身分排行程。先前只有 Ray 有 Consent → 其他 owner fail-closed 用不了 AI，此卡讓每位 owner 就地授權。
+- **卡片**：`--color-accent-subtle` 底 + `--radius-xl`，無框線。左 38px 柔褐 badge（`--color-accent` 底、白 sparkle SVG、`--radius-lg`）+ 標題（15px/700 `--color-foreground`）+ 說明（13px `--color-muted`）。
+- **未授權**：全寬「授權 AI」鈕（`--color-accent` 實心、`--color-accent-foreground` 字、`--radius-lg`、min-height 44px）。
+- **已授權**：綠色確認列（`--color-accent-2-subtle` 底 + `--color-accent-2-deep` 字 —— sage tone =「已生效／無需再動作」）+ checkmark SVG +「已授權 · 可隨時在『已連結應用』撤銷」。撤銷走帳號設定既有 revoke，不在卡上放撤銷鈕。
+- **機制**：Approach B 直接 session 授權（`POST /api/account/ai-authorization` upsert Consent），非 OAuth redirect dance；機器 client 不開 web redirect_uri、不簽 auth code。讀狀態失敗 fail-open 當未授權（顯授權鈕、不卡建立流程）。
+- Mockup：`docs/design-sessions/2026-07-11-tp-request-consent-trigger.html`（sign-off 2026-07-11，選 V1 就地卡片；V2 送出對話框 / V3 建立後獨立頁未採用）。
+
 ### Stop Card
 - 4-col grid：`68px time | 48px icon box | content | actions`，compact 可收斂到 3-col。
 - **依類型 tone 上同色系淡底**：卡片 bg = tone `-subtle`、border = tone `-bg`（柔褐／sage／粉，見 Stop Type Color Convention）。
