@@ -1,6 +1,8 @@
 # tp-request 雙層 containment（activation 前置 (0)）
 
-**Status:** planned · eng-review + outside-voice(security-auditor) locked 2026-07-11 · **Scope:** one PR · **Feature:** stays inert (`TP_REQUEST_USER_TOKEN` OFF) · **Fail-closed:** 未設 tp-agent/sudo → 不 spawn user session
+**Status:** ✅ **BUILT** 2026-07-11 (branch `feat/tp-request-containment`, T1-T6) · 2-agent adversarial review + /cso --diff clean · unit 3660 + api 1075 green · **Scope:** one PR · **Feature:** stays inert (`TP_REQUEST_USER_TOKEN` OFF) · **Fail-closed:** 未設 tp-agent/sudo/self-probe → 降級 read-only service token · **Ray-manual:** (0a) tp-agent user + sudoers + perms, (0b) pre-activation smoke test — see `scripts/tp-request-contained/README.md`
+
+_eng-review + outside-voice(security-auditor) locked the plan 2026-07-11; built same day. Review findings all fixed in-PR (enrichPoi tripId, negative self-probe, --strict-mcp-config, profile guard, reply cap). Follow-ups: per-session Google-API budget, degrade-path token-on-argv._
 
 ## 為什麼
 
