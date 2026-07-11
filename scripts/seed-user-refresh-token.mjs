@@ -117,7 +117,7 @@ async function main() {
     process.exit(1);
   }
 
-  fileStore().setRefreshToken(json.refresh_token, CLIENT_ID);
+  fileStore().save({ refresh_token: json.refresh_token, client_id: CLIENT_ID });
   console.log('\n✓ refresh token 已存入 ~/.tripline/user-token-state.json (0600)。');
   console.log('  啟用：在 api-server 環境設 TP_REQUEST_USER_TOKEN=1 後 kickstart。');
   process.exit(0);
