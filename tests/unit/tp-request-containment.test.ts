@@ -44,19 +44,25 @@ describe('buildContainedShellCommand — layer B (capability lockdown)', () => {
   it('uses dontAsk + isolated --settings + --mcp-config + --strict-mcp-config', () => {
     const cmd = buildContainedShellCommand(BASE);
     expect(cmd).toContain('--permission-mode dontAsk');
-    // flags live in the sh wrapper; the actual paths are positional args ($3/$4)
-    expect(cmd).toContain('--settings "$3"');
-    expect(cmd).toContain('--mcp-config "$4"');
+    // flags live in the sh wrapper; the actual paths are positional args ($4/$5)
+    expect(cmd).toContain('--settings "$4"');
+    expect(cmd).toContain('--mcp-config "$5"');
     expect(cmd).toContain('--strict-mcp-config'); // tripline is provably the whole tool surface
     expect(cmd).toContain(`'${BASE.settingsPath}'`);
     expect(cmd).toContain(`'${BASE.mcpConfigPath}'`);
+  });
+
+  it('cd into the session dir first (so the clean session dir is the trusted workspace, not the repo)', () => {
+    const cmd = buildContainedShellCommand(BASE);
+    expect(cmd).toContain('cd "$1"'); // cwd = session dir, set inside the wrapper (as tp-agent)
+    expect(cmd).toContain(`'${BASE.sessionDir}'`); // session dir passed as $1
   });
 
   it('is INTERACTIVE — no -p (headless print mode was abandoned in v2.30.7); skill goes via the REPL', () => {
     const cmd = buildContainedShellCommand(BASE);
     expect(cmd).not.toContain(' -p '); // not headless; skill submitted via send-keys later
     expect(cmd).toContain('/bin/sh -c'); // launched through the OAuth sh wrapper
-    expect(cmd).toContain('--name "$5"'); // interactive claude with a display name
+    expect(cmd).toContain('--name "$6"'); // interactive claude with a display name
   });
 
   it('NEVER passes --dangerously-skip-permissions / bypassPermissions (would void the allowlist)', () => {
@@ -73,7 +79,7 @@ describe('buildContainedShellCommand — neither token on the command line', () 
     expect(cmd).not.toContain(TOKEN);
     expect(cmd).not.toMatch(/TRIPLINE_API_TOKEN/);
     // OAuth token: read from the 0600 file into the env by the sh wrapper — never argv
-    expect(cmd).toContain('CLAUDE_CODE_OAUTH_TOKEN=$(cat "$1")');
+    expect(cmd).toContain('CLAUDE_CODE_OAUTH_TOKEN=$(cat "$2")');
     expect(cmd).toContain(`'${BASE.tokenFilePath}'`);
     // its value is never inlined as an env assignment on the command
     expect(cmd).not.toMatch(/CLAUDE_CODE_OAUTH_TOKEN=[A-Za-z0-9]/);

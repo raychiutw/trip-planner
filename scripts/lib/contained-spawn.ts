@@ -54,17 +54,22 @@ export function buildContainedShellCommand(o: {
     `CLAUDE_CONFIG_DIR='${q(`${o.sessionDir}/config`)}'`,
     `LANG='en_US.UTF-8'`,
   ].join(' ');
-  // sh wrapper: read the OAuth token out of a 0600 file into CLAUDE_CODE_OAUTH_TOKEN,
-  // then exec claude INTERACTIVELY. Positional args ($1..$5) keep every value — incl.
-  // the token FILE path — off claude's own argv. `exec` replaces sh so the tmux pane's
-  // foreground process is claude itself.
+  // sh wrapper (runs as tp-agent):
+  //   1. `cd` into the session dir FIRST — that dir is the workspace claude trusts.
+  //      tmux's own `-c` can't be the session dir (it's tp-agent-0700, and tmux runs as
+  //      the api-server user who can't chdir in), so we cd inside the wrapper where we
+  //      already are tp-agent. `|| exit 97` fails CLOSED (claude never runs un-cwd'd in
+  //      the repo, which would trigger a workspace-trust dialog on the repo's allow list).
+  //   2. read the OAuth token out of a 0600 file into CLAUDE_CODE_OAUTH_TOKEN.
+  //   3. exec claude INTERACTIVELY (no -p). Positional args ($1..$6) keep every value —
+  //      incl. the token FILE path — off claude's own argv (no `ps` leak).
   const inner =
-    'CLAUDE_CODE_OAUTH_TOKEN=$(cat "$1") exec "$2" --permission-mode dontAsk ' +
-    '--settings "$3" --mcp-config "$4" --strict-mcp-config --name "$5"';
+    'cd "$1" || exit 97; CLAUDE_CODE_OAUTH_TOKEN=$(cat "$2") exec "$3" --permission-mode dontAsk ' +
+    '--settings "$4" --mcp-config "$5" --strict-mcp-config --name "$6"';
   return (
     `sudo -n -u ${TP_AGENT_USER} env -i ${env} /bin/sh -c '${inner}' tp-contained ` +
-    `'${q(o.tokenFilePath)}' '${q(o.claudeBin)}' '${q(o.settingsPath)}' ` +
-    `'${q(o.mcpConfigPath)}' '${q(o.sessionName)}'`
+    `'${q(o.sessionDir)}' '${q(o.tokenFilePath)}' '${q(o.claudeBin)}' ` +
+    `'${q(o.settingsPath)}' '${q(o.mcpConfigPath)}' '${q(o.sessionName)}'`
   );
 }
 

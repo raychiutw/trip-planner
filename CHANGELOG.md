@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.60] - 2026-07-11
+
+### Fixed
+- **tp-request containment：activation dry-run 抓到的 3 個真 bug，(0b) live 驗證全過** — 在 Ray 機器上實跑真實 contained 機制（互動 REPL、非 `-p`）逐關 debug，修好才能無人值守跑起來。**功能仍 inert**（`TP_REQUEST_USER_TOKEN` OFF）。
+  - **deny 清單不完整（containment 破口）** — `dontAsk` 把未列的 meta-tool 當豁免放行：實測 contained agent 竟能用 `Skill`（叫別 skill）/ `ToolSearch`（載 Bash 等 deferred schema）/ `Workflow`（開 subagent 繞過隔離）/ `Artifact`（發網頁外洩）。Claude Code **無「只准 allow、其餘全 deny」的權威模式**（claude-code-guide 確認）→ `settings.json` 改成**逐一列全** deny（+ WebFetch/SendUserFile/Agent/Task/ScheduleWakeup… 等）。修後工具面**只剩 16 個 `mcp__tripline__*``**（實測驗證）。殘留：列舉法對 claude 未來新工具脆弱 → Layer A(OS) 兜 FS/exec、網路/spawn 類已明列、升版重跑 (0b) 檢查。
+  - **互動 REPL 無人值守卡對話框** — 互動模式對 untrusted folder **一定**跳 workspace-trust 對話框（只有 `-p` 停用它），而 containment 必須拿掉 `--dangerously-skip-permissions`（非-contained 靠它跳 trust）。且 tmux `-c sessionDir` 因 sessionDir 是 tp-agent-0700、api-server 用戶進不去而 fallback 到 `/Users/ray` → claude 把它當 workspace 讀到 user settings。修法：**sh wrapper 內 `cd "$1"`**（tp-agent 進得去自己目錄）讓 cwd = 乾淨 sessionDir；**pre-seed `<config>/.claude.json`**：`hasCompletedOnboarding` 跳 onboarding + `projects[sessionDir].hasTrustDialogAccepted` pre-trust 那個**無 allow** 的空目錄（信任=零授權）；**`<config>/skills` symlink → repo skills** 讓 `/tp-request` 探索得到但不用 repo 當 workspace。
+  - **認證** — 非登入 user 沒 keychain（跳「找不到鑰匙圈」）；改用 `claude setup-token` 一年期 `CLAUDE_CODE_OAUTH_TOKEN`，經 sh wrapper `$(cat 0600檔)` 注入 env（不上 argv）。
+  - README `(0a)`（家目錄 / `/etc/sudoers.d/` / setup-token）+ `(0b)`（已驗證 + 互動 REPL 無人值守機制說明）補齊。
+
 ## [2.55.59] - 2026-07-11
 
 ### Fixed

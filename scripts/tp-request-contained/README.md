@@ -60,18 +60,27 @@ grep -q '^CLAUDE_CODE_OAUTH_TOKEN=' /Users/ray/Projects/trip-planner/.env.local 
 
 在這步做完之前，api-server 一律 **fail-closed**：帶 restrict_trip 的請求會降級成 read-only service token 的 session（改不了行程內容，但仍有 ops scope）並發 alert —— **絕不會**把可寫 token 跑在未隔離的 session 裡。
 
-## (0b) 開 flag 前的 live 驗證（我來跑，非 `-p`）
+## (0b) 開 flag 前的 live 驗證 —— ✅ 已通過（2026-07-11 dry-run，非 `-p`）
 
-能力鎖（dontAsk + deny）與 REPL 跑 skill + MCP handshake，CI 測不到（沒有 tp-agent）。(0a) ⑤ 全過後告訴我，我用**真實 contained 機制**（互動 tmux REPL，跟 prod 一樣，**不用 `-p`**）跑一次 dry-run，看 `scripts/logs/tp-request/<session>.log` 確認：
+在本機實跑真實 contained 機制（互動 tmux REPL），逐關驗證全過：
 
-- claude 用 `CLAUDE_CODE_OAUTH_TOKEN` 認證成功、REPL 起得來；
-- 叫它讀憑證（`cat .env.local` 之類）→ **被 deny 擋掉**、拿不到內容；
-- 只用得到 `mcp__tripline__*` 工具，且只碰那一個 restrict trip。
+- ✅ **認證**：claude 用 `CLAUDE_CODE_OAUTH_TOKEN` 起得來，且**無 onboarding/trust 對話框**卡住（見下方「互動 REPL 無人值守」機制）；
+- ✅ **能力面**：工具清單**只剩 16 個 `mcp__tripline__*`** —— Bash / Read / Skill / ToolSearch / Workflow / Agent / Artifact 全部消失；
+- ✅ **skill**：`/tp-request` 觸發、agent 自判「Contained mode」、呼叫 MCP 工具；
+- ✅ **exfil**：prompt-injection 叫它讀 `.env.local` 印憑證 → 拒絕 + **零外洩**（Layer A OS perm 讓 tp-agent 根本開不了檔 + Layer B 無 Read tool，雙擋）。
 
-三項都過，才開 `TP_REQUEST_USER_TOKEN=1`。
+換機器 / claude 升版 / 改設定後，重跑同機制再驗一次即可。
+
+### 互動 REPL 無人值守怎麼跑起來（非 `-p`）
+
+Claude Code 的互動模式對 untrusted folder **一定**跳 trust 對話框（只有 `-p` 會停用），且能力鎖必須拿掉 `--dangerously-skip-permissions`（非-contained 路徑靠它跳過 trust；contained 不能用）。所以 contained 用這套組合（`buildContainedShellCommand` + `spawnContainedSession`）讓互動 REPL 無人值守直達 prompt：
+
+1. **cwd = 乾淨的 sessionDir**（sh wrapper 內 `cd "$1"`，因為 tp-agent 進得去自己的 0700 目錄、而 api-server 用戶的 tmux `-c` 進不去）→ workspace 不是 repo，沒有 `.claude/settings.local.json` 的 allow，trust 對話框無 allow 可套。
+2. **pre-seed `<config>/.claude.json`**：`hasCompletedOnboarding:true`（跳過登入/主題 onboarding）+ `projects[sessionDir].hasTrustDialogAccepted:true`（pre-trust 那個空 sessionDir → 跳過 trust 對話框；空目錄信任=零授權）。
+3. **skill 探索**：`<config>/skills` symlink 到 repo `.claude/skills`（user-skill scope）→ `/tp-request` 找得到，但不用把 repo 當 workspace。
 
 ## 已知 follow-up（不擋 merge；flag 目前 OFF）
 
 - **per-session Google-API 額度** —— `recomputeTravel` / `enrichPoi` / `poiSearch` 會打有計費的 Google API，目前沒有 per-session 上限；被注入的 message 可能在 90 分鐘 session 內燒額度。之後用 `bumpRateLimit` 加一個以 request 為 key 的額度。
 - **降級路徑 token 上 argv** —— service token fallback 仍把 token 直接插在 tmux 指令列（既有行為、`ps` 看得到）。之後比照 contained 路徑改走 stdin。
-- **contained cwd = repo** —— session 的 cwd 是 repo，Claude 會讀到專案的 `.claude/settings*.json`。裸 tool 的 `deny`（會把整個 tool 從 context 移除）+ `--strict-mcp-config` 已中和目前的 allow；(0b) 冒煙測試會驗證。殘留風險只剩「未來新增、不在 deny 清單裡的 built-in tool」。
+- **deny 用列舉（Claude Code 沒有「只准 allow、其餘全 deny」的權威模式）** —— `dontAsk` 會把未列的 meta-tool（Skill / ToolSearch / Workflow / Artifact …）當豁免放行，所以 `settings.json` 得**逐一列 deny**。風險：claude 未來新增一個沒列到的工具會漏。緩解：(1) **Layer A**（tp-agent OS 隔離）擋掉 FS/exec 類漏洞（讀憑證、跑 script）；(2) 真正需要 deny 擋的是**網路/外洩/spawn 類**（WebFetch / Artifact / SendUserFile / Workflow / Agent），這些已列。升 claude 版本後值得重跑 (0b) 的工具清單檢查、必要時補 deny。
