@@ -57,6 +57,19 @@ async function fetchAuditRows() {
   return rs.results ?? [];
 }
 
+describe('PATCH /api/account/profile — restrict_trip containment（defense-in-depth）', () => {
+  it('受限 token 改帳號名稱 → 403（不得以行程受限身份改擁有者資料）', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test/api/account/profile', 'PATCH', { displayName: 'hijack' }),
+      env,
+      auth: mockAuth({ email: userEmail, restrictTrip: 'some-trip' }),
+      params: {},
+    });
+    const resp = await callHandler(onRequestPatch, ctx);
+    expect(resp.status).toBe(403);
+  });
+});
+
 describe('PATCH /api/account/profile — display_name lifecycle', () => {
   it('字串 → trim 後寫入', async () => {
     const res = await callPatch({ displayName: '  Ray Chiu  ' });

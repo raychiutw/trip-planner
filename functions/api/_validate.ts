@@ -153,9 +153,13 @@ const SENSITIVE_REPLY_PATTERNS = [
 
 const SANITIZED_FALLBACK = '已處理您的請求。如有問題請直接聯繫行程主人。';
 
+// tp-request containment：bound reply length so a prompt-injected companion agent
+// can't use the reply as a bulk exfil channel for the (single) trip's data.
+const MAX_REPLY_LEN = 2000;
+
 export function sanitizeReply(reply: string): string {
   for (const pattern of SENSITIVE_REPLY_PATTERNS) {
     if (pattern.test(reply)) return SANITIZED_FALLBACK;
   }
-  return reply;
+  return reply.length > MAX_REPLY_LEN ? reply.slice(0, MAX_REPLY_LEN) + '…' : reply;
 }

@@ -108,6 +108,13 @@ describe('sanitizeReply', () => {
     expect(sanitizeReply('已新增餐廳推薦：すし三昧')).toBe('已新增餐廳推薦：すし三昧');
   });
 
+  it('超長 reply → 截斷（containment：防旅伴 agent 用 reply 大量外洩單一 trip 資料）', () => {
+    const long = 'あ'.repeat(3000);
+    const out = sanitizeReply(long);
+    expect(out.length).toBeLessThanOrEqual(2001); // 2000 + 省略號
+    expect(out.endsWith('…')).toBe(true);
+  });
+
   it('含 API 路徑 → 過濾', () => {
     expect(sanitizeReply('請用 /api/trips 端點')).toBe(FALLBACK);
   });

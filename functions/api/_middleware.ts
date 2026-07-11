@@ -249,6 +249,17 @@ export function checkCsrf(request: Request, env: Env, url: URL): Response | null
 const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
   { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/days\/\d+\/entries$/ },
   { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/entries\/\d+$/ },
+  // v2.27.0+ entry-POI 主要 endpoints（alternates / master / poi-id）。舊清單只有
+  // legacy /trip-pois，導致帶 companion header 的 restrict-mode 寫入這些路徑會 403
+  // （latent gap，tp-request containment 修）。
+  { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/alternates$/ },
+  { method: 'DELETE', pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/alternates\/\d+$/ },
+  { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/alternates\/reorder$/ },
+  { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/master$/ },
+  { method: 'PUT',   pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/poi-id$/ },
+  { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/recompute-travel$/ },
+  { method: 'POST',  pattern: /^\/api\/pois\/\d+\/enrich$/ },
+  // legacy /trip-pois alias（v2.29.0 PATCH/DELETE endpoint 已刪，POST alias 仍在）
   { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/trip-pois$/ },
   { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/trip-pois\/\d+$/ },
   { method: 'DELETE', pattern: /^\/api\/trips\/[^/]+\/trip-pois\/\d+$/ },

@@ -13,6 +13,7 @@
 import { AppError } from '../_errors';
 import { logAudit } from '../_audit';
 import { parseIntParam, parseJsonBody } from '../_utils';
+import { assertNotTripRestricted } from '../_auth';
 import { assertFavoriteOwnership, preGateFavoriteThrottle, requireFavoriteActor } from '../_companion';
 import type { Env, AuthData } from '../_types';
 
@@ -22,6 +23,8 @@ interface DeleteBody {
 
 export const onRequestDelete: PagesFunction<Env, 'id'> = async (context) => {
   const auth = (context.data as { auth?: AuthData }).auth ?? null;
+  // restrict_trip token 不可刪跨 trip 的 user 收藏（favorites user-scoped）— containment。
+  if (auth) assertNotTripRestricted(auth);
   const id = parseIntParam(context.params.id as string);
   if (!id) throw new AppError('DATA_VALIDATION', 'id 須為正整數');
 

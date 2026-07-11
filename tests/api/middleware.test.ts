@@ -144,7 +144,41 @@ describe('checkCompanionScope', () => {
     expect(check('PATCH', '/api/pois/123', 'companion')).toBeNull();
   });
 
+  // v2.27.0+ entry-POI 主要 endpoints（tp-request containment 補齊；舊清單只有 legacy /trip-pois）
+  it('companion: POST alternates → 放行', () => {
+    expect(check('POST', '/api/trips/test-trip/entries/1/alternates', 'companion')).toBeNull();
+  });
+
+  it('companion: DELETE alternate → 放行', () => {
+    expect(check('DELETE', '/api/trips/test-trip/entries/1/alternates/9', 'companion')).toBeNull();
+  });
+
+  it('companion: PATCH alternates/reorder → 放行', () => {
+    expect(check('PATCH', '/api/trips/test-trip/entries/1/alternates/reorder', 'companion')).toBeNull();
+  });
+
+  it('companion: PATCH master → 放行', () => {
+    expect(check('PATCH', '/api/trips/test-trip/entries/1/master', 'companion')).toBeNull();
+  });
+
+  it('companion: PUT poi-id → 放行', () => {
+    expect(check('PUT', '/api/trips/test-trip/entries/1/poi-id', 'companion')).toBeNull();
+  });
+
+  it('companion: POST recompute-travel → 放行', () => {
+    expect(check('POST', '/api/trips/test-trip/recompute-travel', 'companion')).toBeNull();
+  });
+
+  it('companion: POST pois enrich → 放行', () => {
+    expect(check('POST', '/api/pois/123/enrich', 'companion')).toBeNull();
+  });
+
   // 白名單外 → 403
+  it('companion: DELETE entry（非 alternate）→ 403', () => {
+    // 補齊 alternates 白名單後，確認「整個 entry 刪除」仍被擋（❌ 硬限制）
+    expect(check('DELETE', '/api/trips/test-trip/entries/1', 'companion')!.status).toBe(403);
+  });
+
   it('companion: DELETE trip → 403', () => {
     const resp = check('DELETE', '/api/trips/test-trip', 'companion');
     expect(resp).not.toBeNull();

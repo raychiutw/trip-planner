@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.57] - 2026-07-11
+
+### Security
+- **tp-request 雙層 containment（開 `TP_REQUEST_USER_TOKEN` flag 前的硬前提 (0)）** — v2.55.56 給 tp-request 的 restrict_trip token 是 **API 層 defense-in-depth，不是對 shell-capable agent 的 containment 邊界**：ephemeral session 是有完整 shell + `--dangerously-skip-permissions` + 跑在 repo、與 api-server 同 OS user 的 Claude REPL，被 `trip_requests.message`（untrusted）prompt-inject 後可讀 ambient 憑證（`~/.tripline` refresh token / `.env.local` client secret / `process.env`）重 mint 一個**完整無限制** token 繞過 scope。本版補上真正的 containment（**只在 restrict_trip 寫入 token 時觸發；fail-closed**），功能維持 inert（flag 預設 OFF）：
+  - **Layer B（能力鎖）** — restrict token 的 `/tp-request` 改用 `claude -p --permission-mode dontAsk --settings scripts/tp-request-contained/settings.json --mcp-config <per-session> --strict-mcp-config`（**拿掉 `--dangerously-skip-permissions`**）。agent 的**唯一**能力面 = 新的 zero-shell stdio MCP server `scripts/tp-request-mcp-server.js`（16 個 typed tool = security.md ✅ 白名單；tripId 一律注入 `TRIPLINE_RESTRICT_TRIP` 寫死、host 寫死、只有 ✅ 操作存在）。`settings.json` 的 `deny:[Bash,Read,Write,Edit,Glob,Grep,WebFetch,WebSearch,Agent,Task,NotebookEdit]` 是 **LOAD-BEARING**（`dontAsk` 不 auto-deny read-only tool，否則 `cat .env.local` / `Read` 會過）。
+  - **Layer A（OS 隔離）** — spawn 成獨立 unix user `tp-agent`（`sudo -n -u tp-agent env -i` 洗掉繼承的環境變數 + disposable `HOME`/`TMPDIR`/`CLAUDE_CONFIG_DIR`）。FS 權限擋讀 `~ray/.tripline`/`.env.local`、env-scrub 擋繼承 `TRIPLINE_TP_REQUEST_CLIENT_SECRET`（關掉 process.env 繼承這條 sandbox 擋不到的路徑）。restrict token 寫進 0600 的 per-session mcp-config（走 stdin、不上 argv → 不進 `ps`）。
+  - **fail-closed** — `containmentReady()` 驗 `tp-agent`/sudo/settings 存在 **＋ negative self-probe**（若 `tp-agent` **讀得到** `.env.local`/`~/.tripline` → 判定 FS 隔離未生效、拒跑）。未就緒 → 降級 read-only service token（改不了行程，非隔離也安全），**絕不**以受限寫入 token 跑未隔離 session。
+  - **skill 重寫** — SKILL.md 加 mode gate：有 `mcp__tripline__*` 工具 → 走新的 self-contained「Contained 流程」（`dontAsk` 下無 Read，讀不到 reference 檔，故 prompt-injection 防護 / reply 衛生 / Google Maps 驗證 / travel 重算等 essential 規則全 inline）；否則走 legacy shell（Cowork / service-token 模式，不變）。`checkCompanionScope` 的 `COMPANION_ALLOWED` 補齊現行 entry-POI 端點（alternates / master / poi-id / enrich / recompute-travel；舊清單只有 legacy /trip-pois，會讓帶 companion header 的寫入 403）。
+  - **相關收斂** — restrict token 不可存取跨 trip 的 user 收藏（`poi-favorites` 4 端點加 `assertNotTripRestricted`）、不可改擁有者帳號名稱（`PATCH /account/profile`）；`sanitizeReply` 加 2KB 長度上限（限制 P4 外洩頻寬）。
+  - 2-agent 對抗性審查（security-auditor + code-reviewer）過、findings 全修（enrichPoi 缺 tripId→400 / negative self-probe / `--strict-mcp-config` / profile guard / reply cap）；`/cso --diff` 0 findings；unit 3660 + api 1075 全綠。**Ray-manual activation 前置**：(0a) 建 `tp-agent` user + NOPASSWD sudoers + 權限、(0b) 必跑 pre-activation 冒煙測試（見 `scripts/tp-request-contained/README.md`）。code 已 fail-closed，(0a) 只 gate e2e，merge 安全。
+
 ## [2.55.56] - 2026-07-11
 
 ### Security
