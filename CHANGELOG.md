@@ -3,7 +3,10 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.55.60] - 2026-07-11
+## [2.55.61] - 2026-07-11
+
+### Fixed
+- **`seed-user-refresh-token.mjs` 存 refresh token 用了不存在的方法** — 收尾寫 `fileStore().setRefreshToken(json.refresh_token, CLIENT_ID)`，但 `fileStore()`（`get-tripline-user-token.js`）只有 `load()` / `save(state)` / `clear()`，沒有 `setRefreshToken` → OAuth 交換成功後存檔會 throw `setRefreshToken is not a function`，refresh token 丟失、seed 失敗。改為 `fileStore().save({ refresh_token, client_id })`（api-server 的 `provideUserToken` 讀的正是這個形狀）。activation seed 時實測撞到此 bug（當下用替代 helper 繞過完成），本版修正 script 本身，下次 token 到期重 seed 才不會踩到。
 
 ### Fixed
 - **tp-request containment：activation dry-run 抓到的 3 個真 bug，(0b) live 驗證全過** — 在 Ray 機器上實跑真實 contained 機制（互動 REPL、非 `-p`）逐關 debug，修好才能無人值守跑起來。**功能仍 inert**（`TP_REQUEST_USER_TOKEN` OFF）。
