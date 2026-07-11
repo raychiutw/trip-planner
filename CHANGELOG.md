@@ -3,10 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.63] - 2026-07-11
+
+### Security
+- **Option E prod cutover + 更正 v2.55.62 記錄（flag 一直是 ON、且舊碼一直跑未-contained session）** — v2.55.62 merge 後才發現：`TP_REQUEST_USER_TOKEN` 其實 **ON**（非 CHANGELOG 誤述的 OFF），而且 running api-server（restart 前那顆，早於 v2.55.62 code）的舊 `peekPendingTripId` 有**同一個 `trip_id`/`tripId` camelCase DOA bug** → peek 恆 null → `acquireToken` 一律 fallthrough service token → `restrictTrip` undefined → 跳過 containment gate → **未-contained `ray + --dangerously-skip-permissions` session** 處理 untrusted `trip_requests.message`。即：先前所有「已 activate、contained restrict-token session 上線」**從沒真的發生**——數小時來 /tp-request 一直在跑 confused-deputy / prompt-injection 洞（`ps` 實測 child = ray + `--dangerously-skip-permissions`）。
+  - **Cutover**：kill 掉 orphaned 未-contained session → `launchctl kickstart -k … com.tripline.api-server` 重啟載入 v2.55.62 Option E 新碼。驗證：api-server log 由舊「無 pending request 可 scope；改用 service token spawn」轉為新「無 pending request → 不 spawn（Option E）」（新 `acquireToken` 跑、fail-closed）；`containmentReady()` 4 前提全過（settings/mcp 檔存在、`tp-agent` sudo OK、negative self-probe：tp-agent 讀不到 `.env.local`/`~/.tripline`、`CLAUDE_CODE_OAUTH_TOKEN` present）。**未-contained 洞已關**。
+  - **行為改變**：只處理 owner 有 Consent 的請求（目前僅 Ray）；其他 owner → mint `PERM_DENIED` → fail-closed 不 spawn（待各 owner 授權，Phase-2 build-trip consent UX 未建）。
+  - docs-only；無 code / test 變更。memory `project_tp_request_user_token` 已同步更正。
+
 ## [2.55.62] - 2026-07-11
 
 ### Security
-- **tp-request 改用 Option E：OAuth server 直接從既有 Consent 簽發 owner 受限 token，退役 refresh-token vault** — 讓 contained agent 用「trip owner 身份」寫 owner 自己的行程。與其在 api-server 端存/rotate 每位 owner 的 refresh token（自家 OAuth server 對自己跑 OAuth、把長效憑證落在 Ray 的 Mac），不如讓**發證方（OAuth server）**由 `request_id` 推 trip/owner、查 owner 對 tp-request client 的既有 Consent，再以 owner 身份直接簽發「只能寫單一 trip」的 access token（無 refresh）。**owner 從不需在場、refresh token 從不存在 / 不落 api-server 機器**（Mac 只剩 CF↔api-server 的 `API_SECRET`）。功能仍 **inert**（`TP_REQUEST_USER_TOKEN` 預設 OFF）。
+- **tp-request 改用 Option E：OAuth server 直接從既有 Consent 簽發 owner 受限 token，退役 refresh-token vault** — 讓 contained agent 用「trip owner 身份」寫 owner 自己的行程。與其在 api-server 端存/rotate 每位 owner 的 refresh token（自家 OAuth server 對自己跑 OAuth、把長效憑證落在 Ray 的 Mac），不如讓**發證方（OAuth server）**由 `request_id` 推 trip/owner、查 owner 對 tp-request client 的既有 Consent，再以 owner 身份直接簽發「只能寫單一 trip」的 access token（無 refresh）。**owner 從不需在場、refresh token 從不存在 / 不落 api-server 機器**（Mac 只剩 CF↔api-server 的 `API_SECRET`）。此 CF 端點為 additive（api-server 未接前不被呼叫）。**⚠️ 本條原誤述「功能仍 inert（flag OFF）」——實際 `TP_REQUEST_USER_TOKEN` 為 ON；prod cutover 見 v2.55.63。**
   - **新端點 `POST /api/oauth/mint-restricted`** — 授權只收 `TRIPLINE_API_SECRET`（infra secret、常數時間比對、fail-closed；user token 無法偽造），不走 `requireAuth`。綁 `request_id`（須 `open`/`processing`）→ 拿到 secret 者也只能為現有 pending 請求 mint 單-trip token，非任意 trip / 非 refresh。簽發 payload：`user_id=owner`、`client_id=tripline-tp-request`、`scopes=[]`、`restrict_trip=trip`，2h TTL。鏡射 `downscope.ts` 的 issuance；revocation 沿用既有 connected-app disconnect（依 user+client 刪 Consent + 所有 AccessToken）。
   - **修好 DOA bug（feature 之前根本跑不起來）** — api-server 的 `peekPendingRequest` 讀 `item.trip_id`，但 `/api/requests` 經 `json()`→`deepCamel` 回的是 camelCase `tripId` → `trip_id` 永遠 `undefined` → 永不 mint、永不 spawn。flag OFF 時沒被發現，Option E 讓它變 load-bearing。改讀 `item.tripId`（`id` 無底線不受轉換影響）。加行為契約測試鎖住「peek 讀的欄名 = API emit 的欄名」，防同類回歸。
   - **堵住未-contained fallback 外洩洞** — 舊碼 mint/downscope 失敗或 containment 未就緒時會**降級 service token 跑未隔離 `--dangerously-skip-permissions` session** 處理 untrusted `trip_requests.message`（prompt-injection 可讀 Mac 憑證重 mint 無限制 token）。改為 **fail-closed：mint 失敗 → 不 spawn；containment 未就緒 → 不 spawn**（絕不降級 service token）。連帶移除因此變成死碼的 `restrictTripEnv`（restrict token 一律走 contained 路徑、不落未-contained tmux）。
