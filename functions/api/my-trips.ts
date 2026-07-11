@@ -61,10 +61,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // V2 cutover phase 2: 純 user_id-keyed query (email column dropped, '*' wildcard 也走了)
   // Phase 3（移除全域 admin）：無 admin 看全部分支，純 owner/member 自己的 trip。
   if (!auth.userId) return json([]);
-  const { results } = await env.DB
-    .prepare(`${SELECT_BASE} WHERE p.user_id = ? ORDER BY p.trip_id`)
-    .bind(auth.userId)
-    .all();
+  // v2.55.56: 受限 token（tp-request downscope）只看自己那個 trip — 這是唯一 Bearer 可達
+  // 的多-trip list 端點，不加過濾會讓被注入的 agent 列舉 owner 其他 trip（confused-deputy
+  // 偵察面）。內容 gate 只在 per-trip 端點，list 端點得自己 scope。
+  const scoped = auth.restrictTrip !== undefined;
+  const { results } = await (scoped
+    ? env.DB.prepare(`${SELECT_BASE} WHERE p.user_id = ? AND p.trip_id = ? ORDER BY p.trip_id`)
+        .bind(auth.userId, auth.restrictTrip)
+    : env.DB.prepare(`${SELECT_BASE} WHERE p.user_id = ? ORDER BY p.trip_id`)
+        .bind(auth.userId)
+  ).all();
 
   return json(results);
 };

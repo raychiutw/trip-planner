@@ -1,10 +1,10 @@
 /**
- * Integration test — GET/PUT /api/trips/:id
+ * Integration test — GET/PUT/DELETE /api/trips/:id
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
 import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip , callHandler } from './helpers';
-import { onRequestGet, onRequestPut } from '../../functions/api/trips/[id]';
+import { onRequestGet, onRequestPut, onRequestDelete } from '../../functions/api/trips/[id]';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
@@ -203,5 +203,25 @@ describe('PUT /api/trips/:id', () => {
     const dest = await db.prepare('SELECT sub_areas FROM trip_destinations WHERE name = ?')
       .bind('正常 sub_areas').first();
     expect(JSON.parse((dest as Record<string, unknown>).sub_areas as string)).toEqual(['梅田', '難波']);
+  });
+});
+
+describe('DELETE /api/trips/:id', () => {
+  it('受限 token（restrict_trip）→ 403，即使是 owner 且目標就是 scoped trip（v2.55.56 confused-deputy）', async () => {
+    // 受限 token 不可刪任何 trip（destructive，超出內容編輯 agent 職權）；assertNotTripRestricted
+    // 在任何 DB mutation 前就擋下 → trip-1 不會被刪，後續測試不受影響。
+    const ctx = mockContext({
+      request: new Request('https://test.com/api/trips/trip-1', {
+        method: 'DELETE',
+        headers: { Origin: 'https://trip-planner-dby.pages.dev' },
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com', restrictTrip: 'trip-1' }),
+      params: { id: 'trip-1' },
+    });
+    expect((await callHandler(onRequestDelete, ctx)).status).toBe(403);
+    // 確認 trip-1 仍在
+    const still = await db.prepare('SELECT 1 FROM trips WHERE id = ?').bind('trip-1').first();
+    expect(still).toBeTruthy();
   });
 });

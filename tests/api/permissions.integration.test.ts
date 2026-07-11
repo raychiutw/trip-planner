@@ -42,6 +42,17 @@ describe('GET /api/permissions', () => {
     expect((await callHandler(onRequestGet, ctx)).status).toBe(403);
   });
 
+  it('受限 token（restrict_trip）→ 403，即使是 owner 且目標就是 scoped trip（v2.55.56 confused-deputy）', async () => {
+    // owner admin@test.com 的 token 若被 downscope 成 restrict_trip，仍不可管理共編 —
+    // 邀請成員是持久性提權，超出「只做內容編輯」的受限 agent 職權。
+    const ctx = mockContext({
+      request: new Request('https://test.com/api/permissions?tripId=trip-perm'),
+      env,
+      auth: mockAuth({ email: 'admin@test.com', restrictTrip: 'trip-perm' }),
+    });
+    expect((await callHandler(onRequestGet, ctx)).status).toBe(403);
+  });
+
   it('未認證 → handler crash（middleware 已在前攔截）', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/permissions?tripId=trip-perm'),

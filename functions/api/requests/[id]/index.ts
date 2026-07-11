@@ -4,7 +4,7 @@
  */
 
 import { logAudit, computeDiff } from '../../_audit';
-import { hasPermission, requireAuth, requireScope } from '../../_auth';
+import { hasOpsScope, hasPermission, hasWritePermission, requireAuth } from '../../_auth';
 import { AppError } from '../../_errors';
 import { sanitizeReply } from '../../_validate';
 import { json, parseJsonBody } from '../../_utils';
@@ -33,11 +33,23 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
-  // Phase 3（移除全域 admin）：只有帶 companion scope 的 service token 可 PATCH —
-  // Claude CLI 回覆 chat + 標記完成/失敗是 companion 身份的核心職能。最小權限：
-  // 純維運 token（如僅 ops:maps）無法誤觸發 chat 回覆 / health-check / notes hook。
-  const auth = requireScope(context, 'companion');
+  const auth = requireAuth(context);
   const id = params.id as string;
+
+  // gate 需要 request 的 trip_id 才能判斷 trip-writer → 提前 fetch（也供 status 驗證 +
+  // audit diff 共用，只讀一次）。
+  const oldRow = await env.DB.prepare('SELECT * FROM trip_requests WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
+  if (!oldRow) throw new AppError('DATA_NOT_FOUND', '找不到該請求');
+  const requestTripId = oldRow.trip_id as string;
+
+  // 授權：companion service token（Claude CLI 回覆 chat + 標記完成/失敗，跨-trip 可信）
+  // 或 對該 request 所屬 trip 有寫權的 user（v2.55.56：restrict_trip-scoped tp-request
+  // agent 只能回覆自己那個 trip 的請求 — status/reply 也吃 trip scope，比 companion
+  // service token 更緊）。純維運 token（如僅 ops:maps）兩者皆不符 → 擋，不誤觸發 chat
+  // 回覆 / health-check / notes hook。
+  if (!hasOpsScope(auth, 'companion') && !(await hasWritePermission(env.DB, auth, requestTripId))) {
+    throw new AppError('PERM_DENIED');
+  }
 
   const body = await parseJsonBody<{ reply?: string; status?: string; processed_by?: string }>(context.request);
 
@@ -48,8 +60,6 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     updates.push('reply = ?');
     values.push(sanitizeReply(body.reply));
   }
-  // Fetch once for both status validation and audit diff
-  const oldRow = await env.DB.prepare('SELECT * FROM trip_requests WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
 
   if (body.status !== undefined) {
     const STATUS_ORDER = ['open', 'processing', 'completed', 'failed'] as const;
@@ -58,7 +68,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     }
 
     // 驗證 status 只能往前推進，不可回退（failed 例外：任何狀態都可標記失敗）
-    if (oldRow && body.status !== 'failed') {
+    if (body.status !== 'failed') {
       const oldIdx = STATUS_ORDER.indexOf((oldRow.status as string) as typeof STATUS_ORDER[number]);
       const newIdx = STATUS_ORDER.indexOf(body.status as typeof STATUS_ORDER[number]);
       if (newIdx >= 0 && oldIdx >= 0 && newIdx < oldIdx) {
@@ -106,7 +116,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     recordId: Number(id),
     action: 'update',
     changedBy: auth.email,
-    diffJson: oldRow ? computeDiff(oldRow, newFields) : JSON.stringify(newFields),
+    diffJson: computeDiff(oldRow, newFields),
   });
 
   // AI 健檢 hook：v2.33.102 CR-8 confused-deputy fix — 之前單靠 `message.startsWith([AI 健檢])`

@@ -1,5 +1,5 @@
 import { logAudit } from './_audit';
-import { requireAuth, hasOpsScope } from './_auth';
+import { requireAuth, hasOpsScope, assertNotTripRestricted } from './_auth';
 import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
 import type { Env } from './_types';
@@ -41,6 +41,8 @@ function nullableNum(val: unknown): number | null {
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
+  // v2.55.56: 受限 token 只做單一 trip 的內容編輯 — 不可建立新 trip。
+  assertNotTripRestricted(auth);
 
   const body = await parseJsonBody<Record<string, unknown>>(context.request);
 

@@ -48,6 +48,20 @@ describe('GET /api/my-trips', () => {
     expect(data.length).toBe(0);
   });
 
+  it('受限 token（restrict_trip）只看自己那個 trip，不列舉 owner 其他 trip（v2.55.56 confused-deputy 偵察面）', async () => {
+    // me@test.com 擁有 trip-my-1 + trip-my-2，但受限到 trip-my-1 的 token 只該看到 trip-my-1。
+    const ctx = mockContext({
+      request: new Request('https://test.com/api/my-trips'),
+      env,
+      auth: mockAuth({ email: 'me@test.com', restrictTrip: 'trip-my-1' }),
+    });
+    const resp = await callHandler(onRequestGet, ctx);
+    expect(resp.status).toBe(200);
+    const data = await resp.json() as Array<Record<string, unknown>>;
+    expect(data.length).toBe(1);
+    expect(data[0].tripId).toBe('trip-my-1');
+  });
+
   it('未認證 → handler crash（middleware 已在前攔截）', async () => {
     // my-trips handler 假設 middleware 已驗證 auth，不做 null check
     // 實際上 middleware 會先回 401，handler 不會被呼叫
