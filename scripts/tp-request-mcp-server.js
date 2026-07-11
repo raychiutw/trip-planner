@@ -101,6 +101,7 @@ const TOOLS = [
     method: 'POST',
     path: '/api/pois/{id}/enrich',
     pathParams: { id: { required: true, description: 'poi id' } },
+    injectTripIdQuery: true, // enrich 讀 ?tripId=（requirePoiWrite 授權需要）— 缺則 400
     companion: true,
   },
   // ----- entries (writes) -----

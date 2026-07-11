@@ -52,9 +52,9 @@ describe('失敗 fallback 不 crash', () => {
 });
 
 describe('v2.55.56 trip-scope（confused-deputy 緩解）', () => {
-  it('peek 最舊 pending trip（processing→open→received 優先序）用 service token 讀', () => {
+  it('peek 最舊 pending trip（processing→open 優先序）用 service token 讀', () => {
     expect(SRC).toMatch(/async function peekPendingTripId/);
-    expect(SRC).toMatch(/\['processing', 'open', 'received'\]/);
+    expect(SRC).toMatch(/\['processing', 'open'\]/);
     // peek 用 service token（ops:trips:read），非 user token
     expect(SRC).toMatch(/const svcToken = await tokenHelper\.getToken\(\)/);
     expect(SRC).toMatch(/\/api\/requests\?status=/);

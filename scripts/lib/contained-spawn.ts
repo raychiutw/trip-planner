@@ -54,7 +54,9 @@ export function buildContainedShellCommand(o: {
     `'${q(o.claudeBin)}' -p '${q(o.skillCommand)}' ` +
     `--permission-mode dontAsk ` +
     `--settings '${q(o.settingsPath)}' ` +
-    `--mcp-config '${q(o.mcpConfigPath)}' ` +
+    // --strict-mcp-config: use ONLY this --mcp-config; ignore project .mcp.json /
+    // CLAUDE_CONFIG_DIR servers, so tripline is provably the entire tool surface.
+    `--mcp-config '${q(o.mcpConfigPath)}' --strict-mcp-config ` +
     `--name '${q(o.sessionName)}'`
   );
 }

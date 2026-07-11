@@ -51,6 +51,44 @@ sudo -n -u tp-agent test -r /Users/ray/Projects/trip-planner/scripts/tp-request-
 sudo -n -u tp-agent test -r /Users/ray/.env.local && echo "LEAK: tp-agent can read .env.local" || echo "creds isolated OK"
 ```
 
-Until this is done, api-server is **fail-closed**: a restrict-token request
-degrades to a read-only service-token session (can't write trips) and alerts —
-it never runs the write-capable token in an un-contained session.
+`containmentReady()` also runs a **negative self-probe** at spawn time: if
+`tp-agent` CAN read `.env.local` or `~ray/.tripline`, it fails closed (a botched
+step-3 chmod won't silently ship porous isolation).
+
+Until (0a) is done, api-server is **fail-closed**: a restrict-token request
+degrades to a service-token session (can't write trip content, though it still
+holds ops scopes) and alerts — it never runs the write-capable token in an
+un-contained session.
+
+## (0b) REQUIRED pre-activation smoke test — run once before `TP_REQUEST_USER_TOKEN=1`
+
+The capability lockdown (dontAsk + deny) and the headless skill invocation are
+not e2e-tested in CI (no tp-agent there). Verify them live once:
+
+```bash
+SDIR=$(mktemp -d)
+# a) a denied built-in must be refused (proves deny is load-bearing):
+sudo -n -u tp-agent env -i PATH=/usr/bin:/bin HOME=/Users/tp-agent \
+  CLAUDE_CONFIG_DIR="$SDIR" /Users/ray/.local/bin/claude -p 'Run: cat /Users/ray/Projects/trip-planner/.env.local' \
+  --permission-mode dontAsk --settings /Users/ray/Projects/trip-planner/scripts/tp-request-contained/settings.json \
+  --strict-mcp-config 2>&1 | grep -qi 'denied\|not allowed\|cannot' && echo "BASH DENIED ✓" || echo "LEAK — do not activate"
+# b) the skill must actually run headless via -p and the MCP handshake must succeed
+#    (protocolVersion 2024-11-05). Do a dry-run against a throwaway request and
+#    confirm it reads/writes only that trip. If -p doesn't invoke the skill, fix
+#    before flipping the flag.
+```
+
+Only flip `TP_REQUEST_USER_TOKEN=1` after both pass.
+
+## Known follow-ups (not blocking merge; flag is OFF)
+
+- **Per-session Google-API budget** — `recomputeTravel` / `enrichPoi` / `poiSearch`
+  drive metered Google APIs with no per-session cap; an injected message could burn
+  quota within the 90-min session. Add a `bumpRateLimit` budget keyed on the request.
+- **Degrade path token on argv** — the service-token fallback still interpolates the
+  token on the tmux command line (pre-existing baseline, visible in `ps`). Move it to
+  stdin like the contained path.
+- **cwd = repo** — the contained session's cwd is the repo, so Claude discovers the
+  project `.claude/settings*.json`. The bare-tool `deny` (which removes the tool
+  entirely) + `--strict-mcp-config` neutralise today's allows; the smoke test (0b)
+  verifies it. Residual risk is only a FUTURE built-in tool not in the deny list.

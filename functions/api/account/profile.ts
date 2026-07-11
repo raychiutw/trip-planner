@@ -10,7 +10,7 @@
  *
  * Response: 200 + updated user shape mirror /api/oauth/userinfo
  */
-import { requireAuth } from '../_auth';
+import { requireAuth, assertNotTripRestricted } from '../_auth';
 import { AppError } from '../_errors';
 import { json, parseJsonBody } from '../_utils';
 import { logAudit } from '../_audit';
@@ -27,6 +27,8 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if (!auth.userId) {
     throw new AppError('AUTH_REQUIRED');
   }
+  // restrict_trip token 是行程範圍的受限身份，不得改擁有者帳號資料（defense-in-depth）
+  assertNotTripRestricted(auth);
 
   const body = await parseJsonBody<ProfilePatchBody>(context.request);
 

@@ -121,7 +121,7 @@ interface AcquiredToken {
  *  received, oldest-first. null = nothing pending to scope. */
 async function peekPendingTripId(): Promise<string | null> {
   const svcToken = await tokenHelper.getToken();
-  for (const status of ['processing', 'open', 'received'] as const) {
+  for (const status of ['processing', 'open'] as const) {
     try {
       const res = await fetch(`${API_BASE}/api/requests?status=${status}&sort=asc&limit=1`, {
         headers: { Authorization: `Bearer ${svcToken}` },
@@ -361,7 +361,17 @@ function runAsAgent(args: string[], input?: string) {
 function containmentReady(): boolean {
   try {
     if (!existsSync(CONTAINED_SETTINGS_PATH) || !existsSync(MCP_SERVER_PATH)) return false;
-    return runAsAgent(['true']).status === 0;
+    if (runAsAgent(['true']).status !== 0) return false;
+    // NEGATIVE self-probe: tp-agent must NOT be able to read ray's creds. Catches a
+    // botched (0a) chmod that leaves FS isolation porous → fail closed. `test -r`
+    // is 0 only when readable (also non-0 when the path is absent — fine).
+    for (const p of [join(PROJECT_DIR, '.env.local'), '/Users/ray/.tripline']) {
+      if (runAsAgent(['test', '-r', p]).status === 0) {
+        logError(`containment self-probe FAILED：tp-agent 可讀 ${p} — FS 隔離未生效，fail-closed（修 (0a) chmod）`);
+        return false;
+      }
+    }
+    return true;
   } catch {
     return false;
   }
@@ -469,9 +479,9 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
     if (containmentReady()) {
       return spawnContainedSession(sessionName, skillCommand, token, restrictTrip);
     }
-    logError('containment infra 未就緒（tp-agent/sudo/settings）→ 拒絕以受限寫入 token 跑未隔離 session；降級 read-only service token');
+    logError('containment infra 未就緒（tp-agent/sudo/settings/self-probe）→ 拒絕以受限寫入 token 跑未隔離 session；降級 service token（寫不了行程，仍具 ops 讀取）');
     void throttledAlert('containment-not-ready', 'failed',
-      'tp-request 受限寫入 token 需隔離但 (0a) 未就緒 → 暫用 read-only service token（寫不了行程）。設定見 scripts/tp-request-contained/README.md');
+      'tp-request 受限寫入 token 需隔離但 (0a) 未就緒 → 暫用 service token（改不了行程內容，但仍有 ops scope）。設定見 scripts/tp-request-contained/README.md');
     try {
       token = await tokenHelper.getToken();
       restrictTrip = undefined;

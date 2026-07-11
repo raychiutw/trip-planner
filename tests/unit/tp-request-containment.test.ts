@@ -41,11 +41,13 @@ describe('buildContainedShellCommand — layer A (OS isolation + env scrub)', ()
 });
 
 describe('buildContainedShellCommand — layer B (capability lockdown)', () => {
-  it('uses dontAsk + isolated --settings + --mcp-config', () => {
+  it('uses dontAsk + isolated --settings + --mcp-config + --strict-mcp-config', () => {
     const cmd = buildContainedShellCommand(BASE);
     expect(cmd).toContain('--permission-mode dontAsk');
     expect(cmd).toContain(`--settings '${BASE.settingsPath}'`);
     expect(cmd).toContain(`--mcp-config '${BASE.mcpConfigPath}'`);
+    // ignore any project .mcp.json — tripline is provably the whole tool surface
+    expect(cmd).toContain('--strict-mcp-config');
     expect(cmd).toContain("-p '/tp-request'");
   });
 
