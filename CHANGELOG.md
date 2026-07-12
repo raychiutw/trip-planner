@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.69] - 2026-07-12
+
+### Fixed
+- **桌機返回行程頁捲動「往上彈回」根治（restoreScrollTo 改 input-agnostic 讓位）** — 從編輯景點子頁返回行程頁時，`restoreScrollTo` 會等 per-day 內容 async 載入完（`loading` 轉 false，實測 ~2.6s）才 fire，並逐幀把 `.app-shell-main.scrollTop` 釘回 savedTop。v2.55.47(#1014) 只加了 `wheel`/`touchstart` 事件讓位，漏掉鍵盤（PageUp/方向鍵）、捲軸拖曳、慣性等不發這兩個事件的輸入 → 那些輸入在還原空窗被逐幀扯回（「往上彈回」，要一次捲大範圍才逃得掉）。改為兩層讓位：**(A) 事件層**保留 wheel/touchstart 中止（涵蓋 touchstart 按住未拖、邊界 wheel、微小 trackpad delta 等「有意圖但 scrollTop 未動」）；**(B) divergence 層**新增 — `scrollTop` 一旦偏離本函式上次設定值就中止（涵蓋鍵盤/捲軸/慣性，不限事件類型）。另加 call 時 `scrollTop>8` guard（user 已在載入空窗自行捲過就完全不還原）+ seed `expected=scrollTop`（call→首幀 ~16ms 空窗的離散輸入也在首幀讓位，不被首幀無條件 set 蓋掉）。cross-model review(Claude+Codex) 抓到「divergence 偵測的是位移非意圖」故補回事件層。13 unit test（含 old-vs-new regression gate：舊碼在鍵盤/捲軸/gap case 失敗）。`src/lib/preserveScroll.ts` 單一檔、單一 caller `TripPage.tsx:587`。scroll-anchoring 造成的 false-abort 為 fail-safe under-shoot（頁面落點略高，絕不扯走 user），可接受。
+
 ## [2.55.68] - 2026-07-12
 
 ### Changed
