@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.70] - 2026-07-13
+
+### Fixed
+- **行程 AI 聊天「載入訊息失敗」紅字 banner 根治（apiFetch 偵測 Cloudflare edge block 頁）** — Cloudflare edge 限流/挑戰某 IP 時，會在 request 到達 Pages Function 前就回一個 `text/html` block 頁（"Just a moment..."）但帶 **HTTP 200**。`apiFetch` 舊行為看到 `response.ok` 就直接 `response.json()` → 對 `<!DOCTYPE html>` 丟無診斷的 `SyntaxError: Unexpected token '<'` → `useChatPagination` 接住 `setLoadError` → 聊天「載入訊息失敗」banner。edge 擋在 Function 前，200 狀態、**零 server 痕跡**（無 worker error / Sentry），排查數天才定位。修法：新增 `isEdgeBlockPage`（2xx 且 Content-Type 含 text/html、排除 204、value 比對 case-insensitive）→ 比照現有 429 邏輯，idempotent GET/HEAD 重試一次（暫時性 blip 自癒 → banner 不出現）→ 重試後仍是 block 頁才丟中性 `SYS_UPSTREAM_UNAVAILABLE`（「伺服器暫時無法回應，請稍後重試」，非 user-blaming 的 SYS_RATE_LIMIT），取代無診斷 SyntaxError，讓 banner 的「重試」鈕與訊息有意義。等候採 abort-aware `sleepOrAbort`（wait 期間 signal abort 立即喚醒、不呆等滿 Retry-After 上限；timer + listener 兩邊都清）。重試冪等安全：真 block 頁 = Cloudflare 擋在 origin「之前」、origin 沒跑無 side effect（含 view-count 這種 GET，其寫入只在 200 JSON 成功路徑、永不觸 retry）。cross-model review（Claude + Codex）抓到 abort-blind sleep、Content-Type case-sensitivity、第一個回應 body 未釋放 → 全修。6 unit test（block 頁重試自癒／重試後明確錯／JSON 不重試／POST 不重試／abort-during-wait／403 挑戰頁 fromResponse fallback）。`src/lib/apiClient.ts` + `src/types/api.ts`（新增 `SYS_UPSTREAM_UNAVAILABLE` code + message）。純 client-side lib robustness、無 UI／backend 變化。
+
 ## [2.55.69] - 2026-07-12
 
 ### Fixed
