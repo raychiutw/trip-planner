@@ -2,8 +2,9 @@
 'use strict';
 /**
  * provision-tp-request-client.js — register the confidential OAuth client that
- * lets tp-request obtain a USER-identity token (authorization_code + refresh_token
- * rotation), separate from the ops-only `tripline-internal-cli` client.
+ * represents tp-request (the Tripline AI) as a connected app, separate from the
+ * ops-only `tripline-internal-cli` client. (Detail on how it acts as the owner:
+ * see the "After running" note below — Option E, not refresh-token rotation.)
  *
  *   node scripts/provision-tp-request-client.js            # provision (once)
  *   node scripts/provision-tp-request-client.js --rotate-secret  # reissue secret
@@ -68,8 +69,8 @@ if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CF_ACCOUNT_ID || !process.
       CLIENT_ID,
       clientSecretHash,
       'confidential',
-      'Tripline tp-request (user auth)',
-      'authorization_code + refresh_token client — lets the tp-request pipeline act as the trip owner',
+      'Tripline 行程助理',
+      '讓 AI 以你的身分安排行程景點、餐廳與交通',
       null,
       REDIRECT_URIS,
       ALLOWED_SCOPES,
