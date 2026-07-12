@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.68] - 2026-07-12
+
+### Changed
+- **provision-tp-request-client.js 顯示字串對齊 prod** — 本 session 已 live 更新 prod `client_apps`（tripline-tp-request）：`app_name` → 「Tripline 行程助理」、`app_description` → 「讓 AI 以你的身分安排行程景點、餐廳與交通」（兩者經 `/api/oauth/client-info` 顯示於 OAuth 同意頁與「已連結應用」；V1 就地授權卡不經同意頁）。同步 provision 腳本 INSERT 的 literal 值，避免未來 `--rotate-secret` re-provision 覆蓋回舊 dev 名；順修 header 註解仍宣稱已退役的「authorization_code + refresh_token rotation」（改指向 Option E 說明）。scripts-only、無 runtime 影響、無測試覆蓋此腳本。
+- **Prod 煙測 AI 授權卡（v2.55.66 V1 卡）通過** — 用 owner session 實測 `/trips/new`：`GET /api/account/ai-authorization`（帶真 session cookie）回 200 顯綠「已授權」；撤銷後顯「授權 AI」鈕 → 點擊 `POST /api/account/ai-authorization` 回 200（CSRF 過，`/api/account/*` 不 bypass）→ D1 寫入 Consent → 卡片翻綠。補上 dev-mock 因無 session cookie 測不到的路徑。
+
 ## [2.55.67] - 2026-07-12
 
 ### Removed
