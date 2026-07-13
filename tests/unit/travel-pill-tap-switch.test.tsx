@@ -115,21 +115,50 @@ describe('TravelPill — interactive auto-save (v2.55.45 多方式)', () => {
     });
   });
 
-  it('地鐵（手填）+ min=30 + onBlur → PATCH 帶 mode + submode + min', async () => {
+  // v2.55.72：地鐵/火車/高鐵改為自動（預設 DRIVE 估）→ chip click 立即 PATCH、不必手填 min。
+  // 消除「選火車按關閉沒作用」（舊：手填方式選了不填 min + 關閉 → 無聲丟失）。
+  it.each([
+    ['metro', '地鐵'],
+    ['train', '火車'],
+    ['hsr', '高鐵'],
+  ])('%s chip → 立即 PATCH transit + submode（自動 DRIVE，不帶 min）', async (submode) => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, mode: 'transit', submode, version: 1 }), { status: 200 }));
+    render(<TravelPill segment={baseSegment} tripId="trip-1" />);
+    fireEvent.click(screen.getByTestId('travel-pill'));
+    fireEvent.click(screen.getByTestId(`travel-method-${submode}`));
+    await waitFor(() => {
+      const body = findSegmentPatchBody();
+      expect(body?.mode).toBe('transit');
+      expect(body?.submode).toBe(submode);
+      expect('min' in (body ?? {})).toBe(false); // 自動選擇＝不帶 min
+    });
+  });
+
+  it('火車 chip → 立即存後按「關閉」→ dialog 關且已存（回歸：修復無聲丟失）', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, mode: 'transit', submode: 'train', version: 1 }), { status: 200 }));
+    render(<TravelPill segment={baseSegment} tripId="trip-1" />);
+    fireEvent.click(screen.getByTestId('travel-pill'));
+    fireEvent.click(screen.getByTestId('travel-method-train'));
+    await waitFor(() => expect(findSegmentPatchBody()?.submode).toBe('train'));
+    fireEvent.click(screen.getByTestId('travel-dialog-close'));
+    await waitFor(() => expect(screen.queryByTestId('travel-pill-dialog')).not.toBeInTheDocument());
+  });
+
+  it('火車 仍可手填 min 覆寫 → PATCH 帶 min（自動方式的手動覆寫，v2.55.72）', async () => {
     apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 42, version: 1 }), { status: 200 }));
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));
-    fireEvent.click(screen.getByTestId('travel-method-metro'));
+    fireEvent.click(screen.getByTestId('travel-method-train'));
     const input = screen.getByTestId('travel-min-input');
-    fireEvent.change(input, { target: { value: '30' } });
+    fireEvent.change(input, { target: { value: '45' } });
     fireEvent.blur(input);
     await waitFor(() => {
-      const transitCall = apiFetchRawMock.mock.calls.find((c) => {
+      const call = apiFetchRawMock.mock.calls.find((c) => {
         if (!c[1]) return false;
         const body = JSON.parse((c[1] as RequestInit).body as string);
-        return body.mode === 'transit' && body.submode === 'metro' && body.min === 30;
+        return body.mode === 'transit' && body.submode === 'train' && body.min === 45;
       });
-      expect(transitCall).toBeTruthy();
+      expect(call).toBeTruthy();
     });
   });
 

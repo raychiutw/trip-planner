@@ -10,13 +10,13 @@
  *   mode='transit' + submode：
  *     - 'monorail'（沖繩單軌）→ 自動算 walk+單軌+walk（yuiRail.computeYuiTravel，
  *       走路段直線估、不打 API）。source='haversine'。
- *     - 'bus'（公車）→ 自動算，同駕車走 Google DRIVE。source='google'。
- *     - 其他（metro / train / hsr / 自由文字 / null）→ 純手填分鐘，距離自動算直線。
- *       source='manual'。
+ *     - 其餘（bus / metro / train / hsr / 自由文字 / null）→ v2.55.72 起一律自動、預設用駕車
+ *       Google DRIVE 估車程與距離（無大眾運輸 API，開車為預設估值）。source='google'。
+ *       不再強制手填 min（「選了即存」），可手填分鐘覆寫鎖定。
  *
  * ## 覆寫 / 恢復自動（source 當鎖定旗標）
  *
- *   自動算的方式（driving/walking/monorail/bus）若 caller 帶了有效 manualMin →
+ *   自動算的方式（driving/walking/monorail/bus/metro/train/hsr）若 caller 帶了有效 manualMin →
  *   視為「使用者手動覆寫」→ 鎖定該值、source='manual'、距離改直線。之後 recompute
  *   會依 source='manual' 跳過不覆寫（見 recompute-travel.ts）。「恢復自動計算」= 前端
  *   重送不帶 min → 走自動路徑、source 回 google/haversine。
@@ -139,18 +139,18 @@ export async function resolveSegmentTravel(
   }
 
   // --- transit family ---
-  // 自動方式（未被手填覆寫）：monorail / bus
+  // 自動方式（未被手填覆寫）：
+  //   monorail → 沖繩單軌本地 Yui 估（0 API）。
+  //   其餘（bus / metro / train / hsr / 自由文字 / null）→ v2.55.72 起一律預設用駕車 Google
+  //     DRIVE 估車程與距離（無大眾運輸 API，開車為預設估值，submode 原樣保留當 label）。
+  //     不再強制手填 min → 前端「選了即存」，消除選火車/地鐵按關閉的無聲丟失。
   if (!hasManual && submode === 'monorail') {
     return computeMonorail(db, fromEntryId, toEntryId, now);
   }
-  if (!hasManual && submode === 'bus') {
-    return computeGoogle(env, db, fromEntryId, toEntryId, 'DRIVE', 'bus', now);
-  }
-
-  // 純手填 / 覆寫：需有效 min（無 → 硬錯誤 400）。距離自動算直線。
   if (!hasManual) {
-    throw new AppError('DATA_VALIDATION', '此交通方式需填寫分鐘（1–1440）');
+    return computeGoogle(env, db, fromEntryId, toEntryId, 'DRIVE', submode, now);
   }
+  // 手填覆寫：鎖定手填值（source='manual'），距離自動算直線。
   const distanceM = await haversineFromEntries(db, fromEntryId, toEntryId);
   return { ok: true, min: Math.round(manualMin as number), distanceM, source: 'manual', submode, computedAt: now };
 }

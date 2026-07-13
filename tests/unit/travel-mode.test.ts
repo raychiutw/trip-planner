@@ -55,9 +55,12 @@ describe('TRAVEL_METHODS table (v2.55.45)', () => {
     const keys = TRAVEL_METHODS.map((m) => m.key);
     expect(new Set(keys).size).toBe(8); // 無重複 key
     expect(keys).toEqual(['driving', 'walking', 'monorail', 'bus', 'metro', 'train', 'hsr', 'other']);
-    // 自動方式：driving/walking/monorail/bus；手填：metro/train/hsr/other
+    // v2.55.72：非單軌 transit（metro/train/hsr）改為自動（預設 DRIVE 估、選了即存）；
+    // 僅「其他」(freeText) 仍純手填（需先填方式名）。
     const auto = TRAVEL_METHODS.filter((m) => m.auto).map((m) => m.key);
-    expect(auto).toEqual(['driving', 'walking', 'monorail', 'bus']);
+    expect(auto).toEqual(['driving', 'walking', 'monorail', 'bus', 'metro', 'train', 'hsr']);
+    const manual = TRAVEL_METHODS.filter((m) => !m.auto).map((m) => m.key);
+    expect(manual).toEqual(['other']);
     expect(TRAVEL_METHODS.find((m) => m.key === 'other')!.freeText).toBe(true);
   });
 });

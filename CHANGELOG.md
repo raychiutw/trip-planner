@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.72] - 2026-07-13
+
+### Changed
+- **交通方式：地鐵／火車／高鐵改為「選了即存、預設用駕車估車程距離」（修復「設定成火車按關閉沒作用」）** — 使用者回報在 TravelPill 對話框選「火車」後按「關閉」沒作用。根因：`train`／`metro`／`hsr` 過去是「純手填」方式（`TRAVEL_METHODS.auto=false`）——選了不會立即送出，要在「需要多少分鐘？」欄位填數字並 blur（`commitManual`，`!minValid` 直接早退）才寫入；若沒填分鐘就按「關閉」，`handleSelectMethod` 未 `patch`、`handleClose` 的 `flush` 是 no-op → 選擇無聲丟失。依使用者要求，非單軌的大眾運輸一律改為「預設用駕車 Google DRIVE 估車程與距離、選了即存」（單軌保留沖繩 Yui 特殊處理），手填分鐘變成選填覆寫。三處對齊：**(1)** `travelMode.ts` 的 `metro`／`train`／`hsr` `auto` 改 `true`（picker 選了即 `submit`，同駕車／步行／單軌／公車）；**(2)** 後端 `segments/_shared.ts resolveSegmentTravel` 把「非單軌 transit 缺 min → throw 400」改為「非單軌 transit → `computeGoogle` DRIVE 估」（`submode` 原樣保留），POST/PATCH `/segments` 不再對 `train`／`metro`／`hsr`／bare transit 強制 min；**(3)** `recompute-travel.ts` 的 batch dispatch 把「bus-only DRIVE、其餘假設 manual 而跳過」泛化為「非單軌 transit 一律 DRIVE 重算、保留 `submode`」，使 `source='google'` 的 train 段搬動後也會被重估而非留 stale。手填分鐘（`source='manual'`）仍一律鎖定跳過，覆寫語意不變。
+- **EditEntryPage 3-mode 編輯器「大眾運輸」分鐘同步改選填** — 對齊上述原則：`validation` 不再對 transit 強制 `1–1440`（留空放行、有填才驗範圍），save body 僅在有填分鐘時帶 `min`（留空＝後端 DRIVE 估），UI label 改「分鐘（選填）」、提示改「留空＝用駕車估車程，填了則鎖定手動值」（原「Japan Google Routes 沒 transit 資料，請手動填」已過時）。
+
+### 測試
+- TDD 紅→綠。後端：`segments-post` 新增 `metro`／`train`／`hsr` 不帶 min → 201 + `source=google` 參數化測試、bare transit 無 min → DRIVE（有座標）／stale（缺座標）；`segments-patch` 將「transit 無 min → 400」改為「200 + 軟失敗 stale」；`recompute` 新增「`source=google` 的 train 段 → DRIVE 重算、`submode=train` 保留、不跳過」。前端：`travel-mode` auto 集合斷言更新為含 `metro`／`train`／`hsr`；`travel-pill-tap-switch` 將地鐵手填測試改為 `metro`／`train`／`hsr` chip 點擊即 PATCH（不帶 min）＋「火車選了按關閉仍存」回歸＋火車手填覆寫；`edit-entry-page` 新增「選大眾運輸不填分鐘 → POST 不帶 min」。`tsc --noEmit`（src＋functions）綠、觸及測試檔隔離重跑綠。4 原始碼（`travelMode.ts`／`segments/_shared.ts`／`recompute-travel.ts`／`EditEntryPage.tsx`；`TravelPillDialog` 邏輯經 `auto` flag 自動涵蓋、未改）＋ 6 test。
+
 ## [2.55.71] - 2026-07-13
 
 ### Fixed

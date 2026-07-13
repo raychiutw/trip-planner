@@ -6,11 +6,11 @@
  *   - driving/walking 永遠 1 Google Routes call/pair（不打 Google TRANSIT — Japan 無資料）
  *   - 寫 trip_segments（first-class，v2.29.0 為唯一 source，entry.travel_* 已 DROPPED）
  *
- * v2.55.45（交通方式 submode 自動算）：
+ * v2.55.45（交通方式 submode 自動算）／v2.55.72（非單軌 transit 一律預設 DRIVE）：
  *   - transit + submode='monorail'（沖繩單軌）→ 本地 Yui 估重算（walk+單軌+walk，0 API）。
- *   - transit + submode='bus'（公車）→ 同駕車走 Google DRIVE 重算。
+ *   - 其餘 transit（bus/metro/train/hsr/自由文字/null）→ 預設用駕車 Google DRIVE 重算，
+ *     submode 原樣保留（v2.55.72 起 metro/train/hsr 也自動，不再落入「假設 manual 而跳過」）。
  *   - source='manual'（手填 / 手動覆寫鎖定）→ 一律跳過不覆寫（取代舊 mode!='transit' 判斷）。
- *   - 其他 transit submode（metro/train/hsr/自由文字，皆 source='manual'）→ 跳過。
  *
  * v2.30.0（mode_source DROPPED）：
  *   - mode='transit' 既有 segment 不覆寫（user 手填 min，recompute 不能蓋）
@@ -123,8 +123,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 收集 batch statements 最後一次 db.batch 寫入（單一 subrequest）
   const segmentInserts: Array<{ tripId: string; from: number; to: number; mode: string; min: number; distM: number; now: number }> = [];
   const segmentUpdates: Array<{ id: number; mode: string; min: number; distM: number; now: number }> = [];
-  // v2.55.45: transit 自動方式（monorail/bus）的重算寫入（帶 submode + source，走獨立 UPDATE）。
-  const transitUpdates: Array<{ id: number; submode: string; min: number; distM: number | null; source: string; now: number }> = [];
+  // v2.55.45: transit 自動方式的重算寫入（帶 submode + source，走獨立 UPDATE）。
+  // v2.55.72: submode 放寬為 string | null（bus/metro/train/hsr/自由文字/null 皆走 DRIVE 保留原 submode）。
+  const transitUpdates: Array<{ id: number; submode: string | null; min: number; distM: number | null; source: string; now: number }> = [];
   // v2.29.0: trip_entries.travel_* DROPPED. trip_segments 為唯一 source.
 
   // v2.55.43: 載入「整個 trip」的 entries（不論 day filter）建 allTripPairKeys。
@@ -204,31 +205,28 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           }
           continue;
         }
-        if (existing.submode === 'bus') {
-          try {
-            const result = await computeRoute(apiKey, { lat: prev.lat, lng: prev.lng }, { lat: curr.lat, lng: curr.lng }, 'DRIVE');
-            transitUpdates.push({
-              id: existing.id,
-              submode: 'bus',
-              min: Math.round(result.duration_seconds / 60),
-              distM: result.distance_meters,
-              source: 'google',
-              now,
-            });
-            sourceBreakdown['google'] = (sourceBreakdown['google'] ?? 0) + 1;
-            modeBreakdown['transit'] = (modeBreakdown['transit'] ?? 0) + 1;
-            pairsComputed++;
-          } catch (err) {
-            sourceBreakdown['error'] = (sourceBreakdown['error'] ?? 0) + 1;
-            const detail = err instanceof AppError ? (err.detail ?? err.message) : (err instanceof Error ? err.message : String(err));
-            errorsDetail.push({ entryId: curr.id, message: detail.slice(0, 200) });
-            if (err instanceof AppError && err.code === 'MAPS_LOCKED') throw err;
-          }
-          continue;
+        // 其餘 transit（bus/metro/train/hsr/自由文字/null）→ v2.55.72 起一律預設 Google DRIVE
+        // 估（同 _shared resolveSegmentTravel）。submode 原樣保留當 label。手填鎖定
+        // （source='manual'）已於上方 skip，不會到這。
+        try {
+          const result = await computeRoute(apiKey, { lat: prev.lat, lng: prev.lng }, { lat: curr.lat, lng: curr.lng }, 'DRIVE');
+          transitUpdates.push({
+            id: existing.id,
+            submode: existing.submode,
+            min: Math.round(result.duration_seconds / 60),
+            distM: result.distance_meters,
+            source: 'google',
+            now,
+          });
+          sourceBreakdown['google'] = (sourceBreakdown['google'] ?? 0) + 1;
+          modeBreakdown['transit'] = (modeBreakdown['transit'] ?? 0) + 1;
+          pairsComputed++;
+        } catch (err) {
+          sourceBreakdown['error'] = (sourceBreakdown['error'] ?? 0) + 1;
+          const detail = err instanceof AppError ? (err.detail ?? err.message) : (err instanceof Error ? err.message : String(err));
+          errorsDetail.push({ entryId: curr.id, message: detail.slice(0, 200) });
+          if (err instanceof AppError && err.code === 'MAPS_LOCKED') throw err;
         }
-        // 其他 transit submode（metro/train/hsr/自由文字）本應 source='manual'（上面已跳）；
-        // 防禦性跳過不覆寫。
-        pairsSkippedTransit++;
         continue;
       }
 
