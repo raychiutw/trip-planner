@@ -105,12 +105,12 @@ describe('poiMeta', () => {
     expect(poiMeta('東京都新宿區 1-2-3, 日本', 'restaurant')).toBe('東京都新宿區 1-2-3');
   });
 
-  it('address 缺省時 fallback 分類 — Google primaryType（英文）映射成中文，不露英文', () => {
+  it('address 缺省時 fallback 分類 — 收錄 primaryType 映射成中文', () => {
     expect(poiMeta('', 'restaurant')).toBe('餐廳');
     expect(poiMeta(null, 'hotel')).toBe('飯店');
     expect(poiMeta('', 'tourist_attraction')).toBe('景點');
-    // 無法對應的輸入 → 景點 fallback，不外露原始字串
-    expect(poiMeta('', 'unknown_type')).toBe('景點');
+    // v2.55.73：未收錄的英文 primaryType → 顯示英文（Title Case，事後補救），非壓成景點
+    expect(poiMeta('', 'unknown_venue_type')).toBe('Unknown Venue Type');
   });
 
   it('falls back to "景點" when both empty', () => {

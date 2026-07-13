@@ -140,27 +140,63 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     expect(pill.textContent).toContain('全部地區');
   });
 
-  it('5 個 subtab chip 渲染：為你推薦 / 景點 / 美食 / 住宿 / 購物', () => {
+  it('v2.55.73 動態細類 chip：為你推薦第一 + 由結果 primaryType 生成（含數量、依數量排序）', async () => {
+    mockSearch([
+      { place_id: 'a', name: '拉麵A', address: 'X', lat: 1, lng: 1, category: 'ramen_restaurant' },
+      { place_id: 'b', name: '拉麵B', address: 'X', lat: 1, lng: 1, category: 'ramen_restaurant' },
+      { place_id: 'c', name: '咖啡', address: 'X', lat: 1, lng: 1, category: 'cafe' },
+      { place_id: 'd', name: '水族館', address: 'X', lat: 1, lng: 1, category: 'aquarium' },
+    ]);
     const { getByTestId } = renderPage();
-    expect(getByTestId('explore-subtab-all').textContent).toBe('為你推薦');
-    expect(getByTestId('explore-subtab-attraction').textContent).toBe('景點');
-    expect(getByTestId('explore-subtab-food').textContent).toBe('美食');
-    expect(getByTestId('explore-subtab-hotel').textContent).toBe('住宿');
-    expect(getByTestId('explore-subtab-shopping').textContent).toBe('購物');
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: '沖繩' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => expect(getByTestId('explore-save-btn-a')).toBeTruthy());
+    // 為你推薦 永遠第一 + 預設 active
+    const all = getByTestId('explore-cat-all');
+    expect(all.textContent).toContain('為你推薦');
+    expect(all.className).toContain('is-active');
+    // 細類由 primaryType 生成：拉麵(2) / 咖啡廳(1) / 水族館(1)
+    expect(getByTestId('explore-cat-拉麵').textContent).toContain('拉麵');
+    expect(getByTestId('explore-cat-拉麵').textContent).toContain('2'); // count badge
+    expect(getByTestId('explore-cat-咖啡廳')).toBeTruthy();
+    expect(getByTestId('explore-cat-水族館')).toBeTruthy();
   });
 
-  it('預設 subtab「為你推薦」 套 .is-active', () => {
-    const { getByTestId } = renderPage();
-    expect(getByTestId('explore-subtab-all').className).toContain('is-active');
-    expect(getByTestId('explore-subtab-food').className).not.toContain('is-active');
+  it('無結果時只有「為你推薦」chip 且 active', () => {
+    const { getByTestId } = renderPage(); // beforeEach mockSearch([]) → 空結果
+    expect(getByTestId('explore-cat-all').className).toContain('is-active');
   });
 
-  it('切 subtab 套 .is-active 並切換 aria-selected', () => {
+  it('v2.55.73 細類 > 4 種 → 前 4 inline、其餘收進「更多」選單、點選單項可篩選', async () => {
+    mockSearch([
+      { place_id: '1', name: 'A', address: 'X', lat: 1, lng: 1, category: 'ramen_restaurant' },
+      { place_id: '2', name: 'B', address: 'X', lat: 1, lng: 1, category: 'cafe' },
+      { place_id: '3', name: 'C', address: 'X', lat: 1, lng: 1, category: 'aquarium' },
+      { place_id: '4', name: 'D', address: 'X', lat: 1, lng: 1, category: 'art_gallery' },
+      { place_id: '5', name: 'E', address: 'X', lat: 1, lng: 1, category: 'department_store' },
+      { place_id: '6', name: 'F', address: 'X', lat: 1, lng: 1, category: 'shinto_shrine' },
+    ]);
     const { getByTestId } = renderPage();
-    fireEvent.click(getByTestId('explore-subtab-food'));
-    expect(getByTestId('explore-subtab-food').className).toContain('is-active');
-    expect(getByTestId('explore-subtab-food').getAttribute('aria-selected')).toBe('true');
-    expect(getByTestId('explore-subtab-all').className).not.toContain('is-active');
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: 'many' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => expect(getByTestId('explore-save-btn-1')).toBeTruthy());
+    // 6 種細類（count 皆 1，穩定排序＝插入序）→ 前 4 inline、後 2 進「更多」
+    expect(getByTestId('explore-cat-more').textContent).toContain('更多');
+    // details 保留 children 於 DOM → 選單項可直接點，點後只留該類
+    fireEvent.click(getByTestId('explore-cat-menu-神社'));
+    expect(getByTestId('explore-save-btn-6')).toBeTruthy(); // shinto_shrine → 神社
+    expect(() => getByTestId('explore-save-btn-1')).toThrow(); // 拉麵 被濾掉
+  });
+
+  it('v2.55.73 結果卡片 poi-category 顯示細類 label（拉麵 而非粗類 餐廳）', async () => {
+    mockSearch([
+      { place_id: 'x', name: '豚人拉麵', address: 'X', lat: 1, lng: 1, category: 'ramen_restaurant' },
+    ]);
+    const { getByTestId, container } = renderPage();
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: 'ramen' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => expect(getByTestId('explore-save-btn-x')).toBeTruthy());
+    expect(container.querySelector('.poi-category')?.textContent).toBe('拉麵');
   });
 
   it('search results 渲染 cover（依 POI 類型三色 tone）+ heart save button', async () => {
@@ -242,10 +278,10 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     expect(container.textContent).not.toContain('探索更多評論');
   });
 
-  it('subtab category filter — food 過濾掉非餐廳結果', async () => {
+  it('v2.55.73 點細類 chip → 只留該類結果、chip 套 is-active + aria-selected', async () => {
     mockSearch([
-      { place_id: 'p1', name: 'A 餐廳', address: 'X', lat: 1, lng: 1, category: 'restaurant' },
-      { place_id: 'p2', name: 'B 景點', address: 'X', lat: 1, lng: 1, category: 'tourism' },
+      { place_id: 'p1', name: '拉麵店', address: 'X', lat: 1, lng: 1, category: 'ramen_restaurant' },
+      { place_id: 'p2', name: '水族館', address: 'X', lat: 1, lng: 1, category: 'aquarium' },
     ]);
     const { getByTestId } = renderPage();
     fireEvent.change(getByTestId('explore-search-input'), { target: { value: 'foo' } });
@@ -254,9 +290,41 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
       expect(getByTestId('explore-save-btn-p1')).toBeTruthy();
       expect(getByTestId('explore-save-btn-p2')).toBeTruthy();
     });
-    // 切 food → 只剩 restaurant
-    fireEvent.click(getByTestId('explore-subtab-food'));
+    // 點「拉麵」細類 → 只剩 ramen_restaurant
+    fireEvent.click(getByTestId('explore-cat-拉麵'));
+    expect(getByTestId('explore-cat-拉麵').className).toContain('is-active');
+    expect(getByTestId('explore-cat-拉麵').getAttribute('aria-selected')).toBe('true');
+    expect(getByTestId('explore-cat-all').className).not.toContain('is-active');
     expect(() => getByTestId('explore-save-btn-p2')).toThrow();
     expect(getByTestId('explore-save-btn-p1')).toBeTruthy();
+  });
+
+  it('v2.55.73 新搜尋重置 filter — 細類消失再出現不靜默復活舊選擇（隱藏結果回歸）', async () => {
+    // 搜尋1（有拉麵）→ 選拉麵
+    mockSearch([
+      { place_id: 'r1', name: '拉麵1', address: 'X', lat: 1, lng: 1, category: 'ramen_restaurant' },
+      { place_id: 'a1', name: '水族館1', address: 'X', lat: 1, lng: 1, category: 'aquarium' },
+    ]);
+    const { getByTestId } = renderPage();
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: '沖繩' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => expect(getByTestId('explore-save-btn-r1')).toBeTruthy());
+    fireEvent.click(getByTestId('explore-cat-拉麵')); // category='拉麵'
+    // 搜尋2（無拉麵）→ activeCategory 遮成 all
+    mockSearch([{ place_id: 'c2', name: '咖啡2', address: 'X', lat: 1, lng: 1, category: 'cafe' }]);
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: '東京' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => expect(getByTestId('explore-save-btn-c2')).toBeTruthy());
+    // 搜尋3（拉麵又出現＋水族館）→ 沒重置的話 category='拉麵' snap 回、隱藏水族館3
+    mockSearch([
+      { place_id: 'r3', name: '拉麵3', address: 'X', lat: 1, lng: 1, category: 'ramen_restaurant' },
+      { place_id: 'a3', name: '水族館3', address: 'X', lat: 1, lng: 1, category: 'aquarium' },
+    ]);
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: '大阪' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => expect(getByTestId('explore-save-btn-r3')).toBeTruthy());
+    // 修正後：filter 已重置 → 為你推薦 active + 水族館3 未被復活的「拉麵」filter 隱藏
+    expect(getByTestId('explore-cat-all').className).toContain('is-active');
+    expect(getByTestId('explore-save-btn-a3')).toBeTruthy();
   });
 });

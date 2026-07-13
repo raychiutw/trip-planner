@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.73] - 2026-07-13
+
+### Added
+- **POI 分類細化：Explore 篩選改「動態細類 chip」＋ 全站顯示 Google 原始細分類** — 使用者回報 POI 分類太粗（只有 8 大類，大量細分被壓成「景點」），要求「直接用 Google 原始分類分出更細的項目」。`pois.category` 早已存 Google Places `primaryType` 原始值 → 純顯示／篩選層改動，無 schema 變更。**(1) 細類對照表**：`poiCategory.ts` 新增 `GOOGLE_PRIMARY_TYPE_LABELS`（~120 條常見旅遊 primaryType → 中文細類，如 `ramen_restaurant`→拉麵、`sushi_restaurant`→壽司、`cafe`→咖啡廳、`shinto_shrine`→神社、`buddhist_temple`→寺廟、`aquarium`→水族館、`art_gallery`→美術館、`department_store`→百貨公司、`shopping_mall`→購物中心、`subway_station`→地鐵站、`guest_house`→民宿），並含 generic 值（`tourist_attraction`→景點、`lodging`→飯店、`store`→商店）防英文外漏。**(2) `poiCategoryLabel` 5 路分流**：純 CJK curated（拉麵／浮潛）原樣回傳 → 細類表命中回中文細類 → 8 大類 whitelist 值回對應 label → **未收錄的純 snake_case 英文 primaryType 直接顯示英文（Title Case，依使用者「沒對應到中文的就顯示英文、事後補救」讓缺漏 mapping 可見）** → 純雜訊（數字／emoji／全形）回乾淨粗類（不噴垃圾）。全站經 `poiCategoryLabel`／`poiMeta` 的顯示（TimelineRail／收藏／POI 卡片）自動細化。**(3) ExplorePage 動態 chip（Variant C）**：5 固定 subtab（為你推薦／景點／美食／住宿／購物）改為「為你推薦」＋ 由當前搜尋結果的 distinct 細類動態生成 chip（帶父類三色 tone、數量 badge、依數量排序），前 4 個 inline、其餘收進原生 `<details>`「更多」選單；chip 生成與 filter 共用同一 `poiCategoryLabel(...) ?? '其他'` 運算式 → 保證一致，卡片 `poi-category` 改顯細類 label。chip 由「當前結果」推導（單次搜尋通常 5-15 種）→ 天然避開 100+ 全集爆炸。
+
+### Fixed
+- **新搜尋重置細類 filter（防 stale label 靜默隱藏結果）** — 選了某細類後做新搜尋，若該細類在新結果消失、再於後續搜尋出現，殘留的 `category` 會靜默 snap 回並隱藏其他結果。改為勝出的搜尋提交結果時一併 `setCategory('all')`（在 handler 重置而非 effect，符合 RBP-23）。
+- **`bed_and_breakfast` 粗類映射修正** — 原被 `mapGooglePrimaryTypeToPoiType` 誤歸 attraction，改歸 hotel（b&b 本就是 lodging），連帶讓「民宿」細類 chip 的 tone 確定為 sage、不再隨結果順序閃動。
+
+### 測試
+- TDD 紅→綠。`poi-category`：generic／8 粗類值 → 中文、有辨識度 primaryType → 細類 label、未收錄英文 → Title Case 英文（事後補救）、`bed_and_breakfast`→hotel；`poi-search-helpers`：`poiMeta` 未收錄英文顯英文。`explore-page`：動態細類 chip 生成＋數量＋排序、無結果、>4 「更多」overflow 選單點選過濾、卡片顯細類 label、點 chip 過濾＋is-active／aria-selected、新搜尋重置 filter 回歸（3 段搜尋隱藏結果 gate）；`explore-page-category-label`／`explore-filter-empty-state` source-grep 斷言更新為新 pattern。`tsc --noEmit` 綠、本 diff 相關測試檔全綠。2 原始碼（`poiCategory.ts`／`ExplorePage.tsx`）＋ 5 test。
+
 ## [2.55.72] - 2026-07-13
 
 ### Changed
