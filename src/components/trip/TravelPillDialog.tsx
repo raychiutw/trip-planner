@@ -169,7 +169,11 @@ const SCOPED_STYLES = `
 
 export interface TravelPillDialogProps {
   tripId: string;
-  segmentId: number;
+  /** 既有 segment → PATCH /segments/:id。省略 → create 模式：用 fromEntryId/toEntryId POST /segments 建立。 */
+  segmentId?: number;
+  /** create 模式（segmentId 省略）時必填：POST /segments 的 from/to entry id。 */
+  fromEntryId?: number;
+  toEntryId?: number;
   currentMode: TravelMode;
   /** v2.55.45: 目前 submode（monorail/bus/metro/train/hsr/自由文字/null）。 */
   currentSubmode?: string | null;
@@ -205,6 +209,8 @@ function formatKm(m: number): string {
 export default function TravelPillDialog({
   tripId,
   segmentId,
+  fromEntryId,
+  toEntryId,
   currentMode,
   currentSubmode,
   currentMin,
@@ -234,7 +240,7 @@ export default function TravelPillDialog({
   });
 
   const overlayRef = useRef<HTMLDivElement | null>(null);
-  const titleId = `tp-travel-dialog-title-${segmentId}`;
+  const titleId = `tp-travel-dialog-title-${segmentId ?? `${fromEntryId}-${toEntryId}`}`;
 
   const selectedMethod: TravelMethod = useMemo(
     () => TRAVEL_METHODS.find((m) => m.key === selectedKey) ?? TRAVEL_METHODS[0]!,
@@ -251,26 +257,38 @@ export default function TravelPillDialog({
     initialVersion: currentVersion,
     debounceMs: 600,
     save: async (body, expectedVersion) => {
-      const payload: Partial<SegmentPatchBody> & { expectedVersion?: number } = { ...body };
-      if (typeof expectedVersion === 'number') payload.expectedVersion = expectedVersion;
+      // segmentId 省略 = create 模式：POST /segments 帶 from/to entry id（後端 upsert）。
+      // 既有 segment → PATCH /segments/:id 帶 expectedVersion（OCC）。
+      const isCreate = segmentId == null;
+      const payload: Record<string, unknown> = { ...body };
+      if (isCreate) {
+        payload.from_entry_id = fromEntryId;
+        payload.to_entry_id = toEntryId;
+      } else if (typeof expectedVersion === 'number') {
+        payload.expectedVersion = expectedVersion;
+      }
       const res = await apiFetchRaw(
-        `/trips/${encodeURIComponent(tripId)}/segments/${segmentId}`,
-        { method: 'PATCH', body: JSON.stringify(payload) },
+        isCreate
+          ? `/trips/${encodeURIComponent(tripId)}/segments`
+          : `/trips/${encodeURIComponent(tripId)}/segments/${segmentId}`,
+        { method: isCreate ? 'POST' : 'PATCH', body: JSON.stringify(payload) },
       );
       if (!res.ok) throw await ApiError.fromResponse(res);
-      const updated = await res.json() as { mode?: TravelMode; min?: number | null; version?: number };
+      const updated = await res.json() as { id?: number; mode?: TravelMode; min?: number | null; version?: number };
       onSaved?.({
         mode: (updated.mode ?? body.mode) as TravelMode,
         min: typeof updated.min === 'number' ? updated.min : null,
       });
-      window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId } }));
+      window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId: segmentId ?? updated.id } }));
       return updated as Record<string, unknown>;
     },
     onStale: async () => {
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments`);
       if (!res.ok) throw new Error('Failed to refresh segments');
-      const list = await res.json() as Array<{ id: number; version: number }>;
-      const found = list.find((s) => s.id === segmentId);
+      const list = await res.json() as Array<{ id: number; version: number; from_entry_id: number; to_entry_id: number }>;
+      const found = segmentId != null
+        ? list.find((s) => s.id === segmentId)
+        : list.find((s) => s.from_entry_id === fromEntryId && s.to_entry_id === toEntryId);
       if (!found) throw new Error('Segment not found after refresh');
       return found.version;
     },
@@ -408,7 +426,7 @@ export default function TravelPillDialog({
           >
             <Icon name="location-pin" />
             <span className="tp-travel-sameplace-row-txt">
-              <b>同一地點・免交通</b>
+              <b>不需計算路程</b>
               <span>此段不顯示交通時間</span>
             </span>
             {isSamePlaceSelected && (
@@ -418,7 +436,7 @@ export default function TravelPillDialog({
 
           {isSamePlaceSelected ? (
             <p className="tp-travel-sameplace-hint" data-testid="travel-sameplace-hint">
-              兩地視為同一處，不計交通時間。選上方任一方式即可恢復。
+              此段不計交通時間，選上方任一方式即可恢復。
             </p>
           ) : (
           <div className="tp-travel-detail">

@@ -56,9 +56,9 @@ describe('formatTravelLine', () => {
   it('transit 無 submode（legacy/未細分）→ 回退大眾運輸', () => {
     expect(formatTravelLine({ type: 'transit', submode: null, min: 30 })).toBe('大眾運輸 · 30 分');
   });
-  it('v2.55.46 sameplace → 收合「同一地點」（優先於 type/min/submode）', () => {
-    expect(formatTravelLine({ sameplace: true, type: 'car', min: 21, distanceM: 9400 })).toBe('同一地點');
-    expect(formatTravelLine({ sameplace: true })).toBe('同一地點');
+  it('v2.55.46 sameplace → 收合「不需計算路程」（優先於 type/min/submode）', () => {
+    expect(formatTravelLine({ sameplace: true, type: 'car', min: 21, distanceM: 9400 })).toBe('不需計算路程');
+    expect(formatTravelLine({ sameplace: true })).toBe('不需計算路程');
   });
 });
 
