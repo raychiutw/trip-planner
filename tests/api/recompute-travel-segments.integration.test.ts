@@ -360,6 +360,28 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
       expect(seg!.computed_at).not.toBeNull();
     });
 
+    it('G2b 既有 train（非 manual、source=google）→ 走 Google DRIVE 代理重算、submode=train 保留（v2.55.72）', async () => {
+      // metro/train/hsr 改為預設 DRIVE 自動（同 bus）後，其 source=google 段亦須被 recompute
+      // DRIVE 重算，而非落入「假設 source=manual 而跳過」（recompute-travel 舊 fallback）。
+      const { e1, e2 } = await seed3AtYui('trip-rec-train');
+      const now = Date.now();
+      await db.prepare(
+        `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, 'transit', 'train', 9, 900, 'google', NULL, ?)`,
+      ).bind('trip-rec-train', e1, e2, now).run();
+      const resp = await recompute('trip-rec-train');
+      expect(resp.status).toBe(200);
+      const body = await resp.json() as { pairsSkippedTransit: number };
+      expect(body.pairsSkippedTransit).toBe(0); // train 非 manual → 不跳過
+      const seg = await db.prepare(
+        'SELECT submode, source, "min", computed_at FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?',
+      ).bind(e1, e2).first<{ submode: string; source: string; min: number; computed_at: number | null }>();
+      expect(seg!.submode).toBe('train');   // 具體 submode 保留（非硬寫 bus）
+      expect(seg!.source).toBe('google');
+      expect(seg!.min).toBeGreaterThan(0);
+      expect(seg!.computed_at).not.toBeNull();
+    });
+
     it('G4 核心：同 recompute 中 manual transit 跳過、非 manual monorail 重算（source IS NOT manual 泛化）', async () => {
       const { e1, e2, e3 } = await seed3AtYui('trip-rec-mixed');
       const now = Date.now();
