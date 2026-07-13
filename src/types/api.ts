@@ -143,9 +143,9 @@ export interface AuthData {
   /** V2 user_id (TEXT uuid). null only for service-token / pre-V2 sessions. */
   userId: string | null;
   isServiceToken: boolean;
-  /** OAuth scopes from V2 Bearer token (client_credentials grant). Only present for service token. */
+  /** OAuth scopes from V2 Bearer token; absent for session-cookie auth. */
   scopes?: string[];
-  /** OAuth client_id from V2 Bearer token. Only present for service token. */
+  /** OAuth client_id from V2 Bearer token; absent for session-cookie auth. */
   clientId?: string;
   /**
    * Trip-scoped token restriction (v2.55.56, tp-request downscope). When set, the
@@ -287,4 +287,3 @@ export interface PoiFavoriteUsage {
 // 既有 trip_ideas 資料 active rows 已 migrate 進 poi_favorites (trip owner's pool)。
 // 「目前在哪些 trip」資訊改透過 PoiFavorite.usages 反查
 // (v2.29.0: trip_days.hotel_poi_id ∪ trip_entry_pois.poi_id)。
-

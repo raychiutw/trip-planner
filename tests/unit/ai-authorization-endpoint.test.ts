@@ -4,15 +4,15 @@
  *   - GET：Consent 存在 → {authorized:true}；不存在（undefined）→ {authorized:false}
  *   - POST：upsert Consent `${uid}:tripline-tp-request`（scopes openid/profile、1yr TTL）→ {authorized:true}
  *   - 只授權固定 AI client（endpoint 不吃外部 client_id）→ 無提權面
- *   - session 必須：requireSessionUser throw → 不 upsert
+ *   - middleware user identity 必須：context.data.auth 缺失 → 不 upsert
  */
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { AuthData } from '../../functions/api/_types';
 
-const { mockFind, mockUpsert, mockRequireSession } = vi.hoisted(() => ({
+const { mockFind, mockUpsert } = vi.hoisted(() => ({
   mockFind: vi.fn(),
   mockUpsert: vi.fn(async () => undefined),
-  mockRequireSession: vi.fn(async () => ({ uid: 'user-1' })),
 }));
 
 vi.mock('../../src/server/oauth-d1-adapter', () => ({
@@ -29,10 +29,6 @@ vi.mock('../../src/server/oauth-d1-adapter', () => ({
     }
   },
 }));
-vi.mock('../../functions/api/_session', () => ({
-  requireSessionUser: (req: unknown, env: unknown) => mockRequireSession(req, env),
-}));
-
 import { onRequestGet, onRequestPost } from '../../functions/api/account/ai-authorization';
 
 // 最小 DB mock：只需吞掉 recordAuthEvent 的 INSERT ... .run()（best-effort，不影響回應）。
@@ -47,10 +43,13 @@ function makeDb() {
     },
   };
 }
-function ctx() {
+const userAuth: AuthData = { email: 'user@example.com', userId: 'user-1', isServiceToken: false };
+
+function ctx(auth: AuthData | null = userAuth, request?: Request) {
   return {
-    request: new Request('https://x.pages.dev/api/account/ai-authorization', { method: 'POST' }),
+    request: request ?? new Request('https://x.pages.dev/api/account/ai-authorization', { method: 'POST' }),
     env: { DB: makeDb() },
+    data: auth ? { auth } : {},
   } as unknown as Parameters<typeof onRequestPost>[0];
 }
 
@@ -59,7 +58,6 @@ const YEAR_SEC = 365 * 24 * 60 * 60;
 beforeEach(() => {
   mockFind.mockReset();
   mockUpsert.mockReset().mockResolvedValue(undefined);
-  mockRequireSession.mockReset().mockResolvedValue({ uid: 'user-1' });
 });
 
 describe('GET /api/account/ai-authorization', () => {
@@ -76,9 +74,8 @@ describe('GET /api/account/ai-authorization', () => {
     expect(await res.json()).toEqual({ authorized: false });
   });
 
-  it('未登入（requireSessionUser throw）→ 不查 Consent', async () => {
-    mockRequireSession.mockRejectedValue(Object.assign(new Error('no session'), { code: 'AUTH_REQUIRED' }));
-    await expect(onRequestGet(ctx())).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+  it('未登入（context.data.auth 缺失）→ 不查 Consent', async () => {
+    await expect(onRequestGet(ctx(null))).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
     expect(mockFind).not.toHaveBeenCalled();
   });
 });
@@ -95,22 +92,21 @@ describe('POST /api/account/ai-authorization', () => {
     expect(ttl).toBe(YEAR_SEC);
   });
 
-  it('未登入（requireSessionUser throw）→ 不 upsert', async () => {
-    mockRequireSession.mockRejectedValue(Object.assign(new Error('no session'), { code: 'AUTH_REQUIRED' }));
-    await expect(onRequestPost(ctx())).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+  it('未登入（context.data.auth 缺失）→ 不 upsert', async () => {
+    await expect(onRequestPost(ctx(null))).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
     expect(mockUpsert).not.toHaveBeenCalled();
   });
 
   // 頭號安全不變式：body 完全不被讀 → 惡意 client_id/user_id 無法提權/冒名。
-  it('惡意 body（client_id/user_id）被忽略 → 仍用 session uid + 固定 client', async () => {
-    const hostileCtx = {
-      request: new Request('https://x.pages.dev/api/account/ai-authorization', {
+  it('惡意 body（client_id/user_id）被忽略 → 仍用 middleware userId + 固定 client', async () => {
+    const hostileCtx = ctx(
+      userAuth,
+      new Request('https://x.pages.dev/api/account/ai-authorization', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ client_id: 'attacker-client', user_id: 'victim-user' }),
       }),
-      env: { DB: makeDb() },
-    } as unknown as Parameters<typeof onRequestPost>[0];
+    );
     const res = await onRequestPost(hostileCtx);
     expect(await res.json()).toEqual({ authorized: true });
     const [key, payload] = mockUpsert.mock.calls[0] as [string, Record<string, unknown>];
