@@ -462,6 +462,29 @@ describe('EditEntryPage — segment 不存在時手動建立 (v2.55.x)', () => {
     vi.useRealTimers();
   });
 
+  it('no-segment + 選大眾運輸（不填分鐘）→ POST /segments 帶 mode=transit、不帶 min（自動 DRIVE 估，v2.55.72）', async () => {
+    // v2.55.72：大眾運輸不再強制手填分鐘 — 選了即存、預設用駕車估。對齊 TravelPillDialog。
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.queryByTestId('edit-entry-mode-transit')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByTestId('edit-entry-mode-transit'));
+    await vi.advanceTimersByTimeAsync(900);
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const postCall = calls.find((c: unknown[]) => {
+        const opts = c[1] as { method?: string };
+        return opts?.method === 'POST' && String(c[0]).endsWith('/segments');
+      });
+      expect(postCall).toBeTruthy();
+      const body = JSON.parse((postCall![1] as { body: string }).body);
+      expect(body.mode).toBe('transit');
+      expect('min' in body).toBe(false); // 不填分鐘＝走自動 DRIVE 估
+    });
+    vi.useRealTimers();
+  });
+
   it('選 driving 建立後不重複 POST（originalRef reset 防 re-save loop）', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     renderPage();

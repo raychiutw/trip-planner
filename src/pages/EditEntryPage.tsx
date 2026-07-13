@@ -1208,9 +1208,10 @@ export default function EditEntryPage() {
     if (startTime && !TIME_RE.test(startTime)) return '抵達時間格式錯誤（HH:MM）';
     if (endTime && !TIME_RE.test(endTime)) return '離開時間格式錯誤（HH:MM）';
     if (startTime && endTime && startTime >= endTime) return '抵達時間需早於離開時間';
-    if (mode === 'transit') {
+    // v2.55.72：大眾運輸分鐘改選填（留空＝預設用駕車估、選了即存）；有填才驗範圍。
+    if (mode === 'transit' && transitMin.trim() !== '') {
       const n = parseInt(transitMin, 10);
-      if (!Number.isFinite(n) || n < 1 || n > 1440) return '大眾運輸需填 1–1440 分鐘';
+      if (!Number.isFinite(n) || n < 1 || n > 1440) return '分鐘需為 1–1440';
     }
     return null;
   }, [startTime, endTime, mode, transitMin]);
@@ -1279,7 +1280,8 @@ export default function EditEntryPage() {
       // 細分方式，避免後端 preserve-on-omit 保留舊 submode + 帶 min 鎖成 manual（選大眾運輸
       // 卻得鎖定單軌）。
       const body: Record<string, unknown> = noTravel ? { noTravel: true } : { mode, submode: null };
-      if (!noTravel && mode === 'transit') {
+      // v2.55.72：大眾運輸分鐘選填 — 有填才帶（手動覆寫鎖定）；留空＝不帶 min，後端預設 DRIVE 估。
+      if (!noTravel && mode === 'transit' && transitMin.trim() !== '') {
         body.min = parseInt(transitMin, 10);
       }
       const req = segment
@@ -1943,7 +1945,7 @@ export default function EditEntryPage() {
                   )}
                   {!noTravel && mode === 'transit' && (
                     <div className="tp-edit-entry-transit">
-                      <label htmlFor="edit-entry-transit-min">分鐘</label>
+                      <label htmlFor="edit-entry-transit-min">分鐘（選填）</label>
                       <input
                         id="edit-entry-transit-min"
                         className="tp-input-short"
@@ -1955,7 +1957,7 @@ export default function EditEntryPage() {
                         data-testid="edit-entry-transit-min"
                       />
                       <span className="tp-edit-entry-transit-unit">
-                        min · Japan Google Routes 沒 transit 資料，請手動填
+                        min · 留空＝用駕車估車程，填了則鎖定手動值
                       </span>
                     </div>
                   )}

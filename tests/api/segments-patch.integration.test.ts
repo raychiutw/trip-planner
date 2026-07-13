@@ -81,14 +81,23 @@ describe('PATCH /api/trips/:id/segments/:sid', () => {
     expect(updated!.computed_at).toBeNull();
   });
 
-  it('mode=transit 無 min → 400', async () => {
+  // v2.55.72：transit 無 min 不再 400 — 非單軌一律預設 DRIVE 估。此 fixture 無座標＋無 API key
+  // → computeGoogle ok:false → 軟失敗：改 mode/submode、source=NULL + computed_at=NULL 標 stale，
+  // 保留舊 min/distance（不覆寫）。仍回 200（不再強制手填）。
+  it('mode=transit 無 min → 200 + stale（DRIVE 估軟失敗：source/computed_at=NULL，不再 400）', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'transit' }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-segp', sid: String(segId) },
     });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+    const resp = await callHandler(onRequestPatch, ctx);
+    expect(resp.status).toBe(200);
+    const updated = await db.prepare('SELECT mode, source, computed_at FROM trip_segments WHERE id = ?').bind(segId)
+      .first<{ mode: string; source: string | null; computed_at: number | null }>();
+    expect(updated!.mode).toBe('transit');
+    expect(updated!.source).toBeNull();     // 軟失敗清 source（不留舊 google 鎖定）
+    expect(updated!.computed_at).toBeNull(); // 標 stale
   });
 
   it('mode=transit + min=30（無 submode=其他、此 fixture 無座標）→ 200 + source=manual + distance_m=NULL', async () => {

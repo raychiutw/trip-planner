@@ -143,6 +143,21 @@ describe('POST /api/trips/:id/segments', () => {
     expect(row!.min).toBeGreaterThan(0);
   });
 
+  // v2.55.72：地鐵/火車/高鐵改為「預設用駕車 Google DRIVE 估車程距離、按了就存」（同 bus，
+  // 單軌保留沖繩 Yui 特殊處理）。不再強制手填 min → 消除「選火車按關閉沒作用」的無聲丟失。
+  it.each(['metro', 'train', 'hsr'])(
+    'G8b transit + submode=%s（自動、不帶 min）→ 201 + source=google（DRIVE 代理）+ submode 保留 + min>0',
+    async (submode) => {
+      const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', submode }));
+      expect(resp.status).toBe(201);
+      const row = await db.prepare('SELECT mode, submode, source, min, distance_m FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
+        .bind(e1, e2).first<{ mode: string; submode: string; source: string; min: number; distance_m: number }>();
+      expect(row).toMatchObject({ mode: 'transit', submode, source: 'google' });
+      expect(row!.min).toBeGreaterThan(0);
+      expect(row!.distance_m).toBeGreaterThan(0);
+    },
+  );
+
   it('G10 transit + submode=metro + min=30（手填）→ 201 + source=manual + submode=metro + 距離直線 Haversine', async () => {
     const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', submode: 'metro', min: 30 }));
     expect(resp.status).toBe(201);
@@ -152,8 +167,25 @@ describe('POST /api/trips/:id/segments', () => {
     expect(row!.distance_m).toBeGreaterThan(0);
   });
 
-  it('transit 無 min → 400', async () => {
-    expect((await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit' }))).status).toBe(400);
+  // v2.55.72：transit 無 min 不再 400 — 非單軌一律預設 DRIVE 估（bare transit submode=NULL 同）。
+  it('transit 無 submode 無 min → 201 + source=google（DRIVE 預設估）', async () => {
+    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit' }));
+    expect(resp.status).toBe(201);
+    const row = await db.prepare('SELECT mode, submode, source, min FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
+      .bind(e1, e2).first<{ mode: string; submode: string | null; source: string; min: number }>();
+    expect(row).toMatchObject({ mode: 'transit', submode: null, source: 'google' });
+    expect(row!.min).toBeGreaterThan(0);
+  });
+
+  it('transit 無 submode 無 min 但缺座標 → 201 + stale（source=NULL）', async () => {
+    // DRIVE 估缺座標 → computeGoogle ok:false → 存 NULL（同 driving 缺座標），仍建段不 400。
+    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e3, mode: 'transit' }));
+    expect(resp.status).toBe(201);
+    const row = await db.prepare('SELECT mode, source, min FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
+      .bind(e1, e3).first<{ mode: string; source: string | null; min: number | null }>();
+    expect(row!.mode).toBe('transit');
+    expect(row!.source).toBeNull();
+    expect(row!.min).toBeNull();
   });
 
   it('transit min 超範圍（>1440）→ 400', async () => {

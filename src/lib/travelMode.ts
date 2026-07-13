@@ -29,9 +29,10 @@ export const TRAVEL_MODE_ICON: Record<TravelMode, string> = {
 /**
  * v2.55.45 交通方式細分（submode）。mode 維持 3 canonical（不碰 CHECK），transit 段
  * 用 submode 分具體方式。driving/walking submode 恆 null。
- *   - 自動算：monorail（沖繩單軌，本地 Yui 估）、bus（同駕車走 Google DRIVE）。
- *   - 純手填：metro / train / hsr。
- *   - 其他：自由輸入方式名（submode = 使用者輸入的字，直接當 label）。
+ *   - 自動算：monorail（沖繩單軌，本地 Yui 估）；bus / metro / train / hsr（v2.55.72 起
+ *     一律預設用駕車 Google DRIVE 估車程距離）。無大眾運輸 API → 以開車為預設估值，
+ *     使用者可手填分鐘覆寫鎖定。選了即存（不強制手填），修復「選火車按關閉沒作用」。
+ *   - 其他：自由輸入方式名（submode = 使用者輸入的字，直接當 label；仍需先填方式名）。
  */
 export interface TravelMethod {
   /** 穩定 key（chip testid 用）。 */
@@ -41,7 +42,7 @@ export interface TravelMethod {
   submode: string | null;
   label: string;
   iconName: string;
-  /** true = 自動算（driving/walking/monorail/bus）；false = 純手填分鐘。 */
+  /** true = 選了即自動算（driving/walking/monorail/bus/metro/train/hsr）；false = 純手填（僅「其他」）。 */
   auto: boolean;
   /** 「其他」：自由輸入方式名。 */
   freeText?: boolean;
@@ -52,9 +53,9 @@ export const TRAVEL_METHODS: readonly TravelMethod[] = [
   { key: 'walking', mode: 'walking', submode: null, label: '步行', iconName: 'walking', auto: true },
   { key: 'monorail', mode: 'transit', submode: 'monorail', label: '單軌', iconName: 'train', auto: true },
   { key: 'bus', mode: 'transit', submode: 'bus', label: '公車', iconName: 'bus', auto: true },
-  { key: 'metro', mode: 'transit', submode: 'metro', label: '地鐵', iconName: 'train', auto: false },
-  { key: 'train', mode: 'transit', submode: 'train', label: '火車', iconName: 'train', auto: false },
-  { key: 'hsr', mode: 'transit', submode: 'hsr', label: '高鐵', iconName: 'train', auto: false },
+  { key: 'metro', mode: 'transit', submode: 'metro', label: '地鐵', iconName: 'train', auto: true },
+  { key: 'train', mode: 'transit', submode: 'train', label: '火車', iconName: 'train', auto: true },
+  { key: 'hsr', mode: 'transit', submode: 'hsr', label: '高鐵', iconName: 'train', auto: true },
   { key: 'other', mode: 'transit', submode: null, label: '其他', iconName: 'route', auto: false, freeText: true },
 ];
 
