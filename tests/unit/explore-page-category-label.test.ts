@@ -24,26 +24,25 @@ const SRC = readFileSync(
   'utf8',
 );
 
-describe('v2.31.20 ExplorePage poi-category 中文化', () => {
-  it('import 含 POI_TYPE_LABELS', () => {
-    expect(SRC).toMatch(/import \{[^}]*POI_TYPE_LABELS[^}]*\} from '\.\.\/lib\/poiCategory'/);
+describe('v2.31.20 → v2.55.73 ExplorePage poi-category 中文化 / 細類化', () => {
+  it('import 含 poiCategoryLabel', () => {
+    expect(SRC).toMatch(/import \{[^}]*poiCategoryLabel[^}]*\} from '\.\.\/lib\/poiCategory'/);
   });
 
-  it('poi-category 走 mapNominatimCategory → POI_TYPE_LABELS', () => {
+  it('v2.55.73 poi-category 走 poiCategoryLabel（細類；未收錄英文 fallback 於 helper 內）', () => {
     const cardMatch = SRC.match(
-      /className="poi-category"[\s\S]{0,200}POI_TYPE_LABELS\[mapNominatimCategory\(poi\.category\)\]/,
+      /className="poi-category">\{poiCategoryLabel\(poi\.category\)\s*\?\?\s*'POI'\}/,
     );
     expect(cardMatch).not.toBeNull();
   });
 
-  it('不再 raw render poi.category（避免 RAMEN_RESTAURANT 出現）', () => {
-    // poi-category div 不應該再含 `{poi.category || 'POI'}` 這個原本的寫法
+  it('不再 raw render poi.category（避免 RAMEN_RESTAURANT raw enum 出現）', () => {
     expect(SRC).not.toMatch(/className="poi-category">\{poi\.category \|\| 'POI'\}/);
+    // 也不再壓成粗類 POI_TYPE_LABELS（v2.55.73 改細類 poiCategoryLabel）
+    expect(SRC).not.toMatch(/className="poi-category">\{POI_TYPE_LABELS\[mapNominatimCategory/);
   });
 
   it('fallback 文案保留「POI」（rating 無值 / 全空時的 placeholder）', () => {
-    // helper 永遠回 PoiType（不會 undefined），POI_TYPE_LABELS 也有對應 label，
-    // 嚴格說 fallback 不會觸發；保留 ?? 'POI' 作為防呆。
     expect(SRC).toMatch(/\?\?\s*'POI'/);
   });
 });

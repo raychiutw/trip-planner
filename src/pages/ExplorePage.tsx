@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/apiClient';
-import { mapNominatimCategory, POI_TYPE_LABELS } from '../lib/poiCategory';
+import { mapNominatimCategory, poiCategoryLabel } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -300,6 +300,49 @@ const SCOPED_STYLES = `
   color: var(--color-accent-deep);
   border-color: var(--color-accent-bg);
 }
+/* v2.55.73 動態細類 chip — 數量 badge + 三色 tone（吃=粉／看買=柔褐／住移動=sage）。 */
+.explore-subtab-count {
+  margin-left: 5px; font-size: var(--font-size-caption2); font-weight: 700;
+  opacity: 0.7; font-variant-numeric: tabular-nums;
+}
+.explore-subtab[data-tone] { --tone-subtle: var(--color-accent-subtle); --tone-deep: var(--color-accent-deep); --tone-bg: var(--color-accent-bg); }
+.explore-subtab[data-tone="sage"] { --tone-subtle: var(--color-accent-2-subtle); --tone-deep: var(--color-accent-2-deep); --tone-bg: var(--color-accent-2-bg); }
+.explore-subtab[data-tone="pink"] { --tone-subtle: var(--color-accent-3-subtle); --tone-deep: var(--color-accent-3-deep); --tone-bg: var(--color-accent-3-bg); }
+/* resting：tone-deep 文字（三色 legend），bg 維持中性；active：tone 淡底 pill（對齊 DESIGN.md 淡底 active）。 */
+.explore-subtab[data-tone="accent"] { color: var(--color-accent-deep); }
+.explore-subtab[data-tone="sage"] { color: var(--color-accent-2-deep); }
+.explore-subtab[data-tone="pink"] { color: var(--color-accent-3-deep); }
+.explore-subtab.is-active[data-tone] {
+  background: var(--tone-subtle); color: var(--tone-deep); border-color: var(--tone-bg);
+}
+/* 「更多」overflow — native <details> disclosure（原生 toggle + Escape + a11y）。 */
+.explore-cat-more { position: relative; display: inline-flex; }
+.explore-cat-more-summary { list-style: none; user-select: none; }
+.explore-cat-more-summary::-webkit-details-marker { display: none; }
+.explore-cat-more[open] .explore-cat-more-summary {
+  background: var(--color-accent-subtle); color: var(--color-accent-deep); border-color: var(--color-accent-bg);
+}
+.explore-cat-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+  min-width: 200px; max-width: min(300px, 80vw);
+  background: var(--color-background); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+  padding: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+}
+.explore-cat-menu-item {
+  display: flex; align-items: center; gap: 8px; padding: 9px 10px;
+  border: none; background: transparent; border-radius: var(--radius-sm);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 500;
+  color: var(--color-foreground); cursor: pointer; text-align: left;
+  min-height: var(--spacing-tap-min);
+}
+.explore-cat-menu-item:hover { background: var(--color-hover); }
+.explore-cat-menu-item.is-active { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+.explore-cat-menu-item .explore-subtab-count { margin-left: auto; }
+.explore-cat-menu-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: var(--color-line-strong); }
+.explore-cat-menu-item[data-tone="accent"] .explore-cat-menu-dot { background: var(--color-accent); }
+.explore-cat-menu-item[data-tone="sage"] .explore-cat-menu-dot { background: var(--color-accent-2); }
+.explore-cat-menu-item[data-tone="pink"] .explore-cat-menu-dot { background: var(--color-accent-3); }
 .explore-poi-card .poi-name {
   font-size: var(--font-size-headline); font-weight: 700;
   letter-spacing: -0.005em; color: var(--color-foreground);
@@ -426,6 +469,28 @@ export default function ExplorePage() {
   // Region selector + category subtab filter
   const [region, setRegion] = useState<string>('全部地區');
   const [category, setCategory] = useState<string>('all');
+  const moreRef = useRef<HTMLDetailsElement>(null);
+
+  // v2.55.73: 動態細類 chip（Variant C）— 由當前結果的 Google primaryType 生成、依數量
+  // 排序、帶父類三色 tone。前 INLINE_CHIP_LIMIT 個 inline，其餘進「更多」選單。
+  const INLINE_CHIP_LIMIT = 4;
+  const fineCategories = useMemo(() => {
+    const byLabel = new Map<string, { label: string; tone: string; count: number }>();
+    for (const poi of results) {
+      const label = poiCategoryLabel(poi.category ?? '') ?? '其他';
+      const hit = byLabel.get(label);
+      if (hit) hit.count += 1;
+      else byLabel.set(label, { label, tone: poiTypeToTone(mapNominatimCategory(poi.category ?? '')), count: 1 });
+    }
+    return Array.from(byLabel.values()).sort((a, b) => b.count - a.count);
+  }, [results]);
+  const inlineChips = fineCategories.slice(0, INLINE_CHIP_LIMIT);
+  const overflowChips = fineCategories.slice(INLINE_CHIP_LIMIT);
+  // 新搜尋後選過的細類可能已不存在 → 退回「為你推薦」，避免 filter 空畫面（衍生值，不用 effect）。
+  const activeCategory =
+    category === 'all' || fineCategories.some((c) => c.label === category) ? category : 'all';
+  // 選中的細類若落在「更多」選單內 → summary 顯該 label 並 active（否則 row 上看不出已選）。
+  const activeInOverflow = overflowChips.some((c) => c.label === activeCategory);
 
   /* Region picker popover state (取代 window.prompt) */
   const [regionPickerOpen, setRegionPickerOpen] = useState(false);
@@ -505,7 +570,12 @@ export default function ExplorePage() {
         `/poi-search?q=${encodeURIComponent(q)}&limit=20${regionParam}`,
         { signal: ctrl.signal },
       );
-      if (searchAbortRef.current === ctrl) setResults(body.results ?? []);
+      if (searchAbortRef.current === ctrl) {
+        setResults(body.results ?? []);
+        // v2.55.73: 新搜尋結果 → 細類 chip 重算，重置 filter 回「為你推薦」，
+        // 避免上次選的細類 label 在新結果中復活、靜默隱藏結果（在 handler 重置而非 effect）。
+        setCategory('all');
+      }
     } catch (_err) {
       // signal.aborted 直接判 — apiFetch 把 AbortError wrap 成 NET_TIMEOUT，
       // 用 signal state 比 err.name 更精準（avoids ApiError → DOMException name 損失）。
@@ -673,25 +743,66 @@ export default function ExplorePage() {
             </form>
 
             <div className="explore-subtabs" role="tablist" aria-label="景點類別">
-              {([
-                { key: 'all', label: '為你推薦' },
-                { key: 'attraction', label: '景點' },
-                { key: 'food', label: '美食' },
-                { key: 'hotel', label: '住宿' },
-                { key: 'shopping', label: '購物' },
-              ] as const).map((s) => (
+              {/* v2.55.73: 動態細類 chip — 「為你推薦」永遠第一，其餘由結果 primaryType
+                  生成、依數量排序、帶三色 tone。前 4 inline，長尾收進「更多」details 選單。 */}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeCategory === 'all'}
+                className={`explore-subtab ${activeCategory === 'all' ? 'is-active' : ''}`}
+                onClick={() => setCategory('all')}
+                data-testid="explore-cat-all"
+              >
+                為你推薦
+                {results.length > 0 && <span className="explore-subtab-count">{results.length}</span>}
+              </button>
+              {inlineChips.map((chip) => (
                 <button
-                  key={s.key}
+                  key={chip.label}
                   type="button"
                   role="tab"
-                  aria-selected={category === s.key}
-                  className={`explore-subtab ${category === s.key ? 'is-active' : ''}`}
-                  onClick={() => setCategory(s.key)}
-                  data-testid={`explore-subtab-${s.key}`}
+                  aria-selected={activeCategory === chip.label}
+                  className={`explore-subtab ${activeCategory === chip.label ? 'is-active' : ''}`}
+                  data-tone={chip.tone}
+                  onClick={() => setCategory(chip.label)}
+                  data-testid={`explore-cat-${chip.label}`}
                 >
-                  {s.label}
+                  {chip.label}
+                  <span className="explore-subtab-count">{chip.count}</span>
                 </button>
               ))}
+              {overflowChips.length > 0 && (
+                <details className="explore-cat-more" ref={moreRef}>
+                  <summary
+                    className={`explore-subtab explore-cat-more-summary ${activeInOverflow ? 'is-active' : ''}`}
+                    data-testid="explore-cat-more"
+                  >
+                    {activeInOverflow ? activeCategory : '更多'}
+                    <span className="explore-subtab-count">{overflowChips.length}</span>
+                  </summary>
+                  <div className="explore-cat-menu" role="menu">
+                    {overflowChips.map((chip) => (
+                      <button
+                        key={chip.label}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={activeCategory === chip.label}
+                        className={`explore-cat-menu-item ${activeCategory === chip.label ? 'is-active' : ''}`}
+                        data-tone={chip.tone}
+                        onClick={() => {
+                          setCategory(chip.label);
+                          if (moreRef.current) moreRef.current.open = false;
+                        }}
+                        data-testid={`explore-cat-menu-${chip.label}`}
+                      >
+                        <span className="explore-cat-menu-dot" />
+                        {chip.label}
+                        <span className="explore-subtab-count">{chip.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
 
             {results.length > 0 && (() => {
@@ -699,23 +810,12 @@ export default function ExplorePage() {
               // 起改走 server-side locationBias circle（functions/api/poi-search.ts）—
               // address-includes 中文 city 名 client filter 對英文 address「Tokyo, Japan」
               // 永遠 mismatch，drop。
-              const filtered = results.filter((p) => {
-                if (category === 'all') return true;
-                const cat = (p.category ?? '').toLowerCase();
-                if (category === 'food' && /restaurant|cafe|food|bar|bakery|餐|食/.test(cat)) return true;
-                if (category === 'hotel' && /hotel|hostel|guest|inn|住宿|飯店/.test(cat)) return true;
-                if (category === 'shopping' && /shop|mall|market|購物/.test(cat)) return true;
-                if (category === 'attraction' && /attract|museum|park|temple|景點|公園/.test(cat)) return true;
-                return false;
-              });
-              // v2.31.22: category filter 沒符合結果時的中文 label，給 empty state 用。
-              const CATEGORY_LABELS: Record<string, string> = {
-                all: '為你推薦',
-                attraction: '景點',
-                food: '美食',
-                hotel: '住宿',
-                shopping: '購物',
-              };
+              // v2.55.73: exact 細類 label 過濾（chip label 由 poiCategoryLabel 生成，
+              // 與此處同一函式 → 保證一致）。activeCategory 已防 stale label。
+              const filtered =
+                activeCategory === 'all'
+                  ? results
+                  : results.filter((p) => (poiCategoryLabel(p.category ?? '') ?? '其他') === activeCategory);
               // v2.31.55：query 空時 user 在「為你推薦」auto-seed landing，
               // header「搜尋結果」語意不對。改 conditional：query 有值 = 真正搜尋
               // → 「搜尋結果」；query 空 = landing → 「推薦景點」。對齊 add-stop /
@@ -730,7 +830,7 @@ export default function ExplorePage() {
                   {filtered.length === 0 ? (
                     // v2.31.22: filter 0 結果 empty state — 以前是空白讓 user 迷路。
                     <div className="explore-filter-empty" data-testid="explore-filter-empty">
-                      <p>沒有符合「{CATEGORY_LABELS[category] ?? category}」的結果。試試其他分類或回到「為你推薦」。</p>
+                      <p>沒有符合「{activeCategory}」的結果。試試其他分類或回到「為你推薦」。</p>
                       <button
                         type="button"
                         className="explore-filter-empty-reset"
@@ -792,7 +892,8 @@ export default function ExplorePage() {
                             {/* v2.31.20: poi.category 是 Google Places primary type
                               * (例 'ramen_restaurant')。直接 render 會顯 RAMEN_RESTAURANT
                               * raw enum；走 mapNominatimCategory → 中文 label。 */}
-                            <div className="poi-category">{POI_TYPE_LABELS[mapNominatimCategory(poi.category)] ?? 'POI'}</div>
+                            {/* v2.55.73: 顯示細類 label（拉麵/神社…）；未收錄英文則顯英文（事後補救）。 */}
+                            <div className="poi-category">{poiCategoryLabel(poi.category) ?? 'POI'}</div>
                             <div className="poi-name">{poi.name}</div>
                             <div className="poi-address">{poi.address ?? ''}</div>
                             {/* v2.31.12: backend `PoiSearchResult.rating` 已含 Google rating。

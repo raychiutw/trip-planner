@@ -26,14 +26,9 @@ describe('v2.31.22 ExplorePage filter empty state', () => {
     expect(SRC).toMatch(/data-testid="explore-filter-empty"/);
   });
 
-  it('文案含「沒有符合」+ CATEGORY_LABELS 中文 mapping', () => {
-    expect(SRC).toMatch(/沒有符合「\{CATEGORY_LABELS\[category\]/);
-    // 五個分類 label 都應在 mapping
-    expect(SRC).toMatch(/all:\s*'為你推薦'/);
-    expect(SRC).toMatch(/attraction:\s*'景點'/);
-    expect(SRC).toMatch(/food:\s*'美食'/);
-    expect(SRC).toMatch(/hotel:\s*'住宿'/);
-    expect(SRC).toMatch(/shopping:\s*'購物'/);
+  it('v2.55.73 文案含「沒有符合」+ 顯示當前細類 label（activeCategory）', () => {
+    // v2.55.73：靜態 5 類 CATEGORY_LABELS 改為動態細類 → empty state 直接顯 activeCategory label。
+    expect(SRC).toMatch(/沒有符合「\{activeCategory\}」/);
   });
 
   it('Reset CTA「回到為你推薦」+ onClick setCategory(\'all\')', () => {
