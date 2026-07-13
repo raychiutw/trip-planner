@@ -94,6 +94,46 @@ describe('v2.33.49 round 8a — _lib/cron-shared.ts quote-strip', () => {
   });
 });
 
+describe('token 端點 null-safe parse（2026-07-13 prod null-body 事故）', () => {
+  // 2026-07-12 prod /api/oauth/token 短暫回「非-2xx + 字面 `null` body」。舊
+  // `const json = await res.json()` 讓 json=null，錯誤處理在 `json.error` 上爆
+  // "null is not an object (evaluating 'json.error')"，蓋掉真正 HTTP 狀態碼 →
+  // api-server tokenHelper.getToken() 失敗、daily-check + tp-request 一起停 spawn。
+  // 修法 `(await res.json().catch(() => null)) ?? {}` 同時擋「非-JSON body」與
+  // 「字面 null body」兩種，錯誤訊息保留 HTTP status 可診斷。
+  // 鎖「完整 idiom」而非只鎖 `.catch(() => null)`：若有人拿掉 `?? {}` 只留 catch，
+  // 字面 null body 的 null deref 就回來了，presence-only 斷言會誤放（adversarial review 抓到）。
+  it('get-tripline-token.js: 完整 null-safe idiom (含 ?? {})，拔掉裸 await res.json()', () => {
+    expect(TOKEN_HELPER_SRC).toContain('res.json().catch(() => null)) ?? {}');
+    expect(TOKEN_HELPER_SRC).not.toContain('const json = await res.json();');
+  });
+
+  it('cron-shared.ts: mintToken 完整 idiom (取代 catch(()=>({})))', () => {
+    expect(CRON_SHARED_SRC).toContain('res.json().catch(() => null)) ?? {}');
+    expect(CRON_SHARED_SRC).not.toContain('res.json().catch(() => ({}))');
+  });
+
+  it('tripline-api-server.ts mint-restricted: 完整 null-safe idiom (含 ?? {})', () => {
+    expect(API_SERVER_SRC).toContain('res.json().catch(() => null)) ?? {}');
+  });
+
+  it('tripline-api-server.ts peekPendingRequest: null-safe json()（同事故類別，防 data.items 爆 null）', () => {
+    // /api/requests 回 null/非-JSON body → data.items 爆 TypeError（fail-closed 但同 2026-07-12 事故類別）。
+    expect(API_SERVER_SRC).not.toContain('const data = (await res.json()) as');
+  });
+
+  it('token mint 三處都用 typeof-string 驗證 access_token（防 Bearer [object Object]）', () => {
+    expect(TOKEN_HELPER_SRC).toContain("typeof json.access_token !== 'string'");
+    expect(CRON_SHARED_SRC).toContain("typeof json.access_token !== 'string'");
+    expect(API_SERVER_SRC).toContain("typeof data.access_token !== 'string'");
+  });
+
+  it('cron-shared makeApiClient: 200 空/非-JSON body → fail loud（不回 null as T）', () => {
+    expect(CRON_SHARED_SRC).not.toContain('return (await res.json()) as T;');
+    expect(CRON_SHARED_SRC).toContain('res.json().catch(() => undefined)');
+  });
+});
+
 describe('v2.33.49 round 8a — smoke poi-favorites-rename set -e', () => {
   it('set -euo pipefail 全 enable', () => {
     expect(SMOKE_SH_SRC).toMatch(/set -euo pipefail/);

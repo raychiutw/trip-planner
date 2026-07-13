@@ -79,7 +79,10 @@ async function main(): Promise<void> {
         console.log(`  [${poi.id}] ${poi.name} → ${r.value.status}`);
       } else {
         const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
-        if (isFirstBatch && /401|Unauthorized/.test(msg)) {
+        // 精準比對 status-position 401（`→ 401` / `(401)`），避開 path 內的 "401" 子字串：
+        // makeApiClient fail-loud 訊息含 path，POI id 含 401（如 1401）遇空-body 200 會誤判成
+        // API key rejected。順帶修既有 non-ok 訊息同款 substring 脆弱性。
+        if (isFirstBatch && (/(?:→ |\()401\b/.test(msg) || /unauthorized/i.test(msg))) {
           const alert = '[tp-cron] GOOGLE_MAPS_API_KEY rejected — 檢查 ~/.tripline-cron/.env';
           console.error(alert);
           await alertTelegram(alert);
