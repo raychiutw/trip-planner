@@ -124,7 +124,8 @@ async function peekPendingRequest(): Promise<{ requestId: string; tripId: string
       if (!res.ok) continue;
       // /api/requests 走 json() → deepCamel，回傳是 camelCase（tripId，非 trip_id）。
       // 讀 trip_id 會永遠 undefined → 永不 mint（DOA）。id 無底線不受轉換影響。
-      const data = (await res.json()) as { items?: Array<{ id?: unknown; tripId?: unknown }> };
+      // null / 非-JSON body → ?? {}，否則 data.items 爆（同 mintRestricted null-safe 修法、同 2026-07-12 事故類別）。
+      const data = ((await res.json().catch(() => null)) ?? {}) as { items?: Array<{ id?: unknown; tripId?: unknown }> };
       const item = data.items?.[0];
       const rawId = item?.id;
       const tripId = item?.tripId;
@@ -151,7 +152,8 @@ async function mintRestricted(requestId: string): Promise<{ token: string; tripI
     const detail = await res.text().catch(() => '');
     throw Object.assign(new Error(`mint-restricted ${res.status}: ${detail.slice(0, 120)}`), { kind: 'MINT_FAILED' });
   }
-  const data = (await res.json()) as { access_token?: unknown; restrict_trip?: unknown };
+  // 字面 null / 非-JSON body → ?? {}，否則 data.access_token 爆 null（同 get-tripline-token.js）。
+  const data = ((await res.json().catch(() => null)) ?? {}) as { access_token?: unknown; restrict_trip?: unknown };
   if (typeof data.access_token !== 'string' || !data.access_token || typeof data.restrict_trip !== 'string' || !data.restrict_trip) {
     throw Object.assign(new Error('mint-restricted response missing access_token/restrict_trip'), { kind: 'MINT_FAILED' });
   }
@@ -398,7 +400,10 @@ async function tripHasPending(tripId: string): Promise<boolean> {
         { headers: { Authorization: `Bearer ${svc}` } },
       );
       if (!res.ok) return true;
-      const data = (await res.json()) as { items?: unknown[] };
+      // null / 非-JSON body = transient failure → 依契約 err toward keep-alive (return true)，
+      // 不靠裸 json() 的 throw→outer catch（同 2026-07-12 事故類別，但這裡要回 true 非 reap）。
+      const data = (await res.json().catch(() => null)) as { items?: unknown[] } | null;
+      if (data == null) return true;
       if ((data.items?.length ?? 0) > 0) return true;
     }
     return false;

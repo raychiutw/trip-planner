@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.74] - 2026-07-13
+
+### Fixed
+- **OAuth token／request 端點錯誤處理 null-safe 硬化（2026-07-12 prod 事故根治）＋ adversarial 連帶修 2 處** — 2026-07-12 18:10–23:50 UTC prod `/api/oauth/token` 短暫回「非-2xx ＋ 字面 `null` JSON body」，舊 `const json = await res.json()`（`json=null`）在錯誤處理的 `json.error` 上爆 `null is not an object (evaluating 'json.error')`，把真正的 HTTP 狀態碼整個蓋掉 → api-server 的 `tokenHelper.getToken()` 失敗、**daily-check ＋ tp-request 一起停 spawn**，且錯誤訊息完全誤導排查（報告檔名用台灣日期、cron log 時戳為 UTC）。修法：三處 token mint（`get-tripline-token.js` fetchFresh／`cron-shared.ts` mintToken／`tripline-api-server.ts` mintRestricted）一律 `(await res.json().catch(() => null)) ?? {}`（同時擋「非-JSON body」與「字面 null body」兩種）＋ `typeof json.access_token !== 'string'` 守衛（防 `{}` 之類非字串 token 送成 `Bearer [object Object]`），錯誤訊息保留 HTTP status 可診斷。`cron-shared.ts` makeApiClient 對「200 但 body 空／非-JSON（例：CF 200-HTML edge block）」改 fail-loud（舊裸 `res.json()` 對空 body 一樣 throw SyntaxError，這裡只是收斂成講清楚 body 問題的訊息；已驗所有 caller 端點目前都回 JSON body）。**adversarial（Claude subagent）連帶抓到並修**：(1) `tripline-api-server.ts` 另兩處未硬化的裸 `res.json()`——`peekPendingRequest`（null body→`data.items` 爆）與 `tripHasPending` reaper——各依 caller 契約收斂**不同**的 null-body 安全預設（peek→不 spawn／mint→throw／reaper→**err toward keep-alive、`return true` 保活著的 session 不被誤 reap**，非盲套 `?? {}` 否則會從 throw→catch→true 變成 return false 誤 reap）；(2) `google-poi-refresh-30d.ts` first-batch 的 `/401|Unauthorized/` 偵測吃 path 內「401」子字串——makeApiClient fail-loud 訊息含 path 後，POI id 含 401（如 1401）遇空-body 200 會誤判成「API key rejected」exit，改精準比對 status-position `/(?:→ |\()401\b/`（連帶修既有 non-ok 訊息同款 substring 脆弱性）。
+
+### 測試
+- 行為測試（`get-tripline-token-null-safe.test.ts`，補強 source-grep）：mock fetch 跑 503+null／502+null（斷言訊息不含「is not an object」＝舊 bug 證據）／非-JSON body／**非-2xx＋有 error body（驗診斷訊息保留 status＋OAuth error＝修復核心價值）**／`{access_token:{}}` 拒發／合法 token 正常回傳。`round8a-scripts-security.test.ts`：鎖三處完整 null-safe idiom（含 `?? {}`）＋ typeof-string 守衛＋makeApiClient fail-loud＋`peekPendingRequest`／reaper 不再用裸 `const data = (await res.json()) as`。refresh-30d 401 regex 以 node 驗 6 情境（真 401 endpoint／mint／Unauthorized 命中；path 含 401 的空-200／500 不誤判）。`npm test` 全綠（425 檔／3719）。純後端 infra 腳本錯誤處理，無 UI／無 schema 變更。
+
 ## [2.55.73] - 2026-07-13
 
 ### Added
