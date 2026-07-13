@@ -254,11 +254,11 @@ describe('TravelPill — interactive auto-save (v2.55.45 多方式)', () => {
   });
 
   // v2.55.46 同一地點/免交通
-  it('N-render：segment.noTravel=1 → 收合成「同一地點」marker（非 pill）', () => {
+  it('N-render：segment.noTravel=1 → 收合成「不需計算路程」marker（非 pill）', () => {
     render(<TravelPill segment={{ ...baseSegment, noTravel: 1 }} tripId="trip-1" />);
     const sp = screen.getByTestId('travel-sameplace');
     expect(sp.tagName).toBe('BUTTON'); // 互動：可 tap 開 dialog 改回
-    expect(sp.textContent).toContain('同一地點');
+    expect(sp.textContent).toContain('不需計算路程');
     expect(screen.queryByTestId('travel-pill')).not.toBeInTheDocument(); // 不再顯示交通 pill
   });
 
@@ -279,5 +279,60 @@ describe('TravelPill — interactive auto-save (v2.55.45 多方式)', () => {
     expect(screen.getByTestId('travel-sameplace-hint')).toBeInTheDocument();
     // 交通方式 detail 區被 sameplace hint 取代 → 無 min input
     expect(screen.queryByTestId('travel-min-input')).not.toBeInTheDocument();
+  });
+});
+
+// 2026-07 需求 2：pair 無 segment row（missing，如跨國航班算不出）時，timeline pill
+// 過去渲染成不可點 div → 卡在「車程計算中」無從修改。放開：有 from/to entry id + tripId
+// → pill 可點開 dialog（create 模式，無 segmentId 走 POST /segments upsert）。
+describe('TravelPill — missing segment 可建立（放開「車程計算中」）', () => {
+  it('missing + from/to entry id + tripId → pill 可點（button）', () => {
+    render(<TravelPill missing tripId="trip-1" fromEntryId={10} toEntryId={11} />);
+    expect(screen.getByTestId('travel-pill').tagName).toBe('BUTTON');
+  });
+
+  it('missing 但缺 entry id → 維持不可點（div）', () => {
+    render(<TravelPill missing tripId="trip-1" />);
+    expect(screen.getByTestId('travel-pill').tagName).toBe('DIV');
+  });
+
+  it('click missing pill → 開 dialog（create 模式）', () => {
+    render(<TravelPill missing tripId="trip-1" fromEntryId={10} toEntryId={11} />);
+    fireEvent.click(screen.getByTestId('travel-pill'));
+    expect(screen.getByTestId('travel-pill-dialog')).toBeInTheDocument();
+  });
+
+  it('create 模式選 walking → POST /segments 帶 from/to + mode', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 99, mode: 'walking', version: 0 }), { status: 201 }));
+    render(<TravelPill missing tripId="trip-1" fromEntryId={10} toEntryId={11} />);
+    fireEvent.click(screen.getByTestId('travel-pill'));
+    fireEvent.click(screen.getByTestId('travel-method-walking'));
+    await waitFor(() => {
+      const call = apiFetchRawMock.mock.calls.find(
+        (c) => c[0] === '/trips/trip-1/segments' && (c[1] as RequestInit | undefined)?.method === 'POST',
+      );
+      expect(call).toBeTruthy();
+      const body = JSON.parse((call![1] as RequestInit).body as string);
+      expect(body.mode).toBe('walking');
+      expect(body.from_entry_id).toBe(10);
+      expect(body.to_entry_id).toBe(11);
+    });
+  });
+
+  it('create 模式選「不需計算路程」→ POST /segments 帶 from/to + noTravel:true', async () => {
+    apiFetchRawMock.mockResolvedValue(new Response(JSON.stringify({ id: 99, noTravel: 1, version: 0 }), { status: 201 }));
+    render(<TravelPill missing tripId="trip-1" fromEntryId={10} toEntryId={11} />);
+    fireEvent.click(screen.getByTestId('travel-pill'));
+    fireEvent.click(screen.getByTestId('travel-method-sameplace'));
+    await waitFor(() => {
+      const call = apiFetchRawMock.mock.calls.find(
+        (c) => c[0] === '/trips/trip-1/segments' && (c[1] as RequestInit | undefined)?.method === 'POST',
+      );
+      expect(call).toBeTruthy();
+      const body = JSON.parse((call![1] as RequestInit).body as string);
+      expect(body.noTravel).toBe(true);
+      expect(body.from_entry_id).toBe(10);
+      expect(body.to_entry_id).toBe(11);
+    });
   });
 });

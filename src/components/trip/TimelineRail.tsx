@@ -1453,6 +1453,8 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
                   tripId={tripId}
                   fromName={prev ? getTimelineEntryDisplayTitle(prev) : null}
                   toName={getTimelineEntryDisplayTitle(entry)}
+                  fromEntryId={prev?.id ?? undefined}
+                  toEntryId={entry.id ?? undefined}
                 />
               )}
               <RailRow

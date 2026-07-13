@@ -1896,8 +1896,8 @@ export default function EditEntryPage() {
                     data-testid="edit-entry-sameplace-toggle"
                   >
                     <span className="tp-edit-entry-sameplace-txt">
-                      <b>同一地點・免交通</b>
-                      <span>兩地視為同一處，不計交通時間</span>
+                      <b>不需計算路程</b>
+                      <span>此段不計交通時間</span>
                     </span>
                     <span className="tp-edit-entry-switch" aria-hidden="true" />
                   </button>
@@ -1966,7 +1966,7 @@ export default function EditEntryPage() {
                   )}
                   {noTravel && (
                     <p style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-footnote)', margin: 0 }}>
-                      此段標記為同一地點，儲存後 timeline 收合、不顯示交通時間。關閉開關即恢復。
+                      此段標記為不需計算路程，儲存後 timeline 收合、不顯示交通時間。關閉開關即恢復。
                     </p>
                   )}
                 </section>
