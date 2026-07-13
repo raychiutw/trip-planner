@@ -218,6 +218,13 @@ export interface TravelPillProps {
   /** 顯示在 dialog title 旁的 from→to entry 名稱（optional） */
   fromName?: string | null;
   toName?: string | null;
+  /**
+   * 2026-07：該 pair 的 from/to entry id。pair 無 segment row（missing，如跨國航班算不出）
+   * 時，供 dialog 走 POST /segments 建立段（含「不需計算路程」），放開卡在「車程計算中」
+   * 無法修改的 missing 段。
+   */
+  fromEntryId?: number | null;
+  toEntryId?: number | null;
 }
 
 /**
@@ -251,20 +258,31 @@ export default function TravelPill({
   sameplace,
   fromName,
   toName,
+  fromEntryId,
+  toEntryId,
 }: TravelPillProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // v2.55.46: 同一地點/免交通 dialog（互動 timeline 用 segment.noTravel，唯讀面用 sameplace prop）。
-  const dialogEl = dialogOpen && segment && tripId ? (
+  // 2026-07：pair 真正 missing（segmentsReady 後仍無 row 且無 legacy travel）+ 兩端 entry id
+  // + tripId 齊 → 可 POST 建立段（含「不需計算路程」），放開卡在「車程計算中」無從修改的 missing
+  // 段。gate 用 `missing` 而非單純 `!segment`：legacy `prev.travel` fallback（segments 尚未
+  // 載入的過渡窗口）雖 segment 未到但實際有段，維持唯讀不誤開 create（v2.31.8 loading-state 語意）。
+  const canCreate = missing === true && !segment && fromEntryId != null && toEntryId != null && !!tripId;
+
+  // v2.55.46: 免交通 dialog（互動 timeline 用 segment.noTravel，唯讀面用 sameplace prop）。
+  // segment 存在 → PATCH；missing 但可建立 → create 模式（Dialog 無 segmentId 走 POST）。
+  const dialogEl = dialogOpen && tripId && (segment || canCreate) ? (
     <TravelPillDialog
       tripId={tripId}
-      segmentId={segment.id}
-      currentMode={segment.mode}
-      currentSubmode={segment.submode}
-      currentMin={segment.min}
-      currentSource={segment.source}
-      currentNoTravel={segment.noTravel}
-      distanceM={segment.distanceM}
+      segmentId={segment?.id}
+      fromEntryId={fromEntryId ?? undefined}
+      toEntryId={toEntryId ?? undefined}
+      currentMode={segment?.mode ?? 'driving'}
+      currentSubmode={segment?.submode}
+      currentMin={segment?.min}
+      currentSource={segment?.source}
+      currentNoTravel={segment?.noTravel}
+      distanceM={segment?.distanceM}
       fromName={fromName}
       toName={toName}
       onClose={() => setDialogOpen(false)}
@@ -278,7 +296,7 @@ export default function TravelPill({
     const spInner = (
       <>
         <Icon name="location-pin" />
-        <span>同一地點</span>
+        <span>不需計算路程</span>
       </>
     );
     return (
@@ -289,7 +307,7 @@ export default function TravelPill({
             type="button"
             className="tp-travel-sameplace is-interactive"
             onClick={() => setDialogOpen(true)}
-            aria-label="同一地點・免交通（點擊變更）"
+            aria-label="不需計算路程（點擊變更）"
             data-testid="travel-sameplace"
           >
             {spInner}
@@ -333,7 +351,7 @@ export default function TravelPill({
     : (MODE_LABEL[(effectiveType ?? '').toLowerCase()] ?? effectiveType ?? '');
   // transit 才在 pill 顯示方式 label（train-family 同 icon 需文字區分；driving/walking icon 已足夠）。
   const methodLabel = segment && segment.mode === 'transit' && segment.submode ? a11yMethod : null;
-  const isInteractive = !!segment && !!tripId;
+  const isInteractive = !!tripId && (!!segment || canCreate);
 
   // Pill 內部內容 — 必須只含 non-interactive elements（pill 本身可能 wrap 成 <button>，
   // 內部不可再有 <button>/<a>，否則 HTML5 違規 + a11y 破）。Stale ⚠ chip 含 recompute

@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.71] - 2026-07-13
+
+### Fixed
+- **交通段「同一地點」→「不需計算路程」正名 ＋ 放開卡在「車程計算中」無法改交通方式** — 兩個 TravelPill 相關 UX 修正。**(1) 正名**：`trip_segments.no_travel` 段舊字「同一地點」對「有移動但算不出路程」的段語意不符（如 Day1 桃園國際機場→成田國際機場，跨國航班 Google Routes 算不出開車路線 → 後端 recompute 走 catch 不寫 row），一律改為中性「不需計算路程」，涵蓋 timeline pill（`TravelPill`）、列印／分享面（`tripPrintData`），以及設定它的控制項（`TravelPillDialog` 選項列、`EditEntryPage` 免交通 toggle 與說明文案）。後端 `no_travel` flag、健檢 prompt、segments API 全部不動。**(2) 放開 missing 段編輯**：pair 完全沒有 `trip_segments` row（missing，如上述算不出的航班段、刪除／搬日後的新相鄰對）時，timeline pill 過去 `isInteractive = !!segment && !!tripId` → 無 segment 即渲染成不可點 `<div>`、卡在「車程重新計算中」status chip 無從修改。放開：`TravelPill` 新增 `fromEntryId`/`toEntryId` prop，missing 但兩端 entry id ＋ tripId 齊時 `canCreate=true` → pill 變可點 `<button>`；`TravelPillDialog` 的 `segmentId` 改選填，無 `segmentId` 時 `save`/`onStale` 走既有 `POST /api/trips/:id/segments`（upsert，端點已有 `requireAuth` ＋ `hasWritePermission` ＋ IDOR 檢查，兩端 entry 須屬該 trip）建立段（含直接標「不需計算路程」），有則維持 PATCH。重用既有已授權端點、無新後端；`recompute-travel` 對 `no_travel` 一律跳過故此標記穩定不被覆寫。`canCreate` 以 `missing` 為 gate（非單純 `!segment`），避免 legacy `prev.travel` 尚未載入 segment 的過渡唯讀態被誤開 create（保留 v2.31.8 loading-state 語意）。TDD 紅→綠：新增 5 測試（missing pill 可點／不可點、click 開 create dialog、create 模式 POST 帶 from/to ＋ mode／noTravel）＋ 改 3 改字斷言；`tsc --noEmit` ＋ 本 PR 觸及測試檔全綠。7 檔（`TravelPill.tsx`／`TravelPillDialog.tsx`／`TimelineRail.tsx`／`tripPrintData.ts`／`EditEntryPage.tsx` ＋ 2 test）純前端。
+
 ## [2.55.70] - 2026-07-13
 
 ### Fixed
