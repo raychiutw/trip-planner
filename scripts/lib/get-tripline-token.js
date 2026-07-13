@@ -109,10 +109,12 @@ async function fetchFresh() {
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
   });
-  const json = await res.json();
-  if (!res.ok || !json.access_token) {
+  // 字面 null body：res.json() 回 null（不 throw）→ 需 ?? {}，否則 json.error 爆 null。事故敘述見 round8a 測試。
+  const json = (await res.json().catch(() => null)) ?? {};
+  // access_token 必須是非空字串 — 否則 `Bearer ${token}` 會送 "[object Object]"。
+  if (!res.ok || typeof json.access_token !== 'string' || !json.access_token) {
     throw new Error(
-      `Token fetch failed (${res.status}): ${json.error || ''} ${json.error_description || ''}`,
+      `Token fetch failed (${res.status}): ${json.error || ''} ${json.error_description || ''}`.trim(),
     );
   }
   writeCache(json.access_token, json.expires_in || 3600);

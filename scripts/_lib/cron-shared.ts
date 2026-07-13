@@ -113,11 +113,13 @@ async function mintToken(env: CronEnv, scopes?: string): Promise<string> {
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
   });
-  const json = (await res.json().catch(() => ({}))) as {
+  // 字面 null body：catch(()=>({})) 擋不到（res.json() 回 null 不 throw）→ 用 ?? {}。
+  const json = ((await res.json().catch(() => null)) ?? {}) as {
     access_token?: string; expires_in?: number; error?: string; error_description?: string;
   };
-  if (!res.ok || !json.access_token) {
-    throw new Error(`Token mint failed (${res.status}): ${json.error || ''} ${json.error_description || ''}`);
+  // access_token 必須是非空字串 — 否則 `Bearer ${token}` 會送 "[object Object]"。
+  if (!res.ok || typeof json.access_token !== 'string' || !json.access_token) {
+    throw new Error(`Token mint failed (${res.status}): ${json.error || ''} ${json.error_description || ''}`.trim());
   }
   writeTokenCache(json.access_token, json.expires_in || 3600);
   return json.access_token;
@@ -151,7 +153,15 @@ export function makeApiClient(env: CronEnv) {
       const text = await res.text().catch(() => '');
       throw new Error(`${method} ${path} → ${res.status}: ${text.slice(0, 200)}`);
     }
-    return (await res.json()) as T;
+    // 200 但 body 空 / 非-JSON（例：CF 200-HTML edge block）→ fail loud。舊
+    // `return (await res.json())` 對空 body 一樣 throw（SyntaxError），這裡只是收斂成
+    // 講清楚 body 問題的訊息 — 對讀屬性的 caller（const status = await api<...>）與
+    // fire-and-forget PATCH（google-poi-initial-backfill.ts:107/118 丟棄回傳值）行為都不變。
+    const json = (await res.json().catch(() => undefined)) as T | undefined;
+    if (json == null) {
+      throw new Error(`${method} ${path} → ${res.status} 但 body 空/非-JSON`);
+    }
+    return json;
   };
 }
 
