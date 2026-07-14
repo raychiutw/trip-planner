@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.76] - 2026-07-15
+
+### Fixed
+- **Sentry noise filter 補第三個 SW-register 訊息變體「Rejected」（daily-check 抓到 issue 7525493273）** — vite-plugin-pwa 自動注入的 `registerSW.js` 呼叫 `navigator.serviceWorker.register()` 沒有 `.catch()`，慢速裝置上 reject 會冒泡成 unhandled rejection 進 Sentry。既有 `SW_REGISTER_NOISE_RE` 靠訊息文字比對已擋掉兩個變體（「Timed out...」「Operation has been aborted」），但這次 Sentry 回報的 value 就只是通用的「Rejected」，訊息文字比對抓不到，改認 stack frame（`filename=/registerSW.js`，透過 Sentry API 拉原始 event 驗證過確實存在此 frame）。**codex adversarial review 抓到第一版過寬**：只認 frame、不管 value，會連同一呼叫點上真正有意義的錯誤（CSP 擋、precache 壞掉等）一起靜默吞掉；收斂成「`value` 恰為 `"Rejected"` 且 frame 命中才 drop」，並加 `exceptionValues.length === 1` 守衛避免誤殺 `Error.cause`／`AggregateError` 多值 event 裡的 sibling 有效訊息。
+
+### 測試
+- `sentry-noise-filter.test.ts` 補 5 案例：drop 目標變體／保留無 frame 的通用「Rejected」／保留多值 chain 裡夾帶該 noise 的 event／near-miss 字串（大小寫、空白、包裝文字）不誤殺／保留同呼叫點但有意義訊息的真實錯誤（CSP block）。`tsc --noEmit` 綠、`npm test` 全綠（425 檔／3728）。純 client-side telemetry filter，`/cso --diff` 掃描 0 findings（無 SQL／auth／CI/CD／secrets 攻擊面）。
+
 ## [2.55.75] - 2026-07-14
 
 ### Fixed

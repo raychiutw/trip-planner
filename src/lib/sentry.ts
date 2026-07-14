@@ -20,6 +20,15 @@ const HEADLESS_UA_RE = /HeadlessChrome|Playwright|Lighthouse/i;
 // 其他 AbortError（例如 fetch abort 也叫「Operation has been aborted」）。
 const SW_REGISTER_NOISE_RE =
   /Failed to register a ServiceWorker[\s\S]*?(?:Timed out while trying to start the Service Worker|Operation has been aborted)/i;
+// 同一 root cause 還有第三個訊息變體：value 就只是通用的「Rejected」，訊息文字比對
+// 抓不到。改認 stack frame — vite-plugin-pwa 自動注入的 registerSW.js 呼叫
+// navigator.serviceWorker.register() 這個呼叫點穩定不變，比訊息文字更可靠
+// （issue 7525493273，Chrome 149 / Windows，0 user 影響）。
+// 只在 value 恰好是這個無資訊量的「Rejected」時才用 frame 比對放行 drop —
+// 只認 frame、不管 value 會連同一呼叫點上真正有意義的錯誤（CSP 擋、precache
+// 壞掉等）一起靜默吞掉，等於做出一個監控死角（codex adversarial review 抓到）。
+const SW_REGISTER_FILE_RE = /\/registerSW\.js$/;
+const GENERIC_REJECTED_VALUE = 'Rejected';
 
 // Drop events from Playwright / Lighthouse / local preview. They run against
 // `localhost` (or 127.0.0.1) with a HeadlessChrome user agent and spam the
@@ -42,9 +51,23 @@ export function isNoiseEvent(event: SentryEvent): boolean {
   const browserName = event.contexts?.browser?.name;
   if (typeof browserName === 'string' && HEADLESS_UA_RE.test(browserName)) return true;
   const exceptionValues = event.exception?.values ?? [];
-  if (exceptionValues.some((v) => typeof v?.value === 'string' && SW_REGISTER_NOISE_RE.test(v.value))) {
-    return true;
-  }
+  // exceptionValues.length === 1 一起檢查：多值（Error.cause 串接 / AggregateError）
+  // 事件裡若有其他 sibling value 帶真正有意義的訊息，不該因為某個 value 恰好是
+  // 這個無資訊量的 "Rejected" 就整個 event 一起丟掉。
+  const isSwRegisterNoise = exceptionValues.some((v) => {
+    if (typeof v?.value !== 'string') return false;
+    if (SW_REGISTER_NOISE_RE.test(v.value)) return true;
+    return (
+      exceptionValues.length === 1 &&
+      v.value === GENERIC_REJECTED_VALUE &&
+      Boolean(
+        v.stacktrace?.frames?.some(
+          (f) => typeof f?.filename === 'string' && SW_REGISTER_FILE_RE.test(f.filename),
+        ),
+      )
+    );
+  });
+  if (isSwRegisterNoise) return true;
   return false;
 }
 

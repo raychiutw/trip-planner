@@ -100,6 +100,83 @@ describe('isNoiseEvent', () => {
     }))).toBe(false);
   });
 
+  it('drops SW register "Rejected" variant identified by registerSW.js stack frame (issue 7525493273)', () => {
+    expect(isNoiseEvent(baseEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/' },
+      exception: {
+        values: [{
+          type: 'Error',
+          value: 'Rejected',
+          stacktrace: {
+            frames: [
+              { filename: '/registerSW.js', function: null },
+              { filename: '<anonymous>', function: 'ServiceWorkerContainer.register' },
+              { filename: '<anonymous>', function: 'ServiceWorkerContainer.<anonymous>' },
+            ],
+          },
+        }],
+      },
+    }))).toBe(true);
+  });
+
+  it('keeps a generic "Rejected" error with no registerSW.js stack frame', () => {
+    expect(isNoiseEvent(baseEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/' },
+      exception: {
+        values: [{ type: 'Error', value: 'Rejected' }],
+      },
+    }))).toBe(false);
+  });
+
+  it('keeps a multi-value exception chain even if one sibling value is the generic "Rejected"+registerSW.js noise (Error.cause / AggregateError shape)', () => {
+    expect(isNoiseEvent(baseEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/' },
+      exception: {
+        values: [
+          { type: 'TypeError', value: 'Cannot read properties of undefined (reading "x")' },
+          {
+            type: 'Error',
+            value: 'Rejected',
+            stacktrace: { frames: [{ filename: '/registerSW.js', function: null }] },
+          },
+        ],
+      },
+    }))).toBe(false);
+  });
+
+  it('keeps near-miss "Rejected" value variants (case/whitespace/wrapping) even with a registerSW.js frame — regex must stay exact-match', () => {
+    for (const value of ['Rejected ', 'rejected', 'Uncaught (in promise) Rejected']) {
+      expect(isNoiseEvent(baseEvent({
+        request: { url: 'https://trip-planner-dby.pages.dev/' },
+        exception: {
+          values: [{
+            type: 'Error',
+            value,
+            stacktrace: { frames: [{ filename: '/registerSW.js', function: null }] },
+          }],
+        },
+      }))).toBe(false);
+    }
+  });
+
+  it('keeps a real, informative error thrown from the same registerSW.js call site (e.g. CSP block, precache failure)', () => {
+    expect(isNoiseEvent(baseEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/' },
+      exception: {
+        values: [{
+          type: 'SecurityError',
+          value: "Failed to register a ServiceWorker: The URL protocol of the current origin ('https') does not match the URL protocol of the scope ('http').",
+          stacktrace: {
+            frames: [
+              { filename: '/registerSW.js', function: null },
+              { filename: '<anonymous>', function: 'ServiceWorkerContainer.register' },
+            ],
+          },
+        }],
+      },
+    }))).toBe(false);
+  });
+
   it('keeps a real ServiceWorker error that is not the startup timeout', () => {
     expect(isNoiseEvent(baseEvent({
       request: { url: 'https://trip-planner-dby.pages.dev/' },
