@@ -138,6 +138,40 @@ describe('TimelineRail — 景點說明 section 整合 master POI 欄位 (v2.30.
     expect(desc.querySelector('a[href*="maps.apple.com"]')).not.toBeNull();
   });
 
+  // v2.55.x：master POI 細類 label 補進景點說明（對齊 v2.55.73 ExplorePage/備選卡的
+  // poiCategoryLabel(category) 細類顯示）。v2.30.14 把 master 升格到景點說明時漏掉細類，
+  // 導致「每日行程頁看不到新分類」——正選只剩 collapsed row 的粗類 badge。
+  // 只顯示細類（不 fallback 粗類 type）：正選已有相鄰粗類 badge，fallback 會產生回聲。
+  it('master POI 細類 (Google primaryType) 顯示在景點說明 — ramen_restaurant → 拉麵（非粗類）', () => {
+    const entry = makeEntry({
+      stopPois: [{
+        name: 'きしもと食堂', sortOrder: 1, type: 'restaurant', category: 'ramen_restaurant',
+      }],
+    });
+    renderWithEntry(entry);
+    fireEvent.click(screen.getByTestId('timeline-rail-row-437'));
+
+    const desc = screen.getByTestId('timeline-rail-description-437');
+    // poiCategoryLabel('ramen_restaurant') → '拉麵'（細類），不是粗類「用餐/餐廳」
+    expect(desc.querySelector('.tp-rail-poi-type')?.textContent).toBe('拉麵');
+    expect(desc.textContent).not.toContain('用餐');
+  });
+
+  it('master 只有粗類 type、無 category → 景點說明不冒細類 pill（避免與 collapsed badge 重複）', () => {
+    const entry = makeEntry({
+      // 「本部逛街」避免預設 description 關鍵字污染；type=shopping 粗類已在 collapsed badge
+      description: '本部逛街',
+      stopPois: [{ name: 'AEON MALL', sortOrder: 1, type: 'shopping' }],
+    });
+    renderWithEntry(entry);
+    fireEvent.click(screen.getByTestId('timeline-rail-row-437'));
+
+    const desc = screen.getByTestId('timeline-rail-description-437');
+    // 無 Google primaryType category → 不顯示細類 pill（粗類 badge 已表達，不重複回聲）
+    expect(desc.querySelector('.tp-rail-poi-type')).toBeNull();
+    expect(desc.textContent).not.toContain('購物');
+  });
+
   it('master POI description 整合到 entry.description 下方', () => {
     const entry = makeEntry({
       description: '沖繩 No.1 潛水景點',

@@ -446,6 +446,7 @@ const StopPoiChoiceCard = memo(function StopPoiChoiceCard({
   if (poi.reservation) metaParts.push(poi.reservation);
   // poi.category 是 Google primaryType（英文）— 經 poiCategoryLabel 映射成中文，
   // 不再直接露英文（沖繩備選卡的「tourist_attraction」等）；空則 fallback poi.type。
+  // 備選卡無相鄰粗類 badge，故保留 poi.type fallback（跟正選不同，正選只顯示細類）。
   const typeLabel = poiCategoryLabel(poi.category)
     ?? (poi.type ? POI_TYPE_LABELS[poi.type as PoiType] ?? poi.type : null);
 
@@ -855,12 +856,18 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
     return parts;
   }, [master]);
 
+  // v2.55.x：正選 POI 細類 label（拉麵/神社）— v2.30.14 把 master 升格到景點說明時漏掉，
+  // 導致每日行程頁只剩 collapsed row 的粗類 badge、看不到 v2.55.73 的細類。
+  // 只取細類（poiCategoryLabel(category)），不 fallback 粗類 type：正選已有相鄰粗類
+  // badge（deriveTypeMeta），fallback 會讓景點說明冒出跟 badge 重複的粗類回聲。
+  const masterTypeLabel = poiCategoryLabel(master?.category);
+
   // MapLinks 來源優先 master.location → fallback entry.locations[0]（舊資料相容）
   const mapLocation = master?.location ?? entry.locations?.[0] ?? null;
   const entryDesc = entry.description?.trim() ?? '';
   const masterDesc = master?.description?.trim() ?? '';
   const hasDescriptionSection =
-    !!entryDesc || !!masterDesc || masterMeta.length > 0 || !!mapLocation;
+    !!entryDesc || !!masterDesc || masterMeta.length > 0 || !!mapLocation || !!masterTypeLabel;
 
   // 當日 day number（餵給 EntryTimeChip / 備選卡做 travel 重算的 dayNum）— hoist 一次，
   // 不在 render / alternates.map 內重複 O(days) 掃描。
@@ -990,6 +997,9 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               data-testid={`timeline-rail-description-${entry.id}`}
             >
               <h4>景點說明</h4>
+              {masterTypeLabel && (
+                <span className="tp-rail-poi-type">{masterTypeLabel}</span>
+              )}
               {masterMeta.length > 0 && (
                 <div className="tp-rail-poi-meta">
                   {masterMeta.map((m, i) => (

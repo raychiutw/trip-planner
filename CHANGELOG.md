@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.75] - 2026-07-14
+
+### Fixed
+- **每日行程頁正選 POI 顯示 Google 細類 label（拉麵／神社／百貨）— 補回 v2.30.14 弄丟的細類** — 使用者回報「POI 分類完成但每日行程頁沒顯示新分類」。v2.55.73 的細分類（`poiCategoryLabel(category)` → 拉麵／神社／百貨）在探索頁與展開後的**備選** POI 卡都有，但**正選（master, `sortOrder=1`）POI 沒有**：TimelineRail 主卡的類型 badge 走 `deriveTypeMeta` 只產 8 大粗類（景點／用餐…，刻意如此、驅動三色 tone），而 v2.30.14 把 master 從獨立「正選卡」升格併進「景點說明」section 時，只搬了 rating／price／hours、**漏掉細類 label**。資料本就即時 JOIN（`_merge.ts` 帶 `p.category`），純顯示層缺口。修法：TimelineRail「景點說明」加一個 `.tp-rail-poi-type` 細類 span＝`poiCategoryLabel(master.category)`。**只取細類、不 fallback 粗類 `poi.type`**（與備選卡不同）——正選已有相鄰的 collapsed row 粗類 badge，若 fallback 會冒出跟 badge 重複的粗類回聲（adversarial review 抓到、已修）；無 Google `primaryType` 時正選 pill 不顯示。collapsed row 粗類 badge 與三色 tone 不變。DESIGN.md 同步「正選細類 label」規則。
+
+### 測試
+- TDD 紅→綠（`timeline-rail-restaurants`）：master `category=ramen_restaurant` → 景點說明顯示「拉麵」細類 pill（非粗類「用餐」）；master 只有粗類 `type=shopping`、無 category → 景點說明**不冒**細類 pill（＝ adversarial「粗類回聲」finding 的回歸鎖）。`tsc --noEmit` 綠、`npm test` 全綠（425 檔／3723）。純前端顯示層，3 行 RailRow，無 schema／API 變更。
+
 ## [2.55.74] - 2026-07-13
 
 ### Fixed
