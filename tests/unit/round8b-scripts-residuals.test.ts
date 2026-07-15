@@ -65,9 +65,16 @@ describe('v2.33.50 round 8b — daily-report.js auth on /api/trips', () => {
     expect(DAILY_REPORT_SRC).toContain("Authorization: 'Bearer '");
   });
 
-  it('token mint failure → 跳過 checkLinks (不 crash)', () => {
-    expect(DAILY_REPORT_SRC).toContain('token mint failed');
-    expect(DAILY_REPORT_SRC).toContain('return [];');
+  // v2.55.81 反轉 round 8b 的決定：原本這裡 catch 住 token mint 失敗並 `return []`，
+  // 理由寫在 CHANGELOG v2.33.50「不 crash 整 report」。但 linksHtml 把 data.length === 0
+  // render 成綠色「全部連結正常」→ 檢查沒跑成卻報全綠，正是同一則 entry 想修掉的 bug。
+  // 而 checkLinks 是 Promise.allSettled 的一項，拋出本來就不會 crash 其他來源：
+  // val(6) 把 rejection 變成 null → linksHtml 的 `if (!data) return failedHtml()`。
+  it('token mint 失敗必須往上拋，不能吞成 [] 讓 linksHtml 印綠燈', () => {
+    expect(DAILY_REPORT_SRC).toContain('var token = await getTriplineToken();');
+    expect(DAILY_REPORT_SRC).not.toMatch(/catch[\s\S]{0,120}token mint failed/);
+    // 接手的失敗渲染路徑必須還在，否則上面那個拋出沒人接
+    expect(DAILY_REPORT_SRC).toMatch(/function linksHtml[\s\S]{0,60}if \(!data\) return failedHtml\(\)/);
   });
 
   it('/api/trips + /days fetch 都帶 authHeaders', () => {

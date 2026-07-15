@@ -10,10 +10,16 @@
 #
 # Usage:
 #   bash scripts/check-migration-safety.sh                  # check ALL (informational)
-#   bash scripts/check-migration-safety.sh --since=origin/master  # CI gate (block on NEW)
+#   bash scripts/check-migration-safety.sh --since=origin/master~1  # CI gate (block on NEW)
 #
-# 退出 1 = 不安全 NEW migration；CI 用此 exit code block deploy。
+# Exit codes:
+#   0 = PASS（無不安全的 NEW migration）
+#   1 = 不安全 NEW migration；CI 用此 exit code block deploy
+#   2 = gate 本身跑不起來（--since ref 解不開 / 未知參數）—— 不是「安全」，是「沒檢查」
 # 已 applied 歷史 migrations 只 WARN，不 fail（已是既定事實）。
+#
+# 行為（含 exit 2 那條）由 tests/unit/check-migration-safety.test.ts 鎖住，
+# 該檔的 docblock 也記著這個 gate 為何曾經從未擋下任何東西。改本檔請同步跑它。
 
 set -euo pipefail
 
@@ -37,8 +43,19 @@ echo ""
 # Build NEW migration filenames (newline-separated, bash 3 friendly)
 NEW_FILES=""
 if [ -n "$SINCE_REF" ]; then
-  NEW_FILES=$(git diff --name-only --diff-filter=AM "$SINCE_REF"...HEAD -- "$MIGRATIONS_DIR/" 2>/dev/null | grep '\.sql$' | xargs -n1 basename 2>/dev/null || true)
-  COUNT=$(echo "$NEW_FILES" | grep -c '\.sql$' || echo 0)
+  # Empty NEW_FILES must mean "no .sql changed", never "the ref didn't resolve".
+  if ! git rev-parse --verify --quiet "${SINCE_REF}^{commit}" >/dev/null 2>&1; then
+    echo "❌ GATE BROKEN: --since ref '$SINCE_REF' is unreachable." >&2
+    echo "   Refusing to report PASS on a comparison that cannot run." >&2
+    echo "   In CI this means the checkout is too shallow — give actions/checkout a" >&2
+    echo "   fetch-depth that covers '$SINCE_REF' (.github/workflows/deploy.yml)." >&2
+    exit 2
+  fi
+  # git must NOT be wrapped in `2>/dev/null || true` (set -e has to see it fail);
+  # grep must be, because "no .sql changed" is a legitimate empty result.
+  CHANGED=$(git diff --name-only --diff-filter=AM "$SINCE_REF"...HEAD -- "$MIGRATIONS_DIR/")
+  NEW_FILES=$(echo "$CHANGED" | grep '\.sql$' | xargs -n1 basename 2>/dev/null || true)
+  COUNT=$(echo "$NEW_FILES" | grep -c '\.sql$' || true)  # `|| echo 0` would print a 2nd 0
   echo "📋 NEW/modified migrations vs $SINCE_REF: $COUNT"
   [ -n "$NEW_FILES" ] && echo "$NEW_FILES" | sed 's/^/   - /'
   echo ""

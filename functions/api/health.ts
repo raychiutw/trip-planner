@@ -12,8 +12,7 @@
  * Response shape：
  *   { status: 'healthy' | 'degraded' | 'unhealthy',
  *     checks: { d1: 'ok'|'fail', googleMapsKey: 'ok'|'missing' },
- *     ts: ISO timestamp,
- *     version: VITE_BUILD_VERSION? }
+ *     ts: ISO timestamp }
  *
  * Status code：healthy=200, degraded=200 (non-critical fail), unhealthy=503
  *

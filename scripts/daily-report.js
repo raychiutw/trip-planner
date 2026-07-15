@@ -187,11 +187,11 @@ async function checkLinks() {
   // v2.33.50 round 8b: mint token first — post v2.33.41 anonymous-read fix
   // 後 unpublished trip GET 需 auth；published trip 仍可匿名讀但 /api/trips
   // listing 也 protected (need auth to see own + published)。
-  var token = '';
-  try { token = await getTriplineToken(); } catch (err) {
-    console.warn('[checkLinks] token mint failed, skipping checkLinks:', (err && err.message) || err);
-    return [];
-  }
+  // 不要 catch：token 拿不到 = 檢查沒跑成，不是「沒有壞連結」。回 [] 會走進 linksHtml
+  // 的 `data.length === 0` → 綠色「全部連結正常」；往上拋才會走到 val(6) → null →
+  // failedHtml()。v2.33.50 當初加這個 catch 是為了「不 crash 整 report」，但 checkLinks
+  // 是 Promise.allSettled 的其中一項，拋出本來就不會 crash 其他來源。
+  var token = await getTriplineToken();
   var authHeaders = { Authorization: 'Bearer ' + token };
 
   // 1. 取得所有行程
