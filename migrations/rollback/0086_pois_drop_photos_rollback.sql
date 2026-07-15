@@ -1,0 +1,27 @@
+-- Rollback for 0086_pois_drop_photos.sql
+--
+-- 加回 pois.photos nullable TEXT column。
+--
+-- 無資料損失：photos 從來沒有任何資料 —— 0038 規劃的 Wikimedia backfill 從未執行，
+-- 且結構上從不存在寫入路徑（pois/[id].ts 的 ALLOWED_FIELDS 不含 photos）。
+-- rollback 回來就是原本的空欄位，schema parity 而已。
+--
+-- ## 什麼時候你其實**必須**跑這個檔
+--
+-- 不只是「想撤銷 0086」。以下兩種情境會強制需要它，且都不是為了照片：
+--   1. **要把 CF Pages 回滾到 v2.55.78 以前的部署** —— 那些 code 的 _merge.ts:149
+--      是具名 `p.photos`，對已 DROP 的 schema 會 no such column → /days 與
+--      /entries/:eid 全 500。**先跑本檔加回欄位，再回滾部署。**
+--   2. **要用 pre-0086 的 D1 dump 做表級/部分 restore** —— backups/*.sql 的
+--      INSERT 帶具名 "photos" 欄，會逐行撞 no such column。先跑本檔再 restore。
+--      （整庫 from-scratch restore 自帶 CREATE TABLE，不受影響。）
+-- 兩種情境跑完本檔後，欄位回到 nullable 空欄位，線上行為與 0086 前一致。
+--
+-- 注意：rollback 這個 migration 不會讓照片功能回來，它只還原 schema。
+-- 功能的 code 是在**另一個、更早的 PR** 移除的（Phase 1 = v2.55.78 / PR #1050）：
+-- StopLightbox（整個 component）、types/timeline.ts 的 PoiPhoto、
+-- lib/mapDay.ts 的 parsePhotos、days/_merge.ts 的具名 SELECT 全在那裡。
+-- 要恢復功能：revert **#1050**（code），不是 revert 本 migration 所屬的 PR。
+-- 兩者都 revert 才回得到 v2.55.77 的狀態；只 revert 本 PR 只會拿回一個空欄位。
+
+ALTER TABLE pois ADD COLUMN photos TEXT;
