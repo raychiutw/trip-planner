@@ -18,7 +18,6 @@
 // 本檔 re-export 維持向後相容（5 個 consumer 還 import from this file）。
 export type {
   TravelData,
-  PoiPhoto,
   StopPoiOptionData,
   TimelineEntryData,
 } from '../../types/timeline';

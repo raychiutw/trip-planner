@@ -2,7 +2,9 @@
  * TimelineRail toolbar pencil + ConfirmModal — Section 4.5 (terracotta-mockup-parity-v2)
  *
  * 驗 expanded toolbar 含：
- *   - 放大檢視 button (lightbox open)
+ *   - v2.55.78：「放大檢視」(⛶ → StopLightbox) 移除 —— 它彈出的 modal 是本 toolbar
+ *     所屬的 .tp-rail-detail 的真子集，照片面板拆掉後已無獨有內容。testid
+ *     timeline-rail-lightbox-open-N 一併退場。
  *   - v2.26.0：編輯景點 pencil button → navigate to `/trip/:id/stop/:eid/edit`
  *     （取代既有 inline note edit；備註 inline 編輯仍保留 via tp-rail-note-value click）
  *   - 刪除景點 button → 開 inline ConfirmModal (alertdialog)，不直接 fire DELETE
@@ -66,11 +68,12 @@ describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
     expect(screen.queryByTestId('timeline-rail-detail-42')).toBeNull();
   });
 
-  it('click row → 展開 toolbar 含 3 個 action button (放大/編輯/刪除) — v2.31.92 移除 collapse + change-poi', () => {
+  it('click row → 展開 toolbar 含 2 個 action button (編輯/刪除) — v2.31.92 移除 collapse + change-poi、v2.55.78 移除放大檢視', () => {
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     expect(screen.getByTestId('timeline-rail-detail-42')).toBeTruthy();
-    expect(screen.getByTestId('timeline-rail-lightbox-open-42')).toBeTruthy();
+    // v2.55.78：「放大」拿掉（StopLightbox 是本展開列的真子集，照片拆掉後無獨有內容）
+    expect(screen.queryByTestId('timeline-rail-lightbox-open-42')).toBeNull();
     // v2.26.0: 「編」testid 改為 timeline-rail-edit-N（取代 timeline-rail-edit-note-N）
     expect(screen.getByTestId('timeline-rail-edit-42')).toBeTruthy();
     expect(screen.getByTestId('timeline-rail-delete-42')).toBeTruthy();
