@@ -9,14 +9,16 @@
 # 的危險 pattern，要求 migration 必含 `_backup_` 字樣（backup-restore pattern 標記）。
 #
 # Usage:
-#   bash scripts/check-migration-safety.sh                  # check ALL (informational)
-#   bash scripts/check-migration-safety.sh --since=origin/master~1  # CI gate (block on NEW)
+#   bash scripts/check-migration-safety.sh                    # check ALL (informational)
+#   bash scripts/check-migration-safety.sh --since=<ref>      # gate mode (block on NEW)
+# CI 傳的是 github.event.before（真正的 push 前 tip）—— 見 .github/workflows/deploy.yml。
+# 不要用固定回看一格的 origin/master~1：一次推多個 commit 就會漏看前面幾格。
 #
 # Exit codes:
 #   0 = PASS（無不安全的 NEW migration）
 #   1 = 不安全 NEW migration；CI 用此 exit code block deploy
 #   2 = gate 本身跑不起來（--since ref 解不開 / 未知參數）—— 不是「安全」，是「沒檢查」
-# 已 applied 歷史 migrations 只 WARN，不 fail（已是既定事實）。
+# 早於 --since 的 migration 只 WARN（假定已套用 —— 本 script 不查 d1_migrations）。
 #
 # 行為（含 exit 2 那條）由 tests/unit/check-migration-safety.test.ts 鎖住，
 # 該檔的 docblock 也記著這個 gate 為何曾經從未擋下任何東西。改本檔請同步跑它。
@@ -39,6 +41,14 @@ done
 echo "🛡️  D1 migration safety check — scanning $MIGRATIONS_DIR/"
 [ -n "$SINCE_REF" ] && echo "   Gate mode: NEW migrations vs $SINCE_REF"
 echo ""
+
+# 掃不到任何東西 ≠ 沒有東西可掃：錯的 --dir / sparse checkout 會讓下面的 glob 靜默
+# 展不開 → CASCADE_PARENTS 空 → 「無 CASCADE 關聯」→ exit 0。那是沒檢查，不是安全。
+if [ ! -d "$MIGRATIONS_DIR" ] || ! ls "$MIGRATIONS_DIR"/*.sql >/dev/null 2>&1; then
+  echo "❌ GATE BROKEN: '$MIGRATIONS_DIR/' 不存在或沒有任何 .sql。" >&2
+  echo "   Refusing to report PASS on a scan that had nothing to scan." >&2
+  exit 2
+fi
 
 # Build NEW migration filenames (newline-separated, bash 3 friendly)
 NEW_FILES=""
@@ -67,16 +77,26 @@ is_new() {
   echo "$NEW_FILES" | grep -qx "$1"
 }
 
-# Build list of parents that have CASCADE children (across ALL migrations)
+# Build list of parents that have CASCADE children (across ALL migrations)。
+# 逐「敘述」掃（壓掉換行再以 `;` 切）而非逐「行」：FOREIGN KEY / REFERENCES /
+# ON DELETE CASCADE 分寫三行是合法 SQL，逐行 grep 抓不到就會放行一個 DROP TABLE。
+# 取敘述內每一個 REFERENCES（非 head -1）：寧可多擋，不可漏一個而砍光 prod。
 declare -a CASCADE_PARENTS=()
-while IFS= read -r line; do
-  parent=$(echo "$line" | grep -oE 'REFERENCES[[:space:]]+[a-z_]+' | awk '{print $2}' | head -1)
+while IFS= read -r parent; do
   if [ -n "$parent" ]; then
     if [[ ! " ${CASCADE_PARENTS[*]:-} " =~ " ${parent} " ]]; then
       CASCADE_PARENTS+=("$parent")
     fi
   fi
-done < <(grep -hE 'REFERENCES[[:space:]]+[a-z_]+.*ON[[:space:]]+DELETE[[:space:]]+CASCADE' "$MIGRATIONS_DIR"/*.sql 2>/dev/null || true)
+done < <(
+  cat "$MIGRATIONS_DIR"/*.sql \
+    | tr '\n' ' ' \
+    | tr ';' '\n' \
+    | grep -E 'ON[[:space:]]+DELETE[[:space:]]+CASCADE' \
+    | grep -oE 'REFERENCES[[:space:]]+[a-z_]+' \
+    | awk '{print $2}' \
+    || true
+)
 
 if [ ${#CASCADE_PARENTS[@]} -eq 0 ]; then
   echo "ℹ️  No CASCADE FK relationships detected in schema — skip check."
@@ -101,10 +121,14 @@ for migration in "$MIGRATIONS_DIR"/*.sql; do
     if grep -qE "DROP[[:space:]]+TABLE[[:space:]]+(IF[[:space:]]+EXISTS[[:space:]]+)?${parent}([[:space:]]*;|[[:space:]]+RENAME)" "$migration"; then
       if ! grep -qE "_backup_${parent}|_backup_trip_" "$migration"; then
         if [ -n "$SINCE_REF" ] && ! is_new "$base"; then
-          # Historical applied migration — WARN only
-          echo "⚠️  HISTORICAL UNSAFE: $base"
+          # 「早於 --since」≠「已套用到 prod」—— 本 script 不查 d1_migrations。已知缺口：
+          # 被擋下的不安全 migration（exit 1、apply 沒跑）只要之後再落地一個動到
+          # migrations/ 的 commit，就會降級成這條 WARN 然後被套下去。權威來源是
+          # `wrangler d1 migrations list --remote --env production`，接上它是 follow-up。
+          echo "⚠️  PRE-EXISTING UNSAFE: $base"
           echo "   - DROP TABLE \`$parent\` without backup-restore"
-          echo "   - Already applied to prod; cannot retroactively fix"
+          # ${SINCE_REF} 的大括號不可省：後接全形「；」會被吃進變數名 → set -u 崩。
+          echo "   - 早於 ${SINCE_REF}；假定已套用（未對 d1_migrations 查證）"
           echo ""
           UNSAFE_HISTORICAL=$((UNSAFE_HISTORICAL + 1))
         else

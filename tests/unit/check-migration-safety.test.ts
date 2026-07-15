@@ -3,7 +3,7 @@
  * scripts/check-migration-safety.sh — 行為鎖。
  *
  * 這個 gate 存在的理由是 2026-05-04 的 0047 incident（DROP TABLE trips 觸發 CASCADE
- * 砍光 prod）。但從 CI 導入到 v2.55.81 為止，它在 CI 裡**從未擋下任何東西**：
+ * 砍光 prod）。但從 CI 導入到本檔誕生為止，它在 CI 裡**從未擋下任何東西**：
  * actions/checkout 預設 fetch-depth: 1 → origin/master~1 不存在 → git diff fatal →
  * 被 `2>/dev/null || true` 吞掉 → 每個 migration 都被當成 historical → exit 0。
  * 它印綠燈，而且印得很有說服力。
@@ -11,7 +11,7 @@
  * 所以本檔鎖的不是「gate 會過」，是「gate 會擋」與「gate 壞掉時會紅」。
  * 每個 case 都在一個真的 git repo 上跑真的 script，不 mock git。
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
 import { execFileSync, execSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -28,6 +28,17 @@ const BASELINE_SQL = `CREATE TABLE trips (id TEXT PRIMARY KEY);
 CREATE TABLE trip_days (
   id TEXT PRIMARY KEY,
   trip_id TEXT NOT NULL REFERENCES trips(id) ON DELETE CASCADE
+);
+`;
+
+/** 同樣的 FK，但寫成多行 FOREIGN KEY 子句 —— 完全合法的 SQL，單行 grep 抓不到。 */
+const BASELINE_MULTILINE_SQL = `CREATE TABLE trips (id TEXT PRIMARY KEY);
+CREATE TABLE trip_days (
+  id TEXT PRIMARY KEY,
+  trip_id TEXT NOT NULL,
+  FOREIGN KEY (trip_id)
+    REFERENCES trips(id)
+    ON DELETE CASCADE
 );
 `;
 
@@ -64,7 +75,7 @@ function runGate(cwd: string, args: string[]): GateResult {
 const repos: string[] = [];
 
 /** 建一個真 git repo：baseline commit（有 CASCADE FK）+ 第二個 commit（帶入 newSql）。 */
-function repo(newFile: string | null, newSql?: string): string {
+function repo(newFile: string | null, newSql?: string, baseline = BASELINE_SQL): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'migsafe-'));
   repos.push(dir); // 先登記再動 git —— 中途拋錯也不會漏掉 temp dir
   const git = (cmd: string) => execSync(`git ${cmd}`, { cwd: dir, stdio: 'pipe' });
@@ -73,7 +84,7 @@ function repo(newFile: string | null, newSql?: string): string {
   git('config user.name Test');
   git('config commit.gpgsign false');
   fs.mkdirSync(path.join(dir, 'migrations'));
-  fs.writeFileSync(path.join(dir, 'migrations/0001_init.sql'), BASELINE_SQL);
+  fs.writeFileSync(path.join(dir, 'migrations/0001_init.sql'), baseline);
   git('add -A');
   git('commit -q -m baseline');
   if (newFile && newSql) {
@@ -89,7 +100,7 @@ afterAll(() => {
 });
 
 describe('check-migration-safety.sh', () => {
-  describe('gate 壞掉時必須紅（v2.55.81 之前這條是綠的 —— 就是那個 bug）', () => {
+  describe('gate 壞掉時必須紅（本檔誕生前這幾條都是綠的 —— 就是那個 bug）', () => {
     it('--since ref 解不開 → exit 2 + 講得出怎麼修，不是 exit 0 + PASS', () => {
       // 這正是 CI 淺 clone 的情況：ref 不存在。以前 → exit 0 + "PASS"。
       const r = runGate(repo(null), ['--since=origin/master~1']);
@@ -104,6 +115,14 @@ describe('check-migration-safety.sh', () => {
       // 最惡的組合：gate 瞎了 + 真的有 0047-style migration。必須紅。
       const r = runGate(repo('0002_danger.sql', UNSAFE_SQL), ['--since=origin/master~1']);
       expect(r.code).not.toBe(0);
+    });
+
+    it('掃不到任何 .sql → exit 2，不能當成「沒有 CASCADE 關聯」放行', () => {
+      // 錯的 --dir / 移走的 migrations/ / sparse checkout 都會讓 glob 靜默展不開。
+      // 以前：CASCADE_PARENTS 空 → 「No CASCADE FK relationships detected」→ exit 0。
+      const r = runGate(repo('0002_danger.sql', UNSAFE_SQL), ['--since=HEAD~1', '--dir=nope']);
+      expect(r.code).toBe(2);
+      expect(r.stdout).not.toContain('PASS');
     });
   });
 
@@ -122,19 +141,50 @@ describe('check-migration-safety.sh', () => {
       expect(r.stdout).toContain('PASS');
     });
 
-    it('歷史的不安全 migration 只 WARN 不擋（已套到 prod，擋了也沒用）', () => {
+    it('早於 --since 的不安全 migration 只 WARN 不擋', () => {
       const dir = repo('0002_danger.sql', UNSAFE_SQL);
-      // 再疊一個無關 commit，讓 0002 落在 HEAD~1 之前 → 變成 historical
+      // 再疊一個無關 commit，讓 0002 落在 HEAD~1 之前 → 變成 pre-existing
       fs.writeFileSync(path.join(dir, 'migrations/0003_noop.sql'), 'SELECT 1;\n');
       execSync('git add -A && git commit -q -m later', { cwd: dir, stdio: 'pipe' });
       const r = runGate(dir, ['--since=HEAD~1']);
       expect(r.code).toBe(0);
-      expect(r.stdout).toContain('HISTORICAL UNSAFE');
+      expect(r.stdout).toContain('PRE-EXISTING UNSAFE');
+      // 訊息不能宣稱「已套用到 prod」—— 本 script 從不查 d1_migrations，不知道。
+      expect(r.stdout).not.toContain('Already applied to prod');
+      expect(r.stdout).toContain('未對 d1_migrations 查證');
     });
 
     it('無 --since（本機掃全部）→ 全部當 NEW，不安全就紅', () => {
       const r = runGate(repo('0002_danger.sql', UNSAFE_SQL), []);
       expect(r.code).toBe(1);
+    });
+
+    it('多行 FOREIGN KEY ... REFERENCES ... ON DELETE CASCADE 也要認得', () => {
+      // 完全合法的 SQL 寫法。逐行 grep 抓不到 → CASCADE_PARENTS 空 → 「無 CASCADE
+      // 關聯」→ exit 0，即使同一個 push 就在 DROP 那張 parent table。
+      const r = runGate(
+        repo('0002_danger.sql', UNSAFE_SQL, BASELINE_MULTILINE_SQL),
+        ['--since=HEAD~1'],
+      );
+      expect(r.code).toBe(1);
+      expect(r.stdout).toContain('UNSAFE NEW');
+    });
+
+    it('一次 push 推多個 commit → 不在最後一格的 migration 也要看得見', () => {
+      // GitHub 的 rebase-merge 會讓 master 一次前進多格（此 repo 三種策略都開著）。
+      // 固定回看一格的 origin/master~1 會漏掉前面幾格 → 誤判成 pre-existing → 放行。
+      // deploy.yml 因此改用 github.event.before（真正的 push 前 tip）。
+      const dir = repo('0002_danger.sql', UNSAFE_SQL); // 不安全的在 HEAD~2
+      const before = execSync('git rev-parse HEAD~1', { cwd: dir, encoding: 'utf8' }).trim();
+      fs.writeFileSync(path.join(dir, 'migrations/0003_noop.sql'), 'SELECT 1;\n');
+      execSync('git add -A && git commit -q -m later', { cwd: dir, stdio: 'pipe' });
+
+      // 回看一格（舊行為）→ 看不到 0002 → 放行
+      expect(runGate(dir, ['--since=HEAD~1']).code).toBe(0);
+      // 用真正的 push-before（新行為）→ 抓到
+      const r = runGate(dir, [`--since=${before}`]);
+      expect(r.code).toBe(1);
+      expect(r.stdout).toContain('UNSAFE NEW');
     });
   });
 
