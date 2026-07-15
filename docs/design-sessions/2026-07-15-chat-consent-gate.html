@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ChatPage 授權 gate — mockup 2026-07-15（3 variant）</title>
+<style>
+  /* prod tokens.css 真值（light + dark）— 見 css/tokens.css */
+  :root {
+    --color-accent: #A97A4A; --color-accent-subtle: #F4EDE3; --color-accent-deep: #8A6038;
+    --color-accent-2: #A8BAAA; --color-accent-2-deep: #7E9580; --color-accent-2-subtle: #ECF0ED;
+    --color-accent-3: #E78C99; --color-accent-3-deep: #C66B78;
+    --color-background: #FFFBF5; --color-surface: #FFFFFF;
+    --color-foreground: #2A1F18; --color-muted: #6F5A47; --color-accent-foreground: #FFFFFF;
+    --color-border: #EADFCF;
+    --radius-lg: 12px; --radius-xl: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-accent: #CBA06E; --color-accent-subtle: #33271A; --color-accent-deep: #E0BC90;
+      --color-accent-2: #8FBE9C; --color-accent-2-deep: #A8D0B4; --color-accent-2-subtle: #243A2C;
+      --color-accent-3: #E8A0AB; --color-accent-3-deep: #F0B8C0;
+      --color-background: #1A140F; --color-surface: #241C15;
+      --color-foreground: #F5EBDD; --color-muted: #B89E84; --color-accent-foreground: #1A140F;
+      --color-border: #3A2E22;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif;
+    background: #6b6b6b; color: var(--color-foreground);
+    display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; align-items: flex-start;
+    padding: 36px 20px; -webkit-font-smoothing: antialiased;
+  }
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 360px; }
+  .stage h2 { color: #fff; font-size: 15px; font-weight: 700; }
+  .stage .cap { color: #d8d8d8; font-size: 12px; text-align: center; line-height: 1.5; min-height: 32px; }
+  .stage .cap b { color: #fff; }
+
+  .phone {
+    width: 360px; height: 720px; border-radius: 38px; overflow: hidden;
+    background: var(--color-background); position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,.4); display: flex; flex-direction: column;
+  }
+  .statusbar { height: 40px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px; font-size: 13px; font-weight: 600; flex: none; }
+  .chat-head { flex: none; padding: 6px 16px 10px; display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--color-border); }
+  .chat-head .back { color: var(--color-muted); font-size: 22px; }
+  .chat-head .title { font-size: 15px; font-weight: 700; }
+  .chat-head .sub { font-size: 11px; color: var(--color-muted); }
+
+  .msgs { flex: 1; overflow: hidden; padding: 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; gap: 8px; align-items: flex-end; }
+  .row.me { justify-content: flex-end; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; flex: none; display: flex; align-items: center;
+    justify-content: center; font-size: 10px; font-weight: 700; background: var(--color-accent); color: var(--color-accent-foreground); }
+  .bubble { max-width: 76%; padding: 9px 12px; border-radius: var(--radius-xl); font-size: 13.5px; line-height: 1.45; }
+  .bubble.ai { background: var(--color-accent-subtle); color: var(--color-foreground); border-bottom-left-radius: 5px; }
+  .bubble.me { background: var(--color-accent); color: var(--color-accent-foreground); border-bottom-right-radius: 5px; }
+
+  .composer { flex: none; padding: 9px 12px 14px; display: flex; gap: 8px; align-items: flex-end;
+    border-top: 1px solid var(--color-border); }
+  .composer .input { flex: 1; min-height: 40px; padding: 10px 14px; border-radius: 20px;
+    background: var(--color-surface); border: 1px solid var(--color-border); font-size: 13.5px; color: var(--color-muted); }
+  .composer .send { width: 40px; height: 40px; border-radius: 50%; flex: none; border: none;
+    background: var(--color-accent); color: var(--color-accent-foreground); font-size: 17px; }
+  .composer .send.off { opacity: .4; }
+
+  /* AiAuthorizeCard 視覺（沿用 .tp-ai-card） */
+  .ai-card { border-radius: var(--radius-xl); padding: 14px; background: var(--color-accent-subtle); }
+  .ai-row { display: flex; gap: 11px; align-items: flex-start; }
+  .ai-badge { flex: none; width: 36px; height: 36px; border-radius: var(--radius-lg);
+    background: var(--color-accent); color: var(--color-accent-foreground); display: flex; align-items: center; justify-content: center; }
+  .ai-title { font-size: 14.5px; font-weight: 700; color: var(--color-foreground); }
+  .ai-desc { font-size: 12.5px; color: var(--color-muted); margin-top: 3px; line-height: 1.5; }
+  .quoted { margin-top: 12px; padding: 9px 11px; border-radius: var(--radius-lg);
+    background: var(--color-surface); border: 1px solid var(--color-border); font-size: 12.5px; color: var(--color-foreground); }
+  .quoted .lbl { font-size: 10.5px; color: var(--color-muted); margin-bottom: 3px; }
+  .actions { margin-top: 13px; display: flex; flex-direction: column; gap: 9px; }
+  .btn { width: 100%; min-height: 46px; border: none; border-radius: var(--radius-lg); font-size: 14.5px; font-weight: 700; cursor: pointer; }
+  .btn-primary { background: var(--color-accent); color: var(--color-accent-foreground); }
+  .btn-ghost { background: transparent; color: var(--color-muted); font-weight: 600; }
+  .fineprint { margin-top: 3px; text-align: center; font-size: 10.5px; color: var(--color-muted); }
+
+  /* variant A: inline（卡插在 composer 上方，非 modal） */
+  .inline-gate { flex: none; margin: 0 12px 8px; }
+  .inline-hint { flex: none; padding: 8px 14px 0; font-size: 11.5px; color: var(--color-accent-deep); }
+
+  /* variant B: dialog（跳出 bottom sheet） */
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.42); display: flex; align-items: flex-end; }
+  .sheet { width: 100%; background: var(--color-background); border-radius: 22px 22px 0 0; padding: 18px 16px 16px;
+    box-shadow: 0 -8px 30px rgba(0,0,0,.25); }
+  .grip { width: 36px; height: 4px; border-radius: 2px; background: var(--color-border); margin: 0 auto 14px; }
+
+  /* variant C: fullpage（授權 takeover 步驟） */
+  .full { position: absolute; inset: 0; background: var(--color-background); display: flex; flex-direction: column; }
+  .full-head { flex: none; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .full-head .x { font-size: 22px; color: var(--color-muted); }
+  .full-head .t { font-size: 16px; font-weight: 700; }
+  .full-body { flex: 1; padding: 8px 18px; display: flex; flex-direction: column; }
+  .full-hero { text-align: center; padding: 26px 8px 18px; }
+  .full-hero .big { width: 64px; height: 64px; border-radius: 20px; margin: 0 auto 16px;
+    background: var(--color-accent); color: var(--color-accent-foreground); display: flex; align-items: center; justify-content: center; }
+  .full-hero h3 { font-size: 20px; font-weight: 800; }
+  .full-hero p { font-size: 13.5px; color: var(--color-muted); margin-top: 8px; line-height: 1.6; }
+  .full-foot { flex: none; padding: 12px 18px 22px; }
+</style>
+</head>
+<body>
+
+<!-- ============ Variant A: INLINE ============ -->
+<div class="stage">
+  <h2>A · Inline 卡</h2>
+  <div class="cap">送出時卡片<b>就地插在輸入框上方</b>，不遮聊天。授權前 send 停用。最不打擾，但可能被略過。</div>
+  <div class="phone">
+    <div class="statusbar"><span>23:58</span><span>●●● 📶</span></div>
+    <div class="chat-head"><span class="back">‹</span><div><div class="title">滑雪藏王樹冰</div><div class="sub">AI 行程助理</div></div></div>
+    <div class="msgs">
+      <div class="row"><div class="avatar">AI</div><div class="bubble ai">告訴我天數跟出發地，我幫你排。</div></div>
+      <div class="row me"><div class="bubble me">幫我排藏王三天兩夜</div></div>
+    </div>
+    <div class="inline-gate">
+      <div class="ai-card">
+        <div class="ai-row">
+          <div class="ai-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 4.6L18.5 8l-4.6 1.9L12 14l-1.9-4.1L5.5 8l4.6-1.4L12 2z"/><circle cx="18" cy="17" r="2.4"/></svg></div>
+          <div><div class="ai-title">讓 AI 幫你把行程填滿</div><div class="ai-desc">授權一次，AI 就能以你的身分排景點、餐廳、交通。</div></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary">授權並送出</button>
+          <button class="btn btn-ghost">取消</button>
+        </div>
+      </div>
+    </div>
+    <div class="composer"><div class="input">幫我排藏王三天兩夜</div><button class="send off">↑</button></div>
+  </div>
+</div>
+
+<!-- ============ Variant B: DIALOG（跳出）============ -->
+<div class="stage">
+  <h2>B · Dialog 跳出 <span style="color:var(--color-accent-2);font-size:12px">◎ 建議</span></h2>
+  <div class="cap"><b>底部 sheet 跳出</b>、暗化背景聚焦決定。最貼你說的「跳出選項」，最少導航。</div>
+  <div class="phone">
+    <div class="statusbar"><span>23:58</span><span>●●● 📶</span></div>
+    <div class="chat-head"><span class="back">‹</span><div><div class="title">滑雪藏王樹冰</div><div class="sub">AI 行程助理</div></div></div>
+    <div class="msgs">
+      <div class="row"><div class="avatar">AI</div><div class="bubble ai">告訴我天數跟出發地，我幫你排。</div></div>
+      <div class="row me"><div class="bubble me">幫我排藏王三天兩夜</div></div>
+    </div>
+    <div class="composer"><div class="input">幫我排藏王三天兩夜</div><button class="send">↑</button></div>
+    <div class="scrim">
+      <div class="sheet">
+        <div class="grip"></div>
+        <div class="ai-card">
+          <div class="ai-row">
+            <div class="ai-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 4.6L18.5 8l-4.6 1.9L12 14l-1.9-4.1L5.5 8l4.6-1.4L12 2z"/><circle cx="18" cy="17" r="2.4"/></svg></div>
+            <div><div class="ai-title">讓 AI 幫你把行程填滿</div><div class="ai-desc">授權一次，AI 就能以你的身分排景點、餐廳、交通。可隨時在「已連結應用」撤銷。</div></div>
+          </div>
+          <div class="quoted"><div class="lbl">將送出這則訊息</div>幫我排藏王三天兩夜</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary">授權並送出</button>
+          <button class="btn btn-ghost">取消</button>
+        </div>
+        <div class="fineprint">授權對象：Tripline AI 行程排程</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Variant C: FULLPAGE ============ -->
+<div class="stage">
+  <h2>C · Fullpage 步驟</h2>
+  <div class="cap">送出前<b>整頁授權步驟</b>，空間最大、說明最清楚。但離開 chat、最重。</div>
+  <div class="phone">
+    <div class="statusbar"><span>23:58</span><span>●●● 📶</span></div>
+    <div class="full">
+      <div class="full-head"><span class="x">✕</span><span class="t">授權 AI 排程</span></div>
+      <div class="full-body">
+        <div class="full-hero">
+          <div class="big"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 4.6L18.5 8l-4.6 1.9L12 14l-1.9-4.1L5.5 8l4.6-1.4L12 2z"/><circle cx="18" cy="17" r="2.4"/></svg></div>
+          <h3>讓 AI 幫你把行程填滿</h3>
+          <p>授權一次，AI 就能以你的身分安排景點、餐廳、交通。<br>可隨時在「帳號 → 已連結應用」撤銷。</p>
+        </div>
+        <div class="quoted"><div class="lbl">授權後將送出</div>幫我排藏王三天兩夜</div>
+      </div>
+      <div class="full-foot">
+        <div class="actions" style="margin-top:0">
+          <button class="btn btn-primary">授權並送出</button>
+          <button class="btn btn-ghost">取消，返回聊天</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
