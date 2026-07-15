@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.80] - 2026-07-16
+
+### Fixed
+- **`daily-check.js` 查詢失敗不再靜默回落成假綠燈** — `val()` fallback 在 Promise 被 reject 時原本直接回傳寫死的健康預設值（`status: 'ok'`），今天實測 `.env.local` 缺 `CLOUDFLARE_API_TOKEN` 時，`apiErrors`（D1 4xx/5xx 查詢）、`requestErrors`（未完成請求）、`auditAnomaly`（異常刪除偵測）三個檢查全部因認證失敗而完全沒執行，卻回報「0 issues」——只有 `dataHygiene` 因為自己包了 try/catch 才正確顯示 warning。改為：查詢失敗時附上真實錯誤訊息、把 `status` 降級為 `warning`，並同步在 `build-daily-check-msg.js` 補上 `apiErrors`/`sentry`/`requestErrors` 的 `.error` 顯示分支（比照既有 `dataHygiene` 模式）。根因（本機 `.env.local` 需要重新填入 rotate 後的 `CLOUDFLARE_API_TOKEN` 值）需要人工提供憑證，非 code 可修復範圍。
+
 ## [2.55.79] - 2026-07-16
 
 ### Removed

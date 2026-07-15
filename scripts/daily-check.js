@@ -693,8 +693,13 @@ async function main() {
   function val(idx, fallback) {
     var r = settled[idx];
     if (r.status === 'fulfilled') return r.value;
-    console.error('Source ' + idx + ' failed:', r.reason && r.reason.message ? r.reason.message : r.reason);
-    return fallback;
+    var msg = r.reason && r.reason.message ? r.reason.message : String(r.reason);
+    console.error('Source ' + idx + ' failed:', msg);
+    // 查詢失敗不能靜默回落成健康預設值（假綠燈）— 否則 CF token 失效時
+    // apiErrors/requestErrors/auditAnomaly 會回報「0 issues」掩蓋真正未執行的檢查。
+    var merged = Object.assign({}, fallback, { error: msg });
+    if (merged.status) merged.status = 'warning';
+    return merged;
   }
 
   var sentry = val(0, { status: 'ok', total: 0, issues: [] });
@@ -704,8 +709,8 @@ async function main() {
   var requestErrors = val(4, { status: 'ok', total: 0, statusCounts: { open: 0, processing: 0, failed: 0 }, stuckProcessing: 0, pending: [] });
   var routeHealth = val(5, { status: 'ok', total: 0, checked: 0, routes: [] });
   var dataHygiene = val(6, { status: 'ok', total: 0, leaks: [] });
-  var googleMapsQuota = val(7, { status: 'ok', error: 'queryGoogleMapsQuota rejected' });
-  var auditAnomaly = val(8, { status: 'ok', heavyUsers: [], heavyTrips: [], criticalDeletes: [], error: 'queryAuditAnomaly rejected' });
+  var googleMapsQuota = val(7, { status: 'ok' });
+  var auditAnomaly = val(8, { status: 'ok', heavyUsers: [], heavyTrips: [], criticalDeletes: [] });
 
   var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota, auditAnomaly);
 
