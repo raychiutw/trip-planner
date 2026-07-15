@@ -38,6 +38,26 @@ const SAMPLE_APPS = [
   },
 ];
 
+// URL-aware fetch stub：ConnectedAppsPage 現在含 <AiAuthorizeCard/>，mount 會多打一個
+// GET /account/ai-authorization。用路由式 mock 讓斷言不依賴呼叫順序/次數。
+function routedFetch(opts: { apps?: unknown[]; authorized?: boolean } = {}) {
+  const fetchMock = vi.fn((url: unknown, init?: RequestInit) => {
+    const u = String(url);
+    if (u.includes('/account/ai-authorization')) {
+      return Promise.resolve(new Response(JSON.stringify({ authorized: opts.authorized ?? false }), { status: 200 }));
+    }
+    if (init?.method === 'DELETE') {
+      return Promise.resolve(new Response(JSON.stringify({ ok: true, revoked_client_id: 'x' }), { status: 200 }));
+    }
+    return Promise.resolve(new Response(JSON.stringify({ apps: opts.apps ?? [] }), { status: 200 }));
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+function deleteCalls(fetchMock: ReturnType<typeof vi.fn>) {
+  return fetchMock.mock.calls.filter((c: unknown[]) => (c[1] as RequestInit | undefined)?.method === 'DELETE');
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T12:00:00Z'));
@@ -56,9 +76,7 @@ describe('ConnectedAppsPage', () => {
   });
 
   it('renders empty state when no apps', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ apps: [] }), { status: 200 }),
-    ));
+    routedFetch({ apps: [] });
     vi.useRealTimers();
 
     render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
@@ -67,9 +85,7 @@ describe('ConnectedAppsPage', () => {
   });
 
   it('renders apps list with name + scopes', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ apps: SAMPLE_APPS }), { status: 200 }),
-    ));
+    routedFetch({ apps: SAMPLE_APPS });
     vi.useRealTimers();
 
     render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
@@ -81,9 +97,7 @@ describe('ConnectedAppsPage', () => {
   });
 
   it('Revoke button → opens confirm modal (二次確認)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ apps: SAMPLE_APPS }), { status: 200 }),
-    ));
+    routedFetch({ apps: SAMPLE_APPS });
     vi.useRealTimers();
 
     render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
@@ -94,10 +108,7 @@ describe('ConnectedAppsPage', () => {
   });
 
   it('Cancel modal → no DELETE call', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ apps: SAMPLE_APPS }), { status: 200 }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+    const fetchMock = routedFetch({ apps: SAMPLE_APPS });
     vi.useRealTimers();
 
     render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
@@ -107,15 +118,12 @@ describe('ConnectedAppsPage', () => {
 
     // Modal closed
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
-    // Only initial GET, no DELETE
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // 無 DELETE（不依賴總呼叫次數 — AiAuthorizeCard 另有一個 GET）
+    expect(deleteCalls(fetchMock)).toHaveLength(0);
   });
 
   it('Confirm revoke → DELETE + remove from list', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: SAMPLE_APPS }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, revoked_client_id: 'tp_abc' }), { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
+    const fetchMock = routedFetch({ apps: SAMPLE_APPS });
     vi.useRealTimers();
 
     render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
@@ -127,10 +135,18 @@ describe('ConnectedAppsPage', () => {
     // tp_xyz still there
     expect(screen.queryByTestId('connected-apps-row-tp_xyz')).toBeTruthy();
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const deleteCall = fetchMock.mock.calls[1]!;
-    expect(deleteCall[0]).toBe('/api/account/connected-apps/tp_abc');
-    expect((deleteCall[1] as RequestInit).method).toBe('DELETE');
+    const del = deleteCalls(fetchMock);
+    expect(del).toHaveLength(1);
+    expect(del[0]![0]).toBe('/api/account/connected-apps/tp_abc');
+    expect((del[0]![1] as RequestInit).method).toBe('DELETE');
+  });
+
+  it('顯示 Tripline AI 排程授權入口卡（未授權 → 授權鈕）', async () => {
+    routedFetch({ apps: [], authorized: false });
+    vi.useRealTimers();
+
+    render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('ai-authorize-btn')).toBeTruthy());
   });
 
   it('GET fail → error banner', async () => {
@@ -146,10 +162,7 @@ describe('ConnectedAppsPage', () => {
       ...SAMPLE_APPS[0]!,
       client_id: 'tp_a/b?c=1',
     };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [trickyApp] }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
+    const fetchMock = routedFetch({ apps: [trickyApp] });
     vi.useRealTimers();
 
     render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
@@ -157,8 +170,8 @@ describe('ConnectedAppsPage', () => {
     fireEvent.click(screen.getByTestId('connected-apps-revoke-tp_a/b?c=1'));
     fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    const url = fetchMock.mock.calls[1]![0] as string;
+    await waitFor(() => expect(deleteCalls(fetchMock).length).toBe(1));
+    const url = deleteCalls(fetchMock)[0]![0] as string;
     expect(url).toBe('/api/account/connected-apps/tp_a%2Fb%3Fc%3D1');
   });
 });

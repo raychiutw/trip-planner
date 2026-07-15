@@ -37,6 +37,10 @@ const MINT_TTL_SEC = 2 * 60 * 60;
 const TP_REQUEST_CLIENT_ID = 'tripline-tp-request';
 // 只有仍在佇列中的請求可 mint（防對已結案 / 失敗請求重簽 token）。
 const MINTABLE_STATUSES = new Set(['open', 'processing']);
+// no_consent park 時寫回 chat 的說明（見下方 queue-jam 防禦）。0049 CHECK 限 status 值域，
+// 沿用既有 'failed'（不新增 needs_consent 值 → 免 migration）。
+const NEEDS_CONSENT_REPLY =
+  '這趟行程要用 AI 排程，需要行程擁有者先授權。請在聊天室重新送出訊息，於跳出的視窗點「授權並送出」即可。';
 
 /** 常數時間字串比對（避免 API_SECRET 被 timing 分析）。長度不同直接 false。 */
 function constantTimeEqual(a: string, b: string): boolean {
@@ -99,6 +103,44 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       },
       context.env,
     );
+    // Queue-jam 防禦：no_consent 是「永久」失敗（owner 沒授權 AI，不會自己好）。
+    // peekPendingRequest 每輪 sort=asc 撈最舊 open request → 反覆撞同一筆 403、且餓死其後
+    // 所有請求。把它 park 成 failed（peek 只撈 open/processing → 跳過），寫 user-facing reply
+    // 指引授權。只在仍活著時改（idempotent）。park 失敗不改「拒絕 mint」語意，下輪 cron 再試。
+    // ⚠️ trip_requests UPDATE 刻意排第一條且「不」用 db.batch 原子化：即使後兩條 linked
+    // UPDATE blip，request 已 park → 隊列仍解（主目標）。原子化反而會讓任一失敗整批 rollback、
+    // 隊列該輪不通 —— 別改。orphan pending linked row 僅在後兩條 blip（罕見 transient D1）時殘留：
+    // health_reports（PK=trip_id）下次健檢覆寫復原；note_ai_jobs（UNIQUE request_id + autoincrement
+    // id）不會自癒，卡住的 pending row 殘留（無害，只虛增 pending 計數；adversarial F5，容忍）。
+    try {
+      await db
+        .prepare(
+          `UPDATE trip_requests SET status = 'failed', reply = ?, updated_at = datetime('now')
+             WHERE id = ? AND status IN ('open', 'processing')`,
+        )
+        .bind(NEEDS_CONSENT_REPLY, requestId)
+        .run();
+      // 若這筆其實是 health-check / notes 請求（peekPendingRequest 撈最舊 pending，不分型別），
+      // 連動把 linked 報告/工作也標記 failed —— 否則它們的 row 永遠停在 'pending'（完成 reconcile
+      // 只跑在 requests/[id] PATCH 路徑，此處走 API_SECRET 無法呼 PATCH）。純 planning 請求（如
+      // 事故 250）無 linked row → 兩條 UPDATE no-op。理想抽共用 failRequest helper（follow-up）。
+      await db
+        .prepare(
+          `UPDATE trip_health_reports SET status = 'failed', error_message = ?, completed_at = datetime('now')
+             WHERE request_id = ? AND status = 'pending'`,
+        )
+        .bind('需要行程擁有者授權 AI 才能執行健檢', requestId)
+        .run();
+      await db
+        .prepare(
+          `UPDATE trip_note_ai_jobs SET status = 'failed', error_message = ?, completed_at = datetime('now')
+             WHERE request_id = ? AND status = 'pending'`,
+        )
+        .bind('需要行程擁有者授權 AI 才能生成', requestId)
+        .run();
+    } catch (parkErr) {
+      console.error('[mint-restricted] park needs-consent request failed:', parkErr);
+    }
     throw new AppError('PERM_DENIED', 'owner 未授權 tp-request（無 Consent）');
   }
 

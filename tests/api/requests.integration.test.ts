@@ -72,6 +72,43 @@ describe('POST /api/requests', () => {
     });
     expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
   });
+
+  // 30 秒去重只擋「仍在跑」的請求；終結狀態不得遮蔽合法重送（adversarial F1）。
+  it('dedupe 仍擋 30 秒內重複的 open 請求（同訊息雙擊 → 200 回同一筆）', async () => {
+    const msg = '幫我找拉麵店';
+    const auth = mockAuth({ email: 'user@test.com' }); // trip-req owner（有寫權）
+    const mk = () => mockContext({
+      request: jsonRequest('https://test.com/api/requests', 'POST', { tripId: 'trip-req', message: msg }),
+      env, auth,
+    });
+    const a = await callHandler(onRequestPost, mk());
+    expect(a.status).toBe(201);
+    const aId = (await a.json() as Record<string, unknown>).id;
+    const b = await callHandler(onRequestPost, mk());
+    expect(b.status).toBe(200); // dedupe：回同一筆 open
+    expect((await b.json() as Record<string, unknown>).id).toBe(aId);
+  });
+
+  it('park 成 failed 的請求不遮蔽合法重送 → 建新 open 請求（adversarial F1 回歸）', async () => {
+    const msg = '幫我排三天兩夜溫泉';
+    const auth = mockAuth({ email: 'user@test.com' }); // trip-req owner（有寫權）
+    const mk = () => mockContext({
+      request: jsonRequest('https://test.com/api/requests', 'POST', { tripId: 'trip-req', message: msg }),
+      env, auth,
+    });
+    // 1. 首次送出 → open 請求
+    const first = await callHandler(onRequestPost, mk());
+    expect(first.status).toBe(201);
+    const firstId = (await first.json() as Record<string, unknown>).id as number;
+    // 2. 模擬 mint-restricted 未授權 park：標成 failed
+    await db.prepare("UPDATE trip_requests SET status = 'failed' WHERE id = ?").bind(firstId).run();
+    // 3. 授權後重送同一訊息（30 秒內）→ 不得 dedupe 回 failed，要建新的 open 請求
+    const resend = await callHandler(onRequestPost, mk());
+    expect(resend.status).toBe(201); // 非 200 dedupe 回舊 failed
+    const resendData = await resend.json() as Record<string, unknown>;
+    expect(resendData.id).not.toBe(firstId);
+    expect(resendData.status).toBe('open');
+  });
 });
 
 describe('GET /api/requests', () => {

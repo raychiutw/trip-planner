@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.77] - 2026-07-15
+
+### Fixed
+- **未授權 owner 的聊天請求會永久卡死 tp-request 佇列（prod 事故根治）＋ 補上 owner 自助授權入口** — penyin（某行程 owner）在聊天室送出 AI 排程訊息，但他從未授權 AI，`peekPendingRequest` 每輪 `sort=asc` 撈最舊 open 請求 → 反覆撞同一筆 `mint-restricted` 的 `no_consent`（MINT_FAILED）→ api-server fail-closed 不 spawn → **這一筆之後所有人的請求全被餓死**。而 penyin 在「帳號 → 已連結應用」只找得到撤銷、**沒有任何授權入口**（新授權卡只在 NewTripPage），無從自救。三段修復：**(A) ChatPage 授權 gate**——送出時 `GET /api/account/ai-authorization`，未授權（含 GET 讀取失敗 fail-closed）→ 攔下、不建死請求、跳底部 `AiConsentSheet`（sign-off variant B），點「授權並送出」→ `POST` 建 Consent → 續送；「取消」→ 保留輸入不建請求。**(B) mint-restricted queue-jam park**——遇 `no_consent` 在丟 `PERM_DENIED` 前把該 request park 成 `failed` + 寫授權指引 reply（peek 只撈 open/processing → 跳過解隊列），並連動把 linked `trip_health_reports`／`trip_note_ai_jobs` 的 pending row 也標 failed（否則永遠 pending）；沿用既有 `failed` status（0049 CHECK 值域）免 migration，刻意非 `db.batch` 原子化（park 優先、隊列先解）。**(C) ConnectedAppsPage 授權入口卡**——penyin 直覺找的那頁補上 `AiAuthorizeCard`。
+- **adversarial review 連帶修 3 處**：**(F1，critical)** `POST /api/requests` 的 30 秒去重原本無 status 濾網 —— owner 授權後重送同一訊息會在 30 秒內 dedupe 撞回剛 park 的 `failed` 請求（HTTP 200）、`inflightId` 綁到死 id、SSE 立刻回 failed，**授權成功但下一次重送看似又失敗**，破壞此修復自己的 happy path；加 `AND status IN ('open','processing')`，終結狀態不得遮蔽合法重送（仍擋 open 請求的雙擊）。**(F2)** ChatPage 授權狀態 GET 失敗原本維持 `null`（不攔）→ 未授權 owner 陷入「送出→後端 park→提示重送並在跳窗授權，但 sheet 只在 `false` 才開、`null` 永不轉 `false`→跳窗永不出現」死循環；改 fail-closed 成 `false`（與 AiAuthorizeCard 同端點同行為一致、可從 sheet 授權復原）。**(F3/F4/F7 記錄為 accepted-risk／follow-up**：park 在授權「拒絕」路徑寫入是刻意設計且限縮在必失敗的請求；非 no_consent 的確定性 mint 失敗（如 owner 查無）仍可能卡 peek head，屬 trip 刪除已 cascade 的低機率路徑，留待通用 attempts→park follow-up；F1 修好後 F7 的重送死結已解）。**(F5)** 修正 park 註解誤稱 linked row 皆可 UPSERT 自癒——`trip_health_reports`（PK=trip_id）下次健檢覆寫復原，但 `trip_note_ai_jobs`（UNIQUE request_id）不會，卡住的 pending row 會殘留（無害、僅虛增計數，容忍）。
+
+### 測試
+- `requests.integration.test.ts` 補 2 案（真 D1）：park 成 failed 的請求不遮蔽合法重送→建新 open 請求（F1 回歸）／open 請求雙擊仍 dedupe 回同一筆。`chat-page-consent-gate.test.tsx` 補 4 案：GET fail-closed 跳 sheet／授權 POST 失敗顯錯不關 sheet／SSE failed 撈 reply 顯示後端 park 指引（incident 核心）／撈 reply 失敗落通用訊息。`ai-consent-sheet.test.tsx` 補 Escape-while-busy 抑制。`oauth-mint-restricted-endpoint.test.ts` 既有 park SQL-shape + 連動 cascade + park 失敗仍 PERM_DENIED。`tsc --noEmit` 綠、`npm test` 全綠、`test:api` 全綠。Claude adversarial subagent ＋先前 `/cso`＋`/review` 三次獨立審查。
+
 ## [2.55.76] - 2026-07-15
 
 ### Fixed
