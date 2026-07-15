@@ -6067,13 +6067,6 @@
         </div>
       </div>
       <div class="tp-action-card">
-        <div class="tp-action-icon-box"><span class="tp-icon"><svg><use href="#i-expand"/></svg></span></div>
-        <div class="tp-action-card-body">
-          <div class="tp-action-card-name">放大檢視</div>
-          <div class="tp-action-card-meta">open StopLightbox</div>
-        </div>
-      </div>
-      <div class="tp-action-card">
         <div class="tp-action-icon-box"><span class="tp-icon"><svg><use href="#i-copy"/></svg></span></div>
         <div class="tp-action-card-body">
           <div class="tp-action-card-name">複製到其他天</div>
@@ -6149,7 +6142,6 @@
             <br><strong>地點：</strong>沖繩縣國頭郡本部町石川424
           </div>
           <div class="tp-stop-v-toolbar">
-            <button class="tp-stop-iconbtn" type="button" aria-label="放大檢視" title="放大檢視"><span class="tp-icon"><svg><use href="#i-expand"/></svg></span></button>
             <button class="tp-stop-iconbtn" type="button" aria-label="複製到其他天" title="複製到其他天"><span class="tp-icon"><svg><use href="#i-copy"/></svg></span></button>
             <button class="tp-stop-iconbtn" type="button" aria-label="移到其他天" title="移到其他天"><span class="tp-icon"><svg><use href="#i-move"/></svg></span></button>
             <button class="tp-stop-iconbtn" type="button" aria-label="編輯備註" title="編輯備註"><span class="tp-icon"><svg><use href="#i-pencil"/></svg></span></button>
@@ -6205,7 +6197,6 @@
             </div>
           </div>
           <div class="tp-stop-v-toolbar">
-            <button class="tp-stop-iconbtn" type="button" aria-label="放大檢視" title="放大檢視"><span class="tp-icon"><svg><use href="#i-expand"/></svg></span></button>
             <button class="tp-stop-iconbtn" type="button" aria-label="複製到其他天" title="複製到其他天"><span class="tp-icon"><svg><use href="#i-copy"/></svg></span></button>
             <button class="tp-stop-iconbtn" type="button" aria-label="移到其他天" title="移到其他天"><span class="tp-icon"><svg><use href="#i-move"/></svg></span></button>
             <button class="tp-stop-iconbtn" type="button" aria-label="編輯備註" title="編輯備註"><span class="tp-icon"><svg><use href="#i-pencil"/></svg></span></button>
@@ -6366,7 +6357,6 @@
             <div class="tp-detail-note-empty">+ 加備註</div>
           </div>
           <div class="tp-detail-toolbar">
-            <button class="tp-stop-iconbtn" type="button" aria-label="放大檢視" title="放大檢視"><span class="tp-icon"><svg><use href="#i-expand"/></svg></span></button>
             <button class="tp-stop-iconbtn" type="button" aria-label="複製" title="複製"><span class="tp-icon"><svg><use href="#i-copy"/></svg></span></button>
             <button class="tp-stop-iconbtn" type="button" aria-label="移動" title="移動"><span class="tp-icon"><svg><use href="#i-move"/></svg></span></button>
             <button class="tp-stop-iconbtn" type="button" aria-label="編輯備註" title="編輯備註"><span class="tp-icon"><svg><use href="#i-pencil"/></svg></span></button>
@@ -6507,7 +6497,6 @@
               <p class="tp-detail-expanded-text">世界最大級水族館！「黑潮之海」可看鯨鯊和鬼蝠魟。</p>
             </div>
             <div class="tp-detail-toolbar">
-              <button class="tp-stop-iconbtn" type="button" aria-label="放大"><span class="tp-icon"><svg><use href="#i-expand"/></svg></span></button>
               <button class="tp-stop-iconbtn" type="button" aria-label="複製"><span class="tp-icon"><svg><use href="#i-copy"/></svg></span></button>
               <button class="tp-stop-iconbtn" type="button" aria-label="移動"><span class="tp-icon"><svg><use href="#i-move"/></svg></span></button>
               <div class="tp-detail-toolbar-spacer"></div>
@@ -10219,7 +10208,7 @@ body {
 <h2>v2.23.0 §1 — TripHealthBanner（sticky chrome group）</h2>
 <p class="v23-note">empty 不渲染（return null）。closed=2 missing=1 → 統一 warning 色。
 sticky 順序：TitleBar 56/64 → banner 41/45 → DayNav；scroll-margin-top 對應 110/100。
-role="status" + aria-live="polite" + 不可 dismiss。click 開 StopLightbox 第一個 issue。</p>
+role="status" + aria-live="polite" + 不可 dismiss。click 跳到第一個 issue 的停留點（v2.55.78：原規格寫「開 StopLightbox」，該 component 已移除）。</p>
 
 <div class="v23-frame">
   <div class="v23-label">DESKTOP — closed=2 + missing=1</div>

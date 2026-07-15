@@ -41,18 +41,6 @@ export interface TravelData {
   text?: string | null;
 }
 
-/**
- * v2.12 Wave 3：POI 照片 schema。`pois.photos` 是 JSON-encoded TEXT column，
- * mapDay.toTimelineEntry 會 parse 後 surface 為 PoiPhoto[]。
- */
-export interface PoiPhoto {
-  url: string;
-  thumbUrl?: string;
-  caption?: string;
-  source?: string;
-  attribution?: string;
-}
-
 /** Master / alternate POI option attached to a timeline entry (`trip_entry_pois` row). */
 export interface StopPoiOptionData {
   poiId?: number | null;
@@ -92,9 +80,6 @@ export interface TimelineEntryData {
   locations?: NavLocation[] | null;
   /** Canonical entry POIs: first row (`sortOrder=1`) is the primary pick; remaining rows are alternates. */
   stopPois?: StopPoiOptionData[] | null;
-  /** v2.12 Wave 3：POI photos （from pois.photos JSON column）。null = 還沒抓到，
-   *  StopLightbox 顯示「即將推出」 placeholder。 */
-  photos?: PoiPhoto[] | null;
   /** POI master type — surface 給 deriveTypeMeta 優先 over text-based keyword match。
    *  pois.type ∈ hotel|restaurant|shopping|parking|attraction|transport|activity|other */
   poiType?: string | null;

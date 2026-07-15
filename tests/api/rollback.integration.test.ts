@@ -105,6 +105,73 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
     expect(bodyObj.error?.detail ?? '').toContain('note');
   });
 
+  it('pois snapshot 帶 photos（非 whitelist 欄位）→ 400 乾淨拒絕，不 500', async () => {
+    // photos 已從 TABLE_COLUMNS.pois 移除（欄位本身由 migration 0086 於後續 PR DROP）。
+    // pois delete-audit 的 snapshot 由 `SELECT *` 產生、必帶 photos key → 必須在
+    // whitelist 階段乾淨拒絕（400 DATA_VALIDATION「Invalid column(s) in snapshot」），
+    // 而非通過後執行 `INSERT INTO pois (..., photos, ...)` —— 0086 套用後那會撞
+    // "no such column: photos" 變 opaque 500。同 0062 / 0078 慣例（該慣例包含這個鎖，
+    // 不只是 handler 註解）。
+    //
+    // 刻意 schema-independent：whitelist 在任何 SQL 碰到 pois 之前就短路，所以本測試
+    // 在「欄位還在」(本 PR) 與「欄位已 DROP」(0086 後) 兩種 schema 下都綠 —— 那正是這道
+    // 防線的價值所在。它鎖的是「photos 不在 whitelist」，不是「欄位已消失」；
+    // 後者由 tests/unit/migration-0086-drop-pois-photos.test.ts 以 PRAGMA 驗。
+    //
+    // 註：這也是本檔第一個覆蓋 snapshot 分支（rollback.ts 的 invalidSnapshotCols）的測試；
+    // 既有的 0078 測試走的是 diff/update 分支。
+    const poi = await db.prepare(
+      "INSERT INTO pois (type, name) VALUES ('attraction', 'legacy-snap') RETURNING id"
+    ).first<{ id: number }>();
+    await db.prepare('DELETE FROM pois WHERE id = ?').bind(poi!.id).run();
+
+    await db.prepare(
+      "INSERT INTO audit_log (trip_id, table_name, record_id, action, changed_by, snapshot) VALUES (?, 'pois', ?, 'delete', 'user@test.com', ?)"
+    ).bind('trip-rb', poi!.id, JSON.stringify({
+      id: poi!.id, type: 'attraction', name: 'legacy-snap', photos: null, price: null,
+    })).run();
+
+    const auditRow = await db.prepare(
+      'SELECT id FROM audit_log WHERE trip_id = ? ORDER BY id DESC LIMIT 1'
+    ).bind('trip-rb').first<{ id: number }>();
+
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-rb/audit/${auditRow!.id}/rollback`, 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-rb', aid: String(auditRow!.id) },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(400);
+    const bodyObj = await resp.json() as { error?: { code?: string; detail?: string } };
+    expect(bodyObj.error?.code).toBe('DATA_VALIDATION');
+    expect(bodyObj.error?.detail ?? '').toContain('photos');
+  });
+
+  it('pois diff 指向 photos（非 whitelist 欄位）→ 400', async () => {
+    const poi = await db.prepare(
+      "INSERT INTO pois (type, name) VALUES ('attraction', 'diff-photos') RETURNING id"
+    ).first<{ id: number }>();
+    await db.prepare(
+      "INSERT INTO audit_log (trip_id, table_name, record_id, action, changed_by, diff_json) VALUES (?, 'pois', ?, 'update', 'user@test.com', ?)"
+    ).bind('trip-rb', poi!.id, JSON.stringify({ photos: { old: '[]', new: null } })).run();
+
+    const auditRow = await db.prepare(
+      'SELECT id FROM audit_log WHERE trip_id = ? ORDER BY id DESC LIMIT 1'
+    ).bind('trip-rb').first<{ id: number }>();
+
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-rb/audit/${auditRow!.id}/rollback`, 'POST'),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-rb', aid: String(auditRow!.id) },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(400);
+    const bodyObj = await resp.json() as { error?: { detail?: string } };
+    expect(bodyObj.error?.detail ?? '').toContain('photos');
+  });
+
   it('非 owner（無 trip 寫權限）→ 403', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-rb/audit/1/rollback', 'POST'),

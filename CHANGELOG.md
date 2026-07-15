@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.78] - 2026-07-16
+
+### Removed
+- **POI 照片功能 + `<StopLightbox>` 整個移除（Phase 1/2 —— 純 code，DROP COLUMN 走 v2.55.79）** — migration 0038 (v2.12 Wave 3) 加了 `pois.photos` JSON 欄位，計畫由「`scripts/populate-poi-photos.js` 從 Wikimedia Commons 抓填」餵 StopLightbox 的 photo carousel。實測：**那個 script 從未存在**，且結構上從來沒有任何寫入路徑（`functions/api/pois/[id].ts` 的 `ALLOWED_FIELDS` 不含 photos）—— 這欄與 POI 筆數無關、恆為 NULL。所以 prod 上那個面板永遠只渲染「📷 照片功能即將推出」，一個從未兌現的承諾。owner 裁示清除。**連 component 一起刪，不只拆照片面板**：`/review` 的 design specialist 抓到、實測確認——StopLightbox 唯一入口是 `TimelineRail` 的 ⛶ 鈕，而該鈕在 `{expanded && ...}` 包住的 `.tp-rail-detail` 裡（必須先展開那一列才點得到）；`.tp-rail-detail-desc` **無 line-clamp**（說明/備註本來就全文顯示），所以 component 檔頭宣稱的「expanded reading surface beyond the inline accordion」是假的；展開列還多給細類 label、星等/價位/營業時間、備選景點與編輯 affordance。**它彈出的 modal 是背後那一列的真子集**，照片是它唯一獨有的內容 —— 照片沒了，存在理由也沒了。它也不屬 DESIGN.md 「Modal 限定情境」四款（Confirm/Input/Popover/Critical-attention）任何一款，當初站得住腳正是因為「圖片燈箱」是 modal 的慣例情境。**選擇刪 component 對齊 SoT，而非放寬 SoT 遷就 code。** 連帶清除：`PoiPhoto` 型別、`TimelineEntryData.photos`、`mapDay.ts` 的 `parsePhotos`/`isSafePhotoUrl`、`days/_merge.ts` SELECT 的 `p.photos`、audit rollback 的 `TABLE_COLUMNS.pois` whitelist、⛶ 鈕與其 testid。
+
+### Changed
+- **SoT 三方同步（code + DESIGN.md + mockup，同 PR 前進）** — `terracotta-preview-v2.html`（CLAUDE.md:42 明定與 DESIGN.md **同為** UI/UX truth）移除 action card「放大檢視 / open StopLightbox」+ 4 顆 ⛶ 鈕 + 更正 TripHealthBanner 規格裡指向已刪 component 的敘述；漏改它會讓 SoT 說按鈕存在、code 說不存在，依專案規則「Code mismatch = bug」反而是 code 被判定為缺陷。DESIGN.md：移除 Allowed Modal Components 的 `<StopLightbox>` 列並記錄移除理由、`:153` tone 套用範圍移除 `.tp-lightbox`、Material & Effects 新增 **Photos 條文**（全站不做 POI 照片/artwork/縮圖；陳述「從未有過任何資料」的不變量而非會過期的筆數快照；重開照片的付費前提）。
+- **修正三處長期存在的假敘述** — (1) DESIGN.md:276 例外條款寫「**POI photo** 上的浮動按鈕」是誤稱：全站 POI 卡零 `<img>`，`.explore-poi-cover` 是 `<div aria-hidden>` + `linear-gradient`（code 自己的註解就寫「cover placeholder — 16:9 漸層」），SoT mockup 的 `.tp-add-poi-photo` 同樣是漸層 + pin icon；改為「POI 卡 cover 漸層上的」。**同行的 `blur(14px)` 宣稱是真的**（13 處走 `var(--blur-glass)` 命中），不動。(2) `main.tsx` 註解宣稱 `?focus=:eid` 會「開 StopLightbox」—— codebase 從來沒有 `focus → setLightboxOpen` 的路徑（`?focus` 只展開 inline），那句一直是假的。(3) DESIGN.md:659 把 `<StopLightbox>` 定義為「圖片燈箱」，被本 PR 直接證偽。
+
+### 測試
+- **新增 rollback whitelist 鎖**（`tests/api/rollback.integration.test.ts`）：0062/0078 的慣例**包含測試鎖**，原本只抄了 handler 註解沒抄鎖。**突變驗證**——把 `'photos'` 加回 `TABLE_COLUMNS.pois`（正是這個慣例要防的錯）→ 新測試 2 failed，而在此之前**全套 3728 tests 無一會紅**。也是本檔第一個覆蓋 snapshot 分支（`invalidSnapshotCols`）的測試（既有 0078 測試走 diff/update 分支）。刻意 schema-independent（whitelist 在 SQL 前短路），測試名已誠實反映它鎖的是「photos 不在 whitelist」而非「欄位已消失」——後者由 v2.55.79 的 PRAGMA 測試驗。
+- `timeline-rail-toolbar-pencil`：原本 `getByTestId` 鎖住 ⛶ 存在，改為 `queryByTestId(...).toBeNull()` 反向鎖住移除。
+- **驗證在真實 Phase 1 狀態下跑**（0086 移出 `migrations/`）—— `tests/api/setup.ts` 用 `fs.readdirSync` 從**磁碟**建測試 D1，untracked 的 migration 會被偷偷套用、驗到錯誤的 schema 狀態。`tsc --noEmit` src/functions 皆真 exit 0、`npm run lint` exit 0、`npm test` 425 檔/3720 全綠、`npm run test:api` 93 檔/1084 全綠。`/review` 7 specialist + red-team 共 14 findings（13 fixed / 1 記錄不修）、`/cso --diff` 0 findings（淨移除攻擊面：1 個不可信 JSON parser + 3 個 DB 來源 URL 輸出點）。
+
+### 部署順序（load-bearing）
+- **本 PR 刻意不含任何 `migrations/**` 檔。** `.github/workflows/deploy.yml` 命中 `paths:['migrations/**']` 就**自動**跑 `wrangler d1 migrations apply --remote`，且與 CF Pages build **平行**、通常搶先（workflow 自己的註解 :12-17 寫明）。那是為 additive migration 設計的，對 DROP COLUMN 正好相反 —— 欄位先消失、舊 code 還在服務 30-90s，`SELECT ... p.photos` 會讓 `/api/trips/:id/days` 與 `/entries/:eid` 直接 500（每次開行程頁都打的端點）。拆兩 PR 反向利用同一個 path filter 來強制順序：本 PR 不觸發 workflow、只部署 photos-free 的 code；v2.55.79 只含 migration 0086，等本 PR 部署驗證通過才 merge。
+- **完全照抄 0085 先例**（`trip_days DROP COLUMN title`）：Phase 1 = PR #1016 (v2.55.49, code)、Phase 2 = PR #1017 (v2.55.50, DROP)，兩個 PR 相隔 12 分鐘、皆 PATCH。0085 的註解一字不差地寫著同一個理由。反例不要學：0062/0068/0078 的註解都寫「單一 PR」，但 deploy.yml 建於 2026-04-13 早於三者 —— 它們是「前人也曝險過」的紀錄，不是安全背書。
+
 ## [2.55.77] - 2026-07-15
 
 ### Fixed

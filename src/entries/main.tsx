@@ -141,8 +141,14 @@ function TripIndexRedirect() {
 
 /** v2.10 Wave 1: /trip/:tripId/stop/:entryId → /trips?selected=:tripId&focus=:entryId
  *
- * StopDetailPage 已刪。舊分享 link 仍 land 在 trip 詳情頁，未來 TripsListPage
- * 接 ?focus=:eid query 自動展開 inline expand + 開 StopLightbox 完成 deep-link。 */
+ * StopDetailPage 已刪。舊分享 link 仍 land 在 trip 詳情頁，TripPage 讀 ?focus=:eid
+ * 捲到該 entry、TimelineRail 依同一個 param 展開 inline 明細 —— deep-link 到此完成。
+ *
+ * v2.55.78 更正：原註解寫「+ 開 StopLightbox」，但 codebase 從來沒有 focus →
+ * setLightboxOpen 的路徑（?focus 只展開 inline，見 TripPage.tsx 的 ?focus 處理），
+ * 那句一直是假的。StopLightbox 本身也已移除（見 DESIGN.md Allowed Modal Components）。
+ * 依 DESIGN.md「想 deep-link 給隊友看『我在這個畫面』→ 全頁」，展開的 inline 明細
+ * 就是正解，不該是 modal。 */
 function StopDetailRedirect() {
   const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
   const params = new URLSearchParams();

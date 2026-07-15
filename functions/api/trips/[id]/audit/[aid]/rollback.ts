@@ -21,7 +21,17 @@ const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
   // 指向 note 的歷史 update/delete audit rollback 會在 whitelist 階段乾淨拒絕
   // （400 DATA_VALIDATION「Invalid column(s)」），不再通過後撞 "no such column: note"。
   trip_entries:     ['id', 'day_id', 'sort_order', 'start_time', 'end_time', 'description', 'source', 'entry_pois_version', 'updated_at'],
-  pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'lat', 'lng', 'country', 'source', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at', 'price', 'photos', 'created_at', 'updated_at'],
+  // v2.55.78: photos 移出 whitelist — POI 照片功能移除。0038 規劃的 Wikimedia backfill
+  // 從未執行，且結構上從不存在寫入路徑（本 API 的 ALLOWED_FIELDS 不含 photos）→ 恆為 NULL。
+  // 欄位本身由 migration 0086 DROP，走後續 PR（見該檔的 Deploy 順序：CI 會在 push 命中
+  // migrations/** 時自動 apply，故 DROP 必須晚於本 code 部署，否則舊 code 的
+  // `SELECT p.photos` 會 500）。
+  // 本行先落地是**刻意的、fail-closed 的**：photos 還在 schema 時把它擋在 whitelist 外，
+  // 最壞只是多拒一個 rollback；反過來（DROP 先、whitelist 後）則會讓 snapshot 通過
+  // whitelist 後撞 "no such column: photos" 變 opaque 500。
+  // pois snapshot 由 `SELECT *` 產生、必帶 photos key → 在 whitelist 階段乾淨拒絕
+  // （400「Invalid column(s)」）。同 0062/0078 慣例 —— 含 tests/api 的鎖，不只註解。
+  pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'lat', 'lng', 'country', 'source', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at', 'price', 'created_at', 'updated_at'],
   poi_relations:    ['id', 'poi_id', 'related_poi_id', 'relation_type', 'note'],
   trip_docs:     ['id', 'trip_id', 'doc_type', 'title', 'updated_at'],
   trip_doc_entries: ['id', 'doc_id', 'sort_order', 'section', 'title', 'content', 'updated_at'],
