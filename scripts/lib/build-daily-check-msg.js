@@ -29,14 +29,20 @@ const gmWorst = (q) =>
     ? `${gmShort(q.worst.method)} ${(q.worst.pct || 0).toFixed(0)}% (${q.worst.usage}/${q.worst.cap})`
     : 'n/a';
 
-if (r.apiErrors && r.apiErrors.total > 0) {
+if (r.apiErrors && r.apiErrors.error) {
+  issues.push(`🔴 API errors 檢查失敗: ${r.apiErrors.error}`);
+} else if (r.apiErrors && r.apiErrors.total > 0) {
   const icon = r.apiErrors.status === 'critical' ? '🔴' : '⚠️';
   issues.push(`${icon} API errors: ${r.apiErrors.total} 筆`);
 }
-if (r.sentry && r.sentry.total > 0) {
+if (r.sentry && r.sentry.error) {
+  issues.push(`🔴 Sentry 檢查失敗: ${r.sentry.error}`);
+} else if (r.sentry && r.sentry.total > 0) {
   issues.push(`⚠️ Sentry: ${r.sentry.total} 筆`);
 }
-if (r.requestErrors && r.requestErrors.total > 0) {
+if (r.requestErrors && r.requestErrors.error) {
+  issues.push(`🔴 未完成請求檢查失敗: ${r.requestErrors.error}`);
+} else if (r.requestErrors && r.requestErrors.total > 0) {
   const sc = r.requestErrors.statusCounts || {};
   let line = `⚠️ 未完成請求: open:${sc.open || 0} processing:${sc.processing || 0} failed:${sc.failed || 0}`;
   if (r.requestErrors.stuckProcessing > 0) {
