@@ -38,7 +38,6 @@ import { showToast } from '../shared/Toast';
 import { useAutosave } from '../../hooks/useAutosave';
 import { ApiError } from '../../lib/errors';
 import MarkdownText from '../shared/MarkdownText';
-import StopLightbox from './StopLightbox';
 // 2026-05-03 modal-to-fullpage migration: EntryActionPopover 由 /trip/:id/stop/:eid/(copy|move) page 取代。
 // DayOption type 抽到 src/lib/entryAction.ts 給 caller (TripPage dayOptions) 共用。
 import { useNavigate } from 'react-router-dom';
@@ -715,7 +714,6 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   // v2.33.108: note save 走 useAutosave hook（state/error 由 hook 管）。
   // deleteError 保留 separate state — 跟 note edit error 互不干擾。
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
   const navigate = useNavigate();
   // Section 4.5 (terracotta-ui-parity-polish): 取代 window.confirm 為 ConfirmModal pattern
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -1123,19 +1121,15 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
           )}
 
           {/* 2026-04-29 mockup parity:expanded toolbar 從 body 上方移到底部
-           * (mockup S12 Variant A 規範);排列 4+2 grouped:左 4 常用編輯
-           * (放大|複|移|編)+ spacer + 右 2 終止/狀態(刪|收合)。 */}
+           * (mockup S12 Variant A 規範);排列 grouped:左常用編輯
+           * (複|移|編)+ spacer + 右 2 終止/狀態(刪|收合)。
+           * v2.55.78:「放大檢視」(⛶ → StopLightbox) 移除 —— 它的唯一入口就在這個
+           * toolbar 裡，而 toolbar 只在 .tp-rail-detail 展開時才存在，所以它彈出的
+           * modal 永遠是背後那一列的真子集（.tp-rail-detail-desc 無 line-clamp，
+           * 說明/備註本來就全文顯示；展開列還多給細類 label + 星等/價位/營業時間
+           * + 備選景點 + 編輯 affordance）。照片面板是它唯一獨有的東西，照片沒了
+           * 它就沒有存在理由。 */}
           <div className="tp-rail-actions">
-            <button
-              type="button"
-              className="tp-rail-action-icon"
-              onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
-              aria-label="放大檢視"
-              title="放大檢視"
-              data-testid={`timeline-rail-lightbox-open-${entry.id}`}
-            >
-              <Icon name="maximize" />
-            </button>
             {dayId != null && allDays.length > 1 && (
               <div className="tp-rail-action-icon-group">
                 <button
@@ -1195,11 +1189,6 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         </div>
       )}
 
-      <StopLightbox
-        open={lightboxOpen}
-        entry={entry}
-        onClose={() => setLightboxOpen(false)}
-      />
 
       {/* 2026-07-07 stacking-context bug fix：原 inline modal（fixed inset:0
        * z:1000）在 desktop 2-col 下被祖先 transform/contain 困在左欄 stacking
