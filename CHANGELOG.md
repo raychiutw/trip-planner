@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.79] - 2026-07-16
+
+### Removed
+- **`pois.photos` DROP COLUMN（Phase 2/2 —— 純 migration，零 runtime code）** — 承 v2.55.78：欄位由 migration 0038 (v2.12 Wave 3) 加入，計畫由「`scripts/populate-poi-photos.js` 從 Wikimedia Commons 抓填」餵資料，但**該 script 從未存在**（`git log --all --diff-filter=A` 掃全歷史無此檔），且**結構上從無寫入路徑**（`pois/[id].ts` 的 `ALLOWED_FIELDS`、`_poi.ts` 的 INSERT 欄位表與 `COALESCE_FIELDS`、`enrich.ts` 的 UPDATE 全不含 photos）→ **與 row 數無關、恆為 NULL**（活 prod 抽驗非 NULL 0 筆）。`sqlite_master` 只有 `pois` 表本身引用該欄（無 index / trigger / view / CHECK）→ 純結構移除，零資料損失。Rollback 見 `migrations/rollback/0086_pois_drop_photos_rollback.sql`（與 0038 原定義逐字相同）。
+
+### Changed
+- **API contract：三個端點的回應少掉 `photos` key（已知、零讀者）** — v2.55.78 部署驗證時發現取 POI 的路徑分兩種，DROP 的影響完全不同。**具名** SELECT（`SELECT ... p.photos ...`）DROP 後會 `no such column` 500 —— 只有 `_merge.ts` 的 `fetchEntryPoisByEntries` 屬此，v2.55.78 已移除，**這才是拆兩個 PR 的原因**。**星號** SELECT（`SELECT *` / `RETURNING *`）不具名引用欄位，DROP 後只少回一欄、不報錯，但 key 會靜默消失 —— 今天仍帶 photos 的有 `hotel.photos` 與 `hotel.parking[].photos`（`_merge.ts:82` 與 `:101` 兩條 `SELECT * FROM pois`，都經 `:251` 的 `{ ...hotelPoi, parking: [...] }` 原樣攤進 `days?all=1`）、`PATCH /api/pois/:id` 的回應（`:52` `RETURNING *` → `:66` `json(newRow)`），以及 audit snapshot（`:42`/`:82`）。值恆為 null 且零可執行讀者，故無害。**教訓**：查「還有誰讀這欄」時 grep 欄位名對星號 SELECT **無效**，要另外 grep `SELECT *` / `RETURNING *`。本次初稿正是靠 grep 只抓到 `hotel.photos`、漏掉同一函式 19 行後的 parking 那條 —— 由 `/review` 的 data-migration 與 maintainability specialist 各自獨立抓出。
+
+### 測試
+- **新增 PRAGMA schema 鎖**（`tests/unit/migration-0086-drop-pois-photos.test.ts`）：`PRAGMA table_info('pois')` 驗 `photos` 已消失，並以「相鄰欄（price / rating / place_id / category / type）仍存在」作正面對照 —— 沒有這個對照，「查不到 photos」也可能只是 PRAGMA 壞了。補齊 v2.55.78 那個 whitelist 測試**刻意不驗**的那一半（該測試 schema-independent，鎖的是「photos 不在 whitelist」）。
+
+### ⚠️ 回滾地板（本次新增的運維約束）
+- **v2.55.79 套用後，CF Pages 不能再一鍵回滾到 v2.55.78 以前的部署。** v2.55.77 的 `_merge.ts:149` 仍是具名的 `p.photos`，對已 DROP 的 schema 會 `no such column` → `/api/trips/:id/days` 與 `/entries/:eid` 全 500。而儀表板的「Rollback to this deployment」正是出事時的直覺反射，那一鍵會把局部故障放大成全站 500。**要回滾到 v2.55.78 以前：先 apply `migrations/rollback/0086_pois_drop_photos_rollback.sql`，再回滾部署。** 同理，pre-0086 的 D1 dump 做**表級/部分** restore 需先套 rollback（整庫 from-scratch restore 自帶 CREATE TABLE，不受影響）—— 注意 `scripts/backup-prod-d1.sh` 自稱「migration apply 前的安全網」並印出 restore 指令，但它產出的 artifact 正好被本 migration 破壞。已寫入 migration 與 rollback 兩個檔。由 `/review` 的 adversarial pass 抓出：原本 40 行只論證了正向競態，完全沒寫鏡像的反向情境。
+
+### 部署順序（load-bearing）
+- **本 PR 含 `migrations/**`（PR A 刻意不含）。** merge 後 `.github/workflows/deploy.yml` 會命中 `paths:['migrations/**']` 自動 apply —— 這正是本 PR 要的：此時線上 code（v2.55.78，已於 2026-07-16 部署驗證）早已不引用 photos，DROP 對流量是 no-op。承重的是「PR A 不含、PR B 含」這個對比，不是完整檔案清單。
+- **Phase 1 部署驗證實測結果**（v2.55.78 / merge commit `efa11c81`）：master CI success、Lighthouse CI success；`/api/health`、`/api/trips/:id/days`、`?all=1`、`/entries/:eid`、SPA root 全 200；`timeline[].master` 的 photos key **已消失**（證明新 code 真的在服務，而非「沒爆炸」的弱訊號）；prod bundle grep `timeline-rail-lightbox-open` / `stop-lightbox` / `tp-lightbox` / `放大檢視` **全 0 命中**，而同一批 chunk 的 `timeline-rail-row` / `-edit` / `-delete` / `-detail` 全部命中（正面對照，證明 grep 有效且抓對 chunk）。**且 `deploy.yml` 全程未觸發**（最後一次執行是 2026-07-13 的 `deed14dd`）—— 拆分策略如設計運作，DROP 時機由本 PR 掌握。
+- 先例 0085（`trip_days DROP COLUMN title`）：Phase 1 = #1016 (v2.55.49)、Phase 2 = #1017 (v2.55.50)。
+
 ## [2.55.78] - 2026-07-16
 
 ### Removed
