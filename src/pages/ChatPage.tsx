@@ -33,6 +33,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import Icon from '../components/shared/Icon';
+import AiConsentSheet from '../components/AiConsentSheet';
 import MarkdownText from '../components/shared/MarkdownText';
 
 interface MyTripRow { tripId: string; }
@@ -523,6 +524,13 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const [input, setInput] = useState('');
   const [tripMenuOpen, setTripMenuOpen] = useState(false);
   const [inflightId, setInflightId] = useState<number | null>(null);
+  // AI 授權 gate（Option E）：null=未知/載入中（放行，後端 mint 為最終關卡），
+  // false=已知未授權（送出時攔下、跳授權 sheet），true=已授權。
+  const [aiAuthorized, setAiAuthorized] = useState<boolean | null>(null);
+  // 送出時被攔下的訊息（開著 sheet 時非 null）。授權後用它續送、取消則丟棄。
+  const [consentGate, setConsentGate] = useState<string | null>(null);
+  const [consentBusy, setConsentBusy] = useState(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const tripMenuRef = useRef<HTMLDivElement>(null);
@@ -682,22 +690,32 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     }
 
     if (status === 'failed') {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.pendingRequestId === inflightId
-            ? { ...m, text: 'AI 處理失敗，請換個說法或稍後再試。', pendingRequestId: null, failed: true }
-            : m,
-        ),
-      );
-      setInflightId(null);
+      let cancelled = false;
+      (async () => {
+        // 後端 park（如 no_consent 未授權）會把 user-facing 指引寫進 reply。優先顯示它，
+        // 否則像「重送並點授權」的 NEEDS_CONSENT_REPLY 要 reload 才看得到，live session 只剩通用訊息。
+        let text = 'AI 處理失敗，請換個說法或稍後再試。';
+        try {
+          const row = await apiFetch<{ reply?: string | null }>(`/requests/${inflightId}`);
+          const reply = (row.reply ?? '').trim();
+          if (reply) text = reply;
+        } catch { /* 落用通用訊息 */ }
+        if (cancelled) return;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.pendingRequestId === inflightId
+              ? { ...m, text, pendingRequestId: null, failed: true, markdown: true }
+              : m,
+          ),
+        );
+        setInflightId(null);
+      })();
+      return () => { cancelled = true; };
     }
   }, [status, inflightId]);
 
-  const send = useCallback(async (raw: string) => {
-    const text = raw.trim();
-    if (!text) return;
+  const doSend = useCallback(async (text: string) => {
     if (!activeTripId) return;
-    if (inflightId) return; // busy
 
     const now = Date.now();
     setInput('');
@@ -737,7 +755,53 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         ),
       );
     }
-  }, [activeTripId, inflightId, user]);
+  }, [activeTripId, user]);
+
+  const send = useCallback((raw: string) => {
+    const text = raw.trim();
+    if (!text) return;
+    if (!activeTripId) return;
+    if (inflightId) return; // busy
+    // Option E：已知未授權 → 攔下、跳授權 sheet（避免建一筆 mint 不出 token 的死請求，
+    // 卡住整條佇列）。null（授權狀態載入中，數毫秒窗；讀取失敗已 fail-closed 成 false）不攔，
+    // 讓後端 mint 當最終關卡。
+    if (aiAuthorized === false) {
+      setConsentGate(text);
+      return;
+    }
+    void doSend(text);
+  }, [activeTripId, inflightId, aiAuthorized, doSend]);
+
+  // 授權後續送：POST Consent → 標記已授權 → 送出原被攔訊息。
+  const authorizeAndSend = useCallback(async () => {
+    if (!consentGate) return;
+    setConsentBusy(true);
+    setConsentError(null);
+    try {
+      await apiFetch('/account/ai-authorization', { method: 'POST' });
+      setAiAuthorized(true);
+      const pending = consentGate;
+      setConsentGate(null);
+      void doSend(pending);
+    } catch {
+      setConsentError('授權失敗，請稍後再試。');
+    } finally {
+      setConsentBusy(false);
+    }
+  }, [consentGate, doSend]);
+
+  // 載入 owner 對 AI 的授權狀態（一次）。讀取失敗 fail-closed 成 false（＝送出時跳授權 sheet）：
+  // 維持 null 會讓未授權 owner 送出→後端 park→提示「重送並在跳窗授權」，但 sheet 只在 false 才開、
+  // null 永不轉 false → 跳窗永不出現、陷入死循環（adversarial F2）。fail-closed 到 false 可從
+  // sheet 授權復原，且與 AiAuthorizeCard（同端點同樣 fail-closed 到 false）一致；誤攔已授權者
+  // 也只是多點一次「授權並送出」（POST 冪等），不致卡死。
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<{ authorized: boolean }>('/account/ai-authorization')
+      .then((r) => { if (!cancelled) setAiAuthorized(r.authorized); })
+      .catch(() => { if (!cancelled) setAiAuthorized(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   function pickTrip(tripId: string) {
     // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
@@ -1014,6 +1078,15 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
           <Icon name={inflightId ? 'hourglass' : 'send'} />
         </button>
       </form>
+
+      <AiConsentSheet
+        open={consentGate !== null}
+        message={consentGate ?? ''}
+        busy={consentBusy}
+        error={consentError}
+        onAuthorizeAndSend={authorizeAndSend}
+        onCancel={() => { setConsentGate(null); setConsentError(null); }}
+      />
     </div>
   );
 

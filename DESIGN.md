@@ -446,6 +446,14 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - **機制**：Approach B 直接 session 授權（`POST /api/account/ai-authorization` upsert Consent），非 OAuth redirect dance；機器 client 不開 web redirect_uri、不簽 auth code。讀狀態失敗 fail-open 當未授權（顯授權鈕、不卡建立流程）。
 - Mockup：`docs/design-sessions/2026-07-11-tp-request-consent-trigger.html`（sign-off 2026-07-11，選 V1 就地卡片；V2 送出對話框 / V3 建立後獨立頁未採用）。
 
+### AI Consent Sheet（`tp-consent-sheet`，v2.55.77）
+- ChatPage 送出時的就地授權 sheet：**補 NewTripPage 授權卡沒涵蓋的入口** —— 一個「行程已存在、直接用 AI 聊天問」的 owner，在「帳號 → 已連結應用」只找得到撤銷、沒有授權入口（該頁空狀態只提示 Sign in with Tripline）。送出訊息 = 建 `trip_request`；owner 若未授權，後端 `mint-restricted` 簽不出 owner token，該請求永遠 mint 失敗、卡住整條佇列（peek `sort=asc` 每輪撈同一筆）。此 sheet 在送出當下就地問要不要授權。
+- **觸發**：送出時 `GET /api/account/ai-authorization` 為未授權 → 攔下、不建請求、跳 sheet（`aiAuthorized===false` 才攔，**含 GET 讀取失敗 fail-closed 成 false**——與 AiAuthorizeCard 一致、可從 sheet 授權復原；`null`＝授權狀態載入中的數毫秒窗才放行，後端 mint 為最終關卡）。
+- **形態**：底部跳出 sheet（sign-off variant B；A inline 卡 / C fullpage 步驟未採用）。`--color-background` 底、`22px 22px 0 0` 圓角、grip handle。內含**沿用 `tp-ai-card` 視覺**的授權卡（柔褐 badge + 標題 + 說明）+ 送出訊息引用預覽（`--color-background` 底 + `--color-border` 框）。
+- **動作**：全寬「授權並送出」（`--color-accent` 實心）→ `POST /api/account/ai-authorization` upsert Consent → 續送原訊息；「取消」（ghost）→ 不建請求、保留輸入。Escape／點背景＝取消；授權進行中 disable 主鈕（顯「授權中⋯」）並鎖背景點擊防誤取消。
+- **後端防禦（非 UI）**：`mint-restricted` 遇 `no_consent` 把該 request park 成 `failed` + 寫授權指引 reply（peek 只撈 open/processing → 跳過），確保單一未授權請求不會永久卡死佇列。沿用既有 `failed` status（0049 CHECK 值域）→ 免 migration。並把 `POST /api/requests` 的 30 秒去重加 `status IN ('open','processing')` 濾網 —— 否則 owner 授權後重送同一訊息會在 30 秒內撞回剛 park 的 `failed` 請求、看似又失敗（adversarial F1）。
+- Mockup：`docs/design-sessions/2026-07-15-chat-consent-gate.html`（sign-off 2026-07-15 variant B）。
+
 ### Stop Card
 - 4-col grid：`68px time | 48px icon box | content | actions`，compact 可收斂到 3-col。
 - **依類型 tone 上同色系淡底**：卡片 bg = tone `-subtle`、border = tone `-bg`（柔褐／sage／粉，見 Stop Type Color Convention）。

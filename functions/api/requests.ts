@@ -126,10 +126,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
-  // 30 秒去重保護：防止因網路重試或使用者重複點擊造成重複寫入
+  // 30 秒去重保護：防止因網路重試或使用者重複點擊造成重複寫入。
+  // 只去重「仍在跑」的請求（open/processing）——終結狀態（failed/completed）不得遮蔽合法重送：
+  // 未授權請求被 mint-restricted park 成 failed 後，owner 授權→重送同一訊息若撞回那筆 failed
+  // 會綁到死 id、SSE 立刻回 failed，授權後的第一次重送看似又失敗（adversarial F1）。
   const existing = await env.DB
     .prepare(
-      'SELECT * FROM trip_requests WHERE trip_id = ? AND message = ? AND submitted_by = ? AND created_at > datetime(\'now\', \'-30 seconds\') ORDER BY created_at DESC LIMIT 1'
+      'SELECT * FROM trip_requests WHERE trip_id = ? AND message = ? AND submitted_by = ? AND status IN (\'open\', \'processing\') AND created_at > datetime(\'now\', \'-30 seconds\') ORDER BY created_at DESC LIMIT 1'
     )
     .bind(tripId, message, auth.email)
     .first();

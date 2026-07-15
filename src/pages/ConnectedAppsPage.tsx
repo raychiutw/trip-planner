@@ -18,6 +18,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import AiAuthorizeCard from '../components/AiAuthorizeCard';
 
 const SCOPED_STYLES = `
 .tp-settings-shell {
@@ -196,6 +197,12 @@ export default function ConnectedAppsPage() {
       <div className="tp-settings-inner">
         <p className="tp-page-eyebrow">設定</p>
         <p className="tp-page-meta">這些應用程式可以使用你的 Tripline 帳號。撤銷後該應用程式將立即失去存取權。</p>
+
+        {/* Tripline AI 排程就地授權入口 —— 讓「行程已存在、只用 AI 聊天」的 owner 在設定頁
+            也能授權（不只 NewTripPage / 聊天送出當下）。撤銷仍走下方應用列的「撤銷」。 */}
+        <div style={{ marginBottom: 16 }}>
+          <AiAuthorizeCard />
+        </div>
 
         {error && <ErrorBanner message={error} testId="connected-apps-error" />}
 
