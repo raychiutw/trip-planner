@@ -37,6 +37,12 @@ jobs:
           PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # checkLinks() 打 /api/trips + /days 需要 mint token。少了這兩個，
+          # getTriplineToken 會在 get-tripline-token.js:87 直接拋 —— 這個檢查
+          # 從 v2.33.50 導入至今在 CI 裡一天都沒跑成過，只是舊 code 把失敗
+          # 吞成 [] 再 render 成綠色「全部連結正常」，所以沒人發現。
+          TRIPLINE_API_CLIENT_ID: ${{ secrets.TRIPLINE_API_CLIENT_ID }}
+          TRIPLINE_API_CLIENT_SECRET: ${{ secrets.TRIPLINE_API_CLIENT_SECRET }}
 
       # v2.33.66 round 16 HIGH-2: pin SHA — community-maintained action, supply
       # chain compromise = leak GMAIL_APP_PASSWORD + CF token in earlier step env.

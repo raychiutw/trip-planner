@@ -23,10 +23,6 @@
 
 ## Completed
 
----
-
-## Completed
-
 ### trip_segments — recompute 不清 stale 非相鄰段（reorder 後幽靈車程）
 
 **Priority:** P2 · **Component:** recompute-travel / trip_segments
