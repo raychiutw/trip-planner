@@ -51,10 +51,12 @@ import { FooterArt } from '../components/trip/ThemeArt';
 import DaySkeleton from '../components/trip/DaySkeleton';
 import type { TripListItem } from '../types/trip';
 
+// owner 不在必要欄位裡：/api/trips 對匿名訪客不回 owner email（第三方個資），
+// 而這支正是匿名檢視公開行程的路徑。把 owner 列為必要會讓每個 trip 都被
+// filter 掉 → 公開行程頁全空。這裡真正需要的是 tripId/name/published。
 function isTripListItem(item: Record<string, unknown>): item is Record<string, unknown> & TripListItem {
   return typeof item.tripId === 'string'
     && typeof item.name === 'string'
-    && typeof item.owner === 'string'
     && typeof item.published === 'number';
 }
 

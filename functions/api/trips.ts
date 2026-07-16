@@ -191,8 +191,18 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // is canonical; LEFT JOIN users 拿 owner email for legacy display。
   // 2026-05-07：加 u.display_name AS owner_display_name 給 trip card avatar
   // initial 顯示「帳號名稱」第一字母（不是 email[0]）。
+  //
+  // owner email 與 owner_display_name 都是擁有者個資，只給「已登入且未受 trip 限制」
+  // 的呼叫者。2026-07-16 前 `curl /api/trips` 零認證就能拿到每個公開行程擁有者的
+  // email；display_name 一樣要擋 —— 登入時預設帶 Google 真名（callback/google.ts），
+  // 而匿名情境前端根本不 render 這兩欄（唯一匿名 consumer TripPage 只拿 tripId 判信任）。
+  // 這對齊專案既有的 bar：_share.ts:154 匿名分享連結「never expose the owner's name」。
+  // restrictTrip 降權 token 也拿不到 —— 它只該碰被授權的那一個 trip，不該撈全站 owner
+  // 清單。ops service token（restrictTrip undefined）維持原樣，且目前無 reader 用 owner。
+  const includeOwnerPii = !!auth && auth.restrictTrip === undefined;
+  const ownerCols = includeOwnerPii ? 'u.email AS owner, u.display_name AS owner_display_name,' : '';
   const baseCols = `t.id AS tripId, t.name,
-                    u.email AS owner, u.display_name AS owner_display_name, t.owner_user_id,
+                    ${ownerCols} t.owner_user_id,
                     t.title,
                     t.countries, t.published, t.data_source, t.lang,
                     (SELECT COUNT(*) FROM trip_days d WHERE d.trip_id = t.id) AS day_count,

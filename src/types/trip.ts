@@ -253,7 +253,8 @@ export interface DaySummary {
 export interface TripListItem {
   tripId: string;
   name: string;
-  owner: string;
+  /** 擁有者 email。**只有登入者拿得到** —— /api/trips 對匿名不回此欄（第三方個資）。 */
+  owner?: string;
   title?: string | null;
   countries?: string | null;
   published: number;
@@ -290,7 +291,8 @@ export interface Trip {
   id: string;
   tripId: string;
   name: string;
-  owner: string;
+  /** 擁有者 email。**只有登入者拿得到** —— /api/trips 對匿名不回此欄（第三方個資）。 */
+  owner?: string;
   title?: string | null;
   description?: string | null;
   countries?: string | null;

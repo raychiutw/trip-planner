@@ -3,7 +3,7 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.55.81] - 2026-07-16
+## [2.55.83] - 2026-07-16
 
 ### Fixed
 - **D1 migration 安全 gate 從導入至今在 CI 裡從未擋下任何東西** — 2026-05-04 的 0047 incident（`DROP TABLE trips` 觸發 ON DELETE CASCADE，砍光全 prod 的 trip_days / entries / pois / destinations / docs）之後建立了 `scripts/check-migration-safety.sh`，但它在 CI 裡是死的：`actions/checkout` 預設 `fetch-depth: 1` → `origin/master~1` 解不開 → `git diff` fatal → 被 `2>/dev/null || true` 吞掉 → 每個 migration 都被歸類成 historical → warn-only → exit 0。鐵證是 CI run **29093424704**（#1017 新增 migration 0085 那次），它印出「NEW/modified migrations vs origin/master~1: 0」，正確答案是 1。gate 印綠燈印了兩個月。
@@ -15,6 +15,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 - `check-migration-safety.sh` 新增 `--pending=<file>`（CI 用，D1 權威）與 exit 2（gate 本身跑不起來 ≠ 安全）；`deploy.yml` 移除 `fetch-depth` 與 `workflow_dispatch` 的 since input（gate 已不看 git）。script header 補上誠實聲明：這是 grep 不是 SQL parser，PASS 只代表這幾條 grep 沒抓到，`DELETE FROM <parent>` 一樣會 CASCADE 砍光而 gate 看都不看。
+## [2.55.82] - 2026-07-16
+
+### Security
+- **`GET /api/trips` 對匿名訪客洩漏擁有者個資** — 這支無 auth 時走 `WHERE t.published = 1`（公開行程本來就該看得到），但 `baseCols` 無條件 `SELECT u.email AS owner, u.display_name AS owner_display_name`，把擁有者 email **與顯示真名**一起送出。實測 prod：`curl https://trip-planner-dby.pages.dev/api/trips` 零認證回傳 6 個行程，每個都帶真實 email，其中一個是第三方的。`display_name` 同樣是個資（登入時預設帶 Google 真名），對齊專案既有 bar（`_share.ts:154` 匿名分享連結「never expose the owner's name」）。改為 `const includeOwnerPii = !!auth && auth.restrictTrip === undefined`，只有這條為真才 SELECT 這兩欄。匿名仍拿得到 `owner_user_id`（random UUID、非 email、已驗證無反查 oracle）。
+- **同一 gate 連帶擋掉 `restrict_trip` 降權 token 撈全站 owner email** — `restrict_trip` token（`isServiceToken=false`、`userId` 有值、綁死單一 trip）原本也過 `auth` 真值判斷，能 `GET /api/trips` 撈出所有 published owner 的 email，繞過自己的 scope。`auth.restrictTrip === undefined` 一併擋掉；ops service token（`restrictTrip` undefined）維持原樣，且目前無 reader 用 owner。
+- **連帶修 `owner` 變 optional 後的兩個 client 假設** — `TripPage.tsx` 的 `isTripListItem` type guard 要求 `typeof item.owner === 'string'`，匿名時會把每個 trip 都 filter 掉 → 公開行程頁全空；`TripsListPage.tsx` 四處以 `(t.owner ?? '').toLowerCase() === userEmail` 判斷「我的行程」，未登入時 `'' === ''` 會讓每個行程都判成自己的。前者移除 `owner` 必要性（真正需要的是 tripId/name/published），後者抽出 `isOwnedByUser()` 並加上 `!!userEmail` guard。
 
 ## [2.55.80] - 2026-07-16
 
