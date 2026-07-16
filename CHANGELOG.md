@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.81] - 2026-07-16
+
+### Fixed
+- **D1 migration 安全 gate 從導入至今在 CI 裡從未擋下任何東西** — 2026-05-04 的 0047 incident（`DROP TABLE trips` 觸發 ON DELETE CASCADE，砍光全 prod 的 trip_days / entries / pois / destinations / docs）之後建立了 `scripts/check-migration-safety.sh`，但它在 CI 裡是死的：`actions/checkout` 預設 `fetch-depth: 1` → `origin/master~1` 解不開 → `git diff` fatal → 被 `2>/dev/null || true` 吞掉 → 每個 migration 都被歸類成 historical → warn-only → exit 0。鐵證是 CI run **29093424704**（#1017 新增 migration 0085 那次），它印出「NEW/modified migrations vs origin/master~1: 0」，正確答案是 1。gate 印綠燈印了兩個月。
+- **「哪些 migration 是新的」改問 D1，不再拿 git 推測** — git 不知道 prod 套用到哪，實測出三條洗白路徑（皆同源）：被 exit 1 擋下的 migration 仍留在 master，之後任何動到 `migrations/` 的 commit 都會讓它降級成 pre-existing WARN 然後被下一個 PR 一起套用；`git mv` 換個編號（`--diff-filter=AM` 濾掉 rename）也會；一次推多個 commit 也會。新增 `scripts/d1-pending-migrations.js`（只吃 `wrangler d1 execute --json` 的輸出，無網路、可 unit test）算出 pending 清單餵給 `--pending`。`d1_migrations` 不在乎 git 怎麼動：沒套用過就是要檢查。
+- **gate 的 SQL 比對修正 13 種合法繞過** — CASCADE 偵測的字元類 `[a-z_]+` 不含數字，真實 corpus 的 `trip_docs_v2`（`0019_normalize_docs.sql:5` 建表、`:16` 掛 CASCADE child）被截成 `trip_docs_v` —— 一張不存在的表，gate 一直在保護幽靈。DROP 偵測則是逐行 + 大小寫敏感 + 只認裸識別字，引號 / 中括號 / 反引號 / 小寫 / `main.` 前綴 / 分號換行 / 結尾無分號全部放行（皆在 sqlite3 3.51.0 實跑確認 CASCADE 真的會觸發）。`_backup_` 安全標記是整檔 grep，一句「`-- no _backup_trips needed`」的註解就能替 `DROP TABLE trips` 背書。改為抽出 `sql_statements()` 讓兩側共用同一份正規化（剝註解 / 去引號 / 小寫 / 依 `;` 切敘述），並要求真的存在 `CREATE TABLE _backup_x AS SELECT` 動作。
+- **`daily-report.js` 的連結檢查從 v2.33.50 起一天都沒跑成過** — `daily-report.yml` 的 env 從未傳 `TRIPLINE_API_CLIENT_ID` / `SECRET`，而 `.env.local` 是 gitignored、runner 上不存在，所以 `getTriplineToken()` 每次都拋。舊 code 把失敗 catch 成 `[]`，`linksHtml` 再把 `data.length === 0` render 成綠色「全部連結正常」。改為往上拋（`val(6)` → null → `failedHtml()`）並補上 secrets 讓檢查真的執行。
+- **`scripts/init-local-db.js` 五處吞錯** — 每一步都是 catch-and-continue，結尾無條件印「✅ Local DB ready!」exit 0。實測：整份 restore 全掛（9 張表全部匯入失敗）仍回報成功，Step 3「Verifying」還親口報了 `pois: 0 rows`。改為收集 `failures[]` → exit 1；錯誤訊息不再截 80 字（`err.message` 開頭是「Command failed: npx wrangler …」，真正原因在 `err.stderr`，截 80 字剛好切掉）。
+- **`GET /api/health` 的 JSDoc 宣稱回傳 `version: VITE_BUILD_VERSION`** — 該識別字全 repo 只存在於那行註解本身，從未實作，也沒有任何供應來源（vite.config.ts 無 `define:`）。刪除該行；新增 `tests/api/health-endpoint-shape.integration.test.ts` 真的執行 handler 並鎖住回應 key 集合與三條狀態分支（此前唯一「蓋到」503 的是一條比對原始碼字面的 regex）。
+
+### Changed
+- `check-migration-safety.sh` 新增 `--pending=<file>`（CI 用，D1 權威）與 exit 2（gate 本身跑不起來 ≠ 安全）；`deploy.yml` 移除 `fetch-depth` 與 `workflow_dispatch` 的 since input（gate 已不看 git）。script header 補上誠實聲明：這是 grep 不是 SQL parser，PASS 只代表這幾條 grep 沒抓到，`DELETE FROM <parent>` 一樣會 CASCADE 砍光而 gate 看都不看。
+
 ## [2.55.80] - 2026-07-16
 
 ### Fixed
