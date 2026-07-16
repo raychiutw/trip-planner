@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.84] - 2026-07-17
+
+### Fixed
+- **POI category 顯示補 16 種中文細類 label** — 盤點 prod 全 343 個 POI 後，`pois.category` 裡有 16 種 Google `primaryType` 值原本未收錄於 `GOOGLE_PRIMARY_TYPE_LABELS`，走 `humanizePrimaryType` 顯示英文（`Noodle shop` / `Ferry service` / `Tonkatsu restaurant`…）。補上繁中對照：豬排 / 燒肉 / 麵店 / 日式咖哩 / 觀景點 / 城堡 / 島嶼 / 觀光景點 / 停車場 / 渡輪 / 鐵路 / 交通服務 / 運動場所 / 旅行社 / 服務據點 / 辦公室。接續前一次「143 筆空 category 用 Google Places primaryType 回填」的顯示收尾。`poi-category.test.ts` 加斷言鎖住 16 個 label + 「補回後不再落英文」的迴圈驗證。
+
 ## [2.55.83] - 2026-07-16
 
 ### Fixed
