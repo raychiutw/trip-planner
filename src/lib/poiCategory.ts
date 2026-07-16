@@ -60,6 +60,8 @@ const GOOGLE_PRIMARY_TYPE_LABELS: Record<string, string> = {
   breakfast_restaurant: '早餐', brunch_restaurant: '早午餐', diner: '小餐館', buffet_restaurant: '自助餐',
   cafe: '咖啡廳', coffee_shop: '咖啡廳', cafeteria: '自助餐廳', bakery: '烘焙坊', tea_house: '茶館',
   bar: '酒吧', pub: '酒館', wine_bar: '酒吧', bar_and_grill: '餐酒館',
+  tonkatsu_restaurant: '豬排', yakiniku_restaurant: '燒肉', noodle_shop: '麵店',
+  japanese_curry_restaurant: '日式咖哩',
   ice_cream_shop: '冰淇淋', dessert_shop: '甜點', dessert_restaurant: '甜點', donut_shop: '甜甜圈',
   bagel_shop: '貝果', juice_shop: '果汁', confectionery: '甜點店', candy_store: '糖果店',
   chocolate_shop: '巧克力', food_court: '美食街', deli: '熟食', meal_takeaway: '外帶', meal_delivery: '外送',
@@ -74,6 +76,7 @@ const GOOGLE_PRIMARY_TYPE_LABELS: Record<string, string> = {
   park: '公園', garden: '花園', botanical_garden: '植物園', beach: '海灘', hiking_area: '健行步道',
   plaza: '廣場', tourist_information_center: '遊客中心', planetarium: '天文館', ferris_wheel: '摩天輪',
   point_of_interest: '景點', landmark: '地標',
+  scenic_spot: '觀景點', castle: '城堡', island: '島嶼', tourism: '觀光景點',
   // 購物（買 → 柔褐）
   shopping_mall: '購物中心', shopping_center: '購物中心', department_store: '百貨公司', supermarket: '超市',
   convenience_store: '便利商店', grocery_store: '雜貨店', market: '市場', clothing_store: '服飾店',
@@ -90,13 +93,17 @@ const GOOGLE_PRIMARY_TYPE_LABELS: Record<string, string> = {
   airport: '機場', international_airport: '國際機場', train_station: '火車站', subway_station: '地鐵站',
   bus_station: '巴士站', transit_station: '轉運站', light_rail_station: '輕軌站', ferry_terminal: '渡輪碼頭',
   taxi_stand: '計程車站', bus_stop: '公車站', gas_station: '加油站', ev_charging_station: '充電站',
-  rest_stop: '休息站', car_rental: '租車',
+  rest_stop: '休息站', car_rental: '租車', parking_lot: '停車場', ferry_service: '渡輪',
+  railway: '鐵路', transportation_service: '交通服務',
   // 活動・娛樂（玩 → 柔褐）
   movie_theater: '電影院', night_club: '夜店', casino: '賭場', bowling_alley: '保齡球館', spa: 'SPA',
   gym: '健身房', fitness_center: '健身中心', stadium: '體育場', arena: '競技場', concert_hall: '音樂廳',
   performing_arts_theater: '劇場', karaoke: 'KTV', sports_complex: '運動中心', swimming_pool: '游泳池',
   ski_resort: '滑雪場', golf_course: '高爾夫球場', marina: '碼頭', amusement_center: '遊樂中心',
   community_center: '社區中心', event_venue: '活動場地', banquet_hall: '宴會廳',
+  sports_activity_location: '運動場所', tour_agency: '旅行社',
+  // 其他（Google 泛用 primaryType，資料裡少量出現 → 中文化避免外露英文）
+  service: '服務據點', corporate_office: '辦公室',
 };
 
 /**
