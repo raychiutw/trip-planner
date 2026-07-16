@@ -5,23 +5,23 @@
 # 預期會抑制 ON DELETE CASCADE，但 D1 不 honor cross-statement PRAGMA → CASCADE 觸發
 # → 全 prod trip_days/entries/pois/destinations/docs 砍光。
 #
-# 此 script 掃描 migrations/ 找「DROP TABLE <parent>」+ children 用「REFERENCES <parent>」
-# 的危險 pattern，要求 migration 必含 `_backup_` 字樣（backup-restore pattern 標記）。
+# 掃 migrations/ 找「DROP TABLE <parent>」而 <parent> 有 REFERENCES ... ON DELETE
+# CASCADE 的 children，且該 migration 沒有真的做 backup-restore。
+#
+# 這是 grep，不是 SQL parser —— defence in depth，不是證明。PASS 只代表「這幾條 grep
+# 沒抓到東西」。已知擋不住的至少有：DELETE FROM <parent>（CASCADE 一樣砍光 children）、
+# 動態 SQL、以及任何 sql_statements() 的正規化沒涵蓋到的合法寫法。
 #
 # Usage:
 #   bash scripts/check-migration-safety.sh                    # check ALL (informational)
 #   bash scripts/check-migration-safety.sh --since=<ref>      # gate mode (block on NEW)
-# CI 傳的是 github.event.before（真正的 push 前 tip）—— 見 .github/workflows/deploy.yml。
-# 不要用固定回看一格的 origin/master~1：一次推多個 commit 就會漏看前面幾格。
 #
 # Exit codes:
 #   0 = PASS（無不安全的 NEW migration）
 #   1 = 不安全 NEW migration；CI 用此 exit code block deploy
 #   2 = gate 本身跑不起來（--since ref 解不開 / 未知參數）—— 不是「安全」，是「沒檢查」
-# 早於 --since 的 migration 只 WARN（假定已套用 —— 本 script 不查 d1_migrations）。
 #
-# 行為（含 exit 2 那條）由 tests/unit/check-migration-safety.test.ts 鎖住，
-# 該檔的 docblock 也記著這個 gate 為何曾經從未擋下任何東西。改本檔請同步跑它。
+# 行為由 tests/unit/check-migration-safety.test.ts 鎖住。
 
 set -euo pipefail
 
@@ -63,7 +63,7 @@ if [ -n "$SINCE_REF" ]; then
   fi
   # git must NOT be wrapped in `2>/dev/null || true` (set -e has to see it fail);
   # grep must be, because "no .sql changed" is a legitimate empty result.
-  CHANGED=$(git diff --name-only --diff-filter=AM "$SINCE_REF"...HEAD -- "$MIGRATIONS_DIR/")
+  CHANGED=$(git diff --name-only --diff-filter=AM --no-renames "$SINCE_REF"...HEAD -- "$MIGRATIONS_DIR/")
   NEW_FILES=$(echo "$CHANGED" | grep '\.sql$' | xargs -n1 basename 2>/dev/null || true)
   COUNT=$(echo "$NEW_FILES" | grep -c '\.sql$' || true)  # `|| echo 0` would print a 2nd 0
   echo "📋 NEW/modified migrations vs $SINCE_REF: $COUNT"
@@ -77,10 +77,25 @@ is_new() {
   echo "$NEW_FILES" | grep -qx "$1"
 }
 
-# Build list of parents that have CASCADE children (across ALL migrations)。
-# 逐「敘述」掃（壓掉換行再以 `;` 切）而非逐「行」：FOREIGN KEY / REFERENCES /
-# ON DELETE CASCADE 分寫三行是合法 SQL，逐行 grep 抓不到就會放行一個 DROP TABLE。
-# 取敘述內每一個 REFERENCES（非 head -1）：寧可多擋，不可漏一個而砍光 prod。
+# 把 .sql 正規化成「一行一個 SQL 敘述」的串流。CASCADE 偵測與 DROP 偵測都走這裡 ——
+# 兩邊形狀不一致正是 gate 漏掉一堆合法寫法的原因。每一項都對應一個實測過的繞過：
+#   剝 /* */ 與 -- 註解  一句「no _backup_trips needed」的註解就能讓 DROP TABLE 過關
+#   拿掉 " ` [ ]        DROP TABLE "trips" / [trips] 是合法 SQL，裸識別字 grep 不認
+#   轉小寫              drop table trips 一樣合法
+#   壓換行後依 ; 切      FOREIGN KEY / REFERENCES / ON DELETE CASCADE 分寫三行是合法的；
+#                       DROP TABLE trips 後面換行才打 ; 也是
+sql_statements() {
+  perl -0pe 's{/\*.*?\*/}{ }gs; s{--[^\n]*}{}g' "$@" \
+    | tr -d '"`[]' \
+    | tr 'A-Z' 'a-z' \
+    | tr '\n' ' ' \
+    | tr ';' '\n'
+}
+
+# 哪些 parent 有 CASCADE children（掃全部 migration）。
+# 取敘述內每一個 references（非 head -1）：寧可多擋，不可漏一個而砍光 prod。
+# 字元類含數字：trip_docs_v2 曾被 [a-z_]+ 截成 trip_docs_v —— gate 保護著一張不存在的表，
+# 而真的有 CASCADE child 的 trip_docs_v2 全無防護（migrations/0019_normalize_docs.sql:16）。
 declare -a CASCADE_PARENTS=()
 while IFS= read -r parent; do
   if [ -n "$parent" ]; then
@@ -89,12 +104,11 @@ while IFS= read -r parent; do
     fi
   fi
 done < <(
-  cat "$MIGRATIONS_DIR"/*.sql \
-    | tr '\n' ' ' \
-    | tr ';' '\n' \
-    | grep -E 'ON[[:space:]]+DELETE[[:space:]]+CASCADE' \
-    | grep -oE 'REFERENCES[[:space:]]+[a-z_]+' \
+  sql_statements "$MIGRATIONS_DIR"/*.sql \
+    | grep -E 'on[[:space:]]+delete[[:space:]]+cascade' \
+    | grep -oE 'references[[:space:]]+[a-z0-9_.]+' \
     | awk '{print $2}' \
+    | sed 's/^main\.//' \
     || true
 )
 
@@ -110,16 +124,27 @@ done
 echo ""
 
 UNSAFE_NEW=0
-UNSAFE_HISTORICAL=0
+UNSAFE_PRE_EXISTING=0
 
 # Scan each migration for DROP TABLE on cascade-parent
 for migration in "$MIGRATIONS_DIR"/*.sql; do
   [ -f "$migration" ] || continue
   base=$(basename "$migration")
+  stmts=$(sql_statements "$migration")
+
+  # 真的做了 backup 才算 backup。舊寫法 grep 整個檔案找「_backup_」字樣，所以一句
+  # 「-- no _backup_trips needed」的註解就替整檔背書；而 _backup_trip_ 那條分支與
+  # parent 無關，提到 _backup_trip_days 的註解能同時替 DROP TABLE pois 背書。
+  has_backup=0
+  if echo "$stmts" | grep -qE "create[[:space:]]+table[[:space:]]+(if[[:space:]]+not[[:space:]]+exists[[:space:]]+)?_backup_[a-z0-9_]+[[:space:]]+as[[:space:]]+select"; then
+    has_backup=1
+  fi
 
   for parent in "${CASCADE_PARENTS[@]}"; do
-    if grep -qE "DROP[[:space:]]+TABLE[[:space:]]+(IF[[:space:]]+EXISTS[[:space:]]+)?${parent}([[:space:]]*;|[[:space:]]+RENAME)" "$migration"; then
-      if ! grep -qE "_backup_${parent}|_backup_trip_" "$migration"; then
+    # 敘述已依 ; 切開，parent 後面只會是空白或行尾。尾錨不可省：少了它
+    # DROP TABLE trips_new（0047 的 swap idiom 用得到）會被誤判成 DROP TABLE trips。
+    if echo "$stmts" | grep -qE "drop[[:space:]]+table[[:space:]]+(if[[:space:]]+exists[[:space:]]+)?(main\.)?${parent}([[:space:]]|$)"; then
+      if [ "$has_backup" -eq 0 ]; then
         if [ -n "$SINCE_REF" ] && ! is_new "$base"; then
           # 「早於 --since」≠「已套用到 prod」—— 本 script 不查 d1_migrations。已知缺口：
           # 被擋下的不安全 migration（exit 1、apply 沒跑）只要之後再落地一個動到
@@ -130,7 +155,7 @@ for migration in "$MIGRATIONS_DIR"/*.sql; do
           # ${SINCE_REF} 的大括號不可省：後接全形「；」會被吃進變數名 → set -u 崩。
           echo "   - 早於 ${SINCE_REF}；假定已套用（未對 d1_migrations 查證）"
           echo ""
-          UNSAFE_HISTORICAL=$((UNSAFE_HISTORICAL + 1))
+          UNSAFE_PRE_EXISTING=$((UNSAFE_PRE_EXISTING + 1))
         else
           # NEW migration or no gate mode — ERROR
           echo "❌ UNSAFE NEW: $base"
@@ -152,7 +177,7 @@ done
 
 echo ""
 echo "════════════════════════════════════"
-echo "Summary: NEW unsafe=$UNSAFE_NEW, historical unsafe=$UNSAFE_HISTORICAL"
+echo "Summary: NEW unsafe=$UNSAFE_NEW, pre-existing unsafe=$UNSAFE_PRE_EXISTING"
 if [ $EXIT_CODE -eq 0 ]; then
   echo "✅ PASS — no NEW migration risks D1 CASCADE wipe."
 else

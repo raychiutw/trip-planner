@@ -39,8 +39,15 @@ on:
       - 'migrations/**'
       - '.github/workflows/deploy.yml'
 
-  # Manual trigger for ad-hoc re-runs (e.g. rerun after a failure)
+  # Manual trigger for ad-hoc re-runs (e.g. rerun after a failure)。
+  # since 必填：dispatch 沒有 event.before，而回落到 origin/master~1 等於把這個 workflow
+  # 修掉的固定回看一格請回來 —— 一個被 gate 擋下的 migration 只要等 master 前進一格
+  # （code-only PR 因 paths filter 不觸發本 workflow），按一下 Run workflow 就會被套用。
   workflow_dispatch:
+    inputs:
+      since:
+        description: '比較基準 commit SHA（要重跑的那次 push 之前的 master tip）'
+        required: true
 
 # Prevent concurrent migration runs from racing the d1_migrations tracking
 # table. cancel-in-progress: false means "queue the next run", do NOT kill
@@ -59,11 +66,9 @@ jobs:
       # v2.33.66 round 16 LOW-1: pin SHA per OpenSSF
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          # 0 = full history. The safety check below compares against
-          # github.event.before, which can be arbitrarily far back (a rebase-merge
-          # or multi-commit push moves master by more than one commit), so there is
-          # no correct finite depth. The default of 1 left the old origin/master~1
-          # ref unresolvable, which silently no-op'd the gate on every migration PR.
+          # 0 = full history — the gate below diffs against github.event.before,
+          # which has no bounded depth. The default of 1 left the ref unresolvable,
+          # which silently no-op'd the gate on every migration PR.
           fetch-depth: 0
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -75,7 +80,7 @@ jobs:
         run: npm ci
 
       # 2026-05-04 incident gate: scan for D1 cascade-wipe risk patterns in NEW
-      # migrations (DROP TABLE on cascade-parent without _backup_ pattern).
+      # migrations (DROP TABLE on cascade-parent without backup-restore).
       # See scripts/check-migration-safety.sh for the rule + post-incident note.
       # exit 1 = unsafe NEW migration; exit 2 = the gate itself couldn't run
       # (unresolvable ref / nothing to scan). Both block the apply step below.
@@ -83,13 +88,13 @@ jobs:
       # github.event.before, NOT origin/master~1: `~1` is a fixed one-commit
       # lookback, so a push that moves master by 2+ commits (rebase-merge is
       # enabled on this repo) hides every migration outside the final commit —
-      # the gate then calls it HISTORICAL and passes. event.before is the actual
-      # pre-push tip, however many commits back that is. It's empty on
-      # workflow_dispatch, hence the fallback.
+      # the gate then treats it as pre-existing and passes. event.before is the
+      # actual pre-push tip, however many commits back that is.
       - name: D1 migration safety check
         env:
           PUSH_BEFORE: ${{ github.event.before }}
-        run: bash scripts/check-migration-safety.sh --since="${PUSH_BEFORE:-origin/master~1}"
+          SINCE_INPUT: ${{ inputs.since }}
+        run: bash scripts/check-migration-safety.sh --since="${PUSH_BEFORE:-$SINCE_INPUT}"
 
       - name: Apply pending migrations
         env:

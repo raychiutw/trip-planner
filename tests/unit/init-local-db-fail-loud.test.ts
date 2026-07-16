@@ -2,9 +2,8 @@
 /**
  * scripts/init-local-db.js — 失敗必須走得到 exit code。
  *
- * 這個 script 每一步都是 catch-and-continue，結尾無條件印「✅ Local DB ready!」exit 0。
- * 2026-07-16 用 repo 現有的 2026-04-24 傾印實測：9 張表全部匯入失敗（傾印欄位與現在的
- * schema 對不上），它照樣印 ✅ 並 exit 0，而 Step 3「Verifying」還親口報了 `pois: 0 rows`。
+ * 這個 script 每一步都是 catch-and-continue，結尾無條件印「✅ Local DB ready!」exit 0，
+ * 所以整份 restore 全掛也會回報成功。
  *
  * source-grep（非執行）—— 這個 script 沒有 export、沒有 require.main guard，require 它
  * 會直接跑 main() 並打 wrangler。與 tests/unit/init-local-db-table-order.test.ts 同慣例。
@@ -19,11 +18,32 @@ const SRC = fs.readFileSync(
   'utf8',
 );
 
+/** 用括號配對切出每個 catch 區塊的完整內容 —— 正則配不出巢狀大括號。 */
+function catchBlocks(src: string): string[] {
+  return [...src.matchAll(/catch\s*\([^)]*\)\s*\{/g)].map((m) => {
+    let i = m.index! + m[0].length;
+    let depth = 1;
+    while (i < src.length && depth > 0) {
+      if (src[i] === '{') depth++;
+      else if (src[i] === '}') depth--;
+      i++;
+    }
+    return src.slice(m.index!, i);
+  });
+}
+
 describe('init-local-db.js — 失敗不能靜默', () => {
-  it('每個 catch-and-continue 的步驟都要記進 failures[]', () => {
+  it('每個 catch 區塊都要記錄失敗或直接退出，不能默默吞掉', () => {
+    // 逐個 catch 區塊檢查，不是數 failures.push 的個數。數個數的版本是反的：
+    // 新增一個「忘記記錄」的 swallow（正是要防的回歸）→ 個數不變 → 綠；
+    // 新增一個「有好好記錄」的步驟 → 個數變 6 → 紅。獎懲完全顛倒，
+    // 而且清紅燈最省事的方法是把 5 改成 6 —— 那個數字什麼都沒鎖住。
     expect(SRC).toContain('const failures = [];');
-    // 匯入 / fixup / verify 解析不出 / verify catch / database_id 讀不到 —— 五處
-    expect((SRC.match(/failures\.push\(/g) || []).length).toBe(5);
+    const blocks = catchBlocks(SRC);
+    expect(blocks.length).toBeGreaterThan(0); // 0 = 正則壞了，不是「沒有 catch」
+    for (const b of blocks) {
+      expect(b, `靜默的 catch-and-continue：\n${b}`).toMatch(/failures\.push\(|process\.exit\(|throw /);
+    }
   });
 
   it('failures 非空 → exit 1，而且要在印「Local DB ready」之前', () => {
@@ -37,13 +57,18 @@ describe('init-local-db.js — 失敗不能靜默', () => {
     expect(readyIdx).toBeGreaterThan(exitIdx);
   });
 
-  it('錯誤訊息取 stderr，不截字數', () => {
+  it('errDetail 取 stderr 且不得截字數', () => {
     // err.message 開頭是「Command failed: npx wrangler ...」，截 80 字剛好切在原因之前。
-    expect(SRC).toContain('err.stderr?.toString().trim()');
-    expect(SRC).not.toMatch(/err\.message\?\.substring\(0, 80\)/);
+    // 鎖「沒有任何截斷呼叫」而不是鎖某一種拼法：只禁 substring(0, 80) 的話，
+    // 改成 .slice(0, 80) 或包在外層再截，都能把截斷原封不動加回來而測試全綠。
+    const m = SRC.match(/const errDetail = [^\n]*/);
+    expect(m, 'errDetail 不見了').not.toBeNull();
+    expect(m![0]).toContain('err.stderr');
+    expect(m![0]).not.toMatch(/\.(substring|slice|substr)\(/);
   });
 
   it('失敗一律走 console.error，不混在 console.log 裡', () => {
-    expect(SRC).not.toMatch(/console\.log\(`\s*✗/);
+    // 引號不拘：反引號、單引號、雙引號的 console.log 都不准帶 ✗。
+    expect(SRC).not.toMatch(/console\.log\([^)]*✗/);
   });
 });

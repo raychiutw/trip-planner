@@ -42,6 +42,13 @@ CREATE TABLE trip_days (
 );
 `;
 
+/** 表名帶數字。真實 corpus 有這種（0019_normalize_docs.sql 的 trip_docs_v2）。 */
+const BASELINE_DIGIT_SQL = `CREATE TABLE trip_docs_v2 (id TEXT PRIMARY KEY);
+CREATE TABLE doc_entries (
+  doc_id INTEGER NOT NULL REFERENCES trip_docs_v2(id) ON DELETE CASCADE
+);
+`;
+
 /** 0047 那個 pattern：DROP 掉 cascade parent，沒有 backup-restore。 */
 const UNSAFE_SQL = `DROP TABLE trips;\n`;
 
@@ -124,6 +131,15 @@ describe('check-migration-safety.sh', () => {
       expect(r.code).toBe(2);
       expect(r.stdout).not.toContain('PASS');
     });
+
+    it('打錯的參數 → exit 2，不能默默用預設值掃完然後 PASS', () => {
+      // `--sicne=` 這種 typo 若被忽略，script 會退化成無 gate mode（全掃、全當 NEW），
+      // 而 CI 只看 exit code —— 拿到 0 就以為 gate 過了。exit 2 才擋得住。
+      const r = runGate(repo('0002_safe.sql', SAFE_SQL), ['--sicne=HEAD~1']);
+      expect(r.code).toBe(2);
+      expect(r.stdout).not.toContain('PASS');
+      expect(r.stderr).toContain('Unknown arg');
+    });
   });
 
   describe('gate 真的擋得下東西', () => {
@@ -185,6 +201,61 @@ describe('check-migration-safety.sh', () => {
       const r = runGate(dir, [`--since=${before}`]);
       expect(r.code).toBe(1);
       expect(r.stdout).toContain('UNSAFE NEW');
+    });
+  });
+
+  describe('合法但不是「裸小寫單行」的 DROP —— 下面每一條都真的繞過過這個 gate', () => {
+    // sqlite3 3.51.0 實跑確認：每一種寫法都被接受，且 CASCADE 照樣把 children 砍光。
+    // 舊 gate 是逐行、大小寫敏感、只認裸識別字的 grep，所以全部 exit 0 放行。
+    const EVASIONS: Array<[string, string]> = [
+      ['雙引號識別字', 'DROP TABLE "trips";'],
+      ['中括號識別字', 'DROP TABLE [trips];'],
+      ['反引號識別字', 'DROP TABLE `trips`;'],
+      ['小寫關鍵字', 'drop table trips;'],
+      ['schema 前綴', 'DROP TABLE main.trips;'],
+      ['分號換到下一行', 'DROP TABLE trips\n;'],
+      ['IF EXISTS 後換行', 'DROP TABLE IF EXISTS\n  trips;'],
+      ['結尾沒有分號', 'DROP TABLE trips'],
+      ['註解假稱不需要 backup', '-- no _backup_trips needed, table is empty\nDROP TABLE trips;'],
+      ['註解提到別人的 _backup_', '-- see 0047 _backup_trip_days pattern (n/a here)\nDROP TABLE trips;'],
+      ['區塊註解藏 _backup_', '/* _backup_trips handled elsewhere */\nDROP TABLE trips;'],
+    ];
+
+    it.each(EVASIONS)('%s → 仍要 exit 1', (_label, sql) => {
+      const r = runGate(repo('0002_evade.sql', `${sql}\n`), ['--since=HEAD~1']);
+      expect(r.code).toBe(1);
+      expect(r.stdout).toContain('UNSAFE NEW');
+    });
+
+    it('表名帶數字：CASCADE 偵測的字元類漏數字會保護到一張幽靈表', () => {
+      // 這不是假想。真實 corpus 的 trip_docs_v2（0019_normalize_docs.sql:5 建表、
+      // :16 掛 CASCADE child）被 [a-z_]+ 截成 trip_docs_v —— 一張不存在的表。
+      // gate 因此保護著幽靈，真正有 CASCADE child 的 trip_docs_v2 全無防護。
+      const r = runGate(
+        repo('0002_drop_v2.sql', 'DROP TABLE trip_docs_v2;\n', BASELINE_DIGIT_SQL),
+        ['--since=HEAD~1'],
+      );
+      expect(r.code).toBe(1);
+      expect(r.stdout).toContain('trip_docs_v2');
+    });
+
+    it('DROP TABLE trips_new 不可以被當成 DROP TABLE trips（正控：尾錨還在）', () => {
+      // 0047 的 swap idiom 會 DROP TABLE IF EXISTS trips_new;。誤擋它 = gate 對所有
+      // 走 swap 的 migration 都紅，然後大家開始習慣忽略它。
+      const r = runGate(repo('0002_swap.sql', 'DROP TABLE IF EXISTS trips_new;\n'), ['--since=HEAD~1']);
+      expect(r.code).toBe(0);
+    });
+
+    it('被擋下的 migration 改個編號不能就此洗白', () => {
+      // 編號衝突改名是這裡的日常操作。--diff-filter=AM 會把 rename 濾掉 →
+      // 從 NEW_FILES 消失 → 判成 pre-existing → WARN → 套用。內容一個字沒改。
+      const dir = repo('0087_danger.sql', UNSAFE_SQL);
+      const before = execSync('git rev-parse HEAD', { cwd: dir, encoding: 'utf8' }).trim();
+      execSync('git mv migrations/0087_danger.sql migrations/0088_danger.sql', { cwd: dir, stdio: 'pipe' });
+      execSync('git commit -q -am renumber', { cwd: dir, stdio: 'pipe' });
+      const r = runGate(dir, [`--since=${before}`]);
+      expect(r.code).toBe(1);
+      expect(r.stdout).toContain('0088_danger.sql');
     });
   });
 
