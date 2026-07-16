@@ -66,6 +66,14 @@ if (backups.length === 0) {
 const backupDir = path.join(backupsDir, backups[0]);
 console.log(`  Using backup: ${backups[0]}`);
 
+// 下面每一步都是 catch-and-continue，所以失敗要明確記下來 —— 否則整個 restore 全掛
+// 也還是走到結尾印「✅ Local DB ready!」exit 0。
+const failures = [];
+
+// execSync 失敗時 err.message 是「Command failed: npx wrangler ...」，真正的原因
+// （例如 `table trips has no column named owner`）在 stderr。
+const errDetail = (err) => err.stderr?.toString().trim() || err.message || 'failed';
+
 // Step 2b: Import each table
 for (const table of TABLES) {
   const jsonFile = path.join(backupDir, `${table}.json`);
@@ -104,7 +112,8 @@ for (const table of TABLES) {
     });
     console.log(`  ✓ ${table}: ${rows.length} rows`);
   } catch (err) {
-    console.log(`  ✗ ${table}: ${err.message?.substring(0, 80) || 'failed'}`);
+    console.error(`  ✗ ${table}: ${errDetail(err)}`);
+    failures.push(`${table} 匯入失敗`);
   } finally {
     fs.unlinkSync(tmpFile);
   }
@@ -123,7 +132,8 @@ if (fs.existsSync(fixupSql)) {
     });
     console.log('  ✓ fixup applied');
   } catch (err) {
-    console.log(`  ✗ fixup failed: ${err.message?.substring(0, 80)}`);
+    console.error(`  ✗ fixup failed: ${errDetail(err)}`);
+    failures.push('users / trips.owner fixup 失敗（V2 cutover 後登入會壞）');
   }
 }
 
@@ -137,10 +147,17 @@ for (const table of TABLES) {
     );
     // 抓 JSON 陣列開頭 `[`+空白+`{`（跳過 wrangler 前綴 warning，含 `[WARNING]` 那種帶 '[' 的）
     const m = raw.match(/\[\s*\{/);
-    const count = m ? (JSON.parse(raw.slice(m.index))[0]?.results?.[0]?.c ?? '?') : '?';
-    console.log(`  ${table}: ${count} rows`);
-  } catch {
-    console.log(`  ${table}: ERROR`);
+    const count = m ? JSON.parse(raw.slice(m.index))[0]?.results?.[0]?.c : undefined;
+    if (count === undefined) {
+      // 「數不出來」不是一個 row 數（以前這裡印 `?` 就算過）。
+      console.error(`  ✗ ${table}: 數不出 row 數（wrangler 輸出解析失敗）`);
+      failures.push(`${table} 無法驗證`);
+    } else {
+      console.log(`  ${table}: ${count} rows`);
+    }
+  } catch (err) {
+    console.error(`  ✗ ${table}: ${errDetail(err)}`);
+    failures.push(`${table} 驗證失敗`);
   }
 }
 
@@ -185,7 +202,22 @@ if (TOML_DB_ID) {
     console.log('  ✓ Same hash — no sync needed');
   }
 } else {
-  console.log('  ⚠ Could not read database_id from wrangler.toml — skip sync');
+  // 跳過 sync = pages dev（npm run dev）會連到一個沒有剛才那批資料的 DB。
+  // 這不是可以聳肩帶過的 warning。
+  console.error('  ✗ 讀不到 wrangler.toml 的 database_id — pages dev 會連到未同步的 DB');
+  failures.push('database_id 讀取失敗 → pages dev 的 DB 沒同步到');
+}
+
+if (failures.length > 0) {
+  console.error(`\n❌ Local DB 沒有 ready — ${failures.length} 個步驟失敗：`);
+  for (const f of failures) console.error(`   • ${f}`);
+  console.error(
+    '\n最常見原因：backups/ 的傾印欄位與現在的 migrations/ schema 對不上 —— 傾印裡有的欄，' +
+      '\n表上已經沒有了（欄位改名或 DROP）。INSERT 具名該欄 → 逐行 SQLITE_ERROR → 該表 0 筆。' +
+      '\n上面每個 ✗ 的第一行就是 SQLite 講的實際欄名，照它查。' +
+      '\n解法：撈一份新傾印（傾印要比最後一個 migration 新），或對舊傾印套 migrations/rollback/。',
+  );
+  process.exit(1);
 }
 
 console.log('\n✅ Local DB ready! Run: npm run dev');
