@@ -853,6 +853,11 @@ export default function TripsListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const userEmail = (user?.email ?? '').toLowerCase();
 
+  // userEmail 空（未登入）時一律不算「我的」。少了 !!userEmail 這道，未登入時
+  // '' === '' 會讓每個 trip 都判成自己的 —— /api/trips 對匿名不回 owner
+  // （第三方個資），所以兩邊都是空字串。
+  const isOwnedByUser = (t: TripInfo) => !!userEmail && (t.owner ?? '').toLowerCase() === userEmail;
+
   const visibleTrips = useMemo<TripInfo[]>(() => {
     let list = [...myTrips];
     // 'archived' filter 取 archivedAt !== null；其他 filter 預設排除 archived（避免雜訊）
@@ -861,9 +866,9 @@ export default function TripsListPage() {
     } else {
       list = list.filter((t) => t.archivedAt == null);
       if (filterTab === 'mine') {
-        list = list.filter((t) => (t.owner ?? '').toLowerCase() === userEmail);
+        list = list.filter(isOwnedByUser);
       } else if (filterTab === 'collab') {
-        list = list.filter((t) => (t.owner ?? '').toLowerCase() !== userEmail);
+        list = list.filter((t) => !isOwnedByUser(t));
       }
     }
     const term = searchTerm.trim().toLowerCase();
@@ -890,7 +895,7 @@ export default function TripsListPage() {
   const tabCounts = useMemo(() => {
     const active = myTrips.filter((t) => t.archivedAt == null);
     const archived = myTrips.length - active.length;
-    const mine = active.filter((t) => (t.owner ?? '').toLowerCase() === userEmail).length;
+    const mine = active.filter(isOwnedByUser).length;
     return { all: active.length, mine, collab: active.length - mine, archived };
   }, [myTrips, userEmail]);
 
@@ -1171,7 +1176,7 @@ export default function TripsListPage() {
               {visibleTrips.map((t) => {
                 const isActive = isDesktop && t.tripId === effectiveSelectedId;
                 const ownerEmail = (t.owner ?? '').trim();
-                const isOwnTrip = ownerEmail.toLowerCase() === userEmail;
+                const isOwnTrip = isOwnedByUser(t);
                 // 2026-05-07：avatar initial 一律用「帳號名稱」第一字母（不是 email）。
                 // 自己的 trip 用 current user displayName（API 也帶 ownerDisplayName，
                 // 但 client-side 已知 displayName 較即時）；他人 trip 用後端 LEFT JOIN

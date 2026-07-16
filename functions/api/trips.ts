@@ -191,8 +191,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // is canonical; LEFT JOIN users 拿 owner email for legacy display。
   // 2026-05-07：加 u.display_name AS owner_display_name 給 trip card avatar
   // initial 顯示「帳號名稱」第一字母（不是 email[0]）。
+  //
+  // owner（= u.email）只給登入者。這支無 auth 時回 published trips，而 owner 是
+  // 第三方個資 —— 2026-07-16 前 `curl /api/trips` 零認證就能拿到每個公開行程
+  // 擁有者的 email。前端只在登入後用它比對「這是不是我的行程」，匿名情境用不到；
+  // avatar 走 owner_display_name（本來就是為此加的）。
+  const ownerEmailCol = auth ? 'u.email AS owner,' : '';
   const baseCols = `t.id AS tripId, t.name,
-                    u.email AS owner, u.display_name AS owner_display_name, t.owner_user_id,
+                    ${ownerEmailCol} u.display_name AS owner_display_name, t.owner_user_id,
                     t.title,
                     t.countries, t.published, t.data_source, t.lang,
                     (SELECT COUNT(*) FROM trip_days d WHERE d.trip_id = t.id) AS day_count,
