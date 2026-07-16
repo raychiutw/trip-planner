@@ -95,6 +95,15 @@ describe('v2.33.50 round 8b — daily-report.js auth on /api/trips', () => {
     expect(DAILY_REPORT_SRC).toContain("/api/trips', { headers: authHeaders }");
     expect(DAILY_REPORT_SRC).toMatch(/\/days', \{ headers: authHeaders \}/);
   });
+
+  it('daily-report.yml 要把 mint token 需要的 credential 傳進去', () => {
+    // 上面那條「不准吞錯」只保證失敗會被看見，不保證檢查跑得起來。CI 的 env 少了
+    // 這兩個 → get-tripline-token.js:87 直接拋 → 連結區塊天天紅。兩條要一起在，
+    // 否則就只是把「每天假綠」換成「每天真紅」，一樣沒人知道連結到底好不好。
+    const yml = readFileSync(path.resolve(__dirname, '../../.github/workflows/daily-report.yml'), 'utf-8');
+    expect(yml).toContain('TRIPLINE_API_CLIENT_ID: ${{ secrets.TRIPLINE_API_CLIENT_ID }}');
+    expect(yml).toContain('TRIPLINE_API_CLIENT_SECRET: ${{ secrets.TRIPLINE_API_CLIENT_SECRET }}');
+  });
 });
 
 describe('v2.33.50 round 8b — cron-shared.ts alertTelegram defense', () => {
