@@ -534,7 +534,10 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
     const padded = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
     const padLen = (4 - (padded.length % 4)) % 4;
     const claims = JSON.parse(atob(padded + '='.repeat(padLen))) as Record<string, unknown>;
-    expect(claims.iss).toBe('https://x.com');
+    // v2.55.85: 本條原本斷言 `https://x.com`，把 iss drift 固化了 —— discovery doc
+    // 宣告的是 `<origin>/api/oauth`，兩者必須逐字元相同（OIDC Core 3.1.3.7 #2）。
+    // 逐字比對由 tests/api/oauth-id-token.test.ts 直接拿 discovery 輸出來對。
+    expect(claims.iss).toBe('https://x.com/api/oauth');
     expect(claims.sub).toBe('user-1');
     expect(claims.aud).toBe('mobile');
     expect(claims.email).toBe('user@example.com');

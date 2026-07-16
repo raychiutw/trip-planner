@@ -8,7 +8,7 @@
  * catches and falls back to omitting id_token from the response）。
  */
 import { signJwt, importPrivateKey, computeKid } from '../../../src/server/jwt';
-import { getPublicOrigin } from '../_utils';
+import { getOidcIssuer } from '../_utils';
 import { AppError } from '../_errors';
 import type { Env } from '../_types';
 
@@ -49,7 +49,10 @@ export async function issueIdToken(
 
   // v2.33.59 round 13: 用 PUBLIC_ORIGIN env 取代 Host header (id_token iss
   // 是 OIDC trust anchor — 必須穩定且不可 attacker-spoofable)
-  const issuer = getPublicOrigin(env, request);
+  //
+  // v2.55.85: 改用 getOidcIssuer —— 先前直接用 getPublicOrigin 少了 /api/oauth
+  // 後綴，與 discovery doc 宣告的 issuer 不一致（見該函式註解）。
+  const issuer = getOidcIssuer(env, request);
   const now = Math.floor(Date.now() / 1000);
 
   const claims: Record<string, unknown> = {

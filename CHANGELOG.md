@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.85] - 2026-07-17
+
+### Fixed
+- **id_token 的 `iss` 與 discovery doc 宣告的 `issuer` 從 V2-P5 起就不一致，任何照規範驗 `iss` 的 client 都會把合法 token 判為無效** — `openid-configuration.ts` 宣告 `<origin>/api/oauth`（線上實測 `"issuer": "https://trip-planner-dby.pages.dev/api/oauth"`），但 `_id_token.ts:52` 簽的是 `getPublicOrigin(env, request)` = `<origin>`，少了 `/api/oauth` 後綴。OIDC Core 3.1.3.7 #2 要求兩者逐字元相同。後綴不可省的理由是 OIDC Discovery §4：doc 必須位於 `{issuer}/.well-known/openid-configuration`，而我們的 doc 就掛在 `/api/oauth/` 底下（根路徑 `/.well-known/openid-configuration` 回的是 SPA HTML），所以正解是補後綴而非拔掉。諷刺的是 `openid-configuration.ts` 檔頭的註解早就寫明「Risk：要 cross-check 此 doc 跟實作是否同步」，卻只列了 scope/grant_types/response_types，漏了 issuer 自己。
+- **之所以兩個月沒人踩到** — 四重遮蔽疊在一起。(1) `oauth-token.test.ts:537` 的 `expect(claims.iss).toBe('https://x.com')` **把錯的值固化成期望值**，等於有一條測試在替 drift 背書；(2) `issueIdToken` 本身沒有直接測試，沒有任何地方拿 discovery 的輸出跟 `iss` 對照（本次補上 `tests/api/oauth-id-token.test.ts`，直接比對兩者字串相等）；(3) JWKS 仍是 V2-P1 空 stub，線上實測 `{"keys": []}`，id_token 實際上簽不出來；(4) 唯一的 client（Flutter app）預設不啟用 OAuth（CI 建置無 `--dart-define=TRIPLINE_OAUTH_CLIENT_ID`）。
+- **discovery doc 的 issuer 一直信任 attacker-spoofable 的 Host header** — v2.33.59 round 13 把 5 個 callsite 從 `new URL(request.url).origin` 遷到 `getPublicOrigin`（PUBLIC_ORIGIN 優先），理由正是「id_token iss 是 OIDC trust anchor — 必須穩定且不可 attacker-spoofable」，但那張清單漏了 discovery doc 本身，它到本次為止都還在直接讀 request origin。現已一併收斂，`round-13-server-residuals.test.ts` 補上對應 guard。
+
+### Changed
+- `_utils.ts` 新增 `getOidcIssuer(env, request)` 作為 issuer 的單一真相，discovery doc 與 `_id_token.ts` 共用。兩邊各自組字串正是本次 drift 的成因 —— 光補後綴會再 drift 一次（且 discovery 用 `url.origin`、id_token 用 `getPublicOrigin`，一旦 `PUBLIC_ORIGIN` 設定值與 request origin 不同就又會分岔）。收斂後既有的 `oidc-discovery.test.ts` 也自動成為 id_token 那側的守門員：實測拿掉後綴會讓兩份測試共 6 條同時變紅。
+
 ## [2.55.84] - 2026-07-17
 
 ### Fixed

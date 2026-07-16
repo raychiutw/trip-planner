@@ -11,9 +11,19 @@
  *
  * V2-P2 計畫：用 oidc-provider runtime metadata 取代 hand-written，避免 drift。
  *
- * Issuer 從 request URL origin derive，避免 hardcode prod URL（local dev /
- * preview / prod 都能正確）。
+ * 上面那條 Risk 說中了，但漏了最關鍵的一項：**issuer 自己**。v2.55.84 以前這裡
+ * 宣告 `<origin>/api/oauth`、`_id_token.ts` 卻簽 `<origin>`，任何照 OIDC Core
+ * 3.1.3.7 #2 驗 `iss` 的 client 都會把合法 token 判為無效。之所以沒人踩到，是
+ * 因為 JWKS 尚未上線（V2-P1 stub）、且唯一的 client（Flutter app）預設不啟用
+ * OAuth。修法是把 issuer 收斂到 `getOidcIssuer()` 單一真相，兩邊共用；
+ * `tests/api/oauth-id-token.test.ts` 直接比對兩者字串相等來守住。
+ *
+ * Issuer 由 `getOidcIssuer()` 產生（PUBLIC_ORIGIN 優先、fallback request origin），
+ * 避免 hardcode prod URL —— local dev / preview / prod 都正確，且不信任
+ * attacker-spoofable 的 Host header。
  */
+
+import { getOidcIssuer } from '../../_utils';
 
 interface OpenIDProviderMetadata {
   issuer: string;
@@ -34,10 +44,12 @@ interface OpenIDProviderMetadata {
   claims_supported: string[];
 }
 
-export const onRequestGet: PagesFunction = async (context) => {
-  const url = new URL(context.request.url);
-  const origin = url.origin; // e.g. https://trip-planner-dby.pages.dev or http://localhost:8788
-  const base = `${origin}/api/oauth`;
+export const onRequestGet: PagesFunction<{ PUBLIC_ORIGIN?: string }> = async (context) => {
+  // 與 id_token 的 `iss` 共用同一個 helper —— 兩邊各自組字串正是 v2.55.84 以前
+  // drift 的成因。順帶修掉這裡原本直接用 `new URL(request.url).origin` 而信任
+  // attacker-spoofable Host header 的問題（`_id_token.ts` 早就改用 PUBLIC_ORIGIN
+  // 了，discovery 卻沒跟上）。
+  const base = getOidcIssuer(context.env, context.request);
 
   const metadata: OpenIDProviderMetadata = {
     issuer: base,

@@ -78,6 +78,23 @@ export function getPublicOrigin(env: { PUBLIC_ORIGIN?: string }, request: Reques
   return new URL(request.url).origin;
 }
 
+/**
+ * OIDC issuer identifier — 單一真相，discovery doc 與 id_token 的 `iss` 共用。
+ *
+ * **必須由這裡集中產生。** 兩邊各自組字串會 drift：v2.55.84 以前
+ * `openid-configuration.ts` 宣告 `<origin>/api/oauth`、`_id_token.ts` 卻簽
+ * `<origin>`（無後綴），任何照 OIDC Core 3.1.3.7 #2 驗 `iss` 的 client 都會把
+ * 合法 token 判為無效。該檔的註解甚至預言了要 cross-check 卻漏了 issuer 本身。
+ *
+ * 後綴不可省：OIDC Discovery §4 規定 discovery doc 必須位於
+ * `{issuer}/.well-known/openid-configuration` —— 我們的 doc 掛在
+ * `/api/oauth/.well-known/openid-configuration`，所以 issuer 就是 `/api/oauth`。
+ * 拔掉後綴會讓 doc 的位置變成不合規（根路徑回的是 SPA HTML）。
+ */
+export function getOidcIssuer(env: { PUBLIC_ORIGIN?: string }, request: Request): string {
+  return `${getPublicOrigin(env, request)}/api/oauth`;
+}
+
 export function generateOpaqueToken(byteLen = 32): string {
   const bytes = new Uint8Array(byteLen);
   crypto.getRandomValues(bytes);

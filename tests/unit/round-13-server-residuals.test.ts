@@ -22,6 +22,7 @@ const SEND_VERIFY_SRC = read('functions/api/oauth/send-verification.ts');
 const VERIFY_SRC = read('functions/api/oauth/verify.ts');
 const PERMISSIONS_SRC = read('functions/api/permissions.ts');
 const ID_TOKEN_SRC = read('functions/api/oauth/_id_token.ts');
+const OPENID_CONFIG_SRC = read('functions/api/oauth/.well-known/openid-configuration.ts');
 const VALIDATE_AUTH_SRC = read('src/server/oauth-server/validate-authorize-request.ts');
 const HKDF_SRC = read('src/server/hkdf.ts');
 const SESSION_SRC = read('src/server/session.ts');
@@ -46,7 +47,13 @@ describe('v2.33.59 Step 1 — PUBLIC_ORIGIN env', () => {
     expect(FORGOT_SRC).toContain('getPublicOrigin(context.env, context.request)');
     expect(SEND_VERIFY_SRC).toContain('getPublicOrigin(context.env, context.request)');
     expect(PERMISSIONS_SRC).toContain('getPublicOrigin(context.env, context.request)');
-    expect(ID_TOKEN_SRC).toContain('getPublicOrigin(env, request)');
+    // v2.55.85: id_token 改走 getOidcIssuer（= getPublicOrigin + `/api/oauth`
+    // 後綴）。本條要守的是「iss 不信 attacker-spoofable 的 Host header」，多一層
+    // 間接不影響 —— 但要證明那條鏈確實終結在 getPublicOrigin，否則等於放行。
+    expect(ID_TOKEN_SRC).toContain('getOidcIssuer(env, request)');
+    expect(UTILS_SRC).toMatch(
+      /export function getOidcIssuer[\s\S]{0,200}?getPublicOrigin\(env, request\)/,
+    );
   });
 
   it('5 個 callsite 拔掉 new URL(request.url).origin', () => {
@@ -54,6 +61,11 @@ describe('v2.33.59 Step 1 — PUBLIC_ORIGIN env', () => {
     expect(FORGOT_SRC).not.toMatch(/new URL\(context\.request\.url\)\.origin/);
     expect(SEND_VERIFY_SRC).not.toMatch(/new URL\(context\.request\.url\)\.origin/);
     expect(PERMISSIONS_SRC).not.toMatch(/new URL\(context\.request\.url\)\.origin/);
+    // v2.55.85 補網：discovery doc 的 issuer 當初漏在這張清單外，一直直接用
+    // `new URL(context.request.url).origin` —— 與 _id_token 同一個 Host header
+    // 信任問題，卻沒有守門員。現已一併收斂到 getOidcIssuer。
+    expect(OPENID_CONFIG_SRC).not.toMatch(/new URL\(context\.request\.url\)\.origin/);
+    expect(OPENID_CONFIG_SRC).toContain('getOidcIssuer(context.env, context.request)');
   });
 });
 
