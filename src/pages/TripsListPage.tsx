@@ -856,7 +856,12 @@ export default function TripsListPage() {
   // userEmail 空（未登入）時一律不算「我的」。少了 !!userEmail 這道，未登入時
   // '' === '' 會讓每個 trip 都判成自己的 —— /api/trips 對匿名不回 owner
   // （第三方個資），所以兩邊都是空字串。
-  const isOwnedByUser = (t: TripInfo) => !!userEmail && (t.owner ?? '').toLowerCase() === userEmail;
+  // useCallback 讓 identity 只隨 userEmail 變 —— 下面兩個 useMemo 依賴它，
+  // 每 render 重造一個新 function 會讓 memo 每 render 都重算。
+  const isOwnedByUser = useCallback(
+    (t: TripInfo) => !!userEmail && (t.owner ?? '').toLowerCase() === userEmail,
+    [userEmail],
+  );
 
   const visibleTrips = useMemo<TripInfo[]>(() => {
     let list = [...myTrips];
@@ -889,7 +894,7 @@ export default function TripsListPage() {
     }
     // 'updated' 預設保留 myIds 順序（API 已 most-recent-first）
     return list;
-  }, [myTrips, filterTab, sortBy, searchTerm, userEmail]);
+  }, [myTrips, filterTab, sortBy, searchTerm, isOwnedByUser]);
 
   // For badge counts shown on filter subtabs — counts on the unfiltered set.
   const tabCounts = useMemo(() => {
@@ -897,7 +902,7 @@ export default function TripsListPage() {
     const archived = myTrips.length - active.length;
     const mine = active.filter(isOwnedByUser).length;
     return { all: active.length, mine, collab: active.length - mine, archived };
-  }, [myTrips, userEmail]);
+  }, [myTrips, isOwnedByUser]);
 
   // Effective selected: URL param > first visible trip > null
   const effectiveSelectedId = useMemo<string | null>(() => {
