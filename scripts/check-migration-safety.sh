@@ -27,19 +27,32 @@ set -euo pipefail
 
 MIGRATIONS_DIR="migrations"
 SINCE_REF=""
+PENDING_FILE=""
 EXIT_CODE=0
 
 # Parse args
 for arg in "$@"; do
   case "$arg" in
-    --since=*) SINCE_REF="${arg#--since=}" ;;
-    --dir=*)   MIGRATIONS_DIR="${arg#--dir=}" ;;
-    *)         echo "Unknown arg: $arg" >&2; exit 2 ;;
+    --since=*)   SINCE_REF="${arg#--since=}" ;;
+    --pending=*) PENDING_FILE="${arg#--pending=}" ;;
+    --dir=*)     MIGRATIONS_DIR="${arg#--dir=}" ;;
+    *)           echo "Unknown arg: $arg" >&2; exit 2 ;;
   esac
 done
 
 echo "🛡️  D1 migration safety check — scanning $MIGRATIONS_DIR/"
-[ -n "$SINCE_REF" ] && echo "   Gate mode: NEW migrations vs $SINCE_REF"
+if [ -n "$PENDING_FILE" ]; then
+  # 空檔是合法的（沒有 pending）；不存在不是 —— 那代表上游沒產出來，
+  # 而「沒有 pending」會讓每個 migration 都變 pre-existing → 全部放行。
+  if [ ! -f "$PENDING_FILE" ]; then
+    echo "❌ GATE BROKEN: --pending 檔 '$PENDING_FILE' 不存在。" >&2
+    echo "   Refusing to treat a missing pending list as 'nothing pending'." >&2
+    exit 2
+  fi
+  echo "   Gate mode: D1 pending（權威來源 d1_migrations，非 git 推測）"
+elif [ -n "$SINCE_REF" ]; then
+  echo "   Gate mode: NEW migrations vs $SINCE_REF"
+fi
 echo ""
 
 # 掃不到任何東西 ≠ 沒有東西可掃：錯的 --dir / sparse checkout 會讓下面的 glob 靜默
@@ -52,7 +65,13 @@ fi
 
 # Build NEW migration filenames (newline-separated, bash 3 friendly)
 NEW_FILES=""
-if [ -n "$SINCE_REF" ]; then
+if [ -n "$PENDING_FILE" ]; then
+  NEW_FILES=$(grep -E '\.sql$' "$PENDING_FILE" || true)
+  COUNT=$(echo "$NEW_FILES" | grep -c '\.sql$' || true)
+  echo "📋 D1 尚未套用的 migration: $COUNT"
+  [ -n "$NEW_FILES" ] && echo "$NEW_FILES" | sed 's/^/   - /'
+  echo ""
+elif [ -n "$SINCE_REF" ]; then
   # Empty NEW_FILES must mean "no .sql changed", never "the ref didn't resolve".
   if ! git rev-parse --verify --quiet "${SINCE_REF}^{commit}" >/dev/null 2>&1; then
     echo "❌ GATE BROKEN: --since ref '$SINCE_REF' is unreachable." >&2
@@ -71,9 +90,17 @@ if [ -n "$SINCE_REF" ]; then
   echo ""
 fi
 
-# is_new() helper — checks if basename in NEW_FILES list
+# is_new() — 這個 migration 該不該當「新的」來檢查？
+# --pending：D1 說還沒套用 = 要檢查。跟 git 怎麼動無關，所以 exit 1 擋下來的 migration
+#            會一直是 pending、一直被擋，不會被下一個 PR 洗白（rename 也洗不掉）。
+# --since：  git 推測（本機用；沒有網路與 CF credential 時的退路）。
+# 都沒給：    全部當新的（本機全掃）。
 is_new() {
-  [ -z "$SINCE_REF" ] && return 0  # no gate mode → treat all as new (errors only when no --since)
+  if [ -n "$PENDING_FILE" ]; then
+    echo "$NEW_FILES" | grep -qx "$1"
+    return
+  fi
+  [ -z "$SINCE_REF" ] && return 0
   echo "$NEW_FILES" | grep -qx "$1"
 }
 
@@ -145,15 +172,17 @@ for migration in "$MIGRATIONS_DIR"/*.sql; do
     # DROP TABLE trips_new（0047 的 swap idiom 用得到）會被誤判成 DROP TABLE trips。
     if echo "$stmts" | grep -qE "drop[[:space:]]+table[[:space:]]+(if[[:space:]]+exists[[:space:]]+)?(main\.)?${parent}([[:space:]]|$)"; then
       if [ "$has_backup" -eq 0 ]; then
-        if [ -n "$SINCE_REF" ] && ! is_new "$base"; then
-          # 「早於 --since」≠「已套用到 prod」—— 本 script 不查 d1_migrations。已知缺口：
-          # 被擋下的不安全 migration（exit 1、apply 沒跑）只要之後再落地一個動到
-          # migrations/ 的 commit，就會降級成這條 WARN 然後被套下去。權威來源是
-          # `wrangler d1 migrations list --remote --env production`，接上它是 follow-up。
+        if { [ -n "$PENDING_FILE" ] || [ -n "$SINCE_REF" ]; } && ! is_new "$base"; then
           echo "⚠️  PRE-EXISTING UNSAFE: $base"
           echo "   - DROP TABLE \`$parent\` without backup-restore"
-          # ${SINCE_REF} 的大括號不可省：後接全形「；」會被吃進變數名 → set -u 崩。
-          echo "   - 早於 ${SINCE_REF}；假定已套用（未對 d1_migrations 查證）"
+          if [ -n "$PENDING_FILE" ]; then
+            # 這句現在是查證過的事實，不是假設 —— d1_migrations 說它套過了。
+            # 木已成舟，擋它沒有意義（要救得靠備份，不是靠 gate）。
+            echo "   - 已套用到 prod（d1_migrations 查證）"
+          else
+            # ${SINCE_REF} 的大括號不可省：後接全形「；」會被吃進變數名 → set -u 崩。
+            echo "   - 早於 ${SINCE_REF}；假定已套用（本機模式，未對 d1_migrations 查證）"
+          fi
           echo ""
           UNSAFE_PRE_EXISTING=$((UNSAFE_PRE_EXISTING + 1))
         else

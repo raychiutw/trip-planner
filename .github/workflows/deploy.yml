@@ -40,14 +40,8 @@ on:
       - '.github/workflows/deploy.yml'
 
   # Manual trigger for ad-hoc re-runs (e.g. rerun after a failure)。
-  # since 必填：dispatch 沒有 event.before，而回落到 origin/master~1 等於把這個 workflow
-  # 修掉的固定回看一格請回來 —— 一個被 gate 擋下的 migration 只要等 master 前進一格
-  # （code-only PR 因 paths filter 不觸發本 workflow），按一下 Run workflow 就會被套用。
+  # 不需要任何 input：gate 問的是 d1_migrations，dispatch 與 push 走完全同一條判定。
   workflow_dispatch:
-    inputs:
-      since:
-        description: '比較基準 commit SHA（要重跑的那次 push 之前的 master tip）'
-        required: true
 
 # Prevent concurrent migration runs from racing the d1_migrations tracking
 # table. cancel-in-progress: false means "queue the next run", do NOT kill
@@ -64,12 +58,8 @@ jobs:
 
     steps:
       # v2.33.66 round 16 LOW-1: pin SHA per OpenSSF
+      # 不需要 fetch-depth：gate 已不看 git 歷史，改問 d1_migrations 哪些還沒套用。
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          # 0 = full history — the gate below diffs against github.event.before,
-          # which has no bounded depth. The default of 1 left the ref unresolvable,
-          # which silently no-op'd the gate on every migration PR.
-          fetch-depth: 0
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
@@ -79,22 +69,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 2026-05-04 incident gate: scan for D1 cascade-wipe risk patterns in NEW
+      # 「哪些 migration 是新的」的權威來源是 D1，不是 git。git-based 推測（不論是
+      # origin/master~1 還是 github.event.before）實測有三條洗白路徑：被 exit 1 擋下的
+      # migration 只要之後有 commit 動到 migrations/ 就降級成 pre-existing；git mv 換
+      # 編號也會；一次推多個 commit 也會。d1_migrations 不在乎 git 怎麼動 —— 沒套用過
+      # 就是要檢查，擋下來的會一直被擋。
+      - name: Compute pending migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          npx wrangler d1 execute trip-planner-db --remote --env production --json \
+            --command "SELECT name FROM d1_migrations" \
+            | node scripts/d1-pending-migrations.js migrations > pending.txt
+          echo "pending:"; cat pending.txt
+
+      # 2026-05-04 incident gate: scan for D1 cascade-wipe risk patterns in pending
       # migrations (DROP TABLE on cascade-parent without backup-restore).
       # See scripts/check-migration-safety.sh for the rule + post-incident note.
-      # exit 1 = unsafe NEW migration; exit 2 = the gate itself couldn't run
-      # (unresolvable ref / nothing to scan). Both block the apply step below.
-      #
-      # github.event.before, NOT origin/master~1: `~1` is a fixed one-commit
-      # lookback, so a push that moves master by 2+ commits (rebase-merge is
-      # enabled on this repo) hides every migration outside the final commit —
-      # the gate then treats it as pre-existing and passes. event.before is the
-      # actual pre-push tip, however many commits back that is.
+      # exit 1 = unsafe pending migration; exit 2 = the gate itself couldn't run
+      # (pending list missing / nothing to scan). Both block the apply step below.
       - name: D1 migration safety check
-        env:
-          PUSH_BEFORE: ${{ github.event.before }}
-          SINCE_INPUT: ${{ inputs.since }}
-        run: bash scripts/check-migration-safety.sh --since="${PUSH_BEFORE:-$SINCE_INPUT}"
+        run: bash scripts/check-migration-safety.sh --pending=pending.txt
 
       - name: Apply pending migrations
         env:
