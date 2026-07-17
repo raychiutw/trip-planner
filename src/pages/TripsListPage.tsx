@@ -188,11 +188,13 @@ const SCOPED_STYLES = `
    日本=accent 柔褐／台灣=sage／韓國=pink／其餘 hash 輪替。cover 用 tone 漸層、卡身 tone 淡底、
    hover/選取框與選取點都跟 tone。字一律 --color-foreground / --color-muted（不用 --t-deep
    當字 —— light mode sage/粉 -deep 對 -subtle 對比 <4.5:1；色由 cover 漸層 + 卡底承載）。 */
-.tp-trip-card[data-tone="accent"] { --t: var(--color-accent);   --t-deep: var(--color-accent-deep);   --t-subtle: var(--color-accent-subtle);   --t-bg: var(--color-accent-bg); }
-.tp-trip-card[data-tone="sage"]   { --t: var(--color-accent-2); --t-deep: var(--color-accent-2-deep); --t-subtle: var(--color-accent-2-subtle); --t-bg: var(--color-accent-2-bg); }
-.tp-trip-card[data-tone="pink"]   { --t: var(--color-accent-3); --t-deep: var(--color-accent-3-deep); --t-subtle: var(--color-accent-3-subtle); --t-bg: var(--color-accent-3-bg); }
-.tp-trip-card[data-tone] { background: var(--t-subtle); border-color: var(--t-bg); }
-.tp-trip-card[data-tone] .tp-trip-card-cover { background-image: linear-gradient(135deg, var(--t) 0%, var(--t-deep) 100%); }
+/* v2.55.89 V3 Phase 3：行程卡去封面 + neutral surface（design.md「行程頁不用封面」+ §2.3
+   「所有卡同一 system surface」）。destination 三色退場 → 卡身中性 secondary；--t 保留柔褐
+   供 hover/選取框/avatar 承載 accent。 */
+.tp-trip-card[data-tone="accent"],
+.tp-trip-card[data-tone="sage"],
+.tp-trip-card[data-tone="pink"] { --t: var(--color-accent); --t-deep: var(--color-accent-deep); --t-subtle: var(--color-secondary); --t-bg: var(--color-tertiary); }
+.tp-trip-card[data-tone] { background: var(--t-subtle); border-color: var(--color-border); }
 .tp-trip-card[data-tone]:hover { border-color: var(--t); }
 .tp-trip-card[data-tone].is-active { border-color: var(--t); }
 .tp-trip-card[data-tone].is-active::before { background: var(--t); box-shadow: 0 0 0 3px var(--t-subtle); }
@@ -1205,7 +1207,6 @@ export default function TripsListPage() {
                       data-testid={`trips-list-card-${t.tripId}`}
                       aria-current={isActive ? 'true' : undefined}
                     >
-                      <div className="tp-trip-card-cover" aria-hidden="true" />
                       <div className="tp-trip-card-body">
                         <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.dayCount)}</div>
                         <h2 className="tp-trip-card-title">{t.title || t.name}</h2>
