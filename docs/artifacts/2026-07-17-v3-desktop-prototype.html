@@ -586,6 +586,24 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 /* 統一 header 右上帳號圓圈（首字母）— owner 2026-07-17 */
 .ph-avatar{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;flex-shrink:0;
   background:var(--accent);color:var(--on-accent);font-size:13px;font-weight:800;line-height:1;}
+/* ★ rev2 共用 drill-down header（手機全頁下鑽 = 桌機堆疊面板的手機容器；owner
+   2026-07-17 Image #4/#5）：左上「‹」返上一層、右上「✕」關整疊。iOS Apple One 形制。
+   桌機用 .layer-h（‹/✕），手機全頁用 .dd-top（‹/✕）—— 同一套「前一頁+整個關閉」語意。 */
+.dd-top{position:absolute;top:52px;left:0;right:0;height:52px;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;padding:0 14px;}
+.dd-btn{width:38px;height:38px;border-radius:999px;border:0;cursor:pointer;
+  display:grid;place-items:center;color:var(--fg);
+  background:color-mix(in srgb, var(--fg) 12%, transparent);}
+.dd-body{position:absolute;top:104px;left:0;right:0;bottom:0;overflow-y:auto;padding:8px 18px 24px;}
+.dd-eyebrow{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);}
+.dd-title{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--fg);margin:4px 0 6px;}
+.dd-meta{font-size:13px;color:var(--fg-3);margin-bottom:16px;}
+.dd-card{background:var(--bg-2);border:1px solid var(--hair);border-radius:16px;padding:6px 14px;margin-bottom:12px;}
+.dd-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-size:15px;color:var(--fg);border-bottom:1px solid var(--hair);}
+.dd-row:last-child{border-bottom:0;}
+.dd-row span:last-child{color:var(--fg-3);}
+.dd-note-label{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3);padding:12px 0 4px;}
+.dd-note{font-size:14px;line-height:1.6;color:var(--fg-2);padding-bottom:12px;}
 .ph-pill{
   position:absolute;top:114px;left:50%;transform:translateX(-50%);z-index:15;
   display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;
@@ -1581,6 +1599,34 @@ tab <b>浮動膠囊 4 格</b>（板子原圖是滿版 5 格）。
         <div class="ph-tab on"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5z"/></svg>地圖</div>
         <div class="ph-tab"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>收藏</div>
       </nav>
+    </div>
+  </div>
+
+  <!-- ★ 手機全頁 drill-down（上滑選單 → 點下去）= 桌機堆疊面板的手機容器；
+       共用 header：左上「‹」返上一層、右上「✕」關整疊（owner 2026-07-17 Image #4/#5）。 -->
+  <div class="ph-col">
+    <div class="ph-h">C · 全頁 drill-down（上滑選單 → 點下去）</div>
+    <div class="ph-s">共用 header：左上「‹」前一頁、右上「✕」整個關閉（iOS Apple One 形制）</div>
+    <div class="ph" style="background:var(--bg-1)">
+      <div class="ph-sb"><span>23:28</span><span>▮▮▮ ᯤ ▰</span></div>
+      <div class="dd-top">
+        <button class="dd-btn" title="前一頁"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <button class="dd-btn" title="整個關閉"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="dd-body">
+        <div class="dd-eyebrow">景點 · DAY 02</div>
+        <div class="dd-title">清水寺</div>
+        <div class="dd-meta">14:30–16:00 · ★ 4.7 · 京都市東山區</div>
+        <div class="dd-card">
+          <div class="dd-row"><span>停留</span><span>1.5 小時</span></div>
+          <div class="dd-row"><span>正選景點</span><span>清水寺 ›</span></div>
+          <div class="dd-row"><span>訂位 / 票券</span><span>無</span></div>
+        </div>
+        <div class="dd-card">
+          <div class="dd-note-label">備註</div>
+          <div class="dd-note">音羽瀑布排隊約 20 分。子安塔那側人少，回程走產寧坂下山接祇園。</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
