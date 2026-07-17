@@ -35,7 +35,7 @@
         });
       }
       var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', '#1A140F');
+      if (meta) meta.setAttribute('content', '#121214');
     }
   } catch (_) {
     /* fail silently — useDarkMode hook 仍會 mount 後 catch up */
