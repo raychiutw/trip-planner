@@ -18,16 +18,17 @@ html { color-scheme: light dark; }
     --color-accent-subtle: #F4EDE3;
     --color-accent-bg: #E9DBC8;
     --color-accent-deep: #8A6038;
-    /* 第二色 sage 綠 — 交通資訊（travel connector / 車程·步行 badge）*/
-    --color-accent-2: #A8BAAA;
-    --color-accent-2-deep: #7E9580;
-    --color-accent-2-subtle: #ECF0ED;
-    --color-accent-2-bg: #D4DDD5;
-    /* 第三色 玫瑰粉 — 收藏 / 備選 / 活動 */
-    --color-accent-3: #E78C99;
-    --color-accent-3-deep: #C66B78;
-    --color-accent-3-subtle: #FAF1F3;
-    --color-accent-3-bg: #F2DBE0;
+    /* v2.55.88 V3 三色退場：語意分類色（sage 交通 / 粉 收藏活動）收斂成單一柔褐 accent。
+     * 消費者（data-tone / --tone-*）不變，只是 accent-2/-3 的值統一成 accent，全站不再彩虹。
+     * 卡片改 neutral surface 是 Phase 2（此版仍走柔褐 tint，先退掉多色）。design.md §2.3。 */
+    --color-accent-2: #A97A4A;
+    --color-accent-2-deep: #8A6038;
+    --color-accent-2-subtle: #F4EDE3;
+    --color-accent-2-bg: #E9DBC8;
+    --color-accent-3: #A97A4A;
+    --color-accent-3-deep: #8A6038;
+    --color-accent-3-subtle: #F4EDE3;
+    --color-accent-3-bg: #E9DBC8;
     --color-background: #FFFBF5;
     --color-secondary: #FAF4EA;
     --color-tertiary: #F2EAD9;
@@ -905,28 +906,28 @@ body.dark {
 @layer base {
     body.dark {
         --color-accent: #CBA06E;
-        --color-accent-subtle: #33271A;
-        --color-accent-bg: #44341F;
+        --color-accent-subtle: #2A2418;
+        --color-accent-bg: #3A3020;
         --color-accent-deep: #E0BC90;
-        /* 第二色 sage 綠 dark（明確版，深底調亮）*/
-        --color-accent-2: #8FBE9C;
-        --color-accent-2-deep: #A8D0B4;
-        --color-accent-2-subtle: #243A2C;
-        --color-accent-2-bg: #2E3D30;
-        /* 第三色 玫瑰粉 dark */
-        --color-accent-3: #E8A0AB;
-        --color-accent-3-deep: #F0B8C0;
-        --color-accent-3-subtle: #4A2A3A;
-        --color-accent-3-bg: #6B3F52;
-        --color-background: #1A140F;
-        --color-secondary: #241B14;
-        --color-tertiary: #2E2418;
-        --color-hover: #2D2218;
-        --color-foreground: #F5EBDD;
-        --color-muted: #B89E84;
-        --color-accent-foreground: #1A140F;
-        --color-border: #3D2D22;
-        --color-line-strong: #5A4634;
+        /* v2.55.88 V3 三色退場：accent-2/-3 收斂成柔褐 accent（dark 版）。 */
+        --color-accent-2: #CBA06E;
+        --color-accent-2-deep: #E0BC90;
+        --color-accent-2-subtle: #2A2418;
+        --color-accent-2-bg: #3A3020;
+        --color-accent-3: #CBA06E;
+        --color-accent-3-deep: #E0BC90;
+        --color-accent-3-subtle: #2A2418;
+        --color-accent-3-bg: #3A3020;
+        /* V3 中性深底（design.md §2 Dark：中性灰 #121214 系，取代舊暖褐 #1A140F）。 */
+        --color-background: #121214;
+        --color-secondary: #1C1C1E;
+        --color-tertiary: #2C2C2E;
+        --color-hover: #3A3A3C;
+        --color-foreground: #F5F5F7;
+        --color-muted: #A1A1A6;
+        --color-accent-foreground: #121214;
+        --color-border: #3A3A3C;
+        --color-line-strong: #545458;
         --color-destructive: #E8A0A0;
         --color-destructive-bg: rgba(232, 160, 160, 0.15);
         --color-success: #7EC89A;
