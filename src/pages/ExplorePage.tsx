@@ -149,10 +149,12 @@ const SCOPED_STYLES = `
 /* 三色：探索卡依 POI 類型上同色系淡底 + 類型標籤色 + cover 漸層（v2.54.11：cover 從舊的
    8 色 hash 裝飾改成依 POI 類型三色，與行程一覽 cover 一致、整頁回歸木棕為主）。neutral 顯式
    回 accent 柔褐。 */
-.explore-poi-card[data-tone="accent"]  { --tone: var(--color-accent);   --tone-deep: var(--color-accent-deep);   --tone-subtle: var(--color-accent-subtle);   --tone-bg: var(--color-accent-bg); }
-.explore-poi-card[data-tone="sage"]    { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
-.explore-poi-card[data-tone="pink"]    { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
-.explore-poi-card[data-tone="neutral"] { --tone: var(--color-accent);   --tone-deep: var(--color-accent-deep);   --tone-subtle: var(--color-accent-subtle);   --tone-bg: var(--color-accent-bg); }
+/* v2.55.89 V3 Phase 2：探索卡改 neutral system surface（design.md §8 收藏/探索不以色卡分類）。
+   卡底/border 走中性 secondary/tertiary；--tone/-deep 保留柔褐給 cover 漸層與 accent。 */
+.explore-poi-card[data-tone="accent"],
+.explore-poi-card[data-tone="sage"],
+.explore-poi-card[data-tone="pink"],
+.explore-poi-card[data-tone="neutral"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-secondary); --tone-bg: var(--color-tertiary); }
 .explore-poi-card[data-tone] { background: var(--tone-subtle); border-color: var(--tone-bg); }
 .explore-poi-card[data-tone] .explore-poi-cover { background-image: linear-gradient(135deg, var(--tone) 0%, var(--tone-deep) 100%); }
 .explore-poi-card .explore-poi-heart {

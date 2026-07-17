@@ -76,11 +76,12 @@ const SCOPED_STYLES = `
 
 /* POI summary block (mockup B1) — bg + border-left 依加收藏 POI 類型上 tone
    （玩看買=柔褐、住移動=sage、吃=粉）；neutral/未匹配 fallback 回 accent 柔褐 */
-.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="accent"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); }
-.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="sage"]   { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); }
-.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="pink"]   { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); }
-/* neutral（other）顯式回 accent — 不靠 var() fallback，避免被有設 --tone-* 的祖先繼承汙染 */
-.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="neutral"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); }
+/* v2.55.89 V3 Phase 2：POI summary 改 neutral surface；--tone-subtle→中性 secondary、
+   --tone（左邊框）保留柔褐 accent。顯式設避免被有設 --tone-* 的祖先繼承汙染。 */
+.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="accent"],
+.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="sage"],
+.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="pink"],
+.tp-favorites-add-to-trip .tp-form-poi-summary[data-tone="neutral"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-secondary); }
 .tp-favorites-add-to-trip .tp-form-poi-summary {
   display: flex; flex-direction: column; gap: 4px;
   padding: 14px 16px;
