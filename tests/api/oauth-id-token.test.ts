@@ -7,6 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { issueIdToken } from '../../functions/api/oauth/_id_token';
 import { onRequestGet as openidConfigHandler } from '../../functions/api/oauth/.well-known/openid-configuration';
+import { getPublicOrigin, getOidcIssuer, CANONICAL_PROD_ORIGIN } from '../../functions/api/_utils';
 import type { Env } from '../../functions/api/_types';
 
 async function generateTestPrivateKeyBase64(): Promise<string> {
@@ -124,5 +125,55 @@ describe('issueIdToken — iss claim', () => {
     const claims = decodeClaims(jwt!);
     expect(claims.aud).toBe('mobile');
     expect(claims.sub).toBe('u1');
+  });
+});
+
+describe('getPublicOrigin / getOidcIssuer — production trust anchor (v2.55.86)', () => {
+  it('prod 無 PUBLIC_ORIGIN → 回標準常數，絕不用 request Host（防 spoof）', () => {
+    // 探針證明 CF 擋不符 Host、不理 X-Forwarded-Host，但 trust anchor 不隱性依賴那個。
+    const spoofed = new Request('https://evil.example.com/api/oauth/token');
+    expect(getPublicOrigin({ ENVIRONMENT: 'production' }, spoofed)).toBe(CANONICAL_PROD_ORIGIN);
+  });
+
+  it('prod 有 PUBLIC_ORIGIN → 逐字用它（去尾斜線），不碰 request Host', () => {
+    const spoofed = new Request('https://evil.example.com/api/oauth/token');
+    expect(
+      getPublicOrigin({ PUBLIC_ORIGIN: 'https://tripline.app/', ENVIRONMENT: 'production' }, spoofed),
+    ).toBe('https://tripline.app');
+  });
+
+  it('dev/preview 無 PUBLIC_ORIGIN → 維持 request origin 彈性', () => {
+    const local = new Request('http://localhost:5173/api/oauth/token');
+    expect(getPublicOrigin({ ENVIRONMENT: 'development' }, local)).toBe('http://localhost:5173');
+    expect(getPublicOrigin({ ENVIRONMENT: 'preview' }, local)).toBe('http://localhost:5173');
+  });
+
+  it('ENVIRONMENT 未設 → request origin（deny-list 邊界；prod 靠 wrangler.toml 強制 ENVIRONMENT=production，同 SEC-6 守衛）', () => {
+    // 刻意保留：既有 oidc-discovery 測試靠此推導 issuer，且 prod 的 ENVIRONMENT 是
+    // wrangler.toml enforced invariant（非 dashboard 慣例），未設 = 已有更嚴重的 auth bypass。
+    const local = new Request('http://localhost:5173/api/oauth/token');
+    expect(getPublicOrigin({}, local)).toBe('http://localhost:5173');
+  });
+
+  it('getOidcIssuer 在 prod + spoofed Host → issuer 仍是標準 origin + /api/oauth', () => {
+    const spoofed = new Request('https://evil.example.com/api/oauth/token');
+    expect(getOidcIssuer({ ENVIRONMENT: 'production' }, spoofed)).toBe(
+      `${CANONICAL_PROD_ORIGIN}/api/oauth`,
+    );
+  });
+
+  it('discovery handler 在 prod + spoofed Host → issuer 不被 Host 汙染', async () => {
+    const ctx = {
+      request: new Request('https://evil.example.com/api/oauth/.well-known/openid-configuration'),
+      env: { ENVIRONMENT: 'production' } as unknown as never,
+      params: {} as unknown as never,
+      data: {} as unknown as never,
+      next: () => Promise.resolve(new Response()),
+      waitUntil: () => undefined,
+      passThroughOnException: () => undefined,
+    } as unknown as Parameters<typeof openidConfigHandler>[0];
+    const res = await openidConfigHandler(ctx);
+    const { issuer } = (await res.json()) as { issuer: string };
+    expect(issuer).toBe(`${CANONICAL_PROD_ORIGIN}/api/oauth`);
   });
 });

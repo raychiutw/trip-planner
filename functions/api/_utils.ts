@@ -62,6 +62,9 @@ export function parseIntParam(s: string): number | null {
  * URL-safe identifier. Centralised here so a single bug fix (e.g. unfilled bytes)
  * applies everywhere.
  */
+/** prod trust-anchor 的標準 origin — PUBLIC_ORIGIN 未設時的 fail-safe fallback（非 request Host）。 */
+export const CANONICAL_PROD_ORIGIN = 'https://trip-planner-dby.pages.dev';
+
 /**
  * v2.33.59 round 13: Return trusted origin for outbound email links / OIDC issuer。
  *
@@ -69,11 +72,35 @@ export function parseIntParam(s: string): number | null {
  * CF Pages edge 通常會 normalise，但 zero-trust 不假設。
  *
  * Prefer `env.PUBLIC_ORIGIN` if set (prod: `https://trip-planner-dby.pages.dev`)。
- * Fallback to `request.url.origin` if 未設（dev 漸進採用，wrangler.toml 補完即可拔）。
+ *
+ * v2.55.86: **production 下絕不從 request Host 推導 trust anchor**。issuer / email /
+ * 邀請連結是 trust anchor，不該隱性依賴 CF 的 Host normalise。PUBLIC_ORIGIN 未設時，
+ * production 回 `CANONICAL_PROD_ORIGIN` 常數（非 request origin）並 warn；探針實測 prod
+ * 的 request-origin 已 = 標準 origin（CF 擋不符 Host、不理 X-Forwarded-Host），故此改
+ * 對現況零行為變化，只是把隱性信任變顯性、未設時可見。dev/preview 維持 request-origin 彈性。
  */
-export function getPublicOrigin(env: { PUBLIC_ORIGIN?: string }, request: Request): string {
+let warnedMissingPublicOrigin = false;
+
+export function getPublicOrigin(
+  env: { PUBLIC_ORIGIN?: string; ENVIRONMENT?: string },
+  request: Request,
+): string {
   if (env.PUBLIC_ORIGIN && env.PUBLIC_ORIGIN.length > 0) {
     return env.PUBLIC_ORIGIN.replace(/\/+$/, '');
+  }
+  // Production without PUBLIC_ORIGIN → canonical origin, never the request Host.
+  // `ENVIRONMENT === 'production'` is the SAME wrangler.toml-enforced invariant the
+  // SEC-6 dev-mock-auth guard already trusts (_middleware.ts): were it unset in prod,
+  // that guard fails-open into a full auth bypass first — so this deny-list check is
+  // no weaker than the app's existing trust model. dev/preview keep request-origin.
+  if (env.ENVIRONMENT === 'production') {
+    if (!warnedMissingPublicOrigin) {
+      warnedMissingPublicOrigin = true; // once per isolate — no per-request log spam
+      console.warn(
+        '[getPublicOrigin] PUBLIC_ORIGIN unset in production — using canonical fallback; set PUBLIC_ORIGIN to make the trust anchor explicit.',
+      );
+    }
+    return CANONICAL_PROD_ORIGIN;
   }
   return new URL(request.url).origin;
 }
@@ -91,7 +118,10 @@ export function getPublicOrigin(env: { PUBLIC_ORIGIN?: string }, request: Reques
  * `/api/oauth/.well-known/openid-configuration`，所以 issuer 就是 `/api/oauth`。
  * 拔掉後綴會讓 doc 的位置變成不合規（根路徑回的是 SPA HTML）。
  */
-export function getOidcIssuer(env: { PUBLIC_ORIGIN?: string }, request: Request): string {
+export function getOidcIssuer(
+  env: { PUBLIC_ORIGIN?: string; ENVIRONMENT?: string },
+  request: Request,
+): string {
   return `${getPublicOrigin(env, request)}/api/oauth`;
 }
 
