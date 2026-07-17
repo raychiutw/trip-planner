@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.95] - 2026-07-18
+
+### Changed
+- **V3 rev2 桌機 shell 核心：sidebar → 我的行程清單 + primary nav → 底部浮動玻璃膠囊** — owner「rev2 shell 要做」。承 v2.55.94 三欄 grid：
+  - **`DesktopSidebar`**：primary nav（聊天/行程/地圖/收藏）移除 → **「我的行程」清單**（`useMyTrips` 注入 `/api/trips?all=1`，module-cached + `tp-trips-updated` 失效；active trip 由 URL 推導 `/trips?selected=` 或 `/trip/:id`）+ loading skeleton + 空態；帳號 chip 維持左下。
+  - **`GlobalBottomNav` @≥1024**：由 `display:none` → **底部浮動玻璃膠囊**（`AppShell .app-shell-bottom-nav` fixed `left:calc((100vw+sidebar)/4)` 置中 sidebar+中欄、不隨捲動隱藏；row tabs + glass pill + 去 mobile top-indicator + 隱藏帳號 tab）。primary nav 由 sidebar 移膠囊，桌機不再重複。
+  - 鎖測改版：`desktop-sidebar(.test/-visual/-connected)` nav → trip-list；`explore-titlebar`/`audit` source-lock 由 DesktopSidebar → GlobalBottomNav；`developer-app-new-page` mock `useMyTrips`。tsc ✓ · 429 檔 3743 test 全綠。實機 QA（dev 1440，mock auth lean.lean@gmail.com）淺/深：sidebar 6 trips 清單 + active highlight、底部膠囊 4 tab、帳號 chip、無重複 nav。
+- **DESIGN.md 同步 rev2 shell IA**（Unified App Shell / Responsive Model / Desktop Sidebar 段落）。
+- **mockup**：桌機三欄 day 膠囊整合（原型）+ 手機全頁 drill-down frame（共用 `‹` 前一頁 / `✕` 整個關閉 header，owner Image #4/#5）。
+
 ## [2.55.94] - 2026-07-17
 
 ### Changed
