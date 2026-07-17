@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.91] - 2026-07-17
+
+### Changed
+- **V3 rev2 day-header：大褐卡 → 細 day label（桌機 timeline）** — rev2 中欄無大 day 卡；`.tp-hero` 去 `--color-accent` 實心底 + 去大 hero title（desktop 28→18px、base date 17px），改「eyebrow(DAY xx) accent + date + muted meta」的細 label。DaySection render 不變（純 restyle）。同步更新 `mockup-typography-compliance` 鎖測（`.tp-hero-title` desktop 28→18px，對齊 rev2）。430 檔 / 3768 unit 全綠；實機 QA（dev 5173）細 label 渲染正確、配 PR D route rail 整體清爽。SoT：rev2 mockup `2026-07-15-v3-three-col-bottom-tab.html` 中欄 `.section` header。
+
 ## [2.55.90] - 2026-07-17
 
 ### Changed
