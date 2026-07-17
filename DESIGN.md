@@ -241,8 +241,9 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 ## Layout
 
 ### Unified App Shell
-- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏 / 帳號。Desktop sidebar 將帳號呈現在底部 account chip；compact bottom nav 保留帳號 tab；匿名狀態顯示登入入口。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`，因其為 secondary route 非 primary nav slot；history-aware fallback `/favorites`。
-- **Desktop shell:** sticky left sidebar + sticky page titlebar + standard centered content column。
+> **⚠️ rev2 owner 2026-07-17（桌機 shell 改版，v2.55.94+）**：桌機 primary nav 由 **左欄 sidebar** 搬到 **底部浮動玻璃膠囊**（`GlobalBottomNav` @≥1024 顯示、置中 sidebar+中欄）；**左欄 sidebar 改為「我的行程」清單**（`DesktopSidebar` = trip-list + 帳號 chip 左下，經 `useMyTrips` 注入）。三欄 grid `216px 1fr 1fr`（`--grid-3pane-desktop`）。下方舊 IA 段落逐條改寫中。
+- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏（+ 帳號）。**rev2：primary nav 在底部浮動玻璃膠囊**（桌機 + compact 皆顯示）；帳號桌機在左下 sidebar account chip、compact 在 bottom nav 帳號 tab（膠囊桌機隱藏帳號 tab）；匿名狀態顯示登入入口。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
+- **Desktop shell（rev2）:** 三欄 `216px 1fr 1fr` — 左欄 **我的行程清單** sidebar（+ 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；底部浮動玻璃膠囊 primary nav（置中 sidebar+中欄、不隨捲動隱藏）。
 - **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。底部導航向下捲動隱藏、向上捲動顯示。
 - **Header rule:** 所有主功能頁 titlebar 一律 sticky；桌機與 compact 都是單行標題，不放 eyebrow、meta、helper text。
 - **Map exception:** 地圖頁可 full bleed，仍保留統一 sidebar / titlebar / bottom nav 行為。
@@ -259,7 +260,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 | Mode | Rule | 版型 |
 |------|------|------|
 | compact | default | 手機與平板共用：titlebar + hamburger + bottom nav |
-| desktop | `@media (min-width: 1024px) and (pointer: fine)` | 桌機：左側 sidebar + 無 bottom nav |
+| desktop | `@media (min-width: 1024px) and (pointer: fine)` | 桌機（rev2）：三欄 `216 / 1fr / 1fr` — 左欄我的行程清單 sidebar + 底部浮動玻璃膠囊 nav（primary nav 已由 sidebar 移膠囊） |
 
 不再維護 tablet-specific 斷點。任何不是 `min-width: 1024px` 且 `pointer: fine` 的環境都走 compact。
 
@@ -358,9 +359,10 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 ### Desktop Sidebar（`DesktopSidebar`）
 - 只在 desktop mode 顯示。
-- Primary nav 順序固定：聊天 / 行程 / 地圖 / 收藏。登入只在匿名狀態顯示；已登入帳號入口固定在底部 account chip，避免 desktop 同時出現帳號 nav + account chip。
-- DesktopSidebar 與 GlobalBottomNav 第 4 slot 統一「收藏」label（v2.22.0 後）。ownership 語意由 `PoiFavoritesPage` hero eyebrow（「我的收藏」+ count）補回，不靠 nav text。原 asymmetric labels（sidebar「我的收藏」/ bottom「收藏」）已廢除 — 5-tab 緊密度與 desktop nav 文字皆從 hero 取得 context。
-- Auth loading 不預設成匿名狀態：userinfo 尚未 resolve 時，sidebar 維持 4 個 primary nav，底部只保留 neutral loading chip；不得先顯示「登入」「未登入」或 account chip 後再切換。
+- **rev2 owner 2026-07-17（v2.55.94+）：sidebar = 「我的行程」清單**（`useMyTrips` 注入 `/api/trips?all=1`），**不再有 primary nav**（聊天/行程/地圖/收藏 已移到底部浮動玻璃膠囊 `GlobalBottomNav`）。清單項連 `/trips?selected=<id>`，active trip（URL 推導）套 accent；帳號 chip 維持左下 → `/account`（DESIGN.md:358 保留）。
+- 清單狀態：`trips===undefined` → skeleton（不先渲染空態）；`[]` → 「尚無行程」；有資料 → 逐行 `.tp-trip-item`。
+- Auth loading 不預設成匿名狀態：userinfo 尚未 resolve 時，底部帳號區只保留 neutral loading chip；不得先顯示「登入」「未登入」或 account chip 後再切換。
+- Primary nav 順序（聊天 / 行程 / 地圖 / 收藏）+ 第 4 slot「收藏」label + active route patterns 由 `GlobalBottomNav` 掌管；ownership 語意由 `PoiFavoritesPage` hero eyebrow 補回。
 - 背景固定深棕：light `#2A1F18`；dark `#0F0B08`。不得使用 `--color-foreground` 當背景，因為 dark mode 會反轉成淺色文字 token。
 - Active state 用 柔褐 accent；其餘用 cream `rgba(255,251,245,.78)`。
 - `/trip/:id/map` 與 `/trip/:id/stop/:eid/map` active item = 地圖；其他 `/trip/:id/*` active item = 行程。
