@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.93] - 2026-07-17
+
+### Changed
+- **V3 day 膠囊：實心 accent thumb → 淡 tonal pill + 單行 DAY N（去日期副標）** — owner 2026-07-17 sign-off。承 v2.55.92 玻璃膠囊，active DAY 由 accent 實心 thumb 改 **淡 tonal pill**（`color-mix(--day-color/accent 14%)` 底 + accent 字；per-day 色供地圖 polyline 對應、行程頁無 `--day-color` 落單一 accent）；`MapDayTab` 去 `dateLabel` prop + 日期 span → **單行只留 eyebrow「DAY N」**（去前導零；字級維持真實 app eyebrow 10px，符 owner「不改字級」）。`DayNav`/`MapPage` 同步去 `dateLabel` 傳入 + `DAY N` 去前導零；移除 `.tp-map-day-tab-date` CSS rule + dead `formatPillLabel` util。鎖測同步（`day-nav-eyebrow` 無前導零/無 date element、`map-day-tab` 去 dateLabel、`map-page-day-query`/`overview-runtime`/e2e `DAY 0N→DAY N`）。tsc ✓ · 430 檔 3770 unit 全綠 · 實機 QA（dev 5173）DayNav 淺/深單色 pill、地圖頁 per-day 色 pill、單行無日期皆正確、比對 mockup 一致。**地圖/行程 toggle 仍留後續 PR**（同 v2.55.92，與 shell 耦合）。SoT：`docs/design-sessions/2026-07-17-v3-day-map-glass-capsule.html`（本 PR 另含桌機三欄 day 膠囊整合、手機統一 header 帳號圓圈、Liquid Glass、HIG 字級稽核）。
+
 ## [2.55.92] - 2026-07-17
 
 ### Changed

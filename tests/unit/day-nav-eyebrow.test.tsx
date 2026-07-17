@@ -2,8 +2,8 @@
  * DayNav eyebrow format — 共用 MapDayTab 視覺後的對齊驗證
  *
  * 驗 contract：
- *   - eyebrow「DAY 03 · 今天」 today suffix 內嵌在 .tp-map-day-tab-eyebrow 文字內
- *   - non-today day eyebrow 純「DAY 0X」
+ *   - eyebrow「DAY 3 · 今天」 today suffix 內嵌在 .tp-map-day-tab-eyebrow 文字內
+ *   - non-today day eyebrow 純「DAY N」（單行、無前導零）
  *   - todayDayNum 沒給 → 沒任何 day 顯示「今天」
  *   - 不再有 .dn-area / .dn-dow / .dn-today / .dn-pill 等舊 chip 殘留
  *   - 不再有自家 [data-dn] CSS hook，全用 .tp-map-day-tab*
@@ -43,7 +43,7 @@ describe('DayNav — MapDayTab 共用視覺對齊', () => {
       />,
     );
     const todayEyebrow = eyebrowTexts().find((t) => t.includes('今天'));
-    expect(todayEyebrow).toBe('DAY 02 · 今天');
+    expect(todayEyebrow).toBe('DAY 2 · 今天');
   });
 
   it('non-today day eyebrow 純「DAY 0X」 不含「今天」', () => {
@@ -87,7 +87,7 @@ describe('DayNav — MapDayTab 共用視覺對齊', () => {
     expect(document.querySelector('.tp-day-strip')).toBeNull();
   });
 
-  it('eyebrow 主文字為「DAY NN」 zero-pad 格式', () => {
+  it('eyebrow 主文字為單行「DAY N」 無前導零', () => {
     render(
       <DayNav
         days={makeDays()}
@@ -96,9 +96,20 @@ describe('DayNav — MapDayTab 共用視覺對齊', () => {
       />,
     );
     const texts = eyebrowTexts();
-    expect(texts).toContain('DAY 01');
-    expect(texts).toContain('DAY 02');
-    expect(texts).toContain('DAY 03');
+    expect(texts).toContain('DAY 1');
+    expect(texts).toContain('DAY 2');
+    expect(texts).toContain('DAY 3');
+  });
+
+  it('day tab 單行：無 .tp-map-day-tab-date 日期副標 element', () => {
+    render(
+      <DayNav
+        days={makeDays()}
+        currentDayNum={1}
+        onSwitchDay={vi.fn()}
+      />,
+    );
+    expect(document.querySelector('.tp-map-day-tab-date')).toBeNull();
   });
 
   it('共用 .tp-map-day-tabs wrapper + sticky modifier', () => {

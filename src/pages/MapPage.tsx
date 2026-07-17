@@ -28,7 +28,7 @@ import { useTripContext } from '../contexts/TripContext';
 import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hooks/useMapData';
 import { apiFetch } from '../lib/apiClient';
 import { dayColor } from '../lib/dayPalette';
-import { findEntryInDays, formatDateLabel } from '../lib/mapDay';
+import { findEntryInDays } from '../lib/mapDay';
 import Icon from '../components/shared/Icon';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -501,15 +501,13 @@ export default function MapPage() {
           <MapDayTab
             key="overview"
             dayLabel="總覽"
-            dateLabel={`${dayTabs.length} 天`}
             isActive={isOverview}
             onClick={() => handleTabClick('overview')}
           />
           {dayTabs.map((t) => (
             <MapDayTab
               key={t.dayNum}
-              dayLabel={`DAY ${String(t.dayNum).padStart(2, '0')}`}
-              dateLabel={formatDateLabel(t.date) ?? undefined}
+              dayLabel={`DAY ${t.dayNum}`}
               dayColor={dayColor(t.dayNum)}
               isActive={!isOverview && t.dayNum === activeTab}
               onClick={() => handleTabClick(t.dayNum)}
