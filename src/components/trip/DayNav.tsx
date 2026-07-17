@@ -18,13 +18,6 @@ import MapDayTab from './MapDayTab';
 
 const WEEKDAYS = '日一二三四五六';
 
-/** Exposed for unit test only; not part of the public component API. */
-export function formatPillLabel(day: DaySummary): string {
-  const d = parseLocalDate(day.date);
-  if (!d) return String(day.dayNum);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
-
 function buildAriaLabel(day: DaySummary): string {
   const parts: string[] = [`Day ${day.dayNum}`];
   const d = parseLocalDate(day.date);
