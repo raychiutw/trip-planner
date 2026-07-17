@@ -1,254 +1,100 @@
 /**
- * DesktopSidebar — visual reference: docs/design-sessions/mockup-trip-v2.html
- *
- * Mockup desktop primary nav (v2.21.0): 聊天 / 行程 / 地圖 / 收藏.
- * Anonymous: adds 登入. Logged-in: account access lives in the bottom chip.
- * Settings (connected-apps / developer/apps / sessions) reach via direct URL,
- * not primary nav.
+ * DesktopSidebar (rev2 owner 2026-07-17) — 左欄「我的行程」清單 + 帳號 chip 左下。
+ * primary nav 已移到底部浮動玻璃膠囊（見 global-bottom-nav-5tab.test）。
  */
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import DesktopSidebar from '../../src/components/shell/DesktopSidebar';
+import type { MyTrip } from '../../src/hooks/useMyTrips';
+
+const TRIPS: MyTrip[] = [
+  { tripId: 'kyoto-5', name: '京都五日行' },
+  { tripId: 'okinawa-7', name: '沖繩七日遊' },
+];
 
 function renderSidebar(opts: {
   path?: string;
   user?: { name: string; email: string } | null | undefined;
+  trips?: MyTrip[];
+  activeTripId?: string | null;
 } = {}) {
-  const user = Object.prototype.hasOwnProperty.call(opts, 'user') ? opts.user : null;
+  const user = Object.prototype.hasOwnProperty.call(opts, 'user')
+    ? opts.user
+    : { name: 'Ray', email: 'ray@example.com' };
   return render(
     <MemoryRouter initialEntries={[opts.path ?? '/trips']}>
-      <DesktopSidebar user={user} />
+      <DesktopSidebar user={user} trips={opts.trips} activeTripId={opts.activeTripId} />
     </MemoryRouter>,
   );
 }
 
-describe('DesktopSidebar — visible nav items (anonymous)', () => {
-  it('renders 5 nav items: 聊天 / 行程 / 地圖 / 收藏 / 登入', () => {
-    const { getAllByRole } = renderSidebar();
-    const links = getAllByRole('link');
-    expect(links.length).toBe(5);
-    expect(links[0].textContent).toContain('聊天');
-    expect(links[1].textContent).toContain('行程');
-    expect(links[2].textContent).toContain('地圖');
-    expect(links[3].textContent).toContain('收藏');
-    expect(links[4].textContent).toContain('登入');
+describe('DesktopSidebar rev2 — 我的行程清單', () => {
+  it('brand 顯示 Tripline.', () => {
+    const { container } = renderSidebar({ trips: [] });
+    expect(container.querySelector('.tp-sidebar-brand')?.textContent).toContain('Tripline');
   });
 
-  it('nav items href 對應 mockup IA', () => {
-    const { getAllByRole } = renderSidebar();
-    const links = getAllByRole('link') as HTMLAnchorElement[];
-    expect(links[0].getAttribute('href')).toBe('/chat');
-    expect(links[1].getAttribute('href')).toBe('/trips');
-    expect(links[2].getAttribute('href')).toBe('/map');
-    expect(links[3].getAttribute('href')).toBe('/favorites');
-    expect(links[4].getAttribute('href')).toBe('/login');
+  it('section label「我的行程」', () => {
+    const { getByText } = renderSidebar({ trips: [] });
+    expect(getByText('我的行程')).not.toBeNull();
   });
 
-  it('settings + developer keys 已從 primary nav 移除', () => {
-    const { container } = renderSidebar();
-    const nav = container.querySelector('[aria-label="主要功能"]');
-    expect(nav?.textContent).not.toContain('已連結應用');
-    expect(nav?.textContent).not.toContain('開發者');
+  it('trips=undefined → loading skeleton（不先渲染空態）', () => {
+    const { container } = renderSidebar({ trips: undefined });
+    expect(container.querySelector('.tp-sidebar-trips-loading')).not.toBeNull();
+    expect(container.querySelector('.tp-sidebar-trips-empty')).toBeNull();
   });
 
-  it('auth loading 時只顯示 4 個 primary nav，不先顯示「登入」', () => {
-    const { container, getAllByRole } = renderSidebar({ user: undefined });
-    const links = getAllByRole('link');
-    expect(links.length).toBe(4);
-    expect(links[0].textContent).toContain('聊天');
-    expect(links[1].textContent).toContain('行程');
-    expect(links[2].textContent).toContain('地圖');
-    expect(links[3].textContent).toContain('收藏');
-
-    const nav = container.querySelector('[aria-label="主要功能"]');
-    expect(nav?.textContent).not.toContain('登入');
-    expect(nav?.textContent).not.toContain('帳號');
-  });
-});
-
-describe('DesktopSidebar — active state', () => {
-  it('路由 /trips 時「行程」item active', () => {
-    const { getAllByRole } = renderSidebar({ path: '/trips' });
-    const links = getAllByRole('link');
-    // index 1 = 行程
-    expect(links[1].className).toMatch(/is-active/);
-    expect(links[0].className).not.toMatch(/is-active/);
-    expect(links[3].className).not.toMatch(/is-active/);
+  it('trips=[] → 空態「尚無行程」', () => {
+    const { getByText, container } = renderSidebar({ trips: [] });
+    expect(getByText('尚無行程')).not.toBeNull();
+    expect(container.querySelector('.tp-sidebar-trips-loading')).toBeNull();
   });
 
-  it('路由 /chat 時「聊天」item active（取代舊 /manage editor）', () => {
-    const { getAllByRole } = renderSidebar({ path: '/chat' });
-    const links = getAllByRole('link');
-    expect(links[0].className).toMatch(/is-active/);
+  it('trips 清單 render 每個行程 name + /trips?selected= 連結', () => {
+    const { getByTestId } = renderSidebar({ trips: TRIPS });
+    const a = getByTestId('sidebar-trip-kyoto-5') as HTMLAnchorElement;
+    expect(a.textContent).toContain('京都五日行');
+    expect(a.getAttribute('href')).toBe('/trips?selected=kyoto-5');
   });
 
-  it('PR-O 後 admin user 也不再看到「管理」nav item（已搬進每個行程的共編 sheet）', () => {
-    const { container } = renderSidebar({
-      path: '/trips',
-      user: { name: 'Admin', email: 'admin@trip.io' },
-          });
-    const nav = container.querySelector('[aria-label="主要功能"]');
-    expect(nav?.textContent).not.toContain('管理');
+  it('activeTripId 對應行程套 .is-active + aria-current', () => {
+    const { getByTestId } = renderSidebar({ trips: TRIPS, activeTripId: 'okinawa-7' });
+    const active = getByTestId('sidebar-trip-okinawa-7');
+    const inactive = getByTestId('sidebar-trip-kyoto-5');
+    expect(active.classList.contains('is-active')).toBe(true);
+    expect(active.getAttribute('aria-current')).toBe('page');
+    expect(inactive.classList.contains('is-active')).toBe(false);
   });
 
-  it('non-admin user 不顯示「管理」nav item', () => {
-    const { container } = renderSidebar({
-      user: { name: 'Plain', email: 'plain@x.com' },
-          });
-    const nav = container.querySelector('[aria-label="主要功能"]');
-    expect(nav?.textContent).not.toContain('管理');
-  });
-
-  it('路由 /trip/abc 時「行程」item 仍 active', () => {
-    const { getAllByRole } = renderSidebar({ path: '/trip/abc' });
-    const links = getAllByRole('link');
-    expect(links[1].className).toMatch(/is-active/);
-  });
-
-  it('路由 /trip/abc/map 時「地圖」item active（in-trip map route）', () => {
-    const { getAllByRole } = renderSidebar({ path: '/trip/abc/map' });
-    const links = getAllByRole('link');
-    expect(links[2].className).toMatch(/is-active/);
-    expect(links[1].className).not.toMatch(/is-active/);
-  });
-
-  it('路由 /trip/abc/map/ trailing slash 時「地圖」item active', () => {
-    const { getAllByRole } = renderSidebar({ path: '/trip/abc/map/' });
-    const links = getAllByRole('link');
-    expect(links[2].className).toMatch(/is-active/);
-    expect(links[1].className).not.toMatch(/is-active/);
-  });
-
-  it('路由 /trip/abc/stop/101/map 時「地圖」item active', () => {
-    const { getAllByRole } = renderSidebar({ path: '/trip/abc/stop/101/map' });
-    const links = getAllByRole('link');
-    expect(links[2].className).toMatch(/is-active/);
-    expect(links[1].className).not.toMatch(/is-active/);
-  });
-
-  it('路由 /trip/abc/stop/101/map/ trailing slash 時「地圖」item active', () => {
-    const { getAllByRole } = renderSidebar({ path: '/trip/abc/stop/101/map/' });
-    const links = getAllByRole('link');
-    expect(links[2].className).toMatch(/is-active/);
-    expect(links[1].className).not.toMatch(/is-active/);
-  });
-
-  it('路由 /trip/abc/stop/101/copy 時「行程」item active', () => {
-    const { getAllByRole } = renderSidebar({ path: '/trip/abc/stop/101/copy' });
-    const links = getAllByRole('link');
-    expect(links[1].className).toMatch(/is-active/);
-    expect(links[2].className).not.toMatch(/is-active/);
-  });
-
-  it('路由 /map 時只有「地圖」global view active，「行程」沒 active', () => {
-    const { getAllByRole } = renderSidebar({ path: '/map' });
-    const links = getAllByRole('link');
-    expect(links[2].className).toMatch(/is-active/);
-    expect(links[1].className).not.toMatch(/is-active/);
-  });
-
-  it('路由 /chat 時「聊天」item active', () => {
-    const { getAllByRole } = renderSidebar({ path: '/chat' });
-    const links = getAllByRole('link');
-    expect(links[0].className).toMatch(/is-active/);
-  });
-
-  it('路由 /favorites 時「收藏」item active (v2.21.0)', () => {
-    const { getAllByRole } = renderSidebar({ path: '/favorites' });
-    const links = getAllByRole('link');
-    expect(links[3].className).toMatch(/is-active/);
-  });
-
-  it('路由 /explore (secondary entry) 時「收藏」item 仍 active (MF11)', () => {
-    const { getAllByRole } = renderSidebar({ path: '/explore' });
-    const links = getAllByRole('link');
-    expect(links[3].className).toMatch(/is-active/);
-  });
-
-  it('路由 /login 或 sub-route 時「登入」item active', () => {
-    const { getAllByRole } = renderSidebar({ path: '/login/forgot' });
-    const links = getAllByRole('link');
-    expect(links[4].className).toMatch(/is-active/);
+  it('primary nav（aria-label 主要功能）已不在 sidebar（移到底部膠囊）', () => {
+    const { container } = renderSidebar({ trips: TRIPS });
+    expect(container.querySelector('[aria-label="主要功能"]')).toBeNull();
   });
 });
 
-describe('DesktopSidebar — user chip', () => {
-  it('未登入：user chip 顯示「未登入」', () => {
-    const { container } = renderSidebar({ user: null });
-    const chip = container.querySelector('[data-testid="sidebar-user-chip"]');
-    expect(chip?.textContent).toContain('未登入');
+describe('DesktopSidebar rev2 — 帳號 chip（左下）', () => {
+  it('user=undefined → auth loading skeleton', () => {
+    const { getByTestId } = renderSidebar({ user: undefined, trips: [] });
+    expect(getByTestId('sidebar-user-loading')).not.toBeNull();
   });
 
-  it('已登入：顯示帳號 chip 含 name（不含 email — 2026-05-07 移除）', () => {
-    const { container } = renderSidebar({
-      user: { name: 'Ray Chiu', email: 'ray@trip.io' },
-    });
-    const chip = container.querySelector('[data-testid="sidebar-account-card"]');
-    expect(chip).toBeTruthy();
-    expect(chip?.textContent).toContain('Ray Chiu');
-    expect(chip?.textContent).not.toContain('ray@trip.io');
+  it('user 已登入 → account card 顯示 name + 連 /account', () => {
+    const { getByTestId } = renderSidebar({ user: { name: 'Ray', email: 'ray@example.com' }, trips: [] });
+    const card = getByTestId('sidebar-account-card') as HTMLAnchorElement;
+    expect(card.getAttribute('href')).toBe('/account');
+    expect(card.textContent).toContain('Ray');
   });
 
-  it('已登入時不顯示「未登入」chip', () => {
-    const { container } = renderSidebar({
-      user: { name: 'Ray', email: 'ray@trip.io' },
-    });
-    expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeNull();
+  it('user=null → 未登入 chip', () => {
+    const { getByTestId } = renderSidebar({ user: null, trips: [] });
+    expect(getByTestId('sidebar-user-chip').textContent).toContain('未登入');
   });
 
-  // /devex-review 2026-04-26：sidebar 不再放「登出」link，避免 destructive
-  // action 暴露在主要 nav 區。登出走 /settings/sessions 內的 device row revoke。
-  it('已登入：sidebar 不放「登出」link', () => {
-    const { container } = renderSidebar({
-      user: { name: 'Ray', email: 'ray@trip.io' },
-    });
-    expect(container.querySelector('[data-testid="sidebar-logout"]')).toBeNull();
-  });
-
-  it('未登入時也不顯示「登出」link', () => {
-    const { container } = renderSidebar({ user: null });
-    expect(container.querySelector('[data-testid="sidebar-logout"]')).toBeNull();
-  });
-
-  it('已登入時 nav 隱藏「登入」item — account chip 取代', () => {
-    const { container } = renderSidebar({
-      user: { name: 'Ray', email: 'ray@trip.io' },
-    });
-    const nav = container.querySelector('[aria-label="主要功能"]');
-    expect(nav?.textContent).not.toContain('登入');
-    // Other 4 items still visible
-    expect(nav?.textContent).toContain('聊天');
-    expect(nav?.textContent).toContain('行程');
-    expect(nav?.textContent).toContain('地圖');
-    expect(nav?.textContent).toContain('收藏');
-  });
-
-  it('未登入時 nav 顯示「登入」item', () => {
-    const { container } = renderSidebar({ user: null });
-    const nav = container.querySelector('[aria-label="主要功能"]');
-    expect(nav?.textContent).toContain('登入');
-  });
-
-  it('auth loading 時保留 sidebar 底部高度，但不顯示「未登入」或 account card', () => {
-    const { container } = renderSidebar({ user: undefined });
-    expect(container.querySelector('[data-testid="sidebar-user-loading"]')).toBeTruthy();
-    expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeNull();
-    expect(container.querySelector('[data-testid="sidebar-account-card"]')).toBeNull();
-    expect(container.textContent).not.toContain('未登入');
-  });
-});
-
-describe('DesktopSidebar — sidebar 不再有「+ 新增行程」CTA（user direction 2026-04-26）', () => {
-  it('未登入時 sidebar 沒有 sidebar-new-trip-btn', () => {
-    const { queryByTestId } = renderSidebar();
-    expect(queryByTestId('sidebar-new-trip-btn')).toBeNull();
-  });
-
-  it('已登入時 sidebar 也沒有 sidebar-new-trip-btn — 入口改在 TripsListPage / GlobalMap empty state', () => {
-    const { queryByTestId } = renderSidebar({
-      user: { name: 'Ray', email: 'ray@trip.io' },
-    });
-    expect(queryByTestId('sidebar-new-trip-btn')).toBeNull();
+  it('name > 10 CJK chars → slice(0,10)+…（CJK-safe）', () => {
+    const { getByTestId } = renderSidebar({ user: { name: '一二三四五六七八九十十一', email: 'x@y.z' }, trips: [] });
+    const card = getByTestId('sidebar-account-card');
+    expect(card.textContent).toContain('一二三四五六七八九十…');
   });
 });

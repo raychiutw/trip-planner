@@ -153,13 +153,13 @@ describe('audit fix source locks', () => {
 
 // ---- Medium-tier audit fixes (v2.45.x) ----
 describe('audit fix source locks — medium tier', () => {
-  it('GlobalBottomNav nav patterns mirror DesktopSidebar (sub-routes + stop/map active)', () => {
+  it('GlobalBottomNav nav patterns（sub-routes + stop/map active）— rev2 primary nav 只在膠囊', () => {
     const nav = read('src/components/shell/GlobalBottomNav.tsx');
-    const side = read('src/components/shell/DesktopSidebar.tsx');
     // 行程 pattern excludes map + stop/map; map pattern covers both map routes
     expect(nav).toContain('/^\\/trip\\/[^/]+(?:\\/?$|\\/(?!(?:map|stop\\/[^/]+\\/map)\\/?$).*)/');
     expect(nav).toMatch(/stop\\\/\[\^\/\]\+\\\/map\\\/\?\$/); // MAP pattern now includes stop/:id/map
-    expect(side).toContain('/^\\/trip\\/[^/]+(?:\\/?$|\\/(?!(?:map|stop\\/[^/]+\\/map)\\/?$).*)/');
+    // rev2 owner 2026-07-17：DesktopSidebar 已移除 primary nav（改「我的行程」清單），
+    // 導覽 active patterns 只留 GlobalBottomNav（底部玻璃膠囊）。
   });
 
   it('dev/apps PATCH app_name uses a typeof guard (no TypeError on JSON null)', () => {

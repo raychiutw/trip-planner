@@ -1,160 +1,82 @@
 /**
- * DesktopSidebar — app-level sidebar.
+ * DesktopSidebar — app-level sidebar（rev2 owner 2026-07-17）。
  *
- * Desktop primary nav matching terracotta-preview-v2 (v2.21.0):
- *   聊天 / 行程 / 地圖 / 我的收藏
- * 「探索」自 v2.21.0 起降為 /favorites 頁右上 secondary action（ghost），不再是 primary nav。
- * Anonymous users also see 登入; authenticated account access lives in the
- * bottom account chip to avoid duplicating the Account entry on desktop.
+ * rev2：左欄由 primary-nav 改為「我的行程」清單（primary nav 移到底部浮動
+ * 玻璃膠囊 GlobalBottomNav）。帳號 chip 維持左下（DESIGN.md:358）。
  *
- * Settings (connected-apps, developer/apps, sessions) reach via direct URL
- * or future account-chip menu — they're admin/maintenance routes, not core
- * "produce/consume trips" actions.
+ * prop-driven：清單資料由上層（DesktopSidebarConnected）經 useMyTrips 注入
+ * `trips`，active trip 經 `activeTripId`；pure 版保留給測試 / explicit override。
  *
- * 「地圖」nav owns /map and in-trip map routes. Other trip-scoped routes stay
- * on 「行程」.
- *
- * 聊天 + 地圖 are placeholder pages (chat with LLM concierge / cross-trip
- * map). Visible in sidebar to set roadmap expectations even before full
- * implementation lands.
- *
- * /devex-review 2026-04-26：sidebar 拿掉「登出」link。登出走 account chip →
- * /settings/sessions 內的 device row revoke，避免 destructive action 跟主要
- * nav 同框，降低誤點機率。
- *
- * V2-P7 PR-O 2026-04-26：sidebar 拿掉「管理」 nav item。原 admin 共編管理
- * 功能搬進每個 trip 的 OverflowMenu →「共編設定」 sheet（CollabSheet），
- * 一般 user 也可管自己 owner 行程，不再侷限 admin。
+ * Loading state：user / trips 還沒 resolve 時保持 neutral skeleton，避免 flicker。
  */
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import clsx from 'clsx';
-import Icon from '../shared/Icon';
-
-interface NavItemConfig {
-  key: 'chat' | 'trips' | 'map' | 'favorites' | 'login';
-  label: string;
-  href: string;
-  icon: string;
-  /** Paths that keep this nav highlighted (exact match OR followed by `/`). */
-  matchPrefixes: readonly string[];
-  /** When true, match only the exact prefix — no nested sub-routes. */
-  exactOnly?: boolean;
-  /** Regex route families that should also activate this item. */
-  additionalActivePatterns?: readonly RegExp[];
-  /** When true, item only shows for logged-in users (Section 2 account-hub-page) */
-  authOnly?: boolean;
-  /** When true, item only shows for logged-out users */
-  guestOnly?: boolean;
-}
-
-// 2026-04-29:User 拍板「桌機版 sidebar 不用帳號選項 避免重複」 — desktop 版
-// 移除「帳號」 nav item。User 透過 sidebar 底部 user chip(.tp-account-card)
-// 進 /account。Mobile GlobalBottomNav 維持 5 tab 含「帳號」(底部空間有限,
-// 沒底部 user chip)。
-const MAP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+\/map\/?$/, /^\/trip\/[^/]+\/stop\/[^/]+\/map\/?$/];
-const TRIP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+(?:\/?$|\/(?!(?:map|stop\/[^/]+\/map)\/?$).*)/];
-
-// poi-favorites-rename: 4th slot 「收藏」(poi_favorites universal pool primary nav).
-// /explore 仍 reachable via /favorites TitleBar action; 走到 /explore 時 sidebar 仍
-// highlight 「收藏」(additionalActivePatterns)；DESIGN.md L298 廢除 asymmetric labels —
-// sidebar 與 bottom-nav 都用「收藏」，ownership 由 PoiFavoritesPage hero eyebrow 補回。
-const FAVORITES_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/favorites\//];
-
-const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
-  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'sidebar-chat', matchPrefixes: ['/chat'] },
-  { key: 'trips',     label: '行程', href: '/trips',     icon: 'sidebar-trip', matchPrefixes: ['/trips'], additionalActivePatterns: TRIP_ACTIVE_PATTERNS },
-  { key: 'map',       label: '地圖', href: '/map',       icon: 'sidebar-map',  matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
-  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'heart',        matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
-  { key: 'login',     label: '登入', href: '/login',     icon: 'sidebar-user', matchPrefixes: ['/login'], guestOnly: true },
-];
-
-function isItemActive(pathname: string, item: NavItemConfig): boolean {
-  if (item.additionalActivePatterns) {
-    for (const re of item.additionalActivePatterns) {
-      if (re.test(pathname)) return true;
-    }
-  }
-  for (const prefix of item.matchPrefixes) {
-    if (pathname === prefix) return true;
-    if (!item.exactOnly && pathname.startsWith(prefix + '/')) return true;
-  }
-  return false;
-}
+import type { MyTrip } from '../../hooks/useMyTrips';
 
 const SCOPED_STYLES = `
 .tp-sidebar {
-  /* Section 4.1 (terracotta-ui-parity-polish): mockup dark sidebar
-   * (line 5126) — fixed deep-cocoa surface in both light and dark mode.
-   * v2.34.30: --color-sidebar-bg token (light=#2A1F18, dark=#0F0B08)。 */
+  /* 深棕 sidebar surface（mockup line 5126），light/dark 皆固定深底。 */
   background: var(--color-sidebar-bg);
   border-right: 1px solid var(--color-sidebar-bg);
   padding: 20px 14px;
   display: flex; flex-direction: column;
   gap: 2px;
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
 }
 .tp-sidebar-brand {
   padding: 0 8px;
   margin-bottom: 18px;
   display: flex; align-items: center; gap: 8px;
   font-size: var(--font-size-title3); font-weight: 700; letter-spacing: -0.01em;
-  /* H6 exception: brand sidebar is fixed deep-cocoa surface in both modes
-     (mockup line 5126); text stays warm-cream cross-mode for design lock. */
   color: var(--color-sidebar-fg);
+  flex-shrink: 0;
 }
 .tp-sidebar-brand .accent-dot { color: var(--color-accent); }
 
-.tp-sidebar-nav {
-  display: flex; flex-direction: column; gap: 2px;
+/* rev2：我的行程清單（取代 primary nav；nav 移底部玻璃膠囊） */
+.tp-sidebar-section-label {
+  padding: 0 8px; margin: 0 0 8px;
+  font-size: var(--font-size-caption2); font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--color-sidebar-fg-faint);
+  flex-shrink: 0;
 }
-.tp-nav-item {
-  /* Section 4.1 (terracotta-ui-parity-polish): dark sidebar 上 inactive
-   * 用半透明 white 替代 muted (muted 在深棕底對比不夠)。font-weight 600
-   * 對齊 mockup line 5129。 */
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: var(--radius-md);
+.tp-sidebar-trips {
+  display: flex; flex-direction: column; gap: 2px;
+  overflow-y: auto; flex: 1; min-height: 0;
+}
+.tp-trip-item {
+  display: block; padding: 9px 12px; border-radius: var(--radius-md);
   color: var(--color-sidebar-fg-muted);
   font-size: var(--font-size-footnote); font-weight: 600;
-  cursor: pointer; text-decoration: none;
-  transition: background 150ms var(--transition-timing-function-apple),
-              color 150ms var(--transition-timing-function-apple);
-  min-height: 40px;
+  text-decoration: none; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background 150ms var(--transition-timing-function-apple), color 150ms;
 }
-.tp-nav-item:hover {
-  background: var(--color-sidebar-fg-hover);
-  /* H6 exception: brand sidebar is fixed deep-cocoa surface in both modes
-     (mockup line 5126); text stays warm-cream cross-mode for design lock. */
-  color: var(--color-sidebar-fg);
+.tp-trip-item:hover { background: var(--color-sidebar-fg-hover); color: var(--color-sidebar-fg); }
+.tp-trip-item.is-active { background: var(--color-accent); color: var(--color-accent-foreground); }
+.tp-sidebar-trips-empty {
+  padding: 12px 8px; color: var(--color-sidebar-fg-faint);
+  font-size: var(--font-size-footnote);
 }
-.tp-nav-item.is-active {
-  /* mockup HIGH active 為 accent 實心 (line 5128) */
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
+.tp-sidebar-trips-loading { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; }
+.tp-trip-skeleton {
+  display: block; height: 12px; border-radius: var(--radius-full);
+  background: var(--color-sidebar-fg-skel-faint);
 }
-.tp-nav-item .svg-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.tp-trip-skeleton.is-a { width: 82%; }
+.tp-trip-skeleton.is-b { width: 60%; }
+.tp-trip-skeleton.is-c { width: 72%; }
 
 .tp-sidebar-cta {
   margin-top: auto;
   padding-top: 16px;
-  /* Dark sidebar 上 border 用半透明 white */
   border-top: 1px solid var(--color-sidebar-fg-faint);
   display: flex; flex-direction: column; gap: 8px;
+  flex-shrink: 0;
 }
-.tp-new-trip-btn {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 12px; border-radius: var(--radius-full);
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  border: none;
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  cursor: pointer; min-height: var(--spacing-tap-min);
-  transition: filter 150ms var(--transition-timing-function-apple);
-}
-.tp-new-trip-btn:hover { filter: brightness(var(--hover-brightness)); }
-.tp-new-trip-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-
 .tp-user-chip {
   display: flex; align-items: center; gap: 10px;
   padding: 8px; border-radius: var(--radius-md);
@@ -193,7 +115,6 @@ const SCOPED_STYLES = `
 .tp-account-card {
   padding: 10px;
   border-radius: var(--radius-md);
-  /* Dark sidebar 上 account card 用半透明 white over dark 取代 accent-subtle */
   background: transparent;
   display: flex; align-items: center; gap: 10px;
   text-decoration: none;
@@ -215,8 +136,6 @@ const SCOPED_STYLES = `
 }
 .tp-account-card .tp-account-name {
   font-size: var(--font-size-footnote); font-weight: 600;
-  /* H6 exception: brand sidebar is fixed deep-cocoa surface in both modes
-     (mockup line 5126); text stays warm-cream cross-mode for design lock. */
   color: var(--color-sidebar-fg);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -227,27 +146,19 @@ export interface SidebarUser {
   email: string;
 }
 
-
 export interface DesktopSidebarProps {
   /** undefined = auth loading, null = confirmed unauthenticated */
   user?: SidebarUser | null | undefined;
+  /** rev2：我的行程清單（undefined = 尚未 resolve → skeleton；[] = 無行程） */
+  trips?: MyTrip[];
+  /** 目前 active trip id（清單 highlight） */
+  activeTripId?: string | null;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
 }
 
-export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
-  const { pathname } = useLocation();
+export default function DesktopSidebar({ user, trips, activeTripId, brand }: DesktopSidebarProps) {
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
-  const authResolved = user !== undefined;
-  const isAuthed = !!user;
-
-  // Section 2 (terracotta-account-hub-page): loading 不先猜 guest/auth，
-  // 等 userinfo resolve 後才顯示「登入」或 account chip，避免 auth flicker。
-  const visibleNavItems = NAV_ITEMS.filter((item) => {
-    if (item.authOnly) return isAuthed;
-    if (item.guestOnly) return authResolved && !isAuthed;
-    return true;
-  });
 
   return (
     <>
@@ -257,26 +168,35 @@ export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
           {brand ?? (<>Tripline<span className="accent-dot">.</span></>)}
         </div>
 
-        <nav className="tp-sidebar-nav" aria-label="主要功能">
-          {visibleNavItems.map((item) => {
-            const active = isItemActive(pathname, item);
-            return (
-              <Link
-                key={item.key}
-                to={item.href}
-                className={clsx('tp-nav-item', active && 'is-active')}
-                aria-current={active ? 'page' : undefined}
-              >
-                <Icon name={item.icon} />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+        <div className="tp-sidebar-section-label">我的行程</div>
+        <nav className="tp-sidebar-trips" aria-label="我的行程" data-testid="sidebar-trips">
+          {trips === undefined ? (
+            <div className="tp-sidebar-trips-loading" role="status" aria-label="載入行程中">
+              <span className="tp-trip-skeleton is-a" />
+              <span className="tp-trip-skeleton is-b" />
+              <span className="tp-trip-skeleton is-c" />
+            </div>
+          ) : trips.length === 0 ? (
+            <div className="tp-sidebar-trips-empty">尚無行程</div>
+          ) : (
+            trips.map((t) => {
+              const active = t.tripId === activeTripId;
+              return (
+                <Link
+                  key={t.tripId}
+                  to={`/trips?selected=${encodeURIComponent(t.tripId)}`}
+                  className={clsx('tp-trip-item', active && 'is-active')}
+                  aria-current={active ? 'page' : undefined}
+                  data-testid={`sidebar-trip-${t.tripId}`}
+                >
+                  {t.name}
+                </Link>
+              );
+            })
+          )}
         </nav>
 
         <div className="tp-sidebar-cta">
-          {/* 2026-05-07：移除 sidebar ThemeToggle —— 主題切換在 /account →
-           * /settings/appearance 內，避免 sidebar 底部過於擁擠。 */}
           {user === undefined ? (
             <div
               className="tp-user-chip tp-user-chip-loading"
@@ -299,16 +219,8 @@ export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
             >
               <div className="tp-avatar-md" aria-hidden="true">{initial}</div>
               <div className="tp-account-body">
-                {/* Section 4.1 (terracotta-ui-parity-polish): mockup line 5132
-                 * 規定 name.length > 10 → slice(0,10)+'…' JS-level truncation。
-                 * Sidebar nav 點 Account card 改 navigate /account（取代既有
-                 * /settings/sessions直連）— Section 2 account-hub-page 對齊。
-                 * 2026-05-07：移除 email row（個人資訊保留在 /account hero
-                 * page）。Card parent flex align-items: center 已將 name 跟
-                 * avatar 上下置中對齊。 */}
                 <div className="tp-account-name">
-                  {/* v2.33.45 round 6b: Array.from CJK-safe slice — `string.slice(0, 10)`
-                      會在 surrogate pair / emoji 中間切，render 出 broken glyph。 */}
+                  {/* v2.33.45 round 6b: Array.from CJK-safe slice */}
                   {(() => {
                     const chars = Array.from(user.name);
                     return chars.length > 10 ? `${chars.slice(0, 10).join('')}…` : user.name;

@@ -42,12 +42,12 @@ describe('/explore titleBar right action 拔除', () => {
 });
 
 describe('/favorites page 仍保留 (其他地方仍 link)', () => {
-  it('sidebar nav 仍 link /favorites', () => {
-    const sidebar = readFileSync(
-      join(__dirname, '../../src/components/shell/DesktopSidebar.tsx'),
+  it('底部 nav 仍 link /favorites（rev2：primary nav 由 sidebar 移到底部玻璃膠囊）', () => {
+    const nav = readFileSync(
+      join(__dirname, '../../src/components/shell/GlobalBottomNav.tsx'),
       'utf8',
     );
-    expect(sidebar).toMatch(/href: '\/favorites'/);
+    expect(nav).toMatch(/href: '\/favorites'/);
   });
 
   it('bottom-nav 仍 link /favorites', () => {
