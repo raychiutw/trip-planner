@@ -1,0 +1,1609 @@
+<title>Tripline V3 — 三欄 + 底部 tab + 手機 C·Map First Drawer</title>
+<style>
+/* ============================================================
+   V3 rev2 — owner 2026-07-15 追加需求
+   · sidebar 展開常駐（不捲動收合）
+   · 主功能 nav → 底部浮動玻璃 tab（Apple Music iPadOS 26 形制）
+   · 桌機三欄保留：sidebar | 行程 | 地圖／行程操作
+   · 中欄行程操作 → 在右欄顯示（取代全頁 form 動線）
+   · 手機 = C · Map First Drawer（approved.json 已簽）
+   ============================================================ */
+:root{
+  --bg-0:#0B0B0C; --bg-1:#121214; --bg-2:#1A1A1D; --bg-3:#232327;
+  --fg:#F2F2F4; --fg-2:rgba(242,242,244,.62); --fg-3:rgba(242,242,244,.38);
+  --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.055);
+  --accent:#CBA06E; --accent-hi:#E0BC90; --accent-dim:rgba(203,160,110,.16);
+
+  /* 真玻璃 — 62%，不是 92% */
+  --glass:rgba(18,18,20,.62);
+  --glass-strong:rgba(18,18,20,.72);
+  --glass-rim:rgba(255,255,255,.10);
+  --spec:rgba(255,255,255,.14);
+
+  --board:#2A2A2E; --board-fg:#EDEDEF;
+  --on-accent:#1A140F;      /* accent 底上的文字（tokenize 自寫死 #1A140F）*/
+  --danger:#F0A6A6;
+  color-scheme:dark;
+}
+/* V3 暖白 light —— owner 要就地驗證淺色（帳號選單 → 外觀切換）*/
+:root[data-theme="light"]{
+  --bg-0:#E7DECF; --bg-1:#FFFBF5; --bg-2:#FAF4EA; --bg-3:#F2EAD9;
+  --fg:#2A1F18; --fg-2:rgba(42,31,24,.66); --fg-3:rgba(42,31,24,.42);
+  --hair:rgba(42,31,24,.11); --hair-2:rgba(42,31,24,.06);
+  --accent:#A97A4A; --accent-hi:#8A6038; --accent-dim:rgba(169,122,74,.15);
+  --glass:rgba(255,251,245,.72);
+  --glass-strong:rgba(255,251,245,.84);
+  --glass-rim:rgba(42,31,24,.10);
+  --spec:rgba(255,255,255,.7);
+  --board:#DED4C4; --board-fg:#2A1F18;
+  --on-accent:#FFFBF5;
+  --danger:#C0463E;
+  color-scheme:light;
+}
+*{box-sizing:border-box;margin:0;}
+body{
+  font-family:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,"PingFang TC",system-ui,sans-serif;
+  background:var(--board); color:var(--board-fg); padding:30px 28px 70px;
+  -webkit-font-smoothing:antialiased;
+}
+.hdr h1{font-size:22px;font-weight:800;letter-spacing:-.01em;}
+.hdr .s{font-size:13px;opacity:.6;margin-top:3px;}
+.lede{max-width:78ch;font-size:13.5px;line-height:1.75;opacity:.82;margin:16px 0 8px;}
+.lede b{opacity:1;}
+.warn{
+  max-width:78ch;font-size:13px;line-height:1.7;margin:14px 0 26px;
+  padding:13px 15px;border-radius:10px;
+  background:rgba(240,166,166,.09);border:1px solid rgba(240,166,166,.24);
+}
+.warn b{color:var(--danger);}
+h2.sec{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.5;margin:40px 0 5px;}
+h3.sec-t{font-size:18px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px;}
+p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:18px;}
+.seg{
+  display:inline-flex;gap:3px;padding:3px;border-radius:999px;margin-bottom:14px;
+  background:var(--bg-2);border:1px solid var(--hair);
+}
+.seg button{
+  font:inherit;font-size:12.5px;font-weight:700;padding:6px 15px;border:0;border-radius:999px;
+  background:transparent;color:var(--fg-2);cursor:pointer;
+}
+.seg button.on{background:var(--accent);color:var(--on-accent);}
+
+/* ============================================================
+   桌機視窗
+   ============================================================ */
+.win{
+  width:1340px;height:820px;max-width:100%;position:relative;
+  background:var(--bg-0);border-radius:12px;overflow:hidden;
+  box-shadow:0 26px 70px rgba(0,0,0,.5);
+  border:1px solid rgba(255,255,255,.08);
+  display:flex;flex-direction:column;
+}
+
+/* ---------- 頂列：功能列 + 帳號 右上 ---------- */
+.top{
+  height:54px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:var(--glass);
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border-bottom:1px solid var(--hair);
+  box-shadow:inset 0 1px 0 var(--spec);
+  position:relative;z-index:30;
+}
+.chev{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  color:var(--fg-3);cursor:pointer;flex-shrink:0;}
+.chev:hover{background:var(--bg-3);color:var(--fg);}
+.chev.dim{opacity:.35;pointer-events:none;}
+.top-title{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--fg);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.tool{width:33px;height:33px;border-radius:8px;display:grid;place-items:center;
+  color:var(--fg-2);cursor:pointer;}
+.tool:hover{background:var(--bg-3);color:var(--fg);}
+.tool-sep{width:1px;height:19px;background:var(--hair);margin:0 5px;}
+.acct-av{width:25px;height:25px;border-radius:999px;flex-shrink:0;
+  background:linear-gradient(145deg,var(--accent-hi),var(--accent));
+  display:grid;place-items:center;color:var(--on-accent);font-size:11px;font-weight:800;}
+
+/* 桌機帳號 = sidebar 左下角 account chip（維持現行 DESIGN.md:358，不搬到右上）
+   右上只留功能列。手機才是帳號右上角。 */
+.side-acct{
+  margin-top:auto;display:flex;align-items:center;gap:9px;
+  padding:10px 12px;margin:auto 8px 10px;border-radius:8px;cursor:pointer;
+  border-top:1px solid var(--hair-2);
+}
+.side-acct:hover{background:var(--bg-3);}
+.side-acct .nm{font-size:12.5px;font-weight:700;color:var(--fg);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.side-acct .em{font-size:10.5px;color:var(--fg-3);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.side-acct .tx{min-width:0;flex:1;}
+
+/* ---------- 三欄 ---------- */
+.cols{flex:1;min-height:0;display:grid;grid-template-columns:216px 1fr 1fr;}
+
+/* 欄1 — sidebar（我的行程） */
+.side{
+  background:var(--glass-strong);
+  backdrop-filter:blur(20px) saturate(170%);
+  -webkit-backdrop-filter:blur(20px) saturate(170%);
+  border-right:1px solid var(--hair);
+  display:flex;flex-direction:column;min-height:0;overflow-y:auto;
+}
+.side::-webkit-scrollbar{width:7px;}
+.side::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:7px;}
+.side-lbl{
+  font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--fg-3);padding:16px 16px 7px;
+}
+.trip-i{
+  display:flex;align-items:center;gap:10px;padding:8px 12px;margin:0 8px 2px;
+  border-radius:8px;cursor:pointer;color:var(--fg-2);
+}
+.trip-i:hover{background:var(--bg-3);color:var(--fg);}
+.trip-i.on{background:var(--accent-dim);color:var(--accent-hi);}
+.trip-th{
+  width:34px;height:34px;border-radius:6px;flex-shrink:0;
+  background:linear-gradient(150deg,#4E93AE,#2C5F70);
+}
+.trip-i.on .trip-th{background:linear-gradient(150deg,var(--accent-hi),var(--accent));}
+.trip-tx{min-width:0;}
+.trip-n{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.trip-d{font-size:11px;color:var(--fg-3);margin-top:1px;font-variant-numeric:tabular-nums;}
+.side-add{
+  display:flex;align-items:center;gap:8px;margin:6px 8px 0;padding:8px 12px;
+  border-radius:8px;color:var(--fg-3);font-size:12.5px;font-weight:600;cursor:pointer;
+  border:1px dashed var(--hair);
+}
+.side-add:hover{color:var(--fg);border-color:var(--fg-3);}
+
+/* 欄2 — 行程 timeline（content layer：不上玻璃） */
+.mid{
+  background:var(--bg-1);border-right:1px solid var(--hair);
+  display:flex;flex-direction:column;min-height:0;position:relative;
+}
+/* Scroll edge effect — Apple 的浮動 bar 底下一定鋪漸層，讓內容淡出而不是硬撞。
+   沒有它，捲到一半的列會被膠囊 tab 攔腰切斷（「設為正選」被蓋掉就是這樣來的）。
+   padding-bottom 只在捲到底時有用，中段照樣穿過去 —— 那不是 padding 能解的。 */
+.mid::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:104px;z-index:6;
+  pointer-events:none;
+  background:linear-gradient(to top, var(--bg-1) 26%, rgba(20,18,17,.72) 62%, transparent);
+}
+.mid-scroll{flex:1;min-height:0;overflow-y:auto;padding:0 18px 100px;}
+.mid-scroll::-webkit-scrollbar{width:8px;}
+.mid-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px;}
+.mid-head{padding:20px 0 14px;}
+.mid-head .eb{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--accent);}
+.mid-head h2{font-size:25px;font-weight:800;letter-spacing:-.018em;margin-top:5px;color:var(--fg);}
+.mid-head .mm{font-size:12.5px;color:var(--fg-2);margin-top:6px;font-variant-numeric:tabular-nums;}
+.days{
+  display:flex;gap:18px;border-bottom:1px solid var(--hair);
+  position:sticky;top:0;z-index:5;margin:0 -18px;padding:0 18px;
+  background:var(--glass);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+}
+.day{padding:10px 0 8px;border-bottom:2px solid transparent;cursor:pointer;color:var(--fg-3);flex-shrink:0;}
+.day .n{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;}
+.day .d{font-size:12.5px;font-weight:600;margin-top:1px;}
+.day.on{color:var(--fg);border-bottom-color:var(--accent);}
+.day.on .n{color:var(--accent);}
+
+/* ============================================================
+   中欄 = 旅遊路線軌（route rail），不是播放清單
+   owner 2026-07-15：「中欄行程要有旅遊路線的感覺 但原有功能要保留」
+   · 連續軌線串起停留點 → 這是一條「路徑」
+   · 移動段用虛線 → 呼應右欄地圖的 dashed polyline（同一條路線的兩種視圖）
+   · 現有 action 保留（拖拉排序/展開收合/複製/移動/編輯備註/刪除）；放大檢視移除 —— 沒有照片資料
+   ============================================================ */
+.row{
+  display:grid;grid-template-columns:14px 30px 1fr;gap:10px;
+  position:relative;
+}
+
+/* 軌道欄：節點 + 貫穿線 */
+.rail{position:relative;display:flex;justify-content:center;}
+.rail::before{                       /* 貫穿線 — 每列都畫，串成連續軌 */
+  content:'';position:absolute;top:0;bottom:0;left:50%;width:2px;
+  transform:translateX(-50%);background:var(--hair);
+}
+.row.is-first .rail::before{top:32px;}   /* 起點：線從節點中心開始 */
+.row.is-last .rail::before{bottom:auto;height:32px;}  /* 終點：線到節點中心為止 */
+
+/* ★ 節點 = 編號徽章（owner 2026-07-15：「沒有 POI 圖片，其他頁面也比照」）
+   POI 沒有專輯封面這種東西 —— 硬塞照片方塊只是假 artwork。
+   改用停留編號，跟地圖 pin ①②③ 是同一個號碼：卡片、軌道節點、地圖 pin
+   三種投影共用一套編號，點哪個都知道是路線上第幾站。
+   編號用 CSS counter 自動跑，leg（移動段）不計、飯店不計。 */
+.mid-scroll{counter-reset:stop;}
+.node{
+  position:relative;z-index:2;width:26px;height:26px;border-radius:999px;margin-top:19px;
+  display:grid;place-items:center;flex-shrink:0;
+  background:var(--bg-2);border:1.5px solid var(--hair);
+  font-size:11.5px;font-weight:700;color:var(--fg-2);
+  font-variant-numeric:tabular-nums;line-height:1;
+  transition:background 160ms, border-color 160ms, color 160ms;
+}
+.row:not(.leg):not(.is-hotel) .node{counter-increment:stop;}
+.row:not(.leg):not(.is-hotel) .node::before{content:counter(stop);}
+.row.sel .node{background:var(--accent);border-color:var(--accent);color:var(--on-accent);
+  box-shadow:0 0 0 4px var(--accent-dim);}
+.stop-c:hover ~ * .node,.row:hover .node{border-color:var(--fg-3);}
+/* 飯店不是「第幾站」，是這天路線的起訖錨點（DESIGN.md:190）→ 給床 icon 不給號碼 */
+.row.is-hotel .node{border-color:var(--accent);color:var(--accent);}
+.row.is-hotel .node svg{width:13px;height:13px;}
+
+/* 移動段：虛線軌 + 交通 pill（可點 → 換交通方式） */
+.leg .rail::before{
+  background:none;
+  border-left:2px dashed var(--hair);
+  width:0;
+}
+.leg-c{padding:5px 0 5px 2px;}
+.leg-pill{
+  display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;
+  border-radius:999px;font-size:11.5px;font-weight:600;cursor:pointer;
+  background:transparent;border:1px solid var(--hair);color:var(--fg-3);
+  font-variant-numeric:tabular-nums;
+}
+.leg-pill:hover{border-color:var(--accent);color:var(--accent-hi);}
+.leg-pill b{color:var(--fg-2);font-weight:700;}
+.leg-pill:hover b{color:var(--accent-hi);}
+
+/* 停留點卡 — 對照 Apple Music track row 實際規格
+   標題 17 / 副標 15 / 右側單顆 ⋯ / 內縮分隔線
+   先前 13.5px 標題 + 32px icon 方塊 + 每列圓角卡 + 6 顆 icon 工具列 = 不像 Apple Music
+   ★ artwork 槽已移除：Apple Music 的 48px 封面成立是因為專輯真的有封面；
+     POI 沒有，硬給就是假圖。識別改由左側編號徽章（= .node）承擔。 */
+.stop-t{
+  font-size:13px;font-weight:500;color:var(--fg-3);padding-top:24px;
+  font-variant-numeric:tabular-nums;text-align:right;letter-spacing:-.01em;
+}
+.row.sel .stop-t{color:var(--accent-hi);font-weight:700;}
+.stop-c{
+  position:relative;display:flex;align-items:center;gap:12px;
+  padding:8px;margin:2px 0;border-radius:8px;cursor:pointer;min-width:0;min-height:64px;
+}
+/* 內縮分隔線 — Apple 列表慣例：對齊文字起點（artwork 移除後 = 卡片 padding） */
+.stop-c::after{
+  content:'';position:absolute;left:8px;right:8px;bottom:0;height:1px;
+  background:var(--hair-2);
+}
+.row:last-of-type .stop-c::after,
+.row.open .stop-c::after,
+.row.sel .stop-c::after{display:none;}
+.stop-c:hover{background:var(--bg-3);}
+.stop-c:hover::after{opacity:0;}
+.row.sel .stop-c{background:var(--accent-dim);}
+
+.stop-tx{flex:1;min-width:0;}
+.stop-n{
+  font-size:17px;font-weight:500;letter-spacing:-.012em;color:var(--fg);line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.row.sel .stop-n{font-weight:600;}
+.stop-s{
+  font-size:15px;color:var(--fg-2);margin-top:3px;line-height:1.3;letter-spacing:-.006em;
+  display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;
+}
+.time-chip{
+  display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;
+  background:var(--accent-dim);color:var(--accent-hi);font-weight:600;font-size:14px;
+  font-variant-numeric:tabular-nums;cursor:pointer;flex-shrink:0;
+}
+.time-chip:hover{background:rgba(203,160,110,.3);}
+.stop-more{
+  width:28px;height:28px;border-radius:999px;display:grid;place-items:center;
+  color:var(--fg-3);flex-shrink:0;opacity:0;background:transparent;border:0;cursor:pointer;
+}
+.row:hover .stop-more,.row.sel .stop-more,.row.menu .stop-more{opacity:1;}
+.stop-more:hover,.row.menu .stop-more{background:rgba(255,255,255,.13);color:var(--fg);}
+.stop-caret{
+  width:24px;height:24px;border-radius:999px;display:grid;place-items:center;
+  color:var(--fg-3);flex-shrink:0;transition:transform 200ms;
+}
+.row.open .stop-caret{transform:rotate(180deg);color:var(--fg);}
+
+/* ★ Context menu — Apple 慣例：label 左 / icon 右 / 分組 / destructive 紅
+   一顆 ⋯ 收納全部動作，取代先前那排 6 顆 icon 的工具列 */
+/* portal 出來後改成相對 .win 定位（真實實作是 portal 到 body + 依錨點算座標） */
+.ctx{
+  position:absolute;top:375px;left:435px;z-index:60;width:222px;padding:5px;
+  border-radius:12px;
+  background:var(--glass-strong);
+  backdrop-filter:blur(30px) saturate(180%);
+  -webkit-backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec), 0 14px 40px rgba(0,0,0,.5);
+}
+.ctx-i{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  height:32px;padding:0 9px;border-radius:7px;
+  font-size:14px;font-weight:500;color:var(--fg);cursor:pointer;letter-spacing:-.008em;
+}
+.ctx-i:hover{background:var(--accent);color:var(--on-accent);}
+.ctx-i.dgr{color:var(--danger);}
+.ctx-i.dgr:hover{background:var(--danger);color:var(--on-accent);}
+.ctx-sep{height:1px;background:var(--hair);margin:4px 7px;}
+
+/* 展開明細 — 只放「看」的內容；動作全歸 ⋯ menu 與右欄面板 */
+.detail{margin:0 0 10px 0;padding:2px 8px 6px 60px;}
+.detail-lbl{font-size:12px;font-weight:600;color:var(--fg-3);margin-bottom:4px;}
+.detail-tx{font-size:15px;line-height:1.62;color:var(--fg-2);letter-spacing:-.006em;}
+.detail-hd{margin-bottom:13px;}
+.alt{display:flex;align-items:center;gap:10px;padding:7px 0;}
+.alt + .alt{border-top:1px solid var(--hair-2);}
+.alt-tx{flex:1;min-width:0;}
+.alt-n{font-size:15px;font-weight:500;color:var(--fg);letter-spacing:-.008em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.alt-m{font-size:13px;color:var(--fg-3);margin-top:1px;}
+.alt-set{
+  font-size:13px;font-weight:600;padding:5px 12px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,.09);color:var(--accent-hi);border:0;flex-shrink:0;
+}
+.alt-set:hover{background:var(--accent);color:var(--on-accent);}
+
+/* 欄3 — 地圖／行程操作 */
+.right{position:relative;min-height:0;overflow:hidden;}
+
+/* 地圖底 */
+.map{
+  position:absolute;inset:0;
+  background:#132A2E;
+}
+/* `> svg` 不是 `svg` —— 後代選擇器會把 pin 裡的 icon svg 一起 absolute+100% 撐爆，
+   pin 就會壓在自己的標籤上。這行是 2026-07-15 手機破圖的 root cause。 */
+.map > svg{position:absolute;inset:0;width:100%;height:100%;}
+/* ★ 編號水滴 pin（V3 參考圖）—— pin 上的號碼 = 卡片徽章 = 桌機 rail 節點，同一套編號。
+   .pin 底邊（= tip 錨點圈的底）對齊 POI 真實座標。 */
+.pin{position:absolute;transform:translate(-50%,-100%);}
+.pin-dot{
+  width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+  display:grid;place-items:center;background:var(--accent);
+  box-shadow:0 3px 10px rgba(0,0,0,.5);
+  transition:transform 160ms;
+}
+.pin-dot > span{
+  transform:rotate(45deg);            /* 反轉回正 —— 水滴是靠旋轉做出來的 */
+  font-size:12.5px;font-weight:800;color:var(--on-accent);line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+.pin-tip{
+  width:7px;height:7px;border-radius:999px;margin:2px auto 0;
+  border:2px solid var(--accent);background:rgba(0,0,0,.45);
+}
+.pin.is-sel .pin-dot{transform:rotate(-45deg) scale(1.28);}
+.pin.is-sel .pin-dot > span{font-size:14px;}
+/* 選中 = 從錨點擴散的同心漣漪（V3 參考圖）；不是單純放大 */
+.pin.is-sel .pin-tip{
+  box-shadow:0 0 0 9px rgba(203,160,110,.20),
+             0 0 0 20px rgba(203,160,110,.12),
+             0 0 0 33px rgba(203,160,110,.06);
+}
+/* 標籤在 pin 側邊（非下方）—— 深色地圖上用亮底深字，深玻璃疊深地圖讀不到 */
+.pin-lb{
+  position:absolute;top:4px;left:calc(100% + 6px);
+  font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:8px;white-space:nowrap;
+  background:rgba(28,26,24,.9);color:#F2EDE7;
+  backdrop-filter:blur(12px) saturate(170%);
+  -webkit-backdrop-filter:blur(12px) saturate(170%);
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 2px 8px rgba(0,0,0,.45);
+}
+.pin.lb-l .pin-lb{left:auto;right:calc(100% + 6px);}
+
+/* 地圖上的浮動 day pill */
+.map-pill{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;
+  display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;
+  border-radius:999px;font-size:12.5px;font-weight:700;color:var(--fg);cursor:pointer;
+  background:var(--glass-strong);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec), 0 4px 16px rgba(0,0,0,.3);
+}
+
+/* ★ 右欄堆疊面板（owner 2026-07-15）
+   點選景點 → 面板【滿版】蓋滿整欄（不是浮在角落的 inset 卡）
+   第 2 層：modal 語意，由下往上 → 右上【關閉 X】
+   第 3 層：push 語意，由右往左 → 左上【回前頁 <】+ 右上【關閉 X】
+   玻璃在此仍成立：滿版但 72% 半透明，地圖在底下當 ambient 質地 */
+.layer{
+  position:absolute;inset:0;z-index:8;
+  display:flex;flex-direction:column;
+  background:var(--glass-strong);
+  backdrop-filter:blur(30px) saturate(180%);
+  -webkit-backdrop-filter:blur(30px) saturate(180%);
+  border-left:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec);
+  transition:transform 320ms cubic-bezier(0.2,0.8,0.2,1), opacity 220ms;
+}
+/* L2 — modal：由下往上 */
+.layer.l2{transform:translateY(0);opacity:1;}
+.win[data-stack="1"] .layer.l2{transform:translateY(14px);opacity:0;pointer-events:none;}
+/* L3 / L4 — push：由右往左，一層疊一層（owner 2026-07-15：「有 4 層就堆疊」）
+   規則不是「L3 特例、L4 再特例」，而是照階差來：
+     depth == stack  → 在位
+     depth >  stack  → 收在右邊等待
+     depth <  stack  → 往後退，退的量與暗度跟「差幾階」成正比 */
+.layer.l3{z-index:9;transform:translateX(0);opacity:1;}
+.layer.l4{z-index:10;transform:translateX(0);opacity:1;}
+.win[data-stack="1"] .layer.l3,
+.win[data-stack="2"] .layer.l3{transform:translateX(100%);opacity:0;pointer-events:none;}
+.win[data-stack="1"] .layer.l4,
+.win[data-stack="2"] .layer.l4,
+.win[data-stack="3"] .layer.l4{transform:translateX(100%);opacity:0;pointer-events:none;}
+/* 差 1 階 */
+.win[data-stack="3"] .layer.l2,
+.win[data-stack="4"] .layer.l3{transform:translateX(-14%);filter:brightness(.72);}
+/* 差 2 階 —— 退更多、更暗，堆疊感才讀得出深度 */
+.win[data-stack="4"] .layer.l2{transform:translateX(-25%);filter:brightness(.48);}
+
+.layer-h{
+  display:flex;align-items:center;gap:8px;padding:11px 12px;flex-shrink:0;
+  border-bottom:1px solid var(--hair);min-height:48px;
+}
+.layer-h .t{font-size:14px;font-weight:800;letter-spacing:-.01em;flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.layer-btn{
+  width:28px;height:28px;border-radius:7px;display:grid;place-items:center;
+  color:var(--fg-2);cursor:pointer;flex-shrink:0;background:transparent;border:0;
+}
+.layer-btn:hover{background:rgba(255,255,255,.11);color:var(--fg);}
+.layer-b{flex:1;min-height:0;overflow-y:auto;padding:14px 12px 16px;}
+.layer-b::-webkit-scrollbar{width:7px;}
+.layer-b::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:7px;}
+.fld{margin-bottom:12px;}
+.fld-l{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--fg-3);margin-bottom:5px;}
+.fld-in{
+  width:100%;height:34px;border-radius:8px;padding:0 10px;
+  background:rgba(255,255,255,.07);border:1px solid var(--hair);
+  color:var(--fg);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;
+}
+.fld-in.is-nav{border-color:var(--accent);color:var(--accent-hi);cursor:pointer;
+  justify-content:space-between;}
+.fld-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.fld-ta{
+  width:100%;min-height:64px;border-radius:8px;padding:8px 10px;
+  background:rgba(255,255,255,.07);border:1px solid var(--hair);
+  color:var(--fg-2);font:inherit;font-size:12.5px;line-height:1.6;
+}
+.chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{
+  font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,.07);border:1px solid var(--hair);color:var(--fg-2);
+}
+.chip.on{background:var(--accent);border-color:transparent;color:var(--on-accent);}
+.layer-f{
+  flex-shrink:0;padding:10px 12px;border-top:1px solid var(--hair);display:flex;gap:8px;
+}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:34px;padding:0 15px;border:0;border-radius:999px;
+  font:inherit;font-size:13px;font-weight:700;cursor:pointer;
+}
+.btn.pri{background:var(--accent);color:var(--on-accent);flex:1;}
+.btn.pri:hover{background:var(--accent-hi);}
+.btn.gho{background:rgba(255,255,255,.08);color:var(--fg);border:1px solid var(--hair);}
+.btn.gho:hover{background:rgba(255,255,255,.14);}
+.btn.dgr{background:transparent;color:var(--danger);border:1px solid rgba(240,166,166,.3);}
+
+/* L3 內容：換景點搜尋結果 */
+.srch{
+  display:flex;align-items:center;gap:8px;height:36px;padding:0 11px;border-radius:999px;
+  background:rgba(255,255,255,.07);border:1px solid var(--hair);
+  color:var(--fg-3);font-size:13px;margin-bottom:12px;
+}
+.res{
+  display:flex;align-items:center;gap:10px;padding:8px;border-radius:9px;cursor:pointer;
+  border:1px solid transparent;
+}
+.res:hover{background:rgba(255,255,255,.07);}
+.res.on{background:var(--accent-dim);border-color:var(--accent);}
+.res-tx{flex:1;min-width:0;}
+.res-n{font-size:13px;font-weight:600;color:var(--fg);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.res-m{font-size:11.5px;color:var(--fg-3);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ---------- 底部浮動玻璃 tab ---------- */
+/* tab 置中於「sidebar + 中欄」，不置中於整個視窗。
+   理由：右欄是帶自己 footer（儲存/換景點/刪除）的情境面板，
+   視窗置中會讓 z=40 的 tab 壓在儲存鈕上（實測重疊 67px、按不到）。 */
+.tabbar-wrap{
+  position:absolute;left:216px;right:calc((100% - 216px) / 2);bottom:14px;z-index:40;
+  display:flex;justify-content:center;pointer-events:none;
+}
+.tabbar{
+  pointer-events:auto;
+  display:flex;gap:2px;padding:5px;border-radius:999px;
+  background:var(--glass-strong);
+  backdrop-filter:blur(30px) saturate(180%);
+  -webkit-backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec), inset 0 -1px 0 rgba(255,255,255,.05), 0 12px 34px rgba(0,0,0,.4);
+}
+.tab{
+  display:flex;align-items:center;gap:7px;height:38px;padding:0 17px;
+  border-radius:999px;color:var(--fg-2);font-size:13px;font-weight:700;cursor:pointer;
+  transition:background 140ms,color 140ms;
+}
+.tab:hover{background:rgba(255,255,255,.07);color:var(--fg);}
+.tab.on{background:var(--accent);color:var(--on-accent);}
+
+/* ============================================================
+   手機 — C · Map First Drawer
+   ============================================================ */
+.phones{display:flex;gap:26px;flex-wrap:wrap;align-items:start;}
+.ph-col{width:352px;}
+.ph-h{font-size:13.5px;font-weight:800;margin-bottom:3px;}
+.ph-s{font-size:11.5px;opacity:.6;margin-bottom:11px;}
+.ph{
+  position:relative;width:352px;height:720px;border-radius:34px;overflow:hidden;
+  background:#132A2E;box-shadow:0 18px 50px rgba(0,0,0,.45);
+  border:1px solid rgba(255,255,255,.08);
+}
+.ph-map{position:absolute;inset:0;}
+.ph-map > svg{position:absolute;inset:0;width:100%;height:100%;}   /* 同上：必須是直接子代 */
+/* 手機狀態列（9:41 · 訊號）—— 地圖是全屏底層，狀態列直接浮在上面 */
+.ph-sb{
+  position:absolute;top:0;left:0;right:0;height:52px;z-index:21;
+  display:flex;align-items:center;justify-content:space-between;padding:14px 26px 0;
+  font-size:14px;font-weight:700;color:#fff;pointer-events:none;
+  font-variant-numeric:tabular-nums;
+}
+/* 手機 titlebar — 浮動內縮玻璃條（V3 參考圖），不是滿版 bar。
+   內縮 = 地圖從四邊透出來，玻璃才有東西可折射；滿版貼邊等於一塊擋板。 */
+.ph-top{
+  position:absolute;top:56px;left:12px;right:12px;height:46px;z-index:20;
+  display:flex;align-items:center;gap:4px;padding:0 6px;border-radius:16px;
+  background:var(--glass);
+  backdrop-filter:blur(22px) saturate(180%);
+  -webkit-backdrop-filter:blur(22px) saturate(180%);
+  border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec), 0 6px 22px rgba(0,0,0,.4);
+}
+.ph-top .tt{font-size:16px;font-weight:700;color:var(--fg);flex:1;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em;}
+.ph-ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;
+  color:var(--fg-2);flex-shrink:0;}
+.ph-pill{
+  position:absolute;top:114px;left:50%;transform:translateX(-50%);z-index:15;
+  display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;
+  border-radius:999px;font-size:12.5px;font-weight:700;color:var(--fg);
+  background:var(--glass-strong);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec), 0 4px 16px rgba(0,0,0,.34);
+}
+
+/* ★ POI 停留架（板 C 的 drawer，去掉上下收合）
+   owner 2026-07-15：「POI 不要上下收合 要左右滑動」→ 拿掉 grabber（不能收就別畫把手，
+   那是騙人的 affordance），保留板 C 的抽屜「容器」本身。
+   Apple 材質規則：玻璃只有一層 —— dock 是玻璃，裡面的卡是實色平面。
+   原本三張卡各自 blur(30px) = 三片玻璃疊在地圖上，那不是 Apple，是毛玻璃沙拉。 */
+.poi-dock{
+  position:absolute;left:0;right:0;bottom:62px;z-index:25;
+  padding:11px 0 13px;border-radius:20px 20px 0 0;
+  background:var(--glass-strong);
+  backdrop-filter:blur(30px) saturate(180%);
+  -webkit-backdrop-filter:blur(30px) saturate(180%);
+  border-top:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec), 0 -10px 34px rgba(0,0,0,.4);
+}
+.poi-rail{
+  display:flex;gap:10px;padding:0 12px;
+  overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.poi-rail::-webkit-scrollbar{display:none;}
+.poi-card{
+  flex:0 0 76%;scroll-snap-align:center;
+  display:flex;align-items:center;gap:12px;padding:14px 14px 14px 12px;border-radius:16px;
+  background:rgba(255,255,255,.05);          /* 平面，不是玻璃 */
+  border:1px solid transparent;
+  transition:background 200ms, border-color 200ms;
+}
+.poi-card.on{background:rgba(255,255,255,.10);border-color:var(--glass-rim);}
+/* ★ 編號徽章取代 POI 照片（owner 2026-07-15：「沒有 POI 圖片」）
+   號碼 = 地圖 pin 上的號碼 = 桌機 rail 節點的號碼 */
+.poi-num{
+  width:34px;height:34px;border-radius:999px;flex-shrink:0;display:grid;place-items:center;
+  background:var(--accent);color:var(--on-accent);
+  font-size:14px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;
+}
+.poi-card:not(.on) .poi-num{background:rgba(203,160,110,.5);color:rgba(36,26,18,.85);}
+.poi-num svg{width:16px;height:16px;}        /* 飯店 = 床 icon，不給號碼 */
+.poi-tx{flex:1;min-width:0;}
+.poi-eb{font-size:12.5px;color:var(--fg-3);margin-bottom:2px;font-variant-numeric:tabular-nums;}
+.poi-n{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--fg);line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.poi-m{font-size:13px;color:var(--fg-3);margin-top:3px;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.poi-go{
+  width:52px;height:52px;border-radius:999px;flex-shrink:0;display:grid;place-items:center;
+  background:var(--accent);color:#fff;
+  box-shadow:0 4px 14px rgba(203,160,110,.32);
+}
+.poi-go svg{width:24px;height:24px;}
+/* 滑動位置指示 — 取代板 C 原本的「向下拖曳可收合為一列」提示 */
+.poi-dots{
+  display:flex;justify-content:center;gap:5px;margin-top:9px;pointer-events:none;
+}
+.poi-dot{width:5px;height:5px;border-radius:999px;background:rgba(255,255,255,.26);
+  transition:width 200ms, background 200ms;}
+.poi-dot.on{background:var(--accent);width:14px;}
+
+/* 手機底部 tab — 浮動膠囊，不滿版（iOS 26 Apple Music 形制）
+   4 格：帳號移到 titlebar 右上，不佔 tab slot。
+   不滿版的實益：左右露出地圖 → 玻璃才有東西可透，且看得出內容從底下流過。 */
+.ph-tabs{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:30;
+  display:flex;gap:2px;padding:6px;border-radius:999px;
+  background:var(--glass-strong);
+  backdrop-filter:blur(30px) saturate(180%);
+  -webkit-backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec), inset 0 -1px 0 rgba(255,255,255,.05), 0 10px 30px rgba(0,0,0,.42);
+}
+.ph-tab{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  width:62px;height:46px;border-radius:999px;
+  font-size:10px;font-weight:700;color:var(--fg-3);
+}
+.ph-tab.on{background:var(--accent);color:var(--on-accent);}
+
+table.fmap{border-collapse:collapse;width:100%;max-width:1340px;font-size:13px;margin-top:6px;}
+table.fmap th,table.fmap td{text-align:left;padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.1);
+  vertical-align:top;line-height:1.5;}
+table.fmap th{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.5;}
+table.fmap td:first-child{font-weight:700;white-space:nowrap;}
+table.fmap tr:hover td{background:rgba(255,255,255,.03);}
+.note{
+  margin-top:16px;font-size:12.5px;line-height:1.75;
+  padding:14px 16px;border-radius:10px;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.09);max-width:1340px;
+}
+.note b{color:var(--accent-hi);}
+.ok{color:#9FD8AE;font-weight:700;}
+.no{color:var(--danger);font-weight:700;}
+.mid-c{color:#E8C88F;font-weight:700;}
+.note ul{margin:7px 0 0;padding-left:17px;}
+.note li{margin-bottom:4px;}
+code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;
+  background:rgba(255,255,255,.1);padding:1px 5px;border-radius:4px;}
+
+/* ---------- 帳號選單（帳號 chip → 彈出；含可運作的外觀 淺/深切換）---------- */
+.side-acct{cursor:pointer;}
+.acct-scrim{position:absolute;inset:0;z-index:69;}
+.acct-scrim[hidden]{display:none;}
+.acct-menu{
+  position:absolute;left:10px;bottom:58px;z-index:70;width:238px;padding:8px;
+  border-radius:14px;background:var(--glass-strong);
+  backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec), 0 16px 44px rgba(0,0,0,.5);
+}
+.acct-menu[hidden]{display:none;}
+.am-head{display:flex;align-items:center;gap:10px;padding:6px 8px 12px;border-bottom:1px solid var(--hair);margin-bottom:8px;}
+.am-head .acct-av{width:38px;height:38px;font-size:15px;}
+.am-nm{font-size:14px;font-weight:700;color:var(--fg);}
+.am-em{font-size:11px;color:var(--fg-3);margin-top:1px;}
+.am-sec{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-3);padding:4px 8px 6px;}
+.am-seg{display:flex;gap:3px;padding:3px;border-radius:10px;background:var(--bg-2);border:1px solid var(--hair);margin:0 4px 8px;}
+.am-seg-b{flex:1;height:30px;border-radius:8px;font-size:12px;font-weight:700;color:var(--fg-2);background:transparent;border:0;cursor:pointer;transition:background 120ms,color 120ms;}
+.am-seg-b:hover{color:var(--fg);}
+.am-seg-b.on{background:var(--accent);color:var(--on-accent);}
+.am-i{display:flex;align-items:center;height:34px;padding:0 10px;border-radius:8px;font-size:13px;color:var(--fg);cursor:pointer;}
+.am-i:hover{background:var(--bg-3);}
+.am-i.danger{color:var(--danger);}
+.am-sep{height:1px;background:var(--hair);margin:6px 6px;}
+</style>
+
+<div class="hdr">
+  <h1>Tripline V3 rev2 — 三欄 + 底部 tab + 手機 C</h1>
+  <div class="s">2026-07-15 · sidebar 展開常駐 · 主功能→底部浮動玻璃 tab · 中欄操作→右欄 · 手機 = C·Map First Drawer</div>
+</div>
+
+<p class="lede">
+<b>帳號位置（owner 2026-07-15 更正）：</b>
+<span class="ok">桌機 = 左下角 sidebar account chip</span>（維持現行 <code>DESIGN.md:358</code>，不動）；
+<span class="ok">手機 = titlebar 右上角</span>。
+兩邊底部 tab 都只放 4 個主功能（聊天／行程／地圖／收藏），帳號不佔 tab slot。<br>
+<b>tab 不滿版：</b>浮動膠囊置中（iOS 26 Apple Music 形制）。不滿版不只是造型 ——
+左右露出地圖，玻璃才有東西可透、才看得出內容從底下流過。滿版貼底的玻璃效果為零。<br>
+<b>板子的 teal 只取結構不取色：</b>C 來自 <code>.flutter</code> 專案用青綠系；此處套 V3 中性深色 + 柔褐 accent，避免兩專案品牌分裂。
+</p>
+
+<div class="warn">
+<b>玻璃的實話：</b>玻璃要有東西可透才成立。<b>左欄 sidebar 背後什麼都沒有</b>（它貼在視窗最左緣），
+上玻璃只會得到「有色板」—— 就是你現在 <code>--color-glass-nav 92%</code> 那個問題的翻版。
+這裡仍照你要求上了玻璃，但它的價值幾乎只有 rim 高光。<br>
+<b>玻璃真正賺到的地方有三個</b>，都在此 mockup 內：
+<span class="ok">① 浮在地圖上的「行程操作」面板</span>（Apple 官方的 clear variant over media 情境）、
+<span class="ok">② 底部浮動 tab</span>（內容從底下流過）、
+<span class="ok">③ 手機的 Map First Drawer</span>（地圖在底下透上來）。
+</div>
+
+<h2 class="sec">Section 01</h2>
+<h3 class="sec-t">桌機三欄 — 右欄是堆疊面板（地圖 → 滿版操作 → 再蓋一層 → 不封頂）</h3>
+<p class="sec-d">
+<b>中欄是「旅遊路線」不是播放清單</b>（owner）：連續軌線串起停留點、<b>移動段用虛線</b> ——
+刻意呼應右欄地圖的 dashed polyline，讓兩欄是<b>同一條路線的兩種視圖</b>。
+日首尾是飯店（沿用 <code>DESIGN.md:190</code>「hotel 是當日 polyline 的起點」既有語意）。
+<b>原有 action 保留</b>：拖拉排序（hover 出 grip）／展開收合／複製到其他天／移到其他天／編輯備註／刪除景點（<b>放大檢視移除</b> —— POI 沒有照片資料，該鈕只會開出 placeholder），
+外加時間 chip 就地改起訖（v2.55.51）、備選 + 設為正選、交通 pill 可點換方式。<br><br>
+<b>右欄堆疊語意</b>（owner 2026-07-15）：點選景點 → 面板<b>滿版蓋滿整欄</b>（不是浮在角落的 inset 卡），
+右上【關閉】；再蓋一層 → 左上【回前頁】+ 右上【關閉】。這是 iOS navigation stack：第 2 層 modal（由下往上）、
+第 3 層以後 push（由右往左），下層退後 + 壓暗做深度暗示。<br><br>
+<b>不封頂在三層</b>（owner 2026-07-15：「有 4 層就堆疊」）—— 規則不是「L3 特例、L4 再特例」，而是照<b>階差</b>：
+<code>depth == stack</code> 在位、<code>&gt; stack</code> 收在右邊待命、<code>&lt; stack</code> 往後退，
+退的量與暗度跟差幾階成正比（差 1 階 <code>-14% / .72</code>、差 2 階 <code>-25% / .48</code>）。加第五層只要照這個級數往下寫。
+L4 的動線是被需求逼出來的、不是為了展示堆疊：<b>L2 停留點操作 → L3 換景點 → L4 該景點詳情</b>，
+換景點不該盲換，按下去前要能看一眼。<b>「‹」永遠只退一階</b>（L4→L3），「✕」才收掉整疊回地圖。
+按下方四顆鈕走一遍 —— <span class="mid-c">退後與壓暗只在轉場動畫過程中看得到</span>（上層滿版覆蓋，靜止時看不見，這點與 iOS push 一致）。
+</p>
+<div class="seg">
+  <button onclick="setStack(1,this)">① 地圖（基底）</button>
+  <button class="on" onclick="setStack(2,this)">② 點選景點 → 滿版蓋整欄 · 右上關閉</button>
+  <button onclick="setStack(3,this)">③ 再蓋一層 → 左上回前頁</button>
+  <button onclick="setStack(4,this)">④ 第四層 → 回前頁只退一階</button>
+</div>
+
+
+<div class="win" id="win" data-stack="2">
+  <!-- 頂列 -->
+  <header class="top">
+    <div class="chev dim"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></div>
+    <div class="chev"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+    <div class="top-title">京都五日行</div>
+    <div class="top-right">
+      <div class="tool" title="搜尋"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0A4.5 4.5 0 1 1 14 9.5 4.49 4.49 0 0 1 9.5 14z"/></svg></div>
+      <div class="tool" title="分享"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L8.04 9.81A3 3 0 1 0 6 15c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 1 0 2.92-2.92z"/></svg></div>
+      <div class="tool" title="編輯"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></div>
+      <div class="tool" title="更多"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></div>
+    </div>
+  </header>
+
+  <div class="cols">
+    <!-- 欄1：我的行程 -->
+    <aside class="side">
+      <div class="side-lbl">我的行程</div>
+      <div class="trip-i on">
+        <div class="trip-th"></div>
+        <div class="trip-tx"><div class="trip-n">京都五日行</div><div class="trip-d">10/03 – 10/07</div></div>
+      </div>
+      <div class="trip-i">
+        <div class="trip-th"></div>
+        <div class="trip-tx"><div class="trip-n">沖繩親子跑</div><div class="trip-d">7/29 – 8/02</div></div>
+      </div>
+      <div class="trip-i">
+        <div class="trip-th"></div>
+        <div class="trip-tx"><div class="trip-n">首爾美食週</div><div class="trip-d">12/10 – 12/14</div></div>
+      </div>
+      <div class="side-add">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg> 新增行程
+      </div>
+      <div class="side-lbl">共編中</div>
+      <div class="trip-i">
+        <div class="trip-th"></div>
+        <div class="trip-tx"><div class="trip-n">同學會 台南</div><div class="trip-d">4 位旅伴</div></div>
+      </div>
+
+      <!-- 桌機帳號 = 左下角 account chip（維持現行 DESIGN.md:358）；點擊開帳號選單 -->
+      <div class="side-acct" id="sideAcct">
+        <div class="acct-av">R</div>
+        <div class="tx">
+          <div class="nm">Ray Chiu</div>
+          <div class="em">lean.lean@gmail.com</div>
+        </div>
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="color:var(--fg-3);flex-shrink:0"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+      </div>
+    </aside>
+
+    <!-- 欄2：行程 timeline（content layer，不上玻璃） -->
+    <section class="mid">
+      <div class="mid-scroll">
+        <div class="mid-head">
+          <div class="eb">行程 · 京都</div>
+          <h2>京都五日行</h2>
+          <div class="mm">10/03（五）– 10/07（二） · 5 天 · 24 個停留點</div>
+        </div>
+        <div class="days">
+          <div class="day"><div class="n">總覽</div><div class="d">全程</div></div>
+          <div class="day"><div class="n">Day 01</div><div class="d">10/03 五</div></div>
+          <div class="day on"><div class="n">Day 02</div><div class="d">10/04 六</div></div>
+          <div class="day"><div class="n">Day 03</div><div class="d">10/05 日</div></div>
+        </div>
+
+        <div class="row is-first is-hotel">
+          <div class="stop-t"></div>
+          <div class="rail"><span class="node"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12-2h-8v7H3V5H1v15h2v-3h18v3h2v-9a4 4 0 0 0-4-4z"/></svg></span></div>
+          <div class="stop-c">
+            <div class="stop-tx">
+              <div class="stop-n">The Thousand Kyoto</div>
+              <div class="stop-s"><span class="time-chip" title="點擊改起訖時間"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.24 14.24L11 13V7h1.5v5.25l4.5 2.67z"/></svg> 08:40</span> · 飯店 · 出發</div>
+            </div>
+            <button class="stop-more" title="更多動作"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></button>
+            <div class="stop-caret"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div>
+          </div>
+        </div>
+        <div class="row leg">
+          <div></div>
+          <div class="rail"></div>
+          <div class="leg-c"><span class="leg-pill" title="點擊換交通方式"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg> 車程 <b>14</b> 分 · 5.1 km</span></div>
+        </div>
+        <div class="row menu">
+          <div class="stop-t"></div>
+          <div class="rail"><span class="node"></span></div>
+          <div class="stop-c">
+            <div class="stop-tx">
+              <div class="stop-n">伏見稻荷大社</div>
+              <div class="stop-s"><span class="time-chip" title="點擊改起訖時間"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.24 14.24L11 13V7h1.5v5.25l4.5 2.67z"/></svg> 09:20–11:20</span> · 景點 · ★ 4.7</div>
+            </div>
+            <button class="stop-more" title="更多動作"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></button>
+            <div class="stop-caret"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div>
+          </div>
+        </div>
+        <div class="row leg">
+          <div></div>
+          <div class="rail"></div>
+          <div class="leg-c"><span class="leg-pill" title="點擊換交通方式"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg> 車程 <b>18</b> 分 · 6.2 km</span></div>
+        </div>
+        <div class="row sel open">
+          <div class="stop-t"></div>
+          <div class="rail"><span class="node"></span></div>
+          <div class="stop-c">
+            <div class="stop-tx">
+              <div class="stop-n">清水寺</div>
+              <div class="stop-s"><span class="time-chip" title="點擊改起訖時間"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.24 14.24L11 13V7h1.5v5.25l4.5 2.67z"/></svg> 14:30–16:00</span> · 景點 · ★ 4.6</div>
+            </div>
+            <button class="stop-more" title="更多動作"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></button>
+            <div class="stop-caret"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div>
+          </div>
+        </div>
+        <div class="row is-detail">
+          <div></div>
+          <div class="rail"></div>
+          <div class="detail">
+            <div class="detail-hd">
+              <div class="detail-lbl">景點說明</div>
+              <div class="detail-tx">世界文化遺產。清水舞台懸空 13 公尺，139 根櫸木支撐、無一釘。</div>
+            </div>
+            <div class="detail-lbl">備註</div>
+            <div class="detail-tx" title="點擊編輯備註">音羽瀑布排隊約 20 分。子安塔那側人少，回程走產寧坂下山接祇園。</div>
+            <div class="detail-lbl" style="margin-top:13px">備選</div>
+            <div class="alt">
+              <div class="alt-tx"><div class="alt-n">高台寺</div><div class="alt-m">★ 4.4 · 步行 8 分</div></div>
+              <button class="alt-set">設為正選</button>
+            </div>
+            <div class="alt">
+              <div class="alt-tx"><div class="alt-n">八坂神社</div><div class="alt-m">★ 4.5 · 步行 12 分</div></div>
+              <button class="alt-set">設為正選</button>
+            </div>
+          </div>
+        </div>
+        <div class="row leg">
+          <div></div>
+          <div class="rail"></div>
+          <div class="leg-c"><span class="leg-pill" title="點擊換交通方式"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7z"/></svg> 步行 <b>12</b> 分 · 產寧坂</span></div>
+        </div>
+        <div class="row">
+          <div class="stop-t"></div>
+          <div class="rail"><span class="node"></span></div>
+          <div class="stop-c">
+            <div class="stop-tx">
+              <div class="stop-n">祇園 花見小路</div>
+              <div class="stop-s"><span class="time-chip" title="點擊改起訖時間"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.24 14.24L11 13V7h1.5v5.25l4.5 2.67z"/></svg> 17:00–18:00</span> · 景點 · ★ 4.4</div>
+            </div>
+            <button class="stop-more" title="更多動作"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></button>
+            <div class="stop-caret"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div>
+
+          </div>
+        </div>
+        <div class="row leg">
+          <div></div>
+          <div class="rail"></div>
+          <div class="leg-c"><span class="leg-pill" title="點擊換交通方式"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7z"/></svg> 步行 <b>6</b> 分</span></div>
+        </div>
+        <div class="row">
+          <div class="stop-t"></div>
+          <div class="rail"><span class="node"></span></div>
+          <div class="stop-c">
+            <div class="stop-tx">
+              <div class="stop-n">祇園 天ぷら八坂圓堂</div>
+              <div class="stop-s"><span class="time-chip" title="點擊改起訖時間"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.24 14.24L11 13V7h1.5v5.25l4.5 2.67z"/></svg> 18:30–20:00</span> · 用餐 · ★ 4.5</div>
+            </div>
+            <button class="stop-more" title="更多動作"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></button>
+            <div class="stop-caret"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div>
+          </div>
+        </div>
+        <div class="row leg">
+          <div></div>
+          <div class="rail"></div>
+          <div class="leg-c"><span class="leg-pill" title="點擊換交通方式"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg> 車程 <b>9</b> 分 · 3.4 km</span></div>
+        </div>
+        <div class="row is-last is-hotel">
+          <div class="stop-t"></div>
+          <div class="rail"><span class="node"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12-2h-8v7H3V5H1v15h2v-3h18v3h2v-9a4 4 0 0 0-4-4z"/></svg></span></div>
+          <div class="stop-c">
+            <div class="stop-tx">
+              <div class="stop-n">The Thousand Kyoto</div>
+              <div class="stop-s"><span class="time-chip" title="點擊改起訖時間"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.24 14.24L11 13V7h1.5v5.25l4.5 2.67z"/></svg> 21:00</span> · 飯店 · 回房</div>
+            </div>
+            <button class="stop-more" title="更多動作"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></button>
+            <div class="stop-caret"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 欄3：地圖 + 浮動行程操作 -->
+    <section class="right">
+      <div class="map">
+        <svg viewBox="0 0 600 760" preserveAspectRatio="xMidYMid slice">
+          <rect width="600" height="760" fill="#232323"/>
+          <!-- 綠地 -->
+          <path d="M392 292 L512 272 L540 372 L416 392 Z" fill="#2C3326"/>
+          <path d="M28 486 L162 470 L182 566 L46 586 Z" fill="#2C3326"/>
+          <path d="M430 588 L562 570 L578 682 L444 700 Z" fill="#2C3326"/>
+          <!-- 河 -->
+          <path d="M196 -20 C 214 150, 160 316, 222 484 C 256 590, 236 690, 254 780"
+                stroke="#243040" stroke-width="16" fill="none"/>
+          <!-- 主幹道 -->
+          <g stroke="#3A3A3A" stroke-width="8" fill="none" stroke-linecap="round">
+            <path d="M-10 206 L610 186"/><path d="M-10 424 L610 408"/><path d="M-10 636 L610 654"/>
+            <path d="M104 -10 L128 770"/><path d="M356 -10 L336 770"/><path d="M508 -10 L534 770"/>
+          </g>
+          <!-- 次要道路 -->
+          <g stroke="#2F2F2F" stroke-width="3.6" fill="none">
+            <path d="M-10 96 L610 84"/><path d="M-10 304 L610 288"/><path d="M-10 524 L610 514"/>
+            <path d="M-10 716 L610 728"/>
+            <path d="M46 -10 L62 770"/><path d="M248 -10 L236 770"/><path d="M438 -10 L428 770"/>
+          </g>
+          <!-- 巷弄 -->
+          <g stroke="#2A2A2A" stroke-width="1.7" fill="none" opacity=".9">
+            <path d="M-10 146 L610 134"/><path d="M-10 252 L610 240"/><path d="M-10 360 L610 350"/>
+            <path d="M-10 470 L610 462"/><path d="M-10 580 L610 586"/><path d="M-10 676 L610 686"/>
+            <path d="M160 -10 L172 770"/><path d="M302 -10 L292 770"/><path d="M400 -10 L392 770"/>
+            <path d="M472 -10 L484 770"/>
+          </g>
+          <!-- 路線：跟中欄 rail 的虛線移動段是同一條路線的兩種投影 -->
+          <path d="M186 226 C 206 300, 224 350, 236 400"
+                stroke="#CBA06E" stroke-width="2.6" stroke-dasharray="8 7" fill="none"/>
+          <path d="M236 400 C 290 430, 340 448, 372 462"
+                stroke="#CBA06E" stroke-width="2.6" stroke-dasharray="8 7" fill="none"/>
+        </svg>
+
+        <div class="pin" style="left:31%;top:29.5%">
+          <div class="pin-dot"><span>1</span></div>
+          <div class="pin-tip"></div>
+          <div class="pin-lb">伏見稻荷</div>
+        </div>
+        <div class="pin is-sel lb-l" style="left:39.3%;top:52.6%">
+          <div class="pin-dot"><span>2</span></div>
+          <div class="pin-tip"></div>
+          <div class="pin-lb">清水寺</div>
+        </div>
+        <div class="pin" style="left:62%;top:60.8%">
+          <div class="pin-dot"><span>3</span></div>
+          <div class="pin-tip"></div>
+          <div class="pin-lb">祇園</div>
+        </div>
+      </div>
+
+      <div class="map-pill">
+        地圖 · DAY 02
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+      </div>
+
+      <!-- ★ L2 — 點選景點：滿版蓋滿整欄，右上關閉 -->
+      <div class="layer l2">
+        <div class="layer-h">
+          <div class="t">清水寺</div>
+          <button class="layer-btn" title="關閉" onclick="setStack(1)"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+        </div>
+        <div class="layer-b">
+          <div class="fld">
+            <div class="fld-l">分類</div>
+            <div class="chips">
+              <div class="chip on">景點</div><div class="chip">用餐</div><div class="chip">住宿</div><div class="chip">交通</div>
+            </div>
+          </div>
+          <div class="fld">
+            <div class="fld-l">時間</div>
+            <div class="fld-row"><div class="fld-in">14:30</div><div class="fld-in">16:00</div></div>
+          </div>
+          <div class="fld">
+            <div class="fld-l">停留</div>
+            <div class="fld-in">1.5 小時</div>
+          </div>
+          <div class="fld">
+            <div class="fld-l">備註</div>
+            <div class="fld-ta">音羽瀑布排隊約 20 分。子安塔那側人少，回程走產寧坂下山接祇園。</div>
+          </div>
+          <div class="fld">
+            <div class="fld-l">正選景點</div>
+            <div class="fld-in is-nav" onclick="setStack(3)">清水寺 · 換景點 <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+          </div>
+          <div class="fld">
+            <div class="fld-l">訂位／票券</div>
+            <div class="fld-in" style="color:var(--fg-3)">無</div>
+          </div>
+        </div>
+        <div class="layer-f">
+          <button class="btn pri">儲存</button>
+          <button class="btn gho" onclick="setStack(3)">換景點</button>
+          <button class="btn dgr" title="刪除"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+        </div>
+      </div>
+
+      <!-- ★ L3 — 再蓋一層：左上回前頁 + 右上關閉 -->
+      <div class="layer l3">
+        <div class="layer-h">
+          <button class="layer-btn" title="回前頁" onclick="setStack(2)"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <div class="t">換景點</div>
+          <button class="layer-btn" title="關閉" onclick="setStack(1)"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+        </div>
+        <div class="layer-b">
+          <div class="srch">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0A4.5 4.5 0 1 1 14 9.5 4.49 4.49 0 0 1 9.5 14z"/></svg>
+            搜尋景點…
+          </div>
+          <div class="fld-l">目前正選</div>
+          <div class="res on">
+            <div class="res-tx"><div class="res-n">清水寺</div><div class="res-m">景點 · ★ 4.6 · 東山區</div></div>
+          </div>
+          <div class="fld-l" style="margin-top:12px">備選（2）</div>
+          <div class="res" onclick="setStack(4)" title="看詳情">
+            <div class="res-tx"><div class="res-n">高台寺</div><div class="res-m">景點 · ★ 4.4 · 步行 8 分</div></div>
+          </div>
+          <div class="res" onclick="setStack(4)" title="看詳情">
+            <div class="res-tx"><div class="res-n">八坂神社</div><div class="res-m">景點 · ★ 4.5 · 步行 12 分</div></div>
+          </div>
+          <div class="fld-l" style="margin-top:12px">附近推薦</div>
+          <div class="res" onclick="setStack(4)" title="看詳情">
+            <div class="res-tx"><div class="res-n">地主神社</div><div class="res-m">景點 · ★ 4.2 · 步行 2 分</div></div>
+          </div>
+          <div class="res" onclick="setStack(4)" title="看詳情">
+            <div class="res-tx"><div class="res-n">三年坂</div><div class="res-m">景點 · ★ 4.6 · 步行 5 分</div></div>
+          </div>
+        </div>
+        <div class="layer-f">
+          <button class="btn pri" onclick="setStack(2)">設為正選</button>
+          <button class="btn gho" onclick="setStack(2)">取消</button>
+        </div>
+      </div>
+
+      <!-- ★ L4 — 第四層（owner 2026-07-15：「有 4 層就堆疊」）
+           真實動線：L2 停留點操作 → L3 換景點 → L4 該景點詳情。
+           換景點不該盲換，按下去之前要能看一眼；這一層是被需求逼出來的，不是為了展示堆疊。
+           左上「‹」回 L3（不是回 L2）—— push stack 的返回永遠只退一階；右上「✕」直接收掉整疊回地圖。 -->
+      <div class="layer l4">
+        <div class="layer-h">
+          <button class="layer-btn" title="回前頁" onclick="setStack(3)"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <div class="t">高台寺</div>
+          <button class="layer-btn" title="關閉" onclick="setStack(1)"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+        </div>
+        <div class="layer-b">
+          <div class="fld">
+            <div class="fld-l">分類</div>
+            <div class="chips">
+              <span class="chip on">景點</span><span class="chip">用餐</span><span class="chip">住宿</span><span class="chip">交通</span>
+            </div>
+          </div>
+          <div class="fld">
+            <div class="fld-l">評分</div>
+            <div class="fld-in">★ 4.4 · 1,832 則評論</div>
+          </div>
+          <div class="fld">
+            <div class="fld-l">地址</div>
+            <div class="fld-in">京都市東山區高台寺下河原町 526</div>
+          </div>
+          <div class="fld">
+            <div class="fld-l">營業時間</div>
+            <div class="fld-in">09:00 – 17:30（今日營業中）</div>
+          </div>
+          <div class="fld">
+            <div class="fld-l">距離清水寺</div>
+            <div class="fld-in">步行 8 分 · 650 m</div>
+          </div>
+          <div class="fld">
+            <div class="fld-l">說明</div>
+            <div class="fld-in" style="height:auto;padding:10px 12px;line-height:1.6">
+              豐臣秀吉正室北政所所建。方丈前庭枯山水、開山堂與臥龍廊；春秋兩季夜間特別拜觀有點燈。
+            </div>
+          </div>
+          <div class="fld-in is-nav" onclick="setStack(1)" style="margin-top:4px">
+            在地圖上顯示
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </div>
+        </div>
+        <div class="layer-f">
+          <button class="btn pri" onclick="setStack(2)">換成高台寺</button>
+          <button class="btn gho" onclick="setStack(3)">取消</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 底部浮動玻璃 tab — 桌機 4 格（帳號在左下 sidebar chip） -->
+  <!-- ★ ⋯ context menu 掛在 .win 底下，不在 .mid-scroll 裡 —— 這就是 portal。
+       留在捲動容器內的話，選單會被 overflow 裁掉：實測最後一項「刪除景點」
+       hit-test 打到 null，整個點不到。你的 codebase 已踩過同一個坑（DESIGN.md:159
+       時間 chip popup 要 portal 逃離 .tp-rail-content 的 overflow:hidden）。 -->
+<div class="ctx" id="ctx">
+              
+              <div class="ctx-i">在地圖開啟 <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5z"/></svg></div>
+              <div class="ctx-sep"></div>
+              <div class="ctx-i">編輯備註 <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></div>
+              <div class="ctx-i">換景點 <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg></div>
+              <div class="ctx-i">重新排序 <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/></svg></div>
+              <div class="ctx-sep"></div>
+              <div class="ctx-i">複製到其他天 <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></div>
+              <div class="ctx-i">移到其他天 <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"/></svg></div>
+              <div class="ctx-sep"></div>
+              <div class="ctx-i dgr">刪除景點 <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+            </div>
+
+  <!-- 帳號選單（帳號 chip → 彈出；外觀 淺/深切換有作用，可就地驗證淺色）-->
+  <div class="acct-scrim" id="acctScrim" hidden></div>
+  <div class="acct-menu" id="acctMenu" hidden>
+    <div class="am-head">
+      <div class="acct-av">R</div>
+      <div><div class="am-nm">Ray Chiu</div><div class="am-em">lean.lean@gmail.com</div></div>
+    </div>
+    <div class="am-sec">外觀</div>
+    <div class="am-seg" role="group" aria-label="深淺模式">
+      <button class="am-seg-b" data-theme-set="light">淺色</button>
+      <button class="am-seg-b on" data-theme-set="dark">深色</button>
+    </div>
+    <div class="am-i">帳號資訊與個人資料</div>
+    <div class="am-i">通知</div>
+    <div class="am-i">登入裝置</div>
+    <div class="am-i">已連結的應用程式</div>
+    <div class="am-sep"></div>
+    <div class="am-i danger">登出</div>
+  </div>
+
+  <div class="tabbar-wrap"><nav class="tabbar">
+    <div class="tab"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>聊天</div>
+    <div class="tab on"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>行程</div>
+    <div class="tab"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5z"/></svg>地圖</div>
+    <div class="tab"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>收藏</div>
+  </nav></div>
+</div>
+
+<div class="note">
+  <b>桌機三欄 — 與現行 DESIGN.md 的衝突（需同步改 SoT）</b>
+  <ul>
+    <li><span class="ok">✓ 保留</span> <code>DESIGN.md:358</code> sidebar 底部 account chip（左下角）—— owner 更正：右上角帳號是手機，桌機維持左下</li>
+    <li><span class="ok">✓ 保留</span> <code>DESIGN.md:190</code> hotel 是當日路線起點 → 路線軌首尾都是飯店</li>
+    <li><span class="ok">✓ 保留</span> <code>DESIGN.md:407</code> desktop/compact 共用同一份 <code>TripDetail</code> 內容樹</li>
+    <li><span class="no">✗ 廢除</span> <code>DESIGN.md:356</code> sidebar 放 primary nav → 改放「我的行程」清單；primary nav 移底部浮動膠囊 tab</li>
+    <li><span class="no">✗ 改寫</span> <code>DESIGN.md:411</code>「複雜 form 流程必走全頁，不用 modal」→ 桌機改右欄堆疊面板。<span class="mid-c">⚠ 手機仍需全頁（右欄不存在）→ 同一 form 要支援兩種容器</span></li>
+    <li><span class="no">✗ 改寫</span> <code>DESIGN.md:260</code> desktop = sidebar + 無 bottom nav → 現在兩者都有</li>
+    <li><span class="mid-c">⚠ 實作雷</span> 浮動 tab（z=40）不可視窗置中 —— 會壓在右欄 footer 的儲存鈕上（實測重疊 67px、按不到）。此處改置中於「sidebar + 中欄」，實測重疊 0px、<code>elementFromPoint</code> 命中儲存鈕</li>
+    <li><span class="mid-c">⚠ 未解</span> 第 3 層之後還要更深（例如「換景點 → POI 詳情 → 選照片」）？現在只設計到 3 層。超過 3 層的堆疊在 40% 寬的欄裡會很擠，建議 3 層封頂、更深的走全頁</li>
+  </ul>
+</div>
+
+<div class="note">
+  <b class="no">⚠ 與 DESIGN.md 的衝突 — 需要 owner 裁示後才動 code</b>
+  <ul>
+    <li><b><code>DESIGN.md:411</code>「複雜 form 流程必走全頁 + TitleBar shell，<u>不用 modal</u>」</b> ——
+      V3 桌機把停留點編輯放進<b>右欄 L2 面板</b>，那不是全頁。這條直接被推翻，
+      不是實作細節而是 SoT 改動。<b>DESIGN.md 要同步改寫</b>，否則 code 與 SoT 永久打架。</li>
+    <li><b><code>DESIGN.md:406</code>「Desktop / compact 共用同一份 <code>TripDetail</code> 內容樹…不可拆成兩套邏輯」</b>
+      ＋「所有資料來源、mutation、loading/error state 必須共用」——
+      這條 V3 <b>不違反，而且必須嚴守</b>（owner 2026-07-15 確認）：
+      桌機右欄 L2 與手機全頁是<b>同一個 form component 的兩種容器</b>，
+      一份 state、一份 mutation、一份 validation。<span class="mid-c">容器可以有兩種，邏輯只能有一份。</span></li>
+    <li><b><code>DESIGN.md:260</code>「desktop = sidebar + no bottom nav」</b> ——
+      V3 桌機有底部浮動膠囊 tab，這條也要改寫。</li>
+    <li><b><code>DESIGN.md:276</code>「Titlebar、bottom-nav、sheet 統一使用 <code>backdrop-filter: blur(14px)</code>（<code>--blur-glass: 14px</code>）」</b> ——
+      <span class="ok">這條是真的，而且被確實遵守</span>。V3 若要改玻璃強度，是<b>提出新值</b>，不是修正舊值。
+      <br><span class="mid-c">⚠ 更正我自己 2026-07-15 的錯誤指控</span>：我先前宣稱此條「實測 0 次命中、是假的」。
+      那是<b>爛 grep 的產物</b> —— 我搜字面 <code>backdrop-filter: blur(14px)</code>，
+      漏掉全部走 <code>var(--blur-glass)</code> 的間接引用。實際 13 處命中，點名的三個元素全部到位：
+      <code>tokens.css:183</code> 定義 token、<code>GlobalBottomNav.tsx:80</code>、
+      <code>InfoSheet.tsx:227</code>、<code>_tripFormStyles.ts:324</code>。
+      <b>用 token 而非硬編碼正是設計系統做對的地方</b>，我卻因為搜不到硬編碼值就判它撒謊。
+      教訓：宣稱 SoT 條文為假之前，要搜 token 名不只搜值。</li>
+  </ul>
+</div>
+
+<h2 class="sec">Section 02</h2>
+<h3 class="sec-t">行程卡牌 — 功能對照設計</h3>
+<p class="sec-d">
+每個現有功能對應到 Apple 的原生 affordance。<b>關鍵改變：7 個動作從「一排 icon 工具列」收進「單顆 ⋯ context menu」</b> ——
+Apple 從不在列上排 6 顆 icon 按鈕，那是工具列語彙不是列表語彙。
+</p>
+
+<table class="fmap">
+  <tr><th>現有功能</th><th>來源</th><th>先前（不像 Apple）</th><th>現在（Apple 對應）</th></tr>
+  <tr><td>放大檢視</td><td><code>StopLightbox.tsx:332</code></td><td>明細內 icon 鈕</td><td><b class="no">移除</b> — POI 資料本來就沒有照片（owner 2026-07-15 確認），code 走的永遠是 <code>stop-lightbox-photo-placeholder</code>「📷 照片功能即將推出」分支。沒東西可放大的動作不該佔 menu 位</td></tr>
+  <tr><td>在地圖開啟</td><td><code>tp-rail-detail-maps</code></td><td>明細內 icon 鈕</td><td>⋯ menu 第 1 組</td></tr>
+  <tr><td>編輯備註</td><td>inline note edit</td><td>明細內 icon 鈕</td><td>⋯ menu 第 2 組 ＋ 點備註就地編輯（保留 inline）</td></tr>
+  <tr><td>換景點</td><td><code>ChangePoiPage</code></td><td>全頁跳轉</td><td>⋯ menu 第 2 組 → <b>右欄 L3 push</b></td></tr>
+  <tr><td>拖拉排序</td><td><code>.tp-rail-grip</code></td><td>hover 出 grip 手把</td><td>⋯ menu「重新排序」進編輯模式（Apple Music 的排序也在 ⋯ 內）</td></tr>
+  <tr><td>複製到其他天</td><td><code>goCopyOrMove('copy')</code></td><td>明細內 icon 鈕</td><td>⋯ menu 第 3 組</td></tr>
+  <tr><td>移到其他天</td><td><code>goCopyOrMove('move')</code></td><td>明細內 icon 鈕</td><td>⋯ menu 第 3 組</td></tr>
+  <tr><td>刪除景點</td><td>—</td><td>明細內紅 icon 鈕</td><td>⋯ menu 末組 · destructive 紅（Apple 慣例：destructive 永遠獨立末組）</td></tr>
+  <tr><td>展開／收合</td><td><code>.tp-rail-caret</code></td><td>caret</td><td><b>維持 caret</b> — HIG disclosure，不進 menu</td></tr>
+  <tr><td>就地改起訖時間</td><td>v2.55.51 <code>.tp-rail-time-chip</code></td><td>柔褐 tonal chip</td><td><b>維持 chip</b> — 高頻直接操作不該藏進 menu</td></tr>
+  <tr><td>備選 ＋ 設為正選</td><td>v2.55.51 <code>handleSetMaster</code></td><td>明細內卡片</td><td><b>維持明細內</b> ＋ 右欄 L3 也可選</td></tr>
+  <tr><td>換交通方式</td><td><code>TravelPillDialog</code></td><td>pill 可點</td><td><b>維持 pill</b> — 它在移動段上，不屬於停留點</td></tr>
+</table>
+
+<div class="note">
+  <b>卡牌對照 Apple Music track row 的實測數值</b>（含一項刻意偏離）
+  <ul>
+    <li><span class="mid-c">⚠ 刻意偏離</span> <b>不做 artwork</b> —— Apple Music 的 48px 封面成立，是因為專輯真的有封面圖；POI 資料本來就沒有照片，畫方塊只是假圖。改用<b>停留編號徽章</b>：這顆號碼同時是地圖 pin 的號碼、桌機 rail 節點的號碼 —— artwork 給不了的「這是路線上第幾站」，編號給得了</li>
+    <li><span class="ok">✓</span> 標題 <code>17px</code> / 副標 <code>15px</code>（先前 13.5 / 11.5 — 太小，是最主要的「不像」來源）</li>
+    <li><span class="ok">✓</span> 列高 <code>64px</code>、<code>letter-spacing:-.012em</code>（SF 式緊排）</li>
+    <li><span class="ok">✓</span> <b>內縮分隔線</b> — 對齊文字起點（artwork 拿掉後 = 卡片 padding <code>8px</code>），這是 Apple 列表的簽名細節</li>
+    <li><span class="ok">✓</span> ⋯ 只在 hover／選中／menu 開啟時出現（Apple Music 行為）</li>
+    <li><span class="mid-c">⚠ 實作雷</span> context menu 會被 <code>.mid-scroll</code> 的 overflow 裁切 —— <b>必須 portal 浮出</b>。你的 codebase 已踩過同一個坑：<code>DESIGN.md:159</code> 寫時間 chip popup 要 portal 逃離 <code>.tp-rail-content</code> 的 <code>overflow:hidden</code>。同解法照套。</li>
+  </ul>
+</div>
+
+
+<h3 class="sec-t">手機地圖模式 — C · Map First Drawer（approved.json 已簽）</h3>
+<p class="sec-d">
+取板子的結構（地圖優先 + 底部停留架 + 底部 tab），套 V3 參考圖的實際規格。
+<b>POI 左右滑動，不上下收合</b>（owner 2026-07-15）—— 因此板子原圖的抽屜把手拿掉：
+不能收的東西畫把手是騙人的 affordance。改用原生 <code>scroll-snap-type:x mandatory</code>，是真的可以滑。
+tab <b>浮動膠囊 4 格</b>（板子原圖是滿版 5 格）。
+停留架是<b>真玻璃</b> —— 地圖從底下透上來，這是 Apple clear-variant-over-media 的教科書情境；
+架子是<b>唯一一層</b>玻璃，裡面的卡是實色平面（先前三張卡各自 blur 30px = 三片玻璃疊在地圖上，那不是 Apple）。
+</p>
+<div class="note" style="margin-bottom:16px">
+  <b>帳號為什麼不在這頁的右上角？</b>
+  規則沒變 —— 手機帳號入口就是 titlebar 右上（桌機是左下 sidebar chip）。
+  但這頁是<b>行程內的下鑽頁</b>（左上是 <code>&lt;</code> 返回，不是根頁），右上留給<b>編輯 / ⋯</b>。
+  帳號 chip 屬於四個根 tab 頁的 titlebar。V3 參考圖也是這樣：<code>&lt; 京都五日行 ✏️ ⋯</code>，沒有 avatar。
+</div>
+
+<div class="phones">
+  <div class="ph-col">
+    <div class="ph-h">C · 地圖優先 + POI 左右滑動</div>
+    <div class="ph-s">原生 scroll-snap — 可直接滑；右側 peek 下一站</div>
+    <div class="ph" id="ph1">
+      <div class="ph-map">
+        <svg viewBox="0 0 352 720" preserveAspectRatio="xMidYMid slice">
+          <rect width="352" height="720" fill="#232323"/>
+          <!-- 公園 / 綠地 -->
+          <path d="M228 300 L296 288 L312 352 L240 366 Z" fill="#2C3326"/>
+          <path d="M18 470 L96 462 L108 522 L28 534 Z" fill="#2C3326"/>
+          <path d="M250 560 L330 552 L340 620 L262 630 Z" fill="#2C3326"/>
+          <!-- 河 -->
+          <path d="M118 -20 C 128 140, 96 300, 132 460 C 152 560, 140 660, 150 740"
+                stroke="#243040" stroke-width="13" fill="none"/>
+          <!-- 主幹道 -->
+          <g stroke="#3A3A3A" stroke-width="7" fill="none" stroke-linecap="round">
+            <path d="M-10 196 L362 178"/><path d="M-10 402 L362 388"/><path d="M-10 604 L362 620"/>
+            <path d="M62 -10 L78 730"/><path d="M212 -10 L200 730"/><path d="M300 -10 L316 730"/>
+          </g>
+          <!-- 次要道路 -->
+          <g stroke="#2F2F2F" stroke-width="3.4" fill="none">
+            <path d="M-10 92 L362 80"/><path d="M-10 290 L362 276"/><path d="M-10 500 L362 492"/>
+            <path d="M-10 682 L362 692"/>
+            <path d="M28 -10 L38 730"/><path d="M148 -10 L140 730"/><path d="M262 -10 L256 730"/>
+            <path d="M340 -10 L350 730"/>
+          </g>
+          <!-- 巷弄 -->
+          <g stroke="#2A2A2A" stroke-width="1.6" fill="none" opacity=".9">
+            <path d="M-10 140 L362 130"/><path d="M-10 240 L362 228"/><path d="M-10 344 L362 334"/>
+            <path d="M-10 448 L362 440"/><path d="M-10 552 L362 556"/><path d="M-10 642 L362 650"/>
+            <path d="M96 -10 L104 730"/><path d="M180 -10 L172 730"/><path d="M240 -10 L232 730"/>
+            <path d="M282 -10 L292 730"/>
+          </g>
+          <!-- 路線：虛線 polyline，串起 ①②③（跟桌機 rail 的虛線移動段同一條路線） -->
+          <path d="M136 232 C 150 300, 170 340, 186 372 C 200 400, 206 418, 214 436"
+                stroke="#CBA06E" stroke-width="2.4" stroke-dasharray="7 6" fill="none"/>
+          <path d="M214 436 C 240 420, 258 400, 276 384"
+                stroke="#CBA06E" stroke-width="2.4" stroke-dasharray="7 6" fill="none"/>
+        </svg>
+        <div class="pin" style="left:38.6%;top:32.2%">
+          <div class="pin-dot"><span>1</span></div>
+          <div class="pin-tip"></div>
+          <div class="pin-lb">伏見稻荷</div>
+        </div>
+        <div class="pin is-sel lb-l" style="left:60.8%;top:60.5%">
+          <div class="pin-dot"><span>2</span></div>
+          <div class="pin-tip"></div>
+          <div class="pin-lb">清水寺</div>
+        </div>
+        <div class="pin" style="left:78.4%;top:53.4%">
+          <div class="pin-dot"><span>3</span></div>
+          <div class="pin-tip"></div>
+          <div class="pin-lb">祇園</div>
+        </div>
+      </div>
+
+      <div class="ph-sb">
+        <span>9:41</span>
+        <span>▮▮▮ ᯤ ▰</span>
+      </div>
+
+      <div class="ph-top">
+        <div class="ph-ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></div>
+        <div class="tt">京都五日行</div>
+        <div class="ph-ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></div>
+        <div class="ph-ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></div>
+      </div>
+
+      <div class="ph-pill">
+        地圖 · DAY 02
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+      </div>
+
+      <div class="poi-dock">
+        <div class="poi-rail" id="rail1">
+          <div class="poi-card">
+            <div class="poi-num"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12-2h-8v7H3V5H1v15h2v-3h18v3h2v-9a4 4 0 0 0-4-4z"/></svg></div>
+            <div class="poi-tx">
+              <div class="poi-eb">飯店</div>
+              <div class="poi-n">The Thousand Kyoto</div>
+              <div class="poi-m">08:40 · 出發</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+          <div class="poi-card">
+            <div class="poi-num"><span>1</span></div>
+            <div class="poi-tx">
+              <div class="poi-eb">停留 1 / 4</div>
+              <div class="poi-n">伏見稻荷大社</div>
+              <div class="poi-m">09:20–11:20 · 景點</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+          <div class="poi-card on">
+            <div class="poi-num"><span>2</span></div>
+            <div class="poi-tx">
+              <div class="poi-eb">停留 2 / 4</div>
+              <div class="poi-n">清水寺</div>
+              <div class="poi-m">14:30–16:00 · 景點</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+          <div class="poi-card">
+            <div class="poi-num"><span>3</span></div>
+            <div class="poi-tx">
+              <div class="poi-eb">停留 3 / 4</div>
+              <div class="poi-n">祇園 花見小路</div>
+              <div class="poi-m">16:30–17:30 · 散策</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+          <div class="poi-card">
+            <div class="poi-num"><span>4</span></div>
+            <div class="poi-tx">
+              <div class="poi-eb">停留 4 / 4</div>
+              <div class="poi-n">天ぷら八坂圓堂</div>
+              <div class="poi-m">18:30–20:00 · 用餐</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+          <div class="poi-card">
+            <div class="poi-num"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12-2h-8v7H3V5H1v15h2v-3h18v3h2v-9a4 4 0 0 0-4-4z"/></svg></div>
+            <div class="poi-tx">
+              <div class="poi-eb">飯店</div>
+              <div class="poi-n">The Thousand Kyoto</div>
+              <div class="poi-m">21:00 · 回房</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+        </div>
+        <div class="poi-dots"><span class="poi-dot"></span><span class="poi-dot"></span><span class="poi-dot on"></span><span class="poi-dot"></span><span class="poi-dot"></span><span class="poi-dot"></span></div>
+      </div>
+      <nav class="ph-tabs">
+        <div class="ph-tab"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>聊天</div>
+        <div class="ph-tab"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>行程</div>
+        <div class="ph-tab on"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5z"/></svg>地圖</div>
+        <div class="ph-tab"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>收藏</div>
+      </nav>
+    </div>
+  </div>
+
+  <div class="ph-col">
+    <div class="ph-h">向左滑 → 下一站</div>
+    <div class="ph-s">卡片滑到哪，地圖選中的 pin 就換到哪 —— 同一個編號</div>
+    <div class="ph" id="ph2">
+      <div class="ph-map">
+        <svg viewBox="0 0 352 720" preserveAspectRatio="xMidYMid slice">
+          <rect width="352" height="720" fill="#232323"/>
+          <!-- 公園 / 綠地 -->
+          <path d="M228 300 L296 288 L312 352 L240 366 Z" fill="#2C3326"/>
+          <path d="M18 470 L96 462 L108 522 L28 534 Z" fill="#2C3326"/>
+          <path d="M250 560 L330 552 L340 620 L262 630 Z" fill="#2C3326"/>
+          <!-- 河 -->
+          <path d="M118 -20 C 128 140, 96 300, 132 460 C 152 560, 140 660, 150 740"
+                stroke="#243040" stroke-width="13" fill="none"/>
+          <!-- 主幹道 -->
+          <g stroke="#3A3A3A" stroke-width="7" fill="none" stroke-linecap="round">
+            <path d="M-10 196 L362 178"/><path d="M-10 402 L362 388"/><path d="M-10 604 L362 620"/>
+            <path d="M62 -10 L78 730"/><path d="M212 -10 L200 730"/><path d="M300 -10 L316 730"/>
+          </g>
+          <!-- 次要道路 -->
+          <g stroke="#2F2F2F" stroke-width="3.4" fill="none">
+            <path d="M-10 92 L362 80"/><path d="M-10 290 L362 276"/><path d="M-10 500 L362 492"/>
+            <path d="M-10 682 L362 692"/>
+            <path d="M28 -10 L38 730"/><path d="M148 -10 L140 730"/><path d="M262 -10 L256 730"/>
+            <path d="M340 -10 L350 730"/>
+          </g>
+          <!-- 巷弄 -->
+          <g stroke="#2A2A2A" stroke-width="1.6" fill="none" opacity=".9">
+            <path d="M-10 140 L362 130"/><path d="M-10 240 L362 228"/><path d="M-10 344 L362 334"/>
+            <path d="M-10 448 L362 440"/><path d="M-10 552 L362 556"/><path d="M-10 642 L362 650"/>
+            <path d="M96 -10 L104 730"/><path d="M180 -10 L172 730"/><path d="M240 -10 L232 730"/>
+            <path d="M282 -10 L292 730"/>
+          </g>
+          <!-- 路線：虛線 polyline，串起 ①②③（跟桌機 rail 的虛線移動段同一條路線） -->
+          <path d="M136 232 C 150 300, 170 340, 186 372 C 200 400, 206 418, 214 436"
+                stroke="#CBA06E" stroke-width="2.4" stroke-dasharray="7 6" fill="none"/>
+          <path d="M214 436 C 240 420, 258 400, 276 384"
+                stroke="#CBA06E" stroke-width="2.4" stroke-dasharray="7 6" fill="none"/>
+        </svg>
+        <div class="pin" style="left:38.6%;top:32.2%">
+          <div class="pin-dot"><span>1</span></div>
+          <div class="pin-tip"></div>
+          <div class="pin-lb">伏見稻荷</div>
+        </div>
+        <div class="pin lb-l" style="left:60.8%;top:60.5%">
+          <div class="pin-dot"><span>2</span></div>
+          <div class="pin-tip"></div>
+          <div class="pin-lb">清水寺</div>
+        </div>
+        <div class="pin is-sel" style="left:78.4%;top:53.4%">
+          <div class="pin-dot"><span>3</span></div>
+          <div class="pin-tip"></div>
+          <div class="pin-lb">祇園</div>
+        </div>
+      </div>
+
+      <div class="ph-sb">
+        <span>9:41</span>
+        <span>▮▮▮ ᯤ ▰</span>
+      </div>
+
+      <div class="ph-top">
+        <div class="ph-ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></div>
+        <div class="tt">京都五日行</div>
+        <div class="ph-ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></div>
+        <div class="ph-ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></div>
+      </div>
+
+      <div class="ph-pill">
+        地圖 · DAY 02
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+      </div>
+
+      <div class="poi-dock">
+        <div class="poi-rail" id="rail2">
+          <div class="poi-card">
+            <div class="poi-num"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12-2h-8v7H3V5H1v15h2v-3h18v3h2v-9a4 4 0 0 0-4-4z"/></svg></div>
+            <div class="poi-tx">
+              <div class="poi-eb">飯店</div>
+              <div class="poi-n">The Thousand Kyoto</div>
+              <div class="poi-m">08:40 · 出發</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+          <div class="poi-card">
+            <div class="poi-num"><span>1</span></div>
+            <div class="poi-tx">
+              <div class="poi-eb">停留 1 / 4</div>
+              <div class="poi-n">伏見稻荷大社</div>
+              <div class="poi-m">09:20–11:20 · 景點</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+          <div class="poi-card">
+            <div class="poi-num"><span>2</span></div>
+            <div class="poi-tx">
+              <div class="poi-eb">停留 2 / 4</div>
+              <div class="poi-n">清水寺</div>
+              <div class="poi-m">14:30–16:00 · 景點</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+          <div class="poi-card on">
+            <div class="poi-num"><span>3</span></div>
+            <div class="poi-tx">
+              <div class="poi-eb">停留 3 / 4</div>
+              <div class="poi-n">祇園 花見小路</div>
+              <div class="poi-m">16:30–17:30 · 散策</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+          <div class="poi-card">
+            <div class="poi-num"><span>4</span></div>
+            <div class="poi-tx">
+              <div class="poi-eb">停留 4 / 4</div>
+              <div class="poi-n">天ぷら八坂圓堂</div>
+              <div class="poi-m">18:30–20:00 · 用餐</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+          <div class="poi-card">
+            <div class="poi-num"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12-2h-8v7H3V5H1v15h2v-3h18v3h2v-9a4 4 0 0 0-4-4z"/></svg></div>
+            <div class="poi-tx">
+              <div class="poi-eb">飯店</div>
+              <div class="poi-n">The Thousand Kyoto</div>
+              <div class="poi-m">21:00 · 回房</div>
+            </div>
+            <div class="poi-go"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg></div>
+          </div>
+        </div>
+        <div class="poi-dots"><span class="poi-dot"></span><span class="poi-dot"></span><span class="poi-dot"></span><span class="poi-dot on"></span><span class="poi-dot"></span><span class="poi-dot"></span></div>
+      </div>
+      <nav class="ph-tabs">
+        <div class="ph-tab"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>聊天</div>
+        <div class="ph-tab"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>行程</div>
+        <div class="ph-tab on"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5z"/></svg>地圖</div>
+        <div class="ph-tab"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>收藏</div>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <b>手機 C 的落地重點</b>
+  <ul>
+    <li><span class="ok">✓</span> <b>編號徽章取代 POI 照片</b>（owner 2026-07-15：資料本來就沒有圖）——卡片徽章 ②＝地圖 pin ②＝桌機 rail 節點 ②，同一套編號的三種投影。artwork 給不了「這是路線上第幾站」，編號給得了</li>
+    <li><span class="ok">✓</span> <b>不畫抽屜把手</b>：POI 改左右滑不上下收合，不能收的東西畫把手是騙人的 affordance</li>
+    <li><span class="ok">✓</span> 抽屜玻璃是<b>真的賺到的</b>：地圖在底下，<code>blur(30px) saturate(180%)</code> 有東西可透 —— 對照桌機 sidebar 的玻璃（背後空無一物）</li>
+    <li><span class="ok">✓</span> 底部 tab 兩邊都 4 格（帳號不佔 slot）：桌機帳號在左下 sidebar chip、手機在根頁 titlebar 右上（本頁是下鑽頁故不出現，見上方說明）。<span class="mid-c">與板子原圖的 5 格（含帳號）不同 —— 依 owner 2026-07-15 更正</span></li>
+    <li><span class="ok">✓</span> tab 浮動膠囊不滿版：左右露出地圖，玻璃才透得到東西</li>
+    <li><span class="mid-c">⚠</span> 板子原圖是青綠系（<code>.flutter</code> 專案），此處只取結構、色套 V3</li>
+    <li><span class="mid-c">⚠ 實作雷</span> 橫滑 rail 的水平手勢會跟地圖 pan 搶事件 —— rail 需 <code>touch-action:pan-x</code> 把垂直手勢讓回地圖；滑到哪張卡要同步 <code>panTo</code> 該 pin（雙向：點 pin 也要捲到該卡）</li>
+    <li><span class="no">✗</span> 現行 compact「bottom nav 向下捲動隱藏」（<code>DESIGN.md:368</code>）與浮動 tab 並存會打架 —— 地圖頁沒有捲動，tab 應恆在</li>
+  </ul>
+</div>
+
+<script>
+function setStack(n, btn){
+  document.getElementById('win').dataset.stack = String(n);
+  const btns = [...document.querySelectorAll('.seg button')];
+  btns.forEach(b => b.classList.remove('on'));
+  (btn || btns[n - 1]).classList.add('on');
+}
+// 開場把兩支手機捲到各自的目前停留點（真 scroll-snap，可用滑鼠/觸控直接滑）
+function seed(id, idx){
+  const r = document.getElementById(id);
+  if (!r) return;
+  const c = r.children[idx];
+  if (c) r.scrollLeft = c.offsetLeft - (r.clientWidth - c.clientWidth) / 2;
+}
+seed('rail1', 2);
+seed('rail2', 3);
+
+// 帳號選單 + 外觀 淺/深切換（真的有作用）
+(function(){
+  var chip=document.getElementById('sideAcct');
+  var menu=document.getElementById('acctMenu');
+  var scrim=document.getElementById('acctScrim');
+  function toggle(open){ if(menu)menu.hidden=!open; if(scrim)scrim.hidden=!open; }
+  if(chip)chip.addEventListener('click',function(e){e.stopPropagation();toggle(menu.hidden);});
+  if(scrim)scrim.addEventListener('click',function(){toggle(false);});
+  document.querySelectorAll('[data-theme-set]').forEach(function(b){
+    b.addEventListener('click',function(e){
+      e.stopPropagation();
+      document.documentElement.setAttribute('data-theme', b.getAttribute('data-theme-set'));
+      document.querySelectorAll('[data-theme-set]').forEach(function(x){ x.classList.toggle('on', x===b); });
+    });
+  });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') toggle(false); });
+})();
+</script>
+
