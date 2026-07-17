@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.87] - 2026-07-17
+
+### Changed
+- **`PUBLIC_ORIGIN` 顯式聲明於 `wrangler.toml` `[env.production.vars]`** — 承 v2.55.86 `getPublicOrigin` 加固後的收尾：把 OIDC issuer / email 驗證 / 邀請連結的 trust anchor 從「靠 canonical fallback 或 CF dashboard 慣例」變成 version-controlled 顯式聲明，與 `ENVIRONMENT` 同一機制（CF Pages 對本專案確實讀 `env.production` 區塊 —— 見 D1 binding 亦須在此明示）。設定後 `getPublicOrigin` 走 `PUBLIC_ORIGIN` 分支、不再落到 canonical fallback；#1057 的 fallback 保留為 defense-in-depth。preview **刻意不設** —— 每個 preview 有自己的子網域，靠 request-origin 才正確。
+
 ## [2.55.86] - 2026-07-17
 
 ### Changed
