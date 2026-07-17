@@ -15,10 +15,10 @@
   --accent:#CBA06E; --accent-hi:#E0BC90; --accent-dim:rgba(203,160,110,.16);
 
   /* 真玻璃 — 62%，不是 92% */
-  --glass:rgba(18,18,20,.62);
-  --glass-strong:rgba(18,18,20,.72);
-  --glass-rim:rgba(255,255,255,.10);
-  --spec:rgba(255,255,255,.14);
+  --glass:rgba(24,24,28,.42);
+  --glass-strong:rgba(20,20,24,.54);
+  --glass-rim:rgba(255,255,255,.26);
+  --spec:rgba(255,255,255,.34);
 
   --board:#2A2A2E; --board-fg:#EDEDEF;
   --on-accent:#1A140F;      /* accent 底上的文字（tokenize 自寫死 #1A140F）*/
@@ -31,10 +31,10 @@
   --fg:#2A1F18; --fg-2:rgba(42,31,24,.66); --fg-3:rgba(42,31,24,.42);
   --hair:rgba(42,31,24,.11); --hair-2:rgba(42,31,24,.06);
   --accent:#A97A4A; --accent-hi:#8A6038; --accent-dim:rgba(169,122,74,.15);
-  --glass:rgba(255,251,245,.72);
-  --glass-strong:rgba(255,251,245,.84);
-  --glass-rim:rgba(42,31,24,.10);
-  --spec:rgba(255,255,255,.7);
+  --glass:rgba(255,251,245,.52);
+  --glass-strong:rgba(255,251,245,.62);
+  --glass-rim:rgba(42,31,24,.14);
+  --spec:rgba(255,255,255,.9);
   --board:#DED4C4; --board-fg:#2A1F18;
   --on-accent:#FFFBF5;
   --danger:#C0463E;
@@ -48,7 +48,7 @@ body{
 }
 .hdr h1{font-size:22px;font-weight:800;letter-spacing:-.01em;}
 .hdr .s{font-size:13px;opacity:.6;margin-top:3px;}
-.lede{max-width:78ch;font-size:13.5px;line-height:1.75;opacity:.82;margin:16px 0 8px;}
+.lede{max-width:78ch;font-size:13px;line-height:1.75;opacity:.82;margin:16px 0 8px;}
 .lede b{opacity:1;}
 .warn{
   max-width:78ch;font-size:13px;line-height:1.7;margin:14px 0 26px;
@@ -57,14 +57,14 @@ body{
 }
 .warn b{color:var(--danger);}
 h2.sec{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.5;margin:40px 0 5px;}
-h3.sec-t{font-size:18px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px;}
+h3.sec-t{font-size:17px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px;}
 p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:18px;}
 .seg{
   display:inline-flex;gap:3px;padding:3px;border-radius:999px;margin-bottom:14px;
   background:var(--bg-2);border:1px solid var(--hair);
 }
 .seg button{
-  font:inherit;font-size:12.5px;font-weight:700;padding:6px 15px;border:0;border-radius:999px;
+  font:inherit;font-size:12px;font-weight:700;padding:6px 15px;border:0;border-radius:999px;
   background:transparent;color:var(--fg-2);cursor:pointer;
 }
 .seg button.on{background:var(--accent);color:var(--on-accent);}
@@ -113,9 +113,9 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
   border-top:1px solid var(--hair-2);
 }
 .side-acct:hover{background:var(--bg-3);}
-.side-acct .nm{font-size:12.5px;font-weight:700;color:var(--fg);
+.side-acct .nm{font-size:12px;font-weight:700;color:var(--fg);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.side-acct .em{font-size:10.5px;color:var(--fg-3);margin-top:1px;
+.side-acct .em{font-size:11px;color:var(--fg-3);margin-top:1px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .side-acct .tx{min-width:0;flex:1;}
 
@@ -152,7 +152,7 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 .trip-d{font-size:11px;color:var(--fg-3);margin-top:1px;font-variant-numeric:tabular-nums;}
 .side-add{
   display:flex;align-items:center;gap:8px;margin:6px 8px 0;padding:8px 12px;
-  border-radius:8px;color:var(--fg-3);font-size:12.5px;font-weight:600;cursor:pointer;
+  border-radius:8px;color:var(--fg-3);font-size:12px;font-weight:600;cursor:pointer;
   border:1px dashed var(--hair);
 }
 .side-add:hover{color:var(--fg);border-color:var(--fg-3);}
@@ -176,8 +176,8 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 .mid-head{padding:20px 0 14px;}
 .mid-head .eb{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
   color:var(--accent);}
-.mid-head h2{font-size:25px;font-weight:800;letter-spacing:-.018em;margin-top:5px;color:var(--fg);}
-.mid-head .mm{font-size:12.5px;color:var(--fg-2);margin-top:6px;font-variant-numeric:tabular-nums;}
+.mid-head h2{font-size:22px;font-weight:800;letter-spacing:-.018em;margin-top:5px;color:var(--fg);}
+.mid-head .mm{font-size:12px;color:var(--fg-2);margin-top:6px;font-variant-numeric:tabular-nums;}
 .days{
   display:flex;gap:18px;border-bottom:1px solid var(--hair);
   position:sticky;top:0;z-index:5;margin:0 -18px;padding:0 18px;
@@ -186,8 +186,8 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
   -webkit-backdrop-filter:blur(20px) saturate(180%);
 }
 .day{padding:10px 0 8px;border-bottom:2px solid transparent;cursor:pointer;color:var(--fg-3);flex-shrink:0;}
-.day .n{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;}
-.day .d{font-size:12.5px;font-weight:600;margin-top:1px;}
+.day .n{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;}
+.day .d{font-size:12px;font-weight:600;margin-top:1px;}
 .day.on{color:var(--fg);border-bottom-color:var(--accent);}
 .day.on .n{color:var(--accent);}
 
@@ -222,7 +222,7 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
   position:relative;z-index:2;width:26px;height:26px;border-radius:999px;margin-top:19px;
   display:grid;place-items:center;flex-shrink:0;
   background:var(--bg-2);border:1.5px solid var(--hair);
-  font-size:11.5px;font-weight:700;color:var(--fg-2);
+  font-size:12px;font-weight:700;color:var(--fg-2);
   font-variant-numeric:tabular-nums;line-height:1;
   transition:background 160ms, border-color 160ms, color 160ms;
 }
@@ -244,7 +244,7 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 .leg-c{padding:5px 0 5px 2px;}
 .leg-pill{
   display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;
-  border-radius:999px;font-size:11.5px;font-weight:600;cursor:pointer;
+  border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;
   background:transparent;border:1px solid var(--hair);color:var(--fg-3);
   font-variant-numeric:tabular-nums;
 }
@@ -367,7 +367,7 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 }
 .pin-dot > span{
   transform:rotate(45deg);            /* 反轉回正 —— 水滴是靠旋轉做出來的 */
-  font-size:12.5px;font-weight:800;color:var(--on-accent);line-height:1;
+  font-size:12px;font-weight:800;color:var(--on-accent);line-height:1;
   font-variant-numeric:tabular-nums;
 }
 .pin-tip{
@@ -385,7 +385,7 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 /* 標籤在 pin 側邊（非下方）—— 深色地圖上用亮底深字，深玻璃疊深地圖讀不到 */
 .pin-lb{
   position:absolute;top:4px;left:calc(100% + 6px);
-  font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:8px;white-space:nowrap;
+  font-size:12px;font-weight:700;padding:3px 9px;border-radius:8px;white-space:nowrap;
   background:rgba(28,26,24,.9);color:#F2EDE7;
   backdrop-filter:blur(12px) saturate(170%);
   -webkit-backdrop-filter:blur(12px) saturate(170%);
@@ -398,7 +398,7 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 .map-pill{
   position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;
   display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;
-  border-radius:999px;font-size:12.5px;font-weight:700;color:var(--fg);cursor:pointer;
+  border-radius:999px;font-size:12px;font-weight:700;color:var(--fg);cursor:pointer;
   background:var(--glass-strong);
   backdrop-filter:blur(20px) saturate(180%);
   -webkit-backdrop-filter:blur(20px) saturate(180%);
@@ -457,7 +457,7 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 .layer-b::-webkit-scrollbar{width:7px;}
 .layer-b::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:7px;}
 .fld{margin-bottom:12px;}
-.fld-l{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+.fld-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   color:var(--fg-3);margin-bottom:5px;}
 .fld-in{
   width:100%;height:34px;border-radius:8px;padding:0 10px;
@@ -471,11 +471,11 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 .fld-ta{
   width:100%;min-height:64px;border-radius:8px;padding:8px 10px;
   background:rgba(255,255,255,.07);border:1px solid var(--hair);
-  color:var(--fg-2);font:inherit;font-size:12.5px;line-height:1.6;
+  color:var(--fg-2);font:inherit;font-size:12px;line-height:1.6;
 }
 .chips{display:flex;gap:6px;flex-wrap:wrap;}
 .chip{
-  font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer;
+  font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer;
   background:rgba(255,255,255,.07);border:1px solid var(--hair);color:var(--fg-2);
 }
 .chip.on{background:var(--accent);border-color:transparent;color:var(--on-accent);}
@@ -511,7 +511,7 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 .res-tx{flex:1;min-width:0;}
 .res-n{font-size:13px;font-weight:600;color:var(--fg);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.res-m{font-size:11.5px;color:var(--fg-3);margin-top:2px;
+.res-m{font-size:12px;color:var(--fg-3);margin-top:2px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* ---------- 底部浮動玻璃 tab ---------- */
@@ -544,8 +544,8 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
    ============================================================ */
 .phones{display:flex;gap:26px;flex-wrap:wrap;align-items:start;}
 .ph-col{width:352px;}
-.ph-h{font-size:13.5px;font-weight:800;margin-bottom:3px;}
-.ph-s{font-size:11.5px;opacity:.6;margin-bottom:11px;}
+.ph-h{font-size:13px;font-weight:800;margin-bottom:3px;}
+.ph-s{font-size:12px;opacity:.6;margin-bottom:11px;}
 .ph{
   position:relative;width:352px;height:720px;border-radius:34px;overflow:hidden;
   background:#132A2E;box-shadow:0 18px 50px rgba(0,0,0,.45);
@@ -575,10 +575,13 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em;}
 .ph-ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;
   color:var(--fg-2);flex-shrink:0;}
+/* 統一 header 右上帳號圓圈（首字母）— owner 2026-07-17 */
+.ph-avatar{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;flex-shrink:0;
+  background:var(--accent);color:var(--on-accent);font-size:13px;font-weight:800;line-height:1;}
 .ph-pill{
   position:absolute;top:114px;left:50%;transform:translateX(-50%);z-index:15;
   display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;
-  border-radius:999px;font-size:12.5px;font-weight:700;color:var(--fg);
+  border-radius:999px;font-size:12px;font-weight:700;color:var(--fg);
   background:var(--glass-strong);
   backdrop-filter:blur(20px) saturate(180%);
   -webkit-backdrop-filter:blur(20px) saturate(180%);
@@ -591,20 +594,26 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
    那是騙人的 affordance），保留板 C 的抽屜「容器」本身。
    Apple 材質規則：玻璃只有一層 —— dock 是玻璃，裡面的卡是實色平面。
    原本三張卡各自 blur(30px) = 三片玻璃疊在地圖上，那不是 Apple，是毛玻璃沙拉。 */
+/* owner 2026-07-17：POI 卡別突破膠囊邊界。原本 left:0/right:0 全寬抽屜 → 左右 peek 卡
+   貼手機邊框硬切（圓徽章被裁一半）。改成浮動圓角膠囊（比照 .ph-tabs 浮動膠囊語言）：
+   左右 inset + 全圓角 + overflow:hidden 收邊 + 浮在 nav 膠囊上方。 */
 .poi-dock{
-  position:absolute;left:0;right:0;bottom:62px;z-index:25;
-  padding:11px 0 13px;border-radius:20px 20px 0 0;
+  position:absolute;left:10px;right:10px;bottom:76px;z-index:25;
+  padding:11px 0 13px;border-radius:22px;overflow:hidden;
   background:var(--glass-strong);
   backdrop-filter:blur(30px) saturate(180%);
   -webkit-backdrop-filter:blur(30px) saturate(180%);
-  border-top:1px solid var(--glass-rim);
-  box-shadow:inset 0 1px 0 var(--spec), 0 -10px 34px rgba(0,0,0,.4);
+  border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec), 0 12px 34px rgba(0,0,0,.42);
 }
+/* peek 卡在膠囊左右緣淡出（非硬切）→ 內容收在膠囊隔線內 */
 .poi-rail{
-  display:flex;gap:10px;padding:0 12px;
+  display:flex;gap:10px;padding:0 14px;
   overflow-x:auto;overflow-y:hidden;
   scroll-snap-type:x mandatory;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+  mask-image:linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
 }
 .poi-rail::-webkit-scrollbar{display:none;}
 .poi-card{
@@ -625,7 +634,7 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 .poi-card:not(.on) .poi-num{background:rgba(203,160,110,.5);color:rgba(36,26,18,.85);}
 .poi-num svg{width:16px;height:16px;}        /* 飯店 = 床 icon，不給號碼 */
 .poi-tx{flex:1;min-width:0;}
-.poi-eb{font-size:12.5px;color:var(--fg-3);margin-bottom:2px;font-variant-numeric:tabular-nums;}
+.poi-eb{font-size:12px;color:var(--fg-3);margin-bottom:2px;font-variant-numeric:tabular-nums;}
 .poi-n{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--fg);line-height:1.2;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .poi-m{font-size:13px;color:var(--fg-3);margin-top:3px;
@@ -667,11 +676,11 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 table.fmap{border-collapse:collapse;width:100%;max-width:1340px;font-size:13px;margin-top:6px;}
 table.fmap th,table.fmap td{text-align:left;padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.1);
   vertical-align:top;line-height:1.5;}
-table.fmap th{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.5;}
+table.fmap th{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.5;}
 table.fmap td:first-child{font-weight:700;white-space:nowrap;}
 table.fmap tr:hover td{background:rgba(255,255,255,.03);}
 .note{
-  margin-top:16px;font-size:12.5px;line-height:1.75;
+  margin-top:16px;font-size:12px;line-height:1.75;
   padding:14px 16px;border-radius:10px;background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.09);max-width:1340px;
 }
@@ -681,7 +690,7 @@ table.fmap tr:hover td{background:rgba(255,255,255,.03);}
 .mid-c{color:#E8C88F;font-weight:700;}
 .note ul{margin:7px 0 0;padding-left:17px;}
 .note li{margin-bottom:4px;}
-code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;
+code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;
   background:rgba(255,255,255,.1);padding:1px 5px;border-radius:4px;}
 
 /* ---------- 帳號選單（帳號 chip → 彈出；含可運作的外觀 淺/深切換）---------- */
@@ -1341,8 +1350,9 @@ tab <b>浮動膠囊 4 格</b>（板子原圖是滿版 5 格）。
       <div class="ph-top">
         <div class="ph-ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></div>
         <div class="tt">京都五日行</div>
-        <div class="ph-ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></div>
         <div class="ph-ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></div>
+        <!-- 統一 header：右上帳號圓圈（首字母）owner 2026-07-17 -->
+        <div class="ph-avatar">R</div>
       </div>
 
       <div class="ph-pill">
@@ -1482,8 +1492,9 @@ tab <b>浮動膠囊 4 格</b>（板子原圖是滿版 5 格）。
       <div class="ph-top">
         <div class="ph-ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></div>
         <div class="tt">京都五日行</div>
-        <div class="ph-ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></div>
         <div class="ph-ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></div>
+        <!-- 統一 header：右上帳號圓圈（首字母）owner 2026-07-17 -->
+        <div class="ph-avatar">R</div>
       </div>
 
       <div class="ph-pill">
