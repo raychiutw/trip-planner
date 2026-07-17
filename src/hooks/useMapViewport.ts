@@ -48,15 +48,14 @@ export function useMapViewport(params: UseMapViewportParams): void {
     if (!map) return;
     if (mode === 'detail' && visiblePins[0]) {
       map.setCenter({ lat: visiblePins[0].lat, lng: visiblePins[0].lng });
-      map.setZoom(15);
+      map.setZoom(16); // V3 design.md §7：明確聚焦 POI 用 zoom 16
       return;
     }
     if (focusId !== undefined) {
       const idx = pinIndexById.get(focusId);
       const pin = idx !== undefined ? pins[idx] : undefined;
       if (pin) {
-        const z = map.getZoom() ?? 11;
-        flyTo({ lat: pin.lat, lng: pin.lng }, z < 12 ? 13 : undefined);
+        flyTo({ lat: pin.lat, lng: pin.lng }, 16); // V3 §7：點 marker/POI 卡 → zoom 16
         return;
       }
     }

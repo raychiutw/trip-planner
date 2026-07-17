@@ -689,9 +689,15 @@ body.dark {
        neutral 不設 → var() fallback 回原中性樣式。tier token 在此被引用 → Tailwind 不 tree-shake。 */
     /* --tone-* 同時套到 rail item 與展開明細 .tp-rail-detail（detail 是 item 的 sibling，
        自帶 data-tone 才拿得到變數）*/
-    .tp-rail-item[data-tone="accent"], .tp-rail-detail[data-tone="accent"] { --tone: var(--color-accent); --tone-deep: var(--color-accent-deep); --tone-subtle: var(--color-accent-subtle); --tone-bg: var(--color-accent-bg); }
-    .tp-rail-item[data-tone="sage"], .tp-rail-detail[data-tone="sage"]   { --tone: var(--color-accent-2); --tone-deep: var(--color-accent-2-deep); --tone-subtle: var(--color-accent-2-subtle); --tone-bg: var(--color-accent-2-bg); }
-    .tp-rail-item[data-tone="pink"], .tp-rail-detail[data-tone="pink"]   { --tone: var(--color-accent-3); --tone-deep: var(--color-accent-3-deep); --tone-subtle: var(--color-accent-3-subtle); --tone-bg: var(--color-accent-3-bg); }
+    /* v2.55.89 V3 Phase 2：卡片改 neutral system surface（design.md §2.3「所有卡同一 surface」）。
+       --tone-subtle/-bg 指向中性 secondary/tertiary（非柔褐 tint）；--tone/-deep 保留柔褐供
+       dot/數字/icon glyph 承載 accent。三個 data-tone 值統一（Phase 1 已收斂，此處只是去 tint）。 */
+    .tp-rail-item[data-tone="accent"], .tp-rail-detail[data-tone="accent"],
+    .tp-rail-item[data-tone="sage"], .tp-rail-detail[data-tone="sage"],
+    .tp-rail-item[data-tone="pink"], .tp-rail-detail[data-tone="pink"] {
+        --tone: var(--color-accent); --tone-deep: var(--color-accent-deep);
+        --tone-subtle: var(--color-secondary); --tone-bg: var(--color-tertiary);
+    }
     /* 卡片同色系淡底（now 高亮 + neutral 不套）*/
     .tp-rail-item[data-tone="accent"]:not([data-now="true"]),
     .tp-rail-item[data-tone="sage"]:not([data-now="true"]),
