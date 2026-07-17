@@ -1,0 +1,122 @@
+<title>V3 day/map glass 膠囊（地圖+天 滑動）</title>
+<style>
+:root{
+  --bg-0:#0B0B0C; --bg-1:#121214; --bg-2:#1A1A1D; --bg-3:#232327;
+  --fg:#F2F2F4; --fg-2:rgba(242,242,244,.62); --fg-3:rgba(242,242,244,.38);
+  --hair:rgba(255,255,255,.09); --sel:#33271a;
+  --accent:#CBA06E; --accent-hi:#E0BC90; --accent-2:#CBA06E;
+  --glass:rgba(18,18,20,.60); --glass-rim:rgba(255,255,255,.12); --spec:rgba(255,255,255,.14);
+  --on-accent:#1A140F;
+}
+:root[data-theme="light"]{
+  --bg-0:#EDE6DA; --bg-1:#FFFBF5; --bg-2:#FAF4EA; --bg-3:#F2EAD9;
+  --fg:#2A1F18; --fg-2:rgba(42,31,24,.66); --fg-3:rgba(42,31,24,.42);
+  --hair:rgba(42,31,24,.10); --sel:#F4EDE3;
+  --accent:#A97A4A; --accent-hi:#8A6038; --accent-2:#8A6038;
+  --glass:rgba(255,251,245,.72); --glass-rim:rgba(42,31,24,.10); --spec:rgba(255,255,255,.7);
+  --on-accent:#FFFBF5;
+}
+*{box-sizing:border-box;margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang TC",system-ui,sans-serif;background:#2A2A2E;color:#EDEDEF;padding:30px 26px 60px;-webkit-font-smoothing:antialiased}
+.hdr h1{font-size:20px;font-weight:800}
+.hdr .s{font-size:12.5px;opacity:.6;margin-top:3px}
+.lede{max-width:74ch;font-size:13px;line-height:1.7;opacity:.82;margin:14px 0 6px}
+.lede b{color:var(--accent-hi)}
+h2.sec{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.5;margin:30px 0 10px}
+
+/* 展示台：模擬中欄頂端（行程/地圖頁）*/
+.stage{background:var(--bg-1);border:1px solid var(--hair);border-radius:16px;padding:20px 22px 26px;max-width:760px;margin-bottom:8px}
+.stage-lbl{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.stage.map{background:#132A2E;position:relative;overflow:hidden}
+.stage.map .grid{position:absolute;inset:0;opacity:.4;background-image:linear-gradient(var(--hair) 1px,transparent 1px),linear-gradient(90deg,var(--hair) 1px,transparent 1px);background-size:40px 40px}
+.stage.map .stage-lbl{position:relative;z-index:1}
+
+/* ★ glass 膠囊（地圖+天 滑動） */
+.cap{
+  position:relative;z-index:1;display:inline-flex;align-items:center;gap:2px;
+  padding:4px;border-radius:999px;max-width:100%;overflow-x:auto;scrollbar-width:none;
+  background:var(--glass);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid var(--glass-rim);box-shadow:inset 0 1px 0 var(--spec),0 8px 26px rgba(0,0,0,.32);
+}
+.cap::-webkit-scrollbar{display:none}
+.cap-item{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 15px;
+  border-radius:999px;font-size:13px;font-weight:700;color:var(--fg-2);cursor:pointer;white-space:nowrap;
+  border:0;background:transparent;transition:color .15s;
+}
+.cap-item:hover{color:var(--fg)}
+.cap-item .ic{width:15px;height:15px;fill:currentColor}
+/* 地圖/行程 toggle item — accent 字，點了切 tab */
+.cap-item.toggle{color:var(--accent-2)}
+.cap-item.toggle:hover{color:var(--accent-hi)}
+.cap-sep{flex:0 0 auto;width:1px;height:20px;background:var(--glass-rim);margin:0 5px}
+/* owner 2026-07-17：日 tab 改單行「DAY N」+ 淡 tonal active pill（非實心 accent）；字級/膠囊大小不變。
+   active pill 用 --sel 淡底 + accent 字，靠 .cap 的 padding:4px inset 在膠囊內、不碰邊/隔線。
+   日期副標（.d）收掉 → 當日日期靠中欄 day-header 顯示，膠囊只留 DAY N + 總覽。 */
+.cap-item.on{background:var(--sel);color:var(--accent-2)}
+.cap-item .n{font-size:13px;font-weight:700;letter-spacing:.01em;line-height:1.1}
+.cap-item .d{display:none}
+.cap-item.dayitem{padding:5px 15px}
+
+.note{margin-top:18px;font-size:12.5px;line-height:1.75;padding:14px 16px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);max-width:760px}
+.note b{color:var(--accent-hi)}.ok{color:#9FD8AE;font-weight:700}.mid{color:#E8C88F;font-weight:700}
+.note ul{margin:7px 0 0;padding-left:18px}.note li{margin-bottom:5px}
+.tog{display:inline-flex;gap:3px;padding:3px;border-radius:999px;background:var(--bg-2);border:1px solid var(--hair);margin:16px 0 0}
+.tog button{border:0;border-radius:999px;padding:6px 14px;background:transparent;color:var(--fg-2);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.tog button.on{background:var(--accent);color:var(--on-accent)}
+</style>
+
+<div class="hdr">
+  <h1>V3 切換器 — glass 地圖+天 滑動膠囊</h1>
+  <div class="s">2026-07-17 · owner tweak：日期/地圖切換改玻璃膠囊滑動；點地圖/行程切 tab；桌機主顯天、手機 app 風格</div>
+</div>
+<p class="lede">
+把中欄頂端的<b>底線 day tabs</b> → <b>玻璃膠囊（膠囊滑動）</b>。膠囊左端是 <b>地圖／行程 toggle</b>（accent 字，點了切到那個功能 tab），右接可水平滑動的 <b>DAY</b>（單行 <b>DAY N</b>，日期靠中欄 day-header 顯示）；active day 是<b>淡 tonal pill</b>（--sel 底 + accent 字，非實心 thumb）。
+桌機三欄地圖恆在右欄 → 膠囊<b>主顯天</b>；手機 app 風格 → 地圖+天 toggle 明顯（Flutter 那邊做）。右下切淺色驗證。
+</p>
+
+<div class="tog"><button class="on" onclick="document.documentElement.removeAttribute('data-theme');[...this.parentElement.children].forEach(b=>b.classList.remove('on'));this.classList.add('on')">深色</button><button onclick="document.documentElement.setAttribute('data-theme','light');[...this.parentElement.children].forEach(b=>b.classList.remove('on'));this.classList.add('on')">淺色</button></div>
+
+<h2 class="sec">行程頁的膠囊 — [地圖 ｜ DAY…]</h2>
+<div class="stage">
+  <div class="stage-lbl">中欄 · 行程</div>
+  <div class="cap">
+    <button class="cap-item toggle"><svg class="ic" viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5z"/></svg>地圖</button>
+    <span class="cap-sep"></span>
+    <button class="cap-item dayitem"><span class="n">總覽</span><span class="d">全程</span></button>
+    <button class="cap-item dayitem on"><span class="n">DAY 1</span><span class="d">10/03</span></button>
+    <button class="cap-item dayitem"><span class="n">DAY 2</span><span class="d">10/04</span></button>
+    <button class="cap-item dayitem"><span class="n">DAY 3</span><span class="d">10/05</span></button>
+    <button class="cap-item dayitem"><span class="n">DAY 4</span><span class="d">10/06</span></button>
+    <button class="cap-item dayitem"><span class="n">DAY 5</span><span class="d">10/07</span></button>
+  </div>
+</div>
+<div style="font-size:12px;color:var(--fg-3);max-width:760px;margin-bottom:4px">↑ 點左端「地圖」→ 切到地圖 tab（下方）。DAY 可左右滑，active 是滑動 accent thumb。</div>
+
+<h2 class="sec">地圖頁的膠囊 — [行程 ｜ DAY…]</h2>
+<div class="stage map">
+  <div class="grid"></div>
+  <div class="stage-lbl">右欄 · 地圖</div>
+  <div class="cap">
+    <button class="cap-item toggle"><svg class="ic" viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>行程</button>
+    <span class="cap-sep"></span>
+    <button class="cap-item dayitem"><span class="n">總覽</span><span class="d">全程</span></button>
+    <button class="cap-item dayitem on"><span class="n">DAY 1</span><span class="d">10/03</span></button>
+    <button class="cap-item dayitem"><span class="n">DAY 2</span><span class="d">10/04</span></button>
+    <button class="cap-item dayitem"><span class="n">DAY 3</span><span class="d">10/05</span></button>
+    <button class="cap-item dayitem"><span class="n">DAY 4</span><span class="d">10/06</span></button>
+  </div>
+</div>
+<div style="font-size:12px;color:var(--fg-3);max-width:760px">↑ 地圖頁時左端變「行程」→ 點了切回行程 tab。同一顆膠囊、同一套 DAY。</div>
+
+<div class="note">
+  <b>定案 · owner 2026-07-17 sign-off ✅</b>
+  <ul>
+    <li><span class="ok">✓</span> 切換器 = <b>玻璃膠囊</b>（真半透明 + rim 高光），取代底線 day tabs</li>
+    <li><span class="ok">✓</span> 形式 <b>[地圖/行程 toggle ｜ 總覽 ｜ DAY…]</b>；左端 toggle 是 accent 字，<b>點了切 tab</b>（行程↔地圖）</li>
+    <li><span class="ok">✓</span> active DAY = <b>淡 tonal pill</b>（--sel 底 + accent 字，非實心）；單行 <b>DAY N</b>、DAY 可水平滑動</li>
+    <li><span class="mid">⚠ 桌機</span> 三欄地圖恆在右欄 → 膠囊<b>主顯天</b>（左端 toggle 仍在，方便聚焦地圖）</li>
+    <li><span class="mid">⚠ 手機</span> app 風格（Flutter）：地圖+天 toggle 明顯,單視圖互切</li>
+  </ul>
+  <b>定板後</b>套進真實 code（桌機手機共用 <code>MapDayTab</code> + <code>.tp-map-day-tab</code> family）：單行 <code>DAY N</code>、去 <code>.tp-map-day-tab-date</code> 副標、active 由實心 thumb 改 <code>color-mix(--day-color/accent 14%)</code> 淡 pill；鎖測（day-nav-eyebrow / map-day-tab / map-page-day-query）同步更新。
+</div>

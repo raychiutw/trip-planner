@@ -482,16 +482,19 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
 .layer-f{
   flex-shrink:0;padding:10px 12px;border-top:1px solid var(--hair);display:flex;gap:8px;
 }
+/* HIG：footer 三顆等高＝底部 tab 高（38px）；儲存去 flex:1（不再 full-width）改適當寬；
+   刪除做成正方 icon 鈕（38×38）推到右側（destructive 分離）。 */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  height:34px;padding:0 15px;border:0;border-radius:999px;
-  font:inherit;font-size:13px;font-weight:700;cursor:pointer;
+  height:38px;padding:0 18px;border:0;border-radius:999px;
+  font:inherit;font-size:13px;font-weight:700;cursor:pointer;flex:0 0 auto;
 }
-.btn.pri{background:var(--accent);color:var(--on-accent);flex:1;}
+.btn.pri{background:var(--accent);color:var(--on-accent);padding:0 30px;}
 .btn.pri:hover{background:var(--accent-hi);}
 .btn.gho{background:rgba(255,255,255,.08);color:var(--fg);border:1px solid var(--hair);}
 .btn.gho:hover{background:rgba(255,255,255,.14);}
-.btn.dgr{background:transparent;color:var(--danger);border:1px solid rgba(240,166,166,.3);}
+.btn.dgr{background:transparent;color:var(--danger);border:1px solid rgba(240,166,166,.3);width:38px;padding:0;margin-left:auto;}
+.btn.dgr:hover{background:color-mix(in srgb,var(--danger) 14%,transparent);}
 
 /* L3 內容：換景點搜尋結果 */
 .srch{

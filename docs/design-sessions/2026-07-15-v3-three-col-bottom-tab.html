@@ -572,20 +572,26 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
    那是騙人的 affordance），保留板 C 的抽屜「容器」本身。
    Apple 材質規則：玻璃只有一層 —— dock 是玻璃，裡面的卡是實色平面。
    原本三張卡各自 blur(30px) = 三片玻璃疊在地圖上，那不是 Apple，是毛玻璃沙拉。 */
+/* owner 2026-07-17：POI 卡別突破膠囊邊界。原本 left:0/right:0 全寬抽屜 → 左右 peek 卡
+   貼手機邊框硬切（圓徽章被裁一半）。改成浮動圓角膠囊（比照 .ph-tabs 浮動膠囊語言）：
+   左右 inset + 全圓角 + overflow:hidden 收邊 + 浮在 nav 膠囊上方。 */
 .poi-dock{
-  position:absolute;left:0;right:0;bottom:62px;z-index:25;
-  padding:11px 0 13px;border-radius:20px 20px 0 0;
+  position:absolute;left:10px;right:10px;bottom:76px;z-index:25;
+  padding:11px 0 13px;border-radius:22px;overflow:hidden;
   background:var(--glass-strong);
   backdrop-filter:blur(30px) saturate(180%);
   -webkit-backdrop-filter:blur(30px) saturate(180%);
-  border-top:1px solid var(--glass-rim);
-  box-shadow:inset 0 1px 0 var(--spec), 0 -10px 34px rgba(0,0,0,.4);
+  border:1px solid var(--glass-rim);
+  box-shadow:inset 0 1px 0 var(--spec), 0 12px 34px rgba(0,0,0,.42);
 }
+/* peek 卡在膠囊左右緣淡出（非硬切）→ 內容收在膠囊隔線內 */
 .poi-rail{
-  display:flex;gap:10px;padding:0 12px;
+  display:flex;gap:10px;padding:0 14px;
   overflow-x:auto;overflow-y:hidden;
   scroll-snap-type:x mandatory;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+  mask-image:linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
 }
 .poi-rail::-webkit-scrollbar{display:none;}
 .poi-card{
