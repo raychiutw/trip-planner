@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.94] - 2026-07-17
+
+### Changed
+- **V3 rev2 桌機三欄 grid → `216px 1fr 1fr`** — owner 2026-07-17「rev2 shell 要做」第一步。`--grid-3pane-desktop` 由 `240px 1fr min(780px, 40vw)` → **`216px 1fr 1fr`**（sidebar 240→216、右欄地圖由 capped 40vw/780 → 與中欄行程等寬 1fr，對齊 rev2 mockup 三欄等比）；`--grid-2pane-desktop`/`--sidebar-width-desktop` 同步 216。純 token；AppShell 結構/slot/scroll/testid 不變。實機 QA（dev 1440）3-pane 實測 `216px 606.5px 606.5px`、day 膠囊 + route rail 中欄渲染正常。`tokens-grid-layout` 鎖測同步更新。429 檔 3767 unit ✓。**rev2 shell 後續分批**：sidebar 主 nav → 我的行程清單、primary nav 移底部浮動玻璃膠囊 tab（兩者互鎖須同 PR）、右欄堆疊面板、DESIGN.md 同步。
+
 ## [2.55.93] - 2026-07-17
 
 ### Changed

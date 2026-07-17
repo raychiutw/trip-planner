@@ -102,14 +102,13 @@ html { color-scheme: light dark; }
     --spacing-10: 40px;
 
     /* AppShell layout grid templates.
-     *   ≥1280px: 3-pane full (sidebar 240 / main fluid / sheet up to 780px)
-     *   1024-1279px: 3-pane narrow (sheet capped at 40vw)
-     *   <1024px: single-column + sticky bottom nav
+     *   ≥1024px: 3-pane rev2 (sidebar 216 / 中欄行程 1fr / 右欄地圖 1fr — owner 2026-07-17)
+     *   <1024px: single-column + 底部浮動玻璃膠囊 tab
      */
-    --grid-3pane-desktop: 240px 1fr min(780px, 40vw);
-    --grid-2pane-desktop: 240px 1fr;
+    --grid-3pane-desktop: 216px 1fr 1fr;
+    --grid-2pane-desktop: 216px 1fr;
     --nav-height-mobile: 88px;
-    --sidebar-width-desktop: 240px;
+    --sidebar-width-desktop: 216px;
 
     /* Font size */
     --font-size-large-title: 2.125rem;
