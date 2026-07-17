@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.92] - 2026-07-17
+
+### Changed
+- **V3 rev2 day 切換器：底線 strip → glass 滑動膠囊（桌機 timeline + 地圖頁共用）** — owner 2026-07-17 tweak。`.tp-map-day-tabs`（`DayNav` 行程頁 + `MapPage` 地圖頁共用）由扁平底線 strip 改圓角**玻璃膠囊**（`backdrop-filter` blur + `width:fit-content` pill，內容從後流過＝真玻璃）；active DAY 由 `border-bottom` 底線改 **accent 實心 thumb**（per-day `--day-color` 仍可覆蓋 thumb 底色）。純 CSS restyle，`DayNav`/`MapDayTab` 結構/testid/`onClick`/scroll 全不變。430 檔 / 3768 unit 全綠；實機 QA（dev 5173）桌機+手機膠囊渲染正確、sticky 佈局不破。**地圖/行程 toggle（地圖+天、點了切 tab）** 因桌機三欄「點地圖＝聚焦右欄 or 開全頁」行為未定 + 與 shell 耦合，留後續 PR。SoT：owner glass 膠囊 tweak（`docs/design-sessions/2026-07-17-v3-day-map-glass-capsule.html`）。
+
 ## [2.55.91] - 2026-07-17
 
 ### Changed
