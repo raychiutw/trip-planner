@@ -34,6 +34,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import AccountCircle from '../components/shell/AccountCircle';
 import MapDayTab from '../components/trip/MapDayTab';
 import MapEntryCard, { type EntryKind } from '../components/trip/MapEntryCard';
 import MapFabs from '../components/trip/MapFabs';
@@ -413,6 +414,7 @@ export default function MapPage() {
         // v2.31.81：title bar 對齊 ChatPage 格式 — 左 trip name，右 icon-only picker。
         title={trip?.title || trip?.name || '地圖'}
         back={tripId ? () => navigate(`/trip/${encodeURIComponent(tripId)}`) : undefined}
+        account={<AccountCircle />}
         actions={trips && trips.length > 0 && (
           <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
             <button
