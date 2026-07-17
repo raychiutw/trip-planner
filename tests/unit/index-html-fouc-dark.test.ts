@@ -61,7 +61,7 @@ describe('v2.33.136 dark-mode-init.js content (mirrors useDarkMode hook)', () =>
 
   it('dark 時加 body.dark class + 更新 meta theme-color', () => {
     expect(DARK_INIT).toContain("classList.add('dark')");
-    expect(DARK_INIT).toContain("'#1A140F'");
+    expect(DARK_INIT).toContain("'#121214'");
   });
 
   it('body 不存在時 fallback 到 DOMContentLoaded (head 內載入也安全)', () => {

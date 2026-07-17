@@ -13,6 +13,8 @@
 - **Differentiation:** 暖調 V2 柔褐三色（主柔褐 + sage 交通 + 粉 活動/收藏；非六主題切換、非冷色 Ocean）、Airbnb 式三層陰影但 rgba 用暖棕（`rgba(42, 31, 24, …)`）、Inter + Noto Sans TC 排版
 - **Reference sites:** Airbnb（card + shadow）、Apple HIG（tap target、subheadline）、Anthropic Claude Design 稿（Okinawa Trip Redesign/Mobile）、`docs/design-sessions/mockup-trip-v2.html`（V2 canonical mockup）
 
+> **⚠️ V3 Apple Music 改版進行中（2026-07-17，桌機 React）。** 語意三色（sage 交通 / 粉 收藏活動）**退場**。SoT 轉移到 `trip-planner.flutter/docs/discovery/design.md` §2 + 桌機 mockup `docs/design-sessions/2026-07-15-v3-apple-music-desktop.html`。**Phase 1（v2.55.88）已 ship**：`--color-accent-2/-3` 在 tokens.css 收斂成單一柔褐 accent（全站不再彩虹）+ dark mode 換中性深灰（`#121214`/`#1C1C1E`/`#2C2C2E` + `#CBA06E`，取代下方舊暖褐 dark 表）。**卡片 neutral surface + 去封面/常駐 sidebar/單層 DAY selector 是後續 Phase**——下方三色表為歷史，逐 Phase 改寫。見 memory `project_v3_desktop_redesign`。
+
 ## Palette — V2 柔褐三色（canonical source: tokens.css `@theme`）
 | Token | Hex | 用途 |
 |-------|-----|------|

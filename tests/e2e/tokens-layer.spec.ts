@@ -36,7 +36,7 @@ test.describe('tokens.css Layer 驗證', () => {
     expect(tokens.fontSizeBody).toBe('1rem'); // mockup-parity-qa-fixes: 17→16px (mockup body 規範)
   });
 
-  test('深色模式 Terracotta deep-cocoa 覆蓋正確', async ({ page }) => {
+  test('深色模式 V3 中性深灰覆蓋正確', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(300);
@@ -56,8 +56,8 @@ test.describe('tokens.css Layer 驗證', () => {
     });
 
     expectColor(tokens.accent, '#CBA06E');
-    expectColor(tokens.background, '#1A140F');
-    expectColor(tokens.foreground, '#F5EBDD');
+    expectColor(tokens.background, '#121214');
+    expectColor(tokens.foreground, '#F5F5F7');
   });
 
   test('Tailwind utilities layer 存在', async ({ page }) => {
