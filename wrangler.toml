@@ -18,9 +18,13 @@ database_id = "d61c42d5-8083-4e18-9b6c-70e133e37322"
 # _middleware.ts:241-247 dev mock auth 守衛靠 envBag.ENVIRONMENT === 'production'
 # 判斷拒。若 CF dashboard 沒設此 var，guard fail-open → DEV_MOCK_EMAIL 在 prod 生效
 # = 完全 auth bypass。改在 wrangler.toml 強制聲明而非靠 CF dashboard 慣例。
-# 部署提醒：CF Pages prod 部署仍需 wrangler env set 同步 PUBLIC_ORIGIN 等 var。
+# PUBLIC_ORIGIN 同理顯式聲明：OIDC issuer / email 驗證 / 邀請連結的 trust anchor，
+# 不再靠 CF dashboard 慣例或 getPublicOrigin 的 canonical fallback（v2.55.86 保留為
+# defense-in-depth）。preview 刻意不設 —— 每個 preview 有自己的子網域，靠 request-origin
+# 才正確（getPublicOrigin 對非 production 走 request origin）。
 [env.production.vars]
 ENVIRONMENT = "production"
+PUBLIC_ORIGIN = "https://trip-planner-dby.pages.dev"
 
 # Preview environment — Preview Deploy 使用（Pages 只支援 preview/production）
 [env.preview]
