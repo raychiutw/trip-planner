@@ -1317,24 +1317,30 @@ body.dark {
 
 
 /* ===== MapDayTab — bottom underline tab (V2 Terracotta Map page) ===== */
+/* v2.55.92 rev2：底線 strip → glass 膠囊（滑動 accent thumb）。owner 2026-07-17 tweak。
+   容器縮成圓角玻璃 pill（fit-content，內容從後流過＝真玻璃）；active tab = accent 實心 thumb 取代底線。 */
 .tp-map-day-tabs {
   flex-shrink: 0;
-  background: var(--color-background);
-  border-top: 1px solid var(--color-border);
   display: flex;
-  gap: 2px;
+  gap: 3px;
   overflow-x: auto;
-  padding: 0 12px;
   scrollbar-width: none;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  margin: 6px 12px 8px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--color-secondary) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
 }
 .tp-map-day-tabs::-webkit-scrollbar { display: none; }
 .tp-map-day-tab {
-  /* 扁平 strip — 不搶佔垂直空間，對齊 mockup S20 underline tabs spec。 */
   flex: 0 0 auto;
-  padding: 6px 14px;
+  padding: 5px 15px;
   border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-muted);
   cursor: pointer;
@@ -1342,16 +1348,15 @@ body.dark {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  min-height: 34px;
   white-space: nowrap;
-  transition: color 150ms, border-bottom-color 150ms;
+  transition: color 150ms, background 150ms;
 }
 .tp-map-day-tab:hover:not(.is-active) { color: var(--color-foreground); }
 .tp-map-day-tab.is-active {
-  color: var(--color-accent);
-  /* Section 4.10: per-day border-bottom-color override via inline --day-color
-   * (set in MapDayTab.tsx)。fallback 用 accent (overview tab 沒 dayColor)。 */
-  border-bottom-color: var(--day-color, var(--color-accent));
+  /* 滑動 accent thumb 取代底線；per-day --day-color 仍可覆蓋 thumb 底色。 */
+  color: var(--color-accent-foreground);
+  background: var(--day-color, var(--color-accent));
 }
 .tp-map-day-tab:focus-visible {
   outline: none;
