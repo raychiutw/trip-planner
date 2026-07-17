@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.88] - 2026-07-17
+
+### Changed
+- **V3 Apple Music 改版 Phase 1（桌機 React）：語意三色退場 + dark 中性化** — 承 2026-07-15 拍板的改版第一階段（色彩地基）。語意分類三色（sage 交通 / 玫瑰粉 收藏·活動）在 `css/tokens.css` **收斂成單一柔褐 accent**：`--color-accent-2/-3` 的值統一成 `--color-accent`（light + dark），消費者的 `data-tone` / `--tone-*` plumbing 完全不變、自動全站退掉彩虹（timeline / 探索 / 收藏 / 聊天 avatar / 帳號分區 / 行程一覽 destination tone 一次到位）。dark mode 從暖褐色階（`#1A140F` 系）換成 design.md 的**中性深灰**（`#121214` / `#1C1C1E` / `#2C2C2E` / outline `#3A3A3C`~`#545458`，accent 維持 `#CBA06E`）。3768 unit 全過（三色測試斷言 `data-tone` 屬性而非色值，不受收斂影響）。**後續 Phase**：卡片改 neutral surface（此版仍柔褐 tint，先退多色）、行程頁去封面、桌機常駐 sidebar、單層 DAY selector。SoT：`trip-planner.flutter/docs/discovery/design.md` §2 + 桌機 mockup `2026-07-15-v3-apple-music-desktop.html`；DESIGN.md 加 V3 遷移註記，舊三色表逐 Phase 改寫。
+
 ## [2.55.87] - 2026-07-17
 
 ### Changed
