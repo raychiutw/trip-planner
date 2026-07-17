@@ -49,9 +49,10 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
     expect(tokens).toMatch(/font-size:\s*18px;[\s\S]*?line-height:\s*24px/);
   });
 
-  it('.tp-hero-title desktop 對齊 mockup .tp-detail-hero-title 28px', () => {
-    expect(tokens).toMatch(/\.tp-hero-title\s*\{\s*font-size:\s*28px/);
-    expect(tokens).not.toMatch(/\.tp-hero-title\s*\{\s*font-size:\s*32px/);
+  it('.tp-hero-title desktop = rev2 細 day label 18px（大褐卡→細 label，v2.55.91）', () => {
+    // rev2：day-header 大褐卡退場 → 細 day label；desktop override 18px（取代舊 mockup 28px）。
+    expect(tokens).toMatch(/\.tp-hero-title\s*\{\s*font-size:\s*18px/);
+    expect(tokens).not.toMatch(/\.tp-hero-title\s*\{\s*font-size:\s*(?:28|32)px/);
   });
 
   it('.tp-trip-card-eyebrow 對齊 mockup .tp-list-card-eyebrow 10px / 0.12em', () => {
