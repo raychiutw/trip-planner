@@ -28,6 +28,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import AccountCircle from '../components/shell/AccountCircle';
 import { POI_TYPE_LABELS, mapNominatimCategory } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 
@@ -430,6 +431,7 @@ export default function PoiFavoritesPage() {
       <style>{SCOPED_STYLES}</style>
       <TitleBar
         title="收藏"
+        account={<AccountCircle />}
         actions={
           <button
             type="button"

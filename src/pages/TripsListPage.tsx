@@ -35,6 +35,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import AccountCircle from '../components/shell/AccountCircle';
 import TripCardMenu from '../components/trip/TripCardMenu';
 import ShareLinkModal from '../components/share/ShareLinkModal';
 // v2.18.0:CollabSheet → CollabPage(獨立路由),InfoSheet wrapper 移除
@@ -1030,6 +1031,7 @@ export default function TripsListPage() {
       <div className="tp-trips-shell" data-testid="trips-list-page">
         <TitleBar
           title="我的行程"
+          account={<AccountCircle />}
           actions={
             <>
               <ImportTripButton />

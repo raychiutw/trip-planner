@@ -510,7 +510,7 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     await waitFor(() => {
       expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
     });
-    const back = screen.getByLabelText('返回行程');
+    const back = screen.getByLabelText('返回上一層');
     fireEvent.click(back);
     // v2.55.x：goBackFocused 先 await flush 備註再 navigate（async）→ 帶 ?focus=<entryId>
     // 讓 TripPage 回前頁還原「當下景點展開」。仍無 ConfirmModal。
@@ -525,7 +525,7 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     });
     // v2.34.0: note textarea 已移除，改用時間 picker 製造 dirty 狀態。
     pickTime('edit-entry-start-time', '11:30');
-    fireEvent.click(screen.getByLabelText('返回行程'));
+    fireEvent.click(screen.getByLabelText('返回上一層'));
     await waitFor(() => expect(navigateSpy).toHaveBeenCalled());
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
   });
@@ -549,7 +549,7 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-100'));
     fireEvent.change(screen.getByTestId('edit-entry-poi-note-input-100'), { target: { value: '新備註內容' } });
     fireEvent.blur(screen.getByTestId('edit-entry-poi-note-input-100'));
-    fireEvent.click(screen.getByLabelText('返回行程'));
+    fireEvent.click(screen.getByLabelText('返回上一層'));
 
     // barrier：PATCH 未 resolve → navigate 不該發生（修復前 flush 撞空 body 即 return → 這裡會紅）
     await new Promise((r) => setTimeout(r, 0));

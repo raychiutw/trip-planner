@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.97] - 2026-07-18
+
+### Changed
+- **rev2 手機版做到 mockup + 桌機底部 nav 置中修正**（owner「手機版還是舊版本 和 mockup 不同」+「功能 tab 要在右邊中間欄範圍內置中」）：
+  - **底部 nav 5-tab → 4-tab**（聊天/行程/地圖/收藏）：帳號/登入移出 tab slot → **手機統一 header 右上帳號圓圈**（`AccountCircle`，首字母 → `/account`；匿名 → `/login`），桌機維持 sidebar 左下 chip。對齊 mockup「4 格：帳號移到 titlebar 右上」。grid `repeat(5,1fr)`→`repeat(4,1fr)`。
+  - **`AccountCircle`**（新元件，連 `useCurrentUser`）：30px accent 圓圈（mockup `.ph-avatar`）；桌機 CSS 隱藏（帳號在 sidebar chip）。掛進 4 根頁 header：ChatPage / TripsListPage(我的行程) / PoiFavoritesPage 的 `<TitleBar account>`；GlobalMapPage 全屏無 titlebar → 浮動右上。
+  - **手機操作頁 drill-down 共用 `‹`/`✕` header**：`OperationShell` 兩形態（桌機右欄 panel + 手機全頁）**統一用 `StackPanelHeader`**（`.dd-top` = `‹` 前一頁 / `✕` 整個關閉，iOS Apple One），取代手機原本 TitleBar 單 `‹`。`TripStackLayout` 手機支也注入 `closeStack` 讓 `✕` 可用。完成鈕一律 children bottom-bar。
+  - **桌機底部玻璃膠囊 nav 置中**：`(100vw+sidebar)/4`（偏 sidebar+中欄）→ **`(100vw+sidebar)/2`**（中欄+右欄內容區正中，實測 x=768）。
+  - 鎖測：`global-bottom-nav-5tab`→`global-bottom-nav-4tab`（4 tab + 無帳號/登入 tab + grid 4）；`operation-shell`/`edit-entry`/`entry-action`/`mockup-typography` 由 TitleBar chrome → StackPanelHeader（back label 返回上一層、confirm 走 bottom bar）。tsc ✓ · **432 檔 3755 test 全綠**。實機 QA（dev 402 手機 / 1320 桌機，mock auth）：手機 4-tab + 帳號圓圈 R + 操作 `‹`/`✕` drill-down；桌機 nav 置中 + 帳號圓圈桌機隱藏 + sidebar chip 保留、擷圖存證。
+- **DESIGN.md 同步手機 IA**（4-tab + header 帳號圓圈 + 操作 drill-down 共用 header）。
+
 ## [2.55.96] - 2026-07-18
 
 ### Added

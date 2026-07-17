@@ -77,15 +77,19 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
     expect(tripFormStyles).toContain('--font-size-title');
   });
 
-  it('AddStopPage 經 OperationShell 用 TitleBar 處理 page heading (font-weight 700 由 .tp-titlebar-title token 負責)', () => {
-    // 2026-05-03 modal-to-fullpage：改全頁後 page heading 由 TitleBar render。
-    // rev2「6 條全接」（2026-07-18）：AddStopPage 再改走 <OperationShell title=...>，
-    // 整頁模式由 OperationShell 內部 render <TitleBar>。驗 AddStopPage → OperationShell
-    // → TitleBar 這條鏈仍在，font-weight 規則仍由 tokens.css .tp-titlebar-title 統一管。
+  it('AddStopPage 經 OperationShell 用共用 StackPanelHeader 處理 page heading (font-weight 700 token 治理)', () => {
+    // 2026-05-03 modal-to-fullpage：page heading 由 chrome 統一 render，font-weight token 化。
+    // rev2「6 條全接 → 手機也做」（2026-07-18）：AddStopPage 走 <OperationShell title=...>，
+    // 兩形態（桌機 panel + 手機 drill-down）都用共用 StackPanelHeader（非 TitleBar）。
+    // 驗 AddStopPage → OperationShell → StackPanelHeader 這條鏈 + heading weight 700 token 化。
     expect(addStopPage).toMatch(/import OperationShell from/);
     expect(addStopPage).toMatch(/<OperationShell[\s\S]*?title=/);
-    expect(opShell).toMatch(/import TitleBar from/);
-    expect(opShell).toMatch(/<TitleBar\s/);
+    expect(opShell).toMatch(/import StackPanelHeader from/);
+    expect(opShell).toMatch(/<StackPanelHeader\s/);
+    // StackPanelHeader 標題 weight 700（操作頁 heading 治理）
+    const stackHeader = readFile('src/components/shell/StackPanelHeader.tsx');
+    expect(stackHeader).toMatch(/tp-stack-head-title[\s\S]*?font-weight:\s*700/);
+    // .tp-titlebar-title 700 仍在（走 TitleBar 的根頁/詳情用）
     expect(tokens).toMatch(/\.tp-titlebar-title\s*\{[\s\S]*?font-weight:\s*700/);
   });
 

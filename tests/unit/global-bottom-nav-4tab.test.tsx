@@ -1,13 +1,13 @@
 /**
- * GlobalBottomNav 5-tab unit test — Section 5 (terracotta-mockup-parity-v2 / E4)
+ * GlobalBottomNav 4-tab unit test — rev2「手機也做」（owner 2026-07-18）
  *
- * 驗 mockup section 02 對齊：
- *   - logged-in 5 tab (v2.21.0)：聊天 / 行程 / 地圖 / 收藏 / 帳號
- *   - logged-out 5 tab (v2.21.0)：聊天 / 行程 / 地圖 / 收藏 / 登入
- *   - 帳號 entry → /account
- *   - 「地圖」 active 對 /map + /trip/:id/map (但不對 /manage/map-xxx)
- *   - 「行程」 active 對 /trips + /trip/:id (但不對 /trip/:id/map)
- *   - 觸控目標 ≥44px (min-height CSS)
+ * 底部 nav 由 5-tab 降 4-tab：聊天 / 行程 / 地圖 / 收藏（帳號/登入 移出 tab slot →
+ * 手機統一 header 右上帳號圓圈 <AccountCircle/>、桌機 sidebar 左下 chip）。
+ * 對齊 mockup「4 格：帳號移到 titlebar 右上，不佔 tab slot」。
+ *   - authed / anon 皆 4 tab（無帳號、無登入）
+ *   - 「地圖」 active 對 /map + /trip/:id/map（不對 /manage/map-xxx）
+ *   - 「行程」 active 對 /trips + /trip/:id（不對 /trip/:id/map）
+ *   - 觸控目標 ≥44px
  */
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -22,37 +22,29 @@ function renderNav(opts: { authed: boolean; pathname: string }) {
   );
 }
 
-describe('GlobalBottomNav — 5-tab IA', () => {
-  it('logged-in render 5 tabs：聊天 / 行程 / 地圖 / 收藏 / 帳號 (v2.21.0)', () => {
+describe('GlobalBottomNav — 4-tab IA（rev2 帳號移 header）', () => {
+  it('logged-in render 4 tabs：聊天 / 行程 / 地圖 / 收藏（無帳號 tab）', () => {
     renderNav({ authed: true, pathname: '/trips' });
     expect(screen.getByTestId('global-bottom-nav-chat')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-trips')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-map')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-favorites')).toBeTruthy();
-    expect(screen.getByTestId('global-bottom-nav-account')).toBeTruthy();
+    // 帳號/登入 移出 tab slot → header 帳號圓圈
+    expect(screen.queryByTestId('global-bottom-nav-account')).toBeNull();
     expect(screen.queryByTestId('global-bottom-nav-login')).toBeNull();
   });
 
-  it('logged-out 5 tab 末位是「登入」 (替換「帳號」)', () => {
+  it('logged-out 也 4 tab（無登入 tab；登入入口在 header 帳號圓圈）', () => {
     renderNav({ authed: false, pathname: '/trips' });
-    expect(screen.getByTestId('global-bottom-nav-login')).toBeTruthy();
+    expect(screen.getByTestId('global-bottom-nav-chat')).toBeTruthy();
+    expect(screen.getByTestId('global-bottom-nav-favorites')).toBeTruthy();
+    expect(screen.queryByTestId('global-bottom-nav-login')).toBeNull();
     expect(screen.queryByTestId('global-bottom-nav-account')).toBeNull();
   });
 
-  it('「帳號」 entry href 指向 /account (不是 /settings/sessions)', () => {
-    renderNav({ authed: true, pathname: '/account' });
-    const account = screen.getByTestId('global-bottom-nav-account') as HTMLAnchorElement;
-    expect(account.getAttribute('href')).toBe('/account');
-  });
-
-  it('在 /account 路徑時「帳號」 tab is-active', () => {
-    renderNav({ authed: true, pathname: '/account' });
-    expect(screen.getByTestId('global-bottom-nav-account').className).toContain('is-active');
-  });
-
-  it('在 /settings/sessions「帳號」也算 active (matchPrefixes 涵蓋 /settings)', () => {
-    renderNav({ authed: true, pathname: '/settings/sessions' });
-    expect(screen.getByTestId('global-bottom-nav-account').className).toContain('is-active');
+  it('nav 只 render 4 個連結（無帳號/登入）', () => {
+    const { container } = renderNav({ authed: true, pathname: '/trips' });
+    expect(container.querySelectorAll('a.tp-global-bottom-nav-btn').length).toBe(4);
   });
 
   it('在 /map「地圖」 tab is-active', () => {
@@ -86,7 +78,7 @@ describe('GlobalBottomNav — 5-tab IA', () => {
     expect(screen.getByTestId('global-bottom-nav-chat').className).toContain('is-active');
   });
 
-  it('在 /explore「探索」 tab is-active', () => {
+  it('在 /explore「收藏」 tab is-active', () => {
     renderNav({ authed: true, pathname: '/explore' });
     expect(screen.getByTestId('global-bottom-nav-favorites').className).toContain('is-active');
   });
@@ -97,10 +89,10 @@ describe('GlobalBottomNav — 5-tab IA', () => {
     expect(style).toMatch(/min-height:\s*var\(--spacing-tap-min,\s*44px\)/);
   });
 
-  it('CSS 含 grid 5 col (mockup section 02)', () => {
+  it('CSS 含 grid 4 col（rev2 帳號移 header）', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/grid-template-columns:\s*repeat\(5,\s*1fr\)/);
+    expect(style).toMatch(/grid-template-columns:\s*repeat\(4,\s*1fr\)/);
   });
 
   it('active state 含 2px top indicator (mockup 規格)', () => {

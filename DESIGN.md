@@ -242,7 +242,8 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 ### Unified App Shell
 > **⚠️ rev2 owner 2026-07-17（桌機 shell 改版，v2.55.94+）**：桌機 primary nav 由 **左欄 sidebar** 搬到 **底部浮動玻璃膠囊**（`GlobalBottomNav` @≥1024 顯示、置中 sidebar+中欄）；**左欄 sidebar 改為「我的行程」清單**（`DesktopSidebar` = trip-list + 帳號 chip 左下，經 `useMyTrips` 注入）。三欄 grid `216px 1fr 1fr`（`--grid-3pane-desktop`）。下方舊 IA 段落逐條改寫中。
-- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏（+ 帳號）。**rev2：primary nav 在底部浮動玻璃膠囊**（桌機 + compact 皆顯示）；帳號桌機在左下 sidebar account chip、compact 在 bottom nav 帳號 tab（膠囊桌機隱藏帳號 tab）；匿名狀態顯示登入入口。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
+- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏。**rev2：primary nav 在底部浮動玻璃膠囊 4-tab**（桌機 + compact 皆顯示；桌機置中於中欄+右欄內容區 `(100vw+sidebar)/2`）；**帳號移出 tab slot** → 桌機在左下 sidebar account chip、compact 在**統一 header 右上帳號圓圈**（`AccountCircle` 首字母 → `/account`；匿名 → `/login`；桌機 CSS 隱藏）。對齊 mockup「4 格：帳號移到 titlebar 右上」。
+- **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕一律走 children 內 `.tp-page-bottom-bar`。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
 - **Desktop shell（rev2）:** 三欄 `216px 1fr 1fr` — 左欄 **我的行程清單** sidebar（+ 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；底部浮動玻璃膠囊 primary nav（置中 sidebar+中欄、不隨捲動隱藏）。
 - **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。底部導航向下捲動隱藏、向上捲動顯示。
 - **Header rule:** 所有主功能頁 titlebar 一律 sticky；桌機與 compact 都是單行標題，不放 eyebrow、meta、helper text。

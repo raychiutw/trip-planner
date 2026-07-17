@@ -29,9 +29,11 @@ export interface TitleBarProps {
   actions?: ReactNode;
   /** 返回 button 的 aria-label，預設「返回」。 */
   backLabel?: string;
+  /** rev2：手機統一 header 右上帳號圓圈（<AccountCircle/>）。桌機由 CSS 隱藏。 */
+  account?: ReactNode;
 }
 
-export default function TitleBar({ id, className, title, back, actions, backLabel = '返回' }: TitleBarProps) {
+export default function TitleBar({ id, className, title, back, actions, backLabel = '返回', account }: TitleBarProps) {
   const headerClass = className ? `tp-titlebar ${className}` : 'tp-titlebar';
   return (
     <header id={id} className={headerClass} data-titlebar="true" data-testid="titlebar">
@@ -47,6 +49,7 @@ export default function TitleBar({ id, className, title, back, actions, backLabe
       )}
       <h1 className="tp-titlebar-title">{title}</h1>
       {actions && <div className="tp-titlebar-actions">{actions}</div>}
+      {account}
     </header>
   );
 }

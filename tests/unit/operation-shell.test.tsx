@@ -78,7 +78,8 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(closeStack).toHaveBeenCalledTimes(1);
   });
 
-  it('inStack=false（手機／無 host）→ 整頁 AppShell + TitleBar + actions，無 StackPanelHeader', () => {
+  it('inStack=false（手機全頁下鑽）→ 整頁 AppShell + 共用 StackPanelHeader（‹/✕），無 TitleBar', () => {
+    // rev2「手機也做」：手機操作頁也用共用 drill-down header（.dd-top ‹/✕），非 TitleBar。
     const { getByTestId, queryByTestId, getByText } = render(
       <MemoryRouter>
         <OperationShell
@@ -93,10 +94,10 @@ describe('OperationShell — 雙形態外殼', () => {
       </MemoryRouter>,
     );
     expect(getByTestId('app-shell')).toBeTruthy();
-    expect(getByTestId('titlebar')).toBeTruthy();
+    expect(getByTestId('stack-panel-header')).toBeTruthy();
     expect(getByText('面板內容')).toBeTruthy();
-    // 整頁模式 TitleBar actions（完成鈕）有 render
-    expect(getByTestId('op-actions')).toBeTruthy();
-    expect(queryByTestId('stack-panel-header')).toBeNull();
+    // 手機全頁也無 TitleBar、無 titlebar action（完成由 children bottom-bar 提供）
+    expect(queryByTestId('titlebar')).toBeNull();
+    expect(queryByTestId('op-actions')).toBeNull();
   });
 });

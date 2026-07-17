@@ -32,6 +32,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import AccountCircle from '../components/shell/AccountCircle';
 import Icon from '../components/shared/Icon';
 import AiConsentSheet from '../components/AiConsentSheet';
 import MarkdownText from '../components/shared/MarkdownText';
@@ -829,6 +830,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       {/* v2.31.86 embedded mode：TripSheet 已有 trip name + tab header，skip TitleBar repeat。 */}
       {!embedded && <TitleBar
         title={activeTrip?.title || activeTrip?.name || '聊天'}
+        account={<AccountCircle />}
         actions={trips && trips.length > 0 && (
           <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
             <button

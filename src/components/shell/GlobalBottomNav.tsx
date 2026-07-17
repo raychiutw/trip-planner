@@ -37,12 +37,14 @@ const TRIPS_ACTIVE_PATTERNS = [/^\/trip\/[^/]+(?:\/?$|\/(?!(?:map|stop\/[^/]+\/m
 // poi-favorites-rename:「收藏」 tab — /favorites primary + /favorites/* 子路由 + /explore (secondary entry)
 const FAVORITES_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/favorites\//];
 
+// rev2 owner 2026-07-18「手機也做」：底部 nav 由 5-tab 降 **4-tab**（聊天/行程/地圖/收藏）。
+// 帳號/登入移出 tab slot → 手機統一 header 右上帳號圓圈（<AccountCircle/> → /account 或
+// /login）、桌機為 sidebar 左下 chip。對齊 mockup「4 格：帳號移到 titlebar 右上」。
 const NAV_ITEMS_ANON: ReadonlyArray<NavItem> = [
   { key: 'chat',      label: '聊天', href: '/chat',      icon: 'nav-chat',  matchPrefixes: ['/chat'] },
   { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-trips',  matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
   { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
   { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav', matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
-  { key: 'login',     label: '登入', href: '/login',     icon: 'user',  matchPrefixes: ['/login'] },
 ];
 
 const NAV_ITEMS_AUTH: ReadonlyArray<NavItem> = [
@@ -50,8 +52,6 @@ const NAV_ITEMS_AUTH: ReadonlyArray<NavItem> = [
   { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-trips',  matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
   { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
   { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav', matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
-  // Section 2 (terracotta-account-hub-page) + E4：帳號 entry 改 /account hub
-  { key: 'account',   label: '帳號', href: '/account',   icon: 'user',  matchPrefixes: ['/account', '/settings'] },
 ];
 
 function isItemActive(pathname: string, item: NavItem): boolean {
@@ -74,7 +74,7 @@ const SCOPED_STYLES = `
   inset-block-end: 0;
   left: 0; right: 0;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   height: var(--nav-height-mobile, 64px);
   background: color-mix(in srgb, var(--color-background) 97%, transparent);
   backdrop-filter: blur(14px);
@@ -158,8 +158,6 @@ const SCOPED_STYLES = `
     color: var(--color-accent-foreground);
   }
   .tp-global-bottom-nav-btn.is-active::before { display: none; }
-  /* 帳號在 sidebar chip → 桌機膠囊隱藏帳號 tab */
-  [data-testid="global-bottom-nav-account"] { display: none; }
 }
 `;
 

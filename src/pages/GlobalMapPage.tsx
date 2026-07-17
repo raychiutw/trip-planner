@@ -43,6 +43,7 @@ import { apiFetch } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
+import AccountCircle from '../components/shell/AccountCircle';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
@@ -90,6 +91,12 @@ const SCOPED_STYLES = `
 
 /* Header — trip switcher.
  * z-index 1000 確保壓過 leaflet marker pane (z-index 600+) 跟 popup pane (700+)。 */
+/* rev2「手機也做」：帳號圓圈浮動右上（與 header 同 z 層；圓圈自身桌機隱藏）。 */
+.tp-global-map-account {
+  position: absolute; top: 16px; right: 16px;
+  z-index: 1000;
+  pointer-events: auto;
+}
 .tp-global-map-header {
   position: absolute; top: 16px; left: 16px;
   z-index: 1000;
@@ -862,6 +869,8 @@ export default function GlobalMapPage() {
         </div>
       ) : (
         <>
+          {/* rev2「手機也做」：地圖全屏無 titlebar → 帳號圓圈浮動右上（自身 CSS 桌機隱藏）。 */}
+          <div className="tp-global-map-account"><AccountCircle /></div>
           {/* QA 2026-04-26 PR-I：簡化 header — 拿掉「Global Map」 eyebrow + stops/days
            * meta，只留 trip dropdown。資訊在 sheet overview 已重複顯示。 */}
           {trips && trips.length > 0 && (
