@@ -26,6 +26,9 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
   // 2026-05-03 modal-to-fullpage migration: AddStopModal.tsx 已 DEL，
   // form 移到 src/pages/AddStopPage.tsx。
   const addStopPage = readFile('src/pages/AddStopPage.tsx');
+  // rev2「6 條全接」：操作頁 chrome（整頁 TitleBar / 桌機右欄 StackPanelHeader）
+  // 由 OperationShell 統一負責，page heading 走它的 title prop。
+  const opShell = readFile('src/components/shell/OperationShell.tsx');
   const bnav = readFile('src/components/shell/GlobalBottomNav.tsx');
 
   it('--font-size-body 對齊 mockup body 16px (1rem)', () => {
@@ -74,13 +77,15 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
     expect(tripFormStyles).toContain('--font-size-title');
   });
 
-  it('AddStopPage 用 TitleBar 處理 page heading (font-weight 700 由 .tp-titlebar-title token 負責)', () => {
-    // 2026-05-03 modal-to-fullpage migration: 原本驗 .tp-add-stop-title font-weight 700
-    // 改全頁後 modal h2 不存在，page heading 由 TitleBar render，font-weight 規則由
-    // tokens.css .tp-titlebar-title 統一管。此處改驗 AddStopPage import TitleBar +
-    // tokens.css 仍保有 .tp-titlebar-title 700 weight rule。
-    expect(addStopPage).toMatch(/import TitleBar from/);
-    expect(addStopPage).toMatch(/<TitleBar\s/);
+  it('AddStopPage 經 OperationShell 用 TitleBar 處理 page heading (font-weight 700 由 .tp-titlebar-title token 負責)', () => {
+    // 2026-05-03 modal-to-fullpage：改全頁後 page heading 由 TitleBar render。
+    // rev2「6 條全接」（2026-07-18）：AddStopPage 再改走 <OperationShell title=...>，
+    // 整頁模式由 OperationShell 內部 render <TitleBar>。驗 AddStopPage → OperationShell
+    // → TitleBar 這條鏈仍在，font-weight 規則仍由 tokens.css .tp-titlebar-title 統一管。
+    expect(addStopPage).toMatch(/import OperationShell from/);
+    expect(addStopPage).toMatch(/<OperationShell[\s\S]*?title=/);
+    expect(opShell).toMatch(/import TitleBar from/);
+    expect(opShell).toMatch(/<TitleBar\s/);
     expect(tokens).toMatch(/\.tp-titlebar-title\s*\{[\s\S]*?font-weight:\s*700/);
   });
 

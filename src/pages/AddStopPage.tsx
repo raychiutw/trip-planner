@@ -30,7 +30,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
@@ -49,10 +48,7 @@ import {
   type PoiSearchCategory,
   type RegionOption,
 } from '../lib/poiSearchHelpers';
-import AppShell from '../components/shell/AppShell';
-import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import TitleBar from '../components/shell/TitleBar';
+import OperationShell from '../components/shell/OperationShell';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -638,7 +634,6 @@ const SCOPED_STYLES = `
 
 export default function AddStopPage() {
   const auth = useRequireAuth();
-  const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -964,18 +959,17 @@ export default function AddStopPage() {
   // 上方讓 user 選一天再 unlock form（取代既有 invalid-params blocking page）。
   if (!tripId) {
     return (
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-add-stop-page-shell" data-testid="add-stop-page">
-            <TitleBar title="加入景點" back={handleBack} backLabel="返回行程列表" />
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
-              無效的行程
-            </div>
-          </div>
-        }
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      <OperationShell
+        shellClassName="tp-add-stop-page-shell"
+        testId="add-stop-page"
+        title="加入景點"
+        back={handleBack}
+        backLabel="返回行程列表"
+      >
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
+          無效的行程
+        </div>
+      </OperationShell>
     );
   }
 
@@ -995,17 +989,15 @@ export default function AddStopPage() {
   return (
     <>
       <ToastContainer />
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-add-stop-page-shell" data-testid="add-stop-page">
-            <style>{SCOPED_STYLES}</style>
-            <TitleBar
-              title="加入景點"
-              back={handleBack}
-              backLabel="返回前頁"
-              actions={titleBarActions}
-            />
+      <OperationShell
+        shellClassName="tp-add-stop-page-shell"
+        testId="add-stop-page"
+        title="加入景點"
+        back={handleBack}
+        backLabel="返回前頁"
+        actions={titleBarActions}
+        scopedStyles={SCOPED_STYLES}
+      >
             <div className="tp-add-stop-page-day-meta">{dayLabel}</div>
 
             {/* v2.31.99 day picker chip row — 沒帶 ?day=N 進來時讓 user 選；帶了
@@ -1414,10 +1406,7 @@ export default function AddStopPage() {
                 </button>
               </div>
             </div>
-          </div>
-        }
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      </OperationShell>
     </>
   );
 }

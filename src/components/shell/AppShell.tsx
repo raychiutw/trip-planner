@@ -163,6 +163,17 @@ body.print-mode .app-shell-main {
   .app-shell-sidebar, .app-shell-sheet, .app-shell-bottom-nav { display: none; }
   .app-shell-main { padding-bottom: 0; }
 }
+
+/* rev2 owner 2026-07-18「6 條全接」：操作頁在右欄 sheet 當 bare panel 時，其
+ * .tp-page-bottom-bar 預設是整頁 position:fixed(left:240 → right)，會橫跨中欄。
+ * 在 sheet 內改 sticky → 收進 panel 寬度、貼 panel 底（panel 本身即 scroll 容器）。 */
+@media (min-width: 1024px) {
+  .app-shell-sheet .tp-page-bottom-bar {
+    position: sticky;
+    left: auto;
+    right: auto;
+  }
+}
 `;
 
 export const APP_SHELL_LAYOUT_3PANE = '3pane';

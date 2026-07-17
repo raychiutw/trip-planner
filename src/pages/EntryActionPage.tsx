@@ -35,7 +35,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
@@ -48,10 +47,7 @@ import {
   shortenDateLabel,
   type DayOption,
 } from '../lib/entryAction';
-import AppShell from '../components/shell/AppShell';
-import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import TitleBar from '../components/shell/TitleBar';
+import OperationShell from '../components/shell/OperationShell';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -246,7 +242,6 @@ interface EntryActionPageProps {
 
 export default function EntryActionPage({ action }: EntryActionPageProps) {
   const auth = useRequireAuth();
-  const { user } = useCurrentUser();
   const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
@@ -356,18 +351,17 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
   if (!auth.user) return null;
   if (!tripId || !entryIdNum) {
     return (
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-entry-action-shell" data-testid="entry-action-page">
-            <TitleBar title={heading} back={handleBack} backLabel="返回行程列表" />
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
-              無效的行程或景點 ID
-            </div>
-          </div>
-        }
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      <OperationShell
+        shellClassName="tp-entry-action-shell"
+        testId="entry-action-page"
+        title={heading}
+        back={handleBack}
+        backLabel="返回行程列表"
+      >
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
+          無效的行程或景點 ID
+        </div>
+      </OperationShell>
     );
   }
 
@@ -385,18 +379,15 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
   return (
     <>
       <ToastContainer />
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-entry-action-shell" data-testid="entry-action-page">
-            <style>{SCOPED_STYLES}</style>
-            <TitleBar
-              title={heading}
-              back={handleBack}
-              backLabel="返回前頁"
-              actions={titleBarActions}
-            />
-
+      <OperationShell
+        shellClassName="tp-entry-action-shell"
+        testId="entry-action-page"
+        title={heading}
+        back={handleBack}
+        backLabel="返回前頁"
+        actions={titleBarActions}
+        scopedStyles={SCOPED_STYLES}
+      >
             <div className="tp-entry-action-content">
               {loading && (
                 <div className="tp-entry-action-loading" data-testid="entry-action-loading">
@@ -502,10 +493,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
                 </button>
               </div>
             )}
-          </div>
-        }
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      </OperationShell>
     </>
   );
 }

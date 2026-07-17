@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.96] - 2026-07-18
+
+### Added
+- **V3 rev2 右欄堆疊面板：6 條操作流程全接**（owner「一次到位：6 條全接」）— #10 架構級收尾。桌機（≥1024）操作頁（加景點 / 新增 / 複製移動 / 換景點 / 編輯景點 / 編輯行程）由「navigate 走整頁、炸掉整個 shell」改為 **右欄 bare panel 疊在中欄行程詳情上**（`‹` 前一頁 / `✕` 整個關閉），中欄詳情 context 全程保留；手機維持整頁 drill-down（**零行為變更**）。
+  - **`SheetStackContext`**（`inStack` / `closeStack`）+ **`TripStackLayout`**（pathless layout route，掛 `TripLayout` 下、包住 6 條操作路由）：桌機 render 三欄 host（sidebar｜`<TripPage noShell>` 中欄詳情｜右欄 sheet = `<Outlet>`）；操作間切換（加景點→換景點）host 不 unmount → 中欄保留、只右欄換。手機 passthrough `<Outlet>`（`useMediaQuery('(min-width:1024px)')` 判定）。
+  - **`OperationShell`** 雙形態外殼取代各頁 hardcode 的 `<AppShell>+<TitleBar>`：整頁模式 render `AppShell+TitleBar`（既有行為）、stack 模式 render `StackPanelHeader+內容`（bare panel、由 host 保留中欄）。children / shellClassName / scopedStyles 兩形態共用 → 每頁轉換僅換外殼、1000+ 行內部邏輯零改動。
+  - **`StackPanelHeader`** 加 sticky top glass（比照 TitleBar），`title` 放寬 `ReactNode`。
+  - **`.tp-page-bottom-bar`** 在 `.app-shell-sheet` 內由整頁 `position:fixed(left:240)` → `sticky` → 收進 panel 寬度（否則橫跨中欄）。
+  - route restructure：6 條操作路由包進 `<Route element={<TripStackLayout>}>`（**URL 不變、deep-link 不破**）。
+  - 鎖測：新增 `operation-shell` 契約測（stack / 整頁雙形態 + `‹`/`✕` callback）；`change-poi-titlebar-action-removed` / `mockup-typography-compliance` source-lock 由 `<TitleBar>` → `<OperationShell>`。tsc ✓ · **431 檔 3749 test 全綠**。實機 QA（dev 1320，mock auth lean.lean@gmail.com）6 條流程桌機皆右欄堆疊（中欄詳情保留、`StackPanelHeader` `‹`/`✕`、bottom bar 收進 panel）、手機維持整頁；擷圖存證。
+  - **已知後續 polish**：進操作時的一次性 shell swap（`/trips?selected=` → `/trip/:id/*`，中欄 `TripPage` re-mount）非 seamless；真·多層 z-stack 深度卡（L3/L4 疊影）目前為單面板 + route back 語意。兩者為視覺增強、不影響功能。
+- **rev2 icon 長尾 → Cupertino SF outline** — 44 個 chrome/action icon（plus/trash/check/pencil/search/chevrons/gear/send/copy/x-circle/download/upload/filter/target/swap/layers/maximize/minimize/info/warning…）由 Material 實心改 SF thin outline，對齊 Flutter CupertinoIcons（跨 web+mobile 一致）；content/data glyph（天氣/交通/POI 類別/食宿/自然）刻意留實心（地圖 marker / 分類徽章小尺寸可讀性佳、Flutter 同樣 filled）。自動從 `ICONS` map 生成 gallery，light+dark 雙主題逐一目視 44 個 outline 無破圖、stroke 走 `currentColor` 主題自適應。
+
 ## [2.55.95] - 2026-07-18
 
 ### Changed

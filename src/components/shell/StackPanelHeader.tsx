@@ -7,10 +7,11 @@
  *
  * iOS navigation stack：「‹」永遠只退一階（L4→L3），「✕」才收整疊。
  */
+import type { ReactNode } from 'react';
 import Icon from '../shared/Icon';
 
 export interface StackPanelHeaderProps {
-  title?: string;
+  title?: ReactNode;
   /** 有值 → 顯示左上「‹」返上一層（前一頁）。L2 modal 不傳（只 close）。 */
   onBack?: () => void;
   /** 右上「✕」關整疊（整個關閉）。 */
@@ -22,6 +23,12 @@ export const STACK_PANEL_HEADER_STYLES = `
   display: flex; align-items: center; gap: 8px;
   height: 52px; padding: 0 8px 0 6px; flex-shrink: 0;
   border-bottom: 1px solid var(--color-border);
+  /* 桌機右欄 panel / 手機全頁 drill-down 都以外層為 scroll container，header
+   * 需 sticky top 才不隨內容捲走（比照 TitleBar sticky glass chrome）。 */
+  position: sticky; top: 0; z-index: 3;
+  background: color-mix(in srgb, var(--color-background) 88%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 .tp-stack-head-btn {
   width: 38px; height: 38px; border-radius: var(--radius-full);

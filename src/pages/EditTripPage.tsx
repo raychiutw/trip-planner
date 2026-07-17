@@ -31,15 +31,11 @@ import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetchRaw } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
-import AppShell from '../components/shell/AppShell';
-import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import TitleBar from '../components/shell/TitleBar';
+import OperationShell from '../components/shell/OperationShell';
 import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
@@ -678,7 +674,6 @@ function destNamesEqual(a: DestinationRow[], b: DestinationRow[]): boolean {
 
 export default function EditTripPage() {
   const auth = useRequireAuth();
-  const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
@@ -1096,18 +1091,17 @@ export default function EditTripPage() {
 
   if (!tripId) {
     return (
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-edit-page-shell" data-testid="edit-trip-page">
-            <TitleBar title="編輯行程" back={handleBack} backLabel="返回行程列表" />
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
-              無效的行程 ID
-            </div>
-          </div>
-        }
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      <OperationShell
+        shellClassName="tp-edit-page-shell"
+        testId="edit-trip-page"
+        title="編輯行程"
+        back={handleBack}
+        backLabel="返回行程列表"
+      >
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
+          無效的行程 ID
+        </div>
+      </OperationShell>
     );
   }
 
@@ -1118,18 +1112,15 @@ export default function EditTripPage() {
   return (
     <>
       <ToastContainer />
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-edit-page-shell" data-testid="edit-trip-page">
+      <OperationShell
+        shellClassName="tp-edit-page-shell"
+        testId="edit-trip-page"
+        title="編輯行程"
+        back={handleBack}
+        backLabel="返回前頁"
+      >
             <style>{TRIP_FORM_STYLES}</style>
             <style>{SCOPED_STYLES}</style>
-            <TitleBar
-              title="編輯行程"
-              back={handleBack}
-              backLabel="返回前頁"
-            />
-
             <form id="edit-trip-form" ref={formRef} onSubmit={handleSubmit} className="tp-edit-page-form">
               <p className="tp-edit-page-sub">修改目的地 + 行程天數。</p>
 
@@ -1439,10 +1430,7 @@ export default function EditTripPage() {
                 </div>
               </div>
             )}
-          </div>
-        }
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      </OperationShell>
       {/* v2.33.0: destructive confirm 移除 day with entries / 最後一天 fallback。 */}
       <ConfirmModal
         open={!!pendingDelete}

@@ -28,9 +28,11 @@ describe('ChangePoiPage titleBar right action 拔除', () => {
     expect(SRC).not.toMatch(/change-poi-titlebar-submit/);
   });
 
-  it('TitleBar 無 actions prop', () => {
-    // 取主 JSX `<TitleBar title={pageTitle} back={goBack} ... />`
-    const m = SRC.match(/<TitleBar title=\{pageTitle\}[\s\S]{0,200}?\/>/);
+  it('OperationShell 無 actions prop', () => {
+    // rev2「6 條全接」：ChangePoiPage 改走 <OperationShell>（整頁 TitleBar / 桌機
+    // 右欄 StackPanelHeader 由其負責）。page heading 由其 title 提供、無右上 action；
+    // submit 唯一入口仍是 bottom sticky bar（change-poi-submit）。
+    const m = SRC.match(/<OperationShell[\s\S]{0,260}?>/);
     expect(m).toBeTruthy();
     expect(m![0]).not.toMatch(/actions=/);
   });

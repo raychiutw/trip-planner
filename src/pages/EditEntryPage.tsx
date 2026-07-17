@@ -27,10 +27,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import AppShell from '../components/shell/AppShell';
-import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import TitleBar from '../components/shell/TitleBar';
+import OperationShell from '../components/shell/OperationShell';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import Icon from '../components/shared/Icon';
 import InlineError from '../components/shared/InlineError';
@@ -38,7 +35,6 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
 import { CATEGORY_ICON } from '../components/trip/CategoryPicker';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useAutosave } from '../hooks/useAutosave';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
@@ -974,7 +970,6 @@ export default function EditEntryPage() {
   const entryId = Number(entryIdParam);
   const navigate = useNavigate();
   const goBackHref = tripId ? `/trips?selected=${encodeURIComponent(tripId)}` : '/trips';
-  const { user } = useCurrentUser();
 
   const [entry, setEntry] = useState<EntryApi | null>(null);
   const [poiInfo, setPoiInfo] = useState<{ name: string; poiType: string | null } | null>(null);
@@ -1629,13 +1624,13 @@ export default function EditEntryPage() {
   // mockup `儲存失敗 → 重試 + toast error`)。idle/pending/saving/saved 狀態
   // 都不再顯示視覺干擾，user 信任 auto-save 默默完成。
   const main = (
-    <div className="tp-app">
-      <style>{SCOPED_STYLES}</style>
-      <TitleBar
-        title={tripName ? `編輯景點 · ${tripName}` : '編輯景點'}
-        back={handleCancel}
-        backLabel="返回行程"
-      />
+    <OperationShell
+      shellClassName="tp-app"
+      title={tripName ? `編輯景點 · ${tripName}` : '編輯景點'}
+      back={handleCancel}
+      backLabel="返回行程"
+      scopedStyles={SCOPED_STYLES}
+    >
       <main className="tp-page-content">
         <div className="tp-edit-entry">
           {loading ? (
@@ -2057,17 +2052,13 @@ export default function EditEntryPage() {
         onConfirm={() => void handleDeleteStop()}
         onCancel={() => setShowDeleteStopConfirm(false)}
       />
-    </div>
+    </OperationShell>
   );
 
   return (
     <>
       <ToastContainer />
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={main}
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      {main}
     </>
   );
 }
