@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.89] - 2026-07-17
+
+### Changed
+- **V3 改版 Phase 2 + 3（桌機 React）：卡片 neutral surface + 行程頁去封面 + 地圖 zoom 12/16** — 承 Phase 1（三色收斂）。**Phase 2**：timeline stop 卡 / 探索卡 / AddPoiFavorite 摘要的 `--tone-subtle` 從柔褐 tint 改中性 `secondary`/`tertiary`（design.md §2.3「所有卡同一 system surface」），`--tone`/`-deep` 保留柔褐供 dot/數字/icon glyph 承載 accent；CategoryPicker / EditableCategoryChip / explore-subtab 是 selector chip、選中態保留 accent 不動。**Phase 3**：行程一覽 `.tp-trip-card-cover` 封面移除（design.md「行程頁不用封面」）+ 卡身中性化（destination 三色退場）；地圖 `useGoogleMap` 預設 zoom 11→**12**（每日行程固定預設）、`useMapViewport` 明確聚焦 POI（detail/marker 點擊）15→**16**（design.md §7）。3768 unit + tokens-layer e2e 全過。**驗證**：本地真瀏覽器 /qa（mock auth Ray）截 timeline neutral 卡 before/after；行程一覽 grid 去封面因 localhost SPA 選取黏著未截到 grid 視覺，改 code 層驗證（cover div 移除、無測試斷言、tsc+test 綠）。**剩餘**：單層 DAY selector 的「地圖/行程」前導頁切 toggle（現為單列 DAY tabs、sidebar 已常駐）留後續。SoT：design.md §2/§6/§7。
+
 ## [2.55.88] - 2026-07-17
 
 ### Changed
