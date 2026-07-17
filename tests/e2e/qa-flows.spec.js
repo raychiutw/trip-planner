@@ -91,8 +91,10 @@ test.describe('QA Flow 2 — 新增景點 (custom tab wedge guard)', () => {
 
     // CI 無 Google Maps browser key → map fail-load → customCoord 永遠 null →
     // 完成 disabled，不會 fire POST entries。確認 guard 阻擋。
-    const titleBarConfirm = page.getByTestId('add-stop-titlebar-confirm');
-    await expect(titleBarConfirm).toBeDisabled();
+    // rev2「6 條全接」：桌機 add-stop 改右欄 stack panel（無 titlebar confirm）→
+    // 驗 bottom bar 完成鈕 disabled（stack 模式唯一 confirm 入口）。
+    const bottomConfirm = page.getByTestId('add-stop-confirm');
+    await expect(bottomConfirm).toBeDisabled();
 
     // 確認沒 POST 漏出去
     await page.waitForTimeout(500);

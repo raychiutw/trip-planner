@@ -94,8 +94,12 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await page.goto('/trip/okinawa-trip-2026-Ray');
     await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     await expect(page.getByTestId('add-stop-page')).toBeVisible();
-    // TitleBar 返回 button 用 aria-label 抓 (AddStopPage 設 backLabel="返回前頁")
-    await page.getByRole('button', { name: '返回前頁' }).click();
+    // rev2「6 條全接」：桌機 add-stop 改右欄 stack panel，返回鍵是 StackPanelHeader「‹」
+    // (aria-label 返回上一層)；手機仍整頁 TitleBar「返回前頁」。.or() 兩者皆抓。
+    await page
+      .getByRole('button', { name: '返回前頁' })
+      .or(page.getByRole('button', { name: '返回上一層' }))
+      .click();
     await expect(page).toHaveURL(/\/trip\/okinawa-trip-2026-Ray$|\/trips/);
   });
 
@@ -107,19 +111,17 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await expect(page.getByTestId('add-stop-subtab-all')).not.toHaveClass(/is-active/);
   });
 
-  test('TitleBar 完成按鈕 (responsive icon+text/icon-only) 與 bottom bar 同步 disabled', async ({ page }, testInfo) => {
+  test('完成按鈕（bottom bar，stack 模式唯一 confirm 入口）nothing-selected 時 disabled', async ({ page }, testInfo) => {
     testInfo.skip(testInfo.project.name.startsWith('mobile-'), 'desktop-only inline tab; mobile uses /add-custom-stop fullpage');
     await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
-    // search tab default 0 selected → 兩處 confirm 都 disabled
-    const titleBarConfirm = page.getByTestId('add-stop-titlebar-confirm');
+    // rev2「6 條全接」：桌機 add-stop 改右欄 stack panel → StackPanelHeader 無 titlebar
+    // confirm，完成唯一入口是 bottom bar。search tab default 0 selected → disabled。
     const bottomConfirm = page.getByTestId('add-stop-confirm');
-    await expect(titleBarConfirm).toBeDisabled();
     await expect(bottomConfirm).toBeDisabled();
     // v2.31.94 wedge：自訂 tab 即使 title 填了，map pin coord 沒備齊（CI 無 Google
     // Maps browser key → 地圖 fail load → coord 永遠 null）→ confirm 維持 disabled
     await page.getByTestId('add-stop-tab-custom').click();
     await page.getByTestId('add-stop-custom-title').fill('測試景點');
-    await expect(titleBarConfirm).toBeDisabled();
     await expect(bottomConfirm).toBeDisabled();
   });
 });
