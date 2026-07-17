@@ -122,22 +122,22 @@ async function mountMapPage(url: string) {
 }
 
 describe('F011 — MapPage ?day=N runtime tests', () => {
-  it('?day=2：activeTab 從 DAY 01 顯示 DAY 02 標記', async () => {
+  it('?day=2：activeTab 從 DAY 1 顯示 DAY 2 標記', async () => {
     const { getAllByText } = await mountMapPage('/trip/test-trip/map?day=2');
-    // 麵包屑中有 DAY 02（activeTab = 2）
-    const dayTexts = getAllByText(/DAY 02/i);
+    // 麵包屑中有 DAY 2（activeTab = 2）
+    const dayTexts = getAllByText(/DAY 2\b/i);
     expect(dayTexts.length).toBeGreaterThan(0);
   });
 
-  it('?day=abc（無效值）：回退到預設 day 1，顯示 DAY 01', async () => {
+  it('?day=abc（無效值）：回退到預設 day 1，顯示 DAY 1', async () => {
     const { getAllByText } = await mountMapPage('/trip/test-trip/map?day=abc');
-    const dayTexts = getAllByText(/DAY 01/i);
+    const dayTexts = getAllByText(/DAY 1\b/i);
     expect(dayTexts.length).toBeGreaterThan(0);
   });
 
-  it('?day=999（超出範圍）：回退到預設 day 1，顯示 DAY 01', async () => {
+  it('?day=999（超出範圍）：回退到預設 day 1，顯示 DAY 1', async () => {
     const { getAllByText } = await mountMapPage('/trip/test-trip/map?day=999');
-    const dayTexts = getAllByText(/DAY 01/i);
+    const dayTexts = getAllByText(/DAY 1\b/i);
     expect(dayTexts.length).toBeGreaterThan(0);
   });
 });

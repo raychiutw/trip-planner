@@ -68,13 +68,12 @@ export default function DayNav({
 
   const tabs = useMemo(
     () => days.map((d) => {
-      const eyebrowBase = `DAY ${String(d.dayNum).padStart(2, '0')}`;
+      const eyebrowBase = `DAY ${d.dayNum}`;
       const isToday = d.dayNum === todayDayNum;
       return {
         day: d,
         dayNum: d.dayNum,
         dayLabel: isToday ? `${eyebrowBase} · 今天` : eyebrowBase,
-        dateLabel: formatPillLabel(d),
         ariaLabel: buildAriaLabel(d),
       };
     }),
@@ -110,13 +109,12 @@ export default function DayNav({
       aria-label="行程日期"
       onKeyDown={handleKeyDown}
     >
-      {tabs.map(({ dayNum, dayLabel, dateLabel, ariaLabel }) => {
+      {tabs.map(({ dayNum, dayLabel, ariaLabel }) => {
         const isActive = dayNum === currentDayNum;
         return (
           <MapDayTab
             key={dayNum}
             dayLabel={dayLabel}
-            dateLabel={dateLabel}
             isActive={isActive}
             onClick={() => onSwitchDay(dayNum)}
             ariaLabel={ariaLabel}

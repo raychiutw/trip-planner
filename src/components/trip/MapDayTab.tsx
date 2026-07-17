@@ -1,10 +1,11 @@
 /**
- * MapDayTab — Map page bottom underline tab primitive (also used by TripPage DayNav).
+ * MapDayTab — Map page day-tab primitive (also used by TripPage DayNav).
  *
- * Idle: 透明底 + dayColor eyebrow + muted text + transparent border-bottom
- * Active: accent text + accent border-bottom 2px + 保留 dayColor eyebrow
- *
- * 視覺對應：docs/design-sessions/terracotta-preview-v2.html Section 20 day tabs
+ * 單行「DAY N」膠囊 — owner 2026-07-17 sign-off：去日期副標（當日日期靠中欄
+ * day-header 顯示），active = 淡 tonal pill（非實心 accent thumb）。
+ * Idle: 透明底 + dayColor eyebrow（地圖 per-day）/ muted（行程單色）
+ * Active: 淡 tonal pill 底 + full-opacity eyebrow
+ * 視覺對應：docs/design-sessions/2026-07-17-v3-day-map-glass-capsule.html
  *
  * a11y：用 plain `<button>` 不掛 role=tab — 上層 wrapper (DayNav / MapPage)
  * 用 `<nav>` 包，符合 scroll-to-anchor pattern（panels 一直可見），不適用
@@ -21,11 +22,9 @@ function safeColor(value: string | undefined): string | undefined {
 }
 
 export interface MapDayTabProps {
-  /** 上排 eyebrow 文字（"DAY 01" / "總覽"） */
+  /** 膠囊文字（"DAY 1" / "總覽"） */
   dayLabel: string;
-  /** 下排 date 文字（"7/29" / "7天"），可選 */
-  dateLabel?: string;
-  /** dayColor 套 eyebrow inline style；overview tab 留空 */
+  /** dayColor 套 eyebrow inline style + active pill tint；overview / 行程頁留空 */
   dayColor?: string;
   /** 是否為 selected tab */
   isActive: boolean;
@@ -37,9 +36,9 @@ export interface MapDayTabProps {
   testId?: string;
 }
 
-export default function MapDayTab({ dayLabel, dateLabel, dayColor, isActive, onClick, ariaLabel, testId }: MapDayTabProps) {
-  // Active state border-bottom 用 per-day color (mockup S20 underline 用 day color
-  // 強化 day↔map polyline 視覺對應)。CSS rule 讀 --day-color (有設值才覆蓋)。
+export default function MapDayTab({ dayLabel, dayColor, isActive, onClick, ariaLabel, testId }: MapDayTabProps) {
+  // Active pill 用 per-day color tint（地圖 polyline 對應）；有設值才覆蓋 default
+  // accent。CSS rule 讀 --day-color (有設值才覆蓋)。
   const safeDayColor = safeColor(dayColor);
   const style = isActive && safeDayColor
     ? ({ '--day-color': safeDayColor } as React.CSSProperties)
@@ -60,7 +59,6 @@ export default function MapDayTab({ dayLabel, dateLabel, dayColor, isActive, onC
       >
         {dayLabel}
       </span>
-      {dateLabel && <span className="tp-map-day-tab-date">{dateLabel}</span>}
     </button>
   );
 }

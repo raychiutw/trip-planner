@@ -167,13 +167,13 @@ describe('MapPage overview runtime — handleTabClick URL sync', () => {
     expect(after.dayNum).toBeUndefined();
   });
 
-  it('clicking DAY 02 from overview switches TpMap to single-day props', async () => {
+  it('clicking DAY 2 from overview switches TpMap to single-day props', async () => {
     const { getByText } = await mountMapPage('/trip/test-trip/map?day=all');
     // Initially overview
     expect(tpMapCalls[tpMapCalls.length - 1]!.pinsByDay).toBeInstanceOf(Map);
 
-    // Click DAY 02
-    fireEvent.click(getByText(/DAY 02/i));
+    // Click DAY 2
+    fireEvent.click(getByText(/DAY 2\b/i));
 
     const after = tpMapCalls[tpMapCalls.length - 1]!;
     expect(after.pinsByDay).toBeUndefined();

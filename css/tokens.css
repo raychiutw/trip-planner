@@ -1354,9 +1354,10 @@ body.dark {
 }
 .tp-map-day-tab:hover:not(.is-active) { color: var(--color-foreground); }
 .tp-map-day-tab.is-active {
-  /* 滑動 accent thumb 取代底線；per-day --day-color 仍可覆蓋 thumb 底色。 */
-  color: var(--color-accent-foreground);
-  background: var(--day-color, var(--color-accent));
+  /* 淡 tonal pill（owner 2026-07-17 sign-off）取代實心 thumb；per-day --day-color
+   * tint 供地圖 polyline 對應，行程頁無 --day-color → 落 accent。 */
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--day-color, var(--color-accent)) 14%, transparent);
 }
 .tp-map-day-tab:focus-visible {
   outline: none;
@@ -1371,17 +1372,7 @@ body.dark {
   font-variant-numeric: tabular-nums;
 }
 .tp-map-day-tab.is-active .tp-map-day-tab-eyebrow { opacity: 1; }
-.tp-map-day-tab-date {
-  font-size: var(--font-size-footnote);
-  font-weight: 600;
-  color: var(--color-foreground);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.005em;
-  line-height: 1;
-}
-.tp-map-day-tab.is-active .tp-map-day-tab-date {
-  color: var(--color-accent);
-}
+/* .tp-map-day-tab-date 已移除（owner 2026-07-17：day 膠囊改單行 DAY N、去日期副標）。 */
 
 /* Sticky chrome variant — trip detail page 把同一條 strip 黏在 TitleBar 下方。
  * top 用 --titlebar-h token，跟 .tp-titlebar height + .tp-hero scroll-margin

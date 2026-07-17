@@ -23,10 +23,10 @@ test.describe('MapPage bottom day tabs', () => {
     await expect(tabs).toBeVisible();
     await expect(tabs.getByRole('button', { name: /總覽/ })).toHaveAttribute('aria-current', 'true');
 
-    await tabs.getByRole('button', { name: /DAY 02/ }).click();
+    await tabs.getByRole('button', { name: /DAY 2\b/ }).click();
 
     await expect(page).toHaveURL(/\/trip\/okinawa-trip-2026-Ray\/map\?day=2$/);
-    await expect(tabs.getByRole('button', { name: /DAY 02/ })).toHaveAttribute('aria-current', 'true');
+    await expect(tabs.getByRole('button', { name: /DAY 2\b/ })).toHaveAttribute('aria-current', 'true');
 
     const firstCard = page.locator('.tp-map-entry-card').first();
     await expect(firstCard).toBeVisible();
