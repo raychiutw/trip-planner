@@ -126,6 +126,41 @@ const SCOPED_STYLES = `
 .tp-global-bottom-nav-btn.is-active span {
   font-weight: 700;
 }
+
+/* rev2 owner 2026-07-17：桌機底部浮動玻璃膠囊（row tabs、auto width、去 mobile
+ * top-indicator）。帳號在 sidebar chip → 桌機膠囊不顯帳號 tab。定位（fixed 置中
+ * sidebar+中欄）由 AppShell .app-shell-bottom-nav @≥1024 負責。 */
+@media (min-width: 1024px) {
+  .tp-global-bottom-nav {
+    position: static;
+    display: flex;
+    gap: 2px;
+    height: auto;
+    width: auto;
+    padding: 6px;
+    border-top: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-secondary) 82%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.14);
+  }
+  .tp-global-bottom-nav-btn {
+    flex-direction: row;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: var(--radius-full);
+    min-height: 40px;
+  }
+  .tp-global-bottom-nav-btn.is-active {
+    background: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
+  .tp-global-bottom-nav-btn.is-active::before { display: none; }
+  /* 帳號在 sidebar chip → 桌機膠囊隱藏帳號 tab */
+  [data-testid="global-bottom-nav-account"] { display: none; }
+}
 `;
 
 export interface GlobalBottomNavProps {

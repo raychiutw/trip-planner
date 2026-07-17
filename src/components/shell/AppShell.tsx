@@ -109,8 +109,18 @@ export const APP_SHELL_STYLES = `
     grid-template-columns: var(--grid-2pane-desktop);
     grid-template-rows: 1fr;
   }
+  /* rev2 owner 2026-07-17：桌機底部浮動玻璃膠囊 nav（取代 sidebar primary nav）。
+   * 置中於 sidebar+中欄（避開右欄地圖/面板儲存鈕，實測整窗置中會壓右欄鈕）；
+   * 桌機為主要導覽，不隨捲動隱藏。膠囊本體樣式在 GlobalBottomNav @≥1024 覆蓋。 */
   .app-shell-bottom-nav {
-    display: none;
+    inset-inline: auto;
+    left: calc((100vw + var(--sidebar-width-desktop, 216px)) / 4);
+    transform: translateX(-50%);
+    bottom: 18px;
+    width: auto;
+  }
+  .app-shell-bottom-nav[data-hidden="true"] {
+    transform: translateX(-50%);
   }
 }
 
