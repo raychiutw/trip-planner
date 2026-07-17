@@ -921,9 +921,6 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
           onClick={handleHeadActivate}
           data-testid={entry.id != null ? `timeline-rail-row-${entry.id}` : undefined}
         >
-          <span className="tp-rail-icon" aria-hidden="true">
-            <Icon name={meta.icon} />
-          </span>
           <span className="tp-rail-content">
             <span className="tp-rail-name">{entryDisplayTitle}</span>
             {(() => {

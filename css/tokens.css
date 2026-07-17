@@ -632,6 +632,18 @@ body.dark {
     .tp-rail-meta { font-size: var(--font-size-caption2); color: var(--color-muted); }
 
     .tp-rail-body { position: relative; padding: 0; }
+    /* v2.55.90 rev2 route spine：連續「中性」軌線串接 hollow 編號 node（dot 中心 x=56）。
+       穿過車程列（.tp-travel-pill-wrap margin-left:56 對齊）。item/pill 透明底讓線透出，
+       hollow node 的 bg 環蓋掉停留點處那一小段 → 線接入 node。中性色（非 accent）＝ rev2
+       「移動的兩種視圖」語意：軌線是路徑、accent 只承載選取。 */
+    .tp-rail-body::before {
+        content: ""; position: absolute;
+        left: 55px; top: 26px; bottom: 26px; width: 2px;
+        /* 虛線移動軌 — 呼應右欄地圖的 dashed polyline（rev2：同一路線兩視圖）。 */
+        background: repeating-linear-gradient(var(--color-line-strong, var(--color-border)) 0 5px, transparent 5px 11px);
+        z-index: 0; pointer-events: none;
+    }
+    .tp-rail-body.is-empty-day::before { display: none; }
     /* v2.33.61 round 14b: 拔 .tp-rail-line CSS + DOM (TimelineRail.tsx)。
      * 2026-05-10 連接線取消後 CSS 留 display:none 殼 + DOM 留節點 = 純 dead
      * code。Switch back 變體用 git revert 即可。 */
@@ -639,28 +651,32 @@ body.dark {
     /* v2.30.12: 5-col grid (drop time col — 多數 user 不填 time，空 col 浪費 mobile 寬度).
      * Cols: grip(24) | dot(24) | icon(44) | body(1fr) | caret(20)。
      * 如有 entry.time，time 渲在 .tp-rail-sub 行末（chip 形式）而非佔獨立 col。 */
+    /* v2.55.90 rev2 route-list：去類型 icon tile（5→4 col）。grip(24) | node(24) | body(1fr) | caret(20)。
+       類型走 sub-line label；編號 node 為 route spine 上唯一 leading 元素。 */
     .tp-rail-item {
         position: relative;
         display: grid;
-        grid-template-columns: 24px 24px 44px 1fr 20px;
+        grid-template-columns: 24px 24px 1fr 20px;
         column-gap: 12px;
         align-items: center;
-        width: 100%; padding: 12px 8px;
-        background: var(--color-background);
+        width: 100%; padding: 10px 8px;
+        /* flush 列：透明底（讓中性 route spine 透出）+ hairline 分隔，取代獨立圓角卡。 */
+        background: transparent;
         border-radius: var(--radius-md);
+        border-bottom: 1px solid var(--color-border);
         color: var(--color-foreground);
         transition: background 150ms;
     }
-    .tp-rail-item:hover { background: var(--color-hover, var(--color-secondary)); }
+    .tp-rail-item:hover { background: var(--color-hover, var(--color-secondary)); border-bottom-color: transparent; }
     .tp-rail-item[data-past="true"] { opacity: 0.55; }
     .tp-rail-item[data-now="true"] {
         background: var(--color-accent-subtle);
-        box-shadow: 0 1px 2px rgba(42, 31, 24, 0.05);
+        border-bottom-color: transparent;
     }
-    /* head button 跨 col 3-5（icon | body | caret），row click target */
+    /* head button 跨 col 3-4（body | caret），row click target */
     .tp-rail-head {
-        grid-column: 3 / span 3;
-        display: grid; grid-template-columns: 44px 1fr 20px;
+        grid-column: 3 / span 2;
+        display: grid; grid-template-columns: 1fr 20px;
         column-gap: 12px; align-items: center; width: 100%;
         background: transparent; border: none; padding: 0;
         color: inherit; cursor: pointer; text-align: left;
@@ -698,41 +714,16 @@ body.dark {
         --tone: var(--color-accent); --tone-deep: var(--color-accent-deep);
         --tone-subtle: var(--color-secondary); --tone-bg: var(--color-tertiary);
     }
-    /* 卡片同色系淡底（now 高亮 + neutral 不套）*/
-    .tp-rail-item[data-tone="accent"]:not([data-now="true"]),
-    .tp-rail-item[data-tone="sage"]:not([data-now="true"]),
-    .tp-rail-item[data-tone="pink"]:not([data-now="true"]) {
-        background: var(--tone-subtle);
-        border: 1px solid var(--tone-bg);
-    }
-    .tp-rail-item[data-tone="accent"]:hover,
-    .tp-rail-item[data-tone="sage"]:hover,
-    .tp-rail-item[data-tone="pink"]:hover { background: var(--tone-bg); }
-    .tp-rail-item[data-tone] .tp-rail-dot {
-        border-color: var(--tone, var(--color-line-strong, var(--color-border)));
-        color: var(--tone-deep, var(--color-muted));
-    }
+    /* v2.55.90 rev2：item flush（透明底 + hairline + 中性 route spine），不依 tone 上底色；
+       hollow node 維持中性（accent 只在 now/selected，見下方 [data-now] 規則），故不套 tone 著色。
+       --tone-* 仍供展開明細 .tp-rail-detail 的中性 surface。 */
     .tp-rail-item[data-now="true"] .tp-rail-dot {
         background: var(--color-accent);
         border-color: var(--color-accent);
         color: var(--color-accent-foreground);
     }
 
-    /* icon — col 4 內 head button（mockup .tp-detail-icon:2006） */
-    .tp-rail-icon {
-        width: 44px; height: 44px;
-        display: grid; place-items: center;
-        background: var(--color-background);
-        border: 1px solid var(--color-line-strong, var(--color-border));
-        border-radius: var(--radius-md);
-        color: var(--color-foreground); flex-shrink: 0;
-    }
-    .tp-rail-icon .svg-icon { width: 22px; height: 22px; }
-    .tp-rail-item[data-tone] .tp-rail-icon {
-        background: var(--tone-bg, var(--color-background));
-        border-color: var(--tone-deep, var(--color-line-strong, var(--color-border)));
-        color: var(--tone-deep, var(--color-foreground));
-    }
+    /* v2.55.90 rev2：類型 icon tile 退場 —— 編號 node 為唯一 leading 元素，類型走 sub-line label。 */
 
     .tp-rail-content {
         min-width: 0; overflow: hidden;
