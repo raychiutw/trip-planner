@@ -38,18 +38,18 @@ const TRIPS_ACTIVE_PATTERNS = [/^\/trip\/[^/]+(?:\/?$|\/(?!(?:map|stop\/[^/]+\/m
 const FAVORITES_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/favorites\//];
 
 const NAV_ITEMS_ANON: ReadonlyArray<NavItem> = [
-  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'chat',  matchPrefixes: ['/chat'] },
-  { key: 'trips',     label: '行程', href: '/trips',     icon: 'home',  matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
-  { key: 'map',       label: '地圖', href: '/map',       icon: 'map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
-  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'heart', matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
+  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'nav-chat',  matchPrefixes: ['/chat'] },
+  { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-trips',  matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
+  { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
+  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav', matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
   { key: 'login',     label: '登入', href: '/login',     icon: 'user',  matchPrefixes: ['/login'] },
 ];
 
 const NAV_ITEMS_AUTH: ReadonlyArray<NavItem> = [
-  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'chat',  matchPrefixes: ['/chat'] },
-  { key: 'trips',     label: '行程', href: '/trips',     icon: 'home',  matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
-  { key: 'map',       label: '地圖', href: '/map',       icon: 'map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
-  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'heart', matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
+  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'nav-chat',  matchPrefixes: ['/chat'] },
+  { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-trips',  matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
+  { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
+  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav', matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
   // Section 2 (terracotta-account-hub-page) + E4：帳號 entry 改 /account hub
   { key: 'account',   label: '帳號', href: '/account',   icon: 'user',  matchPrefixes: ['/account', '/settings'] },
 ];
