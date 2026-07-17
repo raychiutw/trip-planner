@@ -16,7 +16,7 @@
  * ‹「前一頁」= back（各頁既有 handleBack 目標）；✕「整個關閉」= context.closeStack（回詳情）。
  * bare panel 形態不顯 TitleBar actions（完成鈕由 children 內的 bottom-bar 提供）。
  */
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import AppShell from './AppShell';
 import DesktopSidebarConnected from './DesktopSidebarConnected';
 import GlobalBottomNav from './GlobalBottomNav';
@@ -55,11 +55,26 @@ export default function OperationShell({
 }: OperationShellProps) {
   const { inStack, closeStack } = useSheetStack();
   const { user } = useCurrentUser();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // a11y：面板由下往上/從側邊開時，把焦點移進面板（非 modal sheet 的 APG 慣例），
+  // 讓鍵盤/螢幕閱讀器使用者不會卡在中欄的觸發鈕。若操作頁自己已 autofocus 某欄位
+  // （child effect 先於 parent effect 觸發 → activeElement 已在面板內），則不搶。
+  useEffect(() => {
+    if (!inStack) return;
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) {
+      panel.focus();
+    }
+  }, [inStack]);
 
   if (inStack) {
     // 桌機右欄 bare panel — 中欄行程詳情由 TripStackLayout 保留。
+    // ‹「前一頁」= 各頁既有 back（useNavigateBack → 行程詳情）；✕「整個關閉」= closeStack
+    // （亦回詳情）。目前單層操作為主，兩者對詳情等效；未接 history 退階（navigate(-N)）多層
+    // pop 是刻意取捨（repo 自 v2.33.139 拔掉 history-back 避免跳到外部 referrer 的 footgun）。
     return (
-      <div className={shellClassName} data-testid={testId}>
+      <div className={shellClassName} data-testid={testId} ref={panelRef} tabIndex={-1}>
         {scopedStyles && <style>{scopedStyles}</style>}
         <StackPanelHeader title={title} onBack={back} onClose={closeStack} />
         {children}

@@ -28,6 +28,10 @@ export default function TripStackLayout() {
   const { user } = useCurrentUser();
 
   // 手機：操作頁自己整頁 render（既有行為）。
+  // 已知取捨：桌機（3 欄 host）與手機（bare Outlet）是結構不同的 tree，跨越 1024px
+  // 邊界（旋轉 / 瀏覽器縮放改變 CSS-px）會 unmount/remount 操作頁 → 未存檔的表單
+  // state（AddStop 已選 POI、EditTrip 目的地排序）會丟。多數操作頁 autosave 兜底；
+  // 要完全消除需讓 Outlet 跨斷點掛在同一 tree 位置（slot 由中欄↔右欄切，非本 PR 範圍）。
   if (!isDesktop) return <Outlet />;
 
   const valid = tripId && /^[\w-]+$/.test(tripId) ? tripId : null;
@@ -36,7 +40,9 @@ export default function TripStackLayout() {
     <SheetStackProvider
       value={{
         inStack: true,
-        closeStack: () => navigate(valid ? routes.tripsSelected(valid) : routes.trips()),
+        // ✕「整個關閉」回行程詳情。replace → 關閉後瀏覽器上一頁不會又把面板叫回來。
+        closeStack: () =>
+          navigate(valid ? routes.tripsSelected(valid) : routes.trips(), { replace: true }),
       }}
     >
       <AppShell

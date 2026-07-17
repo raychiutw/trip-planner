@@ -174,6 +174,14 @@ body.print-mode .app-shell-main {
     right: auto;
   }
 }
+
+/* rev2：操作面板容器 tabIndex=-1 是「開啟時把焦點移進面板」的 a11y 目標（程式聚焦、
+ * 非使用者聚焦的控制項），比照 modal dialog 容器不顯焦點外框；否則整個右欄邊緣會描
+ * accent outline。tabIndex=-1 元素本就不可鍵盤聚焦，抑制其 outline 對鍵盤使用者無損。 */
+.app-shell-sheet > [tabindex="-1"]:focus,
+.app-shell-sheet > [tabindex="-1"]:focus-visible {
+  outline: none;
+}
 `;
 
 export const APP_SHELL_LAYOUT_3PANE = '3pane';

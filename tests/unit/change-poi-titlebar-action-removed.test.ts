@@ -35,6 +35,9 @@ describe('ChangePoiPage titleBar right action 拔除', () => {
     const m = SRC.match(/<OperationShell[\s\S]{0,260}?>/);
     expect(m).toBeTruthy();
     expect(m![0]).not.toMatch(/actions=/);
+    // 硬化：ChangePoiPage 全檔都不該有 actions=（防未來 inline arrow prop 帶入 `>`
+    // 讓上面 lazy match 提早截斷而漏放行 titleBar action）。
+    expect(SRC).not.toMatch(/actions=/);
   });
 
   it('全檔搜尋無 titleBarActions identifier 殘留', () => {

@@ -43,6 +43,26 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(queryByTestId('titlebar')).toBeNull();
   });
 
+  it('inStack=true：actions 不顯（完成鈕由 children bottom-bar 提供）、title 顯示、焦點移入面板', () => {
+    const { getByTestId, queryByTestId, getByText } = renderStack(
+      <OperationShell
+        shellClassName="tp-op-x"
+        testId="op-x-page"
+        title="加入景點"
+        back={() => {}}
+        actions={<button data-testid="op-actions">完成</button>}
+      >
+        <div>面板內容</div>
+      </OperationShell>,
+    );
+    // stack 模式不顯 TitleBar actions（submit 唯一入口是 children 內的 bottom bar）
+    expect(queryByTestId('op-actions')).toBeNull();
+    // title 有 render（heading 語意由 StackPanelHeader 提供）
+    expect(getByText('加入景點')).toBeTruthy();
+    // a11y：面板開啟時焦點移進面板容器（非停在中欄觸發鈕）
+    expect(document.activeElement).toBe(getByTestId('op-x-page'));
+  });
+
   it('inStack=true：‹ 觸發 back、✕ 觸發 closeStack', () => {
     const back = vi.fn();
     const closeStack = vi.fn();
@@ -58,10 +78,16 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(closeStack).toHaveBeenCalledTimes(1);
   });
 
-  it('inStack=false（手機／無 host）→ 整頁 AppShell + TitleBar，無 StackPanelHeader', () => {
+  it('inStack=false（手機／無 host）→ 整頁 AppShell + TitleBar + actions，無 StackPanelHeader', () => {
     const { getByTestId, queryByTestId, getByText } = render(
       <MemoryRouter>
-        <OperationShell shellClassName="tp-op-x" testId="op-x-page" title="加入景點" back={() => {}}>
+        <OperationShell
+          shellClassName="tp-op-x"
+          testId="op-x-page"
+          title="加入景點"
+          back={() => {}}
+          actions={<button data-testid="op-actions">完成</button>}
+        >
           <div>面板內容</div>
         </OperationShell>
       </MemoryRouter>,
@@ -69,6 +95,8 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(getByTestId('app-shell')).toBeTruthy();
     expect(getByTestId('titlebar')).toBeTruthy();
     expect(getByText('面板內容')).toBeTruthy();
+    // 整頁模式 TitleBar actions（完成鈕）有 render
+    expect(getByTestId('op-actions')).toBeTruthy();
     expect(queryByTestId('stack-panel-header')).toBeNull();
   });
 });

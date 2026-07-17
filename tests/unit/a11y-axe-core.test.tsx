@@ -43,6 +43,9 @@ vi.mock('../../src/hooks/useGoogleMap', () => ({
 }));
 
 import AppShell from '../../src/components/shell/AppShell';
+import OperationShell from '../../src/components/shell/OperationShell';
+import StackPanelHeader from '../../src/components/shell/StackPanelHeader';
+import { SheetStackProvider } from '../../src/contexts/SheetStackContext';
 import DesktopSidebar from '../../src/components/shell/DesktopSidebar';
 import TripSheet from '../../src/components/trip/TripSheet';
 import ChatPage from '../../src/pages/ChatPage';
@@ -103,6 +106,28 @@ describe('a11y — axe-core wcag2a + wcag2aa（task 5.1+5.2）', () => {
           main={<div>Main</div>}
           sheet={<div>Sheet</div>}
         />,
+      ),
+    );
+    const violations = await runAxe(container);
+    expect(violations, describeViolations(violations)).toEqual([]);
+  });
+
+  it('StackPanelHeader 0 violations（‹/✕ aria-label + heading）', async () => {
+    const { container } = render(
+      withRouter(<StackPanelHeader title="加入景點" onBack={() => {}} onClose={() => {}} />),
+    );
+    const violations = await runAxe(container);
+    expect(violations, describeViolations(violations)).toEqual([]);
+  });
+
+  it('OperationShell (桌機右欄 bare panel) 0 violations', async () => {
+    const { container } = render(
+      withRouter(
+        <SheetStackProvider value={{ inStack: true, closeStack: () => {} }}>
+          <OperationShell shellClassName="tp-op-x" testId="op-x" title="編輯景點" back={() => {}}>
+            <div>面板內容</div>
+          </OperationShell>
+        </SheetStackProvider>,
       ),
     );
     const violations = await runAxe(container);

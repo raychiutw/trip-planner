@@ -24,8 +24,10 @@ export const STACK_PANEL_HEADER_STYLES = `
   height: 52px; padding: 0 8px 0 6px; flex-shrink: 0;
   border-bottom: 1px solid var(--color-border);
   /* 桌機右欄 panel / 手機全頁 drill-down 都以外層為 scroll container，header
-   * 需 sticky top 才不隨內容捲走（比照 TitleBar sticky glass chrome）。 */
-  position: sticky; top: 0; z-index: 3;
+   * 需 sticky top 才不隨內容捲走（比照 TitleBar sticky glass chrome）。
+   * z-index 10 給操作頁內 sticky 子元素（sub-header / dropdown）headroom，
+   * 仍低於 app-level nav（--z-sticky-nav: 200）。 */
+  position: sticky; top: 0; z-index: 10;
   background: color-mix(in srgb, var(--color-background) 88%, transparent);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -67,7 +69,7 @@ export default function StackPanelHeader({ title, onBack, onClose }: StackPanelH
           <span className="tp-stack-head-spacer" aria-hidden="true" />
         )}
         {title ? (
-          <span className="tp-stack-head-title">{title}</span>
+          <span className="tp-stack-head-title" role="heading" aria-level={2}>{title}</span>
         ) : (
           <span style={{ flex: 1 }} aria-hidden="true" />
         )}
