@@ -567,48 +567,47 @@ body.dark {
 
     /* Hero card inside each day — Airbnb editorial white card。
      * scroll-margin-top 用 --anchor-scroll-margin token (隨 chrome 高度變)。 */
+    /* v2.55.91 rev2：day-header 大褐卡 → 細 day label（rev2 中欄 .section header 語意）。
+       去 accent 實心底 + 去大 hero title；eyebrow(DAY xx) 走 accent、date 17px、meta muted。 */
     .tp-hero {
-        background: var(--color-accent);
-        color: var(--color-accent-foreground);
-        border-radius: var(--radius-lg);
+        background: transparent;
+        color: var(--color-foreground);
         border: 0;
-        padding: 18px 18px; margin-bottom: 20px;
-        overflow: hidden;
+        padding: 6px 2px; margin: 6px 0 8px;
         scroll-margin-top: var(--anchor-scroll-margin);
     }
     .tp-hero-chips {
         display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
-        margin-bottom: 8px;
-        font-size: var(--font-size-eyebrow); font-weight: 600;
+        margin-bottom: 2px;
+        font-size: var(--font-size-eyebrow); font-weight: 800;
         letter-spacing: 0.12em; text-transform: uppercase;
-        color: color-mix(in srgb, var(--color-accent-foreground) 85%, transparent);
+        color: var(--color-accent);
         font-variant-numeric: tabular-nums;
     }
     .tp-hero-chip {
         padding: 0; border: none;
         font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit;
-        color: var(--color-accent-foreground);
+        color: var(--color-accent);
     }
     .tp-hero-chip::after {
         content: "·"; margin: 0 2px 0 6px; opacity: 0.4;
     }
     .tp-hero-chip:last-child::after { content: none; }
     .tp-hero-title {
-        /* mockup .tp-detail-hero-title:1840 — desktop 28px, mobile 24px */
-        font-size: 24px; font-weight: 700; margin: 0 0 6px;
-        letter-spacing: -0.01em; line-height: 1.2;
-        color: var(--color-accent-foreground);
+        /* rev2 細 day label：date 17px，非大 hero title */
+        font-size: 17px; font-weight: 700; margin: 0;
+        letter-spacing: -0.01em; line-height: 1.3;
+        color: var(--color-foreground);
     }
     .tp-hero-sub {
-        /* mockup .tp-detail-hero-sub:1850 */
-        font-size: 13px;
-        color: color-mix(in srgb, var(--color-accent-foreground) 85%, transparent);
+        font-size: 12px;
+        color: var(--color-muted);
         font-variant-numeric: tabular-nums;
-        margin: 0;
+        margin: 3px 0 0;
     }
     @media (min-width: 961px) {
-        .tp-hero { padding: 24px; }
-        .tp-hero-title { font-size: 28px; }
+        .tp-hero { padding: 8px 2px; }
+        .tp-hero-title { font-size: 18px; }
     }
 
     /* Flight card (mockup FlightInfo) */
