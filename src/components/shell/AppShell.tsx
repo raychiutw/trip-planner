@@ -122,6 +122,13 @@ export const APP_SHELL_STYLES = `
   .app-shell-bottom-nav[data-hidden="true"] {
     transform: translateX(-50%);
   }
+  /* 桌機浮動膠囊 nav 是 fixed overlay，置中於中欄+右欄底部。中欄（main）底部釘住的
+   * 內容（地圖 entry cards、聊天輸入列）會被膠囊蓋住 → 攔截點擊。比照 mobile 為
+   * 常駐 nav 留 padding-bottom，桌機也給 main 留膠囊高度的底部間距（膠囊 bottom:18
+   * + 高 ~52 → ~84 清空）。右欄操作面板的動作鈕在遠右、不在膠囊中央下方，不需處理。 */
+  .app-shell-main {
+    padding-bottom: 84px;
+  }
 }
 
 /* Mobile <1024px：單欄 + bottom nav 常駐.
