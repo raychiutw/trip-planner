@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.90] - 2026-07-17
+
+### Changed
+- **V3 rev2 中欄 route rail（桌機 timeline）** — timeline 對齊 rev2 三欄結論的中欄「旅遊路線軌」：`.tp-rail-body::before` 連續**中性 dashed 軌線**串接 hollow 編號 node（呼應右欄地圖 dashed polyline，同一路線兩視圖），node 維持 hollow（now/選中才 accent 實心）；`.tp-rail-item` 由獨立圓角卡改 **flush 列**（透明底 + hairline，讓軌線透出）；**去類型 icon tile**（grid 5→4 col，node 為唯一 leading 元素，類型走 sub-line label）。testid / 互動（grip 拖拉、時間 chip、車程 pill、展開明細）全留。verify：tsc(src+functions) + 430 檔 / 3768 unit + chromium e2e（含 rail flows 6/7/8）全綠；實機 QA（dev 5173，沖繩行程）路線軌渲染正確。SoT：rev2 mockup `docs/design-sessions/2026-07-15-v3-three-col-bottom-tab.html` 中欄 route rail。
+
+### Added
+- **V3 桌機 rev2 可點選原型** — `docs/artifacts/2026-07-17-v3-desktop-prototype.html`（發布為 claude.ai Artifact）：三欄（sidebar 選行程 ｜ 中欄路線軌 ｜ 右欄地圖 + 堆疊操作面板 L2/L3/L4）+ 底部浮動玻璃 tab + 帳號左下 chip，含可運作的**外觀 淺/深切換**（V3 暖白 light palette）供就地驗證淺色。**rev2 取代 rev1（apple-music-desktop）為 canonical 桌機設計**。
+
 ## [2.55.89] - 2026-07-17
 
 ### Changed
