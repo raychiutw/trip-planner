@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.86] - 2026-07-17
+
+### Changed
+- **`getPublicOrigin()` 在 production 下絕不從 request Host 推導 trust anchor** — 承 v2.55.85 收斂 issuer 後的加固：OIDC issuer / email 驗證連結 / 邀請連結全走 `getPublicOrigin`，是 trust anchor，不該隱性依賴「CF Pages edge 會 normalise Host」這個沒寫進 code 的假設。`PUBLIC_ORIGIN` 未設時，production 改回標準常數 `CANONICAL_PROD_ORIGIN`（`https://trip-planner-dby.pages.dev`）並 `console.warn`，而非 `new URL(request.url).origin`；dev/preview 維持 request-origin 彈性。線上探針實測（#1056 部署後對 discovery endpoint 送 `Host: evil.example.com` 被 CF 邊緣擋掉、`X-Forwarded-Host` 被 `new URL(request.url)` 忽略）證明 prod 的 request-origin 已 = 標準 origin，故此改對現況零行為變化，只是把隱性信任變顯性、未設時可見。`tests/api/oauth-id-token.test.ts` 補 5 條行為測試鎖 prod invariant（spoofed Host 下 issuer 不漂移、dev/preview 保留彈性）。
+- **為何不直接 fail-closed（prod 缺 PUBLIC_ORIGIN 就 throw）** — 無法從 repo / wrangler OAuth session 驗證 prod 到底有沒有設 PUBLIC_ORIGIN（CF dashboard out-of-band var，`wrangler.toml` 只宣告 `ENVIRONMENT`）；若實際沒設，throw 會當場讓 prod 的 `/api/oauth/*` + email/邀請連結全 500。canonical fallback 是不需知道該狀態、也絕不 500 的安全設計。剩「把 PUBLIC_ORIGIN 顯式設進 CF dashboard」屬部署設定，非本 PR。此加固由 #1056 的 Codex adversarial review 挖出。
+
 ## [2.55.85] - 2026-07-17
 
 ### Fixed
