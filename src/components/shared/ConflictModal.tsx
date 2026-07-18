@@ -13,8 +13,9 @@
  * 標題色用 warning（不是 destructive，因為「取代」 才 destructive，整個 modal
  * 不是）。
  */
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
 const SCOPED_STYLES = `
 .tp-conflict-backdrop {
@@ -133,19 +134,10 @@ export default function ConflictModal({
   onPushAfter,
 }: ConflictModalProps) {
   const cancelRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    cancelRef.current?.focus();
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onCancel();
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onCancel]);
+  // 統一 sheet 引擎（B1）：focus 取消鈕 + Escape（IME/巢狀 guard）+ focus-trap + scroll-lock。
+  const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onCancel, {
+    initialFocusRef: cancelRef,
+  });
 
   if (!open || !conflictWith) return null;
   if (typeof document === 'undefined') return null;
@@ -157,18 +149,21 @@ export default function ConflictModal({
     <>
       <style>{SCOPED_STYLES}</style>
       <div
+        ref={backdropRef}
         className="tp-conflict-backdrop"
         role="presentation"
         onClick={onCancel}
         data-testid="conflict-modal-backdrop"
       >
         <div
+          ref={panelRef}
           className="tp-conflict-modal"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="tp-conflict-title"
           aria-describedby="tp-conflict-message"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={handlePanelKeyDown}
           data-testid="conflict-modal"
         >
           <h2 className="tp-conflict-title" id="tp-conflict-title">該時段已有景點</h2>
