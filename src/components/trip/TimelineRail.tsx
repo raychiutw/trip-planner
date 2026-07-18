@@ -1149,8 +1149,10 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                   {rating != null && (
                     <>
                       <span className="tp-rail-sub-sep">·</span>
-                      <span className="tp-rail-sub-star">★</span>
-                      <span>{rating.toFixed(1)}</span>
+                      <span className="tp-rail-sub-rating">
+                        <span className="tp-rail-sub-star">★</span>
+                        {rating.toFixed(1)}
+                      </span>
                     </>
                   )}
                   {shortDesc && (

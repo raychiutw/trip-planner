@@ -767,6 +767,9 @@ body.dark {
     .tp-rail-item[data-tone] .tp-rail-sub-type { color: var(--tone-deep, var(--color-muted)); }
     .tp-rail-sub-sep { opacity: 0.5; }
     .tp-rail-sub-star { color: var(--color-warning, #C88500); }
+    /* ★ + 評分數字綁 nowrap 單位，避免副標 flex-wrap 時「4.1」孤行落到下一列
+       （plan line 50：adapt rather than truncate，iOS HIG 文字適應）。 */
+    .tp-rail-sub-rating { display: inline-flex; align-items: baseline; gap: 3px; white-space: nowrap; }
     /* v2.30.12: time chip 取代既有 col-2 time（time col 移除後 inline 顯示） */
     .tp-rail-sub-time {
         font-weight: 700; color: var(--color-foreground);
