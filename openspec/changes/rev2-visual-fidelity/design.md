@@ -23,6 +23,20 @@
 | 5 | 捲動 day tab 沒與 header 間距 | `.tp-map-day-tabs--sticky` `top:var(--titlebar-h)` 緊貼 titlebar 底、無 gap;titlebar 現為玻璃(z=200)、day-tab z=199 | `tokens.css:1399` | sticky 二層應有間距、不穿透玻璃 | `top:calc(var(--titlebar-h)+Npx)` 加 gap + 檢查玻璃層疊 |
 | 6 | 地圖 error 整塊佔版 | localhost referer → Google Maps JS 自畫「糟糕!出了點狀況」overlay 進容器;app `loadError` 未被設(promise resolve) | `useGoogleMap.ts:105` 無 `.catch` + 未接 `gm_authFailure` | 頁面應正常 + 顯「地圖暫停服務」 | `.catch()` + `window.gm_authFailure` → setLoadError → `TpMap` render placeholder、不掛地圖容器 |
 
+## B2. 主動掃描結果（2026-07-18，照方法逐畫面 × 雙視窗,非只修 owner 指出的）
+
+掃描範圍：trips / trip detail / chat / favorites / account,各手機 390 + 桌機 1440。
+
+**確認為真（照 source + computed）：**
+- #1–#6 owner 指出的全部成立（根因見 B 表）。#3 timeline 已 pinpoint：長 entry（時間**區間** 14:30–15:30 + 時數 + 評分）副標超過 390px → `★ 4.1` 整組換到第二行、第一行尾巴掛一個 `·`（分隔符是獨立 flex child 會孤懸）。上輪只綁 ★+4.1 不拆、沒解決整行 wrap。
+- **#7（新找到）**：桌機 favorites 有**重複搜尋**——titlebar 有 🔍 按鈕、頁內又有整條 search bar（computed: titlebarSearch + inlineSearchBar 皆 true）。擇一。
+
+**方法自我修正（肉眼誤報、被 computed 推翻）：**
+- account 底部 row 被 nav 蓋 → **偽**：捲到底時最後可點 row（登出）bottom=691、navTop=880、padding-bottom=88px → 在 nav 上方。我看到的是**捲動中途**（內容從玻璃 nav 下流過＝刻意），非 max scroll 被蓋。
+- favorites 卡片同列不等高 → **偽**：computed 三張皆 227px、等高;肉眼把「內容填充不同」誤讀成「卡高不同」。
+
+→ 印證方法第 3、7 條（computed 勝肉眼）：既抓漏、也擋誤報。
+
 ## C. 決策
 
 - 檢視方法放 DESIGN.md(UI/UX SoT 的一部分)+ OpenSpec spec(可 validate、可被 skill 引用),並回灌記憶 `feedback_qa_visual_fidelity_blindspot`。

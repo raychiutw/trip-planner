@@ -14,10 +14,14 @@
 - [ ] 2.1 開 mockup（`docs/design-sessions/terracotta-preview-v2.html` 或 trips list 相關）截 filter tabs，比對現況 `.tp-trips-tabs`（`--color-secondary` 容器 + `is-active` 白 pill）對比與 segmented control 形制。
 - [ ] 2.2 依 mockup 調整（容器對比 / active thumb / 間距），使其為清楚 segmented control 而非「白色色塊」。同步 DESIGN.md/mockup。
 
-## 3. 行程頁 timeline 破版（#3，待 pinpoint）
+## 3. 行程頁 timeline 破版（#3，已 pinpoint）
 
-- [ ] 3.1 依方法逐元件放大 timeline（手機 + 桌機）:標題/副標/dot/dash 脊線/travel pill/展開明細,找出確切破點（不是上輪修過的 ★ 孤行，是新的）。
-- [ ] 3.2 對照 mockup（`2026-07-17-v3-desktop-timeline-route-spine.html`）+ DESIGN.md timeline 段修正，雙視窗 before/after 驗。
+- [x] 3.1 已定位：長 entry（時間區間 + 時數 + 評分）副標超 390px → `★ 4.1` 整組換行 + 第一行尾掛孤懸 `·`。根因 = `.tp-rail-sub` 分隔符是獨立 flex child。
+- [ ] 3.2 修法：把每個「`·` + token」綁成 nowrap 單位（分隔符不再獨立孤懸），或副標超長時的 graceful 收斂（對 `2026-07-17-...timeline-route-spine.html` mockup）。雙視窗 before/after 驗（含長 entry 3 那種）。
+
+## 6b. 桌機 favorites 重複搜尋（#7，新找到）
+
+- [ ] 6b.1 桌機 favorites 同時有 titlebar 🔍 + 頁內 search bar（computed 皆 true）→ 擇一（保留頁內 bar、拔 titlebar 🔍,或反之），對齊 DESIGN.md search pattern。手機態一併確認不重複。
 
 ## 4. day tab 中欄置中（#4，根因已確認）
 
