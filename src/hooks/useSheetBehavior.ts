@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { useBodyScrollLock } from './useBodyScrollLock';
 import { FOCUSABLE_SELECTOR as FOCUSABLE } from '../lib/constants';
 
@@ -43,33 +43,21 @@ interface UseSheetBehaviorResult {
   backdropRef: React.RefObject<HTMLDivElement | null>;
   /** onKeyDown handler for the panel — implements focus trap. */
   handlePanelKeyDown: (e: React.KeyboardEvent) => void;
-  /** Stacking order among simultaneously-open sheets (0 = first opened). Use for z-index. */
-  layer: number;
 }
 
 /*
- * Module-level open-sheet registry — one shared stack across every useSheetBehavior
- * instance so that:
- *   - (F10) the global `.container.sheet-open` class is REF-COUNTED: present iff ≥1
- *     sheet is open, and not removed while another sheet is still open.
- *   - (F7)  each sheet gets an increasing `layer` for z-index (nested discard/confirm
- *     stacks above its parent instead of colliding on one `--z-modal`).
- *   - (F12) only the TOP-most sheet responds to Escape, so a nested confirm closes
- *     itself, not the whole stack, on one Escape press.
+ * Module-level open-sheet registry — one shared stack across all instances so that
+ * only the TOP-most sheet responds to Escape (F12): a nested confirm closes itself,
+ * not the whole stack, on one Escape press. (Body scroll-lock is ref-counted inside
+ * useBodyScrollLock; nested-modal z-index is handled by portal DOM order.)
  */
 const openSheets: symbol[] = [];
-function refreshContainerClass() {
-  document.querySelector('.container')?.classList.toggle('sheet-open', openSheets.length > 0);
-}
-function registerSheet(id: symbol): number {
+function registerSheet(id: symbol) {
   if (!openSheets.includes(id)) openSheets.push(id);
-  refreshContainerClass();
-  return openSheets.indexOf(id);
 }
 function unregisterSheet(id: symbol) {
   const i = openSheets.indexOf(id);
   if (i !== -1) openSheets.splice(i, 1);
-  refreshContainerClass();
 }
 function isTopSheet(id: symbol): boolean {
   return openSheets.length > 0 && openSheets[openSheets.length - 1] === id;
@@ -79,8 +67,8 @@ function isTopSheet(id: symbol): boolean {
  * Shared sheet/overlay behavior engine — the single source for bottom sheets, centered
  * modals, content sheets, and (non-modal) operation panels:
  *
- * 1. Ref-counted `.container.sheet-open` class + per-instance stacking `layer`
- * 2. Body scroll lock (iOS Safari safe) — only when `modal`
+ * 1. Top-most-sheet registry (for nested Escape)
+ * 2. Body scroll lock (iOS Safari safe, ref-counted) — only when `modal`
  * 3. Focus management on open/close (optionally to `initialFocusRef`)
  * 4. Escape (top-most only, IME-safe, honors `canDismiss`)
  * 5. Focus trap on Tab key
@@ -105,16 +93,12 @@ export function useSheetBehavior(
   const backdropRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
   const idRef = useRef<symbol>(Symbol('sheet'));
-  const [layer, setLayer] = useState(0);
 
-  /* 1. Open-sheet registry: ref-counted container class + stacking layer */
+  /* 1. Open-sheet registry (top-most tracking for nested Escape) */
   useEffect(() => {
     const id = idRef.current;
-    if (isOpen) {
-      setLayer(registerSheet(id));
-    } else {
-      unregisterSheet(id);
-    }
+    if (isOpen) registerSheet(id);
+    else unregisterSheet(id);
     return () => unregisterSheet(id);
   }, [isOpen]);
 
@@ -199,5 +183,5 @@ export function useSheetBehavior(
     };
   }, [isOpen, preventAllBackdropScroll]);
 
-  return { panelRef, backdropRef, handlePanelKeyDown, layer };
+  return { panelRef, backdropRef, handlePanelKeyDown };
 }

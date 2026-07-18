@@ -149,6 +149,8 @@ export default function InputModal({
   const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onCancel, {
     initialFocusRef: inputRef,
   });
+  // 此 effect 須留在 useSheetBehavior 呼叫「之後」：引擎的 focus rAF 先排、本 select rAF 後排，
+  // 同幀 focus→select，游標落定後全選讓 user 直接覆蓋。順序顛倒會變 select→focus（focus 清掉選取）。
   useEffect(() => {
     if (!open) return;
     const id = requestAnimationFrame(() => inputRef.current?.select());

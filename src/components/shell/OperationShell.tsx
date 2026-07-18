@@ -61,6 +61,10 @@ export default function OperationShell({
   //   （v2.33.139 曾因無條件 navigate(-1) 有 footgun 而移除；此處用 depth gate 只在確定 in-app 時才 -1。）
   const depth = (location.state as { depth?: number } | null)?.depth ?? 1;
   const showBack = !inStack || depth > 1;
+  // ⚠ 耦合：depth>1 時 ‹ 走 navigate(-1)、**不呼叫頁面傳入的 `back`**。目前唯一 depth>1 的頁
+  // （ChangePoiPage）的 back 無 dirty 攔截故安全；但若日後把「back 帶未存檔丟棄確認」的頁
+  // （如 EditEntryPage handleCancel）push 成 depth>1，navigate(-1) 會跳過該確認 → 靜默丟資料。
+  // B5 dirty gate 上線後，pop 也須先過同一 gate（見 plan §5b/F3）。
   const handleBack = depth > 1 ? () => navigate(-1) : back;
 
   // a11y：桌機面板從側邊開時把焦點移進面板（非 modal sheet 的 APG 慣例），讓鍵盤/螢幕
