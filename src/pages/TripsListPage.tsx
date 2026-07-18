@@ -312,12 +312,20 @@ body.dark .tp-trips-sort {
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
-  padding: 4px 8px 4px 10px;
   min-height: var(--spacing-tap-min);
   transition: width 160ms ease;
-  width: 36px; overflow: hidden;
+  overflow: hidden;
+  /* rev2 D-review #2：collapsed = 44×44 圓、icon 置中。原 36px 寬 + padding 10+8=18px
+     內容區塞不下 24px toggle → overflow:hidden 把 icon 裁掉、偏左上（破版）。 */
+  width: var(--spacing-tap-min);
+  justify-content: center;
+  padding: 0;
 }
-.tp-trips-search.is-open { width: 220px; }
+.tp-trips-search.is-open {
+  width: 220px;
+  justify-content: flex-start;
+  padding: 4px 8px 4px 10px;
+}
 .tp-trips-search input {
   flex: 1; min-width: 0;
   border: 0; background: transparent;
