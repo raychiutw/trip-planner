@@ -27,6 +27,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { LocationPickerMap } from '../components/trip/LocationPickerMap';
@@ -477,6 +478,23 @@ export default function AddCustomStopPage() {
     }
   }, [submitting, tripId, dayNum, title, pickedCoord, duration, note, startTime, handleBack]);
 
+  // G-H3 dirty 攔截：填了標題/選了座標/寫了備註又按返回 → 先確認再捨棄（防丟輸入）。
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const dirty = title.trim() !== '' || pickedCoord !== null || note.trim() !== '';
+  const handleBackGuarded = useCallback(() => {
+    if (dirty) setDiscardOpen(true);
+    else handleBack();
+  }, [dirty, handleBack]);
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty]);
+
   if (!auth.user) return null;
   if (!tripId || !Number.isFinite(dayNum)) {
     return (
@@ -516,7 +534,7 @@ export default function AddCustomStopPage() {
         main={
           <div className="tp-custom-stop-shell" data-testid="add-custom-stop-page">
             <style>{SCOPED_STYLES}</style>
-            <TitleBar title="自訂景點" back={handleBack} backLabel="返回" actions={titleBarActions} />
+            <TitleBar title="自訂景點" back={handleBackGuarded} backLabel="返回" actions={titleBarActions} />
             <div className="tp-custom-stop-day-meta">{dayLabel}</div>
 
             {/* 2026-07-07 day picker chips — 可切換加入哪天（對齊 AddStopPage）。 */}
@@ -691,6 +709,18 @@ export default function AddCustomStopPage() {
           </div>
         }
         bottomNav={<GlobalBottomNav authed={auth.user !== null} />}
+      />
+      <ConfirmModal
+        open={discardOpen}
+        title="捨棄未儲存的景點？"
+        message="你已經填了一些內容，離開會清空這個還沒加入的自訂景點。"
+        confirmLabel="捨棄"
+        cancelLabel="繼續編輯"
+        onConfirm={() => {
+          setDiscardOpen(false);
+          handleBack();
+        }}
+        onCancel={() => setDiscardOpen(false)}
       />
     </>
   );
