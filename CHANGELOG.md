@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.99] - 2026-07-18
+
+### Changed
+- **rev2 停留卡 Apple Music track row（對齊 owner 簽核 mockup Section 02，`docs/artifacts/2026-07-17-v3-desktop-prototype.html`）**：把停留卡的動作從「展開明細一排 icon 工具列」收進 row 上單顆 **⋯ context menu**（Apple 列表語彙：動作進 ⋯，不在列上排 icon）。⋯ 用**原生 Popover API**（top-layer 自動逃離 `.tp-rail-content` 的 overflow:hidden、light-dismiss、鍵盤 ↑↓/Home/End、`aria-haspopup`/`aria-expanded`）；menu 分組（在地圖開啟｜編輯備註/換景點/編輯景點｜重新排序/複製/移到｜刪除紅字末組）。展開明細只留資訊面（景點說明/備註 inline/備選景點），移除 `.tp-rail-actions` 工具列。
+- **排序模式**：⋯「重新排序」→ `.tp-rail-body[data-sort-mode]` 顯所有列 grip、可拖（dnd-kit，drag 由 sortMode gate）+ 底部 sticky「完成排序」bar；resting 列不放常駐 grip（拖拉排序在 ⋯ 內）。
+- **卡牌字級對齊 mockup**：標題 `.tp-rail-name` → `--font-size-headline`（17px 桌機 / callout 16px 手機）、副標 `.tp-rail-sub` → `--font-size-subheadline`（15px）。先前 15/11px 太小是「不像 Apple」主因。
+- **F1 手機停留卡崩版修復**：手機 `@media(≤760px)` 的 `.tp-rail-item`/`.tp-rail-head` grid 殘留 v2.30.12 舊 5-col（多一個 36px icon 欄，v2.55.90「去 icon tile」只改桌機漏改手機）→ head 的 body 掉進 36px 窄軌、caret 吃 1fr → 每張停留卡內容崩成 36px、名稱截斷、meta 一字一行垂直堆疊。改用 auto-placement 統一模板（resting `24px 1fr` node|body、排序模式 `24px 24px 1fr` grip|node|body），content 36→239px、卡高 178→93px。
+- **F9 桌機堆疊 L2/L3 header**：桌機第一層操作面板（從 timeline / ⋯ 進，L2 modal）只右上「✕」關閉；從另一操作 push 進來（如 編輯景點→變更景點，L3+）才左上「‹」回前頁 + 右上「✕」（對齊 mockup `layer.l2/l3`）。操作是 route-swap，靠 `navigate state.opStacked` 判層；`OperationShell showBack = !inStack || location.state.opStacked`。
+- DESIGN.md 同步 Stop Card（Apple Music track row + ⋯ menu + 排序模式）+ Operation stacking（L2/L3）段。
+- 鎖測更新：`timeline-rail-toolbar-pencil`（toolbar→⋯ menu + aria）、`operation-shell`（L2 ✕-only / L3 ‹+✕）、`edit-entry-page`（change-poi opStacked state）、e2e Flow 7/8（開 ⋯ menu 點動作）。tsc ✓ · **433 檔 3764 test 全綠** · e2e Flow 7/8 chromium+webkit ✓ · eslint（react-hooks）✓ · code review（correctness/a11y）+ security audit（security-clean）· 真瀏覽器桌機(1512)+手機(402)：⋯ menu 開啟/逃 overflow/8 項/排序模式/L2-L3/字級全驗，前後對比擷圖存證。
+
 ## [2.55.98] - 2026-07-18
 
 ### Changed
