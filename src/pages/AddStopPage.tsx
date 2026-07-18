@@ -608,7 +608,7 @@ const SCOPED_STYLES = `
 .tp-add-stop-actions { display: inline-flex; gap: 8px; }
 .tp-add-stop-btn {
   font: inherit; font-weight: 700; font-size: var(--font-size-footnote);
-  padding: 10px 18px; min-height: 40px;
+  padding: 10px 18px; min-height: var(--spacing-tap-min); /* G-H6b：44pt HIG 觸控區（取消/完成） */
   border-radius: var(--radius-full);
   cursor: pointer;
 }

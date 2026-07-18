@@ -464,7 +464,7 @@ const SCOPED_STYLES = `
   justify-content: flex-end;
 }
 .tp-change-poi-btn {
-  min-height: 40px;
+  min-height: var(--spacing-tap-min); /* G-H6b：44pt HIG 觸控區（取消/確認主動作） */
   padding: 8px 16px;
   border-radius: var(--radius-full);
   font: inherit;
