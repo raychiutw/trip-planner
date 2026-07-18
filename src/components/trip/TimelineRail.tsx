@@ -290,7 +290,9 @@ const SCOPED_STYLES = `
   box-shadow: 0 12px 32px rgba(42, 31, 24, 0.18);
 }
 .tp-rail-time-pop-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.tp-rail-time-pop-label { font-size: var(--font-size-caption); font-weight: 700; color: var(--color-muted); }
+/* 抵達/離開 標籤在 flex row 內被壓成 min-content → 2 字 CJK 折成上下兩行（audit）。
+ * nowrap + flex-shrink:0 保持單行。 */
+.tp-rail-time-pop-label { font-size: var(--font-size-caption); font-weight: 700; color: var(--color-muted); white-space: nowrap; flex-shrink: 0; }
 .tp-rail-time-pop-done {
   align-self: flex-end; min-height: 36px; padding: 0 18px;
   border: none; border-radius: var(--radius-full);
