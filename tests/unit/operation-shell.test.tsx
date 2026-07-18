@@ -6,9 +6,10 @@
  * 手機／無 host（inStack=false，預設）→ 整頁：AppShell + TitleBar（既有行為）。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import OperationShell from '../../src/components/shell/OperationShell';
+import ConfirmModal from '../../src/components/shared/ConfirmModal';
 import { SheetStackProvider } from '../../src/contexts/SheetStackContext';
 
 // G-S1：‹ 的 depth-gated back（depth>1 → navigate(-1) pop 一層）需 spy navigate。
@@ -139,5 +140,32 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(getByText('面板內容')).toBeTruthy();
     // 手機全頁也無 TitleBar（完成由 children bottom-bar 提供，header 無 action slot）
     expect(queryByTestId('titlebar')).toBeNull();
+  });
+
+  it('inStack 桌機面板：Escape = 關最上層（G-S4；L2 無 ‹ → closeStack）', () => {
+    const closeStack = vi.fn();
+    renderStack(
+      <OperationShell shellClassName="tp-op-x" testId="op-x-page" title="編輯景點" back={() => {}}>
+        <div />
+      </OperationShell>,
+      closeStack,
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(closeStack).toHaveBeenCalledTimes(1);
+  });
+
+  it('inStack：內層有 engine modal 開著時 Escape 不關 panel（nested guard，讓內層先處理）', () => {
+    const closeStack = vi.fn();
+    const onCancel = vi.fn();
+    renderStack(
+      <OperationShell shellClassName="tp-op-x" testId="op-x-page" title="編輯景點" back={() => {}}>
+        {/* 從 panel 開的 discard ConfirmModal（走 useSheetBehavior engine，會註冊 registry） */}
+        <ConfirmModal open title="捨棄？" message="x" onConfirm={() => {}} onCancel={onCancel} />
+      </OperationShell>,
+      closeStack,
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    // panel 的 Escape 被 isAnySheetOpen() 擋下 → 不關 panel；由 ConfirmModal 自己吃 Escape
+    expect(closeStack).not.toHaveBeenCalled();
   });
 });

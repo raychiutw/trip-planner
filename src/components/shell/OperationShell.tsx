@@ -12,12 +12,13 @@
  * 完成鈕一律由 children 內的 `.tp-page-bottom-bar` 提供（header 不放 action）。
  * `closeStack` 由 TripStackLayout 於桌機+手機兩支都注入（回行程詳情）。
  */
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AppShell from './AppShell';
 import DesktopSidebarConnected from './DesktopSidebarConnected';
 import StackPanelHeader from './StackPanelHeader';
 import { useSheetStack } from '../../contexts/SheetStackContext';
+import { isAnySheetOpen } from '../../hooks/useSheetBehavior';
 
 export interface OperationShellProps {
   /** 各頁 scroll 容器 class（e.g. "tp-add-stop-page-shell"）— 兩形態共用。 */
@@ -61,7 +62,7 @@ export default function OperationShell({
   // （ChangePoiPage）的 back 無 dirty 攔截故安全；但若日後把「back 帶未存檔丟棄確認」的頁
   // （如 EditEntryPage handleCancel）push 成 depth>1，navigate(-1) 會跳過該確認 → 靜默丟資料。
   // B5 dirty gate 上線後，pop 也須先過同一 gate（見 plan §5b/F3）。
-  const handleBack = depth > 1 ? () => navigate(-1) : back;
+  const handleBack = useMemo(() => (depth > 1 ? () => navigate(-1) : back), [depth, navigate, back]);
 
   // a11y：桌機面板從側邊開時把焦點移進面板（非 modal sheet 的 APG 慣例），讓鍵盤/螢幕
   // 閱讀器不卡在中欄觸發鈕。手機是整頁 route 切換（focus 自然重置）+ 面板在 app-shell-main
@@ -73,6 +74,34 @@ export default function OperationShell({
       panel.focus();
     }
   }, [inStack]);
+
+  // G-S4（macOS 鍵盤）：桌機右欄操作面板吃 Escape = 取消當前 = 關最上層（有 ‹ 則退一層、
+  //   否則整個關）。只在桌機面板（inStack）；手機是整頁 route 切換不需。
+  // nested guard（eng F12）：IME 組字、正在輸入（INPUT/TEXTAREA/SELECT）、或有 open 的
+  //   modal / native popover / menu（內層 picker、⋯ 選單、discard ConfirmModal）時 → skip，
+  //   讓內層先處理，不誤關整個 panel。走 handleBack/closeStack（既有安全路徑，含 depth pop）。
+  useEffect(() => {
+    if (!inStack) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.isComposing) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+      // 內層有 engine modal 開著（含從本 panel 開的 discard ConfirmModal）→ 讓它先吃 Escape。
+      // 用 registry 而非掃 DOM：InfoSheet 等元件關閉仍常駐 DOM（role=dialog），registry 只記真開啟的。
+      if (isAnySheetOpen()) return;
+      // native ⋯ 選單 / picker popover 開著（Popover API）→ 讓它先關（:popover-open 只命中開啟的）。
+      try {
+        if (document.querySelector(':popover-open')) return;
+      } catch {
+        /* jsdom 不支援 :popover-open → 視為無 native popover 開啟 */
+      }
+      e.preventDefault();
+      if (showBack) handleBack();
+      else closeStack();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [inStack, showBack, handleBack, closeStack]);
 
   // 共用 drill-down panel（‹ 前一頁 / ✕ 整個關閉）— 桌機右欄 + 手機全頁同一套。
   const panel = (

@@ -64,6 +64,15 @@ function isTopSheet(id: symbol): boolean {
 }
 
 /**
+ * 是否有任何 engine sheet/modal 開啟中（ConfirmModal / InfoSheet / AiConsent 等只在開啟時
+ * 註冊）。給 OperationShell 桌機 Escape 判斷「內層有 modal 開著就別關整個 panel」——比掃 DOM
+ * 找 role=dialog 可靠：InfoSheet 等元件即使關閉也常駐 DOM，registry 只記真正開啟的。
+ */
+export function isAnySheetOpen(): boolean {
+  return openSheets.length > 0;
+}
+
+/**
  * Shared sheet/overlay behavior engine — the single source for bottom sheets, centered
  * modals, content sheets, and (non-modal) operation panels:
  *
