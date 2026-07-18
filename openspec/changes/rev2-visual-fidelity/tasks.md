@@ -9,19 +9,19 @@
 - [x] 1.1 `.tp-trips-search` collapsed 態改 44×44（或 40×40）圓、icon 置中（拔不對稱 padding / `place-items:center`），展開態維持 220px；`.tp-trips-search-toggle` 不再被 `overflow:hidden` 裁。
 - [x] 1.2 雙視窗 3× zoom 驗證 icon 置中、tap 區 ≥44、展開輸入正常。
 
-## 2. filter tabs「一片白色」（#1）
+## 2. filter tabs「一片白色」（#1）✅
 
-- [ ] 2.1 開 mockup（`docs/design-sessions/terracotta-preview-v2.html` 或 trips list 相關）截 filter tabs，比對現況 `.tp-trips-tabs`（`--color-secondary` 容器 + `is-active` 白 pill）對比與 segmented control 形制。
-- [ ] 2.2 依 mockup 調整（容器對比 / active thumb / 間距），使其為清楚 segmented control 而非「白色色塊」。同步 DESIGN.md/mockup。
+- [x] 2.1 根因確認：`.tp-trips-tabs` 容器 `--color-secondary`(#FAF4EA) 與 active thumb `--color-background`(#FFFBF5) 幾乎同色，只靠弱 shadow-sm 分隔 → 整條像白塊。
+- [x] 2.2 修：容器改暖底 track（`--color-hover` + inset border 界定）+ thumb 明顯浮起陰影 → 清楚 segmented control。真瀏覽器驗 active pill 浮起。commit d1b0ae76。
 
 ## 3. 行程頁 timeline 破版（#3，已 pinpoint）
 
 - [x] 3.1 已定位：長 entry（時間區間 + 時數 + 評分）副標超 390px → `★ 4.1` 整組換行 + 第一行尾掛孤懸 `·`。根因 = `.tp-rail-sub` 分隔符是獨立 flex child。
 - [x] 3.2 修法：把每個「`·` + token」綁成 nowrap 單位（分隔符不再獨立孤懸），或副標超長時的 graceful 收斂（對 `2026-07-17-...timeline-route-spine.html` mockup）。雙視窗 before/after 驗（含長 entry 3 那種）。
 
-## 6b. 桌機 favorites 重複搜尋（#7，新找到）
+## 6b. 桌機 favorites 重複搜尋（#7，新找到）✅
 
-- [ ] 6b.1 桌機 favorites 同時有 titlebar 🔍 + 頁內 search bar（computed 皆 true）→ 擇一（保留頁內 bar、拔 titlebar 🔍,或反之），對齊 DESIGN.md search pattern。手機態一併確認不重複。
+- [x] 6b.1 實情：titlebar 的是「探索」按鈕但用了 search 放大鏡 icon，與頁內真 search bar 的放大鏡撞（像兩個搜尋）。修：探索鈕 icon 改 `sidebar-explore`（非放大鏡），保留頁內 search bar。commit d1b0ae76。
 
 ## 4. day tab 中欄置中（#4，根因已確認）
 
@@ -33,27 +33,27 @@
 - [x] 5.1 `.tp-map-day-tabs--sticky` `top: var(--titlebar-h)` → 加 gap（`top: calc(var(--titlebar-h) + Npx)`），確保捲動時與（玻璃）titlebar 有可見間距、不被玻璃層蓋/透。
 - [x] 5.2 捲動態截圖驗證（sticky 後 day-tab 與 titlebar 間有間距、無重疊/穿透）。
 
-## 6. 地圖 auth 失敗優雅降級（#6）
+## 6. 地圖 auth 失敗優雅降級（#6）✅
 
-- [ ] 6.1 `useGoogleMap`：`Promise.all([...])` 補 `.catch()` set loadError；註冊 `window.gm_authFailure = () => setLoadError(...)`（Google referer/key 失敗的官方 callback）。
-- [ ] 6.2 `TpMap`：`loadError` 時 render 頁面內「地圖暫停服務」placeholder（乾淨、非 Google 灰底 error、非 ErrorBoundary 紅屏），地圖容器不掛載（避免 Google 自畫 error overlay）。文案對齊 DESIGN.md Empty/error 語氣。
-- [ ] 6.3 桌機 + 手機驗證：localhost 下右欄/地圖頁顯「地圖暫停服務」、頁面其餘（行程/timeline）完全正常可用。
+- [x] 6.1 `useGoogleMap` 已有 `.catch` + loadError；補註冊 `window.gm_authFailure`（referer/key 失敗官方 callback）→ setLoadError + setMap(null)；`authFailed` flag 雙向 gate .then setMap race；unmount 還原；加 Window.gm_authFailure 型別宣告。
+- [x] 6.2 `TpMap` loadError overlay 文案改「地圖暫停服務」+ 授權失敗專屬訊息（行程其他功能正常）；map 容器 visibility:hidden + PageErrorState overlay 覆蓋（Google 灰底不外露）。
+- [x] 6.3 真瀏覽器驗（localhost /map，非授權 referer）：顯「地圖暫停服務」+ 重試，sidebar/day tabs/entry cards 全正常，無 Google overlay、無紅屏。一併根治 memory local_dev_gmaps_referer_crash。commit 0e46a9cd。
 
 ## 8. workflow 稽核新確認的破版（computed 驗過）
 
-- [ ] 8.1 op-edit 桌機 DAY tab 蓋 day-header:中欄 DAY 膠囊列與「DAY 01/日期」標題重疊 → 補垂直間距/修 z-index/sticky top（與 #5 同源機制）。
-- [ ] 8.2 桌機操作頁浮動 nav 被 stack panel 切（op-move/op-changepoi,nav 右緣進 panel 182px）:stack panel 開啟時桌機底部 nav **隱藏**（或置於 panel 之上不被裁）。對齊 rev2 operation stacking（[[project_rev2_operation_stacking]]）。
-- [ ] 8.3 favorites 桌機卡片動作列底部對齊:卡片等高 + 動作列 pin 到底（flex column + margin-top:auto / grid align-items:stretch）,加入行程 y 一致。
-- [ ] 8.4 login/signup 桌機裝飾圓 edge 橫切 hero 標題:調圓位置/標題位置/層級讓 edge 不穿過字身。
-- [ ] 8.5 new-trip 桌機底部 sticky 列後 nav bleed:sticky 列不透明或 nav 該頁隱藏,消除重影。
+- [ ] 8.1 op-edit 桌機 DAY tab 蓋 day-header:中欄 DAY 膠囊列與「DAY 01/日期」標題重疊 → **待最終 workflow audit 於 d-addentry 截圖確認**（與 #5 同源 sticky 機制；#5 已修，此為操作狀態下複驗）。
+- [x] 8.2 桌機操作頁浮動 nav 被 stack panel 切 → **§10.1 已解**（桌機膠囊整個隱藏、nav 在 sidebar，不再有浮動 nav 被 panel 切問題）。
+- [x] 8.3 favorites 桌機卡片動作列底部對齊 → `.poi-actions` `margin-top:auto` pin 卡底，grid 等高。真瀏覽器驗動作列齊底。commit d1b0ae76。
+- [x] 8.4 login/signup 裝飾圓 edge 橫切標題 → 圓改 radial-gradient 淡出（軟 glow 無硬 edge）。commit 17d5a31c。
+- [x] 8.5 new-trip 桌機底部 sticky 列後 nav bleed → **§10.1 已解**（桌機膠囊隱藏，無 nav bleed）。
 
 ## 9. concrete HIG 違規（要修）
 
-- [ ] 9.1 ⋮ kebab → iOS `…`（SF ellipsis,可置圓內）:tripdetail / op-overflow 的 more menu trigger（手機態）。
-- [ ] 9.2 44pt 觸控區補足:explore POI 卡 `+`/`♥`(~32pt)、op-overflow nav 三控、trip-notes trash/chevron。
-- [ ] 9.3 signup 密碼規則改常駐 helper/footnote（不只 placeholder）。
-- [ ] 9.4 op-changepoi disabled 主鈕提高對比（淺 peach on white → 可辨）。
-- [ ] 9.5 tripdetail nav bar trailing 控制精簡（+/⇆/⋮ 擠掉標題）→ 移部分進 overflow/toolbar,讓標題可讀。
+- [x] 9.1 ⋮ kebab → iOS `…`:新增 `ellipsis` icon（水平三點），more-menu trigger（TripCardMenu/TimelineRail/TripsListPage 3 處）由 `more-vert` 改 `ellipsis`。commit 17d5a31c。
+- [x] 9.2 44pt 觸控區:explore POI 卡 `❤`/`➕` 36px→`--spacing-tap-min`(44)。commit 6225776e。op-overflow nav 三控 = StackPanelHeader `‹`/`✕` 已 44pt(G-H6a)。**trip-notes trash/chevron 待最終 audit 於 d-notes 複驗**。
+- [x] 9.3 signup 密碼規則改常駐 helper（`.tp-hint` + aria-describedby）。commit 17d5a31c。
+- [x] 9.4 op-changepoi disabled 主鈕:原 opacity:0.5（白字對比不足）→ 顯式 disabled（淡 tan 底 + muted 深字）。commit 6225776e。
+- [x] 9.5 tripdetail nav bar 精簡:「新增景點」改 icon-only，讓長標題可讀（切換/⋯ 保留）。commit 054ed142。
 
 ## 10. HIG 偏離 — rev2 owner 決策
 
