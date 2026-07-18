@@ -67,10 +67,16 @@ describe('TimelineRail ⋯ context menu — rev2 Section 02', () => {
     expect(screen.queryByTestId('timeline-rail-detail-42')).toBeNull();
   });
 
-  it('row 上有 ⋯ menu trigger', () => {
+  it('row 上有 ⋯ menu trigger（aria-haspopup=menu + aria-expanded 追蹤開合）', () => {
     renderRail();
-    expect(screen.getByTestId('timeline-rail-menu-42')).toBeTruthy();
+    const trigger = screen.getByTestId('timeline-rail-menu-42');
+    expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
   });
+
+  // 開 popover → onToggle（aria-expanded=true + 焦點移進首項 + 定位 + Arrow/Home/End 導航）依賴
+  // native Popover 的 toggle 事件，jsdom 26 的 showPopover() 不 fire React onToggle → 無法在 jsdom 驗；
+  // 該路徑由真瀏覽器（Chrome + WebKit）+ CI e2e（qa-flows 開 ⋯ menu 點動作）覆蓋。
 
   it('⋯ menu 含動作 items（編輯備註/換景點/編輯景點/重新排序/刪除景點）— 恆在 DOM', () => {
     renderRail();

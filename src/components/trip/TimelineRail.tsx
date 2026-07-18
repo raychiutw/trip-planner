@@ -332,6 +332,8 @@ const SCOPED_STYLES = `
 .tp-rail-menu {
   position: fixed; margin: 0; inset: auto;
   min-width: 208px; max-width: 264px; padding: 6px;
+  /* 短視窗（landscape phone、8 項 menu ~320px）夾在畫面內可捲，避免末項（刪除）落在畫面外不可及。 */
+  max-height: calc(100dvh - 16px); overflow-y: auto;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -459,9 +461,10 @@ type RailMenuItem =
 /**
  * ⋯ context menu — rev2 mockup Section 02：把停留卡的動作從「展開明細一排 icon 鈕」
  * 收進單顆 ⋯（Apple 列表語彙，不在列上排 6 顆 icon）。
- * 用原生 Popover API：top-layer 自動逃離 .tp-rail-content 的 overflow:hidden（免 portal、
- * 免 z-index 戰爭）、light-dismiss（點外面 / Esc 關閉免自寫 handler）。top-layer 預設不跟
- * anchor 走，故開啟時（toggle→open）依 trigger rect 定位（同 .tp-rail-time-chip popover 精神）。
+ * 刻意用原生 Popover API（本 repo 首處；EntryTimeChip 的 popup 是 createPortal + 手寫 open state，
+ * 兩者不同機制）：native 免費拿 top-layer（自動逃離 .tp-rail-content 的 overflow:hidden、免 portal /
+ * z-index 戰爭）+ light-dismiss（點外面 / Esc 關閉 + 焦點歸還 trigger，免自寫 handler）。top-layer
+ * 預設不跟 anchor 走，故開啟時（toggle→open）依 trigger rect 定位。
  */
 function RailRowMenu({ menuId, label, items, testid }: {
   menuId: string;
@@ -471,6 +474,9 @@ function RailRowMenu({ menuId, label, items, testid }: {
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // native popover invoker 不自動反映可被 CSS / AT 讀取的 aria-expanded 屬性 → 手動追蹤開合
+  // （讓 SR 念「已展開的選單按鈕」+ 讓 .tp-rail-menu-trigger[aria-expanded="true"] 開啟時保持可見）。
+  const [open, setOpen] = useState(false);
   const positionMenu = () => {
     const t = triggerRef.current;
     const m = menuRef.current;
@@ -491,6 +497,8 @@ function RailRowMenu({ menuId, label, items, testid }: {
         type="button"
         className="tp-rail-menu-trigger"
         popoverTarget={menuId}
+        aria-haspopup="menu"
+        aria-expanded={open}
         aria-label={`更多動作：${label}`}
         onClick={(e) => e.stopPropagation()}
         data-testid={testid}
@@ -505,7 +513,9 @@ function RailRowMenu({ menuId, label, items, testid }: {
         className="tp-rail-menu"
         aria-label={`${label} 的動作`}
         onToggle={(e) => {
-          if (e.newState !== 'open') return;
+          const isOpen = e.newState === 'open';
+          setOpen(isOpen);
+          if (!isOpen) return;
           positionMenu();
           // 開啟時焦點移進 menu 首項（鍵盤導航）；native popover 已管 Esc / 點外面關閉 + 焦點歸還 trigger。
           menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
