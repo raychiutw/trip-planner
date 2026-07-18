@@ -1297,16 +1297,17 @@ export default function TripsListPage() {
             {/* v2.32.0：「新增景點」入口改 navigate /add-entry（EditEntryPage 形狀 +
                 day 下拉），取代 v2.31.99 直接進 /add-stop。/add-stop 仍是 backward-
                 compat 直連 URL（bulk add 用），但新 entry-creation 主流程走 /add-entry。 */}
+            {/* §9.5：trip detail 在窄中欄，「新增景點」+ 切換 + ⋯ 三控會擠壓長標題。
+                改 icon-only（aria-label/title 保留語意），讓標題有空間可讀。 */}
             <button
               type="button"
-              className="tp-titlebar-action"
+              className="tp-titlebar-action tp-titlebar-action--icon-only"
               onClick={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/add-entry`)}
               aria-label="新增景點"
               title="新增景點"
               data-testid="trip-add-stop-trigger"
             >
               <Icon name="plus" />
-              <span className="tp-titlebar-action-label">新增景點</span>
             </button>
             {/* v2.31.89：切換行程改 dropdown picker（對齊 ChatPage TitleBar trip picker） — swap-horiz + chevron ▾，click 開 dropdown 列 trips */}
             {visibleTrips.length > 0 && (
