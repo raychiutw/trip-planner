@@ -6,8 +6,8 @@
 
 ## 1. 搜尋按鈕破版（#2，根因已確認）
 
-- [ ] 1.1 `.tp-trips-search` collapsed 態改 44×44（或 40×40）圓、icon 置中（拔不對稱 padding / `place-items:center`），展開態維持 220px；`.tp-trips-search-toggle` 不再被 `overflow:hidden` 裁。
-- [ ] 1.2 雙視窗 3× zoom 驗證 icon 置中、tap 區 ≥44、展開輸入正常。
+- [x] 1.1 `.tp-trips-search` collapsed 態改 44×44（或 40×40）圓、icon 置中（拔不對稱 padding / `place-items:center`），展開態維持 220px；`.tp-trips-search-toggle` 不再被 `overflow:hidden` 裁。
+- [x] 1.2 雙視窗 3× zoom 驗證 icon 置中、tap 區 ≥44、展開輸入正常。
 
 ## 2. filter tabs「一片白色」（#1）
 
@@ -17,7 +17,7 @@
 ## 3. 行程頁 timeline 破版（#3，已 pinpoint）
 
 - [x] 3.1 已定位：長 entry（時間區間 + 時數 + 評分）副標超 390px → `★ 4.1` 整組換行 + 第一行尾掛孤懸 `·`。根因 = `.tp-rail-sub` 分隔符是獨立 flex child。
-- [ ] 3.2 修法：把每個「`·` + token」綁成 nowrap 單位（分隔符不再獨立孤懸），或副標超長時的 graceful 收斂（對 `2026-07-17-...timeline-route-spine.html` mockup）。雙視窗 before/after 驗（含長 entry 3 那種）。
+- [x] 3.2 修法：把每個「`·` + token」綁成 nowrap 單位（分隔符不再獨立孤懸），或副標超長時的 graceful 收斂（對 `2026-07-17-...timeline-route-spine.html` mockup）。雙視窗 before/after 驗（含長 entry 3 那種）。
 
 ## 6b. 桌機 favorites 重複搜尋（#7，新找到）
 
@@ -25,13 +25,13 @@
 
 ## 4. day tab 中欄置中（#4，根因已確認）
 
-- [ ] 4.1 `.tp-map-day-tabs` `margin: 6px 12px 8px` → 置中（`margin: 6px auto 8px`；如需手機靠左/桌機置中則加 media query）。
-- [ ] 4.2 桌機截圖驗證 day-tab pill 在中欄水平置中（computed: pill 中心 ≈ 中欄中心）。
+- [x] 4.1 `.tp-map-day-tabs` `margin: 6px 12px 8px` → 置中（`margin: 6px auto 8px`；如需手機靠左/桌機置中則加 media query）。
+- [x] 4.2 桌機截圖驗證 day-tab pill 在中欄水平置中（computed: pill 中心 ≈ 中欄中心）。
 
 ## 5. 捲動時 day tab 與 header 間距（#5，根因已確認）
 
-- [ ] 5.1 `.tp-map-day-tabs--sticky` `top: var(--titlebar-h)` → 加 gap（`top: calc(var(--titlebar-h) + Npx)`），確保捲動時與（玻璃）titlebar 有可見間距、不被玻璃層蓋/透。
-- [ ] 5.2 捲動態截圖驗證（sticky 後 day-tab 與 titlebar 間有間距、無重疊/穿透）。
+- [x] 5.1 `.tp-map-day-tabs--sticky` `top: var(--titlebar-h)` → 加 gap（`top: calc(var(--titlebar-h) + Npx)`），確保捲動時與（玻璃）titlebar 有可見間距、不被玻璃層蓋/透。
+- [x] 5.2 捲動態截圖驗證（sticky 後 day-tab 與 titlebar 間有間距、無重疊/穿透）。
 
 ## 6. 地圖 auth 失敗優雅降級（#6）
 
