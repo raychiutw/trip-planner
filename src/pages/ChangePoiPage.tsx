@@ -484,7 +484,11 @@ const SCOPED_STYLES = `
   min-width: 112px;
 }
 .tp-change-poi-btn-confirm:disabled {
-  opacity: 0.5;
+  /* §9.4：原 opacity:0.5 讓實心 accent 鈕變淡 peach + 白字半透明 → 白字對比不足難辨。
+   * 改顯式 disabled 樣式：淡 tan 底 + muted 深字，對比足、狀態明確（非透明化）。 */
+  background: var(--color-accent-bg);
+  border-color: var(--color-accent-bg);
+  color: var(--color-muted);
   cursor: not-allowed;
 }
 .tp-change-poi-error {
