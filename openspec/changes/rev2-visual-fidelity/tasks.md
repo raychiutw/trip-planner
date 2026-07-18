@@ -55,9 +55,12 @@
 - [ ] 9.4 op-changepoi disabled 主鈕提高對比（淺 peach on white → 可辨）。
 - [ ] 9.5 tripdetail nav bar trailing 控制精簡（+/⇆/⋮ 擠掉標題）→ 移部分進 overflow/toolbar,讓標題可讀。
 
-## 10. HIG 偏離 — rev2 owner 決策（**先不動,待 owner 拍板**）
+## 10. HIG 偏離 — rev2 owner 決策
 
-- [ ] 10.1 **桌機底部浮動 tab bar 非 macOS**（9 HIG agent 一致）:維持 rev2 canonical vs 改 macOS sidebar/toolbar 導覽。決策後才動。
+- [ ] 10.1 **桌機導覽改 macOS sidebar/toolbar**（owner 2026-07-18 **拍板要改**:9 HIG agent 一致點名底部浮動 tab bar 是桌機最大 macOS 違規）。**獨立工作線、踩 mockup-first hard gate（≥1 layout 變化）**:
+    - [ ] 10.1a 產桌機 macOS sidebar 導覽 mockup:4-tab（聊天/行程/地圖/收藏）從底部玻璃膠囊搬進**左 sidebar**（或頂部 toolbar/segmented）;**手機維持底部 tab bar 不動**。用 /tp-claude-design 產 HTML → SendUserFile 截圖給 owner sign-off。
+    - [ ] 10.1b sign-off 後改 code:`AppShell`（桌機不傳 bottomNav / 改 sidebar nav）+ `DesktopSidebar`（加 4-tab 主導覽）+ `GlobalBottomNav`（@≥1024 收起）;手機分支不變。同步 DESIGN.md + mockup。
+    - [ ] 10.1c 桌機各頁雙視窗驗:nav 在 sidebar、底部無膠囊、內容不被遮。**此改一併解掉桌機底部 nav 相關破版**（#9 操作頁 nav 被 panel 切、桌機底部 nav 遮內容),故 #9 桌機部分歸這條做（手機 op-page 若也有 nav 遮則另處理）。
 - [ ] 10.2 操作 sheet 手機 ‹+✕ 雙 dismiss:維持 rev2 StackPanelHeader vs 收斂單一 dismiss。
 - [ ] 10.3 桌機 sidebar vibrancy vs 現有 deep cocoa 不透明:owner 確認（多半維持）。
 - [ ] 10.4 macOS 單欄窄置中 vs 用滿橫向空間（account/new-trip）。
