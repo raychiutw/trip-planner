@@ -661,14 +661,22 @@ body.dark {
         column-gap: 12px;
         align-items: center;
         width: 100%; padding: 10px 8px;
-        /* flush 列：透明底（讓中性 route spine 透出）+ hairline 分隔，取代獨立圓角卡。 */
+        /* flush 列：透明底（讓中性 route spine 透出），分隔線走內縮 ::after（取代獨立圓角卡）。 */
         background: transparent;
         border-radius: var(--radius-md);
-        border-bottom: 1px solid var(--color-border);
         color: var(--color-foreground);
         transition: background 150ms;
     }
-    .tp-rail-item:hover { background: var(--color-hover, var(--color-secondary)); border-bottom-color: transparent; }
+    /* rev2 mockup .stop-c::after:278 — 內縮分隔線：對齊文字起點（編號 node 之後），Apple 列表簽名細節；
+       hover / 展開 / 末列 隱藏。left=padding(8)+node(24)+gap(12)=44px。 */
+    .tp-rail-item::after {
+        content: ''; position: absolute; bottom: 0; left: 44px; right: 8px;
+        height: 1px; background: var(--color-border);
+    }
+    .tp-rail-item:hover::after,
+    .tp-rail-item[data-expanded="true"]::after,
+    .tp-rail-item[data-last="true"]::after { display: none; }
+    .tp-rail-item:hover { background: var(--color-hover, var(--color-secondary)); }
     .tp-rail-item[data-past="true"] { opacity: 0.55; }
     .tp-rail-item[data-now="true"] {
         background: var(--color-accent-subtle);
@@ -737,18 +745,21 @@ body.dark {
     }
     /* rev2 prototype 卡牌 Apple Music track row：標題 17px / 700 / -0.01em / nowrap ellipsis
      * （2026-07-17 mockup Section 02：先前 15px 太小是「不像 Apple」主因，升 card-title 17）。 */
+    /* rev2 mockup .stop-n:291 — Apple Music track row 標題：17px / weight 500（medium，非 bold）
+       / letter-spacing -.012em（SF 式緊排）。選中（展開）→ 600。 */
     .tp-rail-name {
-        display: block; font-size: var(--font-size-headline); font-weight: 700;
-        letter-spacing: -0.01em; line-height: 1.3;
+        display: block; font-size: var(--font-size-headline); font-weight: 500;
+        letter-spacing: -0.012em; line-height: 1.3;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .tp-rail-item[data-expanded="true"] .tp-rail-name { font-weight: 600; }
     /* rev2 prototype 卡牌副標：15px muted inline-flex 串接 time · type · duration · ★ rating · desc
      * （2026-07-17 mockup Section 02：副標 15px，先前 11px 太小）。 */
     .tp-rail-sub {
         display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
         font-size: var(--font-size-subheadline); color: var(--color-muted);
         font-variant-numeric: tabular-nums;
-        line-height: 1.4;
+        line-height: 1.4; letter-spacing: -0.006em; /* mockup .stop-s:296 */
     }
     .tp-rail-sub-type {
         font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
@@ -835,6 +846,7 @@ body.dark {
             column-gap: 8px;
             padding: 10px 4px;
         }
+        .tp-rail-item::after { left: 36px; right: 4px; } /* 手機縮排：padding(4)+node(24)+gap(8) */
         .tp-rail-head { column-gap: 8px; }
         .tp-rail-name { font-size: var(--font-size-callout); }
         /* v2.33.61 round 14b: 拔 .tp-rail-line (見 line 613 dead-code 拔除說明) */
