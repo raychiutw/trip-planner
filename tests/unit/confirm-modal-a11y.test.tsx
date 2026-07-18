@@ -12,7 +12,7 @@
  *   - warning prop conditional render
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { afterEach } from 'vitest';
 import ConfirmModal from '../../src/components/shared/ConfirmModal';
 
@@ -32,7 +32,7 @@ describe('ConfirmModal — a11y + interaction', () => {
     expect(screen.queryByText('刪除行程')).not.toBeInTheDocument();
   });
 
-  it('open=true → portal 渲染 + 自動 focus confirm button', () => {
+  it('open=true → portal 渲染 + 自動 focus confirm button', async () => {
     render(
       <ConfirmModal
         open={true}
@@ -45,7 +45,8 @@ describe('ConfirmModal — a11y + interaction', () => {
     );
     expect(screen.getByText('刪除行程')).toBeInTheDocument();
     const confirmBtn = screen.getByRole('button', { name: '刪除' });
-    expect(document.activeElement).toBe(confirmBtn);
+    // 引擎在 requestAnimationFrame 內 focus initialFocusRef（confirm 鈕），故 await
+    await waitFor(() => expect(document.activeElement).toBe(confirmBtn));
   });
 
   it('backdrop 使用全域 modal z-index token，壓過地圖與 sticky chrome', () => {
@@ -75,7 +76,7 @@ describe('ConfirmModal — a11y + interaction', () => {
         onCancel={onCancel}
       />,
     );
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
@@ -160,7 +161,7 @@ describe('ConfirmModal — a11y + interaction', () => {
         onCancel={onCancel}
       />,
     );
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).not.toHaveBeenCalled();
   });
 });

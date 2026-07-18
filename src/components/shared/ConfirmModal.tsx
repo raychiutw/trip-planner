@@ -11,8 +11,9 @@
  *   - CollabPanel 移除成員 / 撤銷邀請
  *   - 將來其他 destructive 流程(刪除 trip / 刪除 entry / 登出)
  */
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
 const SCOPED_STYLES = `
 .tp-confirm-backdrop {
@@ -130,20 +131,12 @@ export default function ConfirmModal({
   onCancel,
 }: ConfirmModalProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    // Auto-focus confirm button on open(keyboard user 直接可 Enter 確認)
-    confirmRef.current?.focus();
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onCancel();
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onCancel]);
+  // 統一 sheet 引擎（B1）：開啟 focus 確認鈕（keyboard user 直接 Enter）+ Escape
+  // （IME/巢狀 guard，巢狀時只關最上層）+ focus-trap（原本無）+ body scroll-lock（原本無）。
+  // z-index 維持 --z-modal（alertdialog 恆需壓過地圖/sticky chrome）；public props + testid 全不動。
+  const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onCancel, {
+    initialFocusRef: confirmRef,
+  });
 
   if (!open) return null;
   if (typeof document === 'undefined') return null;
@@ -152,18 +145,21 @@ export default function ConfirmModal({
     <>
       <style>{SCOPED_STYLES}</style>
       <div
+        ref={backdropRef}
         className="tp-confirm-backdrop"
         role="presentation"
         onClick={onCancel}
         data-testid="confirm-modal-backdrop"
       >
         <div
+          ref={panelRef}
           className="tp-confirm-modal"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="tp-confirm-title"
           aria-describedby="tp-confirm-message"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={handlePanelKeyDown}
           data-testid="confirm-modal"
         >
           <h2 className="tp-confirm-title" id="tp-confirm-title">{title}</h2>
