@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.101] - 2026-07-18
+
+### Changed
+- **rev2 停留卡精確對齊 mockup Section 02 微調**（逐條對照 `docs/artifacts/2026-07-17-v3-desktop-prototype.html` 停留卡 CSS）：
+  - 標題 `.tp-rail-name`（mockup `.stop-n`）：weight 700 → **500（medium，Apple Music track row 質感，非 bold）** + letter-spacing `-0.01em` → **`-0.012em`**（SF 式緊排）；選中 `[data-expanded]` → 600。
+  - 副標 `.tp-rail-sub`（mockup `.stop-s`）：加 `letter-spacing: -0.006em`。
+  - **內縮分隔線**（mockup `.stop-c::after`）：列間 hairline 從全寬 `border-bottom` 改 `.tp-rail-item::after`（`left: 44px` 桌機 / `36px` 手機 = padding+node+gap，對齊文字起點），hover/展開/末列隱藏。Apple 列表簽名細節。
+  - DESIGN.md Stop Card 段同步（標題 500 medium 為 card-title 700 的 Apple Music track row 例外 + 內縮分隔線）。
+- 驗證：tsc ✓ · 完整 unit **3768 tests 全綠** · 真瀏覽器：weight 500 / letter-spacing -0.204px(-.012em) / divider inset left 44px、桌機視覺對齊 mockup track row。
+
 ## [2.55.100] - 2026-07-18
 
 ### Changed
