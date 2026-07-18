@@ -250,7 +250,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - **Map exception:** 地圖頁可 full bleed，仍保留統一 sidebar / titlebar / bottom nav 行為。
 - **Trip detail DayNav:** sticky 在 titlebar 下方，行為與 bottom nav 一致：向下捲動隱藏、向上捲動顯示。
 - **Trip detail source:** 行程明細頁 desktop / compact 必須共用同一個內容結構與狀態來源；只允許外層 layout responsive，避免兩套明細頁造成行為與 UI 漂移。
-- **Operation stacking（rev2，v2.55.96）:** 6 條操作流程（加景點 / 新增 / 複製移動 / 換景點 / 編輯景點 / 編輯行程）在**桌機（≥1024）以右欄堆疊面板**呈現、**不是整頁**：`TripStackLayout`（pathless layout route，包 6 條操作路由）render 三欄 host（sidebar｜`<TripPage noShell>` 中欄行程詳情｜右欄 sheet = 操作面板），操作面板走 `OperationShell` bare 形態（`StackPanelHeader` = `‹` 前一頁 / `✕` 整個關閉），中欄詳情 context 全程保留。**手機（<1024）維持整頁 drill-down**（`OperationShell` render `AppShell + TitleBar`）。URL 不變（`/trip/:id/*`），deep-link 不破。新操作頁一律用 `OperationShell` 取代 hardcode `<AppShell>+<TitleBar>`，並把路由掛進 `TripStackLayout` group 才會有右欄堆疊行為。`.tp-page-bottom-bar` 在 sheet 內須 `sticky`（非整頁 `fixed`）以收進 panel 寬度。
+- **Operation stacking（rev2，v2.55.96）:** 6 條操作流程（加景點 / 新增 / 複製移動 / 換景點 / 編輯景點 / 編輯行程）在**桌機（≥1024）以右欄堆疊面板**呈現、**不是整頁**：`TripStackLayout`（pathless layout route，包 6 條操作路由）render 三欄 host（sidebar｜`<TripPage noShell>` 中欄行程詳情｜右欄 sheet = 操作面板），操作面板走 `OperationShell` bare 形態（`StackPanelHeader` = `‹` 前一頁 / `✕` 整個關閉），中欄詳情 context 全程保留。**堆疊層級語意（rev2 F9，mockup `layer.l2/l3`）**：桌機**第一層**（從 timeline / ⋯ menu 進的操作，L2 modal）**只給右上「✕」關閉、不給「‹」**；**從另一操作 push 進來**（如 編輯景點 →「變更景點」，L3+）才左上「‹」回前頁 + 右上「✕」。操作是 route-swap（`SheetStackContext` 只有 `inStack` boolean、無真 component stack），故靠 `navigate` 帶 `state.opStacked=true` 標記層級；`OperationShell` 的 `showBack = !inStack || location.state.opStacked`（手機全頁下鑽一律 ‹+✕）。**手機（<1024）維持整頁 drill-down**（`OperationShell` render `AppShell + TitleBar`）。URL 不變（`/trip/:id/*`），deep-link 不破。新操作頁一律用 `OperationShell` 取代 hardcode `<AppShell>+<TitleBar>`，並把路由掛進 `TripStackLayout` group 才會有右欄堆疊行為。`.tp-page-bottom-bar` 在 sheet 內須 `sticky`（非整頁 `fixed`）以收進 panel 寬度。
 
 ### Content Width
 - **Standard pages:** content wrapper `max-width: 1040px; margin-inline: auto; padding-inline: 24px` on desktop。
@@ -461,11 +461,15 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - **後端防禦（非 UI）**：`mint-restricted` 遇 `no_consent` 把該 request park 成 `failed` + 寫授權指引 reply（peek 只撈 open/processing → 跳過），確保單一未授權請求不會永久卡死佇列。沿用既有 `failed` status（0049 CHECK 值域）→ 免 migration。並把 `POST /api/requests` 的 30 秒去重加 `status IN ('open','processing')` 濾網 —— 否則 owner 授權後重送同一訊息會在 30 秒內撞回剛 park 的 `failed` 請求、看似又失敗（adversarial F1）。
 - Mockup：`docs/design-sessions/2026-07-15-chat-consent-gate.html`（sign-off 2026-07-15 variant B）。
 
-### Stop Card
-- 4-col grid：`68px time | 48px icon box | content | actions`，compact 可收斂到 3-col。
-- **依類型 tone 上同色系淡底**：卡片 bg = tone `-subtle`、border = tone `-bg`（柔褐／sage／粉，見 Stop Type Color Convention）。
-- **icon 同色系階梯（ghost）**：icon box bg = tone `-bg`、border + glyph = tone `-deep`（卡片→icon→glyph 同色相由淺到深、icon 融入卡片）。glyph 用 app 真實 SVG（景點 location-pin / 活動 sparkle / 用餐 utensils / 交通 car…）。
-- `data-now="true"` → tone border 加強 + shadow-md；`data-past="true"` → opacity 0.65。
+### Stop Card（rev2 route-list · Apple Music track row，v2.55.99）
+
+> **⚠ rev2 owner 2026-07-17（mockup Section 02，`docs/artifacts/2026-07-17-v3-desktop-prototype.html`）：停留卡改 Apple Music track row —— 動作從「展開明細一排 icon 工具列」收進單顆 ⋯ context menu（Apple 列表語彙：不在列上排 icon）。**
+
+- **Grid（`.tp-rail-item`）**：resting = `編號 node(24) | body(1fr)`（桌機手機統一、無常駐 grip 欄 → Apple 乾淨列）；排序模式才插 grip 欄 = `grip(24) | node(24) | body(1fr)`。grip/node/head 皆無顯式 `grid-column`，靠 source order 自動落欄、兩模板通用。類型 icon tile 已退場（v2.55.90），**編號 node 為 route spine 唯一 leading 元素**、類型走 sub-line label。
+- **Typography**：標題 `.tp-rail-name` = `--font-size-headline`（17px 桌機 / `--font-size-callout` 16px 手機）/ 700 / `-0.01em` / nowrap ellipsis；副標 `.tp-rail-sub` = `--font-size-subheadline`（15px）muted，inline 串接 time chip · 類型 · 停留 · ★rating · desc。（先前 15/11px 太小是「不像 Apple」主因。）
+- **動作 = ⋯ context menu**：row 右側 `.tp-rail-head-actions` = ⋯ trigger（桌機 hover/focus/menu-open 才顯、觸控恆顯）+ 展開 caret。⋯ 用**原生 Popover API**（top-layer 自動逃 `.tp-rail-content` 的 overflow:hidden、light-dismiss、鍵盤 ↑↓/Home/End）。menu 分組（destructive 獨立末組）：**在地圖開啟｜編輯備註 / 換景點 / 編輯景點｜重新排序 / 複製到其他天 / 移到其他天｜刪除景點（紅）**。testid 沿用舊 toolbar（`timeline-rail-edit/-delete/-copy-open/-move-open-N`）。展開明細只留**資訊面**（景點說明 / 備註 inline / 備選景點），**無 action 工具列**（`.tp-rail-actions` 已移除）。
+- **排序模式**：⋯「重新排序」→ `.tp-rail-body[data-sort-mode]`：所有列顯 grip、可拖（dnd-kit，`useSortable` disabled 由 sortMode gate）、底部 sticky「完成排序」bar 退出。resting 列不放常駐 grip（拖拉排序在 ⋯ 內，非列上 icon）。
+- **依類型 tone 上同色系淡底**：卡片 bg = tone `-subtle`、border = tone `-bg`（柔褐／sage／粉，見 Stop Type Color Convention）。`data-now="true"` → 編號 node accent 實心；`data-past="true"` → opacity 0.55。
 
 ### Travel Connector
 - Stop 之間的交通段（travel pill）：**sage 描邊式** — 透明底 + 1.5px sage 邊框 + sage `-deep` 文字/icon（取代填滿）。
