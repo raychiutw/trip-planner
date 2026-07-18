@@ -14,10 +14,13 @@
 - **修 6 項視覺問題**(根因見 design.md 對照表):
   1. 行程一覽 filter tabs(`.tp-trips-tabs`)對比不足、like「一片白色」— 比對 mockup 對齊 segmented control。
   2. 搜尋按鈕破版 — collapsed `.tp-trips-search` 36px 寬、內容區僅 18px(padding 10+8)卻塞 24px toggle → `overflow:hidden` 裁掉、icon 偏左上。改 collapsed 為 44×44 置中圓。
-  3. 行程頁 timeline 破版 — 依方法逐元件 pinpoint 後修(執行時定位確切破點)。
+  3. 行程頁 timeline 破版 — 已 pinpoint:長 entry(時間**區間**+時數+評分)副標超 390px → `★ 4.1` 整組換行、第一行尾掛孤懸 `·`(`.tp-rail-sub` 分隔符是獨立 flex child)。修 = 分隔符綁進 token 為 nowrap 單位。
   4. day tab 沒在中欄置中 — `.tp-map-day-tabs` `margin: 6px 12px 8px`(靠左),改 `margin: auto` 置中。
   5. 捲動時 day tab 沒與 header 間距 — `--sticky` `top: var(--titlebar-h)` 緊貼玻璃 titlebar 無 gap,加間距 + 處理玻璃層疊。
   6. 地圖 auth 失敗(localhost referer)整塊 Google error 佔版 — try/catch + `window.gm_authFailure` → set loadError → 頁面內顯「地圖暫停服務」placeholder,頁面其餘正常。
+  7. 桌機 favorites 重複搜尋 — titlebar 🔍 + 頁內 search bar 同時存在(computed 皆 true)→ 擇一。(方法主動掃描新找到)
+
+> **進行中**:`visual-fidelity-audit` workflow(1 截圖 + 5 破版 + 5 HIG sonnet,含 auth/share/操作頁,HIG agent 先讀最新 macOS/iOS HIG)正在背景蒐集更多 findings;完成後統整、逐項 computed 驗證(擋誤報)、併入本清單。**已知偽陽性(computed 推翻,不修)**:account 底 row 未被 nav 蓋(padding 88px 足)、favorites 卡片等高(皆 227px)。
 
 ## Capabilities
 
@@ -33,6 +36,8 @@
 - `openspec/specs/visual-fidelity-review/spec.md`:新 capability spec。
 - `src/pages/TripsListPage.tsx`:filter tabs(#1)+ 搜尋按鈕(#2)scoped styles。
 - `css/tokens.css`:`.tp-map-day-tabs`(#4 置中)+ `.tp-map-day-tabs--sticky`(#5 間距)。
-- `src/components/trip/TimelineRail.tsx`(或相關):timeline 破版(#3,待 pinpoint)。
+- `src/components/trip/TimelineRail.tsx`:timeline 副標分隔符綁 nowrap(#3,已 pinpoint)。
 - `src/hooks/useGoogleMap.ts` + `src/components/trip/TpMap.tsx`:地圖 auth 失敗降級(#6)。
+- favorites 頁 search 元件:桌機重複搜尋擇一(#7)。
+- **待併入**:`visual-fidelity-audit` workflow 的破版 + HIG findings(完成後統整驗證加進 tasks/design）。
 - 每項雙視窗 before/after 截圖 + computed-vs-token 驗證。UI 改動同步 DESIGN.md / mockup。
