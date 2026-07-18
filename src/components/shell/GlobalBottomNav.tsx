@@ -78,13 +78,13 @@ const SCOPED_STYLES = `
   gap: 2px;
   padding: 6px;
   border-radius: var(--radius-full);
-  /* rev2 iOS 26 Liquid Glass — 對齊 mockup .ph-tabs（2026-07-15-v3-three-col-bottom-tab.html:649）。
-   * 原 cream 82% + blur20 + 弱影在奶油頁面上 cream-on-cream 無對比 → 看起來像色塊非浮動玻璃。
-   * 降透明度到 62%（底下內容透得出來）、blur 30px 更frosted、亮 specular 上緣 + 較強暖落影
-   * 讓膠囊在淺底上「浮」起來。token 化（--color-secondary/-foreground）故 light/dark 皆adapt。 */
+  /* rev2 iOS 26 Liquid Glass。原 cream 82% + 弱影在奶油頁面上 cream-on-cream 無對比 →
+   * 看起來像色塊非浮動玻璃。修法靠「降透明度到 62%（底下內容透得出）＋亮 specular 上緣＋
+   * 較強暖落影」讓膠囊浮起（非靠加重 blur）。blur 用 --blur-glass(14px) 與 titlebar/sheet
+   * 三層一致（DESIGN.md L281 glass 一致性規則；saturate 僅 sheet 不加）。token 化 light/dark adapt。 */
   background: color-mix(in srgb, var(--color-secondary) 62%, transparent);
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
   border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
   box-shadow:
     0 14px 34px rgba(42, 31, 24, .30),
