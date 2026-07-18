@@ -48,7 +48,6 @@ import {
   type DayOption,
 } from '../lib/entryAction';
 import OperationShell from '../components/shell/OperationShell';
-import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripSelect } from '../components/TripSelect';
@@ -356,7 +355,6 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
         testId="entry-action-page"
         title={heading}
         back={handleBack}
-        backLabel="返回行程列表"
       >
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
           無效的行程或景點 ID
@@ -364,17 +362,6 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
       </OperationShell>
     );
   }
-
-  const titleBarActions = !loading && !loadError && (
-    <TitleBarPrimaryAction
-      label={ctaLabel}
-      busyLabel={`${ctaLabel}中⋯`}
-      busy={submitting}
-      disabled={!canConfirm}
-      onClick={handleConfirm}
-      testId="entry-action-titlebar-confirm"
-    />
-  );
 
   return (
     <>
@@ -384,8 +371,6 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
         testId="entry-action-page"
         title={heading}
         back={handleBack}
-        backLabel="返回前頁"
-        actions={titleBarActions}
         scopedStyles={SCOPED_STYLES}
       >
             <div className="tp-entry-action-content">

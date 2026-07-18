@@ -1628,7 +1628,6 @@ export default function EditEntryPage() {
       shellClassName="tp-app"
       title={tripName ? `編輯景點 · ${tripName}` : '編輯景點'}
       back={handleCancel}
-      backLabel="返回行程"
       scopedStyles={SCOPED_STYLES}
     >
       <main className="tp-page-content">

@@ -23,7 +23,7 @@ export interface TitleBarProps {
   className?: string;
   /** Page title — primary identity. ReactNode 允許 inline accent span / `<br/>`。 */
   title: ReactNode;
-  /** 提供 callback 即顯示左側 36×36 返回 button（行程詳情頁專用）。 */
+  /** 提供 callback 即顯示左側 44×44 返回 button（HIG 最小觸控區；行程詳情頁專用）。 */
   back?: () => void;
   /** 右側 actions slot（icon button、menu trigger、primary button）。 */
   actions?: ReactNode;

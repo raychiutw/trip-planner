@@ -247,7 +247,6 @@ export default function AddEntryPage() {
       testId="add-entry-page"
       title={titleBar}
       back={handleBack}
-      backLabel="返回前頁"
       scopedStyles={SCOPED_STYLES}
     >
           <main className="tp-add-entry-body">

@@ -52,20 +52,17 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(queryByTestId('titlebar')).toBeNull();
   });
 
-  it('inStack=true：actions 不顯（完成鈕由 children bottom-bar 提供）、title 顯示、焦點移入面板', () => {
-    const { getByTestId, queryByTestId, getByText } = renderStack(
+  it('inStack=true：title 顯示、焦點移入面板（完成鈕唯一入口是 children bottom-bar，header 無 action slot）', () => {
+    const { getByTestId, getByText } = renderStack(
       <OperationShell
         shellClassName="tp-op-x"
         testId="op-x-page"
         title="加入景點"
         back={() => {}}
-        actions={<button data-testid="op-actions">完成</button>}
       >
         <div>面板內容</div>
       </OperationShell>,
     );
-    // stack 模式不顯 TitleBar actions（submit 唯一入口是 children 內的 bottom bar）
-    expect(queryByTestId('op-actions')).toBeNull();
     // title 有 render（heading 語意由 StackPanelHeader 提供）
     expect(getByText('加入景點')).toBeTruthy();
     // a11y：面板開啟時焦點移進面板容器（非停在中欄觸發鈕）
@@ -132,7 +129,6 @@ describe('OperationShell — 雙形態外殼', () => {
           testId="op-x-page"
           title="加入景點"
           back={() => {}}
-          actions={<button data-testid="op-actions">完成</button>}
         >
           <div>面板內容</div>
         </OperationShell>
@@ -141,8 +137,7 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(getByTestId('app-shell')).toBeTruthy();
     expect(getByTestId('stack-panel-header')).toBeTruthy();
     expect(getByText('面板內容')).toBeTruthy();
-    // 手機全頁也無 TitleBar、無 titlebar action（完成由 children bottom-bar 提供）
+    // 手機全頁也無 TitleBar（完成由 children bottom-bar 提供，header 無 action slot）
     expect(queryByTestId('titlebar')).toBeNull();
-    expect(queryByTestId('op-actions')).toBeNull();
   });
 });

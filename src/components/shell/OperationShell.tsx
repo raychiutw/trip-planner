@@ -28,10 +28,6 @@ export interface OperationShellProps {
   title: ReactNode;
   /** ‹「前一頁」callback（各頁既有 handleBack）。 */
   back: () => void;
-  /** @deprecated 保留讓呼叫端相容；rev2 drill-down header 無 titlebar action（完成由 bottom bar 提供）。 */
-  backLabel?: string;
-  /** @deprecated 同上；header 不放 action。 */
-  actions?: ReactNode;
   /** 各頁 scoped `<style>` 內容（兩形態共用）。 */
   scopedStyles?: string;
   children: ReactNode;

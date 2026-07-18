@@ -49,7 +49,6 @@ import {
   type RegionOption,
 } from '../lib/poiSearchHelpers';
 import OperationShell from '../components/shell/OperationShell';
-import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
@@ -964,7 +963,6 @@ export default function AddStopPage() {
         testId="add-stop-page"
         title="加入景點"
         back={handleBack}
-        backLabel="返回行程列表"
       >
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
           無效的行程
@@ -975,17 +973,6 @@ export default function AddStopPage() {
 
   const dayLabel = hasDay ? deriveDayLabel(currentDay, dayNum) : '請選擇加入哪天';
 
-  const titleBarActions = (
-    <TitleBarPrimaryAction
-      label="完成"
-      busyLabel="加入中⋯"
-      busy={submitting}
-      disabled={!confirmEnabled}
-      onClick={() => void handleConfirm()}
-      testId="add-stop-titlebar-confirm"
-    />
-  );
-
   return (
     <>
       <ToastContainer />
@@ -994,8 +981,6 @@ export default function AddStopPage() {
         testId="add-stop-page"
         title="加入景點"
         back={handleBack}
-        backLabel="返回前頁"
-        actions={titleBarActions}
         scopedStyles={SCOPED_STYLES}
       >
             <div className="tp-add-stop-page-day-meta">{dayLabel}</div>

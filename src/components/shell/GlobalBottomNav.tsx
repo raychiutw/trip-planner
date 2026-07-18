@@ -1,8 +1,8 @@
 /**
- * GlobalBottomNav — 5-tab mobile bottom nav (mockup section 02 align).
+ * GlobalBottomNav — 4-tab 底部浮動玻璃導航（rev2；手機 + 桌機共用同元件）。
  *
- * 5-tab global IA(聊天 / 行程 / 地圖 / 收藏 / 帳號 | 登入),所有 page 共用,
- * 包含 trip-scoped /trip/:id。
+ * 4-tab global IA(聊天 / 行程 / 地圖 / 收藏),所有 page 共用,包含 trip-scoped
+ * /trip/:id。帳號已移出 tab slot(手機 header 右上 AccountCircle / 桌機 sidebar chip)。
  *
  * v2.21.0 IA reshuffle: 4th slot 「探索」→「收藏」 (heart icon, asymmetric label vs
  * DesktopSidebar「我的收藏」 — bottom-nav 緊密用 2-char + heart icon 補語意)。

@@ -1096,7 +1096,6 @@ export default function EditTripPage() {
         testId="edit-trip-page"
         title="編輯行程"
         back={handleBack}
-        backLabel="返回行程列表"
       >
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
           無效的行程 ID
@@ -1117,7 +1116,6 @@ export default function EditTripPage() {
         testId="edit-trip-page"
         title="編輯行程"
         back={handleBack}
-        backLabel="返回前頁"
       >
             <style>{TRIP_FORM_STYLES}</style>
             <style>{SCOPED_STYLES}</style>
