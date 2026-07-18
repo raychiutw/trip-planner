@@ -245,7 +245,8 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
   const entryIdNum = entryId ? parseInt(entryId, 10) : null;
-  const heading = action === 'copy' ? '複製到哪一天' : '移動到哪一天';
+  // G-T2:動詞對齊 menu「移到其他天 / 複製到其他天」（DESIGN.md:471 SoT），避免 移到/移動 混用。
+  const heading = action === 'copy' ? '複製到哪一天' : '移到哪一天';
   const ctaLabel = action === 'copy' ? '複製' : '移動';
 
   const [days, setDays] = useState<DayOption[] | null>(null);
