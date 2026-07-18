@@ -784,7 +784,7 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthChe
         aria-expanded={open}
         data-testid="trips-embedded-menu-trigger"
       >
-        <Icon name="more-vert" />
+        <Icon name="ellipsis" />
       </button>
       {dropdown}
     </>

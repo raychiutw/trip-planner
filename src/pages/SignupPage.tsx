@@ -236,13 +236,16 @@ export default function SignupPage() {
               id="signup-password"
               type="password"
               autoComplete="new-password"
-              placeholder="至少 8 字元"
+              placeholder="輸入密碼"
               minLength={8}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               data-testid="signup-password"
+              aria-describedby="signup-password-hint"
             />
+            {/* §9.3：密碼規則改常駐 helper（原只在 placeholder，打字即消失）。 */}
+            <p id="signup-password-hint" className="tp-hint" data-testid="signup-password-hint">密碼至少 8 字元</p>
             {passwordError && <InlineError message={passwordError} testId="signup-password-error" />}
           </div>
 

@@ -282,7 +282,7 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
         aria-expanded={open}
         data-testid={`trip-card-menu-trigger-${tripId}`}
       >
-        <Icon name="more-vert" />
+        <Icon name="ellipsis" />
       </button>
       {dropdown}
     </>

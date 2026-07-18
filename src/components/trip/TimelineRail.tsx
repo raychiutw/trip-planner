@@ -505,7 +505,7 @@ function RailRowMenu({ menuId, label, items, testid }: {
         onClick={(e) => e.stopPropagation()}
         data-testid={testid}
       >
-        <Icon name="more-vert" />
+        <Icon name="ellipsis" />
       </button>
       <div
         ref={menuRef}
