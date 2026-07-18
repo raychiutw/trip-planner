@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.100] - 2026-07-18
+
+### Changed
+- **rev2 飯店 node 給床 icon 不給號 + 停留編號跳過飯店（對齊 mockup `.row.is-hotel`）**：飯店不是「第幾站」、是當日路線起訖錨點（DESIGN.md:190）→ `.tp-rail-dot[data-hotel]` 給床 icon（`Icon name="hotel"`）+ accent 邊/字（icon 13px），且**不計入停留編號**（TimelineRail 算 stopNumbers 跳過 `deriveTypeMeta(e).label==='住宿'`）。先前對每個 entry 都 `{index+1}`（含飯店）。編號實測：`1,2,3,[床],4,5,[床],6`。
+- **rev2 one-day-view — TripPage 只 render 當前 day（對齊 mockup Section 01 單日 + DAY tab 切換）**：先前是「全日捲動」（`dayNums.map` 堆所有 DaySection + scroll-spy 依 header 位置追蹤 currentDayNum）。改嚴格單日：
+  - 只 render 當前 day 的 DaySection（currentDayNum 未定 → 落首日）。資料全載於 allDays cache、`switchDay` 只換指標 → 切換即時。
+  - `handleSwitchDay`（DAY tab）：switchDay 換天 + 捲回頂（新 day 從頭看）；先前 `scrollToDay` 在單日模式失效（該 day header 換天當下尚未 render 進 DOM）。
+  - **移除 scroll-spy effect**（scroll → `computeActiveDayIndex` 改 currentDayNum + hash）：單日無跨天捲動可追蹤；且它在「預設 render day1」時會強制 `switchDay(1)`，蓋掉 `#dayN` / `?focusDay` deep-link 的選天（實測 bug）。連帶清 `findScrollContainer` / `scrollDayRef` / `computeActiveDayIndex` / `getStableViewportH` 死碼。
+  - 新增 `trip-page-one-day-view` source-lock（4）。
+- 驗證：tsc ✓ · 完整 unit **3768 tests 全綠** · 真瀏覽器桌機(1512)+手機(402)：只 render 單日、DAY tab 切 DAY3/4 換天正確 + 捲回頂、`?focus=441&focusDay=4` 返回落 DAY 04、飯店床 icon + 跳號、Apple Music track row。
+
 ## [2.55.99] - 2026-07-18
 
 ### Changed
