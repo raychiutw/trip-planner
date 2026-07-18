@@ -205,6 +205,8 @@ const SCOPED_STYLES = `
 }
 .favorites-card .poi-select-label {
   display: inline-flex; align-items: center; gap: 6px;
+  /* §9.2：label 是實際點擊區（含 checkbox + 文字），原僅 ~20px 高 → 保底 44pt 觸控。 */
+  min-height: var(--spacing-tap-min);
   font-size: var(--font-size-footnote); color: var(--color-muted);
   cursor: pointer;
 }
