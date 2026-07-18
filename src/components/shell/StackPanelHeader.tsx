@@ -33,7 +33,8 @@ export const STACK_PANEL_HEADER_STYLES = `
   -webkit-backdrop-filter: blur(14px);
 }
 .tp-stack-head-btn {
-  width: 38px; height: 38px; border-radius: var(--radius-full);
+  /* G-H6a：44pt HIG 最小觸控區（全 6 操作頁共用 ‹/✕），舊值低於 tap-min */
+  width: var(--spacing-tap-min); height: var(--spacing-tap-min); border-radius: var(--radius-full);
   display: grid; place-items: center; border: none; cursor: pointer;
   background: transparent; color: var(--color-foreground);
   transition: background 150ms var(--transition-timing-function-apple);
@@ -47,7 +48,7 @@ export const STACK_PANEL_HEADER_STYLES = `
   color: var(--color-foreground);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tp-stack-head-spacer { width: 38px; flex-shrink: 0; }
+.tp-stack-head-spacer { width: var(--spacing-tap-min); flex-shrink: 0; }
 `;
 
 export default function StackPanelHeader({ title, onBack, onClose }: StackPanelHeaderProps) {
