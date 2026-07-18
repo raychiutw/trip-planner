@@ -19,10 +19,10 @@ describe('migration 0050 — poi_favorites schema', () => {
 
   afterAll(disposeMiniflare);
 
-  it('poi_favorites table 含 5 columns', async () => {
+  it('poi_favorites table 含 6 columns（0087 加 deleted_at soft-delete tombstone）', async () => {
     const { results } = await db.prepare("PRAGMA table_info('poi_favorites')").all();
     const columns = results.map((r) => (r as { name: string }).name).sort();
-    expect(columns).toEqual(['favorited_at', 'id', 'note', 'poi_id', 'user_id']);
+    expect(columns).toEqual(['deleted_at', 'favorited_at', 'id', 'note', 'poi_id', 'user_id']);
   });
 
   it('id 為 INTEGER PRIMARY KEY AUTOINCREMENT', async () => {
@@ -78,13 +78,17 @@ describe('migration 0050 — poi_favorites schema', () => {
     expect(col!.dflt_value).toContain("datetime('now')");
   });
 
-  it('UNIQUE (user_id, poi_id) constraint 存在', async () => {
+  it('(user_id, poi_id) 唯一性存在 — 0087 後為 partial unique（只限 active）', async () => {
     const { results: indexes } = await db.prepare("PRAGMA index_list('poi_favorites')").all();
-    const uniqueIdx = indexes.find((r) => (r as { unique: number }).unique === 1);
+    const uniqueIdx = indexes.find((r) => (r as { unique: number }).unique === 1) as
+      | { name: string; partial: number }
+      | undefined;
     expect(uniqueIdx).toBeDefined();
+    // 0087：table-level UNIQUE 換成 partial unique index（WHERE deleted_at IS NULL），
+    // 讓同 (user,poi) 可有多筆 soft-deleted + 至多 1 筆 active。
+    expect(uniqueIdx!.partial).toBe(1);
 
-    const idxName = (uniqueIdx as { name: string }).name;
-    const { results: idxCols } = await db.prepare(`PRAGMA index_info('${idxName}')`).all();
+    const { results: idxCols } = await db.prepare(`PRAGMA index_info('${uniqueIdx!.name}')`).all();
     const colNames = idxCols.map((r) => (r as { name: string }).name).sort();
     expect(colNames).toEqual(['poi_id', 'user_id']);
   });
