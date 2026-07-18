@@ -241,10 +241,10 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 ## Layout
 
 ### Unified App Shell
-> **⚠️ rev2 owner 2026-07-17（桌機 shell 改版，v2.55.94+）**：桌機 primary nav 由 **左欄 sidebar** 搬到 **底部浮動玻璃膠囊**（`GlobalBottomNav` @≥1024 顯示、置中 sidebar+中欄）；**左欄 sidebar 改為「我的行程」清單**（`DesktopSidebar` = trip-list + 帳號 chip 左下，經 `useMyTrips` 注入）。三欄 grid `216px 1fr 1fr`（`--grid-3pane-desktop`）。下方舊 IA 段落逐條改寫中。
-- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏。**rev2：primary nav 在底部浮動玻璃膠囊 4-tab**（桌機 + compact 皆顯示；桌機置中於中欄+右欄內容區 `(100vw+sidebar)/2`）；**帳號移出 tab slot** → 桌機在左下 sidebar account chip、compact 在**統一 header 右上帳號圓圈**（`AccountCircle` 首字母 → `/account`；匿名 → `/login`；桌機 CSS 隱藏）。對齊 mockup「4 格：帳號移到 titlebar 右上」。
+> **⚠️ rev2 owner 2026-07-19（桌機 macOS sidebar，§10.1；mockup `docs/design-sessions/2026-07-19-rev2-desktop-macos-sidebar.html` sign-off）**：桌機 primary nav（聊天/行程/地圖/收藏）**搬回左欄 sidebar 頂部**（macOS Music/Mail 形制），**桌機隱藏底部浮動玻璃膠囊**（`AppShell` @≥1024 `.app-shell-bottom-nav display:none`）。sidebar 結構＝品牌 → **4-tab 主導覽** → 「我的行程」清單 → 帳號 chip 左下。**sidebar 材質改 vibrancy 半透明毛玻璃**（暖奶油：`color-mix(--color-background 72%)` + `backdrop-filter: blur(30px)`，走主 app token 自動 light/dark adapt，取代舊固定深棕 `--color-sidebar-*`）。primary IA + active 判定抽到 `navItems.ts` 單一來源（`GlobalBottomNav` 手機膠囊 + `DesktopSidebar` 共用，無漂移）。三欄 grid `216px 1fr 1fr`（`--grid-3pane-desktop`）。
+- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏。**桌機（≥1024）：primary nav 在左欄 sidebar 頂部 4-tab**（§10.1）；**手機（<1024）：底部浮動玻璃膠囊 4-tab**（`GlobalBottomNav`）。**帳號移出 tab slot** → 桌機在左下 sidebar account chip、手機在**統一 header 右上帳號圓圈**（`AccountCircle` 首字母 → `/account`；匿名 → `/login`）。
 - **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕一律走 children 內 `.tp-page-bottom-bar`。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
-- **Desktop shell（rev2）:** 三欄 `216px 1fr 1fr` — 左欄 **我的行程清單** sidebar（+ 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；底部浮動玻璃膠囊 primary nav（置中 sidebar+中欄、不隨捲動隱藏）。
+- **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（vibrancy：品牌 → 4-tab 主導覽 → 我的行程清單 → 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。
 - **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。底部導航向下捲動隱藏、向上捲動顯示。
 - **Header rule:** 所有主功能頁 titlebar 一律 sticky；桌機與 compact 都是單行標題，不放 eyebrow、meta、helper text。
 - **Map exception:** 地圖頁可 full bleed，仍保留統一 sidebar / titlebar / bottom nav 行為。
@@ -278,7 +278,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 ## Material & Effects
 
-- **Glass:** Titlebar、bottom-nav、sheet 統一使用 `backdrop-filter: blur(14px)`（`--blur-glass: 14px`）。三層 glass 元素保持一致強度，避免不同 blur 強度造成視覺雜亂。Sheet 不加 `saturate(1.8)` — 對齊 editorial clean direction，去除色飽和增強。不再給 timeline card 用（設計稿強調乾淨、無模糊）。**Small floating button 例外**：≤32px 的浮動按鈕（POI 卡 cover 漸層上的 `+ 加入` / `⋯` menu / `❤ 收藏 toggle`）可用 `blur(6px)` — 14px blur 在小元素上會 over-soften 邊緣，6px 給更 proportional 的玻璃感。**扁平卡（無 cover 圖）的 `⋯` 例外**（`TripsListPage` 行程卡 `TripCardMenu`）：**不做玻璃圓** — resting 透明只留字符、hover/focus 才淡底（44px tap 區保留）。實心玻璃圓在奶油卡上與卡片圓角相撞、像貼紙破版；扁平卡無 cover 需要對比，故走 iOS HIG 卡片 more-menu 輕觸慣例，對齊 `TimelineRail` 的 `.tp-rail-menu-trigger`（rev2 D-review 2026-07-18）。
+- **Glass:** Titlebar、bottom-nav、sheet 統一使用 `backdrop-filter: blur(14px)`（`--blur-glass: 14px`）。三層 glass 元素保持一致強度，避免不同 blur 強度造成視覺雜亂。Sheet 不加 `saturate(1.8)` — 對齊 editorial clean direction，去除色飽和增強。不再給 timeline card 用（設計稿強調乾淨、無模糊）。**Small floating button 例外**：≤32px 的浮動按鈕（POI 卡 cover 漸層上的 `+ 加入` / `⋯` menu / `❤ 收藏 toggle`）可用 `blur(6px)` — 14px blur 在小元素上會 over-soften 邊緣，6px 給更 proportional 的玻璃感。**扁平卡（無 cover 圖）的 `⋯` 例外**（`TripsListPage` 行程卡 `TripCardMenu`）：**不做玻璃圓** — resting 透明只留字符、hover/focus 才淡底（44px tap 區保留）。實心玻璃圓在奶油卡上與卡片圓角相撞、像貼紙破版；扁平卡無 cover 需要對比，故走 iOS HIG 卡片 more-menu 輕觸慣例，對齊 `TimelineRail` 的 `.tp-rail-menu-trigger`（rev2 D-review 2026-07-18）。**桌機 sidebar vibrancy 例外（§10.1，2026-07-19）**：`DesktopSidebar` 是 macOS **vibrancy 材質**（非 chrome glass），用 `blur(30px) saturate(180%)` — 比 14px chrome glass 重，對齊 macOS NSVisualEffectView sidebar 材質的深毛玻璃感，屬刻意差異、不受 14px 一致性規則約束。
 - **Photos（v2.55.78）：全站不做 POI 照片 / artwork / 縮圖。** `pois.photos` **從未有過任何資料** —— 0038 規劃的 Wikimedia backfill 從未執行（該 script 不存在），且從來沒有任何寫入路徑（`functions/api/pois/[id].ts` 的 `ALLOWED_FIELDS` 不含 photos），所以它與 POI 筆數無關、恆為 NULL。欄位本身由 migration 0086 DROP（**分開的後續 PR** —— CI 在 push 命中 `migrations/**` 時會自動 apply 且常搶在 CF Pages 部署之前，故 DROP 必須晚於「不再引用 photos 的 code」上線；該檔載有帶日期的實測數字與完整順序說明）。POI 卡的 `.explore-poi-cover` 是**依類型三色的漸層佔位**（v2.54.11，實作見 `ExplorePage.tsx` 的 `.explore-poi-cover`：`<div aria-hidden>` + `linear-gradient`，無 `<img>`），不是照片，不要當圖片容器用。要重開照片：Google Places API 的 `places.photos` 欄位本身不加價（現有 field mask 已含 Enterprise tier 的 `places.rating`），但**取圖是獨立計費的 Place Photos SKU，且不在 `scripts/lib/google-maps-quota.js` 的 FREE_CAP / PRICE_PER_1K 監控表內** —— 開之前先補監控，否則花費不可見。
 - **Shadow specialized 例外**：地圖 markers 的 active state ring + drop shadow 可用 inline 多層 shadow（如 `0 0 0 4px rgba(217,120,72,0.3), 0 4px 12px rgba(42,31,24,0.45)`），因為 marker 浮在地圖背景上需要更強對比，token 三層 shadow 過弱。例外限定地圖 marker，其他 UI 一律用 token。
 - **Shadow scale（Airbnb 三層）：**
@@ -361,11 +361,11 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 ### Desktop Sidebar（`DesktopSidebar`）
 - 只在 desktop mode 顯示。
-- **rev2 owner 2026-07-17（v2.55.94+）：sidebar = 「我的行程」清單**（`useMyTrips` 注入 `/api/trips?all=1`），**不再有 primary nav**（聊天/行程/地圖/收藏 已移到底部浮動玻璃膠囊 `GlobalBottomNav`）。清單項連 `/trips?selected=<id>`，active trip（URL 推導）套 accent；帳號 chip 維持左下 → `/account`（DESIGN.md:358 保留）。
+- **rev2 owner 2026-07-19（§10.1）：macOS sidebar** — 由上而下＝品牌 → **4-tab 主導覽**（聊天/行程/地圖/收藏）→ 分隔線 → **「我的行程」清單**（`useMyTrips` 注入 `/api/trips?all=1`）→ 帳號 chip 左下 → `/account`。桌機底部膠囊隱藏後，primary nav 回到 sidebar 頂部。主導覽 active 用 accent 實心 fill；清單項連 `/trips?selected=<id>`，active trip（URL 推導）套 accent。
 - 清單狀態：`trips===undefined` → skeleton（不先渲染空態）；`[]` → 「尚無行程」；有資料 → 逐行 `.tp-trip-item`。
 - Auth loading 不預設成匿名狀態：userinfo 尚未 resolve 時，底部帳號區只保留 neutral loading chip；不得先顯示「登入」「未登入」或 account chip 後再切換。
-- Primary nav 順序（聊天 / 行程 / 地圖 / 收藏）+ 第 4 slot「收藏」label + active route patterns 由 `GlobalBottomNav` 掌管；ownership 語意由 `PoiFavoritesPage` hero eyebrow 補回。
-- 背景固定深棕：light `#2A1F18`；dark `#0F0B08`。不得使用 `--color-foreground` 當背景，因為 dark mode 會反轉成淺色文字 token。
+- Primary nav 順序（聊天 / 行程 / 地圖 / 收藏）+ active route patterns 由 `navItems.ts`（`PRIMARY_NAV_ITEMS` + `isItemActive`）單一來源掌管，`GlobalBottomNav`（手機膠囊）共用同一份；nav testid＝`sidebar-nav-<key>`（vs 膠囊 `global-bottom-nav-<key>`）。
+- **材質＝vibrancy 半透明毛玻璃（§10.3）**：`background: color-mix(in srgb, var(--color-background) 72%, transparent)` + `backdrop-filter: blur(30px) saturate(180%)`；文字/hover/border 走主 app token（`--color-foreground`/`--color-muted`/`--color-hover`/`--color-border`）→ 自動 light/dark adapt。舊固定深棕 `--color-sidebar-*` token 已退役（無其他 consumer）。
 - Active state 用 柔褐 accent；其餘用 cream `rgba(255,251,245,.78)`。
 - `/trip/:id/map` 與 `/trip/:id/stop/:eid/map` active item = 地圖；其他 `/trip/:id/*` active item = 行程。
 - 不和 page titlebar 重複放頁面說明文字。

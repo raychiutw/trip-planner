@@ -59,8 +59,10 @@
 
 **owner 2026-07-18 決議（§10.2-10.5 已拍板，收斂進 §10.1 桌機 shell mockup）：** §10.2 維持 ‹+✕（已驗證合 iOS 堆疊慣例、免改）· §10.3 桌機 sidebar **改 vibrancy** 半透明毛玻璃 · §10.4 account/new-trip 桌機 **改用滿橫向** · §10.5 collab/explore 子頁導覽併入 §10.1 mockup 一起定。§10.3/§10.4/§10.5 全在 §10.1 mockup + 實作內一次做完。
 
+**owner 2026-07-19 mockup sign-off：** mockup `docs/design-sessions/2026-07-19-rev2-desktop-macos-sidebar.html`（6 board）已截圖 sign-off。決議：sidebar 材質 **A · 暖奶油 vibrancy**（淺暖半透明 + blur，最貼 macOS 淺色 app；非深棕、非 accent-tint）· 整體方向（nav 搬進 sidebar / 表單滿寬 / 子頁 toolbar 返回）**全部通過、進 code**。
+
 - [ ] 10.1 **桌機導覽改 macOS sidebar/toolbar**（owner 2026-07-18 **拍板要改**:9 HIG agent 一致點名底部浮動 tab bar 是桌機最大 macOS 違規）。**獨立工作線、踩 mockup-first hard gate（≥1 layout 變化）**。mockup 需同時涵蓋 §10.3 vibrancy 材質 + §10.4 滿寬表單頁 + §10.5 子頁導覽:
-    - [ ] 10.1a 產桌機 macOS sidebar 導覽 mockup:4-tab（聊天/行程/地圖/收藏）從底部玻璃膠囊搬進**左 sidebar**（或頂部 toolbar/segmented）;**手機維持底部 tab bar 不動**。sidebar 用 **vibrancy 半透明毛玻璃（§10.3）**、account/new-trip **滿橫向版面（§10.4）**、collab/explore 子頁導覽方式一併設計（§10.5）。用 /tp-claude-design 產 HTML → SendUserFile 截圖給 owner sign-off。
+    - [x] 10.1a 產桌機 macOS sidebar 導覽 mockup:4-tab（聊天/行程/地圖/收藏）從底部玻璃膠囊搬進**左 sidebar**;**手機維持底部 tab bar 不動**。sidebar 用 **vibrancy 半透明毛玻璃（§10.3）**、account/new-trip **滿橫向版面（§10.4）**、collab/explore 子頁導覽方式一併設計（§10.5）。✅ 已產 6-board mockup + 截圖 sign-off；**owner 選材質 A（暖奶油 vibrancy）+ 整體方向全過**。mockup 存 `docs/design-sessions/2026-07-19-rev2-desktop-macos-sidebar.html`。
     - [ ] 10.1b sign-off 後改 code:`AppShell`（桌機不傳 bottomNav / 改 sidebar nav）+ `DesktopSidebar`（加 4-tab 主導覽 + vibrancy 材質）+ `GlobalBottomNav`（@≥1024 收起）+ account/new-trip 桌機滿寬重排 + collab/explore 子頁導覽;手機分支不變。同步 DESIGN.md + mockup。
     - [ ] 10.1c 桌機各頁雙視窗驗:nav 在 sidebar、底部無膠囊、內容不被遮、sidebar vibrancy 對比達標、表單頁滿寬不空曠。**此改一併解掉桌機底部 nav 相關破版**（#9 操作頁 nav 被 panel 切、桌機底部 nav 遮內容),故 #9 桌機部分歸這條做（手機 op-page 若也有 nav 遮則另處理）。
 - [x] 10.2 操作 sheet 手機 ‹+✕ 雙 dismiss → **維持 rev2 StackPanelHeader**（owner 決；已驗證 code:‹ 只在 depth>1/L3+ 出現負責退一層、L2 只給 ✕，兩者語意不同、正是 iOS 堆疊慣例，非冗餘 → 免改）。

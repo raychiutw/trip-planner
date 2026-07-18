@@ -10,37 +10,68 @@
  * Loading state：user / trips 還沒 resolve 時保持 neutral skeleton，避免 flicker。
  */
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import type { MyTrip } from '../../hooks/useMyTrips';
+import Icon from '../shared/Icon';
+import { PRIMARY_NAV_ITEMS, isItemActive } from './navItems';
 
 const SCOPED_STYLES = `
 .tp-sidebar {
-  /* 深棕 sidebar surface（mockup line 5126），light/dark 皆固定深底。 */
-  background: var(--color-sidebar-bg);
-  border-right: 1px solid var(--color-sidebar-bg);
-  padding: 20px 14px;
+  /* §10.3 vibrancy（owner 2026-07-19）：暖奶油半透明毛玻璃 — color-mix 主背景 + backdrop
+   * blur。走主 app token（--color-background/foreground/muted/hover/border）→ 自動
+   * light/dark adapt，取代舊固定深棕 --color-sidebar-* token（那組已無其他 consumer）。 */
+  background: color-mix(in srgb, var(--color-background) 72%, transparent);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border-right: 1px solid var(--color-border);
+  padding: 16px 12px 12px;
   display: flex; flex-direction: column;
   gap: 2px;
   height: 100%;
   overflow: hidden;
 }
 .tp-sidebar-brand {
-  padding: 0 8px;
-  margin-bottom: 18px;
+  padding: 2px 8px;
+  margin-bottom: 16px;
   display: flex; align-items: center; gap: 8px;
   font-size: var(--font-size-title3); font-weight: 700; letter-spacing: -0.01em;
-  color: var(--color-sidebar-fg);
+  color: var(--color-foreground);
   flex-shrink: 0;
 }
 .tp-sidebar-brand .accent-dot { color: var(--color-accent); }
 
-/* rev2：我的行程清單（取代 primary nav；nav 移底部玻璃膠囊） */
+/* §10.1 primary nav（macOS sidebar 頂部 4-tab；桌機膠囊隱藏後的主導覽，
+ * 與 GlobalBottomNav 共用 PRIMARY_NAV_ITEMS + isItemActive）。 */
+.tp-sidebar-nav {
+  display: flex; flex-direction: column; gap: 2px;
+  flex-shrink: 0; margin-bottom: 4px;
+}
+.tp-sidebar-nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 8px 10px; border-radius: var(--radius-md);
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote); font-weight: 600;
+  text-decoration: none; cursor: pointer;
+  min-height: 36px;
+  transition: background 150ms var(--transition-timing-function-apple), color 150ms;
+}
+.tp-sidebar-nav-item .svg-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.tp-sidebar-nav-item:hover { background: var(--color-hover); color: var(--color-foreground); }
+.tp-sidebar-nav-item:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-sidebar-nav-item.is-active { background: var(--color-accent); color: var(--color-accent-foreground); }
+.tp-sidebar-nav-item.is-active .svg-icon { color: var(--color-accent-foreground); }
+
+.tp-sidebar-divider {
+  height: 1px; background: var(--color-border);
+  margin: 10px 8px; flex-shrink: 0;
+}
+
 .tp-sidebar-section-label {
   padding: 0 8px; margin: 0 0 8px;
   font-size: var(--font-size-caption2); font-weight: 700;
   letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--color-sidebar-fg-faint);
+  color: var(--color-muted);
   flex-shrink: 0;
 }
 .tp-sidebar-trips {
@@ -49,22 +80,22 @@ const SCOPED_STYLES = `
 }
 .tp-trip-item {
   display: block; padding: 9px 12px; border-radius: var(--radius-md);
-  color: var(--color-sidebar-fg-muted);
+  color: var(--color-muted);
   font-size: var(--font-size-footnote); font-weight: 600;
   text-decoration: none; cursor: pointer;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: background 150ms var(--transition-timing-function-apple), color 150ms;
 }
-.tp-trip-item:hover { background: var(--color-sidebar-fg-hover); color: var(--color-sidebar-fg); }
+.tp-trip-item:hover { background: var(--color-hover); color: var(--color-foreground); }
 .tp-trip-item.is-active { background: var(--color-accent); color: var(--color-accent-foreground); }
 .tp-sidebar-trips-empty {
-  padding: 12px 8px; color: var(--color-sidebar-fg-faint);
+  padding: 12px 8px; color: var(--color-muted);
   font-size: var(--font-size-footnote);
 }
 .tp-sidebar-trips-loading { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; }
 .tp-trip-skeleton {
   display: block; height: 12px; border-radius: var(--radius-full);
-  background: var(--color-sidebar-fg-skel-faint);
+  background: var(--color-border);
 }
 .tp-trip-skeleton.is-a { width: 82%; }
 .tp-trip-skeleton.is-b { width: 60%; }
@@ -73,14 +104,14 @@ const SCOPED_STYLES = `
 .tp-sidebar-cta {
   margin-top: auto;
   padding-top: 16px;
-  border-top: 1px solid var(--color-sidebar-fg-faint);
+  border-top: 1px solid var(--color-border);
   display: flex; flex-direction: column; gap: 8px;
   flex-shrink: 0;
 }
 .tp-user-chip {
   display: flex; align-items: center; gap: 10px;
   padding: 8px; border-radius: var(--radius-md);
-  color: var(--color-sidebar-fg-muted); font-size: var(--font-size-footnote);
+  color: var(--color-muted); font-size: var(--font-size-footnote);
 }
 .tp-user-chip .tp-avatar {
   width: 32px; height: 32px; border-radius: 50%;
@@ -93,7 +124,7 @@ const SCOPED_STYLES = `
   min-height: 52px;
 }
 .tp-user-chip-loading .tp-avatar {
-  background: var(--color-sidebar-fg-faint);
+  background: var(--color-border);
   color: transparent;
 }
 .tp-user-skeleton-stack {
@@ -104,12 +135,12 @@ const SCOPED_STYLES = `
   display: block;
   height: 8px;
   border-radius: var(--radius-full);
-  background: var(--color-sidebar-fg-skel-faint);
+  background: var(--color-border);
 }
 .tp-user-skeleton-line.is-primary { width: 76px; }
 .tp-user-skeleton-line.is-secondary {
   width: 116px;
-  background: var(--color-sidebar-fg-skel-secondary);
+  background: var(--color-secondary);
 }
 
 .tp-account-card {
@@ -118,11 +149,11 @@ const SCOPED_STYLES = `
   background: transparent;
   display: flex; align-items: center; gap: 10px;
   text-decoration: none;
-  color: var(--color-sidebar-fg-muted);
+  color: var(--color-muted);
   transition: background 150ms var(--transition-timing-function-apple);
   min-height: 52px;
 }
-.tp-account-card:hover { background: var(--color-sidebar-fg-hover); }
+.tp-account-card:hover { background: var(--color-hover); }
 .tp-account-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .tp-account-card .tp-avatar-md {
   width: 32px; height: 32px; border-radius: 50%;
@@ -136,7 +167,7 @@ const SCOPED_STYLES = `
 }
 .tp-account-card .tp-account-name {
   font-size: var(--font-size-footnote); font-weight: 600;
-  color: var(--color-sidebar-fg);
+  color: var(--color-foreground);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 `;
@@ -159,6 +190,7 @@ export interface DesktopSidebarProps {
 
 export default function DesktopSidebar({ user, trips, activeTripId, brand }: DesktopSidebarProps) {
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
+  const { pathname } = useLocation();
 
   return (
     <>
@@ -167,6 +199,27 @@ export default function DesktopSidebar({ user, trips, activeTripId, brand }: Des
         <div className="tp-sidebar-brand">
           {brand ?? (<>Tripline<span className="accent-dot">.</span></>)}
         </div>
+
+        {/* §10.1 primary nav：macOS sidebar 頂部 4-tab（聊天/行程/地圖/收藏）。桌機膠囊隱藏後
+            的主導覽；與 GlobalBottomNav 共用 items + active 邏輯，避免路徑 pattern 兩份漂移。 */}
+        <nav className="tp-sidebar-nav" aria-label="主要導覽">
+          {PRIMARY_NAV_ITEMS.map((item) => {
+            const active = isItemActive(pathname, item);
+            return (
+              <Link
+                key={item.key}
+                to={item.href}
+                className={clsx('tp-sidebar-nav-item', active && 'is-active')}
+                aria-current={active ? 'page' : undefined}
+                data-testid={`sidebar-nav-${item.key}`}
+              >
+                <Icon name={item.icon} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="tp-sidebar-divider" />
 
         <div className="tp-sidebar-section-label">我的行程</div>
         <nav className="tp-sidebar-trips" aria-label="我的行程" data-testid="sidebar-trips">

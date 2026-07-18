@@ -1,6 +1,7 @@
 /**
- * DesktopSidebar visual (rev2 owner 2026-07-17) — 我的行程清單 + 帳號 chip 視覺/token。
- * primary nav 已移底部浮動玻璃膠囊；此檔驗 sidebar surface token + 清單 active + 帳號 chip。
+ * DesktopSidebar visual (rev2 owner 2026-07-19, §10.1) — macOS sidebar 材質/token。
+ * §10.3：sidebar 改 vibrancy 半透明毛玻璃（暖奶油，backdrop blur + color-mix 主背景），
+ * 文字改用主 app token（--color-foreground/muted）自動 light/dark adapt。
  */
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -56,18 +57,20 @@ describe('DesktopSidebar rev2 — 帳號 chip', () => {
   });
 });
 
-describe('DesktopSidebar rev2 — surface + 清單視覺 token', () => {
-  it('.tp-sidebar bg 用 --color-sidebar-bg token（無 body.dark override）', () => {
+describe('DesktopSidebar rev2 §10.1 — vibrancy 材質 + 清單視覺 token', () => {
+  it('.tp-sidebar 用 vibrancy：backdrop-filter blur + color-mix(主背景) 半透明（無 body.dark override）', () => {
     const { container } = renderSidebar({ user: null, trips: [] });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*background:\s*var\(--color-sidebar-bg\)/);
+    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*backdrop-filter:\s*blur/);
+    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*background:\s*color-mix\([^}]*var\(--color-background\)/);
+    // vibrancy 走主 app token 自動 light/dark adapt → 不需 body.dark 專段
     expect(style).not.toMatch(/body\.dark\s+\.tp-sidebar/);
   });
 
-  it('trip item inactive 文字用 --color-sidebar-fg-muted token', () => {
+  it('trip item inactive 文字用 --color-muted token（vibrancy 後改主 app token）', () => {
     const { container } = renderSidebar({ user: null, trips: [] });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toContain('var(--color-sidebar-fg-muted)');
+    expect(style).toContain('var(--color-muted)');
   });
 
   it('active trip item bg 用 accent', () => {

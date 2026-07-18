@@ -1,6 +1,7 @@
 /**
- * DesktopSidebar (rev2 owner 2026-07-17) — 左欄「我的行程」清單 + 帳號 chip 左下。
- * primary nav 已移到底部浮動玻璃膠囊（見 global-bottom-nav-5tab.test）。
+ * DesktopSidebar (rev2 owner 2026-07-19, §10.1) — 左欄 macOS sidebar：
+ * primary nav（聊天/行程/地圖/收藏）+「我的行程」清單 + 帳號 chip 左下。
+ * primary nav 從底部浮動玻璃膠囊搬回 sidebar 頂部（桌機膠囊隱藏）。
  */
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
@@ -68,9 +69,34 @@ describe('DesktopSidebar rev2 — 我的行程清單', () => {
     expect(inactive.classList.contains('is-active')).toBe(false);
   });
 
-  it('primary nav（aria-label 主要功能）已不在 sidebar（移到底部膠囊）', () => {
-    const { container } = renderSidebar({ trips: TRIPS });
-    expect(container.querySelector('[aria-label="主要功能"]')).toBeNull();
+  it('primary nav 在 sidebar 頂部：4-tab（聊天/行程/地圖/收藏）', () => {
+    const { container, getByTestId } = renderSidebar({ trips: TRIPS });
+    expect(container.querySelector('[aria-label="主要導覽"]')).not.toBeNull();
+    expect(getByTestId('sidebar-nav-chat')).not.toBeNull();
+    expect(getByTestId('sidebar-nav-trips')).not.toBeNull();
+    expect(getByTestId('sidebar-nav-map')).not.toBeNull();
+    expect(getByTestId('sidebar-nav-favorites')).not.toBeNull();
+  });
+
+  it('primary nav item href 正確（/chat /trips /map /favorites）', () => {
+    const { getByTestId } = renderSidebar({ trips: TRIPS });
+    expect((getByTestId('sidebar-nav-chat') as HTMLAnchorElement).getAttribute('href')).toBe('/chat');
+    expect((getByTestId('sidebar-nav-trips') as HTMLAnchorElement).getAttribute('href')).toBe('/trips');
+    expect((getByTestId('sidebar-nav-map') as HTMLAnchorElement).getAttribute('href')).toBe('/map');
+    expect((getByTestId('sidebar-nav-favorites') as HTMLAnchorElement).getAttribute('href')).toBe('/favorites');
+  });
+
+  it('active nav：在 /chat「聊天」nav is-active，其餘不 active', () => {
+    const { getByTestId } = renderSidebar({ path: '/chat', trips: TRIPS });
+    expect(getByTestId('sidebar-nav-chat').className).toContain('is-active');
+    expect(getByTestId('sidebar-nav-trips').className).not.toContain('is-active');
+    expect(getByTestId('sidebar-nav-map').className).not.toContain('is-active');
+  });
+
+  it('active nav：在 /trip/okinawa/map「地圖」active、「行程」不 active（避免兩個同亮）', () => {
+    const { getByTestId } = renderSidebar({ path: '/trip/okinawa/map', trips: TRIPS });
+    expect(getByTestId('sidebar-nav-map').className).toContain('is-active');
+    expect(getByTestId('sidebar-nav-trips').className).not.toContain('is-active');
   });
 });
 

@@ -14,59 +14,9 @@
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
-
-interface NavItem {
-  key: 'chat' | 'trips' | 'map' | 'favorites' | 'login' | 'account';
-  label: string;
-  href: string;
-  icon: string;
-  matchPrefixes: readonly string[];
-  exactOnly?: boolean;
-  /** Section 5 (E4)：額外的 path 正則 — 對應 /trip/:id/map 也算「地圖」active */
-  additionalActivePatterns?: readonly RegExp[];
-}
-
-// Section 5 (E4)：「地圖」 tab — `/map` exact + `/trip/:id/map` 也視為 active
-// （in-trip map view），但 `/manage/map-xxx` 不誤觸（純文字 prefix 不夠精確）
-// Canonical patterns mirror DesktopSidebar:55-56 so mobile + desktop light the
-// same tab. MAP owns /trip/:id/map AND /trip/:id/stop/:id/map; 行程 owns /trip/:id
-// and every non-map sub-route (edit/notes/health/...).
-const MAP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+\/map\/?$/, /^\/trip\/[^/]+\/stop\/[^/]+\/map\/?$/];
-// 「行程」 tab — /trips + /trip/:id + 子路由 active，但 /trip/:id/map 與 stop/:id/map 算地圖
-const TRIPS_ACTIVE_PATTERNS = [/^\/trip\/[^/]+(?:\/?$|\/(?!(?:map|stop\/[^/]+\/map)\/?$).*)/];
-// poi-favorites-rename:「收藏」 tab — /favorites primary + /favorites/* 子路由 + /explore (secondary entry)
-const FAVORITES_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/favorites\//];
-
-// rev2 owner 2026-07-18「手機也做」：底部 nav 由 5-tab 降 **4-tab**（聊天/行程/地圖/收藏）。
-// 帳號/登入移出 tab slot → 手機統一 header 右上帳號圓圈（<AccountCircle/> → /account 或
-// /login）、桌機為 sidebar 左下 chip。對齊 mockup「4 格：帳號移到 titlebar 右上」。
-const NAV_ITEMS_ANON: ReadonlyArray<NavItem> = [
-  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'nav-chat',  matchPrefixes: ['/chat'] },
-  { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-trips',  matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
-  { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
-  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav', matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
-];
-
-const NAV_ITEMS_AUTH: ReadonlyArray<NavItem> = [
-  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'nav-chat',  matchPrefixes: ['/chat'] },
-  { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-trips',  matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
-  { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
-  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav', matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
-];
-
-function isItemActive(pathname: string, item: NavItem): boolean {
-  // additionalActivePatterns 優先（更精確的 regex match）
-  if (item.additionalActivePatterns) {
-    for (const re of item.additionalActivePatterns) {
-      if (re.test(pathname)) return true;
-    }
-  }
-  for (const prefix of item.matchPrefixes) {
-    if (pathname === prefix) return true;
-    if (!item.exactOnly && pathname.startsWith(prefix + '/')) return true;
-  }
-  return false;
-}
+// rev2 §10.1（2026-07-19）：primary IA（4-tab）+ active 判定抽到 navItems 單一來源，
+// DesktopSidebar（桌機 sidebar 頂部）共用同一份，避免兩份路徑 pattern 漂移。
+import { PRIMARY_NAV_ITEMS, isItemActive } from './navItems';
 
 const SCOPED_STYLES = `
 /* rev2 owner 2026-07-18「手機也做」：底部**浮動玻璃膠囊**（iOS 26 Apple Music
@@ -122,37 +72,29 @@ const SCOPED_STYLES = `
   color: var(--color-accent-foreground);
 }
 .tp-global-bottom-nav-btn.is-active span { font-weight: 700; }
-
-/* 桌機：膠囊 tabs 改 row layout（icon+label 橫排、較寬、字級回 caption2）。 */
-@media (min-width: 1024px) {
-  .tp-global-bottom-nav-btn {
-    flex-direction: row;
-    gap: 7px;
-    width: auto;
-    padding: 8px 16px;
-    min-height: 40px;
-  }
-  .tp-global-bottom-nav-btn span {
-    font-size: var(--font-size-caption2);
-    line-height: 14px;
-  }
-}
+/* rev2 §10.1（2026-07-19）：桌機底部膠囊已隱藏（primary nav 搬進 sidebar，見
+ * AppShell @≥1024 .app-shell-bottom-nav display:none）。原桌機 row-layout 覆蓋已移除。
+ * 此元件現只在手機（<1024）顯示。 */
 `;
 
 export interface GlobalBottomNavProps {
-  /** True when user is signed in. Swaps 登入 → 帳號 in last slot. */
+  /**
+   * True when user is signed in. 目前 4-tab IA 不依 auth 分歧（帳號/登入已移出 tab
+   * slot → header 圓圈），故此 prop 現無作用；保留於 API 供未來 auth-gated tab，
+   * 呼叫端仍傳當前登入狀態。
+   */
   authed: boolean;
 }
 
 export default function GlobalBottomNav({ authed }: GlobalBottomNavProps) {
+  void authed; // 保留 prop（見 interface 註解）；目前 IA auth-independent。
   const { pathname } = useLocation();
-  const items = authed ? NAV_ITEMS_AUTH : NAV_ITEMS_ANON;
 
   return (
     <>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-global-bottom-nav" data-testid="global-bottom-nav">
-        {items.map((item) => {
+        {PRIMARY_NAV_ITEMS.map((item) => {
           const active = isItemActive(pathname, item);
           return (
             <Link
