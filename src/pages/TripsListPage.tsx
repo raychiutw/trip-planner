@@ -252,7 +252,11 @@ const SCOPED_STYLES = `
  * user 滑動切換。Inner-flex 不必 flex:1 等寬,讓內容自然寬度。 */
 .tp-trips-tabs {
   display: inline-flex; align-items: center;
-  background: var(--color-secondary);
+  /* §2（owner「功能 tab 一片白色」）：原 --color-secondary 容器與 --color-background
+   * active thumb 幾乎同色（#FAF4EA vs #FFFBF5），只靠弱 shadow-sm 分隔 → thumb 讀不出、
+   * 整條像一片白色塊。改用略深暖底 track + inset 邊界界定，讓白 thumb 明確浮起。 */
+  background: var(--color-hover);
+  box-shadow: inset 0 0 0 1px var(--color-border);
   border-radius: var(--radius-full);
   padding: 4px;
   max-width: 100%;
@@ -274,7 +278,8 @@ const SCOPED_STYLES = `
 .tp-trips-tab.is-active {
   background: var(--color-background);
   color: var(--color-accent);
-  box-shadow: var(--shadow-sm);
+  /* 明顯浮起的 thumb 陰影（取代弱 shadow-sm）— 在暖 track 上清楚可辨。 */
+  box-shadow: 0 1px 3px rgba(42, 31, 24, 0.16), 0 1px 1px rgba(42, 31, 24, 0.06);
 }
 .tp-trips-tab-count {
   font-size: var(--font-size-caption2);
