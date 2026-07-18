@@ -63,12 +63,12 @@
 
 - [ ] 10.1 **桌機導覽改 macOS sidebar/toolbar**（owner 2026-07-18 **拍板要改**:9 HIG agent 一致點名底部浮動 tab bar 是桌機最大 macOS 違規）。**獨立工作線、踩 mockup-first hard gate（≥1 layout 變化）**。mockup 需同時涵蓋 §10.3 vibrancy 材質 + §10.4 滿寬表單頁 + §10.5 子頁導覽:
     - [x] 10.1a 產桌機 macOS sidebar 導覽 mockup:4-tab（聊天/行程/地圖/收藏）從底部玻璃膠囊搬進**左 sidebar**;**手機維持底部 tab bar 不動**。sidebar 用 **vibrancy 半透明毛玻璃（§10.3）**、account/new-trip **滿橫向版面（§10.4）**、collab/explore 子頁導覽方式一併設計（§10.5）。✅ 已產 6-board mockup + 截圖 sign-off；**owner 選材質 A（暖奶油 vibrancy）+ 整體方向全過**。mockup 存 `docs/design-sessions/2026-07-19-rev2-desktop-macos-sidebar.html`。
-    - [ ] 10.1b sign-off 後改 code:`AppShell`（桌機不傳 bottomNav / 改 sidebar nav）+ `DesktopSidebar`（加 4-tab 主導覽 + vibrancy 材質）+ `GlobalBottomNav`（@≥1024 收起）+ account/new-trip 桌機滿寬重排 + collab/explore 子頁導覽;手機分支不變。同步 DESIGN.md + mockup。
-    - [ ] 10.1c 桌機各頁雙視窗驗:nav 在 sidebar、底部無膠囊、內容不被遮、sidebar vibrancy 對比達標、表單頁滿寬不空曠。**此改一併解掉桌機底部 nav 相關破版**（#9 操作頁 nav 被 panel 切、桌機底部 nav 遮內容),故 #9 桌機部分歸這條做（手機 op-page 若也有 nav 遮則另處理）。
+    - [x] 10.1b sign-off 後改 code:`AppShell`（桌機 @≥1024 隱藏膠囊 + 移除膠囊 padding）+ `DesktopSidebar`（加 4-tab 主導覽 + vibrancy 材質）+ `navItems.ts`（抽單一來源）+ account/new-trip 桌機滿寬 + collab/explore 子頁 toolbar 返回;手機分支不變。同步 DESIGN.md + mockup。✅ commit 5dfdfbbd（sidebar+vibrancy）+ 本批（表單+子頁）。
+    - [x] 10.1c 桌機各頁雙視窗驗:✅ 真瀏覽器 1440 驗 /trips /chat（nav 在 sidebar、無膠囊、內容不被遮）+ /account（滿寬 2-col）+ /explore（toolbar 返回）。**桌機底部 nav 相關破版（#9 操作頁 nav 被 panel 切、底部 nav 遮內容）一併解**（膠囊桌機隱藏）。手機 op-page 走 OperationShell 本就不顯 nav。
 - [x] 10.2 操作 sheet 手機 ‹+✕ 雙 dismiss → **維持 rev2 StackPanelHeader**（owner 決；已驗證 code:‹ 只在 depth>1/L3+ 出現負責退一層、L2 只給 ✕，兩者語意不同、正是 iOS 堆疊慣例，非冗餘 → 免改）。
-- [ ] 10.3 桌機 sidebar vibrancy → **owner 決:改 vibrancy 半透明毛玻璃**（非維持不透明 deep cocoa）。於 §10.1b sidebar 建置一併實作;要重做該區色層/前景對比（毛玻璃底上文字/icon 對比達標）。
-- [ ] 10.4 account/new-trip 桌機版面 → **owner 決:用滿橫向空間**（非窄欄置中）。桌機重排分欄（表單可分左右欄或用滿寬 grid），同步 mockup + DESIGN.md。
-- [ ] 10.5 collab/explore 子頁導覽 → **owner 決:併入 §10.1 mockup**（sidebar 上線後判定 back-chevron vs sidebar/toolbar 導覽）。
+- [x] 10.3 桌機 sidebar vibrancy → **改 vibrancy 半透明毛玻璃**（暖奶油 color-mix + blur30，走主 app token 自動 light/dark adapt）。✅ commit 5dfdfbbd。
+- [x] 10.4 account/new-trip 桌機用滿橫向 → ✅ account 設定分區桌機 2-col grid（hero 收窄置中）；new-trip 桌機加寬 880px（線性表單不 full-bleed，右側 live-preview 面板列為後續可選增強）。
+- [x] 10.5 collab/explore 子頁導覽 → ✅ 加 `TitleBar backLabelVisible`（macOS toolbar 式「‹ <label>」可見文字，opt-in 不動行程詳情 icon-only back）；explore/collab 啟用。
 
 ## 7. 收尾
 

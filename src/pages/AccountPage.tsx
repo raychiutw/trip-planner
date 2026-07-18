@@ -39,6 +39,19 @@ const SCOPED_STYLES = `
 @media (min-width: 768px) {
   .tp-account-inner { padding: 40px 24px 80px; gap: 32px; }
 }
+/* §10.4（owner 2026-07-19）：桌機用滿橫向空間 — inner 加寬、設定分區走 2-col grid，
+ * hero 收窄置中（profile 卡不隨寬度攤開變空）。手機仍單欄堆疊。 */
+.tp-account-groups { display: flex; flex-direction: column; gap: 24px; }
+@media (min-width: 1024px) {
+  .tp-account-inner { max-width: 1040px; }
+  .tp-account-hero { max-width: 560px; width: 100%; margin-inline: auto; }
+  .tp-account-groups {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+}
 
 /* Profile hero (mockup line 7437-7448) */
 .tp-account-hero {
@@ -438,6 +451,7 @@ export default function AccountPage() {
           )}
         </section>
 
+        <div className="tp-account-groups">
         {groups.map((group) => (
           <section key={group.key} className="tp-account-group">
             <div className="tp-account-group-label" data-testid={`account-group-label-${group.key}`}>{group.label}</div>
@@ -470,6 +484,7 @@ export default function AccountPage() {
             </div>
           </section>
         ))}
+        </div>
       </div>
 
       <ConfirmModal

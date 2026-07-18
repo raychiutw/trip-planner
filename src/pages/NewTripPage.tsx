@@ -107,6 +107,12 @@ const SCOPED_STYLES = `
 @media (min-width: 768px) {
   .tp-new-page-form { padding: 32px 24px 120px; }
 }
+/* §10.4（owner 2026-07-19）：桌機用滿橫向空間 — 加寬表單容器（線性表單不宜全 bleed，
+ * 過寬欄位反難讀；880px 讓桌機更飽滿、欄位仍在舒適行長內）。目的地/日期已用 2-col
+ * .tp-new-form-grid 分欄。mockup 的右側 live-preview 面板為後續可選增強。 */
+@media (min-width: 1024px) {
+  .tp-new-page-form { max-width: 880px; }
+}
 
 .tp-new-page-sub {
   color: var(--color-muted);

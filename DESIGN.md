@@ -245,6 +245,8 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - **Primary IA:** 聊天 / 行程 / 地圖 / 收藏。**桌機（≥1024）：primary nav 在左欄 sidebar 頂部 4-tab**（§10.1）；**手機（<1024）：底部浮動玻璃膠囊 4-tab**（`GlobalBottomNav`）。**帳號移出 tab slot** → 桌機在左下 sidebar account chip、手機在**統一 header 右上帳號圓圈**（`AccountCircle` 首字母 → `/account`；匿名 → `/login`）。
 - **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕一律走 children 內 `.tp-page-bottom-bar`。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
 - **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（vibrancy：品牌 → 4-tab 主導覽 → 我的行程清單 → 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。
+- **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + accent 文字，`.tp-titlebar-back--labeled`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
+- **表單頁桌機滿寬（rev2 §10.4）:** account 設定分區桌機 2-col grid（`.tp-account-groups` @≥1024，hero 收窄置中）；new-trip 桌機加寬（線性表單不 full-bleed）。
 - **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。底部導航向下捲動隱藏、向上捲動顯示。
 - **Header rule:** 所有主功能頁 titlebar 一律 sticky；桌機與 compact 都是單行標題，不放 eyebrow、meta、helper text。
 - **Map exception:** 地圖頁可 full bleed，仍保留統一 sidebar / titlebar / bottom nav 行為。

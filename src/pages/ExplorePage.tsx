@@ -675,6 +675,7 @@ export default function ExplorePage() {
         title="探索"
         back={goBack}
         backLabel="返回收藏"
+        backLabelVisible
       />
       <div className="explore-wrap" data-testid="explore-page">
         <ToastContainer />

@@ -1618,6 +1618,22 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 .tp-titlebar-back:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 .tp-titlebar-back .svg-icon { width: 18px; height: 18px; }
 
+/* §10.5（owner 2026-07-19）：macOS toolbar 式返回 — 子頁（collab/explore）顯示可見
+ * 「‹ <label>」文字（chevron + 文字），非行程詳情的 icon-only 44×44。auto 寬、pill 觸控區。 */
+.tp-titlebar-back--labeled {
+  width: auto;
+  min-height: var(--spacing-tap-min);
+  gap: 2px;
+  padding: 0 12px 0 6px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-accent-deep);
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+}
+.tp-titlebar-back--labeled .svg-icon { width: 20px; height: 20px; }
+.tp-titlebar-back-label { white-space: nowrap; }
+
 /* TitleBar action button RWD：桌機 (>=761) pill 樣式 icon + 文字 inline；
  * 手機 (<=760) 縮回 icon-only 圓形 (label hidden via @media)。
  * 用法：<button class="tp-titlebar-action"><Icon /><span class="tp-titlebar-action-label">label</span></button> */
