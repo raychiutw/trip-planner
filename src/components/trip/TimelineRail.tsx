@@ -1062,7 +1062,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       ...(dayId != null && allDays.length > 1 && entryIdNum != null
         ? [
             { kind: 'item' as const, label: '複製到其他天', icon: 'copy' as const, testid: `timeline-rail-copy-open-${entry.id}`, onSelect: () => goCopyOrMove('copy') },
-            { kind: 'item' as const, label: '移到其他天', icon: 'arrows-vertical' as const, testid: `timeline-rail-move-open-${entry.id}`, onSelect: () => goCopyOrMove('move') },
+            { kind: 'item' as const, label: '移到其他天', icon: 'folder' as const, testid: `timeline-rail-move-open-${entry.id}`, onSelect: () => goCopyOrMove('move') },
           ]
         : []),
     ],
