@@ -20,7 +20,12 @@
   6. 地圖 auth 失敗(localhost referer)整塊 Google error 佔版 — try/catch + `window.gm_authFailure` → set loadError → 頁面內顯「地圖暫停服務」placeholder,頁面其餘正常。
   7. 桌機 favorites 重複搜尋 — titlebar 🔍 + 頁內 search bar 同時存在(computed 皆 true)→ 擇一。(方法主動掃描新找到)
 
-> **進行中**:`visual-fidelity-audit` workflow(1 截圖 + 5 破版 + 5 HIG sonnet,含 auth/share/操作頁,HIG agent 先讀最新 macOS/iOS HIG)正在背景蒐集更多 findings;完成後統整、逐項 computed 驗證(擋誤報)、併入本清單。**已知偽陽性(computed 推翻,不修)**:account 底 row 未被 nav 蓋(padding 88px 足)、favorites 卡片等高(皆 227px)。
+**稽核完成 — `visual-fidelity-audit` workflow(11 sonnet,34 畫面)+ 主迴圈 computed 驗證,新增(全表見 design.md B3):**
+  8–12. **新破版**:op-edit 桌機 DAY tab 蓋 day-header 標題 / 桌機操作頁浮動 nav 被 stack panel 切 182px(系統性)/ favorites 卡片動作列參差未底對齊(y 412/483/433)/ login·signup 裝飾圓 edge 橫切 hero 標題 / new-trip 底部 nav bleed 重影。
+  13–17. **concrete HIG 違規**:⋮ kebab → iOS `…` / 44pt 觸控區(explore +·♥、nav 三控、trip-notes)/ signup 密碼常駐 helper / op-changepoi disabled 鈕對比 / tripdetail nav bar 控制過擠壓標題。
+  **owner 決策的 HIG 偏離(tasks §10,先不動)**:桌機底部浮動 tab bar 非 macOS(9 agent 一致最強項,但 rev2 canonical、mockup sign-off)、操作 sheet ‹+✕ 雙 dismiss、sidebar deep cocoa 非 vibrancy、macOS 窄置中欄、macOS 子頁 back-chevron。
+
+> **偽陽性(computed 推翻,不修)**:account 底 row 未被 nav 蓋(真 max scroll 登出 row bottom=691 < navTop=880)。**修正上輪自誤判**:favorites 真問題是動作列未底部對齊(#10),非「卡片等高」(上輪選錯元件)。
 
 ## Capabilities
 

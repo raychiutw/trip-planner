@@ -39,6 +39,30 @@
 - [ ] 6.2 `TpMap`：`loadError` 時 render 頁面內「地圖暫停服務」placeholder（乾淨、非 Google 灰底 error、非 ErrorBoundary 紅屏），地圖容器不掛載（避免 Google 自畫 error overlay）。文案對齊 DESIGN.md Empty/error 語氣。
 - [ ] 6.3 桌機 + 手機驗證：localhost 下右欄/地圖頁顯「地圖暫停服務」、頁面其餘（行程/timeline）完全正常可用。
 
+## 8. workflow 稽核新確認的破版（computed 驗過）
+
+- [ ] 8.1 op-edit 桌機 DAY tab 蓋 day-header:中欄 DAY 膠囊列與「DAY 01/日期」標題重疊 → 補垂直間距/修 z-index/sticky top（與 #5 同源機制）。
+- [ ] 8.2 桌機操作頁浮動 nav 被 stack panel 切（op-move/op-changepoi,nav 右緣進 panel 182px）:stack panel 開啟時桌機底部 nav **隱藏**（或置於 panel 之上不被裁）。對齊 rev2 operation stacking（[[project_rev2_operation_stacking]]）。
+- [ ] 8.3 favorites 桌機卡片動作列底部對齊:卡片等高 + 動作列 pin 到底（flex column + margin-top:auto / grid align-items:stretch）,加入行程 y 一致。
+- [ ] 8.4 login/signup 桌機裝飾圓 edge 橫切 hero 標題:調圓位置/標題位置/層級讓 edge 不穿過字身。
+- [ ] 8.5 new-trip 桌機底部 sticky 列後 nav bleed:sticky 列不透明或 nav 該頁隱藏,消除重影。
+
+## 9. concrete HIG 違規（要修）
+
+- [ ] 9.1 ⋮ kebab → iOS `…`（SF ellipsis,可置圓內）:tripdetail / op-overflow 的 more menu trigger（手機態）。
+- [ ] 9.2 44pt 觸控區補足:explore POI 卡 `+`/`♥`(~32pt)、op-overflow nav 三控、trip-notes trash/chevron。
+- [ ] 9.3 signup 密碼規則改常駐 helper/footnote（不只 placeholder）。
+- [ ] 9.4 op-changepoi disabled 主鈕提高對比（淺 peach on white → 可辨）。
+- [ ] 9.5 tripdetail nav bar trailing 控制精簡（+/⇆/⋮ 擠掉標題）→ 移部分進 overflow/toolbar,讓標題可讀。
+
+## 10. HIG 偏離 — rev2 owner 決策（**先不動,待 owner 拍板**）
+
+- [ ] 10.1 **桌機底部浮動 tab bar 非 macOS**（9 HIG agent 一致）:維持 rev2 canonical vs 改 macOS sidebar/toolbar 導覽。決策後才動。
+- [ ] 10.2 操作 sheet 手機 ‹+✕ 雙 dismiss:維持 rev2 StackPanelHeader vs 收斂單一 dismiss。
+- [ ] 10.3 桌機 sidebar vibrancy vs 現有 deep cocoa 不透明:owner 確認（多半維持）。
+- [ ] 10.4 macOS 單欄窄置中 vs 用滿橫向空間（account/new-trip）。
+- [ ] 10.5 macOS settings 子頁 back-chevron vs sidebar/toolbar（collab/explore）。
+
 ## 7. 收尾
 
 - [ ] 7.1 每項雙視窗 before/after 截圖歸檔;computed-vs-token 對齊表更新。

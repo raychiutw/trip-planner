@@ -37,6 +37,37 @@
 
 → 印證方法第 3、7 條（computed 勝肉眼）：既抓漏、也擋誤報。
 
+## B3. visual-fidelity-audit workflow 稽核結果（11 sonnet,34 畫面,已逐項 computed 驗證）
+
+背景 workflow:1 sonnet 截 34 畫面(含 login/signup/forgot/操作頁/overflow/new-trip/collab)、5 sonnet 驗破版(8 findings)、5 sonnet 驗 HIG(先讀最新 macOS/iOS HIG,66 findings)。主迴圈逐項 computed 驗證。
+
+**新確認的破版（computed 驗過,要修）：**
+| 項 | 畫面 | 根因/實測 | severity |
+|----|------|----------|----------|
+| #8 op-edit 桌機 DAY tab 蓋 day-header | op-edit-d | 中欄 DAY 膠囊列壓在「DAY 01 / 日期」標題上、日期被蓋 | high |
+| #9 桌機操作頁浮動 nav 被 stack panel 切 | op-move-d/op-changepoi-d | nav 右緣 1005 進到 panel(823) 內 **182px** → 地圖/收藏 tab 被面板遮 | medium(系統性) |
+| #10 favorites 卡片動作列未底部對齊 | favorites-d | 加入行程 y=**412/483/433** 參差(內容少的卡浮中段、無分隔線) | medium |
+| #11 login/signup 裝飾圓邊線橫切 hero 標題 | login-d/signup-d | 背景大圓 edge 穿過「把每次旅程/留在身邊」字身、像刪除線 | medium |
+| #12 new-trip 底部 sticky 列後 nav 殘影 bleed | new-trip-d | 半透明底透出模糊膠囊重影 | low |
+
+**concrete HIG 違規（要修,非設計爭議）：**
+- ⋮ kebab(Material/Android)→ iOS 應用 `…`(SF Symbol ellipsis,常在圓內)。tripdetail-m / op-overflow-m。
+- 44pt 觸控區不足:explore POI 卡 `+`/`♥`(~32pt)、op-overflow nav 三控、trip-notes trash/chevron。
+- signup 密碼規則只在 placeholder(打字即消)→ 改常駐 helper/footnote。
+- op-changepoi disabled 主鈕對比過低(淺 peach on white)。
+- tripdetail nav bar trailing 控制過多(+/⇆/⋮)→ 標題被擠到只剩幾字。
+
+**HIG 偏離但屬 rev2 owner 決策（不自動修,需 owner 拍板）：**
+- **桌機底部浮動 tab bar 非 macOS**(9 agent 一致最強項):macOS 導覽該在 sidebar/toolbar。但這是 rev2 canonical(mockup 2026-07-15 sign-off)→ owner 決:維持 rev2 vs 改 macOS sidebar 導覽。
+- 操作 sheet 手機 ‹+✕ 雙 dismiss(op-edit/move/changepoi):iOS modal 該單一 dismiss。是 rev2 StackPanelHeader 刻意(DESIGN.md L246/253)→ owner。
+- 桌機 sidebar 不透明深色非 vibrancy material:是刻意 deep cocoa(#2A1F18)→ owner(多半維持)。
+- macOS 單欄窄置中留大白邊(account/new-trip):owner。
+- macOS 用 back-chevron push/pop 進 settings 子頁(collab/explore):macOS 慣例是 sidebar/toolbar → owner。
+
+**computed 推翻的偽陽性（不修）：**
+- account 底 row 被 nav 蓋 → **偽**:真 max scroll 登出 row bottom=691、navTop=880、未被蓋(agent 看的是捲動中途)。
+- (註:favorites 卡片「等高」是我上輪自己選錯元件的誤判;真問題是動作列未底部對齊 = #10,已改列為真。)
+
 ## C. 決策
 
 - 檢視方法放 DESIGN.md(UI/UX SoT 的一部分)+ OpenSpec spec(可 validate、可被 skill 引用),並回灌記憶 `feedback_qa_visual_fidelity_blindspot`。
