@@ -704,6 +704,9 @@ body.dark {
         line-height: 1;
         z-index: 1;
     }
+    /* rev2 mockup：飯店 node 給床 icon（不給號碼）+ accent 邊/字 —— 當日路線起訖錨點、非「第幾站」。 */
+    .tp-rail-dot[data-hotel] { border-color: var(--color-accent); color: var(--color-accent); }
+    .tp-rail-dot .svg-icon { width: 13px; height: 13px; }
     /* 柔褐三色 tone（2026-06）：每 tone 設一組 --tone-* 供 card/icon/dot/label 取用；
        neutral 不設 → var() fallback 回原中性樣式。tier token 在此被引用 → Tailwind 不 tree-shake。 */
     /* --tone-* 同時套到 rail item 與展開明細 .tp-rail-detail（detail 是 item 的 sibling，

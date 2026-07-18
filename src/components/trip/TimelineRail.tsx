@@ -444,6 +444,8 @@ interface RailRowProps {
   sortMode: boolean;
   /** ⋯ menu「重新排序」→ 進排序模式（顯 grip + 底部「完成排序」）。 */
   onEnterSortMode: () => void;
+  /** rev2 mockup：停留站序號（跳過飯店）。null = 飯店（給床 icon 不給號，當日路線起訖錨點 DESIGN.md:190）。 */
+  stopNumber: number | null;
 }
 
 /** ⋯ context menu 的一列（或分隔線）。 */
@@ -813,7 +815,7 @@ function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
   );
 }
 
-const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId, sortMode, onEnterSortMode }: RailRowProps) {
+const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId, sortMode, onEnterSortMode, stopNumber }: RailRowProps) {
   const tripId = useTripId();
   const allDays = useTripDays();
   const parsed = parseEntryTime(entry);
@@ -1100,7 +1102,9 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         >
           <Icon name="grip" />
         </button>
-        <span className="tp-rail-dot" aria-hidden="true">{index + 1}</span>
+        <span className="tp-rail-dot" data-hotel={stopNumber == null || undefined} aria-hidden="true">
+          {stopNumber != null ? stopNumber : <Icon name="hotel" />}
+        </span>
         {/* head 是 div（非 button / 非 role="button"）— sub-line 內含可互動的時間 chip，
             role="button" 的子孫是 presentational（WAI-ARIA），會讓 AT 吞掉 chip。故 row-click
             展開走 div onClick（滑鼠便利，保留 mockup 整列可點），無障礙 toggle 走下方獨立的
@@ -1516,6 +1520,13 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
   // PR-K：sortable items list — entry.id 或 fallback `idx-N`（disabled in RailRow）
   const sortableItems = orderedEvents.map((e, i) => e.id ?? `idx-${i}`);
 
+  // rev2 mockup：停留站序號**跳過飯店**（飯店是當日路線起訖錨點、非「第幾站」，給床 icon 不給號 —
+  // DESIGN.md:190 + mockup .row.is-hotel 不 counter-increment）。null = 飯店。
+  const stopNumbers = orderedEvents.map((() => {
+    let n = 0;
+    return (e: TimelineEntryData) => (deriveTypeMeta(e).label === '住宿' ? null : ++n);
+  })());
+
   return (
     <div className="tp-rail">
       <style>{SCOPED_STYLES}</style>
@@ -1608,6 +1619,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
                 dayId={dayId}
                 sortMode={sortMode}
                 onEnterSortMode={enterSortMode}
+                stopNumber={stopNumbers[i] ?? null}
               />
             </div>
           );
