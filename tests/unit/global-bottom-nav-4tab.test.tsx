@@ -83,21 +83,25 @@ describe('GlobalBottomNav — 4-tab IA（rev2 帳號移 header）', () => {
     expect(screen.getByTestId('global-bottom-nav-favorites').className).toContain('is-active');
   });
 
-  it('CSS 含 min-height 44px (觸控目標 a11y)', () => {
+  it('tab 高 ≥44px 觸控目標（min-height 46px = mockup .ph-tab）', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/min-height:\s*var\(--spacing-tap-min,\s*44px\)/);
+    expect(style).toMatch(/min-height:\s*46px/);
   });
 
-  it('CSS 含 grid 4 col（rev2 帳號移 header）', () => {
+  it('底部浮動玻璃膠囊（圓角 pill + box-shadow，非滿版 grid bar）', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/grid-template-columns:\s*repeat\(4,\s*1fr\)/);
+    // rev2「手機也做」：flex 玻璃膠囊（.ph-tabs），非舊 grid 滿版 bar
+    expect(style).toMatch(/border-radius:\s*var\(--radius-full\)/);
+    expect(style).toMatch(/box-shadow:/);
+    expect(style).not.toMatch(/grid-template-columns/);
   });
 
-  it('active state 含 2px top indicator (mockup 規格)', () => {
+  it('active state = accent 實心 pill（非 2px top indicator）', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/\.tp-global-bottom-nav-btn\.is-active::before[^}]*background:\s*var\(--color-accent\)/);
+    expect(style).toMatch(/\.tp-global-bottom-nav-btn\.is-active\s*\{[^}]*background:\s*var\(--color-accent\)/);
+    expect(style).not.toMatch(/is-active::before/);
   });
 });

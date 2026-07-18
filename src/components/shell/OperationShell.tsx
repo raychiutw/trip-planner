@@ -15,10 +15,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import AppShell from './AppShell';
 import DesktopSidebarConnected from './DesktopSidebarConnected';
-import GlobalBottomNav from './GlobalBottomNav';
 import StackPanelHeader from './StackPanelHeader';
 import { useSheetStack } from '../../contexts/SheetStackContext';
-import { useCurrentUser } from '../../hooks/useCurrentUser';
 
 export interface OperationShellProps {
   /** 各頁 scroll 容器 class（e.g. "tp-add-stop-page-shell"）— 兩形態共用。 */
@@ -47,7 +45,6 @@ export default function OperationShell({
   children,
 }: OperationShellProps) {
   const { inStack, closeStack } = useSheetStack();
-  const { user } = useCurrentUser();
   const panelRef = useRef<HTMLDivElement>(null);
 
   // a11y：桌機面板從側邊開時把焦點移進面板（非 modal sheet 的 APG 慣例），讓鍵盤/螢幕
@@ -73,12 +70,12 @@ export default function OperationShell({
   // 桌機：bare panel 塞右欄 sheet（中欄詳情由 TripStackLayout 保留）。
   if (inStack) return panel;
 
-  // 手機／無 host：整頁 AppShell 包同一 drill-down panel。
+  // 手機：整頁 drill-down（focused task）— **不顯底部 nav**（比照 mockup .dd-top 全頁下鑽
+  // 與 iOS pushed-detail 隱藏 tab bar；避免浮動膠囊壓在操作 bottom bar「完成」上）。
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       main={panel}
-      bottomNav={<GlobalBottomNav authed={user !== null} />}
     />
   );
 }

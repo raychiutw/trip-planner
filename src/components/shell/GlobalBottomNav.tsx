@@ -69,95 +69,66 @@ function isItemActive(pathname: string, item: NavItem): boolean {
 }
 
 const SCOPED_STYLES = `
+/* rev2 owner 2026-07-18「手機也做」：底部**浮動玻璃膠囊**（iOS 26 Apple Music
+ * .ph-tabs 形制）— 桌機+手機共用同一玻璃膠囊：圓角 pill + glass blur + rim +
+ * box-shadow。不滿版 → 左右露出內容、玻璃才有東西透。定位（fixed 置中；手機置中
+ * 浮動、桌機置中中欄+右欄）由 AppShell .app-shell-bottom-nav 負責。 */
 .tp-global-bottom-nav {
-  position: sticky;
-  inset-block-end: 0;
-  left: 0; right: 0;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  height: var(--nav-height-mobile, 64px);
-  background: color-mix(in srgb, var(--color-background) 97%, transparent);
-  backdrop-filter: blur(14px);
-  border-top: 1px solid var(--color-border);
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 10;
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-secondary) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 10px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.14);
 }
 .tp-global-bottom-nav-btn {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 4px;
+  gap: 2px;
+  width: 62px; min-height: 46px;
+  border-radius: var(--radius-full);
   background: transparent;
   border: none;
   text-decoration: none;
   cursor: pointer;
   color: var(--color-muted);
   font: inherit;
-  min-height: var(--spacing-tap-min, 44px);
-  transition: color 150ms;
+  transition: background 140ms, color 140ms;
 }
 .tp-global-bottom-nav-btn .svg-icon {
   width: 22px; height: 22px;
 }
 .tp-global-bottom-nav-btn span {
-  /* mockup-parity-qa-fixes: mockup section 02:5227 規範 11/14/700
-   * （曾為 11/normal/500，2026-04-29 對齊 mockup 升 weight + 鎖 line-height） */
-  font-size: var(--font-size-caption2);
-  line-height: 14px;
+  /* mockup .ph-tab：10px/700（膠囊窄，字級降至 10px 對齊 iOS 26 tab 形制）。
+   * 10px = var(--font-size-eyebrow)（token gate 要求，見 pr2-tokens 測）。 */
+  font-size: var(--font-size-eyebrow);
+  line-height: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
-.tp-global-bottom-nav-btn:hover { color: var(--color-foreground); }
+.tp-global-bottom-nav-btn:hover { color: var(--color-foreground); background: var(--color-hover); }
 .tp-global-bottom-nav-btn.is-active {
-  color: var(--color-accent);
-  /* Section 5 (E4)：mockup section 02 active state — accent-subtle 底 + 2px
-   * top indicator */
-  background: var(--color-accent-subtle);
-  position: relative;
-}
-.tp-global-bottom-nav-btn.is-active::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 50%;
-  transform: translateX(-50%);
-  width: 32px; height: 2px;
-  border-radius: 0 0 2px 2px;
   background: var(--color-accent);
+  color: var(--color-accent-foreground);
 }
-.tp-global-bottom-nav-btn.is-active span {
-  font-weight: 700;
-}
+.tp-global-bottom-nav-btn.is-active span { font-weight: 700; }
 
-/* rev2 owner 2026-07-17：桌機底部浮動玻璃膠囊（row tabs、auto width、去 mobile
- * top-indicator）。帳號在 sidebar chip → 桌機膠囊不顯帳號 tab。定位（fixed 置中
- * sidebar+中欄）由 AppShell .app-shell-bottom-nav @≥1024 負責。 */
+/* 桌機：膠囊 tabs 改 row layout（icon+label 橫排、較寬、字級回 caption2）。 */
 @media (min-width: 1024px) {
-  .tp-global-bottom-nav {
-    position: static;
-    display: flex;
-    gap: 2px;
-    height: auto;
-    width: auto;
-    padding: 6px;
-    border-top: none;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--color-secondary) 82%, transparent);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: 0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.14);
-  }
   .tp-global-bottom-nav-btn {
     flex-direction: row;
     gap: 7px;
+    width: auto;
     padding: 8px 16px;
-    border-radius: var(--radius-full);
     min-height: 40px;
   }
-  .tp-global-bottom-nav-btn.is-active {
-    background: var(--color-accent);
-    color: var(--color-accent-foreground);
+  .tp-global-bottom-nav-btn span {
+    font-size: var(--font-size-caption2);
+    line-height: 14px;
   }
-  .tp-global-bottom-nav-btn.is-active::before { display: none; }
 }
 `;
 

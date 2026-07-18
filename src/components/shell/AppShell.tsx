@@ -87,16 +87,19 @@ export const APP_SHELL_STYLES = `
 /* PR-VV 2026-04-27：bottom-nav 改 position: fixed overlay（從 grid row）。
  * 原 grid row 結構無法 transform-hide（row 仍佔空間），改 fixed 才能 slide
  * down 完全消失。Main 加 padding-bottom 對應 nav 高度避免 content 被遮。 */
+/* rev2「手機也做」：底部 nav 是**浮動玻璃膠囊**（非滿版 bar）→ fixed 置中浮在底部
+ * 上方（手機 bottom:12+safe；桌機 @≥1024 覆蓋為置中中欄+右欄、bottom:18）。膠囊視覺
+ * 在 GlobalBottomNav。捲動隱藏往下滑出。 */
 .app-shell-bottom-nav {
   position: fixed;
-  inset-block-end: 0;
-  inset-inline: 0;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   z-index: var(--z-sticky-nav);
-  transform: translateY(0);
+  transform: translateX(-50%);
   transition: transform var(--transition-duration-normal, 250ms) var(--transition-timing-function-apple, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 .app-shell-bottom-nav[data-hidden="true"] {
-  transform: translateY(100%);
+  transform: translateX(-50%) translateY(180%);
 }
 
 /* Desktop ≥1024px：grid 兩 / 三欄 */
@@ -113,11 +116,8 @@ export const APP_SHELL_STYLES = `
    * 置中於「中欄+右欄」內容區（sidebar 右緣 → 視窗右緣的中點，= (100vw+sidebar)/2）；
    * 桌機為主要導覽，不隨捲動隱藏。膠囊本體樣式在 GlobalBottomNav @≥1024 覆蓋。 */
   .app-shell-bottom-nav {
-    inset-inline: auto;
     left: calc((100vw + var(--sidebar-width-desktop, 216px)) / 2);
-    transform: translateX(-50%);
     bottom: 18px;
-    width: auto;
   }
   .app-shell-bottom-nav[data-hidden="true"] {
     transform: translateX(-50%);
@@ -126,7 +126,7 @@ export const APP_SHELL_STYLES = `
    * 內容（地圖 entry cards、聊天輸入列）會被膠囊蓋住 → 攔截點擊。比照 mobile 為
    * 常駐 nav 留 padding-bottom，桌機也給 main 留膠囊高度的底部間距（膠囊 bottom:18
    * + 高 ~52 → ~84 清空）。右欄操作面板的動作鈕在遠右、不在膠囊中央下方，不需處理。 */
-  .app-shell-main {
+  .app-shell[data-has-bottom-nav="true"] .app-shell-main {
     padding-bottom: 84px;
   }
 }
@@ -145,9 +145,9 @@ export const APP_SHELL_STYLES = `
   .app-shell-sheet {
     display: none;
   }
-  .app-shell-main {
-    /* PR-VV：bottom-nav 是 fixed overlay 蓋在 main 底部，加 padding-bottom
-     * 對應 --nav-height-mobile 避免 content 被遮（reserve space for nav）。 */
+  /* bottom-nav 是 fixed overlay 蓋在 main 底部 → reserve padding-bottom。只在有 nav
+   * 時保留（操作頁 drill-down 不顯 nav → 不留、bottom bar 貼底）。 */
+  .app-shell[data-has-bottom-nav="true"] .app-shell-main {
     padding-bottom: var(--nav-height-mobile, 88px);
   }
 }
@@ -262,7 +262,7 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
   return (
     <>
       <style>{APP_SHELL_STYLES}</style>
-      <div className="app-shell" data-layout={layout} data-testid="app-shell">
+      <div className="app-shell" data-layout={layout} data-has-bottom-nav={bottomNav ? 'true' : 'false'} data-testid="app-shell">
         <aside className="app-shell-sidebar" data-testid="app-shell-sidebar">
           {sidebar}
         </aside>

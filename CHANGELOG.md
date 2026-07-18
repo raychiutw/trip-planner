@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.55.98] - 2026-07-18
+
+### Changed
+- **手機底部 nav → 浮動玻璃膠囊（非滿版 bar）**（owner「手機還是舊版 tab 不是新版 glass」）：`.tp-global-bottom-nav` 由滿版 sticky grid bar 改 **iOS 26 Apple Music `.ph-tabs` 浮動玻璃膠囊** — 桌機+手機共用同一玻璃膠囊（圓角 pill + `blur(20px) saturate(180%)` + rim + box-shadow），手機 fixed 置中浮於底部（`bottom:12+safe`）、不滿版（左右露出內容）。tab 改 column 窄形（62×46，label 10px=`--font-size-eyebrow`）、active = accent 實心 pill（去舊 2px top-indicator）；桌機 @≥1024 回 row layout。定位由 `AppShell .app-shell-bottom-nav`（base 置中浮動、@≥1024 置中中欄+右欄）負責。
+- **操作頁手機 drill-down 隱藏底部 nav**：`OperationShell` 手機整頁不再 render `GlobalBottomNav`（比照 mockup `.dd-top` 全頁下鑽 + iOS pushed-detail 隱藏 tab bar），避免浮動膠囊壓在操作「完成」bottom bar 上。`AppShell` 加 `data-has-bottom-nav`，mobile/desktop main 的 nav padding-bottom 只在有 nav 時保留（操作頁 bottom bar 貼底、無多餘間距）。
+- 鎖測：`global-bottom-nav-4tab`（grid→玻璃膠囊 pill+shadow、active pill 非 top-indicator、min-height 46）、`mockup-typography`（label 10px→`--font-size-eyebrow`）、`app-shell-snapshot`（+`data-has-bottom-nav`）。tsc ✓ · **433 檔 3760 test 全綠**。實機 QA（localhost 灌 prod 資料，402 手機 / 1320 桌機、淺深）：手機浮動玻璃膠囊 + 帳號圓圈 R + 操作 drill-down 無 nav（完成貼底）；桌機膠囊置中 x=768 + 6 條堆疊中欄詳情保留；console 無 app error；擷圖存證。
+
 ## [2.55.97] - 2026-07-18
 
 ### Changed
