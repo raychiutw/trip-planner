@@ -1127,39 +1127,42 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               const shortDesc = desc && desc.length <= 24 && !desc.includes('\n') ? desc : '';
               return (
                 <span className="tp-rail-sub">
+                  {/* D-review #3：每個「分隔符 + 值」綁成 .tp-rail-sub-part nowrap 單位,
+                      副標超長換行時只在 part 之間斷（乾淨）、分隔符永不孤懸在行尾、
+                      ★+評分整組不拆(plan L50 adapt 非 truncate)。 */}
                   {entryIdNum != null && (
-                    <>
-                      <EntryTimeChip
-                        tripId={tripId ?? null}
-                        entryId={entryIdNum}
-                        dayNum={dayNum}
-                        start={parsed.start}
-                        end={parsed.end}
-                      />
-                      <span className="tp-rail-sub-sep">·</span>
-                    </>
+                    <EntryTimeChip
+                      tripId={tripId ?? null}
+                      entryId={entryIdNum}
+                      dayNum={dayNum}
+                      start={parsed.start}
+                      end={parsed.end}
+                    />
                   )}
-                  <span className="tp-rail-sub-type">{meta.label}</span>
+                  <span className="tp-rail-sub-part">
+                    {entryIdNum != null && <span className="tp-rail-sub-sep">·</span>}
+                    <span className="tp-rail-sub-type">{meta.label}</span>
+                  </span>
                   {durLabel && (
-                    <>
+                    <span className="tp-rail-sub-part">
                       <span className="tp-rail-sub-sep">·</span>
                       <span>{durLabel}</span>
-                    </>
+                    </span>
                   )}
                   {rating != null && (
-                    <>
+                    <span className="tp-rail-sub-part">
                       <span className="tp-rail-sub-sep">·</span>
                       <span className="tp-rail-sub-rating">
                         <span className="tp-rail-sub-star">★</span>
                         {rating.toFixed(1)}
                       </span>
-                    </>
+                    </span>
                   )}
                   {shortDesc && (
-                    <>
+                    <span className="tp-rail-sub-part">
                       <span className="tp-rail-sub-sep">·</span>
                       <span>{shortDesc}</span>
-                    </>
+                    </span>
                   )}
                 </span>
               );

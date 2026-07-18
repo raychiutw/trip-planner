@@ -770,6 +770,9 @@ body.dark {
     /* ★ + 評分數字綁 nowrap 單位，避免副標 flex-wrap 時「4.1」孤行落到下一列
        （plan line 50：adapt rather than truncate，iOS HIG 文字適應）。 */
     .tp-rail-sub-rating { display: inline-flex; align-items: baseline; gap: 3px; white-space: nowrap; }
+    /* D-review #3：每個「分隔符 · + 值」綁成 nowrap 段,副標 flex-wrap 只在段之間斷,
+       分隔符不再獨立成 flex child 孤懸在行尾。 */
+    .tp-rail-sub-part { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
     /* v2.30.12: time chip 取代既有 col-2 time（time col 移除後 inline 顯示） */
     .tp-rail-sub-time {
         font-weight: 700; color: var(--color-foreground);
