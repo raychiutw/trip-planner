@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.0] - 2026-07-19
+
+### Changed
+- **rev2 桌機 macOS sidebar 改版（§10，owner mockup sign-off）**：primary nav（聊天/行程/地圖/收藏）從底部浮動玻璃膠囊搬進**左 macOS sidebar 頂部**（Music/Mail 形制），桌機隱藏膠囊（`AppShell` @≥1024 `.app-shell-bottom-nav display:none`），**手機維持底部膠囊 + 無 sidebar**。sidebar 改 **vibrancy 暖奶油半透明**（`color-mix(--color-background 72%)` + `backdrop-filter: blur(30px)`，走主 app token 自動 light/dark adapt；舊固定深棕 `--color-sidebar-*` 退役）。primary IA + active 判定抽到 `navItems.ts` 單一來源（`GlobalBottomNav` + `DesktopSidebar` 共用）。
+- **表單頁桌機滿寬（§10.4）**：account 設定分區桌機 2-col grid（hero 收窄置中）；new-trip 加寬 880px。
+- **子頁 toolbar 返回（§10.5）**：collab/explore 用 `TitleBar backLabelVisible` → macOS toolbar 式「‹ 返回」可見文字（opt-in，不動行程詳情 icon-only back）。
+
+### Fixed
+- **地圖 auth 失敗優雅降級（§6）**：`useGoogleMap` 註冊 `window.gm_authFailure`（Google referer/key 未授權官方 callback）→ setLoadError + setMap(null) + authFailed race gate；`TpMap` 顯「地圖暫停服務」placeholder，行程其他功能正常。根治 localhost 非授權 referer 整頁崩潰。
+- **行程一覽 filter tab「一片白色」（§2）**：容器與 active thumb 幾乎同色 → 改暖底 track + inset border + thumb 浮起陰影，segmented control 清楚可辨。
+- **操作堆疊中欄 day-tabs 蓋 day-header（§8.1）**：noShell 中欄無 titlebar，`.tp-stack-mid` override sticky top:8px，消除膠囊蓋日期/停留點。
+- **favorites**：探索鈕 icon 改非放大鏡（消與搜尋列重複，§6b）；卡片動作列 `margin-top:auto` pin 卡底對齊（§8.3）；選取 label 保底 44pt（§9.2）。
+- **HIG**：more-menu ⋮ → iOS 水平 …（§9.1）；explore POI 卡 ❤/➕ 44pt（§9.2）；signup 密碼常駐 helper（§9.3）；換景點 disabled 主鈕對比（§9.4）；行程明細 titlebar「新增景點」icon-only 讓標題可讀（§9.5）；login/signup 裝飾圓改軟漸層（§8.4）。
+- **§8.2/§8.5**（桌機操作頁 nav 被 panel 切 / new-trip 底部 nav bleed）由桌機膠囊隱藏一併解決。
+- 驗證：tsc（src + functions）✓ · 完整 unit **3783 tests 全綠** · 真瀏覽器逐頁截圖（1440 + 390）· 最終 multi-agent workflow audit（4 agent / 9 畫面）確認 3 findings（1 HIGH + 2 LOW）全處理、手機 0 破版 · `openspec validate rev2-visual-fidelity --strict` 過。
+
 ## [2.55.101] - 2026-07-18
 
 ### Changed
