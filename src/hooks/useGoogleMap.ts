@@ -25,6 +25,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 
+declare global {
+  interface Window {
+    /** Google Maps 官方全域 callback：API key / referer 授權失敗時呼叫（見 useGoogleMap effect）。 */
+    gm_authFailure?: () => void;
+  }
+}
+
 export interface UseGoogleMapOptions {
   /** Default center [lat, lng]. */
   center?: { lat: number; lng: number };
@@ -88,6 +95,9 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
     const el = containerRef.current;
     if (!el) return;
     let cancelled = false;
+    // auth 失敗 flag：gate 下方 .then 的 setMap（避免 gm_authFailure 先於 promise
+    // resolve 時，仍在授權失敗的 map 上建 instance → marker/segment 在壞 map 上 render）。
+    let authFailed = false;
 
     const apiKey =
       (import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY as string | undefined) ?? '';
@@ -97,6 +107,24 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
     }
 
     ensureLoaderInit(apiKey);
+
+    // Google Maps auth 失敗（referer/key 未授權，如 localhost 非授權來源）會呼叫全域
+    // window.gm_authFailure，但此時 importLibrary promise 仍會 resolve → 下方 .catch
+    // 抓不到。註冊此 callback 才能把 auth 失敗轉成 loadError（→ TpMap 顯「地圖暫停服務」
+    // placeholder，而非讓 Google 自畫灰底 "This page can't load Google Maps correctly"
+    // overlay / 整頁進 ErrorBoundary）。見 memory local_dev_gmaps_referer_crash。
+    const prevAuthFailure = window.gm_authFailure;
+    window.gm_authFailure = () => {
+      authFailed = true;
+      if (!cancelled) {
+        setLoadError(new Error('Google Maps 授權失敗（referer / API key 未授權）'));
+        // 清掉可能已建立的 map instance → 讓 markers/segments 收到 map=null（不在
+        // 授權失敗的 map 上 render，避免 marker.js 整頁 ErrorBoundary 紅屏）。
+        setMap(null);
+      }
+      prevAuthFailure?.();
+    };
+
     // v2.31.76 hotfix #642 follow-up：必須同時 await 'marker' library 才能 setMap，
     // 否則 child component（TpMap / MapFabs）會在 google.maps.marker 尚未注入時
     // 嘗試 new google.maps.marker.AdvancedMarkerElement(...) → TypeError，整個 map
@@ -104,7 +132,7 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
     // 等 marker lib，prod 整個 trip detail page 地圖紅屏。
     Promise.all([importLibrary('maps'), importLibrary('marker')])
       .then(([mapsLib]) => {
-        if (cancelled) return;
+        if (cancelled || authFailed) return;
         const instance = new mapsLib.Map(el, {
           center,
           zoom,
@@ -134,6 +162,8 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
 
     return () => {
       cancelled = true;
+      // 還原前一個 gm_authFailure（避免卸載後仍指向本 hook 的閉包）。
+      window.gm_authFailure = prevAuthFailure;
       // Google Maps JS has no .remove() — element + map ref will be GC'd when
       // container detaches; we only clear React state.
       setMap(null);
