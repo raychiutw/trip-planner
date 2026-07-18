@@ -5,11 +5,18 @@
  *   不 render 自己的 AppShell（中欄行程詳情由 host 保留）。‹=back、✕=closeStack。
  * 手機／無 host（inStack=false，預設）→ 整頁：AppShell + TitleBar（既有行為）。
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import OperationShell from '../../src/components/shell/OperationShell';
 import { SheetStackProvider } from '../../src/contexts/SheetStackContext';
+
+// G-S1：‹ 的 depth-gated back（depth>1 → navigate(-1) pop 一層）需 spy navigate。
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
 
 // DesktopSidebarConnected（整頁模式）會打 /api/trips — mock 掉資料源。
 vi.mock('../../src/hooks/useMyTrips', () => ({
@@ -19,6 +26,8 @@ vi.mock('../../src/hooks/useMyTrips', () => ({
 vi.mock('../../src/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({ user: { userId: 'u1', email: 'ray@example.com' } }),
 }));
+
+beforeEach(() => mockNavigate.mockClear());
 
 function renderStack(ui: React.ReactElement, closeStack = () => {}) {
   return render(
@@ -79,11 +88,11 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(back).not.toHaveBeenCalled();
   });
 
-  it('inStack=true + location.state.opStacked（從另一操作進來，L3 push）→ 「‹」back + 「✕」closeStack', () => {
+  it('inStack=true + depth>1（L3 push）→ 「‹」= navigate(-1) pop 一層（非跳回 trip），「✕」= closeStack', () => {
     const back = vi.fn();
     const closeStack = vi.fn();
     const { getByTestId } = render(
-      <MemoryRouter initialEntries={[{ pathname: '/x', state: { opStacked: true } }]}>
+      <MemoryRouter initialEntries={[{ pathname: '/x', state: { opStacked: true, depth: 2 } }]}>
         <SheetStackProvider value={{ inStack: true, closeStack }}>
           <OperationShell shellClassName="tp-op-x" title="換景點" back={back}>
             <div />
@@ -92,9 +101,26 @@ describe('OperationShell — 雙形態外殼', () => {
       </MemoryRouter>,
     );
     (getByTestId('stack-panel-back') as HTMLButtonElement).click();
+    // G-S1：L3 的 ‹ 走 navigate(-1) 退回上一操作頁，不呼叫頁自帶 back（那會跳回 trip、跳過中間頁）
+    expect(mockNavigate).toHaveBeenCalledWith(-1);
+    expect(back).not.toHaveBeenCalled();
     (getByTestId('stack-panel-close') as HTMLButtonElement).click();
-    expect(back).toHaveBeenCalledTimes(1);
     expect(closeStack).toHaveBeenCalledTimes(1);
+  });
+
+  it('手機 L2（depth=1，無 push）→ 「‹」= 頁自帶 explicit back（回 trip），不 navigate(-1)（冷啟不踢出 app）', () => {
+    const back = vi.fn();
+    const { getByTestId } = render(
+      <MemoryRouter>
+        <OperationShell shellClassName="tp-op-x" testId="op-x-page" title="加入景點" back={back}>
+          <div />
+        </OperationShell>
+      </MemoryRouter>,
+    );
+    // 手機 inStack=false → showBack 恆真，但 depth=1 → ‹ 走 explicit back（非 navigate(-1)）
+    (getByTestId('stack-panel-back') as HTMLButtonElement).click();
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).not.toHaveBeenCalledWith(-1);
   });
 
   it('inStack=false（手機全頁下鑽）→ 整頁 AppShell + 共用 StackPanelHeader（‹/✕），無 TitleBar', () => {

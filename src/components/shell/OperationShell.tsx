@@ -13,7 +13,7 @@
  * `closeStack` 由 TripStackLayout 於桌機+手機兩支都注入（回行程詳情）。
  */
 import { useEffect, useRef, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AppShell from './AppShell';
 import DesktopSidebarConnected from './DesktopSidebarConnected';
 import StackPanelHeader from './StackPanelHeader';
@@ -47,14 +47,21 @@ export default function OperationShell({
 }: OperationShellProps) {
   const { inStack, closeStack } = useSheetStack();
   const location = useLocation();
+  const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
 
   // rev2 Section 01 堆疊語意（mockup 桌機 .layer.l2/.l3）：
-  //   桌機第一層（從 timeline 進的操作，如 ⋯「編輯景點」）= L2 modal → 右上「✕」only、不給「‹」。
-  //   從另一操作進來（如 編輯景點 →「變更景點」）= L3+ push → 左上「‹」回前頁 + 右上「✕」。
-  //     由 navigate 帶 state.opStacked=true 標記（route-swap 無真 component stack，靠 nav 意圖判層）。
-  //   手機全頁下鑽（!inStack，mockup Section 03 .dd-top）一律「‹」+「✕」。
-  const showBack = !inStack || Boolean((location.state as { opStacked?: boolean } | null)?.opStacked);
+  //   桌機第一層（從 timeline 進的操作，如 ⋯「編輯景點」）= L2 → depth 1 → 右上「✕」only、不給「‹」。
+  //   從另一操作 push 進來（如 編輯景點 →「變更景點」）= L3+ → push 時帶 state.depth=+1 →「‹」+「✕」。
+  //   手機全頁下鑽（!inStack，mockup Section 03 .dd-top）一律顯「‹」，但 L2 的 ‹ 走 explicit back（回 trip）。
+  //
+  // G-S1（Back moves one level）：depth 由 push 端存 location.state（route-swap 無真 component stack）。
+  //   depth>1（確定 in-app push 過）→ ‹ = navigate(-1) 委派瀏覽器 history 退回上一操作頁（ChangePoi ‹ → EditEntry）。
+  //   depth≤1（手機 L2 / deep-link 冷啟）→ ‹ = 頁自帶 explicit back（回 trip），**不** navigate(-1) → 不踢出 app。
+  //   （v2.33.139 曾因無條件 navigate(-1) 有 footgun 而移除；此處用 depth gate 只在確定 in-app 時才 -1。）
+  const depth = (location.state as { depth?: number } | null)?.depth ?? 1;
+  const showBack = !inStack || depth > 1;
+  const handleBack = depth > 1 ? () => navigate(-1) : back;
 
   // a11y：桌機面板從側邊開時把焦點移進面板（非 modal sheet 的 APG 慣例），讓鍵盤/螢幕
   // 閱讀器不卡在中欄觸發鈕。手機是整頁 route 切換（focus 自然重置）+ 面板在 app-shell-main
@@ -71,7 +78,7 @@ export default function OperationShell({
   const panel = (
     <div className={shellClassName} data-testid={testId} ref={panelRef} tabIndex={-1}>
       {scopedStyles && <style>{scopedStyles}</style>}
-      <StackPanelHeader title={title} onBack={showBack ? back : undefined} onClose={closeStack} />
+      <StackPanelHeader title={title} onBack={showBack ? handleBack : undefined} onClose={closeStack} />
       {children}
     </div>
   );

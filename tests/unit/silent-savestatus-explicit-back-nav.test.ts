@@ -82,7 +82,13 @@ describe('PR14 (B): useNavigateBack 永遠走 explicit URL', () => {
   });
 });
 
-describe('全 codebase grep — 無 navigate(-N) 殘留', () => {
+describe('全 codebase grep — 無 navigate(-N) 殘留（G-S1 depth-gated 例外）', () => {
+  // 唯一合法例外：OperationShell 的 depth-gated pop（G-S1「Back moves one level」）。
+  // 只在 depth>1（location.state 由我方 push 端寫入 = 確定本 session in-app 操作 push 過）
+  // 才 navigate(-1)，前一頁保證是我方操作頁、絕不會是外部 referrer / login redirect
+  // → v2.33.139 的 footgun 不成立。其餘 back nav 一律 explicit-URL（useNavigateBack）。
+  const ALLOWLIST = ['OperationShell.tsx'];
+
   // 遞迴 scan src/ pages + hooks + components 找剩餘 navigate(-N) calls
   function scanDir(dir: string): string[] {
     const { readdirSync, statSync } = require('node:fs');
@@ -93,6 +99,7 @@ describe('全 codebase grep — 無 navigate(-N) 殘留', () => {
       if (stat.isDirectory()) {
         out.push(...scanDir(full));
       } else if (name.endsWith('.ts') || name.endsWith('.tsx')) {
+        if (ALLOWLIST.some((allowed) => full.endsWith(allowed))) continue;
         const text = readFileSync(full, 'utf8');
         // 排除 block comments (/** ... */) — docstring 可提到舊行為
         const codeOnly = text.replace(/\/\*\*[\s\S]*?\*\//g, '');
@@ -104,11 +111,23 @@ describe('全 codebase grep — 無 navigate(-N) 殘留', () => {
     return out;
   }
 
-  it('src/pages, src/hooks, src/components 0 個 navigate(-N) 殘留', () => {
+  it('src/pages, src/hooks, src/components 0 個 navigate(-N) 殘留（除 allowlist）', () => {
     const srcRoot = join(__dirname, '../../src');
     const offenders = ['pages', 'hooks', 'components'].flatMap((sub) =>
       scanDir(join(srcRoot, sub)),
     );
     expect(offenders).toEqual([]);
+  });
+
+  it('carve-out 本身受守：OperationShell 的 navigate(-1) 必須 depth-gated（depth > 1）', () => {
+    const OP_SHELL = readFileSync(
+      join(__dirname, '../../src/components/shell/OperationShell.tsx'),
+      'utf8',
+    );
+    const codeOnly = OP_SHELL.replace(/\/\*\*[\s\S]*?\*\//g, '');
+    // 有 navigate(-1) 就必須同時有 depth > 1 gate（防日後有人把它改成無條件 -1）
+    if (/navigate\(-1\)/.test(codeOnly)) {
+      expect(codeOnly).toMatch(/depth > 1/);
+    }
   });
 });

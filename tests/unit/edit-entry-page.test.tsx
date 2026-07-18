@@ -287,7 +287,7 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
     expect(btn.getAttribute('aria-label')).toContain('置換景點');
     fireEvent.click(btn);
     // rev2 F9：從 edit 進 change-poi 是 L3 push → 帶 state.opStacked=true 讓 OperationShell 顯「‹」回前頁。
-    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi', { state: { opStacked: true } });
+    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi', { state: { opStacked: true, depth: 2 } });
   });
 
   it('停留時間 chip 顯示「停留 90 分鐘」', async () => {
@@ -761,7 +761,7 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       expect(screen.queryByTestId('edit-entry-alt-add-search')).toBeTruthy();
     });
     fireEvent.click(screen.getByTestId('edit-entry-alt-add-search'));
-    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi?mode=alternate&tab=search', { state: { opStacked: true } });
+    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi?mode=alternate&tab=search', { state: { opStacked: true, depth: 2 } });
   });
 
   it('「收藏加入備選」按鈕 → navigate 到 change-poi alternate favorites tab', async () => {
@@ -771,7 +771,7 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       expect(screen.queryByTestId('edit-entry-alt-add-favorites')).toBeTruthy();
     });
     fireEvent.click(screen.getByTestId('edit-entry-alt-add-favorites'));
-    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi?mode=alternate&tab=favorites', { state: { opStacked: true } });
+    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi?mode=alternate&tab=favorites', { state: { opStacked: true, depth: 2 } });
   });
 
   // Round 9 — 409 STALE_ENTRY 處理 (cross-tab safety + auto-retry on benign race)
