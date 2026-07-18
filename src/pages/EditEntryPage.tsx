@@ -1739,7 +1739,7 @@ export default function EditEntryPage() {
                     className="tp-edit-entry-poi-action"
                     aria-label="置換景點"
                     title="置換景點"
-                    onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi`)}
+                    onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi`, { state: { opStacked: true } })}
                     data-testid="edit-entry-change-poi"
                   >
                     <Icon name="swap-horizontal" />
@@ -1857,7 +1857,7 @@ export default function EditEntryPage() {
                     <button
                       type="button"
                       className="tp-edit-entry-alt-add-btn"
-                      onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate&tab=search`)}
+                      onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate&tab=search`, { state: { opStacked: true } })}
                       data-testid="edit-entry-alt-add-search"
                     >
                       <Icon name="search" />
@@ -1866,7 +1866,7 @@ export default function EditEntryPage() {
                     <button
                       type="button"
                       className="tp-edit-entry-alt-add-btn"
-                      onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate&tab=favorites`)}
+                      onClick={() => navigate(`/trip/${encodeURIComponent(tripId!)}/stop/${entryId}/change-poi?mode=alternate&tab=favorites`, { state: { opStacked: true } })}
                       data-testid="edit-entry-alt-add-favorites"
                     >
                       <Icon name="heart" />

@@ -63,14 +63,33 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(document.activeElement).toBe(getByTestId('op-x-page'));
   });
 
-  it('inStack=true：‹ 觸發 back、✕ 觸發 closeStack', () => {
+  it('inStack=true 預設（從 timeline，L2 modal）→ 只「✕」closeStack、無「‹」（mockup layer.l2 右上關閉）', () => {
     const back = vi.fn();
     const closeStack = vi.fn();
-    const { getByTestId } = renderStack(
-      <OperationShell shellClassName="tp-op-x" title="換景點" back={back}>
+    const { getByTestId, queryByTestId } = renderStack(
+      <OperationShell shellClassName="tp-op-x" title="編輯景點" back={back}>
         <div />
       </OperationShell>,
       closeStack,
+    );
+    // rev2 Section 01：桌機第一層只給關閉，不給回前頁
+    expect(queryByTestId('stack-panel-back')).toBeNull();
+    (getByTestId('stack-panel-close') as HTMLButtonElement).click();
+    expect(closeStack).toHaveBeenCalledTimes(1);
+    expect(back).not.toHaveBeenCalled();
+  });
+
+  it('inStack=true + location.state.opStacked（從另一操作進來，L3 push）→ 「‹」back + 「✕」closeStack', () => {
+    const back = vi.fn();
+    const closeStack = vi.fn();
+    const { getByTestId } = render(
+      <MemoryRouter initialEntries={[{ pathname: '/x', state: { opStacked: true } }]}>
+        <SheetStackProvider value={{ inStack: true, closeStack }}>
+          <OperationShell shellClassName="tp-op-x" title="換景點" back={back}>
+            <div />
+          </OperationShell>
+        </SheetStackProvider>
+      </MemoryRouter>,
     );
     (getByTestId('stack-panel-back') as HTMLButtonElement).click();
     (getByTestId('stack-panel-close') as HTMLButtonElement).click();
