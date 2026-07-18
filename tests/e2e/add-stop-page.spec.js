@@ -94,12 +94,17 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await page.goto('/trip/okinawa-trip-2026-Ray');
     await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     await expect(page.getByTestId('add-stop-page')).toBeVisible();
-    // rev2「6 條全接」：桌機 add-stop 改右欄 stack panel，返回鍵是 StackPanelHeader「‹」
-    // (aria-label 返回上一層)；手機仍整頁 TitleBar「返回前頁」。.or() 兩者皆抓。
-    await page
+    // rev2「6 條全接」+ F9：桌機 add-stop 是右欄 stack **第一層(L2)** → 只有「✕ 整個關閉」
+    // (stack-panel-close)、不給「‹」；手機全頁 drill-down 則 ‹+✕ 都在。用條件式：有 back(‹) 就
+    // 點 back，否則(桌機 L2)點 close(✕) —— 避免手機兩者並存時 .or() 匹配到 2 個。兩者皆回 trip 頁。
+    const backBtn = page
       .getByRole('button', { name: '返回前頁' })
-      .or(page.getByRole('button', { name: '返回上一層' }))
-      .click();
+      .or(page.getByRole('button', { name: '返回上一層' }));
+    if (await backBtn.count() > 0) {
+      await backBtn.first().click();
+    } else {
+      await page.getByTestId('stack-panel-close').click();
+    }
     await expect(page).toHaveURL(/\/trip\/okinawa-trip-2026-Ray$|\/trips/);
   });
 

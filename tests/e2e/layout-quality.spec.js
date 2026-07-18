@@ -44,10 +44,14 @@ test.describe('Layout quality gates', () => {
     await expect(page).toHaveURL(new RegExp(`/trips\\?selected=${TRIP_ID}`));
     await expect(page.getByRole('heading', { name: /2026 沖繩自駕五日遊/ })).toBeVisible();
 
-    const firstGrip = page.getByRole('button', { name: /拖拉排序/ }).first();
+    // rev2 F5：reorder affordance = ⋯ context menu「重新排序」→ 排序模式顯 grip（resting 列不放常駐
+    // grip，Apple 慣例）。展開 caret 恆在。
     const firstRow = page.getByRole('button', { name: /展開景點/ }).first();
-    await expect(firstGrip).toBeVisible();
     await expect(firstRow).toBeVisible();
+    await page.getByRole('button', { name: /更多動作/ }).first().click();
+    await page.getByRole('menuitem', { name: '重新排序' }).click();
+    const firstGrip = page.getByRole('button', { name: /拖拉排序/ }).first();
+    await expect(firstGrip).toBeVisible();
   });
 
   // v2.22.0 (poi-favorites-rename DUC1)：batch toolbar 改 delete-only，
