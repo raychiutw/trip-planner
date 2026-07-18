@@ -41,7 +41,7 @@
 
 ## 8. workflow 稽核新確認的破版（computed 驗過）
 
-- [ ] 8.1 op-edit 桌機 DAY tab 蓋 day-header:中欄 DAY 膠囊列與「DAY 01/日期」標題重疊 → **待最終 workflow audit 於 d-addentry 截圖確認**（與 #5 同源 sticky 機制；#5 已修，此為操作狀態下複驗）。
+- [x] 8.1 op-edit 桌機 DAY tab 蓋 day-header → **最終 workflow audit 確認為 HIGH 破版**：TripStackLayout 中欄 `<TripPage noShell>` 無 titlebar，day-tabs sticky top=72px（假設有 titlebar）把膠囊釘 72px 蓋住 day-header。修：中欄包 `.tp-stack-mid` → CSS override sticky top:8px。真瀏覽器驗無重疊。commit 5b96dca8。
 - [x] 8.2 桌機操作頁浮動 nav 被 stack panel 切 → **§10.1 已解**（桌機膠囊整個隱藏、nav 在 sidebar，不再有浮動 nav 被 panel 切問題）。
 - [x] 8.3 favorites 桌機卡片動作列底部對齊 → `.poi-actions` `margin-top:auto` pin 卡底，grid 等高。真瀏覽器驗動作列齊底。commit d1b0ae76。
 - [x] 8.4 login/signup 裝飾圓 edge 橫切標題 → 圓改 radial-gradient 淡出（軟 glow 無硬 edge）。commit 17d5a31c。
@@ -50,7 +50,7 @@
 ## 9. concrete HIG 違規（要修）
 
 - [x] 9.1 ⋮ kebab → iOS `…`:新增 `ellipsis` icon（水平三點），more-menu trigger（TripCardMenu/TimelineRail/TripsListPage 3 處）由 `more-vert` 改 `ellipsis`。commit 17d5a31c。
-- [x] 9.2 44pt 觸控區:explore POI 卡 `❤`/`➕` 36px→`--spacing-tap-min`(44)。commit 6225776e。op-overflow nav 三控 = StackPanelHeader `‹`/`✕` 已 44pt(G-H6a)。**trip-notes trash/chevron 待最終 audit 於 d-notes 複驗**。
+- [x] 9.2 44pt 觸控區:explore POI 卡 `❤`/`➕` 36px→44(commit 6225776e)。op-overflow = StackPanelHeader `‹`/`✕` 已 44pt。favorites 選取 label 保底 44pt(commit 6e74afaf)。trip-notes chevron = aria-hidden 視覺 span、header 整列才是點擊區(夠大)、無獨立 trash 按鈕 → 非真問題(audit LOW 偽陽性)。
 - [x] 9.3 signup 密碼規則改常駐 helper（`.tp-hint` + aria-describedby）。commit 17d5a31c。
 - [x] 9.4 op-changepoi disabled 主鈕:原 opacity:0.5（白字對比不足）→ 顯式 disabled（淡 tan 底 + muted 深字）。commit 6225776e。
 - [x] 9.5 tripdetail nav bar 精簡:「新增景點」改 icon-only，讓長標題可讀（切換/⋯ 保留）。commit 054ed142。
@@ -70,8 +70,8 @@
 - [x] 10.4 account/new-trip 桌機用滿橫向 → ✅ account 設定分區桌機 2-col grid（hero 收窄置中）；new-trip 桌機加寬 880px（線性表單不 full-bleed，右側 live-preview 面板列為後續可選增強）。
 - [x] 10.5 collab/explore 子頁導覽 → ✅ 加 `TitleBar backLabelVisible`（macOS toolbar 式「‹ <label>」可見文字，opt-in 不動行程詳情 icon-only back）；explore/collab 啟用。
 
-## 7. 收尾
+## 7. 收尾 ✅
 
-- [ ] 7.1 每項雙視窗 before/after 截圖歸檔;computed-vs-token 對齊表更新。
-- [ ] 7.2 UI 改動同步 DESIGN.md + 對應 mockup（同 PR）。
-- [ ] 7.3 `openspec validate rev2-visual-fidelity --strict` 過;tsc + 相關 unit/token-gate 測試綠。
+- [x] 7.1 真瀏覽器截圖歸檔（scratchpad/audit/）；最終 workflow audit（4 agent 分析桌機+手機 9 畫面）確認 3 findings（1 HIGH §8.1 + 2 LOW），全處理（HIGH 修+驗、favorites checkbox 修、notes 偽陽性）。手機組 0 破版（膠囊保留、無 sidebar、無回歸）。
+- [x] 7.2 UI 改動同步 DESIGN.md（桌機 shell/sidebar/glass/子頁返回/表單滿寬）+ mockup（2026-07-19-rev2-desktop-macos-sidebar.html）。
+- [x] 7.3 tsc 綠 + 全 unit suite 435 檔 3783 測全綠（每批驗）;`openspec validate --strict` 過。
