@@ -113,8 +113,17 @@ describe('DELETE /api/poi-favorites/:id — §8.1 V2 user', () => {
     const resp = await callHandler(onRequestDelete, ctx);
     expect(resp.status).toBe(204);
 
-    const after = await db.prepare('SELECT id FROM poi_favorites WHERE id = ?').bind(favId).first();
-    expect(after).toBeNull();
+    // spec §2.1：soft-delete — row 保留但 deleted_at 已寫、且不在 active 查詢內（restore 可復原）。
+    const after = await db
+      .prepare('SELECT deleted_at FROM poi_favorites WHERE id = ?')
+      .bind(favId)
+      .first<{ deleted_at: string | null }>();
+    expect(after?.deleted_at).not.toBeNull();
+    const active = await db
+      .prepare('SELECT id FROM poi_favorites WHERE id = ? AND deleted_at IS NULL')
+      .bind(favId)
+      .first();
+    expect(active).toBeNull();
   });
 
   it('非 owner → 403 + row 仍存在', async () => {
@@ -205,9 +214,17 @@ describe('DELETE /api/poi-favorites/:id — §8.2 companion', () => {
     const resp = await callHandler(onRequestDelete, ctx);
     expect(resp.status).toBe(204);
 
-    // row deleted
-    const after = await db.prepare('SELECT id FROM poi_favorites WHERE id = ?').bind(favId).first();
-    expect(after).toBeNull();
+    // spec §2.1：soft-delete — row 保留但 deleted_at 已寫、且不在 active 查詢內。
+    const after = await db
+      .prepare('SELECT deleted_at FROM poi_favorites WHERE id = ?')
+      .bind(favId)
+      .first<{ deleted_at: string | null }>();
+    expect(after?.deleted_at).not.toBeNull();
+    const active = await db
+      .prepare('SELECT id FROM poi_favorites WHERE id = ? AND deleted_at IS NULL')
+      .bind(favId)
+      .first();
+    expect(active).toBeNull();
 
     // companion_request_actions 1 row（action='favorite_delete'）
     const actions = await db

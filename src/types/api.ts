@@ -57,6 +57,7 @@ export const ErrorCode = {
   INVITATION_INVALID: 'INVITATION_INVALID',
   INVITATION_ACCEPTED: 'INVITATION_ACCEPTED',
   INVITATION_EXPIRED: 'INVITATION_EXPIRED',
+  UNDO_EXPIRED: 'UNDO_EXPIRED',
   SERVER_MISCONFIG: 'SERVER_MISCONFIG',
   // Tripline auth flow（login / signup / reset-password）—— 對 frontend 提供穩定 code
   LOGIN_INVALID_INPUT: 'LOGIN_INVALID_INPUT',
@@ -108,6 +109,7 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   INVITATION_INVALID: '邀請連結無效，請聯絡邀請者重寄',
   INVITATION_ACCEPTED: '此邀請已接受過，請直接登入',
   INVITATION_EXPIRED: '邀請已過期，請聯絡邀請者重寄',
+  UNDO_EXPIRED: '復原期限已過（取消收藏後逾 10 分鐘）',
   SERVER_MISCONFIG: '伺服器設定錯誤，請聯絡管理員',
   LOGIN_INVALID_INPUT: 'email + password 必填',
   LOGIN_INVALID: 'email 或密碼錯誤',
