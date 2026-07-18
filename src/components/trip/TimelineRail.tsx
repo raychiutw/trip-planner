@@ -302,67 +302,87 @@ const SCOPED_STYLES = `
 /* 2026-04-29 mockup parity:expanded toolbar 從 body 上方移到底部(mockup S12
  * Variant A 規範)。margin-top + padding-top + border-top 視覺分隔 body 內容。
  * gap 改 4px 讓 4+2 兩組看起來更緊。 */
-.tp-rail-actions {
-  display: flex; gap: 4px; flex-wrap: wrap;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border);
-}
-.tp-rail-action-spacer { flex: 1; }
-.tp-rail-action-icon {
-  /* v2.10 Wave 1: copy/move icon-only buttons. relative for popover absolute pos. */
-  position: relative;
-  font: inherit; font-size: var(--font-size-body);
-  width: var(--spacing-tap-min); height: var(--spacing-tap-min);
-  border-radius: var(--radius-full);
-  background: var(--color-secondary); color: var(--color-foreground);
-  border: 1px solid var(--color-border); cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center;
-}
-.tp-rail-action-icon:hover {
-  background: var(--color-accent-subtle); color: var(--color-accent-deep); border-color: var(--color-accent-bg);
-}
-/* QA 2026-04-26 BUG-012：mockup .iconbtn.sm.danger for delete — destructive
- * 顏色用 priority-high tokens 對齊 DESIGN.md semantic colors。 */
-.tp-rail-action-icon.is-danger:hover {
-  background: var(--color-priority-high-bg);
-  color: var(--color-priority-high-dot);
-  border-color: var(--color-priority-high-dot);
-}
-.tp-rail-action-icon-group {
-  /* anchor the absolute-positioned EntryActionPopover */
-  position: relative;
-  display: inline-flex; gap: 4px;
+/* rev2 Section 02：head 右側動作簇 — ⋯ context menu + 展開 caret。
+ * 取代舊「展開明細底部一排 icon 工具列」（複/移/編/刪），把動作收進單顆 ⋯（Apple 列表語彙）。 */
+.tp-rail-head-actions {
+  display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0;
 }
 
-/* 2026-05-01 mockup S12 Variant A 對齊 — grip 在 row grid col 1，永遠淡顯
- * (opacity 0.4) 而非 hover-only 隱形，hover 才變 accent。提升 discoverability
- * 同時不喧賓奪主。觸控裝置同樣 0.4，避免「找不到拖拉把手」。 */
-.tp-rail-grip {
-  grid-column: 1;
-  border: 0; background: transparent;
+/* ⋯ trigger：桌機 hover / focus / menu 開啟才顯（Apple Music track row 行為，resting 列乾淨）；
+ * 觸控無 hover → 淡顯恆在，才點得到。 */
+.tp-rail-menu-trigger {
+  border: 0; background: transparent; cursor: pointer;
+  width: 32px; height: 32px; border-radius: var(--radius-full);
   display: inline-flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px;
-  cursor: grab;
   color: var(--color-muted);
-  opacity: 0.4;
+  opacity: 0; transition: opacity 140ms, background 140ms, color 140ms;
+}
+.tp-rail-menu-trigger .svg-icon { width: 18px; height: 18px; }
+.tp-rail-menu-trigger:hover { background: var(--color-hover, var(--color-secondary)); color: var(--color-foreground); }
+@media (hover: hover) {
+  .tp-rail-item:hover .tp-rail-menu-trigger,
+  .tp-rail-menu-trigger:focus-visible,
+  .tp-rail-menu-trigger[aria-expanded="true"] { opacity: 1; }
+}
+.tp-rail-menu-trigger:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; opacity: 1; }
+@media (hover: none) { .tp-rail-menu-trigger { opacity: 0.65; } }
+
+/* ⋯ menu：原生 Popover API（top-layer 自動逃離 .tp-rail-content overflow:hidden、
+ * light-dismiss 免自寫）。top-layer 不隨 anchor → 開啟時 JS 依 trigger rect 設 top/left。 */
+.tp-rail-menu {
+  position: fixed; margin: 0; inset: auto;
+  min-width: 208px; max-width: 264px; padding: 6px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 10px 28px rgba(0,0,0,0.12));
+  z-index: var(--z-modal, 9000);
+}
+.tp-rail-menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 10px; border: 0; background: transparent;
   border-radius: var(--radius-sm);
-  /* drag-vs-scroll: pan-y lets a quick vertical swipe on the grip scroll the
-   * timeline natively; the delay-based TouchSensor still claims a long-press for
-   * reorder. Suppressing touch gestures entirely would make the grip a scroll
-   * dead-zone (swipe neither scrolls nor drags). */
-  touch-action: pan-y;
-  flex-shrink: 0;
-  transition: color 120ms, opacity 160ms;
+  font: inherit; font-size: var(--font-size-subheadline);
+  color: var(--color-foreground); text-align: left; cursor: pointer;
 }
-.tp-rail-row-wrap:hover .tp-rail-grip,
-.tp-rail-grip:hover,
-.tp-rail-grip:focus-visible {
-  opacity: 1;
-  color: var(--color-accent);
+.tp-rail-menu-item .svg-icon { width: 18px; height: 18px; color: var(--color-muted); flex-shrink: 0; }
+.tp-rail-menu-item:hover,
+.tp-rail-menu-item:focus-visible { background: var(--color-hover, var(--color-secondary)); outline: none; }
+.tp-rail-menu-item.is-danger { color: var(--color-destructive); }
+.tp-rail-menu-item.is-danger .svg-icon { color: var(--color-destructive); }
+.tp-rail-menu-item.is-danger:hover,
+.tp-rail-menu-item.is-danger:focus-visible { background: var(--color-priority-high-bg, var(--color-hover)); }
+.tp-rail-menu-sep { height: 1px; margin: 5px 6px; background: var(--color-border); }
+
+/* 拖拉排序 grip：rev2 只在排序模式（⋯「重新排序」進入）顯示 — resting 列不放 grip（Apple 慣例：
+ * 排序在 ⋯ 內，不在列上排 icon）。桌機 + 觸控一致由排序模式驅動。 */
+.tp-rail-grip {
+  border: 0; background: transparent;
+  display: none; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  cursor: grab; color: var(--color-accent);
+  border-radius: var(--radius-sm);
+  /* drag-vs-scroll：pan-y 讓垂直快滑仍捲動 timeline，長按走 TouchSensor 認定 reorder。 */
+  touch-action: pan-y; flex-shrink: 0;
 }
+.tp-rail-body[data-sort-mode] .tp-rail-grip { display: inline-flex; }
 .tp-rail-grip:active { cursor: grabbing; }
+.tp-rail-grip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; opacity: 1; }
 .tp-rail-grip .svg-icon { width: 16px; height: 16px; }
+
+/* 排序模式「完成」bar — sticky 在 rail 底，退出排序模式。 */
+.tp-rail-sort-done {
+  position: sticky; bottom: 8px; z-index: 2;
+  display: flex; justify-content: center; margin: 10px 0 2px;
+  pointer-events: none;
+}
+.tp-rail-sort-done button {
+  pointer-events: auto;
+  font: inherit; font-size: var(--font-size-subheadline); font-weight: 700;
+  padding: 8px 22px; border-radius: var(--radius-full);
+  background: var(--color-accent); color: var(--color-accent-foreground);
+  border: 0; cursor: pointer; box-shadow: var(--shadow-md, 0 6px 16px rgba(0,0,0,0.12));
+}
 
 /* 2026-07-07 跨天拖拉：拖曳懸停本日 rail 時淡高亮（drop-target 回饋）。
  * neutral 陰影 + 淡底，不用 tone 框（三色系統雷：tone 太淺別當框）。 */
@@ -418,6 +438,114 @@ interface RailRowProps {
   isNow: boolean;
   isLast: boolean;
   dayId?: number | null;
+  /** rev2 Section 02：排序模式（由 ⋯ menu「重新排序」開啟）— true 時所有 row 顯 grip。 */
+  sortMode: boolean;
+  /** ⋯ menu「重新排序」→ 進排序模式（顯 grip + 底部「完成排序」）。 */
+  onEnterSortMode: () => void;
+}
+
+/** ⋯ context menu 的一列（或分隔線）。 */
+type RailMenuItem =
+  | { kind: 'sep' }
+  | {
+      kind: 'item';
+      label: string;
+      icon: React.ComponentProps<typeof Icon>['name'];
+      danger?: boolean;
+      onSelect: () => void;
+      testid?: string;
+    };
+
+/**
+ * ⋯ context menu — rev2 mockup Section 02：把停留卡的動作從「展開明細一排 icon 鈕」
+ * 收進單顆 ⋯（Apple 列表語彙，不在列上排 6 顆 icon）。
+ * 用原生 Popover API：top-layer 自動逃離 .tp-rail-content 的 overflow:hidden（免 portal、
+ * 免 z-index 戰爭）、light-dismiss（點外面 / Esc 關閉免自寫 handler）。top-layer 預設不跟
+ * anchor 走，故開啟時（toggle→open）依 trigger rect 定位（同 .tp-rail-time-chip popover 精神）。
+ */
+function RailRowMenu({ menuId, label, items, testid }: {
+  menuId: string;
+  label: string;
+  items: RailMenuItem[];
+  testid?: string;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const positionMenu = () => {
+    const t = triggerRef.current;
+    const m = menuRef.current;
+    if (!t || !m) return;
+    const r = t.getBoundingClientRect();
+    const mh = m.offsetHeight || 300;
+    const mw = m.offsetWidth || 216;
+    // 下方空間夠 → 貼 trigger 下緣；否則往上翻。右對齊 trigger、夾在 viewport 內。
+    const top = window.innerHeight - r.bottom > mh + 12 ? r.bottom + 6 : Math.max(8, r.top - mh - 6);
+    const left = Math.max(8, Math.min(r.right - mw, window.innerWidth - mw - 8));
+    m.style.top = `${top}px`;
+    m.style.left = `${left}px`;
+  };
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="tp-rail-menu-trigger"
+        popoverTarget={menuId}
+        aria-label={`更多動作：${label}`}
+        onClick={(e) => e.stopPropagation()}
+        data-testid={testid}
+      >
+        <Icon name="more-vert" />
+      </button>
+      <div
+        ref={menuRef}
+        id={menuId}
+        popover="auto"
+        role="menu"
+        className="tp-rail-menu"
+        aria-label={`${label} 的動作`}
+        onToggle={(e) => {
+          if (e.newState !== 'open') return;
+          positionMenu();
+          // 開啟時焦點移進 menu 首項（鍵盤導航）；native popover 已管 Esc / 點外面關閉 + 焦點歸還 trigger。
+          menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+        }}
+        onKeyDown={(e) => {
+          const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
+          if (!items || items.length === 0) return;
+          const arr = Array.from(items);
+          const cur = arr.indexOf(document.activeElement as HTMLButtonElement);
+          if (e.key === 'ArrowDown') { e.preventDefault(); arr[cur < 0 ? 0 : (cur + 1) % arr.length]?.focus(); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); arr[cur < 0 ? arr.length - 1 : (cur - 1 + arr.length) % arr.length]?.focus(); }
+          else if (e.key === 'Home') { e.preventDefault(); arr[0]?.focus(); }
+          else if (e.key === 'End') { e.preventDefault(); arr[arr.length - 1]?.focus(); }
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {items.map((it, i) =>
+          it.kind === 'sep' ? (
+            <div key={`sep-${i}`} className="tp-rail-menu-sep" role="separator" />
+          ) : (
+            <button
+              key={it.label}
+              type="button"
+              role="menuitem"
+              className={clsx('tp-rail-menu-item', it.danger && 'is-danger')}
+              onClick={() => {
+                // 關 popover 再執行動作。try/catch 容忍 jsdom（無原生 Popover API）與「已關閉」狀態。
+                try { menuRef.current?.hidePopover(); } catch { /* popover 未開 / 環境不支援 */ }
+                it.onSelect();
+              }}
+              data-testid={it.testid}
+            >
+              <Icon name={it.icon} />
+              <span>{it.label}</span>
+            </button>
+          ),
+        )}
+      </div>
+    </>
+  );
 }
 
 // v2.33.28: dedupe — 改 import POI_TYPE_LABELS canonical (poiCategory.ts)。
@@ -675,7 +803,7 @@ function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
   );
 }
 
-const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId }: RailRowProps) {
+const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId, sortMode, onEnterSortMode }: RailRowProps) {
   const tripId = useTripId();
   const allDays = useTripDays();
   const parsed = parseEntryTime(entry);
@@ -688,7 +816,8 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const sortableId = entry.id ?? `idx-${index}`;
   // 2026-07-07 跨天拖拉：data 帶 dayId — TripPage 層 DndContext 據此分流
   // 同日（rail monitor reorder）vs 跨天（TripPage move）。
-  const sortable = useSortable({ id: sortableId, disabled: entry.id == null, data: { dayId } });
+  // rev2 Section 02：拖曳只在排序模式（⋯「重新排序」）啟用 — resting 列不可拖（grip 亦 display:none）。
+  const sortable = useSortable({ id: sortableId, disabled: entry.id == null || !sortMode, data: { dayId } });
   const sortableStyle: React.CSSProperties = {
     transform: CSS.Transform.toString(sortable.transform),
     transition: sortable.transition,
@@ -885,6 +1014,56 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
     onToggle();
   };
 
+  // ⋯ menu「編輯備註」：展開 row（若收合）+ 進 inline 編輯（sibling textarea 在 detail 內）。
+  const openNoteEditor = () => {
+    if (!canEditNote) return;
+    if (!expanded) onToggle();
+    setDraftNote(entry.note ?? '');
+    setEditingNote(true);
+  };
+
+  // rev2 Section 02：停留卡動作收進 ⋯ menu，依 Apple 慣例分組（destructive 獨立末組）。
+  // 沿用舊 toolbar testid（timeline-rail-edit/-delete/-copy-open/-move-open）→ 只換容器不換語意。
+  const menuGroups: RailMenuItem[][] = [
+    // 第 1 組：在地圖開啟（in-app trip map 聚焦本站）
+    mapLocation && tripId && entryIdNum != null
+      ? [{ kind: 'item', label: '在地圖開啟', icon: 'location-pin', testid: `timeline-rail-menu-map-${entry.id}`,
+          onSelect: () => navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryIdNum}/map`) }]
+      : [],
+    // 第 2 組：編輯（備註 inline / 換景點 L3 / 編輯景點全頁）
+    [
+      ...(canEditNote
+        ? [{ kind: 'item' as const, label: '編輯備註', icon: 'pencil' as const, testid: `timeline-rail-menu-note-${entry.id}`, onSelect: openNoteEditor }]
+        : []),
+      ...(tripId && entryIdNum != null
+        ? [{ kind: 'item' as const, label: '換景點', icon: 'swap-horizontal' as const, testid: `timeline-rail-menu-change-${entry.id}`,
+            onSelect: () => navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryIdNum}/change-poi`) }]
+        : []),
+      ...(tripId && entryIdNum != null
+        ? [{ kind: 'item' as const, label: '編輯景點', icon: 'edit' as const, testid: `timeline-rail-edit-${entry.id}`,
+            onSelect: () => navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryIdNum}/edit`) }]
+        : []),
+    ],
+    // 第 3 組：安排（重新排序 / 複製 / 移到）
+    [
+      { kind: 'item', label: '重新排序', icon: 'grip', testid: `timeline-rail-menu-sort-${entry.id}`, onSelect: onEnterSortMode },
+      ...(dayId != null && allDays.length > 1 && entryIdNum != null
+        ? [
+            { kind: 'item' as const, label: '複製到其他天', icon: 'copy' as const, testid: `timeline-rail-copy-open-${entry.id}`, onSelect: () => goCopyOrMove('copy') },
+            { kind: 'item' as const, label: '移到其他天', icon: 'arrows-vertical' as const, testid: `timeline-rail-move-open-${entry.id}`, onSelect: () => goCopyOrMove('move') },
+          ]
+        : []),
+    ],
+    // 末組：刪除（destructive 紅，Apple 慣例獨立末組）
+    entryIdNum != null
+      ? [{ kind: 'item', label: '刪除景點', icon: 'trash', danger: true, testid: `timeline-rail-delete-${entry.id}`,
+          onSelect: () => setShowDeleteConfirm(true) }]
+      : [],
+  ];
+  const menuItems: RailMenuItem[] = menuGroups
+    .filter((g) => g.length > 0)
+    .flatMap((g, i) => (i === 0 ? g : [{ kind: 'sep' } as RailMenuItem, ...g]));
+
   return (
     <>
       <div
@@ -970,17 +1149,27 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               );
             })()}
           </span>
-          <button
-            type="button"
-            className="tp-rail-caret"
-            onClick={(e) => { e.stopPropagation(); handleHeadActivate(); }}
-            disabled={!canExpand}
-            aria-expanded={canExpand ? expanded : undefined}
-            aria-label={`${expanded ? '收合' : '展開'}景點：${entryDisplayTitle}`}
-            data-testid={entry.id != null ? `timeline-rail-toggle-${entry.id}` : undefined}
-          >
-            <span aria-hidden="true">›</span>
-          </button>
+          <div className="tp-rail-head-actions">
+            {menuItems.length > 0 && entry.id != null && (
+              <RailRowMenu
+                menuId={`rail-menu-${entry.id}`}
+                label={entryDisplayTitle}
+                items={menuItems}
+                testid={`timeline-rail-menu-${entry.id}`}
+              />
+            )}
+            <button
+              type="button"
+              className="tp-rail-caret"
+              onClick={(e) => { e.stopPropagation(); handleHeadActivate(); }}
+              disabled={!canExpand}
+              aria-expanded={canExpand ? expanded : undefined}
+              aria-label={`${expanded ? '收合' : '展開'}景點：${entryDisplayTitle}`}
+              data-testid={entry.id != null ? `timeline-rail-toggle-${entry.id}` : undefined}
+            >
+              <span aria-hidden="true">›</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1117,72 +1306,10 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
             </div>
           )}
 
-          {/* 2026-04-29 mockup parity:expanded toolbar 從 body 上方移到底部
-           * (mockup S12 Variant A 規範);排列 grouped:左常用編輯
-           * (複|移|編)+ spacer + 右 2 終止/狀態(刪|收合)。
-           * v2.55.78:「放大檢視」(⛶ → StopLightbox) 移除 —— 它的唯一入口就在這個
-           * toolbar 裡，而 toolbar 只在 .tp-rail-detail 展開時才存在，所以它彈出的
-           * modal 永遠是背後那一列的真子集（.tp-rail-detail-desc 無 line-clamp，
-           * 說明/備註本來就全文顯示；展開列還多給細類 label + 星等/價位/營業時間
-           * + 備選景點 + 編輯 affordance）。照片面板是它唯一獨有的東西，照片沒了
-           * 它就沒有存在理由。 */}
-          <div className="tp-rail-actions">
-            {dayId != null && allDays.length > 1 && (
-              <div className="tp-rail-action-icon-group">
-                <button
-                  type="button"
-                  className="tp-rail-action-icon"
-                  onClick={(e) => { e.stopPropagation(); goCopyOrMove('copy'); }}
-                  aria-label="複製到其他天"
-                  title="複製到其他天"
-                  data-testid={`timeline-rail-copy-open-${entry.id}`}
-                >
-                  <Icon name="copy" />
-                </button>
-                <button
-                  type="button"
-                  className="tp-rail-action-icon"
-                  onClick={(e) => { e.stopPropagation(); goCopyOrMove('move'); }}
-                  aria-label="移到其他天"
-                  title="移到其他天"
-                  data-testid={`timeline-rail-move-open-${entry.id}`}
-                >
-                  <Icon name="arrows-vertical" />
-                </button>
-              </div>
-            )}
-            {/* v2.26.0：「編」按鈕改 navigate 到 EditEntryPage 全頁 form
-              * （含起訖時間 + 從上一站移動方式 + 備註）。tp-rail-detail 內 inline
-              * note edit 仍保留作為快速 path（單獨改備註不用跳頁）。 */}
-            {tripId && entry.id != null && (
-              <button
-                type="button"
-                className="tp-rail-action-icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entry.id}/edit`);
-                }}
-                aria-label="編輯景點"
-                title="編輯景點"
-                data-testid={`timeline-rail-edit-${entry.id}`}
-              >
-                <Icon name="pencil" />
-              </button>
-            )}
-            {/* v2.31.92：移除「置換景點」button（編輯景點已含此功能 path）+「收合」
-                button（row click 已 toggle expand/collapse，重複 entry）。 */}
-            <div className="tp-rail-action-spacer" />
-            <button
-              type="button"
-              className="tp-rail-action-icon is-danger"
-              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
-              aria-label="刪除景點"
-              title="刪除景點"
-              data-testid={`timeline-rail-delete-${entry.id}`}
-            >
-              <Icon name="trash" />
-            </button>
-          </div>
+          {/* rev2 Section 02（2026-07-17 mockup）：展開明細底部的「一排 icon 鈕」
+           * （複製 / 移到 / 編輯 / 刪除 + 在地圖開啟）已收進 row 上的 ⋯ context menu
+           * （見 head .tp-rail-head-actions 的 RailRowMenu）。Apple 列表語彙：動作進單顆 ⋯，
+           * 不在列上排 icon 工具列。明細只留資訊面（景點說明 / 備註 inline / 備選景點）。 */}
         </div>
       )}
 
@@ -1217,6 +1344,10 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
     const focusId = focus ? Number(focus) : NaN;
     return Number.isFinite(focusId) && events.some((e) => e.id === focusId) ? focusId : null;
   });
+  // rev2 Section 02：排序模式（⋯ menu「重新排序」進入）— per-rail（每天一個 rail 實例）。
+  // 進入後所有 row 顯 grip 可拖；drag 觸發 refetch（events 變）時不重置，否則每拖一次就退出。
+  const [sortMode, setSortMode] = useState(false);
+  const enterSortMode = useCallback(() => setSortMode(true), []);
   // PR-K：local order override — drag-end 後立即套用 optimistic order，等
   // backend PATCH 完成 + tp-entry-updated 觸發 refetch 再用 fresh data 覆蓋。
   const [orderOverride, setOrderOverride] = useState<number[] | null>(null);
@@ -1395,7 +1526,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
-      <div ref={setRailBodyRef} className={clsx('tp-rail-body', { 'is-drop-target': isRailDropOver, 'is-empty-day': orderedEvents.length === 0 })}>
+      <div ref={setRailBodyRef} data-sort-mode={sortMode || undefined} className={clsx('tp-rail-body', { 'is-drop-target': isRailDropOver, 'is-empty-day': orderedEvents.length === 0 })}>
         {/* v2.33.60 round 14: 拔 <div.tp-rail-line> orphan — CSS 已 display:none，DOM 也清掉 */}
         {orderedEvents.map((entry, i) => {
           const isPast = nowIndex >= 0 && i < nowIndex;
@@ -1465,10 +1596,17 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
                 isNow={isNow}
                 isLast={isLast}
                 dayId={dayId}
+                sortMode={sortMode}
+                onEnterSortMode={enterSortMode}
               />
             </div>
           );
         })}
+        {sortMode && (
+          <div className="tp-rail-sort-done">
+            <button type="button" onClick={() => setSortMode(false)}>完成排序</button>
+          </div>
+        )}
       </div>
         </SortableContext>
       </RailDndScope>

@@ -252,7 +252,7 @@ test.describe('QA Flow 6 — 編輯景點 (note inline, v2.33.108 auto-save)', (
 });
 
 test.describe('QA Flow 7 — 移動景點 (cross-day)', () => {
-  test('展開 entry → 移動 → 選 day 2 → 確認 → PATCH { day_id }', async ({ page }) => {
+  test('開 ⋯ menu → 移到其他天 → 選 day 2 → 確認 → PATCH { day_id }', async ({ page }) => {
     /** @type {Array<{url: string, body: string | null}>} */
     const patches = [];
     page.on('request', (req) => {
@@ -262,7 +262,8 @@ test.describe('QA Flow 7 — 移動景點 (cross-day)', () => {
     });
 
     await page.goto('/trip/okinawa-trip-2026-Ray');
-    await page.getByTestId('timeline-rail-row-101').click();
+    // rev2 Section 02：動作收進 ⋯ context menu — 先開 menu（trigger opacity 0 不擋 Playwright click）再點動作。
+    await page.getByTestId('timeline-rail-menu-101').click();
     await page.getByTestId('timeline-rail-move-open-101').click();
 
     // navigate 到 /trip/.../stop/101/move
@@ -285,7 +286,7 @@ test.describe('QA Flow 7 — 移動景點 (cross-day)', () => {
 });
 
 test.describe('QA Flow 8 — 刪除景點', () => {
-  test('展開 entry → 點刪除 → ConfirmModal 確認 → DELETE /api/trips/:id/entries/:eid', async ({ page }) => {
+  test('開 ⋯ menu → 刪除景點 → ConfirmModal 確認 → DELETE /api/trips/:id/entries/:eid', async ({ page }) => {
     /** @type {string[]} */
     const deletes = [];
     page.on('request', (req) => {
@@ -295,7 +296,8 @@ test.describe('QA Flow 8 — 刪除景點', () => {
     });
 
     await page.goto('/trip/okinawa-trip-2026-Ray');
-    await page.getByTestId('timeline-rail-row-101').click();
+    // rev2 Section 02：刪除收進 ⋯ context menu — 先開 menu 再點刪除。
+    await page.getByTestId('timeline-rail-menu-101').click();
     await page.getByTestId('timeline-rail-delete-101').click();
 
     // v2.55.x: TimelineRail 刪除改用 shared ConfirmModal（portal + --z-modal，修 2-col 遮罩被地圖蓋）

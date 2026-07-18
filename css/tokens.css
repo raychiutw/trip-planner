@@ -654,7 +654,10 @@ body.dark {
     .tp-rail-item {
         position: relative;
         display: grid;
-        grid-template-columns: 24px 24px 1fr 20px;
+        /* rev2 Section 02：resting 列 = node | body（無常駐 grip 欄 → Apple 乾淨列）。
+           排序模式（⋯「重新排序」）才插 grip 欄，見下方 [data-sort-mode]。
+           grip / dot / head 皆無顯式 grid-column，靠 source order 自動落欄，兩種模板通用。 */
+        grid-template-columns: 24px 1fr;
         column-gap: 12px;
         align-items: center;
         width: 100%; padding: 10px 8px;
@@ -672,9 +675,11 @@ body.dark {
         border-bottom-color: transparent;
     }
     /* head button 跨 col 3-4（body | caret），row click target */
+    /* rev2 排序模式：插回 grip 欄（grip | node | body）。 */
+    .tp-rail-body[data-sort-mode] .tp-rail-item { grid-template-columns: 24px 24px 1fr; }
+
     .tp-rail-head {
-        grid-column: 3 / span 2;
-        display: grid; grid-template-columns: 1fr 20px;
+        display: grid; grid-template-columns: 1fr auto;
         column-gap: 12px; align-items: center; width: 100%;
         background: transparent; border: none; padding: 0;
         color: inherit; cursor: pointer; text-align: left;
@@ -685,9 +690,9 @@ body.dark {
     /* time — v2.30.12 ripped from rail grid (空欄佔位浪費寬度).
      * JSX 已不再渲染 .tp-rail-time element；保留 selector 給歷史 CSS 不 error 即可。 */
 
-    /* dot — col 2，編號圓圈（mockup .tp-detail-dot:1981） */
+    /* dot — 編號圓圈（mockup .tp-detail-dot:1981）。resting 為列首、排序模式退居 grip 之後，
+       靠 source order 自動落欄（無顯式 grid-column）。 */
     .tp-rail-dot {
-        grid-column: 2;
         width: 24px; height: 24px;
         display: grid; place-items: center;
         background: var(--color-background);
@@ -821,19 +826,13 @@ body.dark {
         .tp-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .tp-hero { padding: 18px; border-radius: var(--radius-md); }
         .tp-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
-        /* v2.55.98 rev2：手機 override 對齊 base 4-col route-list（grip | node | body 1fr | caret）。
-         * 先前殘留 v2.30.12 的 5-col（多一個 36px icon 欄）讓 head 的 body 掉進 36px 窄軌、
-         * caret 吃掉 1fr → 手機每張停留卡內容崩成 36px、名稱截斷、meta 垂直堆疊。
-         * icon tile 已於 v2.55.90 退場，連帶 .tp-rail-icon dead CSS 一併移除。 */
+        /* rev2 Section 02：手機沿用 base grid（node | body，排序模式插 grip 欄），只縮 gap/padding。
+         * （先前殘留 v2.30.12 的 5-col + 36px icon 欄讓 body 崩成 36px；改用 auto-placement 統一模板。） */
         .tp-rail-item {
-            grid-template-columns: 20px 24px 1fr 16px;
             column-gap: 8px;
             padding: 10px 4px;
         }
-        .tp-rail-head {
-            grid-template-columns: 1fr 16px;
-            column-gap: 8px;
-        }
+        .tp-rail-head { column-gap: 8px; }
         .tp-rail-name { font-size: var(--font-size-callout); }
         /* v2.33.61 round 14b: 拔 .tp-rail-line (見 line 613 dead-code 拔除說明) */
         /* Compact viewport titlebar 從 64 縮 56，--titlebar-h 同步調，

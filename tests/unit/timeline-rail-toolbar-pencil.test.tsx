@@ -1,15 +1,15 @@
 /**
- * TimelineRail toolbar pencil + ConfirmModal — Section 4.5 (terracotta-mockup-parity-v2)
+ * TimelineRail ⋯ context menu + ConfirmModal — rev2 Section 02（2026-07-17 mockup）
  *
- * 驗 expanded toolbar 含：
- *   - v2.55.78：「放大檢視」(⛶ → StopLightbox) 移除 —— 它彈出的 modal 是本 toolbar
- *     所屬的 .tp-rail-detail 的真子集，照片面板拆掉後已無獨有內容。testid
- *     timeline-rail-lightbox-open-N 一併退場。
- *   - v2.26.0：編輯景點 pencil button → navigate to `/trip/:id/stop/:eid/edit`
- *     （取代既有 inline note edit；備註 inline 編輯仍保留 via tp-rail-note-value click）
- *   - 刪除景點 button → 開 inline ConfirmModal (alertdialog)，不直接 fire DELETE
- *   - 收合 button (x-mark icon)
- *   - icon 全為 SVG sprite (無 emoji)
+ * rev2 把停留卡的動作從「展開明細底部一排 icon 工具列」收進 row 上的單顆 ⋯ context menu
+ * （Apple 列表語彙：動作進 ⋯，不在列上排 icon）。本測試驗：
+ *   - 展開明細不再有 action 工具列（.tp-rail-actions 已移除）
+ *   - ⋯ menu（RailRowMenu，原生 Popover）含：編輯備註 / 換景點 / 編輯景點 / 重新排序 / 刪除景點
+ *     menu items 恆在 DOM（popover div 常駐，只切換可見性）→ RTL 直接可查
+ *   - 編輯景點 menu item → navigate `/trip/:id/stop/:eid/edit`（testid 沿用 timeline-rail-edit-N）
+ *   - 刪除景點 menu item → 開 ConfirmModal（alertdialog），不直接 fire DELETE（testid 沿用 timeline-rail-delete-N）
+ *   - inline note 快速編輯仍保留（點展開明細的 tp-rail-note-value → textarea）
+ *   - menu icon 全為 SVG sprite（無 emoji）
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -19,12 +19,12 @@ import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent'
 import { TripIdContext } from '../../src/contexts/TripIdContext';
 
 // γ.1：useTripSegments 會打 GET /api/trips/:id/segments，這個 test 套件 stub 全域
-// fetch 驗 toolbar fetch 行為 — mock hook 回 empty 避免 segments fetch 干擾 fetchSpy。
+// fetch 驗行為 — mock hook 回 empty 避免 segments fetch 干擾 fetchSpy。
 vi.mock('../../src/hooks/useTripSegments', () => ({
   useTripSegments: () => ({ segments: [], segmentMap: new Map(), loading: false }),
 }));
 
-// v2.26.0: 編輯按鈕 navigate，mock useNavigate 驗 navigate 路徑
+// 編輯 / 換景點 menu item navigate，mock useNavigate 驗 navigate 路徑
 const navigateSpy = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -35,8 +35,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 // v2.29.x per-POI note cutover：inline 快速編輯 repoint 到 master stopPoi
-// （sortOrder=1）的 per-POI note，缺 master 時停用。實務上 timeline entry 必有
-// master stopPoi（mapDay 由它取得 entry.note），fixture 補上以反映真實資料。
+// （sortOrder=1）的 per-POI note。fixture 補 master 反映真實資料（timeline entry 必有 master）。
 const ENTRY: TimelineEntryData = {
   id: 42,
   time: '11:30-14:00',
@@ -62,33 +61,46 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
-  it('預設不展開 toolbar (no detail panel)', () => {
+describe('TimelineRail ⋯ context menu — rev2 Section 02', () => {
+  it('預設不展開明細 (no detail panel)', () => {
     renderRail();
     expect(screen.queryByTestId('timeline-rail-detail-42')).toBeNull();
   });
 
-  it('click row → 展開 toolbar 含 2 個 action button (編輯/刪除) — v2.31.92 移除 collapse + change-poi、v2.55.78 移除放大檢視', () => {
+  it('row 上有 ⋯ menu trigger', () => {
     renderRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
-    expect(screen.getByTestId('timeline-rail-detail-42')).toBeTruthy();
-    // v2.55.78：「放大」拿掉（StopLightbox 是本展開列的真子集，照片拆掉後無獨有內容）
-    expect(screen.queryByTestId('timeline-rail-lightbox-open-42')).toBeNull();
-    // v2.26.0: 「編」testid 改為 timeline-rail-edit-N（取代 timeline-rail-edit-note-N）
-    expect(screen.getByTestId('timeline-rail-edit-42')).toBeTruthy();
-    expect(screen.getByTestId('timeline-rail-delete-42')).toBeTruthy();
-    // v2.31.92：「收合」button 拿掉（row click 已 toggle expand/collapse）
-    expect(screen.queryByTestId('timeline-rail-collapse-42')).toBeNull();
-    // v2.31.92：「置換景點」button 拿掉（編輯景點已含 path）
-    expect(screen.queryByTestId('timeline-rail-change-poi-42')).toBeNull();
+    expect(screen.getByTestId('timeline-rail-menu-42')).toBeTruthy();
   });
 
-  it('pencil button click → navigate to EditEntryPage', () => {
+  it('⋯ menu 含動作 items（編輯備註/換景點/編輯景點/重新排序/刪除景點）— 恆在 DOM', () => {
+    renderRail();
+    // popover menu items 常駐 DOM（只切換可見性）→ 不需開 popover 即可查
+    expect(screen.getByTestId('timeline-rail-menu-note-42')).toBeTruthy();
+    expect(screen.getByTestId('timeline-rail-menu-change-42')).toBeTruthy();
+    expect(screen.getByTestId('timeline-rail-edit-42')).toBeTruthy();
+    expect(screen.getByTestId('timeline-rail-menu-sort-42')).toBeTruthy();
+    expect(screen.getByTestId('timeline-rail-delete-42')).toBeTruthy();
+  });
+
+  it('展開明細不再有 action 工具列（.tp-rail-actions 已移除，動作在 ⋯ menu）', () => {
+    const { container } = renderRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    expect(screen.getByTestId('timeline-rail-detail-42')).toBeTruthy();
+    expect(container.querySelector('.tp-rail-actions')).toBeNull();
+  });
+
+  it('編輯景點 menu item → navigate to EditEntryPage', () => {
     navigateSpy.mockClear();
     renderRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     fireEvent.click(screen.getByTestId('timeline-rail-edit-42'));
     expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/edit');
+  });
+
+  it('換景點 menu item → navigate to ChangePoiPage', () => {
+    navigateSpy.mockClear();
+    renderRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-change-42'));
+    expect(navigateSpy).toHaveBeenCalledWith('/trip/okinawa-2026/stop/42/change-poi');
   });
 
   it('inline note 編輯仍保留 — 點 tp-rail-note-value 觸發 textarea', () => {
@@ -99,15 +111,12 @@ describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
     expect(textarea).toBeTruthy();
   });
 
-  it('delete button → 開 ConfirmModal (alertdialog)，不直接觸發 fetch', () => {
+  it('刪除景點 menu item → 開 ConfirmModal (alertdialog)，不直接觸發 fetch', () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
     renderRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     fireEvent.click(screen.getByTestId('timeline-rail-delete-42'));
-    // ConfirmModal open
     expect(screen.queryByTestId('confirm-modal')).toBeTruthy();
-    // 還沒 confirm → fetch 不該被打
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
@@ -116,7 +125,6 @@ describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
     renderRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     fireEvent.click(screen.getByTestId('timeline-rail-delete-42'));
     fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
@@ -124,11 +132,10 @@ describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
     vi.unstubAllGlobals();
   });
 
-  it('toolbar icon button 全為 SVG sprite (無 emoji unicode)', () => {
-    renderRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
-    const detail = screen.getByTestId('timeline-rail-detail-42');
-    const text = detail.textContent ?? '';
+  it('⋯ menu item 全為 SVG sprite (無 emoji unicode)', () => {
+    const { container } = renderRail();
+    const menu = container.querySelector('.tp-rail-menu');
+    const text = menu?.textContent ?? '';
     const banned = ['🗑', '🔍', '⛶', '⎘', '⇅', '❤', '🚗', '📋', '✕', '✓'];
     for (const ch of banned) {
       expect(text.includes(ch)).toBe(false);
