@@ -1346,7 +1346,9 @@ body.dark {
   scrollbar-width: none;
   width: fit-content;
   max-width: calc(100% - 24px);
-  margin: 6px 12px 8px;
+  /* rev2 D-review #4：fit-content 膠囊在中欄/視窗水平置中（原 margin-left 12px 靠左，
+     桌機寬中欄下明顯偏左）。auto 左右 margin 置中,少天時置中、多天時仍可捲。 */
+  margin: 6px auto 8px;
   padding: 4px;
   background: color-mix(in srgb, var(--color-secondary) 72%, transparent);
   backdrop-filter: blur(20px) saturate(180%);
@@ -1398,7 +1400,8 @@ body.dark {
  * 同源，不會 drift。 */
 .tp-map-day-tabs--sticky {
   position: sticky;
-  top: var(--titlebar-h);
+  /* rev2 D-review #5：捲動 sticky 時與（玻璃）titlebar 保留 8px 間距,不緊貼/不穿透。 */
+  top: calc(var(--titlebar-h) + 8px);
   z-index: calc(var(--z-sticky-nav, 200) - 1);
   border-top: none;
   border-bottom: 1px solid var(--color-border);
