@@ -1409,6 +1409,11 @@ body.dark {
   border-top: none;
   border-bottom: 1px solid var(--color-border);
 }
+/* §8.1（2026-07-19）：桌機操作堆疊中欄（TripStackLayout `.tp-stack-mid` 內的 <TripPage
+ * noShell>）**無 titlebar**，titlebar-h 偏移會把 day-tabs 膠囊列釘在 ~72px、蓋住從中欄頂端
+ * 流動的 day-header（DAY 01/日期/停留點）。中欄無 titlebar → sticky top 收到 8px，膠囊釘中欄頂、
+ * day-header 在其下方正常流動、不再字疊字。（/trips 嵌入模式有 titlebar，維持 72px 不受影響。） */
+.tp-stack-mid .tp-map-day-tabs--sticky { top: 8px; }
 body.print-mode .tp-map-day-tabs--sticky { display: none; }
 
 /* ===== MapEntryCard — horizontal snap-scroll item (V2 Terracotta Map page) ===== */

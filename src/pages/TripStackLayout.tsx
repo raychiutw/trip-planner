@@ -48,9 +48,11 @@ export default function TripStackLayout() {
 
   return (
     <SheetStackProvider value={{ inStack: true, closeStack }}>
+      {/* §8.1：中欄包 .tp-stack-mid marker → 中欄無 titlebar 時 day-tabs sticky top 收到
+          8px（見 css/tokens.css .tp-stack-mid .tp-map-day-tabs--sticky），避免膠囊蓋 day-header。 */}
       <AppShell
         sidebar={<DesktopSidebarConnected />}
-        main={valid ? <TripPage tripId={valid} noShell /> : null}
+        main={valid ? <div className="tp-stack-mid"><TripPage tripId={valid} noShell /></div> : null}
         sheet={<Outlet />}
         bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
