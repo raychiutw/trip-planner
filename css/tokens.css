@@ -1533,7 +1533,12 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     justify-content: space-between;
     gap: 12px;
     border-bottom: 1px solid var(--color-border);
-    background: var(--color-background);
+    /* rev2 iOS 26 Liquid Glass header — 還原 TitleBar.tsx:12 + mockup Section 23 規範的
+       「glass blur」（原漂移成 opaque cream，chat 等頁標題列不透）。translucent 80% +
+       backdrop blur 讓內容 frost 過標題列下方，與底部玻璃導航一致。token 化 light/dark adapt。 */
+    background: color-mix(in srgb, var(--color-background) 80%, transparent);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
   }
   .tp-titlebar-title {
     /* mockup-parity-qa-fixes: mockup .tp-page-titlebar-title:4060 規範 desktop 20/28/700 (was 24px) */
@@ -1564,7 +1569,12 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     justify-content: space-between;
     gap: 12px;
     border-bottom: 1px solid var(--color-border);
-    background: var(--color-background);
+    /* rev2 iOS 26 Liquid Glass header — 還原 TitleBar.tsx:12 + mockup Section 23 規範的
+       「glass blur」（原漂移成 opaque cream，chat 等頁標題列不透）。translucent 80% +
+       backdrop blur 讓內容 frost 過標題列下方，與底部玻璃導航一致。token 化 light/dark adapt。 */
+    background: color-mix(in srgb, var(--color-background) 80%, transparent);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
   }
   .tp-titlebar-title {
     font-size: 18px; /* mockup compact 18px (was 22px) */
