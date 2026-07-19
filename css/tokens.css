@@ -684,9 +684,9 @@ body.dark {
         background: var(--color-accent-subtle);
         border-bottom-color: transparent;
     }
-    /* head button 跨 col 3-4（body | caret），row click target */
-    /* rev2 排序模式：插回 grip 欄（grip | node | body）。 */
-    .tp-rail-body[data-sort-mode] .tp-rail-item { grid-template-columns: 24px 24px 1fr; }
+    /* head button 跨 col（body | actions），row click target。
+     * rev2 owner 2026-07-19（⑧）：排序 grip 已移到右邊 head-actions（取代 caret ›），不再插左欄
+     * grip 欄 → 排序模式與 resting 同 grid（node | head），左邊 1-2-3 dots 位置不變。 */
 
     .tp-rail-head {
         display: grid; grid-template-columns: 1fr auto;

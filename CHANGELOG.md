@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.5] - 2026-07-20
+
+### Changed（owner 回報批次 1：⑧ 排序介面）
+- **⑧ 排序模式介面重整**：owner「排序模式時 `>` 隱藏，該位置改放排序 icon，讓原來 timeline
+  1-2-3 格式不變」。
+  - 原本排序模式在 `.tp-rail-item` grid 左邊插一欄 grip（`24px 1fr` → `24px 24px 1fr`），
+    導致整條 timeline 的編號 dots 右移一欄（1-2-3 格式跑掉）。移除該 override → 排序模式與
+    resting 同 grid，**左邊 1-2-3 dots 位置不變**（實測 normal / sort 兩模式 dotLeft 皆 34px）。
+  - 拖曳 grip 從「列首左欄」移進右邊 `.tp-rail-head-actions`（取代 `›` caret 的位置）。
+  - 排序模式時右邊展開 caret `›` 隱藏（`.tp-rail-body[data-sort-mode] .tp-rail-caret{display:none}`），
+    grip 顯示在同位置 → 排序時右邊是拖曳握把、非展開鈕。
+  - grip testid（`timeline-rail-grip-*`）+ aria-label（拖拉排序）+ touch-action pan-y 全保留；
+    onClick stopPropagation 防握把點擊冒泡誤觸整列展開。真瀏覽器（390）驗：排序模式 caret 隱藏、
+    grip 在右（x321）、dots 不位移。
+
 ## [2.56.4] - 2026-07-19
 
 ### Changed（owner 回報批次 1，續）
