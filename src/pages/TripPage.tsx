@@ -24,7 +24,7 @@ import { TRIP_TIMEZONE, getLocalToday } from '../lib/constants';
 import { downloadTripJson } from '../lib/tripExport';
 import { renderTripPrintPdf } from '../components/print/renderTripPrintPdf';
 import { showToast } from '../lib/toastBus';
-import { computeInitialHash } from '../lib/scrollSpy';
+import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '../lib/scrollSpy';
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
 import { TripIdContext } from '../contexts/TripIdContext';
 import { TripDaysContext } from '../contexts/TripDaysContext';
@@ -144,6 +144,24 @@ function getQueryTrip(): string | null {
 
 /* ===== Scroll helpers ===== */
 
+/**
+ * Find the actual scrolling ancestor of `el`. AppShell uses a constrained
+ * `.app-shell-main { overflow-y: auto }` as the scroll container, so the
+ * window doesn't scroll. Fall back to document if no ancestor scrolls.
+ */
+function findScrollContainer(el: HTMLElement): HTMLElement | Window {
+  let parent: HTMLElement | null = el.parentElement;
+  while (parent) {
+    const cs = getComputedStyle(parent);
+    const overflowY = cs.overflowY;
+    if ((overflowY === 'auto' || overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return window;
+}
+
 function scrollToDay(dayNum: number): void {
   const header = document.getElementById('day' + dayNum);
   if (!header) return;
@@ -205,6 +223,8 @@ function TripPageInner(
   // showNavTitle removed along with old sticky-nav inline title
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
+  // ⑨ 連續捲動：scroll-spy 最後同步過的 day，避免每個 scroll frame 都 switchDay。
+  const scrollDayRef = useRef(0);
 
   /* --- Scroll restore when returning from StopDetailPage --- */
   useScrollRestoreOnBack();
@@ -537,14 +557,14 @@ function TripPageInner(
     return match?.dayNum;
   }, [days, localToday]);
 
-  /* --- DayNav click: rev2 one-day-view — switchDay 換天（只 render 該 day）+ 捲回頂（新 day 從頭看）。
-   * 先前 scrollToDay(dayNum) 在單日模式失效（該 day header 換天當下尚未 render 進 DOM），改直接
-   * 把 scroll 容器捲回頂。 */
+  /* --- DayNav click（⑨ 連續捲動）：switchDay 高亮該天 + scrollToDay 捲到該天 section。
+   * manualScrollTs 記下手動時間 → 下方 scroll-spy 在 600ms 內不搶回（讓點擊/deep-link 勝出、
+   * 不與程式化捲動打架）。全天已 render，scrollToDay 找得到 header。 */
   const handleSwitchDay = useCallback(
     (dayNum: number) => {
       manualScrollTs.current = Date.now();
       switchDay(dayNum);
-      document.querySelector<HTMLElement>('.app-shell-main')?.scrollTo({ top: 0, behavior: 'auto' });
+      scrollToDay(dayNum);
       history.replaceState(null, '', '#day' + dayNum);
     },
     [switchDay],
@@ -554,6 +574,10 @@ function TripPageInner(
   useEffect(() => {
     if (loading || dayNums.length === 0 || initialScrollDone.current) return;
     initialScrollDone.current = true;
+
+    // ⑨：標記「剛做初始定位」→ 下方 scroll-spy 在 600ms 內不 switchDay，避免它在
+    // deep-link / today 的程式化捲動途中先報 day1 蓋掉正確選天（57814b67 修的 bug）。
+    manualScrollTs.current = Date.now();
 
     // Reset browser scroll restoration to prevent stale position
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
@@ -670,10 +694,53 @@ function TripPageInner(
     return () => window.removeEventListener('resize', align);
   }, [loading]);
 
-  /* --- rev2 one-day-view：移除 scroll-spy（scroll → 依 day header 位置改 currentDayNum + hash）。
-   * 只 render 當前 day → 無跨天捲動可追蹤；且 scroll-spy 在「預設 render day1」時會強制
-   * switchDay(1) + hash #day1，蓋掉 #dayN / ?focusDay deep-link 的選天。換天一律走
-   * handleSwitchDay（DAY tab）與 auto-locate effect（deep-link / today）。 */
+  /* --- ⑨ 連續捲動 scroll-spy：捲動時依 day header 位置更新 active day + hash（owner 2026-07-20
+   * 回退 rev2 單日檢視 57814b67）。AppShell 的 `.app-shell-main { overflow-y:auto }` 是 scroll
+   * container（window 不捲），listener 掛在 day header 的實際捲動祖先。
+   * deep-link 防護：switchDay 與 hash 都 gate 在 `manualScrollTs 600ms` → 點 DAY tab / deep-link /
+   * today 定位後 600ms 內 scroll-spy 不搶回（不與程式化捲動打架、不蓋掉正確選天）。 */
+  useEffect(() => {
+    if (loading || dayNums.length === 0) return;
+    if (isPrintMode) return;
+
+    const firstHeader = document.getElementById('day' + dayNums[0]);
+    if (!firstHeader) return;
+    const scroller = findScrollContainer(firstHeader);
+
+    function onScroll() {
+      const nav = document.getElementById('stickyNav');
+      const navH = nav ? nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0) : 0;
+      const headerTops = dayNums.map((n) => {
+        const h = document.getElementById('day' + n);
+        return h ? h.getBoundingClientRect().top : null;
+      });
+      const current = computeActiveDayIndex(headerTops, navH, getStableViewportH());
+      if (current >= 0) {
+        const activeDayNum = dayNums[current] ?? -1;
+        // 手動選天 / deep-link 後 600ms 內不搶（讓程式化捲動安定、不蓋正確選天）。
+        const settled = Date.now() - manualScrollTs.current > 600;
+        if (settled && activeDayNum >= 0 && activeDayNum !== scrollDayRef.current) {
+          scrollDayRef.current = activeDayNum;
+          switchDay(activeDayNum);
+          const newHash = '#day' + activeDayNum;
+          if (window.location.hash !== newHash) {
+            history.replaceState(null, '', newHash);
+          }
+        }
+      }
+    }
+
+    let ticking = false;
+    function throttledScroll() {
+      if (!ticking) {
+        requestAnimationFrame(() => { onScroll(); ticking = false; });
+        ticking = true;
+      }
+    }
+
+    scroller.addEventListener('scroll', throttledScroll, { passive: true });
+    return () => scroller.removeEventListener('scroll', throttledScroll);
+  }, [loading, dayNums, switchDay, isPrintMode]);
 
   /* --- themeArt memo to avoid defeating DaySection memo with inline object --- */
   const themeArt = useMemo(() => ({ dark: isDark }), [isDark]);
@@ -795,28 +862,22 @@ function TripPageInner(
               onDragEnd={(e) => void handleCrossDayDragEnd(e)}
               onDragCancel={restoreDragScroll}
             >
-              {/* rev2 mockup：one-day-view — 只 render 當前 day（DAY tab switch 換天，非全日捲動）。
-                * 資料全載於 allDays cache，switchDay 只換指標故切換即時。currentDayNum 未定（0）時
-                * 落到首日；deep-link（?focus/#dayN/today）由 auto-locate effect 先 switchDay 選對天。 */}
-              {(() => {
-                const viewDayNum = currentDayNum > 0 ? currentDayNum : (dayNums[0] ?? 0);
-                const viewDay = viewDayNum > 0 ? allDays[viewDayNum] : undefined;
-                if (viewDayNum <= 0 || !viewDay) return null;
-                return (
-                  <DaySection
-                    key={viewDayNum}
-                    dayNum={viewDayNum}
-                    day={viewDay}
-                    daySummary={daySummaryMap.get(viewDayNum)}
-                    tripStart={tripStart}
-                    tripEnd={tripEnd}
-                    themeArt={themeArt}
-                    localToday={localToday}
-                    isActive
-                    timezone={weatherTimezone}
-                  />
-                );
-              })()}
+              {/* ⑨ 連續捲動（owner 2026-07-20 回退單日檢視）：堆疊 render 全部天，往下捲自然進下一天，
+                * scroll-spy 依 header 位置更新 active day + DAY tab 高亮。資料全載於 allDays cache。 */}
+              {dayNums.map((dayNum) => (
+                <DaySection
+                  key={dayNum}
+                  dayNum={dayNum}
+                  day={allDays[dayNum]}
+                  daySummary={daySummaryMap.get(dayNum)}
+                  tripStart={tripStart}
+                  tripEnd={tripEnd}
+                  themeArt={themeArt}
+                  localToday={localToday}
+                  isActive={dayNum === currentDayNum}
+                  timezone={weatherTimezone}
+                />
+              ))}
             </DndContext>
             {/* Embedded mode (TripsListPage sheet) hides decorative footer art —
               * sheet is a narrow column, art would waste vertical space.
