@@ -853,6 +853,10 @@ body.dark {
             padding: 10px 4px;
         }
         .tp-rail-item::after { left: 36px; right: 4px; } /* 手機縮排：padding(4)+node(24)+gap(8) */
+        /* route spine（.tp-rail-body::before）desktop 為 left:55px（桌機 dot 中心 56）。手機
+         * padding 縮 4 → dot 中心=4+24/2=16，若沿用 55 會落進行程文字裡壓字（owner 2026-07-19
+         * 「直條虛線壓到文字」）。手機對齊 dot 中心：left 15（2px 線中心落 x=16）。 */
+        .tp-rail-body::before { left: 15px; }
         .tp-rail-head { column-gap: 8px; }
         .tp-rail-name { font-size: var(--font-size-callout); }
         /* v2.33.61 round 14b: 拔 .tp-rail-line (見 line 613 dead-code 拔除說明) */
@@ -1353,10 +1357,15 @@ body.dark {
      桌機寬中欄下明顯偏左）。auto 左右 margin 置中,少天時置中、多天時仍可捲。 */
   margin: 6px auto 8px;
   padding: 4px;
-  background: color-mix(in srgb, var(--color-secondary) 72%, transparent);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--color-border);
+  /* rev2 owner 2026-07-19：原 secondary(cream) 72% 疊在 cream 頁面底 = cream-on-cream、
+   * 邊界幾乎看不見（「太透明和底色自重疊」）。改：提高不透明度到 90%（自身讀得出的玻璃
+   * 面）+ 加深邊框（foreground 12% 而非淡 cream border）+ 浮起陰影，成為明確玻璃膠囊
+   * （對齊 iOS/macOS 玻璃卡片邊界清楚的質感）。共用於 timeline（cream 頁）+ 地圖（浮地圖上）。 */
+  background: color-mix(in srgb, var(--color-background) 90%, transparent);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
+  box-shadow: 0 6px 20px rgba(42, 31, 24, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.55);
   border-radius: var(--radius-full);
 }
 .tp-map-day-tabs::-webkit-scrollbar { display: none; }
