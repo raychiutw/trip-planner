@@ -82,7 +82,7 @@ const SCOPED_STYLES = `
 }
 .explore-search button {
   padding: 8px 16px; border-radius: var(--radius-full);
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   border: none; cursor: pointer;
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   min-height: 36px;
@@ -194,7 +194,7 @@ const SCOPED_STYLES = `
   top: 8px; right: 60px;
   width: var(--spacing-tap-min); height: var(--spacing-tap-min);
   border: 0; border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   display: grid; place-items: center;
   cursor: pointer;
@@ -407,7 +407,7 @@ const SCOPED_STYLES = `
 }
 .explore-filter-empty-reset {
   padding: 8px 16px; border-radius: var(--radius-full);
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   border: 0; font-weight: 600; cursor: pointer;
   font-size: var(--font-size-footnote);
 }
@@ -449,8 +449,8 @@ const SCOPED_STYLES = `
   transition: background-color 120ms, color 120ms;
 }
 .explore-landing-empty .landing-chip:hover {
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
+  border-color: var(--color-accent-fill);
 }
 
 /* 2026-05-03 modal-to-fullpage migration audit: tp-trip-picker-* (backdrop +

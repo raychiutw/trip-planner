@@ -111,8 +111,8 @@ const SCOPED_STYLES = `
   }
   .tp-add-stop-daypicker-chip:hover { background: var(--color-hover); }
   .tp-add-stop-daypicker-chip.is-active {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
+    background: var(--color-accent-fill);
+    border-color: var(--color-accent-fill);
     color: var(--color-accent-foreground);
   }
   .tp-add-stop-daypicker-chip-num {
@@ -150,7 +150,7 @@ const SCOPED_STYLES = `
     width: 100%;
     min-height: 64px;
     padding: 10px 12px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-border-control);
     border-radius: var(--radius-md);
     background: var(--color-background);
     color: var(--color-foreground);

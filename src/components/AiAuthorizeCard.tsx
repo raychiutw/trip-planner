@@ -19,7 +19,7 @@ const SCOPED_STYLES = `
 .tp-ai-card__row { display: flex; gap: 12px; align-items: flex-start; }
 .tp-ai-card__badge {
   flex: none; width: 38px; height: 38px; border-radius: var(--radius-lg);
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   display: flex; align-items: center; justify-content: center;
 }
 .tp-ai-card__title { font-size: 15px; font-weight: 700; color: var(--color-foreground); }
@@ -31,7 +31,7 @@ const SCOPED_STYLES = `
 }
 .tp-ai-card__btn {
   margin-top: 12px; width: 100%; min-height: 44px; border: none; border-radius: var(--radius-lg);
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   font-size: 14px; font-weight: 600; cursor: pointer;
 }
 .tp-ai-card__btn:disabled { opacity: 0.6; cursor: default; }

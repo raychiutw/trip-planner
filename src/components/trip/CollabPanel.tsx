@@ -239,7 +239,7 @@ const SCOPED_STYLES = `
 }
 .tp-collab-add-input {
   flex: 1 1 auto; min-width: 0;
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--color-border-control);
   border-radius: var(--radius-md);
   background: var(--color-background);
   color: var(--color-foreground);
@@ -256,8 +256,8 @@ const SCOPED_STYLES = `
 
 .tp-collab-add-btn {
   appearance: none;
-  border: 1px solid var(--color-accent);
-  background: var(--color-accent);
+  border: 1px solid var(--color-accent-fill);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   cursor: pointer;
   font: inherit; font-weight: 700; font-size: var(--font-size-callout);

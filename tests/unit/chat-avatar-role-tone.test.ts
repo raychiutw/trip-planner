@@ -55,6 +55,6 @@ describe('ChatPage avatar 依角色三色（v2.54.9）', () => {
   it('你自己的 avatar (base .tp-chat-avatar) 維持柔褐 accent', () => {
     // is-user 沿用 base .tp-chat-avatar = --color-accent（不改），符合「你=柔褐」。
     const base = ruleBody('.tp-chat-avatar');
-    expect(base).toMatch(/background:\s*var\(--color-accent\)/);
+    expect(base).toMatch(/background:\s*var\(--color-accent-fill\)/);
   });
 });

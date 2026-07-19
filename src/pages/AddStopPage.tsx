@@ -189,8 +189,8 @@ const SCOPED_STYLES = `
   background: var(--color-hover);
 }
 .tp-add-stop-daypicker-chip.is-active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--color-accent-fill);
+  border-color: var(--color-accent-fill);
   color: var(--color-accent-foreground);
 }
 .tp-add-stop-daypicker-chip-num {
@@ -344,7 +344,7 @@ const SCOPED_STYLES = `
 .tp-add-stop-search-input {
   width: 100%; min-height: 44px;
   padding: 8px 14px 8px 36px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
   border-radius: var(--radius-full);
   background: var(--color-secondary);
   font: inherit; font-size: var(--font-size-callout);
@@ -552,7 +552,7 @@ const SCOPED_STYLES = `
 .tp-add-stop-form-select,
 .tp-add-stop-form-placeholder {
   padding: 10px 12px; min-height: 44px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
   border-radius: var(--radius-md);
   background: var(--color-background);
   font: inherit; font-size: var(--font-size-callout);
@@ -618,9 +618,9 @@ const SCOPED_STYLES = `
 }
 .tp-add-stop-btn-cancel:hover { background: var(--color-hover); }
 .tp-add-stop-btn-confirm {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--color-accent-fill);
 }
 .tp-add-stop-btn-confirm:hover { filter: brightness(0.95); }
 .tp-add-stop-btn-confirm:disabled {

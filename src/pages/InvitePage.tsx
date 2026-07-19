@@ -60,8 +60,8 @@ const SCOPED_STYLES = `
   transition: opacity 120ms;
 }
 .tp-invite-btn-primary {
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  border: 1px solid var(--color-accent);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
+  border: 1px solid var(--color-accent-fill);
 }
 .tp-invite-btn-secondary {
   background: var(--color-background); color: var(--color-foreground);

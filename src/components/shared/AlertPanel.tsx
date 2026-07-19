@@ -119,7 +119,7 @@ const SCOPED_STYLES = `
   color: var(--color-accent-deep);
 }
 .tp-alert-panel.is-info .tp-alert-panel-icon {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
 }
 .tp-alert-panel.is-info .tp-alert-panel-title { color: var(--color-accent-deep); }

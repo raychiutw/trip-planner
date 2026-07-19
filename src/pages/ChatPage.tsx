@@ -275,7 +275,7 @@ const SCOPED_STYLES = `
 .tp-chat-empty .cta {
   display: inline-flex; align-items: center; padding: 10px 18px;
   border-radius: var(--radius-full);
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   text-decoration: none; font: inherit; font-weight: 700;
 }
 .tp-chat-suggestions {
@@ -304,7 +304,7 @@ const SCOPED_STYLES = `
 }
 .tp-chat-msg-user {
   align-self: flex-end;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   border-bottom-right-radius: 4px;
 }
@@ -390,7 +390,7 @@ const SCOPED_STYLES = `
   display: grid; place-items: center;
   font-size: var(--font-size-footnote); font-weight: 700;
   flex-shrink: 0;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
 }
 /* v2.54.9 依角色三色（mockup V1）：AI avatar = sage。用 --color-accent-2-bg 底 +
@@ -446,7 +446,7 @@ const SCOPED_STYLES = `
   resize: none;
   font: inherit; font-size: var(--font-size-footnote);
   padding: 10px 14px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
   border-radius: var(--radius-xl);
   background: var(--color-background);
   color: var(--color-foreground);
@@ -465,7 +465,7 @@ const SCOPED_STYLES = `
 .tp-chat-input:disabled { opacity: 0.6; cursor: not-allowed; }
 .tp-chat-send {
   border: none; cursor: pointer;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   border-radius: 50%;
   width: 40px; height: 40px;

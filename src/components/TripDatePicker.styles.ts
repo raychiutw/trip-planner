@@ -175,7 +175,7 @@ export const TRIP_DATE_PICKER_STYLES = `
   font-weight: 700;
 }
 .tp-date-popover .rdp-selected .rdp-day_button {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   font-weight: 700;
   box-shadow: var(--shadow-sm);

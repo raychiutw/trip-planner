@@ -13,7 +13,7 @@ export const ACCOUNT_CIRCLE_STYLES = `
 .tp-account-circle {
   width: 30px; height: 30px; border-radius: var(--radius-full);
   display: none; place-items: center; flex-shrink: 0;
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   font-size: 13px; font-weight: 800; line-height: 1;
   text-decoration: none; cursor: pointer;
 }

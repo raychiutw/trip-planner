@@ -108,7 +108,7 @@ const SCOPED_STYLES = `
 .tp-travel-detail input {
   font: inherit; font-size: var(--font-size-body);
   padding: 8px 12px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
   border-radius: var(--radius-sm);
   width: 100%;
   background: var(--color-background); color: var(--color-foreground);

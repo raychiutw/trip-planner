@@ -71,8 +71,8 @@ const SCOPED_STYLES = `
   transition: opacity 120ms;
 }
 .tp-consent-btn-allow {
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  border: 1px solid var(--color-accent);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
+  border: 1px solid var(--color-accent-fill);
 }
 .tp-consent-btn-deny {
   background: var(--color-background); color: var(--color-foreground);

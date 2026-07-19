@@ -29,7 +29,7 @@ const PLACEHOLDER_STYLES = `
 .tp-placeholder .ph-cta {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 12px 20px; border-radius: var(--radius-full);
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   text-decoration: none;
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   min-height: var(--spacing-tap-min);

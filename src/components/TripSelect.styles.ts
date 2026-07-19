@@ -23,7 +23,7 @@ export const TRIP_SELECT_STYLES = `
   width: 100%;
   padding: 12px 14px;
   min-height: var(--spacing-tap-min, 44px);
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--color-border-control);
   border-radius: var(--radius-md);
   background-color: var(--color-background);
   color: var(--color-foreground);

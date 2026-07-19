@@ -229,7 +229,7 @@ const SCOPED_STYLES = `
   padding: 6px 12px;
   border: 0;
   border-radius: var(--radius-full);
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   font: inherit; font-weight: 600; font-size: var(--font-size-caption);
   cursor: pointer;
@@ -389,7 +389,7 @@ const SCOPED_STYLES = `
 .tp-edit-day-add-card .plus {
   display: inline-grid; place-items: center;
   width: 24px; height: 24px;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   border-radius: var(--radius-full);
   font-weight: 700;
@@ -429,7 +429,7 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 .tp-edit-day-gap:hover:not(:disabled) .plus {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
 }
 .tp-edit-day-gap .plus .svg-icon { width: 12px; height: 12px; }
@@ -554,9 +554,9 @@ const SCOPED_STYLES = `
 .tp-shift-modal-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .tp-shift-modal-confirm {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-fill);
 }
 .tp-shift-modal-confirm:hover:not(:disabled) {
   background: var(--color-accent-deep);

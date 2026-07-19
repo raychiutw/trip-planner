@@ -56,7 +56,7 @@ const SCOPED_STYLES = `
 }
 .tp-map-fab:hover { background: var(--color-hover); transform: translateY(-1px); }
 .tp-map-fab:disabled { opacity: 0.4; cursor: not-allowed; }
-.tp-map-fab.is-active { background: var(--color-accent); color: var(--color-accent-foreground); }
+.tp-map-fab.is-active { background: var(--color-accent-fill); color: var(--color-accent-foreground); }
 .tp-map-fab .svg-icon { width: 20px; height: 20px; }
 .tp-map-fab-popover {
   position: absolute;

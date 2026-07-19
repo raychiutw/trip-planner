@@ -149,8 +149,8 @@ const SCOPED_STYLES = `
 .tp-favorites-add-to-trip .tp-action-btn {
   font: inherit; font-weight: 700; font-size: var(--font-size-subheadline);
   padding: 12px 28px; border-radius: var(--radius-full);
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  border: 1px solid var(--color-accent);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
+  border: 1px solid var(--color-accent-fill);
   cursor: pointer; min-height: var(--spacing-tap-min);
   min-width: 200px;
 }
@@ -183,7 +183,7 @@ const SCOPED_STYLES = `
 .tp-favorites-add-to-trip .tp-empty-cta a {
   display: inline-block; margin-top: 12px;
   padding: 10px 20px; border-radius: var(--radius-md);
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   text-decoration: none; font-weight: 600;
 }
 

@@ -85,7 +85,7 @@ describe('TripHealthCheckPage v2.33.118 CTA redesign (regression)', () => {
   });
 
   it('body CTA style: accent fill + radius-full pill + 14px+28px padding', () => {
-    expect(SRC).toMatch(/\.tp-ai-health-body-cta \{[^}]*background: var\(--color-accent\)/);
+    expect(SRC).toMatch(/\.tp-ai-health-body-cta \{[^}]*background: var\(--color-accent-fill\)/);
     expect(SRC).toMatch(/\.tp-ai-health-body-cta \{[^}]*border-radius: var\(--radius-full\)/);
     expect(SRC).toMatch(/\.tp-ai-health-body-cta \{[^}]*padding: 14px 28px/);
   });

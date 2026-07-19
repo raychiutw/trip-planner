@@ -164,7 +164,7 @@ const SCOPED_STYLES = `
 }
 .tp-new-quota-num {
   width: 24px; height: 24px; border-radius: 50%;
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   display: grid; place-items: center;
   font-weight: 700; font-size: var(--font-size-caption2);
 }
@@ -285,9 +285,9 @@ const SCOPED_STYLES = `
   background: var(--color-accent-subtle);
 }
 .tp-new-flex-month.is-active {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground, #fff);
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-fill);
 }
 .tp-new-flex-month .m { font-size: var(--font-size-callout); font-weight: 700; }
 .tp-new-flex-month .y { font-size: var(--font-size-caption); opacity: 0.75; }

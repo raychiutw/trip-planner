@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.11] - 2026-07-20
+
+### Changed（⑫ 淺色 HIG 稽核 — B 組：owner 拍板的視覺取捨）
+承 v2.56.10 的 A 組。B 組兩項會改變整體視覺感受，故先呈報 owner，**owner 選定「餘裕」＋「#94795E」**。
+
+- **主要按鈕填色**：柔褐底 + 白字只有 3.77 未達 AA（深色同一顆鈕 7.12 → 淺色反而比深色難讀）。
+  新增 `--color-accent-fill`：淺色 `#8A6038`（白字 **5.51** ✅），深色維持 `#CBA06E`（深字 7.12 本已通過）。
+  - 以腳本掃描全 codebase 的 `{...}` 區塊，**只改「同一 rule 內同時有 accent 底 + 白字（`accent-foreground` 或硬編 `#fff`）」者**
+    → 66 個填色區塊 / 34 檔（主按鈕、側欄 active、底部 tab 選中膠囊、各 Modal、chat 泡泡…），
+    連同該區塊的 `border-color` 一併對齊。**裝飾用途（圓點、進度條、tint bar）14 處維持 `--color-accent` 不動。**
+- **互動控制項邊界**：輸入框與 outline 按鈕的背景與頁面同為奶油色，邊框是唯一的「可輸入／可按」線索，
+  卻只有 1.28，違反 WCAG 1.4.11（≥3.0）。新增 `--color-border-control`：淺色 `#94795E`
+  （頁面 3.95 / 卡片 3.72 / 深一階底 3.40，**三種表面都過**），深色 `#7C7C80`（`#48484A` 原本只有
+  1.86/1.53 也不合格 → 新值 4.09/3.35 ✅）。
+  - 涵蓋 `.tp-input-long` / `.tp-input-short` / 全域 `:where(input,textarea,select)` / `.tp-btn` /
+    `.tp-form-row > input|textarea` / `_tripFormStyles` / `InputModal` 取消鈕 / TripSelect trigger /
+    各頁自訂輸入框（chat / 帳號改名 / 搜尋 / 備註…）共 21 處。
+  - **純容器與裝飾維持 `--color-border` 不動**（`.tp-rail-dot` 編號圓圈、下拉清單容器、modal 容器、
+    分隔線）—— 這些豁免於 1.4.11。
+- 背景色一律未動，奶油底身分保留；色相全部維持 terracotta，僅壓明度。
+- 4 個 source-lock 測試（chat avatar / desktop sidebar / bottom nav / health CTA）同步改鎖 `-fill`。
+- **tsc + 全套 unit 3783 全綠**；真瀏覽器（390）淺／深色皆驗：輸入框邊界可辨、主鈕白字對比足、
+  深色 token 正確切成淺值。
+
 ## [2.56.10] - 2026-07-20
 
 ### Fixed（⑫ 淺色 HIG 稽核 — A 組：文字對比，視覺重量幾乎不變）

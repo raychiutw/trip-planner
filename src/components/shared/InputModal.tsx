@@ -54,7 +54,7 @@ const SCOPED_STYLES = `
   font: inherit;
   font-size: var(--font-size-body);
   padding: 10px 12px;
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--color-border-control);
   border-radius: var(--radius-md);
   background: var(--color-background);
   color: var(--color-foreground);
@@ -83,13 +83,13 @@ const SCOPED_STYLES = `
 .tp-input-btn-cancel {
   background: var(--color-secondary);
   color: var(--color-foreground);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
 }
 .tp-input-btn-cancel:hover { background: var(--color-hover); }
 .tp-input-btn-confirm {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--color-accent-fill);
 }
 .tp-input-btn-confirm:hover { filter: brightness(0.92); }
 .tp-input-btn-confirm:focus-visible {

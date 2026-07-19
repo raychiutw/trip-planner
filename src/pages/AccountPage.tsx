@@ -67,7 +67,7 @@ const SCOPED_STYLES = `
 }
 .tp-account-hero-avatar {
   width: 64px; height: 64px; border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   display: grid; place-items: center;
   font-size: var(--font-size-title); font-weight: 800;
@@ -116,7 +116,7 @@ const SCOPED_STYLES = `
   font-weight: 800;
   color: var(--color-foreground);
   background: var(--color-secondary);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
   border-radius: var(--radius-sm);
   padding: 2px 10px;
   text-align: center;

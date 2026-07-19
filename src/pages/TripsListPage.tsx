@@ -394,7 +394,7 @@ body.dark .tp-trips-sort {
   transition: background 120ms;
 }
 .tp-trip-card-new:hover .tp-new-icon {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
 }
 @media (max-width: 760px) {
@@ -471,7 +471,7 @@ body.dark .tp-trips-sort {
   display: inline-flex; align-items: center; gap: 10px;
   padding: 14px 28px;
   border-radius: var(--radius-full);
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   font-weight: 700;
   font-size: var(--font-size-callout);

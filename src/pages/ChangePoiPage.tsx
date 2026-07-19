@@ -211,7 +211,7 @@ const SCOPED_STYLES = `
   width: 100%;
   min-height: 44px;
   padding: 8px 14px 8px 36px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
   border-radius: var(--radius-full);
   background: var(--color-secondary);
   font: inherit;
@@ -478,8 +478,8 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
 }
 .tp-change-poi-btn-confirm {
-  border: 1px solid var(--color-accent);
-  background: var(--color-accent);
+  border: 1px solid var(--color-accent-fill);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   min-width: 112px;
 }
