@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.9] - 2026-07-20
+
+### Changed（owner：功能頁全版）
+- **功能 tab 下方改為全版該功能頁面**（owner「功能 tab 下方應該是全版該功能頁面，如行程/地圖/
+  收藏/AI聊天」）。底部 tab 在 v2.56.6（⑥）已改全透明，但 `.app-shell-main` 仍為它保留
+  `padding-bottom: 88px` → 內容被切掉、下方留一條空白奶油帶浮著 tab（實測收藏頁捲到底，最後
+  一張卡被硬切在 y755）。
+  - `.app-shell-main` **不再保留**該空間 → 四個功能頁（行程/地圖/收藏/AI聊天）鋪滿到螢幕底，
+    透明 tab 浮在內容之上、內容從 tab 之間透出（iOS 慣例）。地圖頁本來就是 full-bleed，現在
+    其餘三頁對齊。
+  - 新增 `--nav-overlay-h`（`.app-shell` 預設 `0px`；手機且 `data-has-bottom-nav="true"` 時
+    = `--nav-height-mobile`）給「底部有互動元件、被 tab 蓋住會壞掉」的頁面自行讓位。
+    `ChatPage .tp-chat-shell` 用它保護輸入 composer（實測 inputBottom 746 < navTop 774，不重疊）；
+    桌機 tab 隱藏、操作頁 drill-down 不顯 tab 時皆為 0，不受影響。
+  - 真瀏覽器（390）驗：收藏/行程/行程內頁 `padding-bottom: 0` 且捲到底內容鋪滿；聊天 composer
+    仍在 tab 之上可用。tsc + shell/token unit 8 綠。
+
 ## [2.56.8] - 2026-07-20
 
 ### Fixed（⑦ 補修 — prod 實機 QA 抓到）

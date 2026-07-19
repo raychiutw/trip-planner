@@ -215,6 +215,11 @@ const SCOPED_STYLES = `
   height: 100%;
   display: flex; flex-direction: column;
   background: var(--color-secondary);
+  /* owner 2026-07-20「全版」：AppShell main 已不為透明 tab 保留空間（功能頁鋪到螢幕底）。
+   * 聊天底部的輸入 composer 是互動元件，被浮在上面的 tab 蓋住就打不了字 → 這裡自行讓位。
+   * --nav-overlay-h 在桌機 / 無 tab 的操作頁為 0，故不影響那些情境。 */
+  padding-bottom: var(--nav-overlay-h, 0px);
+  box-sizing: border-box;
 }
 /* tp-chat-header / .tp-page-header CSS 已退役。改用 <TitleBar>，自帶
  * padding 0 24px (desktop) / 0 16px (compact)，不需額外覆寫。 */
