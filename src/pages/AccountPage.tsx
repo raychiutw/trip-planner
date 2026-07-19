@@ -97,7 +97,7 @@ const SCOPED_STYLES = `
 }
 .tp-account-hero-name-edit:hover {
   background: var(--color-hover);
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 .tp-account-hero-name-edit:focus-visible {
   outline: none; box-shadow: var(--shadow-ring);

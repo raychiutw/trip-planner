@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.10] - 2026-07-20
+
+### Fixed（⑫ 淺色 HIG 稽核 — A 組：文字對比，視覺重量幾乎不變）
+owner「用 HIG 審核淺色模式可以調整的項目」→ 跑 5 面向多 agent 稽核 + 對抗式驗證（29 agents，
+14 項存活，去重後 6 個實質問題）。本版落地 **A 組**（WCAG 客觀失分、不改品牌觀感的部分）；
+B 組（主 CTA 填色、控件邊框，會改變整體視覺重量）另附清單待 owner 拍板。
+
+- **accent 當文字只有 3.66，未達 WCAG AA 4.5** → 新增前景專用 token（同色相僅壓明度，不換色系）：
+  - `--color-accent-text: #8A6038`（on bg 5.35 / secondary 5.04 / accent-subtle 4.74 ✅）
+  - `--color-accent-text-on-tonal: #7A5430`（疊 tonal/玻璃底如 day tab 選中 ≈#EFE3D4 = 5.29 ✅；
+    該底上 #8A6038 僅 4.36，故另立一階）
+  - 深色對應為**淺**值 `#E0BC90`（on #1C1C1E 9.53 ✅），避免深底疊深字破版。
+  - 改用處（僅文字／連結／選中標籤）：`[data-reply-content] a`、hero eyebrow、`.tp-hero-chip`、
+    `.tp-bottom-nav-btn.is-active`、`.tp-hint-link`、`.tp-map-day-tab.is-active`（→ on-tonal）、
+    `.tp-titlebar-trip-row.is-active`、`.poi-add-link`、登入/註冊/忘記密碼/重設密碼頁的
+    footer 連結、`.tp-account-hero-name-edit:hover`。
+  - **不動**：填色、邊框、裝飾圓點（brand dot / `.tp-rail-poi-meta-star` / 拖曳 grip）、
+    純 icon（走 WCAG 非文字 3.0 門檻，3.66/3.77 本已通過）。
+- **語意色當文字全站不可讀**（success 純底 2.98 / 淡底 2.62、warning 純底 2.37 / 淡底 2.14）→
+  新增 `--color-success-deep: #07795C`（5.22 / 4.60 ✅）、`--color-warning-deep: #A35A00`
+  （5.07 / 4.59 ✅），深色對應同樣為淺值。規則：**淡底上的文字用 -deep，實心填色與圓點用 base**。
+  改用處：`.tp-collab-badge-owner`（原 2.62）、`.tp-pw-check-ok`、`AlertPanel` warning 標題與內文
+  （原本開發者已私下用 `color-mix(... 70%, black)` 手動壓暗仍只有 4.11 → 換成 token，
+  順帶修好深色下該 color-mix 會把亮橘壓暗的問題）。
+- 所有色值以獨立 WCAG 計算複驗過（非採信 agent 自述）。真瀏覽器（390）驗淺／深色 token 皆正確
+  解析、day tab 選中實測 `rgb(122,84,48)`。tsc + 相關 unit 82 綠。
+
 ## [2.56.9] - 2026-07-20
 
 ### Changed（owner：功能頁全版）

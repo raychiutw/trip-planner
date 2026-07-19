@@ -18,6 +18,14 @@ html { color-scheme: light dark; }
     --color-accent-subtle: #F4EDE3;
     --color-accent-bg: #E9DBC8;
     --color-accent-deep: #8A6038;
+    /* 前景專用（HIG 淺色稽核 2026-07-20）：柔褐 #A97A4A 當**文字**在奶油底上只有 3.66，
+     * 未達 WCAG AA 4.5。文字／連結／選中標籤一律用 -text 變體（同色相僅壓明度，不換色系）；
+     * 填色、邊框、裝飾圓點維持 --color-accent 不動。
+     *   -text          #8A6038 → on bg 5.35 / secondary 5.04 / accent-subtle 4.74 ✅
+     *   -text-on-tonal #7A5430 → 疊在 tonal/玻璃底（如 day tab 選中 ≈#EFE3D4）5.29 ✅
+     *                            （該底上 #8A6038 僅 4.36，故另立一階） */
+    --color-accent-text: #8A6038;
+    --color-accent-text-on-tonal: #7A5430;
     /* v2.55.88 V3 三色退場：語意分類色（sage 交通 / 粉 收藏活動）收斂成單一柔褐 accent。
      * 消費者（data-tone / --tone-*）不變，只是 accent-2/-3 的值統一成 accent，全站不再彩虹。
      * 卡片改 neutral surface 是 Phase 2（此版仍走柔褐 tint，先退掉多色）。design.md §2.3。 */
@@ -44,6 +52,13 @@ html { color-scheme: light dark; }
     --color-success-bg: rgba(6, 167, 125, 0.12);
     --color-warning: #F48C06;
     --color-warning-bg: rgba(244, 140, 6, 0.12);
+    /* 語意色前景變體（HIG 淺色稽核 2026-07-20）：base 值當**文字**皆不可讀 —
+     * success 純底 2.98 / 淡底 2.62、warning 純底 2.37 / 淡底 2.14（AlertPanel 甚至已私下
+     * 用 color-mix 手動壓暗，仍只有 4.11）。規則：**淡底上的文字用 -deep，實心填色與圓點用 base**。
+     *   -success-deep #07795C → on bg 5.22 / on success-bg 4.60 ✅
+     *   -warning-deep #A35A00 → on bg 5.07 / on warning-bg 4.59 ✅（維持琥珀色相） */
+    --color-success-deep: #07795C;
+    --color-warning-deep: #A35A00;
     --color-info: #A97A4A;
     --color-info-bg: rgba(169, 122, 74, 0.12);
     --color-disabled: #B8AC9B;
@@ -515,7 +530,7 @@ body.dark {
 
     /* ManagePage reply content (chat bubbles) */
     [data-reply-content] { font-size: var(--font-size-body); color: inherit; line-height: var(--line-height-normal); overflow-wrap: break-word; word-break: break-word; }
-    [data-reply-content] a { color: var(--color-accent); text-decoration: none; }
+    [data-reply-content] a { color: var(--color-accent-text); text-decoration: none; }
     [data-reply-content] a:hover { text-decoration: underline; }
     [data-reply-content] h2, [data-reply-content] h3 { font-size: var(--font-size-title3); margin: 12px 0 8px; color: inherit; }
     [data-reply-content] h2:first-child, [data-reply-content] h3:first-child { margin-top: 0; }
@@ -580,13 +595,13 @@ body.dark {
         margin-bottom: 2px;
         font-size: var(--font-size-eyebrow); font-weight: 800;
         letter-spacing: 0.12em; text-transform: uppercase;
-        color: var(--color-accent);
+        color: var(--color-accent-text);
         font-variant-numeric: tabular-nums;
     }
     .tp-hero-chip {
         padding: 0; border: none;
         font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit;
-        color: var(--color-accent);
+        color: var(--color-accent-text);
     }
     .tp-hero-chip::after {
         content: "·"; margin: 0 2px 0 6px; opacity: 0.4;
@@ -891,7 +906,7 @@ body.dark {
         }
         .tp-bottom-nav-btn .svg-icon { width: 18px; height: 18px; }
         .tp-bottom-nav-btn span { font-size: var(--font-size-eyebrow); font-weight: 500; }
-        .tp-bottom-nav-btn.is-active { color: var(--color-accent); }
+        .tp-bottom-nav-btn.is-active { color: var(--color-accent-text); }
         .tp-bottom-nav-btn.is-active span { font-weight: 700; }
         .tp-bottom-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     }
@@ -933,6 +948,11 @@ body.dark {
         --color-accent-subtle: #2A2418;
         --color-accent-bg: #3A3020;
         --color-accent-deep: #E0BC90;
+        /* 深色的前景變體必須是**淺**值（深底上要亮字）—— 不能繼承淺色的 #8A6038/#7A5430，
+         * 否則深底疊深字破版。深色 accent 當文字本就 7.12 通過，這裡對齊 accent-deep 更寬裕。
+         * #E0BC90 on #1C1C1E = 9.53 ✅ */
+        --color-accent-text: #E0BC90;
+        --color-accent-text-on-tonal: #E0BC90;
         /* v2.55.88 V3 三色退場：accent-2/-3 收斂成柔褐 accent（dark 版）。 */
         --color-accent-2: #CBA06E;
         --color-accent-2-deep: #E0BC90;
@@ -962,11 +982,15 @@ body.dark {
         --color-destructive-bg: rgba(232, 160, 160, 0.15);
         --color-success: #7EC89A;
         --color-success-bg: rgba(126, 200, 154, 0.15);
+        /* 深色語意前景變體：同樣需淺值（#7EC89A on #1C1C1E = 8.60 ✅）。 */
+        --color-success-deep: #7EC89A;
         /* v2.33.60 round 14: warning 維持 orange (#F48C06) hue 系列，不要切 yellow
            — 之前 light/dark 跨 hue 會讓 brand 感不一致 (orange ↔ yellow 跳)。
            Dark mode 用較亮 orange (#FAA94B) 提高對比，仍同 hue family。 */
         --color-warning: #FAA94B;
         --color-warning-bg: rgba(250, 169, 75, 0.18);
+        /* 深色語意前景變體：需淺值（#FAA94B on #1C1C1E = 8.78 ✅）。 */
+        --color-warning-deep: #FAA94B;
         --color-info: #CBA06E;
         --color-info-bg: rgba(203, 160, 110, 0.15);
         --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
@@ -1333,7 +1357,7 @@ body.dark {
   --tp-form-input-min-h: 48px;
 }
 .tp-form-row .tp-hint-link {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-weight: 600;
   font-size: var(--font-size-caption);
   text-decoration: none;
@@ -1401,7 +1425,7 @@ body.dark {
 .tp-map-day-tab.is-active {
   /* 淡 tonal pill（owner 2026-07-17 sign-off）取代實心 thumb；per-day --day-color
    * tint 供地圖 polyline 對應，行程頁無 --day-color → 落 accent。 */
-  color: var(--color-accent);
+  color: var(--color-accent-text-on-tonal);
   background: color-mix(in srgb, var(--day-color, var(--color-accent)) 14%, transparent);
 }
 .tp-map-day-tab:focus-visible {
@@ -1810,7 +1834,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   color: var(--color-foreground);
 }
 .tp-titlebar-trip-row:hover { background: var(--color-hover); }
-.tp-titlebar-trip-row.is-active { background: var(--color-accent-subtle); color: var(--color-accent); }
+.tp-titlebar-trip-row.is-active { background: var(--color-accent-subtle); color: var(--color-accent-text); }
 .tp-titlebar-trip-row-title { font-weight: 700; font-size: var(--font-size-callout); }
 .tp-titlebar-trip-row-meta { font-size: var(--font-size-caption2); color: var(--color-muted); }
 

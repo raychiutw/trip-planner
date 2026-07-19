@@ -212,7 +212,7 @@ const SCOPED_STYLES = `
 }
 .favorites-card .poi-add-link {
   font-size: var(--font-size-footnote); font-weight: 700;
-  color: var(--color-accent); text-decoration: none;
+  color: var(--color-accent-text); text-decoration: none;
   padding: 6px 10px; border-radius: var(--radius-sm);
   transition: background 120ms;
 }
