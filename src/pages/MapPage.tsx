@@ -148,7 +148,11 @@ const SCOPED_STYLES = `
 }
 .map-page-cards {
   position: absolute;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  /* v2.56.12：功能頁改全版後（v2.56.9 拿掉 main 的 88px 保留），這層 wrap 延伸到螢幕底，
+   * 浮底 POI 卡就掉進底部 tab 的區域重疊 —— 卡片是**可點的互動元件**，被 tab icon 壓住
+   * 會點不準（e2e 實證：firstCard.click() 被 nav 攔截）。比照 ChatPage composer，用
+   * --nav-overlay-h 讓位（桌機 tab 隱藏 / 操作頁不顯 tab 時該值為 0，不受影響）。 */
+  bottom: calc(12px + var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
   left: 0; right: 0;
   z-index: 5;
   /* 無白帶（原 .tp-map-entry-cards 的 background + border-top 在此清掉）。 */

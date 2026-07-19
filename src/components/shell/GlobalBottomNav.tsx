@@ -48,6 +48,9 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   font: inherit;
   transition: background 140ms, color 140ms;
+  /* 容器（.app-shell-bottom-nav）為了讓透明處的點擊穿透到下方內容而設 pointer-events:none，
+   * 這裡把可點區域還給 tab 本身（見 AppShell 該處註解）。 */
+  pointer-events: auto;
 }
 .tp-global-bottom-nav-btn .svg-icon {
   width: 22px; height: 22px;

@@ -101,6 +101,14 @@ export const APP_SHELL_STYLES = `
   z-index: var(--z-sticky-nav);
   transform: translateX(-50%);
   transition: transform var(--transition-duration-normal, 250ms) var(--transition-timing-function-apple, cubic-bezier(0.2, 0.8, 0.2, 1));
+  /* v2.56.12：tab 改透明（⑥）+ 功能頁全版鋪到底（v2.56.9）後，這個 fixed overlay 直接壓在
+   * 內容上 → **整塊攔截點擊**（e2e 實證：地圖頁底部 POI 卡按不動，
+   * "<a class=tp-global-bottom-nav-btn> from <nav class=app-shell-bottom-nav> subtree
+   * intercepts pointer events"）。與本檔上方記載的舊事故（form confirm 被 bottom-nav 攔截，
+   * 22+ master CI runs）同型。
+   * 修法：容器不吃指標事件，只有 tab 按鈕本身吃 → 透明處的點擊穿透到下方內容，icon 仍可按。
+   * （按鈕的 pointer-events:auto 在 GlobalBottomNav .tp-global-bottom-nav-btn。） */
+  pointer-events: none;
 }
 .app-shell-bottom-nav[data-hidden="true"] {
   transform: translateX(-50%) translateY(180%);
