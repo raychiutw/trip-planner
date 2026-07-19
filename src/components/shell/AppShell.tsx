@@ -11,6 +11,10 @@ import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 export const APP_SHELL_STYLES = `
 .app-shell {
   display: grid;
+  /* 透明底部 tab 疊在內容之上的高度（owner 2026-07-20「全版」）。預設 0 —— 桌機（tab 隱藏）
+   * 與操作頁 drill-down（不顯 tab）都不需讓位；手機且有 tab 時由下方 media query 覆寫。
+   * 只有「底部有互動元件、被 tab 蓋住會壞掉」的頁面才需要 padding-bottom: var(--nav-overlay-h)。 */
+  --nav-overlay-h: 0px;
   /* Lock to viewport so sidebar / main / sheet are real scroll containers
    * — grid rows can't grow with content, so each cell becomes its own
    * scroller, and one column scrolling doesn't drag the others. */
@@ -134,10 +138,16 @@ export const APP_SHELL_STYLES = `
   .app-shell-sheet {
     display: none;
   }
-  /* bottom-nav 是 fixed overlay 蓋在 main 底部 → reserve padding-bottom。只在有 nav
-   * 時保留（操作頁 drill-down 不顯 nav → 不留、bottom bar 貼底）。 */
-  .app-shell[data-has-bottom-nav="true"] .app-shell-main {
-    padding-bottom: var(--nav-height-mobile, 88px);
+  /* rev2 owner 2026-07-20「功能 tab 下方應該是全版該功能頁面」：底部 tab 已改全透明
+   * （v2.56.6 ⑥），再為它保留 88px 就變成「內容被切掉 + 一條空白奶油帶浮著 tab」（實測
+   * 收藏頁捲到底最後一張卡被硬切在 y755）。改為**不保留**→ 功能頁全版鋪到螢幕底，透明 tab
+   * 浮在內容之上（內容從 tab 之間透出，iOS 慣例）。
+   *
+   * 底部有互動元件的頁面（如聊天 composer）不能被 tab 蓋住 → 提供 --nav-overlay-h 讓它們
+   * 自行讓位（見 ChatPage .tp-chat-shell）。清單頁不讓位，維持全版。
+   * 操作頁 drill-down 不顯 nav → data-has-bottom-nav="false"，overlay 高度 0。 */
+  .app-shell[data-has-bottom-nav="true"] {
+    --nav-overlay-h: var(--nav-height-mobile, 88px);
   }
 }
 
