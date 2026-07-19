@@ -104,13 +104,13 @@ const SCOPED_STYLES = `
 .tp-alert-panel.is-warning {
   background: var(--color-warning-bg);
   border-color: var(--color-warning);
-  color: color-mix(in srgb, var(--color-warning) 70%, black);
+  color: var(--color-warning-deep);
 }
 .tp-alert-panel.is-warning .tp-alert-panel-icon {
   background: var(--color-warning);
   color: var(--color-accent-foreground);
 }
-.tp-alert-panel.is-warning .tp-alert-panel-title { color: color-mix(in srgb, var(--color-warning) 70%, black); }
+.tp-alert-panel.is-warning .tp-alert-panel-title { color: var(--color-warning-deep); }
 
 /* Info variant — accent (default) */
 .tp-alert-panel.is-info {

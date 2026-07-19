@@ -75,7 +75,7 @@ ${AUTH_LAYOUT_STYLES}
   display: flex; align-items: center; gap: 6px;
   color: var(--color-muted);
 }
-.tp-pw-check-ok { color: var(--color-success); }
+.tp-pw-check-ok { color: var(--color-success-deep); }
 .tp-pw-check svg { width: 14px; height: 14px; }
 
 /* .tp-btn family 移到 css/tokens.css 共用。 */
@@ -108,7 +108,7 @@ ${AUTH_LAYOUT_STYLES}
   font-size: var(--font-size-footnote); color: var(--color-muted);
 }
 .tp-auth-footer a {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-weight: 600; text-decoration: none;
 }
 .tp-auth-footer a:hover { text-decoration: underline; }

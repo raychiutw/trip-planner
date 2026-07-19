@@ -127,7 +127,7 @@ const SCOPED_STYLES = `
 }
 .tp-collab-badge-owner {
   background: var(--color-success-bg);
-  color: var(--color-success);
+  color: var(--color-success-deep);
 }
 .tp-collab-badge-owner .tp-collab-badge-dot {
   background: var(--color-success);

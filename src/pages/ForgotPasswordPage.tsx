@@ -73,7 +73,7 @@ ${AUTH_LAYOUT_STYLES}
   font-size: var(--font-size-footnote); color: var(--color-muted);
 }
 .tp-auth-footer a {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-weight: 600; text-decoration: none;
 }
 .tp-auth-footer a:hover { text-decoration: underline; }

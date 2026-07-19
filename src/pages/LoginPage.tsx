@@ -188,7 +188,7 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote); color: var(--color-muted);
 }
 .tp-login-footer a {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-weight: 600; text-decoration: none;
 }
 .tp-login-footer a:hover { text-decoration: underline; }
