@@ -56,11 +56,14 @@ const SCOPED_STYLES = `
 }
 .map-page-body {
   position: absolute;
-  inset: 0;
-  z-index: 0; /* 地圖沉底 full-bleed（在半透明 titlebar 下、浮層之下）。 */
+  /* owner 2026-07-19：地圖從 titlebar **下方**開始填（非跑到 titlebar 下），否則 Google
+   * TOP_LEFT 的 +/- 縮放鍵被浮動 titlebar 蓋。仍 full-bleed（填滿 titlebar 以下、無白帶）、
+   * day tab 仍浮頂、POI 仍浮底；縮放鍵在 titlebar 下方正常露出。 */
+  top: var(--titlebar-h, 64px);
+  left: 0; right: 0; bottom: 0;
+  z-index: 0;
 }
 .map-page-body > * { width: 100%; height: 100%; }
-/* TitleBar 在 wrap 內、DOM 於 map-body 前 → 需浮於 full-bleed 地圖之上（玻璃透出地圖，iOS 式）。 */
 .map-page-wrap > .tp-titlebar { position: relative; z-index: 3; }
 
 /* ===== Loading state — shimmer canvas + accent spinner（mockup Section 20） ===== */

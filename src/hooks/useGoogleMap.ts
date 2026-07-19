@@ -82,7 +82,7 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
 
   const {
     center = { lat: 26.2124, lng: 127.6792 },
-    zoom = 12, // V3 design.md §7：每日行程固定預設 zoom 12（marker 點擊才 16）
+    zoom = 13, // owner 2026-07-19：預設 zoom 13（原 12；marker 點擊才 16）
     minZoom = 3,
     maxZoom = 19,
     zoomControl = false,
