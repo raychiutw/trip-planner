@@ -17,7 +17,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **favorites**：探索鈕 icon 改非放大鏡（消與搜尋列重複，§6b）；卡片動作列 `margin-top:auto` pin 卡底對齊（§8.3）；選取 label 保底 44pt（§9.2）。
 - **HIG**：more-menu ⋮ → iOS 水平 …（§9.1）；explore POI 卡 ❤/➕ 44pt（§9.2）；signup 密碼常駐 helper（§9.3）；換景點 disabled 主鈕對比（§9.4）；行程明細 titlebar「新增景點」icon-only 讓標題可讀（§9.5）；login/signup 裝飾圓改軟漸層（§8.4）。
 - **§8.2/§8.5**（桌機操作頁 nav 被 panel 切 / new-trip 底部 nav bleed）由桌機膠囊隱藏一併解決。
-- 驗證：tsc（src + functions）✓ · 完整 unit **3783 tests 全綠** · 真瀏覽器逐頁截圖（1440 + 390）· 最終 multi-agent workflow audit（4 agent / 9 畫面）確認 3 findings（1 HIGH + 2 LOW）全處理、手機 0 破版 · `openspec validate rev2-visual-fidelity --strict` 過。
+- **手機帳號頁最後一列被底部膠囊蓋**（帳號頁自成 scroll 容器、底部 padding 不足）→ `.tp-account-inner` 加 `var(--nav-height-mobile)` clearance（桌機 @1024 收回）。
+- **編輯時間 popover「抵達/離開」標籤折行**（flex 壓成 min-content）→ `.tp-rail-time-pop-label` `white-space:nowrap` + `flex-shrink:0`。
+- 驗證：tsc（src + functions）✓ · 完整 unit **3783 tests 全綠** · 真瀏覽器逐頁 + 逐操作截圖（1440 + 390）· **多輪 multi-agent workflow audit 全收斂到 0**：靜態頁 3 輪（R1 3 findings→修 / R2 1 MEDIUM→修 / R3 0）+ 操作畫面 3 輪（25 操作 UI：選單/modal/新增/編輯/刪除/複製移動/共編/健檢/列印/分享/匯出 + 手機版；R1 4 全偽陽性 / R2 1 LOW→修 / R3 0）· `openspec validate rev2-visual-fidelity --strict` 過。
 
 ## [2.55.101] - 2026-07-18
 
