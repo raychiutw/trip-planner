@@ -639,8 +639,8 @@ body.dark {
     .tp-rail-body::before {
         content: ""; position: absolute;
         left: 19px; top: 26px; bottom: 26px; width: 2px;
-        /* 虛線移動軌 — 呼應右欄地圖的 dashed polyline（rev2：同一路線兩視圖）。 */
-        background: repeating-linear-gradient(var(--color-line-strong, var(--color-border)) 0 5px, transparent 5px 11px);
+        /* owner 2026-07-19：route spine 改**實線**（原 repeating-linear-gradient 虛線）。 */
+        background: var(--color-line-strong, var(--color-border));
         z-index: 0; pointer-events: none;
     }
     .tp-rail-body.is-empty-day::before { display: none; }

@@ -208,6 +208,9 @@ const SCOPED_STYLES = `
   text-transform: uppercase;
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
+  /* owner 2026-07-19：卡頂右上 ⋯（absolute right:6 + 32px）會蓋到 eyebrow/標題文字（手機長
+   * 標題尤明顯）。eyebrow + 標題加 padding-right 讓文字讓開 ⋯ 佔位。 */
+  padding-right: 26px;
 }
 .tp-trip-card-title {
   font-size: var(--font-size-body);
@@ -216,6 +219,7 @@ const SCOPED_STYLES = `
   line-height: 1.35;
   color: var(--color-foreground);
   margin: 0;
+  padding-right: 26px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;

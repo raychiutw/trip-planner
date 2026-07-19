@@ -307,7 +307,8 @@ const SCOPED_STYLES = `
 /* rev2 Section 02：head 右側動作簇 — ⋯ context menu + 展開 caret。
  * 取代舊「展開明細底部一排 icon 工具列」（複/移/編/刪），把動作收進單顆 ⋯（Apple 列表語彙）。 */
 .tp-rail-head-actions {
-  display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0;
+  /* owner 2026-07-19：⋯ 與 ⌄ 兩鈕 gap 2px 太近 → 6px 拉開。 */
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
 }
 
 /* ⋯ trigger：桌機 hover / focus / menu 開啟才顯（Apple Music track row 行為，resting 列乾淨）；
