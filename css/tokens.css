@@ -630,13 +630,15 @@ body.dark {
     .tp-rail-meta { font-size: var(--font-size-caption2); color: var(--color-muted); }
 
     .tp-rail-body { position: relative; padding: 0; }
-    /* v2.55.90 rev2 route spine：連續「中性」軌線串接 hollow 編號 node（dot 中心 x=56）。
-       穿過車程列（.tp-travel-pill-wrap margin-left:56 對齊）。item/pill 透明底讓線透出，
-       hollow node 的 bg 環蓋掉停留點處那一小段 → 線接入 node。中性色（非 accent）＝ rev2
-       「移動的兩種視圖」語意：軌線是路徑、accent 只承載選取。 */
+    /* v2.55.90 rev2 route spine：連續「中性」軌線串接 hollow 編號 node。
+       owner 2026-07-19：原 left:55 是**舊版有類型 icon tile 欄時的 dot 中心**；icon tile 移除
+       後（見上方 5→4 col 說明）dot 中心左移到 20（桌機 padding8+node24/2）/16（手機 padding4+
+       node24/2），但 spine 沒跟著改 → 線落在編號 node 右側、壓到行程文字（content 起點 44）。
+       修：spine 對齊現在的 dot 中心（桌機 19 使 2px 線中心落 20；手機 media query override 15）。
+       item/pill 透明底讓線透出，hollow node 的 bg 環蓋掉停留點處那一小段 → 線接入 node。 */
     .tp-rail-body::before {
         content: ""; position: absolute;
-        left: 55px; top: 26px; bottom: 26px; width: 2px;
+        left: 19px; top: 26px; bottom: 26px; width: 2px;
         /* 虛線移動軌 — 呼應右欄地圖的 dashed polyline（rev2：同一路線兩視圖）。 */
         background: repeating-linear-gradient(var(--color-line-strong, var(--color-border)) 0 5px, transparent 5px 11px);
         z-index: 0; pointer-events: none;
