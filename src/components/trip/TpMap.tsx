@@ -76,7 +76,9 @@ export interface TpMapProps {
    *  Called once on mount and on cleanup with null. */
   onMapReady?: (map: google.maps.Map | null) => void;
   /** Override Google zoom control position (default 'TOP_LEFT'). */
-  zoomControlPosition?: 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT';
+  zoomControlPosition?:
+    | 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT'
+    | 'LEFT_CENTER' | 'RIGHT_CENTER';
 }
 
 /* ===== Inline styles (scoped to this component) ===== */

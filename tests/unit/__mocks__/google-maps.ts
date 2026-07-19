@@ -126,6 +126,10 @@ export function setupGoogleMapsMock(): void {
         TOP_RIGHT: 3,
         BOTTOM_LEFT: 9,
         BOTTOM_RIGHT: 11,
+        // owner ⑦ 補修：MapPage full-bleed 地圖用 RIGHT_CENTER（頂被 day tab、底被 POI 卡、
+        // 右下被 FAB 佔用）。缺 key 會讓 zoomControlOptions.position 變 undefined。
+        LEFT_CENTER: 4,
+        RIGHT_CENTER: 8,
       },
       MapTypeId: {
         ROADMAP: 'roadmap',

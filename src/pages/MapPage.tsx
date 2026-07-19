@@ -522,6 +522,11 @@ export default function MapPage() {
               dayNum={isOverview ? undefined : (activeTab as number)}
               onMapReady={setGoogleMap}
               onMarkerClick={handleCardClick}
+              /* owner ⑦ 補修（2026-07-20 prod QA）：預設 TOP_LEFT 的 Google 縮放鍵被
+               * 浮頂 day tab 膠囊蓋住（實測 + 鍵 y67-107 vs 膠囊 y68-112 全覆蓋）。
+               * full-bleed 地圖上緣被 day tab、下緣被 POI 卡、右下被 MapFabs 佔用 →
+               * 右側垂直中段是唯一乾淨區，改用官方 RIGHT_CENTER（非 hack Google 內部 class）。 */
+              zoomControlPosition="RIGHT_CENTER"
             />
           </Suspense>
         )}
