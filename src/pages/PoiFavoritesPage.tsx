@@ -28,6 +28,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import AccountCircle from '../components/shell/AccountCircle';
 import { POI_TYPE_LABELS, mapNominatimCategory } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 
@@ -196,11 +197,16 @@ const SCOPED_STYLES = `
 }
 .favorites-card .poi-actions {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 8px; margin-top: 6px; padding-top: 8px;
+  /* §8.3：grid 卡等高（align-items:stretch）但動作列原只 margin-top:6px 跟著內容 →
+   * 內容少的卡動作列浮在中段、跨卡參差。改 margin-top:auto 把動作列 pin 到卡底，
+   * 使一排卡的「加入行程 / 勾選」對齊同一水平線。 */
+  gap: 8px; margin-top: auto; padding-top: 8px;
   border-top: 1px solid var(--color-border);
 }
 .favorites-card .poi-select-label {
   display: inline-flex; align-items: center; gap: 6px;
+  /* §9.2：label 是實際點擊區（含 checkbox + 文字），原僅 ~20px 高 → 保底 44pt 觸控。 */
+  min-height: var(--spacing-tap-min);
   font-size: var(--font-size-footnote); color: var(--color-muted);
   cursor: pointer;
 }
@@ -430,6 +436,7 @@ export default function PoiFavoritesPage() {
       <style>{SCOPED_STYLES}</style>
       <TitleBar
         title="收藏"
+        account={<AccountCircle />}
         actions={
           <button
             type="button"
@@ -439,7 +446,9 @@ export default function PoiFavoritesPage() {
             title="探索"
             data-testid="favorites-explore-titlebar"
           >
-            <Icon name="search" />
+            {/* §6b：原用 search 放大鏡 icon 與頁內搜尋列放大鏡撞（像兩個搜尋）。改
+                sidebar-explore（探索語意），消除重複、與頁內 .favorites-search 區隔。 */}
+            <Icon name="sidebar-explore" />
             <span className="tp-titlebar-action-label">探索</span>
           </button>
         }

@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import DesktopSidebarConnected from '../../src/components/shell/DesktopSidebarConnected';
+import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
 
 const SAMPLE_USER = {
   id: 'uid-1',
@@ -17,6 +18,7 @@ const SAMPLE_USER = {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  __clearMyTripsCache();
 });
 
 afterEach(() => {
@@ -40,8 +42,7 @@ describe('DesktopSidebarConnected', () => {
     expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeNull();
     expect(container.querySelector('[data-testid="sidebar-account-card"]')).toBeNull();
 
-    const nav = container.querySelector('[aria-label="主要功能"]');
-    expect(nav?.textContent).not.toContain('登入');
+    // rev2：primary nav 已移底部膠囊；sidebar loading 不先渲染登入/未登入
     expect(container.textContent).not.toContain('未登入');
   });
 
@@ -77,8 +78,7 @@ describe('DesktopSidebarConnected', () => {
     await waitFor(() => {
       expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeTruthy();
     });
-    const nav = container.querySelector('[aria-label="主要功能"]');
-    expect(nav?.textContent).toContain('登入');
+    // rev2：primary nav 移底部膠囊；guest sidebar 顯示「未登入」 chip
     expect(container.textContent).toContain('未登入');
     expect(container.textContent).not.toContain('me@example.com');
   });

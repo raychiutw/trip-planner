@@ -286,10 +286,14 @@ const TpMap = memo(function TpMap({
         {showError && (
           <div style={MAP_OVERLAY_STYLE}>
             <PageErrorState
-              title="服務暫停"
-              message={loadError?.message?.includes('quota') || loadError?.message?.includes('LOCKED')
-                ? '本月 Google API 已達配額，月初恢復。'
-                : '地圖載入失敗，請稍後再試。'}
+              title="地圖暫停服務"
+              message={
+                loadError?.message?.includes('quota') || loadError?.message?.includes('LOCKED')
+                  ? '本月 Google 地圖已達配額，月初恢復；行程其他功能不受影響。'
+                  : loadError?.message?.includes('授權')
+                    ? '此環境未授權載入地圖，地圖暫停服務；行程其他功能正常可用。'
+                    : '地圖載入失敗，請稍後再試；行程其他功能不受影響。'
+              }
               onRetry={() => window.location.reload()}
               className="tp-page-error"
             />

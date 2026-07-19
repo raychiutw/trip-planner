@@ -20,12 +20,39 @@ export { showToast, dismissToast, resetToasts, showErrorToast };
 // Toast Container（render 所有 toast）
 // ---------------------------------------------------------------------------
 
+// 單例守衛（module-level）：rev2 桌機右欄操作堆疊會同時掛載多個 ToastContainer
+// （中欄 <TripPage noShell> 一個 + 右欄操作頁一個），兩者共用同一 toast store →
+// 每則 toast 被畫兩次、且兩個 `aria-live` 節點讓螢幕閱讀器重複朗讀。只讓「最早掛載
+// 且仍存活」的 instance render；primary 卸載時通知其餘 instance 重算接手。
+const toastInstances: symbol[] = [];
+const instanceListeners = new Set<() => void>();
+function notifyInstances() {
+  instanceListeners.forEach((fn) => fn());
+}
+
 export default function ToastContainer() {
   const [, forceUpdate] = useState(0);
+  const idRef = useRef<symbol | null>(null);
+  if (!idRef.current) idRef.current = Symbol('toast-container');
 
   useEffect(() => {
-    return subscribeToasts(() => forceUpdate((n) => n + 1));
+    const id = idRef.current!;
+    const rerender = () => forceUpdate((n) => n + 1);
+    toastInstances.push(id);
+    instanceListeners.add(rerender);
+    notifyInstances(); // 掛載改變 primary 歸屬 → 全部 instance 重算
+    const unsubToasts = subscribeToasts(rerender);
+    return () => {
+      const i = toastInstances.indexOf(id);
+      if (i >= 0) toastInstances.splice(i, 1);
+      instanceListeners.delete(rerender);
+      unsubToasts();
+      notifyInstances(); // primary 卸載 → 讓下一個 instance 接手 render
+    };
   }, []);
+
+  // 只有 primary（清單第一個存活 instance）render toast，其餘 render null。
+  if (toastInstances[0] !== idRef.current) return null;
 
   return (
     <div className="fixed top-toast-top left-0 right-0 z-250 flex flex-col items-center gap-2 pointer-events-none px-4">

@@ -18,6 +18,22 @@ interface UseSheetBehaviorOptions {
    * Default: false (InfoSheet behavior).
    */
   preventAllBackdropScroll?: boolean;
+  /**
+   * Focus this element on open instead of the panel container — e.g. a confirm
+   * button (ConfirmSheet a11y: keyboard user hits Enter immediately). Default: panel.
+   */
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
+  /**
+   * When false, Escape must NOT dismiss — e.g. a form mid-submit ("busy" lock, so a
+   * stray Escape can't look like a cancel while the request is in flight). Default true.
+   */
+  canDismiss?: boolean;
+  /**
+   * When true (default), lock body scroll while open — modal bottom sheet / centered
+   * dialog. Set false for a NON-modal surface (desktop right-column operation panel)
+   * so the covered content stays scrollable and interactive.
+   */
+  modal?: boolean;
 }
 
 interface UseSheetBehaviorResult {
@@ -29,13 +45,41 @@ interface UseSheetBehaviorResult {
   handlePanelKeyDown: (e: React.KeyboardEvent) => void;
 }
 
+/*
+ * Module-level open-sheet registry — one shared stack across all instances so that
+ * only the TOP-most sheet responds to Escape (F12): a nested confirm closes itself,
+ * not the whole stack, on one Escape press. (Body scroll-lock is ref-counted inside
+ * useBodyScrollLock; nested-modal z-index is handled by portal DOM order.)
+ */
+const openSheets: symbol[] = [];
+function registerSheet(id: symbol) {
+  if (!openSheets.includes(id)) openSheets.push(id);
+}
+function unregisterSheet(id: symbol) {
+  const i = openSheets.indexOf(id);
+  if (i !== -1) openSheets.splice(i, 1);
+}
+function isTopSheet(id: symbol): boolean {
+  return openSheets.length > 0 && openSheets[openSheets.length - 1] === id;
+}
+
 /**
- * Shared sheet/overlay behaviors extracted from InfoSheet and QuickPanel:
+ * 是否有任何 engine sheet/modal 開啟中（ConfirmModal / InfoSheet / AiConsent 等只在開啟時
+ * 註冊）。給 OperationShell 桌機 Escape 判斷「內層有 modal 開著就別關整個 panel」——比掃 DOM
+ * 找 role=dialog 可靠：InfoSheet 等元件即使關閉也常駐 DOM，registry 只記真正開啟的。
+ */
+export function isAnySheetOpen(): boolean {
+  return openSheets.length > 0;
+}
+
+/**
+ * Shared sheet/overlay behavior engine — the single source for bottom sheets, centered
+ * modals, content sheets, and (non-modal) operation panels:
  *
- * 1. `.container` class toggle (`sheet-open`) when open
- * 2. Body scroll lock (iOS Safari safe, via useBodyScrollLock)
- * 3. Focus management on open/close
- * 4. Escape key handler
+ * 1. Top-most-sheet registry (for nested Escape)
+ * 2. Body scroll lock (iOS Safari safe, ref-counted) — only when `modal`
+ * 3. Focus management on open/close (optionally to `initialFocusRef`)
+ * 4. Escape (top-most only, IME-safe, honors `canDismiss`)
  * 5. Focus trap on Tab key
  * 6. Backdrop scroll prevention (wheel + touchmove, passive: false)
  */
@@ -44,22 +88,31 @@ export function useSheetBehavior(
   onClose: () => void,
   options: UseSheetBehaviorOptions = {},
 ): UseSheetBehaviorResult {
-  const { restorePreviousFocus = false, triggerRef, onEscape, preventAllBackdropScroll = false } = options;
+  const {
+    restorePreviousFocus = false,
+    triggerRef,
+    onEscape,
+    preventAllBackdropScroll = false,
+    initialFocusRef,
+    canDismiss = true,
+    modal = true,
+  } = options;
 
   const panelRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
+  const idRef = useRef<symbol>(Symbol('sheet'));
 
-  /* 1. Container class toggle */
+  /* 1. Open-sheet registry (top-most tracking for nested Escape) */
   useEffect(() => {
-    document.querySelector('.container')?.classList.toggle('sheet-open', isOpen);
-    return () => {
-      document.querySelector('.container')?.classList.remove('sheet-open');
-    };
+    const id = idRef.current;
+    if (isOpen) registerSheet(id);
+    else unregisterSheet(id);
+    return () => unregisterSheet(id);
   }, [isOpen]);
 
-  /* 2. Body scroll lock */
-  useBodyScrollLock(isOpen);
+  /* 2. Body scroll lock — modal surfaces only (non-modal desktop panel stays unlocked) */
+  useBodyScrollLock(isOpen && modal);
 
   /* 3. Focus management on open/close */
   useEffect(() => {
@@ -68,7 +121,7 @@ export function useSheetBehavior(
         previousFocusRef.current = document.activeElement;
       }
       requestAnimationFrame(() => {
-        panelRef.current?.focus();
+        (initialFocusRef?.current ?? panelRef.current)?.focus();
       });
     } else {
       if (restorePreviousFocus) {
@@ -80,24 +133,26 @@ export function useSheetBehavior(
         triggerRef.current.focus();
       }
     }
-  }, [isOpen, restorePreviousFocus, triggerRef]);
+  }, [isOpen, restorePreviousFocus, triggerRef, initialFocusRef]);
 
-  /* 4. Escape key handler */
+  /* 4. Escape — top-most sheet only, skip IME composition, honor canDismiss (busy lock) */
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onEscape?.();
-        onClose();
-        if (!restorePreviousFocus && triggerRef?.current) {
-          triggerRef.current.focus();
-        }
+      if (e.key !== 'Escape') return;
+      if (e.isComposing) return; // IME 組字中的 Escape 交給輸入法取消 composition，不關 sheet
+      if (!isTopSheet(idRef.current)) return; // 巢狀時只有最上層回應
+      if (!canDismiss) return; // busy（送出中）鎖住
+      e.preventDefault();
+      onEscape?.();
+      onClose();
+      if (!restorePreviousFocus && triggerRef?.current) {
+        triggerRef.current.focus();
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, onEscape, restorePreviousFocus, triggerRef]);
+  }, [isOpen, onClose, onEscape, restorePreviousFocus, triggerRef, canDismiss]);
 
   /* 5. Focus trap on Tab key */
   const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {

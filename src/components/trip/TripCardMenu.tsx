@@ -15,27 +15,25 @@ import Icon from '../shared/Icon';
 
 const SCOPED_STYLES = `
 .tp-card-menu-trigger {
-  position: absolute; top: 8px; right: 8px;
+  position: absolute; top: 6px; right: 6px;
   width: var(--spacing-tap-min); height: var(--spacing-tap-min);
   border-radius: var(--radius-full);
-  /* PR-EE 2026-04-26：原本 rgba(255,255,255,0.92) hardcode 白色，dark mode
-   * 跳出來像浮白圓圈。改 --color-glass-toast token 自動 light/dark 切換。 */
-  background: var(--color-glass-toast);
-  border: 1px solid var(--color-border);
-  color: var(--color-foreground);
+  /* rev2 iOS HIG：卡片 more-menu 是輕觸字符，非笨重實心玻璃圓。原玻璃圓（為有封面圖的
+   * 卡做對比）在扁平奶油卡上與圓角相撞、像貼紙破版。resting 透明只留 ⋯，hover/focus
+   * 才淡底；44px tap 區保留（視覺輕、觸控區不變）。 */
+  background: transparent;
+  border: none;
+  color: var(--color-muted);
   display: grid; place-items: center;
   cursor: pointer;
   z-index: 2;
   font: inherit;
   padding: 0;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(8px);
-  transition: background 120ms, border-color 120ms;
+  transition: background 120ms, color 120ms;
 }
 .tp-card-menu-trigger:hover {
-  background: var(--color-background);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  background: var(--color-hover, var(--color-secondary));
+  color: var(--color-foreground);
 }
 .tp-card-menu-trigger:focus-visible {
   outline: 2px solid var(--color-accent); outline-offset: 2px;
@@ -284,7 +282,7 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
         aria-expanded={open}
         data-testid={`trip-card-menu-trigger-${tripId}`}
       >
-        <Icon name="more-vert" />
+        <Icon name="ellipsis" />
       </button>
       {dropdown}
     </>

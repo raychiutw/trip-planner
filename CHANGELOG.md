@@ -3,6 +3,103 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.0] - 2026-07-19
+
+### Changed
+- **rev2 桌機 macOS sidebar 改版（§10，owner mockup sign-off）**：primary nav（聊天/行程/地圖/收藏）從底部浮動玻璃膠囊搬進**左 macOS sidebar 頂部**（Music/Mail 形制），桌機隱藏膠囊（`AppShell` @≥1024 `.app-shell-bottom-nav display:none`），**手機維持底部膠囊 + 無 sidebar**。sidebar 改 **vibrancy 暖奶油半透明**（`color-mix(--color-background 72%)` + `backdrop-filter: blur(30px)`，走主 app token 自動 light/dark adapt；舊固定深棕 `--color-sidebar-*` 退役）。primary IA + active 判定抽到 `navItems.ts` 單一來源（`GlobalBottomNav` + `DesktopSidebar` 共用）。
+- **表單頁桌機滿寬（§10.4）**：account 設定分區桌機 2-col grid（hero 收窄置中）；new-trip 加寬 880px。
+- **子頁 toolbar 返回（§10.5）**：collab/explore 用 `TitleBar backLabelVisible` → macOS toolbar 式「‹ 返回」可見文字（opt-in，不動行程詳情 icon-only back）。
+
+### Fixed
+- **地圖 auth 失敗優雅降級（§6）**：`useGoogleMap` 註冊 `window.gm_authFailure`（Google referer/key 未授權官方 callback）→ setLoadError + setMap(null) + authFailed race gate；`TpMap` 顯「地圖暫停服務」placeholder，行程其他功能正常。根治 localhost 非授權 referer 整頁崩潰。
+- **行程一覽 filter tab「一片白色」（§2）**：容器與 active thumb 幾乎同色 → 改暖底 track + inset border + thumb 浮起陰影，segmented control 清楚可辨。
+- **操作堆疊中欄 day-tabs 蓋 day-header（§8.1）**：noShell 中欄無 titlebar，`.tp-stack-mid` override sticky top:8px，消除膠囊蓋日期/停留點。
+- **favorites**：探索鈕 icon 改非放大鏡（消與搜尋列重複，§6b）；卡片動作列 `margin-top:auto` pin 卡底對齊（§8.3）；選取 label 保底 44pt（§9.2）。
+- **HIG**：more-menu ⋮ → iOS 水平 …（§9.1）；explore POI 卡 ❤/➕ 44pt（§9.2）；signup 密碼常駐 helper（§9.3）；換景點 disabled 主鈕對比（§9.4）；行程明細 titlebar「新增景點」icon-only 讓標題可讀（§9.5）；login/signup 裝飾圓改軟漸層（§8.4）。
+- **§8.2/§8.5**（桌機操作頁 nav 被 panel 切 / new-trip 底部 nav bleed）由桌機膠囊隱藏一併解決。
+- **手機帳號頁最後一列被底部膠囊蓋**（帳號頁自成 scroll 容器、底部 padding 不足）→ `.tp-account-inner` 加 `var(--nav-height-mobile)` clearance（桌機 @1024 收回）。
+- **編輯時間 popover「抵達/離開」標籤折行**（flex 壓成 min-content）→ `.tp-rail-time-pop-label` `white-space:nowrap` + `flex-shrink:0`。
+- 驗證：tsc（src + functions）✓ · 完整 unit **3783 tests 全綠** · 真瀏覽器逐頁 + 逐操作截圖（1440 + 390）· **多輪 multi-agent workflow audit 全收斂到 0**：靜態頁 3 輪（R1 3 findings→修 / R2 1 MEDIUM→修 / R3 0）+ 操作畫面 3 輪（25 操作 UI：選單/modal/新增/編輯/刪除/複製移動/共編/健檢/列印/分享/匯出 + 手機版；R1 4 全偽陽性 / R2 1 LOW→修 / R3 0）· `openspec validate rev2-visual-fidelity --strict` 過。
+
+## [2.55.101] - 2026-07-18
+
+### Changed
+- **rev2 停留卡精確對齊 mockup Section 02 微調**（逐條對照 `docs/artifacts/2026-07-17-v3-desktop-prototype.html` 停留卡 CSS）：
+  - 標題 `.tp-rail-name`（mockup `.stop-n`）：weight 700 → **500（medium，Apple Music track row 質感，非 bold）** + letter-spacing `-0.01em` → **`-0.012em`**（SF 式緊排）；選中 `[data-expanded]` → 600。
+  - 副標 `.tp-rail-sub`（mockup `.stop-s`）：加 `letter-spacing: -0.006em`。
+  - **內縮分隔線**（mockup `.stop-c::after`）：列間 hairline 從全寬 `border-bottom` 改 `.tp-rail-item::after`（`left: 44px` 桌機 / `36px` 手機 = padding+node+gap，對齊文字起點），hover/展開/末列隱藏。Apple 列表簽名細節。
+  - DESIGN.md Stop Card 段同步（標題 500 medium 為 card-title 700 的 Apple Music track row 例外 + 內縮分隔線）。
+- 驗證：tsc ✓ · 完整 unit **3768 tests 全綠** · 真瀏覽器：weight 500 / letter-spacing -0.204px(-.012em) / divider inset left 44px、桌機視覺對齊 mockup track row。
+
+## [2.55.100] - 2026-07-18
+
+### Changed
+- **rev2 飯店 node 給床 icon 不給號 + 停留編號跳過飯店（對齊 mockup `.row.is-hotel`）**：飯店不是「第幾站」、是當日路線起訖錨點（DESIGN.md:190）→ `.tp-rail-dot[data-hotel]` 給床 icon（`Icon name="hotel"`）+ accent 邊/字（icon 13px），且**不計入停留編號**（TimelineRail 算 stopNumbers 跳過 `deriveTypeMeta(e).label==='住宿'`）。先前對每個 entry 都 `{index+1}`（含飯店）。編號實測：`1,2,3,[床],4,5,[床],6`。
+- **rev2 one-day-view — TripPage 只 render 當前 day（對齊 mockup Section 01 單日 + DAY tab 切換）**：先前是「全日捲動」（`dayNums.map` 堆所有 DaySection + scroll-spy 依 header 位置追蹤 currentDayNum）。改嚴格單日：
+  - 只 render 當前 day 的 DaySection（currentDayNum 未定 → 落首日）。資料全載於 allDays cache、`switchDay` 只換指標 → 切換即時。
+  - `handleSwitchDay`（DAY tab）：switchDay 換天 + 捲回頂（新 day 從頭看）；先前 `scrollToDay` 在單日模式失效（該 day header 換天當下尚未 render 進 DOM）。
+  - **移除 scroll-spy effect**（scroll → `computeActiveDayIndex` 改 currentDayNum + hash）：單日無跨天捲動可追蹤；且它在「預設 render day1」時會強制 `switchDay(1)`，蓋掉 `#dayN` / `?focusDay` deep-link 的選天（實測 bug）。連帶清 `findScrollContainer` / `scrollDayRef` / `computeActiveDayIndex` / `getStableViewportH` 死碼。
+  - 新增 `trip-page-one-day-view` source-lock（4）。
+- 驗證：tsc ✓ · 完整 unit **3768 tests 全綠** · 真瀏覽器桌機(1512)+手機(402)：只 render 單日、DAY tab 切 DAY3/4 換天正確 + 捲回頂、`?focus=441&focusDay=4` 返回落 DAY 04、飯店床 icon + 跳號、Apple Music track row。
+
+## [2.55.99] - 2026-07-18
+
+### Changed
+- **rev2 停留卡 Apple Music track row（對齊 owner 簽核 mockup Section 02，`docs/artifacts/2026-07-17-v3-desktop-prototype.html`）**：把停留卡的動作從「展開明細一排 icon 工具列」收進 row 上單顆 **⋯ context menu**（Apple 列表語彙：動作進 ⋯，不在列上排 icon）。⋯ 用**原生 Popover API**（top-layer 自動逃離 `.tp-rail-content` 的 overflow:hidden、light-dismiss、鍵盤 ↑↓/Home/End、`aria-haspopup`/`aria-expanded`）；menu 分組（在地圖開啟｜編輯備註/換景點/編輯景點｜重新排序/複製/移到｜刪除紅字末組）。展開明細只留資訊面（景點說明/備註 inline/備選景點），移除 `.tp-rail-actions` 工具列。
+- **排序模式**：⋯「重新排序」→ `.tp-rail-body[data-sort-mode]` 顯所有列 grip、可拖（dnd-kit，drag 由 sortMode gate）+ 底部 sticky「完成排序」bar；resting 列不放常駐 grip（拖拉排序在 ⋯ 內）。
+- **卡牌字級對齊 mockup**：標題 `.tp-rail-name` → `--font-size-headline`（17px 桌機 / callout 16px 手機）、副標 `.tp-rail-sub` → `--font-size-subheadline`（15px）。先前 15/11px 太小是「不像 Apple」主因。
+- **F1 手機停留卡崩版修復**：手機 `@media(≤760px)` 的 `.tp-rail-item`/`.tp-rail-head` grid 殘留 v2.30.12 舊 5-col（多一個 36px icon 欄，v2.55.90「去 icon tile」只改桌機漏改手機）→ head 的 body 掉進 36px 窄軌、caret 吃 1fr → 每張停留卡內容崩成 36px、名稱截斷、meta 一字一行垂直堆疊。改用 auto-placement 統一模板（resting `24px 1fr` node|body、排序模式 `24px 24px 1fr` grip|node|body），content 36→239px、卡高 178→93px。
+- **F9 桌機堆疊 L2/L3 header**：桌機第一層操作面板（從 timeline / ⋯ 進，L2 modal）只右上「✕」關閉；從另一操作 push 進來（如 編輯景點→變更景點，L3+）才左上「‹」回前頁 + 右上「✕」（對齊 mockup `layer.l2/l3`）。操作是 route-swap，靠 `navigate state.opStacked` 判層；`OperationShell showBack = !inStack || location.state.opStacked`。
+- DESIGN.md 同步 Stop Card（Apple Music track row + ⋯ menu + 排序模式）+ Operation stacking（L2/L3）段。
+- 鎖測更新：`timeline-rail-toolbar-pencil`（toolbar→⋯ menu + aria）、`operation-shell`（L2 ✕-only / L3 ‹+✕）、`edit-entry-page`（change-poi opStacked state）、e2e Flow 7/8（開 ⋯ menu 點動作）。tsc ✓ · **433 檔 3764 test 全綠** · e2e Flow 7/8 chromium+webkit ✓ · eslint（react-hooks）✓ · code review（correctness/a11y）+ security audit（security-clean）· 真瀏覽器桌機(1512)+手機(402)：⋯ menu 開啟/逃 overflow/8 項/排序模式/L2-L3/字級全驗，前後對比擷圖存證。
+
+## [2.55.98] - 2026-07-18
+
+### Changed
+- **手機底部 nav → 浮動玻璃膠囊（非滿版 bar）**（owner「手機還是舊版 tab 不是新版 glass」）：`.tp-global-bottom-nav` 由滿版 sticky grid bar 改 **iOS 26 Apple Music `.ph-tabs` 浮動玻璃膠囊** — 桌機+手機共用同一玻璃膠囊（圓角 pill + `blur(20px) saturate(180%)` + rim + box-shadow），手機 fixed 置中浮於底部（`bottom:12+safe`）、不滿版（左右露出內容）。tab 改 column 窄形（62×46，label 10px=`--font-size-eyebrow`）、active = accent 實心 pill（去舊 2px top-indicator）；桌機 @≥1024 回 row layout。定位由 `AppShell .app-shell-bottom-nav`（base 置中浮動、@≥1024 置中中欄+右欄）負責。
+- **操作頁手機 drill-down 隱藏底部 nav**：`OperationShell` 手機整頁不再 render `GlobalBottomNav`（比照 mockup `.dd-top` 全頁下鑽 + iOS pushed-detail 隱藏 tab bar），避免浮動膠囊壓在操作「完成」bottom bar 上。`AppShell` 加 `data-has-bottom-nav`，mobile/desktop main 的 nav padding-bottom 只在有 nav 時保留（操作頁 bottom bar 貼底、無多餘間距）。
+- 鎖測：`global-bottom-nav-4tab`（grid→玻璃膠囊 pill+shadow、active pill 非 top-indicator、min-height 46）、`mockup-typography`（label 10px→`--font-size-eyebrow`）、`app-shell-snapshot`（+`data-has-bottom-nav`）。tsc ✓ · **433 檔 3760 test 全綠**。實機 QA（localhost 灌 prod 資料，402 手機 / 1320 桌機、淺深）：手機浮動玻璃膠囊 + 帳號圓圈 R + 操作 drill-down 無 nav（完成貼底）；桌機膠囊置中 x=768 + 6 條堆疊中欄詳情保留；console 無 app error；擷圖存證。
+
+## [2.55.97] - 2026-07-18
+
+### Changed
+- **rev2 手機版做到 mockup + 桌機底部 nav 置中修正**（owner「手機版還是舊版本 和 mockup 不同」+「功能 tab 要在右邊中間欄範圍內置中」）：
+  - **底部 nav 5-tab → 4-tab**（聊天/行程/地圖/收藏）：帳號/登入移出 tab slot → **手機統一 header 右上帳號圓圈**（`AccountCircle`，首字母 → `/account`；匿名 → `/login`），桌機維持 sidebar 左下 chip。對齊 mockup「4 格：帳號移到 titlebar 右上」。grid `repeat(5,1fr)`→`repeat(4,1fr)`。
+  - **`AccountCircle`**（新元件，連 `useCurrentUser`）：30px accent 圓圈（mockup `.ph-avatar`）；桌機 CSS 隱藏（帳號在 sidebar chip）。掛進 4 根頁 header：ChatPage / TripsListPage(我的行程) / PoiFavoritesPage 的 `<TitleBar account>`；GlobalMapPage 全屏無 titlebar → 浮動右上。
+  - **手機操作頁 drill-down 共用 `‹`/`✕` header**：`OperationShell` 兩形態（桌機右欄 panel + 手機全頁）**統一用 `StackPanelHeader`**（`.dd-top` = `‹` 前一頁 / `✕` 整個關閉，iOS Apple One），取代手機原本 TitleBar 單 `‹`。`TripStackLayout` 手機支也注入 `closeStack` 讓 `✕` 可用。完成鈕一律 children bottom-bar。
+  - **桌機底部玻璃膠囊 nav 置中**：`(100vw+sidebar)/4`（偏 sidebar+中欄）→ **`(100vw+sidebar)/2`**（中欄+右欄內容區正中，實測 x=768）。
+  - 鎖測：`global-bottom-nav-5tab`→`global-bottom-nav-4tab`（4 tab + 無帳號/登入 tab + grid 4）；`operation-shell`/`edit-entry`/`entry-action`/`mockup-typography` 由 TitleBar chrome → StackPanelHeader（back label 返回上一層、confirm 走 bottom bar）。tsc ✓ · **432 檔 3755 test 全綠**。實機 QA（dev 402 手機 / 1320 桌機，mock auth）：手機 4-tab + 帳號圓圈 R + 操作 `‹`/`✕` drill-down；桌機 nav 置中 + 帳號圓圈桌機隱藏 + sidebar chip 保留、擷圖存證。
+- **DESIGN.md 同步手機 IA**（4-tab + header 帳號圓圈 + 操作 drill-down 共用 header）。
+
+## [2.55.96] - 2026-07-18
+
+### Added
+- **V3 rev2 右欄堆疊面板：6 條操作流程全接**（owner「一次到位：6 條全接」）— #10 架構級收尾。桌機（≥1024）操作頁（加景點 / 新增 / 複製移動 / 換景點 / 編輯景點 / 編輯行程）由「navigate 走整頁、炸掉整個 shell」改為 **右欄 bare panel 疊在中欄行程詳情上**（`‹` 前一頁 / `✕` 整個關閉），中欄詳情 context 全程保留；手機維持整頁 drill-down（**零行為變更**）。
+  - **`SheetStackContext`**（`inStack` / `closeStack`）+ **`TripStackLayout`**（pathless layout route，掛 `TripLayout` 下、包住 6 條操作路由）：桌機 render 三欄 host（sidebar｜`<TripPage noShell>` 中欄詳情｜右欄 sheet = `<Outlet>`）；操作間切換（加景點→換景點）host 不 unmount → 中欄保留、只右欄換。手機 passthrough `<Outlet>`（`useMediaQuery('(min-width:1024px)')` 判定）。
+  - **`OperationShell`** 雙形態外殼取代各頁 hardcode 的 `<AppShell>+<TitleBar>`：整頁模式 render `AppShell+TitleBar`（既有行為）、stack 模式 render `StackPanelHeader+內容`（bare panel、由 host 保留中欄）。children / shellClassName / scopedStyles 兩形態共用 → 每頁轉換僅換外殼、1000+ 行內部邏輯零改動。
+  - **`StackPanelHeader`** 加 sticky top glass（比照 TitleBar），`title` 放寬 `ReactNode`。
+  - **`.tp-page-bottom-bar`** 在 `.app-shell-sheet` 內由整頁 `position:fixed(left:240)` → `sticky` → 收進 panel 寬度（否則橫跨中欄）。
+  - route restructure：6 條操作路由包進 `<Route element={<TripStackLayout>}>`（**URL 不變、deep-link 不破**）。
+  - 鎖測：新增 `operation-shell` 契約測（stack / 整頁雙形態 + `‹`/`✕` callback）；`change-poi-titlebar-action-removed` / `mockup-typography-compliance` source-lock 由 `<TitleBar>` → `<OperationShell>`。tsc ✓ · **431 檔 3749 test 全綠**。實機 QA（dev 1320，mock auth lean.lean@gmail.com）6 條流程桌機皆右欄堆疊（中欄詳情保留、`StackPanelHeader` `‹`/`✕`、bottom bar 收進 panel）、手機維持整頁；擷圖存證。
+  - **/review 三審修**（code-reviewer APPROVE + adversarial + test-engineer）：修 (1) 桌機 stack 模式中欄 `<TripPage>` 與右欄操作頁各掛一個 `ToastContainer` → 每則 toast 畫兩次 + `aria-live` 重複朗讀 → `ToastContainer` 加 module-level 單例守衛（只 primary render，卸載接手）；(2) a11y — 面板開啟時焦點移進面板容器（`tabIndex=-1` + 不搶 child autofocus）、`StackPanelHeader` title 補 `role=heading aria-level=2`（stack 模式原為無語意 `<span>`）、sticky header z-index 3→10 給子元素 headroom；(3) `closeStack` 改 `replace:true`（✕ 關閉後瀏覽器上一頁不再叫回面板）。新增 `trip-stack-layout` 測（桌機/手機 fork + closeStack + invalid guard + 巢狀路由解析）、`operation-shell` 補 actions 抑制/title/focus 斷言、axe 補 `OperationShell`+`StackPanelHeader`、`change-poi` regex 硬化。e2e：桌機（chromium 1280）add-stop 改 stack panel → 3 個鎖 titlebar-confirm/返回前頁 的 e2e 改抓 bottom bar `add-stop-confirm` + `‹`「返回上一層」（`.or()` 相容手機整頁），本地 chromium 實跑 3/3 綠。
+  - **已知後續 polish（不影響功能，已於 code 註記接受）**：進操作的一次性 shell swap（`/trips?selected=` → `/trip/:id/*`，中欄 `TripPage` re-mount）非 seamless；跨 1024px 邊界（旋轉/縮放）會 remount 操作頁 → 未存檔表單 state 丟（多數頁 autosave 兜底）；真·多層 z-stack 深度卡目前為單面板 + `‹`/`✕` 皆回詳情（未接 `navigate(-1)` 多層 pop，避 external-referrer footgun）。
+- **rev2 icon 長尾 → Cupertino SF outline** — 44 個 chrome/action icon（plus/trash/check/pencil/search/chevrons/gear/send/copy/x-circle/download/upload/filter/target/swap/layers/maximize/minimize/info/warning…）由 Material 實心改 SF thin outline，對齊 Flutter CupertinoIcons（跨 web+mobile 一致）；content/data glyph（天氣/交通/POI 類別/食宿/自然）刻意留實心（地圖 marker / 分類徽章小尺寸可讀性佳、Flutter 同樣 filled）。自動從 `ICONS` map 生成 gallery，light+dark 雙主題逐一目視 44 個 outline 無破圖、stroke 走 `currentColor` 主題自適應。
+
+## [2.55.95] - 2026-07-18
+
+### Changed
+- **V3 rev2 桌機 shell 核心：sidebar → 我的行程清單 + primary nav → 底部浮動玻璃膠囊** — owner「rev2 shell 要做」。承 v2.55.94 三欄 grid：
+  - **`DesktopSidebar`**：primary nav（聊天/行程/地圖/收藏）移除 → **「我的行程」清單**（`useMyTrips` 注入 `/api/trips?all=1`，module-cached + `tp-trips-updated` 失效；active trip 由 URL 推導 `/trips?selected=` 或 `/trip/:id`）+ loading skeleton + 空態；帳號 chip 維持左下。
+  - **`GlobalBottomNav` @≥1024**：由 `display:none` → **底部浮動玻璃膠囊**（`AppShell .app-shell-bottom-nav` fixed `left:calc((100vw+sidebar)/4)` 置中 sidebar+中欄、不隨捲動隱藏；row tabs + glass pill + 去 mobile top-indicator + 隱藏帳號 tab）。primary nav 由 sidebar 移膠囊，桌機不再重複。
+  - 鎖測改版：`desktop-sidebar(.test/-visual/-connected)` nav → trip-list；`explore-titlebar`/`audit` source-lock 由 DesktopSidebar → GlobalBottomNav；`developer-app-new-page` mock `useMyTrips`。tsc ✓ · 429 檔 3743 test 全綠。實機 QA（dev 1440，mock auth lean.lean@gmail.com）淺/深：sidebar 6 trips 清單 + active highlight、底部膠囊 4 tab、帳號 chip、無重複 nav。
+- **DESIGN.md 同步 rev2 shell IA**（Unified App Shell / Responsive Model / Desktop Sidebar 段落）。
+- **mockup**：桌機三欄 day 膠囊整合（原型）+ 手機全頁 drill-down frame（共用 `‹` 前一頁 / `✕` 整個關閉 header，owner Image #4/#5）。
+
+## [2.55.94] - 2026-07-17
+
+### Changed
+- **V3 rev2 桌機三欄 grid → `216px 1fr 1fr`** — owner 2026-07-17「rev2 shell 要做」第一步。`--grid-3pane-desktop` 由 `240px 1fr min(780px, 40vw)` → **`216px 1fr 1fr`**（sidebar 240→216、右欄地圖由 capped 40vw/780 → 與中欄行程等寬 1fr，對齊 rev2 mockup 三欄等比）；`--grid-2pane-desktop`/`--sidebar-width-desktop` 同步 216。純 token；AppShell 結構/slot/scroll/testid 不變。實機 QA（dev 1440）3-pane 實測 `216px 606.5px 606.5px`、day 膠囊 + route rail 中欄渲染正常。`tokens-grid-layout` 鎖測同步更新。429 檔 3767 unit ✓。**rev2 shell 後續分批**：sidebar 主 nav → 我的行程清單、primary nav 移底部浮動玻璃膠囊 tab（兩者互鎖須同 PR）、右欄堆疊面板、DESIGN.md 同步。
+
 ## [2.55.93] - 2026-07-17
 
 ### Changed

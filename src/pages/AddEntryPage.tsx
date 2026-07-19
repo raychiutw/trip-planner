@@ -15,14 +15,10 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import AppShell from '../components/shell/AppShell';
-import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import TitleBar from '../components/shell/TitleBar';
+import OperationShell from '../components/shell/OperationShell';
 import Icon from '../components/shared/Icon';
 import { TripSelect } from '../components/TripSelect';
 import { useNavigateBack } from '../hooks/useNavigateBack';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { apiFetch } from '../lib/apiClient';
 
@@ -166,7 +162,6 @@ function formatDayLabel(day: DayApiRow): string {
 
 export default function AddEntryPage() {
   const auth = useRequireAuth();
-  const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -235,18 +230,11 @@ export default function AddEntryPage() {
   if (!auth.user) return null;
   if (!tripId) {
     return (
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-add-entry-shell">
-            <TitleBar title="新增景點" back={handleBack} />
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
-              無效的行程
-            </div>
-          </div>
-        }
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      <OperationShell shellClassName="tp-add-entry-shell" title="新增景點" back={handleBack}>
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
+          無效的行程
+        </div>
+      </OperationShell>
     );
   }
 
@@ -254,13 +242,13 @@ export default function AddEntryPage() {
   const titleBar = tripLabel ? `新增景點 · ${tripLabel}` : '新增景點';
 
   return (
-    <AppShell
-      sidebar={<DesktopSidebarConnected />}
-      main={
-        <div className="tp-add-entry-shell" data-testid="add-entry-page">
-          <style>{SCOPED_STYLES}</style>
-          <TitleBar title={titleBar} back={handleBack} backLabel="返回前頁" />
-
+    <OperationShell
+      shellClassName="tp-add-entry-shell"
+      testId="add-entry-page"
+      title={titleBar}
+      back={handleBack}
+      scopedStyles={SCOPED_STYLES}
+    >
           <main className="tp-add-entry-body">
             {/* Day dropdown — fallback to first day if URL missing ?day */}
             <div className="tp-add-entry-daypicker">
@@ -347,9 +335,6 @@ export default function AddEntryPage() {
               </div>
             </div>
           </main>
-        </div>
-      }
-      bottomNav={<GlobalBottomNav authed={user !== null} />}
-    />
+    </OperationShell>
   );
 }

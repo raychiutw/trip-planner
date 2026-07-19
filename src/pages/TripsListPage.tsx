@@ -35,6 +35,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import AccountCircle from '../components/shell/AccountCircle';
 import TripCardMenu from '../components/trip/TripCardMenu';
 import ShareLinkModal from '../components/share/ShareLinkModal';
 // v2.18.0:CollabSheet → CollabPage(獨立路由),InfoSheet wrapper 移除
@@ -251,7 +252,11 @@ const SCOPED_STYLES = `
  * user 滑動切換。Inner-flex 不必 flex:1 等寬,讓內容自然寬度。 */
 .tp-trips-tabs {
   display: inline-flex; align-items: center;
-  background: var(--color-secondary);
+  /* §2（owner「功能 tab 一片白色」）：原 --color-secondary 容器與 --color-background
+   * active thumb 幾乎同色（#FAF4EA vs #FFFBF5），只靠弱 shadow-sm 分隔 → thumb 讀不出、
+   * 整條像一片白色塊。改用略深暖底 track + inset 邊界界定，讓白 thumb 明確浮起。 */
+  background: var(--color-hover);
+  box-shadow: inset 0 0 0 1px var(--color-border);
   border-radius: var(--radius-full);
   padding: 4px;
   max-width: 100%;
@@ -273,7 +278,8 @@ const SCOPED_STYLES = `
 .tp-trips-tab.is-active {
   background: var(--color-background);
   color: var(--color-accent);
-  box-shadow: var(--shadow-sm);
+  /* 明顯浮起的 thumb 陰影（取代弱 shadow-sm）— 在暖 track 上清楚可辨。 */
+  box-shadow: 0 1px 3px rgba(42, 31, 24, 0.16), 0 1px 1px rgba(42, 31, 24, 0.06);
 }
 .tp-trips-tab-count {
   font-size: var(--font-size-caption2);
@@ -311,12 +317,20 @@ body.dark .tp-trips-sort {
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
-  padding: 4px 8px 4px 10px;
   min-height: var(--spacing-tap-min);
   transition: width 160ms ease;
-  width: 36px; overflow: hidden;
+  overflow: hidden;
+  /* rev2 D-review #2：collapsed = 44×44 圓、icon 置中。原 36px 寬 + padding 10+8=18px
+     內容區塞不下 24px toggle → overflow:hidden 把 icon 裁掉、偏左上（破版）。 */
+  width: var(--spacing-tap-min);
+  justify-content: center;
+  padding: 0;
 }
-.tp-trips-search.is-open { width: 220px; }
+.tp-trips-search.is-open {
+  width: 220px;
+  justify-content: flex-start;
+  padding: 4px 8px 4px 10px;
+}
 .tp-trips-search input {
   flex: 1; min-width: 0;
   border: 0; background: transparent;
@@ -770,7 +784,7 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthChe
         aria-expanded={open}
         data-testid="trips-embedded-menu-trigger"
       >
-        <Icon name="more-vert" />
+        <Icon name="ellipsis" />
       </button>
       {dropdown}
     </>
@@ -1030,6 +1044,7 @@ export default function TripsListPage() {
       <div className="tp-trips-shell" data-testid="trips-list-page">
         <TitleBar
           title="我的行程"
+          account={<AccountCircle />}
           actions={
             <>
               <ImportTripButton />
@@ -1282,16 +1297,17 @@ export default function TripsListPage() {
             {/* v2.32.0：「新增景點」入口改 navigate /add-entry（EditEntryPage 形狀 +
                 day 下拉），取代 v2.31.99 直接進 /add-stop。/add-stop 仍是 backward-
                 compat 直連 URL（bulk add 用），但新 entry-creation 主流程走 /add-entry。 */}
+            {/* §9.5：trip detail 在窄中欄，「新增景點」+ 切換 + ⋯ 三控會擠壓長標題。
+                改 icon-only（aria-label/title 保留語意），讓標題有空間可讀。 */}
             <button
               type="button"
-              className="tp-titlebar-action"
+              className="tp-titlebar-action tp-titlebar-action--icon-only"
               onClick={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/add-entry`)}
               aria-label="新增景點"
               title="新增景點"
               data-testid="trip-add-stop-trigger"
             >
               <Icon name="plus" />
-              <span className="tp-titlebar-action-label">新增景點</span>
             </button>
             {/* v2.31.89：切換行程改 dropdown picker（對齊 ChatPage TitleBar trip picker） — swap-horiz + chevron ▾，click 開 dropdown 列 trips */}
             {visibleTrips.length > 0 && (

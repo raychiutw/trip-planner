@@ -87,16 +87,19 @@ export const APP_SHELL_STYLES = `
 /* PR-VV 2026-04-27：bottom-nav 改 position: fixed overlay（從 grid row）。
  * 原 grid row 結構無法 transform-hide（row 仍佔空間），改 fixed 才能 slide
  * down 完全消失。Main 加 padding-bottom 對應 nav 高度避免 content 被遮。 */
+/* rev2「手機也做」：底部 nav 是**浮動玻璃膠囊**（非滿版 bar）→ fixed 置中浮在底部
+ * 上方（手機 bottom:12+safe；桌機 @≥1024 覆蓋為置中中欄+右欄、bottom:18）。膠囊視覺
+ * 在 GlobalBottomNav。捲動隱藏往下滑出。 */
 .app-shell-bottom-nav {
   position: fixed;
-  inset-block-end: 0;
-  inset-inline: 0;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   z-index: var(--z-sticky-nav);
-  transform: translateY(0);
+  transform: translateX(-50%);
   transition: transform var(--transition-duration-normal, 250ms) var(--transition-timing-function-apple, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 .app-shell-bottom-nav[data-hidden="true"] {
-  transform: translateY(100%);
+  transform: translateX(-50%) translateY(180%);
 }
 
 /* Desktop ≥1024px：grid 兩 / 三欄 */
@@ -109,6 +112,9 @@ export const APP_SHELL_STYLES = `
     grid-template-columns: var(--grid-2pane-desktop);
     grid-template-rows: 1fr;
   }
+  /* rev2 §10.1（owner 2026-07-19）：桌機 primary nav 改回 macOS sidebar（DesktopSidebar
+   * 頂部 4-tab）→ 桌機**隱藏**底部浮動膠囊。故無需膠囊置中，也無需為膠囊在 main 留
+   * padding-bottom。手機（<1024）維持底部膠囊常駐（見下方 max-width:1023px 段）。 */
   .app-shell-bottom-nav {
     display: none;
   }
@@ -128,9 +134,9 @@ export const APP_SHELL_STYLES = `
   .app-shell-sheet {
     display: none;
   }
-  .app-shell-main {
-    /* PR-VV：bottom-nav 是 fixed overlay 蓋在 main 底部，加 padding-bottom
-     * 對應 --nav-height-mobile 避免 content 被遮（reserve space for nav）。 */
+  /* bottom-nav 是 fixed overlay 蓋在 main 底部 → reserve padding-bottom。只在有 nav
+   * 時保留（操作頁 drill-down 不顯 nav → 不留、bottom bar 貼底）。 */
+  .app-shell[data-has-bottom-nav="true"] .app-shell-main {
     padding-bottom: var(--nav-height-mobile, 88px);
   }
 }
@@ -152,6 +158,25 @@ body.print-mode .app-shell-main {
   .app-shell { grid-template-columns: 1fr; grid-template-rows: 1fr; }
   .app-shell-sidebar, .app-shell-sheet, .app-shell-bottom-nav { display: none; }
   .app-shell-main { padding-bottom: 0; }
+}
+
+/* rev2 owner 2026-07-18「6 條全接」：操作頁在右欄 sheet 當 bare panel 時，其
+ * .tp-page-bottom-bar 預設是整頁 position:fixed(left:240 → right)，會橫跨中欄。
+ * 在 sheet 內改 sticky → 收進 panel 寬度、貼 panel 底（panel 本身即 scroll 容器）。 */
+@media (min-width: 1024px) {
+  .app-shell-sheet .tp-page-bottom-bar {
+    position: sticky;
+    left: auto;
+    right: auto;
+  }
+}
+
+/* rev2：操作面板容器 tabIndex=-1 是「開啟時把焦點移進面板」的 a11y 目標（程式聚焦、
+ * 非使用者聚焦的控制項），比照 modal dialog 容器不顯焦點外框；否則整個右欄邊緣會描
+ * accent outline。tabIndex=-1 元素本就不可鍵盤聚焦，抑制其 outline 對鍵盤使用者無損。 */
+.app-shell-sheet > [tabindex="-1"]:focus,
+.app-shell-sheet > [tabindex="-1"]:focus-visible {
+  outline: none;
 }
 `;
 
@@ -226,7 +251,7 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
   return (
     <>
       <style>{APP_SHELL_STYLES}</style>
-      <div className="app-shell" data-layout={layout} data-testid="app-shell">
+      <div className="app-shell" data-layout={layout} data-has-bottom-nav={bottomNav ? 'true' : 'false'} data-testid="app-shell">
         <aside className="app-shell-sidebar" data-testid="app-shell-sidebar">
           {sidebar}
         </aside>

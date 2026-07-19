@@ -35,18 +35,24 @@ async function setup(page) {
   }, TRIP_ID);
 }
 
+// rev2 F5：拖拉排序改「sort-mode gated」— resting 列不放常駐 grip（Apple 慣例），
+// 由 ⋯ context menu「重新排序」進入排序模式後所有列才顯 grip。grip 相關驗證先進此模式。
+async function enterSortMode(page) {
+  await page.getByRole('button', { name: /更多動作/ }).first().click();
+  await page.getByRole('menuitem', { name: '重新排序' }).click();
+}
+
 test.beforeEach(async ({ page }) => {
   await setup(page);
 });
 
 test.describe('Drag flows — Section 8.1 reorder & cross-day', () => {
-  test('Itinerary timeline grip handle visible per row + a11y label', async ({ page }) => {
+  test('Itinerary timeline grip handle visible per row + a11y label（排序模式）', async ({ page }) => {
     await page.goto(`/trips?selected=${TRIP_ID}`);
     await expect(page.getByRole('heading', { name: /2026 沖繩自駕五日遊/ })).toBeVisible();
 
-    // Auto-wait grip rendering — TimelineRail 在 DaySection 內 lazy hydrate，
-    // CI runner 比 local 慢一拍時 sync count() 會拿到 0。先 auto-wait first
-    // visible，再數 count（同 layout-quality.spec.js pattern）。
+    // rev2 F5：grip 只在排序模式顯示（⋯ menu「重新排序」進入）。
+    await enterSortMode(page);
     const grips = page.getByRole('button', { name: /拖拉排序/ });
     await expect(grips.first()).toBeVisible();
     const count = await grips.count();
@@ -59,12 +65,10 @@ test.describe('Drag flows — Section 8.1 reorder & cross-day', () => {
     await page.goto(`/trips?selected=${TRIP_ID}`);
     await expect(page.getByRole('heading', { name: /2026 沖繩自駕五日遊/ })).toBeVisible();
 
-    // 展開第一個 entry → 顯示 ⎘ / ⇅ icons (cross-day functionally available
-    // via popover；drag-cross-day 為 V2 feature)
-    const expandBtn = page.getByRole('button', { name: /展開景點/ }).first();
-    await expandBtn.click();
-    // ⎘ copy-open and ⇅ move-open buttons should appear (multi-day fixture)
-    const moveBtn = page.getByRole('button', { name: '移到其他天' });
+    // rev2 F4：動作收進 ⋯ context menu — 開 menu 後「移到其他天」即現（cross-day functionally
+    // available via menu；drag-cross-day 為 V2 feature）。
+    await page.getByRole('button', { name: /更多動作/ }).first().click();
+    const moveBtn = page.getByRole('menuitem', { name: '移到其他天' });
     await expect(moveBtn).toBeVisible();
   });
 });
@@ -75,6 +79,8 @@ test.describe('Drag flows — Section 8.2 mobile webkit', () => {
     await page.goto(`/trips?selected=${TRIP_ID}`);
     await expect(page.getByRole('heading', { name: /2026 沖繩自駕五日遊/ })).toBeVisible();
 
+    // rev2 F5：grip 只在排序模式顯示（⋯ menu「重新排序」進入）。
+    await enterSortMode(page);
     const firstGrip = page.getByRole('button', { name: /拖拉排序/ }).first();
     await expect(firstGrip).toBeVisible();
     // 2026-05-02 v2.18.3：grip 從 32x32 改 24x24 對齊 mockup S12 Variant A
@@ -115,6 +121,8 @@ test.describe('Drag flows — Section 8.3 keyboard a11y', () => {
     await page.goto(`/trips?selected=${TRIP_ID}`);
     await expect(page.getByRole('heading', { name: /2026 沖繩自駕五日遊/ })).toBeVisible();
 
+    // rev2 F5：grip 只在排序模式顯示（⋯ menu「重新排序」進入）。
+    await enterSortMode(page);
     const firstGrip = page.getByRole('button', { name: /拖拉排序/ }).first();
     // Mobile-safari off-screen focus 不可靠 — 先 scroll into view 再 focus
     await firstGrip.evaluate((el) => el.scrollIntoView({ block: 'center' }));

@@ -67,6 +67,9 @@ import { lazyWithRetry } from '../lib/lazyWithRetry';
 // backward-compat：/trip/:id/stop/:eid → /trips?selected=:id&focus=:eid，
 // 供舊分享 link 仍能 land）。MapPage 仍可走 /trip/:id/stop/:eid/map。
 const TripLayout = lazyWithRetry(() => import('../pages/TripLayout'));
+// rev2 owner 2026-07-18「6 條全接」：桌機右欄操作堆疊 host（pathless layout route，
+// 包住 6 條操作路由；桌機 3 欄詳情+右欄 panel、手機整頁）。
+const TripStackLayout = lazyWithRetry(() => import('../pages/TripStackLayout'));
 const MapPage = lazyWithRetry(() => import('../pages/MapPage'));
 const ChatPage = lazyWithRetry(() => import('../pages/ChatPage'));
 const GlobalMapPage = lazyWithRetry(() => import('../pages/GlobalMapPage'));
@@ -231,19 +234,24 @@ if (el) {
                 <Route path="notes" element={<TripNotesPage />} />
                 {/* v2.36.0 列印文件 — 資料驅動全展開文件（取代 usePrintMode 收合列印） */}
                 <Route path="print" element={<TripPrintPage />} />
-                {/* 2026-05-03 modal-to-fullpage migration: EditTripModal → /trip/:id/edit */}
-                <Route path="edit" element={<EditTripPage />} />
-                {/* 2026-05-03 modal-to-fullpage migration: EntryActionPopover → /stop/:eid/(copy|move) */}
-                <Route path="stop/:entryId/copy" element={<EntryActionPage action="copy" />} />
-                <Route path="stop/:entryId/move" element={<EntryActionPage action="move" />} />
-                {/* v2.23.8 變更 POI — :tripId + :entryId from parent route */}
-                <Route path="stop/:entryId/change-poi" element={<ChangePoiPage />} />
-                {/* v2.26.0 編輯景點（起訖時間 + 從上一站移動方式 + 備註） */}
-                <Route path="stop/:entryId/edit" element={<EditEntryPage />} />
-                {/* 2026-05-03 modal-to-fullpage migration: AddStopModal → /add-stop?day=N */}
-                <Route path="add-stop" element={<AddStopPage />} />
-                {/* v2.32.0: 新增景點 wizard — EditEntryPage 形狀 + day 下拉 + picker buttons → ChangePoiPage mode=new */}
-                <Route path="add-entry" element={<AddEntryPage />} />
+                {/* rev2 owner 2026-07-18「6 條全接」：6 條操作路由包進 TripStackLayout。
+                  * 桌機 → 右欄 bare panel 疊在中欄行程詳情上（‹ 前一頁 / ✕ 整個關閉）；
+                  * 手機 → 各頁整頁（OperationShell inStack=false，既有行為）。 */}
+                <Route element={<TripStackLayout />}>
+                  {/* 2026-05-03 modal-to-fullpage migration: EditTripModal → /trip/:id/edit */}
+                  <Route path="edit" element={<EditTripPage />} />
+                  {/* 2026-05-03 modal-to-fullpage migration: EntryActionPopover → /stop/:eid/(copy|move) */}
+                  <Route path="stop/:entryId/copy" element={<EntryActionPage action="copy" />} />
+                  <Route path="stop/:entryId/move" element={<EntryActionPage action="move" />} />
+                  {/* v2.23.8 變更 POI — :tripId + :entryId from parent route */}
+                  <Route path="stop/:entryId/change-poi" element={<ChangePoiPage />} />
+                  {/* v2.26.0 編輯景點（起訖時間 + 從上一站移動方式 + 備註） */}
+                  <Route path="stop/:entryId/edit" element={<EditEntryPage />} />
+                  {/* 2026-05-03 modal-to-fullpage migration: AddStopModal → /add-stop?day=N */}
+                  <Route path="add-stop" element={<AddStopPage />} />
+                  {/* v2.32.0: 新增景點 wizard — EditEntryPage 形狀 + day 下拉 + picker buttons → ChangePoiPage mode=new */}
+                  <Route path="add-entry" element={<AddEntryPage />} />
+                </Route>
                 {/* v2.31.94: mobile-only fullpage 自訂景點（IME occlusion 避讓）— desktop redirect 回 add-stop?tab=custom */}
                 <Route
                   path="add-custom-stop"

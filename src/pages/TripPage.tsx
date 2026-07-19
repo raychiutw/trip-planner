@@ -24,7 +24,7 @@ import { TRIP_TIMEZONE, getLocalToday } from '../lib/constants';
 import { downloadTripJson } from '../lib/tripExport';
 import { renderTripPrintPdf } from '../components/print/renderTripPrintPdf';
 import { showToast } from '../lib/toastBus';
-import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '../lib/scrollSpy';
+import { computeInitialHash } from '../lib/scrollSpy';
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
 import { TripIdContext } from '../contexts/TripIdContext';
 import { TripDaysContext } from '../contexts/TripDaysContext';
@@ -144,24 +144,6 @@ function getQueryTrip(): string | null {
 
 /* ===== Scroll helpers ===== */
 
-/**
- * Find the actual scrolling ancestor of `el`. AppShell uses a constrained
- * `.app-shell-main { overflow-y: auto }` as the scroll container, so the
- * window doesn't scroll. Fall back to document if no ancestor scrolls.
- */
-function findScrollContainer(el: HTMLElement): HTMLElement | Window {
-  let parent: HTMLElement | null = el.parentElement;
-  while (parent) {
-    const cs = getComputedStyle(parent);
-    const overflowY = cs.overflowY;
-    if ((overflowY === 'auto' || overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
-      return parent;
-    }
-    parent = parent.parentElement;
-  }
-  return window;
-}
-
 function scrollToDay(dayNum: number): void {
   const header = document.getElementById('day' + dayNum);
   if (!header) return;
@@ -223,7 +205,6 @@ function TripPageInner(
   // showNavTitle removed along with old sticky-nav inline title
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
-  const scrollDayRef = useRef(0);
 
   /* --- Scroll restore when returning from StopDetailPage --- */
   useScrollRestoreOnBack();
@@ -556,12 +537,14 @@ function TripPageInner(
     return match?.dayNum;
   }, [days, localToday]);
 
-  /* --- DayNav click: scroll to day section (#4) --- */
+  /* --- DayNav click: rev2 one-day-view — switchDay 換天（只 render 該 day）+ 捲回頂（新 day 從頭看）。
+   * 先前 scrollToDay(dayNum) 在單日模式失效（該 day header 換天當下尚未 render 進 DOM），改直接
+   * 把 scroll 容器捲回頂。 */
   const handleSwitchDay = useCallback(
     (dayNum: number) => {
       manualScrollTs.current = Date.now();
       switchDay(dayNum);
-      scrollToDay(dayNum);
+      document.querySelector<HTMLElement>('.app-shell-main')?.scrollTo({ top: 0, behavior: 'auto' });
       history.replaceState(null, '', '#day' + dayNum);
     },
     [switchDay],
@@ -687,52 +670,10 @@ function TripPageInner(
     return () => window.removeEventListener('resize', align);
   }, [loading]);
 
-  /* --- Scroll tracking: update active pill + hash (#6).
-   * AppShell makes `.app-shell-main` the scroll container (overflow-y: auto).
-   * Window doesn't scroll, so listening on window misses every scroll event.
-   * Attach the listener to the scroll container of any day header. */
-  useEffect(() => {
-    if (loading || dayNums.length === 0) return;
-    if (isPrintMode) return;
-
-    const firstHeader = document.getElementById('day' + dayNums[0]);
-    if (!firstHeader) return;
-    const scroller = findScrollContainer(firstHeader);
-
-    function onScroll() {
-      const nav = document.getElementById('stickyNav');
-      const navH = nav ? nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0) : 0;
-      const headerTops = dayNums.map((n) => {
-        const h = document.getElementById('day' + n);
-        return h ? h.getBoundingClientRect().top : null;
-      });
-      const current = computeActiveDayIndex(headerTops, navH, getStableViewportH());
-      if (current >= 0) {
-        const activeDayNum = dayNums[current] ?? -1;
-        if (activeDayNum >= 0 && activeDayNum !== scrollDayRef.current) {
-          scrollDayRef.current = activeDayNum;
-          switchDay(activeDayNum);
-        }
-        if (Date.now() - manualScrollTs.current > 600) {
-          const newHash = '#day' + activeDayNum;
-          if (window.location.hash !== newHash) {
-            history.replaceState(null, '', newHash);
-          }
-        }
-      }
-    }
-
-    let ticking = false;
-    function throttledScroll() {
-      if (!ticking) {
-        requestAnimationFrame(() => { onScroll(); ticking = false; });
-        ticking = true;
-      }
-    }
-
-    scroller.addEventListener('scroll', throttledScroll, { passive: true });
-    return () => scroller.removeEventListener('scroll', throttledScroll);
-  }, [loading, dayNums, switchDay, isPrintMode]);
+  /* --- rev2 one-day-view：移除 scroll-spy（scroll → 依 day header 位置改 currentDayNum + hash）。
+   * 只 render 當前 day → 無跨天捲動可追蹤；且 scroll-spy 在「預設 render day1」時會強制
+   * switchDay(1) + hash #day1，蓋掉 #dayN / ?focusDay deep-link 的選天。換天一律走
+   * handleSwitchDay（DAY tab）與 auto-locate effect（deep-link / today）。 */
 
   /* --- themeArt memo to avoid defeating DaySection memo with inline object --- */
   const themeArt = useMemo(() => ({ dark: isDark }), [isDark]);
@@ -854,20 +795,28 @@ function TripPageInner(
               onDragEnd={(e) => void handleCrossDayDragEnd(e)}
               onDragCancel={restoreDragScroll}
             >
-              {dayNums.map((dayNum) => (
-                <DaySection
-                  key={dayNum}
-                  dayNum={dayNum}
-                  day={allDays[dayNum]}
-                  daySummary={daySummaryMap.get(dayNum)}
-                  tripStart={tripStart}
-                  tripEnd={tripEnd}
-                  themeArt={themeArt}
-                  localToday={localToday}
-                  isActive={dayNum === currentDayNum}
-                  timezone={weatherTimezone}
-                />
-              ))}
+              {/* rev2 mockup：one-day-view — 只 render 當前 day（DAY tab switch 換天，非全日捲動）。
+                * 資料全載於 allDays cache，switchDay 只換指標故切換即時。currentDayNum 未定（0）時
+                * 落到首日；deep-link（?focus/#dayN/today）由 auto-locate effect 先 switchDay 選對天。 */}
+              {(() => {
+                const viewDayNum = currentDayNum > 0 ? currentDayNum : (dayNums[0] ?? 0);
+                const viewDay = viewDayNum > 0 ? allDays[viewDayNum] : undefined;
+                if (viewDayNum <= 0 || !viewDay) return null;
+                return (
+                  <DaySection
+                    key={viewDayNum}
+                    dayNum={viewDayNum}
+                    day={viewDay}
+                    daySummary={daySummaryMap.get(viewDayNum)}
+                    tripStart={tripStart}
+                    tripEnd={tripEnd}
+                    themeArt={themeArt}
+                    localToday={localToday}
+                    isActive
+                    timezone={weatherTimezone}
+                  />
+                );
+              })()}
             </DndContext>
             {/* Embedded mode (TripsListPage sheet) hides decorative footer art —
               * sheet is a narrow column, art would waste vertical space.

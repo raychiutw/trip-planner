@@ -100,4 +100,15 @@ describe('NewTripPage — wiring smoke (v2.33.48 round 7c)', () => {
     // NewTripPage 只建空 trip，不該帶 entry POI / version 欄位
     expect(SRC).not.toMatch(/entry_pois_version/);
   });
+
+  it('G-H3: dirty 表單攔截 — dirty 檢查 + handleBackGuarded 包 back/取消 + discard ConfirmModal + beforeunload', () => {
+    // 填了東西又按取消/返回 → 先確認再捨棄，避免丟輸入。
+    expect(SRC).toMatch(/const dirty =/);
+    expect(SRC).toMatch(/handleBackGuarded/);
+    // TitleBar back 與 bottom bar 取消都走 guarded handler，不直接 handleBack
+    expect(SRC).toMatch(/back=\{handleBackGuarded\}/);
+    expect(SRC).toMatch(/onClick=\{handleBackGuarded\}/);
+    expect(SRC).toMatch(/<ConfirmModal/);
+    expect(SRC).toMatch(/beforeunload/);
+  });
 });

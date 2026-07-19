@@ -81,7 +81,7 @@ describe('EntryActionPage — move/copy 車程重算 scope', () => {
     // 等 day 選項載入（entry 在 day 71 / dayNum 1，選 day 72 / dayNum 2）
     const day2 = await screen.findByTestId('entry-action-day-2');
     fireEvent.click(day2);
-    fireEvent.click(screen.getByTestId('entry-action-titlebar-confirm'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
 
     await waitFor(() => expect(recomputeMock).toHaveBeenCalledTimes(1));
     expect(recomputeMock).toHaveBeenCalledWith('t1', 2);
@@ -91,7 +91,7 @@ describe('EntryActionPage — move/copy 車程重算 scope', () => {
     renderPage('move');
     const day2 = await screen.findByTestId('entry-action-day-2');
     fireEvent.click(day2);
-    fireEvent.click(screen.getByTestId('entry-action-titlebar-confirm'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
 
     await waitFor(() => expect(recomputeMock).toHaveBeenCalledTimes(2));
     expect(recomputeMock).toHaveBeenNthCalledWith(1, 't1', 2);

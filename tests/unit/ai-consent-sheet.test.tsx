@@ -62,7 +62,8 @@ describe('AiConsentSheet', () => {
 
   it('Escape → onCancel', () => {
     const { onCancel } = setup();
-    fireEvent.keyDown(window, { key: 'Escape' });
+    // 統一引擎在 document 上聽 keydown（非 window）
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
@@ -89,7 +90,7 @@ describe('AiConsentSheet', () => {
 
   it('busy → Escape 不觸發 onCancel（防看似取消卻仍在送出）', () => {
     const { onCancel } = setup({ busy: true });
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(onCancel).not.toHaveBeenCalled();
   });
 

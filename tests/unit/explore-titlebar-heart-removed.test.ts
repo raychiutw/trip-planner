@@ -42,19 +42,22 @@ describe('/explore titleBar right action 拔除', () => {
 });
 
 describe('/favorites page 仍保留 (其他地方仍 link)', () => {
-  it('sidebar nav 仍 link /favorites', () => {
-    const sidebar = readFileSync(
-      join(__dirname, '../../src/components/shell/DesktopSidebar.tsx'),
+  // rev2 §10.1（2026-07-19）：primary IA（含「收藏」→ /favorites）抽到 navItems 單一來源，
+  // GlobalBottomNav（手機膠囊）+ DesktopSidebar（桌機 sidebar）共用；此鎖測改讀 navItems。
+  it('primary nav（navItems）仍 link /favorites', () => {
+    const navItems = readFileSync(
+      join(__dirname, '../../src/components/shell/navItems.ts'),
       'utf8',
     );
-    expect(sidebar).toMatch(/href: '\/favorites'/);
+    expect(navItems).toMatch(/href: '\/favorites'/);
   });
 
-  it('bottom-nav 仍 link /favorites', () => {
-    const bottomNav = readFileSync(
-      join(__dirname, '../../src/components/shell/GlobalBottomNav.tsx'),
+  it('「收藏」 tab active 覆蓋 /favorites 與 /explore（navItems FAVORITES_ACTIVE_PATTERNS）', () => {
+    const navItems = readFileSync(
+      join(__dirname, '../../src/components/shell/navItems.ts'),
       'utf8',
     );
-    expect(bottomNav).toMatch(/href: '\/favorites'/);
+    expect(navItems).toMatch(/\/\^\\\/explore/);
+    expect(navItems).toMatch(/\/\^\\\/favorites\\\//);
   });
 });

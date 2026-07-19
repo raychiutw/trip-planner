@@ -35,7 +35,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
@@ -48,11 +47,7 @@ import {
   shortenDateLabel,
   type DayOption,
 } from '../lib/entryAction';
-import AppShell from '../components/shell/AppShell';
-import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import TitleBar from '../components/shell/TitleBar';
-import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
+import OperationShell from '../components/shell/OperationShell';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripSelect } from '../components/TripSelect';
@@ -246,12 +241,12 @@ interface EntryActionPageProps {
 
 export default function EntryActionPage({ action }: EntryActionPageProps) {
   const auth = useRequireAuth();
-  const { user } = useCurrentUser();
   const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
   const entryIdNum = entryId ? parseInt(entryId, 10) : null;
-  const heading = action === 'copy' ? '複製到哪一天' : '移動到哪一天';
+  // G-T2:動詞對齊 menu「移到其他天 / 複製到其他天」（DESIGN.md:471 SoT），避免 移到/移動 混用。
+  const heading = action === 'copy' ? '複製到哪一天' : '移到哪一天';
   const ctaLabel = action === 'copy' ? '複製' : '移動';
 
   const [days, setDays] = useState<DayOption[] | null>(null);
@@ -356,47 +351,29 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
   if (!auth.user) return null;
   if (!tripId || !entryIdNum) {
     return (
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-entry-action-shell" data-testid="entry-action-page">
-            <TitleBar title={heading} back={handleBack} backLabel="返回行程列表" />
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
-              無效的行程或景點 ID
-            </div>
-          </div>
-        }
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      <OperationShell
+        shellClassName="tp-entry-action-shell"
+        testId="entry-action-page"
+        title={heading}
+        back={handleBack}
+      >
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
+          無效的行程或景點 ID
+        </div>
+      </OperationShell>
     );
   }
-
-  const titleBarActions = !loading && !loadError && (
-    <TitleBarPrimaryAction
-      label={ctaLabel}
-      busyLabel={`${ctaLabel}中⋯`}
-      busy={submitting}
-      disabled={!canConfirm}
-      onClick={handleConfirm}
-      testId="entry-action-titlebar-confirm"
-    />
-  );
 
   return (
     <>
       <ToastContainer />
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-entry-action-shell" data-testid="entry-action-page">
-            <style>{SCOPED_STYLES}</style>
-            <TitleBar
-              title={heading}
-              back={handleBack}
-              backLabel="返回前頁"
-              actions={titleBarActions}
-            />
-
+      <OperationShell
+        shellClassName="tp-entry-action-shell"
+        testId="entry-action-page"
+        title={heading}
+        back={handleBack}
+        scopedStyles={SCOPED_STYLES}
+      >
             <div className="tp-entry-action-content">
               {loading && (
                 <div className="tp-entry-action-loading" data-testid="entry-action-loading">
@@ -502,10 +479,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
                 </button>
               </div>
             )}
-          </div>
-        }
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      </OperationShell>
     </>
   );
 }

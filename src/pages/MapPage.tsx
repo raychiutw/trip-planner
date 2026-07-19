@@ -34,6 +34,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import AccountCircle from '../components/shell/AccountCircle';
 import MapDayTab from '../components/trip/MapDayTab';
 import MapEntryCard, { type EntryKind } from '../components/trip/MapEntryCard';
 import MapFabs from '../components/trip/MapFabs';
@@ -400,8 +401,10 @@ export default function MapPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, cardEntryPins.length]);
 
-  // 2026-04-29 v2.17.14:user 拍板「地圖不需要回前頁箭頭」 — 移除 back button。
-  // User navigates 出 map 走 sidebar / GlobalBottomNav 切換 nav,不需要 back。
+  // MapPage 是 /trip/:id/map(從行程詳情下鑽的 trip-scoped 地圖)→ 顯 back 回行程詳情
+  // 是 HIG drill-down 語意(見下方 TitleBar back)。〔2026-04-29 v2.17.14「地圖不需要回前頁」
+  // 是 pre-rev2 的 root-map IA 決定,已被 rev2 取代:root 地圖=GlobalMapPage(無 back);
+  // 此頁是 trip 內下鑽,需要 back。〕
 
   const { user } = useCurrentUser();
 
@@ -413,6 +416,7 @@ export default function MapPage() {
         // v2.31.81：title bar 對齊 ChatPage 格式 — 左 trip name，右 icon-only picker。
         title={trip?.title || trip?.name || '地圖'}
         back={tripId ? () => navigate(`/trip/${encodeURIComponent(tripId)}`) : undefined}
+        account={<AccountCircle />}
         actions={trips && trips.length > 0 && (
           <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
             <button

@@ -43,15 +43,23 @@ export const onRequestDelete: PagesFunction<Env, 'id'> = async (context) => {
   const actor = await requireFavoriteActor(context, body, 'favorite_delete');
 
   const row = await context.env.DB
-    .prepare('SELECT user_id FROM poi_favorites WHERE id = ?')
+    .prepare('SELECT user_id, deleted_at FROM poi_favorites WHERE id = ?')
     .bind(id)
-    .first<{ user_id: string | null }>();
+    .first<{ user_id: string | null; deleted_at: string | null }>();
   if (!row) throw new AppError('DATA_NOT_FOUND', '找不到該收藏');
 
   assertFavoriteOwnership(actor, row.user_id);
 
+  // 已取消 → idempotent（spec §2.1）：直接回 204，不重複 soft-delete / audit。
+  if (row.deleted_at !== null) {
+    return new Response(null, { status: 204 });
+  }
+
+  // Soft delete（改自 hard DELETE）：寫 deleted_at tombstone，保留 id/poi_id/note/favorited_at
+  // 供 10 分鐘內 restore。AND deleted_at IS NULL 防競速重複 soft-delete。
+  // 不動 POI / trip_entry_pois / 其他 user 收藏（spec §2.1）。
   await context.env.DB
-    .prepare('DELETE FROM poi_favorites WHERE id = ?')
+    .prepare("UPDATE poi_favorites SET deleted_at = datetime('now') WHERE id = ? AND deleted_at IS NULL")
     .bind(id)
     .run();
 

@@ -11,13 +11,9 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import AppShell from '../components/shell/AppShell';
-import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import TitleBar from '../components/shell/TitleBar';
+import OperationShell from '../components/shell/OperationShell';
 import Icon from '../components/shared/Icon';
 import { useNavigateBack } from '../hooks/useNavigateBack';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { requestTravelRecompute } from '../lib/travelRecompute';
@@ -468,7 +464,7 @@ const SCOPED_STYLES = `
   justify-content: flex-end;
 }
 .tp-change-poi-btn {
-  min-height: 40px;
+  min-height: var(--spacing-tap-min); /* G-H6b：44pt HIG 觸控區（取消/確認主動作） */
   padding: 8px 16px;
   border-radius: var(--radius-full);
   font: inherit;
@@ -488,7 +484,11 @@ const SCOPED_STYLES = `
   min-width: 112px;
 }
 .tp-change-poi-btn-confirm:disabled {
-  opacity: 0.5;
+  /* §9.4：原 opacity:0.5 讓實心 accent 鈕變淡 peach + 白字半透明 → 白字對比不足難辨。
+   * 改顯式 disabled 樣式：淡 tan 底 + muted 深字，對比足、狀態明確（非透明化）。 */
+  background: var(--color-accent-bg);
+  border-color: var(--color-accent-bg);
+  color: var(--color-muted);
   cursor: not-allowed;
 }
 .tp-change-poi-error {
@@ -545,7 +545,6 @@ export default function ChangePoiPage() {
   const entryId = Number(entryIdParam);
   const navigate = useNavigate();
   const goBack = useNavigateBack(tripId ? `/trips?selected=${tripId}` : '/trips');
-  const { user } = useCurrentUser();
 
   // v2.27.0 multi-POI per entry：?mode=alternate 切換 add-alternate 行為
   // （title 改「加入備選景點」+ CTA 改「加為備選」+ 提交走 POST /alternates）
@@ -902,9 +901,13 @@ export default function ChangePoiPage() {
   // React 會 reconcile（LocationPickerMap 無 key、useGoogleMap 只 init 一次 → map 不 remount），
   // 成本微小，換來「加 state 不必記得改 dep array」的正確性。move-state-add-bug 不再可能。
   const main = (
-    <div className="tp-change-poi-page-shell" data-testid="change-poi-page">
-      <style>{SCOPED_STYLES}</style>
-      <TitleBar title={pageTitle} back={goBack} />
+    <OperationShell
+      shellClassName="tp-change-poi-page-shell"
+      testId="change-poi-page"
+      title={pageTitle}
+      back={goBack}
+      scopedStyles={SCOPED_STYLES}
+    >
 
       <div className="tp-change-poi-tabs" role="tablist" aria-label="景點來源">
         <button
@@ -1233,14 +1236,8 @@ export default function ChangePoiPage() {
           </button>
         </div>
       </div>
-    </div>
+    </OperationShell>
   );
 
-  return (
-    <AppShell
-      sidebar={<DesktopSidebarConnected />}
-      main={main}
-      bottomNav={<GlobalBottomNav authed={user !== null} />}
-    />
-  );
+  return main;
 }

@@ -99,7 +99,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             ) AS usages_json
      FROM poi_favorites pf
      JOIN pois p ON p.id = pf.poi_id
-     WHERE pf.user_id = ?1
+     WHERE pf.user_id = ?1 AND pf.deleted_at IS NULL
      ORDER BY pf.favorited_at DESC, pf.id DESC`,
   ).bind(effectiveUserId).all();
 
@@ -140,15 +140,37 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const bump = await bumpRateLimit(context.env.DB, bucket, RATE_LIMITS.POI_FAVORITES_WRITE);
   if (!bump.ok) return buildRateLimitResponse(bump.retryAfter ?? 60, { error: 'RATE_LIMITED' });
 
-  // INSERT poi_favorites — FK 失敗（POI 不存在）轉 404；UNIQUE 違反 → 409
+  // 建立收藏（spec §4 soft-delete 相容）：先重新啟用既有 soft-deleted row（保留原 id）、
+  // 沒有才 INSERT 新 row。partial unique index（idx_poi_favorites_active_user_poi，只限
+  // deleted_at IS NULL）保證同 (user,poi) 至多 1 筆 active：
+  //   - 已有 active → reactivate/INSERT 皆撞 partial unique → 409（已收藏、不 500）
+  //   - 只有 soft-deleted → reactivate → 201（新的一次收藏，套新 note/favorited_at、不受 10 分鐘 undo 限制）
+  //   - 都沒有 → INSERT → 201
+  // 競速（restore vs 重新 POST）由 partial unique index 兜底：第二筆 → UNIQUE 違反 → 409，最後恆 1 筆 active。
   let row: Record<string, unknown> | null = null;
   try {
     row = await context.env.DB
       .prepare(
-        `INSERT INTO poi_favorites (user_id, poi_id, note) VALUES (?, ?, ?) RETURNING *`,
+        `UPDATE poi_favorites
+            SET deleted_at = NULL, note = ?3, favorited_at = datetime('now')
+          WHERE id = (
+            SELECT id FROM poi_favorites
+             WHERE user_id = ?1 AND poi_id = ?2 AND deleted_at IS NOT NULL
+             ORDER BY favorited_at DESC, id DESC LIMIT 1
+          )
+          RETURNING *`,
       )
       .bind(actor.userId, body.poiId, body.note ?? null)
       .first<Record<string, unknown>>();
+    if (!row) {
+      // 無 soft-deleted 可重用 → 新增。FK 失敗（POI 不存在）轉 404；partial UNIQUE 違反（已有 active）→ 409。
+      row = await context.env.DB
+        .prepare(
+          `INSERT INTO poi_favorites (user_id, poi_id, note) VALUES (?, ?, ?) RETURNING *`,
+        )
+        .bind(actor.userId, body.poiId, body.note ?? null)
+        .first<Record<string, unknown>>();
+    }
     if (!row) throw new AppError('SYS_INTERNAL', 'INSERT RETURNING 未回傳資料');
   } catch (err) {
     if (err instanceof AppError) throw err;

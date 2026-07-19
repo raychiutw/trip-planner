@@ -160,7 +160,8 @@ const SCOPED_STYLES = `
 .explore-poi-card .explore-poi-heart {
   position: absolute;
   top: 8px; right: 8px;
-  width: 36px; height: 36px;
+  /* §9.2：44pt HIG 觸控區（原 36px 低於最小觸控目標，手機難點）。 */
+  width: var(--spacing-tap-min); height: var(--spacing-tap-min);
   border: 0; border-radius: 50%;
   /* H6 exception: heart icon on permanent rgba(0,0,0) overlay — text must
      stay light in both light/dark mode for contrast against dark backdrop. */
@@ -189,8 +190,9 @@ const SCOPED_STYLES = `
 /* v2.23.8: ➕ 加入行程 button — accent 實心並排 ❤ 右側偏左 */
 .explore-poi-card .explore-poi-add-to-trip {
   position: absolute;
-  top: 8px; right: 52px;
-  width: 36px; height: 36px;
+  /* §9.2：44pt HIG 觸控區；並排 ❤ 左側（8 + 44 + 8 = 60）。 */
+  top: 8px; right: 60px;
+  width: var(--spacing-tap-min); height: var(--spacing-tap-min);
   border: 0; border-radius: 50%;
   background: var(--color-accent);
   color: var(--color-accent-foreground);
@@ -675,6 +677,7 @@ export default function ExplorePage() {
         title="探索"
         back={goBack}
         backLabel="返回收藏"
+        backLabelVisible
       />
       <div className="explore-wrap" data-testid="explore-page">
         <ToastContainer />

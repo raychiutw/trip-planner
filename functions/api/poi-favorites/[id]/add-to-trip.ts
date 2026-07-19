@@ -105,7 +105,7 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
                 p.name AS poi_name, p.type AS poi_type
          FROM poi_favorites pf
          JOIN pois p ON p.id = pf.poi_id
-         WHERE pf.id = ?`,
+         WHERE pf.id = ? AND pf.deleted_at IS NULL`,
       )
       .bind(favoriteId)
       .first<{

@@ -102,14 +102,13 @@ html { color-scheme: light dark; }
     --spacing-10: 40px;
 
     /* AppShell layout grid templates.
-     *   ≥1280px: 3-pane full (sidebar 240 / main fluid / sheet up to 780px)
-     *   1024-1279px: 3-pane narrow (sheet capped at 40vw)
-     *   <1024px: single-column + sticky bottom nav
+     *   ≥1024px: 3-pane rev2 (sidebar 216 / 中欄行程 1fr / 右欄地圖 1fr — owner 2026-07-17)
+     *   <1024px: single-column + 底部浮動玻璃膠囊 tab
      */
-    --grid-3pane-desktop: 240px 1fr min(780px, 40vw);
-    --grid-2pane-desktop: 240px 1fr;
+    --grid-3pane-desktop: 216px 1fr 1fr;
+    --grid-2pane-desktop: 216px 1fr;
     --nav-height-mobile: 88px;
-    --sidebar-width-desktop: 240px;
+    --sidebar-width-desktop: 216px;
 
     /* Font size */
     --font-size-large-title: 2.125rem;
@@ -655,27 +654,40 @@ body.dark {
     .tp-rail-item {
         position: relative;
         display: grid;
-        grid-template-columns: 24px 24px 1fr 20px;
+        /* rev2 Section 02：resting 列 = node | body（無常駐 grip 欄 → Apple 乾淨列）。
+           排序模式（⋯「重新排序」）才插 grip 欄，見下方 [data-sort-mode]。
+           grip / dot / head 皆無顯式 grid-column，靠 source order 自動落欄，兩種模板通用。 */
+        grid-template-columns: 24px 1fr;
         column-gap: 12px;
         align-items: center;
         width: 100%; padding: 10px 8px;
-        /* flush 列：透明底（讓中性 route spine 透出）+ hairline 分隔，取代獨立圓角卡。 */
+        /* flush 列：透明底（讓中性 route spine 透出），分隔線走內縮 ::after（取代獨立圓角卡）。 */
         background: transparent;
         border-radius: var(--radius-md);
-        border-bottom: 1px solid var(--color-border);
         color: var(--color-foreground);
         transition: background 150ms;
     }
-    .tp-rail-item:hover { background: var(--color-hover, var(--color-secondary)); border-bottom-color: transparent; }
+    /* rev2 mockup .stop-c::after:278 — 內縮分隔線：對齊文字起點（編號 node 之後），Apple 列表簽名細節；
+       hover / 展開 / 末列 隱藏。left=padding(8)+node(24)+gap(12)=44px。 */
+    .tp-rail-item::after {
+        content: ''; position: absolute; bottom: 0; left: 44px; right: 8px;
+        height: 1px; background: var(--color-border);
+    }
+    .tp-rail-item:hover::after,
+    .tp-rail-item[data-expanded="true"]::after,
+    .tp-rail-item[data-last="true"]::after { display: none; }
+    .tp-rail-item:hover { background: var(--color-hover, var(--color-secondary)); }
     .tp-rail-item[data-past="true"] { opacity: 0.55; }
     .tp-rail-item[data-now="true"] {
         background: var(--color-accent-subtle);
         border-bottom-color: transparent;
     }
     /* head button 跨 col 3-4（body | caret），row click target */
+    /* rev2 排序模式：插回 grip 欄（grip | node | body）。 */
+    .tp-rail-body[data-sort-mode] .tp-rail-item { grid-template-columns: 24px 24px 1fr; }
+
     .tp-rail-head {
-        grid-column: 3 / span 2;
-        display: grid; grid-template-columns: 1fr 20px;
+        display: grid; grid-template-columns: 1fr auto;
         column-gap: 12px; align-items: center; width: 100%;
         background: transparent; border: none; padding: 0;
         color: inherit; cursor: pointer; text-align: left;
@@ -686,9 +698,9 @@ body.dark {
     /* time — v2.30.12 ripped from rail grid (空欄佔位浪費寬度).
      * JSX 已不再渲染 .tp-rail-time element；保留 selector 給歷史 CSS 不 error 即可。 */
 
-    /* dot — col 2，編號圓圈（mockup .tp-detail-dot:1981） */
+    /* dot — 編號圓圈（mockup .tp-detail-dot:1981）。resting 為列首、排序模式退居 grip 之後，
+       靠 source order 自動落欄（無顯式 grid-column）。 */
     .tp-rail-dot {
-        grid-column: 2;
         width: 24px; height: 24px;
         display: grid; place-items: center;
         background: var(--color-background);
@@ -700,6 +712,9 @@ body.dark {
         line-height: 1;
         z-index: 1;
     }
+    /* rev2 mockup：飯店 node 給床 icon（不給號碼）+ accent 邊/字 —— 當日路線起訖錨點、非「第幾站」。 */
+    .tp-rail-dot[data-hotel] { border-color: var(--color-accent); color: var(--color-accent); }
+    .tp-rail-dot .svg-icon { width: 13px; height: 13px; }
     /* 柔褐三色 tone（2026-06）：每 tone 設一組 --tone-* 供 card/icon/dot/label 取用；
        neutral 不設 → var() fallback 回原中性樣式。tier token 在此被引用 → Tailwind 不 tree-shake。 */
     /* --tone-* 同時套到 rail item 與展開明細 .tp-rail-detail（detail 是 item 的 sibling，
@@ -728,18 +743,23 @@ body.dark {
         min-width: 0; overflow: hidden;
         display: flex; flex-direction: column; gap: 3px;
     }
-    /* mockup .tp-detail-body-name:2030 — 15px / 700 / -0.01em / nowrap ellipsis */
+    /* rev2 prototype 卡牌 Apple Music track row：標題 17px / 700 / -0.01em / nowrap ellipsis
+     * （2026-07-17 mockup Section 02：先前 15px 太小是「不像 Apple」主因，升 card-title 17）。 */
+    /* rev2 mockup .stop-n:291 — Apple Music track row 標題：17px / weight 500（medium，非 bold）
+       / letter-spacing -.012em（SF 式緊排）。選中（展開）→ 600。 */
     .tp-rail-name {
-        display: block; font-size: 15px; font-weight: 700;
-        letter-spacing: -0.01em; line-height: 1.3;
+        display: block; font-size: var(--font-size-headline); font-weight: 500;
+        letter-spacing: -0.012em; line-height: 1.3;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    /* mockup .tp-detail-body-sub:2042 — 11px muted inline-flex 串接 type · duration · ★ rating · desc */
+    .tp-rail-item[data-expanded="true"] .tp-rail-name { font-weight: 600; }
+    /* rev2 prototype 卡牌副標：15px muted inline-flex 串接 time · type · duration · ★ rating · desc
+     * （2026-07-17 mockup Section 02：副標 15px，先前 11px 太小）。 */
     .tp-rail-sub {
         display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
-        font-size: var(--font-size-caption2); color: var(--color-muted);
+        font-size: var(--font-size-subheadline); color: var(--color-muted);
         font-variant-numeric: tabular-nums;
-        line-height: 1.4;
+        line-height: 1.4; letter-spacing: -0.006em; /* mockup .stop-s:296 */
     }
     .tp-rail-sub-type {
         font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
@@ -747,6 +767,12 @@ body.dark {
     .tp-rail-item[data-tone] .tp-rail-sub-type { color: var(--tone-deep, var(--color-muted)); }
     .tp-rail-sub-sep { opacity: 0.5; }
     .tp-rail-sub-star { color: var(--color-warning, #C88500); }
+    /* ★ + 評分數字綁 nowrap 單位，避免副標 flex-wrap 時「4.1」孤行落到下一列
+       （plan line 50：adapt rather than truncate，iOS HIG 文字適應）。 */
+    .tp-rail-sub-rating { display: inline-flex; align-items: baseline; gap: 3px; white-space: nowrap; }
+    /* D-review #3：每個「分隔符 · + 值」綁成 nowrap 段,副標 flex-wrap 只在段之間斷,
+       分隔符不再獨立成 flex child 孤懸在行尾。 */
+    .tp-rail-sub-part { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
     /* v2.30.12: time chip 取代既有 col-2 time（time col 移除後 inline 顯示） */
     .tp-rail-sub-time {
         font-weight: 700; color: var(--color-foreground);
@@ -820,19 +846,15 @@ body.dark {
         .tp-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .tp-hero { padding: 18px; border-radius: var(--radius-md); }
         .tp-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
-        /* v2.30.12 mobile: 5-col compact (time col 移除) */
+        /* rev2 Section 02：手機沿用 base grid（node | body，排序模式插 grip 欄），只縮 gap/padding。
+         * （先前殘留 v2.30.12 的 5-col + 36px icon 欄讓 body 崩成 36px；改用 auto-placement 統一模板。） */
         .tp-rail-item {
-            grid-template-columns: 20px 24px 36px 1fr 16px;
             column-gap: 8px;
             padding: 10px 4px;
         }
-        .tp-rail-head {
-            grid-template-columns: 36px 1fr 16px;
-            column-gap: 8px;
-        }
-        .tp-rail-icon { width: 36px; height: 36px; }
-        .tp-rail-icon .svg-icon { width: 18px; height: 18px; }
-        .tp-rail-name { font-size: 14px; }
+        .tp-rail-item::after { left: 36px; right: 4px; } /* 手機縮排：padding(4)+node(24)+gap(8) */
+        .tp-rail-head { column-gap: 8px; }
+        .tp-rail-name { font-size: var(--font-size-callout); }
         /* v2.33.61 round 14b: 拔 .tp-rail-line (見 line 613 dead-code 拔除說明) */
         /* Compact viewport titlebar 從 64 縮 56，--titlebar-h 同步調，
          * --sticky-chrome-h 跟 --anchor-scroll-margin 自動 follow。 */
@@ -1231,7 +1253,7 @@ body.dark {
   color: var(--color-accent-foreground);
   border: 1px solid var(--color-accent);
   cursor: pointer;
-  min-height: 36px;
+  min-height: var(--spacing-tap-min); /* G-H6b：44pt HIG 觸控區（universal action button） */
 }
 .tp-action-btn:hover:not(:disabled) { filter: brightness(var(--hover-brightness)); }
 .tp-action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -1327,7 +1349,9 @@ body.dark {
   scrollbar-width: none;
   width: fit-content;
   max-width: calc(100% - 24px);
-  margin: 6px 12px 8px;
+  /* rev2 D-review #4：fit-content 膠囊在中欄/視窗水平置中（原 margin-left 12px 靠左，
+     桌機寬中欄下明顯偏左）。auto 左右 margin 置中,少天時置中、多天時仍可捲。 */
+  margin: 6px auto 8px;
   padding: 4px;
   background: color-mix(in srgb, var(--color-secondary) 72%, transparent);
   backdrop-filter: blur(20px) saturate(180%);
@@ -1379,11 +1403,17 @@ body.dark {
  * 同源，不會 drift。 */
 .tp-map-day-tabs--sticky {
   position: sticky;
-  top: var(--titlebar-h);
+  /* rev2 D-review #5：捲動 sticky 時與（玻璃）titlebar 保留 8px 間距,不緊貼/不穿透。 */
+  top: calc(var(--titlebar-h) + 8px);
   z-index: calc(var(--z-sticky-nav, 200) - 1);
   border-top: none;
   border-bottom: 1px solid var(--color-border);
 }
+/* §8.1（2026-07-19）：桌機操作堆疊中欄（TripStackLayout `.tp-stack-mid` 內的 <TripPage
+ * noShell>）**無 titlebar**，titlebar-h 偏移會把 day-tabs 膠囊列釘在 ~72px、蓋住從中欄頂端
+ * 流動的 day-header（DAY 01/日期/停留點）。中欄無 titlebar → sticky top 收到 8px，膠囊釘中欄頂、
+ * day-header 在其下方正常流動、不再字疊字。（/trips 嵌入模式有 titlebar，維持 72px 不受影響。） */
+.tp-stack-mid .tp-map-day-tabs--sticky { top: 8px; }
 body.print-mode .tp-map-day-tabs--sticky { display: none; }
 
 /* ===== MapEntryCard — horizontal snap-scroll item (V2 Terracotta Map page) ===== */
@@ -1514,7 +1544,12 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     justify-content: space-between;
     gap: 12px;
     border-bottom: 1px solid var(--color-border);
-    background: var(--color-background);
+    /* rev2 iOS 26 Liquid Glass header — 還原 TitleBar.tsx:12 + mockup Section 23 規範的
+       「glass blur」（原漂移成 opaque cream，chat 等頁標題列不透）。translucent 80% +
+       backdrop blur 讓內容 frost 過標題列下方，與底部玻璃導航一致。token 化 light/dark adapt。 */
+    background: color-mix(in srgb, var(--color-background) 80%, transparent);
+    backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
   }
   .tp-titlebar-title {
     /* mockup-parity-qa-fixes: mockup .tp-page-titlebar-title:4060 規範 desktop 20/28/700 (was 24px) */
@@ -1545,7 +1580,12 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     justify-content: space-between;
     gap: 12px;
     border-bottom: 1px solid var(--color-border);
-    background: var(--color-background);
+    /* rev2 iOS 26 Liquid Glass header — 還原 TitleBar.tsx:12 + mockup Section 23 規範的
+       「glass blur」（原漂移成 opaque cream，chat 等頁標題列不透）。translucent 80% +
+       backdrop blur 讓內容 frost 過標題列下方，與底部玻璃導航一致。token 化 light/dark adapt。 */
+    background: color-mix(in srgb, var(--color-background) 80%, transparent);
+    backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
   }
   .tp-titlebar-title {
     font-size: 18px; /* mockup compact 18px (was 22px) */
@@ -1582,6 +1622,22 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 .tp-titlebar-back:hover { background: var(--color-hover); color: var(--color-accent); }
 .tp-titlebar-back:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 .tp-titlebar-back .svg-icon { width: 18px; height: 18px; }
+
+/* §10.5（owner 2026-07-19）：macOS toolbar 式返回 — 子頁（collab/explore）顯示可見
+ * 「‹ <label>」文字（chevron + 文字），非行程詳情的 icon-only 44×44。auto 寬、pill 觸控區。 */
+.tp-titlebar-back--labeled {
+  width: auto;
+  min-height: var(--spacing-tap-min);
+  gap: 2px;
+  padding: 0 12px 0 6px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-accent-deep);
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+}
+.tp-titlebar-back--labeled .svg-icon { width: 20px; height: 20px; }
+.tp-titlebar-back-label { white-space: nowrap; }
 
 /* TitleBar action button RWD：桌機 (>=761) pill 樣式 icon + 文字 inline；
  * 手機 (<=760) 縮回 icon-only 圓形 (label hidden via @media)。

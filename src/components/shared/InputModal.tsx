@@ -9,6 +9,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
 const SCOPED_STYLES = `
 .tp-input-backdrop {
@@ -143,25 +144,18 @@ export default function InputModal({
     if (open) setValue(defaultValue);
   }, [open, defaultValue]);
 
+  // 統一 sheet 引擎（B1）：Escape（IME/巢狀 guard）+ focus-trap + scroll-lock；
+  // initialFocusRef 讓引擎開啟時 focus input；再補 select（讓 user 直接覆蓋預設值）。
+  const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onCancel, {
+    initialFocusRef: inputRef,
+  });
+  // 此 effect 須留在 useSheetBehavior 呼叫「之後」：引擎的 focus rAF 先排、本 select rAF 後排，
+  // 同幀 focus→select，游標落定後全選讓 user 直接覆蓋。順序顛倒會變 select→focus（focus 清掉選取）。
   useEffect(() => {
     if (!open) return;
-    // Auto-focus + select on open
-    const t = setTimeout(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }, 0);
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onCancel();
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open, onCancel]);
+    const id = requestAnimationFrame(() => inputRef.current?.select());
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
   if (!open) return null;
   if (typeof document === 'undefined') return null;
@@ -178,17 +172,20 @@ export default function InputModal({
     <>
       <style>{SCOPED_STYLES}</style>
       <div
+        ref={backdropRef}
         className="tp-input-backdrop"
         role="presentation"
         onClick={onCancel}
         data-testid="input-modal-backdrop"
       >
         <div
+          ref={panelRef}
           className="tp-input-modal"
           role="dialog"
           aria-modal="true"
           aria-labelledby="tp-input-title"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={handlePanelKeyDown}
           data-testid="input-modal"
         >
           <h2 className="tp-input-title" id="tp-input-title">{title}</h2>

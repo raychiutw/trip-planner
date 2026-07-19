@@ -18,6 +18,12 @@ vi.mock('../../src/hooks/useRequireAuth', () => ({
 vi.mock('../../src/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({ user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' }, reload: () => {} }),
 }));
+// rev2 sidebar 改「我的行程」清單經 useMyTrips fetch /api/trips；本頁測試不關心
+// sidebar 資料，mock 掉避免它的 fetch 吃掉 form POST 的 mockResolvedValueOnce。
+vi.mock('../../src/hooks/useMyTrips', () => ({
+  useMyTrips: () => ({ trips: [] }),
+  __clearMyTripsCache: () => {},
+}));
 
 import DeveloperAppNewPage from '../../src/pages/DeveloperAppNewPage';
 

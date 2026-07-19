@@ -67,13 +67,15 @@ const SCOPED_STYLES = `
 @media (min-width: 1024px) {
   .tp-login-brand-hero { display: flex; }
 }
+/* §8.4：原為 solid rgba 圓 + border-radius:50%，其硬 edge 弧線會橫切 hero 標題區
+ * （即使文字 z-index 在上、硬弧線仍在標題後方造成視覺切割）。改 radial-gradient
+ * 從中心淡出到透明 → 軟 ambient glow、無硬 edge，標題區乾淨。 */
 .tp-login-brand-hero::before {
   content: '';
   position: absolute;
   top: -100px; right: -100px;
   width: 400px; height: 400px;
-  border-radius: 50%;
-  background: rgba(247, 223, 203, 0.1);
+  background: radial-gradient(circle, rgba(247, 223, 203, 0.16) 0%, transparent 68%);
   pointer-events: none;
 }
 .tp-login-brand-hero::after {
@@ -81,8 +83,7 @@ const SCOPED_STYLES = `
   position: absolute;
   bottom: -80px; left: -80px;
   width: 300px; height: 300px;
-  border-radius: 50%;
-  background: rgba(169, 122, 74, 0.18);
+  background: radial-gradient(circle, rgba(169, 122, 74, 0.24) 0%, transparent 68%);
   pointer-events: none;
 }
 .tp-bs-eyebrow {

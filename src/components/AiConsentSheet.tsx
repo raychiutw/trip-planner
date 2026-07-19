@@ -12,8 +12,9 @@
  * 視覺沿用 AiAuthorizeCard（.tp-ai-card 木棕 tone）。純呈現元件：consent 狀態、POST、
  * 送出邏輯都由 ChatPage 持有，這裡只吐兩個 callback。
  */
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useSheetBehavior } from '../hooks/useSheetBehavior';
 
 const SCOPED_STYLES = `
 .tp-consent-backdrop {
@@ -36,7 +37,7 @@ const SCOPED_STYLES = `
 }
 @keyframes tp-consent-sheet-in { from { transform: translateY(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
 
-.tp-consent-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--color-border); margin: 0 auto 14px; }
+/* G-S2：固定高度 sheet 不放 resize grabber（原 .tp-consent-grip 純裝飾、無拖動行為，已移除）。 */
 
 /* 沿用 AiAuthorizeCard .tp-ai-card 視覺 */
 .tp-consent-card { border-radius: var(--radius-xl); padding: 16px; background: var(--color-accent-subtle); }
@@ -91,26 +92,13 @@ export default function AiConsentSheet({
   onCancel,
 }: AiConsentSheetProps) {
   const primaryRef = useRef<HTMLButtonElement>(null);
-  // onCancel / busy 身分變動不該重綁 escape effect（latest-ref idiom，deps 維持 [open]）
-  const onCancelRef = useRef(onCancel);
-  onCancelRef.current = onCancel;
-  const busyRef = useRef(busy);
-  busyRef.current = busy;
-
-  useEffect(() => {
-    if (!open) return;
-    primaryRef.current?.focus();
-    function onKey(e: KeyboardEvent) {
-      // 授權進行中鎖 Escape（對齊背景點擊鎖）：否則按 Esc 看似取消，實則進行中的
-      // authorizeAndSend 仍會在其 closure 上完成、照樣送出，造成「看似取消卻送出」的不一致。
-      if (e.key === 'Escape' && !busyRef.current) {
-        e.preventDefault();
-        onCancelRef.current();
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
+  // 統一 sheet 引擎（B3）：body scroll-lock（G-S3，modal 預設 true）+ 開啟 focus 主鈕
+  // + Escape（canDismiss=!busy 保留 busy 鎖，避免「看似取消卻仍在送出」）+ IME/巢狀 guard
+  // + focus-trap。固定高度 sheet → 不放 grabber（G-S2）。
+  const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onCancel, {
+    initialFocusRef: primaryRef,
+    canDismiss: !busy,
+  });
 
   if (!open) return null;
   if (typeof document === 'undefined') return null;
@@ -119,20 +107,23 @@ export default function AiConsentSheet({
     <>
       <style>{SCOPED_STYLES}</style>
       <div
+        ref={backdropRef}
         className="tp-consent-backdrop"
         role="presentation"
         onClick={busy ? undefined : onCancel}
         data-testid="ai-consent-backdrop"
       >
         <div
+          ref={panelRef}
+          tabIndex={-1}
           className="tp-consent-sheet"
           role="dialog"
           aria-modal="true"
           aria-labelledby="tp-consent-title"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={handlePanelKeyDown}
           data-testid="ai-consent-sheet"
         >
-          <div className="tp-consent-grip" aria-hidden="true" />
           <div className="tp-consent-card">
             <div className="tp-consent-card__row">
               <div className="tp-consent-card__badge" aria-hidden="true">

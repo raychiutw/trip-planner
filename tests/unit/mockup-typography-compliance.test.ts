@@ -26,6 +26,9 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
   // 2026-05-03 modal-to-fullpage migration: AddStopModal.tsx 已 DEL，
   // form 移到 src/pages/AddStopPage.tsx。
   const addStopPage = readFile('src/pages/AddStopPage.tsx');
+  // rev2「6 條全接」：操作頁 chrome（整頁 TitleBar / 桌機右欄 StackPanelHeader）
+  // 由 OperationShell 統一負責，page heading 走它的 title prop。
+  const opShell = readFile('src/components/shell/OperationShell.tsx');
   const bnav = readFile('src/components/shell/GlobalBottomNav.tsx');
 
   it('--font-size-body 對齊 mockup body 16px (1rem)', () => {
@@ -74,18 +77,26 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
     expect(tripFormStyles).toContain('--font-size-title');
   });
 
-  it('AddStopPage 用 TitleBar 處理 page heading (font-weight 700 由 .tp-titlebar-title token 負責)', () => {
-    // 2026-05-03 modal-to-fullpage migration: 原本驗 .tp-add-stop-title font-weight 700
-    // 改全頁後 modal h2 不存在，page heading 由 TitleBar render，font-weight 規則由
-    // tokens.css .tp-titlebar-title 統一管。此處改驗 AddStopPage import TitleBar +
-    // tokens.css 仍保有 .tp-titlebar-title 700 weight rule。
-    expect(addStopPage).toMatch(/import TitleBar from/);
-    expect(addStopPage).toMatch(/<TitleBar\s/);
+  it('AddStopPage 經 OperationShell 用共用 StackPanelHeader 處理 page heading (font-weight 700 token 治理)', () => {
+    // 2026-05-03 modal-to-fullpage：page heading 由 chrome 統一 render，font-weight token 化。
+    // rev2「6 條全接 → 手機也做」（2026-07-18）：AddStopPage 走 <OperationShell title=...>，
+    // 兩形態（桌機 panel + 手機 drill-down）都用共用 StackPanelHeader（非 TitleBar）。
+    // 驗 AddStopPage → OperationShell → StackPanelHeader 這條鏈 + heading weight 700 token 化。
+    expect(addStopPage).toMatch(/import OperationShell from/);
+    expect(addStopPage).toMatch(/<OperationShell[\s\S]*?title=/);
+    expect(opShell).toMatch(/import StackPanelHeader from/);
+    expect(opShell).toMatch(/<StackPanelHeader\s/);
+    // StackPanelHeader 標題 weight 700（操作頁 heading 治理）
+    const stackHeader = readFile('src/components/shell/StackPanelHeader.tsx');
+    expect(stackHeader).toMatch(/tp-stack-head-title[\s\S]*?font-weight:\s*700/);
+    // .tp-titlebar-title 700 仍在（走 TitleBar 的根頁/詳情用）
     expect(tokens).toMatch(/\.tp-titlebar-title\s*\{[\s\S]*?font-weight:\s*700/);
   });
 
-  it('mobile bottom nav label 對齊 mockup section 02 11/14/700', () => {
-    const labelBlock = bnav.match(/\.tp-global-bottom-nav-btn span\s*\{[\s\S]*?font-size:\s*var\(--font-size-caption2\)[\s\S]*?line-height:\s*14px[\s\S]*?font-weight:\s*700/);
+  it('mobile bottom nav label 對齊 mockup .ph-tab 10/12/700（玻璃膠囊窄 tab）', () => {
+    // rev2「手機也做」：手機底部改浮動玻璃膠囊（iOS 26 .ph-tabs），tab 窄 → label 降
+    // 10px/700（mockup .ph-tab）。桌機 @≥1024 才回 caption2/14px（row layout）。
+    const labelBlock = bnav.match(/\.tp-global-bottom-nav-btn span\s*\{[\s\S]*?font-size:\s*var\(--font-size-eyebrow\)[\s\S]*?line-height:\s*12px[\s\S]*?font-weight:\s*700/);
     expect(labelBlock).not.toBeNull();
   });
 

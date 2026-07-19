@@ -92,7 +92,7 @@ export default function CollabPage() {
         sidebar={<DesktopSidebarConnected />}
         main={
           <div className="tp-collab-shell" data-testid="collab-page">
-            <TitleBar title="共編設定" back={() => navigate('/trips')} backLabel="返回行程列表" />
+            <TitleBar title="共編設定" back={() => navigate('/trips')} backLabel="返回行程列表" backLabelVisible />
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
               無效的行程 ID
             </div>
@@ -117,6 +117,7 @@ export default function CollabPage() {
               title="共編設定"
               back={handleBack}
               backLabel="返回前頁"
+              backLabelVisible
             />
             <h2 className="tp-collab-page-title">{tripName}</h2>
             <CollabPanel tripId={tripId} />
