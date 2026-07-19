@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.4] - 2026-07-19
+
+### Changed（owner 回報批次 1，續）
+- **⑪ 深色模式「全黑太多、tab 也黑」→ 參考 iOS HIG 抬灰階**：`body.dark` 整條中性灰往上抬一階
+  （base `#121214`→`#1C1C1E`／surface `#1C1C1E`→`#2C2C2E`／tertiary→`#3A3A3C`／hover→`#48484A`／
+  border→`#48484A`）。舊 base 幾乎純黑、secondary 只亮一階 → 底部 nav 玻璃（secondary 62%）疊近黑
+  底也糊成黑；抬階後 base 脫離近黑、nav／卡片／day tab 明顯浮起。同步 dark theme-color meta
+  （`useDarkMode` + `public/dark-mode-init.js` FOUC init）與 3 個鎖值測試 + DESIGN.md。foreground
+  `#F5F5F7` 對比仍 >14:1。真瀏覽器（390 dark）驗：底不再近黑、三層 elevation 清楚。
+- **④ day tab「比照功能tab（底部浮動膠囊）的效果」**：`.tp-map-day-tabs` 改與 `.tp-global-bottom-nav`
+  同玻璃材質族 — `--color-secondary` 底（非 background，讓抬亮後的 dark base 上仍以 elevated
+  `#2C2C2E` 浮起，非 base-on-base 糊掉）+ `--blur-glass`（三層 glass 一致）+ 較強暖落影 + 亮 specular
+  上緣；88% 確保頂端 sticky、內容從下方流過時仍讀得出邊界。
+
+### Fixed
+- **② 展開的行程景點「壓在 timeline 上」**：`.tp-rail-detail` 加 `position:relative; z-index:1`。
+  展開卡左緣蓋過 timeline spine（`.tp-rail-body::before`，`position:absolute`），而 absolute pseudo
+  的 paint order 高過 static 子元素 → 直線原本畫在展開內容「之上」穿過。建 stacking context 後
+  展開卡壓在 spine 之上（線在展開區被卡蓋住）。真瀏覽器驗：展開後 spine 不再穿過內容。
+
 ## [2.56.3] - 2026-07-19
 
 ### Fixed（owner 回報批次 1）

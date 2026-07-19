@@ -58,6 +58,12 @@ const SCOPED_STYLES = `
    * 對齊 dot 縮排 — v2.30.12 註解保留於 git history）。 */
   margin: 4px 0 8px;
   padding: 14px 16px;
+  /* owner 2026-07-19「展開的行程景點要壓在 timeline 上」：展開卡左緣(x≈30)蓋過 timeline
+   * spine(.tp-rail-body::before，position:absolute@x≈49)。absolute pseudo 的 paint order
+   * 高過 static 子元素 → 直線畫在展開卡「之上」穿過內容。給展開卡 relative + z-index:1
+   * 建 stacking → 卡壓在 spine 之上（線在展開區被卡蓋住，符合「壓在 timeline 上」）。 */
+  position: relative;
+  z-index: 1;
   /* 展開明細與卡片同色系（繼承 .tp-rail-item[data-tone] 的 --tone-*；neutral fallback secondary）*/
   background: var(--tone-subtle, var(--color-secondary));
   border: 1px solid var(--tone-bg, var(--color-border));
