@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.1] - 2026-07-19
+
+### Changed
+- **地圖頁 full-bleed + 浮動玻璃（owner 回報 + mockup sign-off）**：地圖頁原 day tab + POI 卡在地圖下方白帶上，改為 iOS 地圖式 full-bleed —— 地圖填滿、**day tab 玻璃浮頂**（titlebar 下方置中）、**POI 卡玻璃浮底**（從左起排、無白帶）。`.map-page-wrap` 由 flex column 堆疊改 relative 定位容器 + 絕對浮層；`.map-page-body` absolute inset:0 z-index:0 沉底、titlebar z-index:3 浮上。POI 卡改玻璃（88% + blur + 邊界 + 陰影）。桌機三欄維持只中欄有 day tab、右地圖欄無。
+
+### Fixed
+- **day tab 玻璃太透明「和底色自重疊」**：`.tp-map-day-tabs` 原 secondary(cream) 72% 疊 cream 頁面底 = cream-on-cream、邊界看不見。改 background 90% + 加深邊框（foreground 12%）+ 浮起陰影 → 明確玻璃膠囊（timeline + 地圖共用）。
+- **timeline 直條虛線壓到行程文字**：route spine（`.tp-rail-body::before`）desktop `left:55px` 對齊桌機 dot 中心，手機 padding 縮後 dot 中心=16、內容從 36 起，沿用 55 會落進文字壓字 → 手機加 override `left:15`（線中心對齊 dot）。
+- 驗證：tsc（src）✓ · 完整 unit **3783 tests 全綠** · 真瀏覽器逐狀態截圖（390/768/1440）· **3 輪 multi-agent workflow audit 全 0 findings**（R1 基礎版面 / R2 邊界:多天溢出+平板+捲底 / R3 互動:切日+active POI+sticky）。
+
 ## [2.56.0] - 2026-07-19
 
 ### Changed

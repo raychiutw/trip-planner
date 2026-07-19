@@ -45,20 +45,23 @@ const TpMap = lazyWithRetry(() => import('../components/trip/TpMap'));
 
 const SCOPED_STYLES = `
 .map-page-wrap {
-  /* AppShell main 已 lock 100dvh + 為 fixed GlobalBottomNav 留 padding-bottom。
-   * 此 wrap 對齊 ChatPage .tp-chat-shell pattern 用 height: 100% 填滿 main
-   * content-area,不要用 100dvh(會撐到 viewport 蓋過 bottom-nav 跟 day tabs)。 */
+  /* rev2 owner 2026-07-19：地圖頁改 full-bleed —— 地圖填滿、day tab 浮頂、POI 卡浮底、
+   * 都疊在地圖上（無白帶）。原 flex column（地圖 body → day tab → POI 白帶堆疊）改為
+   * relative 定位容器 + 絕對定位浮層。height:100% 填 main content-area（AppShell 已為
+   * bottom-nav 留 padding，浮層 bottom 相對 wrap 即在 nav 之上）。 */
   height: 100%;
-  display: flex; flex-direction: column;
+  position: relative;
   background: var(--color-background);
   overflow: hidden;
 }
 .map-page-body {
-  flex: 1;
-  position: relative;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
+  z-index: 0; /* 地圖沉底 full-bleed（在半透明 titlebar 下、浮層之下）。 */
 }
 .map-page-body > * { width: 100%; height: 100%; }
+/* TitleBar 在 wrap 內、DOM 於 map-body 前 → 需浮於 full-bleed 地圖之上（玻璃透出地圖，iOS 式）。 */
+.map-page-wrap > .tp-titlebar { position: relative; z-index: 3; }
 
 /* ===== Loading state — shimmer canvas + accent spinner（mockup Section 20） ===== */
 .map-page-loading {
@@ -130,13 +133,37 @@ const SCOPED_STYLES = `
 /* ===== Map page entry cards centering override =====
  * tp-map-entry-cards 的基礎樣式在 tokens.css；MapPage 額外加 scroll-snap 與
  * 中心 padding（first/last card 能 snap 到 viewport center）。 */
-.map-page-cards {
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  /* Padding so first/last card can snap to centre (card width = 220px, half = 110px) */
-  padding: 12px max(16px, calc(50% - 110px)) calc(12px + env(safe-area-inset-bottom, 0px));
+/* rev2 owner 2026-07-19：地圖頁 full-bleed 浮層 —— day tab 浮頂置中、POI 卡浮底。 */
+.map-page-wrap > .tp-map-day-tabs {
+  position: absolute;
+  /* 落在 titlebar 下方（否則被 titlebar 蓋）+ 12px 間距。 */
+  top: calc(var(--titlebar-h, 64px) + 12px);
+  left: 50%; transform: translateX(-50%);
+  margin: 0; /* 覆蓋 timeline 用的 auto margin */
+  z-index: 5;
+  max-width: calc(100% - 24px);
 }
-.map-page-cards .tp-map-entry-card { scroll-snap-align: center; }
+.map-page-cards {
+  position: absolute;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  left: 0; right: 0;
+  z-index: 5;
+  /* 無白帶（原 .tp-map-entry-cards 的 background + border-top 在此清掉）。 */
+  background: transparent;
+  border-top: none;
+  /* POI 從左側起排（owner「夠寬靠左」；對齊已批 mockup），溢出時從左捲。 */
+  justify-content: flex-start;
+  padding: 0 12px;
+  -webkit-overflow-scrolling: touch;
+}
+/* POI 卡改玻璃（浮在地圖上、非白底）：夠不透明 + blur + 邊界 + 陰影，對齊 day tab 玻璃質感。 */
+.map-page-cards .tp-map-entry-card {
+  background: color-mix(in srgb, var(--color-background) 88%, transparent);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  box-shadow: 0 8px 24px rgba(42, 31, 24, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
 .map-page-card-empty {
   flex: 0 0 auto;
   padding: 10px 12px;
