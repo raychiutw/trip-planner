@@ -105,7 +105,7 @@ export const TRIP_FORM_STYLES = `
 .tp-edit-row textarea,
 .tp-edit-row select {
   padding: 12px 14px;
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--color-border-control);
   border-radius: var(--radius-lg);
   background: var(--color-secondary);
   color: var(--color-foreground);
@@ -194,7 +194,7 @@ body.dark .tp-edit-row select {
   width: 28px; height: 28px;
   border-radius: 50%;
   display: grid; place-items: center;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   font-weight: 700;
   font-size: var(--font-size-caption);
@@ -352,9 +352,9 @@ body.dark .tp-edit-row select {
 .tp-edit-btn:hover:not(:disabled) { background: var(--color-hover); }
 .tp-new-modal-btn-primary,
 .tp-edit-btn-primary {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-fill);
 }
 .tp-new-modal-btn-primary:hover:not(:disabled),
 .tp-edit-btn-primary:hover:not(:disabled) {

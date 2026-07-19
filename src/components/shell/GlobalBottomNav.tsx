@@ -68,7 +68,7 @@ const SCOPED_STYLES = `
 .tp-global-bottom-nav-btn.is-active span { text-shadow: none; }
 .tp-global-bottom-nav-btn:hover { color: var(--color-foreground); background: var(--color-hover); }
 .tp-global-bottom-nav-btn.is-active {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
 }
 .tp-global-bottom-nav-btn.is-active span { font-weight: 700; }

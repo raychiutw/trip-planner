@@ -140,7 +140,7 @@ export const TRIP_TIME_PICKER_STYLES = `
   color: var(--color-accent-deep);
 }
 .tp-time-cell.is-selected {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   font-weight: 700;
 }

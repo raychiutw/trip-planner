@@ -188,7 +188,7 @@ const SCOPED_STYLES = `
   line-height: 1.6;
   color: var(--color-foreground);
   background: var(--color-background);
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--color-border-control);
   border-radius: var(--radius-md);
   padding: 12px 14px;
   resize: vertical;

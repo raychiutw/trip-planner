@@ -89,9 +89,9 @@ const SCOPED_STYLES = `
 .tp-conflict-btn-replace:focus-visible { outline: 2px solid var(--color-priority-high-dot); outline-offset: 2px; }
 
 .tp-conflict-btn-after {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground, #fff);
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-fill);
 }
 .tp-conflict-btn-after:hover { filter: brightness(0.92); }
 .tp-conflict-btn-after:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }

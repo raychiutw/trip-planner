@@ -167,7 +167,7 @@ const SCOPED_STYLES = `
 .tp-entry-action-time-select {
   width: 100%; font: inherit; font-size: var(--font-size-callout); font-weight: 600;
   padding: 10px 12px; border-radius: var(--radius-md);
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--color-border-control);
   background: var(--color-secondary);
   min-height: var(--spacing-tap-min);
   color: var(--color-foreground);
@@ -220,9 +220,9 @@ body.dark .tp-entry-action-time-select {
 }
 .tp-entry-action-btn:hover:not(:disabled) { background: var(--color-hover); }
 .tp-entry-action-btn-primary {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-fill);
 }
 .tp-entry-action-btn-primary:hover:not(:disabled) {
   filter: brightness(0.95);

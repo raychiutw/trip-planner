@@ -44,7 +44,7 @@ const SCOPED_STYLES = `
 .tp-consent-card__row { display: flex; gap: 12px; align-items: flex-start; }
 .tp-consent-card__badge {
   flex: none; width: 38px; height: 38px; border-radius: var(--radius-lg);
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   display: flex; align-items: center; justify-content: center;
 }
 .tp-consent-card__title { font-size: 15px; font-weight: 700; color: var(--color-foreground); }
@@ -61,7 +61,7 @@ const SCOPED_STYLES = `
   width: 100%; min-height: 48px; border: none; border-radius: var(--radius-lg);
   font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
 }
-.tp-consent-btn-primary { background: var(--color-accent); color: var(--color-accent-foreground); }
+.tp-consent-btn-primary { background: var(--color-accent-fill); color: var(--color-accent-foreground); }
 .tp-consent-btn-primary:disabled { opacity: 0.6; cursor: default; }
 .tp-consent-btn-ghost { background: transparent; color: var(--color-muted); font-weight: 600; }
 .tp-consent-err { margin-top: 8px; text-align: center; font-size: 12px; color: var(--color-accent-3-deep); }

@@ -126,7 +126,7 @@ const SCOPED_STYLES = `
 .tp-custom-poi-form-field input,
 .tp-custom-poi-form-field textarea {
   padding: 10px 12px; min-height: 44px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
   border-radius: var(--radius-md);
   background: var(--color-background);
   font: inherit; font-size: var(--font-size-callout);

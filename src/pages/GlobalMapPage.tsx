@@ -243,7 +243,7 @@ const SCOPED_STYLES = `
   display: inline-flex; align-items: center; gap: 8px;
   padding: 12px 22px;
   border-radius: var(--radius-full);
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   border: none; cursor: pointer;
   font: inherit; font-weight: 700; font-size: var(--font-size-callout);
   min-height: var(--spacing-tap-min);
@@ -283,7 +283,7 @@ const SCOPED_STYLES = `
 .tp-global-map-sheet-header .open-trip-btn {
   display: inline-flex; align-items: center;
   padding: 6px 14px; border-radius: var(--radius-full);
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   text-decoration: none;
   font: inherit; font-size: var(--font-size-footnote); font-weight: 700;
   border: none; cursor: pointer;
@@ -447,8 +447,8 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 .tp-global-map-sheet-stop.is-active .ds-dot {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--color-accent-fill);
+  border-color: var(--color-accent-fill);
   color: var(--color-accent-foreground);
 }
 .tp-global-map-sheet-stop .ds-name {
@@ -564,7 +564,7 @@ const SCOPED_STYLES = `
 .tp-global-map-mobile-poi-cta {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: var(--font-size-footnote); font-weight: 700;
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
   padding: 10px 14px; border-radius: var(--radius-full);
   text-decoration: none;
   white-space: nowrap;

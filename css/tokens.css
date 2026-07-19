@@ -26,6 +26,11 @@ html { color-scheme: light dark; }
      *                            （該底上 #8A6038 僅 4.36，故另立一階） */
     --color-accent-text: #8A6038;
     --color-accent-text-on-tonal: #7A5430;
+    /* 填色面專用（owner 2026-07-20 拍板「餘裕」檔）：白字疊 #A97A4A 只有 3.77 未達 AA
+     * （深色同一顆鈕有 7.12 → 淺色反而比深色難讀）。填色底改 #8A6038 → 白字 5.51 ✅。
+     * 用於「實心填色 + accent-foreground 白字」的場景（主要按鈕、側欄 active、底部 tab
+     * 選中膠囊…）。深色維持 #CBA06E（深字 7.12 已通過）。 */
+    --color-accent-fill: #8A6038;
     /* v2.55.88 V3 三色退場：語意分類色（sage 交通 / 粉 收藏活動）收斂成單一柔褐 accent。
      * 消費者（data-tone / --tone-*）不變，只是 accent-2/-3 的值統一成 accent，全站不再彩虹。
      * 卡片改 neutral surface 是 Phase 2（此版仍走柔褐 tint，先退掉多色）。design.md §2.3。 */
@@ -46,6 +51,12 @@ html { color-scheme: light dark; }
     --color-accent-foreground: #FFFFFF;
     --color-border: #EADFCF;
     --color-line-strong: #C8B89F;
+    /* 互動控制項邊界（owner 2026-07-20 拍板）：輸入框 / outline 按鈕的背景與頁面同為奶油色，
+     * 邊框是它們唯一的「可輸入 / 可按」視覺線索，但 --color-border 對底只有 1.28，
+     * 未達 WCAG 1.4.11 非文字對比 3.0。#94795E → 頁面 3.95 / 卡片 3.72 / 深一階底 3.40，
+     * 三種表面都過（同一 terracotta 色相僅壓明度，背景一律不動、保留奶油底身分）。
+     * **純裝飾分隔線維持 --color-border 不動**（那類豁免於 1.4.11）。 */
+    --color-border-control: #94795E;
     --color-destructive: #C13515;
     --color-destructive-bg: #FDECEC;
     --color-success: #06A77D;
@@ -301,7 +312,7 @@ body.dark {
         display: block;
         width: 100%;
         padding: 12px 14px;
-        border: 1.5px solid var(--color-border);
+        border: 1.5px solid var(--color-border-control);
         border-radius: var(--radius-lg);
         background-color: var(--color-secondary);
         color: var(--color-foreground);
@@ -335,7 +346,7 @@ body.dark {
     .tp-input-short {
         display: flex; flex-direction: column; gap: 2px;
         background: var(--color-background);
-        border: 1.5px solid var(--color-border);
+        border: 1.5px solid var(--color-border-control);
         border-radius: var(--radius-md);
         padding: 10px 14px;
         min-width: 0;
@@ -379,7 +390,7 @@ body.dark {
         display: block;
         width: 100%;
         padding: 12px 14px;
-        border: 1.5px solid var(--color-border);
+        border: 1.5px solid var(--color-border-control);
         border-radius: var(--radius-md);
         background-color: var(--color-background);
         color: var(--color-foreground);
@@ -420,7 +431,7 @@ body.dark {
         select
     ) {
         padding: 12px 14px;
-        border: 1.5px solid var(--color-border);
+        border: 1.5px solid var(--color-border-control);
         border-radius: var(--radius-lg);
         background-color: var(--color-secondary);
         color: var(--color-foreground);
@@ -484,7 +495,7 @@ body.dark {
 
     /* Day header — Terracotta primary hero */
     .day-header {
-        background: var(--color-accent);
+        background: var(--color-accent-fill);
         color: #ffffff;
         border-radius: var(--radius-xl);
         padding: 20px 24px;
@@ -749,8 +760,8 @@ body.dark {
        hollow node 維持中性（accent 只在 now/selected，見下方 [data-now] 規則），故不套 tone 著色。
        --tone-* 仍供展開明細 .tp-rail-detail 的中性 surface。 */
     .tp-rail-item[data-now="true"] .tp-rail-dot {
-        background: var(--color-accent);
-        border-color: var(--color-accent);
+        background: var(--color-accent-fill);
+        border-color: var(--color-accent-fill);
         color: var(--color-accent-foreground);
     }
 
@@ -953,6 +964,8 @@ body.dark {
          * #E0BC90 on #1C1C1E = 9.53 ✅ */
         --color-accent-text: #E0BC90;
         --color-accent-text-on-tonal: #E0BC90;
+        /* 深色填色鈕維持 #CBA06E（深字 #1C1C1E 疊其上 = 7.12 ✅，本就通過，不需壓深）。 */
+        --color-accent-fill: #CBA06E;
         /* v2.55.88 V3 三色退場：accent-2/-3 收斂成柔褐 accent（dark 版）。 */
         --color-accent-2: #CBA06E;
         --color-accent-2-deep: #E0BC90;
@@ -977,6 +990,9 @@ body.dark {
         --color-muted: #A1A1A6;
         --color-accent-foreground: #1C1C1E;
         --color-border: #48484A;
+        /* 深色控件邊界：#48484A 對底僅 1.86 / 對 surface 1.53，同樣未達 1.4.11 的 3.0。
+         * #7C7C80 → 對 #1C1C1E 4.09、對 surface #2C2C2E 3.35 ✅ 兩種表面都過。 */
+        --color-border-control: #7C7C80;
         --color-line-strong: #545458;
         --color-destructive: #E8A0A0;
         --color-destructive-bg: rgba(232, 160, 160, 0.15);
@@ -1180,7 +1196,7 @@ body.dark {
   min-height: var(--spacing-tap-min);
   padding: 10px 20px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
   background: var(--color-background);
   color: var(--color-foreground);
   font: inherit;
@@ -1195,9 +1211,9 @@ body.dark {
 .tp-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .tp-btn-primary {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-fill);
 }
 .tp-btn-primary:hover:not(:disabled) {
   background: var(--color-accent-deep);
@@ -1285,9 +1301,9 @@ body.dark {
   font-weight: 600;
   padding: 8px 14px;
   border-radius: var(--radius-full);
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--color-accent-fill);
   cursor: pointer;
   min-height: var(--spacing-tap-min); /* G-H6b：44pt HIG 觸控區（universal action button） */
 }
@@ -1328,7 +1344,7 @@ body.dark {
   font-family: inherit;
   font-size: var(--font-size-callout);
   padding: var(--tp-form-input-pad-y, 10px) var(--tp-form-input-pad-x, 12px);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-control);
   border-radius: var(--radius-md);
   background: var(--color-background);
   color: var(--color-foreground);
@@ -1517,7 +1533,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   flex-shrink: 0;
 }
 .tp-map-entry-card.is-active .tp-map-entry-card-num {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   border-color: var(--color-accent-foreground);
 }
@@ -1733,7 +1749,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 /* primary variant — confirm action (儲存 / 完成 / 建立)。Accent 實心，
  * 桌機 icon+文字 / 手機 icon only (繼承 .tp-titlebar-action RWD)。 */
 .tp-titlebar-action.is-primary {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
 }
 .tp-titlebar-action.is-primary:hover {

@@ -105,7 +105,7 @@ describe('GlobalBottomNav — 4-tab IA（rev2 帳號移 header）', () => {
   it('active state = accent 實心 pill（非 2px top indicator）', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/\.tp-global-bottom-nav-btn\.is-active\s*\{[^}]*background:\s*var\(--color-accent\)/);
+    expect(style).toMatch(/\.tp-global-bottom-nav-btn\.is-active\s*\{[^}]*background:\s*var\(--color-accent-fill\)/);
     expect(style).not.toMatch(/is-active::before/);
   });
 });

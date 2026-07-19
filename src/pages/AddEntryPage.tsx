@@ -125,7 +125,7 @@ const SCOPED_STYLES = `
   transition: all 120ms;
 }
 .tp-add-entry-poi-button:hover {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
 }
 .tp-add-entry-poi-button .svg-icon { width: 16px; height: 16px; }

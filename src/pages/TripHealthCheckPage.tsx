@@ -127,7 +127,7 @@ const SCOPED_STYLES = `
 }
 .tp-ai-health-empty .icon-bubble {
   width: 72px; height: 72px;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   border-radius: var(--radius-lg);
   display: grid; place-items: center;
@@ -154,7 +154,7 @@ const SCOPED_STYLES = `
   gap: 8px;
   margin-top: 12px;
   padding: 14px 28px;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   border: none;
   border-radius: var(--radius-full);
@@ -374,9 +374,9 @@ const SCOPED_STYLES = `
   color: var(--color-accent);
 }
 .tp-ai-health-finding .body .action.is-primary {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-fill);
 }
 .tp-ai-health-finding .body .action.is-primary:hover {
   background: var(--color-accent-deep);

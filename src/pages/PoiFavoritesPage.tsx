@@ -244,8 +244,8 @@ const SCOPED_STYLES = `
 .favorites-empty-cta .empty-cta-btn {
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   padding: 10px 20px; border-radius: var(--radius-full);
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  border: 1px solid var(--color-accent);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
+  border: 1px solid var(--color-accent-fill);
   cursor: pointer; min-height: var(--spacing-tap-min);
   text-decoration: none; display: inline-block;
 }
@@ -302,8 +302,8 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border); cursor: pointer;
 }
 .favorites-pagination-btn[aria-current="page"] {
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
+  border-color: var(--color-accent-fill);
 }
 .favorites-pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 `;

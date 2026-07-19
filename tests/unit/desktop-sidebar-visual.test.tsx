@@ -76,7 +76,7 @@ describe('DesktopSidebar rev2 §10.1 — vibrancy 材質 + 清單視覺 token', 
   it('active trip item bg 用 accent', () => {
     const { container } = renderSidebar({ user: null, trips: [] });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/\.tp-trip-item\.is-active\s*\{[^}]*background:\s*var\(--color-accent\)/);
+    expect(style).toMatch(/\.tp-trip-item\.is-active\s*\{[^}]*background:\s*var\(--color-accent-fill\)/);
   });
 
   it('trip item font-weight 600', () => {

@@ -59,7 +59,7 @@ const SCOPED_STYLES = `
 .tp-sidebar-nav-item .svg-icon { width: 20px; height: 20px; flex-shrink: 0; }
 .tp-sidebar-nav-item:hover { background: var(--color-hover); color: var(--color-foreground); }
 .tp-sidebar-nav-item:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
-.tp-sidebar-nav-item.is-active { background: var(--color-accent); color: var(--color-accent-foreground); }
+.tp-sidebar-nav-item.is-active { background: var(--color-accent-fill); color: var(--color-accent-foreground); }
 .tp-sidebar-nav-item.is-active .svg-icon { color: var(--color-accent-foreground); }
 
 .tp-sidebar-divider {
@@ -87,7 +87,7 @@ const SCOPED_STYLES = `
   transition: background 150ms var(--transition-timing-function-apple), color 150ms;
 }
 .tp-trip-item:hover { background: var(--color-hover); color: var(--color-foreground); }
-.tp-trip-item.is-active { background: var(--color-accent); color: var(--color-accent-foreground); }
+.tp-trip-item.is-active { background: var(--color-accent-fill); color: var(--color-accent-foreground); }
 .tp-sidebar-trips-empty {
   padding: 12px 8px; color: var(--color-muted);
   font-size: var(--font-size-footnote);
@@ -115,7 +115,7 @@ const SCOPED_STYLES = `
 }
 .tp-user-chip .tp-avatar {
   width: 32px; height: 32px; border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   display: grid; place-items: center;
   font-size: var(--font-size-footnote); font-weight: 700; flex-shrink: 0;
@@ -157,7 +157,7 @@ const SCOPED_STYLES = `
 .tp-account-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .tp-account-card .tp-avatar-md {
   width: 32px; height: 32px; border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   display: grid; place-items: center;
   font-size: var(--font-size-footnote); font-weight: 700; flex-shrink: 0;
