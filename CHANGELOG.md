@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.3] - 2026-07-19
+
+### Fixed（owner 回報批次 1）
+- **timeline route spine 虛線改實線**（`.tp-rail-body::before` repeating-linear-gradient → 實心）。
+- **景點 ⋯ 與 ⌄ 兩鈕太近**（`.tp-rail-head-actions` gap 2px → 6px）。
+- **手機 trip card ⋯ 蓋到標題文字**（`.tp-trip-card-eyebrow` + `-title` 加 padding-right:26px 讓文字讓開右上 ⋯）。
+- **地圖 Google +/- 縮放鍵被浮動 titlebar 蓋**（`.map-page-body` 從 `inset:0` 改 `top:var(--titlebar-h)`，地圖從 titlebar 下開始填；仍 full-bleed 無白帶、day tab 浮頂、POI 浮底）。
+- **地圖預設 zoom 12 → 13**（`useGoogleMap`）。
+- 驗證：tsc + 全 unit **3783 全綠**；真瀏覽器（390）spine 實線穿 node、card 標題不被蓋、map-body 從 titlebar 下開始。
+
 ## [2.56.2] - 2026-07-19
 
 ### Fixed
