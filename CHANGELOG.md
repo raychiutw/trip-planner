@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.2] - 2026-07-19
+
+### Fixed
+- **timeline 直條虛線桌機仍壓到行程文字**（v2.56.1 只修了手機、漏桌機）：route spine（`.tp-rail-body::before`）預設 `left:55px` 是**舊版有類型 icon tile 欄時的 dot 中心值**，icon tile 移除後 dot 中心左移到 20（桌機）但 spine 沒跟著改 → 桌機（含 3 欄中欄）虛線落在編號 node 右側、壓過行程文字（content 起點 44）。修：預設 spine `left:19`（2px 線中心落 dot 中心 20），手機 override 維持 `left:15`（dot 中心 16）。現桌機 + 手機虛線都穿過編號圓圈、在文字左側 gutter 不壓字。
+- 驗證：桌機 3 欄 spine=19 < 文字 44、手機 spine=15 < 文字 36（computed）；真瀏覽器桌機虛線穿過 ①-⑤ node、文字乾淨。tsc 綠 + timeline 159 測試綠。
+- **QA 教訓**：v2.56.1 的 audit 用了只有 2 筆 entry 的行程截圖 → 桌機虛線壓字不明顯而漏掉；timeline 類 audit 要用**多筆 entry** 的行程 + 桌機 3 欄視圖才驗得出 spine 對齊。
+
 ## [2.56.1] - 2026-07-19
 
 ### Changed
