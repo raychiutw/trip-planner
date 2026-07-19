@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.12] - 2026-07-20
+
+### Fixed（v2.56.9「全版」的 regression — master CI e2e 抓到）
+v2.56.9 拿掉 `.app-shell-main` 的 88px 保留讓功能頁全版鋪底後，底部 tab 這個 **fixed overlay**
+直接壓在內容上，產生兩個實際可觸的問題（master CI `map-bottom-tabs` e2e 失敗實證：
+`<a class=tp-global-bottom-nav-btn> from <nav class=app-shell-bottom-nav> subtree intercepts
+pointer events`）。與 `AppShell` 檔頭記載的舊事故（form confirm 被 bottom-nav 攔截，22+ master
+CI runs）同型。
+
+- **透明 tab 整塊攔截點擊** → `.app-shell-bottom-nav` 加 `pointer-events: none`、
+  `.tp-global-bottom-nav-btn` 加 `pointer-events: auto`。透明處的點擊穿透到下方內容，
+  tab icon 本身仍可按。
+- **地圖頁浮底 POI 卡掉進 tab 區域** → 改全版前 main 的 88px padding 把 map wrap 底邊往上推，
+  卡片剛好落在 tab 之上；全版後 wrap 延伸到螢幕底，卡片與 tab 重疊、按不準。比照 ChatPage
+  composer，`.map-page-cards` 的 bottom 加 `var(--nav-overlay-h, 0px)` 讓位
+  （桌機 tab 隱藏 / 操作頁不顯 tab 時該值為 0，不受影響）。
+- 驗證：本地 playwright `map-bottom-tabs` 由「intercepts pointer events」→ 通過；完整
+  mobile-chrome e2e 44 passed（唯一失敗 `add-custom-stop-page` 經與改動前 commit 比對為
+  **既有本地環境問題、非本次 regression**）。tsc + 全套 unit 3783 全綠。
+
 ## [2.56.11] - 2026-07-20
 
 ### Changed（⑫ 淺色 HIG 稽核 — B 組：owner 拍板的視覺取捨）
