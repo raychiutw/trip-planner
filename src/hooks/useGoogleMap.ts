@@ -40,8 +40,12 @@ export interface UseGoogleMapOptions {
   maxZoom?: number;
   /** Whether to render Google's default zoom control. */
   zoomControl?: boolean;
-  /** ControlPosition string from google.maps.ControlPosition enum. Default 'TOP_LEFT'. */
-  zoomControlPosition?: 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT';
+  /** ControlPosition string from google.maps.ControlPosition enum. Default 'TOP_LEFT'.
+   *  RIGHT_CENTER / LEFT_CENTER 供「頂部與底部都被浮層佔用」的 full-bleed 地圖用
+   *  （MapPage：day tab 膠囊佔頂、POI 卡浮底、FAB 佔右下 → 只剩右側中段乾淨）。 */
+  zoomControlPosition?:
+    | 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT'
+    | 'LEFT_CENTER' | 'RIGHT_CENTER';
   /** Initial mapTypeId. Default 'roadmap'. MapFabs may swap at runtime. */
   mapTypeId?: 'roadmap' | 'satellite' | 'hybrid';
   /** Disable Google's default UI chrome (POI labels, fullscreen button etc.) */

@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.8] - 2026-07-20
+
+### Fixed（⑦ 補修 — prod 實機 QA 抓到）
+- **地圖縮放鍵仍被 day tab 蓋住**（owner ⑦ 未修完）。v2.56.3 只修掉「浮動 titlebar 遮擋」
+  （`.map-page-body` 改從 `--titlebar-h` 起算），但 **prod 實機量測**發現浮頂的 day tab 玻璃膠囊
+  才是主要遮擋源：`+` 放大鍵 y=67–107 vs 膠囊 y=68–112（x 12–367 近滿寬）→ `+` 完全被蓋、
+  `−` 頂端也被壓 4px。localhost 因 Google Maps referer 限制地圖降級成奶油底、量不到縮放鍵，
+  故本地驗不出來，需 prod 真地圖才發現。
+- 修法：`MapPage` 顯式傳 `zoomControlPosition="RIGHT_CENTER"` 給 `TpMap`（原本沒傳 → 吃
+  `useGoogleMap` 預設 `TOP_LEFT`）。full-bleed 地圖上緣被 day tab、下緣被浮底 POI 卡、右下被
+  `MapFabs`（`right:16 bottom:16`）佔用 → **右側垂直中段是唯一乾淨區**。用 Google 官方
+  `ControlPosition.RIGHT_CENTER`，不去 hack Google 內部 class（`.gm-bundled-control`）以免
+  Google 改版即碎。
+- `useGoogleMap` / `TpMap` 的 `zoomControlPosition` 型別補上 `LEFT_CENTER | RIGHT_CENTER`；
+  測試 mock `google-maps.ts` 的 `ControlPosition` 補這兩個 key（原本缺 → position 會變 `undefined`）。
+
 ## [2.56.7] - 2026-07-20
 
 ### Changed（owner 回報批次 1：⑨ 連續捲動切天）
