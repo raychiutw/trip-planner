@@ -28,18 +28,12 @@ const SCOPED_STYLES = `
   gap: 2px;
   padding: 6px;
   border-radius: var(--radius-full);
-  /* rev2 iOS 26 Liquid Glass。原 cream 82% + 弱影在奶油頁面上 cream-on-cream 無對比 →
-   * 看起來像色塊非浮動玻璃。修法靠「降透明度到 62%（底下內容透得出）＋亮 specular 上緣＋
-   * 較強暖落影」讓膠囊浮起（非靠加重 blur）。blur 用 --blur-glass(14px) 與 titlebar/sheet
-   * 三層一致（DESIGN.md L281 glass 一致性規則；saturate 僅 sheet 不加）。token 化 light/dark adapt。 */
-  background: color-mix(in srgb, var(--color-secondary) 62%, transparent);
-  backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-  border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
-  box-shadow:
-    0 14px 34px rgba(42, 31, 24, .30),
-    0 3px 10px rgba(42, 31, 24, .12),
-    inset 0 1px 0 rgba(255, 255, 255, .45);
+  /* rev2 owner 2026-07-20「我不要白底，直接就是在原來的頁面上」：底部 tab 拿掉 cream 玻璃底
+   * （原 secondary 62% 疊在淺色頁 = cream-on-cream 看起來像實心白條）。改**全透明**貼在頁面上，
+   * 只留 icon + 選中高亮。為在地圖等雜底上仍讀得出，icon/字加一層淡陰影（見 -btn 下）。 */
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 .tp-global-bottom-nav-btn {
   display: flex; flex-direction: column;
@@ -57,7 +51,10 @@ const SCOPED_STYLES = `
 }
 .tp-global-bottom-nav-btn .svg-icon {
   width: 22px; height: 22px;
+  /* 透明 nav（owner ⑥）：icon 在地圖等雜底上靠淡陰影浮出，不靠白底容器。 */
+  filter: drop-shadow(0 1px 2.5px rgba(0, 0, 0, 0.28));
 }
+.tp-global-bottom-nav-btn.is-active .svg-icon { filter: none; }
 .tp-global-bottom-nav-btn span {
   /* mockup .ph-tab：10px/700（膠囊窄，字級降至 10px 對齊 iOS 26 tab 形制）。
    * 10px = var(--font-size-eyebrow)（token gate 要求，見 pr2-tokens 測）。 */
@@ -65,7 +62,10 @@ const SCOPED_STYLES = `
   line-height: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
+  /* 透明 nav（owner ⑥）：label 在雜底上靠淡陰影可讀。 */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.30);
 }
+.tp-global-bottom-nav-btn.is-active span { text-shadow: none; }
 .tp-global-bottom-nav-btn:hover { color: var(--color-foreground); background: var(--color-hover); }
 .tp-global-bottom-nav-btn.is-active {
   background: var(--color-accent);

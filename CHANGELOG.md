@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.6] - 2026-07-20
+
+### Changed（owner 回報批次 1：⑥ 底部 tab 白底）
+- **⑥ 底部功能 tab 拿掉白底、透明貼頁**：owner「我不要白底，直接就是在原來的頁面上」。原
+  `.tp-global-bottom-nav` 用 `--color-secondary` 62% cream 玻璃 + blur + 邊框 + 落影；在淺色頁
+  （行程一覽表 / 地圖 / 收藏）cream 玻璃疊 cream 內容 → 看起來像實心白條、浮動感消失。改：容器
+  `background:transparent` + 去邊框/落影/blur → tab 直接貼在頁面上、無白條。icon 加
+  `drop-shadow` + label 加 `text-shadow` → 在地圖等雜底上仍讀得出（active accent 高亮膠囊保留、
+  不加陰影）。真瀏覽器（390 light + dark）驗：無白條、icon 深淺色皆可讀、選中高亮保留。同步
+  更新 `global-bottom-nav-4tab` 測試（原鎖「玻璃膠囊 box-shadow」→ 改鎖「透明 + 無 cream 底 +
+  icon drop-shadow」）。
+
 ## [2.56.5] - 2026-07-20
 
 ### Changed（owner 回報批次 1：⑧ 排序介面）

@@ -89,12 +89,16 @@ describe('GlobalBottomNav — 4-tab IA（rev2 帳號移 header）', () => {
     expect(style).toMatch(/min-height:\s*46px/);
   });
 
-  it('底部浮動玻璃膠囊（圓角 pill + box-shadow，非滿版 grid bar）', () => {
+  it('透明貼頁 flex 列（owner ⑥「不要白底，直接在頁面上」；非滿版 grid bar、無 cream 玻璃底）', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    // rev2「手機也做」：flex 玻璃膠囊（.ph-tabs），非舊 grid 滿版 bar
-    expect(style).toMatch(/border-radius:\s*var\(--radius-full\)/);
-    expect(style).toMatch(/box-shadow:/);
+    // rev2 flex（非舊 grid 滿版 bar）；owner ⑥：容器 background:transparent + box-shadow:none
+    // （原 cream 62% 玻璃在淺色頁看起來像實心白條），icon/label 靠陰影在雜底可讀。
+    const navBlock = style.match(/\.tp-global-bottom-nav\s*\{[^}]*\}/)?.[0] ?? '';
+    expect(navBlock).toMatch(/background:\s*transparent/);
+    expect(navBlock).toMatch(/box-shadow:\s*none/);
+    expect(navBlock).not.toMatch(/color-mix/); // 無 cream 玻璃底
+    expect(style).toMatch(/\.tp-global-bottom-nav-btn\s+\.svg-icon\s*\{[^}]*drop-shadow/);
     expect(style).not.toMatch(/grid-template-columns/);
   });
 
