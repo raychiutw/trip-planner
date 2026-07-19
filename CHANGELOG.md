@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.7] - 2026-07-20
+
+### Changed（owner 回報批次 1：⑨ 連續捲動切天）
+- **⑨ 行程改「連續捲動切上下天 + day tab 連動」**（owner 選 A：連續堆疊 + scroll-spy）——
+  **回退 rev2 單日檢視**（`57814b67`）。TripPage 從「只 render 當前 day」改回 `dayNums.map` 堆疊
+  render 全部天：往下捲自然進下一天，scroll-spy 依 day header 位置更新 active day + DAY tab 高亮 +
+  hash。復原 `findScrollContainer` / `scrollDayRef` / scroll-spy effect（`.app-shell-main` 為 scroll
+  container）；`handleSwitchDay` 從「捲回頂」改回 `scrollToDay`（全天已 render，找得到 header）。
+  - **deep-link 防護**（原 57814b67 移除 scroll-spy 想修的 bug：scroll-spy 在載入時強制 switchDay(1)
+    蓋掉 `#dayN`/`?focusDay`）：改在 scroll-spy 的 switchDay + hash 加 `manualScrollTs 600ms` gate —
+    點 DAY tab / deep-link / today / scroll-restore 定位後 600ms 內 scroll-spy 不搶回，讓程式化捲動
+    安定、不蓋正確選天。auto-locate effect 開頭設 `manualScrollTs`，涵蓋所有初始定位分支。
+  - 真瀏覽器（390，沖繩七日）驗：14 day header 全 render（scrollHeight 8223）· 捲到 3000px →
+    active DAY 4 + hash #day4 · 點 DAY 5 → 捲到 day5 + 高亮不被搶 · deep-link #day3 → 落 DAY 03。
+  - source-lock 測試 `trip-page-one-day-view` → 改名 `trip-page-continuous-scroll`（鎖：dayNums.map
+    堆疊 + scroll-spy 在場 + scrollToDay + manualScrollTs gate）。tsc + 136+ 相關 unit 綠。
+  - mockup Section 01（`2026-07-17-v3-desktop-prototype.html` 單日）由 owner 此決策 supersede；
+    DESIGN.md 無單日 text 引用（單日僅 aligned to mockup、未成文），故無 DESIGN.md 需改。
+
 ## [2.56.6] - 2026-07-20
 
 ### Changed（owner 回報批次 1：⑥ 底部 tab 白底）
