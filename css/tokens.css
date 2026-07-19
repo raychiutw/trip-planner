@@ -942,15 +942,21 @@ body.dark {
         --color-accent-3-deep: #E0BC90;
         --color-accent-3-subtle: #2A2418;
         --color-accent-3-bg: #3A3020;
-        /* V3 中性深底（design.md §2 Dark：中性灰 #121214 系，取代舊暖褐 #1A140F）。 */
-        --color-background: #121214;
-        --color-secondary: #1C1C1E;
-        --color-tertiary: #2C2C2E;
-        --color-hover: #3A3A3C;
+        /* 中性深底 — iOS HIG dark grays（owner 2026-07-19「全黑太多、tab 也黑，參考 HIG」）。
+         * 舊 base #121214 幾乎純黑、secondary #1C1C1E 只亮一階 → nav 玻璃（secondary 62%）
+         * 疊近黑底也糊成黑。改：整條灰階往上抬一階 iOS system gray（base 脫離近黑、elevated
+         * surface / nav / card 明顯浮起）。foreground #F5F5F7 對比仍 >14:1。
+         *   background  #1C1C1E（iOS secondarySystemBackground — dark 但非黑的 base）
+         *   secondary   #2C2C2E（elevated surface / nav 玻璃 / card）
+         *   tertiary    #3A3A3C · hover #48484A（systemGray4/3） */
+        --color-background: #1C1C1E;
+        --color-secondary: #2C2C2E;
+        --color-tertiary: #3A3A3C;
+        --color-hover: #48484A;
         --color-foreground: #F5F5F7;
         --color-muted: #A1A1A6;
-        --color-accent-foreground: #121214;
-        --color-border: #3A3A3C;
+        --color-accent-foreground: #1C1C1E;
+        --color-border: #48484A;
         --color-line-strong: #545458;
         --color-destructive: #E8A0A0;
         --color-destructive-bg: rgba(232, 160, 160, 0.15);
@@ -1359,15 +1365,19 @@ body.dark {
      桌機寬中欄下明顯偏左）。auto 左右 margin 置中,少天時置中、多天時仍可捲。 */
   margin: 6px auto 8px;
   padding: 4px;
-  /* rev2 owner 2026-07-19：原 secondary(cream) 72% 疊在 cream 頁面底 = cream-on-cream、
-   * 邊界幾乎看不見（「太透明和底色自重疊」）。改：提高不透明度到 90%（自身讀得出的玻璃
-   * 面）+ 加深邊框（foreground 12% 而非淡 cream border）+ 浮起陰影，成為明確玻璃膠囊
-   * （對齊 iOS/macOS 玻璃卡片邊界清楚的質感）。共用於 timeline（cream 頁）+ 地圖（浮地圖上）。 */
-  background: color-mix(in srgb, var(--color-background) 90%, transparent);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid color-mix(in srgb, var(--color-foreground) 12%, transparent);
-  box-shadow: 0 6px 20px rgba(42, 31, 24, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  /* rev2 owner 2026-07-19「day tab 比照功能tab（底部浮動膠囊）的效果」：與 .tp-global-bottom-nav
+   * 同一玻璃材質族 — secondary 底 + --blur-glass(三層 glass 一致)+ 較強暖落影 + 亮 specular
+   * 上緣，成為明確浮動玻璃膠囊。用 secondary（非 background）→ 剛抬亮的 dark base(#1C1C1E)上
+   * 仍以 elevated #2C2C2E 明顯浮起（非 base-on-base 糊掉）；88%（比 nav 62% 略實）確保頂端
+   * sticky、內容從下方流過時仍讀得出邊界，不重蹈先前 72% cream-on-cream。 */
+  background: color-mix(in srgb, var(--color-secondary) 88%, transparent);
+  backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
+  box-shadow:
+    0 14px 34px rgba(42, 31, 24, 0.22),
+    0 3px 10px rgba(42, 31, 24, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
   border-radius: var(--radius-full);
 }
 .tp-map-day-tabs::-webkit-scrollbar { display: none; }
