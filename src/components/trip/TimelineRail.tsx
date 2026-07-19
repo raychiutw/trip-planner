@@ -377,6 +377,8 @@ const SCOPED_STYLES = `
   touch-action: pan-y; flex-shrink: 0;
 }
 .tp-rail-body[data-sort-mode] .tp-rail-grip { display: inline-flex; }
+/* owner ⑧：排序模式時右邊 caret › 隱藏，grip 顯示在同位置（head-actions）。 */
+.tp-rail-body[data-sort-mode] .tp-rail-caret { display: none; }
 .tp-rail-grip:active { cursor: grabbing; }
 .tp-rail-grip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; opacity: 1; }
 .tp-rail-grip .svg-icon { width: 16px; height: 16px; }
@@ -1101,16 +1103,9 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         {/* mockup .tp-detail-row:1923 — 6-col grid: grip(24) | time(50) | dot(24) | icon(44) | body(1fr) | caret(20)。
          * 2026-05-10 (#510)：重新加回 .tp-rail-dot — 編號圓圈是 wayfinding，
          * mockup terracotta-preview-v2.html 6241 一直都有，移除它的舊註解（基於更早 S12 Variant A）已過期。 */}
-        <button
-          type="button"
-          className="tp-rail-grip"
-          {...sortable.listeners}
-          {...sortable.attributes}
-          aria-label={`拖拉排序：${entryDisplayTitle}`}
-          data-testid={entry.id != null ? `timeline-rail-grip-${entry.id}` : undefined}
-        >
-          <Icon name="grip" />
-        </button>
+        {/* rev2 owner 2026-07-19：排序 grip 從「列首左欄」移到右邊 head-actions（取代 caret ›）。
+         * 左欄 grip 會讓排序模式整條 timeline dots 右移一欄（1-2-3 格式跑掉）；改放右邊 →
+         * 左邊 node 編號兩模式一致（見 head .tp-rail-head-actions 內的 .tp-rail-grip）。 */}
         <span className="tp-rail-dot" data-hotel={stopNumber == null || undefined} aria-hidden="true">
           {stopNumber != null ? stopNumber : <Icon name="hotel" />}
         </span>
@@ -1196,6 +1191,19 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               data-testid={entry.id != null ? `timeline-rail-toggle-${entry.id}` : undefined}
             >
               <span aria-hidden="true">›</span>
+            </button>
+            {/* 排序模式：caret › 隱藏（CSS），此 grip 顯示在同位置（owner ⑧）。onClick 擋冒泡避免
+             * 拖曳握把被當成整列點擊 → 誤觸展開。 */}
+            <button
+              type="button"
+              className="tp-rail-grip"
+              {...sortable.listeners}
+              {...sortable.attributes}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`拖拉排序：${entryDisplayTitle}`}
+              data-testid={entry.id != null ? `timeline-rail-grip-${entry.id}` : undefined}
+            >
+              <Icon name="grip" />
             </button>
           </div>
         </div>
