@@ -31,6 +31,7 @@ import {
 } from '../_rate_limit';
 import { normalizeEmail } from '../../../src/server/email-utils';
 import type { Env } from '../_types';
+import { maskEmail } from '../_pii';
 
 interface SignupBody {
   email?: string;
@@ -42,6 +43,12 @@ interface SignupBody {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * 目前生效的個資條款版本。**政策文字有實質變更時必須同步 bump**，
+ * 否則無法區分某位使用者同意的是哪一版、也無法判斷誰需要重新同意。
+ */
+const PRIVACY_POLICY_VERSION = '2026-07-20';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = (await parseJsonBody<SignupBody>(context.request)) ?? {};
@@ -55,6 +62,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
   if (!password || password.length < MIN_PASSWORD_LEN) {
     throw new AppError('SIGNUP_PASSWORD_TOO_SHORT', `密碼至少 ${MIN_PASSWORD_LEN} 字元`);
+  }
+
+  // 個資條款同意 —— owner 決策 2026-07-20。
+  // 擋在最前面：未同意就不該消耗 rate limit 額度，也不該碰 DB。
+  // 只接受明確的 true —— 缺欄位、false、字串 'false' 都算沒同意。
+  if ((body as { privacyConsent?: unknown }).privacyConsent !== true) {
+    throw new AppError('SIGNUP_CONSENT_REQUIRED');
   }
 
   // V2-P6 rate limit: per-IP bucket — anti signup-spam.
@@ -78,7 +92,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       eventType: 'signup',
       outcome: 'failure',
       failureReason: 'email_taken',
-      metadata: { email },
+      metadata: { emailMasked: maskEmail(email) },
     }, context.env);
     throw new AppError('SIGNUP_EMAIL_TAKEN');
   }
@@ -94,8 +108,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const userId = crypto.randomUUID();
   try {
     await context.env.DB
-      .prepare('INSERT INTO users (id, email, email_verified_at, display_name) VALUES (?, ?, ?, ?)')
-      .bind(userId, email, null, displayName)
+      .prepare(
+        `INSERT INTO users (id, email, email_verified_at, display_name,
+                            privacy_consent_at, privacy_policy_version)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      // 同意的時間戳與版本一起寫入 —— 版本讓政策改版後仍能得知某人同意的是哪一版。
+      .bind(userId, email, null, displayName, new Date().toISOString(), PRIVACY_POLICY_VERSION)
       .run();
     await context.env.DB
       .prepare(
@@ -170,7 +189,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     eventType: 'signup',
     outcome: 'success',
     userId,
-    metadata: { email, displayName, invitationAccepted: joinedTrip?.id ?? null },
+    metadata: { emailMasked: maskEmail(email), displayName, invitationAccepted: joinedTrip?.id ?? null },
   }, context.env);
   return response;
 };

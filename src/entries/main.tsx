@@ -97,6 +97,8 @@ const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
 const CollabPage = lazyWithRetry(() => import('../pages/CollabPage'));
 const EditTripPage = lazyWithRetry(() => import('../pages/EditTripPage'));
 const NewTripPage = lazyWithRetry(() => import('../pages/NewTripPage'));
+// 未登入首頁。已登入者由 LandingPage 內部導向 /trips。
+const LandingPage = lazyWithRetry(() => import('../pages/LandingPage'));
 const EntryActionPage = lazyWithRetry(() => import('../pages/EntryActionPage'));
 const AddStopPage = lazyWithRetry(() => import('../pages/AddStopPage'));
 const AddCustomStopPage = lazyWithRetry(() => import('../pages/AddCustomStopPage'));
@@ -177,6 +179,9 @@ if (el) {
           <NewTripProvider>
           <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
             <Routes>
+              {/* `/` 改指向未登入首頁。改版前落到 path="*" → LegacyRedirect → /trips → /login，
+                  訪客永遠看不到這個 app 在做什麼。已登入者由 LandingPage 導回 /trips。 */}
+              <Route path="/" element={<LandingPage />} />
               <Route path="/admin" element={<Navigate to="/trips" replace />} />
               <Route path="/admin/" element={<Navigate to="/trips" replace />} />
               <Route path="/manage" element={<Navigate to="/chat" replace />} />

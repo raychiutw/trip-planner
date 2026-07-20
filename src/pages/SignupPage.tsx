@@ -28,6 +28,25 @@ const SCOPED_STYLES = `
     var(--color-secondary);
 }
 ${AUTH_LAYOUT_STYLES}
+/* 個資條款同意勾選框。觸控區給足 44px（HIG），label 整塊可點。 */
+.tp-signup-consent {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin: 4px 0 4px;
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+}
+.tp-signup-consent input {
+  width: 20px; height: 20px; flex: 0 0 20px;
+  margin: 12px 0 0;   /* 對齊第一行文字，同時把可點區撐到 44px 高 */
+  accent-color: var(--color-accent-fill);
+  cursor: pointer;
+}
+.tp-signup-consent label {
+  min-height: 44px; display: flex; align-items: center; flex-wrap: wrap;
+  line-height: 1.6; cursor: pointer;
+}
+.tp-signup-consent a { color: var(--color-accent-text); }
+
 .tp-auth-card {
   width: 100%; max-width: 440px;
   background: var(--color-background);
@@ -102,6 +121,9 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  /* 個資條款同意（owner 決策 2026-07-20）。後端 signup 也會擋 ——
+   * 前端勾選框只是體驗，真正的證據是 DB 的 privacy_consent_at + 版本。 */
+  const [privacyConsent, setPrivacyConsent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ kind: 'error' | 'warning'; node: React.ReactNode } | null>(null);
@@ -120,6 +142,7 @@ export default function SignupPage() {
           email: email.trim(),
           password,
           displayName: displayName.trim() || undefined,
+          privacyConsent,
           // V2 共編：若 URL 帶 ?invitation=xxx，server 會嘗試 accept invitation
           ...(invitationToken ? { invitationToken } : {}),
         }),
@@ -264,10 +287,25 @@ export default function SignupPage() {
             />
           </div>
 
+          <div className="tp-signup-consent">
+            <input
+              id="signup-privacy-consent"
+              type="checkbox"
+              checked={privacyConsent}
+              onChange={(e) => setPrivacyConsent(e.target.checked)}
+              data-testid="signup-privacy-consent"
+            />
+            <label htmlFor="signup-privacy-consent">
+              我已閱讀並同意
+              {' '}
+              <a href="/privacy" target="_blank" rel="noreferrer">個資條款與隱私權政策</a>
+            </label>
+          </div>
+
           <button
             type="submit"
             className="tp-btn tp-btn-primary"
-            disabled={submitting}
+            disabled={submitting || !privacyConsent}
             data-testid="signup-submit"
           >
             {submitting ? '建立中…' : '建立帳號'}

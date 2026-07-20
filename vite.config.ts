@@ -5,15 +5,14 @@ import { resolve } from 'path';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { VitePWA } from 'vite-plugin-pwa';
 import { mockApiPlugin } from './scripts/vite-mock-api';
+// 版本 / commit 單一來源 —— vitest.config.js 也 import 同一份，見該檔註解。
+import { appVersion, commitSha, versionDefine } from './scripts/app-version.mjs';
 
 // Only upload source maps to Sentry in CI (when SENTRY_AUTH_TOKEN is present).
 // B-P6 task 10.1：mark release with package version + commit SHA。
 // CI（GitHub Actions）有 GITHUB_SHA env；fallback 到 explicit SENTRY_RELEASE 或 'local'。
 const sentryRelease =
-  process.env.SENTRY_RELEASE ||
-  `tripline@${process.env.npm_package_version || '0.0.0'}-${
-    (process.env.GITHUB_SHA || process.env.CF_PAGES_COMMIT_SHA || 'local').slice(0, 7)
-  }`;
+  process.env.SENTRY_RELEASE || `tripline@${appVersion}-${commitSha}`;
 
 const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
   ? [
@@ -27,6 +26,8 @@ const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
   : [];
 
 export default defineConfig({
+  // 注入給前端顯示（帳號頁版本頁尾）。與 sentryRelease 同源，見上方註解。
+  define: versionDefine,
   plugins: [
     // MOCK_API=1 npx vite dev → 攔截 /api/* 返回假資料
     ...(process.env.MOCK_API ? [mockApiPlugin()] : []),

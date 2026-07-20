@@ -21,7 +21,8 @@ import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import type { Env } from '../_types';
 
 // 唯一可經此端點授權的 client（Tripline 自家 AI 排程 pipeline，見 provision-tp-request-client）。
-const TP_REQUEST_CLIENT_ID = 'tripline-tp-request';
+// 單一來源 —— 原本此處與另一檔各寫死一份。
+import { TP_REQUEST_CLIENT_ID } from '../_first-party';
 // 1yr（同 consent.ts）；user 可隨時於帳號設定撤銷。
 const CONSENT_TTL_SEC = 365 * 24 * 60 * 60;
 // ⚠️ scopes 對 tp-request 不具授權效力（authz-drift 警語）：mint-restricted 只查 Consent 是否
