@@ -467,7 +467,11 @@ const SCOPED_STYLES = `
  */
 .tp-global-map-mobile-stack,
 .tp-map-entry-stack {
-  position: absolute; left: 0; right: 0; bottom: 0;
+  /* bottom 吃 --nav-overlay-h 讓開底部浮動膠囊。原本是 bottom: 0 + z-index 700，
+   * 把 z=200 的膠囊整個埋在不透明奶油漸層下 —— 而 /map 正是膠囊「地圖」tab 導過來的
+   * 頁面，等於進來就無法用 tab 切走。與 MapPage.tsx 的 .map-page-cards 同構。
+   * （v2.56.12 只修了 /trip/:id/map 的那份，這份漏了。） */
+  position: absolute; left: 0; right: 0; bottom: var(--nav-overlay-h, 0px);
   background: linear-gradient(to top, var(--color-background) 75%, transparent);
   padding: 12px 0 16px;
   /* z-index 700 浮在 leaflet marker-pane (600) + tooltip-pane (650) 之上，

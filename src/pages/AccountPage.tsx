@@ -28,6 +28,12 @@ interface AccountStats {
 const SCOPED_STYLES = `
 .tp-account-shell {
   min-height: 100%;
+  /* height:100% 不可省（原本只有 min-height）。少了它這個 div 雖然宣告了
+   * overflow-y:auto 卻永遠不會溢出 → 它是個「從不捲動的 scrollport」，於是
+   * ① 內部的 position:sticky TitleBar 不會黏，被外層 .app-shell-main 整個帶走；
+   * ② TitleBar 的 scroll edge effect 綁到它之後 scrollTop 恆 0，永不觸發。
+   * 對齊 .explore-shell / .favorites-shell / .tp-trips-shell 等同類頁。 */
+  height: 100%;
   background: var(--color-secondary);
   overflow-y: auto;
 }
@@ -36,7 +42,12 @@ const SCOPED_STYLES = `
   /* audit pass2：帳號頁自成 scroll 容器（.tp-account-shell overflow-y:auto），AppShell
    * main 的 nav padding 不套到此內層 → 手機/平板最後一列會被底部浮動膠囊蓋住。自留膠囊
    * 高度的底部 clearance（桌機無膠囊、@1024 收回 80px）。 */
-  padding: 24px 16px calc(var(--nav-height-mobile, 88px) + 24px);
+  /* --nav-overlay-h（非已退役的 nav-height-mobile 88px）：後者與真實膠囊盒脫鉤，
+   * 在 iPhone 上其實不足（膠囊實佔 safe-area 34 + 60 = 94 > 88），最後一列會被壓到。
+   * --nav-overlay-h 由 AppShell 依 max(--chrome-inset, safe-area) + 60 派生，
+   * 桌機與不顯膠囊的操作頁自動為 0。custom property 從 .app-shell 繼承下來，
+   * 本層自成 scroll 容器也吃得到。 */
+  padding: 24px 16px calc(var(--nav-overlay-h, 0px) + 24px);
   display: flex; flex-direction: column; gap: 24px;
 }
 @media (min-width: 768px) {

@@ -16,6 +16,12 @@ import Icon from '../components/shared/Icon';
 const SCOPED_STYLES = `
 .tp-notif-shell {
   min-height: 100%;
+  /* height:100% 不可省（原本只有 min-height）。少了它這個 div 雖然宣告了
+   * overflow-y:auto 卻永遠不會溢出 → 它是個「從不捲動的 scrollport」，於是
+   * ① 內部的 position:sticky TitleBar 不會黏，被外層 .app-shell-main 整個帶走；
+   * ② TitleBar 的 scroll edge effect 綁到它之後 scrollTop 恆 0，永不觸發。
+   * 對齊 .explore-shell / .favorites-shell / .tp-trips-shell 等同類頁。 */
+  height: 100%;
   background: var(--color-secondary);
   overflow-y: auto;
 }
