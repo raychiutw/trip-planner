@@ -19,21 +19,25 @@ import Icon from '../shared/Icon';
 import { PRIMARY_NAV_ITEMS, isItemActive } from './navItems';
 
 const SCOPED_STYLES = `
-/* rev2 owner 2026-07-18「手機也做」：底部**浮動玻璃膠囊**（iOS 26 Apple Music
- * .ph-tabs 形制）— 桌機+手機共用同一玻璃膠囊：圓角 pill + glass blur + rim +
- * box-shadow。不滿版 → 左右露出內容、玻璃才有東西透。定位（fixed 置中；手機置中
- * 浮動、桌機置中中欄+右欄）由 AppShell .app-shell-bottom-nav 負責。 */
+/* 底部 4-tab **浮動玻璃膠囊**（HIG iOS 26 floating capsule 形制）。不滿版 → 左右露出
+ * 內容、玻璃才有東西透。定位（fixed 置中）由 AppShell .app-shell-bottom-nav 負責。
+ *
+ * 材質沿革：owner 2026-07-20「我不要白底」→ 當時把材質**整個刪掉**（transparent +
+ * 給 icon/label 補黑色投影代償），結果是一排浮空 icon、讀不出這是一組導覽。真正的根因不是
+ * 「有底」而是底被**品牌奶油色**染色（secondary 62% 疊奶油頁 = cream-on-cream），
+ * 那違反 HIG「glass 不上 tint，顏色留給 content layer」。改中性 --glass-tint 後
+ * 材質可以回歸，膠囊重新是一個容器。SoT：
+ * docs/design-sessions/2026-07-20-chrome-hig-regular-glass.html */
 .tp-global-bottom-nav {
   display: flex;
   gap: 2px;
   padding: 6px;
   border-radius: var(--radius-full);
-  /* rev2 owner 2026-07-20「我不要白底，直接就是在原來的頁面上」：底部 tab 拿掉 cream 玻璃底
-   * （原 secondary 62% 疊在淺色頁 = cream-on-cream 看起來像實心白條）。改**全透明**貼在頁面上，
-   * 只留 icon + 選中高亮。為在地圖等雜底上仍讀得出，icon/字加一層淡陰影（見 -btn 下）。 */
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  background: var(--glass-tint);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  border: var(--glass-rim);
+  box-shadow: var(--glass-specular), var(--glass-shadow);
 }
 .tp-global-bottom-nav-btn {
   display: flex; flex-direction: column;
@@ -45,31 +49,26 @@ const SCOPED_STYLES = `
   border: none;
   text-decoration: none;
   cursor: pointer;
-  color: var(--color-muted);
+  /* inactive 用 foreground 而非 muted：膠囊可能浮在 satellite/hybrid 圖磚上
+   * （MapFabs MapTileStyle），合成底 #A8A8A8 配 muted 只有 2.76:1，而 11px bold
+   * 不算 WCAG large text（門檻 4.5 非 3.0）。foreground 得 6.39:1。
+   * active/inactive 的區分靠 accent 實心藥丸，不靠文字灰階 —— 用灰階換來的是 a11y 失敗。 */
+  color: var(--color-foreground);
   font: inherit;
   transition: background 140ms, color 140ms;
-  /* 容器（.app-shell-bottom-nav）為了讓透明處的點擊穿透到下方內容而設 pointer-events:none，
-   * 這裡把可點區域還給 tab 本身（見 AppShell 該處註解）。 */
-  pointer-events: auto;
 }
 .tp-global-bottom-nav-btn .svg-icon {
   width: 22px; height: 22px;
-  /* 透明 nav（owner ⑥）：icon 在地圖等雜底上靠淡陰影浮出，不靠白底容器。 */
-  filter: drop-shadow(0 1px 2.5px rgba(0, 0, 0, 0.28));
 }
-.tp-global-bottom-nav-btn.is-active .svg-icon { filter: none; }
 .tp-global-bottom-nav-btn span {
-  /* mockup .ph-tab：10px/700（膠囊窄，字級降至 10px 對齊 iOS 26 tab 形制）。
-   * 10px = var(--font-size-eyebrow)（token gate 要求，見 pr2-tokens 測）。 */
-  font-size: var(--font-size-eyebrow);
-  line-height: 12px;
+  /* HIG tab label 11px/700。DESIGN.md L58 本就寫 11px，是 code 漂移成 eyebrow(10px)；
+   * --font-size-caption2(0.6875rem) 早就存在只是沒被用。line-height 13px 給 CJK 留空間。 */
+  font-size: var(--font-size-caption2);
+  line-height: 13px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  /* 透明 nav（owner ⑥）：label 在雜底上靠淡陰影可讀。 */
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.30);
 }
-.tp-global-bottom-nav-btn.is-active span { text-shadow: none; }
-.tp-global-bottom-nav-btn:hover { color: var(--color-foreground); background: var(--color-hover); }
+.tp-global-bottom-nav-btn:hover { background: var(--color-hover); }
 .tp-global-bottom-nav-btn.is-active {
   background: var(--color-accent-fill);
   color: var(--color-accent-foreground);

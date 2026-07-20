@@ -93,10 +93,12 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
     expect(tokens).toMatch(/\.tp-titlebar-title\s*\{[\s\S]*?font-weight:\s*700/);
   });
 
-  it('mobile bottom nav label 對齊 mockup .ph-tab 10/12/700（玻璃膠囊窄 tab）', () => {
-    // rev2「手機也做」：手機底部改浮動玻璃膠囊（iOS 26 .ph-tabs），tab 窄 → label 降
-    // 10px/700（mockup .ph-tab）。桌機 @≥1024 才回 caption2/14px（row layout）。
-    const labelBlock = bnav.match(/\.tp-global-bottom-nav-btn span\s*\{[\s\S]*?font-size:\s*var\(--font-size-eyebrow\)[\s\S]*?line-height:\s*12px[\s\S]*?font-weight:\s*700/);
+  it('mobile bottom nav label 對齊 HIG tab label 11/13/700', () => {
+    // DESIGN.md L58 一直寫的就是 bottom-nav-label 11px/700；code 曾漂移成
+    // --font-size-eyebrow(10px)，且當時註解宣稱「10px = token gate 要求」——
+    // 但 --font-size-caption2(0.6875rem = 11px) 早就存在，只是沒被用。
+    // Regular Glass 收斂時一併修回 SoT。line-height 13px 給 CJK 留空間。
+    const labelBlock = bnav.match(/\.tp-global-bottom-nav-btn span\s*\{[\s\S]*?font-size:\s*var\(--font-size-caption2\)[\s\S]*?line-height:\s*13px[\s\S]*?font-weight:\s*700/);
     expect(labelBlock).not.toBeNull();
   });
 

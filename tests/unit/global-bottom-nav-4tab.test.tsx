@@ -89,17 +89,54 @@ describe('GlobalBottomNav — 4-tab IA（rev2 帳號移 header）', () => {
     expect(style).toMatch(/min-height:\s*46px/);
   });
 
-  it('透明貼頁 flex 列（owner ⑥「不要白底，直接在頁面上」；非滿版 grid bar、無 cream 玻璃底）', () => {
+  it('Regular Glass 浮動膠囊（非滿版 grid bar、非品牌 color-mix、非全透明）', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    // rev2 flex（非舊 grid 滿版 bar）；owner ⑥：容器 background:transparent + box-shadow:none
-    // （原 cream 62% 玻璃在淺色頁看起來像實心白條），icon/label 靠陰影在雜底可讀。
+    // 歷史：owner 2026-07-20「不要白底」→ 當時把材質**整個刪掉**（transparent + icon 黑
+    // drop-shadow）。但根因不是「有底」，是底被**品牌奶油色**染色（HIG 明令 glass 不上
+    // tint）——奶油玻璃疊奶油頁必糊。改中性 tint 後材質回歸，膠囊重新成為一個容器。
     const navBlock = style.match(/\.tp-global-bottom-nav\s*\{[^}]*\}/)?.[0] ?? '';
-    expect(navBlock).toMatch(/background:\s*transparent/);
-    expect(navBlock).toMatch(/box-shadow:\s*none/);
-    expect(navBlock).not.toMatch(/color-mix/); // 無 cream 玻璃底
-    expect(style).toMatch(/\.tp-global-bottom-nav-btn\s+\.svg-icon\s*\{[^}]*drop-shadow/);
-    expect(style).not.toMatch(/grid-template-columns/);
+    expect(navBlock).toMatch(/background:\s*var\(--glass-tint\)/);
+    expect(navBlock).toMatch(/backdrop-filter:\s*var\(--glass-filter\)/);
+    expect(navBlock).toMatch(/border:\s*var\(--glass-rim\)/);
+    expect(navBlock).toMatch(/box-shadow:\s*var\(--glass-specular\),\s*var\(--glass-shadow\)/);
+    expect(navBlock).not.toMatch(/color-mix/); // 不得回頭用品牌染色
+    expect(style).not.toMatch(/grid-template-columns/); // 仍是 flex 膠囊，非滿版 grid bar
+  });
+
+  it('有容器後不再給 icon / label 補陰影（那是缺容器的代償）', () => {
+    const { container } = renderNav({ authed: true, pathname: '/trips' });
+    const style = container.querySelector('style')?.textContent ?? '';
+    // 黑 drop-shadow 疊在 frosted 板上會讀成髒污，且它原本只是為了讓 icon 在
+    // 透明態的地圖雜底上浮出來。容器回來了，代償就該撤掉。
+    expect(style).not.toMatch(/drop-shadow/);
+    expect(style).not.toMatch(/text-shadow/);
+  });
+
+  it('label 用 caption2(11px) — HIG tab label 字級，非 eyebrow(10px)', () => {
+    const { container } = renderNav({ authed: true, pathname: '/trips' });
+    const style = container.querySelector('style')?.textContent ?? '';
+    // DESIGN.md L58 早就寫 bottom-nav-label 11px/700，是 code 漂移成 eyebrow(10px)。
+    expect(style).toMatch(/font-size:\s*var\(--font-size-caption2\)/);
+    expect(style).not.toMatch(/var\(--font-size-eyebrow\)/);
+    expect(style).toMatch(/line-height:\s*13px/);
+  });
+
+  it('inactive label 用 foreground 而非 muted（satellite 圖磚上的對比度下限）', () => {
+    const { container } = renderNav({ authed: true, pathname: '/trips' });
+    const style = container.querySelector('style')?.textContent ?? '';
+    // 膠囊可能浮在 satellite/hybrid 圖磚上（MapFabs MapTileStyle）。合成底 #A8A8A8 配
+    // --color-muted 只有 2.76:1（11px bold 不算 WCAG large text，門檻 4.5 非 3.0）；
+    // 改 --color-foreground 得 6.39:1。active/inactive 靠 accent 實心藥丸區分，不靠灰階。
+    const btnBlock = style.match(/\.tp-global-bottom-nav-btn\s*\{[^}]*\}/)?.[0] ?? '';
+    expect(btnBlock).toMatch(/color:\s*var\(--color-foreground\)/);
+    expect(btnBlock).not.toMatch(/color:\s*var\(--color-muted\)/);
+  });
+
+  it('容器不再需要 pointer-events 逃生艙（透明態才需要讓點擊穿透）', () => {
+    const { container } = renderNav({ authed: true, pathname: '/trips' });
+    const style = container.querySelector('style')?.textContent ?? '';
+    expect(style).not.toMatch(/pointer-events/);
   });
 
   it('active state = accent 實心 pill（非 2px top indicator）', () => {
