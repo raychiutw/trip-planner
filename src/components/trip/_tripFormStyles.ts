@@ -320,9 +320,9 @@ body.dark .tp-edit-row select {
   margin: 20px -24px 0;
   padding: 16px 24px max(16px, env(safe-area-inset-bottom, 16px));
   border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+  background: var(--glass-tint);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
 }
 .tp-new-modal-actions { justify-content: flex-end; }
 .tp-edit-actions { justify-content: space-between; flex-wrap: wrap; }

@@ -106,9 +106,9 @@ const SCOPED_STYLES = `
 .map-page-empty-card {
   text-align: center;
   padding: 24px 28px;
-  background: var(--color-glass-nav);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+  background: var(--glass-tint);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   max-width: 280px;
@@ -152,7 +152,10 @@ const SCOPED_STYLES = `
    * 浮底 POI 卡就掉進底部 tab 的區域重疊 —— 卡片是**可點的互動元件**，被 tab icon 壓住
    * 會點不準（e2e 實證：firstCard.click() 被 nav 攔截）。比照 ChatPage composer，用
    * --nav-overlay-h 讓位（桌機 tab 隱藏 / 操作頁不顯 tab 時該值為 0，不受影響）。 */
-  bottom: calc(12px + var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
+  /* 不要再自己加 env(safe-area-inset-bottom)：--nav-overlay-h 內部已經是
+   * max(--chrome-inset, safe-area) + 60，重複加會在 iPhone 上多讓 34px 地圖。
+   * 現在兩種裝置都是「膠囊上緣 + 12px」的一致淨空。 */
+  bottom: calc(12px + var(--nav-overlay-h, 0px));
   left: 0; right: 0;
   z-index: 5;
   /* 無白帶（原 .tp-map-entry-cards 的 background + border-top 在此清掉）。 */
@@ -448,6 +451,12 @@ export default function MapPage() {
 
       <TitleBar
         // v2.31.81：title bar 對齊 ChatPage 格式 — 左 trip name，右 icon-only picker。
+        //
+        // alwaysSolid：地圖頁 full-bleed，`.map-page-wrap { height: 100% }` 填滿 main
+        // 而不產生捲動 → scroll edge effect 永遠不會觸發，TitleBar 會卡在透明態、標題
+        // 直接壓在圖磚上（切 satellite/hybrid 時完全不可讀）。這裡的材質是恆常需要的：
+        // 地圖一直在動，UI 層與 content 層永遠需要分離。
+        alwaysSolid
         title={trip?.title || trip?.name || '地圖'}
         back={tripId ? () => navigate(`/trip/${encodeURIComponent(tripId)}`) : undefined}
         account={<AccountCircle />}

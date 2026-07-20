@@ -432,9 +432,11 @@ const SCOPED_STYLES = `
 .tp-chat-composer {
   position: sticky; inset-block-end: 0;
   padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--color-background) 92%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  /* Regular Glass — 與 TitleBar / 底部膠囊同一材質（原本硬寫 92% 品牌染色 + blur(14px)
+   * 的孤島，未吃 token 因此不隨主材質變動）。 */
+  background: var(--glass-tint);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
   border-top: 1px solid var(--color-border);
   display: flex; gap: 8px; align-items: flex-end;
 }
@@ -835,6 +837,11 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       {/* v2.31.86 embedded mode：TripSheet 已有 trip name + tab header，skip TitleBar repeat。 */}
       {!embedded && <TitleBar
         title={activeTrip?.title || activeTrip?.name || '聊天'}
+        /* alwaysSolid：真正的 scroller 是 flex 子元素 .tp-chat-body（overflow-y:auto），
+         * TitleBar 是它的**兄弟**而非後代 → findScrollAncestor 只會往上找到永不溢出的
+         * .app-shell-main，scroll edge effect 永不觸發。沒有這個 opt-out 的話，訊息氣泡
+         * 捲到標題列下方時兩者之間完全沒有分界（未捲動態的 border 是 transparent）。 */
+        alwaysSolid
         account={<AccountCircle />}
         actions={trips && trips.length > 0 && (
           <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>

@@ -6,8 +6,11 @@ import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 /* ===== Scoped styles (dark mode + focus management) ===== */
 
 const SCOPED_STYLES = `
+/* dark 專用的品牌染色覆寫已移除：原本混 5% accent 進 sheet 底（--color-secondary 95%
+ * + --color-accent 5%），正是 HIG 禁止的「glass 上品牌 tint」。深色值現由
+ * --glass-tint 的 body.dark 覆寫統一提供，不需要 per-component 分支。
+ * specular 上緣同樣改吃 --glass-specular（此處 sheet 由下往上，取 0 -1px 0 方向）。 */
 body.dark [data-info-sheet-panel] {
-  background: color-mix(in srgb, var(--color-secondary) 95%, var(--color-accent) 5%);
   box-shadow: 0 -1px 0 rgba(255,255,255,0.06), 0 -8px 30px rgba(0,0,0,0.5);
 }
 [data-info-sheet-panel] :focus:not(:focus-visible) { outline: none; box-shadow: none; }
@@ -223,9 +226,9 @@ export default function InfoSheet({
             left: 0,
             right: 0,
             height: '75vh',
-            background: 'color-mix(in srgb, var(--color-secondary) 94%, transparent)',
-            WebkitBackdropFilter: 'blur(var(--blur-glass, 14px))',
-            backdropFilter: 'blur(var(--blur-glass, 14px))',
+            background: 'var(--glass-tint)',
+            WebkitBackdropFilter: 'var(--glass-filter)',
+            backdropFilter: 'var(--glass-filter)',
             borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
             zIndex: 'var(--z-info-sheet)',
             transform: open ? 'translateY(0)' : 'translateY(100%)',

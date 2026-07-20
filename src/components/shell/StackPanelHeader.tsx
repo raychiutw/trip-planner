@@ -28,9 +28,11 @@ export const STACK_PANEL_HEADER_STYLES = `
    * z-index 10 給操作頁內 sticky 子元素（sub-header / dropdown）headroom，
    * 仍低於 app-level nav（--z-sticky-nav: 200）。 */
   position: sticky; top: 0; z-index: 10;
-  background: color-mix(in srgb, var(--color-background) 88%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  /* Regular Glass — 與 TitleBar / 底部膠囊同一材質（原本硬寫 88% 品牌染色 + blur(14px)
+   * 的孤島，未吃 token 因此不隨主材質變動）。 */
+  background: var(--glass-tint);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
 }
 .tp-stack-head-btn {
   /* G-H6a：44pt HIG 最小觸控區（全 6 操作頁共用 ‹/✕），舊值低於 tap-min */
