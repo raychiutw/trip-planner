@@ -5,7 +5,7 @@
  *   keeps component state alive across breakpoints (avoids unmount/mount side effects
  *   when users rotate device or resize viewport).
  */
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useRef, type ReactNode } from 'react';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 export const APP_SHELL_STYLES = `
@@ -91,27 +91,34 @@ export const APP_SHELL_STYLES = `
 /* PR-VV 2026-04-27：bottom-nav 改 position: fixed overlay（從 grid row）。
  * 原 grid row 結構無法 transform-hide（row 仍佔空間），改 fixed 才能 slide
  * down 完全消失。Main 加 padding-bottom 對應 nav 高度避免 content 被遮。 */
-/* rev2「手機也做」：底部 nav 是**浮動玻璃膠囊**（非滿版 bar）→ fixed 置中浮在底部
- * 上方（手機 bottom:12+safe；桌機 @≥1024 覆蓋為置中中欄+右欄、bottom:18）。膠囊視覺
- * 在 GlobalBottomNav。捲動隱藏往下滑出。 */
+/* 底部 nav 是**浮動玻璃膠囊**（非滿版 bar）→ fixed 置中浮在底部上方。膠囊材質在
+ * GlobalBottomNav（Regular Glass）。
+ *
+ * 定位吃 --chrome-inset（HIG iOS 26 的 21pt 膠囊 inset），與 MapPage POI 卡避讓、
+ * ChatPage composer 避讓同一來源，不再散落 12px 副本。
+ *
+ * safe-area 用 max() 不是 calc() 相加：inset 的語意是「離螢幕邊」，而 home indicator
+ * 的 34px 已經是那段距離的一部分；calc(21px + 34px) 會讓膠囊在 iPhone 上離底 55px。
+ * 相對**舊值** calc(12px + env(...)) 的實際位移：iPhone 46→34（低 12px，貼齊 safe-area
+ * 上緣，符合 HIG）；無 safe-area 裝置 12→21（高 9px）。後者與 --nav-overlay-h 一起
+ * 收斂了底部淨空，是這次改動要盯的方向。
+ *
+ * ⚠ 膠囊**常駐**（owner 2026-07-20 決定）—— 不實作 HIG 的 tabBarMinimizeBehavior。
+ * 原本的 scroll-direction-aware 隱藏（translateY(180%)）已整套移除。HIG 允許 .never。
+ *
+ * ⚠ 這裡曾有 pointer-events:none（v2.56.12 為地圖 POI 卡被攔截而加）。
+ * 移除的理由**不是**「膠囊變小了」—— 膠囊一直是 shrink-to-fit 藥丸（268×60，
+ * left:50% + translateX(-50%)、無 width/right），加了 rim border 後還比當時大 2px。
+ * 真正的理由是**膠囊現在不透明**：當時它全透明，使用者看得到底下內容，所以點擊理應
+ * 穿透；現在它是實體玻璃，點在膠囊空隙卻觸發看不見的下層元素才是意外行為。
+ * 穩態下 .tp-page-bottom-bar(z=210) 仍勝過本層(z=200)，form 送出鍵不受影響。
+ * 回歸由 tests/e2e/bottom-nav-clickthrough.spec.js 守住。 */
 .app-shell-bottom-nav {
   position: fixed;
   left: 50%;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  bottom: max(var(--chrome-inset), env(safe-area-inset-bottom, 0px));
   z-index: var(--z-sticky-nav);
   transform: translateX(-50%);
-  transition: transform var(--transition-duration-normal, 250ms) var(--transition-timing-function-apple, cubic-bezier(0.2, 0.8, 0.2, 1));
-  /* v2.56.12：tab 改透明（⑥）+ 功能頁全版鋪到底（v2.56.9）後，這個 fixed overlay 直接壓在
-   * 內容上 → **整塊攔截點擊**（e2e 實證：地圖頁底部 POI 卡按不動，
-   * "<a class=tp-global-bottom-nav-btn> from <nav class=app-shell-bottom-nav> subtree
-   * intercepts pointer events"）。與本檔上方記載的舊事故（form confirm 被 bottom-nav 攔截，
-   * 22+ master CI runs）同型。
-   * 修法：容器不吃指標事件，只有 tab 按鈕本身吃 → 透明處的點擊穿透到下方內容，icon 仍可按。
-   * （按鈕的 pointer-events:auto 在 GlobalBottomNav .tp-global-bottom-nav-btn。） */
-  pointer-events: none;
-}
-.app-shell-bottom-nav[data-hidden="true"] {
-  transform: translateX(-50%) translateY(180%);
 }
 
 /* Desktop ≥1024px：grid 兩 / 三欄 */
@@ -154,8 +161,19 @@ export const APP_SHELL_STYLES = `
    * 底部有互動元件的頁面（如聊天 composer）不能被 tab 蓋住 → 提供 --nav-overlay-h 讓它們
    * 自行讓位（見 ChatPage .tp-chat-shell）。清單頁不讓位，維持全版。
    * 操作頁 drill-down 不顯 nav → data-has-bottom-nav="false"，overlay 高度 0。 */
+  /* 由膠囊的實際佔用高度派生，不硬寫。舊值 --nav-height-mobile: 88px 與真實膠囊盒
+   * 完全脫鉤 —— 而 MapPage POI 卡與 ChatPage composer 的避讓是唯一擋住「底部互動
+   * 元件被膠囊蓋住」的機制，脫鉤就會漏。
+   *
+   * 60px = 膠囊實高：padding 6*2 + btn min-height 46 + border 1*2。
+   * ⚠ border 那 2px 不能省：* { box-sizing: border-box } 只作用於有**明確**
+   * width/height 的元素，膠囊是 height:auto，padding 與 border 一定往外加。
+   *
+   * ⚠ 必須 mirror 上面 bottom 的 max()，不能只寫 var(--chrome-inset)。
+   * 只寫 inset 的話 iPhone（safe-area 34）上膠囊實際佔 34+60=94，卻只保留 79 → 短少 15px，
+   * ChatPage composer 會被膠囊壓住上緣。 */
   .app-shell[data-has-bottom-nav="true"] {
-    --nav-overlay-h: var(--nav-height-mobile, 88px);
+    --nav-overlay-h: calc(max(var(--chrome-inset), env(safe-area-inset-bottom, 0px)) + 60px);
   }
 }
 
@@ -221,17 +239,15 @@ export interface AppShellProps {
   bottomNav?: ReactNode;
 }
 
-/* PR-VV 2026-04-27：scroll-direction-aware bottom-nav。向下捲 → hide
- * (translateY 100%)，向上捲 → show。8px threshold 避免抖動，60px top 緩衝
- * 避免最頂端就觸發 hide。passive listener (RBP 規定)。 */
-const SCROLL_THRESHOLD_PX = 8;
-const SCROLL_TOP_BUFFER_PX = 60;
+/* 底部膠囊**常駐**（owner 2026-07-20）。原本的 scroll-direction-aware 隱藏
+ * （PR-VV 2026-04-27：向下捲 hide / 向上捲 show + 8px threshold + 60px top 緩衝）
+ * 已整套移除 —— 4-tab 是 global IA 主導覽，常駐比省 58px 垂直空間重要。
+ * HIG 的 tabBarMinimizeBehavior 本就允許 .never。
+ * mainRef 保留：usePullToRefresh 仍需要它。 */
 
 export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNav }: AppShellProps) {
   const layout: AppShellLayout = (sheet || sheetPortalId) ? APP_SHELL_LAYOUT_3PANE : APP_SHELL_LAYOUT_2PANE;
   const mainRef = useRef<HTMLElement>(null);
-  const [navHidden, setNavHidden] = useState(false);
-  const lastYRef = useRef(0);
 
   // Pull-to-refresh：scrollTop=0 時拖下 80px+ → reload
   const onRefresh = useCallback(() => {
@@ -240,31 +256,6 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
     }
   }, []);
   const { pullPx, refreshing } = usePullToRefresh(mainRef, onRefresh);
-
-  useEffect(() => {
-    const el = mainRef.current;
-    if (!el || !bottomNav) return;
-    function onScroll() {
-      const target = mainRef.current;
-      if (!target) return;
-      const y = target.scrollTop;
-      const dy = y - lastYRef.current;
-      if (Math.abs(dy) < SCROLL_THRESHOLD_PX) return;
-      if (dy > 0 && y > SCROLL_TOP_BUFFER_PX) {
-        setNavHidden(true);
-      } else if (dy < 0) {
-        setNavHidden(false);
-      }
-      lastYRef.current = y;
-    }
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      el.removeEventListener('scroll', onScroll);
-      // v2.33.45 round 6b: reset lastYRef on cleanup — bottomNav 切換移除 +
-      // 重 mount 時，舊 scrollTop 值會留 staticked。
-      lastYRef.current = 0;
-    };
-  }, [bottomNav]);
 
   return (
     <>
@@ -306,7 +297,6 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
           <nav
             className="app-shell-bottom-nav"
             data-testid="app-shell-bottom-nav"
-            data-hidden={navHidden ? 'true' : 'false'}
             aria-label="主要功能"
           >
             {bottomNav}
