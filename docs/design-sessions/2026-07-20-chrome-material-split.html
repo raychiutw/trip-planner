@@ -1,0 +1,1005 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[已否決] 玻璃／實體雙軌 — Tripline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   Tripline — Chrome 材質重做 mockup
+   2026-07-20 · 供 owner sign-off
+   核心主張：依背景是否 media-rich 把 chrome 分成兩套材質。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ---------- Terracotta tokens（自 css/tokens.css 抄錄，light） ---------- */
+:root {
+  --color-background: #FFFBF5;
+  --color-secondary: #FAF4EA;
+  --color-tertiary: #F4EDE3;
+  --color-hover: #F9EDE0;
+  --color-foreground: #2A1F18;
+  --color-muted: #6F5A47;
+  --color-border: #EADFCF;
+  --color-accent: #A97A4A;
+  --color-accent-fill: #8A6038;
+  --color-accent-foreground: #FFFFFF;
+  --color-accent-text-on-tonal: #7A5430;
+  --color-accent-subtle: #F4EDE3;
+
+  --radius-md: 8px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+  --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+  --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
+
+  --font-family-system: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "PingFang TC", system-ui, sans-serif;
+  --font-size-caption2: 11px;
+  --ease-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ── 提案中的新材質 token（本 mockup 的產出重點）───────────────── */
+
+  /* 材質 A：GLASS — 只用於 media-rich 底層（地圖圖磚 / 照片） */
+  --material-glass-bg:       color-mix(in srgb, var(--color-secondary) 58%, transparent);
+  --material-glass-blur:     blur(20px) saturate(180%);
+  --material-glass-rim:      1px solid rgba(255, 255, 255, 0.42);
+  --material-glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  --material-glass-shadow:   0 12px 32px rgba(42, 31, 24, 0.26), 0 2px 8px rgba(42, 31, 24, 0.14);
+
+  /* 材質 B：SOLID — 用於 flat cream 底層（聊天／列表／表單／收藏／設定） */
+  --material-solid-bg:       var(--color-secondary);
+  --material-solid-blur:     none;
+  --material-solid-rim:      1px solid var(--color-border);
+  --material-solid-specular: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --material-solid-shadow:   0 10px 28px rgba(42, 31, 24, 0.12), 0 2px 6px rgba(42, 31, 24, 0.07);
+
+  /* HIG 形制 */
+  --chrome-inset: 21px;
+  --titlebar-h: 56px;
+
+  /* mockup 頁面自身 */
+  --pg-bg: #F3EDE4;
+  --pg-fg: #2A1F18;
+  --pg-muted: #6F5A47;
+  --pg-line: #DFD3C2;
+  --pg-card: #FFFBF5;
+}
+
+/* ---------- Dark theme ---------- */
+:root[data-theme="dark"] {
+  --color-background: #1C1C1E;
+  --color-secondary: #2C2C2E;
+  --color-tertiary: #3A3A3C;
+  --color-hover: #48484A;
+  --color-foreground: #F5F5F7;
+  --color-muted: #A1A1A6;
+  --color-border: #48484A;
+  --color-accent: #CBA06E;
+  --color-accent-fill: #CBA06E;
+  --color-accent-foreground: #1C1C1E;
+  --color-accent-text-on-tonal: #E0BC90;
+  --color-accent-subtle: #2A2418;
+
+  --material-glass-bg:       color-mix(in srgb, var(--color-secondary) 58%, transparent);
+  --material-glass-rim:      1px solid rgba(255, 255, 255, 0.16);
+  --material-glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  --material-glass-shadow:   0 12px 32px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+
+  --material-solid-specular: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --material-solid-shadow:   0 10px 28px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.35);
+
+  --pg-bg: #141416;
+  --pg-fg: #F5F5F7;
+  --pg-muted: #A1A1A6;
+  --pg-line: #3A3A3C;
+  --pg-card: #1C1C1E;
+}
+
+/* ---------- A11y fallback：Reduce Transparency ----------
+   Apple 系統自動；Web 必須手動。玻璃 → 霜化到近不透明。 */
+:root[data-rt="on"] {
+  --material-glass-bg:   color-mix(in srgb, var(--color-secondary) 96%, transparent);
+  --material-glass-blur: blur(6px);
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --material-glass-bg:   color-mix(in srgb, var(--color-secondary) 96%, transparent);
+    --material-glass-blur: blur(6px);
+  }
+}
+
+/* ---------- A11y fallback：Increase Contrast ----------
+   Apple：元素變近黑/白 + 對比色邊框。 */
+:root[data-hc="on"] {
+  --material-glass-bg:   var(--color-background);
+  --material-glass-blur: none;
+  --material-glass-rim:  2px solid var(--color-foreground);
+  --material-solid-bg:   var(--color-background);
+  --material-solid-rim:  2px solid var(--color-foreground);
+  --material-glass-specular: none;
+  --material-solid-specular: none;
+}
+@media (prefers-contrast: more) {
+  :root {
+    --material-glass-bg:  var(--color-background);
+    --material-glass-blur: none;
+    --material-glass-rim: 2px solid var(--color-foreground);
+    --material-solid-bg:  var(--color-background);
+    --material-solid-rim: 2px solid var(--color-foreground);
+  }
+}
+
+/* ═══════════ mockup 頁面外殼 ═══════════ */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--font-family-system);
+  background: var(--pg-bg);
+  color: var(--pg-fg);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background 250ms var(--ease-apple), color 250ms var(--ease-apple);
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px 100px; }
+
+/* ── 頂部：主張 + 控制列 ── */
+.masthead {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--pg-bg) 88%, transparent);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid var(--pg-line);
+  margin-bottom: 40px;
+}
+.masthead-in {
+  max-width: 1180px; margin: 0 auto; padding: 18px 28px;
+  display: flex; align-items: flex-start; gap: 28px; flex-wrap: wrap;
+}
+.masthead h1 { font-size: 21px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+.masthead .thesis { margin: 0; font-size: 13.5px; color: var(--pg-muted); max-width: 620px; }
+.masthead .thesis b { color: var(--pg-fg); font-weight: 600; }
+.ctrls { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.ctrl {
+  font: inherit; font-size: 12px; font-weight: 600;
+  padding: 7px 13px; border-radius: var(--radius-full);
+  border: 1px solid var(--pg-line); background: var(--pg-card); color: var(--pg-fg);
+  cursor: pointer; transition: all 150ms var(--ease-apple); white-space: nowrap;
+}
+.ctrl:hover { border-color: var(--color-accent); }
+.ctrl[aria-pressed="true"] { background: var(--color-accent-fill); color: #fff; border-color: transparent; }
+
+/* ── 區段 ── */
+section { margin-bottom: 68px; scroll-margin-top: 110px; }
+.sec-head { border-bottom: 1px solid var(--pg-line); padding-bottom: 12px; margin-bottom: 26px; }
+.sec-eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--color-accent); margin-bottom: 5px;
+}
+.sec-head h2 { font-size: 25px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.015em; }
+.sec-head p { margin: 0; color: var(--pg-muted); font-size: 14px; max-width: 760px; }
+
+/* ── 手機 frame ── */
+.rack { display: flex; gap: 26px; flex-wrap: wrap; align-items: flex-start; }
+.spec { width: 268px; }
+.spec-cap { margin-bottom: 11px; }
+.spec-cap .tag {
+  display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 4px; margin-bottom: 6px;
+}
+.tag-bad  { background: #F5D9D9; color: #8B2F2F; }
+.tag-glass{ background: #DCE8F0; color: #2C5468; }
+.tag-solid{ background: var(--color-accent-subtle); color: var(--color-accent-text-on-tonal); }
+.tag-pick { background: #1F7A4D; color: #fff; }
+:root[data-theme="dark"] .tag-bad { background: #4A2020; color: #F0B0B0; }
+:root[data-theme="dark"] .tag-glass { background: #1E3540; color: #A8D0E4; }
+.spec-cap h3 { font-size: 15px; font-weight: 700; margin: 0 0 3px; }
+.spec-cap p { margin: 0; font-size: 12.5px; color: var(--pg-muted); line-height: 1.5; }
+
+.phone {
+  position: relative; width: 268px; height: 512px;
+  border-radius: 34px; overflow: hidden;
+  border: 1px solid var(--pg-line);
+  box-shadow: var(--shadow-md);
+  background: var(--color-background);
+  isolation: isolate;
+}
+
+/* 底層 A：flat cream 內容（聊天／列表頁） */
+.canvas-flat {
+  position: absolute; inset: 0; overflow-y: auto;
+  background: var(--color-background);
+  padding: 0 0 120px;
+}
+.canvas-flat::-webkit-scrollbar { display: none; }
+.canvas-flat { scrollbar-width: none; }
+
+/* 底層 B：media-rich 地圖（CSS 合成，無外部資源） */
+.canvas-map {
+  position: absolute; inset: 0; overflow: hidden;
+  background:
+    radial-gradient(circle at 74% 22%, #A8C8B0 0 62px, transparent 63px),
+    radial-gradient(circle at 22% 70%, #A8C8B0 0 48px, transparent 49px),
+    linear-gradient(90deg, transparent 0 46%, #EDE6DA 46% 50%, transparent 50%),
+    linear-gradient(74deg, transparent 0 28%, #EDE6DA 28% 31%, transparent 31%),
+    linear-gradient(0deg, transparent 0 62%, #EDE6DA 62% 65%, transparent 65%),
+    linear-gradient(0deg, transparent 0 30%, #EDE6DA 30% 32%, transparent 32%),
+    linear-gradient(160deg, #9FC4D8 0 18%, transparent 18%),
+    #E4DCCE;
+}
+:root[data-theme="dark"] .canvas-map {
+  background:
+    radial-gradient(circle at 74% 22%, #24382C 0 62px, transparent 63px),
+    radial-gradient(circle at 22% 70%, #24382C 0 48px, transparent 49px),
+    linear-gradient(90deg, transparent 0 46%, #35322D 46% 50%, transparent 50%),
+    linear-gradient(74deg, transparent 0 28%, #35322D 28% 31%, transparent 31%),
+    linear-gradient(0deg, transparent 0 62%, #35322D 62% 65%, transparent 65%),
+    linear-gradient(0deg, transparent 0 30%, #35322D 30% 32%, transparent 32%),
+    linear-gradient(160deg, #1E3641 0 18%, transparent 18%),
+    #26241F;
+}
+.pin {
+  position: absolute; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--color-accent-fill); color: #fff;
+  display: grid; place-items: center; font-size: 11px; font-weight: 700;
+  box-shadow: 0 2px 8px rgba(42,31,24,0.4);
+}
+
+/* 內容假件 */
+.stub { padding: 0 16px; }
+.stub-row {
+  background: var(--color-secondary); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); padding: 11px 13px; margin-bottom: 9px;
+}
+.stub-row .t { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; }
+.stub-row .s { font-size: 11.5px; color: var(--color-muted); }
+.stub-h {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--color-muted); padding: 16px 16px 7px;
+}
+
+/* ═══════════ TitleBar ═══════════ */
+.tbar {
+  position: sticky; top: 0; z-index: 12;
+  height: var(--titlebar-h);
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 14px;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background 200ms var(--ease-apple), border-color 200ms var(--ease-apple),
+              backdrop-filter 200ms var(--ease-apple);
+}
+/* scroll edge effect：捲動後材質淡入。materialised by JS class. */
+.tbar.is-scrolled {
+  background: var(--material-solid-bg);
+  border-bottom-color: var(--color-border);
+}
+.canvas-map .tbar.is-scrolled,
+.tbar.is-glass.is-scrolled {
+  background: var(--material-glass-bg);
+  backdrop-filter: var(--material-glass-blur);
+  -webkit-backdrop-filter: var(--material-glass-blur);
+  border-bottom-color: transparent;
+}
+.tbar-title { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -0.01em; color: var(--color-foreground); }
+.tbar-btn {
+  width: 34px; height: 34px; border-radius: var(--radius-md);
+  border: none; background: transparent; color: var(--color-accent);
+  display: grid; place-items: center; cursor: pointer; font-size: 17px;
+}
+.tbar-spacer { flex: 1; }
+
+/* ═══════════ 底部 4-tab capsule ═══════════ */
+.tabbar {
+  position: absolute; z-index: 14;
+  left: var(--chrome-inset); right: var(--chrome-inset); bottom: var(--chrome-inset);
+  display: flex; gap: 2px; padding: 6px;
+  border-radius: var(--radius-full);
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  min-height: 44px; border-radius: var(--radius-full);
+  background: transparent; border: none; cursor: pointer;
+  color: var(--color-muted); font: inherit;
+  transition: background 140ms var(--ease-apple), color 140ms var(--ease-apple);
+}
+.tab .ic { width: 21px; height: 21px; display: block; }
+.tab span {
+  font-size: var(--font-size-caption2);  /* 11px — DESIGN.md L58 */
+  line-height: 13px; font-weight: 700; letter-spacing: 0.02em;
+}
+.tab.on { background: var(--color-accent-fill); color: var(--color-accent-foreground); }
+
+/* — 材質套用 — */
+.tabbar.m-glass {
+  background: var(--material-glass-bg);
+  backdrop-filter: var(--material-glass-blur);
+  -webkit-backdrop-filter: var(--material-glass-blur);
+  border: var(--material-glass-rim);
+  box-shadow: var(--material-glass-specular), var(--material-glass-shadow);
+}
+.tabbar.m-solid {
+  background: var(--material-solid-bg);
+  border: var(--material-solid-rim);
+  box-shadow: var(--material-solid-specular), var(--material-solid-shadow);
+}
+/* V2 Inset Tray */
+.tabbar.m-tray {
+  background: var(--color-tertiary);
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 9%, transparent);
+  box-shadow:
+    inset 0 2px 4px rgba(42,31,24,0.09),
+    0 8px 22px rgba(42,31,24,0.13);
+}
+.tabbar.m-tray .tab.on { box-shadow: var(--shadow-sm); }
+/* V3 Rimless */
+.tabbar.m-rimless {
+  background: var(--material-solid-bg);
+  border: 1px solid transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 1px 2px rgba(42,31,24,0.06),
+    0 8px 18px rgba(42,31,24,0.11),
+    0 22px 44px rgba(42,31,24,0.09);
+}
+:root[data-theme="dark"] .tabbar.m-rimless {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 8px 18px rgba(0,0,0,0.5),
+    0 22px 44px rgba(0,0,0,0.4);
+}
+/* 現況重現（壞的） */
+.tabbar.m-broken { background: transparent; border: none; box-shadow: none; }
+.tabbar.m-broken .tab { color: var(--color-muted); }
+.tabbar.m-broken .tab .ic { filter: drop-shadow(0 1px 2.5px rgba(0,0,0,0.28)); }
+.tabbar.m-broken .tab span { text-shadow: 0 1px 2px rgba(0,0,0,0.30); }
+.tabbar.m-broken .tab.on .ic { filter: none; }
+.tabbar.m-broken .tab.on span { text-shadow: none; }
+
+/* ═══════════ Day tab 膠囊（地圖頁） ═══════════ */
+.daytabs {
+  position: absolute; z-index: 13; left: 0; right: 0;
+  top: calc(var(--titlebar-h) + 8px);
+  display: flex; justify-content: center;
+}
+.daytabs-in {
+  display: flex; gap: 3px; padding: 4px;
+  border-radius: var(--radius-full);
+  max-width: calc(100% - 24px); overflow-x: auto;
+  scrollbar-width: none;
+}
+.daytabs-in::-webkit-scrollbar { display: none; }
+.daytabs-in.m-glass {
+  background: var(--material-glass-bg);
+  backdrop-filter: var(--material-glass-blur);
+  -webkit-backdrop-filter: var(--material-glass-blur);
+  border: var(--material-glass-rim);
+  box-shadow: var(--material-glass-specular), var(--material-glass-shadow);
+}
+/* glass-on-glass 解法：vibrancy — 不帶自己的 backdrop-filter，只用 fill */
+.daytabs-in.m-vibrancy {
+  background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  box-shadow: none;
+}
+.dtab {
+  flex: 0 0 auto; padding: 5px 13px; min-height: 32px;
+  border: none; border-radius: var(--radius-full);
+  background: transparent; color: var(--color-muted);
+  font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center;
+}
+.dtab.on {
+  color: var(--color-accent-text-on-tonal);
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+}
+
+/* ═══════════ 註解泡泡 ═══════════ */
+.note {
+  margin-top: 11px; padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-accent);
+  background: var(--pg-card);
+  font-size: 12px; line-height: 1.55; color: var(--pg-muted);
+}
+.note b { color: var(--pg-fg); font-weight: 600; }
+.note.bad { border-left-color: #B5443F; }
+.note.good { border-left-color: #1F7A4D; }
+.note code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px; background: var(--pg-bg); padding: 1px 4px; border-radius: 3px;
+}
+
+/* ═══════════ 表格 ═══════════ */
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--pg-line); vertical-align: top; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pg-muted); font-weight: 700; }
+td code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+  background: var(--pg-card); padding: 2px 5px; border-radius: 3px; border: 1px solid var(--pg-line);
+}
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--pg-line); border-radius: 10px; background: var(--pg-card); }
+.del { text-decoration: line-through; opacity: 0.5; }
+
+/* 捲動提示 */
+.hint {
+  position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%);
+  z-index: 20; font-size: 10.5px; font-weight: 600;
+  padding: 5px 11px; border-radius: var(--radius-full);
+  background: rgba(42,31,24,0.82); color: #fff; pointer-events: none;
+  animation: bob 2.2s var(--ease-apple) infinite;
+}
+@keyframes bob { 0%,100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -5px); } }
+@media (prefers-reduced-motion: reduce) {
+  .hint { animation: none; }
+  * { transition-duration: 1ms !important; }
+}
+
+@media (max-width: 700px) {
+  .wrap { padding: 0 16px 60px; }
+  .masthead-in { padding: 14px 16px; }
+  .ctrls { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+
+<div style="background:#8B2F2F;color:#fff;padding:12px 28px;font-size:13.5px;line-height:1.5;font-family:'Inter','Noto Sans TC',system-ui,sans-serif;">
+  <b>⛔ 此方案已於 2026-07-20 被 owner 否決（「都不要，我要照 HIG 規範」）。</b>
+  本頁保留作為探索紀錄，<b>不是規格</b>。
+  現行規格見 <code style="background:rgba(255,255,255,.18);padding:1px 5px;border-radius:3px;">2026-07-20-chrome-hig-regular-glass.html</code>。
+  <br>
+  否決理由：本方案把「玻璃在 cream 頁上很糊」歸因給背景並改用雙軌材質；實際根因是<b>玻璃被品牌色染色</b>，
+  HIG 的 Regular 變體本就該在任何 context 成立，分軌等於承認材質做錯了。
+</div>
+<header class="masthead">
+  <div class="masthead-in">
+    <div>
+      <h1>［已否決］Chrome 材質重做：玻璃／實體雙軌</h1>
+      <p class="thesis">
+        現況五種不透明度共用一個 <code>--blur-glass</code>，底部 tab 材質已被整個刪除。
+        主張：<b>依背景是否 media-rich 分成兩套材質</b> —— 地圖頁用真玻璃，flat cream 頁用不透明浮起膠囊。
+        玻璃需要底下有東西可透；cream 疊 cream 永遠只會糊。
+      </p>
+    </div>
+    <div class="ctrls">
+      <button class="ctrl" id="t-theme" aria-pressed="false">深色</button>
+      <button class="ctrl" id="t-rt" aria-pressed="false">Reduce Transparency</button>
+      <button class="ctrl" id="t-hc" aria-pressed="false">Increase Contrast</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ══════════ 1. 現況 ══════════ -->
+<section id="s1">
+  <div class="sec-head">
+    <div class="sec-eyebrow">Section 1 · 問題</div>
+    <h2>現況：兩種失敗，同一個根因</h2>
+    <p>7/20 你說「我不要白底」時，處置是把材質整個刪掉。但另一條路（加濃不透明度）也一樣壞 —— 因為問題從來不是數值。</p>
+  </div>
+
+  <div class="rack">
+    <div class="spec">
+      <div class="spec-cap">
+        <span class="tag tag-bad">現況 · 線上</span>
+        <h3>材質已刪除</h3>
+        <p><code>background: transparent</code>，靠 icon 黑陰影浮出</p>
+      </div>
+      <div class="phone">
+        <div class="canvas-flat">
+          <div class="tbar"><h1 class="tbar-title">行程</h1><div class="tbar-spacer"></div><button class="tbar-btn">＋</button></div>
+          <div class="stub-h">即將出發</div>
+          <div class="stub">
+            <div class="stub-row"><div class="t">沖繩自駕 2026</div><div class="s">4 月 23 – 4 月 28 · 6 天</div></div>
+            <div class="stub-row"><div class="t">九州溫泉線</div><div class="s">草稿 · 尚未排程</div></div>
+            <div class="stub-row"><div class="t">京都紅葉</div><div class="s">草稿 · 尚未排程</div></div>
+          </div>
+        </div>
+        <nav class="tabbar m-broken">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+      </div>
+      <div class="note bad">
+        <b>沒有容器</b> → 一排浮空 icon。黑 <code>drop-shadow</code> 疊在 cream 上是髒的，
+        且 active 藥丸孤零零地漂著，讀不出這是一組導覽。
+      </div>
+    </div>
+
+    <div class="spec">
+      <div class="spec-cap">
+        <span class="tag tag-bad">舊版 · 已否決</span>
+        <h3>玻璃 62% 疊 cream</h3>
+        <p><code>secondary 62%</code> + <code>blur(14px)</code></p>
+      </div>
+      <div class="phone">
+        <div class="canvas-flat">
+          <div class="tbar"><h1 class="tbar-title">行程</h1><div class="tbar-spacer"></div><button class="tbar-btn">＋</button></div>
+          <div class="stub-h">即將出發</div>
+          <div class="stub">
+            <div class="stub-row"><div class="t">沖繩自駕 2026</div><div class="s">4 月 23 – 4 月 28 · 6 天</div></div>
+            <div class="stub-row"><div class="t">九州溫泉線</div><div class="s">草稿 · 尚未排程</div></div>
+            <div class="stub-row"><div class="t">京都紅葉</div><div class="s">草稿 · 尚未排程</div></div>
+          </div>
+        </div>
+        <nav class="tabbar" style="background:color-mix(in srgb,var(--color-secondary) 62%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--color-border);box-shadow:var(--shadow-md);">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+      </div>
+      <div class="note bad">
+        <b>cream-on-cream。</b> 底下是平色 → blur 沒有東西可以模糊，
+        半透明只是把同一個奶油色再疊一次，看起來像實心白條。
+        <code>blur(14px)</code> 的 GPU 成本全付了、視覺零收益。
+      </div>
+    </div>
+
+    <div class="spec" style="flex:1;min-width:280px;">
+      <div class="spec-cap">
+        <span class="tag tag-glass">同樣的玻璃</span>
+        <h3>放到地圖上就對了</h3>
+        <p>完全相同的 CSS，只是底層換成 media-rich</p>
+      </div>
+      <div class="phone">
+        <div class="canvas-map">
+          <div class="pin" style="top:38%;left:30%">1</div>
+          <div class="pin" style="top:52%;left:62%">2</div>
+          <div class="pin" style="top:70%;left:40%">3</div>
+        </div>
+        <nav class="tabbar m-glass">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+      </div>
+      <div class="note good">
+        <b>這就是全部的差別。</b> 地圖圖磚的綠地、道路、水域從膠囊底下流過，
+        <code>saturate(180%)</code> 把顏色抽出來 → 玻璃終於「是」玻璃。
+        結論：材質該不該用，取決於底層，不取決於元件。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 2. Variant ══════════ -->
+<section id="s2">
+  <div class="sec-head">
+    <div class="sec-eyebrow">Section 2 · 選擇</div>
+    <h2>flat 頁的膠囊要長什麼樣？三個變體</h2>
+    <p>玻璃頁那套已經定了（見上）。真正要你選的是 <b>flat cream 頁</b> 的不透明膠囊 —— 三種浮起手法。三個都是常駐、不隨捲動隱藏。</p>
+  </div>
+
+  <div class="rack">
+
+    <!-- V1 -->
+    <div class="spec">
+      <div class="spec-cap">
+        <span class="tag tag-solid">V1</span>
+        <h3>Solid Float</h3>
+        <p>不透明 <code>secondary</code> + hairline + <code>shadow-lg</code></p>
+      </div>
+      <div class="phone">
+        <div class="canvas-flat" data-scroll>
+          <div class="tbar"><h1 class="tbar-title">行程</h1><div class="tbar-spacer"></div><button class="tbar-btn">＋</button></div>
+          <div class="stub-h">即將出發</div>
+          <div class="stub">
+            <div class="stub-row"><div class="t">沖繩自駕 2026</div><div class="s">4 月 23 – 4 月 28 · 6 天</div></div>
+            <div class="stub-row"><div class="t">九州溫泉線</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">京都紅葉</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">釜山三日</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">板橋一日</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">東京跨年</div><div class="s">草稿</div></div>
+          </div>
+        </div>
+        <nav class="tabbar m-solid">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+        <div class="hint">捲動我 → 看 TitleBar</div>
+      </div>
+      <div class="note">
+        最保守。與 stop card 同一個 hairline 語言，<b>一致性最高</b>。
+        缺點：膠囊底 <code>#FAF4EA</code> 與頁面底 <code>#FFFBF5</code> 只差一階，
+        邊界主要靠 border 撐 —— 有點「貼上去」而非「浮起來」。
+      </div>
+    </div>
+
+    <!-- V2 -->
+    <div class="spec">
+      <div class="spec-cap">
+        <span class="tag tag-solid">V2</span>
+        <h3>Inset Tray</h3>
+        <p><code>tertiary</code> 凹槽 + 內陰影，active 浮在槽裡</p>
+      </div>
+      <div class="phone">
+        <div class="canvas-flat" data-scroll>
+          <div class="tbar"><h1 class="tbar-title">行程</h1><div class="tbar-spacer"></div><button class="tbar-btn">＋</button></div>
+          <div class="stub-h">即將出發</div>
+          <div class="stub">
+            <div class="stub-row"><div class="t">沖繩自駕 2026</div><div class="s">4 月 23 – 4 月 28 · 6 天</div></div>
+            <div class="stub-row"><div class="t">九州溫泉線</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">京都紅葉</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">釜山三日</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">板橋一日</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">東京跨年</div><div class="s">草稿</div></div>
+          </div>
+        </div>
+        <nav class="tabbar m-tray">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+      </div>
+      <div class="note">
+        分離度最強、active 藥丸最清楚。但 <b>內陰影是 Material 語言不是 HIG</b>，
+        且引入了全站沒有第二處在用的凹槽隱喻 —— 一致性代價高。列入是為了把光譜補滿。
+      </div>
+    </div>
+
+    <!-- V3 -->
+    <div class="spec">
+      <div class="spec-cap">
+        <span class="tag tag-pick">V3 · 建議</span>
+        <h3>Rimless Elevated</h3>
+        <p>無 border，雙層落影 + 亮上緣 specular</p>
+      </div>
+      <div class="phone">
+        <div class="canvas-flat" data-scroll>
+          <div class="tbar"><h1 class="tbar-title">行程</h1><div class="tbar-spacer"></div><button class="tbar-btn">＋</button></div>
+          <div class="stub-h">即將出發</div>
+          <div class="stub">
+            <div class="stub-row"><div class="t">沖繩自駕 2026</div><div class="s">4 月 23 – 4 月 28 · 6 天</div></div>
+            <div class="stub-row"><div class="t">九州溫泉線</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">京都紅葉</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">釜山三日</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">板橋一日</div><div class="s">草稿</div></div>
+            <div class="stub-row"><div class="t">東京跨年</div><div class="s">草稿</div></div>
+          </div>
+        </div>
+        <nav class="tabbar m-rimless">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+      </div>
+      <div class="note good">
+        <b>推薦這個。</b> 沒有 border 就沒有「框」，純靠光影浮起 —— 這正是 iOS 26 膠囊給人的感覺，
+        而且不需要透明度就達成。亮上緣 <code>inset 0 1px 0</code> 是玻璃 specular 的實體版，
+        讓它與地圖頁的玻璃膠囊<b>同族但不同材質</b>，切頁時形制連續、材質誠實。
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:20px;">
+    三個變體<b>底部 tab 皆常駐</b>（owner 2026-07-20 決定）—— 不實作 HIG 的
+    <code>tabBarMinimizeBehavior</code>。捲動時只有 TitleBar 有材質變化，底部完全不動。
+    請捲動任一台手機驗證。
+  </div>
+</section>
+
+<!-- ══════════ 3. Scroll edge effect ══════════ -->
+<section id="s3">
+  <div class="sec-head">
+    <div class="sec-eyebrow">Section 3 · Header</div>
+    <h2>TitleBar：scroll edge effect</h2>
+    <p>HIG 的核心 header 機制。捲到頂＝完全無材質、無邊線，標題直接坐在內容上；一旦捲動，材質與 hairline 才淡入（200ms）。這一項對觀感的提升最大、成本最低。</p>
+  </div>
+
+  <div class="rack">
+    <div class="spec">
+      <div class="spec-cap">
+        <span class="tag tag-solid">狀態 A</span>
+        <h3>捲到頂 — 透明</h3>
+        <p>無背景、無 border，chrome 消失</p>
+      </div>
+      <div class="phone">
+        <div class="canvas-flat">
+          <div class="tbar"><h1 class="tbar-title">收藏</h1><div class="tbar-spacer"></div><button class="tbar-btn">⌕</button></div>
+          <div class="stub-h">已儲存的地點</div>
+          <div class="stub">
+            <div class="stub-row"><div class="t">首里城公園</div><div class="s">景點 · 那霸市</div></div>
+            <div class="stub-row"><div class="t">美國村</div><div class="s">購物 · 北谷町</div></div>
+            <div class="stub-row"><div class="t">古宇利大橋</div><div class="s">景點 · 今歸仁村</div></div>
+          </div>
+        </div>
+        <nav class="tabbar m-rimless">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+      </div>
+      <div class="note">現況是<b>恆常</b>半透明 + border，在 flat 頁上就是一條灰糊邊 —— 那條線在捲到頂時沒有任何作用。</div>
+    </div>
+
+    <div class="spec">
+      <div class="spec-cap">
+        <span class="tag tag-solid">狀態 B</span>
+        <h3>捲動後 — 材質淡入</h3>
+        <p>flat 頁＝實體底 + hairline</p>
+      </div>
+      <div class="phone">
+        <div class="canvas-flat" data-scroll data-preset="80">
+          <div class="tbar"><h1 class="tbar-title">收藏</h1><div class="tbar-spacer"></div><button class="tbar-btn">⌕</button></div>
+          <div class="stub-h">已儲存的地點</div>
+          <div class="stub">
+            <div class="stub-row"><div class="t">首里城公園</div><div class="s">景點 · 那霸市</div></div>
+            <div class="stub-row"><div class="t">美國村</div><div class="s">購物 · 北谷町</div></div>
+            <div class="stub-row"><div class="t">古宇利大橋</div><div class="s">景點 · 今歸仁村</div></div>
+            <div class="stub-row"><div class="t">殘波岬燈塔</div><div class="s">景點 · 讀谷村</div></div>
+            <div class="stub-row"><div class="t">瀨長島 Umikaji</div><div class="s">購物 · 豐見城</div></div>
+            <div class="stub-row"><div class="t">備瀨福木林道</div><div class="s">景點 · 本部町</div></div>
+            <div class="stub-row"><div class="t">奧武島</div><div class="s">景點 · 南城市</div></div>
+          </div>
+        </div>
+        <nav class="tabbar m-rimless">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+      </div>
+      <div class="note good">內容從標題列下方流過時才需要分隔 —— <b>材質在需要它的時候才出現</b>。</div>
+    </div>
+
+    <div class="spec">
+      <div class="spec-cap">
+        <span class="tag tag-glass">狀態 B'</span>
+        <h3>地圖頁 — 玻璃版</h3>
+        <p>同一個機制，材質換玻璃、去 hairline</p>
+      </div>
+      <div class="phone">
+        <div class="canvas-map">
+          <div class="pin" style="top:44%;left:28%">1</div>
+          <div class="pin" style="top:58%;left:66%">2</div>
+          <div class="tbar is-glass is-scrolled" style="position:absolute;top:0;left:0;right:0;">
+            <h1 class="tbar-title">沖繩自駕 2026</h1><div class="tbar-spacer"></div><button class="tbar-btn">⋯</button>
+          </div>
+        </div>
+        <nav class="tabbar m-glass">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+      </div>
+      <div class="note">地圖頁 header 恆常有材質（地圖永遠在動，一直需要分離），<b>不做 scroll edge</b> —— 因為沒有捲動容器。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 4. glass on glass ══════════ -->
+<section id="s4">
+  <div class="sec-head">
+    <div class="sec-eyebrow">Section 4 · 禁忌</div>
+    <h2>Day tab 膠囊：解決 glass-on-glass</h2>
+    <p>Apple 明列禁忌：<b>never stack Liquid Glass on top of each other</b>。現況 <code>.tp-map-day-tabs--sticky</code> 釘在玻璃 TitleBar 下方 8px —— 間距只是避免重疊，材質仍是兩層。官方指定解法：上層改用 fills + vibrancy，不再帶自己的 <code>backdrop-filter</code>。</p>
+  </div>
+
+  <div class="rack">
+    <div class="spec">
+      <div class="spec-cap">
+        <span class="tag tag-bad">違規</span>
+        <h3>玻璃疊玻璃</h3>
+        <p>兩個獨立 <code>backdrop-filter</code> 層</p>
+      </div>
+      <div class="phone">
+        <div class="canvas-map">
+          <div class="pin" style="top:52%;left:30%">1</div>
+          <div class="pin" style="top:64%;left:62%">2</div>
+          <div class="tbar is-glass is-scrolled" style="position:absolute;top:0;left:0;right:0;">
+            <h1 class="tbar-title">沖繩自駕</h1><div class="tbar-spacer"></div><button class="tbar-btn">⋯</button>
+          </div>
+          <div class="daytabs">
+            <div class="daytabs-in m-glass">
+              <button class="dtab on">DAY 01</button>
+              <button class="dtab">DAY 02</button>
+              <button class="dtab">DAY 03</button>
+            </div>
+          </div>
+        </div>
+        <nav class="tabbar m-glass">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+      </div>
+      <div class="note bad">兩層落影互相打架、上緣 specular 出現兩次，讀起來是<b>兩個漂浮物</b>而不是一組 chrome。GPU 成本也是雙倍。</div>
+    </div>
+
+    <div class="spec">
+      <div class="spec-cap">
+        <span class="tag tag-pick">解法 · 建議</span>
+        <h3>Vibrancy 子層</h3>
+        <p>只用 fill + rim，無 blur、無落影</p>
+      </div>
+      <div class="phone">
+        <div class="canvas-map">
+          <div class="pin" style="top:52%;left:30%">1</div>
+          <div class="pin" style="top:64%;left:62%">2</div>
+          <div class="tbar is-glass is-scrolled" style="position:absolute;top:0;left:0;right:0;padding-bottom:0;height:auto;flex-direction:column;align-items:stretch;">
+            <div style="display:flex;align-items:center;gap:10px;height:var(--titlebar-h);">
+              <h1 class="tbar-title">沖繩自駕</h1><div class="tbar-spacer"></div><button class="tbar-btn">⋯</button>
+            </div>
+            <div style="display:flex;justify-content:center;padding:0 12px 8px;">
+              <div class="daytabs-in m-vibrancy">
+                <button class="dtab on">DAY 01</button>
+                <button class="dtab">DAY 02</button>
+                <button class="dtab">DAY 03</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <nav class="tabbar m-glass">
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg><span>聊天</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>行程</span></button>
+          <button class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg><span>地圖</span></button>
+          <button class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>收藏</span></button>
+        </nav>
+      </div>
+      <div class="note good">
+        Day tab <b>併入 TitleBar 的玻璃板內</b>，成為單一 chrome 區塊。
+        子層只有一層 8% 前景色 fill —— 這正是 Apple 說的
+        「上層改用 fills、transparency、vibrancy」。少一層 <code>backdrop-filter</code>，
+        <code>--titlebar-h</code> 與 <code>--day-strip-h</code> 的 sticky offset 計算也一併消失。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 5. Token ══════════ -->
+<section id="s5">
+  <div class="sec-head">
+    <div class="sec-eyebrow">Section 5 · 實作</div>
+    <h2>提案的 token 結構</h2>
+    <p>現況 <code>--blur-glass</code> 只統一了六層裡最不重要的一層，其餘五層各自漂移 —— 這是 drift 的結構性原因。改成兩組<b>完整材質</b>，每組是一整包。</p>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th style="width:26%">Token</th><th style="width:37%">值</th><th>用在哪</th></tr></thead>
+      <tbody>
+        <tr><td colspan="3" style="background:var(--pg-bg);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent)">材質 A · GLASS（media-rich 底層限定）</td></tr>
+        <tr><td><code>--material-glass-bg</code></td><td><code>secondary 58%</code></td><td rowspan="5">地圖頁 TitleBar、地圖頁底部膠囊、地圖浮動控制項</td></tr>
+        <tr><td><code>--material-glass-blur</code></td><td><code>blur(20px) saturate(180%)</code></td></tr>
+        <tr><td><code>--material-glass-rim</code></td><td><code>1px solid rgba(255,255,255,.42)</code></td></tr>
+        <tr><td><code>--material-glass-specular</code></td><td><code>inset 0 1px 0 rgba(255,255,255,.55)</code></td></tr>
+        <tr><td><code>--material-glass-shadow</code></td><td><code>0 12px 32px …26 · 0 2px 8px …14</code></td></tr>
+
+        <tr><td colspan="3" style="background:var(--pg-bg);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent)">材質 B · SOLID（flat cream 底層）</td></tr>
+        <tr><td><code>--material-solid-bg</code></td><td><code>var(--color-secondary)</code> 不透明</td><td rowspan="4">聊天／行程列表／表單／收藏／設定的 TitleBar 與底部膠囊、page bottom bar</td></tr>
+        <tr><td><code>--material-solid-rim</code></td><td>V3 = <code>transparent</code>（無框）</td></tr>
+        <tr><td><code>--material-solid-specular</code></td><td><code>inset 0 1px 0 rgba(255,255,255,.85)</code></td></tr>
+        <tr><td><code>--material-solid-shadow</code></td><td>雙層 <code>0 8px 18px</code> + <code>0 22px 44px</code></td></tr>
+
+        <tr><td colspan="3" style="background:var(--pg-bg);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent)">形制</td></tr>
+        <tr><td><code>--chrome-inset</code></td><td><code>21px</code></td><td>膠囊左／右／下 inset（HIG iOS 26 量測值）</td></tr>
+        <tr><td><code>--font-size-caption2</code></td><td><code>11px</code>（已存在，未被用）</td><td>tab label — 取代誤用的 <code>--font-size-eyebrow</code>（10px）</td></tr>
+
+        <tr><td colspan="3" style="background:var(--pg-bg);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#B5443F">退役</td></tr>
+        <tr><td><code class="del">--blur-glass: 14px</code></td><td class="del">單一 blur 值</td><td>被兩組完整材質取代</td></tr>
+        <tr><td><code class="del">--color-glass-nav</code></td><td class="del">background 92%</td><td>無 consumer 存留 → 一併清掉</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note" style="margin-top:16px;">
+    <b>順帶收掉的 drift：</b>現況五種不透明度（<code>transparent</code> / 80% / 88% / 94% / 97%）
+    加上桌機 sidebar 的第六種（72% + <code>blur(30px)</code>）全部收斂進上表兩組。
+    Sidebar 的 macOS vibrancy 屬 DESIGN.md L283 已核可的刻意例外，維持不動。
+  </div>
+</section>
+
+<!-- ══════════ 6. a11y ══════════ -->
+<section id="s6">
+  <div class="sec-head">
+    <div class="sec-eyebrow">Section 6 · 無障礙</div>
+    <h2>三個 fallback（目前全 codebase 為 0）</h2>
+    <p><code>prefers-reduced-transparency</code> 與 <code>prefers-contrast</code> 在整個 repo <b>零命中</b>，只有 <code>prefers-reduced-motion</code> 有實作。Apple 這三項是系統自動套用，Web 必須手寫。用上方控制列切換驗證。</p>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th style="width:24%">系統設定</th><th style="width:38%">Apple 行為</th><th>本專案對應</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>reduced-transparency</code></td>
+          <td>玻璃變得更霜化，遮蔽更多背後內容</td>
+          <td>GLASS → <code>secondary 96%</code> + <code>blur(6px)</code>；SOLID 本就不透明，不變</td>
+        </tr>
+        <tr>
+          <td><code>contrast: more</code></td>
+          <td>元素變成主要為黑或白，加對比色邊框</td>
+          <td>兩組材質 → 全不透明 <code>background</code> + <code>2px solid foreground</code> 邊框，specular 關閉</td>
+        </tr>
+        <tr>
+          <td><code>reduced-motion</code></td>
+          <td>停用彈性屬性，降低效果強度</td>
+          <td>scroll edge 的 200ms 材質淡入 → 直接切換（已有 <code>prefers-reduced-motion</code> 基礎設施）</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note" style="margin-top:16px;">
+    <b>對比度注意：</b>玻璃版的 tab label 是 <code>--color-muted</code> 疊在半透明底上，
+    底層是地圖圖磚 —— 亮綠地／深水域都可能出現。實作時需對<b>最壞情況底色</b>驗 WCAG AA 4.5:1，
+    不能只對這個 mockup 的假地圖驗。這是 <code>/tp-code-verify</code> 的 CSS HIG 檢查項。
+  </div>
+</section>
+
+<!-- ══════════ 7. 決議 ══════════ -->
+<section id="s7">
+  <div class="sec-head">
+    <div class="sec-eyebrow">Section 7 · 待簽核</div>
+    <h2>需要你點頭的四件事</h2>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th style="width:6%">#</th><th style="width:30%">決策</th><th>建議</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>flat 頁膠囊變體</td><td><b>V3 Rimless Elevated</b> — 無框、純光影浮起，與地圖頁玻璃同族不同材質</td></tr>
+        <tr><td>2</td><td>Day tab 併入 TitleBar？</td><td><b>是</b> — 解掉 glass-on-glass，順帶消掉 <code>--sticky-chrome-h</code> 那串 offset 計算</td></tr>
+        <tr><td>3</td><td>TitleBar scroll edge effect</td><td><b>採用</b> — flat 頁與 form 頁都套；地圖頁無捲動容器故恆常有材質</td></tr>
+        <tr><td>4</td><td>DESIGN.md 三處改寫</td><td>L250/L253 捲動隱藏 → 常駐；L283 三層 glass 一致 → 雙軌材質；L285 shadow 例外 → 改由材質 token 承載，不開 inline 例外</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+
+  function toggle(btnId, attr) {
+    var btn = document.getElementById(btnId);
+    btn.addEventListener('click', function () {
+      var on = btn.getAttribute('aria-pressed') === 'true';
+      btn.setAttribute('aria-pressed', String(!on));
+      if (on) root.removeAttribute(attr); else root.setAttribute(attr, 'on');
+    });
+  }
+  toggle('t-rt', 'data-rt');
+  toggle('t-hc', 'data-hc');
+
+  var themeBtn = document.getElementById('t-theme');
+  themeBtn.addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme') === 'dark';
+    themeBtn.setAttribute('aria-pressed', String(!dark));
+    themeBtn.textContent = dark ? '深色' : '淺色';
+    if (dark) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', 'dark');
+  });
+
+  // scroll edge effect — 材質只在捲動後出現
+  document.querySelectorAll('[data-scroll]').forEach(function (pane) {
+    var bar = pane.querySelector('.tbar');
+    if (!bar) return;
+    function sync() { bar.classList.toggle('is-scrolled', pane.scrollTop > 4); }
+    pane.addEventListener('scroll', sync, { passive: true });
+    var preset = pane.getAttribute('data-preset');
+    if (preset) pane.scrollTop = parseInt(preset, 10);
+    sync();
+  });
+})();
+</script>
+</body>
+</html>

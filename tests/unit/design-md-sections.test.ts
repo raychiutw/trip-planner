@@ -28,14 +28,32 @@ describe('DESIGN.md — 完整性檢查', () => {
     expect(design).toContain('qualitative palette');
   });
 
-  it('Material section 明確 glass blur 14px 統一', () => {
-    // 確認 Glass blur 統一 14px
-    expect(design).toMatch(/blur\(14px\)/);
+  it('Material section 記載 Regular Glass 六 token 材質包', () => {
+    // 舊斷言是「glass blur 14px 統一」。--blur-glass 已退役 —— 單一 blur 值只統一了
+    // Liquid Glass 六層裡的一層，其餘五層各自漂移，正是 drift 的結構性根源。
+    for (const token of ['--glass-tint', '--glass-filter', '--glass-rim', '--glass-specular', '--glass-shadow', '--chrome-inset']) {
+      expect(design, `Material section 應記載 ${token}`).toContain(token);
+    }
+    expect(design).toMatch(/blur\(24px\)\s+saturate\(180%\)/);
   });
 
-  it('Material section 說明 sheet 拿掉 saturate', () => {
-    // 確認 sheet saturate 相關條文（"不加 `saturate"、"拿掉 `saturate" 或 "去除 saturate"）
-    expect(design).toMatch(/不加.*saturate|拿掉.*saturate|去除.*saturate|removed.*saturate/i);
+  it('Material section 明令玻璃不上品牌 tint', () => {
+    // 舊斷言是「sheet 拿掉 saturate」——與新材質正面矛盾（saturate 現在是必要的，
+    // 它是 HIG「content 的光溢出到玻璃表面」的廉價替代，少了它玻璃會死灰）。
+    // 改為守住真正的鐵則：tint 必須中性。
+    expect(design).toMatch(/玻璃不上品牌 tint|glass 不上 tint/);
+  });
+
+  it('Material section 保留已核可的材質例外（避免後續 PR 順手統一掉）', () => {
+    expect(design).toMatch(/vibrancy/);
+    expect(design).toMatch(/blur\(30px\)/);   // DesktopSidebar
+    expect(design).toMatch(/blur\(8px\)/);    // small floating button
+  });
+
+  it('Accessibility section 記載 chrome 材質的三個系統設定降級', () => {
+    expect(design).toContain('prefers-reduced-transparency');
+    expect(design).toContain('prefers-contrast');
+    expect(design).toContain('prefers-reduced-motion');
   });
 
   it('label token 描述表單 label 與 metadata 用途', () => {

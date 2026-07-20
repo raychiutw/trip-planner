@@ -3,6 +3,67 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.56.13] - 2026-07-20
+
+### Changed（chrome 材質統一為單一 Regular Glass — Apple HIG iOS 26）
+owner「都不要，我要照 HIG 規範」。SoT：`docs/design-sessions/2026-07-20-chrome-hig-regular-glass.html`。
+
+**根因不是背景平不平，是玻璃被品牌色染色。** 先前 chrome 用 `color-mix(--color-background/secondary N%)`
+當玻璃底，在同色相頁面上必然 cream-on-cream —— 而調 opacity（62%→72%→88%）完全無效，因為錯的是**色相**。
+HIG 明令「glass 不上 tint，顏色留給 content layer」，且 Regular 變體的定義是「provides legibility
+regardless of context」：需要依背景分軌，代表材質本身做錯了。
+
+- **六個材質 token 取代散裝定義**：`--glass-tint`（中性 `rgba(255,255,255,.80)` / dark `rgba(44,44,46,.80)`）、
+  `--glass-filter`（`blur(24px) saturate(180%)`）、`--glass-rim`、`--glass-specular`、`--glass-shadow`、
+  `--chrome-inset`（21px）。退役 `--blur-glass` / `--color-glass-nav` / `--color-glass-toast` /
+  `--nav-height-mobile` —— 單一 blur 值只統一了 Liquid Glass 六層裡的一層，其餘五層各自漂移，正是 drift 的結構性根源。
+- **tint alpha 0.80 由最壞情況對比度反推**，非美感值：地圖有 satellite/hybrid 圖磚，膠囊可能浮在近黑或近白影像上，
+  而 CSS 沒有 HIG 的 adaptivity。light 疊近黑 → 合成 `#CCCCCC`；dark 疊近白 → `#565658`。
+  同理**玻璃上的文字一律 `--color-foreground`**：`--color-muted` 在那兩種底色只有 4.05 / 2.85，
+  `--color-accent-deep` 3.43 / 4.10，而 11px bold 不算 WCAG large text（門檻 4.5 非 3.0）。
+  階層改由不透明 accent 藥丸承載，不靠文字灰階。
+- **底部膠囊材質回歸**：v2.56.6 為了解決 cream-on-cream 把材質**整個刪成 transparent**，結果是一排靠黑色投影
+  代償的浮空 icon，讀不出是一組導覽。中性 tint 讓材質可以裝回去。同時撤掉 icon `drop-shadow` 與 label
+  `text-shadow`（那是缺容器的代償，疊在 frosted 板上會讀成髒污）。
+- **膠囊改常駐**（owner 決定）：移除 scroll-direction-aware 隱藏（`translateY(180%)` + `navHidden` state +
+  scroll effect + `data-hidden`）。4-tab 是 global IA 主導覽，常駐比省 60px 垂直空間重要；HIG 的
+  `tabBarMinimizeBehavior` 本就允許 `.never`。
+- **TitleBar 加 HIG scroll edge effect**：捲到頂為 `background: transparent` + 透明 border（標題直接坐在內容上），
+  捲動後 `.is-scrolled` 掛材質 + hairline，200ms 淡入。綁**捲動祖先**（`lib/scrollAncestor`）而非 window ——
+  `.app-shell { height: 100dvh }` 保證 document 永不捲動，綁 window 是全站死碼。無捲動容器的頁面
+  （MapPage full-bleed、ChatPage 的 scroller 是兄弟節點）用 `alwaysSolid` opt-out。
+- **tab label 10px → 11px**：`--font-size-caption2`(0.6875rem) 早就存在只是沒被用，DESIGN.md L58 一直寫的
+  也是 11px —— 是 code 漂移成 `--font-size-eyebrow`(10px)。
+- **孤島收斂**：`StackPanelHeader` / `ChatPage composer` / `InfoSheet` / form sticky CTA 原本各自硬寫
+  `blur(14px)` + 自訂不透明度，全部改吃 token。InfoSheet 的 dark 覆寫還混了 5% accent 進玻璃底（品牌染色），一併移除。
+
+### Added
+- **三個 a11y 降級**（HIG 在 iOS 上自動套用，Web 必須手寫）：`prefers-reduced-transparency`（玻璃霜化）、
+  `prefers-contrast: more`（不透明 + 2px 對比邊框）、`@supports not (backdrop-filter)`（不透明地板）。
+  ⚠ 這三個 block **必須留在 tokens.css 檔尾**：Tailwind 4 建置會把 `@layer` 攤平（dist CSS 內零 `@layer`），
+  覆寫只靠特異性 + 原始碼順序，而要蓋掉的目標 `body.dark` 是同特異性 → 後出現者勝。初版放在檔案前段，
+  導致深色 + Reduce Transparency 霜化不生效、深色 + Increase Contrast 整個失效（兩者都只在深色壞、淺色正常）。
+  由 `tests/unit/glass-tokens.test.ts` 的順序斷言鎖住。
+- `tests/e2e/bottom-nav-clickthrough.spec.js` —— 移除 `pointer-events: none` 後的回歸守護。歷史上同型事故
+  發生兩次（form confirm 被攔截「22+ master CI runs」、v2.56.12 地圖 POI 卡按不動）卻都沒留測試。
+  用 `elementFromPoint` 幾何斷言而非 `click()`：後者會因 disabled、圖磚載不到等**與遮擋無關**的原因失敗。
+  已實測「抬高膠囊 z-index → 測試變紅」確認它真的守得住。
+
+### Fixed（既有 bug，非本次引入）
+- **`/map` 的膠囊被埋掉**：`.tp-global-map-mobile-stack` 是 `bottom: 0` + `z-index: 700` 的不透明奶油漸層，
+  把 z=200 的膠囊整個蓋住 —— 而 `/map` 正是膠囊「地圖」tab 導向的頁面，進去就切不回來。改吃 `--nav-overlay-h`。
+  v2.56.12 只修了 `/trip/:id/map` 的那份，這份漏了。
+- **三個 settings 頁的 TitleBar 根本不 sticky**：`.tp-account-shell` / `.tp-notif-shell` / `.tp-appearance-shell`
+  有 `overflow-y: auto` 卻沒有 `height: 100%`（5 個同類頁都有）→ 它們是「從不捲動的 scrollport」，
+  內部 sticky 不生效，標題列被外層 `.app-shell-main` 整個帶走。
+- **`--nav-overlay-h` 與真實膠囊盒脫鉤**：舊值硬寫 88px。膠囊實高是 60px（padding 6×2 + btn 46 + border 1×2 ——
+  `box-sizing: border-box` 對 `height: auto` 不生效），實際佔用 `max(--chrome-inset, safe-area) + 60`，
+  iPhone 上是 94px，88 其實**不夠**。改為由該式派生。
+- **`css-hig-rules.md` H7 會擋下本變更**：它逐字禁止 `rgba()` 玻璃底、強制 `color-mix(--bg 85%)` ——
+  正是本次要廢除的品牌染色寫法。H7 與「陷阱 2」一併反轉，`.claude/` 與 `.codex/` 兩份 mirror 同步。
+- `openspec/specs/mobile-bottom-nav.md` 標記 superseded（整份是 Ocean 時期殭屍：tab 寫「行程/地圖/訊息/更多」、
+  `.ocean-bottom-nav-btn`、滿版 grid bar，與現行四 tab 膠囊完全不符）。
+
 ## [2.56.12] - 2026-07-20
 
 ### Fixed（v2.56.9「全版」的 regression — master CI e2e 抓到）

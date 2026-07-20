@@ -1,3 +1,21 @@
+> # ⛔ SUPERSEDED（2026-07-20）
+>
+> **本文件已整份過時，不再是規格。** 現行來源：`DESIGN.md`（§Navigation / §Material & Effects）
+> 與 `openspec/specs/css-hig-discipline/spec.md`。
+>
+> 過時之處（非窮舉，說明為何不逐行保養而是整份退役）：
+> - **Tab 組成錯的**：本文寫「行程 / 地圖 / 訊息 / 更多」，現行 primary IA 是
+>   **聊天 / 行程 / 地圖 / 收藏**（單一來源 `src/components/shell/navItems.ts`）。
+> - **形制錯的**：本文寫 `grid-template-columns: repeat(4, 1fr)` 滿版 bar，
+>   現行是 HIG iOS 26 **浮動膠囊**（flex + `--chrome-inset` 21px + `radius-full`）。
+> - **材質錯的**：本文規定 `rgba(255,255,255,0.97)` + `blur(var(--blur-glass))`（14px）
+>   並「不允許 `blur()` 值偏離 `var(--blur-glass)`」。`--blur-glass` 已於 Regular Glass
+>   收斂中**退役**，材質改由 `--glass-tint` / `--glass-filter` 等六個 token 承載。
+> - **選擇器錯的**：本文用 `.ocean-bottom-nav-btn`（Ocean 時期命名），現行為 `.tp-global-bottom-nav-btn`。
+> - **行為錯的**：捲動隱藏已於 2026-07-20 移除，膠囊常駐。
+>
+> 以下內容僅保留作為歷史紀錄。
+
 ## Mobile Bottom Nav — 4-tab Route-based IA 規格
 
 實作來源：PR #200（v2.0.1.1）+ PR #202（v2.0.2.0）  

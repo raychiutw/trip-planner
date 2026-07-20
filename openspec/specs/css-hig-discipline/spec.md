@@ -27,14 +27,40 @@
 
 ---
 
-### Requirement: sticky-nav 使用 frosted glass 效果
+### Requirement: chrome 使用單一 Regular Glass 材質
 
-`.sticky-nav` 背景 SHALL 使用 `color-mix(in srgb, var(--bg) 85%, transparent)` 搭配 `backdrop-filter: saturate(180%) blur(20px)` 實現半透明磨砂玻璃效果。不得使用實色 `var(--bg)` 或 `rgba()` 背景。
+全站 chrome（titlebar、底部膠囊、page bottom bar、sheet、stack panel header、chat composer）
+SHALL 使用同一組材質 token：`background: var(--glass-tint)`、`backdrop-filter: var(--glass-filter)`、
+`border: var(--glass-rim)`、`box-shadow: var(--glass-specular), var(--glass-shadow)`。
 
-#### Scenario: sticky-nav 無實色背景
+chrome 背景 SHALL NOT 使用品牌色 `color-mix(in srgb, var(--color-background|secondary|accent) N%, transparent)`。
+Apple HIG 明令「glass 不上 tint，顏色留給 content layer」，且 Regular 變體的定義是
+「provides legibility regardless of context」—— 依背景分軌代表材質本身做錯了。
+2026-07-20 實證：品牌染色玻璃在同色相頁面上必然糊掉，且調整 opacity（62%→72%→88%）完全無效，
+根因是 tint 的**色相**不是數值。
 
-- **WHEN** 靜態分析所有 CSS 檔案中含 `sticky-nav` 的選擇器
-- **THEN** 背景 SHALL 不為 `var(--bg)` 實色或 `rgba()` 值
+> 沿革：本條原文為「`.sticky-nav` 背景 SHALL 使用 `color-mix(var(--bg) 85%)` … 不得使用 `rgba()`」，
+> 與 Regular Glass 收斂正面衝突（`--glass-tint` 正是中性 `rgba()`）而反轉。
+
+已核可例外（各有測試守護）：`DesktopSidebar` 的 macOS vibrancy（`blur(30px)`，唯一保留品牌 tint 的 chrome）、
+≤32px 浮動小按鈕的 `blur(8px)`。
+
+#### Scenario: chrome 無品牌染色背景
+
+- **WHEN** 靜態分析 chrome 選擇器（`.tp-titlebar` / `.tp-global-bottom-nav` / `.tp-page-bottom-bar` / `.tp-map-day-tabs` / `.tp-bottom-nav`）
+- **THEN** `background` SHALL 為 `var(--glass-tint)`，SHALL NOT 為含 `--color-background` / `--color-secondary` / `--color-accent` 的 `color-mix()`
+
+#### Scenario: 隨主題變值的材質 token 放置正確
+
+- **WHEN** 檢查 `css/tokens.css` 中 `--glass-tint` / `--glass-rim` / `--glass-specular` / `--glass-shadow` 的宣告位置
+- **THEN** 淺色值 SHALL 在 `@theme` block 內、深色覆寫 SHALL 在 `@layer base { body.dark }` 內
+- **AND** SHALL NOT 出現在未分層的 `body {}` —— 未分層宣告勝過任何 `@layer`，會使深色覆寫永不生效
+
+#### Scenario: a11y 降級齊備
+
+- **WHEN** 檢查 `css/tokens.css`
+- **THEN** SHALL 存在 `@media (prefers-reduced-transparency: reduce)`、`@media (prefers-contrast: more)`
+  與 `@supports not (backdrop-filter: …)` 三個降級 block
 
 ---
 

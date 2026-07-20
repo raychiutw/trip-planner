@@ -28,13 +28,28 @@ gap / row-gap / column-gap 的 px 值必須為 4 的倍數。同上例外。
 ### H6 #fff 禁令
 `color: #fff` / `#FFF` / `#ffffff` 改用 `var(--text-on-accent)`。例外：`.g-icon`、`.n-icon`、`.cmp-` 品牌選擇器。
 
-### H7 frosted glass nav
-`.sticky-nav` 的 background 禁止用實色 `var(--bg)` 或 `rgba()`。必須用：
+### H7 chrome 材質（Regular Glass）
+chrome（titlebar / 底部膠囊 / page bottom bar / sheet / stack header）的玻璃**一律吃材質
+token**，禁止逐處自訂：
 ```css
-background: color-mix(in srgb, var(--bg) 85%, transparent);
-backdrop-filter: saturate(180%) blur(20px);
--webkit-backdrop-filter: saturate(180%) blur(20px);
+background: var(--glass-tint);
+backdrop-filter: var(--glass-filter);
+-webkit-backdrop-filter: var(--glass-filter);
+border: var(--glass-rim);
+box-shadow: var(--glass-specular), var(--glass-shadow);
 ```
+
+**禁止用品牌色染玻璃** —— `color-mix(in srgb, var(--color-background|secondary|accent) N%, transparent)`
+當 chrome background 是違規。Apple HIG 明令「glass 不上 tint，顏色留給 content layer」；
+奶油玻璃疊奶油頁必然 cream-on-cream 糊掉（2026-07-20 實證）。`--glass-tint` 是**中性**的，
+底層顏色由 `saturate(180%)` 抽出來，不由我們填。
+
+⚠ `--glass-tint` 的 alpha 由**最壞情況對比度**反推（膠囊可能浮在 satellite 圖磚上），
+不是美感值。調低前先重算 WCAG AA 4.5:1。
+
+已核可例外（不受本條約束，各自有測試守護）：
+- `DesktopSidebar` — macOS vibrancy `blur(30px)`，DESIGN.md §10.3
+- ExplorePage ≤32px 浮動小按鈕 — `blur(8px)`，14px 在小元素上會 over-soften 邊緣
 
 ### H8 color mode preview token
 設定頁的 `.color-mode-light` / `.color-mode-dark` / `.color-mode-auto` 使用 `var(--cmp-*)` token，禁止硬編碼色碼。
@@ -112,9 +127,14 @@ html.page-{name} {
 
 ### 陷阱 2：frosted glass 失效
 
-**場景**：`.sticky-nav` 背景改成實色 `var(--bg)` 後，毛玻璃效果消失。
+**場景 A**：chrome 背景改成實色 `var(--bg)` 後，毛玻璃效果消失。
+**解法**：用 `var(--glass-tint)` + `var(--glass-filter)`，不要自己寫值。
 
-**解法**：永遠用 `color-mix(in srgb, var(--bg) 85%, transparent)` + `backdrop-filter`。
+**場景 B（更常見，2026-07-20 實證）**：玻璃用了**品牌色** `color-mix(--color-background/secondary ...)`，
+在同色相的頁面上看起來像一條實心色帶 —— 於是有人把 opacity 從 62% 調到 72%、88%⋯⋯ 全都沒用。
+**根因不是數值，是 tint 的色相**。玻璃底跟頁面同色＝再疊一次同一個顏色。
+**解法**：改中性 `--glass-tint`。它會讓底層內容的顏色透過 `saturate(180%)` 浮上表面，
+而不是被品牌色蓋掉。
 
 ### 陷阱 3：dh-nav 手機溢出
 

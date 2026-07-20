@@ -5,7 +5,7 @@ Define the V2 Terracotta page layout contract for the main app surfaces: unified
 
 ## Requirements
 ### Requirement: TitleBar 統一 API
-所有主功能頁 TitleBar MUST 使用統一 component API：`<TitleBar title back? actions? />`，移除桌機 eyebrow / meta / helper text；TitleBar SHALL 為 sticky 顯示，桌機 64px / compact 56px 高度，glass blur 14px + hairline border-bottom；只有行程詳情頁 MUST 有左側返回 button。
+所有主功能頁 TitleBar MUST 使用統一 component API：`<TitleBar title back? actions? />`，移除桌機 eyebrow / meta / helper text；TitleBar SHALL 為 sticky 顯示，桌機 64px / compact 56px 高度；材質走 **HIG scroll edge effect** —— 捲到頂為 `background: transparent` + 透明 border（無材質），捲動後 `.is-scrolled` 掛上 Regular Glass 材質 token（`--glass-tint` / `--glass-filter`）+ hairline border-bottom，200ms 淡入；無捲動容器的頁面（MapPage full-bleed）SHALL 傳 `alwaysSolid` 恆為材質態；只有行程詳情頁 MUST 有左側返回 button。
 
 #### Scenario: 桌機渲染 TripList titlebar
 - **WHEN** 使用者在桌機（≥1024px）開啟 `/trips`
@@ -84,7 +84,7 @@ Map page MUST 提供 loading 與 empty state UI：loading SHALL 顯示 shimmer c
 
 #### Scenario: 切到無景點的日期
 - **WHEN** 使用者切到某 day tab 該日無 entry
-- **THEN** map canvas 中央顯示 280px max-width glass card（blur 14px + hairline border + shadow-md），含 32px `i-map` icon + 15px bold title + 13px muted hint text
+- **THEN** map canvas 中央顯示 280px max-width glass card（`--glass-tint` + `--glass-filter` + hairline border + shadow-md），含 32px `i-map` icon + 15px bold title + 13px muted hint text
 
 ### Requirement: Day tab dayColor underline
 Map page 與 Trip detail page DayNav MUST 共用同一 visual primitive：tab SHALL 為底線型（border-radius 0、border-bottom 2px transparent → active 變 dayColor）、eyebrow SHALL 顯示 dayColor 文字、active state 文字色 MUST 轉 accent。
