@@ -25,6 +25,7 @@ import { downloadTripJson } from '../lib/tripExport';
 import { renderTripPrintPdf } from '../components/print/renderTripPrintPdf';
 import { showToast } from '../lib/toastBus';
 import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '../lib/scrollSpy';
+import { findScrollAncestor } from '../lib/scrollAncestor';
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
 import { TripIdContext } from '../contexts/TripIdContext';
 import { TripDaysContext } from '../contexts/TripDaysContext';
@@ -144,23 +145,10 @@ function getQueryTrip(): string | null {
 
 /* ===== Scroll helpers ===== */
 
-/**
- * Find the actual scrolling ancestor of `el`. AppShell uses a constrained
- * `.app-shell-main { overflow-y: auto }` as the scroll container, so the
- * window doesn't scroll. Fall back to document if no ancestor scrolls.
- */
-function findScrollContainer(el: HTMLElement): HTMLElement | Window {
-  let parent: HTMLElement | null = el.parentElement;
-  while (parent) {
-    const cs = getComputedStyle(parent);
-    const overflowY = cs.overflowY;
-    if ((overflowY === 'auto' || overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
-      return parent;
-    }
-    parent = parent.parentElement;
-  }
-  return window;
-}
+/* 捲動祖先查找已抽到 lib/scrollAncestor（與 TitleBar 的 scroll edge effect 共用）。
+ * 原本這裡的版本多一個 `scrollHeight > clientHeight` 條件；移除後行為更穩健 ——
+ * 那個條件在容器尚未被內容撐開時會 fallback 到 window，讓 scroll-spy 靜默永不觸發。
+ * 本呼叫點 gate 在 `loading === false && dayNums.length > 0`，兩版結果相同。 */
 
 function scrollToDay(dayNum: number): void {
   const header = document.getElementById('day' + dayNum);
@@ -705,7 +693,7 @@ function TripPageInner(
 
     const firstHeader = document.getElementById('day' + dayNums[0]);
     if (!firstHeader) return;
-    const scroller = findScrollContainer(firstHeader);
+    const scroller = findScrollAncestor(firstHeader);
 
     function onScroll() {
       const nav = document.getElementById('stickyNav');
