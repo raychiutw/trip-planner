@@ -133,7 +133,6 @@ html { color-scheme: light dark; }
      */
     --grid-3pane-desktop: 216px 1fr 1fr;
     --grid-2pane-desktop: 216px 1fr;
-    --nav-height-mobile: 88px;
     --sidebar-width-desktop: 216px;
 
     /* Font size */
@@ -205,8 +204,45 @@ html { color-scheme: light dark; }
     /* Focus ring */
     --shadow-ring: 0 0 0 2px var(--color-accent);
 
-    /* Glass blur — unified 14px for topbar, bottom-nav, sheet */
-    --blur-glass: 14px;
+    /* ═══ Regular Glass — 全站 chrome 的唯一材質（HIG iOS 26）═══════════════
+     * SoT: docs/design-sessions/2026-07-20-chrome-hig-regular-glass.html
+     *
+     * 取代舊的 blur-glass(14px) + color-glass-nav / color-glass-toast。舊寫法用**品牌奶油色**
+     * 當玻璃底（color-mix(--color-background/secondary ...)），違反 HIG「glass 不上
+     * tint，顏色留給 content layer」——奶油玻璃疊奶油頁 = cream-on-cream 糊掉。
+     * Regular 變體的定義是「provides legibility regardless of context」，所以是**一套**
+     * 材質吃所有頁面，不依背景分軌。
+     *
+     * ⚠ 放置規則：隨主題變值的四個（tint/rim/specular/shadow）淺色值放這裡（@theme），
+     * 深色覆寫放 `@layer base { body.dark }`。**不可**放進本檔未分層的 `body {}` ——
+     * 未分層宣告勝過任何 @layer，會讓 body.dark 覆寫永不生效且無測試抓得到。
+     * 契約由 tests/unit/glass-tokens.test.ts 鎖住。
+     *
+     * ⚠ tint alpha 0.80 是**對比度下限反推**的，不是美感值：地圖有 satellite/hybrid
+     * 圖磚（MapFabs.tsx MapTileStyle），膠囊可能浮在近黑或近白影像上，而 CSS 沒有
+     * Apple 的 adaptive 能力，所以必須用最壞情況定值。實算（WCAG 2.1 相對亮度）：
+     *
+     *   light tint 疊近黑圖磚 → 合成 #CCCCCC
+     *       --color-foreground #2A1F18 = 10.00 ✅
+     *       --color-muted     #6F5A47 =  4.05 ❌   ← 所以玻璃上不用 muted
+     *       --color-accent-deep       =  3.43 ❌
+     *   dark tint 疊近白衛星  → 合成 #565658
+     *       --color-foreground #F5F5F7 =  6.73 ✅
+     *       --color-muted     #A1A1A6 =  2.85 ❌
+     *
+     * 結論有兩層：alpha 不可低於 0.80（0.62 時 foreground 只剩 ~3.78 ❌），
+     * 且**玻璃上的文字一律用 --color-foreground**（11px bold 不算 WCAG large text，
+     * 門檻 4.5 非 3.0）。階層靠不透明 accent 藥丸，不靠文字灰階。
+     * 調低 alpha 或改用 muted 前，先重算上表。 */
+    --glass-tint: rgba(255, 255, 255, 0.80);
+    /* saturate 模擬 HIG「content 的光溢出到玻璃表面」，少了它玻璃會死灰 */
+    --glass-filter: blur(24px) saturate(180%);
+    --glass-rim: 1px solid rgba(255, 255, 255, 0.50);
+    --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+    --glass-shadow: 0 10px 30px rgba(42, 31, 24, 0.18), 0 2px 6px rgba(42, 31, 24, 0.10);
+    /* 浮動膠囊四邊 inset（HIG iOS 26 量測值 21pt）。AppShell 底部定位與 MapPage 的
+     * POI 卡避讓都吃這個，不要再散落 12px 副本。 */
+    --chrome-inset: 21px;
 
     /* Shared hover filter — filled buttons darken slightly on hover */
     --hover-brightness: 0.92;
@@ -239,11 +275,19 @@ html { color-scheme: light dark; }
     body { font-size: var(--mobile-font-size-body); }
 }
 
-/* ===== Composite tokens on body (let .dark overrides take effect) ===== */
+/* ===== Composite tokens on body — 目前刻意留空 =====
+ *
+ * 原本放 color-glass-nav / color-glass-toast，兩者已隨 Regular Glass 收斂退役
+ * （nav 的唯一 consumer .map-page-empty-card 已遷到 --glass-tint；toast 無 consumer）。
+ *
+ * ⚠ 不要把「隨主題變值」的 token 加回這裡。舊註解寫「let .dark overrides take effect」
+ * 是**錯的**：本 block 未分層，而 body.dark 在 `@layer base` 內，而 CSS 串接層規則是
+ * 「未分層宣告勝過任何 @layer」——放這裡的淺色值會恆勝，深色覆寫永不生效，
+ * 而且視覺上「淺色沒壞、深色壞掉」在 review 極易漏看。
+ * 隨主題變值的 token 一律：淺色放 @theme，深色放 @layer base { body.dark }。
+ * 由 tests/unit/glass-tokens.test.ts「token 放置位置」describe 鎖住。 */
 body {
-    --color-glass-nav: color-mix(in srgb, var(--color-background) 92%, transparent);
-    --color-glass-toast: color-mix(in srgb, var(--color-secondary) 92%, transparent);
-    /* Map marker active state — DESIGN.md exception (multi-layer rgba inline allowed for map markers) */
+    /* intentionally empty — see note above */
 }
 
 /* Form element font inheritance — Tailwind 4 theme import doesn't include preflight,
@@ -900,8 +944,8 @@ body.dark {
             /* sticky 讓 nav 在 AppShell grid cell 內正確定位，不脫離到 viewport */
             position: sticky; inset-block-end: 0;
             display: grid; grid-template-columns: repeat(4, 1fr);
-            background: color-mix(in srgb, var(--color-background) 97%, transparent);
-            backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
+            background: var(--glass-tint);
+            backdrop-filter: var(--glass-filter); -webkit-backdrop-filter: var(--glass-filter);
             border-top: 1px solid var(--color-border);
             padding-bottom: env(safe-area-inset-bottom);
             z-index: calc(var(--z-sticky-nav) - 1);
@@ -912,7 +956,8 @@ body.dark {
             /* Apple HIG minimum tap target */
             min-height: 44px; /* = var(--spacing-tap-min) */
             background: transparent; border: none; cursor: pointer;
-            color: var(--color-muted); font: inherit;
+            /* 同 .tp-map-day-tab：玻璃上的文字用 foreground，muted 疊玻璃只有 4.05 / 2.85。 */
+            color: var(--color-foreground); font: inherit;
             transition: color var(--transition-duration-fast) var(--transition-timing-function-apple);
         }
         .tp-bottom-nav-btn .svg-icon { width: 18px; height: 18px; }
@@ -990,6 +1035,18 @@ body.dark {
         --color-muted: #A1A1A6;
         --color-accent-foreground: #1C1C1E;
         --color-border: #48484A;
+
+        /* ═══ Regular Glass — dark 覆寫 ═══
+         * 中性深灰（#2C2C2E = iOS elevated surface），不是深棕 —— HIG 明令 glass 不上
+         * 品牌 tint。alpha 0.80 同樣由最壞情況對比度反推（見 @theme 的 --glass-tint 註解）：
+         * 深色 tint 80% 疊近白衛星圖磚 → 合成 #5E5E5E，配 --color-foreground #F5F5F7
+         * = 5.92:1 ✅。rim / specular 在深色要壓很低，否則邊緣會像描白線。
+         * 落影改純黑（暖褐落影在深底上看不見）。 */
+        --glass-tint: rgba(44, 44, 46, 0.80);
+        --glass-rim: 1px solid rgba(255, 255, 255, 0.14);
+        --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+
         /* 深色控件邊界：#48484A 對底僅 1.86 / 對 surface 1.53，同樣未達 1.4.11 的 3.0。
          * #7C7C80 → 對 #1C1C1E 4.09、對 surface #2C2C2E 3.35 ✅ 兩種表面都過。 */
         --color-border-control: #7C7C80;
@@ -1274,9 +1331,9 @@ body.dark {
   justify-content: space-between;
   padding: 12px 16px max(12px, env(safe-area-inset-bottom, 12px));
   border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+  background: var(--glass-tint);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
 }
 .tp-page-bottom-bar--end { justify-content: flex-end; }
 @media (min-width: 1024px) {
@@ -1405,19 +1462,16 @@ body.dark {
      桌機寬中欄下明顯偏左）。auto 左右 margin 置中,少天時置中、多天時仍可捲。 */
   margin: 6px auto 8px;
   padding: 4px;
-  /* rev2 owner 2026-07-19「day tab 比照功能tab（底部浮動膠囊）的效果」：與 .tp-global-bottom-nav
-   * 同一玻璃材質族 — secondary 底 + --blur-glass(三層 glass 一致)+ 較強暖落影 + 亮 specular
-   * 上緣，成為明確浮動玻璃膠囊。用 secondary（非 background）→ 剛抬亮的 dark base(#1C1C1E)上
-   * 仍以 elevated #2C2C2E 明顯浮起（非 base-on-base 糊掉）；88%（比 nav 62% 略實）確保頂端
-   * sticky、內容從下方流過時仍讀得出邊界，不重蹈先前 72% cream-on-cream。 */
-  background: color-mix(in srgb, var(--color-secondary) 88%, transparent);
-  backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-  border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
-  box-shadow:
-    0 14px 34px rgba(42, 31, 24, 0.22),
-    0 3px 10px rgba(42, 31, 24, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  /* Regular Glass（單一 chrome 材質）。原本是 secondary 88% 品牌染色 + 三層自訂落影，
+   * 違反 HIG「glass 不上 tint」且與其他 chrome 各自漂移。
+   * ⚠ trip-detail 的 sticky 變體會在下方把這層玻璃**整個拿掉**改 8% fill —— 因為它併進
+   * TitleBar 玻璃板後就是 glass-on-glass（HIG 明列禁忌）。這裡的完整玻璃只服務 MapPage
+   * 的浮動變體（膠囊直接浮在地圖圖磚上，需要完整材質才讀得出來）。 */
+  background: var(--glass-tint);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  border: var(--glass-rim);
+  box-shadow: var(--glass-specular), var(--glass-shadow);
   border-radius: var(--radius-full);
 }
 .tp-map-day-tabs::-webkit-scrollbar { display: none; }
@@ -1427,7 +1481,11 @@ body.dark {
   border: none;
   border-radius: var(--radius-full);
   background: transparent;
-  color: var(--color-muted);
+  /* 玻璃上的文字一律用 --color-foreground，不用 --color-muted / --color-accent-deep：
+   * 這層玻璃會浮在地圖圖磚上（satellite/hybrid），合成底色可能落在 #CCCCCC(light 疊近黑)
+   * 或 #565658(dark 疊近白)。實算 muted 只有 4.05 / 2.85，accent-deep 3.43 / 4.10 —— 都低於 4.5。
+   * 階層改由不透明 accent 藥丸（is-active）承載，不靠文字灰階。 */
+  color: var(--color-foreground);
   cursor: pointer;
   font: inherit;
   display: inline-flex;
@@ -1604,13 +1662,22 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    border-bottom: 1px solid var(--color-border);
-    /* rev2 iOS 26 Liquid Glass header — 還原 TitleBar.tsx:12 + mockup Section 23 規範的
-       「glass blur」（原漂移成 opaque cream，chat 等頁標題列不透）。translucent 80% +
-       backdrop blur 讓內容 frost 過標題列下方，與底部玻璃導航一致。token 化 light/dark adapt。 */
-    background: color-mix(in srgb, var(--color-background) 80%, transparent);
-    backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-    -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+    /* HIG scroll edge effect — 捲到頂＝無材質、無分隔線，標題直接坐在內容上。
+     * border 保留 1px 只把顏色設透明：拿掉整條 border 會讓首次捲動整頁跳 1px。
+     * transition 只動 background / border-color —— 不要 transition backdrop-filter，
+     * 那在多數瀏覽器是逐 frame 重算整塊模糊。
+     * 材質態見下方 .tp-titlebar.is-scrolled（class 由 TitleBar.tsx 依捲動祖先切換）。 */
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    transition: background var(--duration-nav-fade) var(--transition-timing-function-apple),
+                border-color var(--duration-nav-fade) var(--transition-timing-function-apple);
+  }
+  .tp-titlebar.is-scrolled {
+    background: var(--glass-tint);
+    backdrop-filter: var(--glass-filter);
+    -webkit-backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-specular);
+    border-bottom-color: var(--color-border);
   }
   .tp-titlebar-title {
     /* mockup-parity-qa-fixes: mockup .tp-page-titlebar-title:4060 規範 desktop 20/28/700 (was 24px) */
@@ -1640,13 +1707,20 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    border-bottom: 1px solid var(--color-border);
-    /* rev2 iOS 26 Liquid Glass header — 還原 TitleBar.tsx:12 + mockup Section 23 規範的
-       「glass blur」（原漂移成 opaque cream，chat 等頁標題列不透）。translucent 80% +
-       backdrop blur 讓內容 frost 過標題列下方，與底部玻璃導航一致。token 化 light/dark adapt。 */
-    background: color-mix(in srgb, var(--color-background) 80%, transparent);
-    backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-    -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+    /* HIG scroll edge effect — 與上方 @media (min-width: 761px) 那份必須同步。
+     * 這兩份 .tp-titlebar 是複製貼上關係，只改一半是本次變更最容易發生的半落地
+     * （compact 斷點會靜默留著舊材質）。titlebar-scroll-edge.test.tsx 對兩份都斷言。 */
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    transition: background var(--duration-nav-fade) var(--transition-timing-function-apple),
+                border-color var(--duration-nav-fade) var(--transition-timing-function-apple);
+  }
+  .tp-titlebar.is-scrolled {
+    background: var(--glass-tint);
+    backdrop-filter: var(--glass-filter);
+    -webkit-backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-specular);
+    border-bottom-color: var(--color-border);
   }
   .tp-titlebar-title {
     font-size: 18px; /* mockup compact 18px (was 22px) */
@@ -1693,7 +1767,9 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   padding: 0 12px 0 6px;
   display: inline-flex;
   align-items: center;
-  color: var(--color-accent-deep);
+  /* accent-deep 疊 TitleBar 玻璃只有 3.43(light 疊深內容) / 4.10(dark 疊亮內容)，
+   * 而 16px/600 不算 WCAG large text（門檻 4.5）。返回的語意由 chevron 承載，不靠色相。 */
+  color: var(--color-foreground);
   font-size: var(--font-size-callout);
   font-weight: 600;
 }
@@ -1860,4 +1936,55 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   :root {
     --font-size-title: 1.5rem; /* 28px → 24px on compact */
   }
+}
+
+/* ═══ Regular Glass — a11y fallback（必須留在檔尾）═══════════════════════════
+ * HIG 的三個系統設定在 iOS 上是自動套用的，Web 必須手寫。
+ *
+ * ⚠ 位置就是正確性的一部分，不要往上搬。
+ *
+ * 這些 block 要蓋掉的是 `body.dark`（特異性 0,1,1）的正常材質值。同特異性下
+ * **後出現者勝**，所以 fallback 必須排在 body.dark 之後 —— 也就是檔尾。
+ * 早期版本把它們放在檔案前段（body{} 附近），結果：
+ *   ① 深色 + Reduce Transparency → 正常 dark tint 反而勝出，霜化完全不生效
+ *   ② 深色 + Increase Contrast → 只寫了 body(0,0,1)，永遠輸給 body.dark(0,1,1)，整個失效
+ * 兩者都是「淺色沒壞、深色壞掉」，review 極易漏看。
+ *
+ * 註：Tailwind 4 的建置產物會把 @layer 攤平（dist CSS 內無任何 @layer），
+ * 所以這裡不能靠「未分層勝過 layer」的串接層規則，只能靠特異性 + 原始碼順序。
+ * 每個 media query 內都必須同時寫 body 與 body.dark 兩個分支。
+ * 由 tests/unit/glass-tokens.test.ts「a11y fallback 位置」describe 鎖住。 */
+
+/* Reduce Transparency → HIG「玻璃變得更霜化，遮蔽更多背後內容」 */
+@media (prefers-reduced-transparency: reduce) {
+    body {
+        --glass-tint: rgba(255, 255, 255, 0.94);
+        --glass-filter: blur(8px);
+    }
+    body.dark {
+        --glass-tint: rgba(44, 44, 46, 0.96);
+        --glass-filter: blur(8px);
+    }
+}
+
+/* Increase Contrast → HIG「元素變成主要為黑或白，並加上對比色邊框」 */
+@media (prefers-contrast: more) {
+    body,
+    body.dark {
+        /* var(--color-*) 自身已隨主題切換，兩個選擇器取相同值即可；
+         * 但 body.dark 分支不可省 —— 省了它深色模式就吃不到這組覆寫。 */
+        --glass-tint: var(--color-background);
+        --glass-filter: none;
+        --glass-rim: 2px solid var(--color-foreground);
+        --glass-specular: none;
+    }
+}
+
+/* 不支援 backdrop-filter 時給不透明地板 —— 80% tint 沒有 blur 撐著，
+ * 疊在 satellite 圖磚上文字會不可讀。寧可失去玻璃感也不能失去可讀性。 */
+@supports not (backdrop-filter: blur(1px)) {
+    body,
+    body.dark {
+        --glass-tint: var(--color-background);
+    }
 }

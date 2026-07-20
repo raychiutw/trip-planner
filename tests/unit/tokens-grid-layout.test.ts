@@ -21,8 +21,11 @@ describe('tokens.css — grid layout variables (rev2)', () => {
     expect(TOKENS).toMatch(/--grid-2pane-desktop:\s*216px 1fr;/);
   });
 
-  it('--nav-height-mobile 為 `88px`', () => {
-    expect(TOKENS).toMatch(/--nav-height-mobile:\s*88px;/);
+  it('--nav-height-mobile 已退役（改由 --nav-overlay-h 從實際膠囊盒派生）', () => {
+    // 88px 是硬寫值，與真實膠囊盒脫鉤：膠囊實佔 = max(--chrome-inset, safe-area) + 60
+    // （padding 6*2 + btn 46 + border 1*2）。iPhone 上實際 94px，88 其實不夠。
+    // 讓位量現由 AppShell 的 --nav-overlay-h 派生，唯一來源。
+    expect(TOKENS).not.toMatch(/--nav-height-mobile/);
   });
 
   it('--sidebar-width-desktop 為 `216px`', () => {

@@ -19,20 +19,16 @@ describe('tokens.css — 新 token', () => {
     expect(tokens).toMatch(/--font-size-caption2:\s*0\.6875rem/);
   });
 
-  it('包含 --blur-glass token', () => {
-    expect(tokens).toContain('--blur-glass:');
-  });
-
-  it('--blur-glass 值為 14px', () => {
-    expect(tokens).toMatch(/--blur-glass:\s*14px/);
-  });
+  // --blur-glass 已於 Regular Glass 收斂中退役（單一 blur 值只統一了 Liquid Glass 六層
+  // 裡的一層，其餘五層各自漂移＝drift 根源）。材質契約改由 glass-tokens.test.ts 鎖住，
+  // 含六個 token 的值、放置 block（dark 靜默失效防線）與 a11y fallback。
 
   it('包含 --color-warning token', () => {
     expect(tokens).toMatch(/--color-warning:\s*#F48C06/);
   });
 });
 
-// ——— Item 3/4: Glass blur 統一 14px ———
+// ——— Glass blur 統一性（基準已由 14px 改為 --glass-filter 的 24px）———
 describe('CSS glass blur 統一性', () => {
   it('tokens.css 不存在 blur(12px)', () => {
     expect(tokens).not.toContain('blur(12px)');
@@ -40,6 +36,10 @@ describe('CSS glass blur 統一性', () => {
 
   it('tokens.css 不存在 blur(6px)', () => {
     expect(tokens).not.toContain('blur(6px)');
+  });
+
+  it('tokens.css 不存在 blur(14px) 散裝值（chrome 一律吃 --glass-filter）', () => {
+    expect(tokens).not.toContain('blur(14px)');
   });
 });
 
@@ -137,7 +137,10 @@ describe('760px breakpoint — 文件註解', () => {
 const infoSheetContent = readFileSync(resolve(ROOT, 'src/components/trip/InfoSheet.tsx'), 'utf-8');
 
 describe('InfoSheet — sheet 邊緣清晰度', () => {
-  it('InfoSheet sheet background 使用 94% 而非 88%（opacity bump）', () => {
-    expect(infoSheetContent).toMatch(/color-mix\(in srgb,\s*var\(--color-secondary\)\s*94%/);
+  // 原本是「94% 而非 88%」的 opacity 微調。Regular Glass 收斂後不再逐元件調不透明度 ——
+  // 邊緣清晰度改由 --glass-tint(0.80，對比度下限反推) + --glass-rim 統一負責。
+  it('InfoSheet 吃統一材質 token，不自訂品牌色 color-mix', () => {
+    expect(infoSheetContent).toContain("background: 'var(--glass-tint)'");
+    expect(infoSheetContent).not.toMatch(/color-mix\(in srgb,\s*var\(--color-secondary\)/);
   });
 });
