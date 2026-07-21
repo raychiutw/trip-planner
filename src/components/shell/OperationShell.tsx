@@ -31,6 +31,14 @@ export interface OperationShellProps {
   back: () => void;
   /** 各頁 scoped `<style>` 內容（兩形態共用）。 */
   scopedStyles?: string;
+  /**
+   * 手機全頁 drill-down 時的底部 nav slot（v2.57.x 共編/健檢/筆記 panel 化新增）。
+   * 預設 undefined → 沿用既有 6 條操作路由行為（手機也不顯底部 tab，focused-task
+   * drill-down 慣例）。共編設定/AI 健檢/行程筆記這 3 頁在改用 OperationShell 前手機版
+   * 本來就有 GlobalBottomNav，遷移時保留才不改變既有手機行為（owner 要求「手機版行為
+   * 不要改」）。桌機（inStack）不吃此 prop —— 桌機底部 nav 一律由 TripStackLayout 提供。
+   */
+  bottomNav?: ReactNode;
   children: ReactNode;
 }
 
@@ -40,6 +48,7 @@ export default function OperationShell({
   title,
   back,
   scopedStyles,
+  bottomNav,
   children,
 }: OperationShellProps) {
   const { inStack, closeStack } = useSheetStack();
@@ -121,6 +130,7 @@ export default function OperationShell({
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       main={panel}
+      bottomNav={bottomNav}
     />
   );
 }

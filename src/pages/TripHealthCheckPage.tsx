@@ -1,5 +1,5 @@
 /**
- * TripHealthCheckPage — AI 行程健檢全頁
+ * TripHealthCheckPage — AI 行程健檢
  *
  * Route: `/trip/:tripId/health`
  * 入口: TripCardMenu 「AI 健檢」/ TripPage ⋯ menu 「AI 健檢」
@@ -14,12 +14,18 @@
  * 結果儲存：D1 `trip_health_reports` (per-trip latest, PRIMARY KEY trip_id)。
  * 對話留底：同步 INSERT `trip_requests` 走 Claude → user 在 /chat 也看得到對話。
  * 命名：tp-ai-health-* CSS class，避開 v2.23.0 既有 TripHealthBanner（POI lifecycle）。
+ *
+ * v2.57.x：遷入 TripStackLayout（owner 2026-07-21「桌機三欄 shell panel 化」）——
+ *   桌機：OperationShell bare panel 塞右欄，中欄行程詳情保留。
+ *   手機：OperationShell 整頁（bottomNav prop 保留既有 GlobalBottomNav）。
+ *   「重新生成」action 原本在 TitleBar 右上角 actions slot；OperationShell 的共用
+ *   StackPanelHeader 沒有 action slot（規格：次要操作一律由 body 提供），故移到
+ *   body hero 列右側（`.tp-ai-health-hero-top`，視覺樣式沿用同一組 ghost icon
+ *   button class）。詳見 docs/design-sessions/2026-07-21-desktop-third-column-panelization.html。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import TitleBar from '../components/shell/TitleBar';
-import AppShell from '../components/shell/AppShell';
-import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import OperationShell from '../components/shell/OperationShell';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
 import { apiFetchRaw } from '../lib/apiClient';
@@ -76,6 +82,13 @@ const SCOPED_STYLES = `
   min-height: 100%;
   background: var(--color-background);
 }
+/* 2026-07-21 dark-mode elevation audit：桌機第三欄（TripStackLayout 右欄 bare panel）
+ * 內比中欄內容再高一階 — 面板自己不透明背景需對齊 .app-shell-sheet 的
+ * --color-tertiary，否則覆蓋掉那層 base（見 AppShell.tsx 註解）。手機整頁模式
+ * （面板在 .app-shell-main 內）不受此 override 影響，維持原本 --color-background。 */
+.app-shell-sheet .tp-ai-health-shell {
+  background: var(--color-tertiary);
+}
 .tp-ai-health-body {
   padding: 16px;
   max-width: 720px;
@@ -91,6 +104,14 @@ const SCOPED_STYLES = `
   flex-direction: column;
   gap: 4px;
   margin-bottom: 16px;
+}
+/* v2.57.x：「重新生成」action 從 TitleBar actions slot 移入 body（OperationShell 的
+ * StackPanelHeader 無 action slot）。放 hero 頂列右側，與行程標題同一行。 */
+.tp-ai-health-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 .tp-ai-health-hero .eyebrow {
   font-size: var(--font-size-eyebrow);
@@ -628,33 +649,9 @@ export default function TripHealthCheckPage() {
           ? '重新生成'
           : '開始健檢';
 
-  const main = (
-    <div className="tp-ai-health-shell" data-testid="ai-health-page">
+  const bodyContent = (
+    <>
       <style>{SCOPED_STYLES}</style>
-      <TitleBar
-        title="AI 健檢"
-        back={handleBack}
-        backLabel="回行程"
-        // v2.33.118 redesign: titlebar action 只在有狀態時顯（pending / completed / failed）。
-        // empty (entryCount=0) 或 idle (entry > 0 + 未做過) 不顯 — body 改主 CTA。
-        // 風格從 .is-primary (accent fill) 改 ghost (`.tp-titlebar-action`) — 與其他
-        // titlebar functional icon 同 family 但用 refresh-cw icon 區辨「重新生成」action，
-        // pending 時 icon spin 表進行中，completed 加數字 badge 顯 findings 數量。
-        actions={!initialLoading && report && (
-          <button
-            type="button"
-            className={`tp-titlebar-action tp-titlebar-action--icon-only tp-ai-health-titlebar-btn${isPending ? ' is-spinning' : ''}`}
-            onClick={handleStart}
-            disabled={submitting || isPending}
-            aria-label={ctaLabel}
-            title={ctaLabel}
-            data-testid="ai-health-start-btn"
-          >
-            <Icon name="refresh-cw" />
-            <span className="tp-titlebar-action-label">{ctaLabel}</span>
-          </button>
-        )}
-      />
 
       <div className="tp-ai-health-body">
         {!initialLoading && entryCount === 0 && (
@@ -663,7 +660,29 @@ export default function TripHealthCheckPage() {
           </div>
         )}
         <div className="tp-ai-health-hero">
-          <div className="eyebrow">AI 行程建議</div>
+          <div className="tp-ai-health-hero-top">
+            <div className="eyebrow">AI 行程建議</div>
+            {/* v2.33.118 redesign（v2.57.x 從 TitleBar actions slot 移到這裡）：
+                action 只在有狀態時顯（pending / completed / failed）。empty
+                (entryCount=0) 或 idle (entry > 0 + 未做過) 不顯 — body 下方主 CTA 取代。
+                風格 ghost (`.tp-titlebar-action`) — 與其他 functional icon 同 family
+                但用 refresh-cw icon 區辨「重新生成」action，pending 時 icon spin
+                表進行中。 */}
+            {!initialLoading && report && (
+              <button
+                type="button"
+                className={`tp-titlebar-action tp-titlebar-action--icon-only tp-ai-health-titlebar-btn${isPending ? ' is-spinning' : ''}`}
+                onClick={handleStart}
+                disabled={submitting || isPending}
+                aria-label={ctaLabel}
+                title={ctaLabel}
+                data-testid="ai-health-start-btn"
+              >
+                <Icon name="refresh-cw" />
+                <span className="tp-titlebar-action-label">{ctaLabel}</span>
+              </button>
+            )}
+          </div>
           <h1 data-testid="ai-health-title">{tripTitle}</h1>
           {initialLoading ? (
             <div className="meta">載入中…</div>
@@ -843,15 +862,19 @@ export default function TripHealthCheckPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 
   return (
-    <AppShell
-      sidebar={<DesktopSidebarConnected />}
-      main={main}
+    <OperationShell
+      shellClassName="tp-ai-health-shell"
+      testId="ai-health-page"
+      title="AI 健檢"
+      back={handleBack}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
-    />
+    >
+      {bodyContent}
+    </OperationShell>
   );
 }
 

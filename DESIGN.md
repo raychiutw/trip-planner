@@ -417,6 +417,16 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - Desktop 只增加 sidebar、較寬 content、可選的輔助欄；compact 只改成單欄、hamburger、bottom nav。
 - 所有資料來源、mutation、loading/error state 必須共用，確保手機與桌機功能一致。
 
+### 桌機三欄操作堆疊（`TripStackLayout` + `OperationShell`）
+
+owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」。所有「從行程詳情鑽進去的操作／設定頁」共用同一套 host（`/trip/:tripId/*` 下 pathless layout route `TripStackLayout`）：
+
+- **涵蓋路由**：編輯行程 / 加景點 / 新增景點 wizard / 複製 / 移動 / 換景點 / 編輯 entry（既有 6 條）+ **共編設定 / AI 健檢 / 行程筆記**（v2.57.x 遷入）。
+- **桌機（≥1024px）**：3 欄 —— sidebar｜中欄（`TitleBar` 行程名稱 + 返回 ｜ `<TripPage noShell>` 行程詳情）｜右欄 `OperationShell` bare panel（共用 `StackPanelHeader`：`‹` 前一頁 / `✕` 整個關閉）。中欄 TitleBar 的「返回」與右欄「✕」同語意，都導回 `/trips?selected=:id`。
+- **手機（<1024px）**：`OperationShell` render 自己整頁（`AppShell` + `StackPanelHeader`，無 TitleBar）；共編設定/AI 健檢/行程筆記這 3 頁另帶 `GlobalBottomNav`（`OperationShell` 的 optional `bottomNav` prop —— 既有 6 條操作路由手機版本來就無底部 tab，維持不變）。
+- **已知取捨**：從 `/trips?selected=X`（`TripsListPage` 內嵌行程檢視）導覽進任一條堆疊路由，仍會切換到不同頂層 route（`TripsListPage` unmount，`TripStackLayout` 掛一份新的 `<TripPage noShell>`）—— 不是同一個 component instance 保留，而是「沒有整頁 reload、中欄 header 全程可見、行程資料重新抓一次」。
+- Mockup：`docs/design-sessions/2026-07-21-desktop-third-column-panelization.html`（2026-07-21，待 owner sign-off）。
+
 ### Form Pages
 
 複雜 form 流程必走全頁 + TitleBar shell，不用 modal。
@@ -511,7 +521,7 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 
 **Polling**：pending state 每 3000ms `GET /api/trips/:id/health-check` 直到 status 變 completed/failed。`pollRef` 持 timeout id 避免 effect 重渲漏清。`prefers-reduced-motion` → pulse animation 停。
 
-**Title bar action**（v2.33.110+）：主 CTA `<TitleBarPrimaryAction icon="sparkle">` 放 TitleBar `actions` slot，依 state 改 label：開始健檢 / 重新生成 / 再重新生成 / 健檢進行中⋯ / 送出中⋯。「回行程」由 TitleBar 左上 `←` 取代（`backLabel="回行程"`），不再重複 button。`entryCount===0` 時 title bar action `disabled` + 頁面顯示 `.tp-ai-health-notice` banner 補語意。
+**重新生成 action**（v2.33.110+，v2.57.x 遷入 `OperationShell` 後改位置）：依 state 改 label：開始健檢 / 重新生成 / 再重新生成 / 健檢進行中⋯ / 送出中⋯。原本放 TitleBar `actions` slot；本頁遷入桌機三欄操作堆疊（見上「桌機三欄操作堆疊」）後，外殼改用 `OperationShell` 的共用 `StackPanelHeader`（無 action slot）—— action 移到 body hero 列右側（`.tp-ai-health-hero-top`，class 名沿用 `.tp-titlebar-action` ghost icon button token）。回上一頁改由 `OperationShell` 的共用 `‹`/`✕` 提供，不再是頁面自帶 TitleBar back。`entryCount===0` 時此 action 不顯（empty/idle 走 body 中央主 CTA）。
 
 **Mockup**：`/tmp/TripAIHealth-variants.html` Variant C (sign-off 2026-05-16) — sticky bar 版本，v2.33.110 拔掉 sticky bar 改 title bar action。
 

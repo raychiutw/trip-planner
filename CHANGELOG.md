@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.10] - 2026-07-21
+
+### Changed
+- **共編設定／AI 健檢／行程筆記改為桌機第三欄面板**（owner 2026-07-21 交辦，
+  mockup 已簽核）—— 三條路由納入既有的 `TripStackLayout` + `OperationShell`
+  機制，與 2026-07-18 簽核的 6 條操作面板同一套架構。
+  - **沒有另做 query-param 方案**：既有機制已驗證、已有 6 條路由在用，
+    多一套面板機制只會讓兩邊都要維護。
+  - 手機維持整頁導航不變（手機沒有第三欄）。
+- **`TripStackLayout` 中欄補上 TitleBar** —— 這才是 owner 反映「第二欄 header
+  消失」的**真正原因**：該中欄先前**完全沒有 TitleBar**（2026-07-19 的刻意決定）。
+  標題取自已在 context 的 `TripContext`，不額外打 API。9 條 stack 路由全部受惠。
+- **第三欄面板套用 tertiary elevation**（`.app-shell-sheet`）—— 深色下
+  `#1C1C1E`（shell）→ `#2C2C2E`（內容欄）→ `#3A3A3C`（面板），三欄才讀得出層次。
+
+### Known limitations
+- 從 `/trips?selected=X` 進入仍會切換頂層路由 → `TripPage` 重掛載。
+  **不會硬重整、header 全程可見**，但有一次資料重抓 —— 與既有 6 條路由行為一致。
+- 既有的 6 個操作面板尚未套用 tertiary elevation（範圍決定，可後續補齊）。
+
 ## [2.57.9] - 2026-07-21
 
 ### Fixed

@@ -38,26 +38,28 @@ describe('TripHealthCheckPage v2.33.118 CTA redesign (regression)', () => {
     expect(refreshCwLine).toContain('path d="M3.51 9');
   });
 
-  it('titlebar action 改 conditional render — 只有 report 存在時顯（拔掉 idle/empty）', () => {
-    // 老: actions={!initialLoading && (<TitleBarPrimaryAction .../>)}
-    // 新: actions={!initialLoading && report && (<button class="tp-titlebar-action ...".../>)}
-    expect(SRC).toMatch(/actions=\{!initialLoading && report && \(/);
+  it('action 改 conditional render — 只有 report 存在時顯（拔掉 idle/empty）', () => {
+    // 老: actions={!initialLoading && (<TitleBarPrimaryAction .../>)}（TitleBar actions slot）
+    // 新（v2.57.x）: 移入 body hero 列 — {!initialLoading && report && (<button class="tp-titlebar-action ...".../>)}
+    // OperationShell 的 StackPanelHeader 無 actions slot，故不再是 TitleBar 的 `actions=` prop。
+    expect(SRC).toMatch(/\{!initialLoading && report && \(/);
     expect(SRC).not.toMatch(/TitleBarPrimaryAction/);
   });
 
-  it('titlebar button 用 ghost style (.tp-titlebar-action) 而非 .is-primary', () => {
-    // ghost = .tp-titlebar-action 無 .is-primary modifier
+  it('action button 用 ghost style (.tp-titlebar-action) 而非 .is-primary', () => {
+    // ghost = .tp-titlebar-action 無 .is-primary modifier（class 名沿用既有 ghost icon
+    // button token，即使位置已從 titlebar 移到 body hero 列，見 v2.57.x 遷移註解）
     expect(SRC).toContain('tp-titlebar-action tp-titlebar-action--icon-only tp-ai-health-titlebar-btn');
-    // 鎖定 actions={...} block 內不能含 is-primary（其他 finding card 的 `.action.is-primary` 不受影響）
-    const actionsBlock = SRC.match(/actions=\{[\s\S]+?\)\}/);
-    expect(actionsBlock, 'titlebar actions block not found').toBeTruthy();
+    // 鎖定該 conditional block 內不能含 is-primary（其他 finding card 的 `.action.is-primary` 不受影響）
+    const actionsBlock = SRC.match(/\{!initialLoading && report && \([\s\S]+?\)\}/);
+    expect(actionsBlock, 'regenerate action block not found').toBeTruthy();
     expect(actionsBlock![0]).not.toContain('is-primary');
   });
 
-  it('titlebar button 用 refresh-cw icon (非 sparkle)', () => {
-    // titlebar action JSX (上面 conditional render 那段) 必含 Icon name="refresh-cw"
-    const actionsBlock = SRC.match(/actions=\{[\s\S]+?\)\}/);
-    expect(actionsBlock, 'titlebar actions block not found').toBeTruthy();
+  it('action button 用 refresh-cw icon (非 sparkle)', () => {
+    // regenerate action JSX（body hero 列，v2.57.x 從 titlebar actions slot 移入）必含 Icon name="refresh-cw"
+    const actionsBlock = SRC.match(/\{!initialLoading && report && \([\s\S]+?\)\}/);
+    expect(actionsBlock, 'regenerate action block not found').toBeTruthy();
     expect(actionsBlock![0]).toContain('name="refresh-cw"');
     expect(actionsBlock![0]).not.toContain('name="sparkle"');
   });

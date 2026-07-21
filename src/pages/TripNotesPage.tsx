@@ -1,5 +1,5 @@
 /**
- * TripNotesPage — 行程筆記全頁
+ * TripNotesPage — 行程筆記
  *
  * Route: `/trip/:tripId/notes`
  * v2.34.x 行程筆記 PR4 — page shell + accordion frame + skeleton + empty hero
@@ -15,12 +15,15 @@
  *   - hasData: accordion expand 預設 — mobile 航班，desktop ≥768px 全展開
  *
  * CRUD UI per section (PR5-8) 還沒 — section body 顯示 row count + 「加項」placeholder。
+ *
+ * v2.57.x：遷入 TripStackLayout（owner 2026-07-21「桌機三欄 shell panel 化」）——
+ *   桌機：OperationShell bare panel 塞右欄，中欄行程詳情保留。
+ *   手機：OperationShell 整頁（bottomNav prop 保留既有 GlobalBottomNav）。
+ *   詳見 docs/design-sessions/2026-07-21-desktop-third-column-panelization.html。
  */
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import TitleBar from '../components/shell/TitleBar';
-import AppShell from '../components/shell/AppShell';
-import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import OperationShell from '../components/shell/OperationShell';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
 import AlertPanel from '../components/shared/AlertPanel';
@@ -76,6 +79,11 @@ const SCOPED_STYLES = `
  * without it the auto column blows out to content max-content → page-body
  * renders wider than the viewport → mobile horizontal scroll (QA 2026-05-30). */
 .tp-notes-shell { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; min-height: 100%; background: var(--color-background); }
+/* 2026-07-21 dark-mode elevation audit：桌機第三欄（TripStackLayout 右欄 bare panel）
+ * 內比中欄內容再高一階 — 面板自己不透明背景需對齊 .app-shell-sheet 的
+ * --color-tertiary，否則覆蓋掉那層 base（見 AppShell.tsx 註解）。手機整頁模式
+ * （面板在 .app-shell-main 內）不受此 override 影響，維持原本 --color-background。 */
+.app-shell-sheet .tp-notes-shell { background: var(--color-tertiary); }
 /* 底部為浮動 tab 膠囊讓位。
  *
  * v2.56.6 讓功能頁「全版鋪到底」的前提是 tab **全透明** —— 內容從 tab 之間透出。
@@ -341,10 +349,9 @@ export default function TripNotesPage() {
     });
   }, []);
 
-  const main = (
-    <div className="tp-notes-shell" data-testid="trip-notes-page">
+  const bodyContent = (
+    <>
       <style>{SCOPED_STYLES}</style>
-      <TitleBar title={tripName ? `行程筆記 — ${tripName}` : '行程筆記'} back={handleBack} backLabel="回行程" />
 
       <div className="tp-notes-page-body">
         {loading && (
@@ -581,14 +588,18 @@ export default function TripNotesPage() {
           );
         })}
       </div>
-    </div>
+    </>
   );
 
   return (
-    <AppShell
-      sidebar={<DesktopSidebarConnected />}
-      main={main}
+    <OperationShell
+      shellClassName="tp-notes-shell"
+      testId="trip-notes-page"
+      title={tripName ? `行程筆記 — ${tripName}` : '行程筆記'}
+      back={handleBack}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
-    />
+    >
+      {bodyContent}
+    </OperationShell>
   );
 }

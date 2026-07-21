@@ -237,16 +237,15 @@ if (el) {
                 <Route path="map" element={<MapPage />} />
                 <Route path="stop/:entryId" element={<StopDetailRedirect />} />
                 <Route path="stop/:entryId/map" element={<MapPage />} />
-                {/* v2.18.0:共編設定獨立頁(取代 ?sheet=collab bottom-sheet) */}
-                <Route path="collab" element={<CollabPage />} />
-                <Route path="health" element={<TripHealthCheckPage />} />
-                {/* v2.34.x 行程筆記 — 5 section accordion + AI gen pretrip/emergency */}
-                <Route path="notes" element={<TripNotesPage />} />
                 {/* v2.36.0 列印文件 — 資料驅動全展開文件（取代 usePrintMode 收合列印） */}
                 <Route path="print" element={<TripPrintPage />} />
                 {/* rev2 owner 2026-07-18「6 條全接」：6 條操作路由包進 TripStackLayout。
                   * 桌機 → 右欄 bare panel 疊在中欄行程詳情上（‹ 前一頁 / ✕ 整個關閉）；
-                  * 手機 → 各頁整頁（OperationShell inStack=false，既有行為）。 */}
+                  * 手機 → 各頁整頁（OperationShell inStack=false，既有行為）。
+                  * v2.57.x：共編設定/AI 健檢/行程筆記 3 條也遷入本 layout（owner 2026-07-21
+                  * 「桌機三欄 shell panel 化」）—— 原本是 TripLayout 直接子路由，獨立整頁
+                  * AppShell，導覽過去會讓中欄（含 header）整個被換掉；遷入後改用 OperationShell
+                  * bare panel，中欄行程詳情（含新補的 TitleBar）保留。 */}
                 <Route element={<TripStackLayout />}>
                   {/* 2026-05-03 modal-to-fullpage migration: EditTripModal → /trip/:id/edit */}
                   <Route path="edit" element={<EditTripPage />} />
@@ -261,6 +260,11 @@ if (el) {
                   <Route path="add-stop" element={<AddStopPage />} />
                   {/* v2.32.0: 新增景點 wizard — EditEntryPage 形狀 + day 下拉 + picker buttons → ChangePoiPage mode=new */}
                   <Route path="add-entry" element={<AddEntryPage />} />
+                  {/* v2.18.0:共編設定(取代 ?sheet=collab bottom-sheet)。v2.57.x 遷入 TripStackLayout。 */}
+                  <Route path="collab" element={<CollabPage />} />
+                  <Route path="health" element={<TripHealthCheckPage />} />
+                  {/* v2.34.x 行程筆記 — 5 section accordion + AI gen pretrip/emergency。v2.57.x 遷入 TripStackLayout。 */}
+                  <Route path="notes" element={<TripNotesPage />} />
                 </Route>
                 {/* v2.31.94: mobile-only fullpage 自訂景點（IME occlusion 避讓）— desktop redirect 回 add-stop?tab=custom */}
                 <Route

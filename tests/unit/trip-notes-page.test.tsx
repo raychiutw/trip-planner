@@ -28,18 +28,10 @@ vi.mock('../../src/lib/apiClient', () => ({
 vi.mock('../../src/hooks/useRequireAuth', () => ({ useRequireAuth: () => ({ ready: true }) }));
 vi.mock('../../src/hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ email: 'u@test' }) }));
 vi.mock('../../src/components/shell/AppShell', () => ({
-  default: ({ main }: any) => <div data-testid="app-shell">{main}</div>,
+  default: ({ main, bottomNav }: any) => <div data-testid="app-shell">{main}{bottomNav}</div>,
 }));
 vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
 vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
-vi.mock('../../src/components/shell/TitleBar', () => ({
-  default: ({ title, back }: any) => (
-    <div data-testid="titlebar">
-      {back && <button data-testid="titlebar-back" onClick={back}>back</button>}
-      <span>{title}</span>
-    </div>
-  ),
-}));
 
 function renderPage(tripId = 'trip-1') {
   return render(
@@ -275,14 +267,17 @@ describe('TripNotesPage — shell', () => {
     expect(head.getAttribute('aria-controls')).toBe('trip-notes-body-flights');
   });
 
-  it('TitleBar 顯「行程筆記」+ back button', async () => {
+  // v2.57.x：TripNotesPage 遷入 TripStackLayout，外殼從 TitleBar 換成 OperationShell 的
+  // 共用 StackPanelHeader（‹/✕）。手機（無 SheetStackProvider，inStack 預設 false）走
+  // OperationShell 整頁分支，仍會 render 共用 header 顯示標題 + back。
+  it('StackPanelHeader 顯「行程筆記」+ back button', async () => {
     apiFetchMock.mockResolvedValue({
       flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
     });
     renderPage();
-    await waitFor(() => expect(screen.getByTestId('titlebar')).toBeInTheDocument());
-    expect(screen.getByTestId('titlebar').textContent).toContain('行程筆記');
-    expect(screen.getByTestId('titlebar-back')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('stack-panel-header')).toBeInTheDocument());
+    expect(screen.getByTestId('stack-panel-header').textContent).toContain('行程筆記');
+    expect(screen.getByTestId('stack-panel-back')).toBeInTheDocument();
   });
 
   it('apiFetch 路徑對 /trips/:id/notes', async () => {
@@ -337,11 +332,11 @@ describe('TripNotesPage — trip name fallback (F1 regression)', () => {
     });
   });
 
-  it('empty title (destination-named) → TitleBar + eyebrow fall back to trip.name', async () => {
+  it('empty title (destination-named) → StackPanelHeader + eyebrow fall back to trip.name', async () => {
     const { container } = renderPageWithTrip({ title: '', name: '東京都、青森縣' });
     await waitFor(() => expect(screen.getByTestId('trip-notes-empty-hero')).toBeInTheDocument());
-    // TitleBar shows trip identifier, not bare 「行程筆記」
-    expect(screen.getByTestId('titlebar').textContent).toContain('東京都、青森縣');
+    // Header shows trip identifier, not bare 「行程筆記」
+    expect(screen.getByTestId('stack-panel-header').textContent).toContain('東京都、青森縣');
     // empty-hero eyebrow no longer blank
     const eyebrow = container.querySelector('.tp-notes-empty-hero-eyebrow');
     expect(eyebrow?.textContent).toBe('東京都、青森縣');
@@ -350,7 +345,7 @@ describe('TripNotesPage — trip name fallback (F1 regression)', () => {
   it('explicit title wins over name', async () => {
     const { container } = renderPageWithTrip({ title: '2026 沖繩五日自駕遊行程表', name: '沖繩' });
     await waitFor(() => expect(screen.getByTestId('trip-notes-empty-hero')).toBeInTheDocument());
-    expect(screen.getByTestId('titlebar').textContent).toContain('2026 沖繩五日自駕遊行程表');
+    expect(screen.getByTestId('stack-panel-header').textContent).toContain('2026 沖繩五日自駕遊行程表');
     const eyebrow = container.querySelector('.tp-notes-empty-hero-eyebrow');
     expect(eyebrow?.textContent).toBe('2026 沖繩五日自駕遊行程表');
   });
@@ -358,7 +353,7 @@ describe('TripNotesPage — trip name fallback (F1 regression)', () => {
   it('whitespace-only title → trimmed away, falls back to name', async () => {
     const { container } = renderPageWithTrip({ title: '   ', name: '台南' });
     await waitFor(() => expect(screen.getByTestId('trip-notes-empty-hero')).toBeInTheDocument());
-    expect(screen.getByTestId('titlebar').textContent).toContain('台南');
+    expect(screen.getByTestId('stack-panel-header').textContent).toContain('台南');
     const eyebrow = container.querySelector('.tp-notes-empty-hero-eyebrow');
     expect(eyebrow?.textContent).toBe('台南');
   });
@@ -368,7 +363,7 @@ describe('TripNotesPage — trip name fallback (F1 regression)', () => {
     await waitFor(() => expect(screen.getByTestId('trip-notes-empty-hero')).toBeInTheDocument());
     const eyebrow = container.querySelector('.tp-notes-empty-hero-eyebrow');
     expect(eyebrow?.textContent).toBe('此行程');
-    // TitleBar falls back to bare 行程筆記 (no 「— name」 suffix)
-    expect(screen.getByTestId('titlebar').textContent).not.toContain('—');
+    // Header falls back to bare 行程筆記 (no 「— name」 suffix)
+    expect(screen.getByTestId('stack-panel-header').textContent).not.toContain('—');
   });
 });
