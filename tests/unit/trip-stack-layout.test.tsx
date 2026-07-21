@@ -11,6 +11,9 @@ import { render, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import TripStackLayout from '../../src/pages/TripStackLayout';
 import { useSheetStack } from '../../src/contexts/SheetStackContext';
+import { TripContext } from '../../src/contexts/TripContext';
+import type { UseTripReturn } from '../../src/hooks/useTrip';
+import type { Trip } from '../../src/types/trip';
 
 let mockIsDesktop = true;
 vi.mock('../../src/hooks/useMediaQuery', () => ({
@@ -44,18 +47,37 @@ function OperationStub() {
   );
 }
 
-function renderAt(path: string, desktop: boolean) {
+/** v2.57.x：中欄 header 回歸測試用 — 最小 UseTripReturn fixture。 */
+function makeTripCtx(trip: Partial<Trip> | null): UseTripReturn {
+  return {
+    trip: trip as Trip | null,
+    days: [],
+    currentDay: null,
+    currentDayNum: 1,
+    switchDay: () => {},
+    refetchCurrentDay: () => {},
+    refetchDay: () => {},
+    docs: {},
+    allDays: {},
+    loading: trip === null,
+    error: null,
+  };
+}
+
+function renderAt(path: string, desktop: boolean, tripCtx: UseTripReturn | null = null) {
   mockIsDesktop = desktop;
   return render(
     <MemoryRouter initialEntries={[path]}>
       <LocationProbe />
-      <Routes>
-        <Route path="/trips" element={<div data-testid="trips-page">trips</div>} />
-        <Route path="/trip/:tripId" element={<TripStackLayout />}>
-          <Route path="add-stop" element={<OperationStub />} />
-          <Route path="stop/:entryId/change-poi" element={<OperationStub />} />
-        </Route>
-      </Routes>
+      <TripContext.Provider value={tripCtx}>
+        <Routes>
+          <Route path="/trips" element={<div data-testid="trips-page">trips</div>} />
+          <Route path="/trip/:tripId" element={<TripStackLayout />}>
+            <Route path="add-stop" element={<OperationStub />} />
+            <Route path="stop/:entryId/change-poi" element={<OperationStub />} />
+          </Route>
+        </Routes>
+      </TripContext.Provider>
     </MemoryRouter>,
   );
 }
@@ -107,5 +129,44 @@ describe('TripStackLayout — 桌機/手機分支 + 導航', () => {
     expect(queryByTestId('mock-trip-detail')).toBeNull();
     fireEvent.click(getByTestId('op-stub'));
     expect(getByTestId('loc').textContent).toBe('/trips');
+  });
+
+  // v2.57.x：owner 2026-07-21「開啟第三欄時第二欄 header 不要消失」——
+  // 2026-07-19 決策的「中欄無 titlebar」在此補回一個輕量 TitleBar（行程名稱 + 返回列表），
+  // 讓開右欄面板（含新遷入的共編/健檢/筆記）時中欄不會變成無頭內容。
+  it('桌機：中欄補回 TitleBar，顯示 TripContext 的行程名稱', () => {
+    const { getByTestId } = renderAt(
+      '/trip/t1/add-stop',
+      true,
+      makeTripCtx({ id: 't1', name: 't1', title: '2026 沖繩七日遊' }),
+    );
+    const titlebar = getByTestId('titlebar');
+    expect(titlebar).toBeTruthy();
+    expect(titlebar.textContent).toContain('2026 沖繩七日遊');
+  });
+
+  it('桌機：TripContext 載入中（trip=null）→ 中欄 TitleBar 顯示「載入中…」佔位', () => {
+    const { getByTestId } = renderAt('/trip/t1/add-stop', true, makeTripCtx(null));
+    expect(getByTestId('titlebar').textContent).toContain('載入中');
+  });
+
+  it('桌機：中欄 TitleBar 返回 → 與 ✕ 整個關閉同語意（導回 /trips?selected=:id）', () => {
+    const { getByTestId } = renderAt(
+      '/trip/t1/add-stop',
+      true,
+      makeTripCtx({ id: 't1', name: 't1', title: '2026 沖繩七日遊' }),
+    );
+    fireEvent.click(getByTestId('titlebar').querySelector('button')!);
+    expect(getByTestId('loc').textContent).toBe('/trips?selected=t1');
+    expect(getByTestId('trips-page')).toBeTruthy();
+  });
+
+  it('手機：passthrough bare Outlet 不受影響，無中欄 TitleBar', () => {
+    const { queryByTestId } = renderAt(
+      '/trip/t1/add-stop',
+      false,
+      makeTripCtx({ id: 't1', name: 't1', title: '2026 沖繩七日遊' }),
+    );
+    expect(queryByTestId('titlebar')).toBeNull();
   });
 });

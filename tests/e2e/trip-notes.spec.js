@@ -51,12 +51,12 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('TripNotesPage E2E happy path', () => {
-  test('render TitleBar + 5 section accordion', async ({ page }) => {
+  test('render header + 5 section accordion', async ({ page }) => {
     await page.goto(`/trip/${TRIP_ID}/notes`);
     await expect(page.getByTestId('trip-notes-page')).toBeVisible({ timeout: 10000 });
 
-    // TitleBar 含「行程筆記」
-    await expect(page.getByTestId('titlebar')).toContainText('行程筆記');
+    // v2.57.x：外殼從 TitleBar 換成 OperationShell 的共用 StackPanelHeader（‹/✕）。
+    await expect(page.getByTestId('stack-panel-header')).toContainText('行程筆記');
 
     // 5 section render
     await expect(page.getByTestId('trip-notes-section-flights')).toBeVisible();

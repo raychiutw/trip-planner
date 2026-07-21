@@ -35,6 +35,17 @@ export const APP_SHELL_STYLES = `
   overscroll-behavior: contain;
 }
 
+/* 2026-07-21 dark-mode elevation audit（PR #1102 修 .trip-content 透明壓在
+ * .app-shell 底色上的同型問題）：第三欄 sheet 應比中欄內容再高一階，讓三欄讀得出
+ * 層次 —— .app-shell base = --color-background，中欄內容 = --color-secondary
+ * （見 .trip-content / .tp-trips-shell 等），第三欄 = --color-tertiary。
+ * 這是 base/fallback；個別 sheet content（TripSheet / OperationShell 面板）若自己
+ * 畫了不透明背景會覆蓋這層，需各自對齊（見 CollabPage/TripHealthCheckPage/
+ * TripNotesPage 的 .app-shell-sheet .tp-*-shell override）。 */
+.app-shell-sheet {
+  background: var(--color-tertiary);
+}
+
 /* Pull-to-refresh visual indicator. iOS Safari 對 inner scroll container 沒 native
  * pull-to-refresh，自己 implement。indicator 在 main 頂端，translate by pullPx。 */
 .app-shell-ptr {
