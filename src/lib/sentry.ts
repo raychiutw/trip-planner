@@ -30,6 +30,14 @@ const SW_REGISTER_NOISE_RE =
 const SW_REGISTER_FILE_RE = /\/registerSW\.js$/;
 const GENERIC_REJECTED_VALUE = 'Rejected';
 
+// beacon.min.js 不存在於本專案任何 bundle（dist/assets、package.json、src/ 全查無此檔名）
+// — 是瀏覽器擴充功能（廣告攔截／隱私工具常見的 web-vitals 上報腳本）注入頁面丟出的錯誤。
+// SPA 對任何路徑（含未定義的 /privacy）都回 index.html，該外部腳本仍會被載入並丟出
+// `t.entries.at is not a function`（issue 7623792814，0 user，stack 深層全在
+// beacon.min.js，非本專案程式碼可控，比對 SW-register 模式改用 stack frame 而非
+// message 文字，因為同一腳本不同呼叫點可能丟出不同訊息）。
+const THIRD_PARTY_BEACON_FILE_RE = /\/beacon(?:\.min)?\.js(?:\?|$)/i;
+
 // Drop events from Playwright / Lighthouse / local preview. They run against
 // `localhost` (or 127.0.0.1) with a HeadlessChrome user agent and spam the
 // queue with environment-only failures (backend not running, SW blocked,
@@ -68,6 +76,12 @@ export function isNoiseEvent(event: SentryEvent): boolean {
     );
   });
   if (isSwRegisterNoise) return true;
+  const isThirdPartyBeaconNoise = exceptionValues.some((v) =>
+    v?.stacktrace?.frames?.some(
+      (f) => typeof f?.filename === 'string' && THIRD_PARTY_BEACON_FILE_RE.test(f.filename),
+    ),
+  );
+  if (isThirdPartyBeaconNoise) return true;
   return false;
 }
 
