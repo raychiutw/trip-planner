@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.9] - 2026-07-21
+
+### Fixed
+- **深色模式行程頁一片近黑**（owner：「桌機行程功能黑色太多」）——
+  `.trip-content` 補上 `--color-secondary` 表面。
+  - **用 browse 對 prod 實測而非從 CSS 推論**（前兩次推論都錯了）：行程頁有
+    **16,091k px² 的透明面積**壓在單一 `.app-shell` 的 `#1C1C1E` 上 ——
+    整個內容區沒有自己的表面，全糊成一塊。
+  - 相對地 `/trips` 的 `.tp-trips-shell` 早就用 `--color-secondary`
+    （實測 `#2C2C2E`，1093k），所以那頁沒有這個問題。
+  - 修法不是發明新規則，是**補上這個 app 自己已有的做法**。Apple HIG 的深色
+    模式靠 elevation 分層（`#1C1C1E` → `#2C2C2E` → `#3A3A3C`），不是把亮色反過來。
+
+### Removed
+- **無 consumer 的 `--color-sidebar-*` token 組** —— `DesktopSidebar` 早已改用
+  `color-mix(--color-background)` + `backdrop-filter` 走主 app token 自動
+  light/dark adapt（見該檔第 23 行註明）。其中深色的 `#0F0B08` 比 base
+  `#1C1C1E` 還暗，留著只會誤導下一個人以為側欄該是近黑色。
+
 ## [2.57.8] - 2026-07-21
 
 ### Security
