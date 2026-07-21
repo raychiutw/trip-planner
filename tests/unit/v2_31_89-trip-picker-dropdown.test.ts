@@ -14,33 +14,12 @@ const read = (rel: string) => readFileSync(join(__dirname, '../..', rel), 'utf8'
 describe('v2.31.89: TripsListPage embedded TitleBar trip picker dropdown', () => {
   const src = read('src/pages/TripsListPage.tsx');
 
-  it('保留 trip-switch-trigger testid 但 button 結構升級 dropdown picker', () => {
-    expect(src).toMatch(/className="tp-titlebar-trip-picker"[\s\S]*?data-testid="trip-switch-trigger"/);
-  });
-
-  it('button 內含 swap-horiz icon + chevron ▾（對齊 ChatPage 設計）', () => {
-    expect(src).toMatch(/<Icon name="swap-horiz" \/>\s*<span className="tp-titlebar-trip-picker-chevron"[^>]*>▾<\/span>/);
-  });
-
-  it('dropdown menu 結構：.tp-titlebar-trip-menu wrap + .tp-titlebar-trip-dropdown panel + role="menu"', () => {
-    expect(src).toMatch(/className="tp-titlebar-trip-menu"/);
-    expect(src).toMatch(/className="tp-titlebar-trip-dropdown" role="menu"/);
-    expect(src).toMatch(/className=\{`tp-titlebar-trip-row \$\{t\.tripId === effectiveSelectedId \? 'is-active' : ''\}`\}/);
-  });
-
-  it('aria-haspopup=menu + aria-expanded 綁 tripPickerOpen state', () => {
-    expect(src).toMatch(/aria-haspopup="menu"\s+aria-expanded=\{tripPickerOpen\}/);
-  });
-
-  it('row click 切換 selected URL（reuse handleCardClick logic）+ 關閉 menu', () => {
-    expect(src).toMatch(/setActiveTrip\(t\.tripId\);[\s\S]*?next\.set\('selected',\s*t\.tripId\);[\s\S]*?setSearchParams\(next,\s*\{\s*replace:\s*false\s*\}\);[\s\S]*?setTripPickerOpen\(false\)/);
-  });
-
-  it('outside click effect close menu (useEffect tripPickerOpen dep)', () => {
-    expect(src).toMatch(/useEffect\(\(\) => \{\s*if \(!tripPickerOpen\) return;[\s\S]*?tripPickerRef\.current && !tripPickerRef\.current\.contains[\s\S]*?setTripPickerOpen\(false\)/);
-  });
-
-  it('testid trip-switch-pick-${tripId} 給每個 menu row（QA selector）', () => {
-    expect(src).toMatch(/data-testid=\{`trip-switch-pick-\$\{t\.tripId\}`\}/);
+  // 2026-07-21 形制變更（owner：「切換行程由 icon 改為點行程名稱 + V 下拉」）。
+  // 本檔原本鎖 v2.31.89 的 `⇄ ▾` icon-only picker（TitleBar 右側 actions）。
+  // 上一批換掉 ChatPage / MapPage 時漏了這頁 —— 而它正是 owner 截圖看到的那頁。
+  it('改用共用的 TripTitleSwitcher，不再自帶 picker markup', () => {
+    expect(read('src/pages/TripsListPage.tsx')).toMatch(/<TripTitleSwitcher/);
+    expect(read('src/pages/TripsListPage.tsx'), 'owner 要求移除切換行程 icon').not.toMatch(/swap-horiz/);
+    expect(read('src/pages/TripsListPage.tsx'), 'dropdown markup 由共用元件提供').not.toMatch(/tp-titlebar-trip-picker/);
   });
 });
