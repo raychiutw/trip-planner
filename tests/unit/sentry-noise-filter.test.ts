@@ -206,6 +206,39 @@ describe('isNoiseEvent', () => {
     }))).toBe(false);
   });
 
+  it('drops third-party beacon.min.js noise (issue 7623792814, extension-injected web-vitals script)', () => {
+    expect(isNoiseEvent(baseEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/privacy' },
+      exception: {
+        values: [{
+          type: 'TypeError',
+          value: 't.entries.at is not a function',
+          stacktrace: {
+            frames: [
+              { filename: '/assets/sentry-DPdXy1s4.js', function: 'r' },
+              { filename: '/beacon.min.js', function: null },
+            ],
+          },
+        }],
+      },
+    }))).toBe(true);
+  });
+
+  it('keeps a real TypeError thrown from our own bundle (no beacon.min.js frame)', () => {
+    expect(isNoiseEvent(baseEvent({
+      request: { url: 'https://trip-planner-dby.pages.dev/trip/okinawa-trip-2026-Ray' },
+      exception: {
+        values: [{
+          type: 'TypeError',
+          value: 'Cannot read properties of undefined (reading "entries")',
+          stacktrace: {
+            frames: [{ filename: '/assets/index-abc123.js', function: 'renderTripPage' }],
+          },
+        }],
+      },
+    }))).toBe(false);
+  });
+
   // beforeSendTransaction reuses isNoiseEvent. Transaction events carry the same
   // request/browser context but no `exception` — verify env checks still apply
   // and the SW-noise branch no-ops safely (issue 7578052505: /signup pageload
