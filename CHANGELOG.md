@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.4] - 2026-07-21
+
+### Changed
+- **底部 tab 膠囊恢復玻璃材質**（owner 2026-07-21：「沒有玻璃化效果，變成全透明」）——
+  這個地方來回三次，記錄每一次的原因免得再繞：
+  1. 原本 `--color-glass-nav` 是 `color-mix(--color-background 92%, transparent)`，
+     92% 奶油疊奶油頁 → owner 7/20 反映「像實心白條」；
+  2. 於是 v2.56.6 把材質**整個刪成 `transparent`**，icon 靠陰影自撐 → 沒有材質；
+  3. 曾提案 `rgba(255,255,255,0.80)`，owner 判斷「會造成白底」。正確 ——
+     80% 白在奶油頁上仍是白帶，只是換個顏色重演第 1 次。
+
+  問題從來不是「要不要玻璃」，是 **tint 的不透明度**：tint 一高，
+  `backdrop-filter` 就沒有表現空間，材質退化成實心色板。
+  改採 iOS HIG 的組合：**低 tint（0.42）+ 強模糊（28px）+ 高飽和度（190%）**，
+  底下的內容真的透出來並被放大彩度，才讀作玻璃。用中性白而非 `color-mix`
+  取頁面底色 —— 後者正是第一次被反映的 cream-on-cream。
+  附 `prefers-reduced-transparency` / `prefers-contrast` / `@supports not
+  (backdrop-filter)` 三種降級（低 alpha 少了模糊會變成看不見的浮片）。
+  icon/label 的補償陰影減弱但保留 —— 地圖衛星圖這類雜底仍需要分離度。
+
+### Added
+- **登入頁左上角 Tripline 連回首頁**（owner 2026-07-21）—— `/login` 先前沒有
+  任何回首頁的出口，未登入訪客從搜尋或分享連結落到這裡只能登入或關掉。
+  v2.57.0 才剛加了未登入首頁，登入頁卻連不過去。用 `<a href="/">` 而非
+  `navigate()`，中鍵／右鍵開新分頁才正常。
+
 ## [2.57.3] - 2026-07-21
 
 ### Fixed
