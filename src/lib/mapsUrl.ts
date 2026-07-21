@@ -21,6 +21,10 @@ export interface MapsUrlInput {
   address?: string | null;
   lat?: number | null;
   lng?: number | null;
+  /** Google-only precision param (query_place_id) — 2026-07-21 地圖點選 Google
+   *  原生 POI 用，讓「在 Google 地圖開啟」精準指到那個 place 而非同座標的其他結果。
+   *  Apple/Naver 無對應 URL 參數，忽略。 */
+  placeId?: string | null;
 }
 
 export function buildMapsUrl(poi: MapsUrlInput, provider: MapProvider = 'google'): string {
@@ -29,12 +33,14 @@ export function buildMapsUrl(poi: MapsUrlInput, provider: MapProvider = 'google'
   const ll = hasCoords ? `${poi.lat},${poi.lng}` : '';
 
   switch (provider) {
-    case 'google':
+    case 'google': {
       // Google maps `query=lat,lng` opens drop-pin with reverse-geocoded label.
       // Without coords, `query=name+address` does keyword search.
-      return ll
+      const base = ll
         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ll)}`
         : `https://www.google.com/maps/search/?api=1&query=${label}`;
+      return poi.placeId ? `${base}&query_place_id=${encodeURIComponent(poi.placeId)}` : base;
+    }
     case 'apple':
       // Apple Maps URL Scheme: ll= sets center, q= sets search/label pin.
       return ll

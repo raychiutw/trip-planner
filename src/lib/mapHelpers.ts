@@ -182,6 +182,39 @@ export function segmentStyle(isActive: boolean, approx: boolean, dayNum?: number
   return style;
 }
 
+/* ===== Map click classification (地圖點選 Google 原生 POI，owner 2026-07-21) ===== */
+
+/** A Google-native POI icon tap. JS API's IconMouseEvent only carries placeId +
+ *  latLng (no name) — caller must resolve the name separately (see GooglePoiCard). */
+export interface GooglePoiClick {
+  placeId: string;
+  lat: number;
+  lng: number;
+}
+
+export type MapClickResult =
+  | { type: 'poi'; poi: GooglePoiClick }
+  | { type: 'background' };
+
+/**
+ * classifyMapClick — split a Google Maps 'click' event into "tapped a native
+ * POI icon" vs "tapped empty map background". Pure function so the branch
+ * logic is testable without a real google.maps.Map instance (mirrors Flutter's
+ * onPoiClicked/onMapClicked split in map_canvas_mobile.dart).
+ */
+export function classifyMapClick(event: {
+  placeId?: string | null;
+  latLng?: { lat: () => number; lng: () => number } | null;
+}): MapClickResult {
+  if (event.placeId && event.latLng) {
+    return {
+      type: 'poi',
+      poi: { placeId: event.placeId, lat: event.latLng.lat(), lng: event.latLng.lng() },
+    };
+  }
+  return { type: 'background' };
+}
+
 /* ===== Segment-pair builder ===== */
 
 export interface SegmentPair {
