@@ -55,10 +55,17 @@ import TripsListPage from '../../src/pages/TripsListPage';
 beforeEach(() => mockMatchMedia(true));
 afterEach(() => vi.unstubAllGlobals());
 
-function mockApi(my: { tripId: string }[], all: Array<Record<string, unknown>>) {
+/**
+ * 2026-07-21：TripsListPage 改為單抓 /my-trips。原本 /my-trips 只拿 id 順序、
+ * metadata 另抓 /trips?all=1，而那支對一般使用者降級成 published-only —— 行程
+ * 改為不公開後 metadata 全空，卡片就把 tripId 當名稱顯示。
+ *
+ * `my` 參數保留但已不需要另給：直接把完整資料當成 /my-trips 的回應，
+ * 這才是 prod 的實際 shape。
+ */
+function mockApi(_my: { tripId: string }[], all: Array<Record<string, unknown>>) {
   return vi.fn().mockImplementation((url: string) => {
-    if (url === '/api/my-trips') return Promise.resolve(new Response(JSON.stringify(my), { status: 200 }));
-    if (url.startsWith('/api/trips')) return Promise.resolve(new Response(JSON.stringify(all), { status: 200 }));
+    if (url === '/api/my-trips') return Promise.resolve(new Response(JSON.stringify(all), { status: 200 }));
     return Promise.resolve(new Response('null', { status: 200 }));
   });
 }

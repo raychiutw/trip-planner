@@ -5,6 +5,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [2.57.4] - 2026-07-21
 
+### Fixed
+- **行程名稱顯示為 tripId**（owner 回報「行程名稱都不見」「我看是沒改變」）——
+  v2.57.3 只修了 3 處，還有 4 個頁面是壞的。
+  - `ChatPage` / `GlobalMapPage` / `MapPage` / `TripsListPage` 用的是**雙抓**：
+    `/my-trips` 只拿「我有權限的 id 集合」，而 `name` / `countries` / `dayCount`
+    這些**要顯示的資料**來自 `/trips?all=1`。後者需要 `ops:trips:read`
+    service-token scope，一般使用者拿不到 → 靜默降級成 published-only →
+    行程改為不公開後 metadata 全空。
+  - `TripsListPage:864` 的 `map.get(id) ?? { tripId: id, name: id }` 於是把
+    tripId 當成名稱顯示，這就是畫面上看到的現象。
+  - 四頁全部改為**單抓 `/my-trips`** —— 那支本來就帶
+    `name/title/countries/totalDays/startDate/endDate/memberCount`，
+    第二支 API 從一開始就是多餘的（每頁少一次往返）。
+  - ⚠️ 第一輪只看到這些頁「有呼叫 `/my-trips`」就判定沒問題，沒去看它們拿那支
+    **做什麼**。有呼叫 ≠ 用它的資料。
+
 ### Changed
 - **底部 tab 膠囊恢復玻璃材質**（owner 2026-07-21：「沒有玻璃化效果，變成全透明」）——
   這個地方來回三次，記錄每一次的原因免得再繞：

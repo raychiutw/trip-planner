@@ -212,10 +212,6 @@ interface TripSummary {
   countries?: string | null;
 }
 
-interface MyTripRow {
-  tripId: string;
-}
-
 /* ===== Component ===== */
 
 export default function MapPage() {
@@ -235,13 +231,15 @@ export default function MapPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [myJson, allJson] = await Promise.all([
-          apiFetch<MyTripRow[]>('/my-trips'),
-          apiFetch<TripSummary[]>('/trips?all=1'),
-        ]);
-        if (cancelled) return;
-        const mine = new Set(myJson.map((r) => r.tripId));
-        if (!cancelled) setTrips(allJson.filter((t) => mine.has(t.tripId)));
+        // 2026-07-21：改為單抓 /my-trips。原本是雙抓 —— /my-trips 只拿「我有權限
+        // 的 id 集合」，name/title/countries 這些**要顯示的資料**卻來自
+        // /trips?all=1。而 all=1 需要 ops:trips:read service-token scope，
+        // 一般使用者拿不到，會靜默降級成只回 published 行程；既有行程改為不公開
+        // 後名稱就全沒了，畫面只剩 tripId（owner 2026-07-21 回報）。
+        // /my-trips 本身就帶 name/title/countries/totalDays/startDate/endDate，
+        // 第二支 API 從一開始就是多餘的。
+        const myTrips = await apiFetch<TripSummary[]>('/my-trips');
+        if (!cancelled) setTrips(myTrips);
       } catch {
         /* silent — trip-picker only enhancement,fetch fail 隱藏 picker 即可 */
       }

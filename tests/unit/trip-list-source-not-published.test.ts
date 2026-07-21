@@ -60,3 +60,28 @@ describe('TripPage — 行程切換器與預設行程', () => {
     expect(SRC, '仍在用 published 挑預設行程').not.toMatch(/published\s*===\s*1/);
   });
 });
+
+describe('沒有任何頁面靠公開清單取行程名稱', () => {
+  // 2026-07-21 第二輪。第一輪只修了 TripPage / useMyTrips / resolveTripId，
+  // 但 owner 回報「沒改變」—— 因為還有四個頁面用**雙抓**：
+  //     const mine = new Set(myTripsRows.map(r => r.tripId));   // 只拿 id
+  //     const list = allTripsRows.filter(t => mine.has(t.tripId)); // 名稱來自這裡
+  // `/my-trips` 在那裡只當權限過濾器，真正要顯示的 name/title/countries
+  // 仍來自 `/trips?all=1`（對一般使用者降級成 published-only）→ 行程全部
+  // 改為不公開後，名稱一起消失，畫面只剩 tripId。
+  //
+  // 教訓：第一輪我看到這些頁「有打 /my-trips」就當作沒問題，沒去看它們拿那支
+  // **做什麼**。有呼叫 ≠ 用它的資料。
+  const PAGES = [
+    'src/pages/ChatPage.tsx',
+    'src/pages/GlobalMapPage.tsx',
+    'src/pages/MapPage.tsx',
+    'src/pages/TripsListPage.tsx',
+  ];
+
+  for (const page of PAGES) {
+    it(`${page} 不再打 /trips?all=1`, () => {
+      expect(read(page), '名稱應直接取自 /my-trips，不需要第二支 API').not.toMatch(/\/trips\?all=1/);
+    });
+  }
+});

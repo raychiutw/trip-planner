@@ -47,15 +47,14 @@ const SAMPLE_REQUEST_ROW = {
 
 beforeEach(() => {
   apiFetchMock.mockReset();
-  // v2.33.33: /my-trips + /trips?all=1 改走 apiFetch（從 raw fetch 遷移）
+  // 2026-07-21：ChatPage 改為單抓 /my-trips（原本 /my-trips 只拿 id、名稱另抓
+  // /trips?all=1，而那支對一般使用者降級成 published-only）。fixture 跟著改成
+  // /my-trips 直接回完整資料 —— 這正是 prod 的實際 response shape。
   apiFetchMock.mockImplementation((path: string) => {
     if (path.startsWith('/requests')) {
       return Promise.resolve({ items: [SAMPLE_REQUEST_ROW], hasMore: false });
     }
     if (path === '/my-trips') {
-      return Promise.resolve([{ tripId: 'okinawa-2026' }]);
-    }
-    if (path.startsWith('/trips')) {
       return Promise.resolve([
         { tripId: 'okinawa-2026', name: '沖繩 2026', title: '沖繩 2026', countries: 'JP' },
       ]);
