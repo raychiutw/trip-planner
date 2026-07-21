@@ -1100,15 +1100,32 @@ export default function EditEntryPage() {
   const entryDayNumRef = useRef<number | null>(null);
 
   // Once entry is loaded, fetch the day for prev-entry context + POI meta
+  // 2026-07-21 waterfall 優化（實測 prod 中位數）：
+  //   ① /entries/:eid 448ms → ② /days 338ms → ③ /days/:num 606ms = 1392ms 串行
+  //
+  // ② 只需要 tripId，根本不必等 ①（原本被開頭的 `if (!entry) return` 卡住）。
+  // 改成一掛載就開始抓，與 ① 並行 → 1392ms 降到約 1054ms。
+  //
+  // ③ 無法省：它除了 master/alternates（① 的回應已有）之外，還提供
+  // `extractSiblingCoords` 需要的鄰近停留點座標與前一個 entry 的標題 ——
+  // 兩者都要整天的 timeline，entry 端點沒有。要再往下砍就得讓某支端點同時
+  // 回 entry + 當天 context，那是另一個層級的 API 設計。
+  const [daysIndex, setDaysIndex] = useState<Array<{ id: number; dayNum: number }> | null>(null);
   useEffect(() => {
-    if (!entry || !tripId) return;
+    if (!tripId) return;
+    let cancelled = false;
+    apiFetch<Array<{ id: number; dayNum: number }>>(`/trips/${encodeURIComponent(tripId)}/days`)
+      .then((days) => { if (!cancelled) setDaysIndex(days); })
+      .catch(() => { /* graceful — 下方 effect 沒拿到就跳過 */ });
+    return () => { cancelled = true; };
+  }, [tripId]);
+
+  useEffect(() => {
+    if (!entry || !tripId || !daysIndex) return;
     let cancelled = false;
     (async () => {
       try {
-        // entry.dayId → dayNum — fetch via days endpoint pattern: GET /trips/:id/days
-        const days = await apiFetch<Array<{ id: number; dayNum: number }>>(`/trips/${encodeURIComponent(tripId)}/days`);
-        if (cancelled) return;
-        const day = days.find((d) => d.id === entry.dayId);
+        const day = daysIndex.find((d) => d.id === entry.dayId);
         if (!day) return;
         // 2026-07-06 車程重算：存 dayNum 給 handleDeleteStop 做 day-scoped recompute
         entryDayNumRef.current = day.dayNum;
@@ -1162,7 +1179,7 @@ export default function EditEntryPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [entry, tripId, entryId]);
+  }, [entry, tripId, entryId, daysIndex]);
 
   // Init form once entry + segmentMap available
   useEffect(() => {
