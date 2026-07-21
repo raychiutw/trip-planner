@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.11] - 2026-07-22
+
+### Fixed
+- **Sentry noise：過濾 `beacon.min.js` 第三方腳本噪音**（daily-check issue
+  7623792814，`TypeError: t.entries.at is not a function`）—— 該檔名不存在於
+  本專案任何 bundle（`dist/`、`package.json`、`src/` 全查無），是瀏覽器擴充
+  功能（廣告攔截／隱私工具常見的 web-vitals 上報腳本）在 `/privacy` 頁注入
+  丟出的錯誤，0 user 影響。沿用既有 `SW_REGISTER_FILE_RE` 的 frame-based
+  noise filter 同一模式。
+
+### Security
+- **`npm audit fix`** —— 修 `brace-expansion`（high, DoS）與 `dompurify`
+  （low, custom-element sanitize bypass）。皆為 transitive 依賴，`package.json`
+  版本範圍未變。
+
 ## [2.57.10] - 2026-07-21
 
 ### Changed
