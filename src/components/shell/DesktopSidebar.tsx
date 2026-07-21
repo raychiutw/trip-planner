@@ -42,10 +42,24 @@ const SCOPED_STYLES = `
 .tp-sidebar-brand .accent-dot { color: var(--color-accent); }
 
 /* §10.1 primary nav（macOS sidebar 頂部 4-tab；桌機膠囊隱藏後的主導覽，
- * 與 GlobalBottomNav 共用 PRIMARY_NAV_ITEMS + isItemActive）。 */
+ * 與 GlobalBottomNav 共用 PRIMARY_NAV_ITEMS + isItemActive）。
+ *
+ * owner 2026-07-21（第二輪回報 #4）：這裡跟手機 GlobalBottomNav 的玻璃膠囊
+ * 視覺不一致（那邊 tint+blur+rim+shadow 四件套，這裡完全沒有材質、只是純色
+ * list item）。owner 要求共用 —— 不是重做一個新元件，是套用同一組已存在的
+ * --tabbar-* token（GlobalBottomNav 已在用，見該檔 .tp-global-bottom-nav）。
+ * 垂直列表跟水平膠囊的排列不同，但材質（半透明 tint + 高斯模糊 + 邊框 + 陰影）
+ * 是同一套語言，這樣桌機側欄頂部跟手機底部膠囊才讀作「同一種 chrome」。 */
 .tp-sidebar-nav {
   display: flex; flex-direction: column; gap: 2px;
   flex-shrink: 0; margin-bottom: 4px;
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  background: var(--tabbar-tint);
+  backdrop-filter: var(--tabbar-filter);
+  -webkit-backdrop-filter: var(--tabbar-filter);
+  border: var(--tabbar-rim);
+  box-shadow: var(--tabbar-shadow);
 }
 .tp-sidebar-nav-item {
   display: flex; align-items: center; gap: 11px;

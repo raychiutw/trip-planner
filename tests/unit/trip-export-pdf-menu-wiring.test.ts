@@ -14,7 +14,9 @@ const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
 
 const PDF = read('src/components/print/renderTripPrintPdf.tsx');
 const TRIP_PAGE = read('src/pages/TripPage.tsx');
-const LIST = read('src/pages/TripsListPage.tsx');
+// v2.57.x: export menu（含 triggerDownload 呼叫）從 TripsListPage.tsx 的
+// EmbeddedActionMenu 抽到共用元件 TripActionsMenu.tsx（供 TripStackLayout 共用）。
+const LIST = read('src/components/trip/TripActionsMenu.tsx');
 
 describe('renderTripPrintPdf — data-driven, not #tripContent', () => {
   it('renders TripPrintDocument from loadTripPrintData (not the live DOM)', () => {

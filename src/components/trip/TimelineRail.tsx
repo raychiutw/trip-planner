@@ -64,8 +64,10 @@ const SCOPED_STYLES = `
    * 建 stacking → 卡壓在 spine 之上（線在展開區被卡蓋住，符合「壓在 timeline 上」）。 */
   position: relative;
   z-index: 1;
-  /* 展開明細與卡片同色系（繼承 .tp-rail-item[data-tone] 的 --tone-*；neutral fallback secondary）*/
-  background: var(--tone-subtle, var(--color-secondary));
+  /* 展開明細與卡片同色系（繼承 .tp-rail-item[data-tone] 的 --tone-*；neutral fallback tertiary）。
+   * v2.57.x：外層內容欄整片改 --color-secondary 後（見 TripPage.tsx .tp-trip-page-shell），
+   * fallback 若還留在 secondary 會跟外層同色、展開明細沒層次 —— 調高一階到 tertiary。 */
+  background: var(--tone-subtle, var(--color-tertiary));
   border: 1px solid var(--tone-bg, var(--color-border));
   border-radius: var(--radius-md);
   display: flex; flex-direction: column; gap: 12px;

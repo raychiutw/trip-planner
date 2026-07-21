@@ -22,7 +22,10 @@ describe('複製行程 title 後綴「-複製」（QA）', () => {
 });
 
 describe('行程卡 ⋮ menu dropUp（選單被遮修復，QA）', () => {
-  const src = read('src/pages/TripsListPage.tsx');
+  // v2.57.x: 這組 dropUp/BOTTOM_SAFE_AREA 邏輯屬於行程詳情頁右上角「⋯」動作選單
+  // （原 TripsListPage 的 EmbeddedActionMenu），已抽到共用元件 TripActionsMenu.tsx
+  // （供 TripStackLayout 共用）。
+  const src = read('src/components/trip/TripActionsMenu.tsx');
 
   it('recompute 有 dropUp 邏輯（下方空間被 bottom nav 遮 → 往上展開）', () => {
     expect(src).toMatch(/const dropUp =/);

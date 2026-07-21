@@ -35,6 +35,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from '
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { NewTripProvider } from '../contexts/NewTripContext';
 import { ActiveTripProvider } from '../contexts/ActiveTripContext';
+import TripPageHost from '../components/trip/TripPageHost';
 import { Suspense, StrictMode } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ServerStatusBanner } from '../components/ServerStatusBanner';
@@ -180,6 +181,11 @@ if (el) {
           <ServerStatusBanner />
           <ActiveTripProvider>
           <NewTripProvider>
+          {/* owner 2026-07-21 回報 #2「開關第三欄面板會刷新第二欄」修復：TripPageHost
+              必須是整個 route table 的祖先（不是子路由），路由在 /trips?selected=X ↔
+              /trip/:id/{edit|...} 之間切換時它才不會被牽連著 unmount —— 見
+              src/components/trip/TripPageHost.tsx 檔頭註解。 */}
+          <TripPageHost>
           <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
             <Routes>
               {/* `/` 改指向未登入首頁。改版前落到 path="*" → LegacyRedirect → /trips → /login，
@@ -279,6 +285,7 @@ if (el) {
               <Route path="*" element={<LegacyRedirect />} />
             </Routes>
           </Suspense>
+          </TripPageHost>
           </NewTripProvider>
           </ActiveTripProvider>
         </BrowserRouter>

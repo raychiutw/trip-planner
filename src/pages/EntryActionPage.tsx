@@ -76,6 +76,12 @@ const SCOPED_STYLES = `
   height: 100%;
   overflow-y: auto;
 }
+/* owner 2026-07-21（第二輪回報 #5）：桌機第三欄面板要跟新遷入的共編/健檢/筆記
+ * 3 頁一樣套 tertiary elevation（見 AppShell.tsx .app-shell-sheet 註解 + CollabPage
+ * 同型 override）。手機整頁 drill-down 不受影響，仍是上面的 --color-secondary。 */
+.app-shell-sheet .tp-entry-action-shell {
+  background: var(--color-tertiary);
+}
 .tp-entry-action-content {
   max-width: 720px;
   margin: 0 auto;
