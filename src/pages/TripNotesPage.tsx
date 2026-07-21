@@ -76,7 +76,20 @@ const SCOPED_STYLES = `
  * without it the auto column blows out to content max-content → page-body
  * renders wider than the viewport → mobile horizontal scroll (QA 2026-05-30). */
 .tp-notes-shell { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; min-height: 100%; background: var(--color-background); }
-.tp-notes-page-body { padding: 16px; max-width: 720px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+/* 底部為浮動 tab 膠囊讓位。
+ *
+ * v2.56.6 讓功能頁「全版鋪到底」的前提是 tab **全透明** —— 內容從 tab 之間透出。
+ * v2.57.4 材質回歸（0.42 tint + blur 28px）後那個前提不成立了：底下的內容是真的
+ * 被遮住。v2.57.5 再從 4 個 tab 變 5 個、膠囊更寬，手機上最後一段手風琴直接
+ * 點不到（mobile-chrome / mobile-safari e2e 逾時實證）。
+ *
+ * 與 AppShell 註解記載的兩次舊事故同型（form confirm 被攔截、地圖 POI 卡按不動）：
+ * 容器雖 pointer-events:none，但**按鈕本身吃事件**，tab 一多覆蓋面積就變大。 */
+.tp-notes-page-body {
+  padding: 16px;
+  padding-bottom: calc(16px + var(--nav-overlay-h, 0px));
+  max-width: 720px; margin: 0 auto; width: 100%; box-sizing: border-box;
+}
 @media (min-width: 768px) { .tp-notes-page-body { padding: 24px; max-width: 1040px; } }
 
 /* Empty hero (state A) — 拔 gradient 對齊 editorial restrained */

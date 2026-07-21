@@ -1,7 +1,15 @@
 # 帳號刪除 API 規格
 
 **版本**：2026-07-20 · 實作於 `feat/landing-privacy-store-readiness`
-**動機**：Google Play 對「可建立帳號的 app」**強制要求**帳號刪除路徑，且要求 **app 內與網頁各一條**。不提供會直接退件。
+**動機**：Google Play 與 Apple App Store **都強制要求**可建立帳號的 app 提供刪除路徑，
+不提供會直接退件。
+
+- Google Play：app 內與**網頁各一條**
+  <https://support.google.com/googleplay/android-developer/answer/13327111>
+- Apple：**必須能在 app 內發起**（不可只給一個「請來信」的說明）
+  <https://developer.apple.com/support/offering-account-deletion-in-your-app>
+
+先前本文件只寫 Google Play —— iOS 版同樣過不了審，補上。
 
 ---
 

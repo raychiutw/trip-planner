@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.6] - 2026-07-21
+
+### Fixed
+- **手機底部 tab 遮住頁面內容導致點不到**（v2.57.5 造成的回歸，master CI e2e 紅）——
+  tab 從 4 個變 5 個後膠囊變寬，`TripNotesPage` 底部的手風琴被蓋住，
+  mobile-chrome / mobile-safari 點擊逾時。
+  - v2.56.6 讓功能頁「全版鋪到底」的前提是 tab **全透明**；v2.57.4 材質回歸
+    （0.42 tint + blur 28px）後那個前提就不成立了 —— 底下的內容是真的被遮住。
+  - 與 `AppShell` 註解記載的兩次舊事故同型：容器雖 `pointer-events: none`，
+    但**按鈕本身吃事件**，tab 一多覆蓋面積就變大。
+  - ⚠️ 我上次只跑了 `--project=chromium`（桌機）就推，**沒跑 mobile**。
+    這次補跑 mobile 全套（45 passed / 6 skipped）。
+
+### Changed
+- **隱私權政策的刪除帳號段落補齊商店審核要求的四項** ——
+  無法登入／已移除 App 時的申請管道（從註冊信箱來信）、身分核對方式
+  （來信地址須與註冊地址一致，否則任何人都能來信刪別人的帳號）、
+  預計處理時間（7 個工作天）、刪除與保留範圍。
+
+### Docs
+- **更正過度延伸的 Google Play 宣稱** —— 先前寫「Google Play 要求建立帳號時
+  取得個資條款同意」是錯的。Google Play 強制的是隱私權政策連結、Data Safety
+  表單揭露，以及蒐集敏感／非預期資料時的明確揭露與同意，**並非通用的註冊
+  勾選同意**。實際依據是 Tripline 自身的產品／法務決策，並已落成後端 API 契約
+  （`/api/oauth/signup` 缺 `privacyConsent` 回 400）。
+- **帳號刪除補上 Apple 要求** —— 先前文件只寫 Google Play。Apple 同樣要求
+  支援建立帳號的 app 必須能**在 app 內發起刪除**，只寫 Google Play 會讓
+  iOS 版同樣過不了審。
+
 ## [2.57.5] - 2026-07-21
 
 ### Changed

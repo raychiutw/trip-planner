@@ -183,3 +183,31 @@ describe('PrivacyPage — 不得出現與程式行為不符的陳述', () => {
     expect(pageText()).toMatch(/帳號存續期間|帳號存在期間|保留至你刪除/);
   });
 });
+
+describe('PrivacyPage — 刪除帳號段落的完整性（商店審核用）', () => {
+  const section = () => {
+    renderPage();
+    return document.getElementById('delete-account')?.textContent ?? '';
+  };
+
+  it('提供無法登入時的申請管道', () => {
+    // 審核情境與真實情境都會遇到：使用者已移除 app、或忘記密碼進不去，
+    // 「請到帳號頁自行刪除」對他們無效，必須另有一條路。
+    expect(section()).toMatch(/無法登入|已移除|已刪除.*app|來信/);
+  });
+
+  it('說明身分核對方式', () => {
+    // 沒有核對就等於任何人都能來信刪別人的帳號。
+    expect(section()).toMatch(/核對|驗證|本人/);
+  });
+
+  it('說明預計處理時間', () => {
+    expect(section()).toMatch(/\d+\s*(個)?(工作天|天|日)/);
+  });
+
+  it('說明刪除與保留的範圍', () => {
+    const text = section();
+    expect(text, '未說明刪什麼').toMatch(/行程|收藏/);
+    expect(text, '未說明保留什麼').toMatch(/去識別化|匿名/);
+  });
+});
