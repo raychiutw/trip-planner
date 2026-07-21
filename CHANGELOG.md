@@ -5,6 +5,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [2.57.4] - 2026-07-21
 
+### Changed
+- **標題即行程切換器**（owner 2026-07-21：「移除切換行程 icon，改為點下行程名稱
+  後切換，行程名稱後面接一個 V 符號」）—— 新增
+  `src/components/shell/TripTitleSwitcher.tsx`。
+  - 原本 TitleBar 右側有一顆 `⇄ ▾` 圖示按鈕，與標題分離：使用者要先認出那顆
+    圖示才知道能換行程，而標題本身明明就是最自然的入口。改成標題自己是按鈕、
+    後面掛 chevron，對齊 iOS 上「標題帶 ⌄ = 可切換」的既有慣例。
+  - chevron 用 SVG 而非「▾」字元 —— 字元的字級與基線隨字體變動，跨平台對不齊。
+  - **只有一個行程時渲染純文字**，不給可點的假象。
+  - 同時取代 ChatPage / MapPage 兩份重複的 dropdown markup 與 outside-click
+    邏輯；MapPage 連帶清掉已成死碼的 `tripMenuOpen` / `tripMenuRef` 與其
+    document 監聽器。
+
 ### Fixed
 - **行程名稱顯示為 tripId**（owner 回報「行程名稱都不見」「我看是沒改變」）——
   v2.57.3 只修了 3 處，還有 4 個頁面是壞的。

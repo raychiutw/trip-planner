@@ -128,18 +128,16 @@ describe('ChatPage AI avatar + bubble timestamp prefix — Section 4.8', () => {
 
   it('TitleBar title 為當前 trip name (取代「聊天」固定 title)', async () => {
     renderPage();
+    // 2026-07-21：原本等 `chat-trip-picker`（TitleBar 右側那顆 ⇄ 圖示按鈕）。
+    // 形制改成「標題即切換器」後那個 testid 不存在了；而本 fixture 只有一個
+    // 行程，TripTitleSwitcher 會刻意渲染純文字（沒得換就不給可點的假象），
+    // 連 `chat-trip-title` 也不會出現。
+    // 這條要驗的本意沒變 —— 標題顯示的是行程名而非寫死的「聊天」，直接等它。
     await waitFor(() => {
-      // 等待 history loaded → trip picker render with active trip
-      expect(screen.getByTestId('chat-trip-picker')).toBeTruthy();
+      const heading = document.querySelector('h1, [data-testid="page-header-title"]');
+      expect(heading?.textContent).toContain('沖繩 2026');
     }, { timeout: 2000 });
-    // TitleBar h1 應為「沖繩 2026」 而不是「聊天」
     const heading = document.querySelector('h1, [data-testid="page-header-title"]');
-    if (heading) {
-      expect(heading.textContent).toContain('沖繩 2026');
-      expect(heading.textContent).not.toContain('聊天');
-    } else {
-      // fallback: 至少確認 trip picker pill 內含 trip name
-      expect(screen.getAllByText('沖繩 2026').length).toBeGreaterThan(0);
-    }
+    expect(heading!.textContent).not.toContain('聊天');
   });
 });

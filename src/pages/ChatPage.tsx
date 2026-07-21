@@ -29,6 +29,7 @@ import { useChatPagination } from '../hooks/useChatPagination';
 import { apiFetch } from '../lib/apiClient';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
+import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
@@ -832,45 +833,16 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       <style>{SCOPED_STYLES}</style>
       {/* v2.31.86 embedded mode：TripSheet 已有 trip name + tab header，skip TitleBar repeat。 */}
       {!embedded && <TitleBar
-        title={activeTrip?.title || activeTrip?.name || '聊天'}
+        title={
+          <TripTitleSwitcher
+            label={activeTrip?.title || activeTrip?.name || '聊天'}
+            trips={trips ?? []}
+            activeTripId={activeTripId}
+            onPick={pickTrip}
+            testIdPrefix="chat"
+          />
+        }
         account={<AccountCircle />}
-        actions={trips && trips.length > 0 && (
-          <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
-            <button
-              type="button"
-              className="tp-titlebar-trip-picker"
-              onClick={() => setTripMenuOpen((o) => !o)}
-              data-testid="chat-trip-picker"
-              aria-haspopup="menu"
-              aria-expanded={tripMenuOpen}
-              aria-label="切換行程"
-              title="切換行程"
-            >
-              {/* v2.31.47：拔掉 picker button 內的 trip name span（TitleBar title
-                  已顯 trip name；button 重複顯示視覺冗餘）。只留 ⇄ icon + ▾
-                  affordance，user click 開 dropdown 看完整 trip list。 */}
-              <Icon name="swap-horiz" />
-              <span className="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
-            </button>
-            {tripMenuOpen && (
-              <div className="tp-titlebar-trip-dropdown" role="menu">
-                {trips.map((t) => (
-                  <button
-                    key={t.tripId}
-                    type="button"
-                    className={`tp-titlebar-trip-row ${t.tripId === activeTripId ? 'is-active' : ''}`}
-                    onClick={() => pickTrip(t.tripId)}
-                    role="menuitem"
-                    data-testid={`chat-trip-pick-${t.tripId}`}
-                  >
-                    <span className="tp-titlebar-trip-row-title">{t.title || t.name || t.tripId}</span>
-                    <span className="tp-titlebar-trip-row-meta">{(t.countries ?? '').toUpperCase() || t.tripId}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       />}
 
       <div className="tp-chat-body" ref={bodyRef} data-testid="chat-body">

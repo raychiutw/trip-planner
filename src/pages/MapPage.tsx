@@ -31,6 +31,7 @@ import { dayColor } from '../lib/dayPalette';
 import { findEntryInDays } from '../lib/mapDay';
 import Icon from '../components/shared/Icon';
 import AppShell from '../components/shell/AppShell';
+import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
@@ -220,12 +221,10 @@ export default function MapPage() {
   const navigate = useNavigate();
   const { trip, allDays, loading } = useTripContext();
 
-  /* 2026-04-29:trip-picker(對齊 mockup「Map Page」spec + shared
-   * `.tp-titlebar-trip-picker` pattern)。fetch user 所有 trips for dropdown,
-   * pickTrip → navigate /trip/:newId/map(整頁切換 trip context)。 */
+  /* trip 切換：清單餵給 <TripTitleSwitcher/>（標題即切換器，owner 2026-07-21）。
+   * 開合與 outside-click 由該元件自理，本頁不再持有 menu state。
+   * pickTrip → navigate /trip/:newId/map（整頁切換 trip context）。 */
   const [trips, setTrips] = useState<TripSummary[] | null>(null);
-  const [tripMenuOpen, setTripMenuOpen] = useState(false);
-  const tripMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -247,20 +246,7 @@ export default function MapPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // close trip menu on outside click
-  useEffect(() => {
-    if (!tripMenuOpen) return;
-    function onClick(e: MouseEvent) {
-      if (tripMenuRef.current && !tripMenuRef.current.contains(e.target as Node)) {
-        setTripMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, [tripMenuOpen]);
-
   const pickTrip = useCallback((newTripId: string) => {
-    setTripMenuOpen(false);
     if (newTripId === tripId) return;
     navigate(`/trip/${encodeURIComponent(newTripId)}/map`);
   }, [tripId, navigate]);
@@ -446,43 +432,17 @@ export default function MapPage() {
 
       <TitleBar
         // v2.31.81：title bar 對齊 ChatPage 格式 — 左 trip name，右 icon-only picker。
-        title={trip?.title || trip?.name || '地圖'}
+        title={
+          <TripTitleSwitcher
+            label={trip?.title || trip?.name || '地圖'}
+            trips={trips ?? []}
+            activeTripId={tripId ?? null}
+            onPick={pickTrip}
+            testIdPrefix="map"
+          />
+        }
         back={tripId ? () => navigate(`/trip/${encodeURIComponent(tripId)}`) : undefined}
         account={<AccountCircle />}
-        actions={trips && trips.length > 0 && (
-          <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
-            <button
-              type="button"
-              className="tp-titlebar-trip-picker"
-              onClick={() => setTripMenuOpen((o) => !o)}
-              data-testid="map-trip-picker"
-              aria-haspopup="menu"
-              aria-expanded={tripMenuOpen}
-              aria-label="切換行程"
-              title="切換行程"
-            >
-              <Icon name="swap-horiz" />
-              <span className="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
-            </button>
-            {tripMenuOpen && (
-              <div className="tp-titlebar-trip-dropdown" role="menu">
-                {trips.map((t) => (
-                  <button
-                    key={t.tripId}
-                    type="button"
-                    className={`tp-titlebar-trip-row ${t.tripId === tripId ? 'is-active' : ''}`}
-                    onClick={() => pickTrip(t.tripId)}
-                    role="menuitem"
-                    data-testid={`map-trip-pick-${t.tripId}`}
-                  >
-                    <span className="tp-titlebar-trip-row-title">{t.title || t.name || t.tripId}</span>
-                    <span className="tp-titlebar-trip-row-meta">{(t.countries ?? '').toUpperCase() || t.tripId}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       />
 
       <main className="map-page-body">

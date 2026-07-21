@@ -30,14 +30,17 @@ describe('v2.31.81 #1: MapPage handleCardClick syncs day nav in overview mode', 
 describe('v2.31.81 #2: MapPage TitleBar matches ChatPage format', () => {
   const src = read('src/pages/MapPage.tsx');
   it('title 用 trip name（不再寫死「地圖」）', () => {
-    expect(src).toMatch(/title=\{trip\?\.title \|\| trip\?\.name \|\| ['"]地圖['"]\}/);
+    // 2026-07-21：標題改包在 TripTitleSwitcher 的 label 裡（owner 要求點名稱切換），
+    // 但「用 trip name 而非寫死『地圖』」這條不變式仍然成立，只是位置換了。
+    expect(src).toMatch(/label=\{trip\?\.title\s*\|\|\s*trip\?\.name/);
   });
-  it('trip picker button 不含 tp-titlebar-trip-picker-name span（icon-only）', () => {
-    // 整檔不再含 tp-titlebar-trip-picker-name（v2.31.81 移除 trip name span）
-    expect(src).not.toMatch(/tp-titlebar-trip-picker-name/);
-    // picker 仍存在（swap-horiz icon + chevron）
-    expect(src).toMatch(/swap-horiz/);
-    expect(src).toMatch(/tp-titlebar-trip-picker/);
+  it('切換入口是標題本身，不是分離的圖示按鈕', () => {
+    // 2026-07-21 形制變更（owner：「移除切換行程 icon，改為點下行程名稱後切換」）。
+    // 本條原本鎖 v2.31.81 的 icon-only picker（swap-horiz + chevron，放在 TitleBar
+    // 右側 actions）。那顆按鈕與標題分離，使用者要先認出圖示才知道能換行程。
+    expect(src, 'owner 要求移除切換行程 icon').not.toMatch(/swap-horiz/);
+    expect(src, '舊的分離式 picker 已由 TripTitleSwitcher 取代').not.toMatch(/tp-titlebar-trip-picker/);
+    expect(src).toMatch(/<TripTitleSwitcher/);
   });
 });
 

@@ -1807,6 +1807,32 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 /* TitleBar trip-picker — shared by ChatPage / MapPage.
  * 規範:桌機(>=761) icon + trip name + chevron;手機(<=760) icon-only。 */
 .tp-titlebar-trip-menu { position: relative; }
+
+/* 標題即切換器（owner 2026-07-21：「點下行程名稱後切換，名稱後面接一個 V」）。
+ * 取代原本 TitleBar 右側那顆分離的 `⇄ ▾` 圖示按鈕 —— 標題本來就是最自然的入口。 */
+.tp-titlebar-trip-title-wrap { position: relative; display: inline-flex; min-width: 0; }
+.tp-titlebar-trip-title {
+  display: inline-flex; align-items: center; gap: 4px;
+  min-width: 0; min-height: 44px; /* HIG 最小觸控目標 */
+  padding: 0 6px; margin-left: -6px; /* 負 margin 抵銷 padding，視覺仍與原標題切齊 */
+  border: none; background: none; cursor: pointer;
+  border-radius: var(--radius-md);
+  /* 繼承 TitleBar 標題的字體設定，換成按鈕後外觀不該改變 */
+  font: inherit; color: inherit; letter-spacing: inherit;
+}
+.tp-titlebar-trip-title:hover { background: var(--color-hover); }
+.tp-titlebar-trip-title:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-titlebar-trip-title-text {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tp-titlebar-trip-title-chevron {
+  width: 18px; height: 18px; flex-shrink: 0;
+  color: var(--color-muted);
+  transition: transform var(--transition-duration-fast, 140ms) ease;
+}
+.tp-titlebar-trip-title[aria-expanded="true"] .tp-titlebar-trip-title-chevron {
+  transform: rotate(180deg);
+}
 .tp-titlebar-trip-picker {
   /* Ghost icon button — 同 .tp-titlebar-action family，無框透明底，hover 出 --color-hover */
   display: inline-flex; align-items: center; gap: 6px;
