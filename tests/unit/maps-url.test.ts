@@ -63,4 +63,23 @@ describe('buildMapsUrl', () => {
     const url = buildMapsUrl({ name: 'X', lat: 0, lng: 0 }, 'google');
     expect(url).toContain(encodeURIComponent('0,0'));
   });
+
+  // 2026-07-21：地圖點選 Google 原生 POI（owner 需求，對齊 Flutter buildSearchUri
+  // 的 query_place_id）— Google-only 精確定位參數，其他 provider 忽略。
+  it('Google: placeId present → appends query_place_id', () => {
+    const url = buildMapsUrl({ ...TOKYO_TOWER, placeId: 'ChIJ-abc' }, 'google');
+    expect(url).toContain('&query_place_id=ChIJ-abc');
+  });
+
+  it('Google: placeId absent → no query_place_id param', () => {
+    const url = buildMapsUrl(TOKYO_TOWER, 'google');
+    expect(url).not.toContain('query_place_id');
+  });
+
+  it('Apple/Naver: placeId ignored (Google-only precision param)', () => {
+    const apple = buildMapsUrl({ ...TOKYO_TOWER, placeId: 'ChIJ-abc' }, 'apple');
+    const naver = buildMapsUrl({ ...TOKYO_TOWER, placeId: 'ChIJ-abc' }, 'naver');
+    expect(apple).not.toContain('ChIJ-abc');
+    expect(naver).not.toContain('ChIJ-abc');
+  });
 });
