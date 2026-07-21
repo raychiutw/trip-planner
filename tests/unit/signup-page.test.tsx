@@ -16,7 +16,13 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-function fillForm({ email, password, name }: { email?: string; password?: string; name?: string }) {
+/**
+ * 填表。`consent` 預設 true —— 2026-07-20 起送出鈕需勾選個資條款同意才啟用
+ * （owner 決策：建立帳號要客戶同意個資條款）。想測「未同意」情境的傳 consent: false。
+ */
+function fillForm({ email, password, name, consent = true }: {
+  email?: string; password?: string; name?: string; consent?: boolean;
+}) {
   if (email !== undefined) {
     fireEvent.change(screen.getByTestId('signup-email'), { target: { value: email } });
   }
@@ -25,6 +31,9 @@ function fillForm({ email, password, name }: { email?: string; password?: string
   }
   if (name !== undefined) {
     fireEvent.change(screen.getByTestId('signup-display-name'), { target: { value: name } });
+  }
+  if (consent) {
+    fireEvent.click(screen.getByTestId('signup-privacy-consent'));
   }
 }
 
@@ -256,5 +265,38 @@ describe('SignupPage with ?invitation=token (V2 共編)', () => {
     const navTo = navigateMock.mock.calls[0]![0] as string;
     expect(navTo).toContain('/signup/check-email');
     expect(navTo).toContain('invitationError=INVITATION_EXPIRED');
+  });
+
+  it('未勾選個資條款 → 送出鈕 disabled（owner 決策：建帳號需同意）', () => {
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
+    );
+    fillForm({ email: 'a@b.com', password: 'longpassword123', consent: false });
+    expect((screen.getByTestId('signup-submit') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('勾選後送出鈕啟用，且 body 帶 privacyConsent', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ ok: true, userId: 'u1', email: 'a@b.com', requiresVerification: true }),
+      { status: 201 },
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
+    );
+    fillForm({ email: 'a@b.com', password: 'longpassword123' });
+    expect((screen.getByTestId('signup-submit') as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(screen.getByTestId('signup-submit'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string);
+    // 後端 signup 也會擋（真正的證據是 DB 的 privacy_consent_at），前端該一併送出。
+    expect(body.privacyConsent).toBe(true);
   });
 });

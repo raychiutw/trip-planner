@@ -20,7 +20,7 @@ import { requireAuth, assertNotTripRestricted } from '../_auth';
 import { json } from '../_utils';
 import { AppError } from '../_errors';
 import { parseAndValidateImport, MAX_IMPORT_BYTES, type NImportNotes } from './_import';
-import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, TRIP_DOC_TYPES } from './_tripWrite';
+import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, generateUniqueTripId, TRIP_DOC_TYPES } from './_tripWrite';
 
 type Stmt = D1PreparedStatement;
 
@@ -52,7 +52,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Cap trips-per-user (anti import-spam DoS).
   await assertTripCap(db, auth.userId);
 
-  const tripId = `imp-${crypto.randomUUID()}`;
+  const tripId = await generateUniqueTripId(db, data.name);
   const now = new Date().toISOString();
   const createdEntryIds: number[] = [];
   const createdPoiIds: number[] = [];

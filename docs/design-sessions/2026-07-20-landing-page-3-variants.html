@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>未登入首頁 — 三個視覺方向　Tripline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   Tripline — 未登入首頁 (landing) 三個視覺方向
+   2026-07-20 · 供 owner 挑選
+
+   為什麼要挑：這個 app **零圖片素材**且是刻意的
+   （DESIGN.md L284「全站不做 POI 照片 / artwork / 縮圖」），
+   所以「首頁要有圖片」這個需求沒有現成答案。
+
+   寬度切換用 **container queries**（不是縮放）——
+   切到手機寬時真的會觸發各變體自己的 @container 斷點，
+   看到的就是實際 responsive 行為。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ---------- Terracotta tokens（自 css/tokens.css 抄錄） ---------- */
+:root {
+  --color-background: #FFFBF5;
+  --color-secondary: #FAF4EA;
+  --color-tertiary: #F4EDE3;
+  --color-hover: #F9EDE0;
+  --color-foreground: #2A1F18;
+  --color-muted: #6F5A47;
+  --color-border: #EADFCF;
+  --color-accent: #A97A4A;
+  --color-accent-fill: #8A6038;
+  --color-accent-foreground: #FFFFFF;
+  --color-accent-subtle: #F4EDE3;
+  --color-accent-bg: #E9DBC8;
+  --color-accent-deep: #8A6038;
+  --color-accent-text: #8A6038;
+
+  --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
+  --radius-xl: 16px; --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgba(42,31,24,.05);
+  --shadow-md: 0 6px 16px rgba(42,31,24,.09);
+  --shadow-lg: 0 10px 28px rgba(42,31,24,.12);
+
+  --font-family-system: 'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,"PingFang TC",system-ui,sans-serif;
+  --ease-apple: cubic-bezier(.2,.8,.2,1);
+
+  /* day palette 示意（實際值來自 src/lib/dayPalette，此處僅為 mockup 呈現） */
+  --d1:#C9857F; --d2:#7FA8C9; --d3:#8FBF8A; --d4:#C9A97F; --d5:#A98FC9;
+
+  /* mockup 外殼 */
+  --pg-bg:#F3EDE4; --pg-fg:#2A1F18; --pg-muted:#6F5A47; --pg-line:#DFD3C2; --pg-card:#FFFBF5;
+}
+body.dark {
+  --color-background:#1C1C1E; --color-secondary:#2C2C2E; --color-tertiary:#3A3A3C;
+  --color-hover:#48484A; --color-foreground:#F5F5F7; --color-muted:#A1A1A6;
+  --color-border:#48484A; --color-accent:#CBA06E; --color-accent-fill:#CBA06E;
+  --color-accent-foreground:#1C1C1E; --color-accent-subtle:#2A2418;
+  --color-accent-bg:#3A3020; --color-accent-deep:#E0BC90; --color-accent-text:#E0BC90;
+  --shadow-md: 0 6px 16px rgba(0,0,0,.4);
+  --shadow-lg: 0 10px 28px rgba(0,0,0,.5);
+  --d1:#D9968F; --d2:#8FB8D9; --d3:#9FCF9A; --d4:#D9B98F; --d5:#B99FD9;
+  --pg-bg:#141416; --pg-fg:#F5F5F7; --pg-muted:#A1A1A6; --pg-line:#3A3A3C; --pg-card:#1C1C1E;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin:0; font-family:var(--font-family-system);
+  background:var(--pg-bg); color:var(--pg-fg);
+  font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  transition: background 250ms var(--ease-apple), color 250ms var(--ease-apple);
+}
+
+/* ═══════════ mockup 控制列 ═══════════ */
+.bar {
+  position:sticky; top:0; z-index:100;
+  background:color-mix(in srgb,var(--pg-bg) 90%,transparent);
+  backdrop-filter:blur(16px) saturate(180%); -webkit-backdrop-filter:blur(16px) saturate(180%);
+  border-bottom:1px solid var(--pg-line);
+}
+.bar-in { max-width:1240px; margin:0 auto; padding:16px 24px; display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+.bar h1 { font-size:20px; font-weight:800; margin:0 0 3px; letter-spacing:-.01em; }
+.bar p { margin:0; font-size:13px; color:var(--pg-muted); max-width:600px; }
+.ctrls { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; align-items:center; }
+.ctrl {
+  font:inherit; font-size:12.5px; font-weight:600; padding:8px 14px;
+  border-radius:var(--radius-full); border:1px solid var(--pg-line);
+  background:var(--pg-card); color:var(--pg-fg); cursor:pointer;
+  transition:all 150ms var(--ease-apple); white-space:nowrap; min-height:36px;
+}
+.ctrl:hover { border-color:var(--color-accent); }
+.ctrl[aria-pressed="true"] { background:var(--color-accent-fill); color:#fff; border-color:transparent; }
+.ctrl-group { display:flex; gap:0; border:1px solid var(--pg-line); border-radius:var(--radius-full); overflow:hidden; }
+.ctrl-group .ctrl { border:none; border-radius:0; }
+.ctrl-group .ctrl + .ctrl { border-left:1px solid var(--pg-line); }
+
+.wrap { max-width:1240px; margin:0 auto; padding:32px 24px 120px; }
+
+/* ═══════════ 變體區塊外框 ═══════════ */
+.variant { margin-bottom:72px; scroll-margin-top:110px; }
+.variant-head { border-bottom:2px solid var(--pg-line); padding-bottom:14px; margin-bottom:12px; }
+.variant-tag {
+  display:inline-block; font-size:11px; font-weight:800; letter-spacing:.12em;
+  padding:4px 10px; border-radius:5px; margin-bottom:8px;
+  background:var(--color-accent-fill); color:#fff;
+}
+.variant-head h2 { font-size:26px; font-weight:800; margin:0 0 8px; letter-spacing:-.02em; }
+.variant-head .lede { margin:0; font-size:14.5px; color:var(--pg-muted); max-width:820px; }
+.tradeoff { display:flex; gap:10px; flex-wrap:wrap; margin:14px 0 22px; }
+.tradeoff span {
+  font-size:12px; padding:5px 11px; border-radius:var(--radius-full);
+  border:1px solid var(--pg-line); background:var(--pg-card);
+}
+.tradeoff .plus { border-color:#1F7A4D; color:#1F7A4D; }
+.tradeoff .minus { border-color:#B5443F; color:#B5443F; }
+body.dark .tradeoff .plus { border-color:#7EC89A; color:#7EC89A; }
+body.dark .tradeoff .minus { border-color:#E8A0A0; color:#E8A0A0; }
+
+/* ═══════════ 裝置框（container query 容器）═══════════ */
+.stage { display:flex; justify-content:center; }
+.device {
+  container-type: inline-size;
+  container-name: page;
+  width:100%; max-width:1100px;
+  border:1px solid var(--pg-line); border-radius:var(--radius-xl);
+  overflow:hidden; box-shadow:var(--shadow-md);
+  transition: max-width 300ms var(--ease-apple);
+  background:var(--color-background);
+}
+body[data-w="mobile"] .device { max-width:390px; border-radius:28px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   以下是**三個變體共用**的 landing 基礎樣式（.tp-lp-*）
+   實際落地時這些會進 src/pages/LandingPage.tsx 的 SCOPED_STYLES
+   ═══════════════════════════════════════════════════════════════ */
+.tp-lp { background:var(--color-background); color:var(--color-foreground); }
+
+/* — 頂列 — */
+.tp-lp-nav {
+  display:flex; align-items:center; gap:12px;
+  padding:14px 18px; border-bottom:1px solid var(--color-border);
+}
+.tp-lp-brand { font-size:17px; font-weight:800; letter-spacing:-.01em; }
+.tp-lp-brand span { color:var(--color-accent-text); }
+.tp-lp-nav-spacer { flex:1; }
+.tp-lp-nav-login {
+  font-size:14px; font-weight:700; text-decoration:none;
+  color:var(--color-accent-text); padding:10px 14px;
+  min-height:44px; display:inline-flex; align-items:center;
+  border-radius:var(--radius-md);
+}
+.tp-lp-nav-login:hover { background:var(--color-hover); }
+
+/* — Hero — */
+.tp-lp-hero { padding:32px 18px 8px; }
+.tp-lp-eyebrow {
+  font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--color-accent-text); margin-bottom:10px;
+}
+.tp-lp-h1 {
+  font-size:30px; line-height:1.22; font-weight:900; margin:0 0 12px;
+  letter-spacing:-.025em;
+}
+.tp-lp-h1 em { font-style:normal; color:var(--color-accent-text); }
+.tp-lp-sub { font-size:16px; line-height:1.65; color:var(--color-muted); margin:0 0 22px; max-width:52ch; }
+.tp-lp-cta-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.tp-lp-cta {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:48px; padding:0 22px; border-radius:var(--radius-full);
+  background:var(--color-accent-fill); color:var(--color-accent-foreground);
+  font-size:16px; font-weight:700; text-decoration:none; border:none; cursor:pointer;
+  box-shadow:var(--shadow-md);
+}
+.tp-lp-cta:hover { filter:brightness(.92); }
+.tp-lp-cta-note { font-size:13px; color:var(--color-muted); }
+
+/* — 功能區 — */
+.tp-lp-features { padding:36px 18px; }
+.tp-lp-sec-title { font-size:21px; font-weight:800; margin:0 0 6px; letter-spacing:-.015em; }
+.tp-lp-sec-sub { font-size:14.5px; color:var(--color-muted); margin:0 0 22px; max-width:56ch; }
+.tp-lp-grid { display:grid; grid-template-columns:1fr; gap:14px; }
+.tp-lp-card {
+  border:1px solid var(--color-border); border-radius:var(--radius-lg);
+  background:var(--color-secondary); padding:18px;
+}
+.tp-lp-card h3 { font-size:16px; font-weight:700; margin:0 0 6px; }
+.tp-lp-card p { font-size:14px; line-height:1.6; color:var(--color-muted); margin:0; }
+.tp-lp-card-icon {
+  width:38px; height:38px; border-radius:var(--radius-md);
+  background:var(--color-accent-bg); color:var(--color-accent-deep);
+  display:grid; place-items:center; margin-bottom:12px;
+}
+.tp-lp-card-icon svg { width:20px; height:20px; }
+
+/* — 頁尾 — */
+.tp-lp-foot {
+  border-top:1px solid var(--color-border); padding:22px 18px 28px;
+  display:flex; gap:14px; flex-wrap:wrap; align-items:center;
+  font-size:13px; color:var(--color-muted);
+}
+.tp-lp-foot a { color:var(--color-accent-text); text-decoration:none; min-height:44px; display:inline-flex; align-items:center; }
+.tp-lp-foot a:hover { text-decoration:underline; }
+.tp-lp-foot-spacer { flex:1; }
+
+/* — 桌機斷點（container query，非 viewport）— */
+@container page (min-width: 720px) {
+  .tp-lp-nav { padding:18px 40px; }
+  .tp-lp-hero { padding:64px 40px 16px; display:grid; grid-template-columns:1fr 1fr; gap:44px; align-items:center; }
+  .tp-lp-hero-copy { grid-column:1; }
+  .tp-lp-hero-visual { grid-column:2; }
+  .tp-lp-h1 { font-size:44px; }
+  .tp-lp-sub { font-size:17px; }
+  .tp-lp-features { padding:64px 40px; }
+  .tp-lp-grid { grid-template-columns:repeat(3,1fr); gap:18px; }
+  .tp-lp-sec-title { font-size:26px; }
+  .tp-lp-foot { padding:28px 40px 36px; }
+}
+
+/* ═══════════ 變體 A — 截圖導向 ═══════════ */
+.tp-lp-shot {
+  border:2px dashed var(--color-accent); border-radius:var(--radius-lg);
+  background:var(--color-accent-subtle);
+  display:grid; place-items:center; text-align:center;
+  padding:24px 18px; min-height:230px; gap:6px;
+}
+.tp-lp-shot-label { font-size:13.5px; font-weight:700; color:var(--color-accent-deep); }
+.tp-lp-shot-hint { font-size:12px; color:var(--color-muted); max-width:34ch; line-height:1.5; }
+.tp-lp-shot-dims { font-size:11px; color:var(--color-muted); font-family:ui-monospace,Menlo,monospace; }
+@container page (min-width: 720px) { .tp-lp-shot { min-height:330px; } }
+.tp-lp-shot-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+.tp-lp-shot-row .tp-lp-shot { min-height:150px; }
+
+/* ═══════════ 變體 B — SVG 插畫導向 ═══════════ */
+.tp-lp-art { display:block; width:100%; height:auto; }
+.tp-lp-art-hero { max-width:420px; margin:0 auto; }
+.tp-lp-card-art { width:100%; height:auto; margin-bottom:14px; border-radius:var(--radius-md); }
+
+/* ═══════════ 變體 C — CSS 重繪迷你 UI ═══════════ */
+.tp-lp-repaint {
+  border:1px solid var(--color-border); border-radius:var(--radius-lg);
+  background:var(--color-secondary); padding:14px; box-shadow:var(--shadow-lg);
+  overflow:hidden;
+}
+.tp-lp-rp-bar {
+  display:flex; align-items:center; gap:6px; padding-bottom:10px;
+  border-bottom:1px solid var(--color-border); margin-bottom:12px;
+}
+.tp-lp-rp-dot { width:9px; height:9px; border-radius:50%; background:var(--color-border); }
+.tp-lp-rp-title { font-size:12px; font-weight:700; color:var(--color-muted); margin-left:4px; }
+/* 迷你時間軸 */
+.tp-lp-rp-tl { display:flex; flex-direction:column; gap:8px; }
+.tp-lp-rp-item { display:flex; gap:10px; align-items:stretch; }
+.tp-lp-rp-time {
+  font-size:11px; font-weight:700; color:var(--color-muted);
+  font-variant-numeric:tabular-nums; width:38px; flex:0 0 38px; padding-top:9px;
+}
+.tp-lp-rp-rail { width:2px; background:var(--color-border); border-radius:2px; position:relative; flex:0 0 2px; }
+.tp-lp-rp-rail::before {
+  content:''; position:absolute; top:10px; left:-3px;
+  width:8px; height:8px; border-radius:50%; background:var(--dot,var(--color-accent));
+}
+.tp-lp-rp-card {
+  flex:1; background:var(--color-background); border:1px solid var(--color-border);
+  border-radius:var(--radius-md); padding:9px 11px; min-width:0;
+}
+.tp-lp-rp-card b { display:block; font-size:12.5px; font-weight:700; margin-bottom:2px; }
+.tp-lp-rp-card small { font-size:11px; color:var(--color-muted); }
+/* 迷你地圖 */
+.tp-lp-rp-map {
+  height:150px; border-radius:var(--radius-md); position:relative; overflow:hidden;
+  background:
+    linear-gradient(90deg,transparent 0 44%,var(--color-tertiary) 44% 47%,transparent 47%),
+    linear-gradient(72deg,transparent 0 26%,var(--color-tertiary) 26% 29%,transparent 29%),
+    linear-gradient(0deg,transparent 0 58%,var(--color-tertiary) 58% 61%,transparent 61%),
+    var(--color-hover);
+}
+.tp-lp-rp-pin {
+  position:absolute; width:20px; height:20px; border-radius:50%;
+  display:grid; place-items:center; font-size:10px; font-weight:800;
+  color:#fff; box-shadow:0 2px 6px rgba(0,0,0,.3);
+}
+.tp-lp-rp-line { position:absolute; inset:0; }
+/* 迷你對話 */
+.tp-lp-rp-chat { display:flex; flex-direction:column; gap:8px; }
+.tp-lp-rp-bubble {
+  max-width:82%; padding:9px 12px; font-size:12.5px; line-height:1.5;
+  border-radius:14px 14px 14px 4px;
+  background:var(--color-background); border:1px solid var(--color-border);
+}
+.tp-lp-rp-bubble.me {
+  margin-left:auto; border-radius:14px 14px 4px 14px;
+  background:var(--color-accent-fill); color:var(--color-accent-foreground); border-color:transparent;
+}
+.tp-lp-rp-stack { display:grid; gap:12px; }
+@container page (min-width: 720px) { .tp-lp-rp-stack { grid-template-columns:1fr; } }
+
+/* 說明泡泡 */
+.note {
+  margin-top:14px; padding:12px 14px; border-radius:var(--radius-md);
+  border-left:3px solid var(--color-accent); background:var(--pg-card);
+  font-size:13px; line-height:1.6; color:var(--pg-muted);
+}
+.note b { color:var(--pg-fg); font-weight:700; }
+.note code { font-family:ui-monospace,Menlo,monospace; font-size:11.5px; background:var(--pg-bg); padding:1px 5px; border-radius:3px; }
+
+@media (max-width:760px){ .bar-in{padding:14px 16px} .wrap{padding:24px 16px 80px} .ctrls{margin-left:0} }
+@media (prefers-reduced-motion: reduce){ *{transition-duration:1ms !important} }
+</style>
+</head>
+<body data-w="desktop">
+
+<header class="bar">
+  <div class="bar-in">
+    <div>
+      <h1>未登入首頁 — 三個視覺方向</h1>
+      <p>
+        這個 app <b>零圖片素材而且是刻意的</b>（DESIGN.md L284「全站不做 POI 照片 / artwork / 縮圖」），
+        所以「首頁要有圖片」沒有現成答案。三個方向請挑一個，或指出要混哪些。
+        寬度切換用 container query，切到手機是<b>真的觸發斷點</b>，不是縮放。
+      </p>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl-group">
+        <button class="ctrl" data-w-btn="mobile">手機 390</button>
+        <button class="ctrl" data-w-btn="desktop" aria-pressed="true">桌機</button>
+      </div>
+      <button class="ctrl" id="t-theme" aria-pressed="false">深色</button>
+      <div class="ctrl-group">
+        <button class="ctrl" onclick="document.getElementById('vA').scrollIntoView({behavior:'smooth'})">A</button>
+        <button class="ctrl" onclick="document.getElementById('vB').scrollIntoView({behavior:'smooth'})">B</button>
+        <button class="ctrl" onclick="document.getElementById('vC').scrollIntoView({behavior:'smooth'})">C</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ══════════════ 變體 A ══════════════ -->
+<section class="variant" id="vA">
+  <div class="variant-head">
+    <span class="variant-tag">變體 A</span>
+    <h2>App 畫面截圖導向</h2>
+    <p class="lede">
+      最像 app store 的做法，說明力最強 —— 使用者直接看到成品長什麼樣。
+      下方是<b>佔位框</b>而非假截圖：真的要用這版，截圖得從實機拍。
+    </p>
+  </div>
+  <div class="tradeoff">
+    <span class="plus">✓ 說明力最強</span>
+    <span class="plus">✓ Google Play 素材可共用</span>
+    <span class="minus">✗ 專案第一批圖片檔（維護成本從 0 變 1）</span>
+    <span class="minus">✗ 深/淺色各一套，UI 一改就過期</span>
+    <span class="minus">✗ 與 DESIGN.md「不做 artwork」的精神有張力</span>
+  </div>
+
+  <div class="stage"><div class="device"><div class="tp-lp">
+    <nav class="tp-lp-nav">
+      <div class="tp-lp-brand">Trip<span>line</span></div>
+      <div class="tp-lp-nav-spacer"></div>
+      <a class="tp-lp-nav-login" href="/login">登入</a>
+    </nav>
+
+    <section class="tp-lp-hero">
+      <div class="tp-lp-hero-copy">
+        <div class="tp-lp-eyebrow">旅遊行程規劃</div>
+        <h1 class="tp-lp-h1">用<em>對話</em>就能改行程</h1>
+        <p class="tp-lp-sub">
+          「幫我把第二天下午排鬆一點」——講一句話，行程自己調整。
+          時間軸拖拉排序、地圖看每日路線、旅伴一起編輯，全部在同一個地方。
+        </p>
+        <div class="tp-lp-cta-row">
+          <a class="tp-lp-cta" href="/login">登入後開始使用</a>
+        </div>
+      </div>
+      <div class="tp-lp-hero-visual">
+        <div class="tp-lp-shot">
+          <div class="tp-lp-shot-label">📱 Hero 截圖</div>
+          <div class="tp-lp-shot-hint">行程時間軸（手機直式）—— 最能一眼看懂「這是行程規劃工具」的畫面</div>
+          <div class="tp-lp-shot-dims">建議 1170×2532 @2x · 需深/淺各一</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tp-lp-features">
+      <h2 class="tp-lp-sec-title">四個你會天天用到的東西</h2>
+      <p class="tp-lp-sec-sub">不是功能清單，是實際會發生的事。</p>
+      <div class="tp-lp-grid">
+        <div class="tp-lp-card">
+          <div class="tp-lp-shot" style="min-height:130px;margin-bottom:12px">
+            <div class="tp-lp-shot-label">AI 對話</div>
+            <div class="tp-lp-shot-dims">ChatPage 截圖</div>
+          </div>
+          <h3>說一句話就改好</h3>
+          <p>不用一格一格拖。講「第三天太趕」，它會告訴你動了什麼、多出多少車程。</p>
+        </div>
+        <div class="tp-lp-card">
+          <div class="tp-lp-shot" style="min-height:130px;margin-bottom:12px">
+            <div class="tp-lp-shot-label">地圖路線</div>
+            <div class="tp-lp-shot-dims">MapPage 截圖</div>
+          </div>
+          <h3>每天的路線一眼看完</h3>
+          <p>每日一色的路線圖，馬上看出哪天在繞路。可切一般圖 / 衛星圖。</p>
+        </div>
+        <div class="tp-lp-card">
+          <div class="tp-lp-shot" style="min-height:130px;margin-bottom:12px">
+            <div class="tp-lp-shot-label">AI 健檢</div>
+            <div class="tp-lp-shot-dims">HealthCheck 截圖</div>
+          </div>
+          <h3>出發前先健檢</h3>
+          <p>五個維度掃一遍行程：時間排得過緊、來回繞路、營業時間對不上，出發前先知道。</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="tp-lp-foot">
+      <span>© 2026 Tripline</span>
+      <div class="tp-lp-foot-spacer"></div>
+      <a href="/privacy">隱私權政策</a>
+    </footer>
+  </div></div></div>
+
+  <div class="note">
+    <b>採用這版要先解決的事：</b>截圖從哪來？我可以用 <code>/browse</code> 對本機 dev server 拍乾淨截圖並存進 <code>public/</code>，
+    但那會是專案第一批圖片檔 —— 之後 UI 一改就要重拍，且深/淺色要各一套。
+    另外 Google Play 上架本來也要 screenshot，這批可以共用，算是唯一的規模效益。
+  </div>
+</section>
+
+<!-- ══════════════ 變體 B ══════════════ -->
+<section class="variant" id="vB">
+  <div class="variant-head">
+    <span class="variant-tag">變體 B</span>
+    <h2>SVG 插畫導向</h2>
+    <p class="lede">
+      用線條插畫表現功能。與 DESIGN.md「不做照片」一致、零圖片檔、深淺色靠 <code>currentColor</code> 自動適應、UI 改了也不會過期。
+      下方 SVG 是<b>實際畫的</b>，不是佔位框。
+    </p>
+  </div>
+  <div class="tradeoff">
+    <span class="plus">✓ 零圖片檔，深淺色自動</span>
+    <span class="plus">✓ UI 改版不會過期</span>
+    <span class="plus">✓ 體積極小（inline SVG）</span>
+    <span class="minus">✗ 說明力比截圖弱</span>
+    <span class="minus">✗ 插畫風格要維持一致需要品味投入</span>
+  </div>
+
+  <div class="stage"><div class="device"><div class="tp-lp">
+    <nav class="tp-lp-nav">
+      <div class="tp-lp-brand">Trip<span>line</span></div>
+      <div class="tp-lp-nav-spacer"></div>
+      <a class="tp-lp-nav-login" href="/login">登入</a>
+    </nav>
+
+    <section class="tp-lp-hero">
+      <div class="tp-lp-hero-copy">
+        <div class="tp-lp-eyebrow">旅遊行程規劃</div>
+        <h1 class="tp-lp-h1">用<em>對話</em>就能改行程</h1>
+        <p class="tp-lp-sub">
+          「幫我把第二天下午排鬆一點」——講一句話，行程自己調整。
+          時間軸拖拉排序、地圖看每日路線、旅伴一起編輯，全部在同一個地方。
+        </p>
+        <div class="tp-lp-cta-row">
+          <a class="tp-lp-cta" href="/login">登入後開始使用</a>
+        </div>
+      </div>
+      <div class="tp-lp-hero-visual">
+        <!-- Hero 插畫：路線串起幾個停留點 + 一則對話 -->
+        <svg class="tp-lp-art tp-lp-art-hero" viewBox="0 0 400 300" fill="none" aria-hidden="true">
+          <path d="M40 250 C 90 250, 90 190, 140 190 S 200 130, 250 130 S 310 70, 360 70"
+                stroke="var(--color-accent)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="7 7" opacity=".55"/>
+          <circle cx="40" cy="250" r="13" fill="var(--d1)"/>
+          <circle cx="140" cy="190" r="13" fill="var(--d2)"/>
+          <circle cx="250" cy="130" r="13" fill="var(--d3)"/>
+          <circle cx="360" cy="70" r="13" fill="var(--d4)"/>
+          <text x="40" y="255" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">1</text>
+          <text x="140" y="195" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">2</text>
+          <text x="250" y="135" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">3</text>
+          <text x="360" y="75" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">4</text>
+          <rect x="86" y="34" width="196" height="52" rx="16" fill="var(--color-accent-fill)"/>
+          <text x="102" y="58" font-size="13" font-weight="600" fill="var(--color-accent-foreground)" font-family="var(--font-family-system)">第二天下午</text>
+          <text x="102" y="76" font-size="13" font-weight="600" fill="var(--color-accent-foreground)" font-family="var(--font-family-system)">排鬆一點</text>
+          <path d="M108 86 L118 86 L108 98 Z" fill="var(--color-accent-fill)"/>
+        </svg>
+      </div>
+    </section>
+
+    <section class="tp-lp-features">
+      <h2 class="tp-lp-sec-title">四個你會天天用到的東西</h2>
+      <p class="tp-lp-sec-sub">不是功能清單，是實際會發生的事。</p>
+      <div class="tp-lp-grid">
+        <div class="tp-lp-card">
+          <svg class="tp-lp-card-art" viewBox="0 0 200 90" fill="none" aria-hidden="true">
+            <rect x="8" y="14" width="104" height="24" rx="12" fill="var(--color-tertiary)"/>
+            <rect x="20" y="23" width="66" height="6" rx="3" fill="var(--color-muted)" opacity=".5"/>
+            <rect x="88" y="52" width="104" height="24" rx="12" fill="var(--color-accent-fill)"/>
+            <rect x="100" y="61" width="72" height="6" rx="3" fill="var(--color-accent-foreground)" opacity=".8"/>
+          </svg>
+          <h3>說一句話就改好</h3>
+          <p>不用一格一格拖。講「第三天太趕」，它會告訴你動了什麼、多出多少車程。</p>
+        </div>
+        <div class="tp-lp-card">
+          <svg class="tp-lp-card-art" viewBox="0 0 200 90" fill="none" aria-hidden="true">
+            <path d="M14 74 C 50 74, 46 40, 84 40 S 130 20, 186 26"
+                  stroke="var(--d2)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M14 80 C 60 80, 60 58, 110 58 S 160 48, 186 52"
+                  stroke="var(--d3)" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+            <circle cx="14" cy="74" r="6" fill="var(--d2)"/>
+            <circle cx="84" cy="40" r="6" fill="var(--d2)"/>
+            <circle cx="186" cy="26" r="6" fill="var(--d2)"/>
+          </svg>
+          <h3>每天的路線一眼看完</h3>
+          <p>每日一色的路線圖，馬上看出哪天在繞路。可切一般圖 / 衛星圖。</p>
+        </div>
+        <div class="tp-lp-card">
+          <svg class="tp-lp-card-art" viewBox="0 0 200 90" fill="none" aria-hidden="true">
+            <rect x="20" y="16" width="160" height="12" rx="6" fill="var(--color-tertiary)"/>
+            <rect x="20" y="16" width="118" height="12" rx="6" fill="var(--d3)"/>
+            <rect x="20" y="39" width="160" height="12" rx="6" fill="var(--color-tertiary)"/>
+            <rect x="20" y="39" width="70" height="12" rx="6" fill="var(--d4)"/>
+            <rect x="20" y="62" width="160" height="12" rx="6" fill="var(--color-tertiary)"/>
+            <rect x="20" y="62" width="146" height="12" rx="6" fill="var(--d3)"/>
+          </svg>
+          <h3>出發前先健檢</h3>
+          <p>五個維度掃一遍行程：時間排得過緊、來回繞路、營業時間對不上，出發前先知道。</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="tp-lp-foot">
+      <span>© 2026 Tripline</span>
+      <div class="tp-lp-foot-spacer"></div>
+      <a href="/privacy">隱私權政策</a>
+    </footer>
+  </div></div></div>
+
+  <div class="note">
+    SVG 全部用 <code>var(--d1..d5)</code> 與 token 上色，所以<b>切深色會自動跟著變</b>（可以按上面「深色」試）。
+    落地時這些會是 inline SVG（不是檔案），bundle 增加約 2KB。
+  </div>
+</section>
+
+<!-- ══════════════ 變體 C ══════════════ -->
+<section class="variant" id="vC">
+  <div class="variant-head">
+    <span class="variant-tag">變體 C · 我的推薦</span>
+    <h2>CSS 重繪迷你 UI</h2>
+    <p class="lede">
+      不用照片也不用插畫，改用 HTML/CSS <b>重繪一個縮小版的真實 UI</b>。
+      看得到產品實際長什麼樣（截圖的優點），但零圖片檔、深淺色自動、UI 改了改 CSS 就好（插畫的優點）。
+    </p>
+  </div>
+  <div class="tradeoff">
+    <span class="plus">✓ 看得到真實 UI 樣貌</span>
+    <span class="plus">✓ 零圖片檔，深淺色自動</span>
+    <span class="plus">✓ 用的就是既有 token，天生一致</span>
+    <span class="minus">✗ 三者中工作量最大</span>
+    <span class="minus">✗ 真實 UI 大改時要記得同步（但只是 CSS）</span>
+  </div>
+
+  <div class="stage"><div class="device"><div class="tp-lp">
+    <nav class="tp-lp-nav">
+      <div class="tp-lp-brand">Trip<span>line</span></div>
+      <div class="tp-lp-nav-spacer"></div>
+      <a class="tp-lp-nav-login" href="/login">登入</a>
+    </nav>
+
+    <section class="tp-lp-hero">
+      <div class="tp-lp-hero-copy">
+        <div class="tp-lp-eyebrow">旅遊行程規劃</div>
+        <h1 class="tp-lp-h1">用<em>對話</em>就能改行程</h1>
+        <p class="tp-lp-sub">
+          「幫我把第二天下午排鬆一點」——講一句話，行程自己調整。
+          時間軸拖拉排序、地圖看每日路線、旅伴一起編輯，全部在同一個地方。
+        </p>
+        <div class="tp-lp-cta-row">
+          <a class="tp-lp-cta" href="/login">登入後開始使用</a>
+        </div>
+      </div>
+      <div class="tp-lp-hero-visual">
+        <div class="tp-lp-repaint">
+          <div class="tp-lp-rp-bar">
+            <span class="tp-lp-rp-dot"></span><span class="tp-lp-rp-dot"></span><span class="tp-lp-rp-dot"></span>
+            <span class="tp-lp-rp-title">沖繩自駕 · DAY 2</span>
+          </div>
+          <div class="tp-lp-rp-tl">
+            <div class="tp-lp-rp-item">
+              <div class="tp-lp-rp-time">09:30</div>
+              <div class="tp-lp-rp-rail" style="--dot:var(--d2)"></div>
+              <div class="tp-lp-rp-card"><b>美麗海水族館</b><small>景點 · 停留 2 小時</small></div>
+            </div>
+            <div class="tp-lp-rp-item">
+              <div class="tp-lp-rp-time">12:15</div>
+              <div class="tp-lp-rp-rail" style="--dot:var(--d3)"></div>
+              <div class="tp-lp-rp-card"><b>備瀨福木林道</b><small>景點 · 車程 12 分</small></div>
+            </div>
+            <div class="tp-lp-rp-item">
+              <div class="tp-lp-rp-time">18:00</div>
+              <div class="tp-lp-rp-rail" style="--dot:var(--d4)"></div>
+              <div class="tp-lp-rp-card"><b>海景餐廳</b><small>用餐 · 已訂位</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tp-lp-features">
+      <h2 class="tp-lp-sec-title">四個你會天天用到的東西</h2>
+      <p class="tp-lp-sec-sub">不是功能清單，是實際會發生的事。</p>
+      <div class="tp-lp-grid">
+        <div class="tp-lp-card">
+          <div class="tp-lp-repaint" style="margin-bottom:14px;padding:10px">
+            <div class="tp-lp-rp-chat">
+              <div class="tp-lp-rp-bubble">第二天下午排鬆一點</div>
+              <div class="tp-lp-rp-bubble me">已把兩個點移到第三天，車程少 40 分。</div>
+            </div>
+          </div>
+          <h3>說一句話就改好</h3>
+          <p>不用一格一格拖。講「第三天太趕」，它會告訴你動了什麼、多出多少車程。</p>
+        </div>
+        <div class="tp-lp-card">
+          <div class="tp-lp-repaint" style="margin-bottom:14px;padding:10px">
+            <div class="tp-lp-rp-map">
+              <svg class="tp-lp-rp-line" viewBox="0 0 200 150" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M28 118 C 70 118, 66 74, 104 66 S 156 44, 176 32"
+                      stroke="var(--d2)" stroke-width="3" fill="none" stroke-linecap="round"/>
+              </svg>
+              <div class="tp-lp-rp-pin" style="background:var(--d2);left:18px;top:108px">1</div>
+              <div class="tp-lp-rp-pin" style="background:var(--d2);left:94px;top:56px">2</div>
+              <div class="tp-lp-rp-pin" style="background:var(--d2);left:166px;top:22px">3</div>
+            </div>
+          </div>
+          <h3>每天的路線一眼看完</h3>
+          <p>每日一色的路線圖，馬上看出哪天在繞路。可切一般圖 / 衛星圖。</p>
+        </div>
+        <div class="tp-lp-card">
+          <div class="tp-lp-repaint" style="margin-bottom:14px;padding:10px">
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:8px;font-size:11.5px">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--d3);flex:0 0 8px"></span>
+                <span style="flex:1">節奏鬆緊</span><b style="color:var(--color-accent-text)">良好</b>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11.5px">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--d1);flex:0 0 8px"></span>
+                <span style="flex:1">來回繞路</span><b style="color:var(--color-accent-text)">DAY 3</b>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11.5px">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--d3);flex:0 0 8px"></span>
+                <span style="flex:1">營業時間</span><b style="color:var(--color-accent-text)">無衝突</b>
+              </div>
+            </div>
+          </div>
+          <h3>出發前先健檢</h3>
+          <p>五個維度掃一遍行程：時間排得過緊、來回繞路、營業時間對不上，出發前先知道。</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="tp-lp-foot">
+      <span>© 2026 Tripline</span>
+      <div class="tp-lp-foot-spacer"></div>
+      <a href="/privacy">隱私權政策</a>
+    </footer>
+  </div></div></div>
+
+  <div class="note">
+    <b>為什麼我推薦這版：</b>它同時拿到截圖的說明力與插畫的維護性，而且用的就是專案既有 token ——
+    深色模式、Terracotta 調性、day palette 全部天生一致，不需要另外維護一套視覺資產。
+    代價是初次工作量最大，但那是一次性的。
+  </div>
+</section>
+
+<div class="note" style="border-left-color:#B5443F">
+  <b>三版共通、還沒定的事：</b>
+  ① Hero 文案「用<b>對話</b>就能改行程」是我下的，可以換。
+  ② CTA 寫「用 Google 帳號登入即可」—— 但 app 其實也有密碼登入（<code>oauth/forgot-password</code>），要不要一併提？
+  ③ 功能區我只挑了 3 個（對話 / 地圖 / 健檢），刻意沒列滿。收藏、旅伴共編、行程筆記、天氣、匯入匯出都沒放 ——
+  要加哪個請說，但每加一個都會稀釋前三個的說服力。
+</div>
+
+</div>
+
+<script>
+(function(){
+  var body = document.body;
+  var themeBtn = document.getElementById('t-theme');
+  themeBtn.addEventListener('click', function(){
+    var dark = body.classList.toggle('dark');
+    themeBtn.setAttribute('aria-pressed', String(dark));
+    themeBtn.textContent = dark ? '淺色' : '深色';
+  });
+  document.querySelectorAll('[data-w-btn]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var w = b.getAttribute('data-w-btn');
+      body.setAttribute('data-w', w);
+      document.querySelectorAll('[data-w-btn]').forEach(function(o){
+        o.setAttribute('aria-pressed', String(o === b));
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

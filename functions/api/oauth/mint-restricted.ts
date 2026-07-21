@@ -34,7 +34,8 @@ import type { Env } from '../_types';
 // 受限 token TTL 2h（同 downscope）：覆蓋單次 spawn 最長 90min + headroom；只能碰單一 trip，較長 TTL 不擴大 blast。
 const MINT_TTL_SEC = 2 * 60 * 60;
 // owner 授權的對象 client（provision-tp-request-client.js 預設）。issue token + Consent 查核都用它。
-const TP_REQUEST_CLIENT_ID = 'tripline-tp-request';
+// 單一來源 —— 原本此處與另一檔各寫死一份。
+import { TP_REQUEST_CLIENT_ID } from '../_first-party';
 // 只有仍在佇列中的請求可 mint（防對已結案 / 失敗請求重簽 token）。
 const MINTABLE_STATUSES = new Set(['open', 'processing']);
 // no_consent park 時寫回 chat 的說明（見下方 queue-jam 防禦）。0049 CHECK 限 status 值域，

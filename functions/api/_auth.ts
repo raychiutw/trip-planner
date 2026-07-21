@@ -86,6 +86,48 @@ export async function requireTripWrite(
   if (!(await hasWritePermission(db, auth, tripId))) throw new AppError('PERM_DENIED');
 }
 
+
+/* ═══════════ OAuth scope gate ═══════════════════════════════════════════
+ * 2026-07-20 隱私盤點發現：三個權限 chokepoint 完全不檢查 scope，只看
+ * trip_permissions.user_id。使用者在授權畫面只看到「openid 識別您的身分」就按同意，
+ * 該第三方 app 實際上能讀寫他**全部行程**（含航班編號、訂房編號、緊急聯絡人電話）。
+ * → 授權畫面的承諾與實際能力不符，隱私權政策照抄即為不實陳述。
+ *
+ * ⚠ 為什麼不是單純「require trips:read」：
+ *   oauth/mint-restricted.ts 發給自家 AI pipeline 的 token 是 `scopes: []`
+ *   （註解明言「能力純由 user_id + restrict_trip 決定」）。天真加 gate 會把
+ *   「用對話改行程」整條線打掛。
+ *
+ * 所以是三分法，見 hasTripScope。
+ * ══════════════════════════════════════════════════════════════════════ */
+
+export const TRIP_READ_SCOPE = 'trips:read';
+export const TRIP_WRITE_SCOPE = 'trips:write';
+
+/**
+ * 這個 auth 主體是否被授權對行程做 `required` 這件事。
+ *
+ * 1. **第一方 session**（`scopes === undefined`）→ true。
+ *    middleware 的 session 路徑不 attach scopes（見 _middleware.ts 三個 attach 點），
+ *    session 本身就是完整授權，不是委派。
+ * 2. **自家受限 token**（有 `restrictTrip`）→ true。
+ *    已被綁死在單一行程，比任何 scope 都嚴；實際的行程限制由呼叫端既有邏輯負責。
+ * 3. **真正的第三方 OAuth token** → 必須帶對應 scope。空 scopes 一律拒絕（fail closed）。
+ *
+ * `trips:write` 隱含 `trips:read` —— 能寫的必然要能讀。
+ */
+export function hasTripScope(auth: AuthData, required: string): boolean {
+  const { scopes } = auth;
+  if (scopes === undefined) return true;                 // 第一方 session
+  if (auth.restrictTrip !== undefined) return true;      // 自家受限 token
+  // 第一方 client（tp-request AI pipeline）：授權來自 Consent + restrict_trip 而非 scopes。
+  // 不豁免的話 /api/oauth/downscope（還沒拿到 restrictTrip 的那一步）會被擋，整條 pipeline 斷。
+  if (auth.isFirstPartyClient) return true;
+  if (scopes.includes(required)) return true;
+  // 寫權隱含讀權
+  return required === TRIP_READ_SCOPE && scopes.includes(TRIP_WRITE_SCOPE);
+}
+
 /**
  * Returns true if the authenticated user has any permission row on the given trip
  * (read access). viewer / member / owner roles all return true — viewer is read-allowed.
@@ -107,6 +149,7 @@ export async function hasPermission(
   // completes the chokepoint set (hasWritePermission / requireTripReadAccess) so a
   // prompt-injected agent can't even read other trips' requests.
   if (auth.restrictTrip !== undefined && auth.restrictTrip !== tripId) return false;
+  if (!hasTripScope(auth, TRIP_READ_SCOPE)) return false;
   const row = await db
     .prepare('SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ?')
     .bind(auth.userId, tripId)
@@ -147,6 +190,9 @@ export async function requireTripReadAccess(
   if (auth?.restrictTrip !== undefined && auth.restrictTrip !== tripId) {
     throw new AppError('PERM_DENIED');
   }
+  // scope gate 放在 published 短路**之前**：沒有 trips:read 的第三方 token
+  // 連公開行程也不該透過本站 API 讀 —— 公開分享有自己的 /s/:token 路徑。
+  if (auth && !hasTripScope(auth, TRIP_READ_SCOPE)) throw new AppError('PERM_DENIED');
   const published = row.published === 1;
   if (published) return { published: true, isMember: false };
   if (!auth) throw new AppError('PERM_DENIED');
@@ -173,6 +219,7 @@ export async function hasWritePermission(
   // denies cross-trip writes at the API (confused deputy). Defense-in-depth, NOT a
   // containment boundary against a shell agent that can re-mint — see oauth/downscope.ts.
   if (auth.restrictTrip !== undefined && auth.restrictTrip !== tripId) return false;
+  if (!hasTripScope(auth, TRIP_WRITE_SCOPE)) return false;
   const row = await db
     .prepare("SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ? AND role != 'viewer'")
     .bind(auth.userId, tripId)

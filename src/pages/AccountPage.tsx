@@ -19,6 +19,14 @@ import TitleBar from '../components/shell/TitleBar';
 import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
 
+/** GET /api/account 的刪除影響預覽。 */
+interface DeleteAccountPreview {
+  /** 有 local 密碼身分 → 用密碼確認；純 OAuth → 用確認字串 */
+  hasPassword: boolean;
+  tripsOwned: number;
+  collaboratorsAffected: number;
+}
+
 interface AccountStats {
   tripCount: number;
   totalDays: number;
@@ -31,6 +39,31 @@ const SCOPED_STYLES = `
   background: var(--color-secondary);
   overflow-y: auto;
 }
+/* 版本頁尾 —— 低調、不搶眼，但要選得起來（客服會請使用者念這串）。
+   font-variant-numeric: tabular-nums 讓版本號等寬，念的時候不會看錯位。
+   user-select 保持可選（預設），不要設 none。 */
+/* 刪除帳號確認欄位（ConfirmModal 的 children slot）。 */
+.tp-account-delete-confirm { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.tp-account-delete-label {
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.tp-account-delete-error {
+  margin: 0;
+  font-size: var(--font-size-footnote);
+  color: var(--color-destructive);
+}
+
+.tp-account-version {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px 0 4px;
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tp-account-version-sep { opacity: .5; }
+.tp-account-version-commit { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .tp-account-inner {
   max-width: 720px; margin: 0 auto;
   /* audit pass2：帳號頁自成 scroll 容器（.tp-account-shell overflow-y:auto），AppShell
@@ -253,6 +286,16 @@ export default function AccountPage() {
   const [stats, setStats] = useState<AccountStats | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  /* ── 刪除帳號（Google Play 強制要求的帳號刪除路徑）──────────────────
+   * owner 決策（2026-07-20）：擁有的行程**一併刪除，含共編者的**。
+   * 所以確認畫面一定要先讓使用者看到「會刪掉幾個行程、影響幾位共編者」——
+   * 那兩個數字前端算不出來，由 GET /api/account 提供。 */
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePreview, setDeletePreview] = useState<DeleteAccountPreview | null>(null);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
 
   // v2.33.142: inline edit display_name — 取代 v2.33.122 modal。
@@ -323,6 +366,49 @@ export default function AccountPage() {
     return () => { cancelled = true; };
   }, [auth.user]);
 
+  /** 開啟刪除確認前先抓預覽 —— 沒有數字就不該讓使用者按下不可逆的按鈕。 */
+  const openDeleteModal = useCallback(async () => {
+    setDeleteError(null);
+    setDeleteInput('');
+    setDeletePreview(null);
+    setShowDeleteModal(true);
+    try {
+      setDeletePreview(await apiFetch<DeleteAccountPreview>('/account'));
+    } catch {
+      setDeleteError('無法取得刪除影響範圍，請稍後再試');
+    }
+  }, []);
+
+  /** 二次確認是否已滿足：有密碼要打密碼，純 OAuth 要打 DELETE。 */
+  const canConfirmDelete = deletePreview
+    ? (deletePreview.hasPassword ? deleteInput.length > 0 : deleteInput === 'DELETE')
+    : false;
+
+  const deleteAccount = useCallback(async () => {
+    if (!deletePreview || !canConfirmDelete) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await apiFetchRaw('/account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          deletePreview.hasPassword ? { password: deleteInput } : { confirm: deleteInput },
+        ),
+      });
+      // 帳號已不存在，不能留在帳號頁。用整頁導向而非 SPA navigate —— 要把
+      // 記憶體中的 auth context / 快取一併清掉。
+      window.location.href = '/';
+    } catch (err) {
+      setDeleting(false);
+      setDeleteError(
+        err instanceof ApiError && err.code === 'ACCOUNT_DELETE_PASSWORD_INVALID'
+          ? '密碼不正確，帳號未刪除'
+          : '刪除失敗，請稍後再試',
+      );
+    }
+  }, [deletePreview, canConfirmDelete, deleteInput]);
+
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);
     try {
@@ -374,7 +460,10 @@ export default function AccountPage() {
       tone: 'pink',
       rows: [
         { key: 'sessions', icon: 'group', title: '已登入裝置', helper: '管理所有登入中的裝置', to: '/settings/sessions' },
+        // Google Play 要求 app 內可直接取得隱私權政策，不能只放在網站頁尾。
+        { key: 'privacy', icon: 'document', title: '隱私權政策', helper: '我們收集什麼資料、如何使用', to: '/privacy' },
         { key: 'logout', icon: 'x-mark', title: '登出', helper: '清除目前裝置的登入狀態', onClick: () => setShowLogoutModal(true), danger: true },
+        { key: 'delete-account', icon: 'trash', title: '刪除帳號', helper: '永久刪除帳號與所有行程，無法復原', onClick: openDeleteModal, danger: true },
       ],
     },
   ];
@@ -488,6 +577,16 @@ export default function AccountPage() {
           </section>
         ))}
         </div>
+
+        {/* 版本頁尾 —— 使用者回報問題時第一個要問的就是「你用哪一版」。
+            值由 vite define 注入，與 Sentry release tag 同源（vite.config.ts），
+            兩套各自算的話 Sentry 上會對不到使用者報的版本。
+            放在 .tp-account-inner 內 → 跟著頁面捲動，不是 fixed 浮層。 */}
+        <div className="tp-account-version" data-testid="app-version">
+          <span>Tripline v{__APP_VERSION__}</span>
+          <span className="tp-account-version-sep" aria-hidden="true">·</span>
+          <span className="tp-account-version-commit">{__APP_COMMIT__}</span>
+        </div>
       </div>
 
       <ConfirmModal
@@ -500,6 +599,55 @@ export default function AccountPage() {
         onConfirm={handleLogout}
         onCancel={() => setShowLogoutModal(false)}
       />
+
+      {/* 刪除帳號 —— Google Play 強制要求的路徑。
+          確認畫面必須誠實顯示影響範圍：owner 決策是「行程一併刪除，含共編者的」，
+          使用者按下去之前一定要看到會波及幾位共編者。 */}
+      <ConfirmModal
+        open={showDeleteModal}
+        title="永久刪除帳號？"
+        message={
+          deletePreview
+            ? `這個動作無法復原。你的 ${deletePreview.tripsOwned} 個行程會一併刪除。`
+            : '正在確認刪除影響範圍⋯'
+        }
+        warning={
+          deletePreview && deletePreview.collaboratorsAffected > 0
+            ? `其中有共編者的行程也會刪除，${deletePreview.collaboratorsAffected} 位共編者將失去存取權，且不會另行通知。`
+            : undefined
+        }
+        confirmLabel="永久刪除"
+        cancelLabel="取消"
+        busy={deleting || !canConfirmDelete}
+        onConfirm={deleteAccount}
+        onCancel={() => setShowDeleteModal(false)}
+      >
+        {deletePreview && (
+          <div className="tp-account-delete-confirm">
+            <label className="tp-account-delete-label" htmlFor="tp-delete-confirm-input">
+              {deletePreview.hasPassword
+                ? '請輸入密碼以確認'
+                : '請輸入 DELETE 以確認'}
+            </label>
+            <input
+              id="tp-delete-confirm-input"
+              className="tp-input"
+              data-testid="delete-account-confirm-input"
+              type={deletePreview.hasPassword ? 'password' : 'text'}
+              autoComplete={deletePreview.hasPassword ? 'current-password' : 'off'}
+              value={deleteInput}
+              onChange={(e) => setDeleteInput(e.target.value)}
+              disabled={deleting}
+            />
+            {deleteError && (
+              <p className="tp-account-delete-error" role="alert">{deleteError}</p>
+            )}
+          </div>
+        )}
+        {!deletePreview && deleteError && (
+          <p className="tp-account-delete-error" role="alert">{deleteError}</p>
+        )}
+      </ConfirmModal>
 
       {/* v2.33.142: 編輯名稱 modal 拔除 — 改 inline edit (hero name input)。 */}
     </div>

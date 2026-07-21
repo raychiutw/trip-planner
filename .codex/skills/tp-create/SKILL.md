@@ -65,7 +65,10 @@ user-invocable: true
 2. 讀取品質規則（tp-quality-rules skill）
 3. 建立行程（`POST /api/trips`，API 格式見 tp-shared/references.md）：
 
-   Body: `{id, name, owner, title, description, countries, data_source:'tp-create', default_travel_mode, lang:'zh-TW', published:0, startDate, endDate, destinations:[{name, lat?, lng?, day_quota?, sub_areas?, osm_id?, osm_type?}]}`
+   Body: `{name, owner, title, description, countries, data_source:'tp-create', default_travel_mode, lang:'zh-TW', published:0, startDate, endDate, destinations:[{name, lat?, lng?, day_quota?, sub_areas?, osm_id?, osm_type?}]}`
+
+   ⚠️ **不可送 `id`**（2026-07-21 起）。行程 ID 由後端產生（`src/lib/tripId.ts`），
+   送了會回 400 `DATA_VALIDATION`。**tripId 一律取回應裡的值**，不要自己造。
 
    POST 會自動建立 trips + trip_days + trip_permissions 記錄。回傳 `{ ok: true, tripId, daysCreated }`。
 4. 為每一天產生完整內容（JSON 格式），包含：

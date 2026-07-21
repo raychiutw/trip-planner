@@ -11,7 +11,7 @@
  *   - CollabPanel 移除成員 / 撤銷邀請
  *   - 將來其他 destructive 流程(刪除 trip / 刪除 entry / 登出)
  */
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
@@ -66,6 +66,9 @@ const SCOPED_STYLES = `
 }
 .tp-confirm-warning-icon { flex-shrink: 0; font-weight: 700; }
 .tp-confirm-warning-text { flex: 1; }
+/* 自訂內容 slot —— 破壞性操作的二次確認欄位（見 children prop 註解）。 */
+.tp-confirm-body { margin-top: 16px; }
+
 .tp-confirm-actions {
   display: flex; gap: 8px; flex-wrap: wrap;
 }
@@ -117,6 +120,12 @@ export interface ConfirmModalProps {
   onConfirm: () => void;
   /** 點 cancel / Escape / backdrop 觸發 */
   onCancel: () => void;
+  /**
+   * 選填的自訂內容，渲染在 warning 與按鈕列之間。
+   * 給破壞性操作放二次確認欄位用（例如刪除帳號要輸入密碼或確認字串）——
+   * 不另造一個 modal，沿用本元件既有的焦點鎖定 / Escape / scroll-lock / a11y。
+   */
+  children?: ReactNode;
 }
 
 export default function ConfirmModal({
@@ -129,6 +138,7 @@ export default function ConfirmModal({
   busy = false,
   onConfirm,
   onCancel,
+  children,
 }: ConfirmModalProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
   // 統一 sheet 引擎（B1）：開啟 focus 確認鈕（keyboard user 直接 Enter）+ Escape
@@ -170,6 +180,7 @@ export default function ConfirmModal({
               <span className="tp-confirm-warning-text">{warning}</span>
             </div>
           )}
+          {children && <div className="tp-confirm-body">{children}</div>}
           <div className="tp-confirm-actions">
             <button
               type="button"

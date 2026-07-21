@@ -26,6 +26,7 @@ import { revokeAllOtherSessions } from '../_session';
 import { sendEmail, EmailError } from '../../../src/server/email';
 import { recordEmailEvent } from '../_audit';
 import { alertAdminTelegram } from '../_alert';
+import { maskEmail } from '../_pii';
 import { passwordChangedConfirm } from '../../../src/server/email-templates';
 import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
@@ -167,7 +168,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     });
     await alertAdminTelegram(
       context.env,
-      `密碼重設確認信寄送失敗（password 已更新）: ${tokenRow.email} (${msg})`,
+      `密碼重設確認信寄送失敗（password 已更新）: ${maskEmail(tokenRow.email)} (${msg})`,
     );
   }
 

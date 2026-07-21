@@ -52,7 +52,10 @@ describe('POST /api/trips/import — endpoint', () => {
     expect(ENDPOINT).toMatch(/if \(!result\.ok\) throw new AppError/);
   });
   it('creates a NEW trip id, owner = current user, data_source imported', () => {
-    expect(ENDPOINT).toMatch(/crypto\.randomUUID\(\)/);
+    // 2026-07-21：原本斷言 `crypto.randomUUID()`，那是匯入自己寫死的 `imp-<uuid>`。
+    // ID 規則已收斂到 src/lib/tripId 的共用 genTripId（owner 由 demo 行程編號
+    // 不合慣例而發現），這裡改鎖「用共用產生器」而非鎖特定亂數實作。
+    expect(ENDPOINT).toMatch(/generateUniqueTripId\(/);
     expect(ENDPOINT).toContain("'imported'");
     expect(ENDPOINT).toMatch(/owner_user_id/);
   });

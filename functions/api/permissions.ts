@@ -17,6 +17,7 @@
 import { logAudit, recordEmailEvent } from './_audit';
 import { requireAuth, assertNotTripRestricted } from './_auth';
 import { alertAdminTelegram } from './_alert';
+import { maskEmail } from './_pii';
 import { AppError } from './_errors';
 import type { AuthData } from '../../src/types/api';
 import { json, parseJsonBody, getPublicOrigin } from './_utils';
@@ -138,7 +139,9 @@ async function sendInvitationEmailBestEffort(
     });
     await alertAdminTelegram(
       env,
-      `行程邀請信寄送失敗: ${params.to} (trip=${params.tripId}, ${msg})`,
+      // ⚠ params.to 是**被邀請的第三方** email —— 那人還不是使用者、從沒同意過任何條款。
+      // 絕不可把它送進境外 bot 聊天群。trip id 已足以定位問題。
+      `行程邀請信寄送失敗: ${maskEmail(params.to)} (trip=${params.tripId}, ${msg})`,
     );
   }
 }
