@@ -257,7 +257,12 @@ export interface TripListItem {
   owner?: string;
   title?: string | null;
   countries?: string | null;
-  published: number;
+  /**
+   * 2026-07-21 改為選填 —— 清單來源已從 `/api/trips`（公開清單）換成
+   * `/api/my-trips`（權限清單），後者不回這一欄。可否存取由權限決定，
+   * 與 published 無關。
+   */
+  published?: number;
   dataSource?: string | null;
   lang?: string | null;
 }
