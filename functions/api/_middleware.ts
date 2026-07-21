@@ -395,7 +395,8 @@ async function handleAuth(
     return context.next();
   }
 
-  // 公開讀取：GET /api/route（Mapbox Directions proxy，只接受座標 query params、不回 user data）
+  // 公開讀取：GET /api/route（Google Routes proxy，只接受座標 query params、不回 user data）
+  // v2.23.0 起已從 Mapbox 遷移到 Google Routes —— 舊註解會誤導隱私權稽核的第三方盤點。
   if (request.method === 'GET' && url.pathname === '/api/route') {
     (context.data as Record<string, unknown>).auth = null;
     return context.next();

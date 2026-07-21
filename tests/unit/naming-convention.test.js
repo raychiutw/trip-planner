@@ -224,8 +224,16 @@ describe('API naming — trip identifier uses tripId', () => {
         const content = readFile('functions/api/trips.ts');
         if (!content) return;
 
-        expect(content, 'functions/api/trips.ts: SELECT should include "id AS tripId"')
-            .toMatch(/SELECT[\s\S]*?\bid\s+AS\s+tripId\b/);
+        // 只斷言別名存在，不要求 `SELECT` 在原始碼文字順序上先出現。
+        // 舊版是 /SELECT[\s\S]*?id AS tripId/，那依賴的是「檔案裡剛好有個 SELECT
+        // 排在欄位清單前面」—— 2026-07-21 把 `SELECT 1 FROM trips WHERE id = ?`
+        // 搬進 _tripWrite.ts 後，欄位清單 `baseCols` 的定義就跑到 `SELECT ${baseCols}`
+        // 前面，查詢完全沒變但測試紅了。規則本身是「對外回 tripId 而不是 id」，
+        // 跟宣告順序無關。
+        expect(content, 'functions/api/trips.ts: 欄位需別名為 "id AS tripId"')
+            .toMatch(/\bid\s+AS\s+tripId\b/);
+        expect(content, 'functions/api/trips.ts: 應有 SELECT 使用該欄位清單')
+            .toMatch(/SELECT\s+\$\{baseCols\}/);
     });
 
     it('trips/[id].ts GET response should include tripId field', () => {

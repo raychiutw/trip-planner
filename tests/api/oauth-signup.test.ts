@@ -36,10 +36,24 @@ function makeContext(body: unknown, env: MockEnv): Parameters<typeof onRequestPo
   } as unknown as Parameters<typeof onRequestPost>[0];
 }
 
-/** Mirror _middleware.ts try/catch: AppError → errorResponse(err). */
+/**
+ * Mirror _middleware.ts try/catch: AppError → errorResponse(err).
+ *
+ * 2026-07-20 起註冊必須帶 `privacyConsent: true`（owner：建立帳號要同意個資條款）。
+ * 這裡預設補上，讓本檔既有的案例維持「只驗自己關心的那件事」——
+ * 它們測的是 email 正規化、重複註冊、邀請碼等，不是同意流程。
+ * 傳入的 body 可以覆寫這個預設（`invoke({ ..., privacyConsent: false })`）。
+ *
+ * 同意檢查排在 email／password 驗證**之後**，所以刻意送壞 email／短密碼的
+ * 案例不受影響，仍會停在各自的錯誤碼上。
+ * 同意 gate 本身的測試在 `tests/api/signup-consent.test.ts`。
+ */
 async function invoke(body: unknown, env: MockEnv): Promise<Response> {
+  const withConsent = body !== null && typeof body === 'object'
+    ? { privacyConsent: true, ...(body as Record<string, unknown>) }
+    : body;
   try {
-    return await onRequestPost(makeContext(body, env));
+    return await onRequestPost(makeContext(withConsent, env));
   } catch (err) {
     if (err instanceof AppError) return errorResponse(err);
     throw err;

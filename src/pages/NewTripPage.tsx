@@ -343,24 +343,6 @@ function flexDatesFromMonth(monthKey: string, days: number): { start: string; en
   return { start: fmt(start), end: fmt(end) };
 }
 
-function slugify(s: string): string {
-  return (
-    s
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80) || 'trip'
-  );
-}
-
-function genTripId(name: string): string {
-  const slug = slugify(name);
-  const suffix = Date.now().toString(36).slice(-4);
-  return `${slug}-${suffix}`.slice(0, 100);
-}
-
 interface SortableDestinationRowProps {
   poi: PoiSearchResult;
   index: number;
@@ -577,7 +559,6 @@ export default function NewTripPage() {
     setSubmitting(true);
     setError(null);
     const tripName = selectedPois.map((poi) => poi.name).join('、');
-    const tripId = genTripId(tripName);
     const dates = dateMode === 'flexible'
       ? flexDatesFromMonth(flexMonth, flexDays)
       : { start: startDate, end: endDate };
@@ -602,13 +583,14 @@ export default function NewTripPage() {
         method: 'POST',
         credentials: 'same-origin',
         body: JSON.stringify({
-          id: tripId,
           name: tripName,
           startDate: dates.start,
           endDate: dates.end,
           countries,
           description: combinedDescription || undefined,
-          published: 1,
+          // published 不再由前端指定 —— 後端預設 0（不公開）。
+          // 2026-07-21 之前這裡寫死 1，於是每個新建行程都立刻進 GET /api/trips
+          // 的公開清單（未登入可讀）。使用者不會預期「建立」等於「發佈」。
           destinations: destinationsPayload,
           // v2.31.36 (migration 0068): self_drive_* + default_travel_mode removed — dead columns。
         }),

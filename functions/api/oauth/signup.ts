@@ -1,6 +1,6 @@
 /**
  * POST /api/oauth/signup
- * Body: { email: string, password: string, displayName?: string }
+ * Body: { email, password, privacyConsent: true, displayName?, invitationToken? }
  *
  * Local password account creation。建 user + auth_identities (provider='local')
  * 並立即 issueSession。`email_verified_at` 留 NULL — verify 流程透過
@@ -12,7 +12,7 @@
  *   - V2-P6 rate limit per-IP（autoplan: 3/h/IP）
  *
  * Error codes:
- *   400 SIGNUP_INVALID_EMAIL / SIGNUP_PASSWORD_TOO_SHORT / SIGNUP_PASSWORD_FORMAT
+ *   400 SIGNUP_CONSENT_REQUIRED / SIGNUP_INVALID_EMAIL / SIGNUP_PASSWORD_TOO_SHORT
  *   409 SIGNUP_EMAIL_TAKEN
  *   429 SIGNUP_RATE_LIMITED
  *   500 SYS_INTERNAL

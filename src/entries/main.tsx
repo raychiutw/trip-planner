@@ -99,6 +99,9 @@ const EditTripPage = lazyWithRetry(() => import('../pages/EditTripPage'));
 const NewTripPage = lazyWithRetry(() => import('../pages/NewTripPage'));
 // 未登入首頁。已登入者由 LandingPage 內部導向 /trips。
 const LandingPage = lazyWithRetry(() => import('../pages/LandingPage'));
+// 隱私權政策。Google Play 送審欄位與審核員都用**未登入**狀態開啟，
+// 且 SignupPage 的同意勾選框、AccountPage 入口、Flutter 註冊畫面都指向這裡。
+const PrivacyPage = lazyWithRetry(() => import('../pages/PrivacyPage'));
 const EntryActionPage = lazyWithRetry(() => import('../pages/EntryActionPage'));
 const AddStopPage = lazyWithRetry(() => import('../pages/AddStopPage'));
 const AddCustomStopPage = lazyWithRetry(() => import('../pages/AddCustomStopPage'));
@@ -195,6 +198,8 @@ if (el) {
               <Route path="/favorites/:id/add-to-trip" element={<AddPoiFavoriteToTripPage />} />
               {/* v2.23.8: direct-mode add-to-trip — Explore POI 不需先收藏，query params 帶 POI 進來 */}
               <Route path="/add-to-trip" element={<AddPoiFavoriteToTripPage />} />
+              {/* 未登入可讀 —— 不可放進需要 auth 的區塊 */}
+              <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/signup/check-email" element={<EmailVerifyPendingPage />} />

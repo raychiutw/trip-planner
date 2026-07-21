@@ -1,10 +1,12 @@
 import { logAudit } from './_audit';
 import { requireAuth, hasOpsScope, assertNotTripRestricted } from './_auth';
 import { AppError } from './_errors';
+import { generateUniqueTripId } from './trips/_tripWrite';
 import { json, getAuth, parseJsonBody } from './_utils';
 import type { Env } from './_types';
 
-const TRIPID_RE = /^[a-z0-9-]+$/;
+// TRIPID_RE 已移除（2026-07-21）：ID 不再由呼叫端提供，格式由 src/lib/tripId 的
+// genTripId 保證（有測試鎖 `^[a-z0-9][a-z0-9-]*$`），沒有外部輸入需要驗。
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const MAX_DAYS = 30;
@@ -46,16 +48,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const body = await parseJsonBody<Record<string, unknown>>(context.request);
 
-  const id = body.id as string | undefined;
+  // 2026-07-21（owner：「建立 id 規則要移往後端」「不要相容模式」）：
+  // 行程 ID 一律由後端產生，呼叫端不得指定。
+  //
+  // 拒絕而非默默忽略：呼叫端若送了 id 又拿它去導頁，忽略的話會建立成功卻
+  // 404 —— 「建立成功但看不到」比當場 400 難查太多。硬錯讓它立刻修。
+  // 呼叫端一律改讀回應的 `tripId`。
+  if (body.id !== undefined) {
+    throw new AppError('DATA_VALIDATION', '行程 ID 由伺服器產生，請勿指定；請改用回應中的 tripId');
+  }
+
   const name = body.name as string | undefined;
   const startDate = body.startDate as string | undefined;
   const endDate = body.endDate as string | undefined;
 
-  if (!id || !name || !startDate || !endDate) {
-    throw new AppError('DATA_VALIDATION', '缺必填欄位：id, name, startDate, endDate');
-  }
-  if (!TRIPID_RE.test(id) || id.length > 100) {
-    throw new AppError('DATA_VALIDATION', 'tripId 格式錯誤：僅允許小寫英數字與連字號，最長 100 字元');
+  if (!name || !startDate || !endDate) {
+    throw new AppError('DATA_VALIDATION', '缺必填欄位：name, startDate, endDate');
   }
   if (!DATE_RE.test(startDate) || !DATE_RE.test(endDate)) {
     throw new AppError('DATA_VALIDATION', '日期格式錯誤：須為 YYYY-MM-DD');
@@ -96,8 +104,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   const db = context.env.DB;
-  const existing = await db.prepare('SELECT 1 FROM trips WHERE id = ?').bind(id).first();
-  if (existing) throw new AppError('DATA_CONFLICT', 'tripId 已存在');
+  // ID 由後端產生並保證未被使用（撞號自動重生，不對呼叫端拋 DATA_CONFLICT ——
+  // 呼叫端已無從選擇 id，怪它撞號沒有道理，也沒有自救方式）。
+  const id = await generateUniqueTripId(db, name);
 
   const stmts: D1PreparedStatement[] = [];
 
@@ -187,22 +196,20 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const showAll = url.searchParams.get('all') === '1';
   const auth = getAuth(context);
 
-  // V2 cutover (migration 0047): trips.owner email column dropped — owner_user_id
-  // is canonical; LEFT JOIN users 拿 owner email for legacy display。
-  // 2026-05-07：加 u.display_name AS owner_display_name 給 trip card avatar
-  // initial 顯示「帳號名稱」第一字母（不是 email[0]）。
+  // `GET /api/trips` 是**未登入可讀**的公開行程清單，一律不回擁有者個資。
   //
-  // owner email 與 owner_display_name 都是擁有者個資，只給「已登入且未受 trip 限制」
-  // 的呼叫者。2026-07-16 前 `curl /api/trips` 零認證就能拿到每個公開行程擁有者的
-  // email；display_name 一樣要擋 —— 登入時預設帶 Google 真名（callback/google.ts），
-  // 而匿名情境前端根本不 render 這兩欄（唯一匿名 consumer TripPage 只拿 tripId 判信任）。
-  // 這對齊專案既有的 bar：_share.ts:154 匿名分享連結「never expose the owner's name」。
-  // restrictTrip 降權 token 也拿不到 —— 它只該碰被授權的那一個 trip，不該撈全站 owner
-  // 清單。ops service token（restrictTrip undefined）維持原樣，且目前無 reader 用 owner。
-  const includeOwnerPii = !!auth && auth.restrictTrip === undefined;
-  const ownerCols = includeOwnerPii ? 'u.email AS owner, u.display_name AS owner_display_name,' : '';
+  // 沿革：2026-07-16 前零認證就能拿到每個公開行程擁有者的 email；當時把門檻設成
+  // 「已登入且未受 trip 限制」。2026-07-21 實測發現那個門檻等於沒有 —— 用當天新
+  // 註冊的帳號打 prod，照樣撈到與該帳號毫無關係的第三方 email。註冊人人都能做。
+  //
+  // 直接拿掉而不是加權限判斷：這兩欄在本端點**沒有任何 consumer**。前端行程清單
+  // 讀的是 `/api/my-trips`（TripsListPage.tsx:832），owner 由那支供應，且那支以
+  // trip_permissions 為條件 —— 給的是「你有權限的行程」的 owner，本來就合理。
+  // 少一個條件分支就少一種設錯的方式。
+  // display_name 同屬個資（登入時預設帶 Google 真名，見 callback/google.ts），
+  // 對齊 _share.ts:154「匿名分享連結 never expose the owner's name」。
   const baseCols = `t.id AS tripId, t.name,
-                    ${ownerCols} t.owner_user_id,
+                    t.owner_user_id,
                     t.title,
                     t.countries, t.published, t.data_source, t.lang,
                     (SELECT COUNT(*) FROM trip_days d WHERE d.trip_id = t.id) AS day_count,
