@@ -692,11 +692,20 @@ async function setupApiMocks(page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
   });
 
+  // 2026-07-21：回完整資料，不再只回 { tripId }。
+  //
+  // 舊 mock 模仿的是「/my-trips 只給 id 集合、metadata 另外跟 /api/trips 要」
+  // 的用法。前端在 v2.57.3/v2.57.4 改為單抓 /my-trips（/api/trips 只回
+  // published 行程，行程改為不公開後 metadata 全空 → 名稱變 tripId），
+  // 這個 mock 就成了唯一還在假設舊契約的地方 —— e2e 因此看不到標題。
+  //
+  // 真實 /api/my-trips 本來就帶 name/title/countries/totalDays/startDate/
+  // endDate/memberCount，mock 照實回才不會再與 prod 脫節。
   await page.route(/\/api\/my-trips$/, (route) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(MOCK_TRIPS_LIST.map((t) => ({ tripId: t.tripId }))),
+      body: JSON.stringify(MOCK_TRIPS_LIST),
     });
   });
 
