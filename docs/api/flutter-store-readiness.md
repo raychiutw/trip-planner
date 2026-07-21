@@ -83,7 +83,18 @@ Web 與 Flutter 建立行程時皆須使用 `published = 0`。
 ## 2. 註冊：加上 `privacyConsent`（breaking）
 
 ### 變更原因
-Google Play 要求建立帳號時取得個資條款同意，且必須**留下證據**。純前端勾選框
+⚠️ **更正（2026-07-21）**：本文件先前寫「Google Play 要求建立帳號時取得個資條款
+同意」—— 那是**過度延伸**。Google Play 強制的是隱私權政策連結、Data Safety 表單
+揭露，以及蒐集敏感或使用者非預期資料時的明確揭露與同意，並非通用的「註冊必須
+勾選同意」。參見
+<https://support.google.com/googleplay/android-developer/answer/11150561>。
+
+實際依據是 **Tripline 自身的產品／法務決策**（owner 2026-07-20：「建立帳號要客戶
+同意個資條款」），並已落成**後端 API 契約** —— `/api/oauth/signup` 缺
+`privacyConsent` 一律回 400。對 Flutter 而言這是硬性的，但理由是 API 契約，
+不是商店規定。
+
+純前端勾選框
 擋不住直接打 API，也在 DB 裡留不下「這個人同意過」的紀錄。後端因此新增
 `users.privacy_consent_at` + `privacy_policy_version`（migration 0088）。
 
@@ -120,10 +131,17 @@ Future<SignupResult> signup({
 
 ---
 
-## 3. 刪除帳號（Google Play 強制，目前完全沒有）
+## 3. 刪除帳號（Google Play **與 Apple** 都強制，目前完全沒有）
 
-Flutter 端搜不到任何 `deleteAccount` / `DELETE /account`。Google Play 要求
-app 內要有可達的帳號刪除路徑，缺了會退件。
+Flutter 端搜不到任何 `deleteAccount` / `DELETE /account`。
+
+**兩家商店都要求**，缺了都會退件：
+- Google Play：可建立帳號的 app 須提供 app 內與網頁各一條刪除路徑
+  <https://support.google.com/googleplay/android-developer/answer/13327111>
+- Apple App Store：支援建立帳號的 app **必須能在 app 內發起刪除**
+  <https://developer.apple.com/support/offering-account-deletion-in-your-app>
+
+先前本文件只寫 Google Play，是不完整的 —— iOS 版同樣過不了審。
 
 **完整 API 規格見 `docs/api/account-deletion.md`**（含 Flutter 章節）。摘要：
 
