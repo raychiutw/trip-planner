@@ -30,6 +30,10 @@ export function resolveTripId(
   // 規則 2：明確導航目標不在 permission-filtered /api/trips（排除使用者自己的私人
   // clone）也信任它 — 存取權交給 useTrip 的實際 fetch 驗證，絕不 silently 換成別的 trip。
   if (isExplicit && tripId) return tripId;
-  const defaultTrip = trips.find((t) => t.published === 1);
+  // 2026-07-21：candidates 改由 /api/my-trips 供應（純看 trip_permissions），
+  // 每一筆都是使用者有權限的行程 —— published 與可否存取無關，直接取第一筆。
+  // 舊版是 `find(t => t.published === 1)`，既有行程全部改為不公開後回 undefined，
+  // 連 fallback 都沒有，畫面停在 unpublished 錯誤態。
+  const defaultTrip = trips[0];
   return defaultTrip ? defaultTrip.tripId : null;
 }

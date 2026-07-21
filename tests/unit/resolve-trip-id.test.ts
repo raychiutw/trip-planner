@@ -31,8 +31,16 @@ describe('resolveTripId', () => {
     expect(resolveTripId(null, false, TRIPS)).toBe('okinawa-HuiYun');
   });
 
-  it('無 tripId 且無 published trip → null', () => {
-    expect(resolveTripId(null, false, [{ tripId: 'x', published: 0 }])).toBeNull();
+  it('無 tripId → fallback 第一筆（不再看 published）', () => {
+    // 2026-07-21 翻轉。舊行為是「沒有 published=1 的就回 null」，但 candidates
+    // 已改由 /api/my-trips 供應（純看 trip_permissions），每一筆都是使用者有
+    // 權限的行程 —— 用 published 篩選會在既有行程全部改為不公開後回 null，
+    // 使用者連預設行程都導不了（owner 2026-07-21 回報側邊欄「尚無行程」）。
+    expect(resolveTripId(null, false, [{ tripId: 'x', published: 0 }])).toBe('x');
+  });
+
+  it('清單為空 → null（真的沒有行程時才回 null）', () => {
+    expect(resolveTripId(null, false, [])).toBeNull();
   });
 
   it('明確 tripId 不在清單且無任何 published → 仍回該明確 tripId', () => {

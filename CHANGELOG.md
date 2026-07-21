@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.3] - 2026-07-21
+
+### Fixed
+- **側邊欄「尚無行程」、行程切換器只顯示 tripId**（owner 回報的 prod 回歸）——
+  v2.57.1 把既有行程改為不公開後，三個地方同時空掉。
+  - 根因不是 v2.57.1，是這三處**本來就取錯來源**，一直用「全站公開行程」
+    冒充「我的行程」。過去看起來能用，純粹因為前端建立行程時寫死
+    `published: 1`（v2.57.0 已移除）。
+  - `src/hooks/useMyTrips.ts` 打 `/api/trips?all=1` —— 但 `all=1` 需要
+    `ops:trips:read` service-token scope，一般使用者拿不到，於是**靜默降級**
+    成只回 published 行程。
+  - `src/pages/TripPage.tsx` 打 `/api/trips`，那支永遠只回 `published = 1`。
+  - `src/lib/resolveTripId.ts` 的 fallback 是 `find(t => t.published === 1)`，
+    回 undefined 後連預設行程都導不了。
+  - 三處全部改用 `/api/my-trips`（`FROM trip_permissions WHERE user_id = ?`，
+    純看權限）。
+- **`isTripListItem` 不再要求 `published` 欄位** —— `/api/my-trips` 不回該欄，
+  留著會讓每一筆都被 filter 掉、清單靜默清空。這個 guard 先前也曾因為把
+  `owner` 列為必要而讓匿名檢視公開行程時整頁全空；只檢查真正會用到的欄位
+  （`tripId` / `name`）。
+
 ## [2.57.2] - 2026-07-21
 
 ### Added
