@@ -90,7 +90,20 @@ const SCOPED_STYLES = `
 .day-content-loaded {
   animation: fadeIn 300ms var(--transition-timing-function-apple) both;
 }
-.trip-content { min-width: 0; }
+/* 內容欄的表面（owner 2026-07-21：「桌機行程功能黑色太多」）。
+ *
+ * browse 對 prod 深色實測：行程頁有 16,091k px2 的透明面積壓在單一
+ * .app-shell 的 #1C1C1E 上 —— 整片內容區沒有自己的表面，於是全糊成一塊近黑。
+ * 相對地 /trips 的 .tp-trips-shell 早就用 --color-secondary 抬起來了
+ * （實測 #2C2C2E，1093k），所以那頁沒這問題。
+ *
+ * 這裡不是發明新規則，是補上這個 app 自己已有的做法：內容欄抬一階，
+ * 與 .app-shell 的 base 之間才讀得出層次。Apple HIG 的深色模式正是靠
+ * elevation 分層（#1C1C1E → #2C2C2E → #3A3A3C），不是把亮色反過來。 */
+.trip-content {
+  min-width: 0;
+  background: var(--color-secondary);
+}
 
 /* Compact-hidden TitleBar actions — 桌機(>=761px) 顯示「建議 / 共編 / 下載」
  * inline,手機塞進 OverflowMenu 避免標題列擁擠。 */
