@@ -3,6 +3,81 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.0] - 2026-07-21
+
+Google Play 上架整備。原本 5 項需求，盤點後補到 7 項 —— 帳號刪除是 Google Play
+強制要求但專案完全沒有，註冊同意個資條款是 owner 追加。過程中撞到三個 prod 實際
+問題，一併處理。
+
+### Added
+- **未登入首頁 `/`**（`LandingPage`）—— 原本 `/` 落到 wildcard → `/trips` → `/login`，
+  訪客看不到任何功能說明。插畫全部 inline SVG，維持 DESIGN.md L284「全站不做照片
+  ／artwork」的零圖片檔前提（有測試擋住 `<img>`）。
+- **隱私權政策頁 `/privacy`**（`PrivacyPage`）—— 未登入可讀。`SignupPage` 的同意
+  連結、`AccountPage` 入口、Flutter 註冊畫面、Google Play Console 欄位，四處都指向
+  這裡，先前全是 404。
+  - 內容**逐條對照程式行為**而非照抄 mockup。草稿寫的 7 項保留期只有「共編邀請
+    30 天」為真（`invitation-cleanup.yml` 有跑）；其餘 6 項連同「逾期自動清除」全部
+    不成立 —— 那些清理都在 `scripts/auth-cleanup.js`，而該檔**沒有任何排程**，
+    `daily-report.js` 的 `cleanupOldLogs` 又已改 no-op 交棒給它，等於兩邊都沒人做。
+  - 揭露跨境傳輸（Sentry 資料在美國）與寄信路徑（驗證信／重設信／共編邀請信經
+    自架主機再由 Gmail SMTP 寄出，被邀請第三方的 email 也走這條）。
+  - 14 條測試鎖住「不得出現與程式行為不符的陳述」，含直接斷言頁面不能出現
+    「逾期自動清除」。
+- **帳號刪除**（Google Play 強制項）—— `GET /api/account` 影響預覽 +
+  `DELETE /api/account`，`AccountPage` 有可達入口。逐表顯式刪除而非依賴 CASCADE：
+  live schema 有 6 張表帶 `trip_id` 卻無 trips 外鍵、14 張表帶身分卻無 users 外鍵。
+  D1 無跨 statement 交易，順序刻意由外圍往 `users` 收 —— 中斷時殘留孤兒資料，
+  而非「使用者已刪但個資還在」。函式冪等。二次確認：有密碼者輸入密碼、
+  純 OAuth 者輸入 `DELETE`。
+- **註冊需同意個資條款**（migration 0088）—— 記錄 `privacy_consent_at` +
+  `privacy_policy_version`。前端勾選框擋不住直接打 API，也在 DB 留不下證據，
+  所以後端一併擋（`SIGNUP_CONSENT_REQUIRED`，排在 rate limit 之前）。兩欄可為
+  NULL 是刻意的：既有使用者是「無同意紀錄」，不等於「已同意」。
+- **帳號頁版本資訊** —— `scripts/app-version.mjs` 作為版本／commit 單一來源。
+  `vitest.config.js` 是獨立設定、不吃 `vite.config.ts` 的 `define`，兩邊都要注入
+  （已加測試守住這個不變量）。
+- **Google Play 送審 demo 帳號** —— `scripts/seed-demo-account.mjs` 走 HTTP
+  signup + import 建立，不需 Cloudflare API token。
+- **`src/lib/tripId.ts`** —— 行程 ID 產生的單一來源。
+
+### Changed
+- **行程 ID 規則移往後端**（**breaking**）—— `POST /api/trips` 送 `id` 一律回 400。
+  owner 由 demo 行程編號 `imp-62a83969-...` 不合慣例而發現：建立走前端 `genTripId`
+  （`trip-bp5o`），匯入走後端寫死 `imp-<uuid>`，同一系統長出兩種慣例。
+  - 不留相容模式。拒絕而非默默忽略 —— 忽略會讓呼叫端拿自己那個 id 去導頁而 404，
+    變成「建立成功但看不到」的隱性 bug。
+  - 後綴改 crypto 亂數而非照抄前端的 `Date.now().slice(-4)`（同毫秒會撞，而匯入
+    路徑沒有唯一性檢查）。撞號由 `generateUniqueTripId` 自動重生，不再對呼叫端拋
+    `DATA_CONFLICT` —— 呼叫端已無從選擇 id，怪它撞號沒有道理也無法自救。
+  - ⚠️ **Flutter 端需同步修改**，見 `docs/api/flutter-store-readiness.md`。
+- **新建行程預設不公開** —— 前端原本寫死 `published: 1`，於是每個新行程立刻進
+  未登入可讀的公開清單。使用者不會預期「建立」等於「發佈」。共編不受影響 ——
+  `/api/my-trips` 純看 `trip_permissions`，`published` 只控制公開清單。
+
+### Security
+- **`GET /api/trips` 不再回傳擁有者 email 與顯示名稱** —— 2026-07-16 修過匿名情境，
+  但門檻只設到「已登入」，而註冊人人都能做。實測：用當天新註冊的帳號打 prod，
+  撈到與該帳號毫無關係的第三方 email。直接移除兩欄而非加權限判斷 —— 這兩欄在本
+  端點沒有任何 consumer（前端讀 `/api/my-trips`），留著的唯一作用就是外洩。
+- **第三方 OAuth token 現在需要行程 scope** —— `hasPermission` /
+  `requireTripReadAccess` / `hasWritePermission` 原本完全不看 scope，使用者在授權
+  畫面只同意「openid 識別身分」，該第三方實際能讀寫他全部行程。改採三分法而非
+  單純 require scope：`mint-restricted` 發給自家 AI pipeline 的 token 是 `scopes: []`，
+  天真加 gate 會把「用對話改行程」整條線打掛。第一方判定用共用常數而非選填 env
+  （用 env 時 `oauth-downscope` 整合測試直接 403）。
+- **告警與稽核紀錄的 email 改存遮罩版**（`functions/api/_pii.ts`）—— 6 處套用。
+  其中 `permissions.ts` 送的是**被邀請的第三方** email，那人還不是使用者、
+  從沒同意過任何條款，卻被送進境外 Telegram 群。
+
+### Fixed
+- `.gitignore` 原本只擋精確的 `.dev.vars`，擋不住 `.dev.vars.qa-backup` 這類帶密鑰
+  的副本 → 改 `.dev.vars.*` + `!.dev.vars.example`。
+- `_middleware.ts` 註解仍寫「Mapbox Directions proxy」，實際 v2.23.0 已遷 Google
+  Routes。過時註解正是本次隱私稽核第三方盤點被誤導的來源。
+- `naming-convention.test.js` 的 `id AS tripId` 斷言原本依賴「檔案裡剛好有個
+  SELECT 排在欄位清單前面」，重構後假紅。改為不綁原始碼文字順序。
+
 ## [2.56.12] - 2026-07-20
 
 ### Fixed（v2.56.9「全版」的 regression — master CI e2e 抓到）
