@@ -402,7 +402,10 @@ export default function MapPage() {
 
     cards.forEach((c) => observer.observe(c));
     return () => observer.disconnect();
-  }, [cardEntryPins, activeTab]);
+    // selectedGooglePoi 納入 deps：顯示 GooglePoiCard 時 entry-cards 容器（ref={cardsRef}）
+    // 被三元換掉、關閉後是全新 DOM 節點；沒有這個 dep，observer 不重建仍觀察舊的脫離節點，
+    // 卡片捲動 → active entry / day tab 同步（scroll-spy）在 POI 卡開關一輪後失效。
+  }, [cardEntryPins, activeTab, selectedGooglePoi]);
 
   /* --- Card click → scroll into view + set active + sync day nav (v2.31.81 #1) --- */
   const handleCardClick = useCallback((entryId: number) => {
@@ -435,8 +438,10 @@ export default function MapPage() {
     el.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
     const t = setTimeout(() => { scrollingProgrammatically.current = false; }, 300);
     return () => clearTimeout(t);
+    // selectedGooglePoi 納入 deps：同上，POI 卡關閉後 entry-cards 重新掛載，需重跑一次
+    // 把 active 卡捲回中央（新節點的 cardsRef 才對得上）。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, cardEntryPins.length]);
+  }, [activeTab, cardEntryPins.length, selectedGooglePoi]);
 
   // MapPage 是 /trip/:id/map(從行程詳情下鑽的 trip-scoped 地圖)→ 顯 back 回行程詳情
   // 是 HIG drill-down 語意(見下方 TitleBar back)。〔2026-04-29 v2.17.14「地圖不需要回前頁」

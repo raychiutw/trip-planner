@@ -720,6 +720,23 @@ export default function TripsListPage() {
     navigate(`/trips?selected=${encodeURIComponent(last.tripId)}${hash}`, { replace: true });
   }, [myTrips, visibleTrips, selectedFromUrl, navigate, isDesktop]);
 
+  // ?selected 指向不在可見清單的行程（已封存/刪除/無權限被濾掉）時：header/switcher/actions
+  // 用 effectiveSelectedId（fallback 到 visibleTrips[0]），但桌機中欄的
+  // resolveDesktopMiddleColumnTripId 讀「原始 ?selected」→ 中欄顯示 X、header 操作 Y 發散。
+  // 把 URL 正規化成實際顯示的行程，讓中欄與 header 讀同一真相。桌機限定（手機中欄不經
+  // resolveDesktopMiddleColumnTripId、直接用 effectiveSelectedId，本無此發散）。正規化後
+  // selected 變有效 → guard 命中不再觸發，無迴圈。
+  useEffect(() => {
+    if (!isDesktop) return;
+    if (!selectedFromUrl) return;                                      // 無 selected 交給上面的還原 effect
+    if (myTrips.length === 0) return;                                  // 等 trips 載入才判斷
+    if (visibleTrips.some((t) => t.tripId === selectedFromUrl)) return; // 有效 → 不動
+    const next = new URLSearchParams(searchParams);
+    if (effectiveSelectedId) next.set('selected', effectiveSelectedId);
+    else next.delete('selected');
+    setSearchParams(next, { replace: true });
+  }, [isDesktop, selectedFromUrl, myTrips.length, visibleTrips, effectiveSelectedId, searchParams, setSearchParams]);
+
   // Card click 同步寫 ActiveTripContext — 不能等 embedded TripPage mount 才設，
   // 否則 user 點完立刻切 bottom-nav 到 /chat，ChatPage 拿舊 activeTripId 會把
   // 訊息送錯 trip。

@@ -324,10 +324,15 @@ function TripPageInner(
    * useEffect 兩階段 pattern：第一次 render = null，effect commit 後 setState
    * 觸發 re-render 拿 node 後 portal。 */
   const [sheetPortalNode, setSheetPortalNode] = useState<Element | null>(null);
+  // portalNode 納入 deps：<TripPage> 是單例（TripPageHost key={tripId} 不隨路由 remount），
+  // 這個 mount-once lookup 過去只跑一次 → 開/關桌機第三欄操作面板後 host 的
+  // #trip-sheet-portal 節點被拆掉重建，sheetPortalNode 仍指向舊的脫離節點，桌機 sticky
+  // map 消失（深連結先進 /trip/:id/edit 時更是永遠抓不到）。portalNode 與 #trip-sheet-portal
+  // 同屬 TripsListPage 的 AppShell、一起 mount/unmount，故用它當「host 已換」訊號重查。
   useEffect(() => {
     if (!noShell) return;
     setSheetPortalNode(document.getElementById('trip-sheet-portal'));
-  }, [noShell]);
+  }, [noShell, portalNode]);
 
   /* --- lsRenewAll once per session (#9) --- */
   useEffect(() => {
@@ -426,7 +431,21 @@ function TripPageInner(
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => { el.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
-  }, [activeTripId]);
+    // portalNode 納入 deps：host 切換時 .app-shell-main 換新 DOM，listener 需重綁到新容器，
+    // 否則仍綁在已卸載的舊容器、新容器完全沒 listener → 切換後連捲動位置都不再被記住。
+  }, [activeTripId, portalNode]);
+
+  // 主 portal host 切換（開/關桌機第三欄操作面板 → TripsListPage ⇄ TripStackLayout）時，
+  // AppShell 連同 .app-shell-main 整個換成新 DOM、scrollTop 歸零；但 <TripPage> 是單例不
+  // remount，下方的初始捲動 effect 因 initialScrollDone latch 不再跑 → 中欄會跳回頂端。
+  // 這裡在 host 切換（portalNode 變更）後補一次還原，維持中欄捲動連續性；首次掛載
+  // （initialScrollDone 尚 false）交給初始 effect，這裡不搶。restoreScrollTo 自帶雙層讓位
+  // （見 preserveScroll），user 一動即停手。
+  useEffect(() => {
+    if (!activeTripId || !portalNode || !initialScrollDone.current) return;
+    const saved = recallScroll(activeTripId);
+    if (saved != null) restoreScrollTo(saved);
+  }, [portalNode, activeTripId]);
 
   const { trip, days, currentDayNum, switchDay, refetchCurrentDay, refetchDay, allDays, loading, error } =
     useTrip(activeTripId);

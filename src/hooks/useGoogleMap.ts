@@ -111,6 +111,15 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
     onMapClick,
   } = opts;
 
+  // click listener 掛在下方 [] init-once effect 內，閉包會鎖定首次 render 的 callback。
+  // 目前呼叫端（MapPage → TpMap）傳的是穩定 callback（state setter + useCallback[]）故無
+  // 實害，但把最新值存進 ref 讓 listener 讀取，避免未來呼叫端傳 inline callback 時靜默
+  // stale（icon 欄位是 string、型別擋不住這類 footgun — 見 handoff lesson #5）。
+  const onPoiClickRef = useRef(onPoiClick);
+  const onMapClickRef = useRef(onMapClick);
+  onPoiClickRef.current = onPoiClick;
+  onMapClickRef.current = onMapClick;
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -189,9 +198,9 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
               if (result.type === 'poi') {
                 // 蓋掉 Google 預設行為（如未來版本恢復內建 POI info window）。
                 (e as google.maps.IconMouseEvent).stop?.();
-                onPoiClick?.(result.poi);
+                onPoiClickRef.current?.(result.poi);
               } else {
-                onMapClick?.();
+                onMapClickRef.current?.();
               }
             },
           );

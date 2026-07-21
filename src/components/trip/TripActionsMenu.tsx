@@ -57,10 +57,10 @@ export const TRIP_ACTIONS_MENU_STYLES = `
 .tp-embedded-menu-section-label {
   font-size: var(--font-size-caption2);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-muted);
-  padding: 6px 12px 2px;
+  padding: 8px 12px 4px;
 }
 `;
 
