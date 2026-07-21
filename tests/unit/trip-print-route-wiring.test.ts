@@ -10,6 +10,8 @@ import { join } from 'node:path';
 const ROOT = join(__dirname, '..', '..');
 const main = readFileSync(join(ROOT, 'src/entries/main.tsx'), 'utf8');
 const list = readFileSync(join(ROOT, 'src/pages/TripsListPage.tsx'), 'utf8');
+// v2.57.x: EmbeddedActionMenu 抽到 TripActionsMenu.tsx（供 TripStackLayout 共用）。
+const menu = readFileSync(join(ROOT, 'src/components/trip/TripActionsMenu.tsx'), 'utf8');
 
 describe('trip print route + menu wiring', () => {
   it('registers the print route under /trip/:tripId', () => {
@@ -17,9 +19,9 @@ describe('trip print route + menu wiring', () => {
     expect(main).toMatch(/const TripPrintPage = lazyWithRetry\(/);
   });
 
-  it('EmbeddedActionMenu accepts onPrint and the 列印 button uses it (fallback to togglePrint)', () => {
-    expect(list).toMatch(/onPrint\?: \(\) => void/);
-    expect(list).toMatch(/onPrint \? onPrint\(\) : tripPageRef\.current\?\.togglePrint\(\)/);
+  it('TripActionsMenu accepts onPrint and the 列印 button uses it (fallback to togglePrint)', () => {
+    expect(menu).toMatch(/onPrint\?: \(\) => void/);
+    expect(menu).toMatch(/onPrint \? onPrint\(\) : tripPageRef\.current\?\.togglePrint\(\)/);
   });
 
   it('call site navigates the 列印 menu to /print', () => {

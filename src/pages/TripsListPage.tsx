@@ -20,8 +20,7 @@
  *     metadata，但那支對一般使用者降級成 published-only，行程改為不公開後
  *     名稱全空 → 卡片顯示 tripId。單一來源即可。
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -40,6 +39,7 @@ import TitleBar from '../components/shell/TitleBar';
 import AccountCircle from '../components/shell/AccountCircle';
 import TripCardMenu from '../components/trip/TripCardMenu';
 import ShareLinkModal from '../components/share/ShareLinkModal';
+import TripActionsMenu from '../components/trip/TripActionsMenu';
 // v2.18.0:CollabSheet → CollabPage(獨立路由),InfoSheet wrapper 移除
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -47,6 +47,9 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import { TripSelect } from '../components/TripSelect';
 import TripPage, { type TripPageHandle } from './TripPage';
+import { useTripPageHandle } from '../contexts/TripPageHandleContext';
+import { useTripMainPortal } from '../contexts/TripMainPortalContext';
+import { TRIP_MAIN_PORTAL_ID } from '../lib/tripStackRoutes';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 
 const SCOPED_STYLES = `
@@ -85,47 +88,8 @@ const SCOPED_STYLES = `
   display: block;
   min-height: 100%;
 }
-.tp-embedded-menu {
-  position: fixed;
-  min-width: 200px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  padding: 4px;
-  z-index: var(--z-modal, 9000);
-  display: flex; flex-direction: column;
-  gap: 1px;
-}
-.tp-embedded-menu-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px;
-  border: none; background: transparent;
-  font: inherit; font-size: var(--font-size-callout);
-  color: var(--color-foreground);
-  text-align: left;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  min-height: 40px;
-}
-.tp-embedded-menu-item:hover { background: var(--color-hover); }
-.tp-embedded-menu-item:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: -2px;
-}
-.tp-embedded-menu-item .svg-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-muted); }
-.tp-embedded-menu-divider {
-  height: 1px;
-  background: var(--color-border);
-  margin: 4px 0;
-}
-.tp-embedded-menu-section-label {
-  font-size: var(--font-size-caption2);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  padding: 8px 12px 4px;
-}
+/* .tp-embedded-menu* 樣式已抽到 TripActionsMenu.tsx（TRIP_ACTIONS_MENU_STYLES），
+ * 該元件自己 render <style>，這裡不再重複定義。 */
 @media (min-width: 1024px) {
   .tp-trips-grid {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -588,210 +552,8 @@ function cardMeta(trip: TripInfo): string {
   return '';
 }
 
-const MENU_WIDTH = 200;
-const VIEWPORT_MARGIN = 8;
-/** menu 高度估算（首次 open menuRef 尚未量到時用；~6 項 × 44 + divider + padding）。 */
-const ESTIMATED_MENU_HEIGHT = 300;
-/** 底部保留高度（GlobalBottomNav ~56 + iOS safe-area + margin）— 往下展開不可侵入這區，否則選單被遮。 */
-const BOTTOM_SAFE_AREA = 96;
-
-interface EmbeddedActionMenuProps {
-  tripId: string;
-  tripPageRef: React.RefObject<TripPageHandle | null>;
-  onEdit: () => void;
-  onCollab: () => void;
-  onHealthCheck: () => void;
-  onNotes?: () => void;
-  onPrint?: () => void;
-  onShare?: () => void;
-}
-
-function EmbeddedActionMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck, onNotes, onPrint, onShare }: EmbeddedActionMenuProps) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const close = useCallback(() => setOpen(false), []);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    let rafId: number | null = null;
-    function recompute() {
-      const btn = triggerRef.current;
-      if (!btn) return;
-      const r = btn.getBoundingClientRect();
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      let left = r.right - MENU_WIDTH;
-      if (left < VIEWPORT_MARGIN) left = VIEWPORT_MARGIN;
-      if (left + MENU_WIDTH > vw - VIEWPORT_MARGIN) left = vw - MENU_WIDTH - VIEWPORT_MARGIN;
-      // dropUp：往下展開若會被底部（bottom nav + safe area）遮 → 改往上展開（trigger 上方）。
-      // 靠列表底部的卡片 menu 原本固定 r.bottom+6 往下、超出可視區被 nav 蓋住（QA 截圖）。
-      const menuH = menuRef.current?.offsetHeight || ESTIMATED_MENU_HEIGHT;
-      const below = r.bottom + 6;
-      const dropUp = below + menuH > vh - BOTTOM_SAFE_AREA && r.top - menuH - 6 >= VIEWPORT_MARGIN;
-      setPos({ top: dropUp ? r.top - menuH - 6 : below, left });
-    }
-    // rAF coalesce — scroll/resize 高頻 fire 時合併到單一 frame，避免 long
-    // timeline scroll 時 getBoundingClientRect + setState 每 ms 跑造成 jank。
-    function scheduleRecompute() {
-      if (rafId !== null) return;
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        recompute();
-      });
-    }
-    recompute();
-    window.addEventListener('resize', scheduleRecompute, { passive: true });
-    window.addEventListener('scroll', scheduleRecompute, { capture: true, passive: true });
-    return () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', scheduleRecompute);
-      window.removeEventListener('scroll', scheduleRecompute, { capture: true });
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        close();
-        triggerRef.current?.focus();
-      }
-    }
-    function onClick(e: MouseEvent) {
-      const target = e.target as Node;
-      if (menuRef.current && !menuRef.current.contains(target) && !triggerRef.current?.contains(target)) {
-        close();
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('mousedown', onClick);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('mousedown', onClick);
-    };
-  }, [open, close]);
-
-  function runAndClose(fn: () => void) {
-    return () => { fn(); close(); };
-  }
-
-  const dropdown = open && pos ? createPortal((
-    <div
-      ref={menuRef}
-      role="menu"
-      className="tp-embedded-menu"
-      style={{ top: pos.top, left: pos.left }}
-      data-testid={`trip-embedded-menu-${tripId}`}
-    >
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-embedded-menu-item"
-        onClick={runAndClose(onEdit)}
-        data-testid={`trip-embedded-menu-edit-${tripId}`}
-      >
-        <Icon name="edit" />
-        <span>編輯行程</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-embedded-menu-item"
-        onClick={runAndClose(onCollab)}
-      >
-        <Icon name="group" />
-        <span>共編設定</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-embedded-menu-item"
-        onClick={runAndClose(onHealthCheck)}
-        data-testid={`trip-embedded-menu-health-${tripId}`}
-      >
-        <Icon name="sparkle" />
-        <span>AI 健檢</span>
-      </button>
-      {onNotes && (
-        <button
-          type="button"
-          role="menuitem"
-          className="tp-embedded-menu-item"
-          onClick={runAndClose(onNotes)}
-          data-testid={`trip-embedded-menu-notes-${tripId}`}
-        >
-          <Icon name="file-text" />
-          <span>行程筆記</span>
-        </button>
-      )}
-      <div className="tp-embedded-menu-divider" />
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-embedded-menu-item"
-        onClick={runAndClose(() => (onPrint ? onPrint() : tripPageRef.current?.togglePrint()))}
-        data-testid={`trip-embedded-menu-print-${tripId}`}
-      >
-        <Icon name="printer" />
-        <span>列印</span>
-      </button>
-      {onShare && (
-        <button
-          type="button"
-          role="menuitem"
-          className="tp-embedded-menu-item"
-          onClick={runAndClose(onShare)}
-          data-testid={`trip-embedded-menu-share-${tripId}`}
-        >
-          <Icon name="copy" />
-          <span>分享連結</span>
-        </button>
-      )}
-      <div className="tp-embedded-menu-divider" />
-      <span className="tp-embedded-menu-section-label">下載格式</span>
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-embedded-menu-item"
-        onClick={runAndClose(() => tripPageRef.current?.triggerDownload('pdf'))}
-      >
-        <Icon name="download" />
-        <span>PDF</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-embedded-menu-item"
-        onClick={runAndClose(() => tripPageRef.current?.triggerDownload('json'))}
-      >
-        <Icon name="code" />
-        <span>JSON</span>
-      </button>
-    </div>
-  ), document.body) : null;
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="tp-titlebar-action tp-titlebar-action--icon-only"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="行程動作"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        data-testid="trips-embedded-menu-trigger"
-      >
-        <Icon name="ellipsis" />
-      </button>
-      {dropdown}
-    </>
-  );
-}
+// EmbeddedActionMenu（行程動作「⋯」選單）v2.57.x 抽到 ../components/trip/TripActionsMenu
+// 供 TripStackLayout 共用（owner「第三欄開啟後第二欄 header actions 消失」）。
 
 export default function TripsListPage() {
   useRequireAuth();
@@ -970,7 +732,16 @@ export default function TripsListPage() {
     setSearchParams(next, { replace: false });
   }
 
-  const tripPageRef = useRef<TripPageHandle>(null);
+  // owner 2026-07-21 回報 #2「開關第三欄面板會刷新第二欄」修復：桌機不再 inline
+  // render <TripPage>（見下方 embedded main JSX）—— main.tsx 的 TripPageHost 是
+  // 唯一持續存在的實例，其 ref 透過 TripPageHandleContext 往下發，這裡 desktop
+  // 用該 ref；手機仍 inline render 自己的 <TripPage>，繼續用 localTripPageRef。
+  const localTripPageRef = useRef<TripPageHandle>(null);
+  const sharedTripPageRef = useTripPageHandle();
+  const tripPageRef = isDesktop ? sharedTripPageRef : localTripPageRef;
+  // portal placeholder 的 callback ref —— TripPageHost 持有的 <TripPage> 靠這個
+  // 知道「現在該把內容 portal 去哪」（push-based，見 TripMainPortalContext 註解）。
+  const { setPortalNode } = useTripMainPortal();
   const handleMenuCollab = useCallback(
     (tripId: string) => { navigate(`/trip/${encodeURIComponent(tripId)}/collab`); },
     [navigate],
@@ -1330,7 +1101,7 @@ export default function TripsListPage() {
             >
               <Icon name="plus" />
             </button>
-            <EmbeddedActionMenu
+            <TripActionsMenu
               tripId={effectiveSelectedId}
               tripPageRef={tripPageRef}
               onEdit={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/edit`)}
@@ -1343,7 +1114,17 @@ export default function TripsListPage() {
           </>
         )}
       />
-      <TripPage ref={tripPageRef} tripId={effectiveSelectedId!} noShell />
+      {/* owner 2026-07-21 回報 #2：桌機只留 portal placeholder，main.tsx 的
+          TripPageHost（唯一持續存在的 <TripPage>）會把內容 portal 進來 ——
+          路由切換到 /trip/:id/edit 等操作面板時，這個 placeholder 會跟著
+          TripsListPage 一起 unmount，但 TripPage 本身（掛在 TripPageHost，
+          <Routes> 之上）不受影響，不會重新抓資料。手機沒有這個機制，維持
+          原本 inline render（tripPageRef 此時是 localTripPageRef）。 */}
+      {isDesktop ? (
+        <div ref={setPortalNode} data-testid={TRIP_MAIN_PORTAL_ID} />
+      ) : (
+        <TripPage ref={localTripPageRef} tripId={effectiveSelectedId!} noShell />
+      )}
     </div>
   ) : cardGridMain;
 

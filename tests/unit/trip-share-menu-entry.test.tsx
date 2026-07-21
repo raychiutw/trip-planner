@@ -3,7 +3,8 @@
  *
  * - TripCardMenu (行程一覽卡片 ⋯): renders 分享連結 when onShare provided, not when
  *   omitted; click → onShare(tripId).
- * - EmbeddedActionMenu (行程頁右上角 ⋯, defined in TripsListPage) + the host wiring
+ * - TripActionsMenu (行程頁右上角 ⋯, src/components/trip/TripActionsMenu.tsx,
+ *   v2.57.x 抽出供 TripStackLayout 共用) + the host wiring
  *   (onShare on both menus + ShareLinkModal mount) — source-grep (rendering the
  *   embedded menu in isolation needs the whole page).
  */
@@ -41,12 +42,15 @@ describe('TripCardMenu — 分享連結 entry', () => {
   });
 });
 
-describe('TripsListPage wiring (source contracts)', () => {
+describe('TripActionsMenu wiring (source contracts)', () => {
+  // v2.57.x: EmbeddedActionMenu 抽到 TripActionsMenu.tsx（供 TripStackLayout 共用），
+  // menu item 本身斷言改讀該檔；call-site wiring 仍讀 TripsListPage.tsx。
+  const menuSrc = readFileSync(join(__dirname, '..', '..', 'src/components/trip/TripActionsMenu.tsx'), 'utf8');
   const src = readFileSync(join(__dirname, '..', '..', 'src/pages/TripsListPage.tsx'), 'utf8');
 
-  it('EmbeddedActionMenu has a 分享連結 item (trip-embedded-menu-share testid)', () => {
-    expect(src).toMatch(/trip-embedded-menu-share-/);
-    expect(src).toMatch(/分享連結/);
+  it('TripActionsMenu has a 分享連結 item (trip-embedded-menu-share testid)', () => {
+    expect(menuSrc).toMatch(/trip-embedded-menu-share-/);
+    expect(menuSrc).toMatch(/分享連結/);
   });
 
   it('wires onShare → setShareTripId on BOTH the card menu and the embedded menu', () => {

@@ -21,7 +21,13 @@ export interface StackPanelHeaderProps {
 export const STACK_PANEL_HEADER_STYLES = `
 .tp-stack-head {
   display: flex; align-items: center; gap: 8px;
-  height: 52px; padding: 0 8px 0 6px; flex-shrink: 0;
+  /* owner 2026-07-21（第二輪回報 #3）：第三欄 panel header 沒跟中欄 TitleBar
+   * 等高 —— TitleBar 用 --titlebar-h（64px 桌機 / 56px compact，見 tokens.css）,
+   * 這裡原本寫死 52px。改共用同一個 token 來源，兩欄視覺才對齊。safe-area-inset-top
+   * 的處理也比照 .tp-titlebar（iOS PWA standalone 需要）。 */
+  height: calc(var(--titlebar-h) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 8px 0 6px;
+  flex-shrink: 0;
   border-bottom: 1px solid var(--color-border);
   /* 桌機右欄 panel / 手機全頁 drill-down 都以外層為 scroll container，header
    * 需 sticky top 才不隨內容捲走（比照 TitleBar sticky glass chrome）。
