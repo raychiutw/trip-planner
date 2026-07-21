@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.2] - 2026-07-21
+
+### Added
+- **隱私權政策的刪除帳號段落加錨點** `#delete-account` —— Google Play Console
+  的「帳號刪除網址」欄位需要一個未登入可讀、說明如何刪除帳號的網址。不需要獨立
+  頁面，但要能深連。審核員是從錨點跳進來的，所以該段自己補齊「刪什麼、留什麼」，
+  不再只依賴上面的「留多久」章節。
+  填入 Play Console 的網址：`https://trip-planner-dby.pages.dev/privacy#delete-account`
+
+### Changed
+- **既有帳號的個資條款同意標記為沿用**（migration 0090，owner 決策）——
+  2026-07-21 前建立的帳號回填同意紀錄，不另做補問流程。
+  - 版本字串刻意標記 `2026-07-20-grandfathered`，**不與真實同意共用同一個值**。
+    0088 加這兩欄的唯一目的是留下證據；沿用若寫成與實際勾選一模一樣，欄位就
+    失去證據價值，日後也分不清哪些是真的。
+    查真實同意者：`WHERE privacy_policy_version NOT LIKE '%-grandfathered'`
+  - 只更新 `privacy_consent_at IS NULL` 的列 —— 冪等，且不覆寫 v2.57.0 上線後
+    真正勾選同意而註冊的紀錄。
+  - 隱私權政策「政策變更」章節同步揭露沿用一事。沒有那段揭露，回填的時間戳
+    就只是一個沒有依據的值。
+
 ## [2.57.1] - 2026-07-21
 
 ### Security
