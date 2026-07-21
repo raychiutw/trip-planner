@@ -115,6 +115,10 @@ const ICONS: Record<string, string> = {
   'nav-trips': '<path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M4 11.4 12 4.5l8 6.9M5.8 9.9V19a1 1 0 0 0 1 1h10.4a1 1 0 0 0 1-1V9.9"/>',
   'nav-map': '<path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9 5 3.5 7v12L9 17l6 2 5.5-2V5l-5.5 2L9 5zM9 5v12M15 7v12"/>',
   'nav-fav': '<path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 20.3l-1.35-1.23C5.9 14.9 3 12.1 3 8.75 3 6.2 5.05 4.2 7.6 4.2c1.44 0 2.82.67 3.72 1.73l.68.8.68-.8c.9-1.06 2.28-1.73 3.72-1.73C18.95 4.2 21 6.2 21 8.75c0 3.35-2.9 6.15-7.65 10.33L12 20.3z"/>',
+  // 底部 tab 的「帳號」。線條風格對齊其他 nav-*（stroke 1.7、round cap），
+  // 不用實心的 'user'/'sidebar-user' —— 那兩個是別處的形制，混用會讓
+  // 第五個 tab 看起來比其他四個重。
+  'nav-account': '<circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M4.6 20c.9-3.4 3.9-5.4 7.4-5.4s6.5 2 7.4 5.4"/>',
   'group': '<path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>',
   'info': '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 11v5"/><circle cx="12" cy="8" r="1" fill="currentColor"/>',
   'swap-horiz': '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7 4L3 8l4 4M3 8h12M17 20l4-4-4-4M21 16H9"/>',
