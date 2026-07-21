@@ -76,22 +76,34 @@ describe('PrivacyPage — 揭露範圍（Google Play 要求）', () => {
     }
   });
 
-  it('列出實際會收到資料的第三方', () => {
-    // 來源：public/_headers 的 CSP connect-src / img-src（瀏覽器實際連線對象）
-    // 加上 server 端 functions/api 的連外。憑空少列一個就是揭露不完整。
+  it('列出所有會收到資料的接收方「類別」', () => {
+    // 2026-07-21 改為鎖類別而非廠商名（owner：「太詳細了怕會遭受攻擊」）。
+    // 法規要的是「哪一類接收方、為了什麼目的、有無跨境」，不是廠商清單。
+    // 類別涵蓋度仍要完整 —— 少一類就是揭露不完整。
+    // 對照來源：public/_headers 的 CSP connect-src/img-src（瀏覽器實際連線對象）
+    // 加上 functions/api 的 server 端連外。
     const text = pageText();
-    for (const vendor of ['Cloudflare', 'Google', 'Sentry', 'Open-Meteo']) {
-      expect(text, `未揭露第三方「${vendor}」`).toContain(vendor);
+    for (const category of ['託管', '地圖', '天氣', '錯誤回報', '郵件', '維運']) {
+      expect(text, `未揭露接收方類別「${category}」`).toContain(category);
     }
   });
 
-  it('揭露寄信路徑 —— 信件經自架主機再由 Gmail SMTP 寄出', () => {
-    // `src/server/email.ts`：驗證信／重設密碼信／共編邀請信都 POST 到
-    // TRIPLINE_API_URL（自架 mac mini，Tailscale Funnel），由它用 Gmail SMTP 寄。
-    // 也就是使用者 email、驗證連結、**被邀請第三方的 email**（permissions.ts:111）
-    // 都會經過一台自架主機。政策若只說「傳給 Cloudflare / Google」而不提這條，
+  it('不得揭露內部架構或實作細節（攻擊面）', () => {
+    // 曾經寫過「經由我們自行維運的一台主機，再透過 Gmail 的郵件伺服器寄出」
+    // 與「流量限制紀錄…這部分是明文」—— 兩句都直接為攻擊者指路，
+    // 而法規完全沒有要求到這個粒度。
+    const text = pageText();
+    for (const leak of ['自行維運', 'Gmail', 'PBKDF2', '這部分是明文', 'Telegram', 'Cloudflare', 'Sentry']) {
+      expect(text, `政策洩漏了實作細節：「${leak}」`).not.toContain(leak);
+    }
+  });
+
+  it('揭露有第三方郵件寄送服務會收到 email 地址', () => {
+    // 驗證信／重設密碼信／共編邀請信都會把 email 地址交給郵件寄送服務處理，
+    // 其中共編邀請還包含**被邀請第三方**的地址。政策若不提這一類接收方，
     // 就與「除此之外我們不對外提供你的個人資料」自相矛盾。
-    expect(pageText()).toMatch(/寄送電子郵件|郵件寄送|寄信/);
+    // 只驗「有揭露這類接收方」，不驗它的架構 —— 架構屬攻擊面，見下一條。
+    expect(pageText()).toMatch(/電子郵件寄送|郵件寄送/);
   });
 
   it('不得列出專案實際沒有使用的第三方', async () => {
@@ -150,13 +162,15 @@ describe('PrivacyPage — 揭露範圍（Google Play 要求）', () => {
   });
 });
 
-describe('PrivacyPage — 既有使用者的同意沿用', () => {
-  it('揭露 2026-07-21 前建立的帳號屬沿用', () => {
-    // owner 決策：既有帳號回填同意紀錄。回填本身站得住腳的前提是**有揭露**——
-    // 政策沒寫，那筆紀錄就只是一個沒有依據的時間戳。
-    // 對應 migration 0090，其 privacy_policy_version 標記為 '-grandfathered'，
-    // 讓稽核時分得出誰是實際點過同意、誰是沿用。
-    expect(pageText()).toMatch(/沿用|既有帳號|先前建立/);
+describe('PrivacyPage — 不得宣稱既有帳號的同意狀態', () => {
+  it('不出現「沿用」相關敘述', () => {
+    // 2026-07-21 翻轉。原本斷言政策要揭露「既有帳號屬沿用」，那是為了讓
+    // migration 0090 的回填站得住腳。
+    //
+    // owner 隨後確認：**系統尚未上線，現有帳號全是測試帳號**。沒有真實使用者
+    // 就沒有沿用可言 —— 留著那段反而會讓讀者以為有一批真實帳號被我們代為
+    // 推定同意，那是比不揭露更糟的不實陳述。
+    expect(pageText()).not.toMatch(/沿用/);
   });
 });
 
