@@ -5,7 +5,7 @@
  *   keeps component state alive across breakpoints (avoids unmount/mount side effects
  *   when users rotate device or resize viewport).
  */
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useRef, type ReactNode } from 'react';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 export const APP_SHELL_STYLES = `
@@ -109,9 +109,6 @@ export const APP_SHELL_STYLES = `
    * 修法：容器不吃指標事件，只有 tab 按鈕本身吃 → 透明處的點擊穿透到下方內容，icon 仍可按。
    * （按鈕的 pointer-events:auto 在 GlobalBottomNav .tp-global-bottom-nav-btn。） */
   pointer-events: none;
-}
-.app-shell-bottom-nav[data-hidden="true"] {
-  transform: translateX(-50%) translateY(180%);
 }
 
 /* Desktop ≥1024px：grid 兩 / 三欄 */
@@ -221,17 +218,15 @@ export interface AppShellProps {
   bottomNav?: ReactNode;
 }
 
-/* PR-VV 2026-04-27：scroll-direction-aware bottom-nav。向下捲 → hide
- * (translateY 100%)，向上捲 → show。8px threshold 避免抖動，60px top 緩衝
- * 避免最頂端就觸發 hide。passive listener (RBP 規定)。 */
-const SCROLL_THRESHOLD_PX = 8;
-const SCROLL_TOP_BUFFER_PX = 60;
+/* PR-VV 2026-04-27 的 scroll-direction-aware bottom-nav（向下捲隱藏、向上捲顯示）
+ * 已於 2026-07-21 整個移除 —— owner 兩次要求底部 tab 常駐（7/20「保持常駐 滾動
+ * 不隱藏」、7/21「下捲動不要讓 function tab 消失」）。閾值常數一併拔掉。 */
 
 export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNav }: AppShellProps) {
   const layout: AppShellLayout = (sheet || sheetPortalId) ? APP_SHELL_LAYOUT_3PANE : APP_SHELL_LAYOUT_2PANE;
   const mainRef = useRef<HTMLElement>(null);
-  const [navHidden, setNavHidden] = useState(false);
-  const lastYRef = useRef(0);
+  // owner 2026-07-20 起要求底部 tab「保持常駐，滾動不隱藏」——
+  // 捲動隱藏的 navHidden / lastYRef 與其 scroll listener 已整個移除。
 
   // Pull-to-refresh：scrollTop=0 時拖下 80px+ → reload
   const onRefresh = useCallback(() => {
@@ -241,30 +236,10 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
   }, []);
   const { pullPx, refreshing } = usePullToRefresh(mainRef, onRefresh);
 
-  useEffect(() => {
-    const el = mainRef.current;
-    if (!el || !bottomNav) return;
-    function onScroll() {
-      const target = mainRef.current;
-      if (!target) return;
-      const y = target.scrollTop;
-      const dy = y - lastYRef.current;
-      if (Math.abs(dy) < SCROLL_THRESHOLD_PX) return;
-      if (dy > 0 && y > SCROLL_TOP_BUFFER_PX) {
-        setNavHidden(true);
-      } else if (dy < 0) {
-        setNavHidden(false);
-      }
-      lastYRef.current = y;
-    }
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      el.removeEventListener('scroll', onScroll);
-      // v2.33.45 round 6b: reset lastYRef on cleanup — bottomNav 切換移除 +
-      // 重 mount 時，舊 scrollTop 值會留 staticked。
-      lastYRef.current = 0;
-    };
-  }, [bottomNav]);
+  // 2026-07-21：捲動隱藏底部 tab 的 scroll listener 整個移除
+  // （owner：「下捲動不要讓 function tab 消失」，2026-07-20 已提過一次）。
+  // 連帶少一個 per-scroll 的 handler —— 它每次捲動都要讀 scrollTop 並比對，
+  // 而膠囊本來就是常駐的。
 
   return (
     <>
@@ -306,7 +281,6 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
           <nav
             className="app-shell-bottom-nav"
             data-testid="app-shell-bottom-nav"
-            data-hidden={navHidden ? 'true' : 'false'}
             aria-label="主要功能"
           >
             {bottomNav}

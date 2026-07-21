@@ -22,29 +22,31 @@ function renderNav(opts: { authed: boolean; pathname: string }) {
   );
 }
 
-describe('GlobalBottomNav — 4-tab IA（rev2 帳號移 header）', () => {
-  it('logged-in render 4 tabs：聊天 / 行程 / 地圖 / 收藏（無帳號 tab）', () => {
+describe('GlobalBottomNav — 5-tab IA（2026-07-21 帳號回到底部）', () => {
+  it('logged-in render 5 tabs：聊天 / 行程 / 地圖 / 收藏 / 帳號', () => {
     renderNav({ authed: true, pathname: '/trips' });
     expect(screen.getByTestId('global-bottom-nav-chat')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-trips')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-map')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-favorites')).toBeTruthy();
     // 帳號/登入 移出 tab slot → header 帳號圓圈
-    expect(screen.queryByTestId('global-bottom-nav-account')).toBeNull();
+    // 2026-07-21：帳號回到底部 tab（owner：手機右上角帳號移除後沒有入口）。
+    expect(screen.getByTestId('global-bottom-nav-account')).toBeTruthy();
     expect(screen.queryByTestId('global-bottom-nav-login')).toBeNull();
   });
 
-  it('logged-out 也 4 tab（無登入 tab；登入入口在 header 帳號圓圈）', () => {
+  it('logged-out 也 5 tab', () => {
     renderNav({ authed: false, pathname: '/trips' });
     expect(screen.getByTestId('global-bottom-nav-chat')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-favorites')).toBeTruthy();
     expect(screen.queryByTestId('global-bottom-nav-login')).toBeNull();
-    expect(screen.queryByTestId('global-bottom-nav-account')).toBeNull();
+    // 2026-07-21：帳號回到底部 tab（owner：手機右上角帳號移除後沒有入口）。
+    expect(screen.getByTestId('global-bottom-nav-account')).toBeTruthy();
   });
 
-  it('nav 只 render 4 個連結（無帳號/登入）', () => {
+  it('nav render 5 個連結', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
-    expect(container.querySelectorAll('a.tp-global-bottom-nav-btn').length).toBe(4);
+    expect(container.querySelectorAll('a.tp-global-bottom-nav-btn').length).toBe(5);
   });
 
   it('在 /map「地圖」 tab is-active', () => {

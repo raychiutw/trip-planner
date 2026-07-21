@@ -1432,9 +1432,11 @@ body.dark {
    * 上緣，成為明確浮動玻璃膠囊。用 secondary（非 background）→ 剛抬亮的 dark base(#1C1C1E)上
    * 仍以 elevated #2C2C2E 明顯浮起（非 base-on-base 糊掉）；88%（比 nav 62% 略實）確保頂端
    * sticky、內容從下方流過時仍讀得出邊界，不重蹈先前 72% cream-on-cream。 */
-  background: color-mix(in srgb, var(--color-secondary) 88%, transparent);
-  backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+  /* 2026-07-21：與 header／底部 tab 統一為 --tabbar-* 材質。
+     先前是 secondary 88% + blur(14px)，比底部 tab 實一倍、模糊弱一半。 */
+  background: var(--tabbar-tint);
+  backdrop-filter: var(--tabbar-filter);
+  -webkit-backdrop-filter: var(--tabbar-filter);
   border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
   box-shadow:
     0 14px 34px rgba(42, 31, 24, 0.22),
@@ -1627,12 +1629,13 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     justify-content: space-between;
     gap: 12px;
     border-bottom: 1px solid var(--color-border);
-    /* rev2 iOS 26 Liquid Glass header — 還原 TitleBar.tsx:12 + mockup Section 23 規範的
-       「glass blur」（原漂移成 opaque cream，chat 等頁標題列不透）。translucent 80% +
-       backdrop blur 讓內容 frost 過標題列下方，與底部玻璃導航一致。token 化 light/dark adapt。 */
-    background: color-mix(in srgb, var(--color-background) 80%, transparent);
-    backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-    -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+    /* 2026-07-21（owner：「header 與 day tab 要用 function tab 相同 liquid glass 效果」）：
+       改用與底部 tab 同一組 --tabbar-* token。先前是 `--color-background 80%` +
+       blur(14px) —— 奶油底疊奶油頁、模糊只有底部 tab 的一半，同一個畫面出現兩種玻璃。
+       中性 tint(0.42) + blur(28px) + saturate(190%)，三處材質才是一套。 */
+    background: var(--tabbar-tint);
+    backdrop-filter: var(--tabbar-filter);
+    -webkit-backdrop-filter: var(--tabbar-filter);
   }
   .tp-titlebar-title {
     /* mockup-parity-qa-fixes: mockup .tp-page-titlebar-title:4060 規範 desktop 20/28/700 (was 24px) */
@@ -1663,12 +1666,13 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     justify-content: space-between;
     gap: 12px;
     border-bottom: 1px solid var(--color-border);
-    /* rev2 iOS 26 Liquid Glass header — 還原 TitleBar.tsx:12 + mockup Section 23 規範的
-       「glass blur」（原漂移成 opaque cream，chat 等頁標題列不透）。translucent 80% +
-       backdrop blur 讓內容 frost 過標題列下方，與底部玻璃導航一致。token 化 light/dark adapt。 */
-    background: color-mix(in srgb, var(--color-background) 80%, transparent);
-    backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-    -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+    /* 2026-07-21（owner：「header 與 day tab 要用 function tab 相同 liquid glass 效果」）：
+       改用與底部 tab 同一組 --tabbar-* token。先前是 `--color-background 80%` +
+       blur(14px) —— 奶油底疊奶油頁、模糊只有底部 tab 的一半，同一個畫面出現兩種玻璃。
+       中性 tint(0.42) + blur(28px) + saturate(190%)，三處材質才是一套。 */
+    background: var(--tabbar-tint);
+    backdrop-filter: var(--tabbar-filter);
+    -webkit-backdrop-filter: var(--tabbar-filter);
   }
   .tp-titlebar-title {
     font-size: 18px; /* mockup compact 18px (was 22px) */

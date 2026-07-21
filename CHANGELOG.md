@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.5] - 2026-07-21
+
+### Changed
+- **TripsListPage 的行程切換也改為標題+chevron** —— v2.57.4 只換了 ChatPage /
+  MapPage，漏了這頁，而它正是 owner 截圖看到的那頁。
+- **header、day tab、底部 tab 統一為同一套 liquid glass** —— 先前三者各用各的：
+  header 是 `--color-background 80%` + blur(14px)、day tab 是
+  `--color-secondary 88%` + blur(14px)、底部 tab 才是新的 `--tabbar-*`
+  （0.42 + blur 28px + saturate 190%）。同一個畫面出現三種玻璃，看起來不像
+  同一個系統。三處全部收斂到 `--tabbar-*`。
+- **底部 tab 補第五個「帳號」** —— 手機右上角的帳號圓圈移除後，帳號一度沒有
+  任何入口。底部列本來就是手機的主要導覽，帳號放這裡比藏在 header 角落合理。
+
+### Removed
+- **底部 tab 的捲動隱藏** —— owner 兩次要求常駐（7/20「保持常駐 滾動不隱藏」、
+  7/21「下捲動不要讓 function tab 消失」）。連帶移除一個 per-scroll handler。
+
+### Docs
+- `docs/api/flutter-store-readiness.md` 追加 2026-07-21 的變更同步：行程清單
+  資料來源（**不可用 `/api/trips`**）、既有行程已改不公開、同意沿用標記、
+  UI 形制變更、隱私權深連錨點。
+
 ## [2.57.4] - 2026-07-21
 
 ### Changed
