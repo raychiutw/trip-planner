@@ -129,6 +129,35 @@ describe('PrivacyPage — 揭露範圍（Google Play 要求）', () => {
   it('有聯絡方式', () => {
     expect(pageText()).toMatch(/聯絡|contact/i);
   });
+
+  it('刪除帳號段落有錨點 —— Google Play Console 要填「帳號刪除網址」', () => {
+    // Play Console 的欄位要一個**未登入可讀、說明如何刪除帳號**的網址。
+    // 不需要獨立頁面，但要能深連到這段，否則審核員得自己在長文裡找。
+    renderPage();
+    const section = document.getElementById('delete-account');
+    expect(section, '缺少 id="delete-account" 錨點').toBeTruthy();
+    expect(section!.textContent).toMatch(/刪除帳號/);
+  });
+
+  it('刪除段落自身要說明刪什麼、留什麼', () => {
+    // Google Play 要求刪除說明涵蓋「哪些資料被刪、哪些被保留」。
+    // 這些字散在「留多久」也算揭露，但審核員是從錨點跳進來的，
+    // 該段自己要講得完整。
+    renderPage();
+    const text = document.getElementById('delete-account')?.textContent ?? '';
+    expect(text, '未說明刪除範圍').toMatch(/行程|收藏/);
+    expect(text, '未說明保留與去識別化').toMatch(/去識別化|匿名/);
+  });
+});
+
+describe('PrivacyPage — 既有使用者的同意沿用', () => {
+  it('揭露 2026-07-21 前建立的帳號屬沿用', () => {
+    // owner 決策：既有帳號回填同意紀錄。回填本身站得住腳的前提是**有揭露**——
+    // 政策沒寫，那筆紀錄就只是一個沒有依據的時間戳。
+    // 對應 migration 0090，其 privacy_policy_version 標記為 '-grandfathered'，
+    // 讓稽核時分得出誰是實際點過同意、誰是沿用。
+    expect(pageText()).toMatch(/沿用|既有帳號|先前建立/);
+  });
 });
 
 describe('PrivacyPage — 不得出現與程式行為不符的陳述', () => {
