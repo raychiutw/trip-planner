@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.1] - 2026-07-21
+
+### Security
+- **既有 10 個行程改為不公開**（migration 0089）—— v2.57.0 把新建行程的預設改成
+  不公開，但既有資料仍是 `published = 1`。`published` 不只是「出現在公開清單」，
+  它同時是 `/api/trips/:id/*` 的讀取權限閘門（`requireTripReadAccess`）——
+  published 的行程，任何人只要知道 tripId 就能匿名讀完整內容，含航班編號、
+  訂房編號與緊急聯絡人電話。
+  - 共編者不受影響（走 `trip_permissions`，與 published 無關）
+  - `/s/:token` 分享連結不受影響（獨立路徑，不看 published）
+  - 僅「拿著 `/trips/<id>` 直接連結的匿名訪客」失去存取，這正是本次意圖
+  - migration 列出明確 ID 而非 blanket `UPDATE trips SET published = 0`：
+    自我記錄動了哪 10 筆、可精確還原（`rollback/0089_*`）、且不會誤傷日後
+    刻意公開的行程。
+
 ## [2.57.0] - 2026-07-21
 
 Google Play 上架整備。原本 5 項需求，盤點後補到 7 項 —— 帳號刪除是 Google Play
