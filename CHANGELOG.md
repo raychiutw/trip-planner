@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.7] - 2026-07-21
+
+### Performance
+- **EditEntryPage 開啟延遲 1392ms → ~1054ms（省 24%）** —— 三段串行的 API
+  waterfall 縮成兩段。prod 實測中位數（5 次）：
+  `/entries/:eid` 448ms → `/days` 338ms → `/days/:num` 606ms。
+  - `/days` 只需要 `tripId`，本來就不必等 entry 回來，卻被 effect 開頭的
+    `if (!entry) return` 卡住。改成掛載即抓、與 entry 並行。
+  - **`/days/:num` 無法省**：它除了 master/alternates（entry 端點的回應已有）
+    之外，還提供 `extractSiblingCoords` 需要的鄰近停留點座標與前一個 entry
+    的標題 —— 兩者都要整天的 timeline。要再往下砍就得讓某支端點同時回
+    entry + 當天 context，屬另一個層級的 API 設計，未納入本次。
+  - 後端不用改：`/trips/:id/entries/:eid` 早已回 `master` / `alternates` /
+    `entry_pois_version`（`fetchEntryPoisByEntries`）。
+
 ## [2.57.6] - 2026-07-21
 
 ### Fixed
