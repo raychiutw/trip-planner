@@ -35,6 +35,7 @@ import { recordAuthEvent } from '../_auth_audit';
 import { recordEmailEvent } from '../_audit';
 import { buildRateLimitResponse } from '../_errors';
 import { alertAdminTelegram } from '../_alert';
+import { maskEmail } from '../_pii';
 import { normalizeEmail } from '../../../src/server/email-utils';
 import type { Env } from '../_types';
 
@@ -136,7 +137,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         eventType: 'password_reset_request',
         outcome: 'success',
         userId,
-        metadata: { email },
+        // 不存明文 email —— userId 已能定位帳號，遮罩版僅供人工比對。
+        metadata: { emailMasked: maskEmail(email) },
       }, context.env);
     } catch (err) {
       const msg = err instanceof EmailError
@@ -154,11 +156,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         eventType: 'password_reset_request',
         outcome: 'failure',
         userId,
-        metadata: { email, reason: 'email_send_failed', error: msg },
+        // 稽核 metadata 不存明文 email（userId 已能定位，遮罩版供人工比對）。
+        metadata: { emailMasked: maskEmail(email), reason: 'email_send_failed', error: msg },
       }, context.env);
       await alertAdminTelegram(
         context.env,
-        `重設密碼信寄送失敗: ${email} (${msg})`,
+        `重設密碼信寄送失敗: ${maskEmail(email)} (${msg})`,
       );
     }
   })());

@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>桌機三欄 shell panel 化 — 共編設定 / AI 健檢 / 行程筆記</title>
+<style>
+  :root {
+    --color-background: #FFFBF5;
+    --color-secondary: #FAF4EA;
+    --color-tertiary: #F2E8D8;
+    --color-foreground: #2A1F18;
+    --color-muted: #8A7A68;
+    --color-border: #E8DCC8;
+    --color-line-strong: #D9C7A8;
+    --color-accent: #B85F2A;
+    --color-accent-deep: #8A431A;
+    --color-accent-subtle: #F5E4D3;
+    --color-accent-fill: #B85F2A;
+    --color-accent-foreground: #FFFBF5;
+    --radius-md: 8px;
+    --radius-lg: 14px;
+    --radius-full: 999px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #EEE3D2;
+    color: var(--color-foreground);
+    padding: 24px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .subtitle { color: var(--color-muted); font-size: 13px; margin: 0 0 20px; }
+  .callout {
+    background: var(--color-accent-subtle);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    max-width: 920px;
+  }
+  .callout b { color: var(--color-accent-deep); }
+  .callout ul { margin: 6px 0 0; padding-left: 18px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab-btn {
+    border: 1px solid var(--color-border);
+    background: var(--color-background);
+    color: var(--color-foreground);
+    padding: 8px 16px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tab-btn.is-active {
+    background: var(--color-accent-fill);
+    color: var(--color-accent-foreground);
+    border-color: var(--color-accent-fill);
+  }
+
+  /* ===== 3-pane frame ===== */
+  .frame {
+    display: none;
+    grid-template-columns: 220px minmax(280px, 1fr) 380px;
+    height: 640px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--color-background);
+    box-shadow: 0 8px 24px rgba(42,31,24,0.12);
+  }
+  .frame.is-active { display: grid; }
+
+  .col-sidebar {
+    background: var(--color-secondary);
+    border-right: 1px solid var(--color-border);
+    padding: 16px 12px;
+    font-size: 13px;
+    color: var(--color-muted);
+  }
+  .col-sidebar .brand { font-weight: 800; color: var(--color-accent-deep); margin-bottom: 16px; }
+  .col-sidebar .nav-item { padding: 8px 10px; border-radius: var(--radius-md); margin-bottom: 4px; }
+  .col-sidebar .nav-item.is-active { background: var(--color-background); color: var(--color-foreground); font-weight: 700; }
+
+  .col-mid { border-right: 1px solid var(--color-border); display: flex; flex-direction: column; min-width: 0; }
+  .mid-titlebar {
+    height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+    padding: 0 16px; border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 88%, transparent);
+  }
+  .mid-titlebar .back-btn {
+    width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+    background: transparent; color: var(--color-foreground); font-size: 16px; flex-shrink: 0;
+  }
+  .mid-titlebar .title { font-weight: 700; font-size: 15px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mid-titlebar .new-badge {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    background: var(--color-accent); color: var(--color-accent-foreground);
+    padding: 2px 6px; border-radius: var(--radius-full);
+  }
+  .mid-body { padding: 16px; overflow-y: auto; flex: 1; color: var(--color-muted); font-size: 13px; }
+  .day-chip { display: inline-block; background: var(--color-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 4px 12px; font-weight: 700; font-size: 12px; margin-bottom: 12px; color: var(--color-foreground); }
+  .stop-row { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+  .stop-row .n { width: 22px; height: 22px; border-radius: 50%; background: var(--color-accent-subtle); color: var(--color-accent-deep); display: grid; place-items: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .stop-row .name { color: var(--color-foreground); font-weight: 600; font-size: 13px; }
+  .stop-row .meta { font-size: 11px; color: var(--color-muted); }
+
+  .col-panel { display: flex; flex-direction: column; min-width: 0; }
+  .panel-head {
+    height: 52px; flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+    padding: 0 8px 0 6px; border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 88%, transparent);
+  }
+  .panel-head .icon-btn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: transparent; color: var(--color-foreground); font-size: 16px; flex-shrink: 0; }
+  .panel-head .title { flex: 1; text-align: center; font-weight: 700; font-size: 14px; }
+  .panel-body { padding: 16px; overflow-y: auto; flex: 1; font-size: 13px; }
+
+  /* collab panel content */
+  .collab-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+  .collab-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--color-accent-subtle); color: var(--color-accent-deep); display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+  .collab-role { margin-left: auto; font-size: 11px; color: var(--color-muted); background: var(--color-secondary); padding: 3px 8px; border-radius: var(--radius-full); }
+
+  /* health panel content */
+  .health-actionrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .health-regenerate {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--color-border); background: var(--color-background);
+    color: var(--color-foreground); font-size: 12px; font-weight: 600;
+    padding: 6px 12px; border-radius: var(--radius-full);
+  }
+  .finding { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 10px; display: grid; grid-template-columns: 5px 1fr; gap: 10px; }
+  .finding .bar { border-radius: var(--radius-full); background: #C9432B; }
+  .finding .t { font-weight: 700; font-size: 12px; }
+  .finding .d { color: var(--color-muted); font-size: 12px; margin-top: 2px; }
+
+  /* notes panel content */
+  .notes-section { border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .notes-section .lbl { font-weight: 700; font-size: 13px; }
+  .notes-section .cnt { font-size: 11px; color: var(--color-muted); }
+
+  .annot {
+    max-width: 920px; margin-top: 16px; font-size: 12px; color: var(--color-muted); line-height: 1.7;
+  }
+  .annot code { background: var(--color-tertiary); padding: 1px 5px; border-radius: 4px; }
+
+  .mobile-note {
+    max-width: 920px; margin-top: 24px; padding: 14px 16px; border: 1px dashed var(--color-line-strong);
+    border-radius: var(--radius-md); font-size: 13px; color: var(--color-muted); background: var(--color-secondary);
+  }
+</style>
+</head>
+<body>
+  <h1>桌機三欄 shell panel 化 — 共編設定 / AI 健檢 / 行程筆記</h1>
+  <p class="subtitle">2026-07-21 mockup — 需 owner sign-off 才可寫入 React（CLAUDE.md mockup-first hard gate）</p>
+
+  <div class="callout">
+    <b>決策摘要</b>：三個功能改走既有 <b>TripStackLayout + OperationShell + SheetStackContext</b>（owner 2026-07-18「6 條全接」已簽核的同一套機制，加景點/換景點/編輯行程等 6 條操作路由現正在用），而非新發明 query-param 機制。理由：
+    <ul>
+      <li>Route 結構不變（仍是 <code>/trip/:id/collab|health|notes</code>），只是把它們從 TripLayout 直接子路由「搬進」TripStackLayout 這個 pathless layout route 底下，與其餘 6 條操作路由同层。</li>
+      <li>桌機（≥1024px）：右欄變成 bare panel（<code>‹</code> 返回 / <code>✕</code> 整個關閉），中欄維持行程詳情 <b>不消失</b>；行程詳情用既有 <code>&lt;TripPage noShell&gt;</code> 重新掛載（與其他 6 條操作路由相同，非逐字保留同一 instance，但視覺與資料一致，見下方「已知取捨」）。</li>
+      <li>手機（&lt;1024px）：完全不變 —— 仍是整頁 drill-down，僅底部 nav 補回（見下方 B 項）。</li>
+      <li><b>額外修正（本次新增）</b>：TripStackLayout 中欄過去（6 條操作路由適用）刻意「無 titlebar」（2026-07-19 決策），本次補回一個輕量 TitleBar（行程名稱 + 返回列表），修正「第二欄 header 消失」的觀感 —— 這個修正同時讓其餘 6 條既有操作路由也受惠。</li>
+      <li><b>Dark-mode elevation（coordinator 2026-07-21 追加）</b>：prod 實測 <code>.app-shell</code> 深色底色（--color-background）之上，中欄內容（--color-secondary，PR #1102 修過 <code>.trip-content</code> 透明問題）與第三欄應再分一階。第三欄 <code>.app-shell-sheet</code> 補 <code>--color-tertiary</code> base，本次遷入的 3 頁面板各自 override 對齊（僅桌機 stacked panel 生效，手機整頁不受影響）。下方 mockup 色階為近似示意，非精確 dark-mode 數值。</li>
+    </ul>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn is-active" data-tab="collab">共編設定</button>
+    <button class="tab-btn" data-tab="health">AI 健檢</button>
+    <button class="tab-btn" data-tab="notes">行程筆記</button>
+  </div>
+
+  <!-- ===================== 共編設定 ===================== -->
+  <div class="frame is-active" id="frame-collab">
+    <div class="col-sidebar">
+      <div class="brand">Tripline</div>
+      <div class="nav-item is-active">行程</div>
+      <div class="nav-item">聊天</div>
+      <div class="nav-item">探索</div>
+      <div class="nav-item">收藏</div>
+    </div>
+    <div class="col-mid">
+      <div class="mid-titlebar">
+        <div class="back-btn">‹</div>
+        <div class="title">2026 沖繩七日遊</div>
+        <span class="new-badge">NEW</span>
+      </div>
+      <div class="mid-body">
+        <div class="day-chip">DAY 3 · 5/3（日）</div>
+        <div class="stop-row"><div class="n">1</div><div><div class="name">首里城公園</div><div class="meta">09:00–11:00 · 景點</div></div></div>
+        <div class="stop-row"><div class="n">2</div><div><div class="name">花織そば</div><div class="meta">12:00–13:30 · 餐廳</div></div></div>
+        <div class="stop-row"><div class="n">3</div><div><div class="name">国際通り</div><div class="meta">14:30–17:00 · 購物</div></div></div>
+        <p style="margin-top:16px;">↑ 中欄行程詳情 —— 開啟右欄面板時<b>不重新整頁、header 不消失</b>（本次新增）。</p>
+      </div>
+    </div>
+    <div class="col-panel">
+      <div class="panel-head">
+        <span class="icon-btn" style="visibility:hidden">‹</span>
+        <span class="title">共編設定</span>
+        <span class="icon-btn">✕</span>
+      </div>
+      <div class="panel-body">
+        <div class="collab-row"><div class="collab-avatar">R</div><div>Ray（你）<div class="meta" style="color:var(--color-muted);font-size:11px;">owner</div></div><span class="collab-role">擁有者</span></div>
+        <div class="collab-row"><div class="collab-avatar">H</div><div>HuiYun<div class="meta" style="color:var(--color-muted);font-size:11px;">huiyun@example.com</div></div><span class="collab-role">可編輯</span></div>
+        <p style="margin-top:16px;color:var(--color-muted);">既有 <code>CollabPanel</code> 內容原樣沿用，僅外殼從獨立 AppShell+TitleBar 換成 <code>OperationShell</code> bare panel。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== AI 健檢 ===================== -->
+  <div class="frame" id="frame-health">
+    <div class="col-sidebar">
+      <div class="brand">Tripline</div>
+      <div class="nav-item is-active">行程</div>
+      <div class="nav-item">聊天</div>
+      <div class="nav-item">探索</div>
+      <div class="nav-item">收藏</div>
+    </div>
+    <div class="col-mid">
+      <div class="mid-titlebar">
+        <div class="back-btn">‹</div>
+        <div class="title">2026 沖繩七日遊</div>
+      </div>
+      <div class="mid-body">
+        <div class="day-chip">DAY 3 · 5/3（日）</div>
+        <div class="stop-row"><div class="n">1</div><div><div class="name">首里城公園</div><div class="meta">09:00–11:00 · 景點</div></div></div>
+        <div class="stop-row"><div class="n">2</div><div><div class="name">花織そば</div><div class="meta">12:00–13:30 · 餐廳</div></div></div>
+      </div>
+    </div>
+    <div class="col-panel">
+      <div class="panel-head">
+        <span class="icon-btn" style="visibility:hidden">‹</span>
+        <span class="title">AI 健檢</span>
+        <span class="icon-btn">✕</span>
+      </div>
+      <div class="panel-body">
+        <div class="health-actionrow">
+          <div>
+            <div style="font-weight:700;font-size:14px;">2026 沖繩七日遊</div>
+            <div style="font-size:11px;color:var(--color-muted);">3 分鐘前完成 · 共 2 項建議</div>
+          </div>
+          <button class="health-regenerate">↻ 重新生成</button>
+        </div>
+        <div class="finding"><div class="bar"></div><div><div class="t">Day 3 行程過緊</div><div class="d">首里城公園到花織そば移動時間可能不足 30 分鐘。</div></div></div>
+        <div class="finding"><div class="bar" style="background:#D68910"></div><div><div class="t">住宿距離景點較遠</div><div class="d">Day 5 飯店與國際通往返約 25 分鐘車程。</div></div></div>
+        <p style="margin-top:8px;color:var(--color-muted);">
+          <b>本次唯一 layout 變化</b>：「重新生成」原本在 TitleBar 右上角 action slot；
+          <code>OperationShell</code> 的共用 header（<code>StackPanelHeader</code>）沒有 action slot（規格：完成/次要操作一律由 body 提供），
+          故此按鈕<b>從 header 移到 body 頂部</b>（緊貼標題列）。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== 行程筆記 ===================== -->
+  <div class="frame" id="frame-notes">
+    <div class="col-sidebar">
+      <div class="brand">Tripline</div>
+      <div class="nav-item is-active">行程</div>
+      <div class="nav-item">聊天</div>
+      <div class="nav-item">探索</div>
+      <div class="nav-item">收藏</div>
+    </div>
+    <div class="col-mid">
+      <div class="mid-titlebar">
+        <div class="back-btn">‹</div>
+        <div class="title">2026 沖繩七日遊</div>
+      </div>
+      <div class="mid-body">
+        <div class="day-chip">DAY 3 · 5/3（日）</div>
+        <div class="stop-row"><div class="n">1</div><div><div class="name">首里城公園</div><div class="meta">09:00–11:00 · 景點</div></div></div>
+        <div class="stop-row"><div class="n">2</div><div><div class="name">花織そば</div><div class="meta">12:00–13:30 · 餐廳</div></div></div>
+      </div>
+    </div>
+    <div class="col-panel">
+      <div class="panel-head">
+        <span class="icon-btn" style="visibility:hidden">‹</span>
+        <span class="title">行程筆記</span>
+        <span class="icon-btn">✕</span>
+      </div>
+      <div class="panel-body">
+        <div class="notes-section"><span class="lbl">✈ 航班</span><span class="cnt">2 個航段</span></div>
+        <div class="notes-section"><span class="lbl">🏨 住宿</span><span class="cnt">3 間</span></div>
+        <div class="notes-section"><span class="lbl">📋 預訂</span><span class="cnt">1 筆</span></div>
+        <div class="notes-section"><span class="lbl">ℹ 行前須知</span><span class="cnt">空 · AI 可代寫</span></div>
+        <div class="notes-section"><span class="lbl">☎ 緊急聯絡</span><span class="cnt">空 · AI 可代寫</span></div>
+        <p style="margin-top:8px;color:var(--color-muted);">既有 accordion + AI 生成內容原樣沿用，僅外殼換成 bare panel。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="annot">
+    <b>已知取捨（誠實揭露，非隱藏）</b>：從 <code>/trips?selected=X</code>（TripsListPage 內嵌行程檢視）點「共編設定」導覽到 <code>/trip/:id/collab</code>，
+    仍是切換到不同的頂層 route（<code>TripsListPage</code> → <code>TripLayout</code> + <code>TripStackLayout</code>），<code>TripsListPage</code> 與其內的
+    <code>&lt;TripPage&gt;</code> instance 仍會 unmount、右側新 host 重新掛載一份 <code>&lt;TripPage noShell&gt;</code>（重新打 API 抓行程資料）。
+    這與現有 6 條操作路由（加景點/編輯行程等）行為一致 —— 不是新的退化，而是延用 2026-07-18 已簽核的既有架構。
+    「不重整」指的是：<b>沒有瀏覽器整頁 reload、沒有整個 App shell（sidebar/底部 nav）閃爍消失、中欄 header 全程可見</b>，
+    但中欄行程內容本身仍會有一次短暫重新載入（沿用既有 6 條路由的已知行為）。
+    若要做到「同一 TripPage instance 完全不重新掛載」，需改用 query-param 策略（<code>?panel=collab</code>，維持在 <code>/trips</code> route 不切換），
+    但那需要同時重構現有 6 條操作路由才能維持一致性 —— 超出本次任務範圍，留待未來獨立回合評估。
+  </div>
+
+  <div class="mobile-note">
+    <b>手機（&lt;1024px）— 不變</b>：三個頁面仍走整頁 drill-down（<code>OperationShell</code> 手機分支），
+    唯一新增是補回 <code>GlobalBottomNav</code>（原本這 3 頁手機版就有底部 tab，沿用；
+    OperationShell 既有 6 條操作路由手機版本來就無底部 tab，這裡透過新增的可選 <code>bottomNav</code> prop 只讓這 3 頁保留）。
+  </div>
+
+  <script>
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('is-active'));
+        document.querySelectorAll('.frame').forEach((f) => f.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        document.getElementById('frame-' + btn.dataset.tab).classList.add('is-active');
+      });
+    });
+  </script>
+</body>
+</html>

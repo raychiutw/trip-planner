@@ -142,6 +142,26 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(queryByTestId('titlebar')).toBeNull();
   });
 
+  it('inStack=false + bottomNav prop（v2.57.x 共編/健檢/筆記 panel 化）→ 手機整頁沿用底部 tab', () => {
+    // 這 3 頁移入 OperationShell 前手機版就有 GlobalBottomNav；既有 6 條操作路由手機版本來
+    // 就沒有底部 nav（bottomNav 不傳 = undefined，行為不變）。新 optional prop 只讓有傳的頁面拿到。
+    const { getByTestId } = render(
+      <MemoryRouter>
+        <OperationShell
+          shellClassName="tp-op-x"
+          testId="op-x-page"
+          title="共編設定"
+          back={() => {}}
+          bottomNav={<div data-testid="mock-bottom-nav">nav</div>}
+        >
+          <div>面板內容</div>
+        </OperationShell>
+      </MemoryRouter>,
+    );
+    expect(getByTestId('app-shell-bottom-nav')).toBeTruthy();
+    expect(getByTestId('mock-bottom-nav')).toBeTruthy();
+  });
+
   it('inStack 桌機面板：Escape = 關最上層（G-S4；L2 無 ‹ → closeStack）', () => {
     const closeStack = vi.fn();
     renderStack(

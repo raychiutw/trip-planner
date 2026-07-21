@@ -1,4 +1,7 @@
 import { defineConfig } from 'vitest/config';
+// vite.config.ts 的 define **不會**自動套到 vitest —— 兩份設定是獨立的。
+// 少了這行，任何 render __APP_VERSION__ 的 component 在測試裡會 ReferenceError。
+import { versionDefine } from './scripts/app-version.mjs';
 
 /**
  * v2.33.71 round 21: projects split — dom vs node 環境分流。
@@ -27,6 +30,7 @@ const TS_DOM_FILES = [
 ];
 
 export default defineConfig({
+  define: versionDefine,
   test: {
     globals: true,
     // v2.33.65 round 15: clearMocks + restoreMocks 自動 reset mock state

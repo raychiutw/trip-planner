@@ -9,7 +9,7 @@
  */
 
 export interface NavItem {
-  key: 'chat' | 'trips' | 'map' | 'favorites';
+  key: 'chat' | 'trips' | 'map' | 'favorites' | 'account';
   label: string;
   href: string;
   icon: string;
@@ -32,6 +32,9 @@ export const PRIMARY_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-trips', matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
   { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
   { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav',   matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
+  // 2026-07-21：手機右上角的帳號圓圈移除後，帳號一度沒有任何入口。
+  // 補成第五個 tab —— 底部列本來就是手機的主要導覽，帳號放這裡比藏在 header 角落合理。
+  { key: 'account',   label: '帳號', href: '/account',   icon: 'nav-account', matchPrefixes: ['/account'] },
 ];
 
 export function isItemActive(pathname: string, item: NavItem): boolean {

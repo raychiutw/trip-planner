@@ -3,6 +3,321 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.10] - 2026-07-21
+
+### Changed
+- **共編設定／AI 健檢／行程筆記改為桌機第三欄面板**（owner 2026-07-21 交辦，
+  mockup 已簽核）—— 三條路由納入既有的 `TripStackLayout` + `OperationShell`
+  機制，與 2026-07-18 簽核的 6 條操作面板同一套架構。
+  - **沒有另做 query-param 方案**：既有機制已驗證、已有 6 條路由在用，
+    多一套面板機制只會讓兩邊都要維護。
+  - 手機維持整頁導航不變（手機沒有第三欄）。
+- **`TripStackLayout` 中欄補上 TitleBar** —— 這才是 owner 反映「第二欄 header
+  消失」的**真正原因**：該中欄先前**完全沒有 TitleBar**（2026-07-19 的刻意決定）。
+  標題取自已在 context 的 `TripContext`，不額外打 API。9 條 stack 路由全部受惠。
+- **第三欄面板套用 tertiary elevation**（`.app-shell-sheet`）—— 深色下
+  `#1C1C1E`（shell）→ `#2C2C2E`（內容欄）→ `#3A3A3C`（面板），三欄才讀得出層次。
+
+### Known limitations
+- 從 `/trips?selected=X` 進入仍會切換頂層路由 → `TripPage` 重掛載。
+  **不會硬重整、header 全程可見**，但有一次資料重抓 —— 與既有 6 條路由行為一致。
+- 既有的 6 個操作面板尚未套用 tertiary elevation（範圍決定，可後續補齊）。
+
+## [2.57.9] - 2026-07-21
+
+### Fixed
+- **深色模式行程頁一片近黑**（owner：「桌機行程功能黑色太多」）——
+  `.trip-content` 補上 `--color-secondary` 表面。
+  - **用 browse 對 prod 實測而非從 CSS 推論**（前兩次推論都錯了）：行程頁有
+    **16,091k px² 的透明面積**壓在單一 `.app-shell` 的 `#1C1C1E` 上 ——
+    整個內容區沒有自己的表面，全糊成一塊。
+  - 相對地 `/trips` 的 `.tp-trips-shell` 早就用 `--color-secondary`
+    （實測 `#2C2C2E`，1093k），所以那頁沒有這個問題。
+  - 修法不是發明新規則，是**補上這個 app 自己已有的做法**。Apple HIG 的深色
+    模式靠 elevation 分層（`#1C1C1E` → `#2C2C2E` → `#3A3A3C`），不是把亮色反過來。
+
+### Removed
+- **無 consumer 的 `--color-sidebar-*` token 組** —— `DesktopSidebar` 早已改用
+  `color-mix(--color-background)` + `backdrop-filter` 走主 app token 自動
+  light/dark adapt（見該檔第 23 行註明）。其中深色的 `#0F0B08` 比 base
+  `#1C1C1E` 還暗，留著只會誤導下一個人以為側欄該是近黑色。
+
+## [2.57.8] - 2026-07-21
+
+### Security
+- **隱私權政策去識別化 —— 移除會指路給攻擊者的實作細節**（owner：「太詳細了
+  怕會遭受攻擊」）。揭露粒度改為「接收方**類別**、目的、跨境與否、你的權利」，
+  那才是法規要求的；「哪一家廠商、什麼架構、什麼演算法、哪張表存明文」不是
+  法規要求，卻等於把攻擊面攤開。
+  - 移除「經由我們自行維運的一台主機，再透過 Gmail 的郵件伺服器寄出」——
+    直接指出有非商用託管的目標。
+  - 移除「防濫用的流量限制紀錄…這部分是明文」—— 直接指出明文 IP 存在哪。
+  - 廠商名（Cloudflare / Google / Sentry / Open-Meteo / Telegram）改為類別
+    敘述；密碼雜湊演算法（PBKDF2-SHA256）改為「加鹽的單向雜湊」。
+  - 揭露**完整度不變**：跨境傳輸、錯誤回報存於美國、共編邀請會把受邀者
+    email 交給郵件服務，這些該講的都還在。
+  - 測試同步改為鎖「類別涵蓋度」，並**新增一條反向斷言**擋住實作細節重新混入。
+
+### Removed
+- **隱私權政策的「既有帳號沿用」段落** —— owner 確認系統尚未上線、現有帳號
+  全是測試帳號。沒有真實使用者就沒有沿用可言，留著反而會讓讀者以為有一批
+  真實帳號被代為推定同意，那是比不揭露更糟的不實陳述。
+  （migration 0090 的回填標記仍在，對象只有測試帳號；
+   `migrations/rollback/0090_*` 備妥，正式上線前若要清乾淨可用。）
+
+## [2.57.7] - 2026-07-21
+
+### Performance
+- **EditEntryPage 開啟延遲 1392ms → ~1054ms（省 24%）** —— 三段串行的 API
+  waterfall 縮成兩段。prod 實測中位數（5 次）：
+  `/entries/:eid` 448ms → `/days` 338ms → `/days/:num` 606ms。
+  - `/days` 只需要 `tripId`，本來就不必等 entry 回來，卻被 effect 開頭的
+    `if (!entry) return` 卡住。改成掛載即抓、與 entry 並行。
+  - **`/days/:num` 無法省**：它除了 master/alternates（entry 端點的回應已有）
+    之外，還提供 `extractSiblingCoords` 需要的鄰近停留點座標與前一個 entry
+    的標題 —— 兩者都要整天的 timeline。要再往下砍就得讓某支端點同時回
+    entry + 當天 context，屬另一個層級的 API 設計，未納入本次。
+  - 後端不用改：`/trips/:id/entries/:eid` 早已回 `master` / `alternates` /
+    `entry_pois_version`（`fetchEntryPoisByEntries`）。
+
+## [2.57.6] - 2026-07-21
+
+### Fixed
+- **手機底部 tab 遮住頁面內容導致點不到**（v2.57.5 造成的回歸，master CI e2e 紅）——
+  tab 從 4 個變 5 個後膠囊變寬，`TripNotesPage` 底部的手風琴被蓋住，
+  mobile-chrome / mobile-safari 點擊逾時。
+  - v2.56.6 讓功能頁「全版鋪到底」的前提是 tab **全透明**；v2.57.4 材質回歸
+    （0.42 tint + blur 28px）後那個前提就不成立了 —— 底下的內容是真的被遮住。
+  - 與 `AppShell` 註解記載的兩次舊事故同型：容器雖 `pointer-events: none`，
+    但**按鈕本身吃事件**，tab 一多覆蓋面積就變大。
+  - ⚠️ 我上次只跑了 `--project=chromium`（桌機）就推，**沒跑 mobile**。
+    這次補跑 mobile 全套（45 passed / 6 skipped）。
+
+### Changed
+- **隱私權政策的刪除帳號段落補齊商店審核要求的四項** ——
+  無法登入／已移除 App 時的申請管道（從註冊信箱來信）、身分核對方式
+  （來信地址須與註冊地址一致，否則任何人都能來信刪別人的帳號）、
+  預計處理時間（7 個工作天）、刪除與保留範圍。
+
+### Docs
+- **更正過度延伸的 Google Play 宣稱** —— 先前寫「Google Play 要求建立帳號時
+  取得個資條款同意」是錯的。Google Play 強制的是隱私權政策連結、Data Safety
+  表單揭露，以及蒐集敏感／非預期資料時的明確揭露與同意，**並非通用的註冊
+  勾選同意**。實際依據是 Tripline 自身的產品／法務決策，並已落成後端 API 契約
+  （`/api/oauth/signup` 缺 `privacyConsent` 回 400）。
+- **帳號刪除補上 Apple 要求** —— 先前文件只寫 Google Play。Apple 同樣要求
+  支援建立帳號的 app 必須能**在 app 內發起刪除**，只寫 Google Play 會讓
+  iOS 版同樣過不了審。
+
+## [2.57.5] - 2026-07-21
+
+### Changed
+- **TripsListPage 的行程切換也改為標題+chevron** —— v2.57.4 只換了 ChatPage /
+  MapPage，漏了這頁，而它正是 owner 截圖看到的那頁。
+- **header、day tab、底部 tab 統一為同一套 liquid glass** —— 先前三者各用各的：
+  header 是 `--color-background 80%` + blur(14px)、day tab 是
+  `--color-secondary 88%` + blur(14px)、底部 tab 才是新的 `--tabbar-*`
+  （0.42 + blur 28px + saturate 190%）。同一個畫面出現三種玻璃，看起來不像
+  同一個系統。三處全部收斂到 `--tabbar-*`。
+- **底部 tab 補第五個「帳號」** —— 手機右上角的帳號圓圈移除後，帳號一度沒有
+  任何入口。底部列本來就是手機的主要導覽，帳號放這裡比藏在 header 角落合理。
+
+### Removed
+- **底部 tab 的捲動隱藏** —— owner 兩次要求常駐（7/20「保持常駐 滾動不隱藏」、
+  7/21「下捲動不要讓 function tab 消失」）。連帶移除一個 per-scroll handler。
+
+### Docs
+- `docs/api/flutter-store-readiness.md` 追加 2026-07-21 的變更同步：行程清單
+  資料來源（**不可用 `/api/trips`**）、既有行程已改不公開、同意沿用標記、
+  UI 形制變更、隱私權深連錨點。
+
+## [2.57.4] - 2026-07-21
+
+### Changed
+- **標題即行程切換器**（owner 2026-07-21：「移除切換行程 icon，改為點下行程名稱
+  後切換，行程名稱後面接一個 V 符號」）—— 新增
+  `src/components/shell/TripTitleSwitcher.tsx`。
+  - 原本 TitleBar 右側有一顆 `⇄ ▾` 圖示按鈕，與標題分離：使用者要先認出那顆
+    圖示才知道能換行程，而標題本身明明就是最自然的入口。改成標題自己是按鈕、
+    後面掛 chevron，對齊 iOS 上「標題帶 ⌄ = 可切換」的既有慣例。
+  - chevron 用 SVG 而非「▾」字元 —— 字元的字級與基線隨字體變動，跨平台對不齊。
+  - **只有一個行程時渲染純文字**，不給可點的假象。
+  - 同時取代 ChatPage / MapPage 兩份重複的 dropdown markup 與 outside-click
+    邏輯；MapPage 連帶清掉已成死碼的 `tripMenuOpen` / `tripMenuRef` 與其
+    document 監聽器。
+
+### Fixed
+- **行程名稱顯示為 tripId**（owner 回報「行程名稱都不見」「我看是沒改變」）——
+  v2.57.3 只修了 3 處，還有 4 個頁面是壞的。
+  - `ChatPage` / `GlobalMapPage` / `MapPage` / `TripsListPage` 用的是**雙抓**：
+    `/my-trips` 只拿「我有權限的 id 集合」，而 `name` / `countries` / `dayCount`
+    這些**要顯示的資料**來自 `/trips?all=1`。後者需要 `ops:trips:read`
+    service-token scope，一般使用者拿不到 → 靜默降級成 published-only →
+    行程改為不公開後 metadata 全空。
+  - `TripsListPage:864` 的 `map.get(id) ?? { tripId: id, name: id }` 於是把
+    tripId 當成名稱顯示，這就是畫面上看到的現象。
+  - 四頁全部改為**單抓 `/my-trips`** —— 那支本來就帶
+    `name/title/countries/totalDays/startDate/endDate/memberCount`，
+    第二支 API 從一開始就是多餘的（每頁少一次往返）。
+  - ⚠️ 第一輪只看到這些頁「有呼叫 `/my-trips`」就判定沒問題，沒去看它們拿那支
+    **做什麼**。有呼叫 ≠ 用它的資料。
+
+### Changed
+- **底部 tab 膠囊恢復玻璃材質**（owner 2026-07-21：「沒有玻璃化效果，變成全透明」）——
+  這個地方來回三次，記錄每一次的原因免得再繞：
+  1. 原本 `--color-glass-nav` 是 `color-mix(--color-background 92%, transparent)`，
+     92% 奶油疊奶油頁 → owner 7/20 反映「像實心白條」；
+  2. 於是 v2.56.6 把材質**整個刪成 `transparent`**，icon 靠陰影自撐 → 沒有材質；
+  3. 曾提案 `rgba(255,255,255,0.80)`，owner 判斷「會造成白底」。正確 ——
+     80% 白在奶油頁上仍是白帶，只是換個顏色重演第 1 次。
+
+  問題從來不是「要不要玻璃」，是 **tint 的不透明度**：tint 一高，
+  `backdrop-filter` 就沒有表現空間，材質退化成實心色板。
+  改採 iOS HIG 的組合：**低 tint（0.42）+ 強模糊（28px）+ 高飽和度（190%）**，
+  底下的內容真的透出來並被放大彩度，才讀作玻璃。用中性白而非 `color-mix`
+  取頁面底色 —— 後者正是第一次被反映的 cream-on-cream。
+  附 `prefers-reduced-transparency` / `prefers-contrast` / `@supports not
+  (backdrop-filter)` 三種降級（低 alpha 少了模糊會變成看不見的浮片）。
+  icon/label 的補償陰影減弱但保留 —— 地圖衛星圖這類雜底仍需要分離度。
+
+### Added
+- **登入頁左上角 Tripline 連回首頁**（owner 2026-07-21）—— `/login` 先前沒有
+  任何回首頁的出口，未登入訪客從搜尋或分享連結落到這裡只能登入或關掉。
+  v2.57.0 才剛加了未登入首頁，登入頁卻連不過去。用 `<a href="/">` 而非
+  `navigate()`，中鍵／右鍵開新分頁才正常。
+
+## [2.57.3] - 2026-07-21
+
+### Fixed
+- **側邊欄「尚無行程」、行程切換器只顯示 tripId**（owner 回報的 prod 回歸）——
+  v2.57.1 把既有行程改為不公開後，三個地方同時空掉。
+  - 根因不是 v2.57.1，是這三處**本來就取錯來源**，一直用「全站公開行程」
+    冒充「我的行程」。過去看起來能用，純粹因為前端建立行程時寫死
+    `published: 1`（v2.57.0 已移除）。
+  - `src/hooks/useMyTrips.ts` 打 `/api/trips?all=1` —— 但 `all=1` 需要
+    `ops:trips:read` service-token scope，一般使用者拿不到，於是**靜默降級**
+    成只回 published 行程。
+  - `src/pages/TripPage.tsx` 打 `/api/trips`，那支永遠只回 `published = 1`。
+  - `src/lib/resolveTripId.ts` 的 fallback 是 `find(t => t.published === 1)`，
+    回 undefined 後連預設行程都導不了。
+  - 三處全部改用 `/api/my-trips`（`FROM trip_permissions WHERE user_id = ?`，
+    純看權限）。
+- **`isTripListItem` 不再要求 `published` 欄位** —— `/api/my-trips` 不回該欄，
+  留著會讓每一筆都被 filter 掉、清單靜默清空。這個 guard 先前也曾因為把
+  `owner` 列為必要而讓匿名檢視公開行程時整頁全空；只檢查真正會用到的欄位
+  （`tripId` / `name`）。
+
+## [2.57.2] - 2026-07-21
+
+### Added
+- **隱私權政策的刪除帳號段落加錨點** `#delete-account` —— Google Play Console
+  的「帳號刪除網址」欄位需要一個未登入可讀、說明如何刪除帳號的網址。不需要獨立
+  頁面，但要能深連。審核員是從錨點跳進來的，所以該段自己補齊「刪什麼、留什麼」，
+  不再只依賴上面的「留多久」章節。
+  填入 Play Console 的網址：`https://trip-planner-dby.pages.dev/privacy#delete-account`
+
+### Changed
+- **既有帳號的個資條款同意標記為沿用**（migration 0090，owner 決策）——
+  2026-07-21 前建立的帳號回填同意紀錄，不另做補問流程。
+  - 版本字串刻意標記 `2026-07-20-grandfathered`，**不與真實同意共用同一個值**。
+    0088 加這兩欄的唯一目的是留下證據；沿用若寫成與實際勾選一模一樣，欄位就
+    失去證據價值，日後也分不清哪些是真的。
+    查真實同意者：`WHERE privacy_policy_version NOT LIKE '%-grandfathered'`
+  - 只更新 `privacy_consent_at IS NULL` 的列 —— 冪等，且不覆寫 v2.57.0 上線後
+    真正勾選同意而註冊的紀錄。
+  - 隱私權政策「政策變更」章節同步揭露沿用一事。沒有那段揭露，回填的時間戳
+    就只是一個沒有依據的值。
+
+## [2.57.1] - 2026-07-21
+
+### Security
+- **既有 10 個行程改為不公開**（migration 0089）—— v2.57.0 把新建行程的預設改成
+  不公開，但既有資料仍是 `published = 1`。`published` 不只是「出現在公開清單」，
+  它同時是 `/api/trips/:id/*` 的讀取權限閘門（`requireTripReadAccess`）——
+  published 的行程，任何人只要知道 tripId 就能匿名讀完整內容，含航班編號、
+  訂房編號與緊急聯絡人電話。
+  - 共編者不受影響（走 `trip_permissions`，與 published 無關）
+  - `/s/:token` 分享連結不受影響（獨立路徑，不看 published）
+  - 僅「拿著 `/trips/<id>` 直接連結的匿名訪客」失去存取，這正是本次意圖
+  - migration 列出明確 ID 而非 blanket `UPDATE trips SET published = 0`：
+    自我記錄動了哪 10 筆、可精確還原（`rollback/0089_*`）、且不會誤傷日後
+    刻意公開的行程。
+
+## [2.57.0] - 2026-07-21
+
+Google Play 上架整備。原本 5 項需求，盤點後補到 7 項 —— 帳號刪除是 Google Play
+強制要求但專案完全沒有，註冊同意個資條款是 owner 追加。過程中撞到三個 prod 實際
+問題，一併處理。
+
+### Added
+- **未登入首頁 `/`**（`LandingPage`）—— 原本 `/` 落到 wildcard → `/trips` → `/login`，
+  訪客看不到任何功能說明。插畫全部 inline SVG，維持 DESIGN.md L284「全站不做照片
+  ／artwork」的零圖片檔前提（有測試擋住 `<img>`）。
+- **隱私權政策頁 `/privacy`**（`PrivacyPage`）—— 未登入可讀。`SignupPage` 的同意
+  連結、`AccountPage` 入口、Flutter 註冊畫面、Google Play Console 欄位，四處都指向
+  這裡，先前全是 404。
+  - 內容**逐條對照程式行為**而非照抄 mockup。草稿寫的 7 項保留期只有「共編邀請
+    30 天」為真（`invitation-cleanup.yml` 有跑）；其餘 6 項連同「逾期自動清除」全部
+    不成立 —— 那些清理都在 `scripts/auth-cleanup.js`，而該檔**沒有任何排程**，
+    `daily-report.js` 的 `cleanupOldLogs` 又已改 no-op 交棒給它，等於兩邊都沒人做。
+  - 揭露跨境傳輸（Sentry 資料在美國）與寄信路徑（驗證信／重設信／共編邀請信經
+    自架主機再由 Gmail SMTP 寄出，被邀請第三方的 email 也走這條）。
+  - 14 條測試鎖住「不得出現與程式行為不符的陳述」，含直接斷言頁面不能出現
+    「逾期自動清除」。
+- **帳號刪除**（Google Play 強制項）—— `GET /api/account` 影響預覽 +
+  `DELETE /api/account`，`AccountPage` 有可達入口。逐表顯式刪除而非依賴 CASCADE：
+  live schema 有 6 張表帶 `trip_id` 卻無 trips 外鍵、14 張表帶身分卻無 users 外鍵。
+  D1 無跨 statement 交易，順序刻意由外圍往 `users` 收 —— 中斷時殘留孤兒資料，
+  而非「使用者已刪但個資還在」。函式冪等。二次確認：有密碼者輸入密碼、
+  純 OAuth 者輸入 `DELETE`。
+- **註冊需同意個資條款**（migration 0088）—— 記錄 `privacy_consent_at` +
+  `privacy_policy_version`。前端勾選框擋不住直接打 API，也在 DB 留不下證據，
+  所以後端一併擋（`SIGNUP_CONSENT_REQUIRED`，排在 rate limit 之前）。兩欄可為
+  NULL 是刻意的：既有使用者是「無同意紀錄」，不等於「已同意」。
+- **帳號頁版本資訊** —— `scripts/app-version.mjs` 作為版本／commit 單一來源。
+  `vitest.config.js` 是獨立設定、不吃 `vite.config.ts` 的 `define`，兩邊都要注入
+  （已加測試守住這個不變量）。
+- **Google Play 送審 demo 帳號** —— `scripts/seed-demo-account.mjs` 走 HTTP
+  signup + import 建立，不需 Cloudflare API token。
+- **`src/lib/tripId.ts`** —— 行程 ID 產生的單一來源。
+
+### Changed
+- **行程 ID 規則移往後端**（**breaking**）—— `POST /api/trips` 送 `id` 一律回 400。
+  owner 由 demo 行程編號 `imp-62a83969-...` 不合慣例而發現：建立走前端 `genTripId`
+  （`trip-bp5o`），匯入走後端寫死 `imp-<uuid>`，同一系統長出兩種慣例。
+  - 不留相容模式。拒絕而非默默忽略 —— 忽略會讓呼叫端拿自己那個 id 去導頁而 404，
+    變成「建立成功但看不到」的隱性 bug。
+  - 後綴改 crypto 亂數而非照抄前端的 `Date.now().slice(-4)`（同毫秒會撞，而匯入
+    路徑沒有唯一性檢查）。撞號由 `generateUniqueTripId` 自動重生，不再對呼叫端拋
+    `DATA_CONFLICT` —— 呼叫端已無從選擇 id，怪它撞號沒有道理也無法自救。
+  - ⚠️ **Flutter 端需同步修改**，見 `docs/api/flutter-store-readiness.md`。
+- **新建行程預設不公開** —— 前端原本寫死 `published: 1`，於是每個新行程立刻進
+  未登入可讀的公開清單。使用者不會預期「建立」等於「發佈」。共編不受影響 ——
+  `/api/my-trips` 純看 `trip_permissions`，`published` 只控制公開清單。
+
+### Security
+- **`GET /api/trips` 不再回傳擁有者 email 與顯示名稱** —— 2026-07-16 修過匿名情境，
+  但門檻只設到「已登入」，而註冊人人都能做。實測：用當天新註冊的帳號打 prod，
+  撈到與該帳號毫無關係的第三方 email。直接移除兩欄而非加權限判斷 —— 這兩欄在本
+  端點沒有任何 consumer（前端讀 `/api/my-trips`），留著的唯一作用就是外洩。
+- **第三方 OAuth token 現在需要行程 scope** —— `hasPermission` /
+  `requireTripReadAccess` / `hasWritePermission` 原本完全不看 scope，使用者在授權
+  畫面只同意「openid 識別身分」，該第三方實際能讀寫他全部行程。改採三分法而非
+  單純 require scope：`mint-restricted` 發給自家 AI pipeline 的 token 是 `scopes: []`，
+  天真加 gate 會把「用對話改行程」整條線打掛。第一方判定用共用常數而非選填 env
+  （用 env 時 `oauth-downscope` 整合測試直接 403）。
+- **告警與稽核紀錄的 email 改存遮罩版**（`functions/api/_pii.ts`）—— 6 處套用。
+  其中 `permissions.ts` 送的是**被邀請的第三方** email，那人還不是使用者、
+  從沒同意過任何條款，卻被送進境外 Telegram 群。
+
+### Fixed
+- `.gitignore` 原本只擋精確的 `.dev.vars`，擋不住 `.dev.vars.qa-backup` 這類帶密鑰
+  的副本 → 改 `.dev.vars.*` + `!.dev.vars.example`。
+- `_middleware.ts` 註解仍寫「Mapbox Directions proxy」，實際 v2.23.0 已遷 Google
+  Routes。過時註解正是本次隱私稽核第三方盤點被誤導的來源。
+- `naming-convention.test.js` 的 `id AS tripId` 斷言原本依賴「檔案裡剛好有個
+  SELECT 排在欄位清單前面」，重構後假紅。改為不綁原始碼文字順序。
+
 ## [2.56.12] - 2026-07-20
 
 ### Fixed（v2.56.9「全版」的 regression — master CI e2e 抓到）

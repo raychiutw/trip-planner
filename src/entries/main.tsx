@@ -97,6 +97,11 @@ const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
 const CollabPage = lazyWithRetry(() => import('../pages/CollabPage'));
 const EditTripPage = lazyWithRetry(() => import('../pages/EditTripPage'));
 const NewTripPage = lazyWithRetry(() => import('../pages/NewTripPage'));
+// 未登入首頁。已登入者由 LandingPage 內部導向 /trips。
+const LandingPage = lazyWithRetry(() => import('../pages/LandingPage'));
+// 隱私權政策。Google Play 送審欄位與審核員都用**未登入**狀態開啟，
+// 且 SignupPage 的同意勾選框、AccountPage 入口、Flutter 註冊畫面都指向這裡。
+const PrivacyPage = lazyWithRetry(() => import('../pages/PrivacyPage'));
 const EntryActionPage = lazyWithRetry(() => import('../pages/EntryActionPage'));
 const AddStopPage = lazyWithRetry(() => import('../pages/AddStopPage'));
 const AddCustomStopPage = lazyWithRetry(() => import('../pages/AddCustomStopPage'));
@@ -177,6 +182,9 @@ if (el) {
           <NewTripProvider>
           <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
             <Routes>
+              {/* `/` 改指向未登入首頁。改版前落到 path="*" → LegacyRedirect → /trips → /login，
+                  訪客永遠看不到這個 app 在做什麼。已登入者由 LandingPage 導回 /trips。 */}
+              <Route path="/" element={<LandingPage />} />
               <Route path="/admin" element={<Navigate to="/trips" replace />} />
               <Route path="/admin/" element={<Navigate to="/trips" replace />} />
               <Route path="/manage" element={<Navigate to="/chat" replace />} />
@@ -190,6 +198,8 @@ if (el) {
               <Route path="/favorites/:id/add-to-trip" element={<AddPoiFavoriteToTripPage />} />
               {/* v2.23.8: direct-mode add-to-trip — Explore POI 不需先收藏，query params 帶 POI 進來 */}
               <Route path="/add-to-trip" element={<AddPoiFavoriteToTripPage />} />
+              {/* 未登入可讀 —— 不可放進需要 auth 的區塊 */}
+              <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/signup/check-email" element={<EmailVerifyPendingPage />} />
@@ -227,16 +237,15 @@ if (el) {
                 <Route path="map" element={<MapPage />} />
                 <Route path="stop/:entryId" element={<StopDetailRedirect />} />
                 <Route path="stop/:entryId/map" element={<MapPage />} />
-                {/* v2.18.0:共編設定獨立頁(取代 ?sheet=collab bottom-sheet) */}
-                <Route path="collab" element={<CollabPage />} />
-                <Route path="health" element={<TripHealthCheckPage />} />
-                {/* v2.34.x 行程筆記 — 5 section accordion + AI gen pretrip/emergency */}
-                <Route path="notes" element={<TripNotesPage />} />
                 {/* v2.36.0 列印文件 — 資料驅動全展開文件（取代 usePrintMode 收合列印） */}
                 <Route path="print" element={<TripPrintPage />} />
                 {/* rev2 owner 2026-07-18「6 條全接」：6 條操作路由包進 TripStackLayout。
                   * 桌機 → 右欄 bare panel 疊在中欄行程詳情上（‹ 前一頁 / ✕ 整個關閉）；
-                  * 手機 → 各頁整頁（OperationShell inStack=false，既有行為）。 */}
+                  * 手機 → 各頁整頁（OperationShell inStack=false，既有行為）。
+                  * v2.57.x：共編設定/AI 健檢/行程筆記 3 條也遷入本 layout（owner 2026-07-21
+                  * 「桌機三欄 shell panel 化」）—— 原本是 TripLayout 直接子路由，獨立整頁
+                  * AppShell，導覽過去會讓中欄（含 header）整個被換掉；遷入後改用 OperationShell
+                  * bare panel，中欄行程詳情（含新補的 TitleBar）保留。 */}
                 <Route element={<TripStackLayout />}>
                   {/* 2026-05-03 modal-to-fullpage migration: EditTripModal → /trip/:id/edit */}
                   <Route path="edit" element={<EditTripPage />} />
@@ -251,6 +260,11 @@ if (el) {
                   <Route path="add-stop" element={<AddStopPage />} />
                   {/* v2.32.0: 新增景點 wizard — EditEntryPage 形狀 + day 下拉 + picker buttons → ChangePoiPage mode=new */}
                   <Route path="add-entry" element={<AddEntryPage />} />
+                  {/* v2.18.0:共編設定(取代 ?sheet=collab bottom-sheet)。v2.57.x 遷入 TripStackLayout。 */}
+                  <Route path="collab" element={<CollabPage />} />
+                  <Route path="health" element={<TripHealthCheckPage />} />
+                  {/* v2.34.x 行程筆記 — 5 section accordion + AI gen pretrip/emergency。v2.57.x 遷入 TripStackLayout。 */}
+                  <Route path="notes" element={<TripNotesPage />} />
                 </Route>
                 {/* v2.31.94: mobile-only fullpage 自訂景點（IME occlusion 避讓）— desktop redirect 回 add-stop?tab=custom */}
                 <Route

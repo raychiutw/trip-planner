@@ -73,6 +73,10 @@ export const ErrorCode = {
   RESET_TOKEN_INVALID: 'RESET_TOKEN_INVALID',
   RESET_PASSWORD_FORMAT: 'RESET_PASSWORD_FORMAT',
   RESET_RATE_LIMITED: 'RESET_RATE_LIMITED',
+  // 帳號刪除（不可逆，需二次確認）
+  ACCOUNT_DELETE_CONFIRM_REQUIRED: 'ACCOUNT_DELETE_CONFIRM_REQUIRED',
+  ACCOUNT_DELETE_PASSWORD_INVALID: 'ACCOUNT_DELETE_PASSWORD_INVALID',
+  SIGNUP_CONSENT_REQUIRED: 'SIGNUP_CONSENT_REQUIRED',
 } as const;
 
 export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
@@ -124,6 +128,9 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   RESET_TOKEN_INVALID: '重設連結已過期或無效',
   RESET_PASSWORD_FORMAT: '密碼格式不符',
   RESET_RATE_LIMITED: '密碼重設嘗試過多，請稍後再試',
+  ACCOUNT_DELETE_CONFIRM_REQUIRED: '刪除帳號需要二次確認',
+  ACCOUNT_DELETE_PASSWORD_INVALID: '密碼不正確，帳號未刪除',
+  SIGNUP_CONSENT_REQUIRED: '請先閱讀並同意個資條款',
 };
 
 // ---------------------------------------------------------------------------
@@ -157,6 +164,17 @@ export interface AuthData {
    * its current request belongs to. Undefined for normal (unrestricted) tokens.
    */
   restrictTrip?: string;
+  /**
+   * 這個 Bearer token 是否來自**第一方** client（自家 tp-request AI pipeline）。
+   * 由 middleware 依 `clientId === env.TP_REQUEST_CLIENT_ID` 判定 —— 判斷放在
+   * middleware 是因為只有那裡拿得到 env。
+   *
+   * 用途：OAuth scope gate（_auth.ts `hasTripScope`）豁免第一方 client。
+   * 它的授權來自 Consent + restrict_trip 機制而**非 scopes** ——
+   * `ai-authorization.ts` 的 Consent 只存 openid/profile，見該檔 authz-drift 警語。
+   * 不豁免的話，downscope（尚未取得 restrictTrip 的那一步）會被擋，整條 AI pipeline 斷掉。
+   */
+  isFirstPartyClient?: boolean;
 }
 
 // ---------------------------------------------------------------------------

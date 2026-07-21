@@ -11,6 +11,7 @@
  * created ids are tracked for rollback.
  */
 import { AppError } from '../_errors';
+import { genTripId } from '../../../src/lib/tripId';
 
 export const BATCH_CHUNK = 50; // stay well under D1's ~100-statement-per-batch limit
 export const MAX_TRIPS_PER_USER = 1000;
@@ -99,4 +100,26 @@ export async function assertTripCap(db: D1Database, userId: string): Promise<voi
   if ((row?.cnt ?? 0) >= MAX_TRIPS_PER_USER) {
     throw new AppError('DATA_VALIDATION', `行程數已達上限（${MAX_TRIPS_PER_USER}）`);
   }
+}
+
+/**
+ * 產生一個尚未被使用的行程 ID。
+ *
+ * 2026-07-21 之前 ID 由呼叫端提供，所以撞號回 `DATA_CONFLICT`（「tripId 已存在」）
+ * 是合理的 —— 是呼叫端挑了被佔用的 id。ID 改由後端產生後，這個錯誤變成在怪罪
+ * 一個根本無從選擇 id 的呼叫端，而且使用者沒有任何辦法自救。
+ *
+ * 碰撞機率極低（8 碼 base36），但機率低不等於處理方式可以是錯的：重生一個即可。
+ * 重試三次仍撞代表不是運氣問題（DB 異常之類），此時才誠實往外拋。
+ */
+export async function generateUniqueTripId(
+  db: D1Database,
+  name: string,
+): Promise<string> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const candidate = genTripId(name);
+    const taken = await db.prepare('SELECT 1 FROM trips WHERE id = ?').bind(candidate).first();
+    if (!taken) return candidate;
+  }
+  throw new AppError('SYS_INTERNAL', '無法產生可用的行程 ID，請稍後再試');
 }

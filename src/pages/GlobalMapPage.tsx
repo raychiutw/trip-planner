@@ -53,7 +53,6 @@ import type { Day } from '../types/trip';
 // (header + sheet skeleton) lands before the leaflet bundle finishes parsing.
 const TpMap = lazyWithRetry(() => import('../components/trip/TpMap'));
 
-interface MyTripRow { tripId: string; }
 interface TripSummary {
   tripId: string;
   name?: string;
@@ -663,21 +662,23 @@ export default function GlobalMapPage() {
     let cancelled = false;
     async function load() {
       try {
-        const [myRes, allRes] = await Promise.allSettled([
-          apiFetch<MyTripRow[]>('/my-trips'),
-          apiFetch<TripSummary[]>('/trips?all=1'),
-        ]);
-        if (cancelled) return;
-        if (myRes.status === 'rejected') {
-          const err = myRes.reason;
+        // 2026-07-21：改為單抓 /my-trips。原本是雙抓 —— /my-trips 只拿「我有權限
+        // 的 id 集合」，name/title/countries 這些**要顯示的資料**卻來自
+        // /trips?all=1。而 all=1 需要 ops:trips:read service-token scope，
+        // 一般使用者拿不到，會靜默降級成只回 published 行程；既有行程改為不公開
+        // 後名稱就全沒了，畫面只剩 tripId（owner 2026-07-21 回報）。
+        // /my-trips 本身就帶 name/title/countries/totalDays/startDate/endDate，
+        // 第二支 API 從一開始就是多餘的。
+        let myTrips: TripSummary[];
+        try {
+          myTrips = await apiFetch<TripSummary[]>('/my-trips');
+        } catch (err) {
+          if (cancelled) return;
           if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return;
           setError('無法載入行程清單。');
           return;
         }
-        const myJson = myRes.value;
-        const allJson = allRes.status === 'fulfilled' ? allRes.value : [];
-        const mine = new Set(myJson.map((r) => r.tripId));
-        const myTrips = allJson.filter((t) => mine.has(t.tripId));
+        if (cancelled) return;
         setTrips(myTrips);
         if (myTrips.length === 0) return;
         // Section 5 (E4)：優先用 ActiveTripContext (cross-page persisted)，

@@ -23,6 +23,7 @@ import { sendEmail, EmailError } from '../../../src/server/email';
 import { emailVerification } from '../../../src/server/email-templates';
 import { recordEmailEvent } from '../_audit';
 import { alertAdminTelegram } from '../_alert';
+import { maskEmail } from '../_pii';
 import { normalizeEmail } from '../../../src/server/email-utils';
 import { buildRateLimitResponse } from '../_errors';
 import type { Env } from '../_types';
@@ -133,7 +134,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       });
       await alertAdminTelegram(
         context.env,
-        `驗證信寄送失敗: ${email} (${msg})`,
+        `驗證信寄送失敗: ${maskEmail(email)} (${msg})`,
       );
     }
   })());

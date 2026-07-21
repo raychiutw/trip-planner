@@ -1,17 +1,15 @@
 /**
- * CollabPage — 共編設定獨立頁面 `/trip/:tripId/collab`(v2.18.0)
+ * CollabPage — 共編設定 `/trip/:tripId/collab`(v2.18.0)
  *
  * 取代 v2.17 的 CollabSheet bottom-sheet pattern。User 拍板「獨立頁面 + 共用 title +
  * back 回前頁,右側無 actions」。
  *
- * Layout:
- *   AppShell
- *     sidebar:DesktopSidebarConnected(行程 active)
- *     main:
- *       TitleBar(共用 .tp-titlebar)
- *         ← back  共編設定                      ← 左 back / 右無 action
- *       <CollabPanel tripId={...} />
- *     bottomNav:GlobalBottomNav(行程 active)
+ * v2.57.x：遷入 TripStackLayout（owner 2026-07-21「桌機三欄 shell panel 化」）——
+ *   桌機（TripStackLayout host，inStack=true）：OperationShell bare panel 塞右欄，
+ *     中欄行程詳情（含新補的 TitleBar）保留，不再是獨立整頁。
+ *   手機（inStack=false，無 host）：OperationShell 整頁 AppShell（既有行為，
+ *     GlobalBottomNav 透過新增的 `bottomNav` prop 保留 — 遷移前手機版本來就有底部 tab）。
+ * 詳見 docs/design-sessions/2026-07-21-desktop-third-column-panelization.html。
  *
  * 進入路徑:
  *   - TripsList card kebab menu 「共編」
@@ -23,10 +21,8 @@ import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
-import AppShell from '../components/shell/AppShell';
-import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import TitleBar from '../components/shell/TitleBar';
+import OperationShell from '../components/shell/OperationShell';
 import CollabPanel from '../components/trip/CollabPanel';
 import ToastContainer from '../components/shared/Toast';
 
@@ -36,6 +32,13 @@ const SCOPED_STYLES = `
   background: var(--color-secondary);
   height: 100%;
   overflow-y: auto;
+}
+/* 2026-07-21 dark-mode elevation audit：桌機第三欄（TripStackLayout 右欄 bare panel）
+ * 內比中欄內容再高一階 — 面板自己不透明背景需對齊 .app-shell-sheet 的
+ * --color-tertiary，否則覆蓋掉那層 base（見 AppShell.tsx 註解）。手機整頁模式
+ * （面板在 .app-shell-main 內）不受此 override 影響，維持原本 --color-secondary。 */
+.app-shell-sheet .tp-collab-shell {
+  background: var(--color-tertiary);
 }
 .tp-collab-page-title {
   /* page-title under TitleBar — DESIGN.md page-title token (28/36/700) */
@@ -88,18 +91,17 @@ export default function CollabPage() {
   if (!auth.user) return null;
   if (!tripId) {
     return (
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-collab-shell" data-testid="collab-page">
-            <TitleBar title="共編設定" back={() => navigate('/trips')} backLabel="返回行程列表" backLabelVisible />
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
-              無效的行程 ID
-            </div>
-          </div>
-        }
+      <OperationShell
+        shellClassName="tp-collab-shell"
+        testId="collab-page"
+        title="共編設定"
+        back={() => navigate('/trips')}
         bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      >
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
+          無效的行程 ID
+        </div>
+      </OperationShell>
     );
   }
 
@@ -108,23 +110,17 @@ export default function CollabPage() {
   return (
     <>
       <ToastContainer />
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={
-          <div className="tp-collab-shell" data-testid="collab-page">
-            <style>{SCOPED_STYLES}</style>
-            <TitleBar
-              title="共編設定"
-              back={handleBack}
-              backLabel="返回前頁"
-              backLabelVisible
-            />
-            <h2 className="tp-collab-page-title">{tripName}</h2>
-            <CollabPanel tripId={tripId} />
-          </div>
-        }
+      <OperationShell
+        shellClassName="tp-collab-shell"
+        testId="collab-page"
+        title="共編設定"
+        back={handleBack}
         bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+      >
+        <style>{SCOPED_STYLES}</style>
+        <h2 className="tp-collab-page-title">{tripName}</h2>
+        <CollabPanel tripId={tripId} />
+      </OperationShell>
     </>
   );
 }

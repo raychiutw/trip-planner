@@ -47,15 +47,14 @@ const SAMPLE_REQUEST_ROW = {
 
 beforeEach(() => {
   apiFetchMock.mockReset();
-  // v2.33.33: /my-trips + /trips?all=1 改走 apiFetch（從 raw fetch 遷移）
+  // 2026-07-21：ChatPage 改為單抓 /my-trips（原本 /my-trips 只拿 id、名稱另抓
+  // /trips?all=1，而那支對一般使用者降級成 published-only）。fixture 跟著改成
+  // /my-trips 直接回完整資料 —— 這正是 prod 的實際 response shape。
   apiFetchMock.mockImplementation((path: string) => {
     if (path.startsWith('/requests')) {
       return Promise.resolve({ items: [SAMPLE_REQUEST_ROW], hasMore: false });
     }
     if (path === '/my-trips') {
-      return Promise.resolve([{ tripId: 'okinawa-2026' }]);
-    }
-    if (path.startsWith('/trips')) {
       return Promise.resolve([
         { tripId: 'okinawa-2026', name: '沖繩 2026', title: '沖繩 2026', countries: 'JP' },
       ]);
@@ -129,18 +128,16 @@ describe('ChatPage AI avatar + bubble timestamp prefix — Section 4.8', () => {
 
   it('TitleBar title 為當前 trip name (取代「聊天」固定 title)', async () => {
     renderPage();
+    // 2026-07-21：原本等 `chat-trip-picker`（TitleBar 右側那顆 ⇄ 圖示按鈕）。
+    // 形制改成「標題即切換器」後那個 testid 不存在了；而本 fixture 只有一個
+    // 行程，TripTitleSwitcher 會刻意渲染純文字（沒得換就不給可點的假象），
+    // 連 `chat-trip-title` 也不會出現。
+    // 這條要驗的本意沒變 —— 標題顯示的是行程名而非寫死的「聊天」，直接等它。
     await waitFor(() => {
-      // 等待 history loaded → trip picker render with active trip
-      expect(screen.getByTestId('chat-trip-picker')).toBeTruthy();
+      const heading = document.querySelector('h1, [data-testid="page-header-title"]');
+      expect(heading?.textContent).toContain('沖繩 2026');
     }, { timeout: 2000 });
-    // TitleBar h1 應為「沖繩 2026」 而不是「聊天」
     const heading = document.querySelector('h1, [data-testid="page-header-title"]');
-    if (heading) {
-      expect(heading.textContent).toContain('沖繩 2026');
-      expect(heading.textContent).not.toContain('聊天');
-    } else {
-      // fallback: 至少確認 trip picker pill 內含 trip name
-      expect(screen.getAllByText('沖繩 2026').length).toBeGreaterThan(0);
-    }
+    expect(heading!.textContent).not.toContain('聊天');
   });
 });

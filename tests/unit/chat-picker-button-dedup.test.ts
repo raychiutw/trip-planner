@@ -22,20 +22,22 @@ const SRC = readFileSync(
 );
 
 describe('v2.31.47 ChatPage picker button 不重複 trip name', () => {
-  it('TitleBar title 維持 activeTrip name（v2.18 design SoT, existing test pin）', () => {
-    expect(SRC).toMatch(/<TitleBar\s+title=\{activeTrip\?\.title\s*\|\|\s*activeTrip\?\.name\s*\|\|\s*['"]聊天['"]\}/);
+  // 2026-07-21 形制變更（owner：「移除切換行程 icon，改為點下行程名稱後切換，
+  // 行程名稱後面接一個 V 符號」）。本檔原本鎖的是 v2.31.47 的形制：標題是純字串、
+  // 右側一顆 `⇄ ▾` 圖示按鈕。那顆按鈕與標題分離，使用者要先認出圖示才知道能換。
+  // 現在標題自己是按鈕、後面掛 chevron，dropdown 邏輯抽到 TripTitleSwitcher。
+
+  it('標題改用共用的 TripTitleSwitcher', () => {
+    expect(SRC).toMatch(/<TripTitleSwitcher/);
+    expect(SRC).toMatch(/label=\{activeTrip\?\.title\s*\|\|\s*activeTrip\?\.name/);
   });
 
-  it('Picker button 內不再 render trip name span', () => {
-    expect(SRC).not.toMatch(/<span className="tp-titlebar-trip-picker-name">[\s\S]{0,80}activeTrip\?\.title\s*\|\|\s*activeTrip\?\.name/);
+  it('不再有分離的 swap-horiz 圖示按鈕', () => {
+    expect(SRC, 'owner 要求移除切換行程 icon').not.toMatch(/swap-horiz/);
+    expect(SRC).not.toMatch(/tp-titlebar-trip-picker-chevron/);
   });
 
-  it('Picker button 仍有 swap-horiz icon + chevron（affordance regression）', () => {
-    expect(SRC).toMatch(/Icon\s+name=["']swap-horiz["']/);
-    expect(SRC).toMatch(/tp-titlebar-trip-picker-chevron/);
-  });
-
-  it('Dropdown trip rows 維持顯每個 trip name（切換功能 regression）', () => {
-    expect(SRC).toMatch(/tp-titlebar-trip-row-title[\s\S]{0,40}>\{?\s*t\.title\s*\|\|\s*t\.name/);
+  it('dropdown 的 trip name 渲染已移到共用元件（本頁不再重複實作）', () => {
+    expect(SRC, 'markup 應由 TripTitleSwitcher 提供').not.toMatch(/tp-titlebar-trip-row-title/);
   });
 });

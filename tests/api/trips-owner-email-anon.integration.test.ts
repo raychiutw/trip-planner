@@ -68,10 +68,28 @@ describe('GET /api/trips — 擁有者個資不外洩給匿名／受限 token', 
     expect(blob).not.toContain(OWNER_REAL_NAME);
   });
 
-  it('登入者 → 拿得到 owner 與 ownerDisplayName（前端比對「我的行程」＋avatar 要用）', async () => {
+  it('任何登入者 → 一樣拿不到 owner／ownerDisplayName', async () => {
+    // 2026-07-21 翻轉。原本這條斷言「登入者拿得到」，理由寫「前端比對『我的行程』
+    // ＋avatar 要用」—— 那個理由不成立：前端行程清單讀的是 `/api/my-trips`
+    // （TripsListPage.tsx:832），不是這支。`GET /api/trips` 的 owner 欄位沒有任何
+    // 前端 consumer。
+    //
+    // 而門檻只設到「有登入」的後果，是實測拿得到的：用當天新註冊的 demo 帳號打 prod，
+    // 撈到與該帳號毫無關係的第三方 email。註冊是任何人都能做的事，等於零門檻。
+    //
+    // 需要 owner 的情境（自己的行程卡片、avatar）由 `/api/my-trips` 供應，那支以
+    // trip_permissions 為條件，給的是「你有權限的行程」的 owner，合理且已足夠。
     const rows = await call(mockAuth({ email: 'user@test.com' }));
-    expect(rows.length).toBeGreaterThan(0);
-    expect(Object.keys(rows[0])).toEqual(expect.arrayContaining(['owner', 'ownerDisplayName']));
+    expect(rows.length, '登入者仍應看得到公開行程清單本身').toBeGreaterThan(0);
+
+    const blob = JSON.stringify(rows);
+    expect(blob, '登入者不該撈到全站公開行程擁有者的 email').not.toMatch(
+      /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}/);
+    expect(blob, '顯示真名同樣是個資').not.toContain(OWNER_REAL_NAME);
+    for (const row of rows) {
+      expect(Object.keys(row)).not.toContain('owner');
+      expect(Object.keys(row)).not.toContain('ownerDisplayName');
+    }
   });
 
   it('restrict_trip 降權 token → 拿不到 owner／ownerDisplayName（只該碰被授權的單一 trip）', async () => {

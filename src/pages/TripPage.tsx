@@ -14,7 +14,7 @@ import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { writeTripView } from '../lib/tripViewState';
 import { EVENT } from '../lib/events';
 import { mapRow } from '../lib/mapRow';
-import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
+import { lsGet, lsSet, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import { resolveTripId } from '../lib/resolveTripId';
 import { useTrip } from '../hooks/useTrip';
@@ -51,13 +51,15 @@ import { FooterArt } from '../components/trip/ThemeArt';
 import DaySkeleton from '../components/trip/DaySkeleton';
 import type { TripListItem } from '../types/trip';
 
-// owner 不在必要欄位裡：/api/trips 對匿名訪客不回 owner email（第三方個資），
-// 而這支正是匿名檢視公開行程的路徑。把 owner 列為必要會讓每個 trip 都被
-// filter 掉 → 公開行程頁全空。這裡真正需要的是 tripId/name/published。
+// 只認 tripId 與 name —— 這是切換器與導頁真正需要的。
+//
+// 曾把 owner 列為必要而讓匿名檢視公開行程時整頁全空；2026-07-21 又因為
+// `published` 被列為必要，在清單來源換成 `/api/my-trips`（不回該欄）後
+// **每一筆都被 filter 掉**。教訓一樣：這個 guard 只該檢查真正會用到的欄位，
+// 多列一個就多一種讓清單靜默清空的方式。
 function isTripListItem(item: Record<string, unknown>): item is Record<string, unknown> & TripListItem {
   return typeof item.tripId === 'string'
-    && typeof item.name === 'string'
-    && typeof item.published === 'number';
+    && typeof item.name === 'string';
 }
 
 import '../../css/tokens.css';
@@ -88,7 +90,20 @@ const SCOPED_STYLES = `
 .day-content-loaded {
   animation: fadeIn 300ms var(--transition-timing-function-apple) both;
 }
-.trip-content { min-width: 0; }
+/* 內容欄的表面（owner 2026-07-21：「桌機行程功能黑色太多」）。
+ *
+ * browse 對 prod 深色實測：行程頁有 16,091k px2 的透明面積壓在單一
+ * .app-shell 的 #1C1C1E 上 —— 整片內容區沒有自己的表面，於是全糊成一塊近黑。
+ * 相對地 /trips 的 .tp-trips-shell 早就用 --color-secondary 抬起來了
+ * （實測 #2C2C2E，1093k），所以那頁沒這問題。
+ *
+ * 這裡不是發明新規則，是補上這個 app 自己已有的做法：內容欄抬一階，
+ * 與 .app-shell 的 base 之間才讀得出層次。Apple HIG 的深色模式正是靠
+ * elevation 分層（#1C1C1E → #2C2C2E → #3A3A3C），不是把亮色反過來。 */
+.trip-content {
+  min-width: 0;
+  background: var(--color-secondary);
+}
 
 /* Compact-hidden TitleBar actions — 桌機(>=761px) 顯示「建議 / 共編 / 下載」
  * inline,手機塞進 OverflowMenu 避免標題列擁擠。 */
@@ -317,25 +332,24 @@ function TripPageInner(
     // Reset scroll tracking for new trip
     initialScrollDone.current = false;
 
-    apiFetch<Record<string, unknown>[]>('/trips')
+    // 2026-07-21：改用 /my-trips（`FROM trip_permissions WHERE user_id = ?`）。
+    // 原本打 /trips —— 那支只回 `published = 1`，等於用「全站公開行程」冒充
+    // 「我的行程」。過去看起來能用純粹因為前端建立行程時寫死 published=1；
+    // v2.57.0 移除該預設、v2.57.1 把既有行程改為不公開後，切換器就只剩 tripId
+    // 顯示不出名稱（owner 2026-07-21 回報）。
+    apiFetch<Record<string, unknown>[]>('/my-trips')
       .then((raw) => {
         if (cancelled) return;
         const trips: TripListItem[] = raw.map(r => mapRow(r)).filter(isTripListItem);
 
-        // Migration 0045 dropped trips.is_default. Fallback改用 user 第一個
-        // published=1 的 trip — TripsListPage 列表已是 published=1 ordered by
-        // name ASC，取第一筆即可（PR plan Q5 / commit 18）。
-        const defaultTrip = trips.find((t) => t.published === 1);
-
-        // 比對 tripId 是否存在於已發布行程中
-        const match = tripId ? trips.find((t) => t.tripId === tripId) : null;
-
-        if (match && match.published === 0) {
-          lsRemove(LS_KEY_TRIP_PREF);
-          setResolveState({ status: 'unpublished' });
-          setTimeout(() => { navigate(defaultTrip ? `/trip/${defaultTrip.tripId}` : '/', { replace: true }); }, 2000);
-          return;
-        }
+        // Migration 0045 dropped trips.is_default。/my-trips 回的每一筆都是使用者
+        // 有權限的行程，published 與可否存取無關 —— 直接取第一筆。舊版是
+        // `find(t => t.published === 1)`，既有行程全部改為不公開後回 undefined，
+        // 連預設行程都導不了。
+        // 舊版在此自行算 defaultTrip / match，並攔截 `match.published === 0` 顯示
+        // 「已取消發布」。改用 /my-trips 後那條不成立 —— 清單裡的就是你有權限的；
+        // 比對與 fallback 也都已在 resolveTripId 內完成，不需在這裡重算一次。
+        // 真正無權限的情況由下方 useTrip(activeTripId) 的 403/404 處理。
 
         // v2.43.x fix：明確導航目標（URL/prop/?trip=）即使不在 permission-filtered
         // /api/trips（排除使用者自己的私人 clone, published=0）也信任它，不再 silently

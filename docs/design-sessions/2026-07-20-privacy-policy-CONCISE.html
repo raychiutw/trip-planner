@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>隱私權政策（精簡版）　Tripline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   Tripline 隱私權政策 — 精簡版
+   2026-07-20
+
+   與完整版的差別：拿掉表格與 code 來源註記，改成「一段話講完一件事」。
+   揭露的**事實範圍完全相同** —— Google Play 要求的是揭露完整，不是篇幅長。
+   讀不完的政策等於沒有政策。
+
+   ⚠ 黃底 [待定] 仍需 owner 決定，共 8 處（與完整版同一組）。
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --color-background:#FFFBF5;--color-secondary:#FAF4EA;--color-tertiary:#F4EDE3;
+  --color-hover:#F9EDE0;--color-foreground:#2A1F18;--color-muted:#6F5A47;
+  --color-border:#EADFCF;--color-accent:#A97A4A;--color-accent-fill:#8A6038;
+  --color-accent-foreground:#FFFFFF;--color-accent-text:#8A6038;
+  --radius-md:8px;--radius-lg:12px;--radius-full:9999px;
+  --font-family-system:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,"PingFang TC",system-ui,sans-serif;
+  --todo-bg:#FFF4D6;--todo-line:#E0B33C;--todo-fg:#6B4E00;
+}
+body.dark{
+  --color-background:#1C1C1E;--color-secondary:#2C2C2E;--color-tertiary:#3A3A3C;
+  --color-hover:#48484A;--color-foreground:#F5F5F7;--color-muted:#A1A1A6;
+  --color-border:#48484A;--color-accent:#CBA06E;--color-accent-fill:#CBA06E;
+  --color-accent-foreground:#1C1C1E;--color-accent-text:#E0BC90;
+  --todo-bg:#3A2E12;--todo-line:#8A6B1F;--todo-fg:#F0D68A;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-family-system);background:var(--color-background);
+  color:var(--color-foreground);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+@media (min-width:761px){body{font-size:17px}}
+
+.tp-pp-nav{
+  position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:12px 18px;
+  background:color-mix(in srgb,var(--color-background) 88%,transparent);
+  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid var(--color-border);
+}
+.tp-pp-back{min-height:44px;padding:0 14px;display:inline-flex;align-items:center;
+  color:var(--color-accent-text);text-decoration:none;font-weight:700;font-size:15px;border-radius:var(--radius-full)}
+.tp-pp-back:hover{background:var(--color-hover)}
+.tp-pp-nav-title{font-size:16px;font-weight:800}
+
+.tp-pp{max-width:680px;margin:0 auto;padding:32px 18px 90px}
+@media (min-width:761px){.tp-pp{padding:56px 40px 120px}}
+.tp-pp-h1{font-size:clamp(26px,6vw,31px);font-weight:900;letter-spacing:-.03em;margin:0 0 8px}
+.tp-pp-meta{font-size:14px;color:var(--color-muted);margin:0 0 26px}
+
+h2{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:34px 0 10px}
+p{margin:0 0 14px}
+ul{margin:0 0 14px;padding-left:22px}
+li{margin:5px 0}
+b{font-weight:700}
+
+.key{
+  border:1px solid var(--color-border);border-radius:var(--radius-lg);
+  background:var(--color-secondary);padding:18px 20px;margin:0 0 26px;
+}
+.key p{margin:0 0 8px}
+.key p:last-child{margin:0}
+
+.todo{background:var(--todo-bg);border-left:4px solid var(--todo-line);color:var(--todo-fg);
+  padding:10px 13px;border-radius:0 var(--radius-md) var(--radius-md) 0;margin:0 0 14px;font-size:14.5px}
+.todo-inline{background:var(--todo-bg);color:var(--todo-fg);border:1px dashed var(--todo-line);
+  padding:1px 7px;border-radius:4px;font-weight:700;font-size:14px;white-space:nowrap}
+
+.more{margin:36px 0 0;padding:16px 18px;border:1px dashed var(--color-border);
+  border-radius:var(--radius-lg);font-size:15px;color:var(--color-muted)}
+.more a{color:var(--color-accent-text)}
+
+.mk-toggle{position:fixed;right:16px;bottom:16px;z-index:99;min-height:44px;padding:0 18px;
+  border-radius:var(--radius-full);border:1px solid var(--color-border);background:var(--color-secondary);
+  color:var(--color-foreground);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.mk-banner{background:#8B2F2F;color:#fff;padding:12px 18px;font-size:14px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="mk-banner">
+  <b>⚠ mockup，非可上線版本。</b>黃底 [待定] 共 8 處，與完整版同一組，落地前必須全部替換。
+  篇幅約完整版的 1/3，但<b>揭露的事實範圍相同</b>。
+</div>
+
+<nav class="tp-pp-nav">
+  <a class="tp-pp-back" href="/account">‹ 帳號</a>
+  <span class="tp-pp-nav-title">隱私權政策</span>
+</nav>
+
+<main class="tp-pp">
+  <h1 class="tp-pp-h1">隱私權政策</h1>
+  <p class="tp-pp-meta">最後更新：<span class="todo-inline">[待定] 上線日期</span></p>
+
+  <div class="key">
+    <p><b>一句話版本：</b>我們只收行程規劃需要的資料，不追蹤你的位置，不賣資料。</p>
+    <p>你可以隨時匯出行程，也可以在<b>帳號 → 刪除帳號</b>把一切刪光。</p>
+  </div>
+
+  <h2>我們收什麼</h2>
+  <p>
+    <b>你給的：</b>電子郵件與顯示名稱、行程內容（地點、時間、備註）、行前資料
+    （航班編號、住宿與訂房編號、餐廳訂位、<b>緊急聯絡人姓名電話</b>）、收藏的地點、
+    你邀請旅伴時輸入的對方信箱、你對 AI 下的行程指令。
+  </p>
+  <p>
+    <b>系統產生的：</b>密碼的雜湊值（我們無法還原你的密碼）、登入裝置摘要與
+    <b>IP 位址的雜湊</b>（非原始 IP）、誰在何時改過哪個行程的稽核紀錄、程式出錯時的錯誤資訊。
+  </p>
+  <p>
+    <b>我們不收：</b>不追蹤位置軌跡（地圖的「我的位置」只在你按下時用來移動畫面，
+    不上傳不儲存）、不讀通訊錄或相簿、不賣個人資料。
+  </p>
+
+  <h2>為什麼收</h2>
+  <p>為了讓服務能運作：儲存同步你的行程、驗證身分與偵測異常登入、讓你邀請的旅伴能共同編輯、出問題時能查明原因。</p>
+  <div class="todo"><b>[待定 1/8]</b> 是否納入「產品改善分析」目的 —— 取決於 Cloudflare Web Analytics 是否啟用（Dashboard 端設定，code 查無載入點）。</div>
+
+  <h2>會傳給誰</h2>
+  <ul>
+    <li><b>Google 地圖服務</b>：你輸入的地點搜尋文字、行程座標、起訖點（用於搜尋、地圖與車程計算）。地圖元件與網頁字型由你的瀏覽器直接載入，因此 Google 會看到你的 IP。</li>
+    <li><b>Open-Meteo</b>：行程地點座標與日期（用於天氣）。由你的瀏覽器直接連線，對方會看到你的 IP。</li>
+    <li><b>Sentry</b>：程式出錯時的錯誤訊息與<b>當下的完整網址</b>（用於錯誤監控，伺服器位於美國）。</li>
+    <li><b>Google Gmail</b>：驗證信、密碼重設信、共編邀請信的收件者與內容。</li>
+    <li><b>Cloudflare</b>：網站與資料庫的基礎設施。</li>
+  </ul>
+  <div class="todo"><b>[待定 2/8]</b> Sentry 的資料保留期。　<b>[待定 3/8]</b> 寄信伺服器端的稽核紀錄內容與保留期（該程式不在本專案內）。　<b>[待定 4/8]</b> 管理者告警目前會把使用者與被邀請者的 email 送到 Telegram —— <b>建議先改 code 移除，而非在此揭露</b>。</div>
+
+  <h2>第三方應用程式</h2>
+  <p>Tripline 可作為登入提供者。你可以隨時在<b>帳號 → 已連結應用</b>撤銷授權。</p>
+  <div class="todo"><b>[待定 5/8]</b> 授權畫面顯示的範圍與實際能力不符：權限判斷不檢查 scope，獲授權的應用實際可讀寫你<b>全部行程</b>。<b>需先決定要加 scope 限制，還是在此誠實寫明。</b></div>
+
+  <h2>留多久</h2>
+  <p>
+    登入稽核 30 天、裝置紀錄 30 天、共編邀請 30–90 天、錯誤回報 90 天、
+    API 存取紀錄 60 天、AI 健檢報告 30 天、登入 Cookie 30 天。逾期自動清除。
+  </p>
+  <div class="todo"><b>[待定 6/8]</b> 帳號、行程、收藏、操作稽核的保留期 —— code 中無清理邏輯，屬政策決定。　<b>[待定 7/8]</b> 上述自動清除的實際執行機制需確認（若靠單機排程，機器離線期間承諾不成立）。　<b>[待定 8/8]</b> 資料庫備份的保留期與地理位置。</div>
+
+  <h2>你可以做什麼</h2>
+  <ul>
+    <li><b>取回資料</b>：每個行程可匯出 JSON 或列印 PDF。</li>
+    <li><b>管理裝置</b>：帳號 → 登入裝置，可登出其他裝置。</li>
+    <li><b>撤銷授權</b>：帳號 → 已連結應用。</li>
+    <li>
+      <b>刪除帳號</b>：帳號 → 刪除帳號。會永久刪除你的帳號與<b>你建立的所有行程</b>，無法復原。
+      <br>
+      ⚠ 你建立的行程若有共編者，<b>那些行程也會一併刪除</b>，共編者將失去存取權（確認畫面會顯示受影響人數）。
+      操作稽核紀錄會匿名化保留 —— 移除你的信箱與資料快照，只留「某位已刪除使用者改過某行程」的行為紀錄。
+    </li>
+  </ul>
+
+  <h2>安全</h2>
+  <p>全站 HTTPS；密碼以 PBKDF2 雜湊儲存，我們無法還原；IP 以雜湊儲存；分享連結有雜湊與有效期。</p>
+
+  <h2>兒童</h2>
+  <p>本服務不針對 13 歲以下兒童設計，也不刻意收集其資料。若發現請聯絡我們，我們會盡快移除。</p>
+
+  <h2>聯絡我們</h2>
+  <p>隱私權相關問題請寄至 <span class="todo-inline">[待定] 聯絡信箱</span>。政策若有重大變更，我們會更新本頁日期並在應用程式內告知。</p>
+
+  <div class="more">
+    想看更詳細的逐項說明（含每類資料的完整欄位與第三方傳輸細節）？
+    <a href="#">完整版隱私權政策</a>
+  </div>
+</main>
+
+<button class="mk-toggle" id="mk">深色</button>
+<script>
+  var b=document.body,t=document.getElementById('mk');
+  t.addEventListener('click',function(){var d=b.classList.toggle('dark');t.textContent=d?'淺色':'深色';});
+</script>
+</body>
+</html>

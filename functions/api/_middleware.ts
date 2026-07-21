@@ -13,6 +13,7 @@ import { normalizeEmail } from '../../src/server/email-utils';
 
 import { AppError, errorResponse } from './_errors';
 import { alertAdminTelegram } from './_alert';
+import { isFirstPartyClientId } from './_first-party';
 
 interface AccessTokenPayload extends AdapterPayload {
   client_id: string;
@@ -394,7 +395,8 @@ async function handleAuth(
     return context.next();
   }
 
-  // 公開讀取：GET /api/route（Mapbox Directions proxy，只接受座標 query params、不回 user data）
+  // 公開讀取：GET /api/route（Google Routes proxy，只接受座標 query params、不回 user data）
+  // v2.23.0 起已從 Mapbox 遷移到 Google Routes —— 舊註解會誤導隱私權稽核的第三方盤點。
   if (request.method === 'GET' && url.pathname === '/api/route') {
     (context.data as Record<string, unknown>).auth = null;
     return context.next();
@@ -504,6 +506,12 @@ async function handleAuth(
             isServiceToken,
             scopes: safeScopes,
             clientId: safeClientId,
+            // 第一方 client 豁免 scope gate —— 只有這裡拿得到 env 做判斷。
+            // 見 src/types/api.ts AuthData.isFirstPartyClient 的說明。
+            isFirstPartyClient: isFirstPartyClientId(
+              safeClientId,
+              (context.env as { TP_REQUEST_CLIENT_ID?: string }).TP_REQUEST_CLIENT_ID,
+            ),
             // v2.55.56: trip-scoped downscope restriction — enforced in _auth.ts.
             restrictTrip: typeof tokenRow.restrict_trip === 'string' ? tokenRow.restrict_trip : undefined,
           };
