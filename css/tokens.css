@@ -242,6 +242,24 @@ html { color-scheme: light dark; }
 /* ===== Composite tokens on body (let .dark overrides take effect) ===== */
 body {
     --color-glass-nav: color-mix(in srgb, var(--color-background) 92%, transparent);
+
+    /* 底部 tab 膠囊材質（2026-07-21）。
+     *
+     * 這個地方來回三次，參數是關鍵，不是「要不要玻璃」：
+     *   92% 奶油（原本）→ 像實心白條；transparent（v2.56.6）→ 沒有材質；
+     *   80% 白（提案）→ 換個顏色重演白條。
+     *
+     * iOS HIG 的玻璃感來自「低 tint + 強模糊 + 提高飽和度」——
+     * 底下的內容真的透出來並被放大彩度，才讀作玻璃。tint 一高，
+     * backdrop-filter 就沒有表現空間。
+     *
+     * 用中性白而非 color-mix(--color-background)：後者是奶油疊奶油，
+     * 正是第一次被反映的問題。中性白在低 alpha 下會被底下的內容染色，
+     * 自然融進頁面而不自帶顏色。 */
+    --tabbar-tint: rgba(255, 255, 255, 0.42);
+    --tabbar-filter: blur(28px) saturate(190%);
+    --tabbar-rim: 1px solid rgba(255, 255, 255, 0.55);
+    --tabbar-shadow: 0 8px 28px rgba(42, 31, 24, 0.16), 0 2px 6px rgba(42, 31, 24, 0.10);
     --color-glass-toast: color-mix(in srgb, var(--color-secondary) 92%, transparent);
     /* Map marker active state — DESIGN.md exception (multi-layer rgba inline allowed for map markers) */
 }
@@ -266,6 +284,10 @@ input, select, textarea {
     font-size: max(16px, 1em);
 }
 body.dark {
+    /* 深色下改用深底低 alpha —— 白 tint 在深色頁上會變成霧面亮條。 */
+    --tabbar-tint: rgba(28, 28, 30, 0.52);
+    --tabbar-rim: 1px solid rgba(255, 255, 255, 0.12);
+    --tabbar-shadow: 0 8px 28px rgba(0, 0, 0, 0.44), 0 2px 6px rgba(0, 0, 0, 0.30);
     /* Sidebar dark accent — 更深 cocoa surface（DESIGN.md H6 exception line 5126）。 */
     --color-sidebar-bg: #0F0B08;
 }
@@ -1785,6 +1807,32 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 /* TitleBar trip-picker — shared by ChatPage / MapPage.
  * 規範:桌機(>=761) icon + trip name + chevron;手機(<=760) icon-only。 */
 .tp-titlebar-trip-menu { position: relative; }
+
+/* 標題即切換器（owner 2026-07-21：「點下行程名稱後切換，名稱後面接一個 V」）。
+ * 取代原本 TitleBar 右側那顆分離的 `⇄ ▾` 圖示按鈕 —— 標題本來就是最自然的入口。 */
+.tp-titlebar-trip-title-wrap { position: relative; display: inline-flex; min-width: 0; }
+.tp-titlebar-trip-title {
+  display: inline-flex; align-items: center; gap: 4px;
+  min-width: 0; min-height: 44px; /* HIG 最小觸控目標 */
+  padding: 0 6px; margin-left: -6px; /* 負 margin 抵銷 padding，視覺仍與原標題切齊 */
+  border: none; background: none; cursor: pointer;
+  border-radius: var(--radius-md);
+  /* 繼承 TitleBar 標題的字體設定，換成按鈕後外觀不該改變 */
+  font: inherit; color: inherit; letter-spacing: inherit;
+}
+.tp-titlebar-trip-title:hover { background: var(--color-hover); }
+.tp-titlebar-trip-title:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-titlebar-trip-title-text {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tp-titlebar-trip-title-chevron {
+  width: 18px; height: 18px; flex-shrink: 0;
+  color: var(--color-muted);
+  transition: transform var(--transition-duration-fast, 140ms) ease;
+}
+.tp-titlebar-trip-title[aria-expanded="true"] .tp-titlebar-trip-title-chevron {
+  transform: rotate(180deg);
+}
 .tp-titlebar-trip-picker {
   /* Ghost icon button — 同 .tp-titlebar-action family，無框透明底，hover 出 --color-hover */
   display: inline-flex; align-items: center; gap: 6px;
@@ -1860,4 +1908,28 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   :root {
     --font-size-title: 1.5rem; /* 28px → 24px on compact */
   }
+}
+
+/* ── tab 膠囊材質的可及性降級 ───────────────────────────────────────
+ * 放在檔案最後：Tailwind 4 會把所有 @layer 攤平，覆寫靠的是「特異性 + 來源順序」，
+ * 不是 layer 順序。body.dark 的特異性是 (0,1,1)，這裡要蓋過它就必須排在它之後。
+ * （這條規則踩過一次，寫在這裡免得再踩。） */
+
+/* 使用者開啟「降低透明度」時拿不到 backdrop-filter 的效果。若只留 0.42 的 tint，
+ * 膠囊會變成幾乎看不見的浮片 —— 改給不透明底。 */
+@media (prefers-reduced-transparency: reduce) {
+  :root { --tabbar-tint: var(--color-background); --tabbar-filter: none; }
+  body.dark { --tabbar-tint: var(--color-secondary); }
+}
+
+/* 「提高對比」時同樣不該讓背景干擾 tab 文字。 */
+@media (prefers-contrast: more) {
+  :root { --tabbar-tint: var(--color-background); --tabbar-filter: none; }
+  body.dark { --tabbar-tint: var(--color-secondary); }
+}
+
+/* 不支援 backdrop-filter 的瀏覽器：低 alpha tint 沒有模糊撐著會糊成一片。 */
+@supports not (backdrop-filter: blur(1px)) {
+  :root { --tabbar-tint: var(--color-background); }
+  body.dark { --tabbar-tint: var(--color-secondary); }
 }

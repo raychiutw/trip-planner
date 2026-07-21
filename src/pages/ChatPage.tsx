@@ -29,6 +29,7 @@ import { useChatPagination } from '../hooks/useChatPagination';
 import { apiFetch } from '../lib/apiClient';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
+import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
@@ -37,7 +38,6 @@ import Icon from '../components/shared/Icon';
 import AiConsentSheet from '../components/AiConsentSheet';
 import MarkdownText from '../components/shared/MarkdownText';
 
-interface MyTripRow { tripId: string; }
 interface TripSummary {
   tripId: string;
   name?: string;
@@ -612,16 +612,15 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     let cancelled = false;
     async function load() {
       try {
-        const [myRes, allRes] = await Promise.allSettled([
-          apiFetch<MyTripRow[]>('/my-trips'),
-          apiFetch<TripSummary[]>('/trips?all=1'),
-        ]);
+        // 2026-07-21：改為單抓 /my-trips。原本是雙抓 —— /my-trips 只拿「我有權限
+        // 的 id 集合」，name/title/countries 這些**要顯示的資料**卻來自
+        // /trips?all=1。而 all=1 需要 ops:trips:read service-token scope，
+        // 一般使用者拿不到，會靜默降級成只回 published 行程；既有行程改為不公開
+        // 後名稱就全沒了，畫面只剩 tripId（owner 2026-07-21 回報）。
+        // /my-trips 本身就帶 name/title/countries/totalDays/startDate/endDate，
+        // 第二支 API 從一開始就是多餘的。
+        const myTrips = await apiFetch<TripSummary[]>('/my-trips');
         if (cancelled) return;
-        if (myRes.status === 'rejected') return;
-        const myJson = myRes.value;
-        const allJson = allRes.status === 'fulfilled' ? allRes.value : [];
-        const mine = new Set(myJson.map((r) => r.tripId));
-        const myTrips = allJson.filter((t) => mine.has(t.tripId));
         setTrips(myTrips);
 
         // Section 5 (E4)：優先用 ActiveTripContext (cross-page persisted)，
@@ -834,45 +833,16 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       <style>{SCOPED_STYLES}</style>
       {/* v2.31.86 embedded mode：TripSheet 已有 trip name + tab header，skip TitleBar repeat。 */}
       {!embedded && <TitleBar
-        title={activeTrip?.title || activeTrip?.name || '聊天'}
+        title={
+          <TripTitleSwitcher
+            label={activeTrip?.title || activeTrip?.name || '聊天'}
+            trips={trips ?? []}
+            activeTripId={activeTripId}
+            onPick={pickTrip}
+            testIdPrefix="chat"
+          />
+        }
         account={<AccountCircle />}
-        actions={trips && trips.length > 0 && (
-          <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
-            <button
-              type="button"
-              className="tp-titlebar-trip-picker"
-              onClick={() => setTripMenuOpen((o) => !o)}
-              data-testid="chat-trip-picker"
-              aria-haspopup="menu"
-              aria-expanded={tripMenuOpen}
-              aria-label="切換行程"
-              title="切換行程"
-            >
-              {/* v2.31.47：拔掉 picker button 內的 trip name span（TitleBar title
-                  已顯 trip name；button 重複顯示視覺冗餘）。只留 ⇄ icon + ▾
-                  affordance，user click 開 dropdown 看完整 trip list。 */}
-              <Icon name="swap-horiz" />
-              <span className="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
-            </button>
-            {tripMenuOpen && (
-              <div className="tp-titlebar-trip-dropdown" role="menu">
-                {trips.map((t) => (
-                  <button
-                    key={t.tripId}
-                    type="button"
-                    className={`tp-titlebar-trip-row ${t.tripId === activeTripId ? 'is-active' : ''}`}
-                    onClick={() => pickTrip(t.tripId)}
-                    role="menuitem"
-                    data-testid={`chat-trip-pick-${t.tripId}`}
-                  >
-                    <span className="tp-titlebar-trip-row-title">{t.title || t.name || t.tripId}</span>
-                    <span className="tp-titlebar-trip-row-meta">{(t.countries ?? '').toUpperCase() || t.tripId}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       />}
 
       <div className="tp-chat-body" ref={bodyRef} data-testid="chat-body">

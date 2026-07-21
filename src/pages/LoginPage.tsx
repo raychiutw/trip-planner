@@ -27,6 +27,9 @@ const SCOPED_STYLES = `
   /* mobile fallback: single-column centered */
   display: flex; align-items: center; justify-content: center;
   padding: 48px 24px;
+  /* .tp-login-home 的定位基準。沒有這行，絕對定位會往上找到 viewport 或任何
+     帶 transform 的祖先，左上角就跑掉了。 */
+  position: relative;
 }
 .tp-login-form-side {
   width: 100%;
@@ -146,6 +149,25 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-headline); font-weight: 800; letter-spacing: -0.02em;
 }
 .tp-login-brand-dot { color: var(--color-accent); }
+
+/* 左上角回首頁（owner 2026-07-21）。/login 先前沒有任何回首頁的出口 ——
+ * 未登入訪客從搜尋或分享連結落到這裡，只能登入或關掉。
+ * absolute 而非塞進表單流：不動既有的置中品牌與表單版面。 */
+.tp-login-home {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  left: max(8px, env(safe-area-inset-left, 0px));
+  z-index: 3;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px; padding: 0 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-subheadline); font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-foreground);
+  text-decoration: none;
+}
+.tp-login-home:hover { background: var(--color-hover); }
+.tp-login-home-dot { color: var(--color-accent); }
 .tp-login-headline { text-align: center; margin-bottom: 24px; }
 .tp-login-headline h1 {
   font-size: var(--font-size-title2); font-weight: 800;
@@ -420,6 +442,11 @@ export default function LoginPage() {
   return (
     <main className="tp-login-shell" data-testid="login-page">
       <style>{SCOPED_STYLES}</style>
+      {/* anchor 而非 navigate('/')：品牌連結該支援中鍵／右鍵開新分頁。 */}
+      <a className="tp-login-home" href="/" data-testid="login-home-link" aria-label="回 Tripline 首頁">
+        <span className="tp-login-home-dot" aria-hidden="true">●</span>
+        <span>Tripline</span>
+      </a>
       <div className="tp-login-form-side">
         <div className="tp-login-card">
         <div className="tp-login-brand">

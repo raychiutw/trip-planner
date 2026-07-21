@@ -89,17 +89,22 @@ describe('GlobalBottomNav — 4-tab IA（rev2 帳號移 header）', () => {
     expect(style).toMatch(/min-height:\s*46px/);
   });
 
-  it('透明貼頁 flex 列（owner ⑥「不要白底，直接在頁面上」；非滿版 grid bar、無 cream 玻璃底）', () => {
+  it('玻璃膠囊 flex 列（非滿版 grid bar；材質參數見 tabbar-glass-material.test.js）', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    // rev2 flex（非舊 grid 滿版 bar）；owner ⑥：容器 background:transparent + box-shadow:none
-    // （原 cream 62% 玻璃在淺色頁看起來像實心白條），icon/label 靠陰影在雜底可讀。
+    // 2026-07-21 翻轉：本條原本鎖 `background: transparent`，那是 owner 7/20
+    // 「不要白底」的解法。7/21 owner 反映「沒有玻璃化效果，變成全透明」——
+    // 全透明解決了白條，卻連材質也一起沒了。現在走低 tint + 強模糊 + 高飽和度，
+    // 底下內容透得出來才讀作玻璃。tint 上限等參數由
+    // tests/unit/tabbar-glass-material.test.js 鎖，這裡只確認「有材質」與版型。
     const navBlock = style.match(/\.tp-global-bottom-nav\s*\{[^}]*\}/)?.[0] ?? '';
-    expect(navBlock).toMatch(/background:\s*transparent/);
-    expect(navBlock).toMatch(/box-shadow:\s*none/);
-    expect(navBlock).not.toMatch(/color-mix/); // 無 cream 玻璃底
+    expect(navBlock, '容器不該再是全透明').not.toMatch(/background:\s*transparent/);
+    expect(navBlock).toMatch(/backdrop-filter:\s*var\(--tabbar-filter\)/);
+    // cream 疊 cream 正是最初「像實心白條」的成因 —— 中性 tint，不用 color-mix 取頁面底色。
+    expect(navBlock, 'tint 不該取頁面底色（cream-on-cream）').not.toMatch(/color-mix/);
+    // icon 陰影減弱但保留：地圖衛星圖這類雜底仍需要分離度。
     expect(style).toMatch(/\.tp-global-bottom-nav-btn\s+\.svg-icon\s*\{[^}]*drop-shadow/);
-    expect(style).not.toMatch(/grid-template-columns/);
+    expect(style, '仍是 flex 膠囊，非舊的 grid 滿版 bar').not.toMatch(/grid-template-columns/);
   });
 
   it('active state = accent 實心 pill（非 2px top indicator）', () => {

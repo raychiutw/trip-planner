@@ -15,9 +15,10 @@
  *     all open NewTripModal, which POSTs /api/trips and selects the new trip.
  *
  * Data:
- *   - GET /api/my-trips → tripIds the user has permission for
- *   - GET /api/trips?all=1 → trip metadata (name, countries, day_count,
- *     start_date, end_date, member_count)
+ *   - GET /api/my-trips → 使用者有權限的行程（含 name / countries / totalDays /
+ *     startDate / endDate / memberCount）。2026-07-21 前另外抓 /trips?all=1 拿
+ *     metadata，但那支對一般使用者降級成 published-only，行程改為不公開後
+ *     名稱全空 → 卡片顯示 tripId。單一來源即可。
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -492,10 +493,6 @@ body.dark .tp-trips-sort {
 .tp-trips-error { color: var(--color-destructive); }
 `;
 
-interface MyTripRow {
-  tripId: string;
-}
-
 interface TripInfo {
   tripId: string;
   name: string;
@@ -828,18 +825,24 @@ export default function TripsListPage() {
   // tp-trip-updated event 觸發 refetch，否則新增/編輯後回 list 看不到變更。
   const loadTrips = useCallback(async () => {
     try {
-      const [myRes, allRes] = await Promise.allSettled([
-        apiFetch<MyTripRow[]>('/my-trips'),
-        apiFetch<TripInfo[]>('/trips?all=1'),
-      ]);
-      if (myRes.status === 'rejected') {
-        const err = myRes.reason;
+      // 2026-07-21：改為單抓 /my-trips。原本是雙抓 —— /my-trips 只拿 id 順序，
+      // name/countries/dayCount 這些**要顯示的資料**來自 /trips?all=1。而 all=1
+      // 需要 ops:trips:read service-token scope，一般使用者拿不到，會靜默降級成
+      // 只回 published 行程；既有行程改為不公開後 metadata 全空，下方
+      // `map.get(id) ?? { tripId: id, name: id }` 就把 tripId 當成名稱顯示
+      // （owner 2026-07-21 回報「行程名稱都不見」）。
+      let myTrips: (TripInfo & { totalDays?: number })[];
+      try {
+        myTrips = await apiFetch<(TripInfo & { totalDays?: number })[]>('/my-trips');
+      } catch (err) {
         if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return;
         setError('無法載入你的行程清單。');
         return;
       }
-      setMyIds(myRes.value.map((r) => r.tripId));
-      setAllTrips(allRes.status === 'fulfilled' ? allRes.value : []);
+      setMyIds(myTrips.map((r) => r.tripId));
+      // /my-trips 的天數欄位叫 totalDays，卡片渲染讀的是 dayCount —— 對映一次，
+      // 否則 eyebrow 的「· N 天」會不見。
+      setAllTrips(myTrips.map((r) => ({ ...r, dayCount: r.dayCount ?? r.totalDays })));
     } catch {
       setError('網路連線失敗，請稍後再試。');
     }

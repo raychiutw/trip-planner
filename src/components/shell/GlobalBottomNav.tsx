@@ -28,12 +28,23 @@ const SCOPED_STYLES = `
   gap: 2px;
   padding: 6px;
   border-radius: var(--radius-full);
-  /* rev2 owner 2026-07-20「我不要白底，直接就是在原來的頁面上」：底部 tab 拿掉 cream 玻璃底
-   * （原 secondary 62% 疊在淺色頁 = cream-on-cream 看起來像實心白條）。改**全透明**貼在頁面上，
-   * 只留 icon + 選中高亮。為在地圖等雜底上仍讀得出，icon/字加一層淡陰影（見 -btn 下）。 */
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  /* 材質沿革（同一處來回三次，參數才是重點）：
+   *   1. secondary 62% cream → owner 2026-07-20「像實心白條」
+   *   2. 於是整個改 transparent → owner 2026-07-21「沒有玻璃化效果」
+   *   3. 曾提案 rgba(255,255,255,0.80) → owner 判斷「會造成白底」。正確，
+   *      80% 白在奶油頁上仍是一條白帶，只是換個顏色重演第 1 次。
+   *
+   * 現在走 iOS HIG 的路：低 tint（0.42）+ 強模糊（28px）+ 提高飽和度（190%）。
+   * 底下的內容真的透出來並被放大彩度，才讀作玻璃；tint 一高，backdrop-filter
+   * 就沒有表現空間，材質退化成實心色板。token 定義與降級見 css/tokens.css。
+   *
+   * 這個膠囊是 position:fixed 浮在內容上（AppShell .app-shell-bottom-nav），
+   * 功能頁全版鋪到底，所以底下確實有東西在捲動 —— 玻璃有得折射。 */
+  background: var(--tabbar-tint);
+  backdrop-filter: var(--tabbar-filter);
+  -webkit-backdrop-filter: var(--tabbar-filter);
+  border: var(--tabbar-rim);
+  box-shadow: var(--tabbar-shadow);
 }
 .tp-global-bottom-nav-btn {
   display: flex; flex-direction: column;
@@ -55,7 +66,9 @@ const SCOPED_STYLES = `
 .tp-global-bottom-nav-btn .svg-icon {
   width: 22px; height: 22px;
   /* 透明 nav（owner ⑥）：icon 在地圖等雜底上靠淡陰影浮出，不靠白底容器。 */
-  filter: drop-shadow(0 1px 2.5px rgba(0, 0, 0, 0.28));
+  /* 材質回歸後減弱：當初 0.28 是為了在全透明下撐可讀性，疊在玻璃上會顯髒。
+   不整個拿掉 —— 地圖衛星圖這類雜底仍需要一點分離度。 */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.16));
 }
 .tp-global-bottom-nav-btn.is-active .svg-icon { filter: none; }
 .tp-global-bottom-nav-btn span {
@@ -66,7 +79,7 @@ const SCOPED_STYLES = `
   font-weight: 700;
   letter-spacing: 0.02em;
   /* 透明 nav（owner ⑥）：label 在雜底上靠淡陰影可讀。 */
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.30);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
 }
 .tp-global-bottom-nav-btn.is-active span { text-shadow: none; }
 .tp-global-bottom-nav-btn:hover { color: var(--color-foreground); background: var(--color-hover); }
