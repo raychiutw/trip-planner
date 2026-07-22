@@ -3,7 +3,7 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.57.13] - 2026-07-22
+## [2.57.15] - 2026-07-22
 
 ### Fixed
 - **unit 測試套件限制為 2 個 worker**（`npm test` → `vitest run --maxWorkers=2`）——
