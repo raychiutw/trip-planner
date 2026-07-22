@@ -66,4 +66,4 @@ Issues 走 GitHub Issues（`raychiutw/trip-planner`），用 `gh` CLI；`/wayfin
 
 ### Domain docs
 
-Single-context — 根目錄 `CONTEXT.md` + `docs/adr/`（不存在時靜默略過；由 `/domain-modeling` 需要時才建）。See `docs/agents/domain.md`.
+Single-context — 根目錄 [`CONTEXT.md`](CONTEXT.md)（領域詞彙 + 已退場名字）+ [`docs/adr/`](docs/adr/)（架構決策，`ARCHITECTURE.md` 只留索引）。探索程式碼前先讀。See `docs/agents/domain.md`.
