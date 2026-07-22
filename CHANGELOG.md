@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.13] - 2026-07-22
+
+### Added
+- **`audit_log` 保留期 365 天**（item-4，owner 2026-07-22）—— `auth-cleanup.js`
+  retention sweep 新增第 10 條：`DELETE FROM audit_log WHERE created_at <
+  datetime('now', '-365 days')`。行程變更稽核（`trip_id` / `action` / `diff_json`
+  / `snapshot`）過去無保留期、無界成長，且舊 diff/snapshot 含行程自由文 PII。
+  `created_at` 有 `idx_audit_time` 索引（migration 0071），走索引不全表掃。
+  - **owner 明確接受 rollback 只回溯一年內**：`rollback.ts` 讀 `audit_log`，超過
+    一年的還原點會被清。
+  - ⚠️ **需搭配憑證修復才生效**：`auth-cleanup.js` cron 目前因缺
+    `CLOUDFLARE_API_TOKEN` / `CF_ACCOUNT_ID` / `D1_DATABASE_ID` 每日 no-op 失敗；
+    此變更在憑證補齊前 inert（本機 config，不在 git）。
+
 ## [2.57.12] - 2026-07-22
 
 ### Added
