@@ -31,6 +31,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   `overflow: hidden`（用來裁 head hover 背景的圓角）連 `.tp-date-popover`
   （`position: absolute`）一起裁；`z-index: 1100` 對 overflow clipping 無效。
   改為不裁，圓角責任下放給唯一需要它的子元素。
+  - 第二層（preview 實測補的）：popover 底部仍會超出 `.app-shell-sheet` 可視區
+    （量到 71px）。那層是 `overflow: auto` 捲得到，但要使用者自己捲才看得到月底 ——
+    「無法看到全部日期」這句抱怨還沒被完全滿足。`TripDatePicker` 開啟時補
+    `scrollIntoView({ block: 'nearest' })`：`nearest` 的語意正是「已經看得到就不要動」，
+    空間夠時完全不會多捲、不搶使用者的捲動位置。
+    （姊妹元件 `TripTimePicker` 的 popover 是 portal 到 body，不受祖先 `overflow`
+    影響，本來就沒這個問題，不需同步修。）
 - **關閉第三欄面板時中欄會先閃一下別的畫面**（owner 回報 #5）—— 關閉是 navigate 到
   `/trips?selected=:id`，此時清單還沒載入（`myIds === null`），`effectiveSelectedId`
   的 `visibleTrips.some(...)` 必為 false → fallback 成 null → 中欄空一拍才把行程放回來；
