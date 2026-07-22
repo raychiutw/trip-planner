@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.12] - 2026-07-22
+
+### Added
+- **地圖點選 Google 原生 POI → POI 卡**（map-poi-tap，mockup `2026-07-21-google-poi-tap-card.html`
+  待簽核）—— 桌機/手機地圖點 Google 地圖上的原生店家圖示 → 底部浮出 `GooglePoiCard`
+  （店名／地址／「在 Google 地圖開啟」另開新分頁），對齊 Flutter `onPoiClicked`。
+  與行程 entry 卡互斥（點自己的 stop 會清掉 Google POI 卡）。
+  - Place Details 成本：每次點約 $17/1000（owner 核可）。
+
+### Changed
+- **桌機第三欄 followups**（shell-panel-fixes，mockup `2026-07-21-third-column-followups.html`
+  待簽核）—— 第三欄 header 高度對齊第二欄、sidebar 材質等六項桌機 shell 修正。
+
+### Fixed
+- **底部「帳號」tab 缺 icon**（`nav-account`）—— `Icon.tsx` 補上該圖示；加
+  `nav-items-icons-exist.test.ts` 鎖住「nav item icon 名稱都存在」（型別擋不住
+  字串查表靜默降級）。
+- **tp-team QA 抓到並修的 6 個回歸**（整合分支 6 維度審查 + 對抗式驗證，8 CONFIRMED 去重）：
+  - **[HIGH] 桌機開/關第三欄操作面板後中欄捲動跳回頂端** —— `TripPage` 單例化後
+    `.app-shell-main` 換新 DOM、scrollTop 歸零，但 `initialScrollDone` latch 擋死初始
+    捲動 effect。改為監看 `portalNode` 變更補還原 + `rememberScroll` listener 重綁新容器。
+  - **[HIGH] 桌機 sticky map 開/關面板後消失** —— sheet portal（`#trip-sheet-portal`）用
+    mount-once `getElementById`，單例不 remount → host 換掉後指向脫離節點/卡 null。
+    改為 `portalNode` 納入 lookup deps 重查。
+  - **[MED] 地圖 POI 卡開關後 entry scroll-spy 失效** —— `MapPage` 的 IntersectionObserver
+    與 scroll-into-view effect 漏 `selectedGooglePoi` dep（observer 卡舊脫離節點）。
+  - **[MED] `TripActionsMenu` CSS 漂移** —— 宣稱「純搬移」卻改了 letter-spacing
+    （0.12→0.04em）與 padding（退回非 4pt-grid），還原 master 原值。
+  - **[MED] `?selected` 指向不可見行程時中欄/header 發散** —— 中欄顯示 X、header 操作 Y；
+    `TripsListPage` 正規化 URL 對齊 `effectiveSelectedId`。
+  - **[LOW] `useGoogleMap` map click listener stale-closure** —— 現呼叫端穩定無實害，
+    改用 latest-callback ref 防未來 inline callback 靜默失效。
+- 新增 `tests/e2e/trip-stack-scroll-sheet.spec.js` 鎖兩個 HIGH（捲動保持 + sheet 重接）。
+
 ## [2.57.11] - 2026-07-22
 
 ### Fixed

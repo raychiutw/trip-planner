@@ -90,18 +90,25 @@ const SCOPED_STYLES = `
 .day-content-loaded {
   animation: fadeIn 300ms var(--transition-timing-function-apple) both;
 }
-/* 內容欄的表面（owner 2026-07-21：「桌機行程功能黑色太多」）。
+/* 內容欄的表面（owner 2026-07-21：「桌機行程功能黑色太多」，第二輪回報「兩側仍深黑」）。
  *
- * browse 對 prod 深色實測：行程頁有 16,091k px2 的透明面積壓在單一
- * .app-shell 的 #1C1C1E 上 —— 整片內容區沒有自己的表面，於是全糊成一塊近黑。
- * 相對地 /trips 的 .tp-trips-shell 早就用 --color-secondary 抬起來了
- * （實測 #2C2C2E，1093k），所以那頁沒這問題。
+ * v2.57.9 在 .trip-content 補了 --color-secondary，但 .trip-content 只是 .tp-page
+ * （padding 40px + max-width 1440px 置中）內的一個窄框 —— DayNav / offline banner 等
+ * 兄弟元素、以及 .tp-page 自己的左右 padding 區，全都還透出 .app-shell-main 底下
+ * .app-shell 的 base 深色。「中間淺一階、兩側還是深黑」的截圖就是這個窄框造成的。
  *
- * 這裡不是發明新規則，是補上這個 app 自己已有的做法：內容欄抬一階，
- * 與 .app-shell 的 base 之間才讀得出層次。Apple HIG 的深色模式正是靠
- * elevation 分層（#1C1C1E → #2C2C2E → #3A3A3C），不是把亮色反過來。 */
+ * 對照 /trips 的 .tp-trips-shell：那份 elevation 是上在最外層（跟 .tp-shell 同級），
+ * 整片欄寬都著色，所以沒有這個 band 問題。這裡照抄同一個既有 pattern —— 把 elevation
+ * 移到 TripPage 的最外層（見下方 .tp-shell.tp-trip-page-shell），而不是只上在內層窄框。
+ * .trip-content 自己不再重複宣告背景（外層已整片上色，這裡重複同色是 no-op）。 */
 .trip-content {
   min-width: 0;
+}
+/* 疊在全域 .tp-shell（tokens.css，background: var(--color-background)）之上；兩個
+ * class 的組合選擇器特異度大於單一 class，不受 import 順序影響一定覆蓋成功。
+ * TripPage 現在永遠 noShell=true（embedded），這個 outer div 就是中欄/embedded 詳情
+ * 唯一涵蓋整個欄寬的節點，在這裡上色才能讓兩側 padding 區、DayNav 等都被涵蓋到。 */
+.tp-shell.tp-trip-page-shell {
   background: var(--color-secondary);
 }
 
@@ -203,6 +210,23 @@ export interface TripPageProps {
    * skip the AppShell wrapper, sidebar, sheet, bottomNav. The hosting page
    * provides those. */
   noShell?: boolean;
+  /**
+   * owner 2026-07-21 回報 #2「開關第三欄面板會刷新第二欄」修復：桌機由
+   * TripPageHost.tsx render 唯一一份持續存在的 <TripPage>（不受路由切換
+   * unmount），用 React Portal 把 main content 掛進當下 host（TripsListPage
+   * 桌機分支 / TripStackLayout 中欄）留的 placeholder <div>。
+   *
+   * 傳 `usePortalMain: true` 才會進入 portal 模式 —— `portalNode` 由呼叫端
+   * （TripPageHost）透過 TripMainPortalContext 的 callback ref 拿到，可能暫時是
+   * null（host 正在切換、placeholder 還沒 mount）。portal 模式下 null 就先不
+   * render 任何東西（避免內容顯示在錯的地方），等 ref callback 給到實際 node
+   * 才 portal 進去 —— 這是 push-based（React ref callback 在 commit 內同步
+   * 觸發），不是 pull-based 的 document.getElementById 猜測（第一版曾用這招，
+   * playwright e2e 實測抓到 race：找不到就永遠不會重試，中欄整個空白）。
+   * 不傳 usePortalMain → 維持原本 inline render（手機各頁、既有呼叫端不受影響）。
+   */
+  usePortalMain?: boolean;
+  portalNode?: Element | null;
 }
 
 /* PR-SS/UU 2026-04-27：embedded mode 用 ref 從外部 trigger 各 actions。
@@ -217,7 +241,7 @@ export interface TripPageHandle {
 }
 
 function TripPageInner(
-  { tripId: propTripId, noShell = false }: TripPageProps,
+  { tripId: propTripId, noShell = false, usePortalMain = false, portalNode = null }: TripPageProps,
   ref: React.Ref<TripPageHandle>,
 ) {
   const { tripId: urlTripId } = useParams<{ tripId: string }>();
@@ -300,10 +324,15 @@ function TripPageInner(
    * useEffect 兩階段 pattern：第一次 render = null，effect commit 後 setState
    * 觸發 re-render 拿 node 後 portal。 */
   const [sheetPortalNode, setSheetPortalNode] = useState<Element | null>(null);
+  // portalNode 納入 deps：<TripPage> 是單例（TripPageHost key={tripId} 不隨路由 remount），
+  // 這個 mount-once lookup 過去只跑一次 → 開/關桌機第三欄操作面板後 host 的
+  // #trip-sheet-portal 節點被拆掉重建，sheetPortalNode 仍指向舊的脫離節點，桌機 sticky
+  // map 消失（深連結先進 /trip/:id/edit 時更是永遠抓不到）。portalNode 與 #trip-sheet-portal
+  // 同屬 TripsListPage 的 AppShell、一起 mount/unmount，故用它當「host 已換」訊號重查。
   useEffect(() => {
     if (!noShell) return;
     setSheetPortalNode(document.getElementById('trip-sheet-portal'));
-  }, [noShell]);
+  }, [noShell, portalNode]);
 
   /* --- lsRenewAll once per session (#9) --- */
   useEffect(() => {
@@ -402,7 +431,21 @@ function TripPageInner(
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => { el.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
-  }, [activeTripId]);
+    // portalNode 納入 deps：host 切換時 .app-shell-main 換新 DOM，listener 需重綁到新容器，
+    // 否則仍綁在已卸載的舊容器、新容器完全沒 listener → 切換後連捲動位置都不再被記住。
+  }, [activeTripId, portalNode]);
+
+  // 主 portal host 切換（開/關桌機第三欄操作面板 → TripsListPage ⇄ TripStackLayout）時，
+  // AppShell 連同 .app-shell-main 整個換成新 DOM、scrollTop 歸零；但 <TripPage> 是單例不
+  // remount，下方的初始捲動 effect 因 initialScrollDone latch 不再跑 → 中欄會跳回頂端。
+  // 這裡在 host 切換（portalNode 變更）後補一次還原，維持中欄捲動連續性；首次掛載
+  // （initialScrollDone 尚 false）交給初始 effect，這裡不搶。restoreScrollTo 自帶雙層讓位
+  // （見 preserveScroll），user 一動即停手。
+  useEffect(() => {
+    if (!activeTripId || !portalNode || !initialScrollDone.current) return;
+    const saved = recallScroll(activeTripId);
+    if (saved != null) restoreScrollTo(saved);
+  }, [portalNode, activeTripId]);
 
   const { trip, days, currentDayNum, switchDay, refetchCurrentDay, refetchDay, allDays, loading, error } =
     useTrip(activeTripId);
@@ -826,7 +869,7 @@ function TripPageInner(
   ) : undefined;
 
   const mainContent = (
-    <div className="tp-shell">
+    <div className="tp-shell tp-trip-page-shell">
       <style>{SCOPED_STYLES}</style>
 
       {/* v2.17.17:TripPage 永遠透過 TripsListPage embedded mode 渲染(noShell=true)
@@ -952,7 +995,13 @@ function TripPageInner(
   if (noShell) {
     return (
       <>
-        {wrappedMain}
+        {/* owner 2026-07-21 #2：usePortalMain 時把 main content portal 到 host 給的
+         * portalNode（TripPageHost 是唯一呼叫端）；portalNode 暫時是 null（host 正在
+         * 切換、callback ref 還沒 fire）就先不 render 任何東西，等它到位才 portal，
+         * 不會把內容顯示在錯的地方。不傳 usePortalMain 維持原本 inline render
+         * （既有呼叫端，如 TripsListPage 手機分支，完全不受影響）。 */}
+        {!usePortalMain && wrappedMain}
+        {usePortalMain && portalNode ? createPortal(wrappedMain, portalNode) : null}
         {sheetPortalNode && sheetContent && createPortal(sheetContent, sheetPortalNode)}
       </>
     );

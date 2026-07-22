@@ -13,6 +13,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { NewTripProvider } from '../../src/contexts/NewTripContext';
 import { writeTripView } from '../../src/lib/tripViewState';
+import { TRIP_MAIN_PORTAL_ID } from '../../src/lib/tripStackRoutes';
 
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({
@@ -137,12 +138,17 @@ describe('TripsListPage', () => {
     expect(screen.queryByTestId('embedded-trip-page')).toBeNull();
   });
 
-  it('desktop + ?selected=seoul: embedded TripPage replaces grid 滿版 (PR-PP)', async () => {
+  // owner 2026-07-21 回報 #2「開關第三欄面板會刷新第二欄」修復：桌機不再由
+  // TripsListPage 自己 inline render <TripPage>（那是造成路由切換時 remount 的
+  // root cause），改留一個 portal placeholder，讓 main.tsx 的 TripPageHost
+  // （唯一一份持續存在的 <TripPage>）portal 內容進來。見 TripPageHost.tsx。
+  // 手機沒有這個機制（下方 mobile 測試維持 inline <TripPage>，見 148 行起）。
+  it('desktop + ?selected=seoul: main 留 portal placeholder（不再 inline render TripPage，交給 TripPageHost）(PR-PP + owner #2)', async () => {
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], SAMPLE));
     render(<MemoryRouter initialEntries={['/trips?selected=seoul']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('embedded-trip-page')).toBeTruthy());
-    expect(screen.getByTestId('embedded-trip-page').getAttribute('data-trip-id')).toBe('seoul');
-    expect(screen.getByTestId('embedded-trip-page').getAttribute('data-no-shell')).toBe('true');
+    await waitFor(() => expect(screen.queryByTestId(TRIP_MAIN_PORTAL_ID)).toBeTruthy());
+    // 桌機不 inline render TripPage 了 —— TripPageHost 才是唯一呼叫端。
+    expect(screen.queryByTestId('embedded-trip-page')).toBeNull();
   });
 
   it('mobile + no ?selected: card grid renders, no embedded TripPage in main', async () => {
@@ -250,13 +256,13 @@ describe('TripsListPage — 進 /trips 還原上次檢視（v2.55.x bug 1）', (
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
 
-  it('桌機 + 無 ?selected + 有上次檢視紀錄 → 自動開回該行程（嵌入 TripPage）', async () => {
+  it('桌機 + 無 ?selected + 有上次檢視紀錄 → 自動開回該行程（留 portal placeholder 給 TripPageHost）', async () => {
     mockMatchMedia(true);
     writeTripView({ tripId: 'okinawa', dayNum: 2 });
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], SAMPLE));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('embedded-trip-page')).toBeTruthy());
-    expect(screen.getByTestId('embedded-trip-page').getAttribute('data-trip-id')).toBe('okinawa');
+    await waitFor(() => expect(screen.queryByTestId(TRIP_MAIN_PORTAL_ID)).toBeTruthy());
+    expect(screen.queryByTestId('embedded-trip-page')).toBeNull();
   });
 
   it('手機 + 有上次檢視紀錄 → 不自動還原（Trips 分頁顯示清單）', async () => {

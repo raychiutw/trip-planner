@@ -85,3 +85,23 @@ describe('DesktopSidebar rev2 §10.1 — vibrancy 材質 + 清單視覺 token', 
     expect(style).toMatch(/\.tp-trip-item\s*\{[^}]*font-weight:\s*600/);
   });
 });
+
+// owner 2026-07-21（第二輪回報 #4）：桌機 primary nav（.tp-sidebar-nav）跟手機
+// GlobalBottomNav 的玻璃膠囊視覺不一致，要求共用同一套材質 token
+// （--tabbar-tint / --tabbar-filter / --tabbar-rim / --tabbar-shadow，已在
+// tokens.css 定義，GlobalBottomNav 已在用）。
+describe('DesktopSidebar rev2 owner 回報 #4 — primary nav 玻璃材質跟手機 GlobalBottomNav 共用', () => {
+  it('.tp-sidebar-nav 用 --tabbar-tint + --tabbar-filter（跟 .tp-global-bottom-nav 同一組 token，不是自創的新材質）', () => {
+    const { container } = renderSidebar({ user: null, trips: [] });
+    const style = container.querySelector('style')?.textContent ?? '';
+    expect(style).toMatch(/\.tp-sidebar-nav\s*\{[^}]*background:\s*var\(--tabbar-tint\)/);
+    expect(style).toMatch(/\.tp-sidebar-nav\s*\{[^}]*backdrop-filter:\s*var\(--tabbar-filter\)/);
+  });
+
+  it('.tp-sidebar-nav 也套 --tabbar-rim（邊框）+ --tabbar-shadow（陰影），三個材質變數都跟手機膠囊一致', () => {
+    const { container } = renderSidebar({ user: null, trips: [] });
+    const style = container.querySelector('style')?.textContent ?? '';
+    expect(style).toMatch(/\.tp-sidebar-nav\s*\{[^}]*border:\s*var\(--tabbar-rim\)/);
+    expect(style).toMatch(/\.tp-sidebar-nav\s*\{[^}]*box-shadow:\s*var\(--tabbar-shadow\)/);
+  });
+});

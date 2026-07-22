@@ -39,7 +39,9 @@ import AccountCircle from '../components/shell/AccountCircle';
 import MapDayTab from '../components/trip/MapDayTab';
 import MapEntryCard, { type EntryKind } from '../components/trip/MapEntryCard';
 import MapFabs from '../components/trip/MapFabs';
+import GooglePoiCard from '../components/trip/GooglePoiCard';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import type { GooglePoiClick } from '../lib/mapHelpers';
 
 
 const TpMap = lazyWithRetry(() => import('../components/trip/TpMap'));
@@ -181,6 +183,13 @@ const SCOPED_STYLES = `
 
 @media (max-width: 760px) {
   .map-page-cards .tp-map-entry-card { flex: 0 0 200px; }
+}
+
+/* Google POI 卡插槽 — 同一插槽（.map-page-cards 的定位）但非橫向捲動 strip，
+ * 单張卡片撐開寬度即可（GooglePoiCard 自帶玻璃樣式）。 */
+.map-page-google-poi-slot {
+  display: block;
+  max-width: 420px;
 }
 
 `;
@@ -332,6 +341,13 @@ export default function MapPage() {
 
   const [activeEntryId, setActiveEntryId] = useState<number | null>(urlEntryId);
 
+  // owner 2026-07-21「地圖點選 Google POI」：Google 原生 POI 圖示（非我們自己的
+  // 行程 pin）被點擊時顯示的底部卡片（對齊 Flutter TripMapScreen 的
+  // _selectedGooglePoi）。與行程 entry 卡互斥 — 選了行程 stop 就清掉、點地圖
+  // 空白處也清掉。
+  const [selectedGooglePoi, setSelectedGooglePoi] = useState<GooglePoiClick | null>(null);
+  const clearSelectedGooglePoi = useCallback(() => setSelectedGooglePoi(null), []);
+
   // When tab changes (or first load), default active entry to URL entry or first card.
   // Overview mode without explicit entryId: leave unfocused so TpMap falls back to
   // fitBounds (shows whole trip) instead of flyTo on first pin.
@@ -386,11 +402,17 @@ export default function MapPage() {
 
     cards.forEach((c) => observer.observe(c));
     return () => observer.disconnect();
-  }, [cardEntryPins, activeTab]);
+    // selectedGooglePoi 納入 deps：顯示 GooglePoiCard 時 entry-cards 容器（ref={cardsRef}）
+    // 被三元換掉、關閉後是全新 DOM 節點；沒有這個 dep，observer 不重建仍觀察舊的脫離節點，
+    // 卡片捲動 → active entry / day tab 同步（scroll-spy）在 POI 卡開關一輪後失效。
+  }, [cardEntryPins, activeTab, selectedGooglePoi]);
 
   /* --- Card click → scroll into view + set active + sync day nav (v2.31.81 #1) --- */
   const handleCardClick = useCallback((entryId: number) => {
     setActiveEntryId((prev) => (prev === entryId ? prev : entryId));
+    // 選行程自己的 stop 時，若正顯示 Google POI 卡則清掉（對齊 Flutter _selectStop
+    // 同時清 _selectedGooglePoi 的行為 — 兩種底部卡互斥）。
+    setSelectedGooglePoi(null);
     // v2.31.81 #1：overview 模式 user 點 map pin 時，day nav 沒切到該 entry 的
     // 那一天 — 用 entryDayMap 反查 dayNum，call handleTabClick 同步。
     if (isOverview) {
@@ -416,8 +438,10 @@ export default function MapPage() {
     el.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
     const t = setTimeout(() => { scrollingProgrammatically.current = false; }, 300);
     return () => clearTimeout(t);
+    // selectedGooglePoi 納入 deps：同上，POI 卡關閉後 entry-cards 重新掛載，需重跑一次
+    // 把 active 卡捲回中央（新節點的 cardsRef 才對得上）。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, cardEntryPins.length]);
+  }, [activeTab, cardEntryPins.length, selectedGooglePoi]);
 
   // MapPage 是 /trip/:id/map(從行程詳情下鑽的 trip-scoped 地圖)→ 顯 back 回行程詳情
   // 是 HIG drill-down 語意(見下方 TitleBar back)。〔2026-04-29 v2.17.14「地圖不需要回前頁」
@@ -484,6 +508,8 @@ export default function MapPage() {
               dayNum={isOverview ? undefined : (activeTab as number)}
               onMapReady={setGoogleMap}
               onMarkerClick={handleCardClick}
+              onPoiClick={setSelectedGooglePoi}
+              onMapClick={clearSelectedGooglePoi}
               /* owner ⑦ 補修（2026-07-20 prod QA）：預設 TOP_LEFT 的 Google 縮放鍵被
                * 浮頂 day tab 膠囊蓋住（實測 + 鍵 y67-107 vs 膠囊 y68-112 全覆蓋）。
                * full-bleed 地圖上緣被 day tab、下緣被 POI 卡、右下被 MapFabs 佔用 →
@@ -517,34 +543,43 @@ export default function MapPage() {
         </nav>
       )}
 
-      <div className="tp-map-entry-cards map-page-cards" ref={cardsRef} role="list">
-        {cardEntryPins.length === 0 ? (
-          <div className="map-page-card-empty">
-            {isOverview ? '這趟行程尚無景點' : '這天沒有景點'}
-          </div>
-        ) : (
-          cardEntryPins.map((pin) => {
-            const isActive = pin.id === activeEntryId;
-            // Overview 模式：用 entryDayMap 反查；Single-day 模式：activeTab 即 dayNum
-            const pinDay = isOverview ? entryDayMap.get(pin.id) : (activeTab as number);
-            const color = pinDay ? dayColor(pinDay) : 'var(--color-muted)';
-            return (
-              <MapEntryCard
-                key={pin.id}
-                dataEntryId={pin.id}
-                dayLocalIndex={pin.index}
-                dayLabel={isOverview && pinDay ? `D${pinDay}` : undefined}
-                dayColor={color}
-                time={pin.time ?? undefined}
-                title={pin.title || '（無標題）'}
-                kind={inferKind(pin)}
-                isActive={isActive}
-                onClick={() => handleCardClick(pin.id)}
-              />
-            );
-          })
-        )}
-      </div>
+      {selectedGooglePoi ? (
+        // owner 2026-07-21：點到 Google 原生 POI 圖示 → 同一個底部插槽換成
+        // GooglePoiCard（取代行程 POI 卡橫向捲動），對齊 Flutter 的
+        // AnimatedSwitcher(tripline-poi-accessory ↔ google-poi-accessory)。
+        <div className="map-page-cards map-page-google-poi-slot">
+          <GooglePoiCard poi={selectedGooglePoi} onClose={clearSelectedGooglePoi} />
+        </div>
+      ) : (
+        <div className="tp-map-entry-cards map-page-cards" ref={cardsRef} role="list">
+          {cardEntryPins.length === 0 ? (
+            <div className="map-page-card-empty">
+              {isOverview ? '這趟行程尚無景點' : '這天沒有景點'}
+            </div>
+          ) : (
+            cardEntryPins.map((pin) => {
+              const isActive = pin.id === activeEntryId;
+              // Overview 模式：用 entryDayMap 反查；Single-day 模式：activeTab 即 dayNum
+              const pinDay = isOverview ? entryDayMap.get(pin.id) : (activeTab as number);
+              const color = pinDay ? dayColor(pinDay) : 'var(--color-muted)';
+              return (
+                <MapEntryCard
+                  key={pin.id}
+                  dataEntryId={pin.id}
+                  dayLocalIndex={pin.index}
+                  dayLabel={isOverview && pinDay ? `D${pinDay}` : undefined}
+                  dayColor={color}
+                  time={pin.time ?? undefined}
+                  title={pin.title || '（無標題）'}
+                  kind={inferKind(pin)}
+                  isActive={isActive}
+                  onClick={() => handleCardClick(pin.id)}
+                />
+              );
+            })
+          )}
+        </div>
+      )}
 
       {/* Trip title for a11y / fallback */}
       {trip?.title && (

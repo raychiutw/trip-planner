@@ -35,6 +35,7 @@ import {
   type SegmentPair,
 } from '../../lib/mapHelpers';
 import type { MapPin, Coord } from '../../lib/mapTypes';
+import type { GooglePoiClick } from '../../lib/mapHelpers';
 import MapSkeleton from './MapSkeleton';
 import PageErrorState from '../shared/PageErrorState';
 
@@ -59,6 +60,15 @@ export interface TpMapProps {
   /** Fill parent container instead of using mode-default fixed heights (for fullscreen pages like /map) */
   fillParent?: boolean;
   onMarkerClick?: (pinId: number) => void;
+  /** 2026-07-21 owner「地圖點選 Google POI」：Google 原生 POI 圖示（非我們自己的
+   *  行程 pin）被點擊時觸發。給了這個 prop，clickableIcons 才會打開（見
+   *  useGoogleMap；未給則沿用舊行為關閉）。 */
+  onPoiClick?: (poi: GooglePoiClick) => void;
+  /** 點地圖空白處（無 Google POI）時觸發 — 搭配 onPoiClick 讓 caller 清掉已選的
+   *  POI 卡。只有 onMarkerClick 觸發的行程 pin 點擊不算「空白處」（Google Maps
+   *  只在真正的背景點擊時才 fire 'click' 且不含 placeId；點我們自己的
+   *  AdvancedMarkerElement 不會冒泡到 map 的 click）。 */
+  onMapClick?: () => void;
   dark?: boolean;
   className?: string;
   style?: React.CSSProperties;
@@ -158,6 +168,8 @@ const TpMap = memo(function TpMap({
   routes,
   fillParent = false,
   onMarkerClick,
+  onPoiClick,
+  onMapClick,
   dark: _dark = false, // unused with Google Maps（mapTypeId 'roadmap' 顏色固定）
   className,
   style,
@@ -173,6 +185,11 @@ const TpMap = memo(function TpMap({
   const { containerRef, map, loadError, fitBounds, flyTo } = useGoogleMap({
     zoomControl: mode === 'overview',
     zoomControlPosition,
+    // 只有 caller 給 onPoiClick 才開 Google 原生 POI 圖示點擊（見 useGoogleMap
+    // 註解 — 其他 useGoogleMap 呼叫端如 LocationPickerMap 不受影響）。
+    clickableIcons: !!onPoiClick,
+    onPoiClick,
+    onMapClick,
   });
 
   // Expose google.maps.Map handle to parent (one-shot when ready, null on cleanup).

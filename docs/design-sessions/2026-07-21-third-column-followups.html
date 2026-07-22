@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>第三欄面板 owner 回報批次 — #3 header 等高 + #4 桌機 tab 玻璃共用</title>
+<style>
+  :root {
+    --color-background: #FFFBF5;
+    --color-secondary: #FAF4EA;
+    --color-tertiary: #F2E8D8;
+    --color-foreground: #2A1F18;
+    --color-muted: #8A7A68;
+    --color-border: #E8DCC8;
+    --color-line-strong: #D9C7A8;
+    --color-accent: #B85F2A;
+    --color-accent-deep: #8A431A;
+    --color-accent-subtle: #F5E4D3;
+    --color-accent-fill: #B85F2A;
+    --color-accent-foreground: #FFFBF5;
+    --radius-md: 8px;
+    --radius-lg: 14px;
+    --radius-full: 999px;
+    --tabbar-tint: color-mix(in srgb, var(--color-background) 58%, transparent);
+    --tabbar-filter: blur(20px) saturate(190%);
+    --tabbar-rim: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
+    --tabbar-shadow: 0 6px 18px rgba(42,31,24,0.14);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #EEE3D2;
+    color: var(--color-foreground);
+    padding: 24px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .subtitle { color: var(--color-muted); font-size: 13px; margin: 0 0 20px; }
+  h2 { font-size: 15px; margin: 28px 0 8px; }
+  .callout {
+    background: var(--color-accent-subtle);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    max-width: 980px;
+  }
+  .callout b { color: var(--color-accent-deep); }
+  .callout ul { margin: 6px 0 0; padding-left: 18px; }
+  .status-line { max-width: 980px; font-size: 13px; line-height: 1.8; margin-bottom: 24px; }
+  .status-line .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: var(--radius-full); margin-right: 6px; }
+  .tag.done { background: #DCEFD9; color: #2E6B2A; }
+  .tag.mockup { background: var(--color-accent-subtle); color: var(--color-accent-deep); }
+
+  .pair { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 8px; }
+  .frame-wrap { }
+  .frame-label { font-size: 12px; font-weight: 700; margin-bottom: 6px; color: var(--color-muted); }
+  .frame-label.before { color: #A34A3A; }
+  .frame-label.after { color: #2E6B2A; }
+
+  .frame {
+    display: grid;
+    grid-template-columns: 160px minmax(220px, 1fr) 260px;
+    height: 380px;
+    width: 700px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--color-background);
+    box-shadow: 0 8px 24px rgba(42,31,24,0.12);
+  }
+
+  .col-sidebar {
+    background: var(--color-secondary);
+    padding: 12px 10px;
+    font-size: 12px;
+    color: var(--color-muted);
+    border-right: 1px solid var(--color-border);
+  }
+  .col-sidebar .brand { font-weight: 800; color: var(--color-accent-deep); margin-bottom: 10px; font-size: 13px; }
+
+  /* #4 BEFORE: flat list nav, no glass */
+  .nav-flat .nav-item { padding: 6px 8px; border-radius: var(--radius-md); margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+  .nav-flat .nav-item.is-active { background: var(--color-background); color: var(--color-foreground); font-weight: 700; }
+
+  /* #4 AFTER: glass capsule container matching bottom tab */
+  .nav-glass {
+    padding: 4px;
+    border-radius: var(--radius-lg);
+    background: var(--tabbar-tint);
+    backdrop-filter: var(--tabbar-filter);
+    -webkit-backdrop-filter: var(--tabbar-filter);
+    border: var(--tabbar-rim);
+    box-shadow: var(--tabbar-shadow);
+    margin-bottom: 10px;
+  }
+  .nav-glass .nav-item { padding: 6px 8px; border-radius: var(--radius-md); margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+  .nav-glass .nav-item.is-active { background: var(--color-accent-fill); color: var(--color-accent-foreground); font-weight: 700; }
+
+  .col-mid { border-right: 1px solid var(--color-border); display: flex; flex-direction: column; min-width: 0; }
+  /* #3 BEFORE: mid titlebar 64px vs panel head 52px — mismatched */
+  .mid-titlebar-before {
+    height: 64px; flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+    padding: 0 16px; border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 88%, transparent);
+  }
+  /* #3 AFTER: both use --titlebar-h (64px here) */
+  .mid-titlebar-after {
+    height: 64px; flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+    padding: 0 16px; border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 88%, transparent);
+  }
+  .mid-titlebar-before .back-btn, .mid-titlebar-after .back-btn {
+    width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+    background: transparent; color: var(--color-foreground); font-size: 16px; flex-shrink: 0;
+  }
+  .mid-titlebar-before .title, .mid-titlebar-after .title { font-weight: 700; font-size: 14px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mid-titlebar-before .actions, .mid-titlebar-after .actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .mid-titlebar-before .icon-btn, .mid-titlebar-after .icon-btn {
+    width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    background: transparent; color: var(--color-foreground); font-size: 14px;
+  }
+  .mid-body { padding: 12px 16px; overflow-y: auto; flex: 1; color: var(--color-muted); font-size: 12px; }
+  .day-chip { display: inline-block; background: var(--color-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 3px 10px; font-weight: 700; font-size: 11px; margin-bottom: 8px; color: var(--color-foreground); }
+  .stop-row { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--color-border); }
+  .stop-row .n { width: 18px; height: 18px; border-radius: 50%; background: var(--color-accent-subtle); color: var(--color-accent-deep); display: grid; place-items: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .stop-row .name { color: var(--color-foreground); font-weight: 600; font-size: 12px; }
+
+  .col-panel { display: flex; flex-direction: column; min-width: 0; }
+  /* #3 BEFORE: panel head hardcoded 52px */
+  .panel-head-before {
+    height: 52px; flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+    padding: 0 8px 0 6px; border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 88%, transparent);
+  }
+  /* #3 AFTER: panel head now uses --titlebar-h too (64px) — aligned with mid titlebar */
+  .panel-head-after {
+    height: 64px; flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+    padding: 0 8px 0 6px; border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 88%, transparent);
+  }
+  .panel-head-before .icon-btn, .panel-head-after .icon-btn { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: transparent; color: var(--color-foreground); font-size: 14px; flex-shrink: 0; }
+  .panel-head-before .title, .panel-head-after .title { flex: 1; text-align: center; font-weight: 700; font-size: 13px; }
+  .panel-body { padding: 12px; overflow-y: auto; flex: 1; font-size: 12px; background: var(--color-tertiary); }
+
+  .mismatch-marker { position: absolute; }
+  .row-guide { position: relative; }
+  .row-guide::after {
+    content: ""; position: absolute; left: 0; right: 0; height: 1px; background: repeating-linear-gradient(90deg, #C9432B 0 6px, transparent 6px 10px);
+    z-index: 5;
+  }
+
+  .annot {
+    max-width: 980px; margin-top: 12px; font-size: 12px; color: var(--color-muted); line-height: 1.7;
+  }
+  .annot code { background: var(--color-tertiary); padding: 1px 5px; border-radius: 4px; }
+
+  .signoff {
+    max-width: 980px; margin-top: 24px; padding: 14px 16px; border: 2px solid var(--color-accent);
+    border-radius: var(--radius-md); font-size: 13px; color: var(--color-foreground); background: var(--color-accent-subtle);
+  }
+</style>
+</head>
+<body>
+  <h1>第三欄面板 owner 2026-07-21 第二輪回報 — #3 header 等高 + #4 桌機 tab 玻璃共用</h1>
+  <p class="subtitle">mockup 產出於實作完成後（bug-fix/token 對齊性質，非全新頁面），仍走 mockup-first gate 補送 owner sign-off。</p>
+
+  <div class="status-line">
+    <b>本回報批次共 6 項，狀態：</b><br/>
+    <span class="tag done">已完成</span> #1 中欄 header actions 消失（補回 TripActionsMenu）<br/>
+    <span class="tag done">已完成</span> #2 開關第三欄不重掛載中欄（TripPageHost 單例 + Portal，見下方「已知取捨」段落已改寫為「已解決」）<br/>
+    <span class="tag done">已完成</span> #5 既有 6 個操作面板套 tertiary elevation（跟新 3 面板一致）<br/>
+    <span class="tag done">已完成</span> #6 行程內容欄兩側深黑（elevation 移到最外層 + 展開卡片調高一階）<br/>
+    <span class="tag mockup">本頁 mockup</span> #3 第三欄 header 沒和第二欄等高<br/>
+    <span class="tag mockup">本頁 mockup</span> #4 桌機 tab 效果沒比照手機版
+  </div>
+
+  <div class="callout">
+    <b>#3 決策摘要</b>：<code>StackPanelHeader</code>（第三欄 header，class <code>.tp-stack-head</code>）原本寫死 <code>height: 52px</code>；
+    中欄 <code>TitleBar</code>（class <code>.tp-titlebar</code>）用 <code>--titlebar-h</code> token（桌機 64px / compact 56px）。
+    兩者不共用同一個高度來源，肉眼可見第三欄 header 比中欄矮一截。改法：<b>把 <code>.tp-stack-head</code> 的 height 也改成
+    <code>calc(var(--titlebar-h) + env(safe-area-inset-top, 0px))</code></b>，跟 <code>.tp-titlebar</code> 完全同源 —— 之後
+    <code>--titlebar-h</code> 若再調整（例如全站改 60px），兩欄會自動一起變，不會再漂移。<br/><br/>
+    <b>#4 決策摘要</b>：手機 <code>GlobalBottomNav</code> 是玻璃膠囊（<code>--tabbar-tint</code> + <code>--tabbar-filter</code> + <code>--tabbar-rim</code> + <code>--tabbar-shadow</code>
+    四件套材質，已在 tokens.css 定義）；桌機 <code>DesktopSidebar</code> 頂部的 primary nav（<code>.tp-sidebar-nav</code>）過去是純色 list、完全沒有材質。
+    這裡<b>不是重做一個新元件</b>，是讓 <code>.tp-sidebar-nav</code> 套用同一組已存在的 <code>--tabbar-*</code> token —— 垂直列表 vs
+    水平膠囊排列不同，但材質語言統一，桌機側欄頂部跟手機底部膠囊才讀作「同一種 chrome」。
+    <ul>
+      <li>已選中項目背景沿用既有 <code>--color-accent-fill</code>（跟手機 active tab 已經一致，未變動）。</li>
+      <li>沒有改變 <code>navItems.ts</code> 的 5-tab IA（含帳號），純視覺材質對齊。</li>
+    </ul>
+  </div>
+
+  <h2>#3 — 第三欄 header 高度對齊中欄 TitleBar</h2>
+  <div class="pair">
+    <div class="frame-wrap">
+      <div class="frame-label before">Before — .tp-stack-head 寫死 52px，比中欄矮</div>
+      <div class="frame">
+        <div class="col-sidebar nav-flat">
+          <div class="brand">Tripline</div>
+          <div class="nav-item is-active">📅 行程</div>
+          <div class="nav-item">💬 聊天</div>
+          <div class="nav-item">🗺 地圖</div>
+          <div class="nav-item">❤ 收藏</div>
+        </div>
+        <div class="col-mid">
+          <div class="mid-titlebar-before">
+            <div class="back-btn">‹</div>
+            <div class="title">2026 沖繩七日遊</div>
+          </div>
+          <div class="mid-body">
+            <div class="day-chip">DAY 3</div>
+            <div class="stop-row"><div class="n">1</div><div class="name">首里城公園</div></div>
+            <div class="stop-row"><div class="n">2</div><div class="name">花織そば</div></div>
+          </div>
+        </div>
+        <div class="col-panel">
+          <div class="panel-head-before">
+            <span class="icon-btn" style="visibility:hidden">‹</span>
+            <span class="title">共編設定</span>
+            <span class="icon-btn">✕</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin:0;color:#A34A3A;font-weight:700;">↑ 52px，比左邊中欄的 64px 矮 12px —— 兩條分隔線高度對不齊</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-wrap">
+      <div class="frame-label after">After — .tp-stack-head 改用 --titlebar-h，兩欄同高</div>
+      <div class="frame">
+        <div class="col-sidebar nav-flat">
+          <div class="brand">Tripline</div>
+          <div class="nav-item is-active">📅 行程</div>
+          <div class="nav-item">💬 聊天</div>
+          <div class="nav-item">🗺 地圖</div>
+          <div class="nav-item">❤ 收藏</div>
+        </div>
+        <div class="col-mid">
+          <div class="mid-titlebar-after">
+            <div class="back-btn">‹</div>
+            <div class="title">2026 沖繩七日遊</div>
+            <div class="actions"><span class="icon-btn">+</span><span class="icon-btn">⋯</span></div>
+          </div>
+          <div class="mid-body">
+            <div class="day-chip">DAY 3</div>
+            <div class="stop-row"><div class="n">1</div><div class="name">首里城公園</div></div>
+            <div class="stop-row"><div class="n">2</div><div class="name">花織そば</div></div>
+          </div>
+        </div>
+        <div class="col-panel">
+          <div class="panel-head-after">
+            <span class="icon-btn" style="visibility:hidden">‹</span>
+            <span class="title">共編設定</span>
+            <span class="icon-btn">✕</span>
+          </div>
+          <div class="panel-body">
+            <p style="margin:0;color:#2E6B2A;font-weight:700;">↑ 64px，跟中欄 TitleBar 同高，分隔線對齊一直線</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="annot">
+    順帶展示 <b>#1 的修復</b>：After 版中欄 TitleBar 右上角補回「+ 新增景點」與「⋯ 動作選單」（Before 版兩者都沒有 —— 這正是 owner 回報 #1 「header actions 消失」的畫面）。
+  </div>
+
+  <h2>#4 — 桌機 primary nav 玻璃材質跟手機底部膠囊共用</h2>
+  <div class="pair">
+    <div class="frame-wrap">
+      <div class="frame-label before">Before — .tp-sidebar-nav 純色 list，無材質</div>
+      <div class="frame" style="height:220px;">
+        <div class="col-sidebar nav-flat">
+          <div class="brand">Tripline</div>
+          <div class="nav-item is-active">📅 行程</div>
+          <div class="nav-item">💬 聊天</div>
+          <div class="nav-item">🗺 地圖</div>
+          <div class="nav-item">❤ 收藏</div>
+          <div class="nav-item">👤 帳號</div>
+        </div>
+        <div class="col-mid" style="align-items:center;justify-content:center;color:var(--color-muted);font-size:12px;">（中欄/右欄與本項無關，省略）</div>
+        <div class="col-panel"></div>
+      </div>
+    </div>
+    <div class="frame-wrap">
+      <div class="frame-label after">After — .tp-sidebar-nav 套用 --tabbar-* 玻璃 token</div>
+      <div class="frame" style="height:220px;">
+        <div class="col-sidebar">
+          <div class="brand">Tripline</div>
+          <div class="nav-glass">
+            <div class="nav-item is-active">📅 行程</div>
+            <div class="nav-item">💬 聊天</div>
+            <div class="nav-item">🗺 地圖</div>
+            <div class="nav-item">❤ 收藏</div>
+            <div class="nav-item">👤 帳號</div>
+          </div>
+        </div>
+        <div class="col-mid" style="align-items:center;justify-content:center;color:var(--color-muted);font-size:12px;">（中欄/右欄與本項無關，省略）</div>
+        <div class="col-panel"></div>
+      </div>
+    </div>
+  </div>
+  <div class="annot">
+    手機參照（不變，僅供比對材質語言）：<code>GlobalBottomNav</code> 的浮動玻璃膠囊 —— tint(0.42) + blur(28px) + saturate(190%) + rim + shadow。
+    桌機這裡是同一組 <code>--tabbar-tint</code> / <code>--tabbar-filter</code> / <code>--tabbar-rim</code> / <code>--tabbar-shadow</code>，
+    容器形狀改成貼合側欄寬度的圓角矩形（不是膠囊），但材質「配方」一致。
+  </div>
+
+  <div class="signoff">
+    <b>需要 owner sign-off 才能視為此輪 UI 變化定案</b>（CLAUDE.md mockup-first hard gate）。
+    #3、#4 程式碼已依本頁樣式實作並通過對應單元測試；若 sign-off 後有調整（例如 #4 想要更貼近「膠囊」的圓角、或 #3 想要跟 compact 斷點驗證），
+    請回饋後續調整，不影響其餘 4 項已完成項目。
+  </div>
+</body>
+</html>

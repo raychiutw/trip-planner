@@ -24,6 +24,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
+import { classifyMapClick, type GooglePoiClick } from '../lib/mapHelpers';
 
 declare global {
   interface Window {
@@ -50,6 +51,18 @@ export interface UseGoogleMapOptions {
   mapTypeId?: 'roadmap' | 'satellite' | 'hybrid';
   /** Disable Google's default UI chrome (POI labels, fullscreen button etc.) */
   disableDefaultUI?: boolean;
+  /** 2026-07-21 owner「地圖點選 Google POI」：enable Google's native POI icon
+   *  clicks (business/attraction markers baked into the map tiles). Default
+   *  **false** — only callers that pass onPoiClick opt in; other useGoogleMap
+   *  callers (e.g. LocationPickerMap) keep today's behaviour unchanged. */
+  clickableIcons?: boolean;
+  /** Fired when a Google-native POI icon is tapped (only reachable when
+   *  clickableIcons=true). See classifyMapClick (lib/mapHelpers.ts) for the
+   *  poi-vs-background split — mirrors Flutter's onPoiClicked. */
+  onPoiClick?: (poi: GooglePoiClick) => void;
+  /** Fired on a plain map background click (no placeId) — lets the caller
+   *  clear a selected POI card. Mirrors Flutter's onMapClicked. */
+  onMapClick?: () => void;
 }
 
 export interface UseGoogleMap {
@@ -93,7 +106,19 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
     zoomControlPosition = 'TOP_LEFT',
     mapTypeId = 'roadmap',
     disableDefaultUI = true,
+    clickableIcons = false,
+    onPoiClick,
+    onMapClick,
   } = opts;
+
+  // click listener 掛在下方 [] init-once effect 內，閉包會鎖定首次 render 的 callback。
+  // 目前呼叫端（MapPage → TpMap）傳的是穩定 callback（state setter + useCallback[]）故無
+  // 實害，但把最新值存進 ref 讓 listener 讀取，避免未來呼叫端傳 inline callback 時靜默
+  // stale（icon 欄位是 string、型別擋不住這類 footgun — 見 handoff lesson #5）。
+  const onPoiClickRef = useRef(onPoiClick);
+  const onMapClickRef = useRef(onMapClick);
+  onPoiClickRef.current = onPoiClick;
+  onMapClickRef.current = onMapClick;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -102,6 +127,10 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
     // auth 失敗 flag：gate 下方 .then 的 setMap（避免 gm_authFailure 先於 promise
     // resolve 時，仍在授權失敗的 map 上建 instance → marker/segment 在壞 map 上 render）。
     let authFailed = false;
+    // 2026-07-21：click listener handle，unmount 時 remove（避免同一 container 之後
+    // 重掛時殘留舊 listener；Map instance 本身雖無 .remove()，addListener 回傳的
+    // handle 有）。
+    let clickListenerHandle: google.maps.MapsEventListener | undefined;
 
     const apiKey =
       (import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY as string | undefined) ?? '';
@@ -149,7 +178,9 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
             position: google.maps.ControlPosition[zoomControlPosition],
           },
           gestureHandling: 'greedy', // mobile single-finger pan
-          clickableIcons: false,     // disable Google's POI overlay clicks
+          // 2026-07-21：預設仍關閉（現有行為不變，如 LocationPickerMap）；地圖頁
+          // 傳 onPoiClick 時才開，讓 user 點 Google 原生 POI 圖示。
+          clickableIcons,
           // v2.31.75: AdvancedMarkerElement requires a mapId to render.
           // v2.33.39 (round 4 security audit): 改讀 VITE_GOOGLE_MAPS_MAP_ID
           // env var；Google 共享的 'DEMO_MAP_ID' 在 GCP Console 列為可隨時停用，
@@ -157,6 +188,23 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
           // 以維持 dev 開發體驗。
           mapId: (import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined) ?? 'DEMO_MAP_ID',
         });
+        // 2026-07-21：只在 caller 有給任一 callback 時才掛 listener（省一個永遠
+        // no-op 的事件訂閱）。classifyMapClick 判斷 placeId 有無 → poi vs 空白。
+        if (onPoiClick || onMapClick) {
+          clickListenerHandle = instance.addListener(
+            'click',
+            (e: google.maps.MapMouseEvent | google.maps.IconMouseEvent) => {
+              const result = classifyMapClick(e as google.maps.IconMouseEvent);
+              if (result.type === 'poi') {
+                // 蓋掉 Google 預設行為（如未來版本恢復內建 POI info window）。
+                (e as google.maps.IconMouseEvent).stop?.();
+                onPoiClickRef.current?.(result.poi);
+              } else {
+                onMapClickRef.current?.();
+              }
+            },
+          );
+        }
         setMap(instance);
       })
       .catch((err: unknown) => {
@@ -168,6 +216,7 @@ export function useGoogleMap(opts: UseGoogleMapOptions = {}): UseGoogleMap {
       cancelled = true;
       // 還原前一個 gm_authFailure（避免卸載後仍指向本 hook 的閉包）。
       window.gm_authFailure = prevAuthFailure;
+      clickListenerHandle?.remove();
       // Google Maps JS has no .remove() — element + map ref will be GC'd when
       // container detaches; we only clear React state.
       setMap(null);

@@ -156,6 +156,12 @@ const SCOPED_STYLES = `
   display: flex;
   flex-direction: column;
 }
+/* owner 2026-07-21（第二輪回報 #5）：桌機第三欄面板要跟新遷入的共編/健檢/筆記
+ * 3 頁一樣套 tertiary elevation（見 AppShell.tsx .app-shell-sheet 註解 + CollabPage
+ * 同型 override）。手機整頁 drill-down 不受影響，仍是上面的 --color-background。 */
+.app-shell-sheet .tp-add-stop-page-shell {
+  background: var(--color-tertiary);
+}
 .tp-add-stop-page-day-meta {
   font-size: var(--font-size-footnote);
   color: var(--color-muted);

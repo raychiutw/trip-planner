@@ -45,4 +45,14 @@ describe('StackPanelHeader — rev2 共用堆疊面板 header', () => {
       /\.tp-stack-head-spacer\s*\{[^}]*var\(--spacing-tap-min\)/,
     );
   });
+
+  // owner 2026-07-21（第二輪回報 #3）：第三欄 StackPanelHeader 沒有跟中欄 TitleBar
+  // 等高 —— TitleBar 用 --titlebar-h token（64px 桌機/56px compact），StackPanelHeader
+  // 寫死 52px，兩欄 header 對不齊。改共用同一個 token 來源。
+  it('owner 回報 #3：.tp-stack-head 高度改用 --titlebar-h token（不再寫死 52px），跟 .tp-titlebar 同一個高度來源', () => {
+    expect(STACK_PANEL_HEADER_STYLES).not.toMatch(/\.tp-stack-head\s*\{[^}]*height:\s*52px/);
+    expect(STACK_PANEL_HEADER_STYLES).toMatch(
+      /\.tp-stack-head\s*\{[^}]*height:\s*calc\(var\(--titlebar-h\)/,
+    );
+  });
 });
