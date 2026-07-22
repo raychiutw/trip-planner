@@ -1,4 +1,4 @@
-# ADR-0005：不引入 state management library
+# ADR-0004：不引入 state management library
 
 - **Status**：Accepted
 - **來源**：自 `ARCHITECTURE.md` 的 Key Architectural Decisions 搬入（2026-07-22）

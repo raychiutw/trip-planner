@@ -1,4 +1,4 @@
-# ADR-0003：自建 V2 OAuth，不用 Cloudflare Access
+# ADR-0002：自建 V2 OAuth，不用 Cloudflare Access
 
 - **Status**：Accepted（v2.21.x 起生效）
 - **來源**：自 `ARCHITECTURE.md` 的 Key Architectural Decisions 搬入（2026-07-22）

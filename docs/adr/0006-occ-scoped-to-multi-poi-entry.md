@@ -1,4 +1,4 @@
-# ADR-0007：OCC 只用在 entry 的 multi-POI，不擴散到其他表
+# ADR-0006：OCC 只用在 entry 的 multi-POI，不擴散到其他表
 
 - **Status**：Accepted（v2.27.0 起生效）
 - **來源**：自 `ARCHITECTURE.md` 的 Key Architectural Decisions 搬入（2026-07-22）

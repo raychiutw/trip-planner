@@ -371,13 +371,12 @@ tests/
 
 | ADR | 決策 |
 |-----|------|
-| [0001](docs/adr/0001-d1-on-the-edge.md) | 用 D1 跑在邊緣，不用 PostgreSQL |
-| [0002](docs/adr/0002-poi-master-per-entry-alternates.md) | POI master + per-entry 備選，拔掉 trip-scoped override 中間層（v2.29.0） |
-| [0003](docs/adr/0003-self-hosted-v2-oauth.md) | 自建 V2 OAuth，不用 Cloudflare Access（v2.21.x） |
-| [0004](docs/adr/0004-tailwind-4-theme-tokens.md) | Tailwind CSS 4 + `@theme`，不用 CSS modules |
-| [0005](docs/adr/0005-no-state-management-library.md) | 不引入 state management library |
-| [0006](docs/adr/0006-google-maps-platform-only.md) | 全套切換 Google Maps Platform，不留 fallback（v2.23.0，2026-05-23 鎖死） |
-| [0007](docs/adr/0007-occ-scoped-to-multi-poi-entry.md) | OCC 只用在 entry 的 multi-POI（v2.27.0） |
+| [0001](docs/adr/0001-poi-master-per-entry-alternates.md) | POI master + per-entry 備選，拔掉 trip-scoped override 中間層（v2.29.0） |
+| [0002](docs/adr/0002-self-hosted-v2-oauth.md) | 自建 V2 OAuth，不用 Cloudflare Access（v2.21.x） |
+| [0003](docs/adr/0003-tailwind-4-theme-tokens.md) | Tailwind CSS 4 + `@theme`，不用 CSS modules |
+| [0004](docs/adr/0004-no-state-management-library.md) | 不引入 state management library |
+| [0005](docs/adr/0005-google-maps-platform-only.md) | 全套切換 Google Maps Platform，不留 fallback（v2.23.0，2026-05-23 鎖死） |
+| [0006](docs/adr/0006-occ-scoped-to-multi-poi-entry.md) | OCC 只用在 entry 的 multi-POI（v2.27.0） |
 
 新決策**新增 ADR**，不要改回寫在這裡；被推翻的舊決策標 superseded、不要刪。
 

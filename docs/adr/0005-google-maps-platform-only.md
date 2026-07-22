@@ -1,4 +1,4 @@
-# ADR-0006：全套切換 Google Maps Platform，不留 fallback
+# ADR-0005：全套切換 Google Maps Platform，不留 fallback
 
 - **Status**：Accepted（v2.23.0 起生效；2026-05-23 owner 明確鎖死）
 - **來源**：自 `ARCHITECTURE.md` 的 Key Architectural Decisions 搬入（2026-07-22）

@@ -1,4 +1,4 @@
-# ADR-0002：POI master + per-entry 備選，拔掉 trip-scoped override 中間層
+# ADR-0001：POI master + per-entry 備選，拔掉 trip-scoped override 中間層
 
 - **Status**：Accepted（v2.29.0 起生效）
 - **來源**：自 `ARCHITECTURE.md` 的 Key Architectural Decisions 搬入（2026-07-22）

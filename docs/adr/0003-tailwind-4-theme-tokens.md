@@ -1,4 +1,4 @@
-# ADR-0004：Tailwind CSS 4 + `@theme`，不用 CSS modules
+# ADR-0003：Tailwind CSS 4 + `@theme`，不用 CSS modules
 
 - **Status**：Accepted
 - **來源**：自 `ARCHITECTURE.md` 的 Key Architectural Decisions 搬入（2026-07-22）
