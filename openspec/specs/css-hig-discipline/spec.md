@@ -1,99 +1,40 @@
-### Requirement: focus-visible 移除 outline 時必須提供替代焦點指示
+# css-hig-discipline — ⚰️ 已退役（2026-07-23）
 
-所有 `:focus-visible` 規則中使用 `outline: none` 時 SHALL 同時宣告 `box-shadow: var(--shadow-ring)` 作為替代焦點指示器。
+## Purpose
 
-例外：表單輸入元素（`textarea`、`input`、`.edit-textarea`）使用文字游標作為焦點指示，不需 `box-shadow`。
+**這份 spec 已退役。** 它曾用靜態分析守 7 條 CSS HIG 紀律，但指定的守護測試 `tests/unit/css-hig.test.js` 與引用的 `css/shared.css` 都已不存在、多條規則的 target token 也不存在（見下）。保留此檔作為 tombstone：記錄退役原因與各規則去向，供日後查證，**不要照原內容重建**。
 
-#### Scenario: button focus-visible 有 box-shadow
+## Requirements
 
-- **WHEN** 靜態分析所有 CSS 檔案中含 `:focus-visible` 的規則
-- **THEN** 若該規則包含 `outline: none` 且選擇器非表單輸入，SHALL 同時包含 `box-shadow` 宣告
+### Requirement: 本 capability 已退役
 
-#### Scenario: shared.css 提供全局 button focus-visible
+`css-hig-discipline` SHALL 不再被視為 active spec。CSS HIG 紀律的 SoT 改為 `DESIGN.md`（Accessibility / Color / Material 段）；原 7 條規則的去向見下方表格（搬進 `DESIGN.md` 或丟棄）。
 
-- **WHEN** 載入 `css/shared.css`
-- **THEN** SHALL 存在 `button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }` 規則
+#### Scenario: 有人想重建這份 spec
 
----
+- **WHEN** 未來有人要為 CSS HIG 紀律建立 spec
+- **THEN** SHALL 先讀本 tombstone 的去向表，確認規則是否已在 `DESIGN.md`，避免重蹈「守護測試不存在、規則悄悄漂走」的覆轍
 
-### Requirement: backdrop/overlay 使用 --overlay token
+## 為什麼退役
 
-所有含 `backdrop` 或 `overlay` 關鍵字的選擇器 SHALL 使用 `var(--overlay)` 作為背景色，不得硬寫 `rgba(0,0,0,...)` 值。
+大範圍腐爛，且**指向多個已不存在的東西**：
+- 引用的 `css/shared.css` — 不存在
+- 指定的守護測試 `tests/unit/css-hig.test.js` — 不存在（規則 7 因此自我證偽）
+- 規則 2 的 `--overlay` token — `css/tokens.css` 中不存在（grep = 0）
+- 規則 5 的 `--text-on-accent` token — 同樣不存在
 
-#### Scenario: 無硬寫 backdrop rgba
+因為守護測試消失，這份 spec 的規則從未被自動執行，也就悄悄漂走了（focus-ring 規則實際在 `8ead450b` 被違反、無人擋下）。這正是 wayfinder map #1110 / ticket #1116 揭露的問題。
 
-- **WHEN** 靜態分析所有 CSS 檔案中含 `backdrop` 或 `overlay` 的選擇器（排除 `:root` 與 `body.dark` 定義區塊）
-- **THEN** 背景色 SHALL 為 `var(--overlay)`，不得出現 `rgba(0,0,0,...)`
+## 7 條規則的去向
 
----
+| # | Requirement | 去向 |
+|---|---|---|
+| 1 | focus-visible 移除 outline 時提供替代焦點指示 | **搬進 `DESIGN.md`**（Accessibility 段的 Focus 條目，已補上 `box-shadow: var(--shadow-ring)` 要求 + 誤刪紀錄） |
+| 2 | backdrop/overlay 用 `--overlay` token | **丟** — `--overlay` token 根本不存在，規則從一開始就對不上現況 |
+| 3 | sticky-nav frosted glass | **丟** — `DESIGN.md`（Material & Effects 的 Glass 段 + TitleBar/Sidebar 章）已有更完整、更新的 glass 規範 |
+| 4 | dark mode 覆寫不得冗餘 | **搬進 `DESIGN.md`**（Color / Approach 段尾） |
+| 5 | `color: #fff` 改 `--text-on-accent` | **丟** — target token `--text-on-accent` 不存在，搬了等於叫人改成一個沒有的東西（僅 3 處疑似硬寫白，未來若要收斂應以當時真實 token 重寫規則） |
+| 6 | 4pt grid spacing | **丟** — `DESIGN.md`（Spacing / Base Unit 段）已有更完整版，含 micro-spacing 例外 |
+| 7 | css-hig.test.js 自動守護（≥12 條靜態分析） | **丟** — 該測試檔已不存在；守護機制的重建屬 wayfinder #1110 的 P2 落差（focus-ring 補回時要一併恢復守護，避免再次靜默漂移） |
 
-### Requirement: sticky-nav 使用 frosted glass 效果
-
-`.sticky-nav` 背景 SHALL 使用 `color-mix(in srgb, var(--bg) 85%, transparent)` 搭配 `backdrop-filter: saturate(180%) blur(20px)` 實現半透明磨砂玻璃效果。不得使用實色 `var(--bg)` 或 `rgba()` 背景。
-
-#### Scenario: sticky-nav 無實色背景
-
-- **WHEN** 靜態分析所有 CSS 檔案中含 `sticky-nav` 的選擇器
-- **THEN** 背景 SHALL 不為 `var(--bg)` 實色或 `rgba()` 值
-
----
-
-### Requirement: dark mode 覆寫不得冗餘
-
-若 base 規則已使用 `var(--token)` 且該 token 在 `body.dark` 中已有覆寫值，則 SHALL NOT 另寫 `body.dark .class { property: var(--token); }` 規則（冗餘，因 token 值已自動切換）。
-
-#### Scenario: 無冗餘 dark mode 覆寫
-
-- **WHEN** 靜態分析所有 CSS 檔案
-- **THEN** `body.dark .class` 規則中的屬性值若與 base 規則完全相同（皆為同一 `var(--token)`），該規則 SHALL 被移除
-
----
-
-### Requirement: color: #fff 改用語意 token
-
-CSS 中 `color: #fff` / `color: #FFF` / `color: #ffffff` SHALL 改為 `color: var(--text-on-accent)`。
-
-例外：brand icon 選擇器（`.g-icon`、`.n-icon`）及 color mode preview（`.cmp-*`）。
-
-#### Scenario: 無硬寫 color: #fff
-
-- **WHEN** 靜態分析所有 CSS 檔案（排除 `:root`、`body.dark`、print mode、brand icon）
-- **THEN** 不得出現 `color: #fff` 或等效硬寫值
-
----
-
-### Requirement: 4pt grid spacing
-
-所有 `margin`、`padding`、`gap` 的 px 值 SHALL 為 4 的倍數。
-
-例外：
-- 裝飾性 pseudo-element（`::before`/`::after`）中的 `.ov-card h4::before`、`.cmp-*`
-- scrollbar 元素
-- `@page` print margin
-- 使用 `var()` 或 `calc()` 的值
-
-#### Scenario: padding 值為 4 的倍數
-
-- **WHEN** 靜態分析所有 CSS 檔案中的 `padding` 相關宣告
-- **THEN** 所有 px 值 SHALL 為 4 的倍數（0 除外）
-
-#### Scenario: margin 值為 4 的倍數
-
-- **WHEN** 靜態分析所有 CSS 檔案中的 `margin` 相關宣告
-- **THEN** 所有 px 值 SHALL 為 4 的倍數（0 除外）
-
-#### Scenario: gap 值為 4 的倍數
-
-- **WHEN** 靜態分析所有 CSS 檔案中的 `gap` 相關宣告
-- **THEN** 所有 px 值 SHALL 為 4 的倍數（0 除外）
-
----
-
-### Requirement: CSS HIG 回歸測試自動守護
-
-`tests/unit/css-hig.test.js` SHALL 包含至少 12 條自動化靜態分析測試，涵蓋上述所有 HIG 紀律規則。每次 CSS 變更須通過所有測試。
-
-#### Scenario: npm test 包含 CSS HIG 測試
-
-- **WHEN** 執行 `npm test`
-- **THEN** `css-hig.test.js` 中所有測試 SHALL 通過
+搬遷前每條都查過現況，沒有把未驗證的斷言盲搬進 DESIGN.md。
