@@ -19,6 +19,12 @@
 
 `TP_REQUEST_USER_TOKEN` OFF 時，`/tp-request`（處理 untrusted `trip_requests.message`）仍降級 service-token 走未-contained `--dangerously-skip-permissions` session（`spawnTmuxRequest` 未-contained tmux 路徑），prompt-injection 可讀 Mac 憑證 → 拿 `API_SECRET` 可 mint owner token（若該 owner 已有 Consent）。flag ON 時此路徑已不可達（走 mint→contained 或 fail-closed）。**不能盲修**：10-min cron + CF `/trigger` 都在此路徑跑 prod AI 聊天 pipeline，直接 `return false` 會停掉聊天。與 containment 就緒度耦合 → 併 activation 一起做：activation 應**原子化**（containment ready + Consent + flag 同時上），別留 Consent-first-flag-later 窗口；或改造 spawn 讓 service-token 路徑也能 contained。security-auditor v2.55.62 P1。
 
+### 測試套件 — D1 建置成本迫使 unit 限流 2 worker（根本解：共用已 migrate 快照）
+
+**Priority**: P3（開發體驗；不影響使用者）
+
+v2.57.13 把 `npm test` 限成 `--maxWorkers=2`，因為每個 worker 都要各自建 Miniflare D1 並跑 90+ 個 migration，滿並行度下會有測試撞 timeout（實測預設並行度 1 failed，maxWorkers=2 全綠且**還略快** 289.87s vs 294.70s）。這是權宜：測試檔繼續長，2 worker 遲早也會撞牆，而現在整套要跑 ~290 秒。根本解是共用一份已 migrate 的 D1 快照（建一次、各 worker 複製），讓並行度重新可用。沒調高 `hookTimeout` —— 那等於把訊號關掉。
+
 ---
 
 ## Completed
