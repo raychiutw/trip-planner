@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.16] - 2026-07-22
+
+### Changed
+- **retention sweep 統一 60 天**（item-4，owner 2026-07-22）—— `auth-cleanup.js`：
+  - **`audit_log` 新增 60 天保留**（第 10 條）：`DELETE FROM audit_log WHERE
+    created_at < datetime('now', '-60 days')`。行程變更稽核（`trip_id` / `action`
+    / `diff_json` / `snapshot`）過去無保留、無界成長，舊 diff/snapshot 含行程自由文
+    PII。`created_at` 有 `idx_audit_time` 索引（0071），走索引不全表掃。
+    ⚠️ owner 接受 rollback（`rollback.ts` 讀 `audit_log`）只回溯 60 天。
+  - **`auth_audit_log` 由 30 天放寬到 60 天**。
+  - `api_logs` 維持 60 天（不變）。
+  - 憑證修復（`.env.local` 的 `CLOUDFLARE_API_TOKEN`，本機 config、不在 git）後已
+    實跑驗證：cron 不再 no-op，一次性清 backlog（api_logs 9572 / auth_audit_log 236
+    / oauth_models 216 / pois_search_cache 55 等）。
+
 ## [2.57.15] - 2026-07-22
 
 ### Fixed
@@ -19,6 +34,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   - `test:all` 同步改為 `npm test && npm run test:api`（原本是自己再寫一次 `vitest run`，
     會繞過 `--maxWorkers=2`）。並行度上限現在只有一個真相來源。CI（`ci.yml`）跑的是
     `npm test` + `npm run test:api`，本來就沒走 `test:all`。
+
 ## [2.57.14] - 2026-07-22
 
 ### Fixed
