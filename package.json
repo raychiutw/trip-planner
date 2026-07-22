@@ -1,6 +1,6 @@
 {
   "name": "tripline",
-  "version": "2.57.14",
+  "version": "2.57.15",
   "private": true,
   "scripts": {
     "dev": "concurrently -n vite,api -c cyan,green \"vite\" \"wrangler pages dev dist --local --port 8788 --d1 DB\"",
@@ -14,9 +14,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "typecheck:functions": "tsc --noEmit -p tsconfig.functions.json",
-    "test": "vitest run",
+    "test": "vitest run --maxWorkers=2",
     "test:api": "vitest run --config vitest.config.api.mts",
-    "test:all": "vitest run && vitest run --config vitest.config.api.mts",
+    "test:all": "npm test && npm run test:api",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "verify-sw": "node scripts/verify-sw.js",

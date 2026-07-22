@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.15] - 2026-07-22
+
+### Fixed
+- **unit 測試套件限制為 2 個 worker**（`npm test` → `vitest run --maxWorkers=2`）——
+  v2.57.12 一次加進 21 支測試後，測試套件推過了機器的並行度上限，滿載時會有測試撞
+  timeout。實測（同一台、同一 commit）：預設並行度 `1 failed | 461 passed`
+  （`privacy-page.test.tsx` 撞 5s test timeout，單獨重跑 1.98 秒 22 tests 全綠，
+  純負載型 flaky）；`--maxWorkers=2` 則 `462 passed / 4020 tests` 全綠，且耗時
+  289.87s 比預設的 294.70s **還略快** —— 並行度已過甜蜜點，多開 worker 只是互搶資源。
+  CI runner 通常比本機弱，不設上限在 CI 紅的風險更高。
+  - 這是權宜不是根本解。沒調高 `hookTimeout`（那等於把訊號關掉）。根本解是共用一份
+    已 migrate 的 D1 快照，屬獨立工程。
+  - `vitest.config.api.mts` 早已有 `maxWorkers: 1`，但只管 api 套件、管不到 unit。
+  - `test:all` 同步改為 `npm test && npm run test:api`（原本是自己再寫一次 `vitest run`，
+    會繞過 `--maxWorkers=2`）。並行度上限現在只有一個真相來源。CI（`ci.yml`）跑的是
+    `npm test` + `npm run test:api`，本來就沒走 `test:all`。
 ## [2.57.14] - 2026-07-22
 
 ### Fixed
