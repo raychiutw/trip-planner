@@ -14,7 +14,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "typecheck:functions": "tsc --noEmit -p tsconfig.functions.json",
-    "test": "vitest run",
+    "test": "vitest run --maxWorkers=2",
     "test:api": "vitest run --config vitest.config.api.mts",
     "test:all": "vitest run && vitest run --config vitest.config.api.mts",
     "test:watch": "vitest",
