@@ -18,6 +18,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import { writeAuthHint } from '../lib/authHint';
 
 /** GET /api/account 的刪除影響預覽。 */
 interface DeleteAccountPreview {
@@ -413,6 +414,11 @@ export default function AccountPage() {
     setLoggingOut(true);
     try {
       await apiFetchRaw('/oauth/logout', { method: 'POST' });
+      // 清掉「上次已登入」旗標（見 lib/authHint）。不清的話，登出後第一次進 `/`
+      // 會被 LandingPage 依舊旗標轉去 /trips，再被 useRequireAuth 踢回 /login ——
+      // 使用者想看行銷頁卻直接彈到登入頁。旗標會在那次 401 時自我校正，但沒必要
+      // 讓使用者先撞一次。
+      writeAuthHint(false);
       // v2.33.47 round 7b: navigate 前先關 modal — success 路徑也要關 (避免在
       // /login 看到 stale modal 殘影 if route transition 慢)。
       setShowLogoutModal(false);

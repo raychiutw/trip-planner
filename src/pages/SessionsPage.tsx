@@ -24,6 +24,7 @@ import TitleBar from '../components/shell/TitleBar';
 import ThemeToggle from '../components/shared/ThemeToggle';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import { writeAuthHint } from '../lib/authHint';
 
 const SCOPED_STYLES = `
 .tp-sessions-shell {
@@ -358,6 +359,10 @@ export default function SessionsPage() {
               } catch {
                 /* ignore — navigate to /login regardless */
               }
+              // 同 AccountPage 的登出：清掉「上次已登入」旗標（見 lib/authHint），
+              // 否則登出後第一次進 `/` 會被轉去 /trips 再彈回 /login。
+              // 放在 try/catch 之外 —— 登出請求失敗與否，使用者的意圖都是登出。
+              writeAuthHint(false);
               navigate('/login', { replace: true });
             }}
           >

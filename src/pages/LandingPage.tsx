@@ -15,6 +15,7 @@
  */
 import { Navigate } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { readAuthHint } from '../lib/authHint';
 
 const SCOPED_STYLES = `
 .tp-lp{background:var(--color-background);color:var(--color-foreground);min-height:100dvh}
@@ -121,8 +122,17 @@ const SCOPED_STYLES = `
 export default function LandingPage() {
   const { user } = useCurrentUser();
 
-  // 已登入者不該看到行銷頁。undefined = 還在載入，先不動（避免閃一下行銷頁再跳走）。
-  if (user) return <Navigate to="/trips" replace />;
+  /* 已登入者不該看到行銷頁（owner 2026-07-22：「先判斷有登入做轉址再渲染」）。
+   *
+   * 先前只寫 `if (user)`，而 user 的載入中狀態是 undefined —— falsy，所以 loading
+   * 期間會落到下面 return 整頁行銷內容，等 userinfo 回來才轉址，每次進站都閃一下。
+   *
+   * userinfo 是非同步的，首次 paint 拿不到答案，改用上次結果做樂觀判斷：
+   * hint 說已登入就直接轉址（完全不 render 行銷頁），猜錯的話 fetch 回來會把
+   * user 修正成 null、hint 也被清掉，這裡自然回到行銷頁。 */
+  if (user || (user === undefined && readAuthHint())) {
+    return <Navigate to="/trips" replace />;
+  }
 
   return (
     <>

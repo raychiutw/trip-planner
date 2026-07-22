@@ -23,7 +23,22 @@
 
 **Priority**: P3（開發體驗；不影響使用者）
 
-v2.57.13 把 `npm test` 限成 `--maxWorkers=2`，因為每個 worker 都要各自建 Miniflare D1 並跑 90+ 個 migration，滿並行度下會有測試撞 timeout（實測預設並行度 1 failed，maxWorkers=2 全綠且**還略快** 289.87s vs 294.70s）。這是權宜：測試檔繼續長，2 worker 遲早也會撞牆，而現在整套要跑 ~290 秒。根本解是共用一份已 migrate 的 D1 快照（建一次、各 worker 複製），讓並行度重新可用。沒調高 `hookTimeout` —— 那等於把訊號關掉。
+v2.57.15 把 `npm test` 限成 `--maxWorkers=2`，因為每個 worker 都要各自建 Miniflare D1 並跑 90+ 個 migration，滿並行度下會有測試撞 timeout（實測預設並行度 1 failed，maxWorkers=2 全綠且**還略快** 289.87s vs 294.70s）。這是權宜：測試檔繼續長，2 worker 遲早也會撞牆，而現在整套要跑 ~290 秒。根本解是共用一份已 migrate 的 D1 快照（建一次、各 worker 複製），讓並行度重新可用。沒調高 `hookTimeout` —— 那等於把訊號關掉。
+### CSS — 8 個 component 的 SCOPED_STYLES 仍手寫 `-webkit-backdrop-filter`（同一顆雷，目前未爆）
+
+**Priority**: P3（目前無害，但會在搬家時炸掉）
+
+v2.57.14 修掉了 `css/tokens.css` 裡的 5 處：成對寫 `backdrop-filter` +
+`-webkit-backdrop-filter` 時，lightningcss 去重會**留下 `-webkit-` 那條**，Chrome
+computed 變成 `none` —— 整組手寫玻璃在 Chrome 上從來沒生效過。
+
+component 的 `SCOPED_STYLES` 是 runtime 注入的 `<style>`，不經建置器，所以這 8 個檔案
+（DesktopSidebar / GlobalBottomNav / StackPanelHeader / GooglePoiCard / _tripFormStyles /
+ChatPage / LandingPage / MapPage）目前是好的 —— 但它們是**意外正確**，不是寫得比較對。
+任何一段被抽進 `tokens.css`（或未來 component styles 被納入建置）就會立刻複製這個 bug。
+
+專案 browserslist 是 `last 2 Chrome versions`，本來就不需要手寫前綴。清掉即可，
+只是要一個一個確認沒有依賴舊 Safari 的地方。
 
 ---
 

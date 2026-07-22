@@ -19,6 +19,59 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   - `test:all` 同步改為 `npm test && npm run test:api`（原本是自己再寫一次 `vitest run`，
     會繞過 `--maxWorkers=2`）。並行度上限現在只有一個真相來源。CI（`ci.yml`）跑的是
     `npm test` + `npm run test:api`，本來就沒走 `test:all`。
+## [2.57.14] - 2026-07-22
+
+### Fixed
+- **手寫的 liquid glass 在 Chrome 上從來沒生效過**（owner 回報「day tab 透明度太高」，
+  查下去發現的真根因）—— `css/tokens.css` 裡 5 處手寫玻璃都成對寫了
+  `backdrop-filter` + `-webkit-backdrop-filter`，lightningcss 判定重複而去重，
+  **留下的是 `-webkit-` 那條**，Chrome computed 因此是 `none`。
+  - prod 實測證據：`getComputedStyle('.tp-map-day-tabs').backdropFilter === "none"`，
+    而 `SCOPED_STYLES` 注入的 `.tp-global-bottom-nav` 是 `"blur(28px) saturate(1.9)"`。
+    差別不在寫法（兩處寫法一模一樣），在有沒有經過建置器 —— component 的
+    `SCOPED_STYLES` 是 runtime 注入的 `<style>`，逃過去重。
+  - 受影響：`.tp-bottom-nav`、`.tp-page-bottom-bar`、`.tp-map-day-tabs`、TitleBar ×2。
+  - 修法：移除手寫前綴，交給 lightningcss 依 browserslist（`last 2 Chrome versions`）
+    自己產生。建置產物已驗證兩條都正確輸出。
+  - day tab 的疊字是這個 bug 最先被看見的地方（頂端 sticky、內容從下方流過）。
+    blur 真的生效後，0.42/0.52 的低 tint 就完全讀得清 —— 那也才是 iOS HIG 說的玻璃
+    （低 tint + 強模糊），所以 tint 維持與底部 tab 同一組 `--tabbar-*`，不另開 token。
+- **桌機中欄 TitleBar 下方露出一條深色**（owner 回報 #2）—— `.tp-stack-mid` 先前
+  **只是個沒有任何規則的 marker class**，elevation 只上在最內層的 TripPage，
+  TitleBar 到 portal 內容之間那段直接透出 `.app-shell` 的 base。補上 `--color-secondary`
+  + `min-height: 100%`。
+- **第三欄 header 與中欄 TitleBar 不等高**（owner 回報 #3）—— `.trip-sheet-header`
+  （地圖 / 聊天 tab 那條）仍用 padding 撐高，實測 68px vs TitleBar 的 64px。
+  v2.57.12 只把 `.tp-stack-head` 改吃 `--titlebar-h`，漏了這個。三個 header 現在同源。
+- **行程筆記的日期選單被卡片裁掉**（owner 回報 #4）—— `.tp-notes-section` 的
+  `overflow: hidden`（用來裁 head hover 背景的圓角）連 `.tp-date-popover`
+  （`position: absolute`）一起裁；`z-index: 1100` 對 overflow clipping 無效。
+  改為不裁，圓角責任下放給唯一需要它的子元素。
+  - 第二層（preview 實測補的）：popover 底部仍會超出 `.app-shell-sheet` 可視區
+    （量到 71px）。那層是 `overflow: auto` 捲得到，但要使用者自己捲才看得到月底 ——
+    「無法看到全部日期」這句抱怨還沒被完全滿足。`TripDatePicker` 開啟時補
+    `scrollIntoView({ block: 'nearest' })`：`nearest` 的語意正是「已經看得到就不要動」，
+    空間夠時完全不會多捲、不搶使用者的捲動位置。
+    （姊妹元件 `TripTimePicker` 的 popover 是 portal 到 body，不受祖先 `overflow`
+    影響，本來就沒這個問題，不需同步修。）
+- **關閉第三欄面板時中欄會先閃一下別的畫面**（owner 回報 #5）—— 關閉是 navigate 到
+  `/trips?selected=:id`，此時清單還沒載入（`myIds === null`），`effectiveSelectedId`
+  的 `visibleTrips.some(...)` 必為 false → fallback 成 null → 中欄空一拍才把行程放回來；
+  清單多筆時甚至會先命中別的行程。改為清單載入完成前直接信任 URL，真的不可見的
+  由既有的 URL 正規化 effect 在載入後修正。
+- **已登入者進首頁會閃一下行銷頁**（owner 回報 #6）—— `LandingPage` 寫的是
+  `if (user)`，而 `useCurrentUser` 的載入中狀態是 `undefined`（falsy），所以 loading
+  期間會落到 render 整頁行銷內容，等 userinfo 回來才轉址。新增 `src/lib/authHint.ts`：
+  用 localStorage 記一個「上次是否已登入」的布林旗標，讓首次 paint 就能決定。
+  存的不是憑證也不是身分資料，授權一律仍以 userinfo 為準。
+- **登出後第一次進首頁會被彈到登入頁**（`/cso --diff` 抓到的自引入 bug）——
+  `AccountPage` 與 `SessionsPage` 兩個登出點都沒清 authHint，舊旗標會把使用者
+  轉去 `/trips` 再被 `useRequireAuth` 踢回 `/login`。兩處都補上清除。
+
+### Changed
+- **地圖模式的 Google POI 卡置中**（owner 2026-07-22）—— `.map-page-google-poi-slot`
+  是 `max-width: 420px` 的單張 block 卡，沒有 auto margin 會貼左。加 `margin-inline: auto`。
+  旁邊那排行程 POI 卡維持刻意的靠左橫向捲動（owner 先前「夠寬靠左」），不受影響。
 
 ## [2.57.12] - 2026-07-22
 

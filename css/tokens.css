@@ -917,7 +917,7 @@ body.dark {
             position: sticky; inset-block-end: 0;
             display: grid; grid-template-columns: repeat(4, 1fr);
             background: color-mix(in srgb, var(--color-background) 97%, transparent);
-            backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
+            backdrop-filter: blur(var(--blur-glass));
             border-top: 1px solid var(--color-border);
             padding-bottom: env(safe-area-inset-bottom);
             z-index: calc(var(--z-sticky-nav) - 1);
@@ -1292,7 +1292,6 @@ body.dark {
   border-top: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-background) 94%, transparent);
   backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
 }
 .tp-page-bottom-bar--end { justify-content: flex-end; }
 @media (min-width: 1024px) {
@@ -1422,15 +1421,22 @@ body.dark {
   margin: 6px auto 8px;
   padding: 4px;
   /* rev2 owner 2026-07-19「day tab 比照功能tab（底部浮動膠囊）的效果」：與 .tp-global-bottom-nav
-   * 同一玻璃材質族 — secondary 底 + --blur-glass(三層 glass 一致)+ 較強暖落影 + 亮 specular
-   * 上緣，成為明確浮動玻璃膠囊。用 secondary（非 background）→ 剛抬亮的 dark base(#1C1C1E)上
-   * 仍以 elevated #2C2C2E 明顯浮起（非 base-on-base 糊掉）；88%（比 nav 62% 略實）確保頂端
-   * sticky、內容從下方流過時仍讀得出邊界，不重蹈先前 72% cream-on-cream。 */
+   * 同一玻璃材質族 —— 浮動玻璃膠囊（較強暖落影 + 亮 specular 上緣）。
+   * （原本這裡還記著「secondary 底 88%，比 nav 62% 略實」的理由，已於 2026-07-21
+   *   統一材質時作廢，見下段。） */
   /* 2026-07-21：與 header／底部 tab 統一為 --tabbar-* 材質。
-     先前是 secondary 88% + blur(14px)，比底部 tab 實一倍、模糊弱一半。 */
+     先前是 secondary 88% + blur(14px)，比底部 tab 實一倍、模糊弱一半。
+
+     2026-07-22 owner 回報「day tab 透明度太高」，prod 實測後發現症狀的成因不是
+     tint —— 是 backdrop-filter **從來沒生效過**：原本這裡成對寫了
+     `backdrop-filter` + `-webkit-backdrop-filter`，lightningcss 判定重複而去重，
+     留下的是 -webkit- 那條，Chrome computed 因此是 none，只剩 0.52 的半透明底
+     在擋，內容一流過就疊字。移除手寫前綴後（見本檔其餘 4 處同樣處理），建置器
+     自己會依 browserslist 產生正確的兩條，blur(28px) 真的作用，0.42/0.52 的低
+     tint 就完全讀得清了——也才是 iOS HIG 說的玻璃（低 tint + 強模糊）。
+     所以 tint 維持與底部 tab 同一組 --tabbar-*，不另開 token。 */
   background: var(--tabbar-tint);
   backdrop-filter: var(--tabbar-filter);
-  -webkit-backdrop-filter: var(--tabbar-filter);
   border: 1px solid color-mix(in srgb, var(--color-foreground) 14%, transparent);
   box-shadow:
     0 14px 34px rgba(42, 31, 24, 0.22),
@@ -1494,6 +1500,23 @@ body.dark {
  * 中欄與 /trips 嵌入模式一樣有 64/56px titlebar，改用下方一般 `.tp-map-day-tabs--sticky`
  * 預設偏移（top: calc(var(--titlebar-h) + 8px)）即可，此 override 已移除。 */
 body.print-mode .tp-map-day-tabs--sticky { display: none; }
+
+/* 桌機操作堆疊中欄的表面（owner 2026-07-22 回報「第二欄 header 分隔線下方多一塊黑色」）。
+ *
+ * `.tp-stack-mid` 在此之前**只是個 marker class、沒有任何規則** —— 中欄的視覺是
+ *   .app-shell-main（base 深色）
+ *     └ .tp-stack-mid（無樣式，整片透明）
+ *         ├ <TitleBar>（自己的玻璃底）
+ *         └ <div portal>（無背景）→ TripPage 的 .tp-trip-page-shell（secondary）
+ * elevation 只上在最內層的 TripPage，所以 TitleBar 到 portal 內容之間那一段直接
+ * 露出 .app-shell 的 base，就是 owner 看到的黑帶。
+ *
+ * 這裡把 secondary 上到整個中欄，與 TripPage 的 .tp-trip-page-shell 同階（同色疊同色
+ * 是 no-op，不會多一層）。min-height:100% 讓內容短時下方也不露 base。 */
+.tp-stack-mid {
+  background: var(--color-secondary);
+  min-height: 100%;
+}
 
 /* ===== MapEntryCard — horizontal snap-scroll item (V2 Terracotta Map page) ===== */
 .tp-map-entry-cards {
@@ -1629,7 +1652,6 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
        中性 tint(0.42) + blur(28px) + saturate(190%)，三處材質才是一套。 */
     background: var(--tabbar-tint);
     backdrop-filter: var(--tabbar-filter);
-    -webkit-backdrop-filter: var(--tabbar-filter);
   }
   .tp-titlebar-title {
     /* mockup-parity-qa-fixes: mockup .tp-page-titlebar-title:4060 規範 desktop 20/28/700 (was 24px) */
@@ -1666,7 +1688,6 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
        中性 tint(0.42) + blur(28px) + saturate(190%)，三處材質才是一套。 */
     background: var(--tabbar-tint);
     backdrop-filter: var(--tabbar-filter);
-    -webkit-backdrop-filter: var(--tabbar-filter);
   }
   .tp-titlebar-title {
     font-size: 18px; /* mockup compact 18px (was 22px) */
