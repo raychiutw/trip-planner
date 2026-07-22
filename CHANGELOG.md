@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.18] - 2026-07-23
+
+### Changed
+- **收斂 `DESIGN.md` SoT 內部矛盾**（HIG 落差地圖 wayfinder #1110 的 P0 規範層；
+  純文件、不改 code/行為，owner 逐項裁決）：
+  - **時間 popup**：「必走全頁」判準寫過頭，收窄為「多步驟 day picker 流程」，
+    inline 起訖時間 chip（`.tp-rail-time-chip` portal popup）明列為例外 —— 原本
+    `:161` 核可、`:677` 禁止的直接衝突消除。
+  - **ShareLinkModal**：認定為欠債（違反「>3 欄位含 select/segment/toggle 必走全頁」），
+    標「已知違規待改全頁」，不追認為核可的 modal 例外。
+  - **`modal:false`**：更正描述 —— `useSheetBehavior` 支援此參數但 `OperationShell`
+    實際沒接（自己手寫 scroll 管理），是設計意圖非已實作。
+  - **導覽改寫 5-tab**（含帳號）：手機 header 帳號圓圈標退場（與帳號 tab 重複、僅
+    30×30）；code 移除另開 PR。
+  - **手機堆疊層級**：原本只規範桌機，補齊手機層級語意（‹/✕ 同目的地待收斂）。
+  - **捲動隱藏 nav**：三處過期規範改「常駐不隱藏」（owner 2026-07-20/21 決策，
+    scroll-direction 邏輯已於 `AppShell.tsx:232` 移除）。
+  - **TitleBar 第二層**：標與 `StackPanelHeader` 的分界（操作面板不走舊的 form 全頁）。
+  - focus ring（補 `box-shadow: var(--shadow-ring)` 要求 + 誤刪紀錄）與 dark-mode
+    不冗餘規則從 css-hig-discipline spec 遷入 Accessibility / Color 段。
+
+### Removed
+- **歸檔 `openspec/specs/css-hig-discipline` spec**（改為 tombstone）—— 指定的守護
+  測試 `tests/unit/css-hig.test.js`、引用的 `css/shared.css`、規則的 target token
+  （`--overlay` / `--text-on-accent`）**全都不存在**，守護測試消失後規則悄悄漂走
+  （focus-ring 在 `8ead450b` 被違反、無人擋下）。7 條規則逐條查現況：1/4 搬進
+  `DESIGN.md`（有驗證），2/3/5/6/7 丟棄（token 不存在 / DESIGN.md 已覆蓋 / 自我
+  證偽）；tombstone 記錄各規則去向、通過 `openspec validate`。
+
 ## [2.57.17] - 2026-07-23
 
 ### Added
