@@ -691,12 +691,23 @@ export default function TripsListPage() {
   }, [myTrips, isOwnedByUser]);
 
   // Effective selected: URL param > first visible trip > null
+  //
+  // owner 2026-07-22 回報 #5「第二欄功能開啟到第三欄再關閉時，畫面會跳到其他頁後再關閉」：
+  // 關閉第三欄是 navigate 到 /trips?selected=:id，換到本頁這棵 tree。此時清單還沒載入
+  // （myIds === null → visibleTrips 是空陣列），`visibleTrips.some(...)` 必為 false，
+  // 於是 fallback 成 visibleTrips[0]（也是 undefined）→ null → showEmbeddedTrip 變 false
+  // → 中欄先空一拍/露出清單，等 /api/trips 回來才把行程放回來。那一拍就是使用者看到的
+  // 「跳到其他頁」。清單多筆時更糟：fallback 有機會先命中**別的行程**再跳回來。
+  //
+  // 清單還沒載入時根本無從驗證 selected 可不可見，這時應該直接信任 URL —— 真的不可見
+  // （已封存/刪除/無權限）由下方的 URL 正規化 effect 在載入後修正，那才是它的職責。
+  const tripsLoaded = myIds !== null;
   const effectiveSelectedId = useMemo<string | null>(() => {
-    if (selectedFromUrl && visibleTrips.some((t) => t.tripId === selectedFromUrl)) {
+    if (selectedFromUrl && (!tripsLoaded || visibleTrips.some((t) => t.tripId === selectedFromUrl))) {
       return selectedFromUrl;
     }
     return visibleTrips[0]?.tripId ?? null;
-  }, [selectedFromUrl, visibleTrips]);
+  }, [selectedFromUrl, visibleTrips, tripsLoaded]);
 
   // v2.55.x：進 /trips 沒帶 ?selected 時，還原「上次檢視」的行程 + 天（Q1「記住上次行程+位置」）。
   // 來源用 tripViewState（TripPage 實際檢視時才寫）而非 activeTripId —— 兩者語意不同：tripView
