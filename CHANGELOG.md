@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.17] - 2026-07-23
+
+### Added
+- **`CONTEXT.md`（領域詞彙 / ubiquitous language）** —— agent 與人在 issue、重構提案、
+  測試名稱裡都用同一組詞。收錄行程結構（trip/day/entry/segment）、POI 與正選
+  （`sort_order=1`）／備選、協作（permission/companion/request）、稽核（**`audit_log`
+  與 `auth_audit_log` 是兩張不同的表**），外加「**已退場的名字**」對照表（`trip_pois`
+  / `saved_pois` / `trip_ideas` / `trip_entries.title` / `mode_source` / `owner_email`
+  / `pois.photos`）。詞彙以本機 D1 實際 36 張表核對，非從 migration 檔推測。
+- **`CONTEXT.md` 的「介面與互動」段** —— code 裡 `modal` 50 檔、`sheet` 43 檔、
+  `panel` 38 檔混用，`DESIGN.md:255` 同一段就寫了「右欄 sheet ＝ 操作面板」「L2 modal」。
+  按**角色**（非版面位置）定名：操作面板／行程 sheet／bottom sheet／對話框／行內警示／
+  堆疊層級，各帶 `_Avoid_`。位置命名（第三欄）在手機不成立 —— 桌機預設兩欄，只有行程
+  與地圖情境才三欄。版面本身仍歸 `DESIGN.md`。
+- **`docs/adr/0001-0006`（架構決策記錄）** —— `ARCHITECTURE.md` 原本的 Key Architectural
+  Decisions 散文清單搬成每條一檔（可個別標 `superseded`，散文清單做不到），該段改為索引表。
+- **`docs/agents/`** —— `/setup-matt-pocock-skills` 產出：`issue-tracker.md`（GitHub Issues
+  + `gh` CLI，含 `/wayfinder` 的 map / child ticket / blocking 操作定義）、`triage-labels.md`
+  （五角色用預設名，`wontfix` 沿用既有）、`domain.md`（single-context）。CLAUDE.md 加
+  `## Agent skills` 區塊指向三者。GitHub 也建了 4 個 triage label + 5 個 wayfinder label。
+
+### Changed
+- **`tests/unit/architecture-key-decisions.test.ts` 跟著搬遷改寫** —— 決策本體移出後，
+  原測試會退化成「守一張連結表」：它的斷言剛好因索引列含關鍵字而通過，卻不再守決策本體。
+  改為雙向鎖：索引連結必須指向真實存在的 ADR、每個 ADR 都要被索引到（防孤兒）、關鍵決策
+  （V2 OAuth / Google Maps / OCC / multi-POI）必須在 **ADR 檔內**、每個 ADR 要有 Status 欄。
+  已做負向驗證（拿掉一份 ADR 會紅 2 條，放回全綠）——不留結構上無法失敗的空測。
+
+### Removed
+- **ADR-0001「D1 vs PostgreSQL」** —— owner 指出 PostgreSQL 從未使用，查證屬實：
+  `package.json` 無相關依賴、`src|functions|scripts` 零引用、`git -S'postgres'` 只命中
+  文件 commit。原文的對照是稻草人；在 Cloudflare Pages 上用 D1 是平台預設，不構成決策。
+  剩餘 6 條升序重編號。
+
 ## [2.57.16] - 2026-07-22
 
 ### Changed

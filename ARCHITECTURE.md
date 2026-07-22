@@ -367,21 +367,18 @@ tests/
 
 ## Key Architectural Decisions
 
-幾個「為什麼是這樣」：
+「為什麼是這樣」的決策記錄在 **`docs/adr/`** — 每條一檔，可個別標記 superseded（散文清單做不到）。索引：
 
-1. **D1 on the edge, not PostgreSQL** — 行程是 read-heavy + 少量寫。D1 的 per-region replica + SQLite 讀取在 CF 的邊緣 node 跑，不需要另開 DB server。代價：跨 region 寫入延遲較高；在這個 workload 可接受。
+| ADR | 決策 |
+|-----|------|
+| [0001](docs/adr/0001-poi-master-per-entry-alternates.md) | POI master + per-entry 備選，拔掉 trip-scoped override 中間層（v2.29.0） |
+| [0002](docs/adr/0002-self-hosted-v2-oauth.md) | 自建 V2 OAuth，不用 Cloudflare Access（v2.21.x） |
+| [0003](docs/adr/0003-tailwind-4-theme-tokens.md) | Tailwind CSS 4 + `@theme`，不用 CSS modules |
+| [0004](docs/adr/0004-no-state-management-library.md) | 不引入 state management library |
+| [0005](docs/adr/0005-google-maps-platform-only.md) | 全套切換 Google Maps Platform，不留 fallback（v2.23.0，2026-05-23 鎖死） |
+| [0006](docs/adr/0006-occ-scoped-to-multi-poi-entry.md) | OCC 只用在 entry 的 multi-POI（v2.27.0） |
 
-2. **POI master + per-entry alternates（v2.29.0 起）** — `pois` 是 immutable master（Google Place Details refresh），`trip_entry_pois` junction（entry × poi M:N + `sort_order`）讓每個 entry 同時掛 1 主選 + N 備案。**過去**有 `trip_pois` 中間層做 trip-scoped override（COALESCE），實測 user 客製率低 + 維運成本高，v2.29.0 整表 rip-out 改純 reference。Trip-scoped 自由文字改寫進 `trip_entries.note`。
-
-3. **V2 OAuth 自建（v2.21.x 起）而非 Cloudflare Access** — CF Access 強制綁 Google identity provider + 每 user $3/月，自架 OAuth server（opaque session cookie + HKDF + Bearer service token + client_credentials grant）打破 vendor lock-in 並降本到零。代價：自己管 session store、密碼 hash（PBKDF2 600k → Argon2id self-describing）、token rotation。Migration runbook 見 `docs/runbooks/oauth-env-setup.md`。
-
-4. **Tailwind CSS 4 + @theme，不用 CSS modules** — 6 套主題（color theme × dark mode）的 token 切換用 CSS custom property 最簡。元件層全用 utility class，減少 dead CSS。
-
-5. **無 state management library** — 服務狀態（trip / requests）用 custom hook + SWR-style fetch；UI 狀態用 React context 或 local state。Redux / Zustand 對這規模是 overkill。
-
-6. **Google Maps Platform 全套切換（v2.23.0 起）** — OSM Nominatim + Mapbox + ORS + Leaflet + Haversine 全部 ripped out，no fallback。Search/Routes/Maps 統一 Google → 商業級資料品質 + license 一致 + Google `place_id` 變 canonical ID。代價：付費 + 配額管理。對應：`app_settings` 90/50 hysteresis kill switch + `/admin/maps-*` 8 endpoint + mac mini `google-quota-monitor` cron + `<TripHealthBanner>` 預警。Runbook 見 `docs/runbooks/v2.33-migration-deploy-order.md`。
-
-7. **OCC（optimistic concurrency control）只用在 multi-POI per entry** — `trip_entries.entry_pois_version` integer counter（v2.27.0）保護 master/alternates concurrent edit。其他表暫不導入，避免 `IF version=X` 寫法蔓延。Token 衝突 → 409 STALE_ENTRY，frontend refetch 後 retry。
+新決策**新增 ADR**，不要改回寫在這裡；被推翻的舊決策標 superseded、不要刪。
 
 ---
 
@@ -408,6 +405,8 @@ tests/
 ## Related Docs
 
 - [README.md](README.md) — 使用者介紹、功能特色
+- [CONTEXT.md](CONTEXT.md) — 領域詞彙（ubiquitous language）、已退場的名字對照
+- [docs/adr/](docs/adr/) — 架構決策記錄（為什麼是這樣）
 - [CLAUDE.md](CLAUDE.md) — 開發流程、gstack pipeline
 - [DESIGN.md](DESIGN.md) — 設計系統、視覺 tokens
 - [CHANGELOG.md](CHANGELOG.md) — 版本紀錄

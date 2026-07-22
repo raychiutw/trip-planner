@@ -53,3 +53,17 @@ Match → invoke `Skill` first.
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `.claude/skills/tp-team/SKILL.md`.
 Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite + MCP (user scope), sync=full, repo=read-write, 873 pages, setup 2026-05-04. Windows caveat: transcript ingest no-op (script POSIX-only). See `~/.gbrain/config.json`.
+
+## Agent skills
+
+### Issue tracker
+
+Issues 走 GitHub Issues（`raychiutw/trip-planner`），用 `gh` CLI；`/wayfinder` 的 map / child ticket / blocking 也落在這。See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+五個角色用預設名稱（`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`）；`wontfix` 沿用 repo 既有標籤。See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — 根目錄 [`CONTEXT.md`](CONTEXT.md)（領域詞彙 + 已退場名字）+ [`docs/adr/`](docs/adr/)（架構決策，`ARCHITECTURE.md` 只留索引）。探索程式碼前先讀。See `docs/agents/domain.md`.
