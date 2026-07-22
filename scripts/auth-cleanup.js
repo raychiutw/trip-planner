@@ -44,9 +44,10 @@ if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CF_ACCOUNT_ID || !process.
     audit_log: 0,
   };
 
-  // 1. auth_audit_log — 30 天保留
+  // 1. auth_audit_log — 60 天保留（owner 2026-07-22：由 30 放寬到 60，與 api_logs /
+  //    audit_log 對齊）
   report.auth_audit_log = await execD1(
-    "DELETE FROM auth_audit_log WHERE created_at < datetime('now', '-30 days')"
+    "DELETE FROM auth_audit_log WHERE created_at < datetime('now', '-60 days')"
   );
 
   // 2. session_devices — revoked 後 30 天或 30 天無活動
@@ -103,10 +104,10 @@ if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CF_ACCOUNT_ID || !process.
   // 10. audit_log — item-4 (owner 2026-07-22)：行程變更稽核（trip_id / action /
   //     diff_json / snapshot）。rollback 功能（functions/api/trips/[id]/audit/[aid]/rollback.ts）
   //     在讀，但無限保留 = 無界成長 + 舊 diff/snapshot 含行程自由文 PII。owner 決策
-  //     365 天保留（明確接受 rollback 只能回溯一年內；超過一年的還原點會被清）。
-  //     created_at 有 idx_audit_time 索引（migration 0071），DELETE 走索引不全表掃。
+  //     60 天保留（與 api_logs / auth_audit_log 對齊；明確接受 rollback 只回溯 60 天，
+  //     超過的還原點會被清）。created_at 有 idx_audit_time 索引（0071），走索引不全表掃。
   report.audit_log = await execD1(
-    "DELETE FROM audit_log WHERE created_at < datetime('now', '-365 days')"
+    "DELETE FROM audit_log WHERE created_at < datetime('now', '-60 days')"
   );
 
   console.log(JSON.stringify({
