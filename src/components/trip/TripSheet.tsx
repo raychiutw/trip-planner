@@ -36,7 +36,12 @@ const SCOPED_STYLES = `
 }
 .trip-sheet-header {
   display: flex; align-items: center; gap: 8px;
-  padding: 12px 16px;
+  /* owner 2026-07-22 回報「第三欄 header 沒對齊」：這條（地圖 / 聊天 tab）先前靠
+   * padding 撐高，與中欄 TitleBar 的 --titlebar-h（64px 桌機 / 56px compact）不等高。
+   * #1105 已把 .tp-stack-head 改吃同一個 token，但漏了這個右欄 header —— 三欄要對齊
+   * 就得三個 header 都同源。safe-area-inset-top 比照 .tp-titlebar / .tp-stack-head。 */
+  height: calc(var(--titlebar-h) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 16px 0;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }

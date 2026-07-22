@@ -75,6 +75,23 @@ export function TripDatePicker({
   const defaultMonth = selected ?? fromDate ?? new Date();
 
   const close = useCallback(() => setOpen(false), []);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  /* owner 2026-07-22「行程航班的月曆會被外框壓住無法看到全部日期」的第二層。
+   *
+   * 第一層是 .tp-notes-section 的 overflow:hidden 把 popover 裁掉（已移除）。
+   * 但 preview 實測發現 popover 底部仍會超出 .app-shell-sheet 的可視區
+   * （量到 71px）—— 那層是 overflow:auto 捲得到，可是要使用者自己捲。
+   *
+   * block:'nearest' 的語意正是「已經看得到就不要動」，所以空間足夠時完全不會
+   * 產生多餘捲動（不搶使用者原本的捲動位置），只有真的被切到才補那一段。 */
+  useEffect(() => {
+    if (!open) return;
+    // `?.scrollIntoView?.(` 的第二個 ?. 不是多餘的：jsdom 沒有實作這個方法，
+    // 直接呼叫會讓每一個 render 這個元件的測試都爆掉（實測打壞 3 個既有測試）。
+    // 捲動是純錦上添花，環境沒有就安靜跳過。
+    popoverRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -127,6 +144,7 @@ export function TripDatePicker({
       </button>
       {open && (
         <div
+          ref={popoverRef}
           id={popoverId}
           role="dialog"
           aria-label={ariaLabel ?? '選擇日期'}

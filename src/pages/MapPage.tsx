@@ -186,10 +186,16 @@ const SCOPED_STYLES = `
 }
 
 /* Google POI 卡插槽 — 同一插槽（.map-page-cards 的定位）但非橫向捲動 strip，
- * 单張卡片撐開寬度即可（GooglePoiCard 自帶玻璃樣式）。 */
+ * 单張卡片撐開寬度即可（GooglePoiCard 自帶玻璃樣式）。
+ *
+ * owner 2026-07-22：「地圖單獨模式選 Google POI 開啟的顯示區域要置中」。
+ * 外層 .map-page-cards 是 absolute + left:0/right:0 撐滿欄寬，這張是單張 block
+ * 卡、又有 max-width:420px，沒有 auto margin 就會貼左。旁邊那排行程 POI 卡是
+ * 刻意靠左的橫向 strip（owner 先前「夠寬靠左」），不受影響 —— 只有這個單卡插槽置中。 */
 .map-page-google-poi-slot {
   display: block;
   max-width: 420px;
+  margin-inline: auto;
 }
 
 `;

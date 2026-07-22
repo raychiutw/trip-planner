@@ -125,13 +125,23 @@ const SCOPED_STYLES = `
 .tp-notes-empty-hero-dot.is-filled { background: var(--color-accent); }
 
 /* Section accordion */
+/* owner 2026-07-22 回報「行程航班的月曆會被外框壓住無法看到全部日期」：
+ * 這裡原本有 overflow: hidden（用來裁 head hover 背景的圓角），但它同時把
+ * .tp-date-popover（position: absolute）裁掉了 —— popover 的 z-index:1100 對
+ * overflow clipping 無效，祖先一旦 hidden 就一定被切。
+ * 改為不裁，圓角責任下放給唯一需要它的子元素（head 的 hover 背景）。 */
 .tp-notes-section {
   margin-bottom: 12px;
   background: var(--color-secondary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
-  overflow: hidden;
   transition: border-color 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* 收合時 head 就是整張卡 → 四角都跟著 section 圓；展開時底部接 body → 收成方角。 */
+.tp-notes-section-head { border-radius: inherit; }
+.tp-notes-section.is-open .tp-notes-section-head {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 .tp-notes-section.is-open { border-color: var(--color-line-strong); }
 .tp-notes-section.is-suggested { border-color: var(--color-accent-bg); }
