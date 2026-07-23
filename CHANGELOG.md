@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.20] - 2026-07-23
+
+### Added
+- **Apple HIG 合規 W1 — IA foundation + 帳號 Account sheet**（`feat/hig-foundation`；計畫見 `docs/plans/apple-hig-compliance/`）：
+  - **底部 nav 5→4-tab**（聊天/行程/地圖/收藏），帳號移出 tab；`AccountCircle` 30×30→**44pt** tap target（HIG）。順帶修正 code 既有矛盾（2026-07-21 誤把帳號加回第 5 tab）。
+  - **帳號 Account sheet**：header 圓圈（手機）／sidebar 左下 chip（桌機）→ 開**覆蓋當前頁**的 sheet（自有 nav stack、子頁留 sheet 內、關閉回原頁原狀態、deep-link 全頁 fallback）。`SheetModeContext` + `AppShell` 單一 choke point 抑制 shell（0 per-page 改動）＋ `AccountModalRoutes` render-prop 原地包 route table 注入 location。
+  - **tab reselect**：點已在該 branch 根的 tab → 內容捲頂（找實際 inner scroller）。
+  - **per-branch Navigation Stack**：切 tab 返回續原工作（輕量 location-memory 記每 branch 最後完整 URL，非 keep-alive → 無 4 頁／地圖常駐 perf 負擔）。
+
+### Changed
+- **W0 governance**：Apple HIG 定為 **UI/UX 上位 SoT**（`DESIGN.md` 衍生、須對齊；mockup 流程退役）；解除 `/browse`-only 限制（Chrome MCP 亦可）。
+- **W4 色彩（4/6 audit bug）**：`--color-info` 從柔褐 accent 獨立為 iOS systemBlue（G14）；dark `--color-destructive` 提亮可辨識 #FF6B52（G11）；toast elevated surface 綁 `body.dark` 非 OS media（G12）；ChatPage 錯誤 banner 幽靈 `--color-error*` token → 真 `--color-destructive*`（G8）。
+
 ## [2.57.18] - 2026-07-23
 
 ### Changed
