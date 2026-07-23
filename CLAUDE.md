@@ -18,7 +18,7 @@ Cloudflare Pages + D1 + React SPA + V2 OAuth. 無全域 admin — owner/permissi
 - Feature branch + PR via `/ship`. Never push master directly.
 - `tp-*` skills hit API, not local files.
 - Agent tool only for worktree isolation.
-- Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
+- Web browse: Chrome MCP (`mcp__claude-in-chrome__*`) 或 `/browse` 皆可（owner 2026-07-23 解除 /browse-only 限制）。
 - Post-ship retroactive OpenSpec archive if PR didn't propose first.
 
 ## Layout
