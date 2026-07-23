@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.21] - 2026-07-24
+
+### Changed
+- **Apple HIG W12 刪除政策 — 破壞性 ConfirmModal 預設焦點改安全鈕**：`ConfirmModal` 開啟時焦點從破壞（刪除）鈕改為安全（取消）鈕（HIG「破壞性動作預設聚焦安全選項」P1-1）—— keyboard user 開刪除確認後按 Enter 不再直接刪除。單一共用元件，19 個呼叫點一次生效。真瀏覽器驗證：開景點刪除 → 焦點落「取消」、Escape 關閉不刪。
+
+### Removed
+- **死路由清除（W12：無 undo／不提供 restore UI）**：移除 `functions/api/poi-favorites/[id]/restore.ts`（前端從未串接）+ 其整合測試 + `UNDO_EXPIRED` 錯誤碼（`_errors.ts` / `api.ts` 共 3 處）。soft-delete `deleted_at` tombstone 保留（重新收藏 dedupe 用）。backend-task doc 標 SUPERSEDED。
+
+### Added
+- **Apple HIG 合規計畫落地 master**：`docs/plans/apple-hig-compliance/{spec.md,tickets.md}`（原僅在未合併分支，多票引用作驗收依據）；取代 docs PR #1121。
+
 ## [2.57.20] - 2026-07-23
 
 ### Added
