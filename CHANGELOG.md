@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.22] - 2026-07-24
+
+### Added
+- **Apple HIG W7 搜尋 source-lock guard**：`page-scoped-search-guard.test.ts` 鎖住地圖/全域地圖/聊天/帳號/帳號 sheet 不含 page-level 搜尋 UI（搜尋只在清單頂 + 加 POI scoped task；現況已合規，防未來漂移）。
+
+### Changed
+- **Apple HIG W4r 色彩剩餘（W4 audit 6 bug 出清）**：G9 ShareLinkModal 30+ 寫死 hex → 既有語意 token（fill 態走 `--color-accent-fill`+`--color-accent-foreground`、tonal 態走 `--color-accent-subtle`/`-text`），dark mode 由 `body.dark` token 覆寫自動生效（不改字級/容器，那是 W11）；G10 座標 chip `.tp-travel-pill-stale` 加 `--color-border-control` 描邊，dark 底可讀性一致。
+
 ## [2.57.21] - 2026-07-24
 
 ### Changed
