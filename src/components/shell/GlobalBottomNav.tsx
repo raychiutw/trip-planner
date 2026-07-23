@@ -16,7 +16,7 @@ import clsx from 'clsx';
 import Icon from '../shared/Icon';
 // rev2 §10.1（2026-07-19）：primary IA（4-tab）+ active 判定抽到 navItems 單一來源，
 // DesktopSidebar（桌機 sidebar 頂部）共用同一份，避免兩份路徑 pattern 漂移。
-import { PRIMARY_NAV_ITEMS, isItemActive } from './navItems';
+import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop } from './navItems';
 
 const SCOPED_STYLES = `
 /* rev2 owner 2026-07-18「手機也做」：底部**浮動玻璃膠囊**（iOS 26 Apple Music
@@ -119,6 +119,13 @@ export default function GlobalBottomNav({ authed }: GlobalBottomNavProps) {
               className={clsx('tp-global-bottom-nav-btn', active && 'is-active')}
               aria-current={active ? 'page' : undefined}
               data-testid={`global-bottom-nav-${item.key}`}
+              onClick={(e) => {
+                // tab reselect（spec §1）：已在該 branch 根 → 捲頂、不重複導覽。
+                if (active && pathname === item.href) {
+                  e.preventDefault();
+                  scrollBranchToTop();
+                }
+              }}
             >
               <Icon name={item.icon} />
               <span>{item.label}</span>

@@ -15,7 +15,7 @@ import { useAccountSheet } from '../../contexts/AccountSheetContext';
 import clsx from 'clsx';
 import type { MyTrip } from '../../hooks/useMyTrips';
 import Icon from '../shared/Icon';
-import { PRIMARY_NAV_ITEMS, isItemActive } from './navItems';
+import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop } from './navItems';
 
 const SCOPED_STYLES = `
 .tp-sidebar {
@@ -229,6 +229,13 @@ export default function DesktopSidebar({ user, trips, activeTripId, brand }: Des
                 className={clsx('tp-sidebar-nav-item', active && 'is-active')}
                 aria-current={active ? 'page' : undefined}
                 data-testid={`sidebar-nav-${item.key}`}
+                onClick={(e) => {
+                  // tab reselect（spec §1）：已在該 branch 根 → 捲頂、不重複導覽。
+                  if (active && pathname === item.href) {
+                    e.preventDefault();
+                    scrollBranchToTop();
+                  }
+                }}
               >
                 <Icon name={item.icon} />
                 <span>{item.label}</span>

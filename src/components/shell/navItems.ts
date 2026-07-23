@@ -37,6 +37,30 @@ export const PRIMARY_NAV_ITEMS: ReadonlyArray<NavItem> = [
   // 見 docs/plans/apple-hig-compliance/、DESIGN.md :247。
 ];
 
+/**
+ * tab reselect（spec §1）：點擊「已在該 branch 根」的 tab → 內容捲頂（不清篩選、不重載）。
+ * scroll 容器＝`.app-shell-main`（AppShell 的 main 是 overflow scroller，桌機/手機共用）。
+ * reduce-motion 時用 auto（不平滑）。GlobalBottomNav（手機）+ DesktopSidebar（桌機）共用。
+ */
+export function scrollBranchToTop(): void {
+  if (typeof document === 'undefined') return;
+  const main = document.querySelector<HTMLElement>('.app-shell-main');
+  if (!main) return;
+  const reduce =
+    typeof window !== 'undefined' &&
+    !!window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const behavior: ScrollBehavior = reduce ? 'auto' : 'smooth';
+  // 實際 scroller 因頁而異：`.app-shell-main` 有 overflow，但多數列表頁又自帶 inner scroll
+  // 容器（如 .tp-trips-shell / .tp-account-shell overflow-y:auto，此時 main 本身不捲）。與其
+  // 逐頁猜 selector，直接把 main 自己或其內任何「已捲動」（scrollTop>0）的元素捲頂 —— 通常
+  // 只有一個在捲。click 才觸發、非熱路徑，querySelectorAll 成本可接受。
+  const targets = [main, ...Array.from(main.querySelectorAll<HTMLElement>('*'))].filter(
+    (el) => el.scrollTop > 0,
+  );
+  for (const el of targets) el.scrollTo({ top: 0, behavior });
+}
+
 export function isItemActive(pathname: string, item: NavItem): boolean {
   // additionalActivePatterns 優先（更精確的 regex match）
   if (item.additionalActivePatterns) {
