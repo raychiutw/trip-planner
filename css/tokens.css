@@ -70,8 +70,10 @@ html { color-scheme: light dark; }
      *   -warning-deep #A35A00 → on bg 5.07 / on warning-bg 4.59 ✅（維持琥珀色相） */
     --color-success-deep: #07795C;
     --color-warning-deep: #A35A00;
-    --color-info: #A97A4A;
-    --color-info-bg: rgba(169, 122, 74, 0.12);
+    /* G14: info 語意色必須獨立於 accent（原本兩者都 #A97A4A 柔褐 → 資訊/連結與品牌 tint
+     * 無法區分）。改 iOS systemBlue，light #007AFF。 */
+    --color-info: #007AFF;
+    --color-info-bg: rgba(0, 122, 255, 0.10);
     --color-disabled: #B8AC9B;
     --color-overlay: rgba(42, 31, 24, 0.35);
     --color-priority-high-bg: rgba(193, 53, 21, 0.12);
@@ -1010,8 +1012,10 @@ body.dark {
          * #7C7C80 → 對 #1C1C1E 4.09、對 surface #2C2C2E 3.35 ✅ 兩種表面都過。 */
         --color-border-control: #7C7C80;
         --color-line-strong: #545458;
-        --color-destructive: #E8A0A0;
-        --color-destructive-bg: rgba(232, 160, 160, 0.15);
+        /* G11: #E8A0A0 太淡偏粉、dark 底上不夠「危險」可辨識。改暖紅（延續 light #C13515
+         * 的 red-orange hue family、非跳冷 iOS 紅），#FF6B52 on #1C1C1E ≈ 6.06:1 ✅。 */
+        --color-destructive: #FF6B52;
+        --color-destructive-bg: rgba(255, 107, 82, 0.16);
         --color-success: #7EC89A;
         --color-success-bg: rgba(126, 200, 154, 0.15);
         /* 深色語意前景變體：同樣需淺值（#7EC89A on #1C1C1E = 8.60 ✅）。 */
@@ -1023,8 +1027,9 @@ body.dark {
         --color-warning-bg: rgba(250, 169, 75, 0.18);
         /* 深色語意前景變體：需淺值（#FAA94B on #1C1C1E = 8.78 ✅）。 */
         --color-warning-deep: #FAA94B;
-        --color-info: #CBA06E;
-        --color-info-bg: rgba(203, 160, 110, 0.15);
+        /* G14: dark info = iOS systemBlue dark #0A84FF（獨立於 accent 柔褐）。 */
+        --color-info: #0A84FF;
+        --color-info-bg: rgba(10, 132, 255, 0.18);
         --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
         --shadow-md: 0 6px 16px rgba(0,0,0,0.42);
         --shadow-lg: 0 10px 28px rgba(0,0,0,0.55);
@@ -1141,9 +1146,10 @@ body.dark {
 .tp-toast--info { border-color: color-mix(in srgb, var(--color-info) 34%, transparent); }
 .tp-toast--info::before { background: var(--color-info); }
 
-@media (prefers-color-scheme: dark) {
-    .tp-toast { background: var(--color-secondary); }
-}
+/* G12: toast elevated surface 綁 body.dark（app theme SoT）而非 OS media —— 之前 explicit
+ * 'dark'（OS light）toast 不浮起、explicit 'light'（OS dark）反被 OS 誤觸。body.dark 由
+ * useDarkMode 對 light/auto/dark 三態統一 resolve，是 dark 的唯一來源。 */
+body.dark .tp-toast { background: var(--color-secondary); }
 
 /* ===== Keyframes ===== */
 /* v2.31.38: keyframes 拔 translateX(-50%)，container 已用 flex items-center 置中 */
