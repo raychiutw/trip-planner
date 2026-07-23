@@ -11,6 +11,7 @@
  */
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAccountSheet } from '../../contexts/AccountSheetContext';
 import clsx from 'clsx';
 import type { MyTrip } from '../../hooks/useMyTrips';
 import Icon from '../shared/Icon';
@@ -204,7 +205,9 @@ export interface DesktopSidebarProps {
 
 export default function DesktopSidebar({ user, trips, activeTripId, brand }: DesktopSidebarProps) {
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
+  const { openSheet } = useAccountSheet();
 
   return (
     <>
@@ -283,6 +286,7 @@ export default function DesktopSidebar({ user, trips, activeTripId, brand }: Des
               className="tp-account-card"
               data-testid="sidebar-account-card"
               aria-label={`帳號設定：${user.name}`}
+              onClick={() => openSheet(location)}
             >
               <div className="tp-avatar-md" aria-hidden="true">{initial}</div>
               <div className="tp-account-body">
