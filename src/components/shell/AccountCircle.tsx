@@ -5,20 +5,29 @@
  * 匿名 → 登入 icon → /login。桌機帳號入口是 sidebar 左下 chip → 本元件 CSS 桌機隱藏
  * （≥1024）。搭配底部 nav 由 5-tab 降 4-tab（帳號移出 tab slot）。
  */
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Icon from '../shared/Icon';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
+import { useAccountSheet } from '../../contexts/AccountSheetContext';
 
 export const ACCOUNT_CIRCLE_STYLES = `
+/* HIG 44pt tap target（原 30×30 過小，DESIGN.md :247/:248）：外層 44 透明 hit area，
+ * 視覺圓圈 30 置中於內層 .tp-account-circle-avatar。 */
 .tp-account-circle {
-  width: 30px; height: 30px; border-radius: var(--radius-full);
+  width: 44px; height: 44px; border-radius: var(--radius-full);
   display: none; place-items: center; flex-shrink: 0;
-  background: var(--color-accent-fill); color: var(--color-accent-foreground);
-  font-size: 13px; font-weight: 800; line-height: 1;
+  background: transparent;
   text-decoration: none; cursor: pointer;
 }
+.tp-account-circle-avatar {
+  width: 30px; height: 30px; border-radius: var(--radius-full);
+  display: grid; place-items: center;
+  background: var(--color-accent-fill); color: var(--color-accent-foreground);
+  font-size: 13px; font-weight: 800; line-height: 1;
+}
 .tp-account-circle .svg-icon { width: 17px; height: 17px; }
-.tp-account-circle:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-account-circle:focus-visible { outline: none; }
+.tp-account-circle:focus-visible .tp-account-circle-avatar { box-shadow: var(--shadow-ring); }
 /* 桌機帳號在 sidebar 左下 chip → header 圓圈只手機顯示。 */
 @media (max-width: 1023px) {
   .tp-account-circle { display: grid; }
@@ -27,6 +36,8 @@ export const ACCOUNT_CIRCLE_STYLES = `
 
 export default function AccountCircle() {
   const { user } = useCurrentUser();
+  const location = useLocation();
+  const { openSheet } = useAccountSheet();
 
   // 載入中（undefined）先不佔位，避免閃爍；解析後才顯示。
   if (user === undefined) return null;
@@ -41,7 +52,7 @@ export default function AccountCircle() {
           aria-label="登入"
           data-testid="titlebar-account"
         >
-          <Icon name="user" />
+          <span className="tp-account-circle-avatar"><Icon name="user" /></span>
         </Link>
       </>
     );
@@ -57,8 +68,9 @@ export default function AccountCircle() {
         className="tp-account-circle"
         aria-label="帳號"
         data-testid="titlebar-account"
+        onClick={() => openSheet(location)}
       >
-        {letter}
+        <span className="tp-account-circle-avatar">{letter}</span>
       </Link>
     </>
   );

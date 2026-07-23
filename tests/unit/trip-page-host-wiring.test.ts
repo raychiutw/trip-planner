@@ -14,10 +14,10 @@ describe('main.tsx — TripPageHost wiring', () => {
     expect(MAIN).toMatch(/import TripPageHost from ['"]\.\.\/components\/trip\/TripPageHost['"]/);
   });
 
-  it('TripPageHost 包住 <Routes>（必須是 Routes 的祖先，不能是 Routes 的子路由，否則路由切換一樣會把它 unmount 掉）', () => {
+  it('TripPageHost 包住路由表（W1：主 <Routes> 改由 <AccountModalRoutes> render-prop 包住以注入 location；TripPageHost 仍須是它的祖先，否則路由切換會 unmount 掉）', () => {
     const openIdx = MAIN.indexOf('<TripPageHost>');
-    const routesOpenIdx = MAIN.indexOf('<Routes>');
-    const routesCloseIdx = MAIN.indexOf('</Routes>');
+    const routesOpenIdx = MAIN.indexOf('<AccountModalRoutes>');
+    const routesCloseIdx = MAIN.indexOf('</AccountModalRoutes>');
     const closeIdx = MAIN.indexOf('</TripPageHost>');
     expect(openIdx).toBeGreaterThan(-1);
     expect(routesOpenIdx).toBeGreaterThan(openIdx);

@@ -237,8 +237,10 @@ const SCOPED_STYLES = `
   position: sticky; top: 0; z-index: 1;
   display: flex; gap: 12px; align-items: center; justify-content: space-between;
   padding: 8px 12px;
-  background: var(--color-error-soft, color-mix(in srgb, var(--color-error) 12%, var(--color-background)));
-  color: var(--color-error, #b00020);
+  /* G8: 原用幽靈 token --color-error*（repo 不存在）→ 永遠 fallback 到寫死 #b00020，
+   * dark 不 adapt（text 1.9:1 fail）。改真 token --color-destructive*（light/dark 自適應）。 */
+  background: var(--color-destructive-bg);
+  color: var(--color-destructive);
   border-radius: var(--radius-md, 8px);
   font-size: var(--font-size-footnote);
   margin-bottom: 8px;
@@ -246,11 +248,13 @@ const SCOPED_STYLES = `
 .tp-chat-load-error-text { flex: 1; min-width: 0; }
 .tp-chat-load-error-retry {
   height: 32px; padding: 0 12px;
-  background: var(--color-error, #b00020);
-  color: var(--color-on-error, #fff);
+  background: var(--color-destructive);
+  color: #fff;
   border: none; border-radius: var(--radius-sm, 4px);
   font-size: var(--font-size-footnote); font-weight: 500; cursor: pointer;
 }
+/* dark destructive(#FF6B52) 偏亮 → 白字僅 2.8:1；dark 改深字(≈6:1)。light 維持白字(5.2:1)。 */
+body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 .tp-chat-load-error-retry:hover { opacity: 0.92; }
 
 .tp-chat-empty {

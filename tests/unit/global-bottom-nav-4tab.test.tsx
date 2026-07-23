@@ -22,31 +22,30 @@ function renderNav(opts: { authed: boolean; pathname: string }) {
   );
 }
 
-describe('GlobalBottomNav — 5-tab IA（2026-07-21 帳號回到底部）', () => {
-  it('logged-in render 5 tabs：聊天 / 行程 / 地圖 / 收藏 / 帳號', () => {
+describe('GlobalBottomNav — 4-tab IA（HIG 2026-07-23：帳號移出 tab → header 圓圈）', () => {
+  it('logged-in render 4 tabs：聊天 / 行程 / 地圖 / 收藏（帳號不在 tab）', () => {
     renderNav({ authed: true, pathname: '/trips' });
     expect(screen.getByTestId('global-bottom-nav-chat')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-trips')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-map')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-favorites')).toBeTruthy();
-    // 帳號/登入 移出 tab slot → header 帳號圓圈
-    // 2026-07-21：帳號回到底部 tab（owner：手機右上角帳號移除後沒有入口）。
-    expect(screen.getByTestId('global-bottom-nav-account')).toBeTruthy();
+    // HIG 4-tab（grill v2，2026-07-23，supersede #1120 五-tab）：帳號/登入 移出 tab slot
+    // → header 右上 <AccountCircle/> 圓圈 → Account sheet。
+    expect(screen.queryByTestId('global-bottom-nav-account')).toBeNull();
     expect(screen.queryByTestId('global-bottom-nav-login')).toBeNull();
   });
 
-  it('logged-out 也 5 tab', () => {
+  it('logged-out 也 4 tab（無帳號、無登入）', () => {
     renderNav({ authed: false, pathname: '/trips' });
     expect(screen.getByTestId('global-bottom-nav-chat')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-favorites')).toBeTruthy();
     expect(screen.queryByTestId('global-bottom-nav-login')).toBeNull();
-    // 2026-07-21：帳號回到底部 tab（owner：手機右上角帳號移除後沒有入口）。
-    expect(screen.getByTestId('global-bottom-nav-account')).toBeTruthy();
+    expect(screen.queryByTestId('global-bottom-nav-account')).toBeNull();
   });
 
-  it('nav render 5 個連結', () => {
+  it('nav render 4 個連結', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
-    expect(container.querySelectorAll('a.tp-global-bottom-nav-btn').length).toBe(5);
+    expect(container.querySelectorAll('a.tp-global-bottom-nav-btn').length).toBe(4);
   });
 
   it('在 /map「地圖」 tab is-active', () => {

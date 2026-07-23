@@ -11,12 +11,13 @@
  *
  * Logged-in users「帳號」 entry → /account。
  */
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
 // rev2 §10.1（2026-07-19）：primary IA（4-tab）+ active 判定抽到 navItems 單一來源，
 // DesktopSidebar（桌機 sidebar 頂部）共用同一份，避免兩份路徑 pattern 漂移。
-import { PRIMARY_NAV_ITEMS, isItemActive } from './navItems';
+import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop } from './navItems';
+import { getRememberedBranchLocation } from '../../lib/branchMemory';
 
 const SCOPED_STYLES = `
 /* rev2 owner 2026-07-18「手機也做」：底部**浮動玻璃膠囊**（iOS 26 Apple Music
@@ -105,6 +106,7 @@ export interface GlobalBottomNavProps {
 export default function GlobalBottomNav({ authed }: GlobalBottomNavProps) {
   void authed; // 保留 prop（見 interface 註解）；目前 IA auth-independent。
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   return (
     <>
@@ -119,6 +121,20 @@ export default function GlobalBottomNav({ authed }: GlobalBottomNavProps) {
               className={clsx('tp-global-bottom-nav-btn', active && 'is-active')}
               aria-current={active ? 'page' : undefined}
               data-testid={`global-bottom-nav-${item.key}`}
+              onClick={(e) => {
+                if (active && pathname === item.href) {
+                  // reselect（spec §1）：已在該 branch 根 → 捲頂、不重複導覽。
+                  e.preventDefault();
+                  scrollBranchToTop();
+                } else if (!active) {
+                  // per-branch stack：切到別的 tab → 回它記住的完整位置（含 ?selected/day/篩選），非 bare href。
+                  const remembered = getRememberedBranchLocation(item.key);
+                  if (remembered && remembered !== item.href) {
+                    e.preventDefault();
+                    navigate(remembered);
+                  }
+                }
+              }}
             >
               <Icon name={item.icon} />
               <span>{item.label}</span>

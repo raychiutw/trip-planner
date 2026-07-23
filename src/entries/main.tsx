@@ -36,7 +36,11 @@ import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { NewTripProvider } from '../contexts/NewTripContext';
 import { ActiveTripProvider } from '../contexts/ActiveTripContext';
 import TripPageHost from '../components/trip/TripPageHost';
-import { Suspense, StrictMode } from 'react';
+import AccountSheet from '../components/shell/AccountSheet';
+import { AccountSheetProvider, useAccountSheet } from '../contexts/AccountSheetContext';
+import { PRIMARY_NAV_ITEMS, isItemActive } from '../components/shell/navItems';
+import { rememberBranchLocation } from '../lib/branchMemory';
+import { Suspense, StrictMode, useEffect, useRef, type ReactNode } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ServerStatusBanner } from '../components/ServerStatusBanner';
 
@@ -166,6 +170,68 @@ function StopDetailRedirect() {
   return <Navigate to={`/trips?${params.toString()}`} replace />;
 }
 
+/**
+ * AccountModalRoutes — W1 帳號 sheet 的 modal-route wrapper。
+ *
+ * render-prop 讓整個 route table **原地不動**（只包開頭/結尾兩處），同時能注入 location：
+ * sheet 開啟時主 <Routes> render 背景 location（bg）→ 背景頁全程 mounted 在 overlay 之下；
+ * overlay 另開一組 <Routes> render 帳號頁（AccountSheet 內包 SheetModeProvider → shell-less）。
+ * 判定：flag(open) ＋ path 以 /account 開頭。子頁普通 <Link> 因 path 仍 /account/* 而留在
+ * sheet 內。deep-link（無 flag）→ 主 <Routes> 直接 render /account 全頁（fallback）。
+ */
+function AccountModalRoutes({ children }: { children: (loc: ReturnType<typeof useLocation>) => ReactNode }) {
+  const location = useLocation();
+  const { open, bg, closeSheet } = useAccountSheet();
+  const showSheet = open && location.pathname.startsWith('/account');
+  // 只在「從 /account **離開**到非 account」時收掉 flag（back button）。用 prevPath 判方向 ——
+  // 開啟過程（/trips → /account）的中間 render（open 已 true、path 還沒切到 /account）不能誤觸關閉，
+  // 否則 sheet 一開就被關掉（實測 bug）。
+  const prevPathRef = useRef(location.pathname);
+  useEffect(() => {
+    const wasAccount = prevPathRef.current.startsWith('/account');
+    const isAccount = location.pathname.startsWith('/account');
+    if (open && wasAccount && !isAccount) closeSheet();
+    prevPathRef.current = location.pathname;
+  }, [location.pathname, open, closeSheet]);
+  return (
+    <>
+      {children(showSheet ? (bg ?? location) : location)}
+      {showSheet && (
+        <AccountSheet>
+          <Suspense fallback={null}>
+            <Routes>
+              <Route path="/account" element={<AccountPage />} />
+              <Route path="/account/appearance" element={<AppearanceSettingsPage />} />
+              <Route path="/account/notifications" element={<NotificationsSettingsPage />} />
+              <Route path="/account/sessions" element={<SessionsPage />} />
+              <Route path="/account/connected-apps" element={<ConnectedAppsPage />} />
+              <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
+              <Route path="/settings/notifications" element={<NotificationsSettingsPage />} />
+              <Route path="/settings/sessions" element={<SessionsPage />} />
+              <Route path="/settings/connected-apps" element={<ConnectedAppsPage />} />
+            </Routes>
+          </Suspense>
+        </AccountSheet>
+      )}
+    </>
+  );
+}
+
+/**
+ * BranchLocationTracker — 每次 location 變更記住當前 primary branch 的完整位置
+ * （W1 per-branch stack；nav 元件切 tab 時 navigate 到記住位置）。mount 於 app root、return null。
+ */
+function BranchLocationTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    const active = PRIMARY_NAV_ITEMS.find((item) => isItemActive(location.pathname, item));
+    if (active) {
+      rememberBranchLocation(active.key, location.pathname + location.search + location.hash);
+    }
+  }, [location.pathname, location.search, location.hash]);
+  return null;
+}
+
 const el = document.getElementById('reactRoot');
 if (el) {
   // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
@@ -177,8 +243,10 @@ if (el) {
     <StrictMode>
       <ErrorBoundary>
         <BrowserRouter>
+          <AccountSheetProvider>
           <DarkModeInit />
           <ServerStatusBanner />
+          <BranchLocationTracker />
           <ActiveTripProvider>
           <NewTripProvider>
           {/* owner 2026-07-21 回報 #2「開關第三欄面板會刷新第二欄」修復：TripPageHost
@@ -187,7 +255,8 @@ if (el) {
               src/components/trip/TripPageHost.tsx 檔頭註解。 */}
           <TripPageHost>
           <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
-            <Routes>
+            <AccountModalRoutes>{(mainLocation) => (
+            <Routes location={mainLocation}>
               {/* `/` 改指向未登入首頁。改版前落到 path="*" → LegacyRedirect → /trips → /login，
                   訪客永遠看不到這個 app 在做什麼。已登入者由 LandingPage 導回 /trips。 */}
               <Route path="/" element={<LandingPage />} />
@@ -284,10 +353,12 @@ if (el) {
               </Route>
               <Route path="*" element={<LegacyRedirect />} />
             </Routes>
+            )}</AccountModalRoutes>
           </Suspense>
           </TripPageHost>
           </NewTripProvider>
           </ActiveTripProvider>
+          </AccountSheetProvider>
         </BrowserRouter>
       </ErrorBoundary>
     </StrictMode>

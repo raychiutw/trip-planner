@@ -58,14 +58,14 @@ describe('② header 與 day tab 用同一套 liquid glass', () => {
   });
 });
 
-describe('③ 底部 tab 補第五個「帳號」', () => {
-  it('navItems 含 account', () => {
-    expect(NAV_ITEMS, '手機右上角帳號移除後，帳號需要一個入口').toMatch(/key:\s*'account'/);
-    expect(NAV_ITEMS).toMatch(/href:\s*'\/account'/);
+describe('③ 帳號移出 tab（HIG 4-tab，2026-07-23）', () => {
+  it('navItems 不含 account（帳號入口＝header AccountCircle 圓圈，非 tab）', () => {
+    expect(NAV_ITEMS, 'HIG 4-tab：帳號移出 tab slot（grill v2，supersede #1120 五-tab）').not.toMatch(/key:\s*'account'/);
+    expect(NAV_ITEMS).not.toMatch(/href:\s*'\/account'/);
   });
 
-  it('key 型別聯集也要加上 account', () => {
-    expect(NAV_ITEMS).toMatch(/'chat'\s*\|[\s\S]{0,80}'account'/);
+  it('key 型別聯集不含 account（只 4 root tab）', () => {
+    expect(NAV_ITEMS).not.toMatch(/\|\s*'account'/);
   });
 });
 
