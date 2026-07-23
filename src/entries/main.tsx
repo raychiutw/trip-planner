@@ -38,6 +38,8 @@ import { ActiveTripProvider } from '../contexts/ActiveTripContext';
 import TripPageHost from '../components/trip/TripPageHost';
 import AccountSheet from '../components/shell/AccountSheet';
 import { AccountSheetProvider, useAccountSheet } from '../contexts/AccountSheetContext';
+import { PRIMARY_NAV_ITEMS, isItemActive } from '../components/shell/navItems';
+import { rememberBranchLocation } from '../lib/branchMemory';
 import { Suspense, StrictMode, useEffect, useRef, type ReactNode } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { ServerStatusBanner } from '../components/ServerStatusBanner';
@@ -215,6 +217,21 @@ function AccountModalRoutes({ children }: { children: (loc: ReturnType<typeof us
   );
 }
 
+/**
+ * BranchLocationTracker — 每次 location 變更記住當前 primary branch 的完整位置
+ * （W1 per-branch stack；nav 元件切 tab 時 navigate 到記住位置）。mount 於 app root、return null。
+ */
+function BranchLocationTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    const active = PRIMARY_NAV_ITEMS.find((item) => isItemActive(location.pathname, item));
+    if (active) {
+      rememberBranchLocation(active.key, location.pathname + location.search + location.hash);
+    }
+  }, [location.pathname, location.search, location.hash]);
+  return null;
+}
+
 const el = document.getElementById('reactRoot');
 if (el) {
   // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
@@ -229,6 +246,7 @@ if (el) {
           <AccountSheetProvider>
           <DarkModeInit />
           <ServerStatusBanner />
+          <BranchLocationTracker />
           <ActiveTripProvider>
           <NewTripProvider>
           {/* owner 2026-07-21 回報 #2「開關第三欄面板會刷新第二欄」修復：TripPageHost

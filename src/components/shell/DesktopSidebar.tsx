@@ -10,8 +10,9 @@
  * Loading state：user / trips 還沒 resolve 時保持 neutral skeleton，避免 flicker。
  */
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAccountSheet } from '../../contexts/AccountSheetContext';
+import { getRememberedBranchLocation } from '../../lib/branchMemory';
 import clsx from 'clsx';
 import type { MyTrip } from '../../hooks/useMyTrips';
 import Icon from '../shared/Icon';
@@ -207,6 +208,7 @@ export default function DesktopSidebar({ user, trips, activeTripId, brand }: Des
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
   const location = useLocation();
   const { pathname } = location;
+  const navigate = useNavigate();
   const { openSheet } = useAccountSheet();
 
   return (
@@ -230,10 +232,17 @@ export default function DesktopSidebar({ user, trips, activeTripId, brand }: Des
                 aria-current={active ? 'page' : undefined}
                 data-testid={`sidebar-nav-${item.key}`}
                 onClick={(e) => {
-                  // tab reselect（spec §1）：已在該 branch 根 → 捲頂、不重複導覽。
                   if (active && pathname === item.href) {
+                    // reselect（spec §1）：已在該 branch 根 → 捲頂、不重複導覽。
                     e.preventDefault();
                     scrollBranchToTop();
+                  } else if (!active) {
+                    // per-branch stack：切到別的 tab → 回它記住的完整位置，非 bare href。
+                    const remembered = getRememberedBranchLocation(item.key);
+                    if (remembered && remembered !== item.href) {
+                      e.preventDefault();
+                      navigate(remembered);
+                    }
                   }
                 }}
               >
