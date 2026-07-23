@@ -25,7 +25,7 @@ Cloudflare Pages + D1 + React SPA + V2 OAuth. 無全域 admin — owner/permissi
 
 `src/` SPA · `functions/api/` Pages Functions · `migrations/` D1 · `tests/` · `css/tokens.css` Tailwind 4.
 
-Desktop ≥1024px: 2-col timeline + sticky map. Mobile: 5-tab nav.
+Desktop ≥1024px: 2-col timeline + sticky map. Mobile: 4-tab nav（聊天/行程/地圖/收藏）+ 帳號 header 圓圈 → Account sheet（HIG，見 `docs/plans/apple-hig-compliance/`）。
 
 ## Dev
 
@@ -39,7 +39,7 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
 
-`DESIGN.md` + `docs/design-sessions/terracotta-preview-v2.html` are UI/UX truth. Code mismatch = bug. Conflict → discuss first.
+**Apple HIG 是 UI/UX SoT**（iOS 手機 / macOS 桌機：IA、互動、色彩、材質、a11y）。`DESIGN.md` 為衍生、須對齊 HIG；code 不符＝bug，衝突以 HIG 為準（先討論再改 `DESIGN.md`）。**品牌保留例外**：terracotta 受控 tint / Inter web font / timeline editorial no-glass —— HIG 允許，不對齊。合規計畫（spec + 16 W-tickets）見 `docs/plans/apple-hig-compliance/`。此 effort 不使用 mockup 流程。
 
 ## Skill Routing
 

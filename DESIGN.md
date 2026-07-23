@@ -1,5 +1,8 @@
 # Design System — Tripline（V2 柔褐三色）
 
+> **🍎 Apple HIG＝UI/UX SoT（2026-07-23，grill v2 owner 拍板）。** 手機 iOS／桌機 macOS 的 IA、互動、色彩、材質、a11y 以 Apple HIG 為最終依據；**本文件（`DESIGN.md`）為衍生、須對齊 HIG**，衝突以 HIG 為準（先討論再改）。合規計畫（spec + 16 W-tickets + grill v2 五決策）：`docs/plans/apple-hig-compliance/`。**品牌保留例外**（HIG 允許、不對齊）：terracotta 受控 tint、Inter web font、timeline editorial no-glass。**此 effort 不使用 mockup 流程。**
+> grill v2 五決策：① 平台模型 **C**（web 鏡像 app #82，桌機輸入走 macOS）｜② IA **4-tab + 帳號 header sheet**（supersede 同日 #1120 五-tab）｜③ 色彩 **system 語意色底 + terracotta 受控 tint**｜④ 刪除 **無 undo + server-confirm-before-remove + 高影響 reauth**｜⑤ 平台翻譯 SF-風描邊 icon／`backdrop-filter` glass+fallback／省 haptic／系統返回／留 Inter。
+
 ## Product Context
 - **What this is:** 行程共享網站 — 旅伴可以瀏覽精美行程表（時間軸、餐廳推薦、飯店、地圖導航）
 - **Who it's for:** 旅伴（家人朋友），非技術人員，旅行中在手機上使用
@@ -244,8 +247,8 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 ### Unified App Shell
 > **⚠️ rev2 owner 2026-07-19（桌機 macOS sidebar，§10.1；mockup `docs/design-sessions/2026-07-19-rev2-desktop-macos-sidebar.html` sign-off）**：桌機 primary nav（聊天/行程/地圖/收藏）**搬回左欄 sidebar 頂部**（macOS Music/Mail 形制），**桌機隱藏底部浮動玻璃膠囊**（`AppShell` @≥1024 `.app-shell-bottom-nav display:none`）。sidebar 結構＝品牌 → **4-tab 主導覽** → 「我的行程」清單 → 帳號 chip 左下。**sidebar 材質改 vibrancy 半透明毛玻璃**（暖奶油：`color-mix(--color-background 72%)` + `backdrop-filter: blur(30px)`，走主 app token 自動 light/dark adapt，取代舊固定深棕 `--color-sidebar-*`）。primary IA + active 判定抽到 `navItems.ts` 單一來源（`GlobalBottomNav` 手機膠囊 + `DesktopSidebar` 共用，無漂移）。三欄 grid `216px 1fr 1fr`（`--grid-3pane-desktop`）。
-- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏 / **帳號** —— **5-tab**（單一來源 `navItems.ts` `PRIMARY_NAV_ITEMS`，手機膠囊與桌機 sidebar 共用）。**桌機（≥1024）：primary nav 在左欄 sidebar 頂部**（§10.1，另有「我的行程」清單與左下 account chip）；**手機（<1024）：底部浮動玻璃膠囊**（`GlobalBottomNav`）。
-  - ⚠️ **帳號入口去重（2026-07-23 owner 裁定）**：帳號**保留為第 5 個 tab**（iOS HIG tab bar 語意：持久、可預測的目的地）。手機 header 右上的 `AccountCircle` 圓圈**判定退場** —— 它與帳號 tab 重複、且只有 30×30（低於 44pt）。〔`navItems.ts` 的舊註解「圓圈移除後帳號沒入口才加 tab」是寫在移除發生前；圓圈實際從未移除，仍掛在 5 頁。**code 移除另開 PR**，本輪只更正規範。〕
+- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏 —— **4-tab**（單一來源 `navItems.ts` `PRIMARY_NAV_ITEMS`，手機膠囊與桌機 sidebar 共用）。**帳號移出 tab slot**：手機 header 右上 `person.crop.circle` 圓圈 → 開有自己 Navigation Stack 的 **Account sheet**（關閉回原頁原狀態、deep-link 相容）；桌機 sidebar 左下 account chip → 同 Account sheet／popover。**桌機（≥1024）：primary nav 在左欄 sidebar 頂部**（§10.1，另有「我的行程」清單與左下 account chip）；**手機（<1024）：底部浮動玻璃膠囊**（`GlobalBottomNav`）。
+  - ✅ **帳號入口＝Account sheet（2026-07-23 grill v2 owner 拍板，鏡像 app #82；Apple HIG 為 UI/UX SoT）**：帳號**移出 tab**（4-tab），改 header `person.crop.circle` 圓圈 → Account sheet。**此決策 supersede 同日稍早 #1120 的「帳號保留第 5 tab」裁定** —— 兩者皆以 HIG 為由，owner 於 grill v2 選定 app #82 的 4-tab + sheet 模型（profile-circle 慣例、釋出 tab slot）。〔實作（W1）：`navItems.ts` 移除 `account` item（5→4）；`AccountCircle` 從導向 `/account` 改為開 Account sheet 容器（自有 nav stack）；圓圈放大到 44pt（原 30×30 過小）。桌機 sidebar 左下 chip 同步指向 sheet。〕
 - **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕一律走 children 內 `.tp-page-bottom-bar`。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
 - **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（vibrancy：品牌 → 4-tab 主導覽 → 我的行程清單 → 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。
 - **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + accent 文字，`.tp-titlebar-back--labeled`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
