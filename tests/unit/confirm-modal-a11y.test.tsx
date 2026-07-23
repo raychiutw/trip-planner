@@ -32,7 +32,7 @@ describe('ConfirmModal — a11y + interaction', () => {
     expect(screen.queryByText('刪除行程')).not.toBeInTheDocument();
   });
 
-  it('open=true → portal 渲染 + 自動 focus confirm button', async () => {
+  it('open=true → portal 渲染 + 自動 focus 安全（取消）button（W12 HIG 破壞性動作預設焦點）', async () => {
     render(
       <ConfirmModal
         open={true}
@@ -44,9 +44,10 @@ describe('ConfirmModal — a11y + interaction', () => {
       />,
     );
     expect(screen.getByText('刪除行程')).toBeInTheDocument();
-    const confirmBtn = screen.getByRole('button', { name: '刪除' });
-    // 引擎在 requestAnimationFrame 內 focus initialFocusRef（confirm 鈕），故 await
-    await waitFor(() => expect(document.activeElement).toBe(confirmBtn));
+    // W12：預設焦點在安全（取消）鈕、非破壞（刪除）鈕 —— keyboard user 按 Enter 不會直接刪除。
+    const cancelBtn = screen.getByRole('button', { name: '取消' });
+    // 引擎在 requestAnimationFrame 內 focus initialFocusRef（cancel 鈕），故 await
+    await waitFor(() => expect(document.activeElement).toBe(cancelBtn));
   });
 
   it('backdrop 使用全域 modal z-index token，壓過地圖與 sticky chrome', () => {

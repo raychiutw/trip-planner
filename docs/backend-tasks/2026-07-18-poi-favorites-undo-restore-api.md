@@ -1,5 +1,7 @@
 # Tripline 後端任務：單筆收藏取消與復原 API
 
+> **⚠ SUPERSEDED（2026-07-24，W12 刪除政策）**：Apple HIG 刪除政策定為**無 undo／不提供 restore UI**，此 undo/restore API 決策已被推翻。`functions/api/poi-favorites/[id]/restore.ts` 端點與 `UNDO_EXPIRED` 錯誤碼已移除（前端從未串接）。soft-delete 的 `deleted_at` tombstone 保留（重新收藏 dedupe 用、非使用者可見 restore）。本檔保留為決策軌跡、不刪。
+
 日期：2026-07-18
 
 狀態：待後端實作

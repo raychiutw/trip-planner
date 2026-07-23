@@ -141,11 +141,13 @@ export default function ConfirmModal({
   children,
 }: ConfirmModalProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
-  // 統一 sheet 引擎（B1）：開啟 focus 確認鈕（keyboard user 直接 Enter）+ Escape
-  // （IME/巢狀 guard，巢狀時只關最上層）+ focus-trap（原本無）+ body scroll-lock（原本無）。
-  // z-index 維持 --z-modal（alertdialog 恆需壓過地圖/sticky chrome）；public props + testid 全不動。
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  // 統一 sheet 引擎（B1）：開啟 focus **安全（取消）鈕**（W12 刪除政策 / HIG「破壞性動作預設
+  // 聚焦安全選項」P1-1 —— 原本 focus 破壞鈕，keyboard user 一按 Enter 就刪；ConfirmModal 是
+  // 19 個呼叫點共用元件，改這一處全站生效）+ Escape（IME/巢狀 guard，巢狀時只關最上層）+
+  // focus-trap + body scroll-lock。z-index 維持 --z-modal；public props + testid 全不動。
   const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onCancel, {
-    initialFocusRef: confirmRef,
+    initialFocusRef: cancelRef,
   });
 
   if (!open) return null;
@@ -183,6 +185,7 @@ export default function ConfirmModal({
           {children && <div className="tp-confirm-body">{children}</div>}
           <div className="tp-confirm-actions">
             <button
+              ref={cancelRef}
               type="button"
               className="tp-confirm-btn tp-confirm-btn-cancel"
               onClick={onCancel}
