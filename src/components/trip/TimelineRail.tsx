@@ -459,6 +459,8 @@ interface RailRowProps {
   onEnterSortMode: () => void;
   /** rev2 mockup：停留站序號（跳過飯店）。null = 飯店（給床 icon 不給號，當日路線起訖錨點 DESIGN.md:190）。 */
   stopNumber: number | null;
+  /** W13 拖拉 a11y：⋯ menu「上移一格/下移一格」的鍵盤/觸控替代排序（不靠拖曳，給 VoiceOver/TalkBack）。 */
+  onMoveStep?: (entryId: number, dir: 'up' | 'down') => void;
 }
 
 /** ⋯ context menu 的一列（或分隔線）。 */
@@ -828,7 +830,7 @@ function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
   );
 }
 
-const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId, sortMode, onEnterSortMode, stopNumber }: RailRowProps) {
+const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId, sortMode, onEnterSortMode, stopNumber, onMoveStep }: RailRowProps) {
   const tripId = useTripId();
   const allDays = useTripDays();
   const parsed = parseEntryTime(entry);
@@ -1072,6 +1074,13 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
     // 第 3 組：安排（重新排序 / 複製 / 移到）
     [
       { kind: 'item', label: '重新排序', icon: 'grip', testid: `timeline-rail-menu-sort-${entry.id}`, onSelect: onEnterSortMode },
+      // W13：⋯ menu 上移/下移一格 —— 不靠拖曳的鍵盤/VoiceOver 替代排序路徑（首列無上移、末列無下移）。
+      ...(entryIdNum != null && index > 0
+        ? [{ kind: 'item' as const, label: '上移一格', icon: 'chevron-up' as const, testid: `timeline-rail-move-up-${entry.id}`, onSelect: () => onMoveStep?.(entryIdNum, 'up') }]
+        : []),
+      ...(entryIdNum != null && !isLast
+        ? [{ kind: 'item' as const, label: '下移一格', icon: 'chevron-down' as const, testid: `timeline-rail-move-down-${entry.id}`, onSelect: () => onMoveStep?.(entryIdNum, 'down') }]
+        : []),
       ...(dayId != null && allDays.length > 1 && entryIdNum != null
         ? [
             { kind: 'item' as const, label: '複製到其他天', icon: 'copy' as const, testid: `timeline-rail-copy-open-${entry.id}`, onSelect: () => goCopyOrMove('copy') },
@@ -1473,6 +1482,46 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
   const recomputeStalled = tripId != null
     && getAutoRecomputeStatus(tripId, dayNumFromId(allDays, dayId)) !== 'active';
 
+  // W13：reorder 落地（optimistic override → batch PATCH → travel recompute → 廣播 → 失敗 revert）
+  // 抽成共用，供拖曳（handleDragEnd）與 ⋯ menu「上移/下移一格」（moveEntryStep）共用，行為一致。
+  const applyReorder = useCallback(async (newIds: number[], sourceEntryId: number | string) => {
+    setOrderOverride(newIds);
+    if (!tripId) return;
+    // Section 6/3：reorder 走 batch endpoint，避免 N+1 PATCH。一次送所有改變位置的 sort_order，
+    // atomic 失敗 → revert override。
+    try {
+      const updates = newIds.map((id, idx) => ({ id, sort_order: idx }));
+      const res = await apiFetchRaw(`/trips/${tripId}/entries/batch`, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        body: JSON.stringify({ updates }),
+      });
+      if (!res.ok) throw new Error(`batch reorder failed: ${res.status}`);
+      // OSM PR (migration 0045)：reorder 後 entry travel 依順序重算（fire-and-forget，失敗 toast 提示）。
+      // day-scope 化省其他天 Google 重算；dayNum 解析不到才退全 trip。
+      requestTravelRecompute(tripId, dayNumFromId(allDays, dayId))
+        .catch(() => {
+          showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
+        });
+      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
+        detail: { tripId, entryId: sourceEntryId, reordered: true, travelRecomputeRequested: true },
+      }));
+    } catch {
+      setOrderOverride(null);
+    }
+  }, [tripId, allDays, dayId]);
+
+  // W13：⋯ menu「上移/下移一格」—— 單步 arrayMove 後走 applyReorder（VoiceOver/觸控不靠拖曳的替代）。
+  const moveEntryStep = useCallback((entryId: number, dir: 'up' | 'down') => {
+    const oldIdx = orderedEvents.findIndex((ev) => ev.id === entryId);
+    if (oldIdx < 0) return;
+    const newIdx = dir === 'up' ? oldIdx - 1 : oldIdx + 1;
+    if (newIdx < 0 || newIdx >= orderedEvents.length) return;
+    const reordered = arrayMove(orderedEvents, oldIdx, newIdx);
+    const newIds = reordered.map((ev) => ev.id).filter((id): id is number => id != null);
+    void applyReorder(newIds, entryId);
+  }, [orderedEvents, applyReorder]);
+
   const handleDragEnd = useCallback(async (e: DragEndEvent) => {
     const { active, over } = e;
     // 拖完還原到「開始拖前」的 scrollTop（抵消拖曳中 dnd-kit autoScroll + drop 後
@@ -1491,36 +1540,9 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
     if (oldIdx < 0 || newIdx < 0) return;
     const reordered = arrayMove(orderedEvents, oldIdx, newIdx);
     const newIds = reordered.map((ev) => ev.id).filter((id): id is number => id != null);
-    setOrderOverride(newIds);
-    if (!tripId) return;
-    // Section 6/3：reorder 走 batch endpoint，避免 N+1 PATCH。drop 後一次送
-    // 所有改變位置的 entry 的 sort_order，atomic 失敗 → revert override。
-    try {
-      const updates = newIds.map((id, idx) => ({ id, sort_order: idx }));
-      const res = await apiFetchRaw(`/trips/${tripId}/entries/batch`, {
-        method: 'PATCH',
-        credentials: 'same-origin',
-        body: JSON.stringify({ updates }),
-      });
-      if (!res.ok) throw new Error(`batch reorder failed: ${res.status}`);
-      // OSM PR (migration 0045)：reorder 後重新計算 entry travel — 兩個相鄰 entry
-      // 的 driving / walking / transit 距離取決於順序，sort_order 變動 → 必須重算。
-      // 走 fire-and-forget：travel 顯示是 secondary，重算失敗（API 503/no ORS key）
-      // 不阻塞 UI 但 toast 提示 user 重排已存、travel 數字未更新，避免誤以為
-      // reorder 沒生效（travel 是 user reorder 的視覺信號）。
-      // 2026-07-06 perf review：rail 內拖曳只改本日 adjacency（segment pair 嚴格
-      // 同日），day-scope 化省掉其他天的 Google 重算；dayNum 解析不到才退全 trip。
-      requestTravelRecompute(tripId, dayNumFromId(allDays, dayId))
-        .catch(() => {
-          showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
-        });
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
-        detail: { tripId, entryId: active.id, reordered: true, travelRecomputeRequested: true },
-      }));
-    } catch {
-      setOrderOverride(null);
-    }
-  }, [orderedEvents, tripId, allDays, dayId, dndManaged]);
+    // W13：落地邏輯抽到 applyReorder（拖曳與 ⋯ menu 上移/下移共用，行為一致）。
+    await applyReorder(newIds, active.id);
+  }, [orderedEvents, dayId, dndManaged, applyReorder]);
 
   // 2026-07-07 跨天拖拉：rail body 掛 droppable — 拖到空日（無 item 可 over）
   // 或 rail 空白處也能 drop（data 帶 dayId 給 TripPage 判目標日，插末尾）。
@@ -1644,6 +1666,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
                 sortMode={sortMode}
                 onEnterSortMode={enterSortMode}
                 stopNumber={stopNumbers[i] ?? null}
+                onMoveStep={moveEntryStep}
               />
             </div>
           );
