@@ -5,9 +5,10 @@
  * 匿名 → 登入 icon → /login。桌機帳號入口是 sidebar 左下 chip → 本元件 CSS 桌機隱藏
  * （≥1024）。搭配底部 nav 由 5-tab 降 4-tab（帳號移出 tab slot）。
  */
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Icon from '../shared/Icon';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
+import { useAccountSheet } from '../../contexts/AccountSheetContext';
 
 export const ACCOUNT_CIRCLE_STYLES = `
 /* HIG 44pt tap target（原 30×30 過小，DESIGN.md :247/:248）：外層 44 透明 hit area，
@@ -35,6 +36,8 @@ export const ACCOUNT_CIRCLE_STYLES = `
 
 export default function AccountCircle() {
   const { user } = useCurrentUser();
+  const location = useLocation();
+  const { openSheet } = useAccountSheet();
 
   // 載入中（undefined）先不佔位，避免閃爍；解析後才顯示。
   if (user === undefined) return null;
@@ -65,6 +68,7 @@ export default function AccountCircle() {
         className="tp-account-circle"
         aria-label="帳號"
         data-testid="titlebar-account"
+        onClick={() => openSheet(location)}
       >
         <span className="tp-account-circle-avatar">{letter}</span>
       </Link>

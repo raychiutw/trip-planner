@@ -7,6 +7,7 @@
  */
 import { useCallback, useRef, type ReactNode } from 'react';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { useSheetMode } from '../../contexts/SheetModeContext';
 
 export const APP_SHELL_STYLES = `
 .app-shell {
@@ -23,6 +24,14 @@ export const APP_SHELL_STYLES = `
   color: var(--color-foreground);
   grid-template-columns: 1fr;
   grid-template-rows: 1fr;
+}
+
+/* W1 Account sheet：sheet 內只 render 主內容（AppShell inSheet 短路），這是它的容器。
+ * 外層 scroll / box 由 AccountSheet panel 提供，這裡只保證 flex column 撐滿。 */
+.app-shell-in-sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .app-shell-sidebar,
@@ -234,6 +243,7 @@ export interface AppShellProps {
  * 不隱藏」、7/21「下捲動不要讓 function tab 消失」）。閾值常數一併拔掉。 */
 
 export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNav }: AppShellProps) {
+  const { inSheet } = useSheetMode();
   const layout: AppShellLayout = (sheet || sheetPortalId) ? APP_SHELL_LAYOUT_3PANE : APP_SHELL_LAYOUT_2PANE;
   const mainRef = useRef<HTMLElement>(null);
   // owner 2026-07-20 起要求底部 tab「保持常駐，滾動不隱藏」——
@@ -251,6 +261,17 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
   // （owner：「下捲動不要讓 function tab 消失」，2026-07-20 已提過一次）。
   // 連帶少一個 per-scroll 的 handler —— 它每次捲動都要讀 scrollTop 並比對，
   // 而膠囊本來就是常駐的。
+
+  // W1 Account sheet：sheet overlay 內只 render 主內容，跳過 sidebar / 底部 nav / grid
+  // chrome（見 SheetModeContext）。上方所有 hooks 已呼叫完，此 early-return 不違反 Rules of Hooks。
+  if (inSheet) {
+    return (
+      <>
+        <style>{APP_SHELL_STYLES}</style>
+        <div className="app-shell-in-sheet" data-testid="app-shell">{main}</div>
+      </>
+    );
+  }
 
   return (
     <>
