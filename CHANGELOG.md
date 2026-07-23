@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.19] - 2026-07-23
+
+### Added
+- **Apple HIG 合規計畫**（`docs/plans/apple-hig-compliance/`，純文件、不改 code/行為；
+  以 app issue #82 為範圍地圖，翻譯到 web 的全站 HIG 遷移規劃）：
+  - `spec.md`：to-spec 產物 —— 14 域規範（IA 4-tab／自適應 compact-regular／Header／
+    Account sheet／色彩材質／搜尋／底部 accessory／Day selector／地圖／表單 picker／
+    刪除政策／拖拉／載入離線／a11y）+ grill v2 五決策 + 平台翻譯規則。
+  - `tickets.md`：to-tickets 產物 —— 16 張 W-ticket（W0 governance → **W1 IA foundation** +
+    **W4 色彩** → … → W15 a11y 守衛）。
+  - SoT 定調：**Apple HIG 為 UI/UX source of truth**，`DESIGN.md` 衍生須對齊；品牌護欄保留
+    （terracotta tint／Inter／timeline editorial no-glass）。本 effort 不使用 mockup 流程。
+
 ## [2.57.18] - 2026-07-23
 
 ### Changed
