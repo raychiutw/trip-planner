@@ -87,6 +87,10 @@ const SCOPED_STYLES = `
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px;
   border-radius: var(--radius-full);
+  /* G10：加 1px 描邊（--color-border-control 本身 light/dark 雙態），與旁邊
+   * .tp-travel-pill(sage 描邊)/.tp-travel-sameplace(line-strong 描邊)存在感一致；
+   * 修 dark 底上 stale chip 淡字疊淡底可讀性不足。 */
+  border: 1px solid var(--color-border-control);
   background: var(--color-accent-2-subtle);
   color: var(--color-muted);
   font-size: var(--font-size-caption);
