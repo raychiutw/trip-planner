@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.39] - 2026-07-24
+
+### Changed
+- **聊天／地圖／行程三 tab 共用同一 active trip（#1140 item 7）**：`ActiveTripContext`（persist localStorage `LS_KEY_TRIP_PREF`）是單一真相，聊天與地圖本就讀它，但行程 tab 先前各自 fallback 到清單第一筆／`tripViewState`（上次看的），導致切 tab 會看到不同行程。改為：(1) 行程 tab 無 `?selected` 時優先回到 active trip（桌機 restore 亦然，day-hash 僅在 `tripViewState` 指同一條時沿用）；(2) 反向同步 —— 行程 tab 實際顯示某條明細（`?selected` 有效）時 setActiveTrip，讓 deep-link／重整／桌機還原都跟著同步，不只 card click（embedded TripPage 走 `/trips?selected=` 而非 `/trip/:id`，不會觸發 TripPage 自動 setActive）。新增 item-7 測試（桌機有 active trip → 還原該行程而非第一筆）+ 修測試隔離漏洞（前面 setActiveTrip 洩漏 localStorage 污染後面「無 ?selected」測試）。
+
 ## [2.57.38] - 2026-07-24
 
 ### Fixed

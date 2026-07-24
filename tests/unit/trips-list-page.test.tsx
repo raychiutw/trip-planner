@@ -14,6 +14,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { NewTripProvider } from '../../src/contexts/NewTripContext';
 import { writeTripView } from '../../src/lib/tripViewState';
 import { TRIP_MAIN_PORTAL_ID } from '../../src/lib/tripStackRoutes';
+import { lsSet, LS_KEY_TRIP_PREF } from '../../src/lib/localStorage';
 
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({
@@ -53,8 +54,11 @@ function mockMatchMedia(isDesktop: boolean) {
 
 import TripsListPage from '../../src/pages/TripsListPage';
 
-beforeEach(() => mockMatchMedia(true));
-afterEach(() => vi.unstubAllGlobals());
+// #1140 item 7 後：TripsListPage 讀 activeTripId（ActiveTripContext，無 provider 時 fallback
+// 直讀/寫 localStorage `LS_KEY_TRIP_PREF`）。前面 setActiveTrip 的測試會把值留在 localStorage，
+// 洩漏到後面「無 ?selected」的測試 → 桌機 restore 誤導向 embedded、卡片列表消失。每個測試前後清乾淨。
+beforeEach(() => { mockMatchMedia(true); localStorage.clear(); });
+afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
 
 /**
  * 2026-07-21：TripsListPage 改為單抓 /my-trips。原本 /my-trips 只拿 id 順序、
@@ -136,6 +140,18 @@ describe('TripsListPage', () => {
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeTruthy());
     expect(screen.queryByTestId('embedded-trip-page')).toBeNull();
+  });
+
+  // #1140 item 7：聊天/地圖/行程三 tab 共用同一 active trip（`ActiveTripContext` / localStorage）。
+  // 桌機無 ?selected 時，restore 應還原到 active trip（seoul）而非清單第一筆（okinawa）——
+  // 與聊天/地圖同源。還原後 URL 帶 ?selected=seoul → main 出現 portal placeholder。
+  it('desktop + active trip in localStorage, no ?selected → restores active trip (item 7)', async () => {
+    lsSet(LS_KEY_TRIP_PREF, 'seoul');
+    vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], SAMPLE));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByTestId(TRIP_MAIN_PORTAL_ID)).toBeTruthy());
+    // switcher 標題應反映 active trip（seoul），而非第一筆 okinawa。
+    expect(screen.getByTestId('trips-trip-title').textContent).toMatch(/首爾美食行/);
   });
 
   // owner 2026-07-21 回報 #2「開關第三欄面板會刷新第二欄」修復：桌機不再由

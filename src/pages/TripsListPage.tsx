@@ -704,12 +704,29 @@ export default function TripsListPage() {
   // 清單還沒載入時根本無從驗證 selected 可不可見，這時應該直接信任 URL —— 真的不可見
   // （已封存/刪除/無權限）由下方的 URL 正規化 effect 在載入後修正，那才是它的職責。
   const tripsLoaded = myIds !== null;
+  // #1140 item 7：聊天/地圖/行程三 tab 共用同一個 active trip（`ActiveTripContext`，persist
+  // `LS_KEY_TRIP_PREF`）。行程 tab 無 ?selected 時優先回到 active trip（與聊天/GlobalMapPage
+  // 同源），不再各自 fallback 到 visibleTrips[0] → 切 tab 不會變不同行程。
+  const { activeTripId, setActiveTrip } = useActiveTrip();
   const effectiveSelectedId = useMemo<string | null>(() => {
     if (selectedFromUrl && (!tripsLoaded || visibleTrips.some((t) => t.tripId === selectedFromUrl))) {
       return selectedFromUrl;
     }
+    if (activeTripId && (!tripsLoaded || visibleTrips.some((t) => t.tripId === activeTripId))) {
+      return activeTripId;
+    }
     return visibleTrips[0]?.tripId ?? null;
-  }, [selectedFromUrl, visibleTrips, tripsLoaded]);
+  }, [selectedFromUrl, visibleTrips, tripsLoaded, activeTripId]);
+
+  // #1140 item 7：行程 tab 實際顯示某條行程明細（?selected 有效）時，反向同步成 active trip，
+  // 讓切到聊天/地圖跟著同一條 —— deep-link / 重整 / 桌機還原都涵蓋，不只 card click
+  // （embedded TripPage 走 /trips?selected= 而非 /trip/:id，不會觸發 TripPage 的自動 setActive）。
+  // 只在 URL 指向的行程有效（== effectiveSelectedId）時同步，避免拿 fallback 的第一筆污染 active。
+  useEffect(() => {
+    if (selectedFromUrl && effectiveSelectedId === selectedFromUrl && effectiveSelectedId !== activeTripId) {
+      setActiveTrip(effectiveSelectedId);
+    }
+  }, [selectedFromUrl, effectiveSelectedId, activeTripId, setActiveTrip]);
 
   // v2.55.x：進 /trips 沒帶 ?selected 時，還原「上次檢視」的行程 + 天（Q1「記住上次行程+位置」）。
   // 來源用 tripViewState（TripPage 實際檢視時才寫）而非 activeTripId —— 兩者語意不同：tripView
@@ -728,10 +745,16 @@ export default function TripsListPage() {
     if (myTrips.length === 0) return; // 等 trips 載入才判斷
     didRestoreViewRef.current = true;
     const last = readTripView();
-    if (!last || !visibleTrips.some((t) => t.tripId === last.tripId)) return;
-    const hash = last.dayNum > 0 ? `#day${last.dayNum}` : '';
-    navigate(`/trips?selected=${encodeURIComponent(last.tripId)}${hash}`, { replace: true });
-  }, [myTrips, visibleTrips, selectedFromUrl, navigate, isDesktop]);
+    // #1140 item 7：優先還原 active trip（與聊天/地圖同源、三 tab 一致）；tripViewState 只在
+    // 它指向同一條 active trip 時用來沿用「上次看的那天」（day-hash），否則不帶 day。active trip
+    // 不在可見清單才退回 tripViewState 的上次行程。
+    const activeVisible = !!activeTripId && visibleTrips.some((t) => t.tripId === activeTripId);
+    const lastVisible = !!last && visibleTrips.some((t) => t.tripId === last.tripId);
+    const restoreId = activeVisible ? activeTripId : (lastVisible ? last!.tripId : null);
+    if (!restoreId) return;
+    const hash = last && last.tripId === restoreId && last.dayNum > 0 ? `#day${last.dayNum}` : '';
+    navigate(`/trips?selected=${encodeURIComponent(restoreId)}${hash}`, { replace: true });
+  }, [myTrips, visibleTrips, selectedFromUrl, navigate, isDesktop, activeTripId]);
 
   // ?selected 指向不在可見清單的行程（已封存/刪除/無權限被濾掉）時：header/switcher/actions
   // 用 effectiveSelectedId（fallback 到 visibleTrips[0]），但桌機中欄的
@@ -752,8 +775,7 @@ export default function TripsListPage() {
 
   // Card click 同步寫 ActiveTripContext — 不能等 embedded TripPage mount 才設，
   // 否則 user 點完立刻切 bottom-nav 到 /chat，ChatPage 拿舊 activeTripId 會把
-  // 訊息送錯 trip。
-  const { setActiveTrip } = useActiveTrip();
+  // 訊息送錯 trip。（activeTripId/setActiveTrip 已在上面 effectiveSelectedId 前取得。）
   function handleCardClick(tripId: string, e: React.MouseEvent | React.KeyboardEvent) {
     e.preventDefault();
     setActiveTrip(tripId);
