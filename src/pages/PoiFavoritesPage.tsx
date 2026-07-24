@@ -25,6 +25,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import PageErrorState from '../components/shared/PageErrorState';
 import EmptyState from '../components/shared/EmptyState';
 import AppShell from '../components/shell/AppShell';
+import { useRegisterRefresh } from '../contexts/RefreshContext';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
@@ -337,6 +338,16 @@ export default function PoiFavoritesPage() {
   }, []);
 
   useEffect(() => { void loadFavorites(); }, [loadFavorites]);
+
+  // W14 下拉刷新：soft-refetch 不翻 loading skeleton（保留舊清單、當頁留原地），
+  // 只在資料回來時換 rows；失敗往上拋 → AppShell PTR 顯示「更新失敗，請再下拉重試」。
+  // 首載的 loading/error 態仍走 loadFavorites。
+  const softRefetch = useCallback(async () => {
+    const rows = await apiFetch<PoiFavoriteRow[]>('/poi-favorites');
+    setFavorites(rows);
+    setStatus('data');
+  }, []);
+  useRegisterRefresh(softRefetch);
 
   // Region 計數（含 "全部" = total）— 從 poiAddress derive（server 無 region field）
   const regionByRow = useMemo(

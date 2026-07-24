@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.26] - 2026-07-24
+
+### Added
+- **Apple HIG W14 下拉刷新 — per-view soft-refetch 契約（不再整頁 reload）**：新 `RefreshContext`（`useRegisterRefresh` / `useRefreshRunner`）—— 目前顯示的頁面登記自己的資料 refetch，下拉刷新時就地重抓、捲動位置保留、不閃白；沒登記的頁面 fall back 回 `location.reload()`（零回歸）。`usePullToRefresh` 改支援 async `onRefresh`（await 讓 spinner 撐到資料回來）+ 回傳 `failed`；AppShell 下拉失敗顯示「更新失敗，請再下拉重試」小 pill。`PoiFavoritesPage` 首個接上 soft-refetch（不翻 loading skeleton、保留舊清單）。既有觸控 input-guard（touch 起於輸入欄不觸發，防沖掉編輯中備註）保留。離線回饋沿用既有 `ServerStatusBanner`（sticky 斷線橫幅 + 自動重試）。新增 7 個測試（refetch 呼叫 / unmount 清除 / 無 Provider fallback / wiring source-lock）。
+
 ## [2.57.25] - 2026-07-24
 
 ### Added
