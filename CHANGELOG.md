@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.29] - 2026-07-24
+
+### Fixed
+- **Apple HIG W2 桌機/手機跨 1024px 表單流失 — keep-alive（owner 二次確認真修）**：`TripStackLayout` 桌機（3 欄 shell 右欄 sheet）與手機（bare 全頁）原本是兩個結構不同的 tree，跨 1024px（旋轉 / 縮放改 CSS-px）React 會 unmount/remount 操作頁 → 未存表單 state 丟。修法：`<Outlet/>` 只宣告一次、用 `createPortal` 掛在穩定 React tree 位置，DOM 依斷點搬進「桌機 sheet 槽」或「手機全頁 host」（`display:contents` 透明 wrapper）—— React portal children 換 container 只移 DOM、不 remount，故操作頁 instance（含表單 state）跨斷點保留。stable fallback container（detached div）防切換瞬間 slot 尚未 attach 的 null→remount。手機維持 bare 全頁（不加 AppShell chrome）。真瀏覽器實測（/browse 真 viewport resize）：編輯行程頁填未存 marker → 桌機↔手機多次翻轉（700/900/1300/1440px）→ 值全程保留。新增 5 個 wiring source-lock 測試。全套 472 files / 4098 tests 綠。
+
 ## [2.57.28] - 2026-07-24
 
 ### Changed
