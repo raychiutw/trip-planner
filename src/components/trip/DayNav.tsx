@@ -1,6 +1,7 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { DaySummary } from '../../types/trip';
 import { parseLocalDate } from '../../lib/mapDay';
+import { useDayStripNav } from '../../hooks/useDayStripNav';
 import MapDayTab from './MapDayTab';
 
 /**
@@ -39,25 +40,13 @@ export default function DayNav({
   onSwitchDay,
   todayDayNum,
 }: DayNavProps) {
-  const navRef = useRef<HTMLElement>(null);
-  // First-mount guard：初次 render 用 instant scroll (避免跟 #dayN anchor 的 vertical
-  // smooth scroll 同時 fight，iOS Safari 看到 snap-back)。Subsequent day switches
-  // 才走 smooth。
-  const firstMountRef = useRef(true);
-
-  // Scroll active tab into horizontal view on day switch
-  useEffect(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-    const btn = nav.querySelector<HTMLElement>(`[data-testid="dn-day-${currentDayNum}"]`);
-    if (!btn) return;
-    const left = btn.offsetLeft - nav.offsetWidth / 2 + btn.offsetWidth / 2;
-    nav.scrollTo({
-      left: Math.max(0, left),
-      behavior: firstMountRef.current ? 'auto' : 'smooth',
-    });
-    firstMountRef.current = false;
-  }, [currentDayNum]);
+  // 置中捲入 + ArrowLeft/Right roving 共用邏輯（與 MapPage day strip 同一份）。
+  const { navRef, handleKeyDown } = useDayStripNav<number>({
+    keys: useMemo(() => days.map((d) => d.dayNum), [days]),
+    activeKey: currentDayNum,
+    onPick: onSwitchDay,
+    testId: (n) => `dn-day-${n}`,
+  });
 
   const tabs = useMemo(
     () => days.map((d) => {
@@ -72,27 +61,6 @@ export default function DayNav({
     }),
     [days, todayDayNum],
   );
-
-  // Roving keyboard — ArrowLeft/Right 在 day buttons 之間移焦 + 切 day。
-  function handleKeyDown(e: React.KeyboardEvent<HTMLElement>) {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    const idx = days.findIndex((d) => d.dayNum === currentDayNum);
-    if (idx < 0) return;
-    const nextIdx = e.key === 'ArrowLeft'
-      ? Math.max(0, idx - 1)
-      : Math.min(days.length - 1, idx + 1);
-    if (nextIdx === idx) return;
-    e.preventDefault();
-    const nextDay = days[nextIdx];
-    if (!nextDay) return;
-    onSwitchDay(nextDay.dayNum);
-    // Move focus to new active button so user can keep arrowing
-    requestAnimationFrame(() => {
-      const nav = navRef.current;
-      const btn = nav?.querySelector<HTMLElement>(`[data-testid="dn-day-${nextDay.dayNum}"]`);
-      btn?.focus();
-    });
-  }
 
   return (
     <nav
