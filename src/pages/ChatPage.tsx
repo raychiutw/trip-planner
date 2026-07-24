@@ -26,6 +26,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useRequestSSE } from '../hooks/useRequestSSE';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import { useChatPagination } from '../hooks/useChatPagination';
+import { useKeyboardInset } from '../hooks/useKeyboardInset';
 import { apiFetch } from '../lib/apiClient';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
@@ -441,6 +442,10 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--color-border);
   display: flex; gap: 8px; align-items: flex-end;
+  /* W8：手機軟鍵盤彈出時 sticky bottom:0 會被鍵盤蓋 → 依 --kb-inset（useKeyboardInset
+   * 由 visualViewport 設；桌機/鍵盤收起恆 0）上移到鍵盤上方。transition 讓收放平順。 */
+  transform: translateY(calc(-1 * var(--kb-inset, 0px)));
+  transition: transform var(--transition-duration-fast, 150ms) ease-out;
 }
 @media (max-width: 760px) {
   .tp-chat-composer { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
@@ -529,6 +534,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       setActiveTripId(lockTripId);
     }
   }, [lockTripId, activeTripId, setActiveTripId]);
+  // W8：手機軟鍵盤彈出時把 composer 頂到鍵盤上方（設 --kb-inset；桌機 no-op）。
+  useKeyboardInset();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [input, setInput] = useState('');

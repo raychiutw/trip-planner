@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.34] - 2026-07-24
+
+### Added
+- **Apple HIG W8 聊天 composer visualViewport（軟鍵盤不擋輸入）**：owner 2026-07-24 選「保留 Enter 送出」（不反轉成 ⌘Enter），W8 只做 visualViewport 首引入。新 `useKeyboardInset` hook：手機軟鍵盤彈出時 layout viewport 不變、`visualViewport` 縮小，`sticky bottom:0` 的 composer 會被鍵盤蓋；hook 用 `visualViewport` 算出被佔高度寫進 `--kb-inset`，composer 依此 `translateY` 上移到鍵盤上方（桌機/收起恆 0、no-op）。新增 7 個測試（inset 計算 / resize 更新 / unmount 清除 / 無 visualViewport no-op / wiring + Enter-送出未改）。手機軟鍵盤實機行為待 owner 真機驗。
+
 ## [2.57.33] - 2026-07-24
 
 ### Changed
