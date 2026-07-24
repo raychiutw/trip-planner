@@ -1926,6 +1926,24 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 .tp-titlebar-trip-row.is-active { background: var(--color-accent-subtle); color: var(--color-accent-text); }
 .tp-titlebar-trip-row-title { font-weight: 700; font-size: var(--font-size-callout); }
 .tp-titlebar-trip-row-meta { font-size: var(--font-size-caption2); color: var(--color-muted); }
+/* W6：目前行程 checkmark —— 絕對定位右側，不動既有 title/meta 直排；reserve padding-right 讓
+ * 有無 check 的列對齊一致。搜尋框 + 空狀態同區。 */
+.tp-titlebar-trip-row { position: relative; padding-right: 32px; }
+.tp-titlebar-trip-row-check {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--color-accent); flex-shrink: 0;
+}
+.tp-titlebar-trip-row.is-active .tp-titlebar-trip-row-check { color: var(--color-accent-text); }
+.tp-titlebar-trip-search {
+  width: 100%; box-sizing: border-box; margin: 0 0 6px;
+  padding: 7px 10px; font: inherit; font-size: var(--font-size-footnote);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-background); color: var(--color-foreground);
+}
+.tp-titlebar-trip-search:focus-visible { outline: none; border-color: var(--color-accent); }
+.tp-titlebar-trip-empty {
+  padding: 12px 10px; font-size: var(--font-size-footnote); color: var(--color-muted); text-align: center;
+}
 
 /* page-title compact override — mockup .tp-page-titlebar-title compact spec：
  * 24px on <760px viewport (28px on desktop)。 */
