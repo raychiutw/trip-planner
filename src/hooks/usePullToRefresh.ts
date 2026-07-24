@@ -29,17 +29,20 @@ interface PullToRefreshResult {
   pullPx: number;
   /** 是否正在 refresh（onRefresh 觸發到 reset 之間）。 */
   refreshing: boolean;
+  /** 上一次 refresh 是否失敗（async onRefresh reject）— 給 caller 顯示重試回饋。 */
+  failed: boolean;
 }
 
 export function usePullToRefresh(
   scrollerRef: RefObject<HTMLElement | null>,
-  onRefresh: () => void,
+  onRefresh: () => void | Promise<void>,
   opts: PullToRefreshOptions = {},
 ): PullToRefreshResult {
   const { threshold = 80, friction = 0.5, maxPull = threshold * 1.5 } = opts;
 
   const [pullPx, setPullPx] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   // refs to avoid stale closure + listener churn on refreshing toggle
   const startYRef = useRef<number | null>(null);
@@ -107,13 +110,20 @@ export function usePullToRefresh(
         setRefreshing(true);
         // keep visual at threshold during refresh
         setPullPx(threshold);
-        try {
-          onRefreshRef.current();
-        } catch {
-          // onRefresh might throw（e.g. window.location 沒準備好）— still reset
-          setRefreshing(false);
-          setPullPx(0);
-        }
+        // W14：onRefresh 可能是 async soft-refetch（回 promise）或 sync reload。
+        // await 讓 spinner 撐到資料回來；reject → 記 failed 供 caller 顯示重試。
+        // reload fallback 會直接卸載頁面，下面的 reset 不會有機會跑（也無所謂）。
+        void (async () => {
+          try {
+            await onRefreshRef.current();
+            setFailed(false);
+          } catch {
+            setFailed(true);
+          } finally {
+            setRefreshing(false);
+            setPullPx(0);
+          }
+        })();
       } else if (pulled !== 0) {
         setPullPx(0);
       }
@@ -133,5 +143,5 @@ export function usePullToRefresh(
     // 每父 render 都新 ref → 重綁 4 個 listener。
   }, [scrollerRef, threshold, friction, maxPull]);
 
-  return { pullPx, refreshing };
+  return { pullPx, refreshing, failed };
 }

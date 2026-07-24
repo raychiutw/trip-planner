@@ -5,8 +5,9 @@
  *   keeps component state alive across breakpoints (avoids unmount/mount side effects
  *   when users rotate device or resize viewport).
  */
-import { useCallback, useRef, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { useRefreshRunner } from '../../contexts/RefreshContext';
 import { useSheetMode } from '../../contexts/SheetModeContext';
 
 export const APP_SHELL_STYLES = `
@@ -89,6 +90,20 @@ export const APP_SHELL_STYLES = `
 }
 @media (prefers-reduced-motion: reduce) {
   .app-shell-ptr[data-refreshing="true"] .app-shell-ptr-spinner { animation: none; }
+}
+/* W14 soft-refetch 失敗提示 pill。 */
+.app-shell-ptr-failed {
+  position: absolute;
+  top: 8px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-priority-high-bg, #fde2e2);
+  color: var(--color-priority-high-text, #8b2828);
+  font-size: var(--font-size-caption1);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 /* main 拉動位移（pull friction）。transform 同時讓 PTR indicator 跟內容一起下拉。
@@ -249,13 +264,10 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
   // owner 2026-07-20 起要求底部 tab「保持常駐，滾動不隱藏」——
   // 捲動隱藏的 navHidden / lastYRef 與其 scroll listener 已整個移除。
 
-  // Pull-to-refresh：scrollTop=0 時拖下 80px+ → reload
-  const onRefresh = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      window.location.reload();
-    }
-  }, []);
-  const { pullPx, refreshing } = usePullToRefresh(mainRef, onRefresh);
+  // Pull-to-refresh：scrollTop=0 時拖下 80px+ → per-view soft-refetch（W14）。
+  // 目前頁 useRegisterRefresh 登記了 refetch → 就地重抓、位置保留；沒登記 → fall back reload。
+  const runRefresh = useRefreshRunner();
+  const { pullPx, refreshing, failed } = usePullToRefresh(mainRef, runRefresh);
 
   // 2026-07-21：捲動隱藏底部 tab 的 scroll listener 整個移除
   // （owner：「下捲動不要讓 function tab 消失」，2026-07-20 已提過一次）。
@@ -300,6 +312,16 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
               aria-hidden={!refreshing}
             >
               <div className="app-shell-ptr-spinner" />
+            </div>
+          )}
+          {/* W14：soft-refetch 失敗 → 小 pill 提示重試（下次下拉會重置 failed）。 */}
+          {failed && !refreshing && (
+            <div
+              className="app-shell-ptr-failed"
+              role="status"
+              data-testid="app-shell-ptr-failed"
+            >
+              更新失敗，請再下拉重試
             </div>
           )}
           {main}
