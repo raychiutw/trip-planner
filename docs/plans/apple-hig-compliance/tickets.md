@@ -8,6 +8,35 @@ to-tickets 產物（本地 markdown）。每票＝可獨立 demo/驗收的一個
 
 ---
 
+## ✅ 交付狀態 — effort 2026-07-24 收官（全 16 票 shipped）
+
+所有 W 票已 ship + merge master + CF Pages 部署，能桌機/localhost 驗的皆已真瀏覽器驗證；手機軟鍵盤/實機 safe-area 待 owner 真機驗。
+
+| 票 | 版本 | PR | 摘要 |
+|---|---|---|---|
+| W0 Governance | 2.57.20 | #1122 | Apple HIG 為 UI/UX SoT（CLAUDE.md / DESIGN.md banner） |
+| W1 IA foundation | 2.57.20 | #1122 | 4-tab（帳號移出 → header 圓圈 + Account sheet、自有 stack、deep-link）、per-branch nav |
+| W2 自適應 + keep-alive | 2.57.29 | #1131 | 跨 1024px 表單 keep-alive：`<Outlet/>` 單一 createPortal + stable fallback |
+| W3 Header 慣例 | 2.57.27 | #1129 | 桌機 titlebar 恢復 icon + 可見 label（推翻 v2.31.90） |
+| W4 色彩 → system + terracotta | 2.57.20 / .22 | #1122 / #1124 | 語意 token；W4r G8-G12 dark/hex→token 出清 |
+| W5 材質 & icon | 2.57.33 | #1135 | 保留玻璃膠囊（owner）；G15 reduced-transparency 全玻璃面降級 + G16 底部列 offset |
+| W6 行程選擇器 | 2.57.24 | #1126 | menuitemradio + checkmark + 長清單搜尋 + 聊天草稿分行程 |
+| W7 搜尋 | 2.57.22 | #1124 | page-scoped-search-guard（地圖/聊天/帳號不顯 page-level 搜尋） |
+| W8 composer | 2.57.34 | #1136 | 保留 Enter 送出（owner）；`useKeyboardInset` visualViewport 軟鍵盤上移 |
+| W9 Day selector | 2.57.25 | #1127 | 抽 `useDayStripNav`：地圖 day strip 置中 + ArrowLeft/Right roving |
+| W10 地圖 | 2.57.35 | #1137 | marker 編號/route 虛線（非純色）+ safe-area 已滿足；source-lock 鎖合規 |
+| W11 表單 & picker | 2.57.28 / .31 / .32 | #1130 / #1133 / #1134 | ShareLinkModal + 表單/帳號 px→rem；TripTimePicker 12/24 跟系統（Intl hourCycle） |
+| W12 刪除政策 | 2.57.21 | #1123 | ConfirmModal 預設焦點安全鈕 + 清死路由 restore/UNDO_EXPIRED |
+| W13 拖拉 a11y | 2.57.23 | #1125 | ⋯ menu 上移/下移一格（抽 `applyReorder` 共用） |
+| W14 狀態 + soft-refresh | 2.57.26 | #1128 | `RefreshContext` per-view soft-refetch（不再整頁 reload）+ 失敗態 |
+| W15 Accessibility 守衛 | 2.57.30 | #1132 | `a11y-axe.spec.js` 掃 key 頁 + 修 2 處色彩對比 |
+
+**W1d depth footgun**（2.57.36 #1138）：owner 選 A，保留 `location.state.depth`、加 `confirmBeforeBack` gate 修 depth>1 pop 跳過確認的 latent footgun（不做 store 重構）。
+
+**刻意 defer / 未做**：Google zoom 鈕套樣式（W10，Google 內部 class fragile）；tokens.css hero/titlebar display 標題維持 px（mockup-parity 鎖、大文字 rem 價值低）；W1d in-memory store 重構（arguably 反效果，見 §W1d 決策）。
+
+---
+
 ### W0 · Governance — 採 HIG 為 SoT
 **依賴**：無（先做）｜**AFK**（docs）
 - `CLAUDE.md`：SoT 宣告 → 「Apple HIG 是 UI/UX SoT；`DESIGN.md` 衍生、須對齊」
