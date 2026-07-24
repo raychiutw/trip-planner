@@ -61,6 +61,8 @@
 | `bottom-nav-label` | n/a | 11px / 14px | 700 | Compact bottom nav label |
 | `eyebrow` | 10px / 14px | 10px / 14px | 600 | 僅用於 uppercase label，例如 `DAY 01` |
 
+> **手機全域字級放大（owner 2026-07-24，v2.57.42）**：字級 token 全為 `rem`。`@media (max-width:760px)` 下 root `html { font-size: 106.25% }`（16→17px，iOS HIG body 標準）→ 上表 Compact 欄所有 rem 字級**等比放大 6.25%**（body 實得 17px、footnote 14.9px…）。`spacing`/`radius` 為 px 不受影響（版面不變、只有字變大）；輸入框仍 ≥16px（`max(16px,1em)` 以 1em=17px 計）不觸發 iOS 聚焦縮放。
+
 ### Weight Scale
 | Token | Value | 用途 |
 |-------|-------|------|
@@ -253,7 +255,8 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（vibrancy：品牌 → 4-tab 主導覽 → 我的行程清單 → 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。
 - **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + accent 文字，`.tp-titlebar-back--labeled`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
 - **表單頁桌機滿寬（rev2 §10.4）:** account 設定分區桌機 2-col grid（`.tp-account-groups` @≥1024，hero 收窄置中）；new-trip 桌機加寬（線性表單不 full-bleed）。
-- **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。**底部 tab 常駐，捲動不隱藏**（owner 2026-07-20 / 07-21 兩次要求；捲動隱藏的 scroll-direction 邏輯已於 2026-07-21 整個移除，見 `AppShell.tsx:232`）。
+- **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。**底部 tab 常駐，捲動不隱藏**（owner 2026-07-20 / 07-21 兩次要求；捲動隱藏的 scroll-direction 邏輯已於 2026-07-21 整個移除，見 `AppShell.tsx:232`）。**唯一例外：手機軟鍵盤彈出時收起 root tab**（Apple HIG，v2.57.41）——`useKeyboardInset`（app root 全站掛一次）偵測 visualViewport inset > 120px（過濾 Safari URL bar 顯隱）→ documentElement 掛 `data-kb-open` → CSS 把浮動膠囊往下滑出畫面；鍵盤收起沿 transition 滑回。**底部互動元件讓位**：聊天 composer / 地圖 POI 卡用 `--nav-overlay-h`（80px = 膠囊 footprint 72 + 8px 呼吸間距）+ safe-area 讓位，與膠囊間距一致 8px（v2.57.41 從 88px 收緊）。
+- **Compact header trailing（v2.57.42）:** 主功能頁與行程明細 header 右側順序＝**主要動作（＋）· ⋯ · 帳號圓圈**（HIG trailing；`TitleBar` 的 `account` slot 排在 `actions` 之後即最右；桌機由 CSS 隱藏帳號圓圈，走 sidebar 左下帳號 chip）。
 - **Header rule:** 所有主功能頁 titlebar 一律 sticky；桌機與 compact 都是單行標題，不放 eyebrow、meta、helper text。
 - **Map exception:** 地圖頁可 full bleed，仍保留統一 sidebar / titlebar / bottom nav 行為。
 - **Trip detail DayNav:** sticky 在 titlebar 下方，**常駐不隨捲動隱藏**（與 bottom nav 同 2026-07-21 決策）。
