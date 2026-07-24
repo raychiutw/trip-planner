@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.35] - 2026-07-24
+
+### Added
+- **Apple HIG W10 地圖 a11y source-lock（marker/route 非純色區分 + /map safe-area）**：owner 2026-07-24 選「現在定義+做」。調查後定義：W10 的 substantive 要求已由既有地圖重設計（v2.56.1）+ marker/route 實作滿足 —— marker 帶站序編號標籤（非純色、色盲可數字辨識）、route 對 approx/偶數日用虛線（color-blind aid）、TitleBar 讓 status bar（`env(safe-area-inset-top)`）、地圖浮卡讓 home indicator（`--nav-overlay-h` + `env(safe-area-inset-bottom)`）。**不做 marker 形狀重設計**（圓形+編號已 color-blind 合規 + HIG-aligned，重設計＝change-for-change's-sake）。新增 4 個 source-lock 測試鎖住這些合規點防 regress。唯一未做：Google zoom 鈕套樣式（需打 Google 內部 class、fragile + CSS injection 風險），刻意 defer。
+
 ## [2.57.34] - 2026-07-24
 
 ### Added
