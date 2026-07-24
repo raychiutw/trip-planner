@@ -1,11 +1,11 @@
 /**
  * MapDayTab — Map page day-tab primitive (also used by TripPage DayNav).
  *
- * 單行「DAY N」膠囊 — owner 2026-07-17 sign-off：去日期副標（當日日期靠中欄
- * day-header 顯示），active = 淡 tonal pill（非實心 accent thumb）。
- * Idle: 透明底 + dayColor eyebrow（地圖 per-day）/ muted（行程單色）
- * Active: 淡 tonal pill 底 + full-opacity eyebrow
- * 視覺對應：docs/design-sessions/2026-07-17-v3-day-map-glass-capsule.html
+ * 單行「DAY N」膠囊 — 去日期副標（當日日期靠中欄 day-header 顯示）。
+ * active = 實心 accent-fill 膠囊，比照 root tab（`.tp-global-bottom-nav-btn.is-active`）
+ *   —— owner 2026-07-24「Day tab 比照 root tab」，overturns 2026-07-17「淡 tonal pill」sign-off。
+ * Idle: 透明底 + dayColor eyebrow（地圖 per-day polyline 對應）/ muted（行程單色）
+ * Active: 實心 accent-fill 底 + accent-foreground eyebrow（per-day 色只留 idle，避免淺色天白字對比不足）
  *
  * a11y：用 plain `<button>` 不掛 role=tab — 上層 wrapper (DayNav / MapPage)
  * 用 `<nav>` 包，符合 scroll-to-anchor pattern（panels 一直可見），不適用
@@ -37,12 +37,11 @@ export interface MapDayTabProps {
 }
 
 export default function MapDayTab({ dayLabel, dayColor, isActive, onClick, ariaLabel, testId }: MapDayTabProps) {
-  // Active pill 用 per-day color tint（地圖 polyline 對應）；有設值才覆蓋 default
-  // accent。CSS rule 讀 --day-color (有設值才覆蓋)。
+  // #1140 item 3（owner 2026-07-24「Day tab 比照 root tab」，overturns 2026-07-17 淡 tonal
+  // sign-off）：active 改實心 accent-fill 膠囊（比照 root tab，CSS 給 accent-foreground 前景），
+  // 不再用 per-day --day-color tint。per-day polyline 對應改只由 **idle** eyebrow 顏色承載 ——
+  // active 時 eyebrow 用 accent-foreground（實心底上可讀），故 inline day-color 只在非 active 時套。
   const safeDayColor = safeColor(dayColor);
-  const style = isActive && safeDayColor
-    ? ({ '--day-color': safeDayColor } as React.CSSProperties)
-    : undefined;
   return (
     <button
       type="button"
@@ -50,12 +49,11 @@ export default function MapDayTab({ dayLabel, dayColor, isActive, onClick, ariaL
       aria-current={isActive ? 'true' : undefined}
       className={`tp-map-day-tab${isActive ? ' is-active' : ''}`}
       onClick={onClick}
-      style={style}
       data-testid={testId}
     >
       <span
         className="tp-map-day-tab-eyebrow"
-        style={safeDayColor ? { color: safeDayColor } : undefined}
+        style={!isActive && safeDayColor ? { color: safeDayColor } : undefined}
       >
         {dayLabel}
       </span>
