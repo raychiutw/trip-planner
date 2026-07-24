@@ -1783,14 +1783,19 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   padding: 0;
   justify-content: center;
 }
-/* v2.31.90：桌機也 icon-only — label 永遠 display:none，hover tooltip (title attr) 補語意。 */
-.tp-titlebar-action-label { display: none; }
+/* W3（owner 2026-07-24）：推翻 v2.31.90 桌機 icon-only —— 桌機恢復 icon + 可見文字
+ * label（HIG header 慣例：動作鈕帶文字、可辨識）。手機 (<=760) 仍 icon-only 圓形
+ * （label hidden via @media）。title attr tooltip 保留（桌機 hover 也給得起）。 */
+.tp-titlebar-action-label { display: inline; }
+/* icon-only 變體（漢堡/kebab 等無文字 trigger）永遠不顯 label，避免桌機誤露空 span。 */
+.tp-titlebar-action--icon-only .tp-titlebar-action-label { display: none; }
 @media (max-width: 760px) {
   .tp-titlebar-action {
     width: var(--spacing-tap-min);
     padding: 0;
     justify-content: center;
   }
+  .tp-titlebar-action-label { display: none; }
 }
 
 /* primary variant — confirm action (儲存 / 完成 / 建立)。Accent 實心，
