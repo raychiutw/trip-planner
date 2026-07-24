@@ -29,6 +29,14 @@ export interface OperationShellProps {
   title: ReactNode;
   /** ‹「前一頁」callback（各頁既有 handleBack）。 */
   back: () => void;
+  /**
+   * W1d：depth>1 時 ‹ 的 pop（navigate(-1)）未存確認 gate。有未存編輯的頁面（被 push 成
+   * depth>1）提供此 callback，OperationShell 在 pop 前先呼叫它、由頁面決定要不要跳「丟棄
+   * 變更」確認；確認後頁面呼叫傳入的 `proceed()` 才真的 pop。不提供（如 ChangePoiPage 無
+   * dirty）→ 維持直接 navigate(-1)。修掉「depth>1 pop 盲目 navigate(-1) 跳過確認 → 靜默
+   * 丟資料」的 footgun（原本只是 latent，此 hook 讓它可被關）。
+   */
+  confirmBeforeBack?: (proceed: () => void) => void;
   /** 各頁 scoped `<style>` 內容（兩形態共用）。 */
   scopedStyles?: string;
   /**
@@ -47,6 +55,7 @@ export default function OperationShell({
   testId,
   title,
   back,
+  confirmBeforeBack,
   scopedStyles,
   bottomNav,
   children,
@@ -67,11 +76,16 @@ export default function OperationShell({
   //   （v2.33.139 曾因無條件 navigate(-1) 有 footgun 而移除；此處用 depth gate 只在確定 in-app 時才 -1。）
   const depth = (location.state as { depth?: number } | null)?.depth ?? 1;
   const showBack = !inStack || depth > 1;
-  // ⚠ 耦合：depth>1 時 ‹ 走 navigate(-1)、**不呼叫頁面傳入的 `back`**。目前唯一 depth>1 的頁
-  // （ChangePoiPage）的 back 無 dirty 攔截故安全；但若日後把「back 帶未存檔丟棄確認」的頁
-  // （如 EditEntryPage handleCancel）push 成 depth>1，navigate(-1) 會跳過該確認 → 靜默丟資料。
-  // B5 dirty gate 上線後，pop 也須先過同一 gate（見 plan §5b/F3）。
-  const handleBack = useMemo(() => (depth > 1 ? () => navigate(-1) : back), [depth, navigate, back]);
+  // depth>1 時 ‹ 走 navigate(-1)（in-app pop，depth-gate 保 navigate(-1) 只在確定 push 過時才
+  // 用，避免 deep-link 冷啟 back 踢出 app —— v2.33.139 教訓，勿拆）。
+  // W1d（owner 2026-07-24 選 A）：pop 前先過頁面的未存確認 gate（`confirmBeforeBack`）——
+  // 有 dirty 的頁面被 push 成 depth>1 時，pop 會先跳「丟棄變更」確認、確認才 navigate(-1)，
+  // 不再盲目 -1 靜默丟資料。ChangePoiPage 無 dirty、不傳此 prop → 維持直接 navigate(-1)。
+  const handleBack = useMemo(() => {
+    if (depth <= 1) return back;
+    const pop = () => navigate(-1);
+    return confirmBeforeBack ? () => confirmBeforeBack(pop) : pop;
+  }, [depth, navigate, back, confirmBeforeBack]);
 
   // a11y：桌機面板從側邊開時把焦點移進面板（非 modal sheet 的 APG 慣例），讓鍵盤/螢幕
   // 閱讀器不卡在中欄觸發鈕。手機是整頁 route 切換（focus 自然重置）+ 面板在 app-shell-main
