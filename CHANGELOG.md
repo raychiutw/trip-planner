@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.37] - 2026-07-24
+
+### Docs
+- **Apple HIG effort 收官 doc-sync**：`docs/plans/apple-hig-compliance/tickets.md` 加「✅ 交付狀態」表（W0–W15 全 16 票 + W1d 的版本/PR/摘要，含刻意 defer 清單）；`DESIGN.md` + `CLAUDE.md` 的 HIG SoT banner 加「W0–W15 全 2026-07-24 ship 收官」註記指向交付狀態表。純文件、無 code 變更。
+
 ## [2.57.36] - 2026-07-24
 
 ### Fixed

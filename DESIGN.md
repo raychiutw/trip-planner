@@ -1,6 +1,6 @@
 # Design System — Tripline（V2 柔褐三色）
 
-> **🍎 Apple HIG＝UI/UX SoT（2026-07-23，grill v2 owner 拍板）。** 手機 iOS／桌機 macOS 的 IA、互動、色彩、材質、a11y 以 Apple HIG 為最終依據；**本文件（`DESIGN.md`）為衍生、須對齊 HIG**，衝突以 HIG 為準（先討論再改）。合規計畫（spec + 16 W-tickets + grill v2 五決策）：`docs/plans/apple-hig-compliance/`。**品牌保留例外**（HIG 允許、不對齊）：terracotta 受控 tint、Inter web font、timeline editorial no-glass。**此 effort 不使用 mockup 流程。**
+> **🍎 Apple HIG＝UI/UX SoT（2026-07-23，grill v2 owner 拍板）。** 手機 iOS／桌機 macOS 的 IA、互動、色彩、材質、a11y 以 Apple HIG 為最終依據；**本文件（`DESIGN.md`）為衍生、須對齊 HIG**，衝突以 HIG 為準（先討論再改）。合規計畫（spec + 16 W-tickets + grill v2 五決策）：`docs/plans/apple-hig-compliance/`（**W0–W15 全 2026-07-24 ship 收官**，交付狀態表見 `tickets.md`）。**品牌保留例外**（HIG 允許、不對齊）：terracotta 受控 tint、Inter web font、timeline editorial no-glass。**此 effort 不使用 mockup 流程。**
 > grill v2 五決策：① 平台模型 **C**（web 鏡像 app #82，桌機輸入走 macOS）｜② IA **4-tab + 帳號 header sheet**（supersede 同日 #1120 五-tab）｜③ 色彩 **system 語意色底 + terracotta 受控 tint**｜④ 刪除 **無 undo + server-confirm-before-remove + 高影響 reauth**｜⑤ 平台翻譯 SF-風描邊 icon／`backdrop-filter` glass+fallback／省 haptic／系統返回／留 Inter。
 
 ## Product Context
