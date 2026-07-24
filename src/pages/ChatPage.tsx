@@ -532,6 +532,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [input, setInput] = useState('');
+  // W6：聊天草稿依行程分開存（session-only ref；切換行程時存舊、載新，不讓半成品漏到別行程）。
+  const draftsRef = useRef<Record<string, string>>({});
   const [tripMenuOpen, setTripMenuOpen] = useState(false);
   const [inflightId, setInflightId] = useState<number | null>(null);
   // AI 授權 gate（Option E）：null=未知/載入中（放行，後端 mint 為最終關卡），
@@ -814,7 +816,10 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
   function pickTrip(tripId: string) {
     // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
+    // W6：切換前存舊行程草稿、切換後載新行程草稿（session-only；跨 reload 持久化留給 W8 composer 契約）。
+    if (activeTripId) draftsRef.current[activeTripId] = input;
     setActiveTripId(tripId);
+    setInput(draftsRef.current[tripId] ?? '');
     setTripMenuOpen(false);
   }
 

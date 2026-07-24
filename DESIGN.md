@@ -356,7 +356,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - `.tp-titlebar-back` — 左側返回 button, 44×44 ghost icon
 - `.tp-titlebar-action` — 右側 action (icon + 文字 / mobile icon-only)，可加 `.is-primary` 變實心 accent CTA
 - `.tp-titlebar-icon-btn` — OverflowMenu kebab trigger, 44×44 icon-only ghost
-- `.tp-titlebar-trip-picker` — Chat/Map「切換行程」 picker，v2.31.47 起 icon + chevron only（拔掉 trip name span 避免跟 TitleBar title 重複；dropdown rows 仍顯每個 trip name）, radius-full pill shape
+- **`TripTitleSwitcher`（標題即切換器，owner 2026-07-21）** — Chat/Map/Trips 三頁共用；標題文字本身是 button、後掛 SVG chevron（`.tp-titlebar-trip-title` + `.tp-titlebar-trip-title-chevron`），取代舊的 `.tp-titlebar-trip-picker`（右側獨立 `⇄ ▾` icon pill，已移除）。點標題展開 `.tp-titlebar-trip-dropdown`（`role="menu"`）。**W6 HIG a11y**：每列 `role="menuitemradio"` + `aria-checked`，目前行程列加 checkmark SVG（`.tp-titlebar-trip-row-check`，accent 色）讓 VoiceOver 讀得出「已選取」；行程 >8 筆時 dropdown 頂顯 scoped 搜尋框（`.tp-titlebar-trip-search`，本地 filter title/name/countries/id，非頁面內容搜尋、不與 W7 page-level 搜尋守衛衝突）。單一行程 → 純文字不給可點假象。
 - 漢堡選單 (TripsListPage embedded EmbeddedActionMenu) 直接複用 `.tp-titlebar-action`，不再有獨立 `.tp-embedded-menu-trigger` class
 
 **Sub-content 規則 (TitleBar 下方)**

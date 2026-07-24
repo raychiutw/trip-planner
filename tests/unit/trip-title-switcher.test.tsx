@@ -82,6 +82,35 @@ describe('TripTitleSwitcher', () => {
     fireEvent.click(btn);
     expect(btn.getAttribute('aria-expanded')).toBe('true');
   });
+
+  it('W6：目前行程列 role=menuitemradio + aria-checked + checkmark（SR 讀得出已選取）', () => {
+    renderSwitcher();
+    fireEvent.click(screen.getByTestId('chat-trip-title'));
+    const active = screen.getByTestId('chat-trip-pick-okinawa');
+    const other = screen.getByTestId('chat-trip-pick-seoul');
+    expect(active.getAttribute('role')).toBe('menuitemradio');
+    expect(active.getAttribute('aria-checked')).toBe('true');
+    expect(other.getAttribute('aria-checked')).toBe('false');
+    expect(active.querySelector('.tp-titlebar-trip-row-check'), '目前列應有 checkmark').toBeTruthy();
+    expect(other.querySelector('.tp-titlebar-trip-row-check'), '非目前列不應有 checkmark').toBeNull();
+  });
+
+  it('W6：短清單（≤8）不顯搜尋框', () => {
+    renderSwitcher();
+    fireEvent.click(screen.getByTestId('chat-trip-title'));
+    expect(screen.queryByTestId('chat-trip-search')).toBeNull();
+  });
+
+  it('W6：長清單（>8）顯搜尋框且本地 filter', () => {
+    const many = Array.from({ length: 9 }, (_, i) => ({
+      tripId: `t${i}`, title: i === 0 ? '沖繩' : `行程${i}`, name: `行程${i}`, countries: 'JP',
+    }));
+    render(<TripTitleSwitcher label="沖繩" trips={many} activeTripId="t0" onPick={vi.fn()} testIdPrefix="chat" />);
+    fireEvent.click(screen.getByTestId('chat-trip-title'));
+    fireEvent.change(screen.getByTestId('chat-trip-search'), { target: { value: '沖繩' } });
+    expect(screen.getByTestId('chat-trip-pick-t0'), '符合的留下').toBeTruthy();
+    expect(screen.queryByTestId('chat-trip-pick-t1'), '不符的濾掉').toBeNull();
+  });
 });
 
 describe('舊的 icon 切換器已移除', () => {

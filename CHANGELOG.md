@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.24] - 2026-07-24
+
+### Added
+- **Apple HIG W6 行程選擇器 — a11y checkmark + 長清單搜尋 + 聊天草稿分行程**：`TripTitleSwitcher`（Chat/Map/Trips 共用標題即切換器）每列改 `role="menuitemradio"` + `aria-checked`，目前行程列加 accent checkmark SVG，VoiceOver 讀得出「已選取」（原本只有底色/字色變化 SR 讀不出）。行程 >8 筆時 dropdown 頂顯 scoped 搜尋框（本地 filter title/name/countries/id，非頁面內容搜尋、不與 W7 page-level 守衛衝突）。ChatPage 切換行程時用 `draftsRef` 保存各行程未送出的聊天草稿（切回原行程還原），避免切換遺失輸入。新增 3 個渲染測試（checkmark/aria-checked、短清單無搜尋框、長清單顯搜尋框且 filter）+ 既有 9 測試全綠。
+
 ## [2.57.23] - 2026-07-24
 
 ### Added
