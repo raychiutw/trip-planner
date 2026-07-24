@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.27] - 2026-07-24
+
+### Changed
+- **Apple HIG W3 桌機 TitleBar action 恢復 icon + 可見文字 label（推翻 v2.31.90 icon-only）**：owner 2026-07-24 裁定改回 HIG header 慣例 —— 桌機動作鈕顯示 icon + 文字（可辨識、無障礙），不再 icon-only。`.tp-titlebar-action-label` 從 top-level `display:none` 改為 `display:inline`（桌機顯示），只在 `@media (max-width:760px)` 內隱藏（手機仍 icon-only 圓形）；icon-only 變體（漢堡/kebab/AI 健檢等無文字 trigger）顯式保持不顯 label。title attr tooltip 保留。lock 測試 `v2_31_90-titlebar-action-icon-only` → 改寫為 `w3-titlebar-action-labels`（鎖桌機顯示 + 手機隱藏 + icon-only 例外）。真瀏覽器驗證：桌機收藏頁「探索」action 顯示羅盤 icon + 「探索」文字。
+
 ## [2.57.26] - 2026-07-24
 
 ### Added
