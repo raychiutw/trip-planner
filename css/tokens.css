@@ -1524,6 +1524,12 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   min-height: 100%;
 }
 
+/* W2 keep-alive：<Outlet/> 的 portal 落點。用 display:contents 讓這層 wrapper div
+ * 不生成 box —— 操作頁內容（OperationShell panel）直接 participate 父層 layout，
+ * 完全複製「Outlet 直接當 sheet content / 直接全頁」的原結構，portal 只是換 DOM 家。 */
+.tp-stack-sheet-slot,
+.tp-stack-mobile-host { display: contents; }
+
 /* ===== MapEntryCard — horizontal snap-scroll item (V2 Terracotta Map page) ===== */
 .tp-map-entry-cards {
   flex-shrink: 0;

@@ -37,7 +37,8 @@
  * tripPageRef 也改從 TripPageHandleContext 拿 TripPageHost 持有的那一份
  * （不再自己建立一個永遠不會被 attach 的 dead ref）。
  */
-import { useContext, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -66,72 +67,83 @@ export default function TripStackLayout() {
   const [shareTripId, setShareTripId] = useState<string | null>(null);
   const valid = tripId && /^[\w-]+$/.test(tripId) ? tripId : null;
 
+  // W2 keep-alive（owner 2026-07-24 二次確認「照原意真修」）：桌機（3 欄 shell 右欄 sheet）
+  // 與手機（bare 全頁）原本是兩個結構不同的 tree，跨 1024px（旋轉 / 縮放改 CSS-px）會
+  // unmount/remount 操作頁 → 未存表單 state 丟。改法：`<Outlet/>` 永遠在同一 React tree
+  // 位置用 createPortal 掛出，DOM 只依斷點搬進「桌機 sheet 槽」或「手機全頁 host」——
+  // React portal children 換 container 只移 DOM、不 remount，故操作頁 instance（含表單 state）
+  // 跨斷點保留。chrome（AppShell / host）本身可自由 remount（無 state）。
+  const [desktopSlot, setDesktopSlot] = useState<HTMLElement | null>(null);
+  const [mobileSlot, setMobileSlot] = useState<HTMLElement | null>(null);
+  // stable fallback：斷點翻轉當下，新 slot 的 callback ref 觸發 setState 是在 commit 之後，
+  // 該次 render 目標 slot 仍為 null。用一個 detached div 兜著，讓 portal container 永不為 null
+  // → Outlet 永不 unmount（否則會出現一 frame 的 null → remount → state 丟，白忙一場）。
+  const fallbackRef = useRef<HTMLElement | null>(null);
+  if (!fallbackRef.current && typeof document !== 'undefined') {
+    fallbackRef.current = document.createElement('div');
+  }
+  const container = (isDesktop ? desktopSlot : mobileSlot) ?? fallbackRef.current;
+
   // ✕「整個關閉」回行程詳情（桌機+手機共用）。replace → 關閉後瀏覽器上一頁不會又把
   // 面板叫回來。
   const closeStack = () =>
     navigate(valid ? routes.tripsSelected(valid) : routes.trips(), { replace: true });
-
-  // 手機：操作頁整頁 drill-down render（OperationShell !inStack 分支），但仍注入 closeStack
-  // 讓共用 header 的「✕ 整個關閉」可用。
-  // 已知取捨：桌機（3 欄 host）與手機（bare Outlet）是結構不同的 tree，跨越 1024px 邊界
-  // （旋轉 / 瀏覽器縮放改變 CSS-px）會 unmount/remount 操作頁 → 未存檔表單 state 會丟
-  // （多數操作頁 autosave 兜底）；要完全消除需讓 Outlet 跨斷點掛同一 tree 位置（非本 PR 範圍）。
-  if (!isDesktop) {
-    return (
-      <SheetStackProvider value={{ inStack: false, closeStack }}>
-        <Outlet />
-      </SheetStackProvider>
-    );
-  }
 
   const tripTitle = tripCtx?.trip
     ? (tripCtx.trip.title?.trim() || tripCtx.trip.name?.trim() || '行程')
     : (tripCtx?.loading !== false ? '載入中…' : '行程');
 
   return (
-    <SheetStackProvider value={{ inStack: true, closeStack }}>
-      {/* §8.1：中欄包 .tp-stack-mid marker。中欄現有 TitleBar（v2.57.x 補回），
-          day-tabs sticky top 沿用一般 `.tp-map-day-tabs--sticky` 預設偏移即可
-          （見 css/tokens.css，舊「無 titlebar → top:8px」override 已移除）。 */}
-      <AppShell
-        sidebar={<DesktopSidebarConnected />}
-        main={valid ? (
-          <div className="tp-stack-mid">
-            <TitleBar
-              title={tripTitle}
-              back={closeStack}
-              backLabel="返回行程列表"
-              actions={(
-                <>
-                  <button
-                    type="button"
-                    className="tp-titlebar-action tp-titlebar-action--icon-only"
-                    onClick={() => navigate(`/trip/${encodeURIComponent(valid)}/add-entry`)}
-                    aria-label="新增景點"
-                    title="新增景點"
-                    data-testid="trip-add-stop-trigger"
-                  >
-                    <Icon name="plus" />
-                  </button>
-                  <TripActionsMenu
-                    tripId={valid}
-                    tripPageRef={tripPageRef}
-                    onEdit={() => navigate(routes.tripEdit(valid))}
-                    onCollab={() => navigate(routes.tripCollab(valid))}
-                    onHealthCheck={() => navigate(routes.tripHealth(valid))}
-                    onNotes={() => navigate(`/trip/${encodeURIComponent(valid)}/notes`)}
-                    onPrint={() => navigate(`/trip/${encodeURIComponent(valid)}/print`)}
-                    onShare={() => setShareTripId(valid)}
-                  />
-                </>
-              )}
-            />
-            <div ref={setPortalNode} data-testid={TRIP_MAIN_PORTAL_ID} />
-          </div>
-        ) : null}
-        sheet={<Outlet />}
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      />
+    <SheetStackProvider value={{ inStack: isDesktop, closeStack }}>
+      {isDesktop ? (
+        // §8.1：中欄包 .tp-stack-mid marker。右欄 sheet 改成穩定的空槽 div（callback ref），
+        // Outlet 由下方 portal 塞進來 —— 不再把 <Outlet/> 直接當 sheet content（那會讓 Outlet
+        // 的 tree 位置隨斷點改變而 remount）。
+        <AppShell
+          sidebar={<DesktopSidebarConnected />}
+          main={valid ? (
+            <div className="tp-stack-mid">
+              <TitleBar
+                title={tripTitle}
+                back={closeStack}
+                backLabel="返回行程列表"
+                actions={(
+                  <>
+                    <button
+                      type="button"
+                      className="tp-titlebar-action tp-titlebar-action--icon-only"
+                      onClick={() => navigate(`/trip/${encodeURIComponent(valid)}/add-entry`)}
+                      aria-label="新增景點"
+                      title="新增景點"
+                      data-testid="trip-add-stop-trigger"
+                    >
+                      <Icon name="plus" />
+                    </button>
+                    <TripActionsMenu
+                      tripId={valid}
+                      tripPageRef={tripPageRef}
+                      onEdit={() => navigate(routes.tripEdit(valid))}
+                      onCollab={() => navigate(routes.tripCollab(valid))}
+                      onHealthCheck={() => navigate(routes.tripHealth(valid))}
+                      onNotes={() => navigate(`/trip/${encodeURIComponent(valid)}/notes`)}
+                      onPrint={() => navigate(`/trip/${encodeURIComponent(valid)}/print`)}
+                      onShare={() => setShareTripId(valid)}
+                    />
+                  </>
+                )}
+              />
+              <div ref={setPortalNode} data-testid={TRIP_MAIN_PORTAL_ID} />
+            </div>
+          ) : null}
+          sheet={<div ref={setDesktopSlot} className="tp-stack-sheet-slot" data-testid="tp-stack-sheet-slot" />}
+          bottomNav={<GlobalBottomNav authed={user !== null} />}
+        />
+      ) : (
+        // 手機：全頁 host（操作頁經 OperationShell !inStack 分支以 fixed 定位鋪滿，host 只當
+        // portal 落點；不加 AppShell chrome，維持既有 bare 全頁行為）。
+        <div ref={setMobileSlot} className="tp-stack-mobile-host" data-testid="tp-stack-mobile-host" />
+      )}
+      {container && createPortal(<Outlet />, container)}
       {shareTripId && (
         <ShareLinkModal tripId={shareTripId} open onClose={() => setShareTripId(null)} />
       )}
