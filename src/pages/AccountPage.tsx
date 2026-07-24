@@ -256,7 +256,10 @@ const SCOPED_STYLES = `
  * .tp-account-row-title/.tp-account-row-helper 有 explicit color 不繼承）。 */
 .tp-account-row.is-danger { color: var(--color-priority-high-dot); }
 .tp-account-row.is-danger .tp-account-row-title { color: var(--color-priority-high-dot); }
-.tp-account-row.is-danger .tp-account-row-helper { color: var(--color-priority-high-dot); opacity: 0.78; }
+/* W15 a11y：原 opacity:0.78 把 #C13515 混成 #cf6146 → 在 #FFFBF5 上僅 3.73:1（<4.5，
+ * axe serious）。移除 opacity → 全 #C13515 ≈ 5.3:1 達標；視覺層級靠字級（caption2 較小）
+ * 與 title 較粗維持，不再靠調淡。 */
+.tp-account-row.is-danger .tp-account-row-helper { color: var(--color-priority-high-dot); }
 .tp-account-row.is-danger .tp-account-row-icon {
   background: var(--color-priority-high-bg);
   color: var(--color-priority-high-dot);

@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.30] - 2026-07-24
+
+### Added
+- **Apple HIG W15 Accessibility 守衛 — axe-core 自動掃描**：新 `tests/e2e/a11y-axe.spec.js`，用 axe-core 對 key 頁（行程一覽 / 收藏 / 帳號 + 帳號 sheet）跑無障礙稽核，鎖 serious/critical 違規不得出現（防未來 regress）。地圖/聊天（第三方 canvas / 後端串流）在 e2e 不穩另計。
+
+### Fixed
+- **W15 掃出的 2 處色彩對比缺口（W4 收尾）**：(1) 行程一覽 active 篩選 tab —— `.tp-trips-tab.is-active` 原 `--color-accent`（#A97A4A）在 #FFFBF5 上僅 3.65:1（axe serious），改用較深的 `--color-accent-text`（#8A6038 ≈ 5.5:1，仍品牌 terracotta）。(2) 帳號 danger row 說明文字 —— `.tp-account-row.is-danger .tp-account-row-helper` 的 `opacity:0.78` 把 #C13515 混成 #cf6146（3.73:1），移除 opacity → 全 #C13515（≈ 5.3:1）；視覺層級靠字級與 title 粗細維持。light + dark 皆改善。axe 4 測試（3 頁 + sheet）改後全 0 violation。
+
 ## [2.57.29] - 2026-07-24
 
 ### Fixed

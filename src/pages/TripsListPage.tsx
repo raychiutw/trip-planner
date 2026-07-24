@@ -247,7 +247,9 @@ const SCOPED_STYLES = `
 .tp-trips-tab:hover { color: var(--color-foreground); }
 .tp-trips-tab.is-active {
   background: var(--color-background);
-  color: var(--color-accent);
+  /* W15 a11y：原 --color-accent(#A97A4A) 在 #FFFBF5 上僅 3.65:1（<4.5，axe serious）。
+   * 改用較深的 --color-accent-text（#8A6038 ≈ 5.5:1），仍是品牌 terracotta、對比達標。 */
+  color: var(--color-accent-text);
   /* 明顯浮起的 thumb 陰影（取代弱 shadow-sm）— 在暖 track 上清楚可辨。 */
   box-shadow: 0 1px 3px rgba(42, 31, 24, 0.16), 0 1px 1px rgba(42, 31, 24, 0.06);
 }
