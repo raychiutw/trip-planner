@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.33] - 2026-07-24
+
+### Changed
+- **Apple HIG W5 玻璃面 a11y（owner 保留玻璃膠囊、只補 a11y）**：owner 2026-07-24 裁定保留浮動玻璃膠囊（iOS 26 Liquid Glass，本身對齊新版 HIG），不動材質，只補兩個無爭議收尾。**G15**：使用者開「降低透明度 / 提高對比」時，**全玻璃面**（不只 tab bar）降級 —— `prefers-reduced-transparency` + `prefers-contrast` 兩個 media 區加 `--blur-glass:0`（關掉 `.tp-bottom-nav`/`.tp-page-bottom-bar` 兩條走 `--blur-glass` 的模糊）+ glass tint 轉不透明 + 兩底部列 color-mix 半透明底顯式蓋全不透明。**G16**：桌機底部列 `left` 從 hardcoded 240px → `var(--sidebar-width-desktop)`（216px，實際 sidebar 寬），原差 24px 露出一條中欄。真瀏覽器確認 sidebar 實寬 216px。新增 4 個守衛測試。
+
 ## [2.57.32] - 2026-07-24
 
 ### Added
