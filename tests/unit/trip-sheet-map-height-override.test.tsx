@@ -7,7 +7,9 @@
  * - calc(100dvh - nav-h) 是相對 viewport，不是 sheet 可用高度 → map 視覺上只佔約 1/4
  *
  * Fix：TripSheet SCOPED_STYLES 加 `.trip-sheet-body .trip-map-rail` override，
- * specificity (0,2,0) > .trip-map-rail (0,1,0)，覆蓋成 position:static + height:100%。
+ * specificity (0,2,0) > .trip-map-rail (0,1,0)，撤掉 sticky + height:100%。
+ * position 用 relative（非 static）：in-flow layout 與 static 等同（無位移），但建立定位包含塊，
+ * 讓 Google POI 卡（.trip-map-rail-poi-card, absolute）依 rail 置中而非逃逸到 viewport（grill item 2/3）。
  */
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
@@ -23,7 +25,7 @@ function renderSheet(initialUrl: string) {
 }
 
 describe('TripSheet — sheet body 對 .trip-map-rail 的高度 override', () => {
-  it('SCOPED_STYLES 應包含 .trip-sheet-body .trip-map-rail position:static 覆蓋（撤掉 sticky）', () => {
+  it('SCOPED_STYLES 應包含 .trip-sheet-body .trip-map-rail position:relative 覆蓋（撤掉 sticky + 建立定位包含塊給 POI 卡）', () => {
     const { container } = renderSheet('/trip/test-trip?sheet=map');
     const styleNode = container.querySelector('style');
     expect(styleNode, '應有 inline <style>').toBeTruthy();
@@ -31,7 +33,9 @@ describe('TripSheet — sheet body 對 .trip-map-rail 的高度 override', () =>
     expect(css, '需有 .trip-sheet-body .trip-map-rail 選擇器（specificity > .trip-map-rail）').toMatch(
       /\.trip-sheet-body\s+\.trip-map-rail/,
     );
-    expect(css).toMatch(/position:\s*static/);
+    // relative（非 sticky、也非 static）：POI 卡 absolute 依它置中，見檔頭說明。
+    expect(css).toMatch(/\.trip-sheet-body\s+\.trip-map-rail[^}]*position:\s*relative/);
+    expect(css).not.toMatch(/\.trip-sheet-body\s+\.trip-map-rail[^}]*position:\s*sticky/);
   });
 
   it('SCOPED_STYLES 應將 .trip-map-rail 高度覆蓋為 100%（取代 calc(100dvh - nav-h)）', () => {

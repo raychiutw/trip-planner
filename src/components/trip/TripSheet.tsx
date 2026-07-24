@@ -97,9 +97,12 @@ const SCOPED_STYLES = `
 /* TripMapRail 預設 .trip-map-rail 是給 main column scroll context 用：
    position:sticky + height:calc(100dvh - var(--spacing-nav-h))。
    放進 sheet 後 sticky 失效，且 100dvh 不等於 sheet 可用高度 → map 視覺只佔約 1/4。
-   用 specificity (0,2,0) 覆蓋成 static + 撐滿 sheet body。 */
+   用 specificity (0,2,0) 覆蓋 + 撐滿 sheet body。
+   position 用 relative（非 static）：in-flow layout 與 static 等同（無 top/left 位移），但**建立
+   定位包含塊**，讓 Google POI 卡（.trip-map-rail-poi-card，absolute）依 rail 置中，而非逃逸到
+   viewport 中央（grill item 2/3；owner「浮在地圖底部中央」）。 */
 .trip-sheet-body .trip-map-rail {
-  position: static;
+  position: relative;
   top: auto;
   height: 100%;
 }
