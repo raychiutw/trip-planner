@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.36] - 2026-07-24
+
+### Fixed
+- **Apple HIG W1d OperationShell depth>1 back footgun（owner 選 A：修 footgun、不做 store 重構）**：owner 2026-07-24 看完三選項修缺點分析後選 A —— 保留 `location.state.depth`（它本就是「隨瀏覽器 history 走的 depth」的正確工具，改 in-memory store 會失去自動 history 追蹤、需 fragile popstate 同步、方向反而差），只修真正的 footgun。原本 `handleBack` 在 depth>1 盲目 `navigate(-1)`，會跳過頁面自帶的未存確認 → 靜默丟資料（latent：目前唯一 depth>1 頁 ChangePoiPage 無 dirty 故未觸發，但為未來陷阱）。新增 `confirmBeforeBack?: (proceed) => void` prop：有未存編輯的頁面被 push 成 depth>1 時提供它，pop 前先過「丟棄變更」確認、確認才 `proceed()` 真 pop；不提供（ChangePoi）維持直接 navigate(-1)、行為不變。depth-gate 的 navigate(-1) 安全機制（v2.33.139，只在確定 in-app push 才 -1、避免冷啟踢出 app）保留。新增 2 個測試（gate 攔截 + 無 hook 行為不變）。
+
 ## [2.57.35] - 2026-07-24
 
 ### Added

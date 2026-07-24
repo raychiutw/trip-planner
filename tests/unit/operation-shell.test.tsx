@@ -106,6 +106,44 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(closeStack).toHaveBeenCalledTimes(1);
   });
 
+  it('W1d：depth>1 + confirmBeforeBack → ‹ 先過未存確認 gate、確認才 pop（不再盲目 navigate(-1)）', () => {
+    const back = vi.fn();
+    let captured: (() => void) | null = null;
+    // 模擬「有未存編輯 → 攔住不立即 proceed」（等使用者按確認丟棄）。
+    const confirmBeforeBack = vi.fn((proceed: () => void) => { captured = proceed; });
+    const { getByTestId } = render(
+      <MemoryRouter initialEntries={[{ pathname: '/x', state: { opStacked: true, depth: 2 } }]}>
+        <SheetStackProvider value={{ inStack: true, closeStack: () => {} }}>
+          <OperationShell shellClassName="tp-op-x" title="換景點" back={back} confirmBeforeBack={confirmBeforeBack}>
+            <div />
+          </OperationShell>
+        </SheetStackProvider>
+      </MemoryRouter>,
+    );
+    (getByTestId('stack-panel-back') as HTMLButtonElement).click();
+    // 先過 gate、還沒 pop（未存資料不被靜默丟）
+    expect(confirmBeforeBack).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).not.toHaveBeenCalledWith(-1);
+    expect(back).not.toHaveBeenCalled();
+    // 使用者確認丟棄 → proceed → 才真的 pop 一層
+    captured?.();
+    expect(mockNavigate).toHaveBeenCalledWith(-1);
+  });
+
+  it('W1d：depth>1 無 confirmBeforeBack → ‹ 直接 navigate(-1)（ChangePoi 無 dirty、行為不變）', () => {
+    const { getByTestId } = render(
+      <MemoryRouter initialEntries={[{ pathname: '/x', state: { opStacked: true, depth: 2 } }]}>
+        <SheetStackProvider value={{ inStack: true, closeStack: () => {} }}>
+          <OperationShell shellClassName="tp-op-x" title="換景點" back={vi.fn()}>
+            <div />
+          </OperationShell>
+        </SheetStackProvider>
+      </MemoryRouter>,
+    );
+    (getByTestId('stack-panel-back') as HTMLButtonElement).click();
+    expect(mockNavigate).toHaveBeenCalledWith(-1);
+  });
+
   it('手機 L2（depth=1，無 push）→ 「‹」= 頁自帶 explicit back（回 trip），不 navigate(-1)（冷啟不踢出 app）', () => {
     const back = vi.fn();
     const { getByTestId } = render(
