@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.32] - 2026-07-24
+
+### Added
+- **Apple HIG W11 完成 — TripTimePicker「12/24 跟系統」（Intl hourCycle）**：時間選擇器改依系統制式顯示/選取（`Intl.DateTimeFormat().resolvedOptions().hour12`；TW 多為 24h、en-US 12h）。**儲存永遠 24h "HH:MM"（I/O 不變、consumer 不動）**；只有 trigger 顯示與 picker 欄依 12/24：12h 模式顯 "1:30 PM"、picker 加 1-12 時欄 + AM/PM 欄（`to12h`/`to24h` 換算，處理 12AM=00 / 12PM=12 邊角）；24h 模式維持 00-23。新增 `hour12?` prop 覆寫（測試/特例用，app 不傳＝跟系統）。共用測試 helper `pickTime` 改 mode-aware。真瀏覽器驗證：時間 chip trigger 在 12h 下顯 "10:45 AM"。新增 29 個測試（15 換算含 12AM/PM 邊角 + 6 12h UI + 8 24h 回歸）。**W11 至此全數完成**（part1 ShareLinkModal + part2 表單 sweep + 本次 12/24）。
+
 ## [2.57.31] - 2026-07-24
 
 ### Changed

@@ -88,6 +88,11 @@ export const TRIP_TIME_PICKER_STYLES = `
   flex: 1;
   min-width: 72px;
 }
+/* W11：12h 模式的 AM/PM 欄只有兩格，不需佔滿 1/3，收窄。 */
+.tp-time-col--period {
+  flex: 0 0 auto;
+  min-width: 56px;
+}
 .tp-time-col-label {
   text-align: center;
   font-size: var(--font-size-footnote);
