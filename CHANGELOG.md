@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.42] - 2026-07-24
+
+### Changed
+- **手機行程明細 header 常駐帳號圓圈（#1140 item 1）**：行程 tab 檢視某行程時的 header（TripTitleSwitcher + ＋/⋯）先前缺帳號圓圈，補上 `<AccountCircle/>` —— 與聊天/地圖/行程列表 header 一致（HIG trailing 順序：主要動作 · ⋯ · 帳號，account 排在 actions 之後即最右）。桌機由既有 CSS 隱藏。真瀏覽器（mobile 390px）驗證：帳號圓圈可見、44px 觸控區、最右。
+- **手機字體全域調大（#1140 item 6）**：`@media (max-width:760px)` 下把 root `font-size` 從瀏覽器預設 16px 提到 **17px**（`106.25%`，iOS HIG body 標準）。所有 rem-based 字級（body/headline/footnote/caption…）等比放大 6.25%；spacing/radius 是 px 不受影響 → 版面不動、只有字變大。輸入框仍 ≥16px（`max(16px,1em)` 以 1em=17px 計）不觸發 iOS 聚焦縮放。真瀏覽器驗證：root/body 17px、無橫向捲動。
+
 ## [2.57.41] - 2026-07-24
 
 ### Changed
