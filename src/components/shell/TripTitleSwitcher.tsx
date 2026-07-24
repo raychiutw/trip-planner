@@ -12,7 +12,8 @@
  * 這個元件同時取代了 ChatPage / MapPage / TripsListPage 三份重複的實作。
  * 它們原本各自維護一模一樣的 dropdown markup 與 outside-click 邏輯。
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface TripTitleSwitcherItem {
   tripId: string;
@@ -39,13 +40,20 @@ export default function TripTitleSwitcher({
   // W6：長清單搜尋 —— 行程數超過門檻才顯搜尋框，純 client filter（無 debounce）。
   const [query, setQuery] = useState('');
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // Bug 修（2026-07-24）：dropdown 原本是 absolute 掛在 title-wrap 內，被 titlebar 的
+  // `.tp-titlebar-title { overflow: hidden }`（給長標題 ellipsis 用）整個裁掉 → 點了打不開。
+  // 改用 portal 到 body + fixed 定位（依 trigger rect），逃離所有 parent overflow
+  //（同時間軸 time-chip popover 的作法）。
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
 
-  // 點外面關閉。監聽掛在 document 上，且只在開啟時掛 —— 常駐監聽器會讓
-  // 每個頁面都多一個永遠在跑的 handler。
+  // 點外面關閉。dropdown 已 portal 出去（不在 rootRef 內），故要同時檢查 dropdownRef。
   useEffect(() => {
     if (!open) return;
     function onDocClick(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (!rootRef.current?.contains(t) && !dropdownRef.current?.contains(t)) setOpen(false);
     }
     function onEsc(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
@@ -55,6 +63,24 @@ export default function TripTitleSwitcher({
     return () => {
       document.removeEventListener('mousedown', onDocClick);
       document.removeEventListener('keydown', onEsc);
+    };
+  }, [open]);
+
+  // 依 trigger 的 rect 定位 portaled dropdown（fixed）；開啟時算一次，並跟 resize/scroll 更新。
+  useLayoutEffect(() => {
+    if (!open) { setPos(null); return; }
+    const btn = triggerRef.current;
+    if (!btn) return;
+    const update = () => {
+      const r = btn.getBoundingClientRect();
+      setPos({ top: Math.round(r.bottom + 6), right: Math.round(window.innerWidth - r.right) });
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
     };
   }, [open]);
 
@@ -73,6 +99,7 @@ export default function TripTitleSwitcher({
   return (
     <div className="tp-titlebar-trip-title-wrap" ref={rootRef}>
       <button
+        ref={triggerRef}
         type="button"
         className="tp-titlebar-trip-title"
         onClick={() => setOpen((o) => { if (o) setQuery(''); return !o; })}
@@ -88,8 +115,13 @@ export default function TripTitleSwitcher({
         </svg>
       </button>
 
-      {open && (
-        <div className="tp-titlebar-trip-dropdown" role="menu">
+      {open && pos && createPortal(
+        <div
+          ref={dropdownRef}
+          className="tp-titlebar-trip-dropdown"
+          role="menu"
+          style={{ position: 'fixed', top: pos.top, right: pos.right }}
+        >
           {showSearch && (
             // W6 長清單搜尋。此搜尋是行程選擇器內的 scoped 搜尋（spec §6），非頁面內容搜尋，
             // 不與 W7「地圖/聊天/帳號不顯 page-level 搜尋」衝突（W7 guard 讀頁面檔、非本元件）。
@@ -134,7 +166,8 @@ export default function TripTitleSwitcher({
           {showSearch && q && shown.length === 0 && (
             <div className="tp-titlebar-trip-empty">找不到符合的行程</div>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

@@ -87,6 +87,13 @@ _Avoid_: 警示面板、alert panel
 使用者從行程詳情往下鑽了幾層。第一層只給「關閉」，更深層才給「返回上一層」。
 _Avoid_: 深度、L2/L3（口語可用，寫文件時用「第一層／更深層」）
 
+**導覽 tab（三種別搞混，2026-07-24 grill 釘）**：
+- **root tab（主 tab）**：底部 4-tab 導覽（聊天／行程／地圖／收藏）。元件 `GlobalBottomNav`，玻璃膠囊 + 滑動 active thumb，app 的 primary IA。**常駐**（捲動不隱；只有手機鍵盤彈出時才收起）。
+- **Day tab（日期 tab）**：行程明細與地圖**共用**的日期切換列（總覽／DAY 1–N）。元件 `MapDayTab` + `.tp-map-day-tabs`（`DayNav` 復用同一套）。視覺比照 root tab（owner 2026-07-24）。
+- **trip switcher（選擇行程下拉）**：titlebar「行程名稱 + ⌄」的 `TripTitleSwitcher`，切換 **active trip**（單一真相＝`ActiveTripContext`，persist `LS_KEY_TRIP_PREF`；聊天／地圖／行程三 tab 都應以它為準）。
+- **trips 篩選 tab**：`.tp-trips-tab`（全部／我的／共編／已歸檔），只在行程清單頁。
+_Avoid_: 「**POI tab**」—— 歧義（曾同時被拿來指 Day tab 與收藏頁篩選），一律改叫 **Day tab**；收藏頁的類型／地區是「收藏篩選」（`role=group` pill 列），不是 tab。
+
 > **單獨寫「sheet」是有歧義的** —— 它可能指行程 sheet、bottom sheet，或版面裡裝這些東西的槽位。文件與 issue 裡要指名是哪一個。版面本身（幾欄、怎麼排）屬 `DESIGN.md`，不在本詞彙表。
 
 ---
