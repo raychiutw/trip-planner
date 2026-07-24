@@ -1302,7 +1302,9 @@ body.dark .tp-toast { background: var(--color-secondary); }
 .tp-page-bottom-bar--end { justify-content: flex-end; }
 @media (min-width: 1024px) {
   .tp-page-bottom-bar {
-    left: 240px;
+    /* W5 G16：原 hardcoded 240px 與實際桌機 sidebar 216px（--sidebar-width-desktop）
+     * 差 24px，底部列左緣沒對齊 sidebar 右緣、露出一條中欄。改用同一 token 對齊。 */
+    left: var(--sidebar-width-desktop);
     padding: 16px 32px max(16px, env(safe-area-inset-bottom, 16px));
   }
 }
@@ -1970,16 +1972,33 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
  * （這條規則踩過一次，寫在這裡免得再踩。） */
 
 /* 使用者開啟「降低透明度」時拿不到 backdrop-filter 的效果。若只留 0.42 的 tint，
- * 膠囊會變成幾乎看不見的浮片 —— 改給不透明底。 */
+ * 膠囊會變成幾乎看不見的浮片 —— 改給不透明底。
+ * W5 G15：不只 tab bar，**全玻璃面**都要降級 —— `--blur-glass:0` 一次關掉 .tp-bottom-nav
+ * /.tp-page-bottom-bar 兩條走 --blur-glass 的模糊；glass tint 全轉不透明；兩底部列的
+ * color-mix 半透明底也顯式蓋成全不透明（模糊沒了、3-6% 透出仍會干擾）。 */
 @media (prefers-reduced-transparency: reduce) {
-  :root { --tabbar-tint: var(--color-background); --tabbar-filter: none; }
+  :root {
+    --tabbar-tint: var(--color-background); --tabbar-filter: none;
+    --blur-glass: 0px;
+    --color-glass-nav: var(--color-background);
+    --color-glass-toast: var(--color-secondary);
+  }
   body.dark { --tabbar-tint: var(--color-secondary); }
+  .tp-bottom-nav, .tp-page-bottom-bar { background: var(--color-background); }
+  body.dark .tp-bottom-nav, body.dark .tp-page-bottom-bar { background: var(--color-secondary); }
 }
 
-/* 「提高對比」時同樣不該讓背景干擾 tab 文字。 */
+/* 「提高對比」時同樣不該讓背景干擾 tab 文字 —— 同 G15 全玻璃面降級。 */
 @media (prefers-contrast: more) {
-  :root { --tabbar-tint: var(--color-background); --tabbar-filter: none; }
+  :root {
+    --tabbar-tint: var(--color-background); --tabbar-filter: none;
+    --blur-glass: 0px;
+    --color-glass-nav: var(--color-background);
+    --color-glass-toast: var(--color-secondary);
+  }
   body.dark { --tabbar-tint: var(--color-secondary); }
+  .tp-bottom-nav, .tp-page-bottom-bar { background: var(--color-background); }
+  body.dark .tp-bottom-nav, body.dark .tp-page-bottom-bar { background: var(--color-secondary); }
 }
 
 /* 不支援 backdrop-filter 的瀏覽器：低 alpha tint 沒有模糊撐著會糊成一片。 */
