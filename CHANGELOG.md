@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.43] - 2026-07-24
+
+### Fixed
+- **桌機行程頁：收合 stop 不再移動地圖（owner 2026-07-24 grill）**：先前收合 stop 造成時間軸版面位移，觸發 `TripMapRail` scroll-spy 的 `IntersectionObserver` 誤 pan 到別天中心（「移來移去」）。收合後短暫（600ms）抑制 scroll-spy → **地圖原地不動**；展開仍飛到該 stop（zoom 16）不變。
+
+### Added
+- **桌機行程頁地圖可點 Google 原生 POI（owner 2026-07-24 grill）**：`TripMapRail` 的 `<TpMap>` 補 `onPoiClick`/`onMapClick`（開 `clickableIcons`），行為同地圖頁 —— 點 Google POI → 浮出 `GooglePoiCard`（店名 + X + 「在 Google 地圖開啟」開新分頁），浮在右欄地圖底部中央；與行程 stop focus 互斥（選 POI 清 stop focus、展開 stop 清 POI 卡）。桌機限定（TripMapRail 本就 `!isDesktop return null`）。
+
 ## [2.57.42] - 2026-07-24
 
 ### Changed

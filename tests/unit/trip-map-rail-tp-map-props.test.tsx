@@ -9,8 +9,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, waitFor, act } from '@testing-library/react';
+import { render, waitFor, act, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { EVENT } from '../../src/lib/events';
 
 interface CapturedTpMapProps {
   pins?: unknown;
@@ -18,12 +19,22 @@ interface CapturedTpMapProps {
   dark?: boolean;
   panToCoord?: { lat: number; lng: number };
   onMarkerClick?: (id: number) => void;
+  onPoiClick?: (poi: { placeId: string; lat: number; lng: number }) => void;
+  onMapClick?: () => void;
+  focusId?: number;
 }
 
 const tpMapCalls: CapturedTpMapProps[] = [];
 
 vi.mock('../../src/hooks/useMediaQuery', () => ({
   useMediaQuery: () => true,
+}));
+
+// mock GooglePoiCard — 避開它 mount 時的 /places/resolve fetch，只驗「有沒有渲染」。
+vi.mock('../../src/components/trip/GooglePoiCard', () => ({
+  default: ({ poi }: { poi: { placeId: string } }) => (
+    <div data-testid="trip-rail-google-poi-card">{poi.placeId}</div>
+  ),
 }));
 
 const mockNavigate = vi.fn();
@@ -160,5 +171,96 @@ describe('TripMapRail — TpMap wrapper contract', () => {
     expect(last.panToCoord!.lng).toBeCloseTo(127.65, 2);
 
     document.body.removeChild(section);
+  });
+
+  // ===== #1140-followup（owner 2026-07-24 grill）=====
+
+  it('item 2/3：傳 onPoiClick + onMapClick 給 TpMap（才會開 clickableIcons）', async () => {
+    render(
+      <MemoryRouter>
+        <TripMapRail pins={PINS_DAY1} tripId="test-trip" pinsByDay={PINS_BY_DAY} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(tpMapCalls.length).toBeGreaterThan(0));
+    const props = tpMapCalls[tpMapCalls.length - 1]!;
+    expect(typeof props.onPoiClick).toBe('function');
+    expect(typeof props.onMapClick).toBe('function');
+  });
+
+  it('item 2/3：點 Google POI → 浮出 GooglePoiCard；onMapClick → 關閉', async () => {
+    render(
+      <MemoryRouter>
+        <TripMapRail pins={PINS_DAY1} tripId="test-trip" pinsByDay={PINS_BY_DAY} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(tpMapCalls.length).toBeGreaterThan(0));
+    expect(screen.queryByTestId('trip-rail-google-poi-card')).toBeNull();
+    act(() => {
+      tpMapCalls[tpMapCalls.length - 1]!.onPoiClick!({ placeId: 'PLACE_X', lat: 26.1, lng: 127.6 });
+    });
+    expect(screen.getByTestId('trip-rail-google-poi-card').textContent).toBe('PLACE_X');
+    // POI 選取時解除行程 stop focus（互斥，同地圖頁）
+    expect(tpMapCalls[tpMapCalls.length - 1]!.focusId).toBeUndefined();
+    act(() => {
+      tpMapCalls[tpMapCalls.length - 1]!.onMapClick!();
+    });
+    expect(screen.queryByTestId('trip-rail-google-poi-card')).toBeNull();
+  });
+
+  it('item 1：收合 stop 後，scroll-spy 的 IntersectionObserver 誤觸不再 pan（地圖原地不動）', async () => {
+    const section = document.createElement('section');
+    section.setAttribute('data-day', '1');
+    document.body.appendChild(section);
+
+    render(
+      <MemoryRouter>
+        <TripMapRail pins={PINS_DAY1} tripId="test-trip" pinsByDay={PINS_BY_DAY} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(capturedIOCallback).not.toBeNull());
+
+    const fireIO = () => act(() => {
+      capturedIOCallback!([
+        { isIntersecting: true, intersectionRatio: 0.8, target: section,
+          boundingClientRect: {} as DOMRectReadOnly, intersectionRect: {} as DOMRectReadOnly,
+          rootBounds: null, time: 0 } as IntersectionObserverEntry,
+      ]);
+    });
+
+    // 先確認正常情況 scroll-spy 會 pan
+    fireIO();
+    await waitFor(() => expect(tpMapCalls[tpMapCalls.length - 1]!.panToCoord).toBeDefined());
+
+    // 收合 stop → 清 panToCoord + 開啟抑制窗
+    act(() => {
+      window.dispatchEvent(new CustomEvent(EVENT.entryFocused, { detail: { entryId: 101, isExpanding: false } }));
+    });
+    await waitFor(() => expect(tpMapCalls[tpMapCalls.length - 1]!.panToCoord).toBeUndefined());
+
+    // 收合後版面位移造成的 IO 誤觸 → 抑制窗內不 pan（panToCoord 維持 undefined）
+    fireIO();
+    expect(tpMapCalls[tpMapCalls.length - 1]!.panToCoord).toBeUndefined();
+
+    document.body.removeChild(section);
+  });
+
+  it('item 1：展開 stop → focusId 設定（飛過去）且清掉 Google POI 卡', async () => {
+    render(
+      <MemoryRouter>
+        <TripMapRail pins={PINS_DAY1} tripId="test-trip" pinsByDay={PINS_BY_DAY} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(tpMapCalls.length).toBeGreaterThan(0));
+    // 先選一個 Google POI
+    act(() => {
+      tpMapCalls[tpMapCalls.length - 1]!.onPoiClick!({ placeId: 'PLACE_Y', lat: 26.1, lng: 127.6 });
+    });
+    expect(screen.getByTestId('trip-rail-google-poi-card')).toBeTruthy();
+    // 展開 stop → focusId=101 + POI 卡消失
+    act(() => {
+      window.dispatchEvent(new CustomEvent(EVENT.entryFocused, { detail: { entryId: 101, isExpanding: true } }));
+    });
+    await waitFor(() => expect(tpMapCalls[tpMapCalls.length - 1]!.focusId).toBe(101));
+    expect(screen.queryByTestId('trip-rail-google-poi-card')).toBeNull();
   });
 });
