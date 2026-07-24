@@ -15,9 +15,14 @@ describe('tokens.css — mobile type scale override', () => {
     expect(tokens).toContain('Mobile type scale');
   });
 
-  it('mobile body font-size override 為 1rem (16px)', () => {
-    // body 在 mobile 下改 1rem (16px)
+  it('mobile body font-size override 為 1rem（隨 root 縮放 = 17px）', () => {
+    // body 在 mobile 下為 1rem；#1140 item 6 後 root=106.25% → 1rem=17px
     expect(tokens).toMatch(/@media \(max-width:\s*760px\)[\s\S]*?--mobile-font-size-body:\s*1rem/);
+  });
+
+  it('#1140 item 6：mobile root font-size 106.25%（16→17px，rem 字級全局放大）', () => {
+    // @media (max-width:760px) 內 :root { font-size: 106.25% }，讓所有 rem 字級等比放大。
+    expect(tokens).toMatch(/@media \(max-width:\s*760px\)\s*\{\s*:root\s*\{[\s\S]{0,120}font-size:\s*106\.25%/);
   });
 
   it('tp-hero-title mobile override 已存在（≤760px hero title override）', () => {

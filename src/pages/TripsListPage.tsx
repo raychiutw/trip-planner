@@ -1136,6 +1136,10 @@ export default function TripsListPage() {
         }
         back={clearSelected}
         backLabel="返回行程列表"
+        // #1140 item 1（owner 2026-07-24「手機版右上要常駐帳號」）：行程明細 header（行程 tab 檢視
+        // 某行程）先前只有 ＋/⋯、缺帳號圓圈。補上 —— 與聊天/地圖/行程列表 header 一致（HIG trailing
+        // 順序：主要動作 · ⋯ · 帳號，TitleBar 把 account 排在 actions 之後即最右）。桌機由 CSS 隱藏。
+        account={<AccountCircle />}
         actions={effectiveSelectedId && (
           <>
             {/* v2.32.0：「新增景點」入口改 navigate /add-entry（EditEntryPage 形狀 +

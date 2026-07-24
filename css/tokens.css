@@ -233,10 +233,14 @@ html { color-scheme: light dark; }
 }
 
 /* ===== Mobile type scale (≤760px) — DESIGN.md Type Scale (Mobile ≤760px) ===== */
-/* body 16px, callout 15px, subheadline 14px 改善行動閱讀體驗 */
+/* #1140 item 6（owner 2026-07-24「手機版字體太小，全局調大」）：把 root font-size 從瀏覽器預設
+ * 16px 提到 17px（iOS HIG body 標準）。所有 rem-based 字級（--font-size-body/headline/footnote/
+ * caption… 全是 rem）等比放大 6.25%；spacing/radius 是 px 不受影響 → 版面不動、只有字變大。
+ * 輸入框仍 ≥16px（下方 max(16px,1em) 以 1em=17px 計 → 17px），不會觸發 iOS 聚焦縮放。 */
 @media (max-width: 760px) {
     :root {
-        --mobile-font-size-body: 1rem;         /* 16px (desktop: 17px) */
+        font-size: 106.25%;                    /* 16px → 17px；rem 字級全局等比放大 */
+        --mobile-font-size-body: 1rem;         /* = 17px */
     }
     body { font-size: var(--mobile-font-size-body); }
 }
