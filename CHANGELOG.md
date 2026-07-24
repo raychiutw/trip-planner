@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.28] - 2026-07-24
+
+### Changed
+- **Apple HIG W11（part 1）ShareLinkModal 字級 px→rem（縮放/字級偏好無障礙）**：owner 2026-07-24 裁定「ShareLinkModal 現在就全頁重寫」。inline `<style>` 的 22 處 `font-size:NNpx` 全改 rem（18→1.125 / 14→0.875 / 13→0.8125 / 12→0.75rem）—— px 不隨使用者瀏覽器字級偏好縮放，rem 才會（WCAG reflow / 放大字級無障礙）。顏色（W4r G9 已 hex→token）與 dark（body.dark token）視為一併吸收完成。新增 zoom 守衛測試（鎖無 px font-size + 無寫死 hex）。真瀏覽器驗證：root font-size 16→20px 時 modal h2 18→22.5px、sub 13→16.25px 等比放大、pills/inputs/按鈕無裁字。W11 其餘（date/time picker 12/24 跟系統、min-height chrome 裁字掃描、app 廣義 px→rem）後續增量。
+
 ## [2.57.27] - 2026-07-24
 
 ### Changed
