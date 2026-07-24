@@ -32,7 +32,7 @@
 | `--color-border` | `#EADFCF` | hairline |
 | `--color-line-strong` | `#C8B89F` | divider strong |
 
-> **Day palette exception**: 10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）**只用於地圖** — map polyline + Map page bottom day strip eyebrow + active underline。對應 Data Visualization 例外。**Trip 明細頁 day strip 嚴守 柔褐主色 accent**（idle eyebrow muted, active eyebrow + underline 用 `var(--color-accent)`），不套 dayColor。理由：多色服務於地圖 N 條線視覺區分需求；trip 明細頁不需要區分多 day，反而 chrome 一致性更重要。
+> **Day palette exception**: 10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）**只用於地圖 polyline 與 entry card**（map polyline + Map page bottom entry card num/eyebrow）。對應 Data Visualization 例外。**Day 指示 tab（day strip / MapDayTab）嚴守 柔褐主色 accent 統一色系**（idle eyebrow muted、active 實心 accent-fill + accent-foreground），**地圖與 Trip 明細頁一致、都不套 dayColor**（owner 2026-07-24「地圖模式 day tab 移除依日期不同顏色，回到統一色系」；此前地圖 day strip eyebrow 曾套 per-day 色，已退場）。理由：多色服務於地圖 N 條 polyline 視覺區分需求；day tab chrome 一致性更重要，且淺色天（amber/lime）在膠囊上對比不足。
 
 ## Typography
 
@@ -190,7 +190,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 「柔褐三色 accent」原則有 **data visualization 例外**：地圖 polyline、chart series、時間軸 day separator 等 semantic encoding 可用 10 色 qualitative palette（Tailwind `{sky,teal,amber,rose,violet,lime,orange,cyan,fuchsia,emerald}-500`）。UI chrome（button、text、icon、active state）仍嚴守柔褐三色。
 
-**地圖 chrome 子例外：** 在地圖相關頁面（`MapPage`、`TripMapRail`、`OceanMap`）的 **Day 指示 tab active state**（底線色、eyebrow `DAY NN` 文字色），可套用 `dayColor(N)` 作為 visual cueing，與 polyline 同色呼應。適用範圍僅限 Day 指示 tab；其他 chrome（返回鈕、主導航、title、overflow menu）仍嚴守 柔褐。
+**地圖 chrome 子例外（2026-07-24 收斂）：** 地圖相關頁面（`MapPage`、`TripMapRail`、`OceanMap`）的 **entry card**（bottom POI 卡的 num / eyebrow）可套 `dayColor(N)` 與 polyline 同色呼應。**Day 指示 tab（MapDayTab / day strip）不再套 dayColor** —— 統一柔褐（idle muted、active 實心 accent-fill），地圖與 Trip 明細頁一致（owner「地圖模式 day tab 回到統一色系」）。其他 chrome（返回鈕、主導航、title、overflow menu）一律柔褐。
 
 ### 地圖 Polyline 規格（含飯店）
 
@@ -400,17 +400,15 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab>` 元件 + `.tp-map-day-tab*` CSS family。Trip detail 透過 `<DayNav>` wrapper 加上 sticky modifier；MapPage 直接用 plain wrapper（黏在底部 card-rail 上方）。
 
-**Tab 規格 (`.tp-map-day-tab`)**
-- text-only (eyebrow + date)，無 chip background fill / border
-- Eyebrow: `DAY 01` — **Map page** 套 per-day color (`dayColor(dayNum)` from `src/lib/dayPalette` — 10-tone Tailwind -500 palette)；**Trip 明細頁** 不傳 `dayColor` prop，用 default token (idle muted, active accent)
-- Date: 14px / 600 weight, `color-foreground` (active 套 accent color)
-- Active state: 2px `border-bottom`-color — **Map page** 用 `--day-color` inline override (per-day color underline)；**Trip 明細頁** 用 `var(--color-accent)` (柔褐主色)
-- Idle: muted text + transparent border-bottom
+**Tab 規格 (`.tp-map-day-tab`)** — 單行 eyebrow「DAY N / 總覽」，無日期副標（2026-07-17 移除）
+- **統一色系（owner 2026-07-24；地圖與 Trip 明細頁一致，不套 dayColor）**：
+  - Idle: `DAY 01` eyebrow muted 文字、透明底
+  - Active: **實心 accent-fill 膠囊 + accent-foreground eyebrow**，比照 root tab（`.tp-global-bottom-nav-btn.is-active`）——（沿革：2026-07-17「淡 tonal pill」→ 2026-07-24「比照 root tab 實心」；同批移除地圖 idle eyebrow 的 per-day 色）
 - Hover (idle): `color-foreground`
-- 36px min height (扁平 strip — 不搶佔垂直空間，對齊 mockup S20)
+- min-height 34px（扁平 strip，不搶垂直空間）；桌機（≥1024）每 tab 固定 88px、水平可捲
 - Today marker: eyebrow 文字後綴「· 今天」（不是另一個 pill）
 
-> **Day color 規範**：Map page 內 chrome (day strip eyebrow + underline + entry card num + entry card eyebrow) 套 dayColor 服務於「N 條 polyline 視覺區分」需求；Trip 明細頁 chrome 嚴守 柔褐主色 accent — 多色不溢出地圖 context。詳見上方「Day palette exception」。
+> **Day color 規範**：per-day dayColor 只用於 Map page 的 **entry card**（num + eyebrow）與 **polyline**，服務「N 條路線視覺區分」；**Day 指示 tab（MapDayTab）不套 dayColor**，統一柔褐 accent —— 多色不溢出到 day tab chrome。詳見上方「Day palette exception」。
 
 **Strip container (`.tp-map-day-tabs`)**
 - 共用 wrapper：horizontal scroll + scrollbar hidden + glass blur 14px

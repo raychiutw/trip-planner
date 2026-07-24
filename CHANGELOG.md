@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.45] - 2026-07-24
+
+### Fixed
+- **手機帳號頁沒有關閉按鈕、回不了主畫面（owner 2026-07-24 grill；僅手機、桌機不改）**：手機是全螢幕 AccountSheet，內部 AccountPage 的 sticky TitleBar（z-index `--z-sticky-nav`=200）在空間上蓋住 sheet 右上的 ✕（原 z-index:1）→ `elementFromPoint` 命中 titlebar、✕ 點不到（這也是為何「有 ✕ 卻關不掉」）。`@media (max-width:1023px)` 下把 ✕ 提到 titlebar 之上（用 `.account-sheet-panel .account-sheet-close` 加 specificity 蓋過 base 的 z-index:1）。桌機 sheet 是較窄右側面板、✕ 本就可點，不動。真瀏覽器（mobile 390px）驗證：✕ z-index 210、`elementFromPoint` 命中 ✕、可點。
+
+### Changed
+- **地圖模式 Day tab 移除「依日期不同顏色」→ 統一色系（owner 2026-07-24 grill）**：`MapDayTab`（地圖與行程明細共用）的 idle eyebrow 先前在地圖模式依 `dayColor(dayNum)` 上色（DAY 1 藍、DAY 2 綠…對應 polyline）。移除 → **idle muted、active 實心 accent-fill**，地圖與行程明細完全一致、都不套 per-day 色。per-day 顏色只留地圖 **polyline** 與 **entry card**（不動，grill 確認）。同步更新 DESIGN.md「Day palette exception / 地圖 chrome 子例外 / Tab 規格 / Day color 規範」四處。
+
 ## [2.57.44] - 2026-07-24
 
 ### Fixed

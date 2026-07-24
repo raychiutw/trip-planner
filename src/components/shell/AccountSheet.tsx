@@ -29,7 +29,16 @@ export const ACCOUNT_SHEET_STYLES = `
   overflow-y: auto; overscroll-behavior: contain;
   animation: account-sheet-slide var(--transition-duration-normal, 250ms) var(--transition-timing-function-apple, cubic-bezier(0.2,0.8,0.2,1));
 }
-@media (max-width: 1023px) { .account-sheet-panel { width: 100vw; } }
+@media (max-width: 1023px) {
+  .account-sheet-panel { width: 100vw; }
+  /* item A（owner 2026-07-24「帳號沒關閉，只手機版，桌機正常不改」）：手機是全螢幕 sheet，內部
+     AccountPage 的 sticky TitleBar（z-index: --z-sticky-nav=200）在空間上蓋住 sheet 右上的 ✕
+     （原 z-index:1）→ elementFromPoint 命中 titlebar、✕ 點不到。把 ✕ 拉到 titlebar 之上即可點。
+     桌機 sheet 是較窄右側面板、✕ 本就可點，故此修正只限手機（不動桌機）。
+     用 .account-sheet-panel 加一層 specificity (0,2,0)，蓋過下方 base .account-sheet-close
+     的 z-index:1（同 specificity 下 base 在後、否則會贏）。 */
+  .account-sheet-panel .account-sheet-close { z-index: calc(var(--z-sticky-nav, 200) + 10); }
+}
 .account-sheet-close {
   position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 1;
   width: 44px; height: 44px; display: grid; place-items: center;

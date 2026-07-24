@@ -564,7 +564,6 @@ export default function MapPage() {
             <MapDayTab
               key={t.dayNum}
               dayLabel={`DAY ${t.dayNum}`}
-              dayColor={dayColor(t.dayNum)}
               isActive={!isOverview && t.dayNum === activeTab}
               onClick={() => handleTabClick(t.dayNum)}
               testId={`map-day-${t.dayNum}`}
