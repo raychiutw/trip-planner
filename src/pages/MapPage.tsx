@@ -41,6 +41,7 @@ import MapEntryCard, { type EntryKind } from '../components/trip/MapEntryCard';
 import MapFabs from '../components/trip/MapFabs';
 import GooglePoiCard from '../components/trip/GooglePoiCard';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useDayStripNav } from '../hooks/useDayStripNav';
 import type { GooglePoiClick } from '../lib/mapHelpers';
 
 
@@ -379,6 +380,19 @@ export default function MapPage() {
     }
   }, [tripId, navigate, searchParams, setSearchParams, urlEntryId]);
 
+  /* --- Day strip：active tab 置中 + ArrowLeft/Right roving（與 DayNav 共用 hook，W9）。
+   * key 序列＝'overview' + 各 dayNum；activeTab 本身就是 'overview' | number。 --- */
+  const dayStripKeys = useMemo<('overview' | number)[]>(
+    () => ['overview', ...dayTabs.map((t) => t.dayNum)],
+    [dayTabs],
+  );
+  const { navRef: dayTabsRef, handleKeyDown: onDayTabsKeyDown } = useDayStripNav<'overview' | number>({
+    keys: dayStripKeys,
+    activeKey: activeTab,
+    onPick: handleTabClick,
+    testId: (k) => (k === 'overview' ? 'map-day-overview' : `map-day-${k}`),
+  });
+
   /* --- Card scroll → active entry (IntersectionObserver) --- */
   const cardsRef = useRef<HTMLDivElement | null>(null);
   const scrollingProgrammatically = useRef(false);
@@ -529,13 +543,19 @@ export default function MapPage() {
       </main>
 
       {dayTabs.length > 1 && (
-        <nav className="tp-map-day-tabs" aria-label="行程日期">
+        <nav
+          ref={dayTabsRef}
+          className="tp-map-day-tabs"
+          aria-label="行程日期"
+          onKeyDown={onDayTabsKeyDown}
+        >
           {/* 「總覽」tab prepend 於 Day 01 之前 */}
           <MapDayTab
             key="overview"
             dayLabel="總覽"
             isActive={isOverview}
             onClick={() => handleTabClick('overview')}
+            testId="map-day-overview"
           />
           {dayTabs.map((t) => (
             <MapDayTab
@@ -544,6 +564,7 @@ export default function MapPage() {
               dayColor={dayColor(t.dayNum)}
               isActive={!isOverview && t.dayNum === activeTab}
               onClick={() => handleTabClick(t.dayNum)}
+              testId={`map-day-${t.dayNum}`}
             />
           ))}
         </nav>

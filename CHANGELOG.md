@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.25] - 2026-07-24
+
+### Added
+- **Apple HIG W9 Day selector — 地圖 day strip 補鍵盤 + active tab 置中**：抽出共用 hook `useDayStripNav`（水平 day strip 的 active-tab 置中捲入 + ArrowLeft/Right roving 鍵盤 + 移焦），`DayNav`（行程明細）與 `MapPage`（地圖）兩處共用，行為不漂移。地圖 `.tp-map-day-tabs` 原本只有捲動、缺鍵盤與置中；現在切 Day 時 active tab 捲入置中、方向鍵可在「總覽 + 各 Day」間走（含邊界不繞回）。tab 加 `map-day-*` testid 供置中/移焦定位。hook 對 `Element.scrollTo` 缺失（jsdom/舊瀏覽器）做防禦。新增 7 個測試（roving 邊界 + DayNav/MapPage wiring source-lock）。
+
 ## [2.57.24] - 2026-07-24
 
 ### Added
