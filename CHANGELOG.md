@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.38] - 2026-07-24
+
+### Fixed
+- **trip switcher 下拉點了打不開（#1140 item 2）**：titlebar 「行程名 ⌄」的 `TripTitleSwitcher` 下拉，被 `.tp-titlebar-title`（h1，`overflow:hidden` 給長標題 ellipsis 用）整個裁掉 → 點標題沒反應、選單看不到（桌機/手機皆中，先前用 offsetHeight/DOM 數會誤判正常，實測 elementFromPoint 才抓到被裁）。改用 **portal 到 body + `position:fixed`**（依 trigger rect 定位，跟 resize/scroll 更新），逃離所有 parent overflow（同時間軸 time-chip popover 作法）；outside-click 同時檢查 portaled dropdown。真瀏覽器驗證：下拉完整顯示 4 條行程 + active checkmark、`elementFromPoint` 命中（真的可見在最上層）。新增回歸測試（portal 到 body、非巢在 wrap、fixed 定位）+ 既有 12 測試全綠。
+
 ## [2.57.37] - 2026-07-24
 
 ### Docs

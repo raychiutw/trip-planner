@@ -1917,14 +1917,16 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   .tp-titlebar-trip-picker-chevron { display: none; }
 }
 .tp-titlebar-trip-dropdown {
-  position: absolute; top: calc(100% + 6px); right: 0;
+  /* 定位由 JS portal 以 inline `position: fixed; top; right` 提供（逃離 titlebar 的
+   * overflow:hidden 裁切）；這裡保留視覺。z 要壓過 fixed 玻璃 titlebar/nav。 */
+  position: fixed;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   min-width: 240px;
   max-height: 360px; overflow-y: auto;
-  z-index: 20;
+  z-index: var(--z-popover, 1100);
   padding: 4px;
 }
 .tp-titlebar-trip-row {

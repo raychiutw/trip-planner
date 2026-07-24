@@ -111,6 +111,16 @@ describe('TripTitleSwitcher', () => {
     expect(screen.getByTestId('chat-trip-pick-t0'), '符合的留下').toBeTruthy();
     expect(screen.queryByTestId('chat-trip-pick-t1'), '不符的濾掉').toBeNull();
   });
+
+  it('bug 修：dropdown portal 到 body + fixed（逃離 titlebar overflow:hidden 裁切），非巢在 wrap 內', () => {
+    // 原本 dropdown 是 absolute 掛 .tp-titlebar-trip-title-wrap 內，被 .tp-titlebar-title
+    // 的 overflow:hidden（長標題 ellipsis 用）整個裁掉 → 點了打不開。改 portal 逃離。
+    renderSwitcher();
+    fireEvent.click(screen.getByTestId('chat-trip-title'));
+    const menu = screen.getByRole('menu');
+    expect(menu.closest('.tp-titlebar-trip-title-wrap'), 'portal 出去、不巢在 wrap 內').toBeNull();
+    expect(menu.style.position, 'fixed 定位逃離 overflow').toBe('fixed');
+  });
 });
 
 describe('舊的 icon 切換器已移除', () => {
