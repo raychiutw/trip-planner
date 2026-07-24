@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.23] - 2026-07-24
+
+### Added
+- **Apple HIG W13 拖拉排序 a11y — ⋯ menu「上移一格 / 下移一格」**：不靠拖曳的替代排序（VoiceOver/TalkBack 觸控無法模擬拖曳）。TimelineRail 停留卡 ⋯ menu「安排」組新增上移/下移（首列無上移、末列無下移），與拖曳共用抽出的 `applyReorder`（optimistic override → `/entries/batch` PATCH → 車程重算 → 失敗 revert），行為一致不漂移。真瀏覽器驗證：中間景點下移一格 → DOM 順序 idx1→idx2、batch PATCH 生效。既有拖曳回歸 31 測試全綠。
+
 ## [2.57.22] - 2026-07-24
 
 ### Added
