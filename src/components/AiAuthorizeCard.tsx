@@ -22,20 +22,20 @@ const SCOPED_STYLES = `
   background: var(--color-accent-fill); color: var(--color-accent-foreground);
   display: flex; align-items: center; justify-content: center;
 }
-.tp-ai-card__title { font-size: 15px; font-weight: 700; color: var(--color-foreground); }
-.tp-ai-card__desc { font-size: 13px; color: var(--color-muted); margin-top: 3px; }
+.tp-ai-card__title { font-size: 0.9375rem; font-weight: 700; color: var(--color-foreground); }
+.tp-ai-card__desc { font-size: 0.8125rem; color: var(--color-muted); margin-top: 3px; }
 .tp-ai-card__on {
   display: flex; align-items: center; gap: 8px; margin-top: 12px;
   background: var(--color-accent-2-subtle); color: var(--color-accent-2-deep);
-  border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13px; font-weight: 600;
+  border-radius: var(--radius-lg); padding: 10px 12px; font-size: 0.8125rem; font-weight: 600;
 }
 .tp-ai-card__btn {
   margin-top: 12px; width: 100%; min-height: 44px; border: none; border-radius: var(--radius-lg);
   background: var(--color-accent-fill); color: var(--color-accent-foreground);
-  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-size: 0.875rem; font-weight: 600; cursor: pointer;
 }
 .tp-ai-card__btn:disabled { opacity: 0.6; cursor: default; }
-.tp-ai-card__err { margin-top: 8px; font-size: 12px; color: var(--color-accent-3-deep); }
+.tp-ai-card__err { margin-top: 8px; font-size: 0.75rem; color: var(--color-accent-3-deep); }
 `;
 
 export default function AiAuthorizeCard() {

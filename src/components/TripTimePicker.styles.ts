@@ -23,7 +23,7 @@ export const TRIP_TIME_PICKER_STYLES = `
   background-color: var(--color-background);
   color: var(--color-foreground);
   font: inherit;
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -126,7 +126,7 @@ export const TRIP_TIME_PICKER_STYLES = `
   background: transparent;
   border-radius: var(--radius-md);
   font: inherit;
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--color-foreground);

@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.31] - 2026-07-24
+
+### Changed
+- **Apple HIG W11（part 2）表單/picker/帳號 字級 px→rem**：承 part1（ShareLinkModal），把 W11 最相關的選擇器（`TripSelect` / `TripDatePicker` / `TripTimePicker`）與帳號/AI 面 UI（`AccountCircle` / `AccountSheet` / `AiAuthorizeCard` / `AiConsentSheet`）的 CSS `font-size:NNpx` 全改 rem（÷16，同視覺、獲得瀏覽器字級偏好縮放 / 200% reflow 放大）。7 檔 20 處轉換 + 守衛測試鎖無 px。**刻意排除**：email-templates（email client 不吃 rem）、tripPrintStyles（列印物理單位）、LandingPage SVG `fontSize=`（幾何座標）、tokens.css hero/titlebar display 標題（被 mockup-parity 測試鎖、大文字 rem 價值低）。rem 縮放原理已於 part1 ShareLinkModal 真瀏覽器 live 驗證（相同機制）。
+
 ## [2.57.30] - 2026-07-24
 
 ### Added
