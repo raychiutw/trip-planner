@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.46] - 2026-07-24
+
+### Docs
+- **DESIGN.md 同步本批 UI/UX 改動（`/document-release`）**：補上三處 SoT 準確度缺口 —— (1) 手機全域字級放大（`@media ≤760px` root `font-size:106.25%` → Compact 欄 rem 字級等比 +6.25%、spacing/radius px 不變，v2.57.42）；(2) root tab「常駐不隱藏」新增唯一例外「手機軟鍵盤彈出時收起」（`data-kb-open` 機制 + composer/POI 卡以 `--nav-overlay-h`=80px 讓位、間距 8px，v2.57.41）；(3) Compact header trailing 順序＝主要動作·⋯·帳號圓圈（v2.57.42）。Day tab 統一色系 / 比照 root tab 已於 v2.57.45 / v2.57.40 同步。其餘 README/ARCHITECTURE/CLAUDE 無需更新（本批全為 UI 打磨、無 API/架構/CLI 變更）。
+
 ## [2.57.45] - 2026-07-24
 
 ### Fixed
