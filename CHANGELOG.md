@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.44] - 2026-07-24
+
+### Fixed
+- **桌機行程頁 Google POI 卡未置中在地圖（接續 v2.57.43，prod QA 抓到）**：POI 卡浮出時跑到 viewport 中央（跨在時間軸/地圖交界），而非右欄地圖底部中央。root cause：`TripSheet` 為修 sheet 內 sticky 失效，把 `.trip-sheet-body .trip-map-rail` 覆蓋成 `position: static`，導致 POI 卡（absolute）找不到定位包含塊、逃逸到 viewport。改成 `position: relative`（in-flow layout 與 static 等同、無位移，但建立定位包含塊）→ POI 卡依 rail 精確置中。prod 真瀏覽器驗證：卡片中心與地圖欄中心對齊（offset 0）、完全落在地圖欄內、距底 16px。
+
 ## [2.57.43] - 2026-07-24
 
 ### Fixed
