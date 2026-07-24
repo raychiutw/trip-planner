@@ -155,8 +155,11 @@ const SCOPED_STYLES = `
   /* v2.56.12：功能頁改全版後（v2.56.9 拿掉 main 的 88px 保留），這層 wrap 延伸到螢幕底，
    * 浮底 POI 卡就掉進底部 tab 的區域重疊 —— 卡片是**可點的互動元件**，被 tab icon 壓住
    * 會點不準（e2e 實證：firstCard.click() 被 nav 攔截）。比照 ChatPage composer，用
-   * --nav-overlay-h 讓位（桌機 tab 隱藏 / 操作頁不顯 tab 時該值為 0，不受影響）。 */
-  bottom: calc(12px + var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
+   * --nav-overlay-h 讓位（桌機 tab 隱藏 / 操作頁不顯 tab 時該值為 0，不受影響）。
+   * #1140 item 9（owner「地圖 POI 卡與 root tab 間距過高」）：原本再疊 12px 造成卡片底距
+   * 螢幕底 100px、離膠囊頂 28px。12px 是膠囊自身的 bottom offset，本就含在 --nav-overlay-h(80)
+   * 的讓位量裡，重複計。移除 → 卡片底距 80px、與膠囊間距 8px，跟 ChatPage composer 一致。 */
+  bottom: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
   left: 0; right: 0;
   z-index: 5;
   /* 無白帶（原 .tp-map-entry-cards 的 background + border-top 在此清掉）。 */

@@ -34,10 +34,12 @@ function setInnerHeight(h: number) {
   Object.defineProperty(window, 'innerHeight', { value: h, configurable: true });
 }
 const kbInset = () => document.documentElement.style.getPropertyValue('--kb-inset');
+const kbOpen = () => document.documentElement.getAttribute('data-kb-open');
 
 afterEach(() => {
   cleanup();
   document.documentElement.style.removeProperty('--kb-inset');
+  document.documentElement.removeAttribute('data-kb-open');
 });
 
 describe('useKeyboardInset', () => {
@@ -82,17 +84,65 @@ describe('useKeyboardInset', () => {
   });
 });
 
-describe('W8 wiring source-lock', () => {
-  const src = readFileSync(join(__dirname, '../../src/pages/ChatPage.tsx'), 'utf8');
+describe('#1140 item 10 — 鍵盤開合切換 data-kb-open（收 root tab 的訊號）', () => {
+  it('inset 超門檻（300 > 120）→ 掛 data-kb-open="1"', () => {
+    setInnerHeight(800);
+    setVV(mockVV(500, 0));
+    render(<Harness />);
+    expect(kbOpen()).toBe('1');
+  });
 
-  it('ChatPage 接上 useKeyboardInset + composer 用 --kb-inset', () => {
-    expect(src).toMatch(/useKeyboardInset\(\)/);
-    expect(src).toMatch(/translateY\(calc\(-1 \* var\(--kb-inset/);
+  it('inset 小幅（URL bar 顯隱，80 < 120）→ 不掛 data-kb-open', () => {
+    setInnerHeight(800);
+    setVV(mockVV(720, 0));
+    render(<Harness />);
+    expect(kbInset()).toBe('80px');
+    expect(kbOpen()).toBeNull();
+  });
+
+  it('鍵盤收起（resize 回 inset 0）→ 移除 data-kb-open', () => {
+    setInnerHeight(800);
+    const vv = mockVV(500, 0);
+    setVV(vv);
+    render(<Harness />);
+    expect(kbOpen()).toBe('1');
+    vv.height = 800;
+    vv._emit('resize');
+    expect(kbOpen()).toBeNull();
+  });
+
+  it('unmount → 清除 data-kb-open', () => {
+    setInnerHeight(800);
+    setVV(mockVV(500, 0));
+    const { unmount } = render(<Harness />);
+    expect(kbOpen()).toBe('1');
+    unmount();
+    expect(kbOpen()).toBeNull();
+  });
+});
+
+describe('wiring source-lock', () => {
+  const chatSrc = readFileSync(join(__dirname, '../../src/pages/ChatPage.tsx'), 'utf8');
+  const mainSrc = readFileSync(join(__dirname, '../../src/entries/main.tsx'), 'utf8');
+  const appShellSrc = readFileSync(join(__dirname, '../../src/components/shell/AppShell.tsx'), 'utf8');
+
+  it('#1140 item 10：useKeyboardInset 改由 app root 全站掛（main.tsx），非 ChatPage', () => {
+    // 全站掛一次 → 所有頁面都能收 tab；ChatPage 不再各自掛（避免雙掛 cleanup 打架）。
+    expect(mainSrc).toMatch(/useKeyboardInset\(\)/);
+    expect(chatSrc).not.toMatch(/useKeyboardInset\(\)/);
+  });
+
+  it('composer 仍用全站 --kb-inset 上移（不受移到 app root 影響）', () => {
+    expect(chatSrc).toMatch(/translateY\(calc\(-1 \* var\(--kb-inset/);
+  });
+
+  it('#1140 item 10：data-kb-open 時 root tab 滑出畫面', () => {
+    expect(appShellSrc).toMatch(/:root\[data-kb-open="1"\]\s*\.app-shell-bottom-nav\s*\{[\s\S]{0,120}transform:\s*translate\(-50%,/);
   });
 
   it('Enter 送出保留（owner 2026-07-24：不反轉成 ⌘Enter）', () => {
     // 送出條件仍是 Enter 且非 Shift、非組字中；沒有改成 metaKey/ctrlKey 才送。
-    expect(src).toMatch(/e\.key === 'Enter' && !e\.shiftKey/);
-    expect(src).not.toMatch(/e\.key === 'Enter' && \(e\.metaKey \|\| e\.ctrlKey\)/);
+    expect(chatSrc).toMatch(/e\.key === 'Enter' && !e\.shiftKey/);
+    expect(chatSrc).not.toMatch(/e\.key === 'Enter' && \(e\.metaKey \|\| e\.ctrlKey\)/);
   });
 });

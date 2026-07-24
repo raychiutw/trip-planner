@@ -130,7 +130,12 @@ html { color-scheme: light dark; }
      */
     --grid-3pane-desktop: 216px 1fr 1fr;
     --grid-2pane-desktop: 216px 1fr;
-    --nav-height-mobile: 88px;
+    /* #1140 item 8/9（owner 2026-07-24「輸入框/地圖 POI 卡與 root tab 間距過高」）：底部浮動玻璃
+     * 膠囊實測 top 距螢幕底 72px（bottom:12px + 膠囊高 60px）。此值＝底部互動元件（聊天 composer /
+     * 地圖 POI 卡）為膠囊讓位的高度 → 72 + 8px 呼吸間距 = 80px（原 88 讓 composer 間距 16px、
+     * 地圖卡因另疊 12px 達 28px）。消費端見 ChatPage `.tp-chat-composer`、MapPage `.map-page-cards`
+     * （後者已同步移除多疊的 12px）。 */
+    --nav-height-mobile: 80px;
     --sidebar-width-desktop: 216px;
 
     /* Font size */
