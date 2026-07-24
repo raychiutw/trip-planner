@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.41] - 2026-07-24
+
+### Changed
+- **聊天輸入框／地圖 POI 卡與 root tab 間距過高（#1140 item 8/9）**：底部浮動玻璃膠囊實測 top 距螢幕底 72px（bottom 12px + 膠囊高 60px）。`--nav-height-mobile` 88→**80px**（72 footprint + 8px 呼吸間距）；聊天 composer 間距 16→**8px**、地圖 POI 卡另移除多疊的 12px（原本 `12px + overlay` 造成卡片底距 100px、間距 28px）→ 現兩者都距螢幕底 80px、與膠囊間距一致 8px。composer 另補 `env(safe-area-inset-bottom)`，notch 機型間距一致。真瀏覽器（mobile 390px）量測驗證。
+
+### Added
+- **手機軟鍵盤彈出時收起 root tab（#1140 item 10，Apple HIG）**：`useKeyboardInset` 偵測到鍵盤（visualViewport inset 超過 120px 門檻，過濾 Safari URL bar 顯隱誤觸）時，在 documentElement 掛 `data-kb-open`，CSS 把底部浮動膠囊往下滑出畫面（打字把螢幕讓給內容＋鍵盤）；鍵盤收起沿既有 transition 滑回。捲動不受影響（root tab 常駐，只有鍵盤才收）。hook 改由 app root（`KeyboardInsetTracker`）**全站掛一次**（原只在聊天頁），故所有頁面都收 tab；聊天 composer 仍讀全站 `--kb-inset` 上移。真瀏覽器驗證：掛 `data-kb-open` → 膠囊 `translateY 84px` 滑出視窗底（navTop 856 > vh 844）。
+
 ## [2.57.40] - 2026-07-24
 
 ### Changed

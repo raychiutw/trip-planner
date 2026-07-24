@@ -21,8 +21,8 @@ describe('tokens.css — grid layout variables (rev2)', () => {
     expect(TOKENS).toMatch(/--grid-2pane-desktop:\s*216px 1fr;/);
   });
 
-  it('--nav-height-mobile 為 `88px`', () => {
-    expect(TOKENS).toMatch(/--nav-height-mobile:\s*88px;/);
+  it('--nav-height-mobile 為 `80px`（#1140 item 8/9：72 膠囊 footprint + 8 呼吸間距）', () => {
+    expect(TOKENS).toMatch(/--nav-height-mobile:\s*80px;/);
   });
 
   it('--sidebar-width-desktop 為 `216px`', () => {

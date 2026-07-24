@@ -146,6 +146,15 @@ export const APP_SHELL_STYLES = `
   pointer-events: none;
 }
 
+/* #1140 item 10（Apple HIG）：手機軟鍵盤彈出時收起 root tab —— useKeyboardInset 偵測到鍵盤
+ * （inset 超門檻）在 documentElement 掛 data-kb-open，這裡把浮動膠囊往下滑出畫面。打字時把
+ * 螢幕讓給內容＋鍵盤；鍵盤收起 attribute 移除、膠囊沿既有 transition 滑回。捲動不受影響
+ * （root tab 常駐，只有鍵盤才收）。translateX(-50%) 保持水平置中。 */
+:root[data-kb-open="1"] .app-shell-bottom-nav {
+  transform: translate(-50%, calc(100% + 24px));
+  pointer-events: none;
+}
+
 /* Desktop ≥1024px：grid 兩 / 三欄 */
 @media (min-width: 1024px) {
   .app-shell[data-layout="3pane"] {

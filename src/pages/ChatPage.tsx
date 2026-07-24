@@ -26,7 +26,6 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useRequestSSE } from '../hooks/useRequestSSE';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import { useChatPagination } from '../hooks/useChatPagination';
-import { useKeyboardInset } from '../hooks/useKeyboardInset';
 import { apiFetch } from '../lib/apiClient';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
@@ -218,8 +217,9 @@ const SCOPED_STYLES = `
   background: var(--color-secondary);
   /* owner 2026-07-20「全版」：AppShell main 已不為透明 tab 保留空間（功能頁鋪到螢幕底）。
    * 聊天底部的輸入 composer 是互動元件，被浮在上面的 tab 蓋住就打不了字 → 這裡自行讓位。
-   * --nav-overlay-h 在桌機 / 無 tab 的操作頁為 0，故不影響那些情境。 */
-  padding-bottom: var(--nav-overlay-h, 0px);
+   * --nav-overlay-h 在桌機 / 無 tab 的操作頁為 0，故不影響那些情境。
+   * #1140 item 8：加 safe-area，讓 iPhone 有 home indicator 時 composer 與膠囊間距一致（不被吃掉）。 */
+  padding-bottom: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
 }
 /* tp-chat-header / .tp-page-header CSS 已退役。改用 <TitleBar>，自帶
@@ -534,8 +534,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       setActiveTripId(lockTripId);
     }
   }, [lockTripId, activeTripId, setActiveTripId]);
-  // W8：手機軟鍵盤彈出時把 composer 頂到鍵盤上方（設 --kb-inset；桌機 no-op）。
-  useKeyboardInset();
+  // #1140 item 10：useKeyboardInset 改由 app root（KeyboardInsetTracker）全站掛一次，
+  // composer 讀全站 --kb-inset 上移即可，這裡不再各自掛（避免雙掛 cleanup 打架）。
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [input, setInput] = useState('');

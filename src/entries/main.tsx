@@ -43,6 +43,7 @@ import { PRIMARY_NAV_ITEMS, isItemActive } from '../components/shell/navItems';
 import { rememberBranchLocation } from '../lib/branchMemory';
 import { Suspense, StrictMode, useEffect, useRef, type ReactNode } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useKeyboardInset } from '../hooks/useKeyboardInset';
 import { ServerStatusBanner } from '../components/ServerStatusBanner';
 
 /**
@@ -233,6 +234,16 @@ function BranchLocationTracker() {
   return null;
 }
 
+/**
+ * KeyboardInsetTracker — 全站掛一次 useKeyboardInset（app root、return null）。
+ * #1140 item 10：讓「軟鍵盤彈出 → 收 root tab（`data-kb-open`）＋ 設 `--kb-inset`」對所有頁面
+ * 生效，不只聊天頁。聊天 composer 讀全站的 `--kb-inset` 上移，故 ChatPage 不再各自掛。
+ */
+function KeyboardInsetTracker() {
+  useKeyboardInset();
+  return null;
+}
+
 const el = document.getElementById('reactRoot');
 if (el) {
   // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
@@ -248,6 +259,7 @@ if (el) {
           <DarkModeInit />
           <ServerStatusBanner />
           <BranchLocationTracker />
+          <KeyboardInsetTracker />
           <ActiveTripProvider>
           <NewTripProvider>
           <RefreshProvider>
