@@ -23,7 +23,7 @@ export const ACCOUNT_CIRCLE_STYLES = `
   width: 30px; height: 30px; border-radius: var(--radius-full);
   display: grid; place-items: center;
   background: var(--color-accent-fill); color: var(--color-accent-foreground);
-  font-size: 13px; font-weight: 800; line-height: 1;
+  font-size: 0.8125rem; font-weight: 800; line-height: 1;
 }
 .tp-account-circle .svg-icon { width: 17px; height: 17px; }
 .tp-account-circle:focus-visible { outline: none; }

@@ -28,7 +28,7 @@ export const TRIP_SELECT_STYLES = `
   background-color: var(--color-background);
   color: var(--color-foreground);
   font: inherit;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -108,7 +108,7 @@ export const TRIP_SELECT_STYLES = `
   min-height: 44px;
   padding: 12px 14px;
   border-radius: var(--radius-md);
-  font-size: 16px;
+  font-size: 1rem;
   color: var(--color-foreground);
   cursor: pointer;
   transition: background-color var(--transition-duration-fast), color var(--transition-duration-fast);

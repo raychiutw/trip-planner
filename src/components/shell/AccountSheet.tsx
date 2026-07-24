@@ -34,7 +34,7 @@ export const ACCOUNT_SHEET_STYLES = `
   position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 1;
   width: 44px; height: 44px; display: grid; place-items: center;
   background: transparent; border: none; cursor: pointer;
-  color: var(--color-muted); font-size: 20px; line-height: 1; border-radius: var(--radius-full);
+  color: var(--color-muted); font-size: 1.25rem; line-height: 1; border-radius: var(--radius-full);
 }
 .account-sheet-close:hover { background: var(--color-hover); color: var(--color-foreground); }
 .account-sheet-close:focus-visible { outline: none; box-shadow: var(--shadow-ring); }

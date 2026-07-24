@@ -22,7 +22,7 @@ export const TRIP_DATE_PICKER_STYLES = `
   background-color: var(--color-background);
   color: var(--color-foreground);
   font: inherit;
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -54,7 +54,7 @@ export const TRIP_DATE_PICKER_STYLES = `
 .tp-date-value.is-placeholder {
   color: var(--color-muted);
   font-weight: 500;
-  font-size: 22px;
+  font-size: 1.375rem;
 }
 .tp-date-chev {
   width: 18px;
@@ -101,7 +101,7 @@ export const TRIP_DATE_PICKER_STYLES = `
 }
 
 .tp-date-popover .rdp-month_caption {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--color-foreground);
   padding-bottom: 12px;
@@ -150,7 +150,7 @@ export const TRIP_DATE_PICKER_STYLES = `
 }
 
 .tp-date-popover .rdp-day {
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
 }
 .tp-date-popover .rdp-day_button {
