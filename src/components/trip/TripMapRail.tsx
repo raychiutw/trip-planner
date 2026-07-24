@@ -11,12 +11,14 @@
  * roads via Mapbox Directions) is delegated to TpMap so desktop rail + mobile
  * MapPage share the same polyline engine and font stack.
  */
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { lazyWithRetry } from '../../lib/lazyWithRetry';
 import { useNavigate } from 'react-router-dom';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { EVENT } from '../../lib/events';
 import type { MapPin } from '../../hooks/useMapData';
+import GooglePoiCard from './GooglePoiCard';
+import type { GooglePoiClick } from '../../lib/mapHelpers';
 
 const TpMap = lazyWithRetry(() => import('./TpMap'));
 
@@ -56,6 +58,18 @@ const SCOPED_STYLES = `
   width: 100%;
   height: 100%;
 }
+/* item 2/3：Google POI 卡浮在地圖底部中央（同地圖頁 owner 2026-07-22「置中」）。
+ * 選擇器比 .trip-map-rail 通用子代規則更 specific，覆蓋其 width/height:100%（否則卡片被撐滿整欄）。
+ * .trip-map-rail 是 position:sticky，已建立定位包含塊，absolute 依它定位。 */
+.trip-map-rail > .trip-map-rail-poi-card {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: min(340px, calc(100% - 24px));
+  height: auto;
+}
 `;
 
 export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: TripMapRailProps) {
@@ -65,6 +79,13 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
   // v2.31.93：focusedEntryId 觸發 TpMap 換 marker 視覺（accent orange + 36px focused style）
   // + 內建 flyTo zoom 13 + collapse 自動 fitBounds（對齊 MapPage focusId flow）。
   const [focusedEntryId, setFocusedEntryId] = useState<number | undefined>();
+  // #1140-followup item 2/3（owner 2026-07-24）：桌機行程頁地圖也能點 Google 原生 POI，
+  // 點選後浮出 GooglePoiCard（同地圖頁 —— 店名 + 「在 Google 地圖開啟」另開分頁）。
+  const [selectedGooglePoi, setSelectedGooglePoi] = useState<GooglePoiClick | null>(null);
+  // #1140-followup item 1（owner「收合 stop 不要改變地圖定位，現在會移來移去」）：收合會讓時間軸
+  // 版面位移，觸發下方 scroll-spy 的 IntersectionObserver 誤 pan 到別天中心。收合後短暫抑制
+  // scroll-spy，讓地圖「原地不動」（展開仍飛過去，見 entryFocused handler）。
+  const suppressScrollSpyUntilRef = useRef(0);
 
   useEffect(() => {
     ensureStyle();
@@ -104,6 +125,8 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
     // 改：先掃，沒抓到 → MutationObserver 等 DOM 加 [data-day] 後 trigger。
     const intersectionObserver = new IntersectionObserver(
       (entries) => {
+        // item 1：收合 stop 造成的版面位移會讓 observer 誤觸 → 抑制窗內不 pan（地圖原地不動）。
+        if (performance.now() < suppressScrollSpyUntilRef.current) return;
         const mostVisible = entries
           .filter((e) => e.isIntersecting && e.intersectionRatio >= 0.6)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
@@ -152,8 +175,8 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
   // v2.31.93：對齊 MapPage focusId flow — 不再 manual panToCoord+zoom，改用
   //   focusedEntryId 觸發 TpMap useEffect 同時切 marker 視覺（accent orange + 36px）
   //   + flyTo z<12?13:undefined + collapse 自動 fitBounds(visible pins) 回 overview。
-  //   - 展開 (isExpanding=true) → setFocusedEntryId(entryId)
-  //   - 收合 (isExpanding=false) → setFocusedEntryId(undefined) → TpMap fitBounds reset
+  //   - 展開 (isExpanding=true) → setFocusedEntryId(entryId) → flyTo 該 stop
+  //   - 收合 (isExpanding=false) → 只解除 marker focus，**不動地圖視野**（item 1，見下）
   //   - undefined (scroll spy fallback) → 維持 v2.31.81 panToCoord pan only no zoom
   useEffect(() => {
     if (!isDesktop) return;
@@ -166,9 +189,13 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
       if (detail?.isExpanding === true) {
         setFocusedEntryId(entryId);
         setPanToCoord(undefined);
+        setSelectedGooglePoi(null); // 聚焦行程 stop 時清掉 Google POI 卡（互斥，同地圖頁）
       } else if (detail?.isExpanding === false) {
+        // item 1「收合原地不動」：解除 marker focus（focusId=undefined，因 fitOnce 已完成 → 不 fitBounds、
+        // 地圖不動），但收合的版面位移會讓 scroll-spy 誤 pan → 短暫抑制它（見 observer callback）。
         setFocusedEntryId(undefined);
         setPanToCoord(undefined);
+        suppressScrollSpyUntilRef.current = performance.now() + 600;
       } else {
         setPanToCoord({ lat: pin.lat, lng: pin.lng });
       }
@@ -190,11 +217,22 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
           fillParent={true}
           fitOnce={true}
           onMarkerClick={handleMarkerClick}
+          onPoiClick={(poi) => {
+            // item 2/3：點 Google 原生 POI → 浮出 POI 卡；與行程 stop focus 互斥（同地圖頁）。
+            setSelectedGooglePoi(poi);
+            setFocusedEntryId(undefined);
+          }}
+          onMapClick={() => setSelectedGooglePoi(null)}
           panToCoord={panToCoord}
           focusId={focusedEntryId}
           dark={dark}
         />
       </Suspense>
+      {selectedGooglePoi && (
+        <div className="trip-map-rail-poi-card">
+          <GooglePoiCard poi={selectedGooglePoi} onClose={() => setSelectedGooglePoi(null)} />
+        </div>
+      )}
     </div>
   );
 }
