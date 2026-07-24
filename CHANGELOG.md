@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.40] - 2026-07-24
+
+### Changed
+- **Day tab（行程明細＋地圖共用）樣式比照 root tab（#1140 item 3）**：`MapDayTab` / `.tp-map-day-tab` 的 active 從「淡 tonal pill（14% day-color tint）」改為**實心 accent-fill 膠囊**，與底部 root tab（`.tp-global-bottom-nav-btn.is-active`）同一 token（`--color-accent-fill` + `--color-accent-foreground`）與形制 —— owner 2026-07-24「Day tab 比照 root tab」，overturns 2026-07-17「淡 tonal」sign-off。per-day polyline 對應改只由 **idle** eyebrow 顏色承載，不再進 active 底色（避免 amber/lime 等淺色天在實心底上白字對比不足；day palette 本就不進 UI chrome）。行程明細與地圖共用同一 `MapDayTab`，一次改兩處。
+- **桌機 Day tab 固定寬 + 水平可捲（#1140 item 4）**：桌機（≥1024px）每個 Day tab 固定 88px、置中對齊；容器沿用原生 `overflow-x` 捲動（**不加左右箭頭** —— owner 明示不要）。手機維持內容寬（窄螢幕塞得下更多天 + 觸控捲動順手）。新增 CSS 回歸鎖（active 實心 accent-fill、桌機固定寬）。
+
 ## [2.57.39] - 2026-07-24
 
 ### Changed

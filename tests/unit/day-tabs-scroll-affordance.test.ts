@@ -28,3 +28,20 @@ describe('tokens.css — .tp-map-day-tabs horizontal scroll', () => {
     expect(TOKENS_CSS).toMatch(/\.tp-map-day-tabs\s*\{[\s\S]{0,400}scrollbar-width:\s*none/);
   });
 });
+
+describe('tokens.css — Day tab 比照 root tab（#1140 item 3/4）', () => {
+  it('item 3：active 用實心 --color-accent-fill（比照 root tab），非 14% 淡 tonal', () => {
+    const activeRule = TOKENS_CSS.match(/\.tp-map-day-tab\.is-active\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(activeRule).toMatch(/background:\s*var\(--color-accent-fill\)/);
+    expect(activeRule).toMatch(/color:\s*var\(--color-accent-foreground\)/);
+    // 舊的淡 tonal（14% day-color tint）不應再存在
+    expect(activeRule).not.toMatch(/14%/);
+  });
+
+  it('item 4：桌機（≥1024）Day tab 固定寬 + 置中，容器保留原生水平捲動（無箭頭）', () => {
+    // desktop media query 內把 .tp-map-day-tab 設固定寬
+    expect(TOKENS_CSS).toMatch(
+      /@media\s*\(min-width:\s*1024px\)\s*\{[\s\S]*?\.tp-map-day-tab\s*\{[\s\S]{0,120}flex:\s*0\s*0\s*88px/,
+    );
+  });
+});

@@ -1471,10 +1471,13 @@ body.dark .tp-toast { background: var(--color-secondary); }
 }
 .tp-map-day-tab:hover:not(.is-active) { color: var(--color-foreground); }
 .tp-map-day-tab.is-active {
-  /* 淡 tonal pill（owner 2026-07-17 sign-off）取代實心 thumb；per-day --day-color
-   * tint 供地圖 polyline 對應，行程頁無 --day-color → 落 accent。 */
-  color: var(--color-accent-text-on-tonal);
-  background: color-mix(in srgb, var(--day-color, var(--color-accent)) 14%, transparent);
+  /* #1140 item 3（owner 2026-07-24「Day tab 比照 root tab」，overturns 2026-07-17 淡 tonal
+   * sign-off）：active 改實心 accent-fill 膠囊，與 root tab（.tp-global-bottom-nav-btn.is-active，
+   * GlobalBottomNav.tsx）同一形制與 token。per-day polyline 對應改由 idle eyebrow 顏色承載
+   * （見 MapDayTab），不再進 active 底色 —— 避免 amber/lime 等淺色天在實心底上白字對比不足
+   * （day palette 本就不進 UI chrome，見 DESIGN.md DV / dayPalette.ts）。 */
+  color: var(--color-accent-foreground);
+  background: var(--color-accent-fill);
 }
 .tp-map-day-tab:focus-visible {
   outline: none;
@@ -1490,6 +1493,19 @@ body.dark .tp-toast { background: var(--color-secondary); }
 }
 .tp-map-day-tab.is-active .tp-map-day-tab-eyebrow { opacity: 1; }
 /* .tp-map-day-tab-date 已移除（owner 2026-07-17：day 膠囊改單行 DAY N、去日期副標）。 */
+
+/* #1140 item 4（owner 2026-07-24）：桌機每個 Day tab 固定寬、水平可捲（原生捲動，**不加**
+ * 左右箭頭 —— owner 明示不要箭頭）。容器 `.tp-map-day-tabs` 本就 overflow-x:auto + max-width，
+ * 捲動與 fade 遮罩已具備，這裡只把桌機的膠囊從內容寬改成等寬、置中對齊。手機維持內容寬
+ *（窄螢幕塞得下更多天、且觸控捲動順手）。 */
+@media (min-width: 1024px) {
+  .tp-map-day-tab {
+    flex: 0 0 88px;
+    padding-left: 8px;
+    padding-right: 8px;
+    justify-content: center;
+  }
+}
 
 /* Sticky chrome variant — trip detail page 把同一條 strip 黏在 TitleBar 下方。
  * top 用 --titlebar-h token，跟 .tp-titlebar height + .tp-hero scroll-margin
