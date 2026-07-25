@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.49] - 2026-07-25
+
+### Fixed
+- **純鍵盤使用者看得到焦點停在哪了（#1158）**：`css/tokens.css` 有兩處全域 `:focus-visible { outline: none }` 把按鈕／連結／`role="button"` 的焦點指示拔掉卻沒補替代，純鍵盤使用者按 Tab 完全不知道自己在哪。改為 `outline: none; box-shadow: var(--shadow-ring)`，對齊檔案裡 `.tp-btn`／titlebar 按鈕等元件本來就在用的寫法。**同一次補上守護測試**（掃描所有 `:focus-visible` 規則，凡是 reset 了 outline 又沒提供可見指示就 fail）—— 它第一次靜默漂走就是因為沒有守護，修復與守護必須同時落地。既有輸入元件的邊框變色替代方案不在此限。真瀏覽器 Tab 過確認焦點框出現。
+- **地圖頁（root tab）補安全區收邊（#1163）**：`GlobalMapPage` 的浮動 header 與底部景點卡改吃 `env(safe-area-inset-*)` 與 `--nav-overlay-h`，對齊行程地圖頁既有作法。⚠️ **實際影響面比 #1117 盤點時所述小得多**：`/map` 對「有任何行程」的帳號一律 redirect 到 `/trip/:id/map`（那頁的安全區早已存在且有測試鎖住），只有一條行程都沒有的帳號才會落到這個畫面。缺口為真但屬罕見路徑。
+
+### Changed
+- **對比守衛改成真的解析 `tokens.css`，砍掉說謊的那支測試（#1153）**：既有的 tokens 單元測試（本來就在 `readFileSync` 解析 `css/tokens.css`）擴充為動態抽出 light／dark 兩份色票 hex、實作 WCAG 相對亮度與對比計算，斷言目前柔褐色盤裡「淺底上文字／UI」用途的 pair 達標（文字 ≥4.5:1、非文字 UI ≥3:1），accent 系列依用途分工套不同門檻。同一次刪除獨立的對比測試檔 —— 它兩端寫死同一份**已退役兩年的 Ocean 藍色盤**，結構上不可能失敗。開發過程中第一次跑就真紅（`body.dark` 在檔內出現兩次，抓錯 block），另做過 mutation 驗證（故意改壞色票會 fail）。
+
+### Added
+- **證實既有 e2e axe 掃描為何漏抓行程一覽頁的已知違規（#1154）**：根因不是頁面沒排進掃描清單（`/trips` 本來就在），而是守衛只驗 `goto` 後的**預設頁面狀態** —— 兩個違規節點分別要靠 `:hover` 偽類（新增行程卡）與條件渲染（已封存篩選結果為零時的重設按鈕）才摸得到。新增兩支場景用真滑鼠 hover 與真篩選觸發，實測 axe 確實抓得到（contrast 3.24 與 3.65，門檻 4.5），先以預期失敗標記追蹤。**下游把對比修好後，這個標記會因「預期失敗卻通過」而報錯，不會有人忘記收尾。** 這是 #1150「先查明再擴大掃描」順序的落地。
+
 ## [2.57.48] - 2026-07-25
 
 ### Docs
