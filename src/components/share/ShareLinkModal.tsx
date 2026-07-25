@@ -12,6 +12,7 @@
  * WITHOUT a new URL.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 import Icon from '../shared/Icon';
 import { TripDatePicker } from '../TripDatePicker';
 import { shareQrDataUrl } from '../../lib/shareQr';
@@ -184,14 +185,14 @@ export default function ShareLinkModal({ tripId, open, onClose }: { tripId: stri
     reload();
   }, [open, reload]);
 
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [open, onClose]);
+  // #1161：接共用 sheet 引擎。本元件宣告 aria-modal="true" 卻是手刻覆蓋層，Tab 會跑出
+  // 對話框外碰到底下被遮住的內容 —— 宣告 modal 卻沒有 focus trap 就是騙輔助技術。
+  //
+  // 接上引擎一次拿到：Tab focus trap（handlePanelKeyDown）、**巢狀時只有最上層回應
+  // 的 Escape**（原本手刻的 window keydown 會讓內層 confirm 與本面板同時關掉）、
+  // body scroll lock、開啟時的初始焦點、關閉後焦點還原（#1160 起是引擎預設）。
+  // 原本那個手刻 Escape listener 因此整段刪除。
+  const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onClose);
 
   // QR for the just-created/rotated link (lazy; token stays in the browser).
   useEffect(() => {
@@ -301,9 +302,21 @@ export default function ShareLinkModal({ tripId, open, onClose }: { tripId: stri
   const revoked = links.filter((l) => l.revokedAt);
 
   return (
-    <div className="tp-sharemodal-backdrop" role="presentation" onClick={onClose}>
+    <div className="tp-sharemodal-backdrop" role="presentation" onClick={onClose} ref={backdropRef}>
       <style>{STYLE}</style>
-      <div className="tp-sharemodal" role="dialog" aria-modal="true" aria-labelledby="tp-sharemodal-title" onClick={(e) => e.stopPropagation()} data-testid="share-modal">
+      {/* tabIndex={-1} 讓引擎能在開啟時把焦點放進 panel（沒有它 focus() 是 no-op，
+          焦點會留在觸發元素上、Tab 第一下就跑到對話框外）。onKeyDown 是 Tab focus trap。 */}
+      <div
+        className="tp-sharemodal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tp-sharemodal-title"
+        onClick={(e) => e.stopPropagation()}
+        data-testid="share-modal"
+        ref={panelRef}
+        tabIndex={-1}
+        onKeyDown={handlePanelKeyDown}
+      >
         <div className="tp-sharemodal-head">
           <h2 id="tp-sharemodal-title">分享這個行程</h2>
           <button type="button" className="tp-sharemodal-x" onClick={onClose} aria-label="關閉">✕</button>

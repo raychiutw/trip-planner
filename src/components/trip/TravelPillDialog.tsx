@@ -25,6 +25,7 @@ import { apiFetchRaw } from '../../lib/apiClient';
 import { ApiError } from '../../lib/errors';
 import { EVENT } from '../../lib/events';
 import { useAutosave } from '../../hooks/useAutosave';
+import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 import {
   type TravelMode,
   type TravelMethod,
@@ -59,13 +60,10 @@ const SCOPED_STYLES = `
     box-shadow: 0 16px 48px rgba(42, 31, 24, 0.22);
   }
 }
-.tp-travel-dialog-handle {
-  width: 36px; height: 4px;
-  background: var(--color-line-strong);
-  border-radius: var(--radius-full);
-  margin: 0 auto 12px;
-}
-@media (min-width: 760px) { .tp-travel-dialog-handle { display: none; } }
+/* .tp-travel-dialog-handle 已刪除（#1161）：那是一條純裝飾的膠囊，**沒有綁任何觸控事件**。
+ * 這個對話框是固定高度的覆蓋層、畫不出可拖曳的行為，卻畫了一個看起來可拖的把手 ——
+ * 使用者會一直嘗試一個不存在的手勢。依「誠實介面」原則直接刪視覺元素，不新增手勢。
+ * （原本只在 <760px 顯示，桌機本來就看不到，所以這個改動只影響手機寬度的渲染。） */
 .tp-travel-dialog-title { font-size: var(--font-size-headline); font-weight: 700; margin: 0 0 4px; }
 .tp-travel-dialog-meta { font-size: var(--font-size-footnote); color: var(--color-muted); margin: 0 0 14px; }
 
@@ -240,6 +238,8 @@ export default function TravelPillDialog({
   });
 
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  // #1161：交給引擎當 initialFocusRef —— 由下方 effect 填入第一個交通方式晶片。
+  const initialFocusRef = useRef<HTMLElement | null>(null);
   const titleId = `tp-travel-dialog-title-${segmentId ?? `${fromEntryId}-${toEntryId}`}`;
 
   const selectedMethod: TravelMethod = useMemo(
@@ -340,11 +340,20 @@ export default function TravelPillDialog({
     void autosave.flush().finally(onClose);
   }, [autosave, onClose]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [handleClose]);
+  // #1161：接共用 sheet 引擎。本元件宣告 aria-modal="true" 卻是手刻覆蓋層，Tab 會跑出
+  // 對話框外碰到底下被遮住的內容 —— 宣告 modal 卻沒有 focus trap 就是騙輔助技術。
+  //
+  // 接上引擎一次拿到：Tab focus trap（handlePanelKeyDown 掛在 .tp-travel-dialog 上，
+  // 那才是真正的 panel）、**巢狀時只有最上層回應的 Escape**（原本手刻的 document
+  // keydown 沒有這個判斷，內層若再開 confirm 會兩個一起關）、IME 組字中的 Escape 不誤關、
+  // body scroll lock、以及開啟時的初始焦點。原本手刻的 Escape listener 整段刪除。
+  //
+  // ⚠ 已知限制（不在本票範圍）：本元件由 parent 條件式 render，沒有 `open` prop ——
+  // isOpen 永遠是 true，所以引擎的「關閉時還原焦點」（#1160）在這裡不會觸發（unmount
+  // 不等於 isOpen 轉 false）。要補得先把它改成受控的 open prop。
+  const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(true, handleClose, {
+    initialFocusRef,
+  });
 
   const lastErrorRef = useRef<string | null>(null);
   useEffect(() => {
@@ -356,9 +365,11 @@ export default function TravelPillDialog({
     }
   }, [autosave.state, autosave.error]);
 
+  // #1161：改成只「記下」初始焦點目標，實際 focus() 交給引擎（它在 rAF 裡做，時序才對）。
+  // 若這裡自己 focus()，引擎的 rAF 會晚一步把焦點搬到 panel 上，反而蓋掉第一個晶片。
   useEffect(() => {
-    const first = overlayRef.current?.querySelector<HTMLButtonElement>('.tp-travel-chip');
-    first?.focus();
+    initialFocusRef.current =
+      overlayRef.current?.querySelector<HTMLButtonElement>('.tp-travel-chip') ?? null;
   }, []);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -374,7 +385,13 @@ export default function TravelPillDialog({
     <>
       <style>{SCOPED_STYLES}</style>
       <div
-        ref={overlayRef}
+        // overlay 同時是 backdrop（點它會關）。一個元素只能掛一個 ref，用 callback ref
+        // 同時餵既有的 overlayRef 與引擎的 backdropRef —— 後者讓引擎能阻擋 backdrop 上的
+        // wheel/touchmove（手機 bottom sheet 尤其有感；沒掛的話引擎會安靜 no-op）。
+        ref={(el) => {
+          overlayRef.current = el;
+          backdropRef.current = el;
+        }}
         className="tp-travel-overlay"
         onClick={handleOverlayClick}
         role="dialog"
@@ -382,8 +399,7 @@ export default function TravelPillDialog({
         aria-labelledby={titleId}
         data-testid="travel-pill-dialog"
       >
-        <div className="tp-travel-dialog">
-          <div className="tp-travel-dialog-handle" />
+        <div className="tp-travel-dialog" ref={panelRef} tabIndex={-1} onKeyDown={handlePanelKeyDown}>
           <h3 id={titleId} className="tp-travel-dialog-title">交通方式</h3>
           {(fromName || toName || hasDist) && (
             <p className="tp-travel-dialog-meta">

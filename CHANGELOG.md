@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.58] - 2026-07-25
+
+### Fixed
+- **分享連結面板與交通方式對話框宣告了「我是 modal」卻讓 Tab 跑出去（#1161）**：兩者都掛 `aria-modal="true"`，但都是手刻覆蓋層、沒接共用 sheet 引擎 —— Tab 會跑到對話框外碰到底下被遮住的內容。**宣告 modal 卻沒有 focus trap 就是騙輔助技術。** 兩者接上引擎後一次拿到：Tab 焦點陷阱、**巢狀時只有最上層回應的 Escape**、IME 組字中的 Escape 不誤關、body scroll lock、開啟時的初始焦點。
+- **順帶移除兩份手刻的 Escape listener**：它們沒有「最上層才回應」的判斷，巢狀時內層開了確認對話框，一次 Escape 會把兩層一起關掉；也沒有 IME 組字保護（中文輸入中按 Escape 應該是取消組字，不是關對話框）。
+- **交通方式對話框的初始焦點改由引擎處理**：原本元件自己在 effect 裡 `focus()` 第一個方式晶片，接上引擎後兩者會打架 —— 引擎的 `requestAnimationFrame` 晚一步執行，會把焦點從晶片搬到 panel 上。改成 effect 只「記下」目標、交給引擎 focus。
+
+### Removed
+- **交通方式對話框的假拖曳把手（#1161）**：那是一條純裝飾的膠囊，**沒有綁任何觸控事件**。這個對話框是固定高度的覆蓋層、畫不出可拖曳的行為，卻畫了一個看起來可拖的把手 —— 使用者會一直嘗試一個不存在的手勢。依「誠實介面」原則直接刪視覺元素，**不新增手勢**（守衛連 `onTouchStart`／`onPointerDown` 一起鎖，防有人日後「順手補上手勢」）。原本只在 <760px 顯示，桌機本來就看不到，所以只影響手機寬度的渲染。
+
+### Added
+- **`tests/unit/dialog-focus-trap.test.tsx` 分兩層守**，因為兩層會壞的方式不同：**引擎層**驗 Tab／Shift+Tab 真的在 panel 內繞回、且中間位置不被攔（trap 只在邊界接手，攔太多會弄壞原生 Tab 順序）；**接線層**驗兩個元件確實掛上 `panelRef` 與 `onKeyDown`（引擎再對，沒接上就沒用，而「有沒有接上」正是本票要修的東西），並鎖住手刻 Escape 已移除。
+- focus trap 用 jsdom 驗是合理的 —— 它是純 JS（攔 Tab + `preventDefault` + `focus()`）。**這跟 #1160 的焦點「還原」不同**：那個依賴瀏覽器原生行為，只能在真瀏覽器驗，所以那票用的是 e2e。
+
 ## [2.57.57] - 2026-07-25
 
 ### Fixed
