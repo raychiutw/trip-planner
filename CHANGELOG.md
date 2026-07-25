@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.56] - 2026-07-25
+
+### Added
+- **Day palette 補上「文字用」深階 `--day-text-1..10`（#1168，owner 2026-07-25 拍板）**：那 10 色是 Tailwind -500，本來就是給填色／描邊的飽和色，當淺底上的文字 **10 色全部不達 AA**（實測疊頁面底：lime 1.92:1、amber 2.08:1、…、violet 4.11:1，門檻 4.5）。各補一顆文字專用深變體，關係同 `--color-accent-text` 之於 `--color-accent`。**polyline 與 entry card 的 num 圓框仍用原飽和色** —— 分色而非整組換掉，每天一個顏色的辨識性完整保留。
+- **深色模式各自算一套**：深色底方向相反要更淺，實測**原色有 9/10 本來就達標**（lime 8.61 … rose 4.63），只有 violet 4.02 真不足。所以深色多數維持原值（保住與 polyline 的一致性），只把 rose／violet／fuchsia 三顆往白插值。**取值刻意抓 ≥5.0 而非門檻 4.5** —— 貼線的值在底色微調時會靜默掉下去，比照既有 accent-text（5.35）的餘裕。
+- **`tests/unit/day-palette-text.test.ts` 守衛**：驗 token 值本身的對比（淺／深／列印三種底）、`dayTextColor()` 的輪替與 fallback 跟 `dayColor()` 同步、**回傳必須是 token 引用不是 hex**（回 hex 會鎖死一套主題），以及「飽和原色當文字確實不達標」這個**前提本身**（色盤哪天換了、原色自己達標了，這支會轉紅提醒回來重評，而不是默默留著多餘機制）。
+- **地圖頁整頁納入 e2e axe 掃描清單**（票的完成判準）。此前只能掃 trip switcher 下拉子樹。
+
+### Fixed
+- **地圖 day 膠囊 eyebrow 的對比不是挑錯 token，是用 `opacity` 當視覺層級（#1168）**：`opacity: 0.7` 把繼承來的 `--color-muted` 稀釋成 **3.25:1**（10px/700 屬一般文字、門檻 4.5）。**移除即修好** —— `.tp-map-day-tab` base 本來就是 `--color-muted`（4.83:1），active 時繼承 `--color-accent-foreground`。而 `DESIGN.md` 對 day tab 的措辭正是「idle eyebrow muted、active 實心 accent-fill + accent-foreground」，**也就是 code 原本不符 SoT**。沒有用加深前景色去補（那會讓 active 態過深）：opacity 對狀態辨識本來就多餘，active 已經同時換了 `color` 與 `background`。守衛連 `.is-active` 那條也一起鎖，防有人把 opacity 加回來。
+- **地圖頁整頁掃描時冒出一個票上沒預料到的 critical 違規，一併修掉**：entry card 是 `<button role="listitem" aria-pressed>`，父容器是 `role="list"` 所以掛了 `listitem`，但那覆蓋掉 `<button>` 的隱含 role，而 `aria-pressed` 只允許用在 button → axe 判 `aria-allowed-attr` **critical**（4 個節點）。改用 `aria-current`：它是**全域** ARIA 屬性、任何 role 都合法，而且語意更貼切 —— 這些卡是「清單中的當前項」，不是可反覆按下放開的 toggle。沒有改成 `<div role="listitem"><button>` 包一層：那會讓 wrapper 變成 flex child，`flex: 0 0 220px` 與 scroll-snap 都要搬。同 commit 更新 3 處綁著 `aria-pressed` 的測試斷言。
+- **`src/lib/dayPalette.ts` 的檔頭與 `DESIGN.md` 矛盾，已更正**：它寫「Used exclusively for map polyline strokeColor. Does NOT apply to UI chrome」，但 `DESIGN.md`（SoT）明文授權 entry card 的 num／eyebrow 使用。照著檔頭讀會以為現行用法違規。
+
 ## [2.57.55] - 2026-07-25
 
 ### Fixed

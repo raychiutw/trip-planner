@@ -37,6 +37,18 @@
 
 > **Day palette exception**: 10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）**只用於地圖 polyline 與 entry card**（map polyline + Map page bottom entry card num/eyebrow）。對應 Data Visualization 例外。**Day 指示 tab（day strip / MapDayTab）嚴守 柔褐主色 accent 統一色系**（idle eyebrow muted、active 實心 accent-fill + accent-foreground），**地圖與 Trip 明細頁一致、都不套 dayColor**（owner 2026-07-24「地圖模式 day tab 移除依日期不同顏色，回到統一色系」；此前地圖 day strip eyebrow 曾套 per-day 色，已退場）。理由：多色服務於地圖 N 條 polyline 視覺區分需求；day tab chrome 一致性更重要，且淺色天（amber/lime）在膠囊上對比不足。
 
+> **Day palette 的文字用深階 `--day-text-1..10`**（#1168，owner 2026-07-25 拍板）：上面那組 -500 是**填色／描邊用的飽和色，一律不得直接當文字色** —— 實測當淺底文字 **10 色全部不達 AA**（疊 `--color-background`：lime 1.92 / amber 2.08 / cyan 2.35 / teal 2.41 / emerald 2.46 / sky 2.69 / orange 2.72 / fuchsia 3.35 / rose 3.56 / violet 4.11，門檻 4.5）。因此每色各補一顆**文字專用**深變體，關係同 `--color-accent-text` 之於 `--color-accent`。
+>
+> | 用途 | 用哪個 |
+> |---|---|
+> | polyline stroke | `dayColor(n)` — 原飽和 -500 |
+> | entry card `num` **圓框**（非文字） | `dayColor(n)` — 原飽和 -500 |
+> | entry card `num` **數字**、`day` eyebrow **文字** | `dayTextColor(n)` → `var(--day-text-N)` |
+>
+> **取值口徑**：淺色降亮度到「疊頁面底 `#FFFBF5` 與列印底 `#FFFFFF` 兩者的較差值 ≥5.0」；深色方向相反要更淺，且**原色有 9/10 本來就達標**（疊 `#1C1C1E`：lime 8.61…rose 4.63），只有 violet 4.02 真不足，故深色多數維持原值以保住與 polyline 的一致性，僅把 rose/violet/fuchsia 三顆往白插值到 ≥5.0。**刻意不抓剛好 4.5** —— 貼線的值在底色微調時會靜默掉下去。逐色數字寫在 `css/tokens.css` 的 `--day-text-*` 區塊，守衛在 `tests/unit/day-palette-text.test.ts`。
+>
+> ⚠ **`num` 的對比 e2e 掃不到**：day 序號在行程 ≤9 天時是單一字元，axe 的 color-contrast 對 1 字元元素一律歸 incomplete（`messageKey: shortTextContent`），而 e2e 只讀 violations。它只能靠上述單元守衛，別以為 e2e 全綠就代表沒問題（同 §Color Approach 記的 accent 徽章盲區，這是第二現場）。
+
 ## Typography
 
 ### Font Stack

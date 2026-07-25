@@ -33,6 +33,9 @@ test.describe('MapPage bottom day tabs', () => {
     await expect(firstCard.locator('.tp-map-entry-card-num')).toHaveText('1');
 
     await firstCard.click();
-    await expect(firstCard).toHaveAttribute('aria-pressed', 'true');
+    // #1168：選中狀態從 aria-pressed 改成 aria-current。本元件掛 role="listitem"（父容器是
+    // role="list"），listitem 覆蓋了 <button> 的隱含 role，而 aria-pressed 只允許用在
+    // button → axe 判 aria-allowed-attr critical。aria-current 是全域屬性、任何 role 合法。
+    await expect(firstCard).toHaveAttribute('aria-current', 'true');
   });
 });

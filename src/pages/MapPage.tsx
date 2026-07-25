@@ -27,7 +27,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTripContext } from '../contexts/TripContext';
 import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hooks/useMapData';
 import { apiFetch } from '../lib/apiClient';
-import { dayColor } from '../lib/dayPalette';
+import { dayColor, dayTextColor } from '../lib/dayPalette';
 import { findEntryInDays } from '../lib/mapDay';
 import Icon from '../components/shared/Icon';
 import AppShell from '../components/shell/AppShell';
@@ -591,6 +591,9 @@ export default function MapPage() {
               // Overview 模式：用 entryDayMap 反查；Single-day 模式：activeTab 即 dayNum
               const pinDay = isOverview ? entryDayMap.get(pin.id) : (activeTab as number);
               const color = pinDay ? dayColor(pinDay) : 'var(--color-muted)';
+              // #1168：文字與圓框拆兩顆色 —— 飽和 -500 當淺底文字 10 色全不達 AA。
+              // 無 pinDay 時兩者都落回 --color-muted（本來就達標，4.76:1）。
+              const textColor = pinDay ? dayTextColor(pinDay) : 'var(--color-muted)';
               return (
                 <MapEntryCard
                   key={pin.id}
@@ -598,6 +601,7 @@ export default function MapPage() {
                   dayLocalIndex={pin.index}
                   dayLabel={isOverview && pinDay ? `D${pinDay}` : undefined}
                   dayColor={color}
+                  dayTextColor={textColor}
                   time={pin.time ?? undefined}
                   title={pin.title || '（無標題）'}
                   kind={inferKind(pin)}
