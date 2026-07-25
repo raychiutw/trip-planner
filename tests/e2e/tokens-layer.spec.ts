@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * 驗證 CSS custom properties 在瀏覽器端正確定義 + 主題切換正常。
+ * 驗證 CSS custom properties 在瀏覽器端正確定義 + light/dark 切換正常。
  * 這是 AB Test Blue-Green 方案的地基 — 此測試失敗則整個方案需重新評估。
  */
 

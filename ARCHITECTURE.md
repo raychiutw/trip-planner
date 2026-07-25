@@ -109,7 +109,7 @@ src/
 
 ### CSS 架構
 
-`css/tokens.css` 是**唯一** CSS 檔，用 Tailwind CSS 4 的 `@theme` 定義 tokens（色彩、字體、圓角、間距、6 套主題）。元件一律用 utility classes；scoped styles 只用於 Tailwind 表達不了的 pseudo-element 或 dark mode 特例（見 `DayNav.tsx` 內的 `SCOPED_STYLES`）。
+`css/tokens.css` 是**唯一** CSS 檔，用 Tailwind CSS 4 的 `@theme` 定義 tokens（色彩、字體、圓角、間距）。**Single-theme**：只有 `body.dark` 與 `body.theme-print` 兩個覆寫，不是多主題系統（`tests/unit/tokens-css.test.ts` 鎖住此不變量）。元件一律用 utility classes；scoped styles 只用於 Tailwind 表達不了的 pseudo-element 或 dark mode 特例（見 `DayNav.tsx` 內的 `SCOPED_STYLES`）。
 
 ---
 
