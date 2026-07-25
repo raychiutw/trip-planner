@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.50] - 2026-07-25
+
+### Fixed
+- **master CI 連紅約 30 小時的 a11y 守衛修好了，而且它從頭到尾都沒真的守到手機**：`tests/e2e/a11y-axe.spec.js` 的「帳號 sheet」場景在 `mobile-chrome` 與 `mobile-safari` 兩個 project 都 `locator.click` 逾時 30 秒（`chromium` 綠），從 2026-07-24 09:27 起連續 12 個以上的 master run 都是同樣這兩支。**根因有兩層**：(1) 測試找的 `data-testid="account-circle"` 在 `src/` **根本不存在** —— 手機 header 帳號圓圈的真名是 `titlebar-account`（`AccountCircle.tsx`），`account-circle` 只是它的 CSS class 前綴 `.tp-account-circle`；(2) 於是 `.or()` 每次都只剩桌機側欄的 `sidebar-account-card`，而 `.or()` 是**按 DOM 順序**挑、不是「挑第一個有 match 的 locator」，`.first()` 在手機視窗下就挑到那顆被 `@media (max-width: 1023px)` 反向藏起來的桌機 chip，`click` 永遠等不到 `visible`。改為用正確 testid ＋ `.filter({ visible: true })`，三個 project 全綠、每支從 30 秒逾時降到 1.4–1.8 秒。
+- **同一支守衛的三個 fail-open 一併關掉**（不然它下次漂走還是靜默）：(1) 原本 `if (await trigger.count())` 在找不到入口時**直接跳過整段互動**、只掃 `/trips` 預設狀態就綠 —— 這正是本次 testid 寫錯卻沒人發現的結構原因（桌機那顆恰好 match 到，count 才沒有歸零）。改為 `toHaveCount(1)` 硬斷言「當前 viewport 恰好一顆可見入口」，0 顆代表 testid 又漂了、2 顆代表 form factor 的 `display` 切換壞了。(2) 原本**全程沒有斷言 sheet 真的開了**：`openSheet` 只設 flag、導航仍是 `<Link to="/account">`，flag 沒生效就退化成 `/account` 全頁 fallback，而 `/account` 本來就在同檔的 `PAGES` 掃描清單裡、已知乾淨 → 掃到全頁照樣綠。改為斷言 sheet overlay 的 `role="dialog"`（`aria-label="帳號"`）可見。(3) `AccountPage` 是 lazy（`main.tsx` 的 `lazyWithRetry`）且 sheet 內包 `<Suspense fallback={null}>`，**overlay 外殼可見時 body 可能還是空的** —— 原本靠 `waitForTimeout(300)` 恰好蓋住這段，改成斷言式等待後必須明寫，否則掃到的是空 sheet。補上「sheet 內的 `account-page` 可見」第二道斷言。三道各管一種失效模式，是**疊加不是取代** —— 只留一道就會在另外兩種情況下靜默放行。
+- **三道新斷言都做過 mutation 實測**（綠燈不算驗過）：testid 改回 `account-circle` → 在 `toHaveCount(1)` 轉紅（`Expected: 1, Received: 0`，6.1 秒，不是原本那種 30 秒的謎樣逾時）；拿掉 `AccountCircle` 的 `onClick={() => openSheet(location)}` 讓它退化成全頁導航 → 在 `role="dialog"` 斷言轉紅；把內容斷言的 testid 改成不存在的名字 → 在該斷言轉紅。第一次做 mutation 時正則縮排數錯導致改壞沒生效、測試假綠，靠比對「改壞後 `openSheet` 出現次數應為 0」才抓到 —— **mutation 本身也要驗它有沒有真的改到**。第 (3) 個 fail-open 是自審時發現「我把 `waitForTimeout(300)` 拿掉換成斷言」這個動作自己開的洞，補回去才完整。
+- 純測試變更，`src/` 零改動（產品行為本來就是對的，桌機那支綠也是真的綠）。
+
 ## [2.57.49] - 2026-07-25
 
 ### Fixed
