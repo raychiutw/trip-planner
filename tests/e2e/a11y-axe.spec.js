@@ -116,12 +116,38 @@ test('a11y: 「已封存」分類篩選結果為零時的重設按鈕已知有 s
 test('a11y: 帳號 sheet（帳號圓圈開啟）無 serious/critical axe 違規', async ({ page }) => {
   await page.goto('/trips');
   await page.waitForLoadState('networkidle');
-  // 桌機側欄帳號 chip 或 手機 header 圓圈 → 開帳號 sheet。用 testid 容錯。
-  const trigger = page.getByTestId('account-circle').or(page.getByTestId('sidebar-account-card')).first();
-  if (await trigger.count()) {
-    await trigger.click();
-    await page.waitForTimeout(300);
-  }
+  // 帳號入口每個 form factor 各一顆，另一顆由 CSS 藏起來：手機是 header 圓圈
+  // （AccountCircle 的 `titlebar-account`，.tp-account-circle 在 ≥1024 display:none），
+  // 桌機是側欄左下 chip（DesktopSidebar 的 `sidebar-account-card`）。兩顆都在 DOM 裡。
+  //
+  // ⚠ 這裡不能用 `.first()`：`.or()` 是**按 DOM 順序**挑，不是「挑第一個有 match 的
+  // locator」。手機視窗下 DOM 裡先出現的是隱藏的桌機 chip → click 永遠等不到 visible，
+  // 30s 逾時（master 連紅 30 小時的根因，另一半是原本寫的 `account-circle` 這個 testid
+  // 在 src/ 根本不存在，於是 `.or()` 每次都只剩桌機那顆）。必須 filter visible。
+  const trigger = page
+    .getByTestId('titlebar-account')
+    .or(page.getByTestId('sidebar-account-card'))
+    .filter({ visible: true });
+  // 恰好一顆：0 顆代表 testid 又漂了（原本的 `if (count)` 會直接跳過互動、只掃 /trips
+  // 就綠 —— fail-open）；2 顆代表 form factor 的 display 切換壞了。
+  await expect(trigger, '帳號入口在當前 viewport 應恰好一顆可見').toHaveCount(1);
+  await trigger.click();
+  // sheet 真的開了才算掃到 sheet。openSheet 只設 flag，導航仍是 <Link to="/account">：
+  // flag 沒生效就退化成 /account 全頁 fallback，而 /account 本來就在上面的 PAGES 清單裡、
+  // 已知乾淨 → 掃到全頁也會綠（第二個 fail-open）。用 sheet overlay 的 role=dialog 鎖住。
+  const sheet = page.getByRole('dialog', { name: '帳號' });
+  await expect(
+    sheet,
+    '點帳號入口後應開出帳號 sheet（overlay），不是退化成 /account 全頁',
+  ).toBeVisible();
+  // 再等內容真的 render。AccountPage 是 lazy（main.tsx `lazyWithRetry`）且 sheet 內包
+  // `<Suspense fallback={null}>` —— overlay 外殼可見時 body 可能還是空的，這時掃 axe 等於
+  // 掃一個空 sheet（第三個 fail-open）。原本靠 `waitForTimeout(300)` 恰好蓋住這段，改成
+  // 斷言式等待就必須明寫，不能只驗外殼。兩道斷言各管一種失效模式，是疊加不是取代。
+  await expect(
+    sheet.getByTestId('account-page'),
+    'sheet 外殼開了但內容還沒 render（lazy chunk / Suspense 未解）—— 這時掃到的是空 sheet',
+  ).toBeVisible();
   const bad = await scanSeriousCritical(page);
   if (bad.length) {
     // eslint-disable-next-line no-console
