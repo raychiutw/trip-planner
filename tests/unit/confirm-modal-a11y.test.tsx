@@ -166,3 +166,63 @@ describe('ConfirmModal — a11y + interaction', () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 });
+
+describe('ConfirmModal — 關閉後焦點回到觸發元素（#1160）', () => {
+  /**
+   * 鍵盤使用者關掉對話框後不該被丟回文件頂端、重新 Tab 一遍才回到原位。
+   *
+   * 引擎（useSheetBehavior）本來就有焦點還原機制，但要靠呼叫方傳 `restorePreviousFocus`
+   * 或 `triggerRef` 才會啟動 —— 而三個共用對話框（ConfirmModal / InputModal /
+   * ConflictModal，共 26 處 JSX 使用）**都只傳 initialFocusRef**，兩個都沒傳，
+   * 所以全部沒有還原。#1160 改的是引擎的**預設值**：兩者都沒給時仍記住開啟當下的
+   * document.activeElement 並在關閉時聚焦回去，不必去改 26 個呼叫點。
+   */
+  function Harness({ open }: { open: boolean }) {
+    return (
+      <>
+        <button type="button" data-testid="trigger">開啟</button>
+        <ConfirmModal
+          open={open}
+          title="刪除行程"
+          message="此動作無法復原"
+          onConfirm={() => {}}
+          onCancel={() => {}}
+        />
+      </>
+    );
+  }
+
+  it('開啟前聚焦某按鈕 → 開對話框 → 關閉 → 焦點回到該按鈕', async () => {
+    const { rerender } = render(<Harness open={false} />);
+    const trigger = screen.getByTestId('trigger') as HTMLButtonElement;
+    trigger.focus();
+    expect(document.activeElement).toBe(trigger);
+
+    rerender(<Harness open={true} />);
+    // 開啟後焦點進到對話框內的安全鈕（既有 W12 行為，不該被本票改動）。
+    const cancelBtn = screen.getByRole('button', { name: '取消' });
+    await waitFor(() => expect(document.activeElement).toBe(cancelBtn));
+
+    rerender(<Harness open={false} />);
+    // 關閉後回到觸發元素 —— 這是 #1160 要補的行為。
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it('觸發元素在對話框開啟期間被移除 → 不 throw、也不亂搶焦點', async () => {
+    // 真實情境：刪除流程關掉對話框時，觸發它的那一列已經連帶消失。
+    function Vanishing({ open, withTrigger }: { open: boolean; withTrigger: boolean }) {
+      return (
+        <>
+          {withTrigger && <button type="button" data-testid="trigger">開啟</button>}
+          <ConfirmModal open={open} title="t" message="m" onConfirm={() => {}} onCancel={() => {}} />
+        </>
+      );
+    }
+    const { rerender } = render(<Vanishing open={false} withTrigger />);
+    (screen.getByTestId('trigger') as HTMLButtonElement).focus();
+    rerender(<Vanishing open={true} withTrigger />);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: '取消' })));
+    // 觸發元素與對話框同時消失
+    expect(() => rerender(<Vanishing open={false} withTrigger={false} />)).not.toThrow();
+  });
+});

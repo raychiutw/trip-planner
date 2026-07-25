@@ -4,11 +4,17 @@ import { FOCUSABLE_SELECTOR as FOCUSABLE } from '../lib/constants';
 
 interface UseSheetBehaviorOptions {
   /**
-   * Whether to restore focus to the previously focused element on close
-   * (InfoSheet pattern). When false, `triggerRef` is focused instead (QuickPanel pattern).
+   * 明確要求「還原到開啟前聚焦的元素」（InfoSheet pattern）。
+   *
+   * ⚠ #1160 起這個 flag **不再是還原行為的開關**，只是「明確指定用這條路」。
+   * 沒傳 flag 也沒傳 `triggerRef` 時，引擎預設就會還原到開啟當下的
+   * `document.activeElement` —— 見下方 focus management 的說明。
    */
   restorePreviousFocus?: boolean;
-  /** Ref to the trigger button — focused on close when restorePreviousFocus is false. */
+  /**
+   * 觸發按鈕的 ref —— 關閉時聚焦它（QuickPanel pattern），優先於預設的
+   * 「還原 activeElement」。有些觸發元件關閉後會重繪，指名 ref 比記快照可靠。
+   */
   triggerRef?: React.RefObject<HTMLElement | null>;
   /** Extra callback to run when Escape is pressed (before setIsOpen(false)). */
   onEscape?: () => void;
@@ -114,24 +120,43 @@ export function useSheetBehavior(
   /* 2. Body scroll lock — modal surfaces only (non-modal desktop panel stays unlocked) */
   useBodyScrollLock(isOpen && modal);
 
-  /* 3. Focus management on open/close */
+  /* 3. Focus management on open/close
+   *
+   * #1160：焦點還原改成**預設行為**，不再要求呼叫方明確開啟。
+   *
+   * 原本 `previousFocusRef` 只在 `restorePreviousFocus === true` 時才記，關閉時的
+   * 三種情況只處理兩種 —— 兩者都沒傳就**什麼都不做**，鍵盤使用者被丟回文件頂端、
+   * 要重新 Tab 一遍才能回到原位。而三個共用對話框（ConfirmModal / InputModal /
+   * ConflictModal，共 26 處 JSX 使用）都只傳 `initialFocusRef`，全部落在那一格。
+   *
+   * 改引擎預設值一次修好全部呼叫點，比逐一改 26 個呼叫點的變更面小得多。
+   * **既有兩條明確路徑的行為完全不變** —— 新邏輯只補「兩者都沒傳」的 fallback：
+   *   restorePreviousFocus  → 還原 activeElement 快照（不變）
+   *   triggerRef            → 聚焦指定的觸發元素（不變，優先於快照）
+   *   兩者都沒傳            → **改為**還原 activeElement 快照（原本什麼都不做）
+   *
+   * 快照改為無條件記錄：成本是一次 `document.activeElement` 讀取，而只在需要時才用。
+   */
   useEffect(() => {
     if (isOpen) {
-      if (restorePreviousFocus) {
-        previousFocusRef.current = document.activeElement;
-      }
+      previousFocusRef.current = document.activeElement;
       requestAnimationFrame(() => {
         (initialFocusRef?.current ?? panelRef.current)?.focus();
       });
     } else {
-      if (restorePreviousFocus) {
-        if (previousFocusRef.current instanceof HTMLElement) {
+      // triggerRef 明確指名時優先（它比快照可靠：有些觸發元件關閉後會重繪）。
+      if (!restorePreviousFocus && triggerRef?.current) {
+        triggerRef.current.focus();
+      } else if (previousFocusRef.current instanceof HTMLElement) {
+        // `instanceof HTMLElement` 同時擋掉三種情況：null（沒開過）、非 HTML 元素、
+        // 以及**已從 DOM 移除的元素**（刪除流程關閉對話框時，觸發它的那一列常一起消失
+        // —— 對 detached 元素呼叫 focus() 不會 throw，但會把焦點掉到 body，
+        // 與什麼都不做同樣糟；isConnected 檢查讓它安靜跳過，由瀏覽器保留當前焦點）。
+        if (previousFocusRef.current.isConnected) {
           previousFocusRef.current.focus();
         }
-        previousFocusRef.current = null;
-      } else if (triggerRef?.current) {
-        triggerRef.current.focus();
       }
+      previousFocusRef.current = null;
     }
   }, [isOpen, restorePreviousFocus, triggerRef, initialFocusRef]);
 
