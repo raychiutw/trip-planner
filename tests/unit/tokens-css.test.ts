@@ -271,4 +271,29 @@ describe('tokens.css', () => {
       });
     });
   });
+
+  // #1158: 全域 focus-visible 焦點框補回 + 守護測試
+  // 任何 `:focus-visible { ... outline: none ... }` 規則若裸移除 outline，
+  // 必須在同規則內同時提供可見的焦點指示 —— 焦點框陰影（--shadow-ring，本票要補的
+  // 一般按鈕/連結/role=button 寫法）或既有輸入元件的邊框變色替代方案（不在本票範圍，
+  // 見 .tp-titlebar-trip-search 這類既有案例），不能兩手空空完全沒有指示。
+  it('every :focus-visible rule that resets outline: none also provides a visible focus indicator', () => {
+    const ruleRegex = /([^{}]*:focus-visible[^{}]*)\{([^}]*)\}/g;
+    const offendingSelectors: string[] = [];
+    let match: RegExpExecArray | null;
+
+    while ((match = ruleRegex.exec(tokens)) !== null) {
+      const selector = match[1].trim();
+      const body = match[2];
+      const resetsOutline = /outline:\s*none\s*;?/.test(body);
+      const hasFocusRingShadow = /box-shadow:\s*var\(--shadow-ring\)/.test(body);
+      const hasBorderColorAlternative = /border-color:\s*var\(/.test(body);
+
+      if (resetsOutline && !hasFocusRingShadow && !hasBorderColorAlternative) {
+        offendingSelectors.push(selector);
+      }
+    }
+
+    expect(offendingSelectors).toEqual([]);
+  });
 });
