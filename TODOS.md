@@ -13,6 +13,34 @@
 
 ## Active
 
+### 色彩對比 — Tailwind utility 路徑不在任何守衛的視線內
+
+**Priority**: P2（既有違規已存在，但沒有守衛會發現新的）
+
+`css/tokens.css` 的 `@theme` 會把 `--color-accent` 生成 `text-accent` utility，於是
+`hover:text-accent` 這種寫法產出的就是 `color: var(--color-accent)` —— 但它不在任何
+CSS 字串裡，`tests/unit/trips-list-accent-text.test.ts` 這類掃 template literal 的守衛
+**永遠**看不到，axe 也只在該狀態被觸發時才掃得到。
+
+現有實例：`InfoSheet.tsx:261`（`hover:text-accent hover:bg-accent-bg`，實測 2.77:1，
+連非文字的 3:1 都不到）、`HourlyWeather.tsx:121/158/205`（`hover:text-accent hover:bg-hover`，
+3.27:1）。
+
+要嘛把 `--color-accent` 排除在生成 `text-*` utility 的 token 之外（改名成只給填色用），
+要嘛接受這條路徑靠人工守。這是策略決定，不是純實作。v2.57.50 / #1156 稽核發現。
+
+### 色彩對比 — `body.theme-print` 沒覆寫 `-text` 系列 token
+
+**Priority**: P3（目前影響面小，但會隨遷移線性放大）
+
+`body.theme-print`（`css/tokens.css`）覆寫了 `--color-accent` / `-subtle` / `-bg` 成灰階，
+但**沒有**覆寫 `--color-accent-text` / `-text-on-tonal` / `-deep`，它們會回落 light 的
+`#8A6038` / `#7A5430`。
+
+`#1156` 立的通則要求全庫把文字色遷到 `-text` 變體 —— 每遷一處，列印模式的灰階版面就多
+一處暖褐色文字。目前 print mode 只掛在行程明細頁（`usePrintMode` 只在 `TripPage` 使用），
+所以現在幾乎無感，但全庫推廣前要先補 print 的 token 覆寫。v2.57.50 / #1156 稽核發現。
+
 ### tp-request — flag-OFF 路徑仍走未-contained spawn（activation 硬化）
 
 **Priority**: P1（安全；pre-existing，flag OFF 才可達）
