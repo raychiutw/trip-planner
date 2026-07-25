@@ -179,6 +179,61 @@ test('a11y: 信箱驗證等候頁無 serious/critical axe 違規', async ({ page
   await expectNoSeriousCritical(page, '信箱驗證等候頁');
 });
 
+test('a11y: titlebar action hover 態（共用 chrome）無 serious/critical 違規', async ({ page }) => {
+  // #1169：.tp-titlebar-action:hover 的文字色是**共用 chrome** —— 這個 class 出現在每個有
+  // 動作按鈕的 TitleBar 上。原本 --color-accent 疊 --color-hover：light 3.27:1 / dark 3.82:1，
+  // label 是 16px/600 屬一般文字、門檻 4.5，兩個色系都不達標。
+  //
+  // 為什麼上面 /trips、/favorites、/account 三支全綠卻沒抓到：**沒有任何一支去 hover 它**。
+  // 那正是 #1150 要收的「綠著但沒在守」—— 所以守衛得主動 hover，不能只 goto。
+  //
+  // 只在桌機有意義：.tp-titlebar-action-label 在 ≤760px 是 display:none（tokens.css），
+  // 手機 project 上那個文字節點不存在，寫斷言會在手機必敗。
+  const vp = page.viewportSize();
+  test.skip(!vp || vp.width <= 760, 'label 在 ≤760px 隱藏，hover 文字對比只在桌機成立');
+
+  // 用 /settings/sessions 的「登出其他裝置」action 當樣本：它是 .tp-titlebar-action 且帶
+  // 可見 label。要 render 出來需要 mock 裡有「非目前」的工作階段 —— api-mocks 的
+  // MOCK_SESSIONS 已有 sid 'iphone'，不必新增 mock。
+  await page.goto('/settings/sessions');
+  await page.waitForLoadState('networkidle');
+  const action = page.getByTestId('sessions-revoke-all');
+  await action.waitFor({ state: 'visible' });
+  // 真滑鼠移入才會觸發 :hover 偽類，加 class 模擬不算。
+  await action.hover();
+  // .tp-titlebar-action 有 `transition: background-color 150ms, color 150ms`。過渡期間
+  // getComputedStyle 回的是插值，對比會落在起訖值之間 —— 太早取樣，回歸（改回
+  // --color-accent）會量到假綠。等超過 150ms 再掃，同 #1156 在 hover 卡那支學到的。
+  await page.waitForTimeout(200);
+  // 掃描範圍縮到 titlebar 子樹：本頁其餘部分還有一個「目前」pill 的語意色違規（2.35:1，
+  // 追蹤於 #1176），整頁掃會為了別的原因紅、把這支守衛的訊號蓋掉。同一頁的那個違規已由
+  // 下面「登入工作階段頁」那支的指紋斷言負責鎖住，不會因為這裡縮範圍而失去守備。
+  await expectNoSeriousCritical(page, 'titlebar action hover 態', '.tp-titlebar');
+});
+
+test('a11y: titlebar 帶文字返回鈕 hover 態無 serious/critical 違規', async ({ page }) => {
+  // #1169 的票說「不要順手改 .tp-titlebar-back:hover，它沒有可見文字、非文字門檻 3:1 已達標」
+  // —— 那個前提只對 icon-only 變體成立。.tp-titlebar-back--labeled 會顯示可見的
+  // 「‹ <label>」文字（TitleBar.tsx 依 backLabelVisible 掛上，用於 /privacy 與 /explore），
+  // callout(16px) + 600 屬一般文字、門檻 4.5。它非 hover 時是 --color-accent-deep（4.78:1
+  // 達標），一 hover 就被 .tp-titlebar-back:hover 的色蓋掉 → 原本 light 3.27 / dark 3.82。
+  //
+  // 所以那條規則也改了，這支就是它的守衛 —— 不然這是一個沒有任何測試覆蓋的修正。
+  const vp = page.viewportSize();
+  test.skip(!vp || vp.width <= 760, 'label 在 ≤760px 隱藏，hover 文字對比只在桌機成立');
+
+  // /privacy 是靜態頁（不需要登入或 API mock），是最便宜的 labeled 返回鈕樣本。
+  await page.goto('/privacy');
+  await page.waitForLoadState('networkidle');
+  await page.getByTestId('privacy-page').waitFor({ state: 'visible' });
+  const back = page.locator('.tp-titlebar-back--labeled');
+  await expect(back, 'labeled 返回鈕不存在 —— 這支守的東西沒 render，別讓它靜默通過').toHaveCount(1);
+  await back.hover();
+  // 同 action 那支：transition 150ms，等超過再掃，否則量到插值假綠。
+  await page.waitForTimeout(200);
+  await expectNoSeriousCritical(page, 'titlebar labeled 返回鈕 hover 態', '.tp-titlebar');
+});
+
 test('a11y: 登入工作階段頁 — 鎖住剩下那個語意色違規（待 #1176 修）', async ({ page }) => {
   // /settings/sessions 與 /account/sessions 都指向 SessionsPage，深連結時兩者都落在
   // 主 routes（sheet 那份要 background location 才會 render）。選 /settings/sessions

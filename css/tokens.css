@@ -1760,7 +1760,15 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   color: var(--color-foreground);
   transition: background-color 150ms, color 150ms;
 }
-.tp-titlebar-back:hover { background: var(--color-hover); color: var(--color-accent); }
+/* ⚠ #1169 的票說「不要順手改這條，它是只有 aria-label 的 SVG、沒有可見文字，非文字門檻
+ * 3:1 已達標」—— **那個前提只對 icon-only 變體成立**。下面的 .tp-titlebar-back--labeled
+ * 是同一個元素的 modifier，會顯示可見的「‹ <label>」文字（TitleBar.tsx:48 依
+ * backLabelVisible 掛上，label 在 .tp-titlebar-back-label），font-size: callout(16px)
+ * + weight 600 → 一般文字、門檻 4.5。它非 hover 時是 --color-accent-deep（4.78:1 達標），
+ * 但一 hover 就被這條的 --color-accent 蓋掉，掉到 light 3.27:1 / dark 3.82:1 —— 真違規。
+ * 所以這條要跟 .tp-titlebar-action:hover 一起改。改後 light 5.81:1 / dark 5.11:1，
+ * icon-only 變體同樣受益（只是 hover 時的棕色略深，與 labeled 變體的 base 色更一致）。 */
+.tp-titlebar-back:hover { background: var(--color-hover); color: var(--color-accent-text-on-tonal); }
 .tp-titlebar-back:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 .tp-titlebar-back .svg-icon { width: 18px; height: 18px; }
 
@@ -1805,7 +1813,13 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 }
 .tp-titlebar-action:hover {
   background: var(--color-hover);
-  color: var(--color-accent);
+  /* 底是同色系 tint（--color-hover）→ 走 -text-on-tonal（DESIGN.md §Color Approach 通則）。
+   * 原本 --color-accent 疊 --color-hover：light 3.27:1、dark 3.82:1，label 是 16px/600 屬
+   * 一般文字、門檻 4.5，兩個色系都不達標。改後 light 5.81:1、dark 5.11:1。#1169
+   *
+   * 這是**共用 chrome** —— .tp-titlebar-action 出現在每個有動作按鈕的 TitleBar 上。既有
+   * e2e axe 守衛對 /trips、/favorites、/account 全綠，只是因為沒有任何一支測試去 hover 它。 */
+  color: var(--color-accent-text-on-tonal);
 }
 .tp-titlebar-action:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 .tp-titlebar-action .svg-icon { width: 18px; height: 18px; }
