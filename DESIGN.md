@@ -669,6 +669,75 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-share-page.html`（Variant B�
 - **POI 模型**：匯入一律**新建 pois**（不 find-or-create，天然「不碰既有 catalog」）；trip-specific override（reservation/note/description）寫 `trip_entry_pois`。segments 用 positional idx remap 回新 entry id。
 - **Round-trip**：PR2 匯出的 JSON 可原檔匯回成等價新行程。
 
+## Desktop CRUD Interaction (macOS HIG)
+
+> **本段是規範（SoT），不是現況描述。** 現況對齊盤點見 openspec change `macos-hig-crud-spec` 的 `design.md` 附錄 —— 那份是一次性快照、會隨實作過時，所以刻意不放在這裡。**待對齊項不代表規範可以打折**：讀到「code 這樣寫」時請以本段為準（`CLAUDE.md`：code 不符 SoT ＝ bug）。
+>
+> 規範來源：Apple macOS HIG（owner 2026-07-25 要求把已研究的 iOS CRUD 互動整理成 macOS 對應版）。可測 requirement 落在 `openspec/changes/macos-hig-crud-spec/specs/desktop-crud-interaction/spec.md`；本段是它的散文版，兩者衝突時以 spec 的 SHALL/MUST 條文為準。
+>
+> **這段規範與下方 §Modal Dialogs 的 Surface 對應表、§Error & Status Messaging 的 Toast 原則有交集，三處已對齊**（見各處的交叉註記）。政策在這裡，機制在 §Modal Dialogs。
+
+### 動詞語意（New / Add / Remove / Delete）
+
+四個動詞不可混用 —— 使用者是靠動詞判斷「這個動作會不會毀掉東西」：
+
+| 動詞 | 語意 | 用在哪 |
+|---|---|---|
+| **新增**（New） | 建立**新資料** | 新行程、新筆記 |
+| **加入**（Add） | 把**既有**景點放進行程 | 從收藏／搜尋加進某一天 |
+| **移除**（Remove） | 解除關聯，**可復原、不銷毀底層資料** | 解除收藏、從備選清單拿掉 |
+| **刪除**（Delete） | **真正銷毀資料** | 刪整趟行程、刪景點、刪筆記 |
+
+**收藏／備選的動作 MUST 用「移除」而非「刪除」** —— 它只解除關聯，底層 POI 仍在（universal pool，見 §V2 Owner Cutover）。寫「刪除」會讓使用者以為資料被毀，於是不敢用。
+
+### 可復原 → 直接執行 + undo；不可逆 → Alert
+
+| 性質 | 做法 | MUST NOT |
+|---|---|---|
+| 單筆、**可復原** | **直接執行**，底部出「已移除・復原」toast（對齊 macOS `⌘Z` 語意） | MUST NOT 跳 Alert 二次確認 |
+| 不常發生、**不可逆**（如刪整趟行程） | **Alert 二次確認** | — |
+
+為什麼可復原的不給確認框：確認框對「反正能復原」的動作是純摩擦，使用者學會無腦按確認之後，它在真正危險的地方也失去效力。**把注意力預算留給不可逆的操作。**
+
+> 🔴 **這一條目前與已 ship 的 W12 刪除政策直接衝突，尚未定案 —— 讀到這裡請不要照著改 code。**
+>
+> | | W12 刪除政策 | 本段（`macos-hig-crud-spec`） |
+> |---|---|---|
+> | 日期／狀態 | **2026-07-24 已 ship**（v2.57.21 / PR #1123） | 2026-07-18 提案，未實作 |
+> | 收藏取消 | **跳同一個不可復原確認、無 undo、不提供 restore** | 不跳確認、提供 undo |
+> | code 現況 | 已照 W12 落地：`poi-favorites/[id]/restore.ts` 與 `UNDO_EXPIRED` **已刪除**，驗收條件是「無 restore 路徑殘留」 | — |
+>
+> **提案比 W12 早 6 天，所以是 W12 推翻提案**（`docs/backend-tasks/2026-07-18-poi-favorites-undo-restore-api.md` 首行的 SUPERSEDED banner 已這樣記載）。上表的「可復原 → 不跳確認 + undo」對**行程景點刪除**沒有爭議（W12 也要求確認，但那屬不可逆一類、另有 #1150 的獨立取捨），**爭議只在收藏**。
+>
+> 待 owner 裁決（見 §Desktop CRUD Interaction 開頭的規範來源）：要嘛 W12 維持、本段把收藏移到「不可逆」那一列；要嘛本段生效、W12 的收藏條款退場並把 restore 能力接回來。**在裁決前，收藏的實作以 W12 為準（現況即是）。**
+
+Alert（不可逆）MUST 具備三件事：
+
+1. **可獨立理解的標題，含對象名稱** —— 「刪除『京都五日行』？」，不是「確定刪除行程？」（後者要讀 message 才知道刪哪一趟）
+2. **說明將永久刪除哪些資料** —— 「行程、景點、筆記與共編資料將永久刪除」
+3. **以動詞命名的按鈕** —— 「刪除行程」
+
+### 破壞性按鈕樣式與 Alert 按鈕排列
+
+- 破壞性按鈕 MUST 用系統紅色（`--color-priority-high-dot`），**MUST NOT 套品牌柔褐**（柔褐是品牌／active／CTA，見 §Color）
+- 破壞性按鈕 **MUST NOT 設為主要／預設按鈕**
+- Alert 按鈕置於**右下角橫排**，預設按鈕在**最右**
+- **預設按鈕 MUST 只執行安全動作** —— 所以高誤觸風險時 **Cancel SHALL 為預設按鈕**，讓 Enter 落在安全的那一邊
+- 按鈕文字 MUST 用**描述結果的動詞**（「刪除行程」），MUST NOT 用「確定／是／否」—— 那些字脫離語境，使用者按下去不知道自己同意了什麼
+
+### 動作入口用 macOS 載體，不是 iOS 手勢
+
+| 動作 | 桌機入口 |
+|---|---|
+| 新增 | toolbar 標準 `＋` / 標題列按鈕（可綁 `⌘N`） |
+| 單筆動作 | **hover 顯示的列尾按鈕** + **右鍵 contextual menu**（+ `Delete` 鍵） |
+| undo | `⌘Z` / 底部 toast |
+| 批次 | `⌘`／`⇧` 多選 + toolbar／選單刪除（僅永久刪除才再 Alert 確認） |
+
+桌機 **MUST NOT** 使用 FAB（Material 浮動鈕）或 hamburger 選單，**MUST NOT** 依賴 iOS 滑動刪除手勢。
+
+> **FAB 條款的範圍限定在「CRUD 動作入口」。** 地圖頁右下的浮動控制（重新定位／定位我，`MapFabs`）不是 CRUD 入口，不受此條約束 —— 它們是地圖檢視控制，macOS 的地圖類 App 也把這類控制浮在圖面上。看到 `tp-map-fab` 不要當成違規。
+
 ## Modal Dialogs
 
 ### Principle
@@ -741,11 +810,16 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-share-page.html`（Variant B�
 
 | Situation | Surface | Component |
 |-----------|---------|-----------|
-| Destructive 確認（刪除 / 撤銷 / 登出全部裝置 / 移除共編） | ConfirmModal (`role="alertdialog"`) | `<ConfirmModal>` |
+| **不可逆**破壞性確認（刪整趟行程 / 撤銷 / 登出全部裝置 / 移除共編） | ConfirmModal (`role="alertdialog"`) | `<ConfirmModal>` |
+| **單筆可復原**的移除／刪除 | **不用 Modal** —— 直接執行 + undo toast | `showToast()` 帶動作按鈕 |
 | 單行 input prompt（輸入地區名 / 自訂值 / 備註） | InputModal (`role="dialog"`) | `<InputModal>` |
 | 環境狀態 / 低風險通知（離線 / 複製成功 / 不支援的功能 / 操作失敗可重試） | Toast | `showToast()` / `showErrorToast()` |
 
 當你在猶豫時：**需要 user 顯式決定 → Modal；passive 通知 → Toast**。
+
+> ⚠ **第二列是規範新增的分軌，判準見 §Desktop CRUD Interaction「可復原 → 直接執行 + undo；不可逆 → Alert」。** 要判斷落哪一軌，問的是「底層資料有沒有被銷毀」，不是「動作看起來危不危險」。
+>
+> 🔴 **但這一列目前沒有任何合規的 call-site，而唯一的候選（收藏移除）正卡在 W12 衝突未定案** —— 見 §Desktop CRUD Interaction 那條紅字。**在裁決前，收藏移除仍走第一列的 ConfirmModal（現況即是）**，不要照第二列改。
 
 ### ConfirmModal
 
@@ -753,7 +827,10 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-share-page.html`（Variant B�
 
 - Role: `alertdialog`（語意上要求 user 注意）
 - Title `<h2>` + message `<p>` + 兩個 button：取消 ghost / 確認 destructive 實心
-- Confirm button 自動 focus（keyboard user 直接 Enter）
+- **取消（安全）button 自動 focus，不是 confirm button** —— keyboard user 按 Enter 落在安全的那一邊。
+  ⚠ 本行原本寫「Confirm button 自動 focus（keyboard user 直接 Enter）」，那是 2026-07-25 前的舊行為，
+  已由 #1150 的 P1-1 修正（`initialFocusRef` 指向 cancel 鈕），且與 §Desktop CRUD Interaction
+  「預設按鈕 MUST 只執行安全動作」相反 —— 文件停在修正前、方向還是錯的，一併更正。
 - Escape / backdrop click / cancel button 都關閉
 - `busy` prop：confirm button 顯示「處理中…」+ disabled，避免 double-submit
 - Destructive button 顏色 = `--color-priority-high-dot`（不用 柔褐 accent）
@@ -803,7 +880,14 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-share-page.html`（Variant B�
 
 ### Principle
 
-Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、複製成功。其他錯誤必須使用更明顯、持續可見、可操作的 surface，避免使用者漏看儲存、登入、資料載入等重要問題。
+Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、複製成功。其他**錯誤**必須使用更明顯、持續可見、可操作的 surface，避免使用者漏看儲存、登入、資料載入等重要問題。
+
+> ⚠ **2026-07-25 補一個 Toast 的第二角色：可復原操作的 undo。** 上面那條「只用於低風險通知」原本是為了擋「把錯誤塞進會自己消失的 toast」，它**不禁止**「操作成功 + 提供復原」這種用法 —— macOS HIG 對可復原刪除明文要求走底部 undo（見 §Desktop CRUD Interaction）。兩者的界線是：
+>
+> - **錯誤**（使用者需要修的問題）→ 不進 toast，走上表的 banner / dialog / page state
+> - **成功但可反悔**（移除收藏、刪景點）→ **進 toast，且必須帶動作按鈕**
+>
+> 沒有動作按鈕的「已移除」toast 不算滿足規範 —— 那只是通知，沒有給回頭路。
 
 ### Surfaces
 

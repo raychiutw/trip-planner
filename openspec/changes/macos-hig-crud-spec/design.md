@@ -31,14 +31,41 @@
 
 ## Open Questions
 
-- 現有「刪除景點」是否已有 undo？「移除收藏」是否已無確認？→ 由 tasks 的盤點步驟實查後填入，決定後續實作變更範圍（本變更不修）。
+- ~~現有「刪除景點」是否已有 undo？「移除收藏」是否已無確認？~~ → **2026-07-25 盤點完成**，見下方附錄。兩者答案都是「否」，而且**「移除收藏」的規範本身已被 W12 推翻、需要 owner 重新裁決** —— 見附錄的「⚠ 規範衝突」。
 
-## 附錄：現況對齊盤點（由 tasks 盤點步驟填入）
+## ⚠ 規範衝突：本 change 的「移除收藏可還原」已被 W12 推翻（2026-07-25 盤點發現）
+
+**本 change 是 2026-07-18 的提案（commit `f1cd92dd`）。2026-07-24 ship 的 W12 刪除政策（v2.57.21 / PR #1123）對同一件事下了相反的裁決，時間在後。**
+
+| | W12 刪除政策 | 本 change 的 spec |
+|---|---|---|
+| 日期／狀態 | **2026-07-24 已 ship** | 2026-07-18 提案，未實作 |
+| 收藏取消 | 跳同一個不可復原確認、**無 undo**、**不提供 restore** | 不跳確認、**可即刻還原** |
+| code 連帶 | 已執行：`functions/api/poi-favorites/[id]/restore.ts` 與 `UNDO_EXPIRED` **已刪除**（同一個 commit `206594b9`），驗收條件是「無 restore 路徑殘留」 | — |
+| 佐證 | `docs/plans/apple-hig-compliance/tickets.md` 的 W12 條目 | 本檔 |
+
+`docs/backend-tasks/2026-07-18-poi-favorites-undo-restore-api.md` 首行已自帶 SUPERSEDED banner 指向 W12 —— 也就是**後端側早就知道被推翻了，但本 change 的 spec 沒有同步**。
+
+**下游影響**：#1150 拆出的 #1164（通知訊息支援動作按鈕）與 #1165（收藏刪除接上復原）都建立在本 change 未被推翻的假設上。#1165 的本文更直接寫「按下呼叫**既有的**後端復原端點」、「後端其實**早就有**復原端點，前端從來沒接上」—— **那個端點在 2026-07-24 已被刪除**，票在描述 W12 之前的狀態。
+
+**待 owner 二選一**（本 change 不自行裁決）：
+
+1. **維持 W12** → 本 change 的 spec 把「移除收藏」從「可復原」移到「不可逆」一列（收藏取消照舊跳確認）；#1165 關為 superseded、#1164 失去唯一消費者需重新評估。
+2. **改採本 change** → W12 的收藏條款退場，restore 能力接回來；#1164 → #1165 照原計畫做。
+
+## 附錄：現況對齊盤點（2026-07-25 實查）
 
 | 桌機 CRUD 流程 | macOS HIG 規範 | 現況 | 對齊 |
 |---|---|---|---|
-| 刪除單一景點 | 直接刪 + undo，不確認 | （盤點填） | ⬜ |
-| 移除收藏 / 備選 | 「移除」+ 無確認 + 可還原 | （盤點填） | ⬜ |
-| 刪除整趟行程 | Alert + 紅色非-default + 動詞 | （盤點填） | ⬜ |
-| 批次刪除 | 多選 + 僅永久才確認 | （盤點填） | ⬜ |
-| 單筆動作入口 | hover + 右鍵 contextual menu | （盤點填） | ⬜ |
+| 刪除單一景點 | 直接刪 + undo，不確認 | `TimelineRail` 的 ⋯ menu「刪除景點」→ `ConfirmModal`（`showDeleteConfirm`）。**跳確認、無 undo。** 該檔註解自述「與全站其他刪除 confirm（trip-notes / favorites / trips-list）同 pattern」 | ⬜ **但不修** —— #1150 明列「行程項目刪除的復原牽涉車程重算與衝突處理，獨立取捨」，且 W12 要求所有刪除走同一確認 |
+| 移除收藏 / 備選 | 「移除」+ 無確認 + 可還原 | 文案用**「刪除」**（`favorites-delete-selected` 工具列鈕）、**會跳 `ConfirmModal`**、**無還原入口**。後端 soft-delete 已實作（migration `0087` + `[id].ts` 寫 `deleted_at` tombstone），但 **restore 端點已被 W12 刪除**；`POST /api/poi-favorites` 會 reactivate soft-deleted row 保留原 id，惟註解明載那是「新的一次收藏，套新 note/favorited_at」—— **語意上不是還原**（原 note 與收藏時間會被覆寫） | 🔴 **規範本身衝突中**，見上節 |
+| 刪除整趟行程 | Alert + 紅色非-default + 動詞 | `TripsListPage` / `EditTripPage` 走 `ConfirmModal`：紅色破壞鈕（`.tp-confirm-btn-danger` = `--color-priority-high-dot`，非品牌柔褐）✅、預設焦點在取消鈕（`initialFocusRef: cancelRef`，#1150 P1-1 已修）✅、`confirmLabel="刪除"` 是動詞 ✅。**未達標處**：標題是「確定刪除行程？」**不含對象名稱**（行程名在 message 裡），規範要求「刪除『京都五日行』？」這種可獨立理解的標題；按鈕文案「刪除」也未含對象（規範舉例「刪除行程」） | 🟡 **大致對齊**，差標題／按鈕的對象名稱 |
+| 批次刪除 | 多選 + 僅永久才確認 | 收藏頁有批次多選，但用 **checkbox**（`favorites-check-*` + 全選／清除選取）而非規範寫的 **`⌘`／`⇧` 點選**；刪除入口在工具列 ✅；會跳確認（收藏屬可復原 → 依規範不該跳，但受上述衝突影響）。timeline 無批次 | 🟡 部分 —— 入口對、多選手法不同 |
+| 單筆動作入口 | hover + 右鍵 contextual menu | hover 列尾動作**有**（`.poi-actions` / `.tp-rail-poi-actions`）✅；`⋯` menu **有**（`timeline-rail-menu-*`）✅；**右鍵 contextual menu 完全沒有**（`grep -rn onContextMenu src/` 零命中）❌；**`Delete` 鍵未綁**（零命中）❌ | ⬜ 缺右鍵選單與 `Delete` 鍵 |
+| （額外查核）FAB / hamburger | 桌機 MUST NOT 用 | `MapFabs`（`tp-map-fab`）存在，但那兩顆是**地圖檢視控制**（重新定位／定位我）、**不是 CRUD 入口**，不在本條約束範圍。無 hamburger | ✅ 不算違規 |
+
+**待對齊項的歸屬**（本 change 不修，供後續實作變更引用）：
+
+- 右鍵 contextual menu + `Delete` 鍵 → 兩者都需要**全域快捷鍵註冊機制**，#1150 已明列該機制為 `⌘N`／`Delete`／`⌘Z` 的實作前置且尚不存在 → 另開票，不在 #1150 內
+- 刪除行程 Alert 的標題／按鈕加對象名稱 → 小額 XS，可另開票
+- `⌘`／`⇧` 多選 → 需求價值待評估（現行 checkbox 在觸控裝置上更好用，而收藏頁手機也用同一份 UI）

@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.60] - 2026-07-25
+
+### Docs
+- **桌機 CRUD 互動規範寫進 `DESIGN.md`（openspec change `macos-hig-crud-spec`，純文件零 code）**：新增「Desktop CRUD Interaction (macOS HIG)」段 —— 動詞語意（新增/加入/移除/刪除，收藏 MUST 用「移除」不用「刪除」）、可復原 vs 不可逆的判準、破壞性按鈕與 Alert 排列（預設按鈕只能做安全動作）、macOS 動作入口（不用 FAB／hamburger／滑動手勢）。這是 #1150 母票指名由該 change 擁有的規範本體，此前 0/12 未動。
+- **三處交集已明文對齊，不是各寫一套**：§Modal Dialogs 的 Surface 對應表把「刪除」拆成「不可逆 → ConfirmModal」與「單筆可復原 → 直接執行 + undo toast」兩軌；§Error & Status Messaging 的「Toast 只用於低風險通知」補上第二角色（可復原操作的 undo），並寫明界線 —— **錯誤不進 toast，成功但可反悔才進，且必須帶動作按鈕**。
+- **`MapFabs` 不是 FAB 條款的違規，已寫進規範**：那兩顆是地圖檢視控制（重新定位／定位我），不是 CRUD 入口。不寫清楚的話下一個做稽核的人會來「修」它。
+
+### Fixed
+- **`DESIGN.md` 有一條敘述停在修正前、而且方向與規範相反，一併更正**：`### ConfirmModal` 寫「**Confirm button 自動 focus**（keyboard user 直接 Enter）」，但 code 早已改成 focus 取消鈕（#1150 的 P1-1，`initialFocusRef: cancelRef`），且新規範明文要求「預設按鈕 MUST 只執行安全動作」。照舊文件寫新元件會做出「Enter 直接刪除」的東西。
+
+### Changed
+- 🔴 **盤點發現本 change 的「移除收藏可還原」規範已被 W12 推翻，已標記為待 owner 裁決、未當成生效規範寫入**：W12 刪除政策（**2026-07-24 已 ship**，v2.57.21 / PR #1123）裁定「收藏取消同確認、**無 undo**、**不提供 restore**」並在同一個 commit 刪除了 `functions/api/poi-favorites/[id]/restore.ts` 與 `UNDO_EXPIRED`，驗收條件是「無 restore 路徑殘留」。本 change 是 **2026-07-18** 的提案 —— **時間在前，所以是 W12 推翻它**（後端規格 `docs/backend-tasks/2026-07-18-poi-favorites-undo-restore-api.md` 首行早已自帶 SUPERSEDED banner 指向 W12，只是本 change 的 spec 沒同步）。`DESIGN.md`、change 的 `design.md`、spec 三處都加了紅字標記，並明寫「裁決前收藏的實作以 W12 為準（現況即是）」。
+- **下游影響已記錄**：#1164（通知訊息支援動作按鈕）與 #1165（收藏刪除接上復原）都建立在本 change 未被推翻的假設上。#1165 本文寫「按下呼叫**既有的**後端復原端點」、「後端其實**早就有**復原端點」—— 那個端點 2026-07-24 已刪除，票在描述 W12 之前的狀態。兩票待裁決後才動。
+- **`design.md` 附錄的現況對齊盤點填完了（5+1 列，實查）**：刪除單一景點 ⬜（走 ConfirmModal、無 undo，但 #1150 明列其復原為獨立取捨、不修）／移除收藏 🔴（文案用「刪除」、會跳確認、無還原入口；soft-delete 已實作但 restore 端點已被 W12 刪除；`POST` 雖會 reactivate 保留原 id，註解明載那是「新的一次收藏」會覆寫 note 與收藏時間，**語意上不是還原**）／刪除整趟行程 🟡（紅色非預設 + 動詞都對，差標題與按鈕的對象名稱）／批次刪除 🟡（入口對，多選用 checkbox 而非 `⌘`／`⇧`）／單筆動作入口 ⬜（hover 列尾與 ⋯ menu 都有，**右鍵 contextual menu 與 `Delete` 鍵完全沒有**，`grep onContextMenu src/` 零命中）。待對齊項的歸屬也寫明了 —— 右鍵選單與 `Delete` 鍵需要 #1150 已標為前置且尚不存在的全域快捷鍵註冊機制，屬另開票。
+
 ## [2.57.59] - 2026-07-25
 
 ### Added
