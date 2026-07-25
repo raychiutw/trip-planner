@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.62] - 2026-07-26
+
+### Fixed
+- **daily-check 揪出 production 相依 `brace-expansion@5.0.7` 高風險 DoS 漏洞（GHSA-mh99-v99m-4gvg），`npm audit fix` 清掉**：非 major 修補版本直接吃，`package.json` 未動、只有 `package-lock.json` 重新解析（含連帶的 wrangler/miniflare/sharp 工具鏈依賴 dedup）。Typecheck + unit(4225) + API(1139) 全過。
+- **`react-router`/`react-router-dom` 的 CSRF 漏洞（GHSA-qwww-vcr4-c8h2）查證後暫不處理**：advisory 明寫「僅影響 unstable RSC APIs」，`grep -rn "unstable_.*RSC\|react-router/rsc"` 全 codebase 零命中；且 patched 版本 `react-router-dom@8.3.0` 尚未發布（`react-router` core 已有 8.3.0，DOM binding 還沒跟上），目前無可升級路徑。
+
 ## [2.57.60] - 2026-07-25
 
 ### Docs
