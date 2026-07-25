@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.51] - 2026-07-25
+
+### Fixed
+- **行程一覽頁三處文字在淺底上看得清楚了（#1156）**：分類 tab 的選中計數徽章、「新增行程」卡滑鼠移入後的文字、以及「已封存」分類沒有結果時的「回到全部」按鈕，都直接用品牌柔褐當文字色，在自家淺底上只有 3.24–3.65:1，低於 WCAG AA 要求的 4.5:1。改成依底色挑深變體：底是同色系淡底用 `--color-accent-text-on-tonal`（5.76:1），底是頁面色用 `--color-accent-text`（5.35:1）。**兩個裝飾圖示刻意不改** —— 它們是 `aria-hidden` 的純裝飾、旁邊已有文字標籤，依 WCAG 1.4.11 門檻是 3:1 而非 4.5:1，實測 3.24:1 已達標，硬套深色會在淺圓底上過深、與同頁其他圖示不協調。
+
+### Added
+- **補上自動化守衛擋住同一個錯誤再犯（#1156）**：這三處的其中一處，既有的端對端無障礙掃描**結構性看不到** —— 掃描工具對「內容恰好一個字元」的元素一律降級成 incomplete，而分類計數在行程數 ≤9 時就是單一數字。也就是說那個綠燈會隨測試資料量飄。新增一支單元守衛直接檢查頁面樣式的來源，涵蓋別名 token、帶 fallback 的寫法、硬編碼色碼與行內樣式；並鎖住「裝飾圖示例外」所依賴的兩個前提（`aria-hidden` 仍在、對比仍達 3:1），前提垮掉會立刻報錯而不是靜默放行。設計 token 層另補上文字色對第三層表面／hover 底、以及邊框對三種底色的對比斷言，深淺兩色系對稱。
+
+### Changed
+- **`DESIGN.md` 立下「品牌柔褐不得當文字色」通則（#1156）**：文字要照底色挑深變體，唯一例外是 `aria-hidden` 的純裝飾圖示與邊框（走 3:1）。同時清掉文件內六處與這條規則互相矛盾的舊敘述（色票表、§Color Approach 散文與類型標籤、§Buttons ghost button、§TitleBar 子頁返回、§Compact Bottom Nav、§Desktop Sidebar、§AI Health Check），以免後人照著文件再造一次同樣的問題。規則另附遷移狀態：對新程式碼一律生效，既有 call-site 逐頁收斂中（尚有 28 檔 57 處，追蹤於 #1157／#1168／#1169），並誠實標明目前沒有全庫執法者、Tailwind utility 與列印模式兩條路徑不在守備範圍。
+- **其餘文件跟著這條通則對齊（#1156，post-ship 同步）**：`DESIGN.md` 的 canonical 色票表補齊規則指名要用的三顆 token（`-text` / `-text-on-tonal` / `-fill`），並修掉兩個與 `tokens.css` 對不上的色碼（`-subtle` `#FBEEE4`→`#F4EDE3`、`-bg` `#F7DFCB`→`#E9DBC8`）—— 讀者若照舊值算對比會得到錯的數字；同時把 §AI Authorize Card / §AI Consent Sheet 三處「`--color-accent` 實心 + 白字」改回 code 實際用的 `--color-accent-fill`（白字疊 `#A97A4A` 只有 3.77:1，照文件寫就會生出新的違規）。`README.md` 的 accent 色碼從早已退場的 `#D97848` 更正為 `#A97A4A`。`openspec/specs/terracotta-page-layout` 的「Day tab dayColor underline」標記為已被取代 —— 它要求 active day tab 用 `color: var(--color-accent)`，同時撞上本通則與 v2.57.45 的實心膠囊改版。
+
 ## [2.57.50] - 2026-07-25
 
 ### Fixed

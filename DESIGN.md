@@ -21,10 +21,13 @@
 ## Palette — V2 柔褐三色（canonical source: tokens.css `@theme`）
 | Token | Hex | 用途 |
 |-------|-----|------|
-| `--color-accent` | `#A97A4A` | UI chrome 唯一主色（active state、CTA、link） |
+| `--color-accent` | `#A97A4A` | UI chrome 唯一主色（active 指示、邊框、裝飾圖示、tint 底）。**不可當文字色**，見下方 §Color Approach 的通則；**實心 CTA + 白字請用 `--color-accent-fill`**（白字疊 `#A97A4A` 僅 3.77:1） |
 | `--color-accent-deep` | `#8A6038` | hover / pressed |
-| `--color-accent-subtle` | `#FBEEE4` | badge bg、selected row |
-| `--color-accent-bg` | `#F7DFCB` | accent panel |
+| `--color-accent-text` | `#8A6038` | 疊頁面／表面色（`-background`／`-secondary`／`-tertiary`／`-hover`）的**文字色** |
+| `--color-accent-text-on-tonal` | `#7A5430` | 疊同色系 tint（`-subtle`／`-bg`）的**文字色** |
+| `--color-accent-fill` | `#8A6038` | 實心填色面（主要按鈕、tab 選中膠囊）+ `--color-accent-foreground` 白字 |
+| `--color-accent-subtle` | `#F4EDE3` | badge bg、selected row |
+| `--color-accent-bg` | `#E9DBC8` | accent panel |
 | `--color-background` | `#FFFBF5` | page bg |
 | `--color-secondary` | `#FAF4EA` | card bg |
 | `--color-foreground` | `#2A1F18` | body text |
@@ -83,22 +86,32 @@
 ## Color
 
 ### Approach
-**柔褐三色主題（2026-06 改版，tone v2.53）** — 暖奶油底上三色分區：主色柔褐 `#A97A4A`（景點·購物·活動、CTA、active、link、rating）+ 第二色 sage 綠 `#A8BAAA`（住宿·交通·停車、travel pill / connector）+ 第三色玫瑰粉 `#E78C99`（用餐·咖啡、備選、收藏／愛心）。記憶法：玩/看/買=柔褐、住/移動=sage、吃=粉。中性色維持暖奶油底。
+**柔褐三色主題（2026-06 改版，tone v2.53）** — 暖奶油底上三色分區：主色柔褐 `#A97A4A`（景點·購物·活動、CTA 填色、active 指示、邊框、裝飾圖示；**link / rating 等文字用 `-text` / `-text-on-tonal`，見下方通則**）+ 第二色 sage 綠 `#A8BAAA`（住宿·交通·停車、travel pill / connector）+ 第三色玫瑰粉 `#E78C99`（用餐·咖啡、備選、收藏／愛心）。記憶法：玩/看/買=柔褐、住/移動=sage、吃=粉。中性色維持暖奶油底。
 
 行程表套色方式（canonical mockup：`design-sessions/2026-06-06-three-color-trip-theme.html`）：
 - **卡片依類型上同色系淡底**：POI 卡 `data-tone`（accent／sage／pink／neutral）→ 對應色 `-subtle` 底 + `-bg` 邊。
 - **icon 同色系階梯（ghost）**：卡片 `-subtle` → icon 底 `-bg` → glyph/描邊 `-deep`，同一色相由淺到深、icon 融入卡片，不填滿不洗版。
 - **交通 pill 描邊式**：透明底 + sage `-deep` 邊框與文字（取代填滿）。
-- 類型標籤文字同步上對應色；備選卡粉底（dark 用加強粉）；CTA 維持柔褐。
+- 類型標籤**文字**同步上對應色系的深變體（卡底是 tonal → `-text-on-tonal`；base token 疊自家淡底只有 3.24:1，見下方通則）；備選卡粉底（dark 用加強粉）；CTA 維持柔褐**填色**。
 
 參考 mamahoikuen.jp 暖柔三色。完整 4 階色碼見下方 Light/Dark 表 + `design-sessions/2026-06-06-three-color-system.md`。
 
 > **Dark mode 覆寫不得冗餘**：若 base 規則已用 `var(--token)` 且該 token 在 `body.dark` 已有覆寫值，就 SHALL NOT 再寫 `body.dark .class { property: var(--token) }` —— token 值會自動切換，重寫是死碼、且日後改 token 時容易漏掉這份重複。〔遷自已歸檔的 `css-hig-discipline` spec〕
 
+> **`--color-accent` SHALL NOT 當文字色**（#1156，通則）：品牌柔褐是給邊框、active 指示、裝飾圖示與 tint 底用的，它在自家淺底上撐不到 WCAG AA 的 4.5:1。（**實心 CTA 也不要直接用它** —— 白字疊 `#A97A4A` 只有 3.77:1，填色面走 `--color-accent-fill`，見上方色票表。）文字要照**底色**挑深變體 —— 底是頁面／表面色（`--color-background`、`--color-secondary`、`--color-tertiary`、`--color-hover`）用 `--color-accent-text`；底是同色系 tint（`--color-accent-subtle` / `--color-accent-bg`）用更深的 `--color-accent-text-on-tonal`。
+>
+> 例外只有一種：`aria-hidden` 的**純裝飾**圖示——旁邊已有文字標籤、圖示本身不承載資訊。依 WCAG 1.4.11 門檻是 3:1 而非 4.5:1，硬套深色前景 token 反而會在淺 tint 圓底上過深、與同頁其他圖示不協調。邊框同理走 3:1。
+>
+> ⚠ **遷移狀態（別把未遷移當成 regression）**：本規則自 #1156 起對**新 code 一律生效**，既有 call-site 逐頁收斂中 —— 計數口徑 `grep -rhoE '(^|[;{ ])color: var\(--color-accent\)' src/ | wc -l` 命中 **29 個檔、59 處**（`-l` 給檔數、`-ho` 給處數），**不含** `border-color`（邊框走 3:1，本規則允許）。其中 `TripsListPage.tsx` 的 2 處是本節核准的 `aria-hidden` 裝飾例外，不是待遷移 —— **實際待辦是 28 檔 57 處**。已完成：行程一覽頁（#1156）。進行中：信箱驗證等候頁／登入工作階段頁（#1157）、地圖頁 day 標籤（#1168）、titlebar back/action hover（#1169）。其餘尚未開票。看到未遷移的 call-site 請歸到對應票或另開，不要當成本規則的違反紀錄。
+>
+> ⚠ **兩個本規則管不到的地方**：(a) Tailwind utility —— `@theme` 會把 `--color-accent` 生成 `text-accent`，`hover:text-accent` 這種寫法不在任何 CSS 字串裡，掃 template literal 的守衛永遠看不到（`InfoSheet.tsx`、`HourlyWeather.tsx` 現有數處）。(b) `body.theme-print` 只覆寫了 `--color-accent` / `-subtle` / `-bg`，**沒有覆寫 `-text` / `-text-on-tonal` / `-deep`**，所以遷移到 `-text` 的文字在灰階列印版面裡會是暖褐色。目前 print mode 只掛在行程明細頁（`usePrintMode`），影響有限，但全庫推廣前要先補 print 的 token 覆寫。
+>
+> 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層；call-site 層目前只有 `tests/unit/trips-list-accent-text.test.ts` 守行程一覽頁一個檔，**尚無全庫執法者**。
+
 ### Light Mode (柔褐三色 — Default)
 | Token | Hex | 用途 |
 |-------|-----|------|
-| accent（柔褐） | `#A97A4A` | 主強調：CTA、active、link、一般 POI icon/卡、rating |
+| accent（柔褐） | `#A97A4A` | 主強調：CTA 填色、active 指示、邊框、一般 POI icon/卡。**文字與連結請用 `-text` / `-text-on-tonal`**（見 §Color Approach） |
 | accent-deep | `#8A6038` | hover / pressed、icon glyph/描邊 |
 | accent-subtle | `#F4EDE3` | 卡片淡底、hover、selected row、chip bg |
 | accent-bg | `#E9DBC8` | icon 底、卡片邊、badge |
@@ -253,7 +266,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
   - ✅ **帳號入口＝Account sheet（2026-07-23 grill v2 owner 拍板，鏡像 app #82；Apple HIG 為 UI/UX SoT）**：帳號**移出 tab**（4-tab），改 header `person.crop.circle` 圓圈 → Account sheet。**此決策 supersede 同日稍早 #1120 的「帳號保留第 5 tab」裁定** —— 兩者皆以 HIG 為由，owner 於 grill v2 選定 app #82 的 4-tab + sheet 模型（profile-circle 慣例、釋出 tab slot）。〔實作（W1）：`navItems.ts` 移除 `account` item（5→4）；`AccountCircle` 從導向 `/account` 改為開 Account sheet 容器（自有 nav stack）；圓圈放大到 44pt（原 30×30 過小）。桌機 sidebar 左下 chip 同步指向 sheet。〕
 - **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕一律走 children 內 `.tp-page-bottom-bar`。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
 - **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（vibrancy：品牌 → 4-tab 主導覽 → 我的行程清單 → 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。
-- **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + accent 文字，`.tp-titlebar-back--labeled`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
+- **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + `--color-accent-text` 文字，`.tp-titlebar-back--labeled`；實作用同值的 `--color-accent-deep`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
 - **表單頁桌機滿寬（rev2 §10.4）:** account 設定分區桌機 2-col grid（`.tp-account-groups` @≥1024，hero 收窄置中）；new-trip 桌機加寬（線性表單不 full-bleed）。
 - **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。**底部 tab 常駐，捲動不隱藏**（owner 2026-07-20 / 07-21 兩次要求；捲動隱藏的 scroll-direction 邏輯已於 2026-07-21 整個移除，見 `AppShell.tsx:232`）。**唯一例外：手機軟鍵盤彈出時收起 root tab**（Apple HIG，v2.57.41）——`useKeyboardInset`（app root 全站掛一次）偵測 visualViewport inset > 120px（過濾 Safari URL bar 顯隱）→ documentElement 掛 `data-kb-open` → CSS 把浮動膠囊往下滑出畫面；鍵盤收起沿 transition 滑回。**底部互動元件讓位**：聊天 composer / 地圖 POI 卡用 `--nav-overlay-h`（80px = 膠囊 footprint 72 + 8px 呼吸間距）+ safe-area 讓位，與膠囊間距一致 8px（v2.57.41 從 88px 收緊）。
 - **Compact header trailing（v2.57.42）:** 主功能頁與行程明細 header 右側順序＝**主要動作（＋）· ⋯ · 帳號圓圈**（HIG trailing；`TitleBar` 的 `account` slot 排在 `actions` 之後即最右；桌機由 CSS 隱藏帳號圓圈，走 sidebar 左下帳號 chip）。
@@ -345,7 +358,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 **Action button (`.tp-titlebar-action`)**
 - 唯一合法 class，禁止自製 ad-hoc class
-- **Ghost icon button family**：無 border、透明底、hover 出 `--color-hover` + accent text。對齊 Apple HIG / iOS toolbar 慣例，跟 `.tp-titlebar-back` 同 family。
+- **Ghost icon button family**：無 border、透明底、hover 出 `--color-hover` + `--color-accent-text` 文字（**不是 `--color-accent`** —— 它疊 `--color-hover` 只有 3.27:1，見 §Color Approach 通則）。對齊 Apple HIG / iOS toolbar 慣例，跟 `.tp-titlebar-back` 同 family。既有的 `.tp-titlebar-back` / `.tp-titlebar-action` call-site 收斂於 #1169。
 - 兩 variant: default ghost / `.is-primary` accent filled (CTA 強調用，Tracerocta 實心)
 - 桌機: rounded rect (radius-md 8px) + icon + 文字 label
 - 手機: square 44×44 + radius-md + icon-only (label hidden via `.tp-titlebar-action-label` @media)
@@ -379,16 +392,16 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - Auth loading 不預設成匿名狀態：userinfo 尚未 resolve 時，底部帳號區只保留 neutral loading chip；不得先顯示「登入」「未登入」或 account chip 後再切換。
 - Primary nav 順序（聊天 / 行程 / 地圖 / 收藏）+ active route patterns 由 `navItems.ts`（`PRIMARY_NAV_ITEMS` + `isItemActive`）單一來源掌管，`GlobalBottomNav`（手機膠囊）共用同一份；nav testid＝`sidebar-nav-<key>`（vs 膠囊 `global-bottom-nav-<key>`）。
 - **材質＝vibrancy 半透明毛玻璃（§10.3）**：`background: color-mix(in srgb, var(--color-background) 72%, transparent)` + `backdrop-filter: blur(30px) saturate(180%)`；文字/hover/border 走主 app token（`--color-foreground`/`--color-muted`/`--color-hover`/`--color-border`）→ 自動 light/dark adapt。舊固定深棕 `--color-sidebar-*` token 已退役（無其他 consumer）。
-- Active state 用 柔褐 accent；其餘用 cream `rgba(255,251,245,.78)`。
+- Active state ＝ `--color-accent-fill` 實心底 + `--color-accent-foreground` 文字（同上）；inactive 文字走 `--color-foreground` / `--color-muted`。（舊的 cream `rgba(255,251,245,.78)` 已隨 `--color-sidebar-*` 一併退役。）
 - `/trip/:id/map` 與 `/trip/:id/stop/:eid/map` active item = 地圖；其他 `/trip/:id/*` active item = 行程。
 - 不和 page titlebar 重複放頁面說明文字。
 
-### Compact Bottom Nav（`GlobalBottomNav` / `BottomNavBar`）
+### Compact Bottom Nav（`GlobalBottomNav`）
 - 只在 compact mode 顯示，IA 與 desktop sidebar 同步（同一份 `navItems.ts`）。
 - **常駐，捲動不隱藏**（owner 2026-07-20 / 07-21；捲動隱藏邏輯已於 2026-07-21 移除）。
 - 高度需包含 safe-area inset，頁面內容必須留出底部 padding。
 - Bottom nav 是主功能定位，不是 breadcrumb。子頁與明細頁 active item 依所屬主功能決定，不新增子頁 tab。
-- Active item 使用不同於 CTA 的定位樣式：柔褐 淡底 pill + 2px top indicator + accent icon/label；inactive 保持 muted。
+- Active item 使用不同於 CTA 的定位樣式：實心 `--color-accent-fill` 膠囊 + `--color-accent-foreground` icon/label；inactive 保持 muted。**不可用「柔褐淡底 + `--color-accent` label」** —— 那組是 3.24:1，且 nav label 是 11px 小字（見 §Color Approach 通則）。
 
 | Route family | Active bottom nav |
 |--------------|-------------------|
@@ -468,8 +481,8 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 
 ### AI Authorize Card（`tp-ai-card`，v2.55.66）
 - NewTripPage 建立行程表單內的就地 AI 授權卡（Phase 2 V1）：讓 owner 授權 Tripline AI（`tripline-tp-request`）以自己身分排行程。先前只有 Ray 有 Consent → 其他 owner fail-closed 用不了 AI，此卡讓每位 owner 就地授權。
-- **卡片**：`--color-accent-subtle` 底 + `--radius-xl`，無框線。左 38px 柔褐 badge（`--color-accent` 底、白 sparkle SVG、`--radius-lg`）+ 標題（15px/700 `--color-foreground`）+ 說明（13px `--color-muted`）。
-- **未授權**：全寬「授權 AI」鈕（`--color-accent` 實心、`--color-accent-foreground` 字、`--radius-lg`、min-height 44px）。
+- **卡片**：`--color-accent-subtle` 底 + `--radius-xl`，無框線。左 38px 柔褐 badge（`--color-accent-fill` 底、白 sparkle SVG、`--radius-lg`）+ 標題（15px/700 `--color-foreground`）+ 說明（13px `--color-muted`）。
+- **未授權**：全寬「授權 AI」鈕（`--color-accent-fill` 實心、`--color-accent-foreground` 字、`--radius-lg`、min-height 44px）。
 - **已授權**：綠色確認列（`--color-accent-2-subtle` 底 + `--color-accent-2-deep` 字 —— sage tone =「已生效／無需再動作」）+ checkmark SVG +「已授權 · 可隨時在『已連結應用』撤銷」。撤銷走帳號設定既有 revoke，不在卡上放撤銷鈕。
 - **機制**：Approach B 直接 session 授權（`POST /api/account/ai-authorization` upsert Consent），非 OAuth redirect dance；機器 client 不開 web redirect_uri、不簽 auth code。讀狀態失敗 fail-open 當未授權（顯授權鈕、不卡建立流程）。
 - Mockup：`docs/design-sessions/2026-07-11-tp-request-consent-trigger.html`（sign-off 2026-07-11，選 V1 就地卡片；V2 送出對話框 / V3 建立後獨立頁未採用）。
@@ -478,7 +491,7 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 - ChatPage 送出時的就地授權 sheet：**補 NewTripPage 授權卡沒涵蓋的入口** —— 一個「行程已存在、直接用 AI 聊天問」的 owner，在「帳號 → 已連結應用」只找得到撤銷、沒有授權入口（該頁空狀態只提示 Sign in with Tripline）。送出訊息 = 建 `trip_request`；owner 若未授權，後端 `mint-restricted` 簽不出 owner token，該請求永遠 mint 失敗、卡住整條佇列（peek `sort=asc` 每輪撈同一筆）。此 sheet 在送出當下就地問要不要授權。
 - **觸發**：送出時 `GET /api/account/ai-authorization` 為未授權 → 攔下、不建請求、跳 sheet（`aiAuthorized===false` 才攔，**含 GET 讀取失敗 fail-closed 成 false**——與 AiAuthorizeCard 一致、可從 sheet 授權復原；`null`＝授權狀態載入中的數毫秒窗才放行，後端 mint 為最終關卡）。
 - **形態**：底部跳出 sheet（sign-off variant B；A inline 卡 / C fullpage 步驟未採用）。`--color-background` 底、`22px 22px 0 0` 圓角、grip handle。內含**沿用 `tp-ai-card` 視覺**的授權卡（柔褐 badge + 標題 + 說明）+ 送出訊息引用預覽（`--color-background` 底 + `--color-border` 框）。
-- **動作**：全寬「授權並送出」（`--color-accent` 實心）→ `POST /api/account/ai-authorization` upsert Consent → 續送原訊息；「取消」（ghost）→ 不建請求、保留輸入。Escape／點背景＝取消；授權進行中 disable 主鈕（顯「授權中⋯」）並鎖背景點擊防誤取消。
+- **動作**：全寬「授權並送出」（`--color-accent-fill` 實心 + `--color-accent-foreground` 白字）→ `POST /api/account/ai-authorization` upsert Consent → 續送原訊息；「取消」（ghost）→ 不建請求、保留輸入。Escape／點背景＝取消；授權進行中 disable 主鈕（顯「授權中⋯」）並鎖背景點擊防誤取消。
 - **後端防禦（非 UI）**：`mint-restricted` 遇 `no_consent` 把該 request park 成 `failed` + 寫授權指引 reply（peek 只撈 open/processing → 跳過），確保單一未授權請求不會永久卡死佇列。沿用既有 `failed` status（0049 CHECK 值域）→ 免 migration。並把 `POST /api/requests` 的 30 秒去重加 `status IN ('open','processing')` 濾網 —— 否則 owner 授權後重送同一訊息會在 30 秒內撞回剛 park 的 `failed` 請求、看似又失敗（adversarial F1）。
 - Mockup：`docs/design-sessions/2026-07-15-chat-consent-gate.html`（sign-off 2026-07-15 variant B）。
 
@@ -540,7 +553,7 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 ┌─ severity bar (6px column)
 │  ├─ head-row: title + dimension chip（「時間」「移動」「餐飲」「景點」「住宿」）
 │  ├─ desc: 具體描述（≤120 字）
-│  ├─ suggestion block: 「建議」label + 建議文字（accent-subtle bg、accent-deep text、accent eyebrow label）
+│  ├─ suggestion block: 「建議」label + 建議文字（accent-subtle bg、accent-deep text、`--color-accent-text-on-tonal` eyebrow label；既有 `.suggestion .label` call-site 待遷移，見 §Color Approach 遷移清單）
 │  └─ actions: 「前往景點」（有 entry_id）優先於「前往 Day N」（只有 day）
 └─
 ```
