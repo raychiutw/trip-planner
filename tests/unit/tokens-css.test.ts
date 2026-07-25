@@ -4,6 +4,50 @@ import { resolve } from 'path';
 
 const tokensPath = resolve(__dirname, '../../css/tokens.css');
 
+// ===== WCAG 2.x contrast algorithm =====
+// https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
+// https://www.w3.org/TR/WCAG21/#contrast-minimum
+function relativeLuminance(hex: string): number {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const adjust = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  return 0.2126 * adjust(r) + 0.7152 * adjust(g) + 0.0722 * adjust(b);
+}
+
+function contrastRatio(c1: string, c2: string): number {
+  const l1 = relativeLuminance(c1);
+  const l2 = relativeLuminance(c2);
+  const [bright, dark] = l1 > l2 ? [l1, l2] : [l2, l1];
+  return (bright + 0.05) / (dark + 0.05);
+}
+
+const AA_NORMAL = 4.5; // body text
+const AA_LARGE = 3.0; // 18pt+/14pt+ bold text, also non-text UI (WCAG 1.4.11)
+
+// 從 tokens.css 文字動態切出 light（@theme）與 dark（body.dark）兩個宣告區塊。
+// 每個區塊內都沒有巢狀 `{`，non-greedy 到第一個 `}` 即為區塊真正結尾。
+// `body.dark {` 選擇器在檔內出現不只一次（另有 composite token 如 --tabbar-tint 的
+// override block），所以取「所有同名區塊」後，挑內含 --color-accent 宣告的那一個
+// 才是真正的色票 override block；body.theme-print 的第三份色票宣告也不會被誤取，
+// 因為 extractBlock 只回傳符合 headerHasMarker 條件的那一個 block。
+function extractBlock(css: string, header: string, mustContain = '--color-accent:'): string {
+  const re = new RegExp(`${header}\\s*\\{([\\s\\S]*?)\\}`, 'g');
+  const blocks = [...css.matchAll(re)].map((m) => m[1]);
+  const found = blocks.find((b) => b.includes(mustContain));
+  if (!found) throw new Error(`tokens.css: 找不到含 ${mustContain} 的 ${header} 區塊`);
+  return found;
+}
+
+// 對某個 block（light 或 dark）取出 --color-<name> 的實際 hex 值，不 hardcode。
+// 找不到就直接 throw —— token 改名/刪除時要讓這個守衛炸掉，而不是靜默通過。
+function getColor(block: string, name: string): string {
+  const match = block.match(new RegExp(`--color-${name}:\\s*([^;]+);`));
+  if (!match) throw new Error(`tokens.css: 找不到 --color-${name}`);
+  return match[1].trim();
+}
+
 describe('tokens.css', () => {
   const tokens = readFileSync(tokensPath, 'utf-8');
 
@@ -90,5 +134,166 @@ describe('tokens.css', () => {
 
     const tokenBody = tokens.match(/--font-size-body:\s*([^;]+);/)?.[1]?.trim();
     expect(tokenBody).toBeTruthy();
+  });
+
+  // ===== WCAG AA contrast — 柔褐色盤 light/dark（#1153）=====
+  // 色值全部從本檔已讀入的 `tokens` 文字動態抽出（見上方 extractBlock/getColor），
+  // 不 hardcode fixture；斷言的是「目前實際被拿來當淺底上文字/UI 用途」的 pair。
+  // accent 系列依用途分工，門檻不同（見 tokens.css 內對應註解）：
+  //   --color-accent/-subtle/-bg/-deep  → 填色、邊框、裝飾用途，不當文字，這裡不斷言
+  //   --color-accent-text(-on-tonal)    → 文字/連結專用較深變體 → AA_NORMAL
+  //   --color-accent-fill + accent-foreground → 實心鈕文字 → AA_NORMAL
+  //   --color-border-control             → 非文字 UI（輸入框/outline 鈕邊框）→ AA_LARGE
+  describe('WCAG AA contrast — 動態解析 tokens.css', () => {
+    const lightBlock = extractBlock(tokens, '@theme');
+    const darkBlock = extractBlock(tokens, 'body\\.dark');
+
+    describe('light theme', () => {
+      const bg = getColor(lightBlock, 'background');
+      const secondary = getColor(lightBlock, 'secondary');
+      const tertiary = getColor(lightBlock, 'tertiary');
+      const foreground = getColor(lightBlock, 'foreground');
+      const muted = getColor(lightBlock, 'muted');
+      const accentText = getColor(lightBlock, 'accent-text');
+      const accentTextOnTonal = getColor(lightBlock, 'accent-text-on-tonal');
+      const accentSubtle = getColor(lightBlock, 'accent-subtle');
+      const accentBg = getColor(lightBlock, 'accent-bg');
+      const accentFill = getColor(lightBlock, 'accent-fill');
+      const accentForeground = getColor(lightBlock, 'accent-foreground');
+      const borderControl = getColor(lightBlock, 'border-control');
+
+      it('foreground / background ≥ 4.5（body text）', () => {
+        expect(contrastRatio(foreground, bg)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('foreground / secondary ≥ 4.5（body text on alt bg）', () => {
+        expect(contrastRatio(foreground, secondary)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('muted / background ≥ 4.5（secondary text）', () => {
+        expect(contrastRatio(muted, bg)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('muted / secondary ≥ 4.5（secondary text on alt bg）', () => {
+        expect(contrastRatio(muted, secondary)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text / background ≥ 4.5（連結/選中標籤文字）', () => {
+        expect(contrastRatio(accentText, bg)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text / secondary ≥ 4.5', () => {
+        expect(contrastRatio(accentText, secondary)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text / accent-subtle ≥ 4.5（淡 tint 底上的文字）', () => {
+        expect(contrastRatio(accentText, accentSubtle)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text-on-tonal / accent-subtle ≥ 4.5（tonal 底文字變體）', () => {
+        expect(contrastRatio(accentTextOnTonal, accentSubtle)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text-on-tonal / accent-bg ≥ 4.5（較深 tonal 底文字變體）', () => {
+        expect(contrastRatio(accentTextOnTonal, accentBg)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-foreground / accent-fill ≥ 4.5（實心按鈕白字）', () => {
+        expect(contrastRatio(accentForeground, accentFill)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('border-control / background ≥ 3（非文字 UI：輸入框/outline 邊框）', () => {
+        expect(contrastRatio(borderControl, bg)).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+
+      it('border-control / secondary ≥ 3', () => {
+        expect(contrastRatio(borderControl, secondary)).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+
+      it('border-control / tertiary ≥ 3', () => {
+        expect(contrastRatio(borderControl, tertiary)).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+    });
+
+    describe('dark theme', () => {
+      const bg = getColor(darkBlock, 'background');
+      const secondary = getColor(darkBlock, 'secondary');
+      const foreground = getColor(darkBlock, 'foreground');
+      const muted = getColor(darkBlock, 'muted');
+      const accentText = getColor(darkBlock, 'accent-text');
+      const accentTextOnTonal = getColor(darkBlock, 'accent-text-on-tonal');
+      const accentSubtle = getColor(darkBlock, 'accent-subtle');
+      const accentBg = getColor(darkBlock, 'accent-bg');
+      const accentFill = getColor(darkBlock, 'accent-fill');
+      const accentForeground = getColor(darkBlock, 'accent-foreground');
+      const borderControl = getColor(darkBlock, 'border-control');
+
+      it('foreground / background ≥ 4.5（body text）', () => {
+        expect(contrastRatio(foreground, bg)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('muted / background ≥ 4.5（secondary text）', () => {
+        expect(contrastRatio(muted, bg)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text / background ≥ 4.5（連結/選中標籤文字，深色本就用亮字變體）', () => {
+        expect(contrastRatio(accentText, bg)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text-on-tonal / accent-subtle ≥ 4.5（tonal 底文字變體）', () => {
+        expect(contrastRatio(accentTextOnTonal, accentSubtle)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text-on-tonal / accent-bg ≥ 4.5（較深 tonal 底文字變體）', () => {
+        expect(contrastRatio(accentTextOnTonal, accentBg)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-foreground / accent-fill ≥ 4.5（實心按鈕深字，維持深色不壓深）', () => {
+        expect(contrastRatio(accentForeground, accentFill)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('border-control / background ≥ 3（非文字 UI）', () => {
+        expect(contrastRatio(borderControl, bg)).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+
+      it('border-control / secondary ≥ 3', () => {
+        expect(contrastRatio(borderControl, secondary)).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+    });
+
+    describe('algorithm sanity', () => {
+      it('純白 / 純黑 = 21:1（理論最大）', () => {
+        expect(contrastRatio('#FFFFFF', '#000000')).toBeCloseTo(21, 0);
+      });
+
+      it('同色 ratio = 1', () => {
+        expect(contrastRatio('#888888', '#888888')).toBeCloseTo(1, 5);
+      });
+    });
+  });
+
+  // #1158: 全域 focus-visible 焦點框補回 + 守護測試
+  // 任何 `:focus-visible { ... outline: none ... }` 規則若裸移除 outline，
+  // 必須在同規則內同時提供可見的焦點指示 —— 焦點框陰影（--shadow-ring，本票要補的
+  // 一般按鈕/連結/role=button 寫法）或既有輸入元件的邊框變色替代方案（不在本票範圍，
+  // 見 .tp-titlebar-trip-search 這類既有案例），不能兩手空空完全沒有指示。
+  it('every :focus-visible rule that resets outline: none also provides a visible focus indicator', () => {
+    const ruleRegex = /([^{}]*:focus-visible[^{}]*)\{([^}]*)\}/g;
+    const offendingSelectors: string[] = [];
+    let match: RegExpExecArray | null;
+
+    while ((match = ruleRegex.exec(tokens)) !== null) {
+      const selector = match[1].trim();
+      const body = match[2];
+      const resetsOutline = /outline:\s*none\s*;?/.test(body);
+      const hasFocusRingShadow = /box-shadow:\s*var\(--shadow-ring\)/.test(body);
+      const hasBorderColorAlternative = /border-color:\s*var\(/.test(body);
+
+      if (resetsOutline && !hasFocusRingShadow && !hasBorderColorAlternative) {
+        offendingSelectors.push(selector);
+      }
+    }
+
+    expect(offendingSelectors).toEqual([]);
   });
 });
