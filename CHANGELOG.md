@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.52] - 2026-07-25
+
+### Added
+- **無障礙掃描擴大到三個一直沒被看過的畫面（#1155）**：信箱驗證等候頁（`/signup/check-email`，公開路由不需登入 mock）、登入工作階段頁（`/settings/sessions`）、以及地圖頁的行程切換下拉（掃描範圍縮到該下拉子樹）。前兩支**確認目前是紅的**（驗證頁 3.24:1／3.65:1、工作階段頁 3.24:1／2.35:1），由 #1157 修；第三支是綠的 —— 順便查明 **#1157 原本列的三處裡有一處前提已過期**：地圖切換下拉的文字色早在 PR #1078 就換成深變體了，那張票在這個 call-site 上沒有事情要做（已回寫到 issue 留言）。工作階段頁還多抓到一個**不是柔褐**的違規（`--color-success` 疊半透明綠底合成後只有 2.35:1），語意色沒有現成深變體，修法與柔褐那條不同。
+- **地圖那支加了 negative control**：它是本檔唯一一開始就綠的守衛，若不證明它抓得到東西，「綠」等於沒有資訊 —— 注入品牌柔褐當文字色後必須轉紅，才算它真的在守。
+
+### Changed
+- **不再用 `test.fail()` 標記已知違規，改成正面斷言違規指紋清單（#1155）**：`test.fail()` 會把 route 改名、testid 消失、mock 漂移造成的 timeout 也一律判成「如預期失敗」→ 綠燈，**守衛壞掉與守衛正在守就分不出來**。那正是 #1150 這批工作要消滅的東西，不該在收網的過程裡再種一次。改為明列「目前確實紅在這幾處」，修好了會因為指紋不符而報錯。
+- **掃描 + 印明細 + 斷言收斂成 `expectNoSeriousCritical` helper**，全檔 7 處不再各抄一份。
+
+### Fixed
+- **「排除第三方 widget」從來沒生效過（#1155 順帶修）**：`exclude` 一直被放在 `axe.run()` 的第二個參數（`RunOptions`），但 axe 的 `RunOptions` 沒有這個欄位 —— 它屬於 `ContextObject`。移到 context 參數。也就是說地圖 canvas 等第三方 markup 一直都被掃進來。
+
 ## [2.57.51] - 2026-07-25
 
 ### Fixed
