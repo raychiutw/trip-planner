@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.59] - 2026-07-25
+
+### Added
+- **root tab 與 Day tab 的鍵盤焦點指示補上守衛（#1159）**：`tests/e2e/tab-focus-visible.spec.js` 用**真瀏覽器、真鍵盤**驗兩者聚焦時有可見焦點指示。斷言方式依票的要求是「computed style 有非 none 的 outline 或 box-shadow」，**不斷言 class 名稱** —— class 改名不該讓守衛紅，指示消失才該紅。Day tab 那支還按了真的 ArrowRight，證明 roving 搬焦點後新項目也有指示。
+- 兩支都做過 mutation 實測：加一條覆寫把 `outline` 與 `box-shadow` 都 `none !important` → **5 支全紅**（3 project × 2 場景，扣掉桌機跳過的那支），訊息精確回報 `hasIndicator: false`。
+
+### Changed
+- **票的前提兩處都不成立，查證後沒有改 CSS（#1159）**：
+  - 票說 root tab「目前完全沒有這條規則」—— 元件自己的 `SCOPED_STYLES` 確實沒有，但 `css/tokens.css` 的**全域** `a:focus-visible`（#1158 建立）已經涵蓋。實測未聚焦 `box-shadow: none`、鍵盤聚焦後 `rgb(169,122,74) 0 0 0 2px`（正是 `--shadow-ring`）、`matches(':focus-visible') === true`。**截圖確認 ring 清楚可見、沒有被祖先的 `overflow` 裁掉。**
+  - Day tab 的 `.tp-map-day-tab:focus-visible` 存在且**roving 運作正常**（`overview → day 1`，`useDayStripNav` 的 `requestAnimationFrame` 搬焦點有效）。票的坑 1 擔心的「焦點框沒跟著移動」沒有發生。
+- 也就是說本票的產出是**守衛本身**，不是修正 —— 它把兩個原本沒人看著的行為鎖住了。
+
+### Fixed
+- **實測時發現一個票沒預料到的殘留缺口，已拆成 #1182**：`--shadow-ring` 是 `0 0 0 2px var(--color-accent)`，在淺底上 3.71:1 沒問題，但**落在 `--color-accent-fill` 實心底（active 態膠囊）上只有 1.46:1**（WCAG 2.4.11 焦點外觀建議 3:1）。Day tab 的 roving 會讓 arrow 過去的那一顆**同時變成 active**，所以鍵盤使用者用 arrow 移動時焦點框永遠落在那一格。修法需要決定 token 方向（另開 ring-on-fill／雙層 ring／offset 隔開），會動 `DESIGN.md`，故不在本票處理。#1182 附三個候選方向與受影響元件盤點。
+
 ## [2.57.58] - 2026-07-25
 
 ### Fixed
