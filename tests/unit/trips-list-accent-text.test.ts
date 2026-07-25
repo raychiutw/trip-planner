@@ -66,15 +66,29 @@ function flatRules(css: string): Array<{ selector: string; body: string }> {
   }));
   // 原生 CSS 巢狀會讓外層宣告從掃描裡蒸發，而且沒有任何訊號。fail-closed。
   //
-  // 偵測的是 `&` 本身，不是「selector 裡出現宣告」—— 後者只擋得住「宣告寫在巢狀區塊
-  // 之前」的排列。宣告寫在之後時，攤平出的 selector 只剩 `&:hover`、不含任何宣告，
-  // 那個啟發式不會觸發，外層宣告照樣靜默丟棄。`&` 只可能出現在巢狀語法裡
-  // （本 stylesheet 目前 0 個），所以直接擋它才是位置無關的判準。
-  if (/(^|[\s,({;])&/.test(noComments)) {
+  // ⚠ 兩道判準必須**並存**，它們互補而不是互相取代（實測）：
+  //   A「宣告落進 selector」擋得住無 `&` 的巢狀（bare class、巢狀 @media —— CSS Nesting
+  //     relaxed 語法不需要 `&`），但擋不住「宣告寫在巢狀區塊之後」的排列（那時 selector
+  //     只剩 `&:hover`，不含宣告）。
+  //   B「出現 `&`」剛好相反：位置無關，但無 `&` 的巢狀完全看不到。
+  // 只留其中一個都會留下一整類 fail-open。
+  //
+  // B 要在剝掉字串與 url() 之後才測 —— 否則 `content: "Q & A"` 這種合法寫法會被誤判成巢狀，
+  // 而錯誤訊息叫人「改回扁平規則」完全是錯的指引。
+  const declInSelector = rules.filter((r) => /(^|[;\s])[a-z-]+\s*:\s*[^;{]+;/.test(r.selector));
+  if (declInSelector.length) {
+    throw new Error(
+      `SCOPED_STYLES 疑似使用原生 CSS 巢狀（宣告落進 selector）：${declInSelector[0].selector.slice(0, 60)}…\n`
+      + '攤平邏輯處理不了巢狀，外層宣告會被靜默漏掃。請改回扁平規則，或換成真正的 CSS parser。',
+    );
+  }
+  const withoutStrings = noComments
+    .replace(/"[^"]*"|'[^']*'/g, '""')
+    .replace(/url\([^)]*\)/g, 'url()');
+  if (/(^|[\s,({;])&/.test(withoutStrings)) {
     throw new Error(
       'SCOPED_STYLES 疑似使用原生 CSS 巢狀（出現 &）。\n'
-      + '這支守衛的攤平邏輯處理不了巢狀，會靜默漏掃外層宣告 —— 不論宣告寫在巢狀區塊之前或之後。\n'
-      + '請改回扁平規則，或換成真正的 CSS parser。',
+      + '攤平邏輯處理不了巢狀，外層宣告會被靜默漏掃。請改回扁平規則，或換成真正的 CSS parser。',
     );
   }
   return rules;
@@ -146,7 +160,8 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
       const carrying = rules.filter((r) => r.selector === rule && ACCENT_AS_TEXT.test(r.body));
       expect(
         carrying.length,
-        `例外 ${rule} 找不到實際使用 --color-accent 的規則 —— 規則被改名/刪除，或這條例外已是死條目該清掉`,
+        `例外 ${rule} 實際帶 --color-accent 的規則有 ${carrying.length} 條，預期 1 條`
+        + '（0 = 規則被改名/刪除，或這條例外已是死條目該清掉；>1 = @media 覆寫也帶了色，需一併檢視）',
       ).toBe(1);
     }
   });
@@ -155,11 +170,15 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
     // ACCENT_ALIAS_AS_TEXT 刻意不擋 --t-deep，理由是它 = --color-accent-deep = accent-text 同值。
     // 那個前提就寫在被掃描的同一個檔案裡，一次 token 收斂改掉它，--t-deep 就會同時繞過
     // 兩條偵測式。前提本身要有人鎖 —— 同 aria-hidden 那條的道理。
+    // 別名不存在 = 豁免也用不到 = 通過。`--t-deep` 目前 0 個消費者，把它清掉是合理的
+    // 整理，測試不該要求死 code 留在原地（只是清的時候記得連 ACCENT_ALIAS_AS_TEXT 的
+    // 豁免說明一起移除）。
     const scoped = extractScopedStyles(src);
     const defs = [...scoped.matchAll(/--t-deep:\s*var\(([^)]+)\)/g)].map((m) => m[1].trim());
-    expect(defs.length, '找不到 --t-deep 的定義').toBeGreaterThan(0);
-    expect([...new Set(defs)], '--t-deep 不再指向 --color-accent-deep —— 放行它的前提垮了')
-      .toEqual(['--color-accent-deep']);
+    if (defs.length) {
+      expect([...new Set(defs)], '--t-deep 不再指向 --color-accent-deep —— 放行它的前提垮了')
+        .toEqual(['--color-accent-deep']);
+    }
   });
 
   it('裝飾例外的前提仍成立：兩個圖示都還是 aria-hidden', () => {
@@ -197,9 +216,23 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
     expect(ACCENT_ALIAS_AS_TEXT.test('  background: var(--t);')).toBe(false);
   });
 
-  it('原生 CSS 巢狀會炸而不是靜默漏掃外層宣告', () => {
-    const nested = '.tp-x {\n  color: var(--color-accent);\n  &:hover { color: red; }\n}';
-    expect(() => flatRules(nested)).toThrow(/巢狀/);
+  it('原生 CSS 巢狀會炸而不是靜默漏掃外層宣告（四種排列都要擋）', () => {
+    // 兩道判準互補，缺一就漏一整類 —— 這四種都必須 throw。
+    expect(() => flatRules('.tp-x {\n  color: var(--color-accent);\n  &:hover { color: red; }\n}'),
+      '& 巢狀、宣告在前').toThrow(/巢狀/);
+    expect(() => flatRules('.tp-x {\n  &:hover { color: red; }\n  color: var(--color-accent);\n}'),
+      '& 巢狀、宣告在後').toThrow(/巢狀/);
+    expect(() => flatRules('.tp-x {\n  color: var(--color-accent);\n  .child { color: red; }\n}'),
+      'bare class 巢狀（無 &）').toThrow(/巢狀/);
+    expect(() => flatRules('.tp-x {\n  color: var(--color-accent);\n  @media (max-width: 760px) { font-size: 10px; }\n}'),
+      '巢狀 @media（無 &）').toThrow(/巢狀/);
+  });
+
+  it('合法的扁平 CSS 不會被巢狀守衛誤爆', () => {
+    expect(() => flatRules('.tp-y::after { content: "Q & A"; }')).not.toThrow();
+    expect(() => flatRules('.tp-y { font-family: "A & B"; }')).not.toThrow();
+    expect(() => flatRules('.tp-y { background-image: url("data:image/svg+xml;utf8,<svg><text>A &amp; B</text></svg>"); }')).not.toThrow();
+    expect(() => flatRules('@media (max-width: 760px) {\n  .tp-z { color: red; }\n}')).not.toThrow();
   });
 
   it('${} 內插會炸而不是靜默漏掃被內插的 CSS', () => {
@@ -208,13 +241,18 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
   });
 
   it('樣式抽取有抓到整段（截斷會讓後半的違規靜默漏掃）', () => {
-    // 不綁排版、也不綁順序。綁逐字整行 → formatter 一動就假紅；綁「最後一條必須是 X」
-    // → 在尾端加規則（改樣式最自然的動作）就假紅，訊息還說「疑似提前截斷」把人導錯方向。
-    // 兩種假紅的最省事處置都是刪掉這條，順手拆掉整條截斷防線。
-    // 真正要驗的是「抽取的結束位置貼齊原始碼裡最後一個收尾」。
-    const bodyStart = src.indexOf('`', src.indexOf('const SCOPED_STYLES = `')) + 1;
-    expect(src.indexOf('\n`;', bodyStart), '抽取的收尾不是原始碼裡最後一個 `; —— 疑似提前截斷')
-      .toBe(src.lastIndexOf('\n`;', src.indexOf('interface TripInfo')));
+    // 這條的錨點只能涉及守衛自己的領域。試過兩種都不行：
+    //   逐字比對整行 → formatter 一動就假紅；
+    //   「最後一條規則必須是 X」→ 在尾端加規則就假紅；
+    //   拿 `interface TripInfo` 當 marker → 改名／搬位置／中間多一個樣板字串都假紅，
+    //     而三種訊息都寫「疑似提前截斷」，把人導去查 CSS 尾端。
+    // 真正自足的不變式是「抽取區間裡的 backtick 恰好一對」—— 提前截斷必然是因為中間
+    // 冒出第三個 backtick（而那也會被 extractScopedStyles 直接 throw）。
+    const start = src.indexOf('const SCOPED_STYLES = `');
+    const bodyStart = src.indexOf('`', start) + 1;
+    const end = src.indexOf('\n`;', bodyStart);
+    expect((src.slice(start, end + 3).match(/`/g) ?? []).length,
+      '抽取區間內的 backtick 不是恰好一對 —— 疑似提前截斷').toBe(2);
 
     // 尾端那條規則仍在掃描範圍內（截斷在它之前就會漏掉）。
     const selectors = flatRules(extractScopedStyles(src)).map((r) => r.selector);

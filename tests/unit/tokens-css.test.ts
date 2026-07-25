@@ -296,6 +296,20 @@ describe('tokens.css', () => {
         expect(contrastRatio(getColor(darkBlock, 'accent'), accentSubtle)).toBeGreaterThanOrEqual(AA_LARGE);
       });
 
+      // 邊框 3:1 也要對稱 —— .tp-trip-card:hover 的 border-color 走的是不分主題的
+      // var(--color-accent)，只在 light 守等於深色沒人管。dark 最薄的是 hover（3.82）。
+      it('accent / background ≥ 3（邊框：頁面底）', () => {
+        expect(contrastRatio(getColor(darkBlock, 'accent'), bg)).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+
+      it('accent / secondary ≥ 3（邊框：alt 底，行程卡 hover 框）', () => {
+        expect(contrastRatio(getColor(darkBlock, 'accent'), secondary)).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+
+      it('accent / hover ≥ 3（邊框：hover 底）', () => {
+        expect(contrastRatio(getColor(darkBlock, 'accent'), getColor(darkBlock, 'hover'))).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+
       it('accent-text-on-tonal / accent-subtle ≥ 4.5（tonal 底文字變體）', () => {
         expect(contrastRatio(accentTextOnTonal, accentSubtle)).toBeGreaterThanOrEqual(AA_NORMAL);
       });

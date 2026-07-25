@@ -89,7 +89,7 @@
 - **卡片依類型上同色系淡底**：POI 卡 `data-tone`（accent／sage／pink／neutral）→ 對應色 `-subtle` 底 + `-bg` 邊。
 - **icon 同色系階梯（ghost）**：卡片 `-subtle` → icon 底 `-bg` → glyph/描邊 `-deep`，同一色相由淺到深、icon 融入卡片，不填滿不洗版。
 - **交通 pill 描邊式**：透明底 + sage `-deep` 邊框與文字（取代填滿）。
-- 類型標籤文字同步上對應色；備選卡粉底（dark 用加強粉）；CTA 維持柔褐。
+- 類型標籤**文字**同步上對應色系的深變體（卡底是 tonal → `-text-on-tonal`；base token 疊自家淡底只有 3.24:1，見下方通則）；備選卡粉底（dark 用加強粉）；CTA 維持柔褐**填色**。
 
 參考 mamahoikuen.jp 暖柔三色。完整 4 階色碼見下方 Light/Dark 表 + `design-sessions/2026-06-06-three-color-system.md`。
 
@@ -393,12 +393,12 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - `/trip/:id/map` 與 `/trip/:id/stop/:eid/map` active item = 地圖；其他 `/trip/:id/*` active item = 行程。
 - 不和 page titlebar 重複放頁面說明文字。
 
-### Compact Bottom Nav（`GlobalBottomNav` / `BottomNavBar`）
+### Compact Bottom Nav（`GlobalBottomNav`）
 - 只在 compact mode 顯示，IA 與 desktop sidebar 同步（同一份 `navItems.ts`）。
 - **常駐，捲動不隱藏**（owner 2026-07-20 / 07-21；捲動隱藏邏輯已於 2026-07-21 移除）。
 - 高度需包含 safe-area inset，頁面內容必須留出底部 padding。
 - Bottom nav 是主功能定位，不是 breadcrumb。子頁與明細頁 active item 依所屬主功能決定，不新增子頁 tab。
-- Active item 使用不同於 CTA 的定位樣式：`GlobalBottomNav` 走實心 `--color-accent-fill` 膠囊 + `--color-accent-foreground` icon/label；`BottomNavBar` 走無底色 + `--color-accent-text` 文字。inactive 保持 muted。**不可用「柔褐淡底 + `--color-accent` label」** —— 那組是 3.24:1，且 nav label 是 11px 小字（見 §Color Approach 通則）。
+- Active item 使用不同於 CTA 的定位樣式：實心 `--color-accent-fill` 膠囊 + `--color-accent-foreground` icon/label；inactive 保持 muted。**不可用「柔褐淡底 + `--color-accent` label」** —— 那組是 3.24:1，且 nav label 是 11px 小字（見 §Color Approach 通則）。
 
 | Route family | Active bottom nav |
 |--------------|-------------------|
