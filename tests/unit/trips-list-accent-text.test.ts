@@ -41,6 +41,11 @@ function extractScopedStyles(src: string): string {
   if (body.includes('`')) {
     throw new Error('TripsListPage.tsx: SCOPED_STYLES 內含裸 backtick —— 樣板字串會被提前終止');
   }
+  // ${...} 內插進來的片段這支測試看不到，會被解析成假的 rule 並污染前後邊界。
+  // 與裸 backtick 同級對待：寧可炸掉要求改寫，也不要靜默漏掃一整段。
+  if (body.includes('${')) {
+    throw new Error('TripsListPage.tsx: SCOPED_STYLES 含 ${} 內插 —— 被內插的 CSS 掃不到，請改成直接寫入或另立守衛');
+  }
   return body;
 }
 
@@ -55,24 +60,42 @@ function extractScopedStyles(src: string): string {
  */
 function flatRules(css: string): Array<{ selector: string; body: string }> {
   const noComments = css.replace(/\/\*[\s\S]*?\*\//g, ' ');
-  return [...noComments.matchAll(/([^{}]*)\{([^{}]*)\}/g)].map((m) => ({
+  const rules = [...noComments.matchAll(/([^{}]*)\{([^{}]*)\}/g)].map((m) => ({
     selector: m[1].trim().replace(/\s+/g, ' '),
     body: m[2],
   }));
+  // 原生 CSS 巢狀（`.a { color: X; &:hover { … } }`）會讓外層宣告被吃進 selector，
+  // 整條規則的宣告就從掃描裡蒸發、而且沒有任何訊號。目前這份 stylesheet 還沒用巢狀，
+  // 但 Tailwind 4 與現代瀏覽器都支援，一次重構就會踩到。fail-closed。
+  const nested = rules.filter((r) => /(^|[;\s])(color|background|border)[^:]*:/.test(r.selector));
+  if (nested.length) {
+    throw new Error(
+      `SCOPED_STYLES 疑似使用原生 CSS 巢狀（selector 裡出現宣告）：${nested[0].selector.slice(0, 60)}…\n`
+      + '這支守衛的攤平邏輯處理不了巢狀，會靜默漏掃外層宣告。請改回扁平規則，或換成真正的 CSS parser。',
+    );
+  }
+  return rules;
 }
 
 /**
  * 「把柔褐當文字色」的偵測式。
  *
  * - 前綴 `(^|[;{\s])` 要求 color 前面是行首/分號/大括號/空白，才不會誤抓 `border-color`。
- * - 結尾 `\s*[,)]` 同時涵蓋 `var(--color-accent)` 與帶 fallback 的 `var(--color-accent, #A97A4A)`。
- * - token 名後面接 `\s*[,)]` 而不是直接 `\)`，是為了讓 `--color-accent-text` / `-deep` /
- *   `-subtle` 不會被誤匹配（它們後面接的是 `-`，不是 `,` 或 `)`）。
- * - `--t` / `--t-deep` 是同檔 `.tp-trip-card[data-tone]` 定義的別名，值就是 `var(--color-accent)`，
- *   不一起擋就等於留了一扇後門。
+ * - 結尾 `\s*[,)]` 同時涵蓋 `var(--color-accent)` 與帶 fallback 的 `var(--color-accent, #A97A4A)`，
+ *   也讓 `--color-accent-text` / `-deep` / `-subtle` 不被誤匹配（它們後面接的是 `-`）。
+ * - `--color-accent-2` / `-3` 在 tokens.css 裡是**同一個 hex**（light `#A97A4A`、dark `#CBA06E`），
+ *   三色系統退場後值被統一但 token 名保留給既有消費者。不一起擋等於前門上鎖後門開著。
+ * - 硬編碼 hex 同理。
  */
-const ACCENT_AS_TEXT = /(^|[;{\s])color:\s*var\(\s*--color-accent\s*[,)]/m;
-const ACCENT_ALIAS_AS_TEXT = /(^|[;{\s])color:\s*var\(\s*--t(-deep)?\s*[,)]/m;
+const ACCENT_AS_TEXT = /(^|[;{\s])color:\s*(var\(\s*--color-accent(-[23])?\s*[,)]|#a97a4a\b)/im;
+
+/**
+ * `--t` 是同檔 `.tp-trip-card[data-tone]` 定義的 tone 別名，值就是 `var(--color-accent)`。
+ *
+ * ⚠ 不含 `--t-deep`：它是 `var(--color-accent-deep)` = `#8A6038`，與 `--color-accent-text`
+ *   同值，拿來當文字色是**合規的**。同檔的 `.tp-trip-card-avatar` 就直接用 `--color-accent-deep`。
+ */
+const ACCENT_ALIAS_AS_TEXT = /(^|[;{\s])color:\s*var\(\s*--t\s*[,)]/m;
 
 /**
  * 允許繼續用 --color-accent 當 color 的例外：aria-hidden 的純裝飾圖示。
@@ -100,7 +123,7 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
     ).toEqual([]);
   });
 
-  it('別名 --t / --t-deep 也不得當文字色（它們的值就是 --color-accent）', () => {
+  it('tone 別名 --t 不得當文字色（它的值就是 --color-accent）', () => {
     const offenders = flatRules(extractScopedStyles(src))
       .filter((r) => ACCENT_ALIAS_AS_TEXT.test(r.body))
       .map((r) => r.selector);
@@ -141,20 +164,41 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
     expect(flatRules(css).map((r) => r.selector)).toEqual(['.tp-trip-card-new .tp-new-icon']);
   });
 
-  it('偵測式涵蓋 fallback 語法、且不誤抓深色變體', () => {
+  it('偵測式涵蓋同值別名與 fallback 語法、且不誤抓深色變體', () => {
+    // 該抓的
+    expect(ACCENT_AS_TEXT.test('  color: var(--color-accent);')).toBe(true);
     expect(ACCENT_AS_TEXT.test('  color: var(--color-accent, #A97A4A);')).toBe(true);
     expect(ACCENT_AS_TEXT.test('  color: var( --color-accent );')).toBe(true);
+    expect(ACCENT_AS_TEXT.test('  color: var(--color-accent-2);')).toBe(true);
+    expect(ACCENT_AS_TEXT.test('  color: var(--color-accent-3);')).toBe(true);
+    expect(ACCENT_AS_TEXT.test('  color: #A97A4A;')).toBe(true);
+    expect(ACCENT_ALIAS_AS_TEXT.test('  color: var(--t);')).toBe(true);
+    // 不該抓的：非文字屬性、以及與 --color-accent-text 同值的深色變體
     expect(ACCENT_AS_TEXT.test('  border-color: var(--color-accent);')).toBe(false);
+    expect(ACCENT_AS_TEXT.test('  background: var(--color-accent);')).toBe(false);
     expect(ACCENT_AS_TEXT.test('  color: var(--color-accent-text);')).toBe(false);
     expect(ACCENT_AS_TEXT.test('  color: var(--color-accent-text-on-tonal);')).toBe(false);
-    expect(ACCENT_ALIAS_AS_TEXT.test('  color: var(--t);')).toBe(true);
-    expect(ACCENT_ALIAS_AS_TEXT.test('  color: var(--t-deep);')).toBe(true);
+    expect(ACCENT_AS_TEXT.test('  color: var(--color-accent-deep);')).toBe(false);
+    expect(ACCENT_ALIAS_AS_TEXT.test('  color: var(--t-deep);')).toBe(false);
     expect(ACCENT_ALIAS_AS_TEXT.test('  background: var(--t);')).toBe(false);
   });
 
+  it('原生 CSS 巢狀會炸而不是靜默漏掃外層宣告', () => {
+    const nested = '.tp-x {\n  color: var(--color-accent);\n  &:hover { color: red; }\n}';
+    expect(() => flatRules(nested)).toThrow(/巢狀/);
+  });
+
+  it('${} 內插會炸而不是靜默漏掃被內插的 CSS', () => {
+    const interpolated = 'const SCOPED_STYLES = `\n.a { color: red; }\n${SHARED}\n`;\n';
+    expect(() => extractScopedStyles(interpolated)).toThrow(/內插/);
+  });
+
   it('樣式抽取有抓到整段（截斷會讓後半的違規靜默漏掃）', () => {
-    // .tp-trips-error 是 SCOPED_STYLES 的最後一條規則；抽不到它就代表提前截斷了。
-    expect(extractScopedStyles(src)).toContain('.tp-trips-error { color: var(--color-destructive); }');
+    // 用結構性斷言而不是逐字比對整行 —— 綁死排版的話，formatter 換個換行就會假紅，
+    // 而最省事的「修法」就是刪掉這條、順手拆掉整條截斷防線。
+    const rules = flatRules(extractScopedStyles(src));
+    expect(rules.at(-1)?.selector, 'SCOPED_STYLES 的最後一條規則不是預期的那條 —— 疑似提前截斷')
+      .toBe('.tp-trips-error');
   });
 
   it('抽取遇到裸 backtick 會炸而不是靜默截斷（守衛自身的 fail-open 防線）', () => {
@@ -165,7 +209,8 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
   it('JSX inline style 不得把柔褐當文字色', () => {
     // 例：style={{ color: 'var(--color-accent)' }} —— 「已封存空清單」的重設按鈕曾是這樣。
     // 引號類別含反引號：JSX inline style 也可以寫成樣板字串。
-    const inlineBareAccent = /color:\s*['"`]var\(\s*--color-accent\s*[,)][^'"`]*['"`]/g;
+    // 同時擋同值的 --color-accent-2 / -3 與硬編碼 hex，理由同 ACCENT_AS_TEXT。
+    const inlineBareAccent = /color:\s*['"`](var\(\s*--color-accent(-[23])?\s*[,)][^'"`]*|#a97a4a)['"`]/gi;
     expect([...src.matchAll(inlineBareAccent)].map((m) => m[0])).toEqual([]);
   });
 });

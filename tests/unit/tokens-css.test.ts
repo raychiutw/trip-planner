@@ -202,6 +202,17 @@ describe('tokens.css', () => {
         expect(contrastRatio(accentText, getColor(lightBlock, 'hover'))).toBeGreaterThanOrEqual(AA_NORMAL);
       });
 
+      // #1156：DESIGN.md §Color Approach 允許「aria-hidden 純裝飾圖示」繼續用 --color-accent，
+      // 依 WCAG 1.4.11 走 3:1 而非 4.5。那個例外的**全部**正當性就是這個數字（現值 3.24，
+      // 只剩 0.24 餘裕），但它原本沒有任何一層守著 —— call-site 守衛把那兩條規則放進白名單
+      // 直接放行、axe 對 aria-hidden 與單字元都看不到。把 subtle 調亮一階就會靜默破線。
+      it('accent / accent-subtle ≥ 3（裝飾圖示 3:1 例外的前提）', () => {
+        expect(contrastRatio(getColor(lightBlock, 'accent'), accentSubtle)).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+
+      // 刻意「沒有」accent-text / accent-bg 這一條：實測 4.05 < 4.5，本來就不該用。
+      // accent-bg 底上的文字規則指定走 --color-accent-text-on-tonal（下面那條）。
+
       it('accent-text-on-tonal / accent-subtle ≥ 4.5（tonal 底文字變體）', () => {
         expect(contrastRatio(accentTextOnTonal, accentSubtle)).toBeGreaterThanOrEqual(AA_NORMAL);
       });
@@ -250,6 +261,24 @@ describe('tokens.css', () => {
 
       it('accent-text / background ≥ 4.5（連結/選中標籤文字，深色本就用亮字變體）', () => {
         expect(contrastRatio(accentText, bg)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      // 與 light 對稱補齊 —— 規則對這幾組底色不分主題，只守一半等於深色沒人管。
+      // 深色那組灰階最近才整條往上抬過一階（v2.56.4 iOS system gray），再抬一次就會破線。
+      it('accent-text / secondary ≥ 4.5', () => {
+        expect(contrastRatio(accentText, secondary)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text / tertiary ≥ 4.5（recessed surface 上的文字）', () => {
+        expect(contrastRatio(accentText, getColor(darkBlock, 'tertiary'))).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text / hover ≥ 4.5（hover 底上的文字）', () => {
+        expect(contrastRatio(accentText, getColor(darkBlock, 'hover'))).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent / accent-subtle ≥ 3（裝飾圖示 3:1 例外的前提）', () => {
+        expect(contrastRatio(getColor(darkBlock, 'accent'), accentSubtle)).toBeGreaterThanOrEqual(AA_LARGE);
       });
 
       it('accent-text-on-tonal / accent-subtle ≥ 4.5（tonal 底文字變體）', () => {

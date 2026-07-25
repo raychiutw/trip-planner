@@ -83,7 +83,7 @@
 ## Color
 
 ### Approach
-**柔褐三色主題（2026-06 改版，tone v2.53）** — 暖奶油底上三色分區：主色柔褐 `#A97A4A`（景點·購物·活動、CTA、active、link、rating）+ 第二色 sage 綠 `#A8BAAA`（住宿·交通·停車、travel pill / connector）+ 第三色玫瑰粉 `#E78C99`（用餐·咖啡、備選、收藏／愛心）。記憶法：玩/看/買=柔褐、住/移動=sage、吃=粉。中性色維持暖奶油底。
+**柔褐三色主題（2026-06 改版，tone v2.53）** — 暖奶油底上三色分區：主色柔褐 `#A97A4A`（景點·購物·活動、CTA 填色、active 指示、邊框、裝飾圖示；**link / rating 等文字用 `-text` / `-text-on-tonal`，見下方通則**）+ 第二色 sage 綠 `#A8BAAA`（住宿·交通·停車、travel pill / connector）+ 第三色玫瑰粉 `#E78C99`（用餐·咖啡、備選、收藏／愛心）。記憶法：玩/看/買=柔褐、住/移動=sage、吃=粉。中性色維持暖奶油底。
 
 行程表套色方式（canonical mockup：`design-sessions/2026-06-06-three-color-trip-theme.html`）：
 - **卡片依類型上同色系淡底**：POI 卡 `data-tone`（accent／sage／pink／neutral）→ 對應色 `-subtle` 底 + `-bg` 邊。
@@ -99,7 +99,9 @@
 >
 > 例外只有一種：`aria-hidden` 的**純裝飾**圖示——旁邊已有文字標籤、圖示本身不承載資訊。依 WCAG 1.4.11 門檻是 3:1 而非 4.5:1，硬套深色前景 token 反而會在淺 tint 圓底上過深、與同頁其他圖示不協調。邊框同理走 3:1。
 >
-> ⚠ **遷移狀態（別把未遷移當成 regression）**：本規則自 #1156 起對**新 code 一律生效**，既有 call-site 逐頁收斂中 —— `src/` 目前還有 40+ 個檔在用 `color: var(--color-accent)`。已完成：行程一覽頁（#1156）。進行中：信箱驗證等候頁／登入工作階段頁（#1157）、地圖頁 day 標籤（#1168）、titlebar action hover（#1169）。其餘尚未開票。看到未遷移的 call-site 請歸到對應票或另開，不要當成本規則的違反紀錄。
+> ⚠ **遷移狀態（別把未遷移當成 regression）**：本規則自 #1156 起對**新 code 一律生效**，既有 call-site 逐頁收斂中 —— `src/` 目前還有 **29 個檔、59 處**把柔褐當文字色。計數口徑是 `grep -rlE '(^|[;{ ])color: var\(--color-accent\)' src/`，**不含** `border-color`（邊框走 3:1，本規則允許）。已完成：行程一覽頁（#1156）。進行中：信箱驗證等候頁／登入工作階段頁（#1157）、地圖頁 day 標籤（#1168）、titlebar back/action hover（#1169）。其餘尚未開票。看到未遷移的 call-site 請歸到對應票或另開，不要當成本規則的違反紀錄。
+>
+> ⚠ **兩個本規則管不到的地方**：(a) Tailwind utility —— `@theme` 會把 `--color-accent` 生成 `text-accent`，`hover:text-accent` 這種寫法不在任何 CSS 字串裡，掃 template literal 的守衛永遠看不到（`InfoSheet.tsx`、`HourlyWeather.tsx` 現有數處）。(b) `body.theme-print` 只覆寫了 `--color-accent` / `-subtle` / `-bg`，**沒有覆寫 `-text` / `-text-on-tonal` / `-deep`**，所以遷移到 `-text` 的文字在灰階列印版面裡會是暖褐色。目前 print mode 只掛在行程明細頁（`usePrintMode`），影響有限，但全庫推廣前要先補 print 的 token 覆寫。
 >
 > 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層；call-site 層目前只有 `tests/unit/trips-list-accent-text.test.ts` 守行程一覽頁一個檔，**尚無全庫執法者**。
 
@@ -261,7 +263,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
   - ✅ **帳號入口＝Account sheet（2026-07-23 grill v2 owner 拍板，鏡像 app #82；Apple HIG 為 UI/UX SoT）**：帳號**移出 tab**（4-tab），改 header `person.crop.circle` 圓圈 → Account sheet。**此決策 supersede 同日稍早 #1120 的「帳號保留第 5 tab」裁定** —— 兩者皆以 HIG 為由，owner 於 grill v2 選定 app #82 的 4-tab + sheet 模型（profile-circle 慣例、釋出 tab slot）。〔實作（W1）：`navItems.ts` 移除 `account` item（5→4）；`AccountCircle` 從導向 `/account` 改為開 Account sheet 容器（自有 nav stack）；圓圈放大到 44pt（原 30×30 過小）。桌機 sidebar 左下 chip 同步指向 sheet。〕
 - **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕一律走 children 內 `.tp-page-bottom-bar`。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
 - **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（vibrancy：品牌 → 4-tab 主導覽 → 我的行程清單 → 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。
-- **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + accent 文字，`.tp-titlebar-back--labeled`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
+- **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + `--color-accent-text` 文字，`.tp-titlebar-back--labeled`；實作用同值的 `--color-accent-deep`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
 - **表單頁桌機滿寬（rev2 §10.4）:** account 設定分區桌機 2-col grid（`.tp-account-groups` @≥1024，hero 收窄置中）；new-trip 桌機加寬（線性表單不 full-bleed）。
 - **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。**底部 tab 常駐，捲動不隱藏**（owner 2026-07-20 / 07-21 兩次要求；捲動隱藏的 scroll-direction 邏輯已於 2026-07-21 整個移除，見 `AppShell.tsx:232`）。**唯一例外：手機軟鍵盤彈出時收起 root tab**（Apple HIG，v2.57.41）——`useKeyboardInset`（app root 全站掛一次）偵測 visualViewport inset > 120px（過濾 Safari URL bar 顯隱）→ documentElement 掛 `data-kb-open` → CSS 把浮動膠囊往下滑出畫面；鍵盤收起沿 transition 滑回。**底部互動元件讓位**：聊天 composer / 地圖 POI 卡用 `--nav-overlay-h`（80px = 膠囊 footprint 72 + 8px 呼吸間距）+ safe-area 讓位，與膠囊間距一致 8px（v2.57.41 從 88px 收緊）。
 - **Compact header trailing（v2.57.42）:** 主功能頁與行程明細 header 右側順序＝**主要動作（＋）· ⋯ · 帳號圓圈**（HIG trailing；`TitleBar` 的 `account` slot 排在 `actions` 之後即最右；桌機由 CSS 隱藏帳號圓圈，走 sidebar 左下帳號 chip）。
@@ -353,7 +355,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 **Action button (`.tp-titlebar-action`)**
 - 唯一合法 class，禁止自製 ad-hoc class
-- **Ghost icon button family**：無 border、透明底、hover 出 `--color-hover` + accent text。對齊 Apple HIG / iOS toolbar 慣例，跟 `.tp-titlebar-back` 同 family。
+- **Ghost icon button family**：無 border、透明底、hover 出 `--color-hover` + `--color-accent-text` 文字（**不是 `--color-accent`** —— 它疊 `--color-hover` 只有 3.27:1，見 §Color Approach 通則）。對齊 Apple HIG / iOS toolbar 慣例，跟 `.tp-titlebar-back` 同 family。既有的 `.tp-titlebar-back` / `.tp-titlebar-action` call-site 收斂於 #1169。
 - 兩 variant: default ghost / `.is-primary` accent filled (CTA 強調用，Tracerocta 實心)
 - 桌機: rounded rect (radius-md 8px) + icon + 文字 label
 - 手機: square 44×44 + radius-md + icon-only (label hidden via `.tp-titlebar-action-label` @media)

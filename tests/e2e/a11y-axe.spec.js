@@ -24,9 +24,11 @@
  * ⚠ 這支守衛有一個已知盲區：axe 的 color-contrast 規則對「內容恰好 1 個字元」的元素
  *   一律歸到 incomplete 而非 violations（axe-core: visibleText.length === 1 →
  *   messageKey: shortTextContent，"Element content is too short to determine if it
- *   is actual text content"），而本檔只讀 results.violations。行程一覽頁的分類 tab
- *   計數徽章在行程數 ≤9 時就是這種元素 —— 實測 3.24:1 確實違規卻掃不出來，滿 10 筆
- *   變兩位數才掃得到。也就是說這裡的綠會隨 mock 資料量飄。那一類 call-site 要靠
+ *   is actual text content"），而本檔只讀 results.violations。
+ *   實例：行程一覽頁的分類 tab 計數徽章修前是 --color-accent 疊 --color-accent-subtle
+ *   （3.24:1，真違規），但行程數 ≤9 時它是單字元，axe 一律掃不到，滿 10 筆變兩位數才
+ *   掃得出來 —— 那個綠會隨 mock 資料量飄。#1156 已把它改成 --color-accent-text-on-tonal
+ *   （5.76:1），但**盲區本身還在**：任何單字元元素的對比都得靠
  *   tests/unit/trips-list-accent-text.test.ts 守，別以為 e2e 全綠就代表沒有對比違規。
  */
 import { test, expect } from '@playwright/test';
@@ -93,7 +95,10 @@ test('a11y: 「新增行程」卡 hover 態（真滑鼠移入）無 serious/crit
   await page.waitForLoadState('networkidle');
   // 用真的滑鼠移入觸發 :hover 偽類（非加 class 模擬）—— page.hover() 送真實 mousemove。
   await page.getByTestId('trips-list-new-trip-card').hover();
-  await page.waitForTimeout(50);
+  // 這張卡有 transition: color 120ms。getComputedStyle 在過渡期間回的是插值，
+  // 對比會落在起訖值之間 —— 太早取樣，回歸（改回 --color-accent）會量到假綠。
+  // 等超過 transition 時間再掃，別靠 addScriptTag 的耗時碰運氣。
+  await page.waitForTimeout(200);
   const bad = await scanSeriousCritical(page);
   if (bad.length) {
     // eslint-disable-next-line no-console
