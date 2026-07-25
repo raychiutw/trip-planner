@@ -91,13 +91,16 @@ const SCOPED_STYLES = `
 /* Header — trip switcher.
  * z-index 1000 確保壓過 leaflet marker pane (z-index 600+) 跟 popup pane (700+)。 */
 /* rev2「手機也做」：帳號圓圈浮動右上（與 header 同 z 層；圓圈自身桌機隱藏）。 */
+/* #1163：對齊已修過的行程地圖頁（MapPage.tsx）—— 浮動 header 與帳號圓圈都是
+ * position:absolute 疊在地圖上，裝置有 notch/狀態列時 top:16px 會被吃進去。
+ * 用 env(safe-area-inset-top) 補足，16px 當作 non-notch 裝置的 base 間距。 */
 .tp-global-map-account {
-  position: absolute; top: 16px; right: 16px;
+  position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px;
   z-index: 1000;
   pointer-events: auto;
 }
 .tp-global-map-header {
-  position: absolute; top: 16px; left: 16px;
+  position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px;
   z-index: 1000;
   pointer-events: auto;
   background: var(--color-background);
@@ -466,7 +469,11 @@ const SCOPED_STYLES = `
  */
 .tp-global-map-mobile-stack,
 .tp-map-entry-stack {
-  position: absolute; left: 0; right: 0; bottom: 0;
+  position: absolute; left: 0; right: 0;
+  /* #1163：對齊 MapPage.tsx .map-page-cards —— 底部景點卡不能貼裝置下緣（home
+   * indicator）也不能被 root tab 蓋住，用 --nav-overlay-h 讓位 + safe-area-inset-bottom
+   * 補裝置 inset（桌機 / 隱藏 tab 時 --nav-overlay-h 為 0，不受影響）。 */
+  bottom: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
   background: linear-gradient(to top, var(--color-background) 75%, transparent);
   padding: 12px 0 16px;
   /* z-index 700 浮在 leaflet marker-pane (600) + tooltip-pane (650) 之上，
@@ -506,7 +513,11 @@ const SCOPED_STYLES = `
 .tp-global-map-mobile-poi {
   display: none;
   position: absolute;
-  left: 12px; right: 12px; bottom: 110px;
+  left: 12px; right: 12px;
+  /* #1163：卡片浮在 bottom carousel 上方（110px 基礎間距），carousel 本身已讓
+   * root tab + home indicator（見 .tp-map-entry-stack），這裡疊加同一組讓位量
+   * 才不會兩層一起下移後互相貼齊。 */
+  bottom: calc(110px + var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
   z-index: 700;
   background: var(--color-background);
   border: 1px solid var(--color-border);
