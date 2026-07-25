@@ -44,10 +44,24 @@ const PAGES = [
   { name: 'trips', path: '/trips' },
   { name: 'favorites', path: '/favorites' },
   { name: 'account', path: '/account' },
+  // #1168：地圖頁整頁納入。之前只能掃 trip switcher 下拉子樹，因為整頁還有 9 個對比違規
+  // （eyebrow 的 opacity 稀釋 + entry card 的 day palette 當文字），兩者都已在 #1168 修好。
+  // 不能用 /map —— GlobalMapPage 在帳號有 trips 時會無條件轉址到 /trip/:id/map。
+  { name: 'map', path: '/trip/okinawa-trip-2026-Ray/map?day=all' },
 ];
 
 test.beforeEach(async ({ page }) => {
   await setupApiMocks(page);
+  // 地圖頁用得到（#1168 把它加進 PAGES 後，上面的通用迴圈也需要這兩條）：
+  // 本機 .env.local 有 Google Maps key，不擋就會打真 API 而 localhost 非授權 referer；
+  // CI 無 key，useGoogleMap 直接 setLoadError 不注入 script。擋掉即與 CI 同條件。
+  // 對其他頁無副作用（它們不打這兩個 endpoint）。
+  await page.route(/maps\.googleapis\.com/, (r) => r.abort());
+  await page.route('**/api/route**', (r) => r.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ polyline: [], duration: null, distance: 0, approx: true }),
+  }));
 });
 
 /**
