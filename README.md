@@ -73,7 +73,7 @@
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — 系統組成、資料流、信任邊界、部署拓撲
 - [CONTRIBUTING.md](CONTRIBUTING.md) — 新手上路、測試、commit 慣例、常見任務
-- [DESIGN.md](DESIGN.md) — 設計系統與視覺規範（暖色有機風、Apple HIG、6 套主題）
+- [DESIGN.md](DESIGN.md) — 設計系統與視覺規範（暖色有機風、Apple HIG、single-theme + dark mode）
 - [CLAUDE.md](CLAUDE.md) — 開發流程與 gstack pipeline
 - [TODOS.md](TODOS.md) — 已知待辦與 follow-up
 - [SPEC.md](SPEC.md) — 進行中的多階段規格（目前：POI Unification 三階段計劃）

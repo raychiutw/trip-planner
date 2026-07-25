@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.48] - 2026-07-25
+
+### Docs
+- **文件 token / 架構漂移修正（零 code 變更）**：`css/tokens.css` 是 single-theme（只有 `body.dark` + `body.theme-print`），但多份文件仍宣稱「6 套主題」，且 19 個檔案引用早已不存在的 `css/shared.css`。逐項對照 `tokens.css`（142 個 token）驗證後修正 —— `docs/adr/0003` Status 標註原始 Context 前提已失效並改寫（決策本身仍有效，只是「多主題」不再是採用 `@theme` 的理由）、`ARCHITECTURE.md` 與 `README.md` 改為 single-theme + dark mode、`tp-ux-verify/references/tokens.md` 整份重寫（改為只列 token 名與用途、**不再複製會漂的色值** —— 上一版複製了 6 主題全表，主題退場後整份腐爛沒人發現）。
+- **`tp-ux-verify/references/page-structure.md` 全檔重寫**：原內容教的是多頁靜態 HTML 架構（`edit.html`／`setting.html` + `js/shared.js` + `.page-layout`／`.container`／`.sticky-nav`），它引用的 9 個檔案裡 5 個已刪除，`index.html` 雖仍在但已是 Vite SPA entry、不再是舊文描述的多頁骨架。改為指向現行 React SPA 結構（`index.html` → `src/entries/main.tsx`、`src/components/shell/` 各元件角色、三種版面形態），且刻意寫成「指路」而非複製結構細節。
+
+### Removed
+- **7 份 openspec spec 退役／改寫**：逐條對照 `tokens.css` 驗證後，`design-tokens`（28 個 token 中 20 個不存在）、`warm-neutral-palette`（29 中 26）、`light-mode-colors`（11 中 11）、`font-size-scale`（15 中 15）、`semantic-colors`（7 中 5）、`hover-system`（2 中 2）、`tailwind-v4-theme`（70 中 47）全部停在 Tailwind v4 遷移之前 —— 它們的首行是 `## ADDED/MODIFIED Requirements`，本身就是 change delta 被放進 `specs/` 當成持續有效的規格。改寫為 tombstone，各附退役原因與逐條 Requirement 去向表，並在 `tailwind-v4-theme` 留下完整的舊名→新名對照（`--fs-*`→`--font-size-*`、`--ease-apple`→`--transition-timing-function-apple`、`--tap-min`→`--spacing-tap-min` 等）供讀到舊文件的人查。`custom-scrollbar` 是唯一保留為 active 的一份：原斷言的四個硬編碼色碼（`#C4C0BB` 等中性灰）已隨色盤換代失效，改為引用 `--scrollbar-thumb` token；結構斷言（6px／圓角／軌道透明）仍正確。**「元件層不得自行宣告捲軸」那條改寫成記錄現況而非 `SHALL 不存在`** —— 實測 `src/` 有 6 處元件層宣告（4 處刻意隱藏的滑動列合規，2 處窄捲軸用 `--color-border`／`--color-line-strong` 而非捲軸 token），寫成 SHALL 會是一條落地當下就紅的規則。兩處窄捲軸標為已記錄偏離，要收斂需先加窄捲軸專用 token。
+- **skill reference 與 memory-sync 的 pre-SPA 化石段落刪除**：`coding-standards.md` 的檢查範圍列了 `js/`／5 個 `css/*.css`／多頁 `html/`／`server/`（全不存在）、`rules-architecture.md` 的 CSS/JS 拆分表與舊三欄斷點、`rules-testing.md` 的觸發規則（`data/trips-md/`、`js/app.js`、`edit.html`… 從來不會被觸發）、`css-hig-rules.md` 的「陷阱 1」捲動中和解法。一律刪除而非改檔名 —— 只改檔名會讓化石看起來新鮮。`.codex/` 鏡像同步。
+
+### Fixed
+- **兩條規則在退役過程中被標為孤兒，而非假裝有歸屬**：`font-size-scale` 的「不得硬編碼 font-size」與 `hover-system` 的「不硬編碼 hover 色」原本要寫成「SoT 為 `DESIGN.md`」，實際 grep 後發現 `DESIGN.md` 只有字級表與 hover token 定義、**沒有那兩條禁令**，守護測試也隨 `shared.css` 消失。改標 🔶 孤兒並寫明要它生效需補什麼（見 #1150），避免製造正是本次在清理的那種無主規則。同理，`css-hig-rules.md` 陷阱 1 原本要指向 `CONTEXT.md`／`DESIGN.md`，查證後兩處都沒有捲動內容，改為明講「這塊目前沒有文件擁有」並指向既有 e2e。
+
 ## [2.57.47] - 2026-07-25
 
 ### Changed

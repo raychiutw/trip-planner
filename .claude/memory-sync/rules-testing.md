@@ -3,10 +3,10 @@
 - 僅程式碼 / JSON / MD 行程變更才跑測試；文件變更不需跑
 - **commit 前必須測試全過，不得跳過**（pre-commit hook 自動執行）
 - 觸發規則：
-  - `data/trips-md/**/*.md` → `npm test`
-  - `js/app.js` / `js/shared.js` / `js/icons.js` / `css/style.css` / `css/shared.css` / `index.html` → `npm test` + `npm run test:e2e`
-  - `js/edit.js` / `css/edit.css` / `edit.html` → `npm test`
-  - `setting.html` / `js/setting.js` / `css/setting.css` → `npm test`
+  - `src/**` / `functions/api/**` / `css/tokens.css` → `npm test`
+  - 前端行為或版面改動 → 另加 `npx playwright test`（e2e 平時只在 CI 跑，land 前本地跑一次）
+
+> 2026-07-25 更正：原本的觸發規則列的是 `data/trips-md/`、`js/app.js`、`js/edit.js`、`css/style.css`、`edit.html`、`setting.html` —— **全部不存在**，是 pre-SPA 多頁架構的殘留，那組規則從來不會被觸發。
 
 ## 測試目錄結構
 
