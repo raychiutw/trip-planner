@@ -18,8 +18,16 @@
  *       CSS 選擇器不觸發就不會被 axe 抓到對比（需真滑鼠 hover，不能用 class 模擬）。
  *   (b) 「已封存」分類篩選出的重設按鈕（回到全部）只在該分類結果為零筆時才 render，
  *       預設頁面（全部分類）走不到那個條件分支，DOM 裡根本沒有這個節點。
- * 下面兩支場景各自主動觸發該狀態再掃描，用 test.fail() 標記「預期失敗」以便追蹤
- * （見場景前的說明），不是把頁面加進掃描清單 —— 頁面本來就在清單裡。
+ * 下面兩支場景各自主動觸發該狀態再掃描，不是把頁面加進掃描清單 —— 頁面本來就在清單裡。
+ * 兩處對比已由 #1156 修好，原本的 test.fail()「預期失敗」標記隨之移除。
+ *
+ * ⚠ 這支守衛有一個已知盲區：axe 的 color-contrast 規則對「內容恰好 1 個字元」的元素
+ *   一律歸到 incomplete 而非 violations（axe-core: visibleText.length === 1 →
+ *   messageKey: shortTextContent，"Element content is too short to determine if it
+ *   is actual text content"），而本檔只讀 results.violations。行程一覽頁的分類 tab
+ *   計數徽章在行程數 ≤9 時就是這種元素 —— 實測 3.24:1 確實違規卻掃不出來，滿 10 筆
+ *   變兩位數才掃得到。也就是說這裡的綠會隨 mock 資料量飄。那一類 call-site 要靠
+ *   tests/unit/trips-list-accent-text.test.ts 守，別以為 e2e 全綠就代表沒有對比違規。
  */
 import { test, expect } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
@@ -77,14 +85,12 @@ for (const p of PAGES) {
 // call-site 違規 —— 元素本身確實在掃描清單頁（/trips）內，但要靠 :hover 偽類或
 // 特定篩選結果（空清單）才會渲染/切色，預設 goto+networkidle 永遠碰不到。
 // 下面兩支場景刻意「主動觸發」該狀態再掃，證明守衛能力所及、也留紀錄哪裡還紅：
-// - test.fail() 是 Playwright 的「預期失敗」標記：測試本體照常斷言零違規，
-//   若真的抓到 serious/critical（目前確實會），CI 會顯示為「預期失敗」而不是
-//   紅燈擋 pipeline；一旦下游票（#1155／#1156）修好對比、變成真的零違規，
-//   test.fail() 反而會因為「預期失敗卻通過」被判失敗 —— 屆時把這行拿掉即可，
-//   不會有人忘記收尾。
+// #1156 已修好這兩處對比（call-site 從 --color-accent 換成 --color-accent-text
+// 系列），原本的 test.fail()「預期失敗」標記隨之移除，兩支場景現在是真的綠。
+// 註：hover 卡那支原本被 #1154 標成「追蹤於 #1155」，是標錯了 —— #1155 是「擴大掃描
+// 到其他頁面」，不含修色；「新增行程」卡的 hover 文字明列在 #1156 的範圍裡。
 
-test('a11y: 「新增行程」卡 hover 態（真滑鼠移入）已知有 serious/critical 違規 — 追蹤於 #1155', async ({ page }) => {
-  test.fail(true, '.tp-trip-card-new:hover 文字色（--color-accent）在 --color-accent-subtle 底色對比不足；根因是 hover 偽類本身沒被掃到，非頁面漏掃（#1155 修色後移除本行）。');
+test('a11y: 「新增行程」卡 hover 態（真滑鼠移入）無 serious/critical 違規', async ({ page }) => {
   await page.goto('/trips');
   await page.waitForLoadState('networkidle');
   // 用真的滑鼠移入觸發 :hover 偽類（非加 class 模擬）—— page.hover() 送真實 mousemove。
@@ -98,8 +104,7 @@ test('a11y: 「新增行程」卡 hover 態（真滑鼠移入）已知有 seriou
   expect(bad, 'trips 新增行程卡 hover 態有 serious/critical a11y 違規').toEqual([]);
 });
 
-test('a11y: 「已封存」分類篩選結果為零時的重設按鈕已知有 serious/critical 違規 — 追蹤於 #1156', async ({ page }) => {
-  test.fail(true, '.tp-trips-loading 內 reset 按鈕文字色（--color-accent）在 --color-background 底色對比不足；根因是這個節點只在「已封存 tab + 空清單」條件渲染下才存在，預設頁面狀態量不到（#1156 修色後移除本行）。');
+test('a11y: 「已封存」分類篩選結果為零時的重設按鈕無 serious/critical 違規', async ({ page }) => {
   await page.goto('/trips');
   await page.waitForLoadState('networkidle');
   // mock 帳號的兩筆行程都沒有 archivedAt，切到「已封存」分類必為空清單 → 觸發 reset 按鈕渲染。

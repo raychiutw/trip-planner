@@ -95,6 +95,12 @@
 
 > **Dark mode 覆寫不得冗餘**：若 base 規則已用 `var(--token)` 且該 token 在 `body.dark` 已有覆寫值，就 SHALL NOT 再寫 `body.dark .class { property: var(--token) }` —— token 值會自動切換，重寫是死碼、且日後改 token 時容易漏掉這份重複。〔遷自已歸檔的 `css-hig-discipline` spec〕
 
+> **`--color-accent` SHALL NOT 當文字色**（#1156，通則）：品牌柔褐是給 CTA 填色、邊框、active 指示與圖示用的，它在自家淺底上撐不到 WCAG AA 的 4.5:1。文字要照**底色**挑深變體 —— 底是頁面色（`--color-background` / `--color-secondary`）用 `--color-accent-text`；底是同色系 tint（`--color-accent-subtle` / `--color-accent-bg`）用更深的 `--color-accent-text-on-tonal`。
+>
+> 例外只有一種：`aria-hidden` 的**純裝飾**圖示——旁邊已有文字標籤、圖示本身不承載資訊。依 WCAG 1.4.11 門檻是 3:1 而非 4.5:1，硬套深色前景 token 反而會在淺 tint 圓底上過深、與同頁其他圖示不協調。邊框同理走 3:1。
+>
+> 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層、`tests/unit/trips-list-accent-text.test.ts` 守 call-site 層。
+
 ### Light Mode (柔褐三色 — Default)
 | Token | Hex | 用途 |
 |-------|-----|------|

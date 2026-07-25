@@ -263,7 +263,12 @@ const SCOPED_STYLES = `
 }
 .tp-trips-tab.is-active .tp-trips-tab-count {
   background: var(--color-accent-subtle);
-  color: var(--color-accent);
+  /* #1156：底是 tonal → --color-accent-text-on-tonal。規則見 DESIGN.md §Color Approach。
+   * ⚠ 計數是個位數時 axe 掃不到這一處：axe 的 color-contrast 對「內容恰好 1 個字元」的
+   *   元素降級成 incomplete（visibleText.length === 1 → messageKey: shortTextContent），
+   *   不會進 violations。行程滿 10 筆變兩位數才掃得到。守衛見
+   *   tests/unit/trips-list-accent-text.test.ts。 */
+  color: var(--color-accent-text-on-tonal);
 }
 .tp-trips-sort {
   border: 1px solid var(--color-border);
@@ -345,8 +350,11 @@ body.dark .tp-trips-sort {
   transition: border-color 120ms, color 120ms, background 120ms;
 }
 .tp-trip-card-new:hover {
+  /* border 是非文字 UI，門檻 3:1，維持柔褐（DESIGN.md §Color Approach）。 */
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  /* #1156：hover 後底色換成 --color-accent-subtle（tonal）→ 文字改 -text-on-tonal。
+   * 這一處 e2e 掃得到，見 tests/e2e/a11y-axe.spec.js 的 hover 場景。 */
+  color: var(--color-accent-text-on-tonal);
   background: var(--color-accent-subtle);
   transform: none;
   box-shadow: none;
@@ -355,6 +363,8 @@ body.dark .tp-trips-sort {
   width: 40px; height: 40px;
   border-radius: 50%;
   background: var(--color-accent-subtle);
+  /* #1156 刻意不改：aria-hidden 裝飾圖示，走 3:1 門檻的例外（DESIGN.md §Color Approach）。
+   * hover 態另有 --color-accent-fill 覆寫（見下），本來就沒有對比問題。 */
   color: var(--color-accent);
   display: grid; place-items: center;
   font-size: var(--font-size-title3);
@@ -418,6 +428,7 @@ body.dark .tp-trips-sort {
   margin: 0 auto 20px;
   border-radius: 50%;
   background: var(--color-accent-subtle);
+  /* #1156 刻意不改：aria-hidden 裝飾 svg，同 .tp-new-icon 的 3:1 例外。 */
   color: var(--color-accent);
   display: grid; place-items: center;
 }
@@ -1013,7 +1024,9 @@ export default function TripsListPage() {
                     marginLeft: 8,
                     background: 'transparent',
                     border: 0,
-                    color: 'var(--color-accent)',
+                    // #1156：底是頁面色（.tp-trips-loading 用 --color-background）而非
+                    // tonal，所以是 --color-accent-text。規則見 DESIGN.md §Color Approach。
+                    color: 'var(--color-accent-text)',
                     cursor: 'pointer',
                     fontWeight: 600,
                   }}
