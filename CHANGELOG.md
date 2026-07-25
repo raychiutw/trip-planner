@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.47] - 2026-07-25
+
+### Changed
+- **Matt Pocock 工作流改為專案預設，gstack 降為補位（owner 2026-07-25）**：原本 Matt 工作流只是 Apple HIG effort 的例外，現在是全專案預設。`CLAUDE.md` 的 Pipeline 改寫為 matt 主線 —— `grill-with-docs → [to-spec → to-tickets →] implement → /ship → land → canary`，`/implement` 內部驅動 `/tdd`、收尾跑 `/code-review`；加上 context 衛生（`to-tickets` 前不要 compact，接近 smart zone 就 `/handoff`）與三條 on-ramp（`/triage` 只給外部湧入的 issue、`/diagnosing-bugs` 先建會變紅的指令、`/wayfinder` 產決策不產交付物且要交棒到 `/to-spec`）。三個替換：`/office-hours`→`/grill-with-docs`、`/review`→`/code-review`、`/investigate`→`/diagnosing-bugs`。
+- **保留 13 個 gstack skill**（盤點確認 matt 無對應）：發版鏈 `/ship`→`/land-and-deploy`→`/canary`、瀏覽器行為 QA `/qa`、視覺保真 `/design-review`（與 `/qa` 不可互相取代）、`/browse`、`/cso`、`/retro`、`/document-release`、`/plan-eng-review`、`/simplify`、專案自訂 `/tp-code-verify`。
+- **`/tp-team` 不再是 code change 的強制第一步** —— 它與 `/implement` 是同一位置的兩套 orchestration，matt 優先即讓位；需要其 orchestration 時仍可用。行程資料仍走 `tp-*` data skills 直接打 API。
+
+### Docs
+- **新增「Matt skill 的呼叫限制」一節**：13 個 matt skill 有 `disable-model-invocation: true`，agent 不能自主呼叫、只能 owner 打 `/name`，而主線骨幹（`grill-with-docs` / `to-spec` / `to-tickets` / `implement` / `triage` / `wayfinder` / `handoff`）全在其中 —— **agent 無法自己起頭一條主線**。且 session 的 available-skills 清單只列得出可自主呼叫的 9 個，**不能拿它判斷有沒有安裝**（2026-07-25 實測誤判過，要確認就直接看 plugin cache 目錄）。
+- **消除 `CLAUDE.md` 內部矛盾**：mockup-first hard gate 標記為已退役（2026-07-23 Apple HIG 成上位 SoT）。此前 Hard Rules 仍把它列為現行規則，但同文件的 Design SoT 段與 memory 都記載已退役。`/tp-claude-design` 仍可用於探索視覺方案，但不是 gate。
+- 註記 `openspec/specs/` 底下多數檔案首行是 `## ADDED/MODIFIED Requirements`（change delta 被當成規格放進 specs/），讀之前先確認它是規格還是某次變更的差異檔。
+
 ## [2.57.46] - 2026-07-24
 
 ### Docs
