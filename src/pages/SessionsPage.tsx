@@ -101,7 +101,11 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-subheadline); line-height: 1.5;
   margin-top: 16px;
 }
-.tp-banner-info { background: var(--color-accent-subtle); color: var(--color-accent); }
+/* 底是同色系淡底（tonal）→ 走 -text-on-tonal（DESIGN.md §Color Approach 通則）。
+ * 原本 --color-accent 疊 --color-accent-subtle 只有 3.24:1，低於 AA 的 4.5；現為 5.76:1。
+ * 全 codebase 只有本檔 :330 真的 render 這個 class —— LoginPage / ResetPasswordPage 也各有
+ * 一份同名規則但沒有對應 JSX，那兩份已在本次刪除（見 #1157）。 */
+.tp-banner-info { background: var(--color-accent-subtle); color: var(--color-accent-text-on-tonal); }
 .tp-banner-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
 .tp-banner svg { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; }
 

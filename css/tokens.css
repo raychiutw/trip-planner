@@ -1969,9 +1969,12 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 /* W6：目前行程 checkmark —— 絕對定位右側，不動既有 title/meta 直排；reserve padding-right 讓
  * 有無 check 的列對齊一致。搜尋框 + 空狀態同區。 */
 .tp-titlebar-trip-row { position: relative; padding-right: 32px; }
+/* color 刻意不在這裡宣告（#1157 刪掉原本的 --color-accent）：checkmark 只在
+ * `{active && …}` 時 render（TripTitleSwitcher.tsx:157），所以下一行 .is-active 的
+ * 宣告永遠會蓋過它 —— 低特異性那條是死碼，留著會讓人以為非 active 也有 check。 */
 .tp-titlebar-trip-row-check {
   position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-  width: 16px; height: 16px; color: var(--color-accent); flex-shrink: 0;
+  width: 16px; height: 16px; flex-shrink: 0;
 }
 .tp-titlebar-trip-row.is-active .tp-titlebar-trip-row-check { color: var(--color-accent-text); }
 .tp-titlebar-trip-search {

@@ -86,7 +86,8 @@ ${AUTH_LAYOUT_STYLES}
   font-size: var(--font-size-subheadline); line-height: 1.5;
   margin-bottom: 16px;
 }
-.tp-banner-info { background: var(--color-accent-subtle); color: var(--color-accent); }
+/* .tp-banner-info 已刪除（#1157）—— 本檔 JSX 只用 -error，這條規則沒有任何使用點。
+ * 同 LoginPage：SCOPED_STYLES 注入全域 <style>，同名規則的複製品會讓修對比時漏改。 */
 .tp-banner-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
 
 .tp-result-icon {

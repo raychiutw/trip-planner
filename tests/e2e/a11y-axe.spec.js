@@ -167,23 +167,19 @@ test('a11y: 「已封存」分類篩選結果為零時的重設按鈕無 serious
 // 前兩支用 violationFingerprints 正面斷言「目前紅在這幾處」，而不是 #1154 用的
 // test.fail()「預期失敗」標記 —— 理由見 violationFingerprints 的說明。
 
-test('a11y: 信箱驗證等候頁 — 鎖住目前已知的柔褐對比違規（待 #1157 修）', async ({ page }) => {
+test('a11y: 信箱驗證等候頁無 serious/critical axe 違規', async ({ page }) => {
   // 公開路由，不需要登入 mock；本頁掛載時不發任何 request，networkidle 立即成立，
   // 所以額外等 testid 才能確定 lazy chunk 真的到位。
   await page.goto('/signup/check-email?email=test%40example.com');
   await page.waitForLoadState('networkidle');
   await page.getByTestId('verify-pending-page').waitFor({ state: 'visible' });
-  const bad = await scanSeriousCritical(page);
-  // .tp-verify-banner 說明文字 = --color-accent 疊 --color-accent-subtle；
-  // 「改用其他信箱」連結 = --color-accent 疊 --color-background。兩者門檻皆 4.5。
-  expect(violationFingerprints(bad), '信箱驗證等候頁的已知違規清單變了 —— 若是 #1157 修好了，'
-    + '把這裡改成 expectNoSeriousCritical；若是冒出新違規，先查新的那個').toEqual([
-    'color-contrast | .tp-verify-banner > div | 3.24',
-    'color-contrast | a[href$="signup"] | 3.65',
-  ]);
+  // #1157 已修好本頁兩處，指紋斷言依它自己留的指示收掉，改成零違規：
+  //   .tp-verify-banner 說明文字   --color-accent 疊 tonal 底 3.24 → -text-on-tonal 5.76
+  //   「改用其他信箱」連結          --color-accent 疊 頁面底  3.65 → -text          5.35
+  await expectNoSeriousCritical(page, '信箱驗證等候頁');
 });
 
-test('a11y: 登入工作階段頁 — 鎖住目前已知的對比違規（待 #1157 修）', async ({ page }) => {
+test('a11y: 登入工作階段頁 — 鎖住剩下那個語意色違規（待 #1176 修）', async ({ page }) => {
   // /settings/sessions 與 /account/sessions 都指向 SessionsPage，深連結時兩者都落在
   // 主 routes（sheet 那份要 background location 才會 render）。選 /settings/sessions
   // 純粹是對齊既有的 tests/e2e/settings-pages.spec.js。
@@ -191,12 +187,21 @@ test('a11y: 登入工作階段頁 — 鎖住目前已知的對比違規（待 #1
   await page.waitForLoadState('networkidle');
   await page.getByTestId('sessions-row-current').waitFor({ state: 'visible' });
   const bad = await scanSeriousCritical(page);
-  // .tp-banner-info 說明文字 = --color-accent 疊 --color-accent-subtle（柔褐誤用，本批主題）。
-  // .tp-pill-current「目前」= --color-success 疊 --color-success-bg 合成後的 #D7E5D7 ——
-  // 這個不是柔褐誤用而是語意色誤用，順帶掃出來的，同樣未達 4.5。
-  expect(violationFingerprints(bad), '登入工作階段頁的已知違規清單變了 —— 若是 #1157 修好了，'
+  // 本頁原本兩個違規，#1157 只修掉柔褐那個：
+  //   ✅ .tp-banner-info 說明文字 —— --color-accent 疊 tonal 底 3.24 → -text-on-tonal 5.76
+  //   ❌ .tp-pill-current「目前」 —— --color-success 疊 --color-success-bg（12% alpha）再疊
+  //      父層 .tp-row-current 的 --color-accent-subtle，合成成 #D7E5D7，只有 2.35
+  //
+  // 為什麼 pill 不在 #1157 一起修：它不是柔褐誤用，#1156 立的通則管不到，而**既有的
+  // --color-success-deep（#07795C）在這個底上也只有 4.12，仍不到 4.5**。pill 是 11px/700
+  // 不算 large text，門檻就是 4.5。要修得先決定「加更深的變體」還是「改掉半透明底」，
+  // 而那會動到 DESIGN.md（UI/UX SoT，須先討論）。同樣的配對全 codebase 有 13 處，
+  // danger/error/info 連 -deep 都沒有 —— 整包收在 #1176。
+  //
+  // 所以這裡保留正面指紋斷言：#1176 修好時它會因指紋不符轉紅，提醒回來改成
+  // expectNoSeriousCritical。那是刻意的提醒機制，不是 bug。
+  expect(violationFingerprints(bad), '登入工作階段頁的已知違規清單變了 —— 若是 #1176 修好了，'
     + '把這裡改成 expectNoSeriousCritical；若是冒出新違規，先查新的那個').toEqual([
-    'color-contrast | .tp-banner > div | 3.24',
     'color-contrast | .tp-pill | 2.35',
   ]);
 });
