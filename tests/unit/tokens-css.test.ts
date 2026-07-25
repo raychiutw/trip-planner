@@ -190,6 +190,18 @@ describe('tokens.css', () => {
         expect(contrastRatio(accentText, accentSubtle)).toBeGreaterThanOrEqual(AA_NORMAL);
       });
 
+      // #1156：DESIGN.md §Color Approach 把「頁面／表面色」列為 accent-text 的適用底色，
+      // 但 tertiary（recessed surface / input bg）與 hover 這兩個常見底色原本沒人守。
+      // ⚠ accent-text / tertiary 目前只有 4.60，離門檻 4.5 只剩 0.10 —— 任何把 tertiary
+      //   壓深的調整都會直接跌破。這兩條就是為了讓它出聲而不是靜默破線。
+      it('accent-text / tertiary ≥ 4.5（recessed surface 上的文字）', () => {
+        expect(contrastRatio(accentText, tertiary)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
+      it('accent-text / hover ≥ 4.5（hover 底上的文字）', () => {
+        expect(contrastRatio(accentText, getColor(lightBlock, 'hover'))).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
       it('accent-text-on-tonal / accent-subtle ≥ 4.5（tonal 底文字變體）', () => {
         expect(contrastRatio(accentTextOnTonal, accentSubtle)).toBeGreaterThanOrEqual(AA_NORMAL);
       });

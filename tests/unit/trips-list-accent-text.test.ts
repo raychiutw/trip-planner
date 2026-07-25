@@ -47,13 +47,32 @@ function extractScopedStyles(src: string): string {
 /**
  * 攤平出「最內層」的 CSS 規則（selector + body）。
  * `[^{}]*` 跨不過大括號，所以巢狀的 @media 外層會被自動略過，只留裡面的實際規則。
+ *
+ * 進 regex 前先剝掉 CSS 註解：selector 的 capture 是「上一個 } 到下一個 { 之間的全部文字」，
+ * 不剝的話規則上方的註解會被併進 selector 字串。這份 SCOPED_STYLES 幾乎每條規則上方都有
+ * 註解，一旦有人在裝飾圖示規則上方加一行說明，例外清單的精確比對就會失效 —— 而錯誤訊息
+ * 會是「這些規則把品牌柔褐直接當文字色」，把人導向改錯地方。
  */
 function flatRules(css: string): Array<{ selector: string; body: string }> {
-  return [...css.matchAll(/([^{}]*)\{([^{}]*)\}/g)].map((m) => ({
+  const noComments = css.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  return [...noComments.matchAll(/([^{}]*)\{([^{}]*)\}/g)].map((m) => ({
     selector: m[1].trim().replace(/\s+/g, ' '),
     body: m[2],
   }));
 }
+
+/**
+ * 「把柔褐當文字色」的偵測式。
+ *
+ * - 前綴 `(^|[;{\s])` 要求 color 前面是行首/分號/大括號/空白，才不會誤抓 `border-color`。
+ * - 結尾 `\s*[,)]` 同時涵蓋 `var(--color-accent)` 與帶 fallback 的 `var(--color-accent, #A97A4A)`。
+ * - token 名後面接 `\s*[,)]` 而不是直接 `\)`，是為了讓 `--color-accent-text` / `-deep` /
+ *   `-subtle` 不會被誤匹配（它們後面接的是 `-`，不是 `,` 或 `)`）。
+ * - `--t` / `--t-deep` 是同檔 `.tp-trip-card[data-tone]` 定義的別名，值就是 `var(--color-accent)`，
+ *   不一起擋就等於留了一扇後門。
+ */
+const ACCENT_AS_TEXT = /(^|[;{\s])color:\s*var\(\s*--color-accent\s*[,)]/m;
+const ACCENT_ALIAS_AS_TEXT = /(^|[;{\s])color:\s*var\(\s*--t(-deep)?\s*[,)]/m;
 
 /**
  * 允許繼續用 --color-accent 當 color 的例外：aria-hidden 的純裝飾圖示。
@@ -70,11 +89,8 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
   const src = readFileSync(pagePath, 'utf-8');
 
   it('SCOPED_STYLES 內 color: var(--color-accent) 只出現在裝飾圖示規則', () => {
-    // 要求 color 前面是行首/分號/大括號/空白，才不會誤抓 border-color 或自訂屬性 --t。
-    // 尾端用 [;}\s] 界定，避免把 --color-accent-text / -deep / -subtle 也吃進來。
-    const bareAccentAsText = /(^|[;{\s])color:\s*var\(--color-accent\)\s*[;}]?/m;
     const offenders = flatRules(extractScopedStyles(src))
-      .filter((r) => bareAccentAsText.test(r.body))
+      .filter((r) => ACCENT_AS_TEXT.test(r.body))
       .map((r) => r.selector);
 
     expect(
@@ -84,11 +100,56 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
     ).toEqual([]);
   });
 
+  it('別名 --t / --t-deep 也不得當文字色（它們的值就是 --color-accent）', () => {
+    const offenders = flatRules(extractScopedStyles(src))
+      .filter((r) => ACCENT_ALIAS_AS_TEXT.test(r.body))
+      .map((r) => r.selector);
+
+    expect(
+      offenders,
+      '這些規則透過 --t 別名間接把柔褐當文字色 —— 繞過主偵測式但對比一樣不足。',
+    ).toEqual([]);
+  });
+
   it('裝飾圖示例外清單沒有腐爛（規則被改名/刪除要炸掉，而不是靜默放行）', () => {
-    const selectors = flatRules(extractScopedStyles(src)).map((r) => r.selector);
+    // 只驗 selector 字串存在是空洞的：`.tp-trip-card-new .tp-new-icon` 在 @media 內另有一條
+    // 同名的尺寸覆寫規則，就算 base 規則被改名，toContain 也永遠為真。
+    // 要驗的是「例外指向的那條規則，確實還帶著 color: var(--color-accent)」。
+    const rules = flatRules(extractScopedStyles(src));
     for (const rule of DECORATIVE_ICON_RULES) {
-      expect(selectors, `例外清單指向不存在的規則：${rule}`).toContain(rule);
+      const carrying = rules.filter((r) => r.selector === rule && ACCENT_AS_TEXT.test(r.body));
+      expect(
+        carrying.length,
+        `例外 ${rule} 找不到實際使用 --color-accent 的規則 —— 規則被改名/刪除，或這條例外已是死條目該清掉`,
+      ).toBe(1);
     }
+  });
+
+  it('裝飾例外的前提仍成立：兩個圖示都還是 aria-hidden', () => {
+    // 這兩處留 --color-accent 的「全部」正當性，就是它們是 aria-hidden 的純裝飾
+    // （WCAG 1.4.11 門檻 3:1 而非 4.5:1，實測 3.24 剛好達標）。前提一垮，3.24 立刻變違規，
+    // 但 unit 守衛會因為它們在例外清單裡而放行、e2e 會因為 aria-hidden/單字元而看不到。
+    // 兩層都瞎，所以前提本身必須有人鎖。
+    expect(src, '.tp-new-icon 失去 aria-hidden → 3:1 例外不再成立')
+      .toMatch(/className="tp-new-icon"\s+aria-hidden="true"/);
+    expect(src, '.tp-hero-icon 失去 aria-hidden → 3:1 例外不再成立')
+      .toMatch(/className="tp-hero-icon"\s+aria-hidden="true"/);
+  });
+
+  it('規則上方的 CSS 註解不會混進 selector（否則例外清單會誤爆）', () => {
+    const css = '/* 說明註解 */\n.tp-trip-card-new .tp-new-icon { color: var(--color-accent); }';
+    expect(flatRules(css).map((r) => r.selector)).toEqual(['.tp-trip-card-new .tp-new-icon']);
+  });
+
+  it('偵測式涵蓋 fallback 語法、且不誤抓深色變體', () => {
+    expect(ACCENT_AS_TEXT.test('  color: var(--color-accent, #A97A4A);')).toBe(true);
+    expect(ACCENT_AS_TEXT.test('  color: var( --color-accent );')).toBe(true);
+    expect(ACCENT_AS_TEXT.test('  border-color: var(--color-accent);')).toBe(false);
+    expect(ACCENT_AS_TEXT.test('  color: var(--color-accent-text);')).toBe(false);
+    expect(ACCENT_AS_TEXT.test('  color: var(--color-accent-text-on-tonal);')).toBe(false);
+    expect(ACCENT_ALIAS_AS_TEXT.test('  color: var(--t);')).toBe(true);
+    expect(ACCENT_ALIAS_AS_TEXT.test('  color: var(--t-deep);')).toBe(true);
+    expect(ACCENT_ALIAS_AS_TEXT.test('  background: var(--t);')).toBe(false);
   });
 
   it('樣式抽取有抓到整段（截斷會讓後半的違規靜默漏掃）', () => {
@@ -103,7 +164,8 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
 
   it('JSX inline style 不得把柔褐當文字色', () => {
     // 例：style={{ color: 'var(--color-accent)' }} —— 「已封存空清單」的重設按鈕曾是這樣。
-    const inlineBareAccent = /color:\s*['"]var\(--color-accent\)['"]/g;
+    // 引號類別含反引號：JSX inline style 也可以寫成樣板字串。
+    const inlineBareAccent = /color:\s*['"`]var\(\s*--color-accent\s*[,)][^'"`]*['"`]/g;
     expect([...src.matchAll(inlineBareAccent)].map((m) => m[0])).toEqual([]);
   });
 });

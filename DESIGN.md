@@ -21,7 +21,7 @@
 ## Palette — V2 柔褐三色（canonical source: tokens.css `@theme`）
 | Token | Hex | 用途 |
 |-------|-----|------|
-| `--color-accent` | `#A97A4A` | UI chrome 唯一主色（active state、CTA、link） |
+| `--color-accent` | `#A97A4A` | UI chrome 唯一主色（active state、CTA 填色、邊框、裝飾圖示）。**不可當文字色**，見下方 §Color Approach 的通則 |
 | `--color-accent-deep` | `#8A6038` | hover / pressed |
 | `--color-accent-subtle` | `#FBEEE4` | badge bg、selected row |
 | `--color-accent-bg` | `#F7DFCB` | accent panel |
@@ -95,16 +95,18 @@
 
 > **Dark mode 覆寫不得冗餘**：若 base 規則已用 `var(--token)` 且該 token 在 `body.dark` 已有覆寫值，就 SHALL NOT 再寫 `body.dark .class { property: var(--token) }` —— token 值會自動切換，重寫是死碼、且日後改 token 時容易漏掉這份重複。〔遷自已歸檔的 `css-hig-discipline` spec〕
 
-> **`--color-accent` SHALL NOT 當文字色**（#1156，通則）：品牌柔褐是給 CTA 填色、邊框、active 指示與圖示用的，它在自家淺底上撐不到 WCAG AA 的 4.5:1。文字要照**底色**挑深變體 —— 底是頁面色（`--color-background` / `--color-secondary`）用 `--color-accent-text`；底是同色系 tint（`--color-accent-subtle` / `--color-accent-bg`）用更深的 `--color-accent-text-on-tonal`。
+> **`--color-accent` SHALL NOT 當文字色**（#1156，通則）：品牌柔褐是給 CTA 填色、邊框、active 指示與圖示用的，它在自家淺底上撐不到 WCAG AA 的 4.5:1。文字要照**底色**挑深變體 —— 底是頁面／表面色（`--color-background`、`--color-secondary`、`--color-tertiary`、`--color-hover`）用 `--color-accent-text`；底是同色系 tint（`--color-accent-subtle` / `--color-accent-bg`）用更深的 `--color-accent-text-on-tonal`。
 >
 > 例外只有一種：`aria-hidden` 的**純裝飾**圖示——旁邊已有文字標籤、圖示本身不承載資訊。依 WCAG 1.4.11 門檻是 3:1 而非 4.5:1，硬套深色前景 token 反而會在淺 tint 圓底上過深、與同頁其他圖示不協調。邊框同理走 3:1。
 >
-> 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層、`tests/unit/trips-list-accent-text.test.ts` 守 call-site 層。
+> ⚠ **遷移狀態（別把未遷移當成 regression）**：本規則自 #1156 起對**新 code 一律生效**，既有 call-site 逐頁收斂中 —— `src/` 目前還有 40+ 個檔在用 `color: var(--color-accent)`。已完成：行程一覽頁（#1156）。進行中：信箱驗證等候頁／登入工作階段頁（#1157）、地圖頁 day 標籤（#1168）、titlebar action hover（#1169）。其餘尚未開票。看到未遷移的 call-site 請歸到對應票或另開，不要當成本規則的違反紀錄。
+>
+> 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層；call-site 層目前只有 `tests/unit/trips-list-accent-text.test.ts` 守行程一覽頁一個檔，**尚無全庫執法者**。
 
 ### Light Mode (柔褐三色 — Default)
 | Token | Hex | 用途 |
 |-------|-----|------|
-| accent（柔褐） | `#A97A4A` | 主強調：CTA、active、link、一般 POI icon/卡、rating |
+| accent（柔褐） | `#A97A4A` | 主強調：CTA 填色、active 指示、邊框、一般 POI icon/卡。**文字與連結請用 `-text` / `-text-on-tonal`**（見 §Color Approach） |
 | accent-deep | `#8A6038` | hover / pressed、icon glyph/描邊 |
 | accent-subtle | `#F4EDE3` | 卡片淡底、hover、selected row、chip bg |
 | accent-bg | `#E9DBC8` | icon 底、卡片邊、badge |
