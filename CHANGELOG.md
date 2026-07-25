@@ -3,7 +3,7 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.57.47] - 2026-07-25
+## [2.57.48] - 2026-07-25
 
 ### Docs
 - **文件 token / 架構漂移修正（零 code 變更）**：`css/tokens.css` 是 single-theme（只有 `body.dark` + `body.theme-print`），但多份文件仍宣稱「6 套主題」，且 19 個檔案引用早已不存在的 `css/shared.css`。逐項對照 `tokens.css`（142 個 token）驗證後修正 —— `docs/adr/0003` Status 標註原始 Context 前提已失效並改寫（決策本身仍有效，只是「多主題」不再是採用 `@theme` 的理由）、`ARCHITECTURE.md` 與 `README.md` 改為 single-theme + dark mode、`tp-ux-verify/references/tokens.md` 整份重寫（改為只列 token 名與用途、**不再複製會漂的色值** —— 上一版複製了 6 主題全表，主題退場後整份腐爛沒人發現）。
@@ -15,6 +15,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 - **兩條規則在退役過程中被標為孤兒，而非假裝有歸屬**：`font-size-scale` 的「不得硬編碼 font-size」與 `hover-system` 的「不硬編碼 hover 色」原本要寫成「SoT 為 `DESIGN.md`」，實際 grep 後發現 `DESIGN.md` 只有字級表與 hover token 定義、**沒有那兩條禁令**，守護測試也隨 `shared.css` 消失。改標 🔶 孤兒並寫明要它生效需補什麼（見 #1150），避免製造正是本次在清理的那種無主規則。同理，`css-hig-rules.md` 陷阱 1 原本要指向 `CONTEXT.md`／`DESIGN.md`，查證後兩處都沒有捲動內容，改為明講「這塊目前沒有文件擁有」並指向既有 e2e。
+
+## [2.57.47] - 2026-07-25
+
+### Changed
+- **Matt Pocock 工作流改為專案預設，gstack 降為補位（owner 2026-07-25）**：原本 Matt 工作流只是 Apple HIG effort 的例外，現在是全專案預設。`CLAUDE.md` 的 Pipeline 改寫為 matt 主線 —— `grill-with-docs → [to-spec → to-tickets →] implement → /ship → land → canary`，`/implement` 內部驅動 `/tdd`、收尾跑 `/code-review`；加上 context 衛生（`to-tickets` 前不要 compact，接近 smart zone 就 `/handoff`）與三條 on-ramp（`/triage` 只給外部湧入的 issue、`/diagnosing-bugs` 先建會變紅的指令、`/wayfinder` 產決策不產交付物且要交棒到 `/to-spec`）。三個替換：`/office-hours`→`/grill-with-docs`、`/review`→`/code-review`、`/investigate`→`/diagnosing-bugs`。
+- **保留 13 個 gstack skill**（盤點確認 matt 無對應）：發版鏈 `/ship`→`/land-and-deploy`→`/canary`、瀏覽器行為 QA `/qa`、視覺保真 `/design-review`（與 `/qa` 不可互相取代）、`/browse`、`/cso`、`/retro`、`/document-release`、`/plan-eng-review`、`/simplify`、專案自訂 `/tp-code-verify`。
+- **`/tp-team` 不再是 code change 的強制第一步** —— 它與 `/implement` 是同一位置的兩套 orchestration，matt 優先即讓位；需要其 orchestration 時仍可用。行程資料仍走 `tp-*` data skills 直接打 API。
+
+### Docs
+- **新增「Matt skill 的呼叫限制」一節**：13 個 matt skill 有 `disable-model-invocation: true`，agent 不能自主呼叫、只能 owner 打 `/name`，而主線骨幹（`grill-with-docs` / `to-spec` / `to-tickets` / `implement` / `triage` / `wayfinder` / `handoff`）全在其中 —— **agent 無法自己起頭一條主線**。且 session 的 available-skills 清單只列得出可自主呼叫的 9 個，**不能拿它判斷有沒有安裝**（2026-07-25 實測誤判過，要確認就直接看 plugin cache 目錄）。
+- **消除 `CLAUDE.md` 內部矛盾**：mockup-first hard gate 標記為已退役（2026-07-23 Apple HIG 成上位 SoT）。此前 Hard Rules 仍把它列為現行規則，但同文件的 Design SoT 段與 memory 都記載已退役。`/tp-claude-design` 仍可用於探索視覺方案，但不是 gate。
+- 註記 `openspec/specs/` 底下多數檔案首行是 `## ADDED/MODIFIED Requirements`（change delta 被當成規格放進 specs/），讀之前先確認它是規格還是某次變更的差異檔。
 
 ## [2.57.46] - 2026-07-24
 
