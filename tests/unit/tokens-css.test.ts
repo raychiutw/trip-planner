@@ -210,6 +210,21 @@ describe('tokens.css', () => {
         expect(contrastRatio(getColor(lightBlock, 'accent'), accentSubtle)).toBeGreaterThanOrEqual(AA_LARGE);
       });
 
+      // 同理，DESIGN.md §Color Approach 的「邊框同理走 3:1」也是一句沒人守的規範主張。
+      // .tp-trip-card:hover / .tp-trip-card-new:hover 的 border-color 就靠這幾組撐著，
+      // 而 axe 對 border 對比本來就不掃。餘裕最小的是 hover（3.27）。
+      it('accent / background ≥ 3（邊框：頁面底）', () => {
+        expect(contrastRatio(getColor(lightBlock, 'accent'), bg)).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+
+      it('accent / secondary ≥ 3（邊框：alt 底，行程卡 hover 框）', () => {
+        expect(contrastRatio(getColor(lightBlock, 'accent'), secondary)).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+
+      it('accent / hover ≥ 3（邊框：hover 底）', () => {
+        expect(contrastRatio(getColor(lightBlock, 'accent'), getColor(lightBlock, 'hover'))).toBeGreaterThanOrEqual(AA_LARGE);
+      });
+
       // 刻意「沒有」accent-text / accent-bg 這一條：實測 4.05 < 4.5，本來就不該用。
       // accent-bg 底上的文字規則指定走 --color-accent-text-on-tonal（下面那條）。
 

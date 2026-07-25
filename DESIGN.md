@@ -99,7 +99,7 @@
 >
 > 例外只有一種：`aria-hidden` 的**純裝飾**圖示——旁邊已有文字標籤、圖示本身不承載資訊。依 WCAG 1.4.11 門檻是 3:1 而非 4.5:1，硬套深色前景 token 反而會在淺 tint 圓底上過深、與同頁其他圖示不協調。邊框同理走 3:1。
 >
-> ⚠ **遷移狀態（別把未遷移當成 regression）**：本規則自 #1156 起對**新 code 一律生效**，既有 call-site 逐頁收斂中 —— `src/` 目前還有 **29 個檔、59 處**把柔褐當文字色。計數口徑是 `grep -rlE '(^|[;{ ])color: var\(--color-accent\)' src/`，**不含** `border-color`（邊框走 3:1，本規則允許）。已完成：行程一覽頁（#1156）。進行中：信箱驗證等候頁／登入工作階段頁（#1157）、地圖頁 day 標籤（#1168）、titlebar back/action hover（#1169）。其餘尚未開票。看到未遷移的 call-site 請歸到對應票或另開，不要當成本規則的違反紀錄。
+> ⚠ **遷移狀態（別把未遷移當成 regression）**：本規則自 #1156 起對**新 code 一律生效**，既有 call-site 逐頁收斂中 —— 計數口徑 `grep -rhoE '(^|[;{ ])color: var\(--color-accent\)' src/ | wc -l` 命中 **29 個檔、59 處**（`-l` 給檔數、`-ho` 給處數），**不含** `border-color`（邊框走 3:1，本規則允許）。其中 `TripsListPage.tsx` 的 2 處是本節核准的 `aria-hidden` 裝飾例外，不是待遷移 —— **實際待辦是 28 檔 57 處**。已完成：行程一覽頁（#1156）。進行中：信箱驗證等候頁／登入工作階段頁（#1157）、地圖頁 day 標籤（#1168）、titlebar back/action hover（#1169）。其餘尚未開票。看到未遷移的 call-site 請歸到對應票或另開，不要當成本規則的違反紀錄。
 >
 > ⚠ **兩個本規則管不到的地方**：(a) Tailwind utility —— `@theme` 會把 `--color-accent` 生成 `text-accent`，`hover:text-accent` 這種寫法不在任何 CSS 字串裡，掃 template literal 的守衛永遠看不到（`InfoSheet.tsx`、`HourlyWeather.tsx` 現有數處）。(b) `body.theme-print` 只覆寫了 `--color-accent` / `-subtle` / `-bg`，**沒有覆寫 `-text` / `-text-on-tonal` / `-deep`**，所以遷移到 `-text` 的文字在灰階列印版面裡會是暖褐色。目前 print mode 只掛在行程明細頁（`usePrintMode`），影響有限，但全庫推廣前要先補 print 的 token 覆寫。
 >
@@ -389,7 +389,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - Auth loading 不預設成匿名狀態：userinfo 尚未 resolve 時，底部帳號區只保留 neutral loading chip；不得先顯示「登入」「未登入」或 account chip 後再切換。
 - Primary nav 順序（聊天 / 行程 / 地圖 / 收藏）+ active route patterns 由 `navItems.ts`（`PRIMARY_NAV_ITEMS` + `isItemActive`）單一來源掌管，`GlobalBottomNav`（手機膠囊）共用同一份；nav testid＝`sidebar-nav-<key>`（vs 膠囊 `global-bottom-nav-<key>`）。
 - **材質＝vibrancy 半透明毛玻璃（§10.3）**：`background: color-mix(in srgb, var(--color-background) 72%, transparent)` + `backdrop-filter: blur(30px) saturate(180%)`；文字/hover/border 走主 app token（`--color-foreground`/`--color-muted`/`--color-hover`/`--color-border`）→ 自動 light/dark adapt。舊固定深棕 `--color-sidebar-*` token 已退役（無其他 consumer）。
-- Active state 用 柔褐 accent；其餘用 cream `rgba(255,251,245,.78)`。
+- Active state ＝ `--color-accent-fill` 實心底 + `--color-accent-foreground` 文字（同上）；inactive 文字走 `--color-foreground` / `--color-muted`。（舊的 cream `rgba(255,251,245,.78)` 已隨 `--color-sidebar-*` 一併退役。）
 - `/trip/:id/map` 與 `/trip/:id/stop/:eid/map` active item = 地圖；其他 `/trip/:id/*` active item = 行程。
 - 不和 page titlebar 重複放頁面說明文字。
 
@@ -398,7 +398,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - **常駐，捲動不隱藏**（owner 2026-07-20 / 07-21；捲動隱藏邏輯已於 2026-07-21 移除）。
 - 高度需包含 safe-area inset，頁面內容必須留出底部 padding。
 - Bottom nav 是主功能定位，不是 breadcrumb。子頁與明細頁 active item 依所屬主功能決定，不新增子頁 tab。
-- Active item 使用不同於 CTA 的定位樣式：柔褐 淡底 pill + 2px top indicator + accent icon/label；inactive 保持 muted。
+- Active item 使用不同於 CTA 的定位樣式：`GlobalBottomNav` 走實心 `--color-accent-fill` 膠囊 + `--color-accent-foreground` icon/label；`BottomNavBar` 走無底色 + `--color-accent-text` 文字。inactive 保持 muted。**不可用「柔褐淡底 + `--color-accent` label」** —— 那組是 3.24:1，且 nav label 是 11px 小字（見 §Color Approach 通則）。
 
 | Route family | Active bottom nav |
 |--------------|-------------------|
@@ -550,7 +550,7 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 ┌─ severity bar (6px column)
 │  ├─ head-row: title + dimension chip（「時間」「移動」「餐飲」「景點」「住宿」）
 │  ├─ desc: 具體描述（≤120 字）
-│  ├─ suggestion block: 「建議」label + 建議文字（accent-subtle bg、accent-deep text、accent eyebrow label）
+│  ├─ suggestion block: 「建議」label + 建議文字（accent-subtle bg、accent-deep text、`--color-accent-text-on-tonal` eyebrow label；既有 `.suggestion .label` call-site 待遷移，見 §Color Approach 遷移清單）
 │  └─ actions: 「前往景點」（有 entry_id）優先於「前往 Day N」（只有 day）
 └─
 ```

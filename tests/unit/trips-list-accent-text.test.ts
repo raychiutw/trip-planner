@@ -64,14 +64,17 @@ function flatRules(css: string): Array<{ selector: string; body: string }> {
     selector: m[1].trim().replace(/\s+/g, ' '),
     body: m[2],
   }));
-  // 原生 CSS 巢狀（`.a { color: X; &:hover { … } }`）會讓外層宣告被吃進 selector，
-  // 整條規則的宣告就從掃描裡蒸發、而且沒有任何訊號。目前這份 stylesheet 還沒用巢狀，
-  // 但 Tailwind 4 與現代瀏覽器都支援，一次重構就會踩到。fail-closed。
-  const nested = rules.filter((r) => /(^|[;\s])(color|background|border)[^:]*:/.test(r.selector));
-  if (nested.length) {
+  // 原生 CSS 巢狀會讓外層宣告從掃描裡蒸發，而且沒有任何訊號。fail-closed。
+  //
+  // 偵測的是 `&` 本身，不是「selector 裡出現宣告」—— 後者只擋得住「宣告寫在巢狀區塊
+  // 之前」的排列。宣告寫在之後時，攤平出的 selector 只剩 `&:hover`、不含任何宣告，
+  // 那個啟發式不會觸發，外層宣告照樣靜默丟棄。`&` 只可能出現在巢狀語法裡
+  // （本 stylesheet 目前 0 個），所以直接擋它才是位置無關的判準。
+  if (/(^|[\s,({;])&/.test(noComments)) {
     throw new Error(
-      `SCOPED_STYLES 疑似使用原生 CSS 巢狀（selector 裡出現宣告）：${nested[0].selector.slice(0, 60)}…\n`
-      + '這支守衛的攤平邏輯處理不了巢狀，會靜默漏掃外層宣告。請改回扁平規則，或換成真正的 CSS parser。',
+      'SCOPED_STYLES 疑似使用原生 CSS 巢狀（出現 &）。\n'
+      + '這支守衛的攤平邏輯處理不了巢狀，會靜默漏掃外層宣告 —— 不論宣告寫在巢狀區塊之前或之後。\n'
+      + '請改回扁平規則，或換成真正的 CSS parser。',
     );
   }
   return rules;
@@ -148,6 +151,17 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
     }
   });
 
+  it('--t-deep 放行的前提仍成立（它必須指向 --color-accent-deep）', () => {
+    // ACCENT_ALIAS_AS_TEXT 刻意不擋 --t-deep，理由是它 = --color-accent-deep = accent-text 同值。
+    // 那個前提就寫在被掃描的同一個檔案裡，一次 token 收斂改掉它，--t-deep 就會同時繞過
+    // 兩條偵測式。前提本身要有人鎖 —— 同 aria-hidden 那條的道理。
+    const scoped = extractScopedStyles(src);
+    const defs = [...scoped.matchAll(/--t-deep:\s*var\(([^)]+)\)/g)].map((m) => m[1].trim());
+    expect(defs.length, '找不到 --t-deep 的定義').toBeGreaterThan(0);
+    expect([...new Set(defs)], '--t-deep 不再指向 --color-accent-deep —— 放行它的前提垮了')
+      .toEqual(['--color-accent-deep']);
+  });
+
   it('裝飾例外的前提仍成立：兩個圖示都還是 aria-hidden', () => {
     // 這兩處留 --color-accent 的「全部」正當性，就是它們是 aria-hidden 的純裝飾
     // （WCAG 1.4.11 門檻 3:1 而非 4.5:1，實測 3.24 剛好達標）。前提一垮，3.24 立刻變違規，
@@ -194,11 +208,17 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
   });
 
   it('樣式抽取有抓到整段（截斷會讓後半的違規靜默漏掃）', () => {
-    // 用結構性斷言而不是逐字比對整行 —— 綁死排版的話，formatter 換個換行就會假紅，
-    // 而最省事的「修法」就是刪掉這條、順手拆掉整條截斷防線。
-    const rules = flatRules(extractScopedStyles(src));
-    expect(rules.at(-1)?.selector, 'SCOPED_STYLES 的最後一條規則不是預期的那條 —— 疑似提前截斷')
-      .toBe('.tp-trips-error');
+    // 不綁排版、也不綁順序。綁逐字整行 → formatter 一動就假紅；綁「最後一條必須是 X」
+    // → 在尾端加規則（改樣式最自然的動作）就假紅，訊息還說「疑似提前截斷」把人導錯方向。
+    // 兩種假紅的最省事處置都是刪掉這條，順手拆掉整條截斷防線。
+    // 真正要驗的是「抽取的結束位置貼齊原始碼裡最後一個收尾」。
+    const bodyStart = src.indexOf('`', src.indexOf('const SCOPED_STYLES = `')) + 1;
+    expect(src.indexOf('\n`;', bodyStart), '抽取的收尾不是原始碼裡最後一個 `; —— 疑似提前截斷')
+      .toBe(src.lastIndexOf('\n`;', src.indexOf('interface TripInfo')));
+
+    // 尾端那條規則仍在掃描範圍內（截斷在它之前就會漏掉）。
+    const selectors = flatRules(extractScopedStyles(src)).map((r) => r.selector);
+    expect(selectors).toContain('.tp-trips-error');
   });
 
   it('抽取遇到裸 backtick 會炸而不是靜默截斷（守衛自身的 fail-open 防線）', () => {
@@ -210,7 +230,18 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
     // 例：style={{ color: 'var(--color-accent)' }} —— 「已封存空清單」的重設按鈕曾是這樣。
     // 引號類別含反引號：JSX inline style 也可以寫成樣板字串。
     // 同時擋同值的 --color-accent-2 / -3 與硬編碼 hex，理由同 ACCENT_AS_TEXT。
-    const inlineBareAccent = /color:\s*['"`](var\(\s*--color-accent(-[23])?\s*[,)][^'"`]*|#a97a4a)['"`]/gi;
+    // ⚠ 開頭的 \b 不可省：這條為了比對硬編碼 hex 而帶 i flag，沒有邊界的話
+    //   `borderColor:` / `backgroundColor:` / `outlineColor:` 的 camelCase 字尾也會命中 ——
+    //   而那兩種用途是 DESIGN.md 明文允許的（邊框走 3:1、CTA 填色維持柔褐）。
+    const inlineBareAccent = /\bcolor:\s*['"`](var\(\s*--color-accent(-[23])?\s*[,)][^'"`]*|#a97a4a)['"`]/gi;
     expect([...src.matchAll(inlineBareAccent)].map((m) => m[0])).toEqual([]);
+
+    // 鎖住上面那道邊界，別再走丟。
+    const probe = (s: string) => { inlineBareAccent.lastIndex = 0; return inlineBareAccent.test(s); };
+    expect(probe("color: 'var(--color-accent)'")).toBe(true);
+    expect(probe("color: '#A97A4A'")).toBe(true);
+    expect(probe("borderColor: 'var(--color-accent)'")).toBe(false);
+    expect(probe("backgroundColor: '#A97A4A'")).toBe(false);
+    expect(probe("outlineColor: 'var(--color-accent)'")).toBe(false);
   });
 });
