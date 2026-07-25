@@ -4,22 +4,49 @@ Cloudflare Pages + D1 + React SPA + V2 OAuth. 無全域 admin — owner/permissi
 
 ## Pipeline
 
-`Think → Plan → Build → Review → Test → Ship → Reflect`
+**Matt Pocock 工作流是預設**（owner 2026-07-25）。gstack 只補 matt 沒有的環節 —— 發版、瀏覽器 QA、安全稽核、回顧。
 
-- Think `/office-hours` · Plan `/autoplan` · Build code + `/simplify`
-- Review `/tp-code-verify` + `/review` (mandatory)
-- Test `/cso --diff` (mandatory) + `/qa`
-- Ship `/ship` → `/land-and-deploy` → `/canary` · Reflect `/retro`
+主線（idea → ship）：
+
+```
+grill-with-docs → [多 session? → to-spec → to-tickets →] implement → /ship → /land-and-deploy → /canary
+                                                          ↑ 內部驅動 tdd，收尾跑 code-review
+```
+
+- **想法要磨** → `/grill-with-docs`（有 codebase、逐題逼問並留痕到 `CONTEXT.md` + ADR）
+- **答案要跑起來才知道** → `/handoff` 出去 → `/prototype` → `/handoff` 回來
+- **多 session 的 build** → `/to-spec` → `/to-tickets`（tracer-bullet 票 + blocking edges）→ 每票 `/implement`，**每票之間清 context**
+- **單 session 就做得完** → 直接 `/implement`
+- **收尾**：`/implement` 內部驅動 `/tdd` 逐 seam 紅綠，commit 前跑 `/code-review`（Standards + Spec 雙軸）
+- **出貨**：matt 沒有發版流程 → `/ship`（bump VERSION + CHANGELOG + PR）→ `/land-and-deploy` → `/canary`
+
+Context 衛生：步驟 1–3 保持在**同一個不中斷的 context window**，`/to-tickets` 前不要 compact/clear。接近 smart zone（~120k tokens）就 `/handoff` 換新 session，別在退化的狀態硬撐。
+
+On-ramps（匯入主線）：
+
+- **外部湧入的 bug / feature request** → `/triage` → 產出 agent-ready issue → `/implement`。**`/to-tickets` 產的票已經是 agent-ready，不要再 triage。**
+- **東西壞了** → `/diagnosing-bugs`（先建一個對這個 bug 會變紅的指令，才准動手修）
+- **巨大迷霧 effort**（greenfield / 超出單 session 的大 feature）→ `/wayfinder` 畫決策地圖。**它產決策不產交付物** —— 霧散了交棒到 `/to-spec`，不要直接接 `/implement`。
+
+## ⚠️ Matt skill 的呼叫限制
+
+**13 個 matt skill 有 `disable-model-invocation: true` —— 我不能自主呼叫，只能 owner 打 `/name`。** 主線骨幹全在這裡面，所以**我沒辦法自己起頭**：
+
+`ask-matt` · `grill-with-docs` · `to-spec` · `to-tickets` · `implement` · `triage` · `wayfinder` · `improve-codebase-architecture` · `handoff` · `grill-me` · `teach` · `setup-matt-pocock-skills` · `writing-great-skills`
+
+**我可自主呼叫的 9 個**：`tdd` · `code-review` · `diagnosing-bugs` · `domain-modeling` · `codebase-design` · `prototype` · `research` · `resolving-merge-conflicts` · `grilling`
+
+它們不會出現在 session 的 available-skills 清單裡 —— **那份清單不能拿來判斷有沒有安裝**（2026-07-25 實測誤判過）。要確認裝了什麼就去看 `~/.claude/plugins/cache/mattpocock/mattpocock-skills/*/skills/`。
 
 ## Hard Rules
 
-- **Code change → invoke `/tp-team` first** (新功能、bug fix、refactor、migration、CSS、API endpoint)。行程資料用 `tp-*` data skills 直接打 API。
-- **Mockup-first hard gate**：所有 new page / new component（≥1 layout 變化）→ `/tp-claude-design` 產 HTML mockup → user sign-off → 才寫 React。Bug fix / token drift / 純 prop tweak 例外。
+- **Code change → 走 matt 主線**（`/implement`，或先 `/grill-with-docs` 磨清楚）。`/tp-team` 不再是強制第一步，需要它的 orchestration 時才用。行程資料用 `tp-*` data skills 直接打 API，不走 code pipeline。
 - Feature branch + PR via `/ship`. Never push master directly.
 - `tp-*` skills hit API, not local files.
-- Agent tool only for worktree isolation.
+- Agent tool only for worktree isolation（Workflow tool 內部的 `agent()` 不受此限）。
 - Web browse: Chrome MCP (`mcp__claude-in-chrome__*`) 或 `/browse` 皆可（owner 2026-07-23 解除 /browse-only 限制）。
-- Post-ship retroactive OpenSpec archive if PR didn't propose first.
+- Post-ship retroactive OpenSpec archive if PR didn't propose first。⚠️ `openspec/specs/` 底下多數檔案的首行是 `## ADDED/MODIFIED Requirements` —— 那是 change delta 被直接放進 `specs/` 當成持續有效的規格，讀之前先確認它是規格還是某次變更的差異檔。
+- ~~Mockup-first hard gate~~ —— **已退役 2026-07-23**，Apple HIG 成上位 SoT。`/tp-claude-design` 仍可用於探索視覺方案，但不是 gate。
 
 ## Layout
 
@@ -43,13 +70,38 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Skill Routing
 
-Match → invoke `Skill` first.
+Match → invoke `Skill` first。**matt 優先；同一件事 matt 有就用 matt。**
 
-- Brainstorm → `/office-hours` · Bug → `/investigate`
-- Ship/PR → `/ship` · QA → `/qa` · Code review → `/review`
-- Doc sync post-ship → `/document-release`
-- Visual → `/design-review` · Architecture → `/plan-eng-review`
-- Browse → `/browse`
+| 情境 | 用 | 備註 |
+|---|---|---|
+| 磨想法 / 挑戰決策 | `/grill-with-docs` | 取代 `/office-hours`；留痕到 CONTEXT.md + ADR |
+| 收斂成規格 → 拆票 | `/to-spec` → `/to-tickets` | |
+| 實作 | `/implement` | 內部跑 `/tdd`，收尾跑 `/code-review` |
+| 測試先行 | `/tdd` | 可自主呼叫 |
+| Code review | `/code-review` | 取代 `/review`；Standards + Spec 雙軸 |
+| Bug / 效能退化 | `/diagnosing-bugs` | 取代 `/investigate`；先建會變紅的指令 |
+| 詞彙 / ADR | `/domain-modeling` | CONTEXT.md 的維護者 |
+| Module 介面 / seam | `/codebase-design` | |
+| 設計問題要跑起來 | `/prototype` | throwaway，留答案刪 code |
+| 查資料 | `/research` | 背景 agent，產出有引用的 md |
+| Merge 衝突 | `/resolving-merge-conflicts` | |
+| Codebase 保養 | `/improve-codebase-architecture` | 產 deepening opportunities |
+| 跨 session | `/handoff` | 對話快滿或要分岔時 |
+
+**matt 沒有、繼續用 gstack 的**：
+
+| 情境 | 用 |
+|---|---|
+| 發版 | `/ship` → `/land-and-deploy` → `/canary` |
+| 瀏覽器行為 QA | `/qa` |
+| 視覺保真稽核 | `/design-review`（`/qa` 驗行為不驗視覺，兩者不可互相取代） |
+| 無頭瀏覽器 | `/browse` |
+| 安全稽核 | `/cso --diff` |
+| 週回顧 | `/retro` |
+| Post-ship 文件同步 | `/document-release` |
+| Plan 階段架構審查 | `/plan-eng-review` |
+| 已變更程式碼的簡化 | `/simplify` |
+| 專案自訂 commit 前檢查 | `/tp-code-verify` |
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `.claude/skills/tp-team/SKILL.md`.
 Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite + MCP (user scope), sync=full, repo=read-write, 873 pages, setup 2026-05-04. Windows caveat: transcript ingest no-op (script POSIX-only). See `~/.gbrain/config.json`.
