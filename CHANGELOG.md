@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.63] - 2026-07-26
+
+### Fixed
+- **桌機換景點面板切換來源分頁後，「‹ 返回上一層」不再消失（#1162）**：從編輯景點頁進「變更景點」時帶著堆疊層級（`state.depth = 2`），所以有 ‹ 可以回去。但一按「收藏」或「自訂」分頁，‹ 當場消失、只剩「✕ 整個關閉」，使用者被丟回行程詳情、回不到編輯景點頁。
+- **根因不在我方 code 的顯眼處，在 react-router 的 setter 語意**：`useSearchParams` 的 setter 只做 `navigate('?' + params, opts)`，而 router 內部 `createLocation(current, path, opts?.state, …)` 的 state **只取 `opts.state`、不與現有 `location.state` 合併**（對照 react-router 7.18.1 原始碼確認）。所以 `setSearchParams(next, { replace: true })` 產生的新 location 其 `state === null` → `depth` 落回預設 1 → `OperationShell` 的 `showBack` 轉 false。同一路由不會 unmount，`useLocation()` re-render，所以症狀是「按下去當場不見」。
+- **修在共用 hook 而不是逐一補 `state:`**：新增 `src/hooks/useStackSearchParams`，setter 會把 `depth` / `opStacked` 帶到新 location。**刻意只帶白名單兩個 key 而非整包 state** —— 整包帶會把 `scrollAnchor` 之類的一次性欄位一起複製過去，讓「回到上次位置」在切分頁後重新觸發。三個面板頁（換景點／加景點／新增景點）統一改走它。
+- **順手補一個同症狀、不同成因的漏洞**：`AddEntryPage` 的「選來源」push 進換景點面板時**完全沒帶 `depth`**（`EditEntryPage` 的三個同型 push 都有帶），所以桌機一進去就沒有 ‹、不必切分頁就已經退化。一行補齊。
+
+### Added
+- **兩支互補的守衛，因為這個坑有兩個成因**：行為測試（jsdom，真 react-router）鎖「切分頁後 ‹ 還在」；**類級 source-grep 守衛**鎖「用 `OperationShell` 的頁面不得直接用 `useSearchParams` setter」＋「push 進更深一層時必須帶 `depth`」。行為測試擋不到還不存在的呼叫點 —— 今天 `AddStopPage`／`AddEntryPage` 是 latent，只要哪天有人 push 時帶了 depth，同一個 bug 就復活。
+- **e2e（chromium 1440×900）**：三件事只有真瀏覽器同時成立 —— `inStack` 由 `useMediaQuery('(min-width:1024px)')` 算出、`depth=2` 來自 `EditEntryPage` 的真 push、查詢字串更新走真 history。斷言前先驗 URL 真的變了（`tab=favorites`），否則「‹ 還在」可能只是「什麼都沒發生」。
+- 行為測試**刻意另開新檔而不是加進既有的 `change-poi-page.test.tsx`**：那支在頂層 `vi.mock('react-router-dom')`，而 `useSearchParams` 的 setter 內部就是呼叫 `useNavigate()` —— 在那支檔案裡 URL 與 `location.state` 根本不會變動，任何關於本 bug 的斷言都會**假綠**。
 ## [2.57.62] - 2026-07-26
 
 ### Fixed

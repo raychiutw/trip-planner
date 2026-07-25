@@ -14,7 +14,8 @@
  * 同樣指向 reuse ChangePoiPage。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import OperationShell from '../components/shell/OperationShell';
 import Icon from '../components/shared/Icon';
 import { TripSelect } from '../components/TripSelect';
@@ -169,7 +170,11 @@ function formatDayLabel(day: DayApiRow): string {
 export default function AddEntryPage() {
   const auth = useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+  // #1162：走 useStackSearchParams（非裸 useSearchParams）—— 裸 setter 會把
+  // location.state 清成 null，OperationShell 就讀不到 state.depth、桌機「‹ 返回上一層」
+  // 會消失。本頁今天的入口都沒帶 depth（latent 非現行 bug），但同一個坑；統一走 hook
+  // 並由 tests/unit/operation-shell-search-params-guard.test.ts 擋住未來的裸呼叫。
+  const [searchParams, setSearchParams] = useStackSearchParams();
   const navigate = useNavigate();
   const handleBack = useNavigateBack(
     tripId ? `/trips?selected=${encodeURIComponent(tripId)}` : '/trips',
@@ -228,8 +233,13 @@ export default function AddEntryPage() {
     if (!tripId || !Number.isFinite(dayNum)) return;
     // 用 entryId=0 sentinel 標記「new entry mode」— ChangePoiPage 看到
     // mode=new 會走 POST /entries 而不是 PUT /poi-id。
+    // #1162：本頁自己就是操作面板，push 進「選來源」等於再深一層 → 必須帶 depth，
+    // 否則桌機那一層讀回 depth=1、只給「✕ 整個關閉」而沒有「‹ 返回上一層」，
+    // 使用者被丟回行程詳情、失去剛選好的日期。EditEntryPage 的三個同型 push 都有帶，
+    // 這裡漏了（與切分頁那個 bug 不同成因、同一個使用者症狀）。
     navigate(
       `/trip/${encodeURIComponent(tripId)}/stop/0/change-poi?mode=new&day=${dayNum}&tab=${tab}`,
+      { state: { opStacked: true, depth: 2 } },
     );
   }, [tripId, dayNum, navigate]);
 
