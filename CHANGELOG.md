@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.55] - 2026-07-25
+
+### Fixed
+- **TitleBar 動作按鈕 hover 時的文字終於看得清楚，而且深淺兩色系都修（#1169）**：`.tp-titlebar-action:hover` 用品牌柔褐當文字色疊在同色系 hover tint 上，label 是 16px/600 屬一般文字、門檻 4.5，實測 **light 3.27:1、dark 3.82:1 都不達標**（票上只提了淺色）。依 #1156 的通則改走 `--color-accent-text-on-tonal` → light **5.81:1**、dark **5.11:1**。這是**共用 chrome** —— 這個 class 出現在每個有動作按鈕的 TitleBar 上，不是某一頁的問題。
+- **票上叫我「不要順手改」的那條規則，前提查證後不成立，也修了**：`.tp-titlebar-back:hover` 被判定為「只有 `aria-label` 的 SVG、沒有可見文字、非文字門檻 3:1 已達標」。**但 `.tp-titlebar-back--labeled` 是同一個元素的 modifier、會顯示可見的「‹ <label>」文字**（`TitleBar.tsx` 依 `backLabelVisible` 掛上，`/privacy` 與 `/explore` 在用），callout 16px + 600 屬一般文字。它非 hover 時是 `--color-accent-deep`（4.78:1 達標），一 hover 就被這條蓋掉、掉到 3.27:1。mutation 實測證實：把色改回去，axe 就在 `.tp-titlebar-back-label` 回報 3.27 —— 是真違規。
+
+### Added
+- **兩支會真的 hover 的守衛（#1169）**：既有的 axe 掃描對 `/trips`、`/favorites`、`/account` 全綠，**只是因為沒有任何一支測試去 hover** —— 正是 #1150 要收的那類「綠著但沒在守」。新增 titlebar 動作按鈕與帶文字返回鈕各一支 hover 場景，用真滑鼠（`page.hover()`，加 class 模擬不會觸發偽類）。兩支都做過 mutation 實測：把顏色改回 `--color-accent` 各自轉紅並回報 3.27:1。
+- 兩支都**只在桌機 project 跑**（`.tp-titlebar-action-label` 與 back label 在 ≤760px 是 `display: none`，手機上節點不存在），並各自硬斷言「要守的節點確實存在」，避免節點消失時靜默通過。等待都設 200ms 超過 `transition: color 150ms` —— 過渡期間 `getComputedStyle` 回的是插值，太早取樣會量到假綠（#1156 在 hover 卡那支學到的）。
+- 動作按鈕那支的掃描範圍縮到 `.tp-titlebar` 子樹：樣本頁 `/settings/sessions` 其餘部分還有「目前」pill 的語意色違規（2.35:1，追蹤於 #1176），整頁掃會為了別的原因紅、把這支的訊號蓋掉。那個違規已由同檔「登入工作階段頁」那支的指紋斷言鎖住，縮範圍不會失去守備。
+
 ## [2.57.54] - 2026-07-25
 
 ### Fixed
