@@ -2,23 +2,11 @@
 
 ## CSS/JS 拆分規則
 
-| 檔案 | 載入頁面 | 內容 |
-|------|---------|------|
-| `css/shared.css` | 全部 | variables, reset, body, `.page-layout`, `.container`, `.sticky-nav`, `.trip-btn`, dark mode base |
-| `css/style.css` | index only | timeline, weather, hotel, nav, cards, FAB, info-panel, print, menu drawer, sidebar, dark/print mode |
-| `css/edit.css` | edit only | Claude 聊天風格 UI、問候語、issue 列表、底部輸入卡片, dark mode |
-| `css/setting.css` | setting only | setting page layout, trip list, color mode cards |
-| `js/shared.js` | 全部 | `escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, LS helpers, dark mode, `GH_OWNER`/`GH_REPO` |
-| `js/icons.js` | 全部 | `ICONS` SVG registry, `EMOJI_ICON_MAP` emoji→icon, `icon`, `iconSpan`, `emojiToIcon` |
-| `js/app.js` | index only | 所有 render/weather/nav/routing 函式（依賴 shared.js + menu.js + icons.js） |
-| `js/edit.js` | edit only | Claude 聊天風格、時段問候語、GitHub API issue 列表、底部輸入區、行程切換 |
-| `js/setting.js` | setting only | 讀取 trips.json 渲染行程清單、色彩模式切換（Light/Auto/Dark） |
+> **2026-07-25 刪除。** 原本這裡是一張多頁架構的檔案分工表（`css/style.css`、`css/edit.css`、`js/app.js`、`js/shared.js`…），**那些檔案全部不存在**。現在是 React SPA：CSS 只有 `css/tokens.css` 一個檔，JS 在 `src/`（entry `src/entries/main.tsx`）。元件與外殼結構見 `.claude/skills/tp-ux-verify/references/page-structure.md`。
 
-## 桌機資訊面板
+## 桌機版面
 
-- `isDesktop()` 使用 User-Agent 偵測：只有手機判為非桌機，平板及桌機均視為桌機
-- CSS `@media (min-width: 768px)` 控制 sidebar，`@media (min-width: 1200px)` 控制三欄佈局
-- 三欄：sidebar (260px) + content (flex:1) + info-panel (280px)
+> **2026-07-25 刪除。** 原本記載 `isDesktop()` User-Agent 偵測與 `sidebar 260px + content + info-panel 280px` 的斷點分工，**已被 rev2 三欄取代**。現行：桌機 ≥1024px 三欄 `--grid-3pane-desktop`（sidebar `--sidebar-width-desktop` / 行程 / 地圖 + 堆疊面板），手機 <1024px 底部 4-tab。版面 SoT 是 `DESIGN.md`。
 
 ## 交通統計
 

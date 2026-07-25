@@ -76,39 +76,11 @@ backdrop/overlay 選擇器使用 `var(--overlay)` token，禁止硬編碼 `rgba(
 
 ## 常見陷阱
 
-### 陷阱 1：Chrome 手機版捲動彈回
+### 陷阱 1：（已移除 — 2026-07-25）
 
-**場景**：新頁面結構與行程頁差異大時，Chrome 手機版捲到底部會彈回頂部。
+原內容講「中和 `shared.css` 捲動基礎設施」與 `html.page-{name}` 的多頁 class 慣例。**該架構已不存在**：`css/shared.css`、`.page-layout`、`.container`、`.sticky-nav` 全部隨多頁 HTML 一起消失，現在是 React SPA + 單一 `css/tokens.css`。整段刪除而非改寫 —— SPA 下的捲動問題是不同的問題，硬套舊解法會誤導。
 
-**根因**：`shared.css` 的捲動基礎設施（`overflow-x: clip`、`scrollbar-gutter: stable`、`.container` 的 `transition: transform`、`.sticky-nav` 的 `position: sticky`）為行程頁設計。必須**全部中和**，單獨移除任一無效。
-
-**解法**（頁面專屬 CSS 開頭）：
-```css
-html.page-{name} {
-    scroll-behavior: auto;
-    scrollbar-gutter: auto;
-    overflow: visible;
-    overscroll-behavior: none;
-}
-.page-{name} {
-    max-width: none;
-    overflow: visible;
-}
-.page-{name} .page-layout {
-    display: block;
-    min-height: 0;
-}
-.page-{name} .container {
-    transition: none;
-}
-.page-{name} .sticky-nav {
-    position: sticky;
-    top: 0;
-    z-index: 200;
-}
-```
-
-同時在 HTML 加上 `<html class="page-{name}">` 和 `<body class="page-{name}">`。
+⚠️ **捲動彈回在 SPA 下仍然存在，但成因與解法都不同**（現在是路由返回時的捲動還原與使用者意圖搶奪，不是 CSS 基礎設施衝突）。**這塊目前沒有文件擁有** —— `DESIGN.md` 零命中、`CONTEXT.md` 只提到 root tab 捲動時常駐。要改動捲動還原行為前，先查 git log 與既有 e2e（`tests/e2e/trip-stack-scroll-sheet.spec.js`），不要照本段舊解法做。
 
 ### 陷阱 2：frosted glass 失效
 

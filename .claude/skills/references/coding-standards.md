@@ -47,14 +47,14 @@
 
 **納入驗證**：
 ```
-js/          app.js  shared.js  icons.js  setting.js  manage.js  admin.js
-css/         shared.css  style.css  setting.css  manage.css  admin.css
-html/        index.html  setting.html  manage/index.html  admin/index.html
 src/         entries/*.tsx  pages/*.tsx  components/**/*.tsx  hooks/*.ts  lib/*.ts  types/*.ts
 functions/   api/**/*.ts（所有 Pages Functions）
-server/      index.js  lib/auth.js  routes/process.js
-tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js
+css/         tokens.css（唯一 CSS 檔）
+tests/       unit/*.test.ts(x)  api/*.test.ts  e2e/*.spec.js|ts  setup-dom.js
+index.html   SPA entry（→ src/entries/main.tsx）
 ```
+
+> 2026-07-25 更正：原本這裡還列了 `js/`（app.js / shared.js / icons.js…）、5 個 `css/*.css`、多頁 `html/`、`server/` —— **全部不存在**，是 pre-SPA 多頁架構的殘留。
 
 **排除**（不驗證）：
 ```

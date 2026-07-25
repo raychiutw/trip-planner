@@ -39,9 +39,8 @@
 
 ## 經驗筆記
 
-- Node.js v22+ 內建 localStorage 與 jsdom 衝突 → `tests/setup.js` 用 in-memory mock 覆蓋
+- Node.js v22+ 內建 localStorage 與 jsdom 衝突 → `tests/setup-dom.js` 用 in-memory mock 覆蓋
 - GitHub API `state` 預設 `open`，查全部需帶 `&state=all`
-- shared.css 捲動基礎設施為行程頁設計，新頁面需全面中和（詳見 CLAUDE.md）
 - 記憶檔跨機同步：`scripts/memory-sync.sh`（export/import），hook 自動 export
 - `scripts/tp-check.js`：CLI 品質規則驗證工具，讀 dist JSON，邏輯與 quality.test.js 一致
 - Node.js `!` 在 Windows bash `node -e` 中會被 escape → 用暫存 .js 檔代替 inline eval
