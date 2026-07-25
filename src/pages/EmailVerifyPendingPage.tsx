@@ -38,6 +38,11 @@ ${AUTH_LAYOUT_STYLES}
   width: 72px; height: 72px;
   border-radius: var(--radius-full);
   background: var(--color-accent-subtle);
+  /* ⚠ 這裡**刻意保留** --color-accent，不要跟著本頁其他兩處一起換深變體（#1157）：
+   * 裡面是 aria-hidden 的純裝飾信封 svg（:171），旁邊就有標題與說明文字承載語意。
+   * 依 WCAG 1.4.11 非文字對比門檻是 3:1 而非 4.5，實測 3.24:1 已達標；硬套深色會在
+   * 淺圓底上過深、與同頁其他圖示不協調。同 #1156 對兩個柔褐裝飾圖示的取捨。
+   * 例外成立的前提有兩個 —— svg 仍是 aria-hidden、對比仍 ≥3:1。任一垮掉就要改。 */
   color: var(--color-accent);
   display: grid; place-items: center;
   margin: 0 auto 20px;
@@ -62,7 +67,10 @@ ${AUTH_LAYOUT_STYLES}
 .tp-verify-banner {
   display: flex; gap: 12px;
   background: var(--color-accent-subtle);
-  color: var(--color-accent);
+  /* 底是同色系淡底（tonal）→ 走 -text-on-tonal（DESIGN.md §Color Approach 通則）。
+   * 原本直接用 --color-accent 疊 --color-accent-subtle 只有 3.24:1，低於 AA 的 4.5；
+   * 換成 --color-accent-text-on-tonal 後 5.76:1。#1157 */
+  color: var(--color-accent-text-on-tonal);
   padding: 14px 16px;
   border-radius: var(--radius-md);
   font-size: var(--font-size-subheadline);
@@ -79,7 +87,9 @@ ${AUTH_LAYOUT_STYLES}
   font-size: var(--font-size-footnote); color: var(--color-muted);
 }
 .tp-verify-footer a {
-  color: var(--color-accent);
+  /* 底是頁面色（--color-background）→ 走 -text（非 -text-on-tonal）。原本 --color-accent
+   * 疊頁面底只有 3.65:1；換成 --color-accent-text 後 5.35:1。#1157 */
+  color: var(--color-accent-text);
   font-weight: 600;
   text-decoration: none;
 }

@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.54] - 2026-07-25
+
+### Fixed
+- **信箱驗證等候頁與登入工作階段頁的柔褐文字終於看得清楚（#1157）**：三處直接用品牌柔褐當文字色，在自家淺底上不到 WCAG AA 的 4.5:1 —— 驗證頁的說明橫幅（3.24:1）、驗證頁的「改用其他信箱」連結（3.65:1）、工作階段頁的說明橫幅（3.24:1）。依 #1156 立在 `DESIGN.md` §Color Approach 的通則挑深變體：底是同色系淡底用 `--color-accent-text-on-tonal`（**5.76:1**），底是頁面色用 `--color-accent-text`（**5.35:1**）。
+- **驗證頁的裝飾信封圖示刻意不改**，並在原地寫下例外成立的兩個前提（svg 仍是 `aria-hidden`、對比仍 ≥3:1）。它是 `aria-hidden` 的純裝飾、旁邊就有標題與說明承載語意，依 WCAG 1.4.11 門檻是 3:1 而非 4.5，實測 3.24:1 已達標。沿用 #1156 對兩個柔褐裝飾圖示的同一取捨 —— **不留註解的話下一個人會來「修」它**。
+
+### Removed
+- **三處死碼一併刪掉（#1157）**：`LoginPage.tsx` 與 `ResetPasswordPage.tsx` 各有一份 `.tp-banner-info` 規則但**沒有任何對應 JSX**（前者只用 `-success`／`-warning`／`-error`，後者只用 `-error`），全 codebase 唯一真的 render 這個 class 的是 `SessionsPage.tsx`。這些 `SCOPED_STYLES` 注入的是**全域** `<style>`，同名規則的複製品會讓下次修對比時漏改一份。另外 `css/tokens.css` 的 `.tp-titlebar-trip-row-check` 低特異性 `color: var(--color-accent)` 也是死碼 —— checkmark 只在 `{active && …}` 時 render，永遠被下一行 `.is-active` 的宣告蓋過，留著會讓人誤以為非 active 也有 check。
+
+### Changed
+- **#1157 原本列的三處裡有一處是 no-op，已在票上更正**：地圖頁 trip switcher 選中列的文字色早在 PR #1078 就換成深變體（4.74:1，達標），#1155 的掃描已證實。該 call-site 沒有事情要做。
+- **工作階段頁還剩一個違規，但不屬本票、也不能用同一招修 —— 拆成 #1176**：「目前」pill 是 `--color-success` 疊 `--color-success-bg`（12% alpha）再疊父層 `--color-accent-subtle`，合成後只有 **2.35:1**。它不是柔褐誤用，#1156 的通則管不到；而且**既有的 `--color-success-deep`（`#07795C`）在這個底上也只有 4.12:1，仍不到 4.5**（pill 是 11px/700，不算 large text，門檻就是 4.5）。要修得先決定「加更深的變體」還是「改掉半透明底」，而那會動到 `DESIGN.md`（UI/UX SoT，須先討論）。實查同樣的「語意色底 + 同族語意色文字」配對**全 codebase 有 13 處**，且 `danger`／`error`／`info` 連 `-deep` 變體都沒有 —— 整包收在 #1176，含逐處清單與深淺兩色系的實測數字。`a11y-axe.spec.js` 保留該處的正面指紋斷言，#1176 修好時會因指紋不符轉紅提醒收尾。
+
 ## [2.57.53] - 2026-07-25
 
 ### Docs
