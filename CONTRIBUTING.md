@@ -64,11 +64,15 @@ DEV_MOCK_EMAIL=you@example.com
 ```bash
 npm run typecheck          # TypeScript 零錯誤
 npm run typecheck:functions  # Pages Functions 型別檢查
-npm test                   # vitest unit + integration（~4s，跑 409+ tests）
+npm test                   # vitest unit + integration（實測耗時見下方說明，數量看它自己的輸出）
 npm run test:api           # Pages Functions integration（miniflare + 真 D1）
 npm run test:e2e           # Playwright（要先開 dev server）
 npm run test:all           # = npm test + npm run test:api
 ```
+
+**`npm test` 不便宜，別當成隨手跑一次沒成本。** 本機實測約 **80–90 秒**（2026-07-25 快照，Apple Silicon）。原因是 `--maxWorkers=2` 限流 —— 每個 worker 都要各自建 Miniflare D1 並跑 90+ 個 migration，滿並行度下會撞 timeout。這是權宜之計，根本解（共用一份已 migrate 的 D1 快照）記在 [`TODOS.md`](TODOS.md) 的「測試套件 — D1 建置成本迫使 unit 限流 2 worker」。
+
+測試數量刻意不寫死在這裡 —— 它每週都在變，寫下來就會腐爛。要知道規模直接看 `npm test` 的輸出。
 
 ### 測試分層
 

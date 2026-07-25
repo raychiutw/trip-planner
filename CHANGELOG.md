@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.53] - 2026-07-25
+
+### Docs
+- **README 的手機／桌機資訊架構終於跟實作一致了（#1171）**：README 寫「手機 sticky bottom nav **5-tab**：聊天 / 行程 / 地圖 / 收藏 / 帳號」，實際是 **4-tab、帳號早已移出 tab slot**（改成 header 右上圓圈 → 覆蓋當前頁的 Account sheet，Apple HIG 合規 effort 的 W1）。`CLAUDE.md`／`CONTEXT.md`／`DESIGN.md` 三處都已是 4-tab，只有 README 停在改版前 —— 而 README 是新進者與 LLM 讀專案的第一份文件，IA 這種結構性描述寫錯會讓人（含 agent）以為要維護一個不存在的 tab slot。
+- **順帶發現桌機那行也錯，一起修**（票上只列了手機那行）：README 說桌機 sidebar nav 是「聊天 / 行程 / 地圖 / 收藏，**未登入加「登入」**」。實際查 `DesktopSidebar.tsx` 的 nav 是直接 map `PRIMARY_NAV_ITEMS`、**恰好 4 項且沒有任何條件式「登入」項**；未登入顯示的是左下獨立的「未登入」chip，不是 nav 項目。
+- **加一行指出 IA 的單一來源**：`src/components/shell/navItems.ts` 的 `PRIMARY_NAV_ITEMS` 是這 4 個 tab 的 SoT，手機 `GlobalBottomNav` 與桌機 `DesktopSidebar` 共讀它。寫明「改 IA 從這裡改」，讓下一個人不必再從兩份實作反推。
+- **三處寫死的測試數字改成可重算的口徑 + 日期快照（#1172）**：`CONTRIBUTING.md` 的「~4s，跑 409+ tests」與 `tests/README.md` 的「137 source-grep test / 44% / 83 個跑在 jsdom / 271 unit test」全都過時。**刻意不換成新的絕對數字** —— 那三個月後會再爛一次。改為：數量指向 `npm test` 自己的輸出；比例附上可重算的統計口徑（分母、「source-grep」與「純 source-grep」各自的判定條件）＋ 2026-07-25 快照（478 檔中 source-grep 237＝50%、純的 219＝46%）。
+- **`npm test` 的耗時從「~4s」更正為實測 80–90 秒**，並寫明原因（`--maxWorkers=2` 限流，每個 worker 都要各建 Miniflare D1 跑 90+ migration）與根本解的位置（`TODOS.md` 那條 P3）。原本的「~4s」會讓新進者以為跑測試沒成本。
+
+### Fixed
+- **`tests/README.md` 有一項 deferred refactor 其實早就做完了，但文件仍列為待辦**（超出 #1172 的範圍，一併更正）：「vitest workspace split (.ts vs .tsx)」在 `vitest.config.js` 已實作為 `projects: [unit-dom, unit-node]`（`*.test.ts` 走 `environment: 'node'`、不載 jsdom 與 polyfill）。同檔下方「`environment: 'jsdom'` — 全 unit test 預設 jsdom（待 workspace split）」的敘述也因此錯了。兩處都改為記錄現況，並補上一句實務地雷：**改測試檔副檔名會連帶換掉它的執行環境**。殘留部分誠實標明：實測仍有 20 支「純 source-grep 卻跑在 jsdom」（因為副檔名是 `.tsx`／`.js`），屬小額整理而非原本估的大型 refactor。
+- **`clearMocks`／`restoreMocks` 那條的敘述改成講結論**：原文「271 unit test 略 afterEach 仍 safe」把一個會腐爛的數字當成論據；實際結論與數量無關 —— 自動 reset 讓**整套** unit test 都可以省略 `afterEach`。
+
 ## [2.57.52] - 2026-07-25
 
 ### Added
