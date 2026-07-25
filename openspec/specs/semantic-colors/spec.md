@@ -1,69 +1,30 @@
-### Requirement: 語意色 CSS 變數命名對齊
+# semantic-colors — ⚰️ 已退役（2026-07-25）
 
-以 `--blue` 為名的顏色別名 SHALL 不再作為語意色使用；所有語意色引用 MUST 改為使用 `--accent`、`--accent-light`、`--accent-muted` 等語意明確的變數名稱。
+## Purpose
 
-現有語意色變數（`--error`、`--error-bg`、`--success`）維持原定義不變。
+**這份 spec 已退役。** 語意色的概念仍成立，但它用的 token 名與套用的元素 class 都屬 Tailwind v4 遷移前、pre-SPA 的架構。
 
-#### Scenario: 語意色選擇器不含舊別名
+保留為 tombstone，**不要照原內容重建**。
 
-- **WHEN** 靜態分析所有 CSS 檔案的語意色相關選擇器
-- **THEN** `.trip-warnings`、`.trip-warning-item`、`.trip-error`、`.driving-stats-badge`、`.edit-status` 等元素 SHALL 引用 `var(--error)` 或 `var(--error-bg)`，不得引用 `var(--blue)` 或其他別名
+## Requirements
 
----
+### Requirement: 本 capability 已退役
 
-### Requirement: 語意色 CSS 變數定義
+`semantic-colors` SHALL 不再被視為 active spec。語意色現況以 `css/tokens.css` 為權威、`DESIGN.md` 為設計 SoT。
 
-系統 SHALL 在 `css/shared.css` 的 `:root` 與 `body.dark` 中定義以下語意色 CSS 變數：
+#### Scenario: 有人想重建這份 spec
 
-| 變數 | Light 值 | Dark 值 | 用途 |
-|------|----------|---------|------|
-| `--error` | `#D32F2F` | `#FCA5A5` | 錯誤/警告文字色 |
-| `--error-bg` | `#FFEBEE` | `rgba(220, 38, 38, 0.12)` | 錯誤/警告背景色 |
-| `--success` | `#10B981` | `#6EE7B7` | 成功/開啟狀態色 |
+- **WHEN** 未來有人要為語意色建立 spec
+- **THEN** SHALL 使用現行 `--color-destructive`/`--color-success`/`--color-warning`/`--color-info` 命名
 
-#### Scenario: Light mode 語意色變數值正確
+## 為什麼退役
 
-- **WHEN** 載入 `css/shared.css` 且頁面為 light mode
-- **THEN** `:root` 中 `--error` SHALL 為 `#D32F2F`、`--error-bg` SHALL 為 `#FFEBEE`、`--success` SHALL 為 `#10B981`
+2026-07-25 逐條對照 `css/tokens.css`：提及 7 個 token，**5 個不存在**。套用對照表列的 class（`.trip-warnings`、`.trip-error`、`.edit-status`、`.status-dot`、`.driving-stats-badge`）屬 pre-SPA 架構。
 
-#### Scenario: Dark mode 語意色變數值正確
+## 各 Requirement 去向
 
-- **WHEN** 頁面有 `body.dark` class
-- **THEN** `--error` SHALL 為 `#FCA5A5`、`--error-bg` SHALL 為 `rgba(220, 38, 38, 0.12)`、`--success` SHALL 為 `#6EE7B7`
-
----
-
-### Requirement: 錯誤元素使用語意色變數
-
-系統 SHALL 將以下元素的顏色改為引用語意色變數：
-
-| 選擇器 | 屬性 | 值 |
-|--------|------|-----|
-| `.trip-warnings` | `background` | `var(--error-bg)` |
-| `.trip-warnings` | `color` | `var(--error)` |
-| `.trip-warning-item` | `background` | `var(--error-bg)` |
-| `.trip-error` | `color` | `var(--error)` |
-| `.driving-stats-badge` | `background` | `var(--error)` |
-| `.edit-status.error` | `color` | `var(--error)` |
-| `.edit-status.success` | `color` | `var(--success)` |
-| `.status-dot.open` | `background` | `var(--success)` |
-
-#### Scenario: 警告區塊在 light mode 使用語意色
-
-- **WHEN** 頁面為 light mode 且渲染 `.trip-warnings`
-- **THEN** 背景色 SHALL 為 `var(--error-bg)`（`#FFEBEE`）、文字色 SHALL 為 `var(--error)`（`#D32F2F`）
-
-#### Scenario: 警告區塊在 dark mode 使用語意色
-
-- **WHEN** 頁面為 dark mode 且渲染 `.trip-warnings`
-- **THEN** 背景色 SHALL 為 `var(--error-bg)`（`rgba(220, 38, 38, 0.12)`）、文字色 SHALL 為 `var(--error)`（`#FCA5A5`）
-
-#### Scenario: 成功狀態點在 dark mode 使用語意色
-
-- **WHEN** 頁面為 dark mode 且渲染 `.status-dot.open`
-- **THEN** 背景色 SHALL 為 `var(--success)`（`#6EE7B7`）
-
-#### Scenario: 行程錯誤在 dark mode 可讀
-
-- **WHEN** 頁面為 dark mode 且渲染 `.trip-error`
-- **THEN** 文字色 SHALL 為 `var(--error)`（`#FCA5A5`），在深色背景上對比度充足
+| 原 Requirement | 去向 |
+|---|---|
+| 語意色 CSS 變數命名對齊 | **丟** — 別名清除是一次性遷移指令，已完成。 |
+| 語意色 CSS 變數定義 | **搬（改名）** — `--error`/`--error-bg` → `--color-destructive`/`-bg`；`--success` → `--color-success`（另有 `-bg`/`-deep`）。現行還多了 `--color-warning`/`--color-info` 兩組。 |
+| 錯誤元素使用語意色變數 | **丟** — 對照的 class 屬 pre-SPA 架構。原則（錯誤態一律用語意色 token、不硬編碼）仍成立，SoT 為 `DESIGN.md`。 |
