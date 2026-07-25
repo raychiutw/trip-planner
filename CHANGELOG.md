@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.57] - 2026-07-25
+
+### Fixed
+- **關掉對話框後，鍵盤焦點會回到剛才那個按鈕了（#1160）**：原本關閉後焦點掉回文件頂端，鍵盤使用者得從頭 Tab 一遍才能回到原位。sheet 引擎（`useSheetBehavior`）本來就有焦點還原機制，但要呼叫方明確傳 `restorePreviousFocus` 或 `triggerRef` 才會啟動 —— 而三個共用對話框（確認／輸入／衝突，共 **26 處** JSX 使用）**都只傳了 `initialFocusRef`**，兩個都沒傳，於是全部落在「什麼都不做」那一格。**改引擎的預設值一次修好全部呼叫點**，比逐一改 26 個呼叫點的變更面小得多。
+- **既有兩條明確路徑的行為完全不變**：`restorePreviousFocus` 仍還原 activeElement 快照、`triggerRef` 仍聚焦指定元素（且優先於快照 —— 有些觸發元件關閉後會重繪，指名 ref 比記快照可靠）。新邏輯只補「兩者都沒傳」的 fallback。
+- **順帶處理觸發元素在對話框開啟期間消失的情況**：刪除流程關閉對話框時，觸發它的那一列常常已經連帶不見了。對已從 DOM 移除的元素呼叫 `focus()` 不會報錯，但會把焦點掉到 `<body>` —— 跟什麼都不做同樣糟。加 `isConnected` 檢查讓它安靜跳過，由瀏覽器保留當前焦點。
+
+### Added
+- **`tests/e2e/dialog-focus-restore.spec.js` —— 真瀏覽器、真鍵盤**（票的完成判準要求手動操作一次刪除流程確認；這是那個手動步驟的可重複版）。刻意**全程用 Tab／Enter／Escape 不用滑鼠點擊**：滑鼠點擊本身就會把焦點放到被點的元素上，等於幫測試作弊 —— 焦點「回到」觸發元素可能只是因為剛才點過它。
+- 單元測試（jsdom）另補兩例：正常還原、以及觸發元素在開啟期間被移除時不 throw。**但焦點還原這種行為單靠 jsdom 不算驗過** —— 它的焦點模型是簡化版，不實作「元素移除後焦點掉到 body」也沒有真正的 Tab 順序，所以 e2e 那支才是主證據。
+
+### Changed
+- **`useSheetBehavior` 的 `restorePreviousFocus` 語意變了**：它不再是「還原行為的開關」，只是「明確指定走快照這條路」。沒傳它也沒傳 `triggerRef` 時，引擎預設就會還原。option 的文件註解已同步更正，避免後人以為不傳就沒有還原。
+
 ## [2.57.56] - 2026-07-25
 
 ### Added
