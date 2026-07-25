@@ -21,10 +21,13 @@
 ## Palette — V2 柔褐三色（canonical source: tokens.css `@theme`）
 | Token | Hex | 用途 |
 |-------|-----|------|
-| `--color-accent` | `#A97A4A` | UI chrome 唯一主色（active state、CTA 填色、邊框、裝飾圖示）。**不可當文字色**，見下方 §Color Approach 的通則 |
+| `--color-accent` | `#A97A4A` | UI chrome 唯一主色（active 指示、邊框、裝飾圖示、tint 底）。**不可當文字色**，見下方 §Color Approach 的通則；**實心 CTA + 白字請用 `--color-accent-fill`**（白字疊 `#A97A4A` 僅 3.77:1） |
 | `--color-accent-deep` | `#8A6038` | hover / pressed |
-| `--color-accent-subtle` | `#FBEEE4` | badge bg、selected row |
-| `--color-accent-bg` | `#F7DFCB` | accent panel |
+| `--color-accent-text` | `#8A6038` | 疊頁面／表面色（`-background`／`-secondary`／`-tertiary`／`-hover`）的**文字色** |
+| `--color-accent-text-on-tonal` | `#7A5430` | 疊同色系 tint（`-subtle`／`-bg`）的**文字色** |
+| `--color-accent-fill` | `#8A6038` | 實心填色面（主要按鈕、tab 選中膠囊）+ `--color-accent-foreground` 白字 |
+| `--color-accent-subtle` | `#F4EDE3` | badge bg、selected row |
+| `--color-accent-bg` | `#E9DBC8` | accent panel |
 | `--color-background` | `#FFFBF5` | page bg |
 | `--color-secondary` | `#FAF4EA` | card bg |
 | `--color-foreground` | `#2A1F18` | body text |
@@ -95,7 +98,7 @@
 
 > **Dark mode 覆寫不得冗餘**：若 base 規則已用 `var(--token)` 且該 token 在 `body.dark` 已有覆寫值，就 SHALL NOT 再寫 `body.dark .class { property: var(--token) }` —— token 值會自動切換，重寫是死碼、且日後改 token 時容易漏掉這份重複。〔遷自已歸檔的 `css-hig-discipline` spec〕
 
-> **`--color-accent` SHALL NOT 當文字色**（#1156，通則）：品牌柔褐是給 CTA 填色、邊框、active 指示與圖示用的，它在自家淺底上撐不到 WCAG AA 的 4.5:1。文字要照**底色**挑深變體 —— 底是頁面／表面色（`--color-background`、`--color-secondary`、`--color-tertiary`、`--color-hover`）用 `--color-accent-text`；底是同色系 tint（`--color-accent-subtle` / `--color-accent-bg`）用更深的 `--color-accent-text-on-tonal`。
+> **`--color-accent` SHALL NOT 當文字色**（#1156，通則）：品牌柔褐是給邊框、active 指示、裝飾圖示與 tint 底用的，它在自家淺底上撐不到 WCAG AA 的 4.5:1。（**實心 CTA 也不要直接用它** —— 白字疊 `#A97A4A` 只有 3.77:1，填色面走 `--color-accent-fill`，見上方色票表。）文字要照**底色**挑深變體 —— 底是頁面／表面色（`--color-background`、`--color-secondary`、`--color-tertiary`、`--color-hover`）用 `--color-accent-text`；底是同色系 tint（`--color-accent-subtle` / `--color-accent-bg`）用更深的 `--color-accent-text-on-tonal`。
 >
 > 例外只有一種：`aria-hidden` 的**純裝飾**圖示——旁邊已有文字標籤、圖示本身不承載資訊。依 WCAG 1.4.11 門檻是 3:1 而非 4.5:1，硬套深色前景 token 反而會在淺 tint 圓底上過深、與同頁其他圖示不協調。邊框同理走 3:1。
 >
@@ -478,8 +481,8 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 
 ### AI Authorize Card（`tp-ai-card`，v2.55.66）
 - NewTripPage 建立行程表單內的就地 AI 授權卡（Phase 2 V1）：讓 owner 授權 Tripline AI（`tripline-tp-request`）以自己身分排行程。先前只有 Ray 有 Consent → 其他 owner fail-closed 用不了 AI，此卡讓每位 owner 就地授權。
-- **卡片**：`--color-accent-subtle` 底 + `--radius-xl`，無框線。左 38px 柔褐 badge（`--color-accent` 底、白 sparkle SVG、`--radius-lg`）+ 標題（15px/700 `--color-foreground`）+ 說明（13px `--color-muted`）。
-- **未授權**：全寬「授權 AI」鈕（`--color-accent` 實心、`--color-accent-foreground` 字、`--radius-lg`、min-height 44px）。
+- **卡片**：`--color-accent-subtle` 底 + `--radius-xl`，無框線。左 38px 柔褐 badge（`--color-accent-fill` 底、白 sparkle SVG、`--radius-lg`）+ 標題（15px/700 `--color-foreground`）+ 說明（13px `--color-muted`）。
+- **未授權**：全寬「授權 AI」鈕（`--color-accent-fill` 實心、`--color-accent-foreground` 字、`--radius-lg`、min-height 44px）。
 - **已授權**：綠色確認列（`--color-accent-2-subtle` 底 + `--color-accent-2-deep` 字 —— sage tone =「已生效／無需再動作」）+ checkmark SVG +「已授權 · 可隨時在『已連結應用』撤銷」。撤銷走帳號設定既有 revoke，不在卡上放撤銷鈕。
 - **機制**：Approach B 直接 session 授權（`POST /api/account/ai-authorization` upsert Consent），非 OAuth redirect dance；機器 client 不開 web redirect_uri、不簽 auth code。讀狀態失敗 fail-open 當未授權（顯授權鈕、不卡建立流程）。
 - Mockup：`docs/design-sessions/2026-07-11-tp-request-consent-trigger.html`（sign-off 2026-07-11，選 V1 就地卡片；V2 送出對話框 / V3 建立後獨立頁未採用）。
@@ -488,7 +491,7 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 - ChatPage 送出時的就地授權 sheet：**補 NewTripPage 授權卡沒涵蓋的入口** —— 一個「行程已存在、直接用 AI 聊天問」的 owner，在「帳號 → 已連結應用」只找得到撤銷、沒有授權入口（該頁空狀態只提示 Sign in with Tripline）。送出訊息 = 建 `trip_request`；owner 若未授權，後端 `mint-restricted` 簽不出 owner token，該請求永遠 mint 失敗、卡住整條佇列（peek `sort=asc` 每輪撈同一筆）。此 sheet 在送出當下就地問要不要授權。
 - **觸發**：送出時 `GET /api/account/ai-authorization` 為未授權 → 攔下、不建請求、跳 sheet（`aiAuthorized===false` 才攔，**含 GET 讀取失敗 fail-closed 成 false**——與 AiAuthorizeCard 一致、可從 sheet 授權復原；`null`＝授權狀態載入中的數毫秒窗才放行，後端 mint 為最終關卡）。
 - **形態**：底部跳出 sheet（sign-off variant B；A inline 卡 / C fullpage 步驟未採用）。`--color-background` 底、`22px 22px 0 0` 圓角、grip handle。內含**沿用 `tp-ai-card` 視覺**的授權卡（柔褐 badge + 標題 + 說明）+ 送出訊息引用預覽（`--color-background` 底 + `--color-border` 框）。
-- **動作**：全寬「授權並送出」（`--color-accent` 實心）→ `POST /api/account/ai-authorization` upsert Consent → 續送原訊息；「取消」（ghost）→ 不建請求、保留輸入。Escape／點背景＝取消；授權進行中 disable 主鈕（顯「授權中⋯」）並鎖背景點擊防誤取消。
+- **動作**：全寬「授權並送出」（`--color-accent-fill` 實心 + `--color-accent-foreground` 白字）→ `POST /api/account/ai-authorization` upsert Consent → 續送原訊息；「取消」（ghost）→ 不建請求、保留輸入。Escape／點背景＝取消；授權進行中 disable 主鈕（顯「授權中⋯」）並鎖背景點擊防誤取消。
 - **後端防禦（非 UI）**：`mint-restricted` 遇 `no_consent` 把該 request park 成 `failed` + 寫授權指引 reply（peek 只撈 open/processing → 跳過），確保單一未授權請求不會永久卡死佇列。沿用既有 `failed` status（0049 CHECK 值域）→ 免 migration。並把 `POST /api/requests` 的 30 秒去重加 `status IN ('open','processing')` 濾網 —— 否則 owner 授權後重送同一訊息會在 30 秒內撞回剛 park 的 `failed` 請求、看似又失敗（adversarial F1）。
 - Mockup：`docs/design-sessions/2026-07-15-chat-consent-gate.html`（sign-off 2026-07-15 variant B）。
 

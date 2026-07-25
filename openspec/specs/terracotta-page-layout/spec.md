@@ -86,8 +86,15 @@ Map page MUST 提供 loading 與 empty state UI：loading SHALL 顯示 shimmer c
 - **WHEN** 使用者切到某 day tab 該日無 entry
 - **THEN** map canvas 中央顯示 280px max-width glass card（blur 14px + hairline border + shadow-md），含 32px `i-map` icon + 15px bold title + 13px muted hint text
 
-### Requirement: Day tab dayColor underline
-Map page 與 Trip detail page DayNav MUST 共用同一 visual primitive：tab SHALL 為底線型（border-radius 0、border-bottom 2px transparent → active 變 dayColor）、eyebrow SHALL 顯示 dayColor 文字、active state 文字色 MUST 轉 accent。
+### Requirement: Day tab dayColor underline — ⚰️ 已被取代（2026-07-25）
+
+> **這條 Requirement 的視覺契約已作廢，只有「兩頁共用同一 primitive」這件事還成立。** 兩次覆蓋：
+> 1. **形制與色系**（owner 2026-07-24，v2.57.45）：day tab 改 **實心 `--color-accent-fill` 膠囊 + `--color-accent-foreground`**，比照底部 root tab；**不再是底線型、不再套 dayColor**（淺色天 amber/lime 在膠囊上對比不足）。per-day 顏色只留在地圖 polyline 與 entry card。
+> 2. **accent 不得當文字色**（#1156，v2.57.50）：下方 Scenario 要求的 `color: var(--color-accent)` 已被 `DESIGN.md` §Color Approach 的通則禁止（自家淺底上 3.24–3.65:1，未達 WCAG AA 4.5:1）。
+>
+> 現行 SoT：`DESIGN.md` §Palette 的 Day palette exception + §Color Approach 通則；元件 `src/components/trip/MapDayTab.tsx`（`DayNav` 復用同一套）；詞彙見 `CONTEXT.md`「Day tab」。**不要照下方 Scenario 重建。**
+
+Map page 與 Trip detail page DayNav MUST 共用同一 visual primitive。~~tab SHALL 為底線型（border-radius 0、border-bottom 2px transparent → active 變 dayColor）、eyebrow SHALL 顯示 dayColor 文字、active state 文字色 MUST 轉 accent。~~（下方 Scenario 保留作歷史紀錄）
 
 #### Scenario: Idle day tab 樣式
 - **WHEN** 渲染未 active 的 Day 01 tab

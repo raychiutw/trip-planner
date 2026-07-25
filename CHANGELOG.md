@@ -13,6 +13,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 - **`DESIGN.md` 立下「品牌柔褐不得當文字色」通則（#1156）**：文字要照底色挑深變體，唯一例外是 `aria-hidden` 的純裝飾圖示與邊框（走 3:1）。同時清掉文件內六處與這條規則互相矛盾的舊敘述（色票表、§Color Approach 散文與類型標籤、§Buttons ghost button、§TitleBar 子頁返回、§Compact Bottom Nav、§Desktop Sidebar、§AI Health Check），以免後人照著文件再造一次同樣的問題。規則另附遷移狀態：對新程式碼一律生效，既有 call-site 逐頁收斂中（尚有 28 檔 57 處，追蹤於 #1157／#1168／#1169），並誠實標明目前沒有全庫執法者、Tailwind utility 與列印模式兩條路徑不在守備範圍。
+- **其餘文件跟著這條通則對齊（#1156，post-ship 同步）**：`DESIGN.md` 的 canonical 色票表補齊規則指名要用的三顆 token（`-text` / `-text-on-tonal` / `-fill`），並修掉兩個與 `tokens.css` 對不上的色碼（`-subtle` `#FBEEE4`→`#F4EDE3`、`-bg` `#F7DFCB`→`#E9DBC8`）—— 讀者若照舊值算對比會得到錯的數字；同時把 §AI Authorize Card / §AI Consent Sheet 三處「`--color-accent` 實心 + 白字」改回 code 實際用的 `--color-accent-fill`（白字疊 `#A97A4A` 只有 3.77:1，照文件寫就會生出新的違規）。`README.md` 的 accent 色碼從早已退場的 `#D97848` 更正為 `#A97A4A`。`openspec/specs/terracotta-page-layout` 的「Day tab dayColor underline」標記為已被取代 —— 它要求 active day tab 用 `color: var(--color-accent)`，同時撞上本通則與 v2.57.45 的實心膠囊改版。
 
 ## [2.57.50] - 2026-07-25
 
