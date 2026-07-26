@@ -996,7 +996,7 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 
 | 項目 | 規定 | 依據 |
 |---|---|---|
-| **機制** | `outline: 2px solid var(--color-focus-ring); outline-offset: 2px` | **HIG**：「Rely on system-provided focus effects … Consider creating custom focus effects only if it's absolutely necessary.」`outline` 就是系統機制本身 |
+| **機制** | `outline: 2px solid var(--color-focus-ring); outline-offset: 2px`（**offset 必須為正** —— 見下方負值失效模式） | **HIG**：「Rely on system-provided focus effects … Consider creating custom focus effects only if it's absolutely necessary.」`outline` 就是系統機制本身 |
 | **禁止** | `outline: none` 之後用 `box-shadow` 自畫環 | 同上 —— 這正是 HIG 勸阻的「殺掉系統效果再自畫」。被殺掉的那個環是接使用者 System Settings accent 與 Full Keyboard Access 偏好的那一個 |
 | **顏色** | `--color-focus-ring`，**不是** `--color-accent` | **HIG** Color 的 macOS 動態系統色表把 `Keyboard focus indicator color` 與 `Control accent` 列為兩個分開的條目 |
 | **幾何** | `2px` / `offset 2px` | ⚠️ **專案選擇，不是 HIG 規定** —— 整份 HIG `focus-and-selection` 對 thickness／offset／色值完全沉默。要改數值不必找 HIG 依據，但要一起改 |
@@ -1012,18 +1012,32 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 
 第 2 點還有一個結構性後果：貼邊寫法要對**每一種填色**逐個調校，加一個新按鈕色就多一個要驗的組合；`outline-offset` 只要驗父層底色。這是「不需逐個 surface 調校」的意思。
 
-### 既有債（#1182 追蹤，2026-07-26 實測盤點）
+### 既有債（#1182 追蹤，2026-07-26 逐條分類）
 
-| 慣例 | 條數 | 分布 |
+全庫 `focus` selector 內寫 `outline: none` 的共 **38 條**。**它們不是同一種東西** —— 先前把 38 條整批當成「慣例 A」是錯的分類，實際拆開是：
+
+| 類別 | 條數 | 性質 |
 |---|---|---|
-| ✅ B `outline: <n>`（本節規則） | **38** | 22 個檔，`css/tokens.css` 只佔 1 |
-| ❌ A `outline: none` + ring（待遷移） | **38** | 20 個檔，其中 `css/tokens.css` 佔 13（全域 `button` / `a` / `[role=button]` / `.tp-btn`） |
+| ❌ **A** `+ box-shadow: var(--shadow-ring)` | **20** | **待遷移的債**（另有 1 條把環寫在子元素上：`AccountCircle` → `--shadow-ring` 全庫共 21 用量 / 8 檔） |
+| ❌ **C** `+ border-color: accent` + `box-shadow: 0 0 0 2–3px var(--color-accent-subtle｜-bg)` 光暈 | **8** | **待評估** —— 本檔從未記載過的第三套。光暈用的是極淡的 `accent-subtle`，對頁面底幾乎沒有對比 |
+| ❌ **C′** 只有 `border-color`、連光暈都沒有 | **2** | `.tp-titlebar-trip-search`、`.tp-travel-detail input` |
+| ✅ **highlight**（改用背景色標示） | **3** | **不是債，是 HIG 正解** —— 兩個 typeahead item + `.tp-rail-menu-item`，正好是本節規則「清單／集合用 highlight」的現成先例 |
+| ✅ 刻意抑制 | **3** | 程式化聚焦的容器（`AppShell` 的 `[tabindex="-1"]`、`InfoSheet` panel）與滑鼠焦點（`:focus:not(:focus-visible)`） |
+| ✅ 表單例外 | **1** | `.tp-rail-note-input` —— 只在編輯態掛載、恆有 accent 框 + 光暈，落在 §Accessibility 的表單輸入例外 |
 
-**8 個檔同時用兩套**（`css/tokens.css`、`InputModal`、`DesktopSidebar`、`CollabPanel`、`CustomPoiForm`、`TimelineRail`、`_tripFormStyles`、`AddCustomStopPage`）—— 沒有分工規則，是歷史漂移。
+**所以真正要遷的是 30 條（A 20 + C 8 + C′ 2），不是 38 條。** 慣例 B 有 **38 條 / 22 個檔**（`css/tokens.css` 只佔 1）。
 
-A 現在是**待遷移的既有債，不是可選方案**。遷移未完成前，改到的檔案順手換成 B；不要為了「跟隔壁一致」新增 A。
+**8 個檔同時混用**（`css/tokens.css`、`InputModal`、`DesktopSidebar`、`CollabPanel`、`CustomPoiForm`、`TimelineRail`、`_tripFormStyles`、`AddCustomStopPage`）—— 沒有分工規則，是歷史漂移。改到的檔案順手換成 B；不要為了「跟隔壁一致」新增 A 或 C。
 
-慣例 B 現有 38 條裡有 3 個顏色（`--color-accent` 31、`--color-foreground` 3、`--color-priority-high-dot` 2、`--color-destructive` 2）。`--color-focus-ring` token 落地前，`--color-accent` 是暫用值；另外三個是要收斂掉的。
+### ⚠️ 慣例 B 自己也有一個失效模式：負的 `outline-offset`
+
+「`outline-offset` 天生有間隙、露出的是父層底色」**只對正值成立**。全庫 38 條的值分布是 `2px`×30、`-2px`×4、`-3px`×2、`1px`×2 —— **6 條負值把框畫進元件自己的 padding box，相鄰色又變回元件自家底色，跟慣例 A 是同一個失效模式**：
+
+`css/tokens.css:1455`、`CustomPoiForm.tsx:71`、`_tripFormStyles.ts:264`、`TripActionsMenu.tsx:49`、`AddCustomStopPage.tsx:229`、`TripNotesPage.tsx:163`
+
+**所以上表的「機制」列要連 offset 取正一起看** —— 寫 `outline` 但給負 offset，不算符合本節規則。
+
+慣例 B 現有 38 條用了 **4 個顏色**（`--color-accent` 31、`--color-foreground` 3、`--color-priority-high-dot` 2、`--color-destructive` 2）。`--color-focus-ring` token 落地前（`grep -rn 'focus-ring' css src` 目前 **0 命中**），`--color-accent` 是暫用值；另外三個是要收斂掉的。
 
 ### 標準引用更正（2026-07-26）
 
@@ -1033,7 +1047,7 @@ A 現在是**待遷移的既有債，不是可選方案**。遷移未完成前�
 
 ### 尚未做完的實作（#1182）
 
-文件已拍板，code 還沒跟上。剩：抽 `--color-focus-ring` token、遷移 A 的 38 條、修深色 `--color-accent` == `--color-accent-fill`、補 `@media (prefers-contrast: more)` 加強階。
+文件已拍板，code 還沒跟上。剩：抽 `--color-focus-ring` token、遷移 A/C/C′ 共 30 條、把 6 條負 `outline-offset` 取正、收斂 B 的 4 個顏色、修深色 `--color-accent` == `--color-accent-fill`、補 `@media (prefers-contrast: more)` 加強階。
 
 ## Accessibility
 - **Touch target:** 最小 44×44px (Apple HIG)
