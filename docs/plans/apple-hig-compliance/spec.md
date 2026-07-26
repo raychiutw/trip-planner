@@ -43,6 +43,14 @@
 ## 5 · 色彩 & 材質
 - **背景/表面/label/separator/fill** → **system 語意色**（systemBackground/secondarySystemBackground/label/secondaryLabel/separator/fill…），自動 light/dark/**高對比**適應。
 - **terracotta 只當受控 tint**：按鈕/連結/選中/tab active tint。**語意色獨立**：info=系統藍（≠accent）、destructive=系統紅（dark 亦可辨識）、success/warn 系統色。
+
+  > ⚠️ **實作現況與本行不符（2026-07-26 盤點，記錄不掩蓋）**：`--color-success` 是 `#06A77D`、`--color-warning` 是 `#F48C06`，**都是自訂色，不是 Apple 系統色**（systemGreen `#34C759`、systemOrange `#FF8D28`）。只有 `--color-info`（`#007AFF` / dark `#0A84FF`）真的遷到系統藍。
+  >
+  > 這件事有**兩個後果，方向相反，要一起看**：
+  > 1. HIG「Avoid redefining the semantic meanings of **dynamic system colors**」那條的主詞是系統色，**字面上管不到自訂的 success/warn**。所以不要拿它去論證自訂色的用法違規。
+  > 2. 但 HIG 對**自訂色**另有要求：「If you define a custom color, make sure to supply light and dark variants, **and an increased contrast option for each variant**」。本 repo 的 `@media (prefers-contrast: more)` 只處理玻璃模糊與 tabbar tint、**一顆語意色都沒碰** → 這才是自訂色路線下真正的落差。
+  >
+  > 也就是說：要嘛真的遷到系統色（本行原意），要嘛承認走自訂色並補上 increased-contrast 階。**目前是兩邊都沒做完的中間狀態。** 追蹤於 #1176。
 - **材質**：功能層 chrome（tab bar/header/sheet）用 `backdrop-filter` glass 近似 Liquid Glass + **reduced-transparency/高對比 fallback 覆蓋全玻璃面**。timeline editorial no-glass 留。
 - **gap（audit）**：`--color-info==--color-accent`（G14）、dark destructive #E8A0A0 過淡（G11）、tab bar 實心膠囊非 tint（G1/V1）、sidebar 浮動玻璃膠囊非扁平（G2/V6）、chrome 材質不一致（G13）、reduced-transparency fallback 不全（G15）、ChatPage phantom error token dark 1.9:1（G8）、ShareLinkModal 無 dark（G9）、座標 chip dark（G10）、toast dark 綁 OS media（G12）。
 

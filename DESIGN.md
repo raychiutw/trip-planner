@@ -45,7 +45,11 @@
 > | entry card `num` **圓框**（非文字） | `dayColor(n)` — 原飽和 -500 |
 > | entry card `num` **數字**、`day` eyebrow **文字** | `dayTextColor(n)` → `var(--day-text-N)` |
 >
-> **取值口徑**：淺色降亮度到「疊頁面底 `#FFFBF5` 與列印底 `#FFFFFF` 兩者的較差值 ≥5.0」；深色方向相反要更淺，且**原色有 9/10 本來就達標**（疊 `#1C1C1E`：lime 8.61…rose 4.63），只有 violet 4.02 真不足，故深色多數維持原值以保住與 polyline 的一致性，僅把 rose/violet/fuchsia 三顆往白插值到 ≥5.0。**刻意不抓剛好 4.5** —— 貼線的值在底色微調時會靜默掉下去。逐色數字寫在 `css/tokens.css` 的 `--day-text-*` 區塊，守衛在 `tests/unit/day-palette-text.test.ts`。
+> **取值口徑**：淺色降亮度到「疊頁面底 `#FFFBF5` 與列印底 `#FFFFFF` 兩者的較差值 ≥5.0」；深色方向相反要更淺，且**原色有 9/10 本來就達標**（疊 `#1C1C1E`：lime 8.61…rose 4.63），只有 violet 4.02 真不足，故深色多數維持原值以保住與 polyline 的一致性，僅把 rose/violet/fuchsia 三顆往白插值到 ≥5.0。逐色數字寫在 `css/tokens.css` 的 `--day-text-*` 區塊，守衛在 `tests/unit/day-palette-text.test.ts`。
+>
+> ⚠️ **`5.0` 是本專案的內部安全邊際，不是任何標準的門檻，不得當成合規事實引用。** Apple HIG Accessibility 的表格是 `≤17pt 全部 4.5:1` / `18pt 全部 3:1` / `任何尺寸的 Bold 3:1`；WCAG 2.2 是 `4.5` / `3`。**`5.0` 在 HIG 與 WCAG 都不存在。** 之所以抓 5.0，純粹是因為貼著 4.5 的值在底色微調時會靜默掉到門檻以下，而這個 repo 已經因此痛過（見 §Color Approach 的對比雙軌）。
+>
+> 🔴 **不要用「某個既有 token 只有 4.2、不到 5.0」當作必須新造 token 的理由** —— 那是把內部邊際講成合規需求。2026-07-26 的 #1176 評估就犯過這個錯：拿「`--color-success-deep` 只有 4.12」推導出要新增兩顆 token，但 4.12 對 bold 文字在 HIG 表下本來就過。**先確認標準門檻，再談邊際。**
 >
 > ⚠ **`num` 的對比 e2e 掃不到**：day 序號在行程 ≤9 天時是單一字元，axe 的 color-contrast 對 1 字元元素一律歸 incomplete（`messageKey: shortTextContent`），而 e2e 只讀 violations。它只能靠上述單元守衛，別以為 e2e 全綠就代表沒問題（同 §Color Approach 記的 accent 徽章盲區，這是第二現場）。
 
@@ -112,10 +116,42 @@
 
 > **`--color-accent` SHALL NOT 當文字色**（#1156，通則）：品牌柔褐是給邊框、active 指示、裝飾圖示與 tint 底用的，它在自家淺底上撐不到 WCAG AA 的 4.5:1。（**實心 CTA 也不要直接用它** —— 白字疊 `#A97A4A` 只有 3.77:1，填色面走 `--color-accent-fill`，見上方色票表。）文字要照**底色**挑深變體 —— 底是頁面／表面色（`--color-background`、`--color-secondary`、`--color-tertiary`、`--color-hover`）用 `--color-accent-text`；底是同色系 tint（`--color-accent-subtle` / `--color-accent-bg`）用更深的 `--color-accent-text-on-tonal`。
 >
-> 例外只有一種：`aria-hidden` 的**純裝飾**圖示——旁邊已有文字標籤、圖示本身不承載資訊。依 WCAG 1.4.11 門檻是 3:1 而非 4.5:1，硬套深色前景 token 反而會在淺 tint 圓底上過深、與同頁其他圖示不協調。邊框同理走 3:1。
+> 例外只有一種：`aria-hidden` 的**純裝飾**圖示——旁邊已有文字標籤、圖示本身不承載資訊。硬套深色前景 token 反而會在淺 tint 圓底上過深、與同頁其他圖示不協調。邊框同理。
+>
+> ⚠️ **這裡的 3:1 是本專案自訂的，不是 WCAG 要求（2026-07-26 更正）。** 本行原本寫「依 WCAG 1.4.11 門檻是 3:1」—— 那是**錯的**：1.4.11 的兩個適用條件是「識別 UI 元件所必需」與「理解內容所必需」，而旁邊已有文字標籤、且 `aria-hidden` 的純裝飾圖示**兩個都不觸發**，所以它**不在 1.4.11 的範圍內**，標準對它的要求是「無」而不是「3:1」。我們仍自訂 3:1 是為了視覺品質下限，但**不要用合規名義去驅動它** —— 例如「這個裝飾圓點只有 2.5、不到 3:1、所以方案不可行」這種推論不成立（2026-07-26 的 #1176 評估就這樣誤殺過一個方案）。
 >
 > ⚠ **遷移狀態（別把未遷移當成 regression）**：本規則自 #1156 起對**新 code 一律生效**，既有 call-site 逐頁收斂中 —— 計數口徑 `grep -rhoE '(^|[;{ ])color: var\(--color-accent\)' src/ | wc -l` 命中 **29 個檔、59 處**（`-l` 給檔數、`-ho` 給處數），**不含** `border-color`（邊框走 3:1，本規則允許）。其中 `TripsListPage.tsx` 的 2 處是本節核准的 `aria-hidden` 裝飾例外，不是待遷移 —— **實際待辦是 28 檔 57 處**。已完成：行程一覽頁（#1156）。進行中：信箱驗證等候頁／登入工作階段頁（#1157）、地圖頁 day 標籤（#1168）、titlebar back/action hover（#1169）。其餘尚未開票。看到未遷移的 call-site 請歸到對應票或另開，不要當成本規則的違反紀錄。
+
+
+### 語意色的角色分離（HIG，2026-07-26 立）
+
+> **顏色上到「底」與「圖形」，不要上到「文字」。** Apple HIG Color 逐字：
 >
+> > "To emphasize primary actions, **apply color to the background rather than to symbols or text.**"
+>
+> > "**Avoid using the same color to mean different things.** Use color consistently throughout your interface, especially when you use it to help communicate information like status or interactivity."
+>
+> 所以狀態標示（pill / banner / badge）的正確組成是：
+>
+> | 角色 | 用什麼 |
+> |---|---|
+> | 底 | `--color-<semantic>-bg` |
+> | **文字（label）** | **`--color-foreground` / `--color-muted`（中性色）** |
+> | 顏色訊號 | `aria-hidden` 的圓點／glyph，用 `--color-<semantic>` 或 `-deep` |
+>
+> **不要**寫成「同色系淡底 + 同色系深字」再去調色救對比 —— 那是把一個色相同時當 fill 又當 label，正是上面第二段勸阻的。實測差距也很大：`.tp-pill-current` 走中性字是 **12.30:1**，走「壓深的語意色字」只有 ~5.x，而且中性字**底色日後怎麼改都不會再壞**。
+>
+> 這不是新發明 —— 本檔 §行程一覽三色（「字一律 `--color-foreground`／`--color-muted`」）與 §AI聊天 avatar（「`--t-bg` 底 + `--color-foreground` 字，不用 vivid 實心」）**已經各拍板過一次**，本節只是把同一條規則推廣到語意色。
+>
+> 另有 HIG 明文要求的第三重編碼：
+>
+> > "**Convey information with more than color alone.** … Offer visual indicators, like distinct shapes or icons, in addition to color."
+>
+> → 狀態應同時有**文字 + 形狀（glyph）+ 顏色**，不能只靠色相區分。
+>
+> ⚠️ **半透明底是不可靠的對比基礎。** `--color-success-bg` 等是 `rgba()`，疊在不同父層上會合成出不同的底（同一組 token 實測 2.35 vs 2.63）。HIG 也點名：「Consider how artwork and translucency affect nearby colors」。對照組是 `--color-destructive-bg`（**不透明** `#FDECEC`）—— 這正是為什麼全站 51 處 destructive 當文字都沒有對比問題。
+>
+> **待對齊**：15 條語意色當文字的規則（success 8 / warning 7），其中 3 條是 `aria-hidden` 裝飾（依上方例外不動），**實際待辦 12 條** —— 追蹤於 #1176。>
 > ⚠ **兩個本規則管不到的地方**：(a) Tailwind utility —— `@theme` 會把 `--color-accent` 生成 `text-accent`，`hover:text-accent` 這種寫法不在任何 CSS 字串裡，掃 template literal 的守衛永遠看不到（`InfoSheet.tsx`、`HourlyWeather.tsx` 現有數處）。(b) `body.theme-print` 只覆寫了 `--color-accent` / `-subtle` / `-bg`，**沒有覆寫 `-text` / `-text-on-tonal` / `-deep`**，所以遷移到 `-text` 的文字在灰階列印版面裡會是暖褐色。目前 print mode 只掛在行程明細頁（`usePrintMode`），影響有限，但全庫推廣前要先補 print 的 token 覆寫。
 >
 > 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層；call-site 層目前只有 `tests/unit/trips-list-accent-text.test.ts` 守行程一覽頁一個檔，**尚無全庫執法者**。
@@ -324,7 +360,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
   | sm | `0 1px 2px rgba(0,0,0,0.04)` | 微妙抬升（input、chip） |
   | md | `0 6px 16px rgba(0,0,0,0.08)` | 卡片 |
   | lg | `0 10px 28px rgba(0,0,0,0.12)` | 浮層、toast、sheet |
-- **Focus ring:** `0 0 0 2px accent` — 鍵盤導航可見性
+- **Focus ring:** `0 0 0 2px accent`（`--shadow-ring`）— 鍵盤導航可見性。⚠️ **此規格目前有兩個未解問題，見 §Focus Indicator（HIG 對齊中）**：全站有兩套並存的焦點指示寫法，且此規格本身在 accent 填色面上量到 1.00–1.46:1、違反 WCAG 1.4.11。**新元件先讀那一節再選寫法。**
 - **Hairline borders:** `1px solid #EADFCF`（light）/`1px solid #3A3127`（dark）取代重邊線。卡片區分用 border 而非 shadow。
 
 ## Motion
@@ -862,7 +898,7 @@ Alert（不可逆）MUST 具備三件事：
 | Button min-height | 44px (Apple HIG tap target) |
 | Cancel button bg | `--color-secondary` + 1px `--color-border` |
 | Cancel hover | `--color-hover` |
-| Confirm focus ring | 2px outline + 2px offset |
+| Confirm focus ring | 2px outline + 2px offset ⚠️ 這是**慣例 B**，與 §Material & Effects 記的 `0 0 0 2px accent`（慣例 A）不同。兩套並存、各 15 條，見 §Focus Indicator |
 
 ### Examples (現役)
 
@@ -946,6 +982,44 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 - **Size:** 跟隨 font-size（`width: 1em; height: 1em`）
 - **Style:** Line stroke 1.5-1.75px，不用填充
 - **Color:** 繼承 `currentColor`
+
+## Focus Indicator（HIG 對齊中，2026-07-26 盤點）
+
+> **這一節記錄的是一個尚未解決的矛盾，不是可以照抄的規範。** 動焦點樣式前先讀完。
+
+### 現況：兩套並存的寫法，恰好各半
+
+| 慣例 | 寫法 | 條數 | 顏色 |
+|---|---|---|---|
+| A | `outline: none; box-shadow: var(--shadow-ring)` | **15** | `--color-accent` |
+| B | `outline: 2px solid …; outline-offset: 1–2px` | **15** | `--color-accent` / `--color-foreground` / `--color-priority-high-dot` |
+
+慣例 A 集中在 `css/tokens.css` 全域規則與 shell 元件；慣例 B 散在 7 個元件的 `SCOPED_STYLES`。**兩者沒有分工規則，是歷史累積的分裂。** 本檔上方 §Material & Effects 記的是 A、§Modal Dialogs 的 ConfirmModal 表格記的是 B —— 那不是筆誤，是各自忠實描述了一半。
+
+### 已知缺陷（有實測數字）
+
+1. **A 的 ring 貼著 border box，沒有間隙**，所以相鄰色就是元件自己的填色。實測疊 `--color-accent-fill`：**淺色 1.46:1、深色 1.00:1**。深色之所以是 1.00，是因為 `--color-accent` 與 `--color-accent-fill` **是同一個 hex `#CBA06E`** —— 焦點框字面上不存在。這**違反 WCAG 1.4.11（AA，非文字對比 3:1）**。
+2. B 的 `outline-offset` 天生有間隙、間隙露出父層底色，所以不會有這個問題；但它用三種不同顏色、沒有規則。
+
+### HIG 怎麼說（有出處）
+
+- **焦點框顏色是獨立角色。** HIG Color 的 macOS 動態系統色表把 `Keyboard focus indicator color`（"The ring that appears around the currently focused control when using the keyboard for interface navigation."）與 `Control accent` 列為**兩個分開的條目**。本 repo 的 `--shadow-ring: 0 0 0 2px var(--color-accent)` 把這兩個角色壓成同一顆 token —— **這是矛盾的根**。
+- **HIG 對幾何完全沉默**：整份 `focus-and-selection` 沒有任何 thickness / colour value / offset 數值。所以「2px」「4px」「雙色環」都不違反 HIG，**但也都不能宣稱是 HIG 規定的**。§Material & Effects 的 `2px` 不是 HIG 來的。
+- **HIG 勸阻自畫**：> "**Rely on system-provided focus effects.** … Consider creating custom focus effects only if it's absolutely necessary." 本 repo 用全域 `outline: none` 殺掉 UA 的環再自畫 —— 那個被殺掉的環，正是接到使用者 System Settings accent 與 Full Keyboard Access 偏好的那一個。
+- **清單／集合用 highlight 而非 ring**：> "In general, use a focus ring for a text or search field, but **use a highlight in a list or collection.**" `.tp-map-day-tab`、entry card 都是 collection。
+
+### 標準引用更正（2026-07-26）
+
+- 有拘束力的是 **WCAG 1.4.11 Non-text Contrast（AA）** —— 焦點指示器對相鄰色 ≥3:1。
+- **不是 2.4.11** —— 2.4.11 是 "Focus Not Obscured (Minimum)"，與對比無關。
+- 「Focus Appearance」是 **2.4.13，Level AAA**，不是 AA 的硬需求。#1182 的 issue 引用過錯誤編號，寫進文件前已更正。
+
+### 待決（#1182）
+
+1. 抽出 `--color-focus-ring`，與 `--color-accent` 分家（HIG 角色分離）。
+2. 兩套慣例收斂成一套 —— 內圈用頁面底色的雙帶寫法對**任何未來填色**都成立（實測 5.35 / 7.12），是唯一不需逐個 surface 調校的解。
+3. 深色 `--color-accent` == `--color-accent-fill` 是 bug，不是設計題。
+4. 補 `@media (prefers-contrast: more)` 的加強階（HIG："supply … an increased contrast option for each variant"；本 repo 現有的 `prefers-contrast` 區塊只處理玻璃模糊與 tabbar tint，**一顆語意色與焦點色都沒碰**）。
 
 ## Accessibility
 - **Touch target:** 最小 44×44px (Apple HIG)
