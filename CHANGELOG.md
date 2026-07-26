@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.71] - 2026-07-26
+
+### Fixed
+- **從行程內地圖切換行程後，active trip 沒有跟著走（#1140 story 1–3）** —— 在 `/trip/:id/map` 的 trip switcher 換到另一條行程，接著切到聊天 tab，畫面又跳回**舊的**那條。`MapPage.pickTrip` 只 `navigate()`，**完全沒有寫回 `ActiveTripContext`**（`ChatPage` / `GlobalMapPage` / `TripsListPage` 三頁都有寫回，只有它漏了）。改成掛在 `tripId` 上的 effect 而不是塞進 `pickTrip` —— 這樣**深連結**（直接開 `/trip/X/map`）也算數，與 `GlobalMapPage` 的做法一致。
+
+### Added
+- **`tests/e2e/active-trip-continuity.spec.js`** —— #1140 的 Testing Decisions 明寫要這兩支 e2e，但一直只有 unit：
+  1. trip switcher **選另一條真的切過去**（先前 e2e 只把下拉打開給 axe 掃，掃完就結束、從沒點選）。斷言 URL 換到新行程而不是只看標題文字 —— 標題是 switcher 自己 render 的，它可以在 route 沒動的情況下就換掉文字，那是 bug 不是修好。
+  2. **切 tab 帶著同一個 active trip + 重整後仍在**。**上面那個 bug 就是這支抓到的。**
+  
+  兩條非 e2e 不可：價值都在「跨頁後狀態還在」，而 jsdom 沒有真正的導覽，render 一次就結束。
+- **`trip-title-switcher.test.tsx` 加整類守衛** —— 任何 render `<TripTitleSwitcher>` 的頁面都必須取用 `useActiveTrip()`。守的是類，不只這一次：新頁面掛上 switcher 卻忘了寫回，這裡會紅。3 個 mutation 驗過（含一個 meta：讓正則掃不到 renderer 也要紅）。
+
+### #1140 全項重驗（22 story / 10 item）
+
+程式碼裡有 `#1140 item N` 標記的都逐一查證過：item 1（行程明細 header 帳號圓圈）· 3（Day tab 比照 root tab 玻璃膠囊）· 4（桌機 `flex: 0 0 88px` 等寬 + `overflow-x` 可滑、無箭頭）· 6（手機 root font 106.25% → 1rem=17px）· 7（active trip 單一真相）· 8/9（`--nav-overlay-h` = 80px = 72 膠囊 footprint + 8 呼吸間距；膠囊實測 `padding 6×2 + min-height 46` = 58px，加 `bottom: 12px` 共佔 70px）· 10（`data-kb-open` + 膠囊滑出）。item 2（trip switcher 下拉點不開）由 `trip-title-switcher.test.tsx` 的「dropdown portal 到 body + fixed，逃離 titlebar `overflow:hidden` 裁切」鎖住 —— 那正是原 bug 的成因。item 5 已在票內撤除。
+
+**唯一的實際缺口就是上面修掉的那個**，其餘 item 都已落地並有守衛。
+
 ## [2.57.70] - 2026-07-26
 
 ### Fixed
