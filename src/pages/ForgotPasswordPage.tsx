@@ -55,8 +55,8 @@ ${AUTH_LAYOUT_STYLES}
   font-size: var(--font-size-subheadline); line-height: 1.5;
   margin-bottom: 16px;
 }
-.tp-banner-success { background: var(--color-success-bg); color: var(--color-success); }
-.tp-banner-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.tp-banner-success { background: var(--color-success-bg); color: var(--color-foreground); }
+.tp-banner-warning { background: var(--color-warning-bg); color: var(--color-foreground); }
 .tp-banner-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
 
 .tp-success-icon-circle {

@@ -149,9 +149,17 @@
 >
 > → 狀態應同時有**文字 + 形狀（glyph）+ 顏色**，不能只靠色相區分。
 >
-> ⚠️ **半透明底是不可靠的對比基礎。** `--color-success-bg` 等是 `rgba()`，疊在不同父層上會合成出不同的底（同一組 token 實測 2.35 vs 2.63）。HIG 也點名：「Consider how artwork and translucency affect nearby colors」。對照組是 `--color-destructive-bg`（**不透明** `#FDECEC`）—— 這正是為什麼全站 51 處 destructive 當文字都沒有對比問題。
+> ⚠️ **半透明底是不可靠的對比基礎。** HIG 點名：「Consider how artwork and translucency affect nearby colors」。**v2.57.69（#1176）起 `success` / `warning` / `info` / `destructive` 四個 `-bg` 在淺深兩色系都是不透明 6 碼 hex**，值＝原本的 `rgba()` 合成在頁面底色上的結果，所以最常見的那個外觀不變。
 >
-> **待對齊**：15 條語意色當文字的規則（success 8 / warning 7），其中 3 條是 `aria-hidden` 裝飾（依上方例外不動），**實際待辦 12 條** —— 追蹤於 #1176。>
+> 改的理由是半透明底疊在不同父層上會合成出不同的底 —— 同一顆 pill 在頁面底／卡片底／`accent-subtle` 列上實測 **4.60 / 4.36 / 4.12**，只有第一種過 4.5。不透明底讓「文字對比」變成一個能在 `tokens.css` 算死的數字，而不是要逐個 call-site 追父層。原本就不透明的 `--color-destructive-bg`（`#FDECEC`）是這個作法的對照組（淺色一直都沒有對比問題），現在四個都對齊它。
+>
+> **已對齊（v2.57.69 / #1176）**：11 條語意底上的文字改成 `--color-foreground`，中性字對四個 `-bg` 實測 **10.82–14.10**（先前那條「壓深語意色字」的路只有 4.59–4.60，剛好擦過門檻）。清單：`SessionsPage` `.tp-pill-current`、`LoginPage` / `ForgotPasswordPage` / `SignupPage` 的 banner、`DeveloperAppsPage` / `DeveloperAppNewPage` 的 pill、`AlertPanel` `.is-warning`（含 title）、`CollabPanel` `.tp-collab-badge-owner`。
+>
+> 4 條 `aria-hidden` 的 icon 圓底不動（`.tp-secret-icon-circle` / `.tp-success-icon-circle` / `.tp-result-icon-success` / `.tp-result-icon-error`）—— WCAG 1.4.11 把 pure decoration 列為**明文例外**，沒有門檻拘束，而且旁邊都另有標題文字承載語意。
+>
+> ⚠️ **`destructive` 當文字色是刻意保留的偏離，不是漏掉的違規。** 紅字錯誤訊息是很強的慣例，而它的底本來就不透明、實測淺色 4.85／深色 4.78 都過 4.5。但偏離的正當性完全建立在「還過 4.5」上 —— 一旦破線就要改中性字，不是再調深。已鎖在 `tests/unit/semantic-color-contrast.test.ts`。
+>
+> **執法者**：`tests/unit/semantic-color-contrast.test.ts` 守 token 層（含深色與 `prefers-contrast` 加強階，那兩者 axe 都掃不到）＋ call-site 層（掃全 `src/`，把「同族語意色當文字」判違規，含 `-deep` —— 那正是 #1176 第一版走錯的路）。15 條斷言、9 個 mutation 逐一驗過會轉紅。
 > ⚠ **兩個本規則管不到的地方**：(a) Tailwind utility —— `@theme` 會把 `--color-accent` 生成 `text-accent`，`hover:text-accent` 這種寫法不在任何 CSS 字串裡，掃 template literal 的守衛永遠看不到（`InfoSheet.tsx`、`HourlyWeather.tsx` 現有數處）。(b) `body.theme-print` 只覆寫了 `--color-accent` / `-subtle` / `-bg`，**沒有覆寫 `-text` / `-text-on-tonal` / `-deep`**，所以遷移到 `-text` 的文字在灰階列印版面裡會是暖褐色。目前 print mode 只掛在行程明細頁（`usePrintMode`），影響有限，但全庫推廣前要先補 print 的 token 覆寫。
 >
 > 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層；call-site 層目前只有 `tests/unit/trips-list-accent-text.test.ts` 守行程一覽頁一個檔，**尚無全庫執法者**。

@@ -84,7 +84,7 @@ const SCOPED_STYLES = `
   font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.tp-pill-current { background: var(--color-success-bg); color: var(--color-success); }
+.tp-pill-current { background: var(--color-success-bg); color: var(--color-foreground); }
 .tp-device-detail {
   font-size: var(--font-size-caption); color: var(--color-muted);
   margin-top: 2px;

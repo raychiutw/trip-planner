@@ -64,9 +64,13 @@ html { color-scheme: light dark; }
     --color-destructive: #C13515;
     --color-destructive-bg: #FDECEC;
     --color-success: #06A77D;
-    --color-success-bg: rgba(6, 167, 125, 0.12);
+    /* ⚠ 不透明，不要改回 rgba() —— 半透明底會跟父層合成，同一顆 pill 在頁面底／卡片底／
+     * accent-subtle 列上得到三種不同的合成色，對比也就三種（#1176 實測 4.60／4.36／4.12，
+     * 只有第一種過 4.5）。不透明底讓「文字對比」變成一個可以在 tokens.css 算死的數字。
+     * 值＝原本的半透明色合成在頁面底色上的結果，所以最常見的那個外觀不變。 */
+    --color-success-bg: #E1F1E7;
     --color-warning: #F48C06;
-    --color-warning-bg: rgba(244, 140, 6, 0.12);
+    --color-warning-bg: #FEEED8;
     /* 語意色前景變體（HIG 淺色稽核 2026-07-20）：base 值當**文字**皆不可讀 —
      * success 純底 2.98 / 淡底 2.62、warning 純底 2.37 / 淡底 2.14（AlertPanel 甚至已私下
      * 用 color-mix 手動壓暗，仍只有 4.11）。規則：**淡底上的文字用 -deep，實心填色與圓點用 base**。
@@ -80,7 +84,7 @@ html { color-scheme: light dark; }
     /* G14: info 語意色必須獨立於 accent（原本兩者都 #A97A4A 柔褐 → 資訊/連結與品牌 tint
      * 無法區分）。改 iOS systemBlue，light #007AFF。 */
     --color-info: #007AFF;
-    --color-info-bg: rgba(0, 122, 255, 0.10);
+    --color-info-bg: #E6EEF6;
     --color-disabled: #B8AC9B;
     --color-overlay: rgba(42, 31, 24, 0.35);
     --color-priority-high-bg: rgba(193, 53, 21, 0.12);
@@ -1071,16 +1075,16 @@ body.dark {
         /* G11: #E8A0A0 太淡偏粉、dark 底上不夠「危險」可辨識。改暖紅（延續 light #C13515
          * 的 red-orange hue family、非跳冷 iOS 紅），#FF6B52 on #1C1C1E ≈ 6.06:1 ✅。 */
         --color-destructive: #FF6B52;
-        --color-destructive-bg: rgba(255, 107, 82, 0.16);
+        --color-destructive-bg: #402926;
         --color-success: #7EC89A;
-        --color-success-bg: rgba(126, 200, 154, 0.15);
+        --color-success-bg: #2B3631;
         /* 深色語意前景變體：同樣需淺值（#7EC89A on #1C1C1E = 8.60 ✅）。 */
         --color-success-deep: #7EC89A;
         /* v2.33.60 round 14: warning 維持 orange (#F48C06) hue 系列，不要切 yellow
            — 之前 light/dark 跨 hue 會讓 brand 感不一致 (orange ↔ yellow 跳)。
            Dark mode 用較亮 orange (#FAA94B) 提高對比，仍同 hue family。 */
         --color-warning: #FAA94B;
-        --color-warning-bg: rgba(250, 169, 75, 0.18);
+        --color-warning-bg: #443526;
         /* 深色語意前景變體：需淺值（#FAA94B on #1C1C1E = 8.78 ✅）。 */
         --color-warning-deep: #FAA94B;
         /* Day palette「文字用」階（#1168）—— 深色底方向相反，要更**淺**不是更深。
@@ -1101,7 +1105,7 @@ body.dark {
         --day-text-10: #10B981;  /* emerald 6.71 原色不動 */
         /* G14: dark info = iOS systemBlue dark #0A84FF（獨立於 accent 柔褐）。 */
         --color-info: #0A84FF;
-        --color-info-bg: rgba(10, 132, 255, 0.18);
+        --color-info-bg: #192F46;
         --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
         --shadow-md: 0 6px 16px rgba(0,0,0,0.42);
         --shadow-lg: 0 10px 28px rgba(0,0,0,0.55);
@@ -2113,12 +2117,24 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     /* HIG Color：「supply light and dark variants, and an increased contrast option
      * for each variant」。焦點色加強到對頁面底 13.73:1（一般階是 5.35）。 */
     --color-focus-ring: #3D2610;
+    /* 語意色的加強階（#1176）。--color-success / --color-warning 都是**自訂色**（Apple 系統色
+     * 是 #34C759 / #FF8D28），所以同樣落在上面那條 HIG 要求裡。對各自的不透明底，
+     * 從一般階的 4.6–4.9 拉到 8 上下。 */
+    --color-success-deep: #04503D;   /* on #E1F1E7 → 8.08（一般階 4.60） */
+    --color-warning-deep: #6B3B00;   /* on #FEEED8 → 8.19（一般階 4.59） */
+    --color-destructive: #87240E;    /* on #FDECEC → 8.03（一般階 4.85） */
     --tabbar-tint: var(--color-background); --tabbar-filter: none;
     --blur-glass: 0px;
     --color-glass-nav: var(--color-background);
     --color-glass-toast: var(--color-secondary);
   }
-  body.dark { --color-focus-ring: #FFE8C8; --tabbar-tint: var(--color-secondary); }
+  body.dark {
+    --color-focus-ring: #FFE8C8;
+    --color-success-deep: #A8E0BE;   /* on #2B3631 → 8.40（一般階 6.34） */
+    --color-warning-deep: #FFD9A6;   /* on #443526 → 8.82（一般階 6.08） */
+    --color-destructive: #FFB9AB;    /* on #402926 → 8.18（一般階 4.78） */
+    --tabbar-tint: var(--color-secondary);
+  }
   .tp-bottom-nav, .tp-page-bottom-bar { background: var(--color-background); }
   body.dark .tp-bottom-nav, body.dark .tp-page-bottom-bar { background: var(--color-secondary); }
 }

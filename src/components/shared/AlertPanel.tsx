@@ -101,16 +101,18 @@ const SCOPED_STYLES = `
 .tp-alert-panel.is-error .tp-alert-panel-title { color: var(--color-priority-high-dot); }
 
 /* Warning variant — amber border */
+/* 中性字 —— 顏色訊號由 border-color 與下面那顆 aria-hidden 的 .tp-alert-panel-icon 承擔
+ * （DESIGN.md §語意色的角色分離：色上到底與圖形，不上到文字）。 */
 .tp-alert-panel.is-warning {
   background: var(--color-warning-bg);
   border-color: var(--color-warning);
-  color: var(--color-warning-deep);
+  color: var(--color-foreground);
 }
 .tp-alert-panel.is-warning .tp-alert-panel-icon {
   background: var(--color-warning);
   color: var(--color-accent-foreground);
 }
-.tp-alert-panel.is-warning .tp-alert-panel-title { color: var(--color-warning-deep); }
+.tp-alert-panel.is-warning .tp-alert-panel-title { color: var(--color-foreground); }
 
 /* Info variant — accent (default) */
 .tp-alert-panel.is-info {

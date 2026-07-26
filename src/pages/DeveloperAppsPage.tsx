@@ -73,8 +73,8 @@ const SCOPED_STYLES = `
   font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.tp-pill-active { background: var(--color-success-bg); color: var(--color-success); }
-.tp-pill-pending { background: var(--color-warning-bg); color: var(--color-warning); }
+.tp-pill-active { background: var(--color-success-bg); color: var(--color-foreground); }
+.tp-pill-pending { background: var(--color-warning-bg); color: var(--color-foreground); }
 .tp-pill-suspended { background: var(--color-tertiary); color: var(--color-muted); }
 
 /* .tp-btn family 移到 css/tokens.css 共用。 */

@@ -199,9 +199,9 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-subheadline); line-height: 1.5;
   margin-bottom: 16px;
 }
-.tp-banner-success { background: var(--color-success-bg); color: var(--color-success); }
+.tp-banner-success { background: var(--color-success-bg); color: var(--color-foreground); }
 .tp-banner-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
-.tp-banner-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.tp-banner-warning { background: var(--color-warning-bg); color: var(--color-foreground); }
 /* .tp-banner-info 已刪除（#1157）—— 本檔 JSX 只用 -success / -warning / -error，這條規則
  * 沒有任何使用點。它跟 SessionsPage 的同名規則是複製關係，留著只會讓下次修對比時漏改一份
  * （這些 SCOPED_STYLES 注入的是全域 <style>，同名規則會互相影響）。要用時從 SessionsPage 抄。 */

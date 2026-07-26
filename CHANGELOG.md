@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.69] - 2026-07-26
+
+### Fixed
+- **語意色當狀態標示的文字色對比不足（#1176）已修** —— 觸發點 `SessionsPage` 的「目前」pill 實測 **2.35:1**（11px/700，門檻 4.5）。修法**不是把語意色壓深**：DESIGN.md §語意色的角色分離（依 HIG 立）明文「不要同色系淡底 + 同色系深字再去調色救對比」，因為那是把一個色相同時當 fill 又當 label —— HIG Color：「**apply color to the background rather than to symbols or text**」＋「**Avoid using the same color to mean different things**」。
+- **11 條語意底上的文字改成 `--color-foreground`**：`SessionsPage` `.tp-pill-current`、`LoginPage` / `ForgotPasswordPage` / `SignupPage` 的 banner、`DeveloperAppsPage` / `DeveloperAppNewPage` 的 pill、`AlertPanel` `.is-warning`（含 title）、`CollabPanel` `.tp-collab-badge-owner`。中性字對四個 `-bg` 實測 **10.82–14.10**，而「壓深語意色字」那條路只有 4.59–4.60（剛好擦過門檻，底色日後動一點就破線）。
+- **四個 `-bg` token 在淺深兩色系都改成不透明**（`success` / `warning` / `info` / `destructive`）。半透明底會跟父層合成 —— 同一顆 pill 在頁面底／卡片底／`accent-subtle` 列上實測 **4.60 / 4.36 / 4.12**，只有第一種過關。值＝原本的 `rgba()` 合成在頁面底色上的結果，所以最常見的那個外觀不變。真瀏覽器驗過：修好後三種父層底下都是 **11.52，一模一樣**。
+- **`tests/unit/w5-glass-a11y.test.ts` 的 `mediaBlock()` 從固定 600 字元切片改成括號配對** —— 往 `prefers-contrast` 區塊多加幾行就會把 `--blur-glass` 推出視窗、斷言假紅。固定視窗只會造成假紅（斷言都是「必須存在」），但它會讓人誤以為改壞了東西。
+
+### Added
+- **`@media (prefers-contrast: more)` 的語意色加強階**（淺深各 3 顆）。HIG Color 要求自訂色「supply light and dark variants, **and an increased contrast option for each variant**」，而 `--color-success`（`#06A77D`）／`--color-warning`（`#F48C06`）**都是自訂色** —— Apple 系統色是 `#34C759` / `#FF8D28`。淺色 `#04503D` / `#6B3B00` / `#87240E`（8.03–8.19），深色 `#A8E0BE` / `#FFD9A6` / `#FFB9AB`（8.18–8.82）。
+- **`tests/unit/semantic-color-contrast.test.ts`** —— 15 條守衛：`-bg` 必須不透明（下面所有數字的前提）、中性字疊四個 `-bg` ≥4.5、`-deep` 的兩個角色、`destructive` 偏離的數字下限、加強階兩邊齊備且都更高對比、call-site 掃全 `src/` 禁止同族語意色當文字（**含 `-deep`** —— 那正是本票第一版走錯的路）、裝飾例外的 `aria-hidden` 前提。**9 個 mutation 逐一驗過會轉紅。**
+
+### Changed
+- **`a11y-axe.spec.js` 登入工作階段頁的指紋斷言 → `expectNoSeriousCritical`**。原本是 `'color-contrast | .tp-pill | 2.35'`，刻意設計成「#1176 修好時會因指紋不符轉紅」的提醒機制 —— 提醒已兌現。反向驗證過：把修復退回，axe 在真 chromium 裡確實重新報 `color-contrast | .tp-pill`。
+- **`DESIGN.md` §語意色的角色分離**：「待對齊 12 條」→ 已對齊，補上實測數字、4 條 `aria-hidden` 裝飾例外的清單、執法者位置，並修掉一個殘留的 `>` 破格。
+- **`destructive` 當文字色記錄為刻意保留的偏離**，不是漏掉的違規 —— 紅字錯誤訊息是很強的慣例，底本來就不透明、實測淺色 4.85／深色 4.78 都過 4.5。但偏離的正當性完全建立在「還過 4.5」上，已鎖進守衛：破線就要改中性字，不是再調深。
+
 ## [2.57.68] - 2026-07-26
 
 ### Fixed

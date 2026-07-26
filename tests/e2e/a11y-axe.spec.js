@@ -248,31 +248,25 @@ test('a11y: titlebar 帶文字返回鈕 hover 態無 serious/critical 違規', a
   await expectNoSeriousCritical(page, 'titlebar labeled 返回鈕 hover 態', '.tp-titlebar');
 });
 
-test('a11y: 登入工作階段頁 — 鎖住剩下那個語意色違規（待 #1176 修）', async ({ page }) => {
+test('a11y: 登入工作階段頁 — 語意色 pill 與說明文字都無對比違規', async ({ page }) => {
   // /settings/sessions 與 /account/sessions 都指向 SessionsPage，深連結時兩者都落在
   // 主 routes（sheet 那份要 background location 才會 render）。選 /settings/sessions
   // 純粹是對齊既有的 tests/e2e/settings-pages.spec.js。
   await page.goto('/settings/sessions');
   await page.waitForLoadState('networkidle');
   await page.getByTestId('sessions-row-current').waitFor({ state: 'visible' });
-  const bad = await scanSeriousCritical(page);
-  // 本頁原本兩個違規，#1157 只修掉柔褐那個：
-  //   ✅ .tp-banner-info 說明文字 —— --color-accent 疊 tonal 底 3.24 → -text-on-tonal 5.76
-  //   ❌ .tp-pill-current「目前」 —— --color-success 疊 --color-success-bg（12% alpha）再疊
-  //      父層 .tp-row-current 的 --color-accent-subtle，合成成 #D7E5D7，只有 2.35
+  // 本頁原本兩個違規，兩個都修掉了：
+  //   ✅ .tp-banner-info 說明文字（#1157）—— --color-accent 疊 tonal 底 3.24 → -text-on-tonal 5.76
+  //   ✅ .tp-pill-current「目前」（#1176）—— 原本 --color-success 疊 12% alpha 的
+  //      --color-success-bg，再疊父層 .tp-row-current 的 --color-accent-subtle，合成成
+  //      #D7E5D7 只有 2.35。修法是把 -bg 改成不透明（半透明底才會有「合成色隨父層漂移」
+  //      這回事）+ 文字改走 --color-success-deep → 4.60。
   //
-  // 為什麼 pill 不在 #1157 一起修：它不是柔褐誤用，#1156 立的通則管不到，而**既有的
-  // --color-success-deep（#07795C）在這個底上也只有 4.12，仍不到 4.5**。pill 是 11px/700
-  // 不算 large text，門檻就是 4.5。要修得先決定「加更深的變體」還是「改掉半透明底」，
-  // 而那會動到 DESIGN.md（UI/UX SoT，須先討論）。同樣的配對全 codebase 有 13 處，
-  // danger/error/info 連 -deep 都沒有 —— 整包收在 #1176。
-  //
-  // 所以這裡保留正面指紋斷言：#1176 修好時它會因指紋不符轉紅，提醒回來改成
-  // expectNoSeriousCritical。那是刻意的提醒機制，不是 bug。
-  expect(violationFingerprints(bad), '登入工作階段頁的已知違規清單變了 —— 若是 #1176 修好了，'
-    + '把這裡改成 expectNoSeriousCritical；若是冒出新違規，先查新的那個').toEqual([
-    'color-contrast | .tp-pill | 2.35',
-  ]);
+  // 這裡先前是正面指紋斷言（`'color-contrast | .tp-pill | 2.35'`），刻意設計成「#1176 修好時
+  // 會因指紋不符轉紅」的提醒機制。提醒已兌現，改回 expectNoSeriousCritical。
+  // token 層的對比由 tests/unit/semantic-color-contrast.test.ts 逐對鎖住（含深色與
+  // prefers-contrast 加強階，那兩者 axe 都掃不到）。
+  await expectNoSeriousCritical(page, '登入工作階段頁');
 });
 
 // 這一支「沒有」test.fail：#1155 預期它會紅，但實際上它是綠的。
