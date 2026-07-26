@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.67] - 2026-07-26
+
+### Fixed
+- **`DESIGN.md` 同時放著兩套互斥的焦點指示規格，已依 HIG 拍板收斂**：上一版只把矛盾**標記**成「待決」，那不叫修好。HIG Accessibility 明文「**Rely on system-provided focus effects** … create custom only if it's absolutely necessary」—— `outline` 就是系統機制本身，而 `outline: none` + 自畫 `box-shadow` 正是被勸阻的那一邊。**所以 HIG 有立場，這題不該掛待決。** §Focus Indicator 改寫成規則表：機制一律 `outline: 2px solid` + `outline-offset: 2px`，`--shadow-ring` 寫法標為**待遷移的既有債**（不是可選方案）。§Material & Effects 與 §Modal Dialogs 兩處指標同步。
+- **焦點框顏色分家**：HIG Color 的 macOS 動態系統色表把 `Keyboard focus indicator color` 與 `Control accent` 列為**兩個分開的條目**，本 repo 壓成同一顆 `--color-accent` —— 這是矛盾的根。文件已定名 `--color-focus-ring`（token 實作在 #1182）。順帶記錄深色 `--color-accent` 與 `--color-accent-fill` **是同一個 hex `#CBA06E`**，所以焦點框在深色實心鈕上字面上不存在（實測 1.00:1）。
+- **既有債數字重數**：先前寫「兩套各 15 條、B 散在 7 個元件」，實測是**各 38 條**、B 分布 22 個檔、**8 個檔同時用兩套**（沒有分工規則，是歷史漂移）。
+- **`aria-hidden` 純裝飾的合規框架講反了**，4 處已更正（`trips-list-accent-text.test.ts` ×2、`tokens-css.test.ts`、`EmailVerifyPendingPage.tsx`）：原本寫「依 WCAG 1.4.11，門檻是 3:1 而非 4.5:1」，但 1.4.11 把 pure decoration 列為**明文例外**、根本不適用 —— 3:1 是**自訂下限**。改寫後這個下限反而更站得住：它是「圖示哪天不再是裝飾」時唯一的緩衝（那時 1.4.11 真的適用、門檻正好 3:1，而現值只有 3.24）。**只動註解，斷言一行未改。**
+- **§Accessibility 的對比規則從「一律 4.5:1」改成門檻表**（`≤17pt` 4.5 / `18pt` 3 / **任何尺寸 Bold 3**）。一律 4.5 會把大字與 Bold 誤判成不合格 —— 那正是 #1176 的事故機制（11px **Bold** 的門檻其實是 3:1，卻被當成 4.5 不合格而推導出要新造 token）。
+- **新增 increased contrast 條並記錄落差**：HIG Color 要求自訂色「supply light and dark variants, **and an increased contrast option for each variant**」。實測 `tokens.css` 的 `prefers-contrast: more` 區塊**只處理玻璃模糊與 tabbar tint，一顆語意色、一個焦點色都沒碰**，而 `--color-success` / `--color-warning` 都是自訂色（非 Apple 系統色）。追蹤於 #1176。
+- **`.claude/skills/design-review/SKILL.md` 的 large text 門檻寫成 `18px+`**，會把 18–23px 的一般文字誤判成合格 —— WCAG 是 **18pt（≈24px）或 14pt bold**。同處補上「純裝飾不適用任何門檻」。
+
+### Changed
+- **色值與現況校正**（權威是 `css/tokens.css`，文件是衍生）：§Semantic Colors 表 5 個錯誤 hex（`warning` 淺深、`info` 淺深、`destructive` 深）；dark `muted` 三個文件值 `#B89E84` / `#B5A08A` 統一為實際的 `#A1A1A6`；`error-bg` 從誤記的半透明 `rgba()` 改回實際的不透明 `#FDECEC`（這個差別是有意義的 —— §語意色的角色分離正是拿它當對照組）。
+- **`README.md` 桌機 shell 尺寸過期**：`240px` + `min(780px, 40vw)` → 實際是 `--grid-3pane-desktop: 216px 1fr 1fr`；「TitleBar action 全 icon-only」已被 **W3（2026-07-24）推翻**，桌機現在是 icon + 文字 label。`TitleBarPrimaryAction.tsx` 的同一個過期說法一併更正。
+- **`docs/plans/apple-hig-compliance/spec.md` 的 gap 清單時態**：那些清單寫在 W0–W15 收官**前**，時態是當時的現況。逐條回驗後，已收的用刪除線標掉並註明是哪張 W 票收的（帳號 tab→header 圓圈 W1、chevron 文字字元、marker/safe-area W10、時間選擇器 24h W11、整頁 reload W14），還開著的補上實測證據（橫向 inset 全站僅 1 處、px font-size 仍 68 處、Google zoom 鈕未套樣式）。並在檔頭註明 W5 保留玻璃膠囊、W8 保留 Enter 送出是 **owner 拍板與 HIG 相反的刻意保留**，不是未完成。
+
 ## [2.57.66] - 2026-07-26
 
 ### Fixed

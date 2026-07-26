@@ -202,9 +202,10 @@ describe('tokens.css', () => {
         expect(contrastRatio(accentText, getColor(lightBlock, 'hover'))).toBeGreaterThanOrEqual(AA_NORMAL);
       });
 
-      // #1156：DESIGN.md §Color Approach 允許「aria-hidden 純裝飾圖示」繼續用 --color-accent，
-      // 依 WCAG 1.4.11 走 3:1 而非 4.5。那個例外的**全部**正當性就是這個數字（現值 3.24，
-      // 只剩 0.24 餘裕），但它原本沒有任何一層守著 —— call-site 守衛把那兩條規則放進白名單
+      // #1156：DESIGN.md §Color Approach 允許「aria-hidden 純裝飾圖示」繼續用 --color-accent。
+      // WCAG 1.4.11 對 pure decoration 是**明文例外**，所以這個 3:1 是自訂下限、不是法規門檻 ——
+      // 但它是「圖示哪天不再是裝飾」時唯一的緩衝（那時 1.4.11 真的適用、門檻正好 3:1）。
+      // 現值 3.24、只剩 0.24 餘裕，而原本沒有任何一層守著 —— call-site 守衛把那兩條規則放進白名單
       // 直接放行、axe 對 aria-hidden 與單字元都看不到。把 subtle 調亮一階就會靜默破線。
       it('accent / accent-subtle ≥ 3（裝飾圖示 3:1 例外的前提）', () => {
         expect(contrastRatio(getColor(lightBlock, 'accent'), accentSubtle)).toBeGreaterThanOrEqual(AA_LARGE);

@@ -8,9 +8,11 @@ import Icon from '../shared/Icon';
  * EntryActionPage / DeveloperAppNewPage). Single source for testid + busy state +
  * aria-label conventions.
  *
- * Visual: rounded-rect (radius-md), accent filled, icon-only (v2.31.90+).
- * Label hidden 全 viewport via `.tp-titlebar-action-label { display: none }`，
- * hover tooltip (title attr) 補語意。See DESIGN.md "Page Titlebar > Action button" + mockup S23.
+ * Visual: rounded-rect (radius-md), accent filled。
+ * **桌機 icon + 可見文字 label，手機（≤760px）才 icon-only** —— W3（owner 2026-07-24）推翻了
+ * v2.31.90 的「全 viewport icon-only」，理由是 HIG header 慣例要求動作鈕帶文字。
+ * 規則在 `css/tokens.css` 的 `.tp-titlebar-action-label`；hover tooltip (title attr) 兩邊都保留。
+ * See DESIGN.md "Page Titlebar > Action button"。（mockup 流程已於 2026-07-23 退役，S23 不再是 SoT。）
  */
 export interface TitleBarPrimaryActionProps {
   /** Icon name from src/components/shared/Icon registry. Default: 'check'. */

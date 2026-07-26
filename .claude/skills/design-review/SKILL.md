@@ -648,7 +648,9 @@ Apply these at each page. Each finding gets an impact rating (high/medium/polish
 
 **3. Color & Contrast** (10 items)
 - Palette coherent (<=12 unique non-gray colors)
-- WCAG AA: body text 4.5:1, large text (18px+) 3:1, UI components 3:1
+- WCAG AA: body text 4.5:1, large text 3:1, UI components 3:1
+  - ⚠️ 「large text」是 **18pt（≈24px）或 14pt bold（≈18.7px bold）**，不是 18px —— 寫 18px 會把 18–23px 的一般文字誤判成合格。Apple HIG 的表更寬：`18pt` 全部 3、**任何尺寸的 Bold 都是 3**。
+  - ⚠️ 純裝飾（`aria-hidden` 且旁邊有文字標籤）是 1.4.11 的**明文例外**，不適用任何門檻 —— 別拿 3:1 去要求它。
 - Semantic colors consistent (success=green, error=red, warning=yellow/amber)
 - No color-only encoding (always add labels, icons, or patterns)
 - Dark mode: surfaces use elevation, not just lightness inversion
