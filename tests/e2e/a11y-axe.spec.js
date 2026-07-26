@@ -348,3 +348,40 @@ test('a11y: 帳號 sheet（帳號圓圈開啟）無 serious/critical axe 違規'
   ).toBeVisible();
   await expectNoSeriousCritical(page, '帳號 sheet');
 });
+
+test('a11y: 帳號 sheet 的焦點真的關在裡面（aria-modal 不是空頭承諾）', async ({ page }) => {
+  // #1150 story 6。`aria-modal="true"` 是對輔助技術的承諾：這層外面的內容是 inert 的。
+  // 瀏覽器不會替你實現 —— 沒有 Tab 攔截，鍵盤使用者一路 Tab 就會走到被遮住的頁面上，
+  // 而螢幕閱讀器已經照 aria-modal 把那些藏起來了。宣告了卻沒做，比不宣告更糟。
+  //
+  // AccountSheet 原本只有一個 window keydown 監聽 Escape，沒有 trap（v2.57.70 修）。
+  // 這條放 e2e 而不是 unit：jsdom 不做真正的 sequential focus navigation，按 Tab 焦點
+  // 根本不會動 —— 在那裡寫這條測試會恆綠。
+  await page.goto('/trips');
+  await page.waitForLoadState('networkidle');
+  const trigger = page
+    .getByTestId('titlebar-account')
+    .or(page.getByTestId('sidebar-account-card'))
+    .filter({ visible: true });
+  await expect(trigger, '帳號入口在當前 viewport 應恰好一顆可見').toHaveCount(1);
+  await trigger.click();
+  const sheet = page.getByRole('dialog', { name: '帳號' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByTestId('account-page')).toBeVisible();
+
+  // Tab 走足夠多次以繞完整個 sheet 一圈以上；每一步焦點都必須還在 sheet 裡。
+  // 次數取得比 sheet 內可聚焦元素多，才會真的撞到「最後一個 → 回到第一個」那個環。
+  const insideCount = await sheet.locator(
+    'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+  ).count();
+  expect(insideCount, 'sheet 裡應該有可聚焦元素，否則下面的迴圈驗不到東西').toBeGreaterThan(1);
+
+  for (let i = 0; i < insideCount + 3; i++) {
+    await page.keyboard.press('Tab');
+    const stillInside = await page.evaluate(() => {
+      const dialog = document.querySelector('[role="dialog"][aria-modal="true"]');
+      return dialog ? dialog.contains(document.activeElement) : false;
+    });
+    expect(stillInside, `第 ${i + 1} 次 Tab 後焦點跑出 sheet 外了`).toBe(true);
+  }
+});

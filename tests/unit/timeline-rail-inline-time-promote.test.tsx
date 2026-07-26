@@ -79,8 +79,12 @@ describe('TimelineRail — inline 改時間 + 備選升正選', () => {
     // popup portal 到 body — 用 role/aria-label 找
     const dialog = screen.getByRole('dialog', { name: '起訖時間' });
     expect(dialog).toBeTruthy();
-    // a11y：dialog 標記 aria-modal（SR 宣告為模態）
-    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    // a11y（#1150 story 6，2026-07-26 更正）：這裡**不該**有 aria-modal。
+    // 它是錨定在 chip 旁的 popover —— 沒有 backdrop、底下的時間軸完全可見可互動、
+    // 點外面會關閉並存檔。`aria-modal="true"` 對輔助技術的意思是「這層外面是 inert 的」，
+    // 這裡不是，宣告了就是假宣稱（SR 會把實際上還能用的內容藏起來）。
+    // 本測試原本斷言 aria-modal='true'，那把錯的宣稱鎖住了。
+    expect(dialog.getAttribute('aria-modal'), '非模態 popover 不該宣告 aria-modal').toBeNull();
     expect(screen.getByLabelText('抵達時間')).toBeTruthy();
     expect(screen.getByLabelText('離開時間')).toBeTruthy();
     expect(screen.getByText('完成')).toBeTruthy();

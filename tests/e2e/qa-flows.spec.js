@@ -9,7 +9,9 @@
  * 3. 搜尋景點加入收藏 (ExplorePage)
  *    搜尋 → 點 heart → POST /api/poi-favorites → saved view 出現
  * 4. 移除收藏 (ExplorePage saved view)
- *    切到收藏 → 勾選 → 刪除 → ConfirmModal → DELETE /api/poi-favorites/:id
+ *    切到收藏 → 勾選 → 移除 → ConfirmModal → DELETE /api/poi-favorites/:id
+ *    （UI 動詞是「移除」—— 解除的是 poi_favorites 關聯，POI 仍在 universal pool；#1187。
+ *     HTTP method 仍是 DELETE，testid 也仍是 favorites-delete-selected。）
  *
  * 依賴 tests/e2e/api-mocks.js 的 setupApiMocks (含 POST /api/trips mock)
  *
@@ -137,7 +139,7 @@ test.describe('QA Flow 3 — 搜尋景點加入收藏', () => {
 });
 
 test.describe('QA Flow 4 — 移除收藏 (v2.22.0 PoiFavoritesPage)', () => {
-  test('/favorites 勾選 → 刪除 → ConfirmModal 確認 → DELETE /api/poi-favorites/:id', async ({ page }) => {
+  test('/favorites 勾選 → 移除 → ConfirmModal 確認 → DELETE /api/poi-favorites/:id', async ({ page }) => {
     /** @type {string[]} */
     const deletes = [];
     page.on('request', (req) => {
@@ -164,7 +166,8 @@ test.describe('QA Flow 4 — 移除收藏 (v2.22.0 PoiFavoritesPage)', () => {
     const firstCheck = page.locator('[data-testid^="favorites-check-"]').first();
     await firstCheck.check();
 
-    // toolbar 出現「刪除」 button
+    // toolbar 出現「移除」button（本測試只認 testid，不綁文案 —— 文案守衛在
+    // tests/unit/favorites-remove-verb.test.ts）
     const deleteBtn = page.getByTestId('favorites-delete-selected');
     await expect(deleteBtn).toBeEnabled();
     await deleteBtn.click();

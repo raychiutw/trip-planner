@@ -1866,7 +1866,7 @@ export default function EditEntryPage() {
                           <button
                             type="button"
                             className="alt-delete"
-                            aria-label={`刪除 ${alt.name}`}
+                            aria-label={`移除備選 ${alt.name}`}
                             disabled={altPending != null}
                             onClick={() => handleRemoveAlternate(alt)}
                             data-testid={`edit-entry-alt-delete-${alt.poiId}`}

@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.70] - 2026-07-26
+
+### Fixed
+- **三個 `aria-modal="true"` 的覆蓋層沒有 focus trap（#1150 story 6）** —— 那個屬性是對輔助技術的**承諾**（這層外面的內容是 inert 的），瀏覽器不會替你實現：鍵盤使用者一路 Tab 就會走到被遮住的內容上，而螢幕閱讀器已經照屬性把那些藏起來了。**宣告了卻沒做，比不宣告更糟。**
+  - `AccountSheet` —— 原本只有一個 window keydown 監聽 Escape。改接 `useSheetBehavior`，順帶修掉一個副作用：原本的 window 監聽會讓 sheet 內開的確認框按 Escape 時**連 sheet 一起關掉**（引擎有 `isTopSheet` gate）。
+  - `DeveloperAppNewPage` 的 secret modal —— 接引擎並帶 `canDismiss: false`（`client_secret` 是 server 回應的一次性 state，一個誤按的 Escape 就永久丟失）。初始焦點刻意留在 panel 而非確認鈕 —— 一開就聚焦確認鈕的話，順手一個 Enter 會在使用者複製到 secret 之前關掉它。同時把 `role="dialog"` 從 backdrop 移到 panel 並補 `aria-label`（原本這個 dialog 沒有可及名稱）。
+  - `TimelineRail` 的時間 popover —— **移除** `aria-modal`。它是錨定在 chip 旁的 popover：沒有 backdrop、底下時間軸完全可見可互動、點外面會關閉存檔。那個宣告是假的，正解是拿掉而不是硬加 trap。既有測試原本斷言 `aria-modal='true'`，把錯的宣稱鎖住了，一併更正。
+- **收藏／備選的動作文案改「移除」（#1187）** —— `DESIGN.md` §Desktop CRUD Interaction 的動詞條款：移除＝解除關聯不銷毀資料，刪除＝真正銷毀。收藏解除的是 `poi_favorites` 關聯，**底層 POI 仍在 universal pool**；寫「刪除」會讓使用者以為 POI 被毀掉而不敢用。改了批次動作鈕、三則 toast、確認框標題與確認鈕，訊息也補上語意說明。備選的移除鈕 `aria-label` 原本寫「刪除」、與它自己的確認框「移除備選」不一致，一併對齊。
+  - **確認框保留**（owner 2026-07-26 維持 W12：收藏移除照舊跳確認、無 undo）。動詞條款與 undo 是兩件事，兩者並存不矛盾 —— 守衛裡有一條專門鎖住「確認框還在」。
+  - **不改的**：「刪除整個停留點」是真的銷毀 `trip_entries` row，動詞正確；testid `favorites-delete-selected` 刻意不改名（unit + e2e 都在用）。
+
+### Added
+- **`tests/unit/aria-modal-focus-trap.test.ts`** —— `aria-modal` ⇔ 引擎的雙向守衛，含一條「拿了 `handlePanelKeyDown` 卻沒掛到 `onKeyDown`」（那種寫法 grep 看起來合規、實際上 Tab 照樣跑出去）。5 個 mutation 驗過會轉紅。
+- **`tests/e2e/a11y-axe.spec.js`：「帳號 sheet 的焦點真的關在裡面」** —— 真瀏覽器逐次 Tab、每步斷言焦點仍在 dialog 內。**這條不能寫在 unit**：jsdom 不做 sequential focus navigation，按 Tab 焦點根本不會動，寫在那裡會恆綠。反向驗過：拿掉 `onKeyDown` → 第 11 次 Tab 焦點跑出去、測試轉紅。
+- **`tests/unit/favorites-remove-verb.test.ts`** —— 動詞守衛，7 個 mutation 驗過，含兩個反向情境（「確認框被拿掉」、「刪除停留點被誤改成移除」）。
+
+### Changed
+- **`DESIGN.md` §統一行為引擎**：立下「`aria-modal="true"` ⇔ 必須接引擎」的雙向規則表，並記錄三處修正。這條與同節既有的「桌機操作面板不接引擎」（#1166）一致 —— 那裡的第 3 點正是「focus trap 對非模態表面是錯的」，所以非模態表面本來就不該宣告 `aria-modal`。
+- **`DESIGN.md` §Desktop CRUD Interaction 動詞條款**：「現況 UI 仍寫刪除、待對齊」→ 已對齊，並列出不改的兩項與其理由。
+
+### 過程紀錄
+- 守衛第一版有兩個誤判／弱點，都是 mutation 抓到的：(a) 只比對 `onKeyDown={handlePanelKeyDown}` 字面，把 `EditTripPage` 用 destructuring 改名（`handlePanelKeyDown: shiftPanelKeyDown`）的正確寫法誤判成違規；(b) 用 `includes('useSheetBehavior')` 判斷有沒有接引擎 —— **一個留著沒用的 import 就能讓守衛通過**，改成比對呼叫 `useSheetBehavior(`。
+
 ## [2.57.69] - 2026-07-26
 
 ### Fixed

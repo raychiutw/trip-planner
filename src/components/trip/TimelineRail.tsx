@@ -810,7 +810,11 @@ function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
             if (e.key === 'Escape') { e.stopPropagation(); closeAndSave(); chipRef.current?.focus(); }
           }}
           role="dialog"
-          aria-modal="true"
+          /* ⚠ 刻意**不加** aria-modal（#1150 story 6）。它是錨定在 chip 旁的 popover：
+           * 沒有 backdrop、底下內容完全可見可互動、點外面會關閉並存檔（見上方 outside-click）。
+           * `aria-modal="true"` 對輔助技術的意思是「這層外面的東西是 inert 的」—— 這裡不是，
+           * 宣告了就是假宣稱（螢幕閱讀器會把實際上還能用的內容藏起來）。
+           * 非模態的正確收尾本來就已經有了：Escape 關閉存檔 + 焦點歸還 chip。 */
           aria-label="起訖時間"
           tabIndex={-1}
         >
