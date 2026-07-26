@@ -157,6 +157,59 @@ describe('#1168 — --day-text-* token 值本身達標（淺／深兩套）', ()
   });
 });
 
+describe('#1168 — --day-text-* 不得放進 @theme（會被 tree-shake 掉）', () => {
+  /**
+   * 🔴 v2.57.56 上線後在 **production 產物**實測發現：淺色那組 10 個只有 3 個活著。
+   *
+   * 機制：Tailwind 4 會掃描原始檔決定 `@theme` 裡哪些變數要保留，掃不到的直接 tree-shake。
+   * 而 `dayTextColor()` 是用 `var(--day-text-${n})` **動態組名字**，掃描器看不到。
+   * 存活的 1/4/5 恰好是測試檔裡剛好寫死 `var(--day-text-1|4|5)` 字面值的那三個 —— 也就是說
+   * 「哪些顏色能上線」取決於測試檔碰巧提到哪幾個，其餘 7 個在 prod 根本不存在。
+   * 深色那組全程完整，因為它在 plain `body.dark {}` 裡、不受 @theme 影響。
+   *
+   * ⚠ **本檔上面那些對比斷言讀的是原始碼，所以它們全綠、而出貨的東西是壞的。**
+   * 這一條就是補那個洞：鎖住「宣告位置」，因為位置才是決定它會不會上線的東西。
+   */
+  it('淺色那組宣告在 plain :root，不在 @theme 區塊內', () => {
+    const themeStart = TOKENS.indexOf('@theme');
+    expect(themeStart, 'tokens.css 找不到 @theme —— 本守衛的前提變了').toBeGreaterThan(-1);
+    // @theme 區塊的結尾：從 @theme 起算第一個「行首單獨的 }」。
+    const rel = TOKENS.slice(themeStart).search(/\n\}/);
+    expect(rel, '找不到 @theme 的收尾').toBeGreaterThan(-1);
+    const themeBlock = TOKENS.slice(themeStart, themeStart + rel);
+
+    const inTheme = [...themeBlock.matchAll(/--day-text-(\d+):/g)].map((m) => m[1]);
+    expect(
+      inTheme,
+      `--day-text-${inTheme.join(',')} 被放回 @theme 了。Tailwind 會把「原始碼裡沒有字面 `
+        + `var(--day-text-N)」的那些 tree-shake 掉，而 dayTextColor() 是動態組名字 → `
+        + `它們不會出現在 production 的 CSS 裡。放 plain :root。`,
+    ).toEqual([]);
+  });
+
+  it('凡是名字由 JS 動態組出來的 CSS 變數，都不該進 @theme', () => {
+    // 把教訓一般化：src/ 裡任何 `var(--x-${...})` 的前綴都不能在 @theme 裡宣告。
+    const dynamicPrefixes = new Set<string>();
+    for (const f of ['src/lib/dayPalette.ts']) {
+      const src = readFileSync(resolve(__dirname, '../..', f), 'utf8');
+      for (const m of src.matchAll(/var\(--([a-z0-9-]+?)-\$\{/g)) dynamicPrefixes.add(m[1]);
+    }
+    expect(dynamicPrefixes.size, '沒掃到任何動態變數名 —— 守衛條件失效或 dayPalette 改寫了').toBeGreaterThan(0);
+
+    const themeStart = TOKENS.indexOf('@theme');
+    const rel = TOKENS.slice(themeStart).search(/\n\}/);
+    // ⚠ 必須剝註解再比對：@theme 裡刻意留了一句路標註解提到 --day-text-1..10（告訴後人
+    // 不要把它們搬回來），不剝掉就會拿那句說明當違規。第一版正是這樣假紅的。
+    const themeBlock = TOKENS.slice(themeStart, themeStart + rel).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const prefix of dynamicPrefixes) {
+      expect(
+        themeBlock.includes(`--${prefix}-`),
+        `--${prefix}-* 的名字是 JS 動態組的，但它宣告在 @theme 裡 → 會被 tree-shake`,
+      ).toBe(false);
+    }
+  });
+});
+
 describe('#1168 — day tab eyebrow 不得用 opacity 稀釋對比', () => {
   // 原本 .tp-map-day-tab-eyebrow 是 `opacity: 0.7`，把繼承來的 --color-muted 稀釋到
   // 3.25:1。那不是挑錯 token，是用 opacity 當視覺層級 —— axe 量的是合成後的顏色，
