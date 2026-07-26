@@ -136,3 +136,44 @@ describe('舊的 icon 切換器已移除', () => {
     });
   }
 });
+
+describe('#1140 story 1–3：render switcher 的頁面都要把 active trip 寫回 context', () => {
+  /*
+   * MapPage 原本**完全沒有寫回** —— 它的 `pickTrip` 只 navigate。於是從行程內地圖的
+   * switcher 換行程後，切到聊天／地圖 tab 又跳回舊的那條（v2.57.71 修）。
+   * ChatPage / TripsListPage 都有寫回，只有它漏了。
+   *
+   * 這條守的是**整類**：新頁面掛上 switcher 時如果忘了寫回，這裡會紅。
+   * 行為層（換頁後狀態還在）由 `tests/e2e/active-trip-continuity.spec.js` 驗 ——
+   * jsdom 沒有真正的導覽，unit 驗不到「切 tab 後還在」。
+   */
+  const { readFileSync, readdirSync, statSync } = require('node:fs');
+  const { join } = require('node:path');
+  const root = join(__dirname, '../..');
+
+  const walk = (dir, out = []) => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p, out);
+      else if (/\.tsx$/.test(p)) out.push(p);
+    }
+    return out;
+  };
+
+  // 剝註解 —— 本檔的說明與 TripStackLayout 的註解都提到 TripTitleSwitcher，不剝會誤判
+  const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  const renderers = walk(join(root, 'src'))
+    .map((f) => ({ file: f.slice(root.length + 1), src: strip(readFileSync(f, 'utf8')) }))
+    .filter((f) => !f.file.endsWith('TripTitleSwitcher.tsx'))
+    .filter((f) => /<TripTitleSwitcher[\s/>]/.test(f.src));
+
+  it('掃到的 renderer 數量合理（守衛沒有掃空）', () => {
+    expect(renderers.length, '沒掃到任何 render switcher 的頁面，正則可能失效').toBeGreaterThan(2);
+  });
+
+  it('每個 renderer 都取用 useActiveTrip', () => {
+    const offenders = renderers.filter((f) => !/useActiveTrip\s*\(/.test(f.src)).map((f) => f.file);
+    expect(offenders, '掛了 trip switcher 就要把選到的行程寫回 ActiveTripContext，否則切 tab 會跳回舊的').toEqual([]);
+  });
+});

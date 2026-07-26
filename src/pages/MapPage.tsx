@@ -25,6 +25,7 @@ import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'rea
 import { lazyWithRetry } from '../lib/lazyWithRetry';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTripContext } from '../contexts/TripContext';
+import { useActiveTrip } from '../contexts/ActiveTripContext';
 import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hooks/useMapData';
 import { apiFetch } from '../lib/apiClient';
 import { dayColor, dayTextColor } from '../lib/dayPalette';
@@ -269,6 +270,24 @@ export default function MapPage() {
     if (newTripId === tripId) return;
     navigate(`/trip/${encodeURIComponent(newTripId)}/map`);
   }, [tripId, navigate]);
+
+  /*
+   * #1140 story 1–3：把「現在正在看哪條行程」寫回 ActiveTripContext（內部 persist
+   * localStorage `trip-pref`）。
+   *
+   * 這頁**原本完全沒有寫回** —— `pickTrip` 只 navigate。於是從行程內地圖的 switcher 換
+   * 行程後，切到聊天／地圖 tab 又跳回舊的那條（e2e
+   * `active-trip-continuity.spec.js` 抓到）。ChatPage / GlobalMapPage / TripsListPage
+   * 三頁都有寫回，只有這頁漏了。
+   *
+   * 掛在 `tripId` 上而不是塞進 `pickTrip`，這樣**深連結**（直接開 /trip/X/map）也算數 ——
+   * 使用者現在看的就是 X，下一個 tab 應該跟著 X。與 GlobalMapPage 的做法一致。
+   * `setActiveTrip` 是 context 裡的 useCallback（空 deps），不會讓 effect 反覆觸發。
+   */
+  const { setActiveTrip } = useActiveTrip();
+  useEffect(() => {
+    if (tripId) setActiveTrip(tripId);
+  }, [tripId, setActiveTrip]);
 
   const urlEntryId = entryIdStr ? Number(entryIdStr) : null;
 
