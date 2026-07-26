@@ -756,7 +756,11 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-share-page.html`（Variant B�
 >
 > ⚠️ **後端仍有 soft-delete（`deleted_at` tombstone、migration `0087`）**，但那是給「重新收藏時 dedupe／保留原 id」用的內部機制，**不是使用者可見的 restore**。看到 tombstone 不要推論成「已經支援復原」。
 >
-> ⚠️ **動詞條款不受本裁決影響**：上面「收藏 MUST 用『移除』而非『刪除』」與 undo 無關 —— 它講的是「不銷毀底層資料」，現況 UI 仍寫「刪除」屬待對齊項（追蹤於 #1187）。
+> ⚠️ **動詞條款不受本裁決影響**：上面「收藏 MUST 用『移除』而非『刪除』」與 undo 無關 —— 它講的是「不銷毀底層資料」，跟「事後能不能反悔」是兩件事，兩者並存不矛盾。
+>
+> **已對齊（v2.57.70 / #1187）**：收藏頁的批次動作鈕、三則 toast、確認框標題與確認鈕全部改「移除」，確認框本身**保留**（W12 維持）。確認框訊息也補上語意說明 ——「景點本身不會被刪除，之後仍可從搜尋或探索再次收藏；但這次移除無法復原」。備選的移除鈕 `aria-label` 原本寫「刪除」、與它自己的確認框「移除備選」不一致，一併對齊。
+>
+> **不改的**：「刪除整個停留點」是**真的**銷毀 `trip_entries` row，動詞正確；testid `favorites-delete-selected` 刻意不改名（unit + e2e 都在用，改名要 grep 全庫）。守衛在 `tests/unit/favorites-remove-verb.test.ts`（7 個 mutation 逐一驗過會轉紅，含「確認框被拿掉」與「刪除停留點被誤改成移除」兩個反向情境）。
 
 Alert（不可逆）MUST 具備三件事：
 
@@ -804,7 +808,22 @@ Alert（不可逆）MUST 具備三件事：
   - 因此 **`useSheetBehavior` 的 `modal` option 屬「保留能力、目前零消費者」**（全 src 無 `modal: false` 呼叫；2026-07-18 收斂計畫裡本來要承載它的 `FormPanel` wrapper 從未被建）。留著不是遺留待辦，是刻意保留的擴充點 —— 不要因為「沒人用」就把它清掉。現行行為由 `tests/unit/operation-shell.test.tsx` 的三條守衛鎖住。
 - **Escape**：`isComposing` 略過（IME）、`isTopSheet` gate（巢狀只關最上層）、`canDismiss:false` 鎖（busy 送出中，如 AiConsent）。listener 在 `document`。
 - **focus**：`initialFocusRef` 指定開啟焦點（**破壞性 ConfirmModal 預設焦點在安全／取消鈕、非確認鈕** —— W12 刪除政策／HIG「破壞性動作預設聚焦安全選項」）、focus-trap（Tab）、focus-restore。
-- 已收斂：ConfirmModal（16 consumer 零改）/ InputModal / ConflictModal / AiConsentSheet / InfoSheet / EditTrip 平移日期 modal。**例外**：DeveloperApp secret reveal（DESIGN.md 允許的 critical-attention modal，刻意不可 dismiss）、anchored menu/popover（不同 pattern）。
+- 已收斂：ConfirmModal（16 consumer 零改）/ InputModal / ConflictModal / AiConsentSheet / InfoSheet / EditTrip 平移日期 modal / **AccountSheet**（v2.57.70）/ **DeveloperApp secret reveal**（v2.57.70，帶 `canDismiss:false`）。**例外**：anchored menu/popover（不同 pattern，見下條）。
+
+**規則：`aria-modal="true"` ⇔ 必須接引擎（#1150 story 6，v2.57.70 立）**
+
+`aria-modal="true"` 是對輔助技術的**承諾** —— 這層外面的內容是 inert 的。**瀏覽器不會替你實現它**：沒有 Tab 攔截，鍵盤使用者一路 Tab 就會走到被遮住的內容上，而螢幕閱讀器已經照這個屬性把那些藏起來了。**宣告了卻沒做，比不宣告更糟。**
+
+所以這是雙向的：
+
+| 表面 | `aria-modal` | 引擎 |
+|---|---|---|
+| 真模態（有 backdrop、外面不可互動） | ✅ 宣告 | ✅ 必接（含把 `handlePanelKeyDown` 掛上 `onKeyDown`） |
+| 非模態（錨定 popover、桌機操作面板） | ❌ **不要宣告** | ❌ 不接（focus trap 對非模態是錯的，見上方 #1166 第 3 點） |
+
+v2.57.70 依此修了三處：`AccountSheet`（宣告了但只有一個 window Escape 監聽、沒有 trap）、`DeveloperAppNewPage` 的 secret modal（同上；`canDismiss:false` 因為 secret 是一次性、誤按 Escape 就永久丟失）、`TimelineRail` 的時間 popover（**移除** `aria-modal` —— 它沒有 backdrop、底下時間軸完全可見可互動、點外面會關閉存檔，那個宣告是假的）。
+
+守衛：`tests/unit/aria-modal-focus-trap.test.ts`（結構性條件，5 個 mutation 驗過）＋ `tests/e2e/a11y-axe.spec.js` 的「帳號 sheet 的焦點真的關在裡面」（真瀏覽器逐次 Tab，jsdom 做不到 —— 它不做 sequential focus navigation，寫在 unit 會恆綠）。
 
 **固定高度 sheet 不放 resize grabber**（AiConsent 已移除裝飾 grip）；可 resize 才放（InfoSheet 兩段 detent）。
 巢狀 modal 疊放靠 portal DOM 順序，不用 z-index layer。

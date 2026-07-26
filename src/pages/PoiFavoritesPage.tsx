@@ -7,7 +7,9 @@
  *   - 8-state matrix: loading / empty-pool / filter-no-results / error / data /
  *                     optimistic-delete / bulk-action-busy / pagination
  *   - region pill row + type filter row：role="group" + aria-pressed (NOT tablist)
- *   - batch flow delete-only (DUC1 sign-off)：toolbar 只「全選 / 取消 / 刪除」，
+ *   - batch flow delete-only (DUC1 sign-off)：toolbar 只「全選 / 取消 / 移除」，
+ *     ⚠ 使用者可見文案一律「移除」不用「刪除」（#1187）—— 收藏解除的是 poi_favorites 的
+ *     關聯，底層 POI 仍在 universal pool。testid `favorites-delete-selected` 刻意不改名。
  *     per-card「加入行程 →」link 為唯一 add-to-trip 入口
  *   - viewport breakpoints: ≥1024 3-col / 640-1023 2-col / <430 1-col
  *   - a11y: aria-pressed / aria-label per row checkbox / aria-live on optimistic
@@ -429,11 +431,11 @@ export default function PoiFavoritesPage() {
       );
       const failed = results.filter((r) => !r.ok);
       if (failed.length === 0) {
-        showToast(`已刪除 ${ids.length} 個收藏`, 'success', 2400);
+        showToast(`已移除 ${ids.length} 個收藏`, 'success', 2400);
       } else if (failed.length < ids.length) {
-        showToast(`已刪除 ${ids.length - failed.length} 個，${failed.length} 個失敗`, 'error', 3000);
+        showToast(`已移除 ${ids.length - failed.length} 個，${failed.length} 個失敗`, 'error', 3000);
       } else {
-        showToast('刪除失敗，請稍後再試', 'error', 3000);
+        showToast('移除失敗，請稍後再試', 'error', 3000);
       }
       await loadFavorites();
     } finally {
@@ -610,7 +612,7 @@ export default function PoiFavoritesPage() {
                     disabled={deletingSelected}
                     data-testid="favorites-delete-selected"
                   >
-                    {deletingSelected ? '刪除中…' : '刪除'}
+                    {deletingSelected ? '移除中…' : '移除'}
                   </button>
                 </div>
               </div>
@@ -738,9 +740,9 @@ export default function PoiFavoritesPage() {
 
       <ConfirmModal
         open={deleteConfirmOpen}
-        title="確定刪除收藏？"
-        message={`即將刪除 ${selectedIds.size} 個收藏景點，此操作無法復原。`}
-        confirmLabel="刪除"
+        title="確定移除收藏？"
+        message={`即將從收藏移除 ${selectedIds.size} 個景點。景點本身不會被刪除，之後仍可從搜尋或探索再次收藏；但這次移除無法復原。`}
+        confirmLabel="移除"
         busy={deletingSelected}
         onConfirm={handleDeleteSelected}
         onCancel={() => setDeleteConfirmOpen(false)}

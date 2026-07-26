@@ -8,10 +8,11 @@
  * 關閉（✕ / backdrop / Esc）→ closeSheet + navigate 回背景 location（背景全程 mounted，
  * 即時回到原狀態）。
  */
-import { useCallback, useEffect, type ReactNode } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SheetModeProvider } from '../../contexts/SheetModeContext';
 import { useAccountSheet } from '../../contexts/AccountSheetContext';
+import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
 export const ACCOUNT_SHEET_STYLES = `
 .account-sheet-root { position: fixed; inset: 0; z-index: var(--z-modal, 1000); }
@@ -66,20 +67,29 @@ export default function AccountSheet({ children }: { children: ReactNode }) {
     navigate(to, { replace: true });
   }, [closeSheet, navigate, bg]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [close]);
+  /*
+   * 統一 sheet 引擎（#1150 story 6）：原本這裡只有一個 window keydown 監聽 Escape ——
+   * **沒有 focus trap**，而元件宣告了 `aria-modal="true"`。那個屬性是對輔助技術的承諾
+   * （底下的內容不可及），瀏覽器不會替你實現：鍵盤使用者一路 Tab 就會跑到被遮住的頁面上，
+   * 螢幕閱讀器卻已經照 aria-modal 把底下藏起來了。宣告了卻沒做，比不宣告更糟。
+   *
+   * 換成 useSheetBehavior 一次拿到 Escape（含 IME／巢狀 guard，巢狀時只關最上層 ——
+   * 原本的 window 監聽會讓 sheet 內開的確認框按 Escape 時連 sheet 一起關掉）、
+   * focus trap、body scroll-lock、關閉後焦點還原到開啟前的觸發元素。
+   */
+  const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(true, close);
 
   return (
     <SheetModeProvider>
       <style>{ACCOUNT_SHEET_STYLES}</style>
       <div className="account-sheet-root" role="dialog" aria-modal="true" aria-label="帳號">
-        <div className="account-sheet-backdrop" onClick={close} />
-        <div className="account-sheet-panel">
+        <div ref={backdropRef} className="account-sheet-backdrop" onClick={close} />
+        <div
+          ref={panelRef}
+          tabIndex={-1}
+          className="account-sheet-panel"
+          onKeyDown={handlePanelKeyDown}
+        >
           <button type="button" className="account-sheet-close" aria-label="關閉" onClick={close}>✕</button>
           <div className="account-sheet-body">{children}</div>
         </div>

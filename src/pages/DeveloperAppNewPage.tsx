@@ -18,6 +18,7 @@
  *       (driven by submit success state)。
  */
 import { useState } from 'react';
+import { useSheetBehavior } from '../hooks/useSheetBehavior';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
@@ -275,6 +276,22 @@ export default function DeveloperAppNewPage() {
     navigate(routes.developerApps());
   }
 
+  /*
+   * Secret modal 的 sheet 引擎（#1150 story 6）：它宣告 `aria-modal="true"` 卻沒有 focus
+   * trap —— 鍵盤使用者一路 Tab 會跑到被 backdrop 遮住的表單上，而螢幕閱讀器已經照
+   * aria-modal 把那些藏起來了。
+   *
+   * `canDismiss: false` 是刻意的：client_secret 是 server 回應的**一次性** state，
+   * 一個誤按的 Escape 就永久丟失。只能走「我已複製，繼續」。
+   * 初始焦點留在 panel（引擎預設）而不是確認鈕 —— 一開就聚焦確認鈕的話，一個
+   * 順手的 Enter 會在使用者複製到 secret 之前就把它關掉。
+   */
+  const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(
+    secretResult !== null,
+    ackSecret,
+    { canDismiss: false },
+  );
+
   if (!auth.user) return null;
 
   const titleBarActions = (
@@ -409,8 +426,19 @@ export default function DeveloperAppNewPage() {
           * (DESIGN.md 允許 confirm-style modal)。secret 是 server response 一次性
           * client-side state，不適合走 page (back / share / refresh 都會丟資料)。 */}
         {secretResult && (
-          <div className="tp-modal-backdrop" role="dialog" aria-modal="true" data-testid="dev-app-new-secret-modal">
-            <div className="tp-modal">
+          <div ref={backdropRef} className="tp-modal-backdrop" data-testid="dev-app-new-secret-modal">
+            {/* role="dialog" + aria-modal 掛在 panel 而非 backdrop —— dialog 的邊界是面板本身；
+              * 掛在 backdrop 上會把遮罩也算進對話框範圍。順帶補 aria-label，原本這個
+              * role="dialog" 沒有可及名稱、螢幕閱讀器只會念「dialog」。 */}
+            <div
+              ref={panelRef}
+              tabIndex={-1}
+              className="tp-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label="應用程式憑證"
+              onKeyDown={handlePanelKeyDown}
+            >
               <div className="tp-modal-header" style={{ textAlign: 'center' }}>
                 <div className="tp-secret-icon-circle" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>

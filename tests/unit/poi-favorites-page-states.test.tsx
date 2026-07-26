@@ -141,7 +141,7 @@ describe('PoiFavoritesPage — 8-state matrix', () => {
     });
   });
 
-  it('state=bulk-action-busy: toolbar role="region" + aria-label="批次操作" + delete button 顯示「刪除中」', async () => {
+  it('state=bulk-action-busy: toolbar role="region" + aria-label="批次操作" + 動作鈕顯示「移除中」', async () => {
     apiFetchMock.mockImplementation((path) => {
       if (path === '/poi-favorites') return Promise.resolve([makeRow(1), makeRow(2)]);
       return new Promise(() => {});
@@ -157,7 +157,9 @@ describe('PoiFavoritesPage — 8-state matrix', () => {
     await waitFor(() => expect(screen.getByTestId('confirm-modal-confirm')).toBeTruthy());
     fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
     await waitFor(() => {
-      expect(screen.getByTestId('favorites-delete-selected').textContent).toContain('刪除中');
+      // #1187：文案改「移除」—— 收藏解除的是 poi_favorites 關聯，不銷毀 POI。
+      // testid 刻意維持 `favorites-delete-selected` 不改名（unit + e2e 都在用）。
+      expect(screen.getByTestId('favorites-delete-selected').textContent).toContain('移除中');
     });
   });
 
