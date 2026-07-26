@@ -39,7 +39,7 @@
 
 ### 介面架構（v2.4.0+）
 
-- 🖥️ **桌機 3-pane shell（≥1024px）** — 左 sidebar 240px（中文 label nav：聊天 / 行程 / 地圖 / 收藏）+ 中央 timeline + 右 sheet（min(780px, 40vw)）。**帳號不在 nav** — sidebar 左下獨立 chip（未登入時顯示「未登入」chip）。Trip detail TitleBar action 全 icon-only（探索 🔍 + 切換行程 ⇄ dropdown picker + ⋮ menu）
+- 🖥️ **桌機 3-pane shell（≥1024px）** — `--grid-3pane-desktop: 216px 1fr 1fr`（左 sidebar + 中央 timeline + 右欄），兩欄頁面走 `--grid-2pane-desktop: 216px 1fr`。sidebar 是中文 label nav（聊天 / 行程 / 地圖 / 收藏）。**帳號不在 nav** — sidebar 左下獨立 chip（未登入時顯示「未登入」chip）。Trip detail TitleBar action 桌機是 **icon + 文字 label**，手機（≤760px）才 icon-only（W3 於 2026-07-24 推翻先前的全 icon-only）
 - 📱 **手機單欄 + bottom nav（<1024px）** — sticky bottom nav **4-tab IA：聊天 / 行程 / 地圖 / 收藏**。**帳號已移出 tab slot** — header 右上圓圈（`AccountCircle`）→ 覆蓋當前頁的 Account sheet，自有 nav stack。配合 ActiveTripContext，從 trip 進其他 tab 自動帶入當前 trip context
 - 🧭 **兩個 form factor 共用同一份 IA 定義** — `src/components/shell/navItems.ts` 的 `PRIMARY_NAV_ITEMS` 是這 4 個 tab 的單一來源，`GlobalBottomNav`（手機）與 `DesktopSidebar`（桌機）都讀它，避免路徑 pattern 兩份漂移。改 IA 從這裡改
 - 🔗 **URL-driven sheet state** — `/trip/:id?sheet=map|chat` 可深度連結 + 瀏覽器 back/forward 正常。chat tab embed `<ChatPage embedded lockTripId>` trip-scoped AI 聊天

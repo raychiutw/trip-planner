@@ -196,17 +196,19 @@
 | background | `#1A140F` | page bg |
 | tertiary | `#2E2418` | recessed surface、input bg |
 | foreground | `#F5EBDD` | 主要文字 |
-| muted | `#B89E84` | 次要文字 |
+| muted | `#A1A1A6` | 次要文字（v2.56.4 起是 iOS system gray，不再是暖褐；舊值 `#B89E84` 已作廢） |
 | border | `#3D2D22` | hairline |
 | line-strong | `#5A4634` | 強分隔線、中性 icon 描邊 |
 
 ### Semantic Colors
 | Token | Light | Dark | 用途 |
 |-------|-------|------|------|
-| destructive | `#C13515` | `#E8A0A0` | 刪除、錯誤 |
+| destructive | `#C13515` | `#FF6B52` | 刪除、錯誤 |
 | success | `#06A77D` | `#7EC89A` | 成功、確認 |
-| warning | `#C88500` | `#E8B556` | 警告 |
-| info | `#3B7EA1` | `#8FB8D1` | 資訊提示；不用 柔褐，避免和 CTA 混淆 |
+| warning | `#F48C06` | `#FAA94B` | 警告 |
+| info | `#007AFF` | `#0A84FF` | 資訊提示（iOS systemBlue）；不用 柔褐，避免和 CTA 混淆 |
+
+> ⚠️ **本表 2026-07-26 更正過 5 個值**（`warning` 淺深、`info` 淺深、`destructive` 深）。舊值 `#C88500` / `#E8B556` / `#3B7EA1` / `#8FB8D1` / `#E8A0A0` 已作廢 —— `info` 在 W4/G14 遷到 iOS systemBlue（原本與 accent 同為柔褐、分不出資訊與品牌），`destructive` 深色在 G11 從過淡的 `#E8A0A0` 換掉。**色值的權威是 `css/tokens.css`，本表是衍生**；發現不一致以 tokens.css 為準並回頭修本表。
 
 ### Stop Type Color Convention（三色 tone 對應）
 POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 + ghost icon + 類型標籤色：
@@ -247,7 +249,8 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 **帳號 — 依設定分區三色（v2.54.10，`AccountPage`）**：設定 hub 每個分區一色，由 `group.tone` 驅動 row icon chip（mockup V1「輕觸」，只 icon chip 上色）：
 - **應用程式=accent 柔褐**（外觀/通知，你的偏好）、**共編 & 整合=sage**（連結 app/開發者）、**帳號=pink**（裝置/登出）。語意延伸（user 拍板，sage↔pink 與初版 mockup 對調）。**登出=destructive 紅**（`.is-danger` 覆寫、不混三色）。
 - icon chip = `.tp-account-rows[data-tone]` 帶 `--t-bg` 底 + `--color-foreground` glyph（~11–12:1）；tone 規則用 `:not(.is-danger)` 排除登出，讓紅 icon 不被蓋。canonical mockup：`design-sessions/2026-06-08-account-tricolor-by-group.html`。
-- **至此非-POI 頁三色收齊**：行程一覽（目的地）+ AI聊天（角色）+ 帳號（分區）。
+- ~~**至此非-POI 頁三色收齊**：行程一覽（目的地）+ AI聊天（角色）+ 帳號（分區）。~~
+  > ⚠️ **這句已不成立（2026-07-26 更正）**：語意三色在 Phase 1（v2.55.88）就退場了 —— `tokens.css` 的 `--color-accent-2` / `--color-accent-3` 已收斂成與 `--color-accent` 同值的單一柔褐（淺深皆是），所以目的地／角色／分區的 tone **仍在資料層計算，但解析出來是同一顆柔褐**，視覺上沒有三色。上面各節保留為決策軌跡，不要照著實作。
 
 ### Data Visualization 例外
 
@@ -335,7 +338,9 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 | Mode | Rule | 版型 |
 |------|------|------|
 | compact | default | 手機與平板共用：titlebar + hamburger + bottom nav |
-| desktop | `@media (min-width: 1024px) and (pointer: fine)` | 桌機（rev2）：三欄 `216 / 1fr / 1fr` — 左欄我的行程清單 sidebar + 底部浮動玻璃膠囊 nav（primary nav 已由 sidebar 移膠囊） |
+| desktop | `@media (min-width: 1024px) and (pointer: fine)` | 桌機（rev2）：三欄 `216 / 1fr / 1fr` — 左欄 sidebar（**頂部 primary nav 4-tab** + 我的行程清單 + 左下帳號 chip）+ 中欄 timeline + 右欄操作面板。**桌機隱藏底部浮動玻璃膠囊**（`AppShell` 對 `.app-shell-bottom-nav` 設 `display: none`） |
+
+> ⚠️ **本行 2026-07-26 更正**：原寫「底部浮動玻璃膠囊 nav（primary nav 已由 sidebar **移膠囊**）」—— 方向剛好相反。rev2（owner 2026-07-19）是把 primary nav **搬回 sidebar 頂部**、桌機隱藏膠囊；膠囊只留在手機。同檔 §Unified App Shell 與 §Desktop Sidebar 一直是對的，只有本表這一行寫反。
 
 不再維護 tablet-specific 斷點。任何不是 `min-width: 1024px` 且 `pointer: fine` 的環境都走 compact。
 
@@ -360,7 +365,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
   | sm | `0 1px 2px rgba(0,0,0,0.04)` | 微妙抬升（input、chip） |
   | md | `0 6px 16px rgba(0,0,0,0.08)` | 卡片 |
   | lg | `0 10px 28px rgba(0,0,0,0.12)` | 浮層、toast、sheet |
-- **Focus ring:** `0 0 0 2px accent`（`--shadow-ring`）— 鍵盤導航可見性。⚠️ **此規格目前有兩個未解問題，見 §Focus Indicator（HIG 對齊中）**：全站有兩套並存的焦點指示寫法，且此規格本身在 accent 填色面上量到 1.00–1.46:1、違反 WCAG 1.4.11。**新元件先讀那一節再選寫法。**
+- **Focus ring:** ⚠️ **`--shadow-ring`（`0 0 0 2px accent`）已於 2026-07-26 依 HIG 否決，不要用在新程式碼。** 焦點指示一律 `outline: 2px solid` + `outline-offset: 2px`，規則見 **§Focus Indicator**。`--shadow-ring` token 仍存在只因 38 條既有用法未遷完（#1182）。
 - **Hairline borders:** `1px solid #EADFCF`（light）/`1px solid #3A3127`（dark）取代重邊線。卡片區分用 border 而非 shadow。
 
 ## Motion
@@ -458,7 +463,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 | `/map`、行程地圖、全域地圖 | 地圖 |
 | `/favorites`、`/favorites/:id/add-to-trip` | 收藏 |
 | `/explore`、探索結果、POI 詳細 | 收藏（active 同步「收藏」，via `additionalActivePatterns: [/^\/explore/]`）|
-| `/account`、connected apps、developer apps | 帳號 |
+| `/account`、connected apps、developer apps | **（無）** —— 帳號不在 tab slot，這組路由不會有任何 tab 亮起 |
 
 ### Day Nav (Trip Detail + Map page 共用視覺)
 
@@ -898,7 +903,7 @@ Alert（不可逆）MUST 具備三件事：
 | Button min-height | 44px (Apple HIG tap target) |
 | Cancel button bg | `--color-secondary` + 1px `--color-border` |
 | Cancel hover | `--color-hover` |
-| Confirm focus ring | 2px outline + 2px offset ⚠️ 這是**慣例 B**，與 §Material & Effects 記的 `0 0 0 2px accent`（慣例 A）不同。兩套並存、各 15 條，見 §Focus Indicator |
+| Confirm focus ring | `2px outline` + `2px offset` —— ✅ 這是 §Focus Indicator 拍板的寫法 |
 
 ### Examples (現役)
 
@@ -944,8 +949,10 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 ### Visual Style
 
 - Error surfaces 使用 semantic error，不使用 柔褐。柔褐保留給品牌、active state、CTA。
-- `error`: `#C13515`；`error-bg`: `rgba(193, 53, 21, 0.08)`；border 可用 `rgba(193, 53, 21, 0.24)`。
-- Warning 使用 `#C88500`；info 使用 `#3B7EA1`；success 使用 `#06A77D`。
+- `error`（`--color-destructive`）: `#C13515`；**`--color-destructive-bg` 是不透明的 `#FDECEC`**（深色為 `rgba(255, 107, 82, 0.16)`）；border 可用 `rgba(193, 53, 21, 0.24)`。
+- Warning 使用 `#F48C06`；info 使用 `#007AFF`（iOS systemBlue）；success 使用 `#06A77D`。
+
+> ⚠️ **2026-07-26 更正兩處**：(a) `error-bg` 原寫成半透明 `rgba(193, 53, 21, 0.08)`，實際是**不透明**的 `#FDECEC` —— 這個差別是有意義的，§語意色的角色分離正是拿它當「不透明底所以對比可預測」的對照組（全站 51 處 destructive 當文字都沒有對比問題，而半透明的 success/warning 有）。(b) warning / info 沿用了已作廢的 `#C88500` / `#3B7EA1`。
 - Persistent alert panel：8px radius、1px hairline border、左側 4px 狀態色條、icon / title / message / action。
 - 不用大面積實心紅底；錯誤要明顯，但不要破壞 柔褐 editorial 風格。
 - Mobile action 可換行到下一列，避免按鈕擠壓文字。
@@ -983,49 +990,74 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 - **Style:** Line stroke 1.5-1.75px，不用填充
 - **Color:** 繼承 `currentColor`
 
-## Focus Indicator（HIG 對齊中，2026-07-26 盤點）
+## Focus Indicator（2026-07-26 依 HIG 拍板）
 
-> **這一節記錄的是一個尚未解決的矛盾，不是可以照抄的規範。** 動焦點樣式前先讀完。
+### 規則（新程式碼照這個寫）
 
-### 現況：兩套並存的寫法，恰好各半
+| 項目 | 規定 | 依據 |
+|---|---|---|
+| **機制** | `outline: 2px solid var(--color-focus-ring); outline-offset: 2px`（**offset 必須為正** —— 見下方負值失效模式） | **HIG**：「Rely on system-provided focus effects … Consider creating custom focus effects only if it's absolutely necessary.」`outline` 就是系統機制本身 |
+| **禁止** | `outline: none` 之後用 `box-shadow` 自畫環 | 同上 —— 這正是 HIG 勸阻的「殺掉系統效果再自畫」。被殺掉的那個環是接使用者 System Settings accent 與 Full Keyboard Access 偏好的那一個 |
+| **顏色** | `--color-focus-ring`，**不是** `--color-accent` | **HIG** Color 的 macOS 動態系統色表把 `Keyboard focus indicator color` 與 `Control accent` 列為兩個分開的條目 |
+| **幾何** | `2px` / `offset 2px` | ⚠️ **專案選擇，不是 HIG 規定** —— 整份 HIG `focus-and-selection` 對 thickness／offset／色值完全沉默。要改數值不必找 HIG 依據，但要一起改 |
+| **對比** | 焦點指示器對相鄰色 ≥ `3:1` | **WCAG 1.4.11 Non-text Contrast（AA）**。`outline-offset` 天生留間隙、露出的是**父層底色**，所以只要驗父層一種底色即可 |
+| **清單／集合** | 用 highlight（選取態底色），不要 ring | **HIG**：「use a focus ring for a text or search field, but **use a highlight in a list or collection**」。`.tp-map-day-tab`、entry card 屬於 collection |
 
-| 慣例 | 寫法 | 條數 | 顏色 |
-|---|---|---|---|
-| A | `outline: none; box-shadow: var(--shadow-ring)` | **15** | `--color-accent` |
-| B | `outline: 2px solid …; outline-offset: 1–2px` | **15** | `--color-accent` / `--color-foreground` / `--color-priority-high-dot` |
+### 為什麼是這個結論，不是另一套
 
-慣例 A 集中在 `css/tokens.css` 全域規則與 shell 元件；慣例 B 散在 7 個元件的 `SCOPED_STYLES`。**兩者沒有分工規則，是歷史累積的分裂。** 本檔上方 §Material & Effects 記的是 A、§Modal Dialogs 的 ConfirmModal 表格記的是 B —— 那不是筆誤，是各自忠實描述了一半。
+被否決的是 `outline: none` + `box-shadow: var(--shadow-ring)`。兩個獨立理由：
 
-### 已知缺陷（有實測數字）
+1. **HIG 明文勸阻**（上表「禁止」列）—— 這是拍板的主因，不是對比數字。
+2. **實測也不合格**：`box-shadow: 0 0 0 2px` 貼著 border box、沒有間隙，所以相鄰色是**元件自己的填色**、每個 surface 都不一樣。疊 `--color-accent-fill` 量到**淺色 1.46:1、深色 1.00:1**，違反 WCAG 1.4.11。深色是 1.00 因為 `--color-accent` 與 `--color-accent-fill` **是同一個 hex `#CBA06E`** —— 焦點框字面上不存在。
 
-1. **A 的 ring 貼著 border box，沒有間隙**，所以相鄰色就是元件自己的填色。實測疊 `--color-accent-fill`：**淺色 1.46:1、深色 1.00:1**。深色之所以是 1.00，是因為 `--color-accent` 與 `--color-accent-fill` **是同一個 hex `#CBA06E`** —— 焦點框字面上不存在。這**違反 WCAG 1.4.11（AA，非文字對比 3:1）**。
-2. B 的 `outline-offset` 天生有間隙、間隙露出父層底色，所以不會有這個問題；但它用三種不同顏色、沒有規則。
+第 2 點還有一個結構性後果：貼邊寫法要對**每一種填色**逐個調校，加一個新按鈕色就多一個要驗的組合；`outline-offset` 只要驗父層底色。這是「不需逐個 surface 調校」的意思。
 
-### HIG 怎麼說（有出處）
+### 既有債（#1182 追蹤，2026-07-26 逐條分類）
 
-- **焦點框顏色是獨立角色。** HIG Color 的 macOS 動態系統色表把 `Keyboard focus indicator color`（"The ring that appears around the currently focused control when using the keyboard for interface navigation."）與 `Control accent` 列為**兩個分開的條目**。本 repo 的 `--shadow-ring: 0 0 0 2px var(--color-accent)` 把這兩個角色壓成同一顆 token —— **這是矛盾的根**。
-- **HIG 對幾何完全沉默**：整份 `focus-and-selection` 沒有任何 thickness / colour value / offset 數值。所以「2px」「4px」「雙色環」都不違反 HIG，**但也都不能宣稱是 HIG 規定的**。§Material & Effects 的 `2px` 不是 HIG 來的。
-- **HIG 勸阻自畫**：> "**Rely on system-provided focus effects.** … Consider creating custom focus effects only if it's absolutely necessary." 本 repo 用全域 `outline: none` 殺掉 UA 的環再自畫 —— 那個被殺掉的環，正是接到使用者 System Settings accent 與 Full Keyboard Access 偏好的那一個。
-- **清單／集合用 highlight 而非 ring**：> "In general, use a focus ring for a text or search field, but **use a highlight in a list or collection.**" `.tp-map-day-tab`、entry card 都是 collection。
+全庫 `focus` selector 內寫 `outline: none` 的共 **38 條**。**它們不是同一種東西** —— 先前把 38 條整批當成「慣例 A」是錯的分類，實際拆開是：
+
+| 類別 | 條數 | 性質 |
+|---|---|---|
+| ❌ **A** `+ box-shadow: var(--shadow-ring)` | **20** | **待遷移的債**（另有 1 條把環寫在子元素上：`AccountCircle` → `--shadow-ring` 全庫共 21 用量 / 8 檔） |
+| ❌ **C** `+ border-color: accent` + `box-shadow: 0 0 0 2–3px var(--color-accent-subtle｜-bg)` 光暈 | **8** | **待評估** —— 本檔從未記載過的第三套。光暈用的是極淡的 `accent-subtle`，對頁面底幾乎沒有對比 |
+| ❌ **C′** 只有 `border-color`、連光暈都沒有 | **2** | `.tp-titlebar-trip-search`、`.tp-travel-detail input` |
+| ✅ **highlight**（改用背景色標示） | **3** | **不是債，是 HIG 正解** —— 兩個 typeahead item + `.tp-rail-menu-item`，正好是本節規則「清單／集合用 highlight」的現成先例 |
+| ✅ 刻意抑制 | **3** | 程式化聚焦的容器（`AppShell` 的 `[tabindex="-1"]`、`InfoSheet` panel）與滑鼠焦點（`:focus:not(:focus-visible)`） |
+| ✅ 表單例外 | **1** | `.tp-rail-note-input` —— 只在編輯態掛載、恆有 accent 框 + 光暈，落在 §Accessibility 的表單輸入例外 |
+
+**所以真正要遷的是 30 條（A 20 + C 8 + C′ 2），不是 38 條。** 慣例 B 有 **38 條 / 22 個檔**（`css/tokens.css` 只佔 1）。
+
+**8 個檔同時混用**（`css/tokens.css`、`InputModal`、`DesktopSidebar`、`CollabPanel`、`CustomPoiForm`、`TimelineRail`、`_tripFormStyles`、`AddCustomStopPage`）—— 沒有分工規則，是歷史漂移。改到的檔案順手換成 B；不要為了「跟隔壁一致」新增 A 或 C。
+
+### ⚠️ 慣例 B 自己也有一個失效模式：負的 `outline-offset`
+
+「`outline-offset` 天生有間隙、露出的是父層底色」**只對正值成立**。全庫 38 條的值分布是 `2px`×30、`-2px`×4、`-3px`×2、`1px`×2 —— **6 條負值把框畫進元件自己的 padding box，相鄰色又變回元件自家底色，跟慣例 A 是同一個失效模式**：
+
+`css/tokens.css:1455`、`CustomPoiForm.tsx:71`、`_tripFormStyles.ts:264`、`TripActionsMenu.tsx:49`、`AddCustomStopPage.tsx:229`、`TripNotesPage.tsx:163`
+
+**所以上表的「機制」列要連 offset 取正一起看** —— 寫 `outline` 但給負 offset，不算符合本節規則。
+
+慣例 B 現有 38 條用了 **4 個顏色**（`--color-accent` 31、`--color-foreground` 3、`--color-priority-high-dot` 2、`--color-destructive` 2）。`--color-focus-ring` token 落地前（`grep -rn 'focus-ring' css src` 目前 **0 命中**），`--color-accent` 是暫用值；另外三個是要收斂掉的。
 
 ### 標準引用更正（2026-07-26）
 
-- 有拘束力的是 **WCAG 1.4.11 Non-text Contrast（AA）** —— 焦點指示器對相鄰色 ≥3:1。
+- 有拘束力的是 **WCAG 1.4.11 Non-text Contrast（AA）**。
 - **不是 2.4.11** —— 2.4.11 是 "Focus Not Obscured (Minimum)"，與對比無關。
 - 「Focus Appearance」是 **2.4.13，Level AAA**，不是 AA 的硬需求。#1182 的 issue 引用過錯誤編號，寫進文件前已更正。
 
-### 待決（#1182）
+### 尚未做完的實作（#1182）
 
-1. 抽出 `--color-focus-ring`，與 `--color-accent` 分家（HIG 角色分離）。
-2. 兩套慣例收斂成一套 —— 內圈用頁面底色的雙帶寫法對**任何未來填色**都成立（實測 5.35 / 7.12），是唯一不需逐個 surface 調校的解。
-3. 深色 `--color-accent` == `--color-accent-fill` 是 bug，不是設計題。
-4. 補 `@media (prefers-contrast: more)` 的加強階（HIG："supply … an increased contrast option for each variant"；本 repo 現有的 `prefers-contrast` 區塊只處理玻璃模糊與 tabbar tint，**一顆語意色與焦點色都沒碰**）。
+文件已拍板，code 還沒跟上。剩：抽 `--color-focus-ring` token、遷移 A/C/C′ 共 30 條、把 6 條負 `outline-offset` 取正、收斂 B 的 4 個顏色、修深色 `--color-accent` == `--color-accent-fill`、補 `@media (prefers-contrast: more)` 加強階。
 
 ## Accessibility
 - **Touch target:** 最小 44×44px (Apple HIG)
   - Exception: drag handles (e.g. `.ocean-rail-grip`) 24×24px — 跟 row 主點擊區並存時避免 click target 衝突，以 `:focus-visible` ring + 持續可見 opacity 補 a11y
-- **Color contrast:** 文字對比度 WCAG AA 4.5:1（muted text `#6F5A47` / dark `#B5A08A` 需持續驗證）
-- **Focus:** 所有互動元素有 focus-visible ring。**用 `outline: none` 時 SHALL 同時宣告 `box-shadow: var(--shadow-ring)` 作為替代焦點指示** —— 不能只拿掉 outline 卻不補（那會讓純鍵盤使用者無法定位）。例外：表單輸入（`input`/`textarea`/`select`）以文字游標 + `border-color` 變化當焦點指示，不需 `box-shadow`。全域 `button:focus-visible` 應在 `css/tokens.css` 提供這個替代 ring。〔遷自已歸檔的 `css-hig-discipline` spec；曾於 `8ead450b` 被整段移除只留 `outline: none`，判定為誤刪、須補回〕
+- **Color contrast:** 依門檻表，不是一律 4.5 —— **`≤17pt` 全部 `4.5:1`／`18pt` 全部 `3:1`／任何尺寸的 **Bold** `3:1`**（Apple HIG Accessibility 表；WCAG 2.2 是 `4.5` / `3`）。非文字 UI 元件走 `3:1`（WCAG 1.4.11）。持續驗證的重點是 muted text（light `#6F5A47` / dark `#A1A1A6`）。
+  > ⚠️ **2026-07-26 更正兩處**：(a) 原寫「文字對比度 WCAG AA 4.5:1」，一律 4.5 會把大字與 Bold 誤判成不合格 —— 這正是 §Palette 記的 #1176 事故機制（拿「某 token 只有 4.12」推導出必須新造 token，而該處是 11px **Bold**、門檻其實是 3:1）。(b) dark muted 原寫 `#B5A08A`，實際是 `#A1A1A6`（本檔 §Dark Mode 表另有第三個值 `#B89E84`，也已一併更正）。**`5.0` 是本專案內部安全邊際，不是任何標準的門檻，不得當合規事實引用。**
+- **Focus:** 所有互動元素 SHALL 有可見的鍵盤焦點指示。**拿掉 `outline` 就一定要補等效的替代指示** —— 不能只拿掉卻不補（那會讓純鍵盤使用者無法定位）。例外：表單輸入（`input`/`textarea`/`select`）以文字游標 + `border-color` 變化當焦點指示。〔本條的「不得無指示」意圖遷自已歸檔的 `css-hig-discipline` spec；曾於 `8ead450b` 被整段移除只留 `outline: none`，判定為誤刪、已補回〕
+  > ⚠️ **2026-07-26 更正**：本條原本把**機制**寫死成「SHALL 同時宣告 `box-shadow: var(--shadow-ring)`」。**意圖對、機制不該寫死** —— 那個寫法正是同檔 §Focus Indicator 判定為缺陷的「慣例 A」（疊 `--color-accent-fill` 實測淺色 1.46:1、深色 1.00:1，違反 WCAG 1.4.11），而且 HIG Accessibility 明文「**Rely on system-provided focus effects.** … Consider creating custom focus effects only if it's absolutely necessary」—— `outline: none` + 自畫 box-shadow 正是被勸阻的那一邊。**用哪個機制見 §Focus Indicator**，本條只管「不得無指示」。
+- **Increased contrast（HIG 對自訂色的明文要求）**：`@media (prefers-contrast: more)` SHALL 為自訂色提供更高對比的變體。HIG Color：「If you define a custom color, make sure to supply light and dark variants, **and an increased contrast option for each variant**」。
+  > ⚠️ **現況落差（2026-07-26 盤點）**：`css/tokens.css` 的 `prefers-contrast: more` 區塊**只處理玻璃模糊與 tabbar tint，一顆語意色、一個焦點色都沒碰**。而本 repo 的 `--color-success` / `--color-warning` **都是自訂色**（Apple 系統色是 `#34C759` / `#FF8D28`），正落在這條要求的範圍內。追蹤於 #1176。
 - **Motion:** 尊重 `prefers-reduced-motion`（骨架屏動畫、過渡效果）
 - **Screen reader:** 語意化 HTML + ARIA landmarks + `role="tab"` 在 day chips
 
@@ -1066,7 +1098,8 @@ email → user_id 完整切換。
 ### poi_favorites universal pool
 
 - **單一收藏池**：每個 user 一個 `poi_favorites` 池。`(user_id, poi_id)` UNIQUE — 不能重複收藏同 POI。
-- **跨 trip 反查**：透過 `poi_favorites.poi_id ← trip_pois.poi_id` JOIN，每筆收藏即時可知「目前在哪些 trip / 哪天 / 哪 entry 出現」。後端 GET 用 `json_group_array` 一次查（避 N+1），usages 隨收藏 POI row 一起回。
+- **跨 trip 反查**：透過 `poi_favorites.poi_id` 對 **`trip_entry_pois`**（一般景點）與 **`trip_days.hotel_poi_id`**（住宿）兩路 JOIN 後 UNION，每筆收藏即時可知「目前在哪些 trip / 哪天 / 哪 entry 出現」。
+  > ⚠️ **2026-07-26 更正**：原寫 `trip_pois.poi_id`。`trip_pois` 在 v2.29.0 **整表 DROP**，`CONTEXT.md` 的「已退場的名字」表列它為 hard cutover、無 alias —— 照原文寫 SQL 會撞 no such table，而且會漏掉住宿那一路（住宿不在 entry 上，在 `trip_days.hotel_poi_id`）。後端 GET 用 `json_group_array` 一次查（避 N+1），usages 隨收藏 POI row 一起回。
 - **「目前在 N 個行程」徽章**：收藏 POI card 在 POI 名稱下方加一行 `--font-size-footnote --color-muted` 文字，內容例「目前在 3 個行程」。N=0 時不渲染（避免「0 個行程」噪音）。
 - **進行程不刪收藏**：「搬」 = 複製；poi_favorites 是「跨 trip 願望清單」，進行程不代表不想再去（同景點可能不同 trip 都想去）。
 
@@ -1180,7 +1213,9 @@ email → user_id 完整切換。
 ## Design Principles（開發時參考）
 1. **DESIGN.md + design-sessions 是單一來源** — `tokens.css` 是實作；若文件和程式衝突，先更新文件再實作。
 2. **柔褐三色 tone 分區** — 玩/看/買（景點·購物·活動）+ active/CTA 用柔褐；住/移動（住宿·交通·停車）用 sage；吃（用餐·咖啡）+ 備選/收藏用粉。同類型同色、不交叉，避免七彩稀釋重點；中性類型維持 ink。展開明細與卡片同色。
-3. **Chrome 一致優先** — 聊天、行程、地圖、收藏、帳號的 sidebar / bottom nav / titlebar 行為要一致；desktop 帳號以 account chip 呈現，compact 帳號以 bottom-nav tab 呈現；地圖只例外在內容 full bleed。
+3. **Chrome 一致優先** — 聊天、行程、地圖、收藏、帳號的 sidebar / bottom nav / titlebar 行為要一致；desktop 帳號以 sidebar 左下 account chip 呈現，compact 帳號以 **header 右上圓圈**（`AccountCircle` → Account sheet）呈現；地圖只例外在內容 full bleed。
+
+   > ⚠️ **2026-07-26 更正**：原寫「compact 帳號以 **bottom-nav tab** 呈現」。W1（v2.57.20 / PR #1122）已把帳號**移出 tab slot**，底部導覽是 4-tab（聊天／行程／地圖／收藏），`navItems.ts` 的 `PRIMARY_NAV_ITEMS` 只有 4 筆、型別上就沒有 account。
 4. **內容寬度一致** — 一般頁面統一 `1040px` content max width；局部表單可在內部限寬，但外層節奏一致。
 5. **行程明細單一來源** — Desktop / compact 共用同一份內容樹與狀態來源，只讓 layout responsive。
 6. **Bottom nav 是主功能定位** — 子頁 active item 依所屬主功能，不把 bottom nav 當 breadcrumb。

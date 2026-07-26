@@ -40,8 +40,9 @@ ${AUTH_LAYOUT_STYLES}
   background: var(--color-accent-subtle);
   /* ⚠ 這裡**刻意保留** --color-accent，不要跟著本頁其他兩處一起換深變體（#1157）：
    * 裡面是 aria-hidden 的純裝飾信封 svg（:171），旁邊就有標題與說明文字承載語意。
-   * 依 WCAG 1.4.11 非文字對比門檻是 3:1 而非 4.5，實測 3.24:1 已達標；硬套深色會在
-   * 淺圓底上過深、與同頁其他圖示不協調。同 #1156 對兩個柔褐裝飾圖示的取捨。
+   * WCAG 1.4.11 把 pure decoration 列為明文例外，所以這裡沒有法規門檻；3:1 是自訂下限
+   * （實測 3.24:1），留著是因為 svg 哪天不再是裝飾，1.4.11 就真的適用、門檻正好 3:1。
+   * 硬套深色會在淺圓底上過深、與同頁其他圖示不協調。同 #1156 對兩個柔褐裝飾圖示的取捨。
    * 例外成立的前提有兩個 —— svg 仍是 aria-hidden、對比仍 ≥3:1。任一垮掉就要改。 */
   color: var(--color-accent);
   display: grid; place-items: center;

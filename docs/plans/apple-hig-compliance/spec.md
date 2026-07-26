@@ -1,5 +1,11 @@
 # Tripline Web — Apple HIG 合規 Spec（v2 · 鏡像 app #82）
 
+> ⚠️ **本檔的 gap 清單是 2026-07-24 W0–W15 收官**前**寫的，時態是當時的「現況」。**
+> 2026-07-26 逐條回驗過，已收的用 ~~刪除線~~ 標掉並註明是哪張 W 票收的；沒標的才是還開著。
+> 兩處 owner 拍板**與 HIG 建議相反**、屬刻意保留而非未完成：W5 保留玻璃膠囊、W8 保留 Enter 送出。
+> 交付狀態的權威是 `tickets.md`，本檔是規格。
+
+
 **流程**：Matt flow（grill-with-docs 重新來過）。追蹤器＝**local markdown**（此檔＝to-spec 產物；票見 `tickets.md`）。
 **取代**：先前窄框架的 `spec.md`/`tickets.md`（#1117-only）。
 **SoT**：Apple HIG；`DESIGN.md` 為衍生、須對齊。（本 effort 不使用 mockup 流程。）
@@ -28,17 +34,17 @@
 ## 2 · 自適應 compact / regular
 - **compact（手機瀏覽器）**：4 tab bar 在底、單欄 push。**regular（桌機 ≥1024）**：sidebar + split view。
 - compact↔regular 切換（resize）**保留內容與選取**；landscape：Header/內容/accessory 遵守 **safe-area**（inset-top/bottom/left/right）。
-- **gap**：橫向 inset 全站未處理（audit rank17/T5）。
+- **gap**：橫向 inset 全站未處理（audit rank17/T5）。**仍開著**（2026-07-26 實測：整個 `src/` + `css/` 只有 1 處 `safe-area-inset-left|right`）。
 
 ## 3 · Header
 - 每頁 **inline navigation title**（**不用 Large Title** —— 對 web 桌/手機一致）。**leading** 只放返回/關閉/取消；**trailing** 最多一個主要動作 + overflow menu + 帳號圓圈。
 - 完成/取消/儲存用**文字按鈕**；icon-only 動作用語意明確 SF-風 icon。所有 header action ≥ **44×44** + 正確 label。
 - **web 譯**：桌機 trailing 動作可 hover 態；overflow = ⋯ menu（桌機亦支援右鍵 contextual）。
-- **gap**：現有 Large Title（audit V4）、TitleBar 第二層舊規範（T2/T?）、⋯ 尺寸不一、chevron 用文字字元（audit G6）。
+- **gap**：現有 Large Title（audit V4）、TitleBar 第二層舊規範（T2/T?）、⋯ 尺寸不一。~~chevron 用文字字元（audit G6）~~ → **已收**：`TitleBar.tsx:52` 用 `<Icon name="chevron-left" />`，不是文字字元。
 
 ## 4 · Account
 - header 圓圈 → Account sheet（自有 stack）；桌機 form sheet／popover。關閉回原狀態。deep-link 相容。
-- **gap**：現帳號是 tab（T2 IA 改）；AccountCircle 30×30（T5 → 44 或併入 header 動作）。
+- ~~**gap**：現帳號是 tab（T2 IA 改）；AccountCircle 30×30（T5 → 44 或併入 header 動作）。~~ → **兩項皆已收（W1，v2.57.20 / #1122）**：帳號移出 tab、改 header 圓圈 + Account sheet；`AccountCircle` 外層 44×44 透明 hit area、視覺圓圈維持 30 置中（`AccountCircle.tsx:16`）。
 
 ## 5 · 色彩 & 材質
 - **背景/表面/label/separator/fill** → **system 語意色**（systemBackground/secondarySystemBackground/label/secondaryLabel/separator/fill…），自動 light/dark/**高對比**適應。
@@ -75,13 +81,13 @@
 - 保留**原生 pan/zoom/rotate/double-tap**（Google Maps；不被上層攔）。**點定位控制才請求位置權限**（不過早）。
 - 切 全部/Day 同步 marker/route/行程 POI；**marker/route 不只靠顏色區分**（形狀/標籤）。
 - **POI accessory**：有行程 POI 持續顯水平卡片列；點 marker 卡片移到對應 POI、滑卡片地圖聚焦 marker；無 POI 隱 accessory + 地圖內空狀態；**外部 POI card 暫時取代**行程 accessory，關閉恢復原 Day/卡片/marker；外部 POI 須經明確加入流程才進行程（探索不誤改資料）。
-- **gap**：🔴 /map safe-area 未處理（T5）；Google 原生 zoom 鈕未套樣式（V5）；marker 顏色依賴（新增形狀/標籤）。
+- **gap**：~~🔴 /map safe-area 未處理（T5）~~、~~marker 顏色依賴~~ → **已收（W10，v2.57.35 / #1137）**：marker 改編號 + route 改虛線、safe-area 已滿足，並有 source-lock 鎖住。**Google 原生 zoom 鈕未套樣式（V5）仍開著** —— `TpMap.tsx` 只控制 `zoomControl` 開關與 `zoomControlPosition` 位置，沒有覆寫樣式。
 
 ## 11 · 表單 & picker
 - **系統 date picker**（點日期欄開 calendar）；日期順序/星期/週首日跟 **locale**；不合法日期停用、取消不改值。
 - **時間**：只選時分、**5 分鐘間隔**；**12/24 跟系統偏好**（web：`Intl` locale/hourCycle）；起訖錯誤顯欄位旁。
 - **容器**：短任務 sheet、長/多步驟 push；**取消 leading、完成/儲存 trailing**；有未存內容關閉前**確認捨棄**；儲存中阻重複提交、成功才關；**失敗保留輸入**；鍵盤 Next/Done + 焦點順序。
-- **gap**：時間選擇器強制 24h（#82 app gap，web 查現況）；固定高 chrome 裁字（T6）；px font-size（T6）。
+- **gap**：~~時間選擇器強制 24h（#82 app gap）~~ → **已收（W11，v2.57.32 / #1134）**：`TripTimePicker` 預設跟系統 `Intl` `hourCycle`。**固定高 chrome 裁字（T6）仍開著**；**px font-size（T6）只做了一半** —— W11 遷了表單／帳號，2026-07-26 實測 `src/` + `css/` 仍有 68 處 `font-size: <n>px`。
 
 ## 12 · 刪除 & 破壞性〔#82 policy〕
 - **所有刪除入口 → 同一不可復原確認**（顯示對象名/影響/「無法復原」；**安全選項預設焦點**；破壞鈕明寫「刪除」）。
@@ -96,7 +102,7 @@
 
 ## 14 · 狀態（載入/離線）
 - 首載 progress 或近版型 skeleton；refresh **保留舊內容**（不閃空）；行程/收藏 **pull to refresh**；離線顯可用快取 + 持續離線狀態 + 重試。
-- **gap**：下拉更新整頁 reload 沖 SPA 狀態（T7 → per-view soft refresh）。
+- ~~**gap**：下拉更新整頁 reload 沖 SPA 狀態（T7 → per-view soft refresh）。~~ → **已收（W14，v2.57.26 / #1128）**：`RefreshContext` per-view soft-refetch + 失敗態，不再整頁 reload。
 
 ## 15 · Accessibility〔折入 #1117〕
 - **Dynamic Type**：型級 rem、固定高 chrome → min-height（T6）；**44pt 觸控**全站（hit-slop，T5）；**focus ring** 補回 + 守護測試（T4）；**對比 AA** 雙軌 unit+e2e axe（T4）；**VoiceOver** label/role/Space 鍵/對話框名（T8）；**reduce-motion** JS smooth scroll 走 helper（T8）；**axe** 覆蓋全頁+e2e（T9）；marker 非純色（§10）。
