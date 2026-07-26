@@ -15,12 +15,25 @@ import { join } from 'node:path';
 
 const CSS = readFileSync(join(__dirname, '../../css/tokens.css'), 'utf8');
 
-/** 抓某個 @media 條件的 block 內容。 */
+/**
+ * 抓某個 @media 條件的 block 內容，用括號配對抓到真正的收尾 `}`。
+ *
+ * ⚠ 原本是 `CSS.slice(idx, idx + 600)` —— 固定字元視窗。2026-07-26（#1176）往
+ * `prefers-contrast` 區塊加了幾行語意色加強階 + 註解，`--blur-glass` 就被推出 600 字元外，
+ * 這幾條斷言全紅。那不是回歸，是量尺太短。固定視窗只會造成假紅（斷言都是「必須存在」），
+ * 但它會讓人以為改壞了東西 —— 所以改成真的讀完整個 block。
+ */
 function mediaBlock(condition: string): string {
   const idx = CSS.indexOf(`@media (${condition})`);
   if (idx < 0) return '';
-  // 粗略抓到對應的收尾 } —— 找下一個 top-level 空行後的段落夠用（block 內只有幾行）。
-  return CSS.slice(idx, idx + 600);
+  const open = CSS.indexOf('{', idx);
+  if (open < 0) return '';
+  let depth = 0;
+  for (let i = open; i < CSS.length; i++) {
+    if (CSS[i] === '{') depth++;
+    else if (CSS[i] === '}' && --depth === 0) return CSS.slice(idx, i + 1);
+  }
+  return '';
 }
 
 describe('W5 G15 — 降低透明度 / 提高對比 全玻璃面降級', () => {

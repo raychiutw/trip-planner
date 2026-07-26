@@ -94,7 +94,7 @@ const SCOPED_STYLES = `
   font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.tp-pill-pending { background: var(--color-warning-bg); color: var(--color-warning); }
+.tp-pill-pending { background: var(--color-warning-bg); color: var(--color-foreground); }
 
 /* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用,DeveloperAppNew 用 --end variant + buttons flex:1 撐滿。 */
 .tp-page-bottom-bar.tp-page-bottom-bar--end .tp-btn { flex: 1; }

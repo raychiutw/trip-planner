@@ -84,7 +84,7 @@ ${AUTH_LAYOUT_STYLES}
   margin-bottom: 16px;
 }
 .tp-banner-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
-.tp-banner-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.tp-banner-warning { background: var(--color-warning-bg); color: var(--color-foreground); }
 .tp-banner a { color: inherit; text-decoration: underline; font-weight: 600; }
 
 .tp-auth-footer {

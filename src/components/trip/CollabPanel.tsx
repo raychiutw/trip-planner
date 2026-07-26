@@ -127,7 +127,9 @@ const SCOPED_STYLES = `
 }
 .tp-collab-badge-owner {
   background: var(--color-success-bg);
-  color: var(--color-success-deep);
+  /* 中性字 —— 顏色訊號交給下面那顆 aria-hidden 的 .tp-collab-badge-dot
+   * （DESIGN.md §語意色的角色分離）。這個 badge 本來就已經是正確架構，只有文字色沒對齊。 */
+  color: var(--color-foreground);
 }
 .tp-collab-badge-owner .tp-collab-badge-dot {
   background: var(--color-success);
