@@ -28,7 +28,8 @@
  *   - 完成按鈕同時放 TitleBar action + bottom bar (兩處同步 disabled state)
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
@@ -640,7 +641,11 @@ const SCOPED_STYLES = `
 export default function AddStopPage() {
   const auth = useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+  // #1162：走 useStackSearchParams（非裸 useSearchParams）—— 裸 setter 會把
+  // location.state 清成 null，OperationShell 就讀不到 state.depth、桌機「‹ 返回上一層」
+  // 會消失。本頁今天的入口都沒帶 depth（latent 非現行 bug），但同一個坑；統一走 hook
+  // 並由 tests/unit/operation-shell-search-params-guard.test.ts 擋住未來的裸呼叫。
+  const [searchParams, setSearchParams] = useStackSearchParams();
   const navigate = useNavigate();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 

@@ -10,7 +10,8 @@
  * 完成後 fire-and-forget recompute travel + navigate 回 trip view。
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import OperationShell from '../components/shell/OperationShell';
 import Icon from '../components/shared/Icon';
 import { useNavigateBack } from '../hooks/useNavigateBack';
@@ -556,7 +557,12 @@ export default function ChangePoiPage() {
   // （title 改「加入備選景點」+ CTA 改「加為備選」+ 提交走 POST /alternates）
   // round 4 fix M5: use react-router's useSearchParams (reactive + SSR-safe) instead
   // of raw window.location.search which doesn't re-render on client-side route changes.
-  const [searchParams, setSearchParams] = useSearchParams();
+  //
+  // #1162：用 useStackSearchParams 而不是裸的 useSearchParams —— 後者的 setter 會把
+  // location.state 清成 null（router 的 createLocation 只取 opts.state、不合併），
+  // 於是 OperationShell 讀不到 state.depth、桌機的「‹ 返回上一層」在切分頁時當場消失。
+  // 這頁是 depth>1 的實際受害者（從編輯景點頁 push 進來）。
+  const [searchParams, setSearchParams] = useStackSearchParams();
   // v2.32.0: mode=new → 從 AddEntryPage 過來「新增 entry」流程，submit 走
   // POST /trips/:id/days/:N/entries 而不是 PUT /poi-id 或 POST /alternates。
   // dayNum 從 ?day=N param 取得。完成後 navigate /stop/:newId/edit。

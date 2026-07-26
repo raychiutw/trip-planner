@@ -39,8 +39,13 @@ describe('TripsListPage — trip header「新增景點」入口取代探索 icon
 });
 
 describe('AddStopPage — v2.31.99 day picker chip row', () => {
-  it('useSearchParams 解構 setSearchParams（v2.31.99 day 切換需 mutate URL）', () => {
-    expect(ADD_STOP_SRC).toMatch(/const \[searchParams, setSearchParams\] = useSearchParams\(\)/);
+  it('解構出 setSearchParams（v2.31.99 day 切換需 mutate URL）', () => {
+    // #1162：本頁改走 useStackSearchParams（裸 useSearchParams 的 setter 會把
+    // location.state 清成 null → OperationShell 讀不到 state.depth → 桌機「‹ 返回上一層」
+    // 消失）。這裡原本鎖字面 `= useSearchParams()`，改成只鎖**意圖**：day 切換需要一個
+    // 能 mutate URL 的 setter，用哪支 hook 是實作細節。
+    // 「哪些頁面必須走 useStackSearchParams」由 tests/unit/operation-shell-search-params-guard.test.ts 守。
+    expect(ADD_STOP_SRC).toMatch(/const \[searchParams, setSearchParams\] = useStack(Search)?Params\(\)|const \[searchParams, setSearchParams\] = useSearchParams\(\)/);
   });
 
   it('載入所有 days 進 allDays state（不再只 setCurrentDay）', () => {
