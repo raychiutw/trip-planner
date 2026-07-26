@@ -18,17 +18,17 @@
 
 單筆、可復原的刪除 SHALL 直接執行，不跳確認視窗，並提供 undo（底部「已刪除・復原」toast，對齊 macOS `⌘Z` 語意）。此類操作 MUST NOT 使用 Alert 二次確認。
 
-🔴 **本 Requirement 的「移除收藏」情境已被 W12 刪除政策推翻，待 owner 重新裁決** —— W12（2026-07-24 ship，v2.57.21 / PR #1123）裁定「收藏取消同確認、無 undo、不提供 restore」並刪除了 `poi-favorites/[id]/restore.ts`；本 change 是 2026-07-18 的提案，時間在前。詳細對照與下游影響（#1164／#1165）見 `design.md` 的「⚠ 規範衝突」節。**裁決前收藏的實作以 W12 為準。**「刪除單一景點」情境不受此爭議影響（它另有 #1150 的獨立取捨）。
+⚖️ **「移除收藏」不適用本 Requirement**（owner 2026-07-26 定案，維持 W12）—— W12 刪除政策（2026-07-24 ship，v2.57.21 / PR #1123）裁定「收藏取消同確認、無 undo、不提供 restore」並刪除了 `poi-favorites/[id]/restore.ts`；本 change 是 2026-07-18 的提案、時間在前，故由 W12 推翻。收藏歸「不可逆刪除必須 Alert 確認」那條 Requirement。裁決經過與下游影響見 `design.md`。
 
 #### Scenario: 刪除單一景點
 
 - **WHEN** 使用者刪除一個行程景點（可復原）
 - **THEN** 系統 SHALL 立即刪除並顯示底部「已刪除・復原」toast，且 SHALL NOT 跳出確認視窗
 
-#### Scenario: 移除收藏
+#### Scenario: 收藏不適用本 Requirement
 
 - **WHEN** 使用者移除一筆收藏
-- **THEN** 系統 SHALL 立即移除並可即刻還原，且 SHALL NOT 跳出確認視窗
+- **THEN** 系統 SHALL 依「不可逆刪除必須 Alert 確認」處理（W12 刪除政策，owner 2026-07-26 維持），SHALL NOT 提供 undo，且 SHALL NOT 存在使用者可見的 restore 路徑
 
 ### Requirement: 不可逆刪除必須 Alert 確認
 

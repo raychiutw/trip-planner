@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.64] - 2026-07-26
+
+### Changed
+- **定案：桌機操作面板不接共用 sheet 引擎，維持自有實作（#1166，owner 2026-07-26）**。`DESIGN.md` 原本掛著「是**設計意圖、非已實作**；要不要真的接進引擎屬 map #1110 的落差」，現改寫為定案 + 三條可查證的理由：(1) **零增量** —— 引擎在 `modal:false` 下唯一提供「不鎖 body」，而桌機 body 本來就不是 scroller；(2) **會掉守衛** —— `OperationShell` 的 Escape 另有兩道引擎沒有的 guard（焦點在文字欄位時跳過、`:popover-open` 時跳過），面板裝的是多欄位表單，掉了第一道等於「在輸入框按 Esc 關掉整個面板」＝近似靜默丟資料；(3) **focus trap 對非模態表面是錯的** —— 非模態面板必須讓 Tab 走得出去到中欄（APG）。
+- `useSheetBehavior` 的 `modal` option 標為**「保留能力、目前零消費者」**（全 src 無 `modal: false` 呼叫；2026-07-18 收斂計畫裡本來要承載它的 `FormPanel` wrapper 從未被建）。寫明它不是遺留待辦、不要因為沒人用就清掉。
+- **定案：收藏走 W12（跳確認、無 undo、不提供 restore），維持已 ship 的行為（owner 2026-07-26）**。v2.57.60 盤點時發現 `macos-hig-crud-spec` 的「移除收藏可還原」與 W12 直接衝突且提案早 6 天；三處紅字標記現改寫為定案敘述 —— `DESIGN.md` 的「可復原 → 直接執行 + undo」那一列標明**目前零 call-site**（為將來預留），收藏歸「不可逆 → Alert」；crud-spec 的 Scenario「移除收藏」改寫為「收藏不適用本 Requirement」。
+
+### Added
+- **三條守衛鎖住 #1166 定案後的現行行為**（`tests/unit/operation-shell.test.tsx`）：焦點在文字欄位時 Escape 不關面板／面板不對 Tab 做 focus trap／面板掛載時不鎖 body。**這三條就是「不接」的理由本身** —— 它們是 `OperationShell` 比引擎多、或刻意與引擎相反的地方。若哪天有人「順手接進引擎」，會被這三條擋下來，而不是等使用者回報資料被丟掉。三條都做過 mutation 實測。
+
+### Removed
+- **#1165（收藏刪除接上復原）關為 superseded**。它本文寫「按下呼叫**既有的**後端復原端點」、「後端其實**早就有**復原端點，前端從來沒接上」—— 那個端點在建票**前一天**（2026-07-24）就被 W12 刪除了（commit `206594b9`，驗收條件明列「無 restore 路徑殘留」），票在描述 W12 之前的狀態。
+- **#1164（通知訊息支援動作按鈕）標為暫緩**：它自述唯一目的是「#1165 要用的能力」，該消費者消失後屬 YAGNI。留言記下已查證的實作面（`ToastItem` 在 `src/lib/toastBus.ts`、`showToast` 是位置參數且有 68 個呼叫點、樣式在 `css/tokens.css`、守衛 seam 現成）供將來接手。
+- **動詞條款另開 #1187**（純文案 XS）：「收藏 MUST 用『移除』而非『刪除』」講的是不銷毀底層資料，**與 undo 裁決無關**，兩者並存不矛盾 —— 收藏確實不銷毀 POI（文案該用「移除」），同時在使用者可見層面確實不可復原（照舊跳確認）。
+
 ## [2.57.63] - 2026-07-26
 
 ### Fixed
