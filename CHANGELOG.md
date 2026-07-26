@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.66] - 2026-07-26
+
+### Fixed
+- **`DESIGN.md` 有一條標錯成「WCAG 要求」的自訂規則，已更正**：裝飾圖示的例外原本寫「**依 WCAG 1.4.11 門檻是 3:1**」。那是錯的 —— 1.4.11 的適用條件是「識別 UI 元件所必需」與「理解內容所必需」，而 `aria-hidden`、旁邊已有文字標籤的純裝飾圖示**兩個都不觸發**，所以它**不在 1.4.11 範圍內**，標準的要求是「無」而不是「3:1」。我們仍自訂 3:1 作為視覺品質下限，但已標明那是**專案自訂、不是合規要求** —— 用合規名義推導會誤殺方案（2026-07-26 評估 #1176 時就這樣砍掉一個後來證明是 HIG 正解的方案）。
+- **`≥5.0` 這個「家規」被當成合規事實用過，已標註**：HIG Accessibility 的表格是 `≤17pt 全部 4.5:1` / `18pt 全部 3:1` / **任何尺寸的 Bold 3:1**；WCAG 2.2 是 `4.5` / `3`。**`5.0` 在兩者都不存在。** 已在 §Day palette 該處寫明它是內部安全邊際，並明文禁止用「某 token 只有 4.2、不到 5.0」推導出必須新造 token。
+- **標準引用更正**：焦點指示器的拘束力來自 **WCAG 1.4.11（AA）**，不是 2.4.11（那是 "Focus Not Obscured"，與對比無關）；「Focus Appearance」是 **2.4.13、Level AAA**。#1182 的 issue 引用過錯誤編號。
+
+### Added
+- **`DESIGN.md` 新增 §Focus Indicator（HIG 對齊中）—— 記錄一個此前沒人寫下來的矛盾**：全站有**兩套並存的焦點指示寫法，恰好各 15 條**（A：`outline: none` + `box-shadow: var(--shadow-ring)`；B：`outline: 2px solid` + `outline-offset`，且用了三種顏色）。本檔 §Material & Effects 記的是 A、§Modal Dialogs 的表格記的是 B —— **那不是筆誤，是各自忠實描述了分裂 codebase 的一半**，兩處現已互相交叉引用並標為待決。
+- 同節記下 HIG 的兩條關鍵出處：macOS 動態系統色表把 **`Keyboard focus indicator color` 與 `Control accent` 列為兩個獨立角色**（而 repo 的 `--shadow-ring` 把它們壓成同一顆 token —— 這是矛盾的根）；以及 HIG 對焦點框幾何**完全沉默**（所以 `2px` 不是 HIG 來的，別宣稱它是）。附實測缺陷：ring 疊 accent 填色是**淺色 1.46、深色 1.00**（深色兩個 token 同 hex）。
+- **`DESIGN.md` 新增 §語意色的角色分離（HIG）**：HIG Color 逐字「**apply color to the background rather than to symbols or text**」。狀態標示的正確組成是「語意色底 + **中性文字** + `aria-hidden` 語意色圓點／glyph」，不是「同色系淡底 + 同色系深字再調色救對比」。實測差距：中性字 **12.30:1** vs 壓深語意色字 ~5.x，且中性字**底色日後怎麼改都不會再壞**。這不是新規則 —— §行程一覽三色與 §AI聊天 avatar **已經各拍板過一次**，本節只是推廣到語意色。
+
+### Changed
+- **`docs/plans/apple-hig-compliance/spec.md` 的「success/warn 系統色」與實作不符，已記錄不掩蓋**：`--color-success` `#06A77D` 與 `--color-warning` `#F48C06` **都是自訂色**（Apple 是 `#34C759` / `#FF8D28`），只有 `--color-info` 真的遷到系統藍。後果有兩個且方向相反：HIG「避免重新定義**系統色**語意」那條字面上管不到自訂色；但 HIG 對自訂色另外要求「**supply … an increased contrast option for each variant**」，而本 repo 的 `prefers-contrast: more` 區塊只處理玻璃模糊與 tabbar tint、一顆語意色都沒碰 —— **那才是自訂色路線下真正的落差**。目前是兩邊都沒做完的中間狀態。
+
 ## [2.57.65] - 2026-07-26
 
 ### Fixed
