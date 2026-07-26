@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.65] - 2026-07-26
+
+### Fixed
+- **v2.57.56 的 day 文字色有 7/10 從來沒上線過 —— production 產物實測抓到（#1168 回歸）**：淺色那組 `--day-text-1..10` 原本宣告在 `@theme` 裡，而 **Tailwind 4 會掃描原始檔決定 `@theme` 的變數要不要保留，掃不到的直接 tree-shake 掉**。`dayTextColor()` 是用 `var(--day-text-${n})` **動態組名字**的，掃描器看不到 → 上線的 CSS 裡淺色那組只剩 **3 個**。
+- **存活的那 3 個是 1／4／5 —— 恰好是測試檔裡剛好寫死 `var(--day-text-1|4|5)` 字面值的那三個。** 也就是說「哪幾個顏色能上線」取決於測試檔碰巧提到哪幾個。深色那組全程完整，因為它在 plain `body.dark {}` 裡、不受 `@theme` 影響。
+- 修法：把淺色那組移到 **plain `:root {}`**（與深色那組同樣不受 tree-shake 影響）。重新建置後 **20/20 全部存活**（修前 13/20）。`@theme` 原處留一句路標註解，防止有人再搬回去。
+- **使用者影響**：地圖頁底部 entry card 的 day 序號與 `D1`／`D2` eyebrow，在**淺色模式**下有 7 天的顏色是失效的（`var()` 解不出來 → 落回繼承色）。因為落回的是高對比的前景色，**a11y 掃描抓不到**（也確實一路綠燈）—— 壞掉的是「每天一個顏色」的設計辨識，不是可讀性。
+
+### Added
+- **兩條守衛，補的是「守衛讀原始碼、出貨的是建置產物」這個洞**（`tests/unit/day-palette-text.test.ts`）：(1) `--day-text-*` 必須宣告在 plain `:root`、不得在 `@theme`；(2) 一般化 —— **凡是名字由 JS 動態組出來的 CSS 變數（`var(--x-${…})`）都不得放進 `@theme`**，掃 `src/lib/dayPalette.ts` 自動抽出前綴比對。兩條都做過 mutation（把 `--day-text-1` 搬回 `@theme` → 兩條都轉紅）。
+- ⚠️ 這次的根本教訓寫進註解了：**同檔上面那些對比斷言讀的是原始碼，所以它們全綠、而出貨的東西是壞的。** 位置（宣告在哪個 block）才是決定它會不會上線的東西，值算得再準也沒用。
+
 ## [2.57.64] - 2026-07-26
 
 ### Changed

@@ -70,27 +70,9 @@ html { color-scheme: light dark; }
      *   -warning-deep #A35A00 → on bg 5.07 / on warning-bg 4.59 ✅（維持琥珀色相） */
     --color-success-deep: #07795C;
     --color-warning-deep: #A35A00;
-    /* Day palette「文字用」深階（#1168，owner 2026-07-25 拍板）——
-     * DAY_PALETTE 是 Tailwind -500，本來就是給填色／描邊的飽和色。當淺底上的文字時
-     * **10 色全部不達標**（實測疊 --color-background #FFFBF5：lime 1.92、amber 2.08、
-     * teal 2.41、cyan 2.35、emerald 2.46、sky 2.69、orange 2.72、fuchsia 3.35、
-     * rose 3.56、violet 4.11，門檻 4.5）。這裡各補一顆深變體專供**文字**用，
-     * 關係同 --color-accent-text 之於 --color-accent；polyline 與 num 圓框仍用原飽和色。
-     *
-     * 取值口徑：降亮度到「疊 --color-background(#FFFBF5) 與 print 底(#FFFFFF) 兩者的
-     * 較差值 ≥5.0」。**刻意不是剛好 4.5** —— 貼線的值在底色微調時會靜默掉下去，
-     * 比照既有 accent-text（5.35）／accent-text-on-tonal（5.76）的餘裕。
-     * 下面各行註記 light / print 兩底的實測值。 */
-    --day-text-1: #0A73A3;   /* sky     5.10 / 5.26 */
-    --day-text-2: #0D796E;   /* teal    5.12 / 5.28 */
-    --day-text-3: #956007;   /* amber   5.15 / 5.31 */
-    --day-text-4: #C8344D;   /* rose    5.02 / 5.18 */
-    --day-text-5: #7A51D8;   /* violet  5.10 / 5.26 */
-    --day-text-6: #4E780D;   /* lime    5.07 / 5.23 */
-    --day-text-7: #AE500F;   /* orange  5.15 / 5.31 */
-    --day-text-8: #04788C;   /* cyan    5.00 / 5.16 */
-    --day-text-9: #AB37BD;   /* fuchsia 5.08 / 5.23 */
-    --day-text-10: #0B7C56;  /* emerald 5.05 / 5.21 */
+    /* ⚠ Day palette「文字用」深階（--day-text-1..10）**不能放在 @theme**，已移到本檔下方的
+     * plain :root 區塊。原因見那裡的註解（Tailwind 4 會 tree-shake @theme 裡沒被掃描到的
+     * 變數，而它們的名字是 JS 動態組出來的）。這行留著當路標，不要把它們搬回來。 */
     /* G14: info 語意色必須獨立於 accent（原本兩者都 #A97A4A 柔褐 → 資訊/連結與品牌 tint
      * 無法區分）。改 iOS systemBlue，light #007AFF。 */
     --color-info: #007AFF;
@@ -242,6 +224,43 @@ html { color-scheme: light dark; }
     /* Toast 距頂使用 safe-area inset (對齊 iOS HIG transient notification)。
      * 不能用固定 60px — page 沒 sticky topbar 時 toast 會直接蓋住 page heading。 */
     --spacing-toast-top: max(16px, env(safe-area-inset-top, 16px));
+}
+
+/* ===== Day palette「文字用」深階（#1168；淺色值。深色值在 body.dark） =====
+ *
+ * DAY_PALETTE 是 Tailwind -500，本來就是給填色／描邊的飽和色。當淺底上的文字時
+ * **10 色全部不達標**（實測疊 --color-background #FFFBF5：lime 1.92、amber 2.08、
+ * teal 2.41、cyan 2.35、emerald 2.46、sky 2.69、orange 2.72、fuchsia 3.35、
+ * rose 3.56、violet 4.11，門檻 4.5）。這裡各補一顆深變體專供**文字**用，關係同
+ * --color-accent-text 之於 --color-accent；polyline 與 entry card num 圓框仍用原飽和色。
+ *
+ * 取值口徑：降亮度到「疊 --color-background(#FFFBF5) 與 print 底(#FFFFFF) 兩者的較差值
+ * ≥5.0」。**刻意不是剛好 4.5** —— 貼線的值在底色微調時會靜默掉下去，比照既有
+ * accent-text（5.35）／accent-text-on-tonal（5.76）的餘裕。各行註記 light / print 實測值。
+ *
+ * 🔴 **這組刻意放在 plain :root 而不是 @theme，不要搬回去。**
+ * Tailwind 4 會掃描原始檔決定 @theme 裡哪些變數要保留，掃不到的直接 tree-shake 掉。
+ * 而 `dayTextColor()`（src/lib/dayPalette.ts）是用 `var(--day-text-${n})` **動態組名字**的，
+ * 掃描器看不到 → 放在 @theme 時 10 個只有 3 個活著上線。
+ *
+ * 那 3 個是 1/4/5 —— 恰好是測試檔裡剛好寫死 `var(--day-text-1|4|5)` 字面值的那三個，
+ * 其餘 7 個在 production 的 CSS 裡根本不存在（v2.57.56 上線後實測 prod 產物才發現）。
+ * 深色那組從頭到尾都完整，因為它在 plain `body.dark {}` 裡、不受 @theme tree-shake 影響。
+ *
+ * ⚠ 教訓：`tests/unit/day-palette-text.test.ts` 讀的是**原始碼**，所以它全綠而出貨的東西是壞的。
+ * 凡是「名字由 JS 動態組出來」的 CSS 變數都不要放進 @theme。守衛見同檔測試的「不得在 @theme」那條。
+ */
+:root {
+    --day-text-1: #0A73A3;   /* sky     5.10 / 5.26 */
+    --day-text-2: #0D796E;   /* teal    5.12 / 5.28 */
+    --day-text-3: #956007;   /* amber   5.15 / 5.31 */
+    --day-text-4: #C8344D;   /* rose    5.02 / 5.18 */
+    --day-text-5: #7A51D8;   /* violet  5.10 / 5.26 */
+    --day-text-6: #4E780D;   /* lime    5.07 / 5.23 */
+    --day-text-7: #AE500F;   /* orange  5.15 / 5.31 */
+    --day-text-8: #04788C;   /* cyan    5.00 / 5.16 */
+    --day-text-9: #AB37BD;   /* fuchsia 5.08 / 5.23 */
+    --day-text-10: #0B7C56;  /* emerald 5.05 / 5.21 */
 }
 
 /* ===== Sheet animation tokens ===== */
