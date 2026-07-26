@@ -115,8 +115,9 @@ const SCOPED_STYLES = `
   background: var(--color-accent-subtle);
 }
 .tp-edit-entry-poi-action:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-edit-entry-poi-action .svg-icon { width: 20px; height: 20px; }
 
@@ -330,8 +331,9 @@ const SCOPED_STYLES = `
 }
 .tp-poi-note-read:hover { border-color: var(--color-border); }
 .tp-poi-note-read:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-poi-note-read.is-empty {
   color: var(--color-muted);
@@ -411,8 +413,9 @@ const SCOPED_STYLES = `
   color: var(--color-accent);
 }
 .tp-poi-note-done:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-poi-note-kbd {
   font-size: var(--font-size-caption);
@@ -555,8 +558,9 @@ const SCOPED_STYLES = `
 }
 .tp-edit-entry-alt-actions button .svg-icon { width: 18px; height: 18px; }
 .tp-edit-entry-alt-actions button:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-edit-entry-alt-actions button[disabled] { opacity: 0.4; cursor: not-allowed; }
 .tp-edit-entry-alt-actions button.set-master {
@@ -600,8 +604,9 @@ const SCOPED_STYLES = `
   cursor: pointer;
 }
 .tp-edit-entry-alt-add-btn:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 
 .tp-edit-entry-alt-error {
@@ -632,8 +637,9 @@ const SCOPED_STYLES = `
 }
 .tp-edit-entry-danger-btn:hover { background: var(--color-destructive-bg); }
 .tp-edit-entry-danger-btn:focus-visible {
-  outline: 2px solid var(--color-destructive);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 
 /* discard-changes 用 shared <ConfirmModal>（沒額外樣式） */

@@ -133,9 +133,7 @@ const SCOPED_STYLES = `
   background: var(--color-hover);
   color: var(--color-accent-text);
 }
-.tp-account-hero-name-edit:focus-visible {
-  outline: none; box-shadow: var(--shadow-ring);
-}
+.tp-account-hero-name-edit:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-account-hero-name-edit .svg-icon { width: 16px; height: 16px; }
 .tp-account-hero-email {
   font-size: var(--font-size-callout);
@@ -159,9 +157,10 @@ const SCOPED_STYLES = `
   box-sizing: border-box;
 }
 .tp-account-hero-name-input:focus-visible {
-  outline: none;
   border-color: var(--color-accent);
-  box-shadow: var(--shadow-ring);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-account-hero-name-input:disabled {
   opacity: 0.6;

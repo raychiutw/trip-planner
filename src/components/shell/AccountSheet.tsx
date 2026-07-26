@@ -46,7 +46,7 @@ export const ACCOUNT_SHEET_STYLES = `
   color: var(--color-muted); font-size: 1.25rem; line-height: 1; border-radius: var(--radius-full);
 }
 .account-sheet-close:hover { background: var(--color-hover); color: var(--color-foreground); }
-.account-sheet-close:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.account-sheet-close:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .account-sheet-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 @keyframes account-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes account-sheet-slide { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

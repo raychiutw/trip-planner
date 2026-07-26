@@ -45,9 +45,7 @@ export const TRIP_ACTIONS_MENU_STYLES = `
   min-height: 40px;
 }
 .tp-embedded-menu-item:hover { background: var(--color-hover); }
-.tp-embedded-menu-item:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: -2px;
-}
+.tp-embedded-menu-item:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-embedded-menu-item .svg-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-muted); }
 .tp-embedded-menu-divider {
   height: 1px;

@@ -365,7 +365,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
   | sm | `0 1px 2px rgba(0,0,0,0.04)` | 微妙抬升（input、chip） |
   | md | `0 6px 16px rgba(0,0,0,0.08)` | 卡片 |
   | lg | `0 10px 28px rgba(0,0,0,0.12)` | 浮層、toast、sheet |
-- **Focus ring:** ⚠️ **`--shadow-ring`（`0 0 0 2px accent`）已於 2026-07-26 依 HIG 否決，不要用在新程式碼。** 焦點指示一律 `outline: 2px solid` + `outline-offset: 2px`，規則見 **§Focus Indicator**。`--shadow-ring` token 仍存在只因 38 條既有用法未遷完（#1182）。
+- **Focus ring:** 焦點指示一律 `outline: 2px solid var(--color-focus-ring)` + `outline-offset: 2px` + 內帶 `box-shadow: 0 0 0 2px var(--color-background)`，規則見 **§Focus Indicator**。⚠️ **`--shadow-ring` 已於 2026-07-26 依 HIG 否決並刪除**（v2.57.68 / #1182）—— 看到這個名字表示讀到過期文件。
 - **Hairline borders:** `1px solid #EADFCF`（light）/`1px solid #3A3127`（dark）取代重邊線。卡片區分用 border 而非 shadow。
 
 ## Motion
@@ -998,7 +998,7 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 |---|---|---|
 | **機制** | `outline: 2px solid var(--color-focus-ring); outline-offset: 2px`（**offset 必須為正** —— 見下方負值失效模式） | **HIG**：「Rely on system-provided focus effects … Consider creating custom focus effects only if it's absolutely necessary.」`outline` 就是系統機制本身 |
 | **禁止** | `outline: none` 之後用 `box-shadow` 自畫環 | 同上 —— 這正是 HIG 勸阻的「殺掉系統效果再自畫」。被殺掉的那個環是接使用者 System Settings accent 與 Full Keyboard Access 偏好的那一個 |
-| **顏色** | `--color-focus-ring`，**不是** `--color-accent` | **HIG** Color 的 macOS 動態系統色表把 `Keyboard focus indicator color` 與 `Control accent` 列為兩個分開的條目 |
+| **顏色** | `--color-focus-ring`（已落地，值見下方表），**不是** `--color-accent` | **HIG** Color 的 macOS 動態系統色表把 `Keyboard focus indicator color` 與 `Control accent` 列為兩個分開的條目 |
 | **幾何** | `2px` / `offset 2px` | ⚠️ **專案選擇，不是 HIG 規定** —— 整份 HIG `focus-and-selection` 對 thickness／offset／色值完全沉默。要改數值不必找 HIG 依據，但要一起改 |
 | **對比** | 焦點指示器對相鄰色 ≥ `3:1` | **WCAG 1.4.11 Non-text Contrast（AA）**。`outline-offset` 天生留間隙、露出的是**父層底色**，所以只要驗父層一種底色即可 |
 | **清單／集合** | 用 highlight（選取態底色），不要 ring | **HIG**：「use a focus ring for a text or search field, but **use a highlight in a list or collection**」。`.tp-map-day-tab`、entry card 屬於 collection |
@@ -1012,32 +1012,26 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 
 第 2 點還有一個結構性後果：貼邊寫法要對**每一種填色**逐個調校，加一個新按鈕色就多一個要驗的組合；`outline-offset` 只要驗父層底色。這是「不需逐個 surface 調校」的意思。
 
-### 既有債（#1182 追蹤，2026-07-26 逐條分類）
+### 遷移狀態：已完成（v2.57.68 / #1182）
 
-全庫 `focus` selector 內寫 `outline: none` 的共 **38 條**。**它們不是同一種東西** —— 先前把 38 條整批當成「慣例 A」是錯的分類，實際拆開是：
+全庫 `focus` selector 內原本寫 `outline: none` 的共 38 條。**它們不是同一種東西** —— 曾經兩次把整批當成同一類分錯，最後逐條看過的結果是：
 
-| 類別 | 條數 | 性質 |
+| 類別 | 條數 | 處置 |
 |---|---|---|
-| ❌ **A** `+ box-shadow: var(--shadow-ring)` | **20** | **待遷移的債**（另有 1 條把環寫在子元素上：`AccountCircle` → `--shadow-ring` 全庫共 21 用量 / 8 檔） |
-| ❌ **C** `+ border-color: accent` + `box-shadow: 0 0 0 2–3px var(--color-accent-subtle｜-bg)` 光暈 | **8** | **待評估** —— 本檔從未記載過的第三套。光暈用的是極淡的 `accent-subtle`，對頁面底幾乎沒有對比 |
-| ❌ **C′** 只有 `border-color`、連光暈都沒有 | **2** | `.tp-titlebar-trip-search`、`.tp-travel-detail input` |
-| ✅ **highlight**（改用背景色標示） | **3** | **不是債，是 HIG 正解** —— 兩個 typeahead item + `.tp-rail-menu-item`，正好是本節規則「清單／集合用 highlight」的現成先例 |
-| ✅ 刻意抑制 | **3** | 程式化聚焦的容器（`AppShell` 的 `[tabindex="-1"]`、`InfoSheet` panel）與滑鼠焦點（`:focus:not(:focus-visible)`） |
-| ✅ 表單例外 | **1** | `.tp-rail-note-input` —— 只在編輯態掛載、恆有 accent 框 + 光暈，落在 §Accessibility 的表單輸入例外 |
+| **A** `+ box-shadow: var(--shadow-ring)` | 20（`--shadow-ring` 全庫 21 用量） | ✅ **已全數遷到 `outline` 機制**，`--shadow-ring` token 已刪除 |
+| **C** 表單輸入 `+ border-color` + `accent-subtle` 光暈 | 8 | ✅ **不是債** —— 全部落在真的 `input` / `textarea` / `select` 上，正是上方規則表列的表單輸入例外 |
+| **C′** 表單輸入，只有 `border-color` | 2 | ✅ 同上（`.tp-titlebar-trip-search` 是 `<input>`、`.tp-travel-detail input`） |
+| **highlight**（背景色標示） | 3 | ✅ **不是債，是 HIG 正解** —— 兩個 typeahead item + `.tp-rail-menu-item`，就是「清單／集合用 highlight」 |
+| 刻意抑制 | 3 | ✅ 程式化聚焦的容器（`AppShell` 的 `[tabindex="-1"]`、`InfoSheet` panel）與滑鼠焦點（`:focus:not(:focus-visible)`） |
+| 表單例外 | 1 | ✅ `.tp-rail-note-input` —— 只在編輯態掛載、恆有 accent 框 + 光暈 |
 
-**所以真正要遷的是 30 條（A 20 + C 8 + C′ 2），不是 38 條。** 慣例 B 有 **38 條 / 22 個檔**（`css/tokens.css` 只佔 1）。
+**真正遷移的是 A 的 20 條**；C／C′ 一開始被誤記成債，實際上它們符合規則表的表單例外。慣例 B 的 38 條同步收斂成單一顏色 `--color-focus-ring`，6 條負 `outline-offset` 全部取正。
 
-**8 個檔同時混用**（`css/tokens.css`、`InputModal`、`DesktopSidebar`、`CollabPanel`、`CustomPoiForm`、`TimelineRail`、`_tripFormStyles`、`AddCustomStopPage`）—— 沒有分工規則，是歷史漂移。改到的檔案順手換成 B；不要為了「跟隔壁一致」新增 A 或 C。
+> ⚠️ **`--shadow-ring` 曾同時是 Tailwind utility。** `@theme` 裡的 token 會生成同名 utility class，`HourlyWeather` 用 `shadow-ring` 標「現在這一小時」（**不是焦點指示**，只是借用同一個陰影）。刪 token 時它會靜默失效 —— 已改用 Tailwind 原生 `ring-2 ring-accent`（產出的 CSS 等價）。**刪 `@theme` token 前要連 utility class 用法一起 grep。**
 
-### ⚠️ 慣例 B 自己也有一個失效模式：負的 `outline-offset`
+### 為什麼一定要雙帶（有算過，不是偏好）
 
-「`outline-offset` 天生有間隙、露出的是父層底色」**只對正值成立**。全庫 38 條的值分布是 `2px`×30、`-2px`×4、`-3px`×2、`1px`×2 —— **6 條負值把框畫進元件自己的 padding box，相鄰色又變回元件自家底色，跟慣例 A 是同一個失效模式**：
-
-`css/tokens.css:1455`、`CustomPoiForm.tsx:71`、`_tripFormStyles.ts:264`、`TripActionsMenu.tsx:49`、`AddCustomStopPage.tsx:229`、`TripNotesPage.tsx:163`
-
-**所以上表的「機制」列要連 offset 取正一起看** —— 寫 `outline` 但給負 offset，不算符合本節規則。
-
-慣例 B 現有 38 條用了 **4 個顏色**（`--color-accent` 31、`--color-foreground` 3、`--color-priority-high-dot` 2、`--color-destructive` 2）。`--color-focus-ring` token 落地前（`grep -rn 'focus-ring' css src` 目前 **0 命中**），`--color-accent` 是暫用值；另外三個是要收斂掉的。
+**沒有任何一個顏色能同時對頁面底色與 accent 實心底都達到 3:1。** 實測最好的候選：淺色 `#6B4826` 對底色 7.89 但對 `--color-accent-fill` 只有 1.48；深色 `#EFE3D0` 對底色 13.42 但對 fill 只有 1.88。**所以「換個顏色就好」在數學上不存在** —— 內帶（`box-shadow: 0 0 0 2px var(--color-background)`）把 offset 間隙填成頁面底色，外環才有一個固定、可預測的相鄰色。
 
 ### 標準引用更正（2026-07-26）
 
@@ -1045,9 +1039,14 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 - **不是 2.4.11** —— 2.4.11 是 "Focus Not Obscured (Minimum)"，與對比無關。
 - 「Focus Appearance」是 **2.4.13，Level AAA**，不是 AA 的硬需求。#1182 的 issue 引用過錯誤編號，寫進文件前已更正。
 
-### 尚未做完的實作（#1182）
+### 目前的 token 值
 
-文件已拍板，code 還沒跟上。剩：抽 `--color-focus-ring` token、遷移 A/C/C′ 共 30 條、把 6 條負 `outline-offset` 取正、收斂 B 的 4 個顏色、修深色 `--color-accent` == `--color-accent-fill`、補 `@media (prefers-contrast: more)` 加強階。
+| | 一般階 | 對頁面底色 | `prefers-contrast: more` | 加強後 |
+|---|---|---|---|---|
+| 淺色 | `#8A6038` | 5.35:1 | `#3D2610` | 13.73:1 |
+| 深色 | `#E0BC90` | 9.53:1 | `#FFE8C8` | 14.28:1 |
+
+深色刻意**不用** `--color-accent`（`#CBA06E`）—— 它與 `--color-accent-fill` 同值，焦點框疊在實心鈕上會是 1.00:1。
 
 ## Accessibility
 - **Touch target:** 最小 44×44px (Apple HIG)

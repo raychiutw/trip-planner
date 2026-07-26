@@ -344,10 +344,15 @@ describe('tokens.css', () => {
   });
 
   // #1158: 全域 focus-visible 焦點框補回 + 守護測試
-  // 任何 `:focus-visible { ... outline: none ... }` 規則若裸移除 outline，
-  // 必須在同規則內同時提供可見的焦點指示 —— 焦點框陰影（--shadow-ring，本票要補的
-  // 一般按鈕/連結/role=button 寫法）或既有輸入元件的邊框變色替代方案（不在本票範圍，
-  // 見 .tp-titlebar-trip-search 這類既有案例），不能兩手空空完全沒有指示。
+  // 任何 `:focus-visible { ... outline: none ... }` 規則若裸移除 outline，必須在同規則內
+  // 提供可見的替代指示，不能兩手空空。
+  //
+  // ⚠ 2026-07-26（#1182）：本條原本把 `box-shadow: var(--shadow-ring)` 列為認可的替代方案。
+  // 那個寫法已依 HIG 否決（「Rely on system-provided focus effects」—— `outline: none` 再自畫
+  // 就是被勸阻的那一邊），`--shadow-ring` token 也已刪除。現在認可的替代只剩兩種，都是
+  // DESIGN.md §Focus Indicator 明列的例外：表單輸入的 `border-color` 變化、清單／集合的
+  // `background` highlight。要畫框請直接用 `outline` + 正的 `outline-offset`，那條走
+  // tests/unit/focus-indicator.test.ts。
   it('every :focus-visible rule that resets outline: none also provides a visible focus indicator', () => {
     const ruleRegex = /([^{}]*:focus-visible[^{}]*)\{([^}]*)\}/g;
     const offendingSelectors: string[] = [];
@@ -357,10 +362,10 @@ describe('tokens.css', () => {
       const selector = match[1].trim();
       const body = match[2];
       const resetsOutline = /outline:\s*none\s*;?/.test(body);
-      const hasFocusRingShadow = /box-shadow:\s*var\(--shadow-ring\)/.test(body);
       const hasBorderColorAlternative = /border-color:\s*var\(/.test(body);
+      const hasHighlightAlternative = /background(-color)?:\s*var\(/.test(body);
 
-      if (resetsOutline && !hasFocusRingShadow && !hasBorderColorAlternative) {
+      if (resetsOutline && !hasBorderColorAlternative && !hasHighlightAlternative) {
         offendingSelectors.push(selector);
       }
     }

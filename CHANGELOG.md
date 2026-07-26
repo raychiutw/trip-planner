@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.68] - 2026-07-26
+
+### Fixed
+- **焦點框在 accent 實心底上看不見（#1182）已修** —— 深色實測 **1.00:1**（`--color-accent` 與 `--color-accent-fill` 同為 `#CBA06E`，焦點框字面上不存在）、淺色 1.46:1，都不到 WCAG 1.4.11（AA）的 3:1。修法是依 v2.57.67 拍板的 HIG 規則收斂機制，不是調色。
+- **`--shadow-ring` 已刪除**，全庫 20 條慣例 A（`outline: none` + 自畫 `box-shadow`）遷到 `outline: 2px solid var(--color-focus-ring)` + `outline-offset: 2px` + 內帶 `box-shadow: 0 0 0 2px var(--color-background)`。依據是 HIG Accessibility 的「Rely on system-provided focus effects … create custom only if it's absolutely necessary」—— `outline` 就是系統機制，它接得到使用者的 System Settings accent 與 Full Keyboard Access 偏好。
+- **6 條負 `outline-offset` 取正**（`-2px`×4、`-3px`×2）。負值把框畫進元件自己的 padding box，相鄰色又變回自家底色 —— 跟被否決的慣例 A 是同一個失效模式，「`outline-offset` 天生有間隙」只對正值成立。
+- **`.tp-entry-action-time-select` 死 CSS 清除**（無任何 JSX 引用）。
+
+### Added
+- **`--color-focus-ring` —— 焦點框自己的角色**，與 `--color-accent` 分家（HIG Color 的 macOS 動態系統色表把 `Keyboard focus indicator color` 與 `Control accent` 列為兩個分開的條目）。淺 `#8A6038`（對底色 5.35:1）／深 `#E0BC90`（9.53:1）。深色刻意不用 `#CBA06E` —— 它與 `accent-fill` 同值。
+- **`@media (prefers-contrast: more)` 的焦點色加強階**（淺 `#3D2610` 13.73:1／深 `#FFE8C8` 14.28:1）。HIG Color 要求自訂色「supply light and dark variants, **and an increased contrast option for each variant**」，而本 repo 的 `prefers-contrast` 區塊先前只處理玻璃模糊與 tabbar tint。
+- **`tests/unit/focus-indicator.test.ts`** —— 9 條守衛（token 存在／對比／`--shadow-ring` 絕跡／無負 offset／顏色一律走 `--color-focus-ring`／加強階兩階且都更高對比／宣告語法合法／meta guard）。**8 個 mutation 逐一驗過會轉紅**，每次先確認突變真的套用。
+
+### Changed
+- **慣例 B 的 38 條收斂成單一顏色** —— 原本混用 `--color-accent` 31／`--color-foreground` 3／`--color-priority-high-dot` 2／`--color-destructive` 2。
+- **`HourlyWeather` 的 `shadow-ring` utility → Tailwind 原生 `ring-2 ring-accent`**。`@theme` 的 token 會生成同名 utility class，那裡拿它標「現在這一小時」（不是焦點指示）—— 刪 token 會讓它靜默失效。產出的 CSS 等價（`.ring-accent{--tw-ring-color:var(--color-accent)}`）。
+- **`tokens-css.test.ts` 的 #1158 守衛更新**：原本把 `box-shadow: var(--shadow-ring)` 列為認可的替代指示，那條已被 HIG 否決。現在認可的替代只剩表單輸入的 `border-color` 與清單／集合的 `background` highlight。
+- **`DESIGN.md` §Focus Indicator 債務表改為遷移狀態，並做第三次分類修正** —— C（8 條表單光暈）與 C′（2 條）先前被記成債，實際上它們全落在真的 `input`／`textarea`／`select` 上，正是規則表列的表單輸入例外。真正遷移的只有 A 的 20 條。同時補上雙帶的數學理由：**沒有任何單一顏色能同時對頁面底色與 accent 實心底達到 3:1**（最好的候選淺色 `#6B4826` 對 fill 只有 1.48、深色 `#EFE3D0` 只有 1.88），所以「換個顏色就好」不存在。
+
 ## [2.57.67] - 2026-07-26
 
 ### Fixed

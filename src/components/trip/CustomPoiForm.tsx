@@ -67,8 +67,9 @@ const SCOPED_STYLES = `
   height: 100%;
 }
 .tp-custom-picker-map:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: -3px;
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-custom-picker-pin {
   position: absolute;

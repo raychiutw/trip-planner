@@ -46,7 +46,7 @@ export const STACK_PANEL_HEADER_STYLES = `
   transition: background 150ms var(--transition-timing-function-apple);
 }
 .tp-stack-head-btn:hover { background: var(--color-hover); }
-.tp-stack-head-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-stack-head-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-stack-head-btn .svg-icon { width: 20px; height: 20px; }
 .tp-stack-head-title {
   flex: 1; min-width: 0; text-align: center;

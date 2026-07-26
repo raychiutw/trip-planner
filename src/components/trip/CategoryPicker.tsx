@@ -72,7 +72,7 @@ const SCOPED_STYLES = `
 }
 /* focus 用 outline（獨立視覺層），不用 inset box-shadow — 否則會蓋掉 is-active 的 tone 選中框，
    鍵盤 tab 到已選的餐廳/住宿 tile 時粉/sage 框會被換成 accent。outline 與選中框正交，兩者並存。*/
-.tp-category-tile:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.tp-category-tile:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 /* auto-derived default indicator dot */
 .tp-category-tile-auto {
   position: absolute; top: 5px; right: 6px;

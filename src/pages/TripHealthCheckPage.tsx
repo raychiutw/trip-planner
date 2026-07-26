@@ -186,7 +186,7 @@ const SCOPED_STYLES = `
   transition: filter 150ms;
 }
 .tp-ai-health-body-cta:hover:not(:disabled) { filter: brightness(0.95); }
-.tp-ai-health-body-cta:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-ai-health-body-cta:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-ai-health-body-cta:disabled { opacity: 0.5; cursor: not-allowed; }
 .tp-ai-health-body-cta .svg-icon { width: 18px; height: 18px; }
 
