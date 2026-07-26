@@ -93,8 +93,9 @@ const SCOPED_STYLES = `
 }
 .tp-input-btn-confirm:hover { filter: brightness(0.92); }
 .tp-input-btn-confirm:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-input-btn-confirm:disabled {
   opacity: 0.5;

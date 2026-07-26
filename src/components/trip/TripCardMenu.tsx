@@ -35,9 +35,7 @@ const SCOPED_STYLES = `
   background: var(--color-hover, var(--color-secondary));
   color: var(--color-foreground);
 }
-.tp-card-menu-trigger:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: 2px;
-}
+.tp-card-menu-trigger:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-card-menu-trigger .svg-icon { width: 18px; height: 18px; }
 
 .tp-card-menu-dropdown {

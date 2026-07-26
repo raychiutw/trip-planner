@@ -31,7 +31,9 @@ test.beforeEach(async ({ page }) => {
  *
  * `hasIndicator` 刻意寫得保守：`outline-style` 不是 none 且寬度不為 0，**或**
  * box-shadow 不是 none。只要其中一個成立就算有指示 —— 本 repo 的慣例（#1158 立的）
- * 是 `outline: none; box-shadow: var(--shadow-ring)`，但別把守衛綁死在那一種寫法上。
+ * 是 `outline: 2px solid var(--color-focus-ring)` + `outline-offset: 2px` + 雙帶內圈
+ * （#1182 依 HIG 收斂；先前的 `outline: none; box-shadow: var(--shadow-ring)` 已退場）。
+ * 但別把守衛綁死在那一種寫法上 —— 表單輸入走 border-color、清單走 highlight 也算數。
  */
 async function focusIndicator(page) {
   return page.evaluate(() => {

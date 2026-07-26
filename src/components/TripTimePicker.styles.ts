@@ -150,8 +150,9 @@ export const TRIP_TIME_PICKER_STYLES = `
   font-weight: 700;
 }
 .tp-time-cell:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 
 /* clearable：popover 底部「清除時間」按鈕（把值設回空字串）。 */
@@ -180,7 +181,8 @@ export const TRIP_TIME_PICKER_STYLES = `
   color: var(--color-destructive);
 }
 .tp-time-clear:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 `;

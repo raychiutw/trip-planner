@@ -160,7 +160,7 @@ const SCOPED_STYLES = `
   color: inherit;
 }
 .tp-notes-section-head:hover { background: var(--color-tertiary); }
-.tp-notes-section-head:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.tp-notes-section-head:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 
 .tp-notes-section-icon {
   width: 36px; height: 36px;

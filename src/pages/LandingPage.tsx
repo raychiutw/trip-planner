@@ -38,7 +38,7 @@ const SCOPED_STYLES = `
   border-radius:var(--radius-full);
 }
 .tp-lp-nav-login:hover{background:var(--color-hover)}
-.tp-lp-nav-login:focus-visible{outline:none;box-shadow:var(--shadow-ring)}
+.tp-lp-nav-login:focus-visible{outline:2px solid var(--color-focus-ring);outline-offset:2px;box-shadow:0 0 0 2px var(--color-background)}
 
 /* ── Hero ── */
 .tp-lp-hero{padding:36px 18px 12px;max-width:1160px;margin:0 auto}
@@ -62,7 +62,7 @@ const SCOPED_STYLES = `
   transition:filter var(--transition-duration-fast) var(--transition-timing-function-apple);
 }
 .tp-lp-cta:hover{filter:brightness(var(--hover-brightness))}
-.tp-lp-cta:focus-visible{outline:none;box-shadow:var(--shadow-ring),var(--shadow-md)}
+.tp-lp-cta:focus-visible{outline:2px solid var(--color-focus-ring);outline-offset:2px;box-shadow:0 0 0 2px var(--color-background),var(--shadow-md)}
 .tp-lp-hero-visual{margin-top:28px}
 .tp-lp-art{width:100%;height:auto;max-width:460px;margin:0 auto;display:block}
 

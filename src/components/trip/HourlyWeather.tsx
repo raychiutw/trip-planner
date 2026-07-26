@@ -243,7 +243,9 @@ const HourlyWeather = memo(function HourlyWeather({
                 key={h}
                 className={clsx(
                   'bg-background rounded-sm py-2 px-1 text-center min-w-[52px] shrink-0',
-                  isNow && 'bg-accent-bg shadow-ring',
+                  // 「現在這一小時」的強調環，不是焦點指示 —— 原本借用 --shadow-ring，
+                  // 那顆 token 已隨慣例 A 退場（#1182），改用 Tailwind 原生 ring，視覺相同。
+                  isNow && 'bg-accent-bg ring-2 ring-accent',
                 )}
                 data-hour={h}
               >

@@ -185,8 +185,9 @@ export const TRIP_DATE_PICKER_STYLES = `
   cursor: not-allowed;
 }
 .tp-date-popover .rdp-day_button:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 
 /* Mobile responsive — full-width popover on narrow viewports */

@@ -554,8 +554,9 @@ const SCOPED_STYLES = `
   border-color: var(--color-line-strong);
 }
 .tp-shift-modal-cancel:focus-visible {
-  outline: 2px solid var(--color-foreground);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-shift-modal-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
 

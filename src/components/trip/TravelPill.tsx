@@ -55,8 +55,9 @@ const SCOPED_STYLES = `
 }
 .tp-travel-pill.is-interactive:hover { background: var(--color-accent-2-subtle); }
 .tp-travel-pill.is-interactive:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-travel-pill-icon {
   /* 柔褐三色：交通 sage（描邊式用較深 sage 維持對比，2026-06）*/
@@ -113,9 +114,7 @@ const SCOPED_STYLES = `
 .tp-travel-sameplace .svg-icon { width: 13px; height: 13px; opacity: 0.7; }
 .tp-travel-sameplace.is-interactive { cursor: pointer; transition: background 120ms, color 120ms; }
 .tp-travel-sameplace.is-interactive:hover { background: var(--color-hover); color: var(--color-foreground); }
-.tp-travel-sameplace.is-interactive:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: 2px;
-}
+.tp-travel-sameplace.is-interactive:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 @media (max-width: 760px) {
   .tp-travel-sameplace { margin-left: 44px; }
   /* v2.30.12: mobile dot 中心 56→44px (page padding 16 + grip 20 + gap 8 + dot/2 12 — 對齊 .tp-rail-detail mobile margin-left). */

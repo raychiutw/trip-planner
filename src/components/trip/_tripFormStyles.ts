@@ -260,9 +260,7 @@ body.dark .tp-edit-row select {
 .tp-new-dest-result:hover,
 .tp-edit-dest-result:hover { background: var(--color-accent-subtle); }
 .tp-new-dest-result:focus-visible,
-.tp-edit-dest-result:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: -2px;
-}
+.tp-edit-dest-result:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-new-dest-result .name,
 .tp-edit-dest-result .name {
   font-size: var(--font-size-callout); font-weight: 700;

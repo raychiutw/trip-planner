@@ -34,8 +34,9 @@ const SCOPED_STYLES = `
 }
 .tp-map-link:hover { background: var(--color-hover); }
 .tp-map-link:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-map-link .svg-icon { width: 14px; height: 14px; }
 .tp-map-link-block {

@@ -79,7 +79,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
 }
 .tp-consent-btn:hover { opacity: 0.85; }
-.tp-consent-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.tp-consent-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-consent-note {
   font-size: var(--font-size-footnote); color: var(--color-muted);
   text-align: center; max-width: 380px;

@@ -49,7 +49,7 @@ const SCOPED_STYLES = `
 .tp-cat-chip:disabled { opacity: 0.6; cursor: default; }
 /* open：底加深到 --tone-bg（比 resting --tone-subtle 深一階）+ 下方 picker 浮層 = 開啟態指示 */
 .tp-cat-chip.is-open { background: var(--tone-bg, var(--color-accent-subtle)); }
-.tp-cat-chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.tp-cat-chip:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-cat-chip .svg-icon { width: 14px; height: 14px; }
 .tp-cat-chip .tp-cat-chip-pencil { width: 11px; height: 11px; color: var(--color-muted); }
 .tp-cat-chip.is-open .tp-cat-chip-pencil { color: var(--color-foreground); }

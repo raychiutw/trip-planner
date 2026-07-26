@@ -155,9 +155,7 @@ const SCOPED_STYLES = `
   transition: filter 120ms;
 }
 .tp-collab-badge-trigger:hover { filter: brightness(0.96); }
-.tp-collab-badge-trigger:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: 2px;
-}
+.tp-collab-badge-trigger:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-collab-badge-trigger .tp-collab-badge-caret {
   font-size: var(--font-size-eyebrow);
   opacity: 0.7;
@@ -225,9 +223,7 @@ const SCOPED_STYLES = `
 .tp-collab-remove:hover:not(:disabled) {
   background: var(--color-destructive-bg);
 }
-.tp-collab-remove:focus-visible {
-  outline: 2px solid var(--color-destructive); outline-offset: 2px;
-}
+.tp-collab-remove:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-collab-remove:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ===== Add form — input + role pills + CTA ===== */
@@ -273,9 +269,7 @@ const SCOPED_STYLES = `
   background: var(--color-accent-deep);
   border-color: var(--color-accent-deep);
 }
-.tp-collab-add-btn:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: 2px;
-}
+.tp-collab-add-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-collab-add-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .tp-collab-add-btn .svg-icon { width: 14px; height: 14px; flex-shrink: 0; }
 

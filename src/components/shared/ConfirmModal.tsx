@@ -89,7 +89,7 @@ const SCOPED_STYLES = `
   border-color: var(--color-border);
 }
 .tp-confirm-btn-cancel:hover { background: var(--color-tertiary); border-color: var(--color-line-strong); }
-.tp-confirm-btn-cancel:focus-visible { outline: 2px solid var(--color-foreground); outline-offset: 2px; }
+.tp-confirm-btn-cancel:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 
 .tp-confirm-btn-danger {
   background: var(--color-priority-high-dot);
@@ -97,7 +97,7 @@ const SCOPED_STYLES = `
   border-color: var(--color-priority-high-dot);
 }
 .tp-confirm-btn-danger:hover { filter: brightness(0.92); }
-.tp-confirm-btn-danger:focus-visible { outline: 2px solid var(--color-priority-high-dot); outline-offset: 2px; }
+.tp-confirm-btn-danger:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-confirm-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 

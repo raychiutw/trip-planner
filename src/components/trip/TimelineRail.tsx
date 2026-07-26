@@ -202,7 +202,7 @@ const SCOPED_STYLES = `
    .tp-rail-item[data-expanded] 處理，這裡只補 button reset + focus/disabled。 */
 .tp-rail-caret { transition: transform 120ms; display: inline-block; background: none; border: none; padding: 0; margin: 0; font: inherit; line-height: 1; color: var(--color-muted); cursor: pointer; }
 .tp-rail-caret:disabled { cursor: default; opacity: 0.4; }
-.tp-rail-caret:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+.tp-rail-caret:focus-visible { border-radius: var(--radius-sm); outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 
 /* 備選景點 list — alternates only (v2.30.14)。master POI 已升格到 .tp-rail-poi-meta */
 .tp-rail-poi-list { display: flex; flex-direction: column; gap: 8px; }
@@ -265,7 +265,7 @@ const SCOPED_STYLES = `
 .tp-rail-set-master:hover:not(:disabled) { background: var(--color-accent-bg); }
 .tp-rail-set-master:disabled { opacity: 0.5; cursor: default; }
 .tp-rail-set-master .svg-icon { width: 15px; height: 15px; }
-.tp-rail-set-master:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.tp-rail-set-master:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 
 /* 起訖時間 chip（V2）：header sub-line 內可點膠囊，terracotta tonal + pencil；空值虛線提示。 */
 .tp-rail-time-chip {
@@ -285,7 +285,7 @@ const SCOPED_STYLES = `
 }
 .tp-rail-time-chip:disabled { opacity: 0.55; cursor: default; }
 .tp-rail-time-chip .svg-icon { width: 11px; height: 11px; opacity: 0.75; }
-.tp-rail-time-chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.tp-rail-time-chip:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 
 /* 起訖時間 popup（portal 到 body，逃離 header .tp-rail-content overflow:hidden 裁切）。
    z 低於內層 TripTimePicker 的 .tp-time-popover(1100)，高於 sticky-nav(200)。 */
@@ -335,7 +335,7 @@ const SCOPED_STYLES = `
   .tp-rail-menu-trigger:focus-visible,
   .tp-rail-menu-trigger[aria-expanded="true"] { opacity: 1; }
 }
-.tp-rail-menu-trigger:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; opacity: 1; }
+.tp-rail-menu-trigger:focus-visible { opacity: 1; outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 @media (hover: none) { .tp-rail-menu-trigger { opacity: 0.65; } }
 
 /* ⋯ menu：原生 Popover API（top-layer 自動逃離 .tp-rail-content overflow:hidden、
@@ -382,7 +382,7 @@ const SCOPED_STYLES = `
 /* owner ⑧：排序模式時右邊 caret › 隱藏，grip 顯示在同位置（head-actions）。 */
 .tp-rail-body[data-sort-mode] .tp-rail-caret { display: none; }
 .tp-rail-grip:active { cursor: grabbing; }
-.tp-rail-grip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; opacity: 1; }
+.tp-rail-grip:focus-visible { opacity: 1; outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-rail-grip .svg-icon { width: 16px; height: 16px; }
 
 /* 排序模式「完成」bar — sticky 在 rail 底，退出排序模式。 */

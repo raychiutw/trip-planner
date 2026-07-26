@@ -18,6 +18,10 @@ html { color-scheme: light dark; }
     --color-accent-subtle: #F4EDE3;
     --color-accent-bg: #E9DBC8;
     --color-accent-deep: #8A6038;
+    /* 焦點框自己的角色 —— HIG Color 的 macOS 動態系統色表把 `Keyboard focus indicator
+     * color` 與 `Control accent` 列為兩個分開的條目。值目前與 accent-deep 相同，但角色
+     * 分開了，之後要單獨調不必動 accent。對頁面底色 5.35:1（WCAG 1.4.11 門檻 3:1）。 */
+    --color-focus-ring: #8A6038;
     /* 前景專用（HIG 淺色稽核 2026-07-20）：柔褐 #A97A4A 當**文字**在奶油底上只有 3.66，
      * 未達 WCAG AA 4.5。文字／連結／選中標籤一律用 -text 變體（同色相僅壓明度，不換色系）；
      * 填色、邊框、裝飾圓點維持 --color-accent 不動。
@@ -208,7 +212,6 @@ html { color-scheme: light dark; }
     --z-modal: 9000;
 
     /* Focus ring */
-    --shadow-ring: 0 0 0 2px var(--color-accent);
 
     /* Glass blur — unified 14px for topbar, bottom-nav, sheet */
     --blur-glass: 14px;
@@ -358,7 +361,7 @@ body.dark {
 @layer base {
     .svg-icon { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.125em; }
     .svg-icon svg { width: 100%; height: 100%; }
-    button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 }
 
 /* ===== TripPage base styles ===== */
@@ -1026,6 +1029,10 @@ body.dark {
         --color-accent-subtle: #2A2418;
         --color-accent-bg: #3A3020;
         --color-accent-deep: #E0BC90;
+        /* 深色刻意不用 accent(#CBA06E) —— 它與 --color-accent-fill 同值，焦點框疊在
+         * 實心鈕上會變成 1.00:1。#E0BC90 對頁面底 9.53:1、對 accent-fill 1.34:1
+         * （後者靠雙帶的內圈隔開，見 DESIGN.md §Focus Indicator）。 */
+        --color-focus-ring: #E0BC90;
         /* 深色的前景變體必須是**淺**值（深底上要亮字）—— 不能繼承淺色的 #8A6038/#7A5430，
          * 否則深底疊深字破版。深色 accent 當文字本就 7.12 通過，這裡對齊 accent-deep 更寬裕。
          * #E0BC90 on #1C1C1E = 9.53 ✅ */
@@ -1165,9 +1172,9 @@ body.dark {
     ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 
-    button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
-    a:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
-    [role="button"]:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
+    a:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
+    [role="button"]:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 
     * { -webkit-tap-highlight-color: transparent; }
 }
@@ -1294,7 +1301,7 @@ body.dark .tp-toast { background: var(--color-secondary); }
   transition: background-color 150ms, border-color 150ms, color 150ms;
 }
 .tp-btn:hover:not(:disabled) { background: var(--color-hover); }
-.tp-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .tp-btn-primary {
@@ -1451,9 +1458,10 @@ body.dark .tp-toast { background: var(--color-secondary); }
    驗過無 <select>）。 */
 .tp-form-row > input:focus,
 .tp-form-row > textarea:focus {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
   border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-form--auth {
   --tp-form-input-pad-y: 12px;
@@ -1545,8 +1553,9 @@ body.dark .tp-toast { background: var(--color-secondary); }
   background: var(--color-accent-fill);
 }
 .tp-map-day-tab:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-ring);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-map-day-tab-eyebrow {
   font-size: var(--font-size-eyebrow);
@@ -1654,8 +1663,9 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 20%, transparent);
 }
 .tp-map-entry-card:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-ring);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-background);
 }
 .tp-map-entry-card-top {
   display: inline-flex;
@@ -1834,7 +1844,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
  * 所以這條要跟 .tp-titlebar-action:hover 一起改。改後 light 5.81:1 / dark 5.11:1，
  * icon-only 變體同樣受益（只是 hover 時的棕色略深，與 labeled 變體的 base 色更一致）。 */
 .tp-titlebar-back:hover { background: var(--color-hover); color: var(--color-accent-text-on-tonal); }
-.tp-titlebar-back:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-titlebar-back:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-titlebar-back .svg-icon { width: 18px; height: 18px; }
 
 /* §10.5（owner 2026-07-19）：macOS toolbar 式返回 — 子頁（collab/explore）顯示可見
@@ -1886,7 +1896,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
    * e2e axe 守衛對 /trips、/favorites、/account 全綠，只是因為沒有任何一支測試去 hover 它。 */
   color: var(--color-accent-text-on-tonal);
 }
-.tp-titlebar-action:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-titlebar-action:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-titlebar-action .svg-icon { width: 18px; height: 18px; }
 /* Icon-only modifier — 強制 44×44 square (desktop + mobile)，給沒文字 label 的
  * trigger (例：EmbeddedActionMenu 漢堡) 用。 */
@@ -1943,7 +1953,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   transition: background-color 150ms, color 150ms;
 }
 .tp-titlebar-icon-btn:hover { background: var(--color-hover); color: var(--color-accent); }
-.tp-titlebar-icon-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-titlebar-icon-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-titlebar-icon-btn .svg-icon { width: 20px; height: 20px; }
 
 /* TitleBar trip-picker — shared by ChatPage / MapPage.
@@ -1963,7 +1973,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   font: inherit; color: inherit; letter-spacing: inherit;
 }
 .tp-titlebar-trip-title:hover { background: var(--color-hover); }
-.tp-titlebar-trip-title:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-titlebar-trip-title:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-titlebar-trip-title-text {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
@@ -1996,7 +2006,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   background: var(--color-hover);
   color: var(--color-accent);
 }
-.tp-titlebar-trip-picker:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-titlebar-trip-picker:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-titlebar-trip-picker .svg-icon { width: 18px; height: 18px; flex-shrink: 0; }
 .tp-titlebar-trip-picker-name {
   overflow: hidden;
@@ -2100,12 +2110,15 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 /* 「提高對比」時同樣不該讓背景干擾 tab 文字 —— 同 G15 全玻璃面降級。 */
 @media (prefers-contrast: more) {
   :root {
+    /* HIG Color：「supply light and dark variants, and an increased contrast option
+     * for each variant」。焦點色加強到對頁面底 13.73:1（一般階是 5.35）。 */
+    --color-focus-ring: #3D2610;
     --tabbar-tint: var(--color-background); --tabbar-filter: none;
     --blur-glass: 0px;
     --color-glass-nav: var(--color-background);
     --color-glass-toast: var(--color-secondary);
   }
-  body.dark { --tabbar-tint: var(--color-secondary); }
+  body.dark { --color-focus-ring: #FFE8C8; --tabbar-tint: var(--color-secondary); }
   .tp-bottom-nav, .tp-page-bottom-bar { background: var(--color-background); }
   body.dark .tp-bottom-nav, body.dark .tp-page-bottom-bar { background: var(--color-secondary); }
 }

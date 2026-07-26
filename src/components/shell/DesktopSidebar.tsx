@@ -74,7 +74,7 @@ const SCOPED_STYLES = `
 }
 .tp-sidebar-nav-item .svg-icon { width: 20px; height: 20px; flex-shrink: 0; }
 .tp-sidebar-nav-item:hover { background: var(--color-hover); color: var(--color-foreground); }
-.tp-sidebar-nav-item:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-sidebar-nav-item:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-sidebar-nav-item.is-active { background: var(--color-accent-fill); color: var(--color-accent-foreground); }
 .tp-sidebar-nav-item.is-active .svg-icon { color: var(--color-accent-foreground); }
 
@@ -170,7 +170,7 @@ const SCOPED_STYLES = `
   min-height: 52px;
 }
 .tp-account-card:hover { background: var(--color-hover); }
-.tp-account-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.tp-account-card:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-account-card .tp-avatar-md {
   width: 32px; height: 32px; border-radius: 50%;
   background: var(--color-accent-fill);
