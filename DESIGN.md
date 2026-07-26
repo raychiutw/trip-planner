@@ -699,17 +699,15 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-share-page.html`（Variant B�
 
 為什麼可復原的不給確認框：確認框對「反正能復原」的動作是純摩擦，使用者學會無腦按確認之後，它在真正危險的地方也失去效力。**把注意力預算留給不可逆的操作。**
 
-> 🔴 **這一條目前與已 ship 的 W12 刪除政策直接衝突，尚未定案 —— 讀到這裡請不要照著改 code。**
+> ⚖️ **收藏（含備選）不適用「可復原」這一列 —— 它走不可逆那一列，跳確認、不提供 undo。**（owner 2026-07-26 定案，維持 W12）
 >
-> | | W12 刪除政策 | 本段（`macos-hig-crud-spec`） |
-> |---|---|---|
-> | 日期／狀態 | **2026-07-24 已 ship**（v2.57.21 / PR #1123） | 2026-07-18 提案，未實作 |
-> | 收藏取消 | **跳同一個不可復原確認、無 undo、不提供 restore** | 不跳確認、提供 undo |
-> | code 現況 | 已照 W12 落地：`poi-favorites/[id]/restore.ts` 與 `UNDO_EXPIRED` **已刪除**，驗收條件是「無 restore 路徑殘留」 | — |
+> 背景：`macos-hig-crud-spec`（2026-07-18 提案）原本把「移除收藏」列為可復原、要求 undo；但 **W12 刪除政策在 2026-07-24 已 ship**（v2.57.21 / PR #1123）裁定「收藏取消同確認、無 undo、不提供 restore」，並在同一個 commit 刪除 `poi-favorites/[id]/restore.ts` 與 `UNDO_EXPIRED`，驗收條件是「無 restore 路徑殘留」。**提案早 6 天 → 是 W12 推翻提案**（後端規格 `docs/backend-tasks/2026-07-18-poi-favorites-undo-restore-api.md` 首行的 SUPERSEDED banner 早已這樣記載）。
 >
-> **提案比 W12 早 6 天，所以是 W12 推翻提案**（`docs/backend-tasks/2026-07-18-poi-favorites-undo-restore-api.md` 首行的 SUPERSEDED banner 已這樣記載）。上表的「可復原 → 不跳確認 + undo」對**行程景點刪除**沒有爭議（W12 也要求確認，但那屬不可逆一類、另有 #1150 的獨立取捨），**爭議只在收藏**。
+> 所以本列目前**沒有任何 call-site**，是為將來真正可復原的操作預留的規範。要新增此類操作前先確認它真的可復原，別把「看起來不危險」當成可復原。
 >
-> 待 owner 裁決（見 §Desktop CRUD Interaction 開頭的規範來源）：要嘛 W12 維持、本段把收藏移到「不可逆」那一列；要嘛本段生效、W12 的收藏條款退場並把 restore 能力接回來。**在裁決前，收藏的實作以 W12 為準（現況即是）。**
+> ⚠️ **後端仍有 soft-delete（`deleted_at` tombstone、migration `0087`）**，但那是給「重新收藏時 dedupe／保留原 id」用的內部機制，**不是使用者可見的 restore**。看到 tombstone 不要推論成「已經支援復原」。
+>
+> ⚠️ **動詞條款不受本裁決影響**：上面「收藏 MUST 用『移除』而非『刪除』」與 undo 無關 —— 它講的是「不銷毀底層資料」，現況 UI 仍寫「刪除」屬待對齊項（追蹤於 #1187）。
 
 Alert（不可逆）MUST 具備三件事：
 
@@ -750,7 +748,11 @@ Alert（不可逆）MUST 具備三件事：
 所有 modal / sheet / 操作面板的**行為層走單一引擎** `src/hooks/useSheetBehavior.ts`，各元件只保留自己的 markup + scoped styles + testid（視覺不變）。引擎提供：
 
 - **body scroll-lock**（`modal` 預設 true）。**ref-count**（`useBodyScrollLock` module-level 計數）→ 巢狀 sheet 共用一把鎖，內層不覆寫外層捲動位置。引擎**支援** `modal:false`（`useSheetBehavior` 有此參數，語意為「非模態表面、不鎖 body」，見 hook 內註解）。
-  - ⚠️ **實作現況（2026-07-23 更正）**：桌機右欄操作面板（`OperationShell`）**目前並未透過 `useSheetBehavior({modal:false})` 走引擎** —— 它只 import `isAnySheetOpen` 供 Escape 判斷，scroll 管理是自己手寫的。全 src 無 `modal: false` 呼叫。所以「操作面板走引擎的 non-modal 模式」是**設計意圖、非已實作**；要不要讓它真的接進引擎屬 wayfinder map #1110 的落差（規範層本輪只更正描述、不改 code）。
+  - ✅ **定案：桌機操作面板（`OperationShell`）不接引擎，維持自有實作**（owner 2026-07-26，#1166；此前掛在 map #1110 當未決落差）。它只 import `isAnySheetOpen` 供 Escape 判斷，Escape 與焦點都是自己管的。三條理由都可查證：
+    1. **零增量** —— 引擎在 `modal:false` 下唯一提供的是「不鎖 body」，而桌機 body 本來就不是 scroller（`.app-shell` 100dvh、三欄各自 overflow）。接了不會多出任何使用者摸得到的行為。
+    2. **會掉守衛** —— `OperationShell` 的 Escape 另有兩道引擎沒有的 guard：**焦點在 `INPUT`／`TEXTAREA`／`SELECT` 時跳過**、**`:popover-open` 時跳過**。面板裝的是多欄位表單，掉了第一道等於「在輸入框按 Esc 直接關掉整個面板」＝近似靜默丟資料。要保住就得往引擎加 option，而那會動到 8 個 modal 共用的路徑 —— 為零增量付這個變更面不划算。
+    3. **focus trap 對非模態表面是錯的** —— 引擎的 `handlePanelKeyDown` 把 Tab 關在 panel 內；非模態操作面板必須讓 Tab 走得出去到中欄（APG）。現況 panel 不掛 Tab handler、Tab 自由，是對的。
+  - 因此 **`useSheetBehavior` 的 `modal` option 屬「保留能力、目前零消費者」**（全 src 無 `modal: false` 呼叫；2026-07-18 收斂計畫裡本來要承載它的 `FormPanel` wrapper 從未被建）。留著不是遺留待辦，是刻意保留的擴充點 —— 不要因為「沒人用」就把它清掉。現行行為由 `tests/unit/operation-shell.test.tsx` 的三條守衛鎖住。
 - **Escape**：`isComposing` 略過（IME）、`isTopSheet` gate（巢狀只關最上層）、`canDismiss:false` 鎖（busy 送出中，如 AiConsent）。listener 在 `document`。
 - **focus**：`initialFocusRef` 指定開啟焦點（**破壞性 ConfirmModal 預設焦點在安全／取消鈕、非確認鈕** —— W12 刪除政策／HIG「破壞性動作預設聚焦安全選項」）、focus-trap（Tab）、focus-restore。
 - 已收斂：ConfirmModal（16 consumer 零改）/ InputModal / ConflictModal / AiConsentSheet / InfoSheet / EditTrip 平移日期 modal。**例外**：DeveloperApp secret reveal（DESIGN.md 允許的 critical-attention modal，刻意不可 dismiss）、anchored menu/popover（不同 pattern）。
@@ -819,7 +821,7 @@ Alert（不可逆）MUST 具備三件事：
 
 > ⚠ **第二列是規範新增的分軌，判準見 §Desktop CRUD Interaction「可復原 → 直接執行 + undo；不可逆 → Alert」。** 要判斷落哪一軌，問的是「底層資料有沒有被銷毀」，不是「動作看起來危不危險」。
 >
-> 🔴 **但這一列目前沒有任何合規的 call-site，而唯一的候選（收藏移除）正卡在 W12 衝突未定案** —— 見 §Desktop CRUD Interaction 那條紅字。**在裁決前，收藏移除仍走第一列的 ConfirmModal（現況即是）**，不要照第二列改。
+> ⚖️ **這一列目前零 call-site**：唯一的候選（收藏移除）已由 owner 2026-07-26 定案走**第一列**（維持 W12：跳確認、無 undo）。詳見 §Desktop CRUD Interaction 該處。新增此類操作前先確認它真的可復原。
 
 ### ConfirmModal
 

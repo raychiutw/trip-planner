@@ -227,3 +227,57 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(closeStack).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * #1166 · 定案「操作面板不接 sheet 引擎」之後，鎖住三件現行行為。
+ *
+ * owner 2026-07-26 裁定不接（DESIGN.md §Modal Dialogs 記載理由）。這三條就是「不接」
+ * 的理由本身 —— 它們是 `OperationShell` **比引擎多**或**刻意與引擎相反**的地方。
+ * 若哪天有人「順手把它接進引擎」，這三條會擋下來，而不是等使用者回報資料被丟掉。
+ */
+describe('OperationShell — #1166 定案：不接 sheet 引擎，鎖住自有行為', () => {
+  it('焦點在文字欄位時 Escape 不關面板（引擎沒有這道 guard，掉了＝在輸入框按 Esc 丟資料）', () => {
+    const closeStack = vi.fn();
+    const { getByTestId } = renderStack(
+      <OperationShell title="編輯景點">
+        <input data-testid="a-field" />
+      </OperationShell>,
+      closeStack,
+    );
+    const input = getByTestId('a-field') as HTMLInputElement;
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(
+      closeStack,
+      '焦點在 <input> 時 Escape 關掉了整個面板 —— 使用者在填表單，這近似靜默丟資料',
+    ).not.toHaveBeenCalled();
+  });
+
+  it('面板不對 Tab 做 focus trap（非模態表面必須讓 Tab 走得出去，APG）', () => {
+    // 引擎的 handlePanelKeyDown 會把 Tab 關在 panel 內 —— 那對「非模態」的操作面板是
+    // 錯的行為：使用者要能 Tab 到中欄的行程詳情。這裡鎖「panel 沒有攔 Tab」。
+    const { getByTestId } = renderStack(
+      <OperationShell title="編輯景點">
+        <button type="button" data-testid="only-btn">唯一可聚焦</button>
+      </OperationShell>,
+    );
+    const btn = getByTestId('only-btn');
+    btn.focus();
+    // 若有人接了引擎的 trap，Tab 會被 preventDefault 並 wrap 回第一個元素。
+    const notPrevented = fireEvent.keyDown(btn, { key: 'Tab' });
+    expect(
+      notPrevented,
+      'Tab 被 preventDefault 了 —— 面板做了 focus trap，非模態表面不該關住 Tab',
+    ).toBe(true);
+  });
+
+  it('面板掛載時不鎖 body scroll（引擎 modal:false 唯一提供的東西，桌機本來就不需要）', () => {
+    // 「接引擎能拿到什麼」的答案是「不鎖 body」，而桌機 body 本來就不是 scroller。
+    // 這條同時是「零增量」那個理由的證據：現況 body 本來就沒被鎖。
+    renderStack(<OperationShell title="編輯景點"><div>內容</div></OperationShell>);
+    expect(document.body.style.position, 'body 被 lock 了 —— 面板不該鎖 body').not.toBe('fixed');
+    expect(document.body.style.overflow).not.toBe('hidden');
+  });
+});
