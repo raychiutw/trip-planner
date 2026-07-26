@@ -64,6 +64,19 @@ test('#1140 story 1–3：切 tab 帶著同一個 active trip，重整後仍在'
   await page.getByTestId(`map-trip-pick-${TRIP_B}`).click();
   await expect(page).toHaveURL(new RegExp(`/trip/${TRIP_B}/`));
 
+  /*
+   * ⚠ **不能只等 URL 換掉就往下走。** URL 一變 `toHaveURL` 就通過，但把 active trip 寫進
+   * localStorage 的是 `MapPage` 在**新頁面 render 之後**的 effect —— 兩者之間有一段窗口。
+   * 在那段窗口裡 `page.goto('/chat')` 會讓寫入根本沒發生，聊天頁就讀到舊的那條。
+   *
+   * 這正是本檔第一版的 bug：機器空閒時窗口小、看起來是綠的；與 playwright 另一份同時跑時
+   * 就紅（2026-07-26 實測重現）。等「真正的前置條件」而不是等一個剛好比較早發生的信號。
+   */
+  const LS_KEY = 'tp-trip-pref'; // LS_PREFIX('tp-') + LS_KEY_TRIP_PREF('trip-pref')
+  await expect
+    .poll(() => page.evaluate((k) => localStorage.getItem(k), LS_KEY), { timeout: 10000 })
+    .toContain(TRIP_B);
+
   // 走到聊天 tab（不帶 tripId）—— 應該解析到 active trip = B，不是回到預設的 A
   await page.goto('/chat');
   await page.waitForLoadState('networkidle');

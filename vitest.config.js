@@ -65,6 +65,22 @@ export default defineConfig({
           exclude: TS_DOM_FILES,
           environment: 'node',
           // 不需 jsdom polyfill setup
+          /*
+           * 2026-07-26：從 vitest 預設的 5s 提高。這個 project 裡有兩類**會 spawn 真子程序**的
+           * 測試，它們在機器吃緊時（例如同時在跑 playwright）會超過 5s 而變成間歇失敗：
+           *   - 12 個檔用 `createTestDb()` 起 Miniflare／workerd（`account-erasure`、
+           *     `migration-00xx-*`…）—— 同一套 Miniflare 在 `vitest.config.api.mts` 早就設了
+           *     testTimeout 90s，只有這個 project 還在吃 5s 預設
+           *   - `check-migration-safety.test.ts` 每個 case 建一個真 git repo（6+ 個 git 子程序）
+           *
+           * 實測（機器空閒）：這兩支每個 case 300–600ms。**兩支各自間歇失敗的那條，都正好是
+           * 該檔最慢的之一** —— 10 核吃滿時 10 倍慢就撞 5s。
+           *
+           * 純邏輯／source-grep 測試（本 project 的多數）都是毫秒級，提高上限對它們沒有成本：
+           * 只有「真的卡死」時才會從 5s 變成 30s 才報。
+           */
+          testTimeout: 30000,
+          hookTimeout: 60000,
         },
       },
     ],
