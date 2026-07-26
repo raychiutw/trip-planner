@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.72] - 2026-07-26
+
+### Fixed
+- **e2e fixture 不再帶第三方人名** —— `tests/e2e/api-mocks.js` 的第二條測試行程原本用一條**真實 prod 行程的 slug**，而那個 slug 帶著第三方的名字；這個 repo 是 public，pre-push 的 PII 掃描也會命中。9 處改成 `Demo`（沒有任何測試斷言 owner 字串，改名零風險），並在 fixture 上加註「不要為了跟 prod 一致抄真 slug 回來」。
+- **`active-trip-continuity.spec.js` 等錯了信號（我上一版自己寫的 bug）** —— 它在 `toHaveURL` 通過後就 `goto('/chat')`，但把 active trip 寫進 localStorage 的是 `MapPage` 在**新頁面 render 之後**的 effect，兩者之間有一段窗口。機器空閒時窗口小、看起來是綠的；與另一份 playwright 同時跑就紅。改成 `expect.poll` 等 localStorage 真的寫入。**負載下實測：拿掉等待 4/4 紅、加回來 4/4 綠。**
+
+### Changed
+- **`tests/api/setup.ts` 的 migration 判定與併發結構**（**加固，不是已重現的 bug 的修正**）：
+  - `hasMigratedSchema` 原本看 `trip_entries` 的形狀，而 `trip_entries` 建於 **0047**、migration 總數是 **90** —— 判定為「已遷移」時可能還缺 0048–0090 全部（`account_notification_preferences`、`poi_favorites` soft-delete 欄位、`users` 隱私同意欄位…）。改看最後一個 schema 變更（0088 的 `users.privacy_consent_at`）。
+  - 「要不要跑 migration」的**決定**原本在 memoized promise **外面** `await` —— 兩個併發呼叫都能通過 `!__tp_migrated`、都停在那個 await 上，晚醒的那個會看到判定已成立而**直接返回、沒等完剩下的 migration**。決定已移進單一 memoized promise。
+  - 回傳前加 post-condition：schema 不完整就當場拋出明確錯誤，而不是讓半套 schema 造成隨機的下游斷言失敗。
+- **`unit-node` 的 `testTimeout` 5s（vitest 預設）→ 30s、`hookTimeout` → 60s**（**同樣是加固，假設未被證實**）。這個 project 裡有兩類會 spawn 真子程序的測試：12 個檔用 `createTestDb()` 起 Miniflare／workerd、`check-migration-safety.test.ts` 每個 case 建一個真 git repo。同一套 Miniflare 在 `vitest.config.api.mts` 早就設了 90s，只有這個 project 還在吃 5s 預設。
+
+### 誠實記錄：兩支 unit flake 沒有重現
+`check-migration-safety.test.ts` 與 `account-erasure.test.ts` 今天各自間歇失敗過（共 3 次），但**在 15+ 次嘗試裡沒有重現一次** —— 含單獨連跑 8 次、6 個並行程序、9 核 CPU 吃滿、與 playwright 同時跑、以及**把 timeout 改回 5s 再在重負載下跑兩次**（仍然全綠）。
+
+所以上面兩項 `Changed` 是**基於閱讀程式碼找到的真實結構問題**，不是「已證明會修好那兩支」。支持 timeout 假設的只有間接證據：兩支各自失敗的那條都正好是該檔最慢的之一（`account-erasure` 那條 466ms 是全檔最慢）。**若日後再看到同樣的紅，請不要以為已經修過了。**
+
+反過來，可重現的是 **e2e** 那組：與另一份 playwright 同時跑時 `map-bottom-tabs` 與 `trip-stack-scroll-sheet` 會 30s 逾時（純資源飢餓，非產品缺陷；CI 有 `retries: 2` 會吸收，本地 `retries: 0`）。本次沒有動它們 —— 加本地 retries 會把真 flake 一起遮掉。
+
 ## [2.57.71] - 2026-07-26
 
 ### Fixed

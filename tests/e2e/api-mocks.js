@@ -25,9 +25,13 @@ const MOCK_TRIPS_LIST = [
     dataSource: 'manual',
   },
   {
-    tripId: 'busan-trip-2026-CeliaDemyKathy',
+    /* ⚠ owner／tripId 刻意用 `Demo` 這種明顯是假的值，**不要為了「跟 prod 一致」抄真 slug 回來**。
+     * 原本這裡是一條真實 prod 行程的 slug，而那個 slug 帶著第三方的名字 —— 這個 repo 是
+     * public，pre-push 的 PII 掃描也會命中。fixture 只需要「有第二條行程可以切換」，
+     * 名字是什麼完全不影響任何斷言（沒有測試斷言 owner 字串）。 */
+    tripId: 'busan-trip-2026-Demo',
     name: '釜山三日遊',
-    owner: 'CeliaDemyKathy',
+    owner: 'Demo',
     title: '2026 釜山三日遊',
     countries: '["KR"]',
     published: 1,
@@ -101,12 +105,12 @@ const MOCK_TRIP_META_OKINAWA = {
   destinations: [],
 };
 
-/* ===== /api/trips/busan-trip-2026-CeliaDemyKathy (single trip meta) ===== */
+/* ===== /api/trips/busan-trip-2026-Demo (single trip meta) ===== */
 const MOCK_TRIP_META_BUSAN = {
-  id: 'busan-trip-2026-CeliaDemyKathy',
-  tripId: 'busan-trip-2026-CeliaDemyKathy',
+  id: 'busan-trip-2026-Demo',
+  tripId: 'busan-trip-2026-Demo',
   name: '釜山三日遊',
-  owner: 'CeliaDemyKathy',
+  owner: 'Demo',
   title: '2026 釜山三日遊',
   description: '三天兩夜釜山美食行程',
   countries: '["KR"]',
@@ -608,17 +612,17 @@ const OKINAWA_DOCS = {
 
 const TRIP_META = {
   'okinawa-trip-2026-Ray': MOCK_TRIP_META_OKINAWA,
-  'busan-trip-2026-CeliaDemyKathy': MOCK_TRIP_META_BUSAN,
+  'busan-trip-2026-Demo': MOCK_TRIP_META_BUSAN,
 };
 
 const TRIP_DAYS = {
   'okinawa-trip-2026-Ray': { list: MOCK_DAYS_OKINAWA, byNum: OKINAWA_DAYS },
-  'busan-trip-2026-CeliaDemyKathy': { list: MOCK_DAYS_BUSAN, byNum: BUSAN_DAYS },
+  'busan-trip-2026-Demo': { list: MOCK_DAYS_BUSAN, byNum: BUSAN_DAYS },
 };
 
 const TRIP_DOCS = {
   'okinawa-trip-2026-Ray': OKINAWA_DOCS,
-  'busan-trip-2026-CeliaDemyKathy': null, // no docs
+  'busan-trip-2026-Demo': null, // no docs
 };
 
 const MOCK_SESSIONS = [
