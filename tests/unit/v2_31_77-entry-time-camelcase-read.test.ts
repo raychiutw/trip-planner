@@ -47,15 +47,32 @@ describe('v2.31.77: entry time read uses camelCase (startTime / endTime)', () =>
   });
 
   describe('buildWeatherDay accepts camelCase input', () => {
-    it('parses startTime hour for weather time slot', () => {
+    it('reads the current master POI shape and parses startTime', () => {
       const day = buildWeatherDay('2026-05-18', [
-        { startTime: '09:00', displayTitle: '景點 A', location: { lat: 26.21, lng: 127.72 } },
-        { startTime: '15:00', displayTitle: '景點 B', location: { lat: 26.50, lng: 127.99 } },
+        { startTime: '09:00', master: { poiId: 1, name: '景點 A', lat: 26.21, lng: 127.72 } },
+        { startTime: '15:00', master: { poiId: 2, name: '景點 B', lat: 26.50, lng: 127.99 } },
       ]);
       expect(day).not.toBeNull();
-      expect(day!.locations).toHaveLength(2);
-      // Day-built locations carry the parsed hour
-      expect(day!.locations[0]).toBeTruthy();
+      expect(day!.locations).toEqual([
+        { name: '景點 A', lat: 26.21, lon: 127.72, start: 9 },
+        { name: '景點 B', lat: 26.50, lon: 127.99, start: 15 },
+      ]);
+    });
+
+    it('deduplicates adjacent master POIs within 0.01 degrees', () => {
+      const day = buildWeatherDay('2026-05-18', [
+        { startTime: '09:00', master: { poiId: 1, name: '景點 A', lat: 26.21, lng: 127.72 } },
+        { startTime: '10:00', master: { poiId: 2, name: '景點 A 旁', lat: 26.215, lng: 127.725 } },
+        { startTime: '15:00', master: { poiId: 3, name: '景點 B', lat: 26.50, lng: 127.99 } },
+      ]);
+      expect(day?.locations.map((location) => location.name)).toEqual(['景點 A', '景點 B']);
+    });
+
+    it('returns null when no master POI has usable coordinates', () => {
+      expect(buildWeatherDay('2026-05-18', [
+        { startTime: '09:00', master: { poiId: 1, name: '景點 A', lat: null, lng: null } },
+        { startTime: '15:00', master: null },
+      ])).toBeNull();
     });
   });
 
