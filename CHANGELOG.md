@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.74] - 2026-07-27
+
+### Fixed
+- **每日行程天氣重新顯示（#1208）** —— 天氣座標與名稱改讀現行 API 的 canonical `entry.master` POI，不再使用 v2.29.0 已退場的 `entry.location`／`entry.displayTitle`，並保留開始時間與相鄰地點去重規則。
+- 無即時預報時不再整列消失：依 Day 顯示 Flutter 對齊的「天氣示意」，並區分無位置、超過 16 天、更新中、暫時失敗與無可用預報。
+- 有即時資料時維持全天溫度／降雨範圍，且可用滑鼠、Enter 或 Space 展開完整 0:00–23:00 逐時預報。
+
 ## [2.57.73] - 2026-07-27
 
 ### Fixed
