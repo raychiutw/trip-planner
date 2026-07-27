@@ -231,12 +231,10 @@ describe('EditEntryPage — 載入 + 初始呈現', () => {
       expect(screen.queryByTestId('edit-entry-start-time')).toBeTruthy();
     });
     // v2.33.21: native <input type="time"> → TripTimePicker (button trigger 顯示時間)
-    // W11：picker 現在「12/24 跟系統」，test 環境 en-US=12h → 13:30 顯 "1:30 PM"。
-    // 用容忍兩格式的 regex，避免綁死 test 環境 locale。
     const startTrigger = screen.getByTestId('edit-entry-start-time').querySelector('button');
     const endTrigger = screen.getByTestId('edit-entry-end-time').querySelector('button');
-    expect(startTrigger?.textContent).toMatch(/12:00/); // 24h "12:00" / 12h "12:00 PM" 皆含
-    expect(endTrigger?.textContent).toMatch(/13:30|1:30\s*PM/);
+    expect(startTrigger).toHaveTextContent('12:00');
+    expect(endTrigger).toHaveTextContent('13:30');
   });
 
   // v2.34.0: entry-level「備註」section（trip_entries.note）已移除，改 per-POI 備註。

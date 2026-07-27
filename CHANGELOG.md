@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.73] - 2026-07-27
+
+### Fixed
+- **所有可調整時間固定為 24 小時制（#1210）** —— `TripTimePicker` 不再跟隨作業系統或瀏覽器的 `Intl hourCycle`；行程起訖、時間軸快速編輯、新增景點，以及航班、住宿與預約時間一律顯示並選擇 `00:00–23:59`，既有 `HH:MM` 儲存契約不變。
+
+### Removed
+- 移除 AM／PM 欄、12/24 小時轉換分支與已失效測試，並更新 Apple HIG 規格註明 #1210 取代 #1134 的舊決策。
+
 ## [2.57.72] - 2026-07-26
 
 ### Fixed
