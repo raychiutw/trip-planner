@@ -106,6 +106,7 @@ to-tickets 產物（本地 markdown）。每票＝可獨立 demo/驗收的一個
 ### W11 · 表單 & picker
 **依賴**：無 ｜**AFK**
 - 系統 date picker（locale 日期順序/週首日）、不合法停用/取消不改值；時間只時分+**5 分間隔**、**12/24 跟系統**（`Intl` hourCycle）、錯誤顯欄旁
+- **後續變更**：#1210 已取代 #1134 的時間制式決策；所有可調整時間現固定為 `00:00–23:59`。
 - 容器：短 sheet/長 push；取消 leading、完成 trailing；未存關閉前確認捨棄；儲存中阻重複、成功才關、失敗保留輸入；鍵盤 Next/Done
 - 固定高 chrome 裁字修（`height→min-height`+line-height）；px font-size→rem（ShareLinkModal 併重寫）；加 zoom/reflow 測試
 - **驗收**：日期/時間符系統；表單無資料遺失；200% 不裁字。
