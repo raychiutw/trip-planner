@@ -57,6 +57,9 @@ interface ChatMessage {
   markdown?: boolean;
   /** When true, mark message as failed (red border). */
   failed?: boolean;
+  /** ADR-0007：使用者自己按的「停止等待」。是終結但**不是錯誤** —— 畫中性態，
+   *  不用 destructive 色（真瀏覽器自測抓到的：原本一律套 is-failed 的紅框紅字）。 */
+  terminated?: boolean;
   /** ISO timestamp from tp-request `created_at` / `updated_at`. Rendered as
    *  bubble timestamp (HH:mm if today, MM/DD HH:mm 否則)。null when local
    *  optimistic message (will fill on next reload from API)。 */
@@ -212,11 +215,14 @@ function rowToMessages(row: RawRequestRow): ChatMessage[] {
   } else if (row.status === 'failed') {
     // reply 優先（後端 park 的指引、或 ADR-0007 的「遲到完成」回報都寫在這格）；
     // 沒有 reply 才用 terminal_reason 生文案 —— 停止等待與收屍刻意不寫 reply。
+    const wasCancelled = row.terminalReason === 'cancelled';
     out.push({
       id: baseId + 1,
       role: 'assistant',
       text: row.reply?.trim() || terminationText(row.terminalReason),
-      failed: true,
+      // 使用者自己停的是中性態；超時／錯誤／未授權才是 destructive。
+      terminated: wasCancelled,
+      failed: !wasCancelled,
       createdAt: assistantTs,
     });
   } else {
@@ -439,6 +445,11 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 .tp-chat-msg-assistant.is-failed {
   border-color: var(--color-destructive);
   color: var(--color-destructive);
+}
+
+/* 使用者自己按的停止 —— 是終結但不是錯誤，走中性態（ADR-0007）。 */
+.tp-chat-msg-assistant.is-terminated {
+  color: var(--color-muted);
 }
 
 .tp-chat-typing {
@@ -678,7 +689,9 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
                 ? TERMINATION_TEXT.cancelled
                 : '已在這裡停止等待，但伺服器沒有確認 —— AI 可能仍在處理。',
               pendingRequestId: null,
-              failed: true,
+              // 停成功 = 中性；沒停成功才是真的出事，走 destructive。
+              terminated: stopped,
+              failed: !stopped,
             }
           : m,
       ),
@@ -1059,6 +1072,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
                       byRole('tp-chat-msg-assistant', 'tp-chat-msg-other-user', 'tp-chat-msg-user'),
                       m.pendingRequestId && 'is-pending',
                       m.failed && 'is-failed',
+                      m.terminated && 'is-terminated',
                     )}
                     data-testid={`chat-msg-${isOtherUser ? 'other-user' : m.role}`}
                   >

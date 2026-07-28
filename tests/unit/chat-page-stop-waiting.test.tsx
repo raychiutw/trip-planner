@@ -102,4 +102,20 @@ describe('ChatPage 停止等待 (ADR-0007)', () => {
     expect(screen.getByText(/已停止等待/)).toBeInTheDocument();
     expect(screen.queryByTestId('chat-stop-waiting')).not.toBeInTheDocument();
   });
+
+  // 真瀏覽器自測抓到的：停止後泡泡被畫成 is-failed（destructive 紅框紅字）。
+  // 使用者自己按的停止不是錯誤，HIG 上不該用 destructive 色。
+  it('停止後的泡泡是中性態，不是 destructive 錯誤態', async () => {
+    renderPage();
+    const stopBtn = await screen.findByTestId('chat-stop-waiting');
+    await act(async () => { fireEvent.click(stopBtn); });
+
+    const bubble = await waitFor(() => {
+      const el = screen.getByText(/已停止等待/).closest('.tp-chat-msg');
+      expect(el).not.toBeNull();
+      return el!;
+    });
+    expect(bubble.className).toContain('is-terminated');
+    expect(bubble.className).not.toContain('is-failed');
+  });
 });

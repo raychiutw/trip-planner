@@ -116,8 +116,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     try {
       await db
         .prepare(
-          `UPDATE trip_requests SET status = 'failed', reply = ?, updated_at = datetime('now')
-             WHERE id = ? AND status IN ('open', 'processing')`,
+          // terminal_reason（ADR-0007 / migration 0092）：park 是一種終結，原因要記下來，
+          // 否則按原因聚合會整個漏掉 needs_consent 這一類。bind 順序不變（字面值不佔 ?）。
+          `UPDATE trip_requests
+              SET status = 'failed', terminal_reason = 'needs_consent', reply = ?, updated_at = datetime('now')
+            WHERE id = ? AND status IN ('open', 'processing')`,
         )
         .bind(NEEDS_CONSENT_REPLY, requestId)
         .run();

@@ -20,7 +20,7 @@
 **兩層收屍，時鐘必須錯開**：
 
 1. api-server 在**確定不會再有人處理**時就地標 `timed_out` —— reaper 收尾、tmux 起不來、REPL 未就緒、skill 未提交。`containmentReady()` 為 false **不標**（暫時性失敗，下輪 cron 會再試）。
-2. 100 分鐘牆鐘兜底，lazy 掛在 `GET /requests/:id` 與 SSE 端點，涵蓋 api-server 自己掛掉／mac mini 離線。
+2. 100 分鐘牆鐘兜底，lazy 掛在 `GET /requests/:id`（`useRequestSSE` 的 30 秒 always-on polling 打的就是它），涵蓋 api-server 自己掛掉／mac mini 離線。**不掛 SSE**：那條 stream 30 分鐘就關，活不到 100 分鐘。
 
 **終結後 worker 遲到的 PATCH，`status` 段當 no-op 不丟 400，`reply` 照寫。**
 
@@ -39,3 +39,4 @@
 - 「停止等待」鍵一送出就在，不依賴任何時鐘 —— 也因此 `useRequestSSE` 的 `elapsedMs` 每次 mount 重新計時（重整後顯示錯誤的等候分鐘數）是**獨立**的既有問題，不阻擋這個決策。
 - `terminal_reason` 是 additive 欄位 → 上線順序遵 additive 規則：**先套 migration 再 merge**（見 `ARCHITECTURE.md` 的 D1 migration 章節）。
 - 一個終結語意拆在兩個欄位，讀取端要記得同時看 `status` 與 `terminal_reason`。這是為了避開 0047 地雷付的代價。
+- **牆鐘那層繞過完成 hook**：它直接 UPDATE 不經 PATCH，所以被它收掉的健檢／筆記請求，其 `trip_health_reports` 會停在 pending。不是新迴歸（改之前 request 永遠停在 processing，那些表一樣卡著），且第一層走 PATCH、hook 照跑。要補走 `mint-restricted.ts:127` 已記下的共用 `failRequest` helper。

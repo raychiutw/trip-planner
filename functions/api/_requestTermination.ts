@@ -33,13 +33,22 @@ interface RequestRow {
 /**
  * Lazy 收屍：非終結 request 停滯超過 REQUEST_STALE_MINUTES 就地標 timed_out。
  *
- * 掛在有人在打的 read path（GET /requests/:id、SSE events）。沒人在看的殭屍收不到，
- * 但那種情況隊列本來就不會動 —— 能推進隊列的 api-server 若活著，第一層早就收了。
+ * 只掛 `GET /requests/:id` —— `useRequestSSE` 的 30 秒 always-on polling 打的就是它。
+ * **不掛 SSE events**：那條 stream 30 分鐘就關（MAX_DURATION_MS），本來就活不到 100
+ * 分鐘，掛上去只是多一條打不到的路徑。沒人在看的殭屍收不到，但那種情況隊列本來就不會
+ * 動 —— 能推進隊列的 api-server 若活著，第一層早就收了。
  *
  * 齡用 `COALESCE(updated_at, created_at)`：api-server 從沒接手過的 request 其
  * `updated_at` 是 NULL（PATCH 才會寫），只看 updated_at 會讓它永遠不算齡。
  *
  * **刻意不寫 reply** —— 那格留給 ADR-0007 的「遲到完成」。UI 文案由 terminal_reason 驅動。
+ *
+ * ⚠️ **已知缺口**：這裡直接 UPDATE、不經 PATCH，所以 requests/[id] 的完成 hook
+ * （`applyHealthCheckCompletion` / `applyNotesGenerationCompletion`）不會跑 ——
+ * 被牆鐘收掉的健檢／筆記請求，其 `trip_health_reports` 會停在 pending。
+ * **不是本次引入的迴歸**（改之前 request 根本永遠停在 processing，那些表一樣卡著），
+ * 且第一層 api-server 走 PATCH、hook 照跑；這條要 mac mini 死透 100 分鐘才觸發。
+ * 要補的話走 mint-restricted:127 已經記下的共用 failRequest helper。
  */
 export async function reapIfStale<T extends RequestRow | null>(
   db: D1Database,
