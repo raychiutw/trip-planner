@@ -57,6 +57,9 @@ interface ChatMessage {
   markdown?: boolean;
   /** When true, mark message as failed (red border). */
   failed?: boolean;
+  /** ADR-0007：使用者自己按的「停止等待」。是終結但**不是錯誤** —— 畫中性態，
+   *  不用 destructive 色（真瀏覽器自測抓到的：原本一律套 is-failed 的紅框紅字）。 */
+  terminated?: boolean;
   /** ISO timestamp from tp-request `created_at` / `updated_at`. Rendered as
    *  bubble timestamp (HH:mm if today, MM/DD HH:mm 否則)。null when local
    *  optimistic message (will fill on next reload from API)。 */
@@ -120,8 +123,28 @@ interface RawRequestRow {
    *  avatar/sender label 顯示「帳號名稱」第一字母。null = users 表無對應。 */
   submittedByDisplayName?: string | null;
   processedBy?: string | null;
+  /** ADR-0007：為什麼終結。cancelled=使用者停止等待、timed_out=收屍、
+   *  needs_consent=未授權被 park、error=處理失敗。 */
+  terminalReason?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+}
+
+/**
+ * ADR-0007 的終結文案。取消**不會**叫停 worker（entries/days 走 owner 身份 token），
+ * 所以「已停止等待」必須誠實講出行程仍可能被改，不能寫成「已中止」。
+ */
+const TERMINATION_TEXT = {
+  cancelled: '已停止等待。AI 若仍在處理，完成後的回報還是會出現在這裡，行程也可能已被更動。',
+  timed_out: 'AI 一直沒有回應，已自動停止。可以重新送出這則訊息。',
+  needs_consent: '需要行程擁有者授權 AI 才能處理。授權後重新送出即可。',
+} as const;
+const TERMINATION_FALLBACK = 'AI 處理失敗，請換個說法或稍後再試。';
+
+function terminationText(reason: unknown): string {
+  if (typeof reason !== 'string') return TERMINATION_FALLBACK;
+  // 'error' 沒有專屬文案 —— 它就是通用失敗，落 fallback。
+  return TERMINATION_TEXT[reason as keyof typeof TERMINATION_TEXT] ?? TERMINATION_FALLBACK;
 }
 
 /** QA 2026-04-26 PR-K：format chat bubble timestamp。同日只顯示 HH:mm，
@@ -190,11 +213,16 @@ function rowToMessages(row: RawRequestRow): ChatMessage[] {
   if (row.status === 'completed' && row.reply) {
     out.push({ id: baseId + 1, role: 'assistant', text: row.reply, markdown: true, createdAt: assistantTs });
   } else if (row.status === 'failed') {
+    // reply 優先（後端 park 的指引、或 ADR-0007 的「遲到完成」回報都寫在這格）；
+    // 沒有 reply 才用 terminal_reason 生文案 —— 停止等待與收屍刻意不寫 reply。
+    const wasCancelled = row.terminalReason === 'cancelled';
     out.push({
       id: baseId + 1,
       role: 'assistant',
-      text: row.reply?.trim() || 'AI 處理失敗。',
-      failed: true,
+      text: row.reply?.trim() || terminationText(row.terminalReason),
+      // 使用者自己停的是中性態；超時／錯誤／未授權才是 destructive。
+      terminated: wasCancelled,
+      failed: !wasCancelled,
       createdAt: assistantTs,
     });
   } else {
@@ -419,6 +447,11 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   color: var(--color-destructive);
 }
 
+/* 使用者自己按的停止 —— 是終結但不是錯誤，走中性態（ADR-0007）。 */
+.tp-chat-msg-assistant.is-terminated {
+  color: var(--color-muted);
+}
+
 .tp-chat-typing {
   display: inline-flex; gap: 4px; align-items: center;
 }
@@ -432,6 +465,28 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 @keyframes tp-chat-bounce {
   0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
   40% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* 停止等待（ADR-0007）。次要動作 — 陪在 typing 點點旁邊，不跟送出鍵搶重量。
+   HIG：長工作要隨時可退出，所以它一送出就在，不等時鐘。 */
+.tp-chat-stop {
+  margin-inline-start: 10px;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.tp-chat-stop:hover:not(:disabled) { color: var(--color-foreground); }
+.tp-chat-stop:disabled { opacity: 0.5; cursor: default; }
+.tp-chat-stop:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .tp-chat-composer {
@@ -606,6 +661,45 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   // 區分 'auth_expired' / 'sse_failed' / 'network'；elapsedMs 給 UI 顯示等待時間。
   const { status, error: sseError, errorReason, elapsedMs } = useRequestSSE(inflightId);
 
+  // ADR-0007「停止等待」：只終結 request、放開 composer，不追殺 mac mini 上的 worker。
+  // 一送出就在，不看時鐘 —— elapsedMs 每次 mount 重新計時，拿它當出現條件會讓重整後
+  // 的殭屍再等 3 分鐘才給得出出口，而重整正是使用者卡住時的第一反應。
+  const [stopping, setStopping] = useState(false);
+  const stopWaiting = useCallback(async () => {
+    if (!inflightId || stopping) return;
+    const id = inflightId;
+    setStopping(true);
+    let stopped = true;
+    try {
+      await apiFetch(`/requests/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'failed', terminalReason: 'cancelled' }),
+      });
+    } catch {
+      // 標不掉也要讓使用者脫身（composer 被 inflight 鎖死，這是唯一出口），
+      // 但文案不能假裝成功 —— 伺服器沒確認就是沒確認，100 分鐘牆鐘會兜底。
+      stopped = false;
+    }
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.pendingRequestId === id
+          ? {
+              ...m,
+              text: stopped
+                ? TERMINATION_TEXT.cancelled
+                : '已在這裡停止等待，但伺服器沒有確認 —— AI 可能仍在處理。',
+              pendingRequestId: null,
+              // 停成功 = 中性；沒停成功才是真的出事，走 destructive。
+              terminated: stopped,
+              failed: !stopped,
+            }
+          : m,
+      ),
+    );
+    setInflightId(null);
+    setStopping(false);
+  }, [inflightId, stopping]);
+
   // v2.33.47 round 7b LOW: memoize buildMessagesWithDividers — 之前每 keystroke
   // 都 O(n) walk messages list。1000-msg trip 在打字時明顯卡。
   const messagesWithDividers = useMemo(
@@ -712,11 +806,12 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       (async () => {
         // 後端 park（如 no_consent 未授權）會把 user-facing 指引寫進 reply。優先顯示它，
         // 否則像「重送並點授權」的 NEEDS_CONSENT_REPLY 要 reload 才看得到，live session 只剩通用訊息。
-        let text = 'AI 處理失敗，請換個說法或稍後再試。';
+        // 沒有 reply 才用 ADR-0007 的 terminal_reason 生文案 —— 停止等待與收屍刻意不寫 reply。
+        let text = TERMINATION_FALLBACK;
         try {
-          const row = await apiFetch<{ reply?: string | null }>(`/requests/${inflightId}`);
+          const row = await apiFetch<{ reply?: string | null; terminalReason?: string | null }>(`/requests/${inflightId}`);
           const reply = (row.reply ?? '').trim();
-          if (reply) text = reply;
+          text = reply || terminationText(row.terminalReason);
         } catch { /* 落用通用訊息 */ }
         if (cancelled) return;
         setMessages((prev) =>
@@ -977,13 +1072,25 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
                       byRole('tp-chat-msg-assistant', 'tp-chat-msg-other-user', 'tp-chat-msg-user'),
                       m.pendingRequestId && 'is-pending',
                       m.failed && 'is-failed',
+                      m.terminated && 'is-terminated',
                     )}
                     data-testid={`chat-msg-${isOtherUser ? 'other-user' : m.role}`}
                   >
                     {m.pendingRequestId ? (
-                      <span className="tp-chat-typing" aria-label="AI 思考中">
-                        <span /><span /><span />
-                      </span>
+                      <>
+                        <span className="tp-chat-typing" aria-label="AI 思考中">
+                          <span /><span /><span />
+                        </span>
+                        <button
+                          type="button"
+                          className="tp-chat-stop"
+                          data-testid="chat-stop-waiting"
+                          onClick={stopWaiting}
+                          disabled={!inflightId || stopping}
+                        >
+                          停止等待
+                        </button>
+                      </>
                     ) : isGarbledMessage(m.text) ? (
                       /* F7 design-review: detect mojibake → render placeholder
                        * 而不是 raw bytes，避免 trust signal 受損。 */

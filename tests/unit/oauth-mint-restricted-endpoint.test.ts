@@ -197,6 +197,9 @@ describe('POST /api/oauth/mint-restricted', () => {
     // bind = [reply, requestId]；requestId 正規化為 string '42'
     expect(park.args[1]).toBe('42');
     expect(String(park.args[0])).toContain('授權');
+    // ADR-0007：終結原因要寫進 terminal_reason，否則「按原因聚合」（獨立成欄的
+    // 唯一理由）漏掉整個 needs_consent 類別，那個值也就永遠沒人寫。
+    expect(park.sql).toMatch(/terminal_reason\s*=\s*'needs_consent'/i);
     // 連動把 linked health-check / notes 也標記 failed（否則完成 reconcile 只跑 PATCH 路徑、永遠 pending）
     const healthFail = db._runs.find((r: { sql: string }) => /UPDATE\s+trip_health_reports\s+SET\s+status\s*=\s*'failed'/i.test(r.sql));
     const notesFail = db._runs.find((r: { sql: string }) => /UPDATE\s+trip_note_ai_jobs\s+SET\s+status\s*=\s*'failed'/i.test(r.sql));

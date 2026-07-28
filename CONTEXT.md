@@ -44,6 +44,25 @@ trips ─┬─ trip_days ── trip_entries ── trip_entry_pois
 | **share（分享）** | 未登入可讀的分享連結。`trip_shares`。 |
 | **request（請求 / AI 聊天）** | 旅伴用自然語言提的改行程／問建議。`trip_requests`。**「行程 AI 聊天」在後端就是 requests pipeline**，不是另一套系統。 |
 
+### 請求怎麼結束（2026-07-28 grill 釘）
+
+一筆 request 結束時，**「結束了」與「為什麼結束」是兩個欄位**：`status` 說終結與否，`terminal_reason` 說原因。讀取端兩個都要看。理由（以及為什麼不把原因塞進 `status`）見 [ADR-0007](docs/adr/0007-request-termination-cancel-and-reap.md)。
+
+**停止等待**：
+使用者主動終結一筆還在等的 request。語意是「我不等了」，讓輸入框放開、隊列解開 —— **不是**叫 AI 停手，AI 可能還會繼續改行程。
+_Avoid_: 「取消」「中斷」「abort」（都會讓人以為 AI 停了，實際上沒有）
+
+**殭屍請求**：
+停在 `open`/`processing`、但已經沒有 worker 會再處理它的 request。**不是**「處理得很慢」—— 慢的請求還有人在跑。
+_Avoid_: 卡住、stuck（歧義：同時被拿來指殭屍請求與「我不想等了」，那是兩件事、兩套機制）
+
+**收屍**：
+系統把殭屍請求標成終結。兩層：api-server 確定 worker 死亡時就地標，加上牆鐘兜底。
+_Avoid_: 超時（只描述其中一層）、清理（跟 orphan tmux session 的清理混淆）
+
+**遲到完成**：
+request 已經終結之後，worker 才回報進來的成果。它的 `reply` 寫得進去，但不會讓 `status` 復活。
+
 ## 行程筆記（trip-level metadata）
 
 `trip_flights`（航班）· `trip_lodgings`（住宿）· `trip_reservations`（預訂）· `trip_pretrip_notes`（行前須知）· `trip_emergency_contacts`（緊急聯絡）· `trip_note_ai_jobs`（AI 產生任務）· `trip_note_ai_exclusions`（已刪 AI 主題的排除 tombstone）

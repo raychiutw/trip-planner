@@ -61,12 +61,20 @@ describe('PATCH /api/requests/:id', () => {
 /* ===== src/types/api.ts — Request interface ===== */
 
 describe('Request type definition', () => {
-  it('exports RequestStatus type with four values', () => {
-    expect(apiTypes).toContain('RequestStatus');
-    expect(apiTypes).toContain("'open'");
-    expect(apiTypes).toContain("'received'");
-    expect(apiTypes).toContain("'processing'");
-    expect(apiTypes).toContain("'completed'");
+  // RequestStatus 曾長期與 D1 對不上 —— 帶著 v2.21.3 就退場的 'received'、缺了
+  // 'failed'。這條原本斷言 'received' 存在，等於把漂移鎖進測試。
+  it('RequestStatus 對齊 D1 CHECK 的四值（無退場的 received、有 failed）', () => {
+    const line = apiTypes.match(/export type RequestStatus = ([^;]+);/);
+    expect(line).not.toBeNull();
+    expect(line[1]).toContain("'open'");
+    expect(line[1]).toContain("'processing'");
+    expect(line[1]).toContain("'completed'");
+    expect(line[1]).toContain("'failed'");
+    expect(line[1]).not.toContain("'received'");
+  });
+
+  it('Request 帶 terminalReason（ADR-0007 終結原因）', () => {
+    expect(apiTypes).toContain('terminalReason');
   });
 
   it('has message field in Request interface', () => {

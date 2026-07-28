@@ -12,6 +12,7 @@ import {
   type NoteAiDocType,
   type NoteAiJobStatus,
 } from '../../_noteAi';
+import { TERMINAL_REASONS, TERMINAL_STATUSES, reapIfStale, type TerminalReason } from '../../_requestTermination';
 import { sanitizeReply } from '../../_validate';
 import { json, parseJsonBody } from '../../_utils';
 import type { Env } from '../../_types';
@@ -34,7 +35,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
-  return json(row);
+  // ADR-0007 第二層：牆鐘兜底。權限通過後才收 —— 收屍是寫入，不給沒權限的人觸發。
+  // 收屍後的 row 少了 LEFT JOIN 的 submitted_by_display_name，補回去（chat avatar 要用）。
+  const reaped = await reapIfStale(env.DB, id, row as Record<string, unknown>);
+  if (reaped !== row) {
+    reaped.submitted_by_display_name = (row as Record<string, unknown>).submitted_by_display_name;
+  }
+
+  return json(reaped);
 };
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
@@ -57,10 +65,17 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
-  const body = await parseJsonBody<{ reply?: string; status?: string; processed_by?: string }>(context.request);
+  const body = await parseJsonBody<{
+    reply?: string;
+    status?: string;
+    processed_by?: string;
+    terminalReason?: string;
+  }>(context.request);
 
   const updates: string[] = [];
   const values: string[] = [];
+  // 遲到完成時 status 不進 UPDATE，但其餘欄位（reply）照寫 —— 見下方 bothTerminal 註解。
+  let statusIsNoop = false;
 
   if (body.reply !== undefined) {
     updates.push('reply = ?');
@@ -78,12 +93,25 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       const oldIdx = STATUS_ORDER.indexOf((oldRow.status as string) as typeof STATUS_ORDER[number]);
       const newIdx = STATUS_ORDER.indexOf(body.status as typeof STATUS_ORDER[number]);
       if (newIdx >= 0 && oldIdx >= 0 && newIdx < oldIdx) {
-        throw new AppError('DATA_VALIDATION', `status 不可從 ${oldRow.status} 退回 ${body.status}`);
+        // ADR-0007「遲到完成」：request 已終結後 worker 才回報成果。取消不會叫停 worker
+        // （entries/days 走 owner 身份 token，不受只掛在 poi-favorites 的 companion gate
+        // 約束），所以這個 PATCH 一定會來。整支 400 會連 reply 一起吞掉 —— 使用者於是
+        // 看到行程被改卻零說明，而 SKILL.md 的「誠實回覆鐵律」正是要求 worker 交代。
+        // 終結 → 終結：status 段當 no-op，其餘欄位照寫。終結 → 未終結（open/processing）
+        // 仍是非法回退，維持 400。
+        const bothTerminal = TERMINAL_STATUSES.has(oldRow.status as string)
+          && TERMINAL_STATUSES.has(body.status);
+        if (!bothTerminal) {
+          throw new AppError('DATA_VALIDATION', `status 不可從 ${oldRow.status} 退回 ${body.status}`);
+        }
+        statusIsNoop = true;
       }
     }
 
-    updates.push('status = ?');
-    values.push(body.status);
+    if (!statusIsNoop) {
+      updates.push('status = ?');
+      values.push(body.status);
+    }
   }
 
   if (body.processed_by !== undefined) {
@@ -95,7 +123,23 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     values.push(body.processed_by);
   }
 
+  // ADR-0007：終結原因獨立成欄（不進 status 的 CHECK — trip_requests 有 4 張 children
+  // FK，改 CHECK 要走 migrations/0047 的 backup-restore，那條路造成過 prod 資料全失）。
+  // 值域在這裡把關，migration 刻意不加 CHECK constraint（見 0092 的說明）。
+  // Body 用 camelCase `terminalReason` 對齊 POST /api/requests 與 response shape；
+  // `processed_by` 的 snake 是既有包袱，不擴散。
+  if (body.terminalReason !== undefined) {
+    if (!TERMINAL_REASONS.includes(body.terminalReason as TerminalReason)) {
+      throw new AppError('DATA_VALIDATION', `terminalReason 必須是 ${TERMINAL_REASONS.join('、')}`);
+    }
+    updates.push('terminal_reason = ?');
+    values.push(body.terminalReason);
+  }
+
   if (updates.length === 0) {
+    // 遲到完成只送了 status（沒帶 reply）→ 整個 PATCH 是 no-op，回現況即可。
+    // 不能丟 400：對 worker 來說「我回報完成」跟「我送了空 body」是兩件事。
+    if (statusIsNoop) return json(oldRow);
     throw new AppError('DATA_VALIDATION', '沒有要更新的欄位');
   }
 

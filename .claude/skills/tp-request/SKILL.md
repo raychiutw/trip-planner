@@ -114,6 +114,8 @@ TRIPLINE_API_TOKEN=$(node scripts/lib/get-tripline-token.js)
 
 **注意：** `received` 狀態已移除。API server 在呼叫本 skill 前已將 status 改為 `processing`。
 
+**請求可能在你還在處理時就被終結**（ADR-0007）—— 使用者按了「停止等待」、或系統收屍。這時你的收尾 `updateRequest({status:'completed', reply})` 會回 **200**，但回來的 row 仍是 `status='failed'` 加上 `terminal_reason`（`cancelled` / `timed_out`）。**這不是失敗，不要當成錯誤回報**：`reply` 已經寫進去了，使用者會在對話裡看到你的交代。狀態不復活是刻意的 —— 使用者的終結決定不被覆寫。
+
 ## 步驟
 
 > **⚠️ 以下為 Cowork / service-token 模式（有 Bash）的 shell 流程。** Contained 模式（有 `mcp__tripline__*` 工具）請走上方「Contained 流程」，不要執行下面任何 shell 指令。

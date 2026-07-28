@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
 import { mockEnv, mockAuth, mockServiceAuth, mockContext, jsonRequest, seedTrip , callHandler } from './helpers';
 import { onRequestGet, onRequestPost } from '../../functions/api/requests';
-import { onRequestPatch } from '../../functions/api/requests/[id]';
+import { onRequestPatch, onRequestGet as onRequestGetOne } from '../../functions/api/requests/[id]';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
@@ -266,5 +266,148 @@ describe('PATCH /api/requests/:id', () => {
       });
       expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
     });
+  });
+});
+
+// ADR-0007：終結原因獨立成欄。status 說「結束了沒」，terminal_reason 說「為什麼」。
+describe('終結原因 terminal_reason (ADR-0007)', () => {
+  async function newRequest(message: string): Promise<number> {
+    await db.prepare(
+      'INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?)'
+    ).bind('trip-req', message, 'user@test.com').run();
+    const row = await db.prepare(
+      'SELECT id FROM trip_requests WHERE message = ? ORDER BY id DESC LIMIT 1'
+    ).bind(message).first<{ id: number }>();
+    return row!.id;
+  }
+
+  function patch(id: number, body: Record<string, unknown>) {
+    return mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${id}`, 'PATCH', body),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: String(id) },
+    });
+  }
+
+  it('停止等待：標 failed + cancelled → 200，回傳帶 terminalReason', async () => {
+    const id = await newRequest('停止等待測試');
+    const resp = await callHandler(onRequestPatch, patch(id, {
+      status: 'failed',
+      terminalReason: 'cancelled',
+    }));
+    expect(resp.status).toBe(200);
+    const data = await resp.json() as Record<string, unknown>;
+    expect(data.status).toBe('failed');
+    expect(data.terminalReason).toBe('cancelled');
+  });
+
+  // 取消不會叫停 worker（entries/days 走 owner 身份 token，不受 companion gate 約束）。
+  // 它做完仍會回報 —— 那份交代必須寫得進來，否則使用者只看到行程被改、零說明。
+  it('遲到完成：終結後 worker 回報 → reply 寫得進來，status 不復活', async () => {
+    const id = await newRequest('遲到完成測試');
+    await callHandler(onRequestPatch, patch(id, { status: 'failed', terminalReason: 'cancelled' }));
+
+    const resp = await callHandler(onRequestPatch, patch(id, {
+      status: 'completed',
+      reply: '已加入沖繩美麗海水族館',
+    }));
+    expect(resp.status).toBe(200);
+    const data = await resp.json() as Record<string, unknown>;
+    expect(data.status).toBe('failed');
+    expect(data.terminalReason).toBe('cancelled');
+    expect(data.reply).toContain('美麗海水族館');
+  });
+
+  it('遲到完成只送 status（無 reply）→ 200 no-op，不是「沒有要更新的欄位」', async () => {
+    const id = await newRequest('遲到完成純 status');
+    await callHandler(onRequestPatch, patch(id, { status: 'failed', terminalReason: 'timed_out' }));
+
+    const resp = await callHandler(onRequestPatch, patch(id, { status: 'completed' }));
+    expect(resp.status).toBe(200);
+    const data = await resp.json() as Record<string, unknown>;
+    expect(data.status).toBe('failed');
+    expect(data.terminalReason).toBe('timed_out');
+  });
+
+  it('未知 terminalReason 拒絕 400', async () => {
+    const id = await newRequest('未知終結原因');
+    const resp = await callHandler(onRequestPatch, patch(id, {
+      status: 'failed',
+      terminalReason: 'because-i-said-so',
+    }));
+    expect(resp.status).toBe(400);
+  });
+});
+
+// ADR-0007 第二層：牆鐘兜底。api-server 自己掛掉／mac mini 離線時沒人收屍，
+// 由有人在打的 read path 就地收。100 分鐘 > ORPHAN_MAX_AGE_MS(90min)，健康 session
+// 還在工作時絕不會被標終結（短於它就重演 #237）。
+describe('牆鐘收屍 (ADR-0007)', () => {
+  function getOne(id: number) {
+    return mockContext({
+      request: new Request(`https://test.com/api/requests/${id}`),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: String(id) },
+    });
+  }
+
+  async function seedAged(message: string, status: string, minutesAgo: number, useUpdatedAt: boolean): Promise<number> {
+    await db.prepare(
+      `INSERT INTO trip_requests (trip_id, message, submitted_by, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now', ?), ?)`
+    ).bind(
+      'trip-req', message, 'user@test.com', status,
+      `-${minutesAgo} minutes`,
+      useUpdatedAt ? null : null,
+    ).run();
+    const row = await db.prepare(
+      'SELECT id FROM trip_requests WHERE message = ? ORDER BY id DESC LIMIT 1'
+    ).bind(message).first<{ id: number }>();
+    if (useUpdatedAt) {
+      await db.prepare(
+        `UPDATE trip_requests SET updated_at = datetime('now', ?) WHERE id = ?`
+      ).bind(`-${minutesAgo} minutes`, row!.id).run();
+    }
+    return row!.id;
+  }
+
+  it('processing 停滯 101 分鐘 → GET 就地標 failed + timed_out', async () => {
+    const id = await seedAged('殭屍 101 分鐘', 'processing', 101, true);
+    const resp = await callHandler(onRequestGetOne, getOne(id));
+    expect(resp.status).toBe(200);
+    const data = await resp.json() as Record<string, unknown>;
+    expect(data.status).toBe('failed');
+    expect(data.terminalReason).toBe('timed_out');
+
+    const row = await db.prepare('SELECT status, terminal_reason FROM trip_requests WHERE id = ?')
+      .bind(id).first<{ status: string; terminal_reason: string | null }>();
+    expect(row!.status).toBe('failed');
+    expect(row!.terminal_reason).toBe('timed_out');
+  });
+
+  it('從未被 PATCH 過（updated_at 為 NULL）也算齡 → 用 created_at 收', async () => {
+    const id = await seedAged('殭屍 never-patched', 'open', 120, false);
+    const resp = await callHandler(onRequestGetOne, getOne(id));
+    const data = await resp.json() as Record<string, unknown>;
+    expect(data.status).toBe('failed');
+    expect(data.terminalReason).toBe('timed_out');
+  });
+
+  it('停滯 89 分鐘 → 不動（健康 session 還在工作，短於 orphan cap 絕不誤殺）', async () => {
+    const id = await seedAged('工作中 89 分鐘', 'processing', 89, true);
+    const resp = await callHandler(onRequestGetOne, getOne(id));
+    const data = await resp.json() as Record<string, unknown>;
+    expect(data.status).toBe('processing');
+    expect(data.terminalReason).toBeNull();
+  });
+
+  it('已終結的 request 不被牆鐘覆寫原因', async () => {
+    const id = await seedAged('久遠的已完成', 'completed', 500, true);
+    const resp = await callHandler(onRequestGetOne, getOne(id));
+    const data = await resp.json() as Record<string, unknown>;
+    expect(data.status).toBe('completed');
+    expect(data.terminalReason).toBeNull();
   });
 });
