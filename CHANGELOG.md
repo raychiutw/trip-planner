@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.75] - 2026-07-28
+
+### Added
+- **行程筆記 AI 可安全重新生成（#1213–#1215）** —— 行前須知、住宿在地建議與緊急聯絡各自追蹤生成狀態，可平行執行、逾時重試，完成後顯示新增、替換、保留人工、排除與略過摘要。
+- AI 產生的項目刪除後會進入「已排除 N 項」清單；可查看並恢復單一項目，恢復後僅允許下次重新生成再次出現。
+- AI 來源項目一經編輯即轉為人工維護，重新生成不會覆蓋或重複同主題；仍可手動交還 AI 維護。
+
+### Changed
+- AI 回呼改以 request/job linkage、generation 與 active status 驗證，嚴格解析 JSON，並以同類型原子替換及資料庫 guard 防止生成期間的人工編輯或排除被覆蓋。
+
 ## [2.57.74] - 2026-07-27
 
 ### Fixed
