@@ -5,7 +5,6 @@
  * - trip_days        → trips, pois (trip_days.hotel_poi_id, migration 0060)
  * - trip_entries     → trip_days
  * - poi_relations    → pois
- * - trip_doc_entries → trip_docs
  * - trip_requests    → trips
  * - trip_permissions → trips
  *
@@ -59,10 +58,6 @@ describe('init-local-db.js TABLES FK-safe order', () => {
 
   it('pois 必須在 poi_relations 之前（FK: poi_relations.poi_id → pois.id）', () => {
     expectParentBeforeChild(tables, 'pois', 'poi_relations');
-  });
-
-  it('trip_docs 必須在 trip_doc_entries 之前（FK: trip_doc_entries.doc_id → trip_docs.id）', () => {
-    expectParentBeforeChild(tables, 'trip_docs', 'trip_doc_entries');
   });
 
   it('trips 必須在 trip_requests 之前', () => {

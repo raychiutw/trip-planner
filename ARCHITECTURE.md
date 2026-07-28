@@ -160,7 +160,7 @@ functions/api/
 ├── pois/                POI CRUD（AI 維護的 master）
 ├── requests/            旅伴請求（含 SSE stream）
 ├── permissions/         trip_permissions CRUD
-├── trips.ts             list trips（v2.19.0：POST 寫 destinations[] + auto-create 5 trip_docs stubs）
+├── trips.ts             list trips（v2.19.0：POST 寫 destinations[]）
 ├── my-trips.ts          caller's accessible trips
 ├── requests.ts          top-level requests endpoint
 ├── reports.ts           error reports
@@ -246,7 +246,6 @@ API endpoints:
 | `trip_requests` | 旅伴請求（改行程 / 問建議）。`status` 說結束了沒、`terminal_reason` 說為什麼結束（migration 0092），讀取端兩個都要看 —— 見 [ADR-0007](docs/adr/0007-request-termination-cancel-and-reap.md) |
 | `audit_log` | 所有寫操作的追蹤 |
 | `api_logs` | 錯誤日誌（`source` 欄位做分類） |
-| `trip_docs` | 行程附件（機票、訂房 PDF）|
 
 ### Trip Notes (v2.34.0+, v2.57.75 AI ownership, v2.57.76 worker contract) — trip-level metadata 5 sections + AI generation
 

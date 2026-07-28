@@ -38,7 +38,7 @@ export interface ErasureSummary {
  * 但我們仍顯式刪 —— 見檔頭③。
  */
 const TRIP_CHILD_TABLES = [
-  'trip_days', 'trip_destinations', 'trip_docs', 'trip_emergency_contacts',
+  'trip_days', 'trip_destinations', 'trip_emergency_contacts',
   'trip_flights', 'trip_health_reports', 'trip_invitations', 'trip_lodgings',
   'trip_note_ai_exclusions', 'trip_note_ai_jobs', 'trip_pois', 'trip_pretrip_notes', 'trip_reservations',
   'trip_segments', 'trip_shares',

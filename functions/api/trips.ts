@@ -18,7 +18,6 @@ const MS_PER_DAY = 86400000;
 const VALID_LANGS = new Set(['zh-TW', 'en', 'ja']);
 const VALID_DATA_SOURCES = new Set(['manual', 'tp-create', 'imported']);
 
-const TRIP_DOC_TYPES = ['flights', 'checklist', 'backup', 'suggestions', 'emergency'] as const;
 
 interface DestinationInput {
   name?: string;
@@ -166,16 +165,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       ),
     );
   });
-
-  // Auto-create 5 trip_docs stubs (commit 9). Empty title; tp-create skill or
-  // user fills in later. Avoids "UI-built trip has no docs tab content" gap.
-  for (const docType of TRIP_DOC_TYPES) {
-    stmts.push(
-      db.prepare(
-        'INSERT INTO trip_docs (trip_id, doc_type, title) VALUES (?, ?, ?)',
-      ).bind(id, docType, ''),
-    );
-  }
 
   await db.batch(stmts);
 

@@ -79,6 +79,43 @@ describe('tp-request MCP — companion write gate', () => {
   });
 });
 
+describe('tp-request MCP — trip_docs 是死路，不可暴露給 agent', () => {
+  /*
+   * 2026-07-28 prod 事故（Ray 的沖繩之旅，request 280）：使用者在聊天要求「重新生成
+   * 行程筆記的緊急聯絡與行程須知」，agent 用 putDoc 對 trip_docs 寫了四次，audit_log
+   * 四筆全是 entries_count=0，然後回報「已重新生成…包含警察/消防/海保電話…」。
+   *
+   * 兩層問題：(1) 空寫入被講成完成；(2) 就算真寫進去也看不到 —— 行程筆記頁讀的是
+   * trip_pretrip_notes + trip_emergency_contacts（migration 0073），從不讀 trip_docs，
+   * 而 checklist/emergency 這些 doc 的 UI 入口在 v2.17.17 就整批移除了。前端現在
+   * 完全不 fetch /docs。
+   *
+   * putDoc 是工具表裡唯一能寫「筆記類」的工具 —— 留著它，agent 想寫筆記時只能倒進
+   * 這個黑洞。筆記的正解是 App 筆記頁的 POST /trips/:id/notes/:type/generate，那條
+   * pipeline 有人工維護保護與 exclusion tombstone，不該讓自由格式的 agent 繞過。
+   */
+  it('工具表沒有 putDoc', async () => {
+    const m = await load();
+    const names = m.TOOLS.map((t: { name: string }) => t.name);
+    expect(names).not.toContain('putDoc');
+  });
+
+  it('沒有任何工具打 /docs（不留別名繞過）', async () => {
+    const m = await load();
+    const docTools = m.TOOLS.filter((t: { path: string }) => /\/docs\b/.test(t.path));
+    expect(docTools.map((t: { name: string }) => t.name)).toEqual([]);
+  });
+
+  it('也沒有直寫筆記表的工具 —— 筆記只能走 generate pipeline', async () => {
+    const m = await load();
+    const noteWriters = m.TOOLS.filter(
+      (t: { path: string; method: string }) =>
+        /\/notes\b/.test(t.path) && t.method !== 'GET',
+    );
+    expect(noteWriters.map((t: { name: string }) => t.name)).toEqual([]);
+  });
+});
+
 describe('tp-request MCP — allowlist surface (❌ ops absent)', () => {
   it('exposes no favorites, no entry-delete, no poi-delete, no trips create/delete, no permissions tool', async () => {
     const m = await load();

@@ -264,7 +264,13 @@ const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
   { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/trip-pois$/ },
   { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/trip-pois\/\d+$/ },
   { method: 'DELETE', pattern: /^\/api\/trips\/[^/]+\/trip-pois\/\d+$/ },
-  { method: 'PUT',   pattern: /^\/api\/trips\/[^/]+\/docs\/\w+$/ },
+  // PUT /docs **刻意移除**（2026-07-28）：trip_docs 整條退役 —— 前端完全不 fetch
+  // /docs，checklist/emergency 的 UI 入口 v2.17.17 就整批移除，行程筆記讀的是
+  // trip_pretrip_notes + trip_emergency_contacts（migration 0073）。留著這條放行，
+  // agent 想寫行程筆記時就只有這個黑洞可倒：prod request 280 對它寫了四次
+  // entries_count=0，然後回報「已重新生成…包含警察/消防/海保電話…」。
+  // 唯一消費者是 MCP 的 putDoc 工具，已一併移除。筆記的正解是 App 筆記頁的
+  // POST /trips/:id/notes/:type/generate。
   { method: 'PATCH', pattern: /^\/api\/requests\/\d+$/ },
   { method: 'PATCH', pattern: /^\/api\/pois\/\d+$/ },
   { method: 'GET',   pattern: /^\/api\/trips\// },

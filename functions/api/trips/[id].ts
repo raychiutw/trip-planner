@@ -63,7 +63,7 @@ function safeParseJson(raw: string): unknown {
  *（Phase 3 移除全域 admin；co-editor 雖能編輯，destructive 操作仍限 owner）。
  *
  * Cascade：trip_days / trip_entries / pois (via trip_pois) / trip_pois /
- * poi_relations / trip_docs / trip_doc_entries / trip_permissions / ideas /
+ * poi_relations / trip_permissions / ideas /
  * trip_requests 都有 FK ON DELETE CASCADE references trips(id)，自動清。
  */
 export const onRequestDelete: PagesFunction<Env> = async (context) => {

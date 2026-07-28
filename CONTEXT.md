@@ -66,7 +66,6 @@ request 已經終結之後，worker 才回報進來的成果。它的 `reply` �
 ## 行程筆記（trip-level metadata）
 
 `trip_flights`（航班）· `trip_lodgings`（住宿）· `trip_reservations`（預訂）· `trip_pretrip_notes`（行前須知）· `trip_emergency_contacts`（緊急聯絡）· `trip_note_ai_jobs`（AI 產生任務）· `trip_note_ai_exclusions`（已刪 AI 主題的排除 tombstone）
-附件（機票／訂房 PDF）走 `trip_docs` + `trip_doc_entries`。
 
 AI 來源項目用 `origin` 記來源、`managed_by` 記目前由人或 AI 維護、`semantic_key` 辨識同一主題。人工維護項目不可被重新生成覆蓋；「恢復排除」只移除 tombstone，不代表立即把項目加回。
 
@@ -134,5 +133,6 @@ hard cutover、**沒有 alias**。grep 不到舊名是正常的，對照這張�
 | `trip_requests.mode` | 不再 dispatch by mode，改 auto-classify intent | v2.21.3 |
 | `pois.google_rating`／`pois.maps` | `pois.rating`／已移除 | v2.19.x |
 | `pois.photos` | **全站不做 POI 照片**（DESIGN.md）；欄位已 DROP | v2.55.78 |
+| `trip_docs` / `trip_doc_entries` | 行程筆記走 `trip_pretrip_notes` / `trip_emergency_contacts` / `trip_flights` / `trip_lodgings` / `trip_reservations`（migration 0073）。兩張表已 DROP（0094），內容由 0093 搬進 pretrip notes | v2.57.78 |
 
 完整 rename 歷史（含 migration 編號）見 `ARCHITECTURE.md` 的 **Schema / IA Naming History**。

@@ -8,7 +8,7 @@ import type { Env } from '../../../../_types';
 // trip_destinations.{osm_id, osm_type} 2 cols 同步 DROPPED。
 // 指向已 drop table / cols 的歷史 audit row rollback 會 hard-fail with clear error
 // ('無效的表格名稱' / '無效的欄位')，admin 看到時知道「這個 audit 是 cutover 前的，不能 rollback」。
-const ALLOWED_TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'poi_relations', 'trip_docs', 'trip_doc_entries', 'trip_requests', 'trip_permissions'] as const;
+const ALLOWED_TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'poi_relations', 'trip_requests', 'trip_permissions'] as const;
 type AllowedTable = typeof ALLOWED_TABLES[number];
 
 const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
@@ -33,8 +33,6 @@ const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
   // （400「Invalid column(s)」）。同 0062/0078 慣例 —— 含 tests/api 的鎖，不只註解。
   pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'lat', 'lng', 'country', 'source', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at', 'price', 'created_at', 'updated_at'],
   poi_relations:    ['id', 'poi_id', 'related_poi_id', 'relation_type', 'note'],
-  trip_docs:     ['id', 'trip_id', 'doc_type', 'title', 'updated_at'],
-  trip_doc_entries: ['id', 'doc_id', 'sort_order', 'section', 'title', 'content', 'updated_at'],
   // V2 cutover (migration 0048 phase 1): trip_requests.mode is vestigial (nullable, no CHECK).
   // Phase 2 (follow-up) will DROP COLUMN. Rollback path no longer references mode.
   trip_requests:    ['id', 'trip_id', 'message', 'submitted_by', 'reply', 'status', 'actions_taken', 'created_at'],

@@ -46,19 +46,28 @@ const _cache = globalThis as unknown as GlobalCache;
 /**
  * schema 是否已跑完 migration。
  *
- * ⚠ 判定用**最後一個改 schema 的 migration**（0092 `trip_requests.terminal_reason`），不是
- * `trip_entries` 的形狀。`trip_entries` 建於 **0047**，而 migration 總數是 91 ——
- * 拿它當判定，「已遷移」在 0048–0091 全部還沒跑時就會成立（少 `account_notification_preferences`、
+ * ⚠ 判定用**最後一個改 schema 的 migration**（0094 DROP trip_docs），不是
+ * `trip_entries` 的形狀。`trip_entries` 建於 **0047**，而 migration 總數是 93 ——
+ * 拿它當判定，「已遷移」在 0048–0093 全部還沒跑時就會成立（少 `account_notification_preferences`、
  * `poi_favorites` 的 soft-delete 欄位、`users` 的隱私同意欄位…）。
  *
  * 判定表要用**最後**改 schema 的那一個；新增 migration 若動 schema，這裡要跟著往後移。
  */
 async function hasMigratedSchema(db: D1Database): Promise<boolean> {
   try {
+    // 0094_drop_trip_docs.sql —— 目前最後一個 schema 變更。
+    //
+    // ⚠️ DROP 型判定**不能只驗「表不見了」** —— 空 DB 上那也成立，會判成「已遷移」
+    // 而讓 migration 整個不跑（實測：整批 integration test 掛在 no such table: users）。
+    // 必須同時驗一個「跑完才會存在」的東西。這裡取 0092 的 trip_requests.terminal_reason
+    // 當存在性錨點，再加 0094 的 trip_docs 已消失。
     const info = await db.prepare('PRAGMA table_info(trip_requests)').all<{ name: string }>();
-    const columnNames = new Set((info.results ?? []).map((col) => col.name));
-    // 0092_trip_requests_terminal_reason.sql —— 目前最後一個 schema 變更
-    return columnNames.has('terminal_reason');
+    const hasTerminalReason = (info.results ?? []).some((col) => col.name === 'terminal_reason');
+    if (!hasTerminalReason) return false;
+    const dropped = await db
+      .prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='trip_docs'")
+      .first<{ n: number }>();
+    return (dropped?.n ?? 1) === 0;
   } catch {
     return false;
   }

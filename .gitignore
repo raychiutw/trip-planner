@@ -37,10 +37,9 @@ report.html
 # D1 daily backup JSON dumps (scripts/dump-d1.js output)
 backups/
 
-# tp-workspace runtime trigger outputs
-.claude/skills/tp-workspace/trigger-results/
-# tp-team skill eval workspace (runtime-generated outputs + snapshots)
-.claude/skills/tp-team-workspace/
+# tp-workspace / tp-team-workspace / tp-claude-design-workspace 已移除 2026-07-29：
+# 它們是 eval 產出目錄放在 .claude/skills/ 下（無 SKILL.md，不是 skill）。
+# 觸發率 fixture 已搬到 tests/skill-triggers/。
 
 # Stray npm CLI bin scripts leaked to project root
 baseline-browser-mapping
@@ -108,8 +107,6 @@ day3.json
 # Project Codex skills are versioned; other .codex runtime files stay ignored.
 !.codex/skills/
 !.codex/skills/**
-.codex/skills/tp-workspace/trigger-results/
-.codex/skills/tp-team-workspace/
 
 # funnel-guard kill-switch（incident response，本機不入 repo）
 scripts/funnel-guard/.disabled

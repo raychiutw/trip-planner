@@ -23,7 +23,7 @@ const DB_NAME = 'trip-planner-db';
 // binding，否則 "Couldn't find a D1 DB with the name or binding 'trip-planner-db'"。
 const ENV_FLAG = '--env production';
 // 順序必須 FK-safe：父表在前，子表在後（test: tests/unit/init-local-db-table-order.test.ts）
-const TABLES = ['trips', 'pois', 'trip_days', 'trip_entries', 'poi_relations', 'trip_docs', 'trip_doc_entries', 'trip_requests', 'trip_permissions'];
+const TABLES = ['trips', 'pois', 'trip_days', 'trip_entries', 'poi_relations', 'trip_requests', 'trip_permissions'];
 
 console.log('init-local-db.js — 本機 SQLite 初始化\n');
 
