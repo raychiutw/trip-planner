@@ -588,7 +588,7 @@ describe('人工維護、排除與恢復', () => {
 describe('GET AI state', () => {
   it('回傳三種 docType、摘要、排除數，並將逾時 active job 標成 timedOut', async () => {
     const tripId = await freshTrip();
-    const { jobId } = await createJob(tripId, 'tips');
+    const { jobId, requestId } = await createJob(tripId, 'tips');
     await db.prepare(
       `UPDATE trip_note_ai_jobs SET timeout_at = datetime('now', '-1 second') WHERE id = ?`,
     ).bind(jobId).run();
@@ -606,5 +606,8 @@ describe('GET AI state', () => {
       exclusionCount: 1,
       errorCode: 'NOTES_AI_JOB_STALE',
     });
+    expect(await db.prepare(
+      'SELECT status FROM trip_requests WHERE id = ?',
+    ).bind(requestId).first()).toMatchObject({ status: 'failed' });
   });
 });
