@@ -263,3 +263,12 @@ describe('searchPlaces —— 分頁（nextPageToken）', () => {
     expect(results).toHaveLength(1);
   });
 });
+
+describe('searchText field mask', () => {
+  it('必須包含 nextPageToken —— Places API (New) 只回 mask 列出的欄位', async () => {
+    fetchOk({ places: [] });
+    await searchPlacesPage('k', 'q');
+    const [, init] = mockFetch.mock.calls[0]!;
+    expect(init.headers['X-Goog-FieldMask'].split(',')).toContain('nextPageToken');
+  });
+});

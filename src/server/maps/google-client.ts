@@ -114,6 +114,11 @@ interface PlacesSearchTextResponse {
 }
 
 const SEARCH_TEXT_FIELD_MASK = [
+  // ⚠️ Places API (New) **只回 field mask 列出的欄位** —— nextPageToken 不是
+  // 自動附帶的。少了這行，分頁永遠拿不到 token（回應照樣 200、20 筆，只是
+  // nextPageToken 恆為 null）。單元測試 mock 掉 fetch 直接餵含 token 的假回應，
+  // 測不出這點；2026-07-29 靠打真 API 才抓到。
+  'nextPageToken',
   'places.id',
   'places.displayName',
   'places.formattedAddress',
