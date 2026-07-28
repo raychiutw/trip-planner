@@ -20,7 +20,7 @@ import { requireAuth, assertNotTripRestricted } from '../_auth';
 import { json } from '../_utils';
 import { AppError } from '../_errors';
 import { parseAndValidateImport, MAX_IMPORT_BYTES, type NImportNotes } from './_import';
-import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, generateUniqueTripId, TRIP_DOC_TYPES } from './_tripWrite';
+import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, generateUniqueTripId } from './_tripWrite';
 
 type Stmt = D1PreparedStatement;
 
@@ -66,7 +66,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       ...data.destinations.map((d, i) =>
         db.prepare('INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, sub_areas) VALUES (?,?,?,?,?,?,?)')
           .bind(tripId, i + 1, d.name, d.lat, d.lng, d.dayQuota, d.subAreas ? JSON.stringify(d.subAreas) : null)),
-      ...TRIP_DOC_TYPES.map((dt) => db.prepare('INSERT INTO trip_docs (trip_id, doc_type, title) VALUES (?,?,?)').bind(tripId, dt, '')),
       ...noteStatements(db, tripId, data.notes),
     ]);
 

@@ -3,14 +3,7 @@ import { apiFetch } from '../lib/apiClient';
 import { mapRow } from '../lib/mapRow';
 import { ApiError } from '../lib/errors';
 import { showErrorToast } from '../components/shared/Toast';
-import type { Trip, Day, DaySummary, DocEntry } from '../types/trip';
-
-/** Shape of a single doc returned from /api/trips/:id/docs/:key */
-export interface DocData {
-  docType?: string;
-  title?: string;
-  entries?: DocEntry[];
-}
+import type { Trip, Day, DaySummary } from '../types/trip';
 
 
 /* ===== API response normaliser ===== */
@@ -33,12 +26,6 @@ function mapDayResponse(raw: Record<string, unknown>): Day {
 }
 
 /* ===== Doc Types ===== */
-// v2.33.37 round 2: DOC_KEYS canonical 移到 src/lib/docKeys.ts（lib → hooks
-// 反向依賴）。本檔 re-export 維持向後相容。
-export { DOC_KEYS } from '../lib/docKeys';
-export type { DocKey } from '../lib/docKeys';
-import { DOC_KEYS } from '../lib/docKeys';
-import type { DocKey } from '../lib/docKeys';
 
 /* ===== Hook Return Type ===== */
 
@@ -53,7 +40,6 @@ export interface UseTripReturn {
    *  happens to a non-current day — timeline 顯示所有 day, 該 day section
    *  仍需 invalidate cache + re-fetch 才會 surface 新 entry。 */
   refetchDay: (dayNum: number) => void;
-  docs: Partial<Record<DocKey, DocData>>;
   allDays: Record<number, Day>;
   loading: boolean;
   error: string | null;
@@ -66,7 +52,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
   const [days, setDays] = useState<DaySummary[]>([]);
   const [currentDay, setCurrentDay] = useState<Day | null>(null);
   const [currentDayNum, setCurrentDayNum] = useState<number>(0);
-  const [docs, setDocs] = useState<Partial<Record<DocKey, DocData>>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [allDays, setAllDays] = useState<Record<number, Day>>({});
@@ -118,7 +103,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
     [fetchDay],
   );
 
-  /* --- Initial load: trip meta + days list + docs --- */
+  /* --- Initial load: trip meta + days list --- */
   useEffect(() => {
     if (!tripId) {
       setLoading(false);
@@ -129,7 +114,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
     setDays([]);
     setCurrentDay(null);
     setCurrentDayNum(0);
-    setDocs({});
     setError(null);
     setLoading(true);
     allDaysRef.current = {};
@@ -174,35 +158,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
           setCurrentDay(first);
         }
 
-        async function fetchAllDocs() {
-          // v2.33.35 (simplify PR-8): 用 batch endpoint GET /trips/:id/docs 取代
-          // 原本 5 個 sequential CF Function calls (10 D1 queries)。
-          // 新端點回 { docs: { flights | checklist | ... : DocData | null } }
-          // — 不存在的 doc 為 null，caller 不需 per-doc catch DATA_NOT_FOUND。
-          try {
-            const res = await apiFetch<{ docs: Record<DocKey, DocData | null> }>(
-              `/trips/${tripId}/docs`,
-              { signal: controller.signal },
-            );
-            if (cancelled) return;
-            const next: Partial<Record<DocKey, DocData>> = {};
-            for (const key of DOC_KEYS) {
-              const data = res.docs[key];
-              if (data) next[key] = data;
-            }
-            setDocs((prev) => ({ ...prev, ...next }));
-          } catch (err) {
-            if (cancelled) return;
-            if (err instanceof ApiError && err.code === 'DATA_NOT_FOUND') {
-              // batch endpoint 404（trip 找不到等）— 上游已 setLoadError，這裡靜默
-              return;
-            }
-            if (err instanceof ApiError && err.severity !== 'minor') {
-              showErrorToast(err.message, err.severity);
-            }
-          }
-        }
-        fetchAllDocs();
 
         if (!cancelled) setLoading(false);
       } catch (err) {
@@ -244,5 +199,5 @@ export function useTrip(tripId: string | null): UseTripReturn {
     refetchDay(currentDayNum);
   }, [currentDayNum, refetchDay]);
 
-  return { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, refetchDay, docs, allDays, loading, error };
+  return { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, refetchDay, allDays, loading, error };
 }

@@ -15,7 +15,6 @@ import { genTripId } from '../../../src/lib/tripId';
 
 export const BATCH_CHUNK = 50; // stay well under D1's ~100-statement-per-batch limit
 export const MAX_TRIPS_PER_USER = 1000;
-export const TRIP_DOC_TYPES = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'];
 
 type Stmt = D1PreparedStatement;
 
@@ -83,7 +82,7 @@ export async function rollbackTrip(db: D1Database, tripId: string, entryIds: num
   }
   stmts.push(db.prepare('DELETE FROM trip_segments WHERE trip_id = ?').bind(tripId));
   stmts.push(db.prepare('DELETE FROM trip_days WHERE trip_id = ?').bind(tripId));
-  for (const t of ['trip_flights', 'trip_lodgings', 'trip_reservations', 'trip_pretrip_notes', 'trip_emergency_contacts', 'trip_destinations', 'trip_docs', 'trip_permissions']) {
+  for (const t of ['trip_flights', 'trip_lodgings', 'trip_reservations', 'trip_pretrip_notes', 'trip_emergency_contacts', 'trip_destinations', 'trip_permissions']) {
     stmts.push(db.prepare(`DELETE FROM ${t} WHERE trip_id = ?`).bind(tripId));
   }
   for (let i = 0; i < poiIds.length; i += 100) {

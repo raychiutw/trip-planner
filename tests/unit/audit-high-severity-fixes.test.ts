@@ -236,9 +236,6 @@ describe('audit fix source locks — batch 3', () => {
     expect(src).not.toMatch(/Bun\.spawnSync\(\['sh', '-c'/);
   });
 
-  it('docs PUT enforces a body byte cap', () => {
-    expect(read('functions/api/trips/[id]/docs/[type].ts')).toMatch(/\.length > MAX_DOCS_BYTES|rawText\.length >/);
-  });
 
   it('days entries POST returns entry_pois_version=1 + validates sort_order', () => {
     const src = read('functions/api/trips/[id]/days/[num]/entries.ts');

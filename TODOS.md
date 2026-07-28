@@ -47,6 +47,12 @@ CSS 字串裡，`tests/unit/trips-list-accent-text.test.ts` 這類掃 template l
 
 `TP_REQUEST_USER_TOKEN` OFF 時，`/tp-request`（處理 untrusted `trip_requests.message`）仍降級 service-token 走未-contained `--dangerously-skip-permissions` session（`spawnTmuxRequest` 未-contained tmux 路徑），prompt-injection 可讀 Mac 憑證 → 拿 `API_SECRET` 可 mint owner token（若該 owner 已有 Consent）。flag ON 時此路徑已不可達（走 mint→contained 或 fail-closed）。**不能盲修**：10-min cron + CF `/trigger` 都在此路徑跑 prod AI 聊天 pipeline，直接 `return false` 會停掉聊天。與 containment 就緒度耦合 → 併 activation 一起做：activation 應**原子化**（containment ready + Consent + flag 同時上），別留 Consent-first-flag-later 窗口；或改造 spawn 讓 service-token 路徑也能 contained。security-auditor v2.55.62 P1。
 
+### trip_docs 退場收尾 —— 確認 67 筆搬遷後才套 0094
+
+**Priority**: P1（有時限；0094 未套前 schema 帶著兩張空表）
+
+migration 0093 已把 backup 43 + suggestions 24 = 67 筆搬進 `trip_pretrip_notes`。**0094（DROP 兩張表）刻意還沒套** —— 依 DROP 部署規則是「code 先上線、DROP 後套」，而且要先讓 owner 在筆記頁確認 67 筆看得到。確認後執行 `wrangler d1 migrations apply trip-planner-db --remote --env production`。⚠️ 那 67 筆是 `origin=ai / managed_by=ai / ai_source=general-tips`（owner 決定不擋未來生成），所以**下次按「一般」AI 生成會被整批取代**；想留哪筆就在 App 裡編輯它一次（翻成 human 即受保護）。
+
 ### request 收屍 — 牆鐘那層繞過完成 hook，linked 報告會停在 pending
 
 **Priority**: P3（罕見路徑；pre-existing，非 v2.57.77 引入）
@@ -58,6 +64,8 @@ CSS 字串裡，`tests/unit/trips-list-accent-text.test.ts` 這類掃 template l
 **Priority**: P3（開發體驗；不影響使用者）
 
 v2.57.15 把 `npm test` 限成 `--maxWorkers=2`，因為每個 worker 都要各自建 Miniflare D1 並跑 90+ 個 migration，滿並行度下會有測試撞 timeout（實測預設並行度 1 failed，maxWorkers=2 全綠且**還略快** 289.87s vs 294.70s）。這是權宜：測試檔繼續長，2 worker 遲早也會撞牆，而現在整套要跑 ~290 秒。根本解是共用一份已 migrate 的 D1 快照（建一次、各 worker 複製），讓並行度重新可用。沒調高 `hookTimeout` —— 那等於把訊號關掉。
+
+**2026-07-29 實測：已經開始間歇性撞牆。** migration 加到 93 支後，本機全跑兩次有一次紅 —— 6 個 suite 掛在 `createTestDb()` 的 `beforeAll`，錯誤是 `Hook timed out in 30000ms`（config 寫 `hookTimeout: 60000`，但 vitest 對 `describe` 內的 `beforeAll` 實際套的是 `testTimeout: 30000`）。13 支 unit 測試各要建一次 Miniflare + 全套 migration，兩個 worker 各建一份。第二次全跑 489 檔全綠，所以是浮動不是迴歸 —— 但**每加一支 migration 就更靠近臨界**，下一次可能就變成 CI 間歇紅。根本解仍是共用已 migrate 的 D1 快照。
 ### CSS — 8 個 component 的 SCOPED_STYLES 仍手寫 `-webkit-backdrop-filter`（同一顆雷，目前未爆）
 
 **Priority**: P3（目前無害，但會在搬家時炸掉）

@@ -19,7 +19,6 @@ const tables = [
   // POI data
   'pois', 'poi_relations', 'poi_favorites',
   // Documents
-  'trip_docs', 'trip_doc_entries',
   // Collaboration
   'trip_requests', 'trip_permissions', 'trip_invitations', 'companion_request_actions',
   // Audit + users

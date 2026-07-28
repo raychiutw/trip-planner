@@ -13,7 +13,7 @@ import { requireAuth, assertNotTripRestricted } from '../../_auth';
 import { json } from '../../_utils';
 import { AppError } from '../../_errors';
 import { resolveActiveShare, parseVisibleSections, type ShareSection } from '../../_share';
-import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, TRIP_DOC_TYPES, type ResolvablePoi } from '../../trips/_tripWrite';
+import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, type ResolvablePoi } from '../../trips/_tripWrite';
 import { checkRateLimit, bumpRateLimit, clientIp, RATE_LIMITS } from '../../_rate_limit';
 import type { Env } from '../../_types';
 
@@ -127,7 +127,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       db.prepare('INSERT INTO trip_permissions (user_id, trip_id, role) VALUES (?,?,?)').bind(auth.userId, tripId, 'owner'),
       ...rows(destsR).map((d, i) => db.prepare('INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, sub_areas) VALUES (?,?,?,?,?,?,?)')
         .bind(tripId, i + 1, d.name, d.lat, d.lng, d.day_quota ?? 0, d.sub_areas ?? null)),
-      ...TRIP_DOC_TYPES.map((dt) => db.prepare('INSERT INTO trip_docs (trip_id, doc_type, title) VALUES (?,?,?)').bind(tripId, dt, '')),
       ...noteStmts(),
     ]);
 

@@ -15,8 +15,6 @@ import { mockEnv, mockAuth, mockContext, seedTrip, callHandler } from './helpers
 import { onRequestGet as getTrip } from '../../functions/api/trips/[id]';
 import { onRequestGet as getDays } from '../../functions/api/trips/[id]/days';
 import { onRequestGet as getDayNum } from '../../functions/api/trips/[id]/days/[num]';
-import { onRequestGet as getDocsBatch } from '../../functions/api/trips/[id]/docs/index';
-import { onRequestGet as getDoc } from '../../functions/api/trips/[id]/docs/[type]';
 import { onRequestGet as getSegments } from '../../functions/api/trips/[id]/segments/index';
 import type { Env } from '../../functions/api/_types';
 
@@ -74,10 +72,6 @@ describe('v2.33.41 trip read-access gate — published trip', () => {
     expect(resp.status).toBe(200);
   });
 
-  it('GET /trips/:id/docs batch anonymous → 200 (published)', async () => {
-    const resp = await callHandler(getDocsBatch, ctx('pub-trip'));
-    expect(resp.status).toBe(200);
-  });
 
   it('GET /trips/:id/segments anonymous → 200 (published)', async () => {
     const resp = await callHandler(getSegments, ctx('pub-trip'));
@@ -111,22 +105,7 @@ describe('v2.33.41 trip read-access gate — unpublished trip blocks anonymous',
     expect(resp.status).toBe(403);
   });
 
-  it('GET /trips/:id/docs batch anonymous → 403 (private)', async () => {
-    const resp = await callHandler(getDocsBatch, ctx('priv-trip'));
-    expect(resp.status).toBe(403);
-  });
 
-  it('GET /trips/:id/docs/:type anonymous → 403 (private)', async () => {
-    const resp = await callHandler(
-      getDoc,
-      ctxWithExtraParams(
-        'priv-trip',
-        'https://test.com/api/trips/priv-trip/docs/flights',
-        { type: 'flights' },
-      ),
-    );
-    expect(resp.status).toBe(403);
-  });
 
   it('GET /trips/:id/segments anonymous → 403 (private)', async () => {
     const resp = await callHandler(getSegments, ctx('priv-trip'));

@@ -1,9 +1,7 @@
 /**
  * daily-check.js — API error query contract.
  *
- * Optional trip docs are allowed to 404. useTrip already treats
- * DATA_NOT_FOUND docs as a silent optional sub-resource, so daily-check should
- * not escalate those expected misses as post-ship anomalies.
+ * （trip docs 404 那條已隨 trip_docs 退場移除，2026-07-29）
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -19,9 +17,6 @@ describe('daily-check.js — API error filters', () => {
     expect(DAILY_CHECK_SRC).toContain('status NOT IN (401, 403, 429)');
   });
 
-  it('does not count optional trip docs 404 as API anomalies', () => {
-    expect(DAILY_CHECK_SRC).toContain("status = 404 AND path LIKE '/api/trips/%/docs/%'");
-  });
 
   it('does not escalate expected /api/route "no drivable route" 502 (P11/T13 design)', () => {
     expect(DAILY_CHECK_SRC).toContain(
