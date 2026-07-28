@@ -6,8 +6,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [2.57.76] - 2026-07-28
 
 ### Fixed
-- **行程筆記 AI worker 回覆契約** —— 系統建立的行前須知、住宿建議與緊急聯絡 request 會優先走 JSON-only 流程，不再回傳無法套用的敘述文字，也不會繞過 backend 的人工維護、排除與去重規則。
-- 逾時 job 會先關閉 active generation，再將關聯 request 標記失敗，避免舊 request 留在 queue 或 late completion 覆寫新一代內容。
+- **行程筆記 AI 重新生成能正確套用** —— 行前須知、住宿建議與緊急聯絡不再回傳無法套用的敘述文字，並繼續保護人工維護、排除與去重規則。
+- 生成逾時後可直接重試：系統會先停止舊一代生成並清理關聯 request，避免舊 queue 或 late completion 覆寫新內容。
 
 ## [2.57.75] - 2026-07-28
 

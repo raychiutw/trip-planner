@@ -248,7 +248,7 @@ API endpoints:
 | `api_logs` | 錯誤日誌（`source` 欄位做分類） |
 | `trip_docs` | 行程附件（機票、訂房 PDF）|
 
-### Trip Notes (v2.34.0+, v2.57.75 AI ownership) — trip-level metadata 5 sections + AI generation
+### Trip Notes (v2.34.0+, v2.57.75 AI ownership, v2.57.76 worker contract) — trip-level metadata 5 sections + AI generation
 
 行程筆記（航班 / 住宿 / 預訂 / 行前須知 / 緊急聯絡）trip-level metadata 集中入 Tripline，user 不再切換 TripIt / Notion / Wanderlog。對齊 design doc `~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260528-144009.md`。
 
@@ -269,8 +269,8 @@ trip_note_ai_jobs         每 trip + doc_type 的 generation / status / timeout 
 
 Trigger flow（CR-7 + CR-8 pattern）：
 1. POST `/api/trips/:id/notes/:type/generate` → INSERT `trip_requests` + 建立該 `doc_type` 的新 generation；同類型已有 active job 時沿用，三種類型彼此可平行。
-2. Fire-and-forget trigger api-server（8s AbortController for CF Edge → Tailscale Funnel cold path），job 依序為 `pending` → `processing`，10 分鐘未完成轉 `timed_out`。
-3. Mac mini api-server tp-request skill 處理 message → PATCH `/requests/:id` with strict JSON reply。
+2. Fire-and-forget trigger api-server（8s AbortController for CF Edge → Tailscale Funnel cold path），job 依序為 `pending` → `processing`；10 分鐘未完成時先轉 `timed_out`，再將關聯 request 標記 `failed`，避免 late completion 與 stale queue。
+3. Mac mini api-server tp-request skill 對三種行程筆記 message 走最高優先 JSON-only contract → PATCH `/requests/:id` with strict JSON reply，不直接寫入筆記。
 4. PATCH hook `applyNotesGenerationCompletion` 以 authoritative request/job linkage、generation 與 active status 驗證 callback；舊 callback 或錯誤／空輸出不改既有資料。
 5. D1 batch 只替換同類型且 `managed_by='ai'` 的舊項目；人工維護項目、同主題人工項目與 exclusion tombstone 都保留／略過，完成後記錄新增、替換、保留人工、排除與略過數量。
 
