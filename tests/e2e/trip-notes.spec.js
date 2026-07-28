@@ -34,17 +34,30 @@ const NOTES_FIXTURE = {
     { id: 1, sortOrder: 0, kind: 'restaurant', title: 'そば処 鶴亀庵', reservedAt: '2026-07-28T12:00', partySize: 4, reservationNo: 'R-9182', phone: '', note: '', version: 0 },
   ],
   pretripNotes: [
-    { id: 1, sortOrder: 0, section: '貨幣', title: '貨幣 — 1 TWD ≈ 4.8 JPY', content: '- ATM 手續費低於市區', aiGenerated: 0, aiSource: null, version: 0 },
-    { id: 2, sortOrder: 1, section: '電子設備', title: '插頭 — A 型 110V', content: '與台灣相同免轉接頭', aiGenerated: 1, aiSource: 'general-tips', version: 0 },
+    { id: 1, sortOrder: 0, section: '貨幣', title: '貨幣 — 1 TWD ≈ 4.8 JPY', content: '- ATM 手續費低於市區', aiGenerated: 0, aiSource: null, origin: 'human', managedBy: 'human', semanticKey: null, version: 0 },
+    { id: 2, sortOrder: 1, section: '電子設備', title: '插頭 — A 型 110V', content: '與台灣相同免轉接頭', aiGenerated: 1, aiSource: 'general-tips', origin: 'ai', managedBy: 'ai', semanticKey: 'tips:power', version: 0 },
   ],
   emergencyContacts: [
-    { id: 1, sortOrder: 0, name: '日本警察', relationship: '報案', phone: '110', email: '', kind: 'police', aiGenerated: 0, version: 0 },
-    { id: 2, sortOrder: 1, name: '駐那霸辦事處', relationship: '駐外館處', phone: '+81988628603', email: '', kind: 'embassy', aiGenerated: 1, version: 0 },
+    { id: 1, sortOrder: 0, name: '日本警察', relationship: '報案', phone: '110', email: '', kind: 'police', aiGenerated: 0, origin: 'human', managedBy: 'human', semanticKey: null, version: 0 },
+    { id: 2, sortOrder: 1, name: '駐那霸辦事處', relationship: '駐外館處', phone: '+81988628603', email: '', kind: 'embassy', aiGenerated: 1, origin: 'ai', managedBy: 'ai', semanticKey: 'emergency:embassy:駐那霸辦事處', version: 0 },
   ],
 };
 
 test.beforeEach(async ({ page }) => {
   await setupApiMocks(page);
+  await page.route(new RegExp(`/api/trips/${TRIP_ID}/notes/ai-state$`), (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        jobs: [
+          { docType: 'tips', status: 'idle', jobId: null, requestId: null, generation: 0, exclusionCount: 1 },
+          { docType: 'lodging-tips', status: 'idle', jobId: null, requestId: null, generation: 0, exclusionCount: 1 },
+          { docType: 'emergency', status: 'idle', jobId: null, requestId: null, generation: 0, exclusionCount: 2 },
+        ],
+      }),
+    });
+  });
   await page.route(new RegExp(`/api/trips/${TRIP_ID}/notes$`), (route) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(NOTES_FIXTURE) });
   });
@@ -83,6 +96,10 @@ test.describe('TripNotesPage E2E happy path', () => {
     await ensureSectionOpen(page, 'emergency');
     await expect(page.getByTestId('trip-notes-ai-btn-pretrip')).toBeVisible();
     await expect(page.getByTestId('trip-notes-ai-btn-emergency')).toBeVisible();
+    await expect(page.getByTestId('trip-notes-exclusions-pretrip')).toContainText('已排除 2 項');
+    await expect(page.getByTestId('trip-notes-exclusions-emergency')).toContainText('已排除 2 項');
+    await expect(page.getByTestId('pretrip-row-2')).toContainText('AI 產生');
+    await expect(page.getByTestId('emergency-row-2')).toContainText('AI 產生');
     await expect(page.getByTestId('trip-notes-ai-btn-flights')).not.toBeVisible();
     await expect(page.getByTestId('trip-notes-ai-btn-lodgings')).not.toBeVisible();
     await expect(page.getByTestId('trip-notes-ai-btn-reservations')).not.toBeVisible();

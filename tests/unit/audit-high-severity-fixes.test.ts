@@ -181,8 +181,8 @@ describe('audit fix source locks — medium tier', () => {
   });
 
   it('requests notes dedup scopes the SELECT by ai_source', () => {
-    const src = read('functions/api/requests/[id]/index.ts');
-    expect(src).toMatch(/WHERE trip_id = \? AND ai_source = \?/);
+    const src = read('functions/api/_noteAi.ts');
+    expect(src).toMatch(/WHERE trip_id = \? AND ai_source = \? AND origin = 'ai'/);
     expect(src).toMatch(/\.bind\(tripId, aiSource\)/);
   });
 

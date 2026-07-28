@@ -248,7 +248,7 @@ API endpoints:
 | `api_logs` | 錯誤日誌（`source` 欄位做分類） |
 | `trip_docs` | 行程附件（機票、訂房 PDF）|
 
-### Trip Notes (v2.34.0+) — trip-level metadata 5 sections + AI generation
+### Trip Notes (v2.34.0+, v2.57.75 AI ownership) — trip-level metadata 5 sections + AI generation
 
 行程筆記（航班 / 住宿 / 預訂 / 行前須知 / 緊急聯絡）trip-level metadata 集中入 Tripline，user 不再切換 TripIt / Notion / Wanderlog。對齊 design doc `~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260528-144009.md`。
 
@@ -256,9 +256,10 @@ API endpoints:
 trip_flights              航班 (純手動，9 col + version OCC)
 trip_lodgings             住宿 (純手動，可選 day_id ON DELETE SET NULL)
 trip_reservations         預訂 (5-kind CHECK enum)
-trip_pretrip_notes        行前須知 (AI 可生，ai_source 區分 lodging-tips / general-tips)
-trip_emergency_contacts   緊急聯絡 (AI 可生，7-kind CHECK enum)
-trip_note_ai_jobs         AI generation linkage (對齊 v2.33.102 CR-8 confused-deputy fix)
+trip_pretrip_notes        行前須知 (AI 可生；origin / managed_by / semantic_key 區分來源、維護者與主題)
+trip_emergency_contacts   緊急聯絡 (AI 可生；7-kind CHECK enum + 同一組 AI ownership 欄位)
+trip_note_ai_exclusions   已刪 AI 主題的排除 tombstone；恢復只移除 tombstone
+trip_note_ai_jobs         每 trip + doc_type 的 generation / status / timeout / result summary
 ```
 
 **AI generation 3 prompts**：
@@ -267,15 +268,21 @@ trip_note_ai_jobs         AI generation linkage (對齊 v2.33.102 CR-8 confused-
 - `emergency`（緊急聯絡）→ INSERT trip_emergency_contacts with kind narrowed
 
 Trigger flow（CR-7 + CR-8 pattern）：
-1. POST `/api/trips/:id/notes/:type/generate` → INSERT trip_requests + INSERT trip_note_ai_jobs linkage
-2. Fire-and-forget trigger api-server（8s AbortController for CF Edge → Tailscale Funnel cold path）
-3. Mac mini api-server tp-request skill 處理 message → PATCH /requests/:id with reply JSON
-4. PATCH hook `applyNotesGenerationCompletion` 識別 linkage → 路由 doc_type → parse + dedup + INSERT rows + summary reply
+1. POST `/api/trips/:id/notes/:type/generate` → INSERT `trip_requests` + 建立該 `doc_type` 的新 generation；同類型已有 active job 時沿用，三種類型彼此可平行。
+2. Fire-and-forget trigger api-server（8s AbortController for CF Edge → Tailscale Funnel cold path），job 依序為 `pending` → `processing`，10 分鐘未完成轉 `timed_out`。
+3. Mac mini api-server tp-request skill 處理 message → PATCH `/requests/:id` with strict JSON reply。
+4. PATCH hook `applyNotesGenerationCompletion` 以 authoritative request/job linkage、generation 與 active status 驗證 callback；舊 callback 或錯誤／空輸出不改既有資料。
+5. D1 batch 只替換同類型且 `managed_by='ai'` 的舊項目；人工維護項目、同主題人工項目與 exclusion tombstone 都保留／略過，完成後記錄新增、替換、保留人工、排除與略過數量。
 
-**Frontend** `src/pages/TripNotesPage.tsx`（route `/trip/:tripId/notes`）：5 section accordion，mobile 預設展 航班，desktop ≥768px 全展開。`<FlightsSection>` / `<LodgingsSection>` / `<ReservationsSection>` / `<PretripSection>` / `<EmergencySection>` 每 section 獨立 component 處理 CRUD + autosave OCC + drag-reorder。
+AI ownership：
+- AI 來源項目第一次編輯前先轉成 `managed_by='human'`，後續重新生成不可覆蓋；使用者可明確「交還 AI 維護」。
+- 刪除 AI 來源項目時，同一 transaction 寫入 `trip_note_ai_exclusions`，後續生成不再重複；「恢復」只解除排除，須等下一次重新生成才可能再次出現。
+- 人工建立／維護的項目也有 canonical `semantic_key`，生成時同主題直接略過，不建立重複項目。
 
-**Tests**（122+ tests）：
-- migration 0073 17 + import HuiYun 9 + page shell 17 + section components 25 + integration 50 + E2E 4 + a11y 13 = 137 tests covering trip-notes
+**Frontend** `src/pages/TripNotesPage.tsx`（route `/trip/:tripId/notes`）：5 section accordion，mobile 預設展 航班，desktop ≥768px 全展開。`<FlightsSection>` / `<LodgingsSection>` / `<ReservationsSection>` / `<PretripSection>` / `<EmergencySection>` 每 section 獨立 component 處理 CRUD + autosave OCC + drag-reorder。三個 AI job 獨立顯示進度、逾時／失敗重試與完成摘要；行前須知、緊急聯絡各有「已排除 N 項」對話框，可逐項恢復。
+
+**Tests**：
+- migration 0091 schema/legacy ownership、API callback/race/排除/恢復、前端 job 狀態與 ownership UI、Trip Notes E2E 都有針對性回歸測試；避免維護容易過期的固定總數。
 
 ---
 

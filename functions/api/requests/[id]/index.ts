@@ -6,6 +6,12 @@
 import { logAudit, computeDiff } from '../../_audit';
 import { hasOpsScope, hasPermission, hasWritePermission, requireAuth } from '../../_auth';
 import { AppError } from '../../_errors';
+import {
+  applyNotesGenerationCompletion,
+  markNoteAiJobProcessing,
+  type NoteAiDocType,
+  type NoteAiJobStatus,
+} from '../../_noteAi';
 import { sanitizeReply } from '../../_validate';
 import { json, parseJsonBody } from '../../_utils';
 import type { Env } from '../../_types';
@@ -125,6 +131,9 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   // 覆蓋（或產生）該 trip 的 report row。改用 trip_health_reports.request_id linkage
   // 當 authoritative signal（POST /trips/:id/health-check 唯一寫入點）。
   const newStatus = (result as Record<string, unknown>).status as string;
+  if (newStatus === 'processing') {
+    await markNoteAiJobProcessing(env.DB, Number(id), tripId);
+  }
   if (newStatus === 'completed' || newStatus === 'failed') {
     const linked = await env.DB
       .prepare('SELECT 1 FROM trip_health_reports WHERE request_id = ? AND trip_id = ? LIMIT 1')
@@ -142,12 +151,28 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     // 對齊 CR-8 confused-deputy fix — SELECT linkage row 是 authoritative signal
     // (POST /trips/:id/notes/:type/generate 唯一寫入點，service token 不會誤觸發)
     const notesJob = await env.DB
-      .prepare('SELECT id, doc_type FROM trip_note_ai_jobs WHERE request_id = ? AND trip_id = ? LIMIT 1')
+      .prepare(
+        `SELECT id, request_id, trip_id, doc_type, generation, status
+         FROM trip_note_ai_jobs WHERE request_id = ? AND trip_id = ? LIMIT 1`,
+      )
       .bind(Number(id), tripId)
-      .first<{ id: number; doc_type: string }>();
+      .first<{
+        id: number;
+        request_id: number;
+        trip_id: string;
+        doc_type: NoteAiDocType;
+        generation: number;
+        status: NoteAiJobStatus;
+      }>();
     if (notesJob) {
       try {
-        await applyNotesGenerationCompletion(env.DB, tripId, Number(id), notesJob.id, notesJob.doc_type, result as Record<string, unknown>);
+        await applyNotesGenerationCompletion(
+          env.DB,
+          tripId,
+          Number(id),
+          notesJob,
+          result as Record<string, unknown>,
+        );
       } catch (hookErr) {
         console.error('[requests] notes-generation completion hook failed:', hookErr);
       }
@@ -318,171 +343,4 @@ function sanitizeFindings(arr: unknown[]): unknown[] {
     out.push(cleaned);
   }
   return out;
-}
-
-// ============================================================================
-// v2.34.x 行程筆記 PR10: notes generation completion hook
-// ============================================================================
-
-const PRETRIP_AI_SOURCES: Record<string, string> = {
-  'lodging-tips': 'lodging-tips',
-  'tips': 'general-tips',
-};
-
-// notes generation 用獨立 parser（health-check 的 parseFindings 嚴格要求 severity，
-// 對 notes items 的 title/content/name/phone 全 filter 掉）
-function parseNotesItems(reply: string): unknown[] {
-  if (!reply.trim()) return [];
-  try {
-    const parsed = JSON.parse(reply);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {
-    /* fall through */
-  }
-  const match = reply.match(/\[[\s\S]*\]/);
-  if (match) {
-    try {
-      const parsed = JSON.parse(match[0]);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {
-      /* give up */
-    }
-  }
-  return [];
-}
-
-async function applyNotesGenerationCompletion(
-  db: D1Database,
-  tripId: string,
-  requestId: number,
-  jobId: number,
-  docType: string,
-  request: Record<string, unknown>,
-) {
-  const status = request.status as string;
-  if (status === 'failed') {
-    const errMsg = (request.reply as string) || 'AI 生成失敗';
-    await db
-      .prepare(
-        `UPDATE trip_note_ai_jobs SET status = 'failed', error_message = ?, completed_at = datetime('now') WHERE id = ?`,
-      )
-      .bind(errMsg.slice(0, 500), jobId)
-      .run();
-    await rewriteRequestReply(db, requestId, `AI 生成失敗 — ${errMsg.slice(0, 200)}\n\n可重試：[前往行程筆記 →](/trip/${tripId}/notes)`);
-    return;
-  }
-
-  const reply = (request.reply as string) || '';
-  const items = parseNotesItems(reply); // notes 不需 severity，獨立 parser
-  let insertedCount = 0;
-  const validItems = items.filter((it): it is Record<string, unknown> => it !== null && typeof it === 'object');
-
-  // PR27: AI 觸發人 → audit changedBy（fallback 'system:ai' 處理舊資料 submitted_by NULL）
-  const aiActor = (typeof request.submitted_by === 'string' && request.submitted_by.length > 0)
-    ? `ai:${request.submitted_by}`
-    : 'system:ai';
-
-  // Dedup against existing rows for this trip/type — case-insensitive title compare
-  if (docType === 'lodging-tips' || docType === 'tips') {
-    const aiSource = PRETRIP_AI_SOURCES[docType];
-    const existing = await db
-      .prepare(
-        // Scope dedup to the same ai_source — lodging-tips and tips are distinct
-        // prompts; a trip-wide title set cross-contaminates them.
-        `SELECT LOWER(TRIM(title)) AS k FROM trip_pretrip_notes WHERE trip_id = ? AND ai_source = ?`,
-      )
-      .bind(tripId, aiSource)
-      .all<{ k: string }>();
-    const seen = new Set((existing.results ?? []).map((r) => r.k));
-    const maxOrder = await db
-      .prepare(`SELECT COALESCE(MAX(sort_order), -1) AS m FROM trip_pretrip_notes WHERE trip_id = ?`)
-      .bind(tripId)
-      .first<{ m: number }>();
-    let nextOrder = (maxOrder?.m ?? -1) + 1;
-    for (const it of validItems) {
-      const title = typeof it.title === 'string' ? it.title.trim().slice(0, 100) : '';
-      const content = typeof it.content === 'string' ? it.content.slice(0, 1000) : '';
-      const section = typeof it.section === 'string' ? it.section.trim().slice(0, 50) : '';
-      if (!title) continue;
-      const key = title.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const inserted = await db
-        .prepare(
-          `INSERT INTO trip_pretrip_notes (trip_id, sort_order, section, title, content, ai_generated, ai_source) VALUES (?, ?, ?, ?, ?, 1, ?) RETURNING *`,
-        )
-        .bind(tripId, nextOrder++, section, title, content, aiSource)
-        .first<Record<string, unknown>>();
-      insertedCount++;
-
-      // PR27: AI 寫入 audit_log（user_email → ai:<email>，submitted_by NULL → system:ai）
-      if (inserted) {
-        await logAudit(db, {
-          tripId,
-          tableName: 'trip_pretrip_notes',
-          recordId: inserted.id as number,
-          action: 'insert',
-          changedBy: aiActor,
-          requestId,
-          diffJson: JSON.stringify(inserted),
-        });
-      }
-    }
-  } else if (docType === 'emergency') {
-    const existing = await db
-      .prepare(`SELECT LOWER(TRIM(name)) AS k FROM trip_emergency_contacts WHERE trip_id = ?`)
-      .bind(tripId)
-      .all<{ k: string }>();
-    const seen = new Set((existing.results ?? []).map((r) => r.k));
-    const maxOrder = await db
-      .prepare(`SELECT COALESCE(MAX(sort_order), -1) AS m FROM trip_emergency_contacts WHERE trip_id = ?`)
-      .bind(tripId)
-      .first<{ m: number }>();
-    let nextOrder = (maxOrder?.m ?? -1) + 1;
-    const VALID_KINDS = ['personal', 'embassy', 'police', 'medical', 'insurance', 'hotel', 'other'];
-    for (const it of validItems) {
-      const name = typeof it.name === 'string' ? it.name.trim().slice(0, 100) : '';
-      const phone = typeof it.phone === 'string' ? it.phone.trim().slice(0, 50) : '';
-      const relationship = typeof it.relationship === 'string' ? it.relationship.trim().slice(0, 100) : '';
-      const kindRaw = typeof it.kind === 'string' ? it.kind.toLowerCase().trim() : 'other';
-      const kind = VALID_KINDS.includes(kindRaw) ? kindRaw : 'other';
-      if (!name) continue;
-      const key = name.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const inserted = await db
-        .prepare(
-          `INSERT INTO trip_emergency_contacts (trip_id, sort_order, name, relationship, phone, kind, ai_generated) VALUES (?, ?, ?, ?, ?, ?, 1) RETURNING *`,
-        )
-        .bind(tripId, nextOrder++, name, relationship, phone, kind)
-        .first<Record<string, unknown>>();
-      insertedCount++;
-
-      // PR27: AI 寫入 audit_log
-      if (inserted) {
-        await logAudit(db, {
-          tripId,
-          tableName: 'trip_emergency_contacts',
-          recordId: inserted.id as number,
-          action: 'insert',
-          changedBy: aiActor,
-          requestId,
-          diffJson: JSON.stringify(inserted),
-        });
-      }
-    }
-  }
-
-  await db
-    .prepare(
-      `UPDATE trip_note_ai_jobs SET status = 'completed', inserted_count = ?, error_message = NULL, completed_at = datetime('now') WHERE id = ?`,
-    )
-    .bind(insertedCount, jobId)
-    .run();
-
-  // Rewrite trip_requests.reply 為 user-friendly summary (對齊 v2.31.18 health-check)
-  const summary = insertedCount > 0
-    ? `AI 生成完成 — 已新增 ${insertedCount} 個項目（${docType}）。\n\n[前往行程筆記 →](/trip/${tripId}/notes)`
-    : `AI 生成完成 — 沒有新項目可加（既有資料已涵蓋）。\n\n[前往行程筆記 →](/trip/${tripId}/notes)`;
-  await rewriteRequestReply(db, requestId, summary);
 }

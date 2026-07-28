@@ -46,8 +46,10 @@ trips ─┬─ trip_days ── trip_entries ── trip_entry_pois
 
 ## 行程筆記（trip-level metadata）
 
-`trip_flights`（航班）· `trip_lodgings`（住宿）· `trip_reservations`（預訂）· `trip_pretrip_notes`（行前須知）· `trip_emergency_contacts`（緊急聯絡）· `trip_note_ai_jobs`（AI 產生任務）
+`trip_flights`（航班）· `trip_lodgings`（住宿）· `trip_reservations`（預訂）· `trip_pretrip_notes`（行前須知）· `trip_emergency_contacts`（緊急聯絡）· `trip_note_ai_jobs`（AI 產生任務）· `trip_note_ai_exclusions`（已刪 AI 主題的排除 tombstone）
 附件（機票／訂房 PDF）走 `trip_docs` + `trip_doc_entries`。
+
+AI 來源項目用 `origin` 記來源、`managed_by` 記目前由人或 AI 維護、`semantic_key` 辨識同一主題。人工維護項目不可被重新生成覆蓋；「恢復排除」只移除 tombstone，不代表立即把項目加回。
 
 ## 稽核與維運
 

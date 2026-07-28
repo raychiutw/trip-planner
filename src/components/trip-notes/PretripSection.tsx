@@ -1,10 +1,10 @@
 /**
  * PretripSection — 行前須知 section CRUD UI (v2.34.x 行程筆記 PR8)
  *
- * Display: title + content markdown + AI 建議 chip (if ai_generated=1)
- * Edit: 3 fields (section / title / content textarea)
+ * Display: title + content markdown + AI 產生 chip（僅 AI 維護中的項目）
+ * Edit: title / content；人工編輯 AI 項目後轉為人工維護。
  *
- * ai_generated=1 row 顯「AI 建議」chip + 不可手動改 ai_source（PR9+ AI gen 寫入）
+ * AI 來源的人工維護項目可交還 AI；純人工項目不可交還。
  */
 import { useCallback, useState } from 'react';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
@@ -14,6 +14,7 @@ import Icon from '../shared/Icon';
 import AlertPanel from '../shared/AlertPanel';
 import ConfirmModal from '../shared/ConfirmModal';
 import { apiFetch } from '../../lib/apiClient';
+import { showToast } from '../shared/Toast';
 
 export interface TripPretripNote {
   id: number;
@@ -23,6 +24,9 @@ export interface TripPretripNote {
   content: string;
   aiGenerated: number;
   aiSource: string | null;
+  origin: 'human' | 'ai';
+  managedBy: 'human' | 'ai';
+  semanticKey: string | null;
   version: number;
 }
 
@@ -30,6 +34,7 @@ interface PretripSectionProps {
   tripId: string;
   items: TripPretripNote[];
   onChange: (next: TripPretripNote[]) => void;
+  onAiStateChange?: () => void;
 }
 
 const SCOPED_STYLES = `
@@ -143,9 +148,18 @@ interface SortableRowProps {
   onSaveField: (field: keyof TripPretripNote, value: string) => void;
   onDelete: () => void;
   onClose: () => void;
+  onReturnToAi: () => void;
 }
 
-function SortablePretripRow({ note, isEditing, onEdit, onSaveField, onDelete, onClose }: SortableRowProps) {
+function SortablePretripRow({
+  note,
+  isEditing,
+  onEdit,
+  onSaveField,
+  onDelete,
+  onClose,
+  onReturnToAi,
+}: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: note.id,
     disabled: isEditing,
@@ -181,6 +195,11 @@ function SortablePretripRow({ note, isEditing, onEdit, onSaveField, onDelete, on
             />
           </div>
           <div className="tp-notes-pretrip-edit-actions">
+            {note.origin === 'ai' && note.managedBy === 'human' && (
+              <button type="button" className="tp-btn tp-btn-ghost" onClick={onReturnToAi}>
+                交還 AI 維護
+              </button>
+            )}
             <button type="button" className="tp-btn tp-btn-ghost" onClick={onClose} data-testid={`pretrip-close-${note.id}`}>
               關閉
             </button>
@@ -202,10 +221,10 @@ function SortablePretripRow({ note, isEditing, onEdit, onSaveField, onDelete, on
         <div className="tp-notes-pretrip-title-row">
           {/* v2.34.44 PR44 follow-up: 拔讀模式 section chip（user feedback「不要分類」） */}
           <span className="tp-notes-pretrip-title">{note.title || '（未命名項目）'}</span>
-          {note.aiGenerated === 1 && (
+          {(note.managedBy === 'ai' || (!note.managedBy && note.aiGenerated === 1)) && (
             <span className="tp-notes-pretrip-ai-chip">
               <Icon name="sparkle" />
-              AI 建議
+              AI 產生
             </span>
           )}
         </div>
@@ -221,7 +240,12 @@ function SortablePretripRow({ note, isEditing, onEdit, onSaveField, onDelete, on
   );
 }
 
-export default function PretripSection({ tripId, items, onChange }: PretripSectionProps) {
+export default function PretripSection({
+  tripId,
+  items,
+  onChange,
+  onAiStateChange,
+}: PretripSectionProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -241,6 +265,33 @@ export default function PretripSection({ tripId, items, onChange }: PretripSecti
     }
   }, [tripId, items, onChange, busy]);
 
+  const handleEdit = useCallback(async (noteId: number) => {
+    const note = items.find((item) => item.id === noteId);
+    if (!note || busy) return;
+    if (note.managedBy !== 'ai') {
+      setEditingId(noteId);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await apiFetch<TripPretripNote>(
+        `/trips/${tripId}/notes/pretrip/${noteId}/maintenance`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ managedBy: 'human', expectedVersion: note.version }),
+        },
+      );
+      onChange(items.map((item) => (item.id === noteId ? updated : item)));
+      setEditingId(noteId);
+      showToast('已改為人工維護，重新生成不會覆蓋此項目', 'info', 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '切換人工維護失敗');
+    } finally {
+      setBusy(false);
+    }
+  }, [tripId, items, onChange, busy]);
+
   // v2.34.46 PR46: 還原 autosave-on-blur — 單一 field PATCH with OCC
   const handleSaveField = useCallback(async (noteId: number, field: keyof TripPretripNote, value: string) => {
     const note = items.find((n) => n.id === noteId);
@@ -254,6 +305,9 @@ export default function PretripSection({ tripId, items, onChange }: PretripSecti
         body: JSON.stringify({ [snakeField]: value, expectedVersion: note.version }),
       });
       onChange(items.map((n) => (n.id === noteId ? updated : n)));
+      if (note.managedBy === 'ai' && updated.managedBy === 'human') {
+        showToast('已改為人工維護，重新生成不會覆蓋此項目', 'info', 4000);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '儲存失敗');
     }
@@ -262,14 +316,40 @@ export default function PretripSection({ tripId, items, onChange }: PretripSecti
   const handleDelete = useCallback(async (noteId: number) => {
     setError(null);
     try {
-      await apiFetch(`/trips/${tripId}/notes/pretrip/${noteId}`, { method: 'DELETE' });
+      const result = await apiFetch<{ excluded?: boolean }>(
+        `/trips/${tripId}/notes/pretrip/${noteId}`,
+        { method: 'DELETE' },
+      );
       onChange(items.filter((n) => n.id !== noteId));
       setPendingDeleteId(null);
       if (editingId === noteId) setEditingId(null);
+      if (result.excluded) {
+        showToast('已從 AI 生成排除，可在「已排除項目」恢復', 'info', 4000);
+        onAiStateChange?.();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '刪除失敗');
     }
-  }, [tripId, items, onChange, editingId]);
+  }, [tripId, items, onChange, editingId, onAiStateChange]);
+
+  const handleReturnToAi = useCallback(async (noteId: number) => {
+    const note = items.find((item) => item.id === noteId);
+    if (!note || note.origin !== 'ai' || note.managedBy !== 'human') return;
+    setError(null);
+    try {
+      const updated = await apiFetch<TripPretripNote>(
+        `/trips/${tripId}/notes/pretrip/${noteId}/maintenance`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ managedBy: 'ai', expectedVersion: note.version }),
+        },
+      );
+      onChange(items.map((item) => (item.id === noteId ? updated : item)));
+      showToast('已交還 AI 維護，下次重新生成可更新此項目', 'success', 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '交還 AI 維護失敗');
+    }
+  }, [tripId, items, onChange]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -310,10 +390,11 @@ export default function PretripSection({ tripId, items, onChange }: PretripSecti
                   key={note.id}
                   note={note}
                   isEditing={editingId === note.id}
-                  onEdit={() => setEditingId(note.id)}
+                  onEdit={() => void handleEdit(note.id)}
                   onClose={() => setEditingId(null)}
                   onSaveField={(field, value) => void handleSaveField(note.id, field, value)}
                   onDelete={() => setPendingDeleteId(note.id)}
+                  onReturnToAi={() => void handleReturnToAi(note.id)}
                 />
               ))}
             </div>
@@ -329,7 +410,11 @@ export default function PretripSection({ tripId, items, onChange }: PretripSecti
       <ConfirmModal
         open={pendingDeleteNote !== null}
         title="刪除項目？"
-        message={pendingDeleteNote ? `「${pendingDeleteNote.title || '未命名項目'}」將被刪除，此操作無法復原。` : ''}
+        message={pendingDeleteNote
+          ? pendingDeleteNote.origin === 'ai'
+            ? `「${pendingDeleteNote.title || '未命名項目'}」將被刪除並排除後續 AI 生成；之後可從「已排除項目」恢復。`
+            : `「${pendingDeleteNote.title || '未命名項目'}」將被刪除，此操作無法復原。`
+          : ''}
         confirmLabel="刪除"
         cancelLabel="取消"
         onConfirm={() => pendingDeleteNote && void handleDelete(pendingDeleteNote.id)}
