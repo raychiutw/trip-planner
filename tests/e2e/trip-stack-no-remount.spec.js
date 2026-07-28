@@ -49,8 +49,16 @@ test.describe('TripPageHost — 開關第三欄面板不重新抓中欄行程資
     // 出來，這才是「已經抓過一次資料且成功顯示」的可觀察基準點（同 drag-flows.spec.js
     // 既有的斷言方式）。
     await expect(page.getByRole('heading', { name: /2026 沖繩自駕五日遊/ })).toBeVisible({ timeout: 10000 });
+
+    // ⚠️ 2026-07-29：這裡原本是 `expect(daysRequests.length).toBeGreaterThan(0)`，
+    // 靠「標題出現 ⇒ days 已抓過」這個**時序假設**。那是錯的推論 —— 標題可以由
+    // TripLayout 的 title-only fetch 先渲染出來，days 請求還在路上。master 有一次
+    // CI 就掛在這條（Received: 0），本地連跑 6 次重現不到，是純時序浮動。
+    // 改成明確等 days 請求真的送出，而不是從別的訊號推論它。
+    await expect
+      .poll(() => daysRequests.length, { timeout: 10000, message: '等 days API 至少被呼叫一次' })
+      .toBeGreaterThan(0);
     const countAfterInitialLoad = daysRequests.length;
-    expect(countAfterInitialLoad).toBeGreaterThan(0);
 
     // 開啟操作面板（編輯行程）— 這是 owner 回報「刷新第二欄」的觸發點。
     await page.getByTestId('trips-embedded-menu-trigger').click();

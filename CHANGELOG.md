@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.81] - 2026-07-29
+
+### Fixed
+- 修一支測試的錯誤前提（它用「標題出現了」推論「資料抓過了」，兩者沒有因果關係），讓自動化檢查不再偶發性誤報。純測試變更，不影響任何功能。
+
 ## [2.57.80] - 2026-07-29
 
 ### Added
