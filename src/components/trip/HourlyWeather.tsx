@@ -14,10 +14,12 @@ import type { WeatherDay, MergedHourly } from '../../lib/weather';
 interface HourlyWeatherProps {
   /** Day ID used for keying. */
   dayId: number;
+  /** One-based day number used to cycle preview information. */
+  dayNum: number;
   /** The day's date string (ISO format "YYYY-MM-DD"). */
-  dayDate: string;
+  dayDate?: string;
   /** Weather location data for the day. */
-  weatherDay: WeatherDay;
+  weatherDay: WeatherDay | null;
   /** Trip start date (ISO format). */
   tripStart?: string | null;
   /** Trip end date (ISO format). */
@@ -37,10 +39,42 @@ function daysUntil(dateStr: string): number {
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }
 
+const WEATHER_PREVIEWS = [
+  { icon: 'weather-sun-cloud', temp: 28, label: '晴時多雲', rain: 20 },
+  { icon: 'weather-cloudy', temp: 27, label: '多雲', rain: 30 },
+  { icon: 'weather-clear', temp: 29, label: '晴朗', rain: 10 },
+  { icon: 'weather-rain-sun', temp: 26, label: '短暫陣雨', rain: 40 },
+] as const;
+
+function WeatherPreview({
+  dayId,
+  dayNum,
+  reason,
+}: {
+  dayId: number;
+  dayNum: number;
+  reason: string;
+}) {
+  const preview = WEATHER_PREVIEWS[(Math.max(dayNum, 1) - 1) % WEATHER_PREVIEWS.length]!;
+  return (
+    <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
+      <div className="flex items-center gap-2 py-2 px-3 -mx-3 rounded-sm bg-accent-bg text-subheadline">
+        <Icon name={preview.icon} />
+        <span className="text-foreground">
+          {preview.temp}°C · {preview.label} · 降雨 {preview.rain}%
+        </span>
+        <span className="ml-auto shrink-0 text-muted">天氣示意</span>
+      </div>
+      <div className="pt-1 text-callout text-muted">{reason}</div>
+    </div>
+  );
+}
+
 /* ===== Component ===== */
 
 const HourlyWeather = memo(function HourlyWeather({
   dayId,
+  dayNum,
   dayDate,
   weatherDay,
   tripStart,
@@ -48,32 +82,29 @@ const HourlyWeather = memo(function HourlyWeather({
   timezone,
 }: HourlyWeatherProps) {
   /* --- Days until this day (computed at render time) --- */
-  const diff = daysUntil(dayDate);
+  const diff = dayDate ? daysUntil(dayDate) : 0;
   const tooFarAway = diff > 16;
+  const hasForecastLocation = Boolean(weatherDay?.locations.length);
 
   /* --- Location count (for detail panel label) --- */
-  const locCount = new Set(weatherDay.locations.map((l) => l.name)).size;
+  const locCount = new Set(weatherDay?.locations.map((l) => l.name) ?? []).size;
 
   /* --- All hooks declared unconditionally (Rules of Hooks) --- */
   const [mg, setMg] = useState<MergedHourly | null>(null);
-  const [loading, setLoading] = useState(!tooFarAway);
+  const [loading, setLoading] = useState(Boolean(dayDate && hasForecastLocation && !tooFarAway));
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
-  // v2.33.44 round 6a: ref write during render 是 react anti-pattern (strict
-  // mode fires twice)，搬進 useEffect 確保 render pure。
-  const weatherDayRef = useRef(weatherDay);
-  useEffect(() => { weatherDayRef.current = weatherDay; }, [weatherDay]);
 
   /* --- Fetch weather data on mount — skipped when tooFarAway --- */
   useEffect(() => {
-    if (tooFarAway) return;
+    if (tooFarAway || !dayDate || !weatherDay?.locations.length) return;
 
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetchWeatherForDay(dayDate, weatherDayRef.current, tripStart, tripEnd, timezone)
+    fetchWeatherForDay(dayDate, weatherDay, tripStart, tripEnd, timezone)
       .then((data) => {
         if (!cancelled) {
           setMg(data);
@@ -90,7 +121,7 @@ const HourlyWeather = memo(function HourlyWeather({
     return () => {
       cancelled = true;
     };
-  }, [dayId, dayDate, tripStart, tripEnd, tooFarAway, timezone]);
+  }, [dayId, dayDate, tripStart, tripEnd, tooFarAway, timezone, weatherDay]);
 
   /* --- Toggle expand/collapse --- */
   const handleToggle = useCallback(() => {
@@ -114,35 +145,27 @@ const HourlyWeather = memo(function HourlyWeather({
     });
   }, []);
 
+  if (!hasForecastLocation) {
+    return <WeatherPreview dayId={dayId} dayNum={dayNum} reason="尚無可用預報位置" />;
+  }
+
+  if (!dayDate) {
+    return <WeatherPreview dayId={dayId} dayNum={dayNum} reason="目前沒有可用預報" />;
+  }
+
   /* ===== State A: more than 16 days away — no API call ===== */
   if (tooFarAway) {
-    return (
-      <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
-        <div className="py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover line-clamp-2">
-          ☀️ 天氣預報將於出發前 16 天開放
-        </div>
-      </div>
-    );
+    return <WeatherPreview dayId={dayId} dayNum={dayNum} reason="天氣預報將於出發前 16 天開放" />;
   }
 
   /* --- Loading state --- */
   if (loading) {
-    return (
-      <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
-        <div className="text-center py-3 text-muted text-callout">
-          <Icon name="hourglass" /> 正在載入逐時天氣預報...
-        </div>
-      </div>
-    );
+    return <WeatherPreview dayId={dayId} dayNum={dayNum} reason="正在更新預報" />;
   }
 
   /* --- Error state --- */
   if (error) {
-    return (
-      <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
-        <div className="text-center py-3 text-foreground text-callout bg-accent-bg rounded-sm">天氣資料載入失敗：{error}</div>
-      </div>
-    );
+    return <WeatherPreview dayId={dayId} dayNum={dayNum} reason="暫時無法取得預報" />;
   }
 
   /* --- Resolve data --- */
@@ -153,13 +176,7 @@ const HourlyWeather = memo(function HourlyWeather({
 
   /* ===== State B: within 16 days but API returned all-zero data ===== */
   if (!hasData) {
-    return (
-      <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
-        <div className="py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover line-clamp-2">
-          ☁️ 超出預報範圍，暫無資料
-        </div>
-      </div>
-    );
+    return <WeatherPreview dayId={dayId} dayNum={dayNum} reason="目前沒有可用預報" />;
   }
 
   /* ===== State C: has real data — normal display ===== */

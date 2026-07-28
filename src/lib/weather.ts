@@ -2,6 +2,8 @@
  * WMO weather code to icon name mapping and weather utility functions.
  */
 
+import type { Entry } from '../types/trip';
+
 /** WMO weather code => icon name mapping */
 export const WMO: Record<number, string> = {
   0: 'weather-clear',
@@ -84,11 +86,7 @@ export function getLocIdx(day: WeatherDay, h: number): number {
  */
 export function buildWeatherDay(
   dayLabel: string | null | undefined,
-  timeline: Array<{
-    startTime?: string | null;
-    displayTitle?: string | null;
-    location?: { lat?: number; lng?: number } | null;
-  }>,
+  timeline: Array<Pick<Entry, 'startTime' | 'master'>>,
 ): WeatherDay | null {
   if (!timeline || timeline.length === 0) return null;
 
@@ -97,8 +95,8 @@ export function buildWeatherDay(
   let lastLon = 0;
 
   for (const entry of timeline) {
-    const lat = entry.location?.lat;
-    const lng = entry.location?.lng;
+    const lat = entry.master?.lat;
+    const lng = entry.master?.lng;
     if (typeof lat !== 'number' || typeof lng !== 'number') continue;
 
     // Skip if same location as previous (within ~1km)
@@ -112,7 +110,7 @@ export function buildWeatherDay(
       if (match) start = parseInt(match[1] ?? '0', 10);
     }
 
-    locations.push({ name: entry.displayTitle?.trim() || '', lat, lon: lng, start });
+    locations.push({ name: entry.master?.name?.trim() || '', lat, lon: lng, start });
     lastLat = lat;
     lastLon = lng;
   }

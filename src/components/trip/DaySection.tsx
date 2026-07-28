@@ -220,9 +220,10 @@ const DaySection = React.memo(function DaySection({
           <DaySkeleton />
         ) : (
           <>
-            {weatherDay && dayDate && dayId && (
+            {dayId != null && (
               <HourlyWeather
                 dayId={dayId}
+                dayNum={dayNum}
                 dayDate={dayDate}
                 weatherDay={weatherDay}
                 tripStart={tripStart}

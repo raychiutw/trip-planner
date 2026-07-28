@@ -500,6 +500,12 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - Desktop 只增加 sidebar、較寬 content、可選的輔助欄；compact 只改成單欄、hamburger、bottom nav。
 - 所有資料來源、mutation、loading/error state 必須共用，確保手機與桌機功能一致。
 
+#### 每日天氣
+
+- 有即時資料：顯示主要天氣圖示、全天最低／最高溫與最低／最高降雨率；可用點擊、Enter 或 Space 展開 0:00–23:00 共 24 個時段，並同步 `aria-expanded` 與展開／收合標籤。
+- 無即時資料：保留每日天氣列，依 Day 循環顯示 Flutter 對齊的四組「天氣示意」，並以 Web semantic token 呈現，不複製 Flutter 卡片樣式。
+- 狀態文字固定為：`尚無可用預報位置`、`天氣預報將於出發前 16 天開放`、`正在更新預報`、`暫時無法取得預報`、`目前沒有可用預報`。
+
 ### 桌機三欄操作堆疊（`TripStackLayout` + `OperationShell`）
 
 owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」。所有「從行程詳情鑽進去的操作／設定頁」共用同一套 host（`/trip/:tripId/*` 下 pathless layout route `TripStackLayout`）：
