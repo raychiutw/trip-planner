@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.82] - 2026-07-29
+
+### Fixed
+- **AI 生成不會再因為背景檔案變動而整批失敗** —— 處理請求的工作階段啟動時會先把自己需要的程式複製一份帶走，不再直接讀取隨時可能被改動的專案目錄。先前若在工作階段啟動的瞬間剛好有檔案異動，那個階段會完全失去操作能力、靜默卡到逾時（緊急聯絡生成就是這樣掛掉的）。
+
 ## [2.57.81] - 2026-07-29
 
 ### Fixed

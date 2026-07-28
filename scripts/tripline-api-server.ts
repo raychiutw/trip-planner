@@ -452,7 +452,18 @@ async function spawnContainedSession(
   //    the mcp-config (restrict API token + trip) and the CLAUDE_CODE_OAUTH_TOKEN.
   const WRITER =
     "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>require('fs').writeFileSync(process.argv[1],d,{mode:0o600}))";
-  const mcpConfig = buildMcpConfig({ nodeBin: NODE_BIN, mcpServerPath: MCP_SERVER_PATH, token, restrictTrip });
+  // MCP server **快照進 session 目錄**，設定指向快照而非 repo 工作區。
+  //
+  // 2026-07-29 事故：session 啟動時報「I don't have any mcp__tripline__* tools」，
+  // 整個 session 廢掉（緊急聯絡生成因此 timed_out）。MCP server 本身沒問題 ——
+  // 病灶是原本 mcpServerPath 直指 PROJECT_DIR，而 spawn 那一刻工作區正在被
+  // git pull / 切分支改動。claude 只在啟動時載一次 MCP server，那一瞬間的檔案
+  // 狀態決定整個 session 的命運，工作區之後恢復也救不回來。
+  //
+  // 這支腳本零 require、380 行完全自足，複製一份成本可忽略。
+  const mcpServerSnapshotPath = `${sessionDir}/tp-request-mcp-server.js`;
+  const mcpServerSource = readFileSync(MCP_SERVER_PATH, 'utf-8');
+  const mcpConfig = buildMcpConfig({ nodeBin: NODE_BIN, mcpServerPath: mcpServerSnapshotPath, token, restrictTrip });
   // Pre-seed claude config so the INTERACTIVE REPL launches straight to the prompt for an
   // unattended service account: skip first-run onboarding (hasCompletedOnboarding) AND
   // pre-trust the (empty, allow-free) session dir (hasTrustDialogAccepted) so no
@@ -465,6 +476,7 @@ async function spawnContainedSession(
     projects: { [sessionDir]: { hasTrustDialogAccepted: true } },
   });
   const files: Array<[string, string, string]> = [
+    [mcpServerSnapshotPath, mcpServerSource, 'mcp-server-snapshot'],
     [mcpConfigPath, mcpConfig, 'mcp-config'],
     [tokenFilePath, process.env.CLAUDE_CODE_OAUTH_TOKEN || '', 'oauth-token'],
     [`${sessionDir}/config/.claude.json`, claudeJson, 'claude-json'],
