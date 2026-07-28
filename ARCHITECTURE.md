@@ -243,7 +243,7 @@ API endpoints:
 | 表 | 用途 |
 |----|------|
 | `trip_permissions` | 誰可以看哪個 trip（email 清單） |
-| `trip_requests` | 旅伴請求（改行程 / 問建議） |
+| `trip_requests` | 旅伴請求（改行程 / 問建議）。`status` 說結束了沒、`terminal_reason` 說為什麼結束（migration 0092），讀取端兩個都要看 —— 見 [ADR-0007](docs/adr/0007-request-termination-cancel-and-reap.md) |
 | `audit_log` | 所有寫操作的追蹤 |
 | `api_logs` | 錯誤日誌（`source` 欄位做分類） |
 | `trip_docs` | 行程附件（機票、訂房 PDF）|
