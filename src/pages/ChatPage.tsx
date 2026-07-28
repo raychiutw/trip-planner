@@ -241,6 +241,9 @@ function rowToMessages(row: RawRequestRow): ChatMessage[] {
 const SCOPED_STYLES = `
 .tp-chat-shell {
   height: 100%;
+  /* 「跳到最新」箭頭是 absolute，需要這層當定位脈絡；沒有的話它會脫到更外層
+     （AppShell / body），位置在桌機三欄版面會完全跑掉。 */
+  position: relative;
   display: flex; flex-direction: column;
   background: var(--color-secondary);
   /* owner 2026-07-20「全版」：AppShell main 已不為透明 tab 保留空間（功能頁鋪到螢幕底）。
@@ -489,6 +492,32 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   outline-offset: 2px;
 }
 
+/* 跳到最新：浮在訊息區右下、composer 之上。只在 user 捲離底部時渲染。
+   位置用 composer 高度當基準避免壓到輸入框；HIG 的圓形浮動控制項語彙。 */
+.tp-chat-jump-latest {
+  position: absolute;
+  inset-inline-end: 20px;
+  inset-block-end: calc(76px + env(safe-area-inset-bottom));
+  z-index: 4;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-foreground);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.16);
+  display: grid;
+  place-items: center;
+}
+.tp-chat-jump-latest:hover { background: var(--color-surface-hover, var(--color-surface)); }
+.tp-chat-jump-latest:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 .tp-chat-composer {
   position: sticky; inset-block-end: 0;
   padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
@@ -503,7 +532,33 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   transition: transform var(--transition-duration-fast, 150ms) ease-out;
 }
 @media (max-width: 760px) {
-  .tp-chat-composer { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
+  /* 跳到最新：浮在訊息區右下、composer 之上。只在 user 捲離底部時渲染。
+   位置用 composer 高度當基準避免壓到輸入框；HIG 的圓形浮動控制項語彙。 */
+.tp-chat-jump-latest {
+  position: absolute;
+  inset-inline-end: 20px;
+  inset-block-end: calc(76px + env(safe-area-inset-bottom));
+  z-index: 4;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-foreground);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.16);
+  display: grid;
+  place-items: center;
+}
+.tp-chat-jump-latest:hover { background: var(--color-surface-hover, var(--color-surface)); }
+.tp-chat-jump-latest:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.tp-chat-composer { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
 }
 .tp-chat-input {
   flex: 1;
@@ -614,7 +669,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   // race guards (loadingOlderRef / activeTripIdRef)、auto-scroll 訊息類型判斷。
   // hasMoreOlder + loadOlder 由 hook 內部 scroll listener 自動處理,caller 只用
   // loadError 顯示 banner、retryLoadOlder 給按鈕點按。
-  const { loadError, retryLoadOlder } = useChatPagination<RawRequestRow, ChatMessage>({
+  const { loadError, retryLoadOlder, isAtBottom, scrollToBottom } = useChatPagination<RawRequestRow, ChatMessage>({
     activeTripId,
     bodyRef,
     messages,
@@ -1144,6 +1199,21 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
           </div>
         )}
       </div>
+
+      {/* 捲到底箭頭：只在 user 捲離底部時出現。auto-scroll 已改成「停在底部才拉」，
+          這是他回到最新的路。aria-live 不用 —— 它是導覽控制項不是狀態播報。 */}
+      {activeTripId && !isAtBottom && (
+        <button
+          type="button"
+          className="tp-chat-jump-latest"
+          data-testid="chat-jump-to-latest"
+          onClick={scrollToBottom}
+          aria-label="跳到最新訊息"
+          title="跳到最新訊息"
+        >
+          <span aria-hidden="true">↓</span>
+        </button>
+      )}
 
       <form
         className="tp-chat-composer"

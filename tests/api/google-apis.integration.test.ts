@@ -15,6 +15,9 @@ import type { Env } from '../../functions/api/_types';
 
 // Mock google-client — handlers import via this exact path
 vi.mock('../../src/server/maps/google-client', () => ({
+  // 2026-07-29：poi-search 改呼叫 searchPlacesPage（回 { results, nextPageToken }）
+  // 以支援探索頁的「捲到底載更多」。searchPlaces 薄包裝仍在，供不需分頁的呼叫端用。
+  searchPlacesPage: vi.fn(),
   searchPlaces: vi.fn(),
   computeRoute: vi.fn(),
 }));
@@ -22,7 +25,7 @@ vi.mock('../../src/server/maps/google-client', () => ({
 // Re-import after mock so handlers + tests get mocked versions
 const { onRequestGet: poiSearchHandler } = await import('../../functions/api/poi-search');
 const { onRequestGet: routeHandler } = await import('../../functions/api/route');
-const { searchPlaces, computeRoute } = await import('../../src/server/maps/google-client');
+const { searchPlacesPage, computeRoute } = await import('../../src/server/maps/google-client');
 
 let db: D1Database;
 let env: Env;
@@ -35,7 +38,7 @@ beforeAll(async () => {
 afterAll(disposeMiniflare);
 
 beforeEach(() => {
-  vi.mocked(searchPlaces).mockReset();
+  vi.mocked(searchPlacesPage).mockReset();
   vi.mocked(computeRoute).mockReset();
 });
 
@@ -81,8 +84,8 @@ describe('GET /api/poi-search — validation + rate limit + mock', () => {
     expect(res.status).toBe(400);
   });
 
-  it('正常 query → call searchPlaces + 200 response + X-Cache=MISS', async () => {
-    vi.mocked(searchPlaces).mockResolvedValueOnce([
+  it('正常 query → call searchPlacesPage + 200 response + X-Cache=MISS', async () => {
+    vi.mocked(searchPlacesPage).mockResolvedValueOnce({ nextPageToken: null, results: [
       {
         place_id: 'ChIJxxx',
         name: '東京鐵塔',
@@ -94,27 +97,47 @@ describe('GET /api/poi-search — validation + rate limit + mock', () => {
         country_name: '日本',
         rating: 4.4,
       },
-    ]);
+    ] });
     const res = await callPoiSearch('q=東京鐵塔&region=JP&limit=5');
     expect(res.status).toBe(200);
     expect(res.headers.get('X-Cache')).toBe('MISS');
     const body = await res.json() as { results: Array<{ name: string }> };
     expect(body.results.length).toBe(1);
     expect(body.results[0].name).toBe('東京鐵塔');
-    expect(vi.mocked(searchPlaces)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(searchPlacesPage)).toHaveBeenCalledTimes(1);
   });
 
   it('limit clamp 到 [1, 20]', async () => {
-    vi.mocked(searchPlaces).mockResolvedValueOnce([]);
+    vi.mocked(searchPlacesPage).mockResolvedValueOnce({ results: [], nextPageToken: null });
     await callPoiSearch('q=test&limit=999');
-    const [, , , limit] = vi.mocked(searchPlaces).mock.calls[0]!;
+    const [, , , limit] = vi.mocked(searchPlacesPage).mock.calls[0]!;
     expect(limit).toBe(20);
   });
 
-  it('searchPlaces throw → handler 不 catch（test framework catches raw Error）', async () => {
+  it('回應帶 nextPageToken，讓前端知道還有沒有下一頁', async () => {
+    vi.mocked(searchPlacesPage).mockResolvedValueOnce({ results: [], nextPageToken: 'TOK_2' });
+    const res = await callPoiSearch('q=分頁測試&region=JP');
+    const body = await res.json() as { nextPageToken: string | null };
+    expect(body.nextPageToken).toBe('TOK_2');
+  });
+
+  it('帶 pageToken 時把它傳給 searchPlacesPage 且不寫快取（否則第 2 頁會污染首次搜尋）', async () => {
+    vi.mocked(searchPlacesPage).mockResolvedValueOnce({ results: [], nextPageToken: null });
+    await callPoiSearch('q=快取污染測試&region=JP&pageToken=TOK_2');
+    const call = vi.mocked(searchPlacesPage).mock.calls[0]!;
+    expect(call[5]).toBe('TOK_2');
+
+    // 同一組 (q, region) 再打一次「首次搜尋」—— 若第 2 頁寫進了快取，這裡會是 HIT
+    // 且拿到第 2 頁內容。應為 MISS。
+    vi.mocked(searchPlacesPage).mockResolvedValueOnce({ results: [], nextPageToken: null });
+    const res2 = await callPoiSearch('q=快取污染測試&region=JP');
+    expect(res2.headers.get('X-Cache')).toBe('MISS');
+  });
+
+  it('searchPlacesPage throw → handler 不 catch（test framework catches raw Error）', async () => {
     // Production middleware (Cloudflare Pages) catches uncaught Error → 500。
     // Test 不 simulate middleware；確認 handler 對 google-client 上游錯誤不額外 try/catch。
-    vi.mocked(searchPlaces).mockRejectedValueOnce(new Error('Google 503'));
+    vi.mocked(searchPlacesPage).mockRejectedValueOnce(new Error('Google 503'));
     await expect(callPoiSearch('q=test-err&region=JP')).rejects.toThrow('Google 503');
   });
 });
