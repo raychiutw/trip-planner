@@ -26,6 +26,10 @@ import TitleBar from '../components/shell/TitleBar';
 
 /** Region 候選 (常用 destinations + 全部地區)。Active trip's region 自動加進來不重複。 */
 const POPULAR_REGIONS = ['全部地區', '沖繩', '東京', '京都', '首爾', '台北'] as const;
+/** 搜尋結果最多載幾頁（每頁 20 筆 → 60 筆封頂）。
+ *  每一頁都是一次 Google Text Search 計費請求，而 Text Search 是 Enterprise tier、
+ *  每月免費額度僅 1K —— 所以上限寫死，且只在使用者真的捲到底時才拓。 */
+const MAX_SEARCH_PAGES = 3;
 
 import type { PoiSearchResult } from '../types/poi';
 import { regionToApiParam } from '../lib/maps/region';
@@ -43,6 +47,18 @@ interface SavedKeyRow {
 }
 
 const SCOPED_STYLES = `
+/* 捲到底載更多的哨兵 / 結尾提示。哨兵本身要有高度，否則 IntersectionObserver
+   永遠不會觸發（零高度元素在多數瀏覽器不算 intersecting）。 */
+.explore-load-more {
+  min-block-size: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--color-muted);
+  font-size: 13px;
+  padding-block: 12px;
+}
+.explore-load-more.is-end { color: var(--color-muted); opacity: 0.75; }
+
 .explore-shell {
   background: var(--color-secondary);
   height: 100%;
@@ -558,6 +574,14 @@ export default function ExplorePage() {
   // usePoiSearch 的 debounce 範式不同 (按 Enter / chip 立即查)，留 fetch 但
   // 加 abort + seq。
   const searchAbortRef = useRef<AbortController | null>(null);
+  /** 下一頁 token（null = 沒有更多）。Google Text Search 每頁 20 筆。 */
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  /** 已載入幾頁。上限 MAX_SEARCH_PAGES —— 每多一頁就是多一次 Text Search 計費
+   *  （Enterprise tier，每月免費額度僅 1K）。使用者不捲就不會多打。 */
+  const [pagesLoaded, setPagesLoaded] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
   async function runSearch(q: string) {
     if (q.length < 2) {
       showToast('至少輸入 2 個字', 'error', 2000);
@@ -570,12 +594,14 @@ export default function ExplorePage() {
     try {
       const regionApi = regionToApiParam(region);
       const regionParam = regionApi ? `&region=${encodeURIComponent(regionApi)}` : '';
-      const body = await apiFetch<{ results?: PoiSearchResult[] }>(
+      const body = await apiFetch<{ results?: PoiSearchResult[]; nextPageToken?: string | null }>(
         `/poi-search?q=${encodeURIComponent(q)}&limit=20${regionParam}`,
         { signal: ctrl.signal },
       );
       if (searchAbortRef.current === ctrl) {
         setResults(body.results ?? []);
+        setNextPageToken(body.nextPageToken ?? null);
+        setPagesLoaded(1);
         // v2.55.73: 新搜尋結果 → 細類 chip 重算，重置 filter 回「為你推薦」，
         // 避免上次選的細類 label 在新結果中復活、靜默隱藏結果（在 handler 重置而非 effect）。
         setCategory('all');
@@ -590,6 +616,39 @@ export default function ExplorePage() {
       if (searchAbortRef.current === ctrl) setSearching(false);
     }
   }
+
+  /** 捲到結果底部時載下一頁。三道閘：沒 token、已達頁數上限、正在載 → 不打。 */
+  const loadMoreResults = useCallback(async () => {
+    if (!nextPageToken || pagesLoaded >= MAX_SEARCH_PAGES || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const regionApi = regionToApiParam(region);
+      const regionParam = regionApi ? `&region=${encodeURIComponent(regionApi)}` : '';
+      const body = await apiFetch<{ results?: PoiSearchResult[]; nextPageToken?: string | null }>(
+        `/poi-search?q=${encodeURIComponent(query.trim())}&limit=20${regionParam}`
+          + `&pageToken=${encodeURIComponent(nextPageToken)}`,
+      );
+      setResults((prev) => [...prev, ...(body.results ?? [])]);
+      setNextPageToken(body.nextPageToken ?? null);
+      setPagesLoaded((n) => n + 1);
+    } catch {
+      showToast('載入更多失敗，請稍後再試', 'error', 3000);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [nextPageToken, pagesLoaded, loadingMore, region, query]);
+
+  // 哨兵進入視野 → 載下一頁。deps 帶 loadMoreResults：token / 頁數變動後要重掛，
+  // 否則 observer 抓著舊 closure 的 nextPageToken 會一直請求同一頁。
+  useEffect(() => {
+    const el = loadMoreSentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) void loadMoreResults();
+    }, { rootMargin: '200px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMoreResults, results.length, nextPageToken, pagesLoaded]);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -919,6 +978,26 @@ export default function ExplorePage() {
                 </section>
               );
             })()}
+
+            {/* 捲到底哨兵：進入視野就載下一頁。用 IntersectionObserver 而非 scroll
+                listener —— 探索頁的捲動容器隨版面（手機整頁 / 桌機欄）不同，哨兵
+                不需要知道自己在誰裡面捲。loadMoreResults 內部三道閘擋重複觸發。 */}
+            {results.length > 0 && nextPageToken && pagesLoaded < MAX_SEARCH_PAGES && (
+              <div
+                ref={loadMoreSentinelRef}
+                className="explore-load-more"
+                data-testid="explore-load-more"
+                role="status"
+                aria-live="polite"
+              >
+                {loadingMore ? '載入更多…' : ''}
+              </div>
+            )}
+            {results.length > 0 && (!nextPageToken || pagesLoaded >= MAX_SEARCH_PAGES) && (
+              <div className="explore-load-more is-end" data-testid="explore-results-end">
+                已顯示全部 {results.length} 筆結果
+              </div>
+            )}
 
             {results.length === 0 && query && !searching && (
               <div className="explore-empty">沒有找到「{query}」的結果。換個關鍵字試試？</div>

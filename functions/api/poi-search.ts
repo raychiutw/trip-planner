@@ -14,7 +14,7 @@
 import { AppError, buildRateLimitResponse } from './_errors';
 import { assertGoogleAvailable } from './_maps_lock';
 import { bumpRateLimit, clientIp, RATE_LIMITS } from './_rate_limit';
-import { searchPlaces, type PlacesSearchTextResult } from '../../src/server/maps/google-client';
+import { searchPlacesPage, type PlacesSearchTextResult } from '../../src/server/maps/google-client';
 import { getCachedSearch, setCachedSearch } from '../../src/lib/maps/cache';
 import { regionToLocationBias } from '../../src/lib/maps/region';
 import type { Env } from './_types';
@@ -40,6 +40,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // 否則「東京」/「沖繩」共用同一 cache row 撞 v2.23.3 殘留資料（都歸 JP）。
   const cacheKey = regionRaw ?? region;
   const limitParam = url.searchParams.get('limit');
+  const pageToken = url.searchParams.get('pageToken') || undefined;
 
   if (!q || q.length < 2) {
     throw new AppError('DATA_VALIDATION', 'query (q) 至少 2 個字元');
@@ -66,23 +67,30 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   await assertGoogleAvailable(context.env.DB);
 
-  // D1 cache check
-  const cached = await getCachedSearch(context.env.DB, q, cacheKey);
-  if (cached) {
-    return jsonResponse(
-      { results: cached.slice(0, limit) },
-      200,
-      { 'Cache-Control': 'private, max-age=300', 'X-Cache': 'HIT' },
-    );
+  // D1 cache 只服務第一頁。cache key 是 (q, region)，第 2/3 頁的結果內容完全不同，
+  // 讀或寫同一個 key 都會讓之後的首次搜尋拿到中間頁 —— 所以有 pageToken 時
+  // 整個 cache 路徑跳過（不讀也不寫）。
+  if (!pageToken) {
+    const cached = await getCachedSearch(context.env.DB, q, cacheKey);
+    if (cached) {
+      return jsonResponse(
+        // 命中快取時沒有 token 可給 —— 快取只存第一頁，續頁得靠 cache miss 那條路。
+        { results: cached.slice(0, limit), nextPageToken: null },
+        200,
+        { 'Cache-Control': 'private, max-age=300', 'X-Cache': 'HIT' },
+      );
+    }
   }
 
-  const results = await searchPlaces(apiKey, q, region, limit, cityBias);
+  const page = await searchPlacesPage(apiKey, q, region, limit, cityBias, pageToken);
 
-  // Fire-and-forget cache write — don't block response
-  context.waitUntil(setCachedSearch(context.env.DB, q, cacheKey, results));
+  // Fire-and-forget cache write — don't block response。同上：只快取第一頁。
+  if (!pageToken) {
+    context.waitUntil(setCachedSearch(context.env.DB, q, cacheKey, page.results));
+  }
 
   return jsonResponse(
-    { results },
+    { results: page.results, nextPageToken: page.nextPageToken },
     200,
     { 'Cache-Control': 'private, max-age=300', 'X-Cache': 'MISS' },
   );

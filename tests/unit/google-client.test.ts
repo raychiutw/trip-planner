@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   searchPlaces,
+  searchPlacesPage,
   getPlaceDetails,
   computeRoute,
 } from '../../src/server/maps/google-client';
@@ -210,3 +211,55 @@ describe('computeRoute', () => {
   });
 });
 
+
+/*
+ * 2026-07-29 —— 探索頁「捲到底載更多」。
+ *
+ * 現況：searchPlaces 回 PlacesSearchTextResult[]，maxResultCount 硬 cap 20，
+ * 且完全沒把 Google 的 nextPageToken 接出來 —— 前端 limit=20、後端也 cap 20，
+ * 第 21 筆之後前後端都沒有路可以拿到。
+ *
+ * 決策（owner）：接 pageToken，上限 3 頁 60 筆。使用者不捲就不多打 —— Text Search
+ * 是 Enterprise tier、每月免費額度僅 1K，每多一頁就是多一次計費請求。
+ */
+describe('searchPlaces —— 分頁（nextPageToken）', () => {
+  it('回傳 nextPageToken 讓呼叫端能拿下一頁', async () => {
+    fetchOk({
+      places: [{
+        id: 'p1', displayName: { text: 'A' }, formattedAddress: 'addr',
+        location: { latitude: 1, longitude: 2 }, primaryType: 'restaurant',
+      }],
+      nextPageToken: 'TOKEN_ABC',
+    });
+    const page = await searchPlacesPage('k', 'q');
+    expect(page.results).toHaveLength(1);
+    expect(page.nextPageToken).toBe('TOKEN_ABC');
+  });
+
+  it('沒有更多結果時 nextPageToken 為 null', async () => {
+    fetchOk({ places: [{ id: 'p1', displayName: { text: 'A' }, location: { latitude: 1, longitude: 2 } }] });
+    const page = await searchPlacesPage('k', 'q');
+    expect(page.nextPageToken).toBeNull();
+  });
+
+  it('帶 pageToken 時原樣送進 request body', async () => {
+    fetchOk({ places: [] });
+    await searchPlacesPage('k', 'q', undefined, 10, undefined, 'TOKEN_ABC');
+    const [, init] = mockFetch.mock.calls[0]!;
+    expect(JSON.parse(init.body).pageToken).toBe('TOKEN_ABC');
+  });
+
+  it('不帶 pageToken 時 body 裡不出現該欄位（避免送 undefined 給 Google）', async () => {
+    fetchOk({ places: [] });
+    await searchPlacesPage('k', 'q');
+    const [, init] = mockFetch.mock.calls[0]!;
+    expect(Object.keys(JSON.parse(init.body))).not.toContain('pageToken');
+  });
+
+  it('searchPlaces 舊介面仍可用（只回陣列，既有呼叫端不受影響）', async () => {
+    fetchOk({ places: [{ id: 'p1', displayName: { text: 'A' }, location: { latitude: 1, longitude: 2 } }], nextPageToken: 'X' });
+    const results = await searchPlaces('k', 'q');
+    expect(Array.isArray(results)).toBe(true);
+    expect(results).toHaveLength(1);
+  });
+});

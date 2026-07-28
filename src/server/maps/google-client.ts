@@ -88,7 +88,15 @@ export interface PlacesSearchTextResult {
   business_status?: GoogleBusinessStatus;
 }
 
+/** searchPlacesPage 的回傳：一頁結果 + 下一頁 token（沒有更多則為 null）。 */
+export interface PlacesSearchPage {
+  results: PlacesSearchTextResult[];
+  /** 傳回 searchPlacesPage 的 pageToken 參數即可取下一頁。null = 沒有更多。 */
+  nextPageToken: string | null;
+}
+
 interface PlacesSearchTextResponse {
+  nextPageToken?: string;
   places?: Array<{
     id: string;
     displayName?: { text: string };
@@ -132,19 +140,23 @@ export interface LocationBias {
   radiusMeters: number;
 }
 
-export async function searchPlaces(
+export async function searchPlacesPage(
   apiKey: string,
   query: string,
   region?: string,
   maxCount = 10,
   locationBias?: LocationBias,
-): Promise<PlacesSearchTextResult[]> {
+  pageToken?: string,
+): Promise<PlacesSearchPage> {
   requireApiKey(apiKey);
   const body: Record<string, unknown> = {
     textQuery: query,
     maxResultCount: Math.min(Math.max(maxCount, 1), 20),
     languageCode: 'zh-TW',
   };
+  // 只在有值時放進 body —— 送 `pageToken: undefined` 會被 JSON.stringify 丟掉沒錯，
+  // 但顯式條件讓「不分頁」這件事在 request 上看得出來，也擋掉空字串。
+  if (pageToken) body.pageToken = pageToken;
   if (region) body.regionCode = region.toLowerCase();
   if (locationBias) {
     body.locationBias = {
@@ -168,9 +180,9 @@ export async function searchPlaces(
 
   const json = (await res.json().catch(() => null)) as PlacesSearchTextResponse | null;
   if (!json) fail('Places searchText invalid JSON');
-  if (!json.places) return [];
+  if (!json.places) return { results: [], nextPageToken: json.nextPageToken ?? null };
 
-  return json.places
+  const results = json.places
     .filter((p) => p.id && p.location && p.displayName?.text)
     .map((p) => {
       const country = p.addressComponents?.find((c) => c.types?.includes('country'));
@@ -189,6 +201,22 @@ export async function searchPlaces(
         business_status: p.businessStatus as GoogleBusinessStatus | undefined,
       };
     });
+  return { results, nextPageToken: json.nextPageToken ?? null };
+}
+
+/**
+ * 單頁版薄包裝 —— 既有呼叫端（trip import / POI enrich 等）只要結果不要 token，
+ * 保持原簽章不動，避免為了分頁去改一票不需要分頁的地方。
+ */
+export async function searchPlaces(
+  apiKey: string,
+  query: string,
+  region?: string,
+  maxCount = 10,
+  locationBias?: LocationBias,
+): Promise<PlacesSearchTextResult[]> {
+  const page = await searchPlacesPage(apiKey, query, region, maxCount, locationBias);
+  return page.results;
 }
 
 // ---------------------------------------------------------------------------

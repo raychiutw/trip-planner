@@ -6,6 +6,7 @@
  * silent drift 會讓搜尋結果空白。
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   matchCategory,
   poiTone,
@@ -175,5 +176,32 @@ describe('normalizeSearchResults', () => {
     const input = [{ place_id: 'ChIJ1', name: 'N' }];
     const out = normalizeSearchResults(input);
     expect(out[0]?.category).toBe('poi');
+  });
+});
+
+/*
+ * 2026-07-29 —— 探索頁分頁。快取污染是這裡唯一會咬人的地方：
+ * D1 cache 的 key 是 (q, region)，第 2/3 頁的內容跟第一頁完全不同。若讀或寫
+ * 同一個 key，之後任何一次「首次搜尋」都會拿到中間頁的結果。
+ */
+describe('poi-search 分頁不得污染快取', () => {
+  const SRC = readFileSync('functions/api/poi-search.ts', 'utf-8');
+  const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
+  it('有 pageToken 時不讀快取', () => {
+    expect(CODE).toMatch(/if \(!pageToken\)[\s\S]{0,200}getCachedSearch/);
+  });
+
+  it('有 pageToken 時不寫快取', () => {
+    expect(CODE).toMatch(/if \(!pageToken\)[\s\S]{0,200}setCachedSearch/);
+  });
+
+  it('回應帶 nextPageToken', () => {
+    expect(CODE).toContain('nextPageToken');
+  });
+
+  it('改用 searchPlacesPage 並把 pageToken 傳下去', () => {
+    expect(CODE).toContain('searchPlacesPage(');
+    expect(CODE).toMatch(/searchPlacesPage\([^)]*pageToken\)/);
   });
 });

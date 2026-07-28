@@ -21,6 +21,10 @@ import { apiFetch } from '../lib/apiClient';
 export const CHAT_PAGE_SIZE = 5;
 /** 距頂多少 px 觸發 load older。略大於 0 讓 user 有機會看到「載入中」狀態。 */
 export const LOAD_OLDER_THRESHOLD_PX = 80;
+/** 距底多少 px 內算「還在底部」。超過就視為 user 主動捲上去看歷史：
+ *  新訊息不再硬拉回底（讓位），並顯示「跳回最新」箭頭讓他回得去。
+ *  取 120px 而非 0 —— 行動裝置 momentum scroll 與 rubber-band 會讓精確 0 幾乎踩不到。 */
+export const AT_BOTTOM_THRESHOLD_PX = 120;
 /** 連續失敗最少間隔。401 / network error 時擋 storm fetch。 */
 const ERROR_BACKOFF_MS = 2000;
 
@@ -55,6 +59,11 @@ export interface UseChatPaginationResult {
   loadError: Error | null;
   /** Caller 在 retry button 點按時呼叫,清 error + 重試 loadOlder。 */
   retryLoadOlder: () => void;
+  /** 目前捲動位置是否還在底部附近（AT_BOTTOM_THRESHOLD_PX 內）。
+   *  false = user 捲上去看歷史 → caller 顯示「跳回最新」箭頭。 */
+  isAtBottom: boolean;
+  /** 捲到底（箭頭 onClick 用）。 */
+  scrollToBottom: () => void;
 }
 
 interface PageResponse<TRow extends PaginatedRow> {
@@ -82,6 +91,11 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
 
   const [oldestCursor, setOldestCursor] = useState<{ createdAt: string; id: number } | null>(null);
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
+  /** 初值 true：初次載入本來就停在底部（下方 auto-scroll 會拉到底）。 */
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  /** auto-scroll effect 讀它而非 state —— state 更新是非同步的，訊息與捲動同 tick
+   *  進來時讀 state 會拿到上一輪的值。 */
+  const atBottomRef = useRef(true);
   const [loadError, setLoadError] = useState<Error | null>(null);
 
   // v2.33.40 round 4.5: stash callbacks in refs so caller can pass inline
@@ -220,7 +234,9 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     void loadOlder();
   }, [loadOlder]);
 
-  // Scroll-to-top trigger: 距頂 LOAD_OLDER_THRESHOLD_PX 內 + 還有更舊 + 沒在載 → 載
+  // Scroll trigger（一個 listener 兩件事）：
+  //   1. 距頂 LOAD_OLDER_THRESHOLD_PX 內 + 還有更舊 + 沒在載 → 載更舊
+  //   2. 更新 isAtBottom —— auto-scroll 讓位與「跳回最新」箭頭都看它
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
@@ -229,10 +245,21 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
       if (el.scrollTop <= LOAD_OLDER_THRESHOLD_PX && hasMoreOlder && !loadingOlderRef.current) {
         void loadOlder();
       }
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= AT_BOTTOM_THRESHOLD_PX;
+      atBottomRef.current = atBottom;
+      setIsAtBottom(atBottom);
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
   }, [hasMoreOlder, loadOlder, bodyRef]);
+
+  const scrollToBottom = useCallback(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    atBottomRef.current = true;
+    setIsAtBottom(true);
+  }, [bodyRef]);
 
   // Auto-scroll behavior — 用 first/last message id diff 判斷變動類型,避免 SSE
   // 中間替換 / send / loadOlder 同 tick 交錯時誤判 scrollHeight delta:
@@ -261,12 +288,14 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
       return;
     }
 
-    // 新訊息 at bottom: last id 變 → 拉到底
-    if (lastChanged) {
+    // 新訊息: last id 變 → 拉到底，**但只在 user 還停在底部時**。
+    // 修正前這裡是無條件的，你捲上去看歷史時新訊息一到就被硬拉回底部。
+    // 讓位後回得去的路是 caller 的「跳回最新」箭頭（isAtBottom / scrollToBottom）。
+    if (lastChanged && atBottomRef.current) {
       el.scrollTop = el.scrollHeight;
     }
     // 兩者皆同 → SSE bubble 取代,user 已捲到他要的位置,不動
   }, [messages, bodyRef]);
 
-  return { hasMoreOlder, loadOlder, loadError, retryLoadOlder };
+  return { hasMoreOlder, loadOlder, loadError, retryLoadOlder, isAtBottom, scrollToBottom };
 }
