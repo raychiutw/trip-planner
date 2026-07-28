@@ -4,6 +4,8 @@
  * layer A+B containment hold, by actual output inspection (not source-grep).
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   buildContainedShellCommand,
   buildMcpConfig,
@@ -116,5 +118,42 @@ describe('buildMcpConfig — token delivery via server env (not inherited)', () 
   it('exposes only the tripline server (no other MCP servers)', () => {
     const cfg = JSON.parse(buildMcpConfig({ nodeBin: 'node', mcpServerPath: 's.js', token: 't', restrictTrip: 'r' }));
     expect(Object.keys(cfg.mcpServers)).toEqual(['tripline']);
+  });
+});
+
+/*
+ * 2026-07-29 prod 事故：contained session 啟動時報「I don't have any
+ * mcp__tripline__* tools」，整個 session 廢掉（緊急聯絡生成 job 19 因此 timed_out）。
+ *
+ * MCP server 本身沒問題（單獨跑 tools/list 回 15 個工具）。病灶是
+ * MCP_SERVER_PATH 指向 **repo 工作區**，而 session spawn 那一刻我正在對工作區
+ * 做 git pull / 切分支。claude 只在啟動時載一次 MCP server —— 那一瞬間的檔案狀態
+ * 決定整個 session 的命運，之後工作區恢復也救不回來。
+ *
+ * 修法：spawn 時把 MCP server 快照進 session 專屬目錄（它零 require、380 行完全
+ * 自足），設定指向那份快照。工作區之後怎麼動都影響不到已啟動的 session。
+ */
+describe('MCP server 路徑必須是 session 內的快照，不是共用工作區', () => {
+  it('buildMcpConfig 接受並原樣使用傳入的 mcpServerPath', () => {
+    const snapshot = `${BASE.sessionDir}/tp-request-mcp-server.js`;
+    const cfg = JSON.parse(buildMcpConfig({
+      nodeBin: '/opt/homebrew/bin/node',
+      mcpServerPath: snapshot,
+      token: 'tok',
+      restrictTrip: 'trip-x',
+    }));
+    expect(cfg.mcpServers.tripline.args).toEqual([snapshot]);
+  });
+
+  it('api-server 把 MCP server 複製進 session 目錄後才建設定', () => {
+    const src = readFileSync(
+      join(__dirname, '../../scripts/tripline-api-server.ts'),
+      'utf8',
+    ).replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    // 設定必須指向 session 內的快照路徑，不能直接用 MCP_SERVER_PATH
+    expect(src).toMatch(/mcpServerPath:\s*mcpServerSnapshotPath/);
+    // 快照本身要被寫進去（跟 mcp-config / oauth-token 同一批 0600 寫入）
+    expect(src).toContain('mcpServerSnapshotPath');
+    expect(src).toMatch(/readFileSync\(MCP_SERVER_PATH/);
   });
 });
