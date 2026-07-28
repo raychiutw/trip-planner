@@ -206,6 +206,20 @@ export async function expireNoteAiJobs(
          completed_at = datetime('now')
      WHERE ${filters.join(' AND ')}`,
   ).bind(...values).run();
+  const scopeFilters = filters.slice(2);
+  await db.prepare(
+    `UPDATE trip_requests
+     SET status = 'failed',
+         reply = COALESCE(reply, 'AI 生成超過 10 分鐘'),
+         updated_at = datetime('now')
+     WHERE status IN ('open', 'processing')
+       AND id IN (
+         SELECT request_id FROM trip_note_ai_jobs
+         WHERE status = 'timed_out'
+           AND error_code = 'NOTES_AI_JOB_STALE'
+           ${scopeFilters.length > 0 ? `AND ${scopeFilters.join(' AND ')}` : ''}
+       )`,
+  ).bind(...values).run();
 }
 
 export async function markNoteAiJobProcessing(

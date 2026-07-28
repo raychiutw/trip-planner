@@ -8,6 +8,21 @@ user-invocable: true
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
 
+## 系統行程筆記 request（最高優先）
+
+若 `message` 以 `[行程筆記-lodging-tips]`、`[行程筆記-tips]` 或
+`[行程筆記-emergency]` 開頭，這是 backend 建立的 AI 生成工作，必須在一般
+Decision Rubric 之前處理：
+
+1. 用現有唯讀 API 讀取該 trip 的目的地、日期、住宿等必要脈絡。
+2. 依 `message` 內附 schema 生成項目；`reply 必須是純 JSON array`，不可加
+   markdown fence、前言、摘要或完成說明。
+3. **不得直接寫入行程筆記**，也不得呼叫一般修改流程；backend completion hook
+   會統一套用人工維護、排除、去重與原子替換規則。
+4. 以 `status="completed"` 更新 request，`reply` 放上述 JSON array 的序列化字串，
+   沿用下方 PATCH request 流程。
+5. 完成後直接處理下一筆 request，不再進入一般 Decision Rubric。
+
 ## API 設定
 
 API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/references.md
