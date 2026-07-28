@@ -631,7 +631,7 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 
 ### Trip Notes Page (`tp-notes-*`)
 
-行程筆記全頁（v2.34.x）。Route `/trip/:tripId/notes`。5 section accordion（航班 / 住宿 / 預訂 / 行前須知 / 緊急聯絡）+ 3 AI generation prompt (lodging-tips / general-tips / emergency) 寫進 行前須知 + 緊急聯絡 兩 section。
+行程筆記全頁（v2.34.x；v2.57.75 補 AI ownership）。Route `/trip/:tripId/notes`。5 section accordion（航班 / 住宿 / 預訂 / 行前須知 / 緊急聯絡）+ 3 個獨立 AI generation job（lodging-tips / general-tips / emergency）寫進 行前須知 + 緊急聯絡兩個 section。
 
 **入口**：
 - TripCardMenu「行程筆記」menu item (PR14)
@@ -643,7 +643,7 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 - `matchMedia('(min-width: 768px)')` listener 動態切換
 - `<button>` head + `aria-expanded` + `aria-controls` 給 screen reader
 
-**4 個 state**（依資料 + AI job）：
+**頁面與 AI job state**：
 
 | State | UI |
 |-------|----|
@@ -651,12 +651,21 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 | error | `<AlertPanel variant="error">` + actionLabel「重試」(對齊 L549) |
 | empty (counts=0) | hero「建立行程筆記」+ 5 dot progress + 航班 is-suggested accent border + 「建議先填」warn meta |
 | hasData | 5 section accordion + meta count |
-| ai-pending | accent-subtle banner + pulse dot + 「AI 正在生成 ... 通常 3-7 分鐘完成」 |
+| ai-pending / ai-processing | 每個 doc type 獨立 accent-subtle status，顯示等待分鐘與「通常 3–7 分鐘完成」 |
+| ai-completed | persistent status 顯示新增、替換、保留人工、排除、略過摘要 |
+| ai-failed / ai-timedOut | destructive status；明示原有內容未變更並允許重新生成 |
 
 **AI button**：
-- 只在 行前須知 + 緊急聯絡 section header
-- Disabled state when ai-pending + text 改「生成中…」
-- 30s debounce backend（重複 click → return existing job）
+- 只在展開的 行前須知 + 緊急聯絡 section header；行前須知分「一般」與「住宿」兩個 action，住宿 action 在尚無住宿資料時 disabled
+- 只停用相同 doc type 的 active job，三種類型可平行；active 時文字改「生成中…」
+- backend 同 trip + doc type 保證單一 active job，10 分鐘 timeout；重新生成建立下一個 generation
+
+**AI ownership / exclusions**：
+- AI 項目顯示「AI 維護」chip；第一次進入編輯即轉人工維護，正在執行的 callback 不得覆蓋
+- AI 來源但已人工維護的項目在編輯 actions 顯示「交還 AI 維護」
+- 刪除 AI 來源項目時說明會排除該主題；行前須知與緊急聯絡各顯示「已排除 N 項」入口
+- 排除清單使用可存取對話框（focus trap、Escape、關閉後 focus return、44px controls），可逐項恢復；恢復只允許下次重新生成再次出現，不立即加回
+- 人工項目與人工編輯過的 AI 項目永不被重新生成覆蓋；同主題也不重複新增
 
 **Visual specs**：
 - Section card: 12px gap + 1px hairline border + secondary bg + `tp-notes-section.is-open` border 改 `line-strong`
