@@ -47,6 +47,12 @@ CSS 字串裡，`tests/unit/trips-list-accent-text.test.ts` 這類掃 template l
 
 `TP_REQUEST_USER_TOKEN` OFF 時，`/tp-request`（處理 untrusted `trip_requests.message`）仍降級 service-token 走未-contained `--dangerously-skip-permissions` session（`spawnTmuxRequest` 未-contained tmux 路徑），prompt-injection 可讀 Mac 憑證 → 拿 `API_SECRET` 可 mint owner token（若該 owner 已有 Consent）。flag ON 時此路徑已不可達（走 mint→contained 或 fail-closed）。**不能盲修**：10-min cron + CF `/trigger` 都在此路徑跑 prod AI 聊天 pipeline，直接 `return false` 會停掉聊天。與 containment 就緒度耦合 → 併 activation 一起做：activation 應**原子化**（containment ready + Consent + flag 同時上），別留 Consent-first-flag-later 窗口；或改造 spawn 讓 service-token 路徑也能 contained。security-auditor v2.55.62 P1。
 
+### request 收屍 — 牆鐘那層繞過完成 hook，linked 報告會停在 pending
+
+**Priority**: P3（罕見路徑；pre-existing，非 v2.57.77 引入）
+
+`reapIfStale`（`functions/api/_requestTermination.ts`）直接 UPDATE `trip_requests`、不經 `PATCH /requests/:id`，所以 `applyHealthCheckCompletion` / `applyNotesGenerationCompletion` 不會跑 —— 被 100 分鐘牆鐘收掉的健檢／筆記請求，其 `trip_health_reports` 會停在 `pending`（前端一直轉）。**不是 v2.57.77 引入的迴歸**：在此之前 request 根本永遠停在 `processing`，那些表一樣卡著。第一層（api-server 就地收屍）走 PATCH、hook 照跑，所以只有「mac mini 死透 100 分鐘」才踩得到。根本解是抽出 `mint-restricted.ts:127` 已經記下的共用 `failRequest` helper，讓三個終結入口（PATCH hook / mint-restricted park / 牆鐘）走同一段 linked-table 連動。見 ADR-0007 的 Consequences。
+
 ### 測試套件 — D1 建置成本迫使 unit 限流 2 worker（根本解：共用已 migrate 快照）
 
 **Priority**: P3（開發體驗；不影響使用者）
