@@ -47,8 +47,8 @@ const _cache = globalThis as unknown as GlobalCache;
  * schema 是否已跑完 migration。
  *
  * ⚠ 判定用**最後一個改 schema 的 migration**（0094 DROP trip_docs），不是
- * `trip_entries` 的形狀。`trip_entries` 建於 **0047**，而 migration 總數是 93 ——
- * 拿它當判定，「已遷移」在 0048–0093 全部還沒跑時就會成立（少 `account_notification_preferences`、
+ * `trip_entries` 的形狀。`trip_entries` 建於 **0047**，而 migration 總數是 94 ——
+ * 拿它當判定，「已遷移」在 0048–0094 全部還沒跑時就會成立（少 `account_notification_preferences`、
  * `poi_favorites` 的 soft-delete 欄位、`users` 的隱私同意欄位…）。
  *
  * 判定表要用**最後**改 schema 的那一個；新增 migration 若動 schema，這裡要跟著往後移。

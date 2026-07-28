@@ -21,8 +21,6 @@ export const APP_SETTINGS_SCHEMA: Record<string, AppSettingType> = {
   google_maps_locked: 'boolean',
   google_maps_locked_reason: 'string',
   // hysteresis thresholds (migration 0051)
-  google_maps_lock_threshold_pct: 'integer',
-  google_maps_unlock_threshold_pct: 'integer',
   // POI lifecycle backfill state
   pois_backfill_resume_id: 'integer',
 };
