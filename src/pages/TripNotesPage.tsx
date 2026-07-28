@@ -32,20 +32,22 @@ import LodgingsSection from '../components/trip-notes/LodgingsSection';
 import ReservationsSection from '../components/trip-notes/ReservationsSection';
 import PretripSection from '../components/trip-notes/PretripSection';
 import EmergencySection from '../components/trip-notes/EmergencySection';
+import NoteAiExclusionsDialog, {
+  type NoteAiDocType,
+} from '../components/trip-notes/NoteAiExclusionsDialog';
 import { apiFetch } from '../lib/apiClient';
 import { showToast } from '../components/shared/Toast';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
-import { useRequestSSE } from '../hooks/useRequestSSE';
 import { routes } from '../lib/routes';
 import { TripContext } from '../contexts/TripContext';
 
 interface TripFlight { id: number; sortOrder: number; airline: string; flightNo: string; cabinClass: string; departAirport: string; arriveAirport: string; departAt: string; arriveAt: string; note: string; version: number; }
 interface TripLodging { id: number; sortOrder: number; name: string; address: string; checkInAt: string; checkOutAt: string; bookingNo: string; phone: string; note: string; version: number; }
 interface TripReservation { id: number; sortOrder: number; kind: 'restaurant' | 'experience' | 'ticket' | 'transport' | 'other'; title: string; reservedAt: string; partySize: number; reservationNo: string; phone: string; note: string; version: number; }
-interface TripPretripNote { id: number; sortOrder: number; section: string; title: string; content: string; aiGenerated: number; aiSource: string | null; version: number; }
-interface TripEmergencyContact { id: number; sortOrder: number; name: string; relationship: string; phone: string; email: string; kind: 'personal' | 'embassy' | 'police' | 'medical' | 'insurance' | 'hotel' | 'other'; aiGenerated: number; version: number; }
+interface TripPretripNote { id: number; sortOrder: number; section: string; title: string; content: string; aiGenerated: number; aiSource: string | null; origin: 'human' | 'ai'; managedBy: 'human' | 'ai'; semanticKey: string | null; version: number; }
+interface TripEmergencyContact { id: number; sortOrder: number; name: string; relationship: string; phone: string; email: string; kind: 'personal' | 'embassy' | 'police' | 'medical' | 'insurance' | 'hotel' | 'other'; aiGenerated: number; origin: 'human' | 'ai'; managedBy: 'human' | 'ai'; semanticKey: string | null; version: number; }
 
 interface NotesAggregator {
   flights: TripFlight[];
@@ -64,6 +66,94 @@ interface SectionMeta {
   iconAccent?: boolean;
   hasAI: boolean;
   countLabel: (n: number) => string;
+}
+
+type NoteAiStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed' | 'timedOut';
+
+interface NoteAiJob {
+  docType: NoteAiDocType;
+  status: NoteAiStatus;
+  jobId: number | null;
+  requestId: number | null;
+  generation: number;
+  insertedCount: number;
+  replacedCount: number;
+  preservedManualCount: number;
+  duplicateExcludedCount: number;
+  suppressedCount: number;
+  errorCode: string | null;
+  errorMessage: string | null;
+  createdAt: string | null;
+  startedAt: string | null;
+  timeoutAt: string | null;
+  completedAt: string | null;
+  exclusionCount: number;
+}
+
+const NOTE_AI_TYPES: NoteAiDocType[] = ['lodging-tips', 'tips', 'emergency'];
+const PRETRIP_AI_TYPES: NoteAiDocType[] = ['tips', 'lodging-tips'];
+const EMERGENCY_AI_TYPES: NoteAiDocType[] = ['emergency'];
+const AI_LABELS: Record<NoteAiDocType, string> = {
+  'lodging-tips': '住宿在地建議',
+  tips: '一般行前須知',
+  emergency: '緊急聯絡',
+};
+
+function emptyAiJobs(): Record<NoteAiDocType, NoteAiJob> {
+  return Object.fromEntries(NOTE_AI_TYPES.map((docType) => [docType, {
+    docType,
+    status: 'idle',
+    jobId: null,
+    requestId: null,
+    generation: 0,
+    insertedCount: 0,
+    replacedCount: 0,
+    preservedManualCount: 0,
+    duplicateExcludedCount: 0,
+    suppressedCount: 0,
+    errorCode: null,
+    errorMessage: null,
+    createdAt: null,
+    startedAt: null,
+    timeoutAt: null,
+    completedAt: null,
+    exclusionCount: 0,
+  }])) as Record<NoteAiDocType, NoteAiJob>;
+}
+
+function isActiveAiJob(job: NoteAiJob): boolean {
+  return job.status === 'pending' || job.status === 'processing';
+}
+
+function AiJobStatus({ job }: { job: NoteAiJob }) {
+  if (job.status === 'idle') return null;
+  const label = AI_LABELS[job.docType];
+  let message: string;
+  if (isActiveAiJob(job)) {
+    const started = job.startedAt ?? job.createdAt;
+    const parsed = started ? Date.parse(`${started.replace(' ', 'T')}Z`) : Number.NaN;
+    const minutes = Number.isFinite(parsed)
+      ? Math.max(0, Math.floor((Date.now() - parsed) / 60_000))
+      : 0;
+    message = `${label}生成中 · 已等待 ${minutes} 分鐘，通常 3–7 分鐘完成`;
+  } else if (job.status === 'completed') {
+    message = `${label}完成：新增 ${job.insertedCount}、替換 ${job.replacedCount}、保留人工 ${job.preservedManualCount}、排除 ${job.duplicateExcludedCount}、略過 ${job.suppressedCount}`;
+  } else if (job.status === 'timedOut') {
+    message = `${label}已逾時，原有內容未變更；可按重新生成重試`;
+  } else {
+    message = `${label}生成失敗：${job.errorMessage ?? '原有內容未變更'}；可按重新生成重試`;
+  }
+  return (
+    <div
+      className={`tp-notes-ai-status is-${job.status}`}
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      data-testid={`trip-notes-ai-status-${job.docType}`}
+    >
+      {message}
+    </div>
+  );
 }
 
 const SECTIONS: SectionMeta[] = [
@@ -192,13 +282,52 @@ const SCOPED_STYLES = `
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
   font-size: var(--font-size-footnote); font-weight: 600;
-  min-height: 32px;
+  min-height: var(--spacing-tap-min);
   border: none;
   cursor: pointer;
   transition: background 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .tp-notes-ai-btn:hover { background: var(--color-accent-bg); }
 .tp-notes-ai-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+
+.tp-notes-ai-tools {
+  display: grid; gap: 8px; padding: 12px 16px 4px;
+}
+.tp-notes-ai-status {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote);
+  line-height: 1.45;
+}
+.tp-notes-ai-status.is-pending,
+.tp-notes-ai-status.is-processing {
+  border-color: var(--color-accent-bg);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+}
+.tp-notes-ai-status.is-failed,
+.tp-notes-ai-status.is-timedOut {
+  border-color: var(--color-priority-high-dot);
+  background: var(--color-priority-high-bg);
+  color: var(--color-destructive);
+}
+.tp-notes-exclusions-btn {
+  justify-self: start;
+  min-height: var(--spacing-tap-min);
+  padding: 6px 0;
+  border: 0; background: transparent;
+  color: var(--color-accent-deep);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 650;
+  cursor: pointer;
+}
+.tp-notes-exclusions-btn.is-empty { color: var(--color-muted); font-weight: 500; }
+.tp-notes-exclusions-btn:hover { text-decoration: underline; }
+.tp-notes-exclusions-btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring); outline-offset: 2px;
+}
 
 .tp-notes-section-chevron {
   width: 28px; height: 28px;
@@ -233,10 +362,6 @@ const SCOPED_STYLES = `
 @keyframes tp-notes-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
-}
-@keyframes tp-notes-pulse {
-  0%, 100% { opacity: 0.35; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.1); }
 }
 @media (prefers-reduced-motion: reduce) {
   .tp-notes-skel { animation: none; }
@@ -277,9 +402,9 @@ export default function TripNotesPage() {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (showLoading = true) => {
     if (!tripId) return;
-    setLoading(true);
+    if (showLoading) setLoading(true);
     setError(null);
     try {
       const res = await apiFetch<NotesAggregator>(`/trips/${tripId}/notes`);
@@ -287,7 +412,7 @@ export default function TripNotesPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : '載入失敗');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [tripId]);
 
@@ -295,48 +420,121 @@ export default function TripNotesPage() {
     void loadData();
   }, [loadData]);
 
-  // ============================================================
-  // v2.34.x PR12: AI generation state + polling
-  // ============================================================
-  const [aiJob, setAiJob] = useState<{ requestId: number; jobId: number; docType: 'lodging-tips' | 'tips' | 'emergency' } | null>(null);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const aiSse = useRequestSSE(aiJob?.requestId ?? null);
-  const aiJobIdRef = useRef<number | null>(null);
+  const [aiJobs, setAiJobs] = useState<Record<NoteAiDocType, NoteAiJob>>(emptyAiJobs);
+  const [exclusionsDialog, setExclusionsDialog] = useState<'pretrip' | 'emergency' | null>(null);
+  const aiStateLoadedRef = useRef(false);
+  const announcedJobsRef = useRef(new Set<string>());
+  const aiStateRequestRef = useRef(0);
+  const aiStateInFlightRef = useRef(false);
+  const currentTripIdRef = useRef(tripId);
+  currentTripIdRef.current = tripId;
 
-  // Track terminal status — refetch + clear job on completed/failed
   useEffect(() => {
-    if (!aiJob || !aiSse.status) return;
-    if (aiSse.status === 'completed' || aiSse.status === 'failed') {
-      // Avoid double-trigger if state lags
-      if (aiJobIdRef.current === aiJob.jobId) return;
-      aiJobIdRef.current = aiJob.jobId;
-      const docType = aiJob.docType;
-      setAiJob(null);
-      void (async () => {
-        if (aiSse.status === 'completed') {
-          await loadData(); // refetch aggregator
-          showToast(`AI 生成完成（${docType === 'emergency' ? '緊急聯絡' : '行前須知'}）`, 'success', 4000);
-        } else {
-          setAiError(aiSse.error?.message || 'AI 生成失敗');
-        }
-      })();
-    }
-  }, [aiSse.status, aiSse.error, aiJob, loadData]);
+    aiStateRequestRef.current++;
+    aiStateInFlightRef.current = false;
+    aiStateLoadedRef.current = false;
+    announcedJobsRef.current.clear();
+    setAiJobs(emptyAiJobs());
+  }, [tripId]);
 
-  const handleAiTrigger = useCallback(async (docType: 'lodging-tips' | 'tips' | 'emergency') => {
-    if (!tripId || aiJob) return;
-    setAiError(null);
+  const loadAiState = useCallback(async () => {
+    if (!tripId || aiStateInFlightRef.current) return;
+    aiStateInFlightRef.current = true;
+    const requestToken = ++aiStateRequestRef.current;
     try {
-      const res = await apiFetch<{ jobId: number; requestId: number; status: string; tripId: string; docType: string }>(
+      const response = await apiFetch<{ jobs?: Partial<NoteAiJob>[] }>(
+        `/trips/${tripId}/notes/ai-state`,
+      );
+      if (requestToken !== aiStateRequestRef.current) return;
+      if (!Array.isArray(response.jobs)) return;
+      const next = emptyAiJobs();
+      for (const raw of response.jobs) {
+        if (!raw.docType || !NOTE_AI_TYPES.includes(raw.docType)) continue;
+        next[raw.docType] = { ...next[raw.docType], ...raw };
+      }
+      if (!aiStateLoadedRef.current) {
+        for (const job of Object.values(next)) {
+          if (job.jobId && !isActiveAiJob(job) && job.status !== 'idle') {
+            announcedJobsRef.current.add(`${job.jobId}:${job.status}`);
+          }
+        }
+        aiStateLoadedRef.current = true;
+      }
+      setAiJobs(next);
+    } catch {
+      // 筆記內容仍可使用；job 狀態由下一次 polling / 手動觸發恢復。
+    } finally {
+      if (requestToken === aiStateRequestRef.current) {
+        aiStateInFlightRef.current = false;
+      }
+    }
+  }, [tripId]);
+
+  useEffect(() => {
+    void loadAiState();
+  }, [loadAiState]);
+
+  const hasActiveAiJob = Object.values(aiJobs).some(isActiveAiJob);
+  useEffect(() => {
+    if (!hasActiveAiJob) return;
+    const timer = window.setInterval(() => void loadAiState(), 3000);
+    return () => window.clearInterval(timer);
+  }, [hasActiveAiJob, loadAiState]);
+
+  useEffect(() => {
+    if (!aiStateLoadedRef.current) return;
+    for (const job of Object.values(aiJobs)) {
+      if (!job.jobId || isActiveAiJob(job) || job.status === 'idle') continue;
+      const key = `${job.jobId}:${job.status}`;
+      if (announcedJobsRef.current.has(key)) continue;
+      announcedJobsRef.current.add(key);
+      if (job.status === 'completed') {
+        void loadData(false);
+        showToast(`${AI_LABELS[job.docType]}生成完成`, 'success', 4000);
+      }
+    }
+  }, [aiJobs, loadData]);
+
+  const handleAiTrigger = useCallback(async (docType: NoteAiDocType) => {
+    if (!tripId || isActiveAiJob(aiJobs[docType])) return;
+    try {
+      const response = await apiFetch<{
+        jobId: number;
+        requestId: number;
+        status: NoteAiStatus;
+        generation: number;
+        timeoutAt: string;
+      }>(
         `/trips/${tripId}/notes/${docType}/generate`,
         { method: 'POST', body: JSON.stringify({}) },
       );
-      setAiJob({ requestId: res.requestId, jobId: res.jobId, docType });
-      aiJobIdRef.current = null;
+      if (currentTripIdRef.current !== tripId) return;
+      setAiJobs((current) => ({
+        ...current,
+        [docType]: {
+          ...current[docType],
+          jobId: response.jobId,
+          requestId: response.requestId,
+          status: response.status,
+          generation: response.generation,
+          timeoutAt: response.timeoutAt,
+          createdAt: new Date().toISOString(),
+          errorCode: null,
+          errorMessage: null,
+        },
+      }));
     } catch (err) {
-      setAiError(err instanceof Error ? err.message : 'AI 觸發失敗');
+      if (currentTripIdRef.current !== tripId) return;
+      setAiJobs((current) => ({
+        ...current,
+        [docType]: {
+          ...current[docType],
+          status: 'failed',
+          errorMessage: err instanceof Error ? err.message : 'AI 觸發失敗',
+        },
+      }));
     }
-  }, [tripId, aiJob]);
+  }, [tripId, aiJobs]);
 
   const counts = useMemo(() => {
     if (!data) return { flights: 0, lodgings: 0, reservations: 0, pretrip: 0, emergency: 0, total: 0 };
@@ -380,38 +578,6 @@ export default function TripNotesPage() {
             actionLabel="重試"
             onAction={() => void loadData()}
           />
-        )}
-
-        {aiError && (
-          <AlertPanel
-            variant="error"
-            title="AI 生成失敗"
-            message={`${aiError}。可重試或手動填寫。`}
-            actionLabel="關閉"
-            onAction={() => setAiError(null)}
-          />
-        )}
-
-        {aiJob && (
-          <div data-testid="trip-notes-ai-pending" style={{
-            padding: '12px 16px',
-            background: 'var(--color-accent-subtle)',
-            color: 'var(--color-accent-deep)',
-            borderRadius: 'var(--radius-md)',
-            margin: '12px 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '14px',
-            fontWeight: 600,
-          }}>
-            <span style={{
-              width: '8px', height: '8px', borderRadius: '50%',
-              background: 'var(--color-accent)',
-              animation: 'tp-notes-pulse 1.4s ease-in-out infinite',
-            }} />
-            AI 正在生成{aiJob.docType === 'emergency' ? '緊急聯絡' : '行前須知'}…通常 3–7 分鐘完成
-          </div>
         )}
 
         {!loading && !error && data && counts.total === 0 && (
@@ -482,11 +648,11 @@ export default function TripNotesPage() {
                         aria-label="AI 生成一般行前須知"
                         data-testid="trip-notes-ai-btn-pretrip"
                         onClick={(e) => { e.stopPropagation(); void handleAiTrigger('tips'); }}
-                        disabled={aiJob !== null}
-                        title={aiJob !== null ? 'AI 正在處理另一個請求' : 'AI 生成一般行前須知（貨幣 / 通訊 / 簽證等）'}
+                        disabled={isActiveAiJob(aiJobs.tips)}
+                        title={isActiveAiJob(aiJobs.tips) ? '一般行前須知正在生成' : 'AI 生成一般行前須知（貨幣 / 通訊 / 簽證等）'}
                       >
                         <Icon name="sparkle" />
-                        {aiJob?.docType === 'tips' ? '生成中…' : '一般'}
+                        {isActiveAiJob(aiJobs.tips) ? '生成中…' : '一般'}
                       </button>
                       <button
                         type="button"
@@ -502,15 +668,15 @@ export default function TripNotesPage() {
                           }
                           void handleAiTrigger('lodging-tips');
                         }}
-                        disabled={aiJob !== null || counts.lodgings === 0}
+                        disabled={isActiveAiJob(aiJobs['lodging-tips']) || counts.lodgings === 0}
                         title={
-                          aiJob !== null ? 'AI 正在處理另一個請求' :
+                          isActiveAiJob(aiJobs['lodging-tips']) ? '住宿在地建議正在生成' :
                           counts.lodgings === 0 ? '需要先填寫住宿才能 AI 生成在地建議' :
                           'AI 生成住宿在地建議（基於行程飯店）'
                         }
                       >
                         <Icon name="sparkle" />
-                        {aiJob?.docType === 'lodging-tips' ? '生成中…' : '住宿'}
+                        {isActiveAiJob(aiJobs['lodging-tips']) ? '生成中…' : '住宿'}
                       </button>
                     </>
                   )}
@@ -521,11 +687,11 @@ export default function TripNotesPage() {
                       aria-label="AI 生成緊急聯絡"
                       data-testid="trip-notes-ai-btn-emergency"
                       onClick={(e) => { e.stopPropagation(); void handleAiTrigger('emergency'); }}
-                      disabled={aiJob !== null}
-                      title={aiJob !== null ? 'AI 正在處理另一個請求' : 'AI 生成緊急聯絡（駐外館處 / 警察 / 救護）'}
+                      disabled={isActiveAiJob(aiJobs.emergency)}
+                      title={isActiveAiJob(aiJobs.emergency) ? '緊急聯絡正在生成' : 'AI 生成緊急聯絡（駐外館處 / 警察 / 救護）'}
                     >
                       <Icon name="sparkle" />
-                      {aiJob?.docType === 'emergency' ? '生成中…' : 'AI'}
+                      {isActiveAiJob(aiJobs.emergency) ? '生成中…' : 'AI'}
                     </button>
                   )}
                   <span className="tp-notes-section-chevron" aria-hidden="true">
@@ -575,10 +741,23 @@ export default function TripNotesPage() {
                   className="tp-notes-section-body"
                   data-testid={`trip-notes-section-body-${sec.key}`}
                 >
+                  <div className="tp-notes-ai-tools">
+                    <AiJobStatus job={aiJobs.tips} />
+                    <AiJobStatus job={aiJobs['lodging-tips']} />
+                    <button
+                      type="button"
+                      className={`tp-notes-exclusions-btn${aiJobs.tips.exclusionCount + aiJobs['lodging-tips'].exclusionCount === 0 ? ' is-empty' : ''}`}
+                      data-testid="trip-notes-exclusions-pretrip"
+                      onClick={() => setExclusionsDialog('pretrip')}
+                    >
+                      已排除 {aiJobs.tips.exclusionCount + aiJobs['lodging-tips'].exclusionCount} 項
+                    </button>
+                  </div>
                   <PretripSection
                     tripId={tripId}
                     items={data.pretripNotes}
                     onChange={(next) => setData({ ...data, pretripNotes: next })}
+                    onAiStateChange={() => void loadAiState()}
                   />
                 </div>
               ) : sec.key === 'emergency' && tripId ? (
@@ -587,10 +766,22 @@ export default function TripNotesPage() {
                   className="tp-notes-section-body"
                   data-testid={`trip-notes-section-body-${sec.key}`}
                 >
+                  <div className="tp-notes-ai-tools">
+                    <AiJobStatus job={aiJobs.emergency} />
+                    <button
+                      type="button"
+                      className={`tp-notes-exclusions-btn${aiJobs.emergency.exclusionCount === 0 ? ' is-empty' : ''}`}
+                      data-testid="trip-notes-exclusions-emergency"
+                      onClick={() => setExclusionsDialog('emergency')}
+                    >
+                      已排除 {aiJobs.emergency.exclusionCount} 項
+                    </button>
+                  </div>
                   <EmergencySection
                     tripId={tripId}
                     items={data.emergencyContacts}
                     onChange={(next) => setData({ ...data, emergencyContacts: next })}
+                    onAiStateChange={() => void loadAiState()}
                   />
                 </div>
               ) : null}
@@ -598,6 +789,16 @@ export default function TripNotesPage() {
           );
         })}
       </div>
+      {tripId && (
+        <NoteAiExclusionsDialog
+          open={exclusionsDialog !== null}
+          tripId={tripId}
+          docTypes={exclusionsDialog === 'pretrip' ? PRETRIP_AI_TYPES : EMERGENCY_AI_TYPES}
+          title={exclusionsDialog === 'pretrip' ? '已排除的行前須知' : '已排除的緊急聯絡'}
+          onClose={() => setExclusionsDialog(null)}
+          onRestored={() => void loadAiState()}
+        />
+      )}
     </>
   );
 

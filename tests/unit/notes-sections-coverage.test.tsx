@@ -23,6 +23,7 @@ function withRouter(node: React.ReactNode) {
 
 beforeEach(() => {
   apiFetchMock.mockReset();
+  window.scrollTo = vi.fn();
   cleanup();
 });
 
@@ -129,7 +130,8 @@ describe('ReservationsSection', () => {
 function mkPretrip(over: Partial<TripPretripNote> = {}): TripPretripNote {
   return {
     id: 1, sortOrder: 0, section: '貨幣', title: '貨幣 — 1 TWD ≈ 4.8 JPY',
-    content: '- ATM 手續費', aiGenerated: 0, aiSource: null, version: 0,
+    content: '- ATM 手續費', aiGenerated: 0, aiSource: null,
+    origin: 'human', managedBy: 'human', semanticKey: null, version: 0,
     ...over,
   };
 }
@@ -143,14 +145,73 @@ describe('PretripSection', () => {
     expect(row.textContent).toContain('ATM');
   });
 
-  it('AI generated row shows AI 建議 chip', () => {
-    render(<PretripSection tripId="trip-1" items={[mkPretrip({ aiGenerated: 1 })]} onChange={vi.fn()} />);
-    expect(screen.getByTestId('pretrip-row-1').textContent).toContain('AI 建議');
+  it('AI 維護中的 row 顯示 AI 產生 chip', () => {
+    render(<PretripSection
+      tripId="trip-1"
+      items={[mkPretrip({ aiGenerated: 1, origin: 'ai', managedBy: 'ai' })]}
+      onChange={vi.fn()}
+    />);
+    expect(screen.getByTestId('pretrip-row-1').textContent).toContain('AI 產生');
+  });
+
+  it('進入 AI 項目編輯前先切成人工維護，避免生成 callback 覆蓋', async () => {
+    const onChange = vi.fn();
+    apiFetchMock.mockResolvedValue(mkPretrip({
+      aiGenerated: 1,
+      origin: 'ai',
+      managedBy: 'human',
+      semanticKey: 'tips:currency',
+      version: 2,
+    }));
+    render(<PretripSection
+      tripId="trip-1"
+      items={[mkPretrip({
+        aiGenerated: 1,
+        origin: 'ai',
+        managedBy: 'ai',
+        semanticKey: 'tips:currency',
+        version: 1,
+      })]}
+      onChange={onChange}
+    />);
+
+    fireEvent.click(screen.getByTestId('pretrip-row-1').querySelector('.tp-notes-pretrip-body')!);
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
+      '/trips/trip-1/notes/pretrip/1/maintenance',
+      expect.objectContaining({ method: 'PATCH' }),
+    ));
+    expect(onChange).toHaveBeenCalledWith([
+      expect.objectContaining({ managedBy: 'human', version: 2 }),
+    ]);
   });
 
   it('manual row does NOT show AI chip', () => {
     render(<PretripSection tripId="trip-1" items={[mkPretrip({ aiGenerated: 0 })]} onChange={vi.fn()} />);
-    expect(screen.getByTestId('pretrip-row-1').textContent).not.toContain('AI 建議');
+    expect(screen.getByTestId('pretrip-row-1').textContent).not.toContain('AI 產生');
+  });
+
+  it('只有 AI 維護中的 row 顯「AI 產生」；人工編輯的 AI 來源 row 可交還 AI', async () => {
+    const onChange = vi.fn();
+    apiFetchMock.mockResolvedValue(mkPretrip({
+      aiGenerated: 1,
+      origin: 'ai',
+      managedBy: 'ai',
+      version: 2,
+    }));
+    render(<PretripSection
+      tripId="trip-1"
+      items={[mkPretrip({ aiGenerated: 1, origin: 'ai', managedBy: 'human', version: 1 })]}
+      onChange={onChange}
+    />);
+    const row = screen.getByTestId('pretrip-row-1');
+    expect(row.textContent).not.toContain('AI 產生');
+    fireEvent.click(row.querySelector('.tp-notes-pretrip-body')!);
+    fireEvent.click(screen.getByRole('button', { name: '交還 AI 維護' }));
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
+      '/trips/trip-1/notes/pretrip/1/maintenance',
+      expect.objectContaining({ method: 'PATCH' }),
+    ));
+    expect(onChange).toHaveBeenCalled();
   });
 
   it('Add → POST /pretrip + onChange', async () => {
@@ -171,7 +232,8 @@ describe('PretripSection', () => {
 function mkEmergency(over: Partial<TripEmergencyContact> = {}): TripEmergencyContact {
   return {
     id: 1, sortOrder: 0, name: '日本警察', relationship: '報案',
-    phone: '110', email: '', kind: 'police', aiGenerated: 0, version: 0,
+    phone: '110', email: '', kind: 'police', aiGenerated: 0,
+    origin: 'human', managedBy: 'human', semanticKey: null, version: 0,
     ...over,
   };
 }
@@ -192,8 +254,12 @@ describe('EmergencySection', () => {
   });
 
   it('AI generated → AI chip visible', () => {
-    render(<EmergencySection tripId="trip-1" items={[mkEmergency({ aiGenerated: 1 })]} onChange={vi.fn()} />);
-    expect(screen.getByTestId('emergency-row-1').textContent).toContain('AI');
+    render(<EmergencySection
+      tripId="trip-1"
+      items={[mkEmergency({ aiGenerated: 1, origin: 'ai', managedBy: 'ai' })]}
+      onChange={vi.fn()}
+    />);
+    expect(screen.getByTestId('emergency-row-1').textContent).toContain('AI 產生');
   });
 
   it('Add → POST /emergency + onChange', async () => {
