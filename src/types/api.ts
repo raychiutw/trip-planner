@@ -76,6 +76,11 @@ export const ErrorCode = {
   ACCOUNT_DELETE_CONFIRM_REQUIRED: 'ACCOUNT_DELETE_CONFIRM_REQUIRED',
   ACCOUNT_DELETE_PASSWORD_INVALID: 'ACCOUNT_DELETE_PASSWORD_INVALID',
   SIGNUP_CONSENT_REQUIRED: 'SIGNUP_CONSENT_REQUIRED',
+  NOTES_AI_INVALID_OUTPUT: 'NOTES_AI_INVALID_OUTPUT',
+  NOTES_AI_NO_VALID_ITEMS: 'NOTES_AI_NO_VALID_ITEMS',
+  NOTES_AI_JOB_STALE: 'NOTES_AI_JOB_STALE',
+  NOTES_AI_NOT_REASSIGNABLE: 'NOTES_AI_NOT_REASSIGNABLE',
+  NOTES_AI_APPLY_FAILED: 'NOTES_AI_APPLY_FAILED',
 } as const;
 
 export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
@@ -129,6 +134,11 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   ACCOUNT_DELETE_CONFIRM_REQUIRED: '刪除帳號需要二次確認',
   ACCOUNT_DELETE_PASSWORD_INVALID: '密碼不正確，帳號未刪除',
   SIGNUP_CONSENT_REQUIRED: '請先閱讀並同意個資條款',
+  NOTES_AI_INVALID_OUTPUT: 'AI 回傳格式不正確，未變更原有內容',
+  NOTES_AI_NO_VALID_ITEMS: 'AI 沒有回傳可用項目，未變更原有內容',
+  NOTES_AI_JOB_STALE: '這次生成已逾時，請重新生成',
+  NOTES_AI_NOT_REASSIGNABLE: '只有原本由 AI 產生的項目可交還 AI 維護',
+  NOTES_AI_APPLY_FAILED: '套用 AI 內容失敗，未變更原有內容',
 };
 
 // ---------------------------------------------------------------------------
@@ -305,4 +315,3 @@ export interface PoiFavoriteUsage {
 // 既有 trip_ideas 資料 active rows 已 migrate 進 poi_favorites (trip owner's pool)。
 // 「目前在哪些 trip」資訊改透過 PoiFavorite.usages 反查
 // (v2.29.0: trip_days.hotel_poi_id ∪ trip_entry_pois.poi_id)。
-

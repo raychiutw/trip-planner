@@ -202,6 +202,8 @@ describe('POST /api/oauth/mint-restricted', () => {
     const notesFail = db._runs.find((r: { sql: string }) => /UPDATE\s+trip_note_ai_jobs\s+SET\s+status\s*=\s*'failed'/i.test(r.sql));
     expect(healthFail?.args[1]).toBe('42');
     expect(notesFail?.args[1]).toBe('42');
+    expect(notesFail?.sql).toMatch(/status IN \('pending', 'processing'\)/i);
+    expect(notesFail?.sql).toContain("error_code = 'NOTES_AI_APPLY_FAILED'");
     expect(mockUpsert).not.toHaveBeenCalled();
   });
 

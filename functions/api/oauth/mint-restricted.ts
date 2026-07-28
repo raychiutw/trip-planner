@@ -122,7 +122,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         .bind(NEEDS_CONSENT_REPLY, requestId)
         .run();
       // 若這筆其實是 health-check / notes 請求（peekPendingRequest 撈最舊 pending，不分型別），
-      // 連動把 linked 報告/工作也標記 failed —— 否則它們的 row 永遠停在 'pending'（完成 reconcile
+      // 連動把 linked 報告/工作也標記 failed —— 否則它們的 row 會停在 active 狀態（完成 reconcile
       // 只跑在 requests/[id] PATCH 路徑，此處走 API_SECRET 無法呼 PATCH）。純 planning 請求（如
       // 事故 250）無 linked row → 兩條 UPDATE no-op。理想抽共用 failRequest helper（follow-up）。
       await db
@@ -134,8 +134,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         .run();
       await db
         .prepare(
-          `UPDATE trip_note_ai_jobs SET status = 'failed', error_message = ?, completed_at = datetime('now')
-             WHERE request_id = ? AND status = 'pending'`,
+          `UPDATE trip_note_ai_jobs
+              SET status = 'failed',
+                  error_code = 'NOTES_AI_APPLY_FAILED',
+                  error_message = ?,
+                  completed_at = datetime('now')
+            WHERE request_id = ? AND status IN ('pending', 'processing')`,
         )
         .bind('需要行程擁有者授權 AI 才能生成', requestId)
         .run();

@@ -90,33 +90,38 @@ describe('PATCH /requests/:id — notes generation completion hook', () => {
   });
 
   describe('docType=emergency', () => {
-    it('完成 → INSERT trip_emergency_contacts with kind narrowed', async () => {
+    it('完成 → INSERT schema 合法的 trip_emergency_contacts', async () => {
       const { requestId, jobId } = await createJobAndRequest('emergency');
       const reply = JSON.stringify([
         { name: '日本警察', phone: '110', kind: 'police', relationship: '報案' },
         { name: '駐那霸經文辦', phone: '+81988628603', kind: 'embassy' },
-        { name: 'Invalid kind', phone: '12345', kind: 'unknown-kind' }, // → 'other'
       ]);
       await callPatch(requestId, { status: 'completed', reply });
       const job = await db.prepare('SELECT status, inserted_count FROM trip_note_ai_jobs WHERE id = ?').bind(jobId).first<{ status: string; inserted_count: number }>();
       expect(job!.status).toBe('completed');
-      expect(job!.inserted_count).toBe(3);
-      const invalid = await db.prepare(`SELECT kind FROM trip_emergency_contacts WHERE name = 'Invalid kind' AND trip_id = ?`).bind(tripId).first<{ kind: string }>();
-      expect(invalid!.kind).toBe('other');
+      expect(job!.inserted_count).toBe(2);
     });
   });
 
   describe('dedup', () => {
-    it('既有 title 重複 → skip 不 INSERT', async () => {
+    it('人工維護的 semantic duplicate → 保留人工且不重複 INSERT', async () => {
+      await db.prepare(
+        `INSERT INTO trip_pretrip_notes (trip_id, section, title, content)
+         VALUES (?, '一般', '人工固定', '不可覆蓋')`,
+      ).bind(tripId).run();
       const { requestId, jobId } = await createJobAndRequest('tips');
-      // Reply includes '貨幣' which already exists from earlier test
       const reply = JSON.stringify([
-        { title: '貨幣', content: 'duplicate', section: 'X' },
+        { title: '人工固定', content: 'duplicate', section: '一般' },
         { title: '新項目 unique', content: 'fresh', section: 'X' },
       ]);
       await callPatch(requestId, { status: 'completed', reply });
       const job = await db.prepare('SELECT inserted_count FROM trip_note_ai_jobs WHERE id = ?').bind(jobId).first<{ inserted_count: number }>();
-      expect(job!.inserted_count).toBe(1); // 只 1 個新 (貨幣 dedup skip)
+      expect(job!.inserted_count).toBe(1);
+      const manual = await db.prepare(
+        `SELECT content, managed_by FROM trip_pretrip_notes
+         WHERE trip_id = ? AND title = '人工固定'`,
+      ).bind(tripId).first<{ content: string; managed_by: string }>();
+      expect(manual).toEqual({ content: '不可覆蓋', managed_by: 'human' });
     });
   });
 

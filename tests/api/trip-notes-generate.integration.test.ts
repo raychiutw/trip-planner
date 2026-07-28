@@ -18,6 +18,7 @@ let db: D1Database;
 let env: Env;
 const tripA = 'trip-gen-a';
 const tripB = 'trip-gen-b';
+const tripC = 'trip-gen-c';
 const ownerEmail = 'owner@gen.test';
 const strangerEmail = 'stranger@gen.test';
 
@@ -28,6 +29,7 @@ beforeAll(async () => {
   await seedUser(db, strangerEmail);
   await seedTrip(db, { id: tripA, owner: ownerEmail });
   await seedTrip(db, { id: tripB, owner: ownerEmail });
+  await seedTrip(db, { id: tripC, owner: ownerEmail });
 });
 
 afterAll(disposeMiniflare);
@@ -101,5 +103,36 @@ describe('POST /api/trips/:id/notes/:type/generate', () => {
     const secondBody = await second.json() as any;
     expect(secondBody.jobId).toBe(firstBody.jobId);
     expect(secondBody.requestId).toBe(firstBody.requestId);
+  });
+
+  it('active job 超過 30 秒仍返回同一 job；逾時後才建立下一代', async () => {
+    const first = await callGen(tripC, 'tips');
+    const firstBody = await first.json() as any;
+    await db.prepare(
+      `UPDATE trip_note_ai_jobs
+       SET created_at = datetime('now', '-5 minutes'), timeout_at = datetime('now', '+5 minutes')
+       WHERE id = ?`,
+    ).bind(firstBody.jobId).run();
+
+    const active = await callGen(tripC, 'tips');
+    expect(active.status).toBe(200);
+    expect(await active.json()).toMatchObject({
+      jobId: firstBody.jobId,
+      generation: 1,
+    });
+
+    await db.prepare(
+      `UPDATE trip_note_ai_jobs SET timeout_at = datetime('now', '-1 second') WHERE id = ?`,
+    ).bind(firstBody.jobId).run();
+    const next = await callGen(tripC, 'tips');
+    expect(next.status).toBe(202);
+    expect(await next.json()).toMatchObject({ generation: 2, status: 'pending' });
+    const expired = await db.prepare(
+      `SELECT status, error_code FROM trip_note_ai_jobs WHERE id = ?`,
+    ).bind(firstBody.jobId).first<{ status: string; error_code: string }>();
+    expect(expired).toEqual({
+      status: 'timed_out',
+      error_code: 'NOTES_AI_JOB_STALE',
+    });
   });
 });

@@ -46,7 +46,7 @@ const _cache = globalThis as unknown as GlobalCache;
 /**
  * schema 是否已跑完 migration。
  *
- * ⚠ 判定用**最後一個改 schema 的 migration**（0088 `users.privacy_consent_at`），不是
+ * ⚠ 判定用**最後一個改 schema 的 migration**（0091 `trip_note_ai_jobs.generation`），不是
  * `trip_entries` 的形狀。`trip_entries` 建於 **0047**，而 migration 總數是 90 ——
  * 拿它當判定，「已遷移」在 0048–0090 全部還沒跑時就會成立（少 `account_notification_preferences`、
  * `poi_favorites` 的 soft-delete 欄位、`users` 的隱私同意欄位…）。
@@ -55,10 +55,10 @@ const _cache = globalThis as unknown as GlobalCache;
  */
 async function hasMigratedSchema(db: D1Database): Promise<boolean> {
   try {
-    const info = await db.prepare('PRAGMA table_info(users)').all<{ name: string }>();
+    const info = await db.prepare('PRAGMA table_info(trip_note_ai_jobs)').all<{ name: string }>();
     const columnNames = new Set((info.results ?? []).map((col) => col.name));
-    // 0088_users_privacy_consent.sql —— 目前最後一個 schema 變更
-    return columnNames.has('privacy_consent_at') && columnNames.has('privacy_policy_version');
+    // 0091_trip_note_ai_regeneration.sql —— 目前最後一個 schema 變更
+    return columnNames.has('generation') && columnNames.has('timeout_at');
   } catch {
     return false;
   }

@@ -13,10 +13,10 @@
  *   3. Fire-and-forget trigger Mac Mini api-server
  *   4. Return { jobId, requestId, status: 'pending' }
  *
- * 30-second debounce：同 trip + 同 type 30s 內 pending job 直接回該 job（防 user
- * 多次 click AI button 浪費 quota）。
+ * 同 trip + 同 type 只允許一個 pending / processing job；重複觸發直接回既有 job。
+ * 超過 10 分鐘會標為 timed_out，之後才允許重新生成。
  *
- * Frontend (PR12) polling /requests/:id 直到 completed/failed，
+ * Frontend polling /notes/ai-state 直到 completed/failed/timedOut，
  * PATCH /api/requests/:id hook (PR10) 看 trip_note_ai_jobs linkage 觸發
  * applyNotesGenerationCompletion(doc_type, findings) 分派到 trip_pretrip_notes /
  * trip_emergency_contacts。
@@ -24,16 +24,18 @@
 
 import { hasWritePermission, requireAuth } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
+import {
+  expireNoteAiJobs,
+  isNoteAiDocType,
+  type NoteAiDocType,
+} from '../../../../_noteAi';
 import { json } from '../../../../_utils';
 import { recordEmailEvent } from '../../../../_audit';
 import type { Env } from '../../../../_types';
 
-const VALID_TYPES = ['lodging-tips', 'tips', 'emergency'] as const;
-type GenType = (typeof VALID_TYPES)[number];
-
 // AI prompts per type — 對齊 design doc Premise 6
 // Backend 統一回繁體中文。Schema 對齊 trip_pretrip_notes / trip_emergency_contacts INSERT。
-const PROMPTS: Record<GenType, string> = {
+const PROMPTS: Record<NoteAiDocType, string> = {
   'lodging-tips': `[行程筆記-lodging-tips] 請以資深旅遊規劃師角度，為此行程的住宿地點生成「住宿在地建議」項目（5-8 項），寫進「行前須知」section。
 
 寫作維度：
@@ -96,30 +98,40 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const tripId = params.id as string;
   const type = params.type as string;
 
-  if (!(VALID_TYPES as readonly string[]).includes(type)) {
-    throw new AppError('DATA_VALIDATION', `type 必須是 ${VALID_TYPES.join('/')} 之一`);
+  if (!isNoteAiDocType(type)) {
+    throw new AppError('DATA_VALIDATION', 'type 必須是 lodging-tips/tips/emergency 之一');
   }
-  const docType = type as GenType;
+  const docType = type;
 
   if (!(await hasWritePermission(env.DB, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
 
-  // Debounce：同 trip+type 30s 內 pending → 直接回 existing job
+  await expireNoteAiJobs(env.DB, tripId, docType);
+
+  // 同 trip+type 只能有一個 active job；不同 type 可平行。
   const existing = await env.DB
     .prepare(
       `SELECT * FROM trip_note_ai_jobs
-       WHERE trip_id = ? AND doc_type = ? AND status = 'pending'
-         AND created_at > datetime('now', '-30 seconds')`,
+       WHERE trip_id = ? AND doc_type = ? AND status IN ('pending', 'processing')
+       ORDER BY generation DESC LIMIT 1`,
     )
     .bind(tripId, docType)
-    .first<{ id: number; request_id: number; status: string }>();
+    .first<{
+      id: number;
+      request_id: number;
+      generation: number;
+      status: string;
+      timeout_at: string;
+    }>();
 
   if (existing) {
     return json({
       jobId: existing.id,
       requestId: existing.request_id,
       status: existing.status,
+      generation: existing.generation,
+      timeoutAt: existing.timeout_at,
       tripId,
       docType,
     }, 200);
@@ -134,16 +146,54 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const requestId = reqRow.id;
 
   // 2. INSERT linkage row — confused-deputy 防護 (v2.33.102 CR-8 pattern)
-  const jobRow = await env.DB
-    .prepare(
-      `INSERT INTO trip_note_ai_jobs
-         (request_id, trip_id, doc_type, status, inserted_count, error_message, created_at)
-       VALUES (?, ?, ?, 'pending', 0, NULL, datetime('now'))
-       RETURNING id`,
-    )
-    .bind(requestId, tripId, docType)
-    .first<{ id: number }>();
-  if (!jobRow) throw new AppError('SYS_DB_ERROR', '建立 AI job linkage 失敗');
+  const latest = await env.DB.prepare(
+    `SELECT COALESCE(MAX(generation), 0) AS generation
+     FROM trip_note_ai_jobs WHERE trip_id = ? AND doc_type = ?`,
+  ).bind(tripId, docType).first<{ generation: number }>();
+  const generation = (latest?.generation ?? 0) + 1;
+
+  let jobRow: { id: number; generation: number; timeout_at: string } | null;
+  try {
+    jobRow = await env.DB
+      .prepare(
+        `INSERT INTO trip_note_ai_jobs
+           (request_id, trip_id, doc_type, generation, status, timeout_at)
+         VALUES (?, ?, ?, ?, 'pending', datetime('now', '+10 minutes'))
+         RETURNING id, generation, timeout_at`,
+      )
+      .bind(requestId, tripId, docType, generation)
+      .first<{ id: number; generation: number; timeout_at: string }>();
+  } catch (error) {
+    await env.DB.prepare('DELETE FROM trip_requests WHERE id = ?').bind(requestId).run();
+    const raced = await env.DB.prepare(
+      `SELECT id, request_id, generation, status, timeout_at
+       FROM trip_note_ai_jobs
+       WHERE trip_id = ? AND doc_type = ? AND status IN ('pending', 'processing')
+       ORDER BY generation DESC LIMIT 1`,
+    ).bind(tripId, docType).first<{
+      id: number;
+      request_id: number;
+      generation: number;
+      status: string;
+      timeout_at: string;
+    }>();
+    if (raced) {
+      return json({
+        jobId: raced.id,
+        requestId: raced.request_id,
+        status: raced.status,
+        generation: raced.generation,
+        timeoutAt: raced.timeout_at,
+        tripId,
+        docType,
+      });
+    }
+    throw error;
+  }
+  if (!jobRow) {
+    await env.DB.prepare('DELETE FROM trip_requests WHERE id = ?').bind(requestId).run();
+    throw new AppError('SYS_DB_ERROR', '建立 AI job linkage 失敗');
+  }
 
   // 3. Fire-and-forget trigger Mac Mini api-server
   context.waitUntil(
@@ -194,6 +244,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     jobId: jobRow.id,
     requestId,
     status: 'pending',
+    generation: jobRow.generation,
+    timeoutAt: jobRow.timeout_at,
     tripId,
     docType,
   }, 202);

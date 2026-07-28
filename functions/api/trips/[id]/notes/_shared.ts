@@ -8,6 +8,11 @@
 import { hasPermission, hasWritePermission, requireAuth } from '../../../_auth';
 import { logAudit, computeDiff } from '../../../_audit';
 import { AppError } from '../../../_errors';
+import {
+  semanticKeyForEmergency,
+  semanticKeyForPretrip,
+  type NoteAiDocType,
+} from '../../../_noteAi';
 import { buildUpdateClause, json, parseIntParam, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
 
@@ -17,6 +22,61 @@ export type NotesTable =
   | 'trip_reservations'
   | 'trip_pretrip_notes'
   | 'trip_emergency_contacts';
+
+export function getNoteAiIdentity(
+  table: NotesTable,
+  row: Record<string, unknown>,
+): { docType: NoteAiDocType; semanticKey: string; label: string } | null {
+  if (
+    row.origin !== 'ai'
+    || (table !== 'trip_pretrip_notes' && table !== 'trip_emergency_contacts')
+  ) return null;
+  if (table === 'trip_emergency_contacts') {
+    const label = String(row.name ?? '');
+    return {
+      docType: 'emergency',
+      label,
+      semanticKey: typeof row.semantic_key === 'string' && row.semantic_key
+        ? row.semantic_key
+        : semanticKeyForEmergency(
+          String(row.kind ?? 'other'),
+          label,
+          String(row.phone ?? ''),
+        ),
+    };
+  }
+  const docType: NoteAiDocType = row.ai_source === 'lodging-tips' ? 'lodging-tips' : 'tips';
+  const label = String(row.title ?? '');
+  return {
+    docType,
+    label,
+    semanticKey: typeof row.semantic_key === 'string' && row.semantic_key
+      ? row.semantic_key
+      : semanticKeyForPretrip(docType, String(row.section ?? ''), label),
+  };
+}
+
+function getHumanNoteSemanticKey(
+  table: NotesTable,
+  row: Record<string, unknown>,
+): string | null {
+  if (table === 'trip_pretrip_notes') {
+    const topic = semanticKeyForPretrip(
+      'tips',
+      String(row.section ?? ''),
+      String(row.title ?? ''),
+    ).slice('tips:'.length);
+    return topic || null;
+  }
+  if (table === 'trip_emergency_contacts') {
+    const name = String(row.name ?? '');
+    const phone = String(row.phone ?? '');
+    const kind = String(row.kind ?? 'other');
+    if (!name && !phone && kind === 'other') return null;
+    return semanticKeyForEmergency(kind, name, phone);
+  }
+  return null;
+}
 
 // Per-section writable fields whitelist。snake_case 對齊 DB column + 對齊 entries
 // pattern。`version` 永遠不在 whitelist — autosave 用 body.expectedVersion + SQL
@@ -36,10 +96,10 @@ export const ALLOWED_FIELDS: Record<NotesTable, readonly string[]> = {
     'reservation_no', 'phone', 'note',
   ],
   trip_pretrip_notes: [
-    'sort_order', 'section', 'title', 'content', 'ai_generated', 'ai_source',
+    'sort_order', 'section', 'title', 'content',
   ],
   trip_emergency_contacts: [
-    'sort_order', 'name', 'relationship', 'phone', 'email', 'kind', 'ai_generated',
+    'sort_order', 'name', 'relationship', 'phone', 'email', 'kind',
   ],
 };
 
@@ -107,8 +167,13 @@ export async function createNotesRow(
   const fields = Object.keys(body).filter((k) => (allowed as readonly string[]).includes(k));
   // trip_id 永遠由 path param 提供，不從 body
   const cols = ['trip_id', ...fields];
-  const placeholders = cols.map(() => '?').join(', ');
   const values = [tripId, ...fields.map((f) => body[f])];
+  const semanticKey = getHumanNoteSemanticKey(table, body);
+  if (semanticKey) {
+    cols.push('semantic_key');
+    values.push(semanticKey);
+  }
+  const placeholders = cols.map(() => '?').join(', ');
 
   const row = await env.DB
     .prepare(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders}) RETURNING *`)
@@ -176,11 +241,27 @@ export async function updateNotesRow(
 
   let row;
   try {
-    const setClausesWithVersion = `${update.setClauses}, version = version + 1`;
+    const contentFields: Partial<Record<NotesTable, readonly string[]>> = {
+      trip_pretrip_notes: ['section', 'title', 'content'],
+      trip_emergency_contacts: ['name', 'relationship', 'phone', 'email', 'kind'],
+    };
+    const editsNoteContent = update.fields.some((field) => contentFields[table]?.includes(field));
+    const editsAiContent = oldRow.origin === 'ai' && editsNoteContent;
+    const transfersToHuman = editsAiContent && oldRow.managed_by === 'ai';
+    const aiIdentity = editsAiContent
+      ? getNoteAiIdentity(table, { ...oldRow, ...body, semantic_key: null })
+      : null;
+    const semanticKey = aiIdentity?.semanticKey
+      ?? (editsNoteContent ? getHumanNoteSemanticKey(table, { ...oldRow, ...body }) : undefined);
+    const maintenanceClause = semanticKey !== undefined
+      ? `${transfersToHuman ? ", managed_by = 'human'" : ''}, semantic_key = ?`
+      : '';
+    const maintenanceValues = semanticKey !== undefined ? [semanticKey] : [];
+    const setClausesWithVersion = `${update.setClauses}${maintenanceClause}, version = version + 1, updated_at = datetime('now')`;
     if (expectedVersion !== null) {
       row = await env.DB
         .prepare(`UPDATE ${table} SET ${setClausesWithVersion} WHERE id = ? AND version = ? RETURNING *`)
-        .bind(...update.values, id, expectedVersion)
+        .bind(...update.values, ...maintenanceValues, id, expectedVersion)
         .first<Record<string, unknown>>();
       if (!row) {
         const cur = await env.DB
@@ -193,7 +274,7 @@ export async function updateNotesRow(
     } else {
       row = await env.DB
         .prepare(`UPDATE ${table} SET ${setClausesWithVersion} WHERE id = ? RETURNING *`)
-        .bind(...update.values, id)
+        .bind(...update.values, ...maintenanceValues, id)
         .first<Record<string, unknown>>();
     }
   } catch (err: unknown) {
@@ -213,6 +294,9 @@ export async function updateNotesRow(
   // PR26: audit log for update
   if (row) {
     const newFields = Object.fromEntries(update.fields.map((f) => [f, body[f]]));
+    if (oldRow.origin === 'ai' && oldRow.managed_by === 'ai' && row.managed_by === 'human') {
+      newFields.managed_by = 'human';
+    }
     await logAudit(env.DB, {
       tripId,
       tableName: table,
@@ -252,7 +336,58 @@ export async function deleteNotesRow(
   if (!oldRow) throw new AppError('DATA_NOT_FOUND');
   if (oldRow.trip_id !== tripId) throw new AppError('PERM_DENIED', '此 row 不屬於該 trip');
 
-  await env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
+  let excluded = false;
+  const aiIdentity = getNoteAiIdentity(table, oldRow);
+  if (aiIdentity) {
+    const deleteStatement = table === 'trip_pretrip_notes'
+      ? env.DB.prepare(
+        `DELETE FROM trip_pretrip_notes
+         WHERE trip_id = ?
+           AND (
+             id = ?
+             OR (
+               origin = 'ai'
+               AND managed_by = 'ai'
+               AND ai_source = ?
+               AND semantic_key = ?
+             )
+           )`,
+      ).bind(
+        tripId,
+        id,
+        aiIdentity.docType === 'lodging-tips' ? 'lodging-tips' : 'general-tips',
+        aiIdentity.semanticKey,
+      )
+      : env.DB.prepare(
+         `DELETE FROM trip_emergency_contacts
+         WHERE trip_id = ?
+           AND (
+             id = ?
+             OR (origin = 'ai' AND managed_by = 'ai' AND semantic_key = ?)
+           )`,
+      ).bind(tripId, id, aiIdentity.semanticKey);
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO trip_note_ai_exclusions
+           (trip_id, doc_type, semantic_key, label, deleted_by)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(trip_id, doc_type, semantic_key)
+         DO UPDATE SET label = excluded.label,
+                       deleted_by = excluded.deleted_by,
+                       deleted_at = datetime('now')`,
+      ).bind(
+        tripId,
+        aiIdentity.docType,
+        aiIdentity.semanticKey,
+        aiIdentity.label,
+        auth.email,
+      ),
+      deleteStatement,
+    ]);
+    excluded = true;
+  } else {
+    await env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
+  }
 
   // PR26: audit log for delete
   await logAudit(env.DB, {
@@ -264,7 +399,7 @@ export async function deleteNotesRow(
     diffJson: JSON.stringify(oldRow),
   });
 
-  return json({ ok: true });
+  return json({ ok: true, excluded });
 }
 
 // ============================================================================
