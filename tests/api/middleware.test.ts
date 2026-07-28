@@ -124,8 +124,12 @@ describe('checkCompanionScope', () => {
     expect(check('DELETE', '/api/trips/test-trip/trip-pois/5', 'companion')).toBeNull();
   });
 
-  it('companion: PUT docs → 放行', () => {
-    expect(check('PUT', '/api/trips/test-trip/docs/flights', 'companion')).toBeNull();
+  // 2026-07-28：trip_docs 整條退役（前端不 fetch /docs，checklist/emergency 的 UI
+  // 入口 v2.17.17 就移除）。留著這條 companion 放行，agent 想寫行程筆記時就會倒進
+  // 這個黑洞 —— prod request 280 正是這樣寫了四次空內容還回報成功。
+  // 唯一的消費者是 MCP 的 putDoc 工具，已一併移除。
+  it('companion: PUT docs → 擋（trip_docs 已退役，不給 agent 寫）', () => {
+    expect(check('PUT', '/api/trips/test-trip/docs/flights', 'companion')).not.toBeNull();
   });
 
   it('companion: PATCH request → 放行', () => {

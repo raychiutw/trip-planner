@@ -176,15 +176,20 @@ const TOOLS = [
     query: { day: { required: true, description: '受影響天' } },
     companion: true,
   },
-  {
-    name: 'putDoc',
-    description: '更新 trip doc（type 如 checklist / notes）。',
-    method: 'PUT',
-    path: '/api/trips/{tripId}/docs/{type}',
-    pathParams: { type: { required: true } },
-    body: true,
-    companion: true,
-  },
+  // ⚠️ putDoc（PUT /api/trips/{tripId}/docs/{type}）**刻意移除**，2026-07-28。
+  //
+  // trip_docs 整條是死路：行程筆記頁讀的是 trip_pretrip_notes + trip_emergency_contacts
+  // （migration 0073），從不讀 trip_docs；checklist/emergency 這些 doc 的 UI 入口在
+  // v2.17.17 就整批移除，前端現在完全不 fetch /docs。
+  //
+  // 留著它的後果（prod 事故 request 280，Ray 的沖繩之旅）：使用者要求「重新生成行程
+  // 筆記的緊急聯絡與行程須知」，agent 挑了工具表裡唯一能寫筆記的 putDoc，對 trip_docs
+  // 寫四次、audit_log 四筆全是 entries_count=0，然後回報「已重新生成…包含警察/消防/
+  // 海保電話…」。使用者在 App 裡什麼都看不到。
+  //
+  // 筆記的正解是 POST /trips/:id/notes/:type/generate（App 筆記頁的 AI 生成鈕）——
+  // 那條 pipeline 帶人工維護保護、semantic_key 去重與 exclusion tombstone，不該讓
+  // 自由格式的 agent 繞過。**不要為了「讓 agent 也能寫筆記」把它加回來。**
   // ----- request lifecycle -----
   {
     name: 'updateRequest',

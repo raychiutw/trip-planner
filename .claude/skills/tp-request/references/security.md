@@ -9,7 +9,7 @@
 - ✅ PUT /api/trips/{tripId}/entries/{eid}/poi-id — find-or-create master from search payload
 - ✅ DELETE /api/trips/{tripId}/entries/{eid}/alternates/{poiId}?entryPoisVersion=N — 刪 alternate
 - ✅ PATCH /api/trips/{tripId}/entries/{eid}/alternates/reorder — 重排 alternates
-- ✅ PUT /api/trips/{tripId}/docs/{type} — 更新 doc
+- ❌ PUT /api/trips/{tripId}/docs/{type} — **已移除**（2026-07-28）。trip_docs 整條退役：前端不 fetch /docs、checklist/emergency 的 UI 入口 v2.17.17 就移除，行程筆記讀的是 trip_pretrip_notes + trip_emergency_contacts。留著它，agent 想寫筆記時只會倒進黑洞（prod request 280 寫四次空內容還回報成功）。MCP 工具 putDoc 與 middleware companion 放行皆已一併移除。筆記走 App 筆記頁的 POST /trips/:id/notes/:type/generate。
 - ✅ PATCH /api/requests/{id} — 更新請求 reply/status
 - ✅ PATCH /api/pois/{id} — 更新 POI master（必須帶 tripId，僅限 AI 查詢結果）
 - ✅ POST /api/pois/{id}/enrich — Google Place Details 自動補資料（首選 over PATCH 手動）
