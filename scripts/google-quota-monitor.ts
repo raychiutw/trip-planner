@@ -43,14 +43,13 @@ const PRICE_PER_1K: Record<string, number> = {
 };
 
 const WARN_PCT = 80;
+// 與 scripts/lib/google-maps-quota.js 同步（drift test 守住）。2026-07-29 從
+// app_settings 搬來寫死 —— 見該檔註解。
+const CRITICAL_PCT = 90;
 
 interface QuotaEstimate {
   method: string;
   count: number; // month-to-date request count (real, from GCP Cloud Monitoring)
-}
-
-interface AppSettings {
-  lock_threshold_pct: number; // free-cap headroom critical 門檻（%）
 }
 
 const ENV = loadCronEnv();
@@ -89,8 +88,7 @@ function computeHeadroom(estimates: QuotaEstimate[]): {
 async function main(): Promise<void> {
   console.log('🗺️  Google Maps free-tier headroom monitor');
 
-  const settings = await api<AppSettings>('GET', '/api/admin/maps-settings');
-  const criticalPct = settings.lock_threshold_pct || 90;
+  const criticalPct = CRITICAL_PCT;
   console.log(`   Critical headroom: ≥${criticalPct}% of any SKU free cap (alert-only)`);
 
   // Real month-to-date per-method counts. GCP 拿不到 → endpoint 回 502 → api()

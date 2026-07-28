@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.79] - 2026-07-29
+
+### Fixed
+- **拿掉一組會誤導的地圖成本設定** —— 系統裡還存著「每月 $200 預算」這個數字，並透過維運 API 回報出去，但 Google 早在 2025 年 3 月就取消了那筆抵免、改成各功能各自的免費額度。實際的用量監控兩年前就跟著改了，只有這個數字沒清，讓人以為成本還靠一筆預算在管。現在整組移除，監控門檻改寫在程式裡。
+- 地圖用量的保護機制（額度快用完時自動停用 Google 服務）不受影響，照常運作。
+
 ## [2.57.78] - 2026-07-29
 
 ### Added

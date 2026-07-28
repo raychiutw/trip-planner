@@ -597,10 +597,12 @@ async function queryGoogleMapsQuota() {
     // GCP 拿不到 → endpoint 回 502 → adminApiGet throw → catch 顯示 error。
     var estimates = await adminApiGet('/api/admin/quota-estimate', token);
     // 2025/3 起 Maps 取消 $200 抵免、改每個 SKU 各自免費月額度 → 監控 headroom
-    //（用掉免費額度 %）而非 $ vs 預算。任一 SKU ≥ lock_threshold_pct → critical、
+    //（用掉免費額度 %）而非 $ vs 預算。任一 SKU ≥ CRITICAL_PCT → critical、
     // ≥ WARN_PCT → warning，在跨入付費前預警。overageCost 是真實付費 $（現為 0）。
+    // 2026-07-29：門檻從 app_settings 搬進 lib 寫死（那組 key 建立在已取消的
+    // $200 抵免模型上）。settings 現在只剩鎖定狀態。
     var headroom = googleMapsQuotaLib.calcHeadroom(estimates);
-    var criticalPct = settings.lock_threshold_pct || 90;
+    var criticalPct = googleMapsQuotaLib.CRITICAL_PCT;
     var status = googleMapsQuotaLib.classifyStatus(headroom.maxPct, criticalPct);
     return {
       status: status,

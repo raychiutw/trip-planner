@@ -45,6 +45,11 @@ var PRICE_PER_1K = {
 };
 
 var WARN_PCT = 80; // 任一 SKU 用掉 ≥80% 免費額度 → warning（跨入付費前預警）
+// 任一 SKU 用掉 ≥90% 免費額度 → critical。2026-07-29 從 app_settings 的
+// google_maps_lock_threshold_pct 搬來寫死 —— 那組 key 建立在 2025-03 就取消的
+// $200 抵免模型上，兩端本來也都是 `|| 90` fallback。與 google-quota-monitor.ts
+// 同步（drift test 守著，比照 WARN_PCT）。
+var CRITICAL_PCT = 90;
 
 /**
  * 算每個 method 的免費額度 headroom + 超額成本。
@@ -85,6 +90,7 @@ module.exports = {
   FREE_CAP: FREE_CAP,
   PRICE_PER_1K: PRICE_PER_1K,
   WARN_PCT: WARN_PCT,
+  CRITICAL_PCT: CRITICAL_PCT,
   calcHeadroom: calcHeadroom,
   classifyStatus: classifyStatus,
 };

@@ -94,7 +94,7 @@ describe('google-maps-quota helper (pure)', () => {
 
     it('exports the headroom API only', () => {
       const names = Object.keys(quotaLib).filter((k) => k !== 'default').sort();
-      expect(names).toEqual(['FREE_CAP', 'PRICE_PER_1K', 'WARN_PCT', 'calcHeadroom', 'classifyStatus']);
+      expect(names).toEqual(['CRITICAL_PCT', 'FREE_CAP', 'PRICE_PER_1K', 'WARN_PCT', 'calcHeadroom', 'classifyStatus']);
     });
   });
 
@@ -147,5 +147,71 @@ describe('daily-check.js — Google Maps section wiring', () => {
 
   it('feeds googleMapsQuota into calcSummary (impacts critical/warning counts)', () => {
     expect(DAILY_CHECK_SRC).toMatch(/calcSummary\([^)]*googleMapsQuota[^)]*\)/);
+  });
+});
+
+/*
+ * 2026-07-29 —— 幽靈預算設定清除。
+ *
+ * Google 於 2025-03 取消 $200/月 抵免，改成各 SKU 各自的免費月額度。監控端
+ * （daily-check + quota-monitor）早就改成算 free-cap headroom %，但 app_settings
+ * 裡還留著 `google_maps_budget_usd = 200` 與兩個門檻 key，而
+ * `/api/admin/maps-settings` 把它們原封不動回出去 —— 任何讀那支 API 的人或 agent
+ * 會以為還有一筆 $200 預算在管控。
+ *
+ * 實測狀態（清除前）：
+ *   - budget_usd            0 個決策消費者，只被 API 回出去
+ *   - unlock_threshold_pct  0 個消費者（它要驅動的「daily-check 自動解鎖」從未實作）
+ *   - lock_threshold_pct    有消費者，但兩端都已 `|| 90` fallback → 改寫死在 lib
+ *
+ * owner 決定三個全清、門檻寫死。以下守住「不會被悄悄加回來」。
+ */
+/** 剝掉 // 與 /* *\/ 註解 —— 守衛要驗的是**程式碼**，不是解釋為什麼移除的散文。
+ *  （不剝的話，這支測試會被它自己在 maps-settings.ts 寫的「別把 budget_usd 加回來」
+ *  註解絆倒 —— 實測踩過。） */
+function stripComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
+
+describe('幽靈預算設定不得復活', () => {
+  const MAPS_SETTINGS_SRC = stripComments(fs.readFileSync(
+    path.resolve(__dirname, '../../functions/api/admin/maps-settings.ts'),
+    'utf8',
+  ));
+  const APP_SETTINGS_SRC = stripComments(fs.readFileSync(
+    path.resolve(__dirname, '../../functions/api/_app_settings.ts'),
+    'utf8',
+  ));
+  const QUOTA_MONITOR_CODE = stripComments(QUOTA_MONITOR_SRC);
+  const DAILY_CHECK_CODE = stripComments(DAILY_CHECK_SRC);
+
+  it('maps-settings 不再讀也不再回傳三個幽靈 key', () => {
+    for (const key of ['budget_usd', 'lock_threshold_pct', 'unlock_threshold_pct']) {
+      expect(MAPS_SETTINGS_SRC, `maps-settings 仍提及 ${key}`).not.toContain(key);
+    }
+  });
+
+  it('maps-settings 仍然回傳鎖定狀態（清除不能把 kill switch 一起弄壞）', () => {
+    expect(MAPS_SETTINGS_SRC).toContain('is_locked');
+    expect(MAPS_SETTINGS_SRC).toContain('google_maps_locked');
+  });
+
+  it('_app_settings 型別圖不再列門檻 key', () => {
+    expect(APP_SETTINGS_SRC).not.toContain('google_maps_lock_threshold_pct');
+    expect(APP_SETTINGS_SRC).not.toContain('google_maps_unlock_threshold_pct');
+  });
+
+  it('CRITICAL_PCT 常數存在且 lib 與 quota-monitor 同步（比照 WARN_PCT 的 drift 守法）', () => {
+    expect(quotaLib.CRITICAL_PCT).toBe(90);
+    expect(QUOTA_MONITOR_SRC).toContain('CRITICAL_PCT = 90');
+  });
+
+  it('兩支 script 不再從 API 拿門檻', () => {
+    expect(DAILY_CHECK_CODE).not.toContain('lock_threshold_pct');
+    expect(QUOTA_MONITOR_CODE).not.toContain('lock_threshold_pct');
+  });
+
+  it('quota-monitor 不再為了門檻多打一次 maps-settings', () => {
+    expect(QUOTA_MONITOR_CODE).not.toContain('/api/admin/maps-settings');
   });
 });
