@@ -189,8 +189,19 @@ export interface AuthData {
 // Request
 // ---------------------------------------------------------------------------
 
-/** Valid request status values (four-state stepper) */
-export type RequestStatus = 'open' | 'received' | 'processing' | 'completed';
+/**
+ * Valid request status values — 對齊 migration 0049 的 D1 CHECK constraint。
+ *
+ * 曾長期漂移：帶著 v2.21.3 就退場的 `received`、缺了 `failed`（而 `failed` 是
+ * 後端唯一的失敗終態）。CONTEXT.md 的「已退場的名字」是權威。
+ */
+export type RequestStatus = 'open' | 'processing' | 'completed' | 'failed';
+
+/**
+ * 為什麼終結（ADR-0007）。`status` 說結束了沒，這個說原因 —— 兩個欄位，讀取端都要看。
+ * DB column `terminal_reason`（migration 0092），非終結狀態時為 null。
+ */
+export type RequestTerminalReason = 'cancelled' | 'timed_out' | 'error' | 'needs_consent';
 
 /**
  * A trip-edit / trip-plan request submitted by a traveller.
@@ -211,8 +222,10 @@ export interface Request {
   /** DB column `submitted_by` — email of the submitter */
   submittedBy?: string | null;
   reply?: string | null;
-  /** Four-state status: open → received → processing → completed */
+  /** Four-state status: open → processing → completed；failed 為任何狀態皆可到的失敗終態 */
   status: RequestStatus;
+  /** DB column `terminal_reason` — 終結原因，非終結時為 null（ADR-0007） */
+  terminalReason?: RequestTerminalReason | null;
   /** DB column `created_at` */
   createdAt: string;
 }
