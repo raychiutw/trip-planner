@@ -158,7 +158,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .prepare(
         `INSERT INTO trip_note_ai_jobs
            (request_id, trip_id, doc_type, generation, status, timeout_at)
-         VALUES (?, ?, ?, ?, 'pending', datetime('now', '+10 minutes'))
+         -- 100 分鐘：必須 > api-server 的 ORPHAN_MAX_AGE_MS（90 分鐘），在那之前
+         -- session 都還可能在正常工作。原本是 10 分鐘 —— prod 實測 41% 陣亡率
+         -- （10 完成 vs 7 逾時），而 completed 的裡面有跑滿 101 分鐘的，代表工作
+         -- 真的會那麼久。同 ADR-0007 牆鐘的推論：不在 session 死前放棄。
+         VALUES (?, ?, ?, ?, 'pending', datetime('now', '+100 minutes'))
          RETURNING id, generation, timeout_at`,
       )
       .bind(requestId, tripId, docType, generation)

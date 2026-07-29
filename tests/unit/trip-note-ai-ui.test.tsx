@@ -118,7 +118,11 @@ describe('TripNotesPage AI state', () => {
     });
     expect(screen.getByTestId('trip-notes-ai-btn-pretrip-lodging')).toBeEnabled();
     expect(screen.getByTestId('trip-notes-ai-btn-emergency')).toBeEnabled();
-    expect(screen.getByTestId('trip-notes-ai-status-tips')).toHaveTextContent('通常 3–7 分鐘');
+    // 2026-07-29：原本鎖「通常 3–7 分鐘」，但 prod 實測 completed 的 job 有
+    // 12 / 26 / 101 分鐘 —— 那句文案會讓使用者以為卡住而重按（重按會建新一代）。
+    // 現在鎖住「有講區間」+「不再宣稱 3–7 分鐘」。
+    expect(screen.getByTestId('trip-notes-ai-status-tips')).toHaveTextContent('通常 2–15 分鐘');
+    expect(screen.getByTestId('trip-notes-ai-status-tips')).not.toHaveTextContent('3–7 分鐘');
     expect(screen.getByTestId('trip-notes-ai-status-tips')).toHaveAttribute('aria-live', 'polite');
     expect(screen.getByTestId('trip-notes-ai-status-emergency')).toHaveTextContent(
       '新增 3、替換 2、保留人工 1、排除 1、略過 0',

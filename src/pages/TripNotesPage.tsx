@@ -135,7 +135,9 @@ function AiJobStatus({ job }: { job: NoteAiJob }) {
     const minutes = Number.isFinite(parsed)
       ? Math.max(0, Math.floor((Date.now() - parsed) / 60_000))
       : 0;
-    message = `${label}生成中 · 已等待 ${minutes} 分鐘，通常 3–7 分鐘完成`;
+    // 「通常 3–7 分鐘」對不上實測：completed 的 job 有 12 / 26 / 101 分鐘的。
+    // 給區間 + 誠實講明大行程會更久，避免使用者以為卡住了就重按（重按會建新一代）。
+    message = `${label}生成中 · 已等待 ${minutes} 分鐘，通常 2–15 分鐘，行程較大時可能更久`;
   } else if (job.status === 'completed') {
     message = `${label}完成：新增 ${job.insertedCount}、替換 ${job.replacedCount}、保留人工 ${job.preservedManualCount}、排除 ${job.duplicateExcludedCount}、略過 ${job.suppressedCount}`;
   } else if (job.status === 'timedOut') {
