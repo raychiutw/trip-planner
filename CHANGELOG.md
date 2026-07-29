@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.84] - 2026-07-29
+
+### Changed
+- **天氣改用日本氣象廳資料** —— 先前用的是全球混合預報，跟日本當地天氣網站（tenki.jp、Yahoo天気 等）常常對不上：同一天同一地點，App 連四天報雷雨，氣象廳說毛毛雨轉晴。現在跟你在當地查到的一致。
+- 降雨從「機率 %」改為「雨量 mm」—— 氣象廳資料不提供機率，改用實際雨量（例：0.7mm 是毛毛雨，10mm 以上才是明顯的雨）。
+
 ## [2.57.83] - 2026-07-29
 
 ### Fixed

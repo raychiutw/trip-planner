@@ -39,11 +39,20 @@ function daysUntil(dateStr: string): number {
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }
 
+/** 降雨量顯示：mm/h 常是 0.1~數 mm 的小數，整數會全變 0。
+ *  <10 保留一位小數（0.7），>=10 取整（12）—— 大雨時小數沒有意義。 */
+function fmtMm(v: number): string {
+  if (!Number.isFinite(v) || v <= 0) return '0';
+  return v < 10 ? v.toFixed(1) : String(Math.round(v));
+}
+
+// 16 天以外沒有預報時顯示的示意值。v2.57.84 降雨單位從 % 改 mm/h，數值一起改成
+// 符合標籤的量級 —— 原本 20/30/40 是百分比，直接換單位會變成「20mm」（那是豪雨）。
 const WEATHER_PREVIEWS = [
-  { icon: 'weather-sun-cloud', temp: 28, label: '晴時多雲', rain: 20 },
-  { icon: 'weather-cloudy', temp: 27, label: '多雲', rain: 30 },
-  { icon: 'weather-clear', temp: 29, label: '晴朗', rain: 10 },
-  { icon: 'weather-rain-sun', temp: 26, label: '短暫陣雨', rain: 40 },
+  { icon: 'weather-sun-cloud', temp: 28, label: '晴時多雲', rain: 0 },
+  { icon: 'weather-cloudy', temp: 27, label: '多雲', rain: 0 },
+  { icon: 'weather-clear', temp: 29, label: '晴朗', rain: 0 },
+  { icon: 'weather-rain-sun', temp: 26, label: '短暫陣雨', rain: 1.2 },
 ] as const;
 
 function WeatherPreview({
@@ -61,7 +70,7 @@ function WeatherPreview({
       <div className="flex items-center gap-2 py-2 px-3 -mx-3 rounded-sm bg-accent-bg text-subheadline">
         <Icon name={preview.icon} />
         <span className="text-foreground">
-          {preview.temp}°C · {preview.label} · 降雨 {preview.rain}%
+          {preview.temp}°C · {preview.label} · 降雨 {preview.rain}mm
         </span>
         <span className="ml-auto shrink-0 text-muted">天氣示意</span>
       </div>
@@ -232,7 +241,7 @@ const HourlyWeather = memo(function HourlyWeather({
         {minT}~{maxT}&deg;C{' '}
         &nbsp;&middot;&nbsp;{' '}
         <Icon name="raindrop" />
-        {minR}~{maxR}%{' '}
+        {fmtMm(minR)}~{fmtMm(maxR)}mm{' '}
         <span className="ml-auto shrink-0 font-bold text-subheadline text-muted">
           {isOpen ? ARROW_COLLAPSE : ARROW_EXPAND}
         </span>
@@ -280,7 +289,7 @@ const HourlyWeather = memo(function HourlyWeather({
                     rain >= 50 && 'text-foreground font-bold bg-info-bg rounded-xs px-1',
                   )}
                 >
-                  {rain}%
+                  {fmtMm(rain)}mm
                 </div>
               </div>
             );

@@ -46,7 +46,7 @@ describe('HourlyWeather', () => {
     renderWeather({ weatherDay: null });
 
     expect(screen.getByText('天氣示意')).toBeInTheDocument();
-    expect(screen.getByText(/28°C.*晴時多雲.*20%/)).toBeInTheDocument();
+    expect(screen.getByText(/28°C.*晴時多雲.*0mm/)).toBeInTheDocument();
     expect(screen.getByText('尚無可用預報位置')).toBeInTheDocument();
     expect(mockedFetchWeather).not.toHaveBeenCalled();
   });
@@ -54,7 +54,7 @@ describe('HourlyWeather', () => {
   it('cycles preview data by day number while the date is beyond 16 days', () => {
     renderWeather({ dayNum: 4, dayDate: '2026-08-20' });
 
-    expect(screen.getByText(/26°C.*短暫陣雨.*40%/)).toBeInTheDocument();
+    expect(screen.getByText(/26°C.*短暫陣雨.*1\.2mm/)).toBeInTheDocument();
     expect(screen.getByText('天氣預報將於出發前 16 天開放')).toBeInTheDocument();
     expect(mockedFetchWeather).not.toHaveBeenCalled();
   });
@@ -97,7 +97,8 @@ describe('HourlyWeather', () => {
   it('renders the live daily temperature and rain ranges', async () => {
     const data: MergedHourly = {
       temps: Array.from({ length: 24 }, (_, hour) => 24 + (hour % 8)),
-      rains: Array.from({ length: 24 }, (_, hour) => 10 + (hour % 5) * 10),
+      // v2.57.84：rains 語意從降雨機率 % 改成降雨量 mm/h，fixture 改用真實量級
+      rains: Array.from({ length: 24 }, (_, hour) => 0.2 + (hour % 5) * 0.5),
       codes: Array(24).fill(1),
     };
     mockedFetchWeather.mockResolvedValue(data);
@@ -105,13 +106,13 @@ describe('HourlyWeather', () => {
     renderWeather();
 
     expect(await screen.findByRole('button', { name: '展開天氣' })).toHaveTextContent('24~31°C');
-    expect(screen.getByRole('button', { name: '展開天氣' })).toHaveTextContent('10~50%');
+    expect(screen.getByRole('button', { name: '展開天氣' })).toHaveTextContent('0.2~2.2mm');
   });
 
   it('expands all 24 hours with the keyboard and exposes its state', async () => {
     mockedFetchWeather.mockResolvedValue({
       temps: Array(24).fill(28),
-      rains: Array(24).fill(20),
+      rains: Array(24).fill(1.5),
       codes: Array(24).fill(1),
     });
     renderWeather();

@@ -53,6 +53,7 @@ export interface WeatherDay {
 /** Merged hourly weather data for a single day (24 values each). */
 export interface MergedHourly {
   temps: number[];
+  /** 降雨量 mm/h（v2.57.84 前是降雨機率 %；JMA 模型不提供機率）。 */
   rains: number[];
   codes: number[];
 }
@@ -138,7 +139,8 @@ export function toDateStr(d: Date): string {
 interface OpenMeteoHourly {
   time: string[];
   temperature_2m: number[];
-  precipitation_probability: number[];
+  /** 降雨量 mm/h。JMA 模型不提供 precipitation_probability（一律 null），改用實際量。 */
+  precipitation: number[];
   weather_code: number[];
 }
 
@@ -209,7 +211,14 @@ export async function fetchWeatherForDay(
     const params = new URLSearchParams({
       latitude: lats.join(','),
       longitude: lons.join(','),
-      hourly: 'temperature_2m,precipitation_probability,weather_code',
+      hourly: 'temperature_2m,precipitation,weather_code',
+      // 氣象廳模型。日本的天氣網站（tenki.jp / Yahoo天気 / ウェザーニュース）都用
+      // 氣象廳資料，Open-Meteo 的預設 best_match 是全球混合模式 —— 實測同一天同一
+      // 座標，預設報「雷雨帶冰雹 降雨76%」而 JMA 報「毛毛雨」，使用者跟手邊查到的
+      // 永遠對不上（owner 2026-07-29 人在沖繩回報）。
+      // ⚠️ 取捨：出了日本會退到 JMA 的全球模式 GSM，不見得優於 best_match。
+      // 台灣/韓國行程接受這個代價換單一模型的一致性。
+      models: 'jma_seamless',
       start_date: fetchStart,
       end_date: fetchEnd,
       timezone,
@@ -256,7 +265,7 @@ export async function fetchWeatherForDay(
     const idx = dayOffset + h;
     if (d && d.hourly && idx < d.hourly.temperature_2m.length) {
       mg.temps[h] = d.hourly.temperature_2m[idx] ?? 0;
-      mg.rains[h] = d.hourly.precipitation_probability[idx] ?? 0;
+      mg.rains[h] = d.hourly.precipitation[idx] ?? 0;
       mg.codes[h] = d.hourly.weather_code[idx] ?? 0;
     }
   }
