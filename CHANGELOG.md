@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.83] - 2026-08-01
+
+### Fixed
+- **daily-check 的 npm audit 逾時 60 秒延長為 120 秒** —— 實測本機 npm audit 耗時 57 秒，60 秒逾時貼太緊，偶發會把單純跑比較久的一次稽核誤判成「稽核失敗」，連帶讓當天的健康報告顯示假警訊。
+
 ## [2.57.82] - 2026-07-29
 
 ### Fixed
