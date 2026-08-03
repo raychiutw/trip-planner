@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.83] - 2026-07-29
+
+### Fixed
+- **AI 生成筆記不會再做到一半被判定失敗** —— 原本 10 分鐘沒完成就當逾時，但實測較大的行程本來就要跑十幾分鐘到一小時以上，導致約四成的生成明明還在跑卻被中止、結果被丟棄。放寬到系統實際允許的工作時間。
+- 生成中的提示改成「通常 2–15 分鐘，行程較大時可能更久」（原本寫 3–7 分鐘，跟實際差太多，容易讓人以為卡住而重按）。
+
 ## [2.57.82] - 2026-07-29
 
 ### Fixed

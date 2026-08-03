@@ -202,7 +202,7 @@ export async function expireNoteAiJobs(
     `UPDATE trip_note_ai_jobs
      SET status = 'timed_out',
          error_code = 'NOTES_AI_JOB_STALE',
-         error_message = 'AI 生成超過 10 分鐘',
+         error_message = 'AI 生成逾時（超過 100 分鐘未回報）',
          completed_at = datetime('now')
      WHERE ${filters.join(' AND ')}`,
   ).bind(...values).run();
@@ -210,7 +210,7 @@ export async function expireNoteAiJobs(
   await db.prepare(
     `UPDATE trip_requests
      SET status = 'failed',
-         reply = COALESCE(reply, 'AI 生成超過 10 分鐘'),
+         reply = COALESCE(reply, 'AI 生成逾時（超過 100 分鐘未回報）'),
          updated_at = datetime('now')
      WHERE status IN ('open', 'processing')
        AND id IN (
