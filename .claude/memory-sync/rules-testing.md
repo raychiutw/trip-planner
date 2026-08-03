@@ -38,7 +38,6 @@ tests/
 
 - `tests/setup.js` 先載入 `js/shared.js` → `js/menu.js` → `js/icons.js`，再載入全域 stub
 - `js/app.js` 和 `js/shared.js` 末尾有條件式 `module.exports`（瀏覽器忽略，Node.js/Vitest 可 require）
-- E2E 測試 mock Weather API（`page.route`），避免外部網路依賴
 - Node.js v22+ 內建 localStorage 與 jsdom 衝突 → `tests/setup.js` 用 in-memory mock 覆蓋
 
 ## tp-check 工作流程（必須遵守）

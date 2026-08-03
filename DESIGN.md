@@ -160,7 +160,7 @@
 > ⚠️ **`destructive` 當文字色是刻意保留的偏離，不是漏掉的違規。** 紅字錯誤訊息是很強的慣例，而它的底本來就不透明、實測淺色 4.85／深色 4.78 都過 4.5。但偏離的正當性完全建立在「還過 4.5」上 —— 一旦破線就要改中性字，不是再調深。已鎖在 `tests/unit/semantic-color-contrast.test.ts`。
 >
 > **執法者**：`tests/unit/semantic-color-contrast.test.ts` 守 token 層（含深色與 `prefers-contrast` 加強階，那兩者 axe 都掃不到）＋ call-site 層（掃全 `src/`，把「同族語意色當文字」判違規，含 `-deep` —— 那正是 #1176 第一版走錯的路）。15 條斷言、9 個 mutation 逐一驗過會轉紅。
-> ⚠ **兩個本規則管不到的地方**：(a) Tailwind utility —— `@theme` 會把 `--color-accent` 生成 `text-accent`，`hover:text-accent` 這種寫法不在任何 CSS 字串裡，掃 template literal 的守衛永遠看不到（`InfoSheet.tsx`、`HourlyWeather.tsx` 現有數處）。(b) `body.theme-print` 只覆寫了 `--color-accent` / `-subtle` / `-bg`，**沒有覆寫 `-text` / `-text-on-tonal` / `-deep`**，所以遷移到 `-text` 的文字在灰階列印版面裡會是暖褐色。目前 print mode 只掛在行程明細頁（`usePrintMode`），影響有限，但全庫推廣前要先補 print 的 token 覆寫。
+> ⚠ **兩個本規則管不到的地方**：(a) Tailwind utility —— `@theme` 會把 `--color-accent` 生成 `text-accent`，`hover:text-accent` 這種寫法不在任何 CSS 字串裡，掃 template literal 的守衛永遠看不到（`InfoSheet.tsx` 現有數處）。(b) `body.theme-print` 只覆寫了 `--color-accent` / `-subtle` / `-bg`，**沒有覆寫 `-text` / `-text-on-tonal` / `-deep`**，所以遷移到 `-text` 的文字在灰階列印版面裡會是暖褐色。目前 print mode 只掛在行程明細頁（`usePrintMode`），影響有限，但全庫推廣前要先補 print 的 token 覆寫。
 >
 > 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層；call-site 層目前只有 `tests/unit/trips-list-accent-text.test.ts` 守行程一覽頁一個檔，**尚無全庫執法者**。
 
@@ -499,12 +499,6 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 - Desktop / compact 共用同一份 `TripDetail` 內容樹：DayNav、stop list、住宿、交通、地圖摘要、錯誤訊息、空狀態都不可拆成兩套邏輯。
 - Desktop 只增加 sidebar、較寬 content、可選的輔助欄；compact 只改成單欄、hamburger、bottom nav。
 - 所有資料來源、mutation、loading/error state 必須共用，確保手機與桌機功能一致。
-
-#### 每日天氣
-
-- 有即時資料：顯示主要天氣圖示、全天最低／最高溫與最低／最高降雨率；可用點擊、Enter 或 Space 展開 0:00–23:00 共 24 個時段，並同步 `aria-expanded` 與展開／收合標籤。
-- 無即時資料：保留每日天氣列，依 Day 循環顯示 Flutter 對齊的四組「天氣示意」，並以 Web semantic token 呈現，不複製 Flutter 卡片樣式。
-- 狀態文字固定為：`尚無可用預報位置`、`天氣預報將於出發前 16 天開放`、`正在更新預報`、`暫時無法取得預報`、`目前沒有可用預報`。
 
 ### 桌機三欄操作堆疊（`TripStackLayout` + `OperationShell`）
 
@@ -1068,8 +1062,6 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 | 表單例外 | 1 | ✅ `.tp-rail-note-input` —— 只在編輯態掛載、恆有 accent 框 + 光暈 |
 
 **真正遷移的是 A 的 20 條**；C／C′ 一開始被誤記成債，實際上它們符合規則表的表單例外。慣例 B 的 38 條同步收斂成單一顏色 `--color-focus-ring`，6 條負 `outline-offset` 全部取正。
-
-> ⚠️ **`--shadow-ring` 曾同時是 Tailwind utility。** `@theme` 裡的 token 會生成同名 utility class，`HourlyWeather` 用 `shadow-ring` 標「現在這一小時」（**不是焦點指示**，只是借用同一個陰影）。刪 token 時它會靜默失效 —— 已改用 Tailwind 原生 `ring-2 ring-accent`（產出的 CSS 等價）。**刪 `@theme` token 前要連 utility class 用法一起 grep。**
 
 ### 為什麼一定要雙帶（有算過，不是偏好）
 

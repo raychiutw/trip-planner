@@ -25,4 +25,3 @@ Transit 方向箭頭（`.tl-transit-arrow`）已移除，為純裝飾元素無�
 以下元件不受影響，維持原有收合行為：
 
 - `.col-row` / `.col-detail`（住宿、交通統計等）
-- `.hw-summary` / `.hw-detail`（逐時天氣）

@@ -95,7 +95,7 @@ src/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
 │   ├── mapRow.ts            DB row → UI object 統一轉換
 │   ├── scrollSpy.ts         純函式：捲動位置 → active day index
-│   └── ...                  localStorage、sentry、weather、timelineUtils
+│   └── ...                  localStorage、sentry、timelineUtils
 └── types/                   trip.ts / api.ts
 ```
 

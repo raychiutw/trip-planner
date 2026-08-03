@@ -23,8 +23,7 @@ CSS 字串裡，`tests/unit/trips-list-accent-text.test.ts` 這類掃 template l
 **永遠**看不到，axe 也只在該狀態被觸發時才掃得到。
 
 現有實例：`InfoSheet.tsx:261`（`hover:text-accent hover:bg-accent-bg`，實測 2.77:1，
-連非文字的 3:1 都不到）、`HourlyWeather.tsx:121/158/205`（`hover:text-accent hover:bg-hover`，
-3.27:1）。
+連非文字的 3:1 都不到）。
 
 要嘛把 `--color-accent` 排除在生成 `text-*` utility 的 token 之外（改名成只給填色用），
 要嘛接受這條路徑靠人工守。這是策略決定，不是純實作。v2.57.50 / #1156 稽核發現。
@@ -81,4 +80,3 @@ ChatPage / LandingPage / MapPage）目前是好的 —— 但它們是**意外�
 
 專案 browserslist 是 `last 2 Chrome versions`，本來就不需要手寫前綴。清掉即可，
 只是要一個一個確認沒有依賴舊 Safari 的地方。
-

@@ -4,7 +4,7 @@ description: 批量補齊 POI 欄位時使用 — 跨行程填入 rating、addre
 user-invocable: true
 ---
 
-跨行程 POI 欄位與 entry 座標批次補齊工具。掃描 pois 表缺漏欄位，WebSearch 查詢後用 PATCH 更新。也可為 trip_entries 補齊 location 座標（天氣功能需要）。
+跨行程 POI 欄位與 entry 座標批次補齊工具。掃描 pois 表缺漏欄位，WebSearch 查詢後用 PATCH 更新。也可為 trip_entries 補齊地圖與 travel 計算所需的 location 座標。
 
 API 設定見 `tp-shared/references.md`。
 
@@ -100,7 +100,7 @@ POI 欄位規格見 `tp-shared/references.md`（v2.29.0 後：`pois` master vs `
 # 為指定行程的 POI 補齊所有欄位
 /tp-patch --target all --field all --trips okinawa-trip-2026-HuiYun
 
-# 為指定行程補齊 entry 座標（天氣功能需要）
+# 為指定行程補齊 entry 座標（地圖與 travel 計算需要）
 /tp-patch --target entry --field location --trips yilan-trip-2026-banqiaocircle
 
 # 為所有行程補齊座標

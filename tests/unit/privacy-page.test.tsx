@@ -83,7 +83,7 @@ describe('PrivacyPage — 揭露範圍（Google Play 要求）', () => {
     // 對照來源：public/_headers 的 CSP connect-src/img-src（瀏覽器實際連線對象）
     // 加上 functions/api 的 server 端連外。
     const text = pageText();
-    for (const category of ['託管', '地圖', '天氣', '錯誤回報', '郵件', '維運']) {
+    for (const category of ['託管', '地圖', '錯誤回報', '郵件', '維運']) {
       expect(text, `未揭露接收方類別「${category}」`).toContain(category);
     }
   });

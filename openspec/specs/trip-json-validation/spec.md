@@ -7,7 +7,7 @@
 #### Scenario: 根層級必填欄位
 
 - **WHEN** 驗證任一行程 JSON
-- **THEN** SHALL 確認存在以下必填欄位：`title`、`themeColor`、`days`（陣列）、`weather`（陣列）、`autoScrollDates`（陣列）、`highlights`、`suggestions`、`checklist`
+- **THEN** SHALL 確認存在以下必填欄位：`title`、`themeColor`、`days`（陣列）、`autoScrollDates`（陣列）、`highlights`、`suggestions`、`checklist`
 
 #### Scenario: 根層級選填欄位
 

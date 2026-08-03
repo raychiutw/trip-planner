@@ -646,10 +646,10 @@ const MOCK_SESSIONS = [
 
 const MOCK_CONNECTED_APPS = [
   {
-    client_id: 'weather-importer',
-    app_name: 'Weather Importer',
+    client_id: 'calendar-exporter',
+    app_name: 'Calendar Exporter',
     app_logo_url: null,
-    app_description: 'Imports local weather into Tripline',
+    app_description: 'Exports Tripline itineraries to local calendars',
     homepage_url: null,
     status: 'active',
     scopes: ['read:trips', 'write:trips'],

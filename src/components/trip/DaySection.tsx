@@ -3,19 +3,16 @@
  *
  * Renders:
  *  - Terracotta hero card (DAY NN eyebrow + 日期 headline + stats)
- *  - Weather card (HourlyWeather)
  *  - Timeline stop cards
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import clsx from 'clsx';
 import DaySkeleton from './DaySkeleton';
-import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
 import { toTimelineEntry } from '../../lib/mapDay';
 import { useTripId } from '../../contexts/TripIdContext';
 import { useTripSegments, type TripSegment } from '../../hooks/useTripSegments';
-import { buildWeatherDay } from '../../lib/weather';
 import type { Day, DaySummary } from '../../types/trip';
 
 /* ===== 看地圖 chip + hero chips layout + 加景點 footer (scoped styles) ===== */
@@ -47,13 +44,10 @@ export interface DaySectionProps {
   dayNum: number;
   day: Day | undefined;
   daySummary: DaySummary | undefined;
-  tripStart: string | null;
-  tripEnd: string | null;
+  // Inline day map stays removed; the dedicated route is /trip/:id/map?day=N.
   themeArt?: { dark: boolean };
   localToday?: string;
   isActive?: boolean;
-  // Note: inline day map was removed in PR3. Use /trip/:id/map?day=N instead.
-  timezone?: string;
 }
 
 /** Extract time range parts from entry time string "HH:MM-HH:MM" or "HH:MM". */
@@ -148,11 +142,8 @@ const DaySection = React.memo(function DaySection({
   dayNum,
   day,
   daySummary,
-  tripStart,
-  tripEnd,
   localToday,
   isActive,
-  timezone,
 }: DaySectionProps) {
   const [animKey, setAnimKey] = useState(0);
   const prevActiveRef = useRef(false);
@@ -164,7 +155,6 @@ const DaySection = React.memo(function DaySection({
   // useMemo 穩定 reference：`?? []` 每 render 造新陣列，會讓下面 4 個吃 timeline 的
   // useMemo 依賴每 render 變動而永不命中（react-hooks/exhaustive-deps）。
   const timeline = useMemo(() => day?.timeline ?? [], [day?.timeline]);
-  const weatherDay = useMemo(() => buildWeatherDay(day?.label, timeline), [day?.label, timeline]);
   const dayDate = day?.date ?? daySummary?.date ?? undefined;
   const dayId = day?.id;
 
@@ -219,23 +209,9 @@ const DaySection = React.memo(function DaySection({
         {!day ? (
           <DaySkeleton />
         ) : (
-          <>
-            {dayId != null && (
-              <HourlyWeather
-                dayId={dayId}
-                dayNum={dayNum}
-                dayDate={dayDate}
-                weatherDay={weatherDay}
-                tripStart={tripStart}
-                tripEnd={tripEnd}
-                timezone={timezone}
-              />
-            )}
-
-            {/* 2026-07-07 跨天拖拉：空日也 render（dndManaged 下 rail 顯示
-              * 空 drop 槽）— 拖到還沒排的天是跨天最常見場景（codex review P1）。 */}
-            <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} dayId={dayId ?? null} dndManaged />
-          </>
+          /* 2026-07-07 跨天拖拉：空日也 render（dndManaged 下 rail 顯示
+           * 空 drop 槽）— 拖到還沒排的天是跨天最常見場景（codex review P1）。 */
+          <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} dayId={dayId ?? null} dndManaged />
         )}
       </div>
     </section>

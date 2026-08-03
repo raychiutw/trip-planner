@@ -20,7 +20,7 @@ import { resolveTripId } from '../lib/resolveTripId';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
-import { TRIP_TIMEZONE, getLocalToday } from '../lib/constants';
+import { getLocalToday } from '../lib/constants';
 import { downloadTripJson } from '../lib/tripExport';
 import { renderTripPrintPdf } from '../components/print/renderTripPrintPdf';
 import { showToast } from '../lib/toastBus';
@@ -594,17 +594,6 @@ function TripPageInner(
     return { allPins, pinsByDay };
   }, [dayNums, allDays]);
 
-  /* --- Trip start/end scalars for HourlyWeather (T3) --- */
-  const tripStart = autoScrollDates[0] ?? null;
-  const tripEnd = autoScrollDates[autoScrollDates.length - 1] ?? null;
-
-  /* --- Weather timezone derived from trip destination --- */
-  const weatherTimezone = useMemo(() => {
-    if (!activeTripId) return undefined;
-    const prefix = activeTripId.split('-')[0] ?? '';
-    return TRIP_TIMEZONE[prefix];
-  }, [activeTripId]);
-
   /* --- Today's date (timezone-aware) — shared by DayNav and Timeline --- */
   const localToday = useMemo(() => getLocalToday(activeTripId), [activeTripId]);
 
@@ -927,12 +916,9 @@ function TripPageInner(
                   dayNum={dayNum}
                   day={allDays[dayNum]}
                   daySummary={daySummaryMap.get(dayNum)}
-                  tripStart={tripStart}
-                  tripEnd={tripEnd}
                   themeArt={themeArt}
                   localToday={localToday}
                   isActive={dayNum === currentDayNum}
-                  timezone={weatherTimezone}
                 />
               ))}
             </DndContext>

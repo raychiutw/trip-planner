@@ -21,6 +21,12 @@ export interface ValidationResult {
  * 回傳 { ok: true } 表示驗證通過；否則回傳 { ok: false, status, error }。
  */
 export function validateDayBody(body: DayBody): ValidationResult {
+  for (const field of ['weather', 'weather_json'] as const) {
+    if (Object.prototype.hasOwnProperty.call(body, field)) {
+      return { ok: false, status: 400, error: `${field} 已移除` };
+    }
+  }
+
   // Required field validation
   const missing: string[] = [];
   if (!body.date) missing.push('date');

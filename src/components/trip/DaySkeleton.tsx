@@ -15,8 +15,6 @@ const DaySkeleton = memo(function DaySkeleton() {
         <div className="skeleton-bone" style={TITLE_BONE_STYLE} />
         <div className="skeleton-bone" style={SUBTITLE_BONE_STYLE} />
       </div>
-      {/* Weather bar */}
-      <div className="skeleton-bone w-full h-14 mb-4" />
       {/* Timeline events — 2 items closer to median, reduces layout shift */}
       {SKELETON_EVENT_INDEXES.map(i => (
         <div key={i} className="flex gap-3 mb-4">

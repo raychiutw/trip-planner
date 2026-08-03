@@ -39,7 +39,6 @@ Timeline entry 除了既有欄位，新增兩個與 POI master 有關的 request
 
 #### 每日結構
 - 每日必填：`id`、`date`（非空字串）、`label`、`content.timeline`（陣列）。
-- 每日選填：`weather`（物件，含 `label` 字串、`locations` 陣列）。`weather.locations[].lat` 和 `lon` 須為 number 型別。
 - `days[i].id` 必須等於 `i + 1`（從 1 開始的連續整數）。
 - `autoScrollDates[]` 須為 ISO 格式 `YYYY-MM-DD`。
 
@@ -172,4 +171,3 @@ type 為 `hotel` 的 pois 建議有 `phone`（電話）。缺少 → **warning**
 **Canonical spec**：`openspec/specs/daily-first-stop/spec.md`（archive 後路徑；ship 前位於 `openspec/changes/daily-first-stop-hotel-bridge/specs/daily-first-stop/spec.md`）。包含完整 scenario 定義。
 
 **與 R0 Hotel 結構正交**：R0「最後一天不設 hotel」與 R19「最後一天首 entry 為前日飯店 check-out」同時成立 — 前者規範 `day.hotel`、後者規範 `timeline[0]`，不衝突。
-
