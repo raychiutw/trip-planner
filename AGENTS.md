@@ -89,7 +89,7 @@ Matt Pocock skills do not cover the task or the user explicitly requests it.
 
 `src/` SPA · `functions/api/` Pages Functions · `migrations/` D1 · `tests/` · `css/tokens.css` Tailwind 4.
 
-Desktop ≥1024px: 2-col timeline + sticky map. Mobile: 5-tab nav.
+Desktop ≥1024px: 2-col timeline + sticky map. Mobile: 4-tab nav + account header sheet.
 
 ## Dev
 

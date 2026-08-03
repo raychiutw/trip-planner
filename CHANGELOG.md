@@ -10,6 +10,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 - Day 更新與行程匯入收到舊版 `weather` 或 `weather_json` 欄位時，現在明確回傳 HTTP 400，不再靜默忽略。
+
+### For contributors
 - 專案 agent 文件對齊 Matt Pocock 官方技能流程：釐清、規格、拆票、實作、審查，再銜接本專案發布流程。
 
 ## [2.57.82] - 2026-07-29
