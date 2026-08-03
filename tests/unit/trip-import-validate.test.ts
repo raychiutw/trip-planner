@@ -47,6 +47,14 @@ describe('parseAndValidateImport — gates', () => {
     expect(parseAndValidateImport(bad).ok).toBe(false);
     expect(hasDangerousKey({ a: { b: JSON.parse('{"constructor":1}') } })).toBe(true);
   });
+  it.each(['weather', 'weather_json'])('rejects legacy %s fields at the trip or day level', (field) => {
+    for (const payload of [
+      { ...valid, [field]: {} },
+      { ...valid, days: [{ ...valid.days[0], [field]: {} }] },
+    ]) {
+      expect(parseAndValidateImport(payload)).toEqual({ ok: false, error: `${field} 已移除` });
+    }
+  });
   it('rejects a trip with no name', () => {
     expect(parseAndValidateImport({ schemaVersion: 1, meta: {}, days: [] }).ok).toBe(false);
   });

@@ -61,7 +61,7 @@ export function formatDuration(mins: number): string {
 /**
  * 短格式 duration（英文）— 對應 mockup .tp-detail-body-sub 的 "30 min" / "4 hr" / "1.5 hr"。
  * 與 formatDuration（中文長）並存：rail body sub-line 一行多資訊用短格式較密；
- * 其他情境（TravelPill、weather summary、整列描述）維持中文 formatDuration。
+ * 其他情境（TravelPill、整列描述）維持中文 formatDuration。
  *   30  → "30 min"
  *   60  → "1 hr"
  *   90  → "1.5 hr"

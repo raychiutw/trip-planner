@@ -11,7 +11,7 @@
 | bun | 1.0+ | google-poi-*.ts scripts (cron backfill / refresh / quota monitor) |
 | git | 任何近代版本 | — |
 | [gh CLI](https://cli.github.com/) | 任何 | 開 PR、查 CI |
-| [Claude Code](https://claude.com/claude-code) | 最新版 | 跑 gstack pipeline（非必須，但工作流建議用）|
+| AI coding agent | — | 依 `AGENTS.md` 執行專案工作流（非必須）|
 
 Cloudflare Wrangler 不用先裝，`npm install` 會帶進來。
 
@@ -57,7 +57,7 @@ DEV_MOCK_EMAIL=you@example.com
 
 ## 每次改 code 前
 
-**先讀 [CLAUDE.md](CLAUDE.md)。** 本專案用 gstack 的七階段 pipeline（Think → Plan → Build → Review → Test → Ship → Reflect），不是「改完推上去」那種節奏。`/tp-code-verify` 和 `/review` 不可跳過。
+**先讀 [AGENTS.md](AGENTS.md)。** 本專案以 Matt Pocock 官方技能鏈為預設：依工作規模走 `/grill-with-docs → /to-spec → /to-tickets → /implement → /code-review`，再套用 Tripline 的 feature branch、驗證與 PR 規則；小型且已定案的單一 session 變更可直接進 `/implement`。
 
 ## 測試
 
@@ -130,7 +130,7 @@ Bug：右上角 DayNav active pill 與視覺主畫面不同步...
 # 1. 開 branch + 做事
 git checkout -b fix/my-bug
 
-# 2. 跑 pipeline（完整 pipeline 見 CLAUDE.md）
+# 2. 跑工作流（完整規則見 AGENTS.md）
 #    本地至少確保：
 npm run typecheck && npm test
 
@@ -185,7 +185,8 @@ src/server/               jwt / oauth-d1-adapter / password / email / session / 
 - [README.md](README.md) — 使用者介紹
 - [ARCHITECTURE.md](ARCHITECTURE.md) — 系統架構
 - [DESIGN.md](DESIGN.md) — 設計系統
-- [CLAUDE.md](CLAUDE.md) — 開發 pipeline
+- [AGENTS.md](AGENTS.md) — 開發工作流與發布規則
+- [CLAUDE.md](CLAUDE.md) — 專案事實、命名歷史與 agent 規則
 - [CHANGELOG.md](CHANGELOG.md) — 版本紀錄
 - [TODOS.md](TODOS.md) — 已知待辦
 

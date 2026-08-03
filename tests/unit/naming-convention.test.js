@@ -12,7 +12,7 @@ const JS_FILES = [];
 
 const SRC_FILES = [
     'src/lib/mapRow.ts', 'src/lib/sanitize.ts', 'src/lib/constants.ts',
-    'src/lib/localStorage.ts', 'src/lib/weather.ts',
+    'src/lib/localStorage.ts',
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
 
 const CSS_FILES = [
@@ -65,7 +65,7 @@ describe('JS naming — mutable state', () => {
     const TRUE_CONSTANTS = new Set([
         'JSON_FIELDS', 'ARROW_EXPAND', 'ARROW_COLLAPSE',
         'MS_PER_DAY', 'SAFE_COLOR_RE', 'APPLE_SVG', 'DIAL_RENDERERS',
-        'WMO', 'ICONS', 'EMOJI_ICON_MAP', 'LS_PREFIX', 'LS_TTL',
+        'ICONS', 'EMOJI_ICON_MAP', 'LS_PREFIX', 'LS_TTL',
     ]);
 
     it('TRIP should be renamed to trip (camelCase mutable state)', () => {

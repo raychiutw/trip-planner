@@ -40,13 +40,13 @@ On-ramps（匯入主線）：
 
 ## Hard Rules
 
-- **Code change → 走 matt 主線**（`/implement`，或先 `/grill-with-docs` 磨清楚）。`/tp-team` 不再是強制第一步，需要它的 orchestration 時才用。行程資料用 `tp-*` data skills 直接打 API，不走 code pipeline。
+- **Code change → 走 matt 主線**（`/implement`，或先 `/grill-with-docs` 磨清楚）。`/tp-team` 不再支援，請勿呼叫。行程資料用 `tp-*` data skills 直接打 API，不走 code pipeline。
 - Feature branch + PR via `/ship`. Never push master directly.
 - `tp-*` skills hit API, not local files.
 - Agent tool only for worktree isolation（Workflow tool 內部的 `agent()` 不受此限）。
-- Web browse: Chrome MCP (`mcp__claude-in-chrome__*`) 或 `/browse` 皆可（owner 2026-07-23 解除 /browse-only 限制）。
+- Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
 - Post-ship retroactive OpenSpec archive if PR didn't propose first。⚠️ `openspec/specs/` 底下多數檔案的首行是 `## ADDED/MODIFIED Requirements` —— 那是 change delta 被直接放進 `specs/` 當成持續有效的規格，讀之前先確認它是規格還是某次變更的差異檔。
-- ~~Mockup-first hard gate~~ —— **已退役 2026-07-23**，Apple HIG 成上位 SoT。`/tp-claude-design` 仍可用於探索視覺方案，但不是 gate。
+- **Mockup-first hard gate**：所有 new page / new component（≥1 layout 變化）→ `/prototype` 的 UI branch 產生可比較 prototype → user sign-off → 才寫 React。Bug fix / token drift / 純 prop tweak / 內部 refactor（無 UX 變化）例外。
 
 ## Layout
 
@@ -103,7 +103,7 @@ Match → invoke `Skill` first。**matt 優先；同一件事 matt 有就用 mat
 | 已變更程式碼的簡化 | `/simplify` |
 | 專案自訂 commit 前檢查 | `/tp-code-verify` |
 
-Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `.claude/skills/tp-team/SKILL.md`.
+Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `docs/agents/`.
 Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite + MCP (user scope), sync=full, repo=read-write, 873 pages, setup 2026-05-04. Windows caveat: transcript ingest no-op (script POSIX-only). See `~/.gbrain/config.json`.
 
 ## Agent skills

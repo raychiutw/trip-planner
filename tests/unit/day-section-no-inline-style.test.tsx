@@ -35,8 +35,6 @@ function renderDay() {
         dayNum={1}
         day={mockDay}
         daySummary={mockDaySummary}
-        tripStart="2026-07-27"
-        tripEnd="2026-07-30"
         isActive={false}
       /></DndContext>
     </MemoryRouter>,

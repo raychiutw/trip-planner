@@ -18,7 +18,7 @@
 
 #### Scenario: 產生完整 JSON 結構
 - **WHEN** 產生行程 JSON
-- **THEN** SHALL 包含 meta、footer、autoScrollDates、weather、flights（若有）、highlights、suggestions、checklist、days 等完整結構
+- **THEN** SHALL 包含 meta、footer、autoScrollDates、flights（若有）、highlights、suggestions、checklist、days 等完整結構
 - **AND** 每日 timeline SHALL 符合 `trip-quality-rules.md` 中所有適用的品質規則
 
 #### Scenario: 寫入檔案

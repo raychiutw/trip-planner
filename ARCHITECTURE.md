@@ -2,7 +2,7 @@
 
 Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東西前先看這份，確保新增的 code 落在對的層次。
 
-使用者介紹請看 [README.md](README.md)。設計系統與視覺規範請看 [DESIGN.md](DESIGN.md)。開發流程請看 [CLAUDE.md](CLAUDE.md)。
+使用者介紹請看 [README.md](README.md)。設計系統與視覺規範請看 [DESIGN.md](DESIGN.md)。開發流程請看 [AGENTS.md](AGENTS.md)。
 
 ---
 
@@ -29,7 +29,7 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 │                       使用者瀏覽器                                │
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │  React SPA (src/entries/main.tsx, BrowserRouter)         │  │
-│  │  5-tab IA: 聊天 / 行程 / 地圖 / 收藏 / 帳號 (mobile)     │  │
+│  │  4-tab IA: 聊天 / 行程 / 地圖 / 收藏 + 帳號 sheet       │  │
 │  │  Desktop sidebar nav + 3-pane shell (≥1024px)            │  │
 │  │  /trips list, /trip/:id (TripLayout), /chat, /map,       │  │
 │  │  /favorites, /explore, /account, /auth/* OAuth flow ...  │  │
@@ -67,13 +67,13 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 
 ### 入口與路由
 
-`src/entries/main.tsx` 單一 SPA 入口，5-tab IA + 多 sub-route。完整 route table
+`src/entries/main.tsx` 單一 SPA 入口，4-tab IA + 帳號 sheet + 多 sub-route。完整 route table
 見 main.tsx，主要 group:
 
 | Path group | 用途 |
 |-----------|------|
 | `/trips`, `/trip/:tripId/*` | 行程 list + TripLayout (含 collab / health / edit / add-* / stop edit) |
-| `/chat`, `/map`, `/explore`, `/favorites` | global 5-tab pages (有 ActiveTripContext) |
+| `/chat`, `/map`, `/explore`, `/favorites` | global 4-tab pages (有 ActiveTripContext) |
 | `/login`, `/signup`, `/login/forgot`, `/auth/*` | V2 OAuth 流程 (含 verify email landing v2.33.59) |
 | `/account/*`, `/settings/*` | account hub + sessions / connected-apps / developer (alias) |
 | `/admin`, `/manage` | 已 2026-04-26 拆，redirect to `/trips` / `/chat` |
@@ -95,7 +95,7 @@ src/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
 │   ├── mapRow.ts            DB row → UI object 統一轉換
 │   ├── scrollSpy.ts         純函式：捲動位置 → active day index
-│   └── ...                  localStorage、sentry、weather、timelineUtils
+│   └── ...                  localStorage、sentry、timelineUtils
 └── types/                   trip.ts / api.ts
 ```
 
@@ -414,6 +414,7 @@ tests/
 - [README.md](README.md) — 使用者介紹、功能特色
 - [CONTEXT.md](CONTEXT.md) — 領域詞彙（ubiquitous language）、已退場的名字對照
 - [docs/adr/](docs/adr/) — 架構決策記錄（為什麼是這樣）
-- [CLAUDE.md](CLAUDE.md) — 開發流程、gstack pipeline
+- [AGENTS.md](AGENTS.md) — Matt Pocock 官方技能流程與 Tripline 發布規則
+- [CLAUDE.md](CLAUDE.md) — 專案事實、命名歷史與非衝突的 agent 規則
 - [DESIGN.md](DESIGN.md) — 設計系統、視覺 tokens
 - [CHANGELOG.md](CHANGELOG.md) — 版本紀錄

@@ -1,6 +1,6 @@
 # Tripline
 
-專為小團體量身打造的旅遊行程網站，讓每位旅伴都能輕鬆查閱行程、即時掌握天氣與交通資訊。
+專為小團體量身打造的旅遊行程網站，讓每位旅伴都能輕鬆查閱行程、掌握交通資訊。
 
 🔗 **線上 Demo**：[https://trip-planner-dby.pages.dev/](https://trip-planner-dby.pages.dev/)
 
@@ -25,7 +25,6 @@
 
 ### 即時資訊
 
-- 🌤️ **天氣預報** — 行程日期在 16 天預報範圍內自動顯示逐時天氣
 - 🚗 **交通資訊就地呈現** — 每個停留點之間直接顯示交通時間、距離、方式，不必跳到統計卡
 - ⏳ **倒數計時器** — 顯示距離出發還有幾天
 
@@ -75,7 +74,8 @@
 - [ARCHITECTURE.md](ARCHITECTURE.md) — 系統組成、資料流、信任邊界、部署拓撲
 - [CONTRIBUTING.md](CONTRIBUTING.md) — 新手上路、測試、commit 慣例、常見任務
 - [DESIGN.md](DESIGN.md) — 設計系統與視覺規範（暖色有機風、Apple HIG、single-theme + dark mode）
-- [CLAUDE.md](CLAUDE.md) — 開發流程與 gstack pipeline
+- [AGENTS.md](AGENTS.md) — Matt Pocock 官方技能流程與 Tripline 發布規則
+- [CLAUDE.md](CLAUDE.md) — 專案事實、命名歷史與非衝突的 agent 規則
 - [TODOS.md](TODOS.md) — 已知待辦與 follow-up
 - [SPEC.md](SPEC.md) — 進行中的多階段規格（目前：POI Unification 三階段計劃）
 - [CHANGELOG.md](CHANGELOG.md) — 版本紀錄

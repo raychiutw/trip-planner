@@ -8,7 +8,8 @@
 | 架構（tech stack、topology、資料模型、auth、部署） | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | 上手 / 跑起來 / 跑測試 / commit 規則 | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | 設計系統（V2 Terracotta、tokens、版型） | [DESIGN.md](DESIGN.md) |
-| 開發流程 + gstack pipeline + 環境變數 | [CLAUDE.md](CLAUDE.md) |
+| 開發工作流與發布規則 | [AGENTS.md](AGENTS.md) |
+| 專案事實、命名歷史與環境變數 | [CLAUDE.md](CLAUDE.md) |
 | 待辦 / 已完成項目 | [TODOS.md](TODOS.md) |
 | 進行中規格 | [SPEC.md](SPEC.md) |
 | 版本紀錄 | [CHANGELOG.md](CHANGELOG.md) |
@@ -17,9 +18,9 @@
 
 - **Tech**：React 19 + Vite + Cloudflare Pages Functions + D1 SQLite。**不是** vanilla JS、**不是** markdown source。
 - **資料**：行程在 D1 `trips` / `trip_days` / `trip_entries` 表，POI 走 `pois` master + `trip_entry_pois` junction (v2.27.0 多 POI per entry)。`trip_pois` 已 DROP (v2.29.0 migration 0062)。`data/dist/` 已不存在。
-- **Skills**：以 Claude Code skills 為主（`/tp-create` `/tp-edit` `/tp-check` 等走 API），非 Gemini CLI。Gemini CLI 也可用，但 skill set 在 `.claude/skills/` 不是 `.gemini/skills/`。
+- **Skills**：程式變更依 `AGENTS.md` 的 Matt Pocock 工作流；`/tp-create`、`/tp-edit`、`/tp-check` 等行程資料技能直接走 API，skill 定義同步放在 `.codex/skills/` 與 `.claude/skills/`。
 - **語言**：所有溝通與 commit message 用繁體中文（台灣）。
-- **Pipeline**：code 變更走 7 階段（Think → Plan → Build → Review → Test → Ship → Reflect），詳見 CLAUDE.md。
+- **Workflow**：依工作規模走 Matt Pocock 官方技能鏈，再套用 Tripline 的 feature branch、驗證與 PR 規則，詳見 `AGENTS.md`。
 - **規則**：`openspec/config.yaml` 定義強制規範，不論是否走 OpenSpec 流程都遵守。
 
 ## 為何重寫
