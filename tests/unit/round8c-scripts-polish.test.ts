@@ -79,6 +79,14 @@ describe('v2.33.51 round 8c — daily-check.js npm audit maxBuffer', () => {
   });
 });
 
+describe('daily-check.js npm audit timeout — 2026-07-31 daily-check autofix', () => {
+  it('npm audit execSync timeout 至少 120000ms（實測本機耗時 57s，60s 太貼近會 flaky ETIMEDOUT）', () => {
+    const match = DAILY_CHECK_SRC.match(/execSync\('npm audit[^)]*timeout:\s*(\d+)/s);
+    expect(match).not.toBeNull();
+    expect(Number(match![1])).toBeGreaterThanOrEqual(120000);
+  });
+});
+
 describe('v2.33.91 simplify — google-poi-refresh-30d batched parallel + first-batch 401 check', () => {
   // v2.33.91: 從 sequential for-of + firstCall finally pattern (v2.33.51 round 8c)
   // 改 batched Promise.allSettled。`isFirstBatch` 取代 `firstCall`，401 偵測仍生效。
