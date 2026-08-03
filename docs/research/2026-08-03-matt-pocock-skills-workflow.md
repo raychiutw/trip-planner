@@ -79,18 +79,16 @@ grill-with-docs → to-spec → to-tickets → implement → code-review
 
 換言之，核准 `/to-spec` 的測試 seams **不等於**核准之後尚未呈現的 ticket breakdown；拆票發布前仍需另一個明確核准點。
 
-## 與本 repo `AGENTS.md`／`CLAUDE.md` 的差異觀察
+## 寫入前差異與本次處理
 
-以下只記錄差異，不修改 [`AGENTS.md`](../../AGENTS.md) 或 [`CLAUDE.md`](../../CLAUDE.md)：
+以下是更新前的比較結果與處理方式，**不是現行操作指令**：
 
-1. `AGENTS.md` 把 `/qa → feature branch PR` 接在「Matt Pocock official chain」後方；官方速記鏈實際在 `/code-review` 結束。feature branch、PR 與額外 QA 可以保留成 Tripline 的本地規則，但不應標示為上游主鏈。[官方五段鏈](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/code-review.md#L39-L47)
-2. 官方 router 允許單一 session 可完成的小改動由 `/grill-with-docs` 直接進 `/implement`；`AGENTS.md` 目前仍要求小改動至少先有 spec。這是 repo 比上游更嚴格的本地 gate，不是官方預設。[官方條件分支](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/engineering/ask-matt/SKILL.md#L22-L30)
-3. `AGENTS.md` 的「spec 等待使用者核准」可能被解讀成 spec body 的第二次核准；上游 `to-spec` 只明文要求先確認 test seams，接著即寫入並發布。若保留第二次核准，應標示為本地規則。[`to-spec` source](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/engineering/to-spec/SKILL.md#L15-L19)
-4. `AGENTS.md` 路由到 `/design-an-interface`，但官方最新 repository 已將該 skill 放在 `skills/deprecated/`。[deprecated source](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/deprecated/design-an-interface/SKILL.md#L1-L8) 現行替代能力已收進 `codebase-design` 的 `DESIGN-IT-TWICE.md`，仍可用多個設計方案作比較。[現行 pattern](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/engineering/codebase-design/DESIGN-IT-TWICE.md#L1-L23)
-5. `AGENTS.md` 路由到 `/qa`，但官方最新 repository 同樣將它放在 `skills/deprecated/`；因此它若繼續使用，應被視為 Tripline 保留的 legacy/local 流程，而非目前官方核心 skill。[deprecated `qa`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/deprecated/qa/SKILL.md#L1-L8)
-6. `AGENTS.md` 已改為 Matt Pocock-first，`CLAUDE.md` 仍以 `/tp-team`、gstack-style plan/review/ship 流程為主；兩份文件的 hard rules 尚未同步，且會對同一個 code change 給出相反入口。
-7. `AGENTS.md` 的 universal prototype-before-layout-change 是 Tripline 的本地 mockup gate。官方 `/prototype` 是「有一個必須看 runnable result 才能解決的設計問題」時才進入的旁路，而不是所有 layout change 的通用硬性步驟。[官方 router](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/engineering/ask-matt/SKILL.md#L17-L24)
-8. `AGENTS.md` 的 feature branch／GitHub PR 規則也是本地發布政策。官方 `/implement` 只要求完成 review 後 commit 到「目前分支」，沒有規定 branch 或 PR 策略。[`implement` source](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/engineering/implement/SKILL.md#L7-L14)
+1. 官方速記鏈在 `/code-review` 結束；Tripline 的 feature branch、PR 與發布驗證保留為明確標示的本地 release policy。[官方五段鏈](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/code-review.md#L39-L47)
+2. 單一 session 可完成、需求已穩定的小改允許直接進 `/implement`，不再強制先產 spec。[官方條件分支](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/engineering/ask-matt/SKILL.md#L22-L30)
+3. `/to-spec` 的發布前核准點是 test seams；`/to-tickets` 的 breakdown 仍有獨立核准點。[`to-spec` source](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/engineering/to-spec/SKILL.md#L15-L19)
+4. 已從 Matt 路由移除 deprecated `/design-an-interface` 與 `/qa`；介面方案使用 `codebase-design`，使用者行為驗證走 repo tests 或 browser。[deprecated source](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/deprecated/design-an-interface/SKILL.md#L1-L8) [deprecated `qa`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/deprecated/qa/SKILL.md#L1-L8)
+5. `AGENTS.md` 與 `CLAUDE.md` 的 Matt-first 入口、mockup gate 與 browser policy 已同步；`/tp-team` 不再是必要入口。
+6. universal prototype-before-layout-change 與 feature branch／GitHub PR 都明列為 Tripline 本地政策，不宣稱是上游 Matt Pocock 規則。[官方 router](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/engineering/ask-matt/SKILL.md#L17-L24) [`implement` source](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/skills/engineering/implement/SKILL.md#L7-L14)
 
 ## 對目前 `to-spec → to-tickets` 的直接判定
 

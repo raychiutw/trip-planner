@@ -83,6 +83,24 @@ function payloadWith(suffix: string, timeline: unknown[]) {
 }
 
 describe('POST /api/trips/import — entry note round-trip（master poi note）', () => {
+  it('舊 weather_json 欄位回傳 400，不得靜默忽略', async () => {
+    const base = payloadWith('legacy-weather', []);
+    const payload = { ...base, days: [{ ...base.days[0], weather_json: {} }] };
+    const ctx = mockContext({
+      request: new Request('https://test.com/api/trips/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+    });
+
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(400);
+    await expect(resp.json()).resolves.toMatchObject({ error: { detail: 'weather_json 已移除' } });
+  });
+
   it('entry-level note → master poi（master 自己沒帶 note 時繼承）', async () => {
     const tripId = await runImport(
       payloadWith('inherit', [
