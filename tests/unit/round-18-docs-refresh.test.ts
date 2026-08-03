@@ -77,10 +77,11 @@ describe('v2.33.68 #3 — CONTRIBUTING.md .dev.vars + bun + Node 22', () => {
   });
 });
 
-describe('v2.33.68 #4 — AGENTS.md sync from CLAUDE.md', () => {
-  it('Hard Rules 加 Mockup-first hard gate', () => {
+describe('AGENTS.md workflow', () => {
+  it('uses the official Matt Pocock chain and keeps the Mockup-first hard gate', () => {
     expect(AGENTS).toMatch(/Mockup-first hard gate/);
-    expect(AGENTS).toMatch(/Code change.*tp-team.*first/);
+    expect(AGENTS).toMatch(/grill-with-docs.*to-spec.*to-tickets.*implement.*code-review/s);
+    expect(AGENTS).toMatch(/Do not invoke `\/tp-team`/);
   });
 
   it('加 Naming history summary', () => {
@@ -88,9 +89,9 @@ describe('v2.33.68 #4 — AGENTS.md sync from CLAUDE.md', () => {
     expect(AGENTS).toMatch(/v2\.23\.0\+.*Google Maps Platform/);
   });
 
-  it('typo `.Codex` → `.claude` 修正', () => {
+  it('points to the installed Matt Pocock skills directory', () => {
     expect(AGENTS).not.toMatch(/\.Codex\/skills/);
-    expect(AGENTS).toMatch(/\.claude\/skills/);
+    expect(AGENTS).toMatch(/~\/\.agents\/skills/);
   });
 });
 
