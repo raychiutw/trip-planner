@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.85] - 2026-08-03
+
+### Removed
+- **完整移除天氣預報** —— 行程頁不再顯示或載入天氣資料，每日 Hero 後直接接續時間軸；同時移除天氣骨架、第三方請求與預連線、專用程式、公開文案、隱私聲明及現行規格與技能中的天氣契約。
+
+### Changed
+- Day 更新與行程匯入收到舊版 `weather` 或 `weather_json` 欄位時，現在明確回傳 HTTP 400，不再靜默忽略。
+- 專案 agent 文件對齊 Matt Pocock 官方技能流程：釐清、規格、拆票、實作、審查，再銜接本專案發布流程。
+
 ## [2.57.82] - 2026-07-29
 
 ### Fixed
