@@ -2,11 +2,10 @@
  * PATCH /api/trips/:id/entries/batch — 一次更新多個 entries 的 sort_order /
  * day_id / start_time / end_time，drag-drop reorder 結束後背景 commit 用。
  *
- * Spec: openspec/changes/ideas-drag-to-itinerary/specs/drag-to-reorder/spec.md
- *   "Batch update 優化 D1 寫入" — 用單一 transaction batch update，避免 N+1。
+ * Contract: 用單一 transaction batch update，避免 drag-drop reorder 的 N+1 寫入。
  *
- * Naming: spec 用 `order_in_day`，DB 是 `sort_order`；endpoint 接 DB 名稱以
- * 對齊 PATCH /entries/:eid 既有 contract，前端 mapper 在 IdeasTab/Timeline 處理。
+ * Naming: DB 與 endpoint 使用 `sort_order`，對齊 PATCH /entries/:eid 既有
+ * contract；前端 mapper 在 IdeasTab/Timeline 處理。
  *
  * v2.29.0 (migration 0062): trip_entries.{time, travel_*} 8 cols DROPPED。
  *   - `time` legacy → start_time/end_time 拆分（v2.26 起 dual-write）

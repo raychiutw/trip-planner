@@ -3,7 +3,7 @@
 這份是 **ubiquitous language**：agent 與人在 issue 標題、重構提案、測試名稱、commit 訊息裡都用這裡的詞，不要飄到同義詞。
 
 深度資料在別處，這裡只定義「叫什麼、是什麼、別叫什麼」：
-資料模型與架構決策 → `ARCHITECTURE.md`｜UI/UX 規範 → `DESIGN.md`｜能力規格 → `openspec/specs/`
+資料模型與架構決策 → `ARCHITECTURE.md`｜UI/UX 規範 → `DESIGN.md`｜待做需求與規格 → GitHub Issues
 
 ---
 

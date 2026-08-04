@@ -45,7 +45,6 @@ On-ramps（匯入主線）：
 - `tp-*` skills hit API, not local files.
 - Agent tool only for worktree isolation（Workflow tool 內部的 `agent()` 不受此限）。
 - Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
-- Post-ship retroactive OpenSpec archive if PR didn't propose first。⚠️ `openspec/specs/` 底下多數檔案的首行是 `## ADDED/MODIFIED Requirements` —— 那是 change delta 被直接放進 `specs/` 當成持續有效的規格，讀之前先確認它是規格還是某次變更的差異檔。
 - **Mockup-first hard gate**：所有 new page / new component（≥1 layout 變化）→ `/prototype` 的 UI branch 產生可比較 prototype → user sign-off → 才寫 React。Bug fix / token drift / 純 prop tweak / 內部 refactor（無 UX 變化）例外。
 
 ## Layout

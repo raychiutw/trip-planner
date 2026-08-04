@@ -8,9 +8,8 @@
  *   - 8.3 keyboard Tab + Space + Arrow + Enter
  *
  * 範圍備註：
- *   - Ideas tab (TripSheet) 在當前 IA 已 redirect 到 /trips?selected=:id（見
- *     openspec/changes/archive/2026-04-25-url-driven-sheet-state），E2E 路徑
- *     上 Ideas drag UI 不可達 → 8.1 promote / 8.2 mobile drag 用「a11y / DOM
+ *   - Ideas tab (TripSheet) 在當前 IA 已 redirect 到 /trips?selected=:id，E2E
+ *     路徑上 Ideas drag UI 不可達 → 8.1 promote / 8.2 mobile drag 用「a11y / DOM
  *     contract 可達性」驗證取代 runtime drag gesture。
  *   - dnd-kit gesture 在 Playwright 跨 jsdom + headed 不穩，runtime drag 完整
  *     scenario 留 V2 lift DndContext 後（含真正 Ideas tab UI）跑。

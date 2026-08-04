@@ -375,6 +375,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
   | lg | `0 10px 28px rgba(0,0,0,0.12)` | 浮層、toast、sheet |
 - **Focus ring:** 焦點指示一律 `outline: 2px solid var(--color-focus-ring)` + `outline-offset: 2px` + 內帶 `box-shadow: 0 0 0 2px var(--color-background)`，規則見 **§Focus Indicator**。⚠️ **`--shadow-ring` 已於 2026-07-26 依 HIG 否決並刪除**（v2.57.68 / #1182）—— 看到這個名字表示讀到過期文件。
 - **Hairline borders:** `1px solid #EADFCF`（light）/`1px solid #3A3127`（dark）取代重邊線。卡片區分用 border 而非 shadow。
+- **Scrollbars:** 全域捲軸寬高 6px、軌道透明、滑塊圓角，顏色只引用 `--scrollbar-thumb` / `--scrollbar-thumb-hover`（light / dark 各自覆寫）。元件層只允許兩種例外：水平滑動列隱藏捲軸，或時間／月份 picker 使用 4px 專用窄捲軸；不得重複宣告另一套預設外觀。
 
 ## Motion
 - **Approach:** Intentional — Apple 風格流暢動效，不花俏但有質感
@@ -729,9 +730,9 @@ Mockup sign-off：`docs/design-sessions/2026-05-30-share-page.html`（Variant B�
 
 ## Desktop CRUD Interaction (macOS HIG)
 
-> **本段是規範（SoT），不是現況描述。** 現況對齊盤點見 openspec change `macos-hig-crud-spec` 的 `design.md` 附錄 —— 那份是一次性快照、會隨實作過時，所以刻意不放在這裡。**待對齊項不代表規範可以打折**：讀到「code 這樣寫」時請以本段為準（`CLAUDE.md`：code 不符 SoT ＝ bug）。
+> **本段是唯一規範（SoT），不是現況描述。** 一次性現況盤點已由 PR #1184 完成並發布；那類快照會隨實作過時，所以不保留為第二份規範。**待對齊項不代表規範可以打折**：讀到「code 這樣寫」時請以本段為準（`CLAUDE.md`：code 不符 SoT ＝ bug）。
 >
-> 規範來源：Apple macOS HIG（owner 2026-07-25 要求把已研究的 iOS CRUD 互動整理成 macOS 對應版）。可測 requirement 落在 `openspec/changes/macos-hig-crud-spec/specs/desktop-crud-interaction/spec.md`；本段是它的散文版，兩者衝突時以 spec 的 SHALL/MUST 條文為準。
+> 規範來源：Apple macOS HIG（owner 2026-07-25 要求把已研究的 iOS CRUD 互動整理成 macOS 對應版）。Owner 後續決策由 PR #1188 收斂；可測行為由現行程式與測試守住。
 >
 > **這段規範與下方 §Modal Dialogs 的 Surface 對應表、§Error & Status Messaging 的 Toast 原則有交集，三處已對齊**（見各處的交叉註記）。政策在這裡，機制在 §Modal Dialogs。
 

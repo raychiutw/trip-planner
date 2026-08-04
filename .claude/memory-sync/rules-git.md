@@ -10,4 +10,4 @@
   Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
   ```
 - pre-commit hook（`.git/hooks/pre-commit`）自動根據 staged 檔案跑對應測試
-- push 後檢查本次變更是否影響專案規則或架構，若有則同步更新 `CLAUDE.md` 與 `openspec/config.yaml`
+- push 後檢查本次變更是否影響專案規則、架構或設計，若有則同步更新對應的 `AGENTS.md`、`CLAUDE.md`、`ARCHITECTURE.md` 或 `DESIGN.md`

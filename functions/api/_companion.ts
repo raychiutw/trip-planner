@@ -1,7 +1,5 @@
 /**
- * Companion mapping helper — poi-favorites-rename §4.
- *
- * Spec: openspec/changes/poi-favorites-rename/specs/tp-companion-mapping/spec.md
+ * Companion mapping helper for poi_favorites operations.
  *
  * Failure path is fail-closed: client always sees 401 `AUTH_REQUIRED`; the
  * specific reason lives in audit_log.companion_failure_reason so prod can
