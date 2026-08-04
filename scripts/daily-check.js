@@ -16,32 +16,10 @@ var path = require('path');
 var todayISO = require('./lib/local-date').todayISO;
 var { execSync } = require('child_process');
 
-// 從 openspec/config.yaml 讀取 env（fallback for 本機執行）
-function loadConfigYaml() {
-  try {
-    var configPath = path.join(__dirname, '..', 'openspec', 'config.yaml');
-    var content = fs.readFileSync(configPath, 'utf8');
-    var env = {};
-    var inEnv = false;
-    content.split('\n').forEach(function(line) {
-      if (/^env:/.test(line)) { inEnv = true; return; }
-      if (inEnv && /^\S/.test(line)) { inEnv = false; return; }
-      if (inEnv) {
-        var m = line.match(/^\s+(\w+):\s*(.+)/);
-        if (m && !m[2].startsWith('#') && !m[2].startsWith('(')) {
-          env[m[1]] = m[2].replace(/^["']|["']$/g, '').replace(/#.*$/, '').trim();
-        }
-      }
-    });
-    return env;
-  } catch(e) { return {}; }
-}
-
 // v2.33.29: .env.local 載入改用 shared scripts/lib/load-env（注入 process.env）
 require('./lib/load-env').loadEnvLocal();
 
-var yamlEnv = loadConfigYaml();
-function env(key) { return process.env[key] || yamlEnv[key] || ''; }
+function env(key) { return process.env[key] || ''; }
 
 var CF_TOKEN = env('CLOUDFLARE_API_TOKEN');
 var CF_ACCOUNT = env('CF_ACCOUNT_ID');

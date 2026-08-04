@@ -1,8 +1,8 @@
 /**
  * PoiFavoritesPage — V2 「收藏」 primary nav (v2.21.0)
  *
- * mockup-driven hard gate aligned (docs/design-sessions/2026-05-04-favorites-redesign.html v4，
- * user sign-off 2026-05-04)。對齊 DESIGN.md L623-665 規範：
+ * mockup-driven hard gate 已於 2026-05-04 sign-off；現行規範以 DESIGN.md
+ * 的收藏頁規範為準：
  *   - TitleBar title「收藏」（統一 nav label，ownership 由 hero eyebrow 補）
  *   - 8-state matrix: loading / empty-pool / filter-no-results / error / data /
  *                     optimistic-delete / bulk-action-busy / pagination

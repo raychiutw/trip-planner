@@ -1,12 +1,11 @@
 /**
  * Integration test — PATCH /api/trips/:id/entries/batch
  *
- * Spec: openspec/changes/ideas-drag-to-itinerary/specs/drag-to-reorder/spec.md
- *   "Batch update 優化 D1 寫入" — 同 Day reorder 多 entries 時 SHALL 用單一
- *   transaction batch update，避免 N+1 write。drag drop 後一次送 5 entries。
+ * 同 Day reorder 多 entries 時使用單一 transaction batch update，避免 N+1
+ * write；drag drop 後一次送 5 entries。
  *
- * Field naming：spec 用 `order_in_day`，DB schema 用 `sort_order`。endpoint
- * 接 `sort_order`（一致 PATCH /entries/:eid 既有 contract）。
+ * Field naming：DB schema 與 endpoint 都使用 `sort_order`，對齊
+ * PATCH /entries/:eid 既有 contract。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';

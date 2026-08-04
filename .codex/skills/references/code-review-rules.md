@@ -1,6 +1,6 @@
 # Code Review 規則
 
-從 superpowers:code-reviewer 審查經驗中累積的品質規則。
+從 repository 歷次 code review 累積的品質規則。
 每次 commit 前需對照檢查。
 
 ---

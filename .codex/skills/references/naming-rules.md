@@ -1,6 +1,6 @@
 # 命名規範（Naming Rules）
 
-此為唯一權威來源。`openspec/config.yaml` naming 區塊、`tp-code-verify`、`tp-ux-verify` 等均參照此文件。
+此為唯一權威來源。`tp-code-verify`、`tp-ux-verify` 等均參照此文件。
 
 ---
 

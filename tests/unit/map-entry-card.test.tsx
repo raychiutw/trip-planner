@@ -2,8 +2,7 @@
  * MapEntryCard — Map page entry card primitive.
  *
  * 視覺對應：docs/design-sessions/terracotta-preview-v2.html Section 20 entry cards
- * Spec: openspec/changes/terracotta-pages-refactor/specs/terracotta-page-layout/spec.md
- *       Requirement「Pin type icon 系統（entry card 上）」
+ * 規範：DESIGN.md §Stop Card 與 §地圖 chrome 子例外
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';

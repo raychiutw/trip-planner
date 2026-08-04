@@ -12,4 +12,3 @@ exclude:
   - functions
   - migrations
   - scripts
-  - openspec

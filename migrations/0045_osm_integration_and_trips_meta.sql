@@ -1,5 +1,4 @@
 -- 0045: OSM Integration + Trip Modal v2 (2026-05-02)
--- See openspec/changes/2026-05-02-osm-integration-trip-modal-v2/proposal.md
 --
 -- Changes:
 --   1. trips: DROP 6 dead/over-engineered cols (auto_scroll, og_description, footer,
