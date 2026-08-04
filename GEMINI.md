@@ -11,7 +11,7 @@
 | 開發工作流與發布規則 | [AGENTS.md](AGENTS.md) |
 | 專案事實、命名歷史與環境變數 | [CLAUDE.md](CLAUDE.md) |
 | 待辦 / 已完成項目 | [TODOS.md](TODOS.md) |
-| 進行中規格 | [SPEC.md](SPEC.md) |
+| 進行中需求與規格 | [GitHub Issues](https://github.com/raychiutw/trip-planner/issues) |
 | 版本紀錄 | [CHANGELOG.md](CHANGELOG.md) |
 
 ## 給 AI agent 的最低限度 onboarding
@@ -21,7 +21,7 @@
 - **Skills**：程式變更依 `AGENTS.md` 的 Matt Pocock 工作流；`/tp-create`、`/tp-edit`、`/tp-check` 等行程資料技能直接走 API，skill 定義同步放在 `.codex/skills/` 與 `.claude/skills/`。
 - **語言**：所有溝通與 commit message 用繁體中文（台灣）。
 - **Workflow**：依工作規模走 Matt Pocock 官方技能鏈，再套用 Tripline 的 feature branch、驗證與 PR 規則，詳見 `AGENTS.md`。
-- **規則**：`openspec/config.yaml` 定義強制規範，不論是否走 OpenSpec 流程都遵守。
+- **規則**：代理流程依 `AGENTS.md`，架構依 `ARCHITECTURE.md`，UI/UX 依 `DESIGN.md`。
 
 ## 為何重寫
 

@@ -58,7 +58,7 @@ index.html   SPA entry（→ src/entries/main.tsx）
 
 **排除**（不驗證）：
 ```
-node_modules/  .wrangler/  .playwright-mcp/  openspec/  .claude/  .gemini/
+node_modules/  .wrangler/  .playwright-mcp/  .claude/  .gemini/
 package*.json  wrangler.toml  migrations/*.sql
 scripts/*.ps1  scripts/*.sh
 tests/e2e/api-mocks.js（mock 資料）

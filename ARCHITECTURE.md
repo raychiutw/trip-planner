@@ -405,7 +405,7 @@ tests/
 | **v2.20.0** | 0046 phase 1 | `trip_ideas` table 退場 phase 1；tp-request mode rip-out 啟動。 |
 | **v2.19.x** | 0045 | `pois.google_rating` → `rating`；`pois.maps` DROPPED；`trips.{auto_scroll,og_description,footer,food_prefs,is_default,self_drive}` DROPPED。 |
 
-**找舊欄名 / 舊 route 規則**：grep 整個 codebase 後 fail → 對照表確認是否已 rename → 改用新名 → 不要寫 alias。新功能 reference `openspec/specs/` 而非 `openspec/changes/archive/`（archive spec 有 banner 標明 superseded）。
+**找舊欄名 / 舊 route 規則**：grep 整個 codebase 後 fail → 對照表確認是否已 rename → 改用新名 → 不要寫 alias。新需求與規格走 GitHub Issues；現行架構以本文件、程式碼與測試為準。
 
 ---
 

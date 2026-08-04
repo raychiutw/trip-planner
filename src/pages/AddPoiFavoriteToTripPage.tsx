@@ -4,8 +4,8 @@
  * v2.22.0 改 4-field 純時間驅動：{ tripId, dayNum, startTime, endTime }。
  * 不再含 position radio / anchorEntryId — server 依 startTime 自動排 sort_order。
  *
- * mockup-driven hard gate aligned (docs/design-sessions/2026-05-04-favorites-redesign.html v4
- * sign-off 2026-05-04，frame B1/B2/B3)。對齊 DESIGN.md L580-602 規範。
+ * mockup-driven hard gate 已於 2026-05-04 sign-off；現行規範以 DESIGN.md
+ * 的收藏加入行程流程為準。
  *
  * Mockup classes：tp-form-poi-summary / tp-form / tp-form-field / tp-form-label /
  * tp-form-select / tp-form-input.tabular / tp-form-help / tp-form-actions / tp-action-btn。

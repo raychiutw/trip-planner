@@ -55,9 +55,7 @@ Detailed comparison: [`docs/research/2026-08-03-matt-pocock-skills-workflow.md`]
 When multiple skill frameworks could apply and the user has not named one, use this priority:
 
 1. Matt Pocock engineering skills in `~/.agents/skills/`
-2. OpenSpec
-3. Superpowers
-4. gstack
+2. gstack
 
 Do not stack duplicate workflows. Use a lower-priority framework only when the
 Matt Pocock skills do not cover the task or the user explicitly requests it.
@@ -120,8 +118,8 @@ Match → invoke the Matt Pocock `Skill` first.
 - Code review → `/code-review`
 - User-facing verification / durable issue filing → repository tests or browser + normal `gh`
 
-OpenSpec, Superpowers, and gstack are fallback frameworks in that order; they
-must not replace or duplicate an applicable Matt Pocock workflow unless the
+gstack remains available only for gaps the Matt Pocock workflow does not cover;
+it must not replace or duplicate an applicable Matt Pocock workflow unless the
 user explicitly asks.
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `docs/agents/`.

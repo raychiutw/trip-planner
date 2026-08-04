@@ -168,6 +168,6 @@ type 為 `hotel` 的 pois 建議有 `phone`（電話）。缺少 → **warning**
 - **travel**：Day N 首 entry 的 `travel` 描述「從前日飯店出發至下一站」。若首 entry 與下一站位於同地點（如飯店內早餐接 check-out），`travel` 為 `null`。
 - **換宿 vs 連住**：Day N 首 entry 不管 Day N 是否換宿，皆指向 Day N-1 的 hotel POI；換宿情境 Day N 末仍保留新飯店 check-in entry + `day.hotel`。
 
-**Canonical spec**：`openspec/specs/daily-first-stop/spec.md`（archive 後路徑；ship 前位於 `openspec/changes/daily-first-stop-hotel-bridge/specs/daily-first-stop/spec.md`）。包含完整 scenario 定義。
+**Canonical rule**：本節 R19；`tp-check`、`tp-create`、`tp-edit`、`tp-rebuild` 一律引用這裡，不另存副本。
 
 **與 R0 Hotel 結構正交**：R0「最後一天不設 hotel」與 R19「最後一天首 entry 為前日飯店 check-out」同時成立 — 前者規範 `day.hotel`、後者規範 `timeline[0]`，不衝突。

@@ -2,9 +2,6 @@
  * dnd-kit Announcements — 中文化 screen reader 提示，供 Ideas/Itinerary
  * DndContext 的 `accessibility.announcements` 套用。
  *
- * Spec: openspec/changes/ideas-drag-to-itinerary/specs/drag-to-reorder/spec.md
- *   "Drag keyboard 支援（a11y）" + drag-to-promote spec 「a11y fallback」要求。
- *
  * dnd-kit 預設提供英文 announcements（"Picked up draggable item ..."）。本檔
  * 改成繁體中文，落到 `<DndLiveRegion role="status" aria-live="assertive">`，
  * keyboard / screen reader 使用者操作時即時播報目前狀態。
