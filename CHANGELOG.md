@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.86] - 2026-08-05
+
+### Fixed
+- **飯店在時間軸上有編號了** —— 先前住宿會顯示床鋪圖示取代序號，導致同一天的停留點編號跳號（例如 1、床、2），不容易對照第幾站。現在飯店和其他停留點共用連續編號。
+
 ## [2.57.85] - 2026-08-03
 
 ### Removed
