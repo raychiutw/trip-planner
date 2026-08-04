@@ -92,6 +92,18 @@ afterEach(() => {
 });
 
 describe('TimelineRail — inline expand', () => {
+  it('飯店與其他停留點共用連續編號', () => {
+    const { container } = renderRail([
+      { id: 1, displayTitle: '那霸機場', poiType: 'attraction' },
+      { id: 2, displayTitle: 'Vessel Hotel', poiType: 'hotel' },
+      { id: 3, displayTitle: 'Sunset Beach', poiType: 'attraction' },
+    ]);
+    const markers = [...container.querySelectorAll('.tp-rail-dot')];
+
+    expect(markers.map((marker) => marker.textContent)).toEqual(['1', '2', '3']);
+    expect(container.querySelector('.tp-rail-dot .svg-icon')).toBeNull();
+  });
+
   it('all rows collapsed by default', () => {
     renderRail();
     expect(screen.queryByTestId('timeline-rail-detail-42')).toBeNull();
