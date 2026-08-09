@@ -74,7 +74,7 @@
     "@headlessui/react": "^2.2.10",
     "@sentry/react": "^10.69.0",
     "@sentry/vite-plugin": "^5.4.0",
-    "@types/google.maps": "^3.65.3",
+    "@types/google.maps": "^3.65.4",
     "@types/qrcode": "^1.5.6",
     "@vitejs/plugin-react": "^6.0.5",
     "clsx": "^2.1.1",
