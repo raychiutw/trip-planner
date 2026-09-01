@@ -98,7 +98,7 @@ funnel_hostname() {
 # delegation 走系統 resolver — 但 NS record 穩定少變（不像 funnel A record 頻繁
 # re-publish），故本 incident 的 negative-cache 不影響 NS 查詢；只有 A record 必須
 # 走 authoritative。dig 取不到 NS 時 fallback 到已知 dnsimple NS。grep 過濾純 IPv4
-# 行（排除 CNAME/雜訊）。echoes first resolved IP；失敗 echo empty + 非 0 exit。
+# 行（排除 CNAME/雜訊）。echoes 所有 resolved IP（換行分隔）；失敗 echo empty + 非 0 exit。
 # ponytail: any-one-NS-has-record 即算發布 — dnsimple anycast edge 偶有 serial 落後但
 # 只要一個 edge 有 record 就代表控制平面已發布，不因單一 stale edge 誤判 drift。
 #
@@ -131,11 +131,16 @@ is_funnel_dns_published() {
   funnel_resolve_authoritative "$host" >/dev/null
 }
 
-# L3：用 authoritative IP direct HTTPS reach — 收到任何真 HTTP response (1xx-5xx，含
-# 4xx) 都算 reachable。curl transport fail (TCP refused / TLS / timeout) 時
-# %{http_code}=000，必須排除，否則 dead ingress 會被誤判 healthy → 不 heal（codex
-# 2026-07-05 抓到的既有 bug）。--resolve 強制走該 IP，避過本機 MagicDNS 與 recursive
-# 污染。10s timeout 涵蓋 DERP relay cold path。
+# L3：對 authoritative 回傳的【每個】edge IP 做 direct HTTPS reach — 收到任何真 HTTP
+# response (1xx-5xx，含 4xx) 都算 reachable。curl transport fail (TCP refused / TLS /
+# timeout) 時 %{http_code}=000，必須排除，否則 dead ingress 會被誤判 healthy → 不 heal
+# （codex 2026-07-05 抓到的既有 bug）。--resolve 強制走該 IP，避過本機 MagicDNS 與
+# recursive 污染。10s timeout 涵蓋 DERP relay cold path。
+#
+# 時間預算：healthy 時第一個 edge 通就早退（成本不變）。最壞情況（全 edge 不通）為
+# edge 數 × 10s，乘上 is_funnel_healthy 的 3 次 retry 加 2 × 15s 間隔 —— 2 個 edge =
+# 90s，仍在 launchd 120s interval 內（heal_failed 警報不被拖過一輪，見 codex P1）。
+# edge 數若增到 3 個就會撞上 interval，屆時需縮 --max-time 或降 retry 次數。
 # 失敗細節存 REACH_DETAIL（ip / curl exit / http_code）供 caller log — 2026-07-07
 # 型態 D 事後只有「reach 失敗」四個字，診斷靠猜。
 is_funnel_reach_ok() {
