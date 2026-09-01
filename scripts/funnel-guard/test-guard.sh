@@ -88,6 +88,17 @@ if [ -n "$host" ]; then
     else
       ok "全 edge 不通 → unhealthy（真故障仍偵測得到）"
     fi
+    # REACH_DEGRADED 不得跨呼叫殘留：先製造降級值，再走 resolve-fail 的 early
+    # return，殘值會讓 caller 對著上一輪的 edge 狀態發 log。
+    funnel_resolve_authoritative() { printf '127.0.0.1\n%s' "$good_ip"; }
+    is_funnel_reach_ok "$host" >/dev/null
+    funnel_resolve_authoritative() { return 1; }
+    is_funnel_reach_ok "$host" >/dev/null
+    if [ -n "${REACH_DEGRADED:-}" ]; then
+      bad "REACH_DEGRADED 殘留上一輪的值 ($REACH_DEGRADED) — early return 沒清"
+    else
+      ok "REACH_DEGRADED 每次呼叫先清（early return 路徑也清）"
+    fi
   fi
 else
   skip "no funnel hostname — 跳過多 edge 驗證"

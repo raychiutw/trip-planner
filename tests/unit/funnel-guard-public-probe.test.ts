@@ -159,6 +159,12 @@ describe('L3 多 edge 探測（2026-09-01 incident：單 edge head -1 誤報 159
     expect(GUARD).not.toContain('AAAA');
   });
 
+  it('REACH_DEGRADED 在任何 early return 之前就清空（殘值不得跨呼叫存活）', () => {
+    expect(GUARD).toMatch(
+      /REACH_DEGRADED=""[\s\S]{0,120}\[ -z "\$host" \] && return 1[\s\S]{0,200}authoritative resolve failed/,
+    );
+  });
+
   it('部分 edge 掛掉但服務可達 → 記錄降級並明說不 heal（追蹤單 edge 長期劣化）', () => {
     expect(GUARD).toContain('REACH_DEGRADED=""');
     expect(GUARD).toContain('[ ${#details[@]} -gt 0 ] && REACH_DEGRADED="${(j:; :)details}"');

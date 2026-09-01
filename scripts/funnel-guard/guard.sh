@@ -145,10 +145,12 @@ is_funnel_dns_published() {
 # 型態 D 事後只有「reach 失敗」四個字，診斷靠猜。
 is_funnel_reach_ok() {
   local host="$1" ips ip http_code curl_exit
+  local -a details
+  # 先清再做任何 early return —— 否則 resolve 失敗那條路徑會留著上一輪的降級字串，
+  # caller 讀到殘值。目前 caller 只在成功時讀 REACH_DEGRADED，但別讓正確性靠呼叫慣例。
+  REACH_DEGRADED=""
   [ -z "$host" ] && return 1
   ips=$(funnel_resolve_authoritative "$host") || { REACH_DETAIL="authoritative resolve failed"; return 1; }
-  local -a details
-  REACH_DEGRADED=""
   # 逐一嘗試每個 edge，任一通即算對外可達 — 對齊真實 client 行為（拿到整份 A
   # record 清單，第一個不通會 fallback）。2026-09-01 incident：舊版 head -1 恆
   # 定只探 .153，該 edge 一抖動就判整個 funnel 壞 → 單日 159 次誤報 + 38 次
