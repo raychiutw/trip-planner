@@ -142,7 +142,8 @@ describe('L3 多 edge 探測（2026-09-01 incident：單 edge head -1 誤報 159
   });
 
   it('L3 逐一嘗試每個 edge，任一通即判 reachable', () => {
-    expect(GUARD).toContain('for ip in ${(f)ips}; do');
+    // (u) 去重：重複 A record 不得讓探測時間翻倍
+    expect(GUARD).toContain('for ip in ${(u)${(f)ips}}; do');
     // 命中 → 設 REACH_DETAIL 後立即 return 0（早退，不必等其餘 edge）
     expect(GUARD).toMatch(
       /REACH_DETAIL="ip=\$\{ip\} curl_exit=\$\{curl_exit\} http_code=\$\{http_code\}"[\s\S]{0,400}return 0/,

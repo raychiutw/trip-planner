@@ -137,10 +137,15 @@ is_funnel_dns_published() {
 # （codex 2026-07-05 抓到的既有 bug）。--resolve 強制走該 IP，避過本機 MagicDNS 與
 # recursive 污染。10s timeout 涵蓋 DERP relay cold path。
 #
-# 時間預算：healthy 時第一個 edge 通就早退（成本不變）。最壞情況（全 edge 不通）為
-# edge 數 × 10s，乘上 is_funnel_healthy 的 3 次 retry 加 2 × 15s 間隔 —— 2 個 edge =
-# 90s，仍在 launchd 120s interval 內（heal_failed 警報不被拖過一輪，見 codex P1）。
-# edge 數若增到 3 個就會撞上 interval，屆時需縮 --max-time 或降 retry 次數。
+# 時間預算（2026-09-01 codex adversarial 修正了原本漏算的數字）：
+#   healthy（第一個 edge 通就早退）    ≈ 10s —— 絕大多數情況，成本與單 edge 版本相同
+#   全 edge 不通（真故障，會走 heal）  ≈ 3 retry × (N × 10s) + 2×15s + heal 3s + sleep 5s
+#                                        + heal 後重驗 (N × 10s)  = 40N + 38
+#     N=2 → ~118s，已貼齊 launchd 的 120s interval；N=3 → ~158s，超出。
+# 後果是良性而非崩潰：launchd 同 label 不會併發啟動，超時只是把下一輪往後推；此時
+# heal_failed 的 Telegram 早已發出。plist 的 KeepAlive SuccessfulExit=false 會在
+# exit 1 後隔 ThrottleInterval 10s respawn，於是真故障期間的節奏約 130s 一輪而非 120s。
+# 要根治得讓 retry 迴圈看「已耗時」而不是「次數」—— 那是獨立改動，不塞進這次止血。
 # 失敗細節存 REACH_DETAIL（ip / curl exit / http_code）供 caller log — 2026-07-07
 # 型態 D 事後只有「reach 失敗」四個字，診斷靠猜。
 is_funnel_reach_ok() {
@@ -155,14 +160,17 @@ is_funnel_reach_ok() {
   # record 清單，第一個不通會 fallback）。2026-09-01 incident：舊版 head -1 恆
   # 定只探 .153，該 edge 一抖動就判整個 funnel 壞 → 單日 159 次誤報 + 38 次
   # heal（36 次無效，serve reset 對 edge 側問題無用且 reset 瞬間 funnel 真 off）。
-  for ip in ${(f)ips}; do
+  for ip in ${(u)${(f)ips}}; do   # (u) 去重：重複 A record 會讓探測時間翻倍
     http_code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 \
       --resolve "${host}:443:${ip}" "https://${host}/" 2>/dev/null)
     curl_exit=$?
     if [[ "$http_code" =~ ^[1-5][0-9]{2}$ ]]; then
       REACH_DETAIL="ip=${ip} curl_exit=${curl_exit} http_code=${http_code}"
-      # 前面有 edge 不通但這個通 → 服務可達（不 heal），仍記錄降級供追蹤單一
-      # edge 長期劣化（2026-09-01：.153 大量 timeout，.217 正常，舊版看不見）
+      # 前面有 edge 不通但這個通 → 服務可達（不 heal），仍記錄降級供追蹤單一 edge
+      # 長期劣化（2026-09-01：.153 大量 timeout，.217 正常，舊版看不見）。
+      # 範圍限制：因為命中即早退，這裡只記錄「排在可用 edge 之前」的壞 edge；排在
+      # 後面的壞 edge 不會被探到。完整的全 edge 健康度需要獨立的時間預算設計（見上
+      # 方時間預算 note），不在這次止血範圍。
       [ ${#details[@]} -gt 0 ] && REACH_DEGRADED="${(j:; :)details}"
       return 0
     fi

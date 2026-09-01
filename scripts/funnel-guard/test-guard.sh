@@ -88,6 +88,16 @@ if [ -n "$host" ]; then
     else
       ok "全 edge 不通 → unhealthy（真故障仍偵測得到）"
     fi
+    # 重複 A record 不得讓探測時間翻倍（codex adversarial #2）
+    funnel_resolve_authoritative() { printf '127.0.0.1\n127.0.0.1\n127.0.0.1'; }
+    is_funnel_reach_ok "$host" >/dev/null
+    dup_probes=$(printf '%s' "${REACH_DETAIL:-}" | grep -o 'ip=' | wc -l | tr -d ' ')
+    if [ "$dup_probes" -eq 1 ]; then
+      ok "重複 A record 去重（3 個相同 IP 只探 1 次）"
+    else
+      bad "重複 A record 探了 $dup_probes 次 — 沒去重，惡意/異常 DNS 可拖長單輪執行"
+    fi
+
     # REACH_DEGRADED 不得跨呼叫殘留：先製造降級值，再走 resolve-fail 的 early
     # return，殘值會讓 caller 對著上一輪的 edge 狀態發 log。
     funnel_resolve_authoritative() { printf '127.0.0.1\n%s' "$good_ip"; }
