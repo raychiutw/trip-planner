@@ -101,9 +101,13 @@ funnel_hostname() {
 # 行（排除 CNAME/雜訊）。echoes first resolved IP；失敗 echo empty + 非 0 exit。
 # ponytail: any-one-NS-has-record 即算發布 — dnsimple anycast edge 偶有 serial 落後但
 # 只要一個 edge 有 record 就代表控制平面已發布，不因單一 stale edge 誤判 drift。
+#
+# 2026-09-01 incident：回傳【所有】A record，不再 head -1。Tailscale 對 funnel
+# hostname 發布多個 ingress edge（本次 .153 / .217），真實 client 會 fallback；
+# 只探第一個會把單 edge 抖動誤判成整個 funnel 壞（詳見 is_funnel_reach_ok）。
 FALLBACK_NS=(ns1.dnsimple.com ns2.dnsimple-edge.net ns3.dnsimple.com ns4.dnsimple-edge.org)
 funnel_resolve_authoritative() {
-  local host="$1" ip ns
+  local host="$1" ips ns
   [ -z "$host" ] && return 1
   local -a nslist
   # grep 只留合法 NS hostname 行（結尾點）— dig 連線層失敗會把 `;; ...` 診斷印到
@@ -112,9 +116,9 @@ funnel_resolve_authoritative() {
   [ ${#nslist[@]} -eq 0 ] && nslist=("${FALLBACK_NS[@]}")
   for ns in "${nslist[@]}"; do
     [ -z "$ns" ] && continue
-    ip=$(dig +short +time=3 +tries=1 A "$host" @"$ns" 2>/dev/null | grep -E '^[0-9]+\.[0-9.]+$' | head -1)
-    if [ -n "$ip" ]; then
-      printf '%s' "$ip"
+    ips=$(dig +short +time=3 +tries=1 A "$host" @"$ns" 2>/dev/null | grep -E '^[0-9]+\.[0-9.]+$')
+    if [ -n "$ips" ]; then
+      printf '%s' "$ips"
       return 0
     fi
   done
@@ -135,14 +139,31 @@ is_funnel_dns_published() {
 # 失敗細節存 REACH_DETAIL（ip / curl exit / http_code）供 caller log — 2026-07-07
 # 型態 D 事後只有「reach 失敗」四個字，診斷靠猜。
 is_funnel_reach_ok() {
-  local host="$1" ip http_code curl_exit
+  local host="$1" ips ip http_code curl_exit
   [ -z "$host" ] && return 1
-  ip=$(funnel_resolve_authoritative "$host") || { REACH_DETAIL="authoritative resolve failed"; return 1; }
-  http_code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 \
-    --resolve "${host}:443:${ip}" "https://${host}/" 2>/dev/null)
-  curl_exit=$?
-  REACH_DETAIL="ip=${ip} curl_exit=${curl_exit} http_code=${http_code:-none}"
-  [[ "$http_code" =~ ^[1-5][0-9]{2}$ ]]
+  ips=$(funnel_resolve_authoritative "$host") || { REACH_DETAIL="authoritative resolve failed"; return 1; }
+  local -a details
+  REACH_DEGRADED=""
+  # 逐一嘗試每個 edge，任一通即算對外可達 — 對齊真實 client 行為（拿到整份 A
+  # record 清單，第一個不通會 fallback）。2026-09-01 incident：舊版 head -1 恆
+  # 定只探 .153，該 edge 一抖動就判整個 funnel 壞 → 單日 159 次誤報 + 38 次
+  # heal（36 次無效，serve reset 對 edge 側問題無用且 reset 瞬間 funnel 真 off）。
+  for ip in ${(f)ips}; do
+    http_code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 \
+      --resolve "${host}:443:${ip}" "https://${host}/" 2>/dev/null)
+    curl_exit=$?
+    if [[ "$http_code" =~ ^[1-5][0-9]{2}$ ]]; then
+      REACH_DETAIL="ip=${ip} curl_exit=${curl_exit} http_code=${http_code}"
+      # 前面有 edge 不通但這個通 → 服務可達（不 heal），仍記錄降級供追蹤單一
+      # edge 長期劣化（2026-09-01：.153 大量 timeout，.217 正常，舊版看不見）
+      [ ${#details[@]} -gt 0 ] && REACH_DEGRADED="${(j:; :)details}"
+      return 0
+    fi
+    details+=("ip=${ip} curl_exit=${curl_exit} http_code=${http_code:-none}")
+  done
+  # 全 edge 皆不通才 unhealthy — 逐一列出各 edge 細節，事後不用猜是哪個壞
+  REACH_DETAIL="${(j:; :)details}"
+  return 1
 }
 
 # L3 短暫 blip 重試間隔（秒）。2026-07-07 型態 D incident：Tailscale edge 33 秒
@@ -174,6 +195,7 @@ is_funnel_healthy() {
   for (( attempt=1; attempt<=max_attempts; attempt++ )); do
     if is_funnel_reach_ok "$host"; then
       [ "$attempt" -gt 1 ] && log "L3 重試第 $attempt 次通過 — 短暫 blip 自癒，不 heal"
+      [ -n "${REACH_DEGRADED:-}" ] && log "L3 部分 edge 不可達但服務仍可達，不 heal ($REACH_DEGRADED)"
       return 0
     fi
     log "L3 HTTPS reach 失敗 ($host — ${REACH_DETAIL:-no detail}, attempt $attempt/$max_attempts)"

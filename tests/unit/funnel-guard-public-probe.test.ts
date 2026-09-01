@@ -72,13 +72,15 @@ describe('authoritative NS resolve (2026-07-05 recursive-negative-cache incident
 
 describe('L3 HTTPS reach probe — curl 000 false-healthy guard', () => {
   it('curl --resolve 用 authoritative IP（避過本機 MagicDNS + recursive 污染）', () => {
-    expect(GUARD).toContain('ip=$(funnel_resolve_authoritative "$host") || { REACH_DETAIL="authoritative resolve failed"; return 1; }');
+    expect(GUARD).toContain('ips=$(funnel_resolve_authoritative "$host") || { REACH_DETAIL="authoritative resolve failed"; return 1; }');
     expect(GUARD).toContain('curl -sS -o /dev/null -w "%{http_code}" --max-time 10');
     expect(GUARD).toContain('--resolve "${host}:443:${ip}" "https://${host}/"');
   });
 
-  it('reach 失敗存 REACH_DETAIL 診斷（ip / curl exit / http_code）— 型態 D 事後不用猜', () => {
-    expect(GUARD).toContain('REACH_DETAIL="ip=${ip} curl_exit=${curl_exit} http_code=${http_code:-none}"');
+  it('reach 結果存 REACH_DETAIL 診斷（ip / curl exit / http_code）— 型態 D 事後不用猜', () => {
+    expect(GUARD).toContain('REACH_DETAIL="ip=${ip} curl_exit=${curl_exit} http_code=${http_code}"');
+    // 全 edge 失敗時逐一列出每個 edge 的細節，不只最後一個
+    expect(GUARD).toContain('details+=("ip=${ip} curl_exit=${curl_exit} http_code=${http_code:-none}")');
   });
 
   it('只認真 HTTP response (1xx-5xx) — 排除 curl transport-fail 000（dead ingress 不誤判 healthy）', () => {
@@ -115,5 +117,51 @@ describe('L3 blip 容忍（2026-07-07 型態 D：edge 33s 瞬斷誤 heal ×3 + �
 
   it('重試通過 → 明確 log blip 自癒不 heal（可觀測性）', () => {
     expect(GUARD).toContain('短暫 blip 自癒，不 heal');
+  });
+});
+
+describe('L3 多 edge 探測（2026-09-01 incident：單 edge head -1 誤報 159 次 / 36 次無效 heal）', () => {
+  /**
+   * funnel hostname 由 Tailscale 發布多個 A record（本次 103.84.155.153 /
+   * .217）。真實 client（CF Worker / 瀏覽器 / curl）拿到整份 A record 清單，
+   * 第一個 edge 不通會自動 fallback 到下一個 → 單一 edge 抖動不代表服務不可達。
+   *
+   * 舊實作 funnel_resolve_authoritative 用 `head -1`，恆定只探第一個 IP
+   * (.153)：整份 log 528 次 L3 fail 全部是 .153，.217 從未被探測過。.153 一
+   * 抖動 guard 就判整個 funnel unhealthy → serve reset（對 edge 側問題無效，
+   * 且 reset 瞬間 funnel 真 off 反而加重）→ 2026-09-01 單日 38 次 heal 有 36
+   * 次「heal 後仍 unhealthy」+ 20 則 Telegram 噪音。
+   *
+   * IPv6：本機無 IPv6 出口（AAAA edge curl exit=7），刻意不納入探測 —— 探不到
+   * 不代表服務壞，納入會製造新的誤報來源。
+   */
+  it('resolve 回傳所有 IPv4 A record — 不可退回 head -1 單 edge', () => {
+    expect(GUARD).toContain("ips=$(dig +short +time=3 +tries=1 A \"$host\" @\"$ns\" 2>/dev/null | grep -E '^[0-9]+\\.[0-9.]+$')");
+    // head -1 是本 incident 的根因，不可復現
+    expect(GUARD).not.toMatch(/grep -E '\^\[0-9\]\+\\\.\[0-9\.\]\+\$' \| head -1/);
+  });
+
+  it('L3 逐一嘗試每個 edge，任一通即判 reachable', () => {
+    expect(GUARD).toContain('for ip in ${(f)ips}; do');
+    // 命中 → 設 REACH_DETAIL 後立即 return 0（早退，不必等其餘 edge）
+    expect(GUARD).toMatch(
+      /REACH_DETAIL="ip=\$\{ip\} curl_exit=\$\{curl_exit\} http_code=\$\{http_code\}"[\s\S]{0,400}return 0/,
+    );
+    // 失敗的 edge 累積後才 return 1（迴圈外），不可第一個 edge 不通就放棄
+    expect(GUARD).toMatch(/details\+=\([\s\S]{0,200}done[\s\S]{0,200}return 1/);
+  });
+
+  it('全部 edge 都不通才判 unhealthy（REACH_DETAIL 匯總所有 edge）', () => {
+    expect(GUARD).toContain('REACH_DETAIL="${(j:; :)details}"');
+  });
+
+  it('IPv6 AAAA 刻意不探（本機無 IPv6 出口，探不到 ≠ 服務壞）', () => {
+    expect(GUARD).not.toContain('AAAA');
+  });
+
+  it('部分 edge 掛掉但服務可達 → 記錄降級並明說不 heal（追蹤單 edge 長期劣化）', () => {
+    expect(GUARD).toContain('REACH_DEGRADED=""');
+    expect(GUARD).toContain('[ ${#details[@]} -gt 0 ] && REACH_DEGRADED="${(j:; :)details}"');
+    expect(GUARD).toContain('L3 部分 edge 不可達但服務仍可達，不 heal');
   });
 });

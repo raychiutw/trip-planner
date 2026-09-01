@@ -59,7 +59,41 @@ else
   skip "no funnel hostname — 跳過 L3 000 驗證"
 fi
 
-echo "[6] L3 blip 容忍（2026-07-07 型態 D）— fail→pass 判 healthy；持續 fail 仍 unhealthy"
+echo "[6] 多 edge fallback（2026-09-01 incident：head -1 單 edge 誤報 159 次 / 36 次無效 heal）"
+# 行為測試（非 source-grep）：source-grep 抓不到「第一個 edge 不通就 break」這類
+# 退化 — mutation 實測 source-grep 對它全綠，只有真的跑起來才會紅。
+if [ -n "$host" ]; then
+  # 此時 funnel_resolve_authoritative 已被 [5] mock，直接 dig 取真實 edge
+  good_ip=$(dig +short +time=3 +tries=1 A "$host" @ns1.dnsimple.com 2>/dev/null | grep -E '^[0-9]+\.[0-9.]+$' | tail -1)
+  if [ -z "$good_ip" ]; then
+    skip "無法取得真實 edge IP — 跳過多 edge 驗證"
+  else
+    # 壞 edge 排在前：舊版 head -1 只會探到它 → 誤判整個 funnel 壞。
+    # 127.0.0.1:443 無 listener → 立即 refused（比不可路由 IP 快，同樣 http_code=000）
+    funnel_resolve_authoritative() { printf '127.0.0.1\n%s' "$good_ip"; }
+    if is_funnel_reach_ok "$host"; then
+      ok "一壞一好 → healthy（單 edge 抖動不再誤觸發 heal）"
+      if [ -n "${REACH_DEGRADED:-}" ]; then
+        ok "降級已記錄可觀測 ($REACH_DEGRADED)"
+      else
+        bad "REACH_DEGRADED 未記錄 — 單一 edge 長期劣化會看不見"
+      fi
+    else
+      bad "單一 edge 不通即判整個 funnel 壞 → 誤觸發無效 heal（head -1 / break 回歸？）"
+    fi
+    # 防恆真：全 edge 不通仍須 unhealthy，否則真故障漏偵測
+    funnel_resolve_authoritative() { printf '127.0.0.1\n127.0.0.2'; }
+    if is_funnel_reach_ok "$host"; then
+      bad "全 edge 不通卻判 healthy — 恆真，真故障漏偵測"
+    else
+      ok "全 edge 不通 → unhealthy（真故障仍偵測得到）"
+    fi
+  fi
+else
+  skip "no funnel hostname — 跳過多 edge 驗證"
+fi
+
+echo "[7] L3 blip 容忍（2026-07-07 型態 D）— fail→pass 判 healthy；持續 fail 仍 unhealthy"
 # 全 mock：只驗 is_funnel_healthy 的 L3 retry 分支，不碰網路/真 funnel
 L3_RETRY_INTERVAL=0
 is_funnel_local_healthy() { return 0; }
