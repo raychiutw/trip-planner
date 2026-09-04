@@ -43,7 +43,7 @@ On-ramps（匯入主線）：
 - **Code change → 走 matt 主線**（`/implement`，或先 `/grill-with-docs` 磨清楚）。`/tp-team` 不再支援，請勿呼叫。行程資料用 `tp-*` data skills 直接打 API，不走 code pipeline。
 - Feature branch + PR via `/ship`. Never push master directly.
 - `tp-*` skills hit API, not local files.
-- Agent tool only for worktree isolation（Workflow tool 內部的 `agent()` 不受此限）。
+- Agent tool 限兩種用途：worktree isolation，以及 **gstack skill 明文要求的 subagent dispatch**（`/ship` Steps 7/8/10/18、`/autoplan` 各 phase、review army、adversarial pass —— 這些 skill 明說 inline 執行是錯的，因為那會失去 fresh-context 隔離；dispatch 必須帶 `run_in_background: false`，Claude Code v2.1.198 起 subagent 預設背景執行，漏了會讓整條 ship 卡死）。其餘情況不主動開 subagent。Workflow tool 內部的 `agent()` 不受此限。
 - Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
 - **Mockup-first hard gate**：所有 new page / new component（≥1 layout 變化）→ `/prototype` 的 UI branch 產生可比較 prototype → user sign-off → 才寫 React。Bug fix / token drift / 純 prop tweak / 內部 refactor（無 UX 變化）例外。
 
@@ -103,7 +103,7 @@ Match → invoke `Skill` first。**matt 優先；同一件事 matt 有就用 mat
 | 專案自訂 commit 前檢查 | `/tp-code-verify` |
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `docs/agents/`.
-Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite + MCP (user scope), sync=full, repo=read-write, 873 pages, setup 2026-05-04. Windows caveat: transcript ingest no-op (script POSIX-only). See `~/.gbrain/config.json`.
+Prod: https://trip-planner-dby.pages.dev/
 
 ## Agent skills
 
