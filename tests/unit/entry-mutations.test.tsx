@@ -10,7 +10,7 @@ vi.mock('../../src/lib/apiClient', () => ({ apiFetchRaw: (...a: unknown[]) => ap
 const recomputeMock = vi.fn(() => Promise.resolve(null));
 vi.mock('../../src/lib/travelRecompute', () => ({ requestTravelRecompute: (...a: unknown[]) => recomputeMock(...a) }));
 
-import { setMaster, deleteEntry, updateEntry, reorderEntries, updateEntryPoi, moveEntry, createEntry } from '../../src/lib/entryMutations';
+import { setMaster, deleteEntry, updateEntry, reorderEntries, updateEntryPoi, moveEntry, createEntry, addAlternate, removeAlternate, reorderAlternates, replaceMasterPoi, copyEntry, moveEntriesBatch, addFavoriteToTrip } from '../../src/lib/entryMutations';
 import { EVENT } from '../../src/lib/events';
 
 function res(status: number, body: unknown = {}) {
@@ -137,5 +137,77 @@ describe('createEntry', () => {
     expect((apiFetchRawMock.mock.calls[0] as [string])[0]).toBe('/trips/t1/days/2/entries');
     expect(recomputeMock).toHaveBeenCalledWith('t1', 2);
     expect(L.events).toEqual([{ tripId: 't1', entryId: 88, dayNum: 2 }]);
+  });
+});
+
+describe('#1261 新增動詞', () => {
+  it('setMaster 帶 entryPoisVersion → body 含 OCC token；409 STALE_ENTRY → Result.code', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 'STALE_ENTRY', message: '版本過期' } }), { status: 409 }));
+    const r = await setMaster('t1', 42, 3, 99, '7');
+    expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ poiId: 99, entryPoisVersion: '7' });
+    expect(r).toMatchObject({ ok: false, status: 409, code: 'STALE_ENTRY', message: '版本過期' });
+  });
+
+  it('addAlternate：POST /alternates，不重算；DUPLICATE_POI 進 code', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 'DUPLICATE_POI' } }), { status: 409 }));
+    const r = await addAlternate('t1', 42, null, { poiId: 5, entryPoisVersion: 1 });
+    expect((apiFetchRawMock.mock.calls[0] as [string])[0]).toBe('/trips/t1/entries/42/alternates');
+    expect(r).toMatchObject({ ok: false, code: 'DUPLICATE_POI' });
+    expect(recomputeMock).not.toHaveBeenCalled();
+  });
+
+  it('removeAlternate：DELETE 帶 ?entryPoisVersion query；無 version 不帶', async () => {
+    apiFetchRawMock.mockResolvedValue(res(200));
+    await removeAlternate('t1', 42, 3, 5, 9);
+    await removeAlternate('t1', 42, 3, 5, null);
+    expect((apiFetchRawMock.mock.calls[0] as [string])[0]).toBe('/trips/t1/entries/42/alternates/5?entryPoisVersion=9');
+    expect((apiFetchRawMock.mock.calls[1] as [string])[0]).toBe('/trips/t1/entries/42/alternates/5');
+    expect(recomputeMock).not.toHaveBeenCalled();
+  });
+
+  it('reorderAlternates：PATCH /alternates/reorder { order, entryPoisVersion }', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    await reorderAlternates('t1', 42, 3, [5, 6], 2);
+    const [url, opts] = apiFetchRawMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/trips/t1/entries/42/alternates/reorder');
+    expect(JSON.parse(String(opts.body))).toEqual({ order: [5, 6], entryPoisVersion: 2 });
+  });
+
+  it('replaceMasterPoi：PUT /poi-id → 重算（dayNum null = 全行程 scope）', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    const r = await replaceMasterPoi('t1', 42, null, { poiId: 5 });
+    expect(r.ok).toBe(true);
+    expect((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].method).toBe('PUT');
+    expect(recomputeMock).toHaveBeenCalledWith('t1', null);
+  });
+
+  it('copyEntry：POST /copy 只重算目標天', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200, { id: 77 }));
+    const r = await copyEntry('t1', 42, { targetDayId: 300, targetDayNum: 3 });
+    expect(r).toMatchObject({ ok: true, data: { id: 77 } });
+    expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ targetDayId: 300 });
+    expect(recomputeMock.mock.calls).toEqual([['t1', 3]]);
+  });
+
+  it('moveEntriesBatch：PATCH /entries/batch，來源日與目標日各重算一次、各 emit 一次', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    const L = listen();
+    await moveEntriesBatch('t1', [{ id: 1, day_id: 300, sort_order: 0 }], { fromDayNum: 1, toDayNum: 3 });
+    L.off();
+    expect(recomputeMock.mock.calls).toEqual([['t1', 3], ['t1', 1]]);
+    expect(L.events).toEqual([{ tripId: 't1', dayNum: 3 }, { tripId: 't1', dayNum: 1 }]);
+  });
+
+  it('addFavoriteToTrip：POST /poi-favorites/:id/add-to-trip，重算該日、emit 帶 entryId', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(201, { ok: true, entryId: 91 }));
+    const L = listen();
+    const r = await addFavoriteToTrip(12, 't1', 2, { startTime: '10:00', endTime: '11:00' });
+    L.off();
+    expect(r.ok).toBe(true);
+    const [url, opts] = apiFetchRawMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/poi-favorites/12/add-to-trip');
+    expect(JSON.parse(String(opts.body))).toEqual({ tripId: 't1', dayNum: 2, startTime: '10:00', endTime: '11:00' });
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 2);
+    expect(L.events).toEqual([{ tripId: 't1', entryId: 91, dayNum: 2 }]);
   });
 });

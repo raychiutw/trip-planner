@@ -8,9 +8,9 @@ import { useOfflineToast } from '../hooks/useOfflineToast';
 import { useDragDrop } from '../hooks/useDragDrop';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { buildCrossDayMoves, railItemsFirstCollision } from '../lib/crossDayMove';
-import { requestTravelRecompute } from '../lib/travelRecompute';
+import { moveEntriesBatch } from '../lib/entryMutations';
 import { restoreDragScroll, rememberScroll, recallScroll, restoreScrollTo } from '../lib/preserveScroll';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { apiFetch } from '../lib/apiClient';
 import { writeTripView } from '../lib/tripViewState';
 import { EVENT } from '../lib/events';
 import { mapRow } from '../lib/mapRow';
@@ -562,17 +562,9 @@ function TripPageInner(
     const overEntryId = overData?.railContainer ? null : (typeof over.id === 'number' ? over.id : null);
     const updates = buildCrossDayMoves(active.id, targetDayId, targetIds, overEntryId);
     try {
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(activeTripId)}/entries/batch`, {
-        method: 'PATCH',
-        credentials: 'same-origin',
-        body: JSON.stringify({ updates }),
-      });
-      if (!res.ok) throw new Error(`batch ${res.status}`);
-      void requestTravelRecompute(activeTripId, targetOpt.dayNum).catch(() => undefined);
-      if (sourceOpt) void requestTravelRecompute(activeTripId, sourceOpt.dayNum).catch(() => undefined);
-      // 兩天各發一次（detail.dayNum → refetchDay 精準 invalidate 該天 cache）
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId: activeTripId, dayNum: targetOpt.dayNum } }));
-      if (sourceOpt) window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId: activeTripId, dayNum: sourceOpt.dayNum } }));
+      // #1261：跨天 batch + 兩天重算 + 兩天各一個 emit（detail.dayNum → refetchDay）在 module。
+      const r = await moveEntriesBatch(activeTripId, updates, { fromDayNum: sourceOpt?.dayNum ?? null, toDayNum: targetOpt.dayNum });
+      if (!r.ok) throw new Error(`batch ${r.status}`);
       showToast(`已移到 Day ${String(targetOpt.dayNum).padStart(2, '0')}`, 'success');
     } catch {
       showToast('跨天移動失敗，請稍後再試', 'error');

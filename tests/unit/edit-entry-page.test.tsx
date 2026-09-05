@@ -662,7 +662,8 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     });
     fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
     await waitFor(() => {
-      const calls = (apiFetch as ReturnType<typeof vi.fn>).mock.calls;
+      // #1261：/master 由 entry 變更 module 以 apiFetchRaw 發出
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
       const masterCall = calls.find((c) => typeof c[0] === 'string' && (c[0] as string).includes('/master'));
       expect(masterCall).toBeTruthy();
       const opts = masterCall![1] as RequestInit;
@@ -781,14 +782,17 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       setupAltsMocks();
       // 第一次 PATCH 409 STALE_ENTRY，第二次成功；DAY_DATA refresh 仍回原 master
       let patchCallCount = 0;
-      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+      (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
         if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
           patchCallCount += 1;
           if (patchCallCount === 1) {
-            return Promise.reject(new ApiError('STALE_ENTRY', 409));
+            return Promise.resolve(new Response(JSON.stringify({ error: { code: 'STALE_ENTRY' } }), { status: 409 }));
           }
-          return Promise.resolve({});
+          return Promise.resolve(new Response('{}', { status: 200 }));
         }
+        return Promise.resolve(new Response('', { status: 200 }));
+      });
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
         if (url.includes('/entries/42')) return Promise.resolve({ ...ENTRY, entryPoisVersion: '999' });
         if (url.endsWith('/days')) return Promise.resolve(DAYS);
         if (url.includes('/days/3')) return Promise.resolve(DAY_DATA_WITH_ALTS);
@@ -825,11 +829,14 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       };
       let patchCallCount = 0;
       let refreshed = false;
-      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+      (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
         if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
           patchCallCount += 1;
-          return Promise.reject(new ApiError('STALE_ENTRY', 409));
+          return Promise.resolve(new Response(JSON.stringify({ error: { code: 'STALE_ENTRY' } }), { status: 409 }));
         }
+        return Promise.resolve(new Response('', { status: 200 }));
+      });
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
         // 一開始回原 DAY_DATA_WITH_ALTS，refresh 後回 AFTER_OTHER_TAB_SWAP
         if (url.includes('/days/3')) {
           const data = refreshed ? DAY_DATA_AFTER_OTHER_TAB_SWAP : DAY_DATA_WITH_ALTS;
@@ -862,11 +869,14 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     it('PATCH /master 非 STALE_ENTRY 錯誤 → 不 retry，直接 surface error', async () => {
       const { ApiError } = await import('../../src/lib/errors');
       let patchCallCount = 0;
-      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+      (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
         if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
           patchCallCount += 1;
-          return Promise.reject(new ApiError('SYS_INTERNAL', 500));
+          return Promise.resolve(new Response(JSON.stringify({ error: { code: 'SYS_INTERNAL' } }), { status: 500 }));
         }
+        return Promise.resolve(new Response('', { status: 200 }));
+      });
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
         if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
         if (url.endsWith('/days')) return Promise.resolve(DAYS);
         if (url.includes('/days/3')) return Promise.resolve(DAY_DATA_WITH_ALTS);

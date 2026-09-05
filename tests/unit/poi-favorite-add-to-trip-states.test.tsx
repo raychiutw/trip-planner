@@ -14,6 +14,16 @@ import { pickTime } from './__helpers__/tripTimePicker';
 const apiFetchMock = vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>();
 vi.mock('../../src/lib/apiClient', () => ({
   apiFetch: (path: string, init?: RequestInit) => apiFetchMock(path, init),
+  // #1261：entry 變更 module 用 apiFetchRaw；這裡把 apiFetchMock 的 JSON / ApiError 轉成 Response。
+  apiFetchRaw: async (path: string, init?: RequestInit) => {
+    try {
+      const data = await apiFetchMock(path, init);
+      return new Response(JSON.stringify(data ?? {}), { status: 200 });
+    } catch (err) {
+      const e = err as { status?: number; code?: string; message?: string; payload?: Record<string, unknown> };
+      return new Response(JSON.stringify({ ...(e.payload ?? {}), error: { code: e.code, message: e.message } }), { status: e.status ?? 500 });
+    }
+  },
 }));
 
 import { ApiError } from '../../src/lib/errors';

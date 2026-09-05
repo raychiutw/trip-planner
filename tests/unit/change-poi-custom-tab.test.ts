@@ -55,12 +55,12 @@ describe('ChangePoiPage — v2.31.98 自訂 tab wiring', () => {
     expect(SRC).toMatch(/source:\s*['"]custom['"]/);
   });
 
-  it('handleSubmit alternate mode hits /alternates endpoint with POST', () => {
-    expect(SRC).toMatch(/entries\/\$\{entryId\}\/alternates[\s\S]{0,200}method:\s*['"]POST['"]/);
+  it('handleSubmit alternate mode 走 entry 變更 module 的 addAlternate（endpoint 由 entry-mutations.test 驗）', () => {
+    expect(SRC).toMatch(/addAlternate\(tripId, entryId/);
   });
 
-  it('handleSubmit master mode hits /poi-id endpoint with PUT', () => {
-    expect(SRC).toMatch(/entries\/\$\{entryId\}\/poi-id/);
+  it('handleSubmit master mode 走 replaceMasterPoi（PUT /poi-id 由 entry-mutations.test 驗）', () => {
+    expect(SRC).toMatch(/replaceMasterPoi\(tripId, entryId/);
   });
 
   it('TitleBar action button disabled gating supports custom tab (title + coord)', () => {

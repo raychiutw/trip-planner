@@ -107,9 +107,12 @@ describe('audit fix source locks', () => {
   });
 
   it('EntryActionPage move action sends snake_case day_id', () => {
-    const src = read('src/pages/EntryActionPage.tsx');
-    expect(src).toMatch(/JSON\.stringify\(\{ day_id: selectedDayId \}\)/);
-    expect(src).not.toMatch(/JSON\.stringify\(\{ dayId:/);
+    // #1261：move 的 body 由 entry 變更 module 組（moveEntry → { day_id }），頁面只呼叫動詞。
+    const page = read('src/pages/EntryActionPage.tsx');
+    expect(page).toMatch(/moveEntry\(tripId, entryIdNum/);
+    const mod = read('src/lib/entryMutations.ts');
+    expect(mod).toMatch(/\{ day_id: to\.toDayId \}/);
+    expect(mod).not.toMatch(/\{ dayId:/);
   });
 
   it('daily-report queries trip_requests (not the non-existent requests table)', () => {

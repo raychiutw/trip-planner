@@ -33,10 +33,9 @@ import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
-import { requestTravelRecompute } from '../lib/travelRecompute';
+import { apiFetch } from '../lib/apiClient';
+import { createEntry } from '../lib/entryMutations';
 import { buildPoiNote } from '../lib/poiNote';
-import { EVENT } from '../lib/events';
 import { mapGooglePrimaryTypeToPoiType, type PoiType } from '../lib/poiCategory';
 import {
   REGION_OPTIONS,
@@ -932,28 +931,13 @@ export default function AddStopPage() {
 
       if (payloads.length === 0) return;
 
-      const results = await Promise.allSettled(
-        payloads.map((body) =>
-          apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`, {
-            method: 'POST',
-            credentials: 'same-origin',
-            body: JSON.stringify(body),
-          }).then((r) => {
-            if (!r.ok) throw new Error(`POST 失敗 (${r.status})`);
-            return r;
-          }),
-        ),
-      );
-      const failed = results.filter((r) => r.status === 'rejected');
+      // #1261：每筆走 entry 變更 module（emit + day-scope 重算在 module，helper single-flight 合併）。
+      const results = await Promise.all(payloads.map((body) => createEntry(tripId, dayNum, body)));
+      const failed = results.filter((r) => !r.ok);
       if (failed.length > 0) {
         setSubmitError(`${failed.length}/${payloads.length} 個項目儲存失敗，請重試`);
         return;
       }
-      // Fire-and-forget recompute-travel for this day so newly added entries
-      // get travel_distance_m / travel_min populated. Non-blocking — UI returns
-      // to trip view immediately; travel pills update after server done.
-      void requestTravelRecompute(tripId, dayNum).catch(() => undefined);
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, dayNum } }));
       showToast(`已加入 ${payloads.length} 個景點`, 'success');
       handleBack();
     } catch (err) {

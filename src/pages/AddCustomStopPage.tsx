@@ -19,8 +19,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
-import { requestTravelRecompute } from '../lib/travelRecompute';
-import { EVENT } from '../lib/events';
+import { createEntry } from '../lib/entryMutations';
 import { formatDateLabel } from '../lib/mapDay';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -457,19 +456,8 @@ export default function AddCustomStopPage() {
         lng: pickedCoord.lng,
         source: 'custom',
       };
-      const res = await apiFetchRaw(
-        `/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`,
-        {
-          method: 'POST',
-          credentials: 'same-origin',
-          body: JSON.stringify(body),
-        },
-      );
-      if (!res.ok) throw new Error(`儲存失敗 (${res.status})`);
-
-      void requestTravelRecompute(tripId, dayNum).catch(() => undefined);
-
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, dayNum } }));
+      const r = await createEntry(tripId, dayNum, body);
+      if (!r.ok) throw new Error(`儲存失敗 (${r.status})`);
       showToast('已加入自訂景點', 'success');
       handleBack();
     } catch (err) {

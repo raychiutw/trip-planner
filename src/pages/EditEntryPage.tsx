@@ -41,7 +41,8 @@ import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
-import { requestTravelRecompute } from '../lib/travelRecompute';
+import { setMaster, deleteEntry, updateEntry, updateEntryPoi, removeAlternate, reorderAlternates } from '../lib/entryMutations';
+import type { ErrorCodeType } from '../types/api';
 import { ApiError } from '../lib/errors';
 import { escUrl } from '../lib/sanitize';
 import { EVENT } from '../lib/events';
@@ -844,16 +845,10 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
   const noteAutosave = useAutosave<{ note: string }>({
     debounceMs: 800,
     save: async (body) => {
-      const res = await apiFetchRaw(
-        `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/pois/${poiId}`,
-        {
-          method: 'PATCH',
-          // LWW — 不帶 entryPoisVersion；端點刻意不收/不 bump OCC token。
-          body: JSON.stringify({ [field]: body.note ?? '' }),
-        },
-      );
-      if (!res.ok) throw await ApiError.fromResponse(res);
-      return await res.json() as Record<string, unknown>;
+      // LWW — 不帶 entryPoisVersion；端點刻意不收/不 bump OCC token。#1261 走 module。
+      const r = await updateEntryPoi(tripId, entryId, null, poiId, { [field]: body.note ?? '' });
+      if (!r.ok) throw new Error(r.message || '儲存失敗');
+      return r.data;
     },
   });
 
@@ -1026,11 +1021,9 @@ export default function EditEntryPage() {
     async (poiId: number, isMaster: boolean, newType: PoiType) => {
       if (!tripId) return;
       try {
-        const res = await apiFetch<{ poiId: number; type: string }>(
-          `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/pois/${poiId}`,
-          { method: 'PATCH', body: JSON.stringify({ poi_type: newType }) },
-        );
-        const newPoiId = res.poiId;
+        const r = await updateEntryPoi<{ poiId: number; type: string }>(tripId, entryId, entryDayNumRef.current, poiId, { poi_type: newType });
+        if (!r.ok) throw new Error(r.message || '更新分類失敗');
+        const newPoiId = r.data.poiId;
         if (isMaster) {
           setMasterSummary((s) => (s ? { ...s, poiId: newPoiId, type: newType } : s));
           setPoiInfo((p) => (p ? { ...p, poiType: newType } : p));
@@ -1039,7 +1032,6 @@ export default function EditEntryPage() {
             alts.map((a) => (a.poiId === poiId ? { ...a, poiId: newPoiId, type: newType } : a)),
           );
         }
-        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, entryId } }));
         showToast('已更新分類', 'success');
       } catch (err) {
         showToast(err instanceof Error ? err.message : '更新分類失敗', 'error');
@@ -1283,10 +1275,9 @@ export default function EditEntryPage() {
       // Empty body 表示資料其實沒變，跳過 request。
       if (Object.keys(body).length > 0) {
         requests.push(
-          apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`, {
-            method: 'PATCH',
-            body: JSON.stringify(body),
-          }).then(async (res) => ({ scope: 'entry', ok: res.ok, status: res.status, text: res.ok ? undefined : await res.text() })),
+          // #1261：entry 欄位走 entry 變更 module（時間變動後 module 內重算車程 + emit）。
+          updateEntry(tripId, entryId, entryDayNumRef.current, body)
+            .then((r) => (r.ok ? { scope: 'entry', ok: true, status: 200, text: undefined } : { scope: 'entry', ok: false, status: r.status, text: r.message })),
         );
       }
     }
@@ -1477,11 +1468,9 @@ export default function EditEntryPage() {
     // 使用者要手動 reload。Auto-refresh + retry 一次後仍失敗才 surface error。
     const sendSwap = async (versionOverride?: string) => {
       const useVersion = versionOverride ?? entryPoisVersion ?? undefined;
-      await apiFetch(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/master`, {
-        method: 'PATCH',
-        body: JSON.stringify({ poiId: alt.poiId, entryPoisVersion: useVersion }),
-        headers: { 'Content-Type': 'application/json' },
-      });
+      // #1261：走 module；STALE_ENTRY 由 Result.code 分流，維持既有 ApiError retry 流程。
+      const r = await setMaster(tripId, entryId, entryDayNumRef.current, alt.poiId, useVersion);
+      if (!r.ok) throw new ApiError((r.code as ErrorCodeType | undefined) ?? 'SYS_INTERNAL', r.status, r.message);
     };
 
     try {
@@ -1540,14 +1529,8 @@ export default function EditEntryPage() {
       // apiFetchRaw 不會 throw on 4xx/5xx — 必須自己檢查 res.ok，否則 backend reject 也會
       // 顯示成功 toast（Codex 2nd-pass review CRITICAL）。
       // round 4 fix F3: OCC token travels via query string (DELETE has no body).
-      const versionQuery = entryPoisVersion ? `?entryPoisVersion=${encodeURIComponent(entryPoisVersion)}` : '';
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates/${alt.poiId}${versionQuery}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`移除備選失敗 (${res.status})${text ? `: ${text.slice(0, 120)}` : ''}`);
-      }
+      const r = await removeAlternate(tripId, entryId, entryDayNumRef.current, alt.poiId, entryPoisVersion);
+      if (!r.ok) throw new Error(`移除備選失敗 (${r.status})${r.message ? `: ${r.message.slice(0, 120)}` : ''}`);
       setAltRemoveConfirm(null);
       await refreshEntryPois();
       showToast(`已移除備選「${alt.name}」`, 'success');
@@ -1574,13 +1557,8 @@ export default function EditEntryPage() {
     setAltPending(poiId);
     setAltError(null);
     try {
-      await apiFetch(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates/reorder`, {
-        method: 'PATCH',
-        // round 4 fix F3: pass entryPoisVersion for OCC (concurrent reorders previously
-        // silently overwrote each other).
-        body: JSON.stringify({ order: newOrder, entryPoisVersion: entryPoisVersion ?? undefined }),
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const r = await reorderAlternates(tripId, entryId, entryDayNumRef.current, newOrder, entryPoisVersion);
+      if (!r.ok) throw new Error(r.message || '排序失敗');
       await refreshEntryPois();
     } catch (err) {
       setAltError(err instanceof Error ? err.message : '排序失敗');
@@ -1595,16 +1573,9 @@ export default function EditEntryPage() {
     try {
       // apiFetchRaw 不 throw on 4xx/5xx — 必須自己檢查 res.ok 防止 backend reject
       // 仍 navigate-away（Codex 2nd-pass review CRITICAL）。
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`刪除停留點失敗 (${res.status})${text ? `: ${text.slice(0, 120)}` : ''}`);
-      }
-      // 2026-07-06 車程重算缺口：刪除後新相鄰 pair 缺 segment row → 補顯式
-      // recompute（fire-and-forget；self-healing 與 TravelPill ⚠ 是 fallback）。
-      void requestTravelRecompute(tripId, entryDayNumRef.current).catch(() => undefined);
+      // #1261：刪除 + 重算 + emit 在 module；失敗 Result 不導覽走。
+      const r = await deleteEntry(tripId, entryId, entryDayNumRef.current);
+      if (!r.ok) throw new Error(`刪除停留點失敗 (${r.status})${r.message ? `: ${r.message.slice(0, 120)}` : ''}`);
       setShowDeleteStopConfirm(false);
       navigate(goBackHref);
     } catch (err) {

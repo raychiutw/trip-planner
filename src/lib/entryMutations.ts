@@ -16,7 +16,7 @@ import { EVENT } from './events';
 
 export type MutationResult<T = unknown> =
   | { ok: true; data: T; /** 車程重算是否成功；caller 可據此顯示 info toast。 */ recompute: Promise<boolean> }
-  | { ok: false; status: number; message: string };
+  | { ok: false; status: number; message: string; /** 後端 error.code（STALE_ENTRY / DUPLICATE_POI…），caller 據此分流。 */ code?: string; /** 解析後的 error body（例：409 conflictWith）。 */ payload?: unknown };
 
 type DayNum = number | string | null | undefined;
 
@@ -48,9 +48,22 @@ async function call<T>(
   }
   if (!res.ok) {
     const text = await res.text().catch(() => '');
+    let code: string | undefined;
+    let message = text.slice(0, 200);
+    let payload: unknown;
+    try {
+      const parsed = JSON.parse(text) as { error?: { code?: string; message?: string; detail?: string } | string };
+      payload = parsed;
+      if (parsed && typeof parsed.error === 'object') {
+        code = parsed.error.code;
+        message = parsed.error.message ?? parsed.error.detail ?? message;
+      } else if (typeof parsed?.error === 'string') {
+        code = parsed.error;
+      }
+    } catch { /* 非 JSON body */ }
     // 失敗也 emit：LWW（未帶 version）不會 STALE 409，畫面 refetch resync。
     for (const dayNum of after.dayNums.length ? after.dayNums : [undefined]) emit({ tripId: after.tripId, entryId: after.entryId, dayNum });
-    return { ok: false, status: res.status, message: text.slice(0, 200) };
+    return { ok: false, status: res.status, message, code, payload };
   }
   let data = undefined as unknown as T;
   if (res.status !== 204) {
@@ -72,8 +85,10 @@ export function createEntry(tripId: string, dayNum: DayNum, body: Record<string,
 }
 
 /** PATCH /trips/:id/entries/:eid/master —— 備選升正選。 */
-export function setMaster(tripId: string, entryId: number | string, dayNum: DayNum, poiId: number): Promise<MutationResult> {
-  return call(`/trips/${enc(tripId)}/entries/${entryId}/master`, { method: 'PATCH', body: JSON.stringify({ poiId }) },
+export function setMaster(tripId: string, entryId: number | string, dayNum: DayNum, poiId: number, entryPoisVersion?: number | string | null): Promise<MutationResult> {
+  const body: Record<string, unknown> = { poiId };
+  if (entryPoisVersion != null && entryPoisVersion !== '') body.entryPoisVersion = entryPoisVersion;
+  return call(`/trips/${enc(tripId)}/entries/${entryId}/master`, { method: 'PATCH', body: JSON.stringify(body) },
     { tripId, entryId, dayNums: [dayNum], recompute: true });
 }
 
@@ -108,4 +123,47 @@ export function reorderEntries(tripId: string, dayNum: DayNum, orderedIds: Array
 export function updateEntryPoi<T = Record<string, unknown>>(tripId: string, entryId: number | string, dayNum: DayNum, poiId: number, body: Record<string, unknown>): Promise<MutationResult<T>> {
   return call<T>(`/trips/${enc(tripId)}/entries/${entryId}/pois/${poiId}`, { method: 'PATCH', body: JSON.stringify(body) },
     { tripId, entryId, dayNums: [dayNum], recompute: false });
+}
+
+/** POST /trips/:id/entries/:eid/alternates —— 加備選（body 可帶 poiId 或搜尋結果 + entryPoisVersion）。不影響車程。 */
+export function addAlternate(tripId: string, entryId: number | string, dayNum: DayNum, body: Record<string, unknown>): Promise<MutationResult> {
+  return call(`/trips/${enc(tripId)}/entries/${entryId}/alternates`, { method: 'POST', body: JSON.stringify(body) },
+    { tripId, entryId, dayNums: [dayNum], recompute: false });
+}
+
+/** DELETE /trips/:id/entries/:eid/alternates/:poiId —— 移除備選（OCC 用 query entryPoisVersion）。 */
+export function removeAlternate(tripId: string, entryId: number | string, dayNum: DayNum, poiId: number, entryPoisVersion?: number | string | null): Promise<MutationResult> {
+  const q = entryPoisVersion != null && entryPoisVersion !== '' ? `?entryPoisVersion=${enc(String(entryPoisVersion))}` : '';
+  return call(`/trips/${enc(tripId)}/entries/${entryId}/alternates/${poiId}${q}`, { method: 'DELETE' },
+    { tripId, entryId, dayNums: [dayNum], recompute: false });
+}
+
+/** PATCH /trips/:id/entries/:eid/alternates/reorder —— 備選排序。 */
+export function reorderAlternates(tripId: string, entryId: number | string, dayNum: DayNum, order: number[], entryPoisVersion?: number | string | null): Promise<MutationResult> {
+  return call(`/trips/${enc(tripId)}/entries/${entryId}/alternates/reorder`, { method: 'PATCH', body: JSON.stringify({ order, entryPoisVersion: entryPoisVersion ?? undefined }) },
+    { tripId, entryId, dayNums: [dayNum], recompute: false });
+}
+
+/** PUT /trips/:id/entries/:eid/poi-id —— 置換正選為另一個 POI（搜尋結果／收藏／自訂）。 */
+export function replaceMasterPoi(tripId: string, entryId: number | string, dayNum: DayNum, body: Record<string, unknown>): Promise<MutationResult> {
+  return call(`/trips/${enc(tripId)}/entries/${entryId}/poi-id`, { method: 'PUT', body: JSON.stringify(body) },
+    { tripId, entryId, dayNums: [dayNum], recompute: true });
+}
+
+/** POST /trips/:id/entries/:eid/copy —— 複製到目標天。只重算目標天。 */
+export function copyEntry(tripId: string, entryId: number | string, to: { targetDayId: number; targetDayNum: DayNum }): Promise<MutationResult<{ id?: number }>> {
+  return call<{ id?: number }>(`/trips/${enc(tripId)}/entries/${entryId}/copy`, { method: 'POST', body: JSON.stringify({ targetDayId: to.targetDayId }) },
+    { tripId, entryId, dayNums: [to.targetDayNum], recompute: true });
+}
+
+/** PATCH /trips/:id/entries/batch 帶 day_id —— 跨天拖拉：來源日與目標日各重算一次。 */
+export function moveEntriesBatch(tripId: string, updates: readonly object[], days: { fromDayNum: DayNum; toDayNum: DayNum }): Promise<MutationResult> {
+  return call(`/trips/${enc(tripId)}/entries/batch`, { method: 'PATCH', body: JSON.stringify({ updates }) },
+    { tripId, dayNums: days.fromDayNum == null || days.fromDayNum === days.toDayNum ? [days.toDayNum] : [days.toDayNum, days.fromDayNum], recompute: true });
+}
+
+/** POST /poi-favorites/:id/add-to-trip —— 收藏加入行程 fast-path（後端建 entry），同樣要重算該日。 */
+export function addFavoriteToTrip(favoriteId: number | string, tripId: string, dayNum: DayNum, body: Record<string, unknown>): Promise<MutationResult<{ entryId?: number }>> {
+  return call<{ entryId?: number }>(`/poi-favorites/${favoriteId}/add-to-trip`, { method: 'POST', body: JSON.stringify({ tripId, dayNum: Number(dayNum), ...body }) },
+    { tripId, dayNums: [dayNum], recompute: true, entryIdFrom: (d) => d?.entryId });
 }

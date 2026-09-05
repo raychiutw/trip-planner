@@ -52,7 +52,8 @@ describe('EditEntryPage — editable category (master + alternates)', () => {
   });
 
   it('handler PATCHes /entries/:eid/pois/:poiId with poi_type and re-applies the returned poiId', () => {
-    expect(EDIT_ENTRY).toMatch(/entries\/\$\{entryId\}\/pois\/\$\{poiId\}/);
+    // #1261：PATCH /pois/:poiId 由 entry 變更 module（updateEntryPoi）發出，頁面只呼叫動詞。
+    expect(EDIT_ENTRY).toMatch(/updateEntryPoi<\{ poiId: number; type: string \}>\(tripId, entryId/);
     expect(EDIT_ENTRY).toMatch(/poi_type: newType/);
     expect(EDIT_ENTRY).toMatch(/poiId: newPoiId/);
   });

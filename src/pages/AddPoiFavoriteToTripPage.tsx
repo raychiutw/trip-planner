@@ -26,7 +26,8 @@ import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
-import { requestTravelRecompute } from '../lib/travelRecompute';
+import { createEntry, addFavoriteToTrip } from '../lib/entryMutations';
+import type { ErrorCodeType } from '../types/api';
 import { ApiError } from '../lib/errors';
 import { POI_TYPE_LABELS, mapGooglePrimaryTypeToPoiType, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
@@ -343,30 +344,23 @@ export default function AddPoiFavoriteToTripPage() {
         // direct mode：POI 從 explore 帶來，沒對應 favorite → 直接 POST entries（同 AddStopPage 'search' tab）。
         // entries.ts 後端只認 body.time（"HH:MM-HH:MM" 單欄位），需在前端 join。
         const time = startTime && endTime ? `${startTime}-${endTime}` : undefined;
-        await apiFetch(`/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: favorite.poiName,
-            note: favorite.poiAddress || undefined,
-            lat: favorite.poiLat,
-            lng: favorite.poiLng,
-            source: 'google',
-            time,
-            poi_type: mapGooglePrimaryTypeToPoiType(favorite.poiType),
-          }),
+        const r = await createEntry(tripId, dayNum, {
+          name: favorite.poiName,
+          note: favorite.poiAddress || undefined,
+          lat: favorite.poiLat,
+          lng: favorite.poiLng,
+          source: 'google',
+          time,
+          poi_type: mapGooglePrimaryTypeToPoiType(favorite.poiType),
         });
-        // recompute travel for this day (fire-and-forget；同 v2.23.1 AddStopPage pattern)
-        void requestTravelRecompute(tripId, dayNum).catch(() => undefined);
+        if (!r.ok) throw new ApiError((r.code as ErrorCodeType | undefined) ?? 'SYS_INTERNAL', r.status, r.message, r.payload);
       } else {
-        await apiFetch(`/poi-favorites/${favoriteId}/add-to-trip`, {
-          method: 'POST',
-          body: JSON.stringify({
-            tripId,
-            dayNum: Number(dayNum),
-            startTime: startTime || undefined,
-            endTime: endTime || undefined,
-          }),
+        // #1261：收藏 fast-path 也走 module —— 以前這條沒重算車程。
+        const r = await addFavoriteToTrip(favoriteId!, tripId, dayNum, {
+          startTime: startTime || undefined,
+          endTime: endTime || undefined,
         });
+        if (!r.ok) throw new ApiError((r.code as ErrorCodeType | undefined) ?? 'SYS_INTERNAL', r.status, r.message, r.payload);
       }
       const params = new URLSearchParams({ selected: tripId, day: String(dayNum), saved_added: '1' });
       navigate(`/trips?${params.toString()}`, { replace: true });
