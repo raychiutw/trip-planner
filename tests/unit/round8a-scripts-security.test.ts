@@ -17,6 +17,11 @@ const API_SERVER_SRC = readFileSync(
   path.resolve(__dirname, '../../scripts/tripline-api-server.ts'),
   'utf-8',
 );
+// #1264：allowlist / peek / mint 決策搬進 request worker module，這幾條 lock 跟著搬。
+const WORKER_SRC = fs.readFileSync(
+  path.resolve(__dirname, '../../scripts/lib/request-worker.ts'),
+  'utf8',
+);
 const JOB_SH_SRC = readFileSync(
   path.resolve(__dirname, '../../scripts/tripline-job.sh'),
   'utf-8',
@@ -40,12 +45,13 @@ const TELEGRAM_SH_SRC = readFileSync(
 
 describe('v2.33.49 round 8a — api-server skillCommand allowlist', () => {
   it('ALLOWED_SKILLS Set 含 /tp-request + /tp-daily-check', () => {
-    expect(API_SERVER_SRC).toMatch(/ALLOWED_SKILLS\s*=\s*new Set\(\[['"]\/tp-request['"],\s*['"]\/tp-daily-check['"]/);
+    expect(WORKER_SRC).toMatch(/ALLOWED_SKILLS\s*=\s*new Set\(\[['"]\/tp-request['"],\s*['"]\/tp-daily-check['"]/);
   });
 
-  it('assertAllowedSkill 在 sessionPrefixForSkill / spawnTmuxRequest / processLoop 都 gate', () => {
-    expect(API_SERVER_SRC).toMatch(/function assertAllowedSkill/);
-    expect(API_SERVER_SRC.match(/assertAllowedSkill\(/g)?.length).toBeGreaterThanOrEqual(3);
+  it('assertAllowedSkill 在 sessionPrefixForSkill / tick 都 gate（module）', () => {
+    expect(WORKER_SRC).toMatch(/export function assertAllowedSkill/);
+    expect(WORKER_SRC).toMatch(/function sessionPrefixForSkill[\s\S]{0,120}assertAllowedSkill\(skillCommand\)/);
+    expect(WORKER_SRC).toMatch(/async function tick\([\s\S]{0,160}assertAllowedSkill\(skillCommand\)/);
   });
 });
 
@@ -113,19 +119,20 @@ describe('token 端點 null-safe parse（2026-07-13 prod null-body 事故）', (
     expect(CRON_SHARED_SRC).not.toContain('res.json().catch(() => ({}))');
   });
 
-  it('tripline-api-server.ts mint-restricted: 完整 null-safe idiom (含 ?? {})', () => {
-    expect(API_SERVER_SRC).toContain('res.json().catch(() => null)) ?? {}');
+  it('request-worker.ts mint-restricted: 完整 null-safe idiom (含 ?? {})', () => {
+    expect(WORKER_SRC).toContain('res.json().catch(() => null)) ?? {}');
   });
 
   it('tripline-api-server.ts peekPendingRequest: null-safe json()（同事故類別，防 data.items 爆 null）', () => {
     // /api/requests 回 null/非-JSON body → data.items 爆 TypeError（fail-closed 但同 2026-07-12 事故類別）。
+    expect(WORKER_SRC).not.toContain('const data = (await res.json()) as');
     expect(API_SERVER_SRC).not.toContain('const data = (await res.json()) as');
   });
 
   it('token mint 三處都用 typeof-string 驗證 access_token（防 Bearer [object Object]）', () => {
     expect(TOKEN_HELPER_SRC).toContain("typeof json.access_token !== 'string'");
     expect(CRON_SHARED_SRC).toContain("typeof json.access_token !== 'string'");
-    expect(API_SERVER_SRC).toContain("typeof data.access_token !== 'string'");
+    expect(WORKER_SRC).toContain("typeof data.access_token !== 'string'");
   });
 
   it('cron-shared makeApiClient: 200 空/非-JSON body → fail loud（不回 null as T）', () => {

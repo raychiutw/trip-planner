@@ -43,7 +43,7 @@ describe('api-server v2.55.52 spawn submit wiring (regression)', () => {
     expect(SRC).toMatch(/import\s*\{[^}]*sleep[^}]*\}\s*from\s*'\.\/_lib\/cron-shared'/);
   });
 
-  it('spawnTmuxRequest 用 waitForRepl + submitSkillCommand，兩者失敗都 kill session', () => {
+  it('spawnPlain（#1264 worker 的未隔離 adapter）用 waitForRepl + submitSkillCommand，兩者失敗都 kill session', () => {
     expect(SRC).toMatch(/await waitForRepl\(tmuxDeps, sessionName\)/);
     expect(SRC).toMatch(/await submitSkillCommand\(tmuxDeps, sessionName, skillCommand\)/);
     // 兩個失敗分支都 kill-session（消除 stuck-session-marked-active 阻塞）

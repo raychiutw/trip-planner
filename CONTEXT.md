@@ -68,6 +68,10 @@ _Avoid_: 卡住、stuck（歧義：同時被拿來指殭屍請求與「我不想
 系統把殭屍請求標成終結。兩層：api-server 確定 worker 死亡時就地標，加上牆鐘兜底。
 _Avoid_: 超時（只描述其中一層）、清理（跟 orphan tmux session 的清理混淆）
 
+**request worker**：
+api-server 裡驅動 requests pipeline 的核心（`scripts/lib/request-worker.ts`）：peek 隊列 → 取 token（/tp-request 走 owner-restricted）→ 同 skill 有 session 就 busy → spawn；接受 fetch / tmux / clock / spawn adapter 注入，測試用 fake 進同一個 interface。api-server 本體只組裝真實 adapter 與 HTTP / cron 接線。
+_Avoid_: 在 api-server 頂層函式裡直接寫決策（那樣只能 readFileSync 測）；「worker」單獨講指這個 module，tmux 裡跑的 claude session 叫 session。
+
 **遲到完成**：
 request 已經終結之後，worker 才回報進來的成果。它的 `reply` 寫得進去，但不會讓 `status` 復活。
 
