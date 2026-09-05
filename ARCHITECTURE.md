@@ -88,11 +88,14 @@ src/
 ├── entries/main.tsx         SPA 入口 + lazyWithRetry (v2.33.67 retry-budget reset)
 ├── pages/                   ~30 個 page (含 OAuth flow / settings / 動作頁 fullpage migrations)
 ├── components/
-│   ├── trip/                Timeline / DayNav / DaySection / TripMapRail / DayMap ...
+│   ├── trip/                TimelineRail（拆 RailRow / EntryTimeChip / RailRowMenu / StopPoiChoiceCard）/
+│   │                        DayNav / DaySection / TripMapRail / DayMap ...
 │   └── shared/              Icon / Toast / ErrorBoundary / PageNav ...
 ├── hooks/                   useTrip / useDarkMode / usePrintMode / usePermissions ...
 ├── lib/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
+│   ├── entryMutations.ts    entry 變更：動詞 module（createEntry/setMaster/deleteEntry/...）回 Result，
+│   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 CONTEXT.md「entry 變更」
 │   ├── mapRow.ts            DB row → UI object 統一轉換
 │   ├── scrollSpy.ts         純函式：捲動位置 → active day index
 │   └── ...                  localStorage、sentry、timelineUtils
@@ -145,7 +148,8 @@ functions/api/
 ├── _auth.ts             auth helpers（isAdmin, requireAuth）
 ├── _audit.ts            寫 audit_log
 ├── _errors.ts           AppError + errorResponse
-├── _poi.ts              findOrCreatePoi + POI write helpers (v2.29.0 後 pois master only, trip_pois drop)
+├── _poi.ts              findOrCreatePoi 單一 POI resolver（policy: keep/fill-null，#1256 合併舊 resolvePoi）
+├── _entryWrite.ts       entry intake：createEntry / createEntriesBatch，唯一可 INSERT trip_entries 的入口（#1259，eslint 守門）
 ├── _entry_pois.ts       trip_entry_pois junction CRUD (v2.27.0 multi-POI per entry)
 ├── _session.ts / _cookies.ts  V2 OAuth session cookie helpers
 ├── _auth_audit.ts       auth_audit_log writer (HMAC IP hash via SESSION_IP_HASH_SECRET, v2.33.62)
@@ -205,8 +209,11 @@ Entry 顯示名稱以 `trip_entry_pois.sort_order=1 -> pois.name` 為 canonical 
 - `trip_pois` 整表 — 之前 COALESCE pattern (trip_pois overrides pois) 已過時
 - `saved_pois` → 改名 `poi_favorites` (v2.22.0 migration 0050)
 
-**POI 讀寫**: backend 用 `findOrCreatePoi(db, {...})` (functions/api/_poi.ts) +
-`syncEntryMaster` / `addAlternate` / `setMaster` (functions/api/_entry_pois.ts)。
+**POI 讀寫**: backend 用 `findOrCreatePoi(db, data, opts)` (functions/api/_poi.ts，`opts.policy` 為
+`'keep'` 或 `'fill-null'`) + `syncEntryMaster` / `addAlternate` / `setMaster`
+(functions/api/_entry_pois.ts)。**建立 entry** 一律經 entry intake（`createEntry` /
+`createEntriesBatch`，functions/api/_entryWrite.ts）—— 單筆新增、收藏加入、複製、分享 clone、
+匯入、整日重寫六條路徑共用同一段建立邏輯，見 `CONTEXT.md` 的「entry intake」詞條。
 
 ### Google Maps Platform stack (v2.23.0+)
 
