@@ -431,7 +431,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
 
     // Batch resolve all POIs (2–3 DB round-trips instead of N)
-    const poiIds = await batchFindOrCreatePois(db, poiItems);
+    const poiIds = await batchFindOrCreatePois(db, poiItems, { policy: 'fill-null' });
 
     const directChoicePoiIds = new Set<number>();
     for (const choices of entryPoiChoiceBuilders) {

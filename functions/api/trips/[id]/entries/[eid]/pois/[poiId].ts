@@ -184,7 +184,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       status: existing.status,
       status_reason: existing.status_reason,
       status_checked_at: existing.status_checked_at,
-    });
+    }, { policy: 'fill-null' });
     if (newPoiId !== poiId) {
       // UNIQUE(entry_id, poi_id) guard：此 entry 不可已參照 newPoiId（同名同類已是另一候選）。
       const dup = await db

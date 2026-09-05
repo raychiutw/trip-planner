@@ -20,7 +20,8 @@ import { requireAuth, assertNotTripRestricted } from '../_auth';
 import { json } from '../_utils';
 import { AppError } from '../_errors';
 import { parseAndValidateImport, MAX_IMPORT_BYTES, type NImportNotes } from './_import';
-import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, generateUniqueTripId } from './_tripWrite';
+import { reqId, runChunked, rollbackTrip, assertTripCap, generateUniqueTripId } from './_tripWrite';
+import { findOrCreatePoi } from '../_poi';
 
 type Stmt = D1PreparedStatement;
 
@@ -98,8 +99,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // ---- POIs: find-or-create by UNIQUE(name, type) (pois enforces it), then
     // link. Sequential (SELECT then INSERT OR IGNORE) — can't chain in a batch.
-    // Pre-existing pois are REUSED as-is (never mutated); only newly-created pois
-    // are tracked for rollback. ----
+    // policy=keep：既有 pois 原樣重用（不動共用 master）；只有新建的記進 createdPoiIds
+    // 供 rollback。source='imported'、country 不猜（NULL）。----
+    const resolve = (p: { type: string; name: string; category: string | null; lat: number | null; lng: number | null; hours: string | null; rating: number | null; price?: string | null; address: string | null; placeId: string | null }) =>
+      findOrCreatePoi(db, {
+        type: p.type, name: p.name, category: p.category, lat: p.lat, lng: p.lng, hours: p.hours,
+        rating: p.rating, price: p.price ?? null, address: p.address, place_id: p.placeId,
+        source: 'imported', country: null,
+      }, { policy: 'keep', createdPoiIds });
     const E: Stmt[] = [];
     for (let di = 0; di < data.days.length; di++) {
       const d = data.days[di]!;
@@ -109,7 +116,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         const seenPoi = new Set<number>();
         let so = 1;
         for (const p of e.pois) {
-          const poiId = await resolvePoi(db, p, createdPoiIds);
+          const poiId = await resolve(p);
           if (seenPoi.has(poiId)) continue; // UNIQUE(entry_id, poi_id) — skip dup-resolved POIs
           seenPoi.add(poiId);
           // migration 0078: master(so===1) 的 note 若 POI 自己沒帶，fallback 用舊檔 entry-level
@@ -120,7 +127,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         }
       }
       if (d.hotel) {
-        const poiId = await resolvePoi(db, d.hotel, createdPoiIds);
+        const poiId = await resolve(d.hotel);
         E.push(db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(poiId, dayIds[di]!));
       }
     }

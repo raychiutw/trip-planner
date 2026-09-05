@@ -13,14 +13,16 @@ import { requireAuth, assertNotTripRestricted } from '../../_auth';
 import { json } from '../../_utils';
 import { AppError } from '../../_errors';
 import { resolveActiveShare, parseVisibleSections, type ShareSection } from '../../_share';
-import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, type ResolvablePoi } from '../../trips/_tripWrite';
+import { reqId, runChunked, rollbackTrip, assertTripCap } from '../../trips/_tripWrite';
+import { findOrCreatePoi, type FindOrCreatePoiData } from '../../_poi';
 import { checkRateLimit, bumpRateLimit, clientIp, RATE_LIMITS } from '../../_rate_limit';
 import type { Env } from '../../_types';
 
 type Stmt = D1PreparedStatement;
 type Row = Record<string, unknown>;
 const rows = (r: { results?: unknown[] } | null): Row[] => (r?.results as Row[]) ?? [];
-const poiFrom = (r: Row): ResolvablePoi => ({
+// clone 與匯入同 policy=keep：既有 master 原樣重用；source='imported'、country 不猜。
+const poiFrom = (r: Row): FindOrCreatePoiData => ({
   type: String(r.type ?? 'attraction'),
   name: String(r.name ?? ''),
   category: (r.category as string) ?? null,
@@ -30,7 +32,9 @@ const poiFrom = (r: Row): ResolvablePoi => ({
   rating: (r.rating as number) ?? null,
   price: (r.price as string) ?? null,
   address: (r.address as string) ?? null,
-  placeId: (r.place_id as string) ?? null,
+  place_id: (r.place_id as string) ?? null,
+  source: 'imported',
+  country: null,
 });
 
 function notFound(): Response {
@@ -168,7 +172,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     for (const ep of rows(epR)) {
       const newEntryId = entryIdMap.get(ep.entry_id as number);
       if (newEntryId === undefined) continue;
-      const poiId = await resolvePoi(db, poiFrom(ep), createdPoiIds);
+      const poiId = await findOrCreatePoi(db, poiFrom(ep), { policy: 'keep', createdPoiIds });
       const seen = seenByEntry.get(newEntryId) ?? new Set<number>();
       if (seen.has(poiId)) continue; // UNIQUE(entry_id, poi_id)
       seen.add(poiId);
@@ -181,7 +185,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     for (const h of rows(hotelsR)) {
       const newDayId = dayIdMap.get(h.day_id as number);
       if (newDayId === undefined) continue;
-      const poiId = await resolvePoi(db, poiFrom(h), createdPoiIds);
+      const poiId = await findOrCreatePoi(db, poiFrom(h), { policy: 'keep', createdPoiIds });
       tail.push(db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(poiId, newDayId));
     }
     for (const s of rows(segsR)) {

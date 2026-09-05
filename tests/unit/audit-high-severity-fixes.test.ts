@@ -131,9 +131,9 @@ describe('audit fix source locks', () => {
 
   it('_poi find-or-create persists place_id (INSERT column + COALESCE backfill)', () => {
     const src = read('functions/api/_poi.ts');
-    // migration 0051: place_id 之後接 lifecycle 三欄（status/status_reason/status_checked_at），
-    // 兩個 INSERT（findOrCreatePoi + batchFindOrCreatePois）column tail 必須 parity。
-    expect((src.match(/country, price, place_id, status, status_reason, status_checked_at\)/g) || []).length).toBe(2);
+    // migration 0051: place_id 之後接 lifecycle 三欄（status/status_reason/status_checked_at）。
+    // #1256：單筆與批次共用同一條 INSERT_POI_SQL，column parity 由結構保證 → 只剩 1 份。
+    expect((src.match(/country, price, place_id, status, status_reason, status_checked_at\)/g) || []).length).toBe(1);
     expect(src).toMatch(/'price', 'place_id',/); // COALESCE_FIELDS（status 刻意不進 COALESCE）
     expect(src).not.toMatch(/'place_id', 'status'/); // lifecycle 不得進 COALESCE_FIELDS
     expect(src).toMatch(/place_id\?: string \| null/);
@@ -203,11 +203,8 @@ describe('audit fix source locks — batch 3', () => {
     expect(read('functions/api/oauth/callback/google.ts')).toMatch(/async function recoverIdentityRace\(/);
   });
 
-  it('poi-favorites add-to-trip uses a null append sentinel (no gapped-sequence shift skip)', () => {
-    const src = read('functions/api/poi-favorites/[id]/add-to-trip.ts');
-    expect(src).toMatch(/let insertSortOrder: number \| null = null/);
-    expect(src).toMatch(/const finalSortOrder = insertSortOrder \?\? \(maxSortOrder \+ 1\)/);
-  });
+  // #1257：add-to-trip 的 append / insert-before 改由 entry intake 承載，
+  // tests/api/entry-intake.integration.test.ts「insert-before 讓位」走行為驗證。
 
   it('segments PATCH increments version on both UPDATE branches (ok + coords-missing) + guards null RETURNING', () => {
     const src = read('functions/api/trips/[id]/segments/[sid].ts');

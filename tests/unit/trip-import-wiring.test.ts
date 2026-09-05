@@ -59,13 +59,8 @@ describe('POST /api/trips/import — endpoint', () => {
     expect(ENDPOINT).toContain("'imported'");
     expect(ENDPOINT).toMatch(/owner_user_id/);
   });
-  it('find-or-creates pois by UNIQUE(name,type) and NEVER mutates an existing one (shared _tripWrite)', () => {
-    expect(ENDPOINT).toMatch(/resolvePoi/); // imported + used
-    expect(TRIPWRITE).toMatch(/export async function resolvePoi/);
-    expect(TRIPWRITE).toMatch(/SELECT id FROM pois WHERE name = \? AND type = \?/);
-    expect(TRIPWRITE).toMatch(/INSERT OR IGNORE INTO pois/);
-    expect(TRIPWRITE).not.toMatch(/UPDATE pois/); // never poison a shared catalog row
-  });
+  // #1256：「既有 POI 絕不改」改由 tests/api/poi-resolver-policy.integration.test.ts
+  // 走 findOrCreatePoi({ policy: 'keep' }) 的行為驗證，不再 grep resolvePoi 原始碼。
   it('dedupes resolved poi_ids per entry (UNIQUE(entry_id, poi_id))', () => {
     expect(ENDPOINT).toMatch(/seenPoi/);
   });
