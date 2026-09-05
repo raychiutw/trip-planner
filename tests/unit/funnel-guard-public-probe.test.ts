@@ -61,7 +61,8 @@ describe('authoritative NS resolve (2026-07-05 recursive-negative-cache incident
 
   it('A record 查詢經 IPv4 白名單過濾（排除 CNAME/雜訊 + injection）', () => {
     expect(GUARD).toContain('dig +short +time=3 +tries=1 A "$host" @"$ns"');
-    expect(GUARD).toContain("grep -E '^[0-9]+\\.[0-9.]+$'");
+    // 嚴格四段式（2026-09-04 security 稽核：舊的 ^[0-9]+\.[0-9.]+$ 連 1.2.3.4.5 都放行）
+    expect(GUARD).toContain("grep -E '^([0-9]{1,3}\\.){3}[0-9]{1,3}$'");
   });
 
   it('L2 is_funnel_dns_published = authoritative 有 record（控制平面已發布）', () => {
@@ -136,14 +137,18 @@ describe('L3 多 edge 探測（2026-09-01 incident：單 edge head -1 誤報 159
    * 不代表服務壞，納入會製造新的誤報來源。
    */
   it('resolve 回傳所有 IPv4 A record — 不可退回 head -1 單 edge', () => {
-    expect(GUARD).toContain("ips=$(dig +short +time=3 +tries=1 A \"$host\" @\"$ns\" 2>/dev/null | grep -E '^[0-9]+\\.[0-9.]+$')");
+    expect(GUARD).toContain("ips=$(dig +short +time=3 +tries=1 A \"$host\" @\"$ns\" 2>/dev/null | grep -E '^([0-9]{1,3}\\.){3}[0-9]{1,3}$')");
     // head -1 是本 incident 的根因，不可復現
     expect(GUARD).not.toMatch(/grep -E '\^\[0-9\]\+\\\.\[0-9\.\]\+\$' \| head -1/);
   });
 
   it('L3 逐一嘗試每個 edge，任一通即判 reachable', () => {
     // (u) 去重：重複 A record 不得讓探測時間翻倍
-    expect(GUARD).toContain('for ip in ${(u)${(f)ips}}; do');
+    expect(GUARD).toContain('probe_list=(${(u)${(f)ips}})');
+    expect(GUARD).toContain('for ip in "${probe_list[@]}"; do');
+    // 探測數量上限：DNS 回覆是外部輸入，沒有上限等於讓對方決定腳本跑多久
+    expect(GUARD).toContain('MAX_EDGE_PROBES="${MAX_EDGE_PROBES:-4}"');
+    expect(GUARD).toContain('probe_list=(${probe_list[1,$MAX_EDGE_PROBES]})');
     // 命中 → 設 REACH_DETAIL 後立即 return 0（早退，不必等其餘 edge）
     expect(GUARD).toMatch(
       /REACH_DETAIL="ip=\$\{ip\} curl_exit=\$\{curl_exit\} http_code=\$\{http_code\}"[\s\S]{0,400}return 0/,
@@ -170,5 +175,16 @@ describe('L3 多 edge 探測（2026-09-01 incident：單 edge head -1 誤報 159
     expect(GUARD).toContain('REACH_DEGRADED=""');
     expect(GUARD).toContain('[ ${#details[@]} -gt 0 ] && REACH_DEGRADED="${(j:; :)details}"');
     expect(GUARD).toContain('L3 部分 edge 不可達但服務仍可達，不 heal');
+  });
+});
+
+describe('probe seam 與端到端接線（2026-09-04 codex + testing 稽核）', () => {
+  it('curl 抽成 probe_edge_http_code seam — 行為測試才能不依賴真 funnel／網路', () => {
+    expect(GUARD).toContain('probe_edge_http_code() {');
+    expect(GUARD).toContain('http_code=$(probe_edge_http_code "$ip" "$host")');
+  });
+
+  it('is_funnel_healthy 消費 REACH_DEGRADED 的接線存在（mutation 曾兩層全綠漏掉）', () => {
+    expect(GUARD).toMatch(/\[ -n "\$\{REACH_DEGRADED:-\}" \] && log "L3 部分 edge 不可達但服務仍可達/);
   });
 });

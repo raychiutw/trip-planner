@@ -46,7 +46,10 @@ else
 fi
 
 echo "[5] L3 transport-fail (curl http_code=000) must NOT count as healthy"
-if [ -n "$host" ]; then
+# 用固定 mock hostname：這條只需要「本機 :443 沒有 listener」，不需要真的有 funnel，
+# 所以不再包在 host 條件裡而在無 funnel 的機器上被跳過（同 [6] 的 skip 假綠問題）。
+if true; then
+  host="mock-host.ts.net"
   # mock resolve → 127.0.0.1:443（本機無 https listen → curl connection refused →
   # http_code=000）。regex 若含 000 會把 dead ingress 誤判 healthy。
   funnel_resolve_authoritative() { printf '127.0.0.1'; }
@@ -59,62 +62,124 @@ else
   skip "no funnel hostname — 跳過 L3 000 驗證"
 fi
 
-echo "[6] 多 edge fallback（2026-09-01 incident：head -1 單 edge 誤報 159 次 / 36 次無效 heal）"
-# 行為測試（非 source-grep）：source-grep 抓不到「第一個 edge 不通就 break」這類
-# 退化 — mutation 實測 source-grep 對它全綠，只有真的跑起來才會紅。
-if [ -n "$host" ]; then
-  # 此時 funnel_resolve_authoritative 已被 [5] mock，直接 dig 取真實 edge
-  good_ip=$(dig +short +time=3 +tries=1 A "$host" @ns1.dnsimple.com 2>/dev/null | grep -E '^[0-9]+\.[0-9.]+$' | tail -1)
-  if [ -z "$good_ip" ]; then
-    skip "無法取得真實 edge IP — 跳過多 edge 驗證"
-  else
-    # 壞 edge 排在前：舊版 head -1 只會探到它 → 誤判整個 funnel 壞。
-    # 127.0.0.1:443 無 listener → 立即 refused（比不可路由 IP 快，同樣 http_code=000）
-    funnel_resolve_authoritative() { printf '127.0.0.1\n%s' "$good_ip"; }
-    if is_funnel_reach_ok "$host"; then
-      ok "一壞一好 → healthy（單 edge 抖動不再誤觸發 heal）"
-      if [ -n "${REACH_DEGRADED:-}" ]; then
-        ok "降級已記錄可觀測 ($REACH_DEGRADED)"
-      else
-        bad "REACH_DEGRADED 未記錄 — 單一 edge 長期劣化會看不見"
-      fi
-    else
-      bad "單一 edge 不通即判整個 funnel 壞 → 誤觸發無效 heal（head -1 / break 回歸？）"
-    fi
-    # 防恆真：全 edge 不通仍須 unhealthy，否則真故障漏偵測
-    funnel_resolve_authoritative() { printf '127.0.0.1\n127.0.0.2'; }
-    if is_funnel_reach_ok "$host"; then
-      bad "全 edge 不通卻判 healthy — 恆真，真故障漏偵測"
-    else
-      ok "全 edge 不通 → unhealthy（真故障仍偵測得到）"
-    fi
-    # 重複 A record 不得讓探測時間翻倍（codex adversarial #2）
-    funnel_resolve_authoritative() { printf '127.0.0.1\n127.0.0.1\n127.0.0.1'; }
-    is_funnel_reach_ok "$host" >/dev/null
-    dup_probes=$(printf '%s' "${REACH_DETAIL:-}" | grep -o 'ip=' | wc -l | tr -d ' ')
-    if [ "$dup_probes" -eq 1 ]; then
-      ok "重複 A record 去重（3 個相同 IP 只探 1 次）"
-    else
-      bad "重複 A record 探了 $dup_probes 次 — 沒去重，惡意/異常 DNS 可拖長單輪執行"
-    fi
+echo "[6] 多 edge fallback（全 mock probe seam — 任何環境都真的跑得到）"
+# 2026-09-04 codex adversarial：舊版整段包在「有真 funnel hostname」的條件裡，沒有
+# funnel 的機器（CI／sandbox）會 skip 卻照樣回報 PASS —— skip 也是一種假綠。改成覆寫
+# probe_edge_http_code seam，不依賴真 funnel、不依賴網路。
+_mock_host="mock-host.ts.net"
+probe_edge_http_code() {
+  case "$1" in
+    10.0.0.1) printf '404'; return 0 ;;   # 可達
+    *)        printf '000'; return 28 ;;  # timeout
+  esac
+}
 
-    # REACH_DEGRADED 不得跨呼叫殘留：先製造降級值，再走 resolve-fail 的 early
-    # return，殘值會讓 caller 對著上一輪的 edge 狀態發 log。
-    funnel_resolve_authoritative() { printf '127.0.0.1\n%s' "$good_ip"; }
-    is_funnel_reach_ok "$host" >/dev/null
-    funnel_resolve_authoritative() { return 1; }
-    is_funnel_reach_ok "$host" >/dev/null
-    if [ -n "${REACH_DEGRADED:-}" ]; then
-      bad "REACH_DEGRADED 殘留上一輪的值 ($REACH_DEGRADED) — early return 沒清"
-    else
-      ok "REACH_DEGRADED 每次呼叫先清（early return 路徑也清）"
-    fi
+funnel_resolve_authoritative() { printf '10.0.0.9\n10.0.0.1'; }
+if is_funnel_reach_ok "$_mock_host"; then
+  ok "一壞一好（壞的在前）→ healthy，不誤觸發 heal"
+  if [ -n "${REACH_DEGRADED:-}" ]; then
+    ok "降級已記錄 ($REACH_DEGRADED)"
+  else
+    bad "REACH_DEGRADED 未記錄 — 單一 edge 長期劣化會看不見"
   fi
 else
-  skip "no funnel hostname — 跳過多 edge 驗證"
+  bad "單一 edge 不通即判整個 funnel 壞（head -1 / break 回歸？）"
 fi
 
-echo "[7] L3 blip 容忍（2026-07-07 型態 D）— fail→pass 判 healthy；持續 fail 仍 unhealthy"
+# 好的排前面 → 命中即早退，後面的壞 edge 不會被探到，REACH_DEGRADED 必為空。
+# 這是刻意取捨：heal 只需要知道「有沒有任一條通」，探完全部會讓最壞時間翻倍。代價是
+# 降級診斷只涵蓋「排在可用 edge 之前」的壞 edge。鎖住這個語意，避免日後有人把
+# REACH_DEGRADED 當成完整的 edge 健康度。
+funnel_resolve_authoritative() { printf '10.0.0.1\n10.0.0.9'; }
+if is_funnel_reach_ok "$_mock_host"; then
+  if [ -z "${REACH_DEGRADED:-}" ]; then
+    ok "好的在前 → 早退且 REACH_DEGRADED 空（已知取捨，非完整 edge 健康度）"
+  else
+    bad "好的在前卻記了降級 — 早退語意變了，時間預算的假設也跟著失效"
+  fi
+else
+  bad "第一個 edge 就通卻判 unhealthy"
+fi
+
+funnel_resolve_authoritative() { printf '10.0.0.8\n10.0.0.9'; }
+if is_funnel_reach_ok "$_mock_host"; then
+  bad "全 edge 不通卻判 healthy — 恆真，真故障漏偵測"
+else
+  ok "全 edge 不通 → unhealthy（真故障仍偵測得到）"
+fi
+
+funnel_resolve_authoritative() { printf '10.0.0.9\n10.0.0.9\n10.0.0.9'; }
+is_funnel_reach_ok "$_mock_host" >/dev/null
+dup_probes=$(printf '%s' "${REACH_DETAIL:-}" | grep -o 'ip=' | wc -l | tr -d ' ')
+if [ "$dup_probes" -eq 1 ]; then
+  ok "重複 A record 去重（3 個相同 IP 只探 1 次）"
+else
+  bad "重複 A record 探了 $dup_probes 次 — 沒去重"
+fi
+
+funnel_resolve_authoritative() { printf '10.0.0.9\n10.0.0.1'; }
+is_funnel_reach_ok "$_mock_host" >/dev/null
+funnel_resolve_authoritative() { return 1; }
+is_funnel_reach_ok "$_mock_host" >/dev/null
+if [ -n "${REACH_DEGRADED:-}" ]; then
+  bad "REACH_DEGRADED 殘留上一輪的值 ($REACH_DEGRADED) — early return 沒清"
+else
+  ok "REACH_DEGRADED 每次呼叫先清（early return 路徑也清）"
+fi
+
+echo "[7] resolve 真的回傳多行（擋掉所有『只取第一筆』的變體寫法）"
+# [6] 結尾把 funnel_resolve_authoritative mock 成 return 1，這裡要拿回真的實作
+GUARD_SOURCE_ONLY=1 source scripts/funnel-guard/guard.sh 2>/dev/null
+# coverage 稽核指出：unit test 只禁止字面的 `head -1`，換成 head -n1／tail -1／
+# sed -n 1p 都能繞過 source-grep 而重現 2026-09-01 incident。這裡覆寫 dig 直接數行數，
+# 任何截斷寫法都會讓行數掉到 1 而變紅。
+dig() {
+  case "$*" in
+    *"NS ts.net"*)          printf 'ns1.dnsimple.com.\n' ;;
+    *"A mock-multi.ts.net"*) printf '10.0.0.1\n10.0.0.2\n10.0.0.3\n' ;;
+    *)                       printf '' ;;
+  esac
+}
+_resolved=$(funnel_resolve_authoritative "mock-multi.ts.net")
+_lines=$(printf '%s\n' "$_resolved" | grep -c '^10\.0\.0\.')
+if [ "$_lines" -eq 3 ]; then
+  ok "resolve 回傳全部 3 筆 A record（沒有被任何形式截斷）"
+else
+  bad "resolve 只回傳 $_lines 筆 — 有截斷（head -1／head -n1／tail -1／sed 1p 之類）"
+fi
+unset -f dig
+
+echo "[8] is_funnel_healthy 端到端接線：REACH_DEGRADED 要真的觸發 log"
+# testing specialist 用 mutation 證明的缺口：把 213 行守衛變數打錯字（log 字串不動），
+# source-grep 8 條斷言全綠、test-guard.sh 也全 PASS —— 因為 [6] 只直測
+# is_funnel_reach_ok，[9] 又把它整個 mock 掉，沒有任何案例讓真的 is_funnel_reach_ok
+# 流經 is_funnel_healthy。這裡保留真的 is_funnel_reach_ok，只 mock 它下游的探測。
+is_funnel_local_healthy() { return 0; }
+funnel_hostname() { printf 'mock-host.ts.net'; }
+is_funnel_dns_published() { return 0; }
+probe_edge_http_code() {
+  case "$1" in
+    10.0.0.1) printf '404'; return 0 ;;
+    *)        printf '000'; return 28 ;;
+  esac
+}
+funnel_resolve_authoritative() { printf '10.0.0.9\n10.0.0.1'; }
+_out=$(is_funnel_healthy 2>&1)
+if printf '%s' "$_out" | grep -q '部分 edge 不可達但服務仍可達'; then
+  ok "is_funnel_healthy 真的印出降級 log（寫入→消費的接線完整）"
+else
+  bad "is_funnel_healthy 沒印出降級 log — REACH_DEGRADED 接線斷了（直測 is_funnel_reach_ok 看不到這種回歸）"
+fi
+# 反向：沒有降級時不可誤印（擋 -n 改成 -z、或把 log 移出成功分支而每次都噴）
+funnel_resolve_authoritative() { printf '10.0.0.1'; }
+_out2=$(is_funnel_healthy 2>&1)
+if printf '%s' "$_out2" | grep -q '部分 edge 不可達但服務仍可達'; then
+  bad "沒有降級卻印了降級 log — 條件寫反或 log 放錯分支"
+else
+  ok "無降級時不印降級 log（條件方向正確）"
+fi
+
+echo "[9] L3 blip 容忍（2026-07-07 型態 D）— fail→pass 判 healthy；持續 fail 仍 unhealthy"
 # 全 mock：只驗 is_funnel_healthy 的 L3 retry 分支，不碰網路/真 funnel
 L3_RETRY_INTERVAL=0
 is_funnel_local_healthy() { return 0; }
