@@ -122,7 +122,7 @@ export function normalizeFindOrCreatePoiPayload(raw: FindOrCreatePoiPayload): Fi
     category: normalizeOptionalString(raw.category, 'category'),
     // v2.31.36: address 經 normalizePoiAddress 清「號號」/「縣縣」等 typo doubled。
     address: normalizePoiAddress(normalizeOptionalString(raw.address, 'address')),
-    country: normalizeOptionalString(raw.country, 'country'),
+    country: normalizeOptionalString(raw.country, 'country') ?? 'JP', // 舊 INSERT 預設，行為不變
     source: normalizeOptionalString(raw.source, 'source') ?? 'google',
     place_id: normalizeOptionalString(raw.place_id, 'place_id'),
   };

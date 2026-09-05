@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { findOrCreatePoi, batchFindOrCreatePois } from '../../functions/api/_poi';
+import { findOrCreatePoi, batchFindOrCreatePois, normalizeFindOrCreatePoiPayload } from '../../functions/api/_poi';
 
 let db: D1Database;
 beforeAll(async () => { db = await createTestDb(); });
@@ -74,5 +74,16 @@ describe('batchFindOrCreatePois policy', () => {
     const [f] = await batchFindOrCreatePois(db, [{ name: 'Batch 景點', type: 'attraction', address: 'F' }], { policy: 'fill-null' });
     expect(f).toBe(existing!.id);
     expect((await poiRow(f!))!.address).toBe('F');
+  });
+});
+
+describe('country 預設（行為不變）', () => {
+  it('未給 country → JP；normalize 沒帶 country 也是 JP；只有明確 null 才存 NULL', async () => {
+    const a = await findOrCreatePoi(db, { name: 'Country 未給', type: 'attraction' }, { policy: 'keep' });
+    expect((await poiRow(a))!.country).toBe('JP');
+    const norm = normalizeFindOrCreatePoiPayload({ name: 'Country normalize', type: 'attraction', lat: 1, lng: 2 });
+    expect(norm.country).toBe('JP');
+    const b = await findOrCreatePoi(db, { name: 'Country null', type: 'attraction', country: null }, { policy: 'keep' });
+    expect((await poiRow(b))!.country).toBeNull();
   });
 });

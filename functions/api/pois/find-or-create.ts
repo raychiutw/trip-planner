@@ -33,7 +33,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     address: body.address ?? null,
     category: body.category ?? null,
     source: body.source ?? 'user-explore',
-    country: body.country ?? null,
+    country: body.country ?? 'JP', // 沿用舊 INSERT 預設；只有匯入／clone 明確寫 null
     place_id: typeof body.place_id === 'string' ? body.place_id : null,
   };
 

@@ -52,20 +52,3 @@ describe('API server HTTP endpoints', () => {
     expect(knownPrefixes.some(p => 'tripline-debug'.startsWith(p))).toBe(false);
   });
 });
-
-describe('#1264 api-server 只組裝 adapter，決策在 request-worker', () => {
-  const fs = require('node:fs');
-  const path = require('node:path');
-  const SRC = fs.readFileSync(path.resolve(__dirname, '../../scripts/tripline-api-server.ts'), 'utf8');
-  it('/health 用 worker.status()、/trigger 與 cron 用 worker.isRunning()', () => {
-    expect(SRC).toMatch(/\.\.\.worker\.status\(\)/);
-    expect(SRC).toMatch(/worker\.isRunning\('\/tp-request'\)/);
-    expect(SRC).toMatch(/worker\.isRunning\(skillCommand\)/);
-  });
-  it('script 內不再有 peek / mint / acquireToken / hasActiveSession / cleanupOrphans 的實作', () => {
-    for (const fn of ['peekPendingRequest', 'mintRestricted', 'acquireToken', 'hasActiveSession', 'cleanupOrphans', 'spawnTmuxRequest']) {
-      expect(SRC).not.toMatch(new RegExp(`function ${fn}\\(`));
-    }
-  });
-});
-

@@ -15,6 +15,21 @@ import tseslint from 'typescript-eslint';
 import globals from 'globals';
 
 export default [
+  // #1259 entry intake 守門：functions/ 內只有 _entryWrite.ts 可以 INSERT trip_entries。
+  // 用 lint 而非 readFileSync 測試（spec 橫切規則：不新增讀原始碼的測試）。
+  {
+    files: ['functions/**/*.ts'],
+    ignores: ['functions/api/_entryWrite.ts'],
+    languageOptions: { parser: tseslint.parser, ecmaVersion: 2023, sourceType: 'module' },
+    plugins: { '@typescript-eslint': tseslint.plugin },
+    linterOptions: { reportUnusedDisableDirectives: 'off' },
+    rules: {
+      'no-restricted-syntax': ['error',
+        { selector: 'TemplateElement[value.raw=/INSERT\\s+INTO\\s+trip_entries\\b/i]', message: '建立 entry 只能走 entry intake（functions/api/_entryWrite.ts createEntry / createEntriesBatch）。' },
+        { selector: 'Literal[value=/INSERT\\s+INTO\\s+trip_entries\\b/i]', message: '建立 entry 只能走 entry intake（functions/api/_entryWrite.ts createEntry / createEntriesBatch）。' },
+      ],
+    },
+  },
   {
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
