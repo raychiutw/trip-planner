@@ -78,7 +78,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       (r) => dayIds.push(reqId(r)));
 
     // ---- Batch C: entries RETURNING id; build entryPosition → new id ----
-    // ---- POIs 先批次 resolve（policy=fill-null，spec #1255 / #1258 owner 2026-09-05 拍板：
+    // ---- POIs 逐筆 resolve（policy=fill-null，spec #1255 / #1258 owner 2026-09-05 拍板：
     // 撞既有 pois 只補 NULL 欄、不覆蓋非 NULL；新建記 createdPoiIds 供 rollback；
     // source='imported'、country 不猜）。逐 POI sequential 是 UNIQUE(name,type)
     // SELECT→INSERT OR IGNORE 無法 batch 的既有限制。----
@@ -86,8 +86,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       findOrCreatePoi(db, {
         type: p.type, name: p.name, category: p.category, lat: p.lat, lng: p.lng, hours: p.hours,
         rating: p.rating, price: p.price ?? null, address: p.address, place_id: p.placeId,
-        source: 'imported', country: null,
-      }, { policy: 'fill-null', createdPoiIds });
+        source: 'imported',
+      }, { policy: 'fill-null', createdPoiIds, defaultCountry: null });
 
     // ---- entries：#1258 走 entry intake 批次入口（正選/備選、去重、version、每筆 audit）----
     const specs: BatchEntrySpec[] = [];

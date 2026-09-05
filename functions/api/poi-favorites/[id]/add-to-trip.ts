@@ -229,6 +229,7 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
       changedBy: actor.isCompanion ? actor.audit.changedBy : (auth?.email ?? ''),
       requestId: actor.requestId,
       diff: auditDiff,
+      defer: (p) => context.waitUntil(p),
     },
   });
   const finalSortOrder = row.sort_order as number;

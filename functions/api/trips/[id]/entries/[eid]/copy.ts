@@ -118,7 +118,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 隨下方 trip_entry_pois batch（含 row.note）一起複製，master + 每個 alternate 的 note 保留。
   // #1258 entry intake 批次入口：entry + 正選/備選（含各自 note/reservation）+ version +
   // audit + 補償 DELETE 全在 createEntriesBatch。複製沿用來源的 poi_id 不 resolve。
-  const [newEid] = await createEntriesBatch(db, [{
+  let newRow: Record<string, unknown> | undefined;
+  await createEntriesBatch(db, [{
     dayId: targetDayId,
     sortOrder,
     startTime: copyStartTime,
@@ -134,8 +135,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     })),
   }], {
     audit: { tripId: id, changedBy, diff: { copiedFromEntryId: eid, targetDayId } },
+    onEntryId: (_id, _idx, row) => { newRow = row; },
   });
-  const newRow = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(newEid).first<Record<string, unknown>>();
   if (!newRow) throw new AppError('DATA_SAVE_FAILED', '複製 entry 失敗');
 
   return json(newRow);

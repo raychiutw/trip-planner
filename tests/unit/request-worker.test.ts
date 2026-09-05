@@ -221,3 +221,16 @@ describe('#1265 收屍（ADR-0007 第一層）', () => {
     expect(JSON.parse(patched[0]!)).toMatchObject({ status: 'failed', terminalReason: 'error' });
   });
 });
+
+describe('tripHasPending 保守判斷', () => {
+  it('API 非 200 → true（不誤殺）；fetch 丟例外 → true；兩狀態皆空 → false', async () => {
+    const { deps } = makeDeps();
+    const w = createRequestWorker(deps);
+    (deps.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(async () => new Response('x', { status: 503 }));
+    expect(await w.tripHasPending('t')).toBe(true);
+    (deps.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(async () => { throw new Error('net'); });
+    expect(await w.tripHasPending('t')).toBe(true);
+    (deps.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(async () => jsonRes(200, { items: [] }));
+    expect(await w.tripHasPending('t')).toBe(false);
+  });
+});

@@ -35,7 +35,6 @@ const poiFrom = (r: Row): FindOrCreatePoiData => ({
   address: (r.address as string) ?? null,
   place_id: (r.place_id as string) ?? null,
   source: 'imported',
-  country: null,
 });
 
 function notFound(): Response {
@@ -145,12 +144,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     );
 
     // ---- Batch C: entries RETURNING id → map old entry id → new entry id ----
-    // #1258：POI 先批次 resolve（policy=keep），entries 走 entry intake 批次入口
+    // #1258：POI 逐筆 resolve（policy=fill-null，同匯入），entries 走 entry intake 批次入口
     //（正選/備選、同 entry 去重、version、每筆 audit）。
     const srcEntries = rows(entriesR);
     const poisByEntry = new Map<number, BatchEntrySpec['pois']>();
     for (const ep of rows(epR)) {
-      const poiId = await findOrCreatePoi(db, poiFrom(ep), { policy: 'fill-null', createdPoiIds });
+      const poiId = await findOrCreatePoi(db, poiFrom(ep), { policy: 'fill-null', createdPoiIds, defaultCountry: null });
       const list = poisByEntry.get(ep.entry_id as number) ?? [];
       list.push({ poiId, description: ep.description as string | null, note: ep.note as string | null, reservation: ep.reservation as string | null, reservationUrl: ep.reservation_url as string | null });
       poisByEntry.set(ep.entry_id as number, list);
@@ -180,7 +179,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     for (const h of rows(hotelsR)) {
       const newDayId = dayIdMap.get(h.day_id as number);
       if (newDayId === undefined) continue;
-      const poiId = await findOrCreatePoi(db, poiFrom(h), { policy: 'fill-null', createdPoiIds });
+      const poiId = await findOrCreatePoi(db, poiFrom(h), { policy: 'fill-null', createdPoiIds, defaultCountry: null });
       tail.push(db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(poiId, newDayId));
     }
     for (const s of rows(segsR)) {

@@ -122,7 +122,7 @@ export function normalizeFindOrCreatePoiPayload(raw: FindOrCreatePoiPayload): Fi
     category: normalizeOptionalString(raw.category, 'category'),
     // v2.31.36: address 經 normalizePoiAddress 清「號號」/「縣縣」等 typo doubled。
     address: normalizePoiAddress(normalizeOptionalString(raw.address, 'address')),
-    country: normalizeOptionalString(raw.country, 'country') ?? 'JP', // 舊 INSERT 預設，行為不變
+    country: normalizeOptionalString(raw.country, 'country'),
     source: normalizeOptionalString(raw.source, 'source') ?? 'google',
     place_id: normalizeOptionalString(raw.place_id, 'place_id'),
   };
@@ -130,13 +130,20 @@ export function normalizeFindOrCreatePoiPayload(raw: FindOrCreatePoiPayload): Fi
 
 /**
  * 既有 POI 撞到時怎麼辦 —— ADR-0001 的 immutable master 由這個參數守門。
- *   keep      ：任何欄位不改（匯入、分享 clone）。
- *   fill-null ：只 COALESCE 補 NULL 欄，非 NULL 值不覆蓋（UI 建立 / 換 POI / AI 直寫）。
+ *   keep      ：任何欄位不改。目前沒有呼叫端（匯入／clone 於 2026-09-05 owner 拍板改走
+ *               fill-null），留給日後「絕不動 master」的路徑。
+ *   fill-null ：只 COALESCE 補 NULL 欄，非 NULL 值不覆蓋（所有現行路徑）。
  * createdPoiIds：只記「本次新建」的 id，供失敗時 rollback；既有 row 不記。
  */
 export interface ResolvePoiOptions {
   policy: 'keep' | 'fill-null';
   createdPoiIds?: number[];
+  /**
+   * 新建 row 時 country 未給／null 的預設。預設 'JP'（既有 UI 路徑慣例）；匯入／clone 傳 null
+   * 表示不猜國家。只影響 INSERT，不影響 fill-null 的 COALESCE（null 一律跳過、不會把既有
+   * NULL country 補成預設值）。
+   */
+  defaultCountry?: string | null;
 }
 
 const COALESCE_FIELDS = [
@@ -163,15 +170,14 @@ function buildCoalesceUpdate(data: FindOrCreatePoiData): { fills: string[]; vals
 const INSERT_POI_SQL =
   'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price, place_id, status, status_reason, status_checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id';
 
-function bindInsertPoi(db: D1Database, data: FindOrCreatePoiData): D1PreparedStatement {
+function bindInsertPoi(db: D1Database, data: FindOrCreatePoiData, defaultCountry: string | null): D1PreparedStatement {
   // Migration 0045: dropped maps col. 0054: price. 0051: lifecycle 三欄（一般 caller 不帶 → 預設）。
-  // country：未給 → 'JP'（既有 UI 路徑慣例）；明確給 null → NULL（匯入／clone 不猜國家）。
   return db.prepare(INSERT_POI_SQL).bind(
     data.type, data.name, data.description ?? null, data.hours ?? null,
     data.rating ?? null, data.category ?? null,
     data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
     data.address ?? null, data.phone ?? null, data.email ?? null,
-    data.website ?? null, data.country === undefined ? 'JP' : data.country, data.price ?? null,
+    data.website ?? null, data.country ?? defaultCountry, data.price ?? null,
     data.place_id ?? null,
     data.status ?? 'active', data.status_reason ?? null, data.status_checked_at ?? null,
   );
@@ -199,7 +205,7 @@ export async function findOrCreatePoi(
   }
 
   // Not found → INSERT (INSERT OR IGNORE for race-safety with UNIQUE index)
-  const result = await bindInsertPoi(db, data).first<{ id: number }>();
+  const result = await bindInsertPoi(db, data, opts.defaultCountry === undefined ? 'JP' : opts.defaultCountry).first<{ id: number }>();
 
   // INSERT OR IGNORE returns null if concurrent insert won the race
   if (result) { opts.createdPoiIds?.push(result.id); return result.id; }
@@ -267,7 +273,7 @@ export async function batchFindOrCreatePois(
 
   // Step 3: Batch INSERT OR IGNORE for missing POIs
   if (toInsert.length > 0) {
-    const insertStmts = toInsert.map((idx) => bindInsertPoi(db, uniqueItems[idx]!.data));
+    const insertStmts = toInsert.map((idx) => bindInsertPoi(db, uniqueItems[idx]!.data, opts.defaultCountry === undefined ? 'JP' : opts.defaultCountry));
     const insertResults = await db.batch(insertStmts);
 
     // Collect IDs; race-collisions (INSERT OR IGNORE) return empty results

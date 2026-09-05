@@ -85,3 +85,30 @@ describe('RailRow（獨立 render）', () => {
     await waitFor(() => expect(mutations.setMaster).toHaveBeenCalled());
   });
 });
+
+describe('RailRow ⋯ menu 條件分支', () => {
+  const base: TimelineEntryData = { id: 7, startTime: '09:00', endTime: '10:00', title: '首里城', stopPois: [{ poiId: 1, sortOrder: 1, name: '首里城' }] };
+  function renderRow(entry: TimelineEntryData, extra: Partial<React.ComponentProps<typeof RailRow>> = {}) {
+    return render(
+      <MemoryRouter><TripIdContext.Provider value="t1">
+        <RailRow entry={entry} index={0} expanded={false} onToggle={() => {}} isPast={false} isNow={false} isLast sortMode={false} onEnterSortMode={() => {}} stopNumber={1} {...extra} />
+      </TripIdContext.Provider></MemoryRouter>,
+    );
+  }
+  it('無地點 → 沒有「在地圖開啟」；第一列且非末列 → 只有下移沒有上移', () => {
+    renderRow(base, { onMoveStep: () => {}, isLast: false });
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-7'));
+    expect(screen.queryByTestId('timeline-rail-menu-map-7')).toBeNull();
+    expect(screen.queryByTestId('timeline-rail-move-up-7')).toBeNull();
+    expect(screen.getByTestId('timeline-rail-move-down-7')).toBeTruthy();
+    expect(screen.getByTestId('timeline-rail-menu-sort-7')).toBeTruthy();
+    expect(screen.getByTestId('timeline-rail-delete-7')).toBeTruthy();
+  });
+  it('有地點 → 有「在地圖開啟」；末列且非第一列（index>0）→ 有上移沒有下移', () => {
+    renderRow({ ...base, locations: ['沖繩縣那霸市'] } as TimelineEntryData, { index: 2, isLast: true, onMoveStep: () => {} });
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-7'));
+    expect(screen.getByTestId('timeline-rail-menu-map-7')).toBeTruthy();
+    expect(screen.getByTestId('timeline-rail-move-up-7')).toBeTruthy();
+    expect(screen.queryByTestId('timeline-rail-move-down-7')).toBeNull();
+  });
+});

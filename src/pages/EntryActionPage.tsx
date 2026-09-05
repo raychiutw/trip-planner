@@ -312,7 +312,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
         ? await copyEntry(tripId, entryIdNum, { targetDayId: selectedDayId, targetDayNum })
         : await moveEntry(tripId, entryIdNum, { fromDayNum: dayNumFromId(days, currentDayId), toDayNum: targetDayNum, toDayId: selectedDayId });
       if (!r.ok) {
-        throw new Error(r.code && r.message ? r.message : (action === 'copy' ? '複製失敗' : '移動失敗'));
+        throw new Error(r.message || (action === 'copy' ? '複製失敗' : '移動失敗'));
       }
       showToast(action === 'copy' ? '景點已複製' : '景點已移動', 'success');
       handleBack();

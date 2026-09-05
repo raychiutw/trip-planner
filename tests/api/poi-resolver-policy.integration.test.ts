@@ -48,8 +48,8 @@ describe('findOrCreatePoi policy', () => {
   it('不存在 → 新建，source 由 caller 決定，並記進 createdPoiIds', async () => {
     const created: number[] = [];
     const id = await findOrCreatePoi(db, {
-      name: 'New 食堂', type: 'restaurant', source: 'imported', country: null,
-    }, { policy: 'keep', createdPoiIds: created });
+      name: 'New 食堂', type: 'restaurant', source: 'imported',
+    }, { policy: 'keep', createdPoiIds: created, defaultCountry: null });
     expect(created).toEqual([id]);
     const row = await poiRow(id);
     expect(row!.source).toBe('imported');
@@ -78,12 +78,19 @@ describe('batchFindOrCreatePois policy', () => {
 });
 
 describe('country 預設（行為不變）', () => {
-  it('未給 country → JP；normalize 沒帶 country 也是 JP；只有明確 null 才存 NULL', async () => {
-    const a = await findOrCreatePoi(db, { name: 'Country 未給', type: 'attraction' }, { policy: 'keep' });
+  it('未給 country → 新建 JP；normalize 不給預設（null）；fill-null 撞既有 NULL country 不補成 JP', async () => {
+    const a = await findOrCreatePoi(db, { name: 'Country 未給', type: 'attraction' }, { policy: 'fill-null' });
     expect((await poiRow(a))!.country).toBe('JP');
     const norm = normalizeFindOrCreatePoiPayload({ name: 'Country normalize', type: 'attraction', lat: 1, lng: 2 });
-    expect(norm.country).toBe('JP');
-    const b = await findOrCreatePoi(db, { name: 'Country null', type: 'attraction', country: null }, { policy: 'keep' });
+    expect(norm.country).toBeNull();
+    // 既有 row country NULL，fill-null 撞到 → 維持 NULL（COALESCE 跳過 null，不會被 INSERT 預設值污染）
+    const existing = await db.prepare("INSERT INTO pois (type, name, country) VALUES ('attraction', 'Country 既有 NULL', NULL) RETURNING id").first<{ id: number }>();
+    const hit = await findOrCreatePoi(db, normalizeFindOrCreatePoiPayload({ name: 'Country 既有 NULL', type: 'attraction', lat: 1, lng: 2 }), { policy: 'fill-null' });
+    expect(hit).toBe(existing!.id);
+    expect((await poiRow(hit))!.country).toBeNull();
+  });
+  it('defaultCountry: null（匯入／clone）→ 新建存 NULL', async () => {
+    const b = await findOrCreatePoi(db, { name: 'Country 匯入', type: 'attraction' }, { policy: 'fill-null', defaultCountry: null });
     expect((await poiRow(b))!.country).toBeNull();
   });
 });

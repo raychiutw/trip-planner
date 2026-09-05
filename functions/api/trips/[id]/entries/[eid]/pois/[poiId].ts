@@ -177,7 +177,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       phone: existing.phone,
       email: existing.email,
       website: existing.website,
-      country: existing.country ?? 'JP', // 舊 INSERT 預設，行為不變
+      country: existing.country,
       price: existing.price,
       place_id: existing.place_id,
       // lifecycle 帶入 clone（只在「建新 (name, newType) row」時生效；撞既有 row → 不覆寫）。

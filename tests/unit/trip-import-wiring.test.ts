@@ -32,8 +32,8 @@ describe('POST /api/trips/import — endpoint', () => {
     expect(ENDPOINT).toContain("'imported'");
     expect(ENDPOINT).toMatch(/owner_user_id/);
   });
-  // #1256：「既有 POI 絕不改」改由 tests/api/poi-resolver-policy.integration.test.ts
-  // 走 findOrCreatePoi({ policy: 'keep' }) 的行為驗證，不再 grep resolvePoi 原始碼。
+  // #1256／#1258：POI resolve policy（匯入現為 fill-null：只補 NULL、非 NULL 不覆蓋）改由
+  // tests/api/poi-resolver-policy 與 import-entry-note 走行為驗證，不再 grep resolvePoi 原始碼。
   it('rolls back (connect-root delete) on any failure (shared _tripWrite)', () => {
     expect(ENDPOINT).toMatch(/await rollbackTrip\(/);
     expect(TRIPWRITE).toMatch(/export async function rollbackTrip/);

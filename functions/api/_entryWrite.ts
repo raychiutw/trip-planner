@@ -13,6 +13,7 @@ import { AppError } from './_errors';
 import { findOrCreatePoi, type FindOrCreatePoiData, type ResolvePoiOptions } from './_poi';
 import { resortDayByArrival } from './_entry_sort';
 import { logAudit } from './_audit';
+import { runChunked } from './trips/_tripWrite';
 
 export type PoiRef =
   | { id: number }
@@ -35,10 +36,11 @@ export interface CreateEntrySpec {
    * shift=false 直接寫該 sort_order（collision 由 resort 依抵達時間拉正）。
    */
   placement?: { sortOrder: number; shift?: boolean };
-  /** 稽核：每一條建立路徑都必須留 audit_log（rollback 讀它）。 */
-  audit: { tripId: string; changedBy: string; requestId?: number | null; diff?: Record<string, unknown> };
-  /** 預設 true。整日重寫等批次呼叫端可在最後統一 resort 一次。 */
-  resort?: boolean;
+  /**
+   * 稽核：每一條建立路徑都必須留 audit_log（rollback 讀它）。
+   * defer：給了就把 audit INSERT 交給它（例如 context.waitUntil）不阻塞回應；沒給就 await。
+   */
+  audit: { tripId: string; changedBy: string; requestId?: number | null; diff?: Record<string, unknown>; defer?: (p: Promise<unknown>) => void };
 }
 
 export interface CreateEntryResult {
@@ -87,15 +89,6 @@ function auditInsertStmt(db: D1Database, a: { tripId: string; changedBy: string;
   return db.prepare(
     'INSERT INTO audit_log (trip_id, table_name, record_id, action, changed_by, request_id, diff_json) VALUES (?, ?, ?, ?, ?, ?, ?)',
   ).bind(a.tripId, 'trip_entries', entryId, 'insert', a.changedBy, a.requestId ?? null, JSON.stringify(diff));
-}
-
-const BATCH_CHUNK = 50; // D1 ~100-statement-per-batch 上限之下
-
-async function runChunked(db: D1Database, stmts: D1PreparedStatement[], onResult?: (r: D1Result, idx: number) => void): Promise<void> {
-  for (let i = 0; i < stmts.length; i += BATCH_CHUNK) {
-    const res = await db.batch(stmts.slice(i, i + BATCH_CHUNK));
-    if (onResult) res.forEach((r, j) => onResult(r, i + j));
-  }
 }
 
 async function resolvePoiRef(db: D1Database, poi: PoiRef): Promise<number> {
@@ -151,15 +144,13 @@ export async function createEntry(db: D1Database, spec: CreateEntrySpec): Promis
   }
 
   // ── resort（best-effort：entry 已 commit，重排失敗不可回 5xx，否則 client 重試 → 重複）──
-  if (spec.resort !== false) {
-    try {
-      await resortDayByArrival(db, spec.dayId);
-    } catch (err) {
-      console.error('[entry intake] resortDayByArrival failed (non-fatal)', err);
-    }
+  try {
+    await resortDayByArrival(db, spec.dayId);
+  } catch (err) {
+    console.error('[entry intake] resortDayByArrival failed (non-fatal)', err);
   }
 
-  await logAudit(db, {
+  const audit = logAudit(db, {
     tripId: spec.audit.tripId,
     tableName: 'trip_entries',
     recordId: entryId,
@@ -168,6 +159,7 @@ export async function createEntry(db: D1Database, spec: CreateEntrySpec): Promis
     requestId: spec.audit.requestId,
     diffJson: JSON.stringify({ poiId, sort_order: sortOrder, ...(spec.audit.diff ?? {}) }),
   });
+  if (spec.audit.defer) spec.audit.defer(audit); else await audit;
 
   return { entryId, poiId, version: 1, row: row! };
 }
@@ -194,12 +186,13 @@ export interface CreateEntriesBatchOptions {
   /** 給了就每筆 entry 一列 audit_log（rollback 讀它）。匯入／clone 用 trip 級 diff 即可。 */
   audit?: { tripId: string; changedBy: string; requestId?: number | null; diff?: Record<string, unknown> };
   /**
-   * 與第一批 entry INSERT 同一個 db.batch 執行的前置 statement（整日重寫的 DELETE 舊 entries +
-   * day version bump 要跟新 entries 原子替換）。
+   * 與 entry INSERT 同一個 db.batch 原子執行的前置 statement（整日重寫的 DELETE 舊 entries +
+   * day version bump）。給了就不分 chunk：整批一次送，超過 D1 statement 上限會整批失敗而不是
+   * 砍掉舊 entries 後只建到一半（舊碼 batch1 的語意）。
    */
   atomicWith?: D1PreparedStatement[];
-  /** 每拿到一個 entry id 就回呼（匯入／clone 要逐步累積 createdEntryIds 供失敗 rollback）。 */
-  onEntryId?: (entryId: number, idx: number) => void;
+  /** 每拿到一個 entry 就回呼（匯入／clone 逐步累積 createdEntryIds 供 rollback；複製拿完整 row 回應）。 */
+  onEntryId?: (entryId: number, idx: number, row: Record<string, unknown>) => void;
 }
 
 export async function createEntriesBatch(
@@ -213,19 +206,23 @@ export async function createEntriesBatch(
   }
   const prelude = opts.atomicWith ?? [];
   const entryIds: number[] = [];
-  await runChunked(
-    db,
-    [...prelude, ...specs.map((e) => entryInsertStmt(db, { ...e, version: e.pois.length > 0 ? 1 : 0 }))],
-    (r, idx) => {
-      if (idx < prelude.length) return;
-      const id = (r.results?.[0] as { id?: unknown } | undefined)?.id;
-      if (typeof id !== 'number' || id <= 0) {
-        throw new AppError('SYS_DB_ERROR', `trip_entries INSERT RETURNING id missing at index ${idx - prelude.length}`);
-      }
-      entryIds.push(id);
-      opts.onEntryId?.(id, idx - prelude.length);
-    },
-  );
+  const stmts = [...prelude, ...specs.map((e) => entryInsertStmt(db, { ...e, version: e.pois.length > 0 ? 1 : 0 }))];
+  const onResult = (r: D1Result, idx: number) => {
+    if (idx < prelude.length) return;
+    const row = r.results?.[0] as Record<string, unknown> | undefined;
+    const id = row?.id;
+    if (typeof id !== 'number' || id <= 0) {
+      throw new AppError('SYS_DB_ERROR', `trip_entries INSERT RETURNING id missing at index ${idx - prelude.length}`);
+    }
+    entryIds.push(id);
+    opts.onEntryId?.(id, idx - prelude.length, row!);
+  };
+  if (prelude.length > 0) {
+    // 原子替換：不分 chunk（見 atomicWith 說明）。
+    (await db.batch(stmts)).forEach(onResult);
+  } else {
+    await runChunked(db, stmts, onResult);
+  }
 
   const now = new Date().toISOString();
   const tail: D1PreparedStatement[] = [];

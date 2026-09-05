@@ -129,3 +129,28 @@ describe('createEntriesBatch（複製 / clone / 匯入 / 整日重寫的批次�
     expect(after).toBe(before);
   });
 });
+
+describe('createEntriesBatch 批次大小', () => {
+  it('60 筆（超過 50 chunk）全部建立、順序與 sort_order 一致；onEntryId 帶 row', async () => {
+    const dayId = await getDayId(db, tripId, 1);
+    const poiId = await seedPoi(db, { name: 'Chunk POI', type: 'attraction' });
+    const specs = Array.from({ length: 60 }, (_, i) => ({ dayId, sortOrder: 100 + i, startTime: null, endTime: null, pois: [{ poiId, note: `n${i}` }] }));
+    const rows: number[] = [];
+    const ids = await createEntriesBatch(db, specs, { onEntryId: (_id, idx, row) => { rows[idx] = row.sort_order as number; } });
+    expect(ids).toHaveLength(60);
+    expect(rows).toEqual(specs.map((s) => s.sortOrder));
+    const n = await db.prepare('SELECT COUNT(*) AS n FROM trip_entry_pois WHERE entry_id IN (SELECT id FROM trip_entries WHERE day_id = ? AND sort_order >= 100)').bind(dayId).first<{ n: number }>();
+    expect(n!.n).toBe(60);
+  });
+  it('atomicWith：前置 DELETE 與 entries INSERT 同一批 —— 失敗時舊 entries 仍在（不會砍完才建一半）', async () => {
+    const dayId = await getDayId(db, tripId, 1);
+    const before = (await db.prepare('SELECT COUNT(*) AS n FROM trip_entries WHERE day_id = ?').bind(dayId).first<{ n: number }>())!.n;
+    expect(before).toBeGreaterThan(0);
+    // 讓 INSERT 失敗：day_id 指向不存在的 day（FK）→ 整批 rollback，含前置 DELETE
+    await expect(createEntriesBatch(db, [{ dayId: 999999, sortOrder: 0, startTime: null, endTime: null, pois: [] }], {
+      atomicWith: [db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(dayId)],
+    })).rejects.toThrow();
+    const after = (await db.prepare('SELECT COUNT(*) AS n FROM trip_entries WHERE day_id = ?').bind(dayId).first<{ n: number }>())!.n;
+    expect(after).toBe(before);
+  });
+});

@@ -755,6 +755,38 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     });
   });
 
+  it('移除備選 → confirm → DELETE /entries/42/alternates/201?entryPoisVersion=…（走 entry 變更 module）', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-alt-delete-201')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('edit-entry-alt-delete-201'));
+    await waitFor(() => expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const del = calls.find((c) => typeof c[0] === 'string' && (c[0] as string).includes('/alternates/201'));
+      expect(del).toBeTruthy();
+      expect(del![0]).toMatch(/\/alternates\/201\?entryPoisVersion=/);
+      expect((del![1] as RequestInit).method).toBe('DELETE');
+    });
+  });
+
+  it('備選下移一格 → PATCH /alternates/reorder { order, entryPoisVersion }（走 entry 變更 module）', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-alt-down-201')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('edit-entry-alt-down-201'));
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const re = calls.find((c) => typeof c[0] === 'string' && (c[0] as string).endsWith('/alternates/reorder'));
+      expect(re).toBeTruthy();
+      const body = JSON.parse((re![1] as RequestInit).body as string);
+      expect(body.order).toHaveLength(2);
+      expect(body.order[1]).toBe(201);
+      expect(body.entryPoisVersion).toBe('2026-05-11T12:00:00');
+    });
+  });
+
   it('「搜尋加入備選」按鈕 → navigate 到 change-poi alternate search tab', async () => {
     setupAltsMocks();
     renderPage();
