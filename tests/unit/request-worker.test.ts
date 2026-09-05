@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createRequestWorker, sessionPrefixForSkill, getKnownSessionPrefixes, ORPHAN_MAX_AGE_MS, type WorkerDeps } from '../../scripts/lib/request-worker';
+import { REQUEST_STALE_MINUTES } from '../../functions/api/_requestTermination';
 
 function jsonRes(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
@@ -35,8 +36,10 @@ function makeDeps(over: Partial<WorkerDeps> & { sessions?: string[]; pending?: {
         return sessions.join('\n');
       }),
       kill: vi.fn(),
+      has: vi.fn(() => true),
     },
     clock: { now: () => nowMs },
+    sleep: vi.fn(async () => undefined),
     pid: 4242,
     log: vi.fn(),
     logError: vi.fn(),
@@ -150,5 +153,71 @@ describe('cleanupOrphans', () => {
   it('tmux 不在 → 0', () => {
     const { deps } = makeDeps({ tmux: { list: () => null, kill: vi.fn() } });
     expect(createRequestWorker(deps).cleanupOrphans(1)).toBe(0);
+  });
+});
+
+describe('#1265 收屍（ADR-0007 第一層）', () => {
+  /** fake clock：每次 sleep 把時間往前撥 15s；fetch 回該 trip 是否仍有 pending。 */
+  function reapDeps(opts: { pendingRounds: number; sessionDiesAfter?: number; failPatchOk?: boolean }) {
+    let now = 1_700_000_000_000;
+    let rounds = 0;
+    const patched: string[] = [];
+    const { deps } = makeDeps({
+      clock: { now: () => now },
+      sleep: vi.fn(async (ms: number) => { now += ms; rounds++; }),
+      tmux: { list: () => '', kill: vi.fn(), has: vi.fn(() => opts.sessionDiesAfter == null || rounds < opts.sessionDiesAfter) },
+    });
+    (deps.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/api/requests?status=') && url.includes('tripId=')) {
+        const still = rounds < opts.pendingRounds;
+        // 只在 processing 回同一筆，避免 processing + open 各回一次被當兩筆
+        return jsonRes(200, { items: still && url.includes('status=processing') ? [{ id: 5 }] : [] });
+      }
+      if (/\/api\/requests\/\d+$/.test(url) && init?.method === 'PATCH') {
+        patched.push(String(init.body));
+        return jsonRes(opts.failPatchOk === false ? 500 : 200, {});
+      }
+      return jsonRes(404, {});
+    });
+    return { deps, patched, clock: () => now };
+  }
+
+  it('牆鐘（第二層 100 分鐘）必須大於 orphan cap（第一層 90 分鐘），兩層時鐘錯開', () => {
+    expect(REQUEST_STALE_MINUTES * 60_000).toBeGreaterThan(ORPHAN_MAX_AGE_MS);
+  });
+
+  it('trip 無待處理（drained）→ kill session、不收屍', async () => {
+    const { deps, patched } = reapDeps({ pendingRounds: 2 });
+    const w = createRequestWorker(deps);
+    const outcome = await w.watchContainedSession('tripline-tp-request-1-1', 'trip-a');
+    expect(outcome).toBe('drained');
+    expect(deps.tmux.kill).toHaveBeenCalledWith('tripline-tp-request-1-1');
+    expect(patched).toEqual([]);
+  });
+
+  it('session 自行死亡（worker 確定不會再處理）→ 就地收屍 timed_out', async () => {
+    const { deps, patched } = reapDeps({ pendingRounds: 999, sessionDiesAfter: 3 });
+    const w = createRequestWorker(deps);
+    expect(await w.watchContainedSession('s', 'trip-a')).toBe('died');
+    expect(patched.length).toBeGreaterThan(0);
+    expect(JSON.parse(patched[0]!)).toMatchObject({ status: 'failed', terminalReason: 'timed_out' });
+  });
+
+  it('到 orphan cap（90 分鐘）仍有待處理 → kill + 收屍；撥時鐘驗證恰在 deadline 停', async () => {
+    const { deps, patched, clock } = reapDeps({ pendingRounds: 999 });
+    const start = clock();
+    const w = createRequestWorker(deps);
+    expect(await w.watchContainedSession('s', 'trip-a')).toBe('deadline');
+    expect(clock() - start).toBeGreaterThanOrEqual(ORPHAN_MAX_AGE_MS);
+    expect(clock() - start).toBeLessThan(ORPHAN_MAX_AGE_MS + 15_000 * 2);
+    expect(deps.tmux.kill).toHaveBeenCalledWith('s');
+    expect(JSON.parse(patched[0]!)).toMatchObject({ terminalReason: 'timed_out' });
+  });
+
+  it('reap(tripId, error)：spawn 失敗那類走 error 原因', async () => {
+    const { deps, patched } = reapDeps({ pendingRounds: 999 });
+    const w = createRequestWorker(deps);
+    expect(await w.reap('trip-a', 'error')).toBe(1);
+    expect(JSON.parse(patched[0]!)).toMatchObject({ status: 'failed', terminalReason: 'error' });
   });
 });

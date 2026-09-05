@@ -24,8 +24,7 @@ import {
   buildMcpConfig,
 } from './lib/contained-spawn';
 import { throttledAlert, sleep } from './_lib/cron-shared';
-import { failPendingRequests, type ReapReason } from './lib/fail-pending-requests';
-import { createRequestWorker, ORPHAN_MAX_AGE_MS } from './lib/request-worker';
+import { createRequestWorker } from './lib/request-worker';
 
 // --- Load .env.local ---
 // v2.33.51 round 8c: 統一 parser — 之前 inline 邏輯不 strip 外 quote，跟
@@ -171,47 +170,6 @@ function containmentReady(): boolean {
     return false;
   }
 }
-
-/** Reaper signal: does the restrict trip still have a pending (processing/open) request?
- *  Uses the service token (same read the skill drains with). Errs toward "yes" (keep the
- *  session alive) on transient failure — the orphan cap + cleanupOrphans are the backstop. */
-async function tripHasPending(tripId: string): Promise<boolean> {
-  try {
-    const svc = await tokenHelper.getToken();
-    for (const status of ['processing', 'open'] as const) {
-      const res = await fetch(
-        `${API_BASE}/api/requests?status=${status}&tripId=${encodeURIComponent(tripId)}&limit=1`,
-        { headers: { Authorization: `Bearer ${svc}` } },
-      );
-      if (!res.ok) return true;
-      // null / 非-JSON body = transient failure → 依契約 err toward keep-alive (return true)，
-      // 不靠裸 json() 的 throw→outer catch（同 2026-07-12 事故類別，但這裡要回 true 非 reap）。
-      const data = (await res.json().catch(() => null)) as { items?: unknown[] } | null;
-      if (data == null) return true;
-      if ((data.items?.length ?? 0) > 0) return true;
-    }
-    return false;
-  } catch {
-    return true;
-  }
-}
-
-/** ADR-0007 第一層收屍。**呼叫端必須先 kill-session** —— session 已死才沒有 TOCTOU：
- *  列表與 PATCH 之間不會有東西把那筆請求做完。drained（正常收尾）**不要**呼叫，
- *  否則收尾與下一筆新請求之間那幾毫秒會被誤殺。 */
-function reapTripRequests(tripId: string, reason: ReapReason): Promise<number> {
-  return failPendingRequests(
-    { fetch, apiBase: API_BASE, getToken: () => tokenHelper.getToken(), log, logError },
-    tripId,
-    reason,
-  );
-}
-
-/** Spawn a contained /tp-request session (interactive REPL — NOT -p). Returns false
- *  (fail-closed) on any setup failure so the caller degrades to a service-token spawn.
- *  Blocks (async) for the session's lifetime: it drives the REPL then REAPS the session
- *  when the trip's requests are drained (the contained agent has no Bash to self-destruct,
- *  and can't kill ray's cross-user tmux session). */
 async function spawnContainedSession(
   sessionName: string,
   skillCommand: string,
@@ -293,7 +251,7 @@ async function spawnContainedSession(
   if (create.status !== 0) {
     logError(`contained: tmux new-session 失敗（fail-closed）：${create.stderr || create.status}`);
     // session 根本沒起來 → 這輪確定不會有人處理。收屍解隊列（ADR-0007 第一層）。
-    await reapTripRequests(restrictTrip, 'error');
+    await worker.reap(restrictTrip, 'error');
     return false;
   }
   attachSessionLog(sessionName, skillCommand);
@@ -302,41 +260,20 @@ async function spawnContainedSession(
   if (!(await waitForRepl(tmuxDeps, sessionName))) {
     logError(`contained: REPL 未就緒，kill: ${sessionName}`);
     spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
-    await reapTripRequests(restrictTrip, 'error');
+    await worker.reap(restrictTrip, 'error');
     return false;
   }
   if (!(await submitSkillCommand(tmuxDeps, sessionName, skillCommand))) {
     logError(`contained: skill 未提交，kill: ${sessionName}`);
     spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
-    await reapTripRequests(restrictTrip, 'error');
+    await worker.reap(restrictTrip, 'error');
     return false;
   }
   log(`Spawned CONTAINED session ${sessionName} (trip=${restrictTrip}, dontAsk+MCP-only+tp-agent, interactive REPL)`);
 
   // 5. REAPER — poll the trip's request status; kill when drained or at the orphan cap.
-  const deadline = Date.now() + ORPHAN_MAX_AGE_MS;
-  let drained = false;
-  while (Date.now() < deadline) {
-    await sleep(15_000);
-    // session died on its own (claude crashed/exited) → stop polling
-    if (spawnSync(TMUX_BIN, ['has-session', '-t', sessionName], { encoding: 'utf-8' }).status !== 0) {
-      log(`contained: session ${sessionName} 已自行結束`);
-      break;
-    }
-    if (!(await tripHasPending(restrictTrip))) {
-      drained = true;
-      log(`contained: trip ${restrictTrip} 無待處理 → 收尾 ${sessionName}`);
-      break;
-    }
-  }
-  spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
-  // ADR-0007 第一層：session 死了／到 orphan cap 但請求還沒處理完 → 就地標終結。
-  // 沒有這段，row 會永遠停在 processing：ChatPage 的 composer 綁 inflight（整個聊天
-  // 鎖死），而 peekPendingRequest 每輪都會再撈到它（head-of-line block 全站隊列）。
-  // drained 走正常收尾，不收 —— 那條路上沒有殭屍，硬收反而會誤殺剛進來的新請求。
-  if (!drained) await reapTripRequests(restrictTrip, 'timed_out');
-  // ponytail: per-session dir (0600 mcp-config + oauth-token) left on disk; both are
-  // tp-agent 0700/0600 + short-lived. Add an age-based sweep in cleanupOrphans if needed.
+  // #1265：看門狗 + ADR-0007 第一層收屍在 request worker（fake clock 可測）。
+  await worker.watchContainedSession(sessionName, restrictTrip);
   return true;
 }
 
@@ -404,8 +341,10 @@ const worker = createRequestWorker({
       return r.status === 0 ? (r.stdout || '') : null;
     },
     kill: (name) => { spawnSync(TMUX_BIN, ['kill-session', '-t', name]); },
+    has: (name) => spawnSync(TMUX_BIN, ['has-session', '-t', name], { encoding: 'utf-8' }).status === 0,
   },
   clock: { now: () => Date.now() },
+  sleep,
   pid: process.pid,
   log,
   logError,

@@ -7,7 +7,10 @@
  * 測試用 fake 進同一個 interface。對外行為（session 命名、prefix、legacy 相容、log 訊息）不變。
  */
 
+import { failPendingRequests, type ReapReason } from './fail-pending-requests';
+
 export interface PendingRequest { requestId: string; tripId: string }
+export type WatchOutcome = 'drained' | 'died' | 'deadline';
 export interface AcquiredToken { token: string; restrictTrip?: string }
 export type TickResult = 'spawned' | 'busy' | 'idle' | 'failed';
 
@@ -23,8 +26,11 @@ export interface WorkerDeps {
     /** `tmux ls -F <format>` 的 stdout；tmux 不在／沒 server 回 null。 */
     list: (format: string) => string | null;
     kill: (sessionName: string) => void;
+    /** `tmux has-session -t <name>`。 */
+    has: (sessionName: string) => boolean;
   };
   clock: { now: () => number };
+  sleep: (ms: number) => Promise<void>;
   pid: number;
   log: (msg: string) => void;
   logError: (msg: string) => void;
@@ -39,6 +45,8 @@ export interface WorkerDeps {
 export const ALLOWED_SKILLS = new Set(['/tp-request', '/tp-daily-check']);
 export const LEGACY_SESSION_PREFIX = 'tripline-request-';
 export const ORPHAN_MAX_AGE_MS = 90 * 60 * 1000; // 90 minutes
+/** contained session 看門狗輪詢間隔。 */
+export const WATCH_INTERVAL_MS = 15_000;
 
 export function assertAllowedSkill(skillCommand: string): string {
   if (!ALLOWED_SKILLS.has(skillCommand)) {
@@ -224,9 +232,68 @@ export function createRequestWorker(deps: WorkerDeps) {
     return deps.spawnPlain(sessionName, skillCommand, acquired.token);
   }
 
+  /** 該 trip 是否仍有 open/processing 請求；查不到一律當「有」（保守：不誤殺）。 */
+  async function tripHasPending(tripId: string): Promise<boolean> {
+    try {
+      const svc = await deps.getServiceToken();
+      for (const status of ['processing', 'open'] as const) {
+        const res = await deps.fetch(
+          `${deps.apiBase}/api/requests?status=${status}&tripId=${encodeURIComponent(tripId)}&limit=1`,
+          { headers: { Authorization: `Bearer ${svc}` } },
+        );
+        if (!res.ok) return true;
+        const data = (await res.json().catch(() => null)) as { items?: unknown[] } | null;
+        if (data == null) return true;
+        if ((data.items?.length ?? 0) > 0) return true;
+      }
+      return false;
+    } catch {
+      return true;
+    }
+  }
+
+  /** ADR-0007 第一層：確定沒人會再處理時，把該 trip 的 open/processing 請求就地標終結。 */
+  function reap(tripId: string, reason: ReapReason): Promise<number> {
+    return failPendingRequests(
+      { fetch: deps.fetch, apiBase: deps.apiBase, getToken: deps.getServiceToken, log: deps.log, logError: deps.logError },
+      tripId,
+      reason,
+    );
+  }
+
+  /**
+   * contained session 看門狗：每 WATCH_INTERVAL_MS 看一次，直到 session 自行結束（died）、
+   * trip 無待處理（drained）或到 orphan cap（deadline）。三種都 kill session；
+   * died / deadline 表示請求還沒處理完卻不會再有人處理 → 就地收屍 timed_out；
+   * drained 走正常收尾不收（那條路上沒有殭屍，硬收會誤殺剛進來的新請求）。
+   */
+  async function watchContainedSession(sessionName: string, restrictTrip: string): Promise<WatchOutcome> {
+    const deadline = deps.clock.now() + ORPHAN_MAX_AGE_MS;
+    let outcome: WatchOutcome = 'deadline';
+    while (deps.clock.now() < deadline) {
+      await deps.sleep(WATCH_INTERVAL_MS);
+      if (!deps.tmux.has(sessionName)) {
+        deps.log(`contained: session ${sessionName} 已自行結束`);
+        outcome = 'died';
+        break;
+      }
+      if (!(await tripHasPending(restrictTrip))) {
+        deps.log(`contained: trip ${restrictTrip} 無待處理 → 收尾 ${sessionName}`);
+        outcome = 'drained';
+        break;
+      }
+    }
+    deps.tmux.kill(sessionName);
+    if (outcome !== 'drained') await reap(restrictTrip, 'timed_out');
+    return outcome;
+  }
+
   return {
     tick,
     cleanupOrphans,
+    tripHasPending,
+    reap,
+    watchContainedSession,
     hasActiveSession,
     acquireToken,
     peekPendingRequest,

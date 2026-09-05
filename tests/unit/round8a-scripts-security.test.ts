@@ -18,7 +18,7 @@ const API_SERVER_SRC = readFileSync(
   'utf-8',
 );
 // #1264：allowlist / peek / mint 決策搬進 request worker module，這幾條 lock 跟著搬。
-const WORKER_SRC = fs.readFileSync(
+const WORKER_SRC = readFileSync(
   path.resolve(__dirname, '../../scripts/lib/request-worker.ts'),
   'utf8',
 );
