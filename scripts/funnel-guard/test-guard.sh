@@ -9,7 +9,12 @@
 #   - 健康判定走 authoritative NS（不碰 recursive resolver，免 negative-cache 誤導）
 #   - 真 drift（authoritative 也無 record）仍偵測得到 → 不因修正而漏 heal
 set -uo pipefail
-cd "$(dirname "$0")/../.."
+# guard.sh 被 source 時會執行它自己的 `cd "$REPO_ROOT"`，把 cwd 劫持到那個路徑。
+# 固定住我們要測的那份 checkout，每次 source 後都 cd 回來，否則在 worktree／CI／
+# 測試 copy 裡會變成驗證別份 guard.sh（2026-09-05 red team 用「把舊 bug 放回 copy，
+# copy 自己的測試卻 PASS」實測出來）。
+TEST_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$TEST_ROOT"
 
 fail=0
 ok()   { echo "  ✅ $1"; }
@@ -21,6 +26,7 @@ zsh -n scripts/funnel-guard/guard.sh && ok "guard.sh parses" || bad "syntax erro
 
 echo "[2] load lib (GUARD_SOURCE_ONLY=1 → 不跑 main，無 heal/telegram 副作用)"
 GUARD_SOURCE_ONLY=1 source scripts/funnel-guard/guard.sh 2>/dev/null
+cd "$TEST_ROOT"
 set +e
 typeset -f funnel_resolve_authoritative >/dev/null && ok "funnel_resolve_authoritative loaded" || bad "fn missing"
 [ ${#FALLBACK_NS[@]} -ge 1 ] && ok "FALLBACK_NS non-empty (${#FALLBACK_NS[@]})" || bad "FALLBACK_NS empty"
@@ -117,6 +123,41 @@ else
   bad "重複 A record 探了 $dup_probes 次 — 沒去重"
 fi
 
+# 探測上限真的生效：給 6 個 unique edge，只有「超過上限之後」那個可達。
+# 上限有效 → 那個永遠探不到 → unhealthy。把 -gt 寫成 -lt（截斷不再發生）就會變綠而漏抓，
+# 所以這條斷言必須是「unhealthy」而不是「有截斷字串」。
+probe_edge_http_code() {
+  case "$1" in
+    10.0.0.6) printf '404'; return 0 ;;   # 第 6 個才可達，落在 cap 之外
+    *)        printf '000'; return 28 ;;
+  esac
+}
+funnel_resolve_authoritative() { printf '10.0.0.1\n10.0.0.2\n10.0.0.3\n10.0.0.4\n10.0.0.5\n10.0.0.6'; }
+if is_funnel_reach_ok "$_mock_host"; then
+  bad "探到了 cap 之外的第 6 個 edge — MAX_EDGE_PROBES 截斷沒生效"
+else
+  ok "探測上限生效（6 個 edge 只探前 $MAX_EDGE_PROBES 個，cap 外的可達 edge 探不到）"
+fi
+# MAX_EDGE_PROBES 是環境變數 = 外部輸入，惡意值會靜默把上限打開：zsh 的 array slice
+# 對負數是「從尾端數」，非數字則讓 [ -gt ] 報錯後整段截斷被跳過。用 subshell 重新 source
+# 才驗得到（值在 source 當下就定案）。
+for _bad in -1 abc 0; do
+  _got=$(MAX_EDGE_PROBES="$_bad" zsh -c "cd '$TEST_ROOT' && GUARD_SOURCE_ONLY=1 source scripts/funnel-guard/guard.sh 2>/dev/null; echo \$MAX_EDGE_PROBES")
+  if [ "$_got" = "4" ]; then
+    ok "MAX_EDGE_PROBES=$_bad 被擋下並落回 4"
+  else
+    bad "MAX_EDGE_PROBES=$_bad 被接受成 '$_got' — 上限會被靜默打開"
+  fi
+done
+
+# 還原 [6] 其餘案例用的探測 mock
+probe_edge_http_code() {
+  case "$1" in
+    10.0.0.1) printf '404'; return 0 ;;
+    *)        printf '000'; return 28 ;;
+  esac
+}
+
 funnel_resolve_authoritative() { printf '10.0.0.9\n10.0.0.1'; }
 is_funnel_reach_ok "$_mock_host" >/dev/null
 funnel_resolve_authoritative() { return 1; }
@@ -128,8 +169,12 @@ else
 fi
 
 echo "[7] resolve 真的回傳多行（擋掉所有『只取第一筆』的變體寫法）"
-# [6] 結尾把 funnel_resolve_authoritative mock 成 return 1，這裡要拿回真的實作
+# [6] 結尾把 funnel_resolve_authoritative mock 成 return 1，這裡要拿回真的實作。
+# source 會再跑一次 guard.sh 的 cd 與 `set -eo pipefail` —— 兩個都要收拾，否則
+# 後面幾節會改測別份 checkout，且 errexit 會讓任何非 0 回傳直接中斷整份腳本。
 GUARD_SOURCE_ONLY=1 source scripts/funnel-guard/guard.sh 2>/dev/null
+cd "$TEST_ROOT"
+set +e
 # coverage 稽核指出：unit test 只禁止字面的 `head -1`，換成 head -n1／tail -1／
 # sed -n 1p 都能繞過 source-grep 而重現 2026-09-01 incident。這裡覆寫 dig 直接數行數，
 # 任何截斷寫法都會讓行數掉到 1 而變紅。

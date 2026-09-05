@@ -13,7 +13,9 @@
 # 必須 source 自己的環境變數。
 set -eo pipefail
 
-REPO_ROOT="/Users/ray/Projects/trip-planner"
+# 可用環境變數覆寫：source 這支腳本會執行下面的 cd，寫死路徑會讓 worktree／CI／
+# 測試 copy 的 cwd 被劫持到這個目錄，測到的是別份 guard.sh（2026-09-05 red team 實測）。
+REPO_ROOT="${REPO_ROOT:-/Users/ray/Projects/trip-planner}"
 TAILSCALE="/opt/homebrew/bin/tailscale"
 EXPECTED_PROXY="http://127.0.0.1:8080"
 LOG_PREFIX="[funnel-guard]"
@@ -157,7 +159,13 @@ is_funnel_dns_published() {
 # 失敗細節存 REACH_DETAIL（ip / curl exit / http_code）供 caller log — 2026-07-07
 # 型態 D 事後只有「reach 失敗」四個字，診斷靠猜。
 # 單輪最多探測幾個 edge。DNS 回覆是外部輸入，沒有上限等於讓對方決定這支腳本跑多久。
+# 必須驗證：zsh 的 array slice 對負數是「從尾端數」，MAX_EDGE_PROBES=-1 會讓
+# probe_list[1,-1] 變成整個陣列；非數字則讓 [ -gt ] 報錯後整段截斷被跳過。兩者都會
+# 靜默把上限打開，正好重開這個上限要擋的那個洞（2026-09-05 red team 實測兩種都中）。
 MAX_EDGE_PROBES="${MAX_EDGE_PROBES:-4}"
+if [[ "$MAX_EDGE_PROBES" != <1-> ]]; then
+  MAX_EDGE_PROBES=4
+fi
 
 # 單一 edge 的 HTTPS 探測，抽成獨立函式 = 測試 seam。行為測試覆寫它就能驗完整
 # 多 edge 邏輯，不必真的有 funnel 或網路 —— 2026-09-04 codex adversarial 抓到：
