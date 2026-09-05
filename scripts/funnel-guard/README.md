@@ -26,6 +26,8 @@ macOS update / GUI app / 第三方 brew 反覆把 funnel `:443` 改成 `serve` (
 >
 > 部分 edge 不通但服務仍可達時，log 會出現 `L3 部分 edge 不可達但服務仍可達，不 heal (...)`，用來追蹤單一 edge 的長期劣化。
 
+> **探測上限與時間預算**：單輪最多探測 `MAX_EDGE_PROBES`（預設 4，可用環境變數覆寫）個 edge —— authoritative 回覆是外部輸入，沒有上限等於讓對方決定這支腳本要跑多久（DNS 回覆數量不受單封包大小限制）。時間預算（N = 實際探測的 edge 數）：healthy 時第一個通的 edge 早退，≈10s，成本與單 edge 版本相同；**全 edge 皆不通**（真故障，會走 heal）≈ `40N + 38` 秒（3 次 retry × N×10s + 2 次 retry 間隔 15s + heal ~3s + sleep 5s + heal 後重驗 N×10s）——N=2 時 ~118s，已貼齊 launchd 120s 的排程間隔；N=3 時 ~158s，會超出。後果不是漏跑（launchd 同 label 不會併發啟動，超時只是把下一輪往後推），而是**警報也跟著延遲** —— heal 失敗的 Telegram 通知要等 heal 與 heal 後重驗都跑完才送出。這個公式是下界不是精確上限：它把 DNS resolve 當成免費，實際上同一輪 `funnel_resolve_authoritative` 會被呼叫 6 次，DNS 本身不穩時可能再多花十幾秒——而 DNS 不穩正是這支腳本要處理的場景。
+
 > **L2/L3 查 authoritative 而非 recursive resolver**（2026-07-05 incident）：大型 recursive（1.1.1.1/8.8.8.8）對 `*.ts.net` funnel hostname 反覆 NXDOMAIN — Tailscale 週期 re-publish record 造成極短消失 window → resolver negative-cache 300s。這不代表 funnel drift，卻會誤判 → 誤 heal（`serve reset` 瞬間 funnel 真的 off，再製造 negative-cache）→ self-perpetuating flapping。authoritative NS 是控制平面實際發布的真相，不受 recursive cache 污染。詳見 `guard.sh` 頂部 note。
 
 ## 安裝
