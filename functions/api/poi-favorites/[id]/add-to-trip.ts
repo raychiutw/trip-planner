@@ -17,14 +17,13 @@
  *
  * v2.29.0: travel_* DROPPED, trip_segments 由 /recompute-travel 在背景 fill。
  */
-import { logAudit } from '../../_audit';
 import { assertNotTripRestricted, hasWritePermission } from '../../_auth';
+import { createEntry } from '../../_entryWrite';
 import { AppError, buildRateLimitResponse } from '../../_errors';
 import { detectGarbledText } from '../../_validate';
 import { json, parseIntParam, parseJsonBody } from '../../_utils';
 // v2.26.0: TIME_RE canonical 在 _time.ts（migration 0056 後 entry-time helpers 統一住處）。
 import { TIME_RE } from '../../_time';
-import { resortDayByArrival } from '../../_entry_sort';
 import {
   assertFavoriteOwnership,
   pickFavoriteBucketForActor,
@@ -207,68 +206,7 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
       break;
     }
   }
-  const maxSortOrder = (dayEntries ?? []).reduce((m, e) => Math.max(m, e.sort_order), -1);
-  const finalSortOrder = insertSortOrder ?? (maxSortOrder + 1);
-
-  // Shift entries with sort_order >= insertSortOrder 往後讓位（僅 insert-before，非 append）
-  const stmts: D1PreparedStatement[] = [];
-  if (insertSortOrder !== null) {
-    stmts.push(
-      db
-        .prepare('UPDATE trip_entries SET sort_order = sort_order + 1 WHERE day_id = ? AND sort_order >= ?')
-        .bind(day.id, insertSortOrder),
-    );
-  }
-
-  // v2.29.0: trip_entries.{time, poi_id} DROPPED. INSERT 只寫 start_time/end_time，
-  // master poi 走下面 trip_entry_pois INSERT。
-  // v2.33.97 security: 拆 last_insert_rowid() cross-statement assumption — D1
-  // 沒文檔保證 batched prepared statements 的 last_insert_rowid() 在 future
-  // pipeline / serialise 改變後仍 connection-scoped 拿到正確 id。改 INSERT
-  // RETURNING id + 顯式 bind 到 trip_entry_pois，杜絕 FK 接錯 row 的 silent
-  // corruption。Trade-off: trip_entries 已 commit 但 trip_entry_pois INSERT
-  // 失敗 → entry orphan 無 master POI（user 可重新 attach；不算 data loss）。
-  // migration 0078: trip_entries.note DROPPED — entry-level note 不再寫 trip_entries。
-  // favorite.note 改寫進下方 master trip_entry_pois.note（sort_order=1）。
-  stmts.push(
-    db.prepare(
-      `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, description, source, entry_pois_version)
-       VALUES (?, ?, ?, ?, ?, ?, 1) RETURNING id`,
-    ).bind(day.id, finalSortOrder, startTime, endTime, null, 'fast-path'),
-  );
-
-  const batchResults = await db.batch<{ id: number }>(stmts);
-  const insertEntryResult = batchResults[batchResults.length - 1];
-  const newEntryId = insertEntryResult?.results?.[0]?.id ?? null;
-  if (newEntryId === null) {
-    throw new AppError('SYS_INTERNAL', 'INSERT trip_entries RETURNING 未回傳 id');
-  }
-
-  // 顯式 bind entry id，不依賴 last_insert_rowid() cross-statement 隱含 state
-  // migration 0078: master(sort_order=1) 直接帶 favorite.note 進 per-POI note
-  // （此路徑是 6 建立路徑中唯一直接 INSERT master trip_entry_pois 卻沒帶 note 的，
-  //  若不補 note 欄位，收藏的備註會在 cutover 後 silently 遺失）。
-  const nowIso = new Date().toISOString();
-  await db
-    .prepare(
-      `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at, note)
-       VALUES (?, ?, 1, ?, ?, ?)`,
-    )
-    .bind(newEntryId, favorite.poi_id, nowIso, nowIso, favorite.note ?? null)
-    .run();
-
-  // 新增後依抵達時間重排整日：本端點雖已依 startTime 插入正確位置，resort 進一步把
-  // 整日 sort_order 正規化為時序（若他 entry 手排亂序也一併拉正）；已時序 → no-op。
-  // best-effort：entry 已 commit，重排失敗不可讓成功的加入回報 500（否則 client 重試 →
-  // 重複 entry）；resort 自癒。
-  try {
-    await resortDayByArrival(db, day.id);
-  } catch (err) {
-    console.error('[add-to-trip] resortDayByArrival failed (non-fatal)', err);
-  }
-
-  // Audit log — companion 走 system:companion sentinel + 攜 companionTripId 反查；
-  // V2 user 走實際 tripId + auth.email。fire-and-forget 不阻塞 response。
+  // #1257 entry intake：讓位、INSERT、正選（含收藏 note）、version、resort、audit 全在 createEntry。
   const auditDiff: Record<string, unknown> = {
     via: 'poi-favorites-fast-path',
     favoriteId,
@@ -278,17 +216,22 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     endTime,
   };
   if (actor.isCompanion) auditDiff.companionTripId = tripId;
-  context.waitUntil(
-    logAudit(db, {
+  const { entryId: newEntryId, row } = await createEntry(db, {
+    dayId: day.id,
+    poi: { id: favorite.poi_id },
+    startTime,
+    endTime,
+    note: favorite.note ?? null,
+    source: 'fast-path',
+    placement: insertSortOrder === null ? undefined : { sortOrder: insertSortOrder, shift: true },
+    audit: {
       tripId: actor.isCompanion ? actor.audit.tripId : tripId,
-      tableName: 'trip_entries',
-      recordId: newEntryId,
-      action: 'insert',
       changedBy: actor.isCompanion ? actor.audit.changedBy : (auth?.email ?? ''),
       requestId: actor.requestId,
-      diffJson: JSON.stringify(auditDiff),
-    }),
-  );
+      diff: auditDiff,
+    },
+  });
+  const finalSortOrder = row.sort_order as number;
 
   return json({
     ok: true,
