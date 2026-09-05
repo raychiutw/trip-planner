@@ -10,6 +10,7 @@
  * 8. Sidebar「聊天」 nav → /chat（AI chat 維持）— v2.31.80 已是 /chat，sidebar revert 後仍 hold
  */
 import { describe, it, expect } from 'vitest';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -80,7 +81,7 @@ describe('v2.31.81 #5: TimelineRail row click → entryFocused event → TripMap
     expect(src).toMatch(/entryFocused:\s*['"]tp-entry-focused['"]/);
   });
   it('TimelineRail row click 內 dispatch EVENT.entryFocused', () => {
-    const src = read('src/components/trip/TimelineRail.tsx');
+    const src = readTimelineRailSources();
     expect(src).toMatch(/dispatchEvent\(new CustomEvent\(EVENT\.entryFocused/);
   });
   it('TripMapRail 加 useEffect listen entryFocused → setPanToCoord(pin.lat, pin.lng)', () => {

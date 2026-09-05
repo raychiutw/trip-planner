@@ -7,6 +7,7 @@
  */
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -252,7 +253,7 @@ describe('audit fix source locks — batch 3', () => {
 // ---- Partial-tier hardening fixes ----
 describe('audit fix source locks — partial hardening', () => {
   it('TimelineRail drag fallback id uses positional index (no null-id collision)', () => {
-    const src = read('src/components/trip/TimelineRail.tsx');
+    const src = readTimelineRailSources();
     expect(src).toMatch(/findIndex\(\(ev, i\) => \(ev\.id \?\? `idx-\$\{i\}`\)/);
     expect(src).not.toMatch(/findIndex\(\(ev\) => \(ev\.id \?\? `idx-\$\{ev\.id\}`\)/);
   });

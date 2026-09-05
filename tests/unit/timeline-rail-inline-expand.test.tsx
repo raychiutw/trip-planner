@@ -9,6 +9,7 @@
  * Accordion behavior: only one row expanded at a time per rail.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import fs from 'node:fs';
@@ -25,10 +26,7 @@ vi.mock('../../src/hooks/useTripSegments', () => ({
   useTripSegments: () => ({ segments: [], segmentMap: new Map(), loading: false }),
 }));
 
-const TIMELINE_RAIL_SRC = fs.readFileSync(
-  path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-  'utf8',
-);
+const TIMELINE_RAIL_SRC = readTimelineRailSources();
 const USE_DRAG_DROP_SRC = fs.readFileSync(
   path.resolve(__dirname, '../../src/hooks/useDragDrop.ts'),
   'utf8',
@@ -448,10 +446,7 @@ describe('TimelineRail — cross-day drag capability', () => {
 });
 
 describe('2026-07-07 detail 同寬 + iOS 展開（source-grep 鎖）', () => {
-  const SRC = fs.readFileSync(
-    path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-    'utf8',
-  );
+  const SRC = readTimelineRailSources();
   it('detail 與 header 卡同寬 — 不可退回 56/44px 左縮排（terracotta mockup 本為同寬）', () => {
     expect(SRC).toMatch(/\.tp-rail-detail \{[\s\S]{0,400}margin: 4px 0 8px;/);
     expect(SRC).not.toMatch(/margin: 4px 0 8px 56px/);
