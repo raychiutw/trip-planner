@@ -148,7 +148,8 @@ describe('L3 多 edge 探測（2026-09-01 incident：單 edge head -1 誤報 159
     expect(GUARD).toContain('for ip in "${probe_list[@]}"; do');
     // 探測數量上限：DNS 回覆是外部輸入，沒有上限等於讓對方決定腳本跑多久
     expect(GUARD).toContain('MAX_EDGE_PROBES="${MAX_EDGE_PROBES:-4}"');
-    expect(GUARD).toContain('probe_list=(${probe_list[1,$MAX_EDGE_PROBES]})');
+    // 截斷用的是使用點 clamp 過的 cap，不是可被呼叫者改掉的全域值
+    expect(GUARD).toContain('probe_list=(${probe_list[1,$cap]})');
     // 命中 → 設 REACH_DETAIL 後立即 return 0（早退，不必等其餘 edge）
     expect(GUARD).toMatch(
       /REACH_DETAIL="ip=\$\{ip\} curl_exit=\$\{curl_exit\} http_code=\$\{http_code\}"[\s\S]{0,400}return 0/,
@@ -190,11 +191,24 @@ describe('probe seam 與端到端接線（2026-09-04 codex + testing 稽核）',
 });
 
 describe('外部輸入硬化（2026-09-05 red team）', () => {
-  it('REPO_ROOT 可被環境覆寫 — source 時的 cd 不得劫持測試 checkout', () => {
-    expect(GUARD).toContain('REPO_ROOT="${REPO_ROOT:-/Users/ray/Projects/trip-planner}"');
+  it('REPO_ROOT 預設從腳本自身路徑推導，不再硬編碼', () => {
+    expect(GUARD).toContain('REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${(%):-%x}")/../.." && pwd)}"');
+    expect(GUARD).not.toContain('REPO_ROOT="/Users/ray/Projects/trip-planner"');
   });
 
-  it('MAX_EDGE_PROBES 必須驗證為正整數（負數會被 zsh 當從尾端數而打開上限）', () => {
-    expect(GUARD).toMatch(/if \[\[ "\$MAX_EDGE_PROBES" != <1-> \]\]; then\s*\n\s*MAX_EDGE_PROBES=4/);
+  it('被 source 時不開 errexit — 測試 harness 要 bad() 聚合而非直接終止', () => {
+    expect(GUARD).toContain('[ "${GUARD_SOURCE_ONLY:-}" = "1" ] || set -eo pipefail');
+  });
+
+  it('使用點再 clamp 一次 — source 後改全域值不得繞過 source 時的驗證', () => {
+    expect(GUARD).toContain('local cap="$MAX_EDGE_PROBES"');
+    expect(GUARD).toContain('[[ "$cap" == <1-16> ]] || cap=4');
+    expect(GUARD).toContain('probe_list=(${probe_list[1,$cap]})');
+  });
+
+  it('MAX_EDGE_PROBES 必須驗證為有界正整數（<1-> 只驗下界，超大值等於沒有上限）', () => {
+    expect(GUARD).toMatch(/if \[\[ "\$MAX_EDGE_PROBES" != <1-16> \]\]; then\s*\n\s*MAX_EDGE_PROBES=4/);
+    // 不可退回只驗下界
+    expect(GUARD).not.toContain('!= <1-> ]]');
   });
 });

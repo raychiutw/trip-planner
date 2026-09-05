@@ -15,6 +15,8 @@ set -uo pipefail
 # copy 自己的測試卻 PASS」實測出來）。
 TEST_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$TEST_ROOT"
+# 明確指定，不靠 guard.sh 自己推導 —— 讓「被測的是這份 checkout」成為顯式意圖
+export REPO_ROOT="$TEST_ROOT"
 
 fail=0
 ok()   { echo "  ✅ $1"; }
@@ -128,27 +130,43 @@ fi
 # 所以這條斷言必須是「unhealthy」而不是「有截斷字串」。
 probe_edge_http_code() {
   case "$1" in
-    10.0.0.6) printf '404'; return 0 ;;   # 第 6 個才可達，落在 cap 之外
+    10.0.0.5) printf '404'; return 0 ;;   # 第 5 個可達，恰好是 cap(4) 之外的第一個
     *)        printf '000'; return 28 ;;
   esac
 }
 funnel_resolve_authoritative() { printf '10.0.0.1\n10.0.0.2\n10.0.0.3\n10.0.0.4\n10.0.0.5\n10.0.0.6'; }
 if is_funnel_reach_ok "$_mock_host"; then
-  bad "探到了 cap 之外的第 6 個 edge — MAX_EDGE_PROBES 截斷沒生效"
+  bad "探到了 cap 之外的第 5 個 edge — 截斷沒生效，或多探了一個"
 else
-  ok "探測上限生效（6 個 edge 只探前 $MAX_EDGE_PROBES 個，cap 外的可達 edge 探不到）"
+  ok "探測上限生效（6 個 edge 只探前 $MAX_EDGE_PROBES 個，第 5 個可達卻探不到）"
 fi
 # MAX_EDGE_PROBES 是環境變數 = 外部輸入，惡意值會靜默把上限打開：zsh 的 array slice
 # 對負數是「從尾端數」，非數字則讓 [ -gt ] 報錯後整段截斷被跳過。用 subshell 重新 source
 # 才驗得到（值在 source 當下就定案）。
-for _bad in -1 abc 0; do
-  _got=$(MAX_EDGE_PROBES="$_bad" zsh -c "cd '$TEST_ROOT' && GUARD_SOURCE_ONLY=1 source scripts/funnel-guard/guard.sh 2>/dev/null; echo \$MAX_EDGE_PROBES")
+for _bad in -1 abc 0 999999999999 '' 3.5; do
+  _got=$(MAX_EDGE_PROBES="$_bad" TEST_ROOT="$TEST_ROOT" zsh -c 'cd "$TEST_ROOT" && GUARD_SOURCE_ONLY=1 source scripts/funnel-guard/guard.sh 2>/dev/null; echo "$MAX_EDGE_PROBES"')
   if [ "$_got" = "4" ]; then
     ok "MAX_EDGE_PROBES=$_bad 被擋下並落回 4"
   else
     bad "MAX_EDGE_PROBES=$_bad 被接受成 '$_got' — 上限會被靜默打開"
   fi
 done
+
+# source 之後直接改全域值，使用點的 clamp 也要擋得住（codex #3）
+MAX_EDGE_PROBES=-1
+probe_edge_http_code() {
+  case "$1" in
+    10.0.0.5) printf '404'; return 0 ;;
+    *)        printf '000'; return 28 ;;
+  esac
+}
+funnel_resolve_authoritative() { printf '10.0.0.1\n10.0.0.2\n10.0.0.3\n10.0.0.4\n10.0.0.5\n10.0.0.6'; }
+if is_funnel_reach_ok "$_mock_host"; then
+  bad "source 後把 MAX_EDGE_PROBES 改成 -1 就探到了第 5 個 — 使用點沒有 clamp"
+else
+  ok "source 後改全域 MAX_EDGE_PROBES=-1 仍被 clamp 回 4（使用點驗證生效）"
+fi
+MAX_EDGE_PROBES=4
 
 # 還原 [6] 其餘案例用的探測 mock
 probe_edge_http_code() {

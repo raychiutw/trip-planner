@@ -11,11 +11,15 @@
 # Telegram env：由 trip-planner/.env.local 載入（gitignored）。對齊
 # scripts/lib/send-telegram.sh 既有模式。launchd 完全 isolated env →
 # 必須 source 自己的環境變數。
-set -eo pipefail
+# 被 source（GUARD_SOURCE_ONLY=1）時不開 errexit：測試 harness 要的是 bad() 聚合
+# 出 FAIL 診斷，不是在 source helper 或讀 .env.local 失敗時直接把整份腳本殺掉。
+[ "${GUARD_SOURCE_ONLY:-}" = "1" ] || set -eo pipefail
 
-# 可用環境變數覆寫：source 這支腳本會執行下面的 cd，寫死路徑會讓 worktree／CI／
-# 測試 copy 的 cwd 被劫持到這個目錄，測到的是別份 guard.sh（2026-09-05 red team 實測）。
-REPO_ROOT="${REPO_ROOT:-/Users/ray/Projects/trip-planner}"
+# 預設從這支腳本自己的位置推導（${(%):-%x} 在直接執行與被 source 兩種情況都指向
+# guard.sh 本身），不再硬編碼 —— 寫死路徑會讓 worktree／CI／測試 copy 被劫持到別份
+# checkout（2026-09-05 red team 實測）。仍可用環境變數覆寫；那是本機環境變數，能設它
+# 的人本來就能執行任意程式碼，不構成新的攻擊面。
+REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${(%):-%x}")/../.." && pwd)}"
 TAILSCALE="/opt/homebrew/bin/tailscale"
 EXPECTED_PROXY="http://127.0.0.1:8080"
 LOG_PREFIX="[funnel-guard]"
@@ -163,7 +167,10 @@ is_funnel_dns_published() {
 # probe_list[1,-1] 變成整個陣列；非數字則讓 [ -gt ] 報錯後整段截斷被跳過。兩者都會
 # 靜默把上限打開，正好重開這個上限要擋的那個洞（2026-09-05 red team 實測兩種都中）。
 MAX_EDGE_PROBES="${MAX_EDGE_PROBES:-4}"
-if [[ "$MAX_EDGE_PROBES" != <1-> ]]; then
+# 上界 16：<1-> 只驗下界，MAX_EDGE_PROBES=999999999999 會被接受而等於沒有上限
+# （實務上是誤設而非攻擊面 —— 這是本機環境變數，不是 DNS 那種外部輸入 —— 但驗上界
+# 只是多打幾個字）。16 遠高於 Tailscale 實際會發布的 edge 數（目前 2）。
+if [[ "$MAX_EDGE_PROBES" != <1-16> ]]; then
   MAX_EDGE_PROBES=4
 fi
 
@@ -197,9 +204,13 @@ is_funnel_reach_ok() {
   # 保證 —— 合法的 N=2 已是 ~118s，N=3 就會超過 launchd 的 120s interval。
   local -a probe_list
   probe_list=(${(u)${(f)ips}})
-  if [ ${#probe_list[@]} -gt $MAX_EDGE_PROBES ]; then
-    log "authoritative 回了 ${#probe_list[@]} 個 edge，超過上限 $MAX_EDGE_PROBES，只探前 $MAX_EDGE_PROBES 個"
-    probe_list=(${probe_list[1,$MAX_EDGE_PROBES]})
+  # 使用點再 clamp 一次：source 之後呼叫者可以直接改全域 MAX_EDGE_PROBES，source 時的
+  # 驗證擋不到那條路（codex 2026-09-05）。
+  local cap="$MAX_EDGE_PROBES"
+  [[ "$cap" == <1-16> ]] || cap=4
+  if [ ${#probe_list[@]} -gt $cap ]; then
+    log "authoritative 回了 ${#probe_list[@]} 個 edge，超過上限 $cap，只探前 $cap 個"
+    probe_list=(${probe_list[1,$cap]})
   fi
   for ip in "${probe_list[@]}"; do
     http_code=$(probe_edge_http_code "$ip" "$host")
