@@ -210,3 +210,16 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
     expect(rows[0]!.note).toBe('x');
   });
 });
+
+describe('匯入撞既有 POI 的 policy（#1258：fill-null）', () => {
+  it('既有 POI address NULL → 匯入補上；rating 已有值 → 不覆蓋', async () => {
+    const existing = await db.prepare("INSERT INTO pois (type, name, address, rating) VALUES ('restaurant', 'Policy 匯入食堂', NULL, 4.5) RETURNING id").first<{ id: number }>();
+    await runImport(
+      payloadWith('policy', [
+        { sortOrder: 1, stopPois: [{ sortOrder: 1, name: 'Policy 匯入食堂', type: 'restaurant', address: '匯入補的地址', rating: 1 }] },
+      ]),
+    );
+    const row = await db.prepare('SELECT address, rating FROM pois WHERE id = ?').bind(existing!.id).first<{ address: string | null; rating: number }>();
+    expect(row).toEqual({ address: '匯入補的地址', rating: 4.5 });
+  });
+});

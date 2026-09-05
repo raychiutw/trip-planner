@@ -22,7 +22,7 @@ import type { Env } from '../../_types';
 type Stmt = D1PreparedStatement;
 type Row = Record<string, unknown>;
 const rows = (r: { results?: unknown[] } | null): Row[] => (r?.results as Row[]) ?? [];
-// clone 與匯入同 policy=keep：既有 master 原樣重用；source='imported'、country 不猜。
+// clone 與匯入同 policy=fill-null（spec #1255 / #1258，owner 2026-09-05 拍板）：撞既有 master 只補 NULL 欄；source='imported'、country 不猜。
 const poiFrom = (r: Row): FindOrCreatePoiData => ({
   type: String(r.type ?? 'attraction'),
   name: String(r.name ?? ''),
@@ -150,7 +150,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const srcEntries = rows(entriesR);
     const poisByEntry = new Map<number, BatchEntrySpec['pois']>();
     for (const ep of rows(epR)) {
-      const poiId = await findOrCreatePoi(db, poiFrom(ep), { policy: 'keep', createdPoiIds });
+      const poiId = await findOrCreatePoi(db, poiFrom(ep), { policy: 'fill-null', createdPoiIds });
       const list = poisByEntry.get(ep.entry_id as number) ?? [];
       list.push({ poiId, description: ep.description as string | null, note: ep.note as string | null, reservation: ep.reservation as string | null, reservationUrl: ep.reservation_url as string | null });
       poisByEntry.set(ep.entry_id as number, list);
@@ -180,7 +180,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     for (const h of rows(hotelsR)) {
       const newDayId = dayIdMap.get(h.day_id as number);
       if (newDayId === undefined) continue;
-      const poiId = await findOrCreatePoi(db, poiFrom(h), { policy: 'keep', createdPoiIds });
+      const poiId = await findOrCreatePoi(db, poiFrom(h), { policy: 'fill-null', createdPoiIds });
       tail.push(db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(poiId, newDayId));
     }
     for (const s of rows(segsR)) {
