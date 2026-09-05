@@ -11,9 +11,15 @@
 # Telegram env：由 trip-planner/.env.local 載入（gitignored）。對齊
 # scripts/lib/send-telegram.sh 既有模式。launchd 完全 isolated env →
 # 必須 source 自己的環境變數。
-set -eo pipefail
+# 被 source（GUARD_SOURCE_ONLY=1）時不開 errexit：測試 harness 要的是 bad() 聚合
+# 出 FAIL 診斷，不是在 source helper 或讀 .env.local 失敗時直接把整份腳本殺掉。
+[ "${GUARD_SOURCE_ONLY:-}" = "1" ] || set -eo pipefail
 
-REPO_ROOT="/Users/ray/Projects/trip-planner"
+# 預設從這支腳本自己的位置推導（${(%):-%x} 在直接執行與被 source 兩種情況都指向
+# guard.sh 本身），不再硬編碼 —— 寫死路徑會讓 worktree／CI／測試 copy 被劫持到別份
+# checkout（2026-09-05 red team 實測）。仍可用環境變數覆寫；那是本機環境變數，能設它
+# 的人本來就能執行任意程式碼，不構成新的攻擊面。
+REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${(%):-%x}")/../.." && pwd)}"
 TAILSCALE="/opt/homebrew/bin/tailscale"
 EXPECTED_PROXY="http://127.0.0.1:8080"
 LOG_PREFIX="[funnel-guard]"
@@ -55,7 +61,8 @@ log() {
 # 三個 layer 都過才算 healthy：
 #   L1 local: `tailscale serve status --json` AllowFunnel + Proxy 正確
 #   L2 DNS:   authoritative NS (dnsimple) 有 funnel hostname 的 A record
-#   L3 reach: 用 authoritative IP direct HTTPS reach（TLS + 任何 HTTP response 都算通）
+#   L3 reach: 對每個 authoritative edge IP 做 direct HTTPS reach，任一通即算對外可達
+#             （TLS + 任何 HTTP response 都算通）
 #
 # v2.33.123 原本只檢 L1，2026-05-27 incident：控制平面 funnel state on 但 public
 # DNS NXDOMAIN → CF Worker 530 + forgot-password 信沒送。加 L2/L3 偵測。
@@ -98,12 +105,16 @@ funnel_hostname() {
 # delegation 走系統 resolver — 但 NS record 穩定少變（不像 funnel A record 頻繁
 # re-publish），故本 incident 的 negative-cache 不影響 NS 查詢；只有 A record 必須
 # 走 authoritative。dig 取不到 NS 時 fallback 到已知 dnsimple NS。grep 過濾純 IPv4
-# 行（排除 CNAME/雜訊）。echoes first resolved IP；失敗 echo empty + 非 0 exit。
+# 行（排除 CNAME/雜訊）。echoes 所有 resolved IP（換行分隔）；失敗 echo empty + 非 0 exit。
 # ponytail: any-one-NS-has-record 即算發布 — dnsimple anycast edge 偶有 serial 落後但
 # 只要一個 edge 有 record 就代表控制平面已發布，不因單一 stale edge 誤判 drift。
+#
+# 2026-09-01 incident：回傳【所有】A record，不再 head -1。Tailscale 對 funnel
+# hostname 發布多個 ingress edge（本次 .153 / .217），真實 client 會 fallback；
+# 只探第一個會把單 edge 抖動誤判成整個 funnel 壞（詳見 is_funnel_reach_ok）。
 FALLBACK_NS=(ns1.dnsimple.com ns2.dnsimple-edge.net ns3.dnsimple.com ns4.dnsimple-edge.org)
 funnel_resolve_authoritative() {
-  local host="$1" ip ns
+  local host="$1" ips ns
   [ -z "$host" ] && return 1
   local -a nslist
   # grep 只留合法 NS hostname 行（結尾點）— dig 連線層失敗會把 `;; ...` 診斷印到
@@ -112,9 +123,9 @@ funnel_resolve_authoritative() {
   [ ${#nslist[@]} -eq 0 ] && nslist=("${FALLBACK_NS[@]}")
   for ns in "${nslist[@]}"; do
     [ -z "$ns" ] && continue
-    ip=$(dig +short +time=3 +tries=1 A "$host" @"$ns" 2>/dev/null | grep -E '^[0-9]+\.[0-9.]+$' | head -1)
-    if [ -n "$ip" ]; then
-      printf '%s' "$ip"
+    ips=$(dig +short +time=3 +tries=1 A "$host" @"$ns" 2>/dev/null | grep -E '^([0-9]{1,3}\.){3}[0-9]{1,3}$')
+    if [ -n "$ips" ]; then
+      printf '%s' "$ips"
       return 0
     fi
   done
@@ -127,22 +138,98 @@ is_funnel_dns_published() {
   funnel_resolve_authoritative "$host" >/dev/null
 }
 
-# L3：用 authoritative IP direct HTTPS reach — 收到任何真 HTTP response (1xx-5xx，含
-# 4xx) 都算 reachable。curl transport fail (TCP refused / TLS / timeout) 時
-# %{http_code}=000，必須排除，否則 dead ingress 會被誤判 healthy → 不 heal（codex
-# 2026-07-05 抓到的既有 bug）。--resolve 強制走該 IP，避過本機 MagicDNS 與 recursive
-# 污染。10s timeout 涵蓋 DERP relay cold path。
+# L3：對 authoritative 回傳的【每個】edge IP 做 direct HTTPS reach — 收到任何真 HTTP
+# response (1xx-5xx，含 4xx) 都算 reachable。curl transport fail (TCP refused / TLS /
+# timeout) 時 %{http_code}=000，必須排除，否則 dead ingress 會被誤判 healthy → 不 heal
+# （codex 2026-07-05 抓到的既有 bug）。--resolve 強制走該 IP，避過本機 MagicDNS 與
+# recursive 污染。10s timeout 涵蓋 DERP relay cold path。
+#
+# 時間預算（2026-09-01 codex adversarial 修正了原本漏算的數字）：
+#   healthy（第一個 edge 通就早退）    ≈ 10s —— 絕大多數情況，成本與單 edge 版本相同
+#   全 edge 不通（真故障，會走 heal）  ≈ 3 retry × (N × 10s) + 2×15s + heal 3s + sleep 5s
+#                                        + heal 後重驗 (N × 10s)  = 40N + 38
+#     N=2 → ~118s，已貼齊 launchd 的 120s interval；N=3 → ~158s，超出。
+# 後果：launchd 同 label 不會併發啟動，超時只是把下一輪往後推。**警報本身也一起被
+# 推遲** —— heal_failed 的 Telegram 是在 heal 與 heal 後重驗都跑完才送出，所以 N=3
+# 時第一則警報要等約 158s，不是「早就發出去了」（2026-09-04 codex 更正了這裡先前
+# 的錯誤敘述）。plist 的 KeepAlive SuccessfulExit=false 會在 exit 1 後隔
+# ThrottleInterval 10s respawn，真故障期間的節奏因此約 130s 一輪而非 120s。
+#
+# 這個公式是**下界，不是精確上限**：它把 DNS resolve 當成免費。同一條路徑上
+# funnel_resolve_authoritative 其實被呼叫 6 次（L2 兩次 + L3 三個 attempt 各一次 +
+# heal 後重驗一次），每次最壞是 NS 查詢逾時 3s 後再逐一試 4 個 FALLBACK_NS，可以多花
+# 十幾秒。DNS 本身不穩的情境正是這支腳本要處理的場景，所以別把 40N+38 當成硬上限。
+# 要根治得讓 retry 迴圈看「已耗時」而不是「次數」—— 那是獨立改動，不塞進這次止血。
 # 失敗細節存 REACH_DETAIL（ip / curl exit / http_code）供 caller log — 2026-07-07
 # 型態 D 事後只有「reach 失敗」四個字，診斷靠猜。
+# 單輪最多探測幾個 edge。DNS 回覆是外部輸入，沒有上限等於讓對方決定這支腳本跑多久。
+# 必須驗證：zsh 的 array slice 對負數是「從尾端數」，MAX_EDGE_PROBES=-1 會讓
+# probe_list[1,-1] 變成整個陣列；非數字則讓 [ -gt ] 報錯後整段截斷被跳過。兩者都會
+# 靜默把上限打開，正好重開這個上限要擋的那個洞（2026-09-05 red team 實測兩種都中）。
+MAX_EDGE_PROBES="${MAX_EDGE_PROBES:-4}"
+# 上界 16：<1-> 只驗下界，MAX_EDGE_PROBES=999999999999 會被接受而等於沒有上限
+# （實務上是誤設而非攻擊面 —— 這是本機環境變數，不是 DNS 那種外部輸入 —— 但驗上界
+# 只是多打幾個字）。16 遠高於 Tailscale 實際會發布的 edge 數（目前 2）。
+if [[ "$MAX_EDGE_PROBES" != <1-16> ]]; then
+  MAX_EDGE_PROBES=4
+fi
+
+# 單一 edge 的 HTTPS 探測，抽成獨立函式 = 測試 seam。行為測試覆寫它就能驗完整
+# 多 edge 邏輯，不必真的有 funnel 或網路 —— 2026-09-04 codex adversarial 抓到：
+# 原本多 edge 的斷言整段包在「有真 funnel hostname」的條件裡，在沒有 funnel 的機器
+# （CI／sandbox）會靜默 skip 而 test-guard.sh 照樣回報 PASS，等於那些環境下這個
+# 功能完全沒有守門。skip 也是一種假綠。
+probe_edge_http_code() {
+  local ip="$1" host="$2"
+  curl -sS -o /dev/null -w "%{http_code}" --max-time 10 \
+    --resolve "${host}:443:${ip}" "https://${host}/" 2>/dev/null
+}
+
 is_funnel_reach_ok() {
-  local host="$1" ip http_code curl_exit
+  local host="$1" ips ip http_code curl_exit
+  local -a details
+  # 先清再做任何 early return —— 否則 resolve 失敗那條路徑會留著上一輪的降級字串，
+  # caller 讀到殘值。目前 caller 只在成功時讀 REACH_DEGRADED，但別讓正確性靠呼叫慣例。
+  REACH_DEGRADED=""
   [ -z "$host" ] && return 1
-  ip=$(funnel_resolve_authoritative "$host") || { REACH_DETAIL="authoritative resolve failed"; return 1; }
-  http_code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 \
-    --resolve "${host}:443:${ip}" "https://${host}/" 2>/dev/null)
-  curl_exit=$?
-  REACH_DETAIL="ip=${ip} curl_exit=${curl_exit} http_code=${http_code:-none}"
-  [[ "$http_code" =~ ^[1-5][0-9]{2}$ ]]
+  ips=$(funnel_resolve_authoritative "$host") || { REACH_DETAIL="authoritative resolve failed"; return 1; }
+  # 逐一嘗試每個 edge，任一通即算對外可達 — 對齊真實 client 行為（拿到整份 A
+  # record 清單，第一個不通會 fallback）。2026-09-01 incident：舊版 head -1 恆
+  # 定只探 .153，該 edge 一抖動就判整個 funnel 壞 → 單日 159 次誤報 + 38 次
+  # heal（36 次無效，serve reset 對 edge 側問題無用且 reset 瞬間 funnel 真 off）。
+  # 去重（(u)）並截斷到 MAX_EDGE_PROBES。上限存在的理由是 DNS 回覆是外部輸入：
+  # 拿掉 head -1 之後探測目標數等於對方給幾筆就探幾筆，一份被灌爆的 authoritative
+  # 回覆（TCP fallback 不受單封包大小限制）可以讓單輪執行拖到數十分鐘，把這支工具
+  # 存在的意義（即時 heal／告警）整個拖垮。誠實說明：這是擋惡意灌爆的上限，不是時間
+  # 保證 —— 合法的 N=2 已是 ~118s，N=3 就會超過 launchd 的 120s interval。
+  local -a probe_list
+  probe_list=(${(u)${(f)ips}})
+  # 使用點再 clamp 一次：source 之後呼叫者可以直接改全域 MAX_EDGE_PROBES，source 時的
+  # 驗證擋不到那條路（codex 2026-09-05）。
+  local cap="$MAX_EDGE_PROBES"
+  [[ "$cap" == <1-16> ]] || cap=4
+  if [ ${#probe_list[@]} -gt $cap ]; then
+    log "authoritative 回了 ${#probe_list[@]} 個 edge，超過上限 $cap，只探前 $cap 個"
+    probe_list=(${probe_list[1,$cap]})
+  fi
+  for ip in "${probe_list[@]}"; do
+    http_code=$(probe_edge_http_code "$ip" "$host")
+    curl_exit=$?
+    if [[ "$http_code" =~ ^[1-5][0-9]{2}$ ]]; then
+      REACH_DETAIL="ip=${ip} curl_exit=${curl_exit} http_code=${http_code}"
+      # 前面有 edge 不通但這個通 → 服務可達（不 heal），仍記錄降級供追蹤單一 edge
+      # 長期劣化（2026-09-01：.153 大量 timeout，.217 正常，舊版看不見）。
+      # 範圍限制：因為命中即早退，這裡只記錄「排在可用 edge 之前」的壞 edge；排在
+      # 後面的壞 edge 不會被探到。完整的全 edge 健康度需要獨立的時間預算設計（見上
+      # 方時間預算 note），不在這次止血範圍。
+      [ ${#details[@]} -gt 0 ] && REACH_DEGRADED="${(j:; :)details}"
+      return 0
+    fi
+    details+=("ip=${ip} curl_exit=${curl_exit} http_code=${http_code:-none}")
+  done
+  # 全 edge 皆不通才 unhealthy — 逐一列出各 edge 細節，事後不用猜是哪個壞
+  REACH_DETAIL="${(j:; :)details}"
+  return 1
 }
 
 # L3 短暫 blip 重試間隔（秒）。2026-07-07 型態 D incident：Tailscale edge 33 秒
@@ -174,6 +261,7 @@ is_funnel_healthy() {
   for (( attempt=1; attempt<=max_attempts; attempt++ )); do
     if is_funnel_reach_ok "$host"; then
       [ "$attempt" -gt 1 ] && log "L3 重試第 $attempt 次通過 — 短暫 blip 自癒，不 heal"
+      [ -n "${REACH_DEGRADED:-}" ] && log "L3 部分 edge 不可達但服務仍可達，不 heal ($REACH_DEGRADED)"
       return 0
     fi
     log "L3 HTTPS reach 失敗 ($host — ${REACH_DETAIL:-no detail}, attempt $attempt/$max_attempts)"
