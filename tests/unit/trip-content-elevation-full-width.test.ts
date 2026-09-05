@@ -21,11 +21,12 @@
  *   第三欄 panel         --color-tertiary（已完成，v2.57.10）
  */
 import { describe, it, expect } from 'vitest';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const TRIP_PAGE = readFileSync(join(__dirname, '../../src/pages/TripPage.tsx'), 'utf8');
-const TIMELINE_RAIL = readFileSync(join(__dirname, '../../src/components/trip/TimelineRail.tsx'), 'utf8');
+const TIMELINE_RAIL = readTimelineRailSources();
 
 describe('TripPage — 內容欄 elevation 移到最外層（不只 .trip-content 窄框）', () => {
   it('outer wrapper 有頁面專屬 class 疊在 .tp-shell 上', () => {

@@ -32,6 +32,14 @@ trips ─┬─ trip_days ── trip_entries ── trip_entry_pois
 | **poi_relations** | POI 之間的多對多關聯（例：某景點附近的餐廳）。 |
 | **favorite（收藏）** | 跨行程的願望清單。`poi_favorites`。**不是** entry、不屬於任何一天。 |
 
+**entry intake**：
+後端「在某一天建立一個 entry 並掛上正選 POI」的單一 module（`createEntry`）。所有建立路徑（單筆新增、收藏加入、複製、分享 clone、匯入、整日重寫）都經它，規矩（POI resolve policy、讓位／append、正選含 note、`entry_pois_version=1`、resort、audit、補償）只寫在這裡。
+_Avoid_: 在 handler 直接 `INSERT INTO trip_entries` / `trip_entry_pois`；與前端的「entry 變更」（動詞 module，見下）是不同層。
+
+**entry 變更**：
+前端改動 entry 的動詞 module（`src/lib/entryMutations.ts`：createEntry / setMaster / deleteEntry / moveEntry / updateEntry / reorderEntries / updateEntryPoi…）。每個動詞回 Result，不 toast、不導覽；成功後 emit `entryUpdated` 並以正確 day scope 觸發車程重算（跨天兩個 day 各一次），失敗 emit resync 不重算。頁面只拿 Result 決定 toast／navigate。
+_Avoid_: 在頁面或元件直接 `apiFetchRaw` entries endpoint、自己 dispatch `entryUpdated`、自己呼叫 `requestTravelRecompute`（self-healing 的 auto 觸發除外）；與後端「entry intake」是不同層。
+
 > **trip-scoped 的自由文字不寫進 `pois`** —— 寫進 `trip_entries.note` 或 `trip_entry_pois.metadata`（`reservation` / `reservation_url` / `description` / `note`）。`reservation` 是**純文字訂位註解**，不放 JSON。
 
 ## 協作與存取
@@ -59,6 +67,10 @@ _Avoid_: 卡住、stuck（歧義：同時被拿來指殭屍請求與「我不想
 **收屍**：
 系統把殭屍請求標成終結。兩層：api-server 確定 worker 死亡時就地標，加上牆鐘兜底。
 _Avoid_: 超時（只描述其中一層）、清理（跟 orphan tmux session 的清理混淆）
+
+**request worker**：
+api-server 裡驅動 requests pipeline 的核心（`scripts/lib/request-worker.ts`）：peek 隊列 → 取 token（/tp-request 走 owner-restricted）→ 同 skill 有 session 就 busy → spawn；接受 fetch / tmux / clock / spawn adapter 注入，測試用 fake 進同一個 interface。api-server 本體只組裝真實 adapter 與 HTTP / cron 接線。
+_Avoid_: 在 api-server 頂層函式裡直接寫決策（那樣只能 readFileSync 測）；「worker」單獨講指這個 module，tmux 裡跑的 claude session 叫 session。
 
 **遲到完成**：
 request 已經終結之後，worker 才回報進來的成果。它的 `reply` 寫得進去，但不會讓 `status` 復活。

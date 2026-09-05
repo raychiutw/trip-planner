@@ -37,10 +37,9 @@ import { useParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
-import { requestTravelRecompute } from '../lib/travelRecompute';
+import { apiFetch } from '../lib/apiClient';
+import { copyEntry, moveEntry } from '../lib/entryMutations';
 import { dayColor } from '../lib/dayPalette';
-import { EVENT } from '../lib/events';
 import {
   ENTRY_ACTION_TIME_SLOTS,
   dayNumFromId,
@@ -306,41 +305,15 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
     setSubmitting(true);
     setSubmitError(null);
 
-    const path = action === 'copy'
-      ? `/trips/${encodeURIComponent(tripId)}/entries/${entryIdNum}/copy`
-      : `/trips/${encodeURIComponent(tripId)}/entries/${entryIdNum}`;
-    const method = action === 'copy' ? 'POST' : 'PATCH';
-    const body = action === 'copy'
-      ? JSON.stringify({ targetDayId: selectedDayId })
-      : JSON.stringify({ day_id: selectedDayId });
-
+    const targetDayNum = dayNumFromId(days, selectedDayId);
     try {
-      const res = await apiFetchRaw(path, {
-        method,
-        credentials: 'same-origin',
-        body,
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        let message = action === 'copy' ? '複製失敗' : '移動失敗';
-        try {
-          const data = JSON.parse(text) as { error?: { code?: string; message?: string } };
-          if (data?.error?.message) message = data.error.message;
-        } catch { /* not JSON */ }
-        throw new Error(message);
+      // #1261：複製只重算目標天；移動兩天各一次 —— 都在 module。
+      const r = action === 'copy'
+        ? await copyEntry(tripId, entryIdNum, { targetDayId: selectedDayId, targetDayNum })
+        : await moveEntry(tripId, entryIdNum, { fromDayNum: dayNumFromId(days, currentDayId), toDayNum: targetDayNum, toDayId: selectedDayId });
+      if (!r.ok) {
+        throw new Error(r.message || (action === 'copy' ? '複製失敗' : '移動失敗'));
       }
-      // 2026-07-06 車程重算缺口：move 影響來源日 + 目標日兩天的相鄰 pair，
-      // copy 影響目標日 → 補顯式 day-scoped recompute（fire-and-forget，失敗
-      // 靜默 — self-healing 與 TravelPill ⚠ 是 fallback）。
-      const targetDayNum = dayNumFromId(days, selectedDayId);
-      const sourceDayNum = action === 'move' ? dayNumFromId(days, currentDayId) : null;
-      void requestTravelRecompute(tripId, targetDayNum).catch(() => undefined);
-      if (sourceDayNum != null && sourceDayNum !== targetDayNum) {
-        void requestTravelRecompute(tripId, sourceDayNum).catch(() => undefined);
-      }
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
-        detail: { tripId, entryId: entryIdNum },
-      }));
       showToast(action === 'copy' ? '景點已複製' : '景點已移動', 'success');
       handleBack();
     } catch (err) {

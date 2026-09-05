@@ -11,12 +11,13 @@
  * 比 max-width 斷點精準（觸控筆電仍可有鍵盤，但手機/平板兩條件同時成立）。
  */
 import { describe, it, expect } from 'vitest';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const read = (rel: string) => readFileSync(path.resolve(__dirname, '../../', rel), 'utf8');
 const EDIT_ENTRY = read('src/pages/EditEntryPage.tsx');
-const TIMELINE_RAIL = read('src/components/trip/TimelineRail.tsx');
+const TIMELINE_RAIL = readTimelineRailSources();
 
 const touchHides = (cls: string) =>
   new RegExp(

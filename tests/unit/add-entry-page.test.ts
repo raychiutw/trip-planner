@@ -90,8 +90,8 @@ describe('ChangePoiPage — v2.32.0 mode=new branch', () => {
     const idx = CHANGE_POI_SRC.indexOf("if (mode === 'new') {");
     expect(idx).toBeGreaterThan(0);
     const ctx = CHANGE_POI_SRC.slice(idx, idx + 800);
-    expect(ctx).toMatch(/POST/);
-    expect(ctx).toMatch(/\/days\/\$\{newDayNum\}\/entries/);
+    // #1261：POST /days/:n/entries 由 entry 變更 module（createEntry）發出。
+    expect(ctx).toMatch(/createEntry\(tripId, newDayNum/);
   });
 
   it('handleSubmit mode=new + search/favorites → POST /entries + navigate /edit', () => {

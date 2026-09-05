@@ -16,9 +16,8 @@ import OperationShell from '../components/shell/OperationShell';
 import Icon from '../components/shared/Icon';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { usePoiSearch } from '../hooks/usePoiSearch';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
-import { requestTravelRecompute } from '../lib/travelRecompute';
-import { EVENT } from '../lib/events';
+import { apiFetch } from '../lib/apiClient';
+import { createEntry, addAlternate, replaceMasterPoi } from '../lib/entryMutations';
 import { regionToApiParam } from '../lib/maps/region';
 import { mapGooglePrimaryTypeToPoiType, mapNominatimCategory, type PoiType } from '../lib/poiCategory';
 import {
@@ -538,14 +537,6 @@ interface SelectedPoi {
 // to src/lib/poiSearchHelpers.ts. ChangePoi 之前 normalizeSearchResults 是
 // cast-only 無 type 檢查；現在用 shared 嚴格版（同 AddStop pre-extract 行為）。
 
-function parseErrorCode(text: string): string | null {
-  try {
-    const parsed = JSON.parse(text) as { error?: { code?: string } };
-    return parsed.error?.code ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export default function ChangePoiPage() {
   const { tripId, entryId: entryIdParam } = useParams<{ tripId: string; entryId: string }>();
@@ -728,17 +719,9 @@ export default function ChangePoiPage() {
         // v2.32.0: mode=new 走 POST /entries（建立新 entry + master），不需 OCC
         if (mode === 'new') {
         const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', poi_type: customCategory };
-          const res = await apiFetchRaw(
-            `/trips/${encodeURIComponent(tripId)}/days/${newDayNum}/entries`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
-          );
-          if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`新增景點失敗 (${res.status}): ${text.slice(0, 200)}`);
-          }
-          const created = (await res.json()) as { id?: number };
-          void requestTravelRecompute(tripId).catch(() => undefined);
-          window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
+          const r = await createEntry(tripId, newDayNum, body);
+          if (!r.ok) throw new Error(`新增景點失敗 (${r.status}): ${r.message.slice(0, 200)}`);
+          const created = r.data ?? {};
           if (created.id) {
             navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
           } else {
@@ -750,27 +733,17 @@ export default function ChangePoiPage() {
         // /alternates + /poi-id find-or-create read body.type (snake_case poi_type is
         // only for POST /entries). Forward the picked custom category here too.
         const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', type: customCategory, ...occ };
-        const endpoint = mode === 'alternate'
-          ? `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates`
-          : `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/poi-id`;
-        const res = await apiFetchRaw(endpoint, {
-          method: mode === 'alternate' ? 'POST' : 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) {
-          const text = await res.text();
-          if (res.status === 409) {
-            const code = parseErrorCode(text);
-            if (code === 'DUPLICATE_POI') throw new Error('此景點已存在於這個停留點');
+        // entry 所在天不在此頁 context → null = 全行程 scope（與既有行為一致）。
+        const r = mode === 'alternate'
+          ? await addAlternate(tripId, entryId, null, body)
+          : await replaceMasterPoi(tripId, entryId, null, body);
+        if (!r.ok) {
+          if (r.status === 409) {
+            if (r.code === 'DUPLICATE_POI') throw new Error('此景點已存在於這個停留點');
             throw new Error('資料已被其他操作更新，請重新整理');
           }
-          throw new Error(`${mode === 'alternate' ? '加備選' : '置換'}失敗 (${res.status}): ${text.slice(0, 200)}`);
+          throw new Error(`${mode === 'alternate' ? '加備選' : '置換'}失敗 (${r.status}): ${r.message.slice(0, 200)}`);
         }
-        if (mode === 'master') {
-          void requestTravelRecompute(tripId).catch(() => undefined);
-        }
-        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
         navigate(
           mode === 'alternate'
             ? `/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`
@@ -802,17 +775,9 @@ export default function ChangePoiPage() {
               // v2.50.0: 使用者當場覆寫的分類優先，否則沿用 Google primaryType auto-derive。
               poi_type: searchCatOverride ?? mapGooglePrimaryTypeToPoiType(selected.category),
             };
-        const res = await apiFetchRaw(
-          `/trips/${encodeURIComponent(tripId)}/days/${newDayNum}/entries`,
-          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
-        );
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`新增景點失敗 (${res.status}): ${text.slice(0, 200)}`);
-        }
-        const created = (await res.json()) as { id?: number };
-        void requestTravelRecompute(tripId).catch(() => undefined);
-        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
+        const r = await createEntry(tripId, newDayNum, body);
+        if (!r.ok) throw new Error(`新增景點失敗 (${r.status}): ${r.message.slice(0, 200)}`);
+        const created = r.data ?? {};
         if (created.id) {
           navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
         } else {
@@ -828,24 +793,14 @@ export default function ChangePoiPage() {
             : buildSearchPoiBody(selected)),
           ...occ,
         };
-        const res = await apiFetchRaw(
-          `/trips/${encodeURIComponent(tripId)}/entries/${entryId}/alternates`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          },
-        );
-        if (!res.ok) {
-          const text = await res.text();
-          if (res.status === 409) {
-            const code = parseErrorCode(text);
-            if (code === 'DUPLICATE_POI') throw new Error('此景點已存在於這個停留點');
+        const r = await addAlternate(tripId, entryId, null, body);
+        if (!r.ok) {
+          if (r.status === 409) {
+            if (r.code === 'DUPLICATE_POI') throw new Error('此景點已存在於這個停留點');
             throw new Error('資料已被其他操作更新，請重新整理');
           }
-          throw new Error(`加備選失敗 (${res.status}): ${text.slice(0, 200)}`);
+          throw new Error(`加備選失敗 (${r.status}): ${r.message.slice(0, 200)}`);
         }
-        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
         navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`, { replace: true });
         return;
       }
@@ -857,20 +812,11 @@ export default function ChangePoiPage() {
           : buildSearchPoiBody(selected)),
         ...occ,
       };
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}/poi-id`, {
-        method: 'PUT',
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        if (res.status === 409) {
-          throw new Error('資料已被其他操作更新，請重新整理');
-        }
-        throw new Error(`PUT 失敗 (${res.status}): ${text.slice(0, 200)}`);
+      const r = await replaceMasterPoi(tripId, entryId, null, body);
+      if (!r.ok) {
+        if (r.status === 409) throw new Error('資料已被其他操作更新，請重新整理');
+        throw new Error(`PUT 失敗 (${r.status}): ${r.message.slice(0, 200)}`);
       }
-      // fire-and-forget recompute current day（user 換 POI 後 distance/min 應更新）
-      void requestTravelRecompute(tripId).catch(() => undefined);
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId } }));
       navigate(`/trips?selected=${encodeURIComponent(tripId)}`, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '置換景點失敗');

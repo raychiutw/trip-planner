@@ -221,10 +221,33 @@ describe('clone (PR3)', () => {
     expect(ownerRow?.owner_user_id).toBe(userIdFor(clonerEmail));
     const ents = await db.prepare('SELECT COUNT(*) AS c FROM trip_entries e JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ?').bind(newId).first<{ c: number }>();
     expect(ents?.c).toBe(1);
+    // #1258：clone 走 entry intake 批次入口 → 每筆 entry 有 audit_log（rollback 讀它）
+    const au = await db.prepare("SELECT COUNT(*) AS c FROM audit_log WHERE trip_id = ? AND table_name = 'trip_entries' AND action = 'insert'").bind(newId).first<{ c: number }>();
+    expect(au?.c).toBe(1);
     const fl = await db.prepare('SELECT COUNT(*) AS c FROM trip_flights WHERE trip_id = ?').bind(newId).first<{ c: number }>();
     expect(fl?.c).toBe(1); // flights default-ON → copied
     const em = await db.prepare('SELECT COUNT(*) AS c FROM trip_emergency_contacts WHERE trip_id = ?').bind(newId).first<{ c: number }>();
     expect(em?.c).toBe(0); // emergency default-OFF → NOT copied (default-deny holds through clone)
+  });
+
+  it('clone 撞既有 POI（fill-null）：補 NULL 欄、不覆蓋非 NULL；其他 trip 引用的同一 row 只被補不被改', async () => {
+    const { id } = await seedTrip(db, { id: 'clone-policy', owner, days: 1 });
+    const dayId = await getDayId(db, id, 1);
+    // 來源 trip 的 POI 帶完整資料；另一個 trip 已引用同 name+type 的既有 row（address NULL、rating 已有值）
+    const srcPoi = await db.prepare("INSERT INTO pois (type, name, address, rating) VALUES ('restaurant', 'Policy 食堂 clone', '來源地址', 3.0) RETURNING id").first<{ id: number }>();
+    await seedEntry(db, dayId, { poiId: srcPoi!.id });
+    // 模擬「既有共用 row」：同 name+type 只能有一列（UNIQUE），所以 clone 撞到的就是 srcPoi 自己 → 把它改成部分 NULL 再驗
+    await db.prepare('UPDATE pois SET address = NULL, rating = 4.5 WHERE id = ?').bind(srcPoi!.id).run();
+    const created = (await (await createShareFor(id)).json()) as { token: string };
+    await seedUser(db, 'cloner-policy@test.com');
+    const res = await callHandler(cloneShare as never, mockContext({
+      request: jsonRequest(`https://x/api/share/${created.token}/clone`, 'POST'),
+      env, auth: mockAuth({ email: 'cloner-policy@test.com' }), params: { token: created.token },
+    }));
+    expect(res.status).toBe(201);
+    const row = await db.prepare('SELECT address, rating FROM pois WHERE id = ?').bind(srcPoi!.id).first<{ address: string | null; rating: number }>();
+    // address 來源是 NULL（讀出來也是 NULL）→ 沒東西可補；rating 4.5 不被覆蓋
+    expect(row).toEqual({ address: null, rating: 4.5 });
   });
 
   it('clone of unknown token → 404', async () => {

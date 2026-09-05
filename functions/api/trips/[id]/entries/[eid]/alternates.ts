@@ -64,7 +64,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!poiExists) throw new AppError('DATA_NOT_FOUND', `POI ${body.poiId} 不存在`);
     poiIdToAdd = body.poiId;
   } else if ('name' in body || 'lat' in body || 'lng' in body) {
-    poiIdToAdd = await findOrCreatePoi(db, normalizeFindOrCreatePoiPayload(body));
+    poiIdToAdd = await findOrCreatePoi(db, normalizeFindOrCreatePoiPayload(body), { policy: 'fill-null' });
   } else {
     throw new AppError('DATA_VALIDATION', '須提供 poiId 或 { name, lat, lng }');
   }

@@ -1,6 +1,6 @@
 {
   "name": "tripline",
-  "version": "2.57.87",
+  "version": "2.57.88",
   "private": true,
   "scripts": {
     "dev": "concurrently -n vite,api -c cyan,green \"vite\" \"wrangler pages dev dist --local --port 8788 --d1 DB\"",
@@ -26,7 +26,7 @@
     "backfill:google": "bun scripts/google-poi-initial-backfill.ts",
     "refresh:google": "bun scripts/google-poi-refresh-30d.ts",
     "quota:google": "bun scripts/google-quota-monitor.ts",
-    "lint": "eslint \"src/**/*.{ts,tsx}\""
+    "lint": "eslint \"src/**/*.{ts,tsx}\" \"functions/**/*.ts\""
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260813.1",

@@ -25,43 +25,6 @@ export function reqId(r: D1Result, msg = '寫入失敗'): number {
   return id;
 }
 
-export interface ResolvablePoi {
-  type: string;
-  name: string;
-  category: string | null;
-  lat: number | null;
-  lng: number | null;
-  hours: string | null;
-  rating: number | null;
-  price?: string | null;
-  address: string | null;
-  placeId: string | null;
-}
-
-/**
- * Find-or-create a POI by UNIQUE(name, type). pois enforces that index, so callers
- * MUST reuse an existing row rather than INSERT a duplicate. Pre-existing pois are
- * returned AS-IS (never mutated); only newly-created ids are tracked for rollback.
- */
-export async function resolvePoi(db: D1Database, p: ResolvablePoi, createdPoiIds: number[]): Promise<number> {
-  const found = await db.prepare('SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1').bind(p.name, p.type).first<{ id: number }>();
-  if (found && typeof found.id === 'number') return found.id;
-  const ins = await db
-    .prepare(
-      'INSERT OR IGNORE INTO pois (type, name, category, lat, lng, hours, rating, price, address, place_id, source) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id',
-    )
-    .bind(p.type, p.name, p.category, p.lat, p.lng, p.hours, p.rating, p.price ?? null, p.address, p.placeId, 'imported')
-    .first<{ id: number }>();
-  if (ins && typeof ins.id === 'number') {
-    createdPoiIds.push(ins.id);
-    return ins.id;
-  }
-  // Lost the INSERT-OR-IGNORE race (concurrent insert of same name+type) → re-fetch.
-  const ref = await db.prepare('SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1').bind(p.name, p.type).first<{ id: number }>();
-  if (!ref || typeof ref.id !== 'number') throw new AppError('SYS_DB_ERROR', 'POI 解析失敗');
-  return ref.id;
-}
-
 /** Run statements in chunked atomic batches; onResult fires per result as each chunk
  *  commits, so a later chunk's failure still leaves earlier ids tracked. */
 export async function runChunked(db: D1Database, stmts: Stmt[], onResult?: (r: D1Result, idx: number) => void): Promise<void> {

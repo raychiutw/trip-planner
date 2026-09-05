@@ -24,7 +24,7 @@ import {
   buildMcpConfig,
 } from './lib/contained-spawn';
 import { throttledAlert, sleep } from './_lib/cron-shared';
-import { failPendingRequests, type ReapReason } from './lib/fail-pending-requests';
+import { createRequestWorker } from './lib/request-worker';
 
 // --- Load .env.local ---
 // v2.33.51 round 8c: 統一 parser — 之前 inline 邏輯不 strip 外 quote，跟
@@ -92,172 +92,6 @@ const tokenHelper = require(TOKEN_HELPER) as {
   getToken: (opts?: { forceFresh?: boolean }) => Promise<string>;
   invalidateCache: () => void;
 };
-
-// v2.55.62 (Option E): tp-request 用 owner 身份寫入，改由 OAuth server 直接從既有 Consent
-// 簽發受限 token（POST /api/oauth/mint-restricted）；api-server 不再存/rotate refresh token
-// （退役 get-tripline-user-token + tp-request CLIENT_SECRET，Mac 只剩 API_SECRET）。
-// TP_REQUEST_USER_TOKEN=1 且 skill 為 /tp-request 才啟用；mint 失敗 → 不 spawn（見 acquireToken）。
-
-function userTokenEnabled(skillCommand: string): boolean {
-  const flag = process.env.TP_REQUEST_USER_TOKEN;
-  return (flag === '1' || flag === 'true') && skillCommand.trim() === '/tp-request';
-}
-
-/** The Bearer to inject + the trip it may touch. restrictTrip is set only for a
- *  trip-scoped user token; undefined for the unrestricted read-only service token. */
-interface AcquiredToken {
-  token: string;
-  restrictTrip?: string;
-}
-
-/** Option E: peek the oldest pending request's id + trip so we can mint an owner-identity
- *  token bound to that ONE trip (confused-deputy mitigation — an injected agent then
- *  physically can't write other trips). Uses the service token (ops:trips:read — same
- *  read the skill does to drain), priority mirrors the skill: processing → open,
- *  oldest-first. null = nothing pending. */
-async function peekPendingRequest(): Promise<{ requestId: string; tripId: string } | null> {
-  const svcToken = await tokenHelper.getToken();
-  for (const status of ['processing', 'open'] as const) {
-    try {
-      const res = await fetch(`${API_BASE}/api/requests?status=${status}&sort=asc&limit=1`, {
-        headers: { Authorization: `Bearer ${svcToken}` },
-      });
-      if (!res.ok) continue;
-      // /api/requests 走 json() → deepCamel，回傳是 camelCase（tripId，非 trip_id）。
-      // 讀 trip_id 會永遠 undefined → 永不 mint（DOA）。id 無底線不受轉換影響。
-      // null / 非-JSON body → ?? {}，否則 data.items 爆（同 mintRestricted null-safe 修法、同 2026-07-12 事故類別）。
-      const data = ((await res.json().catch(() => null)) ?? {}) as { items?: Array<{ id?: unknown; tripId?: unknown }> };
-      const item = data.items?.[0];
-      const rawId = item?.id;
-      const tripId = item?.tripId;
-      const requestId = typeof rawId === 'number' ? String(rawId) : typeof rawId === 'string' ? rawId : '';
-      if (requestId && typeof tripId === 'string' && tripId) return { requestId, tripId };
-    } catch {
-      /* best-effort — try next status */
-    }
-  }
-  return null;
-}
-
-/** Option E: mint an owner-identity token restricted to the request's trip. The OAuth
- *  server derives trip+owner from `request_id` and signs from the owner's existing Consent
- *  — no refresh token, no owner Bearer, nothing long-lived on this machine. Authed with the
- *  CF↔api-server API_SECRET (a user token cannot forge it). */
-async function mintRestricted(requestId: string): Promise<{ token: string; tripId: string }> {
-  const res = await fetch(`${API_BASE}/api/oauth/mint-restricted`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${API_SECRET}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ request_id: requestId }),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw Object.assign(new Error(`mint-restricted ${res.status}: ${detail.slice(0, 120)}`), { kind: 'MINT_FAILED' });
-  }
-  // 字面 null / 非-JSON body → ?? {}，否則 data.access_token 爆 null（同 get-tripline-token.js）。
-  const data = ((await res.json().catch(() => null)) ?? {}) as { access_token?: unknown; restrict_trip?: unknown };
-  if (typeof data.access_token !== 'string' || !data.access_token || typeof data.restrict_trip !== 'string' || !data.restrict_trip) {
-    throw Object.assign(new Error('mint-restricted response missing access_token/restrict_trip'), { kind: 'MINT_FAILED' });
-  }
-  return { token: data.access_token, tripId: data.restrict_trip };
-}
-
-/** Acquire the Bearer to inject. For /tp-request when enabled (Option E): peek the pending
- *  request → mint an owner-identity token restricted to that ONE trip. **On any failure we
- *  return null (do NOT spawn)** — falling back to a service token would run a
- *  `--dangerously-skip-permissions` session over untrusted `trip_requests.message`, letting
- *  a prompt-injected agent read Mac secrets. Non-/tp-request skills are trusted → read-only
- *  service token. */
-async function acquireToken(skillCommand: string): Promise<AcquiredToken | null> {
-  if (userTokenEnabled(skillCommand)) {
-    try {
-      const pending = await peekPendingRequest();
-      if (!pending) {
-        log('無 pending request → 不 spawn /tp-request（Option E：只在有可處理請求時起 contained session）');
-        return null;
-      }
-      const { token, tripId } = await mintRestricted(pending.requestId);
-      log(`minted owner-restricted token for request ${pending.requestId} (trip ${tripId})`);
-      return { token, restrictTrip: tripId };
-    } catch (err) {
-      const e = err as { kind?: string; message?: string };
-      logError(`mint-restricted 失敗（/tp-request 不 spawn，避免未-contained session 外洩）：[${e.kind ?? '?'}] ${e.message ?? err}`);
-      void throttledAlert(
-        `mint-${e.kind ?? 'unknown'}`,
-        'failed',
-        `tp-request mint-restricted 失效（${e.kind ?? '?'}）→ 不 spawn。查 /api/oauth/mint-restricted 或 owner Consent。`,
-      );
-      return null; // 關鍵：不 fallback service token（不起未-contained session 處理不可信輸入）
-    }
-  }
-  try {
-    return { token: await tokenHelper.getToken() };
-  } catch (err) {
-    logError(`Token mint 失敗，tmux 不啟動：${(err as Error).message}`);
-    return null;
-  }
-}
-
-// --- tmux session management ---
-// v2.30.7: 改用 ephemeral tmux session 跑 claude（非 -p）。每個 /trigger 開
-// 一個 session（v2.33.27 起 per-skill 命名 `tripline-{slug}-<timestamp>-<pid>`，
-// 例 `tripline-tp-request-...` / `tripline-tp-daily-check-...`），skill 處理完
-// 所有 request 後自殺（SKILL.md 結尾 tmux kill-session）。Orphan 由
-// cleanupOrphans 強制回收。
-//
-// 2026-07-07 request #237 incident：30min 上限會**誤殺還在工作的大 request
-// session**（5 天×午晚餐×高評價餐廳搜尋 >30min）→ 反覆重做永遠做不完。
-// 原 30min 是配合 token TTL (1h) 的保守值 — 現 SKILL.md 已加「長工作每
-// ~40min 重取 token」指引（skill 本就自跑 get-tripline-token），TTL 不再是
-// session 壽命上限。90min 平衡「大 request 完成窗」vs「真卡死 block 後續
-// cron」（cron 10min 一輪，卡死最多 block 9 輪）。
-const ORPHAN_MAX_AGE_MS = 90 * 60 * 1000; // 90 minutes
-// v2.33.110: cleanupOrphans / hasActiveSession 的 prefix 從 allowlist derive，
-// 不再 hardcode。原本 SESSION_PREFIX = 'tripline-request-' 僅 match legacy（v2.33.26 前）
-// → v2.33.27 per-skill rename 後 orphan `tripline-tp-*-*` 完全不被清 → hasActiveSession
-// 永真 → cron 每次 skip（2026-05-25 AI 健檢 request 209 卡 1h21m）。改用 allowlist-driven
-// 既 cover 兩世代又不誤殺人類 `tripline-debug` 等 ad-hoc session。
-
-// v2.33.27: per-skill session prefix。原本 SESSION_PREFIX 對所有 skill 共用，
-// v2.33.49 round 8a security audit: skillCommand allowlist — 之前 sessionPrefixForSkill
-// 只 lowercase + 拔 leading /，無嚴格驗證。任何未來 PR 把 skill 暴露給 HTTP query
-// 都會引入 shell-quote / command injection。明定 allowlist 防止 design widening。
-const ALLOWED_SKILLS = new Set(['/tp-request', '/tp-daily-check']);
-function assertAllowedSkill(skillCommand: string): string {
-  if (!ALLOWED_SKILLS.has(skillCommand)) {
-    throw new Error(`Disallowed skillCommand: ${skillCommand.slice(0, 40)} (allowlist: ${[...ALLOWED_SKILLS].join(', ')})`);
-  }
-  return skillCommand;
-}
-
-// hasActiveSession() 偵測到 /tp-request session 就會 skip /tp-daily-check fire
-// → daily-check 5/19 起連 4 天被擋（log: "Active session ... still running"）。
-// Fix：每個 skill 有自己的 session prefix，hasActiveSession 接 skillFilter。
-function sessionPrefixForSkill(skillCommand: string): string {
-  // '/tp-request' → 'tripline-tp-request-'；'/tp-daily-check' → 'tripline-tp-daily-check-'
-  // v2.33.49: validate through allowlist 保證 prefix 內無 shell metacharacter。
-  const verified = assertAllowedSkill(skillCommand);
-  const slug = verified.replace(/^\//, '').toLowerCase();
-  return `tripline-${slug}-`;
-}
-
-// v2.33.110: cleanupOrphans 用「ALLOWED_SKILLS-derived prefix set」判斷哪些 tmux session
-// 是本 server spawn 的 — 自動跟著新 skill 走免雙重維護，也不誤殺 user 手動的
-// `tripline-debug` 等 ad-hoc session。Legacy `tripline-request-` 保留是 v2.33.27
-// 前 spawn 的 session 過渡期可能還在跑（30min orphan timeout 內）。
-// TODO(2026-06-08): v2.33.27 ship 已 2+ 週 + 多輪 Mac mini 重啟，legacy session 早被
-// orphan timeout 清光。確認 prod `tmux ls` 0 個 `tripline-request-*` 後可刪 const +
-// hasActiveSession line 185 backward-compat branch + api-server-per-skill-session.test.ts:33。
-const LEGACY_SESSION_PREFIX = 'tripline-request-';
-function getKnownSessionPrefixes(): string[] {
-  return [
-    ...Array.from(ALLOWED_SKILLS).map(sessionPrefixForSkill),
-    LEGACY_SESSION_PREFIX,
-  ];
-}
-
-// launchd PATH 不含 /opt/homebrew/bin，spawnSync(TMUX_BIN, ...) 抓不到。寫死絕對
-// 路徑，與 claudePath 同 pattern。Intel Mac 用 /usr/local/bin/tmux — homebrew
-// 預設位置不同，這邊偵測一次：找到的第一條存在路徑當 TMUX_BIN。
 const TMUX_BIN = (() => {
   const candidates = ['/opt/homebrew/bin/tmux', '/usr/local/bin/tmux', '/usr/bin/tmux'];
   for (const p of candidates) {
@@ -293,58 +127,6 @@ const CLAUDE_BIN = '/Users/ray/.local/bin/claude';
 const CONTAINED_SETTINGS_PATH = join(PROJECT_DIR, 'scripts', 'tp-request-contained', 'settings.json');
 const MCP_SERVER_PATH = join(PROJECT_DIR, 'scripts', 'tp-request-mcp-server.js');
 const CONTAINED_BASE_DIR = `/Users/${TP_AGENT_USER}/.tripline-contained`;
-
-async function cleanupOrphans(maxAgeMs: number): Promise<number> {
-  try {
-    // v2.33.110: format 用 `|` delimiter 而非 space — tmux session name 允許空格，
-    // space-split + `parts.length !== 2` 會 silent skip 含空格的 session（hasActiveSession
-    // 仍 match → orphan 永不清 + cron 永真 skip，跟原 bug 同病灶）。tmux session name
-    // 不允許 `|`（自 2017 起拒絕），用它當 delimiter 安全。
-    const result = spawnSync(TMUX_BIN, ['ls', '-F', '#{session_name}|#{session_created}'], { encoding: 'utf-8' });
-    // tmux ls exit 1 = no sessions exist — not an error
-    if (result.status !== 0) return 0;
-    const knownPrefixes = getKnownSessionPrefixes();
-    const now = Math.floor(Date.now() / 1000);
-    let killed = 0;
-    for (const line of (result.stdout || '').split('\n')) {
-      const parts = line.split('|');
-      if (parts.length !== 2) continue;
-      const [name, createdStr] = parts;
-      if (!knownPrefixes.some(p => name.startsWith(p))) continue;
-      const created = parseInt(createdStr, 10);
-      if (!created) continue;
-      if ((now - created) * 1000 > maxAgeMs) {
-        spawnSync(TMUX_BIN, ['kill-session', '-t', name]);
-        log(`Cleaned orphan tmux session: ${name} (age=${now - created}s)`);
-        killed++;
-      }
-    }
-    return killed;
-  } catch (err) {
-    logError(`cleanupOrphans error: ${(err as Error).message}`);
-    return 0;
-  }
-}
-
-function hasActiveSession(skillCommand: string): string | null {
-  // 同 skill 才會擋（不同 skill 可以平行跑，例：/tp-request 跑時 /tp-daily-check 不該被擋）。
-  // v2.33.110: 參數改 required — 唯一 caller (processLoop) 必傳，原本三元 fallback
-  // 從未 reach。同步刪 SESSION_PREFIX const（死碼）。
-  const result = spawnSync(TMUX_BIN, ['ls', '-F', '#{session_name}'], { encoding: 'utf-8' });
-  if (result.status !== 0) return null;
-  const filter = sessionPrefixForSkill(skillCommand);
-  for (const line of (result.stdout || '').split('\n')) {
-    if (line.startsWith(filter)) return line;
-    // v2.33.27 backward-compat：legacy LEGACY_SESSION_PREFIX 是 /tp-request 的 prefix；
-    // 如果 caller 是 /tp-request 也要看到 legacy session（process restart 過渡期）。
-    if (skillCommand === '/tp-request' && line.startsWith(LEGACY_SESSION_PREFIX)) return line;
-  }
-  return null;
-}
-
-// v2.55.52: tmux 副作用注入 ./lib/tmux-pane 的 orchestration（waitForRepl /
-// submitSkillCommand），讓 incident 修正邏輯可 behavioral test。capture 失敗回 ''
-// → readiness / submit poll 自然重試；sendKeys 吞 status（效果由後續 capture 驗證）。
 const tmuxDeps: TmuxDeps = {
   capture: (s) => spawnSync(TMUX_BIN, ['capture-pane', '-t', s, '-p'], { encoding: 'utf-8' }).stdout || '',
   sendKeys: (s, keys) => { spawnSync(TMUX_BIN, ['send-keys', '-t', s, keys], { encoding: 'utf-8' }); },
@@ -388,47 +170,6 @@ function containmentReady(): boolean {
     return false;
   }
 }
-
-/** Reaper signal: does the restrict trip still have a pending (processing/open) request?
- *  Uses the service token (same read the skill drains with). Errs toward "yes" (keep the
- *  session alive) on transient failure — the orphan cap + cleanupOrphans are the backstop. */
-async function tripHasPending(tripId: string): Promise<boolean> {
-  try {
-    const svc = await tokenHelper.getToken();
-    for (const status of ['processing', 'open'] as const) {
-      const res = await fetch(
-        `${API_BASE}/api/requests?status=${status}&tripId=${encodeURIComponent(tripId)}&limit=1`,
-        { headers: { Authorization: `Bearer ${svc}` } },
-      );
-      if (!res.ok) return true;
-      // null / 非-JSON body = transient failure → 依契約 err toward keep-alive (return true)，
-      // 不靠裸 json() 的 throw→outer catch（同 2026-07-12 事故類別，但這裡要回 true 非 reap）。
-      const data = (await res.json().catch(() => null)) as { items?: unknown[] } | null;
-      if (data == null) return true;
-      if ((data.items?.length ?? 0) > 0) return true;
-    }
-    return false;
-  } catch {
-    return true;
-  }
-}
-
-/** ADR-0007 第一層收屍。**呼叫端必須先 kill-session** —— session 已死才沒有 TOCTOU：
- *  列表與 PATCH 之間不會有東西把那筆請求做完。drained（正常收尾）**不要**呼叫，
- *  否則收尾與下一筆新請求之間那幾毫秒會被誤殺。 */
-function reapTripRequests(tripId: string, reason: ReapReason): Promise<number> {
-  return failPendingRequests(
-    { fetch, apiBase: API_BASE, getToken: () => tokenHelper.getToken(), log, logError },
-    tripId,
-    reason,
-  );
-}
-
-/** Spawn a contained /tp-request session (interactive REPL — NOT -p). Returns false
- *  (fail-closed) on any setup failure so the caller degrades to a service-token spawn.
- *  Blocks (async) for the session's lifetime: it drives the REPL then REAPS the session
- *  when the trip's requests are drained (the contained agent has no Bash to self-destruct,
- *  and can't kill ray's cross-user tmux session). */
 async function spawnContainedSession(
   sessionName: string,
   skillCommand: string,
@@ -510,7 +251,7 @@ async function spawnContainedSession(
   if (create.status !== 0) {
     logError(`contained: tmux new-session 失敗（fail-closed）：${create.stderr || create.status}`);
     // session 根本沒起來 → 這輪確定不會有人處理。收屍解隊列（ADR-0007 第一層）。
-    await reapTripRequests(restrictTrip, 'error');
+    await worker.reap(restrictTrip, 'error');
     return false;
   }
   attachSessionLog(sessionName, skillCommand);
@@ -519,41 +260,20 @@ async function spawnContainedSession(
   if (!(await waitForRepl(tmuxDeps, sessionName))) {
     logError(`contained: REPL 未就緒，kill: ${sessionName}`);
     spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
-    await reapTripRequests(restrictTrip, 'error');
+    await worker.reap(restrictTrip, 'error');
     return false;
   }
   if (!(await submitSkillCommand(tmuxDeps, sessionName, skillCommand))) {
     logError(`contained: skill 未提交，kill: ${sessionName}`);
     spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
-    await reapTripRequests(restrictTrip, 'error');
+    await worker.reap(restrictTrip, 'error');
     return false;
   }
   log(`Spawned CONTAINED session ${sessionName} (trip=${restrictTrip}, dontAsk+MCP-only+tp-agent, interactive REPL)`);
 
   // 5. REAPER — poll the trip's request status; kill when drained or at the orphan cap.
-  const deadline = Date.now() + ORPHAN_MAX_AGE_MS;
-  let drained = false;
-  while (Date.now() < deadline) {
-    await sleep(15_000);
-    // session died on its own (claude crashed/exited) → stop polling
-    if (spawnSync(TMUX_BIN, ['has-session', '-t', sessionName], { encoding: 'utf-8' }).status !== 0) {
-      log(`contained: session ${sessionName} 已自行結束`);
-      break;
-    }
-    if (!(await tripHasPending(restrictTrip))) {
-      drained = true;
-      log(`contained: trip ${restrictTrip} 無待處理 → 收尾 ${sessionName}`);
-      break;
-    }
-  }
-  spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
-  // ADR-0007 第一層：session 死了／到 orphan cap 但請求還沒處理完 → 就地標終結。
-  // 沒有這段，row 會永遠停在 processing：ChatPage 的 composer 綁 inflight（整個聊天
-  // 鎖死），而 peekPendingRequest 每輪都會再撈到它（head-of-line block 全站隊列）。
-  // drained 走正常收尾，不收 —— 那條路上沒有殭屍，硬收反而會誤殺剛進來的新請求。
-  if (!drained) await reapTripRequests(restrictTrip, 'timed_out');
-  // ponytail: per-session dir (0600 mcp-config + oauth-token) left on disk; both are
-  // tp-agent 0700/0600 + short-lived. Add an age-based sweep in cleanupOrphans if needed.
+  // #1265：看門狗 + ADR-0007 第一層收屍在 request worker（fake clock 可測）。
+  await worker.watchContainedSession(sessionName, restrictTrip);
   return true;
 }
 
@@ -572,76 +292,13 @@ function attachSessionLog(sessionName: string, skillCommand: string): void {
     logError(`session log pipe setup failed (non-blocking): ${err instanceof Error ? err.message : String(err)}`);
   }
 }
-
-async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
-  // v2.33.49 round 8a: enforce allowlist at every entry point — defense in
-  // depth (sessionPrefixForSkill also asserts but defensive double-gate).
-  assertAllowedSkill(skillCommand);
-  // v2.22.0：claude /tp-request skill 用 `Authorization: Bearer $TRIPLINE_API_TOKEN`
-  // 寫入 prod API（含 §6/§7/§8/§9 poi-favorites 4 條 path）。.env.local 只有
-  // TRIPLINE_API_CLIENT_ID/SECRET，沒 TOKEN — 必須 mint 後 inject 到 tmux session
-  // env，否則 skill 內 curl header 是 `Bearer ` (empty) → middleware 401。
-  // v2.55.54: /tp-request 啟用時取 user token（可寫行程）；否則 / 失敗 → service token。
-  const acquired = await acquireToken(skillCommand);
-  if (acquired === null) {
-    return false; // acquireToken 已 logError（service token 也失敗）
-  }
-  // v2.33.27: session name 含 skill slug，讓 hasActiveSession 區分。
-  // 例：'tripline-tp-request-1779...' vs 'tripline-tp-daily-check-1779...'
-  const sessionName = `${sessionPrefixForSkill(skillCommand)}${Date.now()}-${process.pid}`;
-
-  // --- containment gate (activation precondition 0) ---
-  // A restrict_trip token is WRITE-capable; it must NEVER run in an un-contained
-  // session — a prompt-injected agent could read creds → re-mint an unrestricted
-  // token. Infra ready → contained spawn (dontAsk + MCP-only + tp-agent). Not ready
-  // → FAIL CLOSED: do NOT spawn (no service-token degrade — see the inline note at the
-  // gate below). The un-contained tmux path below is reached ONLY by trusted service-token
-  // skills (/tp-daily-check); flag-OFF /tp-request is refused by the P1 guard just after
-  // this block, so untrusted `trip_requests.message` never runs un-contained.
-  const token = acquired.token;
-  const restrictTrip = acquired.restrictTrip;
-  if (restrictTrip) {
-    if (containmentReady()) {
-      return await spawnContainedSession(sessionName, skillCommand, token, restrictTrip);
-    }
-    // Option E / Codex outside-voice: NEVER run /tp-request (untrusted `trip_requests.message`)
-    // in an un-contained session. Even a trip-restricted WRITE token can't stop a
-    // prompt-injected agent in a `--dangerously-skip-permissions` shell from reading Mac
-    // secrets. Fail closed → do NOT spawn (no service-token degrade).
-    logError('containment infra 未就緒（tp-agent/sudo/settings/self-probe）→ /tp-request 不 spawn（拒絕未隔離 session 處理不可信輸入）');
-    void throttledAlert('containment-not-ready', 'failed',
-      'tp-request 需隔離但 containment (0a) 未就緒 → 不 spawn。設定見 scripts/tp-request-contained/README.md');
-    return false;
-  }
-
-  // --- P1 hardening (v2.55.64): /tp-request must NEVER reach the un-contained tmux path ---
-  // /tp-request processes untrusted `trip_requests.message` and must always be contained,
-  // regardless of TP_REQUEST_USER_TOKEN. flag ON → acquireToken already returned above
-  // (mint → restrictTrip → contained gate, or null → no spawn). Reaching here means a
-  // service token with no restrictTrip — i.e. flag OFF /tp-request (the pre-existing hole).
-  // Refuse it. Only trusted service-token skills (/tp-daily-check) may use the path below.
-  if (skillCommand === '/tp-request') {
-    logError('/tp-request 走到未-contained 路徑（flag OFF？無 restrict token）→ 拒絕 spawn（不可信輸入不進未隔離 session）');
-    void throttledAlert('tp-request-uncontained-refused', 'failed',
-      '/tp-request 落到未-contained 路徑 → 不 spawn。要跑請開 TP_REQUEST_USER_TOKEN=1 走 Option E contained 路徑。');
-    return false;
-  }
-
+/**
+ * #1264：worker 決策（peek → token → busy → spawn）在 scripts/lib/request-worker.ts，
+ * 這裡只組裝真實 adapter：tmux 指令、fetch、時鐘、contained / plain spawn。
+ */
+async function spawnPlain(sessionName: string, skillCommand: string, token: string): Promise<boolean> {
   const claudePath = CLAUDE_BIN;
-
-  // shell-escape token for the inline env assignment（避免 token 包含特殊字元）
   const escapedToken = shSingleQuote(token);
-  // 只有 trusted service-token skill（/tp-daily-check）走到這；/tp-request 已被上方 P1 guard
-  // 擋掉、restrict token 一律在 containment gate return，都不會落到未-contained tmux。故無 TRIPLINE_RESTRICT_TRIP。
-
-  // Detached tmux session — claude 跑 interactive REPL（無 -p）。透過 env var 把
-  // TRIPLINE_API_TOKEN + session name 傳給 skill；skill 結尾用 TRIPLINE_TMUX_SESSION
-  // 自殺。--name 給 claude session 一個顯示名稱（同 tmux session）方便人類辨識。
-  //
-  // PATH 含 homebrew dir — launchd 啟動的 api-server process.env.PATH 沒有
-  // /opt/homebrew/bin，skill 內 `tmux kill-session` self-destruct 會 ENOENT silent
-  // fail，session 變 stuck。`2>/dev/null || true` 在 skill 裡會吃掉錯誤。
-  // 同時 export TMUX_BIN 讓 skill 有更穩的 escape hatch。
   const tmuxDir = TMUX_BIN.includes('/') ? TMUX_BIN.slice(0, TMUX_BIN.lastIndexOf('/')) : '';
   const augmentedPath = [process.env.PATH || '', '/Users/ray/.local/bin', tmuxDir]
     .filter(Boolean)
@@ -654,87 +311,54 @@ async function spawnTmuxRequest(skillCommand: string): Promise<boolean> {
     logError(`tmux new-session failed (status=${create.status}): ${create.stderr || ''}`);
     return false;
   }
-
-  // v2.55.52: 等 REPL 就緒（取代硬編碼 2.5s；boot 變慢會丟失早送的 skill command）。
   if (!(await waitForRepl(tmuxDeps, sessionName))) {
     logError(`claude REPL 未在時限內就緒，kill session: ${sessionName}`);
     spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
     return false;
   }
-
-  // 送 skill command（type → poll 落地 → 單獨 Enter → poll 提交，防 slash autocomplete 吞 Enter）
   if (!(await submitSkillCommand(tmuxDeps, sessionName, skillCommand))) {
     logError(`skill command 未能提交，kill session: ${sessionName}`);
     spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
     return false;
   }
-
-  // 2026-07-07 可觀測性：session 輸出 pipe 到持久 log（scrub Bearer token）。
   attachSessionLog(sessionName, skillCommand);
-
   log(`Spawned tmux session: ${sessionName} (skill=${skillCommand}, fire-and-forget; skill self-destructs at end)`);
   return true;
 }
 
-// --- Process Loop ---
-// v2.30.7: skill 自己 drain queue (查 status=processing/open/received → 依序處理)，
-// API server 只負責「沒人在跑就 spawn 一隻」。多筆 stacked /trigger 期間若已有
-// session 活著，後續 /trigger return early。
-// v2.33.27: per-skill isRunning lock。原本 global boolean 讓不同 skill
-// 同時 fire 互擋（/tp-request 跑時 /tp-daily-check 被卡 → 4 天沒 fire）。
-const runningSkills = new Set<string>();
-let lastProcessed: string | null = null;
-let processedCount = 0;
+const worker = createRequestWorker({
+  fetch,
+  apiBase: API_BASE,
+  apiSecret: API_SECRET,
+  getServiceToken: () => tokenHelper.getToken(),
+  userTokenEnabled: (skillCommand) => {
+    const flag = process.env.TP_REQUEST_USER_TOKEN;
+    return (flag === '1' || flag === 'true') && skillCommand.trim() === '/tp-request';
+  },
+  tmux: {
+    list: (format) => {
+      const r = spawnSync(TMUX_BIN, ['ls', '-F', format], { encoding: 'utf-8' });
+      return r.status === 0 ? (r.stdout || '') : null;
+    },
+    kill: (name) => { spawnSync(TMUX_BIN, ['kill-session', '-t', name]); },
+    has: (name) => spawnSync(TMUX_BIN, ['has-session', '-t', name], { encoding: 'utf-8' }).status === 0,
+  },
+  clock: { now: () => Date.now() },
+  sleep,
+  pid: process.pid,
+  log,
+  logError,
+  alert: (key, state, message) => { void throttledAlert(key, state, message); },
+  containmentReady,
+  spawnContained: spawnContainedSession,
+  spawnPlain,
+});
 
+/** 舊名保留給 HTTP / cron 接線：true = 本輪有 spawn。 */
 async function processLoop(source: 'api' | 'job', skillCommand: string = '/tp-request'): Promise<boolean> {
-  // v2.33.49 round 8a: allowlist gate also at processLoop entry.
-  assertAllowedSkill(skillCommand);
-  if (runningSkills.has(skillCommand)) {
-    log(`processLoop: already running, skip (source=${source}, skill=${skillCommand})`);
-    return false;
-  }
-  runningSkills.add(skillCommand);
-  log(`Process loop started (source: ${source}, skill: ${skillCommand})`);
-
-  try {
-    // Cleanup orphans (>30min) — token TTL 是 1h，30min cleanup 保證 active session
-    // 不會碰到 token expire
-    const cleaned = await cleanupOrphans(ORPHAN_MAX_AGE_MS);
-    if (cleaned > 0) log(`Cleaned ${cleaned} orphan session(s)`);
-
-    // 只擋同 skill active session — 不同 skill 可平行跑（v2.33.27）
-    const active = hasActiveSession(skillCommand);
-    if (active) {
-      log(`Active ${skillCommand} session ${active} still running, skip new spawn`);
-      return false;
-    }
-
-    // Fire-and-forget tmux spawn — skill 內部 drain queue + 自殺
-    const success = await spawnTmuxRequest(skillCommand);
-    if (success) {
-      lastProcessed = new Date().toISOString();
-      processedCount++;
-    }
-    return success;
-  } catch (err) {
-    logError(`Process loop error: ${err instanceof Error ? err.message : String(err)}`);
-    return false;
-  } finally {
-    runningSkills.delete(skillCommand);
-    log(`Process loop ended (skill=${skillCommand})`);
-  }
+  return (await worker.tick(source, skillCommand)) === 'spawned';
 }
 
-// --- HTTP Server ---
-/**
- * Constant-time Bearer token comparison — defends against timing side-channel
- * brute-force attacks now that /trigger and /internal/mail/send are publicly
- * reachable via Tailscale Funnel (--https=8443) without per-IP rate limits (Q12).
- *
- * Using subtle.timingSafeEqual on equal-length byte buffers; length mismatch
- * short-circuits to false (timing leak there is acceptable — only reveals
- * "wrong length", not byte-by-byte content).
- */
 function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   const aBuf = new TextEncoder().encode(a);
@@ -815,10 +439,7 @@ Bun.serve({
     if (url.pathname === '/health' && req.method === 'GET') {
       return Response.json({
         // v2.33.27: running 改報 array — backward-compat boolean 也保留
-        running: runningSkills.size > 0,
-        runningSkills: Array.from(runningSkills),
-        lastProcessed,
-        processedCount,
+        ...worker.status(),
         uptime: process.uptime(),
       });
     }
@@ -831,7 +452,7 @@ Bun.serve({
       const source = (url.searchParams.get('source') === 'job' ? 'job' : 'api') as 'api' | 'job';
 
       // /trigger 預設跑 /tp-request；per-skill lock 只擋同 skill
-      if (runningSkills.has('/tp-request')) {
+      if (worker.isRunning('/tp-request')) {
         return Response.json({ already_running: true });
       }
 
@@ -868,7 +489,7 @@ log(`Tripline API Server listening on port ${PORT}`);
 // 用 setInterval + setTimeout-to-next-occurrence chain，不引 cron parser dep。
 // v2.33.27: 鎖改 per-skill — 不同 skill 不互擋。
 function fireSchedule(skillCommand: string, label: string): void {
-  if (runningSkills.has(skillCommand)) {
+  if (worker.isRunning(skillCommand)) {
     log(`Skip ${label} schedule (already running, skill=${skillCommand})`);
     return;
   }

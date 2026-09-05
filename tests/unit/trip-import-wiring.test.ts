@@ -18,35 +18,8 @@ const BTN = read('src/components/trips/ImportTripButton.tsx');
 const LIST = read('src/pages/TripsListPage.tsx');
 
 describe('POST /api/trips/import — endpoint', () => {
-  it('is a POST handler, auth-gated on a V2 user id', () => {
-    expect(ENDPOINT).toMatch(/export const onRequestPost/);
-    expect(ENDPOINT).toMatch(/requireAuth\(context\)/);
-    expect(ENDPOINT).toMatch(/auth\.userId/);
-  });
-  it('enforces the REAL body size (reads text, caps, then parses — not Content-Length)', () => {
-    expect(ENDPOINT).toMatch(/await context\.request\.text\(\)/);
-    expect(ENDPOINT).toMatch(/text\.length > MAX_IMPORT_BYTES/);
-    expect(ENDPOINT).not.toMatch(/headers\.get\('Content-Length'\)/);
-  });
-  it('caps trips-per-user (anti import-spam) via shared _tripWrite', () => {
-    expect(ENDPOINT).toMatch(/assertTripCap\(/);
-    expect(TRIPWRITE).toMatch(/MAX_TRIPS_PER_USER/);
-    expect(TRIPWRITE).toMatch(/COUNT\(\*\)[\s\S]*owner_user_id/);
-  });
-  it('chunks batches under D1 limit + RETURNING id throws on miss (shared _tripWrite)', () => {
-    expect(TRIPWRITE).toMatch(/BATCH_CHUNK = 50/);
-    expect(ENDPOINT).toMatch(/runChunked/);
-    expect(TRIPWRITE).toMatch(/function reqId/);
-  });
-  it('trip_entry_pois carries trip-specific overrides (round-trip fidelity)', () => {
-    expect(ENDPOINT).toMatch(/INSERT INTO trip_entry_pois \(entry_id, poi_id, sort_order, description, note, reservation, reservation_url/);
-  });
-  it('migration 0078: trip_entries INSERT 不再帶 note；entry-level note coalesce 到 master poi', () => {
-    // entry-level note column 已 DROP — INSERT INTO trip_entries 欄位清單不得含 note。
-    expect(ENDPOINT).not.toMatch(/INSERT INTO trip_entries[^)]*\bnote\b/);
-    // master(so===1) note fallback 到舊檔 e.note，保 round-trip 不遺失。
-    expect(ENDPOINT).toMatch(/so === 1 \? \(p\.note \?\? e\.note/);
-  });
+  // #1258：entries + trip_entry_pois 的 INSERT 與 master note fallback 搬進 entry intake，
+  // 由 tests/api/import-entry-note.integration.test.ts 與 entry-intake.integration.test.ts 走行為驗證。
   it('runs the pure validator and rejects on failure', () => {
     expect(ENDPOINT).toMatch(/parseAndValidateImport/);
     expect(ENDPOINT).toMatch(/if \(!result\.ok\) throw new AppError/);
@@ -59,16 +32,8 @@ describe('POST /api/trips/import — endpoint', () => {
     expect(ENDPOINT).toContain("'imported'");
     expect(ENDPOINT).toMatch(/owner_user_id/);
   });
-  it('find-or-creates pois by UNIQUE(name,type) and NEVER mutates an existing one (shared _tripWrite)', () => {
-    expect(ENDPOINT).toMatch(/resolvePoi/); // imported + used
-    expect(TRIPWRITE).toMatch(/export async function resolvePoi/);
-    expect(TRIPWRITE).toMatch(/SELECT id FROM pois WHERE name = \? AND type = \?/);
-    expect(TRIPWRITE).toMatch(/INSERT OR IGNORE INTO pois/);
-    expect(TRIPWRITE).not.toMatch(/UPDATE pois/); // never poison a shared catalog row
-  });
-  it('dedupes resolved poi_ids per entry (UNIQUE(entry_id, poi_id))', () => {
-    expect(ENDPOINT).toMatch(/seenPoi/);
-  });
+  // #1256／#1258：POI resolve policy（匯入現為 fill-null：只補 NULL、非 NULL 不覆蓋）改由
+  // tests/api/poi-resolver-policy 與 import-entry-note 走行為驗證，不再 grep resolvePoi 原始碼。
   it('rolls back (connect-root delete) on any failure (shared _tripWrite)', () => {
     expect(ENDPOINT).toMatch(/await rollbackTrip\(/);
     expect(TRIPWRITE).toMatch(/export async function rollbackTrip/);

@@ -6,10 +6,11 @@
  * （applyReorder），防未來重構把 a11y 路徑弄丟或讓兩路徑行為漂移。
  */
 import { describe, it, expect } from 'vitest';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const SRC = readFileSync(join(__dirname, '../../src/components/trip/TimelineRail.tsx'), 'utf8');
+const SRC = readTimelineRailSources();
 
 describe('W13 ⋯ menu 上移/下移一格（拖拉 a11y 替代路徑）', () => {
   it('上移一格：首列不顯（index > 0 才塞）+ 有 testid', () => {
@@ -27,7 +28,8 @@ describe('W13 ⋯ menu 上移/下移一格（拖拉 a11y 替代路徑）', () =>
   });
 
   it('走既有 batch endpoint（非另開），payload 為 sort_order', () => {
-    expect(SRC).toMatch(/applyReorder[\s\S]*?\/entries\/batch/);
-    expect(SRC).toMatch(/sort_order: idx/);
+    // #1260：batch endpoint 與 sort_order payload 在 entry 變更 module（entry-mutations.test 驗）；
+    // 這裡只鎖 moveStep 仍走 applyReorder → reorderEntries。
+    expect(SRC).toMatch(/applyReorder[\s\S]*?reorderEntries\(/);
   });
 });

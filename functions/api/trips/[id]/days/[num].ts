@@ -1,6 +1,6 @@
 import { logAudit } from '../../../_audit';
 import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../../_auth';
-import { syncEntryMaster } from '../../../_entry_pois';
+import { createEntriesBatch, type BatchEntrySpec } from '../../../_entryWrite';
 import { AppError } from '../../../_errors';
 import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
 import { resolveEntryTimes } from '../../../_time';
@@ -257,44 +257,16 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // Batch 1: delete old entries, update day, insert new entries
     // v2.29.0: trip_pois DROPPED, no DELETE FROM trip_pois needed. ON DELETE CASCADE
     // on trip_entries clears trip_entry_pois automatically.
-    const batch1: D1PreparedStatement[] = [];
-
-    batch1.push(
+    // #1259 entry intake：舊 entries DELETE + day version bump 跟新 entries INSERT 同一個
+    // db.batch 原子替換（createEntriesBatch 的 atomicWith），entries INSERT 本身在 module 內。
+    const atomicWith: D1PreparedStatement[] = [
       db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(dayId),
       // v2.30.x (migration 0065)：bump version 同 batch atomic，下次 PUT 用此 version 對齊 OCC
       db.prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ?, version = version + 1 WHERE id = ?')
         .bind(body.date!, body.dayOfWeek!, body.label!, dayId),
-    );
+    ];
 
     const timeline = Array.isArray(body.timeline) ? body.timeline : [];
-    const ENTRIES_START = batch1.length;
-    for (let i = 0; i < timeline.length; i++) {
-      const e = timeline[i]!;
-      // v2.29.0: trip_entries.{time, travel_*} DROPPED. body.travel.* 被 ignore；
-      // travel info 改寫 trip_segments by /recompute-travel。
-      const { startTime, endTime } = resolveEntryTimes(e as Record<string, unknown>);
-      // migration 0078: trip_entries.note DROPPED — INSERT 不再帶 note；entry-level 備註
-      // 改掛到該 entry 的 master trip_entry_pois.note（batch2 canonical-choices 路徑做
-      // coalesce、name fallback 路徑透過 syncEntryMaster 傳入，見下方）。
-      batch1.push(
-        db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, description) VALUES (?, ?, ?, ?, ?) RETURNING id')
-          .bind(dayId, i, startTime, endTime, e.description ?? null),
-      );
-    }
-
-    const batch1Results = await db.batch(batch1);
-
-    const entryIds: number[] = [];
-    for (let i = 0; i < timeline.length; i++) {
-      const rows = batch1Results[ENTRIES_START + i]!.results as { id: number }[];
-      const insertedId = rows[0]?.id;
-      if (typeof insertedId !== 'number' || insertedId <= 0) {
-        // Guard against a phantom entryId=0 silently flowing into batch2 /
-        // syncEntryMaster. Caught by the handler's try/catch → DATA_SAVE_FAILED.
-        throw new AppError('SYS_DB_ERROR', `trip_entries INSERT RETURNING id missing at index ${i}`);
-      }
-      entryIds.push(insertedId);
-    }
 
     // Collect all POI data for batch find-or-create (eliminates N+1 sequential queries)
     type TripPoiBuilder = (poiIds: number[]) => D1PreparedStatement[];
@@ -431,7 +403,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
 
     // Batch resolve all POIs (2–3 DB round-trips instead of N)
-    const poiIds = await batchFindOrCreatePois(db, poiItems);
+    const poiIds = await batchFindOrCreatePois(db, poiItems, { policy: 'fill-null' });
 
     const directChoicePoiIds = new Set<number>();
     for (const choices of entryPoiChoiceBuilders) {
@@ -472,84 +444,44 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
 
     // Build batch2: (a) canonical entry POIs (trip_entry_pois), (b) hotel UPDATE + parking poi_relations (via tripPoiBuilders).
-    // batch1 DELETE FROM trip_entries → ON DELETE CASCADE 清掉舊 trip_entry_pois。
-    const batch2: D1PreparedStatement[] = [];
+    // atomicWith 的 DELETE FROM trip_entries → ON DELETE CASCADE 清掉舊 trip_entry_pois。
+    // #1259：三種 entry 形態都收成 BatchEntrySpec —— stopPois/master+alternates（explicit
+    // choices）、name fallback（正選帶 entry-level note）、無 POI 佔位（version=0）。
+    // 正選/備選寫入、同 entry 去重、version 初始、失敗補償全在 createEntriesBatch。
     const entriesNeedingMaster: Array<{ entryId: number; poiId: number; note: string | null }> = [];
-    const nowEntryPois = new Date().toISOString();
-    for (let i = 0; i < timeline.length; i++) {
-      const entryId = entryIds[i]!;
-      // migration 0078: timeline entry 的 entry-level note → 該 entry 的 master poi note。
+    const fallbackByIndex = new Map<number, { poiId: number; note: string | null }>();
+    const specs: BatchEntrySpec[] = timeline.map((e, i) => {
+      const { startTime, endTime } = resolveEntryTimes(e as Record<string, unknown>);
       const entryLevelNote = stringOrNull((timeline[i] as Record<string, unknown>).note);
       const explicitChoices = resolveEntryChoices(i);
-      if (explicitChoices.length > 0) {
-        // v2.29.0: trip_entries.poi_id DROPPED. Just bump entry_pois_version.
-        batch2.push(
-          db.prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?')
-            .bind(entryId),
-        );
-        for (const [idx, choice] of explicitChoices.entries()) {
-          // migration 0078: master（idx 0 → sort_order 1）的 note 若 choice 自己沒帶，
-          // 則 fallback 用 entry-level note（避免 entry note 在 canonical-choices 路徑遺失）。
-          // master choice 已有 per-POI note → 保留 choice note，不被 entry note 覆蓋。
-          const rowNote = idx === 0 ? (choice.note ?? entryLevelNote) : choice.note;
-          batch2.push(
-            db
-              .prepare(
-                `INSERT INTO trip_entry_pois (
-                   entry_id,
-                   poi_id,
-                   sort_order,
-                   added_at,
-                   updated_at,
-                   description,
-                   note,
-                   reservation,
-                   reservation_url
-                 )
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              )
-              .bind(
-                entryId,
-                choice.poiId,
-                idx + 1,
-                nowEntryPois,
-                nowEntryPois,
-                choice.description,
-                rowNote,
-                choice.reservation,
-                choice.reservationUrl,
-              ),
-          );
+      // migration 0078：正選（idx 0）自己沒 note → 繼承 entry-level note；備選維持各自 note。
+      let pois: BatchEntrySpec['pois'] = explicitChoices.map((c, idx) => ({
+        poiId: c.poiId, description: c.description, note: idx === 0 ? (c.note ?? entryLevelNote) : c.note, reservation: c.reservation, reservationUrl: c.reservationUrl,
+      }));
+      if (pois.length === 0) {
+        const pIdx = entryPoiIdx[i]!;
+        const poiId = pIdx >= 0 ? poiIds[pIdx] : undefined;
+        if (typeof poiId === 'number') {
+          pois = [{ poiId, note: entryLevelNote }];
+          fallbackByIndex.set(i, { poiId, note: entryLevelNote });
         }
-        continue;
       }
+      return { dayId, sortOrder: i, startTime, endTime, description: (e.description as string | null | undefined) ?? null, pois };
+    });
+    await createEntriesBatch(db, specs, {
+      atomicWith,
+      onEntryId: (entryId, idx) => {
+        const fb = fallbackByIndex.get(idx);
+        if (fb) entriesNeedingMaster.push({ entryId, poiId: fb.poiId, note: fb.note });
+      },
+    });
 
-      const pIdx = entryPoiIdx[i]!;
-      if (pIdx < 0) continue;
-      const poiId = poiIds[pIdx];
-      if (typeof poiId !== 'number') continue;
-      // v2.29.0: trip_entries.poi_id DROPPED. syncEntryMaster 寫 trip_entry_pois.sort_order=1
-      // 並 bump entry_pois_version (見 _entry_pois.ts)。
-      // migration 0078: entry-level note 一併傳入，寫進新 master 的 per-POI note。
-      entriesNeedingMaster.push({ entryId, poiId, note: entryLevelNote });
-    }
+    const batch2: D1PreparedStatement[] = [];
     for (const builder of tripPoiBuilders) {
       batch2.push(...builder(poiIds));
     }
     if (batch2.length > 0) await db.batch(batch2);
 
-    // Name-only entries use the shared helper to keep the master invariant aligned
-    // with POST /entries and copy.ts.
-    // migration 0078: 把 entry-level note 透過 syncEntryMaster 寫進新 master 的 per-POI note。
-    await Promise.all(
-      entriesNeedingMaster.map((p) => syncEntryMaster(db, p.entryId, p.poiId, p.note)),
-    );
-
-    // round 5 fix: claim-once snapshot restore — for each new entry, find first unclaimed
-    // old snapshot with matching master POI, transfer its alts. Prevents conflation of
-    // two old entries sharing the same master POI (round 5 HIGH finding). Each new entry
-    // gets at most ONE old snapshot's alts. Also bumps entry_pois_version for any entry
-    // that received restored alts so clients can detect the day-level reshape.
     const altRestoreStatements: D1PreparedStatement[] = [];
     const nowAlt = new Date().toISOString();
     const claimed = new Set<OldEntrySnapshot>();
@@ -598,7 +530,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   }
 
   // v2.30.x (migration 0065)：surface new OCC token 給 client 下次 PUT 用。
-  // Re-fetch the stored version after the atomic increment in batch1 rather than
+  // Re-fetch the stored version after the atomic increment (atomicWith) rather than
   // returning the local guess (currentDayVersion + 1) — strictly more correct and
   // matches the canonical D1 read-back pattern.
   const stored = await db

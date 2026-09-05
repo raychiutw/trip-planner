@@ -9,6 +9,7 @@
  * Accordion behavior: only one row expanded at a time per rail.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import fs from 'node:fs';
@@ -25,10 +26,7 @@ vi.mock('../../src/hooks/useTripSegments', () => ({
   useTripSegments: () => ({ segments: [], segmentMap: new Map(), loading: false }),
 }));
 
-const TIMELINE_RAIL_SRC = fs.readFileSync(
-  path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-  'utf8',
-);
+const TIMELINE_RAIL_SRC = readTimelineRailSources();
 const USE_DRAG_DROP_SRC = fs.readFileSync(
   path.resolve(__dirname, '../../src/hooks/useDragDrop.ts'),
   'utf8',
@@ -398,14 +396,13 @@ describe('TimelineRail — drag reorder contract', () => {
   it('optimistically reorders rows and posts a single batch payload', () => {
     expect(TIMELINE_RAIL_SRC).toContain('arrayMove(orderedEvents, oldIdx, newIdx)');
     expect(TIMELINE_RAIL_SRC).toContain('setOrderOverride(newIds)');
-    expect(TIMELINE_RAIL_SRC).toContain("/entries/batch");
-    expect(TIMELINE_RAIL_SRC).toContain("JSON.stringify({ updates })");
-    expect(TIMELINE_RAIL_SRC).toContain('id, sort_order: idx');
+    // #1260：batch payload（/entries/batch、{ updates: [{ id, sort_order }] }）由
+    // entry 變更 module 承載，tests/unit/entry-mutations.test.tsx 走 interface 驗。
+    expect(TIMELINE_RAIL_SRC).toContain('reorderEntries(tripId');
   });
 
   it('broadcasts tp-entry-updated after successful reorder and reverts override on failure', () => {
-    expect(TIMELINE_RAIL_SRC).toContain('new CustomEvent(EVENT.entryUpdated');
-    expect(TIMELINE_RAIL_SRC).toContain('reordered: true');
+    // #1260：entryUpdated 由 module emit（entry-mutations.test 驗）；這裡只鎖失敗 revert。
     expect(TIMELINE_RAIL_SRC).toContain('setOrderOverride(null)');
   });
 });
@@ -431,8 +428,8 @@ describe('TimelineRail — drag reorder runtime', () => {
     // dnd-kit pointer 拖動在 jsdom 不穩定，直接驗 contract handler 行為：
     // handleDragEnd 用 batch endpoint。組件已 wired up；以 source-level
     // contract 涵蓋 runtime 流程。
-    expect(TIMELINE_RAIL_SRC).toMatch(/await apiFetchRaw\(`\/trips\/\$\{tripId\}\/entries\/batch`/);
-    expect(TIMELINE_RAIL_SRC).toContain('method: \'PATCH\'');
+    // #1260：endpoint / method 在 entry 變更 module（entry-mutations.test 驗 PATCH /entries/batch）。
+    expect(TIMELINE_RAIL_SRC).toContain('await reorderEntries(tripId');
   });
 });
 
@@ -443,16 +440,13 @@ describe('TimelineRail — cross-day drag capability', () => {
     // 前端 cross-day UI 目前透過 copy/move popover（multi-day view in TimelineRail
     // expand）走 PATCH /entries/:eid 既有 endpoint，drag-cross-day 為 V2 lift
     // DndContext 後啟動。此 contract 只確認 batch endpoint 字段對齊 spec。
-    expect(TIMELINE_RAIL_SRC).toContain('updates');
-    expect(TIMELINE_RAIL_SRC).toContain('sort_order');
+    // #1260：payload 字段（updates / sort_order）在 entry 變更 module；由 entry-mutations.test 驗。
+    expect(TIMELINE_RAIL_SRC).toContain('reorderEntries(');
   });
 });
 
 describe('2026-07-07 detail 同寬 + iOS 展開（source-grep 鎖）', () => {
-  const SRC = fs.readFileSync(
-    path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-    'utf8',
-  );
+  const SRC = readTimelineRailSources();
   it('detail 與 header 卡同寬 — 不可退回 56/44px 左縮排（terracotta mockup 本為同寬）', () => {
     expect(SRC).toMatch(/\.tp-rail-detail \{[\s\S]{0,400}margin: 4px 0 8px;/);
     expect(SRC).not.toMatch(/margin: 4px 0 8px 56px/);

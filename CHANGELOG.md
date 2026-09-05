@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.88] - 2026-09-05
+
+### Fixed
+- **從收藏加入行程時，收藏上的備註不會再默默消失** —— 以前六條建立景點的路徑各寫各的，只有這條漏了備註欄位；現在所有入口（單筆新增、收藏加入、複製、分享 clone、匯入、整日重寫）都走同一段「建立景點」程式，備註、排序、版本號、稽核紀錄一次到位。
+- **刪除或搬移景點後不再留下「待更新」的空車程** —— 車程重算與畫面同步以前散在十四個地方各自呼叫，漏一步就出現幽靈段；現在集中在一個地方，跨天搬移會同時重算來源日與目標日，收藏加入行程這條也補上了原本缺少的重算。
+- **匯入或 clone 分享行程時，若撞到已存在的地點，只會補上空白欄位、不會覆蓋既有資料**（owner 拍板）。
+- **整日重寫在景點很多時不會再砍掉舊資料卻只建一半** —— 舊景點刪除與新景點寫入回到同一批原子執行，超過上限會整批失敗而不是留下截斷的一天。
+
+### Changed
+- 分享 clone 與匯入建立的每個景點現在都有稽核紀錄，行程回滾功能可以涵蓋它們。
+- 建立景點的六條路徑統一寫入稽核內容格式（一律含正選 POI 與排序位置）。
+- AI 聊天請求的處理流程（挑請求、換 token、避免重複啟動、逾時收屍）與收屍看門狗行為不變，但改為可用假時鐘與假 tmux 測試，ADR-0007「兩層收屍時鐘必須錯開」第一次有測試把關。
+
+### For contributors
+- 新增三個深 module 並寫進 `CONTEXT.md`：後端 **entry intake**（`functions/api/_entryWrite.ts`：`createEntry` / `createEntriesBatch`）、前端 **entry 變更**（`src/lib/entryMutations.ts`：動詞回 Result、emit 與車程重算收進 module）、**request worker**（`scripts/lib/request-worker.ts`：api-server 決策接受 fetch / tmux / clock 注入）。
+- 兩個語意相斥的 POI resolver 合併為單一 `findOrCreatePoi`，`keep` / `fill-null` 與 `defaultCountry` 是明確參數，不再靠選函式決定會不會動到共用 master。
+- `TimelineRail` 拆成 `RailRow` / `EntryTimeChip` / `RailRowMenu` / `StopPoiChoiceCard` + `TimelineRail.styles.ts`，行為與 testid 不變。
+- 退掉 24 處 readFileSync 讀原始碼的守衛測試，改由走 interface 的 miniflare / vitest 測試取代；「只有 entry intake 可以 INSERT trip_entries / trip_entry_pois」與「頁面不得直打 entries endpoint」改由 eslint 規則與呼叫點掃描守門（`npm run lint` 現在含 `functions/`）。
+- 每張票至少一次 mutation 轉紅並記在 commit 訊息；/ship 稽核後補的修正：`country` 預設回歸、整日重寫原子性、`copy` 多一次查詢、audit 可 `waitUntil`。
+- merge 後 api-server 需 kickstart 才吃到 request worker。
+
 ## [2.57.87] - 2026-09-02
 
 ### Fixed

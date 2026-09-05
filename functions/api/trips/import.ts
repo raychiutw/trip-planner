@@ -20,7 +20,9 @@ import { requireAuth, assertNotTripRestricted } from '../_auth';
 import { json } from '../_utils';
 import { AppError } from '../_errors';
 import { parseAndValidateImport, MAX_IMPORT_BYTES, type NImportNotes } from './_import';
-import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, generateUniqueTripId } from './_tripWrite';
+import { reqId, runChunked, rollbackTrip, assertTripCap, generateUniqueTripId } from './_tripWrite';
+import { findOrCreatePoi } from '../_poi';
+import { createEntriesBatch, type BatchEntrySpec } from '../_entryWrite';
 
 type Stmt = D1PreparedStatement;
 
@@ -53,7 +55,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   await assertTripCap(db, auth.userId);
 
   const tripId = await generateUniqueTripId(db, data.name);
-  const now = new Date().toISOString();
   const createdEntryIds: number[] = [];
   const createdPoiIds: number[] = [];
 
@@ -77,50 +78,48 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       (r) => dayIds.push(reqId(r)));
 
     // ---- Batch C: entries RETURNING id; build entryPosition → new id ----
-    const entryStmts: Stmt[] = [];
-    const entryPositions: number[] = [];
-    data.days.forEach((d, di) => {
-      for (const e of d.entries) {
-        // migration 0078: trip_entries.note DROPPED — INSERT 不再帶 note。舊匯出檔的
-        // entry-level note 在下方 trip_entry_pois master row 做 coalesce 保留（p.note ?? e.note）。
-        entryStmts.push(
-          db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, description, source, entry_pois_version) VALUES (?,?,?,?,?,?,?) RETURNING id')
-            .bind(dayIds[di], e.sortOrder, e.startTime, e.endTime, e.description, e.source, e.pois.length > 0 ? 1 : 0));
-        entryPositions.push(e.entryPosition);
-      }
-    });
-    const posToEntryId = new Map<number, number>();
-    await runChunked(db, entryStmts, (r, idx) => {
-      const id = reqId(r);
-      createdEntryIds.push(id);
-      posToEntryId.set(entryPositions[idx]!, id);
-    });
+    // ---- POIs 逐筆 resolve（policy=fill-null，spec #1255 / #1258 owner 2026-09-05 拍板：
+    // 撞既有 pois 只補 NULL 欄、不覆蓋非 NULL；新建記 createdPoiIds 供 rollback；
+    // source='imported'、country 不猜）。逐 POI sequential 是 UNIQUE(name,type)
+    // SELECT→INSERT OR IGNORE 無法 batch 的既有限制。----
+    const resolve = (p: { type: string; name: string; category: string | null; lat: number | null; lng: number | null; hours: string | null; rating: number | null; price?: string | null; address: string | null; placeId: string | null }) =>
+      findOrCreatePoi(db, {
+        type: p.type, name: p.name, category: p.category, lat: p.lat, lng: p.lng, hours: p.hours,
+        rating: p.rating, price: p.price ?? null, address: p.address, place_id: p.placeId,
+        source: 'imported',
+      }, { policy: 'fill-null', createdPoiIds, defaultCountry: null });
 
-    // ---- POIs: find-or-create by UNIQUE(name, type) (pois enforces it), then
-    // link. Sequential (SELECT then INSERT OR IGNORE) — can't chain in a batch.
-    // Pre-existing pois are REUSED as-is (never mutated); only newly-created pois
-    // are tracked for rollback. ----
-    const E: Stmt[] = [];
+    // ---- entries：#1258 走 entry intake 批次入口（正選/備選、去重、version、每筆 audit）----
+    const specs: BatchEntrySpec[] = [];
+    const entryPositions: number[] = [];
     for (let di = 0; di < data.days.length; di++) {
       const d = data.days[di]!;
       for (const e of d.entries) {
-        const entryId = posToEntryId.get(e.entryPosition);
-        if (entryId === undefined) continue;
-        const seenPoi = new Set<number>();
-        let so = 1;
+        const pois: BatchEntrySpec['pois'] = [];
         for (const p of e.pois) {
-          const poiId = await resolvePoi(db, p, createdPoiIds);
-          if (seenPoi.has(poiId)) continue; // UNIQUE(entry_id, poi_id) — skip dup-resolved POIs
-          seenPoi.add(poiId);
-          // migration 0078: master(so===1) 的 note 若 POI 自己沒帶，fallback 用舊檔 entry-level
-          // note（e.note），保 round-trip 不遺失；備選維持各自 p.note。
-          const poiNote = so === 1 ? (p.note ?? e.note ?? null) : p.note;
-          E.push(db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, description, note, reservation, reservation_url, added_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
-            .bind(entryId, poiId, so++, p.description, poiNote, p.reservation, p.reservationUrl, now, now));
+          const poiId = await resolve(p);
+          // migration 0078: entry-level note → master note 的 coalesce 已在 _import.ts 解析時
+          // 做完（master-wins），這裡只照 p.note 寫。
+          pois.push({ poiId, description: p.description, note: p.note, reservation: p.reservation, reservationUrl: p.reservationUrl });
         }
+        specs.push({ dayId: dayIds[di]!, sortOrder: e.sortOrder, startTime: e.startTime, endTime: e.endTime, description: e.description, source: e.source, pois });
+        entryPositions.push(e.entryPosition);
       }
+    }
+    const posToEntryId = new Map<number, number>();
+    await createEntriesBatch(db, specs, {
+      audit: { tripId, changedBy: auth.email || auth.userId, diff: { via: 'import' } },
+      onEntryId: (id, idx) => {
+        createdEntryIds.push(id);
+        posToEntryId.set(entryPositions[idx]!, id);
+      },
+    });
+
+    const E: Stmt[] = [];
+    for (let di = 0; di < data.days.length; di++) {
+      const d = data.days[di]!;
       if (d.hotel) {
-        const poiId = await resolvePoi(db, d.hotel, createdPoiIds);
+        const poiId = await resolve(d.hotel);
         E.push(db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(poiId, dayIds[di]!));
       }
     }
