@@ -398,14 +398,13 @@ describe('TimelineRail — drag reorder contract', () => {
   it('optimistically reorders rows and posts a single batch payload', () => {
     expect(TIMELINE_RAIL_SRC).toContain('arrayMove(orderedEvents, oldIdx, newIdx)');
     expect(TIMELINE_RAIL_SRC).toContain('setOrderOverride(newIds)');
-    expect(TIMELINE_RAIL_SRC).toContain("/entries/batch");
-    expect(TIMELINE_RAIL_SRC).toContain("JSON.stringify({ updates })");
-    expect(TIMELINE_RAIL_SRC).toContain('id, sort_order: idx');
+    // #1260：batch payload（/entries/batch、{ updates: [{ id, sort_order }] }）由
+    // entry 變更 module 承載，tests/unit/entry-mutations.test.tsx 走 interface 驗。
+    expect(TIMELINE_RAIL_SRC).toContain('reorderEntries(tripId');
   });
 
   it('broadcasts tp-entry-updated after successful reorder and reverts override on failure', () => {
-    expect(TIMELINE_RAIL_SRC).toContain('new CustomEvent(EVENT.entryUpdated');
-    expect(TIMELINE_RAIL_SRC).toContain('reordered: true');
+    // #1260：entryUpdated 由 module emit（entry-mutations.test 驗）；這裡只鎖失敗 revert。
     expect(TIMELINE_RAIL_SRC).toContain('setOrderOverride(null)');
   });
 });
@@ -431,8 +430,8 @@ describe('TimelineRail — drag reorder runtime', () => {
     // dnd-kit pointer 拖動在 jsdom 不穩定，直接驗 contract handler 行為：
     // handleDragEnd 用 batch endpoint。組件已 wired up；以 source-level
     // contract 涵蓋 runtime 流程。
-    expect(TIMELINE_RAIL_SRC).toMatch(/await apiFetchRaw\(`\/trips\/\$\{tripId\}\/entries\/batch`/);
-    expect(TIMELINE_RAIL_SRC).toContain('method: \'PATCH\'');
+    // #1260：endpoint / method 在 entry 變更 module（entry-mutations.test 驗 PATCH /entries/batch）。
+    expect(TIMELINE_RAIL_SRC).toContain('await reorderEntries(tripId');
   });
 });
 
@@ -443,8 +442,8 @@ describe('TimelineRail — cross-day drag capability', () => {
     // 前端 cross-day UI 目前透過 copy/move popover（multi-day view in TimelineRail
     // expand）走 PATCH /entries/:eid 既有 endpoint，drag-cross-day 為 V2 lift
     // DndContext 後啟動。此 contract 只確認 batch endpoint 字段對齊 spec。
-    expect(TIMELINE_RAIL_SRC).toContain('updates');
-    expect(TIMELINE_RAIL_SRC).toContain('sort_order');
+    // #1260：payload 字段（updates / sort_order）在 entry 變更 module；由 entry-mutations.test 驗。
+    expect(TIMELINE_RAIL_SRC).toContain('reorderEntries(');
   });
 });
 

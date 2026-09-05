@@ -26,7 +26,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
-import { apiFetchRaw } from '../../lib/apiClient';
+import { setMaster, updateEntry, updateEntryPoi, deleteEntry, reorderEntries } from '../../lib/entryMutations';
 import { requestTravelRecompute, getAutoRecomputeStatus } from '../../lib/travelRecompute';
 import { captureDragScroll, restoreDragScroll } from '../../lib/preserveScroll';
 import { EVENT } from '../../lib/events';
@@ -36,7 +36,6 @@ import Icon from '../shared/Icon';
 import ConfirmModal from '../shared/ConfirmModal';
 import { showToast } from '../shared/Toast';
 import { useAutosave } from '../../hooks/useAutosave';
-import { ApiError } from '../../lib/errors';
 import MarkdownText from '../shared/MarkdownText';
 // 2026-05-03 modal-to-fullpage migration: EntryActionPopover 由 /trip/:id/stop/:eid/(copy|move) page 取代。
 // DayOption type 抽到 src/lib/entryAction.ts 給 caller (TripPage dayOptions) 共用。
@@ -616,24 +615,13 @@ const StopPoiChoiceCard = memo(function StopPoiChoiceCard({
     if (!canPromote || promoting) return;
     setPromoting(true);
     try {
-      const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryId}/master`, {
-        method: 'PATCH',
-        credentials: 'same-origin',
-        body: JSON.stringify({ poiId: poi.poiId }),
-      });
-      if (!res.ok) {
-        // LWW（未帶 version）→ 不會 STALE 409；失敗一律 toast + refetch resync。
+      // #1260 entry 變更 module：emit + 車程重算在 module 內；這裡只依 Result 決定 toast。
+      const r = await setMaster(tripId, entryId, dayNum, poi.poiId!);
+      if (!r.ok) {
         showToast('設為正選失敗', 'error', 5000);
-        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, entryId } }));
         return;
       }
-      requestTravelRecompute(tripId, dayNum).catch(() => undefined);
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
-        detail: { tripId, entryId, travelRecomputeRequested: true },
-      }));
       showToast(`已將「${poi.name}」設為正選`, 'success', 3000);
-    } catch {
-      showToast('設為正選失敗', 'error', 5000);
     } finally {
       setPromoting(false);
     }
@@ -742,26 +730,16 @@ function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
     if (nextStart !== (start || null)) body.start_time = nextStart;
     if (nextEnd !== (end || null)) body.end_time = nextEnd;
     if (Object.keys(body).length === 0) return; // 無變動 → 不打
-    try {
-      const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryId}`, {
-        method: 'PATCH',
-        credentials: 'same-origin',
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        // 400 = 起訖倒置（後端 effective merge 驗證）；其餘一律失敗。draft 隨關閉後 re-seed 回原值。
-        showToast(res.status === 400 ? '抵達時間需早於離開時間' : '時間儲存失敗', 'error', 5000);
-        return;
-      }
-      // 後端已依抵達時間重排當日 → 重算車程 + refetch（順序可能變）。
-      requestTravelRecompute(tripId, dayNum).catch(() =>
-        showToast('時間已儲存，車程更新失敗，重新整理後再試', 'info', 5000));
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
-        detail: { tripId, entryId, dayNum, travelRecomputeRequested: true },
-      }));
-    } catch {
-      showToast('時間儲存失敗', 'error', 5000);
+    // #1260：後端已依抵達時間重排當日；module 內 emit + 重算，這裡只決定 toast。
+    const r = await updateEntry(tripId, entryId, dayNum, body);
+    if (!r.ok) {
+      // 400 = 起訖倒置（後端 effective merge 驗證）；其餘一律失敗。draft 隨關閉後 re-seed 回原值。
+      showToast(r.status === 400 ? '抵達時間需早於離開時間' : '時間儲存失敗', 'error', 5000);
+      return;
     }
+    void r.recompute.then((ok) => {
+      if (!ok) showToast('時間已儲存，車程更新失敗，重新整理後再試', 'info', 5000);
+    });
   }, [tripId, entryId, dayNum, startDraft, endDraft, start, end]);
 
   const closeAndSave = useCallback(() => {
@@ -888,17 +866,10 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       if (!tripId || entryIdNum == null || masterPoiId == null) {
         throw new Error('Missing tripId / entryId / masterPoiId');
       }
-      // v2.29.x：repoint 到 per-POI note 端點（master poiId）。LWW，不帶 version token。
-      const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryIdNum}/pois/${masterPoiId}`, {
-        method: 'PATCH',
-        credentials: 'same-origin',
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw await ApiError.fromResponse(res);
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
-        detail: { tripId, entryId: entryIdNum },
-      }));
-      return await res.json() as Record<string, unknown>;
+      // v2.29.x：per-POI note 端點（master poiId）。LWW，不帶 version token。#1260 走 module。
+      const r = await updateEntryPoi(tripId, entryIdNum, dayNumFromId(allDays, dayId), masterPoiId, body);
+      if (!r.ok) throw new Error(r.message || '備註儲存失敗');
+      return r.data;
     },
   });
 
@@ -956,19 +927,9 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
     if (!tripId || entryIdNum == null) return;
     setDeleting(true);
     try {
-      const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryIdNum}`, {
-        method: 'DELETE',
-        credentials: 'same-origin',
-      });
-      if (!res.ok) throw new Error('刪除失敗');
-      // 2026-07-06 車程重算缺口：刪除後 FK cascade 移除舊 pair，新相鄰 pair
-      // 缺 row 沒人算 → 補顯式 day-scoped recompute（fire-and-forget，失敗
-      // 靜默 — self-healing 與 TravelPill ⚠ 是 fallback）。
-      void requestTravelRecompute(tripId, dayNumFromId(allDays, dayId))
-        .catch(() => undefined);
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
-        detail: { tripId, entryId: entryIdNum },
-      }));
+      // #1260：刪除後新相鄰 pair 缺 segment 的 day-scoped recompute 由 module 保證。
+      const r = await deleteEntry(tripId, entryIdNum, dayNumFromId(allDays, dayId));
+      if (!r.ok) throw new Error('刪除失敗');
       setShowDeleteConfirm(false);
     } catch (err) {
       // 顯示錯誤但保留 modal 開啟讓 user 重試
@@ -1492,22 +1453,13 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
     // Section 6/3：reorder 走 batch endpoint，避免 N+1 PATCH。一次送所有改變位置的 sort_order，
     // atomic 失敗 → revert override。
     try {
-      const updates = newIds.map((id, idx) => ({ id, sort_order: idx }));
-      const res = await apiFetchRaw(`/trips/${tripId}/entries/batch`, {
-        method: 'PATCH',
-        credentials: 'same-origin',
-        body: JSON.stringify({ updates }),
+      // #1260：batch reorder + day-scope 重算 + emit 在 module；失敗 revert override。
+      const r = await reorderEntries(tripId, dayNumFromId(allDays, dayId), newIds);
+      if (!r.ok) throw new Error(`batch reorder failed: ${r.status}`);
+      void sourceEntryId;
+      void r.recompute.then((ok) => {
+        if (!ok) showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
       });
-      if (!res.ok) throw new Error(`batch reorder failed: ${res.status}`);
-      // OSM PR (migration 0045)：reorder 後 entry travel 依順序重算（fire-and-forget，失敗 toast 提示）。
-      // day-scope 化省其他天 Google 重算；dayNum 解析不到才退全 trip。
-      requestTravelRecompute(tripId, dayNumFromId(allDays, dayId))
-        .catch(() => {
-          showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
-        });
-      window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, {
-        detail: { tripId, entryId: sourceEntryId, reordered: true, travelRecomputeRequested: true },
-      }));
     } catch {
       setOrderOverride(null);
     }

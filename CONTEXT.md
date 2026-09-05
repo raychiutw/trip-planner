@@ -36,6 +36,10 @@ trips ─┬─ trip_days ── trip_entries ── trip_entry_pois
 後端「在某一天建立一個 entry 並掛上正選 POI」的單一 module（`createEntry`）。所有建立路徑（單筆新增、收藏加入、複製、分享 clone、匯入、整日重寫）都經它，規矩（POI resolve policy、讓位／append、正選含 note、`entry_pois_version=1`、resort、audit、補償）只寫在這裡。
 _Avoid_: 在 handler 直接 `INSERT INTO trip_entries` / `trip_entry_pois`；與前端的「entry 變更」（動詞 module，見下）是不同層。
 
+**entry 變更**：
+前端改動 entry 的動詞 module（`src/lib/entryMutations.ts`：createEntry / setMaster / deleteEntry / moveEntry / updateEntry / reorderEntries / updateEntryPoi…）。每個動詞回 Result，不 toast、不導覽；成功後 emit `entryUpdated` 並以正確 day scope 觸發車程重算（跨天兩個 day 各一次），失敗 emit resync 不重算。頁面只拿 Result 決定 toast／navigate。
+_Avoid_: 在頁面或元件直接 `apiFetchRaw` entries endpoint、自己 dispatch `entryUpdated`、自己呼叫 `requestTravelRecompute`（self-healing 的 auto 觸發除外）；與後端「entry intake」是不同層。
+
 > **trip-scoped 的自由文字不寫進 `pois`** —— 寫進 `trip_entries.note` 或 `trip_entry_pois.metadata`（`reservation` / `reservation_url` / `description` / `note`）。`reservation` 是**純文字訂位註解**，不放 JSON。
 
 ## 協作與存取
