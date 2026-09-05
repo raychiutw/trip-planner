@@ -146,8 +146,13 @@ describe('createEntriesBatch 批次大小', () => {
     const dayId = await getDayId(db, tripId, 1);
     const before = (await db.prepare('SELECT COUNT(*) AS n FROM trip_entries WHERE day_id = ?').bind(dayId).first<{ n: number }>())!.n;
     expect(before).toBeGreaterThan(0);
-    // 讓 INSERT 失敗：day_id 指向不存在的 day（FK）→ 整批 rollback，含前置 DELETE
-    await expect(createEntriesBatch(db, [{ dayId: 999999, sortOrder: 0, startTime: null, endTime: null, pois: [] }], {
+    // 55 筆合法 + 第 56 筆 day_id 指向不存在的 day（FK 失敗）。舊碼分 50 一 chunk：第一 chunk
+    //（DELETE + 49 筆）已 commit、第二 chunk 才炸 → 舊 entries 消失；現在整批一次送 → 全部 rollback。
+    const specs = [
+      ...Array.from({ length: 55 }, (_, i) => ({ dayId, sortOrder: 500 + i, startTime: null, endTime: null, pois: [] })),
+      { dayId: 999999, sortOrder: 0, startTime: null, endTime: null, pois: [] },
+    ];
+    await expect(createEntriesBatch(db, specs, {
       atomicWith: [db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(dayId)],
     })).rejects.toThrow();
     const after = (await db.prepare('SELECT COUNT(*) AS n FROM trip_entries WHERE day_id = ?').bind(dayId).first<{ n: number }>())!.n;
