@@ -114,6 +114,9 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
     const rows = await entryPoiNotesByMasterName(tripId, '暖暮拉麵 inherit');
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ sort_order: 1, note: '整體備註：記得帶現金' });
+    // #1258：匯入走 entry intake 批次入口 → 每筆 entry 有 audit_log
+    const au = await db.prepare("SELECT COUNT(*) AS c FROM audit_log WHERE trip_id = ? AND table_name = 'trip_entries' AND action = 'insert'").bind(tripId).first<{ c: number }>();
+    expect(au?.c).toBe(1);
   });
 
   it('master poi 自己的 note 優先，不被 entry-level note 覆蓋', async () => {

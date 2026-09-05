@@ -15,10 +15,6 @@ const REVOKE_SRC = readFileSync(
   path.resolve(__dirname, '../../functions/api/account/connected-apps/[client_id].ts'),
   'utf-8',
 );
-const ENTRIES_COPY_SRC = readFileSync(
-  path.resolve(__dirname, '../../functions/api/trips/[id]/entries/[eid]/copy.ts'),
-  'utf-8',
-);
 const AUTHORIZE_SRC = readFileSync(
   path.resolve(__dirname, '../../functions/api/oauth/authorize.ts'),
   'utf-8',
@@ -44,20 +40,8 @@ describe('v2.33.55 round 5d — connected-apps revoke atomic batch', () => {
 // #1257：entries POST 的補償 DELETE 搬進 entry intake（createEntry），由
 // tests/api/entry-intake.integration.test.ts「entry_pois 寫入失敗 → 補償 DELETE」走行為驗證。
 
-describe('v2.33.55 round 5d — entries copy compensating delete', () => {
-  it('trip_entry_pois batch 包 try/catch', () => {
-    expect(ENTRIES_COPY_SRC).toMatch(/try\s*\{\s*await db\.batch/);
-  });
-
-  it('catch 內 compensating DELETE on newEid', () => {
-    expect(ENTRIES_COPY_SRC).toContain("'DELETE FROM trip_entries WHERE id = ?'");
-    expect(ENTRIES_COPY_SRC).toContain('compensating delete');
-  });
-
-  it('catch rethrow AppError SYS_DB_ERROR', () => {
-    expect(ENTRIES_COPY_SRC).toMatch(/throw new AppError\('SYS_DB_ERROR'/);
-  });
-});
+// #1258：entries copy 的補償 DELETE 搬進 entry intake（createEntriesBatch），由
+// tests/api/entry-intake.integration.test.ts「entry_pois 階段失敗 → 補償刪除」走行為驗證。
 
 describe('v2.33.55 round 5d — oauth/authorize prompt=consent policy', () => {
   it('prompt=consent short-circuit needsConsent (既有邏輯保留)', () => {

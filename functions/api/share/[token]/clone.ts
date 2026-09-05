@@ -15,6 +15,7 @@ import { AppError } from '../../_errors';
 import { resolveActiveShare, parseVisibleSections, type ShareSection } from '../../_share';
 import { reqId, runChunked, rollbackTrip, assertTripCap } from '../../trips/_tripWrite';
 import { findOrCreatePoi, type FindOrCreatePoiData } from '../../_poi';
+import { createEntriesBatch, type BatchEntrySpec } from '../../_entryWrite';
 import { checkRateLimit, bumpRateLimit, clientIp, RATE_LIMITS } from '../../_rate_limit';
 import type { Env } from '../../_types';
 
@@ -102,7 +103,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!trip) return notFound();
 
   const tripId = `cln-${crypto.randomUUID()}`;
-  const now = new Date().toISOString();
   const createdEntryIds: number[] = [];
   const createdPoiIds: number[] = [];
 
@@ -145,43 +145,38 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     );
 
     // ---- Batch C: entries RETURNING id → map old entry id → new entry id ----
+    // #1258：POI 先批次 resolve（policy=keep），entries 走 entry intake 批次入口
+    //（正選/備選、同 entry 去重、version、每筆 audit）。
     const srcEntries = rows(entriesR);
-    const poiCountByEntry = new Map<number, number>();
-    for (const ep of rows(epR)) poiCountByEntry.set(ep.entry_id as number, (poiCountByEntry.get(ep.entry_id as number) ?? 0) + 1);
+    const poisByEntry = new Map<number, BatchEntrySpec['pois']>();
+    for (const ep of rows(epR)) {
+      const poiId = await findOrCreatePoi(db, poiFrom(ep), { policy: 'keep', createdPoiIds });
+      const list = poisByEntry.get(ep.entry_id as number) ?? [];
+      list.push({ poiId, description: ep.description as string | null, note: ep.note as string | null, reservation: ep.reservation as string | null, reservationUrl: ep.reservation_url as string | null });
+      poisByEntry.set(ep.entry_id as number, list);
+    }
     const entryIdMap = new Map<number, number>();
-    await runChunked(
+    await createEntriesBatch(
       db,
       srcEntries.map((e) => {
         const newDayId = dayIdMap.get(e.day_id as number);
         if (newDayId === undefined) throw new AppError('SYS_DB_ERROR', '複製寫入失敗（entry 缺 day 關聯）');
-        // migration 0078: 不再 copy entry-level note；per-POI note 隨 trip_entry_pois copy（含 ep.note）。
-        return db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, description, source, entry_pois_version) VALUES (?,?,?,?,?,?,?) RETURNING id')
-          .bind(newDayId, e.sort_order, e.start_time, e.end_time, e.description, e.source, (poiCountByEntry.get(e.id as number) ?? 0) > 0 ? 1 : 0);
+        return {
+          dayId: newDayId, sortOrder: e.sort_order as number, startTime: e.start_time as string | null, endTime: e.end_time as string | null,
+          description: e.description as string | null, source: e.source as string | null,
+          pois: poisByEntry.get(e.id as number) ?? [],
+        };
       }),
-      (r, idx) => {
-        const id = reqId(r, '複製寫入失敗');
-        createdEntryIds.push(id);
-        entryIdMap.set(srcEntries[idx]!.id as number, id);
+      {
+        audit: { tripId, changedBy: auth.email || auth.userId, diff: { via: 'share-clone', sourceTripId: src } },
+        onEntryId: (id, idx) => {
+          createdEntryIds.push(id);
+          entryIdMap.set(srcEntries[idx]!.id as number, id);
+        },
       },
     );
 
-    // ---- entry POIs (find-or-create) + hotels + segments ----
     const tail: Stmt[] = [];
-    const seenByEntry = new Map<number, Set<number>>();
-    const soByEntry = new Map<number, number>();
-    for (const ep of rows(epR)) {
-      const newEntryId = entryIdMap.get(ep.entry_id as number);
-      if (newEntryId === undefined) continue;
-      const poiId = await findOrCreatePoi(db, poiFrom(ep), { policy: 'keep', createdPoiIds });
-      const seen = seenByEntry.get(newEntryId) ?? new Set<number>();
-      if (seen.has(poiId)) continue; // UNIQUE(entry_id, poi_id)
-      seen.add(poiId);
-      seenByEntry.set(newEntryId, seen);
-      const so = (soByEntry.get(newEntryId) ?? 0) + 1;
-      soByEntry.set(newEntryId, so);
-      tail.push(db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, description, note, reservation, reservation_url, added_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
-        .bind(newEntryId, poiId, so, ep.description, ep.note, ep.reservation, ep.reservation_url, now, now));
-    }
     for (const h of rows(hotelsR)) {
       const newDayId = dayIdMap.get(h.day_id as number);
       if (newDayId === undefined) continue;

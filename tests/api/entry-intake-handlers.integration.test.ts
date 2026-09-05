@@ -4,9 +4,10 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockContext, mockAuth, seedUser, seedTrip, seedPoi, callHandler, jsonRequest } from './helpers';
+import { mockEnv, mockContext, mockAuth, seedUser, seedTrip, seedPoi, seedEntry, callHandler, jsonRequest, getDayId } from './helpers';
 import { onRequestPost as postEntry } from '../../functions/api/trips/[id]/days/[num]/entries';
 import { onRequestPost as addToTrip } from '../../functions/api/poi-favorites/[id]/add-to-trip';
+import { onRequestPost as copyEntry } from '../../functions/api/trips/[id]/entries/[eid]/copy';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
@@ -61,5 +62,30 @@ describe('POST /api/poi-favorites/:id/add-to-trip → entry intake', () => {
     expect(master).toEqual({ poi_id: poiId, note: '收藏的備註' });
     const audit = await db.prepare("SELECT 1 AS ok FROM audit_log WHERE table_name = 'trip_entries' AND record_id = ? AND action = 'insert'").bind(body.entryId).first();
     expect(audit).not.toBeNull();
+  });
+});
+
+describe('POST /api/trips/:id/entries/:eid/copy → entry intake 批次入口（#1258）', () => {
+  it('正選 + 備選連同各自 note / reservation 一起複製；version=1；audit 存在', async () => {
+    const dayId = await getDayId(db, tripId, 1);
+    const master = await seedPoi(db, { name: '複製 正選', type: 'attraction' });
+    const alt = await seedPoi(db, { name: '複製 備選', type: 'restaurant' });
+    const srcId = await seedEntry(db, dayId, { poiId: master });
+    await db.prepare('UPDATE trip_entry_pois SET note = ? WHERE entry_id = ? AND sort_order = 1').bind('正選備註', srcId).run();
+    await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, note, reservation) VALUES (?, ?, 2, ?, ?)').bind(srcId, alt, '備選備註', '已訂').run();
+    const resp = await callHandler(copyEntry, mockContext({
+      request: jsonRequest(`https://test/api/trips/${tripId}/entries/${srcId}/copy`, 'POST', { targetDayId: dayId }),
+      env, auth: mockAuth({ email: owner }), params: { id: tripId, eid: String(srcId) },
+    }));
+    expect(resp.status).toBe(200);
+    const row = await resp.json() as { id: number; entryPoisVersion: number };
+    expect(row.entryPoisVersion).toBe(1);
+    const pois = await db.prepare('SELECT poi_id, sort_order, note, reservation FROM trip_entry_pois WHERE entry_id = ? ORDER BY sort_order').bind(row.id).all<{ poi_id: number; sort_order: number; note: string | null; reservation: string | null }>();
+    expect(pois.results).toEqual([
+      { poi_id: master, sort_order: 1, note: '正選備註', reservation: null },
+      { poi_id: alt, sort_order: 2, note: '備選備註', reservation: '已訂' },
+    ]);
+    const audit = await db.prepare("SELECT diff_json FROM audit_log WHERE table_name = 'trip_entries' AND record_id = ? AND action = 'insert'").bind(row.id).first<{ diff_json: string }>();
+    expect(JSON.parse(audit!.diff_json)).toMatchObject({ copiedFromEntryId: srcId });
   });
 });

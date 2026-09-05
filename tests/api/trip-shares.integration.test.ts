@@ -221,6 +221,9 @@ describe('clone (PR3)', () => {
     expect(ownerRow?.owner_user_id).toBe(userIdFor(clonerEmail));
     const ents = await db.prepare('SELECT COUNT(*) AS c FROM trip_entries e JOIN trip_days d ON d.id = e.day_id WHERE d.trip_id = ?').bind(newId).first<{ c: number }>();
     expect(ents?.c).toBe(1);
+    // #1258：clone 走 entry intake 批次入口 → 每筆 entry 有 audit_log（rollback 讀它）
+    const au = await db.prepare("SELECT COUNT(*) AS c FROM audit_log WHERE trip_id = ? AND table_name = 'trip_entries' AND action = 'insert'").bind(newId).first<{ c: number }>();
+    expect(au?.c).toBe(1);
     const fl = await db.prepare('SELECT COUNT(*) AS c FROM trip_flights WHERE trip_id = ?').bind(newId).first<{ c: number }>();
     expect(fl?.c).toBe(1); // flights default-ON → copied
     const em = await db.prepare('SELECT COUNT(*) AS c FROM trip_emergency_contacts WHERE trip_id = ?').bind(newId).first<{ c: number }>();
