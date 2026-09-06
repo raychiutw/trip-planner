@@ -37,7 +37,7 @@
     "@testing-library/react": "^16.3.2",
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
+    "@types/react-dom": "^19.2.7",
     "@vitest/runner": "^4.1.10",
     "@vitest/snapshot": "^4.1.10",
     "axe-core": "^4.12.1",
@@ -88,6 +88,6 @@
     "react": "^19.2.8",
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.2"
+    "react-router-dom": "^7.18.3"
   }
 }
