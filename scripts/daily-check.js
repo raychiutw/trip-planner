@@ -232,9 +232,11 @@ function queryNpmAudit() {
     // v2.33.51 round 8c: add maxBuffer — npm audit on deps-heavy project routinely
     // 吐 multi-MB JSON。default 1MB → throw ENOBUFS (timeout/buffer 都不算 shell
     // error，`; true` 無法 recover)。32MB 是 npm audit typical output 上限。
+    // v2.57.89: registry bulk advisories endpoint 實測單次要 ~50s（2026-09-04 甚至整個黑洞），
+    // 60s 貼著邊跑會週期性 ETIMEDOUT 假 critical。放寬到 180s；真的黑洞仍會 fail-loud。
     var output = execSync('npm audit --json --omit=dev 2>/dev/null; true', {
       encoding: 'utf8',
-      timeout: 60000,
+      timeout: 180000,
       maxBuffer: 32 * 1024 * 1024,
       cwd: path.join(__dirname, '..')
     });
