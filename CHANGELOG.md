@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.89] - 2026-09-18
+
+### Fixed
+- **每日健康檢查不會再因 npm audit 慢而誤報 critical** —— registry 弱點查詢實測單次要約 50 秒，原本 60 秒逾時貼邊跑，9/4 與 9/18 兩次假警報；放寬到 180 秒，真的連不上仍會明確報錯。
+
+### Changed
+- 相依套件安全更新：nodemailer 9.0.4 → 9.1.1（4 個 high 弱點：收件網域驗證繞過、addressparser DoS 等）、browserslist / brace-expansion / dompurify / baseline-browser-mapping patch 升級；production 相依現為 0 弱點。dev-only 的 undici 弱點需 miniflare breaking 升級，本次不動。
+
+### For contributors
+- 新增 `tests/unit/daily-check-npm-audit-timeout.test.ts` 守衛 timeout ≥ 180000（剝註解後抓值，mutation 改回 60000 轉紅）。
+
 ## [2.57.88] - 2026-09-05
 
 ### Fixed
