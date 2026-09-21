@@ -113,6 +113,14 @@ AI 來源項目用 `origin` 記來源、`managed_by` 記目前由人或 AI 維�
 
 ---
 
+## 維運檢查結果
+
+**一次檢查結果**：`scripts/lib/operations-run.js` 的 `runOperations` 協調具名來源，分別持有 `completion`（complete／partial／failed）、`severity` 與來源資料。必要檢查完整且沒有異常才可顯示健康；完整但零資料必須另外標示。
+
+連結日報已使用此結果產生 JSON、HTML 與連結摘要。某行程 days 查詢失敗仍保留其他行程的連結證據；查詢失敗不能由空陣列推導為全部正常。來源 adapter 保留原有 token helper、D1 client、查詢及告警政策。
+
+---
+
 ## 介面與互動
 
 同一塊畫面在 code、`DESIGN.md`、對話裡有 sheet / panel / modal / 右欄 / 第三欄 / 面板 六種叫法，指的卻不是同一件事。這裡按**角色**定名 —— 角色跨手機／桌機都成立，位置不成立（桌機預設兩欄，只有行程與地圖情境才有第三欄；同一個東西在手機上根本不是欄）。

@@ -11,6 +11,7 @@
  *   SITE_URL
  */
 'use strict';
+var { runOperations, summaryText } = require('./lib/operations-run');
 
 var CF_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 var CF_ACCOUNT = process.env.CF_ACCOUNT_ID;
@@ -183,15 +184,12 @@ async function runLighthouse() {
 
 // ── 壞連結檢查 ─────────────────────────────────────────────────
 
-async function checkLinks() {
-  // v2.33.50 round 8b: mint token first — post v2.33.41 anonymous-read fix
-  // 後 unpublished trip GET 需 auth；published trip 仍可匿名讀但 /api/trips
-  // listing 也 protected (need auth to see own + published)。
-  // 不要 catch：token 拿不到 = 檢查沒跑成，不是「沒有壞連結」。回 [] 會走進 linksHtml
-  // 的 `data.length === 0` → 綠色「全部連結正常」；往上拋才會走到 val(6) → null →
-  // failedHtml()。v2.33.50 當初加這個 catch 是為了「不 crash 整 report」，但 checkLinks
-  // 是 Promise.allSettled 的其中一項，拋出本來就不會 crash 其他來源。
-  var token = await getTriplineToken();
+async function checkLinks(io = {}) {
+  var fetch = io.fetch || globalThis.fetch;
+  var getToken = io.getToken || getTriplineToken;
+
+  // Authentication failure means the check did not run; runOperations records it.
+  var token = await getToken();
   var authHeaders = { Authorization: 'Bearer ' + token };
 
   // 1. 取得所有行程
@@ -206,14 +204,23 @@ async function checkLinks() {
   var publishedTripIds = trips
     .filter(function (t) { return t.published && (t.id || t.tripId); })
     .map(function (t) { return t.id || t.tripId; });
-  var daysResults = await Promise.all(publishedTripIds.map(function (id) {
-    return fetch(SITE_URL + '/api/trips/' + id + '/days', { headers: authHeaders })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
+  var failures = [];
+  var completedTrips = 0;
+  var daysResults = await Promise.allSettled(publishedTripIds.map(async function (id) {
+    var response = await fetch(SITE_URL + '/api/trips/' + id + '/days', { headers: authHeaders });
+    if (!response.ok) throw new Error('Days query failed: ' + response.status);
+    var days = await response.json();
+    if (!Array.isArray(days)) throw new Error('Invalid days response');
+    return days;
   }));
-  for (var i = 0; i < daysResults.length; i++) {
-    if (daysResults[i]) collectMapsUrls(daysResults[i], mapsUrls);
-  }
+  daysResults.forEach(function(result, index) {
+    if (result.status === 'fulfilled') {
+      completedTrips++;
+      collectMapsUrls(result.value, mapsUrls);
+    } else {
+      failures.push({ tripId: publishedTripIds[index], error: String(result.reason.message || result.reason) });
+    }
+  });
 
   // 3. HEAD check with concurrency limit of 5
   // v2.33.52 cleanup (round 8d defer): host allowlist 防 SSRF — trip 的 maps
@@ -256,11 +263,26 @@ async function checkLinks() {
     results.forEach(function(r, idx) {
       if (r.status === 'rejected') {
         broken.push({ url: batches[b][idx], status: 'network error' });
+        failures.push({ url: batches[b][idx], error: String(r.reason.message || r.reason) });
       }
     });
   }
 
-  return broken;
+  return { broken: broken, checked: urls.length, tripCount: publishedTripIds.length, completedTrips: completedTrips, failures: failures };
+}
+
+function createReportSources(io = {}) {
+  return {
+    links: {
+      run: () => checkLinks(io),
+      assess: (data) => ({
+        completion: data.failures.length === 0 ? 'complete'
+          : data.completedTrips + data.checked > data.failures.filter((failure) => failure.url).length ? 'partial' : 'failed',
+        severity: data.broken.length ? 'critical' : 'ok',
+        empty: data.checked === 0,
+      }),
+    },
+  };
 }
 
 function collectMapsUrls(days, out) {
@@ -388,6 +410,7 @@ function formatDate() {
 function buildHtml(results) {
   var r = results;
   var sections = [];
+  if (r.summary) sections.push(sectionHtml('連結檢查摘要', escHtml(summaryText(r.summary))));
 
   sections.push(sectionHtml('行程修改統計', requestsHtml(r.requests)));
   sections.push(sectionHtml('Workers Analytics', workersHtml(r.workers)));
@@ -500,18 +523,21 @@ function apiLogsHtml(data) {
 }
 
 
-function linksHtml(data) {
-  if (!data) return failedHtml();
-  if (data.length === 0) {
-    return '<p style="font-size:14px;margin:0;color:#16a34a;">全部連結正常</p>';
-  }
-  var html = '<p style="font-size:14px;margin:0 0 8px;color:#ef4444;">' +
-    data.length + ' 個壞連結：</p>' +
-    '<ul style="margin:0;padding-left:20px;font-size:13px;">';
-  data.forEach(function(item) {
-    html += '<li>' + escHtml(item.url) + ' → ' + item.status + '</li>';
-  });
-  html += '</ul>';
+function linksHtml(outcome) {
+  if (!outcome) return failedHtml();
+  var data = outcome.data;
+  var label = outcome.completion === 'partial' ? '部分完成'
+    : outcome.completion === 'failed' ? '查詢失敗，檢查未完成'
+    : outcome.empty ? '檢查完成，零個可檢查連結'
+    : outcome.severity === 'ok' ? '全部連結正常' : '檢查完成，發現壞連結';
+  var html = '<p>' + label + '</p>';
+  if (outcome.error) html += '<p>' + escHtml(outcome.error) + '</p>';
+  if (!data) return html;
+  html += '<p>已取得 ' + data.completedTrips + '/' + data.tripCount + ' 個行程；檢查 ' + data.checked + ' 個連結</p>';
+  if (data.broken.length) html += '<p style="color:#ef4444;">' + data.broken.length + ' 個壞連結：</p><ul>' +
+    data.broken.map((item) => '<li>' + escHtml(item.url) + ' → ' + escHtml(item.status) + '</li>').join('') + '</ul>';
+  if (data.failures.length) html += '<ul>' + data.failures.map((failure) =>
+    '<li>未完成：' + escHtml(failure.tripId || failure.url) + ' — ' + escHtml(failure.error) + '</li>').join('') + '</ul>';
   return html;
 }
 
@@ -548,7 +574,7 @@ async function main() {
     runLighthouse(),          // 3
     querySentry(),            // 4
     queryD1ApiLogs(),         // 5
-    checkLinks(),             // 6
+    runOperations(createReportSources()), // 6: shared link outcome
     checkDataAnomalies()      // 7
   ]);
 
@@ -566,13 +592,15 @@ async function main() {
     lighthouse: val(3),
     sentry: val(4),
     apiLogs: val(5),
-    links: val(6),
+    links: val(6).sources.links,
+    summary: val(6).summary,
     anomalies: val(7)
   };
 
   // 組合 HTML 並輸出檔案
   var html = buildHtml(results);
   writeReport(html);
+  fs.writeFileSync(path.join(__dirname, '..', 'report.json'), JSON.stringify(results, null, 2), 'utf8');
 
   // Telegram 通知（異常時）
   if (results.anomalies && results.anomalies.length > 0) {
@@ -590,7 +618,9 @@ async function main() {
   console.log('Daily report done');
 }
 
-main().catch(function(err) {
+if (require.main === module) main().catch(function(err) {
   console.error('Daily report failed:', err);
   process.exit(1);
 });
+
+module.exports = { createReportSources, buildHtml };
