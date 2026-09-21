@@ -11,7 +11,7 @@
  *   SITE_URL
  */
 'use strict';
-var { runOperations, summaryText } = require('./lib/operations-run');
+var { runOperations, summaryText, sourceText } = require('./lib/operations-run');
 
 var CF_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 var CF_ACCOUNT = process.env.CF_ACCOUNT_ID;
@@ -34,326 +34,356 @@ var { getToken: getTriplineToken } = require('./lib/get-tripline-token');
 
 // ── 數據來源 1: 行程修改統計 ────────────────────────────────────
 
-async function queryD1Requests() {
-  var rows = await queryD1(
-    "SELECT " +
-    "COUNT(*) as total, " +
-    "SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) as open_count, " +
-    "SUM(CASE WHEN status IN ('received','processing','completed') THEN 1 ELSE 0 END) as closed_count " +
-    "FROM trip_requests WHERE created_at >= datetime('now', '-1 day')"
-  );
-  return rows[0];
-}
-
-// ── 數據來源 2: 後端 API 錯誤 ──────────────────────────────────
-
-async function queryD1ApiLogs() {
-  var countRows = await queryD1(
-    "SELECT " +
-    "SUM(CASE WHEN status >= 400 AND status < 500 THEN 1 ELSE 0 END) as count_4xx, " +
-    "SUM(CASE WHEN status >= 500 THEN 1 ELSE 0 END) as count_5xx " +
-    "FROM api_logs WHERE created_at >= datetime('now', '-1 day')"
-  );
-  var topRows = await queryD1(
-    "SELECT path, status, COUNT(*) as cnt " +
-    "FROM api_logs WHERE created_at >= datetime('now', '-1 day') AND status >= 400 " +
-    "GROUP BY path, status ORDER BY cnt DESC LIMIT 5"
-  );
-  return { summary: countRows[0], topErrors: topRows };
-}
-
-
-
-// ── 數據來源 4: Sentry 前端錯誤 ────────────────────────────────
-
-async function querySentry() {
-  var url = 'https://sentry.io/api/0/projects/' + SENTRY_ORG + '/' + SENTRY_PROJECT +
-    '/issues/?query=is:unresolved&statsPeriod=24h';
-  var res = await fetch(url, {
-    headers: { 'Authorization': 'Bearer ' + SENTRY_TOKEN }
-  });
-  if (!res.ok) throw new Error('Sentry API failed: ' + res.status);
-  var issues = await res.json();
-  return {
-    total: issues.length,
-    top3: issues.slice(0, 3).map(function(i) {
-      return { title: i.title, count: i.count, link: i.permalink };
-    })
-  };
-}
-
-// ── 數據來源 5: Workers Analytics ──────────────────────────────
-
-async function queryWorkersAnalytics() {
-  var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
-    'pagesFunctionsInvocationsAdaptiveGroups(limit: 10000, filter: { ' +
-    'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
-    'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
-    'sum { requests errors subrequests } ' +
-    'quantiles { cpuTimeP50 cpuTimeP99 } ' +
-    'dimensions { scriptName } ' +
-    '} } } }';
-  var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + CF_TOKEN,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ query: query })
-  });
-  if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
-  var data = await res.json();
-  if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
-    return { requests: 0, errors: 0, p50: 0, p99: 0 };
-  }
-  var rows = data.data.viewer.accounts[0].pagesFunctionsInvocationsAdaptiveGroups;
-  if (!rows || rows.length === 0) return { requests: 0, errors: 0, p50: 0, p99: 0 };
-  var totalRequests = 0;
-  var totalErrors = 0;
-  var maxP50 = 0;
-  var maxP99 = 0;
-  rows.forEach(function(row) {
-    totalRequests += row.sum.requests;
-    totalErrors += row.sum.errors;
-    if (row.quantiles.cpuTimeP50 > maxP50) maxP50 = row.quantiles.cpuTimeP50;
-    if (row.quantiles.cpuTimeP99 > maxP99) maxP99 = row.quantiles.cpuTimeP99;
-  });
-  return {
-    requests: totalRequests,
-    errors: totalErrors,
-    p50: maxP50,
-    p99: maxP99
-  };
-}
-
-// ── 數據來源 6: Web Analytics（GraphQL rumPageloadEventsAdaptiveGroups）──
-
-async function queryWebAnalytics() {
-  var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
-    'rumPageloadEventsAdaptiveGroups(limit: 1, filter: { ' +
-    'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
-    'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
-    'sum { visits pageViews } ' +
-    '} } } }';
-  var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + CF_TOKEN,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ query: query })
-  });
-  if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
-  var data = await res.json();
-  if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
-    return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
-  }
-  var rows = data.data.viewer.accounts[0].rumPageloadEventsAdaptiveGroups;
-  if (!rows || rows.length === 0) {
-    return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
-  }
-  var row = rows[0];
-  // Core Web Vitals 在 rumWebVitalsEventsAdaptiveGroups，這裡先用 pageload 的 visits/pageViews
-  return {
-    visits: row.sum?.visits || 0,
-    pageViews: row.sum?.pageViews || 0,
-    lcp: '—',
-    cls: '—',
-    inp: '—'
-  };
-}
-
-// ── 數據來源 7: Lighthouse (PageSpeed Insights API) ────────────
-
-async function runLighthouse() {
-  var apiUrl = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed' +
-    '?url=' + encodeURIComponent(SITE_URL) +
-    '&category=performance&category=seo&category=accessibility&category=best-practices' +
-    (PAGESPEED_API_KEY ? '&key=' + PAGESPEED_API_KEY : '');
-  var res = await fetch(apiUrl);
-  if (!res.ok) throw new Error('PageSpeed Insights failed: ' + res.status);
-  var data = await res.json();
-  var cats = data.lighthouseResult.categories;
-  return {
-    performance: Math.round(cats.performance.score * 100),
-    seo: Math.round(cats.seo.score * 100),
-    accessibility: Math.round(cats.accessibility.score * 100),
-    bestPractices: Math.round(cats['best-practices'].score * 100)
-  };
-}
-
-// ── 壞連結檢查 ─────────────────────────────────────────────────
-
-async function checkLinks(io = {}) {
-  var fetch = io.fetch || globalThis.fetch;
-  var getToken = io.getToken || getTriplineToken;
-
-  // Authentication failure means the check did not run; runOperations records it.
-  var token = await getToken();
-  var authHeaders = { Authorization: 'Bearer ' + token };
-
-  // 1. 取得所有行程
-  var tripsRes = await fetch(SITE_URL + '/api/trips', { headers: authHeaders });
-  if (!tripsRes.ok) throw new Error('Failed to fetch trips: ' + tripsRes.status);
-  var trips = await tripsRes.json();
-
-  // 2. 收集所有 maps URLs
-  // v2.33.91 simplify: 平行 fetch /days per trip。之前 sequential await loop
-  // 20 個 published trip = 20 個 round-trip 串接（~20s），改 Promise.all (~1s)。
-  var mapsUrls = [];
-  var publishedTripIds = trips
-    .filter(function (t) { return t.published && (t.id || t.tripId); })
-    .map(function (t) { return t.id || t.tripId; });
-  var failures = [];
-  var completedTrips = 0;
-  var daysResults = await Promise.allSettled(publishedTripIds.map(async function (id) {
-    var response = await fetch(SITE_URL + '/api/trips/' + id + '/days', { headers: authHeaders });
-    if (!response.ok) throw new Error('Days query failed: ' + response.status);
-    var days = await response.json();
-    if (!Array.isArray(days)) throw new Error('Invalid days response');
-    return days;
-  }));
-  daysResults.forEach(function(result, index) {
-    if (result.status === 'fulfilled') {
-      completedTrips++;
-      collectMapsUrls(result.value, mapsUrls);
-    } else {
-      failures.push({ tripId: publishedTripIds[index], error: String(result.reason.message || result.reason) });
-    }
-  });
-
-  // 3. HEAD check with concurrency limit of 5
-  // v2.33.52 cleanup (round 8d defer): host allowlist 防 SSRF — trip 的 maps
-  // URL 來自 user-submitted chat / POI，如果有 attacker 注入 internal host
-  // (e.g. http://192.168.x.x:port) → HEAD with redirect:follow 可達內網。
-  var ALLOWED_HOSTS = new Set([
-    'maps.google.com',
-    'www.google.com',
-    'goo.gl',
-    'maps.app.goo.gl',
-    'maps.apple.com',
-    'apple.co',
-    'map.naver.com',
-    'naver.me',
-  ]);
-  function isAllowedUrl(u) {
-    try {
-      var parsed = new URL(u);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
-      return ALLOWED_HOSTS.has(parsed.hostname);
-    } catch (_) {
-      return false;
-    }
-  }
-
-  var broken = [];
-  var urls = dedup(mapsUrls).filter(isAllowedUrl);
-  var batches = chunk(urls, 5);
-
-  for (var b = 0; b < batches.length; b++) {
-    var results = await Promise.allSettled(
-      batches[b].map(function(url) {
-        return fetch(url, { method: 'HEAD', redirect: 'follow' })
-          .then(function(r) {
-            if (r.status >= 400) broken.push({ url: url, status: r.status });
-          });
-      })
-    );
-    // Also catch network errors
-    results.forEach(function(r, idx) {
-      if (r.status === 'rejected') {
-        broken.push({ url: batches[b][idx], status: 'network error' });
-        failures.push({ url: batches[b][idx], error: String(r.reason.message || r.reason) });
-      }
-    });
-  }
-
-  return { broken: broken, checked: urls.length, tripCount: publishedTripIds.length, completedTrips: completedTrips, failures: failures };
-}
-
 function createReportSources(io = {}) {
-  return {
-    links: {
-      run: () => checkLinks(io),
-      assess: (data) => ({
-        completion: data.failures.length === 0 ? 'complete'
-          : data.completedTrips + data.checked > data.failures.filter((failure) => failure.url).length ? 'partial' : 'failed',
-        severity: data.broken.length ? 'critical' : 'ok',
-        empty: data.checked === 0,
-      }),
-    },
-  };
-}
+  var fetch = io.fetch || globalThis.fetch;
+  var queryD1 = io.queryD1 || require('./lib/d1-client').queryD1;
+  var now = io.now || (() => new Date());
+  var todayISO = () => now().toISOString().slice(0, 10);
+  var yesterdayISO = () => new Date(now().getTime() - 86400000).toISOString().slice(0, 10);
 
-function collectMapsUrls(days, out) {
-  if (!Array.isArray(days)) return;
-  days.forEach(function(day) {
-    if (!day.timeline) return;
-    day.timeline.forEach(function(entry) {
-      if (entry.location) {
-        if (entry.location.googleQuery) out.push(entry.location.googleQuery);
-        if (entry.location.appleQuery) out.push(entry.location.appleQuery);
-        if (entry.location.naverQuery) out.push(entry.location.naverQuery);
+  async function queryD1Requests() {
+    var rows = await queryD1(
+      "SELECT " +
+      "COUNT(*) as total, " +
+      "SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) as open_count, " +
+      "SUM(CASE WHEN status IN ('received','processing','completed') THEN 1 ELSE 0 END) as closed_count " +
+      "FROM trip_requests WHERE created_at >= datetime('now', '-1 day')"
+    );
+    return rows[0];
+  }
+
+  // ── 數據來源 2: 後端 API 錯誤 ──────────────────────────────────
+
+  async function queryD1ApiLogs() {
+    var countRows = await queryD1(
+      "SELECT " +
+      "SUM(CASE WHEN status >= 400 AND status < 500 THEN 1 ELSE 0 END) as count_4xx, " +
+      "SUM(CASE WHEN status >= 500 THEN 1 ELSE 0 END) as count_5xx " +
+      "FROM api_logs WHERE created_at >= datetime('now', '-1 day')"
+    );
+    var topRows = await queryD1(
+      "SELECT path, status, COUNT(*) as cnt " +
+      "FROM api_logs WHERE created_at >= datetime('now', '-1 day') AND status >= 400 " +
+      "GROUP BY path, status ORDER BY cnt DESC LIMIT 5"
+    );
+    return { summary: countRows[0], topErrors: topRows };
+  }
+
+
+
+  // ── 數據來源 4: Sentry 前端錯誤 ────────────────────────────────
+
+  async function querySentry() {
+    var url = 'https://sentry.io/api/0/projects/' + SENTRY_ORG + '/' + SENTRY_PROJECT +
+      '/issues/?query=is:unresolved&statsPeriod=24h';
+    var res = await fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + SENTRY_TOKEN }
+    });
+    if (!res.ok) throw new Error('Sentry API failed: ' + res.status);
+    var issues = await res.json();
+    return {
+      total: issues.length,
+      top3: issues.slice(0, 3).map(function(i) {
+        return { title: i.title, count: i.count, link: i.permalink };
+      })
+    };
+  }
+
+  // ── 數據來源 5: Workers Analytics ──────────────────────────────
+
+  async function queryWorkersAnalytics() {
+    var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
+      'pagesFunctionsInvocationsAdaptiveGroups(limit: 10000, filter: { ' +
+      'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
+      'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
+      'sum { requests errors subrequests } ' +
+      'quantiles { cpuTimeP50 cpuTimeP99 } ' +
+      'dimensions { scriptName } ' +
+      '} } } }';
+    var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + CF_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ query: query })
+    });
+    if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
+    var data = await res.json();
+    if (data.errors?.length || !data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
+      throw new Error('Workers Analytics response unavailable');
+    }
+    var rows = data.data.viewer.accounts[0].pagesFunctionsInvocationsAdaptiveGroups;
+    if (!rows || rows.length === 0) return { requests: 0, errors: 0, p50: 0, p99: 0 };
+    var totalRequests = 0;
+    var totalErrors = 0;
+    var maxP50 = 0;
+    var maxP99 = 0;
+    rows.forEach(function(row) {
+      totalRequests += row.sum.requests;
+      totalErrors += row.sum.errors;
+      if (row.quantiles.cpuTimeP50 > maxP50) maxP50 = row.quantiles.cpuTimeP50;
+      if (row.quantiles.cpuTimeP99 > maxP99) maxP99 = row.quantiles.cpuTimeP99;
+    });
+    return {
+      requests: totalRequests,
+      errors: totalErrors,
+      p50: maxP50,
+      p99: maxP99
+    };
+  }
+
+  // ── 數據來源 6: Web Analytics（GraphQL rumPageloadEventsAdaptiveGroups）──
+
+  async function queryWebAnalytics() {
+    var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
+      'rumPageloadEventsAdaptiveGroups(limit: 1, filter: { ' +
+      'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
+      'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
+      'sum { visits pageViews } ' +
+      '} } } }';
+    var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + CF_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ query: query })
+    });
+    if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
+    var data = await res.json();
+    if (data.errors?.length || !data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
+      throw new Error('Web Analytics response unavailable');
+    }
+    var rows = data.data.viewer.accounts[0].rumPageloadEventsAdaptiveGroups;
+    if (!rows || rows.length === 0) {
+      return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
+    }
+    var row = rows[0];
+    // Core Web Vitals 在 rumWebVitalsEventsAdaptiveGroups，這裡先用 pageload 的 visits/pageViews
+    return {
+      visits: row.sum?.visits || 0,
+      pageViews: row.sum?.pageViews || 0,
+      lcp: '—',
+      cls: '—',
+      inp: '—'
+    };
+  }
+
+  // ── 數據來源 7: Lighthouse (PageSpeed Insights API) ────────────
+
+  async function runLighthouse() {
+    var apiUrl = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed' +
+      '?url=' + encodeURIComponent(SITE_URL) +
+      '&category=performance&category=seo&category=accessibility&category=best-practices' +
+      (PAGESPEED_API_KEY ? '&key=' + PAGESPEED_API_KEY : '');
+    var res = await fetch(apiUrl);
+    if (!res.ok) throw new Error('PageSpeed Insights failed: ' + res.status);
+    var data = await res.json();
+    var cats = data.lighthouseResult.categories;
+    return {
+      performance: Math.round(cats.performance.score * 100),
+      seo: Math.round(cats.seo.score * 100),
+      accessibility: Math.round(cats.accessibility.score * 100),
+      bestPractices: Math.round(cats['best-practices'].score * 100)
+    };
+  }
+
+  // ── 壞連結檢查 ─────────────────────────────────────────────────
+
+  async function checkLinks(io = {}) {
+    var fetch = io.fetch || globalThis.fetch;
+    var getToken = io.getToken || getTriplineToken;
+
+    // Authentication failure means the check did not run; runOperations records it.
+    var token = await getToken();
+    var authHeaders = { Authorization: 'Bearer ' + token };
+
+    // 1. 取得所有行程
+    var tripsRes = await fetch(SITE_URL + '/api/trips', { headers: authHeaders });
+    if (!tripsRes.ok) throw new Error('Failed to fetch trips: ' + tripsRes.status);
+    var trips = await tripsRes.json();
+
+    // 2. 收集所有 maps URLs
+    // v2.33.91 simplify: 平行 fetch /days per trip。之前 sequential await loop
+    // 20 個 published trip = 20 個 round-trip 串接（~20s），改 Promise.all (~1s)。
+    var mapsUrls = [];
+    var publishedTripIds = trips
+      .filter(function (t) { return t.published && (t.id || t.tripId); })
+      .map(function (t) { return t.id || t.tripId; });
+    var failures = [];
+    var completedTrips = 0;
+    var daysResults = await Promise.allSettled(publishedTripIds.map(async function (id) {
+      var response = await fetch(SITE_URL + '/api/trips/' + id + '/days', { headers: authHeaders });
+      if (!response.ok) throw new Error('Days query failed: ' + response.status);
+      var days = await response.json();
+      if (!Array.isArray(days)) throw new Error('Invalid days response');
+      return days;
+    }));
+    daysResults.forEach(function(result, index) {
+      if (result.status === 'fulfilled') {
+        completedTrips++;
+        collectMapsUrls(result.value, mapsUrls);
+      } else {
+        failures.push({ tripId: publishedTripIds[index], error: String(result.reason?.message || result.reason) });
       }
     });
-  });
-}
 
-function dedup(arr) {
-  return arr.filter(function(v, i, a) { return a.indexOf(v) === i; });
-}
-
-function chunk(arr, size) {
-  var out = [];
-  for (var i = 0; i < arr.length; i += size) {
-    out.push(arr.slice(i, i + size));
-  }
-  return out;
-}
-
-// ── 資料異常偵測 ───────────────────────────────────────────────
-
-async function checkDataAnomalies() {
-  var anomalies = [];
-  try {
-    // 1. 空行程（有 trip 但 0 天）
-    var emptyTrips = await queryD1(
-      "SELECT t.id FROM trips t LEFT JOIN trip_days td ON t.id = td.trip_id WHERE td.id IS NULL AND t.published = 1"
-    );
-    if (emptyTrips && emptyTrips.length > 0) {
-      anomalies.push('空行程（無天數）：' + emptyTrips.map(function(r) { return r.id; }).join(', '));
-    }
-
-    // 2. 孤立 POI（trip_entry_pois 引用不存在的 poi_id；v2.29.0 trip_pois rip-out 後 canonical 改用 trip_entry_pois）
-    var orphanPois = await queryD1(
-      "SELECT tep.entry_id, tep.poi_id FROM trip_entry_pois tep LEFT JOIN pois p ON tep.poi_id = p.id WHERE p.id IS NULL LIMIT 10"
-    );
-    if (orphanPois && orphanPois.length > 0) {
-      anomalies.push('孤立 trip_entry_pois（poi 不存在）：' + orphanPois.length + ' 筆');
-    }
-
-    // 3. 使用者錯誤回報（過去 24 小時）
-    var recentReports = await queryD1(
-      "SELECT COUNT(*) as c FROM error_reports WHERE created_at > datetime('now', '-1 day')"
-    );
-    if (recentReports && recentReports[0] && recentReports[0].c > 0) {
-      anomalies.push('使用者錯誤回報（24h）：' + recentReports[0].c + ' 筆');
-    }
-
-    // 4. POI 缺 rating 比例（migration 0045: pois.google_rating renamed to rating）
-    var poiStats = await queryD1(
-      "SELECT COUNT(*) as total, SUM(CASE WHEN rating IS NULL THEN 1 ELSE 0 END) as missing FROM pois WHERE type IN ('hotel','restaurant','shopping')"
-    );
-    if (poiStats && poiStats[0] && poiStats[0].total > 0) {
-      var pct = Math.round(poiStats[0].missing / poiStats[0].total * 100);
-      if (pct > 30) {
-        anomalies.push('POI 缺 rating：' + poiStats[0].missing + '/' + poiStats[0].total + ' (' + pct + '%)');
+    // 3. HEAD check with concurrency limit of 5
+    // v2.33.52 cleanup (round 8d defer): host allowlist 防 SSRF — trip 的 maps
+    // URL 來自 user-submitted chat / POI，如果有 attacker 注入 internal host
+    // (e.g. http://192.168.x.x:port) → HEAD with redirect:follow 可達內網。
+    var ALLOWED_HOSTS = new Set([
+      'maps.google.com',
+      'www.google.com',
+      'goo.gl',
+      'maps.app.goo.gl',
+      'maps.apple.com',
+      'apple.co',
+      'map.naver.com',
+      'naver.me',
+    ]);
+    function isAllowedUrl(u) {
+      try {
+        var parsed = new URL(u);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+        return ALLOWED_HOSTS.has(parsed.hostname);
+      } catch (_) {
+        return false;
       }
     }
-  } catch (e) {
-    anomalies.push('偵測失敗：' + e.message);
+
+    var broken = [];
+    var urls = dedup(mapsUrls).filter(isAllowedUrl);
+    var batches = chunk(urls, 5);
+
+    for (var b = 0; b < batches.length; b++) {
+      var results = await Promise.allSettled(
+        batches[b].map(function(url) {
+          return fetch(url, { method: 'HEAD', redirect: 'follow' })
+            .then(function(r) {
+              if (r.status >= 400) broken.push({ url: url, status: r.status });
+            });
+        })
+      );
+      // Also catch network errors
+      results.forEach(function(r, idx) {
+        if (r.status === 'rejected') {
+          broken.push({ url: batches[b][idx], status: 'network error' });
+          failures.push({ url: batches[b][idx], error: String(r.reason?.message || r.reason) });
+        }
+      });
+    }
+
+    return { broken: broken, checked: urls.length, tripCount: publishedTripIds.length, completedTrips: completedTrips, failures: failures };
   }
-  return anomalies;
+
+  function createLinkSources(io = {}) {
+    return {
+      links: {
+        run: () => checkLinks(io),
+        assess: (data) => ({
+          completion: data.failures.length === 0 ? 'complete'
+            : data.completedTrips + data.checked > data.failures.filter((failure) => failure.url).length ? 'partial' : 'failed',
+          severity: data.broken.length ? 'critical' : 'ok',
+          empty: data.checked === 0,
+        }),
+      },
+    };
+  }
+
+  function collectMapsUrls(days, out) {
+    if (!Array.isArray(days)) return;
+    days.forEach(function(day) {
+      if (!day.timeline) return;
+      day.timeline.forEach(function(entry) {
+        if (entry.location) {
+          if (entry.location.googleQuery) out.push(entry.location.googleQuery);
+          if (entry.location.appleQuery) out.push(entry.location.appleQuery);
+          if (entry.location.naverQuery) out.push(entry.location.naverQuery);
+        }
+      });
+    });
+  }
+
+  function dedup(arr) {
+    return arr.filter(function(v, i, a) { return a.indexOf(v) === i; });
+  }
+
+  function chunk(arr, size) {
+    var out = [];
+    for (var i = 0; i < arr.length; i += size) {
+      out.push(arr.slice(i, i + size));
+    }
+    return out;
+  }
+
+  // ── 資料異常偵測 ───────────────────────────────────────────────
+
+  async function checkDataAnomalies() {
+    var anomalies = [];
+    var failures = [];
+    var completed = 0;
+    async function query(name, sql) {
+      try { var rows = await queryD1(sql); completed++; return rows; }
+      catch (error) { failures.push({ query: name, error: String(error.message || error) }); return []; }
+    }
+    try {
+      // 1. 空行程（有 trip 但 0 天）
+      var emptyTrips = await query('emptyTrips',
+        "SELECT t.id FROM trips t LEFT JOIN trip_days td ON t.id = td.trip_id WHERE td.id IS NULL AND t.published = 1"
+      );
+      if (emptyTrips && emptyTrips.length > 0) {
+        anomalies.push('空行程（無天數）：' + emptyTrips.map(function(r) { return r.id; }).join(', '));
+      }
+
+      // 2. 孤立 POI（trip_entry_pois 引用不存在的 poi_id；v2.29.0 trip_pois rip-out 後 canonical 改用 trip_entry_pois）
+      var orphanPois = await query('orphanPois',
+        "SELECT tep.entry_id, tep.poi_id FROM trip_entry_pois tep LEFT JOIN pois p ON tep.poi_id = p.id WHERE p.id IS NULL LIMIT 10"
+      );
+      if (orphanPois && orphanPois.length > 0) {
+        anomalies.push('孤立 trip_entry_pois（poi 不存在）：' + orphanPois.length + ' 筆');
+      }
+
+      // 3. 使用者錯誤回報（過去 24 小時）
+      var recentReports = await query('recentReports',
+        "SELECT COUNT(*) as c FROM error_reports WHERE created_at > datetime('now', '-1 day')"
+      );
+      if (recentReports && recentReports[0] && recentReports[0].c > 0) {
+        anomalies.push('使用者錯誤回報（24h）：' + recentReports[0].c + ' 筆');
+      }
+
+      // 4. POI 缺 rating 比例（migration 0045: pois.google_rating renamed to rating）
+      var poiStats = await query('poiStats',
+        "SELECT COUNT(*) as total, SUM(CASE WHEN rating IS NULL THEN 1 ELSE 0 END) as missing FROM pois WHERE type IN ('hotel','restaurant','shopping')"
+      );
+      if (poiStats && poiStats[0] && poiStats[0].total > 0) {
+        var pct = Math.round(poiStats[0].missing / poiStats[0].total * 100);
+        if (pct > 30) {
+          anomalies.push('POI 缺 rating：' + poiStats[0].missing + '/' + poiStats[0].total + ' (' + pct + '%)');
+        }
+      }
+    } catch (e) {
+      failures.push({ query: 'response', error: e.message });
+    }
+    return { items: anomalies, failures: failures, completed: completed };
+  }
+
+  const information = (run) => ({ run, required: false, informational: true });
+  return {
+    ...createLinkSources(io),
+    requests: information(queryD1Requests),
+    workers: information(queryWorkersAnalytics),
+    web: information(queryWebAnalytics),
+    lighthouse: information(runLighthouse),
+    sentry: { run: querySentry, assess: (data) => ({ severity: data.total ? 'warning' : 'ok' }) },
+    // This report is a raw API error count (unlike daily-check's filtered alerts).
+    apiLogs: information(queryD1ApiLogs),
+    anomalies: { run: checkDataAnomalies, assess: (data) => ({
+      completion: !data.failures.length ? 'complete' : data.completed ? 'partial' : 'failed',
+      severity: data.items.length || data.failures.length ? 'warning' : 'ok',
+    }) },
+  };
 }
 
 // ── 清理舊 api_logs ────────────────────────────────────────────
@@ -408,27 +438,30 @@ function formatDate() {
 // ── HTML 郵件組裝 ──────────────────────────────────────────────
 
 function buildHtml(results) {
-  var r = results;
-  var sections = [];
-  if (r.summary) sections.push(sectionHtml('連結檢查摘要', escHtml(summaryText(r.summary))));
-
-  sections.push(sectionHtml('行程修改統計', requestsHtml(r.requests)));
-  sections.push(sectionHtml('Workers Analytics', workersHtml(r.workers)));
-  sections.push(sectionHtml('Web Analytics', webHtml(r.web)));
-  sections.push(sectionHtml('Lighthouse 分數', lighthouseHtml(r.lighthouse)));
-  sections.push(sectionHtml('前端錯誤 (Sentry)', sentryHtml(r.sentry)));
-  sections.push(sectionHtml('後端 API 錯誤', apiLogsHtml(r.apiLogs)));
-  sections.push(sectionHtml('壞連結檢查', linksHtml(r.links)));
-  if (r.anomalies && r.anomalies.length > 0) {
-    sections.push(sectionHtml('⚠️ 資料異常', '<ul style="margin:0;padding-left:20px;font-size:14px;">' +
-      r.anomalies.map(function(a) { return '<li>' + a + '</li>'; }).join('') + '</ul>'));
+  var sections = [sectionHtml('檢查摘要', escHtml(summaryText(results.summary)))];
+  function sourceSection(name, title, renderer) {
+    const source = results.sources[name];
+    if (!source) return;
+    sections.push(sectionHtml(title, '<p>' + escHtml(sourceText(name, source)) + '</p>' + (source.empty && source.data == null ? '<p>零資料</p>' : renderer(source.data))));
   }
+  sourceSection('requests', '行程修改統計', requestsHtml);
+  sourceSection('workers', 'Workers Analytics', workersHtml);
+  sourceSection('web', 'Web Analytics', webHtml);
+  sourceSection('lighthouse', 'Lighthouse 分數', lighthouseHtml);
+  sourceSection('sentry', '前端錯誤 (Sentry)', sentryHtml);
+  sourceSection('apiLogs', '後端 API 錯誤', apiLogsHtml);
+  if (results.sources.links) sections.push(sectionHtml('壞連結檢查', linksHtml(results.sources.links)));
+  sourceSection('anomalies', '資料異常', (data) => {
+    if (!data) return failedHtml();
+    return '<ul>' + data.items.map((item) => '<li>' + escHtml(item) + '</li>').join('') +
+      data.failures.map((failure) => '<li>未完成：' + escHtml(failure.query + ' — ' + failure.error) + '</li>').join('') + '</ul>';
+  });
 
   return '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="' +
     'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;' +
     'max-width:640px;margin:0 auto;padding:16px;color:#1a1a1a;background:#f8f9fa;">' +
     '<h1 style="font-size:20px;margin:0 0 16px;color:#0f172a;">Tripline 日報 — ' +
-    formatDate() + '</h1>' +
+    escHtml(results.generatedAt?.slice(0, 10) || formatDate()) + '</h1>' +
     sections.join('') +
     '<p style="margin-top:24px;font-size:12px;color:#94a3b8;">自動產生，由 GitHub Actions 寄出</p>' +
     '</body></html>';
@@ -566,45 +599,18 @@ function writeReport(html) {
 async function main() {
   console.log('Daily report starting — ' + formatDate());
 
-  // 並行查詢所有數據來源（任一失敗不影響其他）
-  var settled = await Promise.allSettled([
-    queryD1Requests(),        // 0
-    queryWorkersAnalytics(),  // 1
-    queryWebAnalytics(),      // 2
-    runLighthouse(),          // 3
-    querySentry(),            // 4
-    queryD1ApiLogs(),         // 5
-    runOperations(createReportSources()), // 6: shared link outcome
-    checkDataAnomalies()      // 7
-  ]);
-
-  function val(idx) {
-    var r = settled[idx];
-    if (r.status === 'fulfilled') return r.value;
-    console.error('Source ' + idx + ' failed:', r.reason);
-    return null;
-  }
-
-  var results = {
-    requests: val(0),
-    workers: val(1),
-    web: val(2),
-    lighthouse: val(3),
-    sentry: val(4),
-    apiLogs: val(5),
-    links: val(6).sources.links,
-    summary: val(6).summary,
-    anomalies: val(7)
-  };
+  var results = await runOperations(createReportSources());
 
   // 組合 HTML 並輸出檔案
   var html = buildHtml(results);
   writeReport(html);
   fs.writeFileSync(path.join(__dirname, '..', 'report.json'), JSON.stringify(results, null, 2), 'utf8');
 
-  // Telegram 通知（異常時）
-  if (results.anomalies && results.anomalies.length > 0) {
-    await sendTelegramAlert(results.anomalies);
+  // Keep the existing notification audience and anomaly-only delivery policy.
+  var anomalies = results.sources.anomalies.data;
+  if (anomalies) {
+    var alerts = anomalies.items.concat(anomalies.failures.map((failure) => '偵測失敗：' + failure.error));
+    if (alerts.length) await sendTelegramAlert(alerts);
   }
 
   // 清理舊 api_logs（>30 天）

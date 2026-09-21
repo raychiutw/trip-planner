@@ -117,7 +117,18 @@ AI 來源項目用 `origin` 記來源、`managed_by` 記目前由人或 AI 維�
 
 **一次檢查結果**：`scripts/lib/operations-run.js` 的 `runOperations` 協調具名來源，分別持有 `completion`（complete／partial／failed）、`severity` 與來源資料。必要檢查完整且沒有異常才可顯示健康；完整但零資料必須另外標示。
 
-連結日報已使用此結果產生 JSON、HTML 與連結摘要。某行程 days 查詢失敗仍保留其他行程的連結證據；查詢失敗不能由空陣列推導為全部正常。來源 adapter 保留原有 token helper、D1 client、查詢及告警政策。
+daily-check 與日報都使用此結果產生 JSON、HTML 與摘要；`sources` 的具名結果是唯一完成度／嚴重程度來源。daily-check 保留既有頂層資料欄位供舊消費者讀取，摘要及新 message renderer 直接讀共用結果。來源失敗不清除其他來源資料；route health 的 HTTP 異常與網路未完成會同時反映在摘要。
+
+| 入口 | 必要檢查／告警來源 | 資訊來源（不新增告警） |
+|---|---|---|
+| daily-check | Sentry、經既有規則篩選的 API errors、npm audit、未完成請求、排程 log、route health、prod data hygiene、audit anomaly；Google Maps quota 在已設定 client credentials 時為必要 | Workers、Web Analytics；未設定憑證的 Maps quota 顯示未執行，不假造用量 |
+| daily-report | 連結、Sentry、資料異常偵測 | 行程修改統計、Workers、Web Analytics、Lighthouse 分數、未經 daily-check 篩選的原始 API log 計數 |
+
+某行程 days 查詢失敗仍保留其他行程的連結證據；資料異常偵測的某條查詢失敗也保留已知異常。查詢失敗不能由空陣列推導為全部正常。HTTP 錯誤與網路失敗分別表達已知異常及檢查完成度。資訊來源查詢失敗會明示，但不一律轉成健康告警。
+
+來源 adapter 保留 D1 client 的既有重試、token helper、route health 門檻、Google Maps 額度及告警政策。npm audit 保留 180 秒 timeout、32 MiB buffer；無有效 audit 結果視為未完成。排程 log 的 ENOENT 仍表示沒有 log，其餘讀取錯誤列為未完成。通知對象、管道及資料異常通知條件沿用既有設定，測試不寄通知。
+
+CLI 輸出：daily-check 的 `scripts/logs/daily-check/YYYY-MM-DD-report.json` 與同名 `.html`；daily-report 的 `report.json` 與 `report.html`。匯入來源 factory 或 renderer 不會啟動掃描、寄信或寫檔。
 
 ---
 

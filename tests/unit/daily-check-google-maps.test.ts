@@ -141,13 +141,7 @@ describe('daily-check.js — Google Maps section wiring', () => {
     expect(DAILY_CHECK_SRC).toMatch(/queryGoogleMapsQuota\(\)/);
   });
 
-  it('includes googleMapsQuota in report object', () => {
-    expect(DAILY_CHECK_SRC).toMatch(/googleMapsQuota:\s*googleMapsQuota/);
-  });
 
-  it('feeds googleMapsQuota into calcSummary (impacts critical/warning counts)', () => {
-    expect(DAILY_CHECK_SRC).toMatch(/calcSummary\([^)]*googleMapsQuota[^)]*\)/);
-  });
 });
 
 /*

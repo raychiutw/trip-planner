@@ -74,26 +74,3 @@ describe('queryAuditAnomaly — status classification', () => {
     expect(SRC).toMatch(/deleteCritical: AUDIT_DELETE_CRITICAL/);
   });
 });
-
-describe('main pipeline wiring', () => {
-  it('Promise.allSettled idx 8 = queryAuditAnomaly()', () => {
-    expect(SRC).toMatch(/queryAuditAnomaly\(\),\s+\/\/ 8 — v2\.33\.132 G14/);
-  });
-
-  it('val(8, ...) fallback shape 對齊（status/heavyUsers/heavyTrips/criticalDeletes）', () => {
-    expect(SRC).toMatch(/var auditAnomaly = val\(8, \{ status: 'ok', heavyUsers: \[\], heavyTrips: \[\], criticalDeletes: \[\]/);
-  });
-
-  it('calcSummary signature 加 auditAnomaly 參數', () => {
-    expect(SRC).toMatch(
-      /function calcSummary\(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota, auditAnomaly\)/,
-    );
-    expect(SRC).toMatch(
-      /var sections = \[sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene, googleMapsQuota, auditAnomaly\]/,
-    );
-  });
-
-  it('report object 含 auditAnomaly field', () => {
-    expect(SRC).toMatch(/auditAnomaly: auditAnomaly\s*\};/);
-  });
-});
