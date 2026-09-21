@@ -32,6 +32,12 @@ function exchange(code: string, extra: Record<string, string> = {}, requestDb = 
     body: new URLSearchParams({ grant_type: 'authorization_code', client_id: 'lifecycle-client', code, redirect_uri: 'https://client.test/cb', ...extra }),
   }), tokenPost as PagesFunction, requestDb);
 }
+function rotate(refreshToken: string, extra: Record<string, string> = {}, requestDb = db) {
+  return through(new Request('https://test.com/api/oauth/token', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'refresh_token', client_id: 'lifecycle-client', refresh_token: refreshToken, ...extra }),
+  }), tokenPost as PagesFunction, requestDb);
+}
 function readPrivateTrip(token: string) {
   return through(new Request('https://test.com/api/trips/token-private-trip', { headers: { Authorization: `Bearer ${token}` } }), tripGet as PagesFunction, db, { id: 'token-private-trip' });
 }
@@ -47,7 +53,7 @@ function failModelWrite(model: string): D1Database {
   return new Proxy(db, { get(target, property) {
     if (property === 'prepare') return (sql: string) => {
       const statement = target.prepare(sql);
-      if (!/(INSERT|UPDATE).*oauth_models/s.test(sql)) return statement;
+      if (!/(INSERT|UPDATE|DELETE).*oauth_models/s.test(sql)) return statement;
       return new Proxy(statement, { get(stmt, member) {
         if (member === 'bind') return (...args: unknown[]) => args[0] === model
           ? target.prepare('SELECT json(?)').bind('injected-invalid-json') : stmt.bind(...args);
@@ -178,6 +184,114 @@ describe('OAuth token issuance through D1 and real authorization middleware', ()
     await grant('expired-code');
     await db.prepare("UPDATE oauth_models SET expires_at = 0 WHERE id = 'expired-code'").run();
     expect((await exchange('expired-code')).status).toBe(400);
+  });
+
+});
+
+describe('OAuth refresh lifecycle through the actual token endpoint', () => {
+  it('invalid scope cannot consume a fresh refresh token or revoke its rotated family', async () => {
+    await grant('refresh-scope', { scopes: ['trips:read', 'profile'] });
+    const issued = await (await exchange('refresh-scope')).json() as { access_token: string; refresh_token: string };
+    expect((await rotate(issued.refresh_token, { scope: 'admin' })).status).toBe(400);
+    expect((await new D1Adapter(db, 'RefreshToken').find(issued.refresh_token))?.consumed).toBeUndefined();
+    const rotated = await rotate(issued.refresh_token, { scope: 'trips:read' });
+    expect(rotated.status).toBe(200);
+    const next = await rotated.json() as { access_token: string; refresh_token: string; scope: string };
+    expect(next.scope).toBe('trips:read');
+    expect((await readPrivateTrip(next.access_token)).status).toBe(200);
+    const invalid = await rotate(issued.refresh_token, { scope: 'admin' });
+    expect(invalid.status).toBe(400);
+    expect(await invalid.json()).toMatchObject({ error: 'invalid_scope' });
+    expect((await readPrivateTrip(next.access_token)).status).toBe(200);
+  });
+  it('cross-client attempts cannot revoke a family; legitimate reuse revokes every member only in that family', async () => {
+    await grant('victim');
+    await grant('same-client-other-family');
+    await grant('other-client-family', { client_id: 'unrelated-client' });
+    const initial = await (await exchange('victim')).json() as { access_token: string; refresh_token: string };
+    const other = await (await exchange('same-client-other-family')).json() as { access_token: string };
+    const otherClient = await (await exchange('other-client-family', { client_id: 'unrelated-client' })).json() as { access_token: string };
+    expect((await rotate(initial.refresh_token, { client_id: 'unrelated-client' })).status).toBe(400);
+    expect((await new D1Adapter(db, 'RefreshToken').find(initial.refresh_token))?.consumed).toBeUndefined();
+    const next = await (await rotate(initial.refresh_token)).json() as { access_token: string; refresh_token: string };
+    expect((await rotate(initial.refresh_token, { client_id: 'unrelated-client' })).status).toBe(400);
+    for (const access of [initial.access_token, next.access_token, other.access_token, otherClient.access_token]) {
+      expect((await readPrivateTrip(access)).status).toBe(200);
+    }
+    expect((await rotate(initial.refresh_token)).status).toBe(400);
+    for (const access of [initial.access_token, next.access_token]) expect((await readPrivateTrip(access)).status).not.toBe(200);
+    for (const refresh of [initial.refresh_token, next.refresh_token]) expect((await rotate(refresh)).status).toBe(400);
+    for (const access of [other.access_token, otherClient.access_token]) expect((await readPrivateTrip(access)).status).toBe(200);
+  });
+
+  it('two concurrent rotations cannot leave a usable successor after reuse detection', async () => {
+    await grant('parallel-refresh');
+    const initial = await (await exchange('parallel-refresh')).json() as { access_token: string; refresh_token: string };
+    const interleaved = synchronizeGrantReads('RefreshToken');
+    const responses = await Promise.all([rotate(initial.refresh_token, {}, interleaved), rotate(initial.refresh_token, {}, interleaved)]);
+    expect(responses.filter((response) => response.status === 200).length).toBeLessThanOrEqual(1);
+    for (const response of responses) {
+      expect([200, 400]).toContain(response.status);
+      if (response.status === 200) {
+        const token = await response.json() as { access_token: string };
+        expect((await readPrivateTrip(token.access_token)).status).not.toBe(200);
+      }
+    }
+    expect((await readPrivateTrip(initial.access_token)).status).not.toBe(200);
+    expect((await db.prepare("SELECT id FROM oauth_models WHERE name IN ('AccessToken', 'RefreshToken')").all()).results).toEqual([]);
+  });
+
+  it('reuse before the winner stores its pair cannot resurrect a revoked family', async () => {
+    await grant('delayed-refresh');
+    const initial = await (await exchange('delayed-refresh')).json() as { access_token: string; refresh_token: string };
+    let reached!: () => void;
+    let release!: () => void;
+    const started = new Promise<void>((resolve) => { reached = resolve; });
+    const resume = new Promise<void>((resolve) => { release = resolve; });
+    const delayed = new Proxy(db, { get(target, property) {
+      if (property === 'batch') return async (statements: D1PreparedStatement[]) => {
+        reached(); await resume; return target.batch(statements);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === 'function' ? value.bind(target) : value;
+    } });
+    const winner = rotate(initial.refresh_token, {}, delayed);
+    await started;
+    try { expect((await rotate(initial.refresh_token)).status).toBe(400); }
+    finally { release(); }
+    expect((await winner).status).toBe(400);
+    expect((await readPrivateTrip(initial.access_token)).status).not.toBe(200);
+    expect((await db.prepare("SELECT id FROM oauth_models WHERE name IN ('AccessToken', 'RefreshToken')").all()).results).toEqual([]);
+  });
+
+  it.each(['$.consumed', 'AccessToken', 'RefreshToken', '$.grantId'])('rotation failure at %s preserves isolation and never reactivates consumption', async (stage) => {
+    await grant('rotation-fault');
+    await grant('unaffected-refresh', { client_id: 'unrelated-client' });
+    const initial = await (await exchange('rotation-fault')).json() as { access_token: string; refresh_token: string };
+    const other = await (await exchange('unaffected-refresh', { client_id: 'unrelated-client' })).json() as { access_token: string };
+    expect((await rotate(initial.refresh_token, {}, failModelWrite(stage))).status).toBeGreaterThanOrEqual(500);
+    const own = await db.prepare("SELECT id FROM oauth_models WHERE name IN ('AccessToken', 'RefreshToken') AND json_extract(payload, '$.client_id') = 'lifecycle-client'").all<{ id: string }>();
+    expect(own.results.map((row) => row.id).sort()).toEqual([initial.access_token, initial.refresh_token].sort());
+    if (stage === '$.consumed') {
+      expect((await new D1Adapter(db, 'RefreshToken').find(initial.refresh_token))?.consumed).toBeUndefined();
+      expect((await rotate(initial.refresh_token)).status).toBe(200);
+    } else {
+      expect((await new D1Adapter(db, 'RefreshToken').find(initial.refresh_token))?.consumed).toBeTruthy();
+      expect((await rotate(initial.refresh_token)).status).toBe(400);
+      expect((await readPrivateTrip(initial.access_token)).status).not.toBe(200);
+    }
+    expect((await readPrivateTrip(other.access_token)).status).toBe(200);
+  });
+
+  it('a failed family deletion reports failure and a later authenticated retry completes revocation', async () => {
+    await grant('revoke-fault');
+    const initial = await (await exchange('revoke-fault')).json() as { access_token: string; refresh_token: string };
+    const next = await (await rotate(initial.refresh_token)).json() as { access_token: string; refresh_token: string };
+    expect((await rotate(initial.refresh_token, {}, failModelWrite('$.grantId'))).status).toBeGreaterThanOrEqual(500);
+    expect((await new D1Adapter(db, 'RefreshToken').find(initial.refresh_token))?.consumed).toBeTruthy();
+    expect((await rotate(initial.refresh_token)).status).toBe(400);
+    for (const access of [initial.access_token, next.access_token]) expect((await readPrivateTrip(access)).status).not.toBe(200);
+    expect((await rotate(next.refresh_token)).status).toBe(400);
   });
 
 });

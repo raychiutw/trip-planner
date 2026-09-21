@@ -20,7 +20,7 @@
  * Response (JSON):
  *   { access_token, refresh_token, token_type: 'Bearer', expires_in, scope }
  */
-import { D1Adapter, type AdapterPayload } from '../../../src/server/oauth-d1-adapter';
+import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { verifyPassword } from '../../../src/server/password';
 import { issueIdToken } from './_id_token';
 import {
@@ -34,16 +34,7 @@ import { generateOpaqueToken, parseFormOrJson, parseBasicAuth } from '../_utils'
 import { oauthErrorResponse, buildRateLimitResponse } from '../_errors';
 import type { Env } from '../_types';
 
-import { ACCESS_TOKEN_TTL_SEC, exchangeAuthorizationCode, issueTokenPair } from './_tokenLifecycle';
-
-interface RefreshTokenPayload extends AdapterPayload {
-  client_id: string;
-  user_id: string;
-  scopes: string[];
-  grantId: string;
-  /** Set on rotation (consume) — re-use attempts after this is set trigger family revoke */
-  consumed?: number;
-}
+import { ACCESS_TOKEN_TTL_SEC, exchangeAuthorizationCode, rotateRefreshToken } from './_tokenLifecycle';
 
 interface ClientAppRow {
   client_id: string;
@@ -230,98 +221,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     );
   }
 
-  if (grant_type === 'refresh_token') {
-    const refreshTokenInput = body.refresh_token;
-    if (!refreshTokenInput) {
-      return oauthErrorResponse('invalid_request', 'Missing refresh_token');
-    }
-
-    const refreshAdapter = new D1Adapter(context.env.DB, 'RefreshToken');
-    const refreshRow = (await refreshAdapter.find(refreshTokenInput)) as RefreshTokenPayload | undefined;
-
-    if (!refreshRow) {
-      return oauthErrorResponse('invalid_grant', 'refresh_token expired or invalid');
-    }
-
-    // v2.33.97 security: client_id 不對 → reject 不 cascade。否則 leaked-once
-    // refresh_token 被任意 registered client B 提交即觸發 victim grantId family
-    // revoke = permanent DoS handle on victim。先驗 client_id 再驗 consumed。
-    if (refreshRow.client_id !== clientId) {
-      return oauthErrorResponse('invalid_grant', 'refresh_token does not belong to this client');
-    }
-
-    // Reuse detection (RFC 6749 §10.4 / OAuth 2.1 §6.1): if this row was already
-    // consumed by a prior rotation, the refresh token has been replayed →
-    // attacker likely has a stolen token. Cascade-revoke the entire family.
-    if (refreshRow.consumed) {
-      await new D1Adapter(context.env.DB, 'AccessToken').revokeByGrantId(refreshRow.grantId);
-      await new D1Adapter(context.env.DB, 'RefreshToken').revokeByGrantId(refreshRow.grantId);
-      await recordAuthEvent(context.env.DB, context.request, {
-        eventType: 'token_revoke',
-        outcome: 'failure',
-        userId: refreshRow.user_id,
-        clientId,
-        failureReason: 'refresh_token_reuse',
-        metadata: { grantId: refreshRow.grantId },
-      }, context.env);
-      return oauthErrorResponse('invalid_grant', 'refresh_token reuse detected — token family revoked');
-    }
-
-    // Optional scope downgrade: caller can request narrower scope
-    const requestedScopes = (body.scope ?? '').split(/\s+/).filter(Boolean);
-    let finalScopes = refreshRow.scopes;
-    if (requestedScopes.length > 0) {
-      const invalid = requestedScopes.filter((s) => !refreshRow.scopes.includes(s));
-      if (invalid.length > 0) {
-        return oauthErrorResponse('invalid_scope', `Cannot widen scope: ${invalid.join(', ')}`);
-      }
-      finalScopes = requestedScopes;
-    }
-
-    // v2.33.58 round 12 C4: 改 atomic CAS consume — 之前先 issue 再 consume，平行
-    // POST /token 兩個都過 .consumed 檢查、都 issue、都 consume，refresh family
-    // 分裂。現在先 atomic consume(returns boolean)，輸的 caller 收到 false 就 abort
-    // + revoke family (race lost = 雙重 rotation 試圖)。
-    const won = await refreshAdapter.consume(refreshTokenInput);
-    if (!won) {
-      // Race lost — 另一個 caller 同時 rotation 已贏走，cascade revoke 保護
-      await new D1Adapter(context.env.DB, 'AccessToken').revokeByGrantId(refreshRow.grantId);
-      await new D1Adapter(context.env.DB, 'RefreshToken').revokeByGrantId(refreshRow.grantId);
-      await recordAuthEvent(context.env.DB, context.request, {
-        eventType: 'token_revoke',
-        outcome: 'failure',
-        userId: refreshRow.user_id,
-        clientId,
-        failureReason: 'refresh_token_concurrent_rotation',
-        metadata: { grantId: refreshRow.grantId },
-      }, context.env);
-      return oauthErrorResponse('invalid_grant', 'refresh_token concurrent rotation detected — token family revoked');
-    }
-    const tokens = await issueTokenPair(
-      context.env.DB,
-      clientId,
-      refreshRow.user_id,
-      finalScopes,
-      { model: 'RefreshToken', id: refreshTokenInput, grantId: refreshRow.grantId },
-    );
-    if (!tokens) return oauthErrorResponse('invalid_grant', 'refresh_token no longer available');
-    let idToken: string | null = null;
-    try {
-      idToken = await issueIdToken(context.env, context.request, clientId, refreshRow.user_id, finalScopes);
-    } catch {
-      // 'openid' scope but no signing key configured → fall through
-    }
-    await recordAuthEvent(context.env.DB, context.request, {
-      eventType: 'token_issue',
-      outcome: 'success',
-      userId: refreshRow.user_id,
-      clientId,
-      metadata: { grant_type: 'refresh_token', scopes: finalScopes },
-    }, context.env);
-    return tokenResponse(tokens, finalScopes, idToken);
-  }
-
-  const result = await exchangeAuthorizationCode(context.env, context.request, clientId, body);
+  const result = grant_type === 'refresh_token'
+    ? await rotateRefreshToken(context.env, context.request, clientId, body)
+    : await exchangeAuthorizationCode(context.env, context.request, clientId, body);
   if (!result.ok) return oauthErrorResponse(result.error, result.description);
   let idToken: string | null = null;
   try {

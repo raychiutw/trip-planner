@@ -38,11 +38,11 @@ async function pkceTransform(verifier: string): Promise<string> {
 }
 
 /**
- * Issue access+refresh tokens. If `existingGrantId` is provided (rotation case),
+ * Issue access+refresh tokens. When the source carries a grantId (rotation),
  * the new pair inherits it so revokeByGrantId can cascade across the entire
  * token family — necessary for RFC 6749 §10.5 / OAuth 2.1 §6.1 reuse detection.
  */
-export async function issueTokenPair(
+async function issueTokenPair(
   db: Env['DB'],
   clientId: string,
   userId: string,
@@ -147,4 +147,99 @@ export async function exchangeAuthorizationCode(
     metadata: { grant_type: 'authorization_code', scopes: finalScopes },
   }, env);
   return { ok: true, tokens, userId: codeRow.user_id, scopes: finalScopes };
+}
+
+interface RefreshTokenPayload extends AdapterPayload {
+  client_id: string;
+  user_id: string;
+  scopes: string[];
+  grantId: string;
+  /** Set on rotation (consume) — re-use attempts after this is set trigger family revoke */
+  consumed?: number;
+}
+
+export async function rotateRefreshToken(
+  env: Env, request: Request, clientId: string,
+  body: { refresh_token?: string; scope?: string },
+): Promise<TokenLifecycleResult> {
+  const refreshTokenInput = body.refresh_token;
+  if (!refreshTokenInput) {
+    return failure('invalid_request', 'Missing refresh_token');
+  }
+
+  const refreshAdapter = new D1Adapter(env.DB, 'RefreshToken');
+  const refreshRow = (await refreshAdapter.find(refreshTokenInput)) as RefreshTokenPayload | undefined;
+
+  if (!refreshRow) {
+    return failure('invalid_grant', 'refresh_token expired or invalid');
+  }
+
+  // v2.33.97 security: client_id 不對 → reject 不 cascade。否則 leaked-once
+  // refresh_token 被任意 registered client B 提交即觸發 victim grantId family
+  // revoke = permanent DoS handle on victim。先驗 client_id 再驗 consumed。
+  if (refreshRow.client_id !== clientId) {
+    return failure('invalid_grant', 'refresh_token does not belong to this client');
+  }
+
+  // Optional scope downgrade: caller can request narrower scope
+  const requestedScopes = (body.scope ?? '').split(/\s+/).filter(Boolean);
+  let finalScopes = refreshRow.scopes;
+  if (requestedScopes.length > 0) {
+    const invalid = requestedScopes.filter((s) => !refreshRow.scopes.includes(s));
+    if (invalid.length > 0) {
+      return failure('invalid_scope', `Cannot widen scope: ${invalid.join(', ')}`);
+    }
+    finalScopes = requestedScopes;
+  }
+
+  // Reuse detection (RFC 6749 §10.4 / OAuth 2.1 §6.1): if this row was already
+  // consumed by a prior rotation, the refresh token has been replayed →
+  // attacker likely has a stolen token. Cascade-revoke the entire family.
+  if (refreshRow.consumed) {
+    await new D1Adapter(env.DB, 'AccessToken').revokeByGrantId(refreshRow.grantId);
+    await recordAuthEvent(env.DB, request, {
+      eventType: 'token_revoke',
+      outcome: 'failure',
+      userId: refreshRow.user_id,
+      clientId,
+      failureReason: 'refresh_token_reuse',
+      metadata: { grantId: refreshRow.grantId },
+    }, env);
+    return failure('invalid_grant', 'refresh_token reuse detected — token family revoked');
+  }
+
+  // v2.33.58 round 12 C4: 改 atomic CAS consume — 之前先 issue 再 consume，平行
+  // POST /token 兩個都過 .consumed 檢查、都 issue、都 consume，refresh family
+  // 分裂。現在先 atomic consume(returns boolean)，輸的 caller 收到 false 就 abort
+  // + revoke family (race lost = 雙重 rotation 試圖)。
+  const won = await refreshAdapter.consume(refreshTokenInput);
+  if (!won) {
+    // Race lost — 另一個 caller 同時 rotation 已贏走，cascade revoke 保護
+    await new D1Adapter(env.DB, 'AccessToken').revokeByGrantId(refreshRow.grantId);
+    await recordAuthEvent(env.DB, request, {
+      eventType: 'token_revoke',
+      outcome: 'failure',
+      userId: refreshRow.user_id,
+      clientId,
+      failureReason: 'refresh_token_concurrent_rotation',
+      metadata: { grantId: refreshRow.grantId },
+    }, env);
+    return failure('invalid_grant', 'refresh_token concurrent rotation detected — token family revoked');
+  }
+  const tokens = await issueTokenPair(
+    env.DB,
+    clientId,
+    refreshRow.user_id,
+    finalScopes,
+    { model: 'RefreshToken', id: refreshTokenInput, grantId: refreshRow.grantId },
+  );
+  if (!tokens) return failure('invalid_grant', 'refresh_token no longer available');
+  await recordAuthEvent(env.DB, request, {
+    eventType: 'token_issue',
+    outcome: 'success',
+    userId: refreshRow.user_id,
+    clientId,
+    metadata: { grant_type: 'refresh_token', scopes: finalScopes },
+  }, env);
+  return { ok: true, tokens, userId: refreshRow.user_id, scopes: finalScopes };
 }

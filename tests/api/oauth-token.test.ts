@@ -380,12 +380,12 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
     }, env));
     expect(res.status).toBe(400);
     expect((await res.json() as { error_description: string }).error_description).toContain('reuse detected');
-    // Cascade DELETE on grantId ran for both AccessToken + RefreshToken
+    // One family DELETE covers both AccessToken + RefreshToken
     // (v2.33.58 round 12 加 name IN allowlist — SQL 含 DELETE...json_extract 但不緊鄰)
     const cascadeCalls = sqls.filter((s) =>
       s.includes('DELETE FROM oauth_models') && s.includes('json_extract(payload'),
     );
-    expect(cascadeCalls.length).toBeGreaterThanOrEqual(2);
+    expect(cascadeCalls.length).toBe(1);
   });
 
   it('400 invalid_grant when refresh_token unknown / expired', async () => {

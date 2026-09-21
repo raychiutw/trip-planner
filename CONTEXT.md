@@ -107,7 +107,7 @@ AI 來源項目用 `origin` 記來源、`managed_by` 記目前由人或 AI 維�
 
 ## OAuth token 發行
 
-**Token lifecycle**：`functions/api/oauth/_tokenLifecycle.ts` 持有授權碼交換的驗證、一次性消耗、pair 發行與 replay 政策。入口只處理 client 認證、協定解析／輸出及既有選用的 ID token 簽署。client／redirect／PKCE／scope 驗證必須先於任何 grant 消耗或撤銷。
+**Token lifecycle**：`functions/api/oauth/_tokenLifecycle.ts` 持有授權碼交換、refresh 輪替的驗證、一次性消耗、pair 發行與 replay／family 撤銷政策。入口只處理 client 認證、協定解析／輸出及既有選用的 ID token 簽署。適用的 client／redirect／PKCE／scope 驗證必須先於任何 grant 消耗或撤銷。合法 refresh reuse 撤銷同一 grantId 的 access／refresh；其他 client 的錯誤請求不能觸發撤銷。
 
 **完整發行**：D1 adapter 以同一 batch 寫入 access、refresh 與來源 grant 關聯；消耗先以 CAS 提交，後續失敗不復活一次性 grant。來源必須仍存在且已消耗，避免已撤銷的 refresh family 在並行發行後重新出現。沿用既有 payload 與 TTL，沒有資料遷移。
 
