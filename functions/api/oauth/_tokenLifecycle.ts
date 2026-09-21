@@ -103,7 +103,8 @@ export async function exchangeAuthorizationCode(
   if (requestedScopes.some((scope) => !codeRow.scopes.includes(scope))) {
     return failure('invalid_scope', 'Cannot widen scope');
   }
-  const finalScopes = requestedScopes.length ? requestedScopes : codeRow.scopes;
+  // Authorization-code scopes remain fixed at consent; refresh supports downscoping.
+  const finalScopes = codeRow.scopes;
 
   if (codeRow.consumed) {
     // Replay attack — RFC 6749 §10.5: cascade-revoke all tokens issued from this grant

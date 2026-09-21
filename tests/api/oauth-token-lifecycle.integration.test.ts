@@ -113,6 +113,14 @@ describe('OAuth token issuance through D1 and real authorization middleware', ()
     expect((await exchange('pkce-code', { code_verifier: 'wrong' })).status).toBe(400);
     expect((await readPrivateTrip(tokens.access_token)).status).toBe(200);
   });
+  it('valid authorization-code exchange retains the scopes fixed at consent', async () => {
+    await grant('consent-scopes', { scopes: ['trips:read', 'profile'] });
+    const response = await exchange('consent-scopes', { scope: 'trips:read' });
+    expect(response.status).toBe(200);
+    const issued = await response.json() as { access_token: string; scope: string };
+    expect(issued.scope).toBe('trips:read profile');
+    expect((await readPrivateTrip(issued.access_token)).status).toBe(200);
+  });
   it('scope widening is rejected before consumption or replay revocation', async () => {
     await grant('scope-code');
     const denied = await exchange('scope-code', { scope: 'admin' });
