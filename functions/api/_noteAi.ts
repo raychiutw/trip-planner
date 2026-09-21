@@ -183,43 +183,33 @@ function parseItems(docType: NoteAiDocType, reply: string): ParseResult {
   };
 }
 
-export async function expireNoteAiJobs(
+/** 筆記自己的期限與適用範圍；由 request coordinator 依序終結、收尾。 */
+export async function expiredNoteAiRequests(
   db: D1Database,
   tripId?: string,
   docType?: NoteAiDocType,
-): Promise<void> {
-  const filters = ["status IN ('pending', 'processing')", "timeout_at <= datetime('now')"];
+): Promise<Array<Record<string, unknown>>> {
+  const scope: string[] = [];
   const values: string[] = [];
-  if (tripId) {
-    filters.push('trip_id = ?');
-    values.push(tripId);
-  }
-  if (docType) {
-    filters.push('doc_type = ?');
-    values.push(docType);
-  }
+  if (tripId) { scope.push('j.trip_id = ?'); values.push(tripId); }
+  if (docType) { scope.push('j.doc_type = ?'); values.push(docType); }
+  const rows = await db.prepare(
+    `SELECT r.* FROM trip_requests r JOIN trip_note_ai_jobs j ON j.request_id = r.id AND j.trip_id = r.trip_id
+     WHERE ((j.status IN ('pending', 'processing') AND j.timeout_at <= datetime('now'))
+       OR (j.status = 'timed_out' AND j.error_code = 'NOTES_AI_JOB_STALE' AND r.status IN ('open', 'processing')))
+       ${scope.length ? `AND ${scope.join(' AND ')}` : ''}`,
+  ).bind(...values).all<Record<string, unknown>>();
+  return rows.results ?? [];
+}
+
+async function expireNoteAiJob(db: D1Database, requestId: number, tripId: string): Promise<void> {
   await db.prepare(
     `UPDATE trip_note_ai_jobs
-     SET status = 'timed_out',
-         error_code = 'NOTES_AI_JOB_STALE',
-         error_message = 'AI 生成超過 10 分鐘',
-         completed_at = datetime('now')
-     WHERE ${filters.join(' AND ')}`,
-  ).bind(...values).run();
-  const scopeFilters = filters.slice(2);
-  await db.prepare(
-    `UPDATE trip_requests
-     SET status = 'failed',
-         reply = COALESCE(reply, 'AI 生成超過 10 分鐘'),
-         updated_at = datetime('now')
-     WHERE status IN ('open', 'processing')
-       AND id IN (
-         SELECT request_id FROM trip_note_ai_jobs
-         WHERE status = 'timed_out'
-           AND error_code = 'NOTES_AI_JOB_STALE'
-           ${scopeFilters.length > 0 ? `AND ${scopeFilters.join(' AND ')}` : ''}
-       )`,
-  ).bind(...values).run();
+     SET status = 'timed_out', error_code = 'NOTES_AI_JOB_STALE',
+         error_message = 'AI 生成超過 10 分鐘', completed_at = datetime('now')
+     WHERE request_id = ? AND trip_id = ? AND status IN ('pending', 'processing')
+       AND timeout_at <= datetime('now')`,
+  ).bind(requestId, tripId).run();
 }
 
 export async function markNoteAiJobProcessing(
@@ -227,7 +217,7 @@ export async function markNoteAiJobProcessing(
   requestId: number,
   tripId: string,
 ): Promise<void> {
-  await expireNoteAiJobs(db, tripId);
+  await expireNoteAiJob(db, requestId, tripId);
   await db.prepare(
     `UPDATE trip_note_ai_jobs
      SET status = 'processing', started_at = COALESCE(started_at, datetime('now'))
@@ -264,7 +254,7 @@ export async function applyNotesGenerationCompletion(
   job: NoteAiJobRow,
   request: Record<string, unknown>,
 ): Promise<void> {
-  await expireNoteAiJobs(db, tripId, job.doc_type);
+  await expireNoteAiJob(db, requestId, tripId);
   const active = await db.prepare(
     `SELECT id, request_id, trip_id, doc_type, generation, status
      FROM trip_note_ai_jobs
@@ -273,10 +263,12 @@ export async function applyNotesGenerationCompletion(
   if (!active) return;
 
   if (request.status === 'failed') {
-    const message = typeof request.reply === 'string' && request.reply.trim()
+    const needsConsent = request.terminal_reason === 'needs_consent';
+    const message = needsConsent ? '需要行程擁有者授權 AI 才能生成' : typeof request.reply === 'string' && request.reply.trim()
       ? request.reply.trim()
       : 'AI 生成失敗';
     if (await failJob(db, active, 'NOTES_AI_APPLY_FAILED', message)) {
+      if (needsConsent) return; // request 保留完整的授權操作指引。
       await rewriteRequestReply(
         db,
         requestId,

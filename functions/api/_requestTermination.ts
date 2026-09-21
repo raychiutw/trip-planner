@@ -2,7 +2,7 @@ import { logAudit, computeDiff } from './_audit';
 import { AppError } from './_errors';
 import { sanitizeReply } from './_validate';
 import { applyHealthCheckCompletion } from './_requestHealthCompletion';
-import { applyNotesGenerationCompletion, markNoteAiJobProcessing, type NoteAiDocType, type NoteAiJobStatus } from './_noteAi';
+import { applyNotesGenerationCompletion, expiredNoteAiRequests, markNoteAiJobProcessing, type NoteAiDocType, type NoteAiJobStatus } from './_noteAi';
 
 /**
  * Request 終結 — 見 docs/adr/0007-request-termination-cancel-and-reap.md
@@ -49,35 +49,32 @@ interface RequestRow {
  *
  * **刻意不寫 reply** —— 那格留給 ADR-0007 的「遲到完成」。UI 文案由 terminal_reason 驅動。
  *
- * ⚠️ **已知缺口**：這裡直接 UPDATE、不經 PATCH，所以 requests/[id] 的完成 hook
- * （`applyHealthCheckCompletion` / `applyNotesGenerationCompletion`）不會跑 ——
- * 被牆鐘收掉的健檢／筆記請求，其 `trip_health_reports` 會停在 pending。
- * **不是本次引入的迴歸**（改之前 request 根本永遠停在 processing，那些表一樣卡著），
- * 且第一層 api-server 走 PATCH、hook 照跑；這條要 mac mini 死透 100 分鐘才觸發。
- * 要補的話走 mint-restricted:127 已經記下的共用 failRequest helper。
+ * 收屍沿用共用終結與收尾；活動時間的 SQL 比對避免誤收剛恢復活動的 request。
  */
 export async function reapIfStale<T extends RequestRow | null>(
   db: D1Database,
   id: number | string,
   row: T,
 ): Promise<T> {
-  if (!row || TERMINAL_STATUSES.has(row.status as string)) return row;
-  // 非終結 row 才多打這一條 guarded UPDATE（in-flight 是少數，成本可忽略）。
-  // 過期判定留在 SQL：SQLite 的 datetime 字串在 JS 端解析是額外的時區踩雷面。
-  const reaped = await db
+  if (!row) return row;
+  if (TERMINAL_STATUSES.has(row.status as string)) {
+    await settleLinkedRequest(db, row);
+    const current = await db.prepare('SELECT * FROM trip_requests WHERE id = ?').bind(id).first();
+    return (current as T) ?? row;
+  }
+  const stale = await db
     .prepare(
-      `UPDATE trip_requests
-          SET status = 'failed',
-              terminal_reason = 'timed_out',
-              updated_at = datetime('now')
-        WHERE id = ?
+      `SELECT * FROM trip_requests WHERE id = ?
           AND status IN ('open', 'processing')
-          AND COALESCE(updated_at, created_at) <= datetime('now', ?)
-        RETURNING *`,
+          AND COALESCE(updated_at, created_at) <= datetime('now', ?)`,
     )
     .bind(id, `-${REQUEST_STALE_MINUTES} minutes`)
-    .first();
-  return (reaped as T) ?? row;
+    .first<Record<string, unknown>>();
+  if (!stale) return row;
+  return await updateRequest(db, stale, { status: 'failed', terminalReason: 'timed_out' }, {
+    changedBy: 'system:request-timeout',
+    ifActivityUnchanged: String(stale.updated_at ?? stale.created_at),
+  }) as T;
 }
 
 export interface RequestPatch {
@@ -87,12 +84,29 @@ export interface RequestPatch {
   terminalReason?: string;
 }
 
+/** 期限判定由筆記 domain 提供；每筆 request 都先終結，再更新自己的 job。 */
+export async function expireNoteAiJobs(db: D1Database, tripId?: string, docType?: NoteAiDocType): Promise<void> {
+  for (const row of await expiredNoteAiRequests(db, tripId, docType)) {
+    await updateRequest(db, row, {
+      status: 'failed', terminalReason: 'timed_out',
+      ...(row.reply == null ? { reply: 'AI 生成超過 10 分鐘' } : {}),
+    }, { changedBy: 'system:notes-timeout', onlyIfActive: true });
+  }
+}
+
+interface RequestUpdateOptions {
+  changedBy?: string;
+  onlyIfActive?: boolean;
+  /** 逾時入口讀取後，活動時間若已改變便不套用這次更新。 */
+  ifActivityUnchanged?: string;
+}
+
 /** 已授權的入口共用：先更新 request，再獨立嘗試關聯收尾；重送可補做。 */
 export async function updateRequest(
   db: D1Database,
   oldRow: Record<string, unknown>,
   body: RequestPatch,
-  changedBy = 'system:request-termination',
+  options: RequestUpdateOptions = {},
 ): Promise<Record<string, unknown>> {
   const id = String(oldRow.id);
   const updates: string[] = [];
@@ -146,16 +160,33 @@ export async function updateRequest(
     throw new AppError('DATA_VALIDATION', '沒有要更新的欄位');
   }
 
+  // 筆記期限也適用於遲到的 worker 通知；期限及 generation 判斷由筆記 domain 持有。
+  // expiry 自己送 failed，所以不會再次進入這個檢查。
+  if (!TERMINAL_STATUSES.has(String(oldRow.status)) && body.status !== 'failed') {
+    await expireNoteAiJobs(db, String(oldRow.trip_id));
+  }
+
   // 每次 PATCH 自動更新 updated_at
   updates.push("updated_at = datetime('now')");
 
   values.push(id);
+  const activityGuard = options.ifActivityUnchanged === undefined
+    ? '' : ' AND COALESCE(updated_at, created_at) = ?';
+  const activeGuard = options.onlyIfActive ? " AND status IN ('open', 'processing')" : '';
+  if (options.ifActivityUnchanged !== undefined) values.push(options.ifActivityUnchanged);
   const result = await db
-    .prepare(`UPDATE trip_requests SET ${updates.join(', ')} WHERE id = ? RETURNING *`)
+    .prepare(`UPDATE trip_requests SET ${updates.join(', ')} WHERE id = ?${activityGuard}${activeGuard} RETURNING *`)
     .bind(...values)
     .first();
 
   if (!result) {
+    if (options.ifActivityUnchanged !== undefined || options.onlyIfActive) {
+      const current = await db.prepare('SELECT * FROM trip_requests WHERE id = ?').bind(id).first<Record<string, unknown>>();
+      if (current) {
+        if (options.onlyIfActive && TERMINAL_STATUSES.has(String(current.status))) await settleLinkedRequest(db, current);
+        return current;
+      }
+    }
     throw new AppError('DATA_NOT_FOUND', '找不到該請求');
   }
 
@@ -171,10 +202,19 @@ export async function updateRequest(
     tableName: 'trip_requests',
     recordId: Number(id),
     action: 'update',
-    changedBy,
+    changedBy: options.changedBy ?? 'system:request-termination',
     diffJson: computeDiff(oldRow, newFields),
   });
 
+  await settleLinkedRequest(db, result as Record<string, unknown>);
+
+  return result as Record<string, unknown>;
+}
+
+/** 關聯收尾也供終結後的 GET 重試；不改 request 的狀態或原因。 */
+async function settleLinkedRequest(db: D1Database, result: Record<string, unknown>): Promise<void> {
+  const id = Number(result.id);
+  const tripId = result.trip_id as string;
   // AI 健檢 hook：v2.33.102 CR-8 confused-deputy fix — 之前單靠 `message.startsWith([AI 健檢])`
   // 認 health-check request。任何 user 在 chat 打 `[AI 健檢] ...` 都能觸發 hook，
   // 讓 service token PATCH reply 後被誤 parse 成 findings → UPSERT trip_health_reports
@@ -229,5 +269,4 @@ export async function updateRequest(
     }
   }
 
-  return result as Record<string, unknown>;
 }

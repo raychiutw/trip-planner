@@ -11,6 +11,7 @@ export async function applyHealthCheckCompletion(
   request: Record<string, unknown>,
 ) {
   const failed = request.status === 'failed';
+  const needsConsent = request.terminal_reason === 'needs_consent';
   const reply = typeof request.reply === 'string' ? request.reply : '';
   // 只有 pending 可套用成果。重試從已保存的報告重建摘要，不能重新解析摘要為空 findings。
   await db.prepare(
@@ -20,9 +21,10 @@ export async function applyHealthCheckCompletion(
   ).bind(
     failed ? 'failed' : 'completed',
     failed ? null : JSON.stringify(parseFindings(reply)),
-    failed ? (reply || '健檢失敗').slice(0, 500) : null,
+    failed ? (needsConsent ? '需要行程擁有者授權 AI 才能執行健檢' : reply || '健檢失敗').slice(0, 500) : null,
     tripId, requestId,
   ).run();
+  if (needsConsent) return; // request 保留完整的授權操作指引。
   const report = await db.prepare(
     'SELECT status, findings_json, error_message FROM trip_health_reports WHERE trip_id = ? AND request_id = ?',
   ).bind(tripId, requestId).first<{ status: string; findings_json: string | null; error_message: string | null }>();

@@ -25,11 +25,11 @@
 import { hasWritePermission, requireAuth } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import {
-  expireNoteAiJobs,
   isNoteAiDocType,
   type NoteAiDocType,
 } from '../../../../_noteAi';
 import { json } from '../../../../_utils';
+import { expireNoteAiJobs } from '../../../../_requestTermination';
 import { recordEmailEvent } from '../../../../_audit';
 import type { Env } from '../../../../_types';
 
