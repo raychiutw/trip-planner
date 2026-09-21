@@ -32,7 +32,7 @@
  *   - copy: POST /api/trips/:id/entries/:eid/copy { targetDayId }
  *   - move: PATCH /api/trips/:id/entries/:eid { day_id }
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
@@ -263,6 +263,14 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
   const [timeSlot, setTimeSlot] = useState<string>('same');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const operationGeneration = useRef(0);
+  useEffect(() => {
+    const generation = ++operationGeneration.current;
+    setSubmitting(false);
+    setSelectedDayId(null);
+    setSubmitError(null);
+    return () => { operationGeneration.current = generation + 1; };
+  }, [tripId, entryIdNum, action]);
 
   // Fetch days + entry meta on mount
   useEffect(() => {
@@ -302,6 +310,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
 
   async function handleConfirm() {
     if (!tripId || entryIdNum == null || selectedDayId == null) return;
+    const generation = operationGeneration.current;
     setSubmitting(true);
     setSubmitError(null);
 
@@ -311,12 +320,14 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
       const r = action === 'copy'
         ? await copyEntry(tripId, entryIdNum, { targetDayId: selectedDayId, targetDayNum })
         : await moveEntry(tripId, entryIdNum, { fromDayNum: dayNumFromId(days, currentDayId), toDayNum: targetDayNum, toDayId: selectedDayId });
+      if (operationGeneration.current !== generation) return;
       if (!r.ok) {
         throw new Error(r.message || (action === 'copy' ? '複製失敗' : '移動失敗'));
       }
       showToast(action === 'copy' ? '景點已複製' : '景點已移動', 'success');
       handleBack();
     } catch (err) {
+      if (operationGeneration.current !== generation) return;
       setSubmitError(err instanceof Error ? err.message : '操作失敗');
       setSubmitting(false);
     }
