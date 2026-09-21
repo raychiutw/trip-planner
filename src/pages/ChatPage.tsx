@@ -533,7 +533,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const tripMenuRef = useRef<HTMLDivElement>(null);
 
   const {
-    messages, setMessages, inflightId, setInflightId, historyLoading,
+    messages, sendMessage, inflightId, busy, historyLoading,
     loadError, retryLoadOlder, isAtBottom, scrollToBottom,
     sseError, errorReason, elapsedMs, stopping, stopWaiting,
   } = useConversation(activeTripId, bodyRef);
@@ -635,47 +635,9 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   }, [input]);
 
   const doSend = useCallback(async (text: string) => {
-    if (!activeTripId) return;
-
-    const now = Date.now();
     setInput('');
-
-    // Optimistic: user bubble + assistant typing placeholder
-    // 2026-04-29 fix:user message 之前用 `timestamp: now`(數字)+ `as unknown as
-    // ChatMessage` cast 跳 type check,實際 ChatMessage interface 要 `createdAt`
-    // ISO string。bug 導致 production 看不到 user 訊息時間戳記(meta render 條件
-    // `{m.createdAt && ...}` 永不為真)。改用 createdAt + ISO 8601。
-    setMessages((prev) => [
-      ...prev,
-      { id: now, role: 'user', text, createdAt: new Date(now).toISOString(), submittedBy: user?.email ?? null, submittedByDisplayName: user?.displayName ?? null },
-      { id: now + 1, role: 'assistant', text: '思考中…', pendingRequestId: -1 },
-    ]);
-
-    try {
-      // mode rip-out (migration 0048): tp-request skill auto-classifies intent.
-      const row = await apiFetch<{ id: number }>('/requests', {
-        method: 'POST',
-        body: JSON.stringify({ tripId: activeTripId, message: text }),
-      });
-      // Bind placeholder bubble to the real request id so the SSE effect can
-      // replace it once Mac Mini fills the reply.
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.pendingRequestId === -1 ? { ...m, pendingRequestId: row.id } : m,
-        ),
-      );
-      setInflightId(row.id);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : '網路錯誤';
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.pendingRequestId === -1
-            ? { ...m, text: `送出失敗：${msg}`, pendingRequestId: null, failed: true }
-            : m,
-        ),
-      );
-    }
-  }, [activeTripId, user, setMessages, setInflightId]);
+    await sendMessage(text, user);
+  }, [sendMessage, user]);
 
   const send = useCallback((raw: string) => {
     const text = raw.trim();
@@ -744,7 +706,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     }
   }
 
-  const composerDisabled = !activeTripId || !!inflightId;
+  const composerDisabled = !activeTripId || busy;
 
   const main = (
     <div className="tp-chat-shell" data-testid="chat-page" data-embedded={embedded ? 'true' : undefined}>

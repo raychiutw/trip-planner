@@ -126,3 +126,21 @@ export function rowToMessages(row: RawRequestRow): ChatMessage[] {
   }
   return out.map((message) => ({ ...message, requestId: row.id }));
 }
+
+/** Merge history and local bubbles using request + role, retaining the mounted identity. */
+export function mergeConversation(previous: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+  const key = (message: ChatMessage) => message.requestId
+    ? `${message.requestId}:${message.role}` : `local:${message.id}`;
+  const known = new Map(previous.map((message) => [key(message), message]));
+  const merged = new Map<string, ChatMessage>();
+  for (const message of [...incoming, ...previous]) {
+    const identity = key(message);
+    const current = merged.get(identity) ?? known.get(identity);
+    if (!current) { merged.set(identity, message); continue; }
+    const keepCurrent = (!current.pendingRequestId && !!message.pendingRequestId)
+      || (!current.pendingRequestId && !message.pendingRequestId && !!current.createdAt && !!message.createdAt
+        && current.createdAt > message.createdAt);
+    merged.set(identity, { ...(keepCurrent ? current : message), id: current.id });
+  }
+  return [...merged.values()];
+}
