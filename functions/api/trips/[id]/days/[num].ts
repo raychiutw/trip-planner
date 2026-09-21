@@ -1,6 +1,6 @@
 import { logAudit } from '../../../_audit';
 import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../../_auth';
-import { createEntriesBatch, type BatchEntrySpec } from '../../../_entryWrite';
+import { replaceDayEntries, type BatchEntrySpec, type DayReplacementEntry } from '../../../_entryWrite';
 import { AppError } from '../../../_errors';
 import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
 import { resolveEntryTimes } from '../../../_time';
@@ -107,6 +107,41 @@ function positiveInt(value: unknown): number | null {
   return value;
 }
 
+/** 先驗證會用到的形狀；不能把格式錯誤的 timeline / POI 過濾成空清單後覆寫舊 day。 */
+function validateReplacementShape(body: Record<string, unknown>): void {
+  function record(value: unknown, path: string): Record<string, unknown> {
+    const result = recordValue(value);
+    if (!result) throw new AppError('DATA_VALIDATION', `${path} 必須為物件`);
+    for (const field of ['name', 'description', 'note', 'reservation', 'reservationUrl', 'reservation_url', 'hours', 'category', 'type', 'time', 'start_time', 'end_time']) {
+      if (result[field] != null && typeof result[field] !== 'string') {
+        throw new AppError('DATA_VALIDATION', `${path}.${field} 必須為文字`);
+      }
+    }
+    for (const field of ['poiId', 'poi_id']) {
+      if (result[field] != null && positiveInt(result[field]) === null) {
+        throw new AppError('DATA_VALIDATION', `${path}.${field} 必須為正整數`);
+      }
+    }
+    return result;
+  }
+  function records(value: unknown, path: string): Record<string, unknown>[] {
+    if (value === undefined) return [];
+    if (!Array.isArray(value)) throw new AppError('DATA_VALIDATION', `${path} 必須為陣列`);
+    return value.map((item, i) => record(item, `${path}[${i}]`));
+  }
+  for (const field of ['date', 'dayOfWeek', 'label']) {
+    if (typeof body[field] !== 'string') throw new AppError('DATA_VALIDATION', `${field} 必須為文字`);
+  }
+  for (const [i, entry] of records(body.timeline, 'timeline').entries()) {
+    for (const field of ['stopPois', 'alternates', 'shopping']) records(entry[field], `timeline[${i}].${field}`);
+    if (entry.master != null) record(entry.master, `timeline[${i}].master`);
+  }
+  if (body.hotel != null) {
+    const hotel = record(body.hotel, 'hotel');
+    records(hotel.parking, 'hotel.parking');
+  }
+}
+
 function canonicalChoiceInputs(entry: TimelineEntryBody): Array<{ item: Record<string, unknown>; defaultType: string }> {
   const stopPois = recordArray(entry.stopPois);
   if (stopPois.length > 0) return stopPois.map((item) => ({ item, defaultType: 'attraction' }));
@@ -163,6 +198,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     expectedDayVersion?: number;
   };
   const body = await parseJsonBody<DayBody>(context.request);
+  validateReplacementShape(body);
 
   // v2.30.x (migration 0065)：Day-level OCC check — body 帶 expectedDayVersion 才驗
   if (body.expectedDayVersion !== undefined && body.expectedDayVersion !== currentDayVersion) {
@@ -218,7 +254,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   //  - Two new entries with same master POI → first claims the first old snapshot's alts,
   //    second claims the second old snapshot's alts (1:1 by order)
   //  - Read trip_entry_pois.sort_order=1 (canonical master since v2.29.0 DROP trip_entries.poi_id)
-  type OldEntrySnapshot = { masterPoiId: number; alts: Array<{ poiId: number; sortOrder: number }> };
+  type OldEntrySnapshot = { masterPoiId: number; alts: NonNullable<DayReplacementEntry['restoredAlternates']> };
   const oldEntrySnapshots: OldEntrySnapshot[] = [];
   {
     const entriesRow = await db
@@ -233,7 +269,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       .all<{ entry_id: number; master_poi_id: number }>();
     const entryIdToSnapshot = new Map<number, OldEntrySnapshot>();
     for (const e of entriesRow.results) {
-      const snap = { masterPoiId: e.master_poi_id, alts: [] as Array<{ poiId: number; sortOrder: number }> };
+      const snap: OldEntrySnapshot = { masterPoiId: e.master_poi_id, alts: [] };
       oldEntrySnapshots.push(snap);
       entryIdToSnapshot.set(e.entry_id, snap);
     }
@@ -241,37 +277,26 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       const altPlaceholders = entriesRow.results.map(() => '?').join(',');
       const altsRow = await db
         .prepare(
-          `SELECT entry_id, poi_id, sort_order
+          `SELECT entry_id, poi_id, sort_order, description, note, reservation, reservation_url
            FROM trip_entry_pois
            WHERE entry_id IN (${altPlaceholders}) AND sort_order > 1`,
         )
         .bind(...entriesRow.results.map((e) => e.entry_id))
-        .all<{ entry_id: number; poi_id: number; sort_order: number }>();
+        .all<{ entry_id: number; poi_id: number; sort_order: number; description: string | null; note: string | null; reservation: string | null; reservation_url: string | null }>();
       for (const a of altsRow.results) {
-        entryIdToSnapshot.get(a.entry_id)?.alts.push({ poiId: a.poi_id, sortOrder: a.sort_order });
+        entryIdToSnapshot.get(a.entry_id)?.alts.push({ poiId: a.poi_id, sortOrder: a.sort_order,
+          description: a.description, note: a.note, reservation: a.reservation, reservationUrl: a.reservation_url,
+        });
       }
     }
   }
 
   try {
-    // Batch 1: delete old entries, update day, insert new entries
-    // v2.29.0: trip_pois DROPPED, no DELETE FROM trip_pois needed. ON DELETE CASCADE
-    // on trip_entries clears trip_entry_pois automatically.
-    // #1259 entry intake：舊 entries DELETE + day version bump 跟新 entries INSERT 同一個
-    // db.batch 原子替換（createEntriesBatch 的 atomicWith），entries INSERT 本身在 module 內。
-    const atomicWith: D1PreparedStatement[] = [
-      db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(dayId),
-      // v2.30.x (migration 0065)：bump version 同 batch atomic，下次 PUT 用此 version 對齊 OCC
-      db.prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ?, version = version + 1 WHERE id = ?')
-        .bind(body.date!, body.dayOfWeek!, body.label!, dayId),
-    ];
-
     const timeline = Array.isArray(body.timeline) ? body.timeline : [];
 
     // Collect all POI data for batch find-or-create (eliminates N+1 sequential queries)
-    type TripPoiBuilder = (poiIds: number[]) => D1PreparedStatement[];
     const poiItems: FindOrCreatePoiData[] = [];
-    const tripPoiBuilders: TripPoiBuilder[] = [];
+    const parkingPoiIndices: number[] = [];
     let hotelPoiIdx = -1;
     // Phase 2: entry-level POI — each timeline entry gets a poi_id FK into pois master.
     // -1 means no POI needed (empty title / placeholder entry).
@@ -290,11 +315,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       });
       // v2.29.0: hotel 改寫 trip_days.hotel_poi_id (FK to pois)。
       // hotel-specific cols (checkout/breakfast/reservation) 已 DROPPED, body 帶值會被 ignore。
-      tripPoiBuilders.push((ids) => [
-        db.prepare(`UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?`)
-          .bind(ids[hotelPoiIdx], dayId),
-      ]);
-
       // Hotel parking — 仍寫 poi_relations (relation_type='parking')；trip_pois.parking row 不再寫。
       if (Array.isArray(h.parking)) {
         for (const p of h.parking as Record<string, unknown>[]) {
@@ -304,10 +324,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
             description: p.price ? `費用：${p.price}` : null,
             lat: p.lat as number, lng: p.lng as number, source: 'ai',
           });
-          tripPoiBuilders.push((ids) => [
-            db.prepare(`INSERT OR IGNORE INTO poi_relations (poi_id, related_poi_id, relation_type) VALUES (?, ?, 'parking')`)
-              .bind(ids[hotelPoiIdx], ids[parkIdx]),
-          ]);
+          parkingPoiIndices.push(parkIdx);
         }
       }
 
@@ -443,14 +460,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       return resolved;
     }
 
-    // Build batch2: (a) canonical entry POIs (trip_entry_pois), (b) hotel UPDATE + parking poi_relations (via tripPoiBuilders).
-    // atomicWith 的 DELETE FROM trip_entries → ON DELETE CASCADE 清掉舊 trip_entry_pois。
-    // #1259：三種 entry 形態都收成 BatchEntrySpec —— stopPois/master+alternates（explicit
-    // choices）、name fallback（正選帶 entry-level note）、無 POI 佔位（version=0）。
-    // 正選/備選寫入、同 entry 去重、version 初始、失敗補償全在 createEntriesBatch。
-    const entriesNeedingMaster: Array<{ entryId: number; poiId: number; note: string | null }> = [];
+    // POI 與備選計畫都先準備好，完整 day 交由 entry intake 原子提交。
     const fallbackByIndex = new Map<number, { poiId: number; note: string | null }>();
-    const specs: BatchEntrySpec[] = timeline.map((e, i) => {
+    const specs: DayReplacementEntry[] = timeline.map((e, i) => {
       const { startTime, endTime } = resolveEntryTimes(e as Record<string, unknown>);
       const entryLevelNote = stringOrNull((timeline[i] as Record<string, unknown>).note);
       const explicitChoices = resolveEntryChoices(i);
@@ -468,54 +480,21 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       }
       return { dayId, sortOrder: i, startTime, endTime, description: (e.description as string | null | undefined) ?? null, pois };
     });
-    await createEntriesBatch(db, specs, {
-      atomicWith,
-      onEntryId: (entryId, idx) => {
-        const fb = fallbackByIndex.get(idx);
-        if (fb) entriesNeedingMaster.push({ entryId, poiId: fb.poiId, note: fb.note });
-      },
-    });
-
-    const batch2: D1PreparedStatement[] = [];
-    for (const builder of tripPoiBuilders) {
-      batch2.push(...builder(poiIds));
-    }
-    if (batch2.length > 0) await db.batch(batch2);
-
-    const altRestoreStatements: D1PreparedStatement[] = [];
-    const nowAlt = new Date().toISOString();
     const claimed = new Set<OldEntrySnapshot>();
-    const entriesGainingAlts: number[] = [];
-    for (const { entryId, poiId: newMasterPoiId } of entriesNeedingMaster) {
+    for (const [index, fallback] of fallbackByIndex) {
       const match = oldEntrySnapshots.find(
-        (s) => s.masterPoiId === newMasterPoiId && !claimed.has(s) && s.alts.length > 0,
+        (s) => s.masterPoiId === fallback.poiId && !claimed.has(s) && s.alts.length > 0,
       );
       if (!match) continue;
       claimed.add(match);
-      entriesGainingAlts.push(entryId);
-      for (const alt of match.alts) {
-        if (alt.poiId === newMasterPoiId) continue; // would violate UNIQUE(entry_id, poi_id)
-        altRestoreStatements.push(
-          db
-            .prepare(
-              `INSERT OR IGNORE INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at)
-               VALUES (?, ?, ?, ?, ?)`,
-            )
-            .bind(entryId, alt.poiId, alt.sortOrder, nowAlt, nowAlt),
-        );
-      }
+      specs[index]!.restoredAlternates = match.alts;
     }
-    // Bump entry_pois_version on entries that gained restored alts (round 5 monotonic invariant).
-    for (const entryId of entriesGainingAlts) {
-      altRestoreStatements.push(
-        db.prepare('UPDATE trip_entries SET entry_pois_version = entry_pois_version + 1 WHERE id = ?').bind(entryId),
-      );
-    }
-    if (altRestoreStatements.length > 0) {
-      await db.batch(altRestoreStatements);
-    }
+    await replaceDayEntries(db, {
+      dayId, date: body.date!, dayOfWeek: body.dayOfWeek!, label: body.label!, entries: specs,
+      ...(hotelPoiIdx >= 0 ? { hotel: { poiId: poiIds[hotelPoiIdx]!, parkingPoiIds: parkingPoiIndices.map((i) => poiIds[i]!) } } : {}),
+    });
 
-    // Audit log AFTER both batches succeed (prevents phantom audit entries on failure)
+    // Audit log AFTER the complete day commits (no phantom success on rollback)
     await logAudit(db, {
       tripId: id, tableName: 'trip_days', recordId: dayId, action: 'update', changedBy,
       snapshot, diffJson: JSON.stringify({ day_num: Number(num), overwrite: true }),
@@ -524,13 +503,13 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     if (err instanceof AppError) throw err;
     await logAudit(db, {
       tripId: id, tableName: 'trip_days', recordId: dayId, action: 'error', changedBy,
-      diffJson: JSON.stringify({ error: 'Partial write failure', message: err instanceof Error ? err.message : String(err) }),
+      diffJson: JSON.stringify({ error: 'Day replacement rolled back', message: err instanceof Error ? err.message : String(err) }),
     });
     throw new AppError('DATA_SAVE_FAILED', '儲存失敗，請稍後再試');
   }
 
   // v2.30.x (migration 0065)：surface new OCC token 給 client 下次 PUT 用。
-  // Re-fetch the stored version after the atomic increment (atomicWith) rather than
+  // Re-fetch the stored version after the atomic day replacement rather than
   // returning the local guess (currentDayVersion + 1) — strictly more correct and
   // matches the canonical D1 read-back pattern.
   const stored = await db

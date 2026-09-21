@@ -7,7 +7,7 @@
  *
  * 固定順序：resolve POI → 讓位 / append → INSERT entry（RETURNING id）→ INSERT 正選
  * entry_pois（含 note）→ resortDayByArrival（best-effort）→ logAudit。
- * D1 無 cross-statement transaction：正選寫入失敗 → 補償 DELETE entry，不留無 master 的孤兒。
+ * 單筆新增在分開寫入正選失敗時補償 DELETE；整日替換則用一個 D1 batch transaction。
  */
 import { AppError } from './_errors';
 import { findOrCreatePoi, type FindOrCreatePoiData, type ResolvePoiOptions } from './_poi';
@@ -63,7 +63,7 @@ export interface EntryPoiFields {
 // ── 唯二的 INSERT SQL：單筆與批次共用，column parity 由結構保證 ──
 function entryInsertStmt(
   db: D1Database,
-  e: { dayId: number; sortOrder: number; startTime: string | null; endTime: string | null; description?: string | null; source?: string | null; version: 0 | 1 },
+  e: { dayId: number; sortOrder: number; startTime: string | null; endTime: string | null; description?: string | null; source?: string | null; version: number },
 ): D1PreparedStatement {
   return db.prepare(
     `INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, description, source, entry_pois_version)
@@ -73,16 +73,18 @@ function entryInsertStmt(
 
 function entryPoiInsertStmt(
   db: D1Database,
-  entryId: number,
+  entryId: number | { dayId: number; sortOrder: number },
   poiId: number,
   sortOrder: number,
   f: EntryPoiFields,
   now: string,
 ): D1PreparedStatement {
+  const entrySql = typeof entryId === 'number' ? '?' : '(SELECT id FROM trip_entries WHERE day_id = ? AND sort_order = ?)';
+  const entryValues = typeof entryId === 'number' ? [entryId] : [entryId.dayId, entryId.sortOrder];
   return db.prepare(
     `INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, added_at, updated_at, description, note, reservation, reservation_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).bind(entryId, poiId, sortOrder, now, now, f.description ?? null, f.note ?? null, f.reservation ?? null, f.reservationUrl ?? null);
+     VALUES (${entrySql}, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(...entryValues, poiId, sortOrder, now, now, f.description ?? null, f.note ?? null, f.reservation ?? null, f.reservationUrl ?? null);
 }
 
 function auditInsertStmt(db: D1Database, a: { tripId: string; changedBy: string; requestId?: number | null }, entryId: number, diff: Record<string, unknown>): D1PreparedStatement {
@@ -182,15 +184,59 @@ export interface BatchEntrySpec {
   pois: Array<{ poiId: number } & EntryPoiFields>;
 }
 
+export interface DayReplacementEntry extends BatchEntrySpec {
+  restoredAlternates?: Array<{ poiId: number; sortOrder: number } & EntryPoiFields>;
+}
+
+/**
+ * 整日替換是一個完整 domain 寫入：刪除、day、entries、junction、飯店與停車關聯
+ * 同一個 D1 transaction；任何必要 statement 失敗都回滾，不使用事後刪新資料的補償。
+ * day_id + sort_order 在此批次中唯一，讓 junction 於 SQL 內取得新 id，無須先提交。
+ * 不套用新增行程的 50-statement chunk；D1 的 query/batch 限額失敗也保留舊 day。
+ */
+export async function replaceDayEntries(db: D1Database, spec: {
+  dayId: number;
+  date: string;
+  dayOfWeek: string;
+  label: string;
+  entries: DayReplacementEntry[];
+  hotel?: { poiId: number; parkingPoiIds: number[] };
+}): Promise<void> {
+  const stmts = [
+    db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(spec.dayId),
+    db.prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ?, version = version + 1 WHERE id = ?')
+      .bind(spec.date, spec.dayOfWeek, spec.label, spec.dayId),
+  ];
+  const now = new Date().toISOString();
+  for (const e of spec.entries) {
+    const version = (e.pois.length ? 1 : 0) + (e.restoredAlternates?.length ? 1 : 0);
+    stmts.push(entryInsertStmt(db, { ...e, version }));
+    const entryRef = { dayId: spec.dayId, sortOrder: e.sortOrder };
+    const seen = new Set<number>();
+    for (const p of e.pois) {
+      if (seen.has(p.poiId)) continue;
+      seen.add(p.poiId);
+      stmts.push(entryPoiInsertStmt(db, entryRef, p.poiId, seen.size, p, now));
+    }
+    for (const p of e.restoredAlternates ?? []) {
+      if (seen.has(p.poiId)) continue;
+      seen.add(p.poiId);
+      stmts.push(entryPoiInsertStmt(db, entryRef, p.poiId, p.sortOrder, p, now));
+    }
+  }
+  if (spec.hotel) {
+    stmts.push(db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(spec.hotel.poiId, spec.dayId));
+    for (const parkingId of spec.hotel.parkingPoiIds) {
+      stmts.push(db.prepare("INSERT OR IGNORE INTO poi_relations (poi_id, related_poi_id, relation_type) VALUES (?, ?, 'parking')")
+        .bind(spec.hotel.poiId, parkingId));
+    }
+  }
+  await db.batch(stmts);
+}
+
 export interface CreateEntriesBatchOptions {
   /** 給了就每筆 entry 一列 audit_log（rollback 讀它）。匯入／clone 用 trip 級 diff 即可。 */
   audit?: { tripId: string; changedBy: string; requestId?: number | null; diff?: Record<string, unknown> };
-  /**
-   * 與 entry INSERT 同一個 db.batch 原子執行的前置 statement（整日重寫的 DELETE 舊 entries +
-   * day version bump）。給了就不分 chunk：整批一次送，超過 D1 statement 上限會整批失敗而不是
-   * 砍掉舊 entries 後只建到一半（舊碼 batch1 的語意）。
-   */
-  atomicWith?: D1PreparedStatement[];
   /** 每拿到一個 entry 就回呼（匯入／clone 逐步累積 createdEntryIds 供 rollback；複製拿完整 row 回應）。 */
   onEntryId?: (entryId: number, idx: number, row: Record<string, unknown>) => void;
 }
@@ -200,29 +246,19 @@ export async function createEntriesBatch(
   specs: BatchEntrySpec[],
   opts: CreateEntriesBatchOptions,
 ): Promise<number[]> {
-  if (specs.length === 0) {
-    if (opts.atomicWith?.length) await db.batch(opts.atomicWith);
-    return [];
-  }
-  const prelude = opts.atomicWith ?? [];
+  if (specs.length === 0) return [];
   const entryIds: number[] = [];
-  const stmts = [...prelude, ...specs.map((e) => entryInsertStmt(db, { ...e, version: e.pois.length > 0 ? 1 : 0 }))];
+  const stmts = specs.map((e) => entryInsertStmt(db, { ...e, version: e.pois.length > 0 ? 1 : 0 }));
   const onResult = (r: D1Result, idx: number) => {
-    if (idx < prelude.length) return;
     const row = r.results?.[0] as Record<string, unknown> | undefined;
     const id = row?.id;
     if (typeof id !== 'number' || id <= 0) {
-      throw new AppError('SYS_DB_ERROR', `trip_entries INSERT RETURNING id missing at index ${idx - prelude.length}`);
+      throw new AppError('SYS_DB_ERROR', `trip_entries INSERT RETURNING id missing at index ${idx}`);
     }
     entryIds.push(id);
-    opts.onEntryId?.(id, idx - prelude.length, row!);
+    opts.onEntryId?.(id, idx, row!);
   };
-  if (prelude.length > 0) {
-    // 原子替換：不分 chunk（見 atomicWith 說明）。
-    (await db.batch(stmts)).forEach(onResult);
-  } else {
-    await runChunked(db, stmts, onResult);
-  }
+  await runChunked(db, stmts, onResult);
 
   const now = new Date().toISOString();
   const tail: D1PreparedStatement[] = [];
