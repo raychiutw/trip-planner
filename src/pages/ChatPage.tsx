@@ -23,9 +23,9 @@ import clsx from 'clsx';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { useRequestSSE } from '../hooks/useRequestSSE';
+import { useConversation } from '../hooks/useConversation';
+import type { ChatMessage } from '../lib/conversation';
 import { parseUtcDate } from '../lib/parseUtcDate';
-import { useChatPagination } from '../hooks/useChatPagination';
 import { apiFetch } from '../lib/apiClient';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
@@ -43,34 +43,6 @@ interface TripSummary {
   name?: string;
   title?: string | null;
   countries?: string | null;
-}
-
-interface ChatMessage {
-  id: number | string;
-  /** Section 4.8 (terracotta-ui-parity-polish)：'day-divider' 是 synthetic
-   *  separator message，由 buildMessagesWithDividers 注入跨日邊界。 */
-  role: 'user' | 'assistant' | 'day-divider';
-  text: string;
-  /** When set, this assistant bubble is the placeholder waiting for SSE completion. */
-  pendingRequestId?: number | null;
-  /** When true, render text as markdown (assistant replies). */
-  markdown?: boolean;
-  /** When true, mark message as failed (red border). */
-  failed?: boolean;
-  /** ADR-0007：使用者自己按的「停止等待」。是終結但**不是錯誤** —— 畫中性態，
-   *  不用 destructive 色（真瀏覽器自測抓到的：原本一律套 is-failed 的紅框紅字）。 */
-  terminated?: boolean;
-  /** ISO timestamp from tp-request `created_at` / `updated_at`. Rendered as
-   *  bubble timestamp (HH:mm if today, MM/DD HH:mm 否則)。null when local
-   *  optimistic message (will fill on next reload from API)。 */
-  createdAt?: string | null;
-  /** 2026-04-29:multi-user trip 共編 chat,user message 真正 sender(從 tp-request
-   * `submittedBy` email 來)。Render bubble meta 時 split email local-part 當
-   * displayName(避免歷史訊息全標當前登入者)。 */
-  submittedBy?: string | null;
-  /** 2026-05-07：sender 的 users.display_name（後端 LEFT JOIN）給 avatar /
-   *  sender label 顯示「帳號名稱」第一字母。null → fallback email local part。 */
-  submittedByDisplayName?: string | null;
 }
 
 /** Section 4.8: format day-divider header — `2026/04/27（週六）`。 */
@@ -108,45 +80,6 @@ export function buildMessagesWithDividers(messages: ChatMessage[]): ChatMessage[
   return out;
 }
 
-// Pagination 邏輯抽到 useChatPagination hook。CHAT_PAGE_SIZE 與 LOAD_OLDER_THRESHOLD_PX
-// 從 hook 模組讀取以保持單一來源。
-
-interface RawRequestRow {
-  id: number;
-  tripId: string;
-  mode?: string;
-  message?: string | null;
-  reply?: string | null;
-  status: 'open' | 'processing' | 'completed' | 'failed';
-  submittedBy?: string | null;
-  /** 2026-05-07：submitter 帳號 display_name（API LEFT JOIN users）給 chat
-   *  avatar/sender label 顯示「帳號名稱」第一字母。null = users 表無對應。 */
-  submittedByDisplayName?: string | null;
-  processedBy?: string | null;
-  /** ADR-0007：為什麼終結。cancelled=使用者停止等待、timed_out=收屍、
-   *  needs_consent=未授權被 park、error=處理失敗。 */
-  terminalReason?: string | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-}
-
-/**
- * ADR-0007 的終結文案。取消**不會**叫停 worker（entries/days 走 owner 身份 token），
- * 所以「已停止等待」必須誠實講出行程仍可能被改，不能寫成「已中止」。
- */
-const TERMINATION_TEXT = {
-  cancelled: '已停止等待。AI 若仍在處理，完成後的回報還是會出現在這裡，行程也可能已被更動。',
-  timed_out: 'AI 一直沒有回應，已自動停止。可以重新送出這則訊息。',
-  needs_consent: '需要行程擁有者授權 AI 才能處理。授權後重新送出即可。',
-} as const;
-const TERMINATION_FALLBACK = 'AI 處理失敗，請換個說法或稍後再試。';
-
-function terminationText(reason: unknown): string {
-  if (typeof reason !== 'string') return TERMINATION_FALLBACK;
-  // 'error' 沒有專屬文案 —— 它就是通用失敗，落 fallback。
-  return TERMINATION_TEXT[reason as keyof typeof TERMINATION_TEXT] ?? TERMINATION_FALLBACK;
-}
-
 /** QA 2026-04-26 PR-K：format chat bubble timestamp。同日只顯示 HH:mm，
  *  跨日加 MM/DD prefix。tabular-nums 字體穩定 alignment。 */
 function formatChatTime(iso: string): string {
@@ -174,68 +107,6 @@ export function isGarbledMessage(text: string): boolean {
   if (/[-ÿ]{3,}/.test(text)) return true;
   if (/[\x80-\x9F]/.test(text)) return true;
   return false;
-}
-
-/** Build a message pair (user bubble + assistant bubble) from a tp-request row. */
-function rowToMessages(row: RawRequestRow): ChatMessage[] {
-  const out: ChatMessage[] = [];
-  const baseId = row.id * 2;
-  // 2026-04-29 design-review F-004:API 實際回 camelCase(`createdAt` / `updatedAt`)
-  // 因此型別與 access 改齊;原 snake_case 拿不到 timestamp,bubble meta 渲染條件
-  // 永不為真。user message 用 createdAt(送出時點),assistant reply 用 updatedAt
-  // (AI 完成時點),fallback 互換。
-  const userTs = row.createdAt ?? row.updatedAt ?? null;
-  const assistantTs = row.updatedAt ?? row.createdAt ?? null;
-  if (row.message) {
-    // v2.31.27 fix #128: AI 健檢 message 是整個 HEALTH_CHECK_MESSAGE system
-    // prompt (含 5 維度 + JSON schema + 範例)，user 看一大坨雜訊。改顯短摘要。
-    // 完整 prompt 仍存 trip_requests.message → api-server 拿到完整 text 送 Claude。
-    // v2.34.38 prod audit fix: trip-notes feature 3 個新 AI prefix 也是 long system
-    //   prompt（JSON schema + 5-8 維度），同樣 raw 顯示 → 套同 pattern substitution。
-    const displayText = row.message.startsWith('[AI 健檢]')
-      ? '已觸發 AI 行程健檢'
-      : row.message.startsWith('[行程筆記-lodging-tips]')
-      ? '已觸發 AI 行程筆記生成（住宿在地建議）'
-      : row.message.startsWith('[行程筆記-tips]')
-      ? '已觸發 AI 行程筆記生成（行前須知）'
-      : row.message.startsWith('[行程筆記-emergency]')
-      ? '已觸發 AI 行程筆記生成（緊急聯絡）'
-      : row.message;
-    out.push({
-      id: baseId,
-      role: 'user',
-      text: displayText,
-      createdAt: userTs,
-      submittedBy: row.submittedBy ?? null,
-      submittedByDisplayName: row.submittedByDisplayName ?? null,
-    });
-  }
-  if (row.status === 'completed' && row.reply) {
-    out.push({ id: baseId + 1, role: 'assistant', text: row.reply, markdown: true, createdAt: assistantTs });
-  } else if (row.status === 'failed') {
-    // reply 優先（後端 park 的指引、或 ADR-0007 的「遲到完成」回報都寫在這格）；
-    // 沒有 reply 才用 terminal_reason 生文案 —— 停止等待與收屍刻意不寫 reply。
-    const wasCancelled = row.terminalReason === 'cancelled';
-    out.push({
-      id: baseId + 1,
-      role: 'assistant',
-      text: row.reply?.trim() || terminationText(row.terminalReason),
-      // 使用者自己停的是中性態；超時／錯誤／未授權才是 destructive。
-      terminated: wasCancelled,
-      failed: !wasCancelled,
-      createdAt: assistantTs,
-    });
-  } else {
-    // open / processing — still inflight from a prior session
-    out.push({
-      id: baseId + 1,
-      role: 'assistant',
-      text: '思考中…',
-      pendingRequestId: row.id,
-      createdAt: assistantTs,
-    });
-  }
-  return out;
 }
 
 const SCOPED_STYLES = `
@@ -646,13 +517,10 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   }, [lockTripId, activeTripId, setActiveTripId]);
   // #1140 item 10：useKeyboardInset 改由 app root（KeyboardInsetTracker）全站掛一次，
   // composer 讀全站 --kb-inset 上移即可，這裡不再各自掛（避免雙掛 cleanup 打架）。
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [input, setInput] = useState('');
   // W6：聊天草稿依行程分開存（session-only ref；切換行程時存舊、載新，不讓半成品漏到別行程）。
   const draftsRef = useRef<Record<string, string>>({});
   const [tripMenuOpen, setTripMenuOpen] = useState(false);
-  const [inflightId, setInflightId] = useState<number | null>(null);
   // AI 授權 gate（Option E）：null=未知/載入中（放行，後端 mint 為最終關卡），
   // false=已知未授權（送出時攔下、跳授權 sheet），true=已授權。
   const [aiAuthorized, setAiAuthorized] = useState<boolean | null>(null);
@@ -664,21 +532,11 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const tripMenuRef = useRef<HTMLDivElement>(null);
 
-  // Cursor pagination + scroll behavior 抽到 useChatPagination hook。
-  // Hook owns: 初次載入、scroll-to-top loadOlder、prepend scrollTop 補位、
-  // race guards (loadingOlderRef / activeTripIdRef)、auto-scroll 訊息類型判斷。
-  // hasMoreOlder + loadOlder 由 hook 內部 scroll listener 自動處理,caller 只用
-  // loadError 顯示 banner、retryLoadOlder 給按鈕點按。
-  const { loadError, retryLoadOlder, isAtBottom, scrollToBottom } = useChatPagination<RawRequestRow, ChatMessage>({
-    activeTripId,
-    bodyRef,
-    messages,
-    setMessages,
-    rowToMessages,
-    isInflightStatus: (row) => row.status === 'open' || row.status === 'processing',
-    onInitialResume: (resumeId) => setInflightId(resumeId),
-    setHistoryLoading,
-  });
+  const {
+    messages, setMessages, inflightId, setInflightId, historyLoading,
+    loadError, retryLoadOlder, isAtBottom, scrollToBottom,
+    sseError, errorReason, elapsedMs, stopping, stopWaiting,
+  } = useConversation(activeTripId, bodyRef);
 
   // Deep-link prefill: /chat?tripId=...&prefill=... — DaySection 的「+ 加景點」
   // 入口會帶這兩個 param 過來，讓 user 落地就看到準備好的請求草稿。撐到 active
@@ -710,50 +568,6 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trips]);
-
-  // Subscribe to SSE for inflight request id; flips status to 'completed' / 'failed'.
-  // v2.31.6: useRequestSSE 改成 polling-always-on + SSE optimization；errorReason
-  // 區分 'auth_expired' / 'sse_failed' / 'network'；elapsedMs 給 UI 顯示等待時間。
-  const { status, error: sseError, errorReason, elapsedMs } = useRequestSSE(inflightId);
-
-  // ADR-0007「停止等待」：只終結 request、放開 composer，不追殺 mac mini 上的 worker。
-  // 一送出就在，不看時鐘 —— elapsedMs 每次 mount 重新計時，拿它當出現條件會讓重整後
-  // 的殭屍再等 3 分鐘才給得出出口，而重整正是使用者卡住時的第一反應。
-  const [stopping, setStopping] = useState(false);
-  const stopWaiting = useCallback(async () => {
-    if (!inflightId || stopping) return;
-    const id = inflightId;
-    setStopping(true);
-    let stopped = true;
-    try {
-      await apiFetch(`/requests/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'failed', terminalReason: 'cancelled' }),
-      });
-    } catch {
-      // 標不掉也要讓使用者脫身（composer 被 inflight 鎖死，這是唯一出口），
-      // 但文案不能假裝成功 —— 伺服器沒確認就是沒確認，100 分鐘牆鐘會兜底。
-      stopped = false;
-    }
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.pendingRequestId === id
-          ? {
-              ...m,
-              text: stopped
-                ? TERMINATION_TEXT.cancelled
-                : '已在這裡停止等待，但伺服器沒有確認 —— AI 可能仍在處理。',
-              pendingRequestId: null,
-              // 停成功 = 中性；沒停成功才是真的出事，走 destructive。
-              terminated: stopped,
-              failed: !stopped,
-            }
-          : m,
-      ),
-    );
-    setInflightId(null);
-    setStopping(false);
-  }, [inflightId, stopping]);
 
   // v2.33.47 round 7b LOW: memoize buildMessagesWithDividers — 之前每 keystroke
   // 都 O(n) walk messages list。1000-msg trip 在打字時明顯卡。
@@ -820,68 +634,6 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
   }, [input]);
 
-  // React to SSE status: when inflight request completes, fetch reply + replace
-  // pending bubble. On 'failed' (or transient SSE error after request landed),
-  // mark the bubble as failed.
-  useEffect(() => {
-    if (!inflightId) return;
-
-    if (status === 'completed') {
-      let cancelled = false;
-      (async () => {
-        try {
-          const row = await apiFetch<{ reply?: string | null; status?: string }>(`/requests/${inflightId}`);
-          if (cancelled) return;
-          const reply = (row.reply ?? '').trim() || '（沒有回覆內容）';
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.pendingRequestId === inflightId
-                ? { ...m, text: reply, pendingRequestId: null, markdown: true }
-                : m,
-            ),
-          );
-        } catch {
-          if (cancelled) return;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.pendingRequestId === inflightId
-                ? { ...m, text: '無法取得 AI 回覆，請稍後再試。', pendingRequestId: null, failed: true }
-                : m,
-            ),
-          );
-        } finally {
-          if (!cancelled) setInflightId(null);
-        }
-      })();
-      return () => { cancelled = true; };
-    }
-
-    if (status === 'failed') {
-      let cancelled = false;
-      (async () => {
-        // 後端 park（如 no_consent 未授權）會把 user-facing 指引寫進 reply。優先顯示它，
-        // 否則像「重送並點授權」的 NEEDS_CONSENT_REPLY 要 reload 才看得到，live session 只剩通用訊息。
-        // 沒有 reply 才用 ADR-0007 的 terminal_reason 生文案 —— 停止等待與收屍刻意不寫 reply。
-        let text = TERMINATION_FALLBACK;
-        try {
-          const row = await apiFetch<{ reply?: string | null; terminalReason?: string | null }>(`/requests/${inflightId}`);
-          const reply = (row.reply ?? '').trim();
-          text = reply || terminationText(row.terminalReason);
-        } catch { /* 落用通用訊息 */ }
-        if (cancelled) return;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.pendingRequestId === inflightId
-              ? { ...m, text, pendingRequestId: null, failed: true, markdown: true }
-              : m,
-          ),
-        );
-        setInflightId(null);
-      })();
-      return () => { cancelled = true; };
-    }
-  }, [status, inflightId]);
-
   const doSend = useCallback(async (text: string) => {
     if (!activeTripId) return;
 
@@ -923,7 +675,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         ),
       );
     }
-  }, [activeTripId, user]);
+  }, [activeTripId, user, setMessages, setInflightId]);
 
   const send = useCallback((raw: string) => {
     const text = raw.trim();

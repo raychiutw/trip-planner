@@ -66,6 +66,8 @@ _Avoid_: 在頁面或元件直接 `apiFetchRaw` entries endpoint、自己 dispat
 
 **首次終結與收尾重試**：已授權的 request 更新由 `_requestTermination.updateRequest` 持有。第一次確立的終結狀態與原因不被後來通知改寫；request 先終結，健檢與筆記再獨立收尾。關聯查詢或資料庫寫入暫時失敗時，可重送終結通知補做。已保存的健檢 findings 不重新解析為空資料；筆記沿用 generation 與人工資料保護，遲到回覆不復活 request。
 
+**對話終結狀態**：主 tab 與行程 sheet 共用 `useConversation`。歷史與即時結果經同一個 request → 泡泡轉換；SSE 只有 status 時，由對話模組補讀完整 request。停止等待為中性態，真正失敗保留失敗態；完成但沒有 reply 也不再等待。終結後仍以原 request 身分接收遲到回覆，合併原泡泡、不重新鎖住輸入框。每 30 秒及切回頁面時補讀可見的未完成回報；暫時讀取失敗保留已知狀態並重試。
+
 **停止等待**：
 使用者主動終結一筆還在等的 request。語意是「我不等了」，讓輸入框放開、隊列解開 —— **不是**叫 AI 停手，AI 可能還會繼續改行程。
 _Avoid_: 「取消」「中斷」「abort」（都會讓人以為 AI 停了，實際上沒有）
