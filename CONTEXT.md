@@ -83,7 +83,7 @@ _Avoid_: 卡住、stuck（歧義：同時被拿來指殭屍請求與「我不想
 _Avoid_: 超時（只描述其中一層）、清理（跟 orphan tmux session 的清理混淆）
 
 **request worker**：
-api-server 裡驅動 requests pipeline 的核心（`scripts/lib/request-worker.ts`）：peek 隊列 → 取 token（/tp-request 走 owner-restricted）→ 同 skill 有 session 就 busy → spawn；接受 fetch / tmux / clock / spawn adapter 注入，測試用 fake 進同一個 interface。api-server 本體只組裝真實 adapter 與 HTTP / cron 接線。
+api-server 裡驅動 requests pipeline 的核心（`scripts/lib/request-worker.ts`）：同 skill 鎖定及 session 去重 → peek 隊列 → 取 token（/tp-request 走 owner-restricted）→ 建立 session → 真實 REPL 就緒及提交協定 → watch → 收尾。接受 fetch／process／pane／clock adapter 注入；adapter 只執行外部效果，不回呼 worker。隔離暫時未就緒不啟動也不收屍；建立、REPL 或提交失敗先確認並關閉已有 session，再以 error 收尾。drained 不收新進 request，died／90 分鐘 deadline 走 timed_out；所有退出均釋放該 skill 的鎖。api-server 本體保留 HTTP／cron／寄信與健康狀態接線。
 _Avoid_: 在 api-server 頂層函式裡直接寫決策（那樣只能 readFileSync 測）；「worker」單獨講指這個 module，tmux 裡跑的 claude session 叫 session。
 
 **遲到完成**：

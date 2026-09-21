@@ -15,7 +15,7 @@ function makeDeps(over: Partial<WorkerDeps> & { sessions?: string[]; pending?: {
   const nowMs = 1_700_000_000_000;
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.includes('/api/requests?status=')) {
-      const items = over.pending && url.includes('status=processing') ? [over.pending] : [];
+      const items = !url.includes('tripId=') && over.pending && url.includes('status=processing') ? [over.pending] : [];
       return jsonRes(200, { items });
     }
     if (url.endsWith('/api/oauth/mint-restricted')) {
@@ -24,6 +24,8 @@ function makeDeps(over: Partial<WorkerDeps> & { sessions?: string[]; pending?: {
     }
     return jsonRes(404, {});
   });
+  let prompt = '❯ ';
+  let killed = false;
   const deps: WorkerDeps = {
     fetch: fetchMock as unknown as typeof fetch,
     apiBase: 'https://api.test',
@@ -35,8 +37,8 @@ function makeDeps(over: Partial<WorkerDeps> & { sessions?: string[]; pending?: {
         if (format.includes('session_created')) return sessions.map((s) => `${s}|${Math.floor(nowMs / 1000) - 10}`).join('\n');
         return sessions.join('\n');
       }),
-      kill: vi.fn(),
-      has: vi.fn(() => true),
+      kill: vi.fn(() => { killed = true; }),
+      has: vi.fn(() => !killed),
     },
     clock: { now: () => nowMs },
     sleep: vi.fn(async () => undefined),
@@ -45,8 +47,10 @@ function makeDeps(over: Partial<WorkerDeps> & { sessions?: string[]; pending?: {
     logError: vi.fn(),
     alert: vi.fn(),
     containmentReady: vi.fn(() => true),
-    spawnContained: vi.fn(async () => true),
-    spawnPlain: vi.fn(async () => true),
+    pane: { capture: () => prompt, sendKeys: (_name, keys) => { prompt = keys === 'Enter' ? '❯ ' : `❯ ${keys}`; } },
+    attachLog: vi.fn(),
+    createContainedSession: vi.fn(async () => true),
+    createPlainSession: vi.fn(async () => true),
     ...over,
   };
   return { deps, fetchMock };
@@ -68,8 +72,8 @@ describe('tick', () => {
     const { deps } = makeDeps({ pending: null });
     const w = createRequestWorker(deps);
     expect(await w.tick('api')).toBe('idle');
-    expect(deps.spawnContained).not.toHaveBeenCalled();
-    expect(deps.spawnPlain).not.toHaveBeenCalled();
+    expect(deps.createContainedSession).not.toHaveBeenCalled();
+    expect(deps.createPlainSession).not.toHaveBeenCalled();
   });
 
   it('有 pending → peek(processing→open) → mint-restricted(request_id, API_SECRET) → contained spawn，session 名 = prefix + now + pid', async () => {
@@ -79,7 +83,7 @@ describe('tick', () => {
     const mint = fetchMock.mock.calls.find((c) => String(c[0]).endsWith('/mint-restricted'))!;
     expect(JSON.parse(String((mint[1] as RequestInit).body))).toEqual({ request_id: '77' });
     expect((mint[1] as RequestInit).headers).toMatchObject({ Authorization: 'Bearer secret' });
-    expect(deps.spawnContained).toHaveBeenCalledWith('tripline-tp-request-1700000000000-4242', '/tp-request', 'restricted-77', 'trip-a');
+    expect(deps.createContainedSession).toHaveBeenCalledWith('tripline-tp-request-1700000000000-4242', '/tp-request', 'restricted-77', 'trip-a');
     expect(w.status()).toMatchObject({ processedCount: 1, running: false });
   });
 
@@ -87,13 +91,13 @@ describe('tick', () => {
     const { deps } = makeDeps({ pending: { id: 1, tripId: 't' }, sessions: ['tripline-request-123-1'] });
     const w = createRequestWorker(deps);
     expect(await w.tick('job')).toBe('busy');
-    expect(deps.spawnContained).not.toHaveBeenCalled();
+    expect(deps.createContainedSession).not.toHaveBeenCalled();
   });
 
   it('同 skill 併發 tick → 第二個 busy（per-skill 鎖）；不同 skill 不互鎖', async () => {
     let release!: () => void;
     const gate = new Promise<boolean>((r) => { release = () => r(true); });
-    const { deps } = makeDeps({ pending: { id: 1, tripId: 't' }, spawnContained: vi.fn(() => gate) });
+    const { deps } = makeDeps({ pending: { id: 1, tripId: 't' }, createContainedSession: vi.fn(() => gate) });
     const w = createRequestWorker(deps);
     const first = w.tick('api', '/tp-request');
     expect(w.isRunning('/tp-request')).toBe(true);
@@ -110,8 +114,8 @@ describe('tick', () => {
     const w = createRequestWorker(deps);
     expect(await w.tick('api')).toBe('idle');
     expect(deps.alert).toHaveBeenCalledWith('mint-MINT_FAILED', 'failed', expect.stringContaining('mint-restricted'));
-    expect(deps.spawnPlain).not.toHaveBeenCalled();
-    expect(deps.spawnContained).not.toHaveBeenCalled();
+    expect(deps.createPlainSession).not.toHaveBeenCalled();
+    expect(deps.createContainedSession).not.toHaveBeenCalled();
   });
 
   it('containment 未就緒 → /tp-request 拒絕 spawn（failed + alert）', async () => {
@@ -119,7 +123,7 @@ describe('tick', () => {
     const w = createRequestWorker(deps);
     expect(await w.tick('api')).toBe('failed');
     expect(deps.alert).toHaveBeenCalledWith('containment-not-ready', 'failed', expect.any(String));
-    expect(deps.spawnPlain).not.toHaveBeenCalled();
+    expect(deps.createPlainSession).not.toHaveBeenCalled();
   });
 
   it('flag OFF 時 /tp-request 落到未-contained 路徑 → 拒絕；/tp-daily-check 走 service token plain spawn', async () => {
@@ -128,7 +132,7 @@ describe('tick', () => {
     expect(await w.tick('api', '/tp-request')).toBe('failed');
     expect(deps.alert).toHaveBeenCalledWith('tp-request-uncontained-refused', 'failed', expect.any(String));
     expect(await w.tick('job', '/tp-daily-check')).toBe('spawned');
-    expect(deps.spawnPlain).toHaveBeenCalledWith('tripline-tp-daily-check-1700000000000-4242', '/tp-daily-check', 'svc-token');
+    expect(deps.createPlainSession).toHaveBeenCalledWith('tripline-tp-daily-check-1700000000000-4242', '/tp-daily-check', 'svc-token');
   });
 });
 
@@ -162,10 +166,11 @@ describe('#1265 收屍（ADR-0007 第一層）', () => {
     let now = 1_700_000_000_000;
     let rounds = 0;
     const patched: string[] = [];
+    let alive = true;
     const { deps } = makeDeps({
       clock: { now: () => now },
       sleep: vi.fn(async (ms: number) => { now += ms; rounds++; }),
-      tmux: { list: () => '', kill: vi.fn(), has: vi.fn(() => opts.sessionDiesAfter == null || rounds < opts.sessionDiesAfter) },
+      tmux: { list: () => '', kill: vi.fn(() => { alive = false; }), has: vi.fn(() => alive && (opts.sessionDiesAfter == null || rounds < opts.sessionDiesAfter)) },
     });
     (deps.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(async (url: string, init?: RequestInit) => {
       if (url.includes('/api/requests?status=') && url.includes('tripId=')) {

@@ -8,6 +8,7 @@
  */
 
 import { failPendingRequests, type ReapReason } from './fail-pending-requests';
+import { waitForRepl, submitSkillCommand, type TmuxDeps } from './tmux-pane';
 
 export interface PendingRequest { requestId: string; tripId: string }
 export type WatchOutcome = 'drained' | 'died' | 'deadline';
@@ -36,10 +37,11 @@ export interface WorkerDeps {
   logError: (msg: string) => void;
   alert: (key: string, state: 'healthy' | 'failed', message: string) => void;
   containmentReady: () => boolean;
-  /** contained 路徑（tp-agent + MCP-only）：檔案佈置、tmux new-session、REPL 等真 adapter。 */
-  spawnContained: (sessionName: string, skillCommand: string, token: string, restrictTrip: string) => Promise<boolean>;
-  /** 未隔離路徑（/tp-daily-check 等信任 skill）。 */
-  spawnPlain: (sessionName: string, skillCommand: string, token: string) => Promise<boolean>;
+  /** External file/process effects only; true means a session was created. */
+  createContainedSession: (sessionName: string, skillCommand: string, token: string, restrictTrip: string) => Promise<boolean>;
+  createPlainSession: (sessionName: string, skillCommand: string, token: string) => Promise<boolean>;
+  pane: Pick<TmuxDeps, 'capture' | 'sendKeys'>;
+  attachLog: (sessionName: string, skillCommand: string) => void;
 }
 
 export const ALLOWED_SKILLS = new Set(['/tp-request', '/tp-daily-check']);
@@ -216,7 +218,7 @@ export function createRequestWorker(deps: WorkerDeps) {
     const sessionName = `${sessionPrefixForSkill(skillCommand)}${deps.clock.now()}-${deps.pid}`;
     if (acquired.restrictTrip) {
       if (deps.containmentReady()) {
-        return deps.spawnContained(sessionName, skillCommand, acquired.token, acquired.restrictTrip);
+        return runSession(sessionName, skillCommand, acquired);
       }
       deps.logError('containment infra 未就緒（tp-agent/sudo/settings/self-probe）→ /tp-request 不 spawn（拒絕未隔離 session 處理不可信輸入）');
       deps.alert('containment-not-ready', 'failed',
@@ -229,7 +231,39 @@ export function createRequestWorker(deps: WorkerDeps) {
         '/tp-request 落到未-contained 路徑 → 不 spawn。要跑請開 TP_REQUEST_USER_TOKEN=1 走 Option E contained 路徑。');
       return false;
     }
-    return deps.spawnPlain(sessionName, skillCommand, acquired.token);
+    return runSession(sessionName, skillCommand, acquired);
+  }
+
+  async function runSession(sessionName: string, skillCommand: string, acquired: AcquiredToken): Promise<boolean> {
+    let created = false;
+    const pane = { ...deps.pane, sleep: deps.sleep, log: deps.log };
+    try {
+      created = acquired.restrictTrip
+        ? await deps.createContainedSession(sessionName, skillCommand, acquired.token, acquired.restrictTrip)
+        : await deps.createPlainSession(sessionName, skillCommand, acquired.token);
+      if (!created) throw new Error('session 建立失敗');
+      if (acquired.restrictTrip) deps.attachLog(sessionName, skillCommand);
+      if (!(await waitForRepl(pane, sessionName))) throw new Error('REPL 未就緒');
+      if (!(await submitSkillCommand(pane, sessionName, skillCommand))) throw new Error('skill 未提交');
+      if (acquired.restrictTrip) {
+        deps.log(`Spawned CONTAINED session ${sessionName} (trip=${acquired.restrictTrip}, dontAsk+MCP-only+tp-agent, interactive REPL)`);
+        await watchContainedSession(sessionName, acquired.restrictTrip);
+      } else {
+        deps.attachLog(sessionName, skillCommand);
+        deps.log(`Spawned tmux session: ${sessionName} (skill=${skillCommand}, fire-and-forget; skill self-destructs at end)`);
+      }
+      return true;
+    } catch (error) {
+      deps.logError(`session ${sessionName} 失敗：${error instanceof Error ? error.message : String(error)}`);
+      if (created || deps.tmux.has(sessionName)) closeSession(sessionName);
+      if (acquired.restrictTrip) await reap(acquired.restrictTrip, 'error');
+      return false;
+    }
+  }
+
+  function closeSession(sessionName: string): void {
+    deps.tmux.kill(sessionName);
+    if (deps.tmux.has(sessionName)) throw new Error(`session ${sessionName} 未能終止，保留 request 等待後續處理`);
   }
 
   /** 該 trip 是否仍有 open/processing 請求；查不到一律當「有」（保守：不誤殺）。 */
@@ -243,8 +277,8 @@ export function createRequestWorker(deps: WorkerDeps) {
         );
         if (!res.ok) return true;
         const data = (await res.json().catch(() => null)) as { items?: unknown[] } | null;
-        if (data == null) return true;
-        if ((data.items?.length ?? 0) > 0) return true;
+        if (!Array.isArray(data?.items)) return true;
+        if (data.items.length > 0) return true;
       }
       return false;
     } catch {
@@ -283,7 +317,7 @@ export function createRequestWorker(deps: WorkerDeps) {
         break;
       }
     }
-    deps.tmux.kill(sessionName);
+    closeSession(sessionName);
     if (outcome !== 'drained') await reap(restrictTrip, 'timed_out');
     return outcome;
   }
