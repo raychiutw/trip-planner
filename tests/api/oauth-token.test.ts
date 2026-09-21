@@ -6,7 +6,7 @@ import { onRequestPost } from '../../functions/api/oauth/token';
 import { hashPassword } from '../../src/server/password';
 
 interface MockEnv {
-  DB?: { prepare: ReturnType<typeof vi.fn> };
+  DB?: { prepare: ReturnType<typeof vi.fn>; batch?: (statements: { run: () => Promise<unknown> }[]) => Promise<unknown[]> };
   OAUTH_SIGNING_PRIVATE_KEY?: string;
 }
 
@@ -62,6 +62,9 @@ function makeAuthorizationCodePayload(overrides: Partial<Record<string, unknown>
 }
 
 function makeContext(body: unknown, env: MockEnv, contentType = 'application/json'): Parameters<typeof onRequestPost>[0] {
+  // Legacy protocol fixtures execute batch statements; transaction guarantees are
+  // covered separately by real D1 lifecycle integration tests.
+  if (env.DB) env.DB.batch ??= (statements) => Promise.all(statements.map((statement) => statement.run()));
   let bodyStr: string;
   if (contentType === 'application/x-www-form-urlencoded' && typeof body === 'object' && body !== null) {
     bodyStr = new URLSearchParams(body as Record<string, string>).toString();

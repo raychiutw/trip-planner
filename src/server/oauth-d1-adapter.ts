@@ -101,6 +101,37 @@ export class D1Adapter {
     return (result.meta?.changes ?? 0) === 1;
   }
 
+  /** Store the complete issuance and its source link in one transaction.
+   * The consumed source must still exist: refresh reuse may have revoked it.
+   * Consumption commits separately and is never undone by issuance rollback.
+   */
+  async storeIssuedPair(
+    sourceId: string,
+    payload: AdapterPayload & { grantId: string },
+    access: { id: string; expiresIn: number },
+    refresh: { id: string; expiresIn: number },
+  ): Promise<boolean> {
+    const serialized = JSON.stringify(payload);
+    if (serialized.length > 16 * 1024) throw new Error('oauth_models payload too large');
+    const now = Date.now();
+    const statements = [
+      ['AccessToken', access] as const,
+      ['RefreshToken', refresh] as const,
+    ].map(([name, token]) => this.db.prepare(
+      `INSERT INTO oauth_models (name, id, payload, expires_at)
+       SELECT ?, ?, ?, ? FROM oauth_models
+       WHERE name = ? AND id = ? AND expires_at >= ?
+         AND json_extract(payload, '$.consumed') IS NOT NULL`,
+    ).bind(name, token.id, serialized, now + token.expiresIn * 1000, this.name, sourceId, now));
+    statements.push(this.db.prepare(
+      `UPDATE oauth_models SET payload = json_set(payload, ?, ?)
+       WHERE name = ? AND id = ? AND expires_at >= ?
+         AND json_extract(payload, '$.consumed') IS NOT NULL`,
+    ).bind('$.grantId', payload.grantId, this.name, sourceId, now));
+    const result = await this.db.batch(statements);
+    return result.every((item) => (item.meta?.changes ?? 0) === 1);
+  }
+
   async destroy(id: string): Promise<void> {
     await this.db
       .prepare('DELETE FROM oauth_models WHERE name = ? AND id = ?')
