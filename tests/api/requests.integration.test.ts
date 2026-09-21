@@ -247,14 +247,16 @@ describe('PATCH /api/requests/:id', () => {
       expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
     });
 
-    it('completed → failed 允許（failed 任何狀態都可標記）', async () => {
+    it('completed 後收到 failed 仍回 200，保留首次完成狀態', async () => {
       const ctx = mockContext({
         request: jsonRequest(`https://test.com/api/requests/${monoReqId}`, 'PATCH', { status: 'failed' }),
         env,
         auth: mockServiceAuth(),
         params: { id: String(monoReqId) },
       });
-      expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+      const response = await callHandler(onRequestPatch, ctx);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ status: 'completed', terminalReason: null });
     });
 
     it('未知 status value 拒絕 400', async () => {
@@ -337,6 +339,22 @@ describe('終結原因 terminal_reason (ADR-0007)', () => {
       terminalReason: 'because-i-said-so',
     }));
     expect(resp.status).toBe(400);
+  });
+
+  it('重複終結保留第一次停止等待的原因，遲到回覆仍可讀回', async () => {
+    const id = await newRequest('首次終結原因');
+    await callHandler(onRequestPatch, patch(id, { status: 'failed', terminalReason: 'cancelled' }));
+    const response = await callHandler(onRequestPatch, patch(id, {
+      status: 'failed', terminalReason: 'timed_out', reply: '已完成整理',
+    }));
+    expect(response.status).toBe(200);
+    const reread = await callHandler(onRequestGetOne, mockContext({
+      request: new Request(`https://test.com/api/requests/${id}`), env,
+      auth: mockAuth(), params: { id: String(id) },
+    }));
+    expect(await reread.json()).toMatchObject({
+      status: 'failed', terminalReason: 'cancelled', reply: '已完成整理',
+    });
   });
 });
 

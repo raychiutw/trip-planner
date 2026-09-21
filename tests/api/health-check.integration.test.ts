@@ -308,6 +308,29 @@ describe('GET /api/trips/:id/health-check', () => {
 });
 
 describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
+  it('重送完成通知後，健檢報告仍保留原本的 findings', async () => {
+    const tripId = 'health-repeated-completion';
+    await seedTrip(db, { id: tripId });
+    await seedOneEntry(tripId);
+    const started = await callHandler(onRequestPost, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${tripId}/health-check`, 'POST'),
+      env, auth: mockAuth(), params: { id: tripId },
+    }));
+    const { report } = await started.json() as { report: { requestId: number } };
+    const patch = (body: Record<string, unknown>) => callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${report.requestId}`, 'PATCH', body),
+      env, auth: mockServiceAuth(), params: { id: String(report.requestId) },
+    }));
+    const finding = { severity: 'high', title: '午餐時間衝突', description: '餐廳營業時間已過' };
+    expect((await patch({ status: 'completed', reply: JSON.stringify([finding]) })).status).toBe(200);
+    expect((await patch({ status: 'completed' })).status).toBe(200);
+    const reread = await callHandler(onRequestGet, mockContext({
+      request: new Request(`https://test.com/api/trips/${tripId}/health-check`),
+      env, auth: mockAuth(), params: { id: tripId },
+    }));
+    expect(await reread.json()).toMatchObject({ report: { status: 'completed', findings: [finding] } });
+  });
+
   it('reply 是 JSON array → findings 寫入 + status=completed', async () => {
     // 先建 trip + request via POST endpoint 取得 requestId
     await seedTrip(db, { id: 'trip-hook' });

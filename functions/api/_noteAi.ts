@@ -514,14 +514,13 @@ export async function applyNotesGenerationCompletion(
     results = await db.batch(statements);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (await failJob(db, active, 'NOTES_AI_APPLY_FAILED', message)) {
-      await rewriteRequestReply(
-        db,
-        requestId,
-        `AI 生成失敗 — 套用內容時發生錯誤\n\n可重試：[前往行程筆記 →](/trip/${tripId}/notes)`,
-      );
-    }
-    return;
+    // D1 batch 已回滾；保留原始 reply 與待套用狀態，讓重送終結通知可補做。
+    // 無效 AI 輸出仍走上方的 domain failure，不混同暫時性的資料庫故障。
+    await db.prepare(
+      `UPDATE trip_note_ai_jobs SET error_code = 'NOTES_AI_APPLY_FAILED', error_message = ?
+       WHERE id = ? AND generation = ? AND status IN ('pending', 'processing')`,
+    ).bind(message.slice(0, 500), active.id, active.generation).run();
+    throw error;
   }
 
   const completion = results.at(-1);

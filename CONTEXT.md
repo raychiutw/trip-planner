@@ -56,6 +56,8 @@ _Avoid_: 在頁面或元件直接 `apiFetchRaw` entries endpoint、自己 dispat
 
 一筆 request 結束時，**「結束了」與「為什麼結束」是兩個欄位**：`status` 說終結與否，`terminal_reason` 說原因。讀取端兩個都要看。理由（以及為什麼不把原因塞進 `status`）見 [ADR-0007](docs/adr/0007-request-termination-cancel-and-reap.md)。
 
+**首次終結與收尾重試**：已授權的 request 更新由 `_requestTermination.updateRequest` 持有。第一次確立的終結狀態與原因不被後來通知改寫；request 先終結，健檢與筆記再獨立收尾。關聯查詢或資料庫寫入暫時失敗時，可重送終結通知補做。已保存的健檢 findings 不重新解析為空資料；筆記沿用 generation 與人工資料保護，遲到回覆不復活 request。
+
 **停止等待**：
 使用者主動終結一筆還在等的 request。語意是「我不等了」，讓輸入框放開、隊列解開 —— **不是**叫 AI 停手，AI 可能還會繼續改行程。
 _Avoid_: 「取消」「中斷」「abort」（都會讓人以為 AI 停了，實際上沒有）
