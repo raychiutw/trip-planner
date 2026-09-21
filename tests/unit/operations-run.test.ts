@@ -5,7 +5,7 @@ const require = createRequire(import.meta.url);
 function linkIo(failedDays = false) {
   return {
     getToken: async () => 'test-token',
-    fetch: vi.fn(async (url: string) => {
+    fetch: vi.fn(async (url: string, _options?: RequestInit) => {
       if (url.endsWith('/api/trips')) return Response.json([{ id: 'good', published: true }, { id: 'bad', published: true }]);
       if (url.endsWith('/good/days')) return Response.json([{ timeline: [{ location: { googleQuery: 'https://maps.google.com/good' } }] }]);
       if (url.endsWith('/bad/days')) return failedDays ? new Response('', { status: 503 }) : Response.json([]);
@@ -313,4 +313,32 @@ it('message output does not fabricate zero Workers metrics after a query failure
   const message = buildDailyCheckMessage({ ...result, date: '2026-09-21', workers: { error: 'Metrics unavailable' } });
   expect(message).not.toContain('Workers: 0 req');
   expect(message).toContain('workers：未完成');
+});
+
+it('link collection waits for its token and authenticates trip and day requests', async () => {
+  const { runOperations } = require('../../scripts/lib/operations-run');
+  const { createReportSources } = require('../../scripts/daily-report');
+  const io = linkIo();
+  let resolveToken!: (token: string) => void;
+  io.getToken = () => new Promise<string>((resolve) => { resolveToken = resolve; });
+  const pending = runOperations({ links: createReportSources(io).links });
+  expect(io.fetch).not.toHaveBeenCalled();
+  resolveToken('controlled-token');
+  const result = await pending;
+  expect(result.summary.healthy).toBe(true);
+  for (const [url, options] of io.fetch.mock.calls) {
+    if (url.includes('/api/trips')) expect(options?.headers).toEqual({ Authorization: 'Bearer controlled-token' });
+  }
+});
+
+it('default daily-check configuration comes from process environment', async () => {
+  const { runOperations } = require('../../scripts/lib/operations-run');
+  const { createCheckSources } = require('../../scripts/daily-check');
+  const io = checkIo();
+  vi.stubEnv('SENTRY_ORG', 'controlled-org');
+  vi.stubEnv('SENTRY_AUTH_TOKEN', 'controlled-token');
+  try {
+    await runOperations(createCheckSources({ ...io, env: undefined }));
+    expect(io.fetch).toHaveBeenCalledWith(expect.stringContaining('/projects/controlled-org/'), expect.objectContaining({ headers: { Authorization: 'Bearer controlled-token' } }));
+  } finally { vi.unstubAllEnvs(); }
 });

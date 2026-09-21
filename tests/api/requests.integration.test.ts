@@ -134,6 +134,39 @@ describe('GET /api/requests', () => {
 });
 
 describe('PATCH /api/requests/:id', () => {
+  it.each(['open', 'processing', 'completed', 'failed'])('accepts current status %s through the real PATCH and GET endpoints', async (status) => {
+    const row = await db.prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id')
+      .bind('trip-req', 'status validation ' + status, 'user@test.com').first<{ id: number }>();
+    const response = await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${row!.id}`, 'PATCH', { status }),
+      env, auth: mockServiceAuth(), params: { id: String(row!.id) },
+    }));
+    expect(response.status).toBe(200);
+    const read = await callHandler(onRequestGetOne, mockContext({
+      request: new Request(`https://test.com/api/requests/${row!.id}`),
+      env, auth: mockAuth(), params: { id: String(row!.id) },
+    }));
+    expect(read.status).toBe(200);
+    expect(await read.json()).toMatchObject({ status });
+  });
+
+  it.each(['closed', 'received', 'invalid'])('rejects retired or unknown status %s without changing the request', async (status) => {
+    const row = await db.prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id')
+      .bind('trip-req', 'invalid status ' + status, 'user@test.com').first<{ id: number }>();
+    const response = await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${row!.id}`, 'PATCH', { status }),
+      env, auth: mockServiceAuth(), params: { id: String(row!.id) },
+    }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: 'DATA_VALIDATION' } });
+    const read = await callHandler(onRequestGetOne, mockContext({
+      request: new Request(`https://test.com/api/requests/${row!.id}`),
+      env, auth: mockAuth(), params: { id: String(row!.id) },
+    }));
+    expect(read.status).toBe(200);
+    expect(await read.json()).toMatchObject({ status: 'open' });
+  });
+
   it('service token（companion scope）回覆請求 → 200', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/requests/${requestId}`, 'PATCH', {

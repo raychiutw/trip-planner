@@ -3,11 +3,11 @@ import { describe, it, expect } from 'vitest';
 
 /**
  * requests API structural validations — source checks for
- * functions/api/requests.ts and functions/api/requests/[id].ts
+ * functions/api/requests.ts, API types and historical migrations.
+ * PATCH status validation is covered through real requests in requests.integration.test.ts.
  */
 
 const requestsTs = readFileSync('functions/api/requests.ts', 'utf-8');
-const requestIdTs = readFileSync('functions/api/requests/[id]/index.ts', 'utf-8');
 const apiTypes = readFileSync('src/types/api.ts', 'utf-8');
 
 /* ===== POST /api/requests — message 欄位 ===== */
@@ -33,28 +33,6 @@ describe('POST /api/requests', () => {
     expect(requestsTs).not.toContain("body.mode");
     expect(requestsTs).not.toContain("'trip-edit'");
     expect(requestsTs).not.toContain("'trip-plan'");
-  });
-});
-
-/* ===== PATCH /api/requests/:id — 四態 status ===== */
-
-describe('PATCH /api/requests/:id', () => {
-  it('validates four status values', () => {
-    expect(requestIdTs).toContain('open');
-    expect(requestIdTs).toContain('processing');
-    expect(requestIdTs).toContain('completed');
-    expect(requestIdTs).toContain('failed');
-  });
-
-  it('does NOT accept legacy "closed" status', () => {
-    // The valid statuses array should not contain 'closed'
-    const validLine = requestIdTs.match(/STATUS_ORDER\s*=\s*\[([^\]]+)\]/);
-    expect(validLine).not.toBeNull();
-    expect(validLine[1]).not.toContain("'closed'");
-  });
-
-  it('validates status with AppError', () => {
-    expect(requestIdTs).toContain('DATA_VALIDATION');
   });
 });
 
