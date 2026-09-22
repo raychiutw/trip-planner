@@ -364,11 +364,11 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 }
 
 /* 跳到最新：浮在訊息區右下、composer 之上。只在 user 捲離底部時渲染。
-   位置用 composer 高度當基準避免壓到輸入框；HIG 的圓形浮動控制項語彙。 */
+   以 composer 為定位容器，跟隨輸入區高度與鍵盤位移，避免壓到送出按鈕。 */
 .tp-chat-jump-latest {
   position: absolute;
   inset-inline-end: 20px;
-  inset-block-end: calc(76px + env(safe-area-inset-bottom));
+  inset-block-end: calc(100% + 12px);
   z-index: 4;
   inline-size: 36px;
   block-size: 36px;
@@ -404,11 +404,11 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 }
 @media (max-width: 760px) {
   /* 跳到最新：浮在訊息區右下、composer 之上。只在 user 捲離底部時渲染。
-   位置用 composer 高度當基準避免壓到輸入框；HIG 的圓形浮動控制項語彙。 */
+   以 composer 為定位容器，跟隨輸入區高度與鍵盤位移，避免壓到送出按鈕。 */
 .tp-chat-jump-latest {
   position: absolute;
   inset-inline-end: 20px;
-  inset-block-end: calc(76px + env(safe-area-inset-bottom));
+  inset-block-end: calc(100% + 12px);
   z-index: 4;
   inline-size: 36px;
   block-size: 36px;
@@ -914,25 +914,24 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         )}
       </div>
 
-      {/* 捲到底箭頭：只在 user 捲離底部時出現。auto-scroll 已改成「停在底部才拉」，
-          這是他回到最新的路。aria-live 不用 —— 它是導覽控制項不是狀態播報。 */}
-      {activeTripId && !isAtBottom && (
-        <button
-          type="button"
-          className="tp-chat-jump-latest"
-          data-testid="chat-jump-to-latest"
-          onClick={scrollToBottom}
-          aria-label="跳到最新訊息"
-          title="跳到最新訊息"
-        >
-          <span aria-hidden="true">↓</span>
-        </button>
-      )}
-
       <form
         className="tp-chat-composer"
         onSubmit={(e) => { e.preventDefault(); void send(input); }}
       >
+        {/* 捲到底箭頭跟隨 composer 定位；只在 user 捲離底部時出現。
+            aria-live 不用 —— 它是導覽控制項不是狀態播報。 */}
+        {activeTripId && !isAtBottom && (
+          <button
+            type="button"
+            className="tp-chat-jump-latest"
+            data-testid="chat-jump-to-latest"
+            onClick={scrollToBottom}
+            aria-label="跳到最新訊息"
+            title="跳到最新訊息"
+          >
+            <span aria-hidden="true">↓</span>
+          </button>
+        )}
         <label htmlFor="chat-input" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
           輸入訊息
         </label>
