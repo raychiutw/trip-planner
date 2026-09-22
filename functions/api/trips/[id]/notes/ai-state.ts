@@ -1,6 +1,7 @@
 import { hasPermission, requireAuth } from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { expireNoteAiJobs, NOTE_AI_DOC_TYPES } from '../../../_noteAi';
+import { NOTE_AI_DOC_TYPES } from '../../../_noteAi';
+import { expireNoteAiJobs } from '../../../_requestTermination';
 import { json } from '../../../_utils';
 import type { Env } from '../../../_types';
 

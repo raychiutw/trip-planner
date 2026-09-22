@@ -3,8 +3,7 @@
  * rollback-safe D1 writes. Consumed by both POST /api/trips/import (attacker JSON)
  * and POST /api/share/:token/clone (trusted server-side share payload).
  *
- * D1 has no interactive transaction, db.batch() can't chain a generated id into a
- * later statement, and has a ~100-statement-per-batch limit — so callers run CHUNKED
+ * New-trip creation consumes generated ids in JavaScript, so callers run CHUNKED
  * sequential batches with INSERT…RETURNING id, track created ids, and connect-root
  * rollback on any failure. POIs are find-or-create by UNIQUE(name,type): pre-existing
  * rows are reused AS-IS (never mutated → no shared-catalog poisoning), only newly-
@@ -13,7 +12,7 @@
 import { AppError } from '../_errors';
 import { genTripId } from '../../../src/lib/tripId';
 
-export const BATCH_CHUNK = 50; // stay well under D1's ~100-statement-per-batch limit
+export const BATCH_CHUNK = 50; // application chunk size for new-trip creation; not D1's batch statement limit
 export const MAX_TRIPS_PER_USER = 1000;
 
 type Stmt = D1PreparedStatement;

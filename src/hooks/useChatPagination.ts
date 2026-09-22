@@ -41,6 +41,7 @@ export interface UseChatPaginationArgs<TRow extends PaginatedRow, TMsg extends {
   messages: TMsg[];
   setMessages: React.Dispatch<React.SetStateAction<TMsg[]>>;
   rowToMessages: (row: TRow) => TMsg[];
+  mergeMessages?: (previous: TMsg[], incoming: TMsg[]) => TMsg[];
   /** 從 raw row 抽出 inflight 狀態 (open / processing) 用以恢復 SSE。 */
   isInflightStatus?: (row: TRow) => boolean;
   /** 初次載入完成後若有 inflight row, 通知 caller resume SSE。 */
@@ -97,17 +98,21 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
    *  進來時讀 state 會拿到上一輪的值。 */
   const atBottomRef = useRef(true);
   const [loadError, setLoadError] = useState<Error | null>(null);
+  const [initialAttempt, setInitialAttempt] = useState(0);
+  const loadedTripRef = useRef<string | null>(null);
 
   // v2.33.40 round 4.5: stash callbacks in refs so caller can pass inline
   // arrows without 撼動 effect deps（之前依賴「caller 傳穩定 ref」隱性 contract，
   // 任何 ChatPage:531-534 inline arrow drift 都會 silently 觸發 stale closure）。
   const setMessagesRef = useRef(setMessages);
   const rowToMessagesRef = useRef(rowToMessages);
+  const mergeMessagesRef = useRef(args.mergeMessages);
   const isInflightStatusRef = useRef(isInflightStatus);
   const onInitialResumeRef = useRef(onInitialResume);
   const setHistoryLoadingRef = useRef(setHistoryLoading);
   useEffect(() => { setMessagesRef.current = setMessages; }, [setMessages]);
   useEffect(() => { rowToMessagesRef.current = rowToMessages; }, [rowToMessages]);
+  useEffect(() => { mergeMessagesRef.current = args.mergeMessages; }, [args.mergeMessages]);
   useEffect(() => { isInflightStatusRef.current = isInflightStatus; }, [isInflightStatus]);
   useEffect(() => { onInitialResumeRef.current = onInitialResume; }, [onInitialResume]);
   useEffect(() => { setHistoryLoadingRef.current = setHistoryLoading; }, [setHistoryLoading]);
@@ -118,6 +123,7 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
   /** loadOlder 進行中時若 user 切換 trip,舊 fetch 回來會把舊 trip 訊息 prepend
    *  到新 trip 的空陣列。Ref 追當下 trip,await 後比對不一致就放棄套用 state。 */
   const activeTripIdRef = useRef<string | null>(activeTripId);
+  const generationRef = useRef(0);
   /** loadingOlder 同步 gate：useState 不夠 (setLoadingOlder async batched),
    *  iOS momentum scroll 會在 tick 內觸發多次 onScroll 全看到 false 重複 fetch。
    *  Ref 同步寫入即時擋。 */
@@ -130,7 +136,14 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
 
   // Initial load: 最新 CHAT_PAGE_SIZE 筆。sort=desc 拿最新,client reverse 成時間軸 asc。
   useEffect(() => {
+    const generation = ++generationRef.current;
+    loadingOlderRef.current = false;
+    lastErrorAtRef.current = 0;
+    atBottomRef.current = true;
+    setIsAtBottom(true);
+    prevFirstMsgIdRef.current = null; prevLastMsgIdRef.current = null;
     if (!activeTripId) {
+      loadedTripRef.current = null;
       setMessagesRef.current([]);
       setOldestCursor(null);
       setHasMoreOlder(false);
@@ -140,7 +153,10 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     }
     let cancelled = false;
     setHistoryLoadingRef.current?.(true);
-    setMessagesRef.current([]);
+    if (loadedTripRef.current !== activeTripId) {
+      loadedTripRef.current = activeTripId;
+      setMessagesRef.current([]);
+    }
     setOldestCursor(null);
     setHasMoreOlder(false);
     setLoadError(null);
@@ -158,7 +174,11 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
           for (const m of rowToMessagesRef.current(row)) next.push(m);
           if (isInflightStatusRef.current?.(row)) resumeId = row.id;
         }
-        setMessagesRef.current(next);
+        setMessagesRef.current((previous) => {
+          if (mergeMessagesRef.current) return mergeMessagesRef.current(previous, next);
+          const existing = new Set(previous.map((message) => message.id));
+          return [...next.filter((message) => !existing.has(message.id)), ...previous];
+        });
         if (oldest) setOldestCursor(oldest);
         setHasMoreOlder(hasMore);
         if (resumeId != null) onInitialResumeRef.current?.(resumeId);
@@ -170,8 +190,8 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
         if (!cancelled) setHistoryLoadingRef.current?.(false);
       }
     })();
-    return () => { cancelled = true; };
-  }, [activeTripId]);
+    return () => { cancelled = true; generationRef.current = generation + 1; };
+  }, [activeTripId, initialAttempt]);
 
   // 同步 activeTripIdRef 給 loadOlder 用作 race guard
   useEffect(() => {
@@ -186,6 +206,7 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     // Backoff：連續失敗 < ERROR_BACKOFF_MS 內不重試,擋 storm fetch
     if (loadError && Date.now() - lastErrorAtRef.current < ERROR_BACKOFF_MS) return;
     const fetchTripId = activeTripId;
+    const generation = generationRef.current;
     // 同步寫 ref 擋住同 tick 多次 onScroll 觸發 (iOS momentum scroll)
     loadingOlderRef.current = true;
     try {
@@ -198,7 +219,7 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
       });
       const res = await apiFetch<PageResponse<TRow>>(`/requests?${params.toString()}`);
       // Trip 切換中不套用任何 state,避免舊 trip 訊息污染新 trip 列表
-      if (activeTripIdRef.current !== fetchTripId) return;
+      if (activeTripIdRef.current !== fetchTripId || generationRef.current !== generation) return;
       const { rows, oldest, hasMore } = parseRequestPage(res);
       // 後端回 hasMore=true 但 items=[] 的邊界 (未來 backend regression 防線):
       // flip hasMoreOlder=false 避免使用者繼續 scroll 觸發無限空 fetch loop
@@ -216,23 +237,26 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
       if (el) {
         prependScrollRef.current = { height: el.scrollHeight, top: el.scrollTop };
       }
-      setMessagesRef.current((prev) => [...older, ...prev]);
+      setMessagesRef.current((prev) => mergeMessagesRef.current?.(prev, older)
+        ?? [...older.filter((message) => !prev.some((current) => current.id === message.id)), ...prev]);
       if (oldest) setOldestCursor(oldest);
       setHasMoreOlder(hasMore);
       setLoadError(null);
     } catch (err) {
+      if (generationRef.current !== generation) return;
       lastErrorAtRef.current = Date.now();
       setLoadError(err instanceof Error ? err : new Error(String(err)));
     } finally {
-      loadingOlderRef.current = false;
+      if (generationRef.current === generation) loadingOlderRef.current = false;
     }
   }, [activeTripId, oldestCursor, hasMoreOlder, loadError, bodyRef]);
 
   const retryLoadOlder = useCallback(() => {
     setLoadError(null);
     lastErrorAtRef.current = 0;
-    void loadOlder();
-  }, [loadOlder]);
+    if (!oldestCursor) setInitialAttempt((attempt) => attempt + 1);
+    else void loadOlder();
+  }, [loadOlder, oldestCursor]);
 
   // Scroll trigger（一個 listener 兩件事）：
   //   1. 距頂 LOAD_OLDER_THRESHOLD_PX 內 + 還有更舊 + 沒在載 → 載更舊

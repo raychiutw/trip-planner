@@ -17,7 +17,7 @@ contained session **絕不可**帶 `--dangerously-skip-permissions` / `bypassPer
 
 `containmentReady()` 在 spawn 時還會跑一次 **negative self-probe**：如果 `tp-agent` **讀得到** `.env.local` 或 `~ray/.tripline`，就 fail-closed（避免 (0a) 的 chmod 沒設好卻默默上線一個有洞的隔離）。
 
-**額外一層（實測發現）**：contained session 用 disposable `CLAUDE_CONFIG_DIR`，所以 repo 的 `.claude/settings.local.json`（有多條 `Bash(...)` allow）會因 **workspace untrusted** 被 Claude Code **整批忽略**（`Ignoring N permissions.allow entries ... this workspace has not been trusted`）。等於連「cwd=repo 吃到專案 allow」那條殘留路徑也堵掉了 —— 別去互動式信任這個 workspace。
+**工作目錄**：contained session 使用 disposable `CLAUDE_CONFIG_DIR`，wrapper 切到乾淨的 `sessionDir`，並只預先信任該空目錄。workspace 不是 repo，因此不會載入 repo 的 `.claude/settings.local.json` allow；skill 由 config 下的 symlink 探索。不要把工作目錄改回 repo 或預先信任 repo。
 
 **認證**：contained 是非登入 user、沒 login keychain，訂閱 `/login` 存不了 token。改用 `claude setup-token` 產的一年期 **`CLAUDE_CODE_OAUTH_TOKEN`**（precedence 高於 `/login`），由 api-server 從 `.env.local` 讀出、寫進 0600 檔、經 sh wrapper 注入 contained claude 的 env（不上 argv）。見 (0a) 步驟 4。
 
@@ -58,7 +58,9 @@ sudo -n -u tp-agent test -r /Users/ray/.tripline && echo "④ ⚠️外洩" || e
 grep -q '^CLAUDE_CODE_OAUTH_TOKEN=' /Users/ray/Projects/trip-planner/.env.local && echo "⑤ OAuth token OK" || echo "⑤ ⚠️缺 OAuth token"
 ```
 
-在這步做完之前，api-server 一律 **fail-closed**：帶 restrict_trip 的請求會降級成 read-only service token 的 session（改不了行程內容，但仍有 ops scope）並發 alert —— **絕不會**把可寫 token 跑在未隔離的 session 裡。
+在這步做完之前，api-server 一律 **fail-closed**：mint 或隔離檢查失敗就不啟動 `/tp-request`，並發 alert。沒有 service token 降級路徑。隔離暫時未就緒保留 pending request，下一輪可再試。
+
+`request-worker` 持有完整生命週期：peek、mint、建立 session、等待 REPL、提交 skill、watch 及收尾。api-server 的 `createContainedSession` 只配置檔案並執行 tmux 建立；不回呼 worker。建立失敗依實際 session 狀態收尾；REPL 或提交失敗先 kill 再標記 request error。drained 只結束 session；死亡或 90 分鐘期限走 timed_out，100 分鐘 API 牆鐘仍為第二層。
 
 ## (0b) 開 flag 前的 live 驗證 —— ✅ 已通過（2026-07-11 dry-run，非 `-p`）
 
@@ -73,7 +75,7 @@ grep -q '^CLAUDE_CODE_OAUTH_TOKEN=' /Users/ray/Projects/trip-planner/.env.local 
 
 ### 互動 REPL 無人值守怎麼跑起來（非 `-p`）
 
-Claude Code 的互動模式對 untrusted folder **一定**跳 trust 對話框（只有 `-p` 會停用），且能力鎖必須拿掉 `--dangerously-skip-permissions`（非-contained 路徑靠它跳過 trust；contained 不能用）。所以 contained 用這套組合（`buildContainedShellCommand` + `spawnContainedSession`）讓互動 REPL 無人值守直達 prompt：
+Claude Code 的互動模式對 untrusted folder **一定**跳 trust 對話框（只有 `-p` 會停用），且能力鎖必須拿掉 `--dangerously-skip-permissions`（非-contained 路徑靠它跳過 trust；contained 不能用）。所以 contained 用這套組合（`buildContainedShellCommand` + `createContainedSession`）讓互動 REPL 無人值守直達 prompt：
 
 1. **cwd = 乾淨的 sessionDir**（sh wrapper 內 `cd "$1"`，因為 tp-agent 進得去自己的 0700 目錄、而 api-server 用戶的 tmux `-c` 進不去）→ workspace 不是 repo，沒有 `.claude/settings.local.json` 的 allow，trust 對話框無 allow 可套。
 2. **pre-seed `<config>/.claude.json`**：`hasCompletedOnboarding:true`（跳過登入/主題 onboarding）+ `projects[sessionDir].hasTrustDialogAccepted:true`（pre-trust 那個空 sessionDir → 跳過 trust 對話框；空目錄信任=零授權）。
@@ -82,5 +84,5 @@ Claude Code 的互動模式對 untrusted folder **一定**跳 trust 對話框（
 ## 已知 follow-up（不擋 merge；flag 目前 OFF）
 
 - **per-session Google-API 額度** —— `recomputeTravel` / `enrichPoi` / `poiSearch` 會打有計費的 Google API，目前沒有 per-session 上限；被注入的 message 可能在 90 分鐘 session 內燒額度。之後用 `bumpRateLimit` 加一個以 request 為 key 的額度。
-- **降級路徑 token 上 argv** —— service token fallback 仍把 token 直接插在 tmux 指令列（既有行為、`ps` 看得到）。之後比照 contained 路徑改走 stdin。
+- **信任 skill 的 token 上 argv** —— `/tp-daily-check` 的 plain session 仍把 service token 插在 tmux 指令列（既有行為、`ps` 看得到）；這不是 `/tp-request` 的 fallback。後續可比照 contained 路徑改走 stdin。
 - **deny 用列舉（Claude Code 沒有「只准 allow、其餘全 deny」的權威模式）** —— `dontAsk` 會把未列的 meta-tool（Skill / ToolSearch / Workflow / Artifact …）當豁免放行，所以 `settings.json` 得**逐一列 deny**。風險：claude 未來新增一個沒列到的工具會漏。緩解：(1) **Layer A**（tp-agent OS 隔離）擋掉 FS/exec 類漏洞（讀憑證、跑 script）；(2) 真正需要 deny 擋的是**網路/外洩/spawn 類**（WebFetch / Artifact / SendUserFile / Workflow / Agent），這些已列。升 claude 版本後值得重跑 (0b) 的工具清單檢查、必要時補 deny。

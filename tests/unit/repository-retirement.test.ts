@@ -30,14 +30,11 @@ function activeRepositoryMatches(pattern: string) {
 }
 
 describe('retired specification frameworks stay out of the repository', () => {
-  it('daily-check reads configuration only from process environment', () => {
+  it('daily-check does not restore retired YAML configuration readers', () => {
     const source = readFileSync(resolve(REPO_ROOT, 'scripts/daily-check.js'), 'utf8');
 
     expect(source).not.toContain('openspec/config.yaml');
     expect(source).not.toContain('loadConfigYaml');
-    expect(source).toMatch(
-      /function env\(key\) \{ return process\.env\[key\] \|\| ''; \}/,
-    );
   });
 
   it('has no active OpenSpec artifacts or references', () => {

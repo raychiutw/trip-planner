@@ -91,7 +91,7 @@ src/
 │   ├── trip/                TimelineRail（拆 RailRow / EntryTimeChip / RailRowMenu / StopPoiChoiceCard）/
 │   │                        DayNav / DaySection / TripMapRail / DayMap ...
 │   └── shared/              Icon / Toast / ErrorBoundary / PageNav ...
-├── hooks/                   useTrip / useDarkMode / usePrintMode / usePermissions ...
+├── hooks/                   useTrip / useConversation / useDarkMode / usePrintMode / usePermissions ...
 ├── lib/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
 │   ├── entryMutations.ts    entry 變更：動詞 module（createEntry/setMaster/deleteEntry/...）回 Result，
@@ -149,7 +149,9 @@ functions/api/
 ├── _audit.ts            寫 audit_log
 ├── _errors.ts           AppError + errorResponse
 ├── _poi.ts              findOrCreatePoi 單一 POI resolver（policy: keep/fill-null，#1256 合併舊 resolvePoi）
-├── _entryWrite.ts       entry intake：createEntry / createEntriesBatch，唯一可 INSERT trip_entries 的入口（#1259，eslint 守門）
+├── _entryWrite.ts       entry intake：createEntry / createEntriesBatch / replaceDayEntries，唯一可 INSERT trip_entries 的入口（#1259，eslint 守門）
+├── _requestTermination.ts  共用 request 狀態更新、可重試的健檢／筆記收尾與 stale reap
+├── _requestHealthCompletion.ts  健檢結果與對話摘要收尾
 ├── _entry_pois.ts       trip_entry_pois junction CRUD (v2.27.0 multi-POI per entry)
 ├── _session.ts / _cookies.ts  V2 OAuth session cookie helpers
 ├── _auth_audit.ts       auth_audit_log writer (HMAC IP hash via SESSION_IP_HASH_SECRET, v2.33.62)
@@ -157,6 +159,7 @@ functions/api/
 ├── _maps_lock.ts        Google Maps Platform kill switch (app_settings)
 ├── _app_settings.ts     typed app_settings accessor (v2.33.62)
 ├── oauth/               OAuth 2.1 server endpoints (signup/login/forgot/reset/verify/authorize/consent/token/logout/well-known)
+│   └── _tokenLifecycle.ts  授權碼交換與 refresh 輪替的驗證、消耗、完整發行及 family 撤銷
 ├── _types.ts            Env / shared types
 ├── _utils.ts            共用 DB / header helpers
 ├── _validate.ts         input validation + garbled guard
@@ -212,8 +215,9 @@ Entry 顯示名稱以 `trip_entry_pois.sort_order=1 -> pois.name` 為 canonical 
 **POI 讀寫**: backend 用 `findOrCreatePoi(db, data, opts)` (functions/api/_poi.ts，`opts.policy` 為
 `'keep'` 或 `'fill-null'`) + `syncEntryMaster` / `addAlternate` / `setMaster`
 (functions/api/_entry_pois.ts)。**建立 entry** 一律經 entry intake（`createEntry` /
-`createEntriesBatch`，functions/api/_entryWrite.ts）—— 單筆新增、收藏加入、複製、分享 clone、
-匯入、整日重寫六條路徑共用同一段建立邏輯，見 `CONTEXT.md` 的「entry intake」詞條。
+`createEntriesBatch`／`replaceDayEntries`，functions/api/_entryWrite.ts）。整日重寫由 `replaceDayEntries`
+一次提交 entries、junction、備選資料、hotel／parking 與版本；其他建立入口保留共用 intake，
+見 `CONTEXT.md` 的「entry intake」詞條。
 
 ### Google Maps Platform stack (v2.23.0+)
 

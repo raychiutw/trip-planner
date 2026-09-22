@@ -74,9 +74,14 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
     }
 
     terminalRef.current = false;
+    let disposed = false;
+    const controllers = new Set<AbortController>();
+    setStatus(null); setProcessedBy(null); setError(null); setErrorReason(null); setElapsedMs(0);
     const startTime = Date.now();
 
     const cleanupAll = () => {
+      disposed = true;
+      for (const controller of controllers) controller.abort();
       if (esRef.current) {
         esRef.current.close();
         esRef.current = null;
@@ -93,7 +98,7 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
     };
 
     const settle = (s: RequestStatus, pb: ProcessedBy) => {
-      if (terminalRef.current) return;
+      if (disposed || terminalRef.current) return;
       terminalRef.current = true;
       setStatus(s);
       setProcessedBy(pb);
@@ -112,11 +117,13 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
     // (95% CF p99 < 1s)，超 10s 直接視為 unresponsive 進下輪 retry。
     const POLL_FETCH_TIMEOUT_MS = 10_000;
     const pollOnce = async (): Promise<void> => {
-      if (terminalRef.current) return;
+      if (disposed || terminalRef.current) return;
       const ctrl = new AbortController();
+      controllers.add(ctrl);
       const abortTimer = setTimeout(() => ctrl.abort(), POLL_FETCH_TIMEOUT_MS);
       try {
         const res = await apiFetchRaw(`/requests/${requestId}`, { signal: ctrl.signal });
+        if (disposed) return;
         if (res.status === 401) {
           setErrorReason('auth_expired');
           setError(new Error('登入已過期，請重新整理頁面'));
@@ -125,6 +132,7 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
         }
         if (!res.ok) return;
         const data = (await res.json()) as { status?: unknown; processedBy?: unknown };
+        if (disposed) return;
         const narrowedStatus = narrowStatus(data.status);
         const narrowedProcessedBy = narrowProcessedBy(data.processedBy);
         if (!narrowedStatus) return; // unknown status — ignore, next poll retries
@@ -139,6 +147,7 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
         // network error / abort timeout — next tick retries
       } finally {
         clearTimeout(abortTimer);
+        controllers.delete(ctrl);
       }
     };
     // v2.33.39 round 4: 立即 fire 一次，原本只 schedule 30s 後第一次 poll，
@@ -153,12 +162,14 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
     esRef.current = es;
 
     es.onopen = () => {
+      if (disposed) return;
       setIsConnected(true);
       setError((prev) => (prev?.message === 'SSE 連線失敗' ? null : prev));
       setErrorReason((prev) => (prev === 'sse_failed' ? null : prev));
     };
 
     es.onmessage = (event) => {
+      if (disposed) return;
       try {
         const data = JSON.parse(event.data) as Record<string, unknown>;
         if (data.error) {
@@ -183,6 +194,7 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
     };
 
     es.onerror = () => {
+      if (disposed) return;
       // 不 close — 讓 EventSource auto-reconnect。polling 兜底，不 silent fail。
       setIsConnected(false);
       setErrorReason('sse_failed');

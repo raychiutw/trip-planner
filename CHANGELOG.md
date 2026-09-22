@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.90] - 2026-09-21
+
+### Fixed
+- 請求取消、拒絕或逾時後，健檢與筆記都會完成收尾；暫時失敗可重試，舊請求不會覆寫新一輪結果。
+- 整日重寫會完整提交景點、備選、住宿、停車與版本；寫入中途失敗時保留原本的一天。切換行程或快速搬移、複製景點時，較晚回來的舊資料不再覆蓋目前畫面。
+- 主聊天頁與行程內聊天共用請求狀態。停止等待、SSE 中斷、歷史載入與晚到回覆會保留同一則訊息，送出失敗可重試，載入舊訊息保持閱讀位置。
+- AI worker 啟動失敗、工作消失或逾時時會正確收尾；確認 session 已停止後才終結請求，避免仍在執行的工作被提前標成失敗。
+- OAuth 授權交換與 refresh 輪替只發出完整 token pair；錯誤 client、PKCE 或 scope 不會消耗或撤銷合法授權，並行重用也不會重新建立已撤銷的 family。
+- 維運 JSON、HTML 與訊息摘要明確區分健康、零資料及未完成。保留部分查詢的成功證據，納入 route health 異常，查詢失敗時不再顯示假的零用量；npm audit 仍保留 180 秒 timeout。
+
+### Changed
+- 請求收尾、整日寫入、對話、worker、OAuth 與維運結果各由單一模組持有完整流程，既有入口與授權範圍保持相容。
+
 ## [2.57.89] - 2026-09-18
 
 ### Fixed

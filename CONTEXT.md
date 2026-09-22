@@ -33,14 +33,22 @@ trips ─┬─ trip_days ── trip_entries ── trip_entry_pois
 | **favorite（收藏）** | 跨行程的願望清單。`poi_favorites`。**不是** entry、不屬於任何一天。 |
 
 **entry intake**：
-後端「在某一天建立一個 entry 並掛上正選 POI」的單一 module（`createEntry`）。所有建立路徑（單筆新增、收藏加入、複製、分享 clone、匯入、整日重寫）都經它，規矩（POI resolve policy、讓位／append、正選含 note、`entry_pois_version=1`、resort、audit、補償）只寫在這裡。
+後端「在某一天建立 entry 並掛上正選／備選 POI」的 module（`_entryWrite`）。單筆新增／收藏使用 `createEntry`，複製／分享 clone／匯入使用 `createEntriesBatch`，整日重寫使用 `replaceDayEntries`；共用 entry 與 junction 欄位規則。
+
+**整日替換**先完成輸入驗證與 POI resolve，再於同一 D1 batch 提交舊 entries 刪除、day 欄位與版本、新 entries、正選／備選、飯店及停車關聯。必要寫入失敗由資料庫回滾，舊 day 不需事後補償；不使用新增批次的 50 筆分批策略。批次超過平台限制也回報失敗，不宣稱已儲存。共用 POI 的 `fill-null` 政策維持原樣。
+
+名稱重寫依正選 POI 與原順序一對一承接舊備選，保留各自 description、note、reservation、reservation_url。新的明示 POI 清單取代原清單。新 entry 有 POI 時 `entry_pois_version=1`，承接備選時為 2；合法無 POI 佔位為 0。day 的 `version` 每次成功替換加一，失敗不變。
 _Avoid_: 在 handler 直接 `INSERT INTO trip_entries` / `trip_entry_pois`；與前端的「entry 變更」（動詞 module，見下）是不同層。
 
 **entry 變更**：
 前端改動 entry 的動詞 module（`src/lib/entryMutations.ts`：createEntry / setMaster / deleteEntry / moveEntry / updateEntry / reorderEntries / updateEntryPoi…）。每個動詞回 Result，不 toast、不導覽；成功後 emit `entryUpdated` 並以正確 day scope 觸發車程重算（跨天兩個 day 各一次），失敗 emit resync 不重算。頁面只拿 Result 決定 toast／navigate。
+
+跨日移動更新來源與目標，複製更新目標，不受目前選中的日期限制。讀取協調以每次行程切換及每個 day 的請求序號識別回應，只接受該 scope 最新的結果；其他行程的事件不觸發目前行程重讀。操作面板與拖曳儲存完成時也核對操作所屬的行程生命週期，避免舊操作顯示提示或導頁。
+
+entry 儲存成功與 segment 重算成功是兩件事。重算故障時保留已儲存的 entry，交通沿用「車程待更新」提示；重新載入或真正改變相鄰景點的操作可依既有 single-flight／gap-signature 規則再次嘗試，不重送原本的建立操作。這層只協調重算入口，不計算路徑：Google client、手填 transit 及既有特定方式估算的界線維持原樣。
 _Avoid_: 在頁面或元件直接 `apiFetchRaw` entries endpoint、自己 dispatch `entryUpdated`、自己呼叫 `requestTravelRecompute`（self-healing 的 auto 觸發除外）；與後端「entry intake」是不同層。
 
-> **trip-scoped 的自由文字不寫進 `pois`** —— 寫進 `trip_entries.note` 或 `trip_entry_pois.metadata`（`reservation` / `reservation_url` / `description` / `note`）。`reservation` 是**純文字訂位註解**，不放 JSON。
+> **trip-scoped 的自由文字不寫進 `pois`** —— entry 說明放 `trip_entries.description`；POI 備註與預訂放 `trip_entry_pois` 的 `reservation` / `reservation_url` / `description` / `note` 欄位。migration 0078 後沒有 `trip_entries.note`；entry-level note 輸入由正選承接。`reservation` 是**純文字訂位註解**，不放 JSON。
 
 ## 協作與存取
 
@@ -56,6 +64,12 @@ _Avoid_: 在頁面或元件直接 `apiFetchRaw` entries endpoint、自己 dispat
 
 一筆 request 結束時，**「結束了」與「為什麼結束」是兩個欄位**：`status` 說終結與否，`terminal_reason` 說原因。讀取端兩個都要看。理由（以及為什麼不把原因塞進 `status`）見 [ADR-0007](docs/adr/0007-request-termination-cancel-and-reap.md)。
 
+**首次終結與收尾重試**：已授權的 request 更新由 `_requestTermination.updateRequest` 持有。第一次確立的終結狀態與原因不被後來通知改寫；request 先終結，健檢與筆記再獨立收尾。關聯查詢或資料庫寫入暫時失敗時，可重送終結通知補做。已保存的健檢 findings 不重新解析為空資料；筆記沿用 generation 與人工資料保護，遲到回覆不復活 request。
+
+**對話終結狀態**：主 tab 與行程 sheet 共用 `useConversation`。歷史與即時結果經同一個 request → 泡泡轉換；SSE 只有 status 時，由對話模組補讀完整 request。停止等待為中性態，真正失敗保留失敗態；完成但沒有 reply 也不再等待。終結後仍以原 request 身分接收遲到回覆，合併原泡泡、不重新鎖住輸入框。每 30 秒及切回頁面時補讀可見的未完成回報；暫時讀取失敗保留已知狀態並重試。
+
+**對話生命週期**：送出、optimistic 泡泡、歷史合併、等待恢復及斷線補回皆由同一個對話模組協調。等待由已合併的泡泡推導，舊歷史不能重新鎖住已完成 request；request ID 加角色決定同一訊息，保留既有畫面 ID。送出尚未取得 ID 時也會擋重複提交。每次切換行程都有獨立 generation，離開後的送出、分頁、SSE／poll 及 callback 都不能回寫新對話；返回時讀取持久化進度。分頁沿用原本「往前載入補位、離開底部不自動跳轉」政策，沒有擴張 #1209。
+
 **停止等待**：
 使用者主動終結一筆還在等的 request。語意是「我不等了」，讓輸入框放開、隊列解開 —— **不是**叫 AI 停手，AI 可能還會繼續改行程。
 _Avoid_: 「取消」「中斷」「abort」（都會讓人以為 AI 停了，實際上沒有）
@@ -69,7 +83,7 @@ _Avoid_: 卡住、stuck（歧義：同時被拿來指殭屍請求與「我不想
 _Avoid_: 超時（只描述其中一層）、清理（跟 orphan tmux session 的清理混淆）
 
 **request worker**：
-api-server 裡驅動 requests pipeline 的核心（`scripts/lib/request-worker.ts`）：peek 隊列 → 取 token（/tp-request 走 owner-restricted）→ 同 skill 有 session 就 busy → spawn；接受 fetch / tmux / clock / spawn adapter 注入，測試用 fake 進同一個 interface。api-server 本體只組裝真實 adapter 與 HTTP / cron 接線。
+api-server 裡驅動 requests pipeline 的核心（`scripts/lib/request-worker.ts`）：同 skill 鎖定及 session 去重 → peek 隊列 → 取 token（/tp-request 走 owner-restricted）→ 建立 session → 真實 REPL 就緒及提交協定 → watch → 收尾。接受 fetch／process／pane／clock adapter 注入；adapter 只執行外部效果，不回呼 worker。隔離暫時未就緒不啟動也不收屍；建立、REPL 或提交失敗先確認並關閉已有 session，再以 error 收尾。drained 不收新進 request，died／90 分鐘 deadline 走 timed_out；所有退出均釋放該 skill 的鎖。api-server 本體保留 HTTP／cron／寄信與健康狀態接線。
 _Avoid_: 在 api-server 頂層函式裡直接寫決策（那樣只能 readFileSync 測）；「worker」單獨講指這個 module，tmux 裡跑的 claude session 叫 session。
 
 **遲到完成**：
@@ -88,6 +102,33 @@ AI 來源項目用 `origin` 記來源、`managed_by` 記目前由人或 AI 維�
 | **audit_log** | **行程資料變更**稽核（trip_id / action / diff_json / snapshot）。rollback 功能讀它。保留 60 天。 |
 | **auth_audit_log** | **登入／OAuth 事件**稽核（ip_hash）。保留 60 天。**與 `audit_log` 是兩張不同的表，不要混用。** |
 | **api_logs** | 錯誤日誌（`source` 欄分類）。保留 60 天。 |
+
+---
+
+## OAuth token 發行
+
+**Token lifecycle**：`functions/api/oauth/_tokenLifecycle.ts` 持有授權碼交換、refresh 輪替的驗證、一次性消耗、pair 發行與 replay／family 撤銷政策。入口只處理 client 認證、協定解析／輸出及既有選用的 ID token 簽署。適用的 client／redirect／PKCE／scope 驗證必須先於任何 grant 消耗或撤銷。合法 refresh reuse 撤銷同一 grantId 的 access／refresh；其他 client 的錯誤請求不能觸發撤銷。
+
+**完整發行**：D1 adapter 以同一 batch 寫入 access、refresh 與來源 grant 關聯；消耗先以 CAS 提交，後續失敗不復活一次性 grant。來源必須仍存在且已消耗，避免已撤銷的 refresh family 在並行發行後重新出現。沿用既有 payload 與 TTL，沒有資料遷移。
+
+---
+
+## 維運檢查結果
+
+**一次檢查結果**：`scripts/lib/operations-run.js` 的 `runOperations` 協調具名來源，分別持有 `completion`（complete／partial／failed）、`severity` 與來源資料。必要檢查完整且沒有異常才可顯示健康；完整但零資料必須另外標示。
+
+daily-check 與日報都使用此結果產生 JSON、HTML 與摘要；`sources` 的具名結果是唯一完成度／嚴重程度來源。daily-check 保留既有頂層資料欄位供舊消費者讀取，摘要及新 message renderer 直接讀共用結果。來源失敗不清除其他來源資料；route health 的 HTTP 異常與網路未完成會同時反映在摘要。
+
+| 入口 | 必要檢查／告警來源 | 資訊來源（不新增告警） |
+|---|---|---|
+| daily-check | Sentry、經既有規則篩選的 API errors、npm audit、未完成請求、排程 log、route health、prod data hygiene、audit anomaly；Google Maps quota 在已設定 client credentials 時為必要 | Workers、Web Analytics；未設定憑證的 Maps quota 顯示未執行，不假造用量 |
+| daily-report | 連結、Sentry、資料異常偵測 | 行程修改統計、Workers、Web Analytics、Lighthouse 分數、未經 daily-check 篩選的原始 API log 計數 |
+
+某行程 days 查詢失敗仍保留其他行程的連結證據；資料異常偵測的某條查詢失敗也保留已知異常。查詢失敗不能由空陣列推導為全部正常。HTTP 錯誤與網路失敗分別表達已知異常及檢查完成度。資訊來源查詢失敗會明示，但不一律轉成健康告警。
+
+來源 adapter 保留 D1 client 的既有重試、token helper、route health 門檻、Google Maps 額度及告警政策。npm audit 保留 180 秒 timeout、32 MiB buffer；無有效 audit 結果視為未完成。排程 log 的 ENOENT 仍表示沒有 log，其餘讀取錯誤列為未完成。通知對象、管道及資料異常通知條件沿用既有設定，測試不寄通知。
+
+CLI 輸出：daily-check 的 `scripts/logs/daily-check/YYYY-MM-DD-report.json` 與同名 `.html`；daily-report 的 `report.json` 與 `report.html`。匯入來源 factory 或 renderer 不會啟動掃描、寄信或寫檔。
 
 ---
 

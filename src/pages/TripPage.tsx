@@ -277,6 +277,7 @@ function TripPageInner(
   // Same pattern for refetchDay — listener 讀 event.detail.dayNum 時
   // 走 refetchDay(targetDay) 而非 refetchCurrentDay (該 day 可能 ≠ currentDay)。
   const refetchDayRef = useRef<((dayNum: number) => void) | null>(null);
+  const eventTripRef = useRef<string | null>(null);
 
   // Refresh stale data when connection is restored
   const prevIsOnlineRef = useRef(isOnline);
@@ -296,7 +297,8 @@ function TripPageInner(
   // 沒帶 dayNum (legacy event source) → fallback refetchCurrentDay。
   useEffect(() => {
     function onEntryUpdated(e: Event) {
-      const detail = (e as CustomEvent).detail as { dayNum?: number } | null;
+      const detail = (e as CustomEvent).detail as { tripId?: string; dayNum?: number } | null;
+      if (detail?.tripId && detail.tripId !== eventTripRef.current) return;
       const targetDay = detail?.dayNum;
       if (typeof targetDay === 'number' && targetDay > 0) {
         refetchDayRef.current?.(targetDay);
@@ -409,6 +411,12 @@ function TripPageInner(
 
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
+  eventTripRef.current = activeTripId;
+  const operationGeneration = useRef(0);
+  useEffect(() => {
+    const generation = ++operationGeneration.current;
+    return () => { operationGeneration.current = generation + 1; };
+  }, [effectiveUrlTripId, activeTripId]);
 
   /* Section 5 (E4)：將 resolved trip id 寫入 ActiveTripContext，提供給
    * /chat /map /explore 等 global route 之預設 active trip。 */
@@ -543,6 +551,7 @@ function TripPageInner(
    * 兩天顯式 recompute + 各 dispatch entryUpdated（帶 dayNum → refetchDay）。 */
   const { sensors: crossDaySensors } = useDragDrop({ includeTouch: true, pointerActivationDistance: 8, sortable: true });
   const handleCrossDayDragEnd = useCallback(async (e: DragEndEvent) => {
+    const generation = operationGeneration.current;
     // 拖完還原到「開始拖前」的 scrollTop（capturedTop 由 rail 的 onDragStart 記下），
     // 抵消 autoScroll + drop 後 focus 亂捲，頁面不移動。idempotent（用完即清）。
     restoreDragScroll();
@@ -564,9 +573,11 @@ function TripPageInner(
     try {
       // #1261：跨天 batch + 兩天重算 + 兩天各一個 emit（detail.dayNum → refetchDay）在 module。
       const r = await moveEntriesBatch(activeTripId, updates, { fromDayNum: sourceOpt?.dayNum ?? null, toDayNum: targetOpt.dayNum });
+      if (operationGeneration.current !== generation) return;
       if (!r.ok) throw new Error(`batch ${r.status}`);
       showToast(`已移到 Day ${String(targetOpt.dayNum).padStart(2, '0')}`, 'success');
     } catch {
+      if (operationGeneration.current !== generation) return;
       showToast('跨天移動失敗，請稍後再試', 'error');
     }
   }, [activeTripId, dayOptions, allDays]);

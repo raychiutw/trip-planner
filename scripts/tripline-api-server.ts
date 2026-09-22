@@ -16,7 +16,7 @@ import { join } from 'path';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { makeMailHandler } from './lib/mailer-handler';
 import { computeNextDailyFire } from './lib/schedule-daily';
-import { waitForRepl, submitSkillCommand, type TmuxDeps } from './lib/tmux-pane';
+import type { TmuxDeps } from './lib/tmux-pane';
 import {
   TP_AGENT_USER,
   shSingleQuote,
@@ -170,9 +170,9 @@ function containmentReady(): boolean {
     return false;
   }
 }
-async function spawnContainedSession(
+async function createContainedSession(
   sessionName: string,
-  skillCommand: string,
+  _skillCommand: string,
   token: string,
   restrictTrip: string,
 ): Promise<boolean> {
@@ -238,9 +238,8 @@ async function spawnContainedSession(
     return false;
   }
 
-  // 3. detached tmux session running claude INTERACTIVELY. CWD stays PROJECT_DIR for
-  //    skill discovery; the disposable CLAUDE_CONFIG_DIR keeps the workspace UNTRUSTED,
-  //    so the repo's .claude/settings.local.json allow-entries are ignored (verified).
+  // 3. tmux starts the wrapper from PROJECT_DIR; the wrapper switches to the clean
+  //    sessionDir as tp-agent. Worker owns readiness, submission and cleanup.
   const shellCmd = buildContainedShellCommand({
     claudeBin: CLAUDE_BIN, sessionName, sessionDir,
     settingsPath: CONTAINED_SETTINGS_PATH, mcpConfigPath, tokenFilePath,
@@ -250,30 +249,8 @@ async function spawnContainedSession(
   });
   if (create.status !== 0) {
     logError(`contained: tmux new-session 失敗（fail-closed）：${create.stderr || create.status}`);
-    // session 根本沒起來 → 這輪確定不會有人處理。收屍解隊列（ADR-0007 第一層）。
-    await worker.reap(restrictTrip, 'error');
     return false;
   }
-  attachSessionLog(sessionName, skillCommand);
-
-  // 4. drive the REPL exactly like the non-contained path.
-  if (!(await waitForRepl(tmuxDeps, sessionName))) {
-    logError(`contained: REPL 未就緒，kill: ${sessionName}`);
-    spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
-    await worker.reap(restrictTrip, 'error');
-    return false;
-  }
-  if (!(await submitSkillCommand(tmuxDeps, sessionName, skillCommand))) {
-    logError(`contained: skill 未提交，kill: ${sessionName}`);
-    spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
-    await worker.reap(restrictTrip, 'error');
-    return false;
-  }
-  log(`Spawned CONTAINED session ${sessionName} (trip=${restrictTrip}, dontAsk+MCP-only+tp-agent, interactive REPL)`);
-
-  // 5. REAPER — poll the trip's request status; kill when drained or at the orphan cap.
-  // #1265：看門狗 + ADR-0007 第一層收屍在 request worker（fake clock 可測）。
-  await worker.watchContainedSession(sessionName, restrictTrip);
   return true;
 }
 
@@ -296,7 +273,7 @@ function attachSessionLog(sessionName: string, skillCommand: string): void {
  * #1264：worker 決策（peek → token → busy → spawn）在 scripts/lib/request-worker.ts，
  * 這裡只組裝真實 adapter：tmux 指令、fetch、時鐘、contained / plain spawn。
  */
-async function spawnPlain(sessionName: string, skillCommand: string, token: string): Promise<boolean> {
+async function createPlainSession(sessionName: string, _skillCommand: string, token: string): Promise<boolean> {
   const claudePath = CLAUDE_BIN;
   const escapedToken = shSingleQuote(token);
   const tmuxDir = TMUX_BIN.includes('/') ? TMUX_BIN.slice(0, TMUX_BIN.lastIndexOf('/')) : '';
@@ -311,18 +288,7 @@ async function spawnPlain(sessionName: string, skillCommand: string, token: stri
     logError(`tmux new-session failed (status=${create.status}): ${create.stderr || ''}`);
     return false;
   }
-  if (!(await waitForRepl(tmuxDeps, sessionName))) {
-    logError(`claude REPL 未在時限內就緒，kill session: ${sessionName}`);
-    spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
-    return false;
-  }
-  if (!(await submitSkillCommand(tmuxDeps, sessionName, skillCommand))) {
-    logError(`skill command 未能提交，kill session: ${sessionName}`);
-    spawnSync(TMUX_BIN, ['kill-session', '-t', sessionName]);
-    return false;
-  }
-  attachSessionLog(sessionName, skillCommand);
-  log(`Spawned tmux session: ${sessionName} (skill=${skillCommand}, fire-and-forget; skill self-destructs at end)`);
+
   return true;
 }
 
@@ -350,8 +316,10 @@ const worker = createRequestWorker({
   logError,
   alert: (key, state, message) => { void throttledAlert(key, state, message); },
   containmentReady,
-  spawnContained: spawnContainedSession,
-  spawnPlain,
+  createContainedSession,
+  createPlainSession,
+  pane: tmuxDeps,
+  attachLog: attachSessionLog,
 });
 
 /** 舊名保留給 HTTP / cron 接線：true = 本輪有 spawn。 */

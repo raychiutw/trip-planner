@@ -52,12 +52,6 @@ CSS 字串裡，`tests/unit/trips-list-accent-text.test.ts` 這類掃 template l
 
 migration 0093 已把 backup 43 + suggestions 24 = 67 筆搬進 `trip_pretrip_notes`。**0094（DROP 兩張表）刻意還沒套** —— 依 DROP 部署規則是「code 先上線、DROP 後套」，而且要先讓 owner 在筆記頁確認 67 筆看得到。確認後執行 `wrangler d1 migrations apply trip-planner-db --remote --env production`。⚠️ 那 67 筆是 `origin=ai / managed_by=ai / ai_source=general-tips`（owner 決定不擋未來生成），所以**下次按「一般」AI 生成會被整批取代**；想留哪筆就在 App 裡編輯它一次（翻成 human 即受保護）。
 
-### request 收屍 — 牆鐘那層繞過完成 hook，linked 報告會停在 pending
-
-**Priority**: P3（罕見路徑；pre-existing，非 v2.57.77 引入）
-
-`reapIfStale`（`functions/api/_requestTermination.ts`）直接 UPDATE `trip_requests`、不經 `PATCH /requests/:id`，所以 `applyHealthCheckCompletion` / `applyNotesGenerationCompletion` 不會跑 —— 被 100 分鐘牆鐘收掉的健檢／筆記請求，其 `trip_health_reports` 會停在 `pending`（前端一直轉）。**不是 v2.57.77 引入的迴歸**：在此之前 request 根本永遠停在 `processing`，那些表一樣卡著。第一層（api-server 就地收屍）走 PATCH、hook 照跑，所以只有「mac mini 死透 100 分鐘」才踩得到。根本解是抽出 `mint-restricted.ts:127` 已經記下的共用 `failRequest` helper，讓三個終結入口（PATCH hook / mint-restricted park / 牆鐘）走同一段 linked-table 連動。見 ADR-0007 的 Consequences。
-
 ### 測試套件 — D1 建置成本迫使 unit 限流 2 worker（根本解：共用已 migrate 快照）
 
 **Priority**: P3（開發體驗；不影響使用者）
@@ -80,3 +74,11 @@ ChatPage / LandingPage / MapPage）目前是好的 —— 但它們是**意外�
 
 專案 browserslist 是 `last 2 Chrome versions`，本來就不需要手寫前綴。清掉即可，
 只是要一個一個確認沒有依賴舊 Safari 的地方。
+
+## Completed
+
+### request 收屍 — 共用健檢與筆記收尾
+
+**Completed:** 2026-09-21（v2.57.90，#1283、#1284）
+
+PATCH、mint-restricted 拒絕、100 分鐘 reap 與筆記期限都走共用終結政策；健檢／筆記收尾可分別重試，保留第一個終止原因，並保護後續生成不被舊請求覆寫。真 D1 與實際 request 入口測試已覆蓋自動終結及重試。

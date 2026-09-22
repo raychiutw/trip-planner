@@ -39,4 +39,16 @@
 - 「停止等待」鍵一送出就在，不依賴任何時鐘 —— 也因此 `useRequestSSE` 的 `elapsedMs` 每次 mount 重新計時（重整後顯示錯誤的等候分鐘數）是**獨立**的既有問題，不阻擋這個決策。
 - `terminal_reason` 是 additive 欄位 → 上線順序遵 additive 規則：**先套 migration 再 merge**（見 `ARCHITECTURE.md` 的 D1 migration 章節）。
 - 一個終結語意拆在兩個欄位，讀取端要記得同時看 `status` 與 `terminal_reason`。這是為了避開 0047 地雷付的代價。
-- **牆鐘那層繞過完成 hook**：它直接 UPDATE 不經 PATCH，所以被它收掉的健檢／筆記請求，其 `trip_health_reports` 會停在 pending。不是新迴歸（改之前 request 永遠停在 processing，那些表一樣卡著），且第一層走 PATCH、hook 照跑。要補走 `mint-restricted.ts:127` 已記下的共用 `failRequest` helper。
+- **終結與收尾共用**（#1283、#1284）：PATCH、牆鐘、未授權拒發及筆記期限都經 `_requestTermination`。request 先終結，健檢及筆記依 linkage 獨立收尾；關聯查詢或寫入失敗不復活 request。重送 PATCH、讀取已終結 request 或再次拒發 mint 均可補做。首次終結的狀態與原因保留，遲到 reply 仍依原本內容及 generation 規則處理。
+
+## 自動終結適用矩陣（2026-09-21）
+
+| 觸發 | 一般聊天 | 健檢 | 筆記 |
+| --- | --- | --- | --- |
+| GET request，100 分鐘無活動 | request failed / timed_out | 同左，報告 failed | 同左；job 已超過自身期限則 timed_out，否則 failed |
+| mint-restricted，owner 無 Consent | failed / needs_consent，保留授權指引 | 同左，報告 failed，保留健檢授權說明 | 同左，job failed / NOTES_AI_APPLY_FAILED，保留筆記授權說明 |
+| 筆記 10 分鐘期限 | 不適用，聊天沒有筆記 job | 不適用，健檢沒有筆記 job | request failed / timed_out；job timed_out / NOTES_AI_JOB_STALE |
+
+筆記期限由 job 的 `timeout_at` 判斷，在讀取 AI state、建立下一代、及處理尚未終結 request 的非 failed 更新時檢查。收尾只更新該 request 的 job，不以舊 generation 覆寫新筆記。
+
+100 分鐘判斷留在 SQLite，寫入時再比對觀察到的活動時間；worker 若已恢復活動，就不套用這次逾時。mint 的自動終結只更新仍在等待的 request；檢查 Consent 期間若已有終結回報，保留該回報。各入口仍先執行原本權限檢查，mint 重試始終拒發 terminal request 的 token。worker 90 分鐘上限不在此流程修改。

@@ -162,7 +162,7 @@ describe('ChatPage AI 授權 gate', () => {
     apiFetchMock.mockImplementation((path: string, opts?: { method?: string }) => {
       if (path === '/account/ai-authorization') return Promise.resolve({ authorized: true });
       if (path === '/requests' && opts?.method === 'POST') return Promise.resolve({ id: 99 });
-      if (path === '/requests/99') return Promise.resolve({ reply: '這趟行程要用 AI 排程，需要行程擁有者先授權。' });
+      if (path === '/requests/99') return Promise.resolve({ id: 99, tripId: 'okinawa-2026', status: 'failed', terminalReason: 'needs_consent', reply: '這趟行程要用 AI 排程，需要行程擁有者先授權。' });
       if (path.startsWith('/requests')) return Promise.resolve({ items: [], hasMore: false });
       if (path === '/my-trips') return Promise.resolve([{ tripId: 'okinawa-2026' }]);
       if (path.startsWith('/trips')) return Promise.resolve([{ tripId: 'okinawa-2026', name: '沖繩 2026', title: '沖繩 2026', countries: 'JP' }]);
@@ -175,7 +175,7 @@ describe('ChatPage AI 授權 gate', () => {
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith('/requests/99', undefined));
   });
 
-  it('SSE failed + 撈 reply 失敗 → 落用通用失敗訊息（gap 2）', async () => {
+  it('SSE failed + 撈 reply 失敗 → 保留狀態待重試，不把取消誤判成執行失敗', async () => {
     sse.status = 'failed';
     apiFetchMock.mockImplementation((path: string, opts?: { method?: string }) => {
       if (path === '/account/ai-authorization') return Promise.resolve({ authorized: true });
@@ -189,6 +189,7 @@ describe('ChatPage AI 授權 gate', () => {
     renderPage();
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith('/account/ai-authorization', undefined));
     await typeAndSend('幫我排藏王三天兩夜');
-    expect(await screen.findByText('AI 處理失敗，請換個說法或稍後再試。')).toBeTruthy();
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith('/requests/99', undefined));
+    expect(screen.queryByText('AI 處理失敗，請換個說法或稍後再試。')).not.toBeInTheDocument();
   });
 });
