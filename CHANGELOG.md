@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.91] - 2026-09-22
+
+### Fixed
+- 手機閱讀聊天歷史時，「跳到最新訊息」按鈕跟隨輸入區定位，不再遮住送出按鈕；保留載入舊訊息時的閱讀位置與回到最新訊息行為。
+
 ## [2.57.90] - 2026-09-21
 
 ### Fixed
