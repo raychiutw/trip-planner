@@ -91,6 +91,7 @@ describe('request terminal state in the real conversation', () => {
   it('retries missing terminal details instead of inventing an execution failure', async () => {
     show('main');
     await screen.findByTestId('chat-stop-waiting');
+    await waitFor(() => expect(RequestEvents.instances.at(-1)?.onmessage).toBeTypeOf('function'));
     row = { ...row, status: 'failed', terminalReason: 'cancelled' }; detailStatus = 503;
     await act(async () => { RequestEvents.instances.at(-1)!.emit({ status: 'failed' }); });
     expect(screen.getByTestId('chat-msg-assistant')).not.toHaveClass('is-failed');
@@ -131,6 +132,7 @@ describe('request terminal state in the real conversation', () => {
   it.each(['main', 'sheet'] as const)('another tab stopping the request gives %s the same neutral result as history', async (surface) => {
     show(surface);
     await screen.findByTestId('chat-stop-waiting');
+    await waitFor(() => expect(RequestEvents.instances.at(-1)?.onmessage).toBeTypeOf('function'));
     row = { ...row, status: 'failed', terminalReason: 'cancelled' };
     await act(async () => { RequestEvents.instances.at(-1)!.emit({ status: 'failed' }); });
     await expectStopped();
