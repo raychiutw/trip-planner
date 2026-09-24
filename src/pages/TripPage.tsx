@@ -247,6 +247,7 @@ function TripPageInner(
   // showNavTitle removed along with old sticky-nav inline title
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
+  const scrollTripIdRef = useRef<string | null>(null);
   // ⑨ 連續捲動：scroll-spy 最後同步過的 day，避免每個 scroll frame 都 switchDay。
   const scrollDayRef = useRef(0);
 
@@ -333,19 +334,24 @@ function TripPageInner(
    * validation and preference persistence. An explicit route always reaches
    * useTrip, including when it is absent from the accessible summary list. */
   useEffect(() => {
-    initialScrollDone.current = false;
-    if (explicitTripId) {
-      setResolveState({ status: 'resolved', tripId: explicitTripId });
-    } else if (selectedTripId) {
-      setResolveState({ status: 'resolved', tripId: selectedTripId });
-    } else if (accessibleStatus === 'success' && accessibleTrips) {
-      setResolveState({ status: 'unpublished' });
-    } else if (accessibleStatus === 'error') {
-      setResolveState({ status: 'error' });
-    } else {
-      setResolveState({ status: 'loading' });
+    const nextTripId = explicitTripId ?? selectedTripId;
+    if (scrollTripIdRef.current !== nextTripId) {
+      initialScrollDone.current = false;
+      scrollTripIdRef.current = nextTripId;
     }
-  }, [resolveKey, explicitTripId, selectedTripId, accessibleStatus, accessibleTrips]);
+    // Preserve the original first-read ordering. A later list refresh can
+    // never unmount a detail already reading its explicit target.
+    const explicitReady = !!explicitTripId
+      && (currentUser === null || accessibleStatus !== 'loading' || accessibleTrips !== undefined);
+    const targetId = explicitTripId ? (explicitReady ? explicitTripId : null) : selectedTripId;
+    const next: ResolveState = targetId
+      ? { status: 'resolved', tripId: targetId }
+      : accessibleStatus === 'success' && accessibleTrips
+        ? { status: 'unpublished' }
+        : accessibleStatus === 'error' ? { status: 'error' } : { status: 'loading' };
+    setResolveState((previous) => previous.status === next.status
+      && (previous.status !== 'resolved' || previous.tripId === targetId) ? previous : next);
+  }, [resolveKey, explicitTripId, selectedTripId, accessibleStatus, accessibleTrips, currentUser]);
 
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;

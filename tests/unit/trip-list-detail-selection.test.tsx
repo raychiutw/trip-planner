@@ -1,9 +1,10 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
 import { NewTripProvider } from '../../src/contexts/NewTripContext';
 import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
+import { EVENT } from '../../src/lib/events';
 import TripsListPage from '../../src/pages/TripsListPage';
 import TripPage from '../../src/pages/TripPage';
 
@@ -22,6 +23,34 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
 
 describe('list and actual detail selection', () => {
+  it('keeps the viewed scroll position when summaries refresh for the same trip', async () => {
+    let listReads = 0;
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+    Element.prototype.scrollIntoView = vi.fn();
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((input: string) => {
+      if (input === '/api/my-trips') {
+        listReads++;
+        return Promise.resolve(new Response(JSON.stringify([{ tripId: 't1', name: 'Private' }])));
+      }
+      if (input === '/api/trips/t1') return Promise.resolve(new Response(JSON.stringify({ id: 't1', name: 'Private', countries: 'JP' })));
+      if (input === '/api/trips/t1/days?all=1') return Promise.resolve(new Response(JSON.stringify([
+        { id: 1, dayNum: 1, date: '2026-10-24', dayOfWeek: '六', label: '第一天', timeline: [] },
+        { id: 2, dayNum: 2, date: '2026-10-25', dayOfWeek: '日', label: '第二天', timeline: [] },
+      ])));
+      return Promise.resolve(new Response('[]'));
+    }));
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><TripPage tripId="t1" noShell /></ActiveTripProvider></MemoryRouter>);
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 0));
+    fireEvent.click(screen.getByTestId('dn-day-2'));
+    expect(screen.getByTestId('dn-day-2').getAttribute('aria-current')).toBe('true');
+    scrollTo.mockClear();
+    await act(async () => window.dispatchEvent(new Event(EVENT.tripUpdated)));
+    await waitFor(() => expect(listReads).toBe(2));
+    await act(async () => {});
+    expect(scrollTo).not.toHaveBeenCalledWith(0, 0);
+    expect(screen.getByTestId('dn-day-2').getAttribute('aria-current')).toBe('true');
+  });
   it('keeps the legacy query target through the actual router and detail read', async () => {
     const reads: string[] = [];
     vi.stubGlobal('fetch', vi.fn().mockImplementation((input: string) => {
