@@ -98,7 +98,12 @@ test('#1140 story 1–3：切 tab 帶著同一個 active trip，重整後仍在'
   await expect(page).toHaveURL(new RegExp(`/trip/${TRIP_B}/map`));
   await expect(page.getByTestId('map-trip-title')).toContainText(TRIP_B_TITLE_FRAGMENT);
 
-  // 切至既有行程頁仍是 B，與地圖中的內容和偏好一致。
+  // 切到行程 root tab 時，既有清單依 active trip 選到 B。
+  await page.goto('/trips');
+  await expect(page).toHaveURL(new RegExp(`/trips\\?selected=${TRIP_B}`));
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(TRIP_B_TITLE_FRAGMENT);
+
+  // 直接檢視既有行程頁仍是 B，與地圖中的內容和偏好一致。
   await page.goto(`/trip/${TRIP_B}`);
   await expect(page).toHaveURL(new RegExp(`/trip/${TRIP_B}(?:\\?|$)`));
   await expect(page.getByText(TRIP_B_TITLE_FRAGMENT).first()).toBeVisible();
