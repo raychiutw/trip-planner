@@ -15,6 +15,8 @@ import { NewTripProvider } from '../../src/contexts/NewTripContext';
 import { writeTripView } from '../../src/lib/tripViewState';
 import { TRIP_MAIN_PORTAL_ID } from '../../src/lib/tripStackRoutes';
 import { lsSet, LS_KEY_TRIP_PREF } from '../../src/lib/localStorage';
+import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
+import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
 
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({
@@ -82,6 +84,28 @@ const SAMPLE = [
 ];
 
 describe('TripsListPage', () => {
+  it('removes a deleted trip from the connected sidebar after confirmation', async () => {
+    __clearMyTripsCache();
+    let accessible = SAMPLE;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url === '/api/my-trips') return Promise.resolve(new Response(JSON.stringify(accessible)));
+      if (url === '/api/trips/okinawa' && init?.method === 'DELETE') {
+        accessible = SAMPLE.filter((trip) => trip.tripId !== 'okinawa');
+        return Promise.resolve(new Response('{}'));
+      }
+      return Promise.resolve(new Response('null'));
+    }));
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><NewTripProvider>
+      <TripsListPage />
+    </NewTripProvider></ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId('sidebar-trip-okinawa');
+    await screen.findByTestId('trips-list-card-okinawa');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByTestId('trip-card-menu-delete-okinawa'));
+    fireEvent.click(screen.getByRole('button', { name: '刪除' }));
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('sidebar-trip-okinawa')).toBeNull());
+  });
   it('shows loading initially', () => {
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);

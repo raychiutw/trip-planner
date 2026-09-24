@@ -15,12 +15,12 @@ import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { useMyTrips } from '../../hooks/useMyTrips';
 import { useActiveTrip } from '../../contexts/ActiveTripContext';
 
-export type DesktopSidebarConnectedProps = Omit<DesktopSidebarProps, 'user' | 'trips' | 'activeTripId'>;
+export type DesktopSidebarConnectedProps = Omit<DesktopSidebarProps, 'user' | 'trips' | 'tripsStatus' | 'activeTripId'>;
 
 export default function DesktopSidebarConnected(props: DesktopSidebarConnectedProps) {
   const { user } = useCurrentUser();
   const { activeTripId } = useActiveTrip();
-  const { trips } = useMyTrips(user?.id);
+  const { trips, status: tripsStatus } = useMyTrips(user?.id);
 
   const sidebarUser = useMemo<SidebarUser | null | undefined>(() => {
     if (user === undefined) return undefined;
@@ -32,5 +32,5 @@ export default function DesktopSidebarConnected(props: DesktopSidebarConnectedPr
     };
   }, [user]);
 
-  return <DesktopSidebar {...props} user={sidebarUser} trips={trips} activeTripId={activeTripId} />;
+  return <DesktopSidebar {...props} user={sidebarUser} trips={trips} tripsStatus={tripsStatus} activeTripId={activeTripId} />;
 }

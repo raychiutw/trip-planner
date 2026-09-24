@@ -6,6 +6,7 @@
  */
 import { useEffect, useSyncExternalStore } from 'react';
 import { apiFetch } from '../lib/apiClient';
+import { EVENT } from '../lib/events';
 
 export interface MyTrip {
   tripId: string;
@@ -47,12 +48,17 @@ function refresh() {
 }
 
 function onTripsUpdated() { void refresh(); }
+const refreshEvents = [EVENT.tripsUpdated, EVENT.tripCreated, EVENT.tripUpdated, EVENT.tripDeleted];
 function subscribe(listener: () => void) {
-  if (listeners.size === 0 && typeof window !== 'undefined') window.addEventListener('tp-trips-updated', onTripsUpdated);
+  if (listeners.size === 0 && typeof window !== 'undefined') {
+    refreshEvents.forEach((name) => window.addEventListener(name, onTripsUpdated));
+  }
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
-    if (listeners.size === 0 && typeof window !== 'undefined') window.removeEventListener('tp-trips-updated', onTripsUpdated);
+    if (listeners.size === 0 && typeof window !== 'undefined') {
+      refreshEvents.forEach((name) => window.removeEventListener(name, onTripsUpdated));
+    }
   };
 }
 

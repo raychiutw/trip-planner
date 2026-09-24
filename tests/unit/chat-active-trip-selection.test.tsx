@@ -5,6 +5,7 @@ import ChatPage from '../../src/pages/ChatPage';
 import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
 import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
 import { LS_KEY_TRIP_PREF, LS_PREFIX, lsGet, lsRemove, lsSet } from '../../src/lib/localStorage';
+import { EVENT } from '../../src/lib/events';
 
 const user = { id: 'user-1', email: 'user@example.com', emailVerified: true, displayName: 'Ray', avatarUrl: null, createdAt: '' };
 const trips = [
@@ -96,7 +97,9 @@ describe('chat active trip selection', () => {
     listResponse = async () => new Response('{}', { status: 503 });
     openChat();
     expect(await screen.findByText('載入行程失敗，請稍後再試')).toBeTruthy();
+    expect(screen.getByText('行程清單載入失敗')).toBeTruthy();
     expect(screen.queryByText('還沒有行程可以聊')).toBeNull();
+    expect(screen.queryByText('尚無行程')).toBeNull();
   });
 
   it('keeps an embedded chat locked to its trip after a storage event', async () => {
@@ -115,7 +118,7 @@ describe('chat active trip selection', () => {
     openChat();
     await screen.findByTestId('chat-trip-title');
     listResponse = () => new Promise((resolve) => { finishRefresh = resolve; });
-    act(() => window.dispatchEvent(new Event('tp-trips-updated')));
+    act(() => window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId: 'private' } })));
     await waitFor(() => expect(finishRefresh).toBeDefined());
     fireEvent.click(screen.getByTestId('chat-trip-title'));
     fireEvent.click(await screen.findByTestId('chat-trip-pick-private'));
@@ -125,12 +128,20 @@ describe('chat active trip selection', () => {
     expect(requestedPaths.some((path) => path.includes('/requests?tripId=private'))).toBe(true);
   });
 
+  it('loads a newly created trip when the normal creation event fires', async () => {
+    openChat();
+    await screen.findByTestId('sidebar-trip-private');
+    listResponse = async () => new Response(JSON.stringify([...trips, { tripId: 'new', name: '新增行程' }]));
+    act(() => window.dispatchEvent(new CustomEvent(EVENT.tripCreated, { detail: { tripId: 'new' } })));
+    expect(await screen.findByTestId('sidebar-trip-new')).toHaveProperty('textContent', '新增行程');
+  });
+
   it('refreshes chat and sidebar names after a trip update without changing the choice', async () => {
     lsSet(LS_KEY_TRIP_PREF, 'private');
     openChat();
     await waitFor(() => expect(screen.getByTestId('sidebar-trip-private').getAttribute('aria-current')).toBe('page'));
     listResponse = async () => new Response(JSON.stringify([trips[0], { ...trips[1], name: '更新後私人行程', title: '更新後標題' }]));
-    act(() => window.dispatchEvent(new Event('tp-trips-updated')));
+    act(() => window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId: 'private' } })));
     await waitFor(() => expect(screen.getByTestId('sidebar-trip-private').textContent).toContain('更新後私人行程'));
     expect(screen.getByTestId('chat-trip-title').textContent).toContain('更新後標題');
     expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private');
