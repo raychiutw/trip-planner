@@ -49,7 +49,7 @@ pois.type 允許值：`hotel`, `restaurant`, `shopping`, `parking`, `attraction`
 
 每個 timeline entry 透過 `trip_entry_pois` junction table 掛 1 個 master (sort_order=1) + N 個 alternates (sort_order > 1)。
 
-- 建 entry + 第一個 POI：`POST /api/trips/:id/days/:num/entries`（body 帶 `poi: { name, type, ... }` 或省略走純 title）
+- 建 entry + 第一個 POI：`POST /api/trips/:id/days/:num/entries`（body 扁平帶 `name` + `poi_type` 等，建 entry 同時建/找 master POI；見下表）
 - 後續加 POI 到既有 entry：`POST /api/trips/:id/entries/:eid/trip-pois`（legacy name kept；backend 寫 trip_entry_pois as alternate）或 `POST /api/trips/:id/entries/:eid/alternates`
 - 變更 master：`PATCH /api/trips/:id/entries/:eid/master` body `{ poiId, entryPoisVersion? }`
 - 從搜尋結果 find-or-create master：`PUT /api/trips/:id/entries/:eid/poi-id` body `{ name, lat, lng, ... }`
@@ -68,7 +68,7 @@ OCC token `entryPoisVersion`（integer counter on `trip_entries.entry_pois_versi
 
 | 操作 | 端點 | 說明 |
 |------|------|------|
-| 新增 entry | `POST /api/trips/{id}/days/{dayNum}/entries` | 必填 `title`，選填 `sort_order`（省略 append 到最後）+ `poi: {...}`（建 entry 同時加 master POI）|
+| 新增 entry | `POST /api/trips/{id}/days/{dayNum}/entries` | 必填 `name`（扁平欄位，即 master POI 名稱）；選填 `poi_type`（hotel/restaurant/shopping/parking/attraction/transport/activity/other，預設 attraction）、`start_time`/`end_time`（HH:MM，或 legacy `time`）、`description`、`note`、`lat`/`lng`、`rating`、`sort_order`（省略 append 到最後）。**沒有 `title`、沒有巢狀 `poi: {...}`**。新 POI 無 `place_id` → enrich 會 400，須先 `PATCH /api/pois/{id}`（body `{ place_id, tripId }`）寫 `place_id` 再 enrich|
 | 新增 alternate POI（推薦）| `POST /api/trips/{id}/entries/{eid}/alternates` | body 帶 `{ poiId }`（既有 POI）或 `{ name, lat, lng, type?, ... }`（find-or-create）+ 選 `entryPoisVersion` |
 | 新增 alternate POI（legacy endpoint）| `POST /api/trips/{id}/entries/{eid}/trip-pois` | v2.29 後 backend 寫 trip_entry_pois，endpoint 名稱保留向後相容 |
 | 變更 master | `PATCH /api/trips/{id}/entries/{eid}/master` | body `{ poiId, entryPoisVersion? }`；POI 必須已是 alternate 或新 POI |

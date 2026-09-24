@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.93] - 2026-09-25
+
+### Fixed
+- AI 旅伴規劃行程時，不再因為照著過時的 API 說明而連續送錯請求：新增行程點要帶景點名稱 `name`（不是 `title`、也沒有巢狀 `poi`），修改行程點只能改時間、描述、排序與日期，新建景點要先補 Google 地點 ID 才能自動補資料。9/24 一次規劃請求因此多打了 12 筆失敗呼叫，還留下名為「午餐」「晚餐」的佔位景點。
+
 ## [2.57.92] - 2026-09-24
 
 ### Fixed
