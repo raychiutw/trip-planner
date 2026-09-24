@@ -85,6 +85,25 @@ describe('chat active trip selection', () => {
     await waitFor(() => expect(sentTripIds).toEqual(['private']));
   });
 
+  it('手動切換後原連結目標不阻止失效行程回退，訊息送到可存取行程', async () => {
+    openChat('/chat?tripId=first');
+    await waitFor(() => expect(requestedPaths.some((path) => path.includes('/requests?tripId=first'))).toBe(true));
+
+    fireEvent.click(await screen.findByTestId('chat-trip-title'));
+    fireEvent.click(await screen.findByTestId('chat-trip-pick-private'));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private'));
+    await waitFor(() => expect(requestedPaths.some((path) => path.includes('/requests?tripId=private'))).toBe(true));
+
+    listResponse = async () => new Response(JSON.stringify([trips[0]]));
+    act(() => window.dispatchEvent(new CustomEvent(EVENT.tripDeleted, { detail: { tripId: 'private' } })));
+    await waitFor(() => expect(listReads).toBe(2));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('first'));
+
+    fireEvent.change(screen.getByTestId('chat-input'), { target: { value: '請幫我調整行程' } });
+    fireEvent.click(screen.getByTestId('chat-send'));
+    await waitFor(() => expect(sentTripIds).toEqual(['first']));
+  });
+
   it('preserves the preference when the accessible list read fails', async () => {
     lsSet(LS_KEY_TRIP_PREF, 'private');
     listResponse = async () => new Response('{}', { status: 503 });

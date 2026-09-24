@@ -633,6 +633,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
     // W6：切換前存舊行程草稿、切換後載新行程草稿（session-only；跨 reload 持久化留給 W8 composer 契約）。
     if (activeTripId) draftsRef.current[activeTripId] = input;
+    setExplicitTargetTripId(null);
     setActiveTripId(tripId);
     setInput(draftsRef.current[tripId] ?? '');
     setTripMenuOpen(false);
