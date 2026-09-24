@@ -40,12 +40,14 @@ import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { apiFetch } from '../lib/apiClient';
 import { setMaster, deleteEntry, updateEntry, updateEntryPoi, removeAlternate, reorderAlternates } from '../lib/entryMutations';
 import type { ErrorCodeType } from '../types/api';
 import { ApiError } from '../lib/errors';
 import { escUrl } from '../lib/sanitize';
 import { EVENT } from '../lib/events';
+import { saveManualSegment } from '../lib/manualSegment';
+import { captureSegmentScope } from '../lib/segmentScope';
 import { haversineMeters, avgLatLng, CROSS_REGION_THRESHOLD_M, type LatLng } from '../lib/geo';
 import { getStopDisplayTitle } from '../lib/stopDisplay';
 
@@ -1257,6 +1259,7 @@ export default function EditEntryPage() {
     if (!tripId || !entry || submitting) return;
     if (validation || !dirty.any) return;
     setSubmitting(true);
+    const isCurrent = captureSegmentScope(tripId);
 
     const requests: Promise<{ scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string }>[] = [];
 
@@ -1293,17 +1296,9 @@ export default function EditEntryPage() {
       if (!noTravel && mode === 'transit' && transitMin.trim() !== '') {
         body.min = parseInt(transitMin, 10);
       }
-      const req = segment
-        ? apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments/${segment.id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(body),
-          })
-        : apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments`, {
-            method: 'POST',
-            body: JSON.stringify({ ...body, from_entry_id: prevEntry.id, to_entry_id: entryId }),
-          });
       requests.push(
-        req.then(async (res) => ({ scope: 'segment', ok: res.ok, status: res.status, text: res.ok ? undefined : await res.text() })),
+        saveManualSegment({ tripId, segmentId: segment?.id, fromEntryId: prevEntry.id, toEntryId: entryId, body })
+          .then(async ({ response }) => ({ scope: 'segment', ok: response.ok, status: response.status, text: response.ok ? undefined : await response.text() })),
       );
     }
 
@@ -1317,13 +1312,15 @@ export default function EditEntryPage() {
 
     try {
       const results = await Promise.all(requests);
+      if (!isCurrent()) return;
       const failures = results.filter((r) => !r.ok);
+      if (results.some((r) => r.scope === 'entry' && r.ok)) {
+        originalRef.current = { ...originalRef.current, startTime, endTime, description };
+      }
+      if (results.some((r) => r.scope === 'segment' && r.ok)) {
+        originalRef.current = { ...originalRef.current, mode, transitMin, noTravel };
+      }
       if (failures.length === 0) {
-        // 通知 timeline + segments 重新 fetch
-        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, entryId } }));
-        if (dirty.segmentDirty) {
-          window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId: segment?.id } }));
-        }
         // v2.33.108: auto-save 後不再 navigate（user 仍在 edit page），update
         // originalRef 讓 dirty 重置避免重複 save，setSubmitting(false) 讓 SaveStatus
         // 從 saving → saved transit。
@@ -1343,6 +1340,7 @@ export default function EditEntryPage() {
       showToast(msg, 'error', 6000);
       setSubmitting(false);
     } catch (err) {
+      if (!isCurrent()) return;
       const msg = err instanceof Error ? err.message : '儲存失敗';
       showToast(msg, 'error', 6000);
       setSubmitting(false);

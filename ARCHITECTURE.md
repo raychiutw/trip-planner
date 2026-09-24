@@ -98,6 +98,7 @@ src/
 │   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 CONTEXT.md「entry 變更」
 │   ├── travelRecompute.ts   segment 重算：single-flight、gap signature、唯讀停止與待更新狀態
 │   ├── segmentScope.ts      segment 讀取者生命週期，隔離晚到操作的通知，保留必要 server 重算
+│   ├── manualSegment.ts     兩個手動交通入口共用 POST／PATCH、成功通知與行程生命週期隔離
 │   ├── mapRow.ts            DB row → UI object 統一轉換
 │   ├── scrollSpy.ts         純函式：捲動位置 → active day index
 │   └── ...                  localStorage、sentry、timelineUtils
