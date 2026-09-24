@@ -476,7 +476,7 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: var(--color-tertiary);
   border: 1px solid var(--color-border);
   line-height: 1.4;
 }
@@ -553,7 +553,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-muted);
-  font-size: var(--font-size-support);
+  font-size: var(--font-size-footnote);
   display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer;
 }

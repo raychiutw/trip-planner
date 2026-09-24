@@ -374,7 +374,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   block-size: 36px;
   border-radius: 50%;
   border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-background);
   color: var(--color-foreground);
   font-size: 17px;
   line-height: 1;
@@ -383,7 +383,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   display: grid;
   place-items: center;
 }
-.tp-chat-jump-latest:hover { background: var(--color-surface-hover, var(--color-surface)); }
+.tp-chat-jump-latest:hover { background: var(--color-hover); }
 .tp-chat-jump-latest:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
@@ -414,7 +414,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   block-size: 36px;
   border-radius: 50%;
   border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-background);
   color: var(--color-foreground);
   font-size: 17px;
   line-height: 1;
@@ -423,7 +423,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   display: grid;
   place-items: center;
 }
-.tp-chat-jump-latest:hover { background: var(--color-surface-hover, var(--color-surface)); }
+.tp-chat-jump-latest:hover { background: var(--color-hover); }
 .tp-chat-jump-latest:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
