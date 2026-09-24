@@ -54,6 +54,11 @@ function NavigateToLinkedChat() {
   return <button onClick={() => navigate('/chat?tripId=linked&prefill=新增一個景點')}>open linked chat</button>;
 }
 
+function NavigateToFirstChat() {
+  const navigate = useNavigate();
+  return <button onClick={() => navigate('/chat?tripId=first')}>open first chat</button>;
+}
+
 describe('chat active trip selection', () => {
   it('keeps an explicit chat target even when it is absent from the accessible list', async () => {
     lsSet(LS_KEY_TRIP_PREF, 'private');
@@ -74,6 +79,30 @@ describe('chat active trip selection', () => {
     await waitFor(() => expect(requestedPaths.some((path) => path.includes('/requests?tripId=linked'))).toBe(true));
     expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('linked');
     expect((screen.getByTestId('chat-input') as HTMLTextAreaElement).value).toBe('新增一個景點');
+  });
+
+  it('同頁無 prefill 連結切回 A 時保留各行程草稿，只送 A 的文字', async () => {
+    render(<MemoryRouter initialEntries={['/chat?tripId=first']}><ActiveTripProvider>
+      <NavigateToFirstChat /><ChatPage />
+    </ActiveTripProvider></MemoryRouter>);
+    const input = await screen.findByTestId('chat-input') as HTMLTextAreaElement;
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('first'));
+    fireEvent.change(input, { target: { value: 'A 的草稿' } });
+    fireEvent.click(await screen.findByTestId('chat-trip-title'));
+    fireEvent.click(await screen.findByTestId('chat-trip-pick-private'));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private'));
+    fireEvent.change(input, { target: { value: 'B 的草稿' } });
+
+    fireEvent.click(screen.getByText('open first chat'));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('first'));
+    expect(input.value).toBe('A 的草稿');
+    fireEvent.click(screen.getByTestId('chat-send'));
+    await waitFor(() => expect(sentTripIds).toEqual(['first']));
+    expect(sentMessages).toEqual(['A 的草稿']);
+
+    fireEvent.click(screen.getByTestId('chat-trip-title'));
+    fireEvent.click(await screen.findByTestId('chat-trip-pick-private'));
+    expect(input.value).toBe('B 的草稿');
   });
 
   it('shares the private trip choice with the connected sidebar and persists it', async () => {

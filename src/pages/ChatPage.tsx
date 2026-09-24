@@ -507,6 +507,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   // W6：聊天草稿依行程分開存（session-only ref；切換行程時存舊、載新，不讓半成品漏到別行程）。
   const draftsRef = useRef<Record<string, string>>({});
   const draftTripIdRef = useRef(activeTripId);
+  const pendingLinkRef = useRef<{ tripId: string; prefill: string | null } | null>(null);
   const [tripMenuOpen, setTripMenuOpen] = useState(false);
   // AI 授權 gate（Option E）：null=未知/載入中（放行，後端 mint 為最終關卡），
   // false=已知未授權（送出時攔下、跳授權 sheet），true=已授權。
@@ -533,9 +534,12 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     const prefill = searchParams.get('prefill');
     const targetTripId = searchParams.get('tripId');
     if (!prefill && !targetTripId) return;
-    if (targetTripId) setExplicitTargetTripId(targetTripId);
+    if (targetTripId) {
+      pendingLinkRef.current = targetTripId !== activeTripId ? { tripId: targetTripId, prefill } : null;
+      setExplicitTargetTripId(targetTripId);
+    }
     if (prefill) {
-      setInput(prefill);
+      if (!targetTripId || targetTripId === activeTripId) setInput(prefill);
       // 等 textarea mount 後 focus + cursor 移到尾端
       setTimeout(() => {
         const el = inputRef.current;
@@ -550,23 +554,27 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     next.delete('prefill');
     next.delete('tripId');
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [activeTripId, searchParams, setSearchParams]);
 
-  // 清單刷新確認舊行程失效時，active trip 會在 picker 之外切換；畫面繪製前同步草稿。
+  // 連結導覽與清單回退會在 picker 之外切換行程；畫面繪製前同步草稿。
   useLayoutEffect(() => {
-    if (draftTripIdRef.current === activeTripId) return;
+    const pendingLink = pendingLinkRef.current;
+    if (pendingLink && activeTripId !== pendingLink.tripId) return;
+    if (draftTripIdRef.current === activeTripId && !pendingLink) return;
+    pendingLinkRef.current = null;
     if (!draftTripIdRef.current) {
       draftTripIdRef.current = activeTripId;
+      if (pendingLink?.prefill) setInput(pendingLink.prefill);
       return;
     }
-    if (explicitTargetTripId || lockTripId) {
+    if (lockTripId) {
       draftTripIdRef.current = activeTripId;
       return;
     }
-    if (draftTripIdRef.current) draftsRef.current[draftTripIdRef.current] = input;
+    draftsRef.current[draftTripIdRef.current] = input;
     draftTripIdRef.current = activeTripId;
-    setInput(activeTripId ? draftsRef.current[activeTripId] ?? '' : '');
-  }, [activeTripId, explicitTargetTripId, input, lockTripId]);
+    setInput(pendingLink?.prefill ?? (activeTripId ? draftsRef.current[activeTripId] ?? '' : ''));
+  }, [activeTripId, input, lockTripId]);
 
   // v2.33.47 round 7b LOW: memoize buildMessagesWithDividers — 之前每 keystroke
   // 都 O(n) walk messages list。1000-msg trip 在打字時明顯卡。
@@ -651,6 +659,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     // W6：切換前存舊行程草稿、切換後載新行程草稿（session-only；跨 reload 持久化留給 W8 composer 契約）。
     if (activeTripId) draftsRef.current[activeTripId] = input;
     draftTripIdRef.current = tripId;
+    pendingLinkRef.current = null;
     setExplicitTargetTripId(null);
     setActiveTripId(tripId);
     setInput(draftsRef.current[tripId] ?? '');
