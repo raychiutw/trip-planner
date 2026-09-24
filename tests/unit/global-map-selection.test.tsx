@@ -80,6 +80,30 @@ describe('root map selection', () => {
     expect(paths.some((path) => path.includes('/days?all=1'))).toBe(false);
   });
 
+  it('空狀態使用 utility classes，頁面不注入一般排版樣式', async () => {
+    listResponse = async () => new Response('[]');
+    openMap();
+    const emptyState = await screen.findByTestId('global-map-empty');
+    expect(emptyState.querySelector('style')).toBeNull();
+    expect(screen.getByTestId('global-map-page').querySelector('style')).toBeNull();
+    expect(emptyState.classList.contains('grid')).toBe(true);
+    expect(screen.getByTestId('global-map-new-trip').classList.contains('inline-flex')).toBe(true);
+  });
+
+  it('空狀態與錯誤狀態維持固定 135 度漸層，新增行程按鈕維持內文行高', async () => {
+    const fixedGradient = 'bg-[linear-gradient(135deg,var(--color-accent-subtle)_0%,var(--color-tertiary)_100%)]';
+    listResponse = async () => new Response('[]');
+    const view = openMap();
+    expect((await screen.findByTestId('global-map-empty')).classList.contains(fixedGradient)).toBe(true);
+    expect(screen.getByTestId('global-map-new-trip').classList.contains('leading-[var(--line-height-normal)]')).toBe(true);
+
+    view.unmount();
+    __clearMyTripsCache();
+    listResponse = async () => new Response('{}', { status: 503 });
+    openMap();
+    expect((await screen.findByRole('alert')).classList.contains(fixedGradient)).toBe(true);
+  });
+
   it('falls back from a confirmed invalid preference to the first accessible trip', async () => {
     lsSet(LS_KEY_TRIP_PREF, 'removed');
     openMap();

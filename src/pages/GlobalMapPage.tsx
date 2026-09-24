@@ -9,52 +9,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
 
-const SCOPED_STYLES = `
-.tp-global-map-shell {
-  position: relative; height: 100%; width: 100%;
-  background: var(--color-secondary);
-  display: flex; flex-direction: column;
-}
-.tp-global-map-empty {
-  flex: 1; min-height: 0;
-  display: grid; place-items: center;
-  padding: 32px 24px;
-  background: linear-gradient(135deg, var(--color-accent-subtle) 0%, var(--color-tertiary) 100%);
-}
-.tp-global-map-empty-card {
-  max-width: 480px; text-align: center;
-  display: flex; flex-direction: column; gap: 16px; align-items: center;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 36px 28px;
-}
-.tp-global-map-empty-icon {
-  width: 64px; height: 64px; border-radius: 50%;
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
-  display: grid; place-items: center;
-}
-.tp-global-map-empty h2 {
-  font-size: var(--font-size-title2); font-weight: 800;
-  letter-spacing: -0.01em; margin: 0;
-}
-.tp-global-map-empty p {
-  color: var(--color-muted); font-size: var(--font-size-callout);
-  line-height: 1.55; margin: 0;
-}
-.tp-global-map-empty .cta {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 12px 22px;
-  border-radius: var(--radius-full);
-  background: var(--color-accent-fill); color: var(--color-accent-foreground);
-  border: none; cursor: pointer;
-  font: inherit; font-weight: 700; font-size: var(--font-size-callout);
-  min-height: var(--spacing-tap-min);
-}
-.tp-global-map-empty .cta:hover { filter: brightness(var(--hover-brightness)); }
-`;
+const EMPTY_STATE_CLASSES = 'grid min-h-0 flex-1 place-items-center bg-[linear-gradient(135deg,var(--color-accent-subtle)_0%,var(--color-tertiary)_100%)] px-6 py-8';
 
 export default function GlobalMapPage() {
   useRequireAuth();
@@ -69,21 +24,20 @@ export default function GlobalMapPage() {
 
   const isEmpty = status === 'success' && trips?.length === 0;
   const main = (
-    <div className="tp-global-map-shell" data-testid="global-map-page">
-      <style>{SCOPED_STYLES}</style>
+    <div className="relative flex h-full w-full flex-col bg-secondary" data-testid="global-map-page">
       {isEmpty ? (
-        <div className="tp-global-map-empty" data-testid="global-map-empty">
-          <div className="tp-global-map-empty-card">
-            <div className="tp-global-map-empty-icon" aria-hidden="true"><Icon name="map" /></div>
-            <h2>還沒有行程可以看</h2>
-            <p>新增第一個行程後，這裡就會把所有景點點在地圖上、用真實導航路線連起來。</p>
-            <button type="button" className="cta" onClick={openNewTrip} data-testid="global-map-new-trip">
+        <div className={EMPTY_STATE_CLASSES} data-testid="global-map-empty">
+          <div className="flex max-w-[480px] flex-col items-center gap-4 rounded-lg border border-border bg-background px-7 py-9 text-center shadow-md">
+            <div className="grid h-16 w-16 place-items-center rounded-full bg-accent-subtle text-accent" aria-hidden="true"><Icon name="map" /></div>
+            <h2 className="m-0 text-title2 font-extrabold tracking-[-0.01em]">還沒有行程可以看</h2>
+            <p className="m-0 text-callout leading-[1.55] text-muted">新增第一個行程後，這裡就會把所有景點點在地圖上、用真實導航路線連起來。</p>
+            <button type="button" className="inline-flex min-h-[var(--spacing-tap-min)] cursor-pointer items-center gap-2 rounded-full border-0 bg-accent-fill px-[22px] py-3 text-callout font-bold leading-[var(--line-height-normal)] text-accent-foreground hover:brightness-[var(--hover-brightness)]" onClick={openNewTrip} data-testid="global-map-new-trip">
               <span aria-hidden="true">+</span><span>新增行程</span>
             </button>
           </div>
         </div>
       ) : (
-        <div className="tp-global-map-empty" role="alert">載入行程失敗，請稍後再試</div>
+        <div className={EMPTY_STATE_CLASSES} role="alert">載入行程失敗，請稍後再試</div>
       )}
     </div>
   );
