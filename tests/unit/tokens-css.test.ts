@@ -275,6 +275,11 @@ describe('tokens.css', () => {
         expect(contrastRatio(muted, bg)).toBeGreaterThanOrEqual(AA_NORMAL);
       });
 
+      // 與 light 對稱。編輯頁備選 chip 就是 muted 字疊 secondary 底（改用 tertiary 時深色只有 4.41）。
+      it('muted / secondary ≥ 4.5（secondary text on alt bg）', () => {
+        expect(contrastRatio(muted, secondary)).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+
       it('accent-text / background ≥ 4.5（連結/選中標籤文字，深色本就用亮字變體）', () => {
         expect(contrastRatio(accentText, bg)).toBeGreaterThanOrEqual(AA_NORMAL);
       });
