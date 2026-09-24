@@ -81,6 +81,14 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 BrowserRouter 走 pretty URL (無 hash)。`/manage/` 與 `/admin/` 的 `dist/` 仍有
 `index.html` 複本以支援 direct access (build step in `package.json`)。
 
+聊天與桌機側欄的可存取行程摘要共用 `useMyTrips`，只讀 `/my-trips` 的 camelCase
+回應，按登入 user ID 隔離清單；初次同時讀取共用請求，`tp-trips-updated` 觸發刷新，
+較舊回應不得覆蓋較新結果；正式的建立、更新與刪除行程事件也會觸發刷新。
+清單狀態區分載入、失敗與成功空清單。聊天透過
+`useAccessibleTripSelection` 協調明確目標、有效偏好與成功讀取後的 fallback；
+側欄直接讀 `ActiveTripContext` 的選擇。偏好仍由該 context 寫入既有 localStorage
+key 並接收跨分頁 storage event；上次檢視行程維持獨立語意。
+
 ### 目錄結構
 
 ```

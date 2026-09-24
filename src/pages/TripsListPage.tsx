@@ -846,6 +846,7 @@ export default function TripsListPage() {
         // Optimistic local removal
         setMyIds((prev) => prev?.filter((id) => id !== tripId) ?? null);
         setAllTrips((prev) => prev?.filter((t) => t.tripId !== tripId) ?? null);
+        window.dispatchEvent(new CustomEvent(EVENT.tripDeleted, { detail: { tripId } }));
         // Clear ?selected= if user just deleted the open trip
         if (selectedFromUrl === tripId) {
           const next = new URLSearchParams(searchParams);
