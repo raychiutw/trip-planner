@@ -52,7 +52,7 @@ const SCOPED_STYLES = `
   margin-left: auto; margin-right: auto;
 }
 @media (min-width: 768px) {
-  .tp-collab-page-title { font-size: var(--font-size-title1); padding: 32px 24px 0; }
+  .tp-collab-page-title { font-size: var(--font-size-title); padding: 32px 24px 0; }
 }
 `;
 

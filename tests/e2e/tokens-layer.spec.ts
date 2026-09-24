@@ -81,4 +81,29 @@ test.describe('tokens.css Layer 驗證', () => {
 
     expect(hasUtilitiesLayer).toBe(true);
   });
+
+  /* 落地頁插畫的 fill/stroke 全用 var() 上色。變數沒定義時瀏覽器不報錯，只會把顏色算成
+   * none —— v2.57.0 起 --d1..--d4 從沒定義，hero 四個停留點與兩張卡的插畫在 prod 隱形兩個月，
+   * 原始碼層的測試（只驗「有用 var」）一路全綠。所以這裡驗的是 build 產物在瀏覽器裡算出來的顏色。 */
+  test('落地頁插畫引用的 var() 在淺色／深色都解得出顏色', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('landing-page').waitFor();
+
+    const unresolved = () => page.evaluate(() => {
+      const bad: string[] = [];
+      for (const el of document.querySelectorAll('[data-testid="landing-page"] svg *')) {
+        for (const prop of ['fill', 'stroke'] as const) {
+          const attr = el.getAttribute(prop);
+          if (attr?.includes('var(') && getComputedStyle(el)[prop] === 'none') {
+            bad.push(`<${el.tagName} ${prop}="${attr}">`);
+          }
+        }
+      }
+      return bad;
+    });
+
+    expect(await unresolved(), '淺色').toEqual([]);
+    await page.evaluate(() => document.body.classList.add('dark'));
+    expect(await unresolved(), '深色').toEqual([]);
+  });
 });

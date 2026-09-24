@@ -37,6 +37,8 @@
 
 > **Day palette exception**: 10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）**只用於地圖 polyline 與 entry card**（map polyline + Map page bottom entry card num/eyebrow）。對應 Data Visualization 例外。**Day 指示 tab（day strip / MapDayTab）嚴守 柔褐主色 accent 統一色系**（idle eyebrow muted、active 實心 accent-fill + accent-foreground），**地圖與 Trip 明細頁一致、都不套 dayColor**（owner 2026-07-24「地圖模式 day tab 移除依日期不同顏色，回到統一色系」；此前地圖 day strip eyebrow 曾套 per-day 色，已退場）。理由：多色服務於地圖 N 條 polyline 視覺區分需求；day tab chrome 一致性更重要，且淺色天（amber/lime）在膠囊上對比不足。
 
+> **落地頁插畫示意色 `--d1..--d4`**（2026-09-24）：`LandingPage` 的 SVG 插畫用一組**插畫專用**柔和色（淺色 `#C9857F` / `#7FA8C9` / `#8FBF8A` / `#C9A97F`，`body.dark` 另一組較亮），值取自 owner 核准的視覺 SoT `docs/design-sessions/2026-07-20-landing-page-FINAL-variantB.html`，定義在該頁 `SCOPED_STYLES`、範圍限 `.tp-lp`。**不是上面的 Day palette，也不擴大它的使用範圍。** hero 停留點圓圈裡的白色數字對比偏低（淺色 2.1–2.9:1）是 mockup 原設計，owner 2026-09-24 決定維持（屬插畫附帶文字，SVG 以 `aria-label` 描述）。
+
 > **Day palette 的文字用深階 `--day-text-1..10`**（#1168，owner 2026-07-25 拍板）：上面那組 -500 是**填色／描邊用的飽和色，一律不得直接當文字色** —— 實測當淺底文字 **10 色全部不達 AA**（疊 `--color-background`：lime 1.92 / amber 2.08 / cyan 2.35 / teal 2.41 / emerald 2.46 / sky 2.69 / orange 2.72 / fuchsia 3.35 / rose 3.56 / violet 4.11，門檻 4.5）。因此每色各補一顆**文字專用**深變體，關係同 `--color-accent-text` 之於 `--color-accent`。
 >
 > | 用途 | 用哪個 |

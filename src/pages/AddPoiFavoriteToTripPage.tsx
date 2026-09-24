@@ -191,8 +191,8 @@ const SCOPED_STYLES = `
 /* Submit error */
 .tp-favorites-add-to-trip .tp-error {
   padding: 12px 16px; border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
-  color: var(--color-danger); border: 1px solid var(--color-danger);
+  background: var(--color-destructive-bg);
+  color: var(--color-destructive); border: 1px solid var(--color-destructive);
   font-size: var(--font-size-footnote);
 }
 `;

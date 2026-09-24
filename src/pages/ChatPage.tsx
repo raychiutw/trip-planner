@@ -374,7 +374,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   block-size: 36px;
   border-radius: 50%;
   border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-background);
   color: var(--color-foreground);
   font-size: 17px;
   line-height: 1;
@@ -383,7 +383,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   display: grid;
   place-items: center;
 }
-.tp-chat-jump-latest:hover { background: var(--color-surface-hover, var(--color-surface)); }
+.tp-chat-jump-latest:hover { background: var(--color-hover); }
 .tp-chat-jump-latest:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
@@ -403,32 +403,6 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   transition: transform var(--transition-duration-fast, 150ms) ease-out;
 }
 @media (max-width: 760px) {
-  /* 跳到最新：浮在訊息區右下、composer 之上。只在 user 捲離底部時渲染。
-   以 composer 為定位容器，跟隨輸入區高度與鍵盤位移，避免壓到送出按鈕。 */
-.tp-chat-jump-latest {
-  position: absolute;
-  inset-inline-end: 20px;
-  inset-block-end: calc(100% + 12px);
-  z-index: 4;
-  inline-size: 36px;
-  block-size: 36px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-foreground);
-  font-size: 17px;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.16);
-  display: grid;
-  place-items: center;
-}
-.tp-chat-jump-latest:hover { background: var(--color-surface-hover, var(--color-surface)); }
-.tp-chat-jump-latest:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
 .tp-chat-composer { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
 }
 .tp-chat-input {

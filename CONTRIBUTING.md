@@ -6,7 +6,7 @@
 
 | 工具 | 版本 | 用途 |
 |------|------|------|
-| Node.js | 22+ | vite, wrangler, vitest (CI 用 22, package.json `engines`) |
+| Node.js | 22+ | vite, wrangler, vitest（CI 用 22；package.json 目前無 `engines` 欄位強制此版本）|
 | npm | 10+ | 隨 Node 來的那個就行 |
 | bun | 1.0+ | google-poi-*.ts scripts (cron backfill / refresh / quota monitor) |
 | git | 任何近代版本 | — |
