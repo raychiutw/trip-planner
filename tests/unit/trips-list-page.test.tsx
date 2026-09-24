@@ -320,6 +320,29 @@ describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () 
     expect(screen.queryByTestId('trips-list-card-seoul')).toBeNull();
   });
 
+  it('封存通知刷新清單後，行程從一般列表移到已歸檔並更新名稱', async () => {
+    let currentTrips: Array<Record<string, unknown>> = SAMPLE;
+    let listReads = 0;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/my-trips') {
+        listReads++;
+        return Promise.resolve(new Response(JSON.stringify(currentTrips)));
+      }
+      return Promise.resolve(new Response('null'));
+    }));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    expect(await screen.findByTestId('trips-list-card-okinawa')).toBeTruthy();
+
+    currentTrips = SAMPLE.map((trip) => trip.tripId === 'okinawa'
+      ? { ...trip, name: '沖繩封存行程', title: '沖繩封存行程', archivedAt: '2026-09-24T00:00:00Z' }
+      : trip);
+    act(() => window.dispatchEvent(new Event(EVENT.tripsUpdated)));
+    await waitFor(() => expect(listReads).toBe(2));
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeNull());
+    fireEvent.click(screen.getByTestId('trips-list-tab-archived'));
+    expect((await screen.findByTestId('trips-list-card-okinawa')).textContent).toContain('沖繩封存行程');
+  });
+
   it('filter tab「共編」只顯示 owner !== current user 的 trip', async () => {
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }, { tripId: 'taipei' }], sample));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
