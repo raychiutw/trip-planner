@@ -164,6 +164,9 @@ functions/api/
 ├── _utils.ts            共用 DB / header helpers
 ├── _validate.ts         input validation + garbled guard
 ├── trips/               trips CRUD + batch days endpoint
+│   ├── _tripCreation.ts 新行程建立順序、ID 對應、分批帳本與補償（匯入已移轉；clone 待 #1298）
+│   ├── _import.ts       匯入來源驗證、舊格式正規化及建立 plan 轉換
+│   └── _tripWrite.ts    分批 D1、清理與 ID／行程數上限 primitives
 ├── pois/                POI CRUD（AI 維護的 master）
 ├── requests/            旅伴請求（含 SSE stream）
 ├── permissions/         trip_permissions CRUD

@@ -1,7 +1,7 @@
 /**
  * PR3 — import endpoint + frontend wiring (source grep).
- * The D1 orchestration can't be unit-tested without a live binding (verified on
- * prod); this locks the security + structural contract.
+ * Import lifecycle behavior is covered by trip-import-lifecycle.integration.test.ts.
+ * These remaining checks cover validation and frontend wiring not replaced there.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -10,40 +10,9 @@ import { join } from 'node:path';
 const ROOT = join(__dirname, '..', '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
 
-const ENDPOINT = read('functions/api/trips/import.ts');
 const VALIDATE = read('functions/api/trips/_import.ts');
-// v2.40.0 PR3: orchestration primitives extracted to _tripWrite (shared with clone).
-const TRIPWRITE = read('functions/api/trips/_tripWrite.ts');
 const BTN = read('src/components/trips/ImportTripButton.tsx');
 const LIST = read('src/pages/TripsListPage.tsx');
-
-describe('POST /api/trips/import — endpoint', () => {
-  // #1258：entries + trip_entry_pois 的 INSERT 與 master note fallback 搬進 entry intake，
-  // 由 tests/api/import-entry-note.integration.test.ts 與 entry-intake.integration.test.ts 走行為驗證。
-  it('runs the pure validator and rejects on failure', () => {
-    expect(ENDPOINT).toMatch(/parseAndValidateImport/);
-    expect(ENDPOINT).toMatch(/if \(!result\.ok\) throw new AppError/);
-  });
-  it('creates a NEW trip id, owner = current user, data_source imported', () => {
-    // 2026-07-21：原本斷言 `crypto.randomUUID()`，那是匯入自己寫死的 `imp-<uuid>`。
-    // ID 規則已收斂到 src/lib/tripId 的共用 genTripId（owner 由 demo 行程編號
-    // 不合慣例而發現），這裡改鎖「用共用產生器」而非鎖特定亂數實作。
-    expect(ENDPOINT).toMatch(/generateUniqueTripId\(/);
-    expect(ENDPOINT).toContain("'imported'");
-    expect(ENDPOINT).toMatch(/owner_user_id/);
-  });
-  // #1256／#1258：POI resolve policy（匯入現為 fill-null：只補 NULL、非 NULL 不覆蓋）改由
-  // tests/api/poi-resolver-policy 與 import-entry-note 走行為驗證，不再 grep resolvePoi 原始碼。
-  it('rolls back (connect-root delete) on any failure (shared _tripWrite)', () => {
-    expect(ENDPOINT).toMatch(/await rollbackTrip\(/);
-    expect(TRIPWRITE).toMatch(/export async function rollbackTrip/);
-    expect(TRIPWRITE).toMatch(/DELETE FROM trips WHERE id = \?/);
-  });
-  it('remaps segments by positional index to new entry ids', () => {
-    expect(ENDPOINT).toMatch(/posToEntryId/);
-    expect(ENDPOINT).toMatch(/from_entry_id, to_entry_id/);
-  });
-});
 
 describe('_import.ts — security boundary', () => {
   it('exports the validator + dangerous-key guard + caps (incl TOTAL caps)', () => {

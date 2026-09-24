@@ -5,12 +5,14 @@
  * boundary: it never spreads parsed objects, reads every field through an
  * explicit allowlist, coerces enum columns to satisfy D1 CHECK constraints,
  * caps every array, and rejects prototype-pollution keys. The DB orchestration
- * (import.ts) only ever sees the normalized, safe shape returned here.
+ * (_tripCreation.ts) only receives the source plan built from that safe shape.
  *
  * Round-trip contract: consumes the v1 export from src/lib/tripExport.ts
  * (buildTripExportJson) — camelCase throughout (apiFetch deep-camels responses).
  */
 import { normalizeReservation } from '../_reservation';
+import type { FindOrCreatePoiData } from '../_poi';
+import type { TripCreationPlan } from './_tripCreation';
 
 export const MAX_IMPORT_BYTES = 512 * 1024;
 export const MAX_DAYS = 366;
@@ -104,6 +106,36 @@ export interface NormalizedImport {
 export type ImportResult =
   | { ok: true; data: NormalizedImport }
   | { ok: false; error: string };
+
+/** 匯入來源語意：舊格式已正規化；名稱、預設與 positional key 留在此邊界。 */
+export function importCreationPlan(data: NormalizedImport, tripId: string, ownerUserId: string, changedBy: string): TripCreationPlan {
+  const poiData = (p: NImportPoi | NImportHotel): FindOrCreatePoiData => ({
+    type: p.type, name: p.name, category: p.category, lat: p.lat, lng: p.lng, hours: p.hours,
+    rating: p.rating, price: 'price' in p ? p.price : null, address: p.address, place_id: p.placeId, source: 'imported',
+  });
+  return {
+    trip: { id: tripId, ownerUserId, name: data.name, title: data.title, description: data.description,
+      countries: data.countries ?? 'JP', published: 0, dataSource: 'imported', lang: data.lang },
+    audit: { changedBy, diff: { via: 'import' } },
+    destinations: data.destinations,
+    notes: data.notes,
+    days: data.days.map((day, index) => ({
+      key: index, dayNum: day.dayNum || index + 1, date: day.date, dayOfWeek: day.dayOfWeek, label: day.label,
+      hotel: day.hotel ? poiData(day.hotel) : null,
+      entries: day.entries.map(entry => ({
+        key: entry.entryPosition, sortOrder: entry.sortOrder, startTime: entry.startTime, endTime: entry.endTime,
+        description: entry.description, source: entry.source,
+        pois: entry.pois.map(poi => ({ data: poiData(poi), description: poi.description, note: poi.note,
+          reservation: poi.reservation, reservationUrl: poi.reservationUrl })),
+      })),
+    })),
+    segments: data.segments.map(segment => ({
+      fromEntryKey: segment.fromEntryIdx, toEntryKey: segment.toEntryIdx, mode: segment.mode, submode: segment.submode,
+      min: segment.min, distanceM: segment.distanceM, source: segment.source,
+      computedAt: segment.source === 'google' ? Date.now() : null, noTravel: segment.noTravel ?? null,
+    })),
+  };
+}
 
 /* ===== coercion helpers (pure) ===== */
 
@@ -215,8 +247,8 @@ function normEntry(raw: unknown, entryPosition: number): NImportEntry {
   // 改掛 master（sort_order=1）POI 的 per-POI note。新匯出檔 entry 不再帶 top-level note；
   // 但舊匯出檔仍可能帶 `entryNote` —— 為不遺失資料，fold 到 master POI。
   // 合併語意：**master-wins**（master 自己有 note → 保留，不被 entry note 覆蓋；master 為空 →
-  // 繼承 entry note）。與 import.ts orchestration 的 `p.note ?? e.note` 一致（import 是建立全新
-  // 行程，非既有資料 backfill，故採 master 優先而非 migration D5 的換行串接）。備選（sort_order>1）
+  // 繼承 entry note）。import 是建立全新
+  // 行程，非既有資料 backfill，故採 master 優先而非 migration D5 的換行串接。備選（sort_order>1）
   // 維持各自 note，entry note 不外洩。entry 完全沒有 POI → entry note 無處可掛而丟棄（罕見純佔位 entry）。
   const entryNote = strOrNull(o.note, 4000);
   if (entryNote && master) {
@@ -228,8 +260,7 @@ function normEntry(raw: unknown, entryPosition: number): NImportEntry {
     startTime: strOrNull(o.startTime, 20),
     endTime: strOrNull(o.endTime, 20),
     description: strOrNull(o.description, 4000),
-    // 保留原始 entry-level note 供向後相容（import.ts orchestration 的 `p.note ?? e.note`
-    // fallback 仍引用此欄）；實際 master 已於上方 fold，故 orchestration fallback 不會重複寫入。
+    // 正規化結果保留原始 entry-level note；實際寫入只使用上方 fold 後的 master note。
     note: entryNote,
     source: str(o.source, 30) || 'imported',
     pois,

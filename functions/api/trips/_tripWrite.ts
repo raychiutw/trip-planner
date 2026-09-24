@@ -5,9 +5,10 @@
  *
  * New-trip creation consumes generated ids in JavaScript, so callers run CHUNKED
  * sequential batches with INSERT…RETURNING id, track created ids, and connect-root
- * rollback on any failure. POIs are find-or-create by UNIQUE(name,type): pre-existing
- * rows are reused AS-IS (never mutated → no shared-catalog poisoning), only newly-
- * created ids are tracked for rollback.
+ * rollback on any failure. Import's lifecycle lives in _tripCreation; clone still
+ * coordinates these primitives until its migration. POIs use fill-null: existing
+ * non-null fields survive, and fills are not undone. Only newly created POI IDs
+ * are tracked for rollback.
  */
 import { AppError } from '../_errors';
 import { genTripId } from '../../../src/lib/tripId';

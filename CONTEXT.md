@@ -35,6 +35,12 @@ trips ─┬─ trip_days ── trip_entries ── trip_entry_pois
 **entry intake**：
 後端「在某一天建立 entry 並掛上正選／備選 POI」的 module（`_entryWrite`）。單筆新增／收藏使用 `createEntry`，複製／分享 clone／匯入使用 `createEntriesBatch`，整日重寫使用 `replaceDayEntries`；共用 entry 與 junction 欄位規則。
 
+**新行程建立**：`functions/api/trips/_tripCreation.ts` 持有整趟行程的必要寫入順序、來源 day／entry key 到新 ID 的對應、已建立資料帳本、分批提交及失敗補償。匯入入口只保留授權、輸入驗證、行程數上限、命名與來源轉換；建立 module 內沿用 entry intake 的正選／備選、版本及 audit 規則。分享 clone 尚待 #1298 移轉。
+
+每批成功提交才把建立結果記入帳本；trip 尚未成功建立時不取得該 ID 的清理權，避免碰撞時誤刪他人的行程。必要寫入失敗仍回報失敗，記錄 trip ID、失敗階段與原始錯誤；補償再失敗時同時保留清理錯誤。清理成功可重新匯入，但沒有跨批次原子交易、持久化帳本或自動重播承諾。既有 audit 保留政策不變。
+
+共用 POI 依 fill-null 補空欄位，非空資料不覆寫；補入既有 POI 的欄位不隨補償還原。帳本只追蹤本次新建 POI。整日替換繼續使用下述同批次交易，不套用新行程的補償方式。
+
 **整日替換**先完成輸入驗證與 POI resolve，再於同一 D1 batch 提交舊 entries 刪除、day 欄位與版本、新 entries、正選／備選、飯店及停車關聯。必要寫入失敗由資料庫回滾，舊 day 不需事後補償；不使用新增批次的 50 筆分批策略。批次超過平台限制也回報失敗，不宣稱已儲存。共用 POI 的 `fill-null` 政策維持原樣。
 
 名稱重寫依正選 POI 與原順序一對一承接舊備選，保留各自 description、note、reservation、reservation_url。新的明示 POI 清單取代原清單。新 entry 有 POI 時 `entry_pois_version=1`，承接備選時為 2；合法無 POI 佔位為 0。day 的 `version` 每次成功替換加一，失敗不變。
