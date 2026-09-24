@@ -31,7 +31,7 @@ export function useAccessibleTripSelection(userId: string | null | undefined, ex
     setActiveTrip(trips[0]?.tripId ?? null);
   }, [activeTripId, explicitTripId, setActiveTrip, status, trips, userId]);
 
-  const selectedTripId = status === 'loading' ? null : status === 'error' ? activeTripId
+  const selectedTripId = status !== 'success' ? null
     : activeTripId && (trips?.some((trip) => trip.tripId === activeTripId) || activeTripId !== selectionAtReadStart.current)
       ? activeTripId : trips?.[0]?.tripId ?? null;
 

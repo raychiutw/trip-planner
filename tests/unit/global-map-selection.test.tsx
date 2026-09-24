@@ -48,7 +48,7 @@ describe('root map selection', () => {
     expect(paths.some((path) => path.includes('/days?all=1'))).toBe(false);
   });
 
-  it('keeps a preference while the list is pending or fails', async () => {
+  it('keeps a preference while the list is pending', async () => {
     lsSet(LS_KEY_TRIP_PREF, 'private');
     let finish: ((value: Response) => void) | undefined;
     listResponse = () => new Promise((resolve) => { finish = resolve; });
@@ -56,9 +56,19 @@ describe('root map selection', () => {
     await waitFor(() => expect(finish).toBeDefined());
     expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private');
     expect(screen.queryByTestId('global-map-empty')).toBeNull();
-    await act(async () => finish!(new Response('{}', { status: 503 })));
+    await act(async () => finish!(new Response(JSON.stringify(trips))));
+    expect(await screen.findByTestId('map-destination')).toHaveTextContent('/trip/private/map');
     expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private');
+  });
+
+  it('keeps a preference without redirecting when the first list read fails', async () => {
+    lsSet(LS_KEY_TRIP_PREF, 'private');
+    listResponse = async () => new Response('{}', { status: 503 });
+    openMap();
+    expect(await screen.findByRole('alert')).toHaveTextContent('載入行程失敗');
+    expect(screen.queryByTestId('map-destination')).toBeNull();
     expect(screen.queryByTestId('global-map-empty')).toBeNull();
+    expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private');
   });
 
   it('shows the existing empty state only for a confirmed empty list', async () => {
