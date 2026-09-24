@@ -565,6 +565,9 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     if (!draftTripIdRef.current) {
       draftTripIdRef.current = activeTripId;
       if (pendingLink?.prefill) setInput(pendingLink.prefill);
+      else if (activeTripId && draftsRef.current[activeTripId] !== undefined) {
+        setInput(draftsRef.current[activeTripId]);
+      }
       return;
     }
     if (lockTripId) {

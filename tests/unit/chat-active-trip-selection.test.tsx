@@ -168,6 +168,31 @@ describe('chat active trip selection', () => {
     expect(input.value).toBe('B 的草稿');
   });
 
+  it('空清單後 A 再出現時恢復 A 草稿，並只送到 A', async () => {
+    openChat('/chat?tripId=first');
+    const input = await screen.findByTestId('chat-input') as HTMLTextAreaElement;
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('first'));
+    fireEvent.change(input, { target: { value: 'A 的草稿' } });
+    fireEvent.click(screen.getByTestId('chat-trip-title'));
+    fireEvent.click(await screen.findByTestId('chat-trip-pick-private'));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private'));
+    fireEvent.change(input, { target: { value: 'B 的草稿' } });
+
+    listResponse = async () => new Response('[]');
+    act(() => window.dispatchEvent(new CustomEvent(EVENT.tripDeleted, { detail: { tripId: 'private' } })));
+    await screen.findByText('還沒有行程可以聊');
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBeNull());
+
+    listResponse = async () => new Response(JSON.stringify([trips[0]]));
+    act(() => window.dispatchEvent(new CustomEvent(EVENT.tripCreated, { detail: { tripId: 'first' } })));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('first'));
+    const restoredInput = await screen.findByTestId('chat-input') as HTMLTextAreaElement;
+    expect(restoredInput.value).toBe('A 的草稿');
+    fireEvent.click(screen.getByTestId('chat-send'));
+    await waitFor(() => expect(sentTripIds).toEqual(['first']));
+    expect(sentMessages).toEqual(['A 的草稿']);
+  });
+
   it('preserves the preference when the accessible list read fails', async () => {
     lsSet(LS_KEY_TRIP_PREF, 'private');
     listResponse = async () => new Response('{}', { status: 503 });
