@@ -7,8 +7,8 @@
  * --font-size-caption1／support／title1 從加進來那天起就不存在。
  *
  * 範圍：沒有 fallback、名字寫死的 var()。帶 fallback 的 var(--x, y) 不會整個失效；
- * 動態組名（var(--day-text-${n})）由 day-palette-text.test.ts 守。
- * 這條讀原始碼；瀏覽器實際算出的顏色由 e2e tokens-layer.spec.ts 驗落地頁。
+ * 也認 Tailwind 任意值簡寫（utility 名後接括號包住的變數名）。動態組名（var(--day-text-${n})）由 day-palette-text.test.ts 守。
+ * 這條讀原始碼；build 產物（含 @theme tree-shake 後）由 e2e css-var-resolution.spec.js 驗。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'fs';
@@ -22,16 +22,50 @@ const files = ['src', 'css'].flatMap((dir) =>
     .map((f) => join(dir, f)),
 );
 
-/** 剝掉註解 —— 說明文字裡的 var(--x) 不算引用。 */
-const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-const sources = files.map((f) => ({ f, src: strip(readFileSync(join(ROOT, f), 'utf-8')) }));
+/**
+ * 剝掉註解 —— 說明文字裡的 var(--x)／--x: 不算數。
+ * `//` 只在行首或空白後才算註解（整行與行尾都剝），避開 https:// 與 '//cdn' 這類字串。
+ */
+const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
+/** 定義：--x: …、'--x': …（style 物件）、setProperty('--x', …) */
+const definitionsIn = (src: string) => [
+  ...[...src.matchAll(/(--[\w-]+)['"]?\s*:/g)].map((m) => m[1]),
+  ...[...src.matchAll(/setProperty\(\s*['"](--[\w-]+)/g)].map((m) => m[1]),
+];
+/** 引用：沒有 fallback、名字寫死的 var(--x)，以及 Tailwind 任意值簡寫（utility 名後接括號包住的變數名） */
+const referencesIn = (src: string) => [
+  ...[...src.matchAll(/var\(\s*(--[\w-]+)\s*\)/g)].map((m) => m[1]),
+  ...[...src.matchAll(/-\((--[\w-]+)\)/g)].map((m) => m[1]),
+];
 
-const defined = new Set(
-  sources.flatMap(({ src }) => [
-    ...[...src.matchAll(/(--[\w-]+)['"]?\s*:/g)].map((m) => m[1]),        // --x: …／'--x': …
-    ...[...src.matchAll(/setProperty\(\s*['"](--[\w-]+)/g)].map((m) => m[1]),
-  ]),
-);
+const sources = files.map((f) => ({ f, src: strip(readFileSync(join(ROOT, f), 'utf-8')) }));
+const defined = new Set(sources.flatMap(({ src }) => definitionsIn(src)));
+
+describe('CSS 變數 — 解析邏輯（守門自己也要被守住）', () => {
+  it('整行、行尾、區塊註解裡的 --x: 都不算定義；https:// 後面的程式碼照常掃', () => {
+    const src = strip([
+      '// --a: 整行註解',
+      'const x = 1; // --b: 行尾註解',
+      '/* --c: 區塊註解 */',
+      'const u = "https://e.com"; const css = `.k{--d: 4px}`;',
+    ].join('\n'));
+    expect(definitionsIn(src)).toEqual(['--d']);
+  });
+
+  it("'--x': 物件鍵與 setProperty('--x') 都算定義", () => {
+    expect(definitionsIn("style={{ '--k': v }}; el.style.setProperty('--m', v);")).toEqual(['--k', '--m']);
+  });
+
+  it('Tailwind 任意值簡寫也算引用（--z-print-exit 就是這樣被當成沒人用而刪掉）', () => {
+    // 執行時才組字串 —— 原始碼裡寫死的話，Tailwind 會把它當真的 class 產出 CSS
+    const shorthand = (utility: string, name: string) => `${utility}-(${name})`;
+    expect(referencesIn(`className="fixed ${shorthand('z', '--z-a')} ${shorthand('bg', '--b')}"`)).toEqual(['--z-a', '--b']);
+  });
+
+  it('帶 fallback 的 var(--x, y) 不算引用；寫死名字的 var(--x) 才算', () => {
+    expect(referencesIn('a{color:var(--p, red);background:var(--q);width:var( --r )}')).toEqual(['--q', '--r']);
+  });
+});
 
 describe('CSS 變數 — 引用的都要有定義', () => {
   it('掃得到巢狀目錄（舊版 Node 會忽略 readdirSync 的 recursive，靜默只掃頂層）', () => {
@@ -40,10 +74,7 @@ describe('CSS 變數 — 引用的都要有定義', () => {
 
   it('沒有 fallback 的 var(--x) 都找得到 --x 的定義', () => {
     const missing = sources.flatMap(({ f, src }) =>
-      [...src.matchAll(/var\(\s*(--[\w-]+)\s*\)/g)]
-        .map((m) => m[1])
-        .filter((name) => !defined.has(name))
-        .map((name) => `${name} ← ${f}`),
+      referencesIn(src).filter((name) => !defined.has(name)).map((name) => `${name} ← ${f}`),
     );
     expect([...new Set(missing)]).toEqual([]);
   });
