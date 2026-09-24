@@ -258,7 +258,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
 
         <div className="tp-sidebar-section-label">我的行程</div>
         <nav className="tp-sidebar-trips" aria-label="我的行程" data-testid="sidebar-trips">
-          {trips === undefined && tripsStatus === 'error' ? (
+          {tripsStatus === 'error' && (!trips || trips.length === 0) ? (
             <div className="tp-sidebar-trips-empty" role="alert">行程清單載入失敗</div>
           ) : trips === undefined ? (
             <div className="tp-sidebar-trips-loading" role="status" aria-label="載入行程中">

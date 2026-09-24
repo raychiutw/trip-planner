@@ -118,6 +118,18 @@ describe('chat active trip selection', () => {
     expect(screen.queryByText('尚無行程')).toBeNull();
   });
 
+  it('does not keep calling a failed refresh of an empty list confirmed empty', async () => {
+    listResponse = async () => new Response('[]');
+    openChat();
+    expect(await screen.findByText('還沒有行程可以聊')).toBeTruthy();
+    expect(screen.getByText('尚無行程')).toBeTruthy();
+    listResponse = async () => new Response('{}', { status: 503 });
+    act(() => window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId: 'removed' } })));
+    expect(await screen.findByText('載入行程失敗，請稍後再試')).toBeTruthy();
+    expect(screen.getByText('行程清單載入失敗')).toBeTruthy();
+    expect(screen.queryByText('尚無行程')).toBeNull();
+  });
+
   it('keeps an embedded chat locked to its trip after a storage event', async () => {
     render(<MemoryRouter initialEntries={['/chat']}>
       <ActiveTripProvider><ChatPage embedded lockTripId="private" /></ActiveTripProvider>
