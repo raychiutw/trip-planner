@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
+import { withTripCreationFaults, tripStructureCounts } from './trip-creation-helpers';
 import { callHandler, jsonRequest, mockAuth, mockContext, mockEnv, seedUser, seedTrip, seedEntry, getDayId } from './helpers';
 import { onRequestPost as importTrip } from '../../functions/api/trips/import';
 
@@ -47,50 +48,18 @@ async function rows(sql: string, ...values: (string | number)[]) {
   return (await db.prepare(sql).bind(...values).all<Record<string, unknown>>()).results;
 }
 
-/** 只替換指定的外部 D1 statement；其餘建立與補償照常執行真 D1。 */
-function withFaults(rules: { sql: RegExp; occurrence?: number; table: string }[], beforeFailure?: () => Promise<void>): D1Database {
-  const seen = rules.map(() => 0);
-  const failures = new WeakSet<D1PreparedStatement>();
-  return new Proxy(db, { get(target, property) {
-    if (property === 'prepare') return (sql: string) => {
-      const rule = rules.find((rule, i) => rule.sql.test(sql) && ++seen[i]! === (rule.occurrence ?? 1));
-      if (!rule) return target.prepare(sql);
-      const failure = target.prepare(`SELECT * FROM ${rule.table}`);
-      failures.add(failure);
-      return new Proxy(failure, { get(stmt, member) {
-        if (member === 'bind') return () => failure;
-        const value = Reflect.get(stmt, member);
-        return typeof value === 'function' ? value.bind(stmt) : value;
-      } });
-    };
-    if (property === 'batch') return async (statements: D1PreparedStatement[]) => {
-      if (statements.some(stmt => failures.has(stmt))) await beforeFailure?.();
-      return target.batch(statements);
-    };
-    const value = Reflect.get(target, property);
-    return typeof value === 'function' ? value.bind(target) : value;
-  } });
-}
-
-async function structureCounts() {
-  // audit_log 沿用原本保留政策，不是行程結構；其餘各表必須沒有本次殘留。
-  const tables = ['trips', 'trip_permissions', 'trip_destinations', 'trip_days', 'trip_entries', 'trip_entry_pois',
-    'trip_segments', 'pois', 'trip_flights', 'trip_lodgings', 'trip_reservations', 'trip_pretrip_notes', 'trip_emergency_contacts'];
-  return rows(`SELECT ${tables.map(table => `(SELECT COUNT(*) FROM ${table}) AS ${table}`).join(', ')}`);
-}
-
 describe('匯入完整行程的生命週期（HTTP + 真 D1）', () => {
   it('trip 與前段筆記已提交後，後批筆記故障仍清完本次新行程', async () => {
     const body = payload('lifecycle-late-notes');
     body.notes.flights = Array.from({ length: 60 }, (_, i) => ({ ...body.notes.flights[0]!, flightNo: `BR${i}` }));
-    const before = await structureCounts();
+    const before = await tripStructureCounts(db);
     let committed: Record<string, unknown>[] | undefined;
-    const response = await runImport(body, withFaults([{ sql: /INSERT INTO trip_flights/, occurrence: 51, table: 'injected_late_note_failure' }], async () => {
+    const response = await runImport(body, withTripCreationFaults(db, [{ sql: /INSERT INTO trip_flights/, occurrence: 51, table: 'injected_late_note_failure' }], async () => {
       committed = await rows('SELECT COUNT(*) AS n FROM trip_flights f JOIN trips t ON t.id = f.trip_id WHERE t.name = ?', body.meta.name);
     }));
     expect(response.status).toBe(503);
     expect(committed).toEqual([{ n: 47 }]);
-    expect(await structureCounts()).toEqual(before);
+    expect(await tripStructureCounts(db)).toEqual(before);
   });
   it('補償保護來源行程與共用 POI，只補空欄位且不回復 fill-null；重試仍可建立', async () => {
     const sourceResponse = await runImport(payload('lifecycle-shared-source'));
@@ -101,9 +70,9 @@ describe('匯入完整行程的生命週期（HTTP + 真 D1）', () => {
     const body = payload('lifecycle-shared-copy');
     Object.assign(body.days[0]!.timeline[0]!.stopPois[1]!, { name: 'lifecycle-shared-source master 0', address: '不能覆蓋', rating: 4.9 });
     body.days[0]!.hotel!.name = 'lifecycle-shared-source hotel';
-    const before = await structureCounts();
-    expect((await runImport(body, withFaults([{ sql: /INSERT INTO trip_segments/, table: 'injected_shared_failure' }]))).status).toBe(503);
-    expect(await structureCounts()).toEqual(before);
+    const before = await tripStructureCounts(db);
+    expect((await runImport(body, withTripCreationFaults(db, [{ sql: /INSERT INTO trip_segments/, table: 'injected_shared_failure' }]))).status).toBe(503);
+    expect(await tripStructureCounts(db)).toEqual(before);
     expect(await rows('SELECT d.id AS day, d.hotel_poi_id, e.id AS entry, ep.poi_id, ep.note FROM trip_days d JOIN trip_entries e ON e.day_id = d.id JOIN trip_entry_pois ep ON ep.entry_id = e.id WHERE d.trip_id = ? ORDER BY e.id, ep.sort_order', sourceId)).toEqual(sourceStructure);
     expect(await rows('SELECT address, rating, source, country FROM pois WHERE name = ?', 'lifecycle-shared-source master 0')).toEqual([{ address: '原地址', rating: 4.9, source: 'google', country: 'TW' }]);
     expect((await runImport(body)).status).toBe(201);
@@ -143,12 +112,12 @@ describe('匯入完整行程的生命週期（HTTP + 真 D1）', () => {
     { label: '污染 key', auth: mockAuth(), body: '{"schemaVersion":1,"meta":{"name":"x"},"__proto__":{}}', status: 400 },
     { label: 'entries 超限', auth: mockAuth(), body: JSON.stringify({ schemaVersion: 1, meta: { name: 'x' }, days: [{ timeline: Array(101).fill({}) }] }), status: 400 },
   ])('$label 在建立前拒絕且不寫入任何行程結構', async ({ auth, body, status }) => {
-    const before = await structureCounts();
+    const before = await tripStructureCounts(db);
     const response = await callHandler(importTrip, mockContext({
       env: mockEnv(db), auth, request: new Request('https://test/api/trips/import', { method: 'POST', headers: { 'Content-Length': '1' }, body }),
     }));
     expect(response.status).toBe(status);
-    expect(await structureCounts()).toEqual(before);
+    expect(await tripStructureCounts(db)).toEqual(before);
   });
 
   it('達 1000 趟的使用者不能匯入新行程', async () => {
@@ -156,11 +125,11 @@ describe('匯入完整行程的生命週期（HTTP + 真 D1）', () => {
     await db.prepare(`WITH RECURSIVE nums(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM nums WHERE n < 1000)
       INSERT INTO trips(id, name, owner_user_id) SELECT 'lifecycle-cap-' || n, '已存在', ? FROM nums`).bind(userId).run();
     try {
-      const before = await structureCounts();
+      const before = await tripStructureCounts(db);
       const response = await callHandler(importTrip, mockContext({ env: mockEnv(db), auth: mockAuth({ email: 'lifecycle-cap@test.com' }), request: jsonRequest('https://test/api/trips/import', 'POST', payload('lifecycle-over-cap')) }));
       expect(response.status).toBe(400);
       await expect(response.json()).resolves.toMatchObject({ error: { detail: '行程數已達上限（1000）' } });
-      expect(await structureCounts()).toEqual(before);
+      expect(await tripStructureCounts(db)).toEqual(before);
     } finally {
       await db.prepare('DELETE FROM trips WHERE owner_user_id = ?').bind(userId).run();
     }
@@ -203,9 +172,9 @@ describe('匯入完整行程的生命週期（HTTP + 真 D1）', () => {
     { phase: 'junction after 50 commits', sql: /INSERT INTO trip_entry_pois/, occurrence: 101, count: 60, committedEntries: 60, committedPois: 100 },
   ])('$phase 必要寫入失敗會清完新結構，重試可完整建立', async ({ phase, sql, occurrence, count, committedEntries, committedPois }) => {
     const name = `lifecycle-failure-${phase}`;
-    const before = await structureCounts();
+    const before = await tripStructureCounts(db);
     let committed: Record<string, unknown>[] | undefined;
-    const response = await runImport(payload(name, count), withFaults([{ sql, occurrence, table: 'injected_write_failure' }], async () => {
+    const response = await runImport(payload(name, count), withTripCreationFaults(db, [{ sql, occurrence, table: 'injected_write_failure' }], async () => {
       committed = await rows(`SELECT COUNT(DISTINCT e.id) AS entries, COUNT(ep.entry_id) AS junctions
         FROM trips t JOIN trip_days d ON d.trip_id = t.id JOIN trip_entries e ON e.day_id = d.id
         LEFT JOIN trip_entry_pois ep ON ep.entry_id = e.id WHERE t.name = ?`, name);
@@ -214,7 +183,7 @@ describe('匯入完整行程的生命週期（HTTP + 真 D1）', () => {
     if (phase.startsWith('junction')) await expect(response.json()).resolves.toMatchObject({ error: { detail: 'entry 建立失敗，請稍後重試' } });
     // POI resolve 使用 .first；其餘故障發生在真正 batch 執行前，量到的是已提交資料。
     if (phase !== 'poi resolve') expect(committed).toEqual([{ entries: committedEntries, junctions: committedPois }]);
-    expect(await structureCounts()).toEqual(before);
+    expect(await tripStructureCounts(db)).toEqual(before);
     const retry = await runImport(payload(name, count));
     expect(retry.status).toBe(201);
     const { tripId } = await retry.json();
@@ -226,7 +195,7 @@ describe('匯入完整行程的生命週期（HTTP + 真 D1）', () => {
   it('junction 建立與整趟補償都失敗時，回報失敗並同時保存兩個錯誤脈絡', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      const response = await runImport(payload('lifecycle-double-failure'), withFaults([
+      const response = await runImport(payload('lifecycle-double-failure'), withTripCreationFaults(db, [
         { sql: /INSERT INTO trip_entry_pois/, table: 'injected_creation_failure' },
         { sql: /DELETE FROM trip_entries/, table: 'injected_cleanup_failure' },
       ]));
@@ -286,9 +255,9 @@ describe('匯入完整行程的生命週期（HTTP + 真 D1）', () => {
     expect(await rows('SELECT sort_order, kind, title, reserved_at, party_size, reservation_no, phone, note FROM trip_reservations WHERE trip_id = ?', tripId)).toEqual([
       { sort_order: 0, kind: 'restaurant', title: '午餐', reserved_at: '2026-09-24T12:00', party_size: 2, reservation_no: 'R123', phone: '02-456', note: '預订備註' },
     ]);
-    expect(await rows('SELECT sort_order, section, title, content FROM trip_pretrip_notes WHERE trip_id = ?', tripId)).toEqual([{ sort_order: 0, section: '行前', title: '護照', content: '檢查效期' }]);
-    expect(await rows('SELECT sort_order, name, relationship, phone, email, kind FROM trip_emergency_contacts WHERE trip_id = ?', tripId)).toEqual([
-      { sort_order: 0, name: '家人', relationship: '姊姊', phone: '0912345678', email: 'family@example.com', kind: 'personal' },
+    expect(await rows('SELECT sort_order, section, title, content, ai_generated, ai_source FROM trip_pretrip_notes WHERE trip_id = ?', tripId)).toEqual([{ sort_order: 0, section: '行前', title: '護照', content: '檢查效期', ai_generated: 0, ai_source: null }]);
+    expect(await rows('SELECT sort_order, name, relationship, phone, email, kind, ai_generated FROM trip_emergency_contacts WHERE trip_id = ?', tripId)).toEqual([
+      { sort_order: 0, name: '家人', relationship: '姊姊', phone: '0912345678', email: 'family@example.com', kind: 'personal', ai_generated: 0 },
     ]);
   });
 });

@@ -4,9 +4,9 @@
  * and POST /api/share/:token/clone (trusted server-side share payload).
  *
  * New-trip creation consumes generated ids in JavaScript, so callers run CHUNKED
- * sequential batches with INSERT…RETURNING id, track created ids, and connect-root
- * rollback on any failure. Import's lifecycle lives in _tripCreation; clone still
- * coordinates these primitives until its migration. POIs use fill-null: existing
+ * sequential batches with INSERT…RETURNING id. _tripCreation owns both import
+ * and clone lifecycles, tracks created ids, and compensates on failure. Other
+ * existing callers still use the low-level chunked writer. POIs use fill-null: existing
  * non-null fields survive, and fills are not undone. Only newly created POI IDs
  * are tracked for rollback.
  */

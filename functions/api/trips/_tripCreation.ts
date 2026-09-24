@@ -18,13 +18,14 @@ export interface TripCreationNotes {
 export interface TripCreationPlan {
   trip: { id: string; ownerUserId: string; name: string; title: string | null; description: string | null; countries: string; published: number; dataSource: string; lang: string };
   audit: { changedBy: string; diff: Record<string, unknown> };
-  destinations: { name: string; lat: number | null; lng: number | null; dayQuota: number | null; subAreas: string[] | null }[];
+  destinations: { name: string; lat: number | null; lng: number | null; dayQuota: number | null; subAreas: string[] | string | null }[];
   notes: TripCreationNotes;
+  writeFailureDetail?: string;
   days: {
-    key: number; dayNum: number; date: string; dayOfWeek: string; label: string;
+    key: number; dayNum: number; date: string | null; dayOfWeek: string | null; label: string | null;
     hotel: FindOrCreatePoiData | null;
     entries: {
-      key: number; sortOrder: number; startTime: string | null; endTime: string | null; description: string | null; source: string;
+      key: number; sortOrder: number; startTime: string | null; endTime: string | null; description: string | null; source: string | null;
       pois: ({ data: FindOrCreatePoiData } & EntryPoiFields)[];
     }[];
   }[];
@@ -53,7 +54,7 @@ export async function createTrip(db: D1Database, plan: TripCreationPlan): Promis
       db.prepare('INSERT INTO trip_permissions (user_id, trip_id, role) VALUES (?,?,?)').bind(trip.ownerUserId, tripId, 'owner'),
       ...plan.destinations.map((d, i) =>
         db.prepare('INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, sub_areas) VALUES (?,?,?,?,?,?,?)')
-          .bind(tripId, i + 1, d.name, d.lat, d.lng, d.dayQuota, d.subAreas ? JSON.stringify(d.subAreas) : null)),
+          .bind(tripId, i + 1, d.name, d.lat, d.lng, d.dayQuota, typeof d.subAreas === 'string' ? d.subAreas : d.subAreas ? JSON.stringify(d.subAreas) : null)),
       ...noteStatements(db, tripId, plan.notes),
     ], (_result, index) => { if (index === 0) createdTrip = true; });
 
@@ -61,7 +62,7 @@ export async function createTrip(db: D1Database, plan: TripCreationPlan): Promis
     await runChunked(db, plan.days.map(d =>
       db.prepare('INSERT INTO trip_days (trip_id, day_num, date, day_of_week, label) VALUES (?,?,?,?,?) RETURNING id')
         .bind(tripId, d.dayNum, d.date, d.dayOfWeek, d.label)),
-    (result, index) => dayIds.set(plan.days[index]!.key, reqId(result)));
+    (result, index) => dayIds.set(plan.days[index]!.key, reqId(result, plan.writeFailureDetail)));
 
     stage = 'entries';
     const specs: BatchEntrySpec[] = [];
@@ -141,12 +142,12 @@ function noteStatements(db: D1Database, tripId: string, n: TripCreationNotes): D
       .bind(tripId, r.sort_order, r.kind, r.title, r.reserved_at, r.party_size, r.reservation_no, r.phone, r.note));
   }
   for (const p of n.pretripNotes) {
-    out.push(db.prepare('INSERT INTO trip_pretrip_notes (trip_id, sort_order, section, title, content) VALUES (?,?,?,?,?)')
-      .bind(tripId, p.sort_order, p.section, p.title, p.content));
+    out.push(db.prepare('INSERT INTO trip_pretrip_notes (trip_id, sort_order, section, title, content, ai_generated, ai_source) VALUES (?,?,?,?,?,?,?)')
+      .bind(tripId, p.sort_order, p.section, p.title, p.content, p.ai_generated ?? 0, p.ai_source ?? null));
   }
   for (const c of n.emergencyContacts) {
-    out.push(db.prepare('INSERT INTO trip_emergency_contacts (trip_id, sort_order, name, relationship, phone, email, kind) VALUES (?,?,?,?,?,?,?)')
-      .bind(tripId, c.sort_order, c.name, c.relationship, c.phone, c.email, c.kind));
+    out.push(db.prepare('INSERT INTO trip_emergency_contacts (trip_id, sort_order, name, relationship, phone, email, kind, ai_generated) VALUES (?,?,?,?,?,?,?,?)')
+      .bind(tripId, c.sort_order, c.name, c.relationship, c.phone, c.email, c.kind, c.ai_generated ?? 0));
   }
   return out;
 }

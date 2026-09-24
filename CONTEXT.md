@@ -35,7 +35,7 @@ trips ─┬─ trip_days ── trip_entries ── trip_entry_pois
 **entry intake**：
 後端「在某一天建立 entry 並掛上正選／備選 POI」的 module（`_entryWrite`）。單筆新增／收藏使用 `createEntry`，複製／分享 clone／匯入使用 `createEntriesBatch`，整日重寫使用 `replaceDayEntries`；共用 entry 與 junction 欄位規則。
 
-**新行程建立**：`functions/api/trips/_tripCreation.ts` 持有整趟行程的必要寫入順序、來源 day／entry key 到新 ID 的對應、已建立資料帳本、分批提交及失敗補償。匯入入口只保留授權、輸入驗證、行程數上限、命名與來源轉換；建立 module 內沿用 entry intake 的正選／備選、版本及 audit 規則。分享 clone 尚待 #1298 移轉。
+**新行程建立**：`functions/api/trips/_tripCreation.ts` 持有整趟行程的必要寫入順序、來源 day／entry key 到新 ID 的對應、已建立資料帳本、分批提交及失敗補償。匯入與分享 clone 入口只保留授權、各自驗證與限制、命名及來源轉換；分享筆記 default-deny 篩選也留在 clone。建立 module 內沿用 entry intake 的正選／備選、版本及 audit 規則，保留不同來源的欄位預設與筆記 AI 來源語意。
 
 每批成功提交才把建立結果記入帳本；trip 尚未成功建立時不取得該 ID 的清理權，避免碰撞時誤刪他人的行程。必要寫入失敗仍回報失敗，記錄 trip ID、失敗階段與原始錯誤；補償再失敗時同時保留清理錯誤。清理成功可重新匯入，但沒有跨批次原子交易、持久化帳本或自動重播承諾。既有 audit 保留政策不變。
 
