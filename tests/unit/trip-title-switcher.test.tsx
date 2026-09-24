@@ -172,8 +172,13 @@ describe('#1140 story 1–3：render switcher 的頁面都要把 active trip 寫
     expect(renderers.length, '沒掃到任何 render switcher 的頁面，正則可能失效').toBeGreaterThan(2);
   });
 
-  it('每個 renderer 都取用 useActiveTrip', () => {
-    const offenders = renderers.filter((f) => !/useActiveTrip\s*\(/.test(f.src)).map((f) => f.file);
+  it('尚未移轉的 renderer 都取用 useActiveTrip', () => {
+    // ChatPage 的選擇寫入與跨頁延續已由 chat-active-trip-selection S2 及
+    // active-trip-continuity E2E 驗證；它透過 useAccessibleTripSelection 使用 context。
+    const offenders = renderers
+      .filter((f) => !f.file.replace(/\\/g, '/').endsWith('/ChatPage.tsx'))
+      .filter((f) => !/useActiveTrip\s*\(/.test(f.src))
+      .map((f) => f.file);
     expect(offenders, '掛了 trip switcher 就要把選到的行程寫回 ActiveTripContext，否則切 tab 會跳回舊的').toEqual([]);
   });
 });
