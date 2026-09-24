@@ -34,6 +34,10 @@ const defined = new Set(
 );
 
 describe('CSS 變數 — 引用的都要有定義', () => {
+  it('掃得到巢狀目錄（舊版 Node 會忽略 readdirSync 的 recursive，靜默只掃頂層）', () => {
+    expect(files).toContain(join('src', 'pages', 'LandingPage.tsx'));
+  });
+
   it('沒有 fallback 的 var(--x) 都找得到 --x 的定義', () => {
     const missing = sources.flatMap(({ f, src }) =>
       [...src.matchAll(/var\(\s*(--[\w-]+)\s*\)/g)]

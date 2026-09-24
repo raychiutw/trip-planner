@@ -476,7 +476,7 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
-  background: var(--color-tertiary);
+  background: var(--color-secondary); /* muted 字疊 tertiary 深色只有 4.41，secondary 5.42 */
   border: 1px solid var(--color-border);
   line-height: 1.4;
 }
