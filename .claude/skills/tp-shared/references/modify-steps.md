@@ -67,8 +67,8 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 
 | 操作 | 端點 | 注意 |
 |------|------|------|
-| 新增 entry | `POST /api/trips/{tripId}/days/{dayNum}/entries` | 必填 `title`；選填 `sort_order`（省略則 append 到最後）、`time`、`description`、`maps` 等。回 201。**之後須 recompute（見 §4）** |
-| 修改單一 entry | `PATCH /api/trips/{tripId}/entries/{eid}` | 只改非結構欄位（`title` / `time` / `description` / `note` / `location` / `maps` 等）。**禁止寫 `travel_type` / `travel_desc` / `travel_min`** — segments 由 recompute-travel 自動計算 |
+| 新增 entry | `POST /api/trips/{tripId}/days/{dayNum}/entries` | 必填 `name`（扁平欄位，即 master POI 名稱）；選填 `poi_type`（hotel/restaurant/shopping/parking/attraction/transport/activity/other，預設 attraction）、`start_time`/`end_time`（HH:MM，或 legacy `time`）、`description`、`note`、`lat`/`lng`、`rating`、`sort_order`（省略 append 到最後）。**沒有 `title`、沒有巢狀 `poi: {...}`**。新 POI 無 `place_id` → enrich 會 400，須先 `PATCH /api/pois/{id}` 寫 `place_id` 再 enrich。回 201。**之後須 recompute（見 §4）** |
+| 修改單一 entry | `PATCH /api/trips/{tripId}/entries/{eid}` | 只收 `start_time` / `end_time`（或 legacy `time`）/ `description` / `sort_order` / `day_id` / `source`，其餘欄位一律 400「無有效欄位可更新」。改名稱/地點 = 換 master POI（`PUT .../poi-id`）；改 POI 客觀欄位走 `PATCH /api/pois/{id}`；per-POI note 走 `PATCH .../entries/{eid}/pois/{poiId}`。**禁止寫 `travel_type` / `travel_desc` / `travel_min`** — segments 由 recompute-travel 自動計算 |
 | 刪除單一 entry | `DELETE /api/trips/{tripId}/entries/{eid}` | **tp-request 禁止此操作**。刪除後須 recompute（見 §4） |
 | 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。entry 內不要手填 `travel`；segments 由之後 recompute 產生。**tp-request 禁止此操作** |
 | 新增 alternate POI | `POST /api/trips/{tripId}/entries/{eid}/alternates` 或 `/trip-pois`（legacy alias）| body 帶 `{ poiId }`（既有 POI）或 `{ name, lat, lng, type?, ... }`（find-or-create）；寫 `trip_entry_pois` as alternate (sort_order = max+1)。**`context` 欄位 v2.29.0 已不存在** |
