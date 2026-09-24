@@ -68,7 +68,7 @@ OCC token `entryPoisVersion`（integer counter on `trip_entries.entry_pois_versi
 
 | 操作 | 端點 | 說明 |
 |------|------|------|
-| 新增 entry | `POST /api/trips/{id}/days/{dayNum}/entries` | 必填 `name`（扁平欄位，即 master POI 名稱）；選填 `poi_type`（hotel/restaurant/shopping/parking/attraction/transport/activity/other，預設 attraction）、`start_time`/`end_time`（HH:MM，或 legacy `time`）、`description`、`note`、`lat`/`lng`、`rating`、`sort_order`（省略 append 到最後）。**沒有 `title`、沒有巢狀 `poi: {...}`**。新 POI 無 `place_id` → enrich 會 400，須先 `PATCH /api/pois/{id}` 寫 `place_id` 再 enrich|
+| 新增 entry | `POST /api/trips/{id}/days/{dayNum}/entries` | 必填 `name`（扁平欄位，即 master POI 名稱）；選填 `poi_type`（hotel/restaurant/shopping/parking/attraction/transport/activity/other，預設 attraction）、`start_time`/`end_time`（HH:MM，或 legacy `time`）、`description`、`note`、`lat`/`lng`、`rating`、`sort_order`（省略 append 到最後）。**沒有 `title`、沒有巢狀 `poi: {...}`**。新 POI 無 `place_id` → enrich 會 400，須先 `PATCH /api/pois/{id}`（body `{ place_id, tripId }`）寫 `place_id` 再 enrich|
 | 新增 alternate POI（推薦）| `POST /api/trips/{id}/entries/{eid}/alternates` | body 帶 `{ poiId }`（既有 POI）或 `{ name, lat, lng, type?, ... }`（find-or-create）+ 選 `entryPoisVersion` |
 | 新增 alternate POI（legacy endpoint）| `POST /api/trips/{id}/entries/{eid}/trip-pois` | v2.29 後 backend 寫 trip_entry_pois，endpoint 名稱保留向後相容 |
 | 變更 master | `PATCH /api/trips/{id}/entries/{eid}/master` | body `{ poiId, entryPoisVersion? }`；POI 必須已是 alternate 或新 POI |
