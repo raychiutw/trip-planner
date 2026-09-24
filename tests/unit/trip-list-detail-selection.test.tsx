@@ -25,8 +25,11 @@ afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
 describe('list and actual detail selection', () => {
   it('keeps the viewed scroll position when summaries refresh for the same trip', async () => {
     let listReads = 0;
-    const scrollTo = vi.fn();
+    const scrollTo = vi.fn((_x: number, y: number) => {
+      Object.defineProperty(window, 'scrollY', { value: y, configurable: true, writable: true });
+    });
     vi.stubGlobal('scrollTo', scrollTo);
+    vi.stubGlobal('scrollY', 0);
     Element.prototype.scrollIntoView = vi.fn();
     vi.stubGlobal('fetch', vi.fn().mockImplementation((input: string) => {
       if (input === '/api/my-trips') {
@@ -44,11 +47,13 @@ describe('list and actual detail selection', () => {
     await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 0));
     fireEvent.click(screen.getByTestId('dn-day-2'));
     expect(screen.getByTestId('dn-day-2').getAttribute('aria-current')).toBe('true');
+    vi.stubGlobal('scrollY', 420);
     scrollTo.mockClear();
     await act(async () => window.dispatchEvent(new Event(EVENT.tripUpdated)));
     await waitFor(() => expect(listReads).toBe(2));
     await act(async () => {});
     expect(scrollTo).not.toHaveBeenCalledWith(0, 0);
+    expect(window.scrollY).toBe(420);
     expect(screen.getByTestId('dn-day-2').getAttribute('aria-current')).toBe('true');
   });
   it('keeps the legacy query target through the actual router and detail read', async () => {
