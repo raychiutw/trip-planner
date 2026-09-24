@@ -683,7 +683,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
             </button>
           </div>
         )}
-        {!activeTripId && tripsStatus === 'success' && trips?.length === 0 && (
+        {!activeTripId && tripsStatus !== 'error' && trips?.length === 0 && (
           <div className="tp-chat-empty">
             <div className="tp-chat-empty-icon" aria-hidden="true"><Icon name="chat" /></div>
             <h2>還沒有行程可以聊</h2>

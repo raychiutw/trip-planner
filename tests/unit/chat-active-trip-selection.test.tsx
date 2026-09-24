@@ -130,6 +130,20 @@ describe('chat active trip selection', () => {
     expect(screen.queryByText('尚無行程')).toBeNull();
   });
 
+  it('keeps the last confirmed empty state visible while its refresh is pending', async () => {
+    listResponse = async () => new Response('[]');
+    openChat();
+    expect(await screen.findByText('還沒有行程可以聊')).toBeTruthy();
+    expect(screen.getByText('尚無行程')).toBeTruthy();
+    let finishRefresh: ((response: Response) => void) | undefined;
+    listResponse = () => new Promise((resolve) => { finishRefresh = resolve; });
+    act(() => window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId: 'new' } })));
+    await waitFor(() => expect(finishRefresh).toBeDefined());
+    expect(screen.getByText('還沒有行程可以聊')).toBeTruthy();
+    expect(screen.getByText('尚無行程')).toBeTruthy();
+    await act(async () => finishRefresh!(new Response('[]')));
+  });
+
   it('keeps an embedded chat locked to its trip after a storage event', async () => {
     render(<MemoryRouter initialEntries={['/chat']}>
       <ActiveTripProvider><ChatPage embedded lockTripId="private" /></ActiveTripProvider>
