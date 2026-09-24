@@ -4,6 +4,7 @@ import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate, useParams 
 import TripPage from '../../src/pages/TripPage';
 import EntryActionPage from '../../src/pages/EntryActionPage';
 import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
+import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
 import { SheetStackProvider } from '../../src/contexts/SheetStackContext';
 import { __resetTravelRecomputeState } from '../../src/lib/travelRecompute';
 import { resetToasts } from '../../src/lib/toastBus';
@@ -36,6 +37,7 @@ const response = (body: unknown, status = 200) => new Response(JSON.stringify(bo
 
 beforeEach(() => {
   localStorage.clear();
+  __clearMyTripsCache();
   __resetTravelRecomputeState();
   resetToasts();
   data = { t1: days('t1'), t2: days('t2') };
@@ -139,6 +141,9 @@ function open(action = 'move') {
 function day(n: number) { return document.querySelector<HTMLElement>(`section[data-day="${n}"]`)!; }
 
 async function dragToDayTwo() {
+  // The real detail now waits for the shared summary lifecycle. Give dnd-kit's
+  // effect-installed sensor one task after the timeline first becomes visible.
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   // jsdom 沒有排版引擎；只提供 sensor 讀取的外部幾何資訊，沿用真正的 DndContext。
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
     const n = Number(this.closest('section[data-day]')?.getAttribute('data-day') ?? 0);
@@ -418,8 +423,9 @@ describe('entry 變更的可見資料協調', () => {
     data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
     open();
     await screen.findByText('10 min');
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     fireEvent.click(screen.getByTestId('travel-pill'));
-    fireEvent.click(screen.getByTestId('travel-method-bus'));
+    fireEvent.click(await screen.findByTestId('travel-method-bus'));
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     fireEvent.change(screen.getByTestId('travel-min-input'), { target: { value: '17' } });
     fireEvent.blur(screen.getByTestId('travel-min-input'));
