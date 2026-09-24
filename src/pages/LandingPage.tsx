@@ -20,6 +20,11 @@ import { readAuthHint } from '../lib/authHint';
 const SCOPED_STYLES = `
 .tp-lp{background:var(--color-background);color:var(--color-foreground);min-height:100dvh}
 
+/* 插畫示意色，值取自視覺 SoT mockup。刻意不用 DAY_PALETTE —— DESIGN.md 規定
+ * day palette 只用於地圖 polyline 與 entry card。這組沒定義時 SVG 不報錯、直接隱形。 */
+.tp-lp{--d1:#C9857F;--d2:#7FA8C9;--d3:#8FBF8A;--d4:#C9A97F}
+body.dark .tp-lp{--d1:#D9968F;--d2:#8FB8D9;--d3:#9FCF9A;--d4:#D9B98F}
+
 /* ── 頂列 ── */
 .tp-lp-nav{
   position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
