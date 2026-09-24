@@ -92,6 +92,13 @@ describe('chat active trip selection', () => {
     expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBeNull();
   });
 
+  it('shows a read error instead of the empty state when there is no preference', async () => {
+    listResponse = async () => new Response('{}', { status: 503 });
+    openChat();
+    expect(await screen.findByText('載入行程失敗，請稍後再試')).toBeTruthy();
+    expect(screen.queryByText('還沒有行程可以聊')).toBeNull();
+  });
+
   it('keeps an embedded chat locked to its trip after a storage event', async () => {
     render(<MemoryRouter initialEntries={['/chat']}>
       <ActiveTripProvider><ChatPage embedded lockTripId="private" /></ActiveTripProvider>

@@ -695,6 +695,10 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
           <div className="tp-chat-empty"><p>載入中…</p></div>
         )}
 
+        {!activeTripId && tripsStatus === 'error' && (
+          <div className="tp-chat-empty" role="alert"><p>載入行程失敗，請稍後再試</p></div>
+        )}
+
         {activeTripId && historyLoading && messages.length === 0 && (
           <div className="tp-chat-empty" data-testid="chat-history-loading">
             <p>載入歷史對話…</p>
