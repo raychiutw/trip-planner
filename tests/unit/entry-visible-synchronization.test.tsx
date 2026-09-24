@@ -22,6 +22,11 @@ let data: Record<string, ReturnType<typeof days>>;
 let writes: string[];
 let recomputes: string[];
 let dayReads: string[];
+let segmentReads: string[];
+let beforeSegments: ((tripId: string, snapshot: unknown) => Promise<Response> | undefined) | undefined;
+let beforeRecompute: ((tripId: string) => Promise<Response> | undefined) | undefined;
+let manualSegment: Record<string, unknown>;
+let segmentWrites: Record<string, unknown>[];
 let beforeRead: ((tripId: string, dayNum: number, snapshot: unknown) => Promise<Response> | undefined) | undefined;
 let beforeWrite: (() => Promise<void>) | undefined;
 let writeStatus = 200;
@@ -34,6 +39,8 @@ beforeEach(() => {
   resetToasts();
   data = { t1: days('t1'), t2: days('t2') };
   writes = []; recomputes = []; dayReads = []; beforeRead = undefined; beforeWrite = undefined; writeStatus = 200; recomputeStatus = 200;
+  segmentReads = []; beforeSegments = undefined; beforeRecompute = undefined;
+  manualSegment = {}; segmentWrites = [];
   Element.prototype.scrollIntoView = vi.fn();
   Element.prototype.scrollTo = vi.fn();
   window.scrollTo = vi.fn();
@@ -55,11 +62,22 @@ beforeEach(() => {
       const snapshot = structuredClone(tripDays.find((d) => d.dayNum === n));
       return beforeRead?.(tripId, n, snapshot) ?? response(snapshot);
     }
-    if (tail === 'segments') return response(tripDays.flatMap((d) => d.timeline.slice(1).map((e, i) => ({
+    if (tail === 'segments') {
+      segmentReads.push(tripId);
+      const snapshot = tripDays.flatMap((d) => d.timeline.slice(1).map((e, i) => ({
       id: e.id, tripId, fromEntryId: d.timeline[i]!.id, toEntryId: e.id, mode: 'driving', min: 10, distanceM: 2000,
       computedAt: recomputeStatus === 200 ? 1 : null,
-    }))));
-    if (tail === 'recompute-travel') { recomputes.push(`${tripId}:${url.searchParams.get('day')}`); return response({}, recomputeStatus); }
+      ...manualSegment,
+      })));
+      return beforeSegments?.(tripId, snapshot) ?? response(snapshot);
+    }
+    if (tail.startsWith('segments/') && init?.method === 'PATCH') {
+      const body = JSON.parse(String(init.body));
+      segmentWrites.push(body);
+      manualSegment = { ...body, source: 'manual', computedAt: 1, version: 2 };
+      return response(manualSegment);
+    }
+    if (tail === 'recompute-travel') { recomputes.push(`${tripId}:${url.searchParams.get('day')}`); return beforeRecompute?.(tripId) ?? response({}, recomputeStatus); }
     if (tail.startsWith('entries/')) {
       const id = Number(tail.split('/')[1]);
       const from = tripDays.find((d) => d.timeline.some((e) => e.id === id));
@@ -76,6 +94,7 @@ beforeEach(() => {
           if (update.day_id) { source!.timeline = source!.timeline.filter((e) => e !== moved); tripDays.find((d) => d.id === update.day_id)!.timeline.push(moved); moved.dayId = update.day_id; }
           moved.sortOrder = update.sort_order;
         }
+        for (const d of tripDays) d.timeline.sort((a, b) => a.sortOrder - b.sortOrder);
         return response({ ok: true });
       }
       const target = tripDays.find((d) => d.id === (body.day_id ?? body.targetDayId))!;
@@ -89,7 +108,7 @@ beforeEach(() => {
     return response([]);
   }));
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 function Workspace() {
   const { tripId } = useParams();
@@ -138,6 +157,229 @@ async function dragToDayTwo() {
 }
 
 describe('entry 變更的可見資料協調', () => {
+  it('segment 讀取尚未完成時的移動刷新不遺失，也不重複補算已完成的缺口', async () => {
+    let release!: () => void;
+    beforeSegments = (_tripId, snapshot) => new Promise<Response>((resolve) => {
+      beforeSegments = undefined;
+      release = () => resolve(response(snapshot));
+    });
+    open();
+    await screen.findByText('甲景點1');
+    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await waitFor(() => expect(within(day(2)).getByText('甲景點1')).toBeInTheDocument());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    expect([...recomputes].sort()).toEqual(['t1:1', 't1:2']);
+    await act(async () => { release(); });
+    await within(day(2)).findByText('10 min');
+    expect([...recomputes].sort()).toEqual(['t1:1', 't1:2']);
+    expect(segmentReads).toEqual(['t1', 't1']);
+  });
+
+  it('讀取未完成或失敗都不補算，成功確認空資料才依日期補算', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    let release!: () => void;
+    beforeSegments = () => new Promise<Response>((resolve) => { release = () => resolve(response({}, 500)); });
+    const view = open();
+    await screen.findByText('甲景點補站');
+    expect(recomputes).toEqual([]);
+    expect(screen.queryByTestId('travel-pill-stale')).not.toBeInTheDocument();
+    await act(async () => { release(); });
+    expect(recomputes).toEqual([]);
+    expect(screen.queryByTestId('travel-pill-stale')).not.toBeInTheDocument();
+    view.unmount();
+    beforeSegments = () => Promise.resolve(response([]));
+    open();
+    await screen.findByText('甲景點補站');
+    await waitFor(() => expect(recomputes).toEqual(['t1:1']));
+    expect(screen.getByTestId('travel-pill-stale')).toHaveTextContent('重新計算中');
+  });
+
+  it('切換到讀取中的行程，不用上一趟已確認的空資料補算', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    data.t2![0]!.timeline.push(entry(112, '乙景點補站', 101));
+    recomputeStatus = 403;
+    let release!: () => void;
+    beforeSegments = (tripId) => tripId === 't1' ? Promise.resolve(response([]))
+      : new Promise<Response>((resolve) => { release = () => resolve(response([])); });
+    open();
+    await screen.findByText('車程待更新');
+    fireEvent.click(screen.getByText('切換乙行程'));
+    await screen.findByText('乙景點補站');
+    expect(recomputes).toEqual(['t1:1']);
+    expect(screen.queryByTestId('travel-pill-stale')).not.toBeInTheDocument();
+    await act(async () => { release(); });
+    await waitFor(() => expect(recomputes).toEqual(['t1:1', 't2:1']));
+  });
+
+  it('A→B→A 之後舊的 entry 儲存完成，仍重算來源與目標，但不刷新目前頁面或提示導頁', async () => {
+    open();
+    await screen.findByText('甲景點1');
+    let release!: () => void;
+    beforeWrite = () => new Promise<void>((resolve) => { release = resolve; });
+    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    fireEvent.click(screen.getByText('切換乙行程'));
+    await screen.findByText('乙景點1');
+    fireEvent.click(screen.getByText('移動甲景點'));
+    await screen.findByText('甲景點1');
+    const readsBeforeCompletion = [...segmentReads];
+    await act(async () => { release(); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    expect([...recomputes].sort()).toEqual(['t1:1', 't1:2']);
+    expect(dayReads).toEqual([]);
+    expect(segmentReads).toEqual(readsBeforeCompletion);
+    expect(screen.getByTestId('location')).toHaveTextContent('/trip/t1/stop/11/move');
+    expect(screen.queryByText('景點已移動')).not.toBeInTheDocument();
+    expect(within(day(1)).getByText('甲景點1')).toBeInTheDocument();
+  });
+
+  it('A→B→A 之後舊補算完成，不向目前行程發出刷新通知', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    beforeSegments = () => Promise.resolve(response([]));
+    let release!: () => void;
+    beforeRecompute = () => new Promise<Response>((resolve) => { release = () => resolve(response({})); });
+    open();
+    await waitFor(() => expect(recomputes).toEqual(['t1:1']));
+    beforeSegments = undefined;
+    fireEvent.click(screen.getByText('切換乙行程'));
+    await screen.findByText('乙景點1');
+    fireEvent.click(screen.getByText('移動甲景點'));
+    await screen.findByText('10 min');
+    const readsBeforeCompletion = [...segmentReads];
+    await act(async () => { release(); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    expect(segmentReads).toEqual(readsBeforeCompletion);
+    expect(screen.getByText('10 min')).toBeInTheDocument();
+  });
+
+  it('返回 A 的目前缺口加入既有補算，single-flight 完成仍刷新目前畫面', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    beforeSegments = () => Promise.resolve(response([]));
+    let release!: () => void;
+    beforeRecompute = () => new Promise<Response>((resolve) => { release = () => resolve(response({})); });
+    open();
+    await waitFor(() => expect(recomputes).toEqual(['t1:1']));
+    fireEvent.click(screen.getByText('切換乙行程'));
+    await screen.findByText('乙景點1');
+    fireEvent.click(screen.getByText('移動甲景點'));
+    await screen.findByText('甲景點補站');
+    await screen.findByTestId('travel-pill-stale');
+    beforeSegments = undefined;
+    await act(async () => { release(); });
+    await screen.findByText('10 min');
+    expect(recomputes).toEqual(['t1:1']);
+  });
+
+  it('已有成功快照後刷新失敗，不用舊空資料追加補算，已儲存景點仍顯示車程待更新', async () => {
+    open();
+    await screen.findByText('甲景點1');
+    await waitFor(() => expect(segmentReads).toEqual(['t1']));
+    beforeSegments = () => Promise.resolve(response({}, 500));
+    recomputeStatus = 500;
+    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await waitFor(() => expect(within(day(2)).getByText('甲景點1')).toBeInTheDocument());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    expect([...recomputes].sort()).toEqual(['t1:1', 't1:2']);
+    expect(writes).toEqual(['t1:entries/11']);
+    expect(within(day(2)).getByText('車程待更新')).toBeInTheDocument();
+  });
+
+  it('重新排序後 A→B→A，舊重算失敗不在目前行程顯示操作提示', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    open();
+    await screen.findByText('10 min');
+    let release!: () => void;
+    beforeRecompute = () => new Promise<Response>((resolve) => { release = () => resolve(response({}, 500)); });
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-down-11'));
+    await waitFor(() => expect(recomputes).toEqual(['t1:1']));
+    fireEvent.click(screen.getByText('切換乙行程'));
+    await screen.findByText('乙景點1');
+    fireEvent.click(screen.getByText('移動甲景點'));
+    await screen.findByText('10 min');
+    await act(async () => { release(); });
+    expect(screen.queryByText('順序已儲存，但車程時間更新失敗，重新整理後再試')).not.toBeInTheDocument();
+  });
+
+  it('排序尚未提交時不補算 optimistic 相鄰景點，提交後只重算該日一次', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    open();
+    await screen.findByText('10 min');
+    let release!: () => void;
+    beforeWrite = () => new Promise<void>((resolve) => { release = resolve; });
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-down-11'));
+    await waitFor(() => expect(writes).toEqual(['t1:entries/batch']));
+    expect(recomputes).toEqual([]);
+    await act(async () => { release(); });
+    await within(day(1)).findByText('10 min');
+    expect(recomputes).toEqual(['t1:1']);
+  });
+
+  it.each(['缺座標', '未知 day'] as const)('%s 的 pair 不擴張成自動全行程補算', async (reason) => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    if (reason === '缺座標') Object.assign(data.t1![0]!.timeline[0]!.master, { lat: null });
+    else Object.assign(data.t1![0]!, { id: null });
+    beforeSegments = () => Promise.resolve(response([]));
+    open();
+    await screen.findByText('甲景點補站');
+    expect(recomputes).toEqual([]);
+    if (reason === '缺座標') expect(screen.getByTestId('travel-pill-stale')).toHaveTextContent('缺座標');
+  });
+
+  it.each([403, 500])('自動補算 %s 後相同缺口不重試，真正排序變更沿用唯讀停止或新 signature 重試規則', async (status) => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    beforeSegments = () => Promise.resolve(response([]));
+    recomputeStatus = status;
+    open();
+    await screen.findByText('車程待更新');
+    expect(recomputes).toEqual(['t1:1']);
+    fireEvent.click(screen.getByText('移動甲景點'));
+    expect(recomputes).toEqual(['t1:1']);
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-down-11'));
+    await waitFor(() => expect(segmentReads.length).toBeGreaterThan(1));
+    await screen.findByText('車程待更新');
+    expect(recomputes).toEqual(status === 403 ? ['t1:1', 't1:1'] : ['t1:1', 't1:1', 't1:1']);
+    expect(writes).toEqual(['t1:entries/batch']);
+  });
+
+  it('A→B→A 的舊 segment 讀取晚到，不覆寫最新車程', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    let release!: () => void;
+    beforeSegments = (_tripId, snapshot) => new Promise<Response>((resolve) => {
+      beforeSegments = undefined;
+      release = () => resolve(response((snapshot as Record<string, unknown>[]).map((s) => ({ ...s, min: 99 }))));
+    });
+    open();
+    await screen.findByText('甲景點補站');
+    fireEvent.click(screen.getByText('切換乙行程'));
+    await screen.findByText('乙景點1');
+    fireEvent.click(screen.getByText('移動甲景點'));
+    await screen.findByText('10 min');
+    await act(async () => { release(); });
+    expect(screen.getByText('10 min')).toBeInTheDocument();
+    expect(screen.queryByText('99 min')).not.toBeInTheDocument();
+  });
+
+  it('交通對話框手填公車分鐘後，既有通知刷新真實行程車程', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    open();
+    await screen.findByText('10 min');
+    fireEvent.click(screen.getByTestId('travel-pill'));
+    fireEvent.click(screen.getByTestId('travel-method-bus'));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    fireEvent.change(screen.getByTestId('travel-min-input'), { target: { value: '17' } });
+    fireEvent.blur(screen.getByTestId('travel-min-input'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(segmentWrites.at(-1)).toMatchObject({ mode: 'transit', submode: 'bus', min: 17 });
+    expect(within(day(1)).getByText('17 min')).toBeInTheDocument();
+    expect(recomputes).toEqual([]);
+  });
+
   it('切換行程後拖曳儲存完成，不在新行程顯示舊操作的提示', async () => {
     open();
     await screen.findByText('甲景點1');

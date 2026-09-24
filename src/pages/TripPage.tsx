@@ -466,7 +466,8 @@ function TripPageInner(
     segmentMap: segmentsHookResult.segmentMap,
     loading: segmentsHookResult.loading,
     ready: segmentsHookResult.ready,
-  }), [segmentsHookResult.segments, segmentsHookResult.segmentMap, segmentsHookResult.loading, segmentsHookResult.ready]);
+    canRecompute: segmentsHookResult.canRecompute,
+  }), [segmentsHookResult.segments, segmentsHookResult.segmentMap, segmentsHookResult.loading, segmentsHookResult.ready, segmentsHookResult.canRecompute]);
 
   // Keep ref in sync so the online-status effect can call it without a stale closure
   refetchCurrentDayRef.current = refetchCurrentDay;

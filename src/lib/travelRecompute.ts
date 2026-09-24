@@ -43,6 +43,7 @@
  */
 import { apiFetchRaw } from './apiClient';
 import { EVENT } from './events';
+import { captureSegmentScope } from './segmentScope';
 
 export interface RecomputeTravelResult {
   pairsComputed?: number;
@@ -52,6 +53,8 @@ export interface RecomputeTravelResult {
 }
 
 const inflight = new Map<string, Promise<RecomputeTravelResult>>();
+// A shared request can outlive its first reader and be joined by a new scope.
+const inflightReaders = new Map<string, Set<() => boolean>>();
 /** auto 已嘗試的 gap signature（scopeKey → signature）。 */
 const autoAttemptedSig = new Map<string, string>();
 /** auto 收過 403 的 trip（唯讀 viewer）— 後續 auto 全 skip，不再浪費請求。 */
@@ -77,6 +80,7 @@ function normalizeDayNum(dayNum: number | string | null | undefined): number | n
 /** @internal 測試用 — 清空 module state。 */
 export function __resetTravelRecomputeState(): void {
   inflight.clear();
+  inflightReaders.clear();
   autoAttemptedSig.clear();
   autoNoWriteTrips.clear();
   autoFailedScopes.clear();
@@ -108,11 +112,14 @@ export function getAutoRecomputeStatus(
 export function requestTravelRecompute(
   tripId: string,
   dayNum?: number | string | null,
-  opts?: { auto?: boolean; signature?: string },
+  opts?: { auto?: boolean; signature?: string; isCurrent?: () => boolean },
 ): Promise<RecomputeTravelResult | null> {
   const day = normalizeDayNum(dayNum);
   const key = scopeKey(tripId, day);
   const auto = opts?.auto === true;
+  const isCurrent = opts?.isCurrent ?? captureSegmentScope(tripId);
+  const pendingKey = inflight.has(key) ? key : auto && inflight.has(scopeKey(tripId, null)) ? scopeKey(tripId, null) : null;
+  if (pendingKey) inflightReaders.get(pendingKey)?.add(isCurrent);
 
   if (auto) {
     const signature = opts?.signature ?? '';
@@ -126,6 +133,7 @@ export function requestTravelRecompute(
       // + 通知，chip 才會由「重新計算中」轉「待更新」（否則永遠停在計算中；codex P1）。
       const pending = inflight.get(key) ?? inflight.get(scopeKey(tripId, null));
       pending?.then(undefined, () => {
+        if (!isCurrent()) return;
         autoFailedScopes.add(key);
         window.dispatchEvent(new CustomEvent(EVENT.segmentRecomputeFailed, { detail: { tripId } }));
       });
@@ -143,6 +151,8 @@ export function requestTravelRecompute(
   autoFailedScopes.delete(key);
 
   const query = day != null ? `?day=${day}` : '';
+  const readers = new Set([isCurrent]);
+  const hasCurrentReader = () => [...readers].some((current) => current());
   const p = (async (): Promise<RecomputeTravelResult> => {
     const res = await apiFetchRaw(
       `/trips/${encodeURIComponent(tripId)}/recompute-travel${query}`,
@@ -152,12 +162,13 @@ export function requestTravelRecompute(
       throw Object.assign(new Error(`recompute-travel ${res.status}`), { status: res.status });
     }
     const data = await res.json().catch(() => ({})) as RecomputeTravelResult;
-    window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId } }));
+    if (hasCurrentReader()) window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId } }));
     return data;
   })();
 
   inflight.set(key, p);
-  const cleanup = () => { inflight.delete(key); };
+  inflightReaders.set(key, readers);
+  const cleanup = () => { inflight.delete(key); inflightReaders.delete(key); };
 
   if (auto) {
     // auto 失敗靜默（唯讀 403 / MAPS_LOCKED / 網路錯都不該吵 user）
@@ -165,6 +176,7 @@ export function requestTravelRecompute(
       (data) => { cleanup(); return data; }, // failed 已在 request 開始時清（見上）
       (err) => {
         cleanup();
+        if (!hasCurrentReader()) return null;
         const status = (err as { status?: number } | null)?.status;
         if (status === 403) {
           autoNoWriteTrips.add(tripId); // 唯讀 viewer → 該 trip auto 全停
@@ -181,5 +193,11 @@ export function requestTravelRecompute(
       },
     );
   }
-  return p.finally(cleanup);
+  return p.catch((err) => {
+    if (hasCurrentReader()) {
+      autoFailedScopes.add(key);
+      window.dispatchEvent(new CustomEvent(EVENT.segmentRecomputeFailed, { detail: { tripId } }));
+    }
+    throw err;
+  }).finally(cleanup);
 }

@@ -13,6 +13,7 @@
 import { apiFetchRaw } from './apiClient';
 import { requestTravelRecompute } from './travelRecompute';
 import { EVENT } from './events';
+import { captureSegmentScope } from './segmentScope';
 
 export type MutationResult<T = unknown> =
   | { ok: true; data: T; /** 車程重算是否成功；caller 可據此顯示 info toast。 */ recompute: Promise<boolean> }
@@ -27,8 +28,10 @@ function emit(detail: { tripId: string; entryId?: number | string; dayNum?: DayN
   window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: d }));
 }
 
-function recompute(tripId: string, dayNums: DayNum[]): Promise<boolean> {
-  return Promise.all(dayNums.map((d) => requestTravelRecompute(tripId, d)))
+function recompute(tripId: string, dayNums: DayNum[], isCurrent: () => boolean): Promise<boolean> {
+  return Promise.all(dayNums.map((d) => isCurrent()
+    ? requestTravelRecompute(tripId, d)
+    : requestTravelRecompute(tripId, d, { isCurrent })))
     .then(() => true)
     .catch(() => false);
 }
@@ -40,6 +43,7 @@ async function call<T>(
   init: RequestInit,
   after: { tripId: string; entryId?: number | string; dayNums: DayNum[]; recompute: boolean; entryIdFrom?: (data: T) => number | string | undefined },
 ): Promise<MutationResult<T>> {
+  const isCurrent = captureSegmentScope(after.tripId);
   let res: Response;
   try {
     res = await apiFetchRaw(path, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, ...init });
@@ -62,7 +66,7 @@ async function call<T>(
       }
     } catch { /* 非 JSON body */ }
     // 失敗也 emit：LWW（未帶 version）不會 STALE 409，畫面 refetch resync。
-    for (const dayNum of after.dayNums.length ? after.dayNums : [undefined]) emit({ tripId: after.tripId, entryId: after.entryId, dayNum });
+    if (isCurrent()) for (const dayNum of after.dayNums.length ? after.dayNums : [undefined]) emit({ tripId: after.tripId, entryId: after.entryId, dayNum });
     return { ok: false, status: res.status, message, code, payload };
   }
   let data = undefined as unknown as T;
@@ -70,9 +74,9 @@ async function call<T>(
     try { data = (await res.json()) as T; } catch { /* 空 body 也算成功 */ }
   }
   const entryId = after.entryId ?? after.entryIdFrom?.(data);
-  const rc = after.recompute ? recompute(after.tripId, after.dayNums) : NO_RECOMPUTE;
+  const rc = after.recompute ? recompute(after.tripId, after.dayNums, isCurrent) : NO_RECOMPUTE;
   // 先觸發 recompute 再 emit：listener 的 refetch 才看得到 in-flight 狀態。
-  for (const dayNum of after.dayNums.length ? after.dayNums : [undefined]) emit({ tripId: after.tripId, entryId, dayNum });
+  if (isCurrent()) for (const dayNum of after.dayNums.length ? after.dayNums : [undefined]) emit({ tripId: after.tripId, entryId, dayNum });
   return { ok: true, data, recompute: rc };
 }
 

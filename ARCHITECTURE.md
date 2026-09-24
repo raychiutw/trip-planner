@@ -96,6 +96,8 @@ src/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
 │   ├── entryMutations.ts    entry 變更：動詞 module（createEntry/setMaster/deleteEntry/...）回 Result，
 │   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 CONTEXT.md「entry 變更」
+│   ├── travelRecompute.ts   segment 重算：single-flight、gap signature、唯讀停止與待更新狀態
+│   ├── segmentScope.ts      segment 讀取者生命週期，隔離晚到操作的通知，保留必要 server 重算
 │   ├── mapRow.ts            DB row → UI object 統一轉換
 │   ├── scrollSpy.ts         純函式：捲動位置 → active day index
 │   └── ...                  localStorage、sentry、timelineUtils
