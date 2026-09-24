@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 import ChatPage from '../../src/pages/ChatPage';
 import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
 import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
@@ -45,12 +45,28 @@ function openChat(path = '/chat') {
   return render(<MemoryRouter initialEntries={[path]}><ActiveTripProvider><ChatPage /></ActiveTripProvider></MemoryRouter>);
 }
 
+function NavigateToLinkedChat() {
+  const navigate = useNavigate();
+  return <button onClick={() => navigate('/chat?tripId=linked&prefill=新增一個景點')}>open linked chat</button>;
+}
+
 describe('chat active trip selection', () => {
   it('keeps an explicit chat target even when it is absent from the accessible list', async () => {
     lsSet(LS_KEY_TRIP_PREF, 'private');
     openChat('/chat?tripId=linked');
     await waitFor(() => expect(requestedPaths.some((path) => path.includes('/requests?tripId=linked'))).toBe(true));
     expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('linked');
+  });
+
+  it('honors a new explicit target while the chat page stays mounted', async () => {
+    render(<MemoryRouter initialEntries={['/chat']}><ActiveTripProvider>
+      <NavigateToLinkedChat /><ChatPage />
+    </ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId('sidebar-trip-private');
+    fireEvent.click(screen.getByText('open linked chat'));
+    await waitFor(() => expect(requestedPaths.some((path) => path.includes('/requests?tripId=linked'))).toBe(true));
+    expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('linked');
+    expect((screen.getByTestId('chat-input') as HTMLTextAreaElement).value).toBe('新增一個景點');
   });
 
   it('shares the private trip choice with the connected sidebar and persists it', async () => {

@@ -496,9 +496,9 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const { user } = useCurrentUser();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const initialTargetTripId = useRef(searchParams.get('tripId'));
+  const [explicitTargetTripId, setExplicitTargetTripId] = useState(() => searchParams.get('tripId'));
   const { trips, status: tripsStatus, activeTripId, setActiveTrip: setActiveTripId } = useAccessibleTripSelection(
-    user?.id, lockTripId ?? initialTargetTripId.current, !!lockTripId,
+    user?.id, lockTripId ?? explicitTargetTripId, !!lockTripId,
   );
 
   // #1140 item 10：useKeyboardInset 改由 app root（KeyboardInsetTracker）全站掛一次，
@@ -532,6 +532,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     const prefill = searchParams.get('prefill');
     const targetTripId = searchParams.get('tripId');
     if (!prefill && !targetTripId) return;
+    if (targetTripId) setExplicitTargetTripId(targetTripId);
     if (prefill) {
       setInput(prefill);
       // 等 textarea mount 後 focus + cursor 移到尾端
