@@ -10,7 +10,11 @@
 import { test, expect } from '@playwright/test';
 const { setupApiMocks, MOCK_TRIPS_LIST } = require('./api-mocks');
 
-/** 回傳目前頁面樣式裡「有引用、沒定義」的變數，格式 `--x ← selector`。 */
+/**
+ * 回傳目前頁面樣式裡「有引用、沒定義」的變數，格式 `--x ← selector`。
+ * ponytail: 「有定義」＝任何規則或 style 屬性宣告過，不看選擇器是否命中、主題／media 是否生效、
+ * inline 定義是否在祖先上；@keyframes 內容不掃。要更嚴再改成逐元素 getComputedStyle 比對。
+ */
 function undefinedVars(page) {
   return page.evaluate(() => {
     const defined = new Set();

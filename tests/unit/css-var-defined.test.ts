@@ -25,6 +25,8 @@ const files = ['src', 'css'].flatMap((dir) =>
 /**
  * 剝掉註解 —— 說明文字裡的 var(--x)／--x: 不算數。
  * `//` 只在行首或空白後才算註解（整行與行尾都剝），避開 https:// 與 '//cdn' 這類字串。
+ * ponytail: 正規式不懂字串 —— 字串裡「空白＋//」之後的同一行會被一起剝掉（2026-09-24 src 零例）；
+ * 真的踩到再換成會跳過字串的 tokenizer。
  */
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
 /** 定義：--x: …、'--x': …（style 物件）、setProperty('--x', …) */
@@ -39,6 +41,8 @@ const referencesIn = (src: string) => [
 ];
 
 const sources = files.map((f) => ({ f, src: strip(readFileSync(join(ROOT, f), 'utf-8')) }));
+// ponytail: defined 是全 repo 一個集合，不分選擇器、主題、media —— 只在深色或某個 media 裡定義的變數
+// 也算「有定義」。目前淺深色 token 都成對；要抓這類再改成逐規則比對範圍。
 const defined = new Set(sources.flatMap(({ src }) => definitionsIn(src)));
 
 describe('CSS 變數 — 解析邏輯（守門自己也要被守住）', () => {
