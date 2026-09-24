@@ -105,6 +105,8 @@ src/
 └── types/                   trip.ts / api.ts
 ```
 
+手動交通寫入由 `manualSegment` 執行 POST／PATCH，成功後只在原行程讀取生命週期仍有效時送出 segment 更新通知，由 `useTripSegments` 重讀。`TravelPillDialog` 保留 600ms autosave 與 409 版本重讀／重試；`EditEntryPage` 保留簡化的 mode／分鐘輸入及不強制帶版本的契約。entry 與 segment 同時修改時各自記錄成功結果，重讀或另一項寫入失敗不重送已成功的操作；過期畫面不發布提示或通知。
+
 ### 狀態管理
 
 無 Redux / Zustand。狀態拆三層：
