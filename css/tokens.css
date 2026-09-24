@@ -350,6 +350,9 @@ body.dark {
     --scrollbar-thumb-hover: #A89978;
     --z-info-sheet-backdrop: 400;
     --z-info-sheet: 401;
+    /* TripPage 列印模式的「離開」鈕用 Tailwind 任意值（class 裡直接寫變數名）引用，不是 var() ——
+     * v2.31.71 清「沒人用的 token」時因此被誤刪，z-index 失效兩季（2026-09-24 補回）。 */
+    --z-print-exit: 9999;
 }
 
 /* ===== Global reset ===== */
