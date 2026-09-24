@@ -559,7 +559,11 @@ function TripPageInner(
 
   /* --- Auto-scroll to today or hash on initial load (#3, #5, #18) --- */
   useEffect(() => {
-    if (loading || dayNums.length === 0 || initialScrollDone.current) return;
+    // useTrip clears the previous trip in an effect. During A→B the render
+    // before that effect still exposes A's days; those must not consume B's
+    // one-time scroll restoration latch.
+    if (loading || dayNums.length === 0 || initialScrollDone.current
+      || !activeTripId || trip?.id !== activeTripId) return;
     initialScrollDone.current = true;
 
     // ⑨：標記「剛做初始定位」→ 下方 scroll-spy 在 600ms 內不 switchDay，避免它在
@@ -664,7 +668,7 @@ function TripPageInner(
     // resolveState 是 discriminated union（tripId 只在 'resolved' variant），deps 不能
     // 取 .tripId（render 時可能是 loading variant → TS error）；依賴整個 resolveState 物件，
     // 變動由 initialScrollDone latch 擋住重跑。
-  }, [loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState, activeTripId]);
+  }, [loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState, activeTripId, trip?.id]);
 
   /* --- scrollMarginTop dynamic alignment (#7) --- */
   useEffect(() => {

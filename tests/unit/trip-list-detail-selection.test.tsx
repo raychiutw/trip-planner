@@ -1,12 +1,14 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { useState } from 'react';
 import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
 import { NewTripProvider } from '../../src/contexts/NewTripContext';
 import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
 import { EVENT } from '../../src/lib/events';
 import TripsListPage from '../../src/pages/TripsListPage';
 import TripPage from '../../src/pages/TripPage';
+const scrollIntoViewDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
 
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({ user: { id: 'u1', email: 'u@x.com' } }),
@@ -20,9 +22,51 @@ beforeEach(() => {
   __clearMyTripsCache();
   vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {} }));
 });
-afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  if (scrollIntoViewDescriptor) Object.defineProperty(Element.prototype, 'scrollIntoView', scrollIntoViewDescriptor);
+  else Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+  localStorage.clear();
+});
 
 describe('list and actual detail selection', () => {
+  it('waits for the new trip days before using its initial scroll latch', async () => {
+    let releaseB!: (response: Response) => void;
+    const bMeta = new Promise<Response>((resolve) => { releaseB = resolve; });
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+    Element.prototype.scrollIntoView = vi.fn();
+    const reads: string[] = [];
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((input: string) => {
+      reads.push(input);
+      if (input === '/api/my-trips') return Promise.resolve(new Response(JSON.stringify([
+        { tripId: 'a', name: 'A' }, { tripId: 'b', name: 'B' },
+      ])));
+      if (input === '/api/trips/b') return bMeta;
+      if (input === '/api/trips/a') return Promise.resolve(new Response(JSON.stringify({ id: 'a', name: 'A' })));
+      if (input === '/api/trips/a/days?all=1') return Promise.resolve(new Response(JSON.stringify([
+        { id: 1, dayNum: 1, date: '2026-10-24', dayOfWeek: '六', label: 'A day', timeline: [] },
+      ])));
+      if (input === '/api/trips/b/days?all=1') return Promise.resolve(new Response(JSON.stringify([
+        { id: 2, dayNum: 2, date: '2026-10-25', dayOfWeek: '日', label: 'B day', timeline: [] },
+      ])));
+      return Promise.resolve(new Response('[]'));
+    }));
+    function Switch() {
+      const [id, setId] = useState('a');
+      return <><button onClick={() => setId('b')}>Switch to B</button><TripPage tripId={id} noShell /></>;
+    }
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><Switch /></ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId('dn-day-1');
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 0));
+    scrollTo.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to B' }));
+    await waitFor(() => expect(reads).toContain('/api/trips/b'));
+    expect(scrollTo).not.toHaveBeenCalledWith(0, 0);
+    await act(async () => releaseB(new Response(JSON.stringify({ id: 'b', name: 'B' }))));
+    await screen.findByTestId('dn-day-2');
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 0));
+  });
   it('keeps the viewed scroll position when summaries refresh for the same trip', async () => {
     let listReads = 0;
     const scrollTo = vi.fn((_x: number, y: number) => {
@@ -45,6 +89,7 @@ describe('list and actual detail selection', () => {
     }));
     render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><TripPage tripId="t1" noShell /></ActiveTripProvider></MemoryRouter>);
     await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 0));
+    expect(document.querySelector('#infoBottomSheet')).toHaveClass('pointer-events-none');
     fireEvent.click(screen.getByTestId('dn-day-2'));
     expect(screen.getByTestId('dn-day-2').getAttribute('aria-current')).toBe('true');
     vi.stubGlobal('scrollY', 420);
