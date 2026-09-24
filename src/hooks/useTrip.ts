@@ -47,7 +47,7 @@ export interface UseTripReturn {
 
 /* ===== Hook ===== */
 
-export function useTrip(tripId: string | null): UseTripReturn {
+export function useTrip(tripId: string | null, reloadKey = 0): UseTripReturn {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [days, setDays] = useState<DaySummary[]>([]);
   const [currentDay, setCurrentDay] = useState<Day | null>(null);
@@ -185,7 +185,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
       controller.abort();
       cancelled = true;
     };
-  }, [tripId]);
+  }, [tripId, reloadKey]);
 
   /* --- Refetch a specific day (bypass cache) ---
    * Handles both「current day」 case (dayNum === currentDayNum 同步 setCurrentDay)

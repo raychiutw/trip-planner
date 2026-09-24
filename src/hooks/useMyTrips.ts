@@ -17,6 +17,11 @@ export interface MyTrip {
   startDate?: string | null;
   endDate?: string | null;
   dayCount?: number;
+  owner?: string;
+  ownerDisplayName?: string | null;
+  memberCount?: number;
+  archivedAt?: string | null;
+  published?: number | boolean;
 }
 
 type ListStatus = 'loading' | 'success' | 'error';
