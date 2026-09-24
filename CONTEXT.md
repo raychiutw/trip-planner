@@ -58,7 +58,7 @@ _Avoid_: 在頁面或元件直接 `apiFetchRaw` entries endpoint、自己 dispat
 
 成功快照可繼續呈現，但讀取中或刷新失敗的資料不能建立新的補算依據；讀取中收到更新會保留一次後續重讀，過期回應不發布。每次行程切換都有獨立讀取身分，A→B→A 也不接受第一輪 A 的結果。
 
-entry 成功儲存後，即使原畫面已離開，仍完成必要的來源／目標重算；過期操作不再通知目前畫面或顯示提示。補算沿用 single-flight、gap signature 與唯讀停止規則。新畫面若加入尚未完成的同一補算，可收到自己的完成通知；沒有目前讀取者接續的舊完成不刷新新畫面。手動交通編輯的既有通知同樣經由此讀取生命週期更新。
+entry 成功儲存後，即使原畫面已離開，仍完成必要的來源／目標重算；過期操作不再通知目前畫面或顯示提示。補算沿用 single-flight、gap signature 與唯讀停止規則；失敗與 403 停止狀態保留，即使完成時已離開該行程，返回後仍呈現待更新。新畫面若加入尚未完成的同一補算，可收到自己的完成通知；沒有目前讀取者接續的舊完成不刷新新畫面。手動交通編輯的既有通知同樣經由此讀取生命週期更新。
 
 > **trip-scoped 的自由文字不寫進 `pois`** —— entry 說明放 `trip_entries.description`；POI 備註與預訂放 `trip_entry_pois` 的 `reservation` / `reservation_url` / `description` / `note` 欄位。migration 0078 後沒有 `trip_entries.note`；entry-level note 輸入由正選承接。`reservation` 是**純文字訂位註解**，不放 JSON。
 

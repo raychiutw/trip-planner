@@ -24,7 +24,8 @@ let recomputes: string[];
 let dayReads: string[];
 let segmentReads: string[];
 let beforeSegments: ((tripId: string, snapshot: unknown) => Promise<Response> | undefined) | undefined;
-let beforeRecompute: ((tripId: string) => Promise<Response> | undefined) | undefined;
+let beforeRecompute: ((tripId: string, dayNum: string | null) => Promise<Response> | undefined) | undefined;
+let entryMetaDayId: number | undefined;
 let manualSegment: Record<string, unknown>;
 let segmentWrites: Record<string, unknown>[];
 let beforeRead: ((tripId: string, dayNum: number, snapshot: unknown) => Promise<Response> | undefined) | undefined;
@@ -41,6 +42,7 @@ beforeEach(() => {
   writes = []; recomputes = []; dayReads = []; beforeRead = undefined; beforeWrite = undefined; writeStatus = 200; recomputeStatus = 200;
   segmentReads = []; beforeSegments = undefined; beforeRecompute = undefined;
   manualSegment = {}; segmentWrites = [];
+  entryMetaDayId = undefined;
   Element.prototype.scrollIntoView = vi.fn();
   Element.prototype.scrollTo = vi.fn();
   window.scrollTo = vi.fn();
@@ -77,12 +79,12 @@ beforeEach(() => {
       manualSegment = { ...body, source: 'manual', computedAt: 1, version: 2 };
       return response(manualSegment);
     }
-    if (tail === 'recompute-travel') { recomputes.push(`${tripId}:${url.searchParams.get('day')}`); return beforeRecompute?.(tripId) ?? response({}, recomputeStatus); }
+    if (tail === 'recompute-travel') { recomputes.push(`${tripId}:${url.searchParams.get('day')}`); return beforeRecompute?.(tripId, url.searchParams.get('day')) ?? response({}, recomputeStatus); }
     if (tail.startsWith('entries/')) {
       const id = Number(tail.split('/')[1]);
       const from = tripDays.find((d) => d.timeline.some((e) => e.id === id));
       const original = from?.timeline.find((e) => e.id === id);
-      if (!init?.method || init.method === 'GET') return response(original);
+      if (!init?.method || init.method === 'GET') return response(entryMetaDayId == null ? original : { ...original, dayId: entryMetaDayId });
       writes.push(`${tripId}:${tail}`);
       await beforeWrite?.();
       if (writeStatus !== 200) return response({ error: { message: '沒有編輯權限' } }, writeStatus);
@@ -270,6 +272,53 @@ describe('entry 變更的可見資料協調', () => {
     await act(async () => { release(); });
     await screen.findByText('10 min');
     expect(recomputes).toEqual(['t1:1']);
+  });
+
+  it('返回 A 加入尚在執行的全行程補算，失敗時目前 day 顯示待更新', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1), entry(13, '甲景點第三站', 1));
+    // The entry and day-list HTTP snapshots can disagree after a concurrent move.
+    // Explicit mutation preserves the existing whole-trip fallback for an unknown source day.
+    entryMetaDayId = 999;
+    const completions: (() => void)[] = [];
+    open();
+    await screen.findAllByText('10 min');
+    beforeSegments = () => Promise.resolve(response([]));
+    beforeRecompute = () => new Promise<Response>((resolve) => { completions.push(() => resolve(response({}, 500))); });
+    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await waitFor(() => expect(segmentReads.length).toBeGreaterThan(1));
+    await within(day(1)).findByTestId('travel-pill-stale');
+    fireEvent.click(screen.getByText('切換乙行程'));
+    await screen.findByText('乙景點1');
+    fireEvent.click(screen.getByText('移動甲景點'));
+    await screen.findByText('甲景點補站');
+    await within(day(1)).findByTestId('travel-pill-stale');
+    await act(async () => { for (const finish of completions) finish(); });
+    expect([...recomputes].sort()).toEqual(['t1:2', 't1:null']);
+    expect(within(day(1)).getByTestId('travel-pill-stale')).toHaveTextContent('車程待更新');
+  });
+
+  it.each([403, 500])('離開 A 後補算才回 %s，返回時仍保留停止或失敗狀態', async (status) => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    beforeSegments = () => Promise.resolve(response([]));
+    let release!: () => void;
+    beforeRecompute = () => new Promise<Response>((resolve) => { release = () => resolve(response({}, status)); });
+    open();
+    await waitFor(() => expect(recomputes).toEqual(['t1:1']));
+    fireEvent.click(screen.getByText('切換乙行程'));
+    await screen.findByText('乙景點1');
+    await act(async () => { release(); });
+    expect(screen.queryByTestId('travel-pill-stale')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('移動甲景點'));
+    await screen.findByText('甲景點補站');
+    expect(screen.getByTestId('travel-pill-stale')).toHaveTextContent('車程待更新');
+    expect(recomputes).toEqual(['t1:1']);
+    beforeRecompute = undefined;
+    recomputeStatus = status;
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-down-11'));
+    await waitFor(() => expect(segmentReads.length).toBeGreaterThan(3));
+    expect(recomputes).toEqual(status === 403 ? ['t1:1', 't1:1'] : ['t1:1', 't1:1', 't1:1']);
   });
 
   it('已有成功快照後刷新失敗，不用舊空資料追加補算，已儲存景點仍顯示車程待更新', async () => {
