@@ -16,6 +16,7 @@ let listResponse: () => Promise<Response>;
 let listReads: number;
 let requestedPaths: string[];
 let sentTripIds: string[];
+let sentMessages: string[];
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -25,12 +26,15 @@ beforeEach(() => {
   listReads = 0;
   requestedPaths = [];
   sentTripIds = [];
+  sentMessages = [];
   listResponse = async () => new Response(JSON.stringify(trips));
   vi.spyOn(global, 'fetch').mockImplementation(async (input, init) => {
     const path = String(input);
     requestedPaths.push(path);
     if (path.includes('/requests') && init?.method === 'POST') {
-      sentTripIds.push(JSON.parse(String(init.body)).tripId);
+      const body = JSON.parse(String(init.body));
+      sentTripIds.push(body.tripId);
+      sentMessages.push(body.message);
       return new Response(JSON.stringify({ id: 42 }));
     }
     if (path.includes('/oauth/userinfo')) return new Response(JSON.stringify(user));
@@ -63,6 +67,9 @@ describe('chat active trip selection', () => {
       <NavigateToLinkedChat /><ChatPage />
     </ActiveTripProvider></MemoryRouter>);
     await screen.findByTestId('sidebar-trip-private');
+    fireEvent.click(await screen.findByTestId('chat-trip-title'));
+    fireEvent.click(await screen.findByTestId('chat-trip-pick-private'));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private'));
     fireEvent.click(screen.getByText('open linked chat'));
     await waitFor(() => expect(requestedPaths.some((path) => path.includes('/requests?tripId=linked'))).toBe(true));
     expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('linked');
@@ -102,6 +109,34 @@ describe('chat active trip selection', () => {
     fireEvent.change(screen.getByTestId('chat-input'), { target: { value: '請幫我調整行程' } });
     fireEvent.click(screen.getByTestId('chat-send'));
     await waitFor(() => expect(sentTripIds).toEqual(['first']));
+  });
+
+  it('失效行程回退時恢復 A 草稿，不將 B 草稿送給 A，回選 B 後保留 B 草稿', async () => {
+    openChat('/chat?tripId=first');
+    const input = await screen.findByTestId('chat-input') as HTMLTextAreaElement;
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('first'));
+    fireEvent.change(input, { target: { value: 'A 的草稿' } });
+
+    fireEvent.click(screen.getByTestId('chat-trip-title'));
+    fireEvent.click(await screen.findByTestId('chat-trip-pick-private'));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private'));
+    expect(input.value).toBe('');
+    fireEvent.change(input, { target: { value: 'B 的草稿' } });
+
+    listResponse = async () => new Response(JSON.stringify([trips[0]]));
+    act(() => window.dispatchEvent(new CustomEvent(EVENT.tripDeleted, { detail: { tripId: 'private' } })));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('first'));
+    expect(input.value).toBe('A 的草稿');
+    fireEvent.click(screen.getByTestId('chat-send'));
+    await waitFor(() => expect(sentTripIds).toEqual(['first']));
+    expect(sentMessages).toEqual(['A 的草稿']);
+
+    listResponse = async () => new Response(JSON.stringify(trips));
+    act(() => window.dispatchEvent(new CustomEvent(EVENT.tripCreated, { detail: { tripId: 'private' } })));
+    await screen.findByTestId('sidebar-trip-private');
+    fireEvent.click(screen.getByTestId('chat-trip-title'));
+    fireEvent.click(await screen.findByTestId('chat-trip-pick-private'));
+    expect(input.value).toBe('B 的草稿');
   });
 
   it('preserves the preference when the accessible list read fails', async () => {

@@ -18,7 +18,7 @@
  *   - Desktop ≥1024px: 3-pane via AppShell (sidebar | chat main | sheet)
  *   - Mobile <1024px: 1-pane chat + bottom nav
  */
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -506,6 +506,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const [input, setInput] = useState('');
   // W6：聊天草稿依行程分開存（session-only ref；切換行程時存舊、載新，不讓半成品漏到別行程）。
   const draftsRef = useRef<Record<string, string>>({});
+  const draftTripIdRef = useRef(activeTripId);
   const [tripMenuOpen, setTripMenuOpen] = useState(false);
   // AI 授權 gate（Option E）：null=未知/載入中（放行，後端 mint 為最終關卡），
   // false=已知未授權（送出時攔下、跳授權 sheet），true=已授權。
@@ -550,6 +551,22 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     next.delete('tripId');
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  // 清單刷新確認舊行程失效時，active trip 會在 picker 之外切換；畫面繪製前同步草稿。
+  useLayoutEffect(() => {
+    if (draftTripIdRef.current === activeTripId) return;
+    if (!draftTripIdRef.current) {
+      draftTripIdRef.current = activeTripId;
+      return;
+    }
+    if (explicitTargetTripId || lockTripId) {
+      draftTripIdRef.current = activeTripId;
+      return;
+    }
+    if (draftTripIdRef.current) draftsRef.current[draftTripIdRef.current] = input;
+    draftTripIdRef.current = activeTripId;
+    setInput(activeTripId ? draftsRef.current[activeTripId] ?? '' : '');
+  }, [activeTripId, explicitTargetTripId, input, lockTripId]);
 
   // v2.33.47 round 7b LOW: memoize buildMessagesWithDividers — 之前每 keystroke
   // 都 O(n) walk messages list。1000-msg trip 在打字時明顯卡。
@@ -633,6 +650,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
     // W6：切換前存舊行程草稿、切換後載新行程草稿（session-only；跨 reload 持久化留給 W8 composer 契約）。
     if (activeTripId) draftsRef.current[activeTripId] = input;
+    draftTripIdRef.current = tripId;
     setExplicitTargetTripId(null);
     setActiveTripId(tripId);
     setInput(draftsRef.current[tripId] ?? '');
