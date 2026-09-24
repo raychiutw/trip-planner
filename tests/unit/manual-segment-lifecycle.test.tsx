@@ -207,6 +207,24 @@ describe('兩個真實交通編輯入口的 segment 生命週期', () => {
     expect(segmentWrites).toHaveLength(2);
   });
 
+  it('segment 網路中斷時仍記住已成功的 entry，重試不重送 entry', async () => {
+    let fails = true;
+    beforeSegmentWrite = () => fails ? Promise.reject(new TypeError('network lost')) : undefined;
+    await open(true);
+    fireEvent.change(screen.getByTestId('edit-entry-description-input'), { target: { value: '已修改' } });
+    fireEvent.click(screen.getByTestId('edit-entry-mode-walking'));
+    await tick(900);
+    expect(entryWrites).toHaveLength(1);
+    expect(segmentWrites).toHaveLength(1);
+    expect(screen.getByText(/移動方式儲存失敗/)).toBeInTheDocument();
+    fails = false;
+    fireEvent.click(screen.getByTestId('edit-entry-mode-driving'));
+    fireEvent.click(screen.getByTestId('edit-entry-mode-walking'));
+    await tick(900);
+    expect(entryWrites).toHaveLength(1);
+    expect(segmentWrites).toHaveLength(2);
+  });
+
   it('segment 已儲存但 entry 失敗時，重試不重送交通修改', async () => {
     let fails = true;
     beforeEntryWrite = () => fails ? Promise.resolve(response({ error: 'temporary' }, 500)) : undefined;

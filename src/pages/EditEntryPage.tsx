@@ -1261,7 +1261,8 @@ export default function EditEntryPage() {
     setSubmitting(true);
     const isCurrent = captureSegmentScope(tripId);
 
-    const requests: Promise<{ scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string }>[] = [];
+    type SaveResult = { scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string };
+    const requests: Array<{ scope: SaveResult['scope']; request: Promise<SaveResult> }> = [];
 
     if (dirty.entryDirty) {
       const body: Record<string, unknown> = {};
@@ -1277,11 +1278,11 @@ export default function EditEntryPage() {
       // "DATA_VALIDATION: 無有效欄位可更新"（api_logs 過去多次此 error）。
       // Empty body 表示資料其實沒變，跳過 request。
       if (Object.keys(body).length > 0) {
-        requests.push(
+        requests.push({ scope: 'entry', request:
           // #1261：entry 欄位走 entry 變更 module（時間變動後 module 內重算車程 + emit）。
           updateEntry(tripId, entryId, entryDayNumRef.current, body)
             .then((r) => (r.ok ? { scope: 'entry', ok: true, status: 200, text: undefined } : { scope: 'entry', ok: false, status: r.status, text: r.message })),
-        );
+        });
       }
     }
 
@@ -1296,10 +1297,10 @@ export default function EditEntryPage() {
       if (!noTravel && mode === 'transit' && transitMin.trim() !== '') {
         body.min = parseInt(transitMin, 10);
       }
-      requests.push(
+      requests.push({ scope: 'segment', request:
         saveManualSegment({ tripId, segmentId: segment?.id, fromEntryId: prevEntry.id, toEntryId: entryId, body })
           .then(async ({ response }) => ({ scope: 'segment', ok: response.ok, status: response.status, text: response.ok ? undefined : await response.text() })),
-      );
+      });
     }
 
     // v2.33.136 race guard：若 entry race-empty + segmentDirty false → 整 requests
@@ -1311,7 +1312,13 @@ export default function EditEntryPage() {
     }
 
     try {
-      const results = await Promise.all(requests);
+      const results = await Promise.all(requests.map(async ({ scope, request }): Promise<SaveResult> => {
+        try { return await request; }
+        catch (err) {
+          return { scope, ok: false, status: err instanceof ApiError ? err.status : 0,
+            text: err instanceof Error ? err.message : '網路錯誤' };
+        }
+      }));
       if (!isCurrent()) return;
       const failures = results.filter((r) => !r.ok);
       if (results.some((r) => r.scope === 'entry' && r.ok)) {
@@ -1332,7 +1339,7 @@ export default function EditEntryPage() {
         return;
       }
       const msg = failures
-        .map((f) => `${f.scope === 'entry' ? '景點' : '移動方式'}儲存失敗 (${f.status})`)
+        .map((f) => `${f.scope === 'entry' ? '景點' : '移動方式'}儲存失敗 (${f.status || f.text || '網路錯誤'})`)
         .join('；');
       // v2.33.136-139: 對齊 mockup spec「儲存失敗 → 重試 + toast error」+
       // user feedback「右上角不用顯示狀態」。失敗走 toast，無 inline / titleBar
