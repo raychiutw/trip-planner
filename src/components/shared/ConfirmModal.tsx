@@ -11,7 +11,7 @@
  *   - CollabPanel 移除成員 / 撤銷邀請
  *   - 將來其他 destructive 流程(刪除 trip / 刪除 entry / 登出)
  */
-import { useRef, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
@@ -146,6 +146,8 @@ export default function ConfirmModal({
   children,
   fallbackFocusRef,
 }: ConfirmModalProps) {
+  const titleId = useId();
+  const messageId = useId();
   const confirmRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   // 統一 sheet 引擎（B1）：開啟 focus **安全（取消）鈕**（W12 刪除政策 / HIG「破壞性動作預設
@@ -176,14 +178,14 @@ export default function ConfirmModal({
           className="tp-confirm-modal"
           role="alertdialog"
           aria-modal="true"
-          aria-labelledby="tp-confirm-title"
-          aria-describedby="tp-confirm-message"
+          aria-labelledby={titleId}
+          aria-describedby={messageId}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={handlePanelKeyDown}
           data-testid="confirm-modal"
         >
-          <h2 className="tp-confirm-title" id="tp-confirm-title">{title}</h2>
-          <p className="tp-confirm-message" id="tp-confirm-message">{message}</p>
+          <h2 className="tp-confirm-title" id={titleId}>{title}</h2>
+          <p className="tp-confirm-message" id={messageId}>{message}</p>
           {warning && (
             <div className="tp-confirm-warning" data-testid="confirm-modal-warning">
               <span className="tp-confirm-warning-icon" aria-hidden="true">⚠</span>
