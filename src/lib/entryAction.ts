@@ -50,10 +50,10 @@ export function shortenDateLabel(label: string): string {
 }
 
 export const ENTRY_ACTION_TIME_SLOTS = [
-  { key: 'same', label: '同原時段' },
-  { key: 'morning', label: '09:00 — 11:30（早上第一站）' },
-  { key: 'noon', label: '12:00 — 13:30（午餐）' },
-  { key: 'afternoon', label: '14:00 — 16:30（午後）' },
-  { key: 'evening', label: '18:00 — 20:00（晚餐）' },
-  { key: 'custom', label: '自訂時段⋯' },
+  { key: 'same', label: '同原時段', time: undefined },
+  { key: 'morning', time: '09:00-11:30', label: '09:00 — 11:30（早上第一站）' },
+  { key: 'noon', time: '12:00-13:30', label: '12:00 — 13:30（午餐）' },
+  { key: 'afternoon', time: '14:00-16:30', label: '14:00 — 16:30（午後）' },
+  { key: 'evening', time: '18:00-20:00', label: '18:00 — 20:00（晚餐）' },
+  { key: 'custom', label: '自訂時段⋯', time: undefined },
 ] as const;

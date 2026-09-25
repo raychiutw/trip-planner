@@ -7,6 +7,7 @@ import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
 import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
 import { SheetStackProvider } from '../../src/contexts/SheetStackContext';
 import { __resetTravelRecomputeState } from '../../src/lib/travelRecompute';
+import { moveEntry } from '../../src/lib/entryMutations';
 import { resetToasts } from '../../src/lib/toastBus';
 
 function entry(id: number, name: string, dayId: number) {
@@ -26,7 +27,6 @@ let dayReads: string[];
 let segmentReads: string[];
 let beforeSegments: ((tripId: string, snapshot: unknown) => Promise<Response> | undefined) | undefined;
 let beforeRecompute: ((tripId: string, dayNum: string | null) => Promise<Response> | undefined) | undefined;
-let entryMetaDayId: number | undefined;
 let manualSegment: Record<string, unknown>;
 let segmentWrites: Record<string, unknown>[];
 let beforeRead: ((tripId: string, dayNum: number, snapshot: unknown) => Promise<Response> | undefined) | undefined;
@@ -44,7 +44,6 @@ beforeEach(() => {
   writes = []; recomputes = []; dayReads = []; beforeRead = undefined; beforeWrite = undefined; writeStatus = 200; recomputeStatus = 200;
   segmentReads = []; beforeSegments = undefined; beforeRecompute = undefined;
   manualSegment = {}; segmentWrites = [];
-  entryMetaDayId = undefined;
   Element.prototype.scrollIntoView = vi.fn();
   Element.prototype.scrollTo = vi.fn();
   window.scrollTo = vi.fn();
@@ -86,7 +85,7 @@ beforeEach(() => {
       const id = Number(tail.split('/')[1]);
       const from = tripDays.find((d) => d.timeline.some((e) => e.id === id));
       const original = from?.timeline.find((e) => e.id === id);
-      if (!init?.method || init.method === 'GET') return response(entryMetaDayId == null ? original : { ...original, dayId: entryMetaDayId });
+      if (!init?.method || init.method === 'GET') return response(original);
       writes.push(`${tripId}:${tail}`);
       await beforeWrite?.();
       if (writeStatus !== 200) return response({ error: { message: '沒有編輯權限' } }, writeStatus);
@@ -281,16 +280,14 @@ describe('entry 變更的可見資料協調', () => {
 
   it('返回 A 加入尚在執行的全行程補算，失敗時目前 day 顯示待更新', async () => {
     data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1), entry(13, '甲景點第三站', 1));
-    // The entry and day-list HTTP snapshots can disagree after a concurrent move.
-    // Explicit mutation preserves the existing whole-trip fallback for an unknown source day.
-    entryMetaDayId = 999;
+    // Other mutation callers still use the supported whole-trip recompute scope.
+    // The copy/move page now requires verified source metadata before enabling a write.
     const completions: (() => void)[] = [];
     open();
     await screen.findAllByText('10 min');
     beforeSegments = () => Promise.resolve(response([]));
     beforeRecompute = () => new Promise<Response>((resolve) => { completions.push(() => resolve(response({}, 500))); });
-    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
-    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await act(async () => { await moveEntry('t1', 11, { fromDayNum: null, toDayNum: 2, toDayId: 2 }); });
     await waitFor(() => expect(segmentReads.length).toBeGreaterThan(1));
     await within(day(1)).findByTestId('travel-pill-stale');
     fireEvent.click(screen.getByText('切換乙行程'));
@@ -496,12 +493,10 @@ describe('entry 變更的可見資料協調', () => {
     await within(day(2)).findByText('車程待更新');
     expect(writes).toEqual(['t1:entries/11']);
     recomputeStatus = 200;
-    fireEvent.click(screen.getByText('移動甲景點'));
-    fireEvent.click(await screen.findByTestId('entry-action-day-3'));
-    fireEvent.click(screen.getByTestId('entry-action-confirm'));
-    await waitFor(() => expect(within(day(3)).getByText('甲景點1')).toBeInTheDocument());
-    await waitFor(() => expect(within(day(3)).queryByTestId('travel-pill-stale')).not.toBeInTheDocument());
-    expect(writes).toHaveLength(2);
+    fireEvent.click(await screen.findByRole('button', { name: '重試交通更新' }));
+    await waitFor(() => expect(within(day(2)).queryByTestId('travel-pill-stale')).not.toBeInTheDocument());
+    expect(within(day(2)).getByText('甲景點1')).toBeInTheDocument();
+    expect(writes).toHaveLength(1);
   });
 
   it('連續移動時，較舊的 day 回應不能把已移走的景點加回來', async () => {

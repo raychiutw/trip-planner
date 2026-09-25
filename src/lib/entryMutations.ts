@@ -16,7 +16,14 @@ import { EVENT } from './events';
 import { captureSegmentScope } from './segmentScope';
 
 export type MutationResult<T = unknown> =
-  | { ok: true; data: T; /** 車程重算是否成功；caller 可據此顯示 info toast。 */ recompute: Promise<boolean> }
+  | {
+    ok: true;
+    data: T;
+    /** Initial travel result, separate from the accepted entry write. */
+    recompute: Promise<boolean>;
+    /** Only retry unfinished travel scopes; never repeat the write. */
+    retryRecompute: () => Promise<boolean>;
+  }
   | { ok: false; status: number; message: string; /** 後端 error.code（STALE_ENTRY / DUPLICATE_POI…），caller 據此分流。 */ code?: string; /** 解析後的 error body（例：409 conflictWith）。 */ payload?: unknown };
 
 type DayNum = number | string | null | undefined;
@@ -28,15 +35,23 @@ function emit(detail: { tripId: string; entryId?: number | string; dayNum?: DayN
   window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: d }));
 }
 
-function recompute(tripId: string, dayNums: DayNum[], isCurrent: () => boolean): Promise<boolean> {
-  return Promise.all(dayNums.map((d) => isCurrent()
-    ? requestTravelRecompute(tripId, d)
-    : requestTravelRecompute(tripId, d, { isCurrent })))
-    .then(() => true)
-    .catch(() => false);
+function travelRecovery(tripId: string, dayNums: DayNum[], isCurrent: () => boolean) {
+  const pending = new Set(dayNums);
+  let flight: Promise<boolean> | null = null;
+  function retryRecompute(): Promise<boolean> {
+    if (flight) return flight;
+    flight = Promise.all([...pending].map(async (day) => {
+      try {
+        const result = await (isCurrent()
+          ? requestTravelRecompute(tripId, day)
+          : requestTravelRecompute(tripId, day, { isCurrent }));
+        if (!result?.errorsDetail?.length) pending.delete(day);
+      } catch { /* Keep only unfinished scopes for the next attempt. */ }
+    })).then(() => pending.size === 0).finally(() => { flight = null; });
+    return flight;
+  }
+  return { recompute: retryRecompute(), retryRecompute };
 }
-
-const NO_RECOMPUTE = Promise.resolve(true);
 
 async function call<T>(
   path: string,
@@ -73,11 +88,11 @@ async function call<T>(
   if (res.status !== 204) {
     try { data = (await res.json()) as T; } catch { /* 空 body 也算成功 */ }
   }
-  const entryId = after.entryId ?? after.entryIdFrom?.(data);
-  const rc = after.recompute ? recompute(after.tripId, after.dayNums, isCurrent) : NO_RECOMPUTE;
+  const entryId = after.entryIdFrom ? after.entryIdFrom(data) : after.entryId;
+  const recovery = travelRecovery(after.tripId, after.recompute ? after.dayNums : [], isCurrent);
   // 先觸發 recompute 再 emit：listener 的 refetch 才看得到 in-flight 狀態。
   if (isCurrent()) for (const dayNum of after.dayNums.length ? after.dayNums : [undefined]) emit({ tripId: after.tripId, entryId, dayNum });
-  return { ok: true, data, recompute: rc };
+  return { ok: true, data, ...recovery };
 }
 
 const enc = encodeURIComponent;
@@ -109,8 +124,9 @@ export function updateEntry<T = Record<string, unknown>>(tripId: string, entryId
 }
 
 /** PATCH /trips/:id/entries/:eid { day_id } —— 跨天搬移：來源日與目標日都要重算。 */
-export function moveEntry(tripId: string, entryId: number | string, to: { fromDayNum: DayNum; toDayNum: DayNum; toDayId: number; sortOrder?: number }): Promise<MutationResult> {
+export function moveEntry(tripId: string, entryId: number | string, to: { fromDayNum: DayNum; toDayNum: DayNum; toDayId: number; sortOrder?: number; time?: string }): Promise<MutationResult> {
   const body: Record<string, unknown> = { day_id: to.toDayId };
+  if (to.time !== undefined) body.time = to.time;
   if (to.sortOrder !== undefined) body.sort_order = to.sortOrder;
   return call(`/trips/${enc(tripId)}/entries/${entryId}`, { method: 'PATCH', body: JSON.stringify(body) },
     { tripId, entryId, dayNums: to.fromDayNum === to.toDayNum ? [to.toDayNum] : [to.toDayNum, to.fromDayNum], recompute: true });
@@ -155,9 +171,9 @@ export function replaceMasterPoi(tripId: string, entryId: number | string, dayNu
 }
 
 /** POST /trips/:id/entries/:eid/copy —— 複製到目標天。只重算目標天。 */
-export function copyEntry(tripId: string, entryId: number | string, to: { targetDayId: number; targetDayNum: DayNum }): Promise<MutationResult<{ id?: number }>> {
-  return call<{ id?: number }>(`/trips/${enc(tripId)}/entries/${entryId}/copy`, { method: 'POST', body: JSON.stringify({ targetDayId: to.targetDayId }) },
-    { tripId, entryId, dayNums: [to.targetDayNum], recompute: true });
+export function copyEntry(tripId: string, entryId: number | string, to: { targetDayId: number; targetDayNum: DayNum; time?: string }): Promise<MutationResult<{ id?: number }>> {
+  return call<{ id?: number }>(`/trips/${enc(tripId)}/entries/${entryId}/copy`, { method: 'POST', body: JSON.stringify({ targetDayId: to.targetDayId, time: to.time }) },
+    { tripId, entryId, dayNums: [to.targetDayNum], recompute: true, entryIdFrom: (d) => d?.id });
 }
 
 /** PATCH /trips/:id/entries/batch 帶 day_id —— 跨天拖拉：來源日與目標日各重算一次。 */
