@@ -89,6 +89,22 @@ describe('RailRow（獨立 render）', () => {
       expect(mutations.updateEntryPoi).toHaveBeenCalledWith('t1', 42, null, 9002, { note: '新景點的新備註' });
     } finally { vi.useRealTimers(); }
   });
+  it('舊正選的儲存完成不會關閉新正選的備註編輯', async () => {
+    let finish!: (value: Awaited<ReturnType<typeof mutations.updateEntryPoi>>) => void;
+    mutations.updateEntryPoi.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const row = (value: TimelineEntryData) => <MemoryRouter><TripIdContext.Provider value="t1">
+      <RailRow entry={value} index={0} expanded onToggle={() => {}} isPast={false} isNow={false} isLast sortMode={false} onEnterSortMode={() => {}} stopNumber={1} />
+    </TripIdContext.Provider></MemoryRouter>;
+    const view = render(row(entry));
+    fireEvent.click(screen.getByTestId('timeline-rail-note-value-42'));
+    fireEvent.change(screen.getByTestId('timeline-rail-note-input-42'), { target: { value: '舊景點' } });
+    fireEvent.click(screen.getByTestId('timeline-rail-note-close-42'));
+    await waitFor(() => expect(mutations.updateEntryPoi).toHaveBeenCalledTimes(1));
+    view.rerender(row({ ...entry, note: '新景點', stopPois: [{ poiId: 9002, sortOrder: 1, name: '泊港漁市場' }] }));
+    fireEvent.click(screen.getByTestId('timeline-rail-note-value-42'));
+    await act(async () => finish({ ok: true, data: {}, recompute: Promise.resolve(true) }));
+    expect(screen.getByTestId('timeline-rail-note-input-42')).toHaveValue('新景點');
+  });
   it('render 一列 + 時間 chip；展開後含備選卡並可設為正選（動詞來自 module）', async () => {
     const onToggle = vi.fn();
     const { rerender } = render(

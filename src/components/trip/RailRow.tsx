@@ -135,7 +135,8 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
   };
 
   const closeEditNote = useCallback(async () => {
-    await noteAutosave.flush();
+    const outcome = await noteAutosave.flush();
+    if (outcome.status !== 'saved') return;
     setEditingNote(false);
     setDraftNote('');
   }, [noteAutosave]);
