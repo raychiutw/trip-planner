@@ -65,7 +65,7 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
 
-**Apple HIG 是 UI/UX SoT**（iOS 手機 / macOS 桌機：IA、互動、色彩、材質、a11y）。`DESIGN.md` 為衍生、須對齊 HIG；code 不符＝bug，衝突以 HIG 為準（先討論再改 `DESIGN.md`）。**品牌保留例外**：terracotta 受控 tint / Inter web font / timeline editorial no-glass —— HIG 允許，不對齊。合規計畫（spec + 16 W-tickets）見 `docs/plans/apple-hig-compliance/`（**W0–W15 全 2026-07-24 ship 收官**，交付狀態見 `tickets.md`）。此 effort 不使用 mockup 流程。
+現行工作流程以 `AGENTS.md` 為準。網頁 UI/UX truth 是 `DESIGN.md` + `docs/design-sessions/terracotta-preview-v2.html`，並保留後續有日期的 owner 決策。HIG 是原生設計參考；WCAG 網頁數值、品牌例外與 prototype gate 見 [網頁設計準則](docs/design-standards.md)。2026-07 W0–W15 的 mockup 豁免只屬該次 effort，不能套用到新 layout。
 
 ## Skill Routing
 

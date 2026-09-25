@@ -1,5 +1,7 @@
 # Tickets — Tripline Web Apple HIG 合規（v2 · 鏡像 app #82）
 
+> **歷史文件（W0–W15，2026-07）**：下文保留當次決策／驗收紀錄；不覆蓋現行 AGENTS。原生尺寸、WCAG 翻譯與新 layout 的 prototype gate 以 [現行網頁準則](../../design-standards.md) 為準。本 effort 的 mockup 豁免不延伸至後續工作。
+
 to-tickets 產物（本地 markdown）。每票＝可獨立 demo/驗收的一個 PR（tracer-bullet）。**取代**先前窄版 tickets（#1117-only）。
 
 **順序**：W0 先 → **W1 IA foundation**（blocks 多數）+ **W4 色彩**（tokens 基礎）→ 其餘依相依/平行 → **W15 a11y 守衛**跨主題。
