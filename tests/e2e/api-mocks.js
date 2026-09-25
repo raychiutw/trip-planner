@@ -684,6 +684,11 @@ async function setupApiMocks(page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_USER) });
   });
 
+  // No disclosure is active until approved rollout; chat may send normally.
+  await page.route(/\/api\/account\/ai-data-consent$/, (route) => {
+    route.fulfill({ json: { disclosure: null, status: 'unconfigured', acceptedVersion: null, acceptedAt: null, decidedAt: null } });
+  });
+
   // Section 2 (terracotta-account-hub-page)：account stats endpoint
   await page.route(/\/api\/account\/stats$/, (route) => {
     route.fulfill({
