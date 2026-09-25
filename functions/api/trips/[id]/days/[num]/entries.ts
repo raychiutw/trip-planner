@@ -70,10 +70,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const masterNote =
     typeof body.note === 'string' && body.note.trim() !== '' ? body.note.trim() : null;
 
+  // Existing POIs follow the same validated reference contract as replacement.
+  let poiId: number | undefined;
+  if ('poiId' in body) {
+    if (typeof body.poiId !== 'number' || !Number.isSafeInteger(body.poiId) || body.poiId <= 0) {
+      throw new AppError('DATA_VALIDATION', 'poiId 須為正整數');
+    }
+    const existing = await db.prepare('SELECT id FROM pois WHERE id = ?').bind(body.poiId).first();
+    if (!existing) throw new AppError('DATA_NOT_FOUND', '找不到景點');
+    poiId = body.poiId;
+  }
+
   // #1257 entry intake：POI resolve、INSERT、正選、version、resort、audit、補償全在 createEntry。
   const { row } = await createEntry(db, {
     dayId,
-    poi: {
+    poi: poiId !== undefined ? {id: poiId} : {
       data: {
         name,
         type: (body.poi_type as string) || 'attraction',

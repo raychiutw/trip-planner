@@ -196,15 +196,19 @@ export interface SidebarUser {
 export interface DesktopSidebarProps {
   /** undefined = auth loading, null = confirmed unauthenticated */
   user?: SidebarUser | null | undefined;
+  /** Loading/recovery presentation supplied by the identity owner. */
+  userStatus?: ReactNode;
   /** rev2：我的行程清單（undefined = 尚未 resolve → skeleton；[] = 無行程） */
   trips?: MyTrip[];
+  /** Distinguish an initial read failure from the loading skeleton and confirmed empty list. */
+  tripsStatus?: 'loading' | 'success' | 'error';
   /** 目前 active trip id（清單 highlight） */
   activeTripId?: string | null;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
 }
 
-export default function DesktopSidebar({ user, trips, activeTripId, brand }: DesktopSidebarProps) {
+export default function DesktopSidebar({ user, userStatus, trips, tripsStatus, activeTripId, brand }: DesktopSidebarProps) {
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
   const location = useLocation();
   const { pathname } = location;
@@ -256,7 +260,9 @@ export default function DesktopSidebar({ user, trips, activeTripId, brand }: Des
 
         <div className="tp-sidebar-section-label">我的行程</div>
         <nav className="tp-sidebar-trips" aria-label="我的行程" data-testid="sidebar-trips">
-          {trips === undefined ? (
+          {tripsStatus === 'error' && (!trips || trips.length === 0) ? (
+            <div className="tp-sidebar-trips-empty" role="alert">行程清單載入失敗</div>
+          ) : trips === undefined ? (
             <div className="tp-sidebar-trips-loading" role="status" aria-label="載入行程中">
               <span className="tp-trip-skeleton is-a" />
               <span className="tp-trip-skeleton is-b" />
@@ -283,7 +289,7 @@ export default function DesktopSidebar({ user, trips, activeTripId, brand }: Des
         </nav>
 
         <div className="tp-sidebar-cta">
-          {user === undefined ? (
+          {user === undefined ? (userStatus ?? (
             <div
               className="tp-user-chip tp-user-chip-loading"
               data-testid="sidebar-user-loading"
@@ -296,7 +302,7 @@ export default function DesktopSidebar({ user, trips, activeTripId, brand }: Des
                 <span className="tp-user-skeleton-line is-secondary" />
               </div>
             </div>
-          ) : user ? (
+          )) : user ? (
             <Link
               to="/account"
               className="tp-account-card"

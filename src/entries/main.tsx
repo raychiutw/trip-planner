@@ -31,7 +31,7 @@ if ('serviceWorker' in navigator) {
 }
 
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { NewTripProvider } from '../contexts/NewTripContext';
 import { ActiveTripProvider } from '../contexts/ActiveTripContext';
@@ -136,22 +136,31 @@ const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
  *  其他 user 走 unknown route 會被 redirect 到非自己的 trip → 403。
  *  改成沒 valid ?trip= 就回 /trips（無 selected param 讓 TripsListPage
  *  fallback 到 user 最新編輯 trip 或顯示 empty state）。 */
-function LegacyRedirect() {
-  const queryTrip = new URLSearchParams(window.location.search).get('trip');
-  if (queryTrip && /^[\w-]+$/.test(queryTrip)) {
-    return <Navigate to={`/trips?selected=${encodeURIComponent(queryTrip)}`} replace />;
+function LegacyRedirect({ to = '/trips' }: { to?: '/trips' | '/chat' }) {
+  const { search, hash } = useLocation();
+  const params = new URLSearchParams(search);
+  if (to === '/trips') {
+    const queryTrip = params.get('trip');
+    params.delete('trip');
+    if (queryTrip && /^[\w-]+$/.test(queryTrip)) params.set('selected', queryTrip);
   }
-  return <Navigate to="/trips" replace />;
+  return <Navigate to={{ pathname: to, search: params.toString(), hash }} replace />;
+}
+
+/** Historical root query links still identify a trip; ordinary visits show the landing page. */
+function LandingPageRoute() {
+  const { search } = useLocation();
+  return new URLSearchParams(search).has('trip') ? <LegacyRedirect /> : <LandingPage />;
 }
 
 /** /trip/:tripId index → /trips?selected=:tripId（unified URL pattern）*/
 function TripIndexRedirect() {
   const { tripId } = useParams<{ tripId: string }>();
-  const { search } = useLocation();
+  const { search, hash } = useLocation();
   const incoming = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   // Forward existing query params (?sheet=map etc) onto the new URL
   incoming.set('selected', tripId ?? '');
-  return <Navigate to={`/trips?${incoming.toString()}`} replace />;
+  return <Navigate to={{ pathname: '/trips', search: incoming.toString(), hash }} replace />;
 }
 
 /** v2.10 Wave 1: /trip/:tripId/stop/:entryId → /trips?selected=:tripId&focus=:entryId
@@ -166,10 +175,11 @@ function TripIndexRedirect() {
  * 就是正解，不該是 modal。 */
 function StopDetailRedirect() {
   const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
-  const params = new URLSearchParams();
+  const { search, hash } = useLocation();
+  const params = new URLSearchParams(search);
   params.set('selected', tripId ?? '');
   if (entryId) params.set('focus', entryId);
-  return <Navigate to={`/trips?${params.toString()}`} replace />;
+  return <Navigate to={{ pathname: '/trips', search: params.toString(), hash }} replace />;
 }
 
 /**
@@ -244,17 +254,9 @@ function KeyboardInsetTracker() {
   return null;
 }
 
-const el = document.getElementById('reactRoot');
-if (el) {
-  // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
-  const existingRoot = (el as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot;
-  const root = existingRoot ?? createRoot(el);
-  (el as unknown as { _reactRoot: typeof root })._reactRoot = root;
+function ApplicationRoutes() {
+  return (<>
 
-  root.render(
-    <StrictMode>
-      <ErrorBoundary>
-        <BrowserRouter>
           <AccountSheetProvider>
           <DarkModeInit />
           <ServerStatusBanner />
@@ -273,11 +275,11 @@ if (el) {
             <Routes location={mainLocation}>
               {/* `/` 改指向未登入首頁。改版前落到 path="*" → LegacyRedirect → /trips → /login，
                   訪客永遠看不到這個 app 在做什麼。已登入者由 LandingPage 導回 /trips。 */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/admin" element={<Navigate to="/trips" replace />} />
-              <Route path="/admin/" element={<Navigate to="/trips" replace />} />
-              <Route path="/manage" element={<Navigate to="/chat" replace />} />
-              <Route path="/manage/" element={<Navigate to="/chat" replace />} />
+              <Route path="/" element={<LandingPageRoute />} />
+              <Route path="/admin" element={<LegacyRedirect />} />
+              <Route path="/admin/" element={<LegacyRedirect />} />
+              <Route path="/manage" element={<LegacyRedirect to="/chat" />} />
+              <Route path="/manage/" element={<LegacyRedirect to="/chat" />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/map" element={<GlobalMapPage />} />
               <Route path="/explore" element={<ExplorePage />} />
@@ -374,7 +376,23 @@ if (el) {
           </NewTripProvider>
           </ActiveTripProvider>
           </AccountSheetProvider>
-        </BrowserRouter>
+
+  </>);
+}
+
+const appRouter = createBrowserRouter([{ path: "*", element: <ApplicationRoutes /> }]);
+
+const el = document.getElementById('reactRoot');
+if (el) {
+  // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
+  const existingRoot = (el as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot;
+  const root = existingRoot ?? createRoot(el);
+  (el as unknown as { _reactRoot: typeof root })._reactRoot = root;
+
+  root.render(
+    <StrictMode>
+      <ErrorBoundary>
+        <RouterProvider router={appRouter} />
       </ErrorBoundary>
     </StrictMode>
   );

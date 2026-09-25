@@ -531,39 +531,9 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     expect(screen.queryByTestId('confirm-modal')).toBeNull();
   });
 
-  it('編輯 per-POI 備註 → blur 啟動 PATCH → 點返回：navigate 等 PATCH resolve 才發生（stale-race barrier）', async () => {
-    // 備註 PATCH 用可控閘門：resolve 前 hang。blur 先啟動 in-flight PATCH，返回時 goBackFocused
-    // 的 flush 撞 in-flight → useAutosave flush barrier 必須 await 它，navigate 才不會搶在 commit 前。
-    let resolvePatch!: () => void;
-    const patchGate = new Promise<void>((r) => { resolvePatch = r; });
-    setupAltsMocks(); // 先設 alts（含 apiFetchRaw resolved 預設）
-    // 再覆蓋 apiFetchRaw：備註 PATCH 走可控閘門，其餘照常 resolved
-    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      const okResp = { ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) };
-      if (url.includes('/pois/100')) return patchGate.then(() => okResp);
-      return Promise.resolve(okResp);
-    });
-    renderPage();
-    await waitFor(() => expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy());
+  // The blur/in-flight navigation barrier now lives in manual-segment-lifecycle:
+  // real data router + real saving module + deferred HTTP; navigateSpy bypasses blockers.
 
-    // master 備註（poiId=100）：開編輯 → 打字 → blur（模擬點按鈕前 textarea 先失焦 → 送出 PATCH）
-    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-100'));
-    fireEvent.change(screen.getByTestId('edit-entry-poi-note-input-100'), { target: { value: '新備註內容' } });
-    fireEvent.blur(screen.getByTestId('edit-entry-poi-note-input-100'));
-    fireEvent.click(screen.getByLabelText('返回上一層'));
-
-    // barrier：PATCH 未 resolve → navigate 不該發生（修復前 flush 撞空 body 即 return → 這裡會紅）
-    await new Promise((r) => setTimeout(r, 0));
-    expect(navigateSpy).not.toHaveBeenCalled();
-
-    // PATCH commit → flush 放行 → navigate 帶 ?focus=42
-    resolvePatch();
-    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith(expect.stringContaining('focus=42')));
-    const patchCall = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls.find(
-      (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('/pois/100'),
-    );
-    expect(JSON.parse((patchCall![1] as { body: string }).body).note).toBe('新備註內容');
-  });
 });
 
 // =========================================================================

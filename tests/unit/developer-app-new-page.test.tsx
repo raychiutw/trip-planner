@@ -60,12 +60,12 @@ describe('DeveloperAppNewPage', () => {
     expect(screen.getByTestId('dev-app-new-cancel')).toBeTruthy();
   });
 
-  it('Default scopes: openid + profile + email checked, trips.* unchecked', () => {
+  it('Default scopes: openid + profile + email checked, offline_access unchecked', () => {
     renderPage();
     const openid = screen.getByTestId('dev-app-new-scope-openid') as HTMLInputElement;
-    const tripsRead = screen.getByTestId('dev-app-new-scope-trips.read') as HTMLInputElement;
+    const offlineAccess = screen.getByTestId('dev-app-new-scope-offline_access') as HTMLInputElement;
     expect(openid.checked).toBe(true);
-    expect(tripsRead.checked).toBe(false);
+    expect(offlineAccess.checked).toBe(false);
   });
 
   it('Submit valid form (confidential) → POST + show secret modal with client_secret', async () => {
@@ -165,6 +165,7 @@ describe('DeveloperAppNewPage', () => {
 
     renderPage();
     fireEvent.change(screen.getByTestId('dev-app-new-name'), { target: { value: 'Done App' } });
+    fireEvent.click(screen.getByTestId('dev-app-new-type-confidential'));
     fireEvent.change(screen.getByTestId('dev-app-new-uris'), { target: { value: 'https://x.com/cb' } });
     fireEvent.click(screen.getByTestId('dev-app-new-submit'));
 

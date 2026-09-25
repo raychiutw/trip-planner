@@ -1,0 +1,20 @@
+import { test, expect } from '@playwright/test';
+const { setupApiMocks } = require('./api-mocks');
+for (const path of ['/trips', '/chat', '/favorites', '/map']) test(`root auth retry restores ${path}`, async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setupApiMocks(page);
+  if (path === '/map') await page.route('**/api/my-trips', route => route.fulfill({ json: [] }));
+  let available = false;
+  await page.route('**/api/oauth/userinfo', route => route.fulfill({ status: available ? 200 : 503, json: available ? { id: 'reader', email: 'reader@example.com', displayName: 'Reader' } : {} }));
+  await page.goto(path);
+  const status = page.getByTestId('app-shell-main').getByTestId('auth-status'); await expect(status.getByRole('alert')).toBeVisible();
+  await expect(page.getByTestId('global-bottom-nav').getByRole('link')).toHaveCount(4);
+  await expect(page.getByTestId('global-bottom-nav')).toBeVisible();
+  const retry = status.getByRole('button', { name: '重試登入狀態' });
+  available = true; await retry.press('Enter');
+  await expect(status).not.toBeVisible();
+  await expect(page.getByTestId('global-bottom-nav')).toBeVisible();
+  if (path !== '/map') await expect(page.getByTestId('titlebar-account')).toHaveAccessibleName('帳號');
+  if (path === '/map') await expect(page.getByTestId('global-map-empty')).toBeVisible();
+  await expect(page).toHaveURL(path);
+});

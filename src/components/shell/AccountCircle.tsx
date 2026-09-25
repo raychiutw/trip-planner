@@ -35,12 +35,23 @@ export const ACCOUNT_CIRCLE_STYLES = `
 `;
 
 export default function AccountCircle() {
-  const { user } = useCurrentUser();
+  const { user, error, reload } = useCurrentUser();
   const location = useLocation();
   const { openSheet } = useAccountSheet();
 
-  // 載入中（undefined）先不佔位，避免閃爍；解析後才顯示。
-  if (user === undefined) return null;
+  if (user === undefined) return (
+    <>
+      <style>{ACCOUNT_CIRCLE_STYLES}</style>
+      <button type="button" className="tp-account-circle" data-testid="titlebar-account"
+        aria-label="重試登入狀態" title={error ? '無法確認登入狀態，請重試' : '確認登入狀態…'}
+        aria-disabled={!error} onClick={() => { if (error) reload(); }}>
+        <span className="tp-account-circle-avatar"><Icon name="user" /></span>
+      </button>
+      <span className="sr-only" role={error ? 'alert' : 'status'}>
+        {error ? '無法確認登入狀態，請重試。' : '確認登入狀態…'}
+      </span>
+    </>
+  );
 
   if (!user) {
     return (

@@ -8,7 +8,8 @@
  *
  * 安全 UX：撤銷必須二次確認（modal）— 破壞性操作。
  */
-import { useEffect, useState } from 'react';
+import AuthStatus from '../components/shared/AuthStatus';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { apiFetch } from '../lib/apiClient';
@@ -19,6 +20,7 @@ import TitleBar from '../components/shell/TitleBar';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import AiAuthorizeCard from '../components/AiAuthorizeCard';
+import { SCOPE_DESCRIPTIONS } from '../lib/oauthScopes';
 
 const SCOPED_STYLES = `
 .tp-settings-shell {
@@ -70,6 +72,7 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 .tp-app-info { flex: 1; min-width: 0; }
+.tp-app-name, .tp-app-meta, .tp-scope-pill { overflow-wrap: anywhere; }
 .tp-app-name {
   font-size: var(--font-size-callout); font-weight: 700;
   margin-bottom: 2px;
@@ -135,6 +138,7 @@ interface ConnectedApp {
 }
 
 function relativeTime(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0 || !Number.isFinite(new Date(ms).getTime())) return '時間不明';
   const diff = Date.now() - ms;
   const sec = Math.floor(diff / 1000);
   if (sec < 60) return '剛才';
@@ -150,37 +154,69 @@ function relativeTime(ms: number): string {
 }
 
 export default function ConnectedAppsPage() {
-  const { user } = useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
+  const auth = useRequireAuth();
+  const { user } = auth; // V2 sole-auth: redirect to /login if no tripline_session
   const navigate = useNavigate();
   const [apps, setApps] = useState<ConnectedApp[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [grantRevision, setGrantRevision] = useState(0);
+  const [announcement, setAnnouncement] = useState('');
+  const contentRef = useRef<HTMLDivElement>(null);
+  const readRequest = useRef<AbortController | null>(null);
+  const busyRef = useRef(false);
+  const lifetime = useRef(0);
+  useLayoutEffect(() => () => { lifetime.current++; readRequest.current?.abort(); }, [user?.id]);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokeBusy, setRevokeBusy] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
+    readRequest.current?.abort();
+    const request = new AbortController();
+    readRequest.current = request;
     setError(null);
     try {
-      const json = await apiFetch<{ apps: ConnectedApp[] }>('/account/connected-apps');
+      const json = await apiFetch<{ apps: ConnectedApp[] }>('/account/connected-apps', { signal: request.signal });
+      if (request.signal.aborted) return;
+      const ids = new Set<string>();
+      if (!Array.isArray(json?.apps)) throw new Error('invalid grants');
+      for (const app of json.apps) {
+        if (!app || typeof app.client_id !== 'string' || !app.client_id || ids.has(app.client_id) ||
+            typeof app.app_name !== 'string' || !Array.isArray(app.scopes) || app.scopes.some(scope => typeof scope !== 'string') ||
+            typeof app.granted_at !== 'number') throw new Error('invalid grant');
+        ids.add(app.client_id);
+      }
       setApps(json.apps);
-    } catch (err) {
-      setError(err instanceof Error ? '無法載入已連結應用，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
+    } catch {
+      if (!request.signal.aborted) setError('無法載入已連結應用，請重試。');
     }
-  }
-
-  useEffect(() => {
-    void load();
   }, []);
 
+  useEffect(() => {
+    if (user?.id) void load();
+    return () => readRequest.current?.abort();
+  }, [user?.id, load]);
+
   async function confirmRevoke(clientId: string) {
+    if (busyRef.current || !apps?.some(app => app.client_id === clientId)) return;
+    busyRef.current = true;
+    const operation = lifetime.current;
+    readRequest.current?.abort();
     setRevokeBusy(true);
+    setRevokeError(null);
+    setAnnouncement('');
     try {
-      await apiFetch(`/account/connected-apps/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
-      setApps((prev) => prev?.filter((a) => a.client_id !== clientId) ?? null);
+      const result = await apiFetch<{ ok: boolean; revoked_client_id: string }>(`/account/connected-apps/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
+      if (operation !== lifetime.current) return;
+      if (result?.ok !== true || result.revoked_client_id !== clientId) throw new Error('unconfirmed revocation');
+      setApps(prev => prev?.filter(app => app.client_id !== clientId) ?? null);
       setRevokingId(null);
+      setGrantRevision(n => n + 1);
+      setAnnouncement('已撤銷應用程式的存取權。');
     } catch {
-      setError('撤銷失敗，請稍後再試。');
+      if (operation === lifetime.current) setRevokeError('撤銷失敗，請稍後再試。');
     } finally {
-      setRevokeBusy(false);
+      if (operation === lifetime.current) { busyRef.current = false; setRevokeBusy(false); }
     }
   }
 
@@ -190,27 +226,31 @@ export default function ConnectedAppsPage() {
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
-      main={<>
+      main={!user ? <AuthStatus auth={auth} /> : <>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-settings-shell" data-testid="connected-apps-page">
       <TitleBar title="已連結的應用程式" back={() => navigate('/account')} />
-      <div className="tp-settings-inner">
+      <div className="tp-settings-inner" ref={contentRef} tabIndex={-1} aria-label="已連結應用清單">
+        <span role="status" className="sr-only">{announcement}</span>
         <p className="tp-page-eyebrow">設定</p>
         <p className="tp-page-meta">這些應用程式可以使用你的 Tripline 帳號。撤銷後該應用程式將立即失去存取權。</p>
 
         {/* Tripline AI 排程就地授權入口 —— 讓「行程已存在、只用 AI 聊天」的 owner 在設定頁
             也能授權（不只 NewTripPage / 聊天送出當下）。撤銷仍走下方應用列的「撤銷」。 */}
         <div style={{ marginBottom: 16 }}>
-          <AiAuthorizeCard />
+          <AiAuthorizeCard refreshVersion={grantRevision} onAuthorized={load} disabled={revokeBusy} />
         </div>
 
-        {error && <ErrorBanner message={error} testId="connected-apps-error" />}
+        {error && <>
+          <ErrorBanner message={error} testId="connected-apps-error" />
+          <button type="button" className="tp-btn min-h-[44px]" onClick={() => void load()} disabled={revokeBusy}>重試載入應用</button>
+        </>}
 
         {apps === null && !error && (
           <div className="tp-loading" data-testid="connected-apps-loading">載入中…</div>
         )}
 
-        {apps !== null && apps.length === 0 && (
+        {apps !== null && apps.length === 0 && !error && (
           <div className="tp-section">
             <div className="tp-empty" data-testid="connected-apps-empty">
               <div className="tp-empty-icon-circle" aria-hidden="true">
@@ -239,10 +279,11 @@ export default function ConnectedAppsPage() {
                   {app.app_name.slice(0, 1).toUpperCase()}
                 </div>
                 <div className="tp-app-info">
-                  <div className="tp-app-name">{app.app_name}</div>
+                  <div className="tp-app-name">{app.app_name || app.client_id}</div>
+                  <div className="tp-app-meta">{app.client_id}</div>
                   <div className="tp-app-meta">
-                    {app.scopes.slice(0, 3).map((s) => (
-                      <span className="tp-scope-pill" key={s}>{s}</span>
+                    {[...new Set(app.scopes)].map((s) => (
+                      <span className="tp-scope-pill" key={s}>{s}{SCOPE_DESCRIPTIONS[s] ? ` — ${SCOPE_DESCRIPTIONS[s]}` : ' — 未知權限'}</span>
                     ))}
                     <span>授權 {relativeTime(app.granted_at)}</span>
                   </div>
@@ -250,7 +291,9 @@ export default function ConnectedAppsPage() {
                 <div className="tp-app-actions">
                   <button
                     className="tp-btn tp-btn-destructive"
-                    onClick={() => setRevokingId(app.client_id)}
+                    onClick={() => { setRevokeError(null); setRevokingId(app.client_id); }}
+                    disabled={revokeBusy}
+                    aria-label={`撤銷 ${app.app_name || app.client_id}`}
                     data-testid={`connected-apps-revoke-${app.client_id}`}
                   >
                     撤銷
@@ -270,16 +313,17 @@ export default function ConnectedAppsPage() {
         * 改為 ConfirmModal 標準 testid (confirm-modal-confirm / -cancel)。 */}
       <ConfirmModal
         open={!!revokingId && !!target}
-        title={target ? `撤銷 ${target.app_name} 的存取權？` : ''}
+        title={target ? `撤銷 ${target.app_name || target.client_id} 的存取權？` : ''}
         message={target
-          ? `撤銷後 ${target.app_name} 將立即無法讀取或修改你的行程。未來想再使用必須重新授權。`
+          ? `撤銷後 ${target.app_name || target.client_id} 將立即無法讀取或修改你的行程。未來想再使用必須重新授權。`
           : ''}
         confirmLabel="確認撤銷"
         cancelLabel="取消"
         busy={revokeBusy}
+        fallbackFocusRef={contentRef}
         onConfirm={() => { if (revokingId) confirmRevoke(revokingId); }}
         onCancel={() => setRevokingId(null)}
-      />
+      >{revokeError && <ErrorBanner message={revokeError} testId="connected-apps-revoke-error" />}</ConfirmModal>
       </>}
     />
   );

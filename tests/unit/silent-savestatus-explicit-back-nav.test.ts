@@ -76,10 +76,7 @@ describe('PR14 (B): useNavigateBack 永遠走 explicit URL', () => {
     expect(COLLAB).not.toMatch(/navigate\(-1\)/);
   });
 
-  it('CollabPage handleBack 走 explicit /trips?selected=:id or /trips', () => {
-    expect(COLLAB).toMatch(/navigate\(`\/trips\?selected=\$\{encodeURIComponent\(tripId\)\}`\)/);
-    expect(COLLAB).toMatch(/navigate\('\/trips'\)/);
-  });
+  // The actual destination is checked in collab-recovery.test.tsx.
 });
 
 describe('全 codebase grep — 無 navigate(-N) 殘留（G-S1 depth-gated 例外）', () => {

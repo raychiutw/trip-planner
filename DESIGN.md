@@ -1,6 +1,6 @@
 # Design System — Tripline（V2 柔褐三色）
 
-> **🍎 Apple HIG＝UI/UX SoT（2026-07-23，grill v2 owner 拍板）。** 手機 iOS／桌機 macOS 的 IA、互動、色彩、材質、a11y 以 Apple HIG 為最終依據；**本文件（`DESIGN.md`）為衍生、須對齊 HIG**，衝突以 HIG 為準（先討論再改）。合規計畫（spec + 16 W-tickets + grill v2 五決策）：`docs/plans/apple-hig-compliance/`（**W0–W15 全 2026-07-24 ship 收官**，交付狀態表見 `tickets.md`）。**品牌保留例外**（HIG 允許、不對齊）：terracotta 受控 tint、Inter web font、timeline editorial no-glass。**此 effort 不使用 mockup 流程。**
+> **現行執行依據：根目錄 [AGENTS.md](AGENTS.md)。** 本文件與 `docs/design-sessions/terracotta-preview-v2.html` 是網頁 UI/UX truth，承接各節有日期的 owner 決策；HIG 是原生平台設計參考，網頁數值與驗收依 [準則與來源](docs/design-standards.md)。品牌保留 terracotta 受控 tint、Inter、timeline editorial no-glass；不能據此豁免 WCAG。2026-07 的 `docs/plans/apple-hig-compliance/` W0–W15 是已完成的歷史 effort，其 mockup 豁免不適用新 layout。新 layout 遵守 AGENTS 的 `/prototype` → user sign-off gate。
 > grill v2 五決策：① 平台模型 **C**（web 鏡像 app #82，桌機輸入走 macOS）｜② IA **4-tab + 帳號 header sheet**（supersede 同日 #1120 五-tab）｜③ 色彩 **system 語意色底 + terracotta 受控 tint**｜④ 刪除 **無 undo + server-confirm-before-remove + 高影響 reauth**｜⑤ 平台翻譯 SF-風描邊 icon／`backdrop-filter` glass+fallback／省 haptic／系統返回／留 Inter。
 
 ## Product Context
@@ -16,7 +16,7 @@
 - **Differentiation:** 暖調 V2 柔褐三色（主柔褐 + sage 交通 + 粉 活動/收藏；非六主題切換、非冷色 Ocean）、Airbnb 式三層陰影但 rgba 用暖棕（`rgba(42, 31, 24, …)`）、Inter + Noto Sans TC 排版
 - **Reference sites:** Airbnb（card + shadow）、Apple HIG（tap target、subheadline）、Anthropic Claude Design 稿（Okinawa Trip Redesign/Mobile）、`docs/design-sessions/mockup-trip-v2.html`（V2 canonical mockup）
 
-> **⚠️ V3 Apple Music 改版進行中（2026-07-17，桌機 React）。** 語意三色（sage 交通 / 粉 收藏活動）**退場**。SoT 轉移到 `trip-planner.flutter/docs/discovery/design.md` §2 + 桌機 mockup `docs/design-sessions/2026-07-15-v3-apple-music-desktop.html`。**Phase 1（v2.55.88）已 ship**：`--color-accent-2/-3` 在 tokens.css 收斂成單一柔褐 accent（全站不再彩虹）+ dark mode 換中性深灰（**v2.56.4 owner「全黑太多、tab 也黑，參考 HIG」→ 整條 iOS system gray 往上抬一階**：base `#1C1C1E`/surface `#2C2C2E`/tertiary `#3A3A3C`/hover `#48484A` + accent `#CBA06E`，取代原近黑 `#121214` 系與下方舊暖褐 dark 表）。**卡片 neutral surface + 去封面/常駐 sidebar/單層 DAY selector 是後續 Phase**——下方三色表為歷史，逐 Phase 改寫。見 memory `project_v3_desktop_redesign`。
+> **歷史 Phase 紀錄（2026-07-17，桌機 React；不覆蓋本文件開頭的現行執行依據）。** 語意三色（sage 交通 / 粉 收藏活動）**退場**。SoT 轉移到 `trip-planner.flutter/docs/discovery/design.md` §2 + 桌機 mockup `docs/design-sessions/2026-07-15-v3-apple-music-desktop.html`。**Phase 1（v2.55.88）已 ship**：`--color-accent-2/-3` 在 tokens.css 收斂成單一柔褐 accent（全站不再彩虹）+ dark mode 換中性深灰（**v2.56.4 owner「全黑太多、tab 也黑，參考 HIG」→ 整條 iOS system gray 往上抬一階**：base `#1C1C1E`/surface `#2C2C2E`/tertiary `#3A3A3C`/hover `#48484A` + accent `#CBA06E`，取代原近黑 `#121214` 系與下方舊暖褐 dark 表）。**卡片 neutral surface + 去封面/常駐 sidebar/單層 DAY selector 是後續 Phase**——下方三色表為歷史，逐 Phase 改寫。見 memory `project_v3_desktop_redesign`。
 
 ## Palette — V2 柔褐三色（canonical source: tokens.css `@theme`）
 | Token | Hex | 用途 |
@@ -49,9 +49,9 @@
 >
 > **取值口徑**：淺色降亮度到「疊頁面底 `#FFFBF5` 與列印底 `#FFFFFF` 兩者的較差值 ≥5.0」；深色方向相反要更淺，且**原色有 9/10 本來就達標**（疊 `#1C1C1E`：lime 8.61…rose 4.63），只有 violet 4.02 真不足，故深色多數維持原值以保住與 polyline 的一致性，僅把 rose/violet/fuchsia 三顆往白插值到 ≥5.0。逐色數字寫在 `css/tokens.css` 的 `--day-text-*` 區塊，守衛在 `tests/unit/day-palette-text.test.ts`。
 >
-> ⚠️ **`5.0` 是本專案的內部安全邊際，不是任何標準的門檻，不得當成合規事實引用。** Apple HIG Accessibility 的表格是 `≤17pt 全部 4.5:1` / `18pt 全部 3:1` / `任何尺寸的 Bold 3:1`；WCAG 2.2 是 `4.5` / `3`。**`5.0` 在 HIG 與 WCAG 都不存在。** 之所以抓 5.0，純粹是因為貼著 4.5 的值在底色微調時會靜默掉到門檻以下，而這個 repo 已經因此痛過（見 §Color Approach 的對比雙軌）。
+> **5.0:1 是專案內部安全邊際，不是標準門檻。** 網頁一般文字按 WCAG 1.4.3 ≥4.5:1，大字 ≥3:1；大字定義為至少 24 CSS px，或至少 18⅔ CSS px 粗體。HIG 原生表不取代這個定義，來源與例外見 [網頁準則](docs/design-standards.md)。
 >
-> 🔴 **不要用「某個既有 token 只有 4.2、不到 5.0」當作必須新造 token 的理由** —— 那是把內部邊際講成合規需求。2026-07-26 的 #1176 評估就犯過這個錯：拿「`--color-success-deep` 只有 4.12」推導出要新增兩顆 token，但 4.12 對 bold 文字在 HIG 表下本來就過。**先確認標準門檻，再談邊際。**
+> 不因 token 未達內部 5.0 就新增色票；先確認適用標準、字級及實際底色。**更正歷史 #1176 說明：11px 粗體在網頁仍需 4.5:1，4.12:1 不能因「粗體」判合格。** 此更正不撤銷已落地的語意底色／中性文字決策。
 >
 > ⚠ **`num` 的對比 e2e 掃不到**：day 序號在行程 ≤9 天時是單一字元，axe 的 color-contrast 對 1 字元元素一律歸 incomplete（`messageKey: shortTextContent`），而 e2e 只讀 violations。它只能靠上述單元守衛，別以為 e2e 全綠就代表沒問題（同 §Color Approach 記的 accent 徽章盲區，這是第二現場）。
 
@@ -141,15 +141,15 @@
 > | **文字（label）** | **`--color-foreground` / `--color-muted`（中性色）** |
 > | 顏色訊號 | `aria-hidden` 的圓點／glyph，用 `--color-<semantic>` 或 `-deep` |
 >
-> **不要**寫成「同色系淡底 + 同色系深字」再去調色救對比 —— 那是把一個色相同時當 fill 又當 label，正是上面第二段勸阻的。實測差距也很大：`.tp-pill-current` 走中性字是 **12.30:1**，走「壓深的語意色字」只有 ~5.x，而且中性字**底色日後怎麼改都不會再壞**。
+> **本專案狀態 pill／banner 使用中性文字 + 語意底色**，沿用既有 owner 決策。這不是 HIG 禁止所有「同色系淡底 + 深字」的通用條文，不能由「同一顏色不要代表不同意思」推導出該禁令。既有 `.tp-pill-current` 中性字量測為 12.30:1；底色或透明度日後改動，仍須重算實際對比。
 >
 > 這不是新發明 —— 本檔 §行程一覽三色（「字一律 `--color-foreground`／`--color-muted`」）與 §AI聊天 avatar（「`--t-bg` 底 + `--color-foreground` 字，不用 vivid 實心」）**已經各拍板過一次**，本節只是把同一條規則推廣到語意色。
 >
-> 另有 HIG 明文要求的第三重編碼：
+> HIG 另提醒不要只靠顏色傳達資訊：
 >
 > > "**Convey information with more than color alone.** … Offer visual indicators, like distinct shapes or icons, in addition to color."
 >
-> → 狀態應同時有**文字 + 形狀（glyph）+ 顏色**，不能只靠色相區分。
+> → 狀態不能只靠色相區分；文字或形狀可提供額外辨識。保留既有 pill／banner 的文字與 glyph 組合，不把 HIG 解讀為每個狀態都強制三種編碼。
 >
 > ⚠️ **半透明底是不可靠的對比基礎。** HIG 點名：「Consider how artwork and translucency affect nearby colors」。**v2.57.69（#1176）起 `success` / `warning` / `info` / `destructive` 四個 `-bg` 在淺深兩色系都是不透明 6 碼 hex**，值＝原本的 `rgba()` 合成在頁面底色上的結果，所以最常見的那個外觀不變。
 >
@@ -276,11 +276,11 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 - **每 day 一段獨立 polyline**：以該日 `pinsByDay.get(N)` 的全部 pins（hotel + entries）按 `sortOrder` 串接。`extractPinsFromDay` 已把 hotel 排在 `sortOrder` 最小（index=0），自然成為線首。
 - **跨 day 不連線**：避免「飯店 A → 餐廳 → 飯店 B」這種視覺上不合理的長線。
-- **單 trip 內 polyline 同色**：在 `OceanMap` 是單 trip 的 dayColor(N) 漸層；在 `GlobalMapPage`（cross-trip）每 trip 一個顏色，當天的線段共用該 trip 的色。
+- **單 trip 內 polyline 同色**：`OceanMap` 的單 trip 地圖使用 dayColor(N) 漸層；root `/map` 只選擇行程並導向行程地圖。
 - **hotel marker 樣式不變**：仍用 ink 類 stop 顏色（per Stop Type Color Convention），只有 polyline 把它包進來。
 - **hotel 缺座標時**：略過該日線首的 hotel 段，從第一個 entry 開始接，不報錯。
 
-實作位置：`OceanMap`（per-trip overview）、`GlobalMapPage`（cross-trip 全域）。`MapPin.type === 'entry'` 不再做 polyline 的入線過濾條件 — 改用 day-grouped 全 pins。
+實作位置：`OceanMap`（per-trip overview）、行程地圖。`MapPin.type === 'entry'` 不再做 polyline 的入線過濾條件 — 改用 day-grouped 全 pins。
 
 ## Spacing
 
@@ -308,7 +308,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 | Token | Value | 用途 |
 |-------|-------|------|
 | padding-h | 16px compact / 24px desktop | 標準頁面水平 padding |
-| tap-min | 44px | 最小觸控目標（Apple HIG） |
+| tap-min | 44px | 專案一般觸控目標（CSS px）；原生 pt 與網頁 AA／AAA 區分見網頁準則 |
 | page-max-w | 1440px | 桌面頁面最大寬 |
 | content-max-w | 1040px | 一般內容頁最大寬度；地圖頁例外可 full bleed |
 | info-panel-w | 320px | 桌面版側邊資訊欄參考寬度 |
@@ -451,8 +451,8 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 ### Desktop Sidebar（`DesktopSidebar`）
 - 只在 desktop mode 顯示。
-- **rev2 owner 2026-07-19（§10.1）：macOS sidebar** — 由上而下＝品牌 → **4-tab 主導覽**（聊天/行程/地圖/收藏）→ 分隔線 → **「我的行程」清單**（`useMyTrips` 注入 `/api/trips?all=1`）→ 帳號 chip 左下 → `/account`。桌機底部膠囊隱藏後，primary nav 回到 sidebar 頂部。主導覽 active 用 accent 實心 fill；清單項連 `/trips?selected=<id>`，active trip（URL 推導）套 accent。
-- 清單狀態：`trips===undefined` → skeleton（不先渲染空態）；`[]` → 「尚無行程」；有資料 → 逐行 `.tp-trip-item`。
+- **rev2 owner 2026-07-19（§10.1）：macOS sidebar** — 由上而下＝品牌 → **4-tab 主導覽**（聊天/行程/地圖/收藏）→ 分隔線 → **「我的行程」清單**（`useMyTrips` 注入 `/api/my-trips` 的可存取行程，包含有權限的私人行程）→ 帳號 chip 左下 → `/account`。桌機底部膠囊隱藏後，primary nav 回到 sidebar 頂部。主導覽 active 用 accent 實心 fill；清單項連 `/trips?selected=<id>`，active trip 由 `ActiveTripContext` 決定並套 accent。
+- 清單狀態：讀取中且 `trips===undefined` → skeleton（不先渲染空態）；讀取或刷新失敗且沒有可保留的行程 → 「行程清單載入失敗」；成功 `[]` → 「尚無行程」；有資料 → 逐行 `.tp-trip-item`。
 - Auth loading 不預設成匿名狀態：userinfo 尚未 resolve 時，底部帳號區只保留 neutral loading chip；不得先顯示「登入」「未登入」或 account chip 後再切換。
 - Primary nav 順序（聊天 / 行程 / 地圖 / 收藏）+ active route patterns 由 `navItems.ts`（`PRIMARY_NAV_ITEMS` + `isItemActive`）單一來源掌管，`GlobalBottomNav`（手機膠囊）共用同一份；nav testid＝`sidebar-nav-<key>`（vs 膠囊 `global-bottom-nav-<key>`）。
 - **材質＝vibrancy 半透明毛玻璃（§10.3）**：`background: color-mix(in srgb, var(--color-background) 72%, transparent)` + `backdrop-filter: blur(30px) saturate(180%)`；文字/hover/border 走主 app token（`--color-foreground`/`--color-muted`/`--color-hover`/`--color-border`）→ 自動 light/dark adapt。舊固定深棕 `--color-sidebar-*` token 已退役（無其他 consumer）。
@@ -1035,21 +1035,21 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 
 | 項目 | 規定 | 依據 |
 |---|---|---|
-| **機制** | `outline: 2px solid var(--color-focus-ring); outline-offset: 2px`（**offset 必須為正** —— 見下方負值失效模式） | **HIG**：「Rely on system-provided focus effects … Consider creating custom focus effects only if it's absolutely necessary.」`outline` 就是系統機制本身 |
-| **禁止** | `outline: none` 之後用 `box-shadow` 自畫環 | 同上 —— 這正是 HIG 勸阻的「殺掉系統效果再自畫」。被殺掉的那個環是接使用者 System Settings accent 與 Full Keyboard Access 偏好的那一個 |
-| **顏色** | `--color-focus-ring`（已落地，值見下方表），**不是** `--color-accent` | **HIG** Color 的 macOS 動態系統色表把 `Keyboard focus indicator color` 與 `Control accent` 列為兩個分開的條目 |
-| **幾何** | `2px` / `offset 2px` | ⚠️ **專案選擇，不是 HIG 規定** —— 整份 HIG `focus-and-selection` 對 thickness／offset／色值完全沉默。要改數值不必找 HIG 依據，但要一起改 |
-| **對比** | 焦點指示器對相鄰色 ≥ `3:1` | **WCAG 1.4.11 Non-text Contrast（AA）**。`outline-offset` 天生留間隙、露出的是**父層底色**，所以只要驗父層一種底色即可 |
-| **清單／集合** | 用 highlight（選取態底色），不要 ring | **HIG**：「use a focus ring for a text or search field, but **use a highlight in a list or collection**」。`.tp-map-day-tab`、entry card 屬於 collection |
+| **機制** | `outline: 2px solid var(--color-focus-ring); outline-offset: 2px`，沿用既有雙帶 | 專案 CSS 決策；不是原生系統 focus effect，也不保證繼承 OS accent／Full Keyboard Access |
+| **禁止** | 移除可見焦點卻沒有可驗證的替代指示；保留已記錄且通過驗證的表單／menu 例外 | WCAG 2.4.7；曾失效的 `--shadow-ring` 組合仍不再使用 |
+| **顏色** | `--color-focus-ring`，不是 `--color-accent` | 專案 token 決策；實際對比須量測 |
+| **幾何** | `2px` / `offset 2px` | **專案選擇，不是原生 pt 表的換算**；調整時須維持可見焦點、對比及既有 owner gate |
+| **對比** | 焦點指示器對實際相鄰色 ≥3:1 | WCAG 1.4.11；正 offset／雙帶有助隔離底色，仍需檢查實際合成、遮擋與裁切 |
+| **清單／集合** | 選取 highlight 與鍵盤 focus 分別可辨識；Day buttons 保留 focus indicator | 原生 HIG 的列表指引不等於網頁可去掉焦點；menu highlight 依現有專案例外驗證 |
 
 ### 為什麼是這個結論，不是另一套
 
 被否決的是 `outline: none` + `box-shadow: var(--shadow-ring)`。兩個獨立理由：
 
-1. **HIG 明文勸阻**（上表「禁止」列）—— 這是拍板的主因，不是對比數字。
+1. **既有 owner 決策**：保留可見 focus 與專用 token。原生 system focus 建議不直接指定網頁 CSS 機制。
 2. **實測也不合格**：`box-shadow: 0 0 0 2px` 貼著 border box、沒有間隙，所以相鄰色是**元件自己的填色**、每個 surface 都不一樣。疊 `--color-accent-fill` 量到**淺色 1.46:1、深色 1.00:1**，違反 WCAG 1.4.11。深色是 1.00 因為 `--color-accent` 與 `--color-accent-fill` **是同一個 hex `#CBA06E`** —— 焦點框字面上不存在。
 
-第 2 點還有一個結構性後果：貼邊寫法要對**每一種填色**逐個調校，加一個新按鈕色就多一個要驗的組合；`outline-offset` 只要驗父層底色。這是「不需逐個 surface 調校」的意思。
+第 2 點的維護考量：雙帶可提供較可預測的相鄰色，但不能省略各實際表面、透明背景與裁切情境的檢查。
 
 ### 遷移狀態：已完成（v2.57.68 / #1182）
 
@@ -1060,15 +1060,15 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 | **A** `+ box-shadow: var(--shadow-ring)` | 20（`--shadow-ring` 全庫 21 用量） | ✅ **已全數遷到 `outline` 機制**，`--shadow-ring` token 已刪除 |
 | **C** 表單輸入 `+ border-color` + `accent-subtle` 光暈 | 8 | ✅ **不是債** —— 全部落在真的 `input` / `textarea` / `select` 上，正是上方規則表列的表單輸入例外 |
 | **C′** 表單輸入，只有 `border-color` | 2 | ✅ 同上（`.tp-titlebar-trip-search` 是 `<input>`、`.tp-travel-detail input`） |
-| **highlight**（背景色標示） | 3 | ✅ **不是債，是 HIG 正解** —— 兩個 typeahead item + `.tp-rail-menu-item`，就是「清單／集合用 highlight」 |
+| **highlight**（背景色標示） | 3 | 既有 typeahead／menu 呈現例外；仍需能辨認鍵盤 focus，不由原生 HIG 自動豁免網頁驗收 |
 | 刻意抑制 | 3 | ✅ 程式化聚焦的容器（`AppShell` 的 `[tabindex="-1"]`、`InfoSheet` panel）與滑鼠焦點（`:focus:not(:focus-visible)`） |
 | 表單例外 | 1 | ✅ `.tp-rail-note-input` —— 只在編輯態掛載、恆有 accent 框 + 光暈 |
 
 **真正遷移的是 A 的 20 條**；C／C′ 一開始被誤記成債，實際上它們符合規則表的表單例外。慣例 B 的 38 條同步收斂成單一顏色 `--color-focus-ring`，6 條負 `outline-offset` 全部取正。
 
-### 為什麼一定要雙帶（有算過，不是偏好）
+### 為什麼保留既有雙帶
 
-**沒有任何一個顏色能同時對頁面底色與 accent 實心底都達到 3:1。** 實測最好的候選：淺色 `#6B4826` 對底色 7.89 但對 `--color-accent-fill` 只有 1.48；深色 `#EFE3D0` 對底色 13.42 但對 fill 只有 1.88。**所以「換個顏色就好」在數學上不存在** —— 內帶（`box-shadow: 0 0 0 2px var(--color-background)`）把 offset 間隙填成頁面底色，外環才有一個固定、可預測的相鄰色。
+既有候選 `#6B4826`／`#EFE3D0` 對 accent fill 的量測分別只有 1.48／1.88，未達 3:1。這是這些候選的證據，不是所有可能色彩都無解的數學證明。保留內帶 `box-shadow: 0 0 0 2px var(--color-background)` 與外環的 owner 決策，實際相鄰色仍須驗證。
 
 ### 標準引用更正（2026-07-26）
 
@@ -1086,16 +1086,15 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 深色刻意**不用** `--color-accent`（`#CBA06E`）—— 它與 `--color-accent-fill` 同值，焦點框疊在實心鈕上會是 1.00:1。
 
 ## Accessibility
-- **Touch target:** 最小 44×44px (Apple HIG)
-  - Exception: drag handles (e.g. `.ocean-rail-grip`) 24×24px — 跟 row 主點擊區並存時避免 click target 衝突，以 `:focus-visible` ring + 持續可見 opacity 補 a11y
-- **Color contrast:** 依門檻表，不是一律 4.5 —— **`≤17pt` 全部 `4.5:1`／`18pt` 全部 `3:1`／任何尺寸的 **Bold** `3:1`**（Apple HIG Accessibility 表；WCAG 2.2 是 `4.5` / `3`）。非文字 UI 元件走 `3:1`（WCAG 1.4.11）。持續驗證的重點是 muted text（light `#6F5A47` / dark `#A1A1A6`）。
-  > ⚠️ **2026-07-26 更正兩處**：(a) 原寫「文字對比度 WCAG AA 4.5:1」，一律 4.5 會把大字與 Bold 誤判成不合格 —— 這正是 §Palette 記的 #1176 事故機制（拿「某 token 只有 4.12」推導出必須新造 token，而該處是 11px **Bold**、門檻其實是 3:1）。(b) dark muted 原寫 `#B5A08A`，實際是 `#A1A1A6`（本檔 §Dark Mode 表另有第三個值 `#B89E84`，也已一併更正）。**`5.0` 是本專案內部安全邊際，不是任何標準的門檻，不得當合規事實引用。**
-- **Focus:** 所有互動元素 SHALL 有可見的鍵盤焦點指示。**拿掉 `outline` 就一定要補等效的替代指示** —— 不能只拿掉卻不補（那會讓純鍵盤使用者無法定位）。例外：表單輸入（`input`/`textarea`/`select`）以文字游標 + `border-color` 變化當焦點指示。〔本條的「不得無指示」意圖遷自已歸檔的 `css-hig-discipline` spec；曾於 `8ead450b` 被整段移除只留 `outline: none`，判定為誤刪、已補回〕
-  > ⚠️ **2026-07-26 更正**：本條原本把**機制**寫死成「SHALL 同時宣告 `box-shadow: var(--shadow-ring)`」。**意圖對、機制不該寫死** —— 那個寫法正是同檔 §Focus Indicator 判定為缺陷的「慣例 A」（疊 `--color-accent-fill` 實測淺色 1.46:1、深色 1.00:1，違反 WCAG 1.4.11），而且 HIG Accessibility 明文「**Rely on system-provided focus effects.** … Consider creating custom focus effects only if it's absolutely necessary」—— `outline: none` + 自畫 box-shadow 正是被勸阻的那一邊。**用哪個機制見 §Focus Indicator**，本條只管「不得無指示」。
-- **Increased contrast（HIG 對自訂色的明文要求）**：`@media (prefers-contrast: more)` SHALL 為自訂色提供更高對比的變體。HIG Color：「If you define a custom color, make sure to supply light and dark variants, **and an increased contrast option for each variant**」。
-  > ⚠️ **現況落差（2026-07-26 盤點）**：`css/tokens.css` 的 `prefers-contrast: more` 區塊**只處理玻璃模糊與 tabbar tint，一顆語意色、一個焦點色都沒碰**。而本 repo 的 `--color-success` / `--color-warning` **都是自訂色**（Apple 系統色是 `#34C759` / `#FF8D28`），正落在這條要求的範圍內。追蹤於 #1176。
-- **Motion:** 尊重 `prefers-reduced-motion`（骨架屏動畫、過渡效果）
-- **Screen reader:** 語意化 HTML + ARIA landmarks + `role="tab"` 在 day chips
+
+完整數值、等級、例外與官方來源見 [網頁設計準則](docs/design-standards.md)。
+
+- **Touch target:** 一般專案目標 44×44 CSS px；Day strip 的 34px 高與拖曳把手 24×24px 為既有明示例外。WCAG 2.5.8 AA 的 24px 與 2.5.5 AAA 的 44px 不混用，也不將原生 pt 直接改標 CSS px。
+- **Color contrast:** 一般網頁文字 ≥4.5:1；符合 WCAG 大字定義才用 ≥3:1。11px 粗體不是大字。必要非文字視覺資訊依 1.4.11 ≥3:1；純裝飾另依專案規則。5.0 是內部邊際。
+- **Focus:** 所有鍵盤操作須有可見且可辨識的焦點；沿用 Focus Indicator 與已記錄的 input/menu 例外，實測相鄰色與遮擋。文字游標／border 變化不自動保證達標。2.4.11 是 AA 的不完全遮擋要求；2.4.13 是 AAA 的外觀要求。
+- **Increased contrast:** 保留自訂色的深淺／提高對比變體。2026-07-26「只處理玻璃」的舊盤點已過期；目前 tokens 含語意色與焦點色覆寫，以 production computed 結果及 token checks 為準。
+- **Motion:** CSS 動畫、過渡及 JS smooth 捲動均尊重 `prefers-reduced-motion`。
+- **Screen reader:** root 為 navigation／links；day 為 navigation／buttons + `aria-current`；filter 為 group／buttons + `aria-pressed`。不把非互斥日期內容標成 tab panels。
 
 ## V2 Owner Cutover & poi_favorites Universal Pool（migration 0046+0047+0050）
 

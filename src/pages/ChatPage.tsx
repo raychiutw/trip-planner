@@ -18,16 +18,16 @@
  *   - Desktop ≥1024px: 3-pane via AppShell (sidebar | chat main | sheet)
  *   - Mobile <1024px: 1-pane chat + bottom nav
  */
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import AuthStatus from '../components/shared/AuthStatus';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useConversation } from '../hooks/useConversation';
 import type { ChatMessage } from '../lib/conversation';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import { apiFetch } from '../lib/apiClient';
-import { useActiveTrip } from '../contexts/ActiveTripContext';
+import { useAccessibleTripSelection } from '../hooks/useAccessibleTripSelection';
 import AppShell from '../components/shell/AppShell';
 import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -37,13 +37,6 @@ import AccountCircle from '../components/shell/AccountCircle';
 import Icon from '../components/shared/Icon';
 import AiConsentSheet from '../components/AiConsentSheet';
 import MarkdownText from '../components/shared/MarkdownText';
-
-interface TripSummary {
-  tripId: string;
-  name?: string;
-  title?: string | null;
-  countries?: string | null;
-}
 
 /** Section 4.8: format day-divider header — `2026/04/27（週六）`。 */
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -121,7 +114,7 @@ const SCOPED_STYLES = `
    * 聊天底部的輸入 composer 是互動元件，被浮在上面的 tab 蓋住就打不了字 → 這裡自行讓位。
    * --nav-overlay-h 在桌機 / 無 tab 的操作頁為 0，故不影響那些情境。
    * #1140 item 8：加 safe-area，讓 iPhone 有 home indicator 時 composer 與膠囊間距一致（不被吃掉）。 */
-  padding-bottom: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(max(var(--nav-overlay-h, 0px), var(--kb-inset, 0px)) + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
 }
 /* tp-chat-header / .tp-page-header CSS 已退役。改用 <TitleBar>，自帶
@@ -150,7 +143,7 @@ const SCOPED_STYLES = `
 }
 .tp-chat-load-error-text { flex: 1; min-width: 0; }
 .tp-chat-load-error-retry {
-  height: 32px; padding: 0 12px;
+  min-height: 44px; padding: 0 12px;
   background: var(--color-destructive);
   color: #fff;
   border: none; border-radius: var(--radius-sm, 4px);
@@ -397,10 +390,8 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--color-border);
   display: flex; gap: 8px; align-items: flex-end;
-  /* W8：手機軟鍵盤彈出時 sticky bottom:0 會被鍵盤蓋 → 依 --kb-inset（useKeyboardInset
-   * 由 visualViewport 設；桌機/鍵盤收起恆 0）上移到鍵盤上方。transition 讓收放平順。 */
-  transform: translateY(calc(-1 * var(--kb-inset, 0px)));
-  transition: transform var(--transition-duration-fast, 150ms) ease-out;
+  /* The shell reserves keyboard space for both messages and composer. */
+  flex-shrink: 0;
 }
 @media (max-width: 760px) {
 .tp-chat-composer { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
@@ -432,7 +423,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   border-radius: 50%;
-  width: 40px; height: 40px;
+  width: 44px; height: 44px;
   padding: 0;
   display: grid; place-items: center;
   flex-shrink: 0;
@@ -473,75 +464,83 @@ export interface ChatPageProps {
 }
 
 export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps = {}) {
-  useRequireAuth();
-  const { user } = useCurrentUser();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [trips, setTrips] = useState<TripSummary[] | null>(null);
-  // Section 5 (E4)：active trip 從 ActiveTripContext 讀寫，跨頁同步
-  const { activeTripId, setActiveTrip } = useActiveTrip();
-  const setActiveTripId = setActiveTrip;
+  const [explicitTargetTripId, setExplicitTargetTripId] = useState(() => searchParams.get('tripId'));
+  const { trips, status: tripsStatus, activeTripId: selectedTripId, retry: retryTrips, setActiveTrip: setActiveTripId } = useAccessibleTripSelection(
+    user?.id, lockTripId ?? explicitTargetTripId, !!lockTripId,
+  );
 
-  // v2.31.86 embedded mode：lockTripId given → 強制 active trip 對齊 prop，
-  // 避免 user 進 TripSheet chat tab 後 active trip context 不一致。
-  useEffect(() => {
-    if (lockTripId && lockTripId !== activeTripId) {
-      setActiveTripId(lockTripId);
-    }
-  }, [lockTripId, activeTripId, setActiveTripId]);
+  const activeTripId = lockTripId ?? selectedTripId;
+
   // #1140 item 10：useKeyboardInset 改由 app root（KeyboardInsetTracker）全站掛一次，
-  // composer 讀全站 --kb-inset 上移即可，這裡不再各自掛（避免雙掛 cleanup 打架）。
-  const [input, setInput] = useState('');
-  // W6：聊天草稿依行程分開存（session-only ref；切換行程時存舊、載新，不讓半成品漏到別行程）。
-  const draftsRef = useRef<Record<string, string>>({});
-  const [tripMenuOpen, setTripMenuOpen] = useState(false);
+  // chat shell 讀全站 --kb-inset 預留空間即可，這裡不再各自掛（避免雙掛 cleanup 打架）。
+  // Drafts belong to a trip for this mounted chat visit, regardless of how selection changes.
+  const [drafts, setDrafts] = useState(() => new Map<string, string>());
+  const input = activeTripId ? drafts.get(activeTripId) ?? '' : '';
+  const setInput = useCallback((text: string) => {
+    if (activeTripId) setDrafts(previous => new Map(previous).set(activeTripId, text));
+  }, [activeTripId]);
+  const focusDraftTrip = useRef<string | null>(null);
   // AI 授權 gate（Option E）：null=未知/載入中（放行，後端 mint 為最終關卡），
   // false=已知未授權（送出時攔下、跳授權 sheet），true=已授權。
   const [aiAuthorized, setAiAuthorized] = useState<boolean | null>(null);
   // 送出時被攔下的訊息（開著 sheet 時非 null）。授權後用它續送、取消則丟棄。
-  const [consentGate, setConsentGate] = useState<string | null>(null);
+  const [consentGate, setConsentGate] = useState<{ tripId: string; text: string } | null>(null);
   const [consentBusy, setConsentBusy] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
+  const consentOperation = useRef<object | null>(null);
+  useEffect(() => {
+    consentOperation.current = null;
+    setConsentGate(null); setConsentBusy(false); setConsentError(null);
+    return () => { consentOperation.current = null; };
+  }, [activeTripId, user?.id]);
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const tripMenuRef = useRef<HTMLDivElement>(null);
+  const stoppedFrom = useRef<{ tripId: string | null; button: HTMLButtonElement } | null>(null);
 
   const {
-    messages, sendMessage, inflightId, busy, historyLoading,
+    messages, sendMessage, announcement, inflightId, busy, historyLoading,
     loadError, retryLoadOlder, isAtBottom, scrollToBottom,
     sseError, errorReason, elapsedMs, stopping, stopWaiting,
   } = useConversation(activeTripId, bodyRef);
 
-  // Deep-link prefill: /chat?tripId=...&prefill=... — DaySection 的「+ 加景點」
-  // 入口會帶這兩個 param 過來，讓 user 落地就看到準備好的請求草稿。撐到 active
-  // trip 設好後再 populate input + 聚焦，不直接 send 讓 user 還能微調。讀完即
-  // 從 URL 拿掉，避免重新整理 / 返回又 re-prefill。
+  useLayoutEffect(() => {
+    const origin = stoppedFrom.current;
+    if (!origin) return;
+    if (origin.tripId !== activeTripId) { stoppedFrom.current = null; return; }
+    if (busy) return;
+    stoppedFrom.current = null;
+    if (document.activeElement === origin.button || document.activeElement === document.body) {
+      inputRef.current?.focus({ preventScroll: true });
+    }
+  }, [activeTripId, busy]);
+
+  // Explicit links replace only their target's draft. A tripless prefill waits for selection.
   useEffect(() => {
     const prefill = searchParams.get('prefill');
-    const targetTripId = searchParams.get('tripId');
-    if (!prefill && !targetTripId) return;
-    if (targetTripId && trips) {
-      const valid = trips.some((t) => t.tripId === targetTripId);
-      if (valid) setActiveTripId(targetTripId);
+    const linkedTripId = searchParams.get('tripId');
+    if (prefill == null && !linkedTripId) return;
+    const target = lockTripId ?? linkedTripId ?? activeTripId;
+    if (!target) return;
+    if (linkedTripId && !lockTripId) setExplicitTargetTripId(linkedTripId);
+    if (prefill != null) {
+      setDrafts(previous => new Map(previous).set(target, prefill));
+      focusDraftTrip.current = target;
     }
-    if (prefill) {
-      setInput(prefill);
-      // 等 textarea mount 後 focus + cursor 移到尾端
-      setTimeout(() => {
-        const el = inputRef.current;
-        if (el) {
-          el.focus();
-          el.setSelectionRange(el.value.length, el.value.length);
-        }
-      }, 50);
-    }
-    // 清掉 query 避免回來的時候又重 prefill
     const next = new URLSearchParams(searchParams);
-    next.delete('prefill');
-    next.delete('tripId');
+    next.delete('prefill'); next.delete('tripId');
     setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trips]);
+  }, [activeTripId, lockTripId, searchParams, setSearchParams]);
+
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (focusDraftTrip.current !== activeTripId || !el || el.disabled) return;
+    focusDraftTrip.current = null;
+    el.focus(); el.setSelectionRange(el.value.length, el.value.length);
+  }, [activeTripId, input, busy]);
 
   // v2.33.47 round 7b LOW: memoize buildMessagesWithDividers — 之前每 keystroke
   // 都 O(n) walk messages list。1000-msg trip 在打字時明顯卡。
@@ -549,56 +548,6 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     () => buildMessagesWithDividers(messages),
     [messages],
   );
-
-  // v2.33.47 round 7b: activeTripId 改用 ref 抓 latest value — 之前 useEffect
-  // 內讀 activeTripId 但 dep 是 [] (intentional, mount-only)；strict-mode
-  // double-mount 時第二 pass 還抓 initial closure，可能 clobber 已 persisted 的
-  // ActiveTripContext 值。
-  const activeTripIdRef = useRef(activeTripId);
-  useEffect(() => { activeTripIdRef.current = activeTripId; }, [activeTripId]);
-
-  // Load trips list (mine + meta) once on mount.
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        // 2026-07-21：改為單抓 /my-trips。原本是雙抓 —— /my-trips 只拿「我有權限
-        // 的 id 集合」，name/title/countries 這些**要顯示的資料**卻來自
-        // /trips?all=1。而 all=1 需要 ops:trips:read service-token scope，
-        // 一般使用者拿不到，會靜默降級成只回 published 行程；既有行程改為不公開
-        // 後名稱就全沒了，畫面只剩 tripId（owner 2026-07-21 回報）。
-        // /my-trips 本身就帶 name/title/countries/totalDays/startDate/endDate，
-        // 第二支 API 從一開始就是多餘的。
-        const myTrips = await apiFetch<TripSummary[]>('/my-trips');
-        if (cancelled) return;
-        setTrips(myTrips);
-
-        // Section 5 (E4)：優先用 ActiveTripContext (cross-page persisted)，
-        // fallback 第一個可見 trip。v2.33.47: 讀 ref 而非 closure capture。
-        const pref = activeTripIdRef.current;
-        const valid = pref && myTrips.some((t) => t.tripId === pref) ? pref : (myTrips[0]?.tripId ?? null);
-        setActiveTripId(valid);
-      } catch {
-        // silent — empty state will guide user
-      }
-    }
-    void load();
-    return () => { cancelled = true; };
-    // setActiveTripId 是 context setter（穩定）；effect 讀 activeTripIdRef.current
-    // 而非 activeTripId，故維持 mount-only 不需要把 activeTripId 列入。
-  }, [setActiveTripId]);
-
-  // Close trip menu on outside click
-  useEffect(() => {
-    if (!tripMenuOpen) return;
-    function onClick(e: MouseEvent) {
-      if (tripMenuRef.current && !tripMenuRef.current.contains(e.target as Node)) {
-        setTripMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, [tripMenuOpen]);
 
   // Auto-grow textarea
   useEffect(() => {
@@ -611,40 +560,43 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const doSend = useCallback(async (text: string) => {
     setInput('');
     await sendMessage(text, user);
-  }, [sendMessage, user]);
+  }, [sendMessage, user, setInput]);
 
   const send = useCallback((raw: string) => {
     const text = raw.trim();
     if (!text) return;
     if (!activeTripId) return;
-    if (inflightId) return; // busy
+    if (busy) return;
     // Option E：已知未授權 → 攔下、跳授權 sheet（避免建一筆 mint 不出 token 的死請求，
     // 卡住整條佇列）。null（授權狀態載入中，數毫秒窗；讀取失敗已 fail-closed 成 false）不攔，
     // 讓後端 mint 當最終關卡。
     if (aiAuthorized === false) {
-      setConsentGate(text);
+      setConsentGate({ tripId: activeTripId, text });
       return;
     }
     void doSend(text);
-  }, [activeTripId, inflightId, aiAuthorized, doSend]);
+  }, [activeTripId, busy, aiAuthorized, doSend]);
 
   // 授權後續送：POST Consent → 標記已授權 → 送出原被攔訊息。
   const authorizeAndSend = useCallback(async () => {
-    if (!consentGate) return;
+    if (!consentGate || consentGate.tripId !== activeTripId || consentOperation.current) return;
+    const operation = {};
+    consentOperation.current = operation;
     setConsentBusy(true);
     setConsentError(null);
     try {
       await apiFetch('/account/ai-authorization', { method: 'POST' });
+      if (consentOperation.current !== operation) return;
       setAiAuthorized(true);
-      const pending = consentGate;
+      const pending = consentGate.text;
       setConsentGate(null);
       void doSend(pending);
     } catch {
-      setConsentError('授權失敗，請稍後再試。');
+      if (consentOperation.current === operation) setConsentError('授權失敗，請稍後再試。');
     } finally {
-      setConsentBusy(false);
+      if (consentOperation.current === operation) { consentOperation.current = null; setConsentBusy(false); }
     }
-  }, [consentGate, doSend]);
+  }, [consentGate, activeTripId, doSend]);
 
   // 載入 owner 對 AI 的授權狀態（一次）。讀取失敗 fail-closed 成 false（＝送出時跳授權 sheet）：
   // 維持 null 會讓未授權 owner 送出→後端 park→提示「重送並在跳窗授權」，但 sheet 只在 false 才開、
@@ -660,12 +612,9 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   }, []);
 
   function pickTrip(tripId: string) {
-    // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
-    // W6：切換前存舊行程草稿、切換後載新行程草稿（session-only；跨 reload 持久化留給 W8 composer 契約）。
-    if (activeTripId) draftsRef.current[activeTripId] = input;
+    focusDraftTrip.current = null;
+    setExplicitTargetTripId(null);
     setActiveTripId(tripId);
-    setInput(draftsRef.current[tripId] ?? '');
-    setTripMenuOpen(false);
   }
 
   const activeTrip = useMemo(
@@ -674,7 +623,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   );
 
   function onComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) {
       e.preventDefault();
       void send(input);
     }
@@ -685,6 +634,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const main = (
     <div className="tp-chat-shell" data-testid="chat-page" data-embedded={embedded ? 'true' : undefined}>
       <style>{SCOPED_STYLES}</style>
+      <div role="status" aria-label="聊天狀態" aria-live="polite" aria-atomic="true" className="sr-only">{announcement}</div>
       {/* v2.31.86 embedded mode：TripSheet 已有 trip name + tab header，skip TitleBar repeat。 */}
       {!embedded && <TitleBar
         title={
@@ -713,7 +663,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
             </button>
           </div>
         )}
-        {!activeTripId && trips !== null && trips.length === 0 && (
+        {!activeTripId && tripsStatus !== 'error' && trips?.length === 0 && (
           <div className="tp-chat-empty">
             <div className="tp-chat-empty-icon" aria-hidden="true"><Icon name="chat" /></div>
             <h2>還沒有行程可以聊</h2>
@@ -722,17 +672,23 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
           </div>
         )}
 
-        {!activeTripId && trips === null && (
+        {!activeTripId && tripsStatus === 'loading' && !trips && (
           <div className="tp-chat-empty"><p>載入中…</p></div>
         )}
 
+        {!activeTripId && tripsStatus === 'error' && (
+          <div className="tp-chat-empty" role="alert"><p>載入行程失敗，請稍後再試</p>
+            <button type="button" className="tp-chat-load-error-retry" data-testid="chat-retry-trips" onClick={() => void retryTrips()}>重試載入行程</button>
+          </div>
+        )}
+
         {activeTripId && historyLoading && messages.length === 0 && (
-          <div className="tp-chat-empty" data-testid="chat-history-loading">
+          <div className="tp-chat-empty" role="status" data-testid="chat-history-loading">
             <p>載入歷史對話…</p>
           </div>
         )}
 
-        {activeTripId && !historyLoading && messages.length === 0 && (
+        {activeTripId && !historyLoading && !loadError && messages.length === 0 && (
           <div className="tp-chat-empty">
             <div className="tp-chat-empty-icon" aria-hidden="true"><Icon name="chat" /></div>
             <h2>從一個指令開始</h2>
@@ -828,7 +784,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
                           type="button"
                           className="tp-chat-stop"
                           data-testid="chat-stop-waiting"
-                          onClick={stopWaiting}
+                          onClick={event => { stoppedFrom.current = { tripId: activeTripId, button: event.currentTarget }; void stopWaiting(); }}
                           disabled={!inflightId || stopping}
                         >
                           停止等待
@@ -937,8 +893,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       </form>
 
       <AiConsentSheet
-        open={consentGate !== null}
-        message={consentGate ?? ''}
+        open={consentGate !== null && consentGate.tripId === activeTripId}
+        message={consentGate?.text ?? ''}
         busy={consentBusy}
         error={consentError}
         onAuthorizeAndSend={authorizeAndSend}
@@ -948,12 +904,12 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   );
 
   // v2.31.86 embedded mode：skip AppShell（TripSheet 已是 nested context，重複會 broken layout）。
-  if (embedded) return main;
+  if (embedded) return user ? main : <AuthStatus auth={auth} />;
 
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
-      main={main}
+      main={user ? main : <AuthStatus auth={auth} />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
     />
   );

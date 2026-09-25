@@ -19,12 +19,10 @@ import TimelineRail from '../../src/components/trip/TimelineRail';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
 import { TripIdContext } from '../../src/contexts/TripIdContext';
 import { TripDaysContext } from '../../src/contexts/TripDaysContext';
+import { TripSegmentsContext } from '../../src/contexts/TripSegmentsContext';
 import type { DayOption } from '../../src/lib/entryAction';
 
-const useTripSegmentsMock = vi.fn();
-vi.mock('../../src/hooks/useTripSegments', () => ({
-  useTripSegments: (tripId: string | null | undefined) => useTripSegmentsMock(tripId),
-}));
+const readSnapshot = vi.fn();
 
 const recomputeMock = vi.fn(() => Promise.resolve(null));
 const autoStatusMock = vi.fn(() => 'active' as 'active' | 'blocked' | 'failed');
@@ -38,7 +36,7 @@ vi.mock('../../src/lib/travelRecompute', () => ({
 }));
 
 beforeEach(() => {
-  useTripSegmentsMock.mockReset();
+  readSnapshot.mockReset();
   recomputeMock.mockClear();
   autoStatusMock.mockReset();
   autoStatusMock.mockReturnValue('active');
@@ -77,7 +75,9 @@ function renderRail(
     <MemoryRouter>
       <TripIdContext.Provider value={tripId}>
         <TripDaysContext.Provider value={DAYS}>
-          <TimelineRail events={events} dayId={dayId} />
+          <TripSegmentsContext.Provider value={readSnapshot()}>
+            <TimelineRail events={events} dayId={dayId} />
+          </TripSegmentsContext.Provider>
         </TripDaysContext.Provider>
       </TripIdContext.Provider>
     </MemoryRouter>,
@@ -86,7 +86,7 @@ function renderRail(
 
 describe('TimelineRail self-healing 車程補算', () => {
   it('ready + 相鄰 pair 缺 segment → auto day-scoped recompute 帶 gap signature', () => {
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
@@ -96,7 +96,7 @@ describe('TimelineRail self-healing 車程補算', () => {
 
   it('ready + segment 在但 computed_at=NULL（換 POI mark stale）→ auto recompute', () => {
     const segMap = new Map([['1-2', seg(1, 2, null)]]);
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: segMap, loading: false, ready: true,
     });
     renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
@@ -105,7 +105,7 @@ describe('TimelineRail self-healing 車程補算', () => {
 
   it('ready + segmentMap 完整 → 不打', () => {
     const segMap = new Map([['1-2', seg(1, 2)], ['2-3', seg(2, 3)]]);
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: segMap, loading: false, ready: true,
     });
     renderRail([entry(1, '那霸機場'), entry(2, '美麗海'), entry(3, '本部午餐')]);
@@ -113,7 +113,7 @@ describe('TimelineRail self-healing 車程補算', () => {
   });
 
   it('!ready（首次 fetch 未 settle）→ 空 map 不觸發（防白燒 quota）', () => {
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: true, ready: false,
     });
     renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
@@ -121,7 +121,7 @@ describe('TimelineRail self-healing 車程補算', () => {
   });
 
   it('單一 entry（無 pair）→ 不打', () => {
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     renderRail([entry(1, '那霸機場')]);
@@ -129,7 +129,7 @@ describe('TimelineRail self-healing 車程補算', () => {
   });
 
   it('dayId 對不到 allDays（無 dayNum）→ auto 不打（不能放大成全 trip recompute）', () => {
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     renderRail([entry(1, '那霸機場'), entry(2, '美麗海')], { dayId: 999 });
@@ -137,7 +137,7 @@ describe('TimelineRail self-healing 車程補算', () => {
   });
 
   it('缺座標 pair 不觸發 auto（backend 也算不出，白燒全日 quota）— chip 顯「缺座標」誠實訊息', () => {
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     const { getAllByTestId } = renderRail([entryNoCoord(1, '手動地點'), entryNoCoord(2, '另一手動地點')]);
@@ -149,7 +149,7 @@ describe('TimelineRail self-healing 車程補算', () => {
   });
 
   it('混合：有座標 pair 缺 segment + 缺座標 pair → 只以有座標缺口當 signature', () => {
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     renderRail([entry(1, 'A'), entry(2, 'B'), entryNoCoord(3, 'C')]);
@@ -158,7 +158,7 @@ describe('TimelineRail self-healing 車程補算', () => {
   });
 
   it('無 tripId → 不打', () => {
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     renderRail([entry(1, '那霸機場'), entry(2, '美麗海')], { tripId: null });
@@ -166,7 +166,7 @@ describe('TimelineRail self-healing 車程補算', () => {
   });
 
   it('有座標的缺 pair（可自動補算）→ render「車程重新計算中」chip（load-bearing 狀態不消失）', () => {
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     const { getAllByTestId } = renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
@@ -178,7 +178,7 @@ describe('TimelineRail self-healing 車程補算', () => {
 
   it('唯讀 viewer / 持續失敗（getAutoRecomputeStatus=blocked）→ chip 顯「車程待更新」不假稱計算中', () => {
     autoStatusMock.mockReturnValue('blocked');
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: false, ready: true,
     });
     const { getAllByTestId } = renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);
@@ -189,7 +189,7 @@ describe('TimelineRail self-healing 車程補算', () => {
   });
 
   it('segments 未 ready → 不 render missing ⚠（載入期不閃）', () => {
-    useTripSegmentsMock.mockReturnValue({
+    readSnapshot.mockReturnValue({
       segments: [], segmentMap: new Map(), loading: true, ready: false,
     });
     const { queryByTestId } = renderRail([entry(1, '那霸機場'), entry(2, '美麗海')]);

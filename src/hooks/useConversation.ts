@@ -20,10 +20,11 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
   const [historyLoading, setHistoryLoading] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [sending, setSending] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
   const lastLocalId = useRef(0);
   useEffect(() => {
     scope.active = true;
-    setStopping(false); setSending(false);
+    setStopping(false); setSending(false); setAnnouncement('');
     return () => { scope.active = false; };
   }, [scope]);
   const pagination = useChatPagination<RawRequestRow, ChatMessage>({
@@ -32,10 +33,22 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
   });
   const { status, error: sseError, errorReason, elapsedMs } = useRequestSSE(inflightId);
 
+  const visibleRef = useRef({ messages, status });
+  visibleRef.current = { messages, status };
+
   const applyTerminal = useCallback((row: RawRequestRow) => {
     if (scopeRef.current !== scope || !scope.active || row.tripId !== scope.tripId) return;
     if (row.status !== 'completed' && row.status !== 'failed') return;
     const assistant = rowToMessages(row).find((message) => message.role === 'assistant')!;
+    const previous = visibleRef.current.messages.find(message => message.role === 'assistant'
+      && (message.pendingRequestId === row.id || message.requestId === row.id));
+    if (!previous) return;
+    if (previous.pendingRequestId || previous.text !== assistant.text || previous.failed !== assistant.failed || previous.terminated !== assistant.terminated) {
+      setAnnouncement(assistant.terminated
+        ? row.reply?.trim() ? '已停止等待；收到後續回報。' : '已停止等待，AI 仍可能繼續處理。'
+        : assistant.failed ? 'AI 處理失敗，請查看回覆。'
+        : row.reply?.trim() ? 'AI 已完成回覆。' : 'AI 已完成，但沒有回覆內容。');
+    }
     setMessages((previous) => previous.map((message) =>
       message.role === 'assistant' && (message.pendingRequestId === row.id || message.requestId === row.id)
         ? { ...assistant, id: message.id, pendingRequestId: null }
@@ -53,8 +66,6 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
 
   // Terminal status closes SSE, but a worker may still submit a late reply.
   // Refresh visible requests on return from another tab and while waiting for it.
-  const visibleRef = useRef({ messages, status });
-  visibleRef.current = { messages, status };
   useEffect(() => {
     if (!activeTripId) return;
     let cancelled = false;
@@ -102,6 +113,7 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
       applyTerminal(await apiFetch<RawRequestRow>(`/requests/${id}`));
     } catch {
       if (scopeRef.current !== scope || !scope.active) return;
+      setAnnouncement('已在這裡停止等待，但伺服器沒有確認。AI 可能仍在處理。');
       setMessages((previous) => previous.map((message) => message.pendingRequestId === id
         ? { ...message, requestId: id, text: '已在這裡停止等待，但伺服器沒有確認 —— AI 可能仍在處理。', pendingRequestId: null, terminated: false, failed: true }
         : message));
@@ -111,6 +123,7 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
   const sendMessage = useCallback(async (text: string, actor?: { email?: string; displayName?: string | null } | null) => {
     if (!activeTripId || scopeRef.current !== scope || !scope.active || scope.sending || inflightId) return;
     scope.sending = true; setSending(true);
+    setAnnouncement('正在送出訊息。');
     const now = Math.max(Date.now(), lastLocalId.current + 2);
     lastLocalId.current = now;
     setMessages((previous) => [...previous,
@@ -122,12 +135,14 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
         method: 'POST', body: JSON.stringify({ tripId: activeTripId, message: text }),
       });
       if (scopeRef.current !== scope || !scope.active) return;
+      setAnnouncement('AI 正在處理，可停止等待。');
       setMessages((previous) => mergeConversation([], previous.map((message) =>
         message.id === now || message.id === now + 1
           ? { ...message, requestId: row.id, ...(message.role === 'assistant' ? { pendingRequestId: row.id } : {}) }
           : message)));
     } catch (error) {
       if (scopeRef.current !== scope || !scope.active) return;
+      setAnnouncement('訊息送出失敗，請查看錯誤。');
       setMessages((previous) => previous.map((message) => message.id === now + 1
         ? { ...message, text: `送出失敗：${error instanceof Error ? error.message : '網路錯誤'}`, pendingRequestId: null, failed: true }
         : message));
@@ -137,6 +152,6 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
     }
   }, [activeTripId, scope, inflightId]);
 
-  return { messages, sendMessage, inflightId, busy: sending || !!inflightId, historyLoading, ...pagination,
+  return { messages, sendMessage, announcement, inflightId, busy: sending || !!inflightId, historyLoading, ...pagination,
     sseError, errorReason, elapsedMs, stopping, stopWaiting };
 }

@@ -49,23 +49,7 @@ describe('v2.31.58 empty trip AI 健檢 guard', () => {
   });
 
   describe('Frontend disable + hint', () => {
-    it('useState 加 entryCount state', () => {
-      expect(FRONTEND).toMatch(/const \[entryCount, setEntryCount\] = useState<number \| null>\(null\)/);
-    });
-
-    it('fetch /trips/:id/days?all=1 並累加 timeline length 算 entry count', () => {
-      expect(FRONTEND).toMatch(/\/trips\/\$\{encodeURIComponent\(tripId\)\}\/days\?all=1/);
-      expect(FRONTEND).toMatch(/d\.timeline\) \? d\.timeline\.length : 0/);
-    });
-
-    it('button disabled 條件加 entryCount === 0 (v2.33.118: body CTA disable 條件)', () => {
-      // v2.33.118 redesign: CTA 拆 2 個 button —
-      //   titlebar (pending/completed): disabled={submitting || isPending}
-      //   body CTA (idle): disabled={submitting || entryCount === 0}
-      // entryCount === 0 guard 從原本 titlebar 單一 button 搬到 body CTA（因為 idle 才是 user 真正能 click）
-      expect(FRONTEND).toMatch(/disabled=\{submitting \|\| entryCount === 0\}/);
-    });
-
+    // Runtime coverage: health-observer-recovery verifies zero/unknown entry eligibility and retry.
     it('entryCount === 0 顯示 hint 取代 button 文案', () => {
       expect(FRONTEND).toMatch(/此行程尚無景點，請先加入景點再執行健檢/);
       expect(FRONTEND).toMatch(/data-testid="ai-health-empty-hint"/);

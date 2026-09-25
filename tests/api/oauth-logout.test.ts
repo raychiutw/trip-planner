@@ -89,3 +89,9 @@ describe('GET/POST /api/oauth/logout', () => {
     expect(args[3]).toBeNull();         // user_id (no session)
   });
 });
+it.each(['/\\evil.test','/\t/evil.test','/%2f%2fevil.test'])('logout rejects browser-normalized external target %j',async(target)=>{
+ const response=await onRequestGet(makeContext('https://app.test/api/oauth/logout?redirect_after='+encodeURIComponent(target)));expect(response.headers.get('Location')).toBe('/login');
+});
+it('account switch preserves an encoded invitation through logout',async()=>{
+ const login='/login?invitation='+encodeURIComponent('a/b');const response=await onRequestGet(makeContext('https://app.test/api/oauth/logout?redirect_after='+encodeURIComponent(login)));expect(response.headers.get('Location')).toBe(login);expect(response.headers.get('Set-Cookie')).toContain('Max-Age=0');
+});

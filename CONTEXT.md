@@ -35,6 +35,12 @@ trips ─┬─ trip_days ── trip_entries ── trip_entry_pois
 **entry intake**：
 後端「在某一天建立 entry 並掛上正選／備選 POI」的 module（`_entryWrite`）。單筆新增／收藏使用 `createEntry`，複製／分享 clone／匯入使用 `createEntriesBatch`，整日重寫使用 `replaceDayEntries`；共用 entry 與 junction 欄位規則。
 
+**新行程建立**：`functions/api/trips/_tripCreation.ts` 持有整趟行程的必要寫入順序、來源 day／entry key 到新 ID 的對應、已建立資料帳本、分批提交及失敗補償。匯入與分享 clone 入口只保留授權、各自驗證與限制、命名及來源轉換；分享筆記 default-deny 篩選也留在 clone。建立 module 內沿用 entry intake 的正選／備選、版本及 audit 規則，保留不同來源的欄位預設與筆記 AI 來源語意。
+
+每批成功提交才把建立結果記入帳本；trip 尚未成功建立時不取得該 ID 的清理權，避免碰撞時誤刪他人的行程。必要寫入失敗仍回報失敗，記錄 trip ID、失敗階段與原始錯誤；補償再失敗時同時保留清理錯誤。清理成功可重新匯入，但沒有跨批次原子交易、持久化帳本或自動重播承諾。既有 audit 保留政策不變。
+
+共用 POI 依 fill-null 補空欄位，非空資料不覆寫；補入既有 POI 的欄位不隨補償還原。帳本只追蹤本次新建 POI。整日替換繼續使用下述同批次交易，不套用新行程的補償方式。
+
 **整日替換**先完成輸入驗證與 POI resolve，再於同一 D1 batch 提交舊 entries 刪除、day 欄位與版本、新 entries、正選／備選、飯店及停車關聯。必要寫入失敗由資料庫回滾，舊 day 不需事後補償；不使用新增批次的 50 筆分批策略。批次超過平台限制也回報失敗，不宣稱已儲存。共用 POI 的 `fill-null` 政策維持原樣。
 
 名稱重寫依正選 POI 與原順序一對一承接舊備選，保留各自 description、note、reservation、reservation_url。新的明示 POI 清單取代原清單。新 entry 有 POI 時 `entry_pois_version=1`，承接備選時為 2；合法無 POI 佔位為 0。day 的 `version` 每次成功替換加一，失敗不變。
@@ -47,6 +53,12 @@ _Avoid_: 在 handler 直接 `INSERT INTO trip_entries` / `trip_entry_pois`；與
 
 entry 儲存成功與 segment 重算成功是兩件事。重算故障時保留已儲存的 entry，交通沿用「車程待更新」提示；重新載入或真正改變相鄰景點的操作可依既有 single-flight／gap-signature 規則再次嘗試，不重送原本的建立操作。這層只協調重算入口，不計算路徑：Google client、手填 transit 及既有特定方式估算的界線維持原樣。
 _Avoid_: 在頁面或元件直接 `apiFetchRaw` entries endpoint、自己 dispatch `entryUpdated`、自己呼叫 `requestTravelRecompute`（self-healing 的 auto 觸發除外）；與後端「entry intake」是不同層。
+
+**segment 生命週期**：`useTripSegments` 與既有 `TripSegmentsContext` 持有讀取、缺口補算與待更新狀態；TripPage、TimelineRail、DaySection、EditEntryPage 都經過同一個 hook。畫面提供日期、entry 與尚未提交的排序狀態，module 才判斷可補算的相鄰缺口。未知日期與缺座標不擴張成全行程自動補算。
+
+成功快照可繼續呈現，但讀取中或刷新失敗的資料不能建立新的補算依據；讀取中收到更新會保留一次後續重讀，過期回應不發布。每次行程切換都有獨立讀取身分，A→B→A 也不接受第一輪 A 的結果。
+
+entry 成功儲存後，即使原畫面已離開，仍完成必要的來源／目標重算；過期操作不再通知目前畫面或顯示提示。補算沿用 single-flight、gap signature 與唯讀停止規則；失敗與 403 停止狀態保留，即使完成時已離開該行程，返回後仍呈現待更新。新畫面若加入尚未完成的同一補算，可收到自己的完成通知；沒有目前讀取者接續的舊完成不刷新新畫面。手動交通編輯的既有通知同樣經由此讀取生命週期更新。
 
 > **trip-scoped 的自由文字不寫進 `pois`** —— entry 說明放 `trip_entries.description`；POI 備註與預訂放 `trip_entry_pois` 的 `reservation` / `reservation_url` / `description` / `note` 欄位。migration 0078 後沒有 `trip_entries.note`；entry-level note 輸入由正選承接。`reservation` 是**純文字訂位註解**，不放 JSON。
 

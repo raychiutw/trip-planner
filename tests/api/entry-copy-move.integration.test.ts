@@ -206,3 +206,29 @@ describe('PATCH /api/trips/:id/entries/:eid — Item 3 move 跨天 via day_id', 
     expect((await callHandler(onRequestPatchEntry, ctx)).status).toBe(400);
   });
 });
+
+it('同日複製套用所選時段，原景點與原時段保留', async () => {
+  const resp = await callHandler(onRequestPostCopy, mockContext({
+    request: jsonRequest(`https://test.com/api/trips/trip-cm/entries/${entryDay1Id}/copy`, 'POST', { targetDayId: day1Id, time: '12:00-13:30' }),
+    env, auth: mockAuth({ email: 'user@test.com' }), params: { id: 'trip-cm', eid: String(entryDay1Id) },
+  }));
+  expect(resp.status).toBe(200);
+  const copy = await resp.json() as { id: number; dayId: number; startTime: string; endTime: string };
+  expect(copy.id).not.toBe(entryDay1Id);
+  expect(copy).toMatchObject({ dayId: day1Id, startTime: '12:00', endTime: '13:30' });
+  expect(await db.prepare('SELECT day_id, start_time, end_time FROM trip_entries WHERE id = ?').bind(entryDay1Id).first())
+    .toMatchObject({ day_id: day1Id, start_time: '11:30', end_time: '14:00' });
+  await db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(copy.id).run();
+});
+
+it('跨日移動同一次寫入套用自訂時段，仍是原 entry 身分', async () => {
+  const id = await seedEntry(db, day1Id);
+  const resp = await callHandler(onRequestPatchEntry, mockContext({
+    request: jsonRequest(`https://test.com/api/trips/trip-cm/entries/${id}`, 'PATCH', { day_id: day2Id, time: '09:00-10:00' }),
+    env, auth: mockAuth({ email: 'user@test.com' }), params: { id: 'trip-cm', eid: String(id) },
+  }));
+  expect(resp.status).toBe(200);
+  expect(await db.prepare('SELECT id, day_id, start_time, end_time FROM trip_entries WHERE id = ?').bind(id).first())
+    .toMatchObject({ id, day_id: day2Id, start_time: '09:00', end_time: '10:00' });
+  await db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(id).run();
+});

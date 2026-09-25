@@ -6,6 +6,7 @@
  * `body.dark`, and updates <meta name="theme-color">.
  */
 import { useDarkMode } from '../../hooks/useDarkMode';
+import InlineError from './InlineError';
 
 const SCOPED_STYLES = `
 .tp-theme-toggle {
@@ -35,9 +36,9 @@ const SCOPED_STYLES = `
 `;
 
 const OPTIONS: Array<{ key: 'light' | 'auto' | 'dark'; label: string }> = [
-  { key: 'light', label: '淺' },
-  { key: 'auto', label: '自動' },
-  { key: 'dark', label: '深' },
+  { key: 'light', label: '淺色' },
+  { key: 'auto', label: '跟隨系統' },
+  { key: 'dark', label: '深色' },
 ];
 
 export interface ThemeToggleProps {
@@ -46,7 +47,7 @@ export interface ThemeToggleProps {
 }
 
 export default function ThemeToggle({ testId = 'theme' }: ThemeToggleProps = {}) {
-  const { colorMode, setColorMode } = useDarkMode();
+  const { colorMode, setColorMode, saveFailed } = useDarkMode();
   return (
     <>
       <style>{SCOPED_STYLES}</style>
@@ -64,6 +65,7 @@ export default function ThemeToggle({ testId = 'theme' }: ThemeToggleProps = {})
           </button>
         ))}
       </div>
+      {saveFailed && <InlineError message="已套用外觀，但瀏覽器無法儲存偏好。重新整理後可能還原；可再次選擇以重試儲存。" />}
     </>
   );
 }

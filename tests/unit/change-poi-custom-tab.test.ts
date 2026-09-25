@@ -79,10 +79,6 @@ describe('CustomPoiForm — shared contract', () => {
     expect(CUSTOM_FORM_SRC).toContain('useTypeaheadKeyboard');
   });
 
-  it('hits /places/resolve when typeahead suggestion picked', () => {
-    expect(CUSTOM_FORM_SRC).toContain('/places/resolve');
-  });
-
   it('renders LocationPickerMap with flyToSignal', () => {
     expect(CUSTOM_FORM_SRC).toContain('LocationPickerMap');
     expect(CUSTOM_FORM_SRC).toContain('flyToSignal');

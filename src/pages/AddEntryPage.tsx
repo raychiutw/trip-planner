@@ -13,7 +13,8 @@
  * 已在 ChangePoiPage 完整實作，重複會 drift。User feedback「相同的增加景點的方式」
  * 同樣指向 reuse ChangePoiPage。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import AuthStatus from '../components/shared/AuthStatus';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import OperationShell from '../components/shell/OperationShell';
@@ -21,14 +22,10 @@ import Icon from '../components/shared/Icon';
 import { TripSelect } from '../components/TripSelect';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useEntryTarget, type EntryTargetDay as DayApiRow } from '../hooks/useEntryTarget';
 import { apiFetch } from '../lib/apiClient';
 
-interface DayApiRow {
-  id: number;
-  dayNum: number;
-  date?: string | null;
-  dayOfWeek?: string | null;
-}
+
 
 interface TripMetaApi {
   id: string;
@@ -181,23 +178,21 @@ export default function AddEntryPage() {
   );
 
   const dayNumParam = searchParams.get('day');
-  const dayNumRaw = dayNumParam ? parseInt(dayNumParam, 10) : NaN;
+  const dayNumRaw = dayNumParam === null ? null : Number(dayNumParam);
 
-  const [allDays, setAllDays] = useState<DayApiRow[] | null>(null);
-  const [tripMeta, setTripMeta] = useState<TripMetaApi | null>(null);
+  const target = useEntryTarget({tripId, dayNum: dayNumRaw, enabled: !!auth.user});
+  const allDays = target.days;
+  const dayNum = target.day?.dayNum ?? NaN;
+  const [tripMeta, setTripMeta] = useState<{tripId: string; data: TripMetaApi} | null>(null);
 
   useEffect(() => {
     if (!auth.user || !tripId) return;
     let cancelled = false;
     (async () => {
       try {
-        const [days, meta] = await Promise.all([
-          apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days`),
-          apiFetch<TripMetaApi>(`/trips/${encodeURIComponent(tripId)}`),
-        ]);
+        const meta = await apiFetch<TripMetaApi>(`/trips/${encodeURIComponent(tripId)}`);
         if (cancelled) return;
-        setAllDays(days ?? []);
-        setTripMeta(meta ?? null);
+        setTripMeta(meta ? {tripId, data: meta} : null);
       } catch {
         // silent — render with fallback labels
       }
@@ -205,18 +200,11 @@ export default function AddEntryPage() {
     return () => { cancelled = true; };
   }, [auth.user, tripId]);
 
-  // 預設 day = URL ?day=N → fallback 第一天
-  const dayNum = useMemo(() => {
-    if (Number.isFinite(dayNumRaw)) return dayNumRaw;
-    if (allDays && allDays.length > 0) return allDays[0]!.dayNum;
-    return NaN;
-  }, [dayNumRaw, allDays]);
-
   // URL 與 state 對齊 — 若沒帶 ?day 而 allDays 載入後選了第一天，
   // replaceState URL 讓 link / refresh 行為一致
   useEffect(() => {
     if (!Number.isFinite(dayNum)) return;
-    if (Number.isFinite(dayNumRaw)) return;
+    if (dayNumRaw !== null) return;
     const sp = new URLSearchParams(searchParams);
     sp.set('day', String(dayNum));
     setSearchParams(sp, { replace: true });
@@ -243,7 +231,7 @@ export default function AddEntryPage() {
     );
   }, [tripId, dayNum, navigate]);
 
-  if (!auth.user) return null;
+  if (!auth.user) return <AuthStatus auth={auth} />;
   if (!tripId) {
     return (
       <OperationShell shellClassName="tp-add-entry-shell" title="新增景點" back={handleBack}>
@@ -254,7 +242,8 @@ export default function AddEntryPage() {
     );
   }
 
-  const tripLabel = tripMeta?.title || tripMeta?.destinations?.[0]?.name || '';
+  const currentMeta = tripMeta?.tripId === tripId ? tripMeta.data : null;
+  const tripLabel = currentMeta?.title || currentMeta?.destinations?.[0]?.name || '';
   const titleBar = tripLabel ? `新增景點 · ${tripLabel}` : '新增景點';
 
   return (
@@ -266,13 +255,15 @@ export default function AddEntryPage() {
       scopedStyles={SCOPED_STYLES}
     >
           <main className="tp-add-entry-body">
+            {target.error && <div role="alert">{target.error} <button type="button" onClick={target.retry}>重試載入日期</button></div>}
             {/* Day dropdown — fallback to first day if URL missing ?day */}
             <div className="tp-add-entry-daypicker">
               <span className="tp-add-entry-daypicker-label">DAY</span>
               {allDays && allDays.length > 0 ? (
                 <div data-testid="add-entry-daypicker" style={{ flex: 1 }}>
                   <TripSelect<number>
-                    value={Number.isFinite(dayNum) ? dayNum : (allDays[0]?.dayNum ?? 0)}
+                    value={Number.isFinite(dayNum) ? dayNum : 0}
+                    placeholder="請選擇有效日期"
                     onChange={handlePickDay}
                     ariaLabel="選擇加入哪天"
                     options={allDays.map((d) => ({
@@ -282,7 +273,7 @@ export default function AddEntryPage() {
                   />
                 </div>
               ) : (
-                <span style={{ color: 'var(--color-muted)' }}>載入中…</span>
+                <span role="status" style={{ color: 'var(--color-muted)' }}>{target.status === 'success' ? '該行程沒有天數' : target.status === 'loading' ? '載入中…' : ''}</span>
               )}
             </div>
 

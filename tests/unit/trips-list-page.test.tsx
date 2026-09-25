@@ -9,12 +9,15 @@
  * leaflet etc) unrelated to TripsListPage's concern.
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { NewTripProvider } from '../../src/contexts/NewTripContext';
 import { writeTripView } from '../../src/lib/tripViewState';
+import { EVENT } from '../../src/lib/events';
 import { TRIP_MAIN_PORTAL_ID } from '../../src/lib/tripStackRoutes';
 import { lsSet, LS_KEY_TRIP_PREF } from '../../src/lib/localStorage';
+import { ActiveTripProvider, useActiveTrip } from '../../src/contexts/ActiveTripContext';
+import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
 
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({
@@ -57,7 +60,7 @@ import TripsListPage from '../../src/pages/TripsListPage';
 // #1140 item 7 後：TripsListPage 讀 activeTripId（ActiveTripContext，無 provider 時 fallback
 // 直讀/寫 localStorage `LS_KEY_TRIP_PREF`）。前面 setActiveTrip 的測試會把值留在 localStorage，
 // 洩漏到後面「無 ?selected」的測試 → 桌機 restore 誤導向 embedded、卡片列表消失。每個測試前後清乾淨。
-beforeEach(() => { mockMatchMedia(true); localStorage.clear(); });
+beforeEach(() => { mockMatchMedia(true); localStorage.clear(); __clearMyTripsCache(); });
 afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
 
 /**
@@ -82,6 +85,86 @@ const SAMPLE = [
 ];
 
 describe('TripsListPage', () => {
+  it('keeps a newer card choice when an older list refresh arrives', async () => {
+    let finishRefresh: ((value: Response) => void) | undefined;
+    let listReads = 0;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/my-trips') {
+        listReads++;
+        if (listReads === 1) return Promise.resolve(new Response(JSON.stringify(SAMPLE)));
+        return new Promise<Response>((resolve) => { finishRefresh = resolve; });
+      }
+      return Promise.resolve(new Response('null'));
+    }));
+    function Selection() {
+      const { activeTripId } = useActiveTrip();
+      return <output data-testid="selection">{useLocation().search}|{activeTripId}</output>;
+    }
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><NewTripProvider>
+      <Selection /><TripsListPage />
+    </NewTripProvider></ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId('trips-list-card-seoul');
+    act(() => window.dispatchEvent(new Event(EVENT.tripUpdated)));
+    await waitFor(() => expect(finishRefresh).toBeDefined());
+    fireEvent.click(screen.getByTestId('trips-list-card-seoul'));
+    await waitFor(() => expect(screen.getByTestId('selection').textContent).toBe('?selected=seoul|seoul'));
+    await act(async () => finishRefresh!(new Response(JSON.stringify([SAMPLE[0]]))));
+    await waitFor(() => expect(screen.queryByTestId('sidebar-trip-seoul')).toBeNull());
+    await waitFor(() => expect(screen.getByTestId('selection').textContent).toBe('?selected=seoul|seoul'));
+  });
+  it('removes a deleted card while the shared refresh is pending', async () => {
+    let listReads = 0;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url === '/api/my-trips') {
+        listReads++;
+        if (listReads === 1) return Promise.resolve(new Response(JSON.stringify(SAMPLE)));
+        return new Promise(() => {});
+      }
+      if (url === '/api/trips/okinawa' && init?.method === 'DELETE') return Promise.resolve(new Response('{}'));
+      return Promise.resolve(new Response('null'));
+    }));
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><NewTripProvider>
+      <TripsListPage />
+    </NewTripProvider></ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId('trips-list-card-okinawa');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByTestId('trip-card-menu-delete-okinawa'));
+    fireEvent.click(screen.getByRole('button', { name: '刪除' }));
+    await waitFor(() => expect(listReads).toBe(2));
+    expect(screen.queryByTestId('trips-list-card-okinawa')).toBeNull();
+  });
+  it('keeps an explicit absent selected trip for the detail read', async () => {
+    function Location() { return <output data-testid="location">{useLocation().search}</output>; }
+    vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }], [SAMPLE[0]]));
+    render(<MemoryRouter initialEntries={['/trips?selected=private']}><ActiveTripProvider><NewTripProvider>
+      <Location /><TripsListPage />
+    </NewTripProvider></ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId(TRIP_MAIN_PORTAL_ID);
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('?selected=private'));
+    expect(screen.getByText('private')).toBeTruthy();
+  });
+  it('removes a deleted trip from the connected sidebar after confirmation', async () => {
+    __clearMyTripsCache();
+    let accessible = SAMPLE;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url === '/api/my-trips') return Promise.resolve(new Response(JSON.stringify(accessible)));
+      if (url === '/api/trips/okinawa' && init?.method === 'DELETE') {
+        accessible = SAMPLE.filter((trip) => trip.tripId !== 'okinawa');
+        return Promise.resolve(new Response('{}'));
+      }
+      return Promise.resolve(new Response('null'));
+    }));
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><NewTripProvider>
+      <TripsListPage />
+    </NewTripProvider></ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId('sidebar-trip-okinawa');
+    await screen.findByTestId('trips-list-card-okinawa');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByTestId('trip-card-menu-delete-okinawa'));
+    fireEvent.click(screen.getByRole('button', { name: '刪除' }));
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('sidebar-trip-okinawa')).toBeNull());
+  });
   it('shows loading initially', () => {
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
@@ -237,6 +320,29 @@ describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () 
     expect(screen.queryByTestId('trips-list-card-seoul')).toBeNull();
   });
 
+  it('封存通知刷新清單後，行程從一般列表移到已歸檔並更新名稱', async () => {
+    let currentTrips: Array<Record<string, unknown>> = SAMPLE;
+    let listReads = 0;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/my-trips') {
+        listReads++;
+        return Promise.resolve(new Response(JSON.stringify(currentTrips)));
+      }
+      return Promise.resolve(new Response('null'));
+    }));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    expect(await screen.findByTestId('trips-list-card-okinawa')).toBeTruthy();
+
+    currentTrips = SAMPLE.map((trip) => trip.tripId === 'okinawa'
+      ? { ...trip, name: '沖繩封存行程', title: '沖繩封存行程', archivedAt: '2026-09-24T00:00:00Z' }
+      : trip);
+    act(() => window.dispatchEvent(new Event(EVENT.tripsUpdated)));
+    await waitFor(() => expect(listReads).toBe(2));
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeNull());
+    fireEvent.click(screen.getByTestId('trips-list-tab-archived'));
+    expect((await screen.findByTestId('trips-list-card-okinawa')).textContent).toContain('沖繩封存行程');
+  });
+
   it('filter tab「共編」只顯示 owner !== current user 的 trip', async () => {
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }, { tripId: 'taipei' }], sample));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
@@ -271,6 +377,20 @@ describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () 
 describe('TripsListPage — 進 /trips 還原上次檢視（v2.55.x bug 1）', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
+
+  it('desktop restores the last viewed trip before the shared first-trip fallback', async () => {
+    function Selection() {
+      const { activeTripId } = useActiveTrip();
+      const location = useLocation();
+      return <output data-testid="selection">{location.search}|{location.hash}|{activeTripId}</output>;
+    }
+    writeTripView({ tripId: 'seoul', dayNum: 2 });
+    vi.stubGlobal('fetch', mockApi([], SAMPLE));
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><NewTripProvider>
+      <Selection /><TripsListPage />
+    </NewTripProvider></ActiveTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('selection').textContent).toBe('?selected=seoul|#day2|seoul'));
+  });
 
   it('桌機 + 無 ?selected + 有上次檢視紀錄 → 自動開回該行程（留 portal placeholder 給 TripPageHost）', async () => {
     mockMatchMedia(true);

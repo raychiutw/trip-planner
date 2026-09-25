@@ -1,27 +1,28 @@
 /**
  * DesktopSidebarConnected — auto-fetch current user + 我的行程清單（rev2）。
  *
- * Connected variant：useCurrentUser 填 `user`、useMyTrips 填 `trips`，active
- * trip 由 URL 推導（/trips?selected=<id> 或 /trip/:id）——不依賴 ActiveTripContext
- * provider，sidebar 在任何頁面都安全。
+ * Connected variant：useCurrentUser 填 `user`、useMyTrips 填 `trips`；
+ * active trip 由 ActiveTripContext 提供，與聊天的選擇保持一致。
  *
  * Pure <DesktopSidebar/>（prop-driven）保留給測試 / explicit override。
  *
- * Loading state：user / trips 還沒 resolve 時 sidebar 保持 neutral skeleton，
- * 避免 login/account + 清單 flicker。
+ * Unknown identity shows loading/retry in the existing account area;
+ * the trip list retains its loading skeleton until identity resolves.
  */
+import AuthStatus from '../shared/AuthStatus';
 import { useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
 import DesktopSidebar, { type DesktopSidebarProps, type SidebarUser } from './DesktopSidebar';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { useMyTrips } from '../../hooks/useMyTrips';
+import { useActiveTrip } from '../../contexts/ActiveTripContext';
 
-export type DesktopSidebarConnectedProps = Omit<DesktopSidebarProps, 'user' | 'trips' | 'activeTripId'>;
+export type DesktopSidebarConnectedProps = Omit<DesktopSidebarProps, 'user' | 'userStatus' | 'trips' | 'tripsStatus' | 'activeTripId'>;
 
 export default function DesktopSidebarConnected(props: DesktopSidebarConnectedProps) {
-  const { user } = useCurrentUser();
-  const { pathname, search } = useLocation();
-  const { trips } = useMyTrips(!!user);
+  const auth = useCurrentUser();
+  const { user } = auth;
+  const { activeTripId } = useActiveTrip();
+  const { trips, status: tripsStatus } = useMyTrips(user?.id);
 
   const sidebarUser = useMemo<SidebarUser | null | undefined>(() => {
     if (user === undefined) return undefined;
@@ -33,12 +34,5 @@ export default function DesktopSidebarConnected(props: DesktopSidebarConnectedPr
     };
   }, [user]);
 
-  const activeTripId = useMemo(() => {
-    const sel = new URLSearchParams(search).get('selected');
-    if (sel) return sel;
-    const m = pathname.match(/^\/trip\/([^/]+)/);
-    return m ? m[1] : null;
-  }, [pathname, search]);
-
-  return <DesktopSidebar {...props} user={sidebarUser} trips={trips} activeTripId={activeTripId} />;
+  return <DesktopSidebar {...props} user={sidebarUser} userStatus={<AuthStatus auth={auth} />} trips={trips} tripsStatus={tripsStatus} activeTripId={activeTripId} />;
 }

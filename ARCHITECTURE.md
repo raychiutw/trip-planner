@@ -81,6 +81,19 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 BrowserRouter 走 pretty URL (無 hash)。`/manage/` 與 `/admin/` 的 `dist/` 仍有
 `index.html` 複本以支援 direct access (build step in `package.json`)。
 
+聊天、桌機側欄、行程清單、行程明細與地圖頁的可存取行程摘要共用 `useMyTrips`，只讀 `/my-trips` 的 camelCase
+回應，按登入 user ID 隔離清單；初次同時讀取共用請求，`tp-trips-updated` 觸發刷新，
+較舊回應不得覆蓋較新結果；正式的建立、更新與刪除行程事件也會觸發刷新。
+當最後一個讀取者離開後，再次進入會共用一次重讀，補上分享複製或接受邀請期間漏接的更新。
+清單狀態區分載入、失敗與成功空清單。聊天、行程清單與行程明細透過
+`useAccessibleTripSelection` 協調明確目標、有效偏好與成功讀取後的 fallback；
+`/map` 只在清單確認後選擇並導向 `/trip/:tripId/map`，成功空清單保留新增引導，
+行程地圖本身保留日期、POI 與 Google 地圖操作；
+明確目標不在清單時，行程明細仍交由 `useTrip` 讀取並呈現實際錯誤。
+桌機行程清單只在首次進入時依 active trip 與上次檢視行程還原，手機保留清單返回。
+側欄直接讀 `ActiveTripContext` 的選擇。偏好仍由該 context 寫入既有 localStorage
+key 並接收跨分頁 storage event；上次檢視行程維持獨立語意。
+
 ### 目錄結構
 
 ```
@@ -96,11 +109,16 @@ src/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
 │   ├── entryMutations.ts    entry 變更：動詞 module（createEntry/setMaster/deleteEntry/...）回 Result，
 │   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 CONTEXT.md「entry 變更」
+│   ├── travelRecompute.ts   segment 重算：single-flight、gap signature、唯讀停止與待更新狀態
+│   ├── segmentScope.ts      segment 讀取者生命週期，隔離晚到操作的通知，保留必要 server 重算
+│   ├── manualSegment.ts     兩個手動交通入口共用 POST／PATCH、成功通知與行程生命週期隔離
 │   ├── mapRow.ts            DB row → UI object 統一轉換
 │   ├── scrollSpy.ts         純函式：捲動位置 → active day index
 │   └── ...                  localStorage、sentry、timelineUtils
 └── types/                   trip.ts / api.ts
 ```
+
+手動交通寫入由 `manualSegment` 執行 POST／PATCH，成功後只在原行程讀取生命週期仍有效時送出 segment 更新通知，由 `useTripSegments` 重讀。`TravelPillDialog` 保留 600ms autosave 與 409 版本重讀／重試；`EditEntryPage` 保留簡化的 mode／分鐘輸入及不強制帶版本的契約。entry 與 segment 同時修改時各自記錄成功結果，重讀或另一項寫入失敗不重送已成功的操作；過期畫面不發布提示或通知。
 
 ### 狀態管理
 
@@ -164,6 +182,9 @@ functions/api/
 ├── _utils.ts            共用 DB / header helpers
 ├── _validate.ts         input validation + garbled guard
 ├── trips/               trips CRUD + batch days endpoint
+│   ├── _tripCreation.ts 新行程建立順序、ID 對應、分批帳本與補償（匯入與分享 clone 共用；caller 保留來源驗證／轉換）
+│   ├── _import.ts       匯入來源驗證、舊格式正規化及建立 plan 轉換
+│   └── _tripWrite.ts    分批 D1、清理與 ID／行程數上限 primitives
 ├── pois/                POI CRUD（AI 維護的 master）
 ├── requests/            旅伴請求（含 SSE stream）
 ├── permissions/         trip_permissions CRUD

@@ -12,11 +12,12 @@
  *      c. logged-in + email mismatch → 「此邀請不屬於你的帳號」
  *      d. anonymous → 兩個 CTA「登入並加入」 / 「註冊並加入」（query 含 invitation token）
  */
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
+import { normalizeEmail } from '../server/email-utils';
 
 const SCOPED_STYLES = `
 .tp-invite-shell {
@@ -90,6 +91,8 @@ interface InvitationDetails {
   expiresAt: string;
 }
 
+const TERMINAL_CODES = new Set(['INVITATION_TOKEN_MISSING', 'INVITATION_INVALID', 'INVITATION_EXPIRED', 'INVITATION_ACCEPTED']);
+
 type FetchState =
   | { status: 'loading' }
   | { status: 'ok'; data: InvitationDetails }
@@ -97,13 +100,26 @@ type FetchState =
 
 export default function InvitePage() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') ?? '';
-  const { user } = useCurrentUser();
+  const token = (searchParams.get('token') ?? '').trim();
+  return <Invitation key={token} token={token} />;
+}
+
+function Invitation({ token }: { token: string }) {
+  const navigate = useNavigate();
+  const active = useRef(true);
+  const inFlight = useRef(false);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
+  const { user, error: authError, reload } = useCurrentUser();
   const [state, setState] = useState<FetchState>({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState<string | null>(null);
 
   useEffect(() => {
+    setState({ status: 'loading' });
     if (!token) {
       setState({ status: 'error', code: 'INVITATION_TOKEN_MISSING', message: '邀請連結無效（缺少 token）' });
       return;
@@ -112,11 +128,15 @@ export default function InvitePage() {
     apiFetch<InvitationDetails>(`/invitations?token=${encodeURIComponent(token)}`)
       .then((data) => {
         if (cancelled) return;
+        if (!data || typeof data.tripId !== 'string' || !data.tripId ||
+            typeof data.tripTitle !== 'string' || typeof data.invitedEmail !== 'string' || !data.invitedEmail) {
+          throw new Error('Invalid invitation preview');
+        }
         setState({ status: 'ok', data });
       })
       .catch((err) => {
         if (cancelled) return;
-        if (err instanceof ApiError) {
+        if (err instanceof ApiError && TERMINAL_CODES.has(err.code)) {
           setState({
             status: 'error',
             code: err.code ?? 'INVITATION_INVALID',
@@ -127,9 +147,12 @@ export default function InvitePage() {
         }
       });
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, attempt]);
 
   async function handleAccept() {
+    if (inFlight.current || state.status !== 'ok' || !user ||
+        normalizeEmail(user.email) !== normalizeEmail(state.data.invitedEmail)) return;
+    inFlight.current = true;
     setAccepting(true);
     setAcceptError(null);
     try {
@@ -137,11 +160,20 @@ export default function InvitePage() {
         method: 'POST',
         body: JSON.stringify({ token }),
       });
-      window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
+      if (!active.current) return;
+      if (!data?.ok || typeof data.tripId !== 'string' || !data.tripId) throw new Error('Invalid accept result');
+      navigate(`/trips?selected=${encodeURIComponent(data.tripId)}`);
     } catch (err) {
+      if (!active.current) return;
+      if (err instanceof ApiError && TERMINAL_CODES.has(err.code)) {
+        setState({ status: 'error', code: err.code, message: err.detail ?? err.message });
+        return;
+      }
+      if (err instanceof ApiError && (err.status === 401 || err.code === 'INVITATION_EMAIL_MISMATCH')) reload();
       setAcceptError(err instanceof ApiError ? (err.detail ?? '接受失敗') : '網路錯誤，請稍後再試');
     } finally {
-      setAccepting(false);
+      inFlight.current = false;
+      if (active.current) setAccepting(false);
     }
   }
 
@@ -149,7 +181,7 @@ export default function InvitePage() {
     <main className="tp-invite-shell" data-testid="invite-page">
       <style>{SCOPED_STYLES}</style>
       <div className="tp-invite-card">
-        {state.status === 'loading' && <div className="tp-invite-body">載入中…</div>}
+        {state.status === 'loading' && <div className="tp-invite-body" role="status">載入中…</div>}
 
         {state.status === 'error' && (
           <>
@@ -157,9 +189,11 @@ export default function InvitePage() {
             <div className="tp-invite-error" role="alert" data-testid="invite-error">
               {state.message}
             </div>
-            <p className="tp-invite-hint">
-              請聯絡邀請者重寄一份新的邀請連結。
-            </p>
+            {TERMINAL_CODES.has(state.code) ? (
+              state.code === 'INVITATION_ACCEPTED'
+                ? <a className="tp-invite-btn tp-invite-btn-primary" href="/trips">前往行程</a>
+                : <p className="tp-invite-hint">請聯絡邀請者重寄一份新的邀請連結。</p>
+            ) : <button className="tp-invite-btn tp-invite-btn-secondary" onClick={() => setAttempt((value) => value + 1)}>重試</button>}
           </>
         )}
 
@@ -176,7 +210,10 @@ export default function InvitePage() {
             </p>
 
             {/* Loading user state */}
-            {user === undefined && <div className="tp-invite-body">確認登入狀態…</div>}
+            {authError ? <div className="tp-invite-cta">
+              <div className="tp-invite-error" role="alert">無法確認登入狀態，請重試。</div>
+              <button className="tp-invite-btn tp-invite-btn-secondary" onClick={reload}>重試登入狀態</button>
+            </div> : user === undefined && <div className="tp-invite-body" role="status">確認登入狀態…</div>}
 
             {/* Anonymous: login or signup */}
             {user === null && (
@@ -199,14 +236,17 @@ export default function InvitePage() {
             )}
 
             {/* Logged in but email mismatch */}
-            {user && user.email.toLowerCase() !== state.data.invitedEmail.toLowerCase() && (
+            {user && normalizeEmail(user.email) !== normalizeEmail(state.data.invitedEmail) && (
+              <div className="tp-invite-cta">
               <div className="tp-invite-error" role="alert" data-testid="invite-mismatch">
                 此邀請不屬於你的帳號（邀請寄給 {state.data.invitedEmail}，你登入的是 {user.email}）。請改用對應 email 登入或聯絡邀請者重寄。
+              </div>
+              <a className="tp-invite-btn tp-invite-btn-secondary" href={`/api/oauth/logout?redirect_after=${encodeURIComponent(`/login?invitation=${encodeURIComponent(token)}`)}`}>切換帳號並加入</a>
               </div>
             )}
 
             {/* Logged in + email match */}
-            {user && user.email.toLowerCase() === state.data.invitedEmail.toLowerCase() && (
+            {user && normalizeEmail(user.email) === normalizeEmail(state.data.invitedEmail) && (
               <div className="tp-invite-cta">
                 {acceptError && (
                   <div className="tp-invite-error" role="alert">{acceptError}</div>

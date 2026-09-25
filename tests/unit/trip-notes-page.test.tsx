@@ -23,9 +23,9 @@ import type { Trip } from '../../src/types/trip';
 // Mock dependencies
 const apiFetchMock = vi.fn();
 vi.mock('../../src/lib/apiClient', () => ({
-  apiFetch: (path: string) => apiFetchMock(path),
+  apiFetch: (path: string) => path.endsWith('/notes/ai-state') ? Promise.resolve({jobs: []}) : apiFetchMock(path),
 }));
-vi.mock('../../src/hooks/useRequireAuth', () => ({ useRequireAuth: () => ({ ready: true }) }));
+vi.mock('../../src/hooks/useRequireAuth', () => ({ useRequireAuth: () => ({ user: { id: 'u1', email: 'u@test' }, error: false, reload: () => {} }) }));
 vi.mock('../../src/hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ email: 'u@test' }) }));
 vi.mock('../../src/components/shell/AppShell', () => ({
   default: ({ main, bottomNav }: any) => <div data-testid="app-shell">{main}{bottomNav}</div>,

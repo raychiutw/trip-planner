@@ -37,5 +37,10 @@ export function sanitizeRedirectAfter(value: unknown): string | null {
   if (value.includes('\\')) return null;
   if (ENCODED_SLASH_PATTERN.test(value.slice(0, 6))) return null; // `/%2f...`
   if (ENCODED_BACKSLASH_PATTERN.test(value.slice(0, 6))) return null;
+  // The browser strips embedded tab/newline characters while resolving a URL.
+  // Validate its normalized origin as well as the raw-path contract above.
+  try {
+    if (new URL(value, 'https://redirect.invalid').origin !== 'https://redirect.invalid') return null;
+  } catch { return null; }
   return value;
 }

@@ -5,13 +5,13 @@
  *   - 對齊 V2 Terracotta tokens(`--color-priority-high-dot` 為 destructive)
  *   - 標題 + 訊息 + 兩個 action button(取消 ghost / 確認 destructive 實心)
  *   - Escape + click backdrop dismiss
- *   - Focus 自動 trap 在 modal 內(confirm button 預設 focus)
+ *   - Focus 自動 trap 在 modal 內(cancel button 預設 focus)
  *
  * Use case:
  *   - CollabPanel 移除成員 / 撤銷邀請
  *   - 將來其他 destructive 流程(刪除 trip / 刪除 entry / 登出)
  */
-import { useRef, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
@@ -114,8 +114,10 @@ export interface ConfirmModalProps {
   confirmLabel?: string;
   /** 取消按鈕 label,預設「取消」 */
   cancelLabel?: string;
-  /** 確認 button 是否 disabled(loading state) */
+  /** An operation is in flight: disable actions and prevent dismissal. */
   busy?: boolean;
+  /** Prerequisites are incomplete; cancellation remains available. */
+  confirmDisabled?: boolean;
   /** 點 confirm 觸發 */
   onConfirm: () => void;
   /** 點 cancel / Escape / backdrop 觸發 */
@@ -126,6 +128,8 @@ export interface ConfirmModalProps {
    * 不另造一個 modal，沿用本元件既有的焦點鎖定 / Escape / scroll-lock / a11y。
    */
   children?: ReactNode;
+  /** Used after the opener is removed or disabled by the confirmed operation. */
+  fallbackFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
 export default function ConfirmModal({
@@ -136,10 +140,14 @@ export default function ConfirmModal({
   confirmLabel = '確認',
   cancelLabel = '取消',
   busy = false,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
   children,
+  fallbackFocusRef,
 }: ConfirmModalProps) {
+  const titleId = useId();
+  const messageId = useId();
   const confirmRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   // 統一 sheet 引擎（B1）：開啟 focus **安全（取消）鈕**（W12 刪除政策 / HIG「破壞性動作預設
@@ -148,6 +156,8 @@ export default function ConfirmModal({
   // focus-trap + body scroll-lock。z-index 維持 --z-modal；public props + testid 全不動。
   const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onCancel, {
     initialFocusRef: cancelRef,
+    fallbackFocusRef,
+    canDismiss: !busy,
   });
 
   if (!open) return null;
@@ -160,7 +170,7 @@ export default function ConfirmModal({
         ref={backdropRef}
         className="tp-confirm-backdrop"
         role="presentation"
-        onClick={onCancel}
+        onClick={busy ? undefined : onCancel}
         data-testid="confirm-modal-backdrop"
       >
         <div
@@ -168,14 +178,14 @@ export default function ConfirmModal({
           className="tp-confirm-modal"
           role="alertdialog"
           aria-modal="true"
-          aria-labelledby="tp-confirm-title"
-          aria-describedby="tp-confirm-message"
+          aria-labelledby={titleId}
+          aria-describedby={messageId}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={handlePanelKeyDown}
           data-testid="confirm-modal"
         >
-          <h2 className="tp-confirm-title" id="tp-confirm-title">{title}</h2>
-          <p className="tp-confirm-message" id="tp-confirm-message">{message}</p>
+          <h2 className="tp-confirm-title" id={titleId}>{title}</h2>
+          <p className="tp-confirm-message" id={messageId}>{message}</p>
           {warning && (
             <div className="tp-confirm-warning" data-testid="confirm-modal-warning">
               <span className="tp-confirm-warning-icon" aria-hidden="true">⚠</span>
@@ -199,7 +209,7 @@ export default function ConfirmModal({
               type="button"
               className="tp-confirm-btn tp-confirm-btn-danger"
               onClick={onConfirm}
-              disabled={busy}
+              disabled={busy || confirmDisabled}
               data-testid="confirm-modal-confirm"
             >
               {busy ? '處理中…' : confirmLabel}

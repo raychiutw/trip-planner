@@ -12,18 +12,17 @@
  * reachable via list click.
  */
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { useLocation } from 'react-router-dom';
 import { DndContext, useDndMonitor, useDroppable, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
-import { reorderEntries } from '../../lib/entryMutations';
-import { requestTravelRecompute, getAutoRecomputeStatus } from '../../lib/travelRecompute';
+import { reorderEntries, type MutationResult } from '../../lib/entryMutations';
+import { captureSegmentScope } from '../../lib/segmentScope';
 import { captureDragScroll, restoreDragScroll } from '../../lib/preserveScroll';
-import { EVENT } from '../../lib/events';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
-import { showToast } from '../shared/Toast';
 import TravelPill from './TravelPill';
 import type { TimelineEntryData } from './TimelineEvent';
 import { parseEntryTime } from '../../lib/timelineUtils';
@@ -58,14 +57,12 @@ function DndMonitorBridge({ onDragStart, onDragEnd }: { onDragStart: () => void;
 
 
 const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, dndManaged = false }: TimelineRailProps) {
-  // v2.55.x: 從 EditEntryPage 回前頁（或從地圖跳景點）帶 ?focus=<entryId> 時，該景點所在
-  // 的 rail 掛載即展開它 —— 回到「當下景點展開」。只認得屬於本 rail 的 entry，避免每一天的
-  // rail 都去吃同一個 focus（expandedId 對不到的 rail 設 null 無害）。
-  const [expandedId, setExpandedId] = useState<number | null>(() => {
-    const focus = new URLSearchParams(window.location.search).get('focus');
-    const focusId = focus ? Number(focus) : NaN;
-    return Number.isFinite(focusId) && events.some((e) => e.id === focusId) ? focusId : null;
-  });
+  const { search } = useLocation();
+  const focusParam = new URLSearchParams(search).get('focus');
+  const focusId = focusParam && /^\d+$/.test(focusParam) ? Number(focusParam) : 0;
+  const hasFocusedEntry = Number.isSafeInteger(focusId) && focusId > 0 && events.some(entry => entry.id === focusId);
+  const [expandedId, setExpandedId] = useState<number | null>(hasFocusedEntry ? focusId : null);
+  useEffect(() => { if (hasFocusedEntry) setExpandedId(focusId); }, [focusId, hasFocusedEntry]);
   // rev2 Section 02：排序模式（⋯ menu「重新排序」進入）— per-rail（每天一個 rail 實例）。
   // 進入後所有 row 顯 grip 可拖；drag 觸發 refetch（events 變）時不重置，否則每拖一次就退出。
   const [sortMode, setSortMode] = useState(false);
@@ -75,9 +72,21 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
   const [orderOverride, setOrderOverride] = useState<number[] | null>(null);
   const tripId = useTripId();
   const allDays = useTripDays();
+  const railRef = useRef<HTMLDivElement>(null);
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const writingOrder = useRef(false);
+  const orderAttempt = useRef(0);
+  const [orderStatus, setOrderStatus] = useState<'saving' | 'travel' | 'saved' | 'travel-error' | null>(null);
+  const [acceptedOrder, setAcceptedOrder] = useState<Extract<MutationResult, { ok: true }> | null>(null);
+  const retryingTravel = useRef(false);
+  const orderedEntry = useRef<number | string | null>(null);
   // v2.24.0 γ.1：fetch segments → 為每對 entry 提供 segment row 給 TravelPill 啟用
   // tap-switch dialog。Hook listen tp-segment-updated + tp-entry-updated 自動 re-fetch。
-  const { segmentMap, ready: segmentsReady } = useTripSegments(tripId);
+  const { segmentMap, ready: segmentsReady, recomputeStalled } = useTripSegments(tripId, {
+    dayId, entries: events, optimistic: orderOverride != null,
+  });
 
   // PR-K dnd-kit sensors。includeTouch 拆 mouse/touch：桌機 MouseSensor 8px 即時
   // 拖曳（避免誤觸 click expand row），觸控走 TouchSensor 200ms 長按（快速垂直
@@ -102,80 +111,59 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
   const eventsKey = events.map((e) => e.id ?? -1).join(',');
   useEffect(() => { setOrderOverride(null); }, [eventsKey]);
 
-  // 2026-07-06 self-healing 車程補算：刪除/搬日/複製/後端直寫（AI chat、import、
-  // share clone、tp-* CLI）後，新相鄰 pair 缺 segment row（FK cascade 只刪舊
-  // pair，新 pair 無人算）或換 POI 後 computed_at=NULL。render 時偵測缺口 →
-  // 自動 day-scoped recompute，以缺口清單當 signature 防重（同缺口只試一次，
-  // unhealable 缺座標 pair 不會被無關 mutation 反覆 re-arm）。其餘防護在
-  // helper：in-flight dedup、唯讀 403 → 該 trip auto 停用、失敗靜默（fallback
-  // 是 TravelPill ⚠ 手動鈕）。segmentsReady gate 防首次 render 空 map 誤判；
-  // orderOverride gate 防 drag optimistic order 在 PATCH commit 前誤判新
-  // adjacency 白燒一輪（perf review CRITICAL）。
-  useEffect(() => {
-    if (!tripId || !segmentsReady || orderOverride != null) return;
-    // auto 只在 day scope 明確時打 — 解析不到 dayNum 不能放大成全 trip
-    // recompute（47-pair trip ≈ 52 subrequests 貼 CF 50 上限，自動路徑
-    // fail-open 方向錯誤；explicit 手動 ⚠ 才保留全 trip fallback）。
-    const dayNum = dayNumFromId(allDays, dayId);
-    if (dayNum == null) return;
-    const gaps: string[] = [];
-    for (let i = 1; i < orderedEvents.length; i++) {
-      const prev = orderedEvents[i - 1];
-      const curr = orderedEvents[i];
-      if (prev?.id == null || curr?.id == null) continue;
-      // 缺座標 pair 不進 gaps：backend recompute 對它無能為力（skip 不寫
-      // row），觸發只會白燒該日全部 pair 的 Google 重算。user 補座標後
-      // entry 資料變 → masterLat 有值 → 進 gaps → 自動補算，閉環成立。
-      if (prev.masterLat == null || prev.masterLng == null
-        || curr.masterLat == null || curr.masterLng == null) continue;
-      const seg = segmentMap.get(`${prev.id}-${curr.id}`);
-      if (!seg || seg.computedAt == null) gaps.push(`${prev.id}-${curr.id}`);
-    }
-    if (gaps.length === 0) return;
-    void requestTravelRecompute(tripId, dayNum, {
-      auto: true,
-      signature: gaps.join(','),
-    });
-  }, [tripId, segmentsReady, orderOverride, segmentMap, orderedEvents, dayId, allDays]);
-
-  // 2026-07-08 車程重算狀態：auto 終端失敗（403 唯讀 viewer / 持續 API 錯）時
-  // helper dispatch segmentRecomputeFailed — 監聽後 re-render，讓 TravelPill 由樂觀
-  // 「重新計算中」改顯誠實「待更新」（stale pair 不會自己好，別假稱系統在算）。
-  const [, bumpRecomputeStatus] = useState(0);
-  useEffect(() => {
-    if (!tripId) return;
-    const onFailed = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { tripId?: string } | null;
-      if (detail?.tripId && detail.tripId !== tripId) return;
-      bumpRecomputeStatus((n) => n + 1);
-    };
-    window.addEventListener(EVENT.segmentRecomputeFailed, onFailed);
-    return () => window.removeEventListener(EVENT.segmentRecomputeFailed, onFailed);
-  }, [tripId]);
-  // day-scope 級（全 rail 共用）：blocked=唯讀 viewer / failed=本日持續失敗 → 停滯。
-  // 每 render 重讀（bumpRecomputeStatus / segments refetch 觸發的 re-render 會刷新）。
-  const recomputeStalled = tripId != null
-    && getAutoRecomputeStatus(tripId, dayNumFromId(allDays, dayId)) !== 'active';
-
   // W13：reorder 落地（optimistic override → batch PATCH → travel recompute → 廣播 → 失敗 revert）
   // 抽成共用，供拖曳（handleDragEnd）與 ⋯ menu「上移/下移一格」（moveEntryStep）共用，行為一致。
   const applyReorder = useCallback(async (newIds: number[], sourceEntryId: number | string) => {
+    if (!tripId || writingOrder.current) return;
+    writingOrder.current = true;
+    orderedEntry.current = sourceEntryId;
+    const attempt = ++orderAttempt.current;
+    setOrderStatus('saving');
+    setAcceptedOrder(null);
+    setOrderError(null);
     setOrderOverride(newIds);
-    if (!tripId) return;
+    const currentScope = captureSegmentScope(tripId);
+    const isCurrent = () => active.current && currentScope() && orderAttempt.current === attempt;
     // Section 6/3：reorder 走 batch endpoint，避免 N+1 PATCH。一次送所有改變位置的 sort_order，
     // atomic 失敗 → revert override。
     try {
       // #1260：batch reorder + day-scope 重算 + emit 在 module；失敗 revert override。
       const r = await reorderEntries(tripId, dayNumFromId(allDays, dayId), newIds);
-      if (!r.ok) throw new Error(`batch reorder failed: ${r.status}`);
-      void sourceEntryId;
-      void r.recompute.then((ok) => {
-        if (!ok) showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
+      if (!isCurrent()) return;
+      if (!r.ok) throw new Error(r.message || '順序儲存失敗，請重試');
+      setAcceptedOrder(r);
+      setOrderStatus('travel');
+      void r.recompute.then(ok => {
+        if (isCurrent()) setOrderStatus(ok ? 'saved' : 'travel-error');
       });
-    } catch {
-      setOrderOverride(null);
+    } catch (error) {
+      if (isCurrent()) {
+        setOrderOverride(null);
+        setOrderStatus(null);
+        setOrderError(error instanceof Error ? error.message : '順序儲存失敗，請重試');
+      }
+    } finally {
+      writingOrder.current = false;
+      if (isCurrent()) {
+        const trigger = railRef.current?.querySelector<HTMLButtonElement>(`[data-testid="timeline-rail-menu-${sourceEntryId}"]`);
+        trigger?.focus({ preventScroll: true });
+        trigger?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      }
     }
   }, [tripId, allDays, dayId]);
+
+  async function retryOrderTravel() {
+    if (!acceptedOrder || retryingTravel.current || writingOrder.current) return;
+    retryingTravel.current = true;
+    const attempt = orderAttempt.current;
+    const isCurrent = captureSegmentScope(tripId ?? '');
+    setOrderStatus('travel');
+    // The retry control disappears; transfer focus now rather than stealing it on completion.
+    railRef.current?.querySelector<HTMLButtonElement>(`[data-testid="timeline-rail-menu-${orderedEntry.current}"]`)?.focus({ preventScroll: true });
+    const ok = await acceptedOrder.retryRecompute();
+    retryingTravel.current = false;
+    if (active.current && isCurrent() && orderAttempt.current === attempt) setOrderStatus(ok ? 'saved' : 'travel-error');
+  }
 
   // W13：⋯ menu「上移/下移一格」—— 單步 arrayMove 後走 applyReorder（VoiceOver/觸控不靠拖曳的替代）。
   const moveEntryStep = useCallback((entryId: number, dir: 'up' | 'down') => {
@@ -233,7 +221,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
   const sortableItems = orderedEvents.map((e, i) => e.id ?? `idx-${i}`);
 
   return (
-    <div className="tp-rail">
+    <div className="tp-rail" ref={railRef}>
       <style>{TIMELINE_RAIL_SCOPED_STYLES}</style>
       <div className="tp-rail-header">
         <span className="tp-rail-eyebrow">行程</span>
@@ -241,6 +229,14 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
           {orderedEvents.length} 個停留點{firstTime && lastTime ? ` · ${firstTime}–${lastTime}` : ''}
         </span>
       </div>
+      {orderStatus && (
+        <div role={orderStatus === 'travel-error' ? 'alert' : 'status'} className="px-3 text-callout">
+          {orderStatus === 'saving' ? '正在儲存順序…' : orderStatus === 'travel' ? '順序已儲存，交通更新中…'
+            : orderStatus === 'travel-error' ? '順序已儲存，交通待更新。' : '順序及交通已更新。'}
+          {orderStatus === 'travel-error' && <button type="button" className="min-h-[44px] text-accent" onClick={() => void retryOrderTravel()}>重試交通更新</button>}
+        </div>
+      )}
+      {orderError && <p role="alert" className="px-3 text-callout text-danger">{orderError}</p>}
       {/* 2026-07-07 跨天拖拉雙模：dndManaged = TripPage 統一 DndContext（跨 rail
         * 拖拉 + autoScroll 捲動換天），rail 只掛 monitor 接同日 reorder；
         * 否則（獨立頁）自建 context 維持原行為。嵌套 DndContext 會搶事件，

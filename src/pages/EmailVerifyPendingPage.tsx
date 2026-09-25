@@ -11,7 +11,7 @@
  *   - 「重寄」按鈕有 60s cooldown 防濫用 (前端 throttle，後端有 rate limit 層)
  *   - mobile：「打開信箱 App」mailto: deep link
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 import { apiFetchRaw } from '../lib/apiClient';
@@ -100,11 +100,21 @@ const COOLDOWN_SEC = 60;
 
 export default function EmailVerifyPendingPage() {
   const [params] = useSearchParams();
-  const email = params.get('email') ?? '';
+  const email = (params.get('email') ?? '').trim().toLowerCase();
+  return <PendingVerification key={email} safeEmail={email} />;
+}
+
+function PendingVerification({ safeEmail }: { safeEmail: string }) {
+  const active = useRef(true);
+  const inFlight = useRef(false);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
   const [cooldownEndsAt, setCooldownEndsAt] = useState(() => Date.now() + COOLDOWN_SEC * 1000);
   const [tick, setTick] = useState(0);
   const [resending, setResending] = useState(false);
-  const [resendStatus, setResendStatus] = useState<'idle' | 'sent' | 'error'>('idle');
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sent' | 'error' | 'limited'>('idle');
 
   // Single 1Hz interval re-renders to update countdown; cleaner than chained setTimeout.
   // v2.33.47 round 7b LOW: pause on tab hidden — long-open tabs 沒必要 burn
@@ -141,10 +151,9 @@ export default function EmailVerifyPendingPage() {
   // Suppress unused-var lint; tick triggers re-render so cooldown recomputes
   void tick;
 
-  const safeEmail = useMemo(() => email.trim().toLowerCase(), [email]);
-
   async function handleResend() {
-    if (cooldown > 0 || !safeEmail) return;
+    if (inFlight.current || cooldownEndsAt > Date.now() || !safeEmail) return;
+    inFlight.current = true;
     setResending(true);
     setResendStatus('idle');
     try {
@@ -152,19 +161,25 @@ export default function EmailVerifyPendingPage() {
         method: 'POST',
         body: JSON.stringify({ email: safeEmail }),
       });
-      // 2026-05-02 cutover: send-verification now returns 500 EMAIL_SEND_FAILED
-      // when mac mini SMTP fails (Q7 strict UX). Don't show "sent" if the
-      // backend explicitly failed to deliver.
+      if (!active.current) return;
+      // The anti-enumeration response acknowledges a request, not delivery.
       if (res.ok) {
         setResendStatus('sent');
         setCooldownEndsAt(Date.now() + COOLDOWN_SEC * 1000);
+      } else if (res.status === 429) {
+        const seconds = Number(res.headers.get('Retry-After'));
+        const wait = Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : COOLDOWN_SEC;
+        setCooldownEndsAt(Date.now() + wait * 1000);
+        setResendStatus('limited');
       } else {
         setResendStatus('error');
       }
     } catch {
+      if (!active.current) return;
       setResendStatus('error');
     } finally {
-      setResending(false);
+      inFlight.current = false;
+      if (active.current) setResending(false);
     }
   }
 
@@ -180,7 +195,7 @@ export default function EmailVerifyPendingPage() {
           </svg>
         </div>
         <h1 className="tp-verify-title">查看你的信箱</h1>
-        <p className="tp-verify-subtitle">我們已寄出驗證信到</p>
+        <p className="tp-verify-subtitle">請查看驗證信；若尚未收到，可稍後重寄至</p>
         <p className="tp-verify-email" data-testid="verify-email">{safeEmail || '（沒有電子郵件）'}</p>
 
         <div className="tp-verify-banner" role="status">
@@ -212,13 +227,13 @@ export default function EmailVerifyPendingPage() {
         </button>
 
         {resendStatus === 'sent' && (
-          <p className="tp-verify-footer" data-testid="verify-resend-sent">
-            已重寄。請查看信箱。
+          <p className="tp-verify-footer" role="status" data-testid="verify-resend-sent">
+            已接受重寄請求。若帳號需要驗證，驗證信會寄至信箱。
           </p>
         )}
-        {resendStatus === 'error' && (
-          <p className="tp-verify-footer" style={{ color: 'var(--color-destructive)' }} data-testid="verify-resend-error">
-            重寄失敗，請稍後再試。
+        {(resendStatus === 'error' || resendStatus === 'limited') && (
+          <p className="tp-verify-footer" style={{ color: 'var(--color-destructive)' }} role="alert" data-testid="verify-resend-error">
+            {resendStatus === 'limited' ? '寄送次數過多，請等待倒數結束後再試。' : '重寄失敗，請稍後再試。'}
           </p>
         )}
 
@@ -236,7 +251,7 @@ export default function EmailVerifyPendingPage() {
           {
             icon: <polyline points="20,6 9,17 4,12" />,
             title: '驗證後立即可用',
-            desc: '點完連結會自動回到這個頁面，可以直接開始規劃旅程。',
+            desc: '完成信件中的驗證後，可選擇前往登入，開始規劃旅程。',
           },
           {
             icon: (

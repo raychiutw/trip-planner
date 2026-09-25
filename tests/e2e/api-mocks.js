@@ -665,6 +665,8 @@ const MOCK_CONNECTED_APPS = [
  * @param {import('@playwright/test').Page} page
  */
 async function setupApiMocks(page) {
+  // These fixtures replace HTTP effects; never load a live SDK with the test key.
+  await page.route(/https:\/\/maps\.googleapis\.com\//, route => route.abort());
   const savedPois = initialSavedPois();
   // V2 cutover: tripIdeas removed — concept retired in migration 0046
   const sessions = MOCK_SESSIONS.map((s) => ({ ...s }));
@@ -720,21 +722,30 @@ async function setupApiMocks(page) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ sessions }),
+        body: JSON.stringify({ current_sid: sessions.find(s => s.is_current)?.sid ?? null, sessions }),
       });
     }
     if (request.method() === 'DELETE' && path === '/api/account/sessions') {
+      const revoked = sessions.filter(s => !s.is_current).length;
       const current = sessions.find((s) => s.is_current);
       sessions.splice(0, sessions.length, ...(current ? [current] : []));
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, revoked }) });
     }
     if (request.method() === 'DELETE') {
       const sid = decodeURIComponent(path.split('/').pop() ?? '');
       const idx = sessions.findIndex((s) => s.sid === sid);
       if (idx >= 0) sessions.splice(idx, 1);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, revoked_sid: sid }) });
     }
     return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
+  });
+
+  await page.route('**/api/account/ai-authorization', async route => {
+    const id = 'tripline-tp-request';
+    if (route.request().method() === 'POST' && !connectedApps.some(app => app.client_id === id)) {
+      connectedApps.push({ client_id: id, app_name: 'Tripline AI', app_logo_url: null, app_description: null, homepage_url: null, status: 'active', scopes: ['openid', 'profile'], granted_at: Date.now() });
+    }
+    return route.fulfill({ json: { authorized: connectedApps.some(app => app.client_id === id) } });
   });
 
   await page.route(/\/api\/account\/connected-apps(?:\/[^/]+)?$/, async (route) => {
@@ -751,7 +762,7 @@ async function setupApiMocks(page) {
       const clientId = decodeURIComponent(path.split('/').pop() ?? '');
       const idx = connectedApps.findIndex((app) => app.client_id === clientId);
       if (idx >= 0) connectedApps.splice(idx, 1);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, revoked_client_id: clientId }) });
     }
     return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
   });

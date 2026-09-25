@@ -23,6 +23,7 @@
  *   - No session: 302 to /login?redirect_after=...
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
+import { validateAuthorizeRequest, type ClientAppRow } from '../../../src/server/oauth-server/validate-authorize-request';
 import { getSessionUser } from '../_session';
 import { recordAuthEvent } from '../_auth_audit';
 import { oauthErrorResponse } from '../_errors';
@@ -42,7 +43,7 @@ interface ConsentBody {
   decision?: string;
 }
 
-async function parseBody(request: Request): Promise<ConsentBody> {
+async function parseBody(request: Request): Promise<ConsentBody | null> {
   const ct = request.headers.get('content-type') ?? '';
   if (ct.includes('application/x-www-form-urlencoded')) {
     const text = await request.text();
@@ -52,9 +53,12 @@ async function parseBody(request: Request): Promise<ConsentBody> {
     return out;
   }
   if (ct.includes('application/json')) {
-    return (await request.json()) as ConsentBody;
+    const value: unknown = await request.json();
+    if (!value || typeof value !== 'object' || Array.isArray(value) ||
+        Object.values(value).some((field) => typeof field !== 'string')) return null;
+    return value as ConsentBody;
   }
-  return {};
+  return null;
 }
 
 /**
@@ -104,7 +108,8 @@ async function safeRedirect(
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const session = await getSessionUser(context.request, context.env, context.waitUntil.bind(context));
-  const body = await parseBody(context.request);
+  const body = await parseBody(context.request).catch(() => null);
+  if (!body) return oauthErrorResponse('invalid_request', 'Invalid consent request body', 400);
 
   if (!session) {
     // 302 to login，preserve full original authorize URL via redirect_after
@@ -136,7 +141,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return oauthErrorResponse('invalid_request', 'Missing client_id', 400);
   }
 
-  const scopes = (body.scope ?? '').split(/\s+/).filter(Boolean);
+  // Validate before persisting, using the same policy as the next authorize hop.
+  const client = await context.env.DB
+    .prepare('SELECT client_id, client_type, app_name, redirect_uris, allowed_scopes, status FROM client_apps WHERE client_id = ?')
+    .bind(body.client_id)
+    .first<ClientAppRow>();
+  const result = validateAuthorizeRequest(body, client);
+  if ('code' in result) return oauthErrorResponse(result.code, result.message, 400);
+  const scopes = result.scopes;
 
   // Store consent (idempotent upsert)
   const consentKey = `${session.uid}:${body.client_id}`;

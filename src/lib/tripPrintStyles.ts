@@ -32,14 +32,14 @@ export const PRINT_CSS = `
 .tp-print-meta{font-size:13px;color:#5c5248;margin-top:6px;display:flex;gap:14px;flex-wrap:wrap;}
 .tp-print-star{color:#9a7b32;font-weight:600;white-space:nowrap;}
 .tp-print-empty{color:#5c5248;border:1px dashed #cfc7ba;border-radius:8px;padding:18px 16px;text-align:center;font-size:13px;margin-top:16px;}
-.tp-print-day{margin-top:18px;break-inside:avoid;page-break-inside:avoid;}
+.tp-print-day{margin-top:18px;break-inside:auto;page-break-inside:auto;}
 .tp-print-day-hd{display:flex;align-items:baseline;gap:10px;border-bottom:1.5px solid #1d1813;padding-bottom:4px;margin-bottom:2px;}
 .tp-print-day-no{font-size:15px;font-weight:700;}
 .tp-print-day-date{font-size:12px;color:#5c5248;}
 .tp-print-day-entries{font-size:13px;}
 /* responsive entry grid: ≥640px = 3 columns (time | activity | travel); the
    @media screen rule below stacks it on mobile. Print/PDF (A4 wide) stays 3-col. */
-.tp-print-entry{display:grid;grid-template-columns:80px 1fr 132px;gap:1px 10px;padding:7px 0;border-bottom:1px solid #efe9df;align-items:start;}
+.tp-print-entry{display:grid;grid-template-columns:80px 1fr 132px;gap:1px 10px;padding:7px 0;border-bottom:1px solid #efe9df;align-items:start;break-inside:avoid;page-break-inside:avoid;}
 .tp-print-t{font-variant-numeric:tabular-nums;font-weight:600;color:#1d1813;white-space:nowrap;}
 .tp-print-title{grid-column:2;font-weight:600;}
 .tp-print-alt{grid-column:2;color:#5c5248;font-size:12px;}
@@ -81,7 +81,7 @@ export const PRINT_CSS = `
 
 @media print {
   .tp-print-page{background:#fff;}
-  .tp-print-toolbar{display:none !important;}
+  .tp-print-toolbar,.tp-print-feedback{display:none !important;}
   .tp-print-doc{box-shadow:none;margin:0 auto;width:auto;max-width:none;padding:0;}
   @page{size:A4;margin:14mm;}
 }
@@ -91,7 +91,7 @@ export const PRINT_CSS = `
  * PDF override — html2canvas does NOT emulate @media print, so it would capture
  * the on-screen shadow/margins. Strip them for the off-screen PDF render.
  */
-export const PRINT_PDF_DOC_CSS = `.tp-print-doc{box-shadow:none;margin:0;width:794px;max-width:none;}`;
+export const PRINT_PDF_DOC_CSS = `.tp-print-doc[data-trip-pdf-document]{box-shadow:none;margin:0;padding:0;width:794px;max-width:none;}`;
 
 /**
  * SHARE_CHROME_CSS — public share page (Variant B「分享封面」, signed off 2026-05-30).
@@ -124,5 +124,5 @@ export const SHARE_CHROME_CSS = `
 .tp-share-hero,.tp-share-actionbar{max-width:794px;margin-left:auto;margin-right:auto;width:100%;}
 .tp-share-page .tp-print-doc{margin-top:0;}
 @media (min-width:834px){ .tp-share-hero{margin-top:18px;border-radius:12px 12px 0 0;} }
-@media print { .tp-share-hero,.tp-share-actionbar{display:none !important;} .tp-share-page{background:#fff;} }
+@media print { .tp-share-actionbar,.tp-share-eyebrow,.tp-share-error{display:none !important;} .tp-share-hero{background:#fff;color:#1d1813;margin:0;padding:0 0 14px;border-radius:0;} .tp-share-page{background:#fff;} }
 `;

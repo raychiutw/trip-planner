@@ -7,6 +7,7 @@
  * v2.30.10: 移除「主題色 / 選擇色票」card grid section — 跟「深淺模式」ThemeToggle
  * 操控同一個 colorMode state（淺/自動/深），功能重複。
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import AppShell from '../components/shell/AppShell';
@@ -53,7 +54,7 @@ const SCOPED_STYLES = `
 `;
 
 export default function AppearanceSettingsPage() {
-  useRequireAuth();
+  const auth = useRequireAuth();
   const navigate = useNavigate();
 
   const sidebar = <DesktopSidebarConnected />;
@@ -63,8 +64,8 @@ export default function AppearanceSettingsPage() {
       <div className="tp-appearance-inner">
         <section className="tp-appearance-section">
           <div className="tp-appearance-section-label">深淺模式</div>
-          <h2>跟系統 / 強制淺 / 強制深</h2>
-          <p className="tp-appearance-helper">沒選的話走「自動」依系統喜好。</p>
+          <h2>選擇顯示外觀</h2>
+          <p className="tp-appearance-helper">「跟隨系統」隨裝置切換；「淺色」與「深色」固定使用所選外觀。立即套用，並儲存在這個瀏覽器。</p>
           <ThemeToggle testId="appearance-theme" />
         </section>
       </div>
@@ -74,7 +75,7 @@ export default function AppearanceSettingsPage() {
   return (
     <>
       <style>{SCOPED_STYLES}</style>
-      <AppShell sidebar={sidebar} main={main} bottomNav={<GlobalBottomNav authed={true} />} />
+      <AppShell sidebar={sidebar} main={<>{!auth.user && <AuthStatus auth={auth} />}{main}</>} bottomNav={<GlobalBottomNav authed={true} />} />
     </>
   );
 }

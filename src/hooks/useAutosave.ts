@@ -8,7 +8,7 @@
  *   - patch(updates) → merge into pendingPatch + 重置 debounce timer
  *   - flush() → 立即清 timer + 走 save flow（onBlur / form submit / unmount caller）
  *   - cancel() → 清 timer + 丟 pendingPatch（用於 cancel button 路徑）
- *   - save success → bump version + clear pendingPatch + 'saved' 2s → 'idle'
+ *   - save success → bump version; later edits remain queued; saved feedback only when drained
  *   - 409 STALE_ENTRY → onStale() refresh version + retry once with same patch
  *   - 其他 error → 'error' + 保留 patch 等 manual retry
  *   - offline (networkBus) → 'offline' + 保留 patch，online 重連時 flush 重送
@@ -25,7 +25,11 @@ import { ApiError } from '../lib/errors';
 
 export type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'offline';
 
+export type SaveResult = { status: 'saved' } | { status: 'error'; error: string } | { status: 'offline' } | { status: 'superseded' };
+
 export interface UseAutosaveOptions<T> {
+  /** Stable identity of the edited entity; changing it starts an isolated lifetime. */
+  entityKey?: string;
   /** 初始 entity version（OCC）。若 entity 沒 version 欄位 → omit；hook skip OCC。 */
   initialVersion?: number;
   /** Debounce ms。Default 800. */
@@ -51,215 +55,158 @@ export interface UseAutosaveReturn<T> {
   hasPending: boolean;
   /** Schedule debounced save with field updates. */
   patch: (updates: Partial<T>) => void;
-  /** Force immediate save — onBlur / form submit / unmount. */
-  flush: () => Promise<void>;
+  /** Drain accepted edits; report saved only after all batches succeed. */
+  flush: () => Promise<SaveResult>;
   /** Discard pending updates (clear timer + drop merged patch). */
   cancel: () => void;
   /** 手動 retry — 失敗後 user click「重試」 button。 */
-  retry: () => Promise<void>;
+  retry: () => Promise<SaveResult>;
 }
 
-export function useAutosave<T extends object>(
-  options: UseAutosaveOptions<T>,
-): UseAutosaveReturn<T> {
-  const { initialVersion, debounceMs = 800, save, onStale, savedDisplayMs = 2000 } = options;
+interface SaveScope<T> {
+  key: string | undefined;
+  version: number | undefined;
+  pending: Partial<T>;
+  flight: Promise<SaveResult> | null;
+  timer: ReturnType<typeof setTimeout> | null;
+  savedTimer: ReturnType<typeof setTimeout> | null;
+  active: boolean;
+  state: SaveState;
+  error: string | null;
+}
 
-  const [state, setState] = useState<SaveState>('idle');
-  const [error, setError] = useState<string | null>(null);
-  const [hasPending, setHasPending] = useState(false);
+function createScope<T>(key: string | undefined, version: number | undefined): SaveScope<T> {
+  return { key, version, pending: {}, flight: null, timer: null, savedTimer: null,
+    active: true, state: 'idle', error: null };
+}
 
-  // Stable refs to avoid stale closures in async / setTimeout
-  const pendingPatchRef = useRef<Partial<T>>({});
-  const versionRef = useRef<number | undefined>(initialVersion);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isOnlineRef = useRef(true);
-  const inFlightRef = useRef(false);
-  // 當前 in-flight save 的 promise（finally 內 resolve）。flush() 撞 in-flight 時 await 它，
-  // 讓 flush 成為真正 barrier — caller（如 EditEntryPage goBackFocused）await flush 後 PATCH
-  // 已 commit，返回時 days GET 才讀得到新值（v2.55.x 桌機備註 stale-on-return 決定性修復）。
-  const inFlightPromiseRef = useRef<Promise<void> | null>(null);
-  // 遞迴排程用：finally 內要 re-trigger performSave，但 performSave useCallback 定義時
-  // 自己尚未存在 → 透過 ref 取最新版（render body 同步更新）。
-  const performSaveRef = useRef<(() => Promise<void>) | null>(null);
-  // unmount 後不再排 reschedule timer（save 可能在 unmount 後才 resolve，其 finally
-  // 不該在已卸載的 hook 上排新 timer / 再 save，Codex #2）。
-  const isMountedRef = useRef(true);
+function clearTimer<T>(scope: SaveScope<T>, key: 'timer' | 'savedTimer') {
+  if (scope[key] !== null) clearTimeout(scope[key]);
+  scope[key] = null;
+}
 
-  const clearDebounceTimer = useCallback(() => {
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+export function useAutosave<T extends object>(options: UseAutosaveOptions<T>): UseAutosaveReturn<T> {
+  const { entityKey, initialVersion, debounceMs = 800, savedDisplayMs = 2000, save, onStale } = options;
+  // A scope owns its queue, batch, version and feedback. New entities never share them.
+  const [scope, setScope] = useState(() => createScope<T>(entityKey, initialVersion));
+  if (scope.key !== entityKey) setScope(createScope<T>(entityKey, initialVersion));
+  const [, render] = useState(0);
+  const online = useRef(true);
+  const publish = useCallback((state: SaveState, error: string | null = null) => {
+    if (!scope.active) return;
+    scope.state = state;
+    scope.error = error;
+    render(n => n + 1);
+  }, [scope]);
+
+  const performSave = useCallback((): Promise<SaveResult> => {
+    if (!scope.active) return Promise.resolve({ status: 'superseded' });
+    if (scope.flight) return scope.flight;
+    if (!Object.keys(scope.pending).length) return Promise.resolve({ status: 'saved' });
+    if (!online.current) {
+      publish('offline');
+      return Promise.resolve({ status: 'offline' });
     }
-  }, []);
-
-  const clearSavedTimer = useCallback(() => {
-    if (savedTimerRef.current !== null) {
-      clearTimeout(savedTimerRef.current);
-      savedTimerRef.current = null;
-    }
-  }, []);
-
-  /** Perform actual save (call save() + handle response + OCC retry). */
-  const performSave = useCallback(async (): Promise<void> => {
-    // Snapshot + clear pending — 若 save 期間 user 又 patch，下一輪會接著 save
-    const body = pendingPatchRef.current;
-    if (Object.keys(body).length === 0) return;
-    if (inFlightRef.current) return; // already saving
-    if (!isOnlineRef.current) {
-      setState('offline');
-      return;
-    }
-    pendingPatchRef.current = {};
-    inFlightRef.current = true;
-    let resolveInFlight!: () => void;
-    inFlightPromiseRef.current = new Promise<void>((r) => { resolveInFlight = r; });
-    setState('saving');
-    setError(null);
-    clearSavedTimer();
-
-    // reschedule（finally）只在 save 成功後觸發；error 路徑保留 pending 等 manual retry，
-    // 不可自動重排（否則失敗的 save 會無限重試）。
-    let saveSucceeded = false;
-    try {
-      const result = await save(body, versionRef.current);
-      const newVersion = typeof result.version === 'number' ? result.version : undefined;
-      if (newVersion !== undefined) versionRef.current = newVersion;
-      setHasPending(Object.keys(pendingPatchRef.current).length > 0);
-      saveSucceeded = true;
-      setState('saved');
-      savedTimerRef.current = setTimeout(() => {
-        setState((prev) => (prev === 'saved' ? 'idle' : prev));
-        savedTimerRef.current = null;
-      }, savedDisplayMs);
-    } catch (err) {
-      // 409 STALE_ENTRY — refresh version + retry once
-      if (err instanceof ApiError && err.code === 'STALE_ENTRY' && onStale) {
+    const batch = scope.pending;
+    scope.pending = {};
+    clearTimer(scope, 'savedTimer');
+    publish('saving');
+    // Defer execution until the shared promise has been installed, even for sync throws.
+    const task = Promise.resolve().then(async (): Promise<SaveResult> => {
+      try {
+        let result: Record<string, unknown>;
         try {
-          const freshVersion = await onStale();
-          versionRef.current = freshVersion;
-          // Re-merge dropped patch（user 編輯中 → 仍在 pendingPatchRef）+ original body
-          pendingPatchRef.current = { ...body, ...pendingPatchRef.current };
-          const retryResult = await save(pendingPatchRef.current, versionRef.current);
-          pendingPatchRef.current = {};
-          const retryVersion = typeof retryResult.version === 'number' ? retryResult.version : undefined;
-          if (retryVersion !== undefined) versionRef.current = retryVersion;
-          setHasPending(false);
-          saveSucceeded = true;
-          setState('saved');
-          savedTimerRef.current = setTimeout(() => {
-            setState((prev) => (prev === 'saved' ? 'idle' : prev));
-            savedTimerRef.current = null;
-          }, savedDisplayMs);
-          return;
-        } catch (retryErr) {
-          // Retry 失敗 → 把 body merge 回 pending，user 可手動 retry
-          pendingPatchRef.current = { ...body, ...pendingPatchRef.current };
-          setHasPending(true);
-          setState('error');
-          setError(retryErr instanceof Error ? retryErr.message : '儲存衝突，請重新整理');
-          return;
+          result = await save(batch, scope.version);
+        } catch (error) {
+          if (!scope.active) return { status: 'superseded' };
+          if (!(error instanceof ApiError) || error.code !== 'STALE_ENTRY' || !onStale) throw error;
+          const version = await onStale();
+          if (!scope.active) return { status: 'superseded' };
+          scope.version = version;
+          // The retry consumes only this batch, never edits accepted while it waits.
+          result = await save(batch, scope.version);
         }
+        if (!scope.active) return { status: 'superseded' };
+        if (typeof result.version === 'number') scope.version = result.version;
+        publish(Object.keys(scope.pending).length ? 'pending' : 'saved');
+        if (scope.state === 'saved') scope.savedTimer = setTimeout(() => {
+          scope.savedTimer = null;
+          if (scope.state === 'saved') publish('idle');
+        }, savedDisplayMs);
+        return { status: 'saved' };
+      } catch (error) {
+        if (!scope.active) return { status: 'superseded' };
+        scope.pending = { ...batch, ...scope.pending };
+        clearTimer(scope, 'timer');
+        const message = error instanceof Error ? error.message : '儲存失敗';
+        publish('error', message);
+        return { status: 'error', error: message };
+      } finally {
+        scope.flight = null;
       }
-      // 其他 error — 保留 patch 等 retry
-      pendingPatchRef.current = { ...body, ...pendingPatchRef.current };
-      setHasPending(true);
-      setState('error');
-      setError(err instanceof Error ? err.message : '儲存失敗');
-    } finally {
-      inFlightRef.current = false;
-      resolveInFlight();               // 解除 flush() 的 barrier await
-      inFlightPromiseRef.current = null;
-      // save 期間 user 又 patch（pending 非空）→ 排下一輪 save，達成 line 95 的「下一輪會
-      // 接著 save」設計意圖。原本 line 98 in-flight return 後沒 reschedule → 慢請求下 in-flight
-      // 期間的最後一次編輯 silently 遺失（Codex #4）。timerRef===null 才排（active timer = user
-      // 還在打字、由它接管，避免重複）。
-      if (
-        saveSucceeded &&
-        isMountedRef.current &&
-        Object.keys(pendingPatchRef.current).length > 0 &&
-        isOnlineRef.current &&
-        timerRef.current === null
-      ) {
-        timerRef.current = setTimeout(() => {
-          timerRef.current = null;
-          void performSaveRef.current?.();
-        }, debounceMs);
-      }
-    }
-  }, [save, onStale, savedDisplayMs, clearSavedTimer, debounceMs]);
-  performSaveRef.current = performSave;
+    });
+    scope.flight = task;
+    return task;
+  }, [scope, publish, save, onStale, savedDisplayMs]);
 
-  /** Schedule debounced save. */
-  const patch = useCallback(
-    (updates: Partial<T>): void => {
-      pendingPatchRef.current = { ...pendingPatchRef.current, ...updates };
-      setHasPending(true);
-      setState((prev) => (prev === 'saving' || prev === 'offline' ? prev : 'pending'));
-      clearDebounceTimer();
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null;
-        void performSave();
-      }, debounceMs);
+  const saveLatest = useRef(performSave);
+  saveLatest.current = performSave;
+  const schedule = useCallback(() => {
+    clearTimer(scope, 'timer');
+    scope.timer = setTimeout(async () => {
+      scope.timer = null;
+      if (!scope.active) return;
+      const outcome = await saveLatest.current();
+      if (scope.active && outcome.status === 'saved' && Object.keys(scope.pending).length && scope.timer === null) schedule();
+    }, debounceMs);
+  }, [scope, debounceMs]);
+
+  const patch = useCallback((updates: Partial<T>) => {
+    if (!scope.active || !Object.keys(updates).length) return;
+    scope.pending = { ...scope.pending, ...updates };
+    clearTimer(scope, 'savedTimer');
+    publish(scope.flight ? 'saving' : online.current ? 'pending' : 'offline');
+    schedule();
+  }, [scope, publish, schedule]);
+
+  const flush = useCallback(async (): Promise<SaveResult> => {
+    do {
+      if (!scope.active) return { status: 'superseded' };
+      clearTimer(scope, 'timer');
+      const outcome = await performSave();
+      if (outcome.status !== 'saved') return outcome;
+    } while (scope.flight || Object.keys(scope.pending).length);
+    clearTimer(scope, 'timer');
+    return { status: 'saved' };
+  }, [scope, performSave]);
+
+  const cancel = useCallback(() => {
+    if (!scope.active) return;
+    clearTimer(scope, 'timer');
+    clearTimer(scope, 'savedTimer');
+    scope.pending = {};
+    publish(scope.flight ? 'saving' : 'idle');
+  }, [scope, publish]);
+
+  useEffect(() => registerNetworkCallbacks(
+    () => { online.current = false; if (!scope.flight) publish('offline'); },
+    () => {
+      online.current = true;
+      if (Object.keys(scope.pending).length) void flush();
+      else if (scope.state === 'offline') publish('idle');
     },
-    [debounceMs, performSave, clearDebounceTimer],
-  );
+  ), [scope, publish, flush]);
 
-  /** Force immediate save — cancel debounce, fire now. */
-  const flush = useCallback(async (): Promise<void> => {
-    clearDebounceTimer();
-    await performSave();
-    // performSave 撞 in-flight（onBlur 已先觸發 save）會即刻 return；補 await 那個 in-flight
-    // save，讓 flush 成為真正 barrier（見 inFlightPromiseRef 註解）。
-    if (inFlightPromiseRef.current) await inFlightPromiseRef.current;
-  }, [clearDebounceTimer, performSave]);
-
-  /** Discard pending updates. */
-  const cancel = useCallback((): void => {
-    clearDebounceTimer();
-    pendingPatchRef.current = {};
-    setHasPending(false);
-    setState('idle');
-    setError(null);
-  }, [clearDebounceTimer]);
-
-  /** Manual retry after error. */
-  const retry = useCallback(async (): Promise<void> => {
-    setError(null);
-    await performSave();
-  }, [performSave]);
-
-  // Wire networkBus — online → flush, offline → state='offline'
   useEffect(() => {
-    const unsub = registerNetworkCallbacks(
-      // onOffline
-      () => {
-        isOnlineRef.current = false;
-        // Don't override 'saving' or 'saved' transient states
-        setState((prev) => (prev === 'pending' || prev === 'error' || prev === 'idle' ? 'offline' : prev));
-      },
-      // onOnline
-      () => {
-        isOnlineRef.current = true;
-        // 自動 flush 重送
-        if (Object.keys(pendingPatchRef.current).length > 0) {
-          void performSave();
-        } else {
-          setState((prev) => (prev === 'offline' ? 'idle' : prev));
-        }
-      },
-    );
-    return unsub;
-  }, [performSave]);
-
-  // Cleanup timers on unmount
-  useEffect(() => {
+    scope.active = true; // React StrictMode repeats setup after cleanup.
     return () => {
-      isMountedRef.current = false; // 阻止 in-flight save 的 finally 在卸載後排新 reschedule timer
-      clearDebounceTimer();
-      clearSavedTimer();
+      scope.active = false;
+      clearTimer(scope, 'timer');
+      clearTimer(scope, 'savedTimer');
     };
-  }, [clearDebounceTimer, clearSavedTimer]);
+  }, [scope]);
 
-  return { state, error, hasPending, patch, flush, cancel, retry };
+  return { state: scope.state, error: scope.error,
+    hasPending: !!scope.flight || Object.keys(scope.pending).length > 0,
+    patch, flush, cancel, retry: flush };
 }

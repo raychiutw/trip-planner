@@ -29,13 +29,13 @@
  *   - 取消走 useNavigateBack(routes.trips()) explicit URL，建立後 navigate(`/trips?selected=:id`)
  *   - 「建立」 primary action 在 TitleBar (responsive icon+文字 / icon-only)
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetchRaw } from '../lib/apiClient';
@@ -422,15 +422,14 @@ type DateMode = 'select' | 'flexible';
 
 export default function NewTripPage() {
   const auth = useRequireAuth();
-  const { user } = useCurrentUser();
+  const { user } = auth;
   const navigate = useNavigate();
   const handleBack = useNavigateBack(routes.trips());
 
   // Destination uses POI autocomplete. User can select multiple POIs.
   const [destQuery, setDestQuery] = useState('');
   const [selectedPois, setSelectedPois] = useState<PoiSearchResult[]>([]);
-  const [poiSearchError, setPoiSearchError] = useState<string | null>(null);
-  const { results: poiResults, searching: poiSearching } = usePoiSearch({
+  const { results: poiResults, searching: poiSearching, status: poiStatus, error: poiSearchError, retry: retryPoiSearch } = usePoiSearch({
     query: destQuery,
     limit: 10,
     normalise: (raw) => {
@@ -438,7 +437,6 @@ export default function NewTripPage() {
       const arr = Array.isArray(raw) ? raw : (raw as { results?: PoiSearchResult[] })?.results ?? [];
       return arr as PoiSearchResult[];
     },
-    onError: (kind) => setPoiSearchError(kind === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'),
   });
 
   const [dateMode, setDateMode] = useState<DateMode>('select');
@@ -500,17 +498,12 @@ export default function NewTripPage() {
     });
   }
 
-  // Clear error when query empties
-  useEffect(() => {
-    if (destQuery.trim().length < 2) setPoiSearchError(null);
-  }, [destQuery]);
 
   function selectPoi(poi: PoiSearchResult) {
     setSelectedPois((prev) => (
       prev.some((p) => p.place_id === poi.place_id) ? prev : [...prev, poi]
     ));
     setDestQuery(''); // Clearing query auto-clears poiResults via hook
-    setPoiSearchError(null);
     pushRecentDest(poi.name);
     setRecentDests(loadRecentDests());
   }
@@ -615,7 +608,7 @@ export default function NewTripPage() {
     }
   }
 
-  if (!auth.user) return null;
+  if (!auth.user) return <AuthStatus auth={auth} />;
 
   const destShown = selectedPois.map((poi) => poi.name).join('、');
   const summaryText = dateMode === 'flexible'
@@ -716,11 +709,11 @@ export default function NewTripPage() {
                     autoComplete="off"
                     data-testid="new-trip-destination-input"
                   />
-                  {(poiSearching || poiResults.length > 0 || poiSearchError) && destQuery.trim().length >= 2 && (
-                    <div className="tp-new-dest-dropdown" role="listbox" data-testid="new-trip-dest-dropdown">
+                  {poiStatus !== 'idle' && (
+                    <div className="tp-new-dest-dropdown" role={poiStatus === 'success' && poiResults.length > 0 ? 'listbox' : undefined} aria-label="目的地搜尋結果" data-testid="new-trip-dest-dropdown">
                       {poiSearching && <div className="tp-new-dest-status">搜尋中⋯</div>}
-                      {!poiSearching && poiSearchError && <div className="tp-new-dest-status">{poiSearchError}</div>}
-                      {!poiSearching && !poiSearchError && poiResults && poiResults.length === 0 && (
+                      {!poiSearching && poiSearchError && <div className="tp-new-dest-status" role="alert">{poiSearchError} <button type="button" onClick={retryPoiSearch}>重試搜尋</button></div>}
+                      {poiStatus === 'success' && poiResults.length === 0 && (
                         <div className="tp-new-dest-status">沒找到結果，試試別的關鍵字</div>
                       )}
                       {!poiSearching && poiResults && poiResults.length > 0 && poiResults.map((p) => (

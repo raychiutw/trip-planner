@@ -66,7 +66,8 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.resto
 function show(sheet = false) { return render(<MemoryRouter initialEntries={['/chat?sheet=chat']}><ActiveTripProvider>
   {sheet ? <TripSheet tripId="t1" allPins={[]} pinsByDay={new Map()} /> : <ChatPage />}
 </ActiveTripProvider></MemoryRouter>); }
-async function send(text: string) {
+async function send(text: string, whileDisabled = false) {
+  if (!whileDisabled && (screen.getByTestId('chat-input') as HTMLTextAreaElement).disabled) await waitFor(() => expect(screen.getByTestId('chat-input')).not.toBeDisabled());
   await act(async () => {
     fireEvent.change(screen.getByTestId('chat-input'), { target: { value: text } });
     fireEvent.click(screen.getByTestId('chat-send'));
@@ -131,7 +132,7 @@ describe('conversation lifecycle through the real chat', () => {
     await send('只送出一次');
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(screen.getByTestId('chat-input')).toBeDisabled();
-    await send('不應送出第二筆');
+    await send('不應送出第二筆', true);
     expect(posts).toHaveLength(1);
     await act(async () => { posted.resolve(); });
     expect(screen.getAllByTestId('chat-stop-waiting')).toHaveLength(1);

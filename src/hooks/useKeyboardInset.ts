@@ -27,7 +27,9 @@ export function useKeyboardInset(): void {
     const update = () => {
       // window.innerHeight = layout viewport 高；vv.height + vv.offsetTop = 可視底緣。
       // 差值 = 底部被鍵盤（或其他 UA chrome）佔掉的高度。
-      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // Pinch zoom also shrinks visualViewport; it must not hide navigation or
+      // invent keyboard padding while the user is magnifying the page.
+      const inset = vv.scale > 1 ? 0 : Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       root.style.setProperty('--kb-inset', `${Math.round(inset)}px`);
       if (inset > KB_OPEN_THRESHOLD_PX) root.setAttribute('data-kb-open', '1');
       else root.removeAttribute('data-kb-open');

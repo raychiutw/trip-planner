@@ -72,6 +72,7 @@ describe('GET /api/poi-favorites — §7.1 V2 user / anonymous', () => {
   it('V2 user 200 + 自己的 favorites + usages 陣列', async () => {
     const userId = await seedUser(db, 'v2-get-list@test.com');
     const poiX = await seedPoi(db, { name: 'GET POI X' });
+    await db.prepare('UPDATE pois SET place_id = ? WHERE id = ?').bind('canonical-get-X', poiX).run();
     await db
       .prepare("INSERT INTO poi_favorites (user_id, poi_id, favorited_at, note) VALUES (?, ?, '2026-04-25 10:00:00', ?)")
       .bind(userId, poiX, 'fav note')
@@ -84,10 +85,11 @@ describe('GET /api/poi-favorites — §7.1 V2 user / anonymous', () => {
     });
     const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
-    const data = await resp.json() as Array<{ poiId: number; poiName: string; usages: unknown[] }>;
+    const data = await resp.json() as Array<{ poiId: number; poiName: string; poiPlaceId: string; usages: unknown[] }>;
     expect(data).toHaveLength(1);
     expect(data[0]!.poiId).toBe(poiX);
     expect(data[0]!.poiName).toBe('GET POI X');
+    expect(data[0]!.poiPlaceId).toBe('canonical-get-X');
     expect(Array.isArray(data[0]!.usages)).toBe(true);
   });
 

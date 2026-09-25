@@ -84,7 +84,7 @@ describe('EntryActionPage — move/copy 車程重算 scope', () => {
     fireEvent.click(screen.getByTestId('entry-action-confirm'));
 
     await waitFor(() => expect(recomputeMock).toHaveBeenCalledTimes(1));
-    expect(recomputeMock).toHaveBeenCalledWith('t1', 2);
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 2, { afterWrite: true, isCurrent: expect.any(Function) });
   });
 
   it('move 跨日 → 恰 2 次 recompute（target=2 + source=1）', async () => {
@@ -94,8 +94,8 @@ describe('EntryActionPage — move/copy 車程重算 scope', () => {
     fireEvent.click(screen.getByTestId('entry-action-confirm'));
 
     await waitFor(() => expect(recomputeMock).toHaveBeenCalledTimes(2));
-    expect(recomputeMock).toHaveBeenNthCalledWith(1, 't1', 2);
-    expect(recomputeMock).toHaveBeenNthCalledWith(2, 't1', 1);
+    expect(recomputeMock).toHaveBeenNthCalledWith(1, 't1', 2, { afterWrite: true, isCurrent: expect.any(Function) });
+    expect(recomputeMock).toHaveBeenNthCalledWith(2, 't1', 1, { afterWrite: true, isCurrent: expect.any(Function) });
   });
 });
 

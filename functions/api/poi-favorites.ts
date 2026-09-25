@@ -57,7 +57,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     `SELECT pf.id, pf.user_id, pf.poi_id, pf.favorited_at, pf.note,
             p.name AS poi_name, p.address AS poi_address,
             p.lat AS poi_lat, p.lng AS poi_lng, p.type AS poi_type,
-            p.rating AS poi_rating,
+            p.rating AS poi_rating, p.place_id AS poi_place_id,
             COALESCE(
               (SELECT json_group_array(json_object(
                   'tripId', usage.trip_id,

@@ -235,6 +235,8 @@ export async function replaceDayEntries(db: D1Database, spec: {
 }
 
 export interface CreateEntriesBatchOptions {
+  /** 新行程由整趟建立 module 持有補償；其他 callers 沿用 intake 自行清理。 */
+  failureCleanup?: 'caller';
   /** 給了就每筆 entry 一列 audit_log（rollback 讀它）。匯入／clone 用 trip 級 diff 即可。 */
   audit?: { tripId: string; changedBy: string; requestId?: number | null; diff?: Record<string, unknown> };
   /** 每拿到一個 entry 就回呼（匯入／clone 逐步累積 createdEntryIds 供 rollback；複製拿完整 row 回應）。 */
@@ -278,6 +280,10 @@ export async function createEntriesBatch(
   try {
     await runChunked(db, tail);
   } catch (err) {
+    if (opts.failureCleanup === 'caller') {
+      // 保留既有 HTTP detail，同時把必要寫入的原始故障交給整趟補償記錄。
+      throw Object.assign(new AppError('SYS_DB_ERROR', 'entry 建立失敗，請稍後重試'), { cause: err });
+    }
     console.error('[entry intake] batch entry_pois failed, compensating delete', { count: entryIds.length, err });
     const ph = entryIds.map(() => '?').join(',');
     await db.prepare(`DELETE FROM trip_entries WHERE id IN (${ph})`).bind(...entryIds).run();

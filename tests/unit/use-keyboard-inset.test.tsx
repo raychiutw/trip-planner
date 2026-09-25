@@ -77,6 +77,18 @@ describe('useKeyboardInset', () => {
     expect(kbInset()).toBe('');
   });
 
+  it('pinch zoom is not a soft keyboard and does not reserve keyboard space', () => {
+    setInnerHeight(800);
+    const vv = Object.assign(mockVV(200), { scale: 4 });
+    setVV(vv);
+    render(<Harness />);
+    expect(kbInset()).toBe('0px');
+    expect(kbOpen()).toBeNull();
+    vv.scale = 1; vv.height = 500; vv._emit('resize');
+    expect(kbInset()).toBe('300px');
+    expect(kbOpen()).toBe('1');
+  });
+
   it('無 visualViewport（桌機舊瀏覽器）→ no-op 不崩', () => {
     setVV(undefined);
     expect(() => render(<Harness />)).not.toThrow();
@@ -132,9 +144,7 @@ describe('wiring source-lock', () => {
     expect(chatSrc).not.toMatch(/useKeyboardInset\(\)/);
   });
 
-  it('composer 仍用全站 --kb-inset 上移（不受移到 app root 影響）', () => {
-    expect(chatSrc).toMatch(/translateY\(calc\(-1 \* var\(--kb-inset/);
-  });
+  // Actual composer/message viewport geometry is covered by chat-input-recovery.spec.js.
 
   it('#1140 item 10：data-kb-open 時 root tab 滑出畫面', () => {
     expect(appShellSrc).toMatch(/:root\[data-kb-open="1"\]\s*\.app-shell-bottom-nav\s*\{[\s\S]{0,120}transform:\s*translate\(-50%,/);

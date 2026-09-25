@@ -1,25 +1,9 @@
-/**
- * DeveloperAppsPage — V2-P4 OAuth client_app management for developers
- *
- * Route: /developer/apps
- * Backend: PR #291 GET/POST /api/dev/apps
- *
- * Flow:
- *   1. List user's client_apps
- *   2. 「建立新應用」→ form modal (app_name, redirect_uris, client_type, scopes)
- *   3. Submit → POST /api/dev/apps → 切換成 secret reveal modal
- *      - 顯示 client_id (永久) + client_secret (一次性，必須立即複製)
- *      - 確認複製 → 重新 fetch 列表 + 關閉 modal
- *
- * 安全 UX：
- *   - client_secret 只 reveal 一次，明確警示
- *   - 預設 client_type='public'（PKCE 強制，不需 secret）
- *   - redirect_uris textarea: HTTPS-only validation 由後端做
- */
-import { useEffect, useState } from 'react';
+/** Developer-owned OAuth registry. Creation and one-time secret reveal live on the new-app page. */
+import AuthStatus from '../components/shared/AuthStatus';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
+import { ApiError } from '../lib/errors';
 import { apiFetch } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
 import { parseUtcDate } from '../lib/parseUtcDate';
@@ -46,12 +30,13 @@ const SCOPED_STYLES = `
 }
 .tp-list-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px; padding: 14px 20px;
   border-bottom: 1px solid var(--color-border);
   font-size: var(--font-size-subheadline);
 }
+.tp-list-row > div { min-width: 0; overflow-wrap: anywhere; }
 .tp-list-row:last-child { border-bottom: none; }
 .tp-list-header {
   background: var(--color-secondary);
@@ -129,45 +114,77 @@ function statusPill(status: string): { className: string; label: string } {
 }
 
 export default function DeveloperAppsPage() {
-  useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
-  const { user } = useCurrentUser();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const navigate = useNavigate();
   const [apps, setApps] = useState<ClientApp[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<'denied' | 'failed' | null>(null);
+  const readRequest = useRef<AbortController | null>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
 
-  async function loadApps() {
-    setError(null);
+  const loadApps = useCallback(async () => {
+    const retryFocused = document.activeElement === retryRef.current;
+    readRequest.current?.abort();
+    const request = new AbortController();
+    readRequest.current = request;
+    setLoading(true);
     try {
-      const json = await apiFetch<{ apps: ClientApp[] }>('/dev/apps');
+      const json = await apiFetch<{ apps: ClientApp[] }>('/dev/apps', { signal: request.signal });
+      if (request.signal.aborted) return;
+      if (!Array.isArray(json?.apps)) throw new Error('invalid registry');
+      const ids = new Set<string>();
+      for (const app of json.apps) {
+        if (!app || typeof app.client_id !== 'string' || !app.client_id || ids.has(app.client_id) ||
+            typeof app.app_name !== 'string' || typeof app.status !== 'string' || typeof app.created_at !== 'string' ||
+            !Array.isArray(app.redirect_uris) || app.redirect_uris.some(uri => typeof uri !== 'string')) {
+          throw new Error('invalid application metadata');
+        }
+        ids.add(app.client_id);
+      }
+      if (retryFocused && (document.activeElement === retryRef.current || document.activeElement === document.body)) {
+        contentRef.current?.focus();
+      }
       setApps(json.apps);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? '無法載入應用列表，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
+      if (request.signal.aborted) return;
+      if (err instanceof ApiError && (err.status === 403 || err.status === 401)) {
+        setApps(null);
+        setError('denied');
+      } else setError('failed');
+    } finally {
+      if (!request.signal.aborted) setLoading(false);
     }
-  }
-
-  useEffect(() => { void loadApps(); }, []);
-
-  // tp-developer-app-created event 觸發 refetch。曾經做過 in-place append 優化
-  // (PR #452) 但有 race：listener 跟 initial fetch 順序不定 + DeveloperAppNew
-  // 假造 created_at/updated_at 跟 server 真值不一致。改 always refetch，犧牲
-  // 一次 GET 換正確性。
-  useEffect(() => {
-    function handleAppCreated() { void loadApps(); }
-    window.addEventListener(EVENT.developerAppCreated, handleAppCreated);
-    return () => window.removeEventListener(EVENT.developerAppCreated, handleAppCreated);
   }, []);
+
+  useEffect(() => {
+    setApps(null);
+    setError(null);
+    setLoading(true);
+    if (!user?.id) return;
+    void loadApps();
+    // Always read the server registry after creation; never fabricate a row.
+    const refresh = () => { void loadApps(); };
+    window.addEventListener(EVENT.developerAppCreated, refresh);
+    return () => {
+      readRequest.current?.abort();
+      window.removeEventListener(EVENT.developerAppCreated, refresh);
+    };
+  }, [user?.id, loadApps]);
 
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
-      main={<>
+      main={!user ? <AuthStatus auth={auth} /> : <>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-dev-shell" data-testid="developer-apps-page">
       <TitleBar
         title="應用"
         back={() => navigate('/account')}
-        actions={
+        actions={user && error !== 'denied' &&
           <button
             type="button"
             className="tp-titlebar-action"
@@ -184,17 +201,20 @@ export default function DeveloperAppsPage() {
           </button>
         }
       />
-      <div className="tp-dev-inner">
+      <div className="tp-dev-inner" ref={contentRef} tabIndex={-1} aria-label="開發者應用清單">
         <p className="tp-page-eyebrow">開發者後台</p>
         <p className="tp-page-meta">管理你的 OAuth client。每個應用程式對應一組 client_id。</p>
 
-        {error && <ErrorBanner message={error} testId="dev-apps-error" />}
+        {error && <>
+          <ErrorBanner message={error === 'denied' ? '目前沒有權限查看開發者應用。' : '無法載入應用列表，請重試。'} testId="dev-apps-error" />
+          <button ref={retryRef} type="button" className="tp-btn tp-btn-secondary" disabled={loading} onClick={() => void loadApps()}>重試載入應用</button>
+        </>}
 
-        {apps === null && !error && (
+        {loading && apps === null && !error && (
           <div className="tp-loading" data-testid="dev-apps-loading">載入中…</div>
         )}
 
-        {apps !== null && apps.length === 0 && (
+        {!loading && !error && apps !== null && apps.length === 0 && (
           <div className="tp-empty" data-testid="dev-apps-empty">
             <h3>尚未建立任何應用</h3>
             <p>建立第一個 OAuth client 來接入「Sign in with Tripline」。</p>
@@ -223,9 +243,10 @@ export default function DeveloperAppsPage() {
                   <div>
                     <div className="tp-app-name">{app.app_name}</div>
                     <div className="tp-app-cid">{app.client_id}</div>
+                    {app.redirect_uris.map((uri, index) => <div className="tp-app-cid" key={index}>回呼 URI：{uri}</div>)}
                   </div>
                   <div><span className={pill.className}>{pill.label}</span></div>
-                  <div>{parseUtcDate(app.created_at)?.toLocaleDateString('zh-TW') ?? app.created_at}</div>
+                  <div>{parseUtcDate(app.created_at)?.toLocaleDateString('zh-TW') ?? '時間不明'}</div>
                   <div></div>
                 </div>
               );

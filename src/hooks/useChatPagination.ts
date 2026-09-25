@@ -76,7 +76,11 @@ interface PageResponse<TRow extends PaginatedRow> {
 function parseRequestPage<TRow extends PaginatedRow>(
   res: PageResponse<TRow> | null | undefined,
 ): { rows: TRow[]; oldest: { createdAt: string; id: number } | null; hasMore: boolean } {
-  const rows = (Array.isArray(res?.items) ? res.items : []).slice().reverse();
+  if (!res || !Array.isArray(res.items) || typeof res.hasMore !== 'boolean'
+    || res.items.some(row => !row || !Number.isSafeInteger(row.id) || row.id <= 0)) {
+    throw new Error('Invalid conversation history');
+  }
+  const rows = res.items.slice().reverse();
   const oldestRow = rows[0];
   const oldest =
     oldestRow && oldestRow.createdAt && typeof oldestRow.id === 'number'

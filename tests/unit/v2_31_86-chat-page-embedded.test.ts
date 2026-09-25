@@ -20,17 +20,11 @@ describe('v2.31.86 #4: ChatPage embedded + lockTripId props', () => {
     expect(chatSrc).toMatch(/export default function ChatPage\(\{\s*embedded\s*=\s*false,\s*lockTripId\s*\}:\s*ChatPageProps\s*=\s*\{\}\)/);
   });
 
-  it('ChatPage 內 useEffect lock activeTripId 到 lockTripId', () => {
-    expect(chatSrc).toMatch(/useEffect\(\(\) => \{\s*if \(lockTripId && lockTripId !== activeTripId\) \{\s*setActiveTripId\(lockTripId\);/);
-  });
-
   it('ChatPage TitleBar 被 conditional render（embedded mode skip）', () => {
     expect(chatSrc).toMatch(/\{!embedded && <TitleBar/);
   });
 
-  it('ChatPage embedded mode return main 不 wrap AppShell', () => {
-    expect(chatSrc).toMatch(/if \(embedded\) return main;/);
-  });
+  // Embedded content and absence of nested shell run in chat-active-trip-selection.test.tsx.
 
   it('TripSheet chat tab embed ChatPage with embedded + lockTripId', () => {
     expect(sheetSrc).toMatch(/import\('\.\.\/\.\.\/pages\/ChatPage'\)/);

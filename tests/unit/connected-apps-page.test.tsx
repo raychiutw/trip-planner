@@ -47,7 +47,7 @@ function routedFetch(opts: { apps?: unknown[]; authorized?: boolean } = {}) {
       return Promise.resolve(new Response(JSON.stringify({ authorized: opts.authorized ?? false }), { status: 200 }));
     }
     if (init?.method === 'DELETE') {
-      return Promise.resolve(new Response(JSON.stringify({ ok: true, revoked_client_id: 'x' }), { status: 200 }));
+      return Promise.resolve(new Response(JSON.stringify({ ok: true, revoked_client_id: decodeURIComponent(u.split('/').at(-1)!) }), { status: 200 }));
     }
     return Promise.resolve(new Response(JSON.stringify({ apps: opts.apps ?? [] }), { status: 200 }));
   });
@@ -92,8 +92,8 @@ describe('ConnectedAppsPage', () => {
     await waitFor(() => expect(screen.queryByTestId('connected-apps-row-tp_abc')).toBeTruthy());
     expect(screen.getByText('Trip Buddy')).toBeTruthy();
     expect(screen.getByText('MapMate')).toBeTruthy();
-    expect(screen.getAllByText('openid').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('trips.read')).toBeTruthy();
+    expect(screen.getAllByText(/^openid/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/^trips.read/)).toBeTruthy();
   });
 
   it('Revoke button → opens confirm modal (二次確認)', async () => {

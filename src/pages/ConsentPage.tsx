@@ -14,7 +14,8 @@
  * Deny  → POST /api/oauth/consent { decision: 'deny', ... }
  *   → server validates redirect_uri ∈ client_apps.redirect_uris + 302 with error=access_denied
  */
-import { useEffect, useState } from 'react';
+import { SCOPE_DESCRIPTIONS } from '../lib/oauthScopes';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 
@@ -93,15 +94,6 @@ const SCOPED_STYLES = `
 }
 `;
 
-const SCOPE_DESCRIPTIONS: Record<string, string> = {
-  openid: '識別您的身分（唯一 ID）',
-  profile: '基本個人資料（名稱、頭像）',
-  email: '您的電子郵件地址',
-  offline_access: '即使您離線也可存取（refresh token）',
-  'trips:read': '讀取您的行程資料',
-  'trips:write': '建立 / 修改您的行程',
-};
-
 // v2.33.46 round 7a security audit: scope allowlist — 未知 scope (`scope=admin`
 // 等) 仍 render 給 user click Allow 培養忽略警告的行為。allowlist 外 scope
 // 顯紅色「未知範圍」 chip 並不附說明。
@@ -130,6 +122,11 @@ interface ClientAppInfo {
 
 export default function ConsentPage() {
   const [searchParams] = useSearchParams();
+  return <ConsentRequest key={searchParams.toString()} />;
+}
+
+function ConsentRequest() {
+  const [searchParams] = useSearchParams();
   const clientId = searchParams.get('client_id') ?? '';
   const scope = searchParams.get('scope') ?? '';
   const redirectUri = searchParams.get('redirect_uri') ?? '';
@@ -137,14 +134,32 @@ export default function ConsentPage() {
   const responseType = searchParams.get('response_type') ?? 'code';
   const codeChallenge = searchParams.get('code_challenge') ?? '';
   const codeChallengeMethod = searchParams.get('code_challenge_method') ?? '';
-  const requestedScopes = scope.split(/\s+/).filter(Boolean);
+  const requestedScopes = [...new Set(scope.split(/\s+/).filter(Boolean))];
+  const inFlight = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  useEffect(() => {
+    const restore = (event: PageTransitionEvent) => {
+      if (event.persisted) { inFlight.current = false; setSubmitting(false); }
+    };
+    window.addEventListener('pageshow', restore);
+    return () => window.removeEventListener('pageshow', restore);
+  }, []);
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    if (inFlight.current) { event.preventDefault(); return; }
+    inFlight.current = true;
+    setSubmitting(true);
+  }
 
   const [clientInfo, setClientInfo] = useState<ClientAppInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryable, setRetryable] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     // deps 若 invalid→valid 轉換，清掉上一輪 latch 的 error（否則 `if (error) return` 卡住）。
     setError(null);
+    setClientInfo(null);
+    setRetryable(false);
     if (!clientId) {
       // v2.31.58 zh-TW fix：原本英文「Missing client_id」 — user 看不懂、不一致。
       setError('授權連結缺少必要參數 client_id，請從應用商家提供的連結重新進入。');
@@ -152,34 +167,33 @@ export default function ConsentPage() {
     }
     // v2.33.46 round 7a: client-side redirect_uri sanity check (defense in
     // depth — backend 仍是 source of truth)。
-    if (redirectUri && !isPlausibleRedirectUri(redirectUri)) {
+    if (!isPlausibleRedirectUri(redirectUri)) {
       setError('授權連結的 redirect_uri 不合法（必須 https:// 或 http://）。請聯繫應用程式提供者。');
       return;
     }
-    // 未驗證保底：backend 查不到 / 非 active client（404）時顯此警告，避免把 URL ?client_id=
-    // 原文當可信 app_name 顯——attacker 可構 `?client_id=Tripline%20官方登入` 騙 user click
-    // Allow（v2.33.46 audit）。
-    const unverified: ClientAppInfo = {
-      app_name: `未知應用程式 (client_id=${clientId})`,
-      app_description: '此應用程式的詳細資訊尚未經過 Tripline 驗證。',
-      app_logo_url: null,
-      homepage_url: null,
-    };
-    // Phase 2：從 /api/oauth/client-info 取已註冊 active client 的公開品牌（app_name/logo/…）。
-    // 非 2xx（未知/停用 client）→ 保留 unverified 保底顯示。
     let cancelled = false;
-    fetch(`/api/oauth/client-info?client_id=${encodeURIComponent(clientId)}`)
-      .then((res) => (res.ok ? (res.json() as Promise<ClientAppInfo>) : null))
-      .then((info) => {
-        if (!cancelled) setClientInfo(info ?? unverified);
-      })
-      .catch(() => {
-        if (!cancelled) setClientInfo(unverified);
-      });
+    void (async () => {
+      try {
+        const res = await fetch(`/api/oauth/client-info?client_id=${encodeURIComponent(clientId)}`);
+        if (res.status === 404) {
+          if (!cancelled) setError(`未知應用程式 (client_id=${clientId})，應用可能不存在或已停用。請從應用程式重新開始授權。`);
+          return;
+        }
+        if (!res.ok) throw new Error('client-info unavailable');
+        const info = await res.json() as ClientAppInfo;
+        if (!info || typeof info.app_name !== 'string' || !info.app_name.trim()) throw new Error('invalid client-info');
+        if (!cancelled) setClientInfo(info);
+      } catch {
+        if (!cancelled) {
+          setError('暫時無法載入應用程式資訊，請重試。');
+          setRetryable(true);
+        }
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [clientId, redirectUri]);
+  }, [clientId, redirectUri, attempt]);
 
   if (error) {
     return (
@@ -187,6 +201,7 @@ export default function ConsentPage() {
         <style>{SCOPED_STYLES}</style>
         <div className="tp-consent-card">
           <ErrorBanner message={error} testId="consent-error" />
+          {retryable && <button type="button" className="tp-consent-btn" onClick={() => setAttempt((value) => value + 1)}>重試</button>}
         </div>
       </main>
     );
@@ -196,7 +211,7 @@ export default function ConsentPage() {
     return (
       <main className="tp-consent-shell" data-testid="consent-page">
         <style>{SCOPED_STYLES}</style>
-        <div className="tp-consent-card">載入中…</div>
+        <div className="tp-consent-card" role="status">載入中…</div>
       </main>
     );
   }
@@ -214,7 +229,7 @@ export default function ConsentPage() {
           </h1>
         </div>
 
-        <div className="tp-consent-scopes" data-testid="consent-scopes">
+        <div className="tp-consent-scopes" role="list" aria-label="請求權限" data-testid="consent-scopes">
           {requestedScopes.length === 0 ? (
             <div>無 scope 請求</div>
           ) : (
@@ -225,7 +240,8 @@ export default function ConsentPage() {
               const known = KNOWN_SCOPES.has(s);
               return (
                 <div
-                  key={s}
+                  key={sRaw}
+                  role="listitem"
                   className={`tp-consent-scope-row${known ? '' : ' unknown'}`}
                   data-testid={`consent-scope-${s}`}
                   data-unknown={known ? undefined : 'true'}
@@ -248,7 +264,7 @@ export default function ConsentPage() {
         </div>
 
         <div className="tp-consent-actions">
-          <form method="POST" action="/api/oauth/consent" style={{ flex: 1 }}>
+          <form method="POST" onSubmit={submit} aria-busy={submitting} action="/api/oauth/consent" style={{ flex: 1 }}>
             <input type="hidden" name="decision" value="deny" />
             <input type="hidden" name="client_id" value={clientId} />
             <input type="hidden" name="redirect_uri" value={redirectUri} />
@@ -259,6 +275,7 @@ export default function ConsentPage() {
             {codeChallengeMethod && <input type="hidden" name="code_challenge_method" value={codeChallengeMethod} />}
             <button
               type="submit"
+              disabled={submitting}
               className="tp-consent-btn tp-consent-btn-deny"
               data-testid="consent-deny"
               style={{ width: '100%' }}
@@ -266,7 +283,7 @@ export default function ConsentPage() {
               拒絕
             </button>
           </form>
-          <form method="POST" action="/api/oauth/consent" style={{ flex: 1 }}>
+          <form method="POST" onSubmit={submit} aria-busy={submitting} action="/api/oauth/consent" style={{ flex: 1 }}>
             <input type="hidden" name="decision" value="allow" />
             <input type="hidden" name="client_id" value={clientId} />
             <input type="hidden" name="redirect_uri" value={redirectUri} />
@@ -277,6 +294,7 @@ export default function ConsentPage() {
             {codeChallengeMethod && <input type="hidden" name="code_challenge_method" value={codeChallengeMethod} />}
             <button
               type="submit"
+              disabled={submitting}
               className="tp-consent-btn tp-consent-btn-allow"
               data-testid="consent-allow"
               style={{ width: '100%' }}

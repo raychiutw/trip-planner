@@ -52,6 +52,7 @@ const SCOPED_STYLES = `
   align-items: center; justify-content: center;
   gap: 2px;
   width: 62px; min-height: 46px;
+  padding-block: 5px;
   border-radius: var(--radius-full);
   background: transparent;
   border: none;
@@ -76,7 +77,7 @@ const SCOPED_STYLES = `
   /* mockup .ph-tab：10px/700（膠囊窄，字級降至 10px 對齊 iOS 26 tab 形制）。
    * 10px = var(--font-size-eyebrow)（token gate 要求，見 pr2-tokens 測）。 */
   font-size: var(--font-size-eyebrow);
-  line-height: 12px;
+  line-height: 1.2;
   font-weight: 700;
   letter-spacing: 0.02em;
   /* 透明 nav（owner ⑥）：label 在雜底上靠淡陰影可讀。 */

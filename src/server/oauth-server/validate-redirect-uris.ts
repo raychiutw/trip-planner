@@ -31,7 +31,7 @@ export function validateRedirectUris(uris: unknown): string[] {
       throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 不是合法 URL`);
     }
     const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]';
-    if (parsed.protocol !== 'https:' && !isLocalhost) {
+    if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && isLocalhost)) {
       throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 必須是 HTTPS（localhost 例外）`);
     }
     // v2.33.58 round 12 H1: reject fragment / userinfo / query — exact-match downstream

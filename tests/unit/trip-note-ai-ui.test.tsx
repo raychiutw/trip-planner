@@ -9,12 +9,6 @@ const apiFetchMock = vi.fn();
 vi.mock('../../src/lib/apiClient', () => ({
   apiFetch: (path: string, init?: RequestInit) => apiFetchMock(path, init),
 }));
-vi.mock('../../src/hooks/useRequireAuth', () => ({
-  useRequireAuth: () => ({ ready: true }),
-}));
-vi.mock('../../src/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({ email: 'owner@test' }),
-}));
 vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
 
 const NOTES = {
@@ -90,6 +84,7 @@ function renderPage() {
 
 beforeEach(() => {
   apiFetchMock.mockReset();
+  vi.spyOn(global, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ id: 'owner', email: 'owner@test' })));
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     value: vi.fn().mockImplementation(() => ({
@@ -102,6 +97,168 @@ beforeEach(() => {
 });
 
 describe('TripNotesPage AI state', () => {
+  it('首次狀態讀取失敗保留筆記並停用生成，重試只讀取任務', async () => {
+    let failed = true;
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.endsWith('/notes/ai-state')) return failed ? Promise.reject(new Error('offline')) : Promise.resolve({jobs: JOBS});
+      if (path.endsWith('/notes')) return Promise.resolve(NOTES);
+      return Promise.reject(new Error(`unexpected ${path}`));
+    });
+    renderPage();
+    fireEvent.click(await screen.findByTestId('trip-notes-section-head-pretrip'));
+    expect(await screen.findByRole('button', {name: '重試 AI 狀態'})).toBeVisible();
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip')).toBeDisabled();
+    expect(screen.getByTestId('trip-notes-section-lodgings')).toHaveTextContent('Naha Hotel');
+    failed = false;
+    fireEvent.click(screen.getByRole('button', {name: '重試 AI 狀態'}));
+    await waitFor(() => expect(screen.queryByRole('button', {name: '重試 AI 狀態'})).not.toBeInTheDocument());
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip')).toBeDisabled();
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip-lodging')).toBeEnabled();
+    expect(apiFetchMock.mock.calls.filter(([path]) => path.endsWith('/generate'))).toHaveLength(0);
+  });
+
+  it('等待生成回覆時禁止重複 POST', async () => {
+    const generating = deferred<unknown>();
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.endsWith('/notes/ai-state')) return Promise.resolve({jobs: []});
+      if (path.endsWith('/notes')) return Promise.resolve(NOTES);
+      if (path.endsWith('/generate')) return generating.promise;
+      return Promise.reject(new Error(`unexpected ${path}`));
+    });
+    renderPage();
+    fireEvent.click(await screen.findByTestId('trip-notes-section-head-pretrip'));
+    const button = screen.getByTestId('trip-notes-ai-btn-pretrip');
+    fireEvent.click(button); fireEvent.click(button);
+    expect(apiFetchMock.mock.calls.filter(([path]) => path.endsWith('/generate'))).toHaveLength(1);
+    expect(button).toBeDisabled();
+  });
+
+
+  it('首次與持續失敗會輪詢恢復，未知期間不啟動生成', async () => {
+    vi.useFakeTimers(); let reads = 0;
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.endsWith('/notes/ai-state')) return ++reads < 3 ? Promise.reject(new Error('offline')) : Promise.resolve({jobs: JOBS});
+      if (path.endsWith('/notes')) return Promise.resolve(NOTES);
+      return Promise.reject(new Error(`unexpected ${path}`));
+    });
+    const view = renderPage();
+    try {
+      await act(async () => {await Promise.resolve();});
+      expect(screen.getByRole('button', {name: '重試 AI 狀態'})).toBeVisible();
+      await act(async () => {await vi.advanceTimersByTimeAsync(3000);});
+      expect(reads).toBe(2);
+      await act(async () => {await vi.advanceTimersByTimeAsync(3000);});
+      expect(reads).toBe(3);
+      expect(screen.queryByRole('button', {name: '重試 AI 狀態'})).not.toBeInTheDocument();
+      expect(apiFetchMock.mock.calls.filter(([path]) => path.endsWith('/generate'))).toHaveLength(0);
+    } finally {view.unmount(); vi.useRealTimers();}
+  });
+
+  it('輪詢失敗保留 last-known job，恢復完成只重新讀一次筆記', async () => {
+    vi.useFakeTimers(); let reads = 0; let notesReads = 0;
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.endsWith('/notes/ai-state')) {
+        reads++;
+        if (reads === 2) return Promise.reject(new Error('offline'));
+        return Promise.resolve({jobs: JOBS.map(job => job.docType === 'tips' && reads > 2 ? {...job, status: 'completed'} : job.docType === 'emergency' && reads > 2 ? {...job, status: 'processing'} : job)});
+      }
+      if (path.endsWith('/notes')) {notesReads++; return Promise.resolve(NOTES);}
+      return Promise.reject(new Error(`unexpected ${path}`));
+    });
+    const view = renderPage();
+    try {
+      await act(async () => {await Promise.resolve();});
+      fireEvent.click(screen.getByTestId('trip-notes-section-head-pretrip'));
+      await act(async () => {await vi.advanceTimersByTimeAsync(3000);});
+      expect(screen.getByTestId('trip-notes-ai-status-tips')).toHaveTextContent('生成中');
+      expect(screen.getByTestId('trip-notes-ai-btn-pretrip-lodging')).toBeDisabled();
+      await act(async () => {await vi.advanceTimersByTimeAsync(3000);});
+      expect(screen.getByTestId('trip-notes-ai-status-tips')).toHaveTextContent('完成');
+      expect(notesReads).toBe(2);
+      await act(async () => {await vi.advanceTimersByTimeAsync(9000);});
+      expect(notesReads).toBe(2);
+    } finally {view.unmount(); vi.useRealTimers();}
+  });
+
+  it('生成請求結果未知時先確認伺服器任務，不把網路失敗當作可重新生成', async () => {
+    let generated = false;
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.endsWith('/notes/ai-state')) return generated ? Promise.reject(new Error('offline')) : Promise.resolve({jobs: []});
+      if (path.endsWith('/notes')) return Promise.resolve(NOTES);
+      if (path.endsWith('/generate')) {generated = true; return Promise.reject(new Error('connection lost'));}
+      return Promise.reject(new Error(`unexpected ${path}`));
+    });
+    renderPage();
+    fireEvent.click(await screen.findByTestId('trip-notes-section-head-pretrip'));
+    fireEvent.click(screen.getByTestId('trip-notes-ai-btn-pretrip'));
+    expect(await screen.findByRole('button', {name: '重試 AI 狀態'})).toBeVisible();
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip')).toBeDisabled();
+    expect(screen.getByTestId('trip-notes-section-lodgings')).toHaveTextContent('Naha Hotel');
+  });
+
+
+  it('首次讀取失敗後若任務已完成，恢復時同步最新筆記', async () => {
+    let recovered = false; let notesReads = 0;
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.endsWith('/notes/ai-state')) return recovered ? Promise.resolve({jobs: JOBS.map(job => ({...job, status: 'completed'}))}) : Promise.reject(new Error('offline'));
+      if (path.endsWith('/notes')) {notesReads++; return Promise.resolve(NOTES);}
+      return Promise.reject(new Error(`unexpected ${path}`));
+    });
+    renderPage();
+    const retry = await screen.findByRole('button', {name: '重試 AI 狀態'});
+    expect(notesReads).toBe(1); recovered = true; fireEvent.click(retry);
+    await waitFor(() => expect(notesReads).toBeGreaterThan(1));
+  });
+
+
+  it('A→B→A 不接受前次 A 的生成結果', async () => {
+    const oldPost = deferred<unknown>(); let aReads = 0;
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.endsWith('/notes/ai-state')) {
+        if (path.includes('/trip-a/')) return Promise.resolve({jobs: ++aReads > 1 ? JOBS : []});
+        return Promise.resolve({jobs: []});
+      }
+      if (path.endsWith('/notes')) return Promise.resolve(NOTES);
+      if (path.endsWith('/generate')) return oldPost.promise;
+      return Promise.reject(new Error(`unexpected ${path}`));
+    });
+    function Harness() {
+      const navigate = useNavigate();
+      return <><button onClick={() => navigate('/trip/trip-a/notes')}>Go A</button><button onClick={() => navigate('/trip/trip-b/notes')}>Go B</button><Routes><Route path="/trip/:tripId/notes" element={<TripNotesPage />} /></Routes></>;
+    }
+    render(<MemoryRouter initialEntries={['/trip/trip-a/notes']}><Harness /></MemoryRouter>);
+    fireEvent.click(await screen.findByTestId('trip-notes-section-head-pretrip'));
+    fireEvent.click(screen.getByTestId('trip-notes-ai-btn-pretrip'));
+    fireEvent.click(screen.getByText('Go B'));
+    await screen.findByTestId('trip-notes-section-head-pretrip');
+    fireEvent.click(screen.getByText('Go A'));
+    fireEvent.click(await screen.findByTestId('trip-notes-section-head-pretrip'));
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip')).toBeDisabled();
+    await act(async () => {oldPost.resolve({jobId: 99, generation: 1, status: 'failed'});});
+    expect(screen.getByTestId('trip-notes-ai-btn-pretrip')).toBeDisabled();
+    expect(screen.getByTestId('trip-notes-ai-status-tips')).toHaveTextContent('生成中');
+  });
+
+
+  it('完成後筆記更新失敗仍保留既有內容並可重試', async () => {
+    vi.useFakeTimers(); let reads = 0; let notesReads = 0;
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.endsWith('/notes/ai-state')) return Promise.resolve({jobs: JOBS.map(job => job.docType === 'tips' && ++reads > 1 ? {...job, status: 'completed'} : job)});
+      if (path.endsWith('/notes')) return ++notesReads === 2 ? Promise.reject(new Error('notes offline')) : Promise.resolve(NOTES);
+      return Promise.reject(new Error(`unexpected ${path}`));
+    });
+    const view = renderPage();
+    try {
+      await act(async () => {await Promise.resolve();});
+      await act(async () => {await vi.advanceTimersByTimeAsync(3000);});
+      expect(screen.getByTestId('trip-notes-section-lodgings')).toHaveTextContent('Naha Hotel');
+      expect(screen.getByRole('button', {name: '重試'})).toBeVisible();
+      fireEvent.click(screen.getByRole('button', {name: '重試'}));
+      await act(async () => {await Promise.resolve();});
+      expect(screen.queryByRole('button', {name: '重試'})).not.toBeInTheDocument();
+    } finally {view.unmount(); vi.useRealTimers();}
+  });
+
   it('reload 後恢復三種 job；只停用同 docType，顯示完成摘要與各 section 排除數', async () => {
     apiFetchMock.mockImplementation((path: string) => {
       if (path.endsWith('/notes/ai-state')) return Promise.resolve({ jobs: JOBS });
@@ -298,6 +455,7 @@ describe('TripNotesPage AI state', () => {
       '/trips/trip-b/notes/ai-state',
       undefined,
     ));
+    fireEvent.click(await screen.findByTestId('trip-notes-section-head-pretrip'));
     expect(await screen.findByTestId('trip-notes-ai-btn-pretrip')).toBeEnabled();
 
     await act(async () => {

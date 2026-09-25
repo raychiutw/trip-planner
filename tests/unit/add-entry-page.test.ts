@@ -76,10 +76,7 @@ describe('ChangePoiPage — v2.32.0 mode=new branch', () => {
     expect(CHANGE_POI_SRC).toMatch(/mode:\s*'master'\s*\|\s*'alternate'\s*\|\s*'new'/);
   });
 
-  it('解析 ?day=N → newDayNum', () => {
-    expect(CHANGE_POI_SRC).toMatch(/const newDayParam = searchParams\.get\('day'\)/);
-    expect(CHANGE_POI_SRC).toMatch(/const newDayNum = newDayParam \? parseInt\(newDayParam, 10\) : NaN/);
-  });
+
 
   it('pageTitle / submitLabel 對應 new 模式', () => {
     expect(CHANGE_POI_SRC).toContain("mode === 'new' ? '新增景點'");

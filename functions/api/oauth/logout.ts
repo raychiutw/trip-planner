@@ -20,16 +20,11 @@
  *   - Telemetry log on logout
  */
 import { clearSession, getSessionUser } from '../_session';
+import { sanitizeRedirectAfter } from '../../../src/lib/redirect';
 import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 const SAFE_REDIRECT_DEFAULT = '/login';
-
-function sanitizeRedirect(value: string | null): string {
-  if (!value) return SAFE_REDIRECT_DEFAULT;
-  if (!value.startsWith('/') || value.startsWith('//')) return SAFE_REDIRECT_DEFAULT;
-  return value;
-}
 
 async function buildLogoutResponse(
   request: Request,
@@ -40,7 +35,7 @@ async function buildLogoutResponse(
   const session = await getSessionUser(request, env, waitUntil);
 
   const url = new URL(request.url);
-  const redirectAfter = sanitizeRedirect(url.searchParams.get('redirect_after'));
+  const redirectAfter = sanitizeRedirectAfter(url.searchParams.get('redirect_after')) ?? SAFE_REDIRECT_DEFAULT;
   const response = new Response(null, {
     status: 302,
     headers: { Location: redirectAfter },

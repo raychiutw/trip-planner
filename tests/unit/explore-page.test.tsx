@@ -182,7 +182,7 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     await waitFor(() => expect(getByTestId('explore-save-btn-1')).toBeTruthy());
     // 6 種細類（count 皆 1，穩定排序＝插入序）→ 前 4 inline、後 2 進「更多」
     expect(getByTestId('explore-cat-more').textContent).toContain('更多');
-    // details 保留 children 於 DOM → 選單項可直接點，點後只留該類
+    fireEvent.click(getByTestId('explore-cat-more'));
     fireEvent.click(getByTestId('explore-cat-menu-神社'));
     expect(getByTestId('explore-save-btn-6')).toBeTruthy(); // shinto_shrine → 神社
     expect(() => getByTestId('explore-save-btn-1')).toThrow(); // 拉麵 被濾掉
@@ -278,7 +278,7 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     expect(container.textContent).not.toContain('探索更多評論');
   });
 
-  it('v2.55.73 點細類 chip → 只留該類結果、chip 套 is-active + aria-selected', async () => {
+  it('v2.55.73 點細類 chip → 只留該類結果、chip 套 is-active + aria-pressed', async () => {
     mockSearch([
       { place_id: 'p1', name: '拉麵店', address: 'X', lat: 1, lng: 1, category: 'ramen_restaurant' },
       { place_id: 'p2', name: '水族館', address: 'X', lat: 1, lng: 1, category: 'aquarium' },
@@ -293,7 +293,7 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     // 點「拉麵」細類 → 只剩 ramen_restaurant
     fireEvent.click(getByTestId('explore-cat-拉麵'));
     expect(getByTestId('explore-cat-拉麵').className).toContain('is-active');
-    expect(getByTestId('explore-cat-拉麵').getAttribute('aria-selected')).toBe('true');
+    expect(getByTestId('explore-cat-拉麵').getAttribute('aria-pressed')).toBe('true');
     expect(getByTestId('explore-cat-all').className).not.toContain('is-active');
     expect(() => getByTestId('explore-save-btn-p2')).toThrow();
     expect(getByTestId('explore-save-btn-p1')).toBeTruthy();

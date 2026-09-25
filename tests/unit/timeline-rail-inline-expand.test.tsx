@@ -73,7 +73,7 @@ const ENTRY_B: TimelineEntryData = {
 
 function renderRail(events: TimelineEntryData[] = [ENTRY_A, ENTRY_B], tripId = 'okinawa-2026') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[window.location.pathname + window.location.search]}>
       <TripIdContext.Provider value={tripId}>
         <TimelineRail events={events} />
       </TripIdContext.Provider>
@@ -346,7 +346,7 @@ const DAY_OPTIONS: DayOption[] = [
 
 function renderWiredRail(events = [ENTRY_A, ENTRY_B], days = DAY_OPTIONS, dayId: number | null = 101, tripId = 'okinawa-2026') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[window.location.pathname + window.location.search]}>
       <TripIdContext.Provider value={tripId}>
         <TripDaysContext.Provider value={days}>
           <TimelineRail events={events} dayId={dayId} />
@@ -418,7 +418,7 @@ describe('TimelineRail — drag reorder runtime', () => {
       { id: 3, title: 'C', time: '12:00-13:00' },
     ];
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[window.location.pathname + window.location.search]}>
         <TripIdContext.Provider value="okinawa-2026">
           <TimelineRail events={events} />
         </TripIdContext.Provider>

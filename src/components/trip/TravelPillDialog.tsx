@@ -23,7 +23,7 @@ import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
 import { apiFetchRaw } from '../../lib/apiClient';
 import { ApiError } from '../../lib/errors';
-import { EVENT } from '../../lib/events';
+import { saveManualSegment } from '../../lib/manualSegment';
 import { useAutosave } from '../../hooks/useAutosave';
 import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 import {
@@ -254,32 +254,19 @@ export default function TravelPillDialog({
   const isOverridden = selectedMethod.auto && selectedKey === initialKey && currentSource === 'manual';
 
   const autosave = useAutosave<SegmentPatchBody>({
+    entityKey: `${tripId}:${fromEntryId != null && toEntryId != null ? `${fromEntryId}-${toEntryId}` : segmentId}`,
     initialVersion: currentVersion,
     debounceMs: 600,
     save: async (body, expectedVersion) => {
       // segmentId 省略 = create 模式：POST /segments 帶 from/to entry id（後端 upsert）。
       // 既有 segment → PATCH /segments/:id 帶 expectedVersion（OCC）。
-      const isCreate = segmentId == null;
-      const payload: Record<string, unknown> = { ...body };
-      if (isCreate) {
-        payload.from_entry_id = fromEntryId;
-        payload.to_entry_id = toEntryId;
-      } else if (typeof expectedVersion === 'number') {
-        payload.expectedVersion = expectedVersion;
-      }
-      const res = await apiFetchRaw(
-        isCreate
-          ? `/trips/${encodeURIComponent(tripId)}/segments`
-          : `/trips/${encodeURIComponent(tripId)}/segments/${segmentId}`,
-        { method: isCreate ? 'POST' : 'PATCH', body: JSON.stringify(payload) },
-      );
-      if (!res.ok) throw await ApiError.fromResponse(res);
-      const updated = await res.json() as { id?: number; mode?: TravelMode; min?: number | null; version?: number };
-      onSaved?.({
+      const { response, isCurrent } = await saveManualSegment({ tripId, segmentId, fromEntryId, toEntryId, body, expectedVersion });
+      if (!response.ok) throw await ApiError.fromResponse(response);
+      const updated = await response.json() as { id?: number; mode?: TravelMode; min?: number | null; version?: number };
+      if (isCurrent()) onSaved?.({
         mode: (updated.mode ?? body.mode) as TravelMode,
         min: typeof updated.min === 'number' ? updated.min : null,
       });
-      window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId: segmentId ?? updated.id } }));
       return updated as Record<string, unknown>;
     },
     onStale: async () => {

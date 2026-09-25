@@ -1,9 +1,9 @@
 name: CI
 on:
   pull_request:
-    branches: [master]
+    branches: [master, uat]
   push:
-    branches: [master]
+    branches: [master, uat]
 
 # v2.33.66 round 16 HIGH-1: minimal default permissions; supply-chain compromise
 # under npm ci / npm test 拿不到 RW GITHUB_TOKEN。CI 純讀 repo + 跑 test，無寫需求。

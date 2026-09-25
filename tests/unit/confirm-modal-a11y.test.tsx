@@ -226,3 +226,11 @@ describe('ConfirmModal — 關閉後焦點回到觸發元素（#1160）', () => 
     expect(() => rerender(<Vanishing open={false} withTrigger={false} />)).not.toThrow();
   });
 });
+
+it('busy operation cannot dismiss through Escape or backdrop', () => {
+  const onCancel = vi.fn();
+  render(<ConfirmModal open busy title="Busy" message="Wait" onConfirm={() => {}} onCancel={onCancel} />);
+  fireEvent.keyDown(document, {key: 'Escape'});
+  fireEvent.click(screen.getByTestId('confirm-modal-backdrop'));
+  expect(onCancel).not.toHaveBeenCalled();
+});

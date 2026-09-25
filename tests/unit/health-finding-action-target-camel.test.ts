@@ -21,12 +21,7 @@ const SRC = readFileSync(
 );
 
 describe('v2.31.14 TripHealthCheckPage actionTarget camelCase', () => {
-  it('Finding type 用 camelCase actionTarget / entryId', () => {
-    const findingType = SRC.match(/interface Finding[\s\S]*?\n\}/);
-    expect(findingType).not.toBeNull();
-    expect(findingType![0]).toMatch(/actionTarget\?:\s*\{\s*day\?:\s*number;\s*entryId\?:\s*number/);
-  });
-
+  // Runtime router coverage verifies camelCase day/entry targets in health-observer-recovery.
   it('「前往景點」button 用 f.actionTarget?.entryId (不再用 action_target.entry_id)', () => {
     expect(SRC).toMatch(/typeof f\.actionTarget\?\.entryId === 'number'/);
     expect(SRC).toMatch(/goToEntry\(f\.actionTarget!\.entryId!\)/);

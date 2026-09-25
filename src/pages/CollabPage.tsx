@@ -19,12 +19,10 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import OperationShell from '../components/shell/OperationShell';
 import CollabPanel from '../components/trip/CollabPanel';
-import ToastContainer from '../components/shared/Toast';
 
 const SCOPED_STYLES = `
 .tp-collab-shell {
@@ -62,65 +60,46 @@ interface TripMeta {
 }
 
 export default function CollabPage() {
-  const auth = useRequireAuth();
-  const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
+  return <TripCollab key={tripId} tripId={tripId} />;
+}
+
+function TripCollab({ tripId }: { tripId?: string }) {
+  const auth = useRequireAuth();
   const navigate = useNavigate();
-
   const [tripMeta, setTripMeta] = useState<TripMeta | null>(null);
-
+  const [metaError, setMetaError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!auth.user || !tripId) return;
-    let cancelled = false;
-    apiFetch<TripMeta>(`/trips/${tripId}`)
-      .then((data) => { if (!cancelled) setTripMeta(data); })
-      .catch(() => { /* 載入失敗不擋 panel — panel 內 fetch /permissions 仍可獨立顯示 */ });
-    return () => { cancelled = true; };
-  }, [auth.user, tripId]);
-
-  // v2.33.139: 拔 history.back 改 explicit URL (對齊 useNavigateBack hook
-  // 的新行為)。回 trip detail（/trips?selected=:id）或 /trips fallback。
-  const handleBack = () => {
-    if (tripId) {
-      navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
-    } else {
-      navigate('/trips');
-    }
-  };
-
-  if (!auth.user) return null;
-  if (!tripId) {
-    return (
-      <OperationShell
-        shellClassName="tp-collab-shell"
-        testId="collab-page"
-        title="共編設定"
-        back={() => navigate('/trips')}
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      >
-        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
-          無效的行程 ID
-        </div>
-      </OperationShell>
-    );
-  }
-
-  const tripName = tripMeta?.title || tripMeta?.name || '行程';
+    const controller = new AbortController();
+    setMetaError(false);
+    apiFetch<TripMeta>(`/trips/${encodeURIComponent(tripId)}`, { signal: controller.signal })
+      .then(data => {
+        if (!data || (typeof data.title !== 'string' && typeof data.name !== 'string')) throw new Error('Invalid trip');
+        if (!controller.signal.aborted) setTripMeta(data);
+      })
+      .catch(() => { if (!controller.signal.aborted) setMetaError(true); });
+    return () => controller.abort();
+  }, [auth.user, tripId, attempt]);
 
   return (
-    <>
-      <ToastContainer />
-      <OperationShell
-        shellClassName="tp-collab-shell"
-        testId="collab-page"
-        title="共編設定"
-        back={handleBack}
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
-      >
-        <style>{SCOPED_STYLES}</style>
-        <h2 className="tp-collab-page-title">{tripName}</h2>
-        <CollabPanel tripId={tripId} />
-      </OperationShell>
-    </>
+    <OperationShell
+      shellClassName="tp-collab-shell"
+      testId="collab-page"
+      title="共編設定"
+      back={() => navigate(tripId ? `/trips?selected=${encodeURIComponent(tripId)}` : '/trips')}
+      bottomNav={<GlobalBottomNav authed={Boolean(auth.user)} />}
+    >
+      <style>{SCOPED_STYLES}</style>
+      {auth.error ? <div role="alert">無法確認登入狀態。<button onClick={auth.reload}>重試登入狀態</button></div>
+        : !auth.user ? <p role="status">確認登入狀態…</p>
+          : !tripId ? <p role="alert">無效的行程 ID</p>
+            : <>
+              <h2 className="tp-collab-page-title">{tripMeta?.title || tripMeta?.name || `行程 ${tripId}`}</h2>
+              {metaError && <div className="tp-collab-panel"><p role="alert">無法載入行程名稱，目前管理的行程 ID：{tripId}</p><button onClick={() => setAttempt(n => n + 1)}>重試行程名稱</button></div>}
+              <CollabPanel tripId={tripId} />
+            </>}
+    </OperationShell>
   );
 }

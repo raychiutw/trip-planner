@@ -5,6 +5,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
+// These page tests own the session endpoint; sidebar list lifecycle has its own
+// integration coverage and must not consume the one-shot session Responses.
+vi.mock('../../src/hooks/useMyTrips', () => ({
+  useMyTrips: () => ({ trips: [], status: 'success', retry: async () => {} }),
+}));
+
 // Bypass V2 auth gate — page is rendered as if user is logged in
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({
@@ -72,7 +78,7 @@ describe('SessionsPage', () => {
 
   it('renders empty state when no sessions', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ sessions: [] }), { status: 200 }),
+      new Response(JSON.stringify({ current_sid: 'sess_current', sessions: [] }), { status: 200 }),
     ));
     vi.useRealTimers();
 
@@ -83,7 +89,7 @@ describe('SessionsPage', () => {
 
   it('renders sessions list with current pill', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }),
+      new Response(JSON.stringify({ current_sid: 'sess_current', sessions: SAMPLE_SESSIONS }), { status: 200 }),
     ));
     vi.useRealTimers();
 
@@ -101,7 +107,7 @@ describe('SessionsPage', () => {
 
   it('current session has no revoke button; non-current does', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }),
+      new Response(JSON.stringify({ current_sid: 'sess_current', sessions: SAMPLE_SESSIONS }), { status: 200 }),
     ));
     vi.useRealTimers();
 
@@ -114,7 +120,7 @@ describe('SessionsPage', () => {
 
   it('shows 「登出其他全部裝置」 button only when other sessions exist', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }),
+      new Response(JSON.stringify({ current_sid: 'sess_current', sessions: SAMPLE_SESSIONS }), { status: 200 }),
     ));
     vi.useRealTimers();
 
@@ -124,7 +130,7 @@ describe('SessionsPage', () => {
 
   it('hides 「登出其他全部裝置」 when only current session', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ sessions: [SAMPLE_SESSIONS[0]!] }), { status: 200 }),
+      new Response(JSON.stringify({ current_sid: 'sess_current', sessions: [SAMPLE_SESSIONS[0]!] }), { status: 200 }),
     ));
     vi.useRealTimers();
 
@@ -135,8 +141,8 @@ describe('SessionsPage', () => {
 
   it('Revoke single session → DELETE + remove from list', async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ current_sid: 'sess_current', sessions: SAMPLE_SESSIONS }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, revoked_sid: 'sess_phone' }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     vi.useRealTimers();
 
@@ -157,8 +163,8 @@ describe('SessionsPage', () => {
 
   it('「登出其他全部裝置」 confirmed via ConfirmModal → DELETE + filter to current only', async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, revoked_count: 2 }), { status: 200 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ current_sid: 'sess_current', sessions: SAMPLE_SESSIONS }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, revoked: 2 }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     vi.useRealTimers();
 
@@ -183,7 +189,7 @@ describe('SessionsPage', () => {
 
   it('「登出其他全部裝置」 ConfirmModal cancel → no DELETE call', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }),
+      new Response(JSON.stringify({ current_sid: 'sess_current', sessions: SAMPLE_SESSIONS }), { status: 200 }),
     );
     vi.stubGlobal('fetch', fetchMock);
     vi.useRealTimers();
@@ -219,7 +225,7 @@ describe('SessionsPage', () => {
 
   it('Revoke fail → keeps row + shows error', async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ current_sid: 'sess_current', sessions: SAMPLE_SESSIONS }), { status: 200 }))
       .mockResolvedValueOnce(new Response('forbidden', { status: 403 }));
     vi.stubGlobal('fetch', fetchMock);
     vi.useRealTimers();
@@ -240,9 +246,9 @@ describe('SessionsPage', () => {
     };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        sessions: [SAMPLE_SESSIONS[0]!, trickySession],
+        current_sid: 'sess_current', sessions: [SAMPLE_SESSIONS[0]!, trickySession],
       }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, revoked_sid: 'sess/x?y=1' }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     vi.useRealTimers();
 

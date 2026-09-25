@@ -238,7 +238,7 @@ describe('TripHealthCheckPage', () => {
     });
     const dayBtn = screen.getByText('前往 Day 3');
     fireEvent.click(dayBtn);
-    expect(navigateMock).toHaveBeenCalledWith('/trip/T1?day=3');
+    expect(navigateMock).toHaveBeenCalledWith('/trips?selected=T1&focusDay=3#day3');
   });
 
   it('failed state — 顯示錯誤訊息 + 「重新生成」可重試', async () => {

@@ -2,10 +2,12 @@
  * DesktopSidebarConnected unit test — V2-P1
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import DesktopSidebarConnected from '../../src/components/shell/DesktopSidebarConnected';
 import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
+import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
+import { LS_KEY_TRIP_PREF, lsRemove, lsSet } from '../../src/lib/localStorage';
 
 const SAMPLE_USER = {
   id: 'uid-1',
@@ -19,6 +21,7 @@ const SAMPLE_USER = {
 beforeEach(() => {
   vi.restoreAllMocks();
   __clearMyTripsCache();
+  lsRemove(LS_KEY_TRIP_PREF);
 });
 
 afterEach(() => {
@@ -34,11 +37,54 @@ function renderConnected() {
 }
 
 describe('DesktopSidebarConnected', () => {
+  it('keeps the latest list when a second update overtakes an earlier refresh', async () => {
+    let finishOld: ((response: Response) => void) | undefined;
+    let finishNew: ((response: Response) => void) | undefined;
+    let listReads = 0;
+    vi.spyOn(global, 'fetch').mockImplementation((input) => {
+      if (!String(input).includes('/my-trips')) return Promise.resolve(new Response(JSON.stringify(SAMPLE_USER)));
+      listReads++;
+      if (listReads === 1) return Promise.resolve(new Response(JSON.stringify([{ tripId: 'first', name: '原行程' }])));
+      if (listReads === 2) return new Promise((resolve) => { finishOld = resolve; });
+      return new Promise((resolve) => { finishNew = resolve; });
+    });
+    const { getByTestId, queryByTestId } = render(
+      <MemoryRouter><ActiveTripProvider><DesktopSidebarConnected /></ActiveTripProvider></MemoryRouter>,
+    );
+    await waitFor(() => expect(getByTestId('sidebar-trip-first')).toBeTruthy());
+    act(() => window.dispatchEvent(new Event('tp-trips-updated')));
+    await waitFor(() => expect(finishOld).toBeDefined());
+    act(() => window.dispatchEvent(new Event('tp-trips-updated')));
+    await waitFor(() => expect(finishNew).toBeDefined());
+    await act(async () => finishNew!(new Response(JSON.stringify([{ tripId: 'new', name: '最新行程' }]))));
+    await waitFor(() => expect(getByTestId('sidebar-trip-new')).toBeTruthy());
+    await act(async () => finishOld!(new Response(JSON.stringify([{ tripId: 'old', name: '過期行程' }]))));
+    expect(queryByTestId('sidebar-trip-old')).toBeNull();
+    expect(getByTestId('sidebar-trip-new')).toBeTruthy();
+  });
+  it('highlights the selected accessible trip on chat, including a private trip', async () => {
+    lsSet(LS_KEY_TRIP_PREF, 'private-trip');
+    vi.spyOn(global, 'fetch').mockImplementation(async (input) => {
+      const path = String(input);
+      if (path.includes('/my-trips')) return new Response(JSON.stringify([
+        { tripId: 'public-trip', name: '公開行程' },
+        { tripId: 'private-trip', name: '私人行程', title: '私人標題', countries: 'JP' },
+      ]), { status: 200 });
+      return new Response(JSON.stringify(SAMPLE_USER), { status: 200 });
+    });
+    const { getByTestId } = render(
+      <MemoryRouter initialEntries={['/chat']}>
+        <ActiveTripProvider><DesktopSidebarConnected /></ActiveTripProvider>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(getByTestId('sidebar-trip-private-trip').getAttribute('aria-current')).toBe('page'));
+    expect(getByTestId('sidebar-trip-private-trip').textContent).toContain('私人行程');
+  });
   it('initial render (loading) does not show logged-out or account UI', () => {
     vi.spyOn(global, 'fetch').mockImplementation(() => new Promise(() => {}));
     const { container } = renderConnected();
     expect(container.querySelector('[data-testid="desktop-sidebar"]')).toBeTruthy();
-    expect(container.querySelector('[data-testid="sidebar-user-loading"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="auth-status"] [role="status"]')?.textContent).toContain('確認登入狀態');
     expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeNull();
     expect(container.querySelector('[data-testid="sidebar-account-card"]')).toBeNull();
 

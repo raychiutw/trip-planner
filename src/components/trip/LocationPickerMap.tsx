@@ -7,7 +7,8 @@
  *   - Marker = CSS overlay `<div>` pinned to map container center (NOT
  *     AdvancedMarkerElement, which would move with the map and defeat the
  *     pick-by-pan interaction)
- *   - User drags map → `idle` event fires when pan settles → coord = map.getCenter()
+ *   - Explicit drag/arrow gesture → `idle` publishes map.getCenter(); initial
+ *     idle and programmatic camera movements never select a coordinate.
  *   - Keyboard a11y: arrow keys nudge map via panBy with step ~10 m at current zoom
  *   - Container focused with tabIndex; aria-live updates on coord change
  *
@@ -15,7 +16,7 @@
  * AdvancedMarkerElement + polylines. This component owns picker-mode concerns
  * (one marker that doesn't move, plus center-extraction).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGoogleMap } from '../../hooks/useGoogleMap';
 import {
   computeArrowKeyStepPixels,
@@ -26,7 +27,8 @@ import {
 export interface LocationPickerMapProps {
   initialCenter: Coord;
   initialZoom?: number;
-  onCoordChange: (coord: Coord) => void;
+  /** null while an explicit map gesture is selecting a new position. */
+  onCoordChange: (coord: Coord | null) => void;
   /** Imperative flyTo handle from parent — used when address typeahead picks a suggestion. */
   flyToSignal?: { coord: Coord; zoom?: number } | null;
   className?: string;
@@ -41,12 +43,16 @@ export function LocationPickerMap(props: LocationPickerMapProps) {
     zoomControl: true,
     zoomControlPosition: 'TOP_RIGHT',
   });
-  const [currentCoord, setCurrentCoord] = useState<Coord>(initialCenter);
+  const [currentCoord, setCurrentCoord] = useState<Coord | null>(null);
+  const userPicking = useRef(false);
 
   // Wire idle listener once map is ready
   useEffect(() => {
     if (!map) return;
+    const drag = map.addListener('dragstart', () => { userPicking.current = true; setCurrentCoord(null); onCoordChange(null); });
     const listener = map.addListener('idle', () => {
+      if (!userPicking.current) return;
+      userPicking.current = false;
       const c = map.getCenter();
       if (!c) return;
       const next: Coord = { lat: c.lat(), lng: c.lng() };
@@ -54,21 +60,26 @@ export function LocationPickerMap(props: LocationPickerMapProps) {
       setCurrentCoord(next);
       onCoordChange(next);
     });
-    return () => listener.remove();
+    return () => { listener.remove(); drag.remove(); };
   }, [map, onCoordChange]);
 
   // Imperative flyTo from typeahead pick
   useEffect(() => {
-    if (!flyToSignal) return;
+    userPicking.current = false;
+    if (!flyToSignal) { setCurrentCoord(null); return; }
     if (!isValidCoord(flyToSignal.coord)) return;
+    userPicking.current = false;
+    setCurrentCoord(flyToSignal.coord);
     flyTo(flyToSignal.coord, flyToSignal.zoom ?? initialZoom);
   }, [flyToSignal, flyTo, initialZoom]);
 
   // Arrow-key keyboard a11y
   function handleKeyDown(ev: React.KeyboardEvent<HTMLDivElement>) {
-    if (!map) return;
+    if (!map || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(ev.key)) return;
+    userPicking.current = true;
+    onCoordChange(null);
     const zoom = map.getZoom() ?? initialZoom;
-    const lat = map.getCenter()?.lat() ?? currentCoord.lat;
+    const lat = map.getCenter()?.lat() ?? initialCenter.lat;
     const step = computeArrowKeyStepPixels(zoom, lat);
     switch (ev.key) {
       case 'ArrowUp':
@@ -95,7 +106,7 @@ export function LocationPickerMap(props: LocationPickerMapProps) {
   if (loadError) {
     return (
       <div className="tp-custom-picker-error" role="alert" data-testid="custom-picker-map-error">
-        無法載入地圖，請改用搜尋 tab 找景點。
+        地圖暫時無法使用。可在上方選擇 Google 地址候選來設定位置；若地址也無法確認，請保留內容稍後重試。
       </div>
     );
   }
@@ -111,7 +122,7 @@ export function LocationPickerMap(props: LocationPickerMapProps) {
         className="tp-custom-picker-map"
         tabIndex={0}
         role="application"
-        aria-label={`拖曳地圖選擇景點位置，目前選擇 ${currentCoord.lat.toFixed(4)} 北緯 ${currentCoord.lng.toFixed(4)} 東經`}
+        aria-label={`拖曳或使用方向鍵選擇景點位置，${currentCoord ? `緯度 ${currentCoord.lat.toFixed(4)}，經度 ${currentCoord.lng.toFixed(4)}` : '尚未選擇位置'}`}
         onKeyDown={handleKeyDown}
         data-testid="custom-picker-map"
       />
@@ -135,7 +146,7 @@ export function LocationPickerMap(props: LocationPickerMapProps) {
         data-testid="custom-picker-coord"
         aria-live="polite"
       >
-        {currentCoord.lat.toFixed(4)}°N {currentCoord.lng.toFixed(4)}°E
+        {currentCoord ? `緯度 ${currentCoord.lat.toFixed(4)}，經度 ${currentCoord.lng.toFixed(4)}` : '尚未選擇位置'}
       </div>
     </div>
   );

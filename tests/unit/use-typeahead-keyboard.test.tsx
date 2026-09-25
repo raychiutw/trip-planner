@@ -9,6 +9,8 @@ import { useTypeaheadKeyboard } from '../../src/hooks/useTypeaheadKeyboard';
 function fakeEvent(key: string): React.KeyboardEvent<HTMLInputElement> {
   return {
     key,
+    nativeEvent: { isComposing: false },
+    stopPropagation: vi.fn(),
     preventDefault: vi.fn(),
   } as unknown as React.KeyboardEvent<HTMLInputElement>;
 }

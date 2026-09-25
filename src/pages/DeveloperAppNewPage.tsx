@@ -8,7 +8,7 @@
  * 9+ field form (app_name + redirect_uris textarea + client_type radio cards
  * + scopes checkboxes) 是 DESIGN.md 2026-05-03「複雜 form 流程必走全頁」
  * 規範範圍。Form submit 成功後，secret reveal 仍以 modal-style 呈現 (critical
- * attention UX，DESIGN.md 允許 confirm-style modal 例外)，「我已複製，繼續」
+ * attention UX，DESIGN.md 允許 confirm-style modal 例外)，「我已安全保存，繼續」
  * → navigate 回 /developer/apps + dispatch tp-developer-app-created event
  * 讓列表頁 refresh。
  *
@@ -17,7 +17,8 @@
  *       client_type radio + scopes checkbox + InlineError) + secret modal
  *       (driven by submit success state)。
  */
-import { useState } from 'react';
+import AuthStatus from '../components/shared/AuthStatus';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSheetBehavior } from '../hooks/useSheetBehavior';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -31,7 +32,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import TitleBar from '../components/shell/TitleBar';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import { useCurrentUser } from '../hooks/useCurrentUser';
+import { SELF_SERVICE_SCOPES, SCOPE_DESCRIPTIONS } from '../lib/oauthScopes';
 import InlineError from '../components/shared/InlineError';
 
 const SCOPED_STYLES = `
@@ -87,15 +88,6 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-caption2);
   color: var(--color-muted);
 }
-
-.tp-pill {
-  display: inline-flex; padding: 2px 8px;
-  border-radius: var(--radius-xs);
-  font-size: var(--font-size-caption2);
-  font-weight: 700; letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.tp-pill-pending { background: var(--color-warning-bg); color: var(--color-foreground); }
 
 /* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用,DeveloperAppNew 用 --end variant + buttons flex:1 撐滿。 */
 .tp-page-bottom-bar.tp-page-bottom-bar--end .tp-btn { flex: 1; }
@@ -189,29 +181,51 @@ interface NewAppResult {
   allowed_scopes: string[];
 }
 
-const SCOPE_OPTIONS: Array<{ key: string; label: string; default?: boolean; risky?: boolean }> = [
-  { key: 'openid', label: 'openid — OIDC 識別', default: true },
-  { key: 'profile', label: 'profile — 名稱/頭像', default: true },
-  { key: 'email', label: 'email — Email 地址', default: true },
-  { key: 'trips.read', label: 'trips.read — 讀取行程' },
-  { key: 'trips.write', label: 'trips.write — 修改行程', risky: true },
-];
+const SCOPE_OPTIONS = SELF_SERVICE_SCOPES.map(key => ({
+  key, label: `${key} — ${SCOPE_DESCRIPTIONS[key]}`, default: key !== 'offline_access',
+}));
 
 export default function DeveloperAppNewPage() {
   const auth = useRequireAuth();
-  const { user } = useCurrentUser();
+  const { user } = auth;
   const navigate = useNavigate();
-  const handleCancel = useNavigateBack(routes.developerApps());
+  const navigateBack = useNavigateBack(routes.developerApps());
 
   const [form, setForm] = useState({
     app_name: '',
     redirect_uris: '',
     client_type: 'public' as 'public' | 'confidential',
-    scopes: new Set(SCOPE_OPTIONS.filter((o) => o.default).map((o) => o.key)),
+    scopes: new Set<string>(SCOPE_OPTIONS.filter((o) => o.default).map((o) => o.key)),
   });
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const [registrationUncertain, setRegistrationUncertain] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<'name' | 'uris' | 'scopes' | null>(null);
+  useEffect(() => {
+    if (createError && errorField && !submitting) document.getElementById(`da-${errorField}`)?.focus();
+  }, [createError, errorField, submitting]);
   const [secretResult, setSecretResult] = useState<NewAppResult | null>(null);
+  const [copyStatus, setCopyStatus] = useState<{ target: 'Client ID' | 'Client Secret'; state: 'pending' | 'success' | 'failed' } | null>(null);
+  const copyBusy = useRef(false);
+  const copyTrigger = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (copyStatus && copyStatus.state !== 'pending' && document.activeElement === document.body) {
+      copyTrigger.current?.focus();
+    }
+  }, [copyStatus]);
+  const lifetime = useRef(0);
+  useEffect(() => () => { lifetime.current++; }, [user?.id]);
+  useEffect(() => {
+    if (!secretResult?.client_secret) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [secretResult]);
+
+  function handleCancel() {
+    if (!submitting && !secretResult) navigateBack();
+  }
 
   function toggleScope(key: string) {
     setForm((f) => {
@@ -223,18 +237,29 @@ export default function DeveloperAppNewPage() {
 
   async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
+    if (submittingRef.current) return;
     setCreateError(null);
-    const redirect_uris = form.redirect_uris
-      .split('\n').map((s) => s.trim()).filter(Boolean);
-    if (form.app_name.trim().length < 2) {
-      setCreateError('app_name 至少 2 字');
+    setErrorField(null);
+    const uriLines = form.redirect_uris.split('\n').map((text, index) => ({ uri: text.trim(), line: index + 1 })).filter(row => row.uri);
+    const redirect_uris = uriLines.map(row => row.uri);
+    if (form.app_name.trim().length < 2 || form.app_name.trim().length > 80) {
+      setErrorField('name');
+      setCreateError('應用名稱需 2–80 字');
       return;
     }
     if (redirect_uris.length === 0) {
-      setCreateError('redirect_uris 至少需要 1 個');
+      setErrorField('uris');
+      setCreateError('Redirect URIs 至少需要 1 個');
       return;
     }
+    if (form.scopes.size === 0) {
+      setErrorField('scopes');
+      setCreateError('請至少選擇一項 scope。');
+      return;
+    }
+    submittingRef.current = true;
     setSubmitting(true);
+    const operation = lifetime.current;
     try {
       const result = await apiFetch<NewAppResult>('/dev/apps', {
         method: 'POST',
@@ -245,35 +270,68 @@ export default function DeveloperAppNewPage() {
           allowed_scopes: Array.from(form.scopes),
         }),
       });
+      if (operation !== lifetime.current) return;
+      if (!result || typeof result.client_id !== 'string' || !result.client_id.trim() ||
+          result.client_type !== form.client_type ||
+          (form.client_type === 'confidential' ? typeof result.client_secret !== 'string' || !result.client_secret.trim() : result.client_secret !== null)) {
+        setRegistrationUncertain(true);
+        setCreateError('伺服器未回傳完整憑證，應用可能已建立。請先返回應用列表確認；一次性密鑰無法重新取得，請勿重複送出。');
+        return;
+      }
       setSecretResult(result);
     } catch (err) {
+      if (operation !== lifetime.current) return;
+      submittingRef.current = false;
       if (err instanceof ApiError) {
         // ApiError.detail = backend `error.message` 人話；err.message = code (例 'invalid_redirect')
-        setCreateError(err.detail ?? '建立失敗，請稍後再試。');
+        const detail = err.detail ?? '建立失敗，請稍後再試。';
+        setErrorField(detail.includes('redirect_uris') ? 'uris' : detail.includes('scope') ? 'scopes' : detail.includes('app_name') ? 'name' : null);
+        setCreateError(detail.replace(/redirect_uris\[(\d+)\]/g, (match, index: string) => {
+          const row = uriLines[Number(index)];
+          return row ? `Redirect URI 第 ${row.line} 行` : match;
+        }));
       } else {
         setCreateError('網路連線失敗，請稍後再試。');
       }
     } finally {
-      setSubmitting(false);
+      if (operation === lifetime.current) setSubmitting(false);
     }
   }
 
 
-  async function copy(value: string) {
+  async function copy(target: 'Client ID' | 'Client Secret', value: string) {
+    if (copyBusy.current) return;
+    copyBusy.current = true;
+    copyTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const operation = lifetime.current;
+    setCopyStatus({ target, state: 'pending' });
     try {
       await navigator.clipboard.writeText(value);
+      if (operation === lifetime.current) setCopyStatus({ target, state: 'success' });
     } catch {
-      // ignore — user can manually select
+      if (operation === lifetime.current) setCopyStatus({ target, state: 'failed' });
+    } finally {
+      if (operation === lifetime.current) copyBusy.current = false;
     }
+  }
+
+  function selectCredential(event: React.FocusEvent<HTMLElement>) {
+    const range = document.createRange();
+    range.selectNodeContents(event.currentTarget);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
   }
 
   function ackSecret() {
+    if (copyBusy.current) return;
     setSecretResult(null);
+    setCopyStatus(null);
     // Notify DeveloperAppsPage to refetch — listener 跑 GET /api/dev/apps 拿
     // 真實 server row。不傳 detail (PR #452 client-side fabricate row 有 race +
     // 假造 created_at 不可靠，改 always refetch)。
     window.dispatchEvent(new CustomEvent(EVENT.developerAppCreated));
-    navigate(routes.developerApps());
+    navigate(routes.developerApps(), { replace: true });
   }
 
   /*
@@ -282,7 +340,7 @@ export default function DeveloperAppNewPage() {
    * aria-modal 把那些藏起來了。
    *
    * `canDismiss: false` 是刻意的：client_secret 是 server 回應的**一次性** state，
-   * 一個誤按的 Escape 就永久丟失。只能走「我已複製，繼續」。
+   * 一個誤按的 Escape 就永久丟失。只能走「我已安全保存，繼續」。
    * 初始焦點留在 panel（引擎預設）而不是確認鈕 —— 一開就聚焦確認鈕的話，一個
    * 順手的 Enter 會在使用者複製到 secret 之前就把它關掉。
    */
@@ -292,13 +350,14 @@ export default function DeveloperAppNewPage() {
     { canDismiss: false },
   );
 
-  if (!auth.user) return null;
+  if (!auth.user) return <AuthStatus auth={auth} />;
 
   const titleBarActions = (
     <TitleBarPrimaryAction
       label="建立"
       busyLabel="建立中⋯"
       busy={submitting}
+      disabled={!!secretResult || registrationUncertain}
       onClick={() => void handleSubmit()}
       testId="dev-app-new-titlebar-submit"
     />
@@ -320,13 +379,16 @@ export default function DeveloperAppNewPage() {
             <div className="tp-dev-new-card">
               <div className="tp-dev-new-intro">
                 <h2>OAuth Client 設定</h2>
-                <p>填寫基本資訊，下一步將產生 client_id 與 client_secret。</p>
+                <p>填寫基本資訊以產生 Client ID。只有 Confidential 類型會產生一次性 Client Secret。</p>
               </div>
               <form className="tp-form" onSubmit={handleSubmit} noValidate>
                 <div className="tp-form-row">
                   <label htmlFor="da-name">應用名稱 <span className="tp-hint">使用者會在同意畫面看到</span></label>
                   <input
+                    disabled={submitting || !!secretResult || registrationUncertain}
                     id="da-name"
+                    aria-invalid={errorField === 'name' || undefined}
+                    aria-describedby={errorField === 'name' ? 'da-error' : undefined}
                     type="text"
                     value={form.app_name}
                     onChange={(e) => setForm({ ...form, app_name: e.target.value })}
@@ -337,21 +399,26 @@ export default function DeveloperAppNewPage() {
                   />
                 </div>
                 <div className="tp-form-row">
-                  <label htmlFor="da-uris">Redirect URIs <span className="tp-hint">每行一個，HTTPS only（localhost 例外）</span></label>
+                  <label htmlFor="da-uris">Redirect URIs <span className="tp-hint">每行一個，最多 10 個</span></label>
                   <textarea
+                    disabled={submitting || !!secretResult || registrationUncertain}
                     id="da-uris"
+                    aria-invalid={errorField === 'uris' || undefined}
+                    aria-describedby={errorField === 'uris' ? 'da-error da-uris-hint' : 'da-uris-hint'}
                     rows={3}
                     value={form.redirect_uris}
                     onChange={(e) => setForm({ ...form, redirect_uris: e.target.value })}
                     placeholder="https://your-app.com/auth/callback"
                     data-testid="dev-app-new-uris"
                   />
+                  <p id="da-uris-hint" className="tp-hint">使用 HTTPS；本機開發可用 HTTP localhost／127.0.0.1／[::1]。不可包含帳密、?query 或 #fragment。</p>
                 </div>
-                <div className="tp-form-row">
-                  <label>類型</label>
+                <div className="tp-form-row" role="group" aria-labelledby="da-type-label">
+                  <span id="da-type-label">類型</span>
                   <div className="tp-radio-group">
                     <label className={`tp-radio-card ${form.client_type === 'public' ? 'tp-radio-card-active' : ''}`}>
                       <input
+                        disabled={submitting || !!secretResult || registrationUncertain}
                         type="radio"
                         name="client_type"
                         checked={form.client_type === 'public'}
@@ -365,6 +432,7 @@ export default function DeveloperAppNewPage() {
                     </label>
                     <label className={`tp-radio-card ${form.client_type === 'confidential' ? 'tp-radio-card-active' : ''}`}>
                       <input
+                        disabled={submitting || !!secretResult || registrationUncertain}
                         type="radio"
                         name="client_type"
                         checked={form.client_type === 'confidential'}
@@ -378,24 +446,24 @@ export default function DeveloperAppNewPage() {
                     </label>
                   </div>
                 </div>
-                <div className="tp-form-row">
-                  <label>申請的 scopes</label>
+                <div id="da-scopes" tabIndex={-1} className="tp-form-row" role="group" aria-labelledby="da-scopes-label" aria-invalid={errorField === 'scopes' || undefined} aria-describedby={errorField === 'scopes' ? 'da-error' : undefined}>
+                  <span id="da-scopes-label">申請的 scopes</span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {SCOPE_OPTIONS.map((opt) => (
                       <label key={opt.key} style={{ display: 'flex', gap: '10px', alignItems: 'center', fontSize: 'var(--font-size-footnote)' }}>
                         <input
+                          disabled={submitting || !!secretResult || registrationUncertain}
                           type="checkbox"
                           checked={form.scopes.has(opt.key)}
                           onChange={() => toggleScope(opt.key)}
                           data-testid={`dev-app-new-scope-${opt.key}`}
                         />
                         <span>{opt.label}</span>
-                        {opt.risky && <span className="tp-pill tp-pill-pending">高風險</span>}
                       </label>
                     ))}
                   </div>
                 </div>
-                {createError && <InlineError message={createError} testId="dev-app-new-error" />}
+                {createError && <InlineError id="da-error" message={createError} testId="dev-app-new-error" />}
               </form>
             </div>
           </div>
@@ -405,7 +473,7 @@ export default function DeveloperAppNewPage() {
               type="button"
               className="tp-btn"
               onClick={handleCancel}
-              disabled={submitting}
+              disabled={submitting || !!secretResult}
               data-testid="dev-app-new-cancel"
             >
               取消
@@ -414,7 +482,7 @@ export default function DeveloperAppNewPage() {
               type="button"
               className="tp-btn tp-btn-primary"
               onClick={() => void handleSubmit()}
-              disabled={submitting}
+              disabled={submitting || !!secretResult || registrationUncertain}
               data-testid="dev-app-new-submit"
             >
               {submitting ? '建立中…' : '建立應用'}
@@ -452,31 +520,34 @@ export default function DeveloperAppNewPage() {
                 <div className="tp-form-row" style={{ marginBottom: '12px' }}>
                   <label>Client ID</label>
                   <div className="tp-code-block">
-                    <code data-testid="dev-app-new-secret-client-id">{secretResult.client_id}</code>
-                    <button type="button" onClick={() => void copy(secretResult.client_id)}>複製</button>
+                    <code tabIndex={0} aria-label="Client ID" onFocus={selectCredential} data-testid="dev-app-new-secret-client-id">{secretResult.client_id}</code>
+                    <button type="button" aria-label="複製 Client ID" disabled={copyStatus?.state === 'pending'} onClick={() => void copy('Client ID', secretResult.client_id)}>複製</button>
                   </div>
                 </div>
                 {secretResult.client_secret && (
                   <div className="tp-form-row">
                     <label style={{ color: 'var(--color-destructive)' }}>Client Secret</label>
                     <div className="tp-code-block tp-code-block-secret">
-                      <code data-testid="dev-app-new-secret-client-secret">{secretResult.client_secret}</code>
-                      <button type="button" onClick={() => void copy(secretResult.client_secret as string)}>複製</button>
+                      <code tabIndex={0} aria-label="Client Secret" onFocus={selectCredential} data-testid="dev-app-new-secret-client-secret">{secretResult.client_secret}</code>
+                      <button type="button" aria-label="複製 Client Secret" disabled={copyStatus?.state === 'pending'} onClick={() => void copy('Client Secret', secretResult.client_secret!)}>複製</button>
                     </div>
                     <div className="tp-secret-warning">
-                      ⚠ 此 secret 不會再顯示。請存到密碼管理器或環境變數。
+                      ⚠ 此 secret 關閉後無法重新取得，重新整理也會遺失。請先存到密碼管理器或環境變數；若遺失，需建立新的應用。
                     </div>
                   </div>
                 )}
+                {copyStatus?.state === 'failed' && <InlineError message={`${copyStatus.target} 複製失敗。請重試，或選取上方文字手動複製。`} />}
+                {copyStatus?.state === 'success' && <p role="status">{copyStatus.target} 已複製。</p>}
               </div>
               <div className="tp-modal-footer">
                 <button
                   type="button"
                   className="tp-btn tp-btn-primary tp-btn-block"
                   onClick={ackSecret}
+                  disabled={copyStatus?.state === 'pending'}
                   data-testid="dev-app-new-secret-acknowledge"
                 >
-                  我已複製，繼續
+                  {secretResult.client_secret ? '我已安全保存，繼續' : '返回應用列表'}
                 </button>
               </div>
             </div>

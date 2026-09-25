@@ -32,11 +32,12 @@ describe('v2.31.25 dark mode root-level init', () => {
     expect(match).not.toBeNull();
   });
 
-  it('root render 含 <DarkModeInit /> 在 BrowserRouter 之下', () => {
+  it('data router 的 root element 保留 <DarkModeInit /> 在 routes 之外', () => {
     // 必須 inside BrowserRouter（hook 可能依 router context）+ 在 routes 外（root level）
     // W1：主路由表由 <AccountModalRoutes> render-prop 包住（注入 location 給 Account sheet），
     // DarkModeInit 仍在其之前、BrowserRouter 之下。
-    const browserRouterMatch = SRC.match(/<BrowserRouter>[\s\S]*?<DarkModeInit \/>[\s\S]*?<AccountModalRoutes>/);
+    const browserRouterMatch = SRC.match(/function ApplicationRoutes[\s\S]*?<DarkModeInit \/>[\s\S]*?<AccountModalRoutes>/);
+    expect(SRC).toMatch(/createBrowserRouter\(\[\{ path: "\*", element: <ApplicationRoutes \/>/);
     expect(browserRouterMatch).not.toBeNull();
   });
 });

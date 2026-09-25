@@ -64,8 +64,11 @@ describe('ci.yml — Playwright matrix gate', () => {
     expect(CI_YML).toMatch(/npx playwright test --project=chromium/);
   });
 
-  it('push master 跑完整 Playwright matrix', () => {
-    expect(CI_YML).toMatch(/push:[\s\S]*branches:\s*\[master\]/);
+  it('push master 與 uat 跑完整 Playwright matrix', () => {
+    for (const event of ['push', 'pull_request']) {
+      const branches = CI_YML.match(new RegExp(`${event}:\\s*branches:\\s*\\[([^\\]]+)\\]`))?.[1]?.split(',').map((branch) => branch.trim());
+      expect(branches).toEqual(expect.arrayContaining(['master', 'uat']));
+    }
     expect(CI_YML).toMatch(/npx playwright install --with-deps chromium webkit/);
     expect(CI_YML).toMatch(/else[\s\S]*npx playwright test/);
   });

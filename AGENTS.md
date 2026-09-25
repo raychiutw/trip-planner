@@ -101,7 +101,7 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
 
-`DESIGN.md` + `docs/design-sessions/terracotta-preview-v2.html` are UI/UX truth. Code mismatch = bug. Conflict → discuss first.
+`DESIGN.md` + `docs/design-sessions/terracotta-preview-v2.html` are UI/UX truth. Code mismatch = bug. Conflict → discuss first. Native HIG, web WCAG, project targets and historical exceptions are distinguished in [docs/design-standards.md](docs/design-standards.md); the current prototype gate above still applies.
 
 ## Skill Routing
 

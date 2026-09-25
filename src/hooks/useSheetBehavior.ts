@@ -16,6 +16,8 @@ interface UseSheetBehaviorOptions {
    * 「還原 activeElement」。有些觸發元件關閉後會重繪，指名 ref 比記快照可靠。
    */
   triggerRef?: React.RefObject<HTMLElement | null>;
+  /** Destination when a destructive operation removes or disables the opener. */
+  fallbackFocusRef?: React.RefObject<HTMLElement | null>;
   /** Extra callback to run when Escape is pressed (before setIsOpen(false)). */
   onEscape?: () => void;
   /**
@@ -57,16 +59,62 @@ interface UseSheetBehaviorResult {
  * not the whole stack, on one Escape press. (Body scroll-lock is ref-counted inside
  * useBodyScrollLock; nested-modal z-index is handled by portal DOM order.)
  */
-const openSheets: symbol[] = [];
-function registerSheet(id: symbol) {
-  if (!openSheets.includes(id)) openSheets.push(id);
+interface OpenSheet {
+  id: symbol;
+  panel: HTMLElement;
+  backdrop: HTMLElement | null;
+  modal: boolean;
+}
+const openSheets: OpenSheet[] = [];
+const inertBranches = new Map<HTMLElement, boolean>();
+let backgroundObserver: MutationObserver | null = null;
+
+/** Keep only the active modal and its backdrop interactive, including nested portals. */
+function updateBackground() {
+  for (const [element, wasInert] of inertBranches) {
+    element.toggleAttribute('inert', wasInert);
+  }
+  inertBranches.clear();
+  const active = [...openSheets].reverse().find(sheet => sheet.modal);
+  if (!active) return;
+  const visit = (element: HTMLElement) => {
+    if (element === active.panel || element === active.backdrop) return;
+    if (element.contains(active.panel) || (active.backdrop && element.contains(active.backdrop))) {
+      for (const child of element.children) if (child instanceof HTMLElement) visit(child);
+    } else {
+      inertBranches.set(element, element.hasAttribute('inert'));
+      element.setAttribute('inert', '');
+    }
+  };
+  for (const child of document.body.children) if (child instanceof HTMLElement) visit(child);
+}
+function registerSheet(sheet: OpenSheet) {
+  openSheets.push(sheet);
+  if (!backgroundObserver) {
+    backgroundObserver = new MutationObserver(updateBackground);
+    backgroundObserver.observe(document.body, { childList: true, subtree: true });
+  }
+  updateBackground();
 }
 function unregisterSheet(id: symbol) {
-  const i = openSheets.indexOf(id);
+  const i = openSheets.findIndex(sheet => sheet.id === id);
   if (i !== -1) openSheets.splice(i, 1);
+  updateBackground();
+  if (!openSheets.length) {
+    backgroundObserver?.disconnect();
+    backgroundObserver = null;
+  }
 }
 function isTopSheet(id: symbol): boolean {
-  return openSheets.length > 0 && openSheets[openSheets.length - 1] === id;
+  return openSheets[openSheets.length - 1]?.id === id;
+}
+function canFocus(element: HTMLElement): boolean {
+  if (element.matches(':disabled') || element.closest('[hidden], [inert]')) return false;
+  for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+    const style = getComputedStyle(node);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+  }
+  return true;
 }
 
 /**
@@ -97,6 +145,7 @@ export function useSheetBehavior(
   const {
     restorePreviousFocus = false,
     triggerRef,
+    fallbackFocusRef,
     onEscape,
     preventAllBackdropScroll = false,
     initialFocusRef,
@@ -108,14 +157,6 @@ export function useSheetBehavior(
   const backdropRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
   const idRef = useRef<symbol>(Symbol('sheet'));
-
-  /* 1. Open-sheet registry (top-most tracking for nested Escape) */
-  useEffect(() => {
-    const id = idRef.current;
-    if (isOpen) registerSheet(id);
-    else unregisterSheet(id);
-    return () => unregisterSheet(id);
-  }, [isOpen]);
 
   /* 2. Body scroll lock — modal surfaces only (non-modal desktop panel stays unlocked) */
   useBodyScrollLock(isOpen && modal);
@@ -137,28 +178,40 @@ export function useSheetBehavior(
    *
    * 快照改為無條件記錄：成本是一次 `document.activeElement` 讀取，而只在需要時才用。
    */
-  useEffect(() => {
-    if (isOpen) {
-      previousFocusRef.current = document.activeElement;
-      requestAnimationFrame(() => {
-        (initialFocusRef?.current ?? panelRef.current)?.focus();
-      });
-    } else {
-      // triggerRef 明確指名時優先（它比快照可靠：有些觸發元件關閉後會重繪）。
-      if (!restorePreviousFocus && triggerRef?.current) {
-        triggerRef.current.focus();
-      } else if (previousFocusRef.current instanceof HTMLElement) {
-        // `instanceof HTMLElement` 同時擋掉三種情況：null（沒開過）、非 HTML 元素、
-        // 以及**已從 DOM 移除的元素**（刪除流程關閉對話框時，觸發它的那一列常一起消失
-        // —— 對 detached 元素呼叫 focus() 不會 throw，但會把焦點掉到 body，
-        // 與什麼都不做同樣糟；isConnected 檢查讓它安靜跳過，由瀏覽器保留當前焦點）。
-        if (previousFocusRef.current.isConnected) {
-          previousFocusRef.current.focus();
-        }
-      }
-      previousFocusRef.current = null;
+  const restoreFocus = useCallback(() => {
+    // Read live refs: an accepted operation can replace/remove the opener.
+    const target = !restorePreviousFocus && triggerRef?.current
+      ? triggerRef.current : previousFocusRef.current;
+    if (target instanceof HTMLElement && target.isConnected && canFocus(target)) {
+      target.focus({ preventScroll: true });
+    } else if (previousFocusRef.current) {
+      fallbackFocusRef?.current?.focus({ preventScroll: true });
     }
-  }, [isOpen, restorePreviousFocus, triggerRef, initialFocusRef]);
+    previousFocusRef.current = null;
+  }, [restorePreviousFocus, triggerRef, fallbackFocusRef]);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!isOpen || !panel) return;
+    previousFocusRef.current = document.activeElement;
+    const originalTabIndex = panel.getAttribute('tabindex');
+    if (originalTabIndex === null) panel.tabIndex = -1;
+    const id = idRef.current;
+    registerSheet({ id, panel, backdrop: backdropRef.current, modal });
+    const frame = requestAnimationFrame(() => {
+      if (!isTopSheet(id)) return;
+      const initial = initialFocusRef?.current;
+      (initial && canFocus(initial) ? initial : panel).focus();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      const wasTop = isTopSheet(id);
+      unregisterSheet(id); // Release inert before restoring focus into the previous layer.
+      if (originalTabIndex === null) panel.removeAttribute('tabindex');
+      if (wasTop) restoreFocus();
+      else previousFocusRef.current = null;
+    };
+  }, [isOpen, initialFocusRef, restoreFocus, modal]);
 
   /* 4. Escape — top-most sheet only, skip IME composition, honor canDismiss (busy lock) */
   useEffect(() => {
@@ -180,16 +233,20 @@ export function useSheetBehavior(
   }, [isOpen, onClose, onEscape, restorePreviousFocus, triggerRef, canDismiss]);
 
   /* 5. Focus trap on Tab key */
-  const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key !== 'Tab') return;
+  const handlePanelKeyDown = useCallback((e: Pick<React.KeyboardEvent, 'key' | 'shiftKey' | 'preventDefault'>) => {
+    if (e.key !== 'Tab' || !modal || !isTopSheet(idRef.current)) return;
     const panel = panelRef.current;
     if (!panel) return;
-    const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
-    if (focusable.length === 0) return;
+    const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(element => element.tabIndex >= 0 && canFocus(element));
+    if (focusable.length === 0) {
+      e.preventDefault();
+      panel.focus();
+      return;
+    }
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
     if (e.shiftKey) {
-      if (first && document.activeElement === first) {
+      if (first && (document.activeElement === first || document.activeElement === panel)) {
         e.preventDefault();
         last?.focus();
       }
@@ -199,7 +256,24 @@ export function useSheetBehavior(
         first?.focus();
       }
     }
-  }, []);
+  }, [modal]);
+
+  // Disabled/removed focused controls can leave focus on body. Keep the next Tab
+  // inside the modal too; panel-only bubbling cannot observe that event.
+  useEffect(() => {
+    if (!isOpen || !modal) return;
+    const handleDocumentTab = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !isTopSheet(idRef.current)) return;
+      const panel = panelRef.current;
+      if (panel && !panel.contains(document.activeElement)) {
+        event.preventDefault();
+        panel.focus();
+        handlePanelKeyDown(event);
+      }
+    };
+    document.addEventListener('keydown', handleDocumentTab);
+    return () => document.removeEventListener('keydown', handleDocumentTab);
+  }, [isOpen, modal, handlePanelKeyDown]);
 
   /* 6. Backdrop scroll prevention (native listeners, passive: false) */
   useEffect(() => {

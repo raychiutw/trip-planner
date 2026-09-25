@@ -26,14 +26,7 @@ describe('v2.31.59 LegacyRedirect no DEFAULT_TRIP hardcode', () => {
     expect(SRC).not.toMatch(/const DEFAULT_TRIP\s*=/);
   });
 
-  it('LegacyRedirect 沒 valid trip 就走 /trips（無 selected param）', () => {
-    expect(SRC).toMatch(/<Navigate to="\/trips" replace \/>/);
-  });
-
-  it('LegacyRedirect 仍處理 valid ?trip=xxx legacy URL', () => {
-    expect(SRC).toMatch(/\?trip=xxx\b|queryTrip && \/\^/);
-    expect(SRC).toMatch(/\/trips\?selected=\$\{encodeURIComponent\(queryTrip\)\}/);
-  });
+  // Routing behavior and invalid-trip fallback are exercised by legacy-context.spec.js.
 
   it('hardcoded admin trip id 已移出 executable code（comments 內仍可保留）', () => {
     // 移除 comment block 後再 grep — comment 內提及修了什麼 OK，但 executable

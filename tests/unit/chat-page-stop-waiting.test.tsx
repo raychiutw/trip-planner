@@ -99,7 +99,7 @@ describe('ChatPage 停止等待 (ADR-0007)', () => {
     await act(async () => { fireEvent.click(stopBtn); });
 
     await waitFor(() => expect(input).not.toBeDisabled());
-    expect(screen.getByText(/已停止等待/)).toBeInTheDocument();
+    expect(screen.getByTestId('chat-msg-assistant')).toHaveTextContent('已停止等待');
     expect(screen.queryByTestId('chat-stop-waiting')).not.toBeInTheDocument();
   });
 
@@ -111,7 +111,8 @@ describe('ChatPage 停止等待 (ADR-0007)', () => {
     await act(async () => { fireEvent.click(stopBtn); });
 
     const bubble = await waitFor(() => {
-      const el = screen.getByText(/已停止等待/).closest('.tp-chat-msg');
+      const el = screen.getByTestId('chat-msg-assistant');
+      expect(el).toHaveTextContent('已停止等待');
       expect(el).not.toBeNull();
       return el!;
     });

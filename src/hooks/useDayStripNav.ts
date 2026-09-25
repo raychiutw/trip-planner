@@ -44,7 +44,7 @@ export function useDayStripNav<K>({ keys, activeKey, onPick, testId }: UseDayStr
     if (typeof nav.scrollTo === 'function') {
       nav.scrollTo({
         left: Math.max(0, left),
-        behavior: firstMountRef.current ? 'auto' : 'smooth',
+        behavior: firstMountRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
       });
     }
     firstMountRef.current = false;

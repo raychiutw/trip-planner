@@ -91,6 +91,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.doUnmock('../../functions/api/_session');
+  vi.resetModules(); // Discard the handler imported while session was mocked.
   vi.useRealTimers();
 });
 
