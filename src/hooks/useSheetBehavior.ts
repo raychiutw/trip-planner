@@ -194,7 +194,7 @@ export function useSheetBehavior(
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
     if (e.shiftKey) {
-      if (first && document.activeElement === first) {
+      if (first && (document.activeElement === first || document.activeElement === panel)) {
         e.preventDefault();
         last?.focus();
       }

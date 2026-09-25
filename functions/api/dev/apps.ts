@@ -21,6 +21,7 @@ import { parseJsonBody, rawJson } from '../_utils';
 import { requireSessionUser } from '../_session';
 import { hashPassword } from '../../../src/server/password';
 import { AppError } from '../_errors';
+import { SELF_SERVICE_SCOPES } from '../../../src/lib/oauthScopes';
 import { validateRedirectUris } from '../../../src/server/oauth-server/validate-redirect-uris';
 import type { Env } from '../_types';
 
@@ -79,7 +80,7 @@ function generateClientSecret(): string {
  *
  * Allowlist whitelist：companion / ops:* 必須 ops 手動 INSERT D1 才能擁有。
  */
-const ALLOWED_USER_SCOPES = new Set(['openid', 'profile', 'email', 'offline_access']);
+const ALLOWED_USER_SCOPES = new Set<string>(SELF_SERVICE_SCOPES);
 export function validateScopes(scopes: unknown): string[] {
   if (!Array.isArray(scopes)) return DEFAULT_SCOPES;
   if (scopes.length === 0) return DEFAULT_SCOPES;

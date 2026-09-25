@@ -7,3 +7,6 @@ export const SCOPE_DESCRIPTIONS: Record<string, string> = {
   'trips:read': '讀取您的行程資料',
   'trips:write': '建立 / 修改您的行程',
 };
+
+/** Scopes available to developer self-service registration; privileged grants stay server-managed. */
+export const SELF_SERVICE_SCOPES = ['openid', 'profile', 'email', 'offline_access'] as const;
