@@ -50,11 +50,11 @@ export function restoreDragScroll(): void {
  * /stop/:eid/edit、/add-entry 等子頁再返回 mount 時 `recallScroll` 取回還原。走 module-
  * level Map（跨 mount 存活；整頁 reload 才清），所以只在 SPA 內導航返回時有值 →
  * 冷開（reload / 首訪）走預設 auto-locate 行為，不受影響。
+ * 清單等巢狀 scroller 可傳入自己的容器，沿用相同記憶與還原規則。
  */
 const scrollMemory = new Map<string, number>();
 
-export function rememberScroll(key: string): void {
-  const el = scrollContainer();
+export function rememberScroll(key: string, el = scrollContainer()): void {
   if (el) scrollMemory.set(key, el.scrollTop);
 }
 
@@ -71,10 +71,10 @@ export function recallScroll(key: string): number | undefined {
  * 用完 frame 預算（~0.75s）。內容一到位就停；期間 user 一動（任何輸入：wheel / 鍵盤 /
  * 捲軸 / 慣性）即讓位，且若 call 時 user 已在載入空窗捲過也不搶回 — 不硬跟 user 搶捲動。
  */
-export function restoreScrollTo(top: number, maxFrames = 45): void {
+export function restoreScrollTo(top: number, maxFrames = 45, container?: HTMLElement | null): void {
   // el 抓一次就鎖定：若逐幀重查，還原途中 user 又導航到別的子頁時，tick 會解析到
   // 新頁的 .app-shell-main 並亂設它的 scrollTop（把不相關表單捲到本 trip 的位置）。
-  const el = scrollContainer();
+  const el = container ?? scrollContainer();
   if (!el) return;
   // 返回時 per-day 內容 async 載入需時，restore 常在載入完（loading 轉 false）才 fire。
   // fresh mount 的 .app-shell-main 起始 scrollTop=0、本 path 不做任何程式捲動，故 call
