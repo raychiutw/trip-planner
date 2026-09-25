@@ -277,7 +277,7 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
     expect(acceptCall).toBeFalsy();
   });
 
-  it('login OK but accept fails: still redirects to /trips with toast hint (graceful)', async () => {
+  it('login OK but accept fails: returns to the original invitation for recovery', async () => {
     stubByRoute([
       { match: /\/api\/public-config/, status: 200, body: {} },
       { match: /\/api\/oauth\/login(?!\/google)/, status: 200, body: { ok: true } },
@@ -295,6 +295,6 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
     fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'goodpass' } });
     fireEvent.click(screen.getByTestId('login-submit'));
 
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/trips'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/invite?token=expired-tok'));
   });
 });

@@ -47,11 +47,11 @@ describe('useCurrentUser', () => {
     expect(result.current.user).toBeNull();
   });
 
-  it('network error → user = null', async () => {
+  it('network error → unknown user + retryable error', async () => {
     vi.spyOn(global, 'fetch').mockRejectedValue(new Error('network down'));
     const { result } = renderHook(() => useCurrentUser());
-    await waitFor(() => expect(result.current.user).not.toBeUndefined());
-    expect(result.current.user).toBeNull();
+    await waitFor(() => expect(result.current.error).toBe(true));
+    expect(result.current.user).toBeUndefined();
   });
 
   it('reload() triggers re-fetch', async () => {
@@ -92,4 +92,7 @@ describe('useCurrentUser', () => {
     resolveFetch(new Response(JSON.stringify(SAMPLE_USER), { status: 200 }));
     // No assertion needed — vitest will warn if setState called on unmounted
   });
+});
+it('temporary failure preserves the last auth hint and reload recovers the actual user',async()=>{
+ localStorage.setItem('tripline:authed','1');const fetcher=vi.spyOn(global,'fetch').mockResolvedValueOnce(new Response('{}',{status:503})).mockResolvedValue(new Response(JSON.stringify(SAMPLE_USER)));const {result,rerender}=renderHook(()=>useCurrentUser());await waitFor(()=>expect(result.current.error).toBe(true));expect(result.current.user).toBeUndefined();expect(localStorage.getItem('tripline:authed')).toBe('1');result.current.reload();rerender();await waitFor(()=>expect(result.current.user?.id).toBe(SAMPLE_USER.id));expect(result.current.error).toBe(false);expect(fetcher).toHaveBeenCalledTimes(2);localStorage.clear();
 });

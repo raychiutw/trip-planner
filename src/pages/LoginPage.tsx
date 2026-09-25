@@ -329,15 +329,18 @@ export default function LoginPage() {
               body: JSON.stringify({ token: invitationToken }),
             });
             if (acceptRes.ok) {
-              const data = (await acceptRes.json()) as { tripId: string };
+              const data = (await acceptRes.json()) as { ok?: boolean; tripId?: string };
               if (!active.current) return;
+              if (data?.ok !== true || typeof data.tripId !== 'string' || !data.tripId) throw new Error('Invalid invitation result');
               window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
               return;
             }
-            // accept failed → fall through to default redirect (使用者體驗：仍登入成功)
+            // Login succeeded; recover the invitation independently.
           } catch {
-            // network error → fall through
+            // The invite page can retry without losing the original token.
           }
+          if (active.current) navigate(`/invite?token=${encodeURIComponent(invitationToken)}`);
+          return;
         }
         if (active.current) navigate(redirectAfter ?? '/trips');
         return;
