@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { Link, MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation, useParams, useNavigate, createMemoryRouter, RouterProvider } from 'react-router-dom';
 import TripPage from '../../src/pages/TripPage';
 import EditEntryPage from '../../src/pages/EditEntryPage';
 import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
@@ -74,18 +74,26 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 function Workspace() {
-  const { tripId = 't1' } = useParams(); const location = useLocation();
+  const { tripId = 't1' } = useParams(); const location = useLocation(); const navigate = useNavigate();
   return <>
     <Link to="/trip/t1">甲時間軸</Link><Link to="/trip/t2">乙時間軸</Link>
     <Link to="/trip/t1/stop/12/edit">編輯甲</Link><Link to="/trip/t2/stop/12/edit">編輯乙</Link>
     <output data-testid="location">{location.pathname}{location.search}</output>
     <TripPage tripId={tripId} noShell />
-    <SheetStackProvider value={{ inStack: true, closeStack: () => {} }}>
+    <SheetStackProvider value={{ inStack: true, closeStack: () => navigate("/trip/t1") }}>
       <Routes><Route path="stop/:entryId/edit" element={<EditEntryPage />} /></Routes>
     </SheetStackProvider>
   </>;
 }
-async function open(edit = false) {
+async function open(edit = false, guarded = false) {
+  if (guarded) {
+    const router = createMemoryRouter([{path: "/trip/:tripId/*", element: <ActiveTripProvider><Workspace /></ActiveTripProvider>}], {initialEntries:["/trip/t1/stop/12/edit"]});
+    render(<RouterProvider router={router} />);
+    await screen.findByTestId("edit-entry-mode-section");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    await tick(250);
+    return router;
+  }
   render(<MemoryRouter initialEntries={[`/trip/t1${edit ? '/stop/12/edit' : ''}`]}><ActiveTripProvider><Routes>
     <Route path="/trip/:tripId/*" element={<Workspace />} />
   </Routes></ActiveTripProvider></MemoryRouter>);
@@ -266,4 +274,81 @@ describe('兩個真實交通編輯入口的 segment 生命週期', () => {
     expect(timeline().getByText('10 min')).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/trip/t1');
   });
+});
+
+
+it('保存超過 1.2 秒時切換行程仍保留編輯頁，成功後才接續目標', async () => {
+  let release!: () => void;
+  beforeEntryWrite = async () => { await new Promise<void>(resolve => { release = resolve; }); return undefined; };
+  await open(true, true);
+  fireEvent.change(screen.getByTestId('edit-entry-description-input'), {target:{value:'尚未保存的新內容'}});
+  fireEvent.click(screen.getByText('乙時間軸'));
+  await tick(1500);
+  expect(screen.getByTestId('location').textContent).toBe('/trip/t1/stop/12/edit');
+  expect(entryWrites).toHaveLength(1);
+  await act(async () => { release(); });
+  await tick(0);
+  expect(screen.getByTestId('location').textContent).toBe('/trip/t2');
+});
+
+it('browser back 保存失敗時留在頁面，重試成功才返回原目的地', async () => {
+  beforeEntryWrite = () => response({error:'unavailable'},503);
+  const router = await open(true, true);
+  await act(async () => { await router!.navigate('/trip/t2'); await router!.navigate('/trip/t1/stop/12/edit'); });
+  await tick(0);
+  fireEvent.change(screen.getByTestId('edit-entry-description-input'), {target:{value:'不能遺失'}});
+  await act(async () => { await router!.navigate(-1); });
+  await tick(0);
+  expect(screen.getByTestId('location').textContent).toBe('/trip/t1/stop/12/edit');
+  expect(screen.getByRole('alertdialog')).toHaveTextContent('尚有未儲存');
+  const attempts = entryWrites.length;
+  await tick(2500);
+  expect(entryWrites).toHaveLength(attempts);
+  beforeEntryWrite = undefined;
+  fireEvent.click(screen.getByRole('button',{name:'重試儲存'}));
+  await tick(0);
+  expect(screen.getByTestId('location').textContent).toBe('/trip/t2');
+});
+
+it('備註保存失敗後可留在頁面，明確放棄才離開且不再重送', async () => {
+  beforeEntryWrite = () => response({error:'unavailable'},503);
+  await open(true, true);
+  fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-1012'));
+  fireEvent.change(screen.getByTestId('edit-entry-poi-note-input-1012'), {target:{value:'保留我的備註'}});
+  fireEvent.click(screen.getByText('乙時間軸'));
+  await tick(0);
+  expect(screen.getByRole('alertdialog')).toHaveTextContent('尚有未儲存');
+  fireEvent.click(screen.getByRole('button',{name:'留在此頁'}));
+  await tick(0);
+  expect(screen.getByTestId('location').textContent).toBe('/trip/t1/stop/12/edit');
+  expect(screen.getByTestId('edit-entry-poi-note-input-1012')).toHaveValue('保留我的備註');
+  fireEvent.click(screen.getByText('乙時間軸'));
+  await tick(0);
+  fireEvent.click(screen.getByRole('button',{name:'放棄未儲存內容並離開'}));
+  await tick(0);
+  expect(screen.getByTestId('location').textContent).toBe('/trip/t2');
+  const writes = entryWrites.length;
+  await tick(2500);
+  expect(entryWrites).toHaveLength(writes);
+});
+
+
+it('關閉操作面板時可以留在頁面，晚到的保存成功不會再觸發離開', async () => {
+  let release!: () => void;
+  beforeEntryWrite = async () => { await new Promise<void>(resolve => { release = resolve; }); return undefined; };
+  await open(true, true);
+  fireEvent.change(screen.getByTestId('edit-entry-description-input'), {target:{value:'正在保存'}});
+  const unload = new Event('beforeunload',{cancelable:true});
+  window.dispatchEvent(unload);
+  expect(unload.defaultPrevented).toBe(true);
+  fireEvent.click(screen.getByTestId('stack-panel-close'));
+  await tick(0);
+  fireEvent.click(screen.getByRole('button',{name:'留在此頁'}));
+  await act(async () => { release(); });
+  await tick(0);
+  expect(screen.getByTestId('location').textContent).toBe('/trip/t1/stop/12/edit');
+  fireEvent.click(screen.getByTestId('stack-panel-close'));
+  await tick(0);
+  expect(screen.getByTestId('location').textContent).toBe('/trip/t1');
+  expect(entryWrites).toHaveLength(1);
 });

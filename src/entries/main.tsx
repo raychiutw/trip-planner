@@ -31,7 +31,7 @@ if ('serviceWorker' in navigator) {
 }
 
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { NewTripProvider } from '../contexts/NewTripContext';
 import { ActiveTripProvider } from '../contexts/ActiveTripContext';
@@ -244,17 +244,9 @@ function KeyboardInsetTracker() {
   return null;
 }
 
-const el = document.getElementById('reactRoot');
-if (el) {
-  // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
-  const existingRoot = (el as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot;
-  const root = existingRoot ?? createRoot(el);
-  (el as unknown as { _reactRoot: typeof root })._reactRoot = root;
+function ApplicationRoutes() {
+  return (<>
 
-  root.render(
-    <StrictMode>
-      <ErrorBoundary>
-        <BrowserRouter>
           <AccountSheetProvider>
           <DarkModeInit />
           <ServerStatusBanner />
@@ -374,7 +366,23 @@ if (el) {
           </NewTripProvider>
           </ActiveTripProvider>
           </AccountSheetProvider>
-        </BrowserRouter>
+
+  </>);
+}
+
+const appRouter = createBrowserRouter([{ path: "*", element: <ApplicationRoutes /> }]);
+
+const el = document.getElementById('reactRoot');
+if (el) {
+  // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
+  const existingRoot = (el as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot;
+  const root = existingRoot ?? createRoot(el);
+  (el as unknown as { _reactRoot: typeof root })._reactRoot = root;
+
+  root.render(
+    <StrictMode>
+      <ErrorBoundary>
+        <RouterProvider router={appRouter} />
       </ErrorBoundary>
     </StrictMode>
   );

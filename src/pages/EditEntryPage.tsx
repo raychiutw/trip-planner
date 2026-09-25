@@ -35,6 +35,8 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
 import { CATEGORY_ICON } from '../components/trip/CategoryPicker';
+import { isAnySheetOpen } from '../hooks/useSheetBehavior';
+import SaveBeforeLeave from '../components/shared/SaveBeforeLeave';
 import { useAutosave, type SaveResult } from '../hooks/useAutosave';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
@@ -815,7 +817,7 @@ interface PerPoiNoteRowProps {
    */
   onSecondary?: boolean;
   /** 把本行 autosave 的 flush 註冊給父頁（EditEntryPage）→ 回前頁前統一 await（v2.55.x stale-race 修）。 */
-  registerFlush?: (flush: () => Promise<SaveResult>) => () => void;
+  registerFlush?: (editor: { flush: () => Promise<SaveResult>; hasPending: () => boolean; discard: () => void }) => () => void;
 }
 
 /**
@@ -857,9 +859,10 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
 
   // v2.55.x：把本行 autosave 的 flush 註冊給 EditEntryPage — 回前頁前統一 await 沖出 pending
   // 備註 PATCH，避免返回時 days GET 搶先讀到未 commit 的舊值（stale race，見 goBackFocused）。
-  const flushRef = useRef(noteAutosave.flush);
-  flushRef.current = noteAutosave.flush;
-  useEffect(() => registerFlush?.(() => flushRef.current()), [registerFlush]);
+  const autosaveRef = useRef(noteAutosave);
+  autosaveRef.current = noteAutosave;
+  useEffect(() => registerFlush?.({ flush: () => autosaveRef.current.flush(),
+    hasPending: () => autosaveRef.current.hasPending, discard: () => autosaveRef.current.cancel() }), [registerFlush]);
 
   // autosave error → toast（對齊 TimelineRail；監聽 error state transition，
   // 避免每 re-render 重複 toast）。
@@ -879,8 +882,8 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
   }, [initialNote]);
 
   const closeEdit = useCallback(async () => {
-    await noteAutosave.flush();
-    setEditing(false);
+    const outcome = await noteAutosave.flush();
+    if (outcome.status === 'saved') setEditing(false);
   }, [noteAutosave]);
 
   const handleChange = (value: string) => {
@@ -1015,7 +1018,7 @@ export default function EditEntryPage() {
   // v2.33.139: 移除 `error` state — titleBar SaveStatus 已拔 (user feedback
   // 「右上角不用顯示狀態」)，error 細節走 showToast 即時呈現，不需 useState 持有。
   // 保留以前的 setError(...) call sites 改 showToast(...)。
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
+
 
   const { segmentMap } = useTripSegments(tripId);
 
@@ -1229,12 +1232,12 @@ export default function EditEntryPage() {
     return null;
   }, [startTime, endTime, mode, transitMin]);
 
-  const dirty = useMemo(() => {
+  const dirty = (() => {
     const o = originalRef.current;
     const entryDirty = startTime !== o.startTime || endTime !== o.endTime || description !== o.description;
     const segmentDirty = noTravel !== o.noTravel || mode !== o.mode || (mode === 'transit' && transitMin !== o.transitMin);
     return { entryDirty, segmentDirty, any: entryDirty || segmentDirty };
-  }, [startTime, endTime, description, mode, transitMin, noTravel]);
+  })();
 
   const stayMinutes = useMemo(() => {
     if (!startTime || !endTime) return null;
@@ -1256,14 +1259,22 @@ export default function EditEntryPage() {
     return `新正選距離本日其他點約 ${km} km，可能跨區，前後車程會誤算。確定要設為正選？`;
   }, [altSwapConfirm, siblingMasterCoords]);
 
-  const handleSave = useCallback(async () => {
-    if (!tripId || !entry || submitting) return;
-    if (validation || !dirty.any) return;
-    setSubmitting(true);
-    const isCurrent = captureSegmentScope(tripId);
+  const editLifetime = useMemo(() => ({ active: true }), [tripId, entryId]);
+  useEffect(() => {
+    editLifetime.active = true;
+    return () => { editLifetime.active = false; };
+  }, [editLifetime]);
 
-    type SaveResult = { scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string };
-    const requests: Array<{ scope: SaveResult['scope']; request: Promise<SaveResult> }> = [];
+  const saveFormBatch = useCallback(async (): Promise<SaveResult> => {
+    if (!tripId || !entry) return { status: 'error', error: '景點尚未載入' };
+    if (validation) return { status: 'error', error: validation };
+    if (!dirty.any) return { status: 'saved' };
+    setSubmitting(true);
+    const currentSegment = captureSegmentScope(tripId);
+    const isCurrent = () => editLifetime.active && currentSegment();
+
+    type WriteResult = { scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string };
+    const requests: Array<{ scope: WriteResult['scope']; request: Promise<WriteResult> }> = [];
 
     if (dirty.entryDirty) {
       const body: Record<string, unknown> = {};
@@ -1309,18 +1320,18 @@ export default function EditEntryPage() {
     // 鎖死的怪行為，直接 setSubmitting(false) early return。
     if (requests.length === 0) {
       setSubmitting(false);
-      return;
+      return { status: 'saved' };
     }
 
     try {
-      const results = await Promise.all(requests.map(async ({ scope, request }): Promise<SaveResult> => {
+      const results = await Promise.all(requests.map(async ({ scope, request }): Promise<WriteResult> => {
         try { return await request; }
         catch (err) {
           return { scope, ok: false, status: err instanceof ApiError ? err.status : 0,
             text: err instanceof Error ? err.message : '網路錯誤' };
         }
       }));
-      if (!isCurrent()) return;
+      if (!isCurrent()) return { status: 'superseded' };
       const failures = results.filter((r) => !r.ok);
       if (results.some((r) => r.scope === 'entry' && r.ok)) {
         originalRef.current = { ...originalRef.current, startTime, endTime, description };
@@ -1337,7 +1348,7 @@ export default function EditEntryPage() {
           startTime, endTime, description, mode, transitMin, noTravel,
         };
         setSubmitting(false);
-        return;
+        return { status: 'saved' };
       }
       const msg = failures
         .map((f) => `${f.scope === 'entry' ? '景點' : '移動方式'}儲存失敗 (${f.status || f.text || '網路錯誤'})`)
@@ -1347,55 +1358,70 @@ export default function EditEntryPage() {
       // 顯示。
       showToast(msg, 'error', 6000);
       setSubmitting(false);
+      return { status: 'error', error: msg };
     } catch (err) {
-      if (!isCurrent()) return;
+      if (!isCurrent()) return { status: 'superseded' };
       const msg = err instanceof Error ? err.message : '儲存失敗';
       showToast(msg, 'error', 6000);
       setSubmitting(false);
+      return { status: 'error', error: msg };
     }
   }, [
-    tripId, entry, entryId, submitting, validation, dirty,
+    tripId, entry, entryId, validation, dirty, editLifetime,
     startTime, endTime, description, mode, transitMin, noTravel, segment, prevEntry,
   ]);
 
-  // v2.55.x：per-POI 備註 autosave 的 flush 註冊表。回前頁前先 await 沖出 pending 備註 PATCH，
-  // 確保返回時重新 fetch 的 days 讀到已 commit 的新值（否則 debounce PATCH 未 commit 就被返回的
-  // GET 搶先讀到舊值 = 「改備註返回沒生效、F5 才對」的 stale race）。
-  const noteFlushersRef = useRef<Set<() => Promise<SaveResult>>>(new Set());
-  const registerNoteFlush = useCallback((flush: () => Promise<SaveResult>) => {
-    noteFlushersRef.current.add(flush);
-    return () => { noteFlushersRef.current.delete(flush); };
+  const failedFormSnapshot = useRef<string | null>(null);
+  const formFlight = useRef<Promise<SaveResult> | null>(null);
+  useEffect(() => {
+    formFlight.current = null;
+    failedFormSnapshot.current = null;
+    setSubmitting(false);
+  }, [editLifetime]);
+  const latestFormSave = useRef(saveFormBatch);
+  latestFormSave.current = saveFormBatch;
+  const handleSave = useCallback((): Promise<SaveResult> => {
+    if (formFlight.current) return formFlight.current;
+    const task = latestFormSave.current().then(result => {
+      if (formFlight.current === task) failedFormSnapshot.current = result.status === 'error' ? JSON.stringify(currentFields.current) : null;
+      return result;
+    }).finally(() => { if (formFlight.current === task) formFlight.current = null; });
+    formFlight.current = task;
+    return task;
   }, []);
-
-  // 回前頁：先 flush 備註，再帶 ?focus=<entryId>&focusDay=<dayNum> → TripPage 切到該天、
-  // TimelineRail 掛載即展開該景點（回到「當下景點展開」）。
-  const goBackFocused = useCallback(async () => {
-    // flush 每行的 pending 備註 PATCH，但加 1.2s 上限 — 離線/慢網時 useAutosave 會保留 patch
-    // 等重連，flush 可能不 resolve；不能讓返回鍵卡住。
-    const capped = (p: Promise<unknown>) => {
-      let t: ReturnType<typeof setTimeout>;
-      return Promise.race([
-        p,
-        new Promise<void>((resolve) => { t = setTimeout(resolve, 1200); }),
-      ]).finally(() => clearTimeout(t));
-    };
-    await Promise.all([...noteFlushersRef.current].map((f) => capped(f().catch(() => undefined))));
+  const currentFields = useRef({ startTime, endTime, description, mode, transitMin, noTravel });
+  currentFields.current = { startTime, endTime, description, mode, transitMin, noTravel };
+  const hasFormPending = useCallback(() => {
+    const value = currentFields.current; const saved = originalRef.current;
+    return !!formFlight.current || Object.keys(value).some(key => value[key as keyof typeof value] !== saved[key as keyof typeof saved]);
+  }, []);
+  type NoteEditor = { flush: () => Promise<SaveResult>; hasPending: () => boolean; discard: () => void };
+  const noteEditors = useRef(new Set<NoteEditor>());
+  const registerNoteFlush = useCallback((editor: NoteEditor) => {
+    noteEditors.current.add(editor);
+    return () => { noteEditors.current.delete(editor); };
+  }, []);
+  const flushEdits = useCallback(async (): Promise<SaveResult> => {
+    do {
+      const result = await handleSave();
+      if (result.status !== 'saved') return result;
+    } while (hasFormPending());
+    const notes = await Promise.all([...noteEditors.current].map(editor => editor.flush()));
+    return notes.find(result => result.status !== 'saved') ?? { status: 'saved' };
+  }, [handleSave, hasFormPending]);
+  const goBackFocused = useCallback(() => {
     if (!tripId) { navigate('/trips'); return; }
     const day = entryDayNumRef.current;
     const dayQuery = typeof day === 'number' ? `&focusDay=${day}` : '';
     navigate(`/trips?selected=${encodeURIComponent(tripId)}&focus=${entryId}${dayQuery}`);
   }, [tripId, entryId, navigate]);
-
-  // v2.33.108: auto-save 後不再需要 discard confirmation — handleCancel 直接 back，
-  // pending patch 由 handleSave debounce 內 flush（user 等 800ms 後 navigate）。
-  const handleCancel = useCallback(() => {
-    void goBackFocused();
-  }, [goBackFocused]);
+  const handleCancel = goBackFocused;
 
   // v2.33.108: debounce auto-save effect — dirty+valid+!submitting 800ms 後 fire handleSave。
   // 取代「儲存」button reassurance（user 改完 800ms 自動 PATCH，SaveStatus 顯示進度）。
   useEffect(() => {
-    if (!dirty.any || validation || submitting) return;
+    if (failedFormSnapshot.current !== JSON.stringify(currentFields.current)) failedFormSnapshot.current = null;
+    if (!dirty.any || validation || submitting || failedFormSnapshot.current !== null) return;
     const timer = setTimeout(() => {
       void handleSave();
     }, 800);
@@ -1603,7 +1629,7 @@ export default function EditEntryPage() {
       if (e.repeat) return;
       // 任一 modal 開著 → 讓 modal 自己的 Escape handler 接 (ConfirmModal 內部
       // 有 onCancel)，page-level shortcut 不介入。
-      if (showDiscardModal || altSwapConfirm) return;
+      if (altSwapConfirm || isAnySheetOpen()) return;
       if ((e.metaKey || e.ctrlKey) && (e.key === 'Enter' || e.key === 's')) {
         e.preventDefault();
         void handleSave();
@@ -1617,7 +1643,7 @@ export default function EditEntryPage() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleSave, handleCancel, showDiscardModal, altSwapConfirm]);
+  }, [handleSave, handleCancel, altSwapConfirm]);
 
   // v2.33.139: titleBar 拔 SaveStatus indicator — user feedback「右上角不用
   // 顯示狀態」。靜默 auto-save，只在失敗時 showToast (v2.33.137 已實作對齊
@@ -2000,15 +2026,13 @@ export default function EditEntryPage() {
         </div>
       </main>
 
-      {/* Discard confirm modal — shared <ConfirmModal> 取代 inline rolled-own */}
-      <ConfirmModal
-        open={showDiscardModal}
-        title="丟棄變更？"
-        message="未儲存的變更會遺失。"
-        confirmLabel="丟棄變更"
-        cancelLabel="繼續編輯"
-        onConfirm={() => { setShowDiscardModal(false); void goBackFocused(); }}
-        onCancel={() => setShowDiscardModal(false)}
+      <SaveBeforeLeave
+        hasPending={() => hasFormPending() || [...noteEditors.current].some(editor => editor.hasPending())}
+        flush={flushEdits}
+        discard={() => {
+          originalRef.current = { ...currentFields.current };
+          noteEditors.current.forEach(editor => editor.discard());
+        }}
       />
 
       {/* Master swap confirm (v2.27.0) with optional cross-region warning */}

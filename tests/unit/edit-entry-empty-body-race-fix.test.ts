@@ -38,7 +38,7 @@ describe('PR12 (A): empty body race guard', () => {
   });
 
   it('requests.length === 0 → 早 return 不走 success path 寫 originalRef', () => {
-    expect(EDIT).toMatch(/if \(requests\.length === 0\) \{\s+setSubmitting\(false\);\s+return;/);
+    expect(EDIT).toMatch(/if \(requests\.length === 0\) \{\s+setSubmitting\(false\);\s+return \{ status: 'saved' \};/);
   });
 });
 
