@@ -352,3 +352,21 @@ it('關閉操作面板時可以留在頁面，晚到的保存成功不會再觸�
   expect(screen.getByTestId('location').textContent).toBe('/trip/t1');
   expect(entryWrites).toHaveLength(1);
 });
+
+it('備註 blur 已送出時，關閉仍等待同一筆 PATCH 完成而不重送', async () => {
+  let release!: () => void;
+  beforeEntryWrite = async () => { await new Promise<void>(resolve => { release = resolve; }); return undefined; };
+  await open(true, true);
+  fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-1012'));
+  fireEvent.change(screen.getByTestId('edit-entry-poi-note-input-1012'), {target:{value:'新備註內容'}});
+  fireEvent.blur(screen.getByTestId('edit-entry-poi-note-input-1012'));
+  fireEvent.click(screen.getByTestId('stack-panel-close'));
+  await tick(1500);
+  expect(screen.getByTestId('location').textContent).toBe('/trip/t1/stop/12/edit');
+  expect(entryWrites).toHaveLength(1);
+  expect(entryWrites[0]!.body).toHaveProperty('note','新備註內容');
+  await act(async () => { release(); });
+  await tick(0);
+  expect(screen.getByTestId('location').textContent).toBe('/trip/t1');
+  expect(entryWrites).toHaveLength(1);
+});
