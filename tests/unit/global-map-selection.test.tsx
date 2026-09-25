@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import GlobalMapPage from '../../src/pages/GlobalMapPage';
 import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
@@ -69,6 +69,18 @@ describe('root map selection', () => {
     expect(screen.queryByTestId('map-destination')).toBeNull();
     expect(screen.queryByTestId('global-map-empty')).toBeNull();
     expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private');
+  });
+
+  it.each([{}, [null], [{ tripId: 'private' }], [{ tripId: 'private', name: '一' }, { tripId: 'private', name: '二' }]].map(body => ({ body })))('preserves selection on malformed summaries and retries the same preference: %j', async ({ body }) => {
+    lsSet(LS_KEY_TRIP_PREF, 'private');
+    listResponse = async () => new Response(JSON.stringify(body));
+    openMap();
+    expect(await screen.findByRole('alert')).toHaveTextContent('載入行程失敗');
+    expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private');
+    expect(screen.getByRole('link', { name: '查看行程列表' })).toHaveAttribute('href', '/trips');
+    listResponse = async () => new Response(JSON.stringify(trips));
+    fireEvent.click(screen.getByRole('button', { name: '重試' }));
+    expect(await screen.findByTestId('map-destination')).toHaveTextContent('/trip/private/map');
   });
 
   it('shows the existing empty state only for a confirmed empty list', async () => {

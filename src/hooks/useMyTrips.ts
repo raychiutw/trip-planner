@@ -4,7 +4,7 @@
  * Only the newest response can publish. A failed read keeps the last known list
  * with error status, so selection never treats failure as a confirmed empty list.
  */
-import { useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { apiFetch } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
 
@@ -43,7 +43,10 @@ function refresh() {
   publish({ ...snapshot, status: 'loading' });
   const task = apiFetch<MyTrip[]>('/my-trips').then((result) => {
     if (version !== requestVersion || userId !== snapshot.userId) return;
-    publish({ userId, status: 'success', trips: Array.isArray(result) ? result : [] });
+    if (!Array.isArray(result) || result.some(trip => !trip || typeof trip.tripId !== 'string' || !trip.tripId.trim()
+      || typeof trip.name !== 'string' || (trip.title != null && typeof trip.title !== 'string'))
+      || new Set(result.map(trip => trip.tripId)).size !== result.length) throw new Error('Invalid trip summaries');
+    publish({ userId, status: 'success', trips: result });
   }).catch(() => {
     if (version !== requestVersion || userId !== snapshot.userId) return;
     publish({ ...snapshot, status: 'error' });
@@ -75,7 +78,7 @@ export function __clearMyTripsCache(): void {
 }
 
 /** Unauthenticated consumers never receive a prior account's accessible summaries. */
-export function useMyTrips(userId: string | null | undefined): { trips: MyTrip[] | undefined; status: ListStatus } {
+export function useMyTrips(userId: string | null | undefined): { trips: MyTrip[] | undefined; status: ListStatus; retry: () => Promise<void> } {
   const current = useSyncExternalStore(subscribe, () => snapshot, () => snapshot);
   useEffect(() => {
     if (!userId) return;
@@ -86,6 +89,10 @@ export function useMyTrips(userId: string | null | undefined): { trips: MyTrip[]
     }
     if (snapshot.trips === undefined && !pending) void refresh();
   }, [userId]);
-  if (!userId || current.userId !== userId) return { trips: undefined, status: 'loading' };
-  return { trips: current.trips, status: current.status };
+  const retry = useCallback(() => {
+    if (!userId || snapshot.userId !== userId) return Promise.resolve();
+    return pending ?? refresh();
+  }, [userId]);
+  if (!userId || current.userId !== userId) return { trips: undefined, status: 'loading', retry };
+  return { trips: current.trips, status: current.status, retry };
 }

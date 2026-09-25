@@ -1,7 +1,6 @@
 /** Root map chooses an accessible trip; the trip map owns map data and controls. */
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNewTrip } from '../contexts/NewTripContext';
 import { useAccessibleTripSelection } from '../hooks/useAccessibleTripSelection';
 import AppShell from '../components/shell/AppShell';
@@ -12,10 +11,9 @@ import Icon from '../components/shared/Icon';
 const EMPTY_STATE_CLASSES = 'grid min-h-0 flex-1 place-items-center bg-[linear-gradient(135deg,var(--color-accent-subtle)_0%,var(--color-tertiary)_100%)] px-6 py-8';
 
 export default function GlobalMapPage() {
-  useRequireAuth();
-  const { user } = useCurrentUser();
+  const { user } = useRequireAuth();
   const { openModal: openNewTrip } = useNewTrip();
-  const { trips, status, selectedTripId } = useAccessibleTripSelection(user?.id);
+  const { trips, status, selectedTripId, retry } = useAccessibleTripSelection(user?.id);
 
   if (status === 'loading') return null;
   if (selectedTripId) {
@@ -37,7 +35,13 @@ export default function GlobalMapPage() {
           </div>
         </div>
       ) : (
-        <div className={EMPTY_STATE_CLASSES} role="alert">載入行程失敗，請稍後再試</div>
+        <div className={EMPTY_STATE_CLASSES} role="alert">
+          <div className="grid gap-3 text-center">
+            <p>載入行程失敗，請稍後再試</p>
+            <button type="button" className="min-h-[44px] text-accent" onClick={() => void retry()}>重試</button>
+            <Link to="/trips" className="min-h-[44px] text-accent">查看行程列表</Link>
+          </div>
+        </div>
       )}
     </div>
   );

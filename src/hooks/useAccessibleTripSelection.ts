@@ -4,7 +4,7 @@ import { useActiveTrip } from '../contexts/ActiveTripContext';
 import { useMyTrips } from './useMyTrips';
 
 export function useAccessibleTripSelection(userId: string | null | undefined, explicitTripId?: string | null, lockSelection = false) {
-  const { trips, status } = useMyTrips(userId);
+  const { trips, status, retry } = useMyTrips(userId);
   const { activeTripId, setActiveTrip } = useActiveTrip();
   const selectionAtReadStart = useRef(activeTripId);
   const previousStatus = useRef(status);
@@ -35,5 +35,5 @@ export function useAccessibleTripSelection(userId: string | null | undefined, ex
     : activeTripId && (trips?.some((trip) => trip.tripId === activeTripId) || activeTripId !== selectionAtReadStart.current)
       ? activeTripId : trips?.[0]?.tripId ?? null;
 
-  return { trips, status, activeTripId, selectedTripId, setActiveTrip };
+  return { trips, status, retry, activeTripId, selectedTripId, setActiveTrip };
 }
