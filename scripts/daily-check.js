@@ -125,7 +125,7 @@ function createCheckSources(io = {}) {
       "  AND NOT (status = 404 AND path LIKE '/api/trips/%/docs/%') " +
       "  AND NOT (status = 405 AND source = 'anonymous') " +
       "  AND NOT (status = 502 AND path = '/api/route' AND error = 'MAPS_UPSTREAM_FAILED: Routes empty result') " +
-      "  AND NOT (status = 502 AND path = '/api/admin/quota-estimate' AND error LIKE 'MAPS_UPSTREAM_FAILED:%') " +
+      "  AND NOT (status = 502 AND path = '/api/admin/quota-estimate' AND error = 'MAPS_UPSTREAM_FAILED: Google Cloud Monitoring 無法取得用量（GOOGLE_CLOUD_SA_KEY / GOOGLE_CLOUD_PROJECT_ID 未設定或 API 失敗）') " +
       "GROUP BY path, method, status " +
       "ORDER BY count DESC"
     );

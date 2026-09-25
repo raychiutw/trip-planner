@@ -57,14 +57,24 @@ describe('daily-check.js — queryApiErrors 對真實 SQL 的行為', () => {
     expect(result).toMatchObject({ status: 'ok', total: 0 });
   });
 
-  it('quota-estimate 的其他 5xx 與其他 path 的 502 照常 critical', async () => {
+  // 精確比對：quota-estimate.ts 改訊息時排除會失效 → 往「照報」方向壞，不會靜默吞掉。
+  it('排除字串與 quota-estimate.ts 實際丟出的訊息一致', () => {
+    const endpointSrc = fs.readFileSync(path.resolve(__dirname, '../../functions/api/admin/quota-estimate.ts'), 'utf8');
+    expect(endpointSrc).toContain(
+      "'Google Cloud Monitoring 無法取得用量（GOOGLE_CLOUD_SA_KEY / GOOGLE_CLOUD_PROJECT_ID 未設定或 API 失敗）'",
+    );
+  });
+
+  it('quota-estimate 的其他 5xx、其他 502 訊息與其他 path 的 502 照常 critical', async () => {
     const result = await runApiErrors([
       ['/api/admin/quota-estimate', 500, 'Internal error'],
+      ['/api/admin/quota-estimate', 502, 'MAPS_UPSTREAM_FAILED: 未來新增的其他失敗情境'],
       ['/api/trips/t1/days', 502, 'MAPS_UPSTREAM_FAILED: Routes timeout'],
     ]);
     expect(result.status).toBe('critical');
     expect(result.errors.map((e: { path: string; status: number }) => `${e.path} ${e.status}`).sort()).toEqual([
       '/api/admin/quota-estimate 500',
+      '/api/admin/quota-estimate 502',
       '/api/trips/t1/days 502',
     ]);
   });
