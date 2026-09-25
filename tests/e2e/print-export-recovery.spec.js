@@ -1,0 +1,34 @@
+import {test,expect} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
+const {setupApiMocks,MOCK_TRIPS_LIST}=require('./api-mocks');
+test('print preview retries missing notes and excludes controls from print',async({page})=>{
+ await setupApiMocks(page);const tripId=MOCK_TRIPS_LIST[0].tripId;let fail=true;
+ await page.route(`**/api/trips/${tripId}/notes`,route=>route.fulfill({status:fail?500:200,json:fail?{}:{pretripNotes:[{title:'Recovered note',content:'Required note body'}]}}));
+ await page.goto(`/trip/${tripId}/print`);
+ const retry=page.getByRole('button',{name:'重新載入列印資料'});await expect(retry).toBeVisible();
+ await expect(page.getByTestId('trip-print-do')).toBeDisabled();fail=false;await retry.click();
+ await expect(page.getByText('Required note body')).toBeVisible();
+ await page.evaluate(()=>{window.print=()=>window.dispatchEvent(new Event('afterprint'));});
+ await page.getByTestId('trip-print-do').click();await expect(page.getByText('列印視窗已關閉')).toBeVisible();
+ await page.emulateMedia({media:'print'});
+ await expect(page.locator('.tp-print-toolbar')).toBeHidden();await expect(page.locator('.tp-print-feedback')).toBeHidden();
+ await expect(page.getByText('Required note body')).toBeVisible();
+});
+test('long share PDF downloads every page and cleans temporary rendering DOM',async({page},testInfo)=>{
+ test.setTimeout(120000);await setupApiMocks(page);
+ const days=Array.from({length:25},(_,day)=>({dayNum:day+1,date:'2026-09-25',timeline:Array.from({length:20},(_,entry)=>({id:day*20+entry+1,startTime:'09:00',endTime:'10:00',stopPois:[{sortOrder:1,poiId:day*20+entry+1,name:`ENTRY-${day+1}-${entry+1}`,type:'attraction',note:'A complete itinerary row, retained through PDF pagination.'}]}))}));
+ await page.route('**/api/share/long-print',route=>route.fulfill({json:{meta:{name:'Long export',title:'Long export'},days,notes:{pretripNotes:[{title:'Final note',content:'END-OF-EXPORT-25-20'}]}}}));
+ await page.goto('/s/long-print');await expect(page.getByText('ENTRY-25-20',{exact:true})).toBeVisible();
+ const downloadPromise=page.waitForEvent('download',{timeout:110000});
+ await page.getByTestId('share-pdf').click();await expect(page.getByTestId('share-pdf')).toBeDisabled();
+ const download=await downloadPromise;const path=testInfo.outputPath('long-trip.pdf');await download.saveAs(path);
+ expect(await download.failure()).toBeNull();
+ const bytes=await readFile(path);expect(bytes.subarray(0,5).toString()).toBe('%PDF-');
+ expect((bytes.toString('latin1').match(/\/Type \/Page\b/g)??[]).length).toBeGreaterThan(15);
+ await expect(page.getByText('PDF 已產生')).toBeVisible();
+ await expect(page.locator('[data-trip-pdf],.html2pdf__overlay')).toHaveCount(0);
+ await page.emulateMedia({media:'print'});
+ await expect(page.getByRole('heading',{name:'Long export'})).toBeVisible();
+ await expect(page.locator('.tp-share-actionbar')).toBeHidden();
+ await expect(page.locator('.tp-print-feedback')).toBeHidden();
+});

@@ -20,7 +20,7 @@ import type { Trip } from '../../types/trip';
 /** html2canvas can hang (canvas/render deadlock) without ever rejecting — cap it. */
 const PDF_TIMEOUT_MS = 30000;
 
-/** One renderer owns the temporary document at a time. */
+/** ponytail: one export per browser; use per-job rendering isolation if parallel exports become necessary. */
 let pdfInFlight = false;
 
 export async function renderTripPrintPdf(opts: {
@@ -28,6 +28,7 @@ export async function renderTripPrintPdf(opts: {
   trip?: Trip | null;
   data?: TripPrintData;
   fileBase?: string;
+  onProgress?: (stage: 'preparing' | 'rendering') => void;
 }): Promise<void> {
   if (pdfInFlight) throw new Error('另一份 PDF 正在產生，請稍後再試');
   pdfInFlight = true;
@@ -43,8 +44,20 @@ export async function renderTripPrintPdf(opts: {
       container?.remove(); style?.remove(); overlay?.remove();
     }
   };
+  let renewDeadline: () => void;
+  const deadline = new Promise<never>((_, reject) => {
+    renewDeadline = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const error = new Error('PDF 產生逾時，請重試');
+        controller.abort(error); reject(error);
+      }, PDF_TIMEOUT_MS);
+    };
+    renewDeadline();
+  });
   const work = async () => {
     try {
+      opts.onProgress?.('preparing');
       if (!opts.data && !opts.tripId) throw new Error('需要行程資料才能輸出 PDF');
       const data = opts.data ?? await loadTripPrintData(opts.tripId!, controller.signal);
       controller.signal.throwIfAborted();
@@ -62,6 +75,7 @@ export async function renderTripPrintPdf(opts: {
       await new Promise(resolve => setTimeout(resolve, 50));
       controller.signal.throwIfAborted();
       const target = (container.querySelector('.tp-print-doc') as HTMLElement) ?? container;
+      target.setAttribute('data-trip-pdf-document', '');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const worker = (html2pdf as any)().set({
         margin: [10, 10, 10, 10],
@@ -75,22 +89,33 @@ export async function renderTripPrintPdf(opts: {
       await worker.toContainer();
       overlay = await worker.get('overlay');
       controller.signal.throwIfAborted();
-      await worker.toPdf();
+      const rendered = await worker.get('container') as HTMLElement;
+      const pageSize = await worker.get('pageSize') as {inner: {px: {height: number}}};
+      const pageHeight = pageSize.inner.px.height;
+      const totalHeight = Math.max(pageHeight, rendered.scrollHeight);
+      opts.onProgress?.('rendering');
+      // Bound canvas memory to one A4 page, regardless of total trip length.
+      for (let y = 0; y < totalHeight; y += pageHeight) {
+        controller.signal.throwIfAborted();
+        renewDeadline!();
+        if (y > 0) {
+          const pdf = await worker.get('pdf');
+          pdf.addPage();
+          await worker.toContainer();
+          overlay = await worker.get('overlay');
+          controller.signal.throwIfAborted();
+        }
+        await worker.set({canvas: null, html2canvas: {
+          scale: 2, useCORS: true, windowWidth: 794,
+          height: Math.min(pageHeight, totalHeight - y), y,
+        }}).toPdf();
+      }
       controller.signal.throwIfAborted();
       await worker.save();
     } finally { cleanup(); }
   };
   try {
-    await Promise.race([
-      work(),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => {
-          const error = new Error('PDF 產生逾時，請重試');
-          controller.abort(error);
-          reject(error);
-        }, PDF_TIMEOUT_MS);
-      }),
-    ]);
+    await Promise.race([work(), deadline]);
   } finally {
     clearTimeout(timer);
     pdfInFlight = false;

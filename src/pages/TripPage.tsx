@@ -424,7 +424,10 @@ function TripPageInner(
     if (!activeTripId) return;
     try {
       if (format === 'json') await downloadTripJson({ tripId: activeTripId, trip });
-      else await renderTripPrintPdf({ tripId: activeTripId, trip });
+      else {
+        await renderTripPrintPdf({tripId: activeTripId, trip, onProgress: stage => showToast(stage === 'preparing' ? 'PDF 準備中…' : 'PDF 輸出中…', 'info')});
+        showToast('PDF 已產生', 'success');
+      }
     } catch (err) {
       console.error(`[handleDownloadFormat] ${format} 失敗:`, err);
       showToast('下載失敗，請稍後再試', 'error', 3000);

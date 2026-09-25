@@ -12,6 +12,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/shared/Icon';
 import TripPrintDocument from '../components/print/TripPrintDocument';
 import { renderTripPrintPdf } from '../components/print/renderTripPrintPdf';
+import { useBrowserPrint } from '../hooks/useBrowserPrint';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { ApiError } from '../lib/errors';
 import { cloneShare } from '../lib/shareApi';
@@ -37,6 +38,11 @@ function ShareReader({token}: {token: string | undefined}) {
     active.current = true;
     return () => { active.current = false; };
   }, []);
+  const browserPrint = useBrowserPrint();
+  const [pdfStage, setPdfStage] = useState<'idle' | 'preparing' | 'rendering' | 'saved' | 'error'>('idle');
+  const [pdfError, setPdfError] = useState('');
+  const pdfFlight = useRef(false);
+  const pdfBusy = pdfStage === 'preparing' || pdfStage === 'rendering';
   const [cloning, setCloning] = useState(false);
   const [cloneErr, setCloneErr] = useState(false);
 
@@ -60,10 +66,17 @@ function ShareReader({token}: {token: string | undefined}) {
     };
   }, [token, attempt]);
 
-  const onPdf = useCallback(() => {
-    if (!data) return;
+  const onPdf = useCallback(async () => {
+    if (!data || pdfFlight.current) return;
+    pdfFlight.current = true;
+    setPdfStage('preparing'); setPdfError('');
     const fileBase = tripDisplayName(data).replace(/[\\/:*?"<>|]/g, '').trim() || '分享行程';
-    void renderTripPrintPdf({ data, fileBase });
+    try {
+      await renderTripPrintPdf({data, fileBase, onProgress: stage => { if (active.current) setPdfStage(stage); }});
+      if (active.current) setPdfStage('saved');
+    } catch (error) {
+      if (active.current) { setPdfStage('error'); setPdfError(error instanceof Error ? error.message : 'PDF 產生失敗，請重試'); }
+    } finally { pdfFlight.current = false; }
   }, [data]);
 
   // Logged in → clone the visible payload server-side into the caller's account, then
@@ -122,16 +135,18 @@ function ShareReader({token}: {token: string | undefined}) {
           </header>
 
           <div className="tp-share-actionbar">
-            <button type="button" className="tp-share-ghost" onClick={() => window.print()} title="列印" data-testid="share-print">
+            <button type="button" className="tp-share-ghost" onClick={browserPrint.print} disabled={browserPrint.busy || pdfBusy} title="列印" data-testid="share-print">
               <Icon name="printer" />
             </button>
-            <button type="button" className="tp-share-ghost" onClick={onPdf} title="存成 PDF" data-testid="share-pdf">
+            <button type="button" className="tp-share-ghost" onClick={() => void onPdf()} disabled={pdfBusy || browserPrint.busy} title="存成 PDF" data-testid="share-pdf">
               <Icon name="download" />
             </button>
             <button type="button" className="tp-share-copy" onClick={onCopy} disabled={cloning || user === undefined} data-testid="share-copy">
               <Icon name="copy" /> {cloning ? '複製中…' : '複製到我的行程'}
             </button>
           </div>
+          {browserPrint.message && <div className="tp-print-feedback" role={browserPrint.error ? 'alert' : 'status'}>{browserPrint.message}</div>}
+          {pdfStage !== 'idle' && <div className="tp-print-feedback" role={pdfStage === 'error' ? 'alert' : 'status'}>{pdfStage === 'preparing' ? 'PDF 準備中…' : pdfStage === 'rendering' ? 'PDF 輸出中…' : pdfStage === 'saved' ? 'PDF 已產生' : pdfError}</div>}
           {cloneErr && (
             <div className="tp-share-error" role="alert">
               複製失敗，請稍後再試。
