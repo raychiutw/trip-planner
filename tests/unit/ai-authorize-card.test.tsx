@@ -3,7 +3,7 @@
  *   - mount GET → authorized:true → 顯「已授權」確認、無授權鈕
  *   - GET → authorized:false → 顯「授權 AI」鈕、無確認
  *   - 點鈕 → POST → authorized:true → 轉「已授權」
- *   - GET reject → 當未授權（顯鈕，不卡建立流程）
+ *   - GET reject → 保留未知狀態並可重試
  *   - POST reject → 顯錯誤、鈕仍在可重試
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -25,7 +25,7 @@ describe('AiAuthorizeCard', () => {
     render(<AiAuthorizeCard />);
     await waitFor(() => expect(screen.getByTestId('ai-authorize-on')).toBeTruthy());
     expect(screen.queryByTestId('ai-authorize-btn')).toBeNull();
-    expect(mockApiFetch).toHaveBeenCalledWith('/account/ai-authorization');
+    expect(mockApiFetch).toHaveBeenCalledWith('/account/ai-authorization', expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
   it('未授權 → 顯授權鈕、無確認', async () => {
@@ -72,10 +72,10 @@ describe('AiAuthorizeCard', () => {
     await waitFor(() => expect(screen.getByTestId('ai-authorize-on')).toBeTruthy());
   });
 
-  it('讀狀態失敗 → 當未授權（顯鈕，不卡流程）', async () => {
+  it('讀狀態失敗 → 顯讀取重試，不冒稱未授權', async () => {
     mockApiFetch.mockRejectedValue(new Error('401'));
     render(<AiAuthorizeCard />);
-    await waitFor(() => expect(screen.getByTestId('ai-authorize-btn')).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('button', { name: '重試讀取授權' })).toBeTruthy());
   });
 
   it('POST 失敗 → 顯錯誤、鈕仍在可重試', async () => {

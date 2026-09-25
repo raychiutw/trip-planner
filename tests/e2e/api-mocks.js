@@ -738,6 +738,14 @@ async function setupApiMocks(page) {
     return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
   });
 
+  await page.route('**/api/account/ai-authorization', async route => {
+    const id = 'tripline-tp-request';
+    if (route.request().method() === 'POST' && !connectedApps.some(app => app.client_id === id)) {
+      connectedApps.push({ client_id: id, app_name: 'Tripline AI', app_logo_url: null, app_description: null, homepage_url: null, status: 'active', scopes: ['openid', 'profile'], granted_at: Date.now() });
+    }
+    return route.fulfill({ json: { authorized: connectedApps.some(app => app.client_id === id) } });
+  });
+
   await page.route(/\/api\/account\/connected-apps(?:\/[^/]+)?$/, async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -752,7 +760,7 @@ async function setupApiMocks(page) {
       const clientId = decodeURIComponent(path.split('/').pop() ?? '');
       const idx = connectedApps.findIndex((app) => app.client_id === clientId);
       if (idx >= 0) connectedApps.splice(idx, 1);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, revoked_client_id: clientId }) });
     }
     return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
   });

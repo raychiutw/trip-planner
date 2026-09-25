@@ -14,6 +14,7 @@
  * Deny  → POST /api/oauth/consent { decision: 'deny', ... }
  *   → server validates redirect_uri ∈ client_apps.redirect_uris + 302 with error=access_denied
  */
+import { SCOPE_DESCRIPTIONS } from '../lib/oauthScopes';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
@@ -92,15 +93,6 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-callout);
 }
 `;
-
-const SCOPE_DESCRIPTIONS: Record<string, string> = {
-  openid: '識別您的身分（唯一 ID）',
-  profile: '基本個人資料（名稱、頭像）',
-  email: '您的電子郵件地址',
-  offline_access: '即使您離線也可存取（refresh token）',
-  'trips:read': '讀取您的行程資料',
-  'trips:write': '建立 / 修改您的行程',
-};
 
 // v2.33.46 round 7a security audit: scope allowlist — 未知 scope (`scope=admin`
 // 等) 仍 render 給 user click Allow 培養忽略警告的行為。allowlist 外 scope

@@ -7,9 +7,9 @@
  * redirect dance。撤銷走「帳號設定 → 已連結應用」（DELETE connected-apps/tripline-tp-request）。
  *
  * 狀態：載入中（null，只顯 header）→ 未授權（顯「授權 AI」鈕）→ 已授權（顯綠色確認）。
- * 讀取失敗當未授權處理（顯授權鈕、不卡建立流程）。
+ * 讀取失敗保留未知狀態並提供重試，不代替使用者重新授權。
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/apiClient';
 
 // 對應 mockup V1 的 .ai-card；mockup 的 --accent/--sage/--radius 映射到 tokens.css 真值：
@@ -38,40 +38,70 @@ const SCOPED_STYLES = `
 .tp-ai-card__err { margin-top: 8px; font-size: 0.75rem; color: var(--color-accent-3-deep); }
 `;
 
-export default function AiAuthorizeCard() {
+export default function AiAuthorizeCard({ refreshVersion = 0, onAuthorized, disabled = false }: {
+  refreshVersion?: number;
+  onAuthorized?: () => void;
+  disabled?: boolean;
+} = {}) {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [readError, setReadError] = useState(false);
+  const [readAttempt, setReadAttempt] = useState(0);
+  const readRequest = useRef<AbortController | null>(null);
+  const busyRef = useRef(false);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const focusResult = useRef(false);
+  useLayoutEffect(() => {
+    if (authorized && focusResult.current) {
+      focusResult.current = false;
+      if (document.activeElement === document.body) statusRef.current?.focus({ preventScroll: true });
+    }
+  }, [authorized]);
   // 使用者按授權後可能離開表單（送出/取消 NewTripPage）→ POST 未 resolve 前卸載；guard 掉 late setState。
   const mountedRef = useRef(true);
-  useEffect(() => () => {
-    mountedRef.current = false;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; readRequest.current?.abort(); };
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    apiFetch<{ authorized: boolean }>('/account/ai-authorization')
-      .then((r) => {
-        if (!cancelled) setAuthorized(r.authorized);
+    const request = new AbortController();
+    readRequest.current?.abort();
+    readRequest.current = request;
+    setReadError(false);
+    setError(null);
+    setAuthorized(null);
+    apiFetch<{ authorized: boolean }>('/account/ai-authorization', { signal: request.signal })
+      .then(r => {
+        if (request.signal.aborted) return;
+        if (typeof r?.authorized !== 'boolean') throw new Error('invalid authorization');
+        setAuthorized(r.authorized);
       })
-      .catch(() => {
-        // 讀狀態失敗 → 當未授權（顯授權鈕），不卡建立行程流程。
-        if (!cancelled) setAuthorized(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      .catch(() => { if (!request.signal.aborted) setReadError(true); });
+    return () => request.abort();
+  }, [refreshVersion, readAttempt]);
 
   async function authorize() {
+    if (busyRef.current || disabled) return;
+    busyRef.current = true;
+    const trigger = document.activeElement;
+    readRequest.current?.abort();
     setBusy(true);
     setError(null);
     try {
       const r = await apiFetch<{ authorized: boolean }>('/account/ai-authorization', { method: 'POST' });
-      if (mountedRef.current) setAuthorized(r.authorized);
+      if (!mountedRef.current) return;
+      if (r?.authorized !== true) throw new Error('unconfirmed authorization');
+      readRequest.current?.abort();
+      focusResult.current = document.activeElement === trigger || document.activeElement === document.body;
+      setAuthorized(true);
+      setReadError(false);
+      onAuthorized?.();
     } catch {
       if (mountedRef.current) setError('授權失敗，請稍後再試。');
     } finally {
+      busyRef.current = false;
       if (mountedRef.current) setBusy(false);
     }
   }
@@ -93,7 +123,7 @@ export default function AiAuthorizeCard() {
       </div>
 
       {authorized === true && (
-        <div className="tp-ai-card__on" data-testid="ai-authorize-on">
+        <div ref={statusRef} className="tp-ai-card__on" data-testid="ai-authorize-on" role="status" tabIndex={-1}>
           <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path
               fillRule="evenodd"
@@ -110,15 +140,20 @@ export default function AiAuthorizeCard() {
           type="button"
           className="tp-ai-card__btn"
           onClick={authorize}
-          disabled={busy}
+          disabled={busy || disabled}
           data-testid="ai-authorize-btn"
         >
           {busy ? '授權中⋯' : '授權 AI'}
         </button>
       )}
 
+      {readError && <>
+        <p className="tp-ai-card__err" role="alert">無法讀取 AI 授權狀態。</p>
+        <button type="button" className="tp-ai-card__btn" disabled={busy || disabled} onClick={() => setReadAttempt(n => n + 1)}>重試讀取授權</button>
+      </>}
+
       {error && (
-        <p className="tp-ai-card__err" data-testid="ai-authorize-error">
+        <p className="tp-ai-card__err" data-testid="ai-authorize-error" role="alert">
           {error}
         </p>
       )}
