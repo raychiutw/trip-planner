@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useLocation, useSearchParams, type NavigateOptions } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams, type NavigateOptions } from 'react-router-dom';
 
 /**
  * useStackSearchParams — 更新查詢字串但**不抹掉堆疊層級**（#1162）。
@@ -53,20 +53,21 @@ export type StackSearchParamsSetter = (
  */
 export function useStackSearchParams(): [URLSearchParams, StackSearchParamsSetter] {
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const setStackSearchParams = useCallback<StackSearchParamsSetter>(
     (next, options) => {
       if (options && 'state' in options) {
         // 呼叫方自己決定 state → 尊重它，不要偷偷合併（否則除錯時找不到值從哪來）。
-        setSearchParams(next, options);
+        navigate({ search: next.toString(), hash: location.hash }, options);
         return;
       }
       const stackState = pickStackState(location.state);
-      setSearchParams(next, stackState ? { ...options, state: stackState } : options);
+      navigate({ search: next.toString(), hash: location.hash }, stackState ? { ...options, state: stackState } : options);
     },
-    // location.state 而非整個 location：只有 state 變動才需要新的 setter。
-    [location.state, setSearchParams],
+    // Query changes preserve the current anchor and only the approved stack state.
+    [location.state, location.hash, navigate],
   );
 
   return [searchParams, setStackSearchParams];

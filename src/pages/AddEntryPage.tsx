@@ -13,6 +13,7 @@
  * 已在 ChangePoiPage 完整實作，重複會 drift。User feedback「相同的增加景點的方式」
  * 同樣指向 reuse ChangePoiPage。
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
@@ -230,7 +231,7 @@ export default function AddEntryPage() {
     );
   }, [tripId, dayNum, navigate]);
 
-  if (!auth.user) return null;
+  if (!auth.user) return <AuthStatus auth={auth} />;
   if (!tripId) {
     return (
       <OperationShell shellClassName="tp-add-entry-shell" title="新增景點" back={handleBack}>

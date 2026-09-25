@@ -17,6 +17,7 @@
  *       client_type radio + scopes checkbox + InlineError) + secret modal
  *       (driven by submit success state)。
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSheetBehavior } from '../hooks/useSheetBehavior';
 import { useNavigate } from 'react-router-dom';
@@ -349,7 +350,7 @@ export default function DeveloperAppNewPage() {
     { canDismiss: false },
   );
 
-  if (!auth.user) return null;
+  if (!auth.user) return <AuthStatus auth={auth} />;
 
   const titleBarActions = (
     <TitleBarPrimaryAction

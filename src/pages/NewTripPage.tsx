@@ -29,13 +29,13 @@
  *   - 取消走 useNavigateBack(routes.trips()) explicit URL，建立後 navigate(`/trips?selected=:id`)
  *   - 「建立」 primary action 在 TitleBar (responsive icon+文字 / icon-only)
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetchRaw } from '../lib/apiClient';
@@ -422,7 +422,7 @@ type DateMode = 'select' | 'flexible';
 
 export default function NewTripPage() {
   const auth = useRequireAuth();
-  const { user } = useCurrentUser();
+  const { user } = auth;
   const navigate = useNavigate();
   const handleBack = useNavigateBack(routes.trips());
 
@@ -608,7 +608,7 @@ export default function NewTripPage() {
     }
   }
 
-  if (!auth.user) return null;
+  if (!auth.user) return <AuthStatus auth={auth} />;
 
   const destShown = selectedPois.map((poi) => poi.name).join('、');
   const summaryText = dateMode === 'flexible'

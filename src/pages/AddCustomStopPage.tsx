@@ -14,6 +14,7 @@
  *   - 開始時間 / 停留分鐘 / 備註
  *   - 完成 → POST entries + recompute-travel + navigate back
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -480,7 +481,7 @@ function CustomStopEditor() {
   const dirty = !!(title || typeahead.query || pickedCoord || startTime || duration || note || hintConfirmed);
   const discard = () => { setTitle(''); setPickedCoord(null); setFlyToSignal(null); setStartTime(''); setDuration(''); setNote(''); setHintConfirmed(false); typeahead.reset(); };
 
-  if (!auth.user) return null;
+  if (!auth.user) return <AuthStatus auth={auth} />;
   if (!tripId || !Number.isFinite(dayNum)) {
     return (
       <AppShell

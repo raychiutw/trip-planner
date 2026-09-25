@@ -32,6 +32,7 @@
  *   - copy: POST /api/trips/:id/entries/:eid/copy { targetDayId }
  *   - move: PATCH /api/trips/:id/entries/:eid { day_id }
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -390,7 +391,7 @@ function EntryActionForm({ action }: EntryActionPageProps) {
     if (complete) { showToast('交通已更新', 'success'); handleBack(); }
   }
 
-  if (!auth.user) return null;
+  if (!auth.user) return <AuthStatus auth={auth} />;
   if (!tripId || !entryIdNum) {
     return (
       <OperationShell

@@ -5,6 +5,7 @@
  * 對應 mockup section 19 (line 7425-7583)。Profile hero + 3 group settings
  * rows，整合既有分散的 /settings/* page 為 entry hub。
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -482,7 +483,7 @@ export default function AccountPage() {
     }
   }, [navigate]);
 
-  if (!user) return null;
+  if (!user) return <AuthStatus auth={auth} />;
 
   // v2.17.17:initial 用 displayName 對齊 sidebar(原本用 email.charAt 造成
   // displayName "Ray" + email "lean.lean@..." 時 hero 顯示「L」 但 sidebar 顯示「R」)。

@@ -27,6 +27,7 @@
  *   - onClose / onAdded 走 useNavigateBack(routes.tripsSelected(id)) explicit URL + dispatch tp-entry-updated
  *   - 完成按鈕同時放 TitleBar action + bottom bar (兩處同步 disabled state)
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
@@ -944,7 +945,7 @@ function AddStopEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, searchCatOverride, tripId, dayNum, selectionVisit, hasDay]);
 
-  if (!auth.user) return null;
+  if (!auth.user) return <AuthStatus auth={auth} />;
   // v2.31.99: tripId 必填，但 dayNum 改成 optional — 沒帶 ?day=N 時 chip row
   // 上方讓 user 選一天再 unlock form（取代既有 invalid-params blocking page）。
   if (!tripId) {

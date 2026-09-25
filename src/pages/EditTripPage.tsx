@@ -25,6 +25,7 @@
  *   - 取消走 useNavigateBack(routes.tripsSelected(id)) explicit URL，儲存後 navigate(`/trips?selected=:id`)
  *   - Form 邏輯 + state machine 完全沿用 EditTripModal v2.19.0
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
@@ -1049,7 +1050,7 @@ function TripEditor() {
     return () => clearTimeout(timer);
   }, [isDirty, submitting, title, description, lang, published, destinations]);
 
-  if (!auth.user) return null;
+  if (!auth.user) return <AuthStatus auth={auth} />;
 
   if (!tripId) {
     return (
