@@ -7,8 +7,8 @@
  * Flow:
  *   1. Mount: read token from query → idle state 顯示「點此完成驗證」button
  *   2. User click button → POST `/api/oauth/verify` with body { token }
- *   3. Success → navigate /login?verified=1
- *   4. Error → 顯示對應訊息 + 提供「重寄」/ 「回首頁」 button
+ *   3. Success → explicit login link /login?verified=1
+ *   4. Error → 顯示對應訊息 + 提供登入／重試／回首頁
  *   5. No-JS fallback: noscript <form> 直接 POST /api/oauth/verify
  *
  * Defense vs 舊 GET-with-side-effect (v2.33.59):
@@ -24,8 +24,8 @@
  *   誤導訊息（rayschiu@fetci.com 2026-05-25 QA 復現）。改用 button click =
  *   require user gesture，scanner headless render 不會自動 click button。
  */
-import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetchRaw } from '../lib/apiClient';
 
 type Status = 'idle' | 'verifying' | 'success' | 'error';
@@ -33,7 +33,7 @@ type ErrorCode = 'missing_token' | 'expired' | 'used' | 'server_error' | 'networ
 
 const ERROR_MESSAGES: Record<ErrorCode, string> = {
   missing_token: '驗證連結缺少 token 參數，可能是連結被截斷。',
-  expired: '驗證連結已過期，請重新申請驗證信。',
+  expired: '驗證連結已過期。請使用最新驗證信，或先登入帳號。',
   used: '此驗證連結已經使用過了，可直接登入。',
   server_error: '系統暫時無法驗證，請稍後再試。',
   network: '網路連線錯誤，請檢查網路後再試。',
@@ -41,13 +41,29 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const token = searchParams.get('token') ?? '';
+  const token = (searchParams.get('token') ?? '').trim();
+  return <Verification key={token} token={token} />;
+}
+
+function Verification({ token }: { token: string }) {
+  const active = useRef(true);
+  const inFlight = useRef(false);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
   // v2.33.114: missing_token 在 mount 時就 derive 進 initial state（避免 useEffect setState 副作用）
   const [status, setStatus] = useState<Status>(token ? 'idle' : 'error');
   const [errorCode, setErrorCode] = useState<ErrorCode | null>(token ? null : 'missing_token');
 
+  const resultRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (status === 'success' || status === 'error') resultRef.current?.focus();
+  }, [status]);
+
   async function performVerify(): Promise<void> {
+    if (!token || inFlight.current) return;
+    inFlight.current = true;
     setStatus('verifying');
     setErrorCode(null);
     try {
@@ -56,18 +72,22 @@ export default function VerifyEmailPage() {
         body: JSON.stringify({ token }),
         headers: { 'content-type': 'application/json' },
       });
-      const data = (await res.json()) as { ok?: boolean; error?: ErrorCode };
-      if (res.ok && data.ok) {
+      const data = (await res.json().catch(() => null)) as { ok?: unknown; error?: unknown } | null;
+      if (!active.current) return;
+      if (res.ok && data?.ok === true) {
         setStatus('success');
-        // 短暫顯示成功，跳轉 /login?verified=1
-        setTimeout(() => navigate('/login?verified=1'), 1500);
       } else {
         setStatus('error');
-        setErrorCode(data.error ?? 'server_error');
+        const code = data?.error;
+        setErrorCode(typeof code === 'string' && Object.prototype.hasOwnProperty.call(ERROR_MESSAGES, code)
+          ? code as ErrorCode : 'server_error');
       }
     } catch {
+      if (!active.current) return;
       setStatus('error');
       setErrorCode('network');
+    } finally {
+      inFlight.current = false;
     }
   }
 
@@ -128,7 +148,7 @@ export default function VerifyEmailPage() {
         ) : null}
 
         {status === 'verifying' ? (
-          <p style={{ color: 'var(--color-muted)', margin: 0 }} data-testid="verify-email-status-verifying">
+          <p style={{ color: 'var(--color-muted)', margin: 0 }} role="status" data-testid="verify-email-status-verifying">
             驗證中…
           </p>
         ) : null}
@@ -136,11 +156,11 @@ export default function VerifyEmailPage() {
         {status === 'success' ? (
           <>
             <p style={{ color: 'var(--color-priority-low-dot)', fontWeight: 700, margin: 0 }}
-               data-testid="verify-email-status-success">
+               ref={resultRef} tabIndex={-1} role="status" data-testid="verify-email-status-success">
               ✓ Email 驗證成功！
             </p>
             <p style={{ color: 'var(--color-muted)', marginTop: 12, fontSize: 14 }}>
-              即將跳轉登入頁…
+              <Link to="/login?verified=1">前往登入</Link>
             </p>
           </>
         ) : null}
@@ -149,29 +169,15 @@ export default function VerifyEmailPage() {
           <>
             <p
               style={{ color: 'var(--color-priority-high-dot)', margin: 0, lineHeight: 1.5 }}
+              ref={resultRef}
+              tabIndex={-1}
+              role="alert"
               data-testid={`verify-email-status-error-${errorCode}`}
             >
               {ERROR_MESSAGES[errorCode]}
             </p>
             <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {errorCode === 'expired' ? (
-                <Link
-                  to="/login"
-                  style={{
-                    padding: '10px 18px',
-                    borderRadius: 'var(--radius-full)',
-                    background: 'var(--color-accent)',
-                    color: '#fff',
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    fontSize: 14,
-                  }}
-                  data-testid="verify-email-resend-link"
-                >
-                  重新申請
-                </Link>
-              ) : null}
-              {errorCode === 'used' ? (
+              {errorCode === 'used' || errorCode === 'expired' || errorCode === 'missing_token' ? (
                 <Link
                   to="/login"
                   style={{
