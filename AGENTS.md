@@ -123,7 +123,7 @@ it must not replace or duplicate an applicable Matt Pocock workflow unless the
 user explicitly asks.
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `docs/agents/`.
-Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite, see `~/.gbrain/config.json`.
+Prod: https://trip-planner-dby.pages.dev/
 
 ## Agent skills
 

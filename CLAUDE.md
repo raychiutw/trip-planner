@@ -103,7 +103,7 @@ Match → invoke `Skill` first。**matt 優先；同一件事 matt 有就用 mat
 | 專案自訂 commit 前檢查 | `/tp-code-verify` |
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `docs/agents/`.
-Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite + MCP (user scope), sync=full, repo=read-write, 873 pages, setup 2026-05-04. Windows caveat: transcript ingest no-op (script POSIX-only). See `~/.gbrain/config.json`.
+Prod: https://trip-planner-dby.pages.dev/
 
 ## Agent skills
 
