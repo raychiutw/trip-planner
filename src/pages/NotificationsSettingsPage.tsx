@@ -2,8 +2,8 @@
  * NotificationsSettingsPage — Section 2 (terracotta-account-hub-page) sub-page
  *
  * Route: /account/notifications
- * Stub page — mockup section 19 規範有此 row 但 backend 通知功能尚在開發中。
- * 初版顯示「即將推出」 + 預先 list 規劃中的通知類型。後續 polish 補實際 toggle。
+ * Informational placeholder: notification settings are not available on this page.
+ * Planned categories are readable content, not disabled controls.
  */
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -53,6 +53,7 @@ const SCOPED_STYLES = `
   max-width: 360px;
 }
 .tp-notif-list {
+  list-style: none; margin: 0; padding: 0;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -62,8 +63,6 @@ const SCOPED_STYLES = `
   display: flex; align-items: center; gap: 14px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--color-border);
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 .tp-notif-row:last-child { border-bottom: none; }
 .tp-notif-row-icon {
@@ -74,7 +73,7 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 .tp-notif-row-icon .svg-icon { width: 18px; height: 18px; }
-.tp-notif-row-body { flex: 1; }
+.tp-notif-row-body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .tp-notif-row-title {
   font-size: var(--font-size-callout); font-weight: 600;
   color: var(--color-foreground);
@@ -84,6 +83,7 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 .tp-notif-row-status {
+  white-space: nowrap;
   font-size: var(--font-size-caption2); font-weight: 700;
   color: var(--color-muted);
   letter-spacing: 0.1em; text-transform: uppercase;
@@ -103,28 +103,28 @@ export default function NotificationsSettingsPage() {
   const sidebar = <DesktopSidebarConnected />;
   const main = (
     <div className="tp-notif-shell" data-testid="notifications-page">
-      <TitleBar title="通知設定" back={() => navigate('/account')} />
+      <TitleBar title="通知設定" backLabel="返回帳號" back={() => navigate('/account')} />
       <div className="tp-notif-inner">
         <section className="tp-notif-stub">
           <div className="tp-notif-stub-icon" aria-hidden="true"><Icon name="lightbulb" /></div>
-          <h2 className="tp-notif-stub-title">即將推出</h2>
+          <h2 className="tp-notif-stub-title">尚未開放</h2>
           <p className="tp-notif-stub-copy">
-            通知功能還在開發中。下面列的是規劃中的通知類型，未來開放後可以分別開啟或關閉。
+            這個頁面僅介紹規劃中的通知類型，目前無法調整通知偏好。
           </p>
         </section>
 
-        <section className="tp-notif-list">
+        <ul className="tp-notif-list" role="list" aria-label="規劃中的通知類型">
           {PLANNED_TYPES.map((t) => (
-            <div key={t.key} className="tp-notif-row" data-testid={`notif-row-${t.key}`}>
+            <li key={t.key} className="tp-notif-row" data-testid={`notif-row-${t.key}`}>
               <div className="tp-notif-row-icon" aria-hidden="true"><Icon name={t.icon} /></div>
               <div className="tp-notif-row-body">
                 <div className="tp-notif-row-title">{t.title}</div>
                 <div className="tp-notif-row-helper">{t.helper}</div>
               </div>
-              <div className="tp-notif-row-status">即將推出</div>
-            </div>
+              <div className="tp-notif-row-status">規劃中</div>
+            </li>
           ))}
-        </section>
+        </ul>
       </div>
     </div>
   );
