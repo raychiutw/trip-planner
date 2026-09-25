@@ -21,6 +21,7 @@
  *  └────────────────────────────────────────────┘
  */
 
+import AuthStatus from '../components/shared/AuthStatus';
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { lazyWithRetry } from '../lib/lazyWithRetry';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
@@ -244,7 +245,8 @@ function TripMapPage() {
   const navigate = useNavigate();
   const { trip, allDays, loading, error } = useTripContext();
 
-  const { user } = useCurrentUser();
+  const auth = useCurrentUser();
+  const { user } = auth;
   const { trips, setActiveTrip } = useAccessibleTripSelection(user?.id, tripId);
 
   const pickTrip = useCallback((newTripId: string) => {
@@ -446,6 +448,7 @@ function TripMapPage() {
       />
 
       <main className="map-page-body">
+        {user === undefined && <AuthStatus auth={auth} />}
         {loading ? (
           <div className="map-page-loading" role="status" aria-busy="true" aria-live="polite">
             <div className="map-page-loading-stack">

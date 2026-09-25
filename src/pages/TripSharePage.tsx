@@ -7,6 +7,7 @@
  *
  * Design: ~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260530-191308.md
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/shared/Icon';
@@ -27,7 +28,8 @@ export default function TripSharePage() {
 // A different share is a different reader lifetime, including its clone action.
 function ShareReader({token}: {token: string | undefined}) {
   const navigate = useNavigate();
-  const { user } = useCurrentUser();
+  const auth = useCurrentUser();
+  const { user } = auth;
   const [data, setData] = useState<TripPrintData | null>(null);
   const [sharedBy, setSharedBy] = useState('');
   const [status, setStatus] = useState<'loading' | 'ready' | 'notfound' | 'error'>('loading');
@@ -134,6 +136,7 @@ function ShareReader({token}: {token: string | undefined}) {
             {meta && <div className="tp-share-meta">{meta}</div>}
           </header>
 
+          {user === undefined && <AuthStatus auth={auth} />}
           <div className="tp-share-actionbar">
             <button type="button" className="tp-share-ghost" onClick={browserPrint.print} disabled={browserPrint.busy || pdfBusy} title="列印" data-testid="share-print">
               <Icon name="printer" />

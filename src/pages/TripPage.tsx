@@ -1,3 +1,4 @@
+import AuthStatus from '../components/shared/AuthStatus';
 import { Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef, type ReactNode } from 'react';
 import { lazyWithRetry } from '../lib/lazyWithRetry';
 import { createPortal } from 'react-dom';
@@ -219,6 +220,13 @@ export interface TripPageHandle {
   openAddStop: () => void;
 }
 
+// A background timeline must not overwrite an operation page's anchor or router state.
+function replaceDayHash(hash: string) {
+  const path = window.location.pathname;
+  if (path !== '/trips' && !/^\/trip\/[\w-]+\/?$/.test(path)) return;
+  history.replaceState(history.state, '', hash);
+}
+
 function TripPageInner(
   { tripId: propTripId, noShell = false, usePortalMain = false, portalNode = null }: TripPageProps,
   ref: React.Ref<TripPageHandle>,
@@ -231,7 +239,8 @@ function TripPageInner(
   const explicitTripId = effectiveUrlTripId && /^[\w-]+$/.test(effectiveUrlTripId)
     ? effectiveUrlTripId : legacyTripId && /^[\w-]+$/.test(legacyTripId) ? legacyTripId : null;
   const navigate = useNavigate();
-  const { user: currentUser } = useCurrentUser();
+  const auth = useCurrentUser();
+  const { user: currentUser } = auth;
   const { trips: accessibleTrips, status: accessibleStatus, activeTripId: selectedTripId } =
     useAccessibleTripSelection(currentUser?.id, explicitTripId);
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
@@ -605,7 +614,7 @@ function TripPageInner(
       manualScrollTs.current = Date.now();
       switchDay(dayNum);
       scrollToDay(dayNum);
-      history.replaceState(null, '', '#day' + dayNum);
+      replaceDayHash('#day' + dayNum);
     },
     [switchDay],
   );
@@ -687,7 +696,7 @@ function TripPageInner(
     // 在初始 resolve 完同步推合法 hash 進 URL，避免分享連結時沒有日期錨點。
     const initialHash = computeInitialHash(dayNums, hash, localToday, autoScrollDates);
     if (initialHash && window.location.hash !== initialHash) {
-      history.replaceState(null, '', initialHash);
+      replaceDayHash(initialHash);
     }
 
     // Auto-locate to today (timezone-aware)
@@ -764,7 +773,7 @@ function TripPageInner(
           switchDay(activeDayNum);
           const newHash = '#day' + activeDayNum;
           if (window.location.hash !== newHash) {
-            history.replaceState(null, '', newHash);
+            replaceDayHash(newHash);
           }
         }
       }
@@ -820,10 +829,15 @@ function TripPageInner(
     ) : undefined
   ), [loading, trip, mapRailData.allPins, mapRailData.pinsByDay, isDark]);
 
+  // Every reader state belongs in the same host, including loading and recovery.
+  const renderMain = (content: ReactNode) => usePortalMain
+    ? (portalNode ? createPortal(content, portalNode) : null)
+    : content;
+
   /* --- Early returns (#13: use hoisted static views) --- */
-  if (resolveState.status === 'unpublished') return UNPUBLISHED_VIEW;
-  if (resolveState.status === 'loading') return LOADING_VIEW;
-  if (resolveState.status === 'error') return (
+  if (resolveState.status === 'unpublished') return renderMain(UNPUBLISHED_VIEW);
+  if (resolveState.status === 'loading') return renderMain(currentUser === undefined ? <AuthStatus auth={auth} /> : LOADING_VIEW);
+  if (resolveState.status === 'error') return renderMain(
     <div className="flex min-h-dvh">
       <div className="flex-1 min-w-0 max-w-full mx-auto" id="tripContent" style={{ padding: '24px 16px' }}>
         <AlertPanel
@@ -838,7 +852,7 @@ function TripPageInner(
   );
 
   if (error && !trip) {
-    return (
+    return renderMain(
       <div className="flex min-h-dvh">
         <div className="flex-1 min-w-0 max-w-full mx-auto">
           <div id="tripContent" style={{ padding: '24px 16px' }}>
@@ -1000,8 +1014,7 @@ function TripPageInner(
          * 切換、callback ref 還沒 fire）就先不 render 任何東西，等它到位才 portal，
          * 不會把內容顯示在錯的地方。不傳 usePortalMain 維持原本 inline render
          * （既有呼叫端，如 TripsListPage 手機分支，完全不受影響）。 */}
-        {!usePortalMain && wrappedMain}
-        {usePortalMain && portalNode ? createPortal(wrappedMain, portalNode) : null}
+        {renderMain(wrappedMain)}
         {sheetPortalNode && sheetContent && createPortal(sheetContent, sheetPortalNode)}
       </>
     );
