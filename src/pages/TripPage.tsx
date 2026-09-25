@@ -168,7 +168,7 @@ function scrollToDay(dayNum: number): void {
   if (!header) return;
   // scroll-margin-top on the header (set in the align effect below) handles
   // the day-strip sticky offset, so we just use scrollIntoView here.
-  header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  header.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 }
 
 /* ===== Resolve state machine ===== */
@@ -714,7 +714,7 @@ function TripPageInner(
         timeoutId = setTimeout(() => {
           const nowEl = document.querySelector('[data-now]');
           if (nowEl) {
-            nowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            nowEl.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
           }
         }, 300);
       });
