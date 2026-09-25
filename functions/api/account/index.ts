@@ -21,20 +21,36 @@
  *   本檔只負責驗證與回應，不重複實作刪除順序。
  */
 import { requireSessionUser } from '../_session';
+import { requireAuth } from '../_auth';
+import { mobileOAuthContract } from '../_mobileOAuth';
 import { buildClearSessionSetCookie } from '../_cookies';
 import { AppError } from '../_errors';
 import { rawJson } from '../_utils';
 import { verifyPassword } from '../../../src/server/password';
 import { eraseUserAccount } from '../_erasure';
+import { consumeDeleteReauth, hasDeleteReauth, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from './_deleteReauth';
 import type { Env } from '../_types';
 
 interface DeleteAccountBody {
   password?: unknown;
   confirm?: unknown;
+  challengeId?: unknown;
 }
 
 /** 純 OAuth 帳號用的確認字串。刻意用英文大寫，避免輸入法誤觸。 */
 const CONFIRM_PHRASE = 'DELETE';
+
+async function requireAccountUser(context: Parameters<PagesFunction<Env>>[0]): Promise<{ uid: string; grantId?: string }> {
+  if (context.request.headers.get('Authorization')?.startsWith('Bearer ')) {
+    const auth = requireAuth(context);
+    const contract = mobileOAuthContract(context.env, context.request);
+    if (!contract || auth.isServiceToken || auth.clientId !== contract.clientId || !auth.userId || !auth.grantId || auth.restrictTrip) {
+      throw new AppError('PERM_DENIED');
+    }
+    return { uid: auth.userId, grantId: auth.grantId };
+  }
+  return { uid: (await requireSessionUser(context.request, context.env)).uid };
+}
 
 /**
  * 該帳號有沒有 local 密碼身分 —— 決定二次確認要用密碼還是確認字串。
@@ -60,10 +76,13 @@ async function findLocalPasswordHash(env: Env, userId: string): Promise<string |
  * Response: { hasPassword, tripsOwned, collaboratorsAffected }
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const session = await requireSessionUser(context.request, context.env);
-  const userId = session.uid;
+  const actor = await requireAccountUser(context);
+  const userId = actor.uid;
 
   const hasPassword = (await findLocalPasswordHash(context.env, userId)) !== null;
+  const googleIdentity = hasPassword ? null : await context.env.DB.prepare("SELECT 1 FROM auth_identities WHERE user_id = ? AND provider = 'google'")
+    .bind(userId).first();
+  const reauthenticated = hasPassword || actor.grantId ? false : await hasDeleteReauth(context.env.DB, context.request, userId);
 
   const owned = await context.env.DB
     .prepare('SELECT count(*) AS n FROM trips WHERE owner_user_id = ?')
@@ -84,15 +103,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   return rawJson({
     hasPassword,
+    reauthProvider: googleIdentity ? 'google' : null,
+    reauthenticated,
     tripsOwned: owned?.n ?? 0,
     collaboratorsAffected: collab?.n ?? 0,
   });
 };
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const session = await requireSessionUser(context.request, context.env);
-  // SessionPayload 的欄位是 `uid`（不是 userId）—— 對齊 account/sessions.ts。
-  const userId = session.uid;
+  const actor = await requireAccountUser(context);
+  const userId = actor.uid;
 
   let body: DeleteAccountBody = {};
   try {
@@ -115,12 +135,23 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       throw new AppError('ACCOUNT_DELETE_PASSWORD_INVALID');
     }
   } else {
-    // 純 OAuth 帳號沒有密碼可打，改要求顯式確認字串。
+    // 顯式確認防誤觸；近期 Google 身分驗證才是刪除授權。
     if (body.confirm !== CONFIRM_PHRASE) {
       throw new AppError(
         'ACCOUNT_DELETE_CONFIRM_REQUIRED',
         `請輸入 ${CONFIRM_PHRASE} 以確認刪除`,
       );
+    }
+    if (actor.grantId) {
+      const challengeId = typeof body.challengeId === 'string' ? body.challengeId : '';
+      const challenge = challengeId ? await readMobileDeleteChallenge(context.env.DB, challengeId) : null;
+      if (!challenge || challenge.uid !== userId || challenge.grantId !== actor.grantId ||
+          challenge.clientId !== mobileOAuthContract(context.env, context.request)?.clientId || challenge.expired ||
+          !(await transitionMobileDeleteChallenge(context.env.DB, challengeId, userId, actor.grantId, 'verified', 'used'))) {
+        throw new AppError('ACCOUNT_DELETE_REAUTH_REQUIRED');
+      }
+    } else if (!(await consumeDeleteReauth(context.env.DB, context.request, userId))) {
+      throw new AppError('ACCOUNT_DELETE_REAUTH_REQUIRED');
     }
   }
 

@@ -38,6 +38,8 @@ export interface Env {
   SESSION_IP_HASH_SECRET?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  /** Separate verified HTTPS app-link callback, configured per environment. */
+  MOBILE_OAUTH_CALLBACK_URL?: string;
   // V2-P5 RS256 signing — PKCS8 private key (PEM or raw base64)
   OAUTH_SIGNING_PRIVATE_KEY?: string;
   // V2-P3 email service — kept for backward-compat during rollout, but

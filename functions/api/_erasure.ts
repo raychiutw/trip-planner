@@ -133,6 +133,11 @@ export async function eraseUserAccount(db: D1Database, userId: string): Promise<
   for (const t of USER_ORPHAN_TABLES) {
     bump(t, await runCounted(db, `DELETE FROM ${t} WHERE user_id = ?`, userId));
   }
+  // OAuth grants/tokens and the one-use delete proof live in the generic model
+  // table without a users FK. Leaving them behind would keep old Bearer tokens valid.
+  bump('oauth_models', await runCounted(db,
+    `DELETE FROM oauth_models WHERE json_extract(payload, '$.user_id') = ?
+       OR json_extract(payload, '$.uid') = ?`, userId, userId));
 
   // 以 email 為鍵的殘留（rate_limit_buckets 用明文 email/IP 當 PK）。
   // 需先取得 email —— users 尚未刪除，此時仍讀得到。

@@ -21,6 +21,9 @@
  */
 import { D1Adapter, type AdapterPayload } from '../../../../src/server/oauth-d1-adapter';
 import { issueSession } from '../../_session';
+import { requireSessionUser } from '../../_session';
+import { mobileOAuthContract } from '../../_mobileOAuth';
+import { deleteReauthSessionId, grantDeleteReauth, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from '../../account/_deleteReauth';
 import { verifyGoogleIdToken } from '../../../../src/server/oauth-client/google-id-token';
 import type { Env } from '../../_types';
 
@@ -36,6 +39,7 @@ interface OAuthStatePayload extends AdapterPayload {
   provider: string;
   redirectAfterLogin: string;
   createdAt: number;
+  reauth?: { uid: string; sessionId?: string; challengeId?: string; grantId?: string; clientId?: string };
 }
 
 function errorResponse(code: string, message: string, status = 400): Response {
@@ -74,8 +78,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
+  const providerError = url.searchParams.get('error');
 
-  if (!code || !state) {
+  if (!state) {
     return errorResponse('OAUTH_MISSING_PARAMS', '缺少 code 或 state');
   }
 
@@ -86,6 +91,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return errorResponse('OAUTH_INVALID_STATE', 'state 過期或已使用 — 請重新登入');
   }
   await stateAdapter.destroy(state); // one-time use
+
+  const reauthFailure = async (message: string, status = 403): Promise<Response> => {
+    const reauth = stateRow.reauth;
+    if (reauth?.challengeId && reauth.grantId && reauth.clientId === mobileOAuthContract(context.env, context.request)?.clientId) {
+      await transitionMobileDeleteChallenge(context.env.DB, reauth.challengeId, reauth.uid, reauth.grantId, 'started', 'failed');
+      const redirect = new URL(stateRow.redirectAfterLogin);
+      redirect.searchParams.set('challenge_id', reauth.challengeId);
+      redirect.searchParams.set('status', 'failed');
+      return Response.redirect(redirect, 302);
+    }
+    return errorResponse('ACCOUNT_DELETE_REAUTH_REQUIRED', message, status);
+  };
+
+  if (providerError) return stateRow.reauth ? reauthFailure('Google 驗證未完成') : errorResponse('OAUTH_PROVIDER_DENIED', 'Google 驗證未完成');
+  if (!code) return stateRow.reauth ? reauthFailure('缺少授權碼') : errorResponse('OAUTH_MISSING_PARAMS', '缺少 code 或 state');
 
   // 2. Validate env
   const clientId = context.env.GOOGLE_CLIENT_ID;
@@ -110,6 +130,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   if (!tokenRes.ok) {
     const errText = await tokenRes.text();
+    if (stateRow.reauth) return reauthFailure('Google 驗證失敗', 502);
     return errorResponse('OAUTH_TOKEN_EXCHANGE_FAILED', `Google token exchange ${tokenRes.status}: ${errText.slice(0, 200)}`, 502);
   }
 
@@ -122,6 +143,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     claims = await verifyGoogleIdToken(tokenJson.id_token, clientId);
   } catch (err) {
+    if (stateRow.reauth) return reauthFailure('Google 憑證無效', 401);
     return errorResponse(
       'OAUTH_INVALID_ID_TOKEN',
       `id_token 驗證失敗: ${(err as Error).message}`,
@@ -134,7 +156,39 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const name = typeof claims.name === 'string' ? claims.name : undefined;
   const picture = typeof claims.picture === 'string' ? claims.picture : undefined;
   if (!sub || !email) {
+    if (stateRow.reauth) return reauthFailure('Google 憑證缺少身分資訊');
     return errorResponse('OAUTH_INVALID_ID_TOKEN', 'id_token 缺 sub/email claim');
+  }
+  if (stateRow.reauth) {
+    const authTime = claims['auth_time'];
+    if (typeof authTime !== 'number' || !Number.isFinite(authTime) ||
+        authTime * 1000 < stateRow.createdAt - 5000 || authTime * 1000 > Date.now() + 5000 ||
+        Date.now() - authTime * 1000 > 5 * 60 * 1000) {
+      return reauthFailure('請重新驗證身分');
+    }
+    const identity = await context.env.DB.prepare('SELECT user_id FROM auth_identities WHERE provider = ? AND provider_user_id = ?')
+      .bind('google', sub).first<{ user_id: string }>();
+    if (identity?.user_id !== stateRow.reauth.uid) return reauthFailure('驗證帳號不符');
+    if (stateRow.reauth.challengeId && stateRow.reauth.grantId && stateRow.reauth.clientId === mobileOAuthContract(context.env, context.request)?.clientId) {
+      const challenge = await readMobileDeleteChallenge(context.env.DB, stateRow.reauth.challengeId);
+      if (!challenge || challenge.uid !== identity.user_id || challenge.grantId !== stateRow.reauth.grantId ||
+          challenge.clientId !== stateRow.reauth.clientId || challenge.expired ||
+          !(await transitionMobileDeleteChallenge(context.env.DB, stateRow.reauth.challengeId, identity.user_id,
+            challenge.grantId, 'started', 'verified'))) {
+        return reauthFailure('請重新驗證身分');
+      }
+      const mobileRedirect = new URL(stateRow.redirectAfterLogin);
+      mobileRedirect.searchParams.set('challenge_id', stateRow.reauth.challengeId);
+      mobileRedirect.searchParams.set('status', 'verified');
+      return Response.redirect(mobileRedirect, 302);
+    }
+    const current = await requireSessionUser(context.request, context.env).catch(() => null);
+    const sessionId = await deleteReauthSessionId(context.request);
+    if (!current || current.uid !== stateRow.reauth.uid || !sessionId || sessionId !== stateRow.reauth.sessionId ||
+        !(await grantDeleteReauth(context.env.DB, context.request, current.uid))) {
+      return errorResponse('ACCOUNT_DELETE_REAUTH_REQUIRED', '請重新驗證身分', 403);
+    }
+    return Response.redirect(new URL(stateRow.redirectAfterLogin, url.origin), 302);
   }
   const now = new Date().toISOString();
 

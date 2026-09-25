@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 async function setup(page) {
-  const state = { name: 'Reader', previewFails: true, deleted: false, deleteCalls: 0, profileCalls: 0, rejectDelete: true, hasPassword: true };
+  const state = { name: 'Reader', previewFails: true, deleted: false, deleteCalls: 0, profileCalls: 0, rejectDelete: true, hasPassword: true, reauthenticated: false, oauthStarts: 0 };
   await page.route('**/api/**', async route => {
     const request = route.request(); const path = new URL(request.url()).pathname;
     const reply = (json, status = 200) => route.fulfill({ json, status });
@@ -11,7 +11,11 @@ async function setup(page) {
     if (path === '/api/account/profile') { state.profileCalls++; state.name = request.postDataJSON().displayName; return reply({ id: 'reader', displayName: state.name }); }
     if (path === '/api/account' && request.method() === 'GET') return state.previewFails
       ? reply({ error: { code: 'SYS_DB_ERROR' } }, 503)
-      : reply({ hasPassword: state.hasPassword, tripsOwned: 3, collaboratorsAffected: 2 });
+      : reply({ hasPassword: state.hasPassword, reauthProvider: state.hasPassword ? null : 'google', reauthenticated: state.reauthenticated, tripsOwned: 3, collaboratorsAffected: 2 });
+    if (path === '/api/oauth/login/google') {
+      state.oauthStarts++; state.reauthenticated = true;
+      return route.fulfill({ status: 302, headers: { location: '/account?deleteReauth=done' }, body: '' });
+    }
     if (path === '/api/account' && request.method() === 'DELETE') {
       state.deleteCalls++;
       if (state.rejectDelete) return reply({ error: { code: 'ACCOUNT_DELETE_PASSWORD_INVALID' } }, 401);
@@ -57,10 +61,23 @@ for (const sheet of [false, true]) {
 }
 
 test('confirmed OAuth deletion navigates away only after server success', async ({ page }) => {
-  const state = await setup(page); state.previewFails = false; state.hasPassword = false; state.rejectDelete = false;
+  const state = await setup(page); state.previewFails = false; state.hasPassword = false; state.reauthenticated = true; state.rejectDelete = false;
   await page.goto('/account'); await page.getByTestId('account-row-delete-account').click();
   await page.getByLabel('請輸入 DELETE 以確認').fill('DELETE');
   await page.getByTestId('confirm-modal-confirm').click();
   await expect(page).toHaveURL(/\/$/); expect(state.deleteCalls).toBe(1); expect(state.deleted).toBe(true);
   await expect(page.getByTestId('account-page')).not.toBeVisible();
+});
+
+test('OAuth deletion requires fresh Google verification before the destructive request', async ({ page }) => {
+  const state = await setup(page); state.previewFails = false; state.hasPassword = false; state.rejectDelete = false;
+  await page.goto('/account'); await page.getByTestId('account-row-delete-account').click();
+  await page.getByLabel('請輸入 DELETE 以確認').fill('DELETE');
+  await Promise.all([page.waitForEvent('domcontentloaded'), page.getByTestId('confirm-modal-confirm').click()]);
+  await expect.poll(() => state.oauthStarts).toBe(1);
+  expect(state.deleteCalls).toBe(0);
+  await expect(page.getByRole('alertdialog')).toBeVisible();
+  await page.getByLabel('請輸入 DELETE 以確認').fill('DELETE');
+  await page.getByTestId('confirm-modal-confirm').click();
+  await expect(page).toHaveURL(/\/$/); expect(state.deleteCalls).toBe(1);
 });
