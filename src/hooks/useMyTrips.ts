@@ -65,7 +65,7 @@ function subscribe(listener: () => void) {
   listeners.add(listener);
   // Share/invitation pages can change membership while nobody observes this list.
   // Revalidate on return, sharing one read with all newly mounted consumers.
-  if (firstSubscriber && snapshot.userId && !pending) void refresh();
+  if (firstSubscriber && snapshot.userId) void refresh();
   return () => {
     listeners.delete(listener);
     if (listeners.size === 0 && typeof window !== 'undefined') {

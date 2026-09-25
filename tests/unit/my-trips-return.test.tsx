@@ -21,3 +21,16 @@ it('returning from a page without list consumers refreshes changes missed while 
   expect(returned.result.current[1].trips).toEqual(returned.result.current[0].trips);
   expect(read).toHaveBeenCalledTimes(2);
 });
+
+it('returning supersedes an older read that was still pending when all consumers left', async () => {
+  let finishOld!: (value: unknown) => void;
+  read.mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve; }));
+  const first = renderHook(() => useMyTrips('owner'));
+  first.unmount();
+  read.mockResolvedValue([{ tripId: 'new', name: 'Newly accessible trip' }]);
+  const returned = renderHook(() => useMyTrips('owner'));
+  await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(returned.result.current.trips?.[0].tripId).toBe('new'));
+  await act(async () => finishOld([{ tripId: 'old', name: 'Old snapshot' }]));
+  expect(returned.result.current.trips?.[0].tripId).toBe('new');
+});
