@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.94] - 2026-09-26
+
+### Fixed
+- 每日健康報告不再把前一天已回報過的 Google Maps 用量查詢失敗，隔天又升級成 critical 再報一次。這類失敗是每日檢查自己查用量時遇到 Google 上游逾時造成的，當天已以 warning 回報；因為每天同一時間執行、統計區間剛好重疊，同一筆錯誤會被算兩次。9/26 的 critical 告警就是 9/25 那一筆。用量查詢若持續失敗，仍會每天以 warning 出現在報告中；其他 API 錯誤照常上報。
+- 排除條件只比對那一則固定錯誤訊息；並新增檢查，錯誤代碼、訊息或 API 紀錄的組字格式任一改動，都會讓測試失敗，而不是讓排除靜默失效或誤排除其他錯誤。
+
 ## [2.57.93] - 2026-09-25
 
 ### Fixed
