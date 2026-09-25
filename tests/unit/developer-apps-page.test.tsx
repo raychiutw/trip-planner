@@ -10,6 +10,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
+// Keep the app registry's one-shot Responses separate from sidebar list reads.
+vi.mock('../../src/hooks/useMyTrips', () => ({
+  useMyTrips: () => ({ trips: [], status: 'success', retry: async () => {} }),
+}));
+
 // Bypass V2 auth gate — page is rendered as if user is logged in
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({ user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' }, reload: () => {} }),

@@ -321,7 +321,7 @@ describe('entry 變更的可見資料協調', () => {
     fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
     fireEvent.click(screen.getByTestId('timeline-rail-move-down-11'));
     await waitFor(() => expect(segmentReads.length).toBeGreaterThan(3));
-    expect(recomputes).toEqual(status === 403 ? ['t1:1', 't1:1'] : ['t1:1', 't1:1', 't1:1']);
+    await waitFor(() => expect(recomputes).toEqual(status === 403 ? ['t1:1', 't1:1'] : ['t1:1', 't1:1', 't1:1']));
   });
 
   it('已有成功快照後刷新失敗，不用舊空資料追加補算，已儲存景點仍顯示車程待更新', async () => {

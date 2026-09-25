@@ -5,6 +5,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
+// These page tests own the session endpoint; sidebar list lifecycle has its own
+// integration coverage and must not consume the one-shot session Responses.
+vi.mock('../../src/hooks/useMyTrips', () => ({
+  useMyTrips: () => ({ trips: [], status: 'success', retry: async () => {} }),
+}));
+
 // Bypass V2 auth gate — page is rendered as if user is logged in
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({

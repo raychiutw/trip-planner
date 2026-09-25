@@ -34,3 +34,13 @@ it('returning supersedes an older read that was still pending when all consumers
   await act(async () => finishOld([{ tripId: 'old', name: 'Old snapshot' }]));
   expect(returned.result.current.trips?.[0].tripId).toBe('new');
 });
+
+it('does not revalidate an old account before the returning consumer is authenticated', async () => {
+  read.mockResolvedValue([{ tripId: 'private', name: 'Previous account' }]);
+  const first = renderHook(() => useMyTrips('owner'));
+  await waitFor(() => expect(first.result.current.status).toBe('success'));
+  first.unmount();
+  const returned = renderHook(() => useMyTrips(undefined));
+  expect(returned.result.current.trips).toBeUndefined();
+  expect(read).toHaveBeenCalledTimes(1);
+});

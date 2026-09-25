@@ -29,6 +29,7 @@ type Snapshot = { trips: MyTrip[] | undefined; status: ListStatus; userId: strin
 let snapshot: Snapshot = { trips: undefined, status: 'loading', userId: null };
 let requestVersion = 0;
 let pending: Promise<void> | null = null;
+let needsRefresh = true;
 const listeners = new Set<() => void>();
 
 function publish(next: Snapshot) {
@@ -58,16 +59,13 @@ function refresh() {
 function onTripsUpdated() { void refresh(); }
 const refreshEvents = [EVENT.tripsUpdated, EVENT.tripCreated, EVENT.tripUpdated, EVENT.tripDeleted];
 function subscribe(listener: () => void) {
-  const firstSubscriber = listeners.size === 0;
-  if (firstSubscriber && typeof window !== 'undefined') {
+  if (listeners.size === 0 && typeof window !== 'undefined') {
     refreshEvents.forEach((name) => window.addEventListener(name, onTripsUpdated));
   }
   listeners.add(listener);
-  // Share/invitation pages can change membership while nobody observes this list.
-  // Revalidate on return, sharing one read with all newly mounted consumers.
-  if (firstSubscriber && snapshot.userId) void refresh();
   return () => {
     listeners.delete(listener);
+    if (listeners.size === 0) needsRefresh = true;
     if (listeners.size === 0 && typeof window !== 'undefined') {
       refreshEvents.forEach((name) => window.removeEventListener(name, onTripsUpdated));
     }
@@ -76,6 +74,7 @@ function subscribe(listener: () => void) {
 
 /** Clears the existing module cache between isolated browser tests. */
 export function __clearMyTripsCache(): void {
+  needsRefresh = true;
   requestVersion++;
   pending = null;
   publish({ trips: undefined, status: 'loading', userId: null });
@@ -91,7 +90,12 @@ export function useMyTrips(userId: string | null | undefined): { trips: MyTrip[]
       pending = null;
       publish({ userId, trips: undefined, status: 'loading' });
     }
-    if (snapshot.trips === undefined && !pending) void refresh();
+    // An unobserved list can miss share/invitation changes. Wait for this
+    // consumer's identity, then supersede old reads once for all consumers.
+    if (needsRefresh || (snapshot.trips === undefined && !pending)) {
+      needsRefresh = false;
+      void refresh();
+    }
   }, [userId]);
   const retry = useCallback(() => {
     if (!userId || snapshot.userId !== userId) return Promise.resolve();
