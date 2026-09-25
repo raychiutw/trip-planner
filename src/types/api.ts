@@ -298,6 +298,8 @@ export interface PoiFavorite {
   note?: string | null;
   // JOIN pois 欄位（GET endpoint 會回）
   poiName?: string;
+  /** Canonical Google identity; null for a custom POI. */
+  poiPlaceId?: string | null;
   poiAddress?: string | null;
   poiLat?: number | null;
   poiLng?: number | null;

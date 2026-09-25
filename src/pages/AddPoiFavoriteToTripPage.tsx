@@ -12,8 +12,8 @@
  *
  * Hits fast-path POST /api/poi-favorites/:id/add-to-trip — travel_* 由背景 tp-request 之後算。
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import TitleBar from '../components/shell/TitleBar';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -25,6 +25,8 @@ import { TripSelect } from '../components/TripSelect';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import type { ExploreVisit } from '../hooks/useExploreResults';
+import { isValidCoord } from '../lib/locationPicker';
 import { useEntryTarget } from '../hooks/useEntryTarget';
 import { apiFetch } from '../lib/apiClient';
 import { createEntry, addFavoriteToTrip } from '../lib/entryMutations';
@@ -195,6 +197,11 @@ const SCOPED_STYLES = `
 `;
 
 export default function AddPoiFavoriteToTripPage() {
+  const location = useLocation();
+  return <AddPoiFavoriteToTripForm key={location.pathname + location.search} />;
+}
+
+function AddPoiFavoriteToTripForm() {
   const { id: idParam } = useParams<{ id: string }>();
   const favoriteId = Number(idParam);
   // v2.23.8: direct mode — 從 ExplorePage ➕ 加入行程 進來，無 favorite，POI 走 query params
@@ -204,7 +211,13 @@ export default function AddPoiFavoriteToTripPage() {
   const isDirectMode = !idParam;
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const goBack = useNavigateBack(isDirectMode ? '/explore' : '/favorites');
+  const location = useLocation();
+  const exploreVisit = (location.state as { exploreVisit?: ExploreVisit } | null)?.exploreVisit;
+  const defaultBack = useNavigateBack(isDirectMode ? '/explore' : '/favorites');
+  const goBack = () => exploreVisit ? navigate('/explore', { replace: true, state: { exploreVisit } }) : defaultBack();
+  const inFlight = useRef(false);
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
 
   // Loading / data states
   const [favorite, setFavorite] = useState<PoiFavorite | null>(null);
@@ -236,7 +249,7 @@ export default function AddPoiFavoriteToTripPage() {
     const name = searchParams.get('name') ?? '';
     const lat = Number(searchParams.get('lat'));
     const lng = Number(searchParams.get('lng'));
-    if (!placeId || !name || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (!placeId || !name || !searchParams.get('lat') || !searchParams.get('lng') || !isValidCoord({ lat, lng })) return null;
     return {
       id: 0, // sentinel — direct mode 不對應 favorite row
       poiId: 0,
@@ -311,7 +324,8 @@ export default function AddPoiFavoriteToTripPage() {
   }, [favorite, tripId, dayNum, daysLoading, startTime, endTime, submitting, isDirectMode]);
 
   const handleSubmit = useCallback(async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || inFlight.current) return;
+    inFlight.current = true;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -337,9 +351,16 @@ export default function AddPoiFavoriteToTripPage() {
         });
         if (!r.ok) throw new ApiError((r.code as ErrorCodeType | undefined) ?? 'SYS_INTERNAL', r.status, r.message, r.payload);
       }
+      if (!active.current) return;
+      if (exploreVisit) {
+        navigate('/explore', { replace: true, state: { exploreVisit, notice: `已將「${favorite?.poiName}」加入 ${tripDisplayName(trips?.find((t) => t.tripId === tripId) ?? {tripId})} · Day ${dayNum}` } });
+        return;
+      }
       const params = new URLSearchParams({ selected: tripId, day: String(dayNum), saved_added: '1' });
       navigate(`/trips?${params.toString()}`, { replace: true });
     } catch (err) {
+      if (!active.current) return;
+      inFlight.current = false;
       // 409 conflict → 開 ConflictModal 顯示衝突資訊（4-field schema 下，user 改時段重 submit）
       if (err instanceof ApiError && err.status === 409) {
         const payload = err.payload as { conflictWith?: ConflictWith } | undefined;
@@ -352,7 +373,7 @@ export default function AddPoiFavoriteToTripPage() {
       setSubmitError(err instanceof Error ? err.message : '加入失敗');
       setSubmitting(false);
     }
-  }, [canSubmit, favoriteId, tripId, dayNum, startTime, endTime, navigate, isDirectMode, favorite]);
+  }, [canSubmit, favoriteId, tripId, dayNum, startTime, endTime, navigate, isDirectMode, favorite, exploreVisit, trips]);
 
   const handleConflictCancel = useCallback(() => {
     setConflictPayload(null);
