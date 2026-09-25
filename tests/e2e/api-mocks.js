@@ -720,19 +720,20 @@ async function setupApiMocks(page) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ sessions }),
+        body: JSON.stringify({ current_sid: sessions.find(s => s.is_current)?.sid ?? null, sessions }),
       });
     }
     if (request.method() === 'DELETE' && path === '/api/account/sessions') {
+      const revoked = sessions.filter(s => !s.is_current).length;
       const current = sessions.find((s) => s.is_current);
       sessions.splice(0, sessions.length, ...(current ? [current] : []));
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, revoked }) });
     }
     if (request.method() === 'DELETE') {
       const sid = decodeURIComponent(path.split('/').pop() ?? '');
       const idx = sessions.findIndex((s) => s.sid === sid);
       if (idx >= 0) sessions.splice(idx, 1);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, revoked_sid: sid }) });
     }
     return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
   });
