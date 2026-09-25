@@ -25,6 +25,7 @@ const rawCalls: Array<{ path: string; opts?: RequestInit }> = [];
 
 vi.mock('../../src/lib/apiClient', () => ({
   apiFetch: vi.fn(async (path: string) => {
+    if (path.endsWith('/days')) return [{id:1,dayNum:1,date:'2026-09-25'}];
     if (path.includes('/entries/')) return {}; // entryPoisVersion 探測（master mode）
     if (path.startsWith('/trips/')) return { destinations: [] }; // customDestinations
     if (path === '/poi-favorites') return [];

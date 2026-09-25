@@ -25,6 +25,7 @@ import { TripSelect } from '../components/TripSelect';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useEntryTarget } from '../hooks/useEntryTarget';
 import { apiFetch } from '../lib/apiClient';
 import { createEntry, addFavoriteToTrip } from '../lib/entryMutations';
 import type { ErrorCodeType } from '../types/api';
@@ -40,11 +41,7 @@ interface TripBrief {
   totalDays?: number;
 }
 
-interface DayBrief {
-  dayNum: number;
-  date: string;
-  label: string | null;
-}
+
 
 /** trip dropdown 顯示文字：title 優先，其次 name，fallback tripId。
  *  v2.31.55 fix：原本 name 優先 → user 在 trips list 看到 user-set
@@ -212,16 +209,19 @@ export default function AddPoiFavoriteToTripPage() {
   // Loading / data states
   const [favorite, setFavorite] = useState<PoiFavorite | null>(null);
   const [trips, setTrips] = useState<TripBrief[] | null>(null);
-  const [days, setDays] = useState<DayBrief[] | null>(null);
-  const [daysLoading, setDaysLoading] = useState(false);
 
   // Form state — 4 fields (純時間驅動 v2.22.0)
   const [tripId, setTripId] = useState('');
-  const [dayNum, setDayNum] = useState<number | ''>('');
+  const [requestedDay, setDayNum] = useState<number | ''>('');
+  const target = useEntryTarget({tripId, dayNum: requestedDay});
+  const days = target.days;
+  const dayNum = target.day?.dayNum ?? '';
+  const daysLoading = target.status === 'loading';
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
 
   // Status states
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -251,6 +251,7 @@ export default function AddPoiFavoriteToTripPage() {
   }, [isDirectMode, searchParams]);
 
   useEffect(() => {
+    setLoadError(null);
     if (isDirectMode) {
       // direct mode：不打 /poi-favorites endpoint
       if (!directPoi) {
@@ -299,41 +300,15 @@ export default function AddPoiFavoriteToTripPage() {
         setLoadError(err instanceof Error ? err.message : '載入失敗');
       });
     return () => { cancelled = true; };
-  }, [favoriteId, isDirectMode, directPoi]);
-
-  useEffect(() => {
-    if (!tripId) {
-      setDays(null);
-      setDaysLoading(false);
-      setDayNum('');
-      return;
-    }
-    let cancelled = false;
-    setDaysLoading(true);
-    setDayNum('');
-    // 改打 /trips/:id/days array endpoint — `/trips/:id` 只回 trip meta，不含 days
-    apiFetch<DayBrief[]>(`/trips/${encodeURIComponent(tripId)}/days`)
-      .then((data) => {
-        if (cancelled) return;
-        const dayList = Array.isArray(data) ? data : [];
-        setDays(dayList);
-        setDaysLoading(false);
-        if (dayList.length > 0) setDayNum(dayList[0]!.dayNum);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setDays([]);
-        setDaysLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [tripId]);
+  }, [favoriteId, isDirectMode, directPoi, loadAttempt]);
 
   const canSubmit = useMemo(() => {
     if (!favorite || !tripId || dayNum === '' || daysLoading || submitting) return false;
+    if (!isDirectMode && (!startTime || !endTime)) return false;
     if (startTime && !TIME_RE.test(startTime)) return false;
     if (endTime && !TIME_RE.test(endTime)) return false;
     return true;
-  }, [favorite, tripId, dayNum, daysLoading, startTime, endTime, submitting]);
+  }, [favorite, tripId, dayNum, daysLoading, startTime, endTime, submitting, isDirectMode]);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
@@ -402,7 +377,7 @@ export default function AddPoiFavoriteToTripPage() {
       <PageErrorState
         title="載入失敗"
         message={loadError}
-        retryLabel={null}
+        onRetry={() => setLoadAttempt(value => value + 1)}
         className="tp-error"
         testId="favorites-add-to-trip-load-error"
       />
@@ -471,7 +446,7 @@ export default function AddPoiFavoriteToTripPage() {
               <TripSelect
                 id="atstr-trip"
                 value={tripId}
-                onChange={setTripId}
+                onChange={(value) => { setTripId(value); setDayNum(''); }}
                 placeholder="選擇行程…"
                 ariaLabel="行程"
                 options={trips.map((t) => ({
@@ -510,6 +485,7 @@ export default function AddPoiFavoriteToTripPage() {
                   />
                 </div>
               )}
+              {target.error && <div role="alert">{target.error} <button type="button" onClick={target.retry}>重試載入日期</button></div>}
               {selectedDay?.label && (
                 <span className="tp-form-help">{selectedDay.label}</span>
               )}
@@ -523,7 +499,7 @@ export default function AddPoiFavoriteToTripPage() {
                 onChange={setStartTime}
                 ariaLabel="開始時間"
               />
-              <span className="tp-form-help">可空 — 依景點類型自動推算</span>
+              <span className="tp-form-help">{isDirectMode ? '可空 — 依景點類型自動推算' : '必填 — 選擇開始時間'}</span>
             </div>
 
             <div className="tp-form-field" data-testid="favorites-add-to-trip-end">
@@ -534,7 +510,7 @@ export default function AddPoiFavoriteToTripPage() {
                 onChange={setEndTime}
                 ariaLabel="結束時間"
               />
-              <span className="tp-form-help">可空 — 依停留時間自動推算</span>
+              <span className="tp-form-help">{isDirectMode ? '可空 — 依停留時間自動推算' : '必填 — 選擇結束時間'}</span>
             </div>
           </div>
 

@@ -147,6 +147,8 @@ describe('AddPoiFavoriteToTripPage — 7-state matrix', () => {
     await pickFromTripSelect('favorites-add-to-trip-trip', /T1/);
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
     await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
+    pickTime('favorites-add-to-trip-start', '12:00');
+    pickTime('favorites-add-to-trip-end', '13:00');
     fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
     await waitFor(() => {
       const btn = screen.getByTestId('favorites-add-to-trip-submit') as HTMLButtonElement;

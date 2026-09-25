@@ -53,6 +53,7 @@ import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { usePoiFavorites } from '../hooks/usePoiFavorites';
+import { useEntryTarget, type EntryTargetDay as DayApiRow } from '../hooks/useEntryTarget';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { regionToApiParam } from '../lib/maps/region';
 // v2.31.94/98: 自訂 tab 用 shared <CustomPoiForm> component（同 ChangePoiPage）。
@@ -83,12 +84,7 @@ interface PoiFavoriteRow {
   poiRating?: number | null;
 }
 
-interface DayApiRow {
-  id: number;
-  dayNum: number;
-  date?: string | null;
-  dayOfWeek?: string | null;
-}
+
 
 // v2.33.34: PoiCardTone / Tab / REGION_OPTIONS / CATEGORY_TABS / matchCategory /
 // normalizeSearchResults / poiTone / poiMeta 全 extract 到
@@ -650,7 +646,7 @@ export default function AddStopPage() {
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
   const dayNumParam = searchParams.get('day');
-  const dayNum = dayNumParam ? parseInt(dayNumParam, 10) : NaN;
+  const dayNum = dayNumParam === null ? NaN : Number(dayNumParam);
 
   // v2.32.2 fix: 初值從 URL param 讀，讓 `/add-stop?tab=custom` direct URL 進來
   // 直接 land 在自訂 tab（之前 hardcoded 'search'，URL param 被忽略）。
@@ -713,31 +709,10 @@ export default function AddStopPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // v2.31.99: 載入所有 days 給 day picker chip row 用。currentDay 從 allDays
-  // 衍生（不另外 setState 避免兩條 state truth）。
-  const [allDays, setAllDays] = useState<DayApiRow[] | null>(null);
-
-  useEffect(() => {
-    if (!auth.user || !tripId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const days = await apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days`);
-        if (cancelled) return;
-        setAllDays(days ?? []);
-      } catch {
-        // silent — label fallback to DAY NN
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [auth.user, tripId]);
-
-  const currentDay = useMemo<DayApiRow | null>(() => {
-    if (!allDays || !Number.isFinite(dayNum)) return null;
-    return allDays.find((d) => d.dayNum === dayNum) ?? null;
-  }, [allDays, dayNum]);
-
-  const hasDay = Number.isFinite(dayNum);
+  const target = useEntryTarget({tripId, dayNum, enabled: !!auth.user, selectFirst: false});
+  const allDays = target.days;
+  const currentDay = target.day;
+  const hasDay = currentDay !== null;
 
   // v2.31.99: switch day via chip row → URL replaceState 不開新 history entry
   const handlePickDay = useCallback((next: number) => {
@@ -750,14 +725,14 @@ export default function AddStopPage() {
   // v2.31.94: 自訂 tab 在 mobile (≤1023px) 上 redirect 到 fullpage route，避免 IME
   // occlusion 把 280px map 整個遮蓋。Desktop 仍走 inline tab。
   useEffect(() => {
-    if (tab !== 'custom' || !tripId || !Number.isFinite(dayNum)) return;
+    if (tab !== 'custom' || !tripId || !hasDay) return;
     if (typeof window === 'undefined' || !window.matchMedia) return;
     if (!window.matchMedia('(max-width: 1023px)').matches) return;
     navigate(
       `/trip/${encodeURIComponent(tripId)}/add-custom-stop?day=${dayNum}`,
       { replace: true },
     );
-  }, [tab, tripId, dayNum, navigate]);
+  }, [tab, tripId, dayNum, navigate, hasDay]);
 
   // v2.31.94: 自訂 tab 需要 trip destinations 當 map default center fallback chain
   // v2.32.1 fix: 從 tab-gated 改 mount-gated — LocationPickerMap 鎖 mount 時
@@ -836,7 +811,7 @@ export default function AddStopPage() {
   }, [customDestinations]);
 
   const handleConfirm = useCallback(async () => {
-    if (submitting || !tripId || !Number.isFinite(dayNum)) return;
+    if (submitting || !tripId || !hasDay) return;
     setSubmitError(null);
 
     type Body = {
@@ -947,7 +922,7 @@ export default function AddStopPage() {
       setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, searchCatOverride, tripId, dayNum, selectionVisit]);
+  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, searchCatOverride, tripId, dayNum, selectionVisit, hasDay]);
 
   if (!auth.user) return null;
   // v2.31.99: tripId 必填，但 dayNum 改成 optional — 沒帶 ?day=N 時 chip row
@@ -980,6 +955,9 @@ export default function AddStopPage() {
         scopedStyles={SCOPED_STYLES}
       >
             <div className="tp-add-stop-page-day-meta">{dayLabel}</div>
+            {target.error && <div role="alert">{target.error} <button type="button" onClick={target.retry}>重試載入日期</button></div>}
+            {target.status === 'loading' && <div role="status">日期載入中…</div>}
+            {allDays?.length === 0 && <div role="status">該行程沒有天數</div>}
 
             {/* v2.31.99 day picker chip row — 沒帶 ?day=N 進來時讓 user 選；帶了
                 也仍顯，可隨時切換。Day metadata 還在 fetch 時不 render

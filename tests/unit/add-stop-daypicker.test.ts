@@ -48,14 +48,9 @@ describe('AddStopPage — v2.31.99 day picker chip row', () => {
     expect(ADD_STOP_SRC).toMatch(/const \[searchParams, setSearchParams\] = useStack(Search)?Params\(\)|const \[searchParams, setSearchParams\] = useSearchParams\(\)/);
   });
 
-  it('載入所有 days 進 allDays state（不再只 setCurrentDay）', () => {
-    expect(ADD_STOP_SRC).toMatch(/setAllDays\(/);
-    expect(ADD_STOP_SRC).toMatch(/const \[allDays, setAllDays\]/);
-  });
 
-  it('currentDay 改 useMemo 從 allDays 衍生（單一 truth）', () => {
-    expect(ADD_STOP_SRC).toMatch(/const currentDay = useMemo[\s\S]{0,150}allDays\.find/);
-  });
+
+
 
   it('handlePickDay setSearchParams replace 切換 day', () => {
     expect(ADD_STOP_SRC).toMatch(/const handlePickDay = useCallback\(/);
@@ -63,10 +58,7 @@ describe('AddStopPage — v2.31.99 day picker chip row', () => {
     expect(ADD_STOP_SRC).toMatch(/setSearchParams\(sp,\s*\{\s*replace:\s*true\s*\}\)/);
   });
 
-  it('hasDay flag = Number.isFinite(dayNum) 用於 submit gate + UI render', () => {
-    expect(ADD_STOP_SRC).toMatch(/const hasDay = Number\.isFinite\(dayNum\)/);
-    expect(ADD_STOP_SRC).toMatch(/const confirmEnabled = hasDay/);
-  });
+
 
   it('day picker chip row 用 testid + 每個 day chip 有 testid', () => {
     expect(ADD_STOP_SRC).toContain('data-testid="add-stop-daypicker"');

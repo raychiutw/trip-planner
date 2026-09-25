@@ -143,6 +143,7 @@ describe('AddPoiFavoriteToTripPage — form fields (4 純時間驅動)', () => {
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
     await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
     pickTime('favorites-add-to-trip-start', '10:00');
+    pickTime('favorites-add-to-trip-end', '11:00');
     fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
     await waitFor(() => {
       const calls = apiFetchMock.mock.calls;

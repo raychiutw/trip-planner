@@ -15,6 +15,7 @@ import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import OperationShell from '../components/shell/OperationShell';
 import Icon from '../components/shared/Icon';
 import { useNavigateBack } from '../hooks/useNavigateBack';
+import { useEntryTarget } from '../hooks/useEntryTarget';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { apiFetch } from '../lib/apiClient';
 import { createEntry, addAlternate, replaceMasterPoi } from '../lib/entryMutations';
@@ -561,7 +562,8 @@ export default function ChangePoiPage() {
   const mode: 'master' | 'alternate' | 'new' =
     rawMode === 'alternate' ? 'alternate' : rawMode === 'new' ? 'new' : 'master';
   const newDayParam = searchParams.get('day');
-  const newDayNum = newDayParam ? parseInt(newDayParam, 10) : NaN;
+  const newDayNum = newDayParam === null ? NaN : Number(newDayParam);
+  const target = useEntryTarget({tripId, dayNum: newDayNum, enabled: mode === 'new', selectFirst: false});
   const rawTab = searchParams.get('tab');
   const tab: Tab = rawTab === 'favorites' ? 'favorites' : rawTab === 'custom' ? 'custom' : 'search';
   const pageTitle =
@@ -704,7 +706,7 @@ export default function ChangePoiPage() {
     if (!tripId || submitting) return;
     // v2.32.0: mode=new 不需要 entryId，但需要 day param；其他 mode 需要 entryId。
     if (mode !== 'new' && !Number.isInteger(entryId)) return;
-    if (mode === 'new' && !Number.isFinite(newDayNum)) return;
+    if (mode === 'new' && !target.day) return;
     // v2.31.98: custom tab 走自己的 payload 構造（title + coord + source: 'custom'），
     // search/favorites tab 仍走 selected POI 路徑。
     if (tab === 'custom') {
@@ -823,12 +825,12 @@ export default function ChangePoiPage() {
     // customCategory MUST be here: handleSubmit reads it for the custom-tab payload
     // (poi_type / type). v2.50.0 added the state but never threaded it in → the
     // callback closed over the initial 'attraction' → custom POIs always saved as 景點.
-  }, [selected, searchCatOverride, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord, customCategory, newDayNum]);
+  }, [selected, searchCatOverride, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord, customCategory, newDayNum, target.day]);
 
   // v2.31.98: custom tab submit 啟動條件不同（要 title + coord，不要 selected）
-  const submitDisabled = tab === 'custom'
+  const submitDisabled = (mode === 'new' && !target.day) || (tab === 'custom'
     ? !customTitle.trim() || !customCoord || submitting
-    : !selected || submitting;
+    : !selected || submitting);
 
   // v2.33.141: 拔 titleBar 右上 ✓ submit action — bottom sticky bar 已有
   // primary button 同 submitLabel (加為備選 / 加入行程 / 置換景點)，完全重複。
@@ -865,6 +867,9 @@ export default function ChangePoiPage() {
       scopedStyles={SCOPED_STYLES}
     >
 
+      {target.error && <div role="alert">{target.error} <button type="button" onClick={target.retry}>重試載入日期</button></div>}
+      {mode === 'new' && target.status === 'loading' && <div role="status">日期載入中…</div>}
+      {mode === 'new' && target.status === 'success' && !target.day && <div role="alert">所選日期已失效，請返回選擇日期</div>}
       <div className="tp-change-poi-tabs" role="tablist" aria-label="景點來源">
         <button
           type="button"
