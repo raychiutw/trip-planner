@@ -665,6 +665,8 @@ const MOCK_CONNECTED_APPS = [
  * @param {import('@playwright/test').Page} page
  */
 async function setupApiMocks(page) {
+  // These fixtures replace HTTP effects; never load a live SDK with the test key.
+  await page.route(/https:\/\/maps\.googleapis\.com\//, route => route.abort());
   const savedPois = initialSavedPois();
   // V2 cutover: tripIdeas removed — concept retired in migration 0046
   const sessions = MOCK_SESSIONS.map((s) => ({ ...s }));

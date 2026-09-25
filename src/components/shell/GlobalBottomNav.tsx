@@ -52,6 +52,7 @@ const SCOPED_STYLES = `
   align-items: center; justify-content: center;
   gap: 2px;
   width: 62px; min-height: 46px;
+  padding-block: 5px;
   border-radius: var(--radius-full);
   background: transparent;
   border: none;

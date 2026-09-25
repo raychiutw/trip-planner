@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-for (const width of [320, 1280]) test(`privacy document reflows at 200% text, ${width}px`, async ({ page }) => {
+for (const width of [320, 1280]) test(`privacy document reflows at 200% text, ${width}px`, async ({ page, browserName }) => {
   await page.setViewportSize({ width, height: 844 });
   await page.route('**/api/**', route => route.fulfill({ status: 401, json: {} }));
   await page.goto('/privacy');
@@ -27,7 +27,7 @@ for (const width of [320, 1280]) test(`privacy document reflows at 200% text, ${
   const contact = policy.getByRole('link', { name: 'lean.lean@gmail.com', exact: true }).last();
   await expect(contact).toHaveAttribute('href', 'mailto:lean.lean@gmail.com');
   await policy.getByRole('link', { name: 'lean.lean@gmail.com', exact: true }).first().focus();
-  await page.keyboard.press('Tab'); await expect(contact).toBeFocused();
+  await page.keyboard.press(browserName === 'webkit' ? 'Alt+Tab' : 'Tab'); await expect(contact).toBeFocused();
   await page.getByRole('button', { name: '返回', exact: true }).press('Enter');
   await expect(page).toHaveURL(/\/$/); await expect(page.getByTestId('landing-page')).toBeVisible();
 });

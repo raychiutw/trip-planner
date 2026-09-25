@@ -98,13 +98,19 @@ test('#1140 story 1–3：切 tab 帶著同一個 active trip，重整後仍在'
   await expect(page).toHaveURL(new RegExp(`/trip/${TRIP_B}/map`));
   await expect(page.getByTestId('map-trip-title')).toContainText(TRIP_B_TITLE_FRAGMENT);
 
-  // 切到行程 root tab 時，既有清單依 active trip 選到 B。
+  // 桌機恢復明細；手機保留清單，選取後才進入明細。
   await page.goto('/trips');
+  if ((page.viewportSize()?.width ?? 0) < 1024) {
+    await expect(page).toHaveURL(/\/trips$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('我的行程');
+    await expect.poll(() => page.evaluate((k) => localStorage.getItem(k), LS_KEY)).toContain(TRIP_B);
+    await page.getByTestId(`trips-list-card-${TRIP_B}`).click();
+  }
   await expect(page).toHaveURL(new RegExp(`/trips\\?selected=${TRIP_B}`));
   await expect(page.getByRole('heading', { level: 1 })).toContainText(TRIP_B_TITLE_FRAGMENT);
 
   // 直接檢視既有行程頁仍是 B，與地圖中的內容和偏好一致。
   await page.goto(`/trip/${TRIP_B}`);
-  await expect(page).toHaveURL(new RegExp(`/trip/${TRIP_B}(?:\\?|$)`));
-  await expect(page.getByText(TRIP_B_TITLE_FRAGMENT).first()).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/trips\\?selected=${TRIP_B}(?:#|$)`));
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(TRIP_B_TITLE_FRAGMENT);
 });

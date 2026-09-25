@@ -34,7 +34,7 @@ for (const width of [390, 1280]) test(`grant facts and AI consent stay synchroni
     return [...range.getClientRects()].every(rect => rect.right <= el.getBoundingClientRect().right + 1);
   })).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole('button', { name: '撤銷 External planner', exact: true }).click();
+  await page.getByRole('button', { name: '撤銷 External planner', exact: true }).press('Enter');
   await expect(page.getByTestId('confirm-modal-cancel')).toBeFocused();
   await page.keyboard.press('Escape'); await expect(page.getByRole('button', { name: '撤銷 External planner', exact: true })).toBeFocused();
   await page.getByRole('button', { name: '撤銷 External planner', exact: true }).press('Enter');
@@ -42,7 +42,7 @@ for (const width of [390, 1280]) test(`grant facts and AI consent stay synchroni
   state.revokeFails = false; await page.getByTestId('confirm-modal-confirm').click();
   await expect(page.getByTestId('connected-apps-empty')).toBeVisible();
   await expect(page.getByLabel('已連結應用清單', { exact: true })).toBeFocused();
-  await page.getByRole('button', { name: '授權 AI', exact: true }).click();
+  await page.getByRole('button', { name: '授權 AI', exact: true }).press('Enter');
   await expect(page.getByTestId('connected-apps-row-tripline-tp-request')).toBeVisible();
   await expect(page.getByTestId('ai-authorize-on')).toBeFocused();
   await page.getByRole('button', { name: '撤銷 Tripline AI', exact: true }).click(); await page.getByTestId('confirm-modal-confirm').click();

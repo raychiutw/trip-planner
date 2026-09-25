@@ -27,7 +27,7 @@ for (const sheet of [false, true]) {
     await page.setViewportSize({ width: sheet ? 390 : 1280, height: 844 });
     const state = await setup(page);
     await page.goto(sheet ? '/trips' : '/account');
-    if (sheet) await page.getByTestId('titlebar-account').click();
+    if (sheet) await page.getByTestId('titlebar-account').press('Enter');
     await expect(page.getByText(/數據載入失敗/)).toBeVisible();
     await page.getByTestId('account-edit-name-btn').click();
     const name = page.getByRole('textbox', { name: '編輯名稱' });
@@ -35,13 +35,13 @@ for (const sheet of [false, true]) {
     await expect(page.getByTestId('account-hero')).toContainText('Updated');
     await expect(page.getByTestId('account-edit-name-btn')).toBeFocused();
     expect(state.profileCalls).toBe(1);
-    const trigger = page.getByTestId('account-row-delete-account'); await trigger.click();
+    const trigger = page.getByTestId('account-row-delete-account'); await trigger.press('Enter');
     await expect(page.getByText('無法取得刪除影響範圍，請稍後再試')).toBeVisible();
     await expect(page.getByTestId('confirm-modal-confirm')).toBeDisabled();
     await page.keyboard.press('Escape'); await expect(page.getByRole('alertdialog')).not.toBeVisible();
     await expect(trigger).toBeFocused();
     if (sheet) await expect(page.getByRole('dialog', { name: '帳號', exact: true })).toBeVisible();
-    state.previewFails = false; await trigger.click();
+    state.previewFails = false; await trigger.press('Enter');
     await expect(page.getByRole('alertdialog')).toContainText('3 個行程');
     await expect(page.getByRole('alertdialog')).toContainText('2 位共編者');
     await page.getByLabel('請輸入密碼以確認').fill('wrong');

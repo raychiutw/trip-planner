@@ -27,7 +27,7 @@ async function verifyControl(button, minHeight) {
 async function contrast(page, selector) {
   const result = await page.evaluate(async selector => {
     const report = await window.axe.run({ include: [selector] }, { runOnly: ['color-contrast'] });
-    return { violations: report.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => n.target) })), incomplete: report.incomplete.map(v => ({ id: v.id, nodes: v.nodes.map(n => n.target) })) };
+    return { violations: report.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => n.target) })), incomplete: report.incomplete.map(v => ({ id: v.id, nodes: v.nodes.map(n => ({ target: n.target, summary: n.failureSummary, checks: n.any })) })) };
   }, selector);
   expect(result).toEqual({ violations: [], incomplete: [] });
 }
@@ -107,6 +107,6 @@ test('timeline day selection respects reduced motion and retains router state', 
   });
   await day2.press('Enter'); await expect(day2).toHaveAttribute('aria-current', 'true');
   await expect(page).toHaveURL('/trips?selected=okinawa-trip-2026-Ray#day2');
-  expect(await page.evaluate(() => window.dayAnchorScrolls.at(-1))).toEqual({ id: 'day2', behavior: 'auto' });
+  await expect.poll(() => page.evaluate(() => window.dayAnchorScrolls.at(-1))).toEqual({ id: 'day2', behavior: 'auto' });
   expect(await page.evaluate(() => history.state)).toEqual(historyState);
 });

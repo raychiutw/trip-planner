@@ -622,22 +622,29 @@ function TripPageInner(
   const focusParam = new URLSearchParams(location.search).get('focus');
   const focusEntryId = focusParam && /^\d+$/.test(focusParam) && Number.isSafeInteger(Number(focusParam)) && Number(focusParam) > 0
     ? Number(focusParam) : null;
+  const focusDayParam = new URLSearchParams(location.search).get('focusDay');
+  const focusDay = focusDayParam && /^\d+$/.test(focusDayParam) && Number.isSafeInteger(Number(focusDayParam)) && Number(focusDayParam) > 0
+    ? Number(focusDayParam) : null;
   const focusedVisit = useRef<string | null>(null);
   useEffect(() => {
-    if (focusEntryId == null) { focusedVisit.current = null; return; }
+    if (focusEntryId == null && focusDay == null) { focusedVisit.current = null; return; }
     if (loading || !activeTripId || trip?.id !== activeTripId) return;
-    const visit = `${activeTripId}:${location.key}:${focusEntryId}`;
+    const visit = `${activeTripId}:${location.key}:${focusEntryId}:${focusDay}`;
     if (focusedVisit.current === visit) return;
-    const targetDay = Object.values(allDays).find(day => day.timeline.some(entry => entry.id === focusEntryId));
+    const targetDay = Object.values(allDays).find(day => focusEntryId != null
+      ? day.timeline.some(entry => entry.id === focusEntryId) : day.dayNum === focusDay);
     if (!targetDay) return;
-    const toggle = document.querySelector<HTMLButtonElement>(`#tripContent [data-scroll-anchor="entry-${focusEntryId}"] .tp-rail-caret`);
-    if (!toggle) return;
+    const target = focusEntryId != null
+      ? document.querySelector<HTMLElement>(`#tripContent [data-scroll-anchor="entry-${focusEntryId}"] .tp-rail-caret`)
+      : document.getElementById(`day${targetDay.dayNum}`);
+    if (!target) return;
     focusedVisit.current = visit;
     manualScrollTs.current = Date.now();
     switchDay(targetDay.dayNum);
-    toggle.focus({ preventScroll: true });
-    toggle.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-  }, [focusEntryId, location.key, activeTripId, loading, trip?.id, allDays, switchDay, portalNode]);
+    if (focusEntryId == null) target.tabIndex = -1;
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  }, [focusEntryId, focusDay, location.key, activeTripId, loading, trip?.id, allDays, switchDay, portalNode]);
 
   /* --- Auto-scroll to today or hash on initial load (#3, #5, #18) --- */
   useEffect(() => {
@@ -647,7 +654,7 @@ function TripPageInner(
     if (loading || dayNums.length === 0 || initialScrollDone.current
       || !activeTripId || trip?.id !== activeTripId) return;
     initialScrollDone.current = true;
-    if (focusEntryId != null) return; // Explicit return target takes precedence over saved scroll.
+    if (focusEntryId != null || focusDay != null) return; // Explicit target takes precedence over saved scroll.
 
     // ⑨：標記「剛做初始定位」→ 下方 scroll-spy 在 600ms 內不 switchDay，避免它在
     // deep-link / today 的程式化捲動途中先報 day1 蓋掉正確選天（57814b67 修的 bug）。
@@ -661,9 +668,6 @@ function TripPageInner(
     // Cold visits fall through to hash/today positioning.
     const savedTop = activeTripId ? recallScroll(activeTripId) : undefined;
     if (savedTop != null) {
-      const returnParams = new URLSearchParams(window.location.search);
-      const fDay = parseInt(returnParams.get('focusDay') ?? '', 10);
-      if (Number.isFinite(fDay) && dayNums.includes(fDay)) switchDay(fDay);
       // per-day timeline async 載入，內容未滿高度 → bounded retry 直到站得住。
       restoreScrollTo(savedTop);
       return;
@@ -726,7 +730,7 @@ function TripPageInner(
     // resolveState 是 discriminated union（tripId 只在 'resolved' variant），deps 不能
     // 取 .tripId（render 時可能是 loading variant → TS error）；依賴整個 resolveState 物件，
     // 變動由 initialScrollDone latch 擋住重跑。
-  }, [focusEntryId, loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState, activeTripId, trip?.id]);
+  }, [focusEntryId, focusDay, loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState, activeTripId, trip?.id]);
 
   /* --- scrollMarginTop dynamic alignment (#7) --- */
   useEffect(() => {

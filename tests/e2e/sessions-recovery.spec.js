@@ -46,7 +46,7 @@ test('mobile read retry and single-device failure preserve the intended session 
 
 test('bulk keyboard confirmation retains pending/error context and excludes the current device', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 844 }); const state = await setup(page);
-  await page.goto('/settings/sessions'); await page.getByTestId('sessions-revoke-all').click();
+  await page.goto('/settings/sessions'); await page.getByTestId('sessions-revoke-all').press('Enter');
   await expect(page.getByTestId('confirm-modal-cancel')).toBeFocused();
   await page.keyboard.press('Escape'); await expect(page.getByTestId('sessions-revoke-all')).toBeFocused(); expect(state.writes).toHaveLength(0);
   await page.getByTestId('sessions-revoke-all').press('Enter'); await expect(page.getByTestId('confirm-modal-cancel')).toBeFocused();

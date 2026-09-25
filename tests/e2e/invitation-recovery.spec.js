@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import { createServer } from 'node:http';
 const invitation={tripId:'trip-A',tripTitle:'旅程 A',invitedEmail:'guest@example.com',inviterDisplayName:'Ray',inviterEmail:'ray@example.com',expiresAt:'2026-10-01'};
 const user={id:'guest',email:'guest@example.com',displayName:'Guest'};
 test('invitation read retry preserves token and accepting a temporary failure can recover',async({page})=>{
@@ -6,5 +7,11 @@ test('invitation read retry preserves token and accepting a temporary failure ca
 });
 test('switch-account link logs out and carries the same invitation into login',async({page})=>{
  await page.route('**/api/**',route=>route.fulfill({json:{}}));await page.route('**/api/oauth/userinfo',route=>route.fulfill({json:{...user,email:'other@example.com'}}));await page.route('**/api/invitations?*',route=>route.fulfill({json:invitation}));let logoutUrl;
- await page.route('**/api/oauth/logout?*',route=>{logoutUrl=new URL(route.request().url());return route.fulfill({status:302,headers:{Location:logoutUrl.searchParams.get('redirect_after')}});});await page.goto('/invite?token=a%2Fb');await expect(page.getByTestId('invite-mismatch')).toContainText('other@example.com');await page.getByRole('link',{name:'切換帳號並加入'}).focus();await page.keyboard.press('Enter');await expect(page).toHaveURL(/\/login\?invitation=a%2Fb$/);expect(new URL(logoutUrl.searchParams.get('redirect_after'),'https://app.test').searchParams.get('invitation')).toBe('a/b');
+ const server=createServer((request,response)=>{
+  request.resume();response.writeHead(302,{Location:'http://localhost:3000'+logoutUrl.searchParams.get('redirect_after')});response.end();
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try {
+ await page.route('**/api/oauth/logout?*',route=>{logoutUrl=new URL(route.request().url());return route.continue({url:`http://127.0.0.1:${server.address().port}/logout`});});await page.goto('/invite?token=a%2Fb');await expect(page.getByTestId('invite-mismatch')).toContainText('other@example.com');await page.getByRole('link',{name:'切換帳號並加入'}).focus();await page.keyboard.press('Enter');await expect(page).toHaveURL(/\/login\?invitation=a%2Fb$/);expect(new URL(logoutUrl.searchParams.get('redirect_after'),'https://app.test').searchParams.get('invitation')).toBe('a/b');
+ } finally { await new Promise(resolve=>server.close(resolve)); }
 });

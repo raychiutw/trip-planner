@@ -454,7 +454,7 @@ function HealthReader({tripId}: {tripId: string}) {
 
   const goToDay = useCallback((day: number) => {
     if (!tripId) return;
-    navigate(`${routes.trip(tripId)}?day=${day}`);
+    navigate(`${routes.tripsSelected(tripId)}&focusDay=${day}#day${day}`);
   }, [navigate, tripId]);
 
   const goToEntry = useCallback((entryId: number) => {

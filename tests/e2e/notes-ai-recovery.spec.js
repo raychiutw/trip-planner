@@ -10,6 +10,10 @@ test('AI state failure retains notes and keyboard retry never generates a new jo
  await page.route(`**/api/trips/${tripId}/notes/ai-state`,route=>route.fulfill({status:failed?500:200,json:failed?{}:{jobs:[{docType:'tips',status:'processing',jobId:1,generation:1}]}}));
  await page.route('**/notes/*/generate',route=>{posts++;return route.fulfill({json:{}});});
  await page.goto(`/trip/${tripId}/notes`);
+ const pretrip=page.getByTestId('trip-notes-section-head-pretrip');
+ await expect(pretrip).toBeVisible();
+ if(await pretrip.getAttribute('aria-expanded')!=='true') await pretrip.click();
+ await expect(pretrip).toHaveAttribute('aria-expanded','true');
  const retry=page.getByRole('button',{name:'重試 AI 狀態'});await expect(retry).toBeVisible();
  await expect(page.getByText('原有筆記仍可閱讀')).toBeVisible();
  await expect(page.getByTestId('trip-notes-ai-btn-pretrip')).toBeDisabled();
@@ -28,6 +32,10 @@ test('generation waits for acknowledgement and retains manual notes after comple
  await page.route(`**/api/trips/${tripId}/notes/ai-state`,route=>route.fulfill({json:{jobs:posts?[{docType:'tips',status:completed?'completed':'pending',jobId:1,generation:1,preservedManualCount:1}]:[]}}));
  await page.route(`**/api/trips/${tripId}/notes/tips/generate`,async route=>{posts++;await released;return route.fulfill({json:{jobId:1,requestId:1,status:'pending',generation:1}});});
  await page.goto(`/trip/${tripId}/notes`);
+ const pretrip=page.getByTestId('trip-notes-section-head-pretrip');
+ await expect(pretrip).toBeVisible();
+ if(await pretrip.getAttribute('aria-expanded')!=='true') await pretrip.click();
+ await expect(pretrip).toHaveAttribute('aria-expanded','true');
  const generate=page.getByTestId('trip-notes-ai-btn-pretrip');await expect(generate).toBeEnabled();await generate.click();
  await expect(generate).toBeDisabled();expect(posts).toBe(1);completed=true;finish();
  await expect(page.getByTestId('trip-notes-ai-status-tips')).toContainText('保留人工 1');

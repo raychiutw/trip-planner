@@ -696,7 +696,7 @@ describe('entry 變更的可見資料協調', () => {
 });
 
 
-it('時間軸等待 portal host，掛載後只在 host 顯示內容', async () => {
+it.each(['focus=11', 'focusDay=2'])('時間軸等待 portal host，掛載後才定位明確目標 %s', async target => {
   function DelayedHost() {
     const [mounted, setMounted] = useState(false);
     const [host, setHost] = useState<HTMLDivElement | null>(null);
@@ -706,11 +706,16 @@ it('時間軸等待 portal host，掛載後只在 host 顯示內容', async () =
       <div data-testid="inline-slot"><TripPage tripId="t1" noShell usePortalMain portalNode={host} /></div>
     </>;
   }
-  render(<MemoryRouter initialEntries={['/trips?selected=t1&focus=11']}><ActiveTripProvider><DelayedHost /></ActiveTripProvider></MemoryRouter>);
+  render(<MemoryRouter initialEntries={[`/trips?selected=t1&${target}`]}><ActiveTripProvider><DelayedHost /></ActiveTripProvider></MemoryRouter>);
   await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/trips/t1/days?all=1', expect.anything()));
   expect(screen.getByTestId('inline-slot')).toBeEmptyDOMElement();
   fireEvent.click(screen.getByRole('button', { name: '掛載行程 host' }));
   await waitFor(() => expect(screen.getByTestId('delayed-host').querySelector('.trip-content')).not.toBeNull());
-  await waitFor(() => expect(within(screen.getByTestId('delayed-host')).getByTestId('timeline-rail-toggle-11')).toHaveFocus());
+  if (target === 'focus=11') {
+    await waitFor(() => expect(within(screen.getByTestId('delayed-host')).getByTestId('timeline-rail-toggle-11')).toHaveFocus());
+  } else {
+    await waitFor(() => expect(document.getElementById('day2')).toHaveFocus());
+    expect(within(screen.getByTestId('delayed-host')).getByTestId('dn-day-2')).toHaveAttribute('aria-current', 'true');
+  }
   expect(screen.getByTestId('inline-slot')).toBeEmptyDOMElement();
 });

@@ -43,9 +43,9 @@ it('日期資料失敗不允許從未知 entry count 啟動，重試後可開始
  let fail=true;http.mockImplementation((path:string)=>Promise.resolve(path.includes('/days?')&&fail?response({},500):response(path.endsWith('/health-check')?{report:null}:path.includes('/days?')?[{timeline:[{id:1}]}]:{title:'Trip'})));
  renderPage();const retry=await screen.findByRole('button',{name:'重試健檢狀態'});expect(screen.queryByRole('button',{name:'開始健檢'})).not.toBeInTheDocument();fail=false;fireEvent.click(retry);expect(await screen.findByTestId('ai-health-start-btn')).toBeEnabled();
 });
-it.each([{actionTarget:{day:2},label:'前往 Day 2',url:'/trip/A?day=2'},{actionTarget:{day:2,entryId:42},label:'前往景點',url:'/trip/A/stop/42/edit'}])('finding 有文字優先級並導向 $url',async({actionTarget,label,url})=>{
+it.each([{actionTarget:{day:2},label:'前往 Day 2',url:'/trips?selected=A&focusDay=2#day2'},{actionTarget:{day:2,entryId:42},label:'前往景點',url:'/trip/A/stop/42/edit'}])('finding 有文字優先級並導向 $url',async({actionTarget,label,url})=>{
  setup(async()=>response({report:{...old,findings:[{...old.findings[0],actionTarget}]}}));
- function Location(){const location=useLocation();return <output>{location.pathname+location.search}</output>;}
+ function Location(){const location=useLocation();return <output>{location.pathname+location.search+location.hash}</output>;}
  render(<MemoryRouter initialEntries={['/trip/A/health']}><Location/><Routes><Route path='/trip/:tripId/health' element={<TripHealthCheckPage/>}/><Route path='*' element={<div>Destination</div>}/></Routes></MemoryRouter>);
  expect(await screen.findByText('高優先')).toBeVisible();fireEvent.click(screen.getByRole('button',{name:label}));expect(screen.getByText(url)).toBeVisible();
 });

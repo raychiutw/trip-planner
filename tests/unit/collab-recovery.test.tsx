@@ -12,7 +12,7 @@ let members = [member];
 let pending = [invitation];
 function defaultRead(path: string) {
   if (path.includes('userinfo')) return reply(user);
-  if (path.includes('/permissions?')) return reply(members.map(p => ({ ...p, tripId: new URL(path, 'https://app.test').searchParams.get('tripId') }))); 
+  if (path.includes('/permissions?')) return reply(members.map(p => ({ ...p, tripId: new URL(path, 'https://app.test').searchParams.get('tripId') })));
   if (path.includes('/invitations?')) return reply({ items: pending });
   if (/\/api\/trips\/[AB]$/.test(path)) return reply({ tripId: path.endsWith('B') ? 'B' : 'A', title: path.endsWith('B') ? '旅程 B' : '旅程 A' });
   return reply([]);

@@ -13,5 +13,5 @@ test('rerun retains last report through failed polling and keyboard retry reads 
  await expect(page.getByText('舊報告問題')).toBeVisible();const retry=page.getByRole('button',{name:'重試健檢狀態'});await expect(retry).toBeVisible({timeout:10000});
  await expect(page.getByText(/最新狀態未知/)).toBeVisible();await expect(page.getByTestId('ai-health-start-btn')).toBeDisabled();fail=false;
  await retry.focus();await page.keyboard.press('Enter');await expect(page.getByText('新報告問題')).toBeVisible();expect(posts).toBe(1);
- await expect(page.getByText('高優先')).toBeVisible();await page.getByRole('button',{name:'前往 Day 2'}).click();await expect(page).toHaveURL(new RegExp(`/trip/${tripId}\\?day=2$`));
+ await expect(page.getByText('高優先')).toBeVisible();await page.getByRole('button',{name:'前往 Day 2'}).click();await expect(page).toHaveURL(new RegExp(`/trips\\?selected=${tripId}&focusDay=2#day2$`));await expect(page.getByTestId('dn-day-2')).toHaveAttribute('aria-current','true');
 });
