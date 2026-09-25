@@ -101,6 +101,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       redirect.searchParams.set('status', 'failed');
       return Response.redirect(redirect, 302);
     }
+    if (reauth?.sessionId) {
+      const redirect = new URL('/account?deleteReauth=failed', url.origin);
+      return Response.redirect(redirect, 302);
+    }
     return errorResponse('ACCOUNT_DELETE_REAUTH_REQUIRED', message, status);
   };
 
@@ -116,7 +120,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // 3. Token exchange with Google
   const callbackUri = `${url.origin}/api/oauth/callback/google`;
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+  let tokenRes: Response;
+  try {
+    tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -126,7 +132,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       redirect_uri: callbackUri,
       grant_type: 'authorization_code',
     }),
-  });
+    });
+  } catch (err) {
+    if (stateRow.reauth) return reauthFailure('Google 驗證暫時無法完成', 502);
+    throw err;
+  }
 
   if (!tokenRes.ok) {
     const errText = await tokenRes.text();
@@ -134,7 +144,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return errorResponse('OAUTH_TOKEN_EXCHANGE_FAILED', `Google token exchange ${tokenRes.status}: ${errText.slice(0, 200)}`, 502);
   }
 
-  const tokenJson = (await tokenRes.json()) as GoogleTokenResponse;
+  let tokenJson: GoogleTokenResponse;
+  try {
+    tokenJson = (await tokenRes.json()) as GoogleTokenResponse;
+  } catch {
+    if (stateRow.reauth) return reauthFailure('Google 憑證無效', 502);
+    return errorResponse('OAUTH_TOKEN_EXCHANGE_FAILED', 'Google token response 無效', 502);
+  }
 
   // 4. Verify id_token signature + claims (signed by Google JWKS, aud=our client_id,
   //    iss=accounts.google.com, exp not passed). Throws on any mismatch — defends
@@ -186,7 +202,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const sessionId = await deleteReauthSessionId(context.request);
     if (!current || current.uid !== stateRow.reauth.uid || !sessionId || sessionId !== stateRow.reauth.sessionId ||
         !(await grantDeleteReauth(context.env.DB, context.request, current.uid))) {
-      return errorResponse('ACCOUNT_DELETE_REAUTH_REQUIRED', '請重新驗證身分', 403);
+      return reauthFailure('請重新驗證身分');
     }
     return Response.redirect(new URL(stateRow.redirectAfterLogin, url.origin), 302);
   }

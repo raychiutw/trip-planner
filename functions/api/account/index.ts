@@ -20,15 +20,14 @@
  * ⚠ 實際抹除邏輯在 `_erasure.ts`（逐表顯式刪除，不依賴 CASCADE）。
  *   本檔只負責驗證與回應，不重複實作刪除順序。
  */
-import { requireSessionUser } from '../_session';
-import { requireAuth } from '../_auth';
 import { mobileOAuthContract } from '../_mobileOAuth';
 import { buildClearSessionSetCookie } from '../_cookies';
 import { AppError } from '../_errors';
 import { rawJson } from '../_utils';
 import { verifyPassword } from '../../../src/server/password';
 import { eraseUserAccount } from '../_erasure';
-import { consumeDeleteReauth, hasDeleteReauth, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from './_deleteReauth';
+import { consumeDeleteReauth, hasDeleteReauth, readMobileDeleteChallenge, restoreDeleteReauth, transitionMobileDeleteChallenge } from './_deleteReauth';
+import { requireAccountActor } from './_accountActor';
 import type { Env } from '../_types';
 
 interface DeleteAccountBody {
@@ -39,18 +38,6 @@ interface DeleteAccountBody {
 
 /** 純 OAuth 帳號用的確認字串。刻意用英文大寫，避免輸入法誤觸。 */
 const CONFIRM_PHRASE = 'DELETE';
-
-async function requireAccountUser(context: Parameters<PagesFunction<Env>>[0]): Promise<{ uid: string; grantId?: string }> {
-  if (context.request.headers.get('Authorization')?.startsWith('Bearer ')) {
-    const auth = requireAuth(context);
-    const contract = mobileOAuthContract(context.env, context.request);
-    if (!contract || auth.isServiceToken || auth.clientId !== contract.clientId || !auth.userId || !auth.grantId || auth.restrictTrip) {
-      throw new AppError('PERM_DENIED');
-    }
-    return { uid: auth.userId, grantId: auth.grantId };
-  }
-  return { uid: (await requireSessionUser(context.request, context.env)).uid };
-}
 
 /**
  * 該帳號有沒有 local 密碼身分 —— 決定二次確認要用密碼還是確認字串。
@@ -76,7 +63,7 @@ async function findLocalPasswordHash(env: Env, userId: string): Promise<string |
  * Response: { hasPassword, tripsOwned, collaboratorsAffected }
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const actor = await requireAccountUser(context);
+  const actor = await requireAccountActor(context);
   const userId = actor.uid;
 
   const hasPassword = (await findLocalPasswordHash(context.env, userId)) !== null;
@@ -111,7 +98,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const actor = await requireAccountUser(context);
+  const actor = await requireAccountActor(context);
   const userId = actor.uid;
 
   let body: DeleteAccountBody = {};
@@ -155,7 +142,20 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     }
   }
 
-  const summary = await eraseUserAccount(context.env.DB, userId);
+  let summary;
+  try {
+    summary = await eraseUserAccount(context.env.DB, userId);
+  } catch (error) {
+    // D1 batch has rolled back the erasure; restore the same fresh-auth proof.
+    if (!passwordHash) {
+      if (actor.grantId && typeof body.challengeId === 'string') {
+        await transitionMobileDeleteChallenge(context.env.DB, body.challengeId, userId, actor.grantId, 'used', 'verified');
+      } else {
+        await restoreDeleteReauth(context.env.DB, context.request, userId);
+      }
+    }
+    throw error;
+  }
 
   const res = rawJson({
     ok: true,

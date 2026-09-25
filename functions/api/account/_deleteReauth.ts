@@ -74,6 +74,16 @@ export async function consumeDeleteReauth(db: D1Database, request: Request, user
   return (result.meta?.changes ?? 0) === 1;
 }
 
+/** A failed atomic erasure leaves the account intact, so its one-use proof can be retried. */
+export async function restoreDeleteReauth(db: D1Database, request: Request, userId: string): Promise<void> {
+  const id = await deleteReauthSessionId(request);
+  if (!id) return;
+  await db.prepare(`UPDATE oauth_models SET payload = json_remove(payload, '$.consumed')
+    WHERE name = ? AND id = ? AND expires_at >= ? AND json_extract(payload, '$.uid') = ?
+      AND json_extract(payload, '$.consumed') IS NOT NULL`)
+    .bind(PROOF_NAME, id, Date.now(), userId).run();
+}
+
 export async function hasDeleteReauth(db: D1Database, request: Request, userId: string): Promise<boolean> {
   const id = await deleteReauthSessionId(request);
   if (!id) return false;

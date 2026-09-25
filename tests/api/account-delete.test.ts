@@ -25,6 +25,7 @@ import { hashPassword } from '../../src/server/password';
 import { createTestDb, disposeMiniflare } from './setup';
 import { mockAuth, mockContext, mockEnv } from './helpers';
 import { MOBILE_PROD_REDIRECT } from '../../functions/api/_mobileOAuth';
+import { grantDeleteReauth } from '../../functions/api/account/_deleteReauth';
 
 const SESSION_SECRET = 'test-secret-32-chars-long-enough';
 vi.mock('../../src/server/oauth-client/google-id-token', () => ({
@@ -217,6 +218,23 @@ describe('DELETE /api/account', () => {
     expect(left!.n).toBe(1);
   });
 
+  it('抹除批次失敗後可用同一個未過期的 Google 證明重試', async () => {
+    const u = await seedUser();
+    const request = await authedRequest(u.id, { confirm: 'DELETE' });
+    expect(await grantDeleteReauth(db, request, u.id)).toBe(true);
+    await db.prepare(`CREATE TRIGGER account_delete_retry_fail BEFORE DELETE ON users
+      WHEN OLD.id = '${u.id}' BEGIN SELECT RAISE(ABORT, 'simulated erasure failure'); END`).run();
+    try {
+      await expect(onRequestDelete(ctx(request.clone()))).rejects.toThrow();
+      expect(await db.prepare('SELECT id FROM users WHERE id = ?').bind(u.id).first()).not.toBeNull();
+    } finally {
+      await db.prepare('DROP TRIGGER account_delete_retry_fail').run();
+    }
+    const res = await onRequestDelete(ctx(request.clone()));
+    expect(res.status).toBe(200);
+    expect(await db.prepare('SELECT id FROM users WHERE id = ?').bind(u.id).first()).toBeNull();
+  });
+
   it('mobile Bearer 可讀刪除預覽，不能只憑 token 刪除', async () => {
     const u = await seedUser();
     await db.prepare("INSERT INTO auth_identities (user_id, provider, provider_user_id) VALUES (?, 'google', ?)")
@@ -349,7 +367,8 @@ describe('DELETE /api/account', () => {
     const provider = vi.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id_token: idToken, access_token: 'a' })));
     try {
       const done = await completeGoogle(oauthCtx(new Request(`https://x.com/api/oauth/callback/google?code=c&state=${state}`, { headers: { Cookie: cookie } })));
-      expect(done.status).toBe(403);
+      expect(done.status).toBe(302);
+      expect(done.headers.get('Location')).toBe('https://x.com/account?deleteReauth=failed');
       await expect(onRequestDelete(ctx(new Request('https://x.com/api/account', {
         method: 'DELETE', headers: { Cookie: cookie }, body: JSON.stringify({ confirm: 'DELETE' }),
       })))).rejects.toMatchObject({ code: 'ACCOUNT_DELETE_REAUTH_REQUIRED' });

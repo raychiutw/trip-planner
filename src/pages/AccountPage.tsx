@@ -425,9 +425,12 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (!user?.id) return;
-    if (new URLSearchParams(window.location.search).get('deleteReauth') !== 'done') return;
+    const result = new URLSearchParams(window.location.search).get('deleteReauth');
+    if (result !== 'done' && result !== 'failed') return;
     window.history.replaceState(window.history.state, '', '/account');
-    void openDeleteModal();
+    void openDeleteModal().then(() => {
+      if (result === 'failed') setDeleteError('身分驗證未完成，帳號尚未刪除。請重新驗證。');
+    });
   }, [openDeleteModal, user?.id]);
 
   /** 二次確認是否已滿足：有密碼要打密碼，純 OAuth 要打 DELETE。 */

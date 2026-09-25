@@ -139,4 +139,22 @@ describe('eraseUserAccount — 帳號刪除', () => {
   it('刪不存在的 user 不炸（冪等）', async () => {
     await expect(eraseUserAccount(db, 'no-such-user')).resolves.toBeTruthy();
   });
+
+  it('末段刪除失敗會回滾整批資料，修復後可重試', async () => {
+    const uid = await seedUser('erase-retry@example.com');
+    const tripId = `erase-retry-trip-${uid}`;
+    await db.prepare('INSERT INTO trips (id, name, owner_user_id, published) VALUES (?, ?, ?, 1)')
+      .bind(tripId, '仍在', uid).run();
+    await db.prepare(`CREATE TRIGGER erase_retry_fail BEFORE DELETE ON users
+      WHEN OLD.id = '${uid}' BEGIN SELECT RAISE(ABORT, 'simulated erasure failure'); END`).run();
+    try {
+      await expect(eraseUserAccount(db, uid)).rejects.toThrow();
+      expect(await db.prepare('SELECT id FROM users WHERE id = ?').bind(uid).first()).not.toBeNull();
+      expect(await db.prepare('SELECT id FROM trips WHERE id = ?').bind(tripId).first()).not.toBeNull();
+    } finally {
+      await db.prepare('DROP TRIGGER erase_retry_fail').run();
+    }
+    await eraseUserAccount(db, uid);
+    expect(await db.prepare('SELECT id FROM users WHERE id = ?').bind(uid).first()).toBeNull();
+  });
 });

@@ -1,23 +1,14 @@
-import { requireAuth } from '../_auth';
 import { AppError } from '../_errors';
 import { getPublicOrigin, rawJson } from '../_utils';
 import { mobileOAuthContract } from '../_mobileOAuth';
 import { createMobileDeleteChallenge, mobileCallbackUrl, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from './_deleteReauth';
+import { requireMobileAccountActor } from './_accountActor';
 import type { Env } from '../_types';
 
 type Context = Parameters<PagesFunction<Env>>[0];
 
-function mobileActor(context: Context): { uid: string; grantId: string; clientId: string } {
-  const auth = requireAuth(context);
-  const contract = mobileOAuthContract(context.env, context.request);
-  if (!contract || auth.isServiceToken || auth.clientId !== contract.clientId || !auth.userId || !auth.grantId || auth.restrictTrip) {
-    throw new AppError('PERM_DENIED');
-  }
-  return { uid: auth.userId, grantId: auth.grantId, clientId: auth.clientId };
-}
-
 async function ownedChallenge(context: Context) {
-  const actor = mobileActor(context);
+  const actor = requireMobileAccountActor(context);
   const id = new URL(context.request.url).searchParams.get('challenge_id');
   if (!id) throw new AppError('DATA_VALIDATION', 'challenge_id 必填');
   const challenge = await readMobileDeleteChallenge(context.env.DB, id);
@@ -28,7 +19,7 @@ async function ownedChallenge(context: Context) {
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const actor = mobileActor(context);
+  const actor = requireMobileAccountActor(context);
   if (mobileCallbackUrl(context.env).toString() !== mobileOAuthContract(context.env, context.request)?.redirectUri) {
     throw new AppError('SERVER_MISCONFIG', 'Mobile OAuth callback 與環境不符');
   }
