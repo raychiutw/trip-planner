@@ -140,23 +140,30 @@ export function useSheetBehavior(
    *
    * 快照改為無條件記錄：成本是一次 `document.activeElement` 讀取，而只在需要時才用。
    */
-  useEffect(() => {
-    if (isOpen) {
-      previousFocusRef.current = document.activeElement;
-      requestAnimationFrame(() => {
-        (initialFocusRef?.current ?? panelRef.current)?.focus();
-      });
-    } else {
-      const target = !restorePreviousFocus && triggerRef?.current
-        ? triggerRef.current : previousFocusRef.current;
-      if (target instanceof HTMLElement && target.isConnected && !target.matches(':disabled')) {
-        target.focus();
-      } else if (previousFocusRef.current) {
-        fallbackFocusRef?.current?.focus();
-      }
-      previousFocusRef.current = null;
+  const restoreFocus = useCallback(() => {
+    // Read live refs: an accepted operation can replace/remove the opener.
+    const target = !restorePreviousFocus && triggerRef?.current
+      ? triggerRef.current : previousFocusRef.current;
+    if (target instanceof HTMLElement && target.isConnected && !target.matches(':disabled')) {
+      target.focus({ preventScroll: true });
+    } else if (previousFocusRef.current) {
+      fallbackFocusRef?.current?.focus({ preventScroll: true });
     }
-  }, [isOpen, restorePreviousFocus, triggerRef, initialFocusRef, fallbackFocusRef]);
+    previousFocusRef.current = null;
+  }, [restorePreviousFocus, triggerRef, fallbackFocusRef]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    previousFocusRef.current = document.activeElement;
+    const frame = requestAnimationFrame(() => {
+      (initialFocusRef?.current ?? panelRef.current)?.focus();
+    });
+    // Closing may toggle open or unmount the route-backed sheet entirely.
+    return () => {
+      cancelAnimationFrame(frame);
+      restoreFocus();
+    };
+  }, [isOpen, initialFocusRef, restoreFocus]);
 
   /* 4. Escape — top-most sheet only, skip IME composition, honor canDismiss (busy lock) */
   useEffect(() => {

@@ -5,7 +5,7 @@
  * （由 `AccountModalRoutes` 傳入的 `<Routes>`）。包 `<SheetModeProvider>` → 內部 account
  * 頁的 `AppShell` 只 render 主內容（無 sidebar / 底部 nav / grid）。
  *
- * 關閉（✕ / backdrop / Esc）→ closeSheet + navigate 回背景 location（背景全程 mounted，
+ * 關閉（✕ / backdrop / Esc）→ navigate 回背景 location，再由路由清 flag（背景全程 mounted，
  * 即時回到原狀態）。
  */
 import { useCallback, type ReactNode } from 'react';
@@ -58,14 +58,16 @@ export const ACCOUNT_SHEET_STYLES = `
 
 export default function AccountSheet({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const { bg, closeSheet } = useAccountSheet();
+  const { bg } = useAccountSheet();
 
   const close = useCallback(() => {
-    closeSheet();
+    // AccountModalRoutes clears the flag after navigation. Clearing it here
+    // renders /account as a full page before the router transition commits,
+    // unmounting the background and its focus/reading position.
     const to = bg ? bg.pathname + bg.search + bg.hash : '/trips';
     // replace：把 /account URL 換回背景（背景 component 全程 mounted → 同 route 不 remount、保留狀態）。
     navigate(to, { replace: true });
-  }, [closeSheet, navigate, bg]);
+  }, [navigate, bg]);
 
   /*
    * 統一 sheet 引擎（#1150 story 6）：原本這裡只有一個 window keydown 監聽 Escape ——

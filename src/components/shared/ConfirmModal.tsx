@@ -5,7 +5,7 @@
  *   - 對齊 V2 Terracotta tokens(`--color-priority-high-dot` 為 destructive)
  *   - 標題 + 訊息 + 兩個 action button(取消 ghost / 確認 destructive 實心)
  *   - Escape + click backdrop dismiss
- *   - Focus 自動 trap 在 modal 內(confirm button 預設 focus)
+ *   - Focus 自動 trap 在 modal 內(cancel button 預設 focus)
  *
  * Use case:
  *   - CollabPanel 移除成員 / 撤銷邀請
@@ -114,8 +114,10 @@ export interface ConfirmModalProps {
   confirmLabel?: string;
   /** 取消按鈕 label,預設「取消」 */
   cancelLabel?: string;
-  /** 確認 button 是否 disabled(loading state) */
+  /** An operation is in flight: disable actions and prevent dismissal. */
   busy?: boolean;
+  /** Prerequisites are incomplete; cancellation remains available. */
+  confirmDisabled?: boolean;
   /** 點 confirm 觸發 */
   onConfirm: () => void;
   /** 點 cancel / Escape / backdrop 觸發 */
@@ -138,6 +140,7 @@ export default function ConfirmModal({
   confirmLabel = '確認',
   cancelLabel = '取消',
   busy = false,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
   children,
@@ -204,7 +207,7 @@ export default function ConfirmModal({
               type="button"
               className="tp-confirm-btn tp-confirm-btn-danger"
               onClick={onConfirm}
-              disabled={busy}
+              disabled={busy || confirmDisabled}
               data-testid="confirm-modal-confirm"
             >
               {busy ? '處理中…' : confirmLabel}
