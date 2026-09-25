@@ -84,6 +84,7 @@ BrowserRouter 走 pretty URL (無 hash)。`/manage/` 與 `/admin/` 的 `dist/` �
 聊天、桌機側欄、行程清單、行程明細與地圖頁的可存取行程摘要共用 `useMyTrips`，只讀 `/my-trips` 的 camelCase
 回應，按登入 user ID 隔離清單；初次同時讀取共用請求，`tp-trips-updated` 觸發刷新，
 較舊回應不得覆蓋較新結果；正式的建立、更新與刪除行程事件也會觸發刷新。
+當最後一個讀取者離開後，再次進入會共用一次重讀，補上分享複製或接受邀請期間漏接的更新。
 清單狀態區分載入、失敗與成功空清單。聊天、行程清單與行程明細透過
 `useAccessibleTripSelection` 協調明確目標、有效偏好與成功讀取後的 fallback；
 `/map` 只在清單確認後選擇並導向 `/trip/:tripId/map`，成功空清單保留新增引導，
