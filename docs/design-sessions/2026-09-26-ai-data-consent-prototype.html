@@ -30,12 +30,5 @@ main{position:relative;display:flex;flex-direction:column;min-height:calc(100vh 
 <div id="review" class="variant"><section class="review" role="dialog" aria-modal="true" aria-labelledby="review-title"><div class="review-inner"><button class="back">← 返回聊天（保留輸入）</button><div class="eyebrow">AI 資料同意 · 版本待核定</div><h2 id="review-title">你決定哪些資料交給 AI</h2><p class="lead">在使用 AI 行程建議前，逐項查看資料範圍。這份畫面只展示資訊架構；正式條款尚未核定。</p><div class="review-grid"><div class="tile"><strong>誰會處理</strong><span class="pending">處理方待核定</span></div><div class="tile"><strong>會用到哪些資料</strong><span class="pending">類別待核定</span></div><div class="tile"><strong>只用於什麼目的</strong><span class="pending">用途待核定</span></div><div class="tile"><strong>如何撤回</strong><span class="pending">流程待核定</span></div></div><div class="quote">待送出的訊息仍保留：「想把第三天安排得輕鬆一點，適合帶小朋友。」</div><label class="check"><input type="checkbox">我已閱讀並同意此版本</label><div class="review-actions row"><button class="secondary">拒絕，返回聊天</button><button class="primary">同意並送出</button></div></div></section></div>
 <div class="prototype-note">PROTOTYPE · 文案未核定 · 不會送出資料</div>
 <nav class="switcher" aria-label="切換 prototype 方案"><button id="prev" aria-label="上一個方案">←</button><span id="label"></span><button id="next" aria-label="下一個方案">→</button></nav>
-<script>
-const variants=[['A','底部同意 sheet','sheet'],['B','完整審閱畫面','review'],['C','輸入框內嵌卡','inline']];
-function current(){const v=new URLSearchParams(location.search).get('variant');return Math.max(0,variants.findIndex(x=>x[0]===v));}
-function show(index){const v=variants[(index+variants.length)%variants.length];const url=new URL(location.href);url.searchParams.set('variant',v[0]);history.replaceState(null,'',url);for(const [, ,id] of variants)document.getElementById(id).classList.toggle('active',id===v[2]);document.getElementById('label').textContent=`${v[0]} — ${v[1]}`;}
-document.getElementById('prev').onclick=()=>show(current()-1);document.getElementById('next').onclick=()=>show(current()+1);
-window.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key)||e.target.closest('input,textarea,[contenteditable]'))return;show(current()+(e.key==='ArrowRight'?1:-1));});
-show(current());
-</script>
+<script src="/prototypes/ai-data-consent.js" defer></script>
 </body></html>
