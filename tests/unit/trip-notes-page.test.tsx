@@ -23,7 +23,7 @@ import type { Trip } from '../../src/types/trip';
 // Mock dependencies
 const apiFetchMock = vi.fn();
 vi.mock('../../src/lib/apiClient', () => ({
-  apiFetch: (path: string) => apiFetchMock(path),
+  apiFetch: (path: string) => path.endsWith('/notes/ai-state') ? Promise.resolve({jobs: []}) : apiFetchMock(path),
 }));
 vi.mock('../../src/hooks/useRequireAuth', () => ({ useRequireAuth: () => ({ ready: true }) }));
 vi.mock('../../src/hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ email: 'u@test' }) }));
