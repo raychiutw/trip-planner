@@ -22,6 +22,8 @@ function makeStmt(firstResult: unknown = null) {
 }
 
 const ALLOWED_CLIENT_ROW = {
+  client_id: 'partner', client_type: 'public', app_name: 'Partner', status: 'active',
+  allowed_scopes: JSON.stringify(['openid', 'profile']),
   redirect_uris: JSON.stringify(['https://x.com/cb', 'https://x.com/alt']),
 };
 
@@ -119,7 +121,7 @@ describe('POST /api/oauth/consent', () => {
   });
 
   it('decision=allow → store Consent in D1 + 302 back to /api/oauth/authorize', async () => {
-    const dbPrepare = vi.fn().mockReturnValue(makeStmt());
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => makeStmt(sql.includes('FROM client_apps') ? ALLOWED_CLIENT_ROW : null));
     const token = await signSessionToken('u1', SECRET);
     const env: MockEnv = {
       SESSION_SECRET: SECRET,
@@ -131,7 +133,7 @@ describe('POST /api/oauth/consent', () => {
       response_type: 'code',
       scope: 'openid profile',
       state: 'csrf-x',
-      decision: 'allow',
+      decision: 'allow', code_challenge: 'test-challenge', code_challenge_method: 'S256',
     }, env, `tripline_session=${token}`));
 
     expect(res.status).toBe(302);
@@ -149,6 +151,7 @@ describe('POST /api/oauth/consent', () => {
       (_, i) => typeof dbPrepare.mock.calls[i][0] === 'string' &&
                 (dbPrepare.mock.calls[i][0] as string).includes('INSERT OR REPLACE'),
     )?.value;
+    expect(stmt).toBeDefined();
     if (stmt) {
       const bindArgs = (stmt as { bind: { mock: { calls: unknown[][] } } }).bind.mock.calls[0];
       expect(bindArgs[0]).toBe('Consent');
@@ -191,20 +194,21 @@ describe('POST /api/oauth/consent', () => {
   });
 
   it('Consent TTL = 1 year', async () => {
-    const dbPrepare = vi.fn().mockReturnValue(makeStmt());
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => makeStmt(sql.includes('FROM client_apps') ? ALLOWED_CLIENT_ROW : null));
     const token = await signSessionToken('u1', SECRET);
     const env: MockEnv = {
       SESSION_SECRET: SECRET,
       DB: { prepare: dbPrepare },
     };
     await onRequestPost(makeContext({
-      client_id: 'p', redirect_uri: 'r', scope: 'openid',
-      decision: 'allow', response_type: 'code', state: 's',
+      client_id: 'partner', redirect_uri: 'https://x.com/cb', scope: 'openid',
+      decision: 'allow', response_type: 'code', state: 's', code_challenge: 'test-challenge', code_challenge_method: 'S256',
     }, env, `tripline_session=${token}`));
     const stmt = dbPrepare.mock.results.find(
       (_, i) => typeof dbPrepare.mock.calls[i][0] === 'string' &&
                 (dbPrepare.mock.calls[i][0] as string).includes('INSERT OR REPLACE'),
     )?.value;
+    expect(stmt).toBeDefined();
     if (stmt) {
       const bindArgs = (stmt as { bind: { mock: { calls: unknown[][] } } }).bind.mock.calls[0];
       const expiresAt = bindArgs[3] as number;

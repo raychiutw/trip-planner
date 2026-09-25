@@ -7,14 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 import ConsentPage from '../../src/pages/ConsentPage';
 
 beforeEach(() => {
-  // Mock window.location.href setter (for redirect)
-  Object.defineProperty(window, 'location', {
-    value: { ...window.location, href: 'about:blank' },
-    writable: true,
-  });
-  // 預設 client-info fetch 失敗 → 走「未知應用程式」保底（確定性，不靠 undici 對 relative
-  // URL 的 reject 行為）。需要成功/404 的 test 自行 override。
-  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network in unit env')));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({app_name:'partner-x 已註冊應用',app_description:null,app_logo_url:null,homepage_url:null}))));
 });
 
 afterEach(() => {
@@ -47,7 +40,7 @@ describe('ConsentPage', () => {
   });
 
   it('shows scope description in zh-tw', async () => {
-    renderWithParams('client_id=p&scope=email&redirect_uri=&state=');
+    renderWithParams('client_id=p&scope=email&redirect_uri=https://x.com/cb&state=');
     await waitFor(() => expect(screen.getByTestId('consent-scope-email')).toBeTruthy());
     expect(screen.getByTestId('consent-scope-email').textContent).toContain('電子郵件地址');
   });
