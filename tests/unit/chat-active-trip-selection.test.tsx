@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
@@ -12,6 +13,9 @@ const trips = [
   { tripId: 'first', name: '公開行程', title: '公開標題', countries: 'JP' },
   { tripId: 'private', name: '私人行程', title: '私人標題', countries: 'TW', startDate: '2026-10-01', totalDays: 3 },
 ];
+let authorized: boolean;
+let authorize: (() => Promise<Response>) | undefined;
+let historyResponse: () => Promise<Response>;
 let listResponse: () => Promise<Response>;
 let listReads: number;
 let requestedPaths: string[];
@@ -23,6 +27,8 @@ beforeEach(() => {
   vi.stubGlobal('EventSource', class { close() {} });
   __clearMyTripsCache();
   lsRemove(LS_KEY_TRIP_PREF);
+  historyResponse = async () => new Response(JSON.stringify({ items: [], hasMore: false }));
+  authorized = true; authorize = undefined;
   listReads = 0;
   requestedPaths = [];
   sentTripIds = [];
@@ -39,8 +45,8 @@ beforeEach(() => {
     }
     if (path.includes('/oauth/userinfo')) return new Response(JSON.stringify(user));
     if (path.includes('/my-trips')) { listReads++; return listResponse(); }
-    if (path.includes('/account/ai-authorization')) return new Response(JSON.stringify({ authorized: true }));
-    if (path.includes('/requests')) return new Response(JSON.stringify({ items: [], hasMore: false }));
+    if (path.includes('/account/ai-authorization')) return init?.method === 'POST' && authorize ? authorize() : new Response(JSON.stringify({ authorized }));
+    if (path.includes('/requests')) return historyResponse();
     return new Response('{}');
   });
 });
@@ -59,7 +65,89 @@ function NavigateToFirstChat() {
   return <button onClick={() => navigate('/chat?tripId=first')}>open first chat</button>;
 }
 
+function EmbeddedTripSwitcher() {
+  const [trip, setTrip] = useState('first');
+  return <><button onClick={() => setTrip('first')}>嵌入 A</button><button onClick={() => setTrip('private')}>嵌入 B</button>
+    <ChatPage embedded lockTripId={trip} /></>;
+}
+
 describe('chat active trip selection', () => {
+  it('嵌入式聊天切換鎖定行程時，各自保留草稿並送到對應行程', async () => {
+    render(<MemoryRouter><ActiveTripProvider><EmbeddedTripSwitcher /></ActiveTripProvider></MemoryRouter>);
+    const input = screen.getByTestId('chat-input');
+    await waitFor(() => expect(input).not.toBeDisabled());
+    fireEvent.change(input, { target: { value: 'A 草稿' } });
+    fireEvent.click(screen.getByText('嵌入 B'));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private'));
+    expect(input).toHaveValue('');
+    fireEvent.change(input, { target: { value: 'B 草稿' } });
+    fireEvent.click(screen.getByText('嵌入 A'));
+    await waitFor(() => expect(input).toHaveValue('A 草稿'));
+    fireEvent.click(screen.getByTestId('chat-send'));
+    await waitFor(() => expect(sentTripIds).toEqual(['first']));
+    expect(sentMessages).toEqual(['A 草稿']);
+    fireEvent.click(screen.getByText('嵌入 B'));
+    await waitFor(() => expect(input).toHaveValue('B 草稿'));
+  });
+
+  it.each([false, true])('授權等待跨行程後不能帶走原草稿或送到新行程（已送授權：%s）', async (started) => {
+    authorized = false;
+    let release!: () => void;
+    authorize = () => new Promise<Response>(resolve => { release = () => resolve(new Response('{}')); });
+    render(<MemoryRouter><ActiveTripProvider><EmbeddedTripSwitcher /></ActiveTripProvider></MemoryRouter>);
+    const input = screen.getByTestId('chat-input');
+    await waitFor(() => expect(requestedPaths).toContain('/api/account/ai-authorization'));
+    await waitFor(() => expect(input).not.toBeDisabled());
+    fireEvent.change(input, { target: { value: 'A 只屬於 A 的指令' } });
+    fireEvent.click(screen.getByTestId('chat-send'));
+    await screen.findByTestId('ai-consent-sheet');
+    if (started) fireEvent.click(screen.getByTestId('ai-consent-authorize'));
+    fireEvent.click(screen.getByText('嵌入 B'));
+    await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private'));
+    expect(screen.queryByTestId('ai-consent-sheet')).not.toBeInTheDocument();
+    fireEvent.change(input, { target: { value: 'B 的未送草稿' } });
+    if (started) await act(async () => release());
+    expect(sentTripIds).toEqual([]);
+    expect(input).toHaveValue('B 的未送草稿');
+    fireEvent.click(screen.getByText('嵌入 A'));
+    await waitFor(() => expect(input).toHaveValue('A 只屬於 A 的指令'));
+  });
+
+  it.each([{ isComposing: true }, { keyCode: 229 }])('輸入法確認 Enter 不送出，Shift Enter 換行，普通 Enter 才送出（%j）', async (native) => {
+    openChat('/chat?tripId=first');
+    const input = screen.getByTestId('chat-input');
+    await waitFor(() => expect(input).not.toBeDisabled());
+    fireEvent.change(input, { target: { value: '中文輸入' } });
+    fireEvent.keyDown(input, { key: 'Enter', ...native });
+    expect(sentTripIds).toEqual([]); expect(input).toHaveValue('中文輸入');
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true });
+    expect(sentTripIds).toEqual([]);
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(sentMessages).toEqual(['中文輸入']));
+  });
+
+  it.each([503, 200])('歷史讀取失敗或不完整回應（%s）不顯示空對話，重試成功才顯示', async status => {
+    historyResponse = async () => new Response('{}', { status });
+    openChat('/chat?tripId=first');
+    await screen.findByTestId('chat-load-error');
+    expect(screen.queryByText('從一個指令開始')).not.toBeInTheDocument();
+    historyResponse = async () => new Response(JSON.stringify({ items: [], hasMore: false }));
+    fireEvent.click(screen.getByTestId('chat-load-error-retry'));
+    await screen.findByText('從一個指令開始');
+    expect(screen.queryByTestId('chat-load-error')).not.toBeInTheDocument();
+  });
+
+  it('沒有偏好且行程讀取失敗時，可直接從聊天重試並恢復輸入', async () => {
+    listResponse = async () => new Response('{}', { status: 503 });
+    openChat();
+    await screen.findByText('載入行程失敗，請稍後再試');
+    expect(screen.getByTestId('chat-input')).toBeDisabled();
+    listResponse = async () => new Response(JSON.stringify(trips));
+    fireEvent.click(screen.getByTestId('chat-retry-trips'));
+    await waitFor(() => expect(screen.getByTestId('chat-input')).not.toBeDisabled());
+    expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('first');
+  });
+
   it('keeps an explicit chat target even when it is absent from the accessible list', async () => {
     lsSet(LS_KEY_TRIP_PREF, 'private');
     openChat('/chat?tripId=linked');

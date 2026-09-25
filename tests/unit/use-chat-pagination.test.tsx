@@ -258,9 +258,9 @@ describe('useChatPagination — loadOlder', () => {
   });
 
   it('loadError 設值後 retryLoadOlder 清 error 並重試', async () => {
-    apiFetchMock.mockResolvedValueOnce({ items: [makeRow(1)], hasMore: true });
+    apiFetchMock.mockResolvedValueOnce({ items: [makeRow(2)], hasMore: true });
     apiFetchMock.mockRejectedValueOnce(new Error('401 unauthorized'));
-    apiFetchMock.mockResolvedValueOnce({ items: [makeRow(0)], hasMore: false });
+    apiFetchMock.mockResolvedValueOnce({ items: [makeRow(1)], hasMore: false });
     const { result } = renderHook(() => useHarness({ activeTripId: 'trip-A' }));
     await waitFor(() => expect(result.current.result.hasMoreOlder).toBe(true));
     await act(async () => {

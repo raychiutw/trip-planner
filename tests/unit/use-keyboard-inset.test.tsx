@@ -132,9 +132,7 @@ describe('wiring source-lock', () => {
     expect(chatSrc).not.toMatch(/useKeyboardInset\(\)/);
   });
 
-  it('composer 仍用全站 --kb-inset 上移（不受移到 app root 影響）', () => {
-    expect(chatSrc).toMatch(/translateY\(calc\(-1 \* var\(--kb-inset/);
-  });
+  // Actual composer/message viewport geometry is covered by chat-input-recovery.spec.js.
 
   it('#1140 item 10：data-kb-open 時 root tab 滑出畫面', () => {
     expect(appShellSrc).toMatch(/:root\[data-kb-open="1"\]\s*\.app-shell-bottom-nav\s*\{[\s\S]{0,120}transform:\s*translate\(-50%,/);
