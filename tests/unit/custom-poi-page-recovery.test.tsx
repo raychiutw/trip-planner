@@ -41,6 +41,9 @@ async function chooseAddress() {
   const input = screen.getByRole('combobox');
   fireEvent.change(input, {target:{value:'台北'}});
   const option = await screen.findByRole('option');
+  // The async suggestions render can precede the keyboard hook's reset effect.
+  // Flush that commit before dispatching a synthetic key event.
+  await act(async () => {});
   await act(async () => { fireEvent.keyDown(input,{key:'ArrowDown'}); });
   await waitFor(() => expect(input).toHaveAttribute('aria-activedescendant', option.id));
   await act(async () => { fireEvent.keyDown(input,{key:'Enter'}); });

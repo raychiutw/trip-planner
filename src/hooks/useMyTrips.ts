@@ -58,10 +58,14 @@ function refresh() {
 function onTripsUpdated() { void refresh(); }
 const refreshEvents = [EVENT.tripsUpdated, EVENT.tripCreated, EVENT.tripUpdated, EVENT.tripDeleted];
 function subscribe(listener: () => void) {
-  if (listeners.size === 0 && typeof window !== 'undefined') {
+  const firstSubscriber = listeners.size === 0;
+  if (firstSubscriber && typeof window !== 'undefined') {
     refreshEvents.forEach((name) => window.addEventListener(name, onTripsUpdated));
   }
   listeners.add(listener);
+  // Share/invitation pages can change membership while nobody observes this list.
+  // Revalidate on return, sharing one read with all newly mounted consumers.
+  if (firstSubscriber && snapshot.userId && !pending) void refresh();
   return () => {
     listeners.delete(listener);
     if (listeners.size === 0 && typeof window !== 'undefined') {
