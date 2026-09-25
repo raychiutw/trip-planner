@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 async function setup(page, history = []) {
-  const state = { rows: history, sends: [], stops: [], listFails: false, consent: null, decisions: [], consentFailures: 0, consentLostResponse: false, rejectNextSend: false, decisionBarrier: null };
+  const state = { rows: history, sends: [], stops: [], listFails: false, consent: null, decisions: [], consentFailures: 0, consentLostResponse: false, rejectNextSend: false, rejectOwnerNextSend: false, decisionBarrier: null };
   await page.addInitScript(() => {
     window.chatEvents = [];
     window.EventSource = class {
@@ -37,6 +37,7 @@ async function setup(page, history = []) {
     if (path === '/api/requests') {
       if (request.method() === 'POST') {
         if (state.rejectNextSend) { state.rejectNextSend = false; return reply({ error: { code: 'AI_DATA_CONSENT_REQUIRED' } }, 403); }
+        if (state.rejectOwnerNextSend) { state.rejectOwnerNextSend = false; return reply({ error: { code: 'AI_DATA_CONSENT_OWNER_REQUIRED' } }, 403); }
         const body = request.postDataJSON(); state.sends.push(body);
         const row = { ...body, id: 42, status: 'processing', createdAt: '2026-09-21T01:00:00Z' };
         state.rows.push(row); return reply(row);
@@ -231,6 +232,23 @@ test('a delayed consent decision cannot send into another trip', async ({ page }
   release();
   await expect(input).toHaveValue('B 的草稿');
   await expect(card).toHaveCount(0);
+  expect(state.sends).toHaveLength(0);
+});
+
+test('owner consent failure explains the blocker without asking the member to accept again', async ({ page }) => {
+  const state = await setup(page);
+  state.consent = { disclosure: { version: 'test-v1', title: '測試版說明', processor: '測試處理方',
+    dataCategories: ['行程文字'], purpose: '回答測試訊息', revocation: '在聊天頁撤回' },
+    status: 'current', acceptedVersion: 'test-v1', acceptedAt: null, decidedAt: null };
+  state.rejectOwnerNextSend = true;
+  await page.goto('/chat?tripId=a');
+  const input = page.getByTestId('chat-input');
+  await expect(page.getByRole('button', { name: '管理 AI 資料同意' })).toBeVisible();
+  await input.fill('需要擁有者同意'); await input.press('Enter');
+  const card = page.getByTestId('ai-data-consent-card');
+  await expect(card.getByRole('alert')).toContainText('行程擁有者也需要同意');
+  await expect(card.getByRole('button', { name: '同意並送出' })).toHaveCount(0);
+  await expect(input).toHaveValue('需要擁有者同意');
   expect(state.sends).toHaveLength(0);
 });
 

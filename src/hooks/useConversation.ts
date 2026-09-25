@@ -144,10 +144,11 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
       return true;
     } catch (error) {
       if (scopeRef.current !== scope || !scope.active) return false;
-      if (error instanceof ApiError && error.code === 'AI_DATA_CONSENT_REQUIRED') {
+      if (error instanceof ApiError && (error.code === 'AI_DATA_CONSENT_REQUIRED' || error.code === 'AI_DATA_CONSENT_OWNER_REQUIRED')) {
         setMessages((previous) => previous.filter((message) => message.id !== now && message.id !== now + 1));
-        setAnnouncement('請先確認最新的 AI 資料處理說明。');
-        return 'consent_required';
+        const owner = error.code === 'AI_DATA_CONSENT_OWNER_REQUIRED';
+        setAnnouncement(owner ? '行程擁有者需要先同意目前的 AI 資料處理說明。' : '請先確認最新的 AI 資料處理說明。');
+        return owner ? 'owner_consent_required' : 'consent_required';
       }
       setAnnouncement('訊息送出失敗，請查看錯誤。');
       setMessages((previous) => previous.map((message) => message.id === now + 1

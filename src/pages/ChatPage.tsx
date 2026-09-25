@@ -609,11 +609,11 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       return;
     }
     if (result !== true) setInput(text);
-    if (result === 'consent_required' && activeTripId) {
+    if ((result === 'consent_required' || result === 'owner_consent_required') && activeTripId) {
       inputRef.current?.blur();
       setDataConsentGate({ tripId: activeTripId, text });
       const refreshed = await refreshDataConsent();
-      if (dataConsentScopeRef.current === dataConsentScope && dataConsentScope.active && refreshed?.status === 'current') {
+      if (dataConsentScopeRef.current === dataConsentScope && dataConsentScope.active && (result === 'owner_consent_required' || refreshed?.status === 'current')) {
         setDataConsentError('行程擁有者也需要同意目前版本，才能使用此行程的 AI 功能。');
       }
     }

@@ -59,7 +59,16 @@ export async function requireAiDataConsentForTrip(db: D1Database, actorUid: stri
     .first<{ owner_user_id: string }>();
   if (!trip) throw new AppError('DATA_NOT_FOUND');
   await requireAiDataConsent(db, actorUid, active);
-  if (trip.owner_user_id !== actorUid) await requireAiDataConsent(db, trip.owner_user_id, active);
+  if (trip.owner_user_id !== actorUid) {
+    try {
+      await requireAiDataConsent(db, trip.owner_user_id, active);
+    } catch (error) {
+      if (error instanceof AppError && error.code === 'AI_DATA_CONSENT_REQUIRED') {
+        throw new AppError('AI_DATA_CONSENT_OWNER_REQUIRED');
+      }
+      throw error;
+    }
+  }
 }
 
 export async function requireAiDataConsentForQueuedRequest(db: D1Database, ownerUid: string, submitterEmail: string | null): Promise<void> {

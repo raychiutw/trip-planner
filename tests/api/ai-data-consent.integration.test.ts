@@ -99,9 +99,13 @@ describe('versioned AI data consent', () => {
     const auth = mockAuth({ userId: member, email: `${member}@example.com` });
     const request = () => new Request('https://x.com/api/requests', { method: 'POST', body: JSON.stringify({ tripId, message: 'please plan' }) });
     const send = () => callHandler(sendRequest, mockContext({ request: request(), env, auth }));
-    expect((await send()).status).toBe(403);
+    const submitterBlocked = await send();
+    expect(submitterBlocked.status).toBe(403);
+    expect(await submitterBlocked.json()).toMatchObject({ error: { code: 'AI_DATA_CONSENT_REQUIRED' } });
     expect((await decide(member, 'test-v2', 'accept')).status).toBe(200);
-    expect((await send()).status).toBe(403);
+    const ownerBlocked = await send();
+    expect(ownerBlocked.status).toBe(403);
+    expect(await ownerBlocked.json()).toMatchObject({ error: { code: 'AI_DATA_CONSENT_OWNER_REQUIRED' } });
     expect((await decide(owner, 'test-v2', 'accept')).status).toBe(200);
     await expect(requireAiDataConsentForTrip(db, member, tripId)).resolves.toBeUndefined();
     await expect(requireAiDataConsentForQueuedRequest(db, owner, `${member}@example.com`)).resolves.toBeUndefined();
