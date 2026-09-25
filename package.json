@@ -41,7 +41,7 @@
     "@vitest/runner": "^4.1.10",
     "@vitest/snapshot": "^4.1.10",
     "axe-core": "^4.12.1",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.5",
     "cross-env": "^10.1.0",
     "dotenv": "^16.6.1",
     "eslint": "^10.8.0",
