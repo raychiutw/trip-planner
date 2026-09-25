@@ -52,6 +52,15 @@ describe('retired specification frameworks stay out of the repository', () => {
     });
   });
 
+  it('has no active GBrain references', () => {
+    const matches = activeRepositoryMatches('gbrain');
+
+    expect({ count: matches.length, sample: matches.slice(0, 20) }).toEqual({
+      count: 0,
+      sample: [],
+    });
+  });
+
   it('has no active Superpowers document artifacts or references', () => {
     const documentRoot = resolve(REPO_ROOT, 'docs/superpowers');
     const matches = activeRepositoryMatches('docs/superpowers');
