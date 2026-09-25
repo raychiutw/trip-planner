@@ -975,21 +975,21 @@ export default function ChangePoiPage() {
             {categoryFilter}
 
             {searchStatus === 'error' && <div role="alert" className="tp-change-poi-empty">{searchError} <button type="button" onClick={retrySearch}>重試搜尋</button></div>}
-            {searching && <div className="tp-change-poi-empty">搜尋中⋯</div>}
+            {searching && <div role="status" className="tp-change-poi-empty">搜尋中⋯</div>}
             {!searching && query.trim().length === 0 && (
-              <div className="tp-change-poi-empty">
+              <div role="status" className="tp-change-poi-empty">
                 輸入關鍵字搜尋，或切到「收藏」分頁從你儲存的景點選取
               </div>
             )}
             {searchStatus === 'success' && searchResults.length === 0 && (
-              <div className="tp-change-poi-empty">沒有找到結果，換個關鍵字試試</div>
+              <div role="status" className="tp-change-poi-empty">沒有找到結果，換個關鍵字試試</div>
             )}
             {!searching && searchResults.length > 0 && filteredSearchResults.length === 0 && (
               <div className="tp-change-poi-empty">符合類別篩選的結果為 0，試著切到「為你推薦」看全部</div>
             )}
             {filteredSearchResults.length > 0 && (
               <>
-                <h3 className="tp-change-poi-result-title">
+                <h3 aria-live="polite" className="tp-change-poi-result-title">
                   {query.trim().length >= 2 ? '搜尋結果' : '熱門景點'} · {region}
                 </h3>
                 <div className="tp-change-poi-grid">
@@ -1050,9 +1050,9 @@ export default function ChangePoiPage() {
           <>
             {categoryFilter}
             {favoritesStatus === 'error' && <div role="alert" className="tp-change-poi-empty">{favoritesError} <button type="button" onClick={retryFavorites}>重試載入收藏</button></div>}
-            {favoritesStatus === 'loading' && <div className="tp-change-poi-empty">載入收藏⋯</div>}
+            {favoritesStatus === 'loading' && <div role="status" className="tp-change-poi-empty">載入收藏⋯</div>}
             {favorites?.length === 0 && (
-              <div className="tp-change-poi-empty">
+              <div role="status" className="tp-change-poi-empty">
                 <div className="tp-change-poi-empty-icon"><Icon name="heart" /></div>
                 <div className="tp-change-poi-empty-title">還沒收藏景點</div>
                 <div className="tp-change-poi-empty-desc">在探索頁或地圖上收藏地點，下次就能直接從這裡選取。</div>

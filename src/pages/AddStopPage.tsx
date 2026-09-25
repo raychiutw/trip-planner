@@ -27,7 +27,7 @@
  *   - onClose / onAdded 走 useNavigateBack(routes.tripsSelected(id)) explicit URL + dispatch tp-entry-updated
  *   - 完成按鈕同時放 TitleBar action + bottom bar (兩處同步 disabled state)
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -695,6 +695,9 @@ export default function AddStopPage() {
   // 搜尋結果 per-result 分類覆寫（place_id → 使用者選的分類）。預設＝Google 自動推導。
   const [searchCatOverride, setSearchCatOverride] = useState<Record<string, PoiType>>({});
   const selectionKey = JSON.stringify([tripId, dayNum, tab, query, region, category]);
+  const selectionVisit = useMemo(() => ({selectionKey}), [selectionKey]);
+  const currentSelection = useRef(selectionVisit);
+  currentSelection.current = selectionVisit;
   const [selectionScope, setSelectionScope] = useState(selectionKey);
   // Clear the previous intent before React commits the new picker view.
   if (selectionScope !== selectionKey) {
@@ -838,6 +841,7 @@ export default function AddStopPage() {
 
     type Body = {
       name: string;
+      poiId?: number;
       time?: string;
       note?: string;
       lat?: number;
@@ -864,9 +868,11 @@ export default function AddStopPage() {
     setSubmitting(true);
     try {
       let payloads: Body[] = [];
+      let selectionIds: Array<string | number> = [];
 
       if (tab === 'search') {
         const selected = searchResults.filter((r) => selectedSearch.has(r.place_id));
+        selectionIds = selected.map(row => row.place_id);
         // 2026-07-08：加 Google 景點時抓 Place Details，把營業時間 + 價位寫進備註
         // （訂位 Google 無此欄位 → 留白由 user 在編輯景點頁補）。graceful：resolve
         // 失敗（rate limit / 404 / kill switch）不 enrich，buildPoiNote fallback 地址。
@@ -893,16 +899,14 @@ export default function AddStopPage() {
           };
         });
       } else if (tab === 'favorites') {
-        const list = poiFavorites ?? [];
-        payloads = list
-          .filter((r) => selectedSaved.has(r.id))
+        const selected = (poiFavorites ?? []).filter(row => selectedSaved.has(row.id));
+        selectionIds = selected.map(row => row.id);
+        payloads = selected
           .map((r) => ({
             name: r.poiName,
+            poiId: r.poiId,
             note: r.poiAddress ?? undefined,
-            lat: r.poiLat ?? undefined,
-            lng: r.poiLng ?? undefined,
             source: 'favorite',
-            poi_type: mapGooglePrimaryTypeToPoiType(r.poiType),
           }));
       } else {
         if (!customCoord) return; // 已前置驗證，此處供 TS 收斂
@@ -922,6 +926,14 @@ export default function AddStopPage() {
 
       // #1261：每筆走 entry 變更 module（emit + day-scope 重算在 module，helper single-flight 合併）。
       const results = await Promise.all(payloads.map((body) => createEntry(tripId, dayNum, body)));
+      const savedIds = new Set(selectionIds.filter((_, index) => results[index]?.ok));
+      const saved = results.filter(result => result.ok);
+      void Promise.all(saved.map(result => result.recompute)).then(outcomes => {
+        if (outcomes.some(ok => !ok)) showToast('景點已儲存，部分交通時間待更新', 'info');
+      });
+      if (currentSelection.current !== selectionVisit) return;
+      if (tab === 'search') setSelectedSearch(previous => new Set([...previous].filter(id => !savedIds.has(id))));
+      if (tab === 'favorites') setSelectedSaved(previous => new Set([...previous].filter(id => !savedIds.has(id))));
       const failed = results.filter((r) => !r.ok);
       if (failed.length > 0) {
         setSubmitError(`${failed.length}/${payloads.length} 個項目儲存失敗，請重試`);
@@ -935,7 +947,7 @@ export default function AddStopPage() {
       setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, searchCatOverride, tripId, dayNum]);
+  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, searchCatOverride, tripId, dayNum, selectionVisit]);
 
   if (!auth.user) return null;
   // v2.31.99: tripId 必填，但 dayNum 改成 optional — 沒帶 ?day=N 時 chip row
@@ -1113,7 +1125,7 @@ export default function AddStopPage() {
                     </div>
                   )}
                   {searchStatus === 'error' && <div role="alert" className="tp-add-stop-empty">{searchError} <button type="button" onClick={retrySearch}>重試搜尋</button></div>}
-            {searching && <div className="tp-add-stop-empty">搜尋中⋯</div>}
+            {searching && <div role="status" className="tp-add-stop-empty">搜尋中⋯</div>}
                   {/* v2.31.55 fix：landing empty state 之前 gate 在
                     * `poiFavorites && poiFavorites.length > 0`，但 poiFavorites
                     * 只在 user 切到「收藏」 tab 才 fetch（line 664-681 lazy load），
@@ -1121,7 +1133,7 @@ export default function AddStopPage() {
                     * 完全沒 hint「該做什麼」。decouple 條件，搜尋 tab + query 空
                     * 一律顯示 hint。 */}
                   {!searching && query.trim().length === 0 && category === 'all' && (
-                    <div className="tp-add-stop-empty">
+                    <div role="status" className="tp-add-stop-empty">
                       輸入關鍵字搜尋，或切到「收藏」 tab 從你儲存的 POI 加入
                     </div>
                   )}
@@ -1129,7 +1141,7 @@ export default function AddStopPage() {
                     <div className="tp-add-stop-empty">輸入「{CATEGORY_TABS.find((c) => c.key === category)?.label}」 相關關鍵字開始搜尋</div>
                   )}
                   {searchStatus === 'success' && searchResults.length === 0 && (
-                    <div className="tp-add-stop-empty">沒有找到結果，換個關鍵字試試</div>
+                    <div role="status" className="tp-add-stop-empty">沒有找到結果，換個關鍵字試試</div>
                   )}
                   {searchResults.length > 0 && (() => {
                     const filtered = searchResults.filter((r) => matchCategory(r.category, category));
@@ -1138,7 +1150,7 @@ export default function AddStopPage() {
                     }
                     return (
                       <>
-                        <h3 className="tp-add-stop-result-title">
+                        <h3 aria-live="polite" className="tp-add-stop-result-title">
                           {query.trim().length >= 2 ? '搜尋結果' : '熱門景點'} · {region}
                         </h3>
                         <div className="tp-add-stop-grid">
@@ -1211,9 +1223,9 @@ export default function AddStopPage() {
               {tab === 'favorites' && (
                 <>
                   {favoritesStatus === 'error' && <div role="alert" className="tp-add-stop-empty">{favoritesError} <button type="button" onClick={retryFavorites}>重試載入收藏</button></div>}
-                  {savedLoading && <div className="tp-add-stop-empty">載入收藏⋯</div>}
+                  {savedLoading && <div role="status" className="tp-add-stop-empty">載入收藏⋯</div>}
                   {!savedLoading && poiFavorites !== null && poiFavorites.length === 0 && (
-                    <div className="tp-add-stop-empty">
+                    <div role="status" className="tp-add-stop-empty">
                       <div className="tp-add-stop-empty-icon"><Icon name="heart" /></div>
                       <div className="tp-add-stop-empty-title">還沒收藏景點</div>
                       <div className="tp-add-stop-empty-desc">在探索頁或地圖上點收藏地點，下次行程就能直接從這裡加入。</div>
@@ -1354,7 +1366,7 @@ export default function AddStopPage() {
                   ? <>已選 <strong>{totalSelected}</strong> 個 → DAY {String(dayNum).padStart(2, '0')}</>
                   : <>請先選擇加入哪天</>
                 }
-                {submitError && <span style={{ color: 'var(--color-destructive)', marginLeft: 8 }}>{submitError}</span>}
+                {submitError && <span role="alert" style={{ color: 'var(--color-destructive)', marginLeft: 8 }}>{submitError}</span>}
               </span>
               <div className="tp-add-stop-actions">
                 <button

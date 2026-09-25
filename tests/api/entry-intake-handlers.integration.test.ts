@@ -24,6 +24,25 @@ beforeAll(async () => {
 afterAll(disposeMiniflare);
 
 describe('POST /api/trips/:id/days/:num/entries → entry intake', () => {
+  it('existing poiId is attached without creating or overwriting a POI', async () => {
+    const poiId = await seedPoi(db, {name: '原始收藏', type: 'restaurant'});
+    const resp = await callHandler(postEntry, mockContext({
+      request: jsonRequest(`https://test/api/trips/${tripId}/days/1/entries`, 'POST', {name: '原始收藏', poiId, source: 'favorite'}),
+      env, auth: mockAuth({email: owner}), params: {id: tripId, num: '1'},
+    }));
+    expect(resp.status).toBe(201);
+    const row = await resp.json() as {id:number};
+    const master = await db.prepare('SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1').bind(row.id).first();
+    expect(master).toEqual({poi_id: poiId});
+    expect(await db.prepare('SELECT type FROM pois WHERE id = ?').bind(poiId).first()).toEqual({type:'restaurant'});
+  });
+  it.each([0, -1, 1.5, '1', 99999999])('rejects invalid or missing existing poiId %s', async (poiId) => {
+    const resp = await callHandler(postEntry, mockContext({
+      request: jsonRequest(`https://test/api/trips/${tripId}/days/1/entries`, 'POST', {name:'無效收藏',poiId}),
+      env, auth: mockAuth({email:owner}), params:{id:tripId,num:'1'},
+    }));
+    expect(resp.status).toBe(poiId===99999999?404:400);
+  });
   it('body.source 進 pois.source 與 trip_entries.source；note 進正選；version=1；audit 存在', async () => {
     const resp = await callHandler(postEntry, mockContext({
       request: jsonRequest(`https://test/api/trips/${tripId}/days/1/entries`, 'POST', {
