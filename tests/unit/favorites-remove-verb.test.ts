@@ -51,14 +51,7 @@ describe('收藏／備選的動作動詞（#1187）', () => {
     expect(favorites, '批次鈕文案').toMatch(/'移除中…'\s*:\s*'移除'/);
   });
 
-  it('確認對話框仍在，只是文案改了（W12 維持，不要順手拿掉）', () => {
-    // 用 `<ConfirmModal` 這種前綴比對會讓 `<ConfirmModalXX` 也算通過（mutation 實測過）。
-    // 綁「元素標籤 + 它必有的 open prop」才擋得住。
-    expect(favorites, '確認框被拿掉了 —— 那是被推翻的方向，見 #1165')
-      .toMatch(/<ConfirmModal\s+open=\{deleteConfirmOpen\}/);
-    expect(favorites, '確認框標題應為「移除」語系').toMatch(/title="確定移除收藏？"/);
-    expect(favorites, '確認鈕應為「移除」').toMatch(/confirmLabel="移除"/);
-  });
+  // Confirmation title, action and no-write-before-confirm run in favorites-batch-recovery.test.tsx.
 
   it('testid 未被改名（unit + e2e 都在用）', () => {
     expect(favorites).toContain('favorites-delete-selected');

@@ -129,3 +129,11 @@ it('切換目的行程時不能保留舊行程標題',async()=>{
  expect(screen.queryByText('新增景點 · 測試行程')).not.toBeInTheDocument();
  await waitFor(()=>expect(screen.getByTestId('add-entry-pick-search')).toBeEnabled());
 });
+
+it('收藏新增沿用 canonical POI，不以畫面分類覆寫主檔',async()=>{
+ dayStatus=200;open(false,'','/trip/t1/add-stop?tab=favorites&day=1');
+ fireEvent.click(await screen.findByRole('checkbox'));
+ fireEvent.click(screen.getByTestId('add-stop-confirm'));
+ await waitFor(()=>expect(writes).toHaveLength(1));
+ expect(writes[0]).toEqual({path:'/api/trips/t1/days/1/entries',body:{name:'保留景點',poiId:1,source:'favorite'}});
+});

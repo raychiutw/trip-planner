@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import PoiFavoritesPage from '../../src/pages/PoiFavoritesPage';
@@ -17,6 +17,7 @@ it('select visible adds the current filter to the existing selection and confirm
  setup();fireEvent.click(await screen.findByTestId('favorites-check-1'));fireEvent.click(screen.getByTestId('favorites-region-京都'));fireEvent.click(screen.getByTestId('favorites-select-all'));
  expect(screen.getByTestId('favorites-toolbar')).toHaveTextContent('已選 3 個');expect(screen.getByTestId('favorites-toolbar')).toHaveTextContent('1 個不在本頁');
  fireEvent.click(screen.getByTestId('favorites-delete-selected'));const dialog=await screen.findByRole('alertdialog');expect(dialog).toHaveTextContent('收藏 1');expect(dialog).toHaveTextContent('收藏 2');expect(dialog).toHaveTextContent('收藏 3');expect(deletes()).toHaveLength(0);
+ expect(dialog).toHaveAccessibleName('確定移除收藏？');expect(within(dialog).getByRole('button',{name:'移除',exact:true})).toBeEnabled();
 });
 it('each acknowledgement removes only its row; failures stay selected and retry never repeats success',async()=>{
  let finish!:(r:Response)=>void,attempt=0;

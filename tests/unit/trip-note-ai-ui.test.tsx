@@ -9,12 +9,6 @@ const apiFetchMock = vi.fn();
 vi.mock('../../src/lib/apiClient', () => ({
   apiFetch: (path: string, init?: RequestInit) => apiFetchMock(path, init),
 }));
-vi.mock('../../src/hooks/useRequireAuth', () => ({
-  useRequireAuth: () => ({ ready: true }),
-}));
-vi.mock('../../src/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({ email: 'owner@test' }),
-}));
 vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
 
 const NOTES = {
@@ -90,6 +84,7 @@ function renderPage() {
 
 beforeEach(() => {
   apiFetchMock.mockReset();
+  vi.spyOn(global, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ id: 'owner', email: 'owner@test' })));
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     value: vi.fn().mockImplementation(() => ({

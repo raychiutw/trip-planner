@@ -79,6 +79,9 @@ it('selects a non-first pin from overview and keeps pin, card and day aligned', 
   expect(maps[0]!.panTo).toHaveBeenLastCalledWith({ lat: 27.1, lng: 127 });
   fireEvent.click(screen.getByTestId('map-day-overview'));
   expect(document.querySelector('[data-card-entry-id][aria-current="true"]')).toBeNull();
+  fireEvent.click(card(22));
+  expect(card(22)).toHaveAttribute('aria-current', 'true');
+  expect(screen.getByTestId('map-day-2')).toHaveAttribute('aria-current', 'true');
 });
 
 it('clears a Google place card when the user changes day', async () => {

@@ -37,7 +37,15 @@ beforeEach(()=>{
   http=vi.fn(async(path:string,opts?:RequestInit)=>opts?.method && !path.includes('autocomplete') ? reply({id:10,ok:true}) : read(path)); vi.stubGlobal('fetch',http);
 });
 afterEach(()=>{vi.unstubAllGlobals();vi.unstubAllEnvs();});
-async function chooseAddress(){fireEvent.change(screen.getByRole('combobox'),{target:{value:'台北'}});await screen.findByRole('option');fireEvent.keyDown(screen.getByRole('combobox'),{key:'ArrowDown'});fireEvent.keyDown(screen.getByRole('combobox'),{key:'Enter'});}
+async function chooseAddress() {
+  const input = screen.getByRole('combobox');
+  fireEvent.change(input, {target:{value:'台北'}});
+  const option = await screen.findByRole('option');
+  await act(async () => { fireEvent.keyDown(input,{key:'ArrowDown'}); });
+  await waitFor(() => expect(input).toHaveAttribute('aria-activedescendant', option.id));
+  await act(async () => { fireEvent.keyDown(input,{key:'Enter'}); });
+}
+
 const writes=()=>http.mock.calls.filter(([p,o])=>o?.method && !p.includes('autocomplete') && !p.includes('recompute'));
 it.each(cases)('$name 沒有座標不能提交；Google 地址可在地圖失敗時完成既有流程',async(c)=>{
  setup(c.path); const title=await screen.findByTestId(c.title); fireEvent.change(title,{target:{value:'朋友家'}});

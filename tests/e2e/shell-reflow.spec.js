@@ -28,7 +28,8 @@ for (const width of [320, 375, 768, 1024, 1440]) test(`root navigation reflows w
   }
 });
 
-test('browser pinch zoom does not activate keyboard-only navigation hiding', async ({ page, context }) => {
+test('browser pinch zoom does not activate keyboard-only navigation hiding', async ({ page, context, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Native emulation uses the Chromium DevTools protocol; reflow and keyboard behavior run on every browser.');
   await page.setViewportSize({ width: 375, height: 844 });
   await page.route('**/api/**', route => route.fulfill({ json: new URL(route.request().url()).pathname === '/api/oauth/userinfo' ? { id: 'reader', email: 'reader@example.com' } : [] }));
   await page.goto('/trips');

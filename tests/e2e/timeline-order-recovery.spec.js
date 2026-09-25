@@ -46,6 +46,7 @@ async function setup(page) {
 
 async function selectMenuByKeyboard(page, id, label) {
   await page.getByTestId(`timeline-rail-menu-${id}`).focus(); await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem').first()).toBeFocused();
   const item = page.getByRole('menuitem', { name: label, exact: true });
   for (let i = 0; i < 14; i++) {
     if (await item.evaluate(el => el === document.activeElement)) break;

@@ -74,8 +74,10 @@ function EmbeddedTripSwitcher() {
 describe('chat active trip selection', () => {
   it('嵌入式聊天切換鎖定行程時，各自保留草稿並送到對應行程', async () => {
     render(<MemoryRouter><ActiveTripProvider><EmbeddedTripSwitcher /></ActiveTripProvider></MemoryRouter>);
-    const input = screen.getByTestId('chat-input');
+    const input = await screen.findByTestId('chat-input');
     await waitFor(() => expect(input).not.toBeDisabled());
+    expect(screen.queryByTestId('app-shell-main')).toBeNull();
+    expect(screen.queryByTestId('global-bottom-nav')).toBeNull();
     fireEvent.change(input, { target: { value: 'A 草稿' } });
     fireEvent.click(screen.getByText('嵌入 B'));
     await waitFor(() => expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private'));
@@ -95,7 +97,7 @@ describe('chat active trip selection', () => {
     let release!: () => void;
     authorize = () => new Promise<Response>(resolve => { release = () => resolve(new Response('{}')); });
     render(<MemoryRouter><ActiveTripProvider><EmbeddedTripSwitcher /></ActiveTripProvider></MemoryRouter>);
-    const input = screen.getByTestId('chat-input');
+    const input = await screen.findByTestId('chat-input');
     await waitFor(() => expect(requestedPaths).toContain('/api/account/ai-authorization'));
     await waitFor(() => expect(input).not.toBeDisabled());
     fireEvent.change(input, { target: { value: 'A 只屬於 A 的指令' } });
@@ -115,7 +117,7 @@ describe('chat active trip selection', () => {
 
   it.each([{ isComposing: true }, { keyCode: 229 }])('輸入法確認 Enter 不送出，Shift Enter 換行，普通 Enter 才送出（%j）', async (native) => {
     openChat('/chat?tripId=first');
-    const input = screen.getByTestId('chat-input');
+    const input = await screen.findByTestId('chat-input');
     await waitFor(() => expect(input).not.toBeDisabled());
     fireEvent.change(input, { target: { value: '中文輸入' } });
     fireEvent.keyDown(input, { key: 'Enter', ...native });
@@ -203,7 +205,7 @@ describe('chat active trip selection', () => {
     expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('private');
     expect(requestedPaths.some((path) => path.includes('/requests?tripId=private'))).toBe(true);
     expect(listReads).toBe(1);
-    const input = screen.getByTestId('chat-input');
+    const input = await screen.findByTestId('chat-input');
     fireEvent.change(input, { target: { value: '請幫我調整行程' } });
     fireEvent.click(screen.getByTestId('chat-send'));
     await waitFor(() => expect(sentTripIds).toEqual(['private']));

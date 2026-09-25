@@ -72,7 +72,7 @@ const SCOPED_STYLES = `
 .map-page-list-link {
   position: absolute; top: calc(var(--titlebar-h, 64px) + 64px); left: 12px;
   z-index: 5; padding: 10px 12px; min-height: 44px; border-radius: var(--radius-md);
-  background: var(--color-background); color: var(--color-accent); font-size: var(--font-size-footnote);
+  background: var(--color-background); color: var(--color-accent-text); font-size: var(--font-size-footnote);
 }
 .map-page-body > * { width: 100%; height: 100%; }
 .map-page-body > .tp-map-fabs { bottom: 24px; }

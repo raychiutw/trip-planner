@@ -16,17 +16,7 @@ import { join } from 'node:path';
 
 const read = (rel: string) => readFileSync(join(__dirname, '../..', rel), 'utf8');
 
-describe('v2.31.81 #1: MapPage handleCardClick syncs day nav in overview mode', () => {
-  const src = read('src/pages/MapPage.tsx');
-  it('handleCardClick 內含 isOverview check + entryDayMap.get + handleTabClick call', () => {
-    const m = src.match(/const handleCardClick = useCallback\(\(entryId: number\) => \{[\s\S]*?\}\,\s*\[isOverview,\s*entryDayMap,\s*handleTabClick\]\);/);
-    expect(m, 'handleCardClick must depend on isOverview/entryDayMap/handleTabClick').toBeTruthy();
-    const block = m![0];
-    expect(block).toMatch(/isOverview/);
-    expect(block).toMatch(/entryDayMap\.get\(entryId\)/);
-    expect(block).toMatch(/handleTabClick\(targetDay\)/);
-  });
-});
+// Overview card/pin/day synchronization is exercised in map-recovery.test.tsx.
 
 describe('v2.31.81 #2: MapPage TitleBar matches ChatPage format', () => {
   const src = read('src/pages/MapPage.tsx');

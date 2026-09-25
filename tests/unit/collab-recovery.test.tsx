@@ -147,8 +147,9 @@ it('角色變更失敗保留舊角色；成功回覆後才呈現新角色', asyn
 it('伺服器不可管理時沒有寫入操作；登入讀取失敗可恢復', async () => {
   let authFailed = true;
   http.mockImplementation(async (path: string) => path.includes('userinfo') && authFailed ? reply({}, 503) : defaultRead(path));
-  setup(); expect(await screen.findByRole('button', { name: '重試登入狀態' })).toBeVisible();
+  setup(); const page = within(screen.getByTestId('collab-page'));
+  expect(await page.findByRole('button', { name: '重試登入狀態' })).toBeVisible();
   expect(screen.queryByTestId('collab-add-submit')).toBeNull(); authFailed = false;
-  fireEvent.click(screen.getByRole('button', { name: '重試登入狀態' }));
+  fireEvent.click(page.getByRole('button', { name: '重試登入狀態' }));
   expect(await screen.findByTestId('collab-add-submit')).toBeVisible(); expect(writes()).toHaveLength(0);
 });

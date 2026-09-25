@@ -637,7 +637,7 @@ function TripPageInner(
     switchDay(targetDay.dayNum);
     toggle.focus({ preventScroll: true });
     toggle.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-  }, [focusEntryId, location.key, activeTripId, loading, trip?.id, allDays, switchDay]);
+  }, [focusEntryId, location.key, activeTripId, loading, trip?.id, allDays, switchDay, portalNode]);
 
   /* --- Auto-scroll to today or hash on initial load (#3, #5, #18) --- */
   useEffect(() => {

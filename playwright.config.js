@@ -21,6 +21,8 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run build && npx vite preview --port 3000',
+    // SDK-backed tests supply their own browser adapter; no real credential is needed.
+    env: { VITE_GOOGLE_MAPS_BROWSER_KEY: 'playwright-sdk-stub' },
     port: 3000,
     reuseExistingServer: true,
     timeout: 60000,

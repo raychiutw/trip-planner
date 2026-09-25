@@ -66,7 +66,8 @@ for (const width of [320, 375, 768, 1024, 1440]) test(`shared filters and day na
   }
 });
 
-test('native safe-area insets keep root controls clear and reduced motion avoids animated day centering', async ({ page, context }) => {
+test('native safe-area insets keep root controls clear and reduced motion avoids animated day centering', async ({ page, context, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Native emulation uses the Chromium DevTools protocol; reflow and keyboard behavior run on every browser.');
   await page.setViewportSize({ width: 375, height: 844 }); await page.emulateMedia({ reducedMotion: 'reduce' }); await setupApiMocks(page);
   const cdp = await context.newCDPSession(page);
   try {
