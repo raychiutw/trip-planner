@@ -43,6 +43,7 @@
  */
 import { apiFetchRaw } from './apiClient';
 import { EVENT } from './events';
+import { captureSegmentScope } from './segmentScope';
 
 export interface RecomputeTravelResult {
   pairsComputed?: number;
@@ -51,7 +52,12 @@ export interface RecomputeTravelResult {
   errorsDetail?: Array<{ entryId: number; message: string }>;
 }
 
-const inflight = new Map<string, Promise<RecomputeTravelResult>>();
+interface RecomputeFlight {
+  promise: Promise<RecomputeTravelResult>;
+  // A shared request can outlive its first reader and be joined by a new scope.
+  readers: Set<() => boolean>;
+}
+const inflight = new Map<string, RecomputeFlight>();
 /** auto 已嘗試的 gap signature（scopeKey → signature）。 */
 const autoAttemptedSig = new Map<string, string>();
 /** auto 收過 403 的 trip（唯讀 viewer）— 後續 auto 全 skip，不再浪費請求。 */
@@ -84,6 +90,13 @@ export function __resetTravelRecomputeState(): void {
 
 export type AutoRecomputeStatus = 'active' | 'blocked' | 'failed';
 
+function recordFailure(tripId: string, key: string, status: 'blocked' | 'failed', notify: boolean): void {
+  // Terminal policy survives navigation; only publication belongs to a visible scope.
+  if (status === 'blocked') autoNoWriteTrips.add(tripId);
+  else autoFailedScopes.add(key);
+  if (notify) window.dispatchEvent(new CustomEvent(EVENT.segmentRecomputeFailed, { detail: { tripId } }));
+}
+
 /**
  * 查某 scope 的 auto 重算狀態，給 TravelPill 選文案（只在 stale pair 才問）：
  *   - 'blocked'：唯讀 viewer（收過 403）— auto 全停，不會自動補算
@@ -108,16 +121,18 @@ export function getAutoRecomputeStatus(
 export function requestTravelRecompute(
   tripId: string,
   dayNum?: number | string | null,
-  opts?: { auto?: boolean; signature?: string },
+  opts?: { auto?: boolean; signature?: string; isCurrent?: () => boolean },
 ): Promise<RecomputeTravelResult | null> {
   const day = normalizeDayNum(dayNum);
   const key = scopeKey(tripId, day);
   const auto = opts?.auto === true;
+  const isCurrent = opts?.isCurrent ?? captureSegmentScope(tripId);
+  const pendingKey = inflight.has(key) ? key : auto && inflight.has(scopeKey(tripId, null)) ? scopeKey(tripId, null) : null;
+  if (pendingKey) inflight.get(pendingKey)?.readers.add(isCurrent);
 
   if (auto) {
     const signature = opts?.signature ?? '';
     if (autoNoWriteTrips.has(tripId)) return Promise.resolve(null);
-    if (autoAttemptedSig.get(key) === signature) return Promise.resolve(null);
     // in-flight（同 key 或 all-scope）即本缺口的嘗試 — 記 signature 後跳過
     if (inflight.has(key) || inflight.has(scopeKey(tripId, null))) {
       autoAttemptedSig.set(key, signature);
@@ -125,17 +140,17 @@ export function requestTravelRecompute(
       // 失敗，本缺口沒補到、signature 已記→不會自己重試 → 標本 day-scope failed
       // + 通知，chip 才會由「重新計算中」轉「待更新」（否則永遠停在計算中；codex P1）。
       const pending = inflight.get(key) ?? inflight.get(scopeKey(tripId, null));
-      pending?.then(undefined, () => {
-        autoFailedScopes.add(key);
-        window.dispatchEvent(new CustomEvent(EVENT.segmentRecomputeFailed, { detail: { tripId } }));
+      pending?.promise.then(undefined, () => {
+        recordFailure(tripId, key, 'failed', isCurrent());
       });
       return Promise.resolve(null);
     }
+    if (autoAttemptedSig.get(key) === signature) return Promise.resolve(null);
     autoAttemptedSig.set(key, signature);
   }
 
   const existing = inflight.get(key);
-  if (existing) return existing;
+  if (existing) return existing.promise;
 
   // 新的一發要打了 → 樂觀清掉舊 failed：re-armed 重試（含 explicit 成功）期間 chip
   // 顯「重新計算中」而非停在「待更新」（codex P2 / adversarial #1）。真的又失敗會在
@@ -143,6 +158,8 @@ export function requestTravelRecompute(
   autoFailedScopes.delete(key);
 
   const query = day != null ? `?day=${day}` : '';
+  const readers = new Set([isCurrent]);
+  const hasCurrentReader = () => [...readers].some((current) => current());
   const p = (async (): Promise<RecomputeTravelResult> => {
     const res = await apiFetchRaw(
       `/trips/${encodeURIComponent(tripId)}/recompute-travel${query}`,
@@ -152,11 +169,11 @@ export function requestTravelRecompute(
       throw Object.assign(new Error(`recompute-travel ${res.status}`), { status: res.status });
     }
     const data = await res.json().catch(() => ({})) as RecomputeTravelResult;
-    window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId } }));
+    if (hasCurrentReader()) window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId } }));
     return data;
   })();
 
-  inflight.set(key, p);
+  inflight.set(key, { promise: p, readers });
   const cleanup = () => { inflight.delete(key); };
 
   if (auto) {
@@ -166,13 +183,7 @@ export function requestTravelRecompute(
       (err) => {
         cleanup();
         const status = (err as { status?: number } | null)?.status;
-        if (status === 403) {
-          autoNoWriteTrips.add(tripId); // 唯讀 viewer → 該 trip auto 全停
-        } else {
-          autoFailedScopes.add(key); // 持續 API 錯 → 本 scope 標 failed（不再重試同 signature）
-        }
-        // 終端失敗通知：TimelineRail re-render 讓 TravelPill 由「重新計算中」改「待更新」。
-        window.dispatchEvent(new CustomEvent(EVENT.segmentRecomputeFailed, { detail: { tripId } }));
+        recordFailure(tripId, key, status === 403 ? 'blocked' : 'failed', hasCurrentReader());
         // 監控可見性：auto 靜默但至少留 console 痕跡（signature 防重保證
         // 同 gap 只 log 一次，不會 spam）。systemic 壞掉（key rotation、
         // routes regression）才有跡可循。
@@ -181,5 +192,8 @@ export function requestTravelRecompute(
       },
     );
   }
-  return p.finally(cleanup);
+  return p.catch((err) => {
+    recordFailure(tripId, key, 'failed', hasCurrentReader());
+    throw err;
+  }).finally(cleanup);
 }

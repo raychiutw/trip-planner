@@ -18,7 +18,7 @@
  *   - Desktop ≥1024px: 3-pane via AppShell (sidebar | chat main | sheet)
  *   - Mobile <1024px: 1-pane chat + bottom nav
  */
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -27,7 +27,7 @@ import { useConversation } from '../hooks/useConversation';
 import type { ChatMessage } from '../lib/conversation';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import { apiFetch } from '../lib/apiClient';
-import { useActiveTrip } from '../contexts/ActiveTripContext';
+import { useAccessibleTripSelection } from '../hooks/useAccessibleTripSelection';
 import AppShell from '../components/shell/AppShell';
 import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -37,13 +37,6 @@ import AccountCircle from '../components/shell/AccountCircle';
 import Icon from '../components/shared/Icon';
 import AiConsentSheet from '../components/AiConsentSheet';
 import MarkdownText from '../components/shared/MarkdownText';
-
-interface TripSummary {
-  tripId: string;
-  name?: string;
-  title?: string | null;
-  countries?: string | null;
-}
 
 /** Section 4.8: format day-divider header — `2026/04/27（週六）`。 */
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -477,23 +470,18 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const { user } = useCurrentUser();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [trips, setTrips] = useState<TripSummary[] | null>(null);
-  // Section 5 (E4)：active trip 從 ActiveTripContext 讀寫，跨頁同步
-  const { activeTripId, setActiveTrip } = useActiveTrip();
-  const setActiveTripId = setActiveTrip;
+  const [explicitTargetTripId, setExplicitTargetTripId] = useState(() => searchParams.get('tripId'));
+  const { trips, status: tripsStatus, activeTripId, setActiveTrip: setActiveTripId } = useAccessibleTripSelection(
+    user?.id, lockTripId ?? explicitTargetTripId, !!lockTripId,
+  );
 
-  // v2.31.86 embedded mode：lockTripId given → 強制 active trip 對齊 prop，
-  // 避免 user 進 TripSheet chat tab 後 active trip context 不一致。
-  useEffect(() => {
-    if (lockTripId && lockTripId !== activeTripId) {
-      setActiveTripId(lockTripId);
-    }
-  }, [lockTripId, activeTripId, setActiveTripId]);
   // #1140 item 10：useKeyboardInset 改由 app root（KeyboardInsetTracker）全站掛一次，
   // composer 讀全站 --kb-inset 上移即可，這裡不再各自掛（避免雙掛 cleanup 打架）。
   const [input, setInput] = useState('');
   // W6：聊天草稿依行程分開存（session-only ref；切換行程時存舊、載新，不讓半成品漏到別行程）。
   const draftsRef = useRef<Record<string, string>>({});
+  const draftTripIdRef = useRef(activeTripId);
+  const pendingLinkRef = useRef<{ tripId: string; prefill: string | null } | null>(null);
   const [tripMenuOpen, setTripMenuOpen] = useState(false);
   // AI 授權 gate（Option E）：null=未知/載入中（放行，後端 mint 為最終關卡），
   // false=已知未授權（送出時攔下、跳授權 sheet），true=已授權。
@@ -520,12 +508,12 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     const prefill = searchParams.get('prefill');
     const targetTripId = searchParams.get('tripId');
     if (!prefill && !targetTripId) return;
-    if (targetTripId && trips) {
-      const valid = trips.some((t) => t.tripId === targetTripId);
-      if (valid) setActiveTripId(targetTripId);
+    if (targetTripId) {
+      pendingLinkRef.current = targetTripId !== activeTripId ? { tripId: targetTripId, prefill } : null;
+      setExplicitTargetTripId(targetTripId);
     }
     if (prefill) {
-      setInput(prefill);
+      if (!targetTripId || targetTripId === activeTripId) setInput(prefill);
       // 等 textarea mount 後 focus + cursor 移到尾端
       setTimeout(() => {
         const el = inputRef.current;
@@ -540,8 +528,30 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     next.delete('prefill');
     next.delete('tripId');
     setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trips]);
+  }, [activeTripId, searchParams, setSearchParams]);
+
+  // 連結導覽與清單回退會在 picker 之外切換行程；畫面繪製前同步草稿。
+  useLayoutEffect(() => {
+    const pendingLink = pendingLinkRef.current;
+    if (pendingLink && activeTripId !== pendingLink.tripId) return;
+    if (draftTripIdRef.current === activeTripId && !pendingLink) return;
+    pendingLinkRef.current = null;
+    if (!draftTripIdRef.current) {
+      draftTripIdRef.current = activeTripId;
+      if (pendingLink?.prefill) setInput(pendingLink.prefill);
+      else if (activeTripId && draftsRef.current[activeTripId] !== undefined) {
+        setInput(draftsRef.current[activeTripId]);
+      }
+      return;
+    }
+    if (lockTripId) {
+      draftTripIdRef.current = activeTripId;
+      return;
+    }
+    draftsRef.current[draftTripIdRef.current] = input;
+    draftTripIdRef.current = activeTripId;
+    setInput(pendingLink?.prefill ?? (activeTripId ? draftsRef.current[activeTripId] ?? '' : ''));
+  }, [activeTripId, input, lockTripId]);
 
   // v2.33.47 round 7b LOW: memoize buildMessagesWithDividers — 之前每 keystroke
   // 都 O(n) walk messages list。1000-msg trip 在打字時明顯卡。
@@ -549,44 +559,6 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     () => buildMessagesWithDividers(messages),
     [messages],
   );
-
-  // v2.33.47 round 7b: activeTripId 改用 ref 抓 latest value — 之前 useEffect
-  // 內讀 activeTripId 但 dep 是 [] (intentional, mount-only)；strict-mode
-  // double-mount 時第二 pass 還抓 initial closure，可能 clobber 已 persisted 的
-  // ActiveTripContext 值。
-  const activeTripIdRef = useRef(activeTripId);
-  useEffect(() => { activeTripIdRef.current = activeTripId; }, [activeTripId]);
-
-  // Load trips list (mine + meta) once on mount.
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        // 2026-07-21：改為單抓 /my-trips。原本是雙抓 —— /my-trips 只拿「我有權限
-        // 的 id 集合」，name/title/countries 這些**要顯示的資料**卻來自
-        // /trips?all=1。而 all=1 需要 ops:trips:read service-token scope，
-        // 一般使用者拿不到，會靜默降級成只回 published 行程；既有行程改為不公開
-        // 後名稱就全沒了，畫面只剩 tripId（owner 2026-07-21 回報）。
-        // /my-trips 本身就帶 name/title/countries/totalDays/startDate/endDate，
-        // 第二支 API 從一開始就是多餘的。
-        const myTrips = await apiFetch<TripSummary[]>('/my-trips');
-        if (cancelled) return;
-        setTrips(myTrips);
-
-        // Section 5 (E4)：優先用 ActiveTripContext (cross-page persisted)，
-        // fallback 第一個可見 trip。v2.33.47: 讀 ref 而非 closure capture。
-        const pref = activeTripIdRef.current;
-        const valid = pref && myTrips.some((t) => t.tripId === pref) ? pref : (myTrips[0]?.tripId ?? null);
-        setActiveTripId(valid);
-      } catch {
-        // silent — empty state will guide user
-      }
-    }
-    void load();
-    return () => { cancelled = true; };
-    // setActiveTripId 是 context setter（穩定）；effect 讀 activeTripIdRef.current
-    // 而非 activeTripId，故維持 mount-only 不需要把 activeTripId 列入。
-  }, [setActiveTripId]);
 
   // Close trip menu on outside click
   useEffect(() => {
@@ -663,6 +635,9 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
     // W6：切換前存舊行程草稿、切換後載新行程草稿（session-only；跨 reload 持久化留給 W8 composer 契約）。
     if (activeTripId) draftsRef.current[activeTripId] = input;
+    draftTripIdRef.current = tripId;
+    pendingLinkRef.current = null;
+    setExplicitTargetTripId(null);
     setActiveTripId(tripId);
     setInput(draftsRef.current[tripId] ?? '');
     setTripMenuOpen(false);
@@ -713,7 +688,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
             </button>
           </div>
         )}
-        {!activeTripId && trips !== null && trips.length === 0 && (
+        {!activeTripId && tripsStatus !== 'error' && trips?.length === 0 && (
           <div className="tp-chat-empty">
             <div className="tp-chat-empty-icon" aria-hidden="true"><Icon name="chat" /></div>
             <h2>還沒有行程可以聊</h2>
@@ -722,8 +697,12 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
           </div>
         )}
 
-        {!activeTripId && trips === null && (
+        {!activeTripId && tripsStatus === 'loading' && !trips && (
           <div className="tp-chat-empty"><p>載入中…</p></div>
+        )}
+
+        {!activeTripId && tripsStatus === 'error' && (
+          <div className="tp-chat-empty" role="alert"><p>載入行程失敗，請稍後再試</p></div>
         )}
 
         {activeTripId && historyLoading && messages.length === 0 && (

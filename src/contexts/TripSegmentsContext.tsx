@@ -19,6 +19,8 @@ export interface TripSegmentsContextValue {
   loading: boolean;
   /** 首次 fetch 是否已 settle — self-healing 補算必須等 ready 才能判斷缺 pair。 */
   ready: boolean;
+  /** Last successful snapshot is still current; pending/failed refreshes cannot establish gaps. */
+  canRecompute?: boolean;
 }
 
 export const TripSegmentsContext = createContext<TripSegmentsContextValue | null>(null);

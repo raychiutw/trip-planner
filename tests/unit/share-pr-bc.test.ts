@@ -1,6 +1,7 @@
 /**
  * Share nice-to-haves PR-B (OG) + PR-C (hardening) — structural contracts.
- * B1 OG meta injection, C2 clone per-IP gate, C4 createdAt parseUtcDate, C1/C3 cron wiring.
+ * B1 OG meta injection, C4 createdAt parseUtcDate, C1/C3 cron wiring.
+ * C2 clone 限制改由 share-clone-lifecycle.integration.test.ts 的 HTTP + D1 測試保護。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
@@ -30,17 +31,6 @@ describe('B1 — /s/:token OG meta injection', () => {
   it('/s/* is in _routes.json include — else the Function never runs (CF serves static)', () => {
     const routes = JSON.parse(read('public/_routes.json')) as { include: string[] };
     expect(routes.include).toContain('/s/*');
-  });
-});
-
-describe('C2 — clone per-IP pre-gate', () => {
-  const CLONE = read('functions/api/share/[token]/clone.ts');
-  const RL = read('functions/api/_rate_limit.ts');
-  it('clone checks a per-IP bucket (CLONE_PER_IP) in addition to per-user', () => {
-    expect(RL).toMatch(/CLONE_PER_IP:/);
-    expect(CLONE).toMatch(/clone:ip:/);
-    expect(CLONE).toMatch(/clientIp\(context\.request\)/);
-    expect(CLONE).toMatch(/RATE_LIMITS\.CLONE_PER_IP/);
   });
 });
 

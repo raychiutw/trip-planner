@@ -40,12 +40,14 @@ import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { apiFetch } from '../lib/apiClient';
 import { setMaster, deleteEntry, updateEntry, updateEntryPoi, removeAlternate, reorderAlternates } from '../lib/entryMutations';
 import type { ErrorCodeType } from '../types/api';
 import { ApiError } from '../lib/errors';
 import { escUrl } from '../lib/sanitize';
 import { EVENT } from '../lib/events';
+import { saveManualSegment } from '../lib/manualSegment';
+import { captureSegmentScope } from '../lib/segmentScope';
 import { haversineMeters, avgLatLng, CROSS_REGION_THRESHOLD_M, type LatLng } from '../lib/geo';
 import { getStopDisplayTitle } from '../lib/stopDisplay';
 
@@ -1257,8 +1259,10 @@ export default function EditEntryPage() {
     if (!tripId || !entry || submitting) return;
     if (validation || !dirty.any) return;
     setSubmitting(true);
+    const isCurrent = captureSegmentScope(tripId);
 
-    const requests: Promise<{ scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string }>[] = [];
+    type SaveResult = { scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string };
+    const requests: Array<{ scope: SaveResult['scope']; request: Promise<SaveResult> }> = [];
 
     if (dirty.entryDirty) {
       const body: Record<string, unknown> = {};
@@ -1274,11 +1278,11 @@ export default function EditEntryPage() {
       // "DATA_VALIDATION: 無有效欄位可更新"（api_logs 過去多次此 error）。
       // Empty body 表示資料其實沒變，跳過 request。
       if (Object.keys(body).length > 0) {
-        requests.push(
+        requests.push({ scope: 'entry', request:
           // #1261：entry 欄位走 entry 變更 module（時間變動後 module 內重算車程 + emit）。
           updateEntry(tripId, entryId, entryDayNumRef.current, body)
             .then((r) => (r.ok ? { scope: 'entry', ok: true, status: 200, text: undefined } : { scope: 'entry', ok: false, status: r.status, text: r.message })),
-        );
+        });
       }
     }
 
@@ -1293,18 +1297,10 @@ export default function EditEntryPage() {
       if (!noTravel && mode === 'transit' && transitMin.trim() !== '') {
         body.min = parseInt(transitMin, 10);
       }
-      const req = segment
-        ? apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments/${segment.id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(body),
-          })
-        : apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments`, {
-            method: 'POST',
-            body: JSON.stringify({ ...body, from_entry_id: prevEntry.id, to_entry_id: entryId }),
-          });
-      requests.push(
-        req.then(async (res) => ({ scope: 'segment', ok: res.ok, status: res.status, text: res.ok ? undefined : await res.text() })),
-      );
+      requests.push({ scope: 'segment', request:
+        saveManualSegment({ tripId, segmentId: segment?.id, fromEntryId: prevEntry.id, toEntryId: entryId, body })
+          .then(async ({ response }) => ({ scope: 'segment', ok: response.ok, status: response.status, text: response.ok ? undefined : await response.text() })),
+      });
     }
 
     // v2.33.136 race guard：若 entry race-empty + segmentDirty false → 整 requests
@@ -1316,14 +1312,22 @@ export default function EditEntryPage() {
     }
 
     try {
-      const results = await Promise.all(requests);
-      const failures = results.filter((r) => !r.ok);
-      if (failures.length === 0) {
-        // 通知 timeline + segments 重新 fetch
-        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, entryId } }));
-        if (dirty.segmentDirty) {
-          window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId: segment?.id } }));
+      const results = await Promise.all(requests.map(async ({ scope, request }): Promise<SaveResult> => {
+        try { return await request; }
+        catch (err) {
+          return { scope, ok: false, status: err instanceof ApiError ? err.status : 0,
+            text: err instanceof Error ? err.message : '網路錯誤' };
         }
+      }));
+      if (!isCurrent()) return;
+      const failures = results.filter((r) => !r.ok);
+      if (results.some((r) => r.scope === 'entry' && r.ok)) {
+        originalRef.current = { ...originalRef.current, startTime, endTime, description };
+      }
+      if (results.some((r) => r.scope === 'segment' && r.ok)) {
+        originalRef.current = { ...originalRef.current, mode, transitMin, noTravel };
+      }
+      if (failures.length === 0) {
         // v2.33.108: auto-save 後不再 navigate（user 仍在 edit page），update
         // originalRef 讓 dirty 重置避免重複 save，setSubmitting(false) 讓 SaveStatus
         // 從 saving → saved transit。
@@ -1335,7 +1339,7 @@ export default function EditEntryPage() {
         return;
       }
       const msg = failures
-        .map((f) => `${f.scope === 'entry' ? '景點' : '移動方式'}儲存失敗 (${f.status})`)
+        .map((f) => `${f.scope === 'entry' ? '景點' : '移動方式'}儲存失敗 (${f.status || f.text || '網路錯誤'})`)
         .join('；');
       // v2.33.136-139: 對齊 mockup spec「儲存失敗 → 重試 + toast error」+
       // user feedback「右上角不用顯示狀態」。失敗走 toast，無 inline / titleBar
@@ -1343,6 +1347,7 @@ export default function EditEntryPage() {
       showToast(msg, 'error', 6000);
       setSubmitting(false);
     } catch (err) {
+      if (!isCurrent()) return;
       const msg = err instanceof Error ? err.message : '儲存失敗';
       showToast(msg, 'error', 6000);
       setSubmitting(false);
