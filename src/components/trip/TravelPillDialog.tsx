@@ -254,6 +254,7 @@ export default function TravelPillDialog({
   const isOverridden = selectedMethod.auto && selectedKey === initialKey && currentSource === 'manual';
 
   const autosave = useAutosave<SegmentPatchBody>({
+    entityKey: `${tripId}:${fromEntryId != null && toEntryId != null ? `${fromEntryId}-${toEntryId}` : segmentId}`,
     initialVersion: currentVersion,
     debounceMs: 600,
     save: async (body, expectedVersion) => {
