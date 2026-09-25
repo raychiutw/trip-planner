@@ -18,12 +18,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Default: GET /api/permissions returns one row
   mockFetch.mockImplementation((url: string, opts?: RequestInit) => {
+    if (typeof url === 'string' && url.includes('/invitations?')) return Promise.resolve({ ok: true, status: 200, json: async () => ({ items: [] }) });
     if (typeof url === 'string' && url.includes('/permissions') && (!opts || opts.method === undefined || opts.method === 'GET')) {
       return Promise.resolve({
         ok: true,
         status: 200,
         json: async () => ([
-          { id: 1, email: 'collab@example.com', trip_id: 'trip-1', role: 'member' },
+          { id: 1, email: 'collab@example.com', tripId: 'trip-1', role: 'member' },
         ]),
       });
     }
@@ -55,15 +56,16 @@ describe('CollabSheet — populated', () => {
         return Promise.resolve({
           ok: true,
           status: 201,
-          json: async () => ({ id: 2, email: 'new@example.com', trip_id: 'trip-1', role: 'member' }),
+          json: async () => ({ ok: true, status: 'invitation_sent', email: 'new@example.com' }),
         });
       }
+      if (url.includes('/invitations?')) return Promise.resolve({ ok: true, status: 200, json: async () => ({ items: [] }) });
       // GET returns empty initially, then includes the new entry on reload
       return Promise.resolve({
         ok: true,
         status: 200,
         json: async () => (postCount === 0 ? [] : [
-          { id: 2, email: 'new@example.com', trip_id: 'trip-1', role: 'member' },
+          { id: 2, email: 'new@example.com', tripId: 'trip-1', role: 'member' },
         ]),
       });
     });
@@ -103,7 +105,7 @@ describe('CollabSheet — pending invitations (V2 共編)', () => {
         ok: true,
         status: 200,
         json: async () => ([
-          { id: 1, email: 'member@example.com', trip_id: 'trip-1', role: 'member' },
+          { id: 1, email: 'member@example.com', tripId: 'trip-1', role: 'member' },
         ]),
       });
     });
