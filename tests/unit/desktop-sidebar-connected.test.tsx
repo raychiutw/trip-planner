@@ -84,7 +84,7 @@ describe('DesktopSidebarConnected', () => {
     vi.spyOn(global, 'fetch').mockImplementation(() => new Promise(() => {}));
     const { container } = renderConnected();
     expect(container.querySelector('[data-testid="desktop-sidebar"]')).toBeTruthy();
-    expect(container.querySelector('[data-testid="sidebar-user-loading"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="auth-status"] [role="status"]')?.textContent).toContain('確認登入狀態');
     expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeNull();
     expect(container.querySelector('[data-testid="sidebar-account-card"]')).toBeNull();
 

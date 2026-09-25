@@ -7,7 +7,7 @@ for (const path of ['/trips', '/chat', '/favorites', '/map']) test(`root auth re
   let available = false;
   await page.route('**/api/oauth/userinfo', route => route.fulfill({ status: available ? 200 : 503, json: available ? { id: 'reader', email: 'reader@example.com', displayName: 'Reader' } : {} }));
   await page.goto(path);
-  const status = page.getByTestId('auth-status'); await expect(status.getByRole('alert')).toBeVisible();
+  const status = page.getByTestId('app-shell-main').getByTestId('auth-status'); await expect(status.getByRole('alert')).toBeVisible();
   await expect(page.getByTestId('global-bottom-nav').getByRole('link')).toHaveCount(4);
   await expect(page.getByTestId('global-bottom-nav')).toBeVisible();
   const retry = status.getByRole('button', { name: '重試登入狀態' });

@@ -196,6 +196,8 @@ export interface SidebarUser {
 export interface DesktopSidebarProps {
   /** undefined = auth loading, null = confirmed unauthenticated */
   user?: SidebarUser | null | undefined;
+  /** Loading/recovery presentation supplied by the identity owner. */
+  userStatus?: ReactNode;
   /** rev2：我的行程清單（undefined = 尚未 resolve → skeleton；[] = 無行程） */
   trips?: MyTrip[];
   /** Distinguish an initial read failure from the loading skeleton and confirmed empty list. */
@@ -206,7 +208,7 @@ export interface DesktopSidebarProps {
   brand?: ReactNode;
 }
 
-export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId, brand }: DesktopSidebarProps) {
+export default function DesktopSidebar({ user, userStatus, trips, tripsStatus, activeTripId, brand }: DesktopSidebarProps) {
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
   const location = useLocation();
   const { pathname } = location;
@@ -287,7 +289,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
         </nav>
 
         <div className="tp-sidebar-cta">
-          {user === undefined ? (
+          {user === undefined ? (userStatus ?? (
             <div
               className="tp-user-chip tp-user-chip-loading"
               data-testid="sidebar-user-loading"
@@ -300,7 +302,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
                 <span className="tp-user-skeleton-line is-secondary" />
               </div>
             </div>
-          ) : user ? (
+          )) : user ? (
             <Link
               to="/account"
               className="tp-account-card"
