@@ -11,6 +11,7 @@
 
 export interface InlineErrorProps {
   message: string;
+  id?: string;
   testId?: string;
   className?: string;
 }
@@ -24,11 +25,12 @@ const SCOPED_STYLES = `
 }
 `;
 
-export default function InlineError({ message, testId, className = '' }: InlineErrorProps) {
+export default function InlineError({ message, id, testId, className = '' }: InlineErrorProps) {
   return (
     <>
       <style>{SCOPED_STYLES}</style>
       <p
+        id={id}
         className={`tp-inline-error-shared ${className}`.trim()}
         role="alert"
         data-testid={testId}
