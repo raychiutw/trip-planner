@@ -1,4 +1,4 @@
-import {act,fireEvent,render,screen} from '@testing-library/react';
+import {act,fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {MemoryRouter,Route,Routes,useLocation,useNavigate} from 'react-router-dom';
 import SignupPage from '../../src/pages/SignupPage';
@@ -10,7 +10,7 @@ function setup(query=''){render(<MemoryRouter initialEntries={['/signup'+query]}
 function submit(){fireEvent.submit(screen.getByTestId('signup-submit').closest('form')!);}
 beforeEach(()=>{http=vi.fn();vi.stubGlobal('fetch',http);});afterEach(()=>vi.unstubAllGlobals());
 it.each([['SIGNUP_INVALID_EMAIL','電子郵件','電子郵件格式無效'],['SIGNUP_PASSWORD_TOO_SHORT','密碼','密碼至少 8 字元'],['SIGNUP_PASSWORD_FORMAT','密碼','密碼格式不符']])('實際 server error %s 關聯並聚焦可修正欄位',async(code,label,message)=>{
- http.mockResolvedValue(reply({error:{code}},400));setup();submit();await screen.findByRole('alert');const field=screen.getByLabelText(label);expect(field).toHaveAttribute('aria-invalid','true');expect(field).toHaveAccessibleDescription(new RegExp(message));expect(field).toHaveFocus();expect(screen.getByTestId('signup-display-name')).toHaveValue('旅人');expect(screen.getByLabelText('密碼')).toHaveValue('password123');
+ http.mockResolvedValue(reply({error:{code}},400));setup();submit();await screen.findByRole('alert');const field=screen.getByLabelText(label);expect(field).toHaveAttribute('aria-invalid','true');expect(field).toHaveAccessibleDescription(new RegExp(message));await waitFor(()=>expect(field).toHaveFocus());expect(screen.getByTestId('signup-display-name')).toHaveValue('旅人');expect(screen.getByLabelText('密碼')).toHaveValue('password123');
 });
 it('未同意有說明且直接 submit 也不送出',()=>{setup();fireEvent.click(screen.getByRole('checkbox'));expect(screen.getByRole('checkbox')).toHaveAccessibleDescription('需同意個資條款與隱私權政策才能建立帳號。');submit();expect(http).not.toHaveBeenCalled();expect(screen.getByRole('checkbox')).toHaveFocus();});
 it('等待提交只送一次，拒絕後保留輸入且可以重試',async()=>{
