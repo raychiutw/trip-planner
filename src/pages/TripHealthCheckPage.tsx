@@ -23,35 +23,16 @@
  *   body hero 列右側（`.tp-ai-health-hero-top`，視覺樣式沿用同一組 ghost icon
  *   button class）。詳見 docs/design-sessions/2026-07-21-desktop-third-column-panelization.html。
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
+import {useTripHealthCheck, type Severity, type Dimension, type Finding} from '../hooks/useTripHealthCheck';
 import { useNavigate, useParams } from 'react-router-dom';
 import OperationShell from '../components/shell/OperationShell';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
-import { apiFetchRaw } from '../lib/apiClient';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
-
-type Severity = 'high' | 'medium' | 'low';
-type Dimension = 'timing' | 'distance' | 'meals' | 'sights' | 'hotel';
-
-interface Finding {
-  severity: Severity;
-  title: string;
-  description: string;
-  /** v2.31.1 Phase 2: audit dimension chip — timing/distance/meals/sights/hotel */
-  dimension?: Dimension;
-  /** v2.31.1 Phase 2: 建議怎麼修 — 顯示在 description 下方 */
-  suggestion?: string;
-  // v2.31.14: backend response 經 deepCamel 是 camelCase（actionTarget / entryId）。
-  // 早期 snake_case 寫法 `f.action_target?.entry_id` 永遠 undefined → 「前往景點」/
-  // 「前往 Day」按鈕永不 render → user 看不到 finding 跳轉。Prod QA found，同 #573
-  // EditTripPage camelCase 對齊 bug 家族。
-  actionTarget?: { day?: number; entryId?: number };
-}
 
 const DIMENSION_LABEL: Record<Dimension, string> = {
   timing: '時間',
@@ -61,18 +42,6 @@ const DIMENSION_LABEL: Record<Dimension, string> = {
   hotel: '住宿',
 };
 
-interface HealthReport {
-  tripId: string;
-  userId: string;
-  status: 'pending' | 'completed' | 'failed';
-  requestId: number | null;
-  findings: Finding[];
-  errorMessage?: string | null;
-  createdAt: string;
-  completedAt?: string | null;
-}
-
-const POLL_INTERVAL_MS = 3000;
 const SEVERITY_ORDER: Severity[] = ['high', 'medium', 'low'];
 
 const SCOPED_STYLES = `
@@ -467,149 +436,18 @@ const SCOPED_STYLES = `
 }
 `;
 
-interface TripSummary {
-  id: string;
-  title?: string;
+export default function TripHealthCheckPage() {
+  const {user} = useRequireAuth();
+  const {tripId} = useParams<{tripId: string}>();
+  return user && tripId ? <HealthReader key={tripId} tripId={tripId} /> : null;
 }
 
-export default function TripHealthCheckPage() {
-  const auth = useRequireAuth();
-  const { user } = useCurrentUser();
-  const { tripId } = useParams<{ tripId: string }>();
+function HealthReader({tripId}: {tripId: string}) {
   const navigate = useNavigate();
-  const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
-
-  const [trip, setTrip] = useState<TripSummary | null>(null);
-  const [report, setReport] = useState<HealthReport | null>(null);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // v2.31.58：empty trip guard — 沒任何 entry 不該允許觸發 AI 健檢。
-  // null = 還沒 fetch；number = 實際 entry 總數（跨所有天）。
-  const [entryCount, setEntryCount] = useState<number | null>(null);
-
-  // Polling: 用 ref 持有 timeout id，避免 effect 重 render 時舊 timer 漏清
-  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const fetchReport = useCallback(async (signal?: AbortSignal): Promise<HealthReport | null> => {
-    if (!tripId) return null;
-    const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/health-check`, { signal });
-    if (!res.ok) throw new Error(`load failed: ${res.status}`);
-    const data = await res.json() as { report: HealthReport | null };
-    return data.report;
-  }, [tripId]);
-
-  // Initial GET trip name + report
-  useEffect(() => {
-    if (!auth.user || !tripId) return;
-    const ctrl = new AbortController();
-    let cancelled = false;
-    (async () => {
-      setInitialLoading(true);
-      setError(null);
-      try {
-        const [tripRes, daysRes, reportData] = await Promise.all([
-          apiFetchRaw(`/trips/${encodeURIComponent(tripId)}`, { signal: ctrl.signal }),
-          apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days?all=1`, { signal: ctrl.signal }),
-          fetchReport(ctrl.signal),
-        ]);
-        if (cancelled) return;
-        if (tripRes.ok) {
-          const tripData = await tripRes.json() as TripSummary;
-          setTrip({ id: tripData.id, title: tripData.title });
-        }
-        if (daysRes.ok) {
-          // v2.31.58 empty trip guard：?all=1 endpoint 回每天 timeline array，
-          // 累加跨天 entry 數判斷 trip 是否完全空白。
-          const daysData = await daysRes.json() as Array<{ timeline?: unknown[] }>;
-          const totalEntries = Array.isArray(daysData)
-            ? daysData.reduce((sum, d) => sum + (Array.isArray(d.timeline) ? d.timeline.length : 0), 0)
-            : 0;
-          setEntryCount(totalEntries);
-        }
-        setReport(reportData);
-      } catch (err) {
-        if (cancelled) return;
-        const e = err as { name?: string };
-        if (e.name !== 'AbortError') {
-          setError('載入失敗，請重新整理');
-        }
-      } finally {
-        if (!cancelled) setInitialLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-      ctrl.abort();
-    };
-  }, [auth.user, tripId, fetchReport]);
-
-  // Polling effect while pending
-  useEffect(() => {
-    if (!report || report.status !== 'pending') return;
-    let cancelled = false;
-    const ctrl = new AbortController();
-
-    function schedule() {
-      pollRef.current = setTimeout(async () => {
-        if (cancelled) return;
-        try {
-          const next = await fetchReport(ctrl.signal);
-          if (cancelled) return;
-          setReport(next);
-          if (next?.status === 'pending') schedule();
-        } catch (err) {
-          if (cancelled) return;
-          const e = err as { name?: string };
-          if (e.name !== 'AbortError') schedule();
-        }
-      }, POLL_INTERVAL_MS);
-    }
-    schedule();
-
-    return () => {
-      cancelled = true;
-      ctrl.abort();
-      if (pollRef.current) {
-        clearTimeout(pollRef.current);
-        pollRef.current = null;
-      }
-    };
-  }, [report, fetchReport]);
-
-  const handleStart = useCallback(async () => {
-    if (!tripId || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/health-check`, {
-        method: 'POST',
-      });
-      if (!res.ok) {
-        // v2.31.58：backend TRIP_EMPTY guard 拒絕（race window：frontend fetch
-        // 完 trip empty 後 user 加 entry，但 button 還沒 re-enable 就點到，
-        // 反之亦然）→ 顯示 backend 中文 message + 同步 entryCount = 0
-        // 讓 button 立即 disabled。
-        try {
-          const errData = await res.json() as { error?: { code?: string; message?: string } };
-          if (errData.error?.code === 'TRIP_EMPTY') {
-            setEntryCount(0);
-            setError(errData.error.message ?? '此行程尚無景點，請先加入景點再執行健檢');
-            return;
-          }
-        } catch {
-          /* ignore parse error, fall through to generic message */
-        }
-        throw new Error(`start failed: ${res.status}`);
-      }
-      const data = await res.json() as { report: HealthReport };
-      setReport(data.report);
-    } catch {
-      setError('觸發健檢失敗，請稍後再試');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [tripId, submitting]);
+  const handleBack = useNavigateBack(routes.tripsSelected(tripId));
+  const health = useTripHealthCheck(tripId);
+  const {report, lastReport, entryCount, submitting, error, start: handleStart} = health;
+  const initialLoading = health.loading && !health.loaded;
 
   const goToDay = useCallback((day: number) => {
     if (!tripId) return;
@@ -621,12 +459,8 @@ export default function TripHealthCheckPage() {
     navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`);
   }, [navigate, tripId]);
 
-  if (!auth.user || !tripId) {
-    return null;
-  }
-
-  const tripTitle = trip?.title ?? '行程';
-  const findings = report?.findings ?? [];
+  const tripTitle = health.title || '行程';
+  const findings = (report?.status === 'completed' ? report : lastReport ?? report)?.findings ?? [];
   const counts: Record<Severity, number> = { high: 0, medium: 0, low: 0 };
   for (const f of findings) counts[f.severity]++;
   const grouped: Record<Severity, Finding[]> = { high: [], medium: [], low: [] };
@@ -636,8 +470,8 @@ export default function TripHealthCheckPage() {
   const isCompleted = report?.status === 'completed';
   const isFailed = report?.status === 'failed';
   const isRegenerating = isPending && findings.length > 0;
-  const hasResults = isCompleted && findings.length > 0;
-  const hasNoIssues = isCompleted && findings.length === 0;
+  const hasResults = findings.length > 0;
+  const hasNoIssues = health.freshness === 'fresh' && isCompleted && findings.length === 0;
 
   const ctaLabel = submitting
     ? '送出中⋯'
@@ -673,7 +507,7 @@ export default function TripHealthCheckPage() {
                 type="button"
                 className={`tp-titlebar-action tp-titlebar-action--icon-only tp-ai-health-titlebar-btn${isPending ? ' is-spinning' : ''}`}
                 onClick={handleStart}
-                disabled={submitting || isPending}
+                disabled={!health.canStart}
                 aria-label={ctaLabel}
                 title={ctaLabel}
                 data-testid="ai-health-start-btn"
@@ -686,6 +520,8 @@ export default function TripHealthCheckPage() {
           <h1 data-testid="ai-health-title">{tripTitle}</h1>
           {initialLoading ? (
             <div className="meta">載入中…</div>
+          ) : health.freshness !== 'fresh' ? (
+            <div className="meta">最新狀態未知；最後一份報告尚未更新</div>
           ) : isPending ? (
             <div className="meta is-active">健檢進行中…</div>
           ) : isCompleted && report ? (
@@ -701,6 +537,7 @@ export default function TripHealthCheckPage() {
           <div className="tp-ai-health-error" role="alert" data-testid="ai-health-error">
             <div className="title">操作失敗</div>
             <div className="desc">{error}</div>
+            <button type="button" className="tp-ai-health-body-cta" onClick={() => void health.retry()} disabled={health.loading}>重試健檢狀態</button>
           </div>
         )}
 
@@ -712,7 +549,7 @@ export default function TripHealthCheckPage() {
           </div>
         )}
 
-        {!initialLoading && !report && (
+        {!initialLoading && health.freshness === 'fresh' && !report && (
           <div className="tp-ai-health-empty" data-testid="ai-health-empty">
             <div className="icon-bubble" aria-hidden="true">
               <Icon name="sparkle" />
@@ -726,7 +563,7 @@ export default function TripHealthCheckPage() {
               type="button"
               className="tp-ai-health-body-cta"
               onClick={handleStart}
-              disabled={submitting || entryCount === 0}
+              disabled={!health.canStart}
               data-testid="ai-health-start-btn"
             >
               <Icon name="sparkle" />
@@ -735,7 +572,7 @@ export default function TripHealthCheckPage() {
           </div>
         )}
 
-        {!initialLoading && isPending && !isRegenerating && (
+        {!initialLoading && health.freshness === 'fresh' && isPending && !isRegenerating && (
           <div className="tp-ai-health-loading" role="status" aria-live="polite" data-testid="ai-health-loading">
             <div className="pulse" />
             <div className="text">
@@ -750,7 +587,7 @@ export default function TripHealthCheckPage() {
             <div className="pulse" />
             <div className="text">
               <div className="title">準備中…</div>
-              <div className="sub">舊結果保留可閱讀，新結果生成中</div>
+              <div className="sub">{health.freshness === 'fresh' ? '舊結果保留可閱讀，新結果生成中' : '舊結果保留可閱讀，正在重新確認任務狀態'}</div>
             </div>
           </div>
         )}
@@ -871,7 +708,7 @@ export default function TripHealthCheckPage() {
       testId="ai-health-page"
       title="AI 健檢"
       back={handleBack}
-      bottomNav={<GlobalBottomNav authed={user !== null} />}
+      bottomNav={<GlobalBottomNav authed />}
     >
       {bodyContent}
     </OperationShell>
