@@ -38,6 +38,8 @@ function open(sheet = false) {
 }
 async function openDelete() {
   const trigger = await screen.findByTestId('account-row-delete-account');
+  const panel = document.querySelector('.account-sheet-panel');
+  if (panel) await waitFor(() => expect(panel).toHaveFocus());
   trigger.focus(); fireEvent.click(trigger);
   return screen.findByRole('alertdialog');
 }
