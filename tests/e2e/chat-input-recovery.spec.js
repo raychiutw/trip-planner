@@ -53,6 +53,10 @@ test('mobile keyboard keeps composer and reading area within the visual viewport
   const input = page.getByTestId('chat-input'); await input.fill('尚未送出的草稿');
   await page.evaluate(() => window.setChatViewport(500));
   await expect(page.locator('html')).toHaveAttribute('data-kb-open', '1');
+  const hiddenNav = page.getByTestId('global-bottom-nav-trips');
+  await expect(hiddenNav).not.toBeVisible();
+  await hiddenNav.evaluate(el => el.focus());
+  await expect(input).toBeFocused();
   const composer = page.locator('.tp-chat-composer'); const body = page.getByTestId('chat-body');
   await expect.poll(async () => (await composer.boundingBox()).y + (await composer.boundingBox()).height).toBeLessThanOrEqual(500);
   await expect.poll(async () => (await body.boundingBox()).y + (await body.boundingBox()).height - (await composer.boundingBox()).y).toBeLessThanOrEqual(1);

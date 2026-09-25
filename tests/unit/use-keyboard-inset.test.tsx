@@ -77,6 +77,18 @@ describe('useKeyboardInset', () => {
     expect(kbInset()).toBe('');
   });
 
+  it('pinch zoom is not a soft keyboard and does not reserve keyboard space', () => {
+    setInnerHeight(800);
+    const vv = Object.assign(mockVV(200), { scale: 4 });
+    setVV(vv);
+    render(<Harness />);
+    expect(kbInset()).toBe('0px');
+    expect(kbOpen()).toBeNull();
+    vv.scale = 1; vv.height = 500; vv._emit('resize');
+    expect(kbInset()).toBe('300px');
+    expect(kbOpen()).toBe('1');
+  });
+
   it('無 visualViewport（桌機舊瀏覽器）→ no-op 不崩', () => {
     setVV(undefined);
     expect(() => render(<Harness />)).not.toThrow();

@@ -152,6 +152,7 @@ export const APP_SHELL_STYLES = `
  * （root tab 常駐，只有鍵盤才收）。translateX(-50%) 保持水平置中。 */
 :root[data-kb-open="1"] .app-shell-bottom-nav {
   transform: translate(-50%, calc(100% + 24px));
+  visibility: hidden;
   pointer-events: none;
 }
 
