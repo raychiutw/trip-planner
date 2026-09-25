@@ -38,13 +38,14 @@ function emit(detail: { tripId: string; entryId?: number | string; dayNum?: DayN
 function travelRecovery(tripId: string, dayNums: DayNum[], isCurrent: () => boolean) {
   const pending = new Set(dayNums);
   let flight: Promise<boolean> | null = null;
+  let afterWrite = true;
   function retryRecompute(): Promise<boolean> {
     if (flight) return flight;
+    const needsFreshRead = afterWrite;
+    afterWrite = false;
     flight = Promise.all([...pending].map(async (day) => {
       try {
-        const result = await (isCurrent()
-          ? requestTravelRecompute(tripId, day)
-          : requestTravelRecompute(tripId, day, { isCurrent }));
+        const result = await requestTravelRecompute(tripId, day, { isCurrent, afterWrite: needsFreshRead });
         if (!result?.errorsDetail?.length) pending.delete(day);
       } catch { /* Keep only unfinished scopes for the next attempt. */ }
     })).then(() => pending.size === 0).finally(() => { flight = null; });

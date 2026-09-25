@@ -131,15 +131,15 @@ function Workspace() {
     </SheetStackProvider>
   </>;
 }
-function open(action = 'move') {
-  return render(<MemoryRouter initialEntries={[`/trip/t1/stop/11/${action}`]}><ActiveTripProvider><Routes>
+function open(action = 'move', path = `/trip/t1/stop/11/${action}`) {
+  return render(<MemoryRouter initialEntries={[path]}><ActiveTripProvider><Routes>
     <Route path="/trip/:tripId/*" element={<Workspace />} />
     <Route path="/trips/*" element={<Workspace />} />
   </Routes></ActiveTripProvider></MemoryRouter>);
 }
 function day(n: number) { return document.querySelector<HTMLElement>(`section[data-day="${n}"]`)!; }
 
-async function dragToDayTwo() {
+async function dragToDayTwo(entryId = 11) {
   // The real detail now waits for the shared summary lifecycle. Give dnd-kit's
   // effect-installed sensor one task after the timeline first becomes visible.
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
@@ -149,9 +149,9 @@ async function dragToDayTwo() {
     return { x: 0, y: n * 200, left: 0, top: n * 200, right: 300, bottom: n * 200 + 80,
       width: 300, height: 80, toJSON: () => ({}) };
   });
-  fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
-  fireEvent.click(screen.getByTestId('timeline-rail-menu-sort-11'));
-  const grip = screen.getByTestId('timeline-rail-grip-11');
+  fireEvent.click(screen.getByTestId(`timeline-rail-menu-${entryId}`));
+  fireEvent.click(screen.getByTestId(`timeline-rail-menu-sort-${entryId}`));
+  const grip = screen.getByTestId(`timeline-rail-grip-${entryId}`);
   fireEvent.mouseDown(grip, { button: 0, clientX: 280, clientY: 220 });
   fireEvent.mouseMove(document, { clientX: 280, clientY: 240 });
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
@@ -355,6 +355,69 @@ describe('entry 變更的可見資料協調', () => {
     expect(screen.queryByText('順序已儲存，但車程時間更新失敗，重新整理後再試')).not.toBeInTheDocument();
   });
 
+  it('排序被拒絕時還原原順序並保留可閱讀的錯誤與景點焦點', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    writeStatus = 403;
+    open();
+    await screen.findByText('10 min');
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-down-11'));
+    expect(await within(day(1)).findByRole('alert')).toHaveTextContent('沒有編輯權限');
+    expect(Array.from(day(1).querySelectorAll('[data-scroll-anchor^="entry-"]')).map(el => el.getAttribute('data-scroll-anchor'))).toEqual(['entry-11', 'entry-12']);
+    expect(screen.getByTestId('timeline-rail-menu-11')).toHaveFocus();
+    expect(recomputes).toEqual([]);
+  });
+
+  it('順序只提交一次，交通失敗可單獨重試而不重送排序', async () => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    open();
+    await screen.findByText('10 min');
+    let releaseWrite!: () => void;
+    let releaseTravel!: () => void;
+    beforeWrite = () => new Promise<void>(resolve => { releaseWrite = resolve; });
+    beforeRecompute = () => new Promise<Response>(resolve => { releaseTravel = () => resolve(response({}, 503)); });
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-down-11'));
+    expect(await within(day(1)).findByRole('status')).toHaveTextContent('正在儲存順序');
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-up-11'));
+    expect(writes).toEqual(['t1:entries/batch']);
+    expect(recomputes).toEqual([]);
+    await act(async () => releaseWrite());
+    expect(within(day(1)).getByRole('status')).toHaveTextContent('順序已儲存，交通更新中');
+    await act(async () => releaseTravel());
+    expect(within(day(1)).getByRole('alert')).toHaveTextContent('順序已儲存，交通待更新');
+    fireEvent.click(screen.getByTestId('dn-day-2'));
+    fireEvent.click(screen.getByTestId('dn-day-1'));
+    expect(within(day(1)).getByRole('alert')).toHaveTextContent('順序已儲存，交通待更新');
+    beforeRecompute = undefined;
+    fireEvent.click(within(day(1)).getByRole('button', { name: '重試交通更新' }));
+    await waitFor(() => expect(within(day(1)).getByRole('status')).toHaveTextContent('順序及交通已更新'));
+    expect(writes).toEqual(['t1:entries/batch']);
+    expect(recomputes).toEqual(['t1:1', 't1:1']);
+    expect(Array.from(day(1).querySelectorAll('[data-scroll-anchor^="entry-"]')).map(el => el.getAttribute('data-scroll-anchor'))).toEqual(['entry-12', 'entry-11']);
+  });
+
+  it.each([200, 503])('前一次交通回 %s 時再次排序，仍須在新寫入後再補算才宣告完成', async (oldStatus) => {
+    data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
+    const finish: Array<() => void> = [];
+    beforeRecompute = () => new Promise<Response>(resolve => { const status = finish.length === 0 ? oldStatus : 200; finish.push(() => resolve(response({}, status))); });
+    open();
+    await screen.findByText('10 min');
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-down-11'));
+    await waitFor(() => expect(recomputes).toEqual(['t1:1']));
+    fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-up-11'));
+    await waitFor(() => expect(writes).toHaveLength(2));
+    expect(recomputes).toHaveLength(1);
+    await act(async () => finish[0]!());
+    await waitFor(() => expect(recomputes).toEqual(['t1:1', 't1:1']));
+    expect(within(day(1)).getByRole('status')).toHaveTextContent('順序已儲存，交通更新中');
+    await act(async () => finish[1]!());
+    await waitFor(() => expect(within(day(1)).getByRole('status')).toHaveTextContent('順序及交通已更新'));
+  });
+
   it('排序尚未提交時不補算 optimistic 相鄰景點，提交後只重算該日一次', async () => {
     data.t1![0]!.timeline.push(entry(12, '甲景點補站', 1));
     open();
@@ -446,6 +509,41 @@ describe('entry 變更的可見資料協調', () => {
     expect(within(day(1)).getByText('乙景點1')).toBeInTheDocument();
   });
 
+  it('跨日已儲存後聚焦目標景點，重試只補算失敗日期', async () => {
+    beforeRecompute = (_tripId, dayNum) => Promise.resolve(response({}, dayNum === '2' ? 503 : 200));
+    open();
+    await screen.findByText('甲景點1');
+    await dragToDayTwo();
+    await waitFor(() => expect(within(day(2)).getByTestId('timeline-rail-menu-11')).toHaveFocus());
+    expect(screen.getByTestId('timeline-move-result')).toHaveTextContent('已移到 Day 02，交通待更新');
+    beforeRecompute = undefined;
+    fireEvent.click(within(screen.getByTestId('timeline-move-result')).getByRole('button', { name: '重試交通更新' }));
+    await waitFor(() => expect(screen.getByTestId('timeline-move-result')).toHaveTextContent('景點及交通已更新'));
+    expect(recomputes).toEqual(['t1:2', 't1:1', 't1:2']);
+    expect(writes).toEqual(['t1:entries/batch']);
+  });
+
+  it('前一趟行程的交通重試未完成，不阻擋目前行程重試或覆寫其結果', async () => {
+    beforeRecompute = (_trip, n) => Promise.resolve(response({}, n === '2' ? 503 : 200));
+    open(); await screen.findByText('甲景點1'); await dragToDayTwo();
+    await waitFor(() => expect(screen.getByTestId('timeline-move-result')).toHaveTextContent('交通待更新'));
+    let release!: () => void;
+    beforeRecompute = () => new Promise<Response>(resolve => { release = () => resolve(response({}, 503)); });
+    fireEvent.click(within(screen.getByTestId('timeline-move-result')).getByRole('button', { name: '重試交通更新' }));
+    expect(screen.getByTestId('timeline-move-result')).toHaveFocus();
+    fireEvent.click(screen.getByText('切換乙行程'));
+    await screen.findByText('乙景點1');
+    beforeRecompute = (_trip, n) => Promise.resolve(response({}, n === '2' ? 503 : 200));
+    await dragToDayTwo(111);
+    await waitFor(() => expect(screen.getByTestId('timeline-move-result')).toHaveTextContent('交通待更新'));
+    beforeRecompute = undefined;
+    fireEvent.click(within(screen.getByTestId('timeline-move-result')).getByRole('button', { name: '重試交通更新' }));
+    await waitFor(() => expect(screen.getByTestId('timeline-move-result')).toHaveTextContent('景點及交通已更新'));
+    await act(async () => release());
+    expect(screen.getByTestId('timeline-move-result')).toHaveTextContent('景點及交通已更新');
+    expect(recomputes).toEqual(['t1:2', 't1:1', 't1:2', 't2:2', 't2:1', 't2:2']);
+  });
+
   it('拖曳跨日移動經真實動詞與讀取協調，同步兩天的畫面', async () => {
     open();
     await screen.findByText('甲景點1');
@@ -454,6 +552,34 @@ describe('entry 變更的可見資料協調', () => {
     expect(within(day(1)).queryByText('甲景點1')).not.toBeInTheDocument();
     expect(writes).toEqual(['t1:entries/batch']);
     expect(new Set(recomputes)).toEqual(new Set(['t1:1', 't1:2']));
+  });
+
+  it('冷開 focus 依景點真正所屬日期定位，忽略錯誤 focusDay 提示', async () => {
+    open('move', '/trips?selected=t1&focus=21&focusDay=3');
+    const toggle = await screen.findByTestId('timeline-rail-toggle-21');
+    await waitFor(() => expect(toggle).toHaveFocus());
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByTestId('dn-day-2')).toHaveAttribute('aria-current', 'true');
+    const scroll = vi.mocked(Element.prototype.scrollIntoView);
+    expect(scroll.mock.calls.some((args, i) => scroll.mock.contexts[i] === toggle && (args[0] as ScrollIntoViewOptions)?.block === 'nearest')).toBe(true);
+  });
+
+  it('無效 focus 不是 selector，保持景點收合且不搶走焦點', async () => {
+    open('move', '/trips?selected=t1&focus=' + encodeURIComponent('21"] button'));
+    const toggle = await screen.findByTestId('timeline-rail-toggle-21');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).not.toHaveFocus();
+  });
+
+  it.each(['move', 'copy'])('不拖曳的 %s 完成後返回目標日期並展開及聚焦結果景點', async action => {
+    open(action);
+    await screen.findByText('甲景點1');
+    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    const id = action === 'copy' ? 99 : 11;
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(`/trips?selected=t1&focus=${id}&focusDay=2`));
+    await waitFor(() => expect(within(day(2)).getByTestId(`timeline-rail-toggle-${id}`)).toHaveAttribute('aria-expanded', 'true'));
+    expect(within(day(2)).getByTestId(`timeline-rail-toggle-${id}`)).toHaveFocus();
   });
 
   it('複製只新增目標日的副本並重算目標日', async () => {

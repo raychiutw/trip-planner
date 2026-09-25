@@ -193,6 +193,8 @@ export function useTrip(tripId: string | null, reloadKey = 0): UseTripReturn {
    * 需 update allDays[dayNum] 該 DaySection 才會 re-render)。 */
   const refetchDay = useCallback((dayNum: number) => {
     if (!Number.isInteger(dayNum) || dayNum < 1) return;
+    // Invalidate the lookup cache without deleting from the currently rendered snapshot.
+    allDaysRef.current = { ...allDaysRef.current };
     delete allDaysRef.current[dayNum];
     fetchDay(dayNum).then((day) => {
       if (day) {

@@ -6,7 +6,7 @@
  *  - Timeline stop cards
  */
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import clsx from 'clsx';
 import DaySkeleton from './DaySkeleton';
 import Timeline from './Timeline';
@@ -145,13 +145,6 @@ const DaySection = React.memo(function DaySection({
   localToday,
   isActive,
 }: DaySectionProps) {
-  const [animKey, setAnimKey] = useState(0);
-  const prevActiveRef = useRef(false);
-  useEffect(() => {
-    if (isActive && !prevActiveRef.current) setAnimKey((k) => k + 1);
-    prevActiveRef.current = !!isActive;
-  }, [isActive]);
-
   // useMemo 穩定 reference：`?? []` 每 render 造新陣列，會讓下面 4 個吃 timeline 的
   // useMemo 依賴每 render 變動而永不命中（react-hooks/exhaustive-deps）。
   const timeline = useMemo(() => day?.timeline ?? [], [day?.timeline]);
@@ -202,8 +195,7 @@ const DaySection = React.memo(function DaySection({
       </div>
 
       <div
-        key={animKey}
-        className={clsx(animKey > 0 && 'day-content-enter', day && 'day-content-loaded')}
+        className={clsx(isActive && 'day-content-enter', day && 'day-content-loaded')}
         id={`day-slot-${dayNum}`}
       >
         {!day ? (

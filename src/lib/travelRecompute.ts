@@ -14,7 +14,8 @@
  *
  * - **explicit**（預設）：mutation 後顯式觸發。同 scope 併發 → 共用同一
  *   in-flight promise（single-flight），caller 各自掛 .then/.catch 做自己的
- *   toast UX。失敗 reject。
+ *   toast UX。失敗 reject。afterWrite 會等待舊請求結束後發起新讀取，
+ *   避免把前次寫入的計算結果當成最新順序已完成。
  * - **auto**（`{ auto: true, signature }`，TimelineRail self-healing 用）：
  *   以 **gap signature**（缺口 pair 清單的指紋）防重 — 同一個缺口每個 scope
  *   只自動嘗試一次；缺口內容改變（真的有新 mutation 改了 adjacency）→
@@ -121,7 +122,10 @@ export function getAutoRecomputeStatus(
 export function requestTravelRecompute(
   tripId: string,
   dayNum?: number | string | null,
-  opts?: { auto?: boolean; signature?: string; isCurrent?: () => boolean },
+  opts?: { auto?: boolean; signature?: string; isCurrent?: () => boolean;
+    /** An accepted entry write cannot be covered by a request that began before it. */
+    afterWrite?: boolean;
+  },
 ): Promise<RecomputeTravelResult | null> {
   const day = normalizeDayNum(dayNum);
   const key = scopeKey(tripId, day);
@@ -149,8 +153,15 @@ export function requestTravelRecompute(
     autoAttemptedSig.set(key, signature);
   }
 
-  const existing = inflight.get(key);
-  if (existing) return existing.promise;
+  const existing = inflight.get(key) ?? (opts?.afterWrite ? inflight.get(scopeKey(tripId, null)) : undefined);
+  if (existing) {
+    if (opts?.afterWrite) {
+      // Concurrent writes waiting on the same old flight share the next fresh flight.
+      // A later write during that next flight schedules another, never a stale success.
+      return existing.promise.catch(() => null).then(() => requestTravelRecompute(tripId, day, { isCurrent }));
+    }
+    return existing.promise;
+  }
 
   // 新的一發要打了 → 樂觀清掉舊 failed：re-armed 重試（含 explicit 成功）期間 chip
   // 顯「重新計算中」而非停在「待更新」（codex P2 / adversarial #1）。真的又失敗會在

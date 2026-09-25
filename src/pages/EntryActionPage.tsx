@@ -33,9 +33,8 @@
  *   - move: PATCH /api/trips/:id/entries/:eid { day_id }
  */
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch } from '../lib/apiClient';
 import { copyEntry, moveEntry, type MutationResult } from '../lib/entryMutations';
@@ -253,7 +252,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
 function EntryActionForm({ action }: EntryActionPageProps) {
   const auth = useRequireAuth();
   const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
-  const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
+  const navigate = useNavigate();
 
   const entryIdNum = entryId && /^\d+$/.test(entryId) && Number.isSafeInteger(Number(entryId)) && Number(entryId) > 0 ? Number(entryId) : null;
   // G-T2:動詞對齊 menu「移到其他天 / 複製到其他天」（DESIGN.md:471 SoT），避免 移到/移動 混用。
@@ -332,6 +331,25 @@ function EntryActionForm({ action }: EntryActionPageProps) {
     && dayNumFromId(days, currentDayId) != null && dayNumFromId(days, selectedDayId) != null
     && (action === 'copy' || selectedDayId !== currentDayId);
 
+  function savedEntryId(result: Extract<MutationResult, { ok: true }>) {
+    return action === 'copy' ? (result.data as { id?: number } | undefined)?.id : entryIdNum;
+  }
+
+  function returnToEntry(id: number | null | undefined, dayNum: number | null) {
+    if (!tripId) { navigate(routes.trips()); return; }
+    const query = new URLSearchParams({ selected: tripId });
+    if (id != null && Number.isSafeInteger(id) && id > 0) {
+      query.set('focus', String(id));
+      if (dayNum != null) query.set('focusDay', String(dayNum));
+    }
+    navigate(`/trips?${query}`);
+  }
+
+  function handleBack() {
+    returnToEntry(accepted ? savedEntryId(accepted) : entryIdNum,
+      dayNumFromId(days, accepted ? selectedDayId : currentDayId));
+  }
+
   async function handleConfirm() {
     if (inFlight.current || !canConfirm || !tripId || entryIdNum == null || selectedDayId == null) return;
     inFlight.current = true;
@@ -351,7 +369,7 @@ function EntryActionForm({ action }: EntryActionPageProps) {
       if (operationGeneration.current !== generation) return;
       if (complete) {
         showToast(`景點已${ctaLabel}`, 'success');
-        handleBack();
+        returnToEntry(savedEntryId(result), targetDayNum);
       }
     } catch (err) {
       if (operationGeneration.current === generation) setSubmitError(err instanceof Error ? err.message : '操作失敗');

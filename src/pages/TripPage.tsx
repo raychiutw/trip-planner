@@ -8,7 +8,7 @@ import { useOfflineToast } from '../hooks/useOfflineToast';
 import { useDragDrop } from '../hooks/useDragDrop';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { buildCrossDayMoves, railItemsFirstCollision } from '../lib/crossDayMove';
-import { moveEntriesBatch } from '../lib/entryMutations';
+import { moveEntriesBatch, type MutationResult } from '../lib/entryMutations';
 import { restoreDragScroll, rememberScroll, recallScroll, restoreScrollTo } from '../lib/preserveScroll';
 import { writeTripView } from '../lib/tripViewState';
 import { EVENT } from '../lib/events';
@@ -357,8 +357,22 @@ function TripPageInner(
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
   eventTripRef.current = activeTripId;
   const operationGeneration = useRef(0);
+  const moveAttempt = useRef(0);
+  const moveWriting = useRef<number | null>(null);
+  const moveRetrying = useRef<number | null>(null);
+  const pendingMoveFocus = useRef<{ id: number; dayNum: number } | null>(null);
+  const [moveResult, setMoveResult] = useState<{
+    dayNum: number;
+    status: 'saving' | 'travel' | 'travel-error' | 'saved' | 'error';
+    accepted?: Extract<MutationResult, { ok: true }>;
+    message?: string;
+  } | null>(null);
   useEffect(() => {
     const generation = ++operationGeneration.current;
+    setMoveResult(null);
+    pendingMoveFocus.current = null;
+    moveWriting.current = null;
+    moveRetrying.current = null;
     return () => { operationGeneration.current = generation + 1; };
   }, [effectiveUrlTripId, activeTripId]);
 
@@ -497,7 +511,7 @@ function TripPageInner(
     // 抵消 autoScroll + drop 後 focus 亂捲，頁面不移動。idempotent（用完即清）。
     restoreDragScroll();
     const { active, over } = e;
-    if (!over || typeof active.id !== 'number' || !activeTripId) return;
+    if (!over || typeof active.id !== 'number' || !activeTripId || moveWriting.current != null) return;
     const activeDayId = (active.data.current as { dayId?: number | null } | undefined)?.dayId;
     const overData = over.data?.current as { dayId?: number | null; railContainer?: boolean } | undefined;
     const targetDayId = overData?.dayId;
@@ -511,17 +525,53 @@ function TripPageInner(
       .filter((id): id is number => typeof id === 'number');
     const overEntryId = overData?.railContainer ? null : (typeof over.id === 'number' ? over.id : null);
     const updates = buildCrossDayMoves(active.id, targetDayId, targetIds, overEntryId);
+    const attempt = ++moveAttempt.current;
+    moveWriting.current = attempt;
+    setMoveResult({ dayNum: targetOpt.dayNum, status: 'saving' });
+    const isCurrent = () => operationGeneration.current === generation && moveAttempt.current === attempt;
     try {
       // #1261：跨天 batch + 兩天重算 + 兩天各一個 emit（detail.dayNum → refetchDay）在 module。
       const r = await moveEntriesBatch(activeTripId, updates, { fromDayNum: sourceOpt?.dayNum ?? null, toDayNum: targetOpt.dayNum });
-      if (operationGeneration.current !== generation) return;
-      if (!r.ok) throw new Error(`batch ${r.status}`);
-      showToast(`已移到 Day ${String(targetOpt.dayNum).padStart(2, '0')}`, 'success');
-    } catch {
-      if (operationGeneration.current !== generation) return;
-      showToast('跨天移動失敗，請稍後再試', 'error');
+      if (!isCurrent()) return;
+      if (!r.ok) throw new Error(r.message || '跨天移動失敗，請稍後再試');
+      pendingMoveFocus.current = { id: active.id, dayNum: targetOpt.dayNum };
+      setMoveResult({ dayNum: targetOpt.dayNum, status: 'travel', accepted: r });
+      void r.recompute.then(ok => {
+        if (isCurrent()) setMoveResult({ dayNum: targetOpt.dayNum, status: ok ? 'saved' : 'travel-error', accepted: r });
+      });
+    } catch (error) {
+      if (!isCurrent()) return;
+      setMoveResult({ dayNum: targetOpt.dayNum, status: 'error', message: error instanceof Error ? error.message : '跨天移動失敗，請稍後再試' });
+    } finally {
+      if (moveWriting.current === attempt) moveWriting.current = null;
     }
   }, [activeTripId, dayOptions, allDays]);
+
+  useEffect(() => {
+    const target = pendingMoveFocus.current;
+    if (!target) return;
+    const trigger = document.querySelector<HTMLButtonElement>(`section[data-day="${target.dayNum}"] [data-scroll-anchor="entry-${target.id}"] .tp-rail-menu-trigger`);
+    if (!trigger) return;
+    pendingMoveFocus.current = null;
+    switchDay(target.dayNum);
+    trigger.focus({ preventScroll: true });
+    trigger.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  }, [allDays, moveResult, switchDay]);
+
+  const moveStatusRef = useRef<HTMLDivElement>(null);
+  async function retryMoveTravel() {
+    if (!moveResult?.accepted || moveRetrying.current != null || moveWriting.current != null) return;
+    const generation = operationGeneration.current;
+    const attempt = moveAttempt.current;
+    moveRetrying.current = attempt;
+    const result = moveResult;
+    const accepted = moveResult.accepted;
+    moveStatusRef.current?.focus({ preventScroll: true });
+    setMoveResult({ ...result, status: 'travel' });
+    const ok = await accepted.retryRecompute();
+    if (moveRetrying.current === attempt) moveRetrying.current = null;
+    if (operationGeneration.current === generation && moveAttempt.current === attempt) setMoveResult({ ...result, status: ok ? 'saved' : 'travel-error' });
+  }
 
   /* --- Pins for TripMapRail (hoisted out of JSX IIFE for AppShell sheet slot) --- */
   const mapRailData = useMemo(() => {
@@ -560,6 +610,26 @@ function TripPageInner(
     [switchDay],
   );
 
+  const focusParam = new URLSearchParams(location.search).get('focus');
+  const focusEntryId = focusParam && /^\d+$/.test(focusParam) && Number.isSafeInteger(Number(focusParam)) && Number(focusParam) > 0
+    ? Number(focusParam) : null;
+  const focusedVisit = useRef<string | null>(null);
+  useEffect(() => {
+    if (focusEntryId == null) { focusedVisit.current = null; return; }
+    if (loading || !activeTripId || trip?.id !== activeTripId) return;
+    const visit = `${activeTripId}:${location.key}:${focusEntryId}`;
+    if (focusedVisit.current === visit) return;
+    const targetDay = Object.values(allDays).find(day => day.timeline.some(entry => entry.id === focusEntryId));
+    if (!targetDay) return;
+    const toggle = document.querySelector<HTMLButtonElement>(`#tripContent [data-scroll-anchor="entry-${focusEntryId}"] .tp-rail-caret`);
+    if (!toggle) return;
+    focusedVisit.current = visit;
+    manualScrollTs.current = Date.now();
+    switchDay(targetDay.dayNum);
+    toggle.focus({ preventScroll: true });
+    toggle.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  }, [focusEntryId, location.key, activeTripId, loading, trip?.id, allDays, switchDay]);
+
   /* --- Auto-scroll to today or hash on initial load (#3, #5, #18) --- */
   useEffect(() => {
     // useTrip clears the previous trip in an effect. During A→B the render
@@ -568,6 +638,7 @@ function TripPageInner(
     if (loading || dayNums.length === 0 || initialScrollDone.current
       || !activeTripId || trip?.id !== activeTripId) return;
     initialScrollDone.current = true;
+    if (focusEntryId != null) return; // Explicit return target takes precedence over saved scroll.
 
     // ⑨：標記「剛做初始定位」→ 下方 scroll-spy 在 600ms 內不 switchDay，避免它在
     // deep-link / today 的程式化捲動途中先報 day1 蓋掉正確選天（57814b67 修的 bug）。
@@ -577,10 +648,8 @@ function TripPageInner(
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
-    // 從編輯 / 新增景點 / 子頁「返回」→ 還原捲動位置，不移動頁面（見 preserveScroll）。
-    // module-map 有值 = 本 session 在 SPA 內導航返回；冷開 / reload 沒值 → 落到下面
-    // 的 ?focus / hash / auto-locate 預設行為。?focus 的 entry 展開由 TimelineRail
-    // 自行讀 ?focus= 處理，這裡只負責「不捲走」。
+    // Without an explicit entry target, preserve the last scroll position.
+    // Cold visits fall through to hash/today positioning.
     const savedTop = activeTripId ? recallScroll(activeTripId) : undefined;
     if (savedTop != null) {
       const returnParams = new URLSearchParams(window.location.search);
@@ -598,29 +667,6 @@ function TripPageInner(
     const sheetParam = new URLSearchParams(window.location.search).get('sheet');
     if (sheetParam === 'collab' && resolveState.status === 'resolved') {
       navigate(`/trip/${encodeURIComponent(resolveState.tripId)}/collab`, { replace: true });
-    }
-
-    // PR-R 2026-04-26：?focus=<entryId> URL param 優先級最高（從 /map 點 POI
-    // 卡「跳到行程」過來，需要 scroll 到該 entry）。useScrollRestoreOnBack
-    // 已處理 location.state.scrollAnchor，但 GlobalMapPage Link 同時放 query
-    // 跟 state，兩條路任一條 work 都行。這裡 query 那條是 fallback —
-    // 例如 user 直接貼 URL 沒有 history state。
-    const focusSearch = new URLSearchParams(window.location.search);
-    const focusParam = focusSearch.get('focus');
-    if (focusParam) {
-      // v2.55.x：回前頁還原「當下景點展開」— 先切到該景點所在天（rail 才會 render，
-      // TimelineRail 依同一個 ?focus= 展開它），再 scroll 到它。focusDay 由 EditEntryPage
-      // goBack 帶入（entry.dayId → dayNum）；無 focusDay 時維持原本只 scroll 行為。
-      const focusDayParam = focusSearch.get('focusDay');
-      const focusDay = focusDayParam ? parseInt(focusDayParam, 10) : NaN;
-      if (Number.isFinite(focusDay) && dayNums.includes(focusDay)) switchDay(focusDay);
-      requestAnimationFrame(() => {
-        const sel = `[data-scroll-anchor="entry-${CSS.escape(focusParam)}"]`;
-        const el = document.querySelector<HTMLElement>(sel);
-        // block:'nearest' — 已在視野就不捲（不移動頁面），離屏才最小捲入。
-        if (el) el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-      });
-      return;
     }
 
     // URL hash takes priority over auto-locate
@@ -671,7 +717,7 @@ function TripPageInner(
     // resolveState 是 discriminated union（tripId 只在 'resolved' variant），deps 不能
     // 取 .tripId（render 時可能是 loading variant → TS error）；依賴整個 resolveState 物件，
     // 變動由 initialScrollDone latch 擋住重跑。
-  }, [loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState, activeTripId, trip?.id]);
+  }, [focusEntryId, loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState, activeTripId, trip?.id]);
 
   /* --- scrollMarginTop dynamic alignment (#7) --- */
   useEffect(() => {
@@ -860,6 +906,13 @@ function TripPageInner(
 
         {!loading && trip && (
           <div className="trip-content" id="tripContent">
+            {moveResult && (
+              <div ref={moveStatusRef} tabIndex={-1} data-testid="timeline-move-result" role={moveResult.status === 'error' || moveResult.status === 'travel-error' ? 'alert' : 'status'} className="px-3 text-callout">
+                {moveResult.status === 'saving' ? '正在儲存移動…' : moveResult.status === 'error' ? moveResult.message
+                  : `已移到 Day ${String(moveResult.dayNum).padStart(2, '0')}，${moveResult.status === 'travel' ? '交通更新中…' : moveResult.status === 'travel-error' ? '交通待更新。' : '景點及交通已更新。'}`}
+                {moveResult.status === 'travel-error' && <button type="button" className="min-h-[44px] text-accent" onClick={() => void retryMoveTravel()}>重試交通更新</button>}
+              </div>
+            )}
             {/* 2026-07-07 跨天拖拉：統一 DndContext（autoScroll 內建 — 拖到
               * 視窗邊緣自動捲動跨天）。rails 走 dndManaged 模式。 */}
             <DndContext
@@ -873,7 +926,7 @@ function TripPageInner(
                 * scroll-spy 依 header 位置更新 active day + DAY tab 高亮。資料全載於 allDays cache。 */}
               {dayNums.map((dayNum) => (
                 <DaySection
-                  key={dayNum}
+                  key={`${activeTripId}:${dayNum}`}
                   dayNum={dayNum}
                   day={allDays[dayNum]}
                   daySummary={daySummaryMap.get(dayNum)}

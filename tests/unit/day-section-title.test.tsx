@@ -9,6 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { DndContext } from '@dnd-kit/core';
 import DaySection from '../../src/components/trip/DaySection';
 import type { Day, DaySummary } from '../../src/types/trip';
@@ -20,7 +21,7 @@ function makeSummary(overrides: Partial<DaySummary> = {}): DaySummary {
   return { id: 1, dayNum: 3, ...overrides };
 }
 
-const dnd = (ui: React.ReactElement) => render(<DndContext>{ui}</DndContext>);
+const dnd = (ui: React.ReactElement) => render(<MemoryRouter><DndContext>{ui}</DndContext></MemoryRouter>);
 
 describe('DaySection day header（v2.55.49 — 日期為主標）', () => {
   it('有 date → hero <h2> 顯示日期（含星期）', () => {
