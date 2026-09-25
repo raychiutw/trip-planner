@@ -256,6 +256,7 @@ const PRIVACY_STYLES = `
   font-size: var(--font-size-subheadline);
 }
 .tp-pp a {
+  overflow-wrap: anywhere;
   color: var(--color-accent-text);
   font-weight: 600;
 }
