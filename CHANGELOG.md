@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.95] - 2026-09-26
+
+### Added
+- 無本機密碼帳號刪除前須完成同帳號的近期 Google 驗證；瀏覽器 session 與 mobile OAuth grant 各自持有五分鐘、單次使用的伺服器證據。刪除時同步清除既有 OAuth token。
+- 正式與 UAT mobile public client 使用各自精確的 HTTPS callback、PKCE 及環境限制；提供 iOS/Android app-link association 檔與 Flutter 契約。正式可用性仍須驗證 callback host、Google `auth_time`、Flutter 接收及真機往返。
+
 ## [2.57.94] - 2026-09-26
 
 ### Fixed

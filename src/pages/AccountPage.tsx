@@ -23,6 +23,8 @@ import { writeAuthHint } from '../lib/authHint';
 interface DeleteAccountPreview {
   /** 有 local 密碼身分 → 用密碼確認；純 OAuth → 用確認字串 */
   hasPassword: boolean;
+  reauthProvider: 'google' | null;
+  reauthenticated: boolean;
   tripsOwned: number;
   collaboratorsAffected: number;
 }
@@ -413,6 +415,7 @@ export default function AccountPage() {
       const preview = await apiFetch<DeleteAccountPreview>('/account', { signal: request.signal });
       if (request.signal.aborted) return;
       if (typeof preview?.hasPassword !== 'boolean' ||
+          (!preview.hasPassword && (preview.reauthProvider !== 'google' && preview.reauthProvider !== null || typeof preview.reauthenticated !== 'boolean')) ||
           ![preview.tripsOwned, preview.collaboratorsAffected].every(n => Number.isSafeInteger(n) && n >= 0)) throw new Error('invalid preview');
       setDeletePreview(preview);
     } catch {
@@ -420,13 +423,28 @@ export default function AccountPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const result = new URLSearchParams(window.location.search).get('deleteReauth');
+    if (result !== 'done' && result !== 'failed') return;
+    window.history.replaceState(window.history.state, '', '/account');
+    void openDeleteModal().then(() => {
+      if (result === 'failed') setDeleteError('身分驗證未完成，帳號尚未刪除。請重新驗證。');
+    });
+  }, [openDeleteModal, user?.id]);
+
   /** 二次確認是否已滿足：有密碼要打密碼，純 OAuth 要打 DELETE。 */
   const canConfirmDelete = deletePreview
-    ? (deletePreview.hasPassword ? deleteInput.length > 0 : deleteInput === 'DELETE')
+    ? (deletePreview.hasPassword ? deleteInput.length > 0 :
+      deletePreview.reauthProvider === 'google' && deleteInput === 'DELETE')
     : false;
 
   const deleteAccount = useCallback(async () => {
     if (!deletePreview || !canConfirmDelete || deletingRef.current) return;
+    if (!deletePreview.hasPassword && !deletePreview.reauthenticated) {
+      window.location.href = '/api/oauth/login/google?purpose=account-delete';
+      return;
+    }
     const operation = lifetime.current;
     deletingRef.current = true;
     setDeleting(true);
@@ -451,8 +469,13 @@ export default function AccountPage() {
       setDeleteError(
         err instanceof ApiError && err.code === 'ACCOUNT_DELETE_PASSWORD_INVALID'
           ? '密碼不正確，帳號未刪除'
+          : err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED'
+            ? '近期身分驗證已失效，請重新驗證。帳號尚未刪除。'
           : '刪除失敗，請稍後再試',
       );
+      if (err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED') {
+        setDeletePreview(current => current ? { ...current, reauthenticated: false } : current);
+      }
     }
   }, [deletePreview, canConfirmDelete, deleteInput]);
 
@@ -681,7 +704,7 @@ export default function AccountPage() {
             ? `其中有共編者的行程也會刪除，${deletePreview.collaboratorsAffected} 位共編者將失去存取權，且不會另行通知。`
             : undefined
         }
-        confirmLabel="永久刪除"
+        confirmLabel={deletePreview && !deletePreview.hasPassword && !deletePreview.reauthenticated ? '重新驗證身分' : '永久刪除'}
         cancelLabel="取消"
         busy={deleting}
         confirmDisabled={!canConfirmDelete}
@@ -695,9 +718,7 @@ export default function AccountPage() {
         {deletePreview && (
           <div className="tp-account-delete-confirm">
             <label className="tp-account-delete-label" htmlFor="tp-delete-confirm-input">
-              {deletePreview.hasPassword
-                ? '請輸入密碼以確認'
-                : '請輸入 DELETE 以確認'}
+              {deletePreview.hasPassword ? '請輸入密碼以確認' : '請輸入 DELETE 以確認'}
             </label>
             <input
               id="tp-delete-confirm-input"
@@ -709,6 +730,11 @@ export default function AccountPage() {
               onChange={(e) => setDeleteInput(e.target.value)}
               disabled={deleting}
             />
+            {!deletePreview.hasPassword && !deletePreview.reauthenticated && (
+              <p className="tp-hint">{deletePreview.reauthProvider === 'google'
+                ? '接下來會使用 Google 重新驗證此帳號，返回後才能永久刪除。'
+                : '此帳號目前沒有可用的重新驗證方式，帳號尚未刪除。'}</p>
+            )}
             {deleteError && (
               <p className="tp-account-delete-error" role="alert">{deleteError}</p>
             )}

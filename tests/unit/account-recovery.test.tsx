@@ -76,7 +76,7 @@ describe('account recovery through the real page', () => {
     previewRead = () => new Promise(r => { resolve = r; });
     open(); await openDelete();
     fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
-    previewRead = undefined; preview = { ...validPreview, hasPassword: false, tripsOwned: 9 };
+    previewRead = undefined; preview = { ...validPreview, hasPassword: false, reauthProvider: 'google', reauthenticated: true, tripsOwned: 9 };
     await openDelete(); await screen.findByLabelText('請輸入 DELETE 以確認');
     await act(async () => resolve(json(validPreview)));
     expect(screen.getByRole('alertdialog')).toHaveTextContent('9 個行程');
@@ -141,7 +141,7 @@ describe('account recovery through the real page', () => {
     expect(writes).toHaveLength(0);
   });
   it.each([403, 500, 200])('OAuth deletion requires the exact phrase and rejects unconfirmed result %s', async code => {
-    preview = { ...validPreview, hasPassword: false }; deleteStatus = code; deleteCode = 'PERM_DENIED';
+    preview = { ...validPreview, hasPassword: false, reauthProvider: 'google', reauthenticated: true }; deleteStatus = code; deleteCode = 'PERM_DENIED';
     open(); await openDelete(); const input = await screen.findByLabelText('請輸入 DELETE 以確認');
     fireEvent.change(input, { target: { value: 'delete' } });
     expect(screen.getByTestId('confirm-modal-confirm')).toBeDisabled();

@@ -20,17 +20,20 @@
  * ⚠ 實際抹除邏輯在 `_erasure.ts`（逐表顯式刪除，不依賴 CASCADE）。
  *   本檔只負責驗證與回應，不重複實作刪除順序。
  */
-import { requireSessionUser } from '../_session';
+import { mobileOAuthContract } from '../_mobileOAuth';
 import { buildClearSessionSetCookie } from '../_cookies';
 import { AppError } from '../_errors';
 import { rawJson } from '../_utils';
 import { verifyPassword } from '../../../src/server/password';
 import { eraseUserAccount } from '../_erasure';
+import { consumeDeleteReauth, hasDeleteReauth, readMobileDeleteChallenge, restoreDeleteReauth, transitionMobileDeleteChallenge } from './_deleteReauth';
+import { requireAccountActor } from './_accountActor';
 import type { Env } from '../_types';
 
 interface DeleteAccountBody {
   password?: unknown;
   confirm?: unknown;
+  challengeId?: unknown;
 }
 
 /** 純 OAuth 帳號用的確認字串。刻意用英文大寫，避免輸入法誤觸。 */
@@ -60,10 +63,13 @@ async function findLocalPasswordHash(env: Env, userId: string): Promise<string |
  * Response: { hasPassword, tripsOwned, collaboratorsAffected }
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const session = await requireSessionUser(context.request, context.env);
-  const userId = session.uid;
+  const actor = await requireAccountActor(context);
+  const userId = actor.uid;
 
   const hasPassword = (await findLocalPasswordHash(context.env, userId)) !== null;
+  const googleIdentity = hasPassword ? null : await context.env.DB.prepare("SELECT 1 FROM auth_identities WHERE user_id = ? AND provider = 'google'")
+    .bind(userId).first();
+  const reauthenticated = hasPassword || actor.grantId ? false : await hasDeleteReauth(context.env.DB, context.request, userId);
 
   const owned = await context.env.DB
     .prepare('SELECT count(*) AS n FROM trips WHERE owner_user_id = ?')
@@ -84,15 +90,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   return rawJson({
     hasPassword,
+    reauthProvider: googleIdentity ? 'google' : null,
+    reauthenticated,
     tripsOwned: owned?.n ?? 0,
     collaboratorsAffected: collab?.n ?? 0,
   });
 };
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const session = await requireSessionUser(context.request, context.env);
-  // SessionPayload 的欄位是 `uid`（不是 userId）—— 對齊 account/sessions.ts。
-  const userId = session.uid;
+  const actor = await requireAccountActor(context);
+  const userId = actor.uid;
 
   let body: DeleteAccountBody = {};
   try {
@@ -115,16 +122,40 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       throw new AppError('ACCOUNT_DELETE_PASSWORD_INVALID');
     }
   } else {
-    // 純 OAuth 帳號沒有密碼可打，改要求顯式確認字串。
+    // 顯式確認防誤觸；近期 Google 身分驗證才是刪除授權。
     if (body.confirm !== CONFIRM_PHRASE) {
       throw new AppError(
         'ACCOUNT_DELETE_CONFIRM_REQUIRED',
         `請輸入 ${CONFIRM_PHRASE} 以確認刪除`,
       );
     }
+    if (actor.grantId) {
+      const challengeId = typeof body.challengeId === 'string' ? body.challengeId : '';
+      const challenge = challengeId ? await readMobileDeleteChallenge(context.env.DB, challengeId) : null;
+      if (!challenge || challenge.uid !== userId || challenge.grantId !== actor.grantId ||
+          challenge.clientId !== mobileOAuthContract(context.env, context.request)?.clientId || challenge.expired ||
+          !(await transitionMobileDeleteChallenge(context.env.DB, challengeId, userId, actor.grantId, 'verified', 'used'))) {
+        throw new AppError('ACCOUNT_DELETE_REAUTH_REQUIRED');
+      }
+    } else if (!(await consumeDeleteReauth(context.env.DB, context.request, userId))) {
+      throw new AppError('ACCOUNT_DELETE_REAUTH_REQUIRED');
+    }
   }
 
-  const summary = await eraseUserAccount(context.env.DB, userId);
+  let summary;
+  try {
+    summary = await eraseUserAccount(context.env.DB, userId);
+  } catch (error) {
+    // D1 batch has rolled back the erasure; restore the same fresh-auth proof.
+    if (!passwordHash) {
+      if (actor.grantId && typeof body.challengeId === 'string') {
+        await transitionMobileDeleteChallenge(context.env.DB, body.challengeId, userId, actor.grantId, 'used', 'verified');
+      } else {
+        await restoreDeleteReauth(context.env.DB, context.request, userId);
+      }
+    }
+    throw error;
+  }
 
   const res = rawJson({
     ok: true,
