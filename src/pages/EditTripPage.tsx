@@ -703,8 +703,7 @@ export default function EditTripPage() {
   // POI search inline state
   const [showSearch, setShowSearch] = useState(false);
   const [destQuery, setDestQuery] = useState('');
-  const [poiSearchError, setPoiSearchError] = useState<string | null>(null);
-  const { results: poiResults, searching: poiSearching } = usePoiSearch({
+  const { results: poiResults, searching: poiSearching, status: poiStatus, error: poiSearchError, retry: retryPoiSearch } = usePoiSearch({
     enabled: showSearch,
     query: destQuery,
     limit: 10,
@@ -712,12 +711,8 @@ export default function EditTripPage() {
       const arr = (raw as { results?: PoiSearchResult[] })?.results ?? [];
       return Array.isArray(arr) ? arr : [];
     },
-    onError: (kind) => setPoiSearchError(kind === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'),
   });
 
-  useEffect(() => {
-    if (destQuery.trim().length < 2) setPoiSearchError(null);
-  }, [destQuery]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1226,10 +1221,10 @@ export default function EditTripPage() {
                             data-testid="edit-trip-dest-search-input"
                           />
                           {destQuery.trim().length >= 2 && (
-                            <div className="tp-edit-dest-dropdown" role="listbox" data-testid="edit-trip-dest-dropdown">
+                            <div className="tp-edit-dest-dropdown" role={poiStatus === 'success' && poiResults.length > 0 ? 'listbox' : undefined} aria-label="目的地搜尋結果" data-testid="edit-trip-dest-dropdown">
                               {poiSearching && <div className="tp-edit-dest-status">搜尋中⋯</div>}
-                              {!poiSearching && poiSearchError && <div className="tp-edit-dest-status">{poiSearchError}</div>}
-                              {!poiSearching && !poiSearchError && poiResults.length === 0 && (
+                              {!poiSearching && poiSearchError && <div className="tp-edit-dest-status" role="alert">{poiSearchError} <button type="button" onClick={retryPoiSearch}>重試搜尋</button></div>}
+                              {poiStatus === 'success' && poiResults.length === 0 && (
                                 <div className="tp-edit-dest-status">沒找到結果，試試別的關鍵字</div>
                               )}
                               {!poiSearching && poiResults.length > 0 && poiResults.map((p) => (

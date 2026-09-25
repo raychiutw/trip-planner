@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PoiSearchResult } from '../types/poi';
 // v2.33.39 round 4: 改走 apiFetchRaw，與 sibling hook (useTrip / useChatPagination)
 // 一致。bare fetch 會繞過 reportFetchResult → useOnlineStatus offline-toast 失效。
@@ -32,6 +32,9 @@ interface UsePoiSearchOptions {
 interface UsePoiSearchResult {
   results: PoiSearchResult[];
   searching: boolean;
+  status: 'idle' | 'loading' | 'success' | 'error';
+  error: string | null;
+  retry: () => void;
 }
 
 /**
@@ -77,59 +80,45 @@ export function usePoiSearch({
   normalise,
   onError,
 }: UsePoiSearchOptions): UsePoiSearchResult {
-  const [results, setResults] = useState<PoiSearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  // Stable ref for callbacks — drop from effect deps so caller-side
-  // inline arrows don't re-trigger the effect on every parent render.
+  const [attempt, setAttempt] = useState(0);
+  const trimmed = query.trim();
+  const active = enabled && trimmed.length >= 2;
+  const key = JSON.stringify([active, trimmed, region, limit, attempt]);
+  const scope = useMemo(() => ({key}), [key]);
+  type Snapshot = { scope: object | null; results: PoiSearchResult[]; status: UsePoiSearchResult['status']; error: string | null };
+  const [snapshot, setSnapshot] = useState<Snapshot>({scope: null, results: [], status: 'idle', error: null});
   const normaliseRef = useRef(normalise);
   const onErrorRef = useRef(onError);
-  useEffect(() => { normaliseRef.current = normalise; }, [normalise]);
-  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+  normaliseRef.current = normalise;
+  onErrorRef.current = onError;
+  const retry = useCallback(() => setAttempt(value => value + 1), []);
 
   useEffect(() => {
-    if (!enabled) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const trimmed = query.trim();
-    if (trimmed.length < 2) {
-      setResults([]);
-      return;
-    }
-    debounceRef.current = setTimeout(async () => {
-      abortRef.current?.abort();
-      const ctrl = new AbortController();
-      abortRef.current = ctrl;
-      setSearching(true);
+    if (!active) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      const fail = (kind: 'http-error' | 'network-error', error?: unknown) => {
+        if (ctrl.signal.aborted) return;
+        setSnapshot({scope, results: [], status: 'error', error: kind === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'});
+        onErrorRef.current?.(kind, error);
+      };
       try {
         const regionParam = region ? `&region=${encodeURIComponent(region)}` : '';
-        const resp = await apiFetchRaw(
-          `/poi-search?q=${encodeURIComponent(trimmed)}&limit=${limit}${regionParam}`,
-          { signal: ctrl.signal },
-        );
-        if (!resp.ok) {
-          onErrorRef.current?.('http-error');
-          if (abortRef.current === ctrl) setResults([]);
-          return;
-        }
-        const raw = await resp.json() as unknown;
-        const normalised = normaliseRef.current ? normaliseRef.current(raw) : (raw as PoiSearchResult[]);
-        const rows = Array.isArray(normalised) ? normalised.filter(isValidPoi) : [];
-        if (abortRef.current === ctrl) setResults(rows);
-      } catch (err) {
-        if ((err as { name?: string })?.name === 'AbortError') return;
-        onErrorRef.current?.('network-error', err);
-        if (abortRef.current === ctrl) setResults([]);
-      } finally {
-        if (abortRef.current === ctrl) setSearching(false);
-      }
+        const response = await apiFetchRaw(`/poi-search?q=${encodeURIComponent(trimmed)}&limit=${limit}${regionParam}`, {signal: ctrl.signal});
+        if (ctrl.signal.aborted) return;
+        if (!response.ok) { fail('http-error'); return; }
+        const raw = await response.json() as unknown;
+        if (ctrl.signal.aborted) return;
+        const rows = normaliseRef.current ? normaliseRef.current(raw) : raw;
+        setSnapshot({scope, results: Array.isArray(rows) ? rows.filter(isValidPoi) : [], status: 'success', error: null});
+      } catch (error) { fail('network-error', error); }
     }, debounceMs);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      abortRef.current?.abort();
-    };
-  }, [enabled, query, region, limit, debounceMs]);
+    return () => { clearTimeout(timer); ctrl.abort(); };
+  }, [active, scope, trimmed, region, limit, debounceMs]);
 
-  return { results, searching };
+  // A result belongs to its exact query, region and attempt. Never expose the
+  // previous scope during the render before effect cleanup, or while disabled.
+  const current = !active ? {results: [], status: 'idle' as const, error: null}
+    : snapshot.scope === scope ? snapshot : {results: [], status: 'loading' as const, error: null};
+  return { results: current.results, status: current.status, error: current.error, searching: current.status === 'loading', retry };
 }
