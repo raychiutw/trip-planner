@@ -126,6 +126,8 @@ export interface ConfirmModalProps {
    * 不另造一個 modal，沿用本元件既有的焦點鎖定 / Escape / scroll-lock / a11y。
    */
   children?: ReactNode;
+  /** Used after the opener is removed or disabled by the confirmed operation. */
+  fallbackFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
 export default function ConfirmModal({
@@ -139,6 +141,7 @@ export default function ConfirmModal({
   onConfirm,
   onCancel,
   children,
+  fallbackFocusRef,
 }: ConfirmModalProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -148,6 +151,8 @@ export default function ConfirmModal({
   // focus-trap + body scroll-lock。z-index 維持 --z-modal；public props + testid 全不動。
   const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onCancel, {
     initialFocusRef: cancelRef,
+    fallbackFocusRef,
+    canDismiss: !busy,
   });
 
   if (!open) return null;
@@ -160,7 +165,7 @@ export default function ConfirmModal({
         ref={backdropRef}
         className="tp-confirm-backdrop"
         role="presentation"
-        onClick={onCancel}
+        onClick={busy ? undefined : onCancel}
         data-testid="confirm-modal-backdrop"
       >
         <div

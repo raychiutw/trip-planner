@@ -16,6 +16,8 @@ interface UseSheetBehaviorOptions {
    * 「還原 activeElement」。有些觸發元件關閉後會重繪，指名 ref 比記快照可靠。
    */
   triggerRef?: React.RefObject<HTMLElement | null>;
+  /** Destination when a destructive operation removes or disables the opener. */
+  fallbackFocusRef?: React.RefObject<HTMLElement | null>;
   /** Extra callback to run when Escape is pressed (before setIsOpen(false)). */
   onEscape?: () => void;
   /**
@@ -97,6 +99,7 @@ export function useSheetBehavior(
   const {
     restorePreviousFocus = false,
     triggerRef,
+    fallbackFocusRef,
     onEscape,
     preventAllBackdropScroll = false,
     initialFocusRef,
@@ -144,21 +147,16 @@ export function useSheetBehavior(
         (initialFocusRef?.current ?? panelRef.current)?.focus();
       });
     } else {
-      // triggerRef 明確指名時優先（它比快照可靠：有些觸發元件關閉後會重繪）。
-      if (!restorePreviousFocus && triggerRef?.current) {
-        triggerRef.current.focus();
-      } else if (previousFocusRef.current instanceof HTMLElement) {
-        // `instanceof HTMLElement` 同時擋掉三種情況：null（沒開過）、非 HTML 元素、
-        // 以及**已從 DOM 移除的元素**（刪除流程關閉對話框時，觸發它的那一列常一起消失
-        // —— 對 detached 元素呼叫 focus() 不會 throw，但會把焦點掉到 body，
-        // 與什麼都不做同樣糟；isConnected 檢查讓它安靜跳過，由瀏覽器保留當前焦點）。
-        if (previousFocusRef.current.isConnected) {
-          previousFocusRef.current.focus();
-        }
+      const target = !restorePreviousFocus && triggerRef?.current
+        ? triggerRef.current : previousFocusRef.current;
+      if (target instanceof HTMLElement && target.isConnected && !target.matches(':disabled')) {
+        target.focus();
+      } else if (previousFocusRef.current) {
+        fallbackFocusRef?.current?.focus();
       }
       previousFocusRef.current = null;
     }
-  }, [isOpen, restorePreviousFocus, triggerRef, initialFocusRef]);
+  }, [isOpen, restorePreviousFocus, triggerRef, initialFocusRef, fallbackFocusRef]);
 
   /* 4. Escape — top-most sheet only, skip IME composition, honor canDismiss (busy lock) */
   useEffect(() => {
