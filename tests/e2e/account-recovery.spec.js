@@ -14,7 +14,9 @@ async function setup(page) {
       : reply({ hasPassword: state.hasPassword, reauthProvider: state.hasPassword ? null : 'google', reauthenticated: state.reauthenticated, tripsOwned: 3, collaboratorsAffected: 2 });
     if (path === '/api/oauth/login/google') {
       state.oauthStarts++; state.reauthenticated = !state.oauthFails;
-      return route.fulfill({ status: 302, headers: { location: `/account?deleteReauth=${state.oauthFails ? 'failed' : 'done'}` }, body: '' });
+      // Playwright's WebKit route.fulfill rejects 302 mocks. Reproduce the
+      // browser navigation outcome without depending on that unsupported mock.
+      return route.fulfill({ contentType: 'text/html', body: `<script>location.replace('/account?deleteReauth=${state.oauthFails ? 'failed' : 'done'}')</script>` });
     }
     if (path === '/api/account' && request.method() === 'DELETE') {
       state.deleteCalls++;
