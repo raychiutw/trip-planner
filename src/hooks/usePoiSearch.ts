@@ -25,8 +25,6 @@ interface UsePoiSearchOptions {
    * shapes. Default: cast as `PoiSearchResult[]` (assumes API returns canonical shape).
    */
   normalise?: (raw: unknown) => PoiSearchResult[];
-  /** Optional error callback. Default: silent. Called for non-OK HTTP + network errors (not AbortError). */
-  onError?: (kind: 'http-error' | 'network-error', err?: unknown) => void;
 }
 
 interface UsePoiSearchResult {
@@ -66,7 +64,7 @@ function isValidPoi(row: unknown): row is PoiSearchResult {
  *   - AbortController per request: rapid typing cancels inflight requests so
  *     the most recent query always wins (no last-write-wins race)
  *   - Cleanup on unmount + on `query`/`enabled`/`limit` change
- *   - `normalise` + `onError` 透過 ref 引用，callers 不必 useCallback 也不會
+ *   - `normalise` 透過 ref 引用，callers 不必 useCallback 也不會
  *     觸發 effect re-run (PR #459 fix)。
  *   - Schema guard：drop rows missing place_id/name/lat/lng，避免 malformed
  *     POI 進入 React state 造成 key collision / lat/lng undefined runtime crash
@@ -78,7 +76,6 @@ export function usePoiSearch({
   limit = 20,
   debounceMs = 300,
   normalise,
-  onError,
 }: UsePoiSearchOptions): UsePoiSearchResult {
   const [attempt, setAttempt] = useState(0);
   const trimmed = query.trim();
@@ -88,19 +85,16 @@ export function usePoiSearch({
   type Snapshot = { scope: object | null; results: PoiSearchResult[]; status: UsePoiSearchResult['status']; error: string | null };
   const [snapshot, setSnapshot] = useState<Snapshot>({scope: null, results: [], status: 'idle', error: null});
   const normaliseRef = useRef(normalise);
-  const onErrorRef = useRef(onError);
   normaliseRef.current = normalise;
-  onErrorRef.current = onError;
   const retry = useCallback(() => setAttempt(value => value + 1), []);
 
   useEffect(() => {
     if (!active) return;
     const ctrl = new AbortController();
     const timer = setTimeout(async () => {
-      const fail = (kind: 'http-error' | 'network-error', error?: unknown) => {
+      const fail = (kind: 'http-error' | 'network-error') => {
         if (ctrl.signal.aborted) return;
         setSnapshot({scope, results: [], status: 'error', error: kind === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'});
-        onErrorRef.current?.(kind, error);
       };
       try {
         const regionParam = region ? `&region=${encodeURIComponent(region)}` : '';
@@ -111,7 +105,7 @@ export function usePoiSearch({
         if (ctrl.signal.aborted) return;
         const rows = normaliseRef.current ? normaliseRef.current(raw) : raw;
         setSnapshot({scope, results: Array.isArray(rows) ? rows.filter(isValidPoi) : [], status: 'success', error: null});
-      } catch (error) { fail('network-error', error); }
+      } catch { fail('network-error'); }
     }, debounceMs);
     return () => { clearTimeout(timer); ctrl.abort(); };
   }, [active, scope, trimmed, region, limit, debounceMs]);

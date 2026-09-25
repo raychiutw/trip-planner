@@ -52,6 +52,7 @@ import OperationShell from '../components/shell/OperationShell';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
+import { usePoiFavorites } from '../hooks/usePoiFavorites';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import { regionToApiParam } from '../lib/maps/region';
 // v2.31.94/98: 自訂 tab 用 shared <CustomPoiForm> component（同 ChangePoiPage）。
@@ -668,7 +669,7 @@ export default function AddStopPage() {
   // Region 不再 auto-fire search — Nominatim 公共 endpoint 1 req/s 限制，
   // 每次開頁面 / 退到 1 字 都會 burn quota。改成 user 主動輸入才查；region
   // 顯示在 empty state 推薦 chip 讓 user 點擊觸發。
-  const { results: searchResults, searching } = usePoiSearch({
+  const { results: searchResults, searching, status: searchStatus, error: searchError, retry: retrySearch } = usePoiSearch({
     enabled: tab === 'search',
     query: query.trim(),
     region: regionToApiParam(region),
@@ -676,8 +677,9 @@ export default function AddStopPage() {
     normalise: normalizeSearchResults,
   });
 
-  const [poiFavorites, setPoiFavorites] = useState<PoiFavoriteRow[] | null>(null);
-  const [savedLoading, setSavedLoading] = useState(false);
+  const { favorites, status: favoritesStatus, error: favoritesError, retry: retryFavorites } = usePoiFavorites(tab === 'favorites');
+  const poiFavorites = useMemo(() => favorites === null ? null : normalizePoiFavorites(favorites), [favorites]);
+  const savedLoading = favoritesStatus === 'loading';
   const [selectedSaved, setSelectedSaved] = useState<Set<number>>(new Set());
 
   const [customTitle, setCustomTitle] = useState('');
@@ -692,6 +694,16 @@ export default function AddStopPage() {
   const [customCategory, setCustomCategory] = useState<PoiType>('attraction');
   // 搜尋結果 per-result 分類覆寫（place_id → 使用者選的分類）。預設＝Google 自動推導。
   const [searchCatOverride, setSearchCatOverride] = useState<Record<string, PoiType>>({});
+  const selectionKey = JSON.stringify([tripId, dayNum, tab, query, region, category]);
+  const [selectionScope, setSelectionScope] = useState(selectionKey);
+  // Clear the previous intent before React commits the new picker view.
+  if (selectionScope !== selectionKey) {
+    setSelectionScope(selectionKey);
+    setSelectedSearch(new Set());
+    setSelectedSaved(new Set());
+    setSearchCatOverride({});
+  }
+
   // v2.32.1 fix: 初值改 null 區分「未載入」與「載入後 0 個」
   const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
@@ -766,29 +778,6 @@ export default function AddStopPage() {
   }, [auth.user, tripId]);
 
   // POI search 由 usePoiSearch hook 處理 (見上方 hook call) — debounce + abort 內建
-
-  // Saved fetch (lazy 切到 tab 才打)
-  // v2.31.78 fix: 切回 search tab 或 unmount 期間若 favorites fetch 還在 inflight,
-  // setPoiFavorites + setSavedLoading 會在 unmount 後觸發 → React state update
-  // warning + closure leak。加 cancelled flag guard。
-  useEffect(() => {
-    if (tab !== 'favorites' || poiFavorites !== null) return;
-    let cancelled = false;
-    setSavedLoading(true);
-    (async () => {
-      try {
-        const json = await apiFetch<unknown>('/poi-favorites');
-        if (cancelled) return;
-        setPoiFavorites(normalizePoiFavorites(json));
-      } catch {
-        if (cancelled) return;
-        setPoiFavorites([]);
-      } finally {
-        if (!cancelled) setSavedLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [tab, poiFavorites]);
 
   function toggleSearch(id: string) {
     setSelectedSearch((prev) => {
@@ -1123,7 +1112,8 @@ export default function AddStopPage() {
                       </p>
                     </div>
                   )}
-                  {searching && <div className="tp-add-stop-empty">搜尋中⋯</div>}
+                  {searchStatus === 'error' && <div role="alert" className="tp-add-stop-empty">{searchError} <button type="button" onClick={retrySearch}>重試搜尋</button></div>}
+            {searching && <div className="tp-add-stop-empty">搜尋中⋯</div>}
                   {/* v2.31.55 fix：landing empty state 之前 gate 在
                     * `poiFavorites && poiFavorites.length > 0`，但 poiFavorites
                     * 只在 user 切到「收藏」 tab 才 fetch（line 664-681 lazy load），
@@ -1138,7 +1128,7 @@ export default function AddStopPage() {
                   {!searching && query.trim().length === 0 && category !== 'all' && (
                     <div className="tp-add-stop-empty">輸入「{CATEGORY_TABS.find((c) => c.key === category)?.label}」 相關關鍵字開始搜尋</div>
                   )}
-                  {!searching && query.trim().length >= 2 && searchResults.length === 0 && (
+                  {searchStatus === 'success' && searchResults.length === 0 && (
                     <div className="tp-add-stop-empty">沒有找到結果，換個關鍵字試試</div>
                   )}
                   {searchResults.length > 0 && (() => {
@@ -1220,6 +1210,7 @@ export default function AddStopPage() {
 
               {tab === 'favorites' && (
                 <>
+                  {favoritesStatus === 'error' && <div role="alert" className="tp-add-stop-empty">{favoritesError} <button type="button" onClick={retryFavorites}>重試載入收藏</button></div>}
                   {savedLoading && <div className="tp-add-stop-empty">載入收藏⋯</div>}
                   {!savedLoading && poiFavorites !== null && poiFavorites.length === 0 && (
                     <div className="tp-add-stop-empty">

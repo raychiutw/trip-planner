@@ -30,7 +30,7 @@ import {
   type PoiSearchTab as Tab,
   type PoiSearchCategory,
 } from '../lib/poiSearchHelpers';
-import type { PoiFavorite } from '../types/api';
+import { usePoiFavorites } from '../hooks/usePoiFavorites';
 // v2.31.98: 自訂 tab — 同 AddStopPage 共用 CustomPoiForm shared component。
 import { CustomPoiForm, type CustomPoiCoord } from '../components/trip/CustomPoiForm';
 import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
@@ -579,7 +579,16 @@ export default function ChangePoiPage() {
   // 非 AddStopPage 的 Record）。null = 沿用 mapGooglePrimaryTypeToPoiType(selected.category)。
   // 換選取 / 改搜尋 / 切 tab 都 reset null → 每次選取回到自動推導預設。
   const [searchCatOverride, setSearchCatOverride] = useState<PoiType | null>(null);
-  const [favorites, setFavorites] = useState<PoiFavorite[] | null>(null);
+  const selectionKey = JSON.stringify([tripId, entryId, mode, newDayNum, tab, query, region, category]);
+  const [selectionScope, setSelectionScope] = useState(selectionKey);
+  // Clear the previous intent before React commits the new picker view.
+  if (selectionScope !== selectionKey) {
+    setSelectionScope(selectionKey);
+    setSelected(null);
+    setSearchCatOverride(null);
+  }
+
+  const { favorites, status: favoritesStatus, error: favoritesError, retry: retryFavorites } = usePoiFavorites(tab === 'favorites');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // v2.27.0 OCC token: GET on mount, attach to PUT /poi-id + POST /alternates body so
@@ -600,7 +609,7 @@ export default function ChangePoiPage() {
   // 就 render 會卡在 Tokyo Station fallback 改不掉 — 必須等 fetch 完才能 mount。
   const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
-  const { results: searchResults, searching } = usePoiSearch({
+  const { results: searchResults, searching, status: searchStatus, error: searchError, retry: retrySearch } = usePoiSearch({
     enabled: tab === 'search',
     query: query.trim(),
     region: regionToApiParam(region),
@@ -645,17 +654,6 @@ export default function ChangePoiPage() {
     [category, favorites],
   );
 
-  useEffect(() => {
-    if (tab !== 'favorites' || favorites !== null) return;
-    let cancelled = false;
-    apiFetch<PoiFavorite[]>('/poi-favorites')
-      .then((data) => {
-        if (cancelled) return;
-        setFavorites(data);
-      })
-      .catch(() => undefined);
-    return () => { cancelled = true; };
-  }, [tab, favorites]);
 
   useEffect(() => {
     // v2.32.0: mode=new 不對應任何既有 entry，跳過 entryPoisVersion fetch（OCC token
@@ -976,13 +974,14 @@ export default function ChangePoiPage() {
 
             {categoryFilter}
 
+            {searchStatus === 'error' && <div role="alert" className="tp-change-poi-empty">{searchError} <button type="button" onClick={retrySearch}>重試搜尋</button></div>}
             {searching && <div className="tp-change-poi-empty">搜尋中⋯</div>}
             {!searching && query.trim().length === 0 && (
               <div className="tp-change-poi-empty">
                 輸入關鍵字搜尋，或切到「收藏」分頁從你儲存的景點選取
               </div>
             )}
-            {!searching && query.trim().length >= 2 && searchResults.length === 0 && (
+            {searchStatus === 'success' && searchResults.length === 0 && (
               <div className="tp-change-poi-empty">沒有找到結果，換個關鍵字試試</div>
             )}
             {!searching && searchResults.length > 0 && filteredSearchResults.length === 0 && (
@@ -1050,7 +1049,8 @@ export default function ChangePoiPage() {
         {tab === 'favorites' && (
           <>
             {categoryFilter}
-            {!favorites && <div className="tp-change-poi-empty">載入收藏⋯</div>}
+            {favoritesStatus === 'error' && <div role="alert" className="tp-change-poi-empty">{favoritesError} <button type="button" onClick={retryFavorites}>重試載入收藏</button></div>}
+            {favoritesStatus === 'loading' && <div className="tp-change-poi-empty">載入收藏⋯</div>}
             {favorites?.length === 0 && (
               <div className="tp-change-poi-empty">
                 <div className="tp-change-poi-empty-icon"><Icon name="heart" /></div>

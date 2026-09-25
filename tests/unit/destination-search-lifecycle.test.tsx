@@ -80,9 +80,8 @@ it.each([false,true])('目的地頁面 edit=%s：失敗能重試並保留已選�
 it.each(['region','disabled','short'] as const)('切換 %s 後忽略舊搜尋錯誤，狀態只屬於目前範圍', async (change) => {
   vi.useFakeTimers({toFake:['setTimeout','clearTimeout']});
   let finish!: (response:Response) => void;
-  const onError = vi.fn();
   search = async () => new Promise(resolve => { finish = resolve; });
-  const {result,rerender} = renderHook(props => usePoiSearch({...props,onError}),
+  const {result,rerender} = renderHook(props => usePoiSearch(props),
     {initialProps:{query:'東京',region:'JP',enabled:true}});
   await tick();
   rerender({query:change === 'short' ? '東' : '東京',region:change === 'region' ? 'TW' : 'JP',enabled:change !== 'disabled'});
@@ -90,5 +89,4 @@ it.each(['region','disabled','short'] as const)('切換 %s 後忽略舊搜尋錯
   expect(result.current.error).toBeNull();
   expect(result.current.results).toEqual([]);
   expect(result.current.status).toBe(change === 'region' ? 'loading' : 'idle');
-  expect(onError).not.toHaveBeenCalled();
 });
