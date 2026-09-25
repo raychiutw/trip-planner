@@ -1,5 +1,5 @@
 /** Inline chat consent layout selected in #1348 prototype C. Content comes from the server. */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface AiDataDisclosure {
   version: string;
@@ -36,9 +36,10 @@ const STYLES = `
 @media(max-width:600px){.tp-ai-data-details{grid-template-columns:1fr}.tp-ai-data-card{padding:15px;margin:8px 10px 0}}
 `;
 
-export default function AiDataConsentCard({ state, message, busy, error, onAccept, onDecline, onRevoke, onRetry, onCancel }: {
+export default function AiDataConsentCard({ state, message, actionLabel, busy, error, onAccept, onDecline, onRevoke, onRetry, onCancel }: {
   state: AiDataConsentState | null;
   message: string;
+  actionLabel?: string;
   busy: boolean;
   error: string | null;
   onAccept: () => void;
@@ -48,11 +49,13 @@ export default function AiDataConsentCard({ state, message, busy, error, onAccep
   onCancel: () => void;
 }) {
   const [checked, setChecked] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { heading.current?.focus({ preventScroll: true }); }, []);
   useEffect(() => setChecked(false), [state?.disclosure?.version]);
   const disclosure = state?.disclosure;
   return <section className="tp-ai-data-card" aria-labelledby="tp-ai-data-title" data-testid="ai-data-consent-card">
     <style>{STYLES}</style>
-    <h2 id="tp-ai-data-title">{message ? '送出前，先確認 AI 資料使用' : 'AI 資料同意管理'}</h2>
+    <h2 id="tp-ai-data-title" ref={heading} tabIndex={-1}>{actionLabel ? `${actionLabel}前，先確認 AI 資料使用` : message ? '送出前，先確認 AI 資料使用' : 'AI 資料同意管理'}</h2>
     {!disclosure ? <>
       <p>目前無法取得資料處理說明。訊息會保留，請稍後重試。</p>
       <div className="tp-ai-data-actions"><button className="tp-ai-data-secondary" type="button" onClick={onCancel}>稍後再說</button><button className="tp-ai-data-primary" type="button" onClick={onRetry} disabled={busy}>重新載入</button></div>
@@ -66,10 +69,11 @@ export default function AiDataConsentCard({ state, message, busy, error, onAccep
         <div><strong>撤回方式</strong>{disclosure.revocation}</div>
       </div>
       {message && <p className="tp-ai-data-quote">待送出：「{message}」</p>}
+      {actionLabel && <p className="tp-ai-data-quote">待執行：{actionLabel}</p>}
       {state?.status !== 'current' && <label className="tp-ai-data-check"><input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} disabled={busy} />我已閱讀並同意此版本 AI 資料處理說明</label>}
       {error && <p role="alert" className="tp-ai-data-error">{error}</p>}
       <div className="tp-ai-data-actions">
-        {state?.status === 'current' ? <><button className="tp-ai-data-secondary" type="button" onClick={onCancel}>返回聊天</button><button className="tp-ai-data-revoke" type="button" onClick={onRevoke} disabled={busy}>撤回 AI 資料同意</button></> : <><button className="tp-ai-data-secondary" type="button" onClick={onDecline} disabled={busy}>拒絕，保留訊息</button><button className="tp-ai-data-primary" type="button" onClick={onAccept} disabled={!checked || busy}>{busy ? '儲存中⋯' : message ? '同意並送出' : '同意此版本'}</button></>}
+        {state?.status === 'current' ? <><button className="tp-ai-data-secondary" type="button" onClick={onCancel}>{actionLabel ? '返回' : '返回聊天'}</button>{actionLabel ? <button className="tp-ai-data-primary" type="button" onClick={onRetry} disabled={busy}>重新確認並繼續</button> : <button className="tp-ai-data-revoke" type="button" onClick={onRevoke} disabled={busy}>撤回 AI 資料同意</button>}</> : <><button className="tp-ai-data-secondary" type="button" onClick={onDecline} disabled={busy}>{actionLabel ? '拒絕，保留原內容' : '拒絕，保留訊息'}</button><button className="tp-ai-data-primary" type="button" onClick={onAccept} disabled={!checked || busy}>{busy ? '儲存中⋯' : actionLabel ? '同意並繼續' : message ? '同意並送出' : '同意此版本'}</button></>}
       </div>
     </>}
   </section>;
