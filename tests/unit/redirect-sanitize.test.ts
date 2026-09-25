@@ -67,3 +67,8 @@ describe('sanitizeRedirectAfter — open-redirect rejection', () => {
     expect(sanitizeRedirectAfter({})).toBeNull();
   });
 });
+
+it.each(['/\t/evil.example','/\n/evil.example','/\r/evil.example'])('rejects browser-normalized authority %j', value => {
+  expect(new URL(value, 'https://tripline.example').origin).toBe('https://evil.example');
+  expect(sanitizeRedirectAfter(value)).toBeNull();
+});

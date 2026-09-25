@@ -31,6 +31,10 @@ const SCOPED_STYLES = `
      帶 transform 的祖先，左上角就跑掉了。 */
   position: relative;
 }
+.tp-login-label-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: var(--font-size-footnote); font-weight: 600;
+}
 .tp-login-form-side {
   width: 100%;
   display: flex; align-items: center; justify-content: center;
@@ -250,6 +254,14 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const inFlight = useRef(false);
+  const active = useRef(true);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const lockHeadingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
   // v2.33.47 round 7b LOW: lazy init via useState — 之前 mount-effect read 後
@@ -297,6 +309,8 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (inFlight.current || lockedRetryAfter !== null) return;
+    inFlight.current = true;
     setBannerError(null);
     setSubmitting(true);
     try {
@@ -304,6 +318,7 @@ export default function LoginPage() {
         method: 'POST',
         body: JSON.stringify({ email: email.trim(), password }),
       });
+      if (!active.current) return;
       if (res.ok) {
         clearFailure();
         // V2 共編：若有 invitation token，嘗試接受 → 成功則導到該 trip
@@ -315,6 +330,7 @@ export default function LoginPage() {
             });
             if (acceptRes.ok) {
               const data = (await acceptRes.json()) as { tripId: string };
+              if (!active.current) return;
               window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
               return;
             }
@@ -323,11 +339,12 @@ export default function LoginPage() {
             // network error → fall through
           }
         }
-        navigate(redirectAfter ?? '/trips');
+        if (active.current) navigate(redirectAfter ?? '/trips');
         return;
       }
 
       const errJson = (await res.json().catch(() => null)) as ApiError | null;
+      if (!active.current) return;
       const code = errJson?.error?.code ?? 'UNKNOWN';
       switch (code) {
         case 'LOGIN_INVALID_INPUT':
@@ -339,16 +356,18 @@ export default function LoginPage() {
           break;
         case 'LOGIN_RATE_LIMITED': {
           const retryAfter = res.headers.get('Retry-After');
-          setLockedRetryAfter(retryAfter ? Number(retryAfter) : 1800);
+          const seconds = retryAfter === null ? Number.NaN : Number(retryAfter);
+          setLockedRetryAfter(Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 1800);
           break;
         }
         default:
           setBannerError('登入失敗，請稍後再試');
       }
     } catch {
-      setBannerError('網路連線失敗，請檢查後再試');
+      if (active.current) setBannerError('網路連線失敗，請檢查後再試');
     } finally {
-      setSubmitting(false);
+      inFlight.current = false;
+      if (active.current) setSubmitting(false);
     }
   }
 
@@ -379,6 +398,14 @@ export default function LoginPage() {
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lockedRetryAfter !== null]);
+
+  const isLocked = lockedRetryAfter !== null;
+  const wasLocked = useRef(false);
+  useEffect(() => {
+    if (isLocked) lockHeadingRef.current?.focus();
+    else if (wasLocked.current) emailRef.current?.focus();
+    wasLocked.current = isLocked;
+  }, [isLocked]);
 
   // Lockout view — single-column (no brand hero, full-bleed alarming UX)
   if (lockedRetryAfter !== null) {
@@ -412,11 +439,13 @@ export default function LoginPage() {
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <h1 className="tp-login-headline" style={{ margin: '0 0 8px' }}>登入嘗試太多次</h1>
+          <h1 ref={lockHeadingRef} tabIndex={-1} className="tp-login-headline" style={{ margin: '0 0 8px' }}>登入嘗試太多次</h1>
           <p style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-subheadline)', margin: '0 0 16px' }}>
             為了保護帳號安全，我們暫時鎖定了登入功能。
           </p>
           <div
+            role="timer"
+            aria-label="距離可再次登入的時間"
             data-testid="login-locked-countdown"
             style={{
               fontFamily: "'SF Mono', ui-monospace, monospace",
@@ -485,10 +514,11 @@ export default function LoginPage() {
 
         {bannerError && <ErrorBanner message={bannerError} testId="login-banner-error" />}
 
-        <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
+        <form className="tp-form tp-form--auth" onSubmit={handleSubmit} aria-busy={submitting} noValidate>
           <div className="tp-form-row">
             <label htmlFor="login-email">電子郵件</label>
             <input
+              ref={emailRef}
               id="login-email"
               type="email"
               autoComplete="email"
@@ -499,10 +529,10 @@ export default function LoginPage() {
             />
           </div>
           <div className="tp-form-row">
-            <label htmlFor="login-password">
-              密碼
+            <div className="tp-login-label-row">
+              <label htmlFor="login-password">密碼</label>
               <a href="/login/forgot" className="tp-hint-link" data-testid="login-forgot-link">忘記密碼？</a>
-            </label>
+            </div>
             <input
               id="login-password"
               type="password"
