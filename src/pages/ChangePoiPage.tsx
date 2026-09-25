@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import OperationShell from '../components/shell/OperationShell';
+import CustomPoiDraftGuard from '../components/trip/CustomPoiDraftGuard';
 import Icon from '../components/shared/Icon';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useEntryTarget } from '../hooks/useEntryTarget';
@@ -37,6 +38,7 @@ import { CustomPoiForm, type CustomPoiCoord } from '../components/trip/CustomPoi
 import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
 import {
   selectDefaultCenter,
+  isValidCoord,
   type Coord as PickerCoord,
 } from '../lib/locationPicker';
 
@@ -540,6 +542,11 @@ interface SelectedPoi {
 
 
 export default function ChangePoiPage() {
+  const { tripId, entryId } = useParams();
+  return <ChangePoiEditor key={`${tripId}:${entryId}`} />;
+}
+
+function ChangePoiEditor() {
   const { tripId, entryId: entryIdParam } = useParams<{ tripId: string; entryId: string }>();
   const entryId = Number(entryIdParam);
   const navigate = useNavigate();
@@ -601,11 +608,19 @@ export default function ChangePoiPage() {
 
   // v2.31.98: 自訂 tab state（同 AddStopPage 模式）。
   const [customTitle, setCustomTitle] = useState('');
+  const [customAddress, setCustomAddress] = useState('');
+  const savedCustom = useRef(false);
+  const inFlight = useRef(false);
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   const [customCoord, setCustomCoord] = useState<CustomPoiCoord | null>(null);
   const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
   // 自訂 stop 無 Google 來源 → 預設 'attraction'，使用者用 CategoryPicker 可改。
   const [customCategory, setCustomCategory] = useState<PoiType>('attraction');
   const [customError, setCustomError] = useState<string | null>(null);
+  const customDirty = !!(customTitle || customAddress || customCoord || customHintConfirmed || customCategory !== 'attraction');
+  const discardCustom = () => { setCustomTitle(''); setCustomAddress(''); setCustomCoord(null); setCustomHintConfirmed(false); setCustomCategory('attraction'); setCustomError(null); };
+
   // v2.32.1 fix: 初值改 null（"未載入"），與「載入後是 0 個 destinations」區分。
   // LocationPickerMap 只用 mount 時的 initialCenter，若 customDestinations 還是 null
   // 就 render 會卡在 Tokyo Station fallback 改不掉 — 必須等 fetch 完才能 mount。
@@ -703,7 +718,7 @@ export default function ChangePoiPage() {
   }, [customDestinations]);
 
   const handleSubmit = useCallback(async () => {
-    if (!tripId || submitting) return;
+    if (!tripId || inFlight.current) return;
     // v2.32.0: mode=new 不需要 entryId，但需要 day param；其他 mode 需要 entryId。
     if (mode !== 'new' && !Number.isInteger(entryId)) return;
     if (mode === 'new' && !target.day) return;
@@ -712,7 +727,8 @@ export default function ChangePoiPage() {
     if (tab === 'custom') {
       const title = customTitle.trim();
       if (!title) { setCustomError('請輸入標題'); return; }
-      if (!customCoord) { setCustomError('請在地圖上選擇位置'); return; }
+      if (!isValidCoord(customCoord)) { setCustomError('請在地圖上選擇位置'); return; }
+      inFlight.current = true;
       setSubmitting(true);
       setError(null);
       try {
@@ -720,7 +736,9 @@ export default function ChangePoiPage() {
         if (mode === 'new') {
         const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', poi_type: customCategory };
           const r = await createEntry(tripId, newDayNum, body);
+          if (!active.current) return;
           if (!r.ok) throw new Error(`新增景點失敗 (${r.status}): ${r.message.slice(0, 200)}`);
+          savedCustom.current = true;
           const created = r.data ?? {};
           if (created.id) {
             navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
@@ -737,6 +755,7 @@ export default function ChangePoiPage() {
         const r = mode === 'alternate'
           ? await addAlternate(tripId, entryId, null, body)
           : await replaceMasterPoi(tripId, entryId, null, body);
+        if (!active.current) return;
         if (!r.ok) {
           if (r.status === 409) {
             if (r.code === 'DUPLICATE_POI') throw new Error('此景點已存在於這個停留點');
@@ -744,6 +763,7 @@ export default function ChangePoiPage() {
           }
           throw new Error(`${mode === 'alternate' ? '加備選' : '置換'}失敗 (${r.status}): ${r.message.slice(0, 200)}`);
         }
+        savedCustom.current = true;
         navigate(
           mode === 'alternate'
             ? `/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`
@@ -752,12 +772,15 @@ export default function ChangePoiPage() {
         );
         return;
       } catch (err) {
+        if (!active.current) return;
+        inFlight.current = false;
         setError(err instanceof Error ? err.message : '失敗');
         setSubmitting(false);
         return;
       }
     }
     if (!selected) return;
+    inFlight.current = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -819,13 +842,14 @@ export default function ChangePoiPage() {
       }
       navigate(`/trips?selected=${encodeURIComponent(tripId)}`, { replace: true });
     } catch (err) {
+      inFlight.current = false;
       setError(err instanceof Error ? err.message : '置換景點失敗');
       setSubmitting(false);
     }
     // customCategory MUST be here: handleSubmit reads it for the custom-tab payload
     // (poi_type / type). v2.50.0 added the state but never threaded it in → the
     // callback closed over the initial 'attraction' → custom POIs always saved as 景點.
-  }, [selected, searchCatOverride, tripId, entryId, submitting, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord, customCategory, newDayNum, target.day]);
+  }, [selected, searchCatOverride, tripId, entryId, navigate, mode, buildSearchPoiBody, entryPoisVersion, tab, customTitle, customCoord, customCategory, newDayNum, target.day]);
 
   // v2.31.98: custom tab submit 啟動條件不同（要 title + coord，不要 selected）
   const submitDisabled = (mode === 'new' && !target.day) || (tab === 'custom'
@@ -876,6 +900,7 @@ export default function ChangePoiPage() {
           role="tab"
           aria-selected={tab === 'search'}
           className={`tp-change-poi-tab ${tab === 'search' ? 'is-active' : ''}`}
+          disabled={submitting}
           onClick={() => handleTabChange('search')}
           data-testid="change-poi-tab-search"
         >
@@ -886,6 +911,7 @@ export default function ChangePoiPage() {
           role="tab"
           aria-selected={tab === 'favorites'}
           className={`tp-change-poi-tab ${tab === 'favorites' ? 'is-active' : ''}`}
+          disabled={submitting}
           onClick={() => handleTabChange('favorites')}
           data-testid="change-poi-tab-favorites"
         >
@@ -896,6 +922,7 @@ export default function ChangePoiPage() {
           role="tab"
           aria-selected={tab === 'custom'}
           className={`tp-change-poi-tab ${tab === 'custom' ? 'is-active' : ''}`}
+          disabled={submitting}
           onClick={() => handleTabChange('custom')}
           data-testid="change-poi-tab-custom"
         >
@@ -1138,6 +1165,8 @@ export default function ChangePoiPage() {
         {tab === 'custom' && customDestinations !== null && (
           <CustomPoiForm
             title={customTitle}
+            disabled={submitting}
+            onAddressChange={setCustomAddress}
             onTitleChange={(v) => { setCustomTitle(v); setCustomError(null); }}
             coord={customCoord}
             onCoordChange={setCustomCoord}
@@ -1202,5 +1231,5 @@ export default function ChangePoiPage() {
     </OperationShell>
   );
 
-  return main;
+  return <><CustomPoiDraftGuard hasPending={() => !savedCustom.current && customDirty} onDiscard={discardCustom} busy={submitting} />{main}</>;
 }

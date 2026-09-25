@@ -49,6 +49,8 @@ import {
   type RegionOption,
 } from '../lib/poiSearchHelpers';
 import OperationShell from '../components/shell/OperationShell';
+import CustomPoiDraftGuard from '../components/trip/CustomPoiDraftGuard';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
@@ -635,6 +637,11 @@ const SCOPED_STYLES = `
 `;
 
 export default function AddStopPage() {
+  const { tripId } = useParams();
+  return <AddStopEditor key={tripId} />;
+}
+
+function AddStopEditor() {
   const auth = useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
   // #1162：走 useStackSearchParams（非裸 useSearchParams）—— 裸 setter 會把
@@ -679,6 +686,12 @@ export default function AddStopPage() {
   const [selectedSaved, setSelectedSaved] = useState<Set<number>>(new Set());
 
   const [customTitle, setCustomTitle] = useState('');
+  const [customAddress, setCustomAddress] = useState('');
+  const [discardTab, setDiscardTab] = useState<Tab | null>(null);
+  const savedCustom = useRef(false);
+  const inFlight = useRef(false);
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   const [customTime, setCustomTime] = useState('');
   const [customDuration, setCustomDuration] = useState('');
   const [customNote, setCustomNote] = useState('');
@@ -688,6 +701,9 @@ export default function AddStopPage() {
   const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
   // 自訂 stop 無 Google 來源 → 預設 'attraction'，使用者用 CategoryPicker 可改。
   const [customCategory, setCustomCategory] = useState<PoiType>('attraction');
+  const customDirty = !!(customTitle || customAddress || customTime || customDuration || customNote || customCoord || customHintConfirmed || customCategory !== 'attraction');
+  const discardCustom = () => { setCustomTitle(''); setCustomAddress(''); setCustomTime(''); setCustomDuration(''); setCustomNote(''); setCustomCoord(null); setCustomHintConfirmed(false); setCustomCategory('attraction'); setCustomError(null); };
+
   // 搜尋結果 per-result 分類覆寫（place_id → 使用者選的分類）。預設＝Google 自動推導。
   const [searchCatOverride, setSearchCatOverride] = useState<Record<string, PoiType>>({});
   const selectionKey = JSON.stringify([tripId, dayNum, tab, query, region, category]);
@@ -811,7 +827,7 @@ export default function AddStopPage() {
   }, [customDestinations]);
 
   const handleConfirm = useCallback(async () => {
-    if (submitting || !tripId || !hasDay) return;
+    if (inFlight.current || !tripId || !hasDay) return;
     setSubmitError(null);
 
     type Body = {
@@ -833,6 +849,7 @@ export default function AddStopPage() {
         setCustomError('請輸入標題');
         return;
       }
+      if (customDuration && (!Number.isSafeInteger(Number(customDuration)) || Number(customDuration) < 0)) { setCustomError('停留時間請輸入零或正整數分鐘'); return; }
       // v2.31.94: 自訂 stop 必須有 map pin 座標，否則 entry 會 silent drop from map
       if (!customCoord || !isValidCustomCoord(customCoord)) {
         setCustomError('請先在地圖上選擇位置');
@@ -840,6 +857,7 @@ export default function AddStopPage() {
       }
     }
 
+    inFlight.current = true;
     setSubmitting(true);
     try {
       let payloads: Body[] = [];
@@ -906,7 +924,7 @@ export default function AddStopPage() {
       void Promise.all(saved.map(result => result.recompute)).then(outcomes => {
         if (outcomes.some(ok => !ok)) showToast('景點已儲存，部分交通時間待更新', 'info');
       });
-      if (currentSelection.current !== selectionVisit) return;
+      if (!active.current || currentSelection.current !== selectionVisit) return;
       if (tab === 'search') setSelectedSearch(previous => new Set([...previous].filter(id => !savedIds.has(id))));
       if (tab === 'favorites') setSelectedSaved(previous => new Set([...previous].filter(id => !savedIds.has(id))));
       const failed = results.filter((r) => !r.ok);
@@ -914,12 +932,14 @@ export default function AddStopPage() {
         setSubmitError(`${failed.length}/${payloads.length} 個項目儲存失敗，請重試`);
         return;
       }
+      if (tab === 'custom') savedCustom.current = true;
       showToast(`已加入 ${payloads.length} 個景點`, 'success');
       handleBack();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : '儲存失敗');
+      if (active.current) setSubmitError(err instanceof Error ? err.message : '儲存失敗');
     } finally {
-      setSubmitting(false);
+      inFlight.current = false;
+      if (active.current) setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, searchCatOverride, tripId, dayNum, selectionVisit, hasDay]);
@@ -947,6 +967,9 @@ export default function AddStopPage() {
   return (
     <>
       <ToastContainer />
+      <CustomPoiDraftGuard hasPending={() => !savedCustom.current && customDirty} onDiscard={discardCustom} busy={submitting} />
+      <ConfirmModal open={discardTab !== null} title="捨棄未儲存的景點？" message="切換來源會清空這個自訂景點。" confirmLabel="捨棄" cancelLabel="繼續編輯" busy={submitting}
+        onCancel={() => setDiscardTab(null)} onConfirm={() => { if (discardTab) { discardCustom(); setTab(discardTab); setDiscardTab(null); } }} />
       <OperationShell
         shellClassName="tp-add-stop-page-shell"
         testId="add-stop-page"
@@ -979,6 +1002,7 @@ export default function AddStopPage() {
                       role="tab"
                       aria-selected={isActive}
                       className={`tp-add-stop-daypicker-chip ${isActive ? 'is-active' : ''}`}
+                      disabled={submitting}
                       onClick={() => handlePickDay(d.dayNum)}
                       data-testid={`add-stop-daypicker-chip-${d.dayNum}`}
                     >
@@ -1007,7 +1031,8 @@ export default function AddStopPage() {
                   role="tab"
                   aria-selected={tab === t.key}
                   className={`tp-add-stop-tab ${tab === t.key ? 'is-active' : ''}`}
-                  onClick={() => setTab(t.key)}
+                  disabled={submitting}
+                  onClick={() => { if (tab === 'custom' && t.key !== tab && customDirty) setDiscardTab(t.key); else setTab(t.key); }}
                   data-testid={`add-stop-tab-${t.key}`}
                 >
                   {t.label}
@@ -1281,6 +1306,8 @@ export default function AddStopPage() {
                 <form onSubmit={(e) => { e.preventDefault(); void handleConfirm(); }}>
                   <CustomPoiForm
                     title={customTitle}
+                    disabled={submitting}
+                    onAddressChange={setCustomAddress}
                     onTitleChange={(v) => { setCustomTitle(v); setCustomError(null); }}
                     coord={customCoord}
                     onCoordChange={setCustomCoord}
