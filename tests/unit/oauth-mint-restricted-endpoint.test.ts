@@ -51,6 +51,8 @@ function makeDb(opts: { request?: unknown; owner?: unknown } = {}) {
     _runs: runs,
     prepare(sql: string) {
       return {
+        // No active AI data disclosure is seeded in this legacy OAuth test.
+        first: async () => null,
         bind(...args: unknown[]) {
           return {
             first: async () => {

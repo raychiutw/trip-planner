@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 async function setup(page, history = []) {
-  const state = { rows: history, sends: [], stops: [], listFails: false };
+  const state = { rows: history, sends: [], stops: [], listFails: false, consent: null, decisions: [], consentFailures: 0, consentLostResponse: false, rejectNextSend: false, decisionBarrier: null };
   await page.addInitScript(() => {
     window.chatEvents = [];
     window.EventSource = class {
@@ -23,8 +23,20 @@ async function setup(page, history = []) {
     if (path === '/api/trips/a') return reply({ id: 'a', name: 'A 行程', published: 1, countries: 'JP' });
     if (path === '/api/trips/a/days') return reply([{ id: 1, dayNum: 1, date: '2026-09-21', timeline: [] }]);
     if (path === '/api/account/ai-authorization') return reply({ authorized: true });
+    if (path === '/api/account/ai-data-consent') {
+      if (request.method() === 'POST' || request.method() === 'DELETE') {
+        const decision = request.postDataJSON(); state.decisions.push(decision);
+        if (state.decisionBarrier) await state.decisionBarrier;
+        if (state.consentFailures > 0) { state.consentFailures--; return reply({ error: { code: 'SYS_DB_ERROR' } }, 503); }
+        state.consent = { ...state.consent, status: decision.decision === 'accept' ? 'current' : decision.decision === 'revoke' ? 'revoked' : 'declined',
+          acceptedVersion: decision.decision === 'accept' ? decision.version : null };
+        if (state.consentLostResponse) { state.consentLostResponse = false; return reply({ error: { code: 'SYS_DB_ERROR' } }, 503); }
+      }
+      return reply(state.consent ?? { disclosure: null, status: 'unconfigured', acceptedVersion: null, acceptedAt: null, decidedAt: null });
+    }
     if (path === '/api/requests') {
       if (request.method() === 'POST') {
+        if (state.rejectNextSend) { state.rejectNextSend = false; return reply({ error: { code: 'AI_DATA_CONSENT_REQUIRED' } }, 403); }
         const body = request.postDataJSON(); state.sends.push(body);
         const row = { ...body, id: 42, status: 'processing', createdAt: '2026-09-21T01:00:00Z' };
         state.rows.push(row); return reply(row);
@@ -98,6 +110,128 @@ test('a failed trip list can be retried in mobile chat without becoming an empty
   state.listFails = false; await page.getByTestId('chat-retry-trips').click();
   await expect(page.getByTestId('chat-input')).toBeEnabled();
   await expect(page.getByTestId('chat-trip-title')).toContainText('A 行程');
+});
+
+test('versioned AI data consent keeps the draft and sends only after an explicit choice', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 600 });
+  const state = await setup(page);
+  state.consent = { disclosure: { version: 'test-v1', title: '測試版說明', processor: '測試處理方',
+    dataCategories: ['行程文字'], purpose: '回答測試訊息', revocation: '在帳戶設定撤回' },
+    status: 'not_accepted', acceptedVersion: null, acceptedAt: null, decidedAt: null };
+  await page.goto('/chat?tripId=a');
+  const input = page.getByTestId('chat-input');
+  await input.fill('保留這段草稿');
+  await input.press('Enter');
+  const card = page.getByTestId('ai-data-consent-card');
+  await expect(card).toContainText('測試版說明 · 版本 test-v1');
+  await expect(input).toHaveValue('保留這段草稿');
+  await expect(input).not.toBeFocused();
+  const composer = page.locator('.tp-chat-composer');
+  await expect.poll(async () => (await composer.boundingBox()).y + (await composer.boundingBox()).height).toBeLessThanOrEqual(600);
+  expect(state.sends).toHaveLength(0);
+  const accept = card.getByRole('button', { name: '同意並送出' });
+  await expect(accept).toBeDisabled();
+  await card.getByRole('checkbox').check();
+  await accept.click();
+  await expect(card).not.toBeVisible();
+  await expect.poll(() => state.sends.length).toBe(1);
+  expect(state.decisions).toMatchObject([{ version: 'test-v1', decision: 'accept' }]);
+  expect(state.sends).toEqual([{ tripId: 'a', message: '保留這段草稿' }]);
+});
+
+test('current consent can be withdrawn from chat before another AI request', async ({ page }) => {
+  const state = await setup(page);
+  state.consent = { disclosure: { version: 'test-v1', title: '測試版說明', processor: '測試處理方',
+    dataCategories: ['行程文字'], purpose: '回答測試訊息', revocation: '在聊天頁撤回' },
+    status: 'current', acceptedVersion: 'test-v1', acceptedAt: '2026-09-26T00:00:00Z', decidedAt: '2026-09-26T00:00:00Z' };
+  await page.goto('/chat?tripId=a');
+  await page.getByRole('button', { name: '管理 AI 資料同意' }).click();
+  const card = page.getByTestId('ai-data-consent-card');
+  await expect(card).toContainText('你已同意目前版本');
+  await card.getByRole('button', { name: '撤回 AI 資料同意' }).click();
+  await expect(card).not.toBeVisible();
+  expect(state.decisions).toMatchObject([{ version: 'test-v1', decision: 'revoke' }]);
+  const input = page.getByTestId('chat-input');
+  await input.fill('撤回後的草稿'); await input.press('Enter');
+  await expect(card).toContainText('撤回後的草稿');
+  expect(state.sends).toHaveLength(0);
+});
+
+test('failed consent save keeps the draft and reuses the decision key on retry', async ({ page }) => {
+  const state = await setup(page);
+  state.consent = { disclosure: { version: 'test-v1', title: '測試版說明', processor: '測試處理方',
+    dataCategories: ['行程文字'], purpose: '回答測試訊息', revocation: '在聊天頁撤回' },
+    status: 'not_accepted', acceptedVersion: null, acceptedAt: null, decidedAt: null };
+  state.consentFailures = 1;
+  await page.goto('/chat?tripId=a');
+  const input = page.getByTestId('chat-input'); await input.fill('失敗後仍要送出的草稿'); await input.press('Enter');
+  const card = page.getByTestId('ai-data-consent-card');
+  await card.getByRole('checkbox').check();
+  await card.getByRole('button', { name: '同意並送出' }).click();
+  await expect(card.getByRole('alert')).toContainText('訊息仍保留');
+  await expect(input).toHaveValue('失敗後仍要送出的草稿');
+  expect(state.sends).toHaveLength(0);
+  await card.getByRole('button', { name: '同意並送出' }).click();
+  await expect.poll(() => state.sends.length).toBe(1);
+  expect(state.decisions).toHaveLength(2);
+  expect(state.decisions[1].requestId).toBe(state.decisions[0].requestId);
+});
+
+test('a lost accept response resumes the pending send after status confirms acceptance', async ({ page }) => {
+  const state = await setup(page);
+  state.consent = { disclosure: { version: 'test-v1', title: '測試版說明', processor: '測試處理方',
+    dataCategories: ['行程文字'], purpose: '回答測試訊息', revocation: '在聊天頁撤回' },
+    status: 'not_accepted', acceptedVersion: null, acceptedAt: null, decidedAt: null };
+  state.consentLostResponse = true;
+  await page.goto('/chat?tripId=a');
+  const input = page.getByTestId('chat-input'); await input.fill('回應遺失後續送'); await input.press('Enter');
+  const card = page.getByTestId('ai-data-consent-card');
+  await card.getByRole('checkbox').check();
+  await card.getByRole('button', { name: '同意並送出' }).click();
+  await expect.poll(() => state.sends.length).toBe(1);
+  expect(state.decisions).toHaveLength(1);
+  await expect(card).toHaveCount(0);
+});
+
+test('server consent rejection refreshes a changed version and preserves the attempted message', async ({ page }) => {
+  const state = await setup(page);
+  const disclosure = { version: 'test-v1', title: '測試版說明', processor: '測試處理方',
+    dataCategories: ['行程文字'], purpose: '回答測試訊息', revocation: '在聊天頁撤回' };
+  state.consent = { disclosure, status: 'current', acceptedVersion: 'test-v1', acceptedAt: null, decidedAt: null };
+  await page.goto('/chat?tripId=a');
+  const input = page.getByTestId('chat-input');
+  await expect(page.getByRole('button', { name: '管理 AI 資料同意' })).toBeVisible();
+  state.consent = { ...state.consent, disclosure: { ...disclosure, version: 'test-v2' }, status: 'outdated' };
+  state.rejectNextSend = true;
+  await input.fill('跨裝置更新後的草稿'); await input.press('Enter');
+  const card = page.getByTestId('ai-data-consent-card');
+  await expect(card).toContainText('版本 test-v2');
+  await expect(input).toHaveValue('跨裝置更新後的草稿');
+  await card.getByRole('checkbox').check();
+  await card.getByRole('button', { name: '同意並送出' }).click();
+  await expect.poll(() => state.sends.length).toBe(1);
+  expect(state.sends[0].message).toBe('跨裝置更新後的草稿');
+});
+
+test('a delayed consent decision cannot send into another trip', async ({ page }) => {
+  const state = await setup(page);
+  state.consent = { disclosure: { version: 'test-v1', title: '測試版說明', processor: '測試處理方',
+    dataCategories: ['行程文字'], purpose: '回答測試訊息', revocation: '在聊天頁撤回' },
+    status: 'not_accepted', acceptedVersion: null, acceptedAt: null, decidedAt: null };
+  let release;
+  state.decisionBarrier = new Promise(resolve => { release = resolve; });
+  await page.goto('/chat?tripId=a');
+  const input = page.getByTestId('chat-input'); await input.fill('A 的待送訊息'); await input.press('Enter');
+  const card = page.getByTestId('ai-data-consent-card');
+  await card.getByRole('checkbox').check();
+  await card.getByRole('button', { name: '同意並送出' }).click();
+  await expect.poll(() => state.decisions.length).toBe(1);
+  await pick(page, 'b');
+  await input.fill('B 的草稿');
+  release();
+  await expect(input).toHaveValue('B 的草稿');
+  await expect(card).toHaveCount(0);
+  expect(state.sends).toHaveLength(0);
 });
 
 

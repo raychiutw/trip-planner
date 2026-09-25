@@ -18,6 +18,7 @@ import { hasPermission, hasWritePermission, requireAuth, hasOpsScope } from './_
 import { AppError } from './_errors';
 import { json, parseJsonBody } from './_utils';
 import type { Env } from './_types';
+import { requireAiDataConsentForTrip } from './_aiDataConsent';
 
 // GET /api/requests
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -125,6 +126,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!await hasWritePermission(env.DB, auth, tripId)) {
     throw new AppError('PERM_DENIED');
   }
+  await requireAiDataConsentForTrip(env.DB, auth.userId, tripId);
 
   // 30 秒去重保護：防止因網路重試或使用者重複點擊造成重複寫入。
   // 只去重「仍在跑」的請求（open/processing）——終結狀態（failed/completed）不得遮蔽合法重送：
