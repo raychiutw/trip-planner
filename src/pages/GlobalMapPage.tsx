@@ -1,4 +1,5 @@
 /** Root map chooses an accessible trip; the trip map owns map data and controls. */
+import AuthStatus from '../components/shared/AuthStatus';
 import { Link, Navigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNewTrip } from '../contexts/NewTripContext';
@@ -11,10 +12,12 @@ import Icon from '../components/shared/Icon';
 const EMPTY_STATE_CLASSES = 'grid min-h-0 flex-1 place-items-center bg-[linear-gradient(135deg,var(--color-accent-subtle)_0%,var(--color-tertiary)_100%)] px-6 py-8';
 
 export default function GlobalMapPage() {
-  const { user } = useRequireAuth();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const { openModal: openNewTrip } = useNewTrip();
   const { trips, status, selectedTripId, retry } = useAccessibleTripSelection(user?.id);
 
+  if (!user) return <AppShell sidebar={<DesktopSidebarConnected />} main={<AuthStatus auth={auth} />} bottomNav={<GlobalBottomNav authed={false} />} />;
   if (status === 'loading') return null;
   if (selectedTripId) {
     return <Navigate to={`/trip/${encodeURIComponent(selectedTripId)}/map`} replace />;

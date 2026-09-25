@@ -18,11 +18,11 @@
  *   - Desktop ≥1024px: 3-pane via AppShell (sidebar | chat main | sheet)
  *   - Mobile <1024px: 1-pane chat + bottom nav
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useConversation } from '../hooks/useConversation';
 import type { ChatMessage } from '../lib/conversation';
 import { parseUtcDate } from '../lib/parseUtcDate';
@@ -464,8 +464,8 @@ export interface ChatPageProps {
 }
 
 export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps = {}) {
-  useRequireAuth();
-  const { user } = useCurrentUser();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [explicitTargetTripId, setExplicitTargetTripId] = useState(() => searchParams.get('tripId'));
@@ -904,12 +904,12 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   );
 
   // v2.31.86 embedded mode：skip AppShell（TripSheet 已是 nested context，重複會 broken layout）。
-  if (embedded) return main;
+  if (embedded) return user ? main : <AuthStatus auth={auth} />;
 
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
-      main={main}
+      main={user ? main : <AuthStatus auth={auth} />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
     />
   );

@@ -20,10 +20,10 @@
  *     metadata，但那支對一般使用者降級成 published-only，行程改為不公開後
  *     名稱全空 → 卡片顯示 tripId。單一來源即可。
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { readTripView } from '../lib/tripViewState';
 import { rememberScroll, recallScroll, restoreScrollTo } from '../lib/preserveScroll';
@@ -569,8 +569,8 @@ function cardMeta(trip: TripInfo): string {
 // 供 TripStackLayout 共用（owner「第三欄開啟後第二欄 header actions 消失」）。
 
 export default function TripsListPage() {
-  useRequireAuth();
-  const { user } = useCurrentUser();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [searchParams, setSearchParams] = useSearchParams();
   // v2.39.0: 分享連結 modal — 由 card ⋯ / 行程頁 ⋯ 的「分享連結」開啟。
@@ -1122,8 +1122,8 @@ export default function TripsListPage() {
       <style>{SCOPED_STYLES}</style>
       <AppShell
         sidebar={<DesktopSidebarConnected />}
-        main={main}
-        sheetPortalId={showEmbeddedTrip ? 'trip-sheet-portal' : undefined}
+        main={user ? main : <AuthStatus auth={auth} />}
+        sheetPortalId={user && showEmbeddedTrip ? 'trip-sheet-portal' : undefined}
         bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
       {shareTripId && (

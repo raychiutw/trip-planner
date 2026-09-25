@@ -16,6 +16,7 @@
  *
  * 不含原 ExplorePage 的 search/region/heart toggle — 那些留在 /explore。
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/apiClient';
@@ -311,7 +312,8 @@ const SCOPED_STYLES = `
 `;
 
 export default function PoiFavoritesPage() {
-  const { user } = useRequireAuth();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const navigate = useNavigate();
 
   const [favorites, setFavorites] = useState<PoiFavoriteRow[]>([]);
@@ -770,7 +772,7 @@ export default function PoiFavoritesPage() {
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
-      main={main}
+      main={user ? main : <AuthStatus auth={auth} />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
     />
   );
