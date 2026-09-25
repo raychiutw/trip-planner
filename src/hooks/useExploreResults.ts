@@ -29,6 +29,8 @@ export function useExploreResults(restored?: ExploreResults) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [moreError, setMoreError] = useState<string | null>(null);
+  // An observer can retain an older callback until React replaces its effect.
+  const automaticRetryBlocked = useRef(false);
   const flight = useRef<AbortController | null>(null);
   const active = useRef(true);
 
@@ -37,6 +39,7 @@ export function useExploreResults(restored?: ExploreResults) {
     flight.current?.abort();
     const controller = new AbortController();
     flight.current = controller;
+    automaticRetryBlocked.current = false;
     if (append) { setLoadingMore(true); setMoreError(null); }
     else { currentSnapshot.current = scope; setSnapshot(scope); setSearching(true); setLoadingMore(false); setError(null); setMoreError(null); }
     try {
@@ -60,7 +63,10 @@ export function useExploreResults(restored?: ExploreResults) {
       setSnapshot(updated);
     } catch {
       if (controller.signal.aborted || flight.current !== controller) return;
-      if (append) setMoreError('載入更多失敗，已保留目前結果');
+      if (append) {
+        automaticRetryBlocked.current = true;
+        setMoreError('載入更多失敗，已保留目前結果');
+      }
       else setError('搜尋失敗，請重試');
     } finally {
       if (flight.current === controller) { flight.current = null; setSearching(false); setLoadingMore(false); }
@@ -76,9 +82,9 @@ export function useExploreResults(restored?: ExploreResults) {
   }, [search]);
   const canLoadMore = !!snapshot.nextPageToken && snapshot.pagesLoaded < MAX_SEARCH_PAGES;
   const loadMore = useCallback((automatic = false) => {
-    if (currentSnapshot.current !== snapshot || flight.current || !snapshot.nextPageToken || snapshot.pagesLoaded >= MAX_SEARCH_PAGES || (automatic && moreError)) return;
+    if (currentSnapshot.current !== snapshot || flight.current || !snapshot.nextPageToken || snapshot.pagesLoaded >= MAX_SEARCH_PAGES || (automatic && automaticRetryBlocked.current)) return;
     return request(snapshot, true);
-  }, [snapshot, moreError, request]);
+  }, [snapshot, request]);
   return { snapshot, searching, loadingMore, error, moreError, canLoadMore, search, loadMore,
     retry: () => search(snapshot.query, snapshot.region) };
 }
