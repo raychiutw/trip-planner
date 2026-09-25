@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {apiFetchRaw} from '../lib/apiClient';
+import {ApiError} from '../lib/errors';
 
 export type Severity = 'high' | 'medium' | 'low';
 export type Dimension = 'timing' | 'distance' | 'meals' | 'sights' | 'hotel';
@@ -115,11 +116,15 @@ export function useTripHealthCheck(tripId: string) {
       if (!owner.alive) return;
       if (!response.ok) {
         if (body.error?.code === 'TRIP_EMPTY') setState(current => ({...current, entryCount: 0}));
+        if (body.error?.code === 'AI_DATA_CONSENT_REQUIRED' || body.error?.code === 'AI_DATA_CONSENT_OWNER_REQUIRED') {
+          throw new ApiError(body.error.code, response.status);
+        }
         throw new Error(body.error?.message ?? (response.status === 403 ? '沒有權限執行此行程健檢' : '健檢請求未確認，請重新讀取狀態'));
       }
       owner.latestRequestId = Math.max(owner.latestRequestId, body.report.requestId ?? 0);
       setState(current => ({...acceptReport(current, body.report), freshness: 'fresh'}));
     } catch (error) {
+      if (error instanceof ApiError && (error.code === 'AI_DATA_CONSENT_REQUIRED' || error.code === 'AI_DATA_CONSENT_OWNER_REQUIRED')) throw error;
       if (owner.alive) setState(current => ({...current, freshness: 'stale',
         error: error instanceof Error ? error.message : '健檢請求未確認，請重新讀取狀態'}));
     } finally {

@@ -32,7 +32,9 @@ vi.mock('../../src/hooks/useRequestSSE', () => ({
 
 const apiFetchMock = vi.fn();
 vi.mock('../../src/lib/apiClient', () => ({
-  apiFetch: (path: string, opts?: { method?: string }) => apiFetchMock(path, opts),
+  apiFetch: (path: string, opts?: { method?: string }) => path === '/account/ai-data-consent'
+    ? Promise.resolve({ disclosure: null, status: 'unconfigured', acceptedVersion: null, acceptedAt: null, decidedAt: null })
+    : apiFetchMock(path, opts),
 }));
 
 import ChatPage from '../../src/pages/ChatPage';

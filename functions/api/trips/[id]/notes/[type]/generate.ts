@@ -32,6 +32,7 @@ import { json } from '../../../../_utils';
 import { expireNoteAiJobs } from '../../../../_requestTermination';
 import { recordEmailEvent } from '../../../../_audit';
 import type { Env } from '../../../../_types';
+import { requireAiDataConsentForTrip } from '../../../../_aiDataConsent';
 
 // AI prompts per type — 對齊 design doc Premise 6
 // Backend 統一回繁體中文。Schema 對齊 trip_pretrip_notes / trip_emergency_contacts INSERT。
@@ -106,6 +107,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!(await hasWritePermission(env.DB, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
+  await requireAiDataConsentForTrip(env.DB, auth.userId, tripId);
 
   await expireNoteAiJobs(env.DB, tripId, docType);
 

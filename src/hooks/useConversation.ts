@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { apiFetch } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 import { mergeConversation, rowToMessages, type ChatMessage, type RawRequestRow } from '../lib/conversation';
 import { useChatPagination } from './useChatPagination';
 import { useRequestSSE } from './useRequestSSE';
@@ -121,7 +122,7 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
   }, [inflightId, stopping, applyTerminal, scope]);
 
   const sendMessage = useCallback(async (text: string, actor?: { email?: string; displayName?: string | null } | null) => {
-    if (!activeTripId || scopeRef.current !== scope || !scope.active || scope.sending || inflightId) return;
+    if (!activeTripId || scopeRef.current !== scope || !scope.active || scope.sending || inflightId) return false;
     scope.sending = true; setSending(true);
     setAnnouncement('正在送出訊息。');
     const now = Math.max(Date.now(), lastLocalId.current + 2);
@@ -134,18 +135,26 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
       const row = await apiFetch<{ id: number }>('/requests', {
         method: 'POST', body: JSON.stringify({ tripId: activeTripId, message: text }),
       });
-      if (scopeRef.current !== scope || !scope.active) return;
+      if (scopeRef.current !== scope || !scope.active) return false;
       setAnnouncement('AI 正在處理，可停止等待。');
       setMessages((previous) => mergeConversation([], previous.map((message) =>
         message.id === now || message.id === now + 1
           ? { ...message, requestId: row.id, ...(message.role === 'assistant' ? { pendingRequestId: row.id } : {}) }
           : message)));
+      return true;
     } catch (error) {
-      if (scopeRef.current !== scope || !scope.active) return;
+      if (scopeRef.current !== scope || !scope.active) return false;
+      if (error instanceof ApiError && (error.code === 'AI_DATA_CONSENT_REQUIRED' || error.code === 'AI_DATA_CONSENT_OWNER_REQUIRED')) {
+        setMessages((previous) => previous.filter((message) => message.id !== now && message.id !== now + 1));
+        const owner = error.code === 'AI_DATA_CONSENT_OWNER_REQUIRED';
+        setAnnouncement(owner ? '行程擁有者需要先同意目前的 AI 資料處理說明。' : '請先確認最新的 AI 資料處理說明。');
+        return owner ? 'owner_consent_required' : 'consent_required';
+      }
       setAnnouncement('訊息送出失敗，請查看錯誤。');
       setMessages((previous) => previous.map((message) => message.id === now + 1
         ? { ...message, text: `送出失敗：${error instanceof Error ? error.message : '網路錯誤'}`, pendingRequestId: null, failed: true }
         : message));
+      return false;
     } finally {
       scope.sending = false;
       if (scopeRef.current === scope && scope.active) setSending(false);

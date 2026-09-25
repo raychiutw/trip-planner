@@ -33,6 +33,7 @@ beforeEach(() => {
     if (path === '/api/oauth/userinfo') return response({ id: 'owner', email: 'owner@test.com', displayName: 'Owner' });
     if (path === '/api/my-trips') return response([{ tripId: 't1', name: '沖繩' }]);
     if (path === '/api/account/ai-authorization') return response({ authorized: true });
+    if (path === '/api/account/ai-data-consent') return response({ disclosure: null, status: 'unconfigured', acceptedVersion: null, acceptedAt: null, decidedAt: null });
     if (path === '/api/requests') return response({ items: history, hasMore: false });
     if (path === '/api/requests/42') {
       if (init?.method === 'PATCH') row = { ...row, ...JSON.parse(String(init.body)) };

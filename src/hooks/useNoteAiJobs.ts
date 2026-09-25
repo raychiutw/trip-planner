@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {apiFetch} from '../lib/apiClient';
+import {ApiError} from '../lib/errors';
 import type {NoteAiDocType} from '../components/trip-notes/NoteAiExclusionsDialog';
 
 type NoteAiStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed' | 'timedOut';
@@ -118,6 +119,7 @@ export function useNoteAiJobs(tripId: string | undefined, onCompleted: (job: Not
     if (!tripId || readStatus !== 'success' || pending.current.has(type) || isActiveAiJob(currentJobs.current[type])) return;
     const visit = lifetime.visit;
     pending.current.add(type); setSubmitting(new Set(pending.current)); setTriggerError('');
+    let consentBlocked = false;
     // Invalidate a read begun before this mutation; reconcile after the POST settles.
     lifetime.request++; inFlight.current = false;
     try {
@@ -130,12 +132,16 @@ export function useNoteAiJobs(tripId: string | undefined, onCompleted: (job: Not
       setJobs(currentJobs.current);
     } catch (error) {
       if (visit !== lifetime.visit) return;
+      if (error instanceof ApiError && (error.code === 'AI_DATA_CONSENT_REQUIRED' || error.code === 'AI_DATA_CONSENT_OWNER_REQUIRED')) {
+        consentBlocked = true;
+        throw error;
+      }
       setTriggerError(error instanceof Error ? error.message : '請確認任務狀態後再試');
       setReadStatus('error');
     } finally {
       if (visit === lifetime.visit) {
         pending.current.delete(type); setSubmitting(new Set(pending.current));
-        void refresh();
+        if (!consentBlocked) void refresh();
       }
     }
   };

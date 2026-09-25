@@ -30,6 +30,7 @@ import { updateRequest } from '../_requestTermination';
 import { recordAuthEvent } from '../_auth_audit';
 import { generateOpaqueToken, parseFormOrJson } from '../_utils';
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
+import { requireAiDataConsentForQueuedRequest } from '../_aiDataConsent';
 import type { Env } from '../_types';
 
 // 受限 token TTL 2h（同 downscope）：覆蓋單次 spawn 最長 90min + headroom；只能碰單一 trip，較長 TTL 不擴大 blast。
@@ -73,7 +74,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const reqRow = (await db
     .prepare('SELECT * FROM trip_requests WHERE id = ?')
     .bind(requestId)
-    .first()) as { trip_id?: string; status?: string } | null;
+    .first()) as { trip_id?: string; status?: string; submitted_by?: string } | null;
   if (!reqRow || !reqRow.trip_id) throw new AppError('DATA_NOT_FOUND', 'request 不存在');
   if (!MINTABLE_STATUSES.has(reqRow.status ?? '')) {
     if (reqRow.status === 'completed' || reqRow.status === 'failed') {
@@ -123,6 +124,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       console.error('[mint-restricted] park needs-consent request failed:', parkErr);
     }
     throw new AppError('PERM_DENIED', 'owner 未授權 tp-request（無 Consent）');
+  }
+
+  // A request may have entered the queue before consent was revoked or a new
+  // disclosure became active. Check again immediately before issuing a token.
+  try {
+    await requireAiDataConsentForQueuedRequest(db, ownerUserId, reqRow.submitted_by ?? null);
+  } catch (error) {
+    if (!(error instanceof AppError) || error.code !== 'AI_DATA_CONSENT_REQUIRED') throw error;
+    try {
+      await updateRequest(db, { ...reqRow, id: requestId }, {
+        status: 'failed', terminalReason: 'needs_consent',
+        reply: 'AI 資料同意已失效。請閱讀目前版本的說明並重新送出請求。',
+      }, { changedBy: 'system:mint-restricted', onlyIfActive: true });
+    } catch (parkError) {
+      console.error('[mint-restricted] park AI data consent request failed:', parkError);
+    }
+    throw error;
   }
 
   // 6. 以 owner 身份簽發受限 token（無 refresh；寫入權來自 user_id + restrict_trip gate + trip_permissions，
