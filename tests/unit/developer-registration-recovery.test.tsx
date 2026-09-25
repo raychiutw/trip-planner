@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { StrictMode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -45,7 +45,7 @@ it('maps server URI errors back to the original line and preserves the draft for
   fireEvent.change(screen.getByTestId('dev-app-new-uris'), { target: { value: uris } }); submit();
   expect(await screen.findByTestId('dev-app-new-error')).toHaveTextContent('第 3 行');
   expect(screen.getByTestId('dev-app-new-uris')).toHaveValue(uris);
-  expect(screen.getByTestId('dev-app-new-uris')).toHaveFocus();
+  await waitFor(() => expect(screen.getByTestId('dev-app-new-uris')).toHaveFocus());
   expect(screen.getByTestId('dev-app-new-uris')).toHaveAttribute('aria-invalid', 'true');
   expect(screen.getByTestId('dev-app-new-name')).toHaveValue('Planner');
   status = 201; fireEvent.change(screen.getByTestId('dev-app-new-uris'), { target: { value: 'https://example.com/good\n\nhttps://fixed.example/cb' } }); submit();
