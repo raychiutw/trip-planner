@@ -113,6 +113,9 @@ function createCheckSources(io = {}) {
     // fallback），前端 useRoute 已優雅降級（隱藏 polyline）。屬預期地理狀況非 code bug，
     // 不該每天觸發 critical。只精確比對此 error 字串 — 真正 upstream 故障（timeout/5xx/
     // parse，error 字串不同）仍照常上報。
+    // 2026-09-26：quota-estimate 的 502 MAPS_UPSTREAM_FAILED 是 daily-check 自己打出來的
+    //（唯一呼叫端，另有手動 quota:google），當次 run 已由 googleMapsQuota 來源回報；
+    // 每天同時段跑、24h 視窗會在隔天撈到同一筆並升級成 critical → 重複告警，故排除。
     var rows = await queryD1(
       "SELECT path, method, status, COUNT(*) as count, MAX(created_at) as lastOccurred " +
       "FROM api_logs " +
@@ -122,6 +125,7 @@ function createCheckSources(io = {}) {
       "  AND NOT (status = 404 AND path LIKE '/api/trips/%/docs/%') " +
       "  AND NOT (status = 405 AND source = 'anonymous') " +
       "  AND NOT (status = 502 AND path = '/api/route' AND error = 'MAPS_UPSTREAM_FAILED: Routes empty result') " +
+      "  AND NOT (status = 502 AND path = '/api/admin/quota-estimate' AND error LIKE 'MAPS_UPSTREAM_FAILED:%') " +
       "GROUP BY path, method, status " +
       "ORDER BY count DESC"
     );
