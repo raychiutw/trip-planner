@@ -224,14 +224,14 @@ export function mapRawToPrintData(meta: Raw, daysRaw: unknown, notesRaw: Raw | n
 /**
  * Load everything the print document needs in parallel:
  * trip meta + days (with timeline/travel/hotel) + 5-section trip notes.
- * Notes failure is non-fatal (older trips may 404) → empty notes.
+ * Every section is required: failed notes must not become a falsely complete export.
  */
-export async function loadTripPrintData(tripId: string): Promise<TripPrintData> {
+export async function loadTripPrintData(tripId: string, signal?: AbortSignal): Promise<TripPrintData> {
   const id = encodeURIComponent(tripId);
   const [meta, daysRaw, notesRaw] = await Promise.all([
-    apiFetch<Raw>(`/trips/${id}`),
-    apiFetch<Raw[]>(`/trips/${id}/days?all=1`),
-    apiFetch<Raw>(`/trips/${id}/notes`).catch(() => null),
+    apiFetch<Raw>(`/trips/${id}`, {signal}),
+    apiFetch<Raw[]>(`/trips/${id}/days?all=1`, {signal}),
+    apiFetch<Raw>(`/trips/${id}/notes`, {signal}),
   ]);
   return mapRawToPrintData(meta, daysRaw, notesRaw);
 }
