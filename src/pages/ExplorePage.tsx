@@ -9,6 +9,7 @@
  * Auth: useRequireAuth — page is for logged-in users.
  * TitleBar 右上 action 拔除 (v2.33.140) — back ← 已回 /favorites，重複入口。
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/react';
 import { TripSelect } from '../components/TripSelect';
@@ -412,7 +413,8 @@ const SCOPED_STYLES = `
 `;
 
 export default function ExplorePage() {
-  const { user } = useRequireAuth();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const navigate = useNavigate();
   const goBack = useNavigateBack('/favorites');
 
@@ -856,7 +858,7 @@ export default function ExplorePage() {
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
-      main={main}
+      main={user ? main : <AuthStatus auth={auth} />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
     />
   );

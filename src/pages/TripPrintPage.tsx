@@ -8,6 +8,7 @@
  * Design: ~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260530-101432.md
  * Mockup: docs/design-sessions/2026-05-30-trip-print-document.html (Variant A)
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/shared/Icon';
@@ -19,9 +20,9 @@ import { loadTripPrintData, type TripPrintData } from '../lib/tripPrintData';
 import { PRINT_CSS } from '../lib/tripPrintStyles';
 
 export default function TripPrintPage() {
-  useRequireAuth();
+  const auth = useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
-  return <PrintPreview key={tripId} tripId={tripId} />;
+  return auth.user ? <PrintPreview key={tripId} tripId={tripId} /> : <AuthStatus auth={auth} />;
 }
 
 function PrintPreview({tripId}: {tripId: string | undefined}) {

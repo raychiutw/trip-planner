@@ -21,6 +21,7 @@
  *   手機：OperationShell 整頁（bottomNav prop 保留既有 GlobalBottomNav）。
  *   詳見 docs/design-sessions/2026-07-21-desktop-third-column-panelization.html。
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import OperationShell from '../components/shell/OperationShell';
@@ -39,7 +40,6 @@ import { useNoteAiJobs, isActiveAiJob, type NoteAiJob } from '../hooks/useNoteAi
 import { apiFetch } from '../lib/apiClient';
 import { showToast } from '../components/shared/Toast';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { TripContext } from '../contexts/TripContext';
@@ -326,8 +326,8 @@ export default function TripNotesPage() {
 }
 
 function TripNotes() {
-  useRequireAuth();
-  const user = useCurrentUser();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const { tripId } = useParams<{ tripId: string }>();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
   // Trip name 從 TripLayout 提供的 TripContext 取；不在 layout 範圍內 (test) 時 fallback。
@@ -668,7 +668,7 @@ function TripNotes() {
       back={handleBack}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
     >
-      {bodyContent}
+      {user ? bodyContent : <AuthStatus auth={auth} />}
     </OperationShell>
   );
 }

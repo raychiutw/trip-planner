@@ -8,6 +8,7 @@
  *
  * 安全 UX：撤銷必須二次確認（modal）— 破壞性操作。
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -153,7 +154,8 @@ function relativeTime(ms: number): string {
 }
 
 export default function ConnectedAppsPage() {
-  const { user } = useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
+  const auth = useRequireAuth();
+  const { user } = auth; // V2 sole-auth: redirect to /login if no tripline_session
   const navigate = useNavigate();
   const [apps, setApps] = useState<ConnectedApp[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -224,7 +226,7 @@ export default function ConnectedAppsPage() {
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
-      main={<>
+      main={!user ? <AuthStatus auth={auth} /> : <>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-settings-shell" data-testid="connected-apps-page">
       <TitleBar title="已連結的應用程式" back={() => navigate('/account')} />

@@ -11,6 +11,7 @@
  *   - 「登出其他全部裝置」mass revoke（除當前外）
  *   - 異地裝置警示（不同 ip_hash_prefix → 警示樣式）— optional V2-P6 future
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -188,7 +189,8 @@ function readSessions(value: { current_sid: string | null; sessions: SessionRow[
 }
 
 export default function SessionsPage() {
-  const { user } = useRequireAuth();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
   const [readError, setReadError] = useState<string | null>(null);
@@ -261,7 +263,7 @@ export default function SessionsPage() {
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
-      main={<>
+      main={!user ? <AuthStatus auth={auth} /> : <>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-sessions-shell" data-testid="sessions-page">
       <TitleBar

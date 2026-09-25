@@ -1,4 +1,5 @@
 /** Developer-owned OAuth registry. Creation and one-time secret reveal live on the new-app page. */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -113,7 +114,8 @@ function statusPill(status: string): { className: string; label: string } {
 }
 
 export default function DeveloperAppsPage() {
-  const { user } = useRequireAuth();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const navigate = useNavigate();
   const [apps, setApps] = useState<ClientApp[] | null>(null);
   const [error, setError] = useState<'denied' | 'failed' | null>(null);
@@ -176,7 +178,7 @@ export default function DeveloperAppsPage() {
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
-      main={<>
+      main={!user ? <AuthStatus auth={auth} /> : <>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-dev-shell" data-testid="developer-apps-page">
       <TitleBar

@@ -23,6 +23,7 @@
  *   body hero 列右側（`.tp-ai-health-hero-top`，視覺樣式沿用同一組 ghost icon
  *   button class）。詳見 docs/design-sessions/2026-07-21-desktop-third-column-panelization.html。
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback } from 'react';
 import {useTripHealthCheck, type Severity, type Dimension, type Finding} from '../hooks/useTripHealthCheck';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -437,9 +438,11 @@ const SCOPED_STYLES = `
 `;
 
 export default function TripHealthCheckPage() {
-  const {user} = useRequireAuth();
+  const auth = useRequireAuth();
+  const { user } = auth;
   const {tripId} = useParams<{tripId: string}>();
-  return user && tripId ? <HealthReader key={tripId} tripId={tripId} /> : null;
+  if (!user) return <AuthStatus auth={auth} />;
+  return tripId ? <HealthReader key={tripId} tripId={tripId} /> : null;
 }
 
 function HealthReader({tripId}: {tripId: string}) {

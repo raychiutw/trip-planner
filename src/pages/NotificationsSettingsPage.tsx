@@ -5,6 +5,7 @@
  * Informational placeholder: notification settings are not available on this page.
  * Planned categories are readable content, not disabled controls.
  */
+import AuthStatus from '../components/shared/AuthStatus';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import AppShell from '../components/shell/AppShell';
@@ -97,7 +98,7 @@ const PLANNED_TYPES = [
 ];
 
 export default function NotificationsSettingsPage() {
-  useRequireAuth();
+  const auth = useRequireAuth();
   const navigate = useNavigate();
 
   const sidebar = <DesktopSidebarConnected />;
@@ -132,7 +133,7 @@ export default function NotificationsSettingsPage() {
   return (
     <>
       <style>{SCOPED_STYLES}</style>
-      <AppShell sidebar={sidebar} main={main} bottomNav={<GlobalBottomNav authed={true} />} />
+      <AppShell sidebar={sidebar} main={<>{!auth.user && <AuthStatus auth={auth} />}{main}</>} bottomNav={<GlobalBottomNav authed={true} />} />
     </>
   );
 }
