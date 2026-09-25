@@ -498,7 +498,7 @@ export default function AccountPage() {
       label: '應用程式',
       tone: 'accent',
       rows: [
-        { key: 'appearance', icon: 'palette', title: '外觀設定', helper: '主題色、深淺模式', to: '/account/appearance' },
+        { key: 'appearance', icon: 'palette', title: '外觀設定', helper: '跟隨系統、淺色或深色', to: '/account/appearance' },
         { key: 'notifications', icon: 'lightbulb', title: '通知設定', helper: '行程更新、旅伴邀請', to: '/account/notifications' },
       ],
     },

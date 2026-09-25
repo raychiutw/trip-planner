@@ -63,8 +63,8 @@ export default function AppearanceSettingsPage() {
       <div className="tp-appearance-inner">
         <section className="tp-appearance-section">
           <div className="tp-appearance-section-label">深淺模式</div>
-          <h2>跟系統 / 強制淺 / 強制深</h2>
-          <p className="tp-appearance-helper">沒選的話走「自動」依系統喜好。</p>
+          <h2>選擇顯示外觀</h2>
+          <p className="tp-appearance-helper">「跟隨系統」隨裝置切換；「淺色」與「深色」固定使用所選外觀。立即套用，並儲存在這個瀏覽器。</p>
           <ThemeToggle testId="appearance-theme" />
         </section>
       </div>

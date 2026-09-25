@@ -1,89 +1,44 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 
 interface PrintModeOptions {
-  isDark: boolean;
-  setIsDark: (value: boolean) => void;
+  setPrintAppearance: (active: boolean) => void;
 }
 
-/**
- * Hook to manage print mode.
- *
- * - Toggles `body.print-mode` + `body.theme-print` classes
- * - Manages `beforeprint` / `afterprint` events
- * - Temporarily disables dark mode and saves/restores the original theme
- */
-export function usePrintMode({ isDark, setIsDark }: PrintModeOptions) {
+/** Temporary print presentation; the theme module retains the user's preference. */
+export function usePrintMode({ setPrintAppearance }: PrintModeOptions) {
   const [isPrintMode, setIsPrintMode] = useState(false);
-  const wasDarkRef = useRef(false);
-  const prevThemeRef = useRef<string | null>(null);
+  const printing = useRef(false);
+  const prevTheme = useRef<string | null>(null);
 
-  /* Keep ref in sync so handlers always read the latest isDark without re-binding */
-  const isDarkRef = useRef(isDark);
-  useEffect(() => {
-    isDarkRef.current = isDark;
-  }, [isDark]);
-
-  /** Save current theme class and switch to theme-print */
-  function enterPrintTheme() {
+  const setPrinting = useCallback((active: boolean) => {
+    if (printing.current === active) return;
+    printing.current = active;
     const body = document.body;
-    const currentTheme = Array.from(body.classList).find((c) => c.startsWith('theme-') && c !== 'theme-print');
-    prevThemeRef.current = currentTheme || null;
-    if (currentTheme) body.classList.remove(currentTheme);
-    body.classList.add('theme-print');
-  }
+    if (active) {
+      prevTheme.current = Array.from(body.classList).find(c => c.startsWith('theme-') && c !== 'theme-print') ?? null;
+      if (prevTheme.current) body.classList.remove(prevTheme.current);
+    } else if (prevTheme.current) {
+      body.classList.add(prevTheme.current);
+      prevTheme.current = null;
+    }
+    body.classList.toggle('theme-print', active);
+    body.classList.toggle('print-mode', active);
+    setPrintAppearance(active);
+    setIsPrintMode(active);
+  }, [setPrintAppearance]);
 
-  /** Restore previous theme class */
-  function exitPrintTheme() {
-    const body = document.body;
-    body.classList.remove('theme-print');
-    if (prevThemeRef.current) body.classList.add(prevThemeRef.current);
-  }
-
-  /** Toggle print mode on/off. */
-  const togglePrint = useCallback(() => {
-    setIsPrintMode((prev) => {
-      const entering = !prev;
-
-      if (entering) {
-        wasDarkRef.current = isDarkRef.current;
-        if (isDarkRef.current) setIsDark(false);
-        enterPrintTheme();
-        document.body.classList.add('print-mode');
-      } else {
-        document.body.classList.remove('print-mode');
-        exitPrintTheme();
-        if (wasDarkRef.current) setIsDark(true);
-      }
-
-      return entering;
-    });
-  }, [setIsDark]);
-
-  /** Listen for native browser print events. */
+  const togglePrint = useCallback(() => setPrinting(!printing.current), [setPrinting]);
   useEffect(() => {
-    function onBeforePrint() {
-      wasDarkRef.current = isDarkRef.current;
-      if (isDarkRef.current) setIsDark(false);
-      enterPrintTheme();
-      document.body.classList.add('print-mode');
-      setIsPrintMode(true);
-    }
-
-    function onAfterPrint() {
-      document.body.classList.remove('print-mode');
-      exitPrintTheme();
-      if (wasDarkRef.current) setIsDark(true);
-      setIsPrintMode(false);
-    }
-
-    window.addEventListener('beforeprint', onBeforePrint);
-    window.addEventListener('afterprint', onAfterPrint);
-
+    const before = () => setPrinting(true);
+    const after = () => setPrinting(false);
+    window.addEventListener('beforeprint', before);
+    window.addEventListener('afterprint', after);
     return () => {
-      window.removeEventListener('beforeprint', onBeforePrint);
-      window.removeEventListener('afterprint', onAfterPrint);
+      window.removeEventListener('beforeprint', before);
+      window.removeEventListener('afterprint', after);
+      setPrinting(false);
     };
-  }, [setIsDark]);
+  }, [setPrinting]);
 
   return { isPrintMode, togglePrint };
 }

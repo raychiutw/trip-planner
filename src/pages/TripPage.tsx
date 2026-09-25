@@ -297,9 +297,9 @@ function TripPageInner(
   }, []);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
-  const { isDark, setIsDark } = useDarkMode();
+  const { isDark, setPrintAppearance } = useDarkMode();
 
-  const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
+  const { isPrintMode, togglePrint } = usePrintMode({ setPrintAppearance });
 
   /**
    * v2.31.46 #143：portal target lookup for embedded mode sticky map sheet。

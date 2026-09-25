@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 import { lsSet, lsGet } from '../lib/localStorage';
 
 export type ColorMode = 'light' | 'auto' | 'dark';
@@ -12,8 +12,7 @@ function resolveDark(mode: ColorMode): boolean {
   if (mode === 'light') return false;
   return (
     typeof window !== 'undefined' &&
-    window.matchMedia &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
+    !!window.matchMedia?.('(prefers-color-scheme: dark)').matches
   );
 }
 
@@ -35,53 +34,73 @@ function updateMetaThemeColor(dark: boolean) {
   }
 }
 
-/**
- * Hook to manage light/dark mode state.
- *
- * Supports three-way color mode (light / auto / dark).
- * Applies `body.dark` class and updates `<meta name="theme-color">`.
- */
-export function useDarkMode() {
-  // v2.33.40 round 4.5: 之前 readColorMode() 在 initial render 跑兩次（一次給
-  // colorMode、一次給 isDark），兩次都打 localStorage。改用單一 init 函式。
-  const [colorMode, setColorModeState] = useState<ColorMode>(readColorMode);
-  const [isDark, setIsDark] = useState(() => resolveDark(colorMode));
+interface ThemeState { colorMode: ColorMode; isDark: boolean; saveFailed: boolean }
+let state: ThemeState | undefined;
+let printing = false;
+const listeners = new Set<() => void>();
 
-  useEffect(() => {
-    updateMetaThemeColor(isDark);
-  }, [isDark]);
+function getSnapshot(): ThemeState {
+  if (!state) {
+    const colorMode = readColorMode();
+    state = { colorMode, isDark: resolveDark(colorMode), saveFailed: false };
+  }
+  return state;
+}
 
-  useEffect(() => {
-    if (isDark) {
-      document.body.classList.add('dark');
-    } else {
-      document.body.classList.remove('dark');
+function publish(colorMode = getSnapshot().colorMode, saveFailed = getSnapshot().saveFailed) {
+  const isDark = !printing && resolveDark(colorMode);
+  const previous = getSnapshot();
+  document.body.classList.toggle('dark', isDark);
+  updateMetaThemeColor(isDark);
+  if (previous.colorMode === colorMode && previous.isDark === isDark && previous.saveFailed === saveFailed) return;
+  state = { colorMode, isDark, saveFailed };
+  listeners.forEach(listener => listener());
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  // One set of environment listeners regardless of the number of hook consumers.
+  if (listeners.size === 1) startListening();
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) {
+      stopListening?.();
+      stopListening = undefined;
+      state = undefined;
+      printing = false;
     }
-  }, [isDark]);
+  };
+}
+let stopListening: (() => void) | undefined;
+function startListening() {
+  const media = window.matchMedia?.('(prefers-color-scheme: dark)');
+  const onSystemChange = () => publish();
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === 'tp-color-mode' || event.key === 'tp-dark') publish(readColorMode(), false);
+  };
+  media?.addEventListener('change', onSystemChange);
+  window.addEventListener('storage', onStorage);
+  publish();
+  stopListening = () => {
+    media?.removeEventListener('change', onSystemChange);
+    window.removeEventListener('storage', onStorage);
+  };
+}
 
-  useEffect(() => {
-    if (colorMode !== 'auto') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [colorMode]);
+function setColorMode(mode: ColorMode) {
+  publish(mode, !lsSet('color-mode', mode));
+}
 
-  const setColorMode = useCallback((mode: ColorMode) => {
-    lsSet('color-mode', mode);
-    setColorModeState(mode);
-    setIsDark(resolveDark(mode));
-  }, []);
+/** Print presentation never changes the saved preference; exit resolves the current environment. */
+function setPrintAppearance(active: boolean) {
+  printing = active;
+  publish();
+}
 
-  const toggleDark = useCallback(() => {
-    setIsDark((prev) => {
-      const next = !prev;
-      const mode = next ? 'dark' : 'light';
-      lsSet('color-mode', mode);
-      setColorModeState(mode);
-      return next;
-    });
-  }, []);
+function toggleDark() { setColorMode(getSnapshot().isDark ? 'light' : 'dark'); }
 
-  return { isDark, setIsDark, colorMode, setColorMode, toggleDark };
+/** Shared preference and resolved appearance for every mounted consumer. */
+export function useDarkMode() {
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot);
+  return { ...snapshot, setColorMode, setPrintAppearance, toggleDark };
 }
