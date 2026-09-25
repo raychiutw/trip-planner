@@ -48,34 +48,36 @@ describe('daily-check.js — queryApiErrors 對真實 SQL 的行為', () => {
     return sources.apiErrors.run();
   }
 
+  const QUOTA_MSG = 'Google Cloud Monitoring 無法取得用量（GOOGLE_CLOUD_SA_KEY / GOOGLE_CLOUD_PROJECT_ID 未設定或 API 失敗）';
+
   // 2026-09-26：daily-check 自己打 quota-estimate 撞 GCP 10s timeout → 502。當次 run 已由
   // googleMapsQuota 來源回報；隔天 run 的 24h 視窗又撈到同一筆並升級成 critical，重複告警。
   it('不重報 daily-check 自己打出的 quota-estimate 502 MAPS_UPSTREAM_FAILED', async () => {
-    const result = await runApiErrors([
-      ['/api/admin/quota-estimate', 502, 'MAPS_UPSTREAM_FAILED: Google Cloud Monitoring 無法取得用量（GOOGLE_CLOUD_SA_KEY / GOOGLE_CLOUD_PROJECT_ID 未設定或 API 失敗）'],
-    ]);
+    const result = await runApiErrors([['/api/admin/quota-estimate', 502, `MAPS_UPSTREAM_FAILED: ${QUOTA_MSG}`]]);
     expect(result).toMatchObject({ status: 'ok', total: 0 });
   });
 
-  // 精確比對：quota-estimate.ts 改訊息時排除會失效 → 往「照報」方向壞，不會靜默吞掉。
-  it('排除字串與 quota-estimate.ts 實際丟出的訊息一致', () => {
-    const endpointSrc = fs.readFileSync(path.resolve(__dirname, '../../functions/api/admin/quota-estimate.ts'), 'utf8');
-    expect(endpointSrc).toContain(
-      "'Google Cloud Monitoring 無法取得用量（GOOGLE_CLOUD_SA_KEY / GOOGLE_CLOUD_PROJECT_ID 未設定或 API 失敗）'",
-    );
+  // 精確比對：api_logs.error = middleware 組的 `${code}: ${detail}`；三處任一漂移排除就失效
+  // → 往「照報」方向壞，不會靜默吞掉。
+  it('排除字串與 quota-estimate.ts 丟出的 code + 訊息、middleware 組字格式一致', () => {
+    const read = (p: string) => fs.readFileSync(path.resolve(__dirname, '../..', p), 'utf8');
+    const escaped = QUOTA_MSG.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    expect(read('functions/api/admin/quota-estimate.ts')).toMatch(new RegExp(`'MAPS_UPSTREAM_FAILED',\\s*'${escaped}'`));
+    expect(read('functions/api/_middleware.ts')).toContain('`${err.code}: ${err.detail}`');
   });
 
-  it('quota-estimate 的其他 5xx、其他 502 訊息與其他 path 的 502 照常 critical', async () => {
+  it('被排除那筆與真實故障同批時，只扣掉被排除那筆，其餘照常 critical', async () => {
     const result = await runApiErrors([
+      ['/api/admin/quota-estimate', 502, `MAPS_UPSTREAM_FAILED: ${QUOTA_MSG}`],
       ['/api/admin/quota-estimate', 500, 'Internal error'],
       ['/api/admin/quota-estimate', 502, 'MAPS_UPSTREAM_FAILED: 未來新增的其他失敗情境'],
       ['/api/trips/t1/days', 502, 'MAPS_UPSTREAM_FAILED: Routes timeout'],
     ]);
-    expect(result.status).toBe('critical');
-    expect(result.errors.map((e: { path: string; status: number }) => `${e.path} ${e.status}`).sort()).toEqual([
-      '/api/admin/quota-estimate 500',
-      '/api/admin/quota-estimate 502',
-      '/api/trips/t1/days 502',
+    expect(result).toMatchObject({ status: 'critical', total: 3 });
+    expect(result.errors.map((e: { path: string; status: number; count: number }) => `${e.path} ${e.status} x${e.count}`).sort()).toEqual([
+      '/api/admin/quota-estimate 500 x1',
+      '/api/admin/quota-estimate 502 x1',
+      '/api/trips/t1/days 502 x1',
     ]);
   });
 });
