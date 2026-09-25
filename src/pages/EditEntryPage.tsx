@@ -1259,7 +1259,7 @@ export default function EditEntryPage() {
     return `新正選距離本日其他點約 ${km} km，可能跨區，前後車程會誤算。確定要設為正選？`;
   }, [altSwapConfirm, siblingMasterCoords]);
 
-  const editLifetime = useMemo(() => ({ active: true }), [tripId, entryId]);
+  const editLifetime = useMemo(() => ({ tripId, entryId, active: true }), [tripId, entryId]);
   useEffect(() => {
     editLifetime.active = true;
     return () => { editLifetime.active = false; };
