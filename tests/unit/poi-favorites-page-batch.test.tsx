@@ -55,6 +55,7 @@ function renderPage() {
 
 beforeEach(() => {
   apiFetchMock.mockReset();
+  window.scrollTo = vi.fn();
 });
 
 describe('PoiFavoritesPage — batch flow delete-only (DUC1)', () => {
@@ -108,5 +109,76 @@ describe('PoiFavoritesPage — batch flow delete-only (DUC1)', () => {
     fireEvent.click(screen.getByTestId('favorites-check-1'));
     // popover 不該存在 — 整個 element 都不該掛
     expect(document.querySelector('[data-testid*="trip-picker"]')).toBeNull();
+  });
+
+  it('跨篩選選取後，全選只加入目前結果，確認框列出完整操作集合', async () => {
+    apiFetchMock.mockResolvedValue([
+      { ...makeRow(1), poiName: '沖繩餐廳', poiType: 'restaurant' },
+      { ...makeRow(2), poiName: '沖繩海灘', poiType: 'attraction' },
+      { ...makeRow(3), poiName: '沖繩公園', poiType: 'attraction' },
+    ]);
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('favorites-check-1')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('favorites-check-1'));
+    fireEvent.click(screen.getByTestId('favorites-type-attraction'));
+    fireEvent.click(screen.getByTestId('favorites-check-2'));
+    fireEvent.click(screen.getByTestId('favorites-select-all'));
+    expect(screen.getByTestId('favorites-toolbar').textContent).toContain('已選 3 個');
+    fireEvent.click(screen.getByTestId('favorites-delete-selected'));
+    const dialog = screen.getByTestId('confirm-modal');
+    expect(dialog.textContent).toContain('沖繩餐廳');
+    expect(dialog.textContent).toContain('沖繩海灘');
+    expect(dialog.textContent).toContain('沖繩公園');
+  });
+
+  it('部分移除成功只保留失敗項，重試不重送已成功項', async () => {
+    const rows = [makeRow(1), makeRow(2), makeRow(3)];
+    let failTwo = true;
+    apiFetchMock.mockImplementation((path, init) => {
+      if (path === '/poi-favorites') return Promise.resolve(rows);
+      if (init?.method === 'DELETE' && path === '/poi-favorites/2' && failTwo) {
+        return Promise.reject(new Error('503'));
+      }
+      return Promise.resolve(undefined);
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('favorites-check-1')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('favorites-check-1'));
+    fireEvent.click(screen.getByTestId('favorites-select-all'));
+    fireEvent.click(screen.getByTestId('favorites-delete-selected'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('favorites-card-1')).toBeNull();
+      expect(screen.queryByTestId('favorites-card-3')).toBeNull();
+      expect((screen.getByTestId('favorites-check-2') as HTMLInputElement).checked).toBe(true);
+    });
+    expect(screen.getByTestId('favorites-toolbar').textContent).toContain('已選 1 個');
+    failTwo = false;
+    fireEvent.click(screen.getByTestId('favorites-delete-selected'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => expect(screen.getByTestId('favorites-empty')).toBeTruthy());
+    const deletes = apiFetchMock.mock.calls.filter(([, init]) => init?.method === 'DELETE').map(([path]) => path);
+    expect(deletes).toEqual([
+      '/poi-favorites/1', '/poi-favorites/2', '/poi-favorites/3', '/poi-favorites/2',
+    ]);
+  });
+
+  it('伺服器確認前保留收藏，等待時不能重複提交', async () => {
+    let completeDelete: (() => void) | undefined;
+    apiFetchMock.mockImplementation((path) => {
+      if (path === '/poi-favorites') return Promise.resolve([makeRow(1)]);
+      return new Promise<void>((resolve) => { completeDelete = resolve; });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('favorites-check-1')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('favorites-check-1'));
+    fireEvent.click(screen.getByTestId('favorites-delete-selected'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    expect(screen.getByTestId('favorites-card-1')).toBeTruthy();
+    expect(screen.getByTestId('favorites-delete-selected').hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByTestId('favorites-delete-selected'));
+    expect(apiFetchMock.mock.calls.filter(([, init]) => init?.method === 'DELETE')).toHaveLength(1);
+    completeDelete?.();
+    await waitFor(() => expect(screen.getByTestId('favorites-empty')).toBeTruthy());
   });
 });
