@@ -1,70 +1,238 @@
-<!doctype html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Prototype — 登入頁隱私權政策入口</title>
-  <link rel="stylesheet" href="../../css/tokens.css">
-  <style>
-    /* Raw @theme needs Tailwind compilation in the app; static prototype mirrors its tokens. */
-    :root { --color-background:#FFFBF5; --color-secondary:#FAF4EA; --color-tertiary:#F2EAD9; --color-foreground:#2A1F18; --color-muted:#6F5A47; --color-accent:#A97A4A; --color-accent-deep:#8A6038; --color-border:#E8DCCB; --radius-md:12px; --radius-xl:20px; --shadow-md:0 8px 24px rgba(42,31,24,.08); --shadow-lg:0 16px 40px rgba(42,31,24,.16); --font-size-headline:17px; --font-size-title:28px; --font-size-subheadline:15px; --font-size-footnote:13px; --font-size-caption:12px; }
-    body { margin:0; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--color-foreground); background:var(--color-secondary); }
-    .page { min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:48px 24px 110px; box-sizing:border-box; }
-    .home { position:absolute; top:16px; left:16px; color:var(--color-accent-deep); text-decoration:none; font-size:var(--font-size-callout); font-weight:600; }
-    .card { width:min(440px,100%); box-sizing:border-box; background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-xl); padding:40px 36px; box-shadow:var(--shadow-md); }
-    .brand { text-align:center; font-size:var(--font-size-headline); font-weight:800; margin-bottom:28px; }
-    .brand b { color:var(--color-accent); }
-    h1 { margin:0 0 8px; font-size:var(--font-size-title); }
-    .sub { color:var(--color-muted); margin:0 0 28px; font-size:var(--font-size-subheadline); }
-    label { display:block; margin:0 0 6px; font-weight:600; font-size:var(--font-size-subheadline); }
-    input { display:block; width:100%; box-sizing:border-box; margin:0 0 18px; padding:12px 14px; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-background); color:var(--color-foreground); font:inherit; }
-    .submit { width:100%; min-height:44px; border:0; border-radius:var(--radius-md); background:var(--color-accent); color:white; font:inherit; font-weight:700; }
-    .footer { text-align:center; color:var(--color-muted); font-size:var(--font-size-footnote); margin-top:26px; }
-    a { color:var(--color-accent-deep); font-weight:600; }
-    .inline { display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; }
-    .quiet { margin-top:16px; font-size:var(--font-size-caption); }
-    .separator { border-top:1px solid var(--color-border); padding-top:18px; }
-    .privacy-top { text-align:right; margin:-8px 0 18px; font-size:var(--font-size-footnote); }
-    .switcher { position:fixed; z-index:10; bottom:14px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:999px; background:var(--color-foreground); color:var(--color-background); box-shadow:var(--shadow-lg); white-space:nowrap; font-size:13px; }
-    .switcher button { border:0; border-radius:999px; width:32px; height:32px; background:var(--color-background); color:var(--color-foreground); font:inherit; cursor:pointer; }
-    .switcher a { color:var(--color-background); }
-    .baseline-note { position:fixed; top:12px; right:12px; max-width:200px; padding:7px 10px; border-radius:8px; background:var(--color-tertiary); font-size:12px; }
-    @media (max-width:480px) { .card { padding:32px 24px; } .baseline-note { display:none; } }
-  </style>
-</head>
-<body>
-  <!-- Throwaway UI prototype. Question: where should Login expose the existing Privacy policy without distracting from sign-in? Variants A/B/C are URL-stable via ?variant=. -->
-  <div class="page">
-    <a class="home" href="#home">‹ 返回首頁</a>
-    <main class="card">
-      <div class="brand">Tripline<b>.</b></div>
-      <h1>歡迎回來</h1>
-      <p class="sub">登入後繼續規劃你的行程。</p>
-      <div id="top-slot"></div>
-      <label for="email">電子郵件</label><input id="email" type="email" placeholder="name@example.com">
-      <label for="password">密碼</label><input id="password" type="password" placeholder="輸入密碼">
-      <button class="submit" type="button">登入</button>
-      <div id="footer-slot"></div>
-    </main>
-  </div>
-  <div class="baseline-note">基準版：登入頁只有「建立帳號」，沒有政策入口。</div>
-  <div class="switcher" aria-label="Prototype variants">
-    <button id="prev" type="button" aria-label="上一個方案">←</button>
-    <span id="variant-label"></span>
-    <button id="next" type="button" aria-label="下一個方案">→</button>
-  </div>
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PROTOTYPE — Login privacy link placement</title>
+<style>
+/* Throwaway A/B/C link placement based on master f30dc75c LoginPage. */
+:root{font-family:Inter,"Noto Sans TC",-apple-system,BlinkMacSystemFont,"PingFang TC",system-ui,sans-serif;--color-background:#FFFBF5;--color-secondary:#FAF4EA;--color-tertiary:#F2EAD9;--color-foreground:#2A1F18;--color-muted:#6F5A47;--color-border:#EADFCF;--color-border-control:#94795E;--color-accent:#A97A4A;--color-accent-fill:#8A6038;--color-accent-deep:#8A6038;--color-accent-text:#8A6038;--color-accent-foreground:#fff;--color-focus-ring:#8A6038;--color-hover:#F9EDE0;--radius-md:8px;--radius-xl:16px;--radius-full:9999px;--shadow-md:0 6px 16px rgba(42,31,24,.09);--font-size-headline:1.0625rem;--font-size-title2:1.375rem;--font-size-large-title:2.125rem;--font-size-subheadline:.9375rem;--font-size-footnote:.875rem;--font-size-caption:.75rem;--font-size-caption2:.6875rem;--font-size-callout:1rem;--font-size-eyebrow:.625rem}
+*{box-sizing:border-box}body{margin:0;color:var(--color-foreground);background:var(--color-secondary)}button,input{font:inherit}a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--color-focus-ring);outline-offset:2px;box-shadow:0 0 0 2px var(--color-background)}
+.tp-form{display:flex;flex-direction:column;gap:16px}.tp-form-row{display:flex;flex-direction:column;gap:6px}.tp-form-row>label{font-size:var(--font-size-footnote);font-weight:600;display:flex;justify-content:space-between;align-items:baseline}.tp-form-row>input{font-size:var(--font-size-callout);padding:12px 14px;border:1px solid var(--color-border-control);border-radius:var(--radius-md);background:var(--color-background);color:var(--color-foreground);min-height:48px}.tp-hint-link{font-size:var(--font-size-caption);color:var(--color-accent-text);text-decoration:none}
+.tp-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 20px;border-radius:var(--radius-md);border:1px solid var(--color-border-control);background:var(--color-background);color:var(--color-foreground);font-size:var(--font-size-callout);font-weight:600;text-decoration:none;cursor:pointer}.tp-btn-primary{background:var(--color-accent-fill);color:var(--color-accent-foreground);border-color:var(--color-accent-fill)}.tp-btn-secondary{background:var(--color-background)}
+
+.tp-login-shell {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(169, 122, 74, 0.06), transparent 50%),
+    radial-gradient(circle at 80% 100%, rgba(169, 122, 74, 0.04), transparent 50%),
+    var(--color-secondary);
+  /* mobile fallback: single-column centered */
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px 24px;
+  /* .tp-login-home 的定位基準。沒有這行，絕對定位會往上找到 viewport 或任何
+     帶 transform 的祖先，左上角就跑掉了。 */
+  position: relative;
+}
+.tp-login-form-side {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.tp-login-card {
+  width: 100%; max-width: 440px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 40px 36px;
+  box-shadow: var(--shadow-md);
+}
+
+/* Desktop ≥1024px: split-screen (form left + brand hero right) */
+@media (min-width: 1024px) {
+  .tp-login-shell {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    padding: 0;
+  }
+  .tp-login-form-side {
+    padding: 48px;
+  }
+}
+
+.tp-login-brand-hero {
+  display: none;
+  background: linear-gradient(135deg, var(--color-foreground) 0%, var(--color-accent-deep, #8A6038) 100%);
+  color: var(--color-background);
+  padding: 56px 48px;
+  position: relative;
+  overflow: hidden;
+  flex-direction: column;
+  justify-content: space-between;
+}
+@media (min-width: 1024px) {
+  .tp-login-brand-hero { display: flex; }
+}
+/* §8.4：原為 solid rgba 圓 + border-radius:50%，其硬 edge 弧線會橫切 hero 標題區
+ * （即使文字 z-index 在上、硬弧線仍在標題後方造成視覺切割）。改 radial-gradient
+ * 從中心淡出到透明 → 軟 ambient glow、無硬 edge，標題區乾淨。 */
+.tp-login-brand-hero::before {
+  content: '';
+  position: absolute;
+  top: -100px; right: -100px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(247, 223, 203, 0.16) 0%, transparent 68%);
+  pointer-events: none;
+}
+.tp-login-brand-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; left: -80px;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(169, 122, 74, 0.24) 0%, transparent 68%);
+  pointer-events: none;
+}
+.tp-bs-eyebrow {
+  font-size: var(--font-size-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  position: relative; z-index: 2;
+}
+.tp-bs-display {
+  font-size: var(--font-size-large-title); font-weight: 900;
+  letter-spacing: -0.03em; line-height: 1.05;
+  margin: 16px 0 24px;
+  position: relative; z-index: 2;
+  max-width: 380px;
+}
+.tp-bs-features {
+  display: flex; flex-direction: column;
+  gap: 18px;
+  position: relative; z-index: 2;
+}
+.tp-bs-feature {
+  display: flex; gap: 14px;
+  align-items: flex-start;
+}
+.tp-bs-feature .tp-feat-icon {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 251, 245, 0.12);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  color: var(--color-background);
+}
+.tp-bs-feature .tp-feat-icon svg {
+  width: 18px; height: 18px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.tp-bs-feature .tp-feat-body { padding-top: 4px; }
+.tp-bs-feature .tp-feat-title {
+  font-size: var(--font-size-subheadline); font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.tp-bs-feature .tp-feat-desc {
+  font-size: var(--font-size-caption); opacity: 0.78;
+  margin-top: 2px; line-height: 1.5;
+}
+.tp-bs-footnote {
+  font-size: var(--font-size-caption2);
+  opacity: 0.6;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  position: relative; z-index: 2;
+}
+.tp-login-brand {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 28px;
+  font-size: var(--font-size-headline); font-weight: 800; letter-spacing: -0.02em;
+}
+.tp-login-brand-dot { color: var(--color-accent); }
+
+/* 左上角回首頁（owner 2026-07-21）。/login 先前沒有任何回首頁的出口 ——
+ * 未登入訪客從搜尋或分享連結落到這裡，只能登入或關掉。
+ * absolute 而非塞進表單流：不動既有的置中品牌與表單版面。 */
+.tp-login-home {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  left: max(8px, env(safe-area-inset-left, 0px));
+  z-index: 3;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px; padding: 0 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-subheadline); font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-foreground);
+  text-decoration: none;
+}
+.tp-login-home:hover { background: var(--color-hover); }
+.tp-login-home-dot { color: var(--color-accent); }
+.tp-login-headline { text-align: center; margin-bottom: 24px; }
+.tp-login-headline h1 {
+  font-size: var(--font-size-title2); font-weight: 800;
+  letter-spacing: -0.01em; margin: 0 0 6px;
+}
+.tp-login-headline p {
+  color: var(--color-muted); font-size: var(--font-size-subheadline);
+  margin: 0;
+}
+
+/* .tp-form / .tp-form-row 移到 css/tokens.css；LoginPage 用 .tp-form--auth 拉高觸控尺寸。 */
+.tp-login-password-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.tp-login-password-header label {
+  font-size: var(--font-size-footnote); font-weight: 600;
+}
+/* .tp-btn family 移到 css/tokens.css 共用。LoginPage 用 .tp-btn-block (full width) + .tp-btn-lg。 */
+
+.tp-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 20px 0;
+  color: var(--color-muted); font-size: var(--font-size-caption);
+  font-weight: 500;
+}
+.tp-divider::before, .tp-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: var(--color-border);
+}
+
+.tp-banner {
+  display: flex; gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-subheadline); line-height: 1.5;
+  margin-bottom: 16px;
+}
+.tp-banner-success { background: var(--color-success-bg); color: var(--color-foreground); }
+.tp-banner-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
+.tp-banner-warning { background: var(--color-warning-bg); color: var(--color-foreground); }
+/* .tp-banner-info 已刪除（#1157）—— 本檔 JSX 只用 -success / -warning / -error，這條規則
+ * 沒有任何使用點。它跟 SessionsPage 的同名規則是複製關係，留著只會讓下次修對比時漏改一份
+ * （這些 SCOPED_STYLES 注入的是全域 <style>，同名規則會互相影響）。要用時從 SessionsPage 抄。 */
+.tp-banner a { color: inherit; text-decoration: underline; font-weight: 600; }
+
+.tp-login-footer {
+  text-align: center; margin-top: 24px;
+  font-size: var(--font-size-footnote); color: var(--color-muted);
+}
+.tp-login-footer a {
+  color: var(--color-accent-text);
+  font-weight: 600; text-decoration: none;
+}
+.tp-login-footer a:hover { text-decoration: underline; }
+
+.prototype-inline{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}.prototype-quiet{margin:16px 0 0;font-size:var(--font-size-caption)}.prototype-separator{border-top:1px solid var(--color-border);padding-top:18px}.prototype-privacy-top{text-align:right;margin:-8px 0 18px;font-size:var(--font-size-footnote)}.prototype-privacy-top a{color:var(--color-accent-text);font-weight:600}
+.prototype-switcher{position:fixed;z-index:30;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:var(--radius-full);background:#2A1F18;color:#fff;box-shadow:0 8px 30px #0005;white-space:nowrap;font-size:13px}.prototype-switcher button{border:0;border-radius:50%;width:40px;height:40px;background:#fff;color:#2A1F18;cursor:pointer}
+@media(max-width:480px){.tp-login-card{padding:32px 24px}.tp-login-shell{padding-bottom:100px}}
+</style></head><body>
+<main class="tp-login-shell"><a class="tp-login-home" href="/" aria-label="回 Tripline 首頁"><span class="tp-login-home-dot" aria-hidden="true">●</span><span>Tripline</span></a>
+<div class="tp-login-form-side"><div class="tp-login-card"><div class="tp-login-brand"><span class="tp-login-brand-dot" aria-hidden="true">●</span><span>Tripline</span></div><div class="tp-login-headline"><h1>登入</h1><p>歡迎回來</p></div><div id="top-slot"></div>
+<form class="tp-form tp-form--auth"><div class="tp-form-row"><label for="login-email">電子郵件</label><input id="login-email" type="email" autocomplete="email"></div><div class="tp-form-row"><div class="tp-login-password-header"><label for="login-password">密碼</label><a href="/login/forgot" class="tp-hint-link">忘記密碼？</a></div><input id="login-password" type="password" autocomplete="current-password"></div><button type="button" class="tp-btn tp-btn-primary">登入</button></form>
+<div class="tp-divider">或</div><a class="tp-btn tp-btn-secondary" href="#google"><svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M16.51 8.18c0-.55-.05-1.08-.14-1.59H9v3.01h4.21c-.18.97-.74 1.79-1.57 2.34v1.94h2.54c1.49-1.37 2.34-3.39 2.34-5.7z"/><path fill="#34A853" d="M9 16c2.13 0 3.92-.71 5.22-1.91l-2.54-1.94c-.71.48-1.61.76-2.68.76-2.06 0-3.81-1.39-4.43-3.26H2v2.01C3.3 14.06 5.96 16 9 16z"/><path fill="#FBBC04" d="M4.57 9.65c-.16-.48-.25-.99-.25-1.5s.09-1.02.25-1.5V4.64H2C1.36 5.79 1 7.13 1 8.55s.36 2.76 1 3.91l2.57-1.81z"/><path fill="#EA4335" d="M9 4.18c1.16 0 2.2.4 3.02 1.18l2.26-2.26C12.92 1.83 11.13 1 9 1 5.96 1 3.3 2.94 2 4.64l2.57 2.01C5.19 5.57 6.94 4.18 9 4.18z"/></svg><span>使用 Google 登入</span></a><div id="footer-slot"></div></div></div>
+<aside class="tp-login-brand-hero" aria-hidden="true"><div class="tp-bs-eyebrow">登入後可以</div><div><h2 class="tp-bs-display">把每次旅程<br>留在身邊。</h2><div class="tp-bs-features"><div class="tp-bs-feature"><div class="tp-feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-9 9M3 12a9 9 0 0 1 9-9M21 12h-4M7 12H3M12 21v-4M12 7V3"/><circle cx="12" cy="12" r="4"/></svg></div><div class="tp-feat-body"><div class="tp-feat-title">跨裝置同步</div><div class="tp-feat-desc">手機看到的就是平板看到的，離線也能用。</div></div></div><div class="tp-bs-feature"><div class="tp-feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="tp-feat-body"><div class="tp-feat-title">邀請旅伴共編</div><div class="tp-feat-desc">用一個連結把家人朋友拉進行程，不用 LINE 截圖。</div></div></div><div class="tp-bs-feature"><div class="tp-feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div><div class="tp-feat-body"><div class="tp-feat-title">收藏跟著你</div><div class="tp-feat-desc">看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進行程。</div></div></div><div class="tp-bs-feature"><div class="tp-feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg></div><div class="tp-feat-body"><div class="tp-feat-title">AI 對話記住你</div><div class="tp-feat-desc">告訴 Tripline 你喜歡什麼，下次規劃自動套你的偏好。</div></div></div></div></div><div class="tp-bs-footnote">© 2026 Tripline · 由旅人為旅人打造</div></aside></main>
+<div class="prototype-switcher" aria-label="Prototype variants"><button id="prev" type="button" aria-label="上一個方案">←</button><span id="variant-label"></span><button id="next" type="button" aria-label="下一個方案">→</button></div>
   <script>
     const variants = ['A','B','C'];
     const names = { A:'同列並置', B:'獨立低調列', C:'表單上方工具連結' };
     const initial = new URLSearchParams(location.search).get('variant');
     let current = variants.includes(initial) ? initial : 'A';
     function draw() {
-      document.getElementById('top-slot').innerHTML = current === 'C' ? '<p class="privacy-top"><a href="#privacy">隱私權政策</a></p>' : '';
+      document.getElementById('top-slot').innerHTML = current === 'C' ? '<p class="prototype-privacy-top"><a href="#privacy">隱私權政策</a></p>' : '';
       document.getElementById('footer-slot').innerHTML = current === 'A'
-        ? '<p class="footer inline"><span>沒有帳號？<a href="#signup">建立帳號</a></span><span aria-hidden="true">·</span><a href="#privacy">隱私權政策</a></p>'
+        ? '<p class="tp-login-footer prototype-inline"><span>沒有帳號？<a href="#signup">建立帳號</a></span><span aria-hidden="true">·</span><a href="#privacy">隱私權政策</a></p>'
         : current === 'B'
-        ? '<div class="footer"><p>沒有帳號？<a href="#signup">建立帳號</a></p><p class="quiet separator"><a href="#privacy">隱私權政策</a></p></div>'
-        : '<p class="footer">沒有帳號？<a href="#signup">建立帳號</a></p>';
+        ? '<div class="tp-login-footer"><p>沒有帳號？<a href="#signup">建立帳號</a></p><p class="prototype-quiet prototype-separator"><a href="#privacy">隱私權政策</a></p></div>'
+        : '<p class="tp-login-footer">沒有帳號？<a href="#signup">建立帳號</a></p>';
       document.getElementById('variant-label').textContent = current + ' — ' + names[current];
       const url = new URL(location.href); url.searchParams.set('variant', current); history.replaceState(null, '', url);
     }
