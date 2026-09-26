@@ -12,7 +12,7 @@
  * reachable via list click.
  */
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { DndContext, useDndMonitor, useDroppable, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -70,9 +70,14 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
   const enterSortMode = useCallback(() => setSortMode(true), []);
   // PR-K：local order override — drag-end 後立即套用 optimistic order，等
   // backend PATCH 完成 + tp-entry-updated 觸發 refetch 再用 fresh data 覆蓋。
-  const [orderOverride, setOrderOverride] = useState<number[] | null>(null);
+  const [orderOverride, setOrderOverride] = useState<{ lifecycle: number; ids: number[] } | null>(null);
   const tripId = useTripId();
   const allDays = useTripDays();
+  const scope = `${tripId ?? ''}:${dayId ?? ''}`;
+  const currentScope = useRef({ scope, lifecycle: 0 });
+  if (currentScope.current.scope !== scope) currentScope.current = { scope, lifecycle: currentScope.current.lifecycle + 1 };
+  const lifecycle = currentScope.current.lifecycle;
+  const optimisticIds = orderOverride?.lifecycle === lifecycle ? orderOverride.ids : null;
 
   // PR-K dnd-kit sensors。includeTouch 拆 mouse/touch：桌機 MouseSensor 8px 即時
   // 拖曳（避免誤觸 click expand row），觸控走 TouchSensor 200ms 長按（快速垂直
@@ -81,15 +86,15 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
 
   // 套 order override (drag 後 optimistic) 重排 events
   const orderedEvents = useMemo(() => {
-    if (!orderOverride) return events;
+    if (!optimisticIds) return events;
     const byId = new Map<number, TimelineEntryData>();
     events.forEach((e) => { if (e.id != null) byId.set(e.id, e); });
     const result: TimelineEntryData[] = [];
-    orderOverride.forEach((id) => { const e = byId.get(id); if (e) result.push(e); });
+    optimisticIds.forEach((id) => { const e = byId.get(id); if (e) result.push(e); });
     // 保險：events 有但 override 漏的 id 接在尾巴
-    events.forEach((e) => { if (e.id != null && !orderOverride.includes(e.id)) result.push(e); });
+    events.forEach((e) => { if (e.id != null && !optimisticIds.includes(e.id)) result.push(e); });
     return result;
-  }, [events, orderOverride]);
+  }, [events, optimisticIds]);
 
   // events prop 變動 → reset override（refetch 帶回 backend authoritative order）
   // v2.33.44 round 6a: useMemo() 內呼 setState 是 side-effect masquerading as memo
@@ -98,29 +103,30 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
   useEffect(() => { setOrderOverride(null); }, [eventsKey]);
 
   const { segmentMap, ready: segmentsReady, autoStatus } = useTripSegments(tripId, {
-    entries: orderedEvents, dayNum: dayNumFromId(allDays, dayId), suspended: orderOverride != null,
+    entries: orderedEvents, dayNum: dayNumFromId(allDays, dayId), suspended: optimisticIds != null,
   });
   const recomputeStalled = autoStatus === 'blocked' || autoStatus === 'failed';
 
   // W13：reorder 落地（optimistic override → batch PATCH → travel recompute → 廣播 → 失敗 revert）
   // 抽成共用，供拖曳（handleDragEnd）與 ⋯ menu「上移/下移一格」（moveEntryStep）共用，行為一致。
   const applyReorder = useCallback(async (newIds: number[], sourceEntryId: number | string) => {
-    setOrderOverride(newIds);
     if (!tripId) return;
+    setOrderOverride({ lifecycle, ids: newIds });
     // Section 6/3：reorder 走 batch endpoint，避免 N+1 PATCH。一次送所有改變位置的 sort_order，
     // atomic 失敗 → revert override。
     try {
       // #1260：batch reorder + day-scope 重算 + emit 在 module；失敗 revert override。
       const r = await reorderEntries(tripId, dayNumFromId(allDays, dayId), newIds);
+      if (currentScope.current.lifecycle !== lifecycle) return;
       if (!r.ok) throw new Error(`batch reorder failed: ${r.status}`);
       void sourceEntryId;
       void r.recompute.then((ok) => {
-        if (!ok) showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
+        if (!ok && currentScope.current.lifecycle === lifecycle) showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
       });
     } catch {
-      setOrderOverride(null);
+      if (currentScope.current.lifecycle === lifecycle) setOrderOverride(null);
     }
-  }, [tripId, allDays, dayId]);
+  }, [tripId, allDays, dayId, lifecycle]);
 
   // W13：⋯ menu「上移/下移一格」—— 單步 arrayMove 後走 applyReorder（VoiceOver/觸控不靠拖曳的替代）。
   const moveEntryStep = useCallback((entryId: number, dir: 'up' | 'down') => {
