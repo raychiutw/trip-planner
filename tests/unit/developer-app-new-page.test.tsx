@@ -69,6 +69,12 @@ describe('DeveloperAppNewPage', () => {
     expect(tripsRead.checked).toBe(false);
   });
 
+  it('client type 與 scope 選項各有可理解的群組名稱', () => {
+    renderPage();
+    expect(screen.getByRole('radiogroup', { name: '類型' }).tagName).toBe('FIELDSET');
+    expect(screen.getByRole('group', { name: '申請的 scopes' }).tagName).toBe('FIELDSET');
+  });
+
   it('Submit valid form (confidential) → POST + show secret modal with client_secret', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(new Response(
       JSON.stringify({
@@ -120,6 +126,30 @@ describe('DeveloperAppNewPage', () => {
     expect(screen.queryByTestId('dev-app-new-secret-client-secret')).toBeNull();
   });
 
+  it('剪貼簿拒絕時不宣稱已複製，secret 仍可手動選取', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({
+      client_id: 'tp_private', client_secret: 'tps_once', app_name: 'Private App',
+      client_type: 'confidential', status: 'pending_review',
+      redirect_uris: ['https://x.com/cb'], allowed_scopes: ['openid'],
+    }), { status: 201 })));
+    vi.stubGlobal('navigator', {
+      userAgent: navigator.userAgent,
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    });
+    renderPage();
+    fireEvent.change(screen.getByTestId('dev-app-new-name'), { target: { value: 'Private App' } });
+    fireEvent.change(screen.getByTestId('dev-app-new-uris'), { target: { value: 'https://x.com/cb' } });
+    fireEvent.click(screen.getByTestId('dev-app-new-type-confidential'));
+    fireEvent.click(screen.getByTestId('dev-app-new-submit'));
+    const dialog = await screen.findByRole('dialog', { name: '應用程式憑證' });
+    const secret = screen.getByTestId('dev-app-new-secret-client-secret');
+    fireEvent.click(secret.parentElement!.querySelector('button')!);
+
+    await waitFor(() => expect(dialog.textContent).toMatch(/複製失敗/));
+    expect(dialog.textContent).not.toMatch(/已複製/);
+    expect(secret.textContent).toBe('tps_once');
+  });
+
   it('Validation: app_name too short → inline error, no POST', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
@@ -144,6 +174,27 @@ describe('DeveloperAppNewPage', () => {
 
     await waitFor(() => expect(screen.queryByTestId('dev-app-new-error')).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(0);
+    expect(document.activeElement).toBe(screen.getByTestId('dev-app-new-uris'));
+    expect(screen.getByTestId('dev-app-new-uris').getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('URI 行錯誤指出行數，保留其他合法輸入供修正', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(
+      JSON.stringify({ error: { code: 'DATA_VALIDATION', message: 'redirect_uris[1] 必須是 HTTPS（localhost 例外）' } }),
+      { status: 400 },
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+    fireEvent.change(screen.getByTestId('dev-app-new-name'), { target: { value: 'My App' } });
+    fireEvent.click(screen.getByTestId('dev-app-new-type-confidential'));
+    fireEvent.change(screen.getByTestId('dev-app-new-uris'), { target: { value: 'https://good.test/cb\n\nhttp://bad.test/cb' } });
+    fireEvent.click(screen.getByTestId('dev-app-new-submit'));
+
+    await waitFor(() => expect(screen.getByTestId('dev-app-new-error').textContent).toMatch(/第 3 行.*HTTPS/));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect((screen.getByTestId('dev-app-new-name') as HTMLInputElement).value).toBe('My App');
+    expect((screen.getByTestId('dev-app-new-uris') as HTMLTextAreaElement).value).toContain('https://good.test/cb');
+    expect((screen.getByTestId('dev-app-new-type-confidential') as HTMLInputElement).checked).toBe(true);
   });
 
   it('Secret ack → dispatch tp-developer-app-created event + navigate /developer/apps', async () => {
@@ -178,6 +229,23 @@ describe('DeveloperAppNewPage', () => {
     window.removeEventListener('tp-developer-app-created', eventSpy);
   });
 
+  it('一次性 secret 對話框有名稱，Escape 不關閉且初始焦點留在面板', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({
+      client_id: 'tp_focus', client_secret: 'tps_focus', app_name: 'Focus App',
+      client_type: 'confidential', status: 'pending_review',
+      redirect_uris: ['https://x.com/cb'], allowed_scopes: ['openid'],
+    }), { status: 201 })));
+    renderPage();
+    fireEvent.change(screen.getByTestId('dev-app-new-name'), { target: { value: 'Focus App' } });
+    fireEvent.change(screen.getByTestId('dev-app-new-uris'), { target: { value: 'https://x.com/cb' } });
+    fireEvent.click(screen.getByTestId('dev-app-new-type-confidential'));
+    fireEvent.click(screen.getByTestId('dev-app-new-submit'));
+    const dialog = await screen.findByRole('dialog', { name: '應用程式憑證' });
+    await waitFor(() => expect(document.activeElement).toBe(dialog));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.getByRole('dialog', { name: '應用程式憑證' })).toBeTruthy();
+  });
+
   it('Cancel → navigate back to /developer/apps (history fallback)', async () => {
     renderPage();
     fireEvent.click(screen.getByTestId('dev-app-new-cancel'));
@@ -199,5 +267,7 @@ describe('DeveloperAppNewPage', () => {
     await waitFor(() => expect(screen.queryByTestId('dev-app-new-error')).toBeTruthy());
     expect(screen.getByTestId('dev-app-new-error').textContent).toMatch(/不接受/);
     expect(screen.queryByTestId('dev-app-new-secret-modal')).toBeNull();
+    expect((screen.getByTestId('dev-app-new-name') as HTMLInputElement).value).toBe('Bad URI App');
+    expect((screen.getByTestId('dev-app-new-uris') as HTMLTextAreaElement).value).toBe('http://insecure.example/cb');
   });
 });
