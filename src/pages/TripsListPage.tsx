@@ -651,8 +651,8 @@ export default function TripsListPage() {
   // 等 trips 載入後只跑一次（ref guard）；已帶 ?selected 則不覆蓋；關掉行程後同一 mount 不再彈回。
   // 只在桌機還原：bug 1 是「點選左側行程」語意，桌機 /trips 是清單+右側嵌入行程，還原只是填右側、
   // 左側清單仍在；手機 /trips 是「清單 XOR 全螢幕行程」，還原會把 Trips 分頁整個吞進上次行程 →
-  // 清單難以觸及，故手機不自動還原。用 visibleTrips 驗證（非 myTrips）：只還原「當前可見」的行程，
-  // 否則 effectiveSelectedId 會 fallback 到 visibleTrips[0]，URL/day-hash 套到錯行程（如已封存被濾掉）。
+  // 清單難以觸及，故手機不自動還原。用可存取清單驗證；搜尋與分類只控制卡片呈現，
+  // 不改變 active trip 和上次閱讀位置。
   const didRestoreViewRef = useRef(false);
   useEffect(() => {
     if (didRestoreViewRef.current) return;
@@ -663,14 +663,14 @@ export default function TripsListPage() {
     const last = readTripView();
     // #1140 item 7：優先還原 active trip（與聊天/地圖同源、三 tab 一致）；tripViewState 只在
     // 它指向同一條 active trip 時用來沿用「上次看的那天」（day-hash），否則不帶 day。active trip
-    // 不在可見清單才退回 tripViewState 的上次行程。
-    const activeVisible = !!activeTripId && visibleTrips.some((t) => t.tripId === activeTripId);
-    const lastVisible = !!last && visibleTrips.some((t) => t.tripId === last.tripId);
-    const restoreId = activeVisible ? activeTripId : (lastVisible ? last!.tripId : null);
+    // 不在可存取清單才退回 tripViewState 的上次行程。
+    const activeAccessible = !!activeTripId && myTrips.some((t) => t.tripId === activeTripId);
+    const lastAccessible = !!last && myTrips.some((t) => t.tripId === last.tripId);
+    const restoreId = activeAccessible ? activeTripId : (lastAccessible ? last!.tripId : null);
     if (!restoreId) return;
     const hash = last && last.tripId === restoreId && last.dayNum > 0 ? `#day${last.dayNum}` : '';
     navigate(`/trips?selected=${encodeURIComponent(restoreId)}${hash}`, { replace: true });
-  }, [myTrips, visibleTrips, selectedFromUrl, navigate, isDesktop, activeTripId, tripsStatus]);
+  }, [myTrips, selectedFromUrl, navigate, isDesktop, activeTripId, tripsStatus]);
 
   // Card click 同步寫 ActiveTripContext — 不能等 embedded TripPage mount 才設，
   // 否則 user 點完立刻切 bottom-nav 到 /chat，ChatPage 拿舊 activeTripId 會把
@@ -1022,7 +1022,7 @@ export default function TripsListPage() {
         title={
           <TripTitleSwitcher
             label={embeddedTrip?.title || embeddedTrip?.name || (tripsStatus === 'ready' ? effectiveSelectedId : '載入中…')}
-            trips={visibleTrips}
+            trips={myTrips}
             activeTripId={effectiveSelectedId ?? null}
             onPick={(id) => {
               setActiveTrip(id);

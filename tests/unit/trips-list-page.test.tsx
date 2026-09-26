@@ -334,6 +334,21 @@ describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () 
     expect(screen.getByTestId('trips-list-search-count').textContent).toContain('1');
   });
 
+  it('搜尋無結果顯示篩選空態，清除搜尋後仍保留已選行程', async () => {
+    mockMatchMedia(false);
+    lsSet(LS_KEY_TRIP_PREF, 'seoul');
+    vi.stubGlobal('fetch', mockApi([], sample));
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><NewTripProvider><TripsListPage /></NewTripProvider></ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId('trips-list-search-toggle');
+    fireEvent.click(screen.getByTestId('trips-list-search-toggle'));
+    fireEvent.change(screen.getByTestId('trips-list-search-input'), { target: { value: '不存在的行程' } });
+    expect(screen.getByTestId('trips-list-empty-filtered')).toHaveTextContent('沒有符合條件的行程');
+    expect(screen.queryByTestId('trips-list-empty')).not.toBeInTheDocument();
+    expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('seoul');
+    fireEvent.change(screen.getByTestId('trips-list-search-input'), { target: { value: '' } });
+    expect(screen.getByTestId('trips-list-card-seoul')).toBeInTheDocument();
+  });
+
   it('owner avatar 顯示「由你建立」/ owner email username', async () => {
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], sample));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
