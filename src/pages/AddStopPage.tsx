@@ -801,6 +801,10 @@ export default function AddStopPage() {
         setCustomError('請先在地圖上選擇位置');
         return;
       }
+      if (customDuration && (!Number.isInteger(Number(customDuration)) || Number(customDuration) <= 0)) {
+        setCustomError('停留時間請輸入正整數分鐘');
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -1281,6 +1285,8 @@ export default function AddStopPage() {
                               id="add-stop-custom-duration"
                               className="tp-input-short"
                               type="number"
+                              min={1}
+                              step={1}
                               inputMode="numeric"
                               value={customDuration}
                               onChange={(e) => setCustomDuration(e.target.value)}
