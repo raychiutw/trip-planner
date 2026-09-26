@@ -149,6 +149,7 @@ export default function LandingPage() {
           <a className="tp-lp-nav-login" href="/login">登入</a>
         </nav>
 
+        <main>
         <header className="tp-lp-hero">
           <div className="tp-lp-hero-copy">
             <div className="tp-lp-eyebrow">旅遊行程規劃</div>
@@ -247,6 +248,7 @@ export default function LandingPage() {
             <a className="tp-lp-cta" href="/login">登入後開始使用</a>
           </div>
         </section>
+        </main>
 
         <footer className="tp-lp-foot">
           <span>© 2026 Tripline</span>
