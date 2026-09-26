@@ -7,6 +7,7 @@ import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
 import { SheetStackProvider } from '../../src/contexts/SheetStackContext';
 import { __resetTravelRecomputeState } from '../../src/lib/travelRecompute';
 import { resetToasts } from '../../src/lib/toastBus';
+import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
 
 function entry(id: number, name: string, dayId: number) {
   const master = { poiId: id + 1000, name, type: 'attraction', lat: 26 + id / 1000, lng: 127, note: null };
@@ -30,6 +31,7 @@ const response = (body: unknown, status = 200) => new Response(JSON.stringify(bo
 
 beforeEach(() => {
   localStorage.clear();
+  __clearMyTripsCache();
   __resetTravelRecomputeState();
   resetToasts();
   data = { t1: days('t1'), t2: days('t2') };

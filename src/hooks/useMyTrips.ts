@@ -28,6 +28,10 @@ export interface MyTrip {
   totalDays?: number;
   dayCount?: number;
   countries?: string | null;
+  owner?: string;
+  ownerDisplayName?: string | null;
+  memberCount?: number;
+  archivedAt?: string | null;
 }
 
 export type MyTripsState = { trips: MyTrip[] | undefined; status: 'loading' | 'ready' | 'error' };
