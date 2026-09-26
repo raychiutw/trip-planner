@@ -39,6 +39,7 @@ it('map failure keeps cards and dates, with a persistent retry and trip-list act
   expect(await screen.findByRole('alert')).toHaveTextContent('地圖暫停服務');
   expect(screen.getByRole('button', { name: '重試' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: '查看行程' })).toHaveAttribute('href', '/trips?selected=trip-one');
+  expect(screen.queryByTestId('map-fabs')).not.toBeInTheDocument();
   expect(screen.getByText('那覇空港')).toBeInTheDocument();
   await waitFor(() => expect(screen.getByTestId('map-day-2')).toBeInTheDocument());
 });

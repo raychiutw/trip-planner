@@ -1,24 +1,13 @@
 /**
- * MapPage — fullscreen map view (Funliday-style navigation).
+ * MapPage — trip map with a floating day strip and a separate card rail.
  *
- *  /trip/:tripId/map                  → day 1 by default
+ *  /trip/:tripId/map                  → 總覽 by default
  *  /trip/:tripId/map?day=N            → specific day
  *  /trip/:tripId/map?day=all          → overview (all days, per-day dayColor polyline)
  *  /trip/:tripId/stop/:entryId/map    → focus that entry (auto-detects day)
  *
- *  ┌────────────────────────────────────────────┐
- *  │ ← 返回   總覽 · 7/29 – 8/4  |  DAY NN ...  │  52px topbar
- *  ├────────────────────────────────────────────┤
- *  │                                            │
- *  │          TpMap (flyTo activeEntry       │  flex-1
- *  │          or fitBounds in overview)         │
- *  ├────────────────────────────────────────────┤
- *  │ 總覽 · 7天  DAY 01 · 7/29  DAY 02 · ···   │  day tabs (snap-scroll)
- *  ├────────────────────────────────────────────┤
- *  │ ┌────┐ ┌────┐ ┌────┐ ┌────┐ ···           │  entry cards (snap-scroll)
- *  │ │D1 10:45│ │D1 12:10│ │D2 13:00│ ···      │  (D{N} prefix only in overview)
- *  │ └────┘ └────┘ └────┘ └────┘                │
- *  └────────────────────────────────────────────┘
+ *  TitleBar → map viewport (floating day strip) → entry card rail → mobile navigation.
+ *  The map viewport ends above the card rail to expose Google's native attribution.
  */
 
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react';
@@ -49,26 +38,24 @@ const TpMap = lazyWithRetry(() => import('../components/trip/TpMap'));
 
 const SCOPED_STYLES = `
 .map-page-wrap {
-  /* rev2 owner 2026-07-19：地圖頁改 full-bleed —— 地圖填滿、day tab 浮頂、POI 卡浮底、
-   * 都疊在地圖上（無白帶）。原 flex column（地圖 body → day tab → POI 白帶堆疊）改為
-   * relative 定位容器 + 絕對定位浮層。height:100% 填 main content-area（AppShell 已為
-   * bottom-nav 留 padding，浮層 bottom 相對 wrap 即在 nav 之上）。 */
+  /* Map viewport ends above the card rail so Google's native attribution stays visible. */
   height: 100%;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
   background: var(--color-background);
   overflow: hidden;
 }
 .map-page-body {
-  position: absolute;
-  /* owner 2026-07-19：地圖從 titlebar **下方**開始填（非跑到 titlebar 下），否則 Google
-   * TOP_LEFT 的 +/- 縮放鍵被浮動 titlebar 蓋。仍 full-bleed（填滿 titlebar 以下、無白帶）、
-   * day tab 仍浮頂、POI 仍浮底；縮放鍵在 titlebar 下方正常露出。 */
-  top: var(--titlebar-h, 64px);
-  left: 0; right: 0; bottom: 0;
+  position: relative;
+  flex: 1;
+  min-height: 0;
   z-index: 0;
 }
 .map-page-body > * { width: 100%; height: 100%; }
-.map-page-wrap > .tp-titlebar { position: relative; z-index: 3; }
+.map-page-body > .tp-map-fabs { bottom: 42px; width: max-content; height: max-content; }
+.map-page-wrap > .tp-titlebar { position: relative; z-index: 3; flex: none; }
 
 /* Map-load failure: selected prototype A. Keep Day tabs and entry cards usable. */
 .map-page-body .tp-page-error {
@@ -178,16 +165,9 @@ const SCOPED_STYLES = `
   max-width: calc(100% - 24px);
 }
 .map-page-cards {
-  position: absolute;
-  /* v2.56.12：功能頁改全版後（v2.56.9 拿掉 main 的 88px 保留），這層 wrap 延伸到螢幕底，
-   * 浮底 POI 卡就掉進底部 tab 的區域重疊 —— 卡片是**可點的互動元件**，被 tab icon 壓住
-   * 會點不準（e2e 實證：firstCard.click() 被 nav 攔截）。比照 ChatPage composer，用
-   * --nav-overlay-h 讓位（桌機 tab 隱藏 / 操作頁不顯 tab 時該值為 0，不受影響）。
-   * #1140 item 9（owner「地圖 POI 卡與 root tab 間距過高」）：原本再疊 12px 造成卡片底距
-   * 螢幕底 100px、離膠囊頂 28px。12px 是膠囊自身的 bottom offset，本就含在 --nav-overlay-h(80)
-   * 的讓位量裡，重複計。移除 → 卡片底距 80px、與膠囊間距 8px，跟 ChatPage composer 一致。 */
-  bottom: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
-  left: 0; right: 0;
+  position: relative;
+  flex: none;
+  margin-top: 10px;
   z-index: 5;
   /* 無白帶（原 .tp-map-entry-cards 的 background + border-top 在此清掉）。 */
   background: transparent;
@@ -220,7 +200,7 @@ const SCOPED_STYLES = `
  * 单張卡片撐開寬度即可（GooglePoiCard 自帶玻璃樣式）。
  *
  * owner 2026-07-22：「地圖單獨模式選 Google POI 開啟的顯示區域要置中」。
- * 外層 .map-page-cards 是 absolute + left:0/right:0 撐滿欄寬，這張是單張 block
+ * 外層 .map-page-cards 撐滿欄寬，這張是單張 block
  * 卡、又有 max-width:420px，沒有 auto margin 就會貼左。旁邊那排行程 POI 卡是
  * 刻意靠左的橫向 strip（owner 先前「夠寬靠左」），不受影響 —— 只有這個單卡插槽置中。 */
 .map-page-google-poi-slot {
@@ -540,17 +520,15 @@ export default function MapPage() {
               onMarkerClick={handleCardClick}
               onPoiClick={setSelectedGooglePoi}
               onMapClick={clearSelectedGooglePoi}
-              /* owner ⑦ 補修（2026-07-20 prod QA）：預設 TOP_LEFT 的 Google 縮放鍵被
-               * 浮頂 day tab 膠囊蓋住（實測 + 鍵 y67-107 vs 膠囊 y68-112 全覆蓋）。
-               * full-bleed 地圖上緣被 day tab、下緣被 POI 卡、右下被 MapFabs 佔用 →
-               * 右側垂直中段是唯一乾淨區，改用官方 RIGHT_CENTER（非 hack Google 內部 class）。 */
-              zoomControlPosition="RIGHT_CENTER"
+              /* The shorter viewport keeps Google's footer above the cards. Put official
+               * zoom controls opposite the right-side MapFabs so both remain usable. */
+              zoomControlPosition="LEFT_CENTER"
               errorAction={<Link className="tp-page-error-link" to={tripId ? `/trips?selected=${encodeURIComponent(tripId)}` : '/trips'}>查看行程</Link>}
             />
           </Suspense>
         )}
-        {/* Section 4.10：右下 FAB stack — 圖層切換 + 我的位置 */}
-        <MapFabs map={googleMap} />
+        {/* Map controls require a loaded map; disabled controls otherwise cover the error action at narrow widths. */}
+        {googleMap && <MapFabs map={googleMap} />}
       </main>
 
       {dayTabs.length > 1 && (
