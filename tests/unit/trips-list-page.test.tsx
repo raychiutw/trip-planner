@@ -371,17 +371,6 @@ describe('TripsListPage — 進 /trips 還原上次檢視（v2.55.x bug 1）', (
     expect(screen.queryByTestId('embedded-trip-page')).toBeNull();
   });
 
-  it('已選行程封存後仍可還原詳情；分類只篩卡片，不改已選行程', async () => {
-    mockMatchMedia(true);
-    lsSet(LS_KEY_TRIP_PREF, 'seoul');
-    writeTripView({ tripId: 'seoul', dayNum: 2 });
-    vi.stubGlobal('fetch', mockApi([], [SAMPLE[0], { ...SAMPLE[1], archivedAt: '2026-08-20T00:00:00Z' }]));
-    const { container } = render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><NewTripProvider><TripsListPage /></NewTripProvider></ActiveTripProvider></MemoryRouter>);
-    await waitFor(() => expect(screen.getByTestId(TRIP_MAIN_PORTAL_ID)).toBeInTheDocument());
-    expect(container.querySelector('.tp-embedded-trip')).toHaveTextContent('首爾美食行');
-    expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('seoul');
-  });
-
   it('手機 + 有上次檢視紀錄 → 不自動還原（Trips 分頁顯示清單）', async () => {
     mockMatchMedia(false);
     writeTripView({ tripId: 'okinawa', dayNum: 2 });

@@ -651,8 +651,8 @@ export default function TripsListPage() {
   // 等 trips 載入後只跑一次（ref guard）；已帶 ?selected 則不覆蓋；關掉行程後同一 mount 不再彈回。
   // 只在桌機還原：bug 1 是「點選左側行程」語意，桌機 /trips 是清單+右側嵌入行程，還原只是填右側、
   // 左側清單仍在；手機 /trips 是「清單 XOR 全螢幕行程」，還原會把 Trips 分頁整個吞進上次行程 →
-  // 清單難以觸及，故手機不自動還原。用可存取清單驗證；分類只控制卡片呈現，
-  // 已封存但仍可存取的 active trip 和上次閱讀位置應能還原。
+  // 清單難以觸及，故手機不自動還原。用可存取清單驗證；搜尋與分類只控制卡片呈現，
+  // 不改變 active trip 和上次閱讀位置。
   const didRestoreViewRef = useRef(false);
   useEffect(() => {
     if (didRestoreViewRef.current) return;
