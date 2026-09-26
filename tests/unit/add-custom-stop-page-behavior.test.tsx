@@ -8,6 +8,7 @@ const listeners = new Map<string, () => void>();
 let center = { lat: 35, lng: 139 };
 let resolveFails = false;
 let mapLoadError: Error | null = null;
+const flyTo = vi.fn();
 const map = {
   addListener: (name: string, callback: () => void) => {
     listeners.set(name, callback);
@@ -19,7 +20,7 @@ const map = {
 };
 
 vi.mock('../../src/hooks/useGoogleMap', () => ({
-  useGoogleMap: () => ({ containerRef: { current: null }, map: mapLoadError ? null : map, loadError: mapLoadError, flyTo: vi.fn() }),
+  useGoogleMap: () => ({ containerRef: { current: null }, map: mapLoadError ? null : map, loadError: mapLoadError, flyTo }),
 }));
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({ user: { id: 'u1', email: 'u@example.com' } }),
@@ -65,17 +66,21 @@ beforeEach(() => {
 });
 
 describe('AddCustomStopPage public form', () => {
-  it('cannot submit a viewport default, validates duration, then sends only the chosen coordinate', async () => {
+  it('cannot submit a viewport default, validates duration, then sends only the dragged coordinate', async () => {
     openPage();
     const title = screen.getByRole('textbox', { name: '標題' });
     fireEvent.change(title, { target: { value: '朋友家' } });
     await screen.findByRole('application');
-    act(() => listeners.get('idle')?.());
+    await waitFor(() => expect(listeners.has('idle')).toBe(true));
+    act(() => listeners.get('idle')!());
     expect(screen.getByRole('button', { name: '完成' })).toBeDisabled();
     expect(requests.filter((r) => r.init?.method === 'POST')).toHaveLength(0);
 
-    fireEvent.keyDown(screen.getByRole('application'), { key: 'ArrowRight' });
-    act(() => listeners.get('idle')?.());
+    center = { lat: 36, lng: 140 };
+    act(() => {
+      listeners.get('dragstart')!();
+      listeners.get('idle')!();
+    });
     await waitFor(() => expect(screen.getByRole('button', { name: '完成' })).toBeEnabled());
     fireEvent.change(screen.getByRole('spinbutton', { name: '停留時間（分鐘）' }), { target: { value: '0' } });
     fireEvent.click(screen.getByRole('button', { name: '完成' }));
