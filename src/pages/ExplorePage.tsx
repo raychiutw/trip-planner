@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 import { mapNominatimCategory, poiCategoryLabel } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -436,6 +437,16 @@ const SCOPED_STYLES = `
   background: var(--color-background); border: 1px dashed var(--color-border);
   border-radius: var(--radius-md); font-size: var(--font-size-callout);
 }
+.explore-search-error {
+  padding: 12px 16px; border-radius: var(--radius-md);
+  background: var(--color-destructive-bg); color: var(--color-destructive);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.explore-search-error button {
+  min-height: 44px; padding-inline: 12px; flex-shrink: 0;
+  border: 1px solid currentColor; border-radius: var(--radius-md);
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
 
 /* v2.31.22: category filter 0 結果 empty state — 暖 placeholder + reset CTA */
 .explore-filter-empty {
@@ -772,10 +783,30 @@ export default function ExplorePage() {
           place_id: poi.place_id,
         }),
       });
-      const saved = await apiFetch<{ id: number }>('/poi-favorites', {
-        method: 'POST',
-        body: JSON.stringify({ poiId: createResp.id }),
-      });
+      let saved: { id: number };
+      try {
+        saved = await apiFetch<{ id: number }>('/poi-favorites', {
+          method: 'POST',
+          body: JSON.stringify({ poiId: createResp.id }),
+        });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          favoriteMutationVersionRef.current++;
+          try {
+            const rows = await apiFetch<SavedKeyRow[]>('/poi-favorites');
+            const key = `${mapNominatimCategory(poi.category ?? '')}::${poi.name}`;
+            if (rows.some((row) => `${row.poiType}::${row.poiName}` === key)) {
+              setSavedKeyRows(rows);
+              showToast(`「${poi.name}」已在收藏中`, 'info', 2000);
+              return;
+            }
+          } catch {
+            showToast(`「${poi.name}」已在收藏中，請重整以更新狀態`, 'info', 3000);
+            return;
+          }
+        }
+        throw err;
+      }
       favoriteMutationVersionRef.current++;
       setSavedKeyRows((rows) => [...rows.filter((row) => row.id !== saved.id), {
         id: saved.id, poiName: poi.name, poiType: mapNominatimCategory(poi.category ?? ''),
@@ -903,6 +934,7 @@ export default function ExplorePage() {
               {overflowChips.length > 0 && (
                 <details className="explore-cat-more" ref={moreRef} onKeyDown={(e) => {
                   if (e.key === 'Escape') {
+                    e.stopPropagation();
                     e.currentTarget.open = false;
                     e.currentTarget.querySelector('summary')?.focus();
                   }
@@ -937,6 +969,13 @@ export default function ExplorePage() {
                 </details>
               )}
             </div>
+
+            {searchError && results.length > 0 && !searching && (
+              <div className="explore-search-error" role="alert">
+                <span>搜尋失敗，仍顯示先前結果。</span>
+                <button type="button" onClick={() => void runSearch(query.trim())}>重新搜尋</button>
+              </div>
+            )}
 
             {results.length > 0 && (() => {
               // Section 4.9：client-side category filter only。region bias 從 v2.23.4

@@ -12,6 +12,7 @@ vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => nu
 
 import ExplorePage from '../../src/pages/ExplorePage';
 import { showToast } from '../../src/components/shared/Toast';
+import { ApiError } from '../../src/lib/errors';
 
 const poi = (place_id: string) => ({ place_id, name: place_id, address: 'addr', lat: 1, lng: 2, category: 'cafe' });
 
@@ -42,10 +43,12 @@ function search(q: string) {
 
 describe('Explore search recovery', () => {
   it('keeps the visible query results when a new search fails', async () => {
+    let secondCalls = 0;
     apiFetchMock.mockImplementation((path) => {
       if (path === '/poi-favorites') return Promise.resolve([]);
       if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')] });
-      if (path.includes('q=second')) return Promise.reject(new Error('offline'));
+      if (path.includes('q=second')) return ++secondCalls === 1
+        ? Promise.reject(new Error('offline')) : Promise.resolve({ results: [poi('second')] });
       return Promise.resolve({ results: [] });
     });
     await open();
@@ -55,6 +58,10 @@ describe('Explore search recovery', () => {
     await waitFor(() => expect(screen.getByTestId('explore-search-submit').textContent).toBe('搜尋'));
     expect(screen.getByText('first')).toBeTruthy();
     expect((screen.getByTestId('explore-search-input') as HTMLInputElement).value).toBe('second');
+    expect(screen.getByRole('alert').textContent).toContain('仍顯示先前結果');
+    fireEvent.click(screen.getByRole('button', { name: '重新搜尋' }));
+    await screen.findByText('second');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('distinguishes failed first search from a successful empty result', async () => {
@@ -193,6 +200,38 @@ describe('Explore search recovery', () => {
     expect(favoriteReads).toBe(1);
   });
 
+  it('reconciles an already-saved favorite after duplicate POST', async () => {
+    let favoriteReads = 0;
+    apiFetchMock.mockImplementation((path, init) => {
+      if (path === '/poi-favorites' && init?.method === 'POST') return Promise.reject(new ApiError('DATA_CONFLICT', 409));
+      if (path === '/poi-favorites') return Promise.resolve(++favoriteReads === 1 ? [] : [{ id: 71, poiName: 'first', poiType: 'restaurant' }]);
+      if (path === '/pois/find-or-create') return Promise.resolve({ id: 41 });
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')] });
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    fireEvent.click(screen.getByTestId('explore-save-btn-first'));
+    await waitFor(() => expect(screen.getByTestId('explore-save-btn-first').getAttribute('aria-label')).toContain('已收藏'));
+    expect(showToast).toHaveBeenCalledWith('「first」已在收藏中', 'info', 2000);
+  });
+
+  it('does not report a duplicate favorite as an unsuccessful write when reconciliation is offline', async () => {
+    apiFetchMock.mockImplementation((path, init) => {
+      if (path === '/poi-favorites' && init?.method === 'POST') return Promise.reject(new ApiError('DATA_CONFLICT', 409));
+      if (path === '/poi-favorites') return Promise.reject(new Error('offline'));
+      if (path === '/pois/find-or-create') return Promise.resolve({ id: 41 });
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')] });
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    fireEvent.click(screen.getByTestId('explore-save-btn-first'));
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('「first」已在收藏中，請重整以更新狀態', 'info', 3000));
+  });
+
   it('does not let an older favorite-list response undo a confirmed save', async () => {
     let finishList!: (rows: unknown[]) => void;
     apiFetchMock.mockImplementation((path, init) => {
@@ -247,5 +286,22 @@ describe('Explore search recovery', () => {
     expect(category.tagName).toBe('BUTTON');
     fireEvent.click(category);
     expect(category.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('keeps category focus when Escape closes it while the region picker is open', async () => {
+    const categories = ['cafe', 'restaurant', 'museum', 'park', 'hotel'];
+    apiFetchMock.mockImplementation((path) => path === '/poi-favorites' ? Promise.resolve([])
+      : Promise.resolve({ results: categories.map((category, i) => ({ ...poi(`place-${i}`), category })) }));
+    await open();
+    search('first');
+    await screen.findByText('place-0');
+    fireEvent.click(screen.getByTestId('explore-region-pill'));
+    const summary = screen.getByTestId('explore-cat-more');
+    const details = summary.closest('details')!;
+    details.open = true;
+    summary.focus();
+    fireEvent.keyDown(summary, { key: 'Escape' });
+    expect(details.open).toBe(false);
+    expect(document.activeElement).toBe(summary);
   });
 });
