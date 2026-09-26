@@ -29,6 +29,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import PageErrorState from '../components/shared/PageErrorState';
 
 const SCOPED_STYLES = `
 .tp-dev-shell {
@@ -104,6 +105,22 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 .tp-error-banner { color: var(--color-destructive); }
+.tp-dev-permission-banner { max-width: 920px; margin: 16px auto 0; }
+.tp-dev-page-error {
+  padding: 32px 24px; background: var(--color-background);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  text-align: center;
+}
+.tp-dev-page-error-title { margin: 0 0 12px; font-weight: 700; color: var(--color-foreground); }
+.tp-dev-page-error-desc { margin: 0 0 12px; color: var(--color-muted); font-size: var(--font-size-footnote); }
+.tp-dev-page-error-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.tp-dev-page-error-btn {
+  min-height: var(--spacing-tap-min); padding: 8px 16px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-full);
+  background: var(--color-secondary); color: var(--color-foreground);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+.tp-dev-page-error-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 `;
 
 interface ClientApp {
@@ -137,6 +154,7 @@ export default function DeveloperAppsPage() {
   const [error, setError] = useState<'forbidden' | 'failed' | null>(null);
   const [retrying, setRetrying] = useState(false);
   const loadSequence = useRef(0);
+  const titlebarActionRef = useRef<HTMLButtonElement>(null);
 
   async function loadApps() {
     const sequence = ++loadSequence.current;
@@ -190,6 +208,7 @@ export default function DeveloperAppsPage() {
         actions={
           <button
             type="button"
+            ref={titlebarActionRef}
             className="tp-titlebar-action"
             onClick={handleTitleBarAction}
             aria-label={actionLabel}
@@ -207,14 +226,26 @@ export default function DeveloperAppsPage() {
           </button>
         }
       />
-      <div className="tp-dev-inner">
+      {error === 'forbidden' && <ErrorBanner
+        message="沒有權限查看開發者應用，請返回帳號。"
+        className="tp-dev-permission-banner"
+        testId="dev-apps-error"
+      />}
+      <div className="tp-dev-inner" data-testid="dev-apps-content">
         <p className="tp-page-eyebrow">開發者後台</p>
         <p className="tp-page-meta">管理你的 OAuth client。每個應用程式對應一組 client_id。</p>
 
-        {error && <ErrorBanner
-          message={error === 'forbidden' ? '沒有權限查看開發者應用，請返回帳號。' : '無法載入應用列表，請重試。'}
+        {error === 'failed' && <PageErrorState
+          className="tp-dev-page-error"
+          title="無法載入應用列表"
+          message="資料暫時無法取得，請重試。"
+          onRetry={() => { titlebarActionRef.current?.focus(); void retryApps(); }}
           testId="dev-apps-error"
-        />}
+        >
+          <div className="tp-dev-page-error-actions">
+            <button type="button" className="tp-btn tp-btn-secondary" onClick={() => navigate('/account')}>返回帳號</button>
+          </div>
+        </PageErrorState>}
 
         {apps === null && !error && (
           <div className="tp-loading" data-testid="dev-apps-loading">載入中…</div>

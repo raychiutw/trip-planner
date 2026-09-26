@@ -167,12 +167,16 @@ describe('DeveloperAppsPage', () => {
     expect(screen.queryByTestId('dev-apps-empty')).toBeNull();
   });
 
-  it('GET fail → error banner', async () => {
+  it('GET fail → content PageErrorState with retry and back', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('net')));
     vi.useRealTimers();
 
     render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-error')).toBeTruthy());
+    const error = await screen.findByTestId('dev-apps-error');
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(error.closest('[data-testid="dev-apps-content"]')).toBeTruthy();
+    expect(error.querySelector('button')?.textContent).toBe('重試');
+    expect(screen.getByRole('button', { name: '返回帳號' })).toBeTruthy();
   });
 
   it('500 後可用原 TitleBar action 重試，成功後顯示真實列表', async () => {
@@ -192,7 +196,7 @@ describe('DeveloperAppsPage', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('重試等待期間保留 action 焦點，連按不會意外前往建立表單', async () => {
+  it('內容重試將焦點移到穩定的 TitleBar action，連按不會意外前往建立表單', async () => {
     let resolveRetry!: (response: Response) => void;
     const retryResponse = new Promise<Response>((resolve) => { resolveRetry = resolve; });
     vi.stubGlobal('fetch', vi.fn()
@@ -208,7 +212,8 @@ describe('DeveloperAppsPage', () => {
         </Routes>
       </MemoryRouter>,
     );
-    const retry = await screen.findByRole('button', { name: '重新載入應用列表' });
+    const error = await screen.findByTestId('dev-apps-error');
+    const retry = error.querySelector('button')!;
     retry.focus();
     fireEvent.click(retry);
     const busyAction = screen.getByRole('button', { name: '載入中…' });
@@ -237,6 +242,8 @@ describe('DeveloperAppsPage', () => {
     );
     const error = await screen.findByTestId('dev-apps-error');
     expect(error.textContent).toMatch(/沒有權限/);
+    expect(error.closest('[data-testid="dev-apps-content"]')).toBeNull();
+    expect(error.compareDocumentPosition(screen.getByTestId('dev-apps-content')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByTestId('dev-apps-empty')).toBeNull();
     expect(screen.queryByRole('button', { name: '建立新應用' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '返回帳號' }));
