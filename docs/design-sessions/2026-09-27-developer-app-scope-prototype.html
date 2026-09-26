@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE — Developer App scope choices</title>
+<style>
+/* Throwaway comparison. Values mirror css/tokens.css; @theme cannot load raw in a plain HTML file. */
+:root { font-family: Inter, system-ui, sans-serif; color: #2A1F18; background: #FAF4EA; --accent: #A97A4A; --line: #EADFCF; --muted: #6F5A47; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.bar { height: 56px; background: #FFFBF5; border-bottom: 1px solid var(--line); display:flex; align-items:center; padding:0 24px; gap:20px; }
+.brand { font-size:20px; font-weight:750; color:var(--accent); }
+.back { color:var(--muted); text-decoration:none; }
+main { max-width:720px; padding:24px 16px 110px; margin:auto; }
+.card { background:#FFFBF5; border:1px solid var(--line); border-radius:16px; padding:28px 32px; }
+h1 { font-size:22px; margin:0 0 6px; }
+.intro { font-size:14px; color:var(--muted); margin:0 0 26px; }
+.field { margin:0 0 24px; }
+.field-title { display:block; font-size:14px; font-weight:700; margin-bottom:8px; }
+input[type=text], textarea { width:100%; border:1px solid var(--line); border-radius:8px; padding:12px; font:inherit; font-size:14px; }
+textarea { height:82px; }
+.hint { font-size:12px; font-weight:400; color:var(--muted); }
+.types { display:flex; gap:8px; }
+.type { border:2px solid var(--accent); border-radius:9px; padding:10px; flex:1; font-size:14px; }
+.type + .type { border:1px solid var(--line); padding:11px; }
+.type small { display:block; color:var(--muted); padding-left:22px; margin-top:3px; }
+.scope { display:flex; align-items:flex-start; gap:10px; margin:8px 0; font-size:14px; }
+.scope small { display:block; color:var(--muted); margin-top:2px; }
+.scope input { accent-color:var(--accent); margin-top:3px; }
+.note { color:var(--muted); font-size:12px; margin:6px 0 0; }
+.group { border-top:1px solid var(--line); padding-top:12px; margin-top:12px; }
+.group strong { font-size:13px; }
+.unsupported { opacity:.6; }
+.chips { display:flex; flex-wrap:wrap; gap:7px; }
+.chip { border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-size:13px; }
+.chip.on { border-color:var(--accent); background:#F4EDE3; }
+.bottom { position:fixed; bottom:0; left:0; right:0; background:#FFFBF5; border-top:1px solid var(--line); padding:14px max(16px, calc((100vw - 688px)/2)); display:flex; gap:8px; }
+.bottom button { flex:1; padding:11px; border-radius:8px; border:1px solid var(--line); background:#FFFBF5; font:inherit; }
+.bottom button:last-child { color:white; background:var(--accent); border-color:var(--accent); }
+.switch { position:fixed; bottom:70px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:12px; padding:6px 10px; border-radius:99px; color:white; background:#2A1F18; box-shadow:0 4px 14px #0004; font-size:12px; white-space:nowrap; }
+.switch button { border:0; background:transparent; color:inherit; font-size:20px; cursor:pointer; }
+@media(max-width:550px) { .bar { padding:0 16px; } .card { padding:22px 18px; } .types { flex-direction:column; } }
+</style>
+<header class="bar"><span class="brand">Tripline</span><span class="back">‹ 應用列表</span><strong>建立新應用</strong></header>
+<main><div class="card">
+  <h1>OAuth Client 設定</h1><p class="intro">填寫基本資訊，下一步將產生 client_id 與 client_secret。</p>
+  <div class="field"><span class="field-title">應用名稱 <span class="hint">使用者會在同意畫面看到</span></span><input type="text" value="My Travel App"></div>
+  <div class="field"><span class="field-title">Redirect URIs <span class="hint">每行一個，HTTPS only（localhost 例外）</span></span><textarea>https://example.com/auth/callback</textarea></div>
+  <div class="field"><span class="field-title">類型</span><div class="types"><div class="type">◉ Public<small>App 端 / SPA — 無 secret，PKCE 強制</small></div><div class="type">○ Confidential<small>Server-side — 配 client_secret</small></div></div></div>
+  <div class="field"><span class="field-title">申請的 scopes</span><div id="choices"></div></div>
+</div></main>
+<div class="bottom"><button>取消</button><button>建立應用</button></div>
+<div class="switch"><button id="prev" aria-label="上一版">‹</button><span id="variant"></span><button id="next" aria-label="下一版">›</button></div>
+<script>
+// Question: how should the existing scope section expose only scopes the server accepts?
+// A: only supported choices, same checkbox pattern. B: explain unavailable Trip access.
+// C: compact allowed-scope chips. All are visual prototypes only; no API calls.
+const variants = ['A','B','C'];
+const labels = { A:'A — 僅可申請的選項（建議）', B:'B — 未開放權限另列', C:'C — 緊湊選擇' };
+const choice = (label, checked=false, disabled=false) => `<label class="scope ${disabled?'unsupported':''}"><input type="checkbox" ${checked?'checked':''} ${disabled?'disabled':''}><span>${label}</span></label>`;
+function render() {
+  const key = new URL(location.href).searchParams.get('variant') || 'A';
+  document.getElementById('variant').textContent = labels[key] || labels.A;
+  document.getElementById('choices').innerHTML = ({
+    A: choice('openid — OIDC 識別',true)+choice('profile — 名稱/頭像',true)+choice('email — Email 地址',true)+choice('offline_access — 保持登入授權')+`<p class="note">目前可申請的權限由服務端審核。</p>`,
+    B: `<strong>目前可申請</strong>`+choice('openid — OIDC 識別',true)+choice('profile — 名稱/頭像',true)+choice('email — Email 地址',true)+choice('offline_access — 保持登入授權')+`<div class="group"><strong>尚未開放</strong>`+choice('trips.read — 讀取行程',false,true)+choice('trips.write — 修改行程',false,true)+`<p class="note">行程權限目前無法透過開發者頁面申請。</p></div>`,
+    C: `<p class="note">選取應用實際需要的 OpenID Connect 權限。</p><div class="chips"><label class="chip on"><input type="checkbox" checked> 識別 openid</label><label class="chip on"><input type="checkbox" checked> 個人資料 profile</label><label class="chip on"><input type="checkbox" checked> Email</label><label class="chip"><input type="checkbox"> 保持授權 offline_access</label></div>`,
+  })[key] || '';
+}
+function move(step) { const u=new URL(location.href); const old=variants.indexOf(u.searchParams.get('variant')||'A'); u.searchParams.set('variant',variants[(old+step+3)%3]); history.replaceState(null,'',u); render(); }
+document.getElementById('prev').onclick=()=>move(-1);
+document.getElementById('next').onclick=()=>move(1);
+document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;if(e.key==='ArrowLeft')move(-1);if(e.key==='ArrowRight')move(1);});
+render();
+</script>
+</html>
