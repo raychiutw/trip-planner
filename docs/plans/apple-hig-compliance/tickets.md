@@ -4,7 +4,7 @@ to-tickets 產物（本地 markdown）。每票＝可獨立 demo/驗收的一個
 
 **順序**：W0 先 → **W1 IA foundation**（blocks 多數）+ **W4 色彩**（tokens 基礎）→ 其餘依相依/平行 → **W15 a11y 守衛**跨主題。
 **模式**：**AFK**＝agent 可獨立實作（複審走 PR）；**HITL**＝需 owner 輸入。
-**本 effort 不使用 mockup 流程**（owner 已豁免 `/tp-team` 與 mockup-first）；直接進 code、複審走 PR。
+**本已完成的 effort 不使用 mockup 流程**（當時 owner 豁免 `/tp-team` 與 mockup-first）；此豁免不適用新 layout。現行 prototype gate 依 `AGENTS.md`，Web/native 數值口徑依 [`DESIGN.md`「Web 設計驗收與來源」](../../../DESIGN.md#web-設計驗收與來源)。
 
 ---
 
@@ -60,7 +60,7 @@ to-tickets 產物（本地 markdown）。每票＝可獨立 demo/驗收的一個
 **依賴**：blocked-by W1 ｜**AFK**
 - **inline nav title（無 Large Title）**；leading 只放返回/關閉/取消；trailing ≤1 主要動作 + ⋯ overflow + 帳號圓圈；完成/取消/儲存文字鈕；icon 動作 ≥44 + label
 - 桌機：trailing hover 態、⋯ 支援右鍵 contextual；chevron 文字字元 → `<Icon>` SVG（G6）
-- **驗收**：所有頁 header 一致；無 Large Title；action 44pt+label。
+- **驗收**：所有頁 header 一致；無 Large Title；action 44 CSS px hit area + label（當時誤寫 pt；現行 Web 口徑見 `DESIGN.md`）。
 
 ### W4 · 色彩系統 → system + terracotta tint
 **依賴**：無（tokens 基礎）｜**AFK**｜**高影響**
@@ -130,7 +130,7 @@ to-tickets 產物（本地 markdown）。每票＝可獨立 demo/驗收的一個
 
 ### W15 · Accessibility 守衛〔跨主題，折入 #1117〕
 **依賴**：軟依各功能票 ｜**AFK**
-- **focus ring** 補回 + 恢復守護測試（T4）；**44pt** hit-slop 全站 + 稽核測試（T5）；**對比 AA** 雙軌 unit+e2e axe（T4）；**VoiceOver** Space 鍵/對話框名/backdrop role（T8）；**reduce-motion** JS scroll 走 `src/lib/motion.ts`（T8）；**axe** 40 頁+75 元件 unit + e2e 全路由，解 chrome mock（T9）；Dynamic Type rem（T6）
+- **focus ring** 補回 + 恢復守護測試（T4）；**44 CSS px** hit-slop 專案目標 + 稽核測試（T5；當時誤寫 pt）；**對比 AA** 雙軌 unit+e2e axe（T4）；**VoiceOver** Space 鍵/對話框名/backdrop role（T8）；**reduce-motion** JS scroll 走 `src/lib/motion.ts`（T8）；**axe** 40 頁+75 元件 unit + e2e 全路由，解 chrome mock（T9）；Dynamic Type rem（T6）
 - **驗收**：a11y 測試為 **release gate**（比照 #82）。
 
 ---

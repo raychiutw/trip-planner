@@ -3,12 +3,12 @@
 > ⚠️ **本檔的 gap 清單是 2026-07-24 W0–W15 收官**前**寫的，時態是當時的「現況」。**
 > 2026-07-26 逐條回驗過，已收的用 ~~刪除線~~ 標掉並註明是哪張 W 票收的；沒標的才是還開著。
 > 兩處 owner 拍板**與 HIG 建議相反**、屬刻意保留而非未完成：W5 保留玻璃膠囊、W8 保留 Enter 送出。
-> 交付狀態的權威是 `tickets.md`，本檔是規格。
+> 交付狀態的權威是 `tickets.md`，本檔是當時 effort 的規格。**現行 Web 驗收、native pt 與 CSS px 的區分、prototype gate 見 [`DESIGN.md`「Web 設計驗收與來源」](../../../DESIGN.md#web-設計驗收與來源) 與 `AGENTS.md`；本檔的歷史 SoT／豁免敘述不擴及新工作。**
 
 
 **流程**：Matt flow（grill-with-docs 重新來過）。追蹤器＝**local markdown**（此檔＝to-spec 產物；票見 `tickets.md`）。
 **取代**：先前窄框架的 `spec.md`/`tickets.md`（#1117-only）。
-**SoT**：Apple HIG；`DESIGN.md` 為衍生、須對齊。（本 effort 不使用 mockup 流程。）
+**當時 effort 的 SoT 表述**：Apple HIG；`DESIGN.md` 為衍生、須對齊。（本 effort 不使用 mockup 流程。）Web 驗收與新 layout gate 以卷首現行口徑為準。
 **範圍**：全站 web（**手機 iOS／桌機 macOS**），**鏡像 app issue #82 的產品語言**、翻譯到 web。
 **護欄（品牌保留）**：terracotta 當受控 tint、Inter web font、timeline editorial no-glass —— HIG 允許，不對齊。
 
@@ -105,7 +105,7 @@
 - ~~**gap**：下拉更新整頁 reload 沖 SPA 狀態（T7 → per-view soft refresh）。~~ → **已收（W14，v2.57.26 / #1128）**：`RefreshContext` per-view soft-refetch + 失敗態，不再整頁 reload。
 
 ## 15 · Accessibility〔折入 #1117〕
-- **Dynamic Type**：型級 rem、固定高 chrome → min-height（T6）；**44pt 觸控**全站（hit-slop，T5）；**focus ring** 補回 + 守護測試（T4）；**對比 AA** 雙軌 unit+e2e axe（T4）；**VoiceOver** label/role/Space 鍵/對話框名（T8）；**reduce-motion** JS smooth scroll 走 helper（T8）；**axe** 覆蓋全頁+e2e（T9）；marker 非純色（§10）。
+- **Dynamic Type**：型級 rem、固定高 chrome → min-height（T6）；**44 CSS px hit area** 專案目標（當時誤記為「44pt 觸控」，T5）；**focus ring** 補回 + 守護測試（T4）；**對比 AA** 雙軌 unit+e2e axe（T4）；**VoiceOver** label/role/Space 鍵/對話框名（T8）；**reduce-motion** JS smooth scroll 走 helper（T8）；**axe** 覆蓋全頁+e2e（T9）；marker 非純色（§10）。
 
 ---
 
