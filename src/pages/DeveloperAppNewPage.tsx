@@ -17,7 +17,7 @@
  *       client_type radio + scopes checkbox + InlineError) + secret modal
  *       (driven by submit success state)。
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSheetBehavior } from '../hooks/useSheetBehavior';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -63,6 +63,11 @@ const SCOPED_STYLES = `
 }
 
 /* .tp-form / .tp-form-row / .tp-hint 移到 css/tokens.css 共用（DeveloperAppNew 用密集預設）。 */
+.tp-dev-new-group { border: 0; padding: 0; margin: 0; min-width: 0; }
+.tp-dev-new-group > legend {
+  width: 100%; padding: 0; margin-bottom: 6px;
+  font-size: var(--font-size-footnote); font-weight: 600;
+}
 
 .tp-radio-group {
   display: flex; gap: 8px;
@@ -212,6 +217,8 @@ export default function DeveloperAppNewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [secretResult, setSecretResult] = useState<NewAppResult | null>(null);
+  const [copyState, setCopyState] = useState<{ field: 'id' | 'secret'; success: boolean } | null>(null);
+  const redirectUrisRef = useRef<HTMLTextAreaElement>(null);
 
   function toggleScope(key: string) {
     setForm((f) => {
@@ -224,14 +231,17 @@ export default function DeveloperAppNewPage() {
   async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setCreateError(null);
-    const redirect_uris = form.redirect_uris
-      .split('\n').map((s) => s.trim()).filter(Boolean);
+    const uriLines = form.redirect_uris.split('\n')
+      .map((value, index) => ({ value: value.trim(), line: index + 1 }))
+      .filter(({ value }) => value.length > 0);
+    const redirect_uris = uriLines.map(({ value }) => value);
     if (form.app_name.trim().length < 2) {
       setCreateError('app_name 至少 2 字');
       return;
     }
     if (redirect_uris.length === 0) {
-      setCreateError('redirect_uris 至少需要 1 個');
+      setCreateError('Redirect URI 至少需要 1 個');
+      redirectUrisRef.current?.focus();
       return;
     }
     setSubmitting(true);
@@ -249,7 +259,12 @@ export default function DeveloperAppNewPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         // ApiError.detail = backend `error.message` 人話；err.message = code (例 'invalid_redirect')
-        setCreateError(err.detail ?? '建立失敗，請稍後再試。');
+        const uriError = /^redirect_uris\[(\d+)\] (.+)$/.exec(err.detail ?? '');
+        const isUriError = err.detail?.startsWith('redirect_uris') ?? false;
+        setCreateError(uriError
+          ? `Redirect URI 第 ${uriLines[Number(uriError[1])]?.line ?? Number(uriError[1]) + 1} 行：${uriError[2]}`
+          : isUriError ? err.detail!.replace('redirect_uris', 'Redirect URIs') : err.detail ?? '建立失敗，請稍後再試。');
+        if (isUriError) redirectUrisRef.current?.focus();
       } else {
         setCreateError('網路連線失敗，請稍後再試。');
       }
@@ -259,11 +274,12 @@ export default function DeveloperAppNewPage() {
   }
 
 
-  async function copy(value: string) {
+  async function copy(field: 'id' | 'secret', value: string) {
     try {
       await navigator.clipboard.writeText(value);
+      setCopyState({ field, success: true });
     } catch {
-      // ignore — user can manually select
+      setCopyState({ field, success: false });
     }
   }
 
@@ -340,15 +356,18 @@ export default function DeveloperAppNewPage() {
                   <label htmlFor="da-uris">Redirect URIs <span className="tp-hint">每行一個，HTTPS only（localhost 例外）</span></label>
                   <textarea
                     id="da-uris"
+                    ref={redirectUrisRef}
                     rows={3}
                     value={form.redirect_uris}
                     onChange={(e) => setForm({ ...form, redirect_uris: e.target.value })}
+                    aria-invalid={createError?.startsWith('Redirect URI') || undefined}
+                    aria-describedby={createError?.startsWith('Redirect URI') ? 'dev-app-new-error' : undefined}
                     placeholder="https://your-app.com/auth/callback"
                     data-testid="dev-app-new-uris"
                   />
                 </div>
-                <div className="tp-form-row">
-                  <label>類型</label>
+                <fieldset className="tp-form-row tp-dev-new-group" role="radiogroup">
+                  <legend>類型</legend>
                   <div className="tp-radio-group">
                     <label className={`tp-radio-card ${form.client_type === 'public' ? 'tp-radio-card-active' : ''}`}>
                       <input
@@ -377,9 +396,9 @@ export default function DeveloperAppNewPage() {
                       </div>
                     </label>
                   </div>
-                </div>
-                <div className="tp-form-row">
-                  <label>申請的 scopes</label>
+                </fieldset>
+                <fieldset className="tp-form-row tp-dev-new-group">
+                  <legend>申請的 scopes</legend>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {SCOPE_OPTIONS.map((opt) => (
                       <label key={opt.key} style={{ display: 'flex', gap: '10px', alignItems: 'center', fontSize: 'var(--font-size-footnote)' }}>
@@ -394,7 +413,7 @@ export default function DeveloperAppNewPage() {
                       </label>
                     ))}
                   </div>
-                </div>
+                </fieldset>
                 {createError && <InlineError message={createError} testId="dev-app-new-error" />}
               </form>
             </div>
@@ -453,7 +472,9 @@ export default function DeveloperAppNewPage() {
                   <label>Client ID</label>
                   <div className="tp-code-block">
                     <code data-testid="dev-app-new-secret-client-id">{secretResult.client_id}</code>
-                    <button type="button" onClick={() => void copy(secretResult.client_id)}>複製</button>
+                    <button type="button" onClick={() => void copy('id', secretResult.client_id)}>
+                      {copyState?.field === 'id' ? (copyState.success ? '已複製' : '複製失敗') : '複製'}
+                    </button>
                   </div>
                 </div>
                 {secretResult.client_secret && (
@@ -461,10 +482,14 @@ export default function DeveloperAppNewPage() {
                     <label style={{ color: 'var(--color-destructive)' }}>Client Secret</label>
                     <div className="tp-code-block tp-code-block-secret">
                       <code data-testid="dev-app-new-secret-client-secret">{secretResult.client_secret}</code>
-                      <button type="button" onClick={() => void copy(secretResult.client_secret as string)}>複製</button>
+                      <button type="button" onClick={() => void copy('secret', secretResult.client_secret as string)}>
+                        {copyState?.field === 'secret' ? (copyState.success ? '已複製' : '複製失敗') : '複製'}
+                      </button>
                     </div>
                     <div className="tp-secret-warning">
-                      ⚠ 此 secret 不會再顯示。請存到密碼管理器或環境變數。
+                      {copyState?.field === 'secret' && !copyState.success
+                        ? '複製失敗，請選取上方 secret 手動複製並妥善保存。此 secret 不會再顯示。'
+                        : '⚠ 此 secret 不會再顯示。請存到密碼管理器或環境變數。'}
                     </div>
                   </div>
                 )}
@@ -476,7 +501,7 @@ export default function DeveloperAppNewPage() {
                   onClick={ackSecret}
                   data-testid="dev-app-new-secret-acknowledge"
                 >
-                  我已複製，繼續
+                  我已保存憑證，返回應用列表
                 </button>
               </div>
             </div>
