@@ -473,7 +473,7 @@ export default function AccountPage() {
       tone: 'accent',
       rows: [
         { key: 'appearance', icon: 'palette', title: '外觀設定', helper: '主題色、深淺模式', to: '/account/appearance' },
-        { key: 'notifications', icon: 'lightbulb', title: '通知設定', helper: '行程更新、旅伴邀請', to: '/account/notifications' },
+        { key: 'notifications', icon: 'lightbulb', title: '通知設定', helper: '尚未開放', to: '/account/notifications' },
       ],
     },
     {

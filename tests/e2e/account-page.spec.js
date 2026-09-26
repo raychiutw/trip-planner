@@ -46,8 +46,16 @@ test.describe('AccountPage — Section 2', () => {
 
   test('通知設定 row click → /account/notifications', async ({ page }) => {
     await page.goto('/account');
+    await expect(page.getByTestId('account-row-notifications')).toContainText('尚未開放');
     await page.getByTestId('account-row-notifications').click();
     await expect(page).toHaveURL(/\/account\/notifications$/);
+    await expect(page.getByRole('heading', { name: '通知功能尚未開放' })).toBeVisible();
+    await expect(page.getByText('以下是規劃中的通知類型，目前無法設定或接收通知。')).toBeVisible();
+    await expect(page.getByRole('list', { name: '規劃中的通知類型' }).getByRole('listitem')).toHaveCount(3);
+    await expect(page.getByRole('switch')).toHaveCount(0);
+    await expect(page.getByRole('checkbox')).toHaveCount(0);
+    await page.getByRole('button', { name: '返回' }).click();
+    await expect(page).toHaveURL(/\/account$/);
   });
 
   test('登出 row click → confirm modal 開啟', async ({ page }) => {
