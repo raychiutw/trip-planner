@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PROTOTYPE — #1335 登入裝置恢復與日期</title>
+  <style>
+    :root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;color:#302922;background:#f6f3ee}
+    *{box-sizing:border-box}body{margin:0}.shell{min-height:100dvh;display:grid;grid-template-columns:240px 1fr}
+    aside{background:#fff;border-right:1px solid #e5ded6;padding:30px 20px;color:#6c6259}aside strong{display:block;color:#302922;font-size:20px;margin-bottom:36px}aside p{padding:12px;border-radius:10px}aside p.selected{background:#f3ece3;color:#784c35;font-weight:700}
+    main{padding:30px 24px 100px;max-width:1040px;width:100%;margin:auto}.back{font-size:14px;color:#6c6259}.heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:10px 0 26px}.heading h1{font-size:30px;letter-spacing:-.03em;margin:0}.eyebrow{font-size:12px;letter-spacing:.12em;color:#84776b;font-weight:700;margin:0 0 6px}.email{color:#6c6259;margin:0 0 24px}
+    button{font:inherit;cursor:pointer}.danger{border:1px solid #ad513d;color:#a23d2d;background:#fff;border-radius:999px;padding:10px 16px;font-weight:700;min-height:44px}.retry{border:0;border-radius:999px;background:#7e5139;color:white;padding:10px 18px;font-weight:700;min-height:44px}.subtle{border:1px solid #d9cfc4;background:#fff;color:#594a3c;border-radius:999px;padding:8px 14px;min-height:44px}.danger:focus-visible,.retry:focus-visible,.subtle:focus-visible{outline:3px solid #8a6046;outline-offset:2px}
+    .list{background:#fff;border:1px solid #e3dcd3;border-radius:16px;overflow:hidden}.row{display:grid;grid-template-columns:minmax(0,1fr) 180px 72px;gap:16px;align-items:center;padding:16px 20px;border-bottom:1px solid #eee8e1}.row:last-child{border-bottom:0}.row.header{background:#f5f1eb;color:#71665c;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800}.device{font-weight:700}.pill{display:inline-block;border-radius:6px;background:#e7efe8;color:#364638;font-size:11px;font-weight:700;padding:3px 7px;margin-left:8px}.muted{color:#766d64;font-size:13px;margin-top:4px}.date-primary{font-size:14px;color:#3e352e}.date-secondary{font-size:12px;color:#766d64;margin-top:4px}.info{background:#f6eae1;color:#74482f;border-radius:12px;padding:14px 16px;margin-top:16px;font-size:13px}.error{border:1px solid #c46b59;background:#faece8;color:#802f23;border-radius:12px;padding:18px}.error strong{display:block;font-size:17px}.error p{margin:6px 0 14px}.error.inline{border:0;border-radius:0;padding:24px}.error.inline .retry{margin-top:3px}.error.bar{display:flex;align-items:center;gap:20px;justify-content:space-between;margin-bottom:16px}.error.bar p{margin:4px 0 0}.error.card{text-align:center;padding:48px 24px;max-width:560px;margin:32px auto}.error.card .symbol{font-size:32px;margin-bottom:12px}.error.card .retry{margin-top:10px}.empty-list{height:150px;border:1px dashed #d6c7b7;border-radius:12px;background:#fff}
+    .variant-note{font-size:13px;color:#62574e;border-left:3px solid #9f785d;padding:3px 12px;margin:26px 0 18px}.variant-note strong{display:block;color:#40352d;margin-bottom:3px}.footer{margin-top:24px;padding:20px;background:#fff;border:1px solid #e3dcd3;border-radius:16px}.footer button{width:100%}.switcher{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:7px;background:#292420;color:#fff;border-radius:999px;box-shadow:0 10px 30px #0005;z-index:10}.switcher button{border:0;border-radius:999px;background:#53493f;color:#fff;width:40px;height:40px}.switcher button:hover{background:#745f4f}.switcher label{font-size:12px;margin:0 8px;white-space:nowrap}.switcher select{font:inherit;color:#fff;background:#53493f;border:0;border-radius:8px;padding:7px}
+    @media(max-width:760px){.shell{display:block}aside{display:none}main{padding:18px 14px 110px}.heading h1{font-size:25px}.heading .danger{font-size:12px;padding:8px 10px}.row{grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:14px}.row.header{display:none}.row .activity{grid-column:1;grid-row:2}.row .action{grid-column:2;grid-row:1/3}.date-primary{font-size:13px}.error.bar{display:block}.error.bar .retry{margin-top:8px}.switcher{width:min(95vw,400px);justify-content:center}.switcher label{margin:0}}
+  </style>
+</head>
+<body>
+  <!-- PROTOTYPE only. Question: where should read failure retry and local dates appear on the existing Sessions page? -->
+  <div class="shell">
+    <aside><strong>Tripline</strong><p>行程</p><p>地圖</p><p>收藏</p><p class="selected">帳號設定</p></aside>
+    <main>
+      <div class="back">‹ 返回帳號</div>
+      <div class="heading"><h1>登入裝置</h1><button class="danger">登出其他裝置</button></div>
+      <p class="eyebrow">帳號</p><p class="email">ray@example.com</p>
+      <div id="variant"></div>
+      <div class="info">登出某裝置後，該裝置上的 Tripline 會回到登入畫面。已連結應用程式不受影響。</div>
+      <div class="footer"><button class="danger">登出此帳號</button></div>
+    </main>
+  </div>
+  <nav class="switcher" aria-label="Prototype variants"><button id="prev" aria-label="上一方案">←</button><label id="variantLabel"></label><select id="state"><option value="ready">列表</option><option value="error">讀取失敗</option></select><button id="next" aria-label="下一方案">→</button></nav>
+  <script>
+    const variants=['A','B','C'];const names={A:'表格內恢復',B:'頂部警示',C:'專屬恢復頁'};const params=new URLSearchParams(location.search);let variant=variants.includes(params.get('variant'))?params.get('variant'):'A';let state=params.get('state')==='error'?'error':'ready';
+    const rows=(v)=>`<div class="list"><div class="row header"><div>裝置</div><div>上次活動</div><div></div></div><div class="row"><div><div class="device">Chrome on macOS <span class="pill">目前</span></div><div class="muted">建立於 2026/4/23 上午 8:00</div></div><div class="activity"><div class="date-primary">${v==='C'?'2026/4/25 下午 7:59':'剛才'}</div><div class="date-secondary">${v==='C'?'剛剛活動':'2026/4/25 下午 7:59'}</div></div><div></div></div><div class="row"><div><div class="device">Safari on iOS</div><div class="muted">建立於 2026/4/20 下午 2:30</div></div><div class="activity"><div class="date-primary">${v==='C'?'2026/4/25 上午 9:00':'3 小時前'}</div><div class="date-secondary">${v==='C'?'3 小時前':'2026/4/25 上午 9:00'}</div></div><div class="action"><button class="danger">登出</button></div></div></div>`;
+    const retry='<button class="retry" onclick="alert(\'Prototype：此按鈕代表重新讀取；不呼叫真實 API。\')">重新載入裝置</button>';
+    function render(){const host=document.getElementById('variant');document.getElementById('variantLabel').textContent=`${variant} — ${names[variant]}`;document.getElementById('state').value=state;params.set('variant',variant);params.set('state',state);history.replaceState(null,'',`${location.pathname}?${params}`);
+      if(state==='ready'){host.innerHTML=`<p class="variant-note"><strong>${names[variant]}</strong>${variant==='A'?'相對時間保留主要位置，本地日期緊鄰顯示。':variant==='B'?'相對與本地時間並列；讀取失敗時警示置頂。':'本地日期為主要資訊，相對時間是補充。'}</p>${rows(variant)}`;return}
+      host.innerHTML=variant==='A'?`<p class="variant-note"><strong>表格內恢復</strong>保留既有清單容器的位置，在其中顯示錯誤與重試。</p><div class="list"><div class="error inline" role="alert"><strong>無法載入登入裝置</strong><p>可能是網路暫時中斷。登入狀態尚未改變。</p>${retry}</div></div>`:variant==='B'?`<p class="variant-note"><strong>頂部警示</strong>在既有清單上方提供恢復操作；清單位置留白。</p><div class="error bar" role="alert"><div><strong>無法載入登入裝置</strong><p>目前無法確認哪些裝置仍在登入。</p></div>${retry}</div><div class="empty-list"></div>`:`<p class="variant-note"><strong>專屬恢復頁</strong>讀取失敗時以單一恢復卡取代整張裝置清單。</p><div class="error card" role="alert"><div class="symbol" aria-hidden="true">!</div><strong>暫時無法查看登入裝置</strong><p>請檢查網路連線後再試。登入狀態尚未改變。</p>${retry}</div>`}
+    document.getElementById('prev').onclick=()=>{variant=variants[(variants.indexOf(variant)+2)%3];render()};document.getElementById('next').onclick=()=>{variant=variants[(variants.indexOf(variant)+1)%3];render()};document.getElementById('state').onchange=e=>{state=e.target.value;render()};document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.activeElement?.isContentEditable)return;if(e.key==='ArrowLeft'){variant=variants[(variants.indexOf(variant)+2)%3];render()}if(e.key==='ArrowRight'){variant=variants[(variants.indexOf(variant)+1)%3];render()}});render();
+  </script>
+</body>
+</html>
