@@ -2,7 +2,7 @@
  * SessionsPage unit test — V2-P6 multi-device session management UI
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { readAuthHint, writeAuthHint } from '../../src/lib/authHint';
 
@@ -60,6 +60,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
   localStorage.clear();
@@ -104,6 +105,20 @@ describe('SessionsPage', () => {
     expect(screen.getByText('未知裝置')).toBeTruthy();
     // current pill
     expect(screen.getByText('目前')).toBeTruthy();
+  });
+
+  it('keeps relative activity prominent with a local calendar date beside each session', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
+
+    render(<MemoryRouter><SessionsPage /></MemoryRouter>);
+    const current = await screen.findByTestId('sessions-row-sess_current');
+    expect(within(current).getByText('剛才')).toBeTruthy();
+    expect(within(current).getAllByText(/2026/)).toHaveLength(2);
+    expect(within(screen.getByTestId('sessions-row-sess_phone')).getByText('3 小時前')).toBeTruthy();
   });
 
   it('current session has no revoke button; non-current does', async () => {
@@ -226,20 +241,45 @@ describe('SessionsPage', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('GET fail → error banner', async () => {
+  it('GET fail → existing list frame contains a page error with retry and back', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('net')));
     vi.useRealTimers();
 
     render(<MemoryRouter><SessionsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('sessions-error')).toBeTruthy());
+    const error = await screen.findByTestId('sessions-load-error');
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(error.closest('.tp-list')).toBeTruthy();
+    expect(screen.getByText('裝置')).toBeTruthy();
+    expect(screen.getByText('上次活動')).toBeTruthy();
+    expect(within(error).getByRole('button', { name: '重新載入裝置' })).toBeTruthy();
+    expect(within(error).getByRole('button', { name: '返回帳號' })).toBeTruthy();
+    expect(screen.queryByTestId('sessions-revoke-all')).toBeNull();
   });
 
-  it('GET non-200 → error banner', async () => {
+  it('GET non-200 → page error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('boom', { status: 500 })));
     vi.useRealTimers();
 
     render(<MemoryRouter><SessionsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('sessions-error')).toBeTruthy());
+    await screen.findByTestId('sessions-load-error');
+  });
+
+  it('failed GET can retry in place and return to the confirmed device list', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('failed', { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(<MemoryRouter><SessionsPage /></MemoryRouter>);
+    const error = await screen.findByTestId('sessions-load-error');
+    const retry = within(error).getByRole('button', { name: '重新載入裝置' });
+    retry.focus();
+    fireEvent.click(retry);
+    await screen.findByTestId('sessions-row-sess_current');
+    expect(screen.queryByTestId('sessions-load-error')).toBeNull();
+    expect(screen.getByTestId('sessions-row-sess_phone')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('Revoke fail → keeps row + shows error', async () => {
