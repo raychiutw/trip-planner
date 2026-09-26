@@ -329,6 +329,7 @@ export default function PoiFavoritesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deletingSelected, setDeletingSelected] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteFailureCount, setDeleteFailureCount] = useState(0);
   const [searchFilter, setSearchFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [regionFilter, setRegionFilter] = useState<string>('all');
@@ -425,6 +426,7 @@ export default function PoiFavoritesPage() {
 
   function requestDeleteSelected() {
     if (selectedFavorites.length === 0 || deletingSelected) return;
+    setDeleteFailureCount(0);
     setDeleteConfirmOpen(true);
   }
   async function handleDeleteSelected() {
@@ -446,10 +448,9 @@ export default function PoiFavoritesPage() {
       setSelectedIds(new Set(failed.map((r) => r.id)));
       if (failed.length === 0) {
         showToast(`已移除 ${ids.length} 個收藏`, 'success', 2400);
-      } else if (failed.length < ids.length) {
-        showToast(`已移除 ${ids.length - failed.length} 個，${failed.length} 個失敗`, 'error', 3000);
       } else {
-        showToast('移除失敗，請稍後再試', 'error', 3000);
+        setDeleteFailureCount(failed.length);
+        setDeleteConfirmOpen(true);
       }
     } finally {
       setDeletingSelected(false);
@@ -597,7 +598,7 @@ export default function PoiFavoritesPage() {
                 aria-label="批次操作"
                 data-testid="favorites-toolbar"
               >
-                <span>已選 {selectedFavorites.length} 個{hiddenSelectedCount > 0 ? `（含目前未顯示的 ${hiddenSelectedCount} 個）` : ''}</span>
+                <span aria-live="polite">{deletingSelected ? `移除中 ${selectedFavorites.length} 筆…` : `已選 ${selectedFavorites.length} 個${hiddenSelectedCount > 0 ? `（含目前未顯示的 ${hiddenSelectedCount} 個）` : ''}`}</span>
                 <div className="favorites-toolbar-actions">
                   <button
                     type="button"
@@ -693,13 +694,15 @@ export default function PoiFavoritesPage() {
                                 />
                                 <span>{isSelected ? '已選' : '選取'}</span>
                               </label>
-                              <a
-                                href={`/favorites/${row.id}/add-to-trip`}
-                                className="poi-add-link"
-                                data-testid={`favorites-add-to-trip-${row.id}`}
-                              >
-                                加入行程 →
-                              </a>
+                              {deletingSelected ? <span className="poi-deleting-label">請稍候…</span> : (
+                                <a
+                                  href={`/favorites/${row.id}/add-to-trip`}
+                                  className="poi-add-link"
+                                  data-testid={`favorites-add-to-trip-${row.id}`}
+                                >
+                                  加入行程 →
+                                </a>
+                              )}
                             </>
                           )}
                         </div>
@@ -753,12 +756,14 @@ export default function PoiFavoritesPage() {
 
       <ConfirmModal
         open={deleteConfirmOpen}
-        title="確定移除收藏？"
-        message={`即將從收藏移除以下 ${selectedFavorites.length} 個景點。景點本身不會被刪除，之後仍可從搜尋或探索再次收藏；但這次移除無法復原。`}
-        confirmLabel="移除"
+        title={deleteFailureCount ? `${deleteFailureCount} 個收藏移除失敗` : '確定移除收藏？'}
+        message={deleteFailureCount
+          ? `以下 ${selectedFavorites.length} 個收藏尚未移除，請重試。已成功的項目不會重送。`
+          : `即將從收藏移除以下 ${selectedFavorites.length} 個景點。景點本身不會被刪除，之後仍可從搜尋或探索再次收藏；但這次移除無法復原。`}
+        confirmLabel={deleteFailureCount ? '重試移除' : '移除'}
         busy={deletingSelected}
         onConfirm={handleDeleteSelected}
-        onCancel={() => setDeleteConfirmOpen(false)}
+        onCancel={() => { setDeleteConfirmOpen(false); setDeleteFailureCount(0); }}
       >
         <ol className="favorites-delete-list" aria-label="將移除的收藏">
           {selectedFavorites.map((row) => <li key={row.id}>{row.poiName}</li>)}

@@ -153,8 +153,9 @@ describe('PoiFavoritesPage — batch flow delete-only (DUC1)', () => {
       expect((screen.getByTestId('favorites-check-2') as HTMLInputElement).checked).toBe(true);
     });
     expect(screen.getByTestId('favorites-toolbar').textContent).toContain('已選 1 個');
+    expect(screen.getByTestId('confirm-modal').textContent).toContain('1 個收藏移除失敗');
+    expect(screen.getByTestId('confirm-modal').textContent).toContain('POI 2');
     failTwo = false;
-    fireEvent.click(screen.getByTestId('favorites-delete-selected'));
     fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
     await waitFor(() => expect(screen.getByTestId('favorites-empty')).toBeTruthy());
     const deletes = apiFetchMock.mock.calls.filter(([, init]) => init?.method === 'DELETE').map(([path]) => path);
@@ -180,5 +181,23 @@ describe('PoiFavoritesPage — batch flow delete-only (DUC1)', () => {
     expect(apiFetchMock.mock.calls.filter(([, init]) => init?.method === 'DELETE')).toHaveLength(1);
     completeDelete?.();
     await waitFor(() => expect(screen.getByTestId('favorites-empty')).toBeTruthy());
+  });
+
+  it('批次處理期間宣告數量並停用所有卡片操作', async () => {
+    let completeDelete: (() => void) | undefined;
+    apiFetchMock.mockImplementation((path) => path === '/poi-favorites'
+      ? Promise.resolve([makeRow(1), makeRow(2)])
+      : new Promise<void>((resolve) => { completeDelete = resolve; }));
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('favorites-check-1')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('favorites-check-1'));
+    fireEvent.click(screen.getByTestId('favorites-delete-selected'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    expect(screen.getByTestId('favorites-toolbar').textContent).toContain('移除中 1 筆');
+    expect(screen.getByTestId('favorites-toolbar').querySelector('[aria-live="polite"]')).toBeTruthy();
+    expect(screen.queryByTestId('favorites-add-to-trip-2')).toBeNull();
+    expect(screen.getByTestId('favorites-check-2').hasAttribute('disabled')).toBe(true);
+    completeDelete?.();
+    await waitFor(() => expect(screen.queryByTestId('favorites-card-1')).toBeNull());
   });
 });
