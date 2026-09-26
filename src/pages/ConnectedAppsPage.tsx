@@ -134,20 +134,18 @@ interface ConnectedApp {
   granted_at: number;
 }
 
-function relativeTime(ms: number): string {
-  const diff = Date.now() - ms;
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return '剛才';
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} 分鐘前`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小時前`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} 天前`;
-  const month = Math.floor(day / 30);
-  if (month < 12) return `${month} 個月前`;
-  return `${Math.floor(month / 12)} 年前`;
-}
+const SCOPE_NAMES: Record<string, string> = {
+  openid: '身分識別',
+  profile: '基本資料',
+  email: '電子郵件',
+  offline_access: '離線存取',
+  'trips.read': '查看行程',
+  'trips.write': '修改行程',
+  'trips:read': '查看行程',
+  'trips:write': '修改行程',
+  'read:trips': '查看行程',
+  'write:trips': '修改行程',
+};
 
 export default function ConnectedAppsPage() {
   const { user } = useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
@@ -155,6 +153,7 @@ export default function ConnectedAppsPage() {
   const [apps, setApps] = useState<ConnectedApp[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
   const [revokeBusy, setRevokeBusy] = useState(false);
 
   async function load() {
@@ -172,13 +171,19 @@ export default function ConnectedAppsPage() {
   }, []);
 
   async function confirmRevoke(clientId: string) {
+    setRevokeError(null);
     setRevokeBusy(true);
     try {
-      await apiFetch(`/account/connected-apps/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
+      const result = await apiFetch<{ ok: boolean; revoked_client_id: string }>(
+        `/account/connected-apps/${encodeURIComponent(clientId)}`, { method: 'DELETE' },
+      );
+      if (result.ok !== true || result.revoked_client_id !== clientId) {
+        throw new Error('Revoke not confirmed by server');
+      }
       setApps((prev) => prev?.filter((a) => a.client_id !== clientId) ?? null);
       setRevokingId(null);
     } catch {
-      setError('撤銷失敗，請稍後再試。');
+      setRevokeError('撤銷失敗，請重試。');
     } finally {
       setRevokeBusy(false);
     }
@@ -233,31 +238,39 @@ export default function ConnectedAppsPage() {
               <h2>授權中</h2>
               <span className="tp-section-count">{apps.length} 個</span>
             </div>
-            {apps.map((app) => (
-              <div className="tp-app-row" key={app.client_id} data-testid={`connected-apps-row-${app.client_id}`}>
-                <div className="tp-app-logo" aria-hidden="true">
-                  {app.app_name.slice(0, 1).toUpperCase()}
-                </div>
-                <div className="tp-app-info">
-                  <div className="tp-app-name">{app.app_name}</div>
-                  <div className="tp-app-meta">
-                    {app.scopes.slice(0, 3).map((s) => (
-                      <span className="tp-scope-pill" key={s}>{s}</span>
-                    ))}
-                    <span>授權 {relativeTime(app.granted_at)}</span>
+            {apps.map((app) => {
+              const grantedAt = new Date(app.granted_at);
+              const hasGrantTime = typeof app.granted_at === 'number' && Number.isFinite(grantedAt.getTime());
+              return (
+                <div className="tp-app-row" key={app.client_id} data-testid={`connected-apps-row-${app.client_id}`}>
+                  <div className="tp-app-logo" aria-hidden="true">
+                    {app.app_name.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="tp-app-info">
+                    <div className="tp-app-name">{app.app_name}</div>
+                    <div className="tp-app-meta">
+                      {app.scopes.map((s) => (
+                        <span className="tp-scope-pill" key={s} title={s}>{SCOPE_NAMES[s] ?? s}</span>
+                      ))}
+                      {hasGrantTime ? (
+                        <time dateTime={grantedAt.toISOString()}>
+                          授權於 {grantedAt.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </time>
+                      ) : <span>授權時間未知</span>}
+                    </div>
+                  </div>
+                  <div className="tp-app-actions">
+                    <button
+                      className="tp-btn tp-btn-destructive"
+                      onClick={() => { setRevokeError(null); setRevokingId(app.client_id); }}
+                      data-testid={`connected-apps-revoke-${app.client_id}`}
+                    >
+                      撤銷
+                    </button>
                   </div>
                 </div>
-                <div className="tp-app-actions">
-                  <button
-                    className="tp-btn tp-btn-destructive"
-                    onClick={() => setRevokingId(app.client_id)}
-                    data-testid={`connected-apps-revoke-${app.client_id}`}
-                  >
-                    撤銷
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -272,13 +285,14 @@ export default function ConnectedAppsPage() {
         open={!!revokingId && !!target}
         title={target ? `撤銷 ${target.app_name} 的存取權？` : ''}
         message={target
-          ? `撤銷後 ${target.app_name} 將立即無法讀取或修改你的行程。未來想再使用必須重新授權。`
+          ? `撤銷後 ${target.app_name} 將失去${target.scopes.length ? target.scopes.map((scope) => SCOPE_NAMES[scope] ?? scope).join('、') : '目前的所有授權'}權限。未來想再使用必須重新授權。`
           : ''}
+        warning={revokeError ?? undefined}
         confirmLabel="確認撤銷"
         cancelLabel="取消"
         busy={revokeBusy}
         onConfirm={() => { if (revokingId) confirmRevoke(revokingId); }}
-        onCancel={() => setRevokingId(null)}
+        onCancel={() => { setRevokeError(null); setRevokingId(null); }}
       />
       </>}
     />
