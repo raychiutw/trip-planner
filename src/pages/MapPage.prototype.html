@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>T23 地圖失敗狀態 Prototype</title>
+<style>
+  /* Prototype only: three map-failure layouts on the existing map page shell. */
+  * { box-sizing: border-box }
+  body { margin: 0; font: 15px/1.4 Inter, -apple-system, BlinkMacSystemFont, sans-serif; color: #2a1f18; background: #faf7f2 }
+  button, a { font: inherit }
+  .page { height: 100dvh; min-height: 350px; position: relative; overflow: hidden; background: #f9f5ef }
+  .header { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 18px; background: #fffdf8; border-bottom: 1px solid #e4d8ca; position: relative; z-index: 3 }
+  .header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; font-size: 17px }
+  .header .avatar { border-radius: 50%; background: #91643f; color: white; width: 30px; height: 30px; display: grid; place-items: center }
+  .map { position: absolute; inset: 56px 0 0; background: #f8f4ed; overflow: hidden }
+  .map::before { content: ''; position: absolute; inset: 0; background: linear-gradient(35deg, transparent 46%, #e6dfd4 47%, #e6dfd4 48%, transparent 49%), linear-gradient(130deg, transparent 48%, #e8dfd3 49%, #e8dfd3 50%, transparent 51%); background-size: 160px 160px; opacity: .5 }
+  .map::after { content: 'Google 地圖載入失敗'; position: absolute; left: 10px; bottom: 8px; color: #75695d; font-size: 11px }
+  .days { display: flex; align-items: center; gap: 4px; position: absolute; z-index: 4; left: 12px; right: 12px; top: 68px; height: 44px; padding: 4px; background: rgba(255,253,249,.93); border: 1px solid #e8dbcd; border-radius: 26px; overflow-x: auto; white-space: nowrap; box-shadow: 0 4px 18px #49342019 }
+  .days span { flex: 0 0 auto; padding: 8px 12px; color: #65564a; font-weight: 700; font-size: 11px; letter-spacing: .1em }
+  .days .active { color: white; background: #91643f; border-radius: 20px }
+  .cards { position: absolute; z-index: 4; bottom: 80px; left: 0; right: 0; display: flex; gap: 10px; overflow: hidden; padding: 0 12px }
+  .card { width: 200px; height: 68px; flex: none; background: #fffdf8ed; border: 1px solid #e8dbcd; border-radius: 13px; padding: 9px 12px; box-shadow: 0 6px 20px #49342020 }
+  .card b { display: block; font-size: 12px; color: #976741 }
+  .card span { display: block; font-weight: 700; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .nav { position: absolute; z-index: 5; bottom: max(10px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: 268px; height: 62px; border-radius: 40px; background: #fffdf8; box-shadow: 0 7px 23px #49342036; display: flex; align-items: center; justify-content: space-around; font-size: 12px }
+  .nav b { border-radius: 27px; padding: 11px 18px; background: #91643f; color: white }
+  .error { position: absolute; z-index: 3; background: #fdecec; color: #7d2414; border: 1px solid #e8a196; border-left: 4px solid #c13515; border-radius: 8px; box-shadow: 0 8px 24px #4934202b; padding: 14px; }
+  .error h2 { margin: 0 0 5px; font-size: 16px }
+  .error p { margin: 0 0 12px; font-size: 14px }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap }
+  .actions a, .actions button { text-decoration: none; border-radius: 8px; border: 1px solid #a55745; color: #7d2414; background: #fffdfa; min-height: 44px; padding: 9px 14px; font-weight: 700; cursor: pointer }
+  .actions button { background: #c13515; border-color: #c13515; color: white }
+  .a .error { top: 126px; left: 12px; right: 12px }
+  .b .error { top: 50%; left: 50%; transform: translate(-50%,-50%); width: min(340px, calc(100% - 24px)); padding: 22px }
+  .b .error h2 { font-size: 20px }
+  .c .error { top: 56px; left: 0; right: 0; border-radius: 0; border-left: 0; border-top: 4px solid #c13515; box-shadow: 0 3px 15px #49342022; padding: 10px 14px }
+  .c .error p { display: none }
+  .c .days { top: 182px }
+  .switcher { position: fixed; z-index: 10; bottom: 90px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: #29211e; color: white; border-radius: 30px; box-shadow: 0 6px 20px #0007; padding: 4px; white-space: nowrap; }
+  .switcher button { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #56443b; color: white; cursor: pointer }
+  .switcher span { font-size: 12px; min-width: 130px; text-align: center }
+  @media (min-width: 800px) { .page { max-width: 1100px; margin: auto; border-inline: 1px solid #ddd } .cards { bottom: 16px } .nav { display: none } .switcher { bottom: 20px } }
+</style>
+<div class="page" id="page">
+  <div class="header"><span>‹</span><strong>2026 沖繩七日遊行程表 ⌄</strong><span class="avatar">R</span></div>
+  <div class="map"></div>
+  <div class="days"><span class="active">總覽</span><span>DAY 1</span><span>DAY 2</span><span>DAY 3</span><span>DAY 4</span><span>DAY 5</span></div>
+  <section class="error" role="alert"><h2>地圖暫停服務</h2><p>地圖載入失敗。行程清單與景點仍可瀏覽，請重試或前往行程。</p><div class="actions"><button>重試地圖</button><a href="#trips">查看行程</a></div></section>
+  <div class="cards"><div class="card"><b>① D1 · 20:50</b><span>那覇空港</span></div><div class="card"><b>② D1 · 22:07</b><span>メルキュール沖縄那覇</span></div></div>
+  <div class="nav"><span>聊天</span><span>行程</span><b>地圖</b><span>收藏</span></div>
+</div>
+<div class="switcher"><button id="prev" aria-label="前一版">←</button><span id="label"></span><button id="next" aria-label="後一版">→</button></div>
+<script>
+  const variants = ['A', 'B', 'C'];
+  const names = { A: '日期列下方行內警示', B: '地圖中央錯誤卡', C: '標題列下方橫幅' };
+  function show(key) {
+    const variant = variants.includes(key) ? key : 'A';
+    document.getElementById('page').className = `page ${variant.toLowerCase()}`;
+    document.getElementById('label').textContent = `${variant} — ${names[variant]}`;
+    const url = new URL(location.href); url.searchParams.set('variant', variant); history.replaceState(null, '', url);
+  }
+  function cycle(delta) { show(variants[(variants.indexOf(new URL(location.href).searchParams.get('variant')) + delta + 3) % 3]); }
+  document.getElementById('prev').onclick = () => cycle(-1);
+  document.getElementById('next').onclick = () => cycle(1);
+  document.addEventListener('keydown', e => { if (!e.target.matches('input,textarea,[contenteditable]') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) cycle(e.key === 'ArrowLeft' ? -1 : 1); });
+  show(new URL(location.href).searchParams.get('variant'));
+</script>
+</html>
