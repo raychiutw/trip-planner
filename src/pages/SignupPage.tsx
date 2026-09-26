@@ -340,7 +340,7 @@ export default function SignupPage() {
             <label htmlFor="signup-privacy-consent">
               我已閱讀並同意
               {' '}
-              <a href="/privacy" target="_blank" rel="noreferrer">個資條款與隱私權政策</a>
+              <a href="/privacy?from=signup" target="_blank" rel="noreferrer">個資條款與隱私權政策</a>
             </label>
           </div>
 

@@ -39,6 +39,7 @@
  */
 import TitleBar from '../components/shell/TitleBar';
 import { useNavigateBack } from '../hooks/useNavigateBack';
+import { useSearchParams } from 'react-router-dom';
 
 /**
  * 與 `functions/api/oauth/signup.ts` 的 `PRIVACY_POLICY_VERSION` 對應。
@@ -51,11 +52,19 @@ const POLICY_VERSION = '2026-07-20';
 const CONTACT_EMAIL = 'lean.lean@gmail.com';
 
 export default function PrivacyPage() {
-  // 固定回首頁而非 history back（v2.33.139 規範）。這頁的入口五花八門 ——
-  // 註冊頁、帳號頁、Flutter、Google Play Console 的外部連結 —— history back
-  // 的落點不可預測，外部 referrer 甚至會把人送回站外。已登入者到 `/` 會被
-  // LandingPage 導回 /trips，兩種身分都有合理落點。
-  const handleBack = useNavigateBack('/');
+  // 只接受本產品的明確來源；外部 deep link 一律回首頁，不走不可預測的 history back。
+  const [searchParams] = useSearchParams();
+  const from = searchParams.get('from');
+  const returnPath = from === 'signup' ? '/signup' : from === 'login' ? '/login' : '/';
+  const navigateBack = useNavigateBack(returnPath);
+  function handleBack() {
+    if (from === 'signup' || from === 'login') {
+      // 認證表單在原分頁：關閉政策分頁可保留尚未送出的欄位。
+      window.close();
+      if (window.closed) return;
+    }
+    navigateBack();
+  }
 
   return (
     <>
@@ -68,7 +77,7 @@ export default function PrivacyPage() {
       />
 
       <main className="tp-pp" data-testid="privacy-page">
-        <h1 className="tp-pp-h1">隱私權政策</h1>
+        <h1 className="tp-pp-h1" aria-hidden="true">隱私權政策</h1>
         <p className="tp-pp-meta">版本 {POLICY_VERSION}．適用於 Tripline 網站與行動應用程式</p>
 
         <section className="tp-pp-key">
@@ -258,5 +267,6 @@ const PRIVACY_STYLES = `
 .tp-pp a {
   color: var(--color-accent-text);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 `;

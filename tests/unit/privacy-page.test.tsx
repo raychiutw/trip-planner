@@ -39,6 +39,12 @@ describe('PrivacyPage — 基本結構', () => {
     expect(screen.getAllByText(/隱私權政策/).length).toBeGreaterThan(0);
   });
 
+  it('長文只有一個可辨識的主標題，章節依序為次標題', () => {
+    renderPage();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: '聯絡我們', level: 2 })).toBeVisible();
+  });
+
   it('標示政策版本 —— 與 signup 記錄的 PRIVACY_POLICY_VERSION 對得起來', async () => {
     const { readFileSync } = await import('fs');
     const { resolve } = await import('path');
