@@ -490,17 +490,29 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   }, [linkTripId, lockTripId]);
   // #1140 item 10：useKeyboardInset 改由 app root（KeyboardInsetTracker）全站掛一次，
   // composer 讀全站 --kb-inset 上移即可，這裡不再各自掛（避免雙掛 cleanup 打架）。
-  const [input, setInput] = useState('');
-  // W6：聊天草稿依行程分開存（session-only ref；切換行程時存舊、載新，不讓半成品漏到別行程）。
-  const draftsRef = useRef<Record<string, string>>({});
+  // 草稿由行程 ID 擁有；自動 fallback、手動切換、明確連結都讀同一份 session-only 狀態。
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const input = activeTripId ? drafts[activeTripId] ?? '' : '';
+  const setInput = useCallback((value: string, tripId = activeTripId) => {
+    if (tripId) setDrafts((previous) => ({ ...previous, [tripId]: value }));
+  }, [activeTripId]);
   const [tripMenuOpen, setTripMenuOpen] = useState(false);
   // AI 授權 gate（Option E）：null=未知/載入中（放行，後端 mint 為最終關卡），
   // false=已知未授權（送出時攔下、跳授權 sheet），true=已授權。
   const [aiAuthorized, setAiAuthorized] = useState<boolean | null>(null);
   // 送出時被攔下的訊息（開著 sheet 時非 null）。授權後用它續送、取消則丟棄。
-  const [consentGate, setConsentGate] = useState<string | null>(null);
+  const [consentGate, setConsentGate] = useState<{ text: string; tripId: string } | null>(null);
+  const consentGateRef = useRef(consentGate);
+  const currentTripIdRef = useRef(activeTripId);
+  currentTripIdRef.current = activeTripId;
   const [consentBusy, setConsentBusy] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
+  useEffect(() => {
+    consentGateRef.current = null;
+    setConsentGate(null);
+    setConsentBusy(false);
+    setConsentError(null);
+  }, [activeTripId]);
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const tripMenuRef = useRef<HTMLDivElement>(null);
@@ -519,8 +531,9 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     const prefill = searchParams.get('prefill');
     const targetTripId = searchParams.get('tripId');
     if (!prefill && !targetTripId) return;
+    if (prefill && !targetTripId && !activeTripId) return;
     if (prefill) {
-      setInput(prefill);
+      setInput(prefill, targetTripId ?? activeTripId);
       // 等 textarea mount 後 focus + cursor 移到尾端
       setTimeout(() => {
         const el = inputRef.current;
@@ -535,7 +548,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     next.delete('prefill');
     next.delete('tripId');
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, activeTripId, setInput]);
 
   // v2.33.47 round 7b LOW: memoize buildMessagesWithDividers — 之前每 keystroke
   // 都 O(n) walk messages list。1000-msg trip 在打字時明顯卡。
@@ -543,6 +556,18 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     () => buildMessagesWithDividers(messages),
     [messages],
   );
+  const liveRequestRef = useRef<{ tripId: string; id: number } | null>(null);
+  if (liveRequestRef.current?.tripId !== activeTripId || (busy && !inflightId)) liveRequestRef.current = null;
+  if (activeTripId && inflightId) liveRequestRef.current = { tripId: activeTripId, id: inflightId };
+  const liveTerminal = !busy && liveRequestRef.current
+    ? messages.find((message) => message.role === 'assistant' && message.requestId === liveRequestRef.current?.id && !message.pendingRequestId)
+    : null;
+  const terminalAnnouncement = liveTerminal
+    ? liveTerminal.stopUnconfirmed ? '停止等待未確認，AI 可能仍在處理'
+      : liveTerminal.terminated ? '已停止等待'
+      : liveTerminal.failed ? 'AI 處理失敗'
+        : 'AI 已完成'
+    : '';
 
   // Close trip menu on outside click
   useEffect(() => {
@@ -567,7 +592,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const doSend = useCallback(async (text: string) => {
     setInput('');
     await sendMessage(text, user);
-  }, [sendMessage, user]);
+  }, [sendMessage, user, setInput]);
 
   const send = useCallback((raw: string) => {
     const text = raw.trim();
@@ -578,7 +603,11 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     // 卡住整條佇列）。null（授權狀態載入中，數毫秒窗；讀取失敗已 fail-closed 成 false）不攔，
     // 讓後端 mint 當最終關卡。
     if (aiAuthorized === false) {
-      setConsentGate(text);
+      const pending = { text, tripId: activeTripId };
+      consentGateRef.current = pending;
+      setConsentGate(pending);
+      setConsentBusy(false);
+      setConsentError(null);
       return;
     }
     void doSend(text);
@@ -586,21 +615,25 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
   // 授權後續送：POST Consent → 標記已授權 → 送出原被攔訊息。
   const authorizeAndSend = useCallback(async () => {
-    if (!consentGate) return;
+    const pending = consentGateRef.current;
+    if (!pending) return;
     setConsentBusy(true);
     setConsentError(null);
     try {
       await apiFetch('/account/ai-authorization', { method: 'POST' });
       setAiAuthorized(true);
-      const pending = consentGate;
+      if (consentGateRef.current !== pending || currentTripIdRef.current !== pending.tripId) return;
+      consentGateRef.current = null;
       setConsentGate(null);
-      void doSend(pending);
-    } catch {
-      setConsentError('授權失敗，請稍後再試。');
-    } finally {
       setConsentBusy(false);
+      void doSend(pending.text);
+    } catch {
+      if (consentGateRef.current === pending) {
+        setConsentError('授權失敗，請稍後再試。');
+        setConsentBusy(false);
+      }
     }
-  }, [consentGate, doSend]);
+  }, [doSend]);
 
   // 載入 owner 對 AI 的授權狀態（一次）。讀取失敗 fail-closed 成 false（＝送出時跳授權 sheet）：
   // 維持 null 會讓未授權 owner 送出→後端 park→提示「重送並在跳窗授權」，但 sheet 只在 false 才開、
@@ -617,11 +650,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
   function pickTrip(tripId: string) {
     // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
-    // W6：切換前存舊行程草稿、切換後載新行程草稿（session-only；跨 reload 持久化留給 W8 composer 契約）。
-    if (activeTripId) draftsRef.current[activeTripId] = input;
     setLinkTripId(null);
     setActiveTripId(tripId);
-    setInput(draftsRef.current[tripId] ?? '');
     setTripMenuOpen(false);
   }
 
@@ -631,7 +661,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   );
 
   function onComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) {
       e.preventDefault();
       void send(input);
     }
@@ -657,6 +687,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       />}
 
       <div className="tp-chat-body" ref={bodyRef} data-testid="chat-body">
+        <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{terminalAnnouncement}</div>
         {loadError && activeTripId && (
           <div className="tp-chat-load-error" role="alert" data-testid="chat-load-error">
             <span className="tp-chat-load-error-text">載入訊息失敗</span>
@@ -895,11 +926,11 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
       <AiConsentSheet
         open={consentGate !== null}
-        message={consentGate ?? ''}
+        message={consentGate?.text ?? ''}
         busy={consentBusy}
         error={consentError}
         onAuthorizeAndSend={authorizeAndSend}
-        onCancel={() => { setConsentGate(null); setConsentError(null); }}
+        onCancel={() => { consentGateRef.current = null; setConsentGate(null); setConsentError(null); }}
       />
     </div>
   );

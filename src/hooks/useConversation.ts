@@ -103,7 +103,7 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
     } catch {
       if (scopeRef.current !== scope || !scope.active) return;
       setMessages((previous) => previous.map((message) => message.pendingRequestId === id
-        ? { ...message, requestId: id, text: '已在這裡停止等待，但伺服器沒有確認 —— AI 可能仍在處理。', pendingRequestId: null, terminated: false, failed: true }
+        ? { ...message, requestId: id, text: '已在這裡停止等待，但伺服器沒有確認 —— AI 可能仍在處理。', pendingRequestId: null, terminated: false, failed: true, stopUnconfirmed: true }
         : message));
     } finally { if (scopeRef.current === scope && scope.active) setStopping(false); }
   }, [inflightId, stopping, applyTerminal, scope]);

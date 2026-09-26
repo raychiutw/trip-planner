@@ -57,6 +57,29 @@ async function expectStopped() {
 
 describe('request terminal state in the real conversation', () => {
   it.each([
+    ['failed', 'cancelled', '已停止等待'],
+    ['failed', 'error', 'AI 處理失敗'],
+    ['completed', null, 'AI 已完成'],
+  ])('announces a live %s/%s transition as %s', async (status, terminalReason, announcement) => {
+    show('main');
+    await screen.findByTestId('chat-stop-waiting');
+    await waitFor(() => expect(RequestEvents.instances.at(-1)?.onmessage).toBeTypeOf('function'));
+    row = { ...row, status, terminalReason, reply: status === 'completed' ? '水族館已加到行程' : null };
+    await act(async () => { RequestEvents.instances.at(-1)!.emit({ status }); });
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(announcement));
+  });
+
+  it('announces an unconfirmed stop without claiming that AI failed', async () => {
+    show('main');
+    await screen.findByTestId('chat-stop-waiting');
+    detailStatus = 503;
+    await act(async () => { fireEvent.click(screen.getByTestId('chat-stop-waiting')); });
+    await screen.findByText(/伺服器沒有確認/);
+    expect(screen.getByRole('status')).toHaveTextContent('停止等待未確認');
+    expect(screen.getByRole('status')).not.toHaveTextContent('AI 處理失敗');
+  });
+
+  it.each([
     ['[AI 健檢] secret system schema', '已觸發 AI 行程健檢'],
     ['[行程筆記-lodging-tips] secret system schema', '已觸發 AI 行程筆記生成（住宿在地建議）'],
     ['[行程筆記-tips] secret system schema', '已觸發 AI 行程筆記生成（行前須知）'],
