@@ -274,3 +274,19 @@ test('#1303：地圖清單較舊的刷新晚到，不覆蓋新的行程名稱與
   await expect(page.getByTestId(`map-trip-pick-${TRIP_B}`)).toContainText(updatedName);
   await expect(page).toHaveURL(new RegExp(`/trip/${TRIP_B}/map`));
 });
+
+test('#1308：聊天在行程之間切換時保留各自未送出的草稿', async ({ page }) => {
+  await page.goto('/chat');
+  await expect(page.getByTestId('chat-trip-title')).toContainText(MOCK_TRIPS_LIST[0].name);
+  await page.getByTestId('chat-input').fill('沖繩未送出的問題');
+  await page.getByTestId('chat-trip-title').click();
+  await page.getByTestId(`chat-trip-pick-${TRIP_B}`).click();
+  await expect(page.getByTestId('chat-input')).toHaveValue('');
+  await page.getByTestId('chat-input').fill('釜山未送出的問題');
+  await page.getByTestId('chat-trip-title').click();
+  await page.getByTestId(`chat-trip-pick-${TRIP_A}`).click();
+  await expect(page.getByTestId('chat-input')).toHaveValue('沖繩未送出的問題');
+  await page.getByTestId('chat-trip-title').click();
+  await page.getByTestId(`chat-trip-pick-${TRIP_B}`).click();
+  await expect(page.getByTestId('chat-input')).toHaveValue('釜山未送出的問題');
+});
