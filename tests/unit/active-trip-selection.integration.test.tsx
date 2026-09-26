@@ -87,7 +87,7 @@ it('聊天與側欄共用私人行程清單，重新掛載後沿用偏好並共�
 it('保存的偏好失效時選第一個可存取行程', async () => {
   lsSet(LS_KEY_TRIP_PREF, 'removed-trip');
   render(<MemoryRouter initialEntries={['/chat']}><ActiveTripProvider><ChatPage /></ActiveTripProvider></MemoryRouter>);
-  expect(await screen.findByTestId('sidebar-trip-t1')).toHaveClass('is-active');
+  await waitFor(() => expect(screen.getByTestId('sidebar-trip-t1')).toHaveClass('is-active'));
   expect(lsGet<string>(LS_KEY_TRIP_PREF)).toBe('t1');
 });
 
