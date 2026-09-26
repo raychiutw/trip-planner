@@ -65,7 +65,38 @@ describe('ResetPasswordPage', () => {
     fireEvent.click(screen.getByTestId('reset-submit'));
     await waitFor(() => expect(screen.queryByTestId('reset-pw-error')).toBeTruthy());
     expect(screen.getByTestId('reset-pw-error').textContent).toContain('8 字');
+    expect(screen.getByTestId('reset-password-input').getAttribute('aria-describedby')).toBe(screen.getByTestId('reset-pw-error').id);
+    expect(screen.getByTestId('reset-password-input').getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByTestId('reset-password-input'));
   });
+
+  it('mismatch points to confirmation and can be corrected', async () => {
+    vi.useRealTimers();
+    renderAt('token=t');
+    fireEvent.change(screen.getByTestId('reset-password-input'), { target: { value: 'longpassword1' } });
+    fireEvent.change(screen.getByTestId('reset-confirm'), { target: { value: 'different1234' } });
+    fireEvent.click(screen.getByTestId('reset-submit'));
+    expect(screen.getByTestId('reset-confirm').getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByTestId('reset-confirm').getAttribute('aria-describedby')).toBe(screen.getByTestId('reset-pw-error').id);
+    expect(document.activeElement).toBe(screen.getByTestId('reset-confirm'));
+    fireEvent.change(screen.getByTestId('reset-confirm'), { target: { value: 'longpassword1' } });
+    expect(screen.queryByTestId('reset-pw-error')).toBeNull();
+  });
+
+  it.each(['RESET_PASSWORD_TOO_SHORT', 'RESET_PASSWORD_FORMAT'])(
+    '%s points to new password and allows correction', async (code) => {
+      vi.useRealTimers();
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code } }), { status: 400 })));
+      renderAt('token=t');
+      fireEvent.change(screen.getByTestId('reset-password-input'), { target: { value: 'goodpassword1' } });
+      fireEvent.change(screen.getByTestId('reset-confirm'), { target: { value: 'goodpassword1' } });
+      fireEvent.click(screen.getByTestId('reset-submit'));
+      await waitFor(() => expect(screen.getByTestId('reset-password-input').getAttribute('aria-describedby')).toBe(screen.getByTestId('reset-pw-error').id));
+      expect(screen.getByTestId('reset-password-input').getAttribute('aria-invalid')).toBe('true');
+      fireEvent.change(screen.getByTestId('reset-password-input'), { target: { value: 'otherpassword1' } });
+      expect(screen.queryByTestId('reset-pw-error')).toBeNull();
+    },
+  );
 
   it('Successful reset → success state', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
@@ -81,11 +112,27 @@ describe('ResetPasswordPage', () => {
 
     await waitFor(() => expect(screen.queryByTestId('reset-go-login')).toBeTruthy());
     expect(screen.getByText(/密碼已更新/)).toBeTruthy();
+    expect(screen.getByTestId('reset-go-login').getAttribute('href')).toBe('/login');
 
     expect(fetchMock).toHaveBeenCalledWith('/api/oauth/reset-password', expect.objectContaining({ method: 'POST' }));
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string) as { token: string; password: string };
     expect(body.token).toBe('t');
     expect(body.password).toBe('goodpassword1');
+  });
+
+  it('deduplicates a pending reset submission', async () => {
+    vi.useRealTimers();
+    let resolve!: (value: Response) => void;
+    const fetchMock = vi.fn(() => new Promise<Response>((done) => { resolve = done; }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderAt('token=t');
+    fireEvent.change(screen.getByTestId('reset-password-input'), { target: { value: 'goodpassword1' } });
+    fireEvent.change(screen.getByTestId('reset-confirm'), { target: { value: 'goodpassword1' } });
+    fireEvent.submit(screen.getByTestId('reset-submit').closest('form')!);
+    fireEvent.submit(screen.getByTestId('reset-submit').closest('form')!);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    await waitFor(() => expect(screen.getByTestId('reset-go-login')).toBeTruthy());
   });
 
   it('RESET_TOKEN_INVALID → switches to error state with retry link', async () => {
@@ -105,11 +152,11 @@ describe('ResetPasswordPage', () => {
     await waitFor(() => expect(screen.queryByTestId('reset-retry')).toBeTruthy());
   });
 
-  it('RESET_INVALID_PASSWORD → inline pw-error (邊界 case)', async () => {
+  it('RESET_RATE_LIMITED → recoverable warning on the form', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       new Response(
-        JSON.stringify({ error: { code: 'RESET_INVALID_PASSWORD', message: 'bad' } }),
-        { status: 400 },
+        JSON.stringify({ error: { code: 'RESET_RATE_LIMITED', message: 'slow down' } }),
+        { status: 429 },
       ),
     ));
     vi.useRealTimers();
@@ -119,7 +166,9 @@ describe('ResetPasswordPage', () => {
     fireEvent.change(screen.getByTestId('reset-confirm'), { target: { value: 'goodpassword1' } });
     fireEvent.click(screen.getByTestId('reset-submit'));
 
-    await waitFor(() => expect(screen.queryByTestId('reset-pw-error')).toBeTruthy());
+    await waitFor(() => expect(screen.queryByTestId('reset-banner-error')).toBeTruthy());
+    expect(screen.getByTestId('reset-banner-error').textContent).toContain('過多');
+    expect(screen.queryByTestId('reset-retry')).toBeNull();
   });
 
   it('Network failure → banner-error', async () => {
@@ -132,5 +181,7 @@ describe('ResetPasswordPage', () => {
     fireEvent.click(screen.getByTestId('reset-submit'));
 
     await waitFor(() => expect(screen.queryByTestId('reset-banner-error')).toBeTruthy());
+    expect(screen.queryByTestId('reset-retry')).toBeNull();
+    expect(screen.getByTestId('reset-submit').hasAttribute('disabled')).toBe(false);
   });
 });

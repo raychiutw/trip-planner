@@ -9,7 +9,7 @@
  *
  * Rate limit (V2-P6): 429 FORGOT_PASSWORD_RATE_LIMITED → 顯示 retry-after。
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 import { apiFetchRaw } from '../lib/apiClient';
 
@@ -88,9 +88,12 @@ export default function ForgotPasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setWarning(null);
     try {
@@ -119,6 +122,7 @@ export default function ForgotPasswordPage() {
     } catch {
       setWarning('網路連線失敗，請稍後再試。');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }

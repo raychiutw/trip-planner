@@ -29,6 +29,7 @@ export default function InlineError({ message, testId, className = '' }: InlineE
     <>
       <style>{SCOPED_STYLES}</style>
       <p
+        id={testId}
         className={`tp-inline-error-shared ${className}`.trim()}
         role="alert"
         data-testid={testId}
