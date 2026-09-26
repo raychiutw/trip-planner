@@ -14,8 +14,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import OperationShell from '../components/shell/OperationShell';
 import Icon from '../components/shared/Icon';
+import { showToast } from '../components/shared/Toast';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { usePoiSearch } from '../hooks/usePoiSearch';
+import { usePoiFavorites } from '../hooks/usePoiFavorites';
+import { usePoiSelection } from '../hooks/usePoiSelection';
 import { apiFetch } from '../lib/apiClient';
 import { createEntry, addAlternate, replaceMasterPoi } from '../lib/entryMutations';
 import { regionToApiParam } from '../lib/maps/region';
@@ -30,7 +33,6 @@ import {
   type PoiSearchTab as Tab,
   type PoiSearchCategory,
 } from '../lib/poiSearchHelpers';
-import type { PoiFavorite } from '../types/api';
 // v2.31.98: 自訂 tab — 同 AddStopPage 共用 CustomPoiForm shared component。
 import { CustomPoiForm, type CustomPoiCoord } from '../components/trip/CustomPoiForm';
 import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
@@ -533,6 +535,12 @@ interface SelectedPoi {
   country?: string | null;
 }
 
+function reportTravelResult(recompute: Promise<boolean>) {
+  void recompute.then((ok) => {
+    if (!ok) showToast('景點已儲存，但車程更新失敗，重新整理後再試', 'info', 5000);
+  });
+}
+
 // v2.33.34: normalizeSearchResults / matchCategory / poiTone / poiMeta extract
 // to src/lib/poiSearchHelpers.ts. ChangePoi 之前 normalizeSearchResults 是
 // cast-only 無 type 檢查；現在用 shared 嚴格版（同 AddStop pre-extract 行為）。
@@ -574,12 +582,14 @@ export default function ChangePoiPage() {
   const [regionMenuOpen, setRegionMenuOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [category, setCategory] = useState<ChangePoiCategory>('all');
-  const [selected, setSelected] = useState<SelectedPoi | null>(null);
+  const selection = usePoiSelection<SelectedPoi>(tab, mode, false);
+  const selected = selection.selected[0]?.value ?? null;
   // v2.50.0: mode=new search 加景點時可當場覆寫 auto-derived 分類（單選模型 → 單一 state，
   // 非 AddStopPage 的 Record）。null = 沿用 mapGooglePrimaryTypeToPoiType(selected.category)。
   // 換選取 / 改搜尋 / 切 tab 都 reset null → 每次選取回到自動推導預設。
   const [searchCatOverride, setSearchCatOverride] = useState<PoiType | null>(null);
-  const [favorites, setFavorites] = useState<PoiFavorite[] | null>(null);
+  const { state: favoritesState, retry: retryFavorites } = usePoiFavorites(tab === 'favorites');
+  const favorites = favoritesState.rows;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // v2.27.0 OCC token: GET on mount, attach to PUT /poi-id + POST /alternates body so
@@ -595,24 +605,35 @@ export default function ChangePoiPage() {
   // 自訂 stop 無 Google 來源 → 預設 'attraction'，使用者用 CategoryPicker 可改。
   const [customCategory, setCustomCategory] = useState<PoiType>('attraction');
   const [customError, setCustomError] = useState<string | null>(null);
+  const previousMode = useRef(mode);
+  useEffect(() => {
+    if (previousMode.current === mode) return;
+    previousMode.current = mode;
+    setCustomTitle('');
+    setCustomCoord(null);
+    setCustomCategory('attraction');
+    setCustomHintConfirmed(false);
+    setCustomError(null);
+  }, [mode]);
   // v2.32.1 fix: 初值改 null（"未載入"），與「載入後是 0 個 destinations」區分。
   // LocationPickerMap 只用 mount 時的 initialCenter，若 customDestinations 還是 null
   // 就 render 會卡在 Tokyo Station fallback 改不掉 — 必須等 fetch 完才能 mount。
   const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
-  const { results: searchResults, searching } = usePoiSearch({
+  const { state: searchState, retry: retrySearch } = usePoiSearch({
     enabled: tab === 'search',
     query: query.trim(),
     region: regionToApiParam(region),
     limit: 20,
     normalise: normalizeSearchResults,
   });
+  const searchResults = searchState.results;
 
   const handleSearchInput = useCallback((event: FormEvent<HTMLInputElement>) => {
     setQuery(event.currentTarget.value);
-    setSelected(null);
+    selection.clear();
     setSearchCatOverride(null);
-  }, []);
+  }, [selection]);
 
   const buildSearchPoiBody = useCallback((poi: SelectedPoi) => ({
     name: poi.name,
@@ -628,12 +649,16 @@ export default function ChangePoiPage() {
 
   const handleTabChange = useCallback((nextTab: Tab) => {
     if (nextTab === tab) return;
-    setSelected(null);
+    selection.clear();
     setSearchCatOverride(null);
+    setCustomTitle('');
+    setCustomCoord(null);
+    setCustomHintConfirmed(false);
+    setCustomError(null);
     const next = new URLSearchParams(searchParams);
     next.set('tab', nextTab);
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams, tab]);
+  }, [searchParams, setSearchParams, tab, selection]);
 
   const filteredSearchResults = useMemo(
     () => searchResults.filter((result) => matchCategory(result.category, category)),
@@ -641,21 +666,9 @@ export default function ChangePoiPage() {
   );
 
   const filteredFavorites = useMemo(
-    () => (favorites ?? []).filter((favorite) => matchCategory(favorite.poiType, category)),
+    () => favorites.filter((favorite) => matchCategory(favorite.poiType, category)),
     [category, favorites],
   );
-
-  useEffect(() => {
-    if (tab !== 'favorites' || favorites !== null) return;
-    let cancelled = false;
-    apiFetch<PoiFavorite[]>('/poi-favorites')
-      .then((data) => {
-        if (cancelled) return;
-        setFavorites(data);
-      })
-      .catch(() => undefined);
-    return () => { cancelled = true; };
-  }, [tab, favorites]);
 
   useEffect(() => {
     // v2.32.0: mode=new 不對應任何既有 entry，跳過 entryPoisVersion fetch（OCC token
@@ -721,6 +734,7 @@ export default function ChangePoiPage() {
         const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', poi_type: customCategory };
           const r = await createEntry(tripId, newDayNum, body);
           if (!r.ok) throw new Error(`新增景點失敗 (${r.status}): ${r.message.slice(0, 200)}`);
+          reportTravelResult(r.recompute);
           const created = r.data ?? {};
           if (created.id) {
             navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
@@ -744,6 +758,7 @@ export default function ChangePoiPage() {
           }
           throw new Error(`${mode === 'alternate' ? '加備選' : '置換'}失敗 (${r.status}): ${r.message.slice(0, 200)}`);
         }
+        if (mode === 'master') reportTravelResult(r.recompute);
         navigate(
           mode === 'alternate'
             ? `/trip/${encodeURIComponent(tripId)}/stop/${entryId}/edit`
@@ -777,6 +792,7 @@ export default function ChangePoiPage() {
             };
         const r = await createEntry(tripId, newDayNum, body);
         if (!r.ok) throw new Error(`新增景點失敗 (${r.status}): ${r.message.slice(0, 200)}`);
+        reportTravelResult(r.recompute);
         const created = r.data ?? {};
         if (created.id) {
           navigate(`/trip/${encodeURIComponent(tripId)}/stop/${created.id}/edit`, { replace: true });
@@ -817,6 +833,7 @@ export default function ChangePoiPage() {
         if (r.status === 409) throw new Error('資料已被其他操作更新，請重新整理');
         throw new Error(`PUT 失敗 (${r.status}): ${r.message.slice(0, 200)}`);
       }
+      reportTravelResult(r.recompute);
       navigate(`/trips?selected=${encodeURIComponent(tripId)}`, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '置換景點失敗');
@@ -926,6 +943,8 @@ export default function ChangePoiPage() {
                       <button
                         type="button"
                         onClick={() => {
+                          selection.clear();
+                          setSearchCatOverride(null);
                           setRegion(option);
                           setRegionMenuOpen(false);
                         }}
@@ -976,16 +995,21 @@ export default function ChangePoiPage() {
 
             {categoryFilter}
 
-            {searching && <div className="tp-change-poi-empty">搜尋中⋯</div>}
-            {!searching && query.trim().length === 0 && (
+            {searchState.status === 'loading' && <div className="tp-change-poi-empty" role="status">搜尋中⋯</div>}
+            {searchState.status === 'error' && (
+              <div className="tp-change-poi-empty" role="alert" aria-label="搜尋失敗">
+                搜尋失敗，請重試 <button type="button" onClick={retrySearch} aria-label="重新搜尋">重新搜尋</button>
+              </div>
+            )}
+            {searchState.status === 'idle' && query.trim().length === 0 && (
               <div className="tp-change-poi-empty">
                 輸入關鍵字搜尋，或切到「收藏」分頁從你儲存的景點選取
               </div>
             )}
-            {!searching && query.trim().length >= 2 && searchResults.length === 0 && (
+            {searchState.status === 'success' && searchResults.length === 0 && (
               <div className="tp-change-poi-empty">沒有找到結果，換個關鍵字試試</div>
             )}
-            {!searching && searchResults.length > 0 && filteredSearchResults.length === 0 && (
+            {searchState.status === 'success' && searchResults.length > 0 && filteredSearchResults.length === 0 && (
               <div className="tp-change-poi-empty">符合類別篩選的結果為 0，試著切到「為你推薦」看全部</div>
             )}
             {filteredSearchResults.length > 0 && (
@@ -1002,7 +1026,7 @@ export default function ChangePoiPage() {
                         type="button"
                         className={`tp-change-poi-card ${isSelected ? 'is-selected' : ''}`}
                         onClick={() => {
-                          setSelected({
+                          selection.choose(result.place_id, {
                             source: 'search',
                             name: result.name,
                             lat: result.lat,
@@ -1050,15 +1074,20 @@ export default function ChangePoiPage() {
         {tab === 'favorites' && (
           <>
             {categoryFilter}
-            {!favorites && <div className="tp-change-poi-empty">載入收藏⋯</div>}
-            {favorites?.length === 0 && (
+            {favoritesState.status === 'loading' && <div className="tp-change-poi-empty" role="status">載入收藏⋯</div>}
+            {favoritesState.status === 'error' && (
+              <div className="tp-change-poi-empty" role="alert" aria-label="載入收藏失敗">
+                載入收藏失敗，請重試 <button type="button" onClick={retryFavorites} aria-label="重試載入收藏">重試載入收藏</button>
+              </div>
+            )}
+            {favoritesState.status === 'ready' && favorites.length === 0 && (
               <div className="tp-change-poi-empty">
                 <div className="tp-change-poi-empty-icon"><Icon name="heart" /></div>
                 <div className="tp-change-poi-empty-title">還沒收藏景點</div>
                 <div className="tp-change-poi-empty-desc">在探索頁或地圖上收藏地點，下次就能直接從這裡選取。</div>
               </div>
             )}
-            {favorites !== null && favorites.length > 0 && filteredFavorites.length === 0 && (
+            {favoritesState.status === 'ready' && favorites.length > 0 && filteredFavorites.length === 0 && (
               <div className="tp-change-poi-empty">符合類別篩選的收藏為 0，試著切到「為你推薦」看全部</div>
             )}
             {filteredFavorites.length > 0 && (
@@ -1076,7 +1105,7 @@ export default function ChangePoiPage() {
                         type="button"
                         className={`tp-change-poi-card ${isSelected ? 'is-selected' : ''}`}
                         onClick={() => {
-                          setSelected({
+                          selection.choose(favorite.id, {
                             source: 'favorite',
                             poiId: favorite.poiId,
                             name: favorite.poiName ?? '',

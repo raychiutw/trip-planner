@@ -24,8 +24,6 @@ interface UsePoiSearchOptions {
    * Default accepts the POI search API's `{ results: [...] }` and bare arrays.
    */
   normalise?: (raw: unknown) => PoiSearchResult[];
-  /** Legacy callback for callers migrating in T05; current errors are also returned in state. */
-  onError?: (kind: 'http-error' | 'network-error', err?: unknown) => void;
 }
 
 interface UsePoiSearchResult {
@@ -36,9 +34,6 @@ interface UsePoiSearchResult {
     error: 'http-error' | 'network-error' | null;
   };
   retry: () => void;
-  /** Transitional fields for AddStopPage/ChangePoiPage until T05. */
-  results: PoiSearchResult[];
-  searching: boolean;
 }
 
 /**
@@ -70,7 +65,7 @@ function isValidPoi(row: unknown): row is PoiSearchResult {
  *   - AbortController per request: rapid typing cancels inflight requests so
  *     the most recent query always wins (no last-write-wins race)
  *   - Cleanup on unmount + on `query`/`enabled`/`limit` change
- *   - `normalise` + `onError` 透過 ref 引用，callers 不必 useCallback 也不會
+ *   - `normalise` 透過 ref 引用，callers 不必 useCallback 也不會
  *     觸發 effect re-run (PR #459 fix)。
  *   - Schema guard：drop rows missing place_id/name/lat/lng，避免 malformed
  *     POI 進入 React state 造成 key collision / lat/lng undefined runtime crash
@@ -82,7 +77,6 @@ export function usePoiSearch({
   limit = 20,
   debounceMs = 300,
   normalise,
-  onError,
 }: UsePoiSearchOptions): UsePoiSearchResult {
   const [result, setResult] = useState<{
     key: object;
@@ -103,9 +97,7 @@ export function usePoiSearch({
   // Stable ref for callbacks — drop from effect deps so caller-side
   // inline arrows don't re-trigger the effect on every parent render.
   const normaliseRef = useRef(normalise);
-  const onErrorRef = useRef(onError);
   useEffect(() => { normaliseRef.current = normalise; }, [normalise]);
-  useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
   useEffect(() => {
     if (!enabled || trimmed.length < 2) return;
@@ -121,7 +113,6 @@ export function usePoiSearch({
         );
         if (!resp.ok) {
           if (currentKeyRef.current === key && !ctrl.signal.aborted) {
-            onErrorRef.current?.('http-error');
             setResult({ key, status: 'error', results: [], error: 'http-error' });
           }
           return;
@@ -137,7 +128,6 @@ export function usePoiSearch({
       } catch (err) {
         if ((err as { name?: string })?.name === 'AbortError') return;
         if (currentKeyRef.current === key && !ctrl.signal.aborted) {
-          onErrorRef.current?.('network-error', err);
           setResult({ key, status: 'error', results: [], error: 'network-error' });
         }
       }
@@ -153,5 +143,5 @@ export function usePoiSearch({
     : result?.key === key
       ? { status: result.status, results: result.results, error: result.error }
       : { status: 'loading' as const, results: [], error: null };
-  return { state, retry, results: state.results, searching: state.status === 'loading' };
+  return { state, retry };
 }
