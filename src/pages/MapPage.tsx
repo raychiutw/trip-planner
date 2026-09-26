@@ -320,10 +320,12 @@ export default function MapPage() {
   }, [isOverview, allDays]);
 
   const currentDay = !isOverview && typeof activeTab === 'number' ? allDays?.[activeTab] : undefined;
-  const singleDayPins = useMemo(() => {
-    if (!currentDay) return [];
-    return extractPinsFromDay(currentDay).pins;
+  const singleDayData = useMemo(() => {
+    if (!currentDay) return { pins: [], missingCount: 0 };
+    return extractPinsFromDay(currentDay);
   }, [currentDay]);
+  const singleDayPins = singleDayData.pins;
+  const missingCount = isOverview ? (overviewData?.missingCount ?? 0) : singleDayData.missingCount;
 
   // Flat pins passed to TpMap (overview aggregates all days)
   const mapPins: MapPin[] = useMemo(() => {
@@ -511,8 +513,8 @@ export default function MapPage() {
               <span className="map-page-empty-icon" aria-hidden="true">
                 <Icon name="map" />
               </span>
-              <p className="map-page-empty-title">{isOverview ? '這趟行程尚無景點' : '此日尚無景點'}</p>
-              <p className="map-page-empty-text">切換其他日期、或回到行程加入景點。</p>
+              <p className="map-page-empty-title">{missingCount > 0 ? '景點尚未設定位置' : isOverview ? '這趟行程尚無景點' : '此日尚無景點'}</p>
+              <p className="map-page-empty-text">{missingCount > 0 ? '回到行程補上位置，或切換其他日期。' : '切換其他日期、或回到行程加入景點。'}</p>
             </div>
           </div>
         ) : (
@@ -589,7 +591,7 @@ export default function MapPage() {
         <div className="tp-map-entry-cards map-page-cards" ref={cardsRef} role="list">
           {cardEntryPins.length === 0 ? (
             <div className="map-page-card-empty">
-              {isOverview ? '這趟行程尚無景點' : '這天沒有景點'}
+              {missingCount > 0 ? '景點尚未設定位置' : isOverview ? '這趟行程尚無景點' : '這天沒有景點'}
             </div>
           ) : (
             cardEntryPins.map((pin) => {
