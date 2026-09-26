@@ -13,7 +13,7 @@ export const EVENT = {
   entryUpdated: 'tp-entry-updated',
   /** dispatch detail: `{ tripId, segmentId? }` — travel segment mode / min / source changed. */
   segmentUpdated: 'tp-segment-updated',
-  /** dispatch detail: `{ tripId }` — trip metadata edit (PUT /trips/:id). */
+  /** dispatch detail: `{ tripId }` — trip metadata edit or deletion. */
   tripUpdated: 'tp-trip-updated',
   /** dispatch detail: `{ tripId }` — trip just created (NewTripPage success). */
   tripCreated: 'tp-trip-created',

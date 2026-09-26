@@ -842,6 +842,7 @@ export default function TripsListPage() {
         if (r.status === 403) throw new Error('僅行程擁有者或管理者可刪除');
         if (r.status === 404) throw new Error('行程不存在');
         if (!r.ok) throw new Error('刪除失敗，請稍後再試');
+        window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
         showToast(`已刪除「${label}」`, 'success');
         // Optimistic local removal
         setMyIds((prev) => prev?.filter((id) => id !== tripId) ?? null);

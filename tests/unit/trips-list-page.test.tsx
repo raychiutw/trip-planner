@@ -12,6 +12,8 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { NewTripProvider } from '../../src/contexts/NewTripContext';
+import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
+import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
 import { writeTripView } from '../../src/lib/tripViewState';
 import { TRIP_MAIN_PORTAL_ID } from '../../src/lib/tripStackRoutes';
 import { lsSet, LS_KEY_TRIP_PREF } from '../../src/lib/localStorage';
@@ -82,6 +84,27 @@ const SAMPLE = [
 ];
 
 describe('TripsListPage', () => {
+  it('刪除行程後已掛載的側欄同步移除該行程', async () => {
+    __clearMyTripsCache();
+    let available = [...SAMPLE];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/my-trips') return new Response(JSON.stringify(available), { status: 200 });
+      if (path === '/api/trips/okinawa' && init?.method === 'DELETE') {
+        available = available.filter((trip) => trip.tripId !== 'okinawa');
+        return new Response('{}', { status: 200 });
+      }
+      return new Response('null', { status: 200 });
+    }));
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><NewTripProvider><TripsListPage /></NewTripProvider></ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId('sidebar-trip-okinawa');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByTestId('trip-card-menu-delete-okinawa'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => expect(screen.queryByTestId('sidebar-trip-okinawa')).not.toBeInTheDocument());
+    expect(screen.getByTestId('sidebar-trip-seoul')).toBeInTheDocument();
+  });
+
   it('shows loading initially', () => {
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
