@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 import { mapNominatimCategory, poiCategoryLabel } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -46,11 +47,36 @@ interface SavedKeyRow {
   poiType: string;
 }
 
+const EXPLORE_CONTEXT_KEY = 'tripline-explore-context';
+interface ExploreContext {
+  query: string;
+  region: string;
+  category: string;
+  results: PoiSearchResult[];
+  nextPageToken: string | null;
+  pagesLoaded: number;
+  searchScope: { query: string; region: string } | null;
+}
+
+function readExploreContext(): ExploreContext | null {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(EXPLORE_CONTEXT_KEY) ?? 'null') as ExploreContext | null;
+    return saved && typeof saved.query === 'string' && typeof saved.region === 'string'
+      && typeof saved.category === 'string'
+      && Array.isArray(saved.results) && Number.isInteger(saved.pagesLoaded)
+      && saved.pagesLoaded >= 1 && saved.pagesLoaded <= MAX_SEARCH_PAGES
+      && (saved.nextPageToken === null || typeof saved.nextPageToken === 'string')
+      && (saved.searchScope === null || (typeof saved.searchScope?.query === 'string' && typeof saved.searchScope?.region === 'string'))
+      ? saved : null;
+  } catch { return null; }
+}
+
 const SCOPED_STYLES = `
 /* 捲到底載更多的哨兵 / 結尾提示。哨兵本身要有高度，否則 IntersectionObserver
    永遠不會觸發（零高度元素在多數瀏覽器不算 intersecting）。 */
 .explore-load-more {
   min-block-size: 44px;
+  width: 100%; border: 0; background: transparent;
   display: grid;
   place-items: center;
   color: var(--color-muted);
@@ -58,6 +84,7 @@ const SCOPED_STYLES = `
   padding-block: 12px;
 }
 .explore-load-more.is-end { color: var(--color-muted); opacity: 0.75; }
+.explore-load-more:not(:disabled) { cursor: pointer; color: var(--color-accent); }
 
 .explore-shell {
   background: var(--color-secondary);
@@ -410,6 +437,16 @@ const SCOPED_STYLES = `
   background: var(--color-background); border: 1px dashed var(--color-border);
   border-radius: var(--radius-md); font-size: var(--font-size-callout);
 }
+.explore-search-error {
+  padding: 12px 16px; border-radius: var(--radius-md);
+  background: var(--color-destructive-bg); color: var(--color-destructive);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.explore-search-error button {
+  min-height: 44px; padding-inline: 12px; flex-shrink: 0;
+  border: 1px solid currentColor; border-radius: var(--radius-md);
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
 
 /* v2.31.22: category filter 0 結果 empty state — 暖 placeholder + reset CTA */
 .explore-filter-empty {
@@ -481,14 +518,17 @@ export default function ExplorePage() {
   const navigate = useNavigate();
   const goBack = useNavigateBack('/favorites');
 
-  const [query, setQuery] = useState('');
+  const [restored] = useState(readExploreContext);
+  const [query, setQuery] = useState(restored?.query ?? '');
   const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState<PoiSearchResult[]>([]);
+  const [searchError, setSearchError] = useState(false);
+  const [results, setResults] = useState<PoiSearchResult[]>(restored?.results ?? []);
   const [savedKeyRows, setSavedKeyRows] = useState<SavedKeyRow[]>([]);
+  const favoriteMutationVersionRef = useRef(0);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   // Region selector + category subtab filter
-  const [region, setRegion] = useState<string>('全部地區');
-  const [category, setCategory] = useState<string>('all');
+  const [region, setRegion] = useState<string>(restored?.region ?? '全部地區');
+  const [category, setCategory] = useState<string>(restored?.category ?? 'all');
   const moreRef = useRef<HTMLDetailsElement>(null);
 
   // v2.55.73: 動態細類 chip（Variant C）— 由當前結果的 Google primaryType 生成、依數量
@@ -516,6 +556,7 @@ export default function ExplorePage() {
   const [regionPickerOpen, setRegionPickerOpen] = useState(false);
   const [regionInputOpen, setRegionInputOpen] = useState(false);
   const regionAnchorRef = useRef<HTMLDivElement>(null);
+  const regionButtonRef = useRef<HTMLButtonElement>(null);
 
   // Click-outside / Escape close popover
   useEffect(() => {
@@ -526,7 +567,10 @@ export default function ExplorePage() {
       }
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setRegionPickerOpen(false);
+      if (e.key === 'Escape') {
+        setRegionPickerOpen(false);
+        regionButtonRef.current?.focus();
+      }
     }
     window.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('keydown', onKey);
@@ -551,9 +595,10 @@ export default function ExplorePage() {
    * disable 「已收藏」 狀態仍要正確。codebase 沒 React Query/SWR，各頁獨立 fetch。
    */
   const loadSaved = useCallback(async () => {
+    const version = favoriteMutationVersionRef.current;
     try {
       const rows = await apiFetch<SavedKeyRow[]>('/poi-favorites');
-      setSavedKeyRows(rows);
+      if (version === favoriteMutationVersionRef.current) setSavedKeyRows(rows);
     } catch {
       // silent — likely 401 or transient; heart disable 退回「皆未收藏」 fallback。
     }
@@ -574,13 +619,18 @@ export default function ExplorePage() {
   // usePoiSearch 的 debounce 範式不同 (按 Enter / chip 立即查)，留 fetch 但
   // 加 abort + seq。
   const searchAbortRef = useRef<AbortController | null>(null);
+  const searchGenerationRef = useRef(0);
+  const searchScopeRef = useRef<{ query: string; region: string } | null>(restored?.searchScope ?? null);
+  const loadMorePendingRef = useRef(false);
+  const loadMoreAbortRef = useRef<AbortController | null>(null);
   /** 下一頁 token（null = 沒有更多）。Google Text Search 每頁 20 筆。 */
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(restored?.nextPageToken ?? null);
   /** 已載入幾頁。上限 MAX_SEARCH_PAGES —— 每多一頁就是多一次 Text Search 計費
    *  （Enterprise tier，每月免費額度僅 1K）。使用者不捲就不會多打。 */
-  const [pagesLoaded, setPagesLoaded] = useState(1);
+  const [pagesLoaded, setPagesLoaded] = useState(restored?.pagesLoaded ?? 1);
   const [loadingMore, setLoadingMore] = useState(false);
-  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLButtonElement | null>(null);
 
   async function runSearch(q: string) {
     if (q.length < 2) {
@@ -588,9 +638,14 @@ export default function ExplorePage() {
       return;
     }
     searchAbortRef.current?.abort();
+    loadMoreAbortRef.current?.abort();
+    loadMorePendingRef.current = false;
+    setLoadingMore(false);
+    ++searchGenerationRef.current;
     const ctrl = new AbortController();
     searchAbortRef.current = ctrl;
     setSearching(true);
+    setSearchError(false);
     try {
       const regionApi = regionToApiParam(region);
       const regionParam = regionApi ? `&region=${encodeURIComponent(regionApi)}` : '';
@@ -599,9 +654,12 @@ export default function ExplorePage() {
         { signal: ctrl.signal },
       );
       if (searchAbortRef.current === ctrl) {
+        searchScopeRef.current = { query: q, region };
         setResults(body.results ?? []);
         setNextPageToken(body.nextPageToken ?? null);
         setPagesLoaded(1);
+        setLoadingMore(false);
+        setLoadMoreError(false);
         // v2.55.73: 新搜尋結果 → 細類 chip 重算，重置 filter 回「為你推薦」，
         // 避免上次選的細類 label 在新結果中復活、靜默隱藏結果（在 handler 重置而非 effect）。
         setCategory('all');
@@ -611,7 +669,7 @@ export default function ExplorePage() {
       // 用 signal state 比 err.name 更精準（avoids ApiError → DOMException name 損失）。
       if (ctrl.signal.aborted) return;
       showToast('搜尋失敗，請稍後再試', 'error', 3000);
-      if (searchAbortRef.current === ctrl) setResults([]);
+      if (searchAbortRef.current === ctrl) setSearchError(true);
     } finally {
       if (searchAbortRef.current === ctrl) setSearching(false);
     }
@@ -619,24 +677,40 @@ export default function ExplorePage() {
 
   /** 捲到結果底部時載下一頁。三道閘：沒 token、已達頁數上限、正在載 → 不打。 */
   const loadMoreResults = useCallback(async () => {
-    if (!nextPageToken || pagesLoaded >= MAX_SEARCH_PAGES || loadingMore) return;
+    const scope = searchScopeRef.current;
+    if (!scope || !nextPageToken || pagesLoaded >= MAX_SEARCH_PAGES || loadMorePendingRef.current || searching) return;
+    const generation = searchGenerationRef.current;
+    const ctrl = new AbortController();
+    loadMoreAbortRef.current = ctrl;
+    loadMorePendingRef.current = true;
     setLoadingMore(true);
+    setLoadMoreError(false);
     try {
-      const regionApi = regionToApiParam(region);
+      const regionApi = regionToApiParam(scope.region);
       const regionParam = regionApi ? `&region=${encodeURIComponent(regionApi)}` : '';
       const body = await apiFetch<{ results?: PoiSearchResult[]; nextPageToken?: string | null }>(
-        `/poi-search?q=${encodeURIComponent(query.trim())}&limit=20${regionParam}`
+        `/poi-search?q=${encodeURIComponent(scope.query)}&limit=20${regionParam}`
           + `&pageToken=${encodeURIComponent(nextPageToken)}`,
+        { signal: ctrl.signal },
       );
-      setResults((prev) => [...prev, ...(body.results ?? [])]);
+      if (generation !== searchGenerationRef.current) return;
+      setResults((prev) => {
+        const seen = new Set(prev.map((poi) => poi.place_id));
+        return [...prev, ...(body.results ?? []).filter((poi) => !seen.has(poi.place_id))];
+      });
       setNextPageToken(body.nextPageToken ?? null);
       setPagesLoaded((n) => n + 1);
     } catch {
+      if (generation !== searchGenerationRef.current || ctrl.signal.aborted) return;
       showToast('載入更多失敗，請稍後再試', 'error', 3000);
+      setLoadMoreError(true);
     } finally {
-      setLoadingMore(false);
+      if (generation === searchGenerationRef.current) {
+        loadMorePendingRef.current = false;
+        setLoadingMore(false);
+      }
     }
-  }, [nextPageToken, pagesLoaded, loadingMore, region, query]);
+  }, [nextPageToken, pagesLoaded, searching]);
 
   // 哨兵進入視野 → 載下一頁。deps 帶 loadMoreResults：token / 頁數變動後要重掛，
   // 否則 observer 抓著舊 closure 的 nextPageToken 會一直請求同一頁。
@@ -644,11 +718,11 @@ export default function ExplorePage() {
     const el = loadMoreSentinelRef.current;
     if (!el) return;
     const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) void loadMoreResults();
+      if (!loadMoreError && entries.some((e) => e.isIntersecting)) void loadMoreResults();
     }, { rootMargin: '200px' });
     io.observe(el);
     return () => io.disconnect();
-  }, [loadMoreResults, results.length, nextPageToken, pagesLoaded]);
+  }, [loadMoreResults, loadMoreError, results.length, nextPageToken, pagesLoaded]);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -665,7 +739,7 @@ export default function ExplorePage() {
   const SUGGESTED_QUERIES = ['沖繩美麗海水族館', '首里城', '國際通', '古宇利大橋', '美國村'];
 
   /* mount auto-search default seed — 對齊 mockup landing 熱門 POI grid。 */
-  const [hasAutoSearched, setHasAutoSearched] = useState(false);
+  const [hasAutoSearched, setHasAutoSearched] = useState(restored !== null);
   useEffect(() => {
     if (hasAutoSearched) return;
     const seed = region !== '全部地區' ? region : '東京';
@@ -689,8 +763,9 @@ export default function ExplorePage() {
           return;
         }
         await apiFetch(`/poi-favorites/${favoriteId}`, { method: 'DELETE' });
+        favoriteMutationVersionRef.current++;
+        setSavedKeyRows((rows) => rows.filter((row) => row.id !== favoriteId));
         showToast(`已取消收藏「${poi.name}」`, 'success', 2000);
-        await loadSaved();
         return;
       }
       // PR-T 2026-04-26：Nominatim raw 'tourism' / 'amenity' / 'shop' 會被
@@ -708,12 +783,35 @@ export default function ExplorePage() {
           place_id: poi.place_id,
         }),
       });
-      await apiFetch('/poi-favorites', {
-        method: 'POST',
-        body: JSON.stringify({ poiId: createResp.id }),
-      });
+      let saved: { id: number };
+      try {
+        saved = await apiFetch<{ id: number }>('/poi-favorites', {
+          method: 'POST',
+          body: JSON.stringify({ poiId: createResp.id }),
+        });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          favoriteMutationVersionRef.current++;
+          try {
+            const rows = await apiFetch<SavedKeyRow[]>('/poi-favorites');
+            const key = `${mapNominatimCategory(poi.category ?? '')}::${poi.name}`;
+            if (rows.some((row) => `${row.poiType}::${row.poiName}` === key)) {
+              setSavedKeyRows(rows);
+              showToast(`「${poi.name}」已在收藏中`, 'info', 2000);
+              return;
+            }
+          } catch {
+            showToast(`「${poi.name}」已在收藏中，請重整以更新狀態`, 'info', 3000);
+            return;
+          }
+        }
+        throw err;
+      }
+      favoriteMutationVersionRef.current++;
+      setSavedKeyRows((rows) => [...rows.filter((row) => row.id !== saved.id), {
+        id: saved.id, poiName: poi.name, poiType: mapNominatimCategory(poi.category ?? ''),
+      }]);
       showToast(`已加入收藏「${poi.name}」`, 'success', 2000);
-      await loadSaved();
     } catch (err) {
       const msg = err instanceof Error ? err.message : '未知錯誤';
       const verb = isPoiFavorited ? '取消收藏' : '加入收藏';
@@ -747,10 +845,10 @@ export default function ExplorePage() {
             <div className="explore-region-bar">
               <div className="explore-region-picker-anchor" ref={regionAnchorRef}>
                 <button
+                  ref={regionButtonRef}
                   type="button"
                   className="explore-region-pill"
                   onClick={() => setRegionPickerOpen((v) => !v)}
-                  aria-haspopup="listbox"
                   aria-expanded={regionPickerOpen}
                   data-testid="explore-region-pill"
                 >
@@ -758,17 +856,17 @@ export default function ExplorePage() {
                   <span>{region} ▾</span>
                 </button>
                 {regionPickerOpen && (
-                  <div className="explore-region-popover" role="listbox" data-testid="explore-region-popover">
+                  <div className="explore-region-popover" role="group" aria-label="選擇地區" data-testid="explore-region-popover">
                     {regionOptions.map((opt) => (
                       <button
                         type="button"
                         key={opt}
-                        role="option"
-                        aria-selected={opt === region}
+                        aria-pressed={opt === region}
                         className={`explore-region-option${opt === region ? ' is-active' : ''}`}
                         onClick={() => {
                           setRegion(opt);
                           setRegionPickerOpen(false);
+                          regionButtonRef.current?.focus();
                         }}
                         data-testid={`explore-region-option-${opt}`}
                       >
@@ -806,13 +904,12 @@ export default function ExplorePage() {
               </button>
             </form>
 
-            <div className="explore-subtabs" role="tablist" aria-label="景點類別">
+            <div className="explore-subtabs" role="group" aria-label="景點類別">
               {/* v2.55.73: 動態細類 chip — 「為你推薦」永遠第一，其餘由結果 primaryType
                   生成、依數量排序、帶三色 tone。前 4 inline，長尾收進「更多」details 選單。 */}
               <button
                 type="button"
-                role="tab"
-                aria-selected={activeCategory === 'all'}
+                aria-pressed={activeCategory === 'all'}
                 className={`explore-subtab ${activeCategory === 'all' ? 'is-active' : ''}`}
                 onClick={() => setCategory('all')}
                 data-testid="explore-cat-all"
@@ -824,8 +921,7 @@ export default function ExplorePage() {
                 <button
                   key={chip.label}
                   type="button"
-                  role="tab"
-                  aria-selected={activeCategory === chip.label}
+                  aria-pressed={activeCategory === chip.label}
                   className={`explore-subtab ${activeCategory === chip.label ? 'is-active' : ''}`}
                   data-tone={chip.tone}
                   onClick={() => setCategory(chip.label)}
@@ -836,7 +932,13 @@ export default function ExplorePage() {
                 </button>
               ))}
               {overflowChips.length > 0 && (
-                <details className="explore-cat-more" ref={moreRef}>
+                <details className="explore-cat-more" ref={moreRef} onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.stopPropagation();
+                    e.currentTarget.open = false;
+                    e.currentTarget.querySelector('summary')?.focus();
+                  }
+                }}>
                   <summary
                     className={`explore-subtab explore-cat-more-summary ${activeInOverflow ? 'is-active' : ''}`}
                     data-testid="explore-cat-more"
@@ -844,13 +946,12 @@ export default function ExplorePage() {
                     {activeInOverflow ? activeCategory : '更多'}
                     <span className="explore-subtab-count">{overflowChips.length}</span>
                   </summary>
-                  <div className="explore-cat-menu" role="menu">
+                  <div className="explore-cat-menu" role="group" aria-label="更多景點類別">
                     {overflowChips.map((chip) => (
                       <button
                         key={chip.label}
                         type="button"
-                        role="menuitemradio"
-                        aria-checked={activeCategory === chip.label}
+                        aria-pressed={activeCategory === chip.label}
                         className={`explore-cat-menu-item ${activeCategory === chip.label ? 'is-active' : ''}`}
                         data-tone={chip.tone}
                         onClick={() => {
@@ -868,6 +969,13 @@ export default function ExplorePage() {
                 </details>
               )}
             </div>
+
+            {searchError && results.length > 0 && !searching && (
+              <div className="explore-search-error" role="alert">
+                <span>搜尋失敗，仍顯示先前結果。</span>
+                <button type="button" onClick={() => void runSearch(query.trim())}>重新搜尋</button>
+              </div>
+            )}
 
             {results.length > 0 && (() => {
               // Section 4.9：client-side category filter only。region bias 從 v2.23.4
@@ -936,6 +1044,12 @@ export default function ExplorePage() {
                             type="button"
                             className="explore-poi-add-to-trip"
                             onClick={() => {
+                              try {
+                                sessionStorage.setItem(EXPLORE_CONTEXT_KEY, JSON.stringify({
+                                  query, region, category, results, nextPageToken, pagesLoaded,
+                                  searchScope: searchScopeRef.current,
+                                } satisfies ExploreContext));
+                              } catch { /* Storage may be unavailable; navigation still works. */ }
                               const params = new URLSearchParams({
                                 place_id: poi.place_id,
                                 name: poi.name,
@@ -983,15 +1097,17 @@ export default function ExplorePage() {
                 listener —— 探索頁的捲動容器隨版面（手機整頁 / 桌機欄）不同，哨兵
                 不需要知道自己在誰裡面捲。loadMoreResults 內部三道閘擋重複觸發。 */}
             {results.length > 0 && nextPageToken && pagesLoaded < MAX_SEARCH_PAGES && (
-              <div
+              <button
+                type="button"
                 ref={loadMoreSentinelRef}
                 className="explore-load-more"
                 data-testid="explore-load-more"
-                role="status"
                 aria-live="polite"
+                disabled={!loadMoreError}
+                onClick={() => void loadMoreResults()}
               >
-                {loadingMore ? '載入更多…' : ''}
-              </div>
+                {loadMoreError ? '重試載入更多' : loadingMore ? '載入更多…' : ''}
+              </button>
             )}
             {results.length > 0 && (!nextPageToken || pagesLoaded >= MAX_SEARCH_PAGES) && (
               <div className="explore-load-more is-end" data-testid="explore-results-end">
@@ -1000,7 +1116,7 @@ export default function ExplorePage() {
             )}
 
             {results.length === 0 && query && !searching && (
-              <div className="explore-empty">沒有找到「{query}」的結果。換個關鍵字試試？</div>
+              <div className="explore-empty">{searchError ? '搜尋失敗，請再試一次。' : `沒有找到「${query}」的結果。換個關鍵字試試？`}</div>
             )}
 
             {/* 2026-04-29 (E5):landing empty state 移除,改 mount auto search
@@ -1009,8 +1125,10 @@ export default function ExplorePage() {
             {results.length === 0 && !query && !searching && hasAutoSearched && (
               <div className="explore-landing-empty" data-testid="explore-landing-empty">
                 <div className="landing-eyebrow">沒拿到結果</div>
-                <h3 className="landing-title">試試這些</h3>
-                <p className="landing-copy">看起來這個地區暫時沒結果，點下方建議或自行搜尋。</p>
+                <h3 className="landing-title">{searchError ? '搜尋暫時失敗' : '試試這些'}</h3>
+                <p className="landing-copy">{searchError
+                  ? '請再試一次，或點下方建議搜尋。'
+                  : '看起來這個地區暫時沒結果，點下方建議或自行搜尋。'}</p>
                 <div className="landing-chips">
                   {SUGGESTED_QUERIES.map((s) => (
                     <button
