@@ -9,13 +9,13 @@
  * UX (per docs/design-sessions/2026-05-18-add-custom-stop/mobile-fullpage.html):
  *   - 標題 (required)
  *   - 地址或地標 typeahead (optional, flyTo affordance)
- *   - LocationPickerMap with center pin + idle listener + arrow-key a11y
+ *   - LocationPickerMap with center pin + user-initiated selection + arrow-key a11y
  *   - 「已調整到正確位置」hint checkbox (non-blocking nudge)
  *   - 開始時間 / 停留分鐘 / 備註
  *   - 完成 → POST entries + recompute-travel + navigate back
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useBlocker, useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
@@ -404,22 +404,25 @@ export default function AddCustomStopPage() {
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [addressError, setAddressError] = useState(false);
+  const allowLeaveRef = useRef(false);
 
   const typeahead = usePlacesAutocomplete();
 
   const handlePickSuggestion = useCallback(
     async (placeId: string) => {
+      setAddressError(false);
       const closingToken = typeahead.pickSuggestion(placeId);
       try {
         const qs = new URLSearchParams({ placeId });
         if (closingToken) qs.set('sessionToken', closingToken);
         const res = await apiFetchRaw(`/places/resolve?${qs.toString()}`);
-        if (!res.ok) return;
+        if (!res.ok) throw new Error('resolve failed');
         const data = (await res.json()) as { lat: number; lng: number };
-        if (!isValidCoord({ lat: data.lat, lng: data.lng })) return;
+        if (!isValidCoord({ lat: data.lat, lng: data.lng })) throw new Error('invalid coordinate');
         setFlyToSignal({ coord: { lat: data.lat, lng: data.lng }, zoom: 15 });
       } catch {
-        // Silent — user can still drag map manually.
+        setAddressError(true);
       }
     },
     [typeahead],
@@ -444,6 +447,10 @@ export default function AddCustomStopPage() {
       setSubmitError('請先在地圖上選擇位置');
       return;
     }
+    if (duration && (!Number.isInteger(Number(duration)) || Number(duration) <= 0)) {
+      setSubmitError('停留時間請輸入正整數分鐘');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -459,6 +466,7 @@ export default function AddCustomStopPage() {
       const r = await createEntry(tripId, dayNum, body);
       if (!r.ok) throw new Error(`儲存失敗 (${r.status})`);
       showToast('已加入自訂景點', 'success');
+      allowLeaveRef.current = true;
       handleBack();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '儲存失敗');
@@ -467,9 +475,15 @@ export default function AddCustomStopPage() {
     }
   }, [submitting, tripId, dayNum, title, pickedCoord, duration, note, startTime, handleBack]);
 
-  // G-H3 dirty 攔截：填了標題/選了座標/寫了備註又按返回 → 先確認再捨棄（防丟輸入）。
+  // 未送出的表單草稿離頁前先確認，包含地址與時間欄位。
   const [discardOpen, setDiscardOpen] = useState(false);
-  const dirty = title.trim() !== '' || pickedCoord !== null || note.trim() !== '';
+  const dirty = title.trim() !== '' || typeahead.query.trim() !== '' || pickedCoord !== null || note.trim() !== '' || startTime !== '' || duration !== '' || hintConfirmed;
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    dirty && !allowLeaveRef.current && currentLocation.pathname !== nextLocation.pathname,
+  );
+  useEffect(() => {
+    if (blocker.state === 'blocked') setDiscardOpen(true);
+  }, [blocker.state]);
   const handleBackGuarded = useCallback(() => {
     if (dirty) setDiscardOpen(true);
     else handleBack();
@@ -587,7 +601,7 @@ export default function AddCustomStopPage() {
                     type="text"
                     className="tp-custom-stop-input"
                     value={typeahead.query}
-                    onChange={(e) => typeahead.setQuery(e.target.value)}
+                    onChange={(e) => { setAddressError(false); typeahead.setQuery(e.target.value); }}
                     placeholder="輸入地址縮放地圖（選填）"
                     autoComplete="off"
                     data-testid="add-custom-stop-address-typeahead"
@@ -623,10 +637,11 @@ export default function AddCustomStopPage() {
                   )}
                 </div>
                 <div className="tp-custom-stop-help">選填 — 用來把地圖縮放到大概區域，最終位置仍以地圖中心為準。</div>
+                {addressError && <div className="tp-custom-stop-error" role="alert">無法取得此地址的位置。請改選其他候選，或拖曳地圖選位置。</div>}
               </div>
 
               <div className="tp-custom-stop-field">
-                <label className="tp-custom-stop-label">位置 *</label>
+                <div className="tp-custom-stop-label">位置 *</div>
                 {/* v2.32.1 fix: destinations 還沒載完先 placeholder，避免地圖鎖
                     Tokyo fallback center。 */}
                 {destinations === null ? (
@@ -670,7 +685,10 @@ export default function AddCustomStopPage() {
                   <div>
                     <div style={{ fontSize: 11, color: 'var(--color-muted)', marginBottom: 4 }}>停留（分鐘）</div>
                     <input
+                      aria-label="停留時間（分鐘）"
                       type="number"
+                      min={1}
+                      step={1}
                       className="tp-input-short"
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
@@ -707,9 +725,13 @@ export default function AddCustomStopPage() {
         cancelLabel="繼續編輯"
         onConfirm={() => {
           setDiscardOpen(false);
-          handleBack();
+          if (blocker.state === 'blocked') blocker.proceed();
+          else { allowLeaveRef.current = true; handleBack(); }
         }}
-        onCancel={() => setDiscardOpen(false)}
+        onCancel={() => {
+          setDiscardOpen(false);
+          if (blocker.state === 'blocked') blocker.reset();
+        }}
       />
     </>
   );
