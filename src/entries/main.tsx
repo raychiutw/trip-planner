@@ -137,9 +137,13 @@ const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
  *  改成沒 valid ?trip= 就回 /trips（無 selected param 讓 TripsListPage
  *  fallback 到 user 最新編輯 trip 或顯示 empty state）。 */
 function LegacyRedirect() {
-  const queryTrip = new URLSearchParams(window.location.search).get('trip');
+  const { search, hash } = useLocation();
+  const params = new URLSearchParams(search);
+  const queryTrip = params.get('trip');
   if (queryTrip && /^[\w-]+$/.test(queryTrip)) {
-    return <Navigate to={`/trips?selected=${encodeURIComponent(queryTrip)}`} replace />;
+    params.delete('trip');
+    params.set('selected', queryTrip);
+    return <Navigate to={`/trips?${params.toString()}${hash}`} replace />;
   }
   return <Navigate to="/trips" replace />;
 }
@@ -147,11 +151,11 @@ function LegacyRedirect() {
 /** /trip/:tripId index → /trips?selected=:tripId（unified URL pattern）*/
 function TripIndexRedirect() {
   const { tripId } = useParams<{ tripId: string }>();
-  const { search } = useLocation();
+  const { search, hash } = useLocation();
   const incoming = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   // Forward existing query params (?sheet=map etc) onto the new URL
   incoming.set('selected', tripId ?? '');
-  return <Navigate to={`/trips?${incoming.toString()}`} replace />;
+  return <Navigate to={`/trips?${incoming.toString()}${hash}`} replace />;
 }
 
 /** v2.10 Wave 1: /trip/:tripId/stop/:entryId → /trips?selected=:tripId&focus=:entryId
