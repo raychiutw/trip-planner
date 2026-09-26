@@ -5,9 +5,9 @@
  *
  * New-trip creation consumes generated ids in JavaScript, so callers run CHUNKED
  * sequential batches with INSERT…RETURNING id, track created ids, and connect-root
- * rollback on any failure. POIs are find-or-create by UNIQUE(name,type): pre-existing
- * rows are reused AS-IS (never mutated → no shared-catalog poisoning), only newly-
- * created ids are tracked for rollback.
+ * rollback on any failure. POIs are find-or-create by UNIQUE(name,type) with
+ * fill-null policy: existing non-null fields stay intact; only newly-created
+ * ids are tracked for rollback. The import flow lives in _createTrip.ts.
  */
 import { AppError } from '../_errors';
 import { genTripId } from '../../../src/lib/tripId';
@@ -51,6 +51,7 @@ export async function rollbackTrip(db: D1Database, tripId: string, entryIds: num
     const chunk = poiIds.slice(i, i + 100);
     stmts.push(db.prepare(`DELETE FROM pois WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk));
   }
+  stmts.push(db.prepare('DELETE FROM audit_log WHERE trip_id = ?').bind(tripId));
   stmts.push(db.prepare('DELETE FROM trips WHERE id = ?').bind(tripId));
   await runChunked(db, stmts);
 }

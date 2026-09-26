@@ -163,7 +163,7 @@ functions/api/
 ├── _types.ts            Env / shared types
 ├── _utils.ts            共用 DB / header helpers
 ├── _validate.ts         input validation + garbled guard
-├── trips/               trips CRUD + batch days endpoint
+├── trips/               trips CRUD + batch days endpoint；_createTrip.ts 持有新行程分批建立、ID 對應及補償
 ├── pois/                POI CRUD（AI 維護的 master）
 ├── requests/            旅伴請求（含 SSE stream）
 ├── permissions/         trip_permissions CRUD

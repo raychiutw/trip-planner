@@ -7,11 +7,9 @@
  * renumber, segment dedup, prototype-pollution rejection), cap trips-per-user,
  * then build only parameterized statements.
  *
- * D1 has no interactive transaction and db.batch() can't feed a generated id
- * into a later statement, AND has a ~100-statement-per-batch limit — so we run
- * CHUNKED sequential batches with INSERT…RETURNING id, tracking created ids as
- * we go, and roll back by deleting everything keyed to the new trip on any
- * failure. Import always CREATES fresh pois (never touches the shared catalog).
+ * The new-trip creation module owns chunked writes, generated-ID remapping and
+ * compensation. POIs follow the shared fill-null policy; existing non-null
+ * values are preserved.
  *
  * Design: ~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260530-101432.md (PR3)
  */
@@ -20,9 +18,8 @@ import { requireAuth, assertNotTripRestricted } from '../_auth';
 import { json } from '../_utils';
 import { AppError } from '../_errors';
 import { parseAndValidateImport, MAX_IMPORT_BYTES, type NImportNotes } from './_import';
-import { reqId, runChunked, rollbackTrip, assertTripCap, generateUniqueTripId } from './_tripWrite';
-import { findOrCreatePoi } from '../_poi';
-import { createEntriesBatch, type BatchEntrySpec } from '../_entryWrite';
+import { assertTripCap, generateUniqueTripId } from './_tripWrite';
+import { createTripFromPlan, type NewTripPlan } from './_createTrip';
 
 type Stmt = D1PreparedStatement;
 
@@ -55,95 +52,33 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   await assertTripCap(db, auth.userId);
 
   const tripId = await generateUniqueTripId(db, data.name);
-  const createdEntryIds: number[] = [];
-  const createdPoiIds: number[] = [];
-
-  try {
-    // ---- Batch A: trip + permissions + destinations + doc stubs + notes ----
-    await runChunked(db, [
-      db.prepare('INSERT INTO trips (id, name, owner_user_id, title, description, countries, published, data_source, lang) VALUES (?,?,?,?,?,?,?,?,?)')
-        .bind(tripId, data.name, auth.userId, data.title, data.description, data.countries ?? 'JP', 0, 'imported', data.lang),
-      db.prepare('INSERT INTO trip_permissions (user_id, trip_id, role) VALUES (?,?,?)').bind(auth.userId, tripId, 'owner'),
-      ...data.destinations.map((d, i) =>
-        db.prepare('INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, sub_areas) VALUES (?,?,?,?,?,?,?)')
-          .bind(tripId, i + 1, d.name, d.lat, d.lng, d.dayQuota, d.subAreas ? JSON.stringify(d.subAreas) : null)),
-      ...noteStatements(db, tripId, data.notes),
-    ]);
-
-    // ---- Batch B: days RETURNING id ----
-    const dayIds: number[] = [];
-    await runChunked(db, data.days.map((d, i) =>
-      db.prepare('INSERT INTO trip_days (trip_id, day_num, date, day_of_week, label) VALUES (?,?,?,?,?) RETURNING id')
-        .bind(tripId, d.dayNum || i + 1, d.date, d.dayOfWeek, d.label)),
-      (r) => dayIds.push(reqId(r)));
-
-    // ---- Batch C: entries RETURNING id; build entryPosition → new id ----
-    // ---- POIs 逐筆 resolve（policy=fill-null，spec #1255 / #1258 owner 2026-09-05 拍板：
-    // 撞既有 pois 只補 NULL 欄、不覆蓋非 NULL；新建記 createdPoiIds 供 rollback；
-    // source='imported'、country 不猜）。逐 POI sequential 是 UNIQUE(name,type)
-    // SELECT→INSERT OR IGNORE 無法 batch 的既有限制。----
-    const resolve = (p: { type: string; name: string; category: string | null; lat: number | null; lng: number | null; hours: string | null; rating: number | null; price?: string | null; address: string | null; placeId: string | null }) =>
-      findOrCreatePoi(db, {
-        type: p.type, name: p.name, category: p.category, lat: p.lat, lng: p.lng, hours: p.hours,
-        rating: p.rating, price: p.price ?? null, address: p.address, place_id: p.placeId,
-        source: 'imported',
-      }, { policy: 'fill-null', createdPoiIds, defaultCountry: null });
-
-    // ---- entries：#1258 走 entry intake 批次入口（正選/備選、去重、version、每筆 audit）----
-    const specs: BatchEntrySpec[] = [];
-    const entryPositions: number[] = [];
-    for (let di = 0; di < data.days.length; di++) {
-      const d = data.days[di]!;
-      for (const e of d.entries) {
-        const pois: BatchEntrySpec['pois'] = [];
-        for (const p of e.pois) {
-          const poiId = await resolve(p);
-          // migration 0078: entry-level note → master note 的 coalesce 已在 _import.ts 解析時
-          // 做完（master-wins），這裡只照 p.note 寫。
-          pois.push({ poiId, description: p.description, note: p.note, reservation: p.reservation, reservationUrl: p.reservationUrl });
-        }
-        specs.push({ dayId: dayIds[di]!, sortOrder: e.sortOrder, startTime: e.startTime, endTime: e.endTime, description: e.description, source: e.source, pois });
-        entryPositions.push(e.entryPosition);
-      }
-    }
-    const posToEntryId = new Map<number, number>();
-    await createEntriesBatch(db, specs, {
-      audit: { tripId, changedBy: auth.email || auth.userId, diff: { via: 'import' } },
-      onEntryId: (id, idx) => {
-        createdEntryIds.push(id);
-        posToEntryId.set(entryPositions[idx]!, id);
-      },
-    });
-
-    const E: Stmt[] = [];
-    for (let di = 0; di < data.days.length; di++) {
-      const d = data.days[di]!;
-      if (d.hotel) {
-        const poiId = await resolve(d.hotel);
-        E.push(db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(poiId, dayIds[di]!));
-      }
-    }
-    for (const s of data.segments) {
-      const from = posToEntryId.get(s.fromEntryIdx);
-      const to = posToEntryId.get(s.toEntryIdx);
-      if (from === undefined || to === undefined) continue;
-      E.push(db.prepare('INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, version, no_travel) VALUES (?,?,?,?,?,?,?,?,?,0,?)')
-        .bind(tripId, from, to, s.mode, s.submode, s.min, s.distanceM, s.source, s.source === 'google' ? Date.now() : null, s.noTravel ?? null));
-    }
-    await runChunked(db, E);
-
-    return json({ ok: true, tripId, daysCreated: data.days.length }, 201);
-  } catch (err) {
-    try {
-      await rollbackTrip(db, tripId, createdEntryIds, createdPoiIds);
-    } catch (rbErr) {
-      // Rollback itself failed → orphaned rows may remain. Surface loudly.
-      console.error('[import] ROLLBACK FAILED — possible orphaned data', { tripId, rbErr });
-    }
-    if (err instanceof AppError) throw err;
-    console.error('[import] failed, rolled back', { tripId, err });
-    throw new AppError('SYS_DB_ERROR', '匯入失敗，請稍後重試');
-  }
+  const poiData = (p: { type: string; name: string; category: string | null; lat: number | null; lng: number | null; hours: string | null; rating: number | null; price?: string | null; address: string | null; placeId: string | null }) => ({
+    type: p.type, name: p.name, category: p.category, lat: p.lat, lng: p.lng, hours: p.hours,
+    rating: p.rating, price: p.price ?? null, address: p.address, place_id: p.placeId, source: 'imported',
+  });
+  const plan: NewTripPlan = {
+    tripId, ownerId: auth.userId, name: data.name, title: data.title, description: data.description,
+    countries: data.countries ?? 'JP', published: 0, dataSource: 'imported', lang: data.lang,
+    destinations: data.destinations.map((d) => ({ ...d, subAreas: d.subAreas ? JSON.stringify(d.subAreas) : null })),
+    notes: noteStatements(db, tripId, data.notes),
+    days: data.days.map((d, i) => ({
+      dayNum: d.dayNum || i + 1, date: d.date, dayOfWeek: d.dayOfWeek, label: d.label,
+      hotel: d.hotel ? poiData(d.hotel) : null,
+      entries: d.entries.map((e) => ({
+        key: e.entryPosition, sortOrder: e.sortOrder, startTime: e.startTime, endTime: e.endTime,
+        description: e.description, source: e.source,
+        pois: e.pois.map((p) => ({ data: poiData(p), fields: {
+          description: p.description, note: p.note, reservation: p.reservation, reservationUrl: p.reservationUrl,
+        } })),
+      })),
+    })),
+    segments: data.segments.map((s) => ({ fromKey: s.fromEntryIdx, toKey: s.toEntryIdx,
+      mode: s.mode, submode: s.submode, min: s.min, distanceM: s.distanceM, source: s.source, noTravel: s.noTravel })),
+    audit: { changedBy: auth.email || auth.userId, diff: { via: 'import' } },
+    failureDetail: '匯入失敗，請稍後重試',
+  };
+  await createTripFromPlan(db, plan);
+  return json({ ok: true, tripId, daysCreated: data.days.length }, 201);
 };
 
 function noteStatements(db: D1Database, tripId: string, n: NImportNotes): Stmt[] {
