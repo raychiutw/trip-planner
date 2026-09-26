@@ -238,33 +238,39 @@ export default function ConnectedAppsPage() {
               <h2>授權中</h2>
               <span className="tp-section-count">{apps.length} 個</span>
             </div>
-            {apps.map((app) => (
-              <div className="tp-app-row" key={app.client_id} data-testid={`connected-apps-row-${app.client_id}`}>
-                <div className="tp-app-logo" aria-hidden="true">
-                  {app.app_name.slice(0, 1).toUpperCase()}
-                </div>
-                <div className="tp-app-info">
-                  <div className="tp-app-name">{app.app_name}</div>
-                  <div className="tp-app-meta">
-                    {app.scopes.map((s) => (
-                      <span className="tp-scope-pill" key={s} title={s}>{SCOPE_NAMES[s] ?? s}</span>
-                    ))}
-                    <time dateTime={new Date(app.granted_at).toISOString()}>
-                      授權於 {new Date(app.granted_at).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}
-                    </time>
+            {apps.map((app) => {
+              const grantedAt = new Date(app.granted_at);
+              const hasGrantTime = typeof app.granted_at === 'number' && Number.isFinite(grantedAt.getTime());
+              return (
+                <div className="tp-app-row" key={app.client_id} data-testid={`connected-apps-row-${app.client_id}`}>
+                  <div className="tp-app-logo" aria-hidden="true">
+                    {app.app_name.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="tp-app-info">
+                    <div className="tp-app-name">{app.app_name}</div>
+                    <div className="tp-app-meta">
+                      {app.scopes.map((s) => (
+                        <span className="tp-scope-pill" key={s} title={s}>{SCOPE_NAMES[s] ?? s}</span>
+                      ))}
+                      {hasGrantTime ? (
+                        <time dateTime={grantedAt.toISOString()}>
+                          授權於 {grantedAt.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </time>
+                      ) : <span>授權時間未知</span>}
+                    </div>
+                  </div>
+                  <div className="tp-app-actions">
+                    <button
+                      className="tp-btn tp-btn-destructive"
+                      onClick={() => { setRevokeError(null); setRevokingId(app.client_id); }}
+                      data-testid={`connected-apps-revoke-${app.client_id}`}
+                    >
+                      撤銷
+                    </button>
                   </div>
                 </div>
-                <div className="tp-app-actions">
-                  <button
-                    className="tp-btn tp-btn-destructive"
-                    onClick={() => { setRevokeError(null); setRevokingId(app.client_id); }}
-                    data-testid={`connected-apps-revoke-${app.client_id}`}
-                  >
-                    撤銷
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

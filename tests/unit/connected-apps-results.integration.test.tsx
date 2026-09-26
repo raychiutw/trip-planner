@@ -105,3 +105,15 @@ it('shows every granted permission in readable words and the local authorization
   expect(row).toHaveTextContent('4');
   expect(row).toHaveTextContent('18');
 });
+
+it('keeps valid grants readable alongside missing and malformed authorization timestamps', async () => {
+  appsResponse = json({ apps: [
+    app,
+    { ...app, client_id: 'broken-time', app_name: 'Broken Time', granted_at: undefined },
+    { ...app, client_id: 'invalid-time', app_name: 'Invalid Time', granted_at: 'not-a-date' },
+  ] });
+  showPage();
+  expect(await screen.findByTestId('connected-apps-row-calendar')).toHaveTextContent('2026年4月18日');
+  expect(screen.getByTestId('connected-apps-row-broken-time')).toHaveTextContent('授權時間未知');
+  expect(screen.getByTestId('connected-apps-row-invalid-time')).toHaveTextContent('授權時間未知');
+});
