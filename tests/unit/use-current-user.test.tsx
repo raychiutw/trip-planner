@@ -98,16 +98,21 @@ describe('useCurrentUser', () => {
     );
   });
 
-  it('cancelled fetch (unmount) does not setState (no warning)', async () => {
+  it('cancelled fetch (unmount) does not crash when it resolves late', async () => {
+    // React 18 removed the "setState on unmounted component" dev warning, so
+    // this doesn't actually verify the `stale` guard fires (confirmed by
+    // mutation elsewhere in this file) — it only proves resolving a fetch
+    // after unmount doesn't throw or leave an unhandled rejection.
     let resolveFetch: (res: Response) => void = () => undefined;
     vi.spyOn(global, 'fetch').mockImplementation(() => new Promise<Response>((resolve) => {
       resolveFetch = resolve;
     }));
     const { unmount } = renderHook(() => useCurrentUser());
     unmount();
-    // Resolve after unmount — should not set state on unmounted component
     resolveFetch(new Response(JSON.stringify(SAMPLE_USER), { status: 200 }));
-    // No assertion needed — vitest will warn if setState called on unmounted
+    // Let the internal .then/.catch chain actually run to completion — an
+    // unhandled rejection or thrown error in it would fail this test.
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 
   it('concurrent mounts on the same pageload share one in-flight request (no N+1)', async () => {
@@ -128,8 +133,15 @@ describe('useCurrentUser', () => {
   it('unmounting one of several deduped concurrent mounts does not affect the others', async () => {
     // Real pageloads mix components with different lifetimes (e.g. a sidebar
     // that unmounts on route change vs. a page body that stays) sharing the
-    // same in-flight fetch. The unmounted instance's `stale` closure guard
-    // must not interfere with the module-level dedup the others still rely on.
+    // same in-flight fetch. This proves the dedup itself survives a sibling
+    // unmounting mid-flight — hooks[0]/hooks[2] must still land correctly.
+    //
+    // This does NOT test the `stale` closure guard in isolation: React 18
+    // silently no-ops a setState on an already-unmounted fiber regardless of
+    // any userland guard (no warning, no observable difference in
+    // `result.current` either way — verified by mutation: removing the guard
+    // does not turn this assertion red). The guard's real job is same-instance
+    // effect-rerun supersession, covered by the reload() tests above.
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
     );
@@ -141,7 +153,6 @@ describe('useCurrentUser', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(hooks[0].result.current.user).toEqual(SAMPLE_USER);
     expect(hooks[2].result.current.user).toEqual(SAMPLE_USER);
-    // No assertion needed for hooks[1] — vitest/RTL warns if setState fired on the unmounted instance.
   });
 
   it('dedup window does not survive a real microtask tick (no accidental long-lived cache)', async () => {
