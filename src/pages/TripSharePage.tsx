@@ -7,45 +7,64 @@
  *
  * Design: ~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260530-191308.md
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/shared/Icon';
 import TripPrintDocument from '../components/print/TripPrintDocument';
 import { renderTripPrintPdf } from '../components/print/renderTripPrintPdf';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { ApiError } from '../lib/errors';
 import { cloneShare } from '../lib/shareApi';
 import { loadSharePrintData, tripDisplayName, type TripPrintData } from '../lib/tripPrintData';
 import { SHARE_CHROME_CSS, PRINT_CSS } from '../lib/tripPrintStyles';
 
+type ShareRead =
+  | { scope: object; request: number; status: 'ready'; data: TripPrintData; sharedBy: string }
+  | { scope: object; request: number; status: 'notfound' | 'error' };
+
 export default function TripSharePage() {
   const { token } = useParams<{ token: string }>();
+  const scope = useMemo(() => ({ token }), [token]);
   const navigate = useNavigate();
   const { user } = useCurrentUser();
-  const [data, setData] = useState<TripPrintData | null>(null);
-  const [sharedBy, setSharedBy] = useState('');
-  const [status, setStatus] = useState<'loading' | 'ready' | 'notfound'>('loading');
-  const [cloning, setCloning] = useState(false);
-  const [cloneErr, setCloneErr] = useState(false);
+  const [read, setRead] = useState<ShareRead | null>(null);
+  const [request, setRequest] = useState(0);
+  const [cloneState, setCloneState] = useState<{ scope: object; status: 'cloning' | 'error' } | null>(null);
+  const activeScope = useRef<object | null>(null);
+
+  // Invalidate pending clone navigation as soon as a new token is committed.
+  useLayoutEffect(() => {
+    activeScope.current = scope;
+    return () => { if (activeScope.current === scope) activeScope.current = null; };
+  }, [scope]);
 
   useEffect(() => {
-    if (!token) return;
+    const shareToken = scope.token;
+    if (!shareToken) return;
     let alive = true;
-    setStatus('loading');
     void (async () => {
       try {
-        const res = await loadSharePrintData(token);
+        const res = await loadSharePrintData(shareToken);
         if (!alive) return;
-        setData(res.data);
-        setSharedBy(res.sharedBy);
-        setStatus('ready');
-      } catch {
-        if (alive) setStatus('notfound');
+        setRead({ scope, request, status: 'ready', data: res.data, sharedBy: res.sharedBy });
+      } catch (error) {
+        if (alive) setRead({
+          scope, request,
+          status: error instanceof ApiError && (error.status === 404 || error.status === 410) ? 'notfound' : 'error',
+        });
       }
     })();
     return () => {
       alive = false;
     };
-  }, [token]);
+  }, [scope, request]);
+
+  const current = read && read.scope === scope && read.request === request ? read : null;
+  const status = current?.status ?? 'loading';
+  const data = current?.status === 'ready' ? current.data : null;
+  const sharedBy = current?.status === 'ready' ? current.sharedBy : '';
+  const cloning = cloneState?.scope === scope && cloneState?.status === 'cloning';
+  const cloneErr = cloneState?.scope === scope && cloneState?.status === 'error';
 
   const onPdf = useCallback(() => {
     if (!data) return;
@@ -56,21 +75,19 @@ export default function TripSharePage() {
   // Logged in → clone the visible payload server-side into the caller's account, then
   // open the new trip. Logged out → send to login (redirect back to keep the funnel).
   const onCopy = useCallback(async () => {
-    if (!token) return;
+    if (!token || user === undefined || cloning) return;
     if (!user) {
       navigate(`/login?redirect_after=${encodeURIComponent(`/s/${token}`)}`);
       return;
     }
-    setCloning(true);
-    setCloneErr(false);
+    setCloneState({ scope, status: 'cloning' });
     try {
       const { tripId } = await cloneShare(token);
-      navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
+      if (activeScope.current === scope) navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
     } catch {
-      setCloning(false);
-      setCloneErr(true);
+      if (activeScope.current === scope) setCloneState({ scope, status: 'error' });
     }
-  }, [navigate, token, user]);
+  }, [cloning, navigate, scope, token, user]);
 
   const name = data ? tripDisplayName(data) : '';
   const meta = data
@@ -86,6 +103,11 @@ export default function TripSharePage() {
           <div className="tp-share-state-title">連結已失效</div>
           這個分享連結不存在、已被關閉或已過期。請向分享者索取新的連結。
         </div>
+      ) : status === 'error' ? (
+        <div className="tp-share-state" role="alert" data-testid="share-error">
+          <div className="tp-share-state-title">暫時無法讀取分享行程</div>
+          <button type="button" className="tp-share-copy" onClick={() => setRequest((value) => value + 1)}>重試</button>
+        </div>
       ) : status === 'loading' || !data ? (
         <div className="tp-share-state" data-testid="share-loading">載入中…</div>
       ) : (
@@ -95,7 +117,7 @@ export default function TripSharePage() {
               <Icon name="sparkle" />
               {sharedBy ? `由 ${sharedBy} 分享給你` : '有人分享了一份行程給你'}
             </div>
-            <div className="tp-share-title" data-testid="share-title">{name}</div>
+            <h1 className="tp-share-title" data-testid="share-title">{name}</h1>
             {meta && <div className="tp-share-meta">{meta}</div>}
           </header>
 
@@ -106,7 +128,7 @@ export default function TripSharePage() {
             <button type="button" className="tp-share-ghost" onClick={onPdf} title="存成 PDF" data-testid="share-pdf">
               <Icon name="download" />
             </button>
-            <button type="button" className="tp-share-copy" onClick={onCopy} disabled={cloning} data-testid="share-copy">
+            <button type="button" className="tp-share-copy" onClick={onCopy} disabled={cloning || user === undefined} data-testid="share-copy">
               <Icon name="copy" /> {cloning ? '複製中…' : '複製到我的行程'}
             </button>
           </div>

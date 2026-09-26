@@ -103,7 +103,7 @@ export const SHARE_CHROME_CSS = `
 .tp-share-hero{background:linear-gradient(135deg,#A97A4A,#C49A6E);color:#fff;padding:26px 20px 20px;}
 .tp-share-eyebrow{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;opacity:.93;margin-bottom:8px;}
 .tp-share-eyebrow svg{width:15px;height:15px;}
-.tp-share-title{font-size:26px;font-weight:700;line-height:1.18;}
+.tp-share-title{font-size:26px;font-weight:700;line-height:1.18;margin:0;}
 .tp-share-meta{font-size:13px;opacity:.95;margin-top:8px;}
 .tp-share-actionbar{position:sticky;top:0;z-index:10;display:flex;gap:8px;
   background:#faf4ea;border-bottom:1px solid #eadfcf;padding:9px 14px;}
