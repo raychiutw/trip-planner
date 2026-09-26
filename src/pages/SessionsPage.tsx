@@ -91,8 +91,8 @@ const SCOPED_STYLES = `
   margin-top: 2px;
 }
 
-.tp-time { font-size: var(--font-size-footnote); color: var(--color-muted); }
-.tp-time-absolute { margin-top: 2px; font-size: var(--font-size-caption); font-variant-numeric: tabular-nums; }
+.tp-time { font-size: var(--font-size-footnote); color: var(--color-foreground); }
+.tp-time-absolute { margin-top: 2px; color: var(--color-muted); font-size: var(--font-size-caption); font-variant-numeric: tabular-nums; }
 @media (max-width: 760px) {
   .tp-sessions-shell { padding-bottom: 96px; }
   .tp-row:not(.tp-row-header) { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }

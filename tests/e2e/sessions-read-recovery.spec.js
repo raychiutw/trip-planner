@@ -31,6 +31,25 @@ test('320px GET failure keeps the list frame and keyboard retry restores local d
   const current = page.getByTestId('sessions-row-current');
   await expect(current).toContainText('剛才');
   await expect(current).toContainText('2026/4/27');
+  const activityColors = await current.locator('.tp-time').evaluate((time) => {
+    const relative = time.firstElementChild;
+    const absolute = time.lastElementChild;
+    const swatch = document.createElement('span');
+    time.appendChild(swatch);
+    swatch.style.color = 'var(--color-foreground)';
+    const foreground = getComputedStyle(swatch).color;
+    swatch.style.color = 'var(--color-muted)';
+    const muted = getComputedStyle(swatch).color;
+    swatch.remove();
+    return {
+      relative: getComputedStyle(relative).color,
+      absolute: getComputedStyle(absolute).color,
+      foreground,
+      muted,
+    };
+  });
+  expect(activityColors.relative).toBe(activityColors.foreground);
+  expect(activityColors.absolute).toBe(activityColors.muted);
   await expect(page.getByTestId('sessions-load-error')).toHaveCount(0);
   await expect(page.getByTestId('titlebar').getByRole('button', { name: '返回' })).toBeFocused();
   expect(loads).toBe(2);
