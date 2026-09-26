@@ -244,6 +244,8 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 .tp-trips-tab:hover { color: var(--color-foreground); }
+/* Dark track is --color-hover (#48484A); --color-muted is only 3.54:1 on it. */
+body.dark .tp-trips-tab:not(.is-active) { color: var(--color-foreground); }
 .tp-trips-tab.is-active {
   background: var(--color-background);
   /* W15 a11y：原 --color-accent(#A97A4A) 在 #FFFBF5 上僅 3.65:1（<4.5，axe serious）。
@@ -800,7 +802,7 @@ export default function TripsListPage() {
 
           {!loading && !error && myTrips.length > 0 && (
             <div className="tp-trips-toolbar" data-testid="trips-list-toolbar">
-              <div className="tp-trips-tabs" role="tablist" aria-label="行程分類">
+              <div className="tp-trips-tabs" role="group" aria-label="行程分類">
                 {([
                   { key: 'all', label: '全部', count: tabCounts.all },
                   { key: 'mine', label: '我的', count: tabCounts.mine },
@@ -810,8 +812,7 @@ export default function TripsListPage() {
                   <button
                     key={tab.key}
                     type="button"
-                    role="tab"
-                    aria-selected={filterTab === tab.key}
+                    aria-pressed={filterTab === tab.key}
                     className={`tp-trips-tab ${filterTab === tab.key ? 'is-active' : ''}`}
                     onClick={() => setFilterTab(tab.key)}
                     data-testid={`trips-list-tab-${tab.key}`}
