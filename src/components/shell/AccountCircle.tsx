@@ -65,6 +65,7 @@ export default function AccountCircle() {
       <style>{ACCOUNT_CIRCLE_STYLES}</style>
       <Link
         to="/account"
+        id="account-sheet-open-mobile"
         className="tp-account-circle"
         aria-label="帳號"
         data-testid="titlebar-account"

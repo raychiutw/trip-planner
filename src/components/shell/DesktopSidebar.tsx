@@ -302,6 +302,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
           ) : user ? (
             <Link
               to="/account"
+              id="account-sheet-open-desktop"
               className="tp-account-card"
               data-testid="sidebar-account-card"
               aria-label={`帳號設定：${user.name}`}
