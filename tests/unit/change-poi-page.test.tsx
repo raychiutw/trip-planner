@@ -32,7 +32,7 @@ vi.mock('../../src/hooks/useNavigateBack', () => ({
 vi.mock('../../src/hooks/usePoiSearch', () => ({
   usePoiSearch: (options: { query: string; normalise?: (raw: unknown) => PoiSearchResult[] }) => {
     mockPoiSearch.lastOptions = options;
-    return { results: mockPoiSearch.results, searching: false };
+    return { state: { status: mockPoiSearch.results.length ? 'success' : 'idle', results: mockPoiSearch.results, error: null }, retry: vi.fn() };
   },
 }));
 
