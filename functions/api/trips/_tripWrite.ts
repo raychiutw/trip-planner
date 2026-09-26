@@ -1,13 +1,12 @@
 /**
- * _tripWrite — shared low-level primitives for creating a new trip via chunked,
- * rollback-safe D1 writes. Consumed by both POST /api/trips/import (attacker JSON)
- * and POST /api/share/:token/clone (trusted server-side share payload).
+ * _tripWrite — low-level primitives for creating a new trip via chunked,
+ * rollback-safe D1 writes. Both creation endpoints call the shared module.
  *
- * New-trip creation consumes generated ids in JavaScript, so callers run CHUNKED
+ * New-trip creation consumes generated ids in JavaScript, so the module runs CHUNKED
  * sequential batches with INSERT…RETURNING id, track created ids, and connect-root
  * rollback on any failure. POIs are find-or-create by UNIQUE(name,type) with
  * fill-null policy: existing non-null fields stay intact; only newly-created
- * ids are tracked for rollback. The import flow lives in _createTrip.ts.
+ * ids are tracked for rollback. The full creation flow lives in _createTrip.ts.
  */
 import { AppError } from '../_errors';
 import { genTripId } from '../../../src/lib/tripId';

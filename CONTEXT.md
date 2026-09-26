@@ -41,7 +41,7 @@ trips ─┬─ trip_days ── trip_entries ── trip_entry_pois
 _Avoid_: 在 handler 直接 `INSERT INTO trip_entries` / `trip_entry_pois`；與前端的「entry 變更」（動詞 module，見下）是不同層。
 
 **行程建立**：
-匯入新行程的完整寫入流程（`functions/api/trips/_createTrip.ts`）：依序建立 trip、權限與目的地、days、由 entry intake 建立 entries 與正選／備選、住宿及 segments。module 持有分批提交、day／entry ID 對應、新建 POI 帳本與失敗補償；匯入入口只負責來源驗證、格式轉換、授權及回應。補償會刪除本次行程與 audit，但共用 POI 的 `fill-null` 補值不回滾。這是新行程的跨批次補償，與整日替換的單批次交易不同。
+匯入與分享 clone 新行程的完整寫入流程（`functions/api/trips/_createTrip.ts`）：依序建立 trip、權限與目的地、days、由 entry intake 建立 entries 與正選／備選、住宿及 segments。module 持有分批提交、day／entry ID 對應、新建 POI 帳本與失敗補償；兩個入口各自負責來源驗證、可見性、格式轉換、授權及回應。補償會刪除本次行程與 audit，但共用 POI 的 `fill-null` 補值不回滾。這是新行程的跨批次補償，與整日替換的單批次交易不同。
 
 **entry 變更**：
 前端改動 entry 的動詞 module（`src/lib/entryMutations.ts`：createEntry / setMaster / deleteEntry / moveEntry / updateEntry / reorderEntries / updateEntryPoi…）。每個動詞回 Result，不 toast、不導覽；成功後 emit `entryUpdated` 並以正確 day scope 觸發車程重算（跨天兩個 day 各一次），失敗 emit resync 不重算。頁面只拿 Result 決定 toast／navigate。
