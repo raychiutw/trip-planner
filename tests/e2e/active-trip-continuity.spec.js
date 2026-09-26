@@ -164,3 +164,113 @@ test('#1302：手機從有日期的明細切換行程，不沿用舊行程日期
   await expect(page).toHaveURL(new RegExp(`selected=${TRIP_B}#day1$`));
   await expect(page.getByTestId('trips-trip-title')).toContainText(TRIP_B_TITLE_FRAGMENT);
 });
+
+test('#1303：root 地圖只導覽，行程 days 由目標地圖讀取一次', async ({ page }) => {
+  const dayReads = [];
+  const listReads = [];
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (/\/api\/trips\/[^/]+\/days$/.test(path)) dayReads.push(request.url());
+    if (path === '/api/my-trips') listReads.push(request.url());
+  });
+  await page.goto('/map');
+  await expect(page).toHaveURL(new RegExp(`/trip/${TRIP_A}/map`));
+  await expect(page.getByTestId('map-trip-title')).toBeVisible();
+  await expect.poll(() => dayReads.length).toBe(1);
+  expect(listReads).toHaveLength(1);
+});
+
+test('#1303：行程地圖與側欄共用一次可存取清單讀取', async ({ page }) => {
+  const reads = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/my-trips') reads.push(request.url());
+  });
+  await page.goto(`/trip/${TRIP_A}/map?day=all`);
+  await expect(page.getByTestId('map-trip-title')).toBeVisible();
+  await expect(page.getByTestId('sidebar-trips')).toContainText(MOCK_TRIPS_LIST[0].name);
+  await expect.poll(() => reads.length).toBe(1);
+});
+
+test('#1303：明確地圖連結缺少清單項目仍保留目標並呈現實際讀取錯誤', async ({ page }) => {
+  const target = 'private-link';
+  await page.goto(`/trip/${target}/map`);
+  await expect(page).toHaveURL(new RegExp(`/trip/${target}/map`));
+  await expect(page.getByText('無法載入此行程地圖')).toBeVisible();
+  await expect(page.getByTestId('map-trip-title')).toContainText(target);
+});
+
+test('#1303：root 地圖在偏好失效後選擇第一個可存取行程', async ({ page }) => {
+  const visited = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.startsWith('/api/trips/removed-trip')) visited.push(request.url());
+  });
+  await page.goto('/chat');
+  await page.evaluate(() => localStorage.setItem('tp-trip-pref', JSON.stringify({ v: 'removed-trip', exp: Date.now() + 86400000 })));
+  await page.goto('/map');
+  await expect(page).toHaveURL(new RegExp(`/trip/${TRIP_A}/map`));
+  await expect(page.getByTestId('map-trip-title')).toContainText(MOCK_TRIPS_LIST[0].name);
+  expect(visited).toHaveLength(0);
+});
+
+test('#1303：沒有行程時 root 地圖保留建立引導，清單失敗則顯示錯誤', async ({ page }) => {
+  await page.route('**/api/my-trips', (route) => route.fulfill({ json: [] }));
+  await page.goto('/map');
+  await expect(page.getByTestId('global-map-empty')).toBeVisible();
+  await expect(page.getByTestId('global-map-new-trip')).toBeVisible();
+  await expect(page.locator('.app-shell')).toHaveAttribute('data-layout', '2pane');
+
+  await page.unroute('**/api/my-trips');
+  await page.route('**/api/my-trips', (route) => route.fulfill({ status: 503, json: { error: 'unavailable' } }));
+  await page.reload();
+  await expect(page.getByRole('alert')).toContainText('無法載入行程清單');
+  await expect(page.getByTestId('global-map-empty')).toHaveCount(0);
+});
+
+test('#1303：私人行程在地圖選單保留名稱，選取後行程頁延續同一目標', async ({ page }) => {
+  const privateName = '私人釜山行程';
+  await page.route('**/api/my-trips', (route) => route.fulfill({
+    json: [MOCK_TRIPS_LIST[0], { ...MOCK_TRIPS_LIST[1], title: privateName, name: privateName, published: 0 }],
+  }));
+  await page.goto(`/trip/${TRIP_A}/map`);
+  await page.getByTestId('map-trip-title').click();
+  await expect(page.getByTestId(`map-trip-pick-${TRIP_B}`)).toContainText(privateName);
+  await page.getByTestId(`map-trip-pick-${TRIP_B}`).click();
+  await expect(page).toHaveURL(new RegExp(`/trip/${TRIP_B}/map`));
+  await expect(page.getByTestId('map-trip-title')).toContainText(MOCK_TRIP_META_BUSAN.name);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('tp-trip-pref'))).toContain(TRIP_B);
+  await page.goto('/trips');
+  await expect(page).toHaveURL(new RegExp(`selected=${TRIP_B}`));
+  await expect(page.getByTestId('trips-trip-title')).toContainText(privateName);
+});
+
+test('#1303：地圖清單較舊的刷新晚到，不覆蓋新的行程名稱與選擇', async ({ page }) => {
+  let reads = 0;
+  let releaseOld;
+  let oldStarted;
+  const oldRequestStarted = new Promise((resolve) => { oldStarted = resolve; });
+  const updatedName = '新的釜山名稱';
+  await page.route('**/api/my-trips', async (route) => {
+    const request = ++reads;
+    if (request === 2) {
+      oldStarted();
+      await new Promise((resolve) => { releaseOld = resolve; });
+    }
+    const list = request === 3
+      ? [MOCK_TRIPS_LIST[0], { ...MOCK_TRIPS_LIST[1], name: updatedName, title: updatedName }]
+      : MOCK_TRIPS_LIST;
+    await route.fulfill({ json: list });
+  });
+  await page.goto(`/trip/${TRIP_B}/map`);
+  await expect(page.getByTestId('sidebar-trips')).toContainText(MOCK_TRIPS_LIST[1].name);
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('tp-trip-updated', { detail: { tripId: 'ignored' } })));
+  await oldRequestStarted;
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('tp-trip-updated', { detail: { tripId: 'ignored' } })));
+  await page.getByTestId('map-trip-title').click();
+  await expect(page.getByTestId(`map-trip-pick-${TRIP_B}`)).toContainText(updatedName);
+  const lateResponse = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/my-trips');
+  releaseOld();
+  await lateResponse;
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(page.getByTestId(`map-trip-pick-${TRIP_B}`)).toContainText(updatedName);
+  await expect(page).toHaveURL(new RegExp(`/trip/${TRIP_B}/map`));
+});

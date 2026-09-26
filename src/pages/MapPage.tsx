@@ -25,9 +25,8 @@ import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'rea
 import { lazyWithRetry } from '../lib/lazyWithRetry';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTripContext } from '../contexts/TripContext';
-import { useActiveTrip } from '../contexts/ActiveTripContext';
+import { useTripSelection } from '../hooks/useMyTrips';
 import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hooks/useMapData';
-import { apiFetch } from '../lib/apiClient';
 import { dayColor, dayTextColor } from '../lib/dayPalette';
 import { findEntryInDays } from '../lib/mapDay';
 import Icon from '../components/shared/Icon';
@@ -226,68 +225,23 @@ interface DayTab {
   label: string | null;
 }
 
-interface TripSummary {
-  tripId: string;
-  name?: string;
-  title?: string | null;
-  countries?: string | null;
-}
-
 /* ===== Component ===== */
 
 export default function MapPage() {
   const { tripId, entryId: entryIdStr } = useParams<{ tripId: string; entryId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { trip, allDays, loading } = useTripContext();
+  const { trip, allDays, loading, error } = useTripContext();
+  const { user } = useCurrentUser();
+  const { trips } = useTripSelection(user?.id, { explicitTripId: tripId });
 
   /* trip 切換：清單餵給 <TripTitleSwitcher/>（標題即切換器，owner 2026-07-21）。
    * 開合與 outside-click 由該元件自理，本頁不再持有 menu state。
    * pickTrip → navigate /trip/:newId/map（整頁切換 trip context）。 */
-  const [trips, setTrips] = useState<TripSummary[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        // 2026-07-21：改為單抓 /my-trips。原本是雙抓 —— /my-trips 只拿「我有權限
-        // 的 id 集合」，name/title/countries 這些**要顯示的資料**卻來自
-        // /trips?all=1。而 all=1 需要 ops:trips:read service-token scope，
-        // 一般使用者拿不到，會靜默降級成只回 published 行程；既有行程改為不公開
-        // 後名稱就全沒了，畫面只剩 tripId（owner 2026-07-21 回報）。
-        // /my-trips 本身就帶 name/title/countries/totalDays/startDate/endDate，
-        // 第二支 API 從一開始就是多餘的。
-        const myTrips = await apiFetch<TripSummary[]>('/my-trips');
-        if (!cancelled) setTrips(myTrips);
-      } catch {
-        /* silent — trip-picker only enhancement,fetch fail 隱藏 picker 即可 */
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
   const pickTrip = useCallback((newTripId: string) => {
     if (newTripId === tripId) return;
     navigate(`/trip/${encodeURIComponent(newTripId)}/map`);
   }, [tripId, navigate]);
-
-  /*
-   * #1140 story 1–3：把「現在正在看哪條行程」寫回 ActiveTripContext（內部 persist
-   * localStorage `trip-pref`）。
-   *
-   * 這頁**原本完全沒有寫回** —— `pickTrip` 只 navigate。於是從行程內地圖的 switcher 換
-   * 行程後，切到聊天／地圖 tab 又跳回舊的那條（e2e
-   * `active-trip-continuity.spec.js` 抓到）。ChatPage / GlobalMapPage / TripsListPage
-   * 三頁都有寫回，只有這頁漏了。
-   *
-   * 掛在 `tripId` 上而不是塞進 `pickTrip`，這樣**深連結**（直接開 /trip/X/map）也算數 ——
-   * 使用者現在看的就是 X，下一個 tab 應該跟著 X。與 GlobalMapPage 的做法一致。
-   * `setActiveTrip` 是 context 裡的 useCallback（空 deps），不會讓 effect 反覆觸發。
-   */
-  const { setActiveTrip } = useActiveTrip();
-  useEffect(() => {
-    if (tripId) setActiveTrip(tripId);
-  }, [tripId, setActiveTrip]);
 
   const urlEntryId = entryIdStr ? Number(entryIdStr) : null;
 
@@ -490,8 +444,6 @@ export default function MapPage() {
   // 是 pre-rev2 的 root-map IA 決定,已被 rev2 取代:root 地圖=GlobalMapPage(無 back);
   // 此頁是 trip 內下鑽,需要 back。〕
 
-  const { user } = useCurrentUser();
-
   const main = (
     <div className="map-page-wrap">
       <style>{SCOPED_STYLES}</style>
@@ -500,7 +452,7 @@ export default function MapPage() {
         // v2.31.81：title bar 對齊 ChatPage 格式 — 左 trip name，右 icon-only picker。
         title={
           <TripTitleSwitcher
-            label={trip?.title || trip?.name || '地圖'}
+            label={trip?.title || trip?.name || tripId || '地圖'}
             trips={trips ?? []}
             activeTripId={tripId ?? null}
             onPick={pickTrip}
@@ -517,6 +469,13 @@ export default function MapPage() {
             <div className="map-page-loading-stack">
               <div className="map-page-loading-spinner" aria-hidden="true" />
               <p className="map-page-loading-text">地圖載入中…</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="map-page-empty" role="alert">
+            <div className="map-page-empty-card">
+              <p className="map-page-empty-title">無法載入此行程地圖</p>
+              <p className="map-page-empty-text">{error}</p>
             </div>
           </div>
         ) : mapPins.length === 0 ? (
