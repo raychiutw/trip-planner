@@ -110,6 +110,27 @@ describe('Explore search recovery', () => {
     expect(screen.queryByText('first')).toBeNull();
   });
 
+  it('clears an aborted page spinner when the replacement search fails', async () => {
+    apiFetchMock.mockImplementation((path, init) => {
+      if (path === '/poi-favorites') return Promise.resolve([]);
+      if (path.includes('pageToken=next')) return new Promise((_, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+      });
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')], nextPageToken: 'next' });
+      if (path.includes('q=second')) return Promise.reject(new Error('offline'));
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    await act(async () => { observe?.([{ isIntersecting: true }]); });
+    await screen.findByText('載入更多…');
+    search('second');
+    await waitFor(() => expect(screen.getByTestId('explore-search-submit').textContent).toBe('搜尋'));
+    expect(screen.getByText('first')).toBeTruthy();
+    expect(screen.queryByText('載入更多…')).toBeNull();
+  });
+
   it('paginates the displayed search even after the input is edited and deduplicates overlapping places', async () => {
     apiFetchMock.mockImplementation((path) => {
       if (path === '/poi-favorites') return Promise.resolve([]);

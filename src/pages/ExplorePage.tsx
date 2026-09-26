@@ -629,6 +629,7 @@ export default function ExplorePage() {
     searchAbortRef.current?.abort();
     loadMoreAbortRef.current?.abort();
     loadMorePendingRef.current = false;
+    setLoadingMore(false);
     ++searchGenerationRef.current;
     const ctrl = new AbortController();
     searchAbortRef.current = ctrl;
