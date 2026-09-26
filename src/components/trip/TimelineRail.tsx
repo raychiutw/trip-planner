@@ -19,9 +19,7 @@ import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-ki
 import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
 import { reorderEntries } from '../../lib/entryMutations';
-import { requestTravelRecompute, getAutoRecomputeStatus } from '../../lib/travelRecompute';
 import { captureDragScroll, restoreDragScroll } from '../../lib/preserveScroll';
-import { EVENT } from '../../lib/events';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import { showToast } from '../shared/Toast';
 import TravelPill from './TravelPill';
@@ -75,9 +73,6 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
   const [orderOverride, setOrderOverride] = useState<number[] | null>(null);
   const tripId = useTripId();
   const allDays = useTripDays();
-  // v2.24.0 γ.1：fetch segments → 為每對 entry 提供 segment row 給 TravelPill 啟用
-  // tap-switch dialog。Hook listen tp-segment-updated + tp-entry-updated 自動 re-fetch。
-  const { segmentMap, ready: segmentsReady } = useTripSegments(tripId);
 
   // PR-K dnd-kit sensors。includeTouch 拆 mouse/touch：桌機 MouseSensor 8px 即時
   // 拖曳（避免誤觸 click expand row），觸控走 TouchSensor 200ms 長按（快速垂直
@@ -102,60 +97,10 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
   const eventsKey = events.map((e) => e.id ?? -1).join(',');
   useEffect(() => { setOrderOverride(null); }, [eventsKey]);
 
-  // 2026-07-06 self-healing 車程補算：刪除/搬日/複製/後端直寫（AI chat、import、
-  // share clone、tp-* CLI）後，新相鄰 pair 缺 segment row（FK cascade 只刪舊
-  // pair，新 pair 無人算）或換 POI 後 computed_at=NULL。render 時偵測缺口 →
-  // 自動 day-scoped recompute，以缺口清單當 signature 防重（同缺口只試一次，
-  // unhealable 缺座標 pair 不會被無關 mutation 反覆 re-arm）。其餘防護在
-  // helper：in-flight dedup、唯讀 403 → 該 trip auto 停用、失敗靜默（fallback
-  // 是 TravelPill ⚠ 手動鈕）。segmentsReady gate 防首次 render 空 map 誤判；
-  // orderOverride gate 防 drag optimistic order 在 PATCH commit 前誤判新
-  // adjacency 白燒一輪（perf review CRITICAL）。
-  useEffect(() => {
-    if (!tripId || !segmentsReady || orderOverride != null) return;
-    // auto 只在 day scope 明確時打 — 解析不到 dayNum 不能放大成全 trip
-    // recompute（47-pair trip ≈ 52 subrequests 貼 CF 50 上限，自動路徑
-    // fail-open 方向錯誤；explicit 手動 ⚠ 才保留全 trip fallback）。
-    const dayNum = dayNumFromId(allDays, dayId);
-    if (dayNum == null) return;
-    const gaps: string[] = [];
-    for (let i = 1; i < orderedEvents.length; i++) {
-      const prev = orderedEvents[i - 1];
-      const curr = orderedEvents[i];
-      if (prev?.id == null || curr?.id == null) continue;
-      // 缺座標 pair 不進 gaps：backend recompute 對它無能為力（skip 不寫
-      // row），觸發只會白燒該日全部 pair 的 Google 重算。user 補座標後
-      // entry 資料變 → masterLat 有值 → 進 gaps → 自動補算，閉環成立。
-      if (prev.masterLat == null || prev.masterLng == null
-        || curr.masterLat == null || curr.masterLng == null) continue;
-      const seg = segmentMap.get(`${prev.id}-${curr.id}`);
-      if (!seg || seg.computedAt == null) gaps.push(`${prev.id}-${curr.id}`);
-    }
-    if (gaps.length === 0) return;
-    void requestTravelRecompute(tripId, dayNum, {
-      auto: true,
-      signature: gaps.join(','),
-    });
-  }, [tripId, segmentsReady, orderOverride, segmentMap, orderedEvents, dayId, allDays]);
-
-  // 2026-07-08 車程重算狀態：auto 終端失敗（403 唯讀 viewer / 持續 API 錯）時
-  // helper dispatch segmentRecomputeFailed — 監聽後 re-render，讓 TravelPill 由樂觀
-  // 「重新計算中」改顯誠實「待更新」（stale pair 不會自己好，別假稱系統在算）。
-  const [, bumpRecomputeStatus] = useState(0);
-  useEffect(() => {
-    if (!tripId) return;
-    const onFailed = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { tripId?: string } | null;
-      if (detail?.tripId && detail.tripId !== tripId) return;
-      bumpRecomputeStatus((n) => n + 1);
-    };
-    window.addEventListener(EVENT.segmentRecomputeFailed, onFailed);
-    return () => window.removeEventListener(EVENT.segmentRecomputeFailed, onFailed);
-  }, [tripId]);
-  // day-scope 級（全 rail 共用）：blocked=唯讀 viewer / failed=本日持續失敗 → 停滯。
-  // 每 render 重讀（bumpRecomputeStatus / segments refetch 觸發的 re-render 會刷新）。
-  const recomputeStalled = tripId != null
-    && getAutoRecomputeStatus(tripId, dayNumFromId(allDays, dayId)) !== 'active';
+  const { segmentMap, ready: segmentsReady, autoStatus } = useTripSegments(tripId, {
+    entries: orderedEvents, dayNum: dayNumFromId(allDays, dayId), suspended: orderOverride != null,
+  });
+  const recomputeStalled = autoStatus === 'blocked' || autoStatus === 'failed';
 
   // W13：reorder 落地（optimistic override → batch PATCH → travel recompute → 廣播 → 失敗 revert）
   // 抽成共用，供拖曳（handleDragEnd）與 ⋯ menu「上移/下移一格」（moveEntryStep）共用，行為一致。
@@ -366,4 +311,3 @@ function RailDndScope({ managed, sensors, onDragStart, onDragEnd, children }: {
 }
 
 export default TimelineRail;
-

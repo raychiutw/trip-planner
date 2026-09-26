@@ -49,6 +49,7 @@ _Avoid_: 在 handler 直接 `INSERT INTO trip_entries` / `trip_entry_pois`；與
 跨日移動更新來源與目標，複製更新目標，不受目前選中的日期限制。讀取協調以每次行程切換及每個 day 的請求序號識別回應，只接受該 scope 最新的結果；其他行程的事件不觸發目前行程重讀。操作面板與拖曳儲存完成時也核對操作所屬的行程生命週期，避免舊操作顯示提示或導頁。
 
 entry 儲存成功與 segment 重算成功是兩件事。重算故障時保留已儲存的 entry，交通沿用「車程待更新」提示；重新載入或真正改變相鄰景點的操作可依既有 single-flight／gap-signature 規則再次嘗試，不重送原本的建立操作。這層只協調重算入口，不計算路徑：Google client、手填 transit 及既有特定方式估算的界線維持原樣。
+**segment 生命週期**由 `useTripSegments` 協調讀取、缺口判定與待更新狀態；只有當前行程的成功讀取能證明缺口，未知日期或暫時排序不觸發自動補算。失敗讀取保留已知資料但不視為空資料。
 _Avoid_: 在頁面或元件直接 `apiFetchRaw` entries endpoint、自己 dispatch `entryUpdated`、自己呼叫 `requestTravelRecompute`（self-healing 的 auto 觸發除外）；與後端「entry intake」是不同層。
 
 > **trip-scoped 的自由文字不寫進 `pois`** —— entry 說明放 `trip_entries.description`；POI 備註與預訂放 `trip_entry_pois` 的 `reservation` / `reservation_url` / `description` / `note` 欄位。migration 0078 後沒有 `trip_entries.note`；entry-level note 輸入由正選承接。`reservation` 是**純文字訂位註解**，不放 JSON。
