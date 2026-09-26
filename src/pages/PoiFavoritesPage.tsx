@@ -223,6 +223,14 @@ const SCOPED_STYLES = `
 .favorites-card .poi-deleting-label {
   font-size: var(--font-size-footnote); color: var(--color-muted); font-style: italic;
 }
+.favorites-delete-list {
+  max-height: min(30vh, 240px); overflow-y: auto;
+  margin: 0; padding: 0 0 0 20px;
+}
+.favorites-delete-list li { padding: 3px 0; overflow-wrap: anywhere; }
+.tp-confirm-modal:has(.favorites-delete-list) {
+  max-height: calc(100dvh - 40px); overflow-y: auto;
+}
 
 .favorites-empty-cta {
   padding: 48px 24px;
@@ -321,6 +329,7 @@ export default function PoiFavoritesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deletingSelected, setDeletingSelected] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteFailureCount, setDeleteFailureCount] = useState(0);
   const [searchFilter, setSearchFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [regionFilter, setRegionFilter] = useState<string>('all');
@@ -390,6 +399,9 @@ export default function PoiFavoritesPage() {
     const start = (page - 1) * PAGE_SIZE;
     return filteredFavorites.slice(start, start + PAGE_SIZE);
   }, [filteredFavorites, usePagination, page]);
+  const selectedFavorites = favorites.filter((row) => selectedIds.has(row.id));
+  const hiddenSelectedCount = selectedFavorites.length
+    - visibleFavorites.filter((row) => selectedIds.has(row.id)).length;
 
   // 切換 filter / search 時重置 page
   useEffect(() => { setPage(1); }, [searchFilter, typeFilter, regionFilter]);
@@ -404,7 +416,7 @@ export default function PoiFavoritesPage() {
   }
   function clearSelection() { setSelectedIds(new Set()); }
   function selectAllVisible() {
-    setSelectedIds(new Set(visibleFavorites.map((r) => r.id)));
+    setSelectedIds((prev) => new Set([...prev, ...visibleFavorites.map((r) => r.id)]));
   }
   function clearAllFilters() {
     setSearchFilter('');
@@ -413,12 +425,13 @@ export default function PoiFavoritesPage() {
   }
 
   function requestDeleteSelected() {
-    if (selectedIds.size === 0) return;
+    if (selectedFavorites.length === 0 || deletingSelected) return;
+    setDeleteFailureCount(0);
     setDeleteConfirmOpen(true);
   }
   async function handleDeleteSelected() {
-    const ids = Array.from(selectedIds);
-    if (ids.length === 0) return;
+    const ids = selectedFavorites.map((row) => row.id);
+    if (ids.length === 0 || deletingSelected) return;
     setDeleteConfirmOpen(false);
     setDeletingSelected(true);
     try {
@@ -430,16 +443,16 @@ export default function PoiFavoritesPage() {
         ),
       );
       const failed = results.filter((r) => !r.ok);
+      const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
+      setFavorites((prev) => prev.filter((row) => !succeeded.has(row.id)));
+      setSelectedIds(new Set(failed.map((r) => r.id)));
       if (failed.length === 0) {
         showToast(`已移除 ${ids.length} 個收藏`, 'success', 2400);
-      } else if (failed.length < ids.length) {
-        showToast(`已移除 ${ids.length - failed.length} 個，${failed.length} 個失敗`, 'error', 3000);
       } else {
-        showToast('移除失敗，請稍後再試', 'error', 3000);
+        setDeleteFailureCount(failed.length);
+        setDeleteConfirmOpen(true);
       }
-      await loadFavorites();
     } finally {
-      setSelectedIds(new Set());
       setDeletingSelected(false);
     }
   }
@@ -578,14 +591,14 @@ export default function PoiFavoritesPage() {
               ))}
             </div>
 
-            {selectedIds.size > 0 && (
+            {selectedFavorites.length > 0 && (
               <div
                 className="favorites-toolbar"
                 role="region"
                 aria-label="批次操作"
                 data-testid="favorites-toolbar"
               >
-                <span>已選 {selectedIds.size} 個</span>
+                <span aria-live="polite">{deletingSelected ? `移除中 ${selectedFavorites.length} 筆…` : `已選 ${selectedFavorites.length} 個${hiddenSelectedCount > 0 ? `（含目前未顯示的 ${hiddenSelectedCount} 個）` : ''}`}</span>
                 <div className="favorites-toolbar-actions">
                   <button
                     type="button"
@@ -594,7 +607,7 @@ export default function PoiFavoritesPage() {
                     disabled={deletingSelected}
                     data-testid="favorites-select-all"
                   >
-                    全選
+                    全選目前顯示
                   </button>
                   <button
                     type="button"
@@ -674,19 +687,22 @@ export default function PoiFavoritesPage() {
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
+                                  disabled={deletingSelected}
                                   onChange={() => toggleSelection(row.id)}
                                   data-testid={`favorites-check-${row.id}`}
                                   aria-label={`選取 ${row.poiName} 收藏`}
                                 />
                                 <span>{isSelected ? '已選' : '選取'}</span>
                               </label>
-                              <a
-                                href={`/favorites/${row.id}/add-to-trip`}
-                                className="poi-add-link"
-                                data-testid={`favorites-add-to-trip-${row.id}`}
-                              >
-                                加入行程 →
-                              </a>
+                              {deletingSelected ? <span className="poi-deleting-label">請稍候…</span> : (
+                                <a
+                                  href={`/favorites/${row.id}/add-to-trip`}
+                                  className="poi-add-link"
+                                  data-testid={`favorites-add-to-trip-${row.id}`}
+                                >
+                                  加入行程 →
+                                </a>
+                              )}
                             </>
                           )}
                         </div>
@@ -740,13 +756,19 @@ export default function PoiFavoritesPage() {
 
       <ConfirmModal
         open={deleteConfirmOpen}
-        title="確定移除收藏？"
-        message={`即將從收藏移除 ${selectedIds.size} 個景點。景點本身不會被刪除，之後仍可從搜尋或探索再次收藏；但這次移除無法復原。`}
-        confirmLabel="移除"
+        title={deleteFailureCount ? `${deleteFailureCount} 個收藏移除失敗` : '確定移除收藏？'}
+        message={deleteFailureCount
+          ? `以下 ${selectedFavorites.length} 個收藏尚未移除，請重試。已成功的項目不會重送。`
+          : `即將從收藏移除以下 ${selectedFavorites.length} 個景點。景點本身不會被刪除，之後仍可從搜尋或探索再次收藏；但這次移除無法復原。`}
+        confirmLabel={deleteFailureCount ? '重試移除' : '移除'}
         busy={deletingSelected}
         onConfirm={handleDeleteSelected}
-        onCancel={() => setDeleteConfirmOpen(false)}
-      />
+        onCancel={() => { setDeleteConfirmOpen(false); setDeleteFailureCount(0); }}
+      >
+        <ol className="favorites-delete-list" aria-label="將移除的收藏">
+          {selectedFavorites.map((row) => <li key={row.id}>{row.poiName}</li>)}
+        </ol>
+      </ConfirmModal>
     </div>
   );
 

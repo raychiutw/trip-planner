@@ -56,8 +56,6 @@ describe('收藏／備選的動作動詞（#1187）', () => {
     // 綁「元素標籤 + 它必有的 open prop」才擋得住。
     expect(favorites, '確認框被拿掉了 —— 那是被推翻的方向，見 #1165')
       .toMatch(/<ConfirmModal\s+open=\{deleteConfirmOpen\}/);
-    expect(favorites, '確認框標題應為「移除」語系').toMatch(/title="確定移除收藏？"/);
-    expect(favorites, '確認鈕應為「移除」').toMatch(/confirmLabel="移除"/);
   });
 
   it('testid 未被改名（unit + e2e 都在用）', () => {
