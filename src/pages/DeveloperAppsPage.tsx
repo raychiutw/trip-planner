@@ -16,7 +16,7 @@
  *   - 預設 client_type='public'（PKCE 強制，不需 secret）
  *   - redirect_uris textarea: HTTPS-only validation 由後端做
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -134,14 +134,18 @@ export default function DeveloperAppsPage() {
   const navigate = useNavigate();
   const [apps, setApps] = useState<ClientApp[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const loadSequence = useRef(0);
 
   async function loadApps() {
+    const sequence = ++loadSequence.current;
     setError(null);
     try {
       const json = await apiFetch<{ apps: ClientApp[] }>('/dev/apps');
-      setApps(json.apps);
+      if (sequence === loadSequence.current) setApps(json.apps);
     } catch (err) {
-      setError(err instanceof Error ? '無法載入應用列表，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
+      if (sequence === loadSequence.current) {
+        setError(err instanceof Error ? '無法載入應用列表，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
+      }
     }
   }
 

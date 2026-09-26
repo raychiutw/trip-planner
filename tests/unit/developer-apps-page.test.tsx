@@ -7,7 +7,7 @@
  * 這裡只 cover list page (loading / empty / render / error / navigate)。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 // Bypass V2 auth gate — page is rendered as if user is logged in
@@ -61,6 +61,27 @@ describe('DeveloperAppsPage', () => {
     expect(screen.getByText(/尚未建立任何應用/)).toBeTruthy();
   });
 
+  it('empty registry keeps a keyboard-focusable path to creating the first app', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ apps: [] }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+
+    render(
+      <MemoryRouter initialEntries={['/developer/apps']}>
+        <Routes>
+          <Route path="/developer/apps" element={<DeveloperAppsPage />} />
+          <Route path="/developer/apps/new" element={<div data-testid="new-page-stub">NEW PAGE</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const create = await screen.findByTestId('dev-apps-empty-cta');
+    create.focus();
+    expect(document.activeElement).toBe(create);
+    fireEvent.click(create);
+    await waitFor(() => expect(screen.getByTestId('new-page-stub')).toBeTruthy());
+  });
+
   it('renders apps list with status pill', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ apps: [SAMPLE_APP] }), { status: 200 }),
@@ -72,6 +93,19 @@ describe('DeveloperAppsPage', () => {
     expect(screen.getByText('Trip Buddy')).toBeTruthy();
     expect(screen.getByText('tp_abc')).toBeTruthy();
     expect(screen.getByText('使用中')).toBeTruthy();
+  });
+
+  it('does not expose a secret even if an API payload includes one', async () => {
+    const secret = 'tps-sensitive-secret-value';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ apps: [{ ...SAMPLE_APP, client_secret: secret, client_secret_hash: 'private-hash' }] }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('dev-apps-row-tp_abc')).toBeTruthy());
+    expect(document.body.textContent).not.toContain(secret);
+    expect(document.body.textContent).not.toContain('private-hash');
   });
 
   it('「建立新應用」 button → navigate 到 /developer/apps/new (不再 mount modal)', async () => {
@@ -111,6 +145,25 @@ describe('DeveloperAppsPage', () => {
 
     await waitFor(() => expect(screen.queryByTestId('dev-apps-row-tp_abc')).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('an older list response cannot erase an app loaded after a create event', async () => {
+    let resolveInitial!: (response: Response) => void;
+    const initial = new Promise<Response>((resolve) => { resolveInitial = resolve; });
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(initial)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [SAMPLE_APP] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    expect(screen.getByTestId('dev-apps-loading')).toBeTruthy();
+    act(() => window.dispatchEvent(new CustomEvent('tp-developer-app-created')));
+    await waitFor(() => expect(screen.getByTestId('dev-apps-row-tp_abc')).toBeTruthy());
+
+    await act(async () => { resolveInitial(new Response(JSON.stringify({ apps: [] }), { status: 200 })); await initial; });
+    expect(screen.getByTestId('dev-apps-row-tp_abc')).toBeTruthy();
+    expect(screen.queryByTestId('dev-apps-empty')).toBeNull();
   });
 
   it('GET fail → error banner', async () => {
