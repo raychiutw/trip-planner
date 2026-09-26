@@ -34,6 +34,20 @@ describe('GET /api/my-trips', () => {
     expect(data.every(t => t.tripId === 'trip-my-1' || t.tripId === 'trip-my-2')).toBe(true);
   });
 
+  it('預設先列出最近更新的行程', async () => {
+    await db.prepare("UPDATE trips SET updated_at = '2026-01-01 00:00:00' WHERE id = 'trip-my-1'").run();
+    await db.prepare("UPDATE trips SET updated_at = '2026-01-02 00:00:00' WHERE id = 'trip-my-2'").run();
+    const ctx = mockContext({
+      request: new Request('https://test.com/api/my-trips'),
+      env,
+      auth: mockAuth({ email: 'me@test.com' }),
+    });
+    const resp = await callHandler(onRequestGet, ctx);
+    const data = await resp.json() as Array<{ tripId: string; updatedAt: string }>;
+    expect(data.map((trip) => trip.tripId)).toEqual(['trip-my-2', 'trip-my-1']);
+    expect(data.map((trip) => trip.updatedAt)).toEqual(['2026-01-02 00:00:00', '2026-01-01 00:00:00']);
+  });
+
   it('非 owner 不再看到所有行程（Phase 3：無全域 admin bypass）', async () => {
     // API tests 共用 D1；permissions.integration.test.ts 會替 admin@test.com 建行程。
     // 用專屬無權限身分驗證沒有 trip_permissions row 時不會看到別人的行程。

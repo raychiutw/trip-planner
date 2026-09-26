@@ -66,9 +66,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // 偵察面）。內容 gate 只在 per-trip 端點，list 端點得自己 scope。
   const scoped = auth.restrictTrip !== undefined;
   const { results } = await (scoped
-    ? env.DB.prepare(`${SELECT_BASE} WHERE p.user_id = ? AND p.trip_id = ? ORDER BY p.trip_id`)
+    ? env.DB.prepare(`${SELECT_BASE} WHERE p.user_id = ? AND p.trip_id = ? ORDER BY t.updated_at DESC, p.trip_id`)
         .bind(auth.userId, auth.restrictTrip)
-    : env.DB.prepare(`${SELECT_BASE} WHERE p.user_id = ? ORDER BY p.trip_id`)
+    : env.DB.prepare(`${SELECT_BASE} WHERE p.user_id = ? ORDER BY t.updated_at DESC, p.trip_id`)
         .bind(auth.userId)
   ).all();
 
