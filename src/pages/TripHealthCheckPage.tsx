@@ -9,7 +9,8 @@
  *  - pending: loading view + 3 秒 poll 直到 completed/failed
  *  - completed: severity-grouped findings + 「重新生成」
  *  - failed: error view + 「重新生成」
- *  + re-generating overlay state: 舊 findings dim + 「再重新生成」disabled
+ * 讀取狀態獨立於報告：斷線時保留上次報告，標示最新狀態未知並重試。
+ * 重新生成時保留舊 findings，直到新報告完成。
  *
  * 結果儲存：D1 `trip_health_reports` (per-trip latest, PRIMARY KEY trip_id)。
  * 對話留底：同步 INSERT `trip_requests` 走 Claude → user 在 /chat 也看得到對話。
@@ -404,11 +405,6 @@ const SCOPED_STYLES = `
   border-color: var(--color-accent-deep);
 }
 
-/* Re-generating overlay (results 仍可看，bg dimmed) */
-.tp-ai-health-results.is-regenerating {
-  opacity: 0.55;
-}
-
 /* Empty trip guard banner — entryCount===0 時顯示。border-left accent + muted text
  * 對齊 .tp-ai-health-error 視覺重量（low-key info / advisory）。CTA disabled
  * 在 title bar action，這個 banner 補語意說明為什麼 disabled。 */
@@ -422,6 +418,19 @@ const SCOPED_STYLES = `
   line-height: 20px;
   color: var(--color-foreground);
 }
+.tp-ai-health-retry {
+  display: block;
+  min-height: var(--spacing-tap-min);
+  margin-top: 8px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-deep);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tp-ai-health-retry:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 /* Error state */
 .tp-ai-health-error {
@@ -484,12 +493,21 @@ export default function TripHealthCheckPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [readState, setReadState] = useState<{ tripId?: string; status: 'loading' | 'fresh' | 'error' }>({
+    tripId, status: 'loading',
+  });
   // v2.31.58：empty trip guard — 沒任何 entry 不該允許觸發 AI 健檢。
   // null = 還沒 fetch；number = 實際 entry 總數（跨所有天）。
   const [entryCount, setEntryCount] = useState<number | null>(null);
 
-  // Polling: 用 ref 持有 timeout id，避免 effect 重 render 時舊 timer 漏清
-  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentTripRef = useRef(tripId);
+  currentTripRef.current = tripId;
+  const tripEpochRef = useRef(0);
+  const readRequestRef = useRef(0);
+  const readInFlightRef = useRef(false);
+  const submitInFlightRef = useRef(false);
+  const reportRef = useRef<HealthReport | null>(null);
+  const isAuthed = Boolean(auth.user);
 
   const fetchReport = useCallback(async (signal?: AbortSignal): Promise<HealthReport | null> => {
     if (!tripId) return null;
@@ -499,19 +517,64 @@ export default function TripHealthCheckPage() {
     return data.report;
   }, [tripId]);
 
-  // Initial GET trip name + report
   useEffect(() => {
-    if (!auth.user || !tripId) return;
+    const request = readRequestRef;
+    request.current++;
+    tripEpochRef.current++;
+    readInFlightRef.current = false;
+    submitInFlightRef.current = false;
+    reportRef.current = null;
+    setReport(null);
+    setReadState({ tripId, status: 'loading' });
+    setInitialLoading(true);
+    setTrip(null);
+    setEntryCount(null);
+    setError(null);
+    return () => { request.current++; };
+  }, [tripId]);
+
+  const loadReport = useCallback(async () => {
+    if (!tripId || readInFlightRef.current) return;
+    readInFlightRef.current = true;
+    const request = ++readRequestRef.current;
+    try {
+      const next = await fetchReport();
+      if (request !== readRequestRef.current || currentTripRef.current !== tripId) return;
+      if (next && next.tripId !== tripId) throw new Error('Wrong trip report');
+      const previous = reportRef.current;
+      if (previous && next && previous.requestId && next.requestId
+        && next.requestId < previous.requestId) return;
+      if (previous && next && previous.requestId === next.requestId
+        && previous.status !== 'pending' && next.status === 'pending') return;
+      const current = next && previous && next.status !== 'completed' && next.findings.length === 0
+        ? { ...next, findings: previous.findings, completedAt: previous.completedAt }
+        : next;
+      reportRef.current = current;
+      setReport(current);
+      setReadState({ tripId, status: 'fresh' });
+    } catch {
+      if (request !== readRequestRef.current || currentTripRef.current !== tripId) return;
+      setReadState({ tripId, status: 'error' });
+    } finally {
+      if (request === readRequestRef.current) {
+        readInFlightRef.current = false;
+        setInitialLoading(false);
+      }
+    }
+  }, [fetchReport, tripId]);
+
+  useEffect(() => { if (isAuthed) void loadReport(); }, [isAuthed, loadReport]);
+
+  // Trip metadata and entry guard must not hide a report when either read fails.
+  useEffect(() => {
+    if (!isAuthed || !tripId) return;
     const ctrl = new AbortController();
     let cancelled = false;
     (async () => {
-      setInitialLoading(true);
-      setError(null);
       try {
-        const [tripRes, daysRes, reportData] = await Promise.all([
+        const [tripRes, daysRes] = await Promise.all([
           apiFetchRaw(`/trips/${encodeURIComponent(tripId)}`, { signal: ctrl.signal }),
           apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days?all=1`, { signal: ctrl.signal }),
-          fetchReport(ctrl.signal),
         ]);
         if (cancelled) return;
         if (tripRes.ok) {
@@ -527,64 +590,41 @@ export default function TripHealthCheckPage() {
             : 0;
           setEntryCount(totalEntries);
         }
-        setReport(reportData);
       } catch (err) {
         if (cancelled) return;
         const e = err as { name?: string };
         if (e.name !== 'AbortError') {
           setError('載入失敗，請重新整理');
         }
-      } finally {
-        if (!cancelled) setInitialLoading(false);
       }
     })();
     return () => {
       cancelled = true;
       ctrl.abort();
     };
-  }, [auth.user, tripId, fetchReport]);
+  }, [isAuthed, tripId]);
 
-  // Polling effect while pending
+  const visibleReport = report?.tripId === tripId ? report : null;
+  const readStatus = readState.tripId === tripId ? readState.status : 'loading';
+  // A failed read keeps the last report visible and continues polling.
   useEffect(() => {
-    if (!report || report.status !== 'pending') return;
-    let cancelled = false;
-    const ctrl = new AbortController();
-
-    function schedule() {
-      pollRef.current = setTimeout(async () => {
-        if (cancelled) return;
-        try {
-          const next = await fetchReport(ctrl.signal);
-          if (cancelled) return;
-          setReport(next);
-          if (next?.status === 'pending') schedule();
-        } catch (err) {
-          if (cancelled) return;
-          const e = err as { name?: string };
-          if (e.name !== 'AbortError') schedule();
-        }
-      }, POLL_INTERVAL_MS);
-    }
-    schedule();
-
-    return () => {
-      cancelled = true;
-      ctrl.abort();
-      if (pollRef.current) {
-        clearTimeout(pollRef.current);
-        pollRef.current = null;
-      }
-    };
-  }, [report, fetchReport]);
+    if (readStatus !== 'error' && visibleReport?.status !== 'pending') return;
+    const timer = window.setInterval(() => void loadReport(), POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [loadReport, readStatus, visibleReport?.status]);
 
   const handleStart = useCallback(async () => {
-    if (!tripId || submitting) return;
+    if (!tripId || readStatus !== 'fresh' || entryCount === null || entryCount === 0
+      || reportRef.current?.status === 'pending' || submitInFlightRef.current) return;
+    submitInFlightRef.current = true;
+    const tripEpoch = tripEpochRef.current;
     setSubmitting(true);
     setError(null);
     try {
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/health-check`, {
         method: 'POST',
       });
+      if (currentTripRef.current !== tripId || tripEpochRef.current !== tripEpoch) return;
       if (!res.ok) {
         // v2.31.58：backend TRIP_EMPTY guard 拒絕（race window：frontend fetch
         // 完 trip empty 後 user 加 entry，但 button 還沒 re-enable 就點到，
@@ -600,16 +640,33 @@ export default function TripHealthCheckPage() {
         } catch {
           /* ignore parse error, fall through to generic message */
         }
+        if (res.status === 403) {
+          setError('沒有權限執行此行程的 AI 健檢');
+          return;
+        }
         throw new Error(`start failed: ${res.status}`);
       }
       const data = await res.json() as { report: HealthReport };
-      setReport(data.report);
+      if (currentTripRef.current !== tripId || tripEpochRef.current !== tripEpoch) return;
+      if (data.report.tripId !== tripId) throw new Error('Wrong trip report');
+      const previous = reportRef.current;
+      const current = data.report.status === 'pending' && data.report.findings.length === 0 && previous
+        ? { ...data.report, findings: previous.findings, completedAt: previous.completedAt }
+        : data.report;
+      reportRef.current = current;
+      setReport(current);
+      setReadState({ tripId, status: 'fresh' });
     } catch {
-      setError('觸發健檢失敗，請稍後再試');
+      if (currentTripRef.current === tripId && tripEpochRef.current === tripEpoch) {
+        setReadState({ tripId, status: 'error' });
+      }
     } finally {
-      setSubmitting(false);
+      if (currentTripRef.current === tripId && tripEpochRef.current === tripEpoch) {
+        submitInFlightRef.current = false;
+        setSubmitting(false);
+      }
     }
-  }, [tripId, submitting]);
+  }, [tripId, readStatus, entryCount]);
 
   const goToDay = useCallback((day: number) => {
     if (!tripId) return;
@@ -625,19 +682,20 @@ export default function TripHealthCheckPage() {
     return null;
   }
 
-  const tripTitle = trip?.title ?? '行程';
-  const findings = report?.findings ?? [];
+  const tripTitle = trip?.id === tripId ? trip.title ?? '行程' : '行程';
+  const findings = visibleReport?.findings ?? [];
   const counts: Record<Severity, number> = { high: 0, medium: 0, low: 0 };
   for (const f of findings) counts[f.severity]++;
   const grouped: Record<Severity, Finding[]> = { high: [], medium: [], low: [] };
   for (const f of findings) grouped[f.severity].push(f);
 
-  const isPending = report?.status === 'pending';
-  const isCompleted = report?.status === 'completed';
-  const isFailed = report?.status === 'failed';
-  const isRegenerating = isPending && findings.length > 0;
-  const hasResults = isCompleted && findings.length > 0;
-  const hasNoIssues = isCompleted && findings.length === 0;
+  const isPending = visibleReport?.status === 'pending';
+  const isCompleted = visibleReport?.status === 'completed';
+  const isFailed = visibleReport?.status === 'failed';
+  const isRegenerating = isPending && readStatus === 'fresh' && findings.length > 0;
+  const hasResults = findings.length > 0;
+  const hasNoIssues = findings.length === 0 && (isCompleted || Boolean(visibleReport?.completedAt));
+  const showingPrevious = findings.length > 0 && (!isCompleted || readStatus !== 'fresh');
 
   const ctaLabel = submitting
     ? '送出中⋯'
@@ -645,7 +703,7 @@ export default function TripHealthCheckPage() {
       ? '再重新生成'
       : isPending
         ? '健檢進行中⋯'
-        : report
+        : visibleReport
           ? '重新生成'
           : '開始健檢';
 
@@ -654,6 +712,20 @@ export default function TripHealthCheckPage() {
       <style>{SCOPED_STYLES}</style>
 
       <div className="tp-ai-health-body">
+        {readStatus === 'error' && (
+          <div className="tp-ai-health-notice" role="status" data-testid="ai-health-read-error">
+            最新狀態未知；{visibleReport?.findings.length
+              ? '下方保留上次取得的報告。'
+              : visibleReport?.status === 'pending'
+                ? '上次讀取顯示健檢進行中，結果尚未確認。'
+                : visibleReport
+                  ? '上次健檢結果仍可查看。'
+                  : '目前無法確認是否已有健檢任務。'}
+            <button type="button" className="tp-ai-health-retry" onClick={() => void loadReport()}>
+              重試讀取健檢狀態
+            </button>
+          </div>
+        )}
         {!initialLoading && entryCount === 0 && (
           <div className="tp-ai-health-notice" role="status" data-testid="ai-health-empty-hint">
             此行程尚無景點，請先加入景點再執行健檢
@@ -668,12 +740,12 @@ export default function TripHealthCheckPage() {
                 風格 ghost (`.tp-titlebar-action`) — 與其他 functional icon 同 family
                 但用 refresh-cw icon 區辨「重新生成」action，pending 時 icon spin
                 表進行中。 */}
-            {!initialLoading && report && (
+            {!initialLoading && visibleReport && (
               <button
                 type="button"
                 className={`tp-titlebar-action tp-titlebar-action--icon-only tp-ai-health-titlebar-btn${isPending ? ' is-spinning' : ''}`}
                 onClick={handleStart}
-                disabled={submitting || isPending}
+                disabled={submitting || isPending || readStatus !== 'fresh' || entryCount === null || entryCount === 0}
                 aria-label={ctaLabel}
                 title={ctaLabel}
                 data-testid="ai-health-start-btn"
@@ -686,10 +758,12 @@ export default function TripHealthCheckPage() {
           <h1 data-testid="ai-health-title">{tripTitle}</h1>
           {initialLoading ? (
             <div className="meta">載入中…</div>
+          ) : readStatus === 'error' ? (
+            <div className="meta">最新狀態待確認</div>
           ) : isPending ? (
             <div className="meta is-active">健檢進行中…</div>
-          ) : isCompleted && report ? (
-            <div className="meta">{formatTimestamp(report.completedAt || report.createdAt)} · 共 {findings.length} 項建議</div>
+          ) : isCompleted && visibleReport ? (
+            <div className="meta">{formatTimestamp(visibleReport.completedAt || visibleReport.createdAt)} · 共 {findings.length} 項建議</div>
           ) : isFailed ? (
             <div className="meta">健檢失敗</div>
           ) : (
@@ -712,7 +786,7 @@ export default function TripHealthCheckPage() {
           </div>
         )}
 
-        {!initialLoading && !report && (
+        {!initialLoading && readStatus === 'fresh' && !visibleReport && (
           <div className="tp-ai-health-empty" data-testid="ai-health-empty">
             <div className="icon-bubble" aria-hidden="true">
               <Icon name="sparkle" />
@@ -726,7 +800,7 @@ export default function TripHealthCheckPage() {
               type="button"
               className="tp-ai-health-body-cta"
               onClick={handleStart}
-              disabled={submitting || entryCount === 0}
+              disabled={submitting || entryCount === null || entryCount === 0}
               data-testid="ai-health-start-btn"
             >
               <Icon name="sparkle" />
@@ -735,7 +809,7 @@ export default function TripHealthCheckPage() {
           </div>
         )}
 
-        {!initialLoading && isPending && !isRegenerating && (
+        {!initialLoading && readStatus === 'fresh' && isPending && !isRegenerating && (
           <div className="tp-ai-health-loading" role="status" aria-live="polite" data-testid="ai-health-loading">
             <div className="pulse" />
             <div className="text">
@@ -755,11 +829,11 @@ export default function TripHealthCheckPage() {
           </div>
         )}
 
-        {isFailed && report && (
+        {isFailed && visibleReport && (
           <div className="tp-ai-health-error" role="alert" data-testid="ai-health-failed">
-            <div className="title">健檢失敗</div>
+            <div className="title">{readStatus === 'fresh' ? '健檢失敗' : '上次狀態：健檢失敗'}</div>
             <div className="desc">
-              {report.errorMessage || 'AI 處理時發生錯誤，可重新生成再試。'}
+              {visibleReport.errorMessage || 'AI 處理時發生錯誤，可重新生成再試。'}
             </div>
           </div>
         )}
@@ -769,13 +843,20 @@ export default function TripHealthCheckPage() {
             <div className="icon-bubble" aria-hidden="true" style={{ background: 'var(--color-success)' }}>
               <Icon name="check" />
             </div>
-            <h2>看起來沒有問題</h2>
-            <div className="sub">AI 沒有找到需要修正的地方。行程安排良好！</div>
+            <h2>{readStatus === 'fresh' && isCompleted ? '看起來沒有問題' : '上次報告：沒有找到問題'}</h2>
+            <div className="sub">{readStatus === 'fresh' && isCompleted
+              ? 'AI 沒有找到需要修正的地方。行程安排良好！'
+              : '最新狀態待確認，這是上次取得的結果。'}</div>
           </div>
         )}
 
-        {(hasResults || isRegenerating) && (
+        {hasResults && (
           <div className={`tp-ai-health-results${isRegenerating ? ' is-regenerating' : ''}`} data-testid="ai-health-results">
+            {showingPrevious && (
+              <div className="tp-ai-health-notice" role="status">
+                上次報告 · {visibleReport?.completedAt ? formatTimestamp(visibleReport.completedAt) : '完成時間未記錄'}
+              </div>
+            )}
             <div className="tp-ai-health-counts">
               {SEVERITY_ORDER.map((sev) =>
                 counts[sev] > 0 ? (
