@@ -86,7 +86,7 @@ test('trip day navigation uses navigation buttons and moves focus by arrow key',
 test('trip classification changes the list without changing the root branch', async ({ page }) => {
   const [ownedTrip, sharedTrip] = [
     { ...MOCK_TRIPS_LIST[0], owner: MOCK_USER.email },
-    { ...MOCK_TRIPS_LIST[1], owner: 'collaborator@example.com', role: 'editor' },
+    { ...MOCK_TRIPS_LIST[1], role: 'editor' },
   ];
   await page.route(/\/api\/my-trips$/, (route) => route.fulfill({
     status: 200,
