@@ -179,6 +179,12 @@ const SCOPED_STYLES = `
 }
 
 /* .tp-form / .tp-form-row 移到 css/tokens.css；LoginPage 用 .tp-form--auth 拉高觸控尺寸。 */
+.tp-login-password-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.tp-login-password-header label {
+  font-size: var(--font-size-footnote); font-weight: 600;
+}
 /* .tp-btn family 移到 css/tokens.css 共用。LoginPage 用 .tp-btn-block (full width) + .tp-btn-lg。 */
 
 .tp-divider {
@@ -252,6 +258,8 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
+  const lockoutHeadingRef = useRef<HTMLHeadingElement>(null);
+  const isLocked = lockedRetryAfter !== null;
   // v2.33.47 round 7b LOW: lazy init via useState — 之前 mount-effect read 後
   // 才 setFailureCount，first paint 顯 0 然後 warning banner 突然冒出。lazy
   // init 直接從 sessionStorage 起手避免 flash。
@@ -380,6 +388,10 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lockedRetryAfter !== null]);
 
+  useEffect(() => {
+    if (isLocked) lockoutHeadingRef.current?.focus();
+  }, [isLocked]);
+
   // Lockout view — single-column (no brand hero, full-bleed alarming UX)
   if (lockedRetryAfter !== null) {
     const minutes = Math.floor(lockedRetryAfter / 60);
@@ -412,7 +424,7 @@ export default function LoginPage() {
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <h1 className="tp-login-headline" style={{ margin: '0 0 8px' }}>登入嘗試太多次</h1>
+          <h1 ref={lockoutHeadingRef} tabIndex={-1} className="tp-login-headline" style={{ margin: '0 0 8px' }}>登入嘗試太多次</h1>
           <p style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-subheadline)', margin: '0 0 16px' }}>
             為了保護帳號安全，我們暫時鎖定了登入功能。
           </p>
@@ -461,13 +473,13 @@ export default function LoginPage() {
         </div>
 
         {verified && (
-          <div className="tp-banner tp-banner-success" data-testid="login-banner-verified">
+          <div className="tp-banner tp-banner-success" role="status" data-testid="login-banner-verified">
             電子郵件驗證成功！請登入。
           </div>
         )}
 
         {verifyError && (
-          <div className="tp-banner tp-banner-warning" data-testid="login-banner-verify-error">
+          <div className="tp-banner tp-banner-warning" role="alert" data-testid="login-banner-verify-error">
             {verifyError === 'expired' && '驗證連結已過期，請重新申請或註冊。'}
             {verifyError === 'used' && '此驗證連結已使用過。'}
             {verifyError === 'missing_token' && '驗證連結無效。'}
@@ -499,10 +511,10 @@ export default function LoginPage() {
             />
           </div>
           <div className="tp-form-row">
-            <label htmlFor="login-password">
-              密碼
+            <div className="tp-login-password-header">
+              <label htmlFor="login-password">密碼</label>
               <a href="/login/forgot" className="tp-hint-link" data-testid="login-forgot-link">忘記密碼？</a>
-            </label>
+            </div>
             <input
               id="login-password"
               type="password"
