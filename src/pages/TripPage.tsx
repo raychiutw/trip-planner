@@ -405,10 +405,16 @@ function TripPageInner(
     if (!activeTripId) return;
     try {
       if (format === 'json') await downloadTripJson({ tripId: activeTripId, trip });
-      else await renderTripPrintPdf({ tripId: activeTripId, trip });
+      else {
+        const result = await renderTripPrintPdf({
+          tripId: activeTripId, trip,
+          onPhase: (phase) => showToast(phase === 'preparing' ? '正在準備 PDF…' : '正在輸出 PDF…', 'info', 1500),
+        });
+        showToast(result === 'saved' ? 'PDF 已下載' : 'PDF 正在產生中', 'info', 3000);
+      }
     } catch (err) {
       console.error(`[handleDownloadFormat] ${format} 失敗:`, err);
-      showToast('下載失敗，請稍後再試', 'error', 3000);
+      showToast(format === 'pdf' ? 'PDF 產生失敗，請重試' : '下載失敗，請稍後再試', 'error', 3000);
     }
   }, [activeTripId, trip]);
 

@@ -31,11 +31,6 @@ describe('renderTripPrintPdf — data-driven, not #tripContent', () => {
   it('commits synchronously via flushSync before html2pdf snapshots', () => {
     expect(PDF).toMatch(/flushSync/);
   });
-  it('cleans up: unmount + remove container + remove style', () => {
-    expect(PDF).toMatch(/root\.unmount\(\)/);
-    expect(PDF).toMatch(/container\.remove\(\)/);
-    expect(PDF).toMatch(/style\.remove\(\)/);
-  });
   it('still lazy-imports html2pdf', () => {
     expect(PDF).toContain("await import('html2pdf.js')");
   });

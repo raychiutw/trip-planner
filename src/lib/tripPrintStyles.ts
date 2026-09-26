@@ -32,14 +32,14 @@ export const PRINT_CSS = `
 .tp-print-meta{font-size:13px;color:#5c5248;margin-top:6px;display:flex;gap:14px;flex-wrap:wrap;}
 .tp-print-star{color:#9a7b32;font-weight:600;white-space:nowrap;}
 .tp-print-empty{color:#5c5248;border:1px dashed #cfc7ba;border-radius:8px;padding:18px 16px;text-align:center;font-size:13px;margin-top:16px;}
-.tp-print-day{margin-top:18px;break-inside:avoid;page-break-inside:avoid;}
-.tp-print-day-hd{display:flex;align-items:baseline;gap:10px;border-bottom:1.5px solid #1d1813;padding-bottom:4px;margin-bottom:2px;}
+.tp-print-day{margin-top:18px;}
+.tp-print-day-hd{display:flex;align-items:baseline;gap:10px;border-bottom:1.5px solid #1d1813;padding-bottom:4px;margin-bottom:2px;break-after:avoid;}
 .tp-print-day-no{font-size:15px;font-weight:700;}
 .tp-print-day-date{font-size:12px;color:#5c5248;}
 .tp-print-day-entries{font-size:13px;}
 /* responsive entry grid: ≥640px = 3 columns (time | activity | travel); the
    @media screen rule below stacks it on mobile. Print/PDF (A4 wide) stays 3-col. */
-.tp-print-entry{display:grid;grid-template-columns:80px 1fr 132px;gap:1px 10px;padding:7px 0;border-bottom:1px solid #efe9df;align-items:start;}
+.tp-print-entry{display:grid;grid-template-columns:80px 1fr 132px;gap:1px 10px;padding:7px 0;border-bottom:1px solid #efe9df;align-items:start;break-inside:avoid;}
 .tp-print-t{font-variant-numeric:tabular-nums;font-weight:600;color:#1d1813;white-space:nowrap;}
 .tp-print-title{grid-column:2;font-weight:600;}
 .tp-print-alt{grid-column:2;color:#5c5248;font-size:12px;}
@@ -57,7 +57,7 @@ export const PRINT_CSS = `
 .tp-print-nh svg{width:15px;height:15px;}
 .tp-print-nh-cnt{margin-left:auto;font-size:11px;font-weight:600;color:#8a7a68;letter-spacing:0;}
 /* block = note item separated by a hairline (last in a chapter has none) */
-.tp-print-note-item{padding:6px 0;border-bottom:1px solid #efe9df;break-inside:avoid;}
+.tp-print-note-item{padding:6px 0;border-bottom:1px solid #efe9df;}
 .tp-print-nsec .tp-print-note-item:last-child{border-bottom:none;}
 .tp-print-note-t{font-weight:700;color:#1d1813;font-size:12.5px;margin-bottom:2px;}
 /* pre-line keeps the content's own line breaks (e.g. "- a\n- b" bullets) */
@@ -117,6 +117,7 @@ export const SHARE_CHROME_CSS = `
 .tp-share-state{padding:72px 24px;text-align:center;color:#6f5a47;font-size:15px;line-height:1.6;}
 .tp-share-state-title{font-size:18px;font-weight:700;color:#1d1813;margin-bottom:8px;}
 .tp-share-error{padding:10px 16px;text-align:center;color:#b3261e;font-size:14px;}
+.tp-share-export-state{padding:8px 16px;text-align:center;color:#6f5a47;font-size:13px;}
 /* Align hero + action bar to the document column (the sheet is 794px centered).
    On mobile (<794) these are full-width no-ops; on desktop they center to match
    the sheet instead of stretching full-bleed (hero「太寬」fix). doc margin-top:0
@@ -124,5 +125,5 @@ export const SHARE_CHROME_CSS = `
 .tp-share-hero,.tp-share-actionbar{max-width:794px;margin-left:auto;margin-right:auto;width:100%;}
 .tp-share-page .tp-print-doc{margin-top:0;}
 @media (min-width:834px){ .tp-share-hero{margin-top:18px;border-radius:12px 12px 0 0;} }
-@media print { .tp-share-hero,.tp-share-actionbar{display:none !important;} .tp-share-page{background:#fff;} }
+@media print { .tp-share-hero,.tp-share-actionbar,.tp-share-export-state,.tp-share-error{display:none !important;} .tp-share-page{background:#fff;} }
 `;

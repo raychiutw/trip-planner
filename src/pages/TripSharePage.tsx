@@ -30,6 +30,8 @@ export default function TripSharePage() {
   const [read, setRead] = useState<ShareRead | null>(null);
   const [request, setRequest] = useState(0);
   const [cloneState, setCloneState] = useState<{ scope: object; status: 'cloning' | 'error' } | null>(null);
+  const [pdfState, setPdfState] = useState<{ scope: object; status: 'preparing' | 'saving' | 'saved' | 'busy' | 'error' } | null>(null);
+  const [printState, setPrintState] = useState<{ scope: object; status: 'sent' | 'error' } | null>(null);
   const activeScope = useRef<object | null>(null);
 
   // Invalidate pending clone navigation as soon as a new token is committed.
@@ -65,12 +67,34 @@ export default function TripSharePage() {
   const sharedBy = current?.status === 'ready' ? current.sharedBy : '';
   const cloning = cloneState?.scope === scope && cloneState?.status === 'cloning';
   const cloneErr = cloneState?.scope === scope && cloneState?.status === 'error';
+  const pdfStatus = pdfState?.scope === scope ? pdfState.status : null;
+  const pdfBusy = pdfStatus === 'preparing' || pdfStatus === 'saving';
+  const printStatus = printState?.scope === scope ? printState.status : null;
 
-  const onPdf = useCallback(() => {
+  const onPrint = useCallback(() => {
     if (!data) return;
+    try {
+      window.print();
+      setPrintState({ scope, status: 'sent' });
+    } catch {
+      setPrintState({ scope, status: 'error' });
+    }
+  }, [data, scope]);
+
+  const onPdf = useCallback(async () => {
+    if (!data || pdfBusy) return;
     const fileBase = tripDisplayName(data).replace(/[\\/:*?"<>|]/g, '').trim() || '分享行程';
-    void renderTripPrintPdf({ data, fileBase });
-  }, [data]);
+    setPdfState({ scope, status: 'preparing' });
+    try {
+      const result = await renderTripPrintPdf({
+        data, fileBase,
+        onPhase: (phase) => { if (activeScope.current === scope) setPdfState({ scope, status: phase }); },
+      });
+      if (activeScope.current === scope) setPdfState({ scope, status: result });
+    } catch {
+      if (activeScope.current === scope) setPdfState({ scope, status: 'error' });
+    }
+  }, [data, pdfBusy, scope]);
 
   // Logged in → clone the visible payload server-side into the caller's account, then
   // open the new trip. Logged out → send to login (redirect back to keep the funnel).
@@ -122,16 +146,22 @@ export default function TripSharePage() {
           </header>
 
           <div className="tp-share-actionbar">
-            <button type="button" className="tp-share-ghost" onClick={() => window.print()} title="列印" data-testid="share-print">
+            <button type="button" className="tp-share-ghost" onClick={onPrint} title="列印" data-testid="share-print">
               <Icon name="printer" />
             </button>
-            <button type="button" className="tp-share-ghost" onClick={onPdf} title="存成 PDF" data-testid="share-pdf">
+            <button type="button" className="tp-share-ghost" onClick={() => { void onPdf(); }} title="存成 PDF" disabled={pdfBusy} data-testid="share-pdf">
               <Icon name="download" />
             </button>
             <button type="button" className="tp-share-copy" onClick={onCopy} disabled={cloning || user === undefined} data-testid="share-copy">
               <Icon name="copy" /> {cloning ? '複製中…' : '複製到我的行程'}
             </button>
           </div>
+          {pdfStatus && <div className={pdfStatus === 'error' ? 'tp-share-error' : 'tp-share-export-state'} role={pdfStatus === 'error' ? 'alert' : 'status'}>
+            {pdfStatus === 'preparing' ? '正在準備 PDF…' : pdfStatus === 'saving' ? '正在輸出 PDF…' : pdfStatus === 'saved' ? 'PDF 已下載' : pdfStatus === 'busy' ? 'PDF 正在產生中，請稍後重試。' : 'PDF 產生失敗，請重試。'}
+          </div>}
+          {printStatus && <div className={printStatus === 'error' ? 'tp-share-error' : 'tp-share-export-state'} role={printStatus === 'error' ? 'alert' : 'status'}>
+            {printStatus === 'error' ? '列印失敗，請重試。' : '已送出列印指令'}
+          </div>}
           {cloneErr && (
             <div className="tp-share-error" role="alert">
               複製失敗，請稍後再試。
