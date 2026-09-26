@@ -84,16 +84,34 @@ test('trip day navigation uses navigation buttons and moves focus by arrow key',
 });
 
 test('trip classification changes the list without changing the root branch', async ({ page }) => {
+  const [ownedTrip, sharedTrip] = [
+    { ...MOCK_TRIPS_LIST[0], owner: 'lean.lean@gmail.com' },
+    { ...MOCK_TRIPS_LIST[1], owner: 'collaborator@example.com', role: 'editor' },
+  ];
+  await page.route(/\/api\/my-trips$/, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([ownedTrip, sharedTrip]),
+  }));
   await page.setViewportSize({ width: 375, height: 844 });
   await page.goto('/trips');
   const filters = page.getByRole('group', { name: '行程分類' });
   await expect(filters).toBeVisible();
   await expect(filters.getByRole('tab')).toHaveCount(0);
+  const mine = page.getByTestId('trips-list-tab-mine');
   const collab = page.getByTestId('trips-list-tab-collab');
+  const ownedCard = page.getByTestId(`trips-list-card-${ownedTrip.tripId}`);
+  const sharedCard = page.getByTestId(`trips-list-card-${sharedTrip.tripId}`);
+  await mine.click();
+  await expect(mine).toHaveAttribute('aria-pressed', 'true');
+  await expect(ownedCard).toBeVisible();
+  await expect(sharedCard).toHaveCount(0);
   await collab.click();
   await expect(collab).toHaveAttribute('aria-pressed', 'true');
+  await expect(mine).toHaveAttribute('aria-pressed', 'false');
+  await expect(ownedCard).toHaveCount(0);
+  await expect(sharedCard).toBeVisible();
   await expect(page.getByTestId('global-bottom-nav-trips')).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByTestId('trips-list-card-okinawa-trip-2026-Ray')).toBeVisible();
 });
 
 test('soft keyboard hides the root nav while keeping the focused search reachable', async ({ page }) => {
