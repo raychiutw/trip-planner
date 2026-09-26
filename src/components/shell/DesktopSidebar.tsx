@@ -14,7 +14,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAccountSheet } from '../../contexts/AccountSheetContext';
 import { getRememberedBranchLocation } from '../../lib/branchMemory';
 import clsx from 'clsx';
-import type { MyTrip } from '../../hooks/useMyTrips';
+import type { MyTrip, MyTripsState } from '../../hooks/useMyTrips';
 import Icon from '../shared/Icon';
 import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop } from './navItems';
 
@@ -198,13 +198,14 @@ export interface DesktopSidebarProps {
   user?: SidebarUser | null | undefined;
   /** rev2：我的行程清單（undefined = 尚未 resolve → skeleton；[] = 無行程） */
   trips?: MyTrip[];
+  tripsStatus?: MyTripsState['status'];
   /** 目前 active trip id（清單 highlight） */
   activeTripId?: string | null;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
 }
 
-export default function DesktopSidebar({ user, trips, activeTripId, brand }: DesktopSidebarProps) {
+export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId, brand }: DesktopSidebarProps) {
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
   const location = useLocation();
   const { pathname } = location;
@@ -256,7 +257,9 @@ export default function DesktopSidebar({ user, trips, activeTripId, brand }: Des
 
         <div className="tp-sidebar-section-label">我的行程</div>
         <nav className="tp-sidebar-trips" aria-label="我的行程" data-testid="sidebar-trips">
-          {trips === undefined ? (
+          {tripsStatus === 'error' && trips === undefined ? (
+            <div className="tp-sidebar-trips-empty" role="alert">載入行程失敗，請稍後再試</div>
+          ) : trips === undefined ? (
             <div className="tp-sidebar-trips-loading" role="status" aria-label="載入行程中">
               <span className="tp-trip-skeleton is-a" />
               <span className="tp-trip-skeleton is-b" />

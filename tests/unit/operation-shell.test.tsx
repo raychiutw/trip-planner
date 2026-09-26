@@ -22,6 +22,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 // DesktopSidebarConnected（整頁模式）會打 /api/trips — mock 掉資料源。
 vi.mock('../../src/hooks/useMyTrips', () => ({
   useMyTrips: () => ({ trips: [] }),
+  useTripSelection: () => ({ trips: [], status: 'ready', activeTripId: null }),
   __clearMyTripsCache: () => {},
 }));
 vi.mock('../../src/hooks/useCurrentUser', () => ({

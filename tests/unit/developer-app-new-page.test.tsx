@@ -22,6 +22,7 @@ vi.mock('../../src/hooks/useCurrentUser', () => ({
 // sidebar 資料，mock 掉避免它的 fetch 吃掉 form POST 的 mockResolvedValueOnce。
 vi.mock('../../src/hooks/useMyTrips', () => ({
   useMyTrips: () => ({ trips: [] }),
+  useTripSelection: () => ({ trips: [], status: 'ready', activeTripId: null }),
   __clearMyTripsCache: () => {},
 }));
 
