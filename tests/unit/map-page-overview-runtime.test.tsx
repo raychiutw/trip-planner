@@ -15,6 +15,7 @@ interface CapturedTpMapProps {
   focusId?: number;
   pinsByDay?: Map<number, unknown>;
   dayNum?: number;
+  onMarkerClick?: (id: number) => void;
 }
 
 // Capture TpMap props across renders
@@ -89,16 +90,18 @@ vi.mock('../../src/hooks/useMapData', async (importOriginal) => {
   };
   return {
     ...orig,
-    extractPinsFromDay: () => ({ pins: [fakePin], missingCount: 0 }),
+    extractPinsFromDay: (day: { dayNum: number }) => ({
+      pins: [{ ...fakePin, id: day.dayNum, title: `e${day.dayNum}` }], missingCount: 0,
+    }),
     extractPinsFromAllDays: () => ({
-      pins: [fakePin, { ...fakePin, id: 2 }],
-      pinsByDay: new Map([[1, [fakePin]], [2, [{ ...fakePin, id: 2 }]]]),
+      pins: [fakePin, { ...fakePin, id: 2, title: 'e2' }],
+      pinsByDay: new Map([[1, [fakePin]], [2, [{ ...fakePin, id: 2, title: 'e2' }]]]),
       missingCount: 0,
     }),
   };
 });
 
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, waitFor, act, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 async function mountMapPage(url: string) {
@@ -178,5 +181,17 @@ describe('MapPage overview runtime — handleTabClick URL sync', () => {
     const after = tpMapCalls[tpMapCalls.length - 1]!;
     expect(after.pinsByDay).toBeUndefined();
     expect(after.dayNum).toBe(2);
+  });
+
+  it('selecting a day-two pin keeps that pin, card, and day selected', async () => {
+    await mountMapPage('/trip/test-trip/map?day=all');
+
+    act(() => tpMapCalls[tpMapCalls.length - 1]!.onMarkerClick?.(2));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-day-2')).toHaveAttribute('aria-current', 'true');
+      expect(screen.getByText('e2').closest('[data-card-entry-id]')).toHaveAttribute('aria-current', 'true');
+      expect(tpMapCalls[tpMapCalls.length - 1]!.focusId).toBe(2);
+    });
   });
 });
