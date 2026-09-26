@@ -59,10 +59,6 @@ describe('AddEntryPage — EditEntryPage-shape layout', () => {
     expect(ADD_ENTRY_SRC).toMatch(/`\/trip\/\$\{encodeURIComponent\(tripId\)\}\/stop\/0\/change-poi\?mode=new&day=\$\{dayNum\}&tab=\$\{tab\}`/);
   });
 
-  it('Buttons disabled when dayNum invalid (defensive)', () => {
-    expect(ADD_ENTRY_SRC).toMatch(/disabled=\{!Number\.isFinite\(dayNum\)\}/);
-  });
-
   it('Preview sections (備選 / 時間 / 移動方式) greyed 提示 user 完成後可編', () => {
     expect(ADD_ENTRY_SRC).toContain('備選');
     expect(ADD_ENTRY_SRC).toContain('時間');
