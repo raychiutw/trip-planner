@@ -40,7 +40,8 @@ import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { apiFetch } from '../lib/apiClient';
+import { saveSegment } from '../lib/segmentMutations';
 import { setMaster, deleteEntry, updateEntry, updateEntryPoi, removeAlternate, reorderAlternates } from '../lib/entryMutations';
 import type { ErrorCodeType } from '../types/api';
 import { ApiError } from '../lib/errors';
@@ -967,6 +968,11 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
 }
 
 export default function EditEntryPage() {
+  const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
+  return <EditEntryPageContent key={`${tripId}:${entryId}`} />;
+}
+
+function EditEntryPageContent() {
   const { tripId, entryId: entryIdParam } = useParams<{ tripId: string; entryId: string }>();
   const entryId = Number(entryIdParam);
   const navigate = useNavigate();
@@ -1009,6 +1015,11 @@ export default function EditEntryPage() {
   }>({ startTime: '', endTime: '', description: '', mode: null, transitMin: '', noTravel: false });
 
   const [submitting, setSubmitting] = useState(false);
+  const saveScopeRef = useRef(0);
+  useEffect(() => {
+    const scope = saveScopeRef;
+    return () => { scope.current++; };
+  }, []);
   // v2.33.139: 移除 `error` state — titleBar SaveStatus 已拔 (user feedback
   // 「右上角不用顯示狀態」)，error 細節走 showToast 即時呈現，不需 useState 持有。
   // 保留以前的 setError(...) call sites 改 showToast(...)。
@@ -1203,16 +1214,24 @@ export default function EditEntryPage() {
 
   useEffect(() => {
     if (!segment) return;
-    setMode(segment.mode);
-    setTransitMin(segment.mode === 'transit' && typeof segment.min === 'number' ? String(segment.min) : '');
-    setNoTravel(segment.noTravel === 1);
+    const nextMin = segment.mode === 'transit' && typeof segment.min === 'number' ? String(segment.min) : '';
+    const nextNoTravel = segment.noTravel === 1;
+    const wasEditing = mode !== originalRef.current.mode || transitMin !== originalRef.current.transitMin
+      || noTravel !== originalRef.current.noTravel;
+    if (!wasEditing) {
+      setMode(segment.mode);
+      setTransitMin(nextMin);
+      setNoTravel(nextNoTravel);
+    }
     originalRef.current = {
       ...originalRef.current,
       mode: segment.mode,
-      transitMin: segment.mode === 'transit' && typeof segment.min === 'number' ? String(segment.min) : '',
-      noTravel: segment.noTravel === 1,
+      transitMin: nextMin,
+      noTravel: nextNoTravel,
     };
-  }, [segment]);
+    // Refetches can follow an entry-only save while the segment edit is still dirty.
+    // Keep the local choice for retry, but advance the server baseline.
+  }, [segment, mode, transitMin, noTravel]);
 
   const validation = useMemo(() => {
     if (startTime && !TIME_RE.test(startTime)) return '抵達時間格式錯誤（HH:MM）';
@@ -1226,12 +1245,10 @@ export default function EditEntryPage() {
     return null;
   }, [startTime, endTime, mode, transitMin]);
 
-  const dirty = useMemo(() => {
-    const o = originalRef.current;
-    const entryDirty = startTime !== o.startTime || endTime !== o.endTime || description !== o.description;
-    const segmentDirty = noTravel !== o.noTravel || mode !== o.mode || (mode === 'transit' && transitMin !== o.transitMin);
-    return { entryDirty, segmentDirty, any: entryDirty || segmentDirty };
-  }, [startTime, endTime, description, mode, transitMin, noTravel]);
+  const original = originalRef.current;
+  const entryDirty = startTime !== original.startTime || endTime !== original.endTime || description !== original.description;
+  const segmentDirty = noTravel !== original.noTravel || mode !== original.mode || (mode === 'transit' && transitMin !== original.transitMin);
+  const dirty = { entryDirty, segmentDirty, any: entryDirty || segmentDirty };
 
   const stayMinutes = useMemo(() => {
     if (!startTime || !endTime) return null;
@@ -1256,6 +1273,7 @@ export default function EditEntryPage() {
   const handleSave = useCallback(async () => {
     if (!tripId || !entry || submitting) return;
     if (validation || !dirty.any) return;
+    const saveScope = saveScopeRef.current;
     setSubmitting(true);
 
     const requests: Promise<{ scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string }>[] = [];
@@ -1267,12 +1285,8 @@ export default function EditEntryPage() {
       // v2.55.x: entry.description（活動說明）可編輯。空/純空白 → null 清除。
       if (description !== originalRef.current.description) body.description = description.trim() ? description : null;
       // v2.34.0: note 移除 — entry-level note 已 DROP，PATCH /entries 不再帶 note。
-      // v2.33.136 fix: race guard — dirty.entryDirty memo 跟 body 各自比 originalRef，
-      // 但 originalRef 是 ref 不在 memo deps。若 dirty 計算後、handleSave 跑前外部
-      // 路徑（entry refetch useEffect、prior save 成功 hook）把 originalRef 寫到
-      // 跟 current state 一致，dirty 仍 stale=true 但 body={} → backend 400
-      // "DATA_VALIDATION: 無有效欄位可更新"（api_logs 過去多次此 error）。
-      // Empty body 表示資料其實沒變，跳過 request。
+      // v2.33.136 fix: race guard。refetch 或前一筆儲存可能已更新 originalRef；
+      // 空 body 不送給後端，避免 DATA_VALIDATION: 無有效欄位可更新。
       if (Object.keys(body).length > 0) {
         requests.push(
           // #1261：entry 欄位走 entry 變更 module（時間變動後 module 內重算車程 + emit）。
@@ -1293,17 +1307,10 @@ export default function EditEntryPage() {
       if (!noTravel && mode === 'transit' && transitMin.trim() !== '') {
         body.min = parseInt(transitMin, 10);
       }
-      const req = segment
-        ? apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments/${segment.id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(body),
-          })
-        : apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments`, {
-            method: 'POST',
-            body: JSON.stringify({ ...body, from_entry_id: prevEntry.id, to_entry_id: entryId }),
-          });
       requests.push(
-        req.then(async (res) => ({ scope: 'segment', ok: res.ok, status: res.status, text: res.ok ? undefined : await res.text() })),
+        saveSegment(tripId, { segmentId: segment?.id, fromEntryId: prevEntry.id, toEntryId: entryId }, body)
+          .then(() => ({ scope: 'segment', ok: true, status: 200 }),
+            (err: unknown) => ({ scope: 'segment', ok: false, status: err instanceof ApiError ? err.status : 0 })),
       );
     }
 
@@ -1317,20 +1324,17 @@ export default function EditEntryPage() {
 
     try {
       const results = await Promise.all(requests);
+      if (saveScope !== saveScopeRef.current) return;
       const failures = results.filter((r) => !r.ok);
-      if (failures.length === 0) {
-        // 通知 timeline + segments 重新 fetch
-        window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: { tripId, entryId } }));
-        if (dirty.segmentDirty) {
-          window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId: segment?.id } }));
-        }
-        // v2.33.108: auto-save 後不再 navigate（user 仍在 edit page），update
-        // originalRef 讓 dirty 重置避免重複 save，setSubmitting(false) 讓 SaveStatus
-        // 從 saving → saved transit。
+      if (results.some((r) => r.ok)) {
+        // 各 scope 獨立提交：另一個 scope 失敗也不能重送已儲存的修改。
         originalRef.current = {
           ...originalRef.current,
-          startTime, endTime, description, mode, transitMin, noTravel,
+          ...(results.some((r) => r.scope === 'entry' && r.ok) ? { startTime, endTime, description } : {}),
+          ...(results.some((r) => r.scope === 'segment' && r.ok) ? { mode, transitMin, noTravel } : {}),
         };
+      }
+      if (failures.length === 0) {
         setSubmitting(false);
         return;
       }
@@ -1343,12 +1347,13 @@ export default function EditEntryPage() {
       showToast(msg, 'error', 6000);
       setSubmitting(false);
     } catch (err) {
+      if (saveScope !== saveScopeRef.current) return;
       const msg = err instanceof Error ? err.message : '儲存失敗';
       showToast(msg, 'error', 6000);
       setSubmitting(false);
     }
   }, [
-    tripId, entry, entryId, submitting, validation, dirty,
+    tripId, entry, entryId, submitting, validation, dirty.any, dirty.entryDirty, dirty.segmentDirty,
     startTime, endTime, description, mode, transitMin, noTravel, segment, prevEntry,
   ]);
 
