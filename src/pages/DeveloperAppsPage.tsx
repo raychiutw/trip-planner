@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 import { EVENT } from '../lib/events';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
@@ -133,7 +134,8 @@ export default function DeveloperAppsPage() {
   const { user } = useCurrentUser();
   const navigate = useNavigate();
   const [apps, setApps] = useState<ClientApp[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<'forbidden' | 'failed' | null>(null);
+  const [retrying, setRetrying] = useState(false);
   const loadSequence = useRef(0);
 
   async function loadApps() {
@@ -144,7 +146,8 @@ export default function DeveloperAppsPage() {
       if (sequence === loadSequence.current) setApps(json.apps);
     } catch (err) {
       if (sequence === loadSequence.current) {
-        setError(err instanceof Error ? '無法載入應用列表，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
+        setApps(null);
+        setError(err instanceof ApiError && err.status === 403 ? 'forbidden' : 'failed');
       }
     }
   }
@@ -161,6 +164,19 @@ export default function DeveloperAppsPage() {
     return () => window.removeEventListener(EVENT.developerAppCreated, handleAppCreated);
   }, []);
 
+  const actionLabel = retrying ? '載入中…' : error === 'forbidden' ? '返回帳號' : error === 'failed' ? '重新載入應用列表' : '建立新應用';
+  async function retryApps() {
+    setRetrying(true);
+    try { await loadApps(); }
+    finally { setRetrying(false); }
+  }
+  function handleTitleBarAction() {
+    if (retrying) return;
+    if (error === 'forbidden') navigate('/account');
+    else if (error === 'failed') void retryApps();
+    else navigate('/developer/apps/new');
+  }
+
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
@@ -175,16 +191,19 @@ export default function DeveloperAppsPage() {
           <button
             type="button"
             className="tp-titlebar-action"
-            onClick={() => navigate('/developer/apps/new')}
-            aria-label="建立新應用"
-            title="建立新應用"
-            data-testid="dev-apps-new"
+            onClick={handleTitleBarAction}
+            aria-label={actionLabel}
+            aria-disabled={retrying}
+            aria-busy={retrying}
+            title={actionLabel}
+            data-testid={!error && !retrying ? 'dev-apps-new' : undefined}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
+              {error === 'forbidden' && <path d="M19 12H5m7-7-7 7 7 7" />}
+              {(error === 'failed' || retrying) && <path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5" />}
+              {!error && !retrying && <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
             </svg>
-            <span className="tp-titlebar-action-label">建立新應用</span>
+            <span className="tp-titlebar-action-label">{actionLabel}</span>
           </button>
         }
       />
@@ -192,7 +211,10 @@ export default function DeveloperAppsPage() {
         <p className="tp-page-eyebrow">開發者後台</p>
         <p className="tp-page-meta">管理你的 OAuth client。每個應用程式對應一組 client_id。</p>
 
-        {error && <ErrorBanner message={error} testId="dev-apps-error" />}
+        {error && <ErrorBanner
+          message={error === 'forbidden' ? '沒有權限查看開發者應用，請返回帳號。' : '無法載入應用列表，請重試。'}
+          testId="dev-apps-error"
+        />}
 
         {apps === null && !error && (
           <div className="tp-loading" data-testid="dev-apps-loading">載入中…</div>
