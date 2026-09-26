@@ -184,9 +184,13 @@ export default function SignupPage() {
           navigate(`/trips?selected=${encodeURIComponent(json.joinedTrip.id)}`);
           return;
         }
-        // signup 成功但 invitation 失敗 → check-email flow + 帶 errCode 給該頁顯示 toast
+        // Signup 已建立 session；邀請未完成時回到原 token，讓邀請頁呈現實際結果並可重試。
+        if (invitationToken && json.invitationError) {
+          completed = true;
+          navigate(`/invite?token=${encodeURIComponent(invitationToken)}`);
+          return;
+        }
         const checkEmailQuery = new URLSearchParams({ email: json.email });
-        if (json.invitationError) checkEmailQuery.set('invitationError', json.invitationError);
         completed = true;
         navigate(`/signup/check-email?${checkEmailQuery.toString()}`);
         return;
@@ -211,7 +215,7 @@ export default function SignupPage() {
             kind: 'error',
             node: (
               <span>
-                <a href="/login">改用登入</a> 或{' '}
+                <a href={invitationToken ? `/login?invitation=${encodeURIComponent(invitationToken)}` : '/login'}>改用登入</a> 或{' '}
                 <a href="/login/forgot">忘記密碼</a>。
               </span>
             ),
@@ -354,7 +358,7 @@ export default function SignupPage() {
         </form>
 
         <div className="tp-auth-footer">
-          已有帳號？<a href="/login">直接登入</a>
+          已有帳號？<a href={invitationToken ? `/login?invitation=${encodeURIComponent(invitationToken)}` : '/login'}>直接登入</a>
         </div>
         </div>
       </div>
