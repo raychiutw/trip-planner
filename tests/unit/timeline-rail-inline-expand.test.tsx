@@ -393,14 +393,6 @@ describe('TimelineRail — drag reorder contract', () => {
     expect(USE_DRAG_DROP_SRC).toContain('sortableKeyboardCoordinates');
   });
 
-  it('optimistically reorders rows and posts a single batch payload', () => {
-    expect(TIMELINE_RAIL_SRC).toContain('arrayMove(orderedEvents, oldIdx, newIdx)');
-    expect(TIMELINE_RAIL_SRC).toContain('setOrderOverride(newIds)');
-    // #1260：batch payload（/entries/batch、{ updates: [{ id, sort_order }] }）由
-    // entry 變更 module 承載，tests/unit/entry-mutations.test.tsx 走 interface 驗。
-    expect(TIMELINE_RAIL_SRC).toContain('reorderEntries(tripId');
-  });
-
   it('broadcasts tp-entry-updated after successful reorder and reverts override on failure', () => {
     // #1260：entryUpdated 由 module emit（entry-mutations.test 驗）；這裡只鎖失敗 revert。
     expect(TIMELINE_RAIL_SRC).toContain('setOrderOverride(null)');

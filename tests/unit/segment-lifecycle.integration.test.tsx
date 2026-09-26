@@ -141,6 +141,41 @@ it('暫時排序在 batch PATCH 提交前不把 optimistic adjacency 當缺口�
   await act(async () => { save.resolve(new Response('{}', { status: 200 })); await save.promise; });
 });
 
+it('切換行程時不顯示舊排序，也不讓舊儲存的車程失敗提示干擾新行程', async () => {
+  const save = deferred<Response>();
+  apiFetchMock.mockResolvedValue([]);
+  apiFetchRawMock.mockImplementation((path) => path.includes('/entries/batch')
+    ? save.promise : Promise.resolve(new Response('{}', { status: 500 })));
+  const page = renderRail([entry(1), entry(2), entry(3)]);
+  fireEvent.click(screen.getByTestId('timeline-rail-move-down-1'));
+  await waitFor(() => expect(apiFetchRawMock).toHaveBeenCalledTimes(1));
+  expect(screen.getAllByTestId(/timeline-rail-row-\d+/).map((row) => row.getAttribute('data-testid')))
+    .toEqual(['timeline-rail-row-2', 'timeline-rail-row-1', 'timeline-rail-row-3']);
+
+  page.rerender(railView([entry(1), entry(2), entry(3)], 't2'));
+  expect(screen.getAllByTestId(/timeline-rail-row-\d+/).map((row) => row.getAttribute('data-testid')))
+    .toEqual(['timeline-rail-row-1', 'timeline-rail-row-2', 'timeline-rail-row-3']);
+  page.rerender(railView([entry(1), entry(2), entry(3)], 't1'));
+  expect(screen.getAllByTestId(/timeline-rail-row-\d+/).map((row) => row.getAttribute('data-testid')))
+    .toEqual(['timeline-rail-row-1', 'timeline-rail-row-2', 'timeline-rail-row-3']);
+  await act(async () => { save.resolve(new Response('{}', { status: 200 })); await save.promise; });
+  await waitFor(() => expect(apiFetchRawMock.mock.calls.some(([path]) => path.includes('/recompute-travel'))).toBe(true));
+  expect(getToasts()).toEqual([]);
+});
+
+it('排序已儲存但車程失敗時保留新位置並提示交通待更新', async () => {
+  apiFetchMock.mockResolvedValue([]);
+  apiFetchRawMock.mockImplementation(async (path) => new Response('{}', {
+    status: path.includes('/recompute-travel') ? 500 : 200,
+  }));
+  renderRail([entry(1), entry(2), entry(3)]);
+  fireEvent.click(screen.getByTestId('timeline-rail-move-down-1'));
+  await waitFor(() => expect(getToasts().some((toast) => toast.message.includes('順序已儲存，但車程時間更新失敗'))).toBe(true));
+  expect(screen.getAllByTestId(/timeline-rail-row-\d+/).map((row) => row.getAttribute('data-testid')))
+    .toEqual(['timeline-rail-row-2', 'timeline-rail-row-1', 'timeline-rail-row-3']);
+  expect(apiFetchRawMock.mock.calls.filter(([path]) => path.includes('/entries/batch'))).toHaveLength(1);
+});
+
 it('A→B→A 切換時晚到的舊讀取不替目前行程確認缺口', async () => {
   const oldA = deferred<unknown>();
   const oldB = deferred<unknown>();
