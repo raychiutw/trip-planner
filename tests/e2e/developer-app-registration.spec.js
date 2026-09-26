@@ -6,6 +6,27 @@ test.beforeEach(async ({ page }) => {
   await setupApiMocks(page);
 });
 
+test('自助註冊只顯示 API 接受的 scopes，選取離線存取後送出', async ({ page }) => {
+  let submitted;
+  await page.route('**/api/dev/apps', (route) => {
+    submitted = route.request().postDataJSON();
+    return route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ client_id: 'tp_new', client_secret: null, app_name: 'My App' }),
+    });
+  });
+  await page.goto('/developer/apps/new');
+  const scopes = page.getByRole('group', { name: '申請的 scopes' });
+  await expect(scopes.getByRole('checkbox')).toHaveCount(4);
+  await scopes.getByRole('checkbox', { name: 'offline_access — 離線存取' }).check();
+  await page.getByTestId('dev-app-new-name').fill('My App');
+  await page.getByTestId('dev-app-new-uris').fill('https://example.com/cb');
+  await page.getByTestId('dev-app-new-submit').click();
+  await expect(page.getByRole('dialog', { name: '應用程式憑證' })).toBeVisible();
+  expect(submitted.allowed_scopes).toEqual(['openid', 'profile', 'email', 'offline_access']);
+});
+
 test('URI 錯誤指出行數，保留名稱、類型和 URI 供修正', async ({ page }) => {
   await page.route('**/api/dev/apps', (route) => route.fulfill({
     status: 400,
