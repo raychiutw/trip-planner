@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PROTOTYPE — #1333 行程歸檔契約</title>
+  <style>
+    /* PROTOTYPE ONLY. Question: is archive personal list organization or a trip-wide owner action? */
+    /* Browser-readable mirror of the few values in css/tokens.css @theme (Tailwind expands @theme in production). */
+    :root { --color-accent: #A97A4A; --color-accent-fill: #8A6038; --color-accent-text: #8A6038; --color-focus-ring: #8A6038; --color-background: #FFFBF5; --color-secondary: #FAF4EA; --color-hover: #F9EDE0; --color-foreground: #2A1F18; --color-muted: #6F5A47; --color-border: #EADFCF; --color-border-control: #94795E; --color-destructive: #C13515; --radius-md: 8px; --radius-lg: 12px; --shadow-md: 0 6px 16px rgba(42,31,24,.09); --shadow-lg: 0 10px 28px rgba(42,31,24,.12); }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--color-secondary); color: var(--color-foreground); font: 14px/1.5 Inter, -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif; }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+    .shell { min-height: 100dvh; display: grid; grid-template-columns: 224px minmax(300px, 1fr) minmax(360px, 1.2fr); padding-bottom: 90px; }
+    .sidebar { background: var(--color-background); border-right: 1px solid var(--color-border); padding: 23px 15px; }
+    .brand { font-size: 20px; font-weight: 800; margin: 0 9px 32px; }
+    .side-link { display: block; padding: 10px 13px; border-radius: var(--radius-md); color: var(--color-muted); font-weight: 600; }
+    .side-link.active { background: var(--color-hover); color: var(--color-accent-text); }
+    .list-pane { min-width: 0; padding: 25px 23px; overflow-y: auto; }
+    .title-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+    h1 { margin: 0; font-size: 25px; letter-spacing: -.03em; }
+    .new-button { border: 0; border-radius: 999px; background: var(--color-accent-fill); color: #fff; padding: 9px 14px; font-weight: 700; min-height: 40px; }
+    .tabs { display: inline-flex; max-width: 100%; overflow-x: auto; gap: 1px; background: var(--color-hover); border-radius: 999px; padding: 4px; box-shadow: inset 0 0 0 1px var(--color-border); white-space: nowrap; }
+    .tabs button { border: 0; border-radius: 999px; background: transparent; color: var(--color-muted); padding: 7px 12px; min-height: 40px; font-weight: 650; white-space: nowrap; }
+    .tabs button.active { background: var(--color-background); color: var(--color-accent-text); box-shadow: 0 1px 3px #2a1f1829; }
+    .tabs span { margin-left: 4px; font-size: 11px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 13px; margin-top: 22px; }
+    .card-wrap { position: relative; min-width: 0; }
+    .card { display: block; width: 100%; min-height: 164px; padding: 16px; text-align: left; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-secondary); color: var(--color-foreground); }
+    .card.selected { border-color: var(--color-accent); box-shadow: var(--shadow-md); }
+    .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .12em; color: var(--color-muted); padding-right: 32px; }
+    .card h2 { margin: 8px 0 0; font-size: 16px; line-height: 1.35; padding-right: 32px; }
+    .card p { margin: 30px 0 0; color: var(--color-muted); font-size: 12px; }
+    .more { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--color-muted); font-size: 20px; }
+    .more:hover { background: var(--color-hover); }
+    .menu { position: absolute; z-index: 4; top: 48px; right: 6px; width: 175px; padding: 4px; background: var(--color-background); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+    .menu button { display: block; width: 100%; border: 0; background: transparent; text-align: left; color: var(--color-foreground); padding: 10px 12px; border-radius: 6px; min-height: 40px; }
+    .menu button:hover { background: var(--color-hover); }
+    .menu .danger { color: var(--color-destructive); }
+    .empty { margin-top: 22px; padding: 26px 20px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-background); color: var(--color-muted); }
+    .detail { background: var(--color-background); border-left: 1px solid var(--color-border); min-width: 0; overflow-y: auto; max-height: calc(100dvh - 90px); }
+    .detail-top { position: sticky; top: 0; z-index: 2; background: var(--color-background); border-bottom: 1px solid var(--color-border); padding: 17px 23px; }
+    .detail-top strong { font-size: 17px; }
+    .mobile-back { display: none; border: 0; background: transparent; color: var(--color-accent-text); padding: 0 0 8px; font-weight: 700; }
+    .detail-top p { margin: 3px 0 0; color: var(--color-muted); font-size: 12px; }
+    .timeline { padding: 24px; }
+    .day { margin: 0 0 25px; border-left: 3px solid var(--color-accent); padding-left: 17px; scroll-margin-top: 130px; }
+    .day h3 { margin: 0 0 12px; font-size: 18px; }
+    .stop { background: var(--color-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 14px; margin: 10px 0; }
+    .stop small { display: block; color: var(--color-muted); margin-top: 5px; }
+    dialog { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-background); color: var(--color-foreground); width: min(430px, calc(100vw - 28px)); padding: 23px; box-shadow: var(--shadow-lg); }
+    dialog::backdrop { background: #16110c66; }
+    dialog h2 { margin: 0 0 8px; font-size: 19px; }
+    dialog p { margin: 0 0 20px; color: var(--color-muted); }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .dialog-actions button { min-height: 40px; border-radius: 999px; padding: 8px 16px; border: 1px solid var(--color-border-control); background: var(--color-background); color: var(--color-foreground); }
+    .dialog-actions button.primary { border-color: var(--color-accent-fill); background: var(--color-accent-fill); color: #fff; }
+    .prototype-bar { position: fixed; z-index: 8; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 9px; max-width: calc(100vw - 20px); padding: 9px 13px; background: #292420; color: #fff; border-radius: 13px; box-shadow: 0 8px 24px #0006; font-size: 12px; }
+    .prototype-bar select, .prototype-bar button { min-height: 36px; border: 1px solid #bdb2a5; border-radius: 7px; background: #53493f; color: #fff; padding: 4px 8px; }
+    .prototype-bar .state { max-width: 365px; line-height: 1.25; }
+    @media (max-width: 1023px) { .shell { display: block; } .sidebar { display: none; } .list-pane { padding: 18px 14px; } .detail { display: none; max-height: calc(100dvh - 90px); border: 0; } .mobile-back { display: block; } body.show-mobile-detail .list-pane { display: none; } body.show-mobile-detail .detail { display: block; } .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .card { min-height: 170px; padding: 13px; } .prototype-bar { width: calc(100vw - 18px); } }
+    @media (max-width: 470px) { .title-row h1 { font-size: 21px; } .tabs { width: 100%; } .prototype-bar .state { width: 100%; text-align: center; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar"><div class="brand">Tripline</div><span class="side-link active">我的行程</span><span class="side-link">地圖</span><span class="side-link">收藏</span><span class="side-link">帳號</span></aside>
+    <main class="list-pane"><div class="title-row"><h1>我的行程</h1><button class="new-button" type="button">＋ 新增行程</button></div><div class="tabs" role="group" aria-label="行程分類" id="tabs"></div><div id="cards"></div></main>
+    <section class="detail" aria-label="正在閱讀的行程"><div class="detail-top"><button type="button" class="mobile-back" id="mobile-back">‹ 返回行程列表</button><strong id="detail-title">沖繩自駕五日遊</strong><p id="detail-status">Day 2 · 已捲動至第 2 天；分類變更不關閉詳情</p></div><div class="timeline" id="timeline"><div class="day"><h3>Day 1 · 抵達那霸</h3><div class="stop">機場取車<small>09:30 · 那霸機場</small></div><div class="stop">國際通<small>14:00 · 散步與晚餐</small></div></div><div class="day" id="reading-point"><h3>Day 2 · 中部海岸</h3><div class="stop">美國村<small>10:00 · 海邊與咖啡</small></div><div class="stop">萬座毛<small>15:00 · 日落</small></div></div><div class="day"><h3>Day 3 · 北部</h3><div class="stop">美麗海水族館<small>10:30 · 海洋館</small></div><div class="stop">古宇利島<small>15:00 · 海邊散步</small></div></div><div class="day"><h3>Day 4 · 南部</h3><div class="stop">齋場御嶽<small>09:30 · 文化散策</small></div><div class="stop">瀨長島<small>16:00 · 海景</small></div></div><div class="day"><h3>Day 5 · 返回</h3><div class="stop">那霸機場<small>11:00 · 還車</small></div></div></div></section>
+  </div>
+  <dialog id="confirm"><h2 id="confirm-title"></h2><p id="confirm-copy"></p><div class="dialog-actions"><button id="cancel" type="button">取消</button><button id="commit" class="primary" type="button"></button></div></dialog>
+  <nav class="prototype-bar" aria-label="Prototype controls"><strong>PROTOTYPE · #1333</strong><label>契約 <select id="variant"><option value="personal">A · 個人歸檔</option><option value="global">B · 全員歸檔</option></select></label><label>身分 <select id="actor"><option value="owner">擁有者</option><option value="member">共編旅伴</option></select></label><button id="detail-toggle" type="button">檢視已選詳情</button><button id="reset" type="button">重設</button><span class="state" id="state"></span></nav>
+  <script>
+    // Throwaway in-memory model. No real API, auth, localStorage, or persistence.
+    const params = new URLSearchParams(location.search);
+    const variantControl = document.querySelector('#variant');
+    const actorControl = document.querySelector('#actor');
+    variantControl.value = params.get('variant') === 'global' ? 'global' : 'personal';
+    actorControl.value = params.get('actor') === 'member' ? 'member' : 'owner';
+    const trips = [{ id: 'okinawa', title: '沖繩自駕五日遊', owner: 'owner', dates: '7/2–7/6', eyebrow: '日本 · 5 天' }, { id: 'busan', title: '釜山三日遊', owner: 'member', dates: '9/12–9/14', eyebrow: '韓國 · 3 天' }];
+    let archived = { owner: new Set(), member: new Set() }, tab = params.get('tab') === 'archived' ? 'archived' : 'all', menu = null, selected = 'okinawa', pending = null, mobileDetail = false;
+    const labels = { owner: '擁有者', member: '共編旅伴' };
+    function currentSet() { return archived[actorControl.value]; }
+    function counts() { return { all: trips.filter(t => !currentSet().has(t.id)).length, archived: currentSet().size }; }
+    function render() {
+      params.set('variant', variantControl.value); params.set('actor', actorControl.value); params.set('tab', tab); history.replaceState(null, '', '?' + params);
+      const c = counts();
+      const active = trips.filter(t => !currentSet().has(t.id));
+      document.querySelector('#tabs').innerHTML = `<button type="button" data-tab="all" class="${tab === 'all' ? 'active' : ''}">全部 <span>${c.all}</span></button><button type="button" data-tab="mine" class="${tab === 'mine' ? 'active' : ''}">我的 <span>${active.filter(t => t.owner === actorControl.value).length}</span></button><button type="button" data-tab="collab" class="${tab === 'collab' ? 'active' : ''}">共編 <span>${active.filter(t => t.owner !== actorControl.value).length}</span></button><button type="button" data-tab="archived" class="${tab === 'archived' ? 'active' : ''}">已歸檔 <span>${c.archived}</span></button>`;
+      const visible = trips.filter(t => tab === 'archived' ? currentSet().has(t.id) : !currentSet().has(t.id) && (tab === 'all' || (tab === 'mine' ? t.owner === actorControl.value : t.owner !== actorControl.value)));
+      document.querySelector('#cards').innerHTML = visible.length ? `<div class="cards">${visible.map(t => `<div class="card-wrap"><button type="button" class="card ${t.id === selected ? 'selected' : ''}" data-select="${t.id}"><div class="eyebrow">${t.eyebrow}</div><h2>${t.title}</h2><p>${t.owner === actorControl.value ? '由你建立' : '旅伴共編'} · ${t.dates}</p></button><button class="more" type="button" aria-label="${t.title}行程選項" aria-expanded="${menu === t.id}" data-menu="${t.id}">⋯</button>${menu === t.id ? `<div class="menu" role="menu"><button type="button" role="menuitem">編輯行程</button><button type="button" role="menuitem">共編設定</button><button type="button" role="menuitem">行程筆記</button><button type="button" role="menuitem">分享連結</button>${variantControl.value === 'personal' || t.owner === actorControl.value ? `<button type="button" role="menuitem" data-archive="${t.id}">${currentSet().has(t.id) ? '取消歸檔' : '歸檔行程'}</button>` : ''}<button type="button" role="menuitem" class="danger">刪除行程</button></div>` : ''}</div>`).join('')}</div>` : `<div class="empty">${tab === 'archived' ? '目前沒有已歸檔行程。歸檔行程會在這裡顯示。' : '沒有符合條件的行程。試著切換分類。'}</div>`;
+      document.querySelector('#detail-toggle').textContent = mobileDetail ? '返回行程列表' : '檢視已選詳情';
+      document.querySelector('#detail-title').textContent = trips.find(t => t.id === selected)?.title || '';
+      document.querySelector('#detail-status').textContent = `${selected === 'okinawa' ? 'Day 2' : 'Day 1'} · 已選行程持續顯示；分類變更不重置閱讀位置`;
+      const other = actorControl.value === 'owner' ? 'member' : 'owner';
+      document.querySelector('#state').textContent = `${labels[actorControl.value]}：${currentSet().has('okinawa') ? '沖繩在已歸檔' : '沖繩在全部'}；${labels[other]}：${archived[other].has('okinawa') ? '沖繩在已歸檔' : '沖繩在全部'}。`;
+    }
+    document.addEventListener('click', e => {
+      const tabButton = e.target.closest('[data-tab]'); if (tabButton) { tab = tabButton.dataset.tab; menu = null; render(); return; }
+      const menuButton = e.target.closest('[data-menu]'); if (menuButton) { menu = menu === menuButton.dataset.menu ? null : menuButton.dataset.menu; render(); return; }
+      const archiveButton = e.target.closest('[data-archive]'); if (archiveButton) { pending = archiveButton.dataset.archive; menu = null; const restoring = currentSet().has(pending); document.querySelector('#confirm-title').textContent = restoring ? '取消歸檔行程？' : '歸檔行程？'; document.querySelector('#confirm-copy').textContent = variantControl.value === 'personal' ? (restoring ? '這趟行程會回到你的「全部」清單；其他旅伴的清單不受影響。' : '這趟行程只會移到你的「已歸檔」；其他旅伴仍照常看見與編輯。你正在閱讀的詳情會保持開啟。') : (restoring ? '這趟行程會回到所有旅伴的「全部」清單。' : '這趟行程會移到所有旅伴的「已歸檔」；旅伴仍可開啟詳情。你正在閱讀的詳情會保持開啟。'); document.querySelector('#commit').textContent = restoring ? '取消歸檔' : '歸檔'; render(); document.querySelector('#confirm').showModal(); return; }
+      const card = e.target.closest('[data-select]'); if (card) { selected = card.dataset.select; mobileDetail = true; document.body.classList.add('show-mobile-detail'); render(); return; }
+      if (!e.target.closest('.menu')) { menu = null; render(); }
+    });
+    document.querySelector('#cancel').onclick = () => { pending = null; document.querySelector('#confirm').close(); };
+    document.querySelector('#commit').onclick = () => { const target = pending; if (!target) return; const recipients = variantControl.value === 'global' ? ['owner', 'member'] : [actorControl.value]; const restoring = currentSet().has(target); recipients.forEach(role => restoring ? archived[role].delete(target) : archived[role].add(target)); pending = null; document.querySelector('#confirm').close(); render(); };
+    document.querySelector('#mobile-back').onclick = () => { mobileDetail = false; document.body.classList.remove('show-mobile-detail'); render(); };
+    document.querySelector('#detail-toggle').onclick = () => { mobileDetail = !mobileDetail; document.body.classList.toggle('show-mobile-detail', mobileDetail); document.querySelector('#detail-toggle').textContent = mobileDetail ? '返回行程列表' : '檢視已選詳情'; if (mobileDetail) requestAnimationFrame(() => document.querySelector('#reading-point').scrollIntoView({ block: 'start' })); };
+    document.querySelector('#reset').onclick = () => { archived = { owner: new Set(), member: new Set() }; tab = 'all'; menu = null; selected = 'okinawa'; mobileDetail = false; document.body.classList.remove('show-mobile-detail'); render(); };
+    variantControl.onchange = () => { archived = { owner: new Set(), member: new Set() }; tab = 'all'; menu = null; selected = 'okinawa'; mobileDetail = false; document.body.classList.remove('show-mobile-detail'); render(); };
+    actorControl.onchange = () => { tab = 'all'; menu = null; render(); };
+    render();
+    requestAnimationFrame(() => { document.querySelector('#reading-point').scrollIntoView({ block: 'start' }); });
+  </script>
+</body>
+</html>
