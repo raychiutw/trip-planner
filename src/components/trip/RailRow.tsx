@@ -94,6 +94,7 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
   // 移除「儲存 / 取消」button，改「完成」按鈕（純關閉 edit mode，狀態已 auto-saved）。
   // ESC 改 revert + 關 — 若未 save 直接 cancel；若已 save 則 revert 需透過原值重 PATCH（保守做法：ESC 一律 flush + close）。
   const noteAutosave = useAutosave<{ note: string }>({
+    scopeKey: `${tripId}:${entryIdNum}:${masterPoiId}`,
     debounceMs: 800,
     save: async (body) => {
       if (!tripId || entryIdNum == null || masterPoiId == null) {

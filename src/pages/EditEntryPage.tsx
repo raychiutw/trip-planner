@@ -814,7 +814,7 @@ interface PerPoiNoteRowProps {
    */
   onSecondary?: boolean;
   /** 把本行 autosave 的 flush 註冊給父頁（EditEntryPage）→ 回前頁前統一 await（v2.55.x stale-race 修）。 */
-  registerFlush?: (flush: () => Promise<void>) => () => void;
+  registerFlush?: (flush: () => Promise<boolean>) => () => void;
 }
 
 /**
@@ -844,6 +844,7 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
   }, [initialNote, editing]);
 
   const noteAutosave = useAutosave<{ note: string }>({
+    scopeKey: `${tripId}:${entryId}:${poiId}:${field}`,
     debounceMs: 800,
     save: async (body) => {
       // LWW — 不帶 entryPoisVersion；端點刻意不收/不 bump OCC token。#1261 走 module。
@@ -1360,8 +1361,8 @@ function EditEntryPageContent() {
   // v2.55.x：per-POI 備註 autosave 的 flush 註冊表。回前頁前先 await 沖出 pending 備註 PATCH，
   // 確保返回時重新 fetch 的 days 讀到已 commit 的新值（否則 debounce PATCH 未 commit 就被返回的
   // GET 搶先讀到舊值 = 「改備註返回沒生效、F5 才對」的 stale race）。
-  const noteFlushersRef = useRef<Set<() => Promise<void>>>(new Set());
-  const registerNoteFlush = useCallback((flush: () => Promise<void>) => {
+  const noteFlushersRef = useRef<Set<() => Promise<boolean>>>(new Set());
+  const registerNoteFlush = useCallback((flush: () => Promise<boolean>) => {
     noteFlushersRef.current.add(flush);
     return () => { noteFlushersRef.current.delete(flush); };
   }, []);
