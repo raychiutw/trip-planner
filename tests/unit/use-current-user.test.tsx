@@ -92,4 +92,19 @@ describe('useCurrentUser', () => {
     resolveFetch(new Response(JSON.stringify(SAMPLE_USER), { status: 200 }));
     // No assertion needed — vitest will warn if setState called on unmounted
   });
+
+  it('concurrent mounts on the same pageload share one in-flight request (no N+1)', async () => {
+    // Regression test for Sentry issue 7755796462 — /trip/*/stop/* pageload fired
+    // 5 near-simultaneous GET /api/oauth/userinfo because every component mounting
+    // useCurrentUser() independently kicked off its own fetch.
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
+    );
+    const hooks = Array.from({ length: 5 }, () => renderHook(() => useCurrentUser()));
+    await Promise.all(
+      hooks.map(({ result }) => waitFor(() => expect(result.current.user).not.toBeUndefined())),
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    hooks.forEach(({ result }) => expect(result.current.user).toEqual(SAMPLE_USER));
+  });
 });

@@ -14,6 +14,15 @@
  * userinfo 回應為準。AbortError 不寫旗標 —— 請求被取消不等於未登入。
  *
  * 不依賴 React Query / SWR — keep dependency surface small。Vanilla useState/useEffect。
+ *
+ * 同一次 pageload 常有多個元件（sidebar / account chip / page 本身）在同一個
+ * commit 裡各自 mount 這個 hook —— 若各自各打一次 fetch 會變成 N+1（Sentry
+ * 7755796462, 2026-09-26, /trip/*\/stop/* 一次 pageload 5 個平行 GET
+ * /api/oauth/userinfo，request_start 完全同時）。用一個只存活一個 microtask 的
+ * 共享 in-flight promise，把同一輪 effect flush 裡的請求合併成一次；下一輪
+ * microtask 就自動清空，不會變成長效跨頁面快取（維持「不快取 across
+ * navigation」的既有語意），也不會被「fetch 永不 resolve」的 loading-state 測試
+ * 卡死。
  */
 import { useEffect, useState } from 'react';
 import { writeAuthHint } from '../lib/authHint';
@@ -36,35 +45,49 @@ export interface UseCurrentUserResult {
 
 const USERINFO_ENDPOINT = '/api/oauth/userinfo';
 
+// Module-level：同一個 effect flush 裡的多個 hook instance 共享同一個 in-flight
+// fetch，下一輪 microtask 就清空（見檔頭註解）。
+let sharedFetchPromise: Promise<CurrentUser | null> | null = null;
+
+function fetchCurrentUser(): Promise<CurrentUser | null> {
+  if (!sharedFetchPromise) {
+    const promise: Promise<CurrentUser | null> = fetch(USERINFO_ENDPOINT, { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) {
+          // 401 / 503 / etc. → 視為未登入
+          writeAuthHint(false);
+          return null;
+        }
+        const data = (await res.json()) as CurrentUser;
+        // 記住結果供下次「首次 paint 就要決定畫什麼」的頁面用（見 lib/authHint）。
+        writeAuthHint(true);
+        return data;
+      })
+      .catch(() => {
+        writeAuthHint(false);
+        return null;
+      });
+    sharedFetchPromise = promise;
+    queueMicrotask(() => {
+      if (sharedFetchPromise === promise) sharedFetchPromise = null;
+    });
+  }
+  return sharedFetchPromise;
+}
+
 export function useCurrentUser(): UseCurrentUserResult {
   const [user, setUser] = useState<CurrentUser | null | undefined>(undefined);
   const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
-    // v2.33.39 round 4: AbortController 取代 cancelled flag — 快速連 reload()
-    // 時舊 in-flight 會被取消，slower-arrived response 不再覆蓋。
-    const controller = new AbortController();
-    fetch(USERINFO_ENDPOINT, { credentials: 'include', signal: controller.signal })
-      .then(async (res) => {
-        if (controller.signal.aborted) return;
-        if (!res.ok) {
-          // 401 / 503 / etc. → 視為未登入
-          setUser(null);
-          writeAuthHint(false);
-          return;
-        }
-        const data = (await res.json()) as CurrentUser;
-        setUser(data);
-        // 記住結果供下次「首次 paint 就要決定畫什麼」的頁面用（見 lib/authHint）。
-        writeAuthHint(true);
-      })
-      .catch((err) => {
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-        setUser(null);
-        writeAuthHint(false);
-      });
+    // v2.33.39 round 4 起沿用的「新請求蓋掉舊請求」保護：改用 closure 變數而非
+    // AbortController，因為共享 fetch 不該被單一 consumer 取消。
+    let stale = false;
+    fetchCurrentUser().then((result) => {
+      if (!stale) setUser(result);
+    });
     return () => {
-      controller.abort();
+      stale = true;
     };
   }, [reloadCount]);
 
