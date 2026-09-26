@@ -184,13 +184,13 @@ function createCheckSources(io = {}) {
       'rumPageloadEventsAdaptiveGroups(limit: 1, filter: { ' +
       'datetime_geq: "' + w.since + '", ' +
       'datetime_lt: "' + w.until + '" }) { ' +
-      'sum { visits pageViews } ' +
+      'count sum { visits } ' +
       '} } } }';
     var account = await cfGraphQL(query);
     var row = account?.rumPageloadEventsAdaptiveGroups?.[0];
     return {
       visits: row?.sum?.visits ?? 0,
-      pageViews: row?.sum?.pageViews ?? 0
+      pageViews: row?.count ?? 0
     };
   }
 
