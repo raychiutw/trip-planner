@@ -93,15 +93,6 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 
-.tp-pill {
-  display: inline-flex; padding: 2px 8px;
-  border-radius: var(--radius-xs);
-  font-size: var(--font-size-caption2);
-  font-weight: 700; letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.tp-pill-pending { background: var(--color-warning-bg); color: var(--color-foreground); }
-
 /* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用,DeveloperAppNew 用 --end variant + buttons flex:1 撐滿。 */
 .tp-page-bottom-bar.tp-page-bottom-bar--end .tp-btn { flex: 1; }
 
@@ -194,12 +185,11 @@ interface NewAppResult {
   allowed_scopes: string[];
 }
 
-const SCOPE_OPTIONS: Array<{ key: string; label: string; default?: boolean; risky?: boolean }> = [
+const SCOPE_OPTIONS: Array<{ key: string; label: string; default?: boolean }> = [
   { key: 'openid', label: 'openid — OIDC 識別', default: true },
   { key: 'profile', label: 'profile — 名稱/頭像', default: true },
   { key: 'email', label: 'email — Email 地址', default: true },
-  { key: 'trips.read', label: 'trips.read — 讀取行程' },
-  { key: 'trips.write', label: 'trips.write — 修改行程', risky: true },
+  { key: 'offline_access', label: 'offline_access — 離線存取' },
 ];
 
 export default function DeveloperAppNewPage() {
@@ -409,7 +399,6 @@ export default function DeveloperAppNewPage() {
                           data-testid={`dev-app-new-scope-${opt.key}`}
                         />
                         <span>{opt.label}</span>
-                        {opt.risky && <span className="tp-pill tp-pill-pending">高風險</span>}
                       </label>
                     ))}
                   </div>

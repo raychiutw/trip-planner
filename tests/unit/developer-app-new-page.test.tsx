@@ -9,7 +9,7 @@
  * 全部改在 page 上 render。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 vi.mock('../../src/hooks/useRequireAuth', () => ({
@@ -61,12 +61,19 @@ describe('DeveloperAppNewPage', () => {
     expect(screen.getByTestId('dev-app-new-cancel')).toBeTruthy();
   });
 
-  it('Default scopes: openid + profile + email checked, trips.* unchecked', () => {
+  it('offers only self-service scopes, with offline access optional', () => {
     renderPage();
+    const choices = within(screen.getByRole('group', { name: '申請的 scopes' })).getAllByRole('checkbox');
+    expect(choices.map((choice) => choice.parentElement?.textContent)).toEqual([
+      'openid — OIDC 識別',
+      'profile — 名稱/頭像',
+      'email — Email 地址',
+      'offline_access — 離線存取',
+    ]);
     const openid = screen.getByTestId('dev-app-new-scope-openid') as HTMLInputElement;
-    const tripsRead = screen.getByTestId('dev-app-new-scope-trips.read') as HTMLInputElement;
+    const offlineAccess = screen.getByTestId('dev-app-new-scope-offline_access') as HTMLInputElement;
     expect(openid.checked).toBe(true);
-    expect(tripsRead.checked).toBe(false);
+    expect(offlineAccess.checked).toBe(false);
   });
 
   it('client type 與 scope 選項各有可理解的群組名稱', () => {
