@@ -22,7 +22,12 @@ function makeStmt(firstResult: unknown = null) {
 }
 
 const ALLOWED_CLIENT_ROW = {
-  redirect_uris: JSON.stringify(['https://x.com/cb', 'https://x.com/alt']),
+  redirect_uris: JSON.stringify(['https://x.com/cb', 'https://x.com/alt', 'https://x.com/cb?source=1&code=stale']),
+};
+const ACTIVE_CLIENT = {
+  client_id: 'partner', client_type: 'public' as const, app_name: 'Partner',
+  redirect_uris: ALLOWED_CLIENT_ROW.redirect_uris,
+  allowed_scopes: JSON.stringify(['openid', 'profile']), status: 'active' as const,
 };
 
 function makeContext(body: Record<string, string>, env: MockEnv, cookie?: string): Parameters<typeof onRequestPost>[0] {
@@ -55,6 +60,46 @@ afterEach(() => {
 
 
 describe('POST /api/oauth/consent', () => {
+  it('does not record consent or redirect when an unknown client is allowed', async () => {
+    const token = await signSessionToken('u1', SECRET);
+    const dbPrepare = vi.fn().mockReturnValue(makeStmt(null));
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      client_id: 'unknown', redirect_uri: 'https://attacker.com/cb',
+      response_type: 'code', scope: 'openid', decision: 'allow',
+      code_challenge: 'challenge', code_challenge_method: 'S256',
+    }, env, `tripline_session=${token}`));
+    expect(res.status).toBe(400);
+    expect(res.headers.get('Location')).toBeNull();
+    expect(dbPrepare.mock.calls.some(([sql]) => String(sql).includes('INSERT OR REPLACE INTO oauth_models'))).toBe(false);
+  });
+
+  it.each([
+    ['unregistered redirect', 'https://attacker.com/cb', 'openid', 'challenge', 'S256', 'code', 400, null],
+    ['disallowed scope', 'https://x.com/cb', 'admin', 'challenge', 'S256', 'code', 302, 'invalid_scope'],
+    ['missing PKCE', 'https://x.com/cb', 'openid', '', '', 'code', 302, 'invalid_request'],
+    ['missing response type', 'https://x.com/cb', 'openid', 'challenge', 'S256', '', 302, 'unsupported_response_type'],
+  ])('allow with %s never records consent', async (_case, redirectUri, scope, challenge, method, responseType, status, errorCode) => {
+    const token = await signSessionToken('u1', SECRET);
+    const dbPrepare = vi.fn().mockImplementation((sql: string) =>
+      makeStmt(sql.includes('FROM client_apps') ? ACTIVE_CLIENT : null));
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      client_id: 'partner', redirect_uri: redirectUri,
+      response_type: responseType, scope, decision: 'allow',
+      code_challenge: challenge, code_challenge_method: method,
+    }, env, `tripline_session=${token}`));
+    expect(res.status).toBe(status);
+    const location = res.headers.get('Location');
+    if (errorCode) {
+      expect(location).toContain('https://x.com/cb?error=' + errorCode);
+      expect(location).not.toContain('code=');
+    } else {
+      expect(location).toBeNull();
+    }
+    expect(dbPrepare.mock.calls.some(([sql]) => String(sql).includes('INSERT OR REPLACE INTO oauth_models'))).toBe(false);
+  });
+
   it('302 to /login when no session (preserve params via redirect_after)', async () => {
     const env: MockEnv = { DB: { prepare: vi.fn() } };
     const res = await onRequestPost(makeContext({
@@ -66,6 +111,20 @@ describe('POST /api/oauth/consent', () => {
     expect(loc).toMatch(/^\/login\?redirect_after=/);
     expect(decodeURIComponent(loc)).toContain('/oauth/consent?');
     expect(decodeURIComponent(loc)).toContain('client_id=partner');
+  });
+
+  it('expired session returns to login without recording consent', async () => {
+    const token = await signSessionToken('u1', SECRET, -1);
+    const dbPrepare = vi.fn();
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      client_id: 'partner', redirect_uri: 'https://x.com/cb',
+      response_type: 'code', scope: 'openid', decision: 'allow',
+      code_challenge: 'challenge', code_challenge_method: 'S256',
+    }, env, `tripline_session=${token}`));
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toMatch(/^\/login\?redirect_after=/);
+    expect(dbPrepare).not.toHaveBeenCalled();
   });
 
   it('decision=deny + redirect_uri in client_apps allowlist → 302 with error=access_denied', async () => {
@@ -84,6 +143,23 @@ describe('POST /api/oauth/consent', () => {
     expect(loc).toContain('https://x.com/cb');
     expect(loc).toContain('error=access_denied');
     expect(loc).toContain('state=csrf-1');
+  });
+
+  it('preserves an allowlisted redirect query when denying', async () => {
+    const token = await signSessionToken('u1', SECRET);
+    const dbPrepare = vi.fn().mockImplementation((sql: string) =>
+      makeStmt(sql.includes('FROM client_apps') ? ALLOWED_CLIENT_ROW : null));
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      client_id: 'partner', redirect_uri: 'https://x.com/cb?source=1&code=stale',
+      scope: 'openid', state: 'csrf-1', decision: 'deny',
+    }, env, `tripline_session=${token}`));
+    expect(res.status).toBe(302);
+    const location = new URL(res.headers.get('Location')!);
+    expect(location.searchParams.get('source')).toBe('1');
+    expect(location.searchParams.has('code')).toBe(false);
+    expect(location.searchParams.get('error')).toBe('access_denied');
+    expect(location.searchParams.get('state')).toBe('csrf-1');
   });
 
   it('decision=deny + redirect_uri NOT in allowlist → 400 (open-redirect guard)', async () => {
@@ -119,7 +195,8 @@ describe('POST /api/oauth/consent', () => {
   });
 
   it('decision=allow → store Consent in D1 + 302 back to /api/oauth/authorize', async () => {
-    const dbPrepare = vi.fn().mockReturnValue(makeStmt());
+    const dbPrepare = vi.fn().mockImplementation((sql: string) =>
+      makeStmt(sql.includes('FROM client_apps') ? ACTIVE_CLIENT : null));
     const token = await signSessionToken('u1', SECRET);
     const env: MockEnv = {
       SESSION_SECRET: SECRET,
@@ -132,6 +209,7 @@ describe('POST /api/oauth/consent', () => {
       scope: 'openid profile',
       state: 'csrf-x',
       decision: 'allow',
+      code_challenge: 'challenge', code_challenge_method: 'S256',
     }, env, `tripline_session=${token}`));
 
     expect(res.status).toBe(302);
@@ -191,15 +269,17 @@ describe('POST /api/oauth/consent', () => {
   });
 
   it('Consent TTL = 1 year', async () => {
-    const dbPrepare = vi.fn().mockReturnValue(makeStmt());
+    const dbPrepare = vi.fn().mockImplementation((sql: string) =>
+      makeStmt(sql.includes('FROM client_apps') ? ACTIVE_CLIENT : null));
     const token = await signSessionToken('u1', SECRET);
     const env: MockEnv = {
       SESSION_SECRET: SECRET,
       DB: { prepare: dbPrepare },
     };
     await onRequestPost(makeContext({
-      client_id: 'p', redirect_uri: 'r', scope: 'openid',
+      client_id: 'partner', redirect_uri: 'https://x.com/cb', scope: 'openid',
       decision: 'allow', response_type: 'code', state: 's',
+      code_challenge: 'challenge', code_challenge_method: 'S256',
     }, env, `tripline_session=${token}`));
     const stmt = dbPrepare.mock.results.find(
       (_, i) => typeof dbPrepare.mock.calls[i][0] === 'string' &&
